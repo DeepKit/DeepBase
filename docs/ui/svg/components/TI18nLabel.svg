@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" width="300" height="80">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="80" class="bg" />
+  
+          <text x="10" y="20" class="title">TI18nLabel</text>
+          
+          <!-- Label -->
+          <text x="10" y="50" class="label" font-weight="bold">Username:</text>
+          
+          <!-- I18n Indicator -->
+          <rect x="80" y="38" width="60" height="16" fill="#fff3e0" stroke="#ff9800" stroke-width="0.5" rx="2"/>
+          <text x="85" y="50" class="tag" fill="#ef6c00">🌐 IDS_USER</text>
+        
+</svg>

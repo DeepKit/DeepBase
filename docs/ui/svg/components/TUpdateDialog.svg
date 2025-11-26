@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 200" width="350" height="200">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="350" height="200" class="bg" />
+  
+          <text x="10" y="20" class="title">TUpdateDialog</text>
+          
+          <!-- Dialog -->
+          <rect x="10" y="30" width="330" height="160" fill="#fff" stroke="#333" rx="3" />
+          
+          <!-- Header -->
+          <rect x="10" y="30" width="330" height="30" fill="#2196f3" rx="3 3 0 0"/>
+          <text x="20" y="50" class="label" fill="#fff" font-weight="bold">New Version Available</text>
+          
+          <!-- Content -->
+          <text x="20" y="80" class="label">Version 1.2.0 is ready.</text>
+          <text x="20" y="100" class="label" fill="#666">- Fixed bugs</text>
+          <text x="20" y="115" class="label" fill="#666">- Added new features</text>
+          
+          <!-- Buttons -->
+          <rect x="150" y="150" width="80" height="25" fill="#2196f3" rx="3"/>
+          <text x="190" y="167" class="label" fill="#fff" text-anchor="middle">Update</text>
+          
+          <rect x="240" y="150" width="80" height="25" fill="#eee" rx="3"/>
+          <text x="280" y="167" class="label" text-anchor="middle">Later</text>
+        
+</svg>

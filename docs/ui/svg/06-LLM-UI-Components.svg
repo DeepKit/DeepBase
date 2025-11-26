@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 2000" width="1800" height="2000">
+  <defs>
+    <style>
+      .bg { fill: #f5f5f5; }
+      .title { font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; text-anchor: middle; fill: #333; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #333; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; text-anchor: start; }
+      .text { font-family: Arial, sans-serif; font-size: 11px; fill: #666; text-anchor: start; }
+      .window-bg { fill: #ffffff; stroke: #333; stroke-width: 2; }
+      .titlebar { fill: #ff9999; stroke: #333; stroke-width: 1; }
+      .panel { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .button { fill: #e0e0e0; stroke: #999; stroke-width: 1; cursor: pointer; }
+      .button:hover { fill: #d0d0d0; }
+      .input { fill: #ffffff; stroke: #999; stroke-width: 1; }
+      .grid-header { fill: #e8e8e8; stroke: #999; stroke-width: 1; }
+      .grid-row-even { fill: #ffffff; stroke: #eee; stroke-width: 0.5; }
+      .grid-row-odd { fill: #f9f9f9; stroke: #eee; stroke-width: 0.5; }
+      .animation-circle { fill: none; stroke: #ff6666; stroke-width: 2; }
+      .progress-bar { fill: #4caf50; }
+      .progress-bg { fill: #e0e0e0; }
+    </style>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1800" height="2000" class="bg"/>
+
+  <!-- 标题 -->
+  <text x="900" y="40" class="title">LLM UI 组件设计详图</text>
+  <text x="900" y="65" class="subtitle">Wait Form | Config Panel | Notification Bar</text>
+
+  <!-- ====== 第一部分：LLM 等待窗体 ====== -->
+  <g id="wait-form-section">
+    <!-- 标题 -->
+    <text x="50" y="110" class="subtitle" text-anchor="start">1️⃣ LLM 等待窗体 (LLMWaitForm)</text>
+    <text x="50" y="132" class="label">显示尺寸：400px × 200px | 模态对话框</text>
+
+    <!-- 窗体容器 -->
+    <g id="wait-form">
+      <!-- 主窗体 -->
+      <rect x="50" y="150" width="400" height="200" class="window-bg" rx="8"/>
+
+      <!-- 标题栏 -->
+      <rect x="50" y="150" width="400" height="35" class="titlebar" rx="8"/>
+      <text x="260" y="171" class="label" font-weight="bold" fill="white" text-anchor="middle">LLM 处理中...</text>
+      <text x="440" y="171" class="label" fill="white">🗙</text>
+
+      <!-- 上部：动画区 -->
+      <rect x="60" y="195" width="380" height="80" class="panel"/>
+      
+      <!-- 动画圈 -->
+      <circle cx="250" cy="235" r="25" class="animation-circle" stroke-width="3" opacity="0.8"/>
+      <circle cx="250" cy="235" r="20" class="animation-circle" stroke-width="2" opacity="0.5"/>
+      <text x="250" y="242" class="text" font-size="20" text-anchor="middle">🔄</text>
+      
+      <!-- 动画说明 -->
+      <text x="280" y="242" class="text" font-size="10" fill="#999">SVG 动画随机播放</text>
+
+      <!-- 中部：文本区 -->
+      <rect x="60" y="285" width="380" height="65" class="panel"/>
+      <text x="70" y="302" class="label" font-weight="bold">正在处理您的请求...</text>
+      <text x="70" y="320" class="text">当前：访问 LiteLLM...</text>
+      <text x="70" y="335" class="text">Token 使用: 45/2000</text>
+
+      <!-- 下部：按钮区 -->
+      <rect x="60" y="360" width="380" height="50" class="panel"/>
+      
+      <!-- 取消按钮 -->
+      <rect x="100" y="375" width="80" height="28" class="button" rx="3"/>
+      <text x="140" y="393" class="label" text-anchor="middle" font-weight="bold">取消</text>
+
+      <!-- 后台运行按钮 -->
+      <rect x="220" y="375" width="80" height="28" class="button" rx="3"/>
+      <text x="260" y="393" class="label" text-anchor="middle" font-weight="bold">后台运行</text>
+    </g>
+
+    <!-- 详细说明 -->
+    <g id="wait-form-details">
+      <text x="480" y="160" class="label" font-weight="bold">关键特性：</text>
+      <text x="480" y="178" class="text">✓ 标题栏高度: 35px</text>
+      <text x="480" y="193" class="text">✓ 动画区高度: 80px</text>
+      <text x="480" y="208" class="text">✓ 文本区高度: 65px</text>
+      <text x="480" y="223" class="text">✓ 按钮区高度: 50px</text>
+      <text x="480" y="238" class="text">✓ 圆角: 8px</text>
+      <text x="480" y="253" class="text">✓ 动画从库中随机选择</text>
+      <text x="480" y="268" class="text">✓ 文本动态更新 (实时)</text>
+      <text x="480" y="283" class="text">✓ 支持取消/后台运行</text>
+      <text x="480" y="298" class="text">✓ 模态对话框 (阻塞)</text>
+    </g>
+  </g>
+
+  <!-- ====== 第二部分：LLM 配置面板 ====== -->
+  <g id="config-panel-section">
+    <!-- 标题 -->
+    <text x="50" y="430" class="subtitle" text-anchor="start">2️⃣ LLM 参数配置面板 (LLMConfigPanel)</text>
+    <text x="50" y="452" class="label">显示尺寸：800px × 500px</text>
+
+    <!-- 配置面板容器 -->
+    <g id="config-panel">
+      <!-- 上部配置区 -->
+      <rect x="50" y="470" width="900" height="280" class="window-bg" rx="5"/>
+      
+      <!-- 配置区标题 -->
+      <rect x="50" y="470" width="900" height="30" fill="#e8e8e8" stroke="#999" stroke-width="1" rx="5 5 0 0"/>
+      <text x="60" y="490" class="label" font-weight="bold">参数配置</text>
+
+      <!-- 第一行：启用 + Provider + 测试连接 -->
+      <text x="60" y="515" class="label">☑ 启用</text>
+      <text x="130" y="515" class="label">Provider:</text>
+      <rect x="190" y="505" width="100" height="20" class="input"/>
+      <text x="200" y="517" class="text">LiteLLM ▼</text>
+      <rect x="750" y="505" width="85" height="20" class="button" rx="3"/>
+      <text x="792" y="517" class="text" text-anchor="middle" font-size="10" font-weight="bold">[测试连接]</text>
+
+      <!-- 第二行：API地址 + API Key -->
+      <text x="60" y="540" class="label">API地址:</text>
+      <rect x="130" y="530" width="320" height="18" class="input"/>
+      <text x="140" y="541" class="text" font-size="9">https://api.litellm.ai/v1</text>
+      
+      <text x="530" y="540" class="label">API Key:</text>
+      <rect x="590" y="530" width="150" height="18" class="input"/>
+      <text x="600" y="541" class="text" font-size="9">****</text>
+      <rect x="745" y="530" width="20" height="18" class="button" rx="2"/>
+      <text x="755" y="541" class="text" text-anchor="middle" font-size="10">👁️</text>
+
+      <!-- 第三行：Model + Temperature + Timeout -->
+      <text x="60" y="565" class="label">Model:</text>
+      <rect x="110" y="555" width="90" height="18" class="input"/>
+      <text x="120" y="566" class="text" font-size="9">gpt-4o ▼</text>
+      
+      <text x="250" y="565" class="label">Temperature:</text>
+      <rect x="330" y="555" width="40" height="18" class="input"/>
+      <text x="340" y="566" class="text" font-size="9">0.7</text>
+      <line x1="330" y1="562" x2="370" y2="562" stroke="#ddd" stroke-width="1"/>
+      <circle cx="350" cy="562" r="3" fill="#ff6666"/>
+      
+      <text x="450" y="565" class="label">Timeout:</text>
+      <rect x="510" y="555" width="60" height="18" class="input"/>
+      <text x="520" y="566" class="text" font-size="9">60000</text>
+      <text x="575" y="565" class="text" font-size="9">ms</text>
+
+      <!-- 第四行：Max Tokens + Top-P -->
+      <text x="60" y="590" class="label">Max Tokens:</text>
+      <rect x="150" y="580" width="60" height="18" class="input"/>
+      <text x="160" y="591" class="text" font-size="9">4096</text>
+      
+      <text x="290" y="590" class="label">Top-P:</text>
+      <rect x="340" y="580" width="50" height="18" class="input"/>
+      <text x="350" y="591" class="text" font-size="9">1.0</text>
+
+      <!-- 第五行：价格配置 -->
+      <text x="60" y="615" class="label">Input Price/1K:</text>
+      <rect x="180" y="605" width="50" height="18" class="input"/>
+      <text x="190" y="616" class="text" font-size="9">$0.15</text>
+      
+      <text x="290" y="615" class="label">Output Price/1K:</text>
+      <rect x="440" y="605" width="50" height="18" class="input"/>
+      <text x="450" y="616" class="text" font-size="9">$0.60</text>
+
+      <!-- 第六行：并发和重试 -->
+      <text x="60" y="640" class="label">Concurrent:</text>
+      <rect x="140" y="630" width="40" height="18" class="input"/>
+      <text x="150" y="641" class="text" font-size="9">5</text>
+      
+      <text x="240" y="640" class="label">Retry Count:</text>
+      <rect x="340" y="630" width="40" height="18" class="input"/>
+      <text x="350" y="641" class="text" font-size="9">3</text>
+      
+      <text x="440" y="640" class="label">Retry Delay:</text>
+      <rect x="530" y="630" width="50" height="18" class="input"/>
+      <text x="540" y="641" class="text" font-size="9">1000</text>
+      <text x="585" y="640" class="text" font-size="9">ms</text>
+
+      <!-- 按钮组 -->
+      <rect x="60" y="665" width="50" height="20" class="button" rx="3"/>
+      <text x="85" y="677" class="text" text-anchor="middle" font-size="10" font-weight="bold">✓ 保存</text>
+      
+      <rect x="125" y="665" width="50" height="20" class="button" rx="3"/>
+      <text x="150" y="677" class="text" text-anchor="middle" font-size="10" font-weight="bold">⟲ 重置</text>
+      
+      <rect x="190" y="665" width="40" height="20" class="button" rx="3"/>
+      <text x="210" y="677" class="text" text-anchor="middle" font-size="10" font-weight="bold">? 帮助</text>
+      
+      <rect x="245" y="665" width="50" height="20" class="button" rx="3"/>
+      <text x="270" y="677" class="text" text-anchor="middle" font-size="10" font-weight="bold">📋 复制</text>
+
+      <!-- 下部 Grid -->
+      <text x="60" y="730" class="label" font-weight="bold">LLM 调用记录</text>
+      <rect x="750" y="720" width="50" height="18" class="button" rx="3"/>
+      <text x="775" y="731" class="text" text-anchor="middle" font-size="9" font-weight="bold">📊导出</text>
+      <rect x="810" y="720" width="50" height="18" class="button" rx="3"/>
+      <text x="835" y="731" class="text" text-anchor="middle" font-size="9" font-weight="bold">🔄刷新</text>
+
+      <!-- Grid 标题行 -->
+      <rect x="50" y="745" width="900" height="20" class="grid-header"/>
+      <line x1="50" y1="745" x2="950" y2="745" stroke="#999" stroke-width="1"/>
+      <text x="60" y="757" class="text" font-size="9" font-weight="bold">Time</text>
+      <text x="120" y="757" class="text" font-size="9" font-weight="bold">Provider</text>
+      <text x="200" y="757" class="text" font-size="9" font-weight="bold">Model</text>
+      <text x="270" y="757" class="text" font-size="9" font-weight="bold">Status</text>
+      <text x="330" y="757" class="text" font-size="9" font-weight="bold">Duration</text>
+      <text x="420" y="757" class="text" font-size="9" font-weight="bold">Tokens</text>
+      <text x="500" y="757" class="text" font-size="9" font-weight="bold">Cost</text>
+
+      <!-- Grid 数据行 1 -->
+      <rect x="50" y="765" width="900" height="18" class="grid-row-even"/>
+      <text x="60" y="776" class="text" font-size="9">14:30</text>
+      <text x="120" y="776" class="text" font-size="9">LiteLLM</text>
+      <text x="200" y="776" class="text" font-size="9">gpt-4o</text>
+      <text x="330" y="776" class="text" font-size="9">✓</text>
+      <text x="420" y="776" class="text" font-size="9">1250ms</text>
+      <text x="480" y="776" class="text" font-size="9">245</text>
+      <text x="520" y="776" class="text" font-size="9">$0.08</text>
+
+      <!-- Grid 数据行 2 -->
+      <rect x="50" y="783" width="900" height="18" class="grid-row-odd"/>
+      <text x="60" y="794" class="text" font-size="9">14:28</text>
+      <text x="120" y="794" class="text" font-size="9">LiteLLM</text>
+      <text x="200" y="794" class="text" font-size="9">gpt-4o</text>
+      <text x="330" y="794" class="text" font-size="9">✓</text>
+      <text x="420" y="794" class="text" font-size="9">980ms</text>
+      <text x="480" y="794" class="text" font-size="9">180</text>
+      <text x="520" y="794" class="text" font-size="9">$0.06</text>
+
+      <!-- Grid 数据行 3 -->
+      <rect x="50" y="801" width="900" height="18" class="grid-row-even"/>
+      <text x="60" y="812" class="text" font-size="9">14:27</text>
+      <text x="120" y="812" class="text" font-size="9">OpenAI</text>
+      <text x="200" y="812" class="text" font-size="9">gpt-4o</text>
+      <text x="330" y="812" class="text" font-size="9">✓</text>
+      <text x="420" y="812" class="text" font-size="9">5400ms</text>
+      <text x="480" y="812" class="text" font-size="9">512</text>
+      <text x="520" y="812" class="text" font-size="9">$0.15</text>
+
+      <!-- Grid 总计行 -->
+      <rect x="50" y="819" width="900" height="18" fill="#e8e8e8" stroke="#999" stroke-width="1"/>
+      <text x="60" y="830" class="text" font-size="9" font-weight="bold">总调用: 156 | 成功: 154 | 失败: 2 | 今日费用: $2.34</text>
+    </g>
+
+    <!-- 详细说明 -->
+    <g id="config-panel-details">
+      <text x="1020" y="480" class="label" font-weight="bold">关键特性：</text>
+      <text x="1020" y="498" class="text">✓ 分为两部分：配置(60%) + Grid(40%)</text>
+      <text x="1020" y="513" class="text">✓ 配置支持 Provider 动态切换</text>
+      <text x="1020" y="528" class="text">✓ API Key 掩码显示 + 显示/隐藏按钮</text>
+      <text x="1020" y="543" class="text">✓ 温度、超参数精确控制</text>
+      <text x="1020" y="558" class="text">✓ 成本计算支持 (Input/Output Price)</text>
+      <text x="1020" y="573" class="text">✓ 并发/重试策略配置</text>
+      <text x="1020" y="588" class="text">✓ Grid: 7 列数据 + 排序/筛选/导出</text>
+      <text x="1020" y="603" class="text">✓ 实时显示调用统计和今日费用</text>
+      <text x="1020" y="618" class="text">✓ 测试连接验证 API Key 有效性</text>
+      <text x="1020" y="633" class="text">✓ 支持保存/重置/复制配置</text>
+    </g>
+  </g>
+
+  <!-- ====== 第三部分：后台通知栏 ====== -->
+  <g id="notification-bar-section">
+    <!-- 标题 -->
+    <text x="50" y="900" class="subtitle" text-anchor="start">3️⃣ 后台任务通知栏 (Background Notification Bar)</text>
+    <text x="50" y="922" class="label">显示位置：主窗体状态栏下方 | 高度: 40px</text>
+
+    <!-- 通知栏容器 -->
+    <g id="notification-bar">
+      <rect x="50" y="940" width="900" height="40" class="window-bg" rx="3"/>
+      
+      <!-- 旋转动画图标 -->
+      <circle cx="70" cy="960" r="8" fill="none" stroke="#ff6666" stroke-width="2"/>
+      <text x="70" y="965" class="text" font-size="14" text-anchor="middle" font-weight="bold">🔄</text>
+
+      <!-- 文本 -->
+      <text x="90" y="963" class="label">后台 LLM 任务</text>
+
+      <!-- 进度条背景 -->
+      <rect x="220" y="955" width="150" height="10" class="progress-bg" rx="2"/>
+      
+      <!-- 进度条 (75%) -->
+      <rect x="220" y="955" width="112" height="10" class="progress-bar" rx="2"/>
+
+      <!-- 百分比 -->
+      <text x="380" y="963" class="label">75%</text>
+
+      <!-- 取消按钮 -->
+      <rect x="420" y="950" width="60" height="20" class="button" rx="3"/>
+      <text x="450" y="962" class="text" text-anchor="middle" font-weight="bold">[取消]</text>
+
+      <!-- 关闭按钮 -->
+      <rect x="490" y="950" width="30" height="20" class="button" rx="3"/>
+      <text x="505" y="962" class="text" text-anchor="middle" font-weight="bold">×</text>
+    </g>
+
+    <!-- 不同状态示例 -->
+    <g id="notification-states">
+      <!-- 进行中状态 -->
+      <text x="50" y="1010" class="label" font-weight="bold">• 状态 1: 进行中 (Running)</text>
+      <rect x="50" y="1025" width="900" height="35" class="window-bg" rx="3"/>
+      <circle cx="70" cy="1042" r="7" fill="none" stroke="#4caf50" stroke-width="2"/>
+      <text x="70" y="1047" class="text" font-size="12" text-anchor="middle">🔄</text>
+      <text x="90" y="1045" class="label">后台 LLM 任务</text>
+      <rect x="220" y="1038" width="150" height="8" class="progress-bg" rx="2"/>
+      <rect x="220" y="1038" width="112" height="8" class="progress-bar" rx="2"/>
+      <text x="380" y="1045" class="label">75%</text>
+
+      <!-- 完成状态 -->
+      <text x="50" y="1090" class="label" font-weight="bold">• 状态 2: 完成 (Completed)</text>
+      <rect x="50" y="1105" width="900" height="35" class="window-bg" rx="3" fill="#e8f5e9"/>
+      <circle cx="70" cy="1122" r="7" fill="none" stroke="#4caf50" stroke-width="2"/>
+      <text x="70" y="1127" class="text" font-size="12" text-anchor="middle">✓</text>
+      <text x="90" y="1125" class="label">✓ LLM 任务已完成！</text>
+      <text x="900" y="1125" class="label" text-anchor="end" font-size="10" fill="#999">自动隐藏 (5s后)</text>
+
+      <!-- 错误状态 -->
+      <text x="50" y="1170" class="label" font-weight="bold">• 状态 3: 错误 (Failed)</text>
+      <rect x="50" y="1185" width="900" height="35" class="window-bg" rx="3" fill="#ffebee"/>
+      <circle cx="70" cy="1202" r="7" fill="none" stroke="#f44336" stroke-width="2"/>
+      <text x="70" y="1207" class="text" font-size="12" text-anchor="middle">✗</text>
+      <text x="90" y="1205" class="label">✗ LLM 任务失败: API Key 无效</text>
+      <text x="900" y="1205" class="label" text-anchor="end" font-size="10" fill="#999">需要手动关闭</text>
+    </g>
+
+    <!-- 详细说明 -->
+    <g id="notification-details">
+      <text x="50" y="1250" class="label" font-weight="bold">关键特性：</text>
+      <text x="50" y="1268" class="text">✓ 高度: 40px，紧凑设计</text>
+      <text x="50" y="1283" class="text">✓ 旋转动画图标表示任务进行中</text>
+      <text x="50" y="1298" class="text">✓ 实时进度条显示 (0-100%)</text>
+      <text x="50" y="1313" class="text">✓ 取消按钮停止后台任务</text>
+      <text x="50" y="1328" class="text">✓ 关闭按钮隐藏通知栏 (任务继续)</text>
+      
+      <text x="550" y="1250" class="label" font-weight="bold">状态转换：</text>
+      <text x="550" y="1268" class="text">🔄 运行中 → ✓ 完成 (自动隐藏)</text>
+      <text x="550" y="1283" class="text">🔄 运行中 → ✗ 错误 (不自动隐藏)</text>
+      <text x="550" y="1298" class="text">🔄 运行中 → 已取消 (用户点击)</text>
+      <text x="550" y="1313" class="text">任何状态 → 用户点击 X 隐藏</text>
+    </g>
+  </g>
+
+  <!-- ====== 第四部分：交互流程 ====== -->
+  <g id="interaction-flow">
+    <text x="50" y="1380" class="title" text-anchor="start">交互流程图</text>
+
+    <!-- 整体流程 -->
+    <g id="main-flow">
+      <text x="50" y="1420" class="label" font-weight="bold">用户发出 LLM 命令后的流程：</text>
+
+      <!-- 步骤 1 -->
+      <rect x="50" y="1440" width="100" height="40" fill="#ffcccc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="100" y="1465" class="text" text-anchor="middle" font-weight="bold">1. 发出命令</text>
+      <line x1="150" y1="1460" x2="200" y2="1460" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- 步骤 2 -->
+      <rect x="200" y="1440" width="100" height="40" fill="#ffffcc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="250" y="1465" class="text" text-anchor="middle" font-weight="bold">2. 弹出等待窗体</text>
+      <line x1="300" y1="1460" x2="350" y2="1460" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- 步骤 3 -->
+      <rect x="350" y="1440" width="100" height="40" fill="#ccffcc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="400" y="1465" class="text" text-anchor="middle" font-weight="bold">3. 后台执行</text>
+
+      <!-- 分支：用户选择 -->
+      <text x="50" y="1520" class="label" font-weight="bold">用户选择：</text>
+
+      <!-- 路径 A：取消 -->
+      <line x1="100" y1="1480" x2="100" y2="1540" stroke="#333" stroke-width="2"/>
+      <line x1="100" y1="1540" x2="150" y2="1540" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="150" y="1520" width="100" height="40" fill="#ff9999" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="200" y="1545" class="text" text-anchor="middle" font-weight="bold">取消任务</text>
+      <line x1="250" y1="1540" x2="300" y2="1540" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="300" y="1520" width="100" height="40" fill="#f0f0f0" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="350" y="1545" class="text" text-anchor="middle" font-weight="bold">关闭窗体</text>
+
+      <!-- 路径 B：后台运行 -->
+      <line x1="400" y1="1480" x2="400" y2="1540" stroke="#333" stroke-width="2"/>
+      <line x1="400" y1="1540" x2="450" y2="1540" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="450" y="1520" width="100" height="40" fill="#ccffcc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="500" y="1545" class="text" text-anchor="middle" font-weight="bold">后台继续</text>
+      <line x1="550" y1="1540" x2="600" y2="1540" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="600" y="1520" width="120" height="40" fill="#ffffcc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="660" y="1545" class="text" text-anchor="middle" font-weight="bold">显示通知栏</text>
+
+      <!-- 路径 C：自然完成 -->
+      <line x1="400" y1="1480" x2="400" y2="1620" stroke="#333" stroke-width="2"/>
+      <line x1="400" y1="1620" x2="450" y2="1620" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="450" y="1600" width="100" height="40" fill="#ccffcc" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="500" y="1625" class="text" text-anchor="middle" font-weight="bold">任务完成</text>
+      <line x1="550" y1="1620" x2="600" y2="1620" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <rect x="600" y="1600" width="120" height="40" fill="#e8f5e9" stroke="#333" stroke-width="1" rx="3"/>
+      <text x="660" y="1625" class="text" text-anchor="middle" font-weight="bold">显示成功状态</text>
+    </g>
+
+    <!-- 数据流 -->
+    <g id="data-flow">
+      <text x="50" y="1700" class="label" font-weight="bold">数据更新流程：</text>
+      
+      <text x="50" y="1720" class="text">后台 Task 📤 Progress Event → LLMWaitForm.UpdateProgress():</text>
+      <rect x="60" y="1735" width="800" height="50" fill="#f9f9f9" stroke="#ccc" stroke-width="1" rx="3"/>
+      <text x="70" y="1750" class="text" font-size="10" font-family="monospace">
+        Current Operation: "Accessing LiteLLM API..."
+      </text>
+      <text x="70" y="1765" class="text" font-size="10" font-family="monospace">
+        Token Count: 45 / Max Tokens: 2000
+      </text>
+      <text x="70" y="1780" class="text" font-size="10" font-family="monospace">
+        → Label.Caption := "Token 使用: 45/2000"
+      </text>
+
+      <text x="50" y="1820" class="text">Task Complete 📤 Result Event → Update Notification Bar:</text>
+      <rect x="60" y="1835" width="800" height="50" fill="#f9f9f9" stroke="#ccc" stroke-width="1" rx="3"/>
+      <text x="70" y="1850" class="text" font-size="10" font-family="monospace">
+        Status: Success | Duration: 1250ms | Cost: $0.08
+      </text>
+      <text x="70" y="1865" class="text" font-size="10" font-family="monospace">
+        → Show ✓ Icon | Auto-Hide After 5 Seconds
+      </text>
+      <text x="70" y="1880" class="text" font-size="10" font-family="monospace">
+        → Record saved to LLMCallHistory table
+      </text>
+    </g>
+  </g>
+
+  <!-- 箭头标记定义 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+
+  <!-- 底部说明 -->
+  <g id="footer">
+    <rect x="50" y="1930" width="900" height="50" fill="#fffacd" stroke="#999" stroke-width="1" rx="3"/>
+    <text x="60" y="1950" class="label" font-weight="bold">💡 实现提示：</text>
+    <text x="60" y="1968" class="text" font-size="10">1. 使用 SVG 控件显示 AnimationAssets 中的动画 | 2. 通过事件回调实时更新界面 | 3. API Key 采用 AES-256 加密存储</text>
+  </g>
+
+</svg>

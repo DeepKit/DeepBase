@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200">
+  <defs>
+    <style>
+      .bg { fill: #f9f9f9; }
+      .title { font-family: Arial, sans-serif; font-size: 32px; font-weight: bold; text-anchor: middle; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; }
+      .text { font-family: Arial, sans-serif; font-size: 13px; text-anchor: middle; }
+      .category-box { stroke: #333; stroke-width: 2; }
+      .phase0 { fill: #ffcccc; }
+      .phase1 { fill: #ffffcc; }
+      .phase2 { fill: #ccffcc; }
+      .phase3 { fill: #ccccff; }
+      .new { fill: #ffff99; }
+      .arrow { stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1600" height="1200" class="bg"/>
+
+  <!-- 标题 -->
+  <text x="800" y="40" class="title">UniBase 完整 UI 界面清单</text>
+  <text x="800" y="70" class="subtitle">32+ 个界面 | 12 个分类 | 4 个阶段实现</text>
+
+  <!-- Phase 图例 -->
+  <g id="legend">
+    <rect x="50" y="90" width="20" height="20" class="phase0" stroke="#333" stroke-width="1"/>
+    <text x="80" y="105" class="text">Phase 0-1（核心）</text>
+    
+    <rect x="350" y="90" width="20" height="20" class="phase1" stroke="#333" stroke-width="1"/>
+    <text x="380" y="105" class="text">Phase 1-2（重要）</text>
+    
+    <rect x="650" y="90" width="20" height="20" class="phase2" stroke="#333" stroke-width="1"/>
+    <text x="680" y="105" class="text">Phase 2-3（增强）</text>
+    
+    <rect x="950" y="90" width="20" height="20" class="new" stroke="#333" stroke-width="1"/>
+    <text x="980" y="105" class="text">✨ 新增</text>
+    
+    <rect x="1250" y="90" width="20" height="20" class="phase3" stroke="#333" stroke-width="1"/>
+    <text x="1280" y="105" class="text">Phase 3（高级）</text>
+  </g>
+
+  <!-- 第一行：应用集成、i18n、LLM -->
+  <g id="row1">
+    <!-- 应用集成 -->
+    <rect x="50" y="140" width="280" height="180" class="category-box phase0" rx="5"/>
+    <text x="190" y="165" class="subtitle">1. 应用集成</text>
+    <text x="70" y="190" class="text" text-anchor="start">• 主窗体</text>
+    <text x="70" y="210" class="text" text-anchor="start">• 设置对话框</text>
+    <text x="70" y="230" class="text" text-anchor="start">• 菜单栏/工具栏</text>
+    <text x="70" y="250" class="text" text-anchor="start">• 状态栏</text>
+    <text x="70" y="270" class="text" text-anchor="start">• 工作区</text>
+    <text x="190" y="305" class="text" font-weight="bold">2 个界面</text>
+
+    <!-- i18n 国际化 -->
+    <rect x="360" y="140" width="280" height="180" class="category-box phase0" rx="5"/>
+    <text x="500" y="165" class="subtitle">2. i18n 国际化</text>
+    <text x="380" y="190" class="text" text-anchor="start">• 语言管理</text>
+    <text x="380" y="210" class="text" text-anchor="start">• 翻译编辑器</text>
+    <text x="380" y="230" class="text" text-anchor="start">• 批量翻译</text>
+    <text x="380" y="250" class="text" text-anchor="start">• 进度仪表板</text>
+    <text x="380" y="270" class="text" text-anchor="start">• 导入/导出</text>
+    <text x="500" y="305" class="text" font-weight="bold">4 个界面</text>
+
+    <!-- LLM 管理 ✨ 新增 -->
+    <rect x="670" y="140" width="280" height="180" class="category-box new" rx="5"/>
+    <text x="810" y="165" class="subtitle">3. LLM 管理 ✨</text>
+    <text x="690" y="190" class="text" text-anchor="start">• 参数配置面板</text>
+    <text x="690" y="210" class="text" text-anchor="start">• LLMCalls Grid</text>
+    <text x="690" y="230" class="text" text-anchor="start">• 测试连接</text>
+    <text x="690" y="250" class="text" text-anchor="start">• 成本分析</text>
+    <text x="690" y="270" class="text" text-anchor="start">• 记录管理</text>
+    <text x="810" y="305" class="text" font-weight="bold">3 个界面</text>
+
+    <!-- 等待和加载 ✨ 新增 -->
+    <rect x="980" y="140" width="280" height="180" class="category-box new" rx="5"/>
+    <text x="1120" y="165" class="subtitle">4. 等待界面 ✨</text>
+    <text x="1000" y="190" class="text" text-anchor="start">• LLM 等待窗体</text>
+    <text x="1000" y="210" class="text" text-anchor="start">• SVG 动画</text>
+    <text x="1000" y="230" class="text" text-anchor="start">• 进度提示</text>
+    <text x="1000" y="250" class="text" text-anchor="start">• 取消/后台按钮</text>
+    <text x="1000" y="270" class="text" text-anchor="start">• 通知栏</text>
+    <text x="1120" y="305" class="text" font-weight="bold">3 个界面</text>
+
+    <!-- 日志异常 -->
+    <rect x="1290" y="140" width="280" height="180" class="category-box phase1" rx="5"/>
+    <text x="1430" y="165" class="subtitle">5. 日志异常</text>
+    <text x="1310" y="190" class="text" text-anchor="start">• 日志查看器</text>
+    <text x="1310" y="210" class="text" text-anchor="start">• 异常报告</text>
+    <text x="1310" y="230" class="text" text-anchor="start">• 堆栈详情</text>
+    <text x="1310" y="250" class="text" text-anchor="start">• 统计图表</text>
+    <text x="1310" y="270" class="text" text-anchor="start">• 导出功能</text>
+    <text x="1430" y="305" class="text" font-weight="bold">4 个界面</text>
+  </g>
+
+  <!-- 第二行：MRU、主题、更新、反馈 -->
+  <g id="row2">
+    <!-- MRU 快捷键 -->
+    <rect x="50" y="350" width="280" height="180" class="category-box phase1" rx="5"/>
+    <text x="190" y="375" class="subtitle">6. MRU 快捷键</text>
+    <text x="70" y="400" class="text" text-anchor="start">• MRU 管理</text>
+    <text x="70" y="420" class="text" text-anchor="start">• 快捷键编辑器</text>
+    <text x="70" y="440" class="text" text-anchor="start">• 冲突检测</text>
+    <text x="70" y="460" class="text" text-anchor="start">• 导入/导出</text>
+    <text x="70" y="480" class="text" text-anchor="start">• 重置默认</text>
+    <text x="190" y="515" class="text" font-weight="bold">2 个界面</text>
+
+    <!-- 主题外观 -->
+    <rect x="360" y="350" width="280" height="180" class="category-box phase1" rx="5"/>
+    <text x="500" y="375" class="subtitle">7. 主题外观</text>
+    <text x="380" y="400" class="text" text-anchor="start">• 主题选择</text>
+    <text x="380" y="420" class="text" text-anchor="start">• 主题预览库</text>
+    <text x="380" y="440" class="text" text-anchor="start">• 导入自定义主题</text>
+    <text x="380" y="460" class="text" text-anchor="start">• 字体设置</text>
+    <text x="380" y="480" class="text" text-anchor="start">• DPI 缩放</text>
+    <text x="500" y="515" class="text" font-weight="bold">2 个界面</text>
+
+    <!-- 自动更新 -->
+    <rect x="670" y="350" width="280" height="180" class="category-box phase2" rx="5"/>
+    <text x="810" y="375" class="subtitle">8. 自动更新</text>
+    <text x="690" y="400" class="text" text-anchor="start">• 更新提示</text>
+    <text x="690" y="420" class="text" text-anchor="start">• 下载进度</text>
+    <text x="690" y="440" class="text" text-anchor="start">• 更新验证</text>
+    <text x="690" y="460" class="text" text-anchor="start">• 签名检查</text>
+    <text x="690" y="480" class="text" text-anchor="start">• 升级备份</text>
+    <text x="810" y="515" class="text" font-weight="bold">3 个界面</text>
+
+    <!-- 用户反馈 -->
+    <rect x="980" y="350" width="280" height="180" class="category-box phase2" rx="5"/>
+    <text x="1120" y="375" class="subtitle">9. 用户反馈</text>
+    <text x="1000" y="400" class="text" text-anchor="start">• 反馈对话框</text>
+    <text x="1000" y="420" class="text" text-anchor="start">• 反馈类型</text>
+    <text x="1000" y="440" class="text" text-anchor="start">• 系统信息</text>
+    <text x="1000" y="460" class="text" text-anchor="start">• 日志附件</text>
+    <text x="1000" y="480" class="text" text-anchor="start">• 预览/发送</text>
+    <text x="1120" y="515" class="text" font-weight="bold">1 个界面</text>
+
+    <!-- 配置管理 -->
+    <rect x="1290" y="350" width="280" height="180" class="category-box phase2" rx="5"/>
+    <text x="1430" y="375" class="subtitle">10. 配置管理</text>
+    <text x="1310" y="400" class="text" text-anchor="start">• 备份对话框</text>
+    <text x="1310" y="420" class="text" text-anchor="start">• 恢复对话框</text>
+    <text x="1310" y="440" class="text" text-anchor="start">• 选择内容</text>
+    <text x="1310" y="460" class="text" text-anchor="start">• 加密选项</text>
+    <text x="1310" y="480" class="text" text-anchor="start">• 位置选择</text>
+    <text x="1430" y="515" class="text" font-weight="bold">2 个界面</text>
+  </g>
+
+  <!-- 第三行：License、DB维护 -->
+  <g id="row3">
+    <!-- License -->
+    <rect x="50" y="560" width="280" height="180" class="category-box phase3" rx="5"/>
+    <text x="190" y="585" class="subtitle">11. License</text>
+    <text x="70" y="610" class="text" text-anchor="start">• 关于窗体</text>
+    <text x="70" y="630" class="text" text-anchor="start">• License 信息</text>
+    <text x="70" y="650" class="text" text-anchor="start">• 激活/取消激活</text>
+    <text x="70" y="670" class="text" text-anchor="start">• 激活码输入</text>
+    <text x="70" y="690" class="text" text-anchor="start">• 在线验证</text>
+    <text x="190" y="725" class="text" font-weight="bold">2 个界面</text>
+
+    <!-- DB 维护 -->
+    <rect x="360" y="560" width="280" height="180" class="category-box phase3" rx="5"/>
+    <text x="500" y="585" class="subtitle">12. DB 维护</text>
+    <text x="380" y="610" class="text" text-anchor="start">• 数据库管理</text>
+    <text x="380" y="630" class="text" text-anchor="start">• 备份/恢复</text>
+    <text x="380" y="650" class="text" text-anchor="start">• 完整性检查</text>
+    <text x="380" y="670" class="text" text-anchor="start">• 数据导出</text>
+    <text x="380" y="690" class="text" text-anchor="start">• 导出格式选择</text>
+    <text x="500" y="725" class="text" font-weight="bold">2 个界面</text>
+
+    <!-- 总统计 -->
+    <rect x="670" y="560" width="900" height="180" fill="none" stroke="#333" stroke-width="3" rx="5"/>
+    <text x="800" y="590" class="subtitle" font-size="20">📊 界面统计总览</text>
+    
+    <text x="700" y="625" class="text" font-weight="bold" text-anchor="start">Total UI Interfaces: 32+</text>
+    <text x="700" y="645" class="text" text-anchor="start">✓ Phase 0-1: 9 个界面（核心必需）</text>
+    <text x="700" y="665" class="text" text-anchor="start">✓ Phase 1-2: 11 个界面（重要功能）</text>
+    <text x="700" y="685" class="text" text-anchor="start">✓ Phase 2-3: 6 个界面（增强功能）</text>
+    
+    <text x="1300" y="625" class="text" text-anchor="start">✨ New Interfaces: 6 个</text>
+    <text x="1300" y="645" class="text" text-anchor="start">LLM 参数配置 + Grid</text>
+    <text x="1300" y="665" class="text" text-anchor="start">LLM 等待窗体</text>
+    <text x="1300" y="685" class="text" text-anchor="start">后台任务通知栏</text>
+  </g>
+
+  <!-- LLM 等待窗体详细设计 -->
+  <g id="llm-wait-detail">
+    <text x="50" y="800" class="subtitle">🎯 LLM 等待窗体详细设计</text>
+    
+    <rect x="50" y="820" width="500" height="300" fill="white" stroke="#333" stroke-width="2" rx="5"/>
+    <rect x="50" y="820" width="500" height="35" fill="#ff9999" stroke="#333" stroke-width="1"/>
+    <text x="300" y="844" class="text" font-weight="bold" text-anchor="middle">LLM 处理中...</text>
+    <text x="530" y="844" class="text" font-size="14">🗙</text>
+    
+    <!-- 上部动画区 -->
+    <circle cx="300" cy="900" r="30" fill="none" stroke="#ff6666" stroke-width="3" opacity="0.7"/>
+    <circle cx="300" cy="900" r="25" fill="none" stroke="#ff9999" stroke-width="2" opacity="0.5"/>
+    <text x="300" y="908" class="text" font-size="16" font-weight="bold">🔄</text>
+    
+    <!-- 中部文本 -->
+    <text x="300" y="960" class="text" font-weight="bold">正在处理您的请求...</text>
+    <text x="300" y="985" class="text">当前：访问 LiteLLM...</text>
+    <text x="300" y="1008" class="text">Token 使用: 45/2000</text>
+    
+    <!-- 下部按钮 -->
+    <rect x="120" y="1050" width="100" height="35" fill="#cccccc" stroke="#333" stroke-width="1" rx="3"/>
+    <text x="170" y="1072" class="text">取消</text>
+    
+    <rect x="280" y="1050" width="100" height="35" fill="#cccccc" stroke="#333" stroke-width="1" rx="3"/>
+    <text x="330" y="1072" class="text">后台运行</text>
+    
+    <!-- 说明 -->
+    <text x="70" y="1120" class="text" text-anchor="start" font-size="11" fill="#666">● 上部：SVG 动画（从库中随机选择）</text>
+    <text x="70" y="1137" class="text" text-anchor="start" font-size="11" fill="#666">● 中部：提示文本 + 进度信息（动态更新）</text>
+    <text x="70" y="1154" class="text" text-anchor="start" font-size="11" fill="#666">● 下部：取消/后台运行按钮</text>
+  </g>
+
+  <!-- LLM 配置界面简图 -->
+  <g id="llm-config-detail">
+    <text x="600" y="800" class="subtitle">🎯 LLM 参数配置界面简图</text>
+    
+    <rect x="600" y="820" width="900" height="300" fill="white" stroke="#333" stroke-width="2" rx="5"/>
+    
+    <!-- 上部：配置面板 -->
+    <text x="620" y="845" class="text" text-anchor="start" font-weight="bold">参数配置</text>
+    <line x1="620" y1="850" x2="1480" y2="850" stroke="#ccc" stroke-width="1"/>
+    
+    <text x="620" y="870" class="text" text-anchor="start" font-size="11">☑ 启用</text>
+    <text x="720" y="870" class="text" text-anchor="start" font-size="11">Provider: [LiteLLM▼]</text>
+    <text x="1050" y="870" class="text" text-anchor="start" font-size="11">[测试连接]</text>
+    
+    <text x="620" y="890" class="text" text-anchor="start" font-size="11">API地址: [_______]</text>
+    <text x="900" y="890" class="text" text-anchor="start" font-size="11">API Key: [***] [👁️]</text>
+    
+    <text x="620" y="910" class="text" text-anchor="start" font-size="11">Model: [gpt-4o▼]</text>
+    <text x="850" y="910" class="text" text-anchor="start" font-size="11">Temperature: [0.7]</text>
+    <text x="1120" y="910" class="text" text-anchor="start" font-size="11">Timeout: [60000ms]</text>
+    
+    <text x="620" y="930" class="text" text-anchor="start" font-size="11">Input: $[0.15]/1K  Output: $[0.60]/1K</text>
+    <text x="1000" y="930" class="text" text-anchor="start" font-size="11">并发: [5]  重试: [3]</text>
+    
+    <!-- 下部：Grid -->
+    <text x="620" y="955" class="text" text-anchor="start" font-weight="bold">LLM 调用记录</text>
+    <line x1="620" y1="960" x2="1480" y2="960" stroke="#ccc" stroke-width="1"/>
+    
+    <rect x="620" y="965" width="860" height="15" fill="#f0f0f0" stroke="#ccc" stroke-width="1"/>
+    <text x="630" y="976" class="text" font-size="9" text-anchor="start">时间 | Provider | 状态 | Duration | Tokens | 费用</text>
+    
+    <line x1="620" y1="980" x2="1480" y2="980" stroke="#ccc" stroke-width="1"/>
+    <text x="630" y="993" class="text" font-size="9" text-anchor="start">14:30 | LiteLLM | ✓ | 1250ms | 245 | $0.08</text>
+    <line x1="620" y1="998" x2="1480" y2="998" stroke="#eee" stroke-width="1"/>
+    <text x="630" y="1011" class="text" font-size="9" text-anchor="start">14:28 | LiteLLM | ✓ | 980ms | 180 | $0.06</text>
+    <line x1="620" y1="1016" x2="1480" y2="1016" stroke="#eee" stroke-width="1"/>
+    <text x="630" y="1029" class="text" font-size="9" text-anchor="start">14:27 | OpenAI | ✓ | 5400ms | 512 | $0.15</text>
+    
+    <text x="630" y="1050" class="text" font-size="10" text-anchor="start" font-weight="bold">总调用: 156  成功: 154  失败: 2  今日费用: $2.34</text>
+  </g>
+
+  <!-- 底部提示 -->
+  <g id="tips">
+    <rect x="50" y="1070" width="1450" height="100" fill="#fffacd" stroke="#999" stroke-width="1" rx="3"/>
+    
+    <text x="70" y="1090" class="subtitle" font-size="14">💡 重要特性</text>
+    <text x="70" y="1112" class="text" text-anchor="start" font-size="11">✓ LLM 等待窗体上部采用随机 SVG 动画 - 从 AnimationAssets 库中随机选择动画</text>
+    <text x="70" y="1132" class="text" text-anchor="start" font-size="11">✓ LLM 参数配置支持实时测试连接、成本计算、并发控制、智能重试</text>
+    <text x="70" y="1152" class="text" text-anchor="start" font-size="11">✓ Grid 支持排序、筛选、搜索、导出功能 - 帮助用户监控 LLM 调用成本</text>
+  </g>
+</svg>

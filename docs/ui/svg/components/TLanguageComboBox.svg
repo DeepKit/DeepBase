@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="150" class="bg" />
+  
+          <text x="10" y="20" class="title">TLanguageComboBox</text>
+          
+          <!-- ComboBox Closed -->
+          <rect x="10" y="35" width="180" height="25" class="ctrl-bg" />
+          <rect x="15" y="40" width="20" height="15" fill="#ddd" stroke="#666" stroke-width="1"/> <!-- Flag Placeholder -->
+          <text x="45" y="52" class="label">English (United States)</text>
+          <path d="M170 45 l5 5 l5 -5" fill="none" stroke="#666" />
+          
+          <!-- Dropdown List -->
+          <g transform="translate(10, 60)">
+            <rect width="180" height="75" fill="#fff" stroke="#999" stroke-width="1" />
+            
+            <!-- Item 1 -->
+            <rect x="0" y="0" width="180" height="25" fill="#e3f2fd" />
+            <rect x="5" y="5" width="20" height="15" fill="#ddd" stroke="#666" stroke-width="1"/>
+            <text x="35" y="17" class="label">English (United States)</text>
+            
+            <!-- Item 2 -->
+            <rect x="5" y="30" width="20" height="15" fill="#ffcccc" stroke="#666" stroke-width="1"/>
+            <text x="35" y="42" class="label">简体中文 (Chinese)</text>
+            
+            <!-- Item 3 -->
+            <rect x="5" y="55" width="20" height="15" fill="#ffffcc" stroke="#666" stroke-width="1"/>
+            <text x="35" y="67" class="label">日本語 (Japanese)</text>
+          </g>
+        
+</svg>

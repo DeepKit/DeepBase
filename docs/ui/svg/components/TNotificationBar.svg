@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 60" width="400" height="60">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="400" height="60" class="bg" />
+  
+          <text x="10" y="15" class="title">TNotificationBar</text>
+          
+          <!-- Bar -->
+          <rect x="10" y="20" width="380" height="35" fill="#fff" stroke="#999" rx="3" filter="drop-shadow(1px 1px 2px rgba(0,0,0,0.1))"/>
+          
+          <!-- Icon Spinner -->
+          <circle cx="30" cy="37" r="8" fill="none" stroke="#2196f3" stroke-width="2" stroke-dasharray="10 5" />
+          
+          <!-- Text -->
+          <text x="50" y="42" class="label" font-weight="bold">Processing LLM Request...</text>
+          
+          <!-- Progress -->
+          <rect x="200" y="32" width="100" height="10" fill="#eee" rx="5"/>
+          <rect x="200" y="32" width="60" height="10" fill="#4caf50" rx="5"/>
+          <text x="310" y="41" class="label" font-size="10px">60%</text>
+          
+          <!-- Close -->
+          <text x="365" y="42" class="label" font-weight="bold" fill="#666">×</text>
+        
+</svg>

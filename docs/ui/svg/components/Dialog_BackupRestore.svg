@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" width="400" height="250">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .header-bg { fill: #e0e0e0; stroke: #999; stroke-width: 1; }
+      .sidebar-bg { fill: #263238; }
+      .sidebar-text { fill: #cfd8dc; font-family: Arial, sans-serif; font-size: 12px; }
+      .sidebar-active { fill: #37474f; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .grid-line { stroke: #eee; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="400" height="250" class="bg" />
+  
+          <text x="10" y="20" class="title">Dialog_BackupRestore</text>
+          <rect x="10" y="30" width="380" height="210" fill="#fff" stroke="#333" />
+          
+          <!-- Option: Backup -->
+          <rect x="30" y="50" width="340" height="60" fill="#e3f2fd" stroke="#2196f3" rx="5"/>
+          <text x="50" y="75" class="label" font-weight="bold">Backup Configuration</text>
+          <text x="50" y="95" class="label" fill="#666">Save current settings to a file.</text>
+          <rect x="280" y="65" width="70" height="30" fill="#2196f3" rx="3"/>
+          <text x="315" y="84" class="label" fill="#fff" text-anchor="middle">Backup</text>
+          
+          <!-- Option: Restore -->
+          <rect x="30" y="130" width="340" height="60" fill="#fff" stroke="#ccc" rx="5"/>
+          <text x="50" y="155" class="label" font-weight="bold">Restore Configuration</text>
+          <text x="50" y="175" class="label" fill="#666">Load settings from a backup file.</text>
+          <rect x="280" y="145" width="70" height="30" fill="#eee" stroke="#ccc" rx="3"/>
+          <text x="315" y="164" class="label" text-anchor="middle">Restore</text>
+        
+</svg>

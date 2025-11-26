@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .panel-bg { fill: #f0f2f5; stroke: #ccc; stroke-width: 1; }
+      .label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #333; }
+      .tag-green { fill: #e8f5e9; stroke: #a5d6a7; stroke-width: 1; }
+      .tag-gray { fill: #e0e0e0; stroke: #bdbdbd; stroke-width: 1; }
+      .progress-bg { fill: #e0e0e0; }
+      .progress-bar { fill: #81c784; }
+      .code-text { font-family: Consolas, monospace; font-size: 11px; fill: #555; }
+      .dialog-bg { fill: #ffffff; stroke: #333; stroke-width: 1; }
+      .btn-primary { fill: #2196f3; rx: 3; }
+      .btn-text { font-family: Arial, sans-serif; font-size: 12px; fill: #fff; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="400" height="220" class="bg" />
+  
+          <text x="10" y="20" class="title" font-size="14px">TLicenseAuthDialog</text>
+          
+          <!-- Dialog Window -->
+          <rect x="10" y="35" width="380" height="170" class="dialog-bg" rx="5" filter="drop-shadow(2px 2px 4px rgba(0,0,0,0.1))"/>
+          
+          <!-- Header -->
+          <rect x="10" y="35" width="380" height="35" fill="#2196f3" rx="5 5 0 0"/>
+          <text x="25" y="58" class="title" fill="#fff" font-size="14px">激活产品</text>
+          <text x="370" y="58" class="title" fill="#fff" text-anchor="middle" font-size="14px">×</text>
+          
+          <!-- Input Area -->
+          <text x="30" y="90" class="label">请输入您的 License Key (卡密):</text>
+          <rect x="30" y="100" width="340" height="30" fill="#fff" stroke="#999" rx="2"/>
+          <text x="40" y="120" class="code-text" fill="#ccc">XXXX-YYYY-ZZZZ-AAAA</text>
+          
+          <!-- Machine Code -->
+          <text x="30" y="150" class="label" font-size="10px" fill="#666">机器码: </text>
+          <text x="70" y="150" class="code-text">M-8F3A-2B1C-9D4E</text>
+          <text x="180" y="150" class="label" font-size="10px" fill="#2196f3" text-decoration="underline">复制</text>
+          
+          <!-- Buttons -->
+          <line x1="10" y1="165" x2="390" y2="165" stroke="#eee"/>
+          
+          <rect x="200" y="175" width="80" height="25" fill="#f5f5f5" stroke="#ccc" rx="3"/>
+          <text x="240" y="192" class="label" text-anchor="middle">取消</text>
+          
+          <rect x="290" y="175" width="80" height="25" class="btn-primary"/>
+          <text x="330" y="192" class="btn-text">立即激活</text>
+        
+</svg>

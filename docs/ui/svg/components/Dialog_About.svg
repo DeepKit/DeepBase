@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .header-bg { fill: #e0e0e0; stroke: #999; stroke-width: 1; }
+      .sidebar-bg { fill: #263238; }
+      .sidebar-text { fill: #cfd8dc; font-family: Arial, sans-serif; font-size: 12px; }
+      .sidebar-active { fill: #37474f; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .grid-line { stroke: #eee; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="400" height="300" class="bg" />
+  
+          <text x="10" y="20" class="title">Dialog_About</text>
+          <rect x="10" y="30" width="380" height="260" fill="#fff" stroke="#333" />
+          
+          <!-- App Icon -->
+          <rect x="30" y="50" width="64" height="64" fill="#eee" stroke="#ccc"/>
+          <text x="62" y="85" class="label" text-anchor="middle">Icon</text>
+          
+          <!-- App Info -->
+          <text x="110" y="60" class="title" font-size="18px">MyApp</text>
+          <text x="110" y="80" class="label">Version 1.0.0 (Build 1024)</text>
+          <text x="110" y="100" class="label" fill="#666">Copyright © 2025 MyCompany</text>
+          
+          <!-- Tabs -->
+          <rect x="30" y="130" width="340" height="140" fill="#fff" stroke="#ccc"/>
+          <rect x="30" y="130" width="340" height="25" fill="#f5f5f5" stroke="#ccc"/>
+          <text x="60" y="147" class="label" font-weight="bold">Components</text>
+          <text x="150" y="147" class="label" fill="#666">System Info</text>
+          
+          <!-- List -->
+          <text x="40" y="170" class="label">• UniBase Core v0.3</text>
+          <text x="40" y="190" class="label">• LiteLLM Adapter v1.0</text>
+          <text x="40" y="210" class="label">• Image32 Library</text>
+          
+          <!-- Close -->
+          <rect x="300" y="240" width="60" height="24" fill="#eee" stroke="#ccc" rx="3"/>
+          <text x="330" y="256" class="label" text-anchor="middle">OK</text>
+        
+</svg>

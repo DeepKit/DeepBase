@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" width="300" height="80">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="80" class="bg" />
+  
+          <text x="10" y="20" class="title">TConfigCheckBox</text>
+          
+          <!-- CheckBox -->
+          <rect x="10" y="40" width="16" height="16" class="ctrl-bg" />
+          <path d="M13 43 l4 4 l8 -8" fill="none" stroke="#333" stroke-width="2" transform="translate(0,2)"/>
+          
+          <text x="35" y="53" class="label">Enable Auto-Start</text>
+          
+          <!-- Binding Tag -->
+          <rect x="160" y="42" width="90" height="16" fill="#e0f7fa" stroke="#00bcd4" stroke-width="0.5" rx="2"/>
+          <text x="165" y="54" class="tag" fill="#006064">🔗 App.AutoStart</text>
+        
+</svg>

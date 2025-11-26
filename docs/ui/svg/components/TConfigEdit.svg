@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="300" height="100">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="100" class="bg" />
+  
+          <text x="10" y="20" class="title">TConfigEdit</text>
+          
+          <!-- Label -->
+          <text x="10" y="50" class="label">Server Port:</text>
+          
+          <!-- Edit Box -->
+          <rect x="90" y="35" width="150" height="25" class="ctrl-bg" />
+          <text x="100" y="52" class="label">8080</text>
+          
+          <!-- Binding Tag -->
+          <rect x="90" y="70" width="80" height="16" fill="#e0f7fa" stroke="#00bcd4" stroke-width="0.5" rx="2"/>
+          <text x="95" y="82" class="tag" fill="#006064">🔗 Network.Port</text>
+          
+          <!-- AutoSave Icon -->
+          <circle cx="230" cy="47" r="8" fill="none" stroke="#4caf50" stroke-width="1.5" />
+          <path d="M226 47 l3 3 l5 -5" fill="none" stroke="#4caf50" stroke-width="1.5" />
+        
+</svg>

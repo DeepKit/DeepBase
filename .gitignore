@@ -1,0 +1,68 @@
+# Delphi 编译输出
+*.dcu
+*.exe
+*.dll
+*.bpl
+*.dcp
+*.so
+*.apk
+*.drc
+*.map
+*.dres
+*.rsm
+*.tds
+*.dproj.local
+*.identcache
+*.stat
+
+# 项目文件
+__history/
+__recovery/
+*.local
+*.ddp
+*.deployproj
+*.~*
+
+# IDE 文件
+*.dsk
+ModelSupport/
+*.groupproj.local
+
+# 测试覆盖率
+*.html
+coverage/
+
+# 临时文件
+*.tmp
+*.log
+*.bak
+*.orig
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 构建输出
+Win32/
+Win64/
+Debug/
+Release/
+*.res
+
+# 包文件（编译后的）
+*.bpl
+*.dcp
+__history/
+
+# 但保留源码包定义
+!*.dpk
+!*.dproj
+
+# 数据库文件（示例除外）
+config.db
+!Examples/**/config.db
+
+# 日志和临时数据
+logs/
+*.sqlite-journal

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="300" height="100">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="100" class="bg" />
+  
+          <text x="10" y="20" class="title">TConfigSpinEdit</text>
+          
+          <text x="10" y="50" class="label">Max Retries:</text>
+          
+          <!-- Spin Edit -->
+          <rect x="90" y="35" width="80" height="25" class="ctrl-bg" />
+          <text x="100" y="52" class="label">3</text>
+          
+          <!-- Buttons -->
+          <rect x="150" y="35" width="20" height="12.5" fill="#ddd" stroke="#999" stroke-width="0.5"/>
+          <path d="M155 42 l5 -4 l5 4" fill="#666" />
+          <rect x="150" y="47.5" width="20" height="12.5" fill="#ddd" stroke="#999" stroke-width="0.5"/>
+          <path d="M155 52 l5 4 l5 -4" fill="#666" />
+          
+          <!-- Binding Tag -->
+          <rect x="90" y="70" width="90" height="16" fill="#e0f7fa" stroke="#00bcd4" stroke-width="0.5" rx="2"/>
+          <text x="95" y="82" class="tag" fill="#006064">🔗 Net.MaxRetries</text>
+        
+</svg>

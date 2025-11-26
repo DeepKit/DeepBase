@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="150" class="bg" />
+  
+          <text x="10" y="20" class="title">TThemeComboBox</text>
+          
+          <rect x="10" y="35" width="200" height="25" class="ctrl-bg" />
+          <rect x="15" y="40" width="15" height="15" fill="#333" />
+          <text x="40" y="52" class="label">Windows11 Dark</text>
+          <path d="M190 45 l5 5 l5 -5" fill="none" stroke="#666" />
+          
+          <!-- Dropdown -->
+          <g transform="translate(10, 60)">
+            <rect width="200" height="80" fill="#fff" stroke="#999" stroke-width="1" />
+            
+            <!-- Header Light -->
+            <rect x="0" y="0" width="200" height="18" fill="#eee" />
+            <text x="5" y="13" class="label" font-size="9px" fill="#666">Light Themes</text>
+            
+            <!-- Item Light -->
+            <rect x="5" y="22" width="15" height="15" fill="#fff" stroke="#ccc"/>
+            <text x="30" y="34" class="label">Windows11 Light</text>
+            
+            <!-- Header Dark -->
+            <rect x="0" y="40" width="200" height="18" fill="#eee" />
+            <text x="5" y="53" class="label" font-size="9px" fill="#666">Dark Themes</text>
+            
+            <!-- Item Dark -->
+            <rect x="0" y="60" width="200" height="20" fill="#e0f7fa" />
+            <rect x="5" y="62" width="15" height="15" fill="#333" stroke="#ccc"/>
+            <text x="30" y="74" class="label">Windows11 Dark</text>
+          </g>
+        
+</svg>

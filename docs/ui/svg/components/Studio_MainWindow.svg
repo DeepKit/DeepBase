@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .header-bg { fill: #e0e0e0; stroke: #999; stroke-width: 1; }
+      .sidebar-bg { fill: #263238; }
+      .sidebar-text { fill: #cfd8dc; font-family: Arial, sans-serif; font-size: 12px; }
+      .sidebar-active { fill: #37474f; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .grid-line { stroke: #eee; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="800" height="500" class="bg" />
+  
+          <text x="10" y="20" class="title">Studio_MainWindow</text>
+          
+          <!-- Window Frame -->
+          <rect x="10" y="30" width="780" height="460" fill="#fff" stroke="#333" stroke-width="1" />
+          
+          <!-- Sidebar -->
+          <rect x="10" y="30" width="180" height="460" class="sidebar-bg" />
+          
+          <!-- Logo Area -->
+          <rect x="10" y="30" width="180" height="50" fill="#1c262b" />
+          <text x="30" y="60" class="title" fill="#fff">UniBase Studio</text>
+          
+          <!-- Nav Items -->
+          <rect x="10" y="90" width="180" height="35" class="sidebar-active" />
+          <text x="30" y="112" class="sidebar-text" fill="#fff" font-weight="bold">🏠 Dashboard</text>
+          
+          <text x="30" y="147" class="sidebar-text">📂 Projects</text>
+          <text x="30" y="182" class="sidebar-text">🌐 Translation (i18n)</text>
+          <text x="30" y="217" class="sidebar-text">📝 Logs & Exceptions</text>
+          <text x="30" y="252" class="sidebar-text">⚙️ Configuration</text>
+          <text x="30" y="287" class="sidebar-text">🤖 LLM Management</text>
+          <text x="30" y="322" class="sidebar-text">📦 Release</text>
+          
+          <!-- Toolbar -->
+          <rect x="190" y="30" width="600" height="40" fill="#f5f5f5" stroke="#ddd" stroke-width="1"/>
+          <text x="200" y="55" class="label">Project: <b>MyApp (v1.0)</b></text>
+          <rect x="700" y="38" width="80" height="24" fill="#2196f3" rx="3"/>
+          <text x="740" y="54" class="label" fill="#fff" text-anchor="middle">Connect DB</text>
+          
+          <!-- Workspace -->
+          <rect x="200" y="80" width="580" height="400" fill="#fff" />
+          <text x="490" y="280" class="label" text-anchor="middle" fill="#ccc">Select a module from the sidebar</text>
+        
+</svg>

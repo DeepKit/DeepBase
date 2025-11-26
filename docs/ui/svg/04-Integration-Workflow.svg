@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000">
+  <defs>
+    <style>
+      .bg { fill: #f5f5f5; }
+      .title { font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; text-anchor: middle; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }
+      .text { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; }
+      .stage-box { stroke: #333; stroke-width: 2; }
+      .low-risk { fill: #ccffcc; }
+      .med-risk { fill: #ffffcc; }
+      .high-risk { fill: #ffcccc; }
+      .complete { fill: #99ff99; }
+      .arrow { stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .stage-text { font-size: 13px; font-weight: bold; }
+      .risk-text { font-size: 11px; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1600" height="1000" class="bg"/>
+
+  <!-- 标题 -->
+  <text x="800" y="35" class="title">UniBase 渐进式集成流程（8 个阶段）</text>
+
+  <!-- Stage 1 -->
+  <g id="stage1">
+    <rect x="30" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="105" y="105" class="stage-text">阶段 1</text>
+    <text x="105" y="125" class="text">root.txt +</text>
+    <text x="105" y="140" class="text">config.db 机制</text>
+    <text x="105" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow 1->2 -->
+  <line x1="180" y1="140" x2="210" y2="140" class="arrow"/>
+
+  <!-- Stage 2 -->
+  <g id="stage2">
+    <rect x="210" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="285" y="105" class="stage-text">阶段 2</text>
+    <text x="285" y="125" class="text">TFormState</text>
+    <text x="285" y="140" class="text">Helper</text>
+    <text x="285" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow 2->3 -->
+  <line x1="360" y1="140" x2="390" y2="140" class="arrow"/>
+
+  <!-- Stage 3 -->
+  <g id="stage3">
+    <rect x="390" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="465" y="105" class="stage-text">阶段 3</text>
+    <text x="465" y="125" class="text">接入日志</text>
+    <text x="465" y="140" class="text">模块</text>
+    <text x="465" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow 3->4 -->
+  <line x1="540" y1="140" x2="570" y2="140" class="arrow"/>
+
+  <!-- Stage 4 -->
+  <g id="stage4">
+    <rect x="570" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="645" y="105" class="stage-text">阶段 4</text>
+    <text x="645" y="125" class="text">替换 MRU</text>
+    <text x="645" y="140" class="text">控件</text>
+    <text x="645" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow 4->5 -->
+  <line x1="720" y1="140" x2="750" y2="140" class="arrow"/>
+
+  <!-- Stage 5 -->
+  <g id="stage5">
+    <rect x="750" y="80" width="150" height="120" class="stage-box med-risk" rx="5"/>
+    <text x="825" y="105" class="stage-text">阶段 5</text>
+    <text x="825" y="125" class="text">配置迁移</text>
+    <text x="825" y="140" class="text">到数据库</text>
+    <text x="825" y="160" class="risk-text">风险: 中</text>
+  </g>
+
+  <!-- Arrow 5->6 -->
+  <line x1="900" y1="140" x2="930" y2="140" class="arrow"/>
+
+  <!-- Stage 6 -->
+  <g id="stage6">
+    <rect x="930" y="80" width="150" height="120" class="stage-box med-risk" rx="5"/>
+    <text x="1005" y="105" class="stage-text">阶段 6</text>
+    <text x="1005" y="125" class="text">文本</text>
+    <text x="1005" y="140" class="text">国际化</text>
+    <text x="1005" y="160" class="risk-text">风险: 中</text>
+  </g>
+
+  <!-- Arrow 6->7 -->
+  <line x1="1080" y1="140" x2="1110" y2="140" class="arrow"/>
+
+  <!-- Stage 7 -->
+  <g id="stage7">
+    <rect x="1110" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="1185" y="105" class="stage-text">阶段 7</text>
+    <text x="1185" y="125" class="text">运行 Studio</text>
+    <text x="1185" y="140" class="text">管理工具</text>
+    <text x="1185" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow 7->8 -->
+  <line x1="1260" y1="140" x2="1290" y2="140" class="arrow"/>
+
+  <!-- Stage 8 -->
+  <g id="stage8">
+    <rect x="1290" y="80" width="150" height="120" class="stage-box low-risk" rx="5"/>
+    <text x="1365" y="105" class="stage-text">阶段 8</text>
+    <text x="1365" y="125" class="text">添加自动</text>
+    <text x="1365" y="140" class="text">更新</text>
+    <text x="1365" y="160" class="risk-text">风险: 低</text>
+  </g>
+
+  <!-- Arrow to completion -->
+  <line x1="1365" y1="200" x2="1365" y2="230" class="arrow"/>
+
+  <!-- Completion -->
+  <ellipse cx="1365" cy="260" rx="60" ry="40" class="complete" stroke="#333" stroke-width="2"/>
+  <text x="1365" y="260" class="subtitle">集成完成</text>
+  <text x="1365" y="280" class="text">所有功能就绪</text>
+
+  <!-- 每个阶段的详细说明 -->
+  <g id="details">
+    <!-- Stage 1 详情 -->
+    <g id="detail1">
+      <rect x="30" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="105" y="250" class="subtitle">阶段 1 详情</text>
+      <text x="40" y="270" class="text" font-size="10">✓ 创建 root.txt</text>
+      <text x="40" y="285" class="text" font-size="10">✓ 初始化 config.db</text>
+      <text x="40" y="300" class="text" font-size="10">✓ 建立 Tier 0 表</text>
+      <text x="40" y="315" class="text" font-size="10">✓ 无 UI 修改</text>
+      <text x="40" y="330" class="text" font-size="10">✓ 立即验证</text>
+    </g>
+
+    <!-- Stage 2 详情 -->
+    <g id="detail2">
+      <rect x="210" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="285" y="250" class="subtitle">阶段 2 详情</text>
+      <text x="220" y="270" class="text" font-size="10">✓ 拖放 Helper</text>
+      <text x="220" y="285" class="text" font-size="10">✓ 配置 AutoSave</text>
+      <text x="220" y="300" class="text" font-size="10">✓ 配置 AutoRestore</text>
+      <text x="220" y="315" class="text" font-size="10">✓ 测试保存/恢复</text>
+      <text x="220" y="330" class="text" font-size="10">✓ 单个窗体验证</text>
+    </g>
+
+    <!-- Stage 3 详情 -->
+    <g id="detail3">
+      <rect x="390" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="465" y="250" class="subtitle">阶段 3 详情</text>
+      <text x="400" y="270" class="text" font-size="10">✓ 全局异常处理</text>
+      <text x="400" y="285" class="text" font-size="10">✓ 使用 UniBase.Log</text>
+      <text x="400" y="300" class="text" font-size="10">✓ 打开日志查看器</text>
+      <text x="400" y="315" class="text" font-size="10">✓ 验证日志记录</text>
+      <text x="400" y="330" class="text" font-size="10">✓ 异常捕获测试</text>
+    </g>
+
+    <!-- Stage 4 详情 -->
+    <g id="detail4">
+      <rect x="570" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="645" y="250" class="subtitle">阶段 4 详情</text>
+      <text x="580" y="270" class="text" font-size="10">✓ 配置 TMRUPopupMenu</text>
+      <text x="580" y="285" class="text" font-size="10">✓ 设置 Category</text>
+      <text x="580" y="300" class="text" font-size="10">✓ 处理 OnItemClick</text>
+      <text x="580" y="315" class="text" font-size="10">✓ 测试菜单显示</text>
+      <text x="580" y="330" class="text" font-size="10">✓ MRU 功能验证</text>
+    </g>
+
+    <!-- Stage 5 详情 -->
+    <g id="detail5">
+      <rect x="750" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="825" y="250" class="subtitle">阶段 5 详情</text>
+      <text x="760" y="270" class="text" font-size="10">✓ 梳理现有配置</text>
+      <text x="760" y="285" class="text" font-size="10">✓ 定义 Key 映射</text>
+      <text x="760" y="300" class="text" font-size="10">✓ 导入工具导入</text>
+      <text x="760" y="315" class="text" font-size="10">✓ 改写代码使用</text>
+      <text x="760" y="330" class="text" font-size="10">✓ 功能完整测试</text>
+    </g>
+
+    <!-- Stage 6 详情 -->
+    <g id="detail6">
+      <rect x="930" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="1005" y="250" class="subtitle">阶段 6 详情</text>
+      <text x="940" y="270" class="text" font-size="10">✓ 替换控件为 i18n</text>
+      <text x="940" y="285" class="text" font-size="10">✓ 设置 TextKey</text>
+      <text x="940" y="300" class="text" font-size="10">✓ Studio 源码扫描</text>
+      <text x="940" y="315" class="text" font-size="10">✓ 翻译编辑和导入</text>
+      <text x="940" y="330" class="text" font-size="10">✓ 语言切换验证</text>
+    </g>
+
+    <!-- Stage 7 详情 -->
+    <g id="detail7">
+      <rect x="1110" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="1185" y="250" class="subtitle">阶段 7 详情</text>
+      <text x="1120" y="270" class="text" font-size="10">✓ 启动 Studio</text>
+      <text x="1120" y="285" class="text" font-size="10">✓ 项目管理</text>
+      <text x="1120" y="300" class="text" font-size="10">✓ i18n 管理</text>
+      <text x="1120" y="315" class="text" font-size="10">✓ 日志查看</text>
+      <text x="1120" y="330" class="text" font-size="10">✓ 导入导出测试</text>
+    </g>
+
+    <!-- Stage 8 详情 -->
+    <g id="detail8">
+      <rect x="1290" y="230" width="150" height="120" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+      <text x="1365" y="250" class="subtitle">阶段 8 详情</text>
+      <text x="1300" y="270" class="text" font-size="10">✓ 拖放 TAutoUpdater</text>
+      <text x="1300" y="285" class="text" font-size="10">✓ 配置检查间隔</text>
+      <text x="1300" y="300" class="text" font-size="10">✓ 配置更新服务</text>
+      <text x="1300" y="315" class="text" font-size="10">✓ 通知测试</text>
+      <text x="1300" y="330" class="text" font-size="10">✓ 完整功能验证</text>
+    </g>
+  </g>
+
+  <!-- 风险等级说明 -->
+  <g id="risk-legend">
+    <text x="50" y="380" class="subtitle">风险等级说明</text>
+    
+    <rect x="50" y="400" width="30" height="20" class="low-risk" stroke="#333" stroke-width="1"/>
+    <text x="90" y="415" class="text" font-size="11">低风险（低）：最小化改变，易于回滚</text>
+    
+    <rect x="50" y="430" width="30" height="20" class="med-risk" stroke="#333" stroke-width="1"/>
+    <text x="90" y="445" class="text" font-size="11">中等风险（中）：需要测试和验证，有备份方案</text>
+    
+    <rect x="50" y="460" width="30" height="20" class="high-risk" stroke="#333" stroke-width="1"/>
+    <text x="90" y="475" class="text" font-size="11">高风险（高）：大量代码改动，完整测试必须</text>
+  </g>
+
+  <!-- 推荐周期 -->
+  <g id="timeline">
+    <text x="50" y="520" class="subtitle">推荐集成周期</text>
+    
+    <rect x="50" y="540" width="1500" height="60" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+    
+    <!-- 时间轴标记 -->
+    <line x1="80" y1="560" x2="1500" y2="560" stroke="#999" stroke-width="1"/>
+    
+    <circle cx="80" cy="560" r="5" fill="#ccffcc" stroke="#333" stroke-width="1"/>
+    <text x="80" y="585" class="text" font-size="10">第 1 周</text>
+    <text x="60" y="600" class="text" font-size="9">阶段 1-2</text>
+    
+    <circle cx="280" cy="560" r="5" fill="#ccffcc" stroke="#333" stroke-width="1"/>
+    <text x="280" y="585" class="text" font-size="10">第 2 周</text>
+    <text x="260" y="600" class="text" font-size="9">阶段 3-4</text>
+    
+    <circle cx="480" cy="560" r="5" fill="#ffffcc" stroke="#333" stroke-width="1"/>
+    <text x="480" y="585" class="text" font-size="10">第 3 周</text>
+    <text x="460" y="600" class="text" font-size="9">阶段 5-6</text>
+    
+    <circle cx="680" cy="560" r="5" fill="#ccffcc" stroke="#333" stroke-width="1"/>
+    <text x="680" y="585" class="text" font-size="10">第 4 周</text>
+    <text x="660" y="600" class="text" font-size="9">阶段 7-8</text>
+    
+    <circle cx="880" cy="560" r="5" fill="#99ff99" stroke="#333" stroke-width="1"/>
+    <text x="880" y="585" class="text" font-size="10">完成</text>
+    <text x="850" y="600" class="text" font-size="9">集成完成</text>
+  </g>
+
+  <!-- 关键指标 -->
+  <g id="metrics">
+    <text x="800" y="520" class="subtitle">集成关键指标</text>
+    
+    <rect x="750" y="540" width="350" height="140" fill="white" stroke="#999" stroke-width="1" rx="3"/>
+    
+    <text x="930" y="565" class="text" font-weight="bold">总时间投入</text>
+    <text x="930" y="585" class="text" font-size="11">4-6 周（按团队规模调整）</text>
+    
+    <text x="930" y="610" class="text" font-weight="bold">代码改动量</text>
+    <text x="930" y="630" class="text" font-size="11">20-30% 的现有代码需要迁移</text>
+    
+    <text x="930" y="655" class="text" font-weight="bold">回滚难度</text>
+    <text x="930" y="675" class="text" font-size="11">阶段 1-4: 易（git reset）</text>
+    
+    <text x="930" y="695" class="text" font-size="11">阶段 5-8: 中（需要手动恢复）</text>
+  </g>
+
+  <!-- 底部提示 -->
+  <g id="tips">
+    <rect x="50" y="700" width="1500" height="100" fill="#fffacd" stroke="#999" stroke-width="1" rx="3"/>
+    
+    <text x="60" y="720" class="subtitle">💡 集成建议</text>
+    <text x="60" y="745" class="text" font-size="11">• 每个阶段后都进行完整测试，确保功能正常</text>
+    <text x="60" y="765" class="text" font-size="11">• 建议使用 git 分支进行集成，便于测试和回滚</text>
+    <text x="60" y="785" class="text" font-size="11">• 定期备份源代码，特别是在高风险阶段（5-6）</text>
+  </g>
+
+  <!-- 底部图例 -->
+  <g id="bottom-legend">
+    <text x="50" y="850" class="text" font-size="10" font-weight="bold">阶段划分：</text>
+    <text x="200" y="850" class="text" font-size="10">①基础设施 (1-2)</text>
+    <text x="400" y="850" class="text" font-size="10">②业务模块 (3-4)</text>
+    <text x="600" y="850" class="text" font-size="10">③数据迁移 (5-6)</text>
+    <text x="800" y="850" class="text" font-size="10">④工具集成 (7-8)</text>
+  </g>
+</svg>

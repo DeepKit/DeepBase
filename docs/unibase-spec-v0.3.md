@@ -1,0 +1,2200 @@
+# UniBase - Delphi 应用基础设施框架规范（v0.3）
+
+> 本文档为 UniBase 的完整设计规范。**UniBase Core 可完全离线使用，Studio/CLI/云服务都是可选增强。**
+> 对于只想用“本地配置 + i18n + 日志”的小项目，可以只接 Core + 少量控件，不必部署任何服务器。
+
+---
+
+## 目录
+
+1. 概述与架构
+2. 目录与文件约定（Core）
+3. config.db 表结构定义（Core）
+4. Core 模块接口（Core）
+5. UI 控件规范（推荐）
+6. 动画资源处理（推荐扩展）
+7. UniBase Studio 功能规范（推荐工具）
+8. **UniBaseTray 工作台规范（日常工具）**
+9. UniBase CLI 命令行工具（推荐工具）
+10. 云端服务规范（可选）
+11. 与现有工程集成指南
+12. 安全性考虑
+13. 测试支持
+14. 线程安全说明
+15. 单元文件结构
+16. 后续工作
+
+---
+
+## 版本变更记录
+
+| 版本 | 日期 | 变更说明 |
+|------|------|----------|
+| v0.3 | 2025-11 | 新增 UI 控件体系、自动更新、远程配置、License 管理、CLI 工具、云端服务规范 |
+| v0.2 | 2025-11 | 更名为 UniBase；新增 Logging、Theme、Hotkeys、MRU、LLM、Exception 模块 |
+| v0.1 | 2025-11 | 初版 UniConfig，定义 root.txt、config.db、i18n 规范 |
+
+---
+
+## 1. 概述与架构
+
+### 1.1 设计目标
+
+UniBase 的目标是为 Delphi 应用提供一套 **开箱即用的基础设施层**，通过统一约定和组件封装，解决 Delphi 开发中的常见痛点：
+
+1. 配置文件散乱（INI、Registry、XML 混用）
+2. 国际化困难（硬编码中文、乱码问题）
+3. 日志无统一规范
+4. 各窗体重复实现状态保存、MRU 等功能
+5. 异常处理不一致
+6. 缺乏自动更新机制
+
+### 1.2 内容分类（必选 / 推荐 / 可选）
+
+| 分类 | 说明 | 包含内容 |
+|------|------|----------|
+| **UniBase Core（必选）** | 所有项目必须引入的基础库 | root.txt、config.db Tier 0 表、TUniBaseManager 核心接口 |
+| **UniBase UI & Tools（推荐）** | 大多数项目会用到的增强 | VCL/FMX 控件、Studio、CLI |
+| **UniBase Cloud（可选）** | 需要服务器支持的高级功能 | 自动更新服务、远程配置、反馈收集、License 验证 |
+
+### 1.3 架构全景图
+
+```
+UniBase 生态
+│
+├── Core 库（被应用引用，无 UI 依赖）
+│   ├── Config        配置读写
+│   ├── i18n          国际化运行时
+│   ├── Logging       日志记录
+│   ├── MRU           最近使用列表
+│   ├── Hotkeys       快捷键管理
+│   ├── Theme         主题接口
+│   ├── Exception     异常处理
+│   ├── LLM           大模型调用封装
+│   ├── AutoUpdate    自动更新检查
+│   └── RemoteConfig  远程配置（Feature Flags）
+│
+├── UI 控件包（VCL + FMX 分别实现）
+│   ├── TMRUPopupMenu / TMRUComboBox
+│   ├── TI18nLabel / TI18nButton / TI18nMenuItem
+│   ├── TLanguageComboBox / TThemeComboBox
+│   ├── TConfigEdit / TConfigCheckBox / TConfigSpinEdit
+│   ├── TWaitForm
+│   ├── TAutoUpdater
+│   ├── TFeedbackDialog
+│   └── TFormStateHelper
+│
+├── UniBase Studio（独立 GUI 管理工具）
+│   ├── 项目管理
+│   ├── i18n 翻译管理
+│   ├── 日志查看器
+│   ├── 异常报告查看器
+│   ├── 资源管理（动画/主题/图标）
+│   ├── 配置编辑器
+│   ├── LLM 管理
+│   ├── 版本发布管理
+│   ├── 远程配置管理
+│   └── License 管理
+│
+├── UniBaseTray（工作台悬浮工具）
+│   ├── 开发日志快速录入
+│   ├── 常用命令面板
+│   ├── 多步操作自动化
+│   ├── 快速启动 Studio/CMD/PowerShell
+│   └── 系统托盘常驻
+│
+├── UniBase CLI（命令行工具，用于 CI/CD）
+│   ├── i18n scan / translate / import
+│   ├── release publish
+│   └── db init / upgrade / backup
+│
+└── 云端服务（可选部署）
+    ├── 版本更新服务
+    ├── 远程配置服务
+    ├── 反馈收集服务
+    └── License 验证服务
+```
+
+### 1.4 适用范围
+
+- 适用于 Delphi（VCL / FMX）桌面应用程序
+- 支持单机部署和联网部署场景
+- 使用 SQLite 作为本地配置数据库
+- 业务数据库类型不受限制，由业务层负责
+
+### 1.5 错误码约定
+
+**初始化返回值规范：**
+
+| 错误码 | 含义 | 说明 |
+|--------|------|------|
+| 0 | 成功 | 已初始化 |
+| 1 | config.db 不存在 | 尝试自动创建失败 |
+| 2 | config.db 损坏 | 表结构检查失败 |
+| 3 | 权限错误 | 无法写入 root.txt 或 config.db |
+| 4 | 路径无效 | root.txt 指向的目录不存在 |
+| 5 | 资源目录缺失 | assets 目录结构不完整 |
+| 99 | 未知错误 | 见错误消息详情 |
+
+**ErrorMsg 返回格式：** "[code] 错误类型: 详细描述"，例："[1] ConfigDB Not Found: Cannot create at D:\\config.db"
+
+---
+
+## 2. 目录与文件约定
+
+### 2.1 root.txt 与目录结构
+
+**root.txt 文件位置（按优先级查找）：**
+
+1. EXE 所在目录
+2. `%APPDATA%\{AppName}\root.txt`（备选，解决 Program Files 权限问题）
+
+**root.txt 文件内容：** 仅一行，项目根目录的绝对路径。
+
+**项目根目录下的统一约定：**
+
+```
+{ProjectRoot}/
+├── config.db             # UniBase 配置数据库（SQLite）
+├── assets/               # 资源文件
+│   ├── icons/            # 图标
+│   ├── images/           # 图片
+│   ├── flags/            # 国旗图标（i18n 语言选择）
+│   ├── styles/           # VCL Style 文件（.vsf）
+│   └── animations/       # 动画资源目录：SVG 文件或预渲染的 PNG 序列帧
+├── logs/                 # 日志文件目录（可选）
+└── updates/              # 下载的更新包临时目录
+```
+
+**扩展配置路径支持（可选）：**
+
+如需将 config.db 或其他资源放在非标准位置，可在 root.txt 中使用 INI 格式扩展：
+
+```
+[Paths]
+Root=D:\MyProject
+ConfigDB=D:\MyProject\data\config.db
+Assets=D:\MyProject\resources
+Logs=D:\MyProject\var\logs
+```
+
+UniBase 会自动检测 INI 格式并优先使用 `ConfigDB` 字段；若不存在则回退到默认位置 `{ProjectRoot}/config.db`。
+
+### 2.2 开发环境与用户环境行为差异
+
+#### 开发期间
+
+- `root.txt` 由开发人员手工维护，指向源码树中的项目根目录
+- 程序启动时必须能读取 `root.txt` 并找到 `config.db`
+
+#### 用户环境（交付后首次运行）
+
+1. 依次检查 EXE 目录和 APPDATA 目录下的 `root.txt`
+2. 若均不存在，自动创建（优先 EXE 目录，无权限则使用 APPDATA）
+3. 尝试连接 `config.db`
+4. 若失败，弹出目录选择对话框
+5. 用户选择有效目录后，更新 `root.txt`
+
+#### root.txt 冲突解决规则
+
+| 情况 | 行为 |
+|------|------|
+| 两个位置都存在 root.txt | **EXE 目录优先级最高**，忽略 APPDATA 中的文件 |
+| EXE 目录无写入权限 | 自动使用 APPDATA 目录 |
+| 需要迁移 root.txt | 在 Studio 中提供“迁移配置位置”功能，迁移后删除旧文件 |
+
+---
+
+## 3. config.db 表结构定义
+
+### 3.0 表分层定义
+
+为便于渐进式采用，将所有表划分为三个层级：
+
+|| 层级 | 说明 | 包含的表 |
+||------|------|----------|
+|| **Tier 0（最小核心）** | 开发其他项目必须使用的基础表 | `SchemaInfo`, `ProjectInfo`, `Settings`, `FormStates`, `Languages`, `I18nTexts` |
+|| **Tier 1（推荐）** | 大多数项目会用到的功能 | `Logs`, `MRU`, `Hotkeys`, `Themes` |
+|| **Tier 2（可选）** | 高级功能，按需启用 | `ExceptionReports`, `LLMCalls`, `AnimationAssets`, `UsageStats`, `UserFeedback`, `TestSnapshots` |
+
+**最小可运行 config.db**（Tier 0）只需包含 6 张表，即可支持：
+- 项目信息管理
+- 配置读写
+- 窗体状态保存
+- i18n 国际化
+
+### 3.1 元信息表
+
+#### SchemaInfo（数据库版本）
+
+```sql
+CREATE TABLE SchemaInfo (
+  Key TEXT PRIMARY KEY,
+  Value TEXT
+);
+
+-- 预置数据
+INSERT INTO SchemaInfo VALUES ('SchemaVersion', '0.3');
+INSERT INTO SchemaInfo VALUES ('CreatedAt', datetime('now'));
+INSERT INTO SchemaInfo VALUES ('LastUpgrade', datetime('now'));
+```
+
+#### ProjectInfo（项目信息）
+
+```sql
+CREATE TABLE ProjectInfo (
+  Key TEXT PRIMARY KEY,
+  Value TEXT
+);
+
+-- 预置数据
+INSERT INTO ProjectInfo VALUES ('ProjectName', 'MyApp');
+INSERT INTO ProjectInfo VALUES ('ProjectVersion', '1.0.0');
+INSERT INTO ProjectInfo VALUES ('ProjectDescription', '');
+INSERT INTO ProjectInfo VALUES ('ProjectAuthor', '');
+INSERT INTO ProjectInfo VALUES ('ProjectWebsite', '');
+```
+
+### 3.2 核心配置表
+
+#### Settings（通用配置表）
+
+```sql
+CREATE TABLE Settings (
+  Key TEXT PRIMARY KEY,
+  Value TEXT,
+  ValueType TEXT DEFAULT 'String',  -- String/Integer/Boolean/Float/JSON
+  Category TEXT DEFAULT 'General',   -- General/UI/Logging/LLM/Update/Remote/License
+  Description TEXT,
+  IsEncrypted INTEGER DEFAULT 0      -- 是否加密存储（用于敏感信息）
+);
+```
+
+**ValueType 和 IsEncrypted 行为约定：**
+
+| 约定 | 说明 |
+|------|------|
+| API 使用者无需关心 ValueType | `GetConfigInt/Bool/Float` 内部自动处理类型转换 |
+| 类型转换失败时 | 返回 Default 值，并在日志中记录 WARN 级别信息 |
+| `IsEncrypted = 1` 时 | **必须**使用 `GetConfigSecure/SetConfigSecure` 访问 |
+| 普通 `GetConfig` 访问加密字段 | 返回空字符串，并记录 WARN 日志 |
+
+> **重要**：实际实现时不要求一次性实现所有预置 Key，可按项目需要逐步引入。
+
+**预置 Key 分类：**
+
+| Category | Key | 说明 | 示例值 |
+|----------|-----|------|--------|
+| General | `App.Language` | 当前语言 | `zh-CN` |
+| General | `App.DebugMode` | 调试模式 | `False` |
+| UI | `App.Theme` | 当前主题 | `Windows11 Dark` |
+| UI | `App.WaitAnimation` | 等待动画名称 | `spinner-default` |
+| Logging | `Log.Level` | 日志级别 | `INFO` |
+| Logging | `Log.StorageMode` | 存储模式 | `Database` / `File` / `Both` |
+| Logging | `Log.RetentionDays` | 保留天数 | `30` |
+| LLM | `LLM.Enabled` | 启用 LLM | `True` |
+| LLM | `LLM.Provider` | 提供方 | `LiteLLM` |
+| LLM | `LLM.ApiUrl` | API 地址 | `http://localhost:4000` |
+| LLM | `LLM.ApiKey` | API Key（加密） | `sk-xxx` |
+| LLM | `LLM.ModelName` | 模型名称 | `gpt-4o-mini` |
+| LLM | `LLM.TimeoutMs` | 超时时间 | `60000` |
+| Update | `Update.Enabled` | 启用自动更新 | `True` |
+| Update | `Update.Channel` | 更新渠道 | `stable` |
+| Update | `Update.Url` | 版本信息 URL | `https://...` |
+| Update | `Update.CheckInterval` | 检查间隔（小时） | `24` |
+| Remote | `Remote.Enabled` | 启用远程配置 | `False` |
+| Remote | `Remote.Url` | 远程配置 URL | `https://...` |
+| License | `License.Key` | 许可证密钥 | `xxx-xxx-xxx` |
+| License | `License.Type` | 许可类型 | `Trial` / `Standard` / `Pro` |
+
+#### FormStates（窗体状态表）
+
+```sql
+CREATE TABLE FormStates (
+  FormName TEXT PRIMARY KEY,
+  Left INTEGER,
+  Top INTEGER,
+  Width INTEGER,
+  Height INTEGER,
+  WindowState INTEGER,        -- 0=Normal, 1=Minimized, 2=Maximized
+  MonitorIndex INTEGER,       -- 多显示器支持
+  Extra TEXT                  -- JSON 格式，存储其他自定义状态
+);
+```
+
+### 3.3 国际化表
+
+#### Languages（支持的语言列表）
+
+```sql
+CREATE TABLE Languages (
+  LangCode TEXT PRIMARY KEY,      -- zh-CN, en-US, ja-JP
+  LangName TEXT NOT NULL,         -- Chinese (Simplified), English, Japanese
+  NativeName TEXT,                -- 简体中文, English, 日本語
+  FlagIcon TEXT,                  -- 国旗图标文件名（相对于 assets/flags/）
+  IsEnabled INTEGER DEFAULT 1,
+  IsDefault INTEGER DEFAULT 0,
+  SortOrder INTEGER DEFAULT 0
+);
+
+-- 预置数据
+INSERT INTO Languages VALUES ('en-US', 'English', 'English', 'us.png', 1, 1, 0);
+INSERT INTO Languages VALUES ('zh-CN', 'Chinese (Simplified)', '简体中文', 'cn.png', 1, 0, 1);
+INSERT INTO Languages VALUES ('zh-TW', 'Chinese (Traditional)', '繁體中文', 'tw.png', 0, 0, 2);
+INSERT INTO Languages VALUES ('ja-JP', 'Japanese', '日本語', 'jp.png', 0, 0, 3);
+```
+
+#### I18nTexts（国际化文本表）
+
+```sql
+CREATE TABLE I18nTexts (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  SourceText TEXT NOT NULL,           -- 英文原文（作为 Key）
+  LangCode TEXT NOT NULL,             -- 语言代码
+  TranslatedText TEXT,                -- 翻译后文本
+  PluralForm TEXT,                    -- 复数形式（JSON）：{"one": "...", "other": "..."}
+  Context TEXT,                       -- 上下文说明（帮助翻译）
+  LastUsedTime TEXT,                  -- 最后使用时间
+  IsAutoTranslated INTEGER DEFAULT 0, -- 是否机器翻译
+  IsVerified INTEGER DEFAULT 0,       -- 是否人工校验
+  UNIQUE(SourceText, LangCode)
+);
+
+CREATE INDEX idx_i18n_lang ON I18nTexts(LangCode);
+CREATE INDEX idx_i18n_source ON I18nTexts(SourceText);
+```
+
+### 3.4 运行状态表
+
+#### MRU（最近使用列表）
+
+```sql
+CREATE TABLE MRU (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Category TEXT NOT NULL,         -- File/Project/Directory/{Custom}
+  ItemKey TEXT NOT NULL,          -- 通常是路径
+  DisplayName TEXT,               -- 显示名称
+  IconIndex INTEGER,              -- 图标索引（可选）
+  LastAccess TEXT NOT NULL,
+  AccessCount INTEGER DEFAULT 1,
+  Extra TEXT,                     -- JSON 附加数据
+  UNIQUE(Category, ItemKey)
+);
+
+CREATE INDEX idx_mru_category ON MRU(Category, LastAccess DESC);
+```
+
+#### Hotkeys（快捷键表）
+
+```sql
+CREATE TABLE Hotkeys (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ActionName TEXT NOT NULL UNIQUE,   -- 动作标识：File.Save, Edit.Copy
+  Shortcut TEXT,                     -- 快捷键：Ctrl+S
+  DefaultShortcut TEXT,              -- 默认快捷键（用于重置）
+  Description TEXT,                  -- 描述（英文，可 i18n）
+  Category TEXT DEFAULT 'General',   -- 分类
+  IsEnabled INTEGER DEFAULT 1,
+  IsGlobal INTEGER DEFAULT 0         -- 是否全局热键
+);
+
+CREATE INDEX idx_hotkeys_category ON Hotkeys(Category);
+```
+
+#### Themes（主题配置表）
+
+```sql
+CREATE TABLE Themes (
+  Name TEXT PRIMARY KEY,
+  StyleFile TEXT,                 -- VCL Style 文件（相对于 assets/styles/）
+  IsDark INTEGER DEFAULT 0,
+  IsBuiltIn INTEGER DEFAULT 1,
+  PreviewImage TEXT,              -- 预览图（可选）
+  SortOrder INTEGER DEFAULT 0
+);
+
+-- 预置数据
+INSERT INTO Themes VALUES ('Windows11', NULL, 0, 1, NULL, 0);
+INSERT INTO Themes VALUES ('Windows11 Dark', 'Windows11Dark.vsf', 1, 1, NULL, 1);
+```
+
+### 3.5 日志与异常表
+
+#### Logs（日志表）
+
+```sql
+CREATE TABLE Logs (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Timestamp TEXT NOT NULL,        -- ISO 8601 格式
+  Level TEXT NOT NULL,            -- DEBUG/INFO/WARN/ERROR/FATAL
+  Source TEXT,                    -- 模块名/类名
+  Message TEXT NOT NULL,
+  StackTrace TEXT,
+  Extra TEXT                      -- JSON 附加数据
+);
+
+CREATE INDEX idx_logs_timestamp ON Logs(Timestamp);
+CREATE INDEX idx_logs_level ON Logs(Level);
+CREATE INDEX idx_logs_source ON Logs(Source);
+```
+
+#### ExceptionReports（异常报告表）
+
+```sql
+CREATE TABLE ExceptionReports (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Timestamp TEXT NOT NULL,
+  ExceptionClass TEXT,
+  ExceptionMessage TEXT,
+  StackTrace TEXT,
+  FormName TEXT,
+  UserAction TEXT,                -- 用户操作描述
+  AppVersion TEXT,
+  OSVersion TEXT,
+  IsHandled INTEGER DEFAULT 0,    -- 是否已处理
+  HandleNote TEXT,                -- 处理备注
+  IsReported INTEGER DEFAULT 0    -- 是否已上报
+);
+
+CREATE INDEX idx_exception_time ON ExceptionReports(Timestamp);
+```
+
+### 3.6 LLM 相关表
+
+#### LLMConfiguration（LLM 配置表）
+
+支持多 Provider 配置（如 LiteLLM, OpenAI, Anthropic 等）及独立的计费参数。
+
+```sql
+CREATE TABLE LLMConfiguration (
+  ConfigID INTEGER PRIMARY KEY AUTOINCREMENT,
+  ProviderName TEXT NOT NULL,     -- LiteLLM, OpenAI, etc.
+  APIAddress TEXT,
+  APIKey TEXT,                    -- 加密存储 (IsEncrypted=1)
+  Model TEXT,                     -- 默认模型
+  Temperature REAL DEFAULT 0.7,
+  TimeoutMS INTEGER DEFAULT 60000,
+  MaxTokens INTEGER DEFAULT 4096,
+  TopP REAL DEFAULT 1.0,
+  InputPrice REAL,                -- 每 1K Token 输入价格（美元）
+  OutputPrice REAL,               -- 每 1K Token 输出价格（美元）
+  ConcurrentRequests INTEGER DEFAULT 5,
+  RetryCount INTEGER DEFAULT 3,
+  RetryDelayMS INTEGER DEFAULT 1000,
+  IsEnabled INTEGER DEFAULT 1,
+  CreatedAt TEXT,
+  ModifiedAt TEXT,
+  UNIQUE(ProviderName)
+);
+```
+
+#### LLMCalls（LLM 调用记录）
+
+```sql
+CREATE TABLE LLMCalls (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Timestamp TEXT NOT NULL,
+  Provider TEXT NOT NULL,
+  ModelName TEXT,
+  DurationMs INTEGER NOT NULL,
+  InputTokens INTEGER,            -- 输入 Token 数
+  OutputTokens INTEGER,           -- 输出 Token 数
+  TotalTokens INTEGER,            -- 总 Token 数
+  EstimatedCost REAL,             -- 估算费用（美元）
+  Success INTEGER NOT NULL,
+  Status TEXT,                    -- 状态详情：Success, Failed, Cancelled
+  ErrorMessage TEXT,
+  Caller TEXT,                    -- 调用方标识
+  RequestHash TEXT                -- 请求哈希（用于去重/缓存）
+);
+
+CREATE INDEX idx_llm_time ON LLMCalls(Timestamp);
+CREATE INDEX idx_llm_caller ON LLMCalls(Caller);
+```
+
+### 3.7 资源表
+
+#### AnimationAssets（动画资源）
+
+使用 Image32 库统一处理 SVG，VCL 和 FMX 共用同一套数据：
+
+```sql
+CREATE TABLE AnimationAssets (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Name TEXT NOT NULL UNIQUE,
+  Category TEXT DEFAULT 'Wait',   -- Wait/Progress/Loading/Custom
+  SvgContent TEXT NOT NULL,       -- SVG 内容（Image32 统一渲染）
+  FrameCount INTEGER DEFAULT 1,   -- 动画帧数（用于旋转动画等）
+  FrameDuration INTEGER DEFAULT 50, -- 每帧持续时间（毫秒）
+  Width INTEGER DEFAULT 64,
+  Height INTEGER DEFAULT 64,
+  Description TEXT,
+  IsDefault INTEGER DEFAULT 0
+);
+
+-- 预置数据（实际 SVG 内容由 Studio 导入）
+INSERT INTO AnimationAssets (Name, Category, SvgContent, Description, IsDefault)
+VALUES ('spinner-default', 'Wait', '<svg>...</svg>', 'Default loading spinner', 1);
+```
+
+### 3.8 使用统计与反馈表（可选）
+
+#### UsageStats（使用统计）
+
+```sql
+CREATE TABLE UsageStats (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  EventName TEXT NOT NULL,        -- App.Launch, Feature.Used, ...
+  EventData TEXT,                 -- JSON
+  Timestamp TEXT NOT NULL,
+  SessionId TEXT,
+  IsSynced INTEGER DEFAULT 0
+);
+
+CREATE INDEX idx_usage_time ON UsageStats(Timestamp);
+CREATE INDEX idx_usage_sync ON UsageStats(IsSynced);
+```
+
+#### UserFeedback（用户反馈）
+
+```sql
+CREATE TABLE UserFeedback (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Timestamp TEXT NOT NULL,
+  FeedbackType TEXT,              -- Bug/Feature/Question/Other
+  Content TEXT NOT NULL,
+  ContactEmail TEXT,
+  AttachedLogs TEXT,              -- JSON：关联的日志 ID 列表
+  AppVersion TEXT,
+  OSVersion TEXT,
+  IsSynced INTEGER DEFAULT 0
+);
+```
+
+---
+
+## 4. Core 模块接口
+
+### 4.1 TUniBaseManager 主类
+
+> **内部模块化原则**：`TUniBaseManager` 通过组合方式内部持有各子模块，避免成为难以维护的超级类：
+> - `FConfig: TUniBaseConfig` - 配置读写
+> - `FI18n: TUniBaseI18n` - 国际化
+> - `FLogger: TUniBaseLogger` - 日志记录
+> - `FMRU: TUniBaseMRU` - 最近使用
+> - `FHotkeys: TUniBaseHotkeys` - 快捷键
+> - `FTheme: TUniBaseTheme` - 主题管理
+> - `FLLM: TUniBaseLLM` - LLM 调用（Tier 2）
+> - `FAutoUpdate: TUniBaseAutoUpdate` - 自动更新（Tier 2）
+>
+> 每个子模块可独立测试、替换或禁用。
+
+```delphi
+type
+  TInitErrorCode = (ecSuccess = 0, ecConfigDBNotFound = 1, ecConfigDBCorrupted = 2,
+    ecPermissionDenied = 3, ecInvalidPath = 4, ecMissingAssets = 5, ecUnknown = 99);
+  
+  TLogLevel = (llDebug, llInfo, llWarn, llError, llFatal);
+  
+  TUniBaseManager = class(TComponent)
+  private
+    FRootPath: string;
+    FConfigDB: TFDConnection;
+    FIsInitialized: Boolean;
+    FLastError: string;
+    FInitErrorCode: TInitErrorCode;
+    FCurrentLanguage: string;
+    FCurrentTheme: string;
+    
+    // 内部子模块（组合而非继承）
+    FConfig: TUniBaseConfig;
+    FI18n: TUniBaseI18n;
+    FLogger: TUniBaseLogger;
+    FMRU: TUniBaseMRU;
+    FHotkeys: TUniBaseHotkeys;
+    FTheme: TUniBaseTheme;
+    
+    // 事件
+    FOnLanguageChanged: TNotifyEvent;
+    FOnThemeChanged: TNotifyEvent;
+    FOnConfigChanged: TConfigChangedEvent;
+  public
+    // ========================================
+    // Phase 0 核心接口（必须实现）
+    // ========================================
+    
+    // --- 初始化 ---
+    function Initialize: Boolean;                                    // 主线程调用
+    function InitializeEx(out ErrorMsg: string): Boolean;            // 主线程调用
+    function InitializeWithDB(const DBPath: string): Boolean;        // 支持 :memory: 测试
+    procedure Finalize;
+    
+    // --- 属性 ---
+    property RootPath: string read FRootPath;
+    property IsInitialized: Boolean read FIsInitialized;
+    property LastError: string read FLastError;
+    property InitErrorCode: TInitErrorCode read FInitErrorCode;  // 初始化错误码
+    property CurrentLanguage: string read FCurrentLanguage write SetCurrentLanguage;
+    property CurrentTheme: string read FCurrentTheme write SetCurrentTheme;
+    
+    // --- 事件 ---
+    property OnLanguageChanged: TNotifyEvent read FOnLanguageChanged write FOnLanguageChanged;
+    property OnThemeChanged: TNotifyEvent read FOnThemeChanged write FOnThemeChanged;
+    property OnConfigChanged: TConfigChangedEvent read FOnConfigChanged write FOnConfigChanged;
+    
+    // --- 配置读写 --- [线程安全]
+    function GetConfig(const Key: string; const Default: string = ''): string;
+    procedure SetConfig(const Key, Value: string; const Category: string = 'General');
+    function GetConfigInt(const Key: string; Default: Integer = 0): Integer;
+    procedure SetConfigInt(const Key: string; Value: Integer);
+    function GetConfigBool(const Key: string; Default: Boolean = False): Boolean;
+    procedure SetConfigBool(const Key: string; Value: Boolean);
+    function GetConfigFloat(const Key: string; Default: Double = 0): Double;
+    procedure SetConfigFloat(const Key: string; Value: Double);
+    
+    // --- i18n 基础 --- [线程安全]
+    function T(const Text: string): string;
+    function TFmt(const Text: string; const Args: array of const): string;
+    function GetAvailableLanguages: TArray<TLanguageInfo>;
+    
+    // --- 窗体状态 --- [仅主线程]
+    procedure SaveFormState(AForm: TForm);
+    procedure RestoreFormState(AForm: TForm);  // 自动处理多显示器边界
+    
+    // --- 日志 --- [线程安全]
+    procedure Log(const Msg: string; Level: TLogLevel = llInfo; const Source: string = '');
+    procedure LogDebug(const Msg: string; const Source: string = '');
+    procedure LogInfo(const Msg: string; const Source: string = '');
+    procedure LogWarn(const Msg: string; const Source: string = '');
+    procedure LogError(const Msg: string; const Source: string = '');
+    
+    // --- 资源路径 ---
+    function GetAssetPath(const RelativePath: string): string;
+    
+    // ========================================
+    // Phase 1 推荐接口
+    // ========================================
+    
+    // --- i18n 扩展 --- [线程安全]
+    function TN(const Singular, Plural: string; Count: Integer): string;  // 复数支持
+    function GetEnabledLanguages: TArray<TLanguageInfo>;
+    
+    // --- 日志扩展 ---
+    procedure LogFmt(const Msg: string; const Args: array of const; Level: TLogLevel = llInfo);
+    procedure ClearOldLogs(DaysToKeep: Integer = 30);
+    
+    // --- MRU --- [线程安全]
+    procedure AddMRU(const Category, ItemKey: string; const DisplayName: string = '');
+    function GetMRUList(const Category: string; MaxItems: Integer = 10): TArray<string>;
+    function GetMRUItems(const Category: string; MaxItems: Integer = 10): TArray<TMRUItem>;
+    procedure ClearMRU(const Category: string);
+    procedure RemoveInvalidMRU;
+    
+    // --- 快捷键 ---
+    function GetHotkey(const ActionName: string): TShortCut;
+    function GetHotkeyStr(const ActionName: string): string;
+    procedure SetHotkey(const ActionName: string; Shortcut: TShortCut);
+    procedure RegisterDefaultHotkeys(const Defaults: array of THotkeyDefault);
+    procedure ResetHotkey(const ActionName: string);
+    procedure ResetAllHotkeys;
+    function CheckHotkeyConflict(Shortcut: TShortCut): string;
+    
+    // --- 主题 --- [仅主线程]
+    procedure ApplyTheme(const ThemeName: string);
+    function GetAvailableThemes: TArray<TThemeInfo>;
+    function IsDarkTheme: Boolean;
+    
+    // ========================================
+    // Phase 2/3 扩展接口
+    // ========================================
+    
+    // --- 加密配置 --- [线程安全]
+    function GetConfigSecure(const Key: string; const Default: string = ''): string;
+    procedure SetConfigSecure(const Key, Value: string; const Category: string = 'General');
+    
+    // --- 动画资源 ---
+    function GetAnimationAsset(const Name: string): TAnimationAssetData;
+    
+    // --- 异常处理 ---
+    procedure HandleException(Sender: TObject; E: Exception);
+    procedure ReportException(E: Exception; const UserAction: string = '');
+    
+    // --- LLM --- [线程安全，建议后台线程调用]
+    function LLMChat(const Prompt: string; out Response: string): Boolean;
+    function LLMChatAsync(const Prompt: string; OnComplete: TLLMCompleteEvent): ITask;
+    function TestLLMConnection(out DurationMs: Integer; out ErrorMsg: string): Boolean;
+    
+    // --- 自动更新 ---
+    function CheckForUpdate(out UpdateInfo: TUpdateInfo): Boolean;
+    procedure DownloadUpdate(const UpdateInfo: TUpdateInfo; OnProgress: TProgressEvent);
+    
+    // --- 远程配置 ---
+    function GetRemoteFlag(const Key: string; Default: Boolean): Boolean;
+    function GetRemoteConfig(const Key: string; const Default: string = ''): string;
+    procedure RefreshRemoteConfig;
+    
+    // === 健康检查 ===
+    function HealthCheck: THealthCheckResult;
+    
+    // === 项目信息 ===
+    function GetProjectInfo(const Key: string): string;
+    procedure SetProjectInfo(const Key, Value: string);
+  end;
+```
+
+### 4.2 全局函数
+
+```delphi
+// 全局单例访问
+function UniBase: TUniBaseManager;
+
+// i18n 快捷函数
+function T(const Text: string): string;
+function TN(const Singular, Plural: string; Count: Integer): string;
+function TFmt(const Text: string; const Args: array of const): string;
+
+// 日志快捷函数
+procedure Log(const Msg: string; Level: TLogLevel = llInfo);
+procedure LogDebug(const Msg: string);
+procedure LogInfo(const Msg: string);
+procedure LogWarn(const Msg: string);
+procedure LogError(const Msg: string);
+```
+
+### 4.3 辅助类型定义
+
+```delphi
+type
+  TLanguageInfo = record
+    LangCode: string;
+    LangName: string;
+    NativeName: string;
+    FlagIcon: string;
+  end;
+  
+  TMRUItem = record
+    ItemKey: string;
+    DisplayName: string;
+    LastAccess: TDateTime;
+    AccessCount: Integer;
+    IconIndex: Integer;
+  end;
+  
+  TThemeInfo = record
+    Name: string;
+    StyleFile: string;
+    IsDark: Boolean;
+    IsBuiltIn: Boolean;
+  end;
+  
+  // Core 层纯数据结构（不包含 TBitmap，保持无 UI 依赖）
+  TAnimationAssetData = record
+    Name: string;
+    SvgContent: string;
+    FrameCount: Integer;
+    FrameDuration: Integer;
+    Width, Height: Integer;
+  end;
+  
+  // UI 层扩展结构（在 VCL/FMX 单元中定义）
+  // TAnimationAsset = record
+  //   Data: TAnimationAssetData;
+  //   Bitmap: TBitmap;  // VCL 或 FMX 的 TBitmap
+  // end;
+  
+  TUpdateInfo = record
+    Version: string;
+    ReleaseDate: TDateTime;
+    DownloadUrl: string;
+    FileSize: Int64;
+    SHA256: string;
+    Changelog: string;
+    ForceUpdate: Boolean;
+  end;
+  
+  THotkeyDefault = record
+    ActionName: string;
+    Shortcut: string;
+    Description: string;
+    Category: string;
+  end;
+  
+  THealthCheckResult = record
+    IsHealthy: Boolean;
+    ConfigDBOk: Boolean;
+    AssetsDirOk: Boolean;
+    LLMConnectionOk: Boolean;
+    Messages: TArray<string>;
+  end;
+```
+
+---
+
+## 5. UI 控件规范
+
+### 5.1 控件列表
+
+| 控件 | 框架 | 说明 |
+|------|------|------|
+| `TMRUPopupMenu` | VCL/FMX | 自动管理最近文件菜单 |
+| `TMRUComboBox` | VCL/FMX | 带历史记录的组合框 |
+| `TI18nLabel` | VCL/FMX | 自动翻译的标签 |
+| `TI18nButton` | VCL/FMX | 自动翻译的按钮 |
+| `TI18nMenuItem` | VCL/FMX | 自动翻译的菜单项 |
+| `TLanguageComboBox` | VCL/FMX | 语言选择下拉框 |
+| `TThemeComboBox` | VCL/FMX | 主题选择下拉框 |
+| `TConfigEdit` | VCL/FMX | 自动绑定配置的编辑框 |
+| `TConfigCheckBox` | VCL/FMX | 自动绑定配置的复选框 |
+| `TConfigSpinEdit` | VCL/FMX | 自动绑定配置的数值框 |
+| `TLLMConfigPanel` | VCL/FMX | LLM 参数配置与历史记录面板 |
+| `TNotificationBar`| VCL/FMX | 后台任务通知栏 |
+| `TDBInitWizard`   | VCL/FMX | 数据库初始化向导 |
+| `TThemeGallery`   | VCL/FMX | 主题预览库（带缩略图） |
+| `TLogListView`    | VCL/FMX | 实时日志列表，自动连接 Logger，虚拟模式高性能渲染 |
+| `TLicenseStatusPanel` | VCL/FMX | 账号信息卡片，可视化显示订阅、额度和状态 |
+| `TLicenseAuthDialog` | VCL/FMX | 卡密激活对话框 |
+| `TWaitForm` | VCL/FMX | 等待窗口（支持随机动画/进度） |
+| `TAutoUpdater` | VCL/FMX | 自动更新组件 |
+| `TFeedbackDialog` | VCL/FMX | 用户反馈对话框 |
+| `TFormStateHelper` | VCL/FMX | 窗体状态自动保存（非可视） |
+
+### 5.2 TMRUPopupMenu
+
+```delphi
+type
+  TMRUItemClickEvent = procedure(Sender: TObject; const ItemKey: string) of object;
+  
+  TMRUPopupMenu = class(TPopupMenu)
+  published
+    property Category: string;           // MRU 分类
+    property MaxItems: Integer;          // 最大显示数量，默认 10
+    property ShowClearItem: Boolean;     // 显示"清除历史"菜单项
+    property ClearItemCaption: string;   // "清除历史"文本（支持 i18n）
+    property OnItemClick: TMRUItemClickEvent;
+  public
+    procedure AddItem(const ItemKey: string; const DisplayName: string = '');
+    procedure Refresh;                   // 刷新菜单项
+  end;
+```
+
+**使用示例：**
+
+```delphi
+// 设计时设置属性
+MRUPopupMenu1.Category := 'RecentFiles';
+MRUPopupMenu1.MaxItems := 10;
+
+// 事件处理
+procedure TMainForm.MRUPopupMenu1ItemClick(Sender: TObject; const ItemKey: string);
+begin
+  OpenFile(ItemKey);
+end;
+
+// 打开文件后添加到 MRU
+procedure TMainForm.OpenFile(const FilePath: string);
+begin
+  // ... 打开文件逻辑 ...
+  MRUPopupMenu1.AddItem(FilePath, ExtractFileName(FilePath));
+end;
+```
+
+### 5.3 TMRUComboBox
+
+```delphi
+type
+  TMRUComboBox = class(TComboBox)
+  published
+    property Category: string;           // MRU 分类
+    property MaxItems: Integer;          // 最大历史数量
+    property AutoSaveOnChange: Boolean;  // 选择变化时自动保存
+  public
+    procedure SaveCurrentItem;           // 手动保存当前项到 MRU
+    procedure LoadMRUList;               // 加载 MRU 列表
+  end;
+```
+
+### 5.4 TI18nLabel / TI18nButton
+
+```delphi
+type
+  TI18nLabel = class(TLabel)
+  published
+    property TextKey: string;            // 英文原文（作为翻译 Key）
+  protected
+    procedure UpdateCaption;             // 语言变更时自动调用
+  end;
+  
+  TI18nButton = class(TButton)
+  published
+    property TextKey: string;
+  end;
+```
+
+**使用示例：**
+
+```delphi
+// 设计时直接设置英文原文
+I18nLabel1.TextKey := 'User name';
+I18nButton1.TextKey := 'Save';
+
+// 运行时自动翻译为当前语言
+// 语言切换时自动刷新
+```
+
+### 5.5 TLanguageComboBox
+
+```delphi
+type
+  TLanguageComboBox = class(TComboBox)
+  published
+    property ShowFlags: Boolean;         // 显示国旗图标
+    property ShowNativeName: Boolean;    // 显示本地化名称
+    property OnLanguageChanged: TNotifyEvent;
+  public
+    procedure LoadLanguages;             // 从数据库加载语言列表
+  end;
+```
+
+### 5.6 TConfigEdit / TConfigCheckBox
+
+```delphi
+type
+  TConfigEdit = class(TEdit)
+  published
+    property ConfigKey: string;          // 配置 Key
+    property DefaultValue: string;       // 默认值
+    property AutoLoad: Boolean;          // 创建时自动加载
+    property AutoSave: Boolean;          // 失去焦点时自动保存
+  public
+    procedure LoadFromConfig;
+    procedure SaveToConfig;
+  end;
+  
+  TConfigCheckBox = class(TCheckBox)
+  published
+    property ConfigKey: string;
+    property DefaultValue: Boolean;
+    property AutoLoad: Boolean;
+    property AutoSave: Boolean;
+  end;
+```
+
+### 5.7 TWaitForm
+
+支持从 `AnimationAssets` 随机选择动画，并显示动态进度文本。
+
+```delphi
+type
+  TWaitForm = class(TForm)
+  public
+    class procedure Show(const Message: string; RandomAnimation: Boolean = True);
+    class procedure Hide;
+    class procedure UpdateMessage(const Message: string);
+    class procedure UpdateProgress(const CurrentOp: string; TokenCount, MaxTokens: Integer);
+    class procedure SwitchToBackground; // 切换到后台通知栏模式
+  end;
+  
+  // RAII 风格使用
+  TWaitScope = record
+  private
+    FMessage: string;
+  public
+    class function Create(const Message: string): TWaitScope; static;
+    procedure Free;  // 调用 TWaitForm.Hide
+  end;
+```
+
+**使用示例：**
+
+```delphi
+// 方式一：手动控制
+TWaitForm.Show(T('Loading data...'));
+try
+  LoadData;
+finally
+  TWaitForm.Hide;
+end;
+
+// 方式二：RAII 风格
+begin
+  var Wait := TWaitScope.Create(T('Processing...'));
+  try
+    DoSomething;
+  finally
+    Wait.Free;
+  end;
+end;
+```
+
+### 5.8 TAutoUpdater
+
+```delphi
+type
+  TAutoUpdater = class(TComponent)
+  published
+    property CheckOnStartup: Boolean;
+    property CheckInterval: Integer;     // 检查间隔（小时）
+    property Channel: string;            // stable/beta/dev
+    property ShowNotification: Boolean;  // 有更新时显示通知
+    property OnUpdateAvailable: TUpdateAvailableEvent;
+    property OnDownloadProgress: TProgressEvent;
+    property OnUpdateReady: TNotifyEvent;
+  public
+    procedure CheckForUpdate;
+    procedure DownloadAndInstall;
+    procedure SkipVersion(const Version: string);
+  end;
+```
+
+### 5.9 TFeedbackDialog
+
+```delphi
+type
+  TFeedbackDialog = class(TComponent)
+  published
+    property FeedbackUrl: string;        // 反馈接收 API
+    property IncludeSystemInfo: Boolean; // 附带系统信息
+    property IncludeRecentLogs: Boolean; // 附带最近日志
+    property MaxLogEntries: Integer;     // 最多附带日志条数
+    property OnFeedbackSent: TNotifyEvent;
+  public
+    procedure ShowDialog;
+  end;
+```
+
+### 5.10 TFormStateHelper
+
+```delphi
+type
+  TFormStateHelper = class(TComponent)
+  published
+    property AutoSave: Boolean;          // 关闭时自动保存
+    property AutoRestore: Boolean;       // 创建时自动恢复
+    property SaveExtraState: Boolean;    // 保存额外状态
+    property OnSaveExtra: TSaveExtraEvent;
+    property OnRestoreExtra: TRestoreExtraEvent;
+  end;
+```
+
+**使用示例：**
+
+```delphi
+// 只需拖放控件到窗体，设置 AutoSave=True, AutoRestore=True
+// 窗体位置、大小、状态自动保存/恢复
+
+// 如需保存额外状态（如分割条位置）
+procedure TMainForm.FormStateHelper1SaveExtra(Sender: TObject; var Extra: string);
+begin
+  Extra := IntToStr(Splitter1.Left);
+end;
+
+procedure TMainForm.FormStateHelper1RestoreExtra(Sender: TObject; const Extra: string);
+begin
+  if Extra <> '' then
+    Splitter1.Left := StrToIntDef(Extra, Splitter1.Left);
+end;
+```
+
+### 5.11 新增高级控件
+
+#### TLLMConfigPanel
+- **功能**：集成 LLM 参数配置（上部）和调用历史 Grid（下部）。
+- **特性**：
+  - Provider 动态切换（LiteLLM/OpenAI 等）
+  - API Key 掩码显示与连接测试
+  - 实时成本估算设置
+  - 调用记录排序、筛选与导出
+
+#### TNotificationBar
+- **功能**：在主窗体底部或系统通知区显示后台任务进度。
+- **特性**：
+  - 支持进度条与旋转动画
+  - 提供“取消”和“关闭”按钮
+  - 任务完成/失败自动更新状态
+
+#### TThemeGallery
+- **功能**：网格化展示可用主题的预览图。
+- **特性**：
+  - 缩略图预览
+  - 亮色/暗色分组
+
+#### TLogListView
+- **功能**：直接拖放到窗体上的实时日志显示组件（替代 TMemo）。
+- **特性**：
+  - **OwnerData 虚拟模式**：支持百万级日志流畅滚动。
+  - **自动连接**：控件创建时自动注册为 Logger Appender，无需额外代码。
+  - **视觉优化**：根据 LogLevel 自动设置整行颜色（Err=红, Warn=橙）。
+  - **列布局**：Time | Level | Source | Message。
+  - **右键菜单**：内置清空、复制、自动滚动开关。
+
+#### TLicenseStatusPanel
+- **功能**：类似仪表盘卡片，展示当前 License 详情。
+- **特性**：
+  - **额度进度条**：可视化显示 API 调用次数/剩余量。
+  - **状态标签**：自动根据过期时间显示 正常/即将过期/已过期。
+  - **敏感字段脱敏**：ApiKey 默认掩码显示，支持点击复制。
+
+#### TLicenseAuthDialog
+- **功能**：激活码输入和验证窗口。
+- **特性**：
+  - **异步验证**：验证时不卡界面，显示 Loading 状态。
+  - **设备指纹**：自动显示当前机器码，便于离线激活。
+
+---
+
+## 6. 动画资源处理（统一使用 Image32）
+
+### 6.1 技术选型
+
+采用 **Image32** 库统一处理 SVG，该库同时支持 VCL 和 FMX：
+
+- **Image32** 是纯 Delphi 实现的 2D 图形库
+- 内置 SVG 解析和渲染能力
+- 支持 VCL 和 FMX 双平台
+- 开源免费：https://github.com/AngusJohnson/Image32
+
+### 6.2 存储方案
+
+由于 Image32 统一支持 SVG，数据库只需存储 SVG 内容。表结构定义见第 3.7 节 `AnimationAssets`。运行时由 UniBase 核心加载 `SvgContent`，在 VCL/FMX UI 层按需渲染为 Bitmap。
+
+### 6.3 运行时加载逻辑（UI 层示例）
+
+> 以下代码示例属于 VCL/FMX 层（如 `UniBase.VCL.WaitForm`），演示如何使用 Core 层的 `TAnimationAssetData` + Image32 渲染 Bitmap。
+
+```delphi
+uses
+  Img32,           // Image32 核心
+  Img32.SVG.Core,  // SVG 解析
+  Img32.SVG.Reader;
+
+function TWaitForm.LoadAnimation(const Name: string): TBitmap;
+var
+  Data: TAnimationAssetData;
+  SvgReader: TSvgReader;
+  Img: TImage32;
+begin
+  // 从 Core 层加载纯数据
+  Data := UniBase.GetAnimationAsset(Name);
+  
+  // 使用 Image32 解析 SVG
+  SvgReader := TSvgReader.Create;
+  Img := TImage32.Create;
+  try
+    SvgReader.LoadFromString(Data.SvgContent);
+    Img.SetSize(Data.Width, Data.Height);
+    SvgReader.DrawImage(Img, True);
+    
+    // 转换为平台 Bitmap
+    {$IFDEF FMX}
+    Result := Image32ToFMXBitmap(Img);
+    {$ELSE}
+    Result := Image32ToVCLBitmap(Img);
+    {$ENDIF}
+  finally
+    Img.Free;
+    SvgReader.Free;
+  end;
+end;
+```
+
+### 6.4 动画实现
+
+对于旋转类加载动画，通过 Timer 旋转 SVG 实现：
+
+```delphi
+procedure TWaitForm.TimerTick(Sender: TObject);
+begin
+  FRotationAngle := FRotationAngle + (360 / FFrameCount);
+  if FRotationAngle >= 360 then
+    FRotationAngle := 0;
+  
+  // 使用 Image32 的变换功能旋转
+  DrawRotatedSVG(FRotationAngle);
+end;
+```
+
+### 6.5 Studio 中的处理
+
+1. **导入 SVG**：保存到 `SvgContent` 字段
+2. **配置参数**：动画帧数、帧间隔、输出尺寸
+3. **实时预览**：使用 Image32 直接预览 SVG 动画效果
+4. **验证 SVG**：检查 SVG 语法是否正确
+
+### 6.6 依赖配置
+
+在项目中引入 Image32：
+
+```delphi
+// 方式一：直接引用源码
+uses
+  Img32, Img32.SVG.Core, Img32.SVG.Reader;
+
+// 方式二：使用 Boss 包管理器
+// boss install image32
+```
+
+---
+
+## 7. UniBase Studio 功能规范
+
+### 7.1 项目管理
+
+| 功能 | 说明 |
+|------|------|
+| 多项目支持 | 管理多个项目的 config.db |
+| 项目切换 | 下拉框快速切换 |
+| 新建项目 | 创建空白 config.db 并初始化表结构 |
+| 项目信息编辑 | 编辑 ProjectInfo 表 |
+| 项目复制 | 复制现有项目作为模板 |
+
+### 7.2 i18n 翻译管理
+
+| 功能 | 说明 |
+|------|------|
+| 源码扫描 | 扫描 `.pas/.dfm/.fmx` 采集 `T('...')`、`TN(...)`、`TextKey` 属性 |
+| 文本对齐 | 与 I18nTexts 表同步（新增/标记废弃） |
+| 翻译编辑 | 表格编辑翻译文本，支持复数形式 |
+| 上下文编辑 | 添加翻译上下文说明 |
+| LLM 批量翻译 | 调用大模型自动翻译 |
+| 翻译校验 | 标记人工校验状态 |
+| 翻译进度 | 按语言统计翻译完成率 |
+| 导入/导出 | 支持 JSON / PO / XLIFF / Excel 格式 |
+| 清理废弃 | 删除不再使用的翻译条目 |
+
+### 7.3 日志查看器
+
+| 功能 | 说明 |
+|------|------|
+| 日志浏览 | 按时间/级别/来源筛选 |
+| 全文搜索 | 搜索日志内容 |
+| 实时刷新 | 自动刷新最新日志 |
+| 日志导出 | 导出为 CSV / TXT / JSON |
+| 日志清理 | 按时间范围删除旧日志 |
+| 统计图表 | 按级别/按天统计日志量 |
+
+### 7.4 异常报告查看器
+
+| 功能 | 说明 |
+|------|------|
+| 异常列表 | 查看 ExceptionReports 表 |
+| 堆栈分析 | 格式化显示调用栈 |
+| 状态管理 | 标记为"已处理"/"已忽略" |
+| 处理备注 | 记录处理过程 |
+| 统计分析 | 按异常类型统计频率 |
+| 批量导出 | 导出异常报告 |
+
+### 7.5 资源管理
+
+| 功能 | 说明 |
+|------|------|
+| 动画管理 | 添加/预览/删除 SVG 动画 |
+| PNG 预渲染 | 将 SVG 渲染为 PNG 序列帧 |
+| 主题管理 | 导入/预览 VCL Style 文件 |
+| 图标管理 | 管理 assets 目录下的图标 |
+| 国旗图标 | 管理 i18n 语言选择用的国旗图标 |
+
+### 7.6 配置编辑器
+
+| 功能 | 说明 |
+|------|------|
+| Settings 表 | Key-Value 编辑器，支持分类筛选和类型验证 |
+| FormStates 表 | 查看/清理窗体状态记录 |
+| MRU 表 | 查看/编辑/清理最近使用记录 |
+| Hotkeys 表 | 编辑快捷键配置，检测冲突 |
+| Themes 表 | 编辑主题配置 |
+| Languages 表 | 编辑支持的语言列表 |
+
+### 7.7 LLM 管理
+
+| 功能 | 说明 |
+|------|------|
+| 连接配置 | 配置 Provider/ApiUrl/ApiKey 等 |
+| 连接测试 | 测试 LLM 服务是否可用 |
+| 调用历史 | 查看 LLMCalls 表 |
+| 用量统计 | 按天/按月统计 Token 消耗 |
+| 费用估算 | 根据 Token 用量估算费用 |
+
+**LLM 成本控制与安全规范：**
+
+| 规范 | 说明 |
+|------|------|
+| 默认禁用 | `LLM.Enabled` 默认为 `False`，用户需在 Studio 中显式启用并配置 API Key |
+| 并发限制 | 每个进程同时调用 LLM 的最大并发数建议不超过 5 |
+| 重试策略 | 失败请求采用指数退避重试，最多重试 3 次 |
+| 费用估算 | 通过 `LLM.InputPricePer1K` 和 `LLM.OutputPricePer1K` 配置单价（美元/1K tokens） |
+| 超时设置 | `LLM.TimeoutMs` 默认 60000ms，可根据场景调整 |
+
+### 7.8 版本发布管理
+
+| 功能 | 说明 |
+|------|------|
+| 版本配置 | 配置版本号、更新日志、最低兼容版本 |
+| 渠道管理 | 支持 Stable / Beta / Dev 多渠道 |
+| 安装包管理 | 上传/管理安装包文件 |
+| 云端配置 | 配置云端存储（HTTP / OSS / S3） |
+| 发布操作 | 一键推送版本信息到云端 |
+| 发布历史 | 查看所有发布版本 |
+| 强制更新 | 标记某版本为强制更新 |
+
+### 7.9 远程配置管理
+
+| 功能 | 说明 |
+|------|------|
+| Feature Flags | 配置功能开关 |
+| A/B 测试 | 配置 A/B 测试分组 |
+| 配置推送 | 推送配置到云端 |
+| 配置历史 | 查看配置变更历史 |
+
+### 7.10 License 管理
+
+| 功能 | 说明 |
+|------|------|
+| License 配置 | 配置许可证验证参数 |
+| 密钥生成 | 生成 License Key |
+| 密钥管理 | 管理已发放的密钥 |
+| 在线验证 | 配置在线验证服务 |
+
+### 7.11 数据库管理
+
+| 功能 | 说明 |
+|------|------|
+| Schema 版本 | 查看当前版本 |
+| Schema 升级 | 执行增量升级脚本 |
+| 数据库备份 | 备份 config.db |
+| 数据库恢复 | 从备份恢复 |
+| 数据库压缩 | 执行 VACUUM |
+| 完整性检查 | 验证表结构和数据 |
+| 初始化向导 | 为新项目创建标准数据库 |
+
+### 7.12 代码生成器
+
+| 功能 | 说明 |
+|------|------|
+| 语言枚举 | 生成语言代码枚举类型 |
+| 快捷键常量 | 生成快捷键 ActionName 常量 |
+| 配置 Key 常量 | 生成常用配置 Key 常量 |
+| 翻译文本常量 | 生成翻译文本常量（可选） |
+
+---
+
+## 8. UniBaseTray 工作台规范
+
+**UniBaseTray** 是一个轻量级的悬浮窗口工具，常驻系统托盘，用于日常开发辅助。
+
+### 8.1 功能概览
+
+| 功能 | 说明 |
+|------|------|
+| 开发日志 | 快速记录每日开发工作，支持多项目、标签分类 |
+| 命令面板 | 常用命令列表，点击复制或直接执行，按频次排序 |
+| 多步操作 | AutoHotkey 风格的自动化脚本 |
+| 快速启动 | 启动 Studio、CMD、PowerShell（含管理员模式） |
+| 悬浮窗口 | 半透明、可拖动、可缩小到托盘 |
+
+### 8.2 数据存储
+
+工作台数据存储在 `%APPDATA%/UniBase/studio.db`（全局数据库），与项目无关。
+
+#### DevLogs（开发日志表）
+
+```sql
+CREATE TABLE DevLogs (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  LogDate TEXT NOT NULL,              -- 日期 (YYYY-MM-DD)
+  ProjectName TEXT NOT NULL,          -- 项目名称
+  Requirement TEXT,                   -- 提出的需求
+  Implementation TEXT,                -- 实现的功能
+  Tags TEXT,                          -- 标签 (JSON 数组, 如 ["Bug","新功能"])
+  CreatedAt TEXT NOT NULL,
+  ModifiedAt TEXT
+);
+
+CREATE INDEX idx_devlogs_date ON DevLogs(LogDate);
+CREATE INDEX idx_devlogs_project ON DevLogs(ProjectName);
+```
+
+#### QuickCommands（常用命令表）
+
+```sql
+CREATE TABLE QuickCommands (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Name TEXT NOT NULL,                 -- 命令名称
+  Command TEXT NOT NULL,              -- 命令内容
+  Category TEXT DEFAULT 'Global',     -- 分类: Global/项目名
+  ProjectName TEXT,                   -- 所属项目 (全局命令为 NULL)
+  UsageCount INTEGER DEFAULT 0,       -- 使用次数
+  LastUsedAt TEXT,                    -- 最后使用时间
+  IsDangerous INTEGER DEFAULT 0,      -- 是否危险命令 (需确认)
+  SortOrder INTEGER DEFAULT 0,        -- 手动排序
+  CreatedAt TEXT NOT NULL
+);
+
+CREATE INDEX idx_commands_usage ON QuickCommands(UsageCount DESC);
+CREATE INDEX idx_commands_project ON QuickCommands(ProjectName);
+```
+
+#### AutomationScripts（多步操作脚本表）
+
+```sql
+CREATE TABLE AutomationScripts (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Name TEXT NOT NULL,                 -- 脚本名称
+  Description TEXT,                   -- 说明
+  StepsJson TEXT NOT NULL,            -- 步骤定义 (JSON)
+  ProjectName TEXT,                   -- 所属项目
+  Hotkey TEXT,                        -- 快捷键
+  UsageCount INTEGER DEFAULT 0,
+  CreatedAt TEXT NOT NULL,
+  ModifiedAt TEXT
+);
+```
+
+### 8.3 开发日志功能
+
+| 功能 | 说明 |
+|------|------|
+| 快速录入 | 悬浮窗口中输入项目名、需求、实现内容 |
+| 项目下拉 | 自动记录历史项目名，快速选择 |
+| 标签管理 | 预设标签: Bug修复、新功能、重构、文档、测试 |
+| 搜索筛选 | 按日期、项目、标签筛选日志 |
+| 历史查看 | 在 Studio 中查看完整日志历史 |
+| 导出报告 | 导出为 Markdown/JSON/Excel |
+
+### 8.4 命令面板功能
+
+| 功能 | 说明 |
+|------|------|
+| 命令列表 | 按使用频次排序显示 |
+| 点击复制 | 单击复制命令到剪贴板 |
+| 双击执行 | 双击直接执行命令 |
+| 危险确认 | 标记为危险的命令执行前需确认 |
+| 全局/项目 | 支持全局命令和项目专属命令 |
+| CRUD | 新增、编辑、删除命令 |
+
+**命令黑名单（禁止直接执行）：**
+- `rm -rf`、`del /f /s /q`
+- `format`、`fdisk`
+- `shutdown`、`reboot`
+- `DROP TABLE`、`DELETE FROM` (无 WHERE)
+
+### 8.5 多步操作自动化
+
+支持 AutoHotkey 风格的自动化脚本，存储为 JSON 格式。
+
+**支持的操作类型：**
+
+| Action | 参数 | 说明 |
+|--------|------|------|
+| `findWindow` | title, class | 查找窗口 |
+| `activateWindow` | title | 激活窗口 |
+| `killProcess` | name, pid | 终止进程 |
+| `runCommand` | cmd, admin | 执行命令 |
+| `sendKeys` | keys | 发送按键 |
+| `sendText` | text | 发送文本 |
+| `paste` | text | 粘贴文本 |
+| `wait` | ms | 等待指定毫秒 |
+| `waitWindow` | title, timeout | 等待窗口出现 |
+| `mouseClick` | x, y, button | 鼠标点击 |
+| `if` | condition | 条件判断 |
+
+**脚本示例：**
+
+```json
+{
+  "name": "重启 MyApp 服务",
+  "description": "关闭现有实例并重新启动",
+  "steps": [
+    {"action": "killProcess", "name": "MyApp.exe"},
+    {"action": "wait", "ms": 1000},
+    {"action": "runCommand", "cmd": "D:\\Apps\\MyApp.exe"},
+    {"action": "waitWindow", "title": "MyApp*", "timeout": 10000},
+    {"action": "sendKeys", "keys": "{F5}"}
+  ]
+}
+```
+
+### 8.6 快速启动
+
+| 功能 | 说明 |
+|------|------|
+| 启动 Studio | 配置 Studio.exe 路径后一键启动 |
+| 打开 CMD | 在当前目录打开 cmd.exe |
+| 打开 PowerShell | 在当前目录打开 powershell.exe |
+| 管理员 CMD | 以管理员权限打开 CMD |
+| 管理员 PowerShell | 以管理员权限打开 PowerShell |
+| 打开资源管理器 | 在当前目录打开资源管理器 |
+
+### 8.7 悬浮窗口规范
+
+| 特性 | 说明 |
+|------|------|
+| 半透明 | 默认 85% 不透明度，可调节 |
+| 置顶 | 可选置顶显示 |
+| 可拖动 | 拖动到屏幕任意位置 |
+| 记住位置 | 重启后恢复上次位置 |
+| 缩小到托盘 | 点击关闭按钮缩小到托盘 |
+| 双击托盘 | 双击托盘图标显示悬浮窗 |
+| 尺寸可调 | 支持窗口大小调整 |
+
+### 8.8 配置项
+
+| 配置 | 说明 | 默认值 |
+|------|------|--------|
+| `Tray.Opacity` | 窗口透明度 (0.5-1.0) | 0.85 |
+| `Tray.AlwaysOnTop` | 是否置顶 | False |
+| `Tray.StudioPath` | Studio.exe 路径 | 空 |
+| `Tray.DefaultProject` | 默认项目名 | 空 |
+| `Tray.CommandConfirm` | 危险命令确认 | True |
+
+---
+
+## 9. UniBase CLI 命令行工具
+
+用于 CI/CD 集成和自动化任务。
+
+### 9.1 命令概览
+
+```bash
+unibase <command> [options]
+
+Commands:
+  db          数据库管理命令
+  i18n        国际化管理命令
+  release     版本发布命令
+  config      配置管理命令
+  test        测试相关命令（快照、验证等，Phase 2 计划实现）
+```
+
+### 9.2 数据库命令
+
+```bash
+# 初始化新数据库
+# 说明：在当前目录创建包含 Tier 0 + Tier 1 表结构的 config.db
+unibase db init --output config.db
+
+# 升级数据库 Schema
+# 说明：自动检测当前版本并执行增量升级脚本
+unibase db upgrade --db config.db --to-version 0.3
+
+# 备份数据库
+# 说明：复制 config.db 到指定位置
+unibase db backup --db config.db --output backup_20251126.db
+
+# 检查数据库完整性
+# 说明：验证表结构、索引和必要数据是否完整
+unibase db check --db config.db
+```
+
+### 9.3 国际化命令
+
+```bash
+# 扫描源码采集翻译文本
+unibase i18n scan --source ./src --output texts.json
+
+# 与数据库同步（新增/标记废弃）
+unibase i18n sync --db config.db --input texts.json
+
+# 调用 LLM 自动翻译
+unibase i18n translate --db config.db --lang zh-CN,ja-JP --provider litellm
+
+# 导出翻译
+unibase i18n export --db config.db --format json --output translations.json
+
+# 导入翻译
+unibase i18n import --db config.db --input translations.json
+
+# 统计翻译进度
+unibase i18n stats --db config.db
+```
+
+### 9.4 版本发布命令
+
+```bash
+# 发布新版本
+unibase release publish \
+  --version 1.2.0 \
+  --channel stable \
+  --changelog "新增 XX 功能" \
+  --file MyApp_Setup.exe \
+  --upload-url https://update.example.com/myapp/
+
+# 查看发布历史
+unibase release list --channel stable
+```
+
+### 9.5 配置命令
+
+```bash
+# 读取配置
+unibase config get --db config.db --key App.Language
+
+# 设置配置
+unibase config set --db config.db --key App.Language --value zh-CN
+
+# 导出配置
+unibase config export --db config.db --output settings.json
+
+# 导入配置
+unibase config import --db config.db --input settings.json
+```
+
+### 9.6 测试命令
+
+```bash
+# 运行单元测试
+# 说明：执行项目的单元测试套件，支持指定测试用例过滤器
+unibase test run --project MyApp [--filter TestName] --output results.xml
+
+# 保存或更新 GUI 状态快照
+# 说明：捕获窗体当前状态，保存到 TestSnapshots 表
+unibase test snapshot capture --db config.db --form LoginForm --test-case TestLoginForm.Initial
+
+# 验证状态快照一致性
+# 说明：比较当前窗体状态与保存的快照，用于回归测试
+unibase test snapshot verify --db config.db --form LoginForm --test-case TestLoginForm.Initial
+
+# 清理过期快照
+# 说明：删除未使用的测试快照
+unibase test snapshot clean --db config.db
+```
+
+---
+
+## 10. 云端服务规范（可选部署）
+
+### 10.1 版本更新服务
+
+**version.json 结构：**
+
+```json
+{
+  "stable": {
+    "version": "1.2.0",
+    "minVersion": "1.0.0",
+    "releaseDate": "2025-11-26",
+    "downloadUrl": "https://update.example.com/myapp/releases/1.2.0/MyApp_Setup.exe",
+    "fileSize": 15728640,
+    "sha256": "abc123...",
+    "changelog": "- 新增 XX 功能\n- 修复 YY 问题",
+    "forceUpdate": false
+  },
+  "beta": {
+    "version": "1.3.0-beta1",
+    ...
+  }
+}
+```
+
+**目录结构：**
+
+```
+/update-server/
+├── version.json
+└── releases/
+    ├── 1.0.0/
+    │   ├── MyApp_1.0.0_Setup.exe
+    │   └── changelog.md
+    ├── 1.1.0/
+    └── 1.2.0/
+```
+
+### 10.2 远程配置服务
+
+**remote-config.json 结构：**
+
+```json
+{
+  "flags": {
+    "NewFeature.Enabled": true,
+    "ExperimentalMode": false
+  },
+  "configs": {
+    "MaxUploadSize": "10485760",
+    "SupportEmail": "support@example.com"
+  },
+  "ab_tests": {
+    "ButtonColor": {
+      "variants": ["blue", "green", "red"],
+      "distribution": [0.34, 0.33, 0.33]
+    }
+  },
+  "version": "20251126001",
+  "updated_at": "2025-11-26T10:00:00Z"
+}
+```
+
+### 9.3 反馈收集服务
+
+**API 接口：**
+
+```
+POST /api/feedback
+Content-Type: application/json
+
+{
+  "app_id": "myapp",
+  "app_version": "1.2.0",
+  "feedback_type": "Bug",
+  "content": "...",
+  "contact_email": "user@example.com",
+  "system_info": {...},
+  "logs": [...]
+}
+```
+
+### 9.4 License 验证服务
+
+**API 接口：**
+
+```
+POST /api/license/verify
+Content-Type: application/json
+
+{
+  "app_id": "myapp",
+  "license_key": "xxx-xxx-xxx",
+  "machine_id": "..."
+}
+
+Response:
+{
+  "valid": true,
+  "license_type": "Pro",
+  "expires_at": "2026-11-26",
+  "features": ["feature1", "feature2"]
+}
+```
+
+---
+
+## 10. 与现有工程集成指南
+
+### 10.1 集成步骤
+
+#### 步骤 1：添加 UniBase 单元
+
+```delphi
+uses
+  UniBase.Manager,
+  UniBase.VCL.Controls,  // 或 UniBase.FMX.Controls
+  UniBase.VCL.WaitForm;  // 或 UniBase.FMX.WaitForm
+```
+
+#### 步骤 2：准备目录结构
+
+```
+{ProjectRoot}/
+├── config.db
+├── assets/
+│   ├── flags/
+│   ├── styles/
+│   └── animations/
+└── root.txt
+```
+
+#### 步骤 3：修改 .dpr 文件
+
+```delphi
+program MyApp;
+
+uses
+  UniBase.Manager;
+
+begin
+  Application.Initialize;
+  
+  var ErrorMsg: string;
+  if not UniBase.InitializeEx(ErrorMsg) then
+  begin
+    MessageDlg(
+      'Failed to initialize: ' + ErrorMsg + sLineBreak +
+      'Please check installation.',
+      mtError, [mbOK], 0);
+    Exit;
+  end;
+  
+  Application.CreateForm(TMainForm, MainForm);
+  Application.Run;
+  
+  UniBase.Finalize;
+end.
+```
+
+#### 步骤 4：使用控件
+
+1. 拖放 `TFormStateHelper` 到每个需要保存状态的窗体
+2. 拖放 `TMRUPopupMenu` 到主窗体，关联到"文件"菜单
+3. 将需要翻译的标签替换为 `TI18nLabel`
+4. 拖放 `TLanguageComboBox` 和 `TThemeComboBox` 到设置窗体
+
+### 10.2 渐进式迁移策略
+
+| 阶段 | 工作内容 | 风险 |
+|------|----------|------|
+| 1 | 引入 root.txt + config.db 机制 | 低 |
+| 2 | 添加 TFormStateHelper 到各窗体 | 低 |
+| 3 | 接入日志模块 | 低 |
+| 4 | 替换 TMRUPopupMenu / TMRUComboBox | 低 |
+| 5 | 将分散配置迁移到 Settings 表 | 中 |
+| 6 | 将硬编码文本替换为 TI18nLabel/T() | 中 |
+| 7 | 运行 Studio 采集并翻译 | 低 |
+| 8 | 添加 TAutoUpdater 组件 | 低 |
+
+---
+
+## 11. 安全性考虑
+
+### 11.1 敏感信息加密
+
+API Key 等敏感信息使用 Windows DPAPI 加密存储：
+
+```delphi
+// 使用加密方法存储
+UniBase.SetConfigSecure('LLM.ApiKey', 'sk-xxx');
+
+// 读取时自动解密
+var Key := UniBase.GetConfigSecure('LLM.ApiKey');
+```
+
+### 11.2 日志脱敏
+
+```delphi
+// 提供脱敏辅助函数
+function SanitizeForLog(const S: string): string;
+
+// 自动检测并替换敏感模式
+Log(SanitizeForLog('User password: 123456'));
+// 输出: "User password: ******"
+```
+
+### 11.3 发送到云端前的安全控制
+
+- i18n 翻译前显示待发送文本列表，允许用户取消
+- 反馈提交前显示将发送的系统信息
+- 自动过滤包含敏感特征的字符串
+
+---
+
+## 12. 测试支持
+
+### 12.1 Core 层单元测试
+
+Core 层模块无 UI 依赖，可直接使用 DUnit / DUnitX 进行单元测试：
+
+```delphi
+procedure TestConfig;
+var
+  Mgr: TUniBaseManager;
+begin
+  Mgr := TUniBaseManager.Create(nil);
+  try
+    Mgr.InitializeWithDB(':memory:');  // 使用内存数据库测试
+    
+    Mgr.SetConfig('Test.Key', 'TestValue');
+    CheckEquals('TestValue', Mgr.GetConfig('Test.Key'));
+    
+    Mgr.SetConfigInt('Test.Int', 42);
+    CheckEquals(42, Mgr.GetConfigInt('Test.Int'));
+  finally
+    Mgr.Free;
+  end;
+end;
+```
+
+### 12.2 GUI 状态单元测试
+
+为支持 GUI 控件的自动化测试，UniBase 提供 **状态快照** 机制：
+
+#### 12.2.1 状态快照表
+
+```sql
+CREATE TABLE TestSnapshots (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  TestName TEXT NOT NULL,           -- 测试用例名称
+  FormName TEXT NOT NULL,           -- 窗体名称
+  ControlStates TEXT NOT NULL,      -- JSON：控件状态快照
+  ExpectedStates TEXT,              -- JSON：预期状态（可选）
+  CreatedAt TEXT NOT NULL,
+  UNIQUE(TestName, FormName)
+);
+```
+
+#### 12.2.2 状态快照 API
+
+```delphi
+type
+  TUniBaseTestHelper = class
+  public
+    // 捕获窗体当前状态
+    class function CaptureFormState(AForm: TForm): string;  // 返回 JSON
+    
+    // 保存状态快照到数据库
+    class procedure SaveSnapshot(const TestName: string; AForm: TForm);
+    
+    // 加载并验证状态
+    class function VerifySnapshot(const TestName: string; AForm: TForm): Boolean;
+    
+    // 比较两个状态快照
+    class function CompareStates(const Expected, Actual: string): TStateDiff;
+    
+    // 模拟用户操作
+    class procedure SimulateClick(AControl: TControl);
+    class procedure SimulateInput(AEdit: TCustomEdit; const Text: string);
+    class procedure SimulateSelect(AComboBox: TCustomComboBox; Index: Integer);
+  end;
+```
+
+#### 12.2.3 GUI 测试示例
+
+```delphi
+procedure TestLoginForm;
+var
+  Form: TLoginForm;
+begin
+  Form := TLoginForm.Create(nil);
+  try
+    // 验证初始状态
+    CheckTrue(TUniBaseTestHelper.VerifySnapshot('LoginForm.Initial', Form));
+    
+    // 模拟用户输入
+    TUniBaseTestHelper.SimulateInput(Form.EdtUsername, 'admin');
+    TUniBaseTestHelper.SimulateInput(Form.EdtPassword, '123456');
+    TUniBaseTestHelper.SimulateClick(Form.BtnLogin);
+    
+    // 验证登录后状态
+    CheckTrue(Form.IsLoggedIn);
+  finally
+    Form.Free;
+  end;
+end;
+```
+
+#### 12.2.4 集成到 CI/CD
+
+```bash
+# CLI 命令支持
+unibase test run --project MyApp --output results.xml
+unibase test snapshot update --project MyApp --form LoginForm
+unibase test snapshot verify --project MyApp
+```
+
+### 12.3 测试数据库隔离
+
+```delphi
+// 支持内存数据库进行测试，避免影响真实数据
+function TUniBaseManager.InitializeWithDB(const DBPath: string): Boolean;
+begin
+  // DBPath = ':memory:' 时使用 SQLite 内存数据库
+  // DBPath = 'test.db' 时使用独立的测试数据库文件
+end;
+```
+
+---
+
+## 13. 线程安全说明
+
+以下方法保证线程安全：
+
+- `Log()` 及所有日志方法
+- `GetConfig()` / `SetConfig()` 及所有配置读写方法
+- `T()` / `TN()` 及所有 i18n 方法
+- `AddMRU()` / `GetMRUList()`
+
+以下方法仅限主线程调用：
+
+- `ApplyTheme()`
+- `RestoreFormState()` / `SaveFormState()`
+- 所有 UI 控件操作
+
+---
+
+## 14. 单元文件结构
+
+```
+UniBase/
+├── Core/
+│   ├── UniBase.Manager.pas           # 核心管理器
+│   ├── UniBase.Config.pas            # 配置读写
+│   ├── UniBase.i18n.pas              # 国际化
+│   ├── UniBase.Logging.pas           # 日志
+│   ├── UniBase.MRU.pas               # 最近使用
+│   ├── UniBase.Hotkeys.pas           # 快捷键
+│   ├── UniBase.Theme.pas             # 主题接口
+│   ├── UniBase.Exception.pas         # 异常处理
+│   ├── UniBase.LLM.pas               # LLM 调用
+│   ├── UniBase.AutoUpdate.pas        # 自动更新
+│   ├── UniBase.RemoteConfig.pas      # 远程配置
+│   ├── UniBase.License.pas           # License 验证
+│   ├── UniBase.Security.pas          # 加密/脱敏
+│   ├── UniBase.Animation.pas         # 动画资源管理（基于 Image32）
+│   └── UniBase.Types.pas             # 公共类型定义
+│
+├── VCL/
+│   ├── UniBase.VCL.Controls.pas      # VCL 控件注册
+│   ├── UniBase.VCL.MRUControls.pas   # TMRUPopupMenu, TMRUComboBox
+│   ├── UniBase.VCL.I18nControls.pas  # TI18nLabel, TI18nButton
+│   ├── UniBase.VCL.ConfigControls.pas# TConfigEdit, TConfigCheckBox
+│   ├── UniBase.VCL.ComboBoxes.pas    # TLanguageComboBox, TThemeComboBox
+│   ├── UniBase.VCL.WaitForm.pas      # TWaitForm（使用 Image32 渲染 SVG）
+│   ├── UniBase.VCL.FormStateHelper.pas
+│   ├── UniBase.VCL.AutoUpdater.pas
+│   ├── UniBase.VCL.FeedbackDialog.pas
+│   └── UniBase.VCL.Dialogs.pas       # 目录选择等
+│
+├── FMX/
+│   ├── UniBase.FMX.Controls.pas      # FMX 控件注册
+│   ├── UniBase.FMX.MRUControls.pas
+│   ├── UniBase.FMX.I18nControls.pas
+│   ├── UniBase.FMX.ConfigControls.pas
+│   ├── UniBase.FMX.ComboBoxes.pas
+│   ├── UniBase.FMX.WaitForm.pas      # TWaitForm（使用 Image32 渲染 SVG）
+│   ├── UniBase.FMX.FormStateHelper.pas
+│   ├── UniBase.FMX.AutoUpdater.pas
+│   ├── UniBase.FMX.FeedbackDialog.pas
+│   └── UniBase.FMX.Dialogs.pas
+│
+├── Packages/
+│   ├── UniBaseCore.dpk               # Core 运行时包
+│   ├── UniBaseVCL.dpk                # VCL 运行时包
+│   ├── UniBaseFMX.dpk                # FMX 运行时包
+│   ├── dclUniBaseVCL.dpk             # VCL 设计时包
+│   └── dclUniBaseFMX.dpk             # FMX 设计时包
+│
+├── ThirdParty/
+│   └── Image32/                      # Image32 库（SVG 渲染）
+│       ├── Img32.pas
+│       ├── Img32.SVG.Core.pas
+│       ├── Img32.SVG.Reader.pas
+│       └── ...                       # 其他 Image32 文件
+│
+└── Tools/
+    ├── Studio/                       # UniBase Studio 源码
+    │   ├── Studio.dproj
+    │   ├── Forms/
+    │   │   ├── Studio.MainForm.pas
+    │   │   ├── Studio.ProjectForm.pas
+    │   │   ├── Studio.I18nForm.pas
+    │   │   ├── Studio.LogViewerForm.pas
+    │   │   ├── Studio.ConfigEditorForm.pas
+    │   │   ├── Studio.AnimationForm.pas
+    │   │   ├── Studio.LLMForm.pas
+    │   │   ├── Studio.ReleaseForm.pas
+    │   │   └── Studio.LicenseForm.pas
+    │   └── Modules/
+    │       ├── Studio.I18nScanner.pas    # 源码扫描器
+    │       ├── Studio.Translator.pas     # LLM 翻译器
+    │       └── Studio.Publisher.pas      # 版本发布器
+    │
+    └── CLI/                          # UniBase CLI 源码
+        ├── unibase.dproj               # 命令行工具主工程
+        ├── unibase.dpr
+        ├── CLI.Commands.pas            # 命令解析器
+        ├── CLI.DB.pas                  # db 子命令
+        ├── CLI.I18n.pas                # i18n 子命令
+        ├── CLI.Release.pas             # release 子命令
+        ├── CLI.Config.pas              # config 子命令
+        └── CLI.Utils.pas               # 工具函数
+```
+
+### 14.1 依赖关系
+
+```
+┌─────────────────┐
+│   Image32       │  ← 第三方库（SVG 渲染）
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  UniBase.Core   │  ← 核心库（无 UI 依赖）
+└────────┬────────┘
+         │
+    ┌────┼────┐
+    ▼         ▼
+┌────────┐ ┌────────┐
+│ VCL    │ │ FMX    │  ← UI 控件包
+└────────┘ └────────┘
+    │         │
+    └────┬────┘
+         ▼
+┌─────────────────┐
+│  用户应用程序    │
+└─────────────────┘
+```
+
+### 14.2 编译顺序
+
+1. Image32（第三方库）
+2. UniBaseCore.dpk
+3. UniBaseVCL.dpk 或 UniBaseFMX.dpk
+4. dclUniBaseVCL.dpk 或 dclUniBaseFMX.dpk（设计时包）
+5. Studio 和 CLI 工具
+
+---
+
+## 15. 后续工作
+
+### Phase 0：最小核心（立即开始）
+
+**目标：实现 Tier 0 表 + 对应的最小 Core API**
+
+| 任务 | 说明 |
+|------|------|
+|| 1. Tier 0 Schema | `SchemaInfo`, `ProjectInfo`, `Settings`, `FormStates`, `Languages`, `I18nTexts` |
+| 2. UniBase.Config | GetConfig/SetConfig 系列方法 |
+| 3. UniBase.i18n | T() 函数、语言切换 |
+| 4. UniBase.FormState | SaveFormState/RestoreFormState |
+| 5. 单元测试 | 使用 :memory: 数据库测试 Core 功能 |
+| 6. 示例工程 | 一个最小 VCL 示例，验证 Config + i18n + FormState |
+
+**交付物：**
+- `UniBase.Manager.pas`（核心管理器）
+- `UniBase.Config.pas`
+- `UniBase.i18n.pas`
+- `UniBase.FormState.pas`
+- `UniBase.Types.pas`
+- `config.db` 初始化脚本（Tier 0）
+- 单元测试工程
+
+### Phase 1：推荐功能
+
+**目标：实现 Tier 1 表 + VCL 控件 + Studio 基础**
+
+| 任务 | 说明 |
+|------|------|
+| 1. Tier 1 Schema | `Logs`, `MRU`, `Hotkeys`, `Themes` |
+| 2. UniBase.Logging | Log() 系列方法，线程安全 |
+| 3. UniBase.MRU | MRU 管理 |
+| 4. UniBase.Hotkeys | 快捷键管理 |
+| 5. UniBase.Theme | 主题切换 |
+| 6. VCL 控件 | TMRUPopupMenu, TI18nLabel, TFormStateHelper, TConfigEdit |
+| 7. Studio 基础 | 项目管理 + 配置编辑器 + 日志查看器 |
+
+### Phase 2：扩展功能
+
+| 任务 | 说明 |
+|------|------|
+| 1. LLM 模块 | LLMChat、LLMConfiguration 表、TLLMConfigPanel |
+| 2. Studio i18n | 源码扫描 + LLM 翻译 |
+| 3. 等待窗口 | TWaitForm (随机动画) + TNotificationBar |
+| 4. 异常处理 | HandleException + ExceptionReports |
+| 5. FMX 控件包 | 与 VCL 保持接口一致 |
+| 6. GUI 测试 | TUniBaseTestHelper + 状态快照 |
+
+### Phase 3：高级功能
+
+| 任务 | 说明 |
+|------|------|
+| 1. 自动更新 | TAutoUpdater + 版本发布管理 |
+| 2. 数据库维护 | TDBInitWizard + 备份/恢复 |
+| 3. 远程配置 | Feature Flags + A/B 测试 |
+| 4. CLI 工具 | i18n/db/release/config 命令 |
+| 5. 云端服务 | 版本更新服务示例 |
+
+### Phase 4：完善
+
+| 任务 | 说明 |
+|------|------|
+| 1. License 管理 | 许可证验证 |
+| 2. 用户反馈 | TFeedbackDialog + 反馈服务 |
+| 3. 使用统计 | UsageStats + 同步服务 |
+| 4. 文档完善 | API 参考、最佳实践、FAQ |

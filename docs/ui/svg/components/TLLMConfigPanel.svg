@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="400" height="300" class="bg" />
+  
+          <text x="10" y="20" class="title">TLLMConfigPanel</text>
+          <rect x="10" y="30" width="380" height="260" class="ctrl-bg" />
+          
+          <!-- Top: Config -->
+          <g transform="translate(20, 40)">
+             <text x="0" y="10" class="label" font-weight="bold">Provider:</text>
+             <rect x="60" y="0" width="100" height="20" fill="#fff" stroke="#999"/>
+             <text x="65" y="14" class="label">LiteLLM</text>
+             
+             <text x="180" y="10" class="label" font-weight="bold">API Key:</text>
+             <rect x="230" y="0" width="80" height="20" fill="#fff" stroke="#999"/>
+             <text x="235" y="14" class="label">****</text>
+             <text x="320" y="14" class="label">👁️</text>
+             
+             <rect x="0" y="30" width="60" height="20" fill="#e0e0e0" stroke="#999" rx="3"/>
+             <text x="30" y="44" class="label" text-anchor="middle">Test</text>
+             <text x="70" y="44" class="label" fill="green">✓ Connected</text>
+          </g>
+          
+          <!-- Bottom: Grid -->
+          <line x1="10" y1="100" x2="390" y2="100" stroke="#ccc" />
+          <text x="20" y="115" class="label" font-weight="bold">History:</text>
+          
+          <g transform="translate(20, 125)">
+             <rect width="360" height="150" fill="#fff" stroke="#999" />
+             <!-- Header -->
+             <rect width="360" height="20" fill="#eee" />
+             <text x="5" y="14" class="label" font-weight="bold">Time</text>
+             <text x="80" y="14" class="label" font-weight="bold">Model</text>
+             <text x="180" y="14" class="label" font-weight="bold">Tokens</text>
+             <text x="260" y="14" class="label" font-weight="bold">Cost</text>
+             
+             <!-- Row 1 -->
+             <text x="5" y="34" class="label">10:00</text>
+             <text x="80" y="34" class="label">gpt-4</text>
+             <text x="180" y="34" class="label">150</text>
+             <text x="260" y="34" class="label">$0.02</text>
+             <line x1="0" y1="40" x2="360" y2="40" stroke="#eee"/>
+             
+             <!-- Row 2 -->
+             <text x="5" y="54" class="label">09:55</text>
+             <text x="80" y="54" class="label">gpt-3.5</text>
+             <text x="180" y="54" class="label">50</text>
+             <text x="260" y="54" class="label">$0.001</text>
+          </g>
+        
+</svg>

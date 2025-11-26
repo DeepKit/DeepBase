@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 250" width="500" height="250">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .panel-bg { fill: #f0f2f5; stroke: #ccc; stroke-width: 1; }
+      .label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #333; }
+      .tag-green { fill: #e8f5e9; stroke: #a5d6a7; stroke-width: 1; }
+      .tag-gray { fill: #e0e0e0; stroke: #bdbdbd; stroke-width: 1; }
+      .progress-bg { fill: #e0e0e0; }
+      .progress-bar { fill: #81c784; }
+      .code-text { font-family: Consolas, monospace; font-size: 11px; fill: #555; }
+      .dialog-bg { fill: #ffffff; stroke: #333; stroke-width: 1; }
+      .btn-primary { fill: #2196f3; rx: 3; }
+      .btn-text { font-family: Arial, sans-serif; font-size: 12px; fill: #fff; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="500" height="250" class="bg" />
+  
+          <text x="10" y="20" class="title" font-size="14px">TLicenseStatusPanel</text>
+          
+          <!-- Main Card -->
+          <rect x="10" y="35" width="480" height="200" class="panel-bg" rx="8" />
+          
+          <!-- Header Section -->
+          <text x="30" y="65" class="title">本地账号信息</text>
+          
+          <!-- Status Tag: 正常 -->
+          <rect x="140" y="48" width="50" height="22" class="tag-green" rx="11" />
+          <text x="165" y="64" class="label" fill="#2e7d32" text-anchor="middle" font-size="11px">正常</text>
+          
+          <line x1="10" y1="85" x2="490" y2="85" stroke="#ddd" stroke-width="1"/>
+          
+          <!-- Content Body -->
+          <!-- Email & Plan -->
+          <text x="30" y="115" class="label" fill="#666">邮箱:</text>
+          <text x="80" y="115" class="label">user@example.com</text>
+          
+          <rect x="220" y="102" width="40" height="18" class="tag-gray" rx="4"/>
+          <text x="240" y="115" class="label" fill="#616161" text-anchor="middle" font-size="10px">FREE</text>
+          
+          <!-- Reset Date -->
+          <text x="30" y="140" class="label" fill="#666">重置日期:</text>
+          <text x="100" y="140" class="label">2025-12-20 12:20:41</text>
+          
+          <!-- Quota & Progress -->
+          <text x="30" y="165" class="label" fill="#666">额度:</text>
+          <text x="80" y="165" class="label" fill="#2e7d32" font-weight="bold">45</text>
+          <text x="100" y="165" class="label">/ 150</text>
+          <text x="460" y="165" class="label" text-anchor="end" fill="#2e7d32">30%</text>
+          
+          <rect x="30" y="175" width="440" height="10" class="progress-bg" rx="5"/>
+          <rect x="30" y="175" width="132" height="10" class="progress-bar" rx="5"/>
+          
+          <!-- Technical IDs -->
+          <text x="30" y="205" class="label" fill="#666">experimentId:</text>
+          <text x="110" y="205" class="code-text">bf2243c9-c6d8-460d-a513-bcd8314e5fa9</text>
+          
+          <text x="30" y="225" class="label" fill="#666">apiKey:</text>
+          <rect x="80" y="212" width="300" height="18" fill="#fff" rx="2"/>
+          <text x="85" y="224" class="code-text">wk-1.d12aabf1999abef76daf2bc... (Click to Copy)</text>
+        
+</svg>

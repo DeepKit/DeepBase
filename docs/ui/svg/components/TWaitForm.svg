@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .ctrl-active { fill: #e3f2fd; stroke: #2196f3; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .hint { font-family: Arial, sans-serif; font-size: 10px; fill: #888; font-style: italic; }
+      .icon { fill: #666; }
+      .highlight { fill: #ffeb3b; fill-opacity: 0.3; }
+      .tag { fill: #e0e0e0; font-size: 9px; }
+    </style>
+  </defs>
+  <rect width="300" height="150" class="bg" />
+  
+          <text x="10" y="20" class="title">TWaitForm</text>
+          
+          <!-- Window -->
+          <rect x="10" y="30" width="280" height="110" class="window-bg" fill="#fff" stroke="#333" stroke-width="1" rx="5"/>
+          
+          <!-- Animation Area -->
+          <circle cx="150" cy="70" r="20" fill="none" stroke="#ff9800" stroke-width="3" stroke-dasharray="20 10" />
+          
+          <!-- Text -->
+          <text x="150" y="110" class="label" text-anchor="middle" font-weight="bold">Please wait...</text>
+          <text x="150" y="125" class="label" text-anchor="middle" font-size="10px" fill="#666">Loading resources (2/5)</text>
+        
+</svg>

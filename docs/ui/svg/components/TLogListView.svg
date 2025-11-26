@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300" width="500" height="300">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .border { fill: none; stroke: #999; stroke-width: 1; }
+      .ctrl-bg { fill: #f9f9f9; stroke: #ccc; stroke-width: 1; }
+      .header-bg { fill: #e0e0e0; stroke: #999; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .grid-line { stroke: #eee; stroke-width: 1; }
+      .icon-error { fill: #f44336; }
+      .icon-warn { fill: #ff9800; }
+      .icon-info { fill: #2196f3; }
+      .text-error { fill: #d32f2f; }
+      .text-warn { fill: #ef6c00; }
+      .text-info { fill: #1976d2; }
+      .tag { font-size: 10px; fill: #666; }
+    </style>
+  </defs>
+  <rect width="500" height="300" class="bg" />
+  
+  <text x="10" y="20" class="title">TLogListView</text>
+  
+  <!-- Main Control Area -->
+  <rect x="10" y="35" width="480" height="200" class="ctrl-bg" />
+  
+  <!-- Column Headers -->
+  <rect x="10" y="35" width="480" height="25" class="header-bg" />
+  <line x1="90" y1="35" x2="90" y2="60" stroke="#999"/>
+  <line x1="150" y1="35" x2="150" y2="60" stroke="#999"/>
+  <line x1="230" y1="35" x2="230" y2="60" stroke="#999"/>
+  
+  <text x="15" y="52" class="label" font-weight="bold">Time</text>
+  <text x="95" y="52" class="label" font-weight="bold">Level</text>
+  <text x="155" y="52" class="label" font-weight="bold">Source</text>
+  <text x="235" y="52" class="label" font-weight="bold">Message</text>
+  
+  <!-- Log Rows (Simulating Virtual List) -->
+  
+  <!-- Row 1: INFO -->
+  <rect x="10" y="60" width="480" height="20" fill="#fff" />
+  <text x="15" y="74" class="label" fill="#666">10:00:05</text>
+  <text x="95" y="74" class="label text-info">INFO</text>
+  <text x="155" y="74" class="label">App</text>
+  <text x="235" y="74" class="label">Application started.</text>
+  <line x1="10" y1="80" x2="490" y2="80" class="grid-line"/>
+  
+  <!-- Row 2: DEBUG -->
+  <rect x="10" y="80" width="480" height="20" fill="#fcfcfc" />
+  <text x="15" y="94" class="label" fill="#666">10:00:06</text>
+  <text x="95" y="94" class="label" fill="#999">DEBUG</text>
+  <text x="155" y="94" class="label">DB</text>
+  <text x="235" y="94" class="label" fill="#666">Connecting to SQLite...</text>
+  <line x1="10" y1="100" x2="490" y2="100" class="grid-line"/>
+  
+  <!-- Row 3: WARN -->
+  <rect x="10" y="100" width="480" height="20" fill="#fff3e0" />
+  <text x="15" y="114" class="label" fill="#666">10:00:08</text>
+  <text x="95" y="114" class="label text-warn">WARN</text>
+  <text x="155" y="114" class="label">Net</text>
+  <text x="235" y="114" class="label">Slow response (1200ms)</text>
+  <line x1="10" y1="120" x2="490" y2="120" class="grid-line"/>
+  
+  <!-- Row 4: ERROR -->
+  <rect x="10" y="120" width="480" height="20" fill="#ffebee" />
+  <text x="15" y="134" class="label" fill="#666">10:00:15</text>
+  <text x="95" y="134" class="label text-error">ERROR</text>
+  <text x="155" y="134" class="label">LLM</text>
+  <text x="235" y="134" class="label text-error">API Key invalid or expired.</text>
+  <line x1="10" y1="140" x2="490" y2="140" class="grid-line"/>
+  
+  <!-- Scrollbar -->
+  <rect x="475" y="60" width="15" height="175" fill="#f0f0f0" stroke="#ccc" />
+  <rect x="477" y="62" width="11" height="40" fill="#ccc" rx="2" />
+  
+  <!-- Footer / Properties Hint -->
+  <rect x="10" y="245" width="480" height="45" fill="#e3f2fd" stroke="#2196f3" rx="3"/>
+  <text x="20" y="262" class="label" font-weight="bold" fill="#0d47a1">💡 Component Features:</text>
+  <text x="20" y="280" class="tag">• Auto-connect to Logger • Virtual Mode (High Perf) • Auto-Scroll • Colored Levels</text>
+
+</svg>
