@@ -1,0 +1,107 @@
+object TFrameConfigEditor: TFrameConfigEditor
+  Left = 0
+  Top = 0
+  Width = 600
+  Height = 400
+  object Layout1: TLayout
+    Align = Client
+    object TopLayout: TLayout
+      Align = Top
+      Height = 40
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      object GroupLabel: TLabel
+        Align = Left
+        Text = 'Group:'
+        Width = 50
+        Margins.Right = 5
+      end
+      object GroupComboBox: TComboBox
+        Align = Left
+        Width = 150
+        Margins.Right = 20
+        Items.Strings = (
+          'App'
+          'UI'
+          'Log'
+          'Database')
+        ItemIndex = 0
+        OnChange = GroupComboBoxChange
+      end
+    end
+    object ConfigListLayout: TLayout
+      Align = Client
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      object ConfigListLabel: TLabel
+        Align = Top
+        Height = 20
+        Text = 'Configuration Items'
+      end
+      object ConfigListBox: TListBox
+        Align = Client
+        Margins.Top = 3
+        OnItemClick = ConfigListBoxItemClick
+      end
+    end
+    object BottomLayout: TLayout
+      Align = Bottom
+      Height = 120
+      Margins.Left = 5
+      Margins.Top = 10
+      Margins.Right = 5
+      Margins.Bottom = 5
+      object DetailLabel: TLabel
+        Align = Top
+        Height = 20
+        Text = 'Configuration Item Details'
+      end
+      object DetailLayout: TLayout
+        Align = Client
+        Margins.Top = 3
+        object KeyLabel: TLabel
+          Align = Top
+          Height = 20
+          Text = 'Key:'
+        end
+        object KeyEdit: TEdit
+          Align = Top
+          Height = 25
+          Margins.Top = 3
+          ReadOnly = True
+        end
+        object ValueLabel: TLabel
+          Align = Top
+          Height = 20
+          Margins.Top = 5
+          Text = 'Value:'
+        end
+        object ValueEdit: TEdit
+          Align = Top
+          Height = 25
+          Margins.Top = 3
+        end
+        object ButtonsLayout: TLayout
+          Align = Bottom
+          Height = 30
+          object SaveButton: TButton
+            Align = Left
+            Text = 'Save'
+            Width = 80
+            Margins.Right = 5
+            OnClick = SaveButtonClick
+          end
+          object ResetButton: TButton
+            Align = Left
+            Text = 'Reset'
+            Width = 80
+            OnClick = ResetButtonClick
+          end
+        end
+      end
+    end
+  end
+end

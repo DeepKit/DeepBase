@@ -1,0 +1,86 @@
+object TFrameLogViewer: TFrameLogViewer
+  Left = 0
+  Top = 0
+  Width = 600
+  Height = 400
+  object Layout1: TLayout
+    Align = Client
+    object ToolbarLayout: TLayout
+      Align = Top
+      Height = 50
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      object Label1: TLabel
+        Align = Top
+        Text = 'Filter & Search'
+        Height = 20
+      end
+      object FilterLayout: TLayout
+        Align = Client
+        Margins.Top = 3
+        object KeywordLabel: TLabel
+          Align = Left
+          Text = 'Keyword:'
+          Width = 70
+          Margins.Right = 5
+        end
+        object KeywordEdit: TEdit
+          Align = Left
+          Width = 150
+          Margins.Right = 10
+        end
+        object LevelLabel: TLabel
+          Align = Left
+          Text = 'Level:'
+          Width = 50
+          Margins.Right = 5
+        end
+        object LevelComboBox: TComboBox
+          Align = Left
+          Width = 100
+          Margins.Right = 10
+          Items.Strings = (
+            'All'
+            'Debug'
+            'Info'
+            'Warning'
+            'Error'
+            'Fatal')
+          ItemIndex = 0
+        end
+        object ApplyFilterButton: TButton
+          Align = Left
+          Text = 'Apply Filter'
+          Width = 100
+          Margins.Right = 5
+          OnClick = ApplyFilterButtonClick
+        end
+        object ClearFilterButton: TButton
+          Align = Left
+          Text = 'Clear'
+          Width = 80
+          OnClick = ClearFilterButtonClick
+        end
+      end
+    end
+    object LogContentLayout: TLayout
+      Align = Client
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      object LogInfoLabel: TLabel
+        Align = Top
+        Height = 20
+        Text = 'No log file selected'
+      end
+      object LogMemo: TMemo
+        Align = Client
+        Margins.Top = 3
+        ReadOnly = True
+        WordWrap = True
+      end
+    end
+  end
+end

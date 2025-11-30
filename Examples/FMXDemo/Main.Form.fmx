@@ -1,0 +1,90 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'UniBase FMX Platform Demo'
+  ClientHeight = 640
+  ClientWidth = 400
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop, iPhone, iPad]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object ToolBar: TToolBar
+    Align = Top
+    Size.Width = 400.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object LabelTitle: TLabel
+      Align = Client
+      StyledSettings = [Family, Style]
+      Margins.Left = 16.000000000000000000
+      Margins.Right = 16.000000000000000000
+      Size.Width = 368.000000000000000000
+      Size.Height = 44.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 18.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'UniBase FMX Demo'
+      TabOrder = 0
+    end
+  end
+  object TabControl: TTabControl
+    Align = Client
+    Size.Width = 400.000000000000000000
+    Size.Height = 596.000000000000000000
+    Size.PlatformDefault = False
+    TabIndex = 0
+    TabOrder = 1
+    TabPosition = Bottom
+    object TabPlatform: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 100.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Platform'
+    end
+    object TabTheme: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 100.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Theme'
+    end
+    object TabListView: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 100.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'ListView'
+    end
+    object TabFormControls: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 100.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Controls'
+    end
+  end
+end

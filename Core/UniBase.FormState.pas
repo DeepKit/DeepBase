@@ -1,9 +1,10 @@
 { ============================================================================
-  UniBase.FormState - 窗体状态管理模块
+  UniBase.FormState - Form State Management Module
   
-  版本: 0.3
-  说明: 提供窗体位置、尺寸和状态的持久化存储
-  注意: 本模块为 Core 层，不依赖 VCL/FMX，具体 UI 绑定由上层组件实现
+  Version: 1.0
+  Description: Provides persistent storage for form position, size and state.
+  Note: This is a Core layer module, does not depend on VCL/FMX. Actual UI
+        binding is implemented by upper layer components.
   ============================================================================ }
 
 unit UniBase.FormState;
@@ -18,7 +19,7 @@ uses
 
 type
   /// <summary>
-  /// 窗体状态数据
+  /// Form state data
   /// </summary>
   TFormStateData = record
     Left: Integer;
@@ -28,37 +29,63 @@ type
     WindowState: Integer; // 0=Normal, 1=Minimized, 2=Maximized
     MonitorIndex: Integer;
     Extra: string;
+    
+    /// <summary>
+    /// Initialize to default values
+    /// </summary>
+    procedure Init;
+    
+    /// <summary>
+    /// Check if data is valid
+    /// </summary>
+    function IsValid: Boolean;
   end;
 
   /// <summary>
-  /// 窗体状态管理器
+  /// Form state manager
   /// </summary>
   TUniBaseFormState = class
   private
     FConnection: TFDConnection;
     FLock: TObject;
+    FOwnsLock: Boolean;
     
     procedure WriteToDB(const FormName: string; const Data: TFormStateData);
     function ReadFromDB(const FormName: string; out Data: TFormStateData): Boolean;
     
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject);
+    constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
     destructor Destroy; override;
     
     /// <summary>
-    /// 保存窗体状态
+    /// Save form state
     /// </summary>
     procedure SaveState(const FormName: string; const Data: TFormStateData);
     
     /// <summary>
-    /// 恢复窗体状态
+    /// Restore form state
     /// </summary>
     function RestoreState(const FormName: string; out Data: TFormStateData): Boolean;
     
     /// <summary>
-    /// 删除窗体状态
+    /// Delete form state
     /// </summary>
     procedure DeleteState(const FormName: string);
+    
+    /// <summary>
+    /// Check if state exists
+    /// </summary>
+    function HasState(const FormName: string): Boolean;
+    
+    /// <summary>
+    /// Get all saved form names
+    /// </summary>
+    function GetAllFormNames: TArray<string>;
+    
+    /// <summary>
+    /// Clear all states
+    /// </summary>
+    procedure ClearAll;
   end;
 
 implementation
@@ -66,17 +93,46 @@ implementation
 uses
   FireDAC.Stan.Param;
 
+{ TFormStateData }
+
+procedure TFormStateData.Init;
+begin
+  Left := 100;
+  Top := 100;
+  Width := 800;
+  Height := 600;
+  WindowState := 0;
+  MonitorIndex := 0;
+  Extra := '';
+end;
+
+function TFormStateData.IsValid: Boolean;
+begin
+  Result := (Width > 0) and (Height > 0);
+end;
+
 { TUniBaseFormState }
 
 constructor TUniBaseFormState.Create(AConnection: TFDConnection; ALock: TObject);
 begin
   inherited Create;
   FConnection := AConnection;
-  FLock := ALock;
+  if ALock <> nil then
+  begin
+    FLock := ALock;
+    FOwnsLock := False;
+  end
+  else
+  begin
+    FLock := TObject.Create;
+    FOwnsLock := True;
+  end;
 end;
 
 destructor TUniBaseFormState.Destroy;
 begin
+  if FOwnsLock then
+    FLock.Free;
   inherited;
 end;
 
@@ -158,6 +214,8 @@ var
   Query: TFDQuery;
 begin
   Result := False;
+  Data.Init;
+  
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
     
@@ -177,10 +235,90 @@ begin
       Data.WindowState := Query.FieldByName('WindowState').AsInteger;
       Data.MonitorIndex := Query.FieldByName('MonitorIndex').AsInteger;
       Data.Extra := Query.FieldByName('Extra').AsString;
-      Result := True;
+      Result := Data.IsValid;
     end;
   finally
     Query.Free;
+  end;
+end;
+
+function TUniBaseFormState.HasState(const FormName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+    
+  TMonitor.Enter(FLock);
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'SELECT 1 FROM FormStates WHERE FormName = :FormName';
+      Query.ParamByName('FormName').AsString := FormName;
+      Query.Open;
+      Result := not Query.Eof;
+    finally
+      Query.Free;
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+function TUniBaseFormState.GetAllFormNames: TArray<string>;
+var
+  Query: TFDQuery;
+  List: TArray<string>;
+begin
+  Result := nil;
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+    
+  TMonitor.Enter(FLock);
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'SELECT FormName FROM FormStates ORDER BY FormName';
+      Query.Open;
+      
+      SetLength(List, 0);
+      while not Query.Eof do
+      begin
+        SetLength(List, Length(List) + 1);
+        List[High(List)] := Query.FieldByName('FormName').AsString;
+        Query.Next;
+      end;
+      Result := List;
+    finally
+      Query.Free;
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseFormState.ClearAll;
+var
+  Query: TFDQuery;
+begin
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+    
+  TMonitor.Enter(FLock);
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'DELETE FROM FormStates';
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
+  finally
+    TMonitor.Exit(FLock);
   end;
 end;
 

@@ -7,7 +7,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   FireDAC.VCLUI.Wait, FireDAC.Comp.UI,
   UniBase.Manager, UniBase.Config, UniBase.i18n, UniBase.FormState, UniBase.Types,
-  UniBase.VCL.UIHelper;
+  UniBase.VCL.UIHelper, UniBase.Logging, FireDAC.UI.Intf, FireDAC.Stan.Intf;
 
 type
   TfrmMain = class(TForm)
@@ -27,6 +27,7 @@ type
     lblLang: TLabel;
     cboLang: TComboBox;
     btnSwitchLang: TButton;
+    btnResetDB: TButton;
     
     pnlTrans: TPanel;
     lblTransSource: TLabel;
@@ -50,6 +51,10 @@ type
     procedure OnBtnSwitchLangClick(Sender: TObject);
     procedure OnLanguageChanged(Sender: TObject);
     procedure OnConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
+    
+    // New reset method
+    procedure ResetDatabase;
+    procedure OnBtnResetDBClick(Sender: TObject);
   public
     { Public declarations }
   end;
@@ -68,11 +73,16 @@ var
   Langs: TLanguageInfoArray;
   Lang: TLanguageInfo;
 begin
-  // Try to enable Mica Effect (Windows 11)
   if TUniBaseUIHelper.ApplyMicaEffect(Self) then
   begin
     // If Mica enabled, make controls transparent where possible
     Self.Color := clBlack; // Or let OS handle it
+    // For VCL, panels might need adjustment
+  end
+  else
+  begin
+    // Fallback for non-Mica
+    Self.Color := clBtnFace;
   end;
 
   InitializeUI;
@@ -178,6 +188,8 @@ begin
   pnlTop.Height := 50;
   pnlTop.Caption := '';
   pnlTop.BevelOuter := bvNone;
+  pnlTop.ParentBackground := False; // Ensure it draws its own background (opaque)
+  pnlTop.Color := clWhite; // Light background for Mica contrast
   
   lblConfig := TLabel.Create(Self);
   lblConfig.Parent := pnlTop;
@@ -205,6 +217,8 @@ begin
   pnlLang.Height := 50;
   pnlLang.Caption := '';
   pnlLang.BevelOuter := bvNone;
+  pnlLang.ParentBackground := False;
+  pnlLang.Color := clWhite;
   
   lblLang := TLabel.Create(Self);
   lblLang.Parent := pnlLang;
@@ -226,6 +240,13 @@ begin
   btnSwitchLang.Caption := 'Switch Language';
   btnSwitchLang.OnClick := OnBtnSwitchLangClick;
   
+  btnResetDB := TButton.Create(Self);
+  btnResetDB.Parent := pnlLang;
+  btnResetDB.Left := 450;
+  btnResetDB.Top := 13;
+  btnResetDB.Caption := 'Reset DB';
+  btnResetDB.OnClick := OnBtnResetDBClick;
+  
   // Translation Demo Panel
   pnlTrans := TPanel.Create(Self);
   pnlTrans.Parent := Self;
@@ -233,6 +254,8 @@ begin
   pnlTrans.Height := 80;
   pnlTrans.Caption := '';
   pnlTrans.BevelOuter := bvNone;
+  pnlTrans.ParentBackground := False;
+  pnlTrans.Color := clWhite;
   
   lblTransSource := TLabel.Create(Self);
   lblTransSource.Parent := pnlTrans;
@@ -298,6 +321,10 @@ end;
 procedure TfrmMain.Log(const Msg: string);
 begin
   mmoLog.Lines.Add(Format('[%s] %s', [FormatDateTime('HH:mm:ss', Now), Msg]));
+  
+  // Also log to system logger
+  if UniBase.Manager.UniBase.IsInitialized then
+    Logger.Info(Msg, 'Demo');
 end;
 
 procedure TfrmMain.UpdateTranslations;
@@ -340,6 +367,26 @@ end;
 procedure TfrmMain.OnConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
 begin
   Log(Format('Config Changed: %s = "%s" -> "%s"', [Key, OldValue, NewValue]));
+end;
+
+procedure TfrmMain.OnBtnResetDBClick(Sender: TObject);
+begin
+  ResetDatabase;
+end;
+
+procedure TfrmMain.ResetDatabase;
+begin
+  if MessageDlg('Reset Database will delete config.db and restart the application. Continue?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  begin
+    UniBase.Manager.UniBase.Finalize;
+    if DeleteFile(UniBase.Manager.UniBase.ConfigDBPath) then
+    begin
+      ShowMessage('Database reset. Application will now close. Please restart it.');
+      Application.Terminate;
+    end
+    else
+      ShowMessage('Failed to delete database file.');
+  end;
 end;
 
 end.

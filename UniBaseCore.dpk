@@ -42,6 +42,25 @@ contains
   UniBase.Config in 'Core\UniBase.Config.pas',
   UniBase.i18n in 'Core\UniBase.i18n.pas',
   UniBase.FormState in 'Core\UniBase.FormState.pas',
-  UniBase.VCL.UIHelper in 'VCL\UniBase.VCL.UIHelper.pas';
+  UniBase.VCL.ConfigControls in 'VCL\UniBase.VCL.ConfigControls.pas',
+  UniBase.VCL.I18nControls in 'VCL\UniBase.VCL.I18nControls.pas',
+  UniBase.VCL.ComboBoxes in 'VCL\UniBase.VCL.ComboBoxes.pas',
+  UniBase.VCL.FormStateHelper in 'VCL\UniBase.VCL.FormStateHelper.pas',
+  UniBase.VCL.LogListView in 'VCL\UniBase.VCL.LogListView.pas',
+  UniBase.VCL.LLMConfigPanel in 'VCL\UniBase.VCL.LLMConfigPanel.pas',
+  UniBase.VCL.WaitForm in 'VCL\UniBase.VCL.WaitForm.pas',
+  UniBase.VCL.NotificationBar in 'VCL\UniBase.VCL.NotificationBar.pas',
+  UniBase.Exception in 'Core\UniBase.Exception.pas',
+  UniBase.VCL.UpdateDialog in 'VCL\UniBase.VCL.UpdateDialog.pas',
+  UniBase.VCL.AutoUpdater in 'VCL\UniBase.VCL.AutoUpdater.pas',
+  UniBase.VCL.DBInitWizard in 'VCL\UniBase.VCL.DBInitWizard.pas',
+  UniBase.VCL.Controls in 'VCL\UniBase.VCL.Controls.pas';
+  UniBase.Logging in 'Core\UniBase.Logging.pas',
+  UniBase.MRU in 'Core\UniBase.MRU.pas',
+  UniBase.Hotkeys in 'Core\UniBase.Hotkeys.pas',
+  UniBase.Theme in 'Core\UniBase.Theme.pas',
+  UniBase.LLM in 'Core\UniBase.LLM.pas',
+  UniBase.AutoUpdate in 'Core\UniBase.AutoUpdate.pas',
+  UniBase.RemoteConfig in 'Core\UniBase.RemoteConfig.pas';
 
 end.

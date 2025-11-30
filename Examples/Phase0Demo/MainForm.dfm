@@ -10,13 +10,11 @@ object frmMain: TfrmMain
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = False
   Position = poScreenCenter
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  OnClose = FormClose
-  PixelsPerInch = 96
   TextHeight = 15
   object FDGUIxWaitCursor1: TFDGUIxWaitCursor
     Provider = 'Forms'

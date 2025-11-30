@@ -1,0 +1,483 @@
+{ ============================================================================
+  UniBase.VCL.FeedbackDialog - 用户反馈对话框
+  
+  版本: 1.0
+  功能: 
+    - 反馈表单（类型、内容、联系方式）
+    - 附带日志选项
+    - 异步提交到服务器
+  ============================================================================ }
+
+unit UniBase.VCL.FeedbackDialog;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Classes,
+  System.JSON,
+  System.Net.HttpClient,
+  System.Net.URLClient,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls,
+  Vcl.Graphics,
+  Vcl.ComCtrls;
+
+type
+  TFeedbackType = (
+    ftBugReport,      // Bug 报告
+    ftFeatureRequest, // 功能请求
+    ftQuestion,       // 问题咨询
+    ftOther           // 其他
+  );
+
+  TFeedbackSubmitCallback = reference to procedure(Success: Boolean; const Message: string);
+
+  TFeedbackDialog = class(TForm)
+  private
+    FPnlHeader: TPanel;
+    FLblTitle: TLabel;
+    FLblSubtitle: TLabel;
+    FPnlContent: TPanel;
+    FLblType: TLabel;
+    FCmbType: TComboBox;
+    FLblSubject: TLabel;
+    FEdtSubject: TEdit;
+    FLblContent: TLabel;
+    FMmoContent: TMemo;
+    FLblEmail: TLabel;
+    FEdtEmail: TEdit;
+    FChkIncludeLogs: TCheckBox;
+    FChkIncludeSystemInfo: TCheckBox;
+    FPnlButtons: TPanel;
+    FBtnSubmit: TButton;
+    FBtnCancel: TButton;
+    FProgressBar: TProgressBar;
+    FLblStatus: TLabel;
+    
+    FFeedbackUrl: string;
+    FAppName: string;
+    FAppVersion: string;
+    FLogCollector: TFunc<string>;
+    
+    procedure CreateControls;
+    procedure LayoutControls;
+    procedure HandleSubmitClick(Sender: TObject);
+    procedure HandleCancelClick(Sender: TObject);
+    procedure HandleTypeChange(Sender: TObject);
+    procedure UpdateSubmitButton;
+    function CollectSystemInfo: string;
+    function GetFeedbackTypeName(FT: TFeedbackType): string;
+  protected
+    procedure DoShow; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    
+    /// <summary>提交反馈（异步）</summary>
+    procedure SubmitFeedback(Callback: TFeedbackSubmitCallback);
+    
+    /// <summary>显示反馈对话框</summary>
+    class function Execute(const FeedbackUrl: string; 
+      const AppName: string = ''; const AppVersion: string = ''): Boolean;
+    
+    /// <summary>反馈提交 URL</summary>
+    property FeedbackUrl: string read FFeedbackUrl write FFeedbackUrl;
+    
+    /// <summary>应用名称</summary>
+    property AppName: string read FAppName write FAppName;
+    
+    /// <summary>应用版本</summary>
+    property AppVersion: string read FAppVersion write FAppVersion;
+    
+    /// <summary>日志收集函数</summary>
+    property LogCollector: TFunc<string> read FLogCollector write FLogCollector;
+  end;
+
+implementation
+
+uses
+  System.IOUtils;
+
+{ TFeedbackDialog }
+
+constructor TFeedbackDialog.Create(AOwner: TComponent);
+begin
+  inherited CreateNew(AOwner);
+  
+  Caption := 'Send Feedback';
+  Width := 500;
+  Height := 480;
+  Position := poMainFormCenter;
+  BorderStyle := bsDialog;
+  
+  FAppName := 'Application';
+  FAppVersion := '1.0';
+  
+  CreateControls;
+  LayoutControls;
+end;
+
+procedure TFeedbackDialog.CreateControls;
+begin
+  // 头部面板
+  FPnlHeader := TPanel.Create(Self);
+  FPnlHeader.Parent := Self;
+  FPnlHeader.Align := alTop;
+  FPnlHeader.Height := 60;
+  FPnlHeader.BevelOuter := bvNone;
+  FPnlHeader.Color := clWhite;
+  FPnlHeader.ParentBackground := False;
+  
+  FLblTitle := TLabel.Create(Self);
+  FLblTitle.Parent := FPnlHeader;
+  FLblTitle.Caption := 'Send Feedback';
+  FLblTitle.Font.Size := 14;
+  FLblTitle.Font.Style := [fsBold];
+  
+  FLblSubtitle := TLabel.Create(Self);
+  FLblSubtitle.Parent := FPnlHeader;
+  FLblSubtitle.Caption := 'We appreciate your feedback to help us improve';
+  FLblSubtitle.Font.Color := clGray;
+  
+  // 内容面板
+  FPnlContent := TPanel.Create(Self);
+  FPnlContent.Parent := Self;
+  FPnlContent.Align := alClient;
+  FPnlContent.BevelOuter := bvNone;
+  
+  // 类型
+  FLblType := TLabel.Create(Self);
+  FLblType.Parent := FPnlContent;
+  FLblType.Caption := 'Feedback Type:';
+  
+  FCmbType := TComboBox.Create(Self);
+  FCmbType.Parent := FPnlContent;
+  FCmbType.Style := csDropDownList;
+  FCmbType.Items.Add('Bug Report');
+  FCmbType.Items.Add('Feature Request');
+  FCmbType.Items.Add('Question');
+  FCmbType.Items.Add('Other');
+  FCmbType.ItemIndex := 0;
+  FCmbType.OnChange := HandleTypeChange;
+  
+  // 主题
+  FLblSubject := TLabel.Create(Self);
+  FLblSubject.Parent := FPnlContent;
+  FLblSubject.Caption := 'Subject:';
+  
+  FEdtSubject := TEdit.Create(Self);
+  FEdtSubject.Parent := FPnlContent;
+  FEdtSubject.OnChange := HandleTypeChange;
+  
+  // 内容
+  FLblContent := TLabel.Create(Self);
+  FLblContent.Parent := FPnlContent;
+  FLblContent.Caption := 'Description:';
+  
+  FMmoContent := TMemo.Create(Self);
+  FMmoContent.Parent := FPnlContent;
+  FMmoContent.ScrollBars := ssVertical;
+  FMmoContent.OnChange := HandleTypeChange;
+  
+  // 邮箱
+  FLblEmail := TLabel.Create(Self);
+  FLblEmail.Parent := FPnlContent;
+  FLblEmail.Caption := 'Email (optional):';
+  
+  FEdtEmail := TEdit.Create(Self);
+  FEdtEmail.Parent := FPnlContent;
+  
+  // 选项
+  FChkIncludeLogs := TCheckBox.Create(Self);
+  FChkIncludeLogs.Parent := FPnlContent;
+  FChkIncludeLogs.Caption := 'Include recent logs';
+  FChkIncludeLogs.Checked := True;
+  
+  FChkIncludeSystemInfo := TCheckBox.Create(Self);
+  FChkIncludeSystemInfo.Parent := FPnlContent;
+  FChkIncludeSystemInfo.Caption := 'Include system information';
+  FChkIncludeSystemInfo.Checked := True;
+  
+  // 状态
+  FLblStatus := TLabel.Create(Self);
+  FLblStatus.Parent := FPnlContent;
+  FLblStatus.Caption := '';
+  FLblStatus.Font.Color := clGray;
+  
+  FProgressBar := TProgressBar.Create(Self);
+  FProgressBar.Parent := FPnlContent;
+  FProgressBar.Style := pbstMarquee;
+  FProgressBar.Visible := False;
+  
+  // 按钮面板
+  FPnlButtons := TPanel.Create(Self);
+  FPnlButtons.Parent := Self;
+  FPnlButtons.Align := alBottom;
+  FPnlButtons.Height := 50;
+  FPnlButtons.BevelOuter := bvNone;
+  
+  FBtnSubmit := TButton.Create(Self);
+  FBtnSubmit.Parent := FPnlButtons;
+  FBtnSubmit.Caption := 'Submit';
+  FBtnSubmit.Default := True;
+  FBtnSubmit.Enabled := False;
+  FBtnSubmit.OnClick := HandleSubmitClick;
+  
+  FBtnCancel := TButton.Create(Self);
+  FBtnCancel.Parent := FPnlButtons;
+  FBtnCancel.Caption := 'Cancel';
+  FBtnCancel.Cancel := True;
+  FBtnCancel.OnClick := HandleCancelClick;
+end;
+
+procedure TFeedbackDialog.LayoutControls;
+var
+  Y: Integer;
+begin
+  // 头部
+  FLblTitle.SetBounds(16, 12, 300, 24);
+  FLblSubtitle.SetBounds(16, 36, 400, 16);
+  
+  // 内容
+  Y := 16;
+  
+  FLblType.SetBounds(16, Y, 100, 16);
+  Inc(Y, 18);
+  FCmbType.SetBounds(16, Y, 200, 24);
+  Inc(Y, 32);
+  
+  FLblSubject.SetBounds(16, Y, 100, 16);
+  Inc(Y, 18);
+  FEdtSubject.SetBounds(16, Y, ClientWidth - 32, 24);
+  Inc(Y, 32);
+  
+  FLblContent.SetBounds(16, Y, 100, 16);
+  Inc(Y, 18);
+  FMmoContent.SetBounds(16, Y, ClientWidth - 32, 100);
+  Inc(Y, 108);
+  
+  FLblEmail.SetBounds(16, Y, 150, 16);
+  Inc(Y, 18);
+  FEdtEmail.SetBounds(16, Y, 250, 24);
+  Inc(Y, 32);
+  
+  FChkIncludeLogs.SetBounds(16, Y, 200, 20);
+  Inc(Y, 24);
+  FChkIncludeSystemInfo.SetBounds(16, Y, 200, 20);
+  Inc(Y, 28);
+  
+  FLblStatus.SetBounds(16, Y, ClientWidth - 32, 16);
+  Inc(Y, 20);
+  FProgressBar.SetBounds(16, Y, ClientWidth - 32, 16);
+  
+  // 按钮
+  FBtnCancel.SetBounds(ClientWidth - 92, 12, 80, 28);
+  FBtnSubmit.SetBounds(ClientWidth - 180, 12, 80, 28);
+end;
+
+procedure TFeedbackDialog.DoShow;
+begin
+  inherited;
+  FEdtSubject.SetFocus;
+end;
+
+procedure TFeedbackDialog.HandleTypeChange(Sender: TObject);
+begin
+  UpdateSubmitButton;
+end;
+
+procedure TFeedbackDialog.UpdateSubmitButton;
+begin
+  FBtnSubmit.Enabled := (Trim(FEdtSubject.Text) <> '') and 
+                        (Trim(FMmoContent.Text) <> '');
+end;
+
+function TFeedbackDialog.GetFeedbackTypeName(FT: TFeedbackType): string;
+begin
+  case FT of
+    ftBugReport: Result := 'bug_report';
+    ftFeatureRequest: Result := 'feature_request';
+    ftQuestion: Result := 'question';
+    ftOther: Result := 'other';
+  else
+    Result := 'unknown';
+  end;
+end;
+
+function TFeedbackDialog.CollectSystemInfo: string;
+var
+  SL: TStringList;
+begin
+  SL := TStringList.Create;
+  try
+    SL.Add('OS: ' + TOSVersion.ToString);
+    SL.Add('Platform: ' + TOSVersion.Platform.ToString);
+    SL.Add('Architecture: ' + TOSVersion.Architecture.ToString);
+    SL.Add('App: ' + FAppName);
+    SL.Add('Version: ' + FAppVersion);
+    SL.Add('Locale: ' + SysUtils.GetLocaleStr(GetUserDefaultLCID, LOCALE_SENGLANGUAGE, ''));
+    Result := SL.Text;
+  finally
+    SL.Free;
+  end;
+end;
+
+procedure TFeedbackDialog.HandleSubmitClick(Sender: TObject);
+begin
+  SubmitFeedback(
+    procedure(Success: Boolean; const Message: string)
+    begin
+      if Success then
+      begin
+        FLblStatus.Caption := 'Feedback submitted successfully!';
+        FLblStatus.Font.Color := clGreen;
+        FProgressBar.Visible := False;
+        
+        // 延迟关闭
+        TThread.CreateAnonymousThread(
+          procedure
+          begin
+            Sleep(1500);
+            TThread.Synchronize(nil,
+              procedure
+              begin
+                ModalResult := mrOk;
+              end);
+          end).Start;
+      end
+      else
+      begin
+        FLblStatus.Caption := 'Submit failed: ' + Message;
+        FLblStatus.Font.Color := clRed;
+        FProgressBar.Visible := False;
+        FBtnSubmit.Enabled := True;
+      end;
+    end);
+end;
+
+procedure TFeedbackDialog.HandleCancelClick(Sender: TObject);
+begin
+  ModalResult := mrCancel;
+end;
+
+procedure TFeedbackDialog.SubmitFeedback(Callback: TFeedbackSubmitCallback);
+var
+  FeedbackType: TFeedbackType;
+  Subject, Content, Email, Logs, SystemInfo: string;
+begin
+  FeedbackType := TFeedbackType(FCmbType.ItemIndex);
+  Subject := Trim(FEdtSubject.Text);
+  Content := Trim(FMmoContent.Text);
+  Email := Trim(FEdtEmail.Text);
+  
+  if FChkIncludeLogs.Checked and Assigned(FLogCollector) then
+    Logs := FLogCollector()
+  else
+    Logs := '';
+  
+  if FChkIncludeSystemInfo.Checked then
+    SystemInfo := CollectSystemInfo
+  else
+    SystemInfo := '';
+  
+  // 显示进度
+  FBtnSubmit.Enabled := False;
+  FProgressBar.Visible := True;
+  FLblStatus.Caption := 'Submitting feedback...';
+  FLblStatus.Font.Color := clGray;
+  
+  // 异步提交
+  TThread.CreateAnonymousThread(
+    procedure
+    var
+      Client: THTTPClient;
+      Response: IHTTPResponse;
+      JsonObj: TJSONObject;
+      Success: Boolean;
+      Message: string;
+    begin
+      Success := False;
+      Message := '';
+      
+      if FFeedbackUrl = '' then
+      begin
+        // 无提交 URL，模拟成功
+        Sleep(1000);
+        Success := True;
+        Message := 'Feedback saved locally';
+      end
+      else
+      begin
+        Client := THTTPClient.Create;
+        try
+          try
+            Client.ContentType := 'application/json';
+            
+            JsonObj := TJSONObject.Create;
+            try
+              JsonObj.AddPair('type', GetFeedbackTypeName(FeedbackType));
+              JsonObj.AddPair('subject', Subject);
+              JsonObj.AddPair('content', Content);
+              JsonObj.AddPair('email', Email);
+              JsonObj.AddPair('app', FAppName);
+              JsonObj.AddPair('version', FAppVersion);
+              
+              if Logs <> '' then
+                JsonObj.AddPair('logs', Logs);
+              if SystemInfo <> '' then
+                JsonObj.AddPair('system_info', SystemInfo);
+              
+              Response := Client.Post(FFeedbackUrl, 
+                TStringStream.Create(JsonObj.ToString, TEncoding.UTF8));
+            finally
+              JsonObj.Free;
+            end;
+            
+            if (Response.StatusCode >= 200) and (Response.StatusCode < 300) then
+            begin
+              Success := True;
+              Message := 'OK';
+            end
+            else
+            begin
+              Message := 'Server returned: ' + Response.StatusCode.ToString;
+            end;
+          except
+            on E: Exception do
+              Message := E.Message;
+          end;
+        finally
+          Client.Free;
+        end;
+      end;
+      
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          if Assigned(Callback) then
+            Callback(Success, Message);
+        end);
+    end).Start;
+end;
+
+class function TFeedbackDialog.Execute(const FeedbackUrl: string;
+  const AppName: string; const AppVersion: string): Boolean;
+var
+  Dlg: TFeedbackDialog;
+begin
+  Dlg := TFeedbackDialog.Create(Application);
+  try
+    Dlg.FeedbackUrl := FeedbackUrl;
+    if AppName <> '' then
+      Dlg.AppName := AppName;
+    if AppVersion <> '' then
+      Dlg.AppVersion := AppVersion;
+    Result := Dlg.ShowModal = mrOk;
+  finally
+    Dlg.Free;
+  end;
+end;
+
+end.

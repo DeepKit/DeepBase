@@ -1,0 +1,54 @@
+{ ============================================================================
+  SamplePluginPkg - Sample Plugin Package
+  
+  Build this package to create SamplePluginPkg.bpl which can be loaded
+  by UniBase PluginManager.
+  
+  Build instructions:
+  1. Open this package in RAD Studio
+  2. Build (Ctrl+F9)
+  3. Copy the resulting .bpl to your application's Plugins directory
+  ============================================================================ }
+
+package SamplePluginPkg;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl;
+
+contains
+  SamplePlugin in 'SamplePlugin.pas',
+  UniBase.Plugin in '..\..\Core\UniBase.Plugin.pas';
+
+exports
+  RegisterPlugin;
+
+end.

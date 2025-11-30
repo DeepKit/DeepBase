@@ -1,9 +1,10 @@
 { ============================================================================
-  UniBase.i18n - 国际化模块
+  UniBase.i18n - Internationalization Module
   
-  版本: 0.3
-  说明: 提供国际化翻译功能，带 LRU 缓存和线程安全保护
-  线程安全: 所有公共方法均线程安全
+  Version: 0.3
+  Description: Provides i18n translation with LRU cache and thread-safe
+               protection.
+  Thread Safety: All public methods are thread-safe.
   ============================================================================ }
 
 unit UniBase.i18n;
@@ -15,14 +16,15 @@ uses
   System.Classes,
   System.Generics.Collections,
   FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Consts;
 
 const
   DEFAULT_CACHE_CAPACITY = 10000;
 
 type
   /// <summary>
-  /// LRU 缓存项
+  /// LRU cache item
   /// </summary>
   TLRUCacheItem = record
     Value: string;
@@ -30,7 +32,7 @@ type
   end;
 
   /// <summary>
-  /// 国际化管理器
+  /// I18n manager with LRU cache and multicast language change notifications
   /// </summary>
   TUniBaseI18n = class
   private
@@ -40,6 +42,7 @@ type
     FCacheCapacity: Integer;
     FCurrentLanguage: string;
     FOnLanguageChanged: TNotifyEvent;
+    FLanguageChangeListeners: TList<TNotifyEvent>;
     
     function MakeCacheKey(const SourceText, LangCode: string): string;
     function ReadFromDB(const SourceText, LangCode: string): string;
@@ -50,102 +53,141 @@ type
     constructor Create(AConnection: TFDConnection; ALock: TObject);
     destructor Destroy; override;
     
-    /// <summary>清空缓存</summary>
+    /// <summary>Clear cache</summary>
     procedure ClearCache;
     
-    /// <summary>预加载指定语言的翻译到缓存</summary>
+    /// <summary>Preload translations for specified language</summary>
     procedure PreloadCache(const LangCode: string);
     
     // ========================================
-    // 翻译方法
+    // Translation Methods
     // ========================================
     
     /// <summary>
-    /// 翻译文本（使用当前语言）
+    /// Translate text using current language
     /// </summary>
     function Translate(const Text: string): string;
     
     /// <summary>
-    /// 翻译文本（指定语言）
+    /// Translate text to specified language
     /// </summary>
     function TranslateTo(const Text, LangCode: string): string;
     
     /// <summary>
-    /// 格式化翻译文本
+    /// Format and translate text
     /// </summary>
     function TranslateFormat(const Text: string; const Args: array of const): string;
     
     /// <summary>
-    /// 复数形式翻译
+    /// Plural form translation
     /// </summary>
     function TranslatePlural(const Singular, Plural: string; Count: Integer): string;
     
     // ========================================
-    // 语言管理
+    // Language Management
     // ========================================
     
     /// <summary>
-    /// 获取所有可用语言
+    /// Get all available languages
     /// </summary>
     function GetAvailableLanguages: TLanguageInfoArray;
     
     /// <summary>
-    /// 获取已启用的语言
+    /// Get enabled languages
     /// </summary>
     function GetEnabledLanguages: TLanguageInfoArray;
     
     /// <summary>
-    /// 获取默认语言
+    /// Get default language
     /// </summary>
     function GetDefaultLanguage: string;
     
+    /// <summary>
+    /// Add or update a translation (useful for demos and runtime additions)
+    /// </summary>
+    procedure AddTranslation(const SourceText, LangCode, TranslatedText: string);
+    
     // ========================================
-    // 属性
+    // Properties
     // ========================================
     
-    /// <summary>当前语言代码</summary>
+    /// <summary>Current language code</summary>
     property CurrentLanguage: string read FCurrentLanguage write FCurrentLanguage;
     
-    /// <summary>缓存容量</summary>
+    /// <summary>Cache capacity</summary>
     property CacheCapacity: Integer read FCacheCapacity write FCacheCapacity;
     
-    /// <summary>语言变更事件</summary>
+    /// <summary>Language changed event (single-cast, for backward compatibility)</summary>
     property OnLanguageChanged: TNotifyEvent read FOnLanguageChanged write FOnLanguageChanged;
+    
+    /// <summary>Subscribe to language change notifications (multicast)</summary>
+    procedure SubscribeLanguageChange(AHandler: TNotifyEvent);
+    
+    /// <summary>Unsubscribe from language change notifications</summary>
+    procedure UnsubscribeLanguageChange(AHandler: TNotifyEvent);
+    
+    /// <summary>Notify all subscribers of language change</summary>
+    procedure NotifyLanguageChanged;
   end;
 
 /// <summary>
-/// 全局翻译函数（快捷方式）
+/// Global translate function (shorthand)
 /// </summary>
 function T(const Text: string): string;
 
 /// <summary>
-/// 全局格式化翻译函数
+/// Global format and translate function
 /// </summary>
 function TFmt(const Text: string; const Args: array of const): string;
 
 /// <summary>
-/// 全局复数翻译函数
+/// Global plural translation function
 /// </summary>
 function TN(const Singular, Plural: string; Count: Integer): string;
+
+type
+  /// <summary>
+  /// Translate callback function type
+  /// </summary>
+  TTranslateCallback = reference to function(const Text: string): string;
+
+/// <summary>
+/// Set the global translate callback (called by TUniBaseManager during init).
+/// This decouples i18n from Manager to avoid circular references.
+/// </summary>
+procedure SetGlobalTranslateCallback(ACallback: TTranslateCallback);
+
+/// <summary>
+/// Check if global translate callback is set
+/// </summary>
+function IsTranslateCallbackSet: Boolean;
 
 implementation
 
 uses
-  System.DateUtils,
-  UniBase.Manager;
+  System.DateUtils;
 
-{ 全局函数实现 }
+var
+  GTranslateCallback: TTranslateCallback = nil;
+
+procedure SetGlobalTranslateCallback(ACallback: TTranslateCallback);
+begin
+  GTranslateCallback := ACallback;
+end;
+
+function IsTranslateCallbackSet: Boolean;
+begin
+  Result := Assigned(GTranslateCallback);
+end;
+
+{ Global function implementations }
 
 function T(const Text: string): string;
 begin
-  if UniBase.Manager.UniBase.IsInitialized then
-  begin
-    // 使用 Manager 的简化方式，避免依赖内部模块
-    // 后续集成时会通过 Manager 调用 i18n 模块
-    Result := Text; // 临时实现
-  end
+  if Assigned(GTranslateCallback) then
+    Result := GTranslateCallback(Text)
   else
-    Result := Text;
+    Result := Text;  // Fallback: return original text
 end;
 
 function TFmt(const Text: string; const Args: array of const): string;
@@ -169,14 +211,64 @@ begin
   FConnection := AConnection;
   FLock := ALock;
   FCache := TDictionary<string, TLRUCacheItem>.Create;
+  FLanguageChangeListeners := TList<TNotifyEvent>.Create;
   FCacheCapacity := DEFAULT_CACHE_CAPACITY;
-  FCurrentLanguage := 'en-US';
+  FCurrentLanguage := SDefaultLanguage;
 end;
 
 destructor TUniBaseI18n.Destroy;
 begin
+  FLanguageChangeListeners.Free;
   FCache.Free;
   inherited;
+end;
+
+procedure TUniBaseI18n.SubscribeLanguageChange(AHandler: TNotifyEvent);
+begin
+  TMonitor.Enter(FLock);
+  try
+    if not FLanguageChangeListeners.Contains(AHandler) then
+      FLanguageChangeListeners.Add(AHandler);
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseI18n.UnsubscribeLanguageChange(AHandler: TNotifyEvent);
+begin
+  TMonitor.Enter(FLock);
+  try
+    FLanguageChangeListeners.Remove(AHandler);
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseI18n.NotifyLanguageChanged;
+var
+  Handler: TNotifyEvent;
+  Listeners: TArray<TNotifyEvent>;
+  I: Integer;
+begin
+  // Copy listeners to avoid lock during notification
+  TMonitor.Enter(FLock);
+  try
+    Listeners := FLanguageChangeListeners.ToArray;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+  
+  // Notify all multicast listeners
+  for I := 0 to High(Listeners) do
+  begin
+    Handler := Listeners[I];
+    if Assigned(Handler) then
+      Handler(Self);
+  end;
+  
+  // Also call the single-cast event for backward compatibility
+  if Assigned(FOnLanguageChanged) then
+    FOnLanguageChanged(Self);
 end;
 
 function TUniBaseI18n.MakeCacheKey(const SourceText, LangCode: string): string;
@@ -234,11 +326,11 @@ var
   OldestTime: TDateTime;
   Pair: TPair<string, TLRUCacheItem>;
 begin
-  // 已在锁内调用
+  // Called within lock
   if FCache.Count < FCacheCapacity then
     Exit;
     
-  // 查找最旧的条目
+  // Find oldest entry
   OldestTime := MaxDateTime;
   OldestKey := '';
   
@@ -285,7 +377,7 @@ procedure TUniBaseI18n.RecordMissingTranslation(const SourceText, LangCode: stri
 var
   Query: TFDQuery;
 begin
-  // 记录缺失的翻译（用于后续翻译）
+  // Record missing translation for later processing
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
     
@@ -300,7 +392,7 @@ begin
       Query.ParamByName('LangCode').AsString := LangCode;
       Query.ExecSQL;
       
-      // 更新最后使用时间
+      // Update last used time
       Query.SQL.Text := 
         'UPDATE I18nTexts SET LastUsedTime = datetime(''now'') ' +
         'WHERE SourceText = :SourceText AND LangCode = :LangCode';
@@ -311,7 +403,13 @@ begin
       Query.Free;
     end;
   except
-    // 忽略记录失败（非关键操作）
+    on E: Exception do
+    begin
+      // 记录缺失翻译失败（非关键操作），使用OutputDebugString避免循环依赖
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.i18n RecordMissingTranslation failed: ' + E.Message));
+      {$ENDIF}
+    end;
   end;
 end;
 
@@ -325,8 +423,8 @@ var
   CacheKey: string;
   Item: TLRUCacheItem;
 begin
-  // 英文原文不需要翻译（英文是源语言）
-  if LangCode = 'en-US' then
+  // English source text doesn't need translation
+  if LangCode = SLangCodeEnUS then
   begin
     Result := Text;
     Exit;
@@ -336,34 +434,34 @@ begin
   try
     CacheKey := MakeCacheKey(Text, LangCode);
     
-    // 查缓存
+    // Check cache
     if FCache.TryGetValue(CacheKey, Item) then
     begin
-      // 更新访问时间
+      // Update access time
       Item.LastAccess := Now;
       FCache.AddOrSetValue(CacheKey, Item);
       
       if Item.Value <> '' then
         Result := Item.Value
       else
-        Result := Text; // 翻译为空，返回原文
+        Result := Text; // Empty translation, return original
       Exit;
     end;
     
-    // 查数据库
+    // Query database
     Result := ReadFromDB(Text, LangCode);
     
-    // 缓存结果（即使为空也缓存，避免重复查询）
+    // Cache result (even if empty to avoid repeated queries)
     EvictOldestIfNeeded;
     Item.Value := Result;
     Item.LastAccess := Now;
     FCache.AddOrSetValue(CacheKey, Item);
     
-    // 如果没找到翻译，返回原文并记录
+    // If no translation found, return original and record
     if Result = '' then
     begin
       Result := Text;
-      // 异步记录缺失翻译（在锁外执行）
+      // Record missing translation outside lock
     end;
   finally
     TMonitor.Exit(FLock);
@@ -483,7 +581,7 @@ function TUniBaseI18n.GetDefaultLanguage: string;
 var
   Query: TFDQuery;
 begin
-  Result := 'en-US'; // 默认返回英文
+  Result := 'en-US'; // Default to English
   
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -501,6 +599,42 @@ begin
     finally
       Query.Free;
     end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseI18n.AddTranslation(const SourceText, LangCode, TranslatedText: string);
+var
+  Query: TFDQuery;
+  CacheKey: string;
+  Item: TLRUCacheItem;
+begin
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+    
+  TMonitor.Enter(FLock);
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      // Insert or replace translation
+      Query.SQL.Text := 
+        'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedTime) ' +
+        'VALUES (:SourceText, :LangCode, :TranslatedText, datetime(''now''))';
+      Query.ParamByName('SourceText').AsString := SourceText;
+      Query.ParamByName('LangCode').AsString := LangCode;
+      Query.ParamByName('TranslatedText').AsString := TranslatedText;
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
+    
+    // Update cache
+    CacheKey := MakeCacheKey(SourceText, LangCode);
+    Item.Value := TranslatedText;
+    Item.LastAccess := Now;
+    FCache.AddOrSetValue(CacheKey, Item);
   finally
     TMonitor.Exit(FLock);
   end;

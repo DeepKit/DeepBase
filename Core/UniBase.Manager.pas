@@ -1,9 +1,11 @@
 { ============================================================================
-  UniBase.Manager - 核心管理器
+  UniBase.Manager - Core Manager
   
-  版本: 0.3
-  说明: UniBase 框架的核心管理器，提供统一的初始化和资源管理
-  线程安全: 初始化/清理方法仅限主线程调用
+  Version: 0.3
+  Description: Core manager of UniBase framework providing unified
+               initialization and resource management.
+  Thread Safety: Initialize/Finalize methods should only be called from
+                 the main thread.
   ============================================================================ }
 
 unit UniBase.Manager;
@@ -15,6 +17,7 @@ uses
   System.Classes,
   System.IOUtils,
   System.SyncObjs,
+  System.Math,
   System.Generics.Collections,
   FireDAC.Comp.Client,
   FireDAC.Stan.Def,
@@ -23,12 +26,25 @@ uses
   FireDAC.Stan.ExprFuncs,
   FireDAC.Phys.SQLite,
   FireDAC.Phys.SQLiteDef,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Consts,
+  UniBase.Config,
+  UniBase.i18n,
+  UniBase.Theme,
+  UniBase.Logging,
+  UniBase.Security,
+  UniBase.Plugin,
+  UniBase.PluginManager;
 
 const
   UNIBASE_VERSION = '0.3';
   DEFAULT_CONFIGDB_NAME = 'config.db';
   ROOT_TXT_NAME = 'root.txt';
+  
+  /// <summary>
+  /// Schema version compatibility error code
+  /// </summary>
+  ecSchemaVersionMismatch = TInitErrorCode(10);
 
 type
   TUniBaseManager = class;
@@ -77,17 +93,37 @@ type
     FOnThemeChanged: TNotifyEvent;
     FOnConfigChanged: TConfigChangedEvent;
     
+    // 核心模块
+    FConfig: TUniBaseConfig;
+    FI18n: TUniBaseI18n;
+    FTheme: TUniBaseTheme;
+    FLogger: TUniBaseLogger;
+    FSecurity: TUniBaseSecurity;
+    FPluginManager: TUniBasePluginManager;
+    
     // 内部方法
-    function FindRootPath: string;
+    procedure InitializeModules;
+    procedure FinalizeModules;
     function ReadRootTxt(const FilePath: string): string;
     function WriteRootTxt(const FilePath, RootPath: string): Boolean;
     function CreateRootTxt(out FilePath: string): Boolean;
     function ConnectToDatabase(const DBPath: string): Boolean;
     function ValidateSchema: Boolean;
+    function ValidateSchemaVersion: Boolean;
     function CreateSchema: Boolean;
+    function GetSchemaVersionInternal: string;
+    function MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
+    function RunMigrationScript(const ScriptPath: string): Boolean;
     function GetExeDir: string;
     function GetAppDataDir: string;
     function CheckWritePermission(const Path: string): Boolean;
+    function FindRootPath: string;
+    function CreatePluginContext: IUniBasePluginContext;
+    
+    // 事件处理器 (用于子模块回调)
+    procedure HandleConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
+    procedure HandleLanguageChanged(Sender: TObject);
+    procedure HandleThemeChanged(Sender: TObject);
     
     // 属性 Setter
     procedure SetCurrentLanguage(const Value: string);
@@ -121,13 +157,24 @@ type
     /// </summary>
     function InitializeWithDB(const DBPath: string): Boolean;
     
-    /// <summary>
-    /// 清理资源
-    /// </summary>
+    /// <summary>Clean up resources</summary>
     procedure Finalize;
     
     // ========================================
-    // 健康检查
+    // Schema Migration
+    // ========================================
+    
+    /// <summary>Get current database schema version</summary>
+    function GetCurrentSchemaVersion: string;
+    
+    /// <summary>
+    /// Check and migrate schema to target version.
+    /// Looks for scripts: {RootPath}/sql/upgrade_vX_to_vY.sql
+    /// </summary>
+    function CheckAndMigrateSchema(const TargetVersion: string = ''): Boolean;
+    
+    // ========================================
+    // Health Check
     // ========================================
     
     /// <summary>
@@ -165,6 +212,14 @@ type
     /// <summary>数据库连接（供子模块使用）</summary>
     property ConfigDB: TFDConnection read FConfigDB;
     
+    // 子模块访问点
+    property Config: TUniBaseConfig read FConfig;
+    property I18n: TUniBaseI18n read FI18n;
+    property Theme: TUniBaseTheme read FTheme;
+    property Logger: TUniBaseLogger read FLogger;
+    property Security: TUniBaseSecurity read FSecurity;
+    property PluginManager: TUniBasePluginManager read FPluginManager;
+    
     /// <summary>项目根目录</summary>
     property RootPath: string read FRootPath;
     
@@ -199,9 +254,16 @@ type
   end;
 
 /// <summary>
-/// 获取全局 UniBase 单例
+/// Get global UniBase singleton
 /// </summary>
 function UniBase: TUniBaseManager;
+
+/// <summary>
+/// Set the global UniBase instance (for testing/dependency injection only)
+/// Passing nil will reset to default lazy-initialization behavior.
+/// IMPORTANT: Must be called before any UniBase() call, or after explicit cleanup.
+/// </summary>
+procedure SetUniBaseInstance(AInstance: TUniBaseManager);
 
 implementation
 
@@ -217,7 +279,8 @@ uses
   FireDAC.Phys.Intf,
   FireDAC.Comp.ScriptCommands,
   FireDAC.Stan.Util,
-  FireDAC.Comp.Script;
+  FireDAC.Comp.Script,
+  UniBase.Schema;
 
 var
   GUniBaseManager: TUniBaseManager = nil;
@@ -236,6 +299,23 @@ begin
     end;
   end;
   Result := GUniBaseManager;
+end;
+
+procedure SetUniBaseInstance(AInstance: TUniBaseManager);
+begin
+  TMonitor.Enter(GUniBaseLock);
+  try
+    // Free existing instance if it was auto-created (not externally owned)
+    if (GUniBaseManager <> nil) and (GUniBaseManager <> AInstance) then
+    begin
+      // Only free if no owner (auto-created by UniBase function)
+      if GUniBaseManager.Owner = nil then
+        FreeAndNil(GUniBaseManager);
+    end;
+    GUniBaseManager := AInstance;
+  finally
+    TMonitor.Exit(GUniBaseLock);
+  end;
 end;
 
 { TUniBaseManager }
@@ -318,18 +398,23 @@ begin
     end;
     
     // 5. 验证/创建 Schema
-    if not ValidateSchema then
+    // 始终调用 CreateSchema 以确保所有表存在（使用 IF NOT EXISTS）
+    if not CreateSchema then
     begin
-      if not CreateSchema then
-      begin
-        ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-          InitErrorCodeToStr(FInitErrorCode), FLastError]);
-        Exit;
-      end;
+      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+      Exit;
     end;
     
-    // 6. 加载默认配置
-    // 从数据库加载当前语言和主题（后续由 Config 模块实现）
+    // Ensure Tier 1 Tables exist (Temporary fix until migration system)
+    // In future versions, we will check SchemaVersion and run upgrade scripts
+    // For now, we just try to create them if missing
+    // Note: We need a better way to handle this, but for now let's assume 
+    // ValidateSchema only checks core tables.
+    // We can run additional SQL scripts here if needed.
+    
+    // 6. 初始化子模块
+    InitializeModules;
     
     FIsInitialized := True;
     FInitErrorCode := ecSuccess;
@@ -387,6 +472,8 @@ begin
       end;
     end;
     
+    InitializeModules;
+    
     FIsInitialized := True;
     FInitErrorCode := ecSuccess;
     Result := True;
@@ -407,6 +494,8 @@ begin
     
   TMonitor.Enter(FLock);
   try
+    FinalizeModules;
+    
     if Assigned(FConfigDB) then
     begin
       if FConfigDB.Connected then
@@ -420,6 +509,118 @@ begin
   finally
     TMonitor.Exit(FLock);
   end;
+end;
+
+procedure TUniBaseManager.InitializeModules;
+var
+  I18nRef: TUniBaseI18n;
+  TranslateCallback: TTranslateCallback;
+begin
+  // 1. Logger - create and register as global logger
+  FLogger := TUniBaseLogger.Create(FConfigDBPath);
+  SetGlobalLogger(FLogger);  // Register with global Logger() function
+  
+  // 2. Config
+  FConfig := TUniBaseConfig.Create(FConfigDB, FLock);
+  FConfig.OnConfigChanged := HandleConfigChanged;
+  
+  // 3. i18n
+  FI18n := TUniBaseI18n.Create(FConfigDB, FLock);
+  FI18n.OnLanguageChanged := HandleLanguageChanged;
+  // Set global T() callback to decouple i18n from Manager
+  I18nRef := FI18n;
+  TranslateCallback := function(const Text: string): string
+    begin
+      Result := I18nRef.Translate(Text);
+    end;
+  SetGlobalTranslateCallback(TranslateCallback);
+  
+  // 4. Theme
+  FTheme := TUniBaseTheme.Create(FConfigDB, FLock);
+  FTheme.OnThemeChanged := HandleThemeChanged;
+  
+  // 5. Security (DPAPI encryption for secrets)
+  FSecurity := TUniBaseSecurity.Create(FConfigDB, FLock);
+  
+  // Load Initial Settings
+  FCurrentLanguage := FConfig.GetConfig(SConfigKeyLanguage, SDefaultLanguage);
+  FI18n.CurrentLanguage := FCurrentLanguage;
+  
+  FCurrentTheme := FConfig.GetConfig(SConfigKeyTheme, SDefaultTheme);
+  // Note: Theme application usually happens in VCL/FMX layer, Manager just holds data
+  // But TUniBaseTheme might apply it if linked to VCL
+  if Assigned(FTheme) then
+    FTheme.ApplyTheme(FCurrentTheme);
+  
+  // 6. Load log level from settings (runtime configurable)
+  if Assigned(FLogger) then
+  begin
+    var LogLevelStr := FConfig.GetConfig(SConfigKeyLogLevel, 'INFO');
+    FLogger.MinLevel := StrToLogLevel(LogLevelStr);
+  end;
+  
+  // 7. PluginManager - create and load plugins
+  FPluginManager := TUniBasePluginManager.Create(
+    TPath.Combine(FRootPath, DEFAULT_PLUGINS_DIR),
+    CreatePluginContext);
+  // Load plugins after core modules are ready
+  FPluginManager.LoadAllPlugins;
+end;
+
+function TUniBaseManager.CreatePluginContext: IUniBasePluginContext;
+var
+  ConfigRef: TUniBaseConfig;
+  I18nRef: TUniBaseI18n;
+  LoggerRef: TUniBaseLogger;
+  RootPathStr: string;
+begin
+  ConfigRef := FConfig;
+  I18nRef := FI18n;
+  LoggerRef := FLogger;
+  RootPathStr := FRootPath;
+  
+  Result := TPluginContext.Create(
+    // GetConfig
+    function(const Key, Default: string): string
+    begin
+      if Assigned(ConfigRef) then
+        Result := ConfigRef.GetConfig(Key, Default)
+      else
+        Result := Default;
+    end,
+    // SetConfig
+    procedure(const Key, Value: string)
+    begin
+      if Assigned(ConfigRef) then
+        ConfigRef.SetConfig(Key, Value);
+    end,
+    // Translate
+    function(const Text: string): string
+    begin
+      if Assigned(I18nRef) then
+        Result := I18nRef.Translate(Text)
+      else
+        Result := Text;
+    end,
+    // Log
+    procedure(const Msg: string; Level: Integer)
+    begin
+      if Assigned(LoggerRef) then
+        LoggerRef.Log(Msg, TLogLevel(Level), 'Plugin');
+    end,
+    RootPathStr
+  );
+end;
+
+procedure TUniBaseManager.FinalizeModules;
+begin
+  // Unload plugins first (reverse order of initialization)
+  if Assigned(FPluginManager) then FreeAndNil(FPluginManager);
+  if Assigned(FSecurity) then FreeAndNil(FSecurity);
+  if Assigned(FTheme) then FreeAndNil(FTheme);
+  if Assigned(FI18n) then FreeAndNil(FI18n);
+  if Assigned(FConfig) then FreeAndNil(FConfig);
+  if Assigned(FLogger) then FreeAndNil(FLogger);
 end;
 
 function TUniBaseManager.FindRootPath: string;
@@ -483,7 +684,12 @@ begin
         Result := Line;
     end;
   except
-    // 读取失败，返回空
+    on E: Exception do
+    begin
+      // 读取失败，记录日志后返回空
+      if Assigned(FLogger) then
+        FLogger.Log('ReadRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
+    end;
   end;
 end;
 
@@ -494,7 +700,12 @@ begin
     TFile.WriteAllText(FilePath, RootPath, TEncoding.UTF8);
     Result := True;
   except
-    // 写入失败
+    on E: Exception do
+    begin
+      // 写入失败，记录日志
+      if Assigned(FLogger) then
+        FLogger.Log('WriteRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
+    end;
   end;
 end;
 
@@ -586,111 +797,88 @@ begin
     begin
       FInitErrorCode := ecConfigDBCorrupted;
       FLastError := Format('Schema validation failed: expected 6 tables, found %d', [TableCount]);
+      Exit;
     end;
     
+    // 验证 Schema 版本兼容性
+    Result := ValidateSchemaVersion;
   finally
     Query.Free;
+  end;
+end;
+
+function TUniBaseManager.ValidateSchemaVersion: Boolean;
+var
+  DBVersion: string;
+  
+  function CompareVersions(const V1, V2: string): Integer;
+  var
+    Parts1, Parts2: TArray<string>;
+    I, N1, N2: Integer;
+  begin
+    Parts1 := V1.Split(['.']);
+    Parts2 := V2.Split(['.']);
+    Result := 0;
+    
+    for I := 0 to Max(Length(Parts1), Length(Parts2)) - 1 do
+    begin
+      if I < Length(Parts1) then N1 := StrToIntDef(Parts1[I], 0) else N1 := 0;
+      if I < Length(Parts2) then N2 := StrToIntDef(Parts2[I], 0) else N2 := 0;
+      
+      if N1 < N2 then Exit(-1);
+      if N1 > N2 then Exit(1);
+    end;
+  end;
+  
+begin
+  Result := True;
+  
+  DBVersion := GetSchemaVersionInternal;
+  if DBVersion = '' then
+  begin
+    // 没有版本信息，可能是旧数据库，允许继续
+    Exit;
+  end;
+  
+  // 检查版本范围
+  if CompareVersions(DBVersion, MIN_COMPATIBLE_SCHEMA_VERSION) < 0 then
+  begin
+    FInitErrorCode := ecSchemaVersionMismatch;
+    FLastError := Format(
+      'Database schema version %s is too old. Minimum required: %s. ' +
+      'Please upgrade your database or use CheckAndMigrateSchema.',
+      [DBVersion, MIN_COMPATIBLE_SCHEMA_VERSION]);
+    Result := False;
+    Exit;
+  end;
+  
+  if CompareVersions(DBVersion, MAX_COMPATIBLE_SCHEMA_VERSION) > 0 then
+  begin
+    FInitErrorCode := ecSchemaVersionMismatch;
+    FLastError := Format(
+      'Database schema version %s is newer than framework supports (max: %s). ' +
+      'Please upgrade UniBase framework.',
+      [DBVersion, MAX_COMPATIBLE_SCHEMA_VERSION]);
+    Result := False;
+    Exit;
   end;
 end;
 
 function TUniBaseManager.CreateSchema: Boolean;
 var
   Script: TFDScript;
-  SchemaSQL: string;
 begin
   Result := False;
   
   if not Assigned(FConfigDB) or not FConfigDB.Connected then
     Exit;
-    
-  // Tier 0 Schema SQL（内嵌，避免依赖外部文件）
-  SchemaSQL :=
-    'CREATE TABLE IF NOT EXISTS SchemaInfo (' +
-    '  Key TEXT PRIMARY KEY,' +
-    '  Value TEXT' +
-    ');' +
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''SchemaVersion'', ''0.3'');' +
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''CreatedAt'', datetime(''now''));' +
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''LastUpgrade'', datetime(''now''));' +
-    
-    'CREATE TABLE IF NOT EXISTS ProjectInfo (' +
-    '  Key TEXT PRIMARY KEY,' +
-    '  Value TEXT' +
-    ');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectName'', ''MyApp'');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectVersion'', ''1.0.0'');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectDescription'', '''');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectAuthor'', '''');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectWebsite'', '''');' +
-    
-    'CREATE TABLE IF NOT EXISTS Settings (' +
-    '  Key TEXT PRIMARY KEY,' +
-    '  Value TEXT,' +
-    '  ValueType TEXT DEFAULT ''String'',' +
-    '  Category TEXT DEFAULT ''General'',' +
-    '  Description TEXT,' +
-    '  IsEncrypted INTEGER DEFAULT 0' +
-    ');' +
-    'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
-    '  VALUES (''App.Language'', ''en-US'', ''String'', ''General'', ''Current language'');' +
-    'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
-    '  VALUES (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode enabled'');' +
-    'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
-    '  VALUES (''App.Theme'', ''Windows11'', ''String'', ''UI'', ''Current theme'');' +
-    
-    'CREATE TABLE IF NOT EXISTS FormStates (' +
-    '  FormName TEXT PRIMARY KEY,' +
-    '  Left INTEGER,' +
-    '  Top INTEGER,' +
-    '  Width INTEGER,' +
-    '  Height INTEGER,' +
-    '  WindowState INTEGER DEFAULT 0,' +
-    '  MonitorIndex INTEGER DEFAULT 0,' +
-    '  Extra TEXT' +
-    ');' +
-    
-    'CREATE TABLE IF NOT EXISTS Languages (' +
-    '  LangCode TEXT PRIMARY KEY,' +
-    '  LangName TEXT NOT NULL,' +
-    '  NativeName TEXT,' +
-    '  FlagIcon TEXT,' +
-    '  IsEnabled INTEGER DEFAULT 1,' +
-    '  IsDefault INTEGER DEFAULT 0,' +
-    '  SortOrder INTEGER DEFAULT 0' +
-    ');' +
-    'INSERT OR REPLACE INTO Languages VALUES (''en-US'', ''English'', ''English'', ''us.png'', 1, 1, 0);' +
-    'INSERT OR REPLACE INTO Languages VALUES (''zh-CN'', ''Chinese (Simplified)'', ''简体中文'', ''cn.png'', 1, 0, 1);' +
-    
-    'CREATE TABLE IF NOT EXISTS I18nTexts (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-    '  SourceText TEXT NOT NULL,' +
-    '  LangCode TEXT NOT NULL,' +
-    '  TranslatedText TEXT,' +
-    '  PluralForm TEXT,' +
-    '  Context TEXT,' +
-    '  LastUsedTime TEXT,' +
-    '  IsAutoTranslated INTEGER DEFAULT 0,' +
-    '  IsVerified INTEGER DEFAULT 0,' +
-    '  UNIQUE(SourceText, LangCode)' +
-    ');' +
-    'CREATE INDEX IF NOT EXISTS idx_i18n_lang ON I18nTexts(LangCode);' +
-    'CREATE INDEX IF NOT EXISTS idx_i18n_source ON I18nTexts(SourceText);' +
-    'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Welcome'', ''zh-CN'', ''欢迎'', 1);' +
-    'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Save'', ''zh-CN'', ''保存'', 1);' +
-    'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Cancel'', ''zh-CN'', ''取消'', 1);' +
-    'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''OK'', ''zh-CN'', ''确定'', 1);' +
-    'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Error'', ''zh-CN'', ''错误'', 1);';
 
   Script := TFDScript.Create(nil);
   try
     Script.Connection := FConfigDB;
     Script.SQLScripts.Add;
-    Script.SQLScripts[0].SQL.Text := SchemaSQL;
+    // Use centralized schema definitions from UniBase.Schema unit
+    Script.SQLScripts[0].SQL.Text := GetFullSchemaSQL;
     
     try
       Script.ExecuteAll;
@@ -706,6 +894,181 @@ begin
     
   finally
     Script.Free;
+  end;
+end;
+
+function TUniBaseManager.GetSchemaVersionInternal: string;
+var
+  Query: TFDQuery;
+begin
+  Result := '';
+  
+  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+    Exit;
+    
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+    Query.SQL.Text := 'SELECT Value FROM SchemaInfo WHERE Key = ''SchemaVersion''';
+    Query.Open;
+    
+    if not Query.Eof then
+      Result := Query.FieldByName('Value').AsString;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TUniBaseManager.GetCurrentSchemaVersion: string;
+begin
+  TMonitor.Enter(FLock);
+  try
+    Result := GetSchemaVersionInternal;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+function TUniBaseManager.RunMigrationScript(const ScriptPath: string): Boolean;
+var
+  Script: TFDScript;
+  ScriptSQL: string;
+begin
+  Result := False;
+  
+  if not TFile.Exists(ScriptPath) then
+  begin
+    FLastError := 'Migration script not found: ' + ScriptPath;
+    Exit;
+  end;
+  
+  try
+    ScriptSQL := TFile.ReadAllText(ScriptPath, TEncoding.UTF8);
+    
+    Script := TFDScript.Create(nil);
+    try
+      Script.Connection := FConfigDB;
+      Script.SQLScripts.Add;
+      Script.SQLScripts[0].SQL.Text := ScriptSQL;
+      Script.ExecuteAll;
+      Result := True;
+    finally
+      Script.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      FLastError := 'Migration script error: ' + E.Message;
+    end;
+  end;
+end;
+
+function TUniBaseManager.MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
+var
+  ScriptPath: string;
+  Query: TFDQuery;
+begin
+  Result := False;
+  
+  // Build script path: sql/upgrade_v0.2_to_v0.3.sql (dots replaced with underscores)
+  ScriptPath := TPath.Combine(FRootPath, 'sql');
+  ScriptPath := TPath.Combine(ScriptPath, 
+    Format('upgrade_v%s_to_v%s.sql', [
+      StringReplace(FromVersion, '.', '_', [rfReplaceAll]),
+      StringReplace(ToVersion, '.', '_', [rfReplaceAll])
+    ]));
+  
+  if not RunMigrationScript(ScriptPath) then
+    Exit;
+  
+  // Update SchemaInfo
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
+    Query.ParamByName('Ver').AsString := ToVersion;
+    Query.ExecSQL;
+    
+    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = datetime(''now'') WHERE Key = ''LastUpgrade''';
+    Query.ExecSQL;
+    
+    Result := True;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TUniBaseManager.CheckAndMigrateSchema(const TargetVersion: string): Boolean;
+var
+  CurrentVer, Target: string;
+  VersionParts: TArray<string>;
+  CurrentMajor, CurrentMinor: Integer;
+  TargetMajor, TargetMinor: Integer;
+begin
+  Result := True;
+  
+  TMonitor.Enter(FLock);
+  try
+    CurrentVer := GetSchemaVersionInternal;
+    
+    if CurrentVer = '' then
+    begin
+      FLastError := 'Cannot determine current schema version';
+      Result := False;
+      Exit;
+    end;
+    
+    // Use UNIBASE_VERSION if target not specified
+    if TargetVersion = '' then
+      Target := UNIBASE_VERSION
+    else
+      Target := TargetVersion;
+    
+    if CurrentVer = Target then
+      Exit; // Already at target version
+    
+    // Parse versions (supports X.Y format)
+    VersionParts := CurrentVer.Split(['.']);
+    if Length(VersionParts) >= 2 then
+    begin
+      TryStrToInt(VersionParts[0], CurrentMajor);
+      TryStrToInt(VersionParts[1], CurrentMinor);
+    end
+    else
+    begin
+      CurrentMajor := 0;
+      CurrentMinor := 0;
+    end;
+    
+    VersionParts := Target.Split(['.']);
+    if Length(VersionParts) >= 2 then
+    begin
+      TryStrToInt(VersionParts[0], TargetMajor);
+      TryStrToInt(VersionParts[1], TargetMinor);
+    end
+    else
+    begin
+      TargetMajor := 0;
+      TargetMinor := 0;
+    end;
+    
+    // Only support forward migration for now
+    if (TargetMajor < CurrentMajor) or 
+       ((TargetMajor = CurrentMajor) and (TargetMinor < CurrentMinor)) then
+    begin
+      FLastError := Format('Downgrade not supported: %s -> %s', [CurrentVer, Target]);
+      Result := False;
+      Exit;
+    end;
+    
+    // Sequential migration: current -> target
+    // For simplicity, we try direct migration first
+    Result := MigrateSchemaInternal(CurrentVer, Target);
+    
+    if not Result then
+      FLastError := Format('Migration failed: %s -> %s. %s', [CurrentVer, Target, FLastError]);
+  finally
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -769,20 +1132,17 @@ end;
 
 function TUniBaseManager.HealthCheck: THealthCheckResult;
 begin
-  Result.IsHealthy := False;
-  Result.ConfigDBOk := False;
-  Result.AssetsDirOk := False;
-  Result.LLMConnectionOk := False;
-  SetLength(Result.Messages, 0);
+  Result.Init;
   
-  // 检查初始化状态
+  // Check initialization status
   if not FIsInitialized then
   begin
     Result.AddMessage('UniBase not initialized');
+    Result.TrimMessages;
     Exit;
   end;
   
-  // 检查数据库连接
+  // Check database connection
   if Assigned(FConfigDB) and FConfigDB.Connected then
   begin
     Result.ConfigDBOk := True;
@@ -793,7 +1153,7 @@ begin
     Result.AddMessage('ConfigDB: Not connected');
   end;
   
-  // 检查 assets 目录
+  // Check assets directory
   if TDirectory.Exists(TPath.Combine(FRootPath, 'assets')) then
   begin
     Result.AssetsDirOk := True;
@@ -802,15 +1162,18 @@ begin
   else
   begin
     Result.AddMessage('Assets directory: Not found (optional)');
-    Result.AssetsDirOk := True; // assets 是可选的
+    Result.AssetsDirOk := True; // Assets is optional
   end;
   
-  // LLM 检查（Phase 2）
+  // LLM check (Phase 2)
   Result.LLMConnectionOk := False;
   Result.AddMessage('LLM: Not configured (Phase 2)');
   
-  // 综合判断
+  // Overall status
   Result.IsHealthy := Result.ConfigDBOk;
+  
+  // Trim array to actual size
+  Result.TrimMessages;
 end;
 
 function TUniBaseManager.GetProjectInfo(const Key: string): string;
@@ -915,6 +1278,25 @@ procedure TUniBaseManager.DoConfigChanged(const Key, OldValue, NewValue: string)
 begin
   if Assigned(FOnConfigChanged) then
     FOnConfigChanged(Self, Key, OldValue, NewValue);
+end;
+
+procedure TUniBaseManager.HandleConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
+begin
+  // Handle log level changes at runtime
+  if (Key = SConfigKeyLogLevel) and Assigned(FLogger) then
+    FLogger.MinLevel := StrToLogLevel(NewValue);
+  
+  DoConfigChanged(Key, OldValue, NewValue);
+end;
+
+procedure TUniBaseManager.HandleLanguageChanged(Sender: TObject);
+begin
+  DoLanguageChanged;
+end;
+
+procedure TUniBaseManager.HandleThemeChanged(Sender: TObject);
+begin
+  DoThemeChanged;
 end;
 
 initialization

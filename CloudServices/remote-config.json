@@ -1,0 +1,99 @@
+{
+  "configs": {
+    "app.maxUploadSize": {
+      "value": "104857600",
+      "type": "integer",
+      "description": "Maximum file upload size in bytes (100 MB)"
+    },
+    "app.sessionTimeout": {
+      "value": "3600",
+      "type": "integer",
+      "description": "Session timeout in seconds"
+    },
+    "app.maintenanceMode": {
+      "value": "false",
+      "type": "boolean",
+      "description": "Enable maintenance mode"
+    },
+    "app.maintenanceMessage": {
+      "value": "System is under maintenance. Please try again later.",
+      "type": "string",
+      "description": "Message shown during maintenance"
+    },
+    "ui.defaultTheme": {
+      "value": "light",
+      "type": "string",
+      "description": "Default UI theme (light/dark/system)"
+    },
+    "ui.animationsEnabled": {
+      "value": "true",
+      "type": "boolean",
+      "description": "Enable UI animations"
+    },
+    "api.baseUrl": {
+      "value": "https://api.example.com/v1",
+      "type": "string",
+      "description": "Base URL for API calls"
+    },
+    "api.timeout": {
+      "value": "30000",
+      "type": "integer",
+      "description": "API request timeout in milliseconds"
+    },
+    "api.retryCount": {
+      "value": "3",
+      "type": "integer",
+      "description": "Number of retry attempts for failed requests"
+    }
+  },
+  "featureFlags": {
+    "feature.newDashboard": {
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "New dashboard UI"
+    },
+    "feature.darkMode": {
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Dark mode support"
+    },
+    "feature.experimentalExport": {
+      "enabled": false,
+      "rolloutPercentage": 0,
+      "description": "Experimental export feature"
+    },
+    "feature.aiAssistant": {
+      "enabled": true,
+      "rolloutPercentage": 50,
+      "description": "AI-powered assistant (gradual rollout)"
+    },
+    "feature.betaFeatures": {
+      "enabled": false,
+      "rolloutPercentage": 0,
+      "description": "Enable beta features for testing"
+    }
+  },
+  "messages": {
+    "welcome": {
+      "title": "Welcome to MyApp",
+      "content": "Thank you for using our application!",
+      "type": "info",
+      "dismissible": true,
+      "showOnce": true
+    },
+    "newFeature": {
+      "title": "New Feature Available",
+      "content": "Check out our new dashboard with improved analytics.",
+      "type": "feature",
+      "dismissible": true,
+      "showOnce": true,
+      "targetVersion": "1.1.0"
+    }
+  },
+  "meta": {
+    "version": 1,
+    "lastUpdated": "2024-02-10T12:00:00Z",
+    "cacheExpireSeconds": 3600,
+    "minimumAppVersion": "1.0.0"
+  }
+}

@@ -1,8 +1,9 @@
 { ============================================================================
-  UniBase.Types - 公共类型定义
+  UniBase.Types - Common Type Definitions
   
-  版本: 0.3
-  说明: 定义 UniBase 框架使用的所有公共类型、枚举和记录
+  Version: 0.3
+  Description: Defines all common types, enums and records used by the
+               UniBase framework.
   ============================================================================ }
 
 unit UniBase.Types;
@@ -14,20 +15,20 @@ uses
 
 type
   /// <summary>
-  /// 初始化错误码
+  /// Initialization error codes
   /// </summary>
   TInitErrorCode = (
-    ecSuccess = 0,           // 成功
-    ecConfigDBNotFound = 1,  // config.db 不存在，尝试自动创建失败
-    ecConfigDBCorrupted = 2, // config.db 损坏，表结构检查失败
-    ecPermissionDenied = 3,  // 无法写入 root.txt 或 config.db
-    ecInvalidPath = 4,       // root.txt 指向的目录不存在
-    ecMissingAssets = 5,     // assets 目录结构不完整
-    ecUnknown = 99           // 未知错误，见错误消息详情
+    ecSuccess = 0,           // Success
+    ecConfigDBNotFound = 1,  // config.db not found, auto-create failed
+    ecConfigDBCorrupted = 2, // config.db corrupted, schema check failed
+    ecPermissionDenied = 3,  // Cannot write root.txt or config.db
+    ecInvalidPath = 4,       // Path in root.txt does not exist
+    ecMissingAssets = 5,     // Assets directory structure incomplete
+    ecUnknown = 99           // Unknown error, see error message
   );
 
   /// <summary>
-  /// 日志级别
+  /// Log level
   /// </summary>
   TLogLevel = (
     llDebug,
@@ -38,20 +39,20 @@ type
   );
 
   /// <summary>
-  /// 语言信息记录
+  /// Language info record
   /// </summary>
   TLanguageInfo = record
-    LangCode: string;    // zh-CN, en-US
-    LangName: string;    // Chinese (Simplified), English
-    NativeName: string;  // 简体中文, English
-    FlagIcon: string;    // 国旗图标文件名
+    LangCode: string;    // e.g. zh-CN, en-US
+    LangName: string;    // e.g. Chinese (Simplified), English
+    NativeName: string;  // e.g. 简体中文, English
+    FlagIcon: string;    // Flag icon filename
     IsEnabled: Boolean;
     IsDefault: Boolean;
   end;
   TLanguageInfoArray = TArray<TLanguageInfo>;
 
   /// <summary>
-  /// MRU 项记录
+  /// MRU item record
   /// </summary>
   TMRUItem = record
     ItemKey: string;
@@ -63,7 +64,7 @@ type
   TMRUItemArray = TArray<TMRUItem>;
 
   /// <summary>
-  /// 主题信息记录
+  /// Theme info record
   /// </summary>
   TThemeInfo = record
     Name: string;
@@ -74,7 +75,7 @@ type
   TThemeInfoArray = TArray<TThemeInfo>;
 
   /// <summary>
-  /// 动画资源数据（Core 层，不含 Bitmap）
+  /// Animation asset data (Core layer, no Bitmap)
   /// </summary>
   TAnimationAssetData = record
     Name: string;
@@ -86,7 +87,7 @@ type
   end;
 
   /// <summary>
-  /// 更新信息记录
+  /// Update info record
   /// </summary>
   TUpdateInfo = record
     Version: string;
@@ -99,7 +100,7 @@ type
   end;
 
   /// <summary>
-  /// 快捷键默认值记录
+  /// Hotkey default record
   /// </summary>
   THotkeyDefault = record
     ActionName: string;
@@ -109,60 +110,70 @@ type
   end;
 
   /// <summary>
-  /// 健康检查结果
+  /// Health check result
   /// </summary>
   THealthCheckResult = record
+  private
+    FMessageCount: Integer;  // Actual message count (may be less than Length(Messages))
+  public
     IsHealthy: Boolean;
     ConfigDBOk: Boolean;
     AssetsDirOk: Boolean;
     LLMConnectionOk: Boolean;
     Messages: TArray<string>;
     
+    /// <summary>Add message with optimized allocation (grows by 8)</summary>
     procedure AddMessage(const Msg: string);
+    /// <summary>Initialize the record</summary>
+    procedure Init;
+    /// <summary>Get actual message count</summary>
+    function MessageCount: Integer;
+    /// <summary>Trim Messages array to actual count</summary>
+    procedure TrimMessages;
   end;
 
   /// <summary>
-  /// 配置变更事件
+  /// Config changed event
   /// </summary>
   TConfigChangedEvent = procedure(Sender: TObject; const Key, OldValue, NewValue: string) of object;
 
   /// <summary>
-  /// LLM 完成回调事件
+  /// LLM completion callback event
   /// </summary>
   TLLMCompleteEvent = procedure(Sender: TObject; Success: Boolean; const Response, ErrorMsg: string) of object;
 
   /// <summary>
-  /// 进度事件
+  /// Progress event
   /// </summary>
   TProgressEvent = procedure(Sender: TObject; Current, Total: Int64; const Status: string) of object;
 
   /// <summary>
-  /// 更新可用事件
+  /// Update available event
   /// </summary>
   TUpdateAvailableEvent = procedure(Sender: TObject; const UpdateInfo: TUpdateInfo) of object;
 
   /// <summary>
-  /// 保存额外状态事件
+  /// Save extra state event
   /// </summary>
   TSaveExtraEvent = procedure(Sender: TObject; var Extra: string) of object;
 
   /// <summary>
-  /// 恢复额外状态事件
+  /// Restore extra state event
   /// </summary>
   TRestoreExtraEvent = procedure(Sender: TObject; const Extra: string) of object;
 
 /// <summary>
-/// 初始化错误码转字符串
+/// Convert init error code to string
 /// </summary>
 function InitErrorCodeToStr(Code: TInitErrorCode): string;
 
 /// <summary>
-/// 日志级别转字符串
+/// Convert log level to string
 /// </summary>
 function LogLevelToStr(Level: TLogLevel): string;
 
 /// <summary>
-/// 字符串转日志级别
+/// Convert string to log level
 /// </summary>
 function StrToLogLevel(const S: string): TLogLevel;
 
@@ -170,13 +181,40 @@ implementation
 
 { THealthCheckResult }
 
-procedure THealthCheckResult.AddMessage(const Msg: string);
+procedure THealthCheckResult.Init;
 begin
-  SetLength(Messages, Length(Messages) + 1);
-  Messages[High(Messages)] := Msg;
+  IsHealthy := False;
+  ConfigDBOk := False;
+  AssetsDirOk := False;
+  LLMConnectionOk := False;
+  FMessageCount := 0;
+  SetLength(Messages, 0);
 end;
 
-{ 辅助函数 }
+procedure THealthCheckResult.AddMessage(const Msg: string);
+const
+  GROW_SIZE = 8;  // Grow by 8 to reduce reallocations
+begin
+  // Grow array if needed
+  if FMessageCount >= Length(Messages) then
+    SetLength(Messages, Length(Messages) + GROW_SIZE);
+  
+  Messages[FMessageCount] := Msg;
+  Inc(FMessageCount);
+end;
+
+function THealthCheckResult.MessageCount: Integer;
+begin
+  Result := FMessageCount;
+end;
+
+procedure THealthCheckResult.TrimMessages;
+begin
+  if FMessageCount < Length(Messages) then
+    SetLength(Messages, FMessageCount);
+end;
+
+{ Helper Functions }
 
 function InitErrorCodeToStr(Code: TInitErrorCode): string;
 begin
