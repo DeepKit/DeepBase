@@ -26,7 +26,8 @@ uses
   UniBase.FMX.I18nControls,
   UniBase.FMX.MRUControls,
   UniBase.FMX.ListView,
-  UniBase.FMX.FormControls;
+  UniBase.FMX.FormControls,
+  UniBase.FMX.LLMConfigPanel;
 
 procedure Register;
 begin
@@ -61,6 +62,11 @@ begin
     TUniLabeledSwitch,
     TUniChipInput,
     TUniStarRating
+  ]);
+
+  // LLM Controls
+  RegisterComponents('UniBase FMX', [
+    TFMXLLMConfigPanel
   ]);
 end;
 

@@ -309,3 +309,23 @@
     - TUpdateProgress 进度百分比计算
     - 版本边缘情况测试
 
+### FMX-002: FMX LLM 配置面板
+- **完成日期**: 2025-12-02
+- **描述**: 为 FMX 平台实现与 VCL 对等的 LLM 配置面板组件
+- **新增文件**: `FMX/UniBase.FMX.LLMConfigPanel.pas`
+- **修改文件**: `FMX/UniBase.FMX.Controls.pas` (添加注册)
+- **组件**: `TFMXLLMConfigPanel`
+- **功能**:
+  - Provider 选择 (OpenAI/Anthropic/Azure/LiteLLM/Ollama/Custom)
+  - API Key / Base URL / Model 配置
+  - MaxTokens / Temperature 参数设置
+  - 测试连接功能
+  - 调用历史显示 (TStringGrid)
+  - 配置保存/重置
+- **API 与 VCL 版本对等**:
+  - `ConfigName` 属性
+  - `Connection` 属性
+  - `SetLLM` 方法
+  - `RefreshConfig` / `RefreshData` 方法
+  - `OnConfigChanged` 事件
+
