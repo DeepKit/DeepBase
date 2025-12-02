@@ -131,6 +131,35 @@ type
     function Load: TDictionary<string, string>; override;
   end;
 
+  /// <summary>
+  /// Encrypted configuration source - wraps another source and decrypts values.
+  /// Values should be stored as Base64-encoded DPAPI-encrypted strings.
+  /// Use ProtectStringDpapi() from UniBase.Security to encrypt values.
+  /// </summary>
+  TEncryptedConfigurationSource = class(TBaseConfigurationSource)
+  private
+    FInnerSource: IConfigurationSource;
+    FEncryptedKeys: TArray<string>;  // Keys to decrypt (empty = all keys)
+    FOwnsInner: Boolean;
+  public
+    /// <summary>
+    /// Create encrypted configuration source.
+    /// </summary>
+    /// <param name="AInnerSource">The wrapped configuration source</param>
+    /// <param name="AEncryptedKeys">Keys to decrypt (empty array = all keys)</param>
+    /// <param name="AOwnsInner">Whether to free inner source on destroy</param>
+    constructor Create(AInnerSource: IConfigurationSource; 
+      const AEncryptedKeys: TArray<string> = nil; AOwnsInner: Boolean = False);
+    destructor Destroy; override;
+    
+    function Load: TDictionary<string, string>; override;
+    function SupportsReload: Boolean; override;
+    procedure Reload; override;
+    
+    /// <summary>Check if a key should be decrypted</summary>
+    function ShouldDecrypt(const AKey: string): Boolean;
+  end;
+
   /// <summary>Configuration section</summary>
   IConfigurationSection = interface
     ['{B1C2D3E4-5678-9ABC-DEF0-222222222222}']
@@ -203,6 +232,8 @@ type
     FWatching: Boolean;
     FWatchThread: TThread;
     FFileTimestamps: TDictionary<string, TDateTime>;
+    FCallbacksLock: TCriticalSection;
+    FWatchIntervalMs: Integer;
     
     procedure LoadAllSources;
     procedure NotifyChange(const AKey: string; const AOldValue, ANewValue: string);
@@ -321,7 +352,7 @@ type
 implementation
 
 uses
-  System.DateUtils, Winapi.Windows;
+  System.DateUtils, System.NetEncoding, Winapi.Windows;
 
 { TConfigValue }
 
@@ -672,6 +703,131 @@ begin
   end;
 end;
 
+{ DPAPI Helper for TEncryptedConfigurationSource }
+
+{$IFDEF MSWINDOWS}
+type
+  PDataBlob = ^TDataBlob;
+  TDataBlob = record
+    cbData: DWORD;
+    pbData: PByte;
+  end;
+
+function CryptUnprotectData(pDataIn: PDataBlob; ppszDataDescr: PPWideChar;
+  pOptionalEntropy: PDataBlob; pvReserved: Pointer;
+  pPromptStruct: Pointer; dwFlags: DWORD; pDataOut: PDataBlob): BOOL; stdcall;
+  external 'crypt32.dll' name 'CryptUnprotectData';
+{$ENDIF}
+
+function DecryptDpapiLocal(const AData: TBytes): string;
+{$IFDEF MSWINDOWS}
+var
+  InBlob, OutBlob: TDataBlob;
+  WideText: UnicodeString;
+begin
+  if Length(AData) = 0 then
+    Exit('');
+    
+  InBlob.cbData := Length(AData);
+  InBlob.pbData := @AData[0];
+  
+  if not CryptUnprotectData(@InBlob, nil, nil, nil, nil, 0, @OutBlob) then
+    RaiseLastOSError;
+    
+  SetString(WideText, PWideChar(OutBlob.pbData), OutBlob.cbData div SizeOf(WideChar));
+  Result := WideText;
+  LocalFree(HLOCAL(OutBlob.pbData));
+end;
+{$ELSE}
+begin
+  // Non-Windows fallback (not secure)
+  Result := TEncoding.UTF8.GetString(AData);
+end;
+{$ENDIF}
+
+{ TEncryptedConfigurationSource }
+
+constructor TEncryptedConfigurationSource.Create(AInnerSource: IConfigurationSource;
+  const AEncryptedKeys: TArray<string>; AOwnsInner: Boolean);
+begin
+  inherited Create('Encrypted:' + AInnerSource.Name);
+  FInnerSource := AInnerSource;
+  FEncryptedKeys := AEncryptedKeys;
+  FOwnsInner := AOwnsInner;
+end;
+
+destructor TEncryptedConfigurationSource.Destroy;
+begin
+  if FOwnsInner then
+    FInnerSource := nil;  // Release reference
+  inherited;
+end;
+
+function TEncryptedConfigurationSource.ShouldDecrypt(const AKey: string): Boolean;
+var
+  LEncKey: string;
+begin
+  // If no specific keys defined, decrypt all
+  if Length(FEncryptedKeys) = 0 then
+    Exit(True);
+    
+  // Check if key matches any encrypted key pattern
+  for LEncKey in FEncryptedKeys do
+  begin
+    if SameText(AKey, LEncKey) then
+      Exit(True);
+  end;
+  Result := False;
+end;
+
+function TEncryptedConfigurationSource.Load: TDictionary<string, string>;
+var
+  LInnerData: TDictionary<string, string>;
+  LPair: TPair<string, string>;
+  LDecrypted: string;
+  LCipherBytes: TBytes;
+begin
+  Result := TDictionary<string, string>.Create;
+  LInnerData := FInnerSource.Load;
+  try
+    for LPair in LInnerData do
+    begin
+      if ShouldDecrypt(LPair.Key) and (LPair.Value <> '') then
+      begin
+        try
+          // Decode Base64 and decrypt using DPAPI
+          LCipherBytes := TNetEncoding.Base64.DecodeStringToBytes(LPair.Value);
+          if Length(LCipherBytes) > 0 then
+            LDecrypted := DecryptDpapiLocal(LCipherBytes)
+          else
+            LDecrypted := '';
+          Result.AddOrSetValue(LPair.Key, LDecrypted);
+        except
+          // If decryption fails, use original value (might not be encrypted)
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Configuration: Failed to decrypt key: ' + LPair.Key));
+          {$ENDIF}
+          Result.AddOrSetValue(LPair.Key, LPair.Value);
+        end;
+      end
+      else
+        Result.AddOrSetValue(LPair.Key, LPair.Value);
+    end;
+  finally
+    LInnerData.Free;
+  end;
+end;
+
+function TEncryptedConfigurationSource.SupportsReload: Boolean;
+begin
+  Result := FInnerSource.SupportsReload;
+end;
+
+procedure TEncryptedConfigurationSource.Reload;
+begin
+  FInnerSource.Reload;
+end;
+
 { TConfigurationSection }
 
 constructor TConfigurationSection.Create(AConfig: TConfiguration; const APath: string);
@@ -687,7 +843,8 @@ var
 begin
   LPos := FPath.LastIndexOf(FConfig.KeyDelimiter);
   if LPos >= 0 then
-    Result := Copy(FPath, LPos + 2, MaxInt)
+    // LastIndexOf 返回 0-based 索引，这里需要换算成 1-based 并跳过完整分隔符
+    Result := Copy(FPath, LPos + Length(FConfig.KeyDelimiter) + 1, MaxInt)
   else
     Result := FPath;
 end;
@@ -822,7 +979,9 @@ begin
   FKeyDelimiter := AKeyDelimiter;
   FChangeCallbacks := TList<TConfigChangeCallback>.Create;
   FFileTimestamps := TDictionary<string, TDateTime>.Create;
+  FCallbacksLock := TCriticalSection.Create;
   FWatching := False;
+  FWatchIntervalMs := 1000;
   
   LoadAllSources;
 end;
@@ -832,6 +991,7 @@ begin
   StopWatching;
   FFileTimestamps.Free;
   FChangeCallbacks.Free;
+  FCallbacksLock.Free;
   FLock.Free;
   FValues.Free;
   FSources.Free;
@@ -879,11 +1039,20 @@ end;
 procedure TConfiguration.NotifyChange(const AKey: string; const AOldValue, ANewValue: string);
 var
   LCallback: TConfigChangeCallback;
+  LCallbacks: TArray<TConfigChangeCallback>;
 begin
+  // 拷贝一份回调快照，避免在回调过程中修改列表导致并发问题
+  FCallbacksLock.Enter;
+  try
+    LCallbacks := FChangeCallbacks.ToArray;
+  finally
+    FCallbacksLock.Leave;
+  end;
+
   if Assigned(FOnChange) then
     FOnChange(Self, AKey);
     
-  for LCallback in FChangeCallbacks do
+  for LCallback in LCallbacks do
     LCallback(AKey, AOldValue, ANewValue);
 end;
 
@@ -1152,7 +1321,10 @@ begin
     if LNeedReload then
       TThread.Synchronize(nil, Reload);
       
-    Sleep(1000);
+    if FWatchIntervalMs <= 0 then
+      Sleep(1000)
+    else
+      Sleep(FWatchIntervalMs);
   end;
 end;
 
@@ -1160,6 +1332,12 @@ procedure TConfiguration.StartWatching(AIntervalMs: Integer);
 begin
   if FWatching then
     Exit;
+
+  // 防止过于频繁地轮询配置文件，设置一个合理下限
+  if AIntervalMs < 100 then
+    FWatchIntervalMs := 100
+  else
+    FWatchIntervalMs := AIntervalMs;
     
   FWatching := True;
   FWatchThread := TThread.CreateAnonymousThread(WatchFiles);
@@ -1225,7 +1403,12 @@ end;
 
 procedure TConfiguration.OnChanged(ACallback: TConfigChangeCallback);
 begin
-  FChangeCallbacks.Add(ACallback);
+  FCallbacksLock.Enter;
+  try
+    FChangeCallbacks.Add(ACallback);
+  finally
+    FCallbacksLock.Leave;
+  end;
 end;
 
 function TConfiguration.ToDictionary: TDictionary<string, string>;

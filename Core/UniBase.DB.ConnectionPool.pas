@@ -37,6 +37,16 @@ uses
 
 type
   /// <summary>
+  /// Base exception for connection pool errors
+  /// </summary>
+  EConnectionPoolException = class(Exception);
+
+  /// <summary>
+  /// Raised when acquiring a connection times out
+  /// </summary>
+  EConnectionPoolTimeout = class(EConnectionPoolException);
+
+  /// <summary>
   /// Connection wrapper with metadata
   /// </summary>
   TPooledConnection = class
@@ -128,6 +138,9 @@ type
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,  // R-006: OutputDebugString 支持
+  {$ENDIF}
   System.Math,
   System.DateUtils;
 
@@ -175,7 +188,13 @@ begin
     try
       FPool.Add(TPooledConnection.Create(CreateConnection));
     except
-      // Ignore creation errors for initial pool
+      on E: Exception do
+      begin
+        // R-006: 初始池创建失败时输出调试信息
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.ConnectionPool pre-create failed: ' + E.Message));
+        {$ENDIF}
+      end;
     end;
   end;
 end;
@@ -242,9 +261,15 @@ begin
           Result := Pooled;
           Exit;
         except
-          // Connection failed, remove from pool
-          FPool.Delete(i);
-          Exit;
+          on E: Exception do
+          begin
+            // R-006: 连接重连失败，从池中移除
+            {$IFDEF DEBUG}
+            OutputDebugString(PChar('UniBase.ConnectionPool reconnect failed, removing: ' + E.Message));
+            {$ENDIF}
+            FPool.Delete(i);
+            Exit;
+          end;
         end;
       end;
     end;
@@ -255,7 +280,7 @@ function TDBConnectionPool.Acquire: TFDConnection;
 begin
   Result := AcquireTimeout(Cardinal(FConnectionTimeout) * 1000);
   if Result = nil then
-    raise Exception.Create('Connection pool timeout: no available connections');
+    raise EConnectionPoolTimeout.Create('Connection pool timeout: no available connections');
 end;
 
 function TDBConnectionPool.AcquireTimeout(TimeoutMs: Cardinal): TFDConnection;
@@ -292,7 +317,13 @@ begin
           Result := Pooled.Connection;
           Exit;
         except
-          // Creation failed
+          on E: Exception do
+          begin
+            // R-006: 新连接创建失败
+            {$IFDEF DEBUG}
+            OutputDebugString(PChar('UniBase.ConnectionPool new connection failed: ' + E.Message));
+            {$ENDIF}
+          end;
         end;
       end;
       

@@ -1,16 +1,29 @@
 { ============================================================================
-  UniBase.Security - Security Module with DPAPI Encryption
+  UniBase.Security - Cross-Platform Security Module
   
-  Version: 0.3
-  Description: Provides secure storage for sensitive data using Windows DPAPI.
+  Version: 1.0
+  Description: Provides secure storage for sensitive data.
+               - Windows: Uses DPAPI (user scope)
+               - macOS/Linux: Uses OpenSSL AES-256-GCM + PBKDF2 (requires bundled libcrypto)
                Use this module for passwords, API keys, tokens, and other secrets.
   
   Thread Safety: All public methods are thread-safe.
   
   SECURITY NOTES:
-  - DPAPI uses user-scope encryption by default (current Windows user only)
+  - Windows DPAPI uses user-scope encryption (current Windows user only)
+  - macOS/Linux uses AES-256-GCM with PBKDF2 key derivation from machine entropy
   - Encrypted data cannot be decrypted on different machines or users
-  - For cross-machine scenarios, use CRYPTPROTECT_LOCAL_MACHINE flag
+  - For cross-machine scenarios, set UNIBASE_MASTER_KEY environment variable
+  
+  DATA FORMAT (UBS2 for macOS/Linux):
+  - Magic: "UBS2" (4 bytes)
+  - Version: 0x01 (1 byte)
+  - KDF: 0x01=PBKDF2-SHA256 (1 byte)
+  - Iterations: UInt32 LE (4 bytes)
+  - Salt: 16 bytes
+  - IV/Nonce: 12 bytes (GCM)
+  - Ciphertext: variable
+  - Tag: 16 bytes (GCM auth tag)
   ============================================================================ }
 
 unit UniBase.Security;
@@ -129,6 +142,9 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
+  {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  UniBase.Crypto.OpenSSL,
+  {$ENDIF}
   System.NetEncoding,
   UniBase.Manager,
   UniBase.Consts;
@@ -157,8 +173,69 @@ function CryptUnprotectData(pDataIn: PDataBlob; ppszDataDescr: PPWideChar;
 
 {$ENDIF}
 
+{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
 // ============================================================================
-// Global DPAPI Functions
+// Cross-Platform AES-256-GCM Encryption (macOS/Linux) using OpenSSL
+// ============================================================================
+// UBS2 Format: [Magic:4][Ver:1][KDF:1][Iter:4][Salt:16][IV:12][Cipher:N][Tag:16]
+
+const
+  UBS2_MAGIC: array[0..3] of Byte = ($55, $42, $53, $32); // 'UBS2'
+  UBS2_VERSION = $01;
+  UBS2_KDF_PBKDF2_SHA256 = $01;
+  UBS2_SALT_SIZE = 16;
+  UBS2_IV_SIZE = 12;   // GCM recommended nonce size
+  UBS2_KEY_SIZE = 32;  // AES-256
+  UBS2_TAG_SIZE = 16;  // GCM tag
+  UBS2_PBKDF2_ITERATIONS = 100000;
+  UBS2_HEADER_SIZE = 4 + 1 + 1 + 4 + 16 + 12; // 38 bytes before ciphertext
+
+function GetMachineEntropy: TBytes;
+var
+  Entropy, EnvKey: string;
+  {$IFDEF LINUX}
+  F: TextFile;
+  MachineId: string;
+  {$ENDIF}
+begin
+  // Check for explicit master key override (for CI/containers)
+  EnvKey := GetEnvironmentVariable('UNIBASE_MASTER_KEY');
+  if EnvKey <> '' then
+  begin
+    Result := TEncoding.UTF8.GetBytes(EnvKey);
+    Exit;
+  end;
+  
+  // Collect machine-specific entropy
+  {$IFDEF MACOS}
+  Entropy := GetEnvironmentVariable('HOME') + ':' + 
+             GetEnvironmentVariable('USER') + ':macOS:UniBase';
+  {$ENDIF}
+  
+  {$IFDEF LINUX}
+  MachineId := '';
+  if FileExists('/etc/machine-id') then
+  begin
+    try
+      AssignFile(F, '/etc/machine-id');
+      Reset(F);
+      ReadLn(F, MachineId);
+      CloseFile(F);
+    except
+      MachineId := '';
+    end;
+  end;
+  if MachineId = '' then
+    MachineId := GetEnvironmentVariable('HOSTNAME');
+  Entropy := MachineId + ':' + GetEnvironmentVariable('USER') + ':Linux:UniBase';
+  {$ENDIF}
+  
+  Result := TEncoding.UTF8.GetBytes(Entropy);
+end;
+{$ENDIF}
+
+// ============================================================================
+// Global Encryption Functions
 // ============================================================================
 
 function ProtectStringDpapi(const AText: string): TBytes;
@@ -185,11 +262,77 @@ begin
   Move(OutBlob.pbData^, Result[0], OutBlob.cbData);
   LocalFree(HLOCAL(OutBlob.pbData));
 end;
+{$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
+var
+  MachineKey, Salt, IV, Key, Plaintext, Ciphertext, Tag: TBytes;
+  Iterations: Cardinal;
+  Offset: Integer;
+begin
+  if AText = '' then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+  
+  // Initialize OpenSSL if not already done
+  OpenSSL_Init;
+  
+  // Generate random salt and IV
+  Salt := OpenSSL_RandomBytes(UBS2_SALT_SIZE);
+  IV := OpenSSL_RandomBytes(UBS2_IV_SIZE);
+  
+  // Derive key from machine entropy using OpenSSL PBKDF2
+  MachineKey := GetMachineEntropy;
+  Iterations := UBS2_PBKDF2_ITERATIONS;
+  Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
+  
+  // Encrypt using AES-256-GCM
+  Plaintext := TEncoding.UTF8.GetBytes(AText);
+  Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
+  
+  // Build UBS2 format output
+  SetLength(Result, UBS2_HEADER_SIZE + Length(Ciphertext) + UBS2_TAG_SIZE);
+  Offset := 0;
+  
+  // Magic
+  Move(UBS2_MAGIC[0], Result[Offset], 4);
+  Inc(Offset, 4);
+  
+  // Version
+  Result[Offset] := UBS2_VERSION;
+  Inc(Offset);
+  
+  // KDF type
+  Result[Offset] := UBS2_KDF_PBKDF2_SHA256;
+  Inc(Offset);
+  
+  // Iterations (little-endian)
+  Result[Offset] := Byte(Iterations);
+  Result[Offset + 1] := Byte(Iterations shr 8);
+  Result[Offset + 2] := Byte(Iterations shr 16);
+  Result[Offset + 3] := Byte(Iterations shr 24);
+  Inc(Offset, 4);
+  
+  // Salt
+  Move(Salt[0], Result[Offset], UBS2_SALT_SIZE);
+  Inc(Offset, UBS2_SALT_SIZE);
+  
+  // IV
+  Move(IV[0], Result[Offset], UBS2_IV_SIZE);
+  Inc(Offset, UBS2_IV_SIZE);
+  
+  // Ciphertext
+  if Length(Ciphertext) > 0 then
+    Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
+  Inc(Offset, Length(Ciphertext));
+  
+  // Tag
+  Move(Tag[0], Result[Offset], UBS2_TAG_SIZE);
+end;
 {$ELSE}
 begin
-  // Non-Windows: fallback to simple encoding (NOT SECURE!)
-  // TODO: Implement cross-platform encryption
-  Result := TEncoding.UTF8.GetBytes(AText);
+  // Unsupported platform - raise error instead of silent failure
+  raise Exception.Create('Encryption not supported on this platform');
 end;
 {$ENDIF}
 
@@ -212,10 +355,79 @@ begin
   Result := WideText;
   LocalFree(HLOCAL(OutBlob.pbData));
 end;
+{$ELSEIF DEFINED(MACOS) OR DEFINED(LINUX)}
+var
+  MachineKey, Salt, IV, Key, Ciphertext, Tag, Plaintext: TBytes;
+  Iterations: Cardinal;
+  Offset, CiphertextLen, I: Integer;
+begin
+  Result := '';
+  
+  if Length(AData) < UBS2_HEADER_SIZE + UBS2_TAG_SIZE then
+    raise Exception.Create('Invalid encrypted data: too short');
+  
+  // Verify magic header
+  for I := 0 to 3 do
+    if AData[I] <> UBS2_MAGIC[I] then
+      raise Exception.Create('Invalid encrypted data: bad header (expected UBS2)');
+  
+  Offset := 4;
+  
+  // Check version
+  if AData[Offset] <> UBS2_VERSION then
+    raise Exception.CreateFmt('Unsupported UBS2 version: %d', [AData[Offset]]);
+  Inc(Offset);
+  
+  // Check KDF type
+  if AData[Offset] <> UBS2_KDF_PBKDF2_SHA256 then
+    raise Exception.CreateFmt('Unsupported KDF type: %d', [AData[Offset]]);
+  Inc(Offset);
+  
+  // Read iterations (little-endian)
+  Iterations := Cardinal(AData[Offset]) or
+                (Cardinal(AData[Offset + 1]) shl 8) or
+                (Cardinal(AData[Offset + 2]) shl 16) or
+                (Cardinal(AData[Offset + 3]) shl 24);
+  Inc(Offset, 4);
+  
+  // Extract salt
+  SetLength(Salt, UBS2_SALT_SIZE);
+  Move(AData[Offset], Salt[0], UBS2_SALT_SIZE);
+  Inc(Offset, UBS2_SALT_SIZE);
+  
+  // Extract IV
+  SetLength(IV, UBS2_IV_SIZE);
+  Move(AData[Offset], IV[0], UBS2_IV_SIZE);
+  Inc(Offset, UBS2_IV_SIZE);
+  
+  // Extract ciphertext
+  CiphertextLen := Length(AData) - Offset - UBS2_TAG_SIZE;
+  if CiphertextLen < 0 then
+    raise Exception.Create('Invalid encrypted data: corrupted');
+  SetLength(Ciphertext, CiphertextLen);
+  if CiphertextLen > 0 then
+    Move(AData[Offset], Ciphertext[0], CiphertextLen);
+  Inc(Offset, CiphertextLen);
+  
+  // Extract tag
+  SetLength(Tag, UBS2_TAG_SIZE);
+  Move(AData[Offset], Tag[0], UBS2_TAG_SIZE);
+  
+  // Initialize OpenSSL if not already done
+  OpenSSL_Init;
+  
+  // Derive key using same parameters
+  MachineKey := GetMachineEntropy;
+  Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
+  
+  // Decrypt using AES-256-GCM (will verify tag)
+  Plaintext := OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, Tag);
+  
+  Result := TEncoding.UTF8.GetString(Plaintext);
+end;
 {$ELSE}
 begin
-  // Non-Windows: fallback
-  Result := TEncoding.UTF8.GetString(AData);
+  raise Exception.Create('Decryption not supported on this platform');
 end;
 {$ENDIF}
 
@@ -337,6 +549,7 @@ var
   Query: TFDQuery;
   CipherBytes: TBytes;
   CipherBase64: string;
+  NowStr: string;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -348,6 +561,9 @@ begin
     CipherBytes := ProtectString(APlainValue);
     CipherBase64 := TNetEncoding.Base64.EncodeBytesToString(CipherBytes);
     
+    // Use ISO8601 format for SQLite datetime compatibility
+    NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
@@ -355,11 +571,14 @@ begin
         'INSERT OR REPLACE INTO ' + STableSecrets + 
         ' (Name, CipherBlob, Description, CreatedAt, UpdatedAt) ' +
         'VALUES (:Name, :CipherBlob, :Description, ' +
-        '  COALESCE((SELECT CreatedAt FROM ' + STableSecrets + ' WHERE Name = :Name), datetime(''now'')), ' +
-        '  datetime(''now''))';
+        '  COALESCE((SELECT CreatedAt FROM ' + STableSecrets + ' WHERE Name = :Name2), :NowTime), ' +
+        '  :UpdatedAt)';
       Query.ParamByName('Name').AsString := AName;
+      Query.ParamByName('Name2').AsString := AName;
       Query.ParamByName('CipherBlob').AsString := CipherBase64;
       Query.ParamByName('Description').AsString := ADescription;
+      Query.ParamByName('NowTime').AsString := NowStr;
+      Query.ParamByName('UpdatedAt').AsString := NowStr;
       Query.ExecSQL;
     finally
       Query.Free;

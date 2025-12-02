@@ -39,9 +39,9 @@ const
     ');';
   
   SQL_TIER0_SCHEMA_INFO_DATA =
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''SchemaVersion'', ''' + SCHEMA_VERSION + ''');' +
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''CreatedAt'', datetime(''now''));' +
-    'INSERT OR REPLACE INTO SchemaInfo VALUES (''LastUpgrade'', datetime(''now''));';
+    'INSERT OR REPLACE INTO SchemaInfo VALUES (''SchemaVersion'', ''' + SCHEMA_VERSION + ''');' + #13#10 +
+    'INSERT OR REPLACE INTO SchemaInfo VALUES (''CreatedAt'', CURRENT_TIMESTAMP);' + #13#10 +
+    'INSERT OR REPLACE INTO SchemaInfo VALUES (''LastUpgrade'', CURRENT_TIMESTAMP);';
   
   SQL_TIER0_PROJECT_INFO =
     'CREATE TABLE IF NOT EXISTS ProjectInfo (' +
@@ -50,10 +50,10 @@ const
     ');';
   
   SQL_TIER0_PROJECT_INFO_DATA =
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectName'', ''MyApp'');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectVersion'', ''1.0.0'');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectDescription'', '''');' +
-    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectAuthor'', '''');' +
+    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectName'', ''MyApp'');' + #13#10 +
+    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectVersion'', ''1.0.0'');' + #13#10 +
+    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectDescription'', '''');' + #13#10 +
+    'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectAuthor'', '''');' + #13#10 +
     'INSERT OR REPLACE INTO ProjectInfo VALUES (''ProjectWebsite'', '''');';
   
   SQL_TIER0_SETTINGS =
@@ -68,9 +68,9 @@ const
   
   SQL_TIER0_SETTINGS_DATA =
     'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
-    '  VALUES (''App.Language'', ''en-US'', ''String'', ''General'', ''Current language'');' +
+    '  VALUES (''App.Language'', ''en-US'', ''String'', ''General'', ''Current language'');' + #13#10 +
     'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
-    '  VALUES (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode enabled'');' +
+    '  VALUES (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode enabled'');' + #13#10 +
     'INSERT OR REPLACE INTO Settings (Key, Value, ValueType, Category, Description) ' +
     '  VALUES (''App.Theme'', ''Windows11'', ''String'', ''UI'', ''Current theme'');';
   
@@ -98,8 +98,10 @@ const
     ');';
   
   SQL_TIER0_LANGUAGES_DATA =
-    'INSERT OR REPLACE INTO Languages VALUES (''en-US'', ''English'', ''English'', ''us.png'', 1, 1, 0);' +
-    'INSERT OR REPLACE INTO Languages VALUES (''zh-CN'', ''Chinese (Simplified)'', ''简体中文'', ''cn.png'', 1, 0, 1);';
+    'INSERT OR REPLACE INTO Languages (LangCode, LangName, NativeName, FlagIcon, IsEnabled, IsDefault, SortOrder) ' +
+    '  VALUES (''en-US'', ''English'', ''English'', ''us.png'', 1, 1, 0);' + #13#10 +
+    'INSERT OR REPLACE INTO Languages (LangCode, LangName, NativeName, FlagIcon, IsEnabled, IsDefault, SortOrder) ' +
+    '  VALUES (''zh-CN'', ''Chinese (Simplified)'', ''简体中文'', ''cn.png'', 1, 0, 1);';
   
   SQL_TIER0_I18N_TEXTS =
     'CREATE TABLE IF NOT EXISTS I18nTexts (' +
@@ -113,19 +115,19 @@ const
     '  IsAutoTranslated INTEGER DEFAULT 0,' +
     '  IsVerified INTEGER DEFAULT 0,' +
     '  UNIQUE(SourceText, LangCode)' +
-    ');' +
-    'CREATE INDEX IF NOT EXISTS idx_i18n_lang ON I18nTexts(LangCode);' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_i18n_lang ON I18nTexts(LangCode);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_i18n_source ON I18nTexts(SourceText);';
   
   SQL_TIER0_I18N_TEXTS_DATA =
     'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Welcome'', ''zh-CN'', ''欢迎'', 1);' +
+    '  VALUES (''Welcome'', ''zh-CN'', ''欢迎'', 1);' + #13#10 +
     'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Save'', ''zh-CN'', ''保存'', 1);' +
+    '  VALUES (''Save'', ''zh-CN'', ''保存'', 1);' + #13#10 +
     'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''Cancel'', ''zh-CN'', ''取消'', 1);' +
+    '  VALUES (''Cancel'', ''zh-CN'', ''取消'', 1);' + #13#10 +
     'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
-    '  VALUES (''OK'', ''zh-CN'', ''确定'', 1);' +
+    '  VALUES (''OK'', ''zh-CN'', ''确定'', 1);' + #13#10 +
     'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) ' +
     '  VALUES (''Error'', ''zh-CN'', ''错误'', 1);';
 
@@ -146,8 +148,8 @@ const
     '  StackTrace TEXT,' +
     '  ThreadId INTEGER,' +
     '  UserId TEXT' +
-    ');' +
-    'CREATE INDEX IF NOT EXISTS idx_logs_time ON Logs(LogTime);' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_logs_time ON Logs(LogTime);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_logs_level ON Logs(LogLevel);';
   
   SQL_TIER1_MRU =
@@ -162,7 +164,7 @@ const
     '  IsPinned INTEGER DEFAULT 0,' +
     '  Extra TEXT,' +
     '  UNIQUE(Category, ItemKey)' +
-    ');' +
+    ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_mru_category_time ON MRU(Category, LastAccess DESC);';
   
   SQL_TIER1_HOTKEYS =
@@ -201,15 +203,16 @@ const
   
   SQL_TIER1_THEMES_DATA =
     'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) ' +
-    '  VALUES (''Windows'', ''Windows'', 0, 1, 0);' +
+    '  VALUES (''Windows'', ''Windows'', 0, 1, 0);' + #13#10 +
     'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) ' +
-    '  VALUES (''Windows11'', ''Windows 11'', 0, 1, 1);' +
+    '  VALUES (''Windows11'', ''Windows 11'', 0, 1, 1);' + #13#10 +
     'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) ' +
     '  VALUES (''Carbon'', ''Carbon (Dark)'', 1, 1, 2);';
 
   // ============================================================================
   // Tier 2: Optional Tables (Extended Features)
-  // Tables: LLMConfiguration, LLMCalls, ExceptionReports, AnimationAssets, TestSnapshots
+  // Tables: LLMConfiguration, LLMCalls, PromptCategories, Prompts, PromptVersions,
+  //         PromptMeta, PromptMetaBinding, ExceptionReports, AnimationAssets, TestSnapshots
   // ============================================================================
   
   SQL_TIER2_LLM_CONFIG =
@@ -234,17 +237,144 @@ const
     '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
     '  RequestTime TEXT NOT NULL,' +
     '  ConfigName TEXT,' +
-    '  Prompt TEXT,' +
-    '  Response TEXT,' +
-    '  TokensPrompt INTEGER DEFAULT 0,' +
-    '  TokensCompletion INTEGER DEFAULT 0,' +
-    '  DurationMs INTEGER,' +
-    '  Cost REAL,' +
+    '  PromptId INTEGER,' +
+    '  VersionNumber INTEGER,' +
+    '  InputText TEXT,' +
+    '  OutputText TEXT,' +
+    '  InputTokens INTEGER DEFAULT 0,' +
+    '  OutputTokens INTEGER DEFAULT 0,' +
+    '  TotalTokens INTEGER DEFAULT 0,' +
+    '  Duration INTEGER DEFAULT 0,' +
+    '  Cost REAL DEFAULT 0,' +
     '  Status TEXT,' +
     '  ErrorMessage TEXT,' +
-    '  TraceId TEXT' +
-    ');' +
-    'CREATE INDEX IF NOT EXISTS idx_llm_time ON LLMCalls(RequestTime DESC);';
+    '  Provider TEXT,' +
+    '  Model TEXT,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime''))' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_llm_calls_time ON LLMCalls(RequestTime DESC);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_llm_calls_prompt ON LLMCalls(PromptId);';
+  
+  // ---- Prompt Management Tables ----
+  
+  SQL_TIER2_PROMPT_CATEGORIES =
+    'CREATE TABLE IF NOT EXISTS PromptCategories (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  ParentId INTEGER,' +
+    '  Level INTEGER NOT NULL DEFAULT 1,' +
+    '  Code TEXT NOT NULL,' +
+    '  Name TEXT NOT NULL,' +
+    '  Description TEXT,' +
+    '  SortOrder INTEGER DEFAULT 0,' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  FOREIGN KEY (ParentId) REFERENCES PromptCategories(Id)' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_cat_parent ON PromptCategories(ParentId);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_cat_level ON PromptCategories(Level);';
+  
+  SQL_TIER2_PROMPT_CATEGORIES_DATA =
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '(1, NULL, 1, ''SYS'', ''系统提示词'', ''系统级通用提示词'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '(2, NULL, 1, ''BIZ'', ''业务提示词'', ''业务场景专用提示词'', 2);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '(3, 1, 2, ''TRANS'', ''翻译'', ''多语言翻译提示词'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '(4, 1, 2, ''CODE'', ''代码'', ''代码相关提示词'', 2);';
+  
+  SQL_TIER2_PROMPTS =
+    'CREATE TABLE IF NOT EXISTS Prompts (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  CategoryId INTEGER,' +
+    '  InternalCode TEXT NOT NULL UNIQUE,' +
+    '  Name TEXT NOT NULL,' +
+    '  Description TEXT,' +
+    '  BoundQueryName TEXT,' +
+    '  VariablesJson TEXT,' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  CreatedBy TEXT,' +
+    '  UpdatedBy TEXT,' +
+    '  FOREIGN KEY (CategoryId) REFERENCES PromptCategories(Id)' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompts_code ON Prompts(InternalCode);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompts_category ON Prompts(CategoryId);';
+  
+  SQL_TIER2_PROMPTS_DATA =
+    'INSERT OR IGNORE INTO Prompts (Id, CategoryId, InternalCode, Name, Description, VariablesJson) VALUES ' +
+    '(1, 3, ''SYS-TRANS-001'', ''通用翻译'', ''将文本翻译为目标语言'', ' +
+    '''[{"name":"source_lang","type":"string","description":"源语言","required":false},' +
+    '{"name":"target_lang","type":"string","description":"目标语言","required":true},' +
+    '{"name":"text","type":"string","description":"待翻译文本","required":true}]'');' + #13#10 +
+    'INSERT OR IGNORE INTO Prompts (Id, CategoryId, InternalCode, Name, Description, VariablesJson) VALUES ' +
+    '(2, 4, ''SYS-CODE-001'', ''代码解释'', ''解释代码的功能和逻辑'', ' +
+    '''[{"name":"language","type":"string","description":"编程语言","required":false},' +
+    '{"name":"code","type":"string","description":"代码片段","required":true}]'');';
+  
+  SQL_TIER2_PROMPT_VERSIONS =
+    'CREATE TABLE IF NOT EXISTS PromptVersions (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  PromptId INTEGER NOT NULL,' +
+    '  VersionNumber INTEGER NOT NULL,' +
+    '  Content TEXT NOT NULL,' +
+    '  IsProduction INTEGER DEFAULT 0,' +
+    '  TestCount INTEGER DEFAULT 0,' +
+    '  SuccessCount INTEGER DEFAULT 0,' +
+    '  TotalTokens INTEGER DEFAULT 0,' +
+    '  TotalCost REAL DEFAULT 0,' +
+    '  AvgDuration REAL DEFAULT 0,' +
+    '  LastTestedAt TEXT,' +
+    '  LastResponse TEXT,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UNIQUE(PromptId, VersionNumber),' +
+    '  FOREIGN KEY (PromptId) REFERENCES Prompts(Id) ON DELETE CASCADE' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_ver_prompt ON PromptVersions(PromptId);';
+  
+  SQL_TIER2_PROMPT_VERSIONS_DATA =
+    'INSERT OR IGNORE INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) VALUES ' +
+    '(1, 1, ''请将以下{{source_lang}}文本翻译为{{target_lang}}：' + #13#10 + '{{text}}'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) VALUES ' +
+    '(2, 1, ''请用简洁的中文解释以下{{language}}代码的功能：' + #13#10 + '```' + #13#10 + '{{code}}' + #13#10 + '```'', 1);';
+  
+  SQL_TIER2_PROMPT_META =
+    'CREATE TABLE IF NOT EXISTS PromptMeta (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  InternalCode TEXT NOT NULL UNIQUE,' +
+    '  Name TEXT NOT NULL,' +
+    '  Category TEXT NOT NULL,' +
+    '  Content TEXT NOT NULL,' +
+    '  MergeMode TEXT DEFAULT ''PREFIX'',' +
+    '  Priority INTEGER DEFAULT 0,' +
+    '  Level INTEGER DEFAULT 0,' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime''))' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_meta_code ON PromptMeta(InternalCode);';
+  
+  SQL_TIER2_PROMPT_META_DATA =
+    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '(1, ''META-SEC-001'', ''安全约束'', ''SECURITY'', ''请确保回答安全、合规，不包含敏感信息。'', ''PREFIX'', 1, 0);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '(2, ''META-FMT-001'', ''JSON输出'', ''FORMAT'', ''请以JSON格式输出结果。'', ''SUFFIX'', 10, 0);';
+  
+  SQL_TIER2_PROMPT_META_BINDING =
+    'CREATE TABLE IF NOT EXISTS PromptMetaBinding (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  PromptId INTEGER NOT NULL,' +
+    '  MetaPromptId INTEGER NOT NULL,' +
+    '  OrderIndex INTEGER DEFAULT 0,' +
+    '  IsEnabled INTEGER DEFAULT 1,' +
+    '  UNIQUE(PromptId, MetaPromptId),' +
+    '  FOREIGN KEY (PromptId) REFERENCES Prompts(Id) ON DELETE CASCADE,' +
+    '  FOREIGN KEY (MetaPromptId) REFERENCES PromptMeta(Id) ON DELETE CASCADE' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_meta_bind_prompt ON PromptMetaBinding(PromptId);';
   
   SQL_TIER2_EXCEPTION_REPORTS =
     'CREATE TABLE IF NOT EXISTS ExceptionReports (' +
@@ -279,6 +409,61 @@ const
     '  Screenshot BLOB,' +
     '  UNIQUE(TestName, SnapshotName)' +
     ');';
+  
+  // LLMPromptTemplates: 简化的提示词模板表
+  SQL_TIER2_LLM_PROMPT_TEMPLATES =
+    'CREATE TABLE IF NOT EXISTS LLMPromptTemplates (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Name TEXT NOT NULL UNIQUE,' +              // 模板名称
+    '  Category TEXT DEFAULT ''General'',' +      // 分类
+    '  Description TEXT,' +                        // 描述
+    '  SystemPrompt TEXT,' +                       // 系统提示词
+    '  UserPromptTemplate TEXT NOT NULL,' +        // 用户提示词模板 ({{variable}})
+    '  Variables TEXT,' +                          // 变量列表 JSON: ["var1", "var2"]
+    '  DefaultValues TEXT,' +                      // 默认值 JSON: {"var1": "value"}
+    '  ParentTemplate TEXT,' +                     // 父模板名称（继承）
+    '  IncludeTemplates TEXT,' +                   // 组合模板 JSON: ["tpl1", "tpl2"]
+    '  OutputFormat TEXT DEFAULT ''text'',' +      // 输出格式: text/json/markdown
+    '  ValidationRegex TEXT,' +                    // 输出验证正则
+    '  Examples TEXT,' +                           // 示例 JSON: [{"input":{},"output":""}]
+    '  RecommendedConfig TEXT,' +                  // 推荐 LLM 配置名
+    '  RecommendedModel TEXT,' +                   // 推荐模型
+    '  MaxTokens INTEGER,' +                       // 推荐最大 Token
+    '  Temperature REAL,' +                        // 推荐温度
+    '  IsEnabled INTEGER DEFAULT 1,' +
+    '  IsBuiltIn INTEGER DEFAULT 0,' +             // 是否内置
+    '  SortOrder INTEGER DEFAULT 0,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  Extra TEXT' +                               // 额外配置 JSON
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_tpl_category ON LLMPromptTemplates(Category);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompt_tpl_parent ON LLMPromptTemplates(ParentTemplate);';
+  
+  SQL_TIER2_LLM_PROMPT_TEMPLATES_DATA =
+    'INSERT OR IGNORE INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, DefaultValues, Temperature, IsBuiltIn) VALUES ' +
+    '(''translate_text'', ''Translation'', ''Translate text between languages'', ' +
+    '''You are a professional translator. Translate accurately while preserving meaning and tone.'', ' +
+    '''Translate the following text from {{source_lang}} to {{target_lang}}:\n\n{{text}}'', ' +
+    '''["source_lang", "target_lang", "text"]'', ' +
+    '''{"source_lang": "English", "target_lang": "Chinese"}'', 0.3, 1);' + #13#10 +
+    'INSERT OR IGNORE INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, DefaultValues, Temperature, IsBuiltIn) VALUES ' +
+    '(''explain_code'', ''Code'', ''Explain code in plain language'', ' +
+    '''You are an expert programmer. Explain code clearly and concisely.'', ' +
+    '''Explain the following {{language}} code:\n\n```{{language}}\n{{code}}\n```'', ' +
+    '''["language", "code"]'', ' +
+    '''{"language": "Delphi"}'', 0.5, 1);' + #13#10 +
+    'INSERT OR IGNORE INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, DefaultValues, Temperature, IsBuiltIn) VALUES ' +
+    '(''generate_docs'', ''Code'', ''Generate documentation for code'', ' +
+    '''You are a technical writer. Generate clear, comprehensive documentation.'', ' +
+    '''Generate XML documentation comments for the following {{language}} code:\n\n```{{language}}\n{{code}}\n```'', ' +
+    '''["language", "code"]'', ' +
+    '''{"language": "Delphi"}'', 0.3, 1);' + #13#10 +
+    // 继承示例模板
+    'INSERT OR IGNORE INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, ParentTemplate, Temperature, IsBuiltIn) VALUES ' +
+    '(''translate_to_chinese'', ''Translation'', ''Translate to Chinese (inherits from translate_text)'', ' +
+    '''", ''Translate to Simplified Chinese:\n\n{{text}}'', ' +
+    '''["text"]'', ''translate_text'', 0.3, 1);';
 
 // ============================================================================
 // Helper Functions
@@ -309,37 +494,46 @@ implementation
 function GetTier0SchemaSQL: string;
 begin
   Result :=
-    SQL_TIER0_SCHEMA_INFO + SQL_TIER0_SCHEMA_INFO_DATA +
-    SQL_TIER0_PROJECT_INFO + SQL_TIER0_PROJECT_INFO_DATA +
-    SQL_TIER0_SETTINGS + SQL_TIER0_SETTINGS_DATA +
-    SQL_TIER0_FORM_STATES +
-    SQL_TIER0_LANGUAGES + SQL_TIER0_LANGUAGES_DATA +
-    SQL_TIER0_I18N_TEXTS + SQL_TIER0_I18N_TEXTS_DATA;
+    SQL_TIER0_SCHEMA_INFO + #13#10 + SQL_TIER0_SCHEMA_INFO_DATA + #13#10 +
+    SQL_TIER0_PROJECT_INFO + #13#10 + SQL_TIER0_PROJECT_INFO_DATA + #13#10 +
+    SQL_TIER0_SETTINGS + #13#10 + SQL_TIER0_SETTINGS_DATA + #13#10 +
+    SQL_TIER0_FORM_STATES + #13#10 +
+    SQL_TIER0_LANGUAGES + #13#10 + SQL_TIER0_LANGUAGES_DATA + #13#10 +
+    SQL_TIER0_I18N_TEXTS + #13#10 + SQL_TIER0_I18N_TEXTS_DATA;
 end;
 
 function GetTier1SchemaSQL: string;
 begin
   Result :=
-    SQL_TIER1_LOGS +
-    SQL_TIER1_MRU +
-    SQL_TIER1_HOTKEYS +
-    SQL_TIER1_QUERIES +
-    SQL_TIER1_THEMES + SQL_TIER1_THEMES_DATA;
+    SQL_TIER1_LOGS + #13#10 +
+    SQL_TIER1_MRU + #13#10 +
+    SQL_TIER1_HOTKEYS + #13#10 +
+    SQL_TIER1_QUERIES + #13#10 +
+    SQL_TIER1_THEMES + #13#10 + SQL_TIER1_THEMES_DATA;
 end;
 
 function GetTier2SchemaSQL: string;
 begin
   Result :=
-    SQL_TIER2_LLM_CONFIG + SQL_TIER2_LLM_CONFIG_DATA +
-    SQL_TIER2_LLM_CALLS +
-    SQL_TIER2_EXCEPTION_REPORTS +
-    SQL_TIER2_ANIMATION_ASSETS +
+    SQL_TIER2_LLM_CONFIG + #13#10 + SQL_TIER2_LLM_CONFIG_DATA + #13#10 +
+    SQL_TIER2_LLM_CALLS + #13#10 +
+    // Prompt Management Tables (Advanced)
+    SQL_TIER2_PROMPT_CATEGORIES + #13#10 + SQL_TIER2_PROMPT_CATEGORIES_DATA + #13#10 +
+    SQL_TIER2_PROMPTS + #13#10 + SQL_TIER2_PROMPTS_DATA + #13#10 +
+    SQL_TIER2_PROMPT_VERSIONS + #13#10 + SQL_TIER2_PROMPT_VERSIONS_DATA + #13#10 +
+    SQL_TIER2_PROMPT_META + #13#10 + SQL_TIER2_PROMPT_META_DATA + #13#10 +
+    SQL_TIER2_PROMPT_META_BINDING + #13#10 +
+    // LLM Prompt Templates (Simplified)
+    SQL_TIER2_LLM_PROMPT_TEMPLATES + #13#10 + SQL_TIER2_LLM_PROMPT_TEMPLATES_DATA + #13#10 +
+    // Other Tier 2 Tables
+    SQL_TIER2_EXCEPTION_REPORTS + #13#10 +
+    SQL_TIER2_ANIMATION_ASSETS + #13#10 +
     SQL_TIER2_TEST_SNAPSHOTS;
 end;
 
 function GetFullSchemaSQL: string;
 begin
-  Result := GetTier0SchemaSQL + GetTier1SchemaSQL + GetTier2SchemaSQL;
+  Result := GetTier0SchemaSQL + #13#10 + GetTier1SchemaSQL + #13#10 + GetTier2SchemaSQL;
 end;
 
 end.

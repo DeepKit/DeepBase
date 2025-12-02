@@ -31,14 +31,19 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 - 💾 **窗体状态管理**：自动保存/恢复窗体位置、大小
 - 🔧 **线程安全**：所有核心 API 均线程安全
 
-### Phase 1-4（规划中）
-- 📝 日志系统
+### Phase 1-5（已完成）
+- 📝 日志系统 - 异步写入、文件轮转、数据库存储
 - 📋 MRU（最近使用列表）
 - ⌨️ 快捷键管理
 - 🎨 主题切换
-- 🤖 LLM 集成
+- 🤖 LLM 集成 - 多模型支持
 - 🔄 自动更新
 - 🛠️ UniBase Studio（GUI 管理工具）
+
+### Phase 7（功能补充）
+- 🔒 单实例检测 - 防止应用多开
+- 📄 简单报表导出 - CSV/HTML
+- 🌅 启动画面 - 淡入淡出、进度条
 
 ## 🚀 快速开始
 
@@ -95,6 +100,51 @@ UniBase.SaveFormState(Self);   // 窗体关闭时调用
 UniBase.RestoreFormState(Self); // 窗体创建时调用
 ```
 
+### 单实例检测
+
+```delphi
+uses UniBase.SingleInstance;
+
+// 在 DPR 文件中，Application.Initialize 之前调用
+if not TAppInstance.CheckSingleInstance('MyCompany.MyApp') then
+begin
+  TAppInstance.ActivateExistingInstance; // 激活已运行的实例
+  Exit;
+end;
+```
+
+### 数据导出
+
+```delphi
+uses UniBase.Export;
+
+// 导出 DataSet 到 CSV
+TDataExport.ToCSV(MyDataSet, 'output.csv');
+
+// 导出 DataSet 到 HTML（带样式）
+TDataExport.ToHTML(MyDataSet, 'report.html', '报表标题');
+
+// 导出 StringGrid
+TDataExport.ToCSV(StringGrid1, 'grid.csv');
+```
+
+### 启动画面
+
+```delphi
+uses UniBase.SplashScreen;
+
+// 显示启动画面
+TSplashScreen.Show('splash.png');
+TSplashScreen.SetStatus('正在加载配置...');
+TSplashScreen.SetProgress(30);
+
+// ... 初始化操作 ...
+
+TSplashScreen.SetStatus('初始化完成');
+TSplashScreen.SetProgress(100);
+TSplashScreen.Hide; // 淡出关闭
+```
+
 ## 📁 项目结构
 
 ```
@@ -148,9 +198,11 @@ UniBaseTests.exe
 
 ## 📝 版本历史
 
-- **v0.3** (2025-11) - 当前开发版本
-  - Phase 0: 最小核心实现中
-  - 配置管理、i18n、FormState
+- **v0.3** (2025-12) - 当前版本
+  - Phase 0-5: 核心功能已完成（57 个任务）
+  - Phase R: 代码重构完成（7 项）
+  - Phase 7: 功能补充（单实例、导出、启动画面）
+  - Bug 修复: 6 个关键 Bug 已修复
 
 - **v0.2** (2025-11) - 规划阶段
 - **v0.1** (2025-11) - 初版设计

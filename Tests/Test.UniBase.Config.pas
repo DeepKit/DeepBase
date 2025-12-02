@@ -16,6 +16,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils, System.Classes, System.SyncObjs, System.Threading,
+  System.Generics.Collections,  // R-005: 添加 TDictionary 支持
   UniBase.Types, UniBase.Manager, UniBase.Config;
 
 type
@@ -80,13 +81,16 @@ type
 
 implementation
 
+uses
+  UniBase.Security;
+
 { TTestUniBaseConfig }
 
 procedure TTestUniBaseConfig.Setup;
 begin
-  // 使用内存数据库初始化
-  if not UniBase.Initialized then
-    UniBase.Initialize(':memory:');
+  // R-005: 使用正确的 InitializeWithDB 方法
+  if not UniBase.IsInitialized then
+    UniBase.InitializeWithDB(':memory:');
   
   FConfig := UniBase.Config;
 end;
@@ -240,30 +244,29 @@ end;
 
 procedure TTestUniBaseConfig.Test_GetAllConfigs;
 var
-  Configs: TArray<TConfigItem>;
-  I: Integer;
-  Found: Boolean;
+  Configs: TDictionary<string, string>;  // R-005: 使用正确的返回类型
+  Value: string;
+const
+  TEST_CATEGORY = 'TestAll';
 begin
-  // 设置一些配置
-  FConfig.SetConfig('test.all.key1', 'Value1');
-  FConfig.SetConfig('test.all.key2', 'Value2');
+  // 设置一些配置，使用相同的 Category
+  FConfig.SetConfig('test.all.key1', 'Value1', TEST_CATEGORY);
+  FConfig.SetConfig('test.all.key2', 'Value2', TEST_CATEGORY);
   
-  Configs := FConfig.GetAllConfigs('test.all.');
-  
-  Assert.IsTrue(Length(Configs) >= 2, '应该至少返回 2 个配置项');
-  
-  // 检查是否包含我们设置的 key
-  Found := False;
-  for I := 0 to High(Configs) do
-  begin
-    if Configs[I].Key = 'test.all.key1' then
-    begin
-      Found := True;
-      Assert.AreEqual('Value1', Configs[I].Value, 'key1 的值应该正确');
-      Break;
-    end;
+  // R-005: 使用正确的 GetConfigsByCategory 方法
+  Configs := FConfig.GetConfigsByCategory(TEST_CATEGORY);
+  try
+    Assert.IsTrue(Configs.Count >= 2, '应该至少返回 2 个配置项');
+    
+    // 检查是否包含我们设置的 key
+    Assert.IsTrue(Configs.TryGetValue('test.all.key1', Value), '应该找到 test.all.key1');
+    Assert.AreEqual('Value1', Value, 'key1 的值应该正确');
+    
+    Assert.IsTrue(Configs.TryGetValue('test.all.key2', Value), '应该找到 test.all.key2');
+    Assert.AreEqual('Value2', Value, 'key2 的值应该正确');
+  finally
+    Configs.Free;  // GetConfigsByCategory 返回的字典需要调用者释放
   end;
-  Assert.IsTrue(Found, '应该找到 test.all.key1');
 end;
 
 procedure TTestUniBaseConfig.Test_Cache_ReturnsConsistentValue;
@@ -377,11 +380,11 @@ begin
   
   FConfig.SetConfigEncrypted(Key, Value);
   
-  // Read as plain config - should get encrypted (Base64) value
-  PlainStored := FConfig.GetConfig(Key, '');
+  // Encrypted secrets should no longer be stored in Settings table
+  PlainStored := FConfig.GetConfig(Key, '__default__');
   
-  Assert.AreNotEqual(Value, PlainStored, 'Stored value should be encrypted (not plain text)');
-  Assert.IsNotEmpty(PlainStored, 'Stored encrypted value should not be empty');
+  Assert.AreEqual('__default__', PlainStored, 'Encrypted value should not be stored in plain Settings table');
+  Assert.IsTrue(SecretExists(Key), 'Encrypted value should be stored in UniBase.Security secrets store');
 end;
 
 procedure TTestUniBaseConfig.Test_EncryptedConfig_NotInCache;

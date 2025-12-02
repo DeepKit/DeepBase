@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.i18n - Internationalization Module
   
   Version: 0.3
@@ -17,7 +17,8 @@ uses
   System.Generics.Collections,
   FireDAC.Comp.Client,
   UniBase.Types,
-  UniBase.Consts;
+  UniBase.Consts,
+  UniBase.Interfaces;
 
 const
   DEFAULT_CACHE_CAPACITY = 10000;
@@ -32,9 +33,10 @@ type
   end;
 
   /// <summary>
-  /// I18n manager with LRU cache and multicast language change notifications
+  /// I18n manager with LRU cache and multicast language change notifications.
+  /// Implements IUniBaseI18n for dependency injection and testing.
   /// </summary>
-  TUniBaseI18n = class
+  TUniBaseI18n = class(TInterfacedObject, IUniBaseI18n)
   private
     FConnection: TFDConnection;
     FLock: TObject;
@@ -43,12 +45,14 @@ type
     FCurrentLanguage: string;
     FOnLanguageChanged: TNotifyEvent;
     FLanguageChangeListeners: TList<TNotifyEvent>;
-    
+
     function MakeCacheKey(const SourceText, LangCode: string): string;
     function ReadFromDB(const SourceText, LangCode: string): string;
     procedure EvictOldestIfNeeded;
     procedure RecordMissingTranslation(const SourceText, LangCode: string);
-    
+    function GetCurrentLanguage: string;
+    procedure SetCurrentLanguage(const Value: string);
+
   public
     constructor Create(AConnection: TFDConnection; ALock: TObject);
     destructor Destroy; override;
@@ -112,7 +116,7 @@ type
     // ========================================
     
     /// <summary>Current language code</summary>
-    property CurrentLanguage: string read FCurrentLanguage write FCurrentLanguage;
+    property CurrentLanguage: string read GetCurrentLanguage write SetCurrentLanguage;
     
     /// <summary>Cache capacity</summary>
     property CacheCapacity: Integer read FCacheCapacity write FCacheCapacity;
@@ -162,13 +166,30 @@ procedure SetGlobalTranslateCallback(ACallback: TTranslateCallback);
 /// </summary>
 function IsTranslateCallbackSet: Boolean;
 
+type
+  /// <summary>
+  /// Language getter callback for plural rules
+  /// </summary>
+  TGetCurrentLanguageFunc = reference to function: string;
+
+/// <summary>
+/// Set the global language getter callback
+/// </summary>
+procedure SetGlobalLanguageCallback(ACallback: TGetCurrentLanguageFunc);
+
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  UniBase.i18n.Plural
+  {$IFDEF MSWINDOWS}
+  , Winapi.Windows
+  {$ENDIF}
+  ;
 
 var
   GTranslateCallback: TTranslateCallback = nil;
+  GLanguageCallback: TGetCurrentLanguageFunc = nil;
 
 procedure SetGlobalTranslateCallback(ACallback: TTranslateCallback);
 begin
@@ -178,6 +199,19 @@ end;
 function IsTranslateCallbackSet: Boolean;
 begin
   Result := Assigned(GTranslateCallback);
+end;
+
+procedure SetGlobalLanguageCallback(ACallback: TGetCurrentLanguageFunc);
+begin
+  GLanguageCallback := ACallback;
+end;
+
+function GetCurrentLanguageCode: string;
+begin
+  if Assigned(GLanguageCallback) then
+    Result := GLanguageCallback
+  else
+    Result := 'en';  // Default to English
 end;
 
 { Global function implementations }
@@ -196,14 +230,33 @@ begin
 end;
 
 function TN(const Singular, Plural: string; Count: Integer): string;
+var
+  LangCode: string;
+  Forms: array of string;
 begin
-  if Count = 1 then
-    Result := T(Singular)
-  else
-    Result := T(Plural);
+  LangCode := GetCurrentLanguageCode;
+  
+  // Use CLDR plural rules for proper localization
+  // Most languages use [singular, plural] forms
+  // Some languages (like Russian) need more forms
+  SetLength(Forms, 2);
+  Forms[0] := T(Singular);  // for 'one' category
+  Forms[1] := T(Plural);    // for 'other' category
+  
+  Result := PluralSelect(LangCode, Count, Forms);
 end;
 
 { TUniBaseI18n }
+
+function TUniBaseI18n.GetCurrentLanguage: string;
+begin
+  Result := FCurrentLanguage;
+end;
+
+procedure TUniBaseI18n.SetCurrentLanguage(const Value: string);
+begin
+  FCurrentLanguage := Value;
+end;
 
 constructor TUniBaseI18n.Create(AConnection: TFDConnection; ALock: TObject);
 begin
@@ -376,28 +429,34 @@ end;
 procedure TUniBaseI18n.RecordMissingTranslation(const SourceText, LangCode: string);
 var
   Query: TFDQuery;
+  NowStr: string;
 begin
   // Record missing translation for later processing
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
     
   try
+    // Use ISO8601 format for SQLite datetime compatibility
+    NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
       Query.SQL.Text := 
         'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, LastUsedTime) ' +
-        'VALUES (:SourceText, :LangCode, datetime(''now''))';
+        'VALUES (:SourceText, :LangCode, :LastUsedTime)';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
+      Query.ParamByName('LastUsedTime').AsString := NowStr;
       Query.ExecSQL;
       
       // Update last used time
       Query.SQL.Text := 
-        'UPDATE I18nTexts SET LastUsedTime = datetime(''now'') ' +
+        'UPDATE I18nTexts SET LastUsedTime = :LastUsedTime ' +
         'WHERE SourceText = :SourceText AND LangCode = :LangCode';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
+      Query.ParamByName('LastUsedTime').AsString := NowStr;
       Query.ExecSQL;
     finally
       Query.Free;
@@ -478,13 +537,17 @@ begin
 end;
 
 function TUniBaseI18n.TranslatePlural(const Singular, Plural: string; Count: Integer): string;
+var
+  Forms: array of string;
+  Selected: string;
 begin
-  // 简单的复数处理（英语规则）
-  // TODO: 支持更复杂的复数规则（如俄语）
-  if Count = 1 then
-    Result := Format(Translate(Singular), [Count])
-  else
-    Result := Format(Translate(Plural), [Count]);
+  // Use CLDR plural rules for proper localization
+  SetLength(Forms, 2);
+  Forms[0] := Translate(Singular);  // for 'one' category
+  Forms[1] := Translate(Plural);    // for 'other' category
+  
+  Selected := PluralSelect(FCurrentLanguage, Count, Forms);
+  Result := Format(Selected, [Count]);
 end;
 
 function TUniBaseI18n.GetAvailableLanguages: TLanguageInfoArray;
@@ -609,22 +672,27 @@ var
   Query: TFDQuery;
   CacheKey: string;
   Item: TLRUCacheItem;
+  NowStr: string;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
     
   TMonitor.Enter(FLock);
   try
+    // Use ISO8601 format for SQLite datetime compatibility
+    NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
       // Insert or replace translation
       Query.SQL.Text := 
         'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedTime) ' +
-        'VALUES (:SourceText, :LangCode, :TranslatedText, datetime(''now''))';
+        'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedTime)';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
       Query.ParamByName('TranslatedText').AsString := TranslatedText;
+      Query.ParamByName('LastUsedTime').AsString := NowStr;
       Query.ExecSQL;
     finally
       Query.Free;

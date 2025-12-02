@@ -1,7 +1,7 @@
 { ============================================================================
   UniBase.CLI.SSH - SSH Remote Execution Support
   
-  Version: 0.1
+  Version: 0.2
   Description: Provides SSH connection management and remote command execution
                capabilities for the CLI framework.
   
@@ -12,6 +12,7 @@
     - Connection pooling for multiple hosts
     - Session persistence and reuse
     - Proxy/Jump host support
+    - Background thread for idle connection cleanup
   
   Note: This module provides the framework interface. Actual SSH implementation
         requires external library such as libssh2 or similar. The module uses
@@ -203,6 +204,28 @@ type
   end;
   
   // ============================================================================
+  // SSH Connection Pool Cleanup Thread
+  // ============================================================================
+  
+  TSSHConnectionPool = class;
+  
+  /// <summary>
+  /// Background thread for cleaning up idle SSH connections
+  /// </summary>
+  TSSHCleanupThread = class(TThread)
+  private
+    FPool: TSSHConnectionPool;
+    FInterval: Integer;  // milliseconds
+    FStopEvent: TEvent;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(APool: TSSHConnectionPool; AIntervalSeconds: Integer);
+    destructor Destroy; override;
+    procedure Stop;
+  end;
+  
+  // ============================================================================
   // SSH Connection Pool
   // ============================================================================
   
@@ -214,14 +237,16 @@ type
     FSessions: TObjectDictionary<string, TSSHSession>;
     FMaxConnections: Integer;
     FIdleTimeout: Integer;  // seconds
+    FCleanupInterval: Integer; // seconds
     FLock: TCriticalSection;
-    FCleanupTimer: TThread;
+    FCleanupThread: TSSHCleanupThread;
     
     function GetSessionKey(const Host: string; Port: Integer; 
       const User: string): string;
-    procedure CleanupIdleSessions;
+    procedure DoCleanupIdleSessions;
   public
-    constructor Create(MaxConnections: Integer = 10; IdleTimeout: Integer = 300);
+    constructor Create(MaxConnections: Integer = 10; IdleTimeout: Integer = 300;
+      CleanupInterval: Integer = 60);
     destructor Destroy; override;
     
     /// <summary>Get or create a session</summary>
@@ -240,8 +265,12 @@ type
     /// <summary>Get active session count</summary>
     function ActiveCount: Integer;
     
+    /// <summary>Manually trigger cleanup of idle sessions</summary>
+    procedure CleanupIdleSessions;
+    
     property MaxConnections: Integer read FMaxConnections write FMaxConnections;
     property IdleTimeout: Integer read FIdleTimeout write FIdleTimeout;
+    property CleanupInterval: Integer read FCleanupInterval;
   end;
   
   // ============================================================================
@@ -625,23 +654,88 @@ begin
 end;
 
 // ============================================================================
+// TSSHCleanupThread
+// ============================================================================
+
+constructor TSSHCleanupThread.Create(APool: TSSHConnectionPool; AIntervalSeconds: Integer);
+begin
+  inherited Create(True);  // Create suspended
+  FPool := APool;
+  FInterval := AIntervalSeconds * 1000;  // Convert to milliseconds
+  FStopEvent := TEvent.Create(nil, True, False, '');
+  FreeOnTerminate := False;
+end;
+
+destructor TSSHCleanupThread.Destroy;
+begin
+  Stop;
+  FStopEvent.Free;
+  inherited;
+end;
+
+procedure TSSHCleanupThread.Execute;
+var
+  LWaitResult: TWaitResult;
+begin
+  while not Terminated do
+  begin
+    // Wait for interval or stop signal
+    LWaitResult := FStopEvent.WaitFor(FInterval);
+    
+    if (LWaitResult = wrTimeout) and not Terminated then
+    begin
+      // Timeout means we should do cleanup
+      try
+        FPool.DoCleanupIdleSessions;
+      except
+        // Ignore cleanup errors
+      end;
+    end
+    else if LWaitResult = wrSignaled then
+    begin
+      // Stop signal received
+      Break;
+    end;
+  end;
+end;
+
+procedure TSSHCleanupThread.Stop;
+begin
+  Terminate;
+  FStopEvent.SetEvent;
+  if Started then
+    WaitFor;
+end;
+
+// ============================================================================
 // TSSHConnectionPool
 // ============================================================================
 
-constructor TSSHConnectionPool.Create(MaxConnections: Integer; IdleTimeout: Integer);
+constructor TSSHConnectionPool.Create(MaxConnections: Integer; IdleTimeout: Integer;
+  CleanupInterval: Integer);
 begin
   inherited Create;
   FSessions := TObjectDictionary<string, TSSHSession>.Create([doOwnsValues]);
   FMaxConnections := MaxConnections;
   FIdleTimeout := IdleTimeout;
+  FCleanupInterval := CleanupInterval;
   FLock := TCriticalSection.Create;
-  FCleanupTimer := nil;  // TODO: Implement cleanup thread
+  
+  // Create and start cleanup thread
+  FCleanupThread := TSSHCleanupThread.Create(Self, FCleanupInterval);
+  FCleanupThread.Start;
 end;
 
 destructor TSSHConnectionPool.Destroy;
 begin
+  // Stop cleanup thread first
+  if Assigned(FCleanupThread) then
+  begin
+    FCleanupThread.Stop;
+    FCleanupThread.Free;
+  end;
+  
   CloseAll;
-  FCleanupTimer.Free;
   FLock.Free;
   FSessions.Free;
   inherited;
@@ -654,6 +748,11 @@ begin
 end;
 
 procedure TSSHConnectionPool.CleanupIdleSessions;
+begin
+  DoCleanupIdleSessions;
+end;
+
+procedure TSSHConnectionPool.DoCleanupIdleSessions;
 var
   SessionsToRemove: TList<string>;
   Session: TSSHSession;
@@ -703,7 +802,7 @@ begin
     
     // Check max connections
     if FSessions.Count >= FMaxConnections then
-      CleanupIdleSessions;
+      DoCleanupIdleSessions;
     
     if FSessions.Count >= FMaxConnections then
     begin

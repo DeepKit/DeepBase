@@ -182,6 +182,7 @@ type
     FInterceptors: TList<IServiceInterceptor>;
     FLock: TCriticalSection;
     FRttiContext: TRttiContext;
+    FResolving: TDictionary<PTypeInfo, Integer>;
     
     function GetRegistrationKey(ServiceType: PTypeInfo): string;
     function GetNamedKey(ServiceType: PTypeInfo; const Name: string): string;
@@ -190,6 +191,8 @@ type
     function ResolveInternal(ServiceType: PTypeInfo; Scope: TIoCScope; 
       const Name: string = ''): TObject;
     procedure ApplyInterceptors(var Context: TInterceptorContext; IsBefore: Boolean);
+    procedure EnterResolving(ServiceType: PTypeInfo; out AlreadyResolving: Boolean);
+    procedure LeaveResolving(ServiceType: PTypeInfo);
   public
     constructor Create;
     destructor Destroy; override;
@@ -421,6 +424,7 @@ begin
   FInterceptors := TList<IServiceInterceptor>.Create;
   FLock := TCriticalSection.Create;
   FRttiContext := TRttiContext.Create;
+  FResolving := TDictionary<PTypeInfo, Integer>.Create;
 end;
 
 destructor TIoCContainer.Destroy;
@@ -430,6 +434,7 @@ begin
     FInterceptors.Free;
     FNamedRegistrations.Free;
     FRegistrations.Free;
+    FResolving.Free;
   finally
     FLock.Leave;
   end;
@@ -535,50 +540,65 @@ function TIoCContainer.ResolveInternal(ServiceType: PTypeInfo; Scope: TIoCScope;
 var
   Reg: TServiceRegistration;
   Context: TInterceptorContext;
+  AlreadyResolving: Boolean;
 begin
   Result := nil;
-  Reg := FindRegistration(ServiceType, Name);
-  
-  if Reg = nil then
-    raise EServiceNotRegisteredException.CreateFmt('Service not registered: %s', 
-      [GetTypeName(ServiceType)]);
-  
-  case Reg.Lifetime of
-    slTransient:
-      Result := CreateInstance(Reg, Scope);
-      
-    slSingleton:
-      begin
-        FLock.Enter;
-        try
-          if Reg.SingletonInstance = nil then
-            Reg.SingletonInstance := CreateInstance(Reg, Scope);
-          Result := Reg.SingletonInstance;
-        finally
-          FLock.Leave;
-        end;
-      end;
-      
-    slScoped:
-      begin
-        if Scope = nil then
-          raise EIoCException.Create('Scoped service requires a scope. Use CreateScope.');
-        
-        if not Scope.FScopedInstances.TryGetValue(ServiceType, Result) then
-        begin
-          Result := CreateInstance(Reg, Scope);
-          Scope.FScopedInstances.Add(ServiceType, Result);
-        end;
-      end;
-  end;
-  
-  // Apply interceptors
-  if FInterceptors.Count > 0 then
+
+  // 检测循环依赖：同一 ServiceType 在当前解析栈中再次出现
+  EnterResolving(ServiceType, AlreadyResolving);
+  if AlreadyResolving then
   begin
-    Context := TInterceptorContext.Create(ServiceType, Reg.ImplementationType, Result);
-    ApplyInterceptors(Context, False); // AfterResolve
-    if Context.Instance <> Result then
-      Result := Context.Instance;
+    LeaveResolving(ServiceType);
+    raise ECircularDependencyException.CreateFmt('Circular dependency detected while resolving %s',
+      [GetTypeName(ServiceType)]);
+  end;
+
+  try
+    Reg := FindRegistration(ServiceType, Name);
+    
+    if Reg = nil then
+      raise EServiceNotRegisteredException.CreateFmt('Service not registered: %s', 
+        [GetTypeName(ServiceType)]);
+    
+    case Reg.Lifetime of
+      slTransient:
+        Result := CreateInstance(Reg, Scope);
+        
+      slSingleton:
+        begin
+          FLock.Enter;
+          try
+            if Reg.SingletonInstance = nil then
+              Reg.SingletonInstance := CreateInstance(Reg, Scope);
+            Result := Reg.SingletonInstance;
+          finally
+            FLock.Leave;
+          end;
+        end;
+        
+      slScoped:
+        begin
+          if Scope = nil then
+            raise EIoCException.Create('Scoped service requires a scope. Use CreateScope.');
+          
+          if not Scope.FScopedInstances.TryGetValue(ServiceType, Result) then
+          begin
+            Result := CreateInstance(Reg, Scope);
+            Scope.FScopedInstances.Add(ServiceType, Result);
+          end;
+        end;
+    end;
+    
+    // Apply interceptors
+    if FInterceptors.Count > 0 then
+    begin
+      Context := TInterceptorContext.Create(ServiceType, Reg.ImplementationType, Result);
+      ApplyInterceptors(Context, False); // AfterResolve
+      if Context.Instance <> Result then
+        Result := Context.Instance;
+    end;
+  finally
+    LeaveResolving(ServiceType);
   end;
 end;
 
@@ -598,6 +618,41 @@ begin
       
       if not Context.Proceed then
         Break;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TIoCContainer.EnterResolving(ServiceType: PTypeInfo; out AlreadyResolving: Boolean);
+var
+  Count: Integer;
+begin
+  FLock.Enter;
+  try
+    if not FResolving.TryGetValue(ServiceType, Count) then
+      Count := 0;
+    AlreadyResolving := Count > 0;
+    Inc(Count);
+    FResolving.AddOrSetValue(ServiceType, Count);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TIoCContainer.LeaveResolving(ServiceType: PTypeInfo);
+var
+  Count: Integer;
+begin
+  FLock.Enter;
+  try
+    if FResolving.TryGetValue(ServiceType, Count) then
+    begin
+      Dec(Count);
+      if Count <= 0 then
+        FResolving.Remove(ServiceType)
+      else
+        FResolving.AddOrSetValue(ServiceType, Count);
     end;
   finally
     FLock.Leave;
@@ -660,6 +715,7 @@ procedure TIoCContainer.RegisterSingleton<TService>(Instance: TService;
 var
   Reg: TServiceRegistration;
   Key: string;
+  IntfInstance: IInterface;
   Obj: TObject;
 begin
   Reg := TServiceRegistration.Create(TypeInfo(TService), nil, slSingleton);
@@ -667,10 +723,27 @@ begin
   Reg.OwnsInstance := False; // Caller owns the instance
   
   // Get underlying object from interface
-  if Instance.QueryInterface(IInterface, Obj) = S_OK then
-    Reg.SingletonInstance := Obj as TObject
-  else
-    Reg.SingletonInstance := nil;
+  // Note: TService must be an interface type that the object implements
+  Obj := nil;
+  if TypeInfo(TService)^.Kind = tkInterface then
+  begin
+    // For interfaces, try to get the implementing object
+    // First, check if the instance directly supports IInterface
+    if Instance.QueryInterface(IInterface, IntfInstance) = S_OK then
+    begin
+      // Use RTTI or a known pattern to extract the object
+      // Most Delphi objects implementing interfaces inherit from TInterfacedObject
+      // and the interface reference points to the object instance
+      Obj := IntfInstance as TObject;
+    end;
+  end
+  else if TypeInfo(TService)^.Kind = tkClass then
+  begin
+    // Direct class registration
+    Obj := TObject((@Instance)^);
+  end;
+  
+  Reg.SingletonInstance := Obj;
   
   FLock.Enter;
   try

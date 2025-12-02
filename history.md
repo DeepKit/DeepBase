@@ -694,3 +694,47 @@
 - ✅ **2025-11-27**: Phase 3 完成，AutoUpdate 和 CLI 工具
 - ✅ **2025-11-27**: Phase 4 完成，License 和文档
 - ✅ **2025-11-28**: Phase 5 完成，代码审查优化（9 项改进）
+
+## 2025-12-01 代码审查与优化
+
+### 安全性修复
+- CRYPTO-001: 实现真正的 AES-256-CBC 加密（使用 Windows BCrypt API）
+  - 文件: `UniBase.Crypto.pas`
+- CRYPTO-002: 使用 BCryptGenRandom 替换不安全的 Random() 调用
+  - 文件: `UniBase.Crypto.pas`
+- CONFIG-001: 添加编译器警告到 XOR 加密方法
+  - 文件: `UniBase.Config.pas`
+
+### 内存管理优化
+- ORM-001: TQueryBuilder 实现 IQueryBuilder 接口（自动引用计数）
+  - 文件: `UniBase.ORM.pas`
+- CACHE-001: 添加 FreeValueIfOwned 安全释放泛型对象
+  - 文件: `UniBase.Cache.pas`
+
+### IoC 容器修复
+- IOC-001: RegisterSingleton 接口实例处理逻辑
+  - 文件: `UniBase.IoC.pas`
+
+### 代码重构
+- UTIL-001: CompareVersions 提取到 `UniBase.Types.pas`
+- INTERFACE-001: `TUniBaseConfig`/`TUniBaseI18n` 实现接口
+
+### 国际化增强
+- I18N-001: 集成 CLDR 复数规则（`UniBase.i18n.Plural.pas`）
+
+### 日志系统优化
+- LOG-001: 日志写入线程重构为批量处理模式（`UniBase.Logging.pas`）
+
+### 新增功能
+- E-001: IoC 循环依赖检测（异常 `ECircularDependencyException`）
+- E-002: ORM `DEFAULT` 生成（`CreateTableSQL` 支持）
+- E-003: Configuration 加密配置源（`TEncryptedConfigurationSource`）
+- E-004: Logging 结构化 JSON 日志（`.jsonl`）
+
+### doQry 模块增强 (2025-12-01)
+- DOQRY-001: CopyQueryToClientDataSet 扩展（Field.Assign + 性能优化）
+- DOQRY-002: 查询缓存 TTL 策略（UniDbInvalidateQuery/UniDbSetCacheTTL/UniDbGetCacheStats）
+- DOQRY-003: doQry 使用指南文档（`docs/doQry_Guide.md`）
+- DOQRY-004: 日志输出结构化 JSON 格式
+- DOQRY-005: 预编译语句池（UniDbSetPreparedStatementPooling/UniDbClearPreparedStatements/UniDbGetPreparedStats）
+- DOQRY-006: 错误码规范化（17 个 DOQRY_ERR_* 常量 + InferErrorCode）

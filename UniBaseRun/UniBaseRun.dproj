@@ -121,11 +121,12 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\Core\UniBase.Consts.pas"/>
+        <DCCReference Include="..\Core\UniBase.Types.pas"/>
         <DCCReference Include="..\Core\UniBase.Manager.pas"/>
         <DCCReference Include="..\Core\UniBase.Config.pas"/>
         <DCCReference Include="..\Core\UniBase.i18n.pas"/>
         <DCCReference Include="..\Core\UniBase.Logging.pas"/>
-        <DCCReference Include="..\Core\UniBase.Types.pas"/>
         <DCCReference Include="..\Core\UniBase.Theme.pas"/>
         <DCCReference Include="..\Core\UniBase.FormState.pas"/>
         <DCCReference Include="ViewMain.pas">

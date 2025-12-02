@@ -269,7 +269,15 @@ type
 /// <summary>Get global event bus instance</summary>
 function EventBus: TEventBus;
 
-/// <summary>Set custom global event bus (for testing)</summary>
+/// <summary>
+/// Set custom global event bus (for testing/dependency injection).
+/// 
+/// R-007: 所有权语义说明：
+///   - 调用此方法后，AEventBus 的所有权转移给全局单例管理器
+///   - 之前的全局实例（无论是 auto-created 还是之前传入的）都会被释放
+///   - 传入 nil 可重置为默认的懒加载行为
+///   - 调用者不应在调用后继续持有或释放 AEventBus
+/// </summary>
 procedure SetEventBus(AEventBus: TEventBus);
 
 implementation
@@ -297,10 +305,14 @@ procedure SetEventBus(AEventBus: TEventBus);
 begin
   GEventBusLock.Enter;
   try
+    // R-007: 所有权转移逻辑
+    // - 如果传入的实例与当前实例不同，释放旧实例
+    // - 传入 nil 会释放当前实例并允许后续懒加载
+    // - 传入同一实例则无操作（避免 double-free）
     if GEventBus <> AEventBus then
     begin
-      GEventBus.Free;
-      GEventBus := AEventBus;
+      FreeAndNil(GEventBus);  // 安全释放旧实例（包括 nil 情况）
+      GEventBus := AEventBus; // 所有权转移，调用者不应再释放
     end;
   finally
     GEventBusLock.Leave;

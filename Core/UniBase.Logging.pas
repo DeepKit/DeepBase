@@ -26,6 +26,14 @@ type
   TLogStorageMode = (lsmDatabase, lsmFile, lsmBoth);
 
   /// <summary>
+  /// Log output format for file logging
+  /// </summary>
+  TLogFormat = (
+    lfText,   // Traditional text format: [HH:mm:ss.zzz] [LEVEL] [ThreadId] [Source] Message
+    lfJson    // JSON structured format: {"timestamp":..., "level":..., "message":..., ...}
+  );
+
+  /// <summary>
   /// Log entry
   /// </summary>
   TLogEntry = record
@@ -58,6 +66,7 @@ type
     FStorageMode: TLogStorageMode;
     FMinLevel: TLogLevel;
     FLogFileDir: string;
+    FLogFormat: TLogFormat;
     
     // File-logging settings
     FMaxLogFileSizeBytes: Int64; // rotate when exceeded (default 10 MB)
@@ -117,6 +126,9 @@ type
     
     /// <summary>Minimum log level</summary>
     property MinLevel: TLogLevel read FMinLevel write FMinLevel;
+    
+    /// <summary>Log format for file output (default: lfText)</summary>
+    property LogFormat: TLogFormat read FLogFormat write FLogFormat;
   end;
 
 /// <summary>
@@ -142,6 +154,7 @@ implementation
 uses
   System.DateUtils,
   System.IOUtils,
+  System.JSON,
   Winapi.Windows,
   FireDAC.Stan.Def,
   FireDAC.Phys.SQLite,
@@ -182,12 +195,13 @@ procedure SetGlobalLogger(ALogger: TUniBaseLogger);
 begin
   TMonitor.Enter(GLoggerLock);
   try
-    // 释放旧的临时 Logger（如果有）
+    // 释放旧的临时 Logger（如果有），但不释放由 Manager 管理的实例
     if Assigned(GLogger) and (GLogger <> ALogger) and (not GLoggerInitializedByManager) then
       FreeAndNil(GLogger);
-    
+
     GLogger := ALogger;
-    GLoggerInitializedByManager := True;
+    // 仅当由外部显式传入实例时才标记为 Manager 初始化
+    GLoggerInitializedByManager := Assigned(ALogger);
   finally
     TMonitor.Exit(GLoggerLock);
   end;
@@ -211,6 +225,7 @@ begin
   // Defaults for file rotation
   FMaxLogFileSizeBytes := 10 * 1024 * 1024; // 10 MB
   FMaxRollFiles := 10; // reserved
+  FLogFormat := lfText; // Default text format
   
   FLogQueue := TThreadList<TLogEntry>.Create;
   FStopEvent := TEvent.Create;
@@ -253,7 +268,13 @@ begin
       FWriteConnection.Params.Values['JournalMode'] := 'WAL';
       FWriteConnection.Open;
     except
-      // Connection failed, WriteToDB will check Connected and fallback
+      on E: Exception do
+      begin
+        // R-006: 连接失败时输出调试信息，WriteToDB 会检查 Connected 并回退到文件模式
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Logger.EnsureWriteConnection failed: ' + E.Message));
+        {$ENDIF}
+      end;
     end;
   end;
 end;
@@ -274,9 +295,13 @@ end;
 procedure TUniBaseLogger.WriteLogThread;
 var
   List: TList<TLogEntry>;
+  LocalBatch: TArray<TLogEntry>;
   Entry: TLogEntry;
+  I, BatchCount, RemainingCount: Integer;
   WaitResult: DWORD;
   Events: array[0..1] of THandle;
+const
+  MAX_BATCH_SIZE = 100;  // Process up to 100 entries per batch
 begin
   Events[0] := FStopEvent.Handle;
   Events[1] := FLogEvent.Handle;
@@ -290,35 +315,50 @@ begin
     if WaitResult = WAIT_OBJECT_0 then
       Break; // Stop event
       
-    // Log event or Timeout (if we used timeout)
-    // Reset event BEFORE processing to avoid race condition:
-    // If Reset happens AFTER processing, a new log added between
-    // queue-empty check and Reset would be lost until next SetEvent
+    // Reset event BEFORE processing to avoid race condition
     FLogEvent.ResetEvent;
     
+    // R-003: 单次锁定即完成批量提取和剩余计数
+    RemainingCount := 0;
     List := FLogQueue.LockList;
     try
-      // Process all queued logs
-      while List.Count > 0 do
-      begin
-        Entry := List[0];
-        List.Delete(0);
+      BatchCount := List.Count;
+      if BatchCount > MAX_BATCH_SIZE then
+        BatchCount := MAX_BATCH_SIZE;
         
-        // Unlock for time-consuming I/O operations
-        FLogQueue.UnlockList;
-        try
-          if (FStorageMode in [lsmDatabase, lsmBoth]) then
-            WriteToDB(Entry);
-            
-          if (FStorageMode in [lsmFile, lsmBoth]) then
-            WriteToFile(Entry);
-        finally
-          List := FLogQueue.LockList;
-        end;
+      if BatchCount > 0 then
+      begin
+        // Copy entries to local array
+        SetLength(LocalBatch, BatchCount);
+        for I := 0 to BatchCount - 1 do
+          LocalBatch[I] := List[I];
+          
+        // Remove processed entries from queue
+        List.DeleteRange(0, BatchCount);
+        
+        // 计算剩余条目数（在同一次锁定中）
+        RemainingCount := List.Count;
       end;
     finally
       FLogQueue.UnlockList;
     end;
+    
+    // Process batch outside of lock (no lock contention during I/O)
+    for I := 0 to High(LocalBatch) do
+    begin
+      Entry := LocalBatch[I];
+      
+      if (FStorageMode in [lsmDatabase, lsmBoth]) then
+        WriteToDB(Entry);
+        
+      if (FStorageMode in [lsmFile, lsmBoth]) then
+        WriteToFile(Entry);
+    end;
+    
+    // If there are more entries in queue, signal ourselves to continue
+    // 注意：使用先前记录的 RemainingCount，避免再次加锁
+    if RemainingCount > 0 then
+      FLogEvent.SetEvent;
   end;
 end;
 
@@ -355,38 +395,75 @@ var
   BaseFile, TargetFile: string;
   Line: string;
   Builder: TStringBuilder;
+  JsonObj: TJSONObject;
   NewBytes: Integer;
+  FileExt: string;
 begin
   try
     if not DirectoryExists(FLogFileDir) then
       ForceDirectories(FLogFileDir);
-      
-    BaseFile := TPath.Combine(FLogFileDir, Format('Log_%s.txt', [FormatDateTime('yyyy-MM-dd', Entry.Timestamp)]));
     
-    Builder := TStringBuilder.Create;
-    try
-      Builder.AppendFormat('[%s] [%s] [%d]', [
-        FormatDateTime('HH:mm:ss.zzz', Entry.Timestamp),
-        LogLevelToStr(Entry.Level),
-        Entry.ThreadId
-      ]);
+    // Determine file extension based on format
+    if FLogFormat = lfJson then
+      FileExt := '.jsonl'  // JSON Lines format
+    else
+      FileExt := '.txt';
       
-      if Entry.Source <> '' then
-        Builder.AppendFormat(' [%s]', [Entry.Source]);
+    BaseFile := TPath.Combine(FLogFileDir, Format('Log_%s%s', [
+      FormatDateTime('yyyy-MM-dd', Entry.Timestamp), FileExt]));
+    
+    if FLogFormat = lfJson then
+    begin
+      // JSON structured format (JSON Lines - one JSON object per line)
+      JsonObj := TJSONObject.Create;
+      try
+        JsonObj.AddPair('timestamp', DateToISO8601(Entry.Timestamp));
+        JsonObj.AddPair('level', LogLevelToStr(Entry.Level));
+        JsonObj.AddPair('threadId', TJSONNumber.Create(Entry.ThreadId));
+        JsonObj.AddPair('message', Entry.Msg);
         
-      Builder.Append(' ');
-      Builder.Append(Entry.Msg);
-      
-      if Entry.StackTrace <> '' then
-      begin
-        Builder.AppendLine;
-        Builder.Append('  StackTrace: ');
-        Builder.Append(Entry.StackTrace);
+        if Entry.Source <> '' then
+          JsonObj.AddPair('source', Entry.Source);
+          
+        if Entry.StackTrace <> '' then
+          JsonObj.AddPair('stackTrace', Entry.StackTrace);
+          
+        if Entry.Extra <> '' then
+          JsonObj.AddPair('extra', Entry.Extra);
+          
+        Line := JsonObj.ToString;
+      finally
+        JsonObj.Free;
       end;
-      
-      Line := Builder.ToString;
-    finally
-      Builder.Free;
+    end
+    else
+    begin
+      // Traditional text format
+      Builder := TStringBuilder.Create;
+      try
+        Builder.AppendFormat('[%s] [%s] [%d]', [
+          FormatDateTime('HH:mm:ss.zzz', Entry.Timestamp),
+          LogLevelToStr(Entry.Level),
+          Entry.ThreadId
+        ]);
+        
+        if Entry.Source <> '' then
+          Builder.AppendFormat(' [%s]', [Entry.Source]);
+          
+        Builder.Append(' ');
+        Builder.Append(Entry.Msg);
+        
+        if Entry.StackTrace <> '' then
+        begin
+          Builder.AppendLine;
+          Builder.Append('  StackTrace: ');
+          Builder.Append(Entry.StackTrace);
+        end;
+        
+        Line := Builder.ToString;
+      finally
+        Builder.Free;
+      end;
     end;
     
     NewBytes := TEncoding.UTF8.GetByteCount(Line + sLineBreak);
@@ -641,13 +718,14 @@ begin
   Result := 0;
   if (FWriteConnection = nil) or (not FWriteConnection.Connected) then
     Exit;
-    
+
   try
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FWriteConnection;
-      Query.SQL.Text := 'SELECT COUNT(*) FROM Logs WHERE Level = :Level';
-      Query.ParamByName('Level').AsInteger := Ord(Level);
+      // 使用 Logs.LogLevel 字段并按字符串级别统计
+      Query.SQL.Text := 'SELECT COUNT(*) FROM Logs WHERE LogLevel = :Level';
+      Query.ParamByName('Level').AsString := LogLevelToStr(Level);
       Query.Open;
       Result := Query.Fields[0].AsLargeInt;
     finally
@@ -685,8 +763,14 @@ initialization
   GLoggerLock := TObject.Create;
 
 finalization
-  if GLogger <> nil then
-    FreeAndNil(GLogger);
+  // 仅释放内部创建的临时 Logger，Manager 注入的实例由 Manager 自己释放
+  if Assigned(GLogger) then
+  begin
+    if not GLoggerInitializedByManager then
+      FreeAndNil(GLogger)
+    else
+      GLogger := nil;
+  end;
   FreeAndNil(GLoggerLock);
 
 end.

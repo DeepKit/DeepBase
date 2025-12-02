@@ -18,13 +18,15 @@ uses
   System.NetEncoding,
   FireDAC.Comp.Client,
   UniBase.Types,
-  UniBase.Consts;
+  UniBase.Consts,
+  UniBase.Interfaces;
 
 type
   /// <summary>
-  /// Configuration manager
+  /// Configuration manager.
+  /// Implements IUniBaseConfig for dependency injection and testing.
   /// </summary>
-  TUniBaseConfig = class
+  TUniBaseConfig = class(TInterfacedObject, IUniBaseConfig)
   private
     FConnection: TFDConnection;
     FLock: TObject;
@@ -33,15 +35,11 @@ type
     FOnConfigChanged: TConfigChangedEvent;
     
     function ReadFromDB(const Key: string; const Default: string = ''): string;
-    function ReadFromDBEx(const Key: string; out IsEncrypted: Boolean; const Default: string = ''): string;
     procedure WriteToDB(const Key, Value: string; const Category: string; 
       const ValueType: string; const Description: string);
-    procedure WriteToDBEncrypted(const Key, Value: string; const Category: string;
-      IsEncrypted: Boolean);
     
-    // Simple encryption (XOR + Base64) for sensitive config values
-    function EncryptValue(const Value: string): string;
-    function DecryptValue(const EncryptedValue: string): string;
+    // R-002: 公共设置逻辑（消除 SetConfig* 重复代码）
+    procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string);
     
   public
     constructor Create(AConnection: TFDConnection; ALock: TObject);
@@ -130,37 +128,8 @@ type
 implementation
 
 uses
-  System.StrUtils;
-
-const
-  // ============================================================================
-  // WARNING: SECURITY NOTICE
-  // ============================================================================
-  // This is NOT cryptographically secure encryption!
-  // XOR + Base64 provides OBFUSCATION only, not security.
-  //
-  // Limitations:
-  //   - Fixed key hardcoded in source (can be extracted via reverse engineering)
-  //   - Simple XOR is trivially breakable with known plaintext
-  //   - Provides no protection against determined attackers
-  //
-  // Suitable for:
-  //   - Preventing casual viewing of config values in plain text
-  //   - Meeting basic compliance requirements for "not storing passwords in clear"
-  //
-  // NOT suitable for:
-  //   - Protecting highly sensitive data (API keys with billing, passwords)
-  //   - PCI-DSS, HIPAA, or other compliance requirements
-  //
-  // For stronger protection, consider:
-  //   - Windows: Use DPAPI via CryptProtectData/CryptUnprotectData
-  //   - Cross-platform: Use AES-256 with user-derived key
-  //   - Hardware: Use platform keychain/credential manager
-  // ============================================================================
-  CONFIG_ENCRYPT_KEY: array[0..15] of Byte = (
-    $A3, $7B, $F2, $91, $C4, $8E, $5D, $06,
-    $3A, $E7, $1C, $B5, $68, $2F, $D9, $40
-  );
+  System.StrUtils,
+  UniBase.Security;
 
 { TUniBaseConfig }
 
@@ -269,127 +238,27 @@ begin
   end;
 end;
 
-function TUniBaseConfig.ReadFromDBEx(const Key: string; out IsEncrypted: Boolean; 
-  const Default: string): string;
-var
-  Query: TFDQuery;
-begin
-  Result := Default;
-  IsEncrypted := False;
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT Value, IsEncrypted FROM Settings WHERE Key = :Key';
-    Query.ParamByName('Key').AsString := Key;
-    Query.Open;
-    
-    if not Query.Eof then
-    begin
-      Result := Query.FieldByName('Value').AsString;
-      IsEncrypted := Query.FieldByName('IsEncrypted').AsInteger = 1;
-    end;
-  finally
-    Query.Free;
-  end;
-end;
-
-procedure TUniBaseConfig.WriteToDBEncrypted(const Key, Value: string; 
-  const Category: string; IsEncrypted: Boolean);
-var
-  Query: TFDQuery;
-begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'INSERT OR REPLACE INTO Settings (Key, Value, Category, ValueType, IsEncrypted) ' +
-      'VALUES (:Key, :Value, :Category, ''String'', :Encrypted)';
-    Query.ParamByName('Key').AsString := Key;
-    Query.ParamByName('Value').AsString := Value;
-    Query.ParamByName('Category').AsString := Category;
-    Query.ParamByName('Encrypted').AsInteger := Ord(IsEncrypted);
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
-end;
-
-function TUniBaseConfig.EncryptValue(const Value: string): string;
-var
-  Bytes: TBytes;
-  i: Integer;
-begin
-  if Value = '' then
-    Exit('');
-    
-  Bytes := TEncoding.UTF8.GetBytes(Value);
-  
-  // XOR with key (cycling through key bytes)
-  for i := 0 to Length(Bytes) - 1 do
-    Bytes[i] := Bytes[i] xor CONFIG_ENCRYPT_KEY[i mod Length(CONFIG_ENCRYPT_KEY)];
-  
-  // Encode as Base64 for safe storage
-  Result := TNetEncoding.Base64.EncodeBytesToString(Bytes);
-end;
-
-function TUniBaseConfig.DecryptValue(const EncryptedValue: string): string;
-var
-  Bytes: TBytes;
-  i: Integer;
-begin
-  if EncryptedValue = '' then
-    Exit('');
-  
-  try
-    // Decode from Base64
-    Bytes := TNetEncoding.Base64.DecodeStringToBytes(EncryptedValue);
-    
-    // XOR with key (same key for decrypt)
-    for i := 0 to Length(Bytes) - 1 do
-      Bytes[i] := Bytes[i] xor CONFIG_ENCRYPT_KEY[i mod Length(CONFIG_ENCRYPT_KEY)];
-    
-    Result := TEncoding.UTF8.GetString(Bytes);
-  except
-    // If decryption fails, return empty
-    Result := '';
-  end;
-end;
 
 function TUniBaseConfig.GetConfigEncrypted(const Key: string; const Default: string): string;
 var
-  IsEncrypted: Boolean;
-  RawValue: string;
+  Secret: string;
 begin
-  TMonitor.Enter(FLock);
-  try
-    RawValue := ReadFromDBEx(Key, IsEncrypted, Default);
-    
-    if (RawValue <> Default) and IsEncrypted then
-      Result := DecryptValue(RawValue)
-    else
-      Result := RawValue;
-  finally
-    TMonitor.Exit(FLock);
-  end;
+  // 从安全存储加载密文（DPAPI/Secrets 表），不再使用 XOR/Settings 表
+  Secret := LoadSecret(Key);
+  if Secret = '' then
+    Result := Default
+  else
+    Result := Secret;
 end;
 
 procedure TUniBaseConfig.SetConfigEncrypted(const Key, Value: string; const Category: string);
-var
-  EncryptedValue: string;
 begin
+  // 将敏感配置委托给 UniBase.Security 模块存储（DPAPI/Secrets 表）
+  SaveSecret(Key, Value, 'Config:' + Category);
+
+  // 移除普通配置缓存，避免明文/旧值残留
   TMonitor.Enter(FLock);
   try
-    EncryptedValue := EncryptValue(Value);
-    WriteToDBEncrypted(Key, EncryptedValue, Category, True);
-    
-    // Do NOT cache encrypted values for security
     FCache.Remove(Key);
   finally
     TMonitor.Exit(FLock);
@@ -415,28 +284,34 @@ begin
   end;
 end;
 
-procedure TUniBaseConfig.SetConfig(const Key, Value: string; const Category: string);
+procedure TUniBaseConfig.SetConfigInternal(const Key, NewValue, Category, ValueType: string);
 var
   OldValue: string;
 begin
+  // 注意：调用者需确保已获取锁
+  // 获取旧值
+  if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
+    // From cache
+  else
+    OldValue := ReadFromDB(Key, '');
+  
+  // 写入数据库
+  WriteToDB(Key, NewValue, Category, ValueType, '');
+  
+  // 更新缓存
+  if FCacheEnabled then
+    FCache.AddOrSetValue(Key, NewValue);
+    
+  // 触发事件
+  if (OldValue <> NewValue) and Assigned(FOnConfigChanged) then
+    FOnConfigChanged(Self, Key, OldValue, NewValue);
+end;
+
+procedure TUniBaseConfig.SetConfig(const Key, Value: string; const Category: string);
+begin
   TMonitor.Enter(FLock);
   try
-    // Get old value
-    if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
-      // From cache
-    else
-      OldValue := ReadFromDB(Key, '');
-    
-    // Write to database
-    WriteToDB(Key, Value, Category, 'String', '');
-    
-    // Update cache
-    if FCacheEnabled then
-      FCache.AddOrSetValue(Key, Value);
-      
-    // Trigger event
-    if (OldValue <> Value) and Assigned(FOnConfigChanged) then
-      FOnConfigChanged(Self, Key, OldValue, Value);
+    SetConfigInternal(Key, Value, Category, 'String');
   finally
     TMonitor.Exit(FLock);
   end;
@@ -451,30 +326,16 @@ begin
     Result := Default
   else if not TryStrToInt(StrValue, Result) then
   begin
-    // Type conversion failed, return default
-    // TODO: Log warning after integrating logger
+    // Type conversion failed, return default (caller may log a warning if needed)
     Result := Default;
   end;
 end;
 
 procedure TUniBaseConfig.SetConfigInt(const Key: string; Value: Integer; const Category: string);
-var
-  OldValue: string;
 begin
   TMonitor.Enter(FLock);
   try
-    if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
-      // From cache
-    else
-      OldValue := ReadFromDB(Key, '');
-    
-    WriteToDB(Key, IntToStr(Value), Category, 'Integer', '');
-    
-    if FCacheEnabled then
-      FCache.AddOrSetValue(Key, IntToStr(Value));
-      
-    if (OldValue <> IntToStr(Value)) and Assigned(FOnConfigChanged) then
-      FOnConfigChanged(Self, Key, OldValue, IntToStr(Value));
+    SetConfigInternal(Key, IntToStr(Value), Category, 'Integer');
   finally
     TMonitor.Exit(FLock);
   end;
@@ -500,27 +361,16 @@ end;
 
 procedure TUniBaseConfig.SetConfigBool(const Key: string; Value: Boolean; const Category: string);
 var
-  OldValue, NewValue: string;
+  NewValue: string;
 begin
+  if Value then
+    NewValue := 'True'
+  else
+    NewValue := 'False';
+    
   TMonitor.Enter(FLock);
   try
-    if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
-      // From cache
-    else
-      OldValue := ReadFromDB(Key, '');
-    
-    if Value then
-      NewValue := 'True'
-    else
-      NewValue := 'False';
-      
-    WriteToDB(Key, NewValue, Category, 'Boolean', '');
-    
-    if FCacheEnabled then
-      FCache.AddOrSetValue(Key, NewValue);
-      
-    if (OldValue <> NewValue) and Assigned(FOnConfigChanged) then
-      FOnConfigChanged(Self, Key, OldValue, NewValue);
+    SetConfigInternal(Key, NewValue, Category, 'Boolean');
   finally
     TMonitor.Exit(FLock);
   end;
@@ -541,24 +391,10 @@ begin
 end;
 
 procedure TUniBaseConfig.SetConfigFloat(const Key: string; Value: Double; const Category: string);
-var
-  OldValue, NewValue: string;
 begin
   TMonitor.Enter(FLock);
   try
-    if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
-      // From cache
-    else
-      OldValue := ReadFromDB(Key, '');
-    
-    NewValue := FloatToStr(Value);
-    WriteToDB(Key, NewValue, Category, 'Float', '');
-    
-    if FCacheEnabled then
-      FCache.AddOrSetValue(Key, NewValue);
-      
-    if (OldValue <> NewValue) and Assigned(FOnConfigChanged) then
-      FOnConfigChanged(Self, Key, OldValue, NewValue);
+    SetConfigInternal(Key, FloatToStr(Value), Category, 'Float');
   finally
     TMonitor.Exit(FLock);
   end;

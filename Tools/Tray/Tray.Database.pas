@@ -438,20 +438,24 @@ function TTrayDatabase.UpdateDevLog(AId: Integer;
   const ARequirement, AImplementation, ATags, ANotes: string): Boolean;
 var
   Query: TFDQuery;
+  NowStr: string;
 begin
   Result := False;
   if not FInitialized then Exit;
+  
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
     Query.SQL.Text :=
       'UPDATE DevLogs SET Requirement = :Requirement, Implementation = :Implementation, ' +
-      'Tags = :Tags, Notes = :Notes, UpdatedAt = datetime(''now'', ''localtime'') WHERE Id = :Id';
+      'Tags = :Tags, Notes = :Notes, UpdatedAt = :UpdatedAt WHERE Id = :Id';
     Query.ParamByName('Requirement').AsString := ARequirement;
     Query.ParamByName('Implementation').AsString := AImplementation;
     Query.ParamByName('Tags').AsString := ATags;
     Query.ParamByName('Notes').AsString := ANotes;
+    Query.ParamByName('UpdatedAt').AsString := NowStr;
     Query.ParamByName('Id').AsInteger := AId;
     Query.ExecSQL;
     Result := Query.RowsAffected > 0;
@@ -609,14 +613,18 @@ end;
 procedure TTrayDatabase.IncrementCommandUsage(AId: Integer);
 var
   Query: TFDQuery;
+  NowStr: string;
 begin
   if not FInitialized then Exit;
+  
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
     Query.SQL.Text :=
-      'UPDATE QuickCommands SET UsageCount = UsageCount + 1, LastUsedAt = datetime(''now'', ''localtime'') WHERE Id = :Id';
+      'UPDATE QuickCommands SET UsageCount = UsageCount + 1, LastUsedAt = :LastUsedAt WHERE Id = :Id';
+    Query.ParamByName('LastUsedAt').AsString := NowStr;
     Query.ParamByName('Id').AsInteger := AId;
     Query.ExecSQL;
   finally
@@ -817,9 +825,12 @@ end;
 procedure TTrayDatabase.AddProjectHistory(const AProjectName: string; const AProjectPath: string);
 var
   Query: TFDQuery;
+  NowStr: string;
 begin
   if not FInitialized then Exit;
   if Trim(AProjectName) = '' then Exit;
+  
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   
   Query := TFDQuery.Create(nil);
   try
@@ -827,14 +838,15 @@ begin
     // 使用 UPSERT 模式
     Query.SQL.Text :=
       'INSERT INTO ProjectHistory (ProjectName, ProjectPath, LastUsedAt, UsageCount) ' +
-      'VALUES (:Name, :Path, datetime(''now'', ''localtime''), 1) ' +
+      'VALUES (:Name, :Path, :NowTime, 1) ' +
       'ON CONFLICT(ProjectName) DO UPDATE SET ' +
-      'LastUsedAt = datetime(''now'', ''localtime''), UsageCount = UsageCount + 1';
+      'LastUsedAt = :NowTime, UsageCount = UsageCount + 1';
     Query.ParamByName('Name').AsString := AProjectName;
     if AProjectPath <> '' then
       Query.ParamByName('Path').AsString := AProjectPath
     else
       Query.ParamByName('Path').Clear;
+    Query.ParamByName('NowTime').AsString := NowStr;
     Query.ExecSQL;
   finally
     Query.Free;
@@ -867,17 +879,21 @@ end;
 procedure TTrayDatabase.SetSetting(const AKey, AValue: string);
 var
   Query: TFDQuery;
+  NowStr: string;
 begin
   if not FInitialized then Exit;
+  
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
     Query.SQL.Text :=
-      'INSERT INTO TraySettings (Key, Value, UpdatedAt) VALUES (:Key, :Value, datetime(''now'', ''localtime'')) ' +
-      'ON CONFLICT(Key) DO UPDATE SET Value = :Value, UpdatedAt = datetime(''now'', ''localtime'')';
+      'INSERT INTO TraySettings (Key, Value, UpdatedAt) VALUES (:Key, :Value, :UpdatedAt) ' +
+      'ON CONFLICT(Key) DO UPDATE SET Value = :Value, UpdatedAt = :UpdatedAt';
     Query.ParamByName('Key').AsString := AKey;
     Query.ParamByName('Value').AsString := AValue;
+    Query.ParamByName('UpdatedAt').AsString := NowStr;
     Query.ExecSQL;
   finally
     Query.Free;

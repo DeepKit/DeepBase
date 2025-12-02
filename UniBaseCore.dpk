@@ -54,7 +54,7 @@ contains
   UniBase.VCL.UpdateDialog in 'VCL\UniBase.VCL.UpdateDialog.pas',
   UniBase.VCL.AutoUpdater in 'VCL\UniBase.VCL.AutoUpdater.pas',
   UniBase.VCL.DBInitWizard in 'VCL\UniBase.VCL.DBInitWizard.pas',
-  UniBase.VCL.Controls in 'VCL\UniBase.VCL.Controls.pas';
+  UniBase.VCL.Controls in 'VCL\UniBase.VCL.Controls.pas',
   UniBase.Logging in 'Core\UniBase.Logging.pas',
   UniBase.MRU in 'Core\UniBase.MRU.pas',
   UniBase.Hotkeys in 'Core\UniBase.Hotkeys.pas',

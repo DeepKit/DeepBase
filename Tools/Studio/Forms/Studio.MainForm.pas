@@ -45,11 +45,16 @@ uses
   Studio.HotkeyFrame,
   Studio.ThemeFrame,
   Studio.SQLFrame,
+  Studio.QueriesFrame,
   Studio.SchemaFrame,
   Studio.BackupFrame,
   Studio.ImportExportFrame,
   Studio.ProfileFrame,
-  Studio.HelpPanel;
+  Studio.LLMFrame,
+  Studio.PromptTemplateFrame,
+  Studio.HelpPanel,
+  Studio.Resources,
+  Studio.i18nInit;
 
 type
   TfrmStudioMain = class(TForm)
@@ -75,6 +80,8 @@ type
     cardBackup: TCard;
     cardImportExport: TCard;
     cardProfile: TCard;
+    cardLLM: TCard;
+    cardPromptTemplate: TCard;
     
     dlgOpenDB: TOpenDialog;
 
@@ -93,15 +100,18 @@ type
     FHotkeyFrame: TfraHotkey;
     FThemeFrame: TfraTheme;
     FSQLFrame: TfraSQLEditor;
+    FQueriesFrame: TfraQueries;
     FSchemaFrame: TfraSchemaViewer;
     FBackupFrame: TfraBackupWizard;
     FImportExportFrame: TfraImportExport;
     FProfileFrame: TfraProfiler;
+    FLLMFrame: TfraLLM;
+    FPromptTemplateFrame: TfraPromptTemplate;
     
     procedure InitNavigation;
     procedure OpenDatabase(const APath: string);
     procedure CloseDatabase;
-    procedure ShowCard(const ACardName: string);
+    procedure ShowCard(ACard: TCard);
     
   public
     property Connection: TFDConnection read FConnection;
@@ -119,7 +129,6 @@ implementation
 
 procedure TfrmStudioMain.FormCreate(Sender: TObject);
 var
-  UB: TUniBaseManager;
   HelpLabelConfig: TLabel;
   HelpLabelLogs: TLabel;
   HelpLabelHotkey: TLabel;
@@ -130,21 +139,14 @@ var
   HelpLabelImportExport: TLabel;
   HelpLabelProfile: TLabel;
 begin
-  // Get UniBase singleton
-  UB := UniBase.Manager.UniBase;
+  // Initialize i18n (detect system language)
+  InitializeI18n;
   
-  // Set default title
-  Caption := 'UniBase Studio';
-  lblTitle.Caption := 'UniBase Studio';
-  lblCurrentDB.Caption := 'No DB Opened';
-  btnOpenDB.Caption := 'Open Database...';
-  
-  // If UniBase is initialized, use i18n translation
-  if UB.IsInitialized and (UB.I18n <> nil) then
-  begin
-    lblCurrentDB.Caption := UB.I18n.Translate('No DB Opened');
-    btnOpenDB.Caption := UB.I18n.Translate('Open Database...');
-  end;
+  // Set title using resource strings
+  Caption := TStudioResources.GetString('RSFormCaption');
+  lblTitle.Caption := TStudioResources.GetString('RSLblTitle');
+  lblCurrentDB.Caption := TStudioResources.GetString('RSNoDBOpened');
+  btnOpenDB.Caption := TStudioResources.GetString('RSBtnOpen');
   
   // Create and embed Frames
   FConfigFrame := TfraConfig.Create(Self);
@@ -194,6 +196,11 @@ begin
   FSQLFrame := TfraSQLEditor.Create(Self);
   FSQLFrame.Parent := cardSQL;
   FSQLFrame.Align := alClient;
+  
+  // Create and embed Queries Frame (DoQry metadata editor)
+  FQueriesFrame := TfraQueries.Create(Self);
+  FQueriesFrame.Parent := cardQueries;
+  FQueriesFrame.Align := alClient;
   
   // Add help label for SQL page
   HelpLabelSQL := CreateHelpLabel(cardSQL,
@@ -255,6 +262,16 @@ begin
     '- Index overview and suggestions');
   HelpLabelProfile.BringToFront;
   
+  // Create and embed LLM Frame
+  FLLMFrame := TfraLLM.Create(Self);
+  FLLMFrame.Parent := cardLLM;
+  FLLMFrame.Align := alClient;
+  
+  // Create and embed Prompt Template Frame
+  FPromptTemplateFrame := TfraPromptTemplate.Create(Self);
+  FPromptTemplateFrame.Parent := cardPromptTemplate;
+  FPromptTemplateFrame.Align := alClient;
+  
   // Initialize navigation
   InitNavigation;
   
@@ -271,54 +288,77 @@ procedure TfrmStudioMain.InitNavigation;
 var
   Cat: TButtonCategory;
   Btn: TButtonItem;
+  
+  function RS(const Key: string): string;
+  begin
+    Result := TStudioResources.GetString(Key);
+  end;
+  
 begin
   catNav.Categories.Clear;
   
   // Configuration category
   Cat := catNav.Categories.Add;
-  Cat.Caption := 'Configuration';
+  Cat.Caption := RS('RSMenuConfiguration');
   Cat.Color := clWhite;
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Settings';
-  Btn.Hint := 'cardConfig';
+  Btn.Caption := RS('RSMenuSettings');
+  Btn.Data := Pointer(cardConfig);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Hotkeys';
-  Btn.Hint := 'cardHotkey';
+  Btn.Caption := RS('RSMenuHotkeys');
+  Btn.Data := Pointer(cardHotkey);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Themes';
-  Btn.Hint := 'cardTheme';
+  Btn.Caption := RS('RSMenuThemes');
+  Btn.Data := Pointer(cardTheme);
   
   // Data category
   Cat := catNav.Categories.Add;
-  Cat.Caption := 'Data';
+  Cat.Caption := RS('RSMenuData');
   Cat.Color := clWhite;
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'SQL Query';
-  Btn.Hint := 'cardSQL';
+  Btn.Caption := RS('RSMenuSQLQuery');
+  Btn.Data := Pointer(cardSQL);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Schema';
-  Btn.Hint := 'cardSchema';
+  Btn.Caption := RS('RSMenuQueries');
+  Btn.Data := Pointer(cardQueries);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Logs';
-  Btn.Hint := 'cardLog';
+  Btn.Caption := RS('RSMenuSchema');
+  Btn.Data := Pointer(cardSchema);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Backup';
-  Btn.Hint := 'cardBackup';
+  Btn.Caption := RS('RSMenuLogs');
+  Btn.Data := Pointer(cardLog);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Import/Export';
-  Btn.Hint := 'cardImportExport';
+  Btn.Caption := RS('RSMenuBackup');
+  Btn.Data := Pointer(cardBackup);
   
   Btn := Cat.Items.Add;
-  Btn.Caption := 'Profiler';
-  Btn.Hint := 'cardProfile';
+  Btn.Caption := RS('RSMenuImportExport');
+  Btn.Data := Pointer(cardImportExport);
+  
+  Btn := Cat.Items.Add;
+  Btn.Caption := RS('RSMenuProfiler');
+  Btn.Data := Pointer(cardProfile);
+  
+  // AI/LLM category
+  Cat := catNav.Categories.Add;
+  Cat.Caption := RS('RSMenuAI');
+  Cat.Color := clWhite;
+  
+  Btn := Cat.Items.Add;
+  Btn.Caption := RS('RSMenuLLM');
+  Btn.Data := Pointer(cardLLM);
+  
+  Btn := Cat.Items.Add;
+  Btn.Caption := RS('RSMenuPromptTemplates');
+  Btn.Data := Pointer(cardPromptTemplate);
 end;
 
 procedure TfrmStudioMain.btnOpenDBClick(Sender: TObject);
@@ -328,57 +368,48 @@ begin
 end;
 
 procedure TfrmStudioMain.catNavButtonClicked(Sender: TObject; const Button: TButtonItem);
+var
+  TargetCard: TCard;
 begin
-  ShowCard(Button.Hint);
+  // Use Data pointer to get the card directly
+  if Button.Data <> nil then
+  begin
+    TargetCard := TCard(Button.Data);
+    ShowCard(TargetCard);
+  end;
 end;
 
-procedure TfrmStudioMain.ShowCard(const ACardName: string);
+procedure TfrmStudioMain.ShowCard(ACard: TCard);
 begin
-  if ACardName = 'cardConfig' then
-  begin
-    cardPanel.ActiveCard := cardConfig;
-    FConfigFrame.RefreshData;
-  end
-  else if ACardName = 'cardLog' then
-  begin
-    cardPanel.ActiveCard := cardLog;
-    FLogFrame.RefreshData;
-  end
-  else if ACardName = 'cardHotkey' then
-  begin
-    cardPanel.ActiveCard := cardHotkey;
-    FHotkeyFrame.RefreshData;
-  end
-  else if ACardName = 'cardTheme' then
-  begin
-    cardPanel.ActiveCard := cardTheme;
-    FThemeFrame.RefreshData;
-  end
-  else if ACardName = 'cardSQL' then
-  begin
-    cardPanel.ActiveCard := cardSQL;
-    FSQLFrame.RefreshData;
-  end
-  else if ACardName = 'cardSchema' then
-  begin
-    cardPanel.ActiveCard := cardSchema;
-    FSchemaFrame.RefreshData;
-  end
-  else if ACardName = 'cardBackup' then
-  begin
-    cardPanel.ActiveCard := cardBackup;
-    FBackupFrame.RefreshData;
-  end
-  else if ACardName = 'cardImportExport' then
-  begin
-    cardPanel.ActiveCard := cardImportExport;
-    FImportExportFrame.RefreshData;
-  end
-  else if ACardName = 'cardProfile' then
-  begin
-    cardPanel.ActiveCard := cardProfile;
-    FProfileFrame.RefreshData;
-  end;
+  if ACard = nil then Exit;
+  
+  cardPanel.ActiveCard := ACard;
+  
+  // Refresh data for the active card's frame
+  if ACard = cardConfig then
+    FConfigFrame.RefreshData
+  else if ACard = cardLog then
+    FLogFrame.RefreshData
+  else if ACard = cardHotkey then
+    FHotkeyFrame.RefreshData
+  else if ACard = cardTheme then
+    FThemeFrame.RefreshData
+  else if ACard = cardSQL then
+    FSQLFrame.RefreshData
+  else if ACard = cardQueries then
+    FQueriesFrame.RefreshData
+  else if ACard = cardSchema then
+    FSchemaFrame.RefreshData
+  else if ACard = cardBackup then
+    FBackupFrame.RefreshData
+  else if ACard = cardImportExport then
+    FImportExportFrame.RefreshData
+  else if ACard = cardProfile then
+    FProfileFrame.RefreshData
+  else if ACard = cardLLM then
+    FLLMFrame.RefreshData
+  else if ACard = cardPromptTemplate then
+    FPromptTemplateFrame.RefreshData;
 end;
 
 procedure TfrmStudioMain.OpenDatabase(const APath: string);
@@ -410,13 +441,16 @@ begin
     FConfigFrame.SetConnection(FConnection);
     FLogFrame.SetConnection(FConnection);
     FHotkeyFrame.SetConnection(FConnection);
-    FThemeFrame.SetConnection(FConnection);
-    FSQLFrame.SetConnection(FConnection);
-    FSchemaFrame.SetConnection(FConnection);
+    FThemeFrame.SetConnection(AConnection);
+    FSQLFrame.SetConnection(AConnection);
+    FQueriesFrame.SetConnection(AConnection);
+    FSchemaFrame.SetConnection(AConnection);
     FBackupFrame.SetConnection(FConnection);
     FBackupFrame.SetDatabasePath(APath);
     FImportExportFrame.SetConnection(FConnection);
     FProfileFrame.SetConnection(FConnection);
+    FLLMFrame.SetConnection(FConnection);
+    FPromptTemplateFrame.SetConnection(FConnection);
     
     // Refresh data
     FConfigFrame.RefreshData;
@@ -428,6 +462,8 @@ begin
     FBackupFrame.RefreshData;
     FImportExportFrame.RefreshData;
     FProfileFrame.RefreshData;
+    FLLMFrame.RefreshData;
+    FPromptTemplateFrame.RefreshData;
   except
     on E: Exception do
     begin
@@ -439,6 +475,21 @@ end;
 
 procedure TfrmStudioMain.CloseDatabase;
 begin
+  // Disconnect all frames BEFORE freeing connection
+  if Assigned(FConfigFrame) then FConfigFrame.SetConnection(nil);
+  if Assigned(FLogFrame) then FLogFrame.SetConnection(nil);
+  if Assigned(FHotkeyFrame) then FHotkeyFrame.SetConnection(nil);
+  if Assigned(FThemeFrame) then FThemeFrame.SetConnection(nil);
+  if Assigned(FSQLFrame) then FSQLFrame.SetConnection(nil);
+  if Assigned(FQueriesFrame) then FQueriesFrame.SetConnection(nil);
+  if Assigned(FSchemaFrame) then FSchemaFrame.SetConnection(nil);
+  if Assigned(FBackupFrame) then FBackupFrame.SetConnection(nil);
+  if Assigned(FImportExportFrame) then FImportExportFrame.SetConnection(nil);
+  if Assigned(FProfileFrame) then FProfileFrame.SetConnection(nil);
+  if Assigned(FLLMFrame) then FLLMFrame.SetConnection(nil);
+  if Assigned(FPromptTemplateFrame) then FPromptTemplateFrame.SetConnection(nil);
+  
+  // Now safely close and free connection
   if FConnection <> nil then
   begin
     FConnection.Close;

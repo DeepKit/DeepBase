@@ -134,13 +134,41 @@ type
   end;
   
   // ============================================================================
-  // Query Builder
+  // Query Builder Interface
   // ============================================================================
   
   /// <summary>
-  /// Fluent query builder for type-safe queries
+  /// Interface for fluent query builder - enables automatic memory management
   /// </summary>
-  TQueryBuilder<T: class> = class
+  IQueryBuilder<T: class> = interface
+    ['{7E3A8F2D-B1C4-4E5F-A6D8-9C0B1E2F3A4D}']
+    function Where(const Condition: string): IQueryBuilder<T>; overload;
+    function Where(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
+    function AndWhere(const Condition: string): IQueryBuilder<T>; overload;
+    function AndWhere(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
+    function OrWhere(const Condition: string): IQueryBuilder<T>; overload;
+    function OrWhere(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
+    function OrderBy(const Column: string): IQueryBuilder<T>;
+    function OrderByDesc(const Column: string): IQueryBuilder<T>;
+    function Limit(Count: Integer): IQueryBuilder<T>;
+    function Offset(Count: Integer): IQueryBuilder<T>;
+    function Select(const Columns: string): IQueryBuilder<T>;
+    function ToList: TObjectList<T>;
+    function FirstOrDefault: T;
+    function First: T;
+    function Count: Integer;
+    function Exists: Boolean;
+  end;
+  
+  // ============================================================================
+  // Query Builder Implementation
+  // ============================================================================
+  
+  /// <summary>
+  /// Fluent query builder for type-safe queries.
+  /// Implements IQueryBuilder for automatic memory management.
+  /// </summary>
+  TQueryBuilder<T: class> = class(TInterfacedObject, IQueryBuilder<T>)
   private
     FContext: TDbContext;
     FMetadata: TEntityMetadata;
@@ -157,27 +185,27 @@ type
     constructor Create(AContext: TDbContext);
     
     /// <summary>Add WHERE clause</summary>
-    function Where(const Condition: string): TQueryBuilder<T>; overload;
-    function Where(const Condition: string; const Params: array of Variant): TQueryBuilder<T>; overload;
+    function Where(const Condition: string): IQueryBuilder<T>; overload;
+    function Where(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
     
     /// <summary>Add AND condition</summary>
-    function AndWhere(const Condition: string): TQueryBuilder<T>; overload;
-    function AndWhere(const Condition: string; const Params: array of Variant): TQueryBuilder<T>; overload;
+    function AndWhere(const Condition: string): IQueryBuilder<T>; overload;
+    function AndWhere(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
     
     /// <summary>Add OR condition</summary>
-    function OrWhere(const Condition: string): TQueryBuilder<T>; overload;
-    function OrWhere(const Condition: string; const Params: array of Variant): TQueryBuilder<T>; overload;
+    function OrWhere(const Condition: string): IQueryBuilder<T>; overload;
+    function OrWhere(const Condition: string; const Params: array of Variant): IQueryBuilder<T>; overload;
     
     /// <summary>Add ORDER BY clause</summary>
-    function OrderBy(const Column: string): TQueryBuilder<T>;
-    function OrderByDesc(const Column: string): TQueryBuilder<T>;
+    function OrderBy(const Column: string): IQueryBuilder<T>;
+    function OrderByDesc(const Column: string): IQueryBuilder<T>;
     
     /// <summary>Limit results</summary>
-    function Limit(Count: Integer): TQueryBuilder<T>;
-    function Offset(Count: Integer): TQueryBuilder<T>;
+    function Limit(Count: Integer): IQueryBuilder<T>;
+    function Offset(Count: Integer): IQueryBuilder<T>;
     
     /// <summary>Select specific columns</summary>
-    function Select(const Columns: string): TQueryBuilder<T>;
+    function Select(const Columns: string): IQueryBuilder<T>;
     
     /// <summary>Execute query and return results</summary>
     function ToList: TObjectList<T>;
@@ -236,8 +264,11 @@ type
     /// <summary>Get all entities</summary>
     function GetAll<T: class>: TObjectList<T>;
     
-    /// <summary>Start a query builder</summary>
-    function Query<T: class>: TQueryBuilder<T>;
+    /// <summary>
+    /// Start a query builder. Returns interface for automatic memory management.
+    /// Example: Context.Query<TUser>.Where('Name = ?', ['John']).ToList;
+    /// </summary>
+    function Query<T: class>: IQueryBuilder<T>;
     
     // ========================================================================
     // Transaction Management
@@ -609,14 +640,14 @@ begin
   end;
 end;
 
-function TQueryBuilder<T>.Where(const Condition: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.Where(const Condition: string): IQueryBuilder<T>;
 begin
   FWhereClause := Condition;
   Result := Self;
 end;
 
 function TQueryBuilder<T>.Where(const Condition: string; 
-  const Params: array of Variant): TQueryBuilder<T>;
+  const Params: array of Variant): IQueryBuilder<T>;
 var
   I: Integer;
 begin
@@ -627,7 +658,7 @@ begin
   Result := Self;
 end;
 
-function TQueryBuilder<T>.AndWhere(const Condition: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.AndWhere(const Condition: string): IQueryBuilder<T>;
 begin
   if FWhereClause <> '' then
     FWhereClause := FWhereClause + ' AND ' + Condition
@@ -637,7 +668,7 @@ begin
 end;
 
 function TQueryBuilder<T>.AndWhere(const Condition: string;
-  const Params: array of Variant): TQueryBuilder<T>;
+  const Params: array of Variant): IQueryBuilder<T>;
 var
   I, OldLen: Integer;
 begin
@@ -649,7 +680,7 @@ begin
   Result := Self;
 end;
 
-function TQueryBuilder<T>.OrWhere(const Condition: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.OrWhere(const Condition: string): IQueryBuilder<T>;
 begin
   if FWhereClause <> '' then
     FWhereClause := FWhereClause + ' OR ' + Condition
@@ -659,7 +690,7 @@ begin
 end;
 
 function TQueryBuilder<T>.OrWhere(const Condition: string;
-  const Params: array of Variant): TQueryBuilder<T>;
+  const Params: array of Variant): IQueryBuilder<T>;
 var
   I, OldLen: Integer;
 begin
@@ -671,7 +702,7 @@ begin
   Result := Self;
 end;
 
-function TQueryBuilder<T>.OrderBy(const Column: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.OrderBy(const Column: string): IQueryBuilder<T>;
 begin
   if FOrderByClause <> '' then
     FOrderByClause := FOrderByClause + ', ' + Column
@@ -680,24 +711,24 @@ begin
   Result := Self;
 end;
 
-function TQueryBuilder<T>.OrderByDesc(const Column: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.OrderByDesc(const Column: string): IQueryBuilder<T>;
 begin
   Result := OrderBy(Column + ' DESC');
 end;
 
-function TQueryBuilder<T>.Limit(Count: Integer): TQueryBuilder<T>;
+function TQueryBuilder<T>.Limit(Count: Integer): IQueryBuilder<T>;
 begin
   FLimitCount := Count;
   Result := Self;
 end;
 
-function TQueryBuilder<T>.Offset(Count: Integer): TQueryBuilder<T>;
+function TQueryBuilder<T>.Offset(Count: Integer): IQueryBuilder<T>;
 begin
   FOffsetCount := Count;
   Result := Self;
 end;
 
-function TQueryBuilder<T>.Select(const Columns: string): TQueryBuilder<T>;
+function TQueryBuilder<T>.Select(const Columns: string): IQueryBuilder<T>;
 begin
   FSelectColumns := Columns;
   Result := Self;
@@ -1033,7 +1064,7 @@ begin
   Result := Query<T>.ToList;
 end;
 
-function TDbContext.Query<T>: TQueryBuilder<T>;
+function TDbContext.Query<T>: IQueryBuilder<T>;
 begin
   Result := TQueryBuilder<T>.Create(Self);
 end;
@@ -1191,7 +1222,30 @@ begin
         SQL.Append(' UNIQUE');
       
       if Col.DefaultValue <> '' then
-        SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
+      begin
+        case Col.ColumnType of
+          ctString, ctText, ctGuid:
+            begin
+              // 如果调用方已显式传入带引号的 SQL 片段，则直接使用
+              if (Length(Col.DefaultValue) >= 2) and
+                 (Col.DefaultValue[1] = '''') and
+                 (Col.DefaultValue[Length(Col.DefaultValue)] = '''') then
+                SQL.Append(' DEFAULT ').Append(Col.DefaultValue)
+              else
+                SQL.Append(' DEFAULT ').Append(QuotedStr(Col.DefaultValue));
+            end;
+          ctBoolean:
+            begin
+              if SameText(Col.DefaultValue, 'true') or (Col.DefaultValue = '1') then
+                SQL.Append(' DEFAULT 1')
+              else if SameText(Col.DefaultValue, 'false') or (Col.DefaultValue = '0') then
+                SQL.Append(' DEFAULT 0');
+            end;
+        else
+          // 数值/日期等类型默认按原样拼接，由调用方保证合法性
+          SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
+        end;
+      end;
       
       First := False;
     end;

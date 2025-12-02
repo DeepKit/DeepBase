@@ -8,9 +8,14 @@
     - 快照保存和验证
     - 模拟用户交互（点击、输入、选择）
     - 控件状态比对
+  平台: Windows (VCL only)
   ============================================================================ }
 
 unit UniBase.TestHelper;
+
+{$IFDEF FMX}
+  {$MESSAGE FATAL 'UniBase.TestHelper is VCL-only. For FMX GUI testing, implement FMX-specific helpers.'}
+{$ENDIF}
 
 interface
 

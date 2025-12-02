@@ -41,9 +41,13 @@ uses
   System.Generics.Defaults,
   System.SyncObjs,
   System.DateUtils,
-  System.TimeSpan;
+  System.TimeSpan,
+  System.TypInfo;
 
 type
+  /// <summary>缓存相关异常</summary>
+  ECacheException = class(Exception);
+  
   // ============================================================================
   // Eviction Policies
   // ============================================================================
@@ -134,6 +138,7 @@ type
     procedure UpdateAccessOrder(const Key: K);
     procedure DoEvict(const Key: K; const Entry: TEntry);
     procedure DoExpire(const Key: K; const Entry: TEntry);
+    procedure FreeValueIfOwned(const Value: V);
     function GetCount: Integer;
     function GetKeys: TArray<K>;
   public
@@ -381,10 +386,7 @@ begin
       
       // Free old value if owned
       if FOwnValues then
-      begin
-        if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-          TObject((@OldEntry.Value)^).Free;
-      end;
+        FreeValueIfOwned(OldEntry.Value);
     end
     else
     begin
@@ -528,10 +530,7 @@ begin
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
       
       if FOwnValues then
-      begin
-        if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-          TObject((@Entry.Value)^).Free;
-      end;
+        FreeValueIfOwned(Entry.Value);
       
       FEntries.Remove(Key);
       FAccessOrder.Remove(Key);
@@ -554,10 +553,7 @@ begin
     if FOwnValues then
     begin
       for Pair in FEntries do
-      begin
-        if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-          TObject((@Pair.Value.Value)^).Free;
-      end;
+        FreeValueIfOwned(Pair.Value.Value);
     end;
     
     FEntries.Clear;
@@ -615,10 +611,7 @@ begin
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
       
       if FOwnValues then
-      begin
-        if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-          TObject((@Entry.Value)^).Free;
-      end;
+        FreeValueIfOwned(Entry.Value);
       
       FEntries.Remove(Key);
       Inc(FStats.Evictions);
@@ -655,10 +648,7 @@ begin
     FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
     
     if FOwnValues then
-    begin
-      if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-        TObject((@Entry.Value)^).Free;
-    end;
+      FreeValueIfOwned(Entry.Value);
     
     FEntries.Remove(MinKey);
     FAccessOrder.Remove(MinKey);
@@ -681,10 +671,7 @@ begin
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
       
       if FOwnValues then
-      begin
-        if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-          TObject((@Entry.Value)^).Free;
-      end;
+        FreeValueIfOwned(Entry.Value);
       
       FEntries.Remove(Key);
       FAccessOrder.Remove(Key);
@@ -716,10 +703,7 @@ begin
         FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
         
         if FOwnValues then
-        begin
-          if PTypeInfo(TypeInfo(V))^.Kind = tkClass then
-            TObject((@Entry.Value)^).Free;
-        end;
+          FreeValueIfOwned(Entry.Value);
         
         FEntries.Remove(Key);
         FAccessOrder.Remove(Key);
@@ -754,6 +738,21 @@ procedure TCache<K, V>.DoExpire(const Key: K; const Entry: TEntry);
 begin
   if Assigned(FOnExpire) then
     FOnExpire(Key, Entry.Value);
+end;
+
+procedure TCache<K, V>.FreeValueIfOwned(const Value: V);
+var
+  LObj: TObject;
+begin
+  // Safely free object values in generic context
+  // Only process class types to avoid invalid memory access
+  if GetTypeKind(V) = tkClass then
+  begin
+    // Use PPointer for safe type punning in generics
+    LObj := PPointer(@Value)^;
+    if LObj <> nil then
+      LObj.Free;
+  end;
 end;
 
 function TCache<K, V>.GetMany(const Keys: TArray<K>): TDictionary<K, V>;

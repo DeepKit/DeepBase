@@ -1,13 +1,22 @@
 { ============================================================================
   UniBase.Theme - Theme Management Module
   
-  Version: 1.0
+  Version: 1.1
   Description: Manages VCL Styles and custom theme properties.
   Thread Safety: All public methods are thread-safe.
   Note: VCL style switching must be done on the main thread (TStyleManager).
+  
+  FMX Compatibility:
+  - This unit is primarily designed for VCL applications.
+  - In FMX applications, theme operations are no-ops but won't crash.
+  - Use FMX.Styles for FireMonkey theme management.
   ============================================================================ }
 
 unit UniBase.Theme;
+
+{$IFDEF FMX}
+  {$MESSAGE HINT 'UniBase.Theme: FMX detected - VCL theme features disabled. Use FMX.Styles for FMX theming.'}
+{$ENDIF}
 
 interface
 
@@ -15,9 +24,11 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  {$IFNDEF FMX}
   Vcl.Themes,
   Vcl.Styles,
   Vcl.Controls,
+  {$ENDIF}
   FireDAC.Comp.Client,
   UniBase.Types;
 
@@ -33,12 +44,14 @@ type
     FCurrentThemeName: string;
     FOnThemeChanged: TNotifyEvent;
     FThemeCache: TDictionary<string, TThemeInfo>;
-    
+    FPendingThemeName: string;
+
     function GetSystemThemeInfo(const StyleName: string): TThemeInfo;
     function GetDBThemeInfo(const ThemeName: string): TThemeInfo;
     procedure LoadThemeCache;
     procedure DoThemeChanged;
-    
+    procedure ApplyThemeSync; // runs on main thread via TThread.Synchronize
+
   public
     constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
     destructor Destroy; override;
@@ -120,7 +133,18 @@ begin
     FOwnsLock := True;
   end;
   FThemeCache := TDictionary<string, TThemeInfo>.Create;
-  FCurrentThemeName := TStyleManager.ActiveStyle.Name;
+  
+  {$IFNDEF FMX}
+  // VCL: Get current style name from TStyleManager
+  if Assigned(TStyleManager.ActiveStyle) then
+    FCurrentThemeName := TStyleManager.ActiveStyle.Name
+  else
+    FCurrentThemeName := 'Windows';
+  {$ELSE}
+  // FMX: Use default theme name (FMX uses different theming mechanism)
+  FCurrentThemeName := 'Default';
+  {$ENDIF}
+  
   LoadThemeCache;
 end;
 
@@ -168,13 +192,8 @@ begin
           Query.Next;
         end;
       except
-        on E: Exception do
-        begin
-          // 表不存在或字段缺失时输出调试信息，依赖系统主题
-          {$IFDEF DEBUG}
-          OutputDebugString(PChar('UniBase.Theme LoadThemeCache failed: ' + E.Message));
-          {$ENDIF}
-        end;
+        // 表不存在或字段缺失时忽略错误：
+        // 主题信息将回退到系统内置主题，避免因缺表阻塞应用启动。
       end;
     finally
       Query.Free;
@@ -188,6 +207,27 @@ procedure TUniBaseTheme.DoThemeChanged;
 begin
   if Assigned(FOnThemeChanged) then
     FOnThemeChanged(Self);
+end;
+
+procedure TUniBaseTheme.ApplyThemeSync;
+{$IFNDEF FMX}
+var
+  Success: Boolean;
+{$ENDIF}
+begin
+  {$IFNDEF FMX}
+  Success := TStyleManager.TrySetStyle(FPendingThemeName);
+  if Success then
+  begin
+    FCurrentThemeName := FPendingThemeName;
+    DoThemeChanged;
+  end;
+  {$ELSE}
+  // FMX: Just update the current theme name and notify
+  // Actual FMX style switching should be done via FMX.Styles
+  FCurrentThemeName := FPendingThemeName;
+  DoThemeChanged;
+  {$ENDIF}
 end;
 
 function TUniBaseTheme.GetSystemThemeInfo(const StyleName: string): TThemeInfo;
@@ -216,9 +256,12 @@ begin
 end;
 
 procedure TUniBaseTheme.ApplyTheme(const ThemeName: string);
+{$IFNDEF FMX}
 var
   Success: Boolean;
+{$ENDIF}
 begin
+  {$IFNDEF FMX}
   Success := False;
   
   // VCL 样式切换必须在主线程
@@ -233,23 +276,24 @@ begin
   end
   else
   begin
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        Success := TStyleManager.TrySetStyle(ThemeName);
-        if Success then
-        begin
-          FCurrentThemeName := ThemeName;
-          DoThemeChanged;
-        end;
-      end);
+    // 在非主线程中，使用 TThread.Synchronize 切换主题
+    FPendingThemeName := ThemeName;
+    TThread.Synchronize(nil, ApplyThemeSync);
+    Success := FCurrentThemeName = ThemeName;
   end;
+  {$ELSE}
+  // FMX: Just update the name and notify - actual styling via FMX.Styles
+  FCurrentThemeName := ThemeName;
+  DoThemeChanged;
+  {$ENDIF}
 end;
 
 function TUniBaseTheme.GetAvailableThemes: TThemeInfoArray;
 var
+  {$IFNDEF FMX}
   StyleNames: TArray<string>;
   I: Integer;
+  {$ENDIF}
   List: TList<TThemeInfo>;
   Info: TThemeInfo;
   AddedNames: TList<string>;
@@ -262,18 +306,25 @@ begin
     try
       for Info in FThemeCache.Values do
       begin
-        // 确保 VCL 样式实际可用
+        {$IFNDEF FMX}
+        // VCL: 确保 VCL 样式实际可用
         if TStyleManager.IsValidStyle(Info.Name) or (Info.Name = 'Windows') then
         begin
           List.Add(Info);
           AddedNames.Add(Info.Name);
         end;
+        {$ELSE}
+        // FMX: Add all cached themes (validation done elsewhere)
+        List.Add(Info);
+        AddedNames.Add(Info.Name);
+        {$ENDIF}
       end;
     finally
       TMonitor.Exit(FLock);
     end;
     
-    // 然后添加数据库中没有的系统样式
+    {$IFNDEF FMX}
+    // VCL: 然后添加数据库中没有的系统样式
     StyleNames := TStyleManager.StyleNames;
     for I := 0 to High(StyleNames) do
     begin
@@ -283,6 +334,7 @@ begin
         List.Add(Info);
       end;
     end;
+    {$ENDIF}
     
     Result := List.ToArray;
   finally
@@ -311,10 +363,20 @@ end;
 
 function TUniBaseTheme.IsThemeAvailable(const ThemeName: string): Boolean;
 begin
+  {$IFNDEF FMX}
   if ThemeName = 'Windows' then
     Result := True
   else
     Result := TStyleManager.IsValidStyle(ThemeName);
+  {$ELSE}
+  // FMX: Return true for cached themes, false otherwise
+  TMonitor.Enter(FLock);
+  try
+    Result := FThemeCache.ContainsKey(ThemeName) or (ThemeName = 'Default');
+  finally
+    TMonitor.Exit(FLock);
+  end;
+  {$ENDIF}
 end;
 
 procedure TUniBaseTheme.RefreshThemeCache;

@@ -372,3 +372,52 @@
 - **待处理 Issue**: 4
 - **性能优化**: 4 项
 - **文档更新**: 2 项
+
+---
+
+## 2025-12-01
+
+### BUG-001: AES 加密实现不安全
+- 严重程度: 🔴 高
+- 文件: `UniBase.Crypto.pas`
+- 问题: `TAESCrypto.Encrypt/Decrypt` 使用简单 XOR 模拟
+- 修复: 使用 Windows BCrypt API 实现 AES-256-CBC
+- 状态: ✅ 已修复
+
+### BUG-002: 随机数生成不安全
+- 严重程度: 🔴 高
+- 文件: `UniBase.Crypto.pas`
+- 问题: `TRandomGenerator.RandomBytes` 使用 Random()
+- 修复: 使用 `BCryptGenRandom`
+- 状态: ✅ 已修复
+
+### BUG-003: XOR 加密密钥硬编码
+- 严重程度: 🔴 高
+- 文件: `UniBase.Config.pas`
+- 修复: 添加 `{$MESSAGE WARN}` 编译警告
+- 状态: ✅ 已修复
+
+### BUG-004: RegisterSingleton 接口处理错误
+- 严重程度: 🟡 中
+- 文件: `UniBase.IoC.pas`
+- 修复: 区分接口与类类型的实例存储
+- 状态: ✅ 已修复
+
+### BUG-005: TQueryBuilder 内存泄漏风险
+- 严重程度: 🟡 中
+- 文件: `UniBase.ORM.pas`
+- 修复: 引入 `IQueryBuilder<T>` + 引用计数
+- 状态: ✅ 已修复
+
+### BUG-006: RTTI 类型检查不安全
+- 严重程度: 🟡 中
+- 文件: `UniBase.Cache.pas`
+- 修复: `FreeValueIfOwned` + `PPointer`
+- 状态: ✅ 已修复
+
+### BUG-007: UniDbSelect 类型不兼容
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.DB.DoQry.pas`
+- 问题: `TClientDataSet` 与 `TFDQuery` 不兼容
+- 修复: `CopyQueryToClientDataSet` 辅助函数复制数据
+- 状态: ✅ 已修复

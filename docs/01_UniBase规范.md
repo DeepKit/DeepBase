@@ -641,6 +641,33 @@ CREATE TABLE UserFeedback (
 
 ---
 
+### 3.9 ConfigDB / DataDB 文件命名与查找约定
+
+> 本节定义 DB1 / DB2 的文件命名规则和查找顺序，供所有集成 UniBase 的应用统一遵循。
+
+- **应用名（AppName）**：默认使用主 EXE 文件名（不含扩展名）。例如：
+  - `UniBase.exe` → `AppName = UniBase`
+  - `MyApp.exe` → `AppName = MyApp`
+- **配置库（DB1）**：`{AppName}Config.db`
+  - 本项目示例：`UniBaseConfig.db`
+- **业务数据仓库（DB2，推荐命名）**：`{AppName}Data.db`
+  - 本项目示例：`UniBaseData.db`
+
+**ConfigDB（DB1）查找顺序：**
+
+1. 从 `root.txt` 指定的 ProjectRoot 目录下查找：
+   - `{ProjectRoot}/{AppName}Config.db`
+2. 若未找到，则回退到用户目录下的 APPDATA 路径：
+   - Windows：`%APPDATA%/{AppName}/{AppName}Config.db`
+   - 其它平台：`~/.{appname}/{AppName}Config.db`
+3. 若以上位置仍未找到：
+   - 初始化返回错误码 `ecConfigDBNotFound`
+   - **不再自动创建新的 ConfigDB**，避免多程序之间误共享或误生成空库。
+
+> 说明：
+> - 本文其它章节中出现的 `config.db`，均应理解为“当前应用的 `{AppName}Config.db`（ConfigDB / DB1）”。
+> - ConfigDB 的表结构和预置键值由第 3 章统一规定；其它程序（UniBaseRun、业务应用等）应复用这些表名和 Key 约定，仅按需要扩展。
+
 ## 4. Core 模块接口
 
 ### 4.1 TUniBaseManager 主类
@@ -2380,7 +2407,8 @@ UniBase 在 Core 层不直接规定业务数据库的结构，但从 v0.3 起，
   - 基于 JSON 参数和 Schema 校验构造参数化 SQL；
   - 通过 FireDAC 连接到 DB2x/DB3x 执行查询或命令；
   - 使用 UniBase.Logging 输出 JSONL 结构化日志到 `logs/query.log`；
-  - 使用 `EUniBaseDbError` 统一承载 DB 相关错误上下文。
+  - 使用 `EUniBaseDbError` 统一承载 DB 相关错误上下文；
+  - 结合 `UniBase.DB.ConnectionPool` / `UniBase.DB.Pool` 提供复用型连接池和查询上下文，避免在业务代码中手工管理连接生命周期。
 
 ### 推荐使用方式
 

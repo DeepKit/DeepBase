@@ -87,6 +87,39 @@ type
     
     [Test]
     procedure Test_RegistrationCount;
+    
+    [Test]
+    procedure Test_RegisterSingleton_WithInstance;
+    
+    [Test]
+    procedure Test_RegisterFactoryWithLifetime;
+    
+    [Test]
+    procedure Test_ResolveAll;
+    
+    [Test]
+    procedure Test_ScopeDisposed_RaisesException;
+    
+    [Test]
+    procedure Test_Interceptor_BeforeAndAfter;
+    
+    [Test]
+    procedure Test_GlobalContainer_Singleton;
+    
+    [Test]
+    procedure Test_IsRegistered_WithName;
+  end;
+  
+  // Test Interceptor
+  TTestInterceptor = class(TInterfacedObject, IServiceInterceptor)
+  private
+    FBeforeCalled: Boolean;
+    FAfterCalled: Boolean;
+  public
+    procedure BeforeResolve(var Context: TInterceptorContext);
+    procedure AfterResolve(var Context: TInterceptorContext);
+    property BeforeCalled: Boolean read FBeforeCalled;
+    property AfterCalled: Boolean read FAfterCalled;
   end;
 
 implementation
@@ -291,6 +324,118 @@ begin
   
   FContainer.RegisterType<ITestService, TTestServiceB>(slTransient, 'Named');
   Assert.AreEqual(2, FContainer.RegistrationCount);
+end;
+
+procedure TIoCContainerTests.Test_RegisterSingleton_WithInstance;
+var
+  Instance: ITestService;
+  Resolved: ITestService;
+begin
+  Instance := TTestServiceA.Create;
+  FContainer.RegisterSingleton<ITestService>(Instance);
+  
+  Resolved := FContainer.Resolve<ITestService>;
+  
+  Assert.AreEqual('ServiceA', Resolved.GetValue);
+end;
+
+procedure TIoCContainerTests.Test_RegisterFactoryWithLifetime;
+var
+  CallCount: Integer;
+  Svc1, Svc2: ITestService;
+begin
+  CallCount := 0;
+  
+  FContainer.RegisterFactory<ITestService>(
+    function: ITestService
+    begin
+      Inc(CallCount);
+      Result := TTestServiceA.Create;
+    end,
+    slSingleton);
+  
+  Svc1 := FContainer.Resolve<ITestService>;
+  Svc2 := FContainer.Resolve<ITestService>;
+  
+  // Singleton factory should only be called once
+  Assert.AreEqual(1, CallCount, 'Factory should only be called once for singleton');
+end;
+
+procedure TIoCContainerTests.Test_ResolveAll;
+var
+  Services: TArray<ITestService>;
+begin
+  FContainer.RegisterType<ITestService, TTestServiceA>(slTransient, 'A');
+  FContainer.RegisterType<ITestService, TTestServiceB>(slTransient, 'B');
+  
+  Services := FContainer.ResolveAll<ITestService>;
+  
+  Assert.AreEqual(2, Length(Services), 'Should resolve all implementations');
+end;
+
+procedure TIoCContainerTests.Test_ScopeDisposed_RaisesException;
+var
+  Scope: TIoCScope;
+begin
+  FContainer.RegisterScoped<ITestService, TTestServiceA>;
+  
+  Scope := FContainer.CreateScope;
+  Scope.Free; // Dispose the scope
+  
+  Assert.WillRaise(
+    procedure
+    begin
+      Scope.Resolve<ITestService>;
+    end,
+    EScopeDisposedException,
+    'Should raise exception when scope is disposed');
+end;
+
+procedure TIoCContainerTests.Test_Interceptor_BeforeAndAfter;
+var
+  Interceptor: TTestInterceptor;
+  Svc: ITestService;
+begin
+  Interceptor := TTestInterceptor.Create;
+  FContainer.AddInterceptor(Interceptor);
+  FContainer.RegisterTransient<ITestService, TTestServiceA>;
+  
+  Svc := FContainer.Resolve<ITestService>;
+  
+  Assert.IsTrue(Interceptor.BeforeCalled, 'BeforeResolve should be called');
+  Assert.IsTrue(Interceptor.AfterCalled, 'AfterResolve should be called');
+  
+  FContainer.ClearInterceptors;
+end;
+
+procedure TIoCContainerTests.Test_GlobalContainer_Singleton;
+var
+  C1, C2: TIoCContainer;
+begin
+  C1 := GlobalContainer;
+  C2 := GlobalContainer;
+  
+  Assert.AreSame(C1, C2, 'GlobalContainer should return same instance');
+end;
+
+procedure TIoCContainerTests.Test_IsRegistered_WithName;
+begin
+  FContainer.RegisterType<ITestService, TTestServiceA>(slTransient, 'NamedA');
+  
+  Assert.IsTrue(FContainer.IsRegistered<ITestService>('NamedA'), 'Named registration should be found');
+  Assert.IsFalse(FContainer.IsRegistered<ITestService>('NonExistent'), 'Non-existent name should not be found');
+end;
+
+{ TTestInterceptor }
+
+procedure TTestInterceptor.BeforeResolve(var Context: TInterceptorContext);
+begin
+  FBeforeCalled := True;
+end;
+
+procedure TTestInterceptor.AfterResolve(var Context: TInterceptorContext);
+begin
+  FAfterCalled := True;
 end;
 
 initialization

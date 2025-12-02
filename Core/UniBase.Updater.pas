@@ -39,7 +39,10 @@ uses
   System.DateUtils,
   System.Zip,
   System.SyncObjs,
-  System.Threading;
+  System.Threading,
+  {$IFDEF MSWINDOWS}
+  UniBase.Crypto
+  {$ENDIF};
 
 type
   // Forward declarations
@@ -702,20 +705,42 @@ begin
 end;
 
 function TUpdateManager.VerifySignature(const Data, Signature: string): Boolean;
+{$IFDEF MSWINDOWS}
+var
+  LVerifier: TRSAVerifier;
+{$ENDIF}
 begin
-  // In production, implement RSA signature verification
-  // For now, return true if signature is not empty
-  // This should be replaced with proper RSA verification using FPublicKey
-  Result := (Signature <> '') or (FPublicKey = '');
+  // If no public key configured, skip verification (development mode)
+  if FPublicKey = '' then
+    Exit(True);
   
-  // TODO: Implement proper RSA signature verification
-  // var RSA := TRSA.Create;
-  // try
-  //   RSA.LoadPublicKey(FPublicKey);
-  //   Result := RSA.Verify(Data, TNetEncoding.Base64.Decode(Signature));
-  // finally
-  //   RSA.Free;
-  // end;
+  // If signature is empty but public key is set, fail
+  if Signature = '' then
+    Exit(False);
+  
+  {$IFDEF MSWINDOWS}
+  LVerifier := TRSAVerifier.Create;
+  try
+    // Load public key (PEM format)
+    if not LVerifier.LoadPublicKeyPEM(FPublicKey) then
+    begin
+      FLastError := 'Failed to load public key: ' + LVerifier.LastError;
+      Exit(False);
+    end;
+    
+    // Verify RSA-SHA256 signature
+    Result := LVerifier.VerifySignature(Data, Signature);
+    if not Result then
+      FLastError := 'Signature verification failed: ' + LVerifier.LastError;
+  finally
+    LVerifier.Free;
+  end;
+  {$ELSE}
+  // Non-Windows platforms: signature verification not implemented yet
+  // TODO: Implement OpenSSL-based verification for macOS/Linux
+  Result := False;
+  FLastError := 'Signature verification not implemented on this platform';
+  {$ENDIF}
 end;
 
 function TUpdateManager.VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;

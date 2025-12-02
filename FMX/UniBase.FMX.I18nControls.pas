@@ -23,15 +23,19 @@ uses
 type
   /// <summary>
   /// 自动翻译的 FMX Label 控件
+  /// 自动订阅语言变更通知，支持多个实例同时使用
   /// </summary>
   TFMXi18nLabel = class(TLabel)
   private
     FTextKey: string;
     FOriginalText: string;
+    FSubscribed: Boolean;
     
     procedure SetTextKey(const Value: string);
     procedure UpdateTranslation;
-    procedure OnLanguageChangedHandler(Sender: TObject);
+    procedure HandleLanguageChanged(Sender: TObject);
+    procedure SubscribeToLanguageChange;
+    procedure UnsubscribeFromLanguageChange;
     
   protected
     procedure Loaded; override;
@@ -54,15 +58,19 @@ type
 
   /// <summary>
   /// 自动翻译的 FMX Button 控件
+  /// 自动订阅语言变更通知，支持多个实例同时使用
   /// </summary>
   TFMXi18nButton = class(TButton)
   private
     FTextKey: string;
     FOriginalText: string;
+    FSubscribed: Boolean;
     
     procedure SetTextKey(const Value: string);
     procedure UpdateTranslation;
-    procedure OnLanguageChangedHandler(Sender: TObject);
+    procedure HandleLanguageChanged(Sender: TObject);
+    procedure SubscribeToLanguageChange;
+    procedure UnsubscribeFromLanguageChange;
     
   protected
     procedure Loaded; override;
@@ -89,14 +97,39 @@ begin
   inherited Create(AOwner);
   FTextKey := '';
   FOriginalText := '';
+  FSubscribed := False;
 end;
 
 destructor TFMXi18nLabel.Destroy;
 begin
-  // 取消注册语言变更事件
-  if UniBase.Manager.UniBase.IsInitialized then
-    UniBase.Manager.UniBase.i18n.OnLanguageChanged := nil;
+  UnsubscribeFromLanguageChange;
   inherited;
+end;
+
+procedure TFMXi18nLabel.SubscribeToLanguageChange;
+begin
+  if FSubscribed then
+    Exit;
+  if (csDesigning in ComponentState) then
+    Exit;
+  if UniBase.Manager.UniBase.IsInitialized and 
+     Assigned(UniBase.Manager.UniBase.I18n) then
+  begin
+    UniBase.Manager.UniBase.I18n.SubscribeLanguageChange(HandleLanguageChanged);
+    FSubscribed := True;
+  end;
+end;
+
+procedure TFMXi18nLabel.UnsubscribeFromLanguageChange;
+begin
+  if not FSubscribed then
+    Exit;
+  if UniBase.Manager.UniBase.IsInitialized and 
+     Assigned(UniBase.Manager.UniBase.I18n) then
+  begin
+    UniBase.Manager.UniBase.I18n.UnsubscribeLanguageChange(HandleLanguageChanged);
+  end;
+  FSubscribed := False;
 end;
 
 procedure TFMXi18nLabel.Loaded;
@@ -109,10 +142,8 @@ begin
     if FOriginalText = '' then
       FOriginalText := Text;
       
-    // 注册语言变更事件
-    if UniBase.Manager.UniBase.IsInitialized then
-      UniBase.Manager.UniBase.i18n.OnLanguageChanged := OnLanguageChangedHandler;
-      
+    // 订阅语言变更事件
+    SubscribeToLanguageChange;
     UpdateTranslation;
   end;
 end;
@@ -149,7 +180,7 @@ begin
   UpdateTranslation;
 end;
 
-procedure TFMXi18nLabel.OnLanguageChangedHandler(Sender: TObject);
+procedure TFMXi18nLabel.HandleLanguageChanged(Sender: TObject);
 begin
   UpdateTranslation;
 end;
@@ -161,13 +192,39 @@ begin
   inherited Create(AOwner);
   FTextKey := '';
   FOriginalText := '';
+  FSubscribed := False;
 end;
 
 destructor TFMXi18nButton.Destroy;
 begin
-  if UniBase.Manager.UniBase.IsInitialized then
-    UniBase.Manager.UniBase.i18n.OnLanguageChanged := nil;
+  UnsubscribeFromLanguageChange;
   inherited;
+end;
+
+procedure TFMXi18nButton.SubscribeToLanguageChange;
+begin
+  if FSubscribed then
+    Exit;
+  if (csDesigning in ComponentState) then
+    Exit;
+  if UniBase.Manager.UniBase.IsInitialized and 
+     Assigned(UniBase.Manager.UniBase.I18n) then
+  begin
+    UniBase.Manager.UniBase.I18n.SubscribeLanguageChange(HandleLanguageChanged);
+    FSubscribed := True;
+  end;
+end;
+
+procedure TFMXi18nButton.UnsubscribeFromLanguageChange;
+begin
+  if not FSubscribed then
+    Exit;
+  if UniBase.Manager.UniBase.IsInitialized and 
+     Assigned(UniBase.Manager.UniBase.I18n) then
+  begin
+    UniBase.Manager.UniBase.I18n.UnsubscribeLanguageChange(HandleLanguageChanged);
+  end;
+  FSubscribed := False;
 end;
 
 procedure TFMXi18nButton.Loaded;
@@ -179,9 +236,7 @@ begin
     if FOriginalText = '' then
       FOriginalText := Text;
       
-    if UniBase.Manager.UniBase.IsInitialized then
-      UniBase.Manager.UniBase.i18n.OnLanguageChanged := OnLanguageChangedHandler;
-      
+    SubscribeToLanguageChange;
     UpdateTranslation;
   end;
 end;
@@ -218,7 +273,7 @@ begin
   UpdateTranslation;
 end;
 
-procedure TFMXi18nButton.OnLanguageChangedHandler(Sender: TObject);
+procedure TFMXi18nButton.HandleLanguageChanged(Sender: TObject);
 begin
   UpdateTranslation;
 end;

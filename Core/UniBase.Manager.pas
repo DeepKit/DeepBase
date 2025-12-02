@@ -28,6 +28,7 @@ uses
   FireDAC.Phys.SQLiteDef,
   UniBase.Types,
   UniBase.Consts,
+  UniBase.Interfaces,
   UniBase.Config,
   UniBase.i18n,
   UniBase.Theme,
@@ -38,8 +39,14 @@ uses
 
 const
   UNIBASE_VERSION = '0.3';
-  DEFAULT_CONFIGDB_NAME = 'config.db';
+  CONFIG_DB_SUFFIX = 'Config.db';
+  DATA_DB_SUFFIX = 'Data.db';
   ROOT_TXT_NAME = 'root.txt';
+  
+  // R-004: Schema 验证所需的核心表
+  REQUIRED_CORE_TABLES: array[0..5] of string = (
+    'SchemaInfo', 'ProjectInfo', 'Settings', 'FormStates', 'Languages', 'I18nTexts'
+  );
   
   /// <summary>
   /// Schema version compatibility error code
@@ -48,25 +55,6 @@ const
 
 type
   TUniBaseManager = class;
-
-  /// <summary>
-  /// UniBase 配置模块接口（前向声明）
-  /// </summary>
-  IUniBaseConfig = interface
-    ['{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}']
-    function GetConfig(const Key: string; const Default: string = ''): string;
-    procedure SetConfig(const Key, Value: string; const Category: string = 'General');
-  end;
-
-  /// <summary>
-  /// UniBase 国际化模块接口（前向声明）
-  /// </summary>
-  IUniBaseI18n = interface
-    ['{B2C3D4E5-F6A7-5B6C-9D0E-1F2A3B4C5D6E}']
-    function Translate(const Text: string): string;
-    function GetCurrentLanguage: string;
-    procedure SetCurrentLanguage(const Value: string);
-  end;
 
   /// <summary>
   /// UniBase 核心管理器
@@ -114,11 +102,17 @@ type
     function GetSchemaVersionInternal: string;
     function MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
     function RunMigrationScript(const ScriptPath: string): Boolean;
+    procedure EnsureSchemaColumns;
     function GetExeDir: string;
     function GetAppDataDir: string;
     function CheckWritePermission(const Path: string): Boolean;
     function FindRootPath: string;
     function CreatePluginContext: IUniBasePluginContext;
+    
+    // InitializeEx 辅助方法（R-001 重构）
+    function DoFindRootPath(out ErrorMsg: string): Boolean;
+    function DoLocateConfigDB(out ErrorMsg: string): Boolean;
+    function DoConnectAndValidate(out ErrorMsg: string): Boolean;
     
     // 事件处理器 (用于子模块回调)
     procedure HandleConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
@@ -345,9 +339,122 @@ begin
   Result := InitializeEx(Dummy);
 end;
 
-function TUniBaseManager.InitializeEx(out ErrorMsg: string): Boolean;
+function TUniBaseManager.DoFindRootPath(out ErrorMsg: string): Boolean;
 var
   RootTxtPath: string;
+begin
+  Result := False;
+  ErrorMsg := '';
+  
+  // 查找 root.txt
+  FRootPath := FindRootPath;
+  
+  if FRootPath = '' then
+  begin
+    // 尝试创建 root.txt
+    if not CreateRootTxt(RootTxtPath) then
+    begin
+      FInitErrorCode := ecPermissionDenied;
+      FLastError := 'Cannot create root.txt';
+      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode), 
+        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+      Exit;
+    end;
+    FRootPath := ExtractFilePath(RootTxtPath);
+  end;
+  
+  // 验证根目录
+  if not TDirectory.Exists(FRootPath) then
+  begin
+    FInitErrorCode := ecInvalidPath;
+    FLastError := 'Root path does not exist: ' + FRootPath;
+    ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+      InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    Exit;
+  end;
+  
+  Result := True;
+end;
+
+function TUniBaseManager.DoLocateConfigDB(out ErrorMsg: string): Boolean;
+var
+  AppName: string;
+  ConfigFileName: string;
+  AppDataDir: string;
+  FallbackPath: string;
+begin
+  Result := False;
+  ErrorMsg := '';
+  
+  // 计算 ConfigDB 文件名：{AppName}Config.db
+  AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
+  if AppName = '' then
+    AppName := 'UniBase'; // 兜底，避免空应用名
+
+  ConfigFileName := AppName + CONFIG_DB_SUFFIX;
+
+  // 优先在 RootPath 下查找 {AppName}Config.db
+  FConfigDBPath := TPath.Combine(FRootPath, ConfigFileName);
+
+  if not TFile.Exists(FConfigDBPath) then
+  begin
+    // 备用位置：%APPDATA%/{AppName}/{AppName}Config.db
+    AppDataDir := GetAppDataDir;
+    if AppDataDir <> '' then
+    begin
+      FallbackPath := TPath.Combine(AppDataDir, ConfigFileName);
+      if TFile.Exists(FallbackPath) then
+      begin
+        FConfigDBPath := FallbackPath;
+      end
+      else
+      begin
+        FInitErrorCode := ecConfigDBNotFound;
+        FLastError := Format('Config database not found: %s; also checked %s',
+          [FConfigDBPath, FallbackPath]);
+        ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+          InitErrorCodeToStr(FInitErrorCode), FLastError]);
+        Exit;
+      end;
+    end
+    else
+    begin
+      FInitErrorCode := ecConfigDBNotFound;
+      FLastError := 'Config database not found and APPDATA directory unavailable';
+      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+      Exit;
+    end;
+  end;
+  
+  Result := True;
+end;
+
+function TUniBaseManager.DoConnectAndValidate(out ErrorMsg: string): Boolean;
+begin
+  Result := False;
+  ErrorMsg := '';
+  
+  // 连接数据库
+  if not ConnectToDatabase(FConfigDBPath) then
+  begin
+    ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+      InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    Exit;
+  end;
+  
+  // 验证/创建 Schema（使用 IF NOT EXISTS 确保所有表存在）
+  if not CreateSchema then
+  begin
+    ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+      InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    Exit;
+  end;
+  
+  Result := True;
+end;
+
+function TUniBaseManager.InitializeEx(out ErrorMsg: string): Boolean;
 begin
   Result := False;
   ErrorMsg := '';
@@ -359,61 +466,19 @@ begin
   end;
   
   try
-    // 1. 查找 root.txt
-    FRootPath := FindRootPath;
-    
-    if FRootPath = '' then
-    begin
-      // 尝试创建 root.txt
-      if not CreateRootTxt(RootTxtPath) then
-      begin
-        FInitErrorCode := ecPermissionDenied;
-        FLastError := 'Cannot create root.txt';
-        ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode), 
-          InitErrorCodeToStr(FInitErrorCode), FLastError]);
-        Exit;
-      end;
-      FRootPath := ExtractFilePath(RootTxtPath);
-    end;
-    
-    // 2. 验证根目录
-    if not TDirectory.Exists(FRootPath) then
-    begin
-      FInitErrorCode := ecInvalidPath;
-      FLastError := 'Root path does not exist: ' + FRootPath;
-      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    // 1. 查找并验证根目录
+    if not DoFindRootPath(ErrorMsg) then
       Exit;
-    end;
     
-    // 3. 确定 config.db 路径
-    FConfigDBPath := TPath.Combine(FRootPath, DEFAULT_CONFIGDB_NAME);
-    
-    // 4. 连接数据库
-    if not ConnectToDatabase(FConfigDBPath) then
-    begin
-      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    // 2. 定位配置数据库
+    if not DoLocateConfigDB(ErrorMsg) then
       Exit;
-    end;
     
-    // 5. 验证/创建 Schema
-    // 始终调用 CreateSchema 以确保所有表存在（使用 IF NOT EXISTS）
-    if not CreateSchema then
-    begin
-      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+    // 3. 连接数据库并验证 Schema
+    if not DoConnectAndValidate(ErrorMsg) then
       Exit;
-    end;
     
-    // Ensure Tier 1 Tables exist (Temporary fix until migration system)
-    // In future versions, we will check SchemaVersion and run upgrade scripts
-    // For now, we just try to create them if missing
-    // Note: We need a better way to handle this, but for now let's assume 
-    // ValidateSchema only checks core tables.
-    // We can run additional SQL scripts here if needed.
-    
-    // 6. 初始化子模块
+    // 4. 初始化子模块
     InitializeModules;
     
     FIsInitialized := True;
@@ -620,7 +685,12 @@ begin
   if Assigned(FTheme) then FreeAndNil(FTheme);
   if Assigned(FI18n) then FreeAndNil(FI18n);
   if Assigned(FConfig) then FreeAndNil(FConfig);
-  if Assigned(FLogger) then FreeAndNil(FLogger);
+  if Assigned(FLogger) then
+  begin
+    // 先解除全局 Logger 绑定，再由 Manager 负责释放实例
+    SetGlobalLogger(nil);
+    FreeAndNil(FLogger);
+  end;
 end;
 
 function TUniBaseManager.FindRootPath: string;
@@ -674,8 +744,7 @@ begin
       // 检查是否是 INI 格式扩展
       if (Length(Line) > 0) and (Line[1] = '[') then
       begin
-        // TODO: 解析 INI 格式的 [Paths] 部分
-        // 暂时不支持，返回空
+        // INI 格式的 [Paths] 扩展目前不支持，为保持兼容直接返回空路径
         Exit;
       end;
       
@@ -774,6 +843,8 @@ function TUniBaseManager.ValidateSchema: Boolean;
 var
   Query: TFDQuery;
   TableCount: Integer;
+  I: Integer;
+  TableList: string;
 begin
   Result := False;
   
@@ -784,19 +855,28 @@ begin
   try
     Query.Connection := FConfigDB;
     
-    // 检查必需的表是否存在
-    Query.SQL.Text := 
-      'SELECT COUNT(*) FROM sqlite_master WHERE type=''table'' AND name IN ' +
-      '(''SchemaInfo'', ''ProjectInfo'', ''Settings'', ''FormStates'', ''Languages'', ''I18nTexts'')';
+    // R-004: 使用 REQUIRED_CORE_TABLES 常量构建查询
+    TableList := '';
+    for I := Low(REQUIRED_CORE_TABLES) to High(REQUIRED_CORE_TABLES) do
+    begin
+      if I > Low(REQUIRED_CORE_TABLES) then
+        TableList := TableList + ', ';
+      TableList := TableList + QuotedStr(REQUIRED_CORE_TABLES[I]);
+    end;
+    
+    Query.SQL.Text := Format(
+      'SELECT COUNT(*) FROM sqlite_master WHERE type=''table'' AND name IN (%s)',
+      [TableList]);
     Query.Open;
     
     TableCount := Query.Fields[0].AsInteger;
-    Result := (TableCount = 6);
+    Result := (TableCount = Length(REQUIRED_CORE_TABLES));
     
     if not Result then
     begin
       FInitErrorCode := ecConfigDBCorrupted;
-      FLastError := Format('Schema validation failed: expected 6 tables, found %d', [TableCount]);
+      FLastError := Format('Schema validation failed: expected %d tables, found %d',
+        [Length(REQUIRED_CORE_TABLES), TableCount]);
       Exit;
     end;
     
@@ -810,27 +890,8 @@ end;
 function TUniBaseManager.ValidateSchemaVersion: Boolean;
 var
   DBVersion: string;
-  
-  function CompareVersions(const V1, V2: string): Integer;
-  var
-    Parts1, Parts2: TArray<string>;
-    I, N1, N2: Integer;
-  begin
-    Parts1 := V1.Split(['.']);
-    Parts2 := V2.Split(['.']);
-    Result := 0;
-    
-    for I := 0 to Max(Length(Parts1), Length(Parts2)) - 1 do
-    begin
-      if I < Length(Parts1) then N1 := StrToIntDef(Parts1[I], 0) else N1 := 0;
-      if I < Length(Parts2) then N2 := StrToIntDef(Parts2[I], 0) else N2 := 0;
-      
-      if N1 < N2 then Exit(-1);
-      if N1 > N2 then Exit(1);
-    end;
-  end;
-  
 begin
+  // Uses UniBase.Types.CompareVersions
   Result := True;
   
   DBVersion := GetSchemaVersionInternal;
@@ -867,33 +928,163 @@ end;
 function TUniBaseManager.CreateSchema: Boolean;
 var
   Script: TFDScript;
+  I, MaxRetry: Integer;
+  ErrorMsg: string;
 begin
   Result := False;
   
   if not Assigned(FConfigDB) or not FConfigDB.Connected then
     Exit;
-
-  Script := TFDScript.Create(nil);
-  try
-    Script.Connection := FConfigDB;
-    Script.SQLScripts.Add;
-    // Use centralized schema definitions from UniBase.Schema unit
-    Script.SQLScripts[0].SQL.Text := GetFullSchemaSQL;
-    
+  
+  MaxRetry := 2;  // Try twice: first attempt, then after fixing columns
+  
+  for I := 1 to MaxRetry do
+  begin
+    Script := TFDScript.Create(nil);
     try
-      Script.ExecuteAll;
-      Result := True;
-      FInitErrorCode := ecSuccess;
-    except
-      on E: Exception do
-      begin
-        FInitErrorCode := ecConfigDBCorrupted;
-        FLastError := 'Failed to create schema: ' + E.Message;
+      Script.Connection := FConfigDB;
+      Script.SQLScripts.Add;
+      // Use centralized schema definitions from UniBase.Schema unit
+      Script.SQLScripts[0].SQL.Text := GetFullSchemaSQL;
+      
+      try
+        Script.ExecuteAll;
+        Result := True;
+        FInitErrorCode := ecSuccess;
+        Exit;  // Success, exit loop
+      except
+        on E: Exception do
+        begin
+          ErrorMsg := E.Message;
+          // If first attempt fails, try to fix schema columns
+          if I < MaxRetry then
+          begin
+            try
+              EnsureSchemaColumns;  // Add missing columns to existing tables
+            except
+              // Ignore errors during column fix attempt
+            end;
+          end
+          else
+          begin
+            FInitErrorCode := ecConfigDBCorrupted;
+            FLastError := 'Failed to create schema: ' + ErrorMsg;
+          end;
+        end;
+      end;
+    finally
+      Script.Free;
+    end;
+  end;
+end;
+
+procedure TUniBaseManager.EnsureSchemaColumns;
+var
+  Query: TFDQuery;
+  
+  function ColumnExists(const TableName, ColumnName: string): Boolean;
+  begin
+    Query.SQL.Text := Format(
+      'SELECT COUNT(*) FROM pragma_table_info(''%s'') WHERE name = ''%s''',
+      [TableName, ColumnName]);
+    Query.Open;
+    Result := Query.Fields[0].AsInteger > 0;
+    Query.Close;
+  end;
+  
+  procedure AddColumnIfMissing(const TableName, ColumnName, ColumnDef: string);
+  begin
+    if not ColumnExists(TableName, ColumnName) then
+    begin
+      try
+        Query.SQL.Text := Format('ALTER TABLE %s ADD COLUMN %s %s',
+          [TableName, ColumnName, ColumnDef]);
+        Query.ExecSQL;
+      except
+        // Ignore errors (table might not exist yet)
       end;
     end;
+  end;
+  
+begin
+  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+    Exit;
+    
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+    
+    // === Settings table columns ===
+    AddColumnIfMissing('Settings', 'ValueType', 'TEXT DEFAULT ''String''');
+    AddColumnIfMissing('Settings', 'Category', 'TEXT DEFAULT ''General''');
+    AddColumnIfMissing('Settings', 'Description', 'TEXT');
+    AddColumnIfMissing('Settings', 'IsEncrypted', 'INTEGER DEFAULT 0');
+    
+    // === Languages table columns ===
+    AddColumnIfMissing('Languages', 'NativeName', 'TEXT');
+    AddColumnIfMissing('Languages', 'FlagIcon', 'TEXT');
+    AddColumnIfMissing('Languages', 'IsEnabled', 'INTEGER DEFAULT 1');
+    AddColumnIfMissing('Languages', 'IsDefault', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Languages', 'SortOrder', 'INTEGER DEFAULT 0');
+    
+    // === Logs table columns (renamed from old schema) ===
+    AddColumnIfMissing('Logs', 'LogTime', 'TEXT');
+    AddColumnIfMissing('Logs', 'LogLevel', 'TEXT');
+    AddColumnIfMissing('Logs', 'Source', 'TEXT');
+    AddColumnIfMissing('Logs', 'ExceptionClass', 'TEXT');
+    AddColumnIfMissing('Logs', 'ExceptionMessage', 'TEXT');
+    AddColumnIfMissing('Logs', 'ThreadId', 'INTEGER');
+    AddColumnIfMissing('Logs', 'UserId', 'TEXT');
+    
+    // === MRU table columns ===
+    AddColumnIfMissing('MRU', 'DisplayName', 'TEXT');
+    AddColumnIfMissing('MRU', 'IconIndex', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('MRU', 'IsPinned', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('MRU', 'Extra', 'TEXT');
+    
+    // === FormStates table columns ===
+    AddColumnIfMissing('FormStates', 'MonitorIndex', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('FormStates', 'Extra', 'TEXT');
+    
+    // === Hotkeys table columns ===
+    AddColumnIfMissing('Hotkeys', 'Description', 'TEXT');
+    AddColumnIfMissing('Hotkeys', 'Category', 'TEXT');
+    
+    // === Themes table columns ===
+    AddColumnIfMissing('Themes', 'DisplayName', 'TEXT');
+    AddColumnIfMissing('Themes', 'StyleFile', 'TEXT');
+    AddColumnIfMissing('Themes', 'AccentColor', 'INTEGER');
+    AddColumnIfMissing('Themes', 'CustomCSS', 'TEXT');
+    
+    // === LLMConfiguration table columns ===
+    AddColumnIfMissing('LLMConfiguration', 'ContextWindow', 'INTEGER DEFAULT 4096');
+    AddColumnIfMissing('LLMConfiguration', 'PricePer1kPrompt', 'REAL DEFAULT 0');
+    AddColumnIfMissing('LLMConfiguration', 'PricePer1kCompletion', 'REAL DEFAULT 0');
+    
+    // === LLMCalls table columns ===
+    AddColumnIfMissing('LLMCalls', 'CallTime', 'TEXT');  // Alias for RequestTime
+    AddColumnIfMissing('LLMCalls', 'Prompt', 'TEXT');     // Alias for InputText
+    AddColumnIfMissing('LLMCalls', 'Response', 'TEXT');   // Alias for OutputText
+    AddColumnIfMissing('LLMCalls', 'EstimatedCost', 'REAL DEFAULT 0');
+    AddColumnIfMissing('LLMCalls', 'DurationMs', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('LLMCalls', 'Success', 'INTEGER DEFAULT 1');
+    AddColumnIfMissing('LLMCalls', 'ErrorCode', 'TEXT');
+    AddColumnIfMissing('LLMCalls', 'CallerModule', 'TEXT');
+    AddColumnIfMissing('LLMCalls', 'CallerFunc', 'TEXT');
+    
+    // === LLMPromptTemplates table columns ===
+    AddColumnIfMissing('LLMPromptTemplates', 'DefaultValues', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'ParentTemplate', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'IncludeTemplates', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'OutputFormat', 'TEXT DEFAULT ''text''');
+    AddColumnIfMissing('LLMPromptTemplates', 'ValidationRegex', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'Examples', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'RecommendedConfig', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'RecommendedModel', 'TEXT');
+    AddColumnIfMissing('LLMPromptTemplates', 'MaxTokens', 'INTEGER DEFAULT 0');
     
   finally
-    Script.Free;
+    Query.Free;
   end;
 end;
 
@@ -989,7 +1180,9 @@ begin
     Query.ParamByName('Ver').AsString := ToVersion;
     Query.ExecSQL;
     
-    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = datetime(''now'') WHERE Key = ''LastUpgrade''';
+    // Use ISO8601 format for SQLite datetime compatibility
+    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
+    Query.ParamByName('NowTime').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
     Query.ExecSQL;
     
     Result := True;
@@ -1082,13 +1275,20 @@ function TUniBaseManager.GetAppDataDir: string;
 var
   Path: array[0..MAX_PATH] of Char;
 {$ENDIF}
+var
+  AppName: string;
 begin
   Result := '';
+  
+  // 应用名约定：使用 EXE 文件名（不含扩展）
+  AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
+  if AppName = '' then
+    AppName := 'UniBase';
   
   {$IFDEF MSWINDOWS}
   if SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, @Path) = S_OK then
   begin
-    Result := TPath.Combine(Path, 'UniBase');
+    Result := TPath.Combine(Path, AppName);
     if not TDirectory.Exists(Result) then
     begin
       try
@@ -1099,7 +1299,8 @@ begin
     end;
   end;
   {$ELSE}
-  Result := TPath.Combine(TPath.GetHomePath, '.unibase');
+  // 非 Windows 平台：使用 ~/.{AppName}
+  Result := TPath.Combine(TPath.GetHomePath, '.' + AppName.ToLower);
   if not TDirectory.Exists(Result) then
   begin
     try

@@ -28,9 +28,11 @@ uses
   Vcl.Grids,
   Vcl.DBGrids,
   Data.DB,
+  DBClient,
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
-  FireDAC.DApt;
+  FireDAC.DApt,
+  UniBase.DB.DoQry;
 
 type
   TQueryHistoryItem = record
@@ -75,6 +77,20 @@ type
     FHistory: TList<TQueryHistoryItem>;
     FMaxHistoryCount: Integer;
     
+    { DoQry integration }
+    tabDoQry: TTabSheet;
+    pnlDQTop: TPanel;
+    lblDQProc: TLabel;
+    edtDQProc: TEdit;
+    lblDQTarget: TLabel;
+    cboDQTarget: TComboBox;
+    btnDQPreview: TButton;
+    btnDQSelect: TButton;
+    btnDQExec: TButton;
+    lblDQStatus: TLabel;
+    mmoDQParams: TMemo;
+    mmoDQResult: TMemo;
+    
     procedure ExecuteQuery;
     procedure DisplayResults(AQuery: TFDQuery);
     procedure DisplayError(const AError: string);
@@ -85,6 +101,16 @@ type
     function GetResultLimit: Integer;
     procedure ClearResults;
     procedure ApplySQLHighlighting;
+    
+    { DoQry helpers }
+    procedure InitDoQryTab;
+    procedure btnDQPreviewClick(Sender: TObject);
+    procedure btnDQSelectClick(Sender: TObject);
+    procedure btnDQExecClick(Sender: TObject);
+    procedure DoPreviewDoQry;
+    procedure DoRunDoQry(const AIsSelect: Boolean);
+    function GetSetting(const AKey, ADefault: string): string;
+    function CreateBusinessConnection(const ATarget: string; out ADBType: TUniDBType): TFDConnection;
     
   public
     constructor Create(AOwner: TComponent); override;
@@ -179,6 +205,9 @@ begin
   mmoSQL.ScrollBars := ssBoth;
   mmoSQL.WantTabs := True;
   
+  // Initialize DoQry integration tab
+  InitDoQryTab;
+  
   SetStatus('Ready - Open a database and enter SQL query');
 end;
 
@@ -187,6 +216,86 @@ begin
   FQuery.Free;
   FHistory.Free;
   inherited;
+end;
+
+procedure TfraSQLEditor.InitDoQryTab;
+begin
+  tabDoQry := TTabSheet.Create(pgcResults);
+  tabDoQry.PageControl := pgcResults;
+  tabDoQry.Caption := 'DoQry';
+  
+  // Top panel (ProcName + Target + Buttons + Status)
+  pnlDQTop := TPanel.Create(Self);
+  pnlDQTop.Parent := tabDoQry;
+  pnlDQTop.Align := alTop;
+  pnlDQTop.Height := 80;
+  pnlDQTop.BevelOuter := bvNone;
+  
+  lblDQProc := TLabel.Create(Self);
+  lblDQProc.Parent := pnlDQTop;
+  lblDQProc.SetBounds(8, 8, 60, 16);
+  lblDQProc.Caption := 'Proc:';
+  
+  edtDQProc := TEdit.Create(Self);
+  edtDQProc.Parent := pnlDQTop;
+  edtDQProc.SetBounds(70, 4, 220, 24);
+  
+  lblDQTarget := TLabel.Create(Self);
+  lblDQTarget.Parent := pnlDQTop;
+  lblDQTarget.SetBounds(300, 8, 70, 16);
+  lblDQTarget.Caption := 'Target DB:';
+  
+  cboDQTarget := TComboBox.Create(Self);
+  cboDQTarget.Parent := pnlDQTop;
+  cboDQTarget.SetBounds(370, 4, 150, 24);
+  cboDQTarget.Style := csDropDownList;
+  cboDQTarget.Items.Add('DB2 (SQLite)');
+  cboDQTarget.Items.Add('DB3 (PostgreSQL)');
+  cboDQTarget.ItemIndex := 0;
+  
+  btnDQPreview := TButton.Create(Self);
+  btnDQPreview.Parent := pnlDQTop;
+  btnDQPreview.SetBounds(530, 4, 90, 24);
+  btnDQPreview.Caption := 'Preview SQL';
+  btnDQPreview.OnClick := btnDQPreviewClick;
+  
+  btnDQSelect := TButton.Create(Self);
+  btnDQSelect.Parent := pnlDQTop;
+  btnDQSelect.SetBounds(630, 4, 90, 24);
+  btnDQSelect.Caption := 'Run Select';
+  btnDQSelect.OnClick := btnDQSelectClick;
+  
+  btnDQExec := TButton.Create(Self);
+  btnDQExec.Parent := pnlDQTop;
+  btnDQExec.SetBounds(730, 4, 90, 24);
+  btnDQExec.Caption := 'Run Exec';
+  btnDQExec.OnClick := btnDQExecClick;
+  
+  lblDQStatus := TLabel.Create(Self);
+  lblDQStatus.Parent := pnlDQTop;
+  lblDQStatus.SetBounds(8, 50, 820, 16);
+  lblDQStatus.Caption := 'Ready';
+  lblDQStatus.Font.Color := clGray;
+  
+  // Params JSON memo (left)
+  mmoDQParams := TMemo.Create(Self);
+  mmoDQParams.Parent := tabDoQry;
+  mmoDQParams.Align := alLeft;
+  mmoDQParams.Width := tabDoQry.ClientWidth div 2;
+  mmoDQParams.ScrollBars := ssBoth;
+  mmoDQParams.WordWrap := False;
+  mmoDQParams.Font.Name := 'Consolas';
+  mmoDQParams.Font.Size := 10;
+  mmoDQParams.Text := '{"sample": "value"}';
+  
+  // Result memo (right)
+  mmoDQResult := TMemo.Create(Self);
+  mmoDQResult.Parent := tabDoQry;
+  mmoDQResult.Align := alClient;
+  mmoDQResult.ScrollBars := ssBoth;
+  mmoDQResult.WordWrap := False;
+  mmoDQResult.Font.Name := 'Consolas';
+  mmoDQResult.Font.Size := 10;
 end;
 
 procedure TfraSQLEditor.SetConnection(AConnection: TFDConnection);
@@ -214,6 +323,21 @@ begin
     SetStatus('Connected - Ready to execute queries')
   else
     SetStatus('No database connection', True);
+end;
+
+procedure TfraSQLEditor.btnDQPreviewClick(Sender: TObject);
+begin
+  DoPreviewDoQry;
+end;
+
+procedure TfraSQLEditor.btnDQSelectClick(Sender: TObject);
+begin
+  DoRunDoQry(True);
+end;
+
+procedure TfraSQLEditor.btnDQExecClick(Sender: TObject);
+begin
+  DoRunDoQry(False);
 end;
 
 procedure TfraSQLEditor.ExecuteQuery;
@@ -363,9 +487,246 @@ begin
   end;
 end;
 
+procedure TfraSQLEditor.DoPreviewDoQry;
+var
+  ProcName, ParamsJson, Target: string;
+  Conn: TFDConnection;
+  DBType: TUniDBType;
+  Ctx: TUniQueryContext;
+  PreviewSQL: string;
+begin
+  if (FConnection = nil) or (not FConnection.Connected) then
+  begin
+    lblDQStatus.Caption := 'No config.db connection - open a UniBase database first';
+    lblDQStatus.Font.Color := clRed;
+    Exit;
+  end;
+
+  ProcName := Trim(edtDQProc.Text);
+  if ProcName = '' then
+  begin
+    lblDQStatus.Caption := 'Proc name cannot be empty';
+    lblDQStatus.Font.Color := clRed;
+    Exit;
+  end;
+
+  ParamsJson := Trim(mmoDQParams.Text);
+  Target := cboDQTarget.Text;
+
+  mmoDQResult.Clear;
+  lblDQStatus.Caption := 'Generating SQL preview...';
+  lblDQStatus.Font.Color := clWindowText;
+  Application.ProcessMessages;
+
+  UniDbInit(ExtractFilePath(FConnection.Params.Database));
+
+  Conn := nil;
+  try
+    Conn := CreateBusinessConnection(Target, DBType);
+    if Conn = nil then
+      raise Exception.Create('Failed to create business DB connection');
+
+    Ctx := UniDbMakeContext(Conn, DBType, 30, UniDbNewCorrelationId);
+    PreviewSQL := UniDbBuildSqlPreview(ProcName, ParamsJson, Ctx);
+    mmoDQResult.Lines.Text := PreviewSQL;
+    lblDQStatus.Caption := 'SQL preview generated';
+    lblDQStatus.Font.Color := clGreen;
+  except
+    on E: Exception do
+    begin
+      mmoDQResult.Lines.Add('[ERROR] ' + E.ClassName + ': ' + E.Message);
+      lblDQStatus.Caption := 'Error: ' + E.Message;
+      lblDQStatus.Font.Color := clRed;
+    end;
+  end;
+
+  if Assigned(Conn) then
+    Conn.Free;
+end;
+
+procedure TfraSQLEditor.DoRunDoQry(const AIsSelect: Boolean);
+var
+  ProcName, ParamsJson, Target: string;
+  Conn: TFDConnection;
+  DBType: TUniDBType;
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  RowCount: Integer;
+  I, Col: Integer;
+  Line: string;
+begin
+  if (FConnection = nil) or (not FConnection.Connected) then
+  begin
+    lblDQStatus.Caption := 'No config.db connection - open a UniBase database first';
+    lblDQStatus.Font.Color := clRed;
+    Exit;
+  end;
+
+  ProcName := Trim(edtDQProc.Text);
+  if ProcName = '' then
+  begin
+    lblDQStatus.Caption := 'Proc name cannot be empty';
+    lblDQStatus.Font.Color := clRed;
+    Exit;
+  end;
+
+  ParamsJson := Trim(mmoDQParams.Text);
+  Target := cboDQTarget.Text;
+
+  mmoDQResult.Clear;
+  lblDQStatus.Caption := 'Running...';
+  lblDQStatus.Font.Color := clWindowText;
+  Application.ProcessMessages;
+
+  UniDbInit(ExtractFilePath(FConnection.Params.Database));
+
+  Conn := nil;
+  Data := nil;
+  try
+    Conn := CreateBusinessConnection(Target, DBType);
+    if Conn = nil then
+      raise Exception.Create('Failed to create business DB connection');
+
+    Ctx := UniDbMakeContext(Conn, DBType, 30, UniDbNewCorrelationId);
+
+    if AIsSelect then
+    begin
+      Data := TClientDataSet.Create(nil);
+      RowCount := UniDbSelect(ProcName, ParamsJson, Data, Ctx);
+      mmoDQResult.Lines.Add(Format('Rows: %d', [RowCount]));
+      mmoDQResult.Lines.Add('');
+
+      if RowCount > 0 then
+      begin
+        // Header
+        Line := '';
+        for Col := 0 to Data.Fields.Count - 1 do
+        begin
+          if Col > 0 then Line := Line + #9;
+          Line := Line + Data.Fields[Col].FieldName;
+        end;
+        mmoDQResult.Lines.Add(Line);
+
+        // Rows
+        Data.First;
+        I := 0;
+        while (not Data.Eof) and (I < 50) do
+        begin
+          Line := '';
+          for Col := 0 to Data.Fields.Count - 1 do
+          begin
+            if Col > 0 then Line := Line + #9;
+            Line := Line + Data.Fields[Col].AsString;
+          end;
+          mmoDQResult.Lines.Add(Line);
+          Inc(I);
+          Data.Next;
+        end;
+        if RowCount > 50 then
+          mmoDQResult.Lines.Add(Format('... (%d more rows truncated)', [RowCount - 50]));
+      end;
+      lblDQStatus.Caption := 'Select completed';
+      lblDQStatus.Font.Color := clGreen;
+    end
+    else
+    begin
+      RowCount := UniDbExec(ProcName, ParamsJson, Ctx);
+      mmoDQResult.Lines.Add(Format('Exec affected %d rows.', [RowCount]));
+      lblDQStatus.Caption := 'Exec completed';
+      lblDQStatus.Font.Color := clGreen;
+    end;
+  except
+    on E: Exception do
+    begin
+      mmoDQResult.Lines.Add('[ERROR] ' + E.ClassName + ': ' + E.Message);
+      lblDQStatus.Caption := 'Error: ' + E.Message;
+      lblDQStatus.Font.Color := clRed;
+    end;
+  end;
+
+  if Assigned(Data) then
+    Data.Free;
+  if Assigned(Conn) then
+    Conn.Free;
+end;
+
+function TfraSQLEditor.GetSetting(const AKey, ADefault: string): string;
+var
+  Q: TFDQuery;
+begin
+  Result := ADefault;
+  if (FConnection = nil) or (not FConnection.Connected) then
+    Exit;
+
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text := 'SELECT Value FROM Settings WHERE Key = :Key';
+    Q.ParamByName('Key').AsString := AKey;
+    Q.Open;
+    if not Q.Eof then
+      Result := Q.FieldByName('Value').AsString;
+  except
+    // ignore errors, keep default
+  end;
+  Q.Free;
+end;
+
+function TfraSQLEditor.CreateBusinessConnection(const ATarget: string; out ADBType: TUniDBType): TFDConnection;
+var
+  DBPath, FullPath: string;
+  Server, Database, UserName, Password: string;
+  Port: Integer;
+begin
+  Result := nil;
+
+  if Pos('DB2', ATarget) = 1 then
+  begin
+    // SQLite business DB
+    DBPath := GetSetting('DB2.Path', '');
+    if DBPath = '' then
+      raise Exception.Create('DB2.Path not configured in Settings');
+
+    if TPath.IsPathRooted(DBPath) then
+      FullPath := DBPath
+    else
+      // Interpret as relative to current config.db folder
+      FullPath := TPath.Combine(ExtractFilePath(FConnection.Params.Database), DBPath);
+
+    Result := TFDConnection.Create(nil);
+    Result.DriverName := 'SQLite';
+    Result.Params.Database := FullPath;
+    Result.Params.Values['LockingMode'] := 'Normal';
+    Result.Params.Values['Synchronous'] := 'Normal';
+    Result.LoginPrompt := False;
+    Result.Open;
+    ADBType := udbSQLite;
+  end
+  else
+  begin
+    // PostgreSQL business DB (DB3)
+    Server   := GetSetting('DB3.Server', '127.0.0.1');
+    Database := GetSetting('DB3.Database', 'postgres');
+    UserName := GetSetting('DB3.User', 'postgres');
+    Password := GetSetting('DB3.Password', '');
+    Port     := StrToIntDef(GetSetting('DB3.Port', '5432'), 5432);
+
+    Result := TFDConnection.Create(nil);
+    Result.DriverName := 'PG';
+    Result.Params.Values['Server']    := Server;
+    Result.Params.Values['Database']  := Database;
+    Result.Params.Values['User_Name'] := UserName;
+    Result.Params.Values['Password']  := Password;
+    Result.Params.Values['Port']      := IntToStr(Port);
+    Result.LoginPrompt := False;
+    Result.Open;
+    ADBType := udbPostgreSQL;
+  end;
+end;
+
 procedure TfraSQLEditor.DisplayError(const AError: string);
 begin
-  mmoMessages.Lines.Add(Format('[%s] ERROR:', [FormatDateTime('hh:nn:ss', Now)]));
+  mmoMessages.Lines.Add('[ERROR] ' + AError);
   mmoMessages.Lines.Add(AError);
   mmoMessages.Lines.Add('');
   pgcResults.ActivePage := tabMessages;

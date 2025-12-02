@@ -621,7 +621,8 @@ begin
   
   // 更新最后运行时间
   TrayDB.Connection.ExecSQL(
-    'UPDATE ScheduledTasks SET LastRunAt = datetime(''now'', ''localtime'') WHERE Id = ' +
+    'UPDATE ScheduledTasks SET LastRunAt = ''' + 
+    FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now) + ''' WHERE Id = ' +
     IntToStr(ATask.Id));
 end;
 

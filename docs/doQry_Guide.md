@@ -1,0 +1,377 @@
+# UniBase.DB.DoQry 使用指南
+
+本模块提供统一的数据库访问层，支持 **SQLite** 和 **PostgreSQL**，并与 UniBase 日志和错误处理系统集成。
+
+---
+
+## 快速开始
+
+```pascal
+uses
+  UniBase.DB.DoQry, FireDAC.Comp.Client;
+
+var
+  Conn: TFDConnection;
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+begin
+  // 1. 初始化（应用启动时调用一次）
+  UniDbInit(ExtractFilePath(ParamStr(0)));
+  
+  // 2. 创建查询上下文
+  Ctx := UniDbMakeContext(Conn, udbSQLite);
+  
+  // 3. 执行查询
+  Data := TClientDataSet.Create(nil);
+  try
+    UniDbSelect('SELECT * FROM Users WHERE Age > :age', '{"age": 18}', Data, Ctx);
+    // 处理 Data ...
+  finally
+    Data.Free;
+  end;
+end;
+```
+
+---
+
+## 核心 API
+
+### 初始化
+
+```pascal
+procedure UniDbInit(const RootPath: string);
+```
+初始化 doQry 模块，设置日志目录。由 `TUniBaseManager.Initialize` 自动调用。
+
+### 创建查询上下文
+
+```pascal
+function UniDbMakeContext(
+  Conn: TFDConnection; 
+  DBType: TUniDBType; 
+  TimeoutSec: Integer = 30; 
+  const CorrelationId: string = ''
+): TUniQueryContext;
+```
+- `Conn`: FireDAC 数据库连接
+- `DBType`: `udbSQLite` 或 `udbPostgreSQL`
+- `TimeoutSec`: 查询超时（秒）
+- `CorrelationId`: 可选，用于日志追踪；留空则自动生成
+
+### 执行查询
+
+| 函数 | 说明 | 返回值 |
+|------|------|--------|
+| `UniDbSelect` | 执行 SELECT，结果写入 TClientDataSet | 行数 |
+| `UniDbExec` | 执行 INSERT/UPDATE/DELETE | 影响行数 |
+| `UniDbInsertReturningId` | 执行 INSERT 并返回自增 ID | 新 ID |
+| `UniDbScalar` | 执行标量查询 | Variant |
+
+---
+
+## 参数绑定（JSON 格式）
+
+所有查询函数的 `ParamsJson` 参数使用 JSON 对象格式：
+
+```pascal
+// 字符串参数
+UniDbExec('INSERT INTO Users (Name) VALUES (:name)', '{"name": "张三"}', Ctx);
+
+// 数字参数
+UniDbSelect('SELECT * FROM Orders WHERE Amount > :amount', '{"amount": 100.5}', Ctx);
+
+// 布尔参数
+UniDbSelect('SELECT * FROM Tasks WHERE IsActive = :active', '{"active": true}', Ctx);
+
+// NULL 参数
+UniDbExec('UPDATE Users SET Email = :email WHERE Id = :id', '{"email": null, "id": 1}', Ctx);
+
+// 空参数
+UniDbSelect('SELECT * FROM Config', '', Data, Ctx);
+```
+
+**类型映射**：
+- JSON `string` → `AsString`
+- JSON `number` → `AsFloat`
+- JSON `boolean` → `AsBoolean`
+- JSON `null` → `Clear`（NULL 值）
+
+---
+
+## SQL 来源：直接 SQL vs Queries 表
+
+### 方式一：直接 SQL（适合动态查询）
+
+```pascal
+UniDbSelect('SELECT * FROM Users WHERE Id = :id', '{"id": 1}', Data, Ctx);
+```
+以 SQL 关键字（`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`CREATE`、`DROP`、`ALTER`、`WITH`、`PRAGMA`）开头的字符串将直接执行。
+
+### 方式二：Queries 表（推荐用于固定查询）
+
+1. 在数据库中创建 `Queries` 表：
+```sql
+CREATE TABLE Queries (
+  Id INTEGER PRIMARY KEY,
+  ProcName TEXT NOT NULL UNIQUE,
+  SQL TEXT NOT NULL,
+  IsEnabled INTEGER DEFAULT 1,
+  Description TEXT
+);
+```
+
+2. 插入查询定义：
+```sql
+INSERT INTO Queries (ProcName, SQL, Description) 
+VALUES ('User.GetById', 'SELECT * FROM Users WHERE Id = :id', '根据ID查询用户');
+```
+
+3. 通过 `ProcName` 调用：
+```pascal
+UniDbSelect('User.GetById', '{"id": 1}', Data, Ctx);
+```
+
+**优势**：
+- SQL 与代码分离，便于维护
+- 支持运行时修改 SQL（无需重新编译）
+- 自动缓存，提升性能
+
+---
+
+## 查询缓存
+
+### 缓存机制
+- 仅缓存从 `Queries` 表加载的 SQL（直接 SQL 不缓存）
+- 默认 TTL：300 秒（5 分钟）
+- 线程安全
+
+### 缓存控制 API
+
+```pascal
+// 设置 TTL（秒）
+UniDbSetCacheTTL(600);  // 10 分钟
+
+// 清除所有缓存
+UniDbClearQueryCache;
+
+// 精确失效某个查询
+UniDbInvalidateQuery('User.GetById');
+
+// 获取缓存统计
+var Hits, Misses, EntryCount: Int64;
+UniDbGetCacheStats(Hits, Misses, EntryCount);
+WriteLn(Format('命中率: %.1f%%', [Hits / (Hits + Misses) * 100]));
+```
+
+### 何时清除缓存
+- 修改 `Queries` 表后调用 `UniDbClearQueryCache`
+- 修改单条查询后调用 `UniDbInvalidateQuery(ProcName)`
+
+---
+
+## 预编译语句池
+
+预编译语句池可复用 `TFDQuery` 对象，避免重复创建和预编译，显著提升性能。
+
+### 启用/禁用
+
+```pascal
+// 启用预编译语句池化
+UniDbSetPreparedStatementPooling(True);
+
+// 执行查询（自动池化）
+UniDbSelect('SELECT * FROM Users WHERE Id = :id', '{"id": 1}', Data, Ctx);
+
+// 禁用池化
+UniDbSetPreparedStatementPooling(False);
+```
+
+### 管理 API
+
+```pascal
+// 清空所有池化语句
+UniDbClearPreparedStatements;
+
+// 获取统计信息
+var PoolSize, ReuseCount: Int64;
+UniDbGetPreparedStats(PoolSize, ReuseCount);
+WriteLn(Format('池大小: %d, 复用次数: %d', [PoolSize, ReuseCount]));
+```
+
+### 注意事项
+- 池化以连接 + SQL 哈希为键，相同 SQL 在同一连接上复用
+- 连接关闭后应调用 `UniDbClearPreparedStatements` 清理
+- 在高并发场景下可显著减少数据库服务器压力
+
+---
+
+## 事务管理
+
+### 手动事务
+
+```pascal
+var
+  Tx: IUniTransaction;
+begin
+  Tx := UniDbBeginTx(Ctx);
+  try
+    UniDbExec('INSERT INTO Orders ...', '...', Ctx);
+    UniDbExec('UPDATE Inventory ...', '...', Ctx);
+    Tx.Commit;
+  except
+    Tx.Rollback;
+    raise;
+  end;
+end;
+```
+
+### 自动事务（推荐）
+
+```pascal
+UniDbRunInTx(Ctx, procedure
+begin
+  UniDbExec('INSERT INTO Orders ...', '...', Ctx);
+  UniDbExec('UPDATE Inventory ...', '...', Ctx);
+  // 正常完成自动 Commit，异常自动 Rollback
+end);
+```
+
+---
+
+## 错误处理
+
+所有数据库错误抛出 `EUniBaseDbError` 异常，包含完整上下文：
+
+```pascal
+try
+  UniDbExec('INVALID SQL', '', Ctx);
+except
+  on E: EUniBaseDbError do
+  begin
+    WriteLn('ProcName: ', E.ProcName);
+    WriteLn('SQL: ', E.SQL);
+    WriteLn('Params: ', E.ParamsJson);
+    WriteLn('DBType: ', Ord(E.DBType));
+    WriteLn('CorrelationId: ', E.CorrelationId);
+    WriteLn('Message: ', E.Message);
+  end;
+end;
+```
+
+### 错误码参考
+
+| 错误码 | 常量 | 说明 |
+|--------|------|------|
+| 0 | `DOQRY_ERR_SUCCESS` | 成功 |
+| 1001 | `DOQRY_ERR_SQL_SYNTAX` | SQL 语法错误 |
+| 1002 | `DOQRY_ERR_PARAM_MISSING` | 参数缺失 |
+| 1003 | `DOQRY_ERR_PARAM_INVALID` | 参数无效 |
+| 2001 | `DOQRY_ERR_CONNECTION` | 连接错误 |
+| 2002 | `DOQRY_ERR_TIMEOUT` | 查询超时 |
+| 2003 | `DOQRY_ERR_DISCONNECTED` | 连接断开 |
+| 3001 | `DOQRY_ERR_TX_CONFLICT` | 事务冲突 |
+| 3002 | `DOQRY_ERR_TX_DEADLOCK` | 死锁 |
+| 3003 | `DOQRY_ERR_TX_ROLLBACK` | 事务回滚 |
+| 4001 | `DOQRY_ERR_CONSTRAINT` | 约束违反 |
+| 4002 | `DOQRY_ERR_UNIQUE` | 唯一约束违反 |
+| 4003 | `DOQRY_ERR_FOREIGN_KEY` | 外键约束违反 |
+| 5001 | `DOQRY_ERR_NOT_FOUND` | 记录未找到 |
+| 5002 | `DOQRY_ERR_QUERY_NOT_FOUND` | 查询定义未找到 |
+| 9999 | `DOQRY_ERR_UNKNOWN` | 未知错误 |
+
+### 常见错误场景
+
+| 场景 | 异常消息示例 | 错误码 |
+|------|-------------|--------|
+| SQL 语法错误 | `near "INVALID": syntax error` | 1001 |
+| 参数缺失 | `Parameter 'xxx' not found` | 1002 |
+| 连接断开 | `Connection is closed` | 2003 |
+| 超时 | `Timeout expired` | 2002 |
+| 唯一约束违反 | `UNIQUE constraint failed` | 4002 |
+
+---
+
+## 日志集成
+
+所有查询自动记录到 UniBase 日志系统：
+
+```
+[DEBUG] DoQry:A1B2C3D4 [SQLite] User.GetById.SELECT 5ms rows=1
+[ERROR] DoQry:A1B2C3D4 [PG] Order.Insert.EXEC 120ms rows=0 ERROR: duplicate key
+```
+
+日志格式：
+- `[Level]` - DEBUG/WARN/ERROR
+- `DoQry:xxx` - CorrelationId
+- `[DBType]` - SQLite/PG
+- `ProcName.Kind` - 查询名称和类型
+- `Nms` - 执行耗时
+- `rows=N` - 影响/返回行数
+- `ERROR: xxx` - 错误消息（仅失败时）
+
+---
+
+## 最佳实践
+
+1. **使用 Queries 表管理固定查询**：便于维护和优化
+2. **设置合理的 TTL**：高频查询可延长，频繁变更的查询缩短
+3. **使用事务包装多步操作**：保证数据一致性
+4. **传递 CorrelationId**：便于跨模块追踪请求
+5. **处理 EUniBaseDbError**：获取完整错误上下文
+6. **定期清理缓存**：在 Queries 表更新后
+
+---
+
+## 完整示例
+
+```pascal
+procedure TOrderService.CreateOrder(const UserId: Integer; const Items: TArray<TOrderItem>);
+var
+  Ctx: TUniQueryContext;
+  OrderId: Integer;
+  Item: TOrderItem;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite, 60, 'CreateOrder-' + IntToStr(UserId));
+  
+  UniDbRunInTx(Ctx, procedure
+  begin
+    // 插入订单
+    OrderId := UniDbInsertReturningId(
+      'Order.Insert',
+      Format('{"user_id": %d, "status": "pending"}', [UserId]),
+      Ctx
+    );
+    
+    // 插入订单项
+    for Item in Items do
+    begin
+      UniDbExec(
+        'OrderItem.Insert',
+        Format('{"order_id": %d, "product_id": %d, "qty": %d}', 
+          [OrderId, Item.ProductId, Item.Quantity]),
+        Ctx
+      );
+    end;
+    
+    // 更新库存
+    for Item in Items do
+    begin
+      UniDbExec(
+        'Inventory.Decrease',
+        Format('{"product_id": %d, "qty": %d}', [Item.ProductId, Item.Quantity]),
+        Ctx
+      );
+    end;
+  end);
+  
+  Logger.LogInfo(Format('Order %d created for user %d', [OrderId, UserId]));
+end;
+```
+
+---
+
+## 参考
+
+- `UniBase.DB.DoQry.pas` - 模块源码
+- `Tests/Test.UniBase.DB.DoQry.pas` - 单元测试
+- `docs/02_API_Reference.md` - API 参考

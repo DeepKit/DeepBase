@@ -143,6 +143,7 @@ procedure TUniBaseMRU.WriteMRU(const Category, ItemKey, DisplayName: string; Ico
 var
   Query: TFDQuery;
   ActualDisplayName: string;
+  NowStr: string;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -153,6 +154,9 @@ begin
   if ActualDisplayName = '' then
     ActualDisplayName := ItemKey;
   
+  // Use ISO8601 format for SQLite datetime compatibility
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+  
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
@@ -160,16 +164,17 @@ begin
     // 使用 SQLite UPSERT 语法
     Query.SQL.Text := 
       'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
-      'VALUES (:Cat, :Key, :Display, :Icon, datetime(''now'', ''localtime''), 1, 0) ' +
+      'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0) ' +
       'ON CONFLICT(Category, ItemKey) DO UPDATE SET ' +
       'DisplayName = :Display, IconIndex = :Icon, ' +
-      'LastAccess = datetime(''now'', ''localtime''), ' +
+      'LastAccess = :NowTime, ' +
       'AccessCount = AccessCount + 1';
       
     Query.ParamByName('Cat').AsString := Category;
     Query.ParamByName('Key').AsString := ItemKey;
     Query.ParamByName('Display').AsString := ActualDisplayName;
     Query.ParamByName('Icon').AsInteger := IconIndex;
+    Query.ParamByName('NowTime').AsString := NowStr;
     
     Query.ExecSQL;
   finally

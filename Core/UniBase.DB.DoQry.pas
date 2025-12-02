@@ -12,7 +12,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Variants,
-  FireDAC.Comp.Client, DBClient,
+  FireDAC.Comp.Client, FireDAC.Comp.DataSet,
   UniBase.Types;
 
 const
@@ -115,7 +115,7 @@ procedure UniDbRunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
 /// 执行 SELECT 查询
 /// </summary>
 function UniDbSelect(const ProcName: string; const ParamsJson: string; 
-  var Data: TClientDataSet; const Ctx: TUniQueryContext): Integer;
+  var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
 
 /// <summary>
 /// 执行非查询（INSERT/UPDATE/DELETE）
@@ -461,45 +461,13 @@ end;
 { 内部辅助函数 }
 
 /// <summary>
-/// 复制 TFDQuery 数据到 TClientDataSet
+/// 复制 TFDQuery 数据到 TFDMemTable
 /// </summary>
-procedure CopyQueryToClientDataSet(Src: TFDQuery; Dest: TClientDataSet);
-var
-  I: Integer;
-  F: TField;
+procedure CopyQueryToMemTable(Src: TFDQuery; Dest: TFDMemTable);
 begin
   Dest.Close;
-  Dest.FieldDefs.Clear;
-  
-  // 复制字段定义
-  for I := 0 to Src.Fields.Count - 1 do
-  begin
-    F := Src.Fields[I];
-    Dest.FieldDefs.Add(F.FieldName, F.DataType, F.Size, F.Required);
-  end;
-  
-  Dest.CreateDataSet;
-  Dest.LogChanges := False; // 避免不必要的变更日志
-  Dest.DisableControls;
-  try
-    // 复制数据（使用 Assign 以正确处理 BLOB/日期/BCD 等类型）
-    Src.First;
-    while not Src.Eof do
-    begin
-      Dest.Append;
-      for I := 0 to Src.Fields.Count - 1 do
-      begin
-        if not Src.Fields[I].IsNull then
-          Dest.Fields[I].Assign(Src.Fields[I])
-        else
-          Dest.Fields[I].Clear;
-      end;
-      Dest.Post;
-      Src.Next;
-    end;
-  finally
-    Dest.EnableControls;
-  end;
+  // TFDMemTable 可以直接从 TFDQuery 复制数据
+  Dest.CopyDataSet(Src, [coStructure, coRestart, coAppend]);
 end;
 
 { 公共函数 }
@@ -810,7 +778,7 @@ end;
 { 查询执行 - 简化实现 }
 
 function UniDbSelect(const ProcName: string; const ParamsJson: string;
-  var Data: TClientDataSet; const Ctx: TUniQueryContext): Integer;
+  var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
 var
   Q: TFDQuery;
   StartTime: TDateTime;
@@ -865,10 +833,10 @@ begin
       Q.Open;
       Result := Q.RecordCount;
       
-      // 复制数据到 TClientDataSet
+      // 复制数据到 TFDMemTable
       if Data = nil then
-        Data := TClientDataSet.Create(nil);
-      CopyQueryToClientDataSet(Q, Data);
+        Data := TFDMemTable.Create(nil);
+      CopyQueryToMemTable(Q, Data);
       
       DurationMs := MilliSecondsBetween(Now, StartTime);
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT', 

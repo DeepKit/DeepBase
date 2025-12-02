@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <defs>
+    <style>
+      .bg { fill: #f0f0f0; }
+      .window-bg { fill: #ffffff; stroke: #333; stroke-width: 2; }
+      .titlebar { fill: #5c6bc0; }
+      .titlebar-text { font-family: Microsoft YaHei, Arial; font-size: 14px; fill: white; font-weight: bold; }
+      .panel { fill: #fafafa; stroke: #ddd; stroke-width: 1; }
+      .panel-header { fill: #e8e8e8; stroke: #ccc; stroke-width: 1; }
+      .panel-production { fill: #e8f5e9; stroke: #4caf50; stroke-width: 2; }
+      .panel-header-production { fill: #c8e6c9; stroke: #4caf50; stroke-width: 1; }
+      .panel-editing { fill: #fff3e0; stroke: #ff9800; stroke-width: 2; }
+      .panel-header-editing { fill: #ffe0b2; stroke: #ff9800; stroke-width: 1; }
+      .label { font-family: Microsoft YaHei, Arial; font-size: 12px; fill: #333; }
+      .label-bold { font-family: Microsoft YaHei, Arial; font-size: 12px; fill: #333; font-weight: bold; }
+      .text { font-family: Microsoft YaHei, Arial; font-size: 11px; fill: #666; }
+      .text-small { font-family: Microsoft YaHei, Arial; font-size: 10px; fill: #888; }
+      .text-mono { font-family: Consolas, monospace; font-size: 10px; fill: #333; }
+      .input { fill: #ffffff; stroke: #ccc; stroke-width: 1; }
+      .button { fill: #5c6bc0; stroke: #3f51b5; stroke-width: 1; }
+      .button-text { font-family: Microsoft YaHei, Arial; font-size: 12px; fill: white; font-weight: bold; }
+      .button-secondary { fill: #e0e0e0; stroke: #bbb; stroke-width: 1; }
+      .button-secondary-text { font-family: Microsoft YaHei, Arial; font-size: 11px; fill: #333; }
+      .stat-good { fill: #4caf50; }
+      .stat-warn { fill: #ff9800; }
+      .stat-bad { fill: #f44336; }
+      .diff-add { fill: #c8e6c9; }
+      .diff-del { fill: #ffcdd2; }
+      .diff-change { fill: #fff9c4; }
+      .badge-production { fill: #4caf50; }
+      .badge-editing { fill: #ff9800; }
+      .content-area { fill: #ffffff; stroke: #e0e0e0; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1400" height="900" class="bg"/>
+
+  <!-- 主窗口 -->
+  <rect x="20" y="20" width="1360" height="860" class="window-bg" rx="5"/>
+
+  <!-- 标题栏 -->
+  <rect x="20" y="20" width="1360" height="35" class="titlebar" rx="5"/>
+  <rect x="20" y="40" width="1360" height="15" class="titlebar"/>
+  <text x="40" y="43" class="titlebar-text">📊 提示词版本对比 - [01-01-001] 客户行为分析</text>
+  <text x="1330" y="43" class="titlebar-text" style="font-size:16px">×</text>
+  <text x="1300" y="43" class="titlebar-text" style="font-size:12px">□</text>
+
+  <!-- 工具栏 -->
+  <rect x="30" y="60" width="1340" height="35" class="panel" rx="3"/>
+  <rect x="40" y="68" width="100" height="20" class="button-secondary" rx="3"/>
+  <text x="65" y="82" class="button-secondary-text">🔍 差异高亮</text>
+  <rect x="150" y="68" width="100" height="20" class="button-secondary" rx="3"/>
+  <text x="172" y="82" class="button-secondary-text">📄 导出报告</text>
+  <rect x="260" y="68" width="90" height="20" class="button-secondary" rx="3"/>
+  <text x="280" y="82" class="button-secondary-text">🔄 刷新</text>
+  
+  <text x="500" y="82" class="label">对比模式:</text>
+  <rect x="560" y="68" width="80" height="20" class="button" rx="3"/>
+  <text x="580" y="82" class="button-text" style="font-size:10px">并排对比</text>
+  <rect x="645" y="68" width="80" height="20" class="button-secondary" rx="3"/>
+  <text x="663" y="82" class="button-secondary-text">逐行对比</text>
+
+  <!-- ===== 四栏平铺布局 ===== -->
+  
+  <!-- Version 1 - 生产版本 (绿色边框) -->
+  <g id="version-1">
+    <rect x="30" y="100" width="320" height="700" class="panel-production" rx="4"/>
+    <rect x="30" y="100" width="320" height="30" class="panel-header-production" rx="4"/>
+    <rect x="30" y="120" width="320" height="10" class="panel-header-production"/>
+    
+    <!-- 版本标题 -->
+    <text x="45" y="120" class="label-bold">Version 1</text>
+    <rect x="120" y="107" width="60" height="18" class="badge-production" rx="9"/>
+    <text x="135" y="120" style="font-family: Microsoft YaHei; font-size:10px; fill:white; font-weight:bold">★ 生产</text>
+    <rect x="270" y="107" width="22" height="18" class="button-secondary" rx="3"/>
+    <text x="276" y="120" class="text-small" font-weight="bold">⇱</text>
+    <text x="295" y="120" class="text-small">11-28</text>
+    
+    <!-- 提示词内容区 -->
+    <text x="45" y="148" class="text-small" font-weight="bold">📝 合成提示词</text>
+    <rect x="40" y="155" width="300" height="200" class="content-area" rx="3"/>
+    <g transform="translate(50, 170)">
+      <text x="0" y="0" class="text-mono" fill="#666" font-style="italic">[META-001 安全约束]</text>
+      <text x="0" y="14" class="text-mono">你是一个专业的客户行为分析师。</text>
+      <text x="0" y="28" class="text-mono">请根据以下客户数据进行分析：</text>
+      <text x="0" y="42" class="text-mono"></text>
+      <text x="0" y="56" class="text-mono">客户ID: 10086</text>
+      <text x="0" y="70" class="text-mono">时间范围: last_30_days</text>
+      <text x="0" y="84" class="text-mono">原始数据: {...}</text>
+      <text x="0" y="98" class="text-mono"></text>
+      <text x="0" y="112" class="text-mono">请输出以下内容：</text>
+      <text x="0" y="126" class="text-mono">1. 购买行为模式</text>
+      <text x="0" y="140" class="text-mono">2. 用户偏好标签</text>
+      <text x="0" y="154" class="text-mono">3. 消费趋势预测</text>
+      <text x="0" y="168" class="text-mono">输出格式: JSON</text>
+    </g>
+    
+    <!-- LLM回复区 -->
+    <text x="45" y="375" class="text-small" font-weight="bold">💬 LLM 回复</text>
+    <rect x="40" y="382" width="300" height="200" fill="#f0fff0" stroke="#4caf50" stroke-width="1" rx="3"/>
+    <g transform="translate(50, 397)">
+      <text x="0" y="0" class="text-mono">{</text>
+      <text x="0" y="14" class="text-mono">  "behavior": {</text>
+      <text x="0" y="28" class="text-mono">    "purchase_count": 12,</text>
+      <text x="0" y="42" class="text-mono">    "avg_amount": 258.50,</text>
+      <text x="0" y="56" class="text-mono">    "peak_hours": "20-22"</text>
+      <text x="0" y="70" class="text-mono">  },</text>
+      <text x="0" y="84" class="text-mono">  "tags": ["电子产品",</text>
+      <text x="0" y="98" class="text-mono">           "价格敏感"],</text>
+      <text x="0" y="112" class="text-mono">  "trend": "increasing",</text>
+      <text x="0" y="126" class="text-mono">  "confidence": 0.92</text>
+      <text x="0" y="140" class="text-mono">}</text>
+    </g>
+    <text x="300" y="575" class="text-small" text-anchor="end">耗时: 1.2s</text>
+    
+    <!-- 统计信息 -->
+    <rect x="40" y="595" width="300" height="70" class="panel" rx="3"/>
+    <text x="50" y="613" class="text-small" font-weight="bold">📈 版本统计</text>
+    <line x1="50" y1="620" x2="330" y2="620" stroke="#eee"/>
+    <text x="50" y="637" class="text-small">Tokens: </text>
+    <text x="95" y="637" class="text-small" font-weight="bold">245</text>
+    <text x="150" y="637" class="text-small">测试: </text>
+    <text x="180" y="637" class="text-small" font-weight="bold">28次</text>
+    <text x="220" y="637" class="text-small">成功率: </text>
+    <text x="270" y="637" class="text-small" font-weight="bold" fill="#4caf50">93%</text>
+    <text x="50" y="655" class="text-small">平均耗时: 1.2s | 费用: $0.08</text>
+  </g>
+
+  <!-- Version 2 -->
+  <g id="version-2">
+    <rect x="360" y="100" width="320" height="700" class="panel" rx="4"/>
+    <rect x="360" y="100" width="320" height="30" class="panel-header" rx="4"/>
+    <rect x="360" y="120" width="320" height="10" class="panel-header"/>
+    
+    <text x="375" y="120" class="label-bold">Version 2</text>
+    <rect x="600" y="107" width="22" height="18" class="button-secondary" rx="3"/>
+    <text x="606" y="120" class="text-small" font-weight="bold">⇱</text>
+    <text x="628" y="120" class="text-small">11-25</text>
+    
+    <!-- 提示词内容区 -->
+    <text x="375" y="148" class="text-small" font-weight="bold">📝 合成提示词</text>
+    <rect x="370" y="155" width="300" height="200" class="content-area" rx="3"/>
+    <g transform="translate(380, 170)">
+      <text x="0" y="0" class="text-mono" fill="#666" font-style="italic">[META-001 安全约束]</text>
+      <text x="0" y="14" class="text-mono">你是一个专业的客户行为分析师。</text>
+      <rect x="-5" y="20" width="290" height="14" class="diff-change" rx="2"/>
+      <text x="0" y="28" class="text-mono">请分析以下客户的行为数据：</text>
+      <text x="0" y="42" class="text-mono"></text>
+      <text x="0" y="56" class="text-mono">客户ID: 10086</text>
+      <text x="0" y="70" class="text-mono">时间范围: last_30_days</text>
+      <text x="0" y="84" class="text-mono">原始数据: {...}</text>
+      <text x="0" y="98" class="text-mono"></text>
+      <text x="0" y="112" class="text-mono">请输出以下内容：</text>
+      <text x="0" y="126" class="text-mono">1. 购买行为模式</text>
+      <text x="0" y="140" class="text-mono">2. 用户偏好标签</text>
+      <rect x="-5" y="148" width="290" height="14" class="diff-del" rx="2"/>
+      <text x="0" y="154" class="text-mono" fill="#999" style="text-decoration:line-through">3. 消费趋势预测</text>
+      <text x="0" y="168" class="text-mono">输出格式: JSON</text>
+    </g>
+    
+    <!-- LLM回复区 -->
+    <text x="375" y="375" class="text-small" font-weight="bold">💬 LLM 回复</text>
+    <rect x="370" y="382" width="300" height="200" fill="#fffaf0" stroke="#ff9800" stroke-width="1" rx="3"/>
+    <g transform="translate(380, 397)">
+      <text x="0" y="0" class="text-mono">{</text>
+      <text x="0" y="14" class="text-mono">  "behavior": {</text>
+      <text x="0" y="28" class="text-mono">    "purchase_count": 12,</text>
+      <text x="0" y="42" class="text-mono">    "avg_amount": 260.00</text>
+      <text x="0" y="56" class="text-mono">  },</text>
+      <text x="0" y="70" class="text-mono">  "tags": ["电子产品"]</text>
+      <text x="0" y="84" class="text-mono">}</text>
+      <text x="0" y="112" class="text-mono" fill="#ff9800">⚠ 缺少趋势预测字段</text>
+    </g>
+    <text x="630" y="575" class="text-small" text-anchor="end">耗时: 1.0s</text>
+    
+    <!-- 统计信息 -->
+    <rect x="370" y="595" width="300" height="70" class="panel" rx="3"/>
+    <text x="380" y="613" class="text-small" font-weight="bold">📈 版本统计</text>
+    <line x1="380" y1="620" x2="660" y2="620" stroke="#eee"/>
+    <text x="380" y="637" class="text-small">Tokens: </text>
+    <text x="425" y="637" class="text-small" font-weight="bold">220</text>
+    <text x="480" y="637" class="text-small">测试: </text>
+    <text x="510" y="637" class="text-small" font-weight="bold">15次</text>
+    <text x="550" y="637" class="text-small">成功率: </text>
+    <text x="600" y="637" class="text-small" font-weight="bold" fill="#ff9800">87%</text>
+    <text x="380" y="655" class="text-small">平均耗时: 1.0s | 费用: $0.06</text>
+  </g>
+
+  <!-- Version 3 - 当前编辑 (橙色边框) -->
+  <g id="version-3">
+    <rect x="690" y="100" width="320" height="700" class="panel-editing" rx="4"/>
+    <rect x="690" y="100" width="320" height="30" class="panel-header-editing" rx="4"/>
+    <rect x="690" y="120" width="320" height="10" class="panel-header-editing"/>
+    
+    <text x="705" y="120" class="label-bold">Version 3</text>
+    <rect x="780" y="107" width="70" height="18" class="badge-editing" rx="9"/>
+    <text x="793" y="120" style="font-family: Microsoft YaHei; font-size:10px; fill:white; font-weight:bold">✎ 编辑中</text>
+    <rect x="930" y="107" width="22" height="18" class="button-secondary" rx="3"/>
+    <text x="936" y="120" class="text-small" font-weight="bold">⇱</text>
+    <text x="958" y="120" class="text-small">今天</text>
+    
+    <!-- 提示词内容区 -->
+    <text x="705" y="148" class="text-small" font-weight="bold">📝 合成提示词</text>
+    <rect x="700" y="155" width="300" height="200" class="content-area" rx="3"/>
+    <g transform="translate(710, 170)">
+      <text x="0" y="0" class="text-mono" fill="#666" font-style="italic">[META-001 安全约束]</text>
+      <text x="0" y="14" class="text-mono">你是一个专业的客户行为分析师。</text>
+      <text x="0" y="28" class="text-mono">请根据以下客户数据进行分析：</text>
+      <text x="0" y="42" class="text-mono"></text>
+      <text x="0" y="56" class="text-mono">客户ID: 10086</text>
+      <text x="0" y="70" class="text-mono">时间范围: last_30_days</text>
+      <text x="0" y="84" class="text-mono">原始数据: {...}</text>
+      <text x="0" y="98" class="text-mono">请输出以下内容：</text>
+      <text x="0" y="112" class="text-mono">1-4. (略)</text>
+      <rect x="-5" y="120" width="290" height="14" class="diff-add" rx="2"/>
+      <text x="0" y="126" class="text-mono" fill="#2e7d32">置信度要求: &gt;= 0.8</text>
+      <text x="0" y="140" class="text-mono">输出格式: JSON</text>
+    </g>
+    
+    <!-- LLM回复区 -->
+    <text x="705" y="375" class="text-small" font-weight="bold">💬 LLM 回复</text>
+    <rect x="700" y="382" width="300" height="200" fill="#f0fff0" stroke="#4caf50" stroke-width="1" rx="3"/>
+    <g transform="translate(710, 397)">
+      <text x="0" y="0" class="text-mono">{</text>
+      <text x="0" y="14" class="text-mono">  "behavior": {...},</text>
+      <text x="0" y="28" class="text-mono">  "tags": ["电子产品",</text>
+      <text x="0" y="42" class="text-mono">           "价格敏感"],</text>
+      <text x="0" y="56" class="text-mono">  "trend": "increasing",</text>
+      <rect x="-5" y="64" width="290" height="14" class="diff-add" rx="2"/>
+      <text x="0" y="70" class="text-mono" fill="#2e7d32">  "repurchase_prob": 0.85,</text>
+      <text x="0" y="84" class="text-mono">  "confidence": 0.91</text>
+      <text x="0" y="98" class="text-mono">}</text>
+      <text x="0" y="126" class="text-mono" fill="#4caf50">✓ 输出完整，含复购概率</text>
+    </g>
+    <text x="960" y="575" class="text-small" text-anchor="end">耗时: 1.4s</text>
+    
+    <!-- 统计信息 -->
+    <rect x="700" y="595" width="300" height="70" class="panel" rx="3"/>
+    <text x="710" y="613" class="text-small" font-weight="bold">📈 版本统计</text>
+    <line x1="710" y1="620" x2="990" y2="620" stroke="#eee"/>
+    <text x="710" y="637" class="text-small">Tokens: </text>
+    <text x="755" y="637" class="text-small" font-weight="bold">280</text>
+    <text x="810" y="637" class="text-small">测试: </text>
+    <text x="840" y="637" class="text-small" font-weight="bold">5次</text>
+    <text x="880" y="637" class="text-small">成功率: </text>
+    <text x="930" y="637" class="text-small" font-weight="bold" fill="#4caf50">100%</text>
+    <text x="710" y="655" class="text-small">平均耗时: 1.4s | 费用: $0.10</text>
+  </g>
+
+  <!-- Version 4 - 空版本 -->
+  <g id="version-4">
+    <rect x="1020" y="100" width="320" height="700" class="panel" rx="4" stroke-dasharray="5,5"/>
+    <rect x="1020" y="100" width="320" height="30" class="panel-header" rx="4"/>
+    <rect x="1020" y="120" width="320" height="10" class="panel-header"/>
+    
+    <text x="1035" y="120" class="label-bold" fill="#999">Version 4</text>
+    <rect x="1260" y="107" width="22" height="18" fill="#f0f0f0" stroke="#ccc" rx="3"/>
+    <text x="1266" y="120" class="text-small" fill="#bbb">⇱</text>
+    <text x="1290" y="120" class="text-small" fill="#999">未创建</text>
+    
+    <!-- 提示词内容区 (空) -->
+    <text x="1035" y="148" class="text-small" font-weight="bold" fill="#999">📝 合成提示词</text>
+    <rect x="1030" y="155" width="300" height="200" fill="#fafafa" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" rx="3"/>
+    <text x="1180" y="255" class="label" fill="#ccc" text-anchor="middle">暂无内容</text>
+    
+    <!-- LLM回复区 (空) -->
+    <text x="1035" y="375" class="text-small" font-weight="bold" fill="#999">💬 LLM 回复</text>
+    <rect x="1030" y="382" width="300" height="200" fill="#fafafa" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5" rx="3"/>
+    <text x="1180" y="485" class="label" fill="#ccc" text-anchor="middle">暂无回复</text>
+    <text x="1180" y="510" class="text-small" fill="#ccc" text-anchor="middle">点击"复制到V4"创建新版本</text>
+    
+    <!-- 统计信息 -->
+    <rect x="1030" y="595" width="300" height="70" class="panel" rx="3" fill="#fafafa"/>
+    <text x="1040" y="613" class="text-small" font-weight="bold" fill="#999">📈 版本统计</text>
+    <line x1="1040" y1="620" x2="1320" y2="620" stroke="#eee"/>
+    <text x="1040" y="640" class="text-small" fill="#999">暂无数据</text>
+  </g>
+
+  <!-- 底部操作栏 -->
+  <rect x="30" y="815" width="1340" height="40" class="panel" rx="3"/>
+  
+  <rect x="50" y="825" width="130" height="24" class="button" rx="4"/>
+  <text x="85" y="841" class="button-text" style="font-size:11px">✓ 设为生产版本</text>
+  
+  <rect x="195" y="825" width="100" height="24" class="button-secondary" rx="4"/>
+  <text x="217" y="841" class="button-secondary-text">📋 复制到V4</text>
+  
+  <rect x="310" y="825" width="120" height="24" class="button-secondary" rx="4"/>
+  <text x="338" y="841" class="button-secondary-text">📊 生成报告</text>
+  
+  <rect x="445" y="825" width="100" height="24" class="button-secondary" rx="4"/>
+  <text x="468" y="841" class="button-secondary-text">🔄 重新测试</text>
+  
+  <rect x="560" y="825" width="120" height="24" class="button-secondary" rx="4"/>
+  <text x="585" y="841" class="button-secondary-text">📤 导出对比</text>
+
+  <!-- 图例 -->
+  <text x="900" y="841" class="text-small">图例:</text>
+  <rect x="930" y="830" width="12" height="12" class="diff-add" rx="2"/>
+  <text x="947" y="841" class="text-small">新增</text>
+  <rect x="980" y="830" width="12" height="12" class="diff-del" rx="2"/>
+  <text x="997" y="841" class="text-small">删除</text>
+  <rect x="1030" y="830" width="12" height="12" class="diff-change" rx="2"/>
+  <text x="1047" y="841" class="text-small">修改</text>
+
+  <rect x="1250" y="825" width="70" height="24" class="button-secondary" rx="4"/>
+  <text x="1270" y="841" class="button-secondary-text">关闭</text>
+
+</svg>

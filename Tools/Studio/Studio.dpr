@@ -17,6 +17,7 @@ uses
   Studio.HotkeyFrame in 'Frames\Studio.HotkeyFrame.pas' {fraHotkey: TFrame},
   Studio.ThemeFrame in 'Frames\Studio.ThemeFrame.pas' {fraTheme: TFrame},
   Studio.SQLFrame in 'Frames\Studio.SQLFrame.pas' {fraSQLEditor: TFrame},
+  Studio.QueriesFrame in 'Frames\Studio.QueriesFrame.pas' {fraQueries: TFrame},
   Studio.SchemaFrame in 'Frames\Studio.SchemaFrame.pas' {fraSchemaViewer: TFrame},
   Studio.BackupFrame in 'Frames\Studio.BackupFrame.pas' {fraBackupWizard: TFrame},
   Studio.ImportExportFrame in 'Frames\Studio.ImportExportFrame.pas' {fraImportExport: TFrame},

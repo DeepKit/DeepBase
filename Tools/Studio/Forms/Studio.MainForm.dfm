@@ -32,6 +32,7 @@ object frmStudioMain: TfrmStudioMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 0
+    ExplicitWidth = 994
     object lblTitle: TLabel
       Left = 16
       Top = 10
@@ -78,6 +79,7 @@ object frmStudioMain: TfrmStudioMain
     Color = clWhite
     ParentBackground = False
     TabOrder = 1
+    ExplicitHeight = 642
     object catNav: TCategoryButtons
       Left = 0
       Top = 0
@@ -95,6 +97,7 @@ object frmStudioMain: TfrmStudioMain
       SelectedButtonColor = 15790320
       TabOrder = 0
       OnButtonClicked = catNavButtonClicked
+      ExplicitHeight = 642
     end
   end
   object pnlClient: TPanel
@@ -105,6 +108,8 @@ object frmStudioMain: TfrmStudioMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitWidth = 791
+    ExplicitHeight = 642
     object cardPanel: TCardPanel
       Left = 0
       Top = 0
@@ -114,6 +119,8 @@ object frmStudioMain: TfrmStudioMain
       ActiveCard = cardConfig
       BevelOuter = bvNone
       TabOrder = 0
+      ExplicitWidth = 791
+      ExplicitHeight = 642
       object cardConfig: TCard
         Left = 0
         Top = 0
@@ -122,6 +129,8 @@ object frmStudioMain: TfrmStudioMain
         Caption = 'Configuration'
         CardIndex = 0
         TabOrder = 0
+        ExplicitWidth = 791
+        ExplicitHeight = 642
       end
       object cardLog: TCard
         Left = 0
@@ -159,14 +168,23 @@ object frmStudioMain: TfrmStudioMain
         CardIndex = 4
         TabOrder = 4
       end
+      object cardQueries: TCard
+        Left = 0
+        Top = 0
+        Width = 797
+        Height = 659
+        Caption = 'Queries'
+        CardIndex = 5
+        TabOrder = 5
+      end
       object cardSchema: TCard
         Left = 0
         Top = 0
         Width = 797
         Height = 659
         Caption = 'Schema'
-        CardIndex = 5
-        TabOrder = 5
+        CardIndex = 6
+        TabOrder = 6
       end
       object cardBackup: TCard
         Left = 0
@@ -174,8 +192,8 @@ object frmStudioMain: TfrmStudioMain
         Width = 797
         Height = 659
         Caption = 'Backup'
-        CardIndex = 6
-        TabOrder = 6
+        CardIndex = 7
+        TabOrder = 7
       end
       object cardImportExport: TCard
         Left = 0
@@ -183,8 +201,8 @@ object frmStudioMain: TfrmStudioMain
         Width = 797
         Height = 659
         Caption = 'Import/Export'
-        CardIndex = 7
-        TabOrder = 7
+        CardIndex = 8
+        TabOrder = 8
       end
       object cardProfile: TCard
         Left = 0
@@ -192,8 +210,26 @@ object frmStudioMain: TfrmStudioMain
         Width = 797
         Height = 659
         Caption = 'Profiler'
-        CardIndex = 8
-        TabOrder = 8
+        CardIndex = 9
+        TabOrder = 9
+      end
+      object cardLLM: TCard
+        Left = 0
+        Top = 0
+        Width = 797
+        Height = 659
+        Caption = 'LLM Manager'
+        CardIndex = 10
+        TabOrder = 10
+      end
+      object cardPromptTemplate: TCard
+        Left = 0
+        Top = 0
+        Width = 797
+        Height = 659
+        Caption = 'Prompt Templates'
+        CardIndex = 11
+        TabOrder = 11
       end
     end
   end

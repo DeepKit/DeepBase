@@ -43,6 +43,15 @@ uses
   System.TypInfo, System.Rtti;
 
 type
+  /// <summary>内存相关异常基类</summary>
+  EMemoryException = class(Exception);
+
+  /// <summary>对象池耗尽或配置错误时抛出的异常</summary>
+  EMemoryPoolException = class(EMemoryException);
+
+  /// <summary>智能缓存相关异常</summary>
+  EMemoryCacheException = class(EMemoryException);
+
   /// <summary>缓存淘汰策略</summary>
   TEvictionPolicy = (
     epNone,     // 不淘汰，满时抛异常
@@ -498,7 +507,7 @@ end;
 function TObjectPool<T>.Acquire: T;
 begin
   if not TryAcquire(Result) then
-    raise Exception.Create('对象池已耗尽');
+    raise EMemoryPoolException.Create('对象池已耗尽');
 end;
 
 function TObjectPool<T>.TryAcquire(out Obj: T): Boolean;
@@ -843,7 +852,7 @@ begin
           ((FMaxMemory > 0) and (FCurrentMemory >= FMaxMemory)) do
     begin
       if FEvictionPolicy = epNone then
-        raise Exception.Create('缓存已满');
+        raise EMemoryCacheException.Create('缓存已满');
       Evict;
     end;
 
@@ -877,7 +886,7 @@ end;
 function TSmartCache<K, V>.Get(const Key: K): V;
 begin
   if not TryGet(Key, Result) then
-    raise Exception.Create('缓存键不存在');
+    raise EMemoryCacheException.Create('缓存键不存在');
 end;
 
 function TSmartCache<K, V>.TryGet(const Key: K; out Value: V): Boolean;

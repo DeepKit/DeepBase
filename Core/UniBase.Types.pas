@@ -19,9 +19,9 @@ type
   /// </summary>
   TInitErrorCode = (
     ecSuccess = 0,           // Success
-    ecConfigDBNotFound = 1,  // config.db not found, auto-create failed
-    ecConfigDBCorrupted = 2, // config.db corrupted, schema check failed
-    ecPermissionDenied = 3,  // Cannot write root.txt or config.db
+    ecConfigDBNotFound = 1,  // ConfigDB not found
+    ecConfigDBCorrupted = 2, // ConfigDB corrupted, schema check failed
+    ecPermissionDenied = 3,  // Cannot write root.txt or ConfigDB
     ecInvalidPath = 4,       // Path in root.txt does not exist
     ecMissingAssets = 5,     // Assets directory structure incomplete
     ecUnknown = 99           // Unknown error, see error message
@@ -177,7 +177,16 @@ function LogLevelToStr(Level: TLogLevel): string;
 /// </summary>
 function StrToLogLevel(const S: string): TLogLevel;
 
+/// <summary>
+/// Compare two version strings (e.g., "1.2.3" vs "1.3.0")
+/// Returns: -1 if V1 < V2, 0 if V1 = V2, 1 if V1 > V2
+/// </summary>
+function CompareVersions(const V1, V2: string): Integer;
+
 implementation
+
+uses
+  System.Math;
 
 { THealthCheckResult }
 
@@ -255,6 +264,34 @@ begin
   else if Upper = 'ERROR' then Result := llError
   else if Upper = 'FATAL' then Result := llFatal
   else Result := llInfo; // 默认
+end;
+
+function CompareVersions(const V1, V2: string): Integer;
+var
+  Parts1, Parts2: TArray<string>;
+  I, N1, N2, MaxLen: Integer;
+begin
+  Parts1 := V1.Split(['.']);
+  Parts2 := V2.Split(['.']);
+  Result := 0;
+  
+  MaxLen := Max(Length(Parts1), Length(Parts2));
+  
+  for I := 0 to MaxLen - 1 do
+  begin
+    if I < Length(Parts1) then
+      N1 := StrToIntDef(Parts1[I], 0)
+    else
+      N1 := 0;
+      
+    if I < Length(Parts2) then
+      N2 := StrToIntDef(Parts2[I], 0)
+    else
+      N2 := 0;
+    
+    if N1 < N2 then Exit(-1);
+    if N1 > N2 then Exit(1);
+  end;
 end;
 
 end.

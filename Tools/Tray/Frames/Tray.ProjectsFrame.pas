@@ -313,10 +313,11 @@ begin
     Query.Connection := TrayDB.Connection;
     Query.SQL.Text :=
       'INSERT OR REPLACE INTO Projects (ProjectName, ProjectPath, ProjectType, LastOpenedAt) ' +
-      'VALUES (:Name, :Path, :Type, datetime(''now'', ''localtime''))';
+      'VALUES (:Name, :Path, :Type, :LastOpenedAt)';
     Query.ParamByName('Name').AsString := ProjectName;
     Query.ParamByName('Path').AsString := APath;
     Query.ParamByName('Type').AsString := ProjectType;
+    Query.ParamByName('LastOpenedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
     Query.ExecSQL;
   finally
     Query.Free;
@@ -326,11 +327,14 @@ begin
 end;
 
 procedure TProjectsFrame.OpenProject(const AProject: TProjectRecord);
+var
+  NowStr: string;
 begin
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   // 更新访问时间和计数
   TrayDB.Connection.ExecSQL(Format(
-    'UPDATE Projects SET LastOpenedAt = datetime(''now'', ''localtime''), ' +
-    'OpenCount = OpenCount + 1 WHERE Id = %d', [AProject.Id]));
+    'UPDATE Projects SET LastOpenedAt = ''%s'', ' +
+    'OpenCount = OpenCount + 1 WHERE Id = %d', [NowStr, AProject.Id]));
   
   // 打开文件夹
   OpenInExplorer(AProject.ProjectPath);
@@ -392,8 +396,9 @@ begin
   
   // 更新访问时间
   TrayDB.Connection.ExecSQL(Format(
-    'UPDATE Projects SET LastOpenedAt = datetime(''now'', ''localtime''), ' +
-    'OpenCount = OpenCount + 1 WHERE Id = %d', [AProject.Id]));
+    'UPDATE Projects SET LastOpenedAt = ''%s'', ' +
+    'OpenCount = OpenCount + 1 WHERE Id = %d', 
+    [FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now), AProject.Id]));
 end;
 
 procedure TProjectsFrame.OpenInTerminal(const APath: string);

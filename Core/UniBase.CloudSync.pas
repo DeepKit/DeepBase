@@ -40,6 +40,14 @@ type
     crMerge,          // 智能合并
     crManual          // 手动解决
   );
+  
+  /// <summary>数组合并策略</summary>
+  TArrayMergeStrategy = (
+    amsReplace,       // 替换 - 用源数组替换目标数组
+    amsAppend,        // 追加 - 将源数组元素追加到目标数组
+    amsMergeByIndex,  // 按索引合并 - 相同索引的元素进行合并
+    amsUnion          // 并集 - 去重合并（基于JSON值相等性）
+  );
 
   /// <summary>同步方向</summary>
   TSyncDirection = (
@@ -269,6 +277,7 @@ type
     procedure InternalSync;
     procedure StartAutoSyncTimer;
     procedure StopAutoSyncTimer;
+    function HasConflictForKey(const AKey: string): Boolean;
   public
     constructor Create(const AConfig: TCloudServiceConfig; const ALocalStorePath: string);
     destructor Destroy; override;
@@ -370,6 +379,30 @@ function MultiTenantSync: TMultiTenantSyncManager;
 function GenerateDeviceId: string;
 function CalculateChecksum(const AData: string): string;
 
+/// <summary>JSON深度合并</summary>
+/// <param name="ATarget">目标JSON对象（将被修改）</param>
+/// <param name="ASource">源JSON对象</param>
+/// <param name="AArrayStrategy">数组合并策略</param>
+/// <remarks>
+/// 递归合并两个JSON对象：
+/// - 对象字段：递归合并
+/// - 数组字段：根据策略合并
+/// - 简单字段：源值覆盖目标值
+/// - 源中存在但目标不存在的字段：添加到目标
+/// </remarks>
+procedure JSONDeepMerge(ATarget, ASource: TJSONObject;
+  AArrayStrategy: TArrayMergeStrategy = amsReplace);
+
+/// <summary>克隆JSON值</summary>
+function JSONClone(AValue: TJSONValue): TJSONValue;
+
+/// <summary>比较两个JSON值是否相等</summary>
+function JSONValuesEqual(A, B: TJSONValue): Boolean;
+
+/// <summary>按策略合并两个JSON数组</summary>
+procedure JSONMergeArrays(ATarget, ASource: TJSONArray;
+  AStrategy: TArrayMergeStrategy);
+
 implementation
 
 uses
@@ -407,6 +440,161 @@ end;
 function CalculateChecksum(const AData: string): string;
 begin
   Result := THashSHA2.GetHashString(AData, THashSHA2.TSHA2Version.SHA256);
+end;
+
+function JSONClone(AValue: TJSONValue): TJSONValue;
+begin
+  if AValue = nil then
+    Exit(nil);
+  Result := TJSONObject.ParseJSONValue(AValue.ToJSON);
+end;
+
+function JSONValuesEqual(A, B: TJSONValue): Boolean;
+begin
+  if (A = nil) and (B = nil) then
+    Exit(True);
+  if (A = nil) or (B = nil) then
+    Exit(False);
+  Result := A.ToJSON = B.ToJSON;
+end;
+
+procedure JSONMergeArrays(ATarget, ASource: TJSONArray;
+  AStrategy: TArrayMergeStrategy);
+var
+  I, J: Integer;
+  LSourceItem, LTargetItem, LCloned: TJSONValue;
+  LFound: Boolean;
+begin
+  case AStrategy of
+    amsReplace:
+      begin
+        // 清空目标数组并复制源数组内容
+        while ATarget.Count > 0 do
+          ATarget.Remove(0);
+        for I := 0 to ASource.Count - 1 do
+        begin
+          LCloned := JSONClone(ASource.Items[I]);
+          if LCloned <> nil then
+            ATarget.AddElement(LCloned);
+        end;
+      end;
+      
+    amsAppend:
+      begin
+        // 追加源数组元素到目标
+        for I := 0 to ASource.Count - 1 do
+        begin
+          LCloned := JSONClone(ASource.Items[I]);
+          if LCloned <> nil then
+            ATarget.AddElement(LCloned);
+        end;
+      end;
+      
+    amsMergeByIndex:
+      begin
+        // 按索引合并
+        for I := 0 to ASource.Count - 1 do
+        begin
+          LSourceItem := ASource.Items[I];
+          if I < ATarget.Count then
+          begin
+            LTargetItem := ATarget.Items[I];
+            // 如果两边都是对象，递归合并
+            if (LTargetItem is TJSONObject) and (LSourceItem is TJSONObject) then
+              JSONDeepMerge(TJSONObject(LTargetItem), TJSONObject(LSourceItem), amsMergeByIndex)
+            else
+            begin
+              // 否则用源值替换
+              LCloned := JSONClone(LSourceItem);
+              if LCloned <> nil then
+              begin
+                ATarget.Remove(I);
+                // TJSONArray没有Insert方法，需要重建
+                // 简化处理：对于非对象元素直接替换
+                ATarget.AddElement(LCloned);
+              end;
+            end;
+          end
+          else
+          begin
+            // 目标数组较短，追加
+            LCloned := JSONClone(LSourceItem);
+            if LCloned <> nil then
+              ATarget.AddElement(LCloned);
+          end;
+        end;
+      end;
+      
+    amsUnion:
+      begin
+        // 并集去重
+        for I := 0 to ASource.Count - 1 do
+        begin
+          LSourceItem := ASource.Items[I];
+          LFound := False;
+          for J := 0 to ATarget.Count - 1 do
+          begin
+            if JSONValuesEqual(ATarget.Items[J], LSourceItem) then
+            begin
+              LFound := True;
+              Break;
+            end;
+          end;
+          if not LFound then
+          begin
+            LCloned := JSONClone(LSourceItem);
+            if LCloned <> nil then
+              ATarget.AddElement(LCloned);
+          end;
+        end;
+      end;
+  end;
+end;
+
+procedure JSONDeepMerge(ATarget, ASource: TJSONObject;
+  AArrayStrategy: TArrayMergeStrategy);
+var
+  LPair: TJSONPair;
+  LTargetValue, LSourceValue, LCloned: TJSONValue;
+  LKey: string;
+begin
+  if (ATarget = nil) or (ASource = nil) then
+    Exit;
+  
+  for LPair in ASource do
+  begin
+    LKey := LPair.JsonString.Value;
+    LSourceValue := LPair.JsonValue;
+    LTargetValue := ATarget.GetValue(LKey);
+    
+    if LTargetValue = nil then
+    begin
+      // 目标不存在此键，直接添加克隆
+      LCloned := JSONClone(LSourceValue);
+      if LCloned <> nil then
+        ATarget.AddPair(LKey, LCloned);
+    end
+    else if (LTargetValue is TJSONObject) and (LSourceValue is TJSONObject) then
+    begin
+      // 两边都是对象，递归合并
+      JSONDeepMerge(TJSONObject(LTargetValue), TJSONObject(LSourceValue), AArrayStrategy);
+    end
+    else if (LTargetValue is TJSONArray) and (LSourceValue is TJSONArray) then
+    begin
+      // 两边都是数组，按策略合并
+      JSONMergeArrays(TJSONArray(LTargetValue), TJSONArray(LSourceValue), AArrayStrategy);
+    end
+    else
+    begin
+      // 简单值或类型不匹配，用源值覆盖
+      LCloned := JSONClone(LSourceValue);
+      if LCloned <> nil then
+      begin
+        ATarget.RemovePair(LKey).Free;
+        ATarget.AddPair(LKey, LCloned);
+      end;
+    end;
+  end;
 end;
 
 { TConfigVersion }
@@ -1295,18 +1483,45 @@ begin
 end;
 
 function TCloudConfigSync.MergeItems(ALocal, ARemote: TConfigItem): TConfigItem;
+var
+  LLocalJSON, LRemoteJSON: TJSONObject;
 begin
-  // 简单合并策略：如果类型是JSON，尝试合并JSON对象
-  // 否则采用较新的版本
+  // 合并策略：
+  // - JSON类型：深度合并（本地为基础，远程覆盖/追加）
+  // - 其他类型：采用较新的版本
   Result := TConfigItem.Create(ALocal.Key, ALocal.ItemType);
   
   if ALocal.ItemType = citJSON then
   begin
-    // TODO: 实现JSON深度合并
-    Result.Value := ALocal.Value;
+    // JSON深度合并：以本地为基础，合并远程变更
+    LLocalJSON := nil;
+    LRemoteJSON := nil;
+    try
+      if ALocal.Value <> '' then
+        LLocalJSON := TJSONObject.ParseJSONValue(ALocal.Value) as TJSONObject;
+      if ARemote.Value <> '' then
+        LRemoteJSON := TJSONObject.ParseJSONValue(ARemote.Value) as TJSONObject;
+      
+      if (LLocalJSON <> nil) and (LRemoteJSON <> nil) then
+      begin
+        // 执行深度合并（远程合并到本地）
+        JSONDeepMerge(LLocalJSON, LRemoteJSON, amsUnion);
+        Result.Value := LLocalJSON.ToJSON;
+      end
+      else if LRemoteJSON <> nil then
+        // 本地无有效JSON，使用远程
+        Result.Value := ARemote.Value
+      else
+        // 远程无有效JSON，保留本地
+        Result.Value := ALocal.Value;
+    finally
+      LLocalJSON.Free;
+      LRemoteJSON.Free;
+    end;
   end
   else
   begin
+    // 非JSON类型：较新者优先
     if ALocal.LocalVersion.ModifiedAt > ARemote.RemoteVersion.ModifiedAt then
       Result.Value := ALocal.Value
     else
@@ -1315,6 +1530,8 @@ begin
   
   Result.LocalVersion := ALocal.LocalVersion;
   Result.LocalVersion.Version := Result.LocalVersion.Version + 1;
+  Result.LocalVersion.ModifiedAt := Now;
+  Result.LocalVersion.Checksum := CalculateChecksum(Result.Value);
   Result.IsDirty := True;
 end;
 

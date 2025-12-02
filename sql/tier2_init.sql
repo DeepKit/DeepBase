@@ -1,6 +1,6 @@
 -- ============================================================================
 -- UniBase Tier 2 Schema 初始化脚本
--- 版本: 1.0
+-- 版本: 0.3
 -- 说明: 创建扩展功能表结构：LLM, Exception, Animation, Test
 -- 依赖: tier0_init.sql, tier1_init.sql 必须先执行
 -- ============================================================================
@@ -278,8 +278,8 @@ INSERT OR IGNORE INTO LLMPromptTemplates (Name, Category, Description, SystemPro
 -- 7. 更新 Schema 版本
 -- ----------------------------------------------------------------------------
 
-UPDATE SchemaInfo SET Value = '2.0' WHERE Key = 'SchemaVersion';
-UPDATE SchemaInfo SET Value = datetime('now') WHERE Key = 'LastUpgrade';
+UPDATE SchemaInfo SET Value = '0.3' WHERE Key = 'SchemaVersion';
+UPDATE SchemaInfo SET Value = CURRENT_TIMESTAMP WHERE Key = 'LastUpgrade';
 
 -- ============================================================================
 -- 完成提示

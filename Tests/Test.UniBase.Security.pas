@@ -1,7 +1,11 @@
 { ============================================================================
-  Test.UniBase.Security - Security Module Tests
+  Test.UniBase.Security - Cross-Platform Security Module Tests
   
-  Tests DPAPI encryption and secret management functionality.
+  Tests:
+  - Windows: DPAPI encryption
+  - macOS/Linux: OpenSSL AES-256-GCM (UBS2 format)
+  - Secret management (all platforms)
+  - Tamper detection
   ============================================================================ }
 
 unit Test.UniBase.Security;
@@ -11,8 +15,13 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
+  System.NetEncoding,
   UniBase.Manager,
-  UniBase.Security;
+  UniBase.Security
+  {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  , UniBase.Crypto.OpenSSL
+  {$ENDIF}
+  ;
 
 type
   [TestFixture]
@@ -67,7 +76,39 @@ type
     // Global Function Tests
     [Test]
     procedure Test_GlobalLoadSaveSecret;
+    
+    // Tamper Detection Tests
+    [Test]
+    procedure Test_TamperDetection_ModifiedByte;
+    [Test]
+    procedure Test_TamperDetection_TruncatedData;
+    [Test]
+    procedure Test_TamperDetection_InvalidHeader;
+    
+    // Encryption Diversity Test
+    [Test]
+    procedure Test_DifferentEncryptions_DifferentOutput;
   end;
+
+{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  /// <summary>
+  /// Tests specific to OpenSSL backend (macOS/Linux only)
+  /// </summary>
+  [TestFixture]
+  TTestOpenSSLBackend = class
+  public
+    [Test]
+    procedure Test_OpenSSL_LoadAndVersion;
+    [Test]
+    procedure Test_RandomBytes_LengthAndEntropy;
+    [Test]
+    procedure Test_PBKDF2_Deterministic;
+    [Test]
+    procedure Test_AES256GCM_Roundtrip;
+    [Test]
+    procedure Test_AES256GCM_TagMismatch;
+  end;
+{$ENDIF}
 
 implementation
 
@@ -284,7 +325,218 @@ begin
   Assert.AreEqual('global_value', Loaded);
 end;
 
+// ============================================================================
+// Tamper Detection Tests
+// ============================================================================
+
+procedure TTestUniBaseSecurity.Test_TamperDetection_ModifiedByte;
+var
+  Original: string;
+  Encrypted: TBytes;
+  TamperPos: Integer;
+begin
+  Original := 'Secret data for tamper test';
+  Encrypted := ProtectStringDpapi(Original);
+  
+  // Tamper with a byte in the middle
+  TamperPos := Length(Encrypted) div 2;
+  Encrypted[TamperPos] := Encrypted[TamperPos] xor $FF;
+  
+  Assert.WillRaise(
+    procedure
+    begin
+      UnprotectStringDpapi(Encrypted);
+    end,
+    Exception,
+    'Tampered data should raise exception'
+  );
+end;
+
+procedure TTestUniBaseSecurity.Test_TamperDetection_TruncatedData;
+var
+  Original: string;
+  Encrypted, Truncated: TBytes;
+begin
+  Original := 'Secret data';
+  Encrypted := ProtectStringDpapi(Original);
+  
+  // Truncate to half length
+  SetLength(Truncated, Length(Encrypted) div 2);
+  Move(Encrypted[0], Truncated[0], Length(Truncated));
+  
+  Assert.WillRaise(
+    procedure
+    begin
+      UnprotectStringDpapi(Truncated);
+    end,
+    Exception,
+    'Truncated data should raise exception'
+  );
+end;
+
+procedure TTestUniBaseSecurity.Test_TamperDetection_InvalidHeader;
+var
+  BadData: TBytes;
+begin
+  // Create data with invalid header
+  SetLength(BadData, 100);
+  FillChar(BadData[0], Length(BadData), 0);
+  BadData[0] := Ord('X');
+  BadData[1] := Ord('Y');
+  BadData[2] := Ord('Z');
+  BadData[3] := Ord('!');
+  
+  Assert.WillRaise(
+    procedure
+    begin
+      UnprotectStringDpapi(BadData);
+    end,
+    Exception,
+    'Invalid header should raise exception'
+  );
+end;
+
+procedure TTestUniBaseSecurity.Test_DifferentEncryptions_DifferentOutput;
+var
+  Original: string;
+  Encrypted1, Encrypted2: TBytes;
+  Base64_1, Base64_2: string;
+begin
+  Original := 'Same input text';
+  
+  Encrypted1 := ProtectStringDpapi(Original);
+  Encrypted2 := ProtectStringDpapi(Original);
+  
+  Base64_1 := TNetEncoding.Base64.EncodeBytesToString(Encrypted1);
+  Base64_2 := TNetEncoding.Base64.EncodeBytesToString(Encrypted2);
+  
+  // Both should decrypt to same value regardless of ciphertext difference
+  Assert.AreEqual(Original, UnprotectStringDpapi(Encrypted1));
+  Assert.AreEqual(Original, UnprotectStringDpapi(Encrypted2));
+  
+  {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  // On macOS/Linux with random salt/IV, output should differ
+  Assert.AreNotEqual(Base64_1, Base64_2, 
+    'Different encryptions should produce different ciphertext (random IV/salt)');
+  {$ENDIF}
+end;
+
+{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+// ============================================================================
+// OpenSSL Backend Tests (macOS/Linux only)
+// ============================================================================
+
+procedure TTestOpenSSLBackend.Test_OpenSSL_LoadAndVersion;
+var
+  Ver: string;
+begin
+  OpenSSL_Init;
+  Assert.IsTrue(OpenSSL_IsLoaded, 'OpenSSL should be loaded after Init');
+  
+  Ver := OpenSSL_Version;
+  Assert.IsNotEmpty(Ver, 'OpenSSL version should not be empty');
+end;
+
+procedure TTestOpenSSLBackend.Test_RandomBytes_LengthAndEntropy;
+var
+  Bytes: TBytes;
+  AllZeros: Boolean;
+  I: Integer;
+begin
+  OpenSSL_Init;
+  
+  // Test various lengths
+  Bytes := OpenSSL_RandomBytes(32);
+  Assert.AreEqual(32, Length(Bytes), 'Should return requested length');
+  
+  Bytes := OpenSSL_RandomBytes(1024);
+  Assert.AreEqual(1024, Length(Bytes));
+  
+  // Check entropy (not all zeros)
+  Bytes := OpenSSL_RandomBytes(32);
+  AllZeros := True;
+  for I := 0 to Length(Bytes) - 1 do
+    if Bytes[I] <> 0 then
+    begin
+      AllZeros := False;
+      Break;
+    end;
+  Assert.IsFalse(AllZeros, 'Random bytes should not all be zeros');
+end;
+
+procedure TTestOpenSSLBackend.Test_PBKDF2_Deterministic;
+var
+  Password, Salt, Key1, Key2: TBytes;
+begin
+  OpenSSL_Init;
+  
+  Password := TEncoding.UTF8.GetBytes('password123');
+  Salt := TEncoding.UTF8.GetBytes('fixed_salt_value');
+  
+  Key1 := OpenSSL_PBKDF2_SHA256(Password, Salt, 1000, 32);
+  Key2 := OpenSSL_PBKDF2_SHA256(Password, Salt, 1000, 32);
+  
+  Assert.AreEqual(32, Length(Key1));
+  Assert.AreEqual(32, Length(Key2));
+  
+  // Same inputs should produce same key
+  Assert.IsTrue(CompareMem(@Key1[0], @Key2[0], 32), 
+    'PBKDF2 should be deterministic with same inputs');
+end;
+
+procedure TTestOpenSSLBackend.Test_AES256GCM_Roundtrip;
+var
+  Key, IV, Plaintext, Ciphertext, Tag, Decrypted: TBytes;
+begin
+  OpenSSL_Init;
+  
+  Key := OpenSSL_RandomBytes(32);
+  IV := OpenSSL_RandomBytes(12);
+  Plaintext := TEncoding.UTF8.GetBytes('Hello AES-256-GCM encryption test!');
+  
+  Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
+  Assert.IsTrue(Length(Ciphertext) > 0, 'Ciphertext should not be empty');
+  Assert.AreEqual(16, Length(Tag), 'Tag should be 16 bytes');
+  
+  Decrypted := OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, Tag);
+  Assert.AreEqual(
+    TEncoding.UTF8.GetString(Plaintext),
+    TEncoding.UTF8.GetString(Decrypted),
+    'Decrypted should match plaintext'
+  );
+end;
+
+procedure TTestOpenSSLBackend.Test_AES256GCM_TagMismatch;
+var
+  Key, IV, Plaintext, Ciphertext, Tag, BadTag: TBytes;
+begin
+  OpenSSL_Init;
+  
+  Key := OpenSSL_RandomBytes(32);
+  IV := OpenSSL_RandomBytes(12);
+  Plaintext := TEncoding.UTF8.GetBytes('Secret message');
+  
+  Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
+  
+  // Create bad tag
+  BadTag := Copy(Tag);
+  BadTag[0] := BadTag[0] xor $FF;
+  
+  Assert.WillRaise(
+    procedure
+    begin
+      OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, BadTag);
+    end,
+    EOpenSSLError,
+    'Bad tag should raise authentication error'
+  );
+end;
+{$ENDIF}
+
 initialization
   TDUnitX.RegisterTestFixture(TTestUniBaseSecurity);
+  {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  TDUnitX.RegisterTestFixture(TTestOpenSSLBackend);
+  {$ENDIF}
 
 end.

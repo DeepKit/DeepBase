@@ -1,0 +1,121 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font-family: sans-serif; font-size: 20px; font-weight: bold; }
+    .subtitle { font-family: sans-serif; font-size: 14px; font-weight: bold; }
+    .label { font-family: sans-serif; font-size: 12px; }
+    .mono { font-family: monospace; font-size: 11px; }
+    .box { fill: #f9f9fb; stroke: #c5c5d6; stroke-width: 1; }
+    .panel { fill: #ffffff; stroke: #b0b0c5; stroke-width: 1.2; }
+    .btn { fill: #e0e5ff; stroke: #5a6ad6; stroke-width: 1; rx: 4; ry: 4; }
+    .status { fill: #f0f1f6; stroke: #c0c0cf; stroke-width: 1; }
+  </style>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f3f4f8"/>
+  <text x="20" y="30" class="title">LLM 提示词调试窗口</text>
+  <text x="20" y="52" class="label">左侧 4 级分类树 · 中部提示词与变量 · 右侧 LLM+Model 选择与运行输出。</text>
+
+  <!-- 左侧：4 级分类树 -->
+  <rect x="20" y="70" width="260" height="610" class="panel"/>
+  <text x="30" y="90" class="subtitle">提示词树（项目 / 模块 / 会话 / 版本+提示词）</text>
+
+  <text x="30" y="116" class="label">过滤：</text>
+  <rect x="80" y="103" width="190" height="22" class="box"/>
+  <text x="85" y="118" class="label">按名称 / 编码 / 分类搜索...</text>
+
+  <rect x="30" y="135" width="240" height="500" class="box"/>
+
+  <!-- 4 级结构 + 内部编码显示示意 -->
+  <text x="40" y="155" class="label">▼ 项目：UniBaseRun</text>
+  <text x="55" y="175" class="label">▼ 模块：ConfigEditor</text>
+  <text x="70" y="195" class="label">▼ 会话：错误修复</text>
+  <text x="85" y="215" class="label">▼ 版本：v2</text>
+  <text x="100" y="235" class="label">• [01-01-001] 根据错误日志修复配置错误</text>
+
+  <text x="55" y="265" class="label">▼ 模块：SQLConsole</text>
+  <text x="70" y="285" class="label">▼ 会话：SQL 生成</text>
+  <text x="85" y="305" class="label">▼ 版本：v1</text>
+  <text x="100" y="325" class="label">• [02-01-003] 自然语言生成订单列表 SQL</text>
+
+  <rect x="30" y="645" width="70" height="28" class="btn"/>
+  <text x="43" y="664" class="label">新建</text>
+  <rect x="115" y="645" width="70" height="28" class="btn"/>
+  <text x="128" y="664" class="label">复制</text>
+  <rect x="200" y="645" width="70" height="28" class="btn"/>
+  <text x="213" y="664" class="label">删除</text>
+
+  <!-- 中部：提示词属性 + System/User + 变量 -->
+  <rect x="300" y="70" width="620" height="430" class="panel"/>
+
+  <!-- 顶部路径显示：项目 / 模块 / 会话 / 提示词名 | 编号 -->
+  <text x="310" y="92" class="subtitle">UniBaseRun / ConfigEditor / 错误修复 / 根据错误日志修复配置错误 | [01-01-001]</text>
+
+  <text x="310" y="118" class="label">分类：</text>
+  <rect x="350" y="105" width="180" height="22" class="box"/>
+  <text x="355" y="120" class="label">Bugfix</text>
+
+  <!-- System Prompt -->
+  <text x="310" y="148" class="subtitle">System Prompt</text>
+  <rect x="310" y="158" width="600" height="90" class="box"/>
+  <text x="320" y="176" class="mono">你是一个熟悉 UniBase 架构的 Delphi 专家，请遵守现有模块和 DoQry 规则，只给出最小修改建议...</text>
+
+  <!-- User Prompt -->
+  <text x="310" y="265" class="subtitle">User Prompt 模板</text>
+  <rect x="310" y="275" width="600" height="90" class="box"/>
+  <text x="320" y="293" class="mono">错误日志：{{Error}}
+相关代码：{{Code}}
+
+请分析问题并按约定格式输出修复建议与测试用例。</text>
+
+  <!-- 变量区：Name / Type / Value （TValueListEditor 或自定义网格） -->
+  <text x="310" y="385" class="subtitle">变量（Name / Type / Value）</text>
+  <rect x="310" y="395" width="600" height="95" class="box"/>
+
+  <text x="320" y="413" class="label">Name</text>
+  <text x="470" y="413" class="label">Type</text>
+  <text x="650" y="413" class="label">Value</text>
+
+  <text x="320" y="433" class="mono">Code</text>
+  <text x="470" y="433" class="mono">text-multiline</text>
+  <text x="650" y="433" class="mono">(最近编辑的源码片段...)</text>
+
+  <text x="320" y="453" class="mono">Error</text>
+  <text x="470" y="453" class="mono">text</text>
+  <text x="650" y="453" class="mono">EConfigDBCorrupted: ...</text>
+
+  <text x="320" y="473" class="mono">Language</text>
+  <text x="470" y="473" class="mono">enum[zh-CN,en-US]</text>
+  <text x="650" y="473" class="mono">zh-CN</text>
+
+  <!-- 右侧：LLM + Model 选择 & 运行输出 -->
+  <rect x="940" y="70" width="320" height="430" class="panel"/>
+  <text x="950" y="90" class="subtitle">运行配置</text>
+
+  <text x="950" y="118" class="label">LLM + Model：</text>
+  <rect x="1035" y="105" width="210" height="22" class="box"/>
+  <text x="1040" y="120" class="label">LLM01-GPT4O-MINI (生产)</text>
+
+  <text x="950" y="148" class="label">提示词版本：</text>
+  <rect x="1015" y="135" width="100" height="22" class="box"/>
+  <text x="1020" y="150" class="label">v2 (当前)</text>
+
+  <rect x="950" y="170" width="130" height="30" class="btn"/>
+  <text x="970" y="190" class="label">▶ 运行当前版本</text>
+
+  <text x="950" y="210" class="label">合成后的 Prompt 预览：</text>
+  <rect x="950" y="222" width="300" height="90" class="box"/>
+  <text x="960" y="238" class="mono">[System] ...
+[User] 错误日志: ...  相关代码: ...
+变量 JSON: {"Code": "...", "Error": "..."}</text>
+
+  <text x="950" y="328" class="label">LLM 输出：</text>
+  <rect x="950" y="340" width="300" height="140" class="box"/>
+  <text x="960" y="356" class="mono">1. 问题根因：...
+2. 建议修改：...
+3. 建议增加的测试：...
+[可点击跳转到版本对比窗口]</text>
+
+  <!-- 底部状态栏 -->
+  <rect x="0" y="680" width="1280" height="40" class="status"/>
+  <text x="20" y="705" class="label">ConfigDB: UniBaseConfig.db  |  DataDB: UniBaseData.db</text>
+  <text x="520" y="705" class="label">当前 LLM: LLM01-GPT4O-MINI · Tokens: 输入 512 / 输出 256 · 费用 ~$0.0012 · 842 ms</text>
+</svg>

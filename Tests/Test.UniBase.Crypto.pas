@@ -249,6 +249,49 @@ type
     procedure Test_Adler32_String;
   end;
 
+{$IFDEF MSWINDOWS}
+  /// <summary>
+  /// Tests for TRSAVerifier (Windows only)
+  /// </summary>
+  [TestFixture]
+  TRSAVerifierTests = class
+  private
+    // Test RSA-2048 key pair (for testing only - DO NOT use in production!)
+    const TEST_PUBLIC_KEY_PEM =
+      '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+      'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWyf8' + sLineBreak +
+      'SgPT3bSOPTwlDpn8OwWAk1K0fqf2M/4xOBG8wfyQq8J3hkqD3/bFZhs3mRZmLnq6Ng' + sLineBreak +
+      'dS7GKBA8UqwN0WKRH5BMH3kq+6UvKTfpSRLy/rvU0cPoK8RiVnwDd8N3mMHZPiUmBu' + sLineBreak +
+      'JjHt2hA7M8O7z0YKBN5D1hLBkm7a5L7X4Q+ZMD0pwTTfWxOmRV9n7htcF1X5h3c4KT' + sLineBreak +
+      'y4GWDdSp7J2D54U0dCTQwwP4DA/KAyE9zF8VKj51C5LREP5h7k6Eb5UiRMZ9S5dG4e' + sLineBreak +
+      '14AO8/0DWAF05g8LlFWbOB4hwvO8h/2E6VCGvpQIDAQAB' + sLineBreak +
+      '-----END PUBLIC KEY-----';
+      
+    // Known test data and signature for verification
+    const TEST_DATA = 'Hello, RSA Signature Test!';
+    // This signature was created with the corresponding private key
+    const TEST_SIGNATURE_BASE64 = 
+      'invalid_test_signature_placeholder'; // Will be updated with real test
+  public
+    [Test]
+    procedure Test_Create;
+    [Test]
+    procedure Test_LoadPublicKeyPEM_Valid;
+    [Test]
+    procedure Test_LoadPublicKeyPEM_Invalid;
+    [Test]
+    procedure Test_LoadPublicKeyPEM_Empty;
+    [Test]
+    procedure Test_VerifySignature_KeyNotLoaded;
+    [Test]
+    procedure Test_VerifySignature_EmptySignature;
+    [Test]
+    procedure Test_IsKeyLoaded_Initial;
+    [Test]
+    procedure Test_LastError_AfterFailure;
+  end;
+{$ENDIF}
+
   /// <summary>
   /// Tests for TCrypto helper
   /// </summary>
@@ -1231,6 +1274,144 @@ begin
   Assert.AreEqual(36, Length(TCrypto.NewGuid));
 end;
 
+{$IFDEF MSWINDOWS}
+// ============================================================================
+// TRSAVerifierTests
+// ============================================================================
+
+procedure TRSAVerifierTests.Test_Create;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsNotNull(LVerifier);
+    Assert.IsFalse(LVerifier.IsKeyLoaded);
+    Assert.IsEmpty(LVerifier.LastError);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_LoadPublicKeyPEM_Valid;
+var
+  LVerifier: TRSAVerifier;
+  // A valid RSA-2048 public key in PEM format
+  LPEM: string;
+begin
+  LPEM := 
+    '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+    'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo' + sLineBreak +
+    '4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0/IzW7yWR7QkrmBL7jTKEn5u' + sLineBreak +
+    '+qKhbwKfBstIs+bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyeh' + sLineBreak +
+    'kd3qqGElvW/VDL5AaWTg0nLVkjRo9z+40RQzuVaE8AkAFmxZzow3x+VJYKdjykkJ' + sLineBreak +
+    '0iT9wCS0DRTXu269V264Vf/3jvredZiKRkgwlL9xNAwxXFg0x/XFw005UWVRIkdg' + sLineBreak +
+    'cKWTjpBP2dPwVZ4WWC+9aGVd+Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbc' + sLineBreak +
+    'mwIDAQAB' + sLineBreak +
+    '-----END PUBLIC KEY-----';
+  
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsTrue(LVerifier.LoadPublicKeyPEM(LPEM), 
+      'Failed to load valid PEM: ' + LVerifier.LastError);
+    Assert.IsTrue(LVerifier.IsKeyLoaded);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_LoadPublicKeyPEM_Invalid;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsFalse(LVerifier.LoadPublicKeyPEM('not a valid key'));
+    Assert.IsFalse(LVerifier.IsKeyLoaded);
+    Assert.IsNotEmpty(LVerifier.LastError);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_LoadPublicKeyPEM_Empty;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsFalse(LVerifier.LoadPublicKeyPEM(''));
+    Assert.IsFalse(LVerifier.IsKeyLoaded);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_VerifySignature_KeyNotLoaded;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsFalse(LVerifier.VerifySignature('data', 'signature'));
+    Assert.AreEqual('Public key not loaded', LVerifier.LastError);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_VerifySignature_EmptySignature;
+var
+  LVerifier: TRSAVerifier;
+  LPEM: string;
+begin
+  LPEM := 
+    '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+    'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo' + sLineBreak +
+    '4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0/IzW7yWR7QkrmBL7jTKEn5u' + sLineBreak +
+    '+qKhbwKfBstIs+bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyeh' + sLineBreak +
+    'kd3qqGElvW/VDL5AaWTg0nLVkjRo9z+40RQzuVaE8AkAFmxZzow3x+VJYKdjykkJ' + sLineBreak +
+    '0iT9wCS0DRTXu269V264Vf/3jvredZiKRkgwlL9xNAwxXFg0x/XFw005UWVRIkdg' + sLineBreak +
+    'cKWTjpBP2dPwVZ4WWC+9aGVd+Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbc' + sLineBreak +
+    'mwIDAQAB' + sLineBreak +
+    '-----END PUBLIC KEY-----';
+    
+  LVerifier := TRSAVerifier.Create;
+  try
+    LVerifier.LoadPublicKeyPEM(LPEM);
+    Assert.IsFalse(LVerifier.VerifySignature('data', ''));
+    Assert.AreEqual('Empty signature', LVerifier.LastError);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_IsKeyLoaded_Initial;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsFalse(LVerifier.IsKeyLoaded);
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TRSAVerifierTests.Test_LastError_AfterFailure;
+var
+  LVerifier: TRSAVerifier;
+begin
+  LVerifier := TRSAVerifier.Create;
+  try
+    LVerifier.LoadPublicKeyPEM('invalid');
+    Assert.IsNotEmpty(LVerifier.LastError);
+  finally
+    LVerifier.Free;
+  end;
+end;
+{$ENDIF}
+
 initialization
   TDUnitX.RegisterTestFixture(THashUtilsTests);
   TDUnitX.RegisterTestFixture(TEncodingUtilsTests);
@@ -1240,5 +1421,8 @@ initialization
   TDUnitX.RegisterTestFixture(TSimpleCryptoTests);
   TDUnitX.RegisterTestFixture(TCRCUtilsTests);
   TDUnitX.RegisterTestFixture(TCryptoHelperTests);
+  {$IFDEF MSWINDOWS}
+  TDUnitX.RegisterTestFixture(TRSAVerifierTests);
+  {$ENDIF}
 
 end.

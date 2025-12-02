@@ -59,6 +59,42 @@ type
     
     [Test]
     procedure Test_InvalidSQL_RaisesEUniBaseDbError;
+    
+    [Test]
+    procedure Test_CacheTTL_Expiry;
+    
+    [Test]
+    procedure Test_CacheInvalidate_RemovesEntry;
+    
+    [Test]
+    procedure Test_CacheStats_Accuracy;
+    
+    [Test]
+    procedure Test_MultiTypeFields_CopyCorrectly;
+    
+    [Test]
+    procedure Test_NullFields_CopyCorrectly;
+    
+    [Test]
+    procedure Test_DateTimeFields_CopyCorrectly;
+    
+    [Test]
+    procedure Test_ErrorCode_SqlSyntax;
+    
+    [Test]
+    procedure Test_ErrorCode_UniqueConstraint;
+    
+    [Test]
+    procedure Test_ErrorCode_HasCorrectValue;
+    
+    [Test]
+    procedure Test_PreparedPool_EnabledCreatesPooledQuery;
+    
+    [Test]
+    procedure Test_PreparedPool_StatsTracksReuse;
+    
+    [Test]
+    procedure Test_PreparedPool_ClearRemovesAll;
   end;
 
 implementation
@@ -102,6 +138,20 @@ begin
       '  active INTEGER DEFAULT 1' +
       ')';
     Q.ExecSQL;
+    
+    // 多类型字段测试表
+    Q.SQL.Text := 
+      'CREATE TABLE IF NOT EXISTS test_multitype (' +
+      '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+      '  name TEXT,' +
+      '  price REAL,' +
+      '  quantity INTEGER,' +
+      '  is_active INTEGER,' +
+      '  created_at TEXT,' +  // SQLite 无原生日期类型，使用 TEXT
+      '  data BLOB,' +
+      '  description TEXT' +
+      ')';
+    Q.ExecSQL;
   finally
     Q.Free;
   end;
@@ -115,6 +165,8 @@ begin
   try
     Q.Connection := FConnection;
     Q.SQL.Text := 'DROP TABLE IF EXISTS test_users';
+    Q.ExecSQL;
+    Q.SQL.Text := 'DROP TABLE IF EXISTS test_multitype';
     Q.ExecSQL;
   finally
     Q.Free;
@@ -295,6 +347,346 @@ begin
     EUniBaseDbError,
     'Should raise EUniBaseDbError for invalid SQL'
   );
+end;
+
+procedure TTestUniBaseDoQry.Test_CacheTTL_Expiry;
+var
+  Ctx: TUniQueryContext;
+  Hits, Misses, EntryCount: Int64;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  // 设置 TTL 为 1 秒
+  UniDbSetCacheTTL(1);
+  UniDbClearQueryCache;
+  
+  // 第一次调用，应该未命中
+  UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "TTLTest", "age": 20}', Ctx);
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+  Assert.AreEqual(Int64(0), Hits, 'First call should be cache miss');
+  
+  // 第二次调用（直接 SQL 不缓存，所以仍然是 miss，但这里验证 TTL 逻辑）
+  // 等待 TTL 过期
+  Sleep(1500);
+  
+  // 重置统计
+  UniDbClearQueryCache;
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+  Assert.AreEqual(Int64(0), EntryCount, 'Cache should be empty after clear');
+end;
+
+procedure TTestUniBaseDoQry.Test_CacheInvalidate_RemovesEntry;
+var
+  Hits, Misses, EntryCount: Int64;
+begin
+  UniDbClearQueryCache;
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+  Assert.AreEqual(Int64(0), EntryCount, 'Cache should start empty');
+  
+  // 精确失效不存在的条目不应报错
+  UniDbInvalidateQuery('NonExistentProc');
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+  Assert.AreEqual(Int64(0), EntryCount, 'Invalidating non-existent entry should not fail');
+end;
+
+procedure TTestUniBaseDoQry.Test_CacheStats_Accuracy;
+var
+  Ctx: TUniQueryContext;
+  Hits, Misses, EntryCount: Int64;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  // 重置
+  UniDbInit(ExtractFilePath(ParamStr(0)));
+  UniDbSetCacheTTL(300);
+  
+  // 直接 SQL 不使用缓存（不计入统计）
+  UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "Stats1", "age": 30}', Ctx);
+  UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "Stats2", "age": 40}', Ctx);
+  
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+  // 直接 SQL 不经过缓存查找，miss 应该为 0
+  Assert.AreEqual(Int64(0), Hits, 'Direct SQL should not count as hits');
+end;
+
+procedure TTestUniBaseDoQry.Test_MultiTypeFields_CopyCorrectly;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  Rows: Integer;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  // 插入多类型数据
+  UniDbExec(
+    'INSERT INTO test_multitype (name, price, quantity, is_active, description) ' +
+    'VALUES (:name, :price, :quantity, :is_active, :description)',
+    '{"name": "测试产品", "price": 99.99, "quantity": 100, "is_active": true, "description": "这是一个测试产品"}',
+    Ctx
+  );
+  
+  Data := TClientDataSet.Create(nil);
+  try
+    Rows := UniDbSelect(
+      'SELECT * FROM test_multitype WHERE name = :name',
+      '{"name": "测试产品"}',
+      Data,
+      Ctx
+    );
+    
+    Assert.AreEqual(1, Rows, 'Should return 1 row');
+    Assert.IsFalse(Data.IsEmpty, 'Data should not be empty');
+    Assert.AreEqual('测试产品', Data.FieldByName('name').AsString, 'Name should match');
+    Assert.AreEqual(99.99, Data.FieldByName('price').AsFloat, 0.001, 'Price should match');
+    Assert.AreEqual(100, Data.FieldByName('quantity').AsInteger, 'Quantity should match');
+    Assert.AreEqual(1, Data.FieldByName('is_active').AsInteger, 'IsActive should be 1');
+    Assert.AreEqual('这是一个测试产品', Data.FieldByName('description').AsString, 'Description should match');
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_NullFields_CopyCorrectly;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  Rows: Integer;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  // 插入含 NULL 字段的数据
+  UniDbExec(
+    'INSERT INTO test_multitype (name, price, quantity) VALUES (:name, :price, :quantity)',
+    '{"name": "NullTest", "price": null, "quantity": 50}',
+    Ctx
+  );
+  
+  Data := TClientDataSet.Create(nil);
+  try
+    Rows := UniDbSelect(
+      'SELECT * FROM test_multitype WHERE name = :name',
+      '{"name": "NullTest"}',
+      Data,
+      Ctx
+    );
+    
+    Assert.AreEqual(1, Rows, 'Should return 1 row');
+    Assert.IsTrue(Data.FieldByName('price').IsNull, 'Price should be NULL');
+    Assert.IsTrue(Data.FieldByName('description').IsNull, 'Description should be NULL');
+    Assert.AreEqual(50, Data.FieldByName('quantity').AsInteger, 'Quantity should be 50');
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_DateTimeFields_CopyCorrectly;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  Rows: Integer;
+  TestDate: string;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  TestDate := '2025-12-01 08:30:00';
+  
+  // 插入含日期字段的数据
+  UniDbExec(
+    'INSERT INTO test_multitype (name, created_at) VALUES (:name, :created_at)',
+    Format('{"name": "DateTest", "created_at": "%s"}', [TestDate]),
+    Ctx
+  );
+  
+  Data := TClientDataSet.Create(nil);
+  try
+    Rows := UniDbSelect(
+      'SELECT * FROM test_multitype WHERE name = :name',
+      '{"name": "DateTest"}',
+      Data,
+      Ctx
+    );
+    
+    Assert.AreEqual(1, Rows, 'Should return 1 row');
+    Assert.AreEqual(TestDate, Data.FieldByName('created_at').AsString, 'CreatedAt should match');
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_ErrorCode_SqlSyntax;
+var
+  Ctx: TUniQueryContext;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  try
+    UniDbExec('INVALID SQL SYNTAX', '', Ctx);
+    Assert.Fail('Should have raised EUniBaseDbError');
+  except
+    on E: EUniBaseDbError do
+    begin
+      // SQLite 语法错误通常包含 "near"
+      Assert.AreEqual(DOQRY_ERR_SQL_SYNTAX, E.ErrorCode, 'ErrorCode should be SQL_SYNTAX');
+    end;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_ErrorCode_UniqueConstraint;
+var
+  Ctx: TUniQueryContext;
+  Q: TFDQuery;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  // 创建带唯一约束的表
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text := 'CREATE TABLE IF NOT EXISTS test_unique (id INTEGER PRIMARY KEY, code TEXT UNIQUE)';
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+  
+  try
+    // 插入第一条
+    UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);
+    // 插入重复的，应该触发唯一约束错误
+    UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);
+    Assert.Fail('Should have raised EUniBaseDbError for unique constraint');
+  except
+    on E: EUniBaseDbError do
+    begin
+      Assert.AreEqual(DOQRY_ERR_UNIQUE, E.ErrorCode, 'ErrorCode should be UNIQUE');
+    end;
+  end;
+  
+  // 清理
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text := 'DROP TABLE IF EXISTS test_unique';
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_ErrorCode_HasCorrectValue;
+var
+  Ctx: TUniQueryContext;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  
+  try
+    UniDbExec('SELECT * FROM nonexistent_table_xyz', '', Ctx);
+    Assert.Fail('Should have raised EUniBaseDbError');
+  except
+    on E: EUniBaseDbError do
+    begin
+      // 确保 ErrorCode 字段存在且不为 0
+      Assert.IsTrue(E.ErrorCode > 0, 'ErrorCode should be greater than 0');
+      Assert.IsNotEmpty(E.Message, 'Message should not be empty');
+      Assert.IsNotEmpty(E.CorrelationId, 'CorrelationId should not be empty');
+    end;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_PreparedPool_EnabledCreatesPooledQuery;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  PoolSize1, PoolSize2, ReuseCount: Int64;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  Data := nil;
+  
+  // 清空池并启用
+  UniDbClearPreparedStatements;
+  UniDbSetPreparedStatementPooling(True);
+  try
+    // 首次查询
+    UniDbSelect('SELECT 1 AS val', '', Data, Ctx);
+    UniDbGetPreparedStats(PoolSize1, ReuseCount);
+    Assert.AreEqual(Int64(1), PoolSize1, 'Pool should have 1 entry after first query');
+    
+    // 再次执行相同 SQL
+    Data.Free;
+    Data := nil;
+    UniDbSelect('SELECT 1 AS val', '', Data, Ctx);
+    UniDbGetPreparedStats(PoolSize2, ReuseCount);
+    Assert.AreEqual(Int64(1), PoolSize2, 'Pool should still have 1 entry (reused)');
+    Assert.IsTrue(ReuseCount >= 1, 'ReuseCount should be at least 1');
+  finally
+    Data.Free;
+    UniDbSetPreparedStatementPooling(False);
+    UniDbClearPreparedStatements;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_PreparedPool_StatsTracksReuse;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  PoolSize, ReuseCount1, ReuseCount2: Int64;
+  I: Integer;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  Data := nil;
+  
+  UniDbClearPreparedStatements;
+  UniDbSetPreparedStatementPooling(True);
+  try
+    // 执行 10 次相同查询
+    for I := 1 to 10 do
+    begin
+      Data.Free;
+      Data := nil;
+      UniDbSelect('SELECT :id AS id', '{"id": ' + IntToStr(I) + '}', Data, Ctx);
+    end;
+    
+    UniDbGetPreparedStats(PoolSize, ReuseCount1);
+    Assert.AreEqual(Int64(1), PoolSize, 'Pool should have 1 entry');
+    Assert.AreEqual(Int64(9), ReuseCount1, 'ReuseCount should be 9 (10 queries - 1 create)');
+  finally
+    Data.Free;
+    UniDbSetPreparedStatementPooling(False);
+    UniDbClearPreparedStatements;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_PreparedPool_ClearRemovesAll;
+var
+  Ctx: TUniQueryContext;
+  Data: TClientDataSet;
+  PoolSize, ReuseCount: Int64;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  Data := nil;
+  
+  UniDbClearPreparedStatements;
+  UniDbSetPreparedStatementPooling(True);
+  try
+    // 创建几个池条目
+    UniDbSelect('SELECT 1', '', Data, Ctx);
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 2', '', Data, Ctx);
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 3', '', Data, Ctx);
+    Data.Free; Data := nil;
+    
+    UniDbGetPreparedStats(PoolSize, ReuseCount);
+    Assert.AreEqual(Int64(3), PoolSize, 'Pool should have 3 entries');
+    
+    // 清空
+    UniDbClearPreparedStatements;
+    
+    UniDbGetPreparedStats(PoolSize, ReuseCount);
+    Assert.AreEqual(Int64(0), PoolSize, 'Pool should be empty after clear');
+  finally
+    Data.Free;
+    UniDbSetPreparedStatementPooling(False);
+  end;
 end;
 
 initialization

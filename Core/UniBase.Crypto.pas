@@ -18,7 +18,109 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows
+  {$ENDIF};
+
+{$IFDEF MSWINDOWS}
+const
+  BCRYPT_DLL = 'bcrypt.dll';
+  BCRYPT_AES_ALGORITHM = 'AES';
+  BCRYPT_CHAIN_MODE_CBC = 'ChainingModeCBC';
+  BCRYPT_CHAINING_MODE = 'ChainingMode';
+  BCRYPT_OBJECT_LENGTH = 'ObjectLength';
+  BCRYPT_BLOCK_LENGTH = 'BlockLength';
+  
+type
+  BCRYPT_ALG_HANDLE = THandle;
+  BCRYPT_KEY_HANDLE = THandle;
+  NTSTATUS = LongInt;
+
+function BCryptOpenAlgorithmProvider(out phAlgorithm: BCRYPT_ALG_HANDLE;
+  pszAlgId: PWideChar; pszImplementation: PWideChar; dwFlags: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptCloseAlgorithmProvider(hAlgorithm: BCRYPT_ALG_HANDLE;
+  dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+  
+function BCryptGetProperty(hObject: THandle; pszProperty: PWideChar;
+  pbOutput: PByte; cbOutput: ULONG; out pcbResult: ULONG;
+  dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+  
+function BCryptSetProperty(hObject: THandle; pszProperty: PWideChar;
+  pbInput: PByte; cbInput: ULONG; dwFlags: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptGenerateSymmetricKey(hAlgorithm: BCRYPT_ALG_HANDLE;
+  out phKey: BCRYPT_KEY_HANDLE; pbKeyObject: PByte; cbKeyObject: ULONG;
+  pbSecret: PByte; cbSecret: ULONG; dwFlags: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptDestroyKey(hKey: BCRYPT_KEY_HANDLE): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptEncrypt(hKey: BCRYPT_KEY_HANDLE; pbInput: PByte; cbInput: ULONG;
+  pPaddingInfo: Pointer; pbIV: PByte; cbIV: ULONG; pbOutput: PByte;
+  cbOutput: ULONG; out pcbResult: ULONG; dwFlags: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptDecrypt(hKey: BCRYPT_KEY_HANDLE; pbInput: PByte; cbInput: ULONG;
+  pPaddingInfo: Pointer; pbIV: PByte; cbIV: ULONG; pbOutput: PByte;
+  cbOutput: ULONG; out pcbResult: ULONG; dwFlags: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+  
+function BCryptGenRandom(hAlgorithm: BCRYPT_ALG_HANDLE; pbBuffer: PByte;
+  cbBuffer: ULONG; dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+
+const
+  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
+  BCRYPT_BLOCK_PADDING = $00000001;
+  STATUS_SUCCESS = 0;
+  
+  // RSA algorithm identifiers
+  BCRYPT_RSA_ALGORITHM = 'RSA';
+  BCRYPT_SHA256_ALGORITHM = 'SHA256';
+  
+  // Padding schemes
+  BCRYPT_PAD_PKCS1 = $00000002;
+  
+  // Key blob types
+  BCRYPT_RSAPUBLIC_BLOB = 'RSAPUBLICBLOB';
+  
+  // RSAPUBKEY structure magic
+  BCRYPT_RSAPUBLIC_MAGIC = $31415352; // 'RSA1'
+
+type
+  // BCrypt RSA public key blob header
+  BCRYPT_RSAKEY_BLOB = record
+    Magic: ULONG;
+    BitLength: ULONG;
+    cbPublicExp: ULONG;
+    cbModulus: ULONG;
+    cbPrime1: ULONG;
+    cbPrime2: ULONG;
+  end;
+  PBCRYPT_RSAKEY_BLOB = ^BCRYPT_RSAKEY_BLOB;
+  
+  // PKCS1 padding info
+  BCRYPT_PKCS1_PADDING_INFO = record
+    pszAlgId: PWideChar;
+  end;
+  PBCRYPT_PKCS1_PADDING_INFO = ^BCRYPT_PKCS1_PADDING_INFO;
+
+function BCryptImportKeyPair(hAlgorithm: BCRYPT_ALG_HANDLE; hImportKey: BCRYPT_KEY_HANDLE;
+  pszBlobType: PWideChar; out phKey: BCRYPT_KEY_HANDLE; pbInput: PByte; cbInput: ULONG;
+  dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+  
+function BCryptVerifySignature(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
+  pbHash: PByte; cbHash: ULONG; pbSignature: PByte; cbSignature: ULONG;
+  dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+
+function BCryptHash(hAlgorithm: BCRYPT_ALG_HANDLE; pbSecret: PByte; cbSecret: ULONG;
+  pbInput: PByte; cbInput: ULONG; pbOutput: PByte; cbOutput: ULONG): NTSTATUS; stdcall;
+  external BCRYPT_DLL;
+{$ENDIF}
 
 type
   ECryptoException = class(Exception);
@@ -270,6 +372,46 @@ type
     class function Adler32(const AData: TBytes): Cardinal; overload; static;
     class function Adler32(const AData: string): Cardinal; overload; static;
   end;
+
+{$IFDEF MSWINDOWS}
+  /// <summary>
+  /// RSA signature verification using Windows CNG (BCrypt).
+  /// Supports RSA-SHA256 with PKCS#1 v1.5 padding.
+  /// </summary>
+  TRSAVerifier = class
+  private
+    FPublicKey: TBytes;       // Raw public key blob for BCrypt
+    FPublicKeyLoaded: Boolean;
+    FLastError: string;
+    
+    function ParsePEMPublicKey(const APEM: string): TBytes;
+    function ParseDERPublicKey(const ADER: TBytes): TBytes;
+    function BuildBCryptKeyBlob(const AModulus, AExponent: TBytes): TBytes;
+  public
+    constructor Create;
+    
+    /// <summary>Load public key from PEM string</summary>
+    function LoadPublicKeyPEM(const APEM: string): Boolean;
+    
+    /// <summary>Load public key from DER bytes</summary>
+    function LoadPublicKeyDER(const ADER: TBytes): Boolean;
+    
+    /// <summary>Load public key from file (PEM or DER)</summary>
+    function LoadPublicKeyFile(const AFileName: string): Boolean;
+    
+    /// <summary>Verify RSA-SHA256 signature</summary>
+    function VerifySignature(const AData, ASignature: TBytes): Boolean; overload;
+    
+    /// <summary>Verify RSA-SHA256 signature (Base64 encoded signature)</summary>
+    function VerifySignature(const AData: TBytes; const ASignatureBase64: string): Boolean; overload;
+    
+    /// <summary>Verify RSA-SHA256 signature (string data, Base64 signature)</summary>
+    function VerifySignature(const AData, ASignatureBase64: string): Boolean; overload;
+    
+    property IsKeyLoaded: Boolean read FPublicKeyLoaded;
+    property LastError: string read FLastError;
+  end;
+{$ENDIF}
 
   /// <summary>Static crypto helper</summary>
   TCrypto = class
@@ -640,12 +782,29 @@ end;
 { TRandomGenerator }
 
 class function TRandomGenerator.RandomBytes(ALength: Integer): TBytes;
+{$IFDEF MSWINDOWS}
+var
+  LStatus: NTSTATUS;
+{$ELSE}
 var
   I: Integer;
+{$ENDIF}
 begin
   SetLength(Result, ALength);
+  if ALength = 0 then
+    Exit;
+    
+  {$IFDEF MSWINDOWS}
+  // Use cryptographically secure random number generator
+  LStatus := BCryptGenRandom(0, @Result[0], ALength, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  if LStatus <> STATUS_SUCCESS then
+    raise ECryptoException.CreateFmt('BCryptGenRandom failed with status: %d', [LStatus]);
+  {$ELSE}
+  // Fallback for non-Windows platforms (NOT cryptographically secure)
+  // Consider using /dev/urandom on Linux/macOS
   for I := 0 to ALength - 1 do
     Result[I] := Random(256);
+  {$ENDIF}
 end;
 
 class function TRandomGenerator.RandomString(ALength: Integer): string;
@@ -986,33 +1145,180 @@ begin
 end;
 
 function TAESCrypto.Encrypt(const AData: TBytes): TBytes;
+{$IFDEF MSWINDOWS}
+var
+  LAlgHandle: BCRYPT_ALG_HANDLE;
+  LKeyHandle: BCRYPT_KEY_HANDLE;
+  LKeyObjectSize, LBlockLen, LResultSize: ULONG;
+  LKeyObject: TBytes;
+  LIVCopy: TBytes;
+  LPadded: TBytes;
+  LStatus: NTSTATUS;
+  LChainMode: WideString;
+begin
+  LAlgHandle := 0;
+  LKeyHandle := 0;
+  
+  try
+    // Open AES algorithm provider
+    LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [LStatus]);
+      
+    // Set CBC chaining mode
+    LChainMode := BCRYPT_CHAIN_MODE_CBC;
+    LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+      PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
+      
+    // Get key object size
+    LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+      @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+      
+    // Allocate key object
+    SetLength(LKeyObject, LKeyObjectSize);
+    
+    // Generate symmetric key
+    LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+      @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+      
+    // Pad data manually (PKCS7)
+    LPadded := PadData(AData);
+    
+    // Copy IV (BCrypt modifies it)
+    LIVCopy := Copy(FIV);
+    
+    // Get output size
+    LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
+      nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptEncrypt (size query) failed: %d', [LStatus]);
+      
+    // Allocate output buffer
+    SetLength(Result, LResultSize);
+    
+    // Reset IV copy
+    LIVCopy := Copy(FIV);
+    
+    // Perform encryption
+    LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
+      nil, @LIVCopy[0], Length(LIVCopy), @Result[0], LResultSize, LResultSize, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptEncrypt failed: %d', [LStatus]);
+      
+    SetLength(Result, LResultSize);
+  finally
+    if LKeyHandle <> 0 then
+      BCryptDestroyKey(LKeyHandle);
+    if LAlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(LAlgHandle, 0);
+  end;
+end;
+{$ELSE}
 var
   LPadded: TBytes;
   I, J: Integer;
   LBlock, LPrevBlock: array[0..15] of Byte;
 begin
-  // Simple XOR-based encryption for demonstration
-  // In production, use proper AES implementation or Windows CryptoAPI
+  // Fallback XOR-based encryption for non-Windows platforms
+  // WARNING: This is NOT secure - for demonstration only
   LPadded := PadData(AData);
   SetLength(Result, Length(LPadded));
-  
-  // Initialize with IV
   Move(FIV[0], LPrevBlock[0], 16);
-  
   I := 0;
   while I < Length(LPadded) do
   begin
-    // XOR with previous block (CBC mode simulation)
     for J := 0 to 15 do
       LBlock[J] := LPadded[I + J] xor LPrevBlock[J] xor FKey[J mod Length(FKey)];
-      
     Move(LBlock[0], Result[I], 16);
     Move(LBlock[0], LPrevBlock[0], 16);
     Inc(I, 16);
   end;
 end;
+{$ENDIF}
 
 function TAESCrypto.Decrypt(const AData: TBytes): TBytes;
+{$IFDEF MSWINDOWS}
+var
+  LAlgHandle: BCRYPT_ALG_HANDLE;
+  LKeyHandle: BCRYPT_KEY_HANDLE;
+  LKeyObjectSize, LBlockLen, LResultSize: ULONG;
+  LKeyObject: TBytes;
+  LIVCopy: TBytes;
+  LStatus: NTSTATUS;
+  LChainMode: WideString;
+  LDecrypted: TBytes;
+begin
+  if Length(AData) mod 16 <> 0 then
+    raise ECryptoException.Create('Invalid ciphertext length');
+    
+  LAlgHandle := 0;
+  LKeyHandle := 0;
+  
+  try
+    // Open AES algorithm provider
+    LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [LStatus]);
+      
+    // Set CBC chaining mode
+    LChainMode := BCRYPT_CHAIN_MODE_CBC;
+    LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+      PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
+      
+    // Get key object size
+    LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+      @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+      
+    // Allocate key object
+    SetLength(LKeyObject, LKeyObjectSize);
+    
+    // Generate symmetric key
+    LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+      @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+      
+    // Copy IV (BCrypt modifies it)
+    LIVCopy := Copy(FIV);
+    
+    // Get output size
+    LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
+      nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptDecrypt (size query) failed: %d', [LStatus]);
+      
+    // Allocate output buffer
+    SetLength(LDecrypted, LResultSize);
+    
+    // Reset IV copy
+    LIVCopy := Copy(FIV);
+    
+    // Perform decryption
+    LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
+      nil, @LIVCopy[0], Length(LIVCopy), @LDecrypted[0], LResultSize, LResultSize, 0);
+    if LStatus <> STATUS_SUCCESS then
+      raise ECryptoException.CreateFmt('BCryptDecrypt failed: %d', [LStatus]);
+      
+    SetLength(LDecrypted, LResultSize);
+    Result := UnpadData(LDecrypted);
+  finally
+    if LKeyHandle <> 0 then
+      BCryptDestroyKey(LKeyHandle);
+    if LAlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(LAlgHandle, 0);
+  end;
+end;
+{$ELSE}
 var
   I, J: Integer;
   LBlock, LPrevBlock, LCipherBlock: array[0..15] of Byte;
@@ -1020,28 +1326,23 @@ var
 begin
   if Length(AData) mod 16 <> 0 then
     raise ECryptoException.Create('Invalid ciphertext length');
-    
+  // Fallback XOR-based decryption for non-Windows platforms  
+  // WARNING: This is NOT secure - for demonstration only
   SetLength(LDecrypted, Length(AData));
-  
-  // Initialize with IV
   Move(FIV[0], LPrevBlock[0], 16);
-  
   I := 0;
   while I < Length(AData) do
   begin
     Move(AData[I], LCipherBlock[0], 16);
-    
-    // XOR to decrypt (CBC mode simulation)
     for J := 0 to 15 do
       LBlock[J] := LCipherBlock[J] xor LPrevBlock[J] xor FKey[J mod Length(FKey)];
-      
     Move(LBlock[0], LDecrypted[I], 16);
     Move(LCipherBlock[0], LPrevBlock[0], 16);
     Inc(I, 16);
   end;
-  
   Result := UnpadData(LDecrypted);
 end;
+{$ENDIF}
 
 function TAESCrypto.EncryptString(const AData: string): string;
 var
@@ -1262,6 +1563,378 @@ class function TCRCUtils.Adler32(const AData: string): Cardinal;
 begin
   Result := Adler32(TEncoding.UTF8.GetBytes(AData));
 end;
+
+{$IFDEF MSWINDOWS}
+{ TRSAVerifier }
+
+constructor TRSAVerifier.Create;
+begin
+  inherited Create;
+  FPublicKeyLoaded := False;
+  FLastError := '';
+end;
+
+function TRSAVerifier.ParsePEMPublicKey(const APEM: string): TBytes;
+var
+  LLines: TArray<string>;
+  LBase64: string;
+  LLine: string;
+  LInKey: Boolean;
+begin
+  Result := nil;
+  LBase64 := '';
+  LInKey := False;
+  
+  LLines := APEM.Split([#10, #13], TStringSplitOptions.ExcludeEmpty);
+  for LLine in LLines do
+  begin
+    if LLine.Contains('-----BEGIN') and LLine.Contains('PUBLIC KEY') then
+    begin
+      LInKey := True;
+      Continue;
+    end;
+    if LLine.Contains('-----END') and LLine.Contains('PUBLIC KEY') then
+      Break;
+    if LInKey then
+      LBase64 := LBase64 + LLine.Trim;
+  end;
+  
+  if LBase64 = '' then
+  begin
+    FLastError := 'Invalid PEM format: no public key found';
+    Exit;
+  end;
+  
+  try
+    Result := TEncodingUtils.Base64Decode(LBase64);
+  except
+    on E: Exception do
+    begin
+      FLastError := 'Base64 decode failed: ' + E.Message;
+      Result := nil;
+    end;
+  end;
+end;
+
+function TRSAVerifier.ParseDERPublicKey(const ADER: TBytes): TBytes;
+var
+  LPos: Integer;
+  LLen, LModulusLen, LExponentLen: Integer;
+  LModulus, LExponent: TBytes;
+  
+  function ReadLength(var APos: Integer): Integer;
+  var
+    LFirst: Byte;
+    LNumBytes, I: Integer;
+  begin
+    if APos >= Length(ADER) then
+      raise ECryptoException.Create('Invalid DER: unexpected end');
+    LFirst := ADER[APos];
+    Inc(APos);
+    if LFirst < $80 then
+      Result := LFirst
+    else
+    begin
+      LNumBytes := LFirst and $7F;
+      Result := 0;
+      for I := 1 to LNumBytes do
+      begin
+        if APos >= Length(ADER) then
+          raise ECryptoException.Create('Invalid DER: unexpected end in length');
+        Result := (Result shl 8) or ADER[APos];
+        Inc(APos);
+      end;
+    end;
+  end;
+  
+  procedure SkipTag(AExpectedTag: Byte; var APos: Integer);
+  begin
+    if APos >= Length(ADER) then
+      raise ECryptoException.Create('Invalid DER: unexpected end before tag');
+    if ADER[APos] <> AExpectedTag then
+      raise ECryptoException.CreateFmt('Invalid DER: expected tag $%x, got $%x', [AExpectedTag, ADER[APos]]);
+    Inc(APos);
+  end;
+  
+begin
+  Result := nil;
+  if Length(ADER) < 20 then
+  begin
+    FLastError := 'DER data too short';
+    Exit;
+  end;
+  
+  try
+    LPos := 0;
+    
+    // SubjectPublicKeyInfo ::= SEQUENCE
+    SkipTag($30, LPos); // SEQUENCE
+    LLen := ReadLength(LPos);
+    
+    // algorithm AlgorithmIdentifier ::= SEQUENCE
+    SkipTag($30, LPos); // SEQUENCE
+    LLen := ReadLength(LPos);
+    LPos := LPos + LLen; // Skip algorithm identifier
+    
+    // subjectPublicKey BIT STRING
+    SkipTag($03, LPos); // BIT STRING
+    LLen := ReadLength(LPos);
+    if LPos >= Length(ADER) then
+      raise ECryptoException.Create('Invalid DER: no bit string content');
+    Inc(LPos); // Skip unused bits byte (should be 0)
+    
+    // The BIT STRING contains RSAPublicKey ::= SEQUENCE
+    SkipTag($30, LPos); // SEQUENCE
+    LLen := ReadLength(LPos);
+    
+    // modulus INTEGER
+    SkipTag($02, LPos); // INTEGER
+    LModulusLen := ReadLength(LPos);
+    // Skip leading zero if present (sign byte)
+    if (LModulusLen > 0) and (ADER[LPos] = 0) then
+    begin
+      Inc(LPos);
+      Dec(LModulusLen);
+    end;
+    SetLength(LModulus, LModulusLen);
+    if LModulusLen > 0 then
+      Move(ADER[LPos], LModulus[0], LModulusLen);
+    Inc(LPos, LModulusLen);
+    
+    // publicExponent INTEGER
+    SkipTag($02, LPos); // INTEGER
+    LExponentLen := ReadLength(LPos);
+    // Skip leading zero if present
+    if (LExponentLen > 0) and (ADER[LPos] = 0) then
+    begin
+      Inc(LPos);
+      Dec(LExponentLen);
+    end;
+    SetLength(LExponent, LExponentLen);
+    if LExponentLen > 0 then
+      Move(ADER[LPos], LExponent[0], LExponentLen);
+    
+    // Build BCrypt key blob
+    Result := BuildBCryptKeyBlob(LModulus, LExponent);
+  except
+    on E: Exception do
+    begin
+      FLastError := 'DER parse error: ' + E.Message;
+      Result := nil;
+    end;
+  end;
+end;
+
+function TRSAVerifier.BuildBCryptKeyBlob(const AModulus, AExponent: TBytes): TBytes;
+var
+  LHeader: BCRYPT_RSAKEY_BLOB;
+  LBlobSize: Integer;
+  LPos: Integer;
+begin
+  // Build BCRYPT_RSAPUBLIC_BLOB format:
+  // BCRYPT_RSAKEY_BLOB header + PublicExponent + Modulus
+  
+  LHeader.Magic := BCRYPT_RSAPUBLIC_MAGIC;
+  LHeader.BitLength := Length(AModulus) * 8;
+  LHeader.cbPublicExp := Length(AExponent);
+  LHeader.cbModulus := Length(AModulus);
+  LHeader.cbPrime1 := 0;
+  LHeader.cbPrime2 := 0;
+  
+  LBlobSize := SizeOf(BCRYPT_RSAKEY_BLOB) + Length(AExponent) + Length(AModulus);
+  SetLength(Result, LBlobSize);
+  
+  LPos := 0;
+  Move(LHeader, Result[LPos], SizeOf(BCRYPT_RSAKEY_BLOB));
+  Inc(LPos, SizeOf(BCRYPT_RSAKEY_BLOB));
+  
+  // Exponent
+  if Length(AExponent) > 0 then
+    Move(AExponent[0], Result[LPos], Length(AExponent));
+  Inc(LPos, Length(AExponent));
+  
+  // Modulus  
+  if Length(AModulus) > 0 then
+    Move(AModulus[0], Result[LPos], Length(AModulus));
+end;
+
+function TRSAVerifier.LoadPublicKeyPEM(const APEM: string): Boolean;
+var
+  LDER: TBytes;
+begin
+  FLastError := '';
+  FPublicKeyLoaded := False;
+  
+  LDER := ParsePEMPublicKey(APEM);
+  if LDER = nil then
+    Exit(False);
+    
+  FPublicKey := ParseDERPublicKey(LDER);
+  FPublicKeyLoaded := FPublicKey <> nil;
+  Result := FPublicKeyLoaded;
+end;
+
+function TRSAVerifier.LoadPublicKeyDER(const ADER: TBytes): Boolean;
+begin
+  FLastError := '';
+  FPublicKeyLoaded := False;
+  
+  FPublicKey := ParseDERPublicKey(ADER);
+  FPublicKeyLoaded := FPublicKey <> nil;
+  Result := FPublicKeyLoaded;
+end;
+
+function TRSAVerifier.LoadPublicKeyFile(const AFileName: string): Boolean;
+var
+  LStream: TFileStream;
+  LBytes: TBytes;
+  LPEM: string;
+begin
+  FLastError := '';
+  FPublicKeyLoaded := False;
+  
+  if not FileExists(AFileName) then
+  begin
+    FLastError := 'File not found: ' + AFileName;
+    Exit(False);
+  end;
+  
+  try
+    LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+    try
+      SetLength(LBytes, LStream.Size);
+      if LStream.Size > 0 then
+        LStream.ReadBuffer(LBytes[0], LStream.Size);
+    finally
+      LStream.Free;
+    end;
+    
+    // Try to detect format - PEM starts with '-----'
+    if (Length(LBytes) > 5) and (LBytes[0] = Ord('-')) then
+    begin
+      LPEM := TEncoding.UTF8.GetString(LBytes);
+      Result := LoadPublicKeyPEM(LPEM);
+    end
+    else
+      Result := LoadPublicKeyDER(LBytes);
+  except
+    on E: Exception do
+    begin
+      FLastError := 'Failed to read file: ' + E.Message;
+      Result := False;
+    end;
+  end;
+end;
+
+function TRSAVerifier.VerifySignature(const AData, ASignature: TBytes): Boolean;
+var
+  LAlgHandle: BCRYPT_ALG_HANDLE;
+  LKeyHandle: BCRYPT_KEY_HANDLE;
+  LHashAlgHandle: BCRYPT_ALG_HANDLE;
+  LHash: TBytes;
+  LPaddingInfo: BCRYPT_PKCS1_PADDING_INFO;
+  LStatus: NTSTATUS;
+  LAlgId: WideString;
+begin
+  Result := False;
+  FLastError := '';
+  
+  if not FPublicKeyLoaded then
+  begin
+    FLastError := 'Public key not loaded';
+    Exit;
+  end;
+  
+  if Length(ASignature) = 0 then
+  begin
+    FLastError := 'Empty signature';
+    Exit;
+  end;
+  
+  LAlgHandle := 0;
+  LKeyHandle := 0;
+  LHashAlgHandle := 0;
+  
+  try
+    // Open RSA algorithm provider
+    LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_RSA_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptOpenAlgorithmProvider (RSA) failed: $%x', [LStatus]);
+      Exit;
+    end;
+    
+    // Import the public key
+    LStatus := BCryptImportKeyPair(LAlgHandle, 0, BCRYPT_RSAPUBLIC_BLOB, LKeyHandle,
+      @FPublicKey[0], Length(FPublicKey), 0);
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptImportKeyPair failed: $%x', [LStatus]);
+      Exit;
+    end;
+    
+    // Hash the data with SHA256
+    LStatus := BCryptOpenAlgorithmProvider(LHashAlgHandle, BCRYPT_SHA256_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptOpenAlgorithmProvider (SHA256) failed: $%x', [LStatus]);
+      Exit;
+    end;
+    
+    SetLength(LHash, 32); // SHA256 = 32 bytes
+    if Length(AData) > 0 then
+      LStatus := BCryptHash(LHashAlgHandle, nil, 0, @AData[0], Length(AData), @LHash[0], 32)
+    else
+      LStatus := BCryptHash(LHashAlgHandle, nil, 0, nil, 0, @LHash[0], 32);
+      
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptHash failed: $%x', [LStatus]);
+      Exit;
+    end;
+    
+    // Setup padding info for PKCS#1 v1.5
+    LAlgId := BCRYPT_SHA256_ALGORITHM;
+    LPaddingInfo.pszAlgId := PWideChar(LAlgId);
+    
+    // Verify signature
+    LStatus := BCryptVerifySignature(LKeyHandle, @LPaddingInfo,
+      @LHash[0], Length(LHash), @ASignature[0], Length(ASignature), BCRYPT_PAD_PKCS1);
+      
+    Result := (LStatus = STATUS_SUCCESS);
+    if not Result then
+      FLastError := Format('Signature verification failed: $%x', [LStatus]);
+  finally
+    if LHashAlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(LHashAlgHandle, 0);
+    if LKeyHandle <> 0 then
+      BCryptDestroyKey(LKeyHandle);
+    if LAlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(LAlgHandle, 0);
+  end;
+end;
+
+function TRSAVerifier.VerifySignature(const AData: TBytes; const ASignatureBase64: string): Boolean;
+var
+  LSignature: TBytes;
+begin
+  try
+    LSignature := TEncodingUtils.Base64Decode(ASignatureBase64);
+    Result := VerifySignature(AData, LSignature);
+  except
+    on E: Exception do
+    begin
+      FLastError := 'Invalid Base64 signature: ' + E.Message;
+      Result := False;
+    end;
+  end;
+end;
+
+function TRSAVerifier.VerifySignature(const AData, ASignatureBase64: string): Boolean;
+begin
+  Result := VerifySignature(TEncoding.UTF8.GetBytes(AData), ASignatureBase64);
+end;
+{$ENDIF}
 
 { TCrypto }
 

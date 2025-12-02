@@ -468,8 +468,9 @@ begin
       Query.SQL.Text :=
         'UPDATE DevNotes SET Title = :Title, Content = :Content, Category = :Category, ' +
         'Priority = :Priority, ReminderTime = :ReminderTime, HasReminder = :HasReminder, ' +
-        'UpdatedAt = datetime(''now'', ''localtime'') WHERE Id = :Id';
+        'UpdatedAt = :UpdatedAt WHERE Id = :Id';
       Query.ParamByName('Id').AsInteger := FEditingId;
+      Query.ParamByName('UpdatedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
     end
     else
     begin
@@ -723,7 +724,9 @@ var
   I: Integer;
   Note: TNoteRecord;
   NewStatus: Integer;
+  NowStr: string;
 begin
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   for I := 0 to FNotes.Count - 1 do
   begin
     Note := FNotes[I];
@@ -732,7 +735,7 @@ begin
       NewStatus := Ord(not Note.IsCompleted);
       TrayDB.Connection.ExecSQL(
         'UPDATE DevNotes SET IsCompleted = ' + IntToStr(NewStatus) +
-        ', UpdatedAt = datetime(''now'', ''localtime'') WHERE Id = ' + IntToStr(ANoteId));
+        ', UpdatedAt = ''' + NowStr + ''' WHERE Id = ' + IntToStr(ANoteId));
       RefreshData;
       Break;
     end;

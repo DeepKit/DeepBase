@@ -1,0 +1,140 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font-family: sans-serif; font-size: 20px; font-weight: bold; }
+    .subtitle { font-family: sans-serif; font-size: 14px; font-weight: bold; }
+    .label { font-family: sans-serif; font-size: 12px; }
+    .mono { font-family: monospace; font-size: 11px; }
+    .box { fill: #f9f9fb; stroke: #c5c5d6; stroke-width: 1; }
+    .panel { fill: #ffffff; stroke: #b0b0c5; stroke-width: 1.2; }
+    .btn { fill: #e0e5ff; stroke: #5a6ad6; stroke-width: 1; rx: 4; ry: 4; }
+    .status { fill: #f0f1f6; stroke: #c0c0cf; stroke-width: 1; }
+  </style>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f3f4f8"/>
+  <text x="20" y="30" class="title">LLM 配置窗口</text>
+  <text x="20" y="52" class="label">编辑 Provider / Model / API Key，并支持快速单次调用测试。</text>
+
+  <!-- 上半：左侧 LLM 属性编辑 -->
+  <rect x="20" y="70" width="620" height="360" class="panel"/>
+  <text x="30" y="90" class="subtitle">LLM 属性</text>
+
+  <text x="30" y="120" class="label">内部名（Provider+Model 编码）：</text>
+  <rect x="230" y="107" width="390" height="22" class="box"/>
+  <text x="235" y="122" class="label">LLM01-GPT4O-MINI</text>
+
+  <text x="30" y="150" class="label">Provider：</text>
+  <rect x="100" y="137" width="200" height="22" class="box"/>
+  <text x="105" y="152" class="label">LiteLLM / OpenAI / Local</text>
+
+  <text x="320" y="150" class="label">Model：</text>
+  <rect x="370" y="137" width="250" height="22" class="box"/>
+  <text x="375" y="152" class="label">gpt-4o-mini / custom-model-name</text>
+
+  <text x="30" y="180" class="label">API Base URL：</text>
+  <rect x="140" y="167" width="480" height="22" class="box"/>
+  <text x="145" y="182" class="label">https://litellm.example.com/v1</text>
+
+  <text x="30" y="210" class="label">API Key（通用，DPAPI 加密存储）：</text>
+  <rect x="250" y="197" width="370" height="22" class="box"/>
+  <text x="255" y="212" class="label">********  （点击可测试连接）</text>
+
+  <text x="30" y="240" class="label">超时时间 (ms)：</text>
+  <rect x="130" y="227" width="80" height="22" class="box"/>
+  <text x="135" y="242" class="label">60000</text>
+
+  <text x="230" y="240" class="label">最大并发：</text>
+  <rect x="290" y="227" width="60" height="22" class="box"/>
+  <text x="295" y="242" class="label">5</text>
+
+  <text x="370" y="240" class="label">Context Window：</text>
+  <rect x="490" y="227" width="70" height="22" class="box"/>
+  <text x="495" y="242" class="label">128k</text>
+
+  <text x="30" y="275" class="label">输入价格（$/1K tokens）：</text>
+  <rect x="200" y="262" width="80" height="22" class="box"/>
+  <text x="205" y="277" class="label">0.0005</text>
+
+  <text x="310" y="275" class="label">输出价格（$/1K tokens）：</text>
+  <rect x="470" y="262" width="80" height="22" class="box"/>
+  <text x="475" y="277" class="label">0.0015</text>
+
+  <text x="30" y="305" class="label">环境：</text>
+  <rect x="80" y="292" width="90" height="22" class="box"/>
+  <text x="85" y="307" class="label">开发 / 测试 / 生产</text>
+
+  <text x="190" y="305" class="label">启用：</text>
+  <rect x="230" y="292" width="18" height="18" class="box"/>
+  <text x="255" y="307" class="label">是</text>
+
+  <text x="30" y="335" class="label">说明：</text>
+  <rect x="80" y="322" width="540" height="90" class="box"/>
+  <text x="90" y="338" class="mono">此配置用于代码修复与文档生成，限制最大并发 = 5，适合交互式工具与 Studio。</text>
+
+  <!-- 上半：右侧 快速测试区 -->
+  <rect x="660" y="70" width="600" height="360" class="panel"/>
+  <text x="670" y="90" class="subtitle">快速测试</text>
+
+  <text x="670" y="120" class="label">测试输入 Prompt：</text>
+  <rect x="670" y="132" width="570" height="90" class="box"/>
+  <text x="680" y="148" class="mono">在这里输入一段测试提示词，用于验证 Provider+Model+API Key 是否可用...</text>
+
+  <rect x="670" y="230" width="130" height="30" class="btn"/>
+  <text x="690" y="250" class="label">▶ 发送测试请求</text>
+
+  <text x="820" y="250" class="label">最近一次调用：Tokens 768 · 费用 ~$0.0011 · 842 ms</text>
+
+  <text x="670" y="280" class="label">返回结果：</text>
+  <rect x="670" y="292" width="570" height="120" class="box"/>
+  <text x="680" y="308" class="mono">[这里显示 LLM 的返回文本，用于判断配置是否正确...]</text>
+
+  <!-- 下半：所有 LLM 配置列表 -->
+  <rect x="20" y="450" width="1240" height="210" class="panel"/>
+  <text x="30" y="470" class="subtitle">LLM 配置列表（Provider + Model 组合）</text>
+
+  <!-- 表头 -->
+  <rect x="30" y="480" width="1220" height="26" class="box"/>
+  <text x="40" y="497" class="label">内部名</text>
+  <text x="180" y="497" class="label">Provider</text>
+  <text x="320" y="497" class="label">Model</text>
+  <text x="520" y="497" class="label">环境</text>
+  <text x="600" y="497" class="label">启用</text>
+  <text x="650" y="497" class="label">输入价($/1K)</text>
+  <text x="760" y="497" class="label">输出价($/1K)</text>
+  <text x="880" y="497" class="label">最近调用</text>
+  <text x="1040" y="497" class="label">备注</text>
+
+  <!-- 示例行 -->
+  <rect x="30" y="506" width="1220" height="26" class="box"/>
+  <text x="40" y="523" class="label">LLM01-GPT4O-MINI</text>
+  <text x="180" y="523" class="label">LiteLLM</text>
+  <text x="320" y="523" class="label">gpt-4o-mini</text>
+  <text x="520" y="523" class="label">生产</text>
+  <text x="600" y="523" class="label">是</text>
+  <text x="650" y="523" class="label">0.0005</text>
+  <text x="760" y="523" class="label">0.0015</text>
+  <text x="880" y="523" class="label">上次: 0.0009$/1.2s</text>
+  <text x="1040" y="523" class="label">主模型</text>
+
+  <rect x="30" y="532" width="1220" height="26" class="box"/>
+  <text x="40" y="549" class="label">LLM02-LOCAL-8B</text>
+  <text x="180" y="549" class="label">LocalLLM</text>
+  <text x="320" y="549" class="label">mistral-8b-q4</text>
+  <text x="520" y="549" class="label">测试</text>
+  <text x="600" y="549" class="label">是</text>
+  <text x="650" y="549" class="label">0.0000</text>
+  <text x="760" y="549" class="label">0.0000</text>
+  <text x="880" y="549" class="label">上次: 0.0000$/2.3s</text>
+  <text x="1040" y="549" class="label">本地模型</text>
+
+  <!-- 列表操作按钮 -->
+  <rect x="30" y="590" width="80" height="28" class="btn"/>
+  <text x="48" y="609" class="label">新建</text>
+  <rect x="120" y="590" width="80" height="28" class="btn"/>
+  <text x="138" y="609" class="label">复制</text>
+  <rect x="210" y="590" width="80" height="28" class="btn"/>
+  <text x="228" y="609" class="label">删除</text>
+
+  <!-- 底部状态栏 -->
+  <rect x="0" y="680" width="1280" height="40" class="status"/>
+  <text x="20" y="705" class="label">当前选中配置：LLM01-GPT4O-MINI  |  Provider=LiteLLM  |  Model=gpt-4o-mini</text>
+</svg>

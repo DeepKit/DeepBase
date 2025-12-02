@@ -1,0 +1,88 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font-family: sans-serif; font-size: 20px; font-weight: bold; }
+    .subtitle { font-family: sans-serif; font-size: 14px; font-weight: bold; }
+    .label { font-family: sans-serif; font-size: 12px; }
+    .mono { font-family: monospace; font-size: 11px; }
+    .box { fill: #f9f9fb; stroke: #c5c5d6; stroke-width: 1; }
+    .panel { fill: #ffffff; stroke: #b0b0c5; stroke-width: 1.2; }
+    .tab { fill: #e6e7f5; stroke: #b0b0c5; stroke-width: 1; }
+    .tab-active { fill: #ffffff; stroke: #5a6ad6; stroke-width: 1.2; }
+    .status { fill: #f0f1f6; stroke: #c0c0cf; stroke-width: 1; }
+  </style>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f3f4f8"/>
+  <text x="20" y="30" class="title">提示词版本运行结果对比窗口</text>
+  <text x="20" y="52" class="label">支持同时比较 2~4 个版本的提示词与 LLM 输出。</text>
+
+  <!-- 顶部路径和信息：4 级分类 + 提示词名 | 编号 -->
+  <rect x="20" y="70" width="1240" height="70" class="panel"/>
+  <text x="30" y="92" class="subtitle">UniBaseRun / ConfigEditor / 错误修复 / 版本对比</text>
+  <text x="30" y="116" class="label">提示词：根据错误日志修复配置错误  |  编号：[01-01-001]</text>
+
+  <text x="650" y="92" class="label">选择要对比的版本（最多 4 个）：</text>
+  <rect x="840" y="80" width="80" height="24" class="box"/>
+  <text x="845" y="96" class="label">v1</text>
+  <rect x="930" y="80" width="80" height="24" class="box"/>
+  <text x="935" y="96" class="label">v2 (当前)</text>
+  <rect x="1020" y="80" width="80" height="24" class="box"/>
+  <text x="1025" y="96" class="label">v3</text>
+  <rect x="1110" y="80" width="80" height="24" class="box"/>
+  <text x="1115" y="96" class="label">v4</text>
+
+  <!-- Tabs: 最多 4 个版本 TabSheet -->
+  <rect x="20" y="150" width="1240" height="30" class="panel"/>
+
+  <rect x="30" y="152" width="140" height="26" class="tab-active"/>
+  <text x="38" y="169" class="label">v1 · [01-01-001]</text>
+
+  <rect x="180" y="152" width="140" height="26" class="tab"/>
+  <text x="188" y="169" class="label">v2 · [01-01-002]</text>
+
+  <rect x="330" y="152" width="140" height="26" class="tab"/>
+  <text x="338" y="169" class="label">v3 · [01-01-003]</text>
+
+  <rect x="480" y="152" width="140" height="26" class="tab"/>
+  <text x="488" y="169" class="label">v4 · [01-01-004]</text>
+
+  <!-- 主内容区域：可视为 Tab 的 PageControl，每次显示 2~4 列，也可纵向滚动 -->
+  <rect x="20" y="180" width="1240" height="460" class="panel"/>
+
+  <!-- 为强调“同屏对比”，示意等宽 2 列；实际实现中可用 Layout / Grid 对齐 -->
+  <!-- 左列：版本 v1 -->
+  <text x="30" y="205" class="subtitle">版本 v1 · [01-01-001]</text>
+  <text x="30" y="224" class="label">System + User Prompt（合成后）：</text>
+  <rect x="30" y="235" width="590" height="130" class="box"/>
+  <text x="40" y="252" class="mono">[System v1] ...
+[User v1] 错误日志: {{Error}} / 代码: {{Code}}
+变量配置: {...}</text>
+
+  <text x="30" y="380" class="label">LLM 输出：</text>
+  <rect x="30" y="392" width="590" height="230" class="box"/>
+  <text x="40" y="408" class="mono">1. 问题根因：...
+2. 修改建议：...
+3. 测试建议：...
+Tokens: 600 / 200 · 费用: $0.0010 · 时延: 900ms</text>
+
+  <!-- 右列：版本 v2 -->
+  <text x="650" y="205" class="subtitle">版本 v2 · [01-01-002]</text>
+  <text x="650" y="224" class="label">System + User Prompt（合成后）：</text>
+  <rect x="650" y="235" width="590" height="130" class="box"/>
+  <text x="660" y="252" class="mono">[System v2] ...
+[User v2] 错误日志: {{Error}} / 代码: {{Code}}
+变量配置: {...}</text>
+
+  <text x="650" y="380" class="label">LLM 输出：</text>
+  <rect x="650" y="392" width="590" height="230" class="box"/>
+  <text x="660" y="408" class="mono">1. 问题根因：...
+2. 修改建议：...
+3. 测试建议：...
+Tokens: 520 / 240 · 费用: $0.0009 · 时延: 780ms</text>
+
+  <!-- 可选：顶部显示当前比较的 LLM+Model 信息 -->
+  <text x="30" y="660" class="label">当前 LLM+Model：LLM01-GPT4O-MINI  （两侧版本使用相同配置或各自配置）</text>
+
+  <!-- 底部状态栏 -->
+  <rect x="0" y="680" width="1280" height="40" class="status"/>
+  <text x="20" y="705" class="label">对比版本：v1, v2  |  可通过 Tab 切换查看 v3 / v4  |  支持从历史 LLMCalls 中重新加载结果。</text>
+</svg>

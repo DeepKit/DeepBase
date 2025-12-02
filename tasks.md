@@ -125,6 +125,7 @@ UniBase/
 - **2025-11-28**: Phase 5 代码审查优化完成（9 项改进，2 个 Bug 修复）
 - **2025-11-29**: 扩展功能持续开发（CLI Pipeline、SSH、GUI测试、压力测试）
 - **2025-11-30**: 平台扩展、云端集成、性能优化完成
+- **2025-12-01**: Phase R 重构 + Bug 修复 + Phase 7 功能补充
 - **后续**: 维护和优化阶段
 
 ---
@@ -137,7 +138,364 @@ UniBase/
 
 ---
 
-**最后更新**: 2025-11-30  
+## 🔧 核心维护任务（2025-12-01 Code Review）
+
+### 📌 Bug 修复（6项） ✅ 全部已修复
+
+#### 1. [BUG] Logging.GetLogCount 类型不匹配 ✅
+**描述**: `WriteToDB` 存储 `LogLevel` 为 TEXT 类型，但 `GetLogCount` 使用 INTEGER 查询
+**影响**: `GetLogCount` 永远返回 0
+**修复**: 改为使用 `Logs.LogLevel` 字段和 AsString 参数绑定
+
+#### 2. [BUG] 全局 Logger 双重释放风险 ✅
+**描述**: Manager 与 Logging 单元都可能释放 GLogger，导致 AV
+**影响**: 应用退出时可能崩溃
+**修复**: Manager 释放前先调用 SetGlobalLogger(nil)，明确所有权
+
+#### 3. [BUG] TConfigurationSection.GetKey 索引错误 ✅
+**描述**: 硬编码 `LPos + 2` 假设单字符分隔符
+**影响**: 多字符分隔符时解析出错
+**修复**: 使用 `LPos + Length(FConfig.KeyDelimiter)` 动态计算
+
+#### 4. [BUG] TConfiguration.WatchFiles 忽略参数 ✅
+**描述**: `StartWatching(AIntervalMs)` 参数未被使用
+**影响**: 无法动态配置轮询间隔
+**修复**: 添加 `FWatchIntervalMs` 字段并在 Sleep 中使用
+
+#### 5. [BUG] Configuration 回调列表并发不安全 ✅
+**描述**: `OnChanged` 和 `NotifyChange` 未加锁
+**影响**: 多线程注册回调或 Reload 时可能崩溃
+**修复**: 在 `FCallbacksLock` 保护下操作 `FChangeCallbacks`
+
+#### 6. [DESIGN] Manager 重复声明接口 ✅
+**描述**: `UniBase.Manager` 重复定义 `IUniBaseConfig/IUniBaseI18n`（GUID 相同）
+**影响**: 类型混淆、无法互换使用
+**修复**: 删除本地声明，使用 `UniBase.Interfaces` 中的定义
+
+### 🚀 增强功能（待规划）
+- [ ] IoC 容器支持循环依赖检测
+- [ ] ORM 默认值 SQL 拼接增强（类型化）
+- [ ] Configuration 支持加密配置源
+- [ ] Logging 支持结构化日志（JSON格式）
+
+---
+
+## 🔄 Phase R: 代码重构任务 (2025-12-01)
+
+> **约束**: 所有重构必须保持对外接口不变，确保已集成 UniBase 的软件无需修改
+
+### R-001: 拆分 TUniBaseManager.InitializeEx 方法 ✅
+- **文件**: `Core/UniBase.Manager.pas:331-457`
+- **问题**: 方法约120行，逻辑过于集中
+- **任务**:
+  - [x] 提取 `DoFindRootPath` 私有方法
+  - [x] 提取 `DoLocateConfigDB` 私有方法  
+  - [x] 提取 `DoConnectAndValidate` 私有方法
+  - [x] 保持 `InitializeEx` 公开签名不变
+- **状态**: ✅ 已完成
+
+### R-002: 消除 SetConfig* 方法重复代码 ✅
+- **文件**: `Core/UniBase.Config.pas`
+- **问题**: SetConfigInt/Bool/Float 逻辑高度相似
+- **任务**:
+  - [x] 提取 `SetConfigInternal` 公共私有方法
+  - [x] 保持公开方法签名不变
+- **状态**: ✅ 已完成
+
+### R-003: 优化 Logging 双重锁模式 ✅
+- **文件**: `Core/UniBase.Logging.pas:303-342`
+- **问题**: 同一方法两次加锁/解锁
+- **任务**:
+  - [x] 合并批处理后的状态检查
+- **状态**: ✅ 已完成
+
+### R-004: 消除 Schema 验证魔法数字 ✅
+- **文件**: `Core/UniBase.Manager.pas:824`
+- **问题**: Schema 验证使用硬编码 `6`
+- **任务**:
+  - [x] 定义 `REQUIRED_CORE_TABLES` 常量数组
+  - [x] 动态计算所需表数量
+- **状态**: ✅ 已完成
+
+### R-005: 修复测试编译错误 ✅
+- **文件**: `Tests/Test.UniBase.Config.pas:241-267`
+- **问题**: 引用不存在的方法
+- **任务**:
+  - [x] 修改为使用正确的 `GetConfigsByCategory`
+- **状态**: ✅ 已完成
+
+### R-006: 改进空 except 块处理 ✅
+- **文件**: 多处
+- **问题**: 空 except 块吞掉异常
+- **任务**:
+  - [x] 添加 `{$IFDEF DEBUG}` 调试输出
+- **状态**: ✅ 已完成
+
+### R-007: 明确 SetEventBus 所有权语义 ✅
+- **文件**: `Core/UniBase.EventBus.pas:296-308`
+- **任务**:
+  - [x] 添加详细注释说明所有权转移
+- **状态**: ✅ 已完成
+
+### Phase R 重构统计
+
+| 任务编号 | 任务名称 | 影响范围 | 状态 |
+|----------|----------|----------|------|
+| R-001 | 拆分 InitializeEx | 内部 | ✅ |
+| R-002 | 消除 SetConfig 重复 | 内部 | ✅ |
+| R-003 | 优化 Logging 锁 | 内部 | ✅ |
+| R-004 | 消除魔法数字 | 内部 | ✅ |
+| R-005 | 修复测试编译 | 测试 | ✅ |
+| R-006 | 改进异常处理 | 内部 | ✅ |
+| R-007 | 明确所有权语义 | 文档 | ✅ |
+
+---
+
+## 📦 Phase 7: 功能补充 (2025-12-01)
+
+> 状态: ✅ 已完成
+
+### P7-001: 单实例检测 (UniBase.SingleInstance) ✅
+- **优先级**: P0
+- **预计工时**: 2-3 小时
+- **输出物**: `Core/UniBase.SingleInstance.pas`
+- **功能**:
+  - 使用 Mutex 防止应用多开
+  - 支持激活已运行实例（将窗口置前）
+  - 支持传递命令行参数给已运行实例
+  - 可配置是否允许多实例
+- **用法示例**:
+```pascal
+if not TAppInstance.CheckSingleInstance('MyAppName') then
+begin
+  TAppInstance.ActivateExistingInstance;
+  Application.Terminate;
+  Exit;
+end;
+```
+
+### P7-002: 简单报表导出 (UniBase.Export) ✅
+- **优先级**: P1
+- **预计工时**: 3-4 小时
+- **输出物**: `Core/UniBase.Export.pas`
+- **功能**:
+  - CSV 导出（支持自定义分隔符、编码）
+  - HTML 表格导出（带基本样式）
+  - 支持从 TDataSet/TStringGrid/数组导出
+  - 支持列标题、列宽度配置
+- **用法示例**:
+```pascal
+TDataExport.ToCSV(DataSet, 'output.csv');
+TDataExport.ToHTML(DataSet, 'report.html', '报表标题');
+```
+
+### P7-003: 启动画面 (UniBase.SplashScreen) ✅
+- **优先级**: P1
+- **预计工时**: 3-4 小时
+- **输出物**: `Core/UniBase.SplashScreen.pas`
+- **功能**:
+  - 支持图片显示（PNG/JPG/BMP）
+  - 可选进度条
+  - 可选状态文本
+  - 淡入淡出动画
+  - 自动关闭或手动关闭
+- **用法示例**:
+```pascal
+TSplashScreen.Show('splash.png');
+TSplashScreen.SetStatus('正在加载配置...');
+TSplashScreen.SetProgress(50);
+// ... 初始化完成
+TSplashScreen.Hide;
+```
+
+---
+
+## 🤖 Phase 6: LLM 提示词管理系统 (2025-12-01)
+
+> 状态: 🟡 设计完成，待开发
+
+### P6-001: 创建提示词数据库表结构 ⭕
+- **优先级**: P0
+- **依赖**: P0-002
+- **预计工时**: 4-6 小时
+- **输出物**:
+  - `sql/llm_prompts_init.sql`
+- **任务内容**:
+  1. PromptCategories 提示词分类表 (4级分类)
+  2. Prompts 提示词主表 (InternalCode, BoundQueryName, VariablesJson)
+  3. PromptVersions 提示词版本表 (最多4个版本)
+  4. PromptMeta 元提示词表 (MergeMode: PREFIX/SUFFIX/WRAP)
+  5. PromptMetaBinding 提示词-元提示词绑定表
+  6. LLMConfigurations 更新字段 (IsDefault)
+  7. LLMCalls 更新字段 (PromptId, VersionNumber)
+- **验收标准**:
+  - 脚本可在现有数据库上成功执行
+  - 所有索引和约束正确创建
+
+---
+
+### P6-002: 实现 TLLMManager 核心类 ⭕
+- **优先级**: P0
+- **依赖**: P6-001
+- **预计工时**: 15-20 小时
+- **输出物**:
+  - `Core/UniBase.LLM.Manager.pas`
+  - `Core/UniBase.LLM.Types.pas`
+  - `Core/UniBase.LLM.ContextBuilder.pas`
+- **任务内容**:
+  1. Execute(提示词Code, Params, Version, LLMConfig) 主调用方法
+  2. ExecuteAsync 异步调用
+  3. TContextBuilder.BuildContext(BoundQueryName, Params) 上下文构建
+  4. TContextBuilder.BuildFinalPrompt 合并元提示词
+  5. TPromptVersionStrategy 版本选择策略 (Production/Latest/Specific/ABTest)
+  6. TLLMResponse 响应结构 (Content, Tokens, Cost, Status)
+- **验收标准**:
+  - 单元测试：变量替换正确
+  - 单元测试：元提示词合并正确
+  - 单元测试：BoundQuery 数据注入正确
+
+---
+
+### P6-003: 实现提示词调试窗口 ✅
+- **优先级**: P1
+- **依赖**: P6-002
+- **预计工时**: 20-25 小时
+- **输出物**:
+  - `Tools/Studio/Forms/Studio.PromptDebugForm.pas`
+- **任务内容**:
+  1. 左侧上部: 4级分类树 (TTreeView)
+  2. 左侧下部: 当前分类下提示词列表 (TListBox)
+  3. 右侧属性区: 版本选择、描述编辑框、变量网格
+  4. 右侧内容区: 提示词编辑框 + 发送按钮
+  5. 右侧回复区: LLM回复显示 (Token/费用/耗时)
+  6. BoundQuery 选择 + SQL预览
+- **验收标准**:
+  - 集成测试：发送按钮正常工作
+  - 集成测试：回复实时显示
+- **UI设计**: `docs/ui/svg/components/LLM_PromptDebugWindow.svg`
+
+---
+
+### P6-004: 实现提示词版本对比窗口 ✅
+- **优先级**: P1
+- **依赖**: P6-003
+- **预计工时**: 15-20 小时
+- **输出物**:
+  - `Tools/Studio/Forms/Studio.PromptVersionCompareForm.pas`
+- **任务内容**:
+  1. 四栏平铺布局 (V1/V2/V3/V4)
+  2. 每栏上部: 合成提示词显示
+  3. 每栏下部: LLM回复显示
+  4. 差异高亮 (新增/删除/修改)
+  5. 统计信息 (Tokens/成功率/平均耗时)
+  6. 弹出大窗按钮 (⇱) 查看/编辑单个版本
+  7. “设为生产版本”、“复制到V4”、“重新测试”按钮
+- **验收标准**:
+  - 集成测试：四个版本同时显示
+  - 集成测试：差异高亮正确
+- **UI设计**: `docs/ui/svg/components/LLM_PromptVersionCompare.svg`
+
+---
+
+### P6-005: 实现 LLM 配置调试窗口 ✅
+- **优先级**: P1
+- **依赖**: P6-002
+- **预计工时**: 12-15 小时
+- **输出物**:
+  - `Tools/Studio/Forms/Studio.LLMConfigForm.pas`
+- **任务内容**:
+  1. 上左: LLM属性编辑 (Provider/Model/APIKey/Temperature等)
+  2. 上右: 测试连接区 + 回复显示
+  3. 下部: 所有LLM配置列表 (Grid)
+  4. 状态指示 (正常/离线/未测试)
+  5. 统计信息 (调用次数/成功率/今日费用)
+- **验收标准**:
+  - 集成测试：测试连接正常工作
+- **UI设计**: `docs/ui/svg/components/LLM_ConfigDebugWindow.svg`
+
+---
+
+### P6-006: 实现自绘变量网格控件 ✅
+- **优先级**: P2
+- **依赖**: P6-003
+- **预计工时**: 10-12 小时
+- **输出物**:
+  - `VCL/UniBase.VCL.PromptVariableGrid.pas`
+- **任务内容**:
+  1. TDrawGrid 自绘实现
+  2. 支持 7 种变量类型: String/Integer/Float/Boolean/Enum/JSON/BoundQuery
+  3. 每种类型对应不同编辑器 (SpinEdit/CheckBox/ComboBox等)
+  4. 添加/删除变量行
+- **验收标准**:
+  - 集成测试：变量编辑正常工作
+
+---
+
+### P6-007: 实现提示词导入导出 ✅
+- **优先级**: P2
+- **依赖**: P6-002
+- **预计工时**: 8-10 小时
+- **输出物**:
+  - `Core/UniBase.LLM.ImportExport.pas`
+- **任务内容**:
+  1. ExportPrompts(FilePath, Format) 导出 (JSON/YAML)
+  2. ImportPrompts(FilePath, Mode) 导入 (Merge/Replace)
+  3. 包含元提示词和绑定关系
+- **验收标准**:
+  - 单元测试：导出后重新导入数据一致
+- **文档**: `docs/12_LLM提示词集成指南.md`
+
+---
+
+### P6-008: 实现版本详情弹出窗口 ✅
+- **优先级**: P2
+- **依赖**: P6-004
+- **预计工时**: 6-8 小时
+- **输出物**:
+  - `Tools/Studio/Forms/Studio.VersionDetailForm.pas`
+- **任务内容**:
+  1. 大窗显示单个版本详情
+  2. 提示词内容编辑
+  3. 最近LLM回复显示
+  4. “重新测试”、“另存为新版本”按钮
+- **UI设计**: `docs/ui/svg/components/LLM_VersionDetailPopup.svg`
+
+---
+
+### Phase 6 任务统计
+
+| 任务编号 | 任务名称 | 优先级 | 预计工时 | 状态 |
+|----------|----------|--------|----------|------|
+| P6-001 | 数据库表结构 | P0 | 4-6h | ✅ |
+| P6-002 | TLLMManager核心类 | P0 | 15-20h | ✅ |
+| P6-003 | 提示词调试窗口 | P1 | 20-25h | ✅ |
+| P6-004 | 版本对比窗口 | P1 | 15-20h | ✅ |
+| P6-005 | LLM配置窗口 | P1 | 12-15h | ✅ |
+| P6-006 | 自绘变量网格 | P2 | 10-12h | ✅ |
+| P6-007 | 导入导出 | P2 | 8-10h | ✅ |
+| P6-008 | 版本详情弹窗 | P2 | 6-8h | ✅ |
+| **总计** | | | **90-116h** | |
+
+### 已完成设计文档
+- ✅ `docs/ui/svg/components/LLM_PromptDebugWindow.svg` - 提示词调试窗口
+- ✅ `docs/ui/svg/components/LLM_PromptVersionCompare.svg` - 版本对比窗口
+- ✅ `docs/ui/svg/components/LLM_ConfigDebugWindow.svg` - LLM配置窗口
+- ✅ `docs/ui/svg/components/LLM_VersionDetailPopup.svg` - 版本详情弹窗
+- ✅ `docs/12_LLM提示词集成指南.md` - 集成指南
+
+### 已完成代码
+- ✅ `sql/llm_prompts_init.sql` - LLM提示词数据库表结构 (P6-001)
+- ✅ `Core/UniBase.LLM.Manager.pas` - TLLMManager核心类 (P6-002)
+- ✅ `Tools/Studio/Forms/Studio.PromptDebugForm.pas` - 提示词调试窗口 (P6-003)
+- ✅ `Tools/Studio/Forms/Studio.PromptVersionCompareForm.pas` - 版本对比窗口 (P6-004)
+- ✅ `Tools/Studio/Forms/Studio.LLMConfigForm.pas` - LLM配置窗口 (P6-005)
+- ✅ `VCL/UniBase.VCL.PromptVariableGrid.pas` - 自绘变量网格控件 (P6-006)
+- ✅ `Core/UniBase.LLM.ImportExport.pas` - 提示词导入导出模块 (P6-007)
+- ✅ `Tools/Studio/Forms/Studio.VersionDetailForm.pas` - 版本详情弹窗 (P6-008)
+
+---
+
+**最后更新**: 2025-12-01  
 **维护者**: 李冰、鲁班、Claude  
 **项目状态**: ✅ MVP 完成，进入维护和优化阶段
 

@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS SchemaInfo (
 );
 
 INSERT OR REPLACE INTO SchemaInfo VALUES ('SchemaVersion', '0.3');
-INSERT OR REPLACE INTO SchemaInfo VALUES ('CreatedAt', datetime('now'));
-INSERT OR REPLACE INTO SchemaInfo VALUES ('LastUpgrade', datetime('now'));
+INSERT OR REPLACE INTO SchemaInfo VALUES ('CreatedAt', CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO SchemaInfo VALUES ('LastUpgrade', CURRENT_TIMESTAMP);
 
 -- ProjectInfo: 项目信息
 CREATE TABLE IF NOT EXISTS ProjectInfo (
