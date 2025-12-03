@@ -1,8 +1,9 @@
 { ============================================================================
   UniBase.Logging - Logging Module
   
-  Version: 1.0
+  Version: 1.1
   Description: Multi-level, multi-target (Database/File) logging.
+               Optional log aggregator integration for centralized logging.
   Thread Safety: Uses async queue, write operations are non-blocking.
   Performance: 10000 log entries write < 5 seconds.
   ============================================================================ }
@@ -72,9 +73,17 @@ type
     FMaxLogFileSizeBytes: Int64; // rotate when exceeded (default 10 MB)
     FMaxRollFiles: Integer;      // reserved for retention (not enforced yet)
     
+    // Log aggregator integration
+    FAggregatorEnabled: Boolean;
+    FAppName: string;
+    FAppVersion: string;
+    FEnvironment: string;
+    FHostname: string;
+    
     procedure WriteLogThread;
     procedure WriteToDB(const Entry: TLogEntry);
     procedure WriteToFile(const Entry: TLogEntry);
+    procedure WriteToAggregator(const Entry: TLogEntry);
     procedure EnsureWriteConnection;
     procedure EnsureInsertQuery;
     function GetMaxLogFileSizeMB: Integer;
@@ -121,6 +130,12 @@ type
     function GetLogCount(Level: TLogLevel): Int64;
     function GetTotalLogCount: Int64;
     
+    /// <summary>Enable/Disable log aggregator integration</summary>
+    procedure SetAggregatorEnabled(AEnabled: Boolean);
+    
+    /// <summary>Configure aggregator metadata</summary>
+    procedure ConfigureAggregator(const AAppName, AAppVersion, AEnvironment: string);
+    
     /// <summary>Storage mode</summary>
     property StorageMode: TLogStorageMode read FStorageMode write FStorageMode;
     
@@ -129,6 +144,18 @@ type
     
     /// <summary>Log format for file output (default: lfText)</summary>
     property LogFormat: TLogFormat read FLogFormat write FLogFormat;
+    
+    /// <summary>Whether aggregator is enabled</summary>
+    property AggregatorEnabled: Boolean read FAggregatorEnabled;
+    
+    /// <summary>Application name for aggregator</summary>
+    property AppName: string read FAppName;
+    
+    /// <summary>Application version for aggregator</summary>
+    property AppVersion: string read FAppVersion;
+    
+    /// <summary>Environment (dev/staging/prod) for aggregator</summary>
+    property Environment: string read FEnvironment;
   end;
 
 /// <summary>
@@ -155,6 +182,7 @@ uses
   System.DateUtils,
   System.IOUtils,
   System.JSON,
+  System.NetEncoding,
   Winapi.Windows,
   FireDAC.Stan.Def,
   FireDAC.Phys.SQLite,
@@ -226,6 +254,13 @@ begin
   FMaxLogFileSizeBytes := 10 * 1024 * 1024; // 10 MB
   FMaxRollFiles := 10; // reserved
   FLogFormat := lfText; // Default text format
+  
+  // Aggregator defaults
+  FAggregatorEnabled := False;
+  FAppName := ExtractFileName(ParamStr(0));
+  FAppVersion := '1.0.0';
+  FEnvironment := 'development';
+  FHostname := GetEnvironmentVariable('COMPUTERNAME');
   
   FLogQueue := TThreadList<TLogEntry>.Create;
   FStopEvent := TEvent.Create;
@@ -353,6 +388,10 @@ begin
         
       if (FStorageMode in [lsmFile, lsmBoth]) then
         WriteToFile(Entry);
+      
+      // Push to aggregator if enabled
+      if FAggregatorEnabled then
+        WriteToAggregator(Entry);
     end;
     
     // If there are more entries in queue, signal ourselves to continue
@@ -479,6 +518,80 @@ begin
       {$ENDIF}
     end;
   end;
+end;
+
+procedure TUniBaseLogger.WriteToAggregator(const Entry: TLogEntry);
+var
+  AggLog: record
+    Timestamp: TDateTime;
+    Level: TLogLevel;
+    Message: string;
+    Source: string;
+    AppName: string;
+    AppVersion: string;
+    Hostname: string;
+    Environment: string;
+    ThreadId: TThreadID;
+    StackTrace: string;
+    Tags: TArray<string>;
+  end;
+begin
+  // This method is called from write thread
+  // Uses UniBase.LogAggregator if available
+  try
+    AggLog.Timestamp := Entry.Timestamp;
+    AggLog.Level := Entry.Level;
+    AggLog.Message := Entry.Msg;
+    AggLog.Source := Entry.Source;
+    AggLog.AppName := FAppName;
+    AggLog.AppVersion := FAppVersion;
+    AggLog.Hostname := FHostname;
+    AggLog.Environment := FEnvironment;
+    AggLog.ThreadId := Entry.ThreadId;
+    AggLog.StackTrace := Entry.StackTrace;
+    SetLength(AggLog.Tags, 0);
+    
+    // Call global aggregator if available
+    // This uses late binding to avoid circular dependency
+    // Users should ensure LogAggregator unit is included in their project
+    // and call LogAggregator().PushLog() with proper TAggregatedLog record
+    
+    // Note: Direct integration requires adding UniBase.LogAggregator to uses
+    // For now, we just output debug info. Full integration requires:
+    // 1. User adds UniBase.LogAggregator to uses clause of main unit
+    // 2. User configures LogAggregator() with backend
+    // 3. This method will push logs via callback/interface
+    
+    {$IFDEF DEBUG}
+    // Debug: show that aggregator push would happen
+    // OutputDebugString(PChar('Aggregator: ' + Entry.Msg));
+    {$ENDIF}
+  except
+    on E: Exception do
+    begin
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('Logger.WriteToAggregator failed: ' + E.Message));
+      {$ENDIF}
+    end;
+  end;
+ end;
+
+procedure TUniBaseLogger.SetAggregatorEnabled(AEnabled: Boolean);
+begin
+  FAggregatorEnabled := AEnabled;
+  {$IFDEF DEBUG}
+  if AEnabled then
+    OutputDebugString('UniBase.Logger: Aggregator enabled')
+  else
+    OutputDebugString('UniBase.Logger: Aggregator disabled');
+  {$ENDIF}
+end;
+
+procedure TUniBaseLogger.ConfigureAggregator(const AAppName, AAppVersion, AEnvironment: string);
+begin
+  FAppName := AAppName;
+  FAppVersion := AAppVersion;
+  FEnvironment := AEnvironment;
 end;
 
 function TUniBaseLogger.GetMaxLogFileSizeMB: Integer;

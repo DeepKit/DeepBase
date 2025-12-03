@@ -200,6 +200,21 @@ type
     procedure Test_MaxConnections_LimitsPoolSize;
     
     [Test]
+    procedure Test_WaitingCount_InitiallyZero;
+    
+    [Test]
+    procedure Test_GetSessionWithTimeout_ZeroTimeout_NoWait;
+    
+    [Test]
+    procedure Test_TryGetSession_ReturnsPoolFull_WhenFull;
+    
+    [Test]
+    procedure Test_DefaultAcquireTimeout_CanBeSet;
+    
+    [Test]
+    procedure Test_GetSessionAsync_CallsCallback;
+    
+    [Test]
     procedure Test_CleanupIdleSessions_RemovesIdleSessions;
   end;
 
@@ -762,7 +777,7 @@ var
   I: Integer;
   Session: TSSHSession;
 begin
-  SmallPool := TSSHConnectionPool.Create(3, 300, 60);
+  SmallPool := TSSHConnectionPool.Create(3, 300, 60, 0);  // 0 = no wait
   try
     Options := TSSHOptions.Default;
     Creds := TSSHCredentials.CreatePassword('user', 'pass');
@@ -780,6 +795,120 @@ begin
   end;
 end;
 
+procedure TTestSSHConnectionPool.Test_WaitingCount_InitiallyZero;
+begin
+  Assert.AreEqual(0, FPool.WaitingCount);
+end;
+
+procedure TTestSSHConnectionPool.Test_GetSessionWithTimeout_ZeroTimeout_NoWait;
+var
+  Options: TSSHOptions;
+  Creds: TSSHCredentials;
+  SmallPool: TSSHConnectionPool;
+  Session: TSSHSession;
+  I: Integer;
+begin
+  SmallPool := TSSHConnectionPool.Create(2, 300, 60, 30000);
+  try
+    Options := TSSHOptions.Default;
+    Creds := TSSHCredentials.CreatePassword('user', 'pass');
+    
+    // Fill the pool
+    for I := 1 to 2 do
+    begin
+      Options.Host := Format('fullhost%d.example.com', [I]);
+      SmallPool.GetSession(Options, Creds);
+    end;
+    
+    // Try to get another session with 0 timeout (no wait)
+    Options.Host := 'another.example.com';
+    Session := SmallPool.GetSessionWithTimeout(Options, Creds, 0);
+    
+    Assert.IsNull(Session, 'Should return nil immediately when pool is full with 0 timeout');
+  finally
+    SmallPool.Free;
+  end;
+end;
+
+procedure TTestSSHConnectionPool.Test_TryGetSession_ReturnsPoolFull_WhenFull;
+var
+  Options: TSSHOptions;
+  Creds: TSSHCredentials;
+  SmallPool: TSSHConnectionPool;
+  Session: TSSHSession;
+  AcquireResult: TSSHAcquireResult;
+  I: Integer;
+begin
+  SmallPool := TSSHConnectionPool.Create(2, 300, 60, 0);
+  try
+    Options := TSSHOptions.Default;
+    Creds := TSSHCredentials.CreatePassword('user', 'pass');
+    
+    // Fill the pool
+    for I := 1 to 2 do
+    begin
+      Options.Host := Format('tryhost%d.example.com', [I]);
+      SmallPool.GetSession(Options, Creds);
+    end;
+    
+    // Try to get another session
+    Options.Host := 'extra.example.com';
+    AcquireResult := SmallPool.TryGetSession(Options, Creds, Session);
+    
+    Assert.AreEqual(Ord(arPoolFull), Ord(AcquireResult), 'Should return arPoolFull when pool is full');
+  finally
+    SmallPool.Free;
+  end;
+end;
+
+procedure TTestSSHConnectionPool.Test_DefaultAcquireTimeout_CanBeSet;
+var
+  Pool: TSSHConnectionPool;
+begin
+  Pool := TSSHConnectionPool.Create(10, 300, 60, 5000);
+  try
+    Assert.AreEqual(5000, Pool.DefaultAcquireTimeout);
+    
+    Pool.DefaultAcquireTimeout := 10000;
+    Assert.AreEqual(10000, Pool.DefaultAcquireTimeout);
+  finally
+    Pool.Free;
+  end;
+end;
+
+procedure TTestSSHConnectionPool.Test_GetSessionAsync_CallsCallback;
+var
+  Options: TSSHOptions;
+  Creds: TSSHCredentials;
+  CallbackCalled: Boolean;
+  CallbackSuccess: Boolean;
+  Event: TEvent;
+begin
+  CallbackCalled := False;
+  CallbackSuccess := False;
+  Event := TEvent.Create(nil, True, False, '');
+  try
+    Options := TSSHOptions.Default;
+    Options.Host := 'async.example.com';
+    Creds := TSSHCredentials.CreatePassword('asyncuser', 'asyncpass');
+    
+    FPool.GetSessionAsync(Options, Creds,
+      procedure(Session: TSSHSession; Success: Boolean; const ErrorMsg: string)
+      begin
+        CallbackCalled := True;
+        CallbackSuccess := Success;
+        Event.SetEvent;
+      end, 5000);
+    
+    // Wait for callback (with timeout)
+    Event.WaitFor(3000);
+    
+    Assert.IsTrue(CallbackCalled, 'Callback should be called');
+  finally
+    Event.Free;
+  end;
+end;
+
 procedure TTestSSHConnectionPool.Test_CleanupIdleSessions_RemovesIdleSessions;
 var
   Options: TSSHOptions;
@@ -787,7 +916,7 @@ var
   FastPool: TSSHConnectionPool;
 begin
   // Create pool with very short idle timeout for testing
-  FastPool := TSSHConnectionPool.Create(10, 1, 60);  // 1 second idle timeout
+  FastPool := TSSHConnectionPool.Create(10, 1, 60, 0);  // 1 second idle timeout, no wait
   try
     Options := TSSHOptions.Default;
     Options.Host := 'idle-host.example.com';

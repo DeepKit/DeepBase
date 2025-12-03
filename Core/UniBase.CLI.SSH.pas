@@ -1,7 +1,7 @@
 { ============================================================================
   UniBase.CLI.SSH - SSH Remote Execution Support
   
-  Version: 0.2
+  Version: 0.3
   Description: Provides SSH connection management and remote command execution
                capabilities for the CLI framework.
   
@@ -13,8 +13,9 @@
     - Session persistence and reuse
     - Proxy/Jump host support
     - Background thread for idle connection cleanup
+    - Async session acquisition with timeout support
   
-  Note: This module provides the framework interface. Actual SSH implementation
+  Note: This module provides the framework interface.
         requires external library such as libssh2 or similar. The module uses
         a pluggable backend architecture to support different SSH libraries.
   
@@ -123,6 +124,12 @@ type
   TSSHHostKeyEvent = procedure(const Host, Fingerprint: string; 
     var Accept: Boolean) of object;
   
+  /// <summary>
+  /// Callback for async session acquisition
+  /// </summary>
+  TSSHSessionCallback = reference to procedure(Session: TSSHSession; 
+    Success: Boolean; const ErrorMsg: string);
+  
   // ============================================================================
   // SSH Backend Interface
   // ============================================================================
@@ -230,7 +237,17 @@ type
   // ============================================================================
   
   /// <summary>
-  /// Manages a pool of SSH connections
+  /// SSH pool acquisition result
+  /// </summary>
+  TSSHAcquireResult = (
+    arSuccess,        // Session acquired successfully
+    arTimeout,        // Timed out waiting for available slot
+    arPoolFull,       // Pool is full (no wait requested)
+    arConnectFailed   // Got slot but connection failed
+  );
+  
+  /// <summary>
+  /// Manages a pool of SSH connections with async support
   /// </summary>
   TSSHConnectionPool = class
   private
@@ -238,20 +255,40 @@ type
     FMaxConnections: Integer;
     FIdleTimeout: Integer;  // seconds
     FCleanupInterval: Integer; // seconds
+    FDefaultAcquireTimeout: Integer; // milliseconds
     FLock: TCriticalSection;
+    FAvailableEvent: TEvent;  // Signaled when a session is released
     FCleanupThread: TSSHCleanupThread;
+    FWaitingCount: Integer;  // Number of threads waiting for a session
     
     function GetSessionKey(const Host: string; Port: Integer; 
       const User: string): string;
     procedure DoCleanupIdleSessions;
+    function TryGetOrCreateSession(const Options: TSSHOptions;
+      const Credentials: TSSHCredentials; out Session: TSSHSession): TSSHAcquireResult;
   public
     constructor Create(MaxConnections: Integer = 10; IdleTimeout: Integer = 300;
-      CleanupInterval: Integer = 60);
+      CleanupInterval: Integer = 60; DefaultAcquireTimeout: Integer = 30000);
     destructor Destroy; override;
     
-    /// <summary>Get or create a session</summary>
+    /// <summary>Get or create a session (blocking, no timeout)</summary>
     function GetSession(const Options: TSSHOptions;
       const Credentials: TSSHCredentials): TSSHSession;
+    
+    /// <summary>Get or create a session with timeout</summary>
+    /// <param name="TimeoutMs">Timeout in milliseconds. 0 = no wait, -1 = use default</param>
+    /// <returns>Acquired session or nil if failed</returns>
+    function GetSessionWithTimeout(const Options: TSSHOptions;
+      const Credentials: TSSHCredentials; TimeoutMs: Integer): TSSHSession;
+    
+    /// <summary>Try to get a session without waiting</summary>
+    function TryGetSession(const Options: TSSHOptions;
+      const Credentials: TSSHCredentials; out Session: TSSHSession): TSSHAcquireResult;
+    
+    /// <summary>Get a session asynchronously</summary>
+    procedure GetSessionAsync(const Options: TSSHOptions;
+      const Credentials: TSSHCredentials; Callback: TSSHSessionCallback;
+      TimeoutMs: Integer = -1);
     
     /// <summary>Release a session back to pool</summary>
     procedure ReleaseSession(Session: TSSHSession);
@@ -265,12 +302,16 @@ type
     /// <summary>Get active session count</summary>
     function ActiveCount: Integer;
     
+    /// <summary>Get waiting thread count</summary>
+    function WaitingCount: Integer;
+    
     /// <summary>Manually trigger cleanup of idle sessions</summary>
     procedure CleanupIdleSessions;
     
     property MaxConnections: Integer read FMaxConnections write FMaxConnections;
     property IdleTimeout: Integer read FIdleTimeout write FIdleTimeout;
     property CleanupInterval: Integer read FCleanupInterval;
+    property DefaultAcquireTimeout: Integer read FDefaultAcquireTimeout write FDefaultAcquireTimeout;
   end;
   
   // ============================================================================
@@ -712,14 +753,17 @@ end;
 // ============================================================================
 
 constructor TSSHConnectionPool.Create(MaxConnections: Integer; IdleTimeout: Integer;
-  CleanupInterval: Integer);
+  CleanupInterval: Integer; DefaultAcquireTimeout: Integer);
 begin
   inherited Create;
   FSessions := TObjectDictionary<string, TSSHSession>.Create([doOwnsValues]);
   FMaxConnections := MaxConnections;
   FIdleTimeout := IdleTimeout;
   FCleanupInterval := CleanupInterval;
+  FDefaultAcquireTimeout := DefaultAcquireTimeout;
+  FWaitingCount := 0;
   FLock := TCriticalSection.Create;
+  FAvailableEvent := TEvent.Create(nil, False, False, '');  // Auto-reset event
   
   // Create and start cleanup thread
   FCleanupThread := TSSHCleanupThread.Create(Self, FCleanupInterval);
@@ -736,6 +780,14 @@ begin
   end;
   
   CloseAll;
+  
+  // Signal any waiting threads to wake up
+  if Assigned(FAvailableEvent) then
+  begin
+    FAvailableEvent.SetEvent;
+    FAvailableEvent.Free;
+  end;
+  
   FLock.Free;
   FSessions.Free;
   inherited;
@@ -783,21 +835,27 @@ begin
   end;
 end;
 
-function TSSHConnectionPool.GetSession(const Options: TSSHOptions;
-  const Credentials: TSSHCredentials): TSSHSession;
+function TSSHConnectionPool.TryGetOrCreateSession(const Options: TSSHOptions;
+  const Credentials: TSSHCredentials; out Session: TSSHSession): TSSHAcquireResult;
 var
   Key: string;
 begin
+  Session := nil;
   Key := GetSessionKey(Options.Host, Options.Port, Credentials.Username);
   
   FLock.Enter;
   try
-    if FSessions.TryGetValue(Key, Result) then
+    // Check for existing connected session
+    if FSessions.TryGetValue(Key, Session) then
     begin
-      if Result.IsConnected then
+      if Session.IsConnected then
+      begin
+        Result := arSuccess;
         Exit;
+      end;
       // Session exists but not connected, remove it
       FSessions.Remove(Key);
+      Session := nil;
     end;
     
     // Check max connections
@@ -806,19 +864,19 @@ begin
     
     if FSessions.Count >= FMaxConnections then
     begin
-      Result := nil;
+      Result := arPoolFull;
       Exit;
     end;
     
     // Create new session
-    Result := TSSHSession.Create(Key);
-    FSessions.Add(Key, Result);
+    Session := TSSHSession.Create(Key);
+    FSessions.Add(Key, Session);
   finally
     FLock.Leave;
   end;
   
   // Connect outside lock
-  if not Result.Connect(Options, Credentials) then
+  if not Session.Connect(Options, Credentials) then
   begin
     FLock.Enter;
     try
@@ -826,8 +884,126 @@ begin
     finally
       FLock.Leave;
     end;
-    Result := nil;
+    Session := nil;
+    Result := arConnectFailed;
+  end
+  else
+    Result := arSuccess;
+end;
+
+function TSSHConnectionPool.TryGetSession(const Options: TSSHOptions;
+  const Credentials: TSSHCredentials; out Session: TSSHSession): TSSHAcquireResult;
+begin
+  Result := TryGetOrCreateSession(Options, Credentials, Session);
+end;
+
+function TSSHConnectionPool.GetSession(const Options: TSSHOptions;
+  const Credentials: TSSHCredentials): TSSHSession;
+begin
+  // Use default timeout for backward compatibility
+  Result := GetSessionWithTimeout(Options, Credentials, FDefaultAcquireTimeout);
+end;
+
+function TSSHConnectionPool.GetSessionWithTimeout(const Options: TSSHOptions;
+  const Credentials: TSSHCredentials; TimeoutMs: Integer): TSSHSession;
+var
+  AcquireResult: TSSHAcquireResult;
+  StartTime: TDateTime;
+  RemainingMs: Integer;
+  WaitResult: TWaitResult;
+  EffectiveTimeout: Integer;
+begin
+  Result := nil;
+  
+  // Determine effective timeout
+  if TimeoutMs < 0 then
+    EffectiveTimeout := FDefaultAcquireTimeout
+  else
+    EffectiveTimeout := TimeoutMs;
+  
+  StartTime := Now;
+  
+  // First attempt without waiting
+  AcquireResult := TryGetOrCreateSession(Options, Credentials, Result);
+  
+  if AcquireResult = arSuccess then
+    Exit;
+  
+  if AcquireResult = arConnectFailed then
+    Exit;  // Connection failed, no point waiting
+  
+  // Pool is full, wait for availability if timeout > 0
+  if EffectiveTimeout = 0 then
+    Exit;  // No wait requested
+  
+  // Increment waiting count
+  TInterlocked.Increment(FWaitingCount);
+  try
+    while True do
+    begin
+      // Calculate remaining time
+      RemainingMs := EffectiveTimeout - MilliSecondsBetween(Now, StartTime);
+      if RemainingMs <= 0 then
+        Exit;  // Timeout
+      
+      // Wait for session release signal
+      WaitResult := FAvailableEvent.WaitFor(RemainingMs);
+      
+      if WaitResult = wrTimeout then
+        Exit;  // Timeout
+      
+      // Try again
+      AcquireResult := TryGetOrCreateSession(Options, Credentials, Result);
+      
+      if AcquireResult = arSuccess then
+        Exit;
+      
+      if AcquireResult = arConnectFailed then
+        Exit;
+      
+      // Still full, keep waiting
+    end;
+  finally
+    TInterlocked.Decrement(FWaitingCount);
   end;
+end;
+
+procedure TSSHConnectionPool.GetSessionAsync(const Options: TSSHOptions;
+  const Credentials: TSSHCredentials; Callback: TSSHSessionCallback;
+  TimeoutMs: Integer);
+var
+  LOptions: TSSHOptions;
+  LCredentials: TSSHCredentials;
+  LTimeout: Integer;
+begin
+  // Capture values for thread
+  LOptions := Options;
+  LCredentials := Credentials;
+  if TimeoutMs < 0 then
+    LTimeout := FDefaultAcquireTimeout
+  else
+    LTimeout := TimeoutMs;
+  
+  TThread.CreateAnonymousThread(
+    procedure
+    var
+      Session: TSSHSession;
+    begin
+      Session := GetSessionWithTimeout(LOptions, LCredentials, LTimeout);
+      
+      // Callback on main thread
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          if Assigned(Callback) then
+          begin
+            if Assigned(Session) then
+              Callback(Session, True, '')
+            else
+              Callback(nil, False, 'Failed to acquire session (timeout or connection failed)');
+          end;
+        end);
+    end).Start;
 end;
 
 procedure TSSHConnectionPool.ReleaseSession(Session: TSSHSession);
@@ -835,7 +1011,18 @@ begin
   // Session stays in pool for reuse
   // Just update last activity
   if Assigned(Session) then
+  begin
     Session.FLastActivity := Now;
+    
+    // Signal waiting threads that a session is available
+    if FWaitingCount > 0 then
+      FAvailableEvent.SetEvent;
+  end;
+end;
+
+function TSSHConnectionPool.WaitingCount: Integer;
+begin
+  Result := FWaitingCount;
 end;
 
 procedure TSSHConnectionPool.RemoveSession(const SessionId: string);

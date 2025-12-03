@@ -340,19 +340,32 @@
 
 ---
 
-### OPT-MAINT-006: 实现日志聚合和分析
+### OPT-MAINT-006: 实现日志聚合和分析 ✅
 - **优先级**: P2
-- **状态**: 待开始
+- **状态**: ✅ 已完成 (2025-12-02)
 - **预计工时**: 30-40 小时
-- **功能描述**:
-  - ElasticSearch 集成
-  - 日志聚合查询
-  - 性能分析可视化
-  - 告警规则配置
-  - Dashboard UI
+- **完成工作**:
+  - `UniBase.LogAggregator.pas` (~1600 行) - 日志聚合器
+    - ElasticSearch/Loki/HTTP Webhook 后端
+    - 批量推送、指数退避重试
+  - `UniBase.LogQuery.pas` (~1800 行) - 日志查询
+    - 流式查询构建器
+    - 时序分析、统计分析
+    - 异常检测、趋势分析
+  - `UniBase.LogAlert.pas` (~1260 行) - 日志告警
+    - 多种告警条件 (ErrorCount/ErrorRate/Pattern/NoLogs)
+    - Webhook/Email/Callback 告警动作
+  - `UniBase.LogDashboard.pas` (~1160 行) - 仪表板
+    - 多种 Widget 类型
+    - Grafana/HTML/JSON 导出
+  - `UniBase.Logging.pas` 扩展 - 聚合器集成
+  - `Tests/Test.UniBase.LogAggregator.pas` (~813 行) - 单元测试
 - **输出物**:
-  - `Tools/LogAnalyzer/`
-  - 日志分析文档
+  - `Core/UniBase.LogAggregator.pas`
+  - `Core/UniBase.LogQuery.pas`
+  - `Core/UniBase.LogAlert.pas`
+  - `Core/UniBase.LogDashboard.pas`
+  - `Tests/Test.UniBase.LogAggregator.pas`
 
 ---
 

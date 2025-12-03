@@ -63,7 +63,7 @@
 UniBase/
 ├── Core/                 # 核心模块（15 个）
 ├── VCL/                  # VCL 控件（14 个）
-├── FMX/                  # FMX 控件（4 个）
+├── FMX/                  # FMX 控件（13 个）
 ├── Tools/                # 开发工具
 │   ├── Studio/           # UniBase Studio
 │   ├── Tray/             # Tray 工作台
@@ -126,6 +126,7 @@ UniBase/
 - **2025-11-29**: 扩展功能持续开发（CLI Pipeline、SSH、GUI测试、压力测试）
 - **2025-11-30**: 平台扩展、云端集成、性能优化完成
 - **2025-12-01**: Phase R 重构 + Bug 修复 + Phase 7 功能补充
+- **2025-12-02**: SEC-001 RSA签名验证 + SSH-001 清理线程 + SYNC-001 JSON深度合并 + TEST-002 + FMX-002
 - **后续**: 维护和优化阶段
 
 ---
@@ -172,11 +173,11 @@ UniBase/
 **影响**: 类型混淆、无法互换使用
 **修复**: 删除本地声明，使用 `UniBase.Interfaces` 中的定义
 
-### 🚀 增强功能（待规划）
-- [ ] IoC 容器支持循环依赖检测
-- [ ] ORM 默认值 SQL 拼接增强（类型化）
-- [ ] Configuration 支持加密配置源
-- [ ] Logging 支持结构化日志（JSON格式）
+### 🚀 增强功能（已完成）
+- [x] IoC 容器支持循环依赖检测 (E-001)
+- [x] ORM 默认值 SQL 拼接增强（类型化）(E-002)
+- [x] Configuration 支持加密配置源 (E-003)
+- [x] Logging 支持结构化日志（JSON格式）(E-004)
 
 ---
 

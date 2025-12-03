@@ -1,0 +1,269 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 950">
+  <defs>
+    <linearGradient id="userGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="directorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b"/>
+      <stop offset="100%" style="stop-color:#ee5a24"/>
+    </linearGradient>
+    <linearGradient id="soIsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="sayDoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#f5576c"/>
+    </linearGradient>
+    <linearGradient id="capabilityGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#48dbfb"/>
+      <stop offset="100%" style="stop-color:#0abde3"/>
+    </linearGradient>
+    <linearGradient id="qualityGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5f27cd"/>
+      <stop offset="100%" style="stop-color:#341f97"/>
+    </linearGradient>
+    <linearGradient id="supportGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#feca57"/>
+      <stop offset="100%" style="stop-color:#ff9f43"/>
+    </linearGradient>
+    <linearGradient id="devDirGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fa709a"/>
+      <stop offset="100%" style="stop-color:#fee140"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a6cf7"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="1200" height="950" fill="#f8fafc"/>
+  
+  <!-- 标题 -->
+  <text x="600" y="35" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="22" font-weight="bold" fill="#1e293b">如是（SoIs）/ 述成（SayDone）后台角色架构</text>
+  <text x="600" y="58" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="13" fill="#64748b">AI归AI · 程序归程序 · 分层角色体系</text>
+
+  <!-- ===== 顶层：用户 ===== -->
+  <ellipse cx="600" cy="100" rx="70" ry="28" fill="url(#userGrad)" filter="url(#shadow)"/>
+  <text x="600" y="105" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="bold" fill="white">👤 用户</text>
+  
+  <!-- 用户到如是的连线 -->
+  <path d="M 600 128 L 600 148" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="615" y="143" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#64748b">自然语言</text>
+
+  <!-- ===== 第一层：如是（对话层） ===== -->
+  <rect x="320" y="155" width="560" height="55" rx="12" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="600" y="180" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="bold" fill="white">如是 SoIs · 对话层</text>
+  <text x="600" y="198" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="rgba(255,255,255,0.9)">用户交互 · 点选澄清 · 草图生成 · 问题定位</text>
+
+  <!-- ===== 如是专属角色 ===== -->
+  <rect x="100" y="220" width="1000" height="105" rx="8" fill="#ede9fe" stroke="#a78bfa" stroke-dasharray="5,3"/>
+  <text x="120" y="242" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="#6d28d9">如是专属角色 (SoIs Roles)</text>
+  
+  <!-- 澄清官 -->
+  <rect x="120" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="175" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">澄清官</text>
+  <text x="175" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Clarifier</text>
+  <text x="175" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#fef08a">🤖 需求分析·选项生成</text>
+  
+  <!-- 草图师 -->
+  <rect x="250" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="305" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">草图师</text>
+  <text x="305" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Sketcher</text>
+  <text x="305" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#fef08a">🤖 界面草图·实时更新</text>
+  
+  <!-- 定位员 -->
+  <rect x="380" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="435" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">定位员</text>
+  <text x="435" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Locator</text>
+  <text x="435" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#fef08a">🤖 问题定位·节点查找</text>
+  
+  <!-- 方案师 -->
+  <rect x="510" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="565" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">方案师</text>
+  <text x="565" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Proposer</text>
+  <text x="565" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#fef08a">🤖 修改建议·方案生成</text>
+  
+  <!-- 默认官 -->
+  <rect x="640" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="695" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">默认官</text>
+  <text x="695" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Defaulter</text>
+  <text x="695" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#bbf7d0">✓ 智能默认·规则推断</text>
+  
+  <!-- 进度官 -->
+  <rect x="770" y="255" width="110" height="60" rx="6" fill="url(#soIsGrad)" filter="url(#shadow)"/>
+  <text x="825" y="278" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="white">进度官</text>
+  <text x="825" y="293" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Tracker</text>
+  <text x="825" y="308" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="#bbf7d0">✓ 流程控制·状态跟踪</text>
+
+  <!-- 如是角色AI标记汇总 -->
+  <text x="900" y="300" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="#6d28d9">🤖 需要AI: 澄清官、草图师、定位员、方案师</text>
+  <text x="900" y="315" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="#059669">✓ 纯程序: 默认官、进度官</text>
+
+  <!-- 如是到述成的连线 -->
+  <path d="M 600 325 L 600 355" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="615" y="345" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#64748b">调用</text>
+
+  <!-- ===== 第二层：述成（转换引擎） ===== -->
+  <rect x="420" y="360" width="360" height="50" rx="10" fill="url(#sayDoneGrad)" filter="url(#shadow)"/>
+  <text x="600" y="385" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="bold" fill="white">述成 SayDone · 转换引擎</text>
+  <text x="600" y="402" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="rgba(255,255,255,0.9)">自然语言 → 结构化数据</text>
+
+  <!-- 述成到总导演的连线 -->
+  <path d="M 600 410 L 600 445" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="615" y="433" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#64748b">驱动</text>
+
+  <!-- ===== 第三层：总导演（核心调度） ===== -->
+  <rect x="400" y="450" width="400" height="70" rx="12" fill="url(#directorGrad)" filter="url(#shadow)"/>
+  <text x="600" y="478" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="bold" fill="white">总导演 / 调度员</text>
+  <text x="600" y="496" text-anchor="middle" font-family="Arial" font-size="11" fill="rgba(255,255,255,0.9)">Director / Orchestrator</text>
+  <text x="600" y="512" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="rgba(255,255,255,0.85)">运行时总指挥 · 无AI · 纯程序逻辑</text>
+
+  <!-- 监工（与总导演平级） -->
+  <rect x="850" y="460" width="120" height="50" rx="8" fill="url(#supportGrad)" filter="url(#shadow)"/>
+  <text x="910" y="482" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="bold" fill="white">监工</text>
+  <text x="910" y="498" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="8" fill="rgba(255,255,255,0.85)">独立观察 · 平级制衡</text>
+  
+  <!-- 平级关系线 -->
+  <line x1="800" y1="485" x2="850" y2="485" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="825" y="478" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="#64748b">平级</text>
+
+  <!-- ===== 分支线到三类角色 ===== -->
+  <path d="M 480 520 L 200 580" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 600 520 L 600 580" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 720 520 L 1000 580" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="600" y="560" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#64748b">发号施令</text>
+
+  <!-- ===== 三大类别标签 ===== -->
+  <!-- 能力执行类 -->
+  <rect x="50" y="585" width="300" height="28" rx="5" fill="#0891b2"/>
+  <text x="200" y="604" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">能力执行类 Capability</text>
+  
+  <!-- 质量守护类 -->
+  <rect x="450" y="585" width="300" height="28" rx="5" fill="#7c3aed"/>
+  <text x="600" y="604" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">质量守护类 Quality</text>
+  
+  <!-- 保障类 -->
+  <rect x="850" y="585" width="300" height="28" rx="5" fill="#ea580c"/>
+  <text x="1000" y="604" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">保障类 Support</text>
+
+  <!-- ===== 能力执行类角色 ===== -->
+  <!-- AI代理 -->
+  <rect x="50" y="625" width="120" height="90" rx="8" fill="url(#capabilityGrad)" filter="url(#shadow)"/>
+  <text x="110" y="650" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">AI代理</text>
+  <text x="110" y="666" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">AI Agent</text>
+  <rect x="58" y="675" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="110" y="690" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">意图理解</text>
+  <text x="110" y="703" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">内容生成</text>
+  
+  <!-- 共情官 -->
+  <rect x="190" y="625" width="120" height="90" rx="8" fill="url(#capabilityGrad)" filter="url(#shadow)"/>
+  <text x="250" y="650" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">共情官</text>
+  <text x="250" y="666" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Empathy</text>
+  <rect x="198" y="675" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="250" y="690" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">情感感知</text>
+  <text x="250" y="703" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">体验优化</text>
+
+  <!-- 记忆官 -->
+  <rect x="120" y="730" width="120" height="90" rx="8" fill="url(#capabilityGrad)" filter="url(#shadow)"/>
+  <text x="180" y="755" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">记忆官</text>
+  <text x="180" y="771" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Memory</text>
+  <rect x="128" y="780" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="180" y="795" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">上下文管理</text>
+  <text x="180" y="808" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">历史记忆</text>
+
+  <!-- 能力执行类AI标记 -->
+  <text x="180" y="850" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#0891b2">🤖 全部需要AI</text>
+
+  <!-- ===== 质量守护类角色 ===== -->
+  <!-- 守卫员 -->
+  <rect x="460" y="625" width="120" height="90" rx="8" fill="url(#qualityGrad)" filter="url(#shadow)"/>
+  <text x="520" y="650" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">守卫员</text>
+  <text x="520" y="666" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Guardian</text>
+  <rect x="468" y="675" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="520" y="690" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">格式验证</text>
+  <text x="520" y="703" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">安全检查</text>
+  
+  <!-- 自检员 -->
+  <rect x="600" y="625" width="120" height="90" rx="8" fill="url(#qualityGrad)" filter="url(#shadow)"/>
+  <text x="660" y="650" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">自检员</text>
+  <text x="660" y="666" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Self-Check</text>
+  <rect x="608" y="675" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="660" y="690" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">AI输出自审</text>
+  <text x="660" y="703" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">幻觉检测</text>
+
+  <!-- 比对员 -->
+  <rect x="530" y="730" width="120" height="90" rx="8" fill="url(#qualityGrad)" filter="url(#shadow)"/>
+  <text x="590" y="755" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">比对员</text>
+  <text x="590" y="771" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Diff Analyzer</text>
+  <rect x="538" y="780" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="590" y="795" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">变更分析</text>
+  <text x="590" y="808" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">影响评估</text>
+
+  <!-- 质量守护类标记 -->
+  <text x="520" y="850" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#7c3aed">🔒 守卫员=硬关卡</text>
+  <text x="660" y="850" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#7c3aed">🤖 其他需要AI</text>
+
+  <!-- ===== 保障类角色 ===== -->
+  <!-- 回滚员 -->
+  <rect x="940" y="625" width="120" height="90" rx="8" fill="url(#supportGrad)" filter="url(#shadow)"/>
+  <text x="1000" y="650" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">回滚员</text>
+  <text x="1000" y="666" text-anchor="middle" font-family="Arial" font-size="9" fill="rgba(255,255,255,0.9)">Rollback</text>
+  <rect x="948" y="675" width="104" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="1000" y="690" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">故障恢复</text>
+  <text x="1000" y="703" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="white">状态回滚</text>
+
+  <!-- 保障类标记 -->
+  <text x="1000" y="745" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#ea580c">✓ 无需AI · 纯程序</text>
+
+  <!-- ===== 汇报箭头到导演台 ===== -->
+  <path d="M 180 820 L 180 880 L 600 880 L 600 900" stroke="#64748b" stroke-width="1.5" fill="none"/>
+  <path d="M 590 820 L 590 880" stroke="#64748b" stroke-width="1.5" fill="none"/>
+  <path d="M 1000 715 L 1000 880 L 600 880" stroke="#64748b" stroke-width="1.5" fill="none"/>
+  
+  <!-- 导演台 -->
+  <rect x="420" y="895" width="360" height="30" rx="6" fill="url(#devDirGrad)" filter="url(#shadow)"/>
+  <text x="600" y="915" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="white">导演台 DevDirector · 场景树 · 节点定位 · 代码生成</text>
+
+  <!-- ===== 图例 ===== -->
+  <rect x="50" y="895" width="320" height="30" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <text x="70" y="915" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#334155">图例:</text>
+  <text x="110" y="915" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#0891b2">🤖 需要AI</text>
+  <text x="190" y="915" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#7c3aed">🔒 硬关卡</text>
+  <text x="270" y="915" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#059669">✓ 纯程序</text>
+
+  <!-- ===== 左侧原则说明 ===== -->
+  <rect x="20" y="340" width="160" height="130" rx="8" fill="#fff" stroke="#e2e8f0" filter="url(#shadow)"/>
+  <text x="100" y="365" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="bold" fill="#334155">设计原则</text>
+  
+  <line x1="30" y1="375" x2="170" y2="375" stroke="#e2e8f0"/>
+  
+  <text x="35" y="398" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#475569">1. AI归AI</text>
+  <text x="45" y="415" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="#94a3b8">需要智能的用AI</text>
+  
+  <text x="35" y="438" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#475569">2. 程序归程序</text>
+  <text x="45" y="455" font-family="Microsoft YaHei, sans-serif" font-size="9" fill="#94a3b8">需要可靠的用程序</text>
+
+  <!-- ===== 右侧如是角色说明 ===== -->
+  <rect x="920" y="220" width="170" height="170" rx="8" fill="#fff" stroke="#a78bfa" filter="url(#shadow)"/>
+  <text x="1005" y="245" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="bold" fill="#6d28d9">如是专属角色</text>
+  
+  <line x1="930" y1="255" x2="1080" y2="255" stroke="#e2e8f0"/>
+  
+  <text x="940" y="275" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#7c3aed">● 澄清官 - 需求分析</text>
+  <text x="940" y="295" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#7c3aed">● 草图师 - 界面生成</text>
+  <text x="940" y="315" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#7c3aed">● 定位员 - 问题定位</text>
+  <text x="940" y="335" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#7c3aed">● 方案师 - 修改建议</text>
+  <text x="940" y="355" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#059669">● 默认官 - 智能默认</text>
+  <text x="940" y="375" font-family="Microsoft YaHei, sans-serif" font-size="10" fill="#059669">● 进度官 - 流程控制</text>
+</svg>

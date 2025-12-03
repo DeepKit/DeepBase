@@ -738,3 +738,124 @@
 - DOQRY-004: 日志输出结构化 JSON 格式
 - DOQRY-005: 预编译语句池（UniDbSetPreparedStatementPooling/UniDbClearPreparedStatements/UniDbGetPreparedStats）
 - DOQRY-006: 错误码规范化（17 个 DOQRY_ERR_* 常量 + InferErrorCode）
+
+---
+
+## OPT-MAINT-006: 日志聚合和分析系统 ✅ (2025-12-02)
+
+> 功能优化任务: 集中式日志聚合和分析系统
+
+### 新增模块
+
+#### UniBase.LogAggregator.pas (~1600 行)
+- **日志聚合器**: `TLogAggregator` 主类，支持批量推送、重试机制
+- **后端接口**: `ILogBackend` 抽象，可扩展多种后端
+- **ElasticSearch 后端**: `TElasticSearchBackend` - ES 7.x+ Bulk API 支持
+- **Loki 后端**: `TLokiBackend` - Grafana Loki Push API
+- **HTTP Webhook 后端**: `THttpWebhookBackend` - 通用 HTTP 推送
+- **日志批次**: `TLogBatch` 批量操作类
+- **过滤器**: `TLogFilter` 流式 API
+- **配置**: `TBackendConfig` 后端配置工厂方法
+
+#### UniBase.LogQuery.pas (~1800 行)
+- **查询构建器**: `TLogQueryBuilder` 流式查询 API
+  - Where* 系列过滤方法
+  - OrderBy*, Skip, Take 分页
+  - GroupBy, Distinct 聚合
+- **查询结果**: `TLogQueryResult` 支持 ToJSON/ToCSV 导出
+- **时序数据**: `TLogTimeSeries` 时间序列分析
+- **统计**: `TLogStats` 日志统计信息
+- **分析器**: `TLogAnalyzer` 高级分析功能
+  - CountByLevel/Source/Host/App
+  - CountByTime, ErrorRateByTime
+  - TopErrors, TopExceptions
+  - FindPatterns (正则匹配)
+  - FindAnomalies (统计异常检测)
+  - IsErrorRateIncreasing, GetTrend (线性回归)
+
+#### UniBase.LogAlert.pas (~1260 行)
+- **告警条件**: `TAlertCondition`
+  - ErrorCount: 错误数阈值
+  - ErrorRate: 错误率阈值
+  - PatternMatch: 模式匹配
+  - NoLogs: 无日志检测
+- **告警动作**: `TAlertAction`
+  - Webhook: HTTP 回调
+  - Email: 邮件通知 (接口)
+  - Callback: 本地回调
+  - Log: 日志输出
+- **告警规则**: `TAlertRule` 流式 API 定义规则
+- **告警管理器**: `TAlertManager`
+  - 后台评估线程
+  - Cooldown 冷却机制
+  - 历史记录
+  - 活动告警查询
+
+#### UniBase.LogDashboard.pas (~1160 行)
+- **Widget 类型**: Counter, Gauge, LineChart, BarChart, PieChart, Table, Heatmap
+- **仪表板**: `TDashboard` 面板和 Widget 组织
+- **导出器**: `TDashboardExporter`
+  - ToJSON: 内部格式
+  - ToGrafanaJSON: Grafana 兼容格式
+  - ToHTML: 独立 HTML 页面
+  - ToCSV: 数据导出
+- **构建器**: `TDashboardBuilder`
+  - BuildOverviewDashboard: 概览仪表板
+  - BuildErrorDashboard: 错误分析仪表板
+  - BuildPerformanceDashboard: 性能仪表板
+
+### UniBase.Logging.pas 扩展 (v1.1)
+- `SetAggregatorEnabled(AEnabled)`: 启用/禁用聚合器
+- `ConfigureAggregator(AppName, AppVersion, Environment)`: 配置元数据
+- `AggregatorEnabled`, `AppName`, `AppVersion`, `Environment` 属性
+- 写入线程自动推送到聚合器
+
+### 单元测试
+- `Tests/Test.UniBase.LogAggregator.pas` (~813 行)
+  - TTestLogAggregator: 聚合器和批次测试
+  - TTestLogQuery: 查询和分析器测试
+  - TTestLogAlert: 告警规则和管理器测试
+  - TTestLogDashboard: 仪表板和导出测试
+
+### 使用示例
+
+```pascal
+// 配置 ElasticSearch 后端
+LogAggregator().AddBackend(
+  CreateElasticSearchBackend('http://localhost:9200', 'app-logs'));
+LogAggregator().Start;
+
+// 启用日志聚合
+Logger.SetAggregatorEnabled(True);
+Logger.ConfigureAggregator('MyApp', '1.0.0', 'production');
+
+// 配置告警规则
+AlertManager().AddRule(
+  CreateAlertRule('high-error-rate', 'High Error Rate')
+    .WithCondition(TAlertCondition.ErrorRate(10.0, 5))
+    .WithSeverity(asCritical)
+    .AddAction(TAlertAction.Webhook('https://hooks.slack.com/...'));
+AlertManager().Start;
+
+// 查询和分析
+var Results := LogQuery()
+  .WhereLevelIn([llError, llFatal])
+  .WhereTimeBetween(IncHour(Now, -1), Now)
+  .OrderByTimestampDesc
+  .Take(100)
+  .Execute;
+
+var Stats := LogAnalyzer.GetStats;
+var TopErrors := LogAnalyzer.TopErrors(10);
+
+// 生成仪表板
+var Builder := TDashboardBuilder.Create(LogAnalyzer);
+var Dashboard := Builder.BuildOverviewDashboard;
+var Exporter := TDashboardExporter.Create(Dashboard);
+var HTML := Exporter.ToHTML;
+```
+
+### 统计
+- 新增代码: ~6600 行
+- 新增模块: 4 个核心模块
+- 新增测试: ~813 行 (35 个测试用例)

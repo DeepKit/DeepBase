@@ -21,6 +21,35 @@ uses
   UniBase.Consts,
   UniBase.Interfaces;
 
+// ============================================================================
+// Unit-level convenience functions
+// These provide direct access without needing to call UniBase().Config
+// Usage: 
+//   uses UniBase.Config;
+//   DBPath := GetConfig('DB.Path', 'default.db');
+// ============================================================================
+
+/// <summary>Get string config value</summary>
+function GetConfig(const Key: string; const Default: string = ''): string;
+/// <summary>Set string config value</summary>
+procedure SetConfig(const Key, Value: string; const Category: string = '');
+/// <summary>Get integer config value</summary>
+function GetConfigInt(const Key: string; Default: Integer = 0): Integer;
+/// <summary>Set integer config value</summary>
+procedure SetConfigInt(const Key: string; Value: Integer; const Category: string = '');
+/// <summary>Get boolean config value</summary>
+function GetConfigBool(const Key: string; Default: Boolean = False): Boolean;
+/// <summary>Set boolean config value</summary>
+procedure SetConfigBool(const Key: string; Value: Boolean; const Category: string = '');
+/// <summary>Get float config value</summary>
+function GetConfigFloat(const Key: string; Default: Double = 0): Double;
+/// <summary>Set float config value</summary>
+procedure SetConfigFloat(const Key: string; Value: Double; const Category: string = '');
+/// <summary>Check if config key exists</summary>
+function ConfigExists(const Key: string): Boolean;
+/// <summary>Delete config key</summary>
+procedure DeleteConfig(const Key: string);
+
 type
   /// <summary>
   /// Configuration manager.
@@ -129,7 +158,8 @@ implementation
 
 uses
   System.StrUtils,
-  UniBase.Security;
+  UniBase.Security,
+  UniBase.Manager;
 
 { TUniBaseConfig }
 
@@ -493,6 +523,131 @@ begin
   finally
     TMonitor.Exit(FLock);
   end;
+end;
+
+// ============================================================================
+// Unit-level convenience function implementations
+// Note: These use UBConfig from UniBase.Manager to avoid dotted-name ambiguity
+// ============================================================================
+
+function GetConfig(const Key: string; const Default: string): string;
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Result := Cfg.GetConfig(Key, Default)
+  else
+    Result := Default;
+end;
+
+procedure SetConfig(const Key, Value: string; const Category: string);
+var
+  Cat: string;
+  Cfg: TUniBaseConfig;
+begin
+  if Category = '' then
+    Cat := SConfigCategoryGeneral
+  else
+    Cat := Category;
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Cfg.SetConfig(Key, Value, Cat);
+end;
+
+function GetConfigInt(const Key: string; Default: Integer): Integer;
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Result := Cfg.GetConfigInt(Key, Default)
+  else
+    Result := Default;
+end;
+
+procedure SetConfigInt(const Key: string; Value: Integer; const Category: string);
+var
+  Cat: string;
+  Cfg: TUniBaseConfig;
+begin
+  if Category = '' then
+    Cat := SConfigCategoryGeneral
+  else
+    Cat := Category;
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Cfg.SetConfigInt(Key, Value, Cat);
+end;
+
+function GetConfigBool(const Key: string; Default: Boolean): Boolean;
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Result := Cfg.GetConfigBool(Key, Default)
+  else
+    Result := Default;
+end;
+
+procedure SetConfigBool(const Key: string; Value: Boolean; const Category: string);
+var
+  Cat: string;
+  Cfg: TUniBaseConfig;
+begin
+  if Category = '' then
+    Cat := SConfigCategoryGeneral
+  else
+    Cat := Category;
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Cfg.SetConfigBool(Key, Value, Cat);
+end;
+
+function GetConfigFloat(const Key: string; Default: Double): Double;
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Result := Cfg.GetConfigFloat(Key, Default)
+  else
+    Result := Default;
+end;
+
+procedure SetConfigFloat(const Key: string; Value: Double; const Category: string);
+var
+  Cat: string;
+  Cfg: TUniBaseConfig;
+begin
+  if Category = '' then
+    Cat := SConfigCategoryGeneral
+  else
+    Cat := Category;
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Cfg.SetConfigFloat(Key, Value, Cat);
+end;
+
+function ConfigExists(const Key: string): Boolean;
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Result := Cfg.ConfigExists(Key)
+  else
+    Result := False;
+end;
+
+procedure DeleteConfig(const Key: string);
+var
+  Cfg: TUniBaseConfig;
+begin
+  Cfg := UBConfig;
+  if Assigned(Cfg) then
+    Cfg.DeleteConfig(Key);
 end;
 
 end.

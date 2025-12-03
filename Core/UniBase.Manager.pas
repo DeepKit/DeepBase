@@ -259,6 +259,28 @@ function UniBase: TUniBaseManager;
 /// </summary>
 procedure SetUniBaseInstance(AInstance: TUniBaseManager);
 
+// ============================================================================
+// Direct Module Access Functions (Convenience Shortcuts)
+// These provide direct access to sub-modules without calling UniBase() first.
+// Usage:
+//   uses UniBase.Manager;
+//   Value := UBConfig.GetConfig('Key', 'Default');
+//   UBI18n.Translate('Hello');
+// ============================================================================
+
+/// <summary>Direct access to Config module</summary>
+function UBConfig: TUniBaseConfig;
+/// <summary>Direct access to I18n module</summary>
+function UBI18n: TUniBaseI18n;
+/// <summary>Direct access to Theme module</summary>
+function UBTheme: TUniBaseTheme;
+/// <summary>Direct access to Logger module</summary>
+function UBLogger: TUniBaseLogger;
+/// <summary>Direct access to Security module</summary>
+function UBSecurity: TUniBaseSecurity;
+/// <summary>Direct access to PluginManager module</summary>
+function UBPlugins: TUniBasePluginManager;
+
 implementation
 
 uses
@@ -310,6 +332,36 @@ begin
   finally
     TMonitor.Exit(GUniBaseLock);
   end;
+end;
+
+function UBConfig: TUniBaseConfig;
+begin
+  Result := UniBase.Config;
+end;
+
+function UBI18n: TUniBaseI18n;
+begin
+  Result := UniBase.I18n;
+end;
+
+function UBTheme: TUniBaseTheme;
+begin
+  Result := UniBase.Theme;
+end;
+
+function UBLogger: TUniBaseLogger;
+begin
+  Result := UniBase.Logger;
+end;
+
+function UBSecurity: TUniBaseSecurity;
+begin
+  Result := UniBase.Security;
+end;
+
+function UBPlugins: TUniBasePluginManager;
+begin
+  Result := UniBase.PluginManager;
 end;
 
 { TUniBaseManager }
@@ -927,9 +979,52 @@ end;
 
 function TUniBaseManager.CreateSchema: Boolean;
 var
-  Script: TFDScript;
+  Query: TFDQuery;
+  FullSQL: string;
+  Statements: TArray<string>;
+  Stmt: string;
   I, MaxRetry: Integer;
   ErrorMsg: string;
+  
+  function SplitSQLStatements(const SQL: string): TArray<string>;
+  var
+    Lines: TArray<string>;
+    Current: string;
+    List: TList<string>;
+    Line: string;
+    InString: Boolean;
+    C: Char;
+    J: Integer;
+  begin
+    // Split by semicolon, but respect string literals
+    List := TList<string>.Create;
+    try
+      Current := '';
+      InString := False;
+      for J := 1 to Length(SQL) do
+      begin
+        C := SQL[J];
+        if C = '''' then
+          InString := not InString;
+        if (C = ';') and not InString then
+        begin
+          Current := Trim(Current);
+          if Current <> '' then
+            List.Add(Current);
+          Current := '';
+        end
+        else
+          Current := Current + C;
+      end;
+      Current := Trim(Current);
+      if Current <> '' then
+        List.Add(Current);
+      Result := List.ToArray;
+    finally
+      List.Free;
+    end;
+  end;
+  
 begin
   Result := False;
   
@@ -940,15 +1035,24 @@ begin
   
   for I := 1 to MaxRetry do
   begin
-    Script := TFDScript.Create(nil);
+    Query := TFDQuery.Create(nil);
     try
-      Script.Connection := FConfigDB;
-      Script.SQLScripts.Add;
-      // Use centralized schema definitions from UniBase.Schema unit
-      Script.SQLScripts[0].SQL.Text := GetFullSchemaSQL;
+      Query.Connection := FConfigDB;
+      // Disable parameter parsing to avoid issues with :name patterns in string literals
+      Query.ResourceOptions.ParamCreate := False;
+      
+      FullSQL := GetFullSchemaSQL;
+      Statements := SplitSQLStatements(FullSQL);
       
       try
-        Script.ExecuteAll;
+        for Stmt in Statements do
+        begin
+          if Trim(Stmt) <> '' then
+          begin
+            Query.SQL.Text := Stmt;
+            Query.ExecSQL;
+          end;
+        end;
         Result := True;
         FInitErrorCode := ecSuccess;
         Exit;  // Success, exit loop
@@ -973,7 +1077,7 @@ begin
         end;
       end;
     finally
-      Script.Free;
+      Query.Free;
     end;
   end;
 end;
@@ -1013,6 +1117,7 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConfigDB;
+    Query.ResourceOptions.ParamCreate := False;
     
     // === Settings table columns ===
     AddColumnIfMissing('Settings', 'ValueType', 'TEXT DEFAULT ''String''');
@@ -1122,8 +1227,12 @@ end;
 
 function TUniBaseManager.RunMigrationScript(const ScriptPath: string): Boolean;
 var
-  Script: TFDScript;
-  ScriptSQL: string;
+  Query: TFDQuery;
+  ScriptSQL, Stmt, Current: string;
+  Statements: TList<string>;
+  InString: Boolean;
+  C: Char;
+  J: Integer;
 begin
   Result := False;
   
@@ -1136,15 +1245,50 @@ begin
   try
     ScriptSQL := TFile.ReadAllText(ScriptPath, TEncoding.UTF8);
     
-    Script := TFDScript.Create(nil);
+    // Split SQL by semicolons, respecting string literals
+    Statements := TList<string>.Create;
     try
-      Script.Connection := FConfigDB;
-      Script.SQLScripts.Add;
-      Script.SQLScripts[0].SQL.Text := ScriptSQL;
-      Script.ExecuteAll;
-      Result := True;
+      Current := '';
+      InString := False;
+      for J := 1 to Length(ScriptSQL) do
+      begin
+        C := ScriptSQL[J];
+        if C = '''' then
+          InString := not InString;
+        if (C = ';') and not InString then
+        begin
+          Current := Trim(Current);
+          if (Current <> '') and not Current.StartsWith('--') then
+            Statements.Add(Current);
+          Current := '';
+        end
+        else
+          Current := Current + C;
+      end;
+      Current := Trim(Current);
+      if (Current <> '') and not Current.StartsWith('--') then
+        Statements.Add(Current);
+      
+      Query := TFDQuery.Create(nil);
+      try
+        Query.Connection := FConfigDB;
+        // Disable parameter parsing to avoid issues with :name patterns in string literals
+        Query.ResourceOptions.ParamCreate := False;
+        
+        for Stmt in Statements do
+        begin
+          if Trim(Stmt) <> '' then
+          begin
+            Query.SQL.Text := Stmt;
+            Query.ExecSQL;
+          end;
+        end;
+        Result := True;
+      finally
+        Query.Free;
+      end;
     finally
-      Script.Free;
+      Statements.Free;
     end;
   except
     on E: Exception do

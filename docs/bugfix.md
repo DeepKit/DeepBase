@@ -181,6 +181,27 @@
   - 更新配置单元测试，验证密文存储在 Secrets 表中而非 Settings 表
 - **状态**: ✅ 已修复
 
+### BUG-027: TFDScript 参数解析导致 SQL 语法错误 (2025-12-02/03)
+- **严重程度**: 🔴 高 (阻塞应用启动)
+- **报告来源**: TheLot, Insight 等多个集成应用
+- **文件**: `UniBase.Schema.pas`, `UniBase.Manager.pas`
+- **问题描述**:
+  - 错误信息: `near "now": syntax error`, `near "cn": syntax error`, `near "SYS": syntax error`
+  - 原因 1: CREATE TABLE 中使用 `datetime('now', 'localtime')` DEFAULT 值，FireDAC TFDScript 将 `'now'` 误解析为参数 `:now`
+  - 原因 2: TFDScript 对多语句 SQL 的解析不稳定，可能与 Unicode 字符有关
+  - 原因 3: `SQL_TIER2_PROMPT_VERSIONS_DATA` 中 Content 字段包含 `#13#10`，导致 SQL 语句被分割
+- **修复方案** (2025-12-03 最终版):
+  1. **完全移除 TFDScript**，改用 TFDQuery 逐条执行 SQL
+  2. 新增 `SplitSQLStatements` 函数，按分号分割 SQL，但尊重字符串字面量内的分号
+  3. 在执行 SQL 前设置 `Query.ResourceOptions.ParamCreate := False`
+  4. 将 `SQL_TIER2_PROMPT_VERSIONS_DATA` 中字符串内的 `#13#10` 改为 `|| char(10) ||`
+  5. 将所有 `datetime('now')` 改为 `CURRENT_TIMESTAMP`
+- **影响方法**:
+  - `TUniBaseManager.CreateSchema` - 重写为逐条执行
+  - `TUniBaseManager.RunMigrationScript` - 重写为逐条执行
+  - `TUniBaseManager.EnsureSchemaColumns` - 添加 ParamCreate := False
+- **状态**: ✅ 已修复
+
 ---
 
 ## 代码质量检查结果 (2025-12-01)

@@ -1,0 +1,582 @@
+# UniFlow 接口契约定义
+
+> 定义 11 个角色的接口契约：方法签名、输入/输出类型、副作用声明、可测试性要求。
+
+创建日期: 2025-12-03  版本: 1.0
+
+---
+
+## 1. 通用类型定义
+
+```typescript
+// 角色枚举
+type RoleType = 
+  | 'engine'        // 引擎
+  | 'inspector'     // 督察
+  | 'commander'     // 总指挥
+  | 'dispatcher'    // 调度员
+  | 'advisor'       // 智囊
+  | 'executor'      // 执行者
+  | 'guard'         // 守卫
+  | 'quartermaster' // 军械官
+  | 'logistics'     // 后勤
+  | 'chronicler'    // 记录员
+  | 'signalOfficer' // 通信官
+
+// 统一结果类型
+interface Result<T> {
+  ok: boolean
+  data?: T
+  error?: ErrorInfo
+}
+
+interface ErrorInfo {
+  code: string           // 错误码，如 'AI_TIMEOUT'
+  message: string        // 可读描述
+  retryable: boolean     // 是否可重试
+  details?: unknown      // 附加诊断信息
+}
+
+// 上下文
+interface RequestContext {
+  correlationId: string
+  traceId: string
+  user?: { id: string; roles: string[] }
+  locale?: string
+  workflowInstanceId?: string
+}
+```
+
+---
+
+## 2. 元层角色接口 (Level 0)
+
+### 2.1 引擎 (IEngine)
+
+```typescript
+interface IEngine {
+  /** 注册角色实例 */
+  registerRole(roleType: RoleType, instance: IRole): void
+
+  /** 获取角色实例 */
+  getRole<T extends IRole>(roleType: RoleType): T | null
+
+  /** 发送消息（同步/异步） */
+  send(message: UniFlowMessage): Promise<Result<unknown>>
+
+  /** 广播事件 */
+  broadcast(event: UniFlowMessage): void
+
+  /** 启动引擎 */
+  start(): Promise<void>
+
+  /** 优雅停止 */
+  stop(): Promise<void>
+
+  /** 健康检查 */
+  healthCheck(): HealthStatus
+}
+
+interface HealthStatus {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  roles: Record<RoleType, RoleHealthInfo>
+  uptime: number
+}
+
+interface RoleHealthInfo {
+  status: 'running' | 'paused' | 'failed'
+  lastHeartbeat: Date
+  errorCount: number
+}
+```
+
+**副作用声明**：启动/停止会影响所有角色生命周期；消息发送会触发目标角色处理。
+
+**可测试性**：可注入 Mock 角色；可查询 HealthStatus 验证状态。
+
+---
+
+### 2.2 督察 (IInspector)
+
+```typescript
+interface IInspector {
+  // === 状态查看 ===
+  getRoleState(roleType: RoleType): RoleState
+  getWorkflowState(instanceId: string): WorkflowState
+  getMemoryState(sessionId?: string): MemoryState
+  getMessageQueueState(): QueueState
+
+  // === 断点控制 ===
+  setBreakpoint(location: BreakpointLocation): string // 返回 breakpointId
+  removeBreakpoint(id: string): void
+  listBreakpoints(): Breakpoint[]
+  step(): Promise<StepResult>
+  continue(): void
+  abort(): void
+  getCurrentContext(): ExecutionContext | null
+
+  // === Mock 注入 ===
+  mockSkill(skillId: string, response: MockResponse): MockHandle
+  mockAgent(agentId: string, response: MockResponse): MockHandle
+  mockExternal(serviceId: string, response: MockResponse): MockHandle
+  removeMock(handle: MockHandle): void
+  clearAllMocks(): void
+
+  // === 性能剖析 ===
+  startProfiling(options?: ProfileOptions): ProfileSession
+  stopProfiling(session: ProfileSession): ProfileReport
+  getRealtimeMetrics(): RealtimeMetrics
+
+  // === 紧急干预 ===
+  forceStop(roleType: RoleType, auth: AuthToken): Promise<void>
+  forceRestart(roleType: RoleType, auth: AuthToken): Promise<void>
+  isolate(roleType: RoleType): void
+  deisolate(roleType: RoleType): void
+}
+
+interface BreakpointLocation {
+  type: 'role' | 'workflow' | 'message'
+  role?: RoleType
+  workflow?: string
+  step?: string
+  messageType?: string
+}
+```
+
+**副作用声明**：断点会暂停执行；Mock 会改变返回；紧急干预会影响角色状态。
+
+**可测试性**：所有方法返回可断言的结构；Mock 可链式设置。
+
+---
+
+## 3. 决策层角色接口 (Level 4)
+
+### 3.1 总指挥 (ICommander)
+
+```typescript
+interface ICommander {
+  /** 接收外部请求 */
+  handleRequest(request: ExternalRequest, ctx: RequestContext): Promise<Result<ExternalResponse>>
+
+  /** 判断是否接受请求 */
+  shouldAccept(request: ExternalRequest): boolean
+
+  /** 分配资源预算 */
+  allocateBudget(taskId: string, budget: ResourceBudget): void
+
+  /** 处理异常上报 */
+  handleException(exception: RoleException): Promise<void>
+
+  /** 返回最终响应 */
+  respond(response: ExternalResponse, ctx: RequestContext): void
+}
+
+interface ExternalRequest {
+  type: string
+  payload: unknown
+  priority?: number
+}
+
+interface ResourceBudget {
+  maxTokens?: number
+  maxTimeMs?: number
+  maxCost?: number
+}
+```
+
+**副作用声明**：`handleRequest` 会触发整个流程；`respond` 会产生外部响应。
+
+---
+
+### 3.2 调度员 (IDispatcher)
+
+```typescript
+interface IDispatcher {
+  /** 创建 Workflow 实例 */
+  createInstance(workflowId: string, input: unknown, ctx: RequestContext): Promise<string>
+
+  /** 执行下一步 */
+  executeNext(instanceId: string): Promise<StepResult>
+
+  /** 获取实例状态 */
+  getInstanceStatus(instanceId: string): WorkflowInstanceStatus
+
+  /** 恢复暂停的实例（如 HumanTask 完成后） */
+  resume(instanceId: string, humanInput?: unknown): Promise<void>
+
+  /** 取消实例 */
+  cancel(instanceId: string, reason: string): Promise<void>
+
+  /** 重试失败步骤 */
+  retry(instanceId: string, stepId: string): Promise<StepResult>
+}
+
+interface WorkflowInstanceStatus {
+  instanceId: string
+  workflowId: string
+  status: 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled'
+  currentStep: string
+  progress: number // 0-100
+  variables: Record<string, unknown>
+  history: StepExecution[]
+}
+```
+
+**副作用声明**：`createInstance` 写入状态存储；`executeNext` 触发角色调用。
+
+---
+
+## 4. 智能层角色接口 (Level 3)
+
+### 4.1 智囊 (IAdvisor)
+
+```typescript
+interface IAdvisor {
+  /** 理解意图 */
+  understand(input: UnderstandInput, ctx: RequestContext): Promise<Result<UnderstandOutput>>
+
+  /** 生成内容 */
+  generate(input: GenerateInput, ctx: RequestContext): Promise<Result<GenerateOutput>>
+
+  /** 诊断问题 */
+  diagnose(input: DiagnoseInput, ctx: RequestContext): Promise<Result<DiagnoseOutput>>
+}
+
+interface UnderstandInput {
+  text: string
+  schema?: JSONSchema       // 期望输出结构
+  examples?: FewShotExample[]
+}
+
+interface UnderstandOutput {
+  intent: StructuredIntent
+  confidence: number
+  clarifications?: string[] // 需要追问的问题
+}
+
+interface GenerateInput {
+  task: string
+  context: Record<string, unknown>
+  style?: StyleGuide
+  maxLength?: number
+}
+
+interface GenerateOutput {
+  content: string
+  metadata: { tokens: number; model: string }
+}
+
+interface DiagnoseInput {
+  errorLog: string
+  context: Record<string, unknown>
+  relatedHistory?: string[]
+}
+
+interface DiagnoseOutput {
+  possibleCauses: Cause[]
+  recommendations: Recommendation[]
+}
+```
+
+**副作用声明**：调用 LLM（消耗 token）；读取记忆（通过记录员）。
+
+**可测试性**：所有输入/输出为结构化数据；可 Mock LLM 响应。
+
+---
+
+## 5. 能力层角色接口 (Level 2)
+
+### 5.1 执行者 (IExecutor)
+
+```typescript
+interface IExecutor {
+  /** 执行 Skill */
+  executeSkill(skillId: string, params: Record<string, unknown>, ctx: RequestContext): Promise<Result<SkillOutput>>
+
+  /** 批量执行 */
+  executeBatch(tasks: SkillTask[]): Promise<Result<SkillOutput>[]>
+
+  /** 取消执行 */
+  cancel(executionId: string): Promise<void>
+
+  /** 查询执行状态 */
+  getExecutionStatus(executionId: string): ExecutionStatus
+}
+
+interface SkillOutput {
+  result: unknown
+  duration: number
+  resourceUsage?: { cpu?: number; memory?: number }
+}
+
+interface ExecutionStatus {
+  executionId: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progress?: number
+  error?: ErrorInfo
+}
+```
+
+---
+
+### 5.2 守卫 (IGuard)
+
+```typescript
+interface IGuard {
+  // === 门卫 ===
+  validateEntry(request: unknown, schema: JSONSchema, ctx: RequestContext): Result<void>
+  checkPermission(action: string, resource: string, ctx: RequestContext): boolean
+
+  // === 监工 ===
+  startMonitoring(taskId: string, limits: TaskLimits): MonitorHandle
+  stopMonitoring(handle: MonitorHandle): MonitorReport
+  checkLimits(handle: MonitorHandle): LimitCheckResult
+
+  // === 审核官 ===
+  validateOutput(output: unknown, rules: ValidationRule[]): Result<void>
+  detectHallucination(aiOutput: string, context: Record<string, unknown>): HallucinationReport
+}
+
+interface TaskLimits {
+  maxSteps?: number
+  maxTimeMs?: number
+  maxCost?: number
+  maxExternalCalls?: number
+}
+
+interface HallucinationReport {
+  score: number // 0-1，越高越可能是幻觉
+  issues: string[]
+  recommendation: 'accept' | 'review' | 'reject'
+}
+```
+
+**副作用声明**：`validateEntry` 可能拒绝请求；监控会收集指标。
+
+---
+
+### 5.3 军械官 (IQuartermaster)
+
+```typescript
+interface IQuartermaster {
+  // === Skill 管理 ===
+  registerSkill(definition: SkillDefinition): void
+  getSkill(skillId: string): SkillDefinition | null
+  listSkills(filter?: SkillFilter): SkillDefinition[]
+  updateSkill(skillId: string, updates: Partial<SkillDefinition>): void
+
+  // === Prompt 管理 ===
+  registerPrompt(definition: PromptDefinition): void
+  getPrompt(promptId: string, version?: string): PromptDefinition | null
+  listPrompts(filter?: PromptFilter): PromptDefinition[]
+
+  // === 版本控制 ===
+  getVersion(assetType: 'skill' | 'prompt', assetId: string): string
+  rollback(assetType: 'skill' | 'prompt', assetId: string, version: string): void
+}
+
+interface SkillDefinition {
+  id: string
+  name: string
+  description: string
+  version: string
+  inputSchema: JSONSchema
+  outputSchema: JSONSchema
+  executor: 'script' | 'http' | 'function'
+  config: Record<string, unknown>
+  permissions: string[]
+}
+
+interface PromptDefinition {
+  id: string
+  name: string
+  version: string
+  template: string
+  variables: PromptVariable[]
+  fewShotSlots?: number
+}
+```
+
+---
+
+## 6. 基础层角色接口 (Level 1)
+
+### 6.1 后勤 (ILogistics)
+
+```typescript
+interface ILogistics {
+  // === 配置 ===
+  getConfig<T>(key: string, defaultValue?: T): T
+  setConfig<T>(key: string, value: T): void
+
+  // === 缓存 ===
+  cacheGet<T>(key: string): T | null
+  cacheSet<T>(key: string, value: T, ttl?: number): void
+  cacheInvalidate(pattern: string): void
+
+  // === 临时资源 ===
+  allocateTempFile(prefix: string): string
+  releaseTempFile(path: string): void
+  cleanupExpiredResources(): void
+
+  // === 快照 ===
+  createSnapshot(scope: string): string // 返回 snapshotId
+  restoreSnapshot(snapshotId: string): void
+}
+```
+
+---
+
+### 6.2 记录员 (IChronicler)
+
+```typescript
+interface IChronicler {
+  // === 事件记录 ===
+  logEvent(event: AuditEvent): void
+  queryEvents(filter: EventFilter): AuditEvent[]
+
+  // === 多层记忆 ===
+  // 短期记忆（会话内）
+  shortTermGet(sessionId: string, key: string): unknown
+  shortTermSet(sessionId: string, key: string, value: unknown): void
+  shortTermClear(sessionId: string): void
+
+  // 工作记忆（任务内）
+  workingGet(taskId: string, key: string): unknown
+  workingSet(taskId: string, key: string, value: unknown): void
+  workingClear(taskId: string): void
+
+  // 长期记忆（持久）
+  longTermStore(entry: MemoryEntry): string
+  longTermSearch(query: string, limit?: number): MemoryEntry[]
+  longTermDelete(entryId: string): void
+
+  // === 审计 ===
+  getAuditTrail(correlationId: string): AuditEvent[]
+}
+
+interface AuditEvent {
+  id: string
+  timestamp: Date
+  role: RoleType
+  action: string
+  input?: unknown
+  output?: unknown
+  duration?: number
+  correlationId: string
+  traceId: string
+}
+
+interface MemoryEntry {
+  id?: string
+  type: 'fact' | 'preference' | 'example' | 'feedback'
+  content: string
+  embedding?: number[]
+  metadata: Record<string, unknown>
+  createdAt?: Date
+}
+```
+
+---
+
+### 6.3 通信官 (ISignalOfficer)
+
+```typescript
+interface ISignalOfficer {
+  /** 调用外部服务 */
+  callExternal(request: ExternalCallRequest): Promise<Result<ExternalCallResponse>>
+
+  /** 批量调用 */
+  callBatch(requests: ExternalCallRequest[]): Promise<Result<ExternalCallResponse>[]>
+
+  /** 检查服务健康 */
+  checkHealth(serviceId: string): ServiceHealth
+
+  /** 获取连接池状态 */
+  getPoolStatus(): PoolStatus
+}
+
+interface ExternalCallRequest {
+  serviceId: string
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  path: string
+  headers?: Record<string, string>
+  body?: unknown
+  timeout?: number
+}
+
+interface ServiceHealth {
+  serviceId: string
+  status: 'healthy' | 'degraded' | 'unavailable'
+  latency: number
+  lastCheck: Date
+}
+```
+
+---
+
+## 7. 角色基类接口
+
+```typescript
+interface IRole {
+  readonly roleType: RoleType
+  readonly roleId: string
+
+  /** 初始化 */
+  initialize(): Promise<void>
+
+  /** 处理消息 */
+  handleMessage(message: UniFlowMessage): Promise<Result<unknown>>
+
+  /** 心跳 */
+  heartbeat(): void
+
+  /** 优雅停止 */
+  shutdown(): Promise<void>
+
+  /** 获取能力声明 */
+  getCapabilities(): RoleCapabilities
+}
+
+interface RoleCapabilities {
+  actions: string[]           // 支持的 action 列表
+  inputSchemas: Record<string, JSONSchema>
+  outputSchemas: Record<string, JSONSchema>
+  sideEffects: string[]       // 副作用声明
+}
+```
+
+---
+
+## 8. 可测试性声明模板
+
+每个角色实现应提供：
+
+```typescript
+interface TestabilityDeclaration {
+  // 输入契约
+  validInputExamples: unknown[]
+  invalidInputExamples: unknown[]
+
+  // 输出契约
+  guaranteedOutputProperties: string[]
+
+  // 副作用
+  sideEffects: {
+    reads: string[]   // 读取的外部状态
+    writes: string[]  // 写入的外部状态
+    calls: string[]   // 调用的外部服务
+  }
+
+  // Mock 点
+  mockableComponents: string[]
+}
+```
+
+---
+
+## 9. 与现有文档的关系
+
+- 本文与《UniFlow-内部角色职能、边界与分工.md》配套，提供代码级定义
+- 类型定义参考《UniFlow-消息协议规范.md》
+- 错误码参考《UniFlow-错误处理策略.md》

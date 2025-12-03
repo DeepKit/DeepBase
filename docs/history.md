@@ -329,3 +329,63 @@
   - `RefreshConfig` / `RefreshData` 方法
   - `OnConfigChanged` 事件
 
+### DOC-002: 快速入门文档
+- **完成日期**: 2025-12-02
+- **描述**: 创建独立的快速入门文档
+- **输出物**: `docs/QuickStart.md` (433 行)
+- **内容**:
+  - 系统要求和安装步骤
+  - 控制台最小示例
+  - VCL 应用完整示例 (DPR + 窗体)
+  - 8 个核心功能速览:
+    1. 配置管理 (GetConfig/SetConfig)
+    2. 国际化 (T/TFmt)
+    3. 日志系统 (Debug/Info/Warn/Error)
+    4. 窗体状态管理 (TFormStateHelper)
+    5. 单实例检测 (TAppInstance)
+    6. 数据导出 (TDataExport)
+    7. 启动画面 (TSplashScreen)
+    8. LLM 集成 (Chat/ChatAsync)
+  - VCL 控件一览表 (10 个控件)
+  - 常见问题解答 (4 个 FAQ)
+  - 示例工程指引
+
+### PERF-002: SSH 连接池异步获取和超时等待
+- **完成日期**: 2025-12-02
+- **描述**: 优化 SSH 连接池并发场景下的阻塞问题
+- **修改文件**: `Core/UniBase.CLI.SSH.pas` (v0.2 → v0.3)
+- **新增 API**:
+  - `GetSessionWithTimeout(Options, Creds, TimeoutMs)` - 带超时的同步获取
+  - `TryGetSession(Options, Creds, Session)` - 无等待尝试获取，返回 TSSHAcquireResult
+  - `GetSessionAsync(Options, Creds, Callback, TimeoutMs)` - 异步获取，回调在主线程执行
+  - `WaitingCount` - 获取当前等待线程数
+  - `DefaultAcquireTimeout` - 默认超时时间 (30000ms)
+- **新增类型**:
+  - `TSSHAcquireResult` 枚举 (arSuccess, arTimeout, arPoolFull, arConnectFailed)
+  - `TSSHSessionCallback` - 异步回调类型
+- **实现细节**:
+  - 使用 `TEvent` 实现可中断等待
+  - `ReleaseSession` 时自动通知等待线程
+  - `TInterlocked.Increment/Decrement` 线程安全计数
+- **新增测试**: 6 个测试用例
+  - Test_WaitingCount_InitiallyZero
+  - Test_GetSessionWithTimeout_ZeroTimeout_NoWait
+  - Test_TryGetSession_ReturnsPoolFull_WhenFull
+  - Test_DefaultAcquireTimeout_CanBeSet
+  - Test_GetSessionAsync_CallsCallback
+  - Test_CleanupIdleSessions 更新
+
+### BUG-027: TFDScript 参数解析导致 SQL 语法错误
+- **完成日期**: 2025-12-03
+- **描述**: 修复多个集成 UniBase 的应用在启动时报告 SQLite 语法错误
+- **错误信息**: `near "now": syntax error`, `near "cn": syntax error`, `near "SYS": syntax error`
+- **修改文件**:
+  - `Core/UniBase.Schema.pas`: 将 `datetime('now')` 改为 `CURRENT_TIMESTAMP`，将字符串内 `#13#10` 改为 `|| char(10) ||`
+  - `Core/UniBase.Manager.pas`: 完全移除 TFDScript，改用 TFDQuery 逐条执行 SQL
+- **修复方案**:
+  1. 完全移除 TFDScript，避免其对多语句 SQL + Unicode 的解析问题
+  2. 新增 `SplitSQLStatements` 函数，按分号分割但尊重字符串字面量
+  3. 设置 `Query.ResourceOptions.ParamCreate := False`
+  4. 使用 SQLite 的 `CURRENT_TIMESTAMP` 替代 `datetime('now')`
+  5. 使用 `|| char(10) ||` 替代字符串内的 `#13#10`
+

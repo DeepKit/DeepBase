@@ -167,7 +167,7 @@ UniBase/
 
 - [完整规范](docs/unibase-spec-v0.3.md) - 设计规范和 API 参考
 - [任务清单](docs/tasks.md) - 开发任务和进度
-- [快速开始](docs/QuickStart.md) - 快速入门指南（待完成）
+- [快速开始](docs/QuickStart.md) - 快速入门指南
 
 ## 🧪 运行测试
 

@@ -184,8 +184,8 @@ const
     '  TimeoutSec INTEGER DEFAULT 30,' +
     '  ParamSchema TEXT,' +  // JSON schema for parameter validation
     '  IsEnabled INTEGER DEFAULT 1,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now''))' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP' +
     ');';
   
   SQL_TIER1_THEMES =
@@ -250,7 +250,7 @@ const
     '  ErrorMessage TEXT,' +
     '  Provider TEXT,' +
     '  Model TEXT,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime''))' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP' +
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_llm_calls_time ON LLMCalls(RequestTime DESC);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_llm_calls_prompt ON LLMCalls(PromptId);';
@@ -267,8 +267,8 @@ const
     '  Description TEXT,' +
     '  SortOrder INTEGER DEFAULT 0,' +
     '  IsActive INTEGER DEFAULT 1,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
     '  FOREIGN KEY (ParentId) REFERENCES PromptCategories(Id)' +
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_prompt_cat_parent ON PromptCategories(ParentId);' + #13#10 +
@@ -294,8 +294,8 @@ const
     '  BoundQueryName TEXT,' +
     '  VariablesJson TEXT,' +
     '  IsActive INTEGER DEFAULT 1,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
     '  CreatedBy TEXT,' +
     '  UpdatedBy TEXT,' +
     '  FOREIGN KEY (CategoryId) REFERENCES PromptCategories(Id)' +
@@ -328,8 +328,8 @@ const
     '  AvgDuration REAL DEFAULT 0,' +
     '  LastTestedAt TEXT,' +
     '  LastResponse TEXT,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
     '  UNIQUE(PromptId, VersionNumber),' +
     '  FOREIGN KEY (PromptId) REFERENCES Prompts(Id) ON DELETE CASCADE' +
     ');' + #13#10 +
@@ -337,9 +337,9 @@ const
   
   SQL_TIER2_PROMPT_VERSIONS_DATA =
     'INSERT OR IGNORE INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) VALUES ' +
-    '(1, 1, ''请将以下{{source_lang}}文本翻译为{{target_lang}}：' + #13#10 + '{{text}}'', 1);' + #13#10 +
+    '(1, 1, ''请将以下{{source_lang}}文本翻译为{{target_lang}}：'' || char(10) || ''{{text}}'', 1);' + #13#10 +
     'INSERT OR IGNORE INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) VALUES ' +
-    '(2, 1, ''请用简洁的中文解释以下{{language}}代码的功能：' + #13#10 + '```' + #13#10 + '{{code}}' + #13#10 + '```'', 1);';
+    '(2, 1, ''请用简洁的中文解释以下{{language}}代码的功能：'' || char(10) || ''```'' || char(10) || ''{{code}}'' || char(10) || ''```'', 1);';
   
   SQL_TIER2_PROMPT_META =
     'CREATE TABLE IF NOT EXISTS PromptMeta (' +
@@ -352,8 +352,8 @@ const
     '  Priority INTEGER DEFAULT 0,' +
     '  Level INTEGER DEFAULT 0,' +
     '  IsActive INTEGER DEFAULT 1,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime''))' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP' +
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_prompt_meta_code ON PromptMeta(InternalCode);';
   
@@ -433,8 +433,8 @@ const
     '  IsEnabled INTEGER DEFAULT 1,' +
     '  IsBuiltIn INTEGER DEFAULT 0,' +             // 是否内置
     '  SortOrder INTEGER DEFAULT 0,' +
-    '  CreatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
-    '  UpdatedAt TEXT DEFAULT (datetime(''now'', ''localtime'')),' +
+    '  CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
+    '  UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,' +
     '  Extra TEXT' +                               // 额外配置 JSON
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_prompt_tpl_category ON LLMPromptTemplates(Category);' + #13#10 +

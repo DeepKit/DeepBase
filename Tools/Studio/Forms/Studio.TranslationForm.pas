@@ -90,6 +90,8 @@ type
     
     procedure UpdateStatusBar;
     function TranslateWithLLM(const SourceText, SourceLang, TargetLang: string): string;
+    function TranslateBatchWithLLM(const SourceTexts: TArray<string>;
+      const SourceLang, TargetLang: string): TArray<string>;
     
   public
     constructor Create(AOwner: TComponent); override;
@@ -545,10 +547,17 @@ begin
 end;
 
 procedure TTranslationForm.TranslateButtonClick(Sender: TObject);
+const
+  BATCH_SIZE = 10;  // Number of concurrent translations
+  MAX_BATCH_TEXTS = 20;  // Max texts per batch API call
 var
   SourceLang, TargetLang: string;
-  I, Translated: Integer;
-  Key, Value, NewValue: string;
+  I, J, Translated, BatchStart: Integer;
+  Key, Value: string;
+  UntranslatedIndices: TList<Integer>;
+  BatchTexts: TArray<string>;
+  BatchResults: TArray<string>;
+  UseBatchMode: Boolean;
 begin
   if not Assigned(FLLM) then
   begin
@@ -568,39 +577,97 @@ begin
     Exit;
   end;
   
-  if MessageDlg('Translate all untranslated entries using LLM?', 
-    mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
-    Exit;
-    
-  FTranslateButton.Enabled := False;
-  Translated := 0;
-  
+  // Collect untranslated entries
+  UntranslatedIndices := TList<Integer>.Create;
   try
     for I := 0 to FTranslationData.Count - 1 do
     begin
       Key := FTranslationData[I].Values['Key'];
       Value := FTranslationData[I].Values['Value'];
-      
-      // Only translate untranslated entries (Key = Value)
       if Key = Value then
-      begin
-        FStatusBar.Panels[3].Text := Format('Translating %d/%d...', [I + 1, FTranslationData.Count]);
-        Application.ProcessMessages;
-        
-        NewValue := TranslateWithLLM(Key, SourceLang, TargetLang);
-        if (NewValue <> '') and (NewValue <> Key) then
-        begin
-          FTransGrid.Cells[1, I + 1] := NewValue;
-          SaveTranslation(I + 1);
-          Inc(Translated);
-        end;
-      end;
+        UntranslatedIndices.Add(I);
     end;
     
-    ShowMessage(Format('Translated %d entries.', [Translated]));
+    if UntranslatedIndices.Count = 0 then
+    begin
+      ShowMessage('All entries are already translated.');
+      Exit;
+    end;
+    
+    UseBatchMode := UntranslatedIndices.Count > 5;
+    
+    if MessageDlg(Format('Translate %d entries using LLM?%s', 
+      [UntranslatedIndices.Count, 
+       IfThen(UseBatchMode, #13#10'(Using batch mode for faster processing)', '')]),
+      mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+      Exit;
+      
+    FTranslateButton.Enabled := False;
+    Translated := 0;
+    
+    try
+      if UseBatchMode then
+      begin
+        // Batch translation mode - process multiple texts per API call
+        BatchStart := 0;
+        while BatchStart < UntranslatedIndices.Count do
+        begin
+          // Prepare batch
+          SetLength(BatchTexts, Min(MAX_BATCH_TEXTS, UntranslatedIndices.Count - BatchStart));
+          for J := 0 to High(BatchTexts) do
+            BatchTexts[J] := FTranslationData[UntranslatedIndices[BatchStart + J]].Values['Key'];
+          
+          FStatusBar.Panels[3].Text := Format('Translating batch %d-%d of %d...', 
+            [BatchStart + 1, BatchStart + Length(BatchTexts), UntranslatedIndices.Count]);
+          Application.ProcessMessages;
+          
+          // Translate batch
+          BatchResults := TranslateBatchWithLLM(BatchTexts, SourceLang, TargetLang);
+          
+          // Apply results
+          for J := 0 to High(BatchResults) do
+          begin
+            I := UntranslatedIndices[BatchStart + J];
+            if (BatchResults[J] <> '') and (BatchResults[J] <> BatchTexts[J]) then
+            begin
+              FTransGrid.Cells[1, I + 1] := BatchResults[J];
+              SaveTranslation(I + 1);
+              Inc(Translated);
+            end;
+          end;
+          
+          Inc(BatchStart, Length(BatchTexts));
+        end;
+      end
+      else
+      begin
+        // Sequential mode for small batches
+        for I := 0 to UntranslatedIndices.Count - 1 do
+        begin
+          J := UntranslatedIndices[I];
+          Key := FTranslationData[J].Values['Key'];
+          
+          FStatusBar.Panels[3].Text := Format('Translating %d/%d...', 
+            [I + 1, UntranslatedIndices.Count]);
+          Application.ProcessMessages;
+          
+          Value := TranslateWithLLM(Key, SourceLang, TargetLang);
+          if (Value <> '') and (Value <> Key) then
+          begin
+            FTransGrid.Cells[1, J + 1] := Value;
+            SaveTranslation(J + 1);
+            Inc(Translated);
+          end;
+        end;
+      end;
+      
+      ShowMessage(Format('Translated %d entries.', [Translated]));
+    finally
+      FTranslateButton.Enabled := True;
+      UpdateStatusBar;
+    end;
   finally
-    FTranslateButton.Enabled := True;
-    UpdateStatusBar;
+    UntranslatedIndices.Free;
   end;
 end;
 
@@ -622,6 +689,69 @@ begin
   
   if LLMResult.Success then
     Result := Trim(LLMResult.Response);
+end;
+
+function TTranslationForm.TranslateBatchWithLLM(const SourceTexts: TArray<string>;
+  const SourceLang, TargetLang: string): TArray<string>;
+var
+  Prompt: string;
+  LLMResult: TLLMResult;
+  I: Integer;
+  Lines: TArray<string>;
+  SB: TStringBuilder;
+begin
+  SetLength(Result, Length(SourceTexts));
+  if Length(SourceTexts) = 0 then
+    Exit;
+  
+  // Build batch prompt with numbered lines
+  SB := TStringBuilder.Create;
+  try
+    SB.AppendFormat('Translate the following %d texts from %s to %s.', 
+      [Length(SourceTexts), SourceLang, TargetLang]);
+    SB.AppendLine;
+    SB.AppendLine('IMPORTANT RULES:');
+    SB.AppendLine('1. Return ONLY the translations, one per line');
+    SB.AppendLine('2. Keep the same order as input');
+    SB.AppendLine('3. Preserve placeholders like %s, %d, %0:s exactly');
+    SB.AppendLine('4. Do NOT include line numbers or prefixes');
+    SB.AppendLine;
+    SB.AppendLine('Texts to translate:');
+    
+    for I := 0 to High(SourceTexts) do
+      SB.AppendFormat('%d. %s', [I + 1, SourceTexts[I]]).AppendLine;
+    
+    Prompt := SB.ToString;
+  finally
+    SB.Free;
+  end;
+  
+  LLMResult := FLLM.Chat('Default', Prompt);
+  
+  if LLMResult.Success then
+  begin
+    // Parse response - one translation per line
+    Lines := LLMResult.Response.Split([#13#10, #10], TStringSplitOptions.None);
+    
+    for I := 0 to Min(High(SourceTexts), High(Lines)) do
+    begin
+      Result[I] := Trim(Lines[I]);
+      // Remove any leading numbers like "1. " if LLM included them
+      if (Length(Result[I]) > 3) and CharInSet(Result[I][1], ['0'..'9']) then
+      begin
+        if (Result[I][2] = '.') and (Result[I][3] = ' ') then
+          Result[I] := Copy(Result[I], 4, MaxInt)
+        else if (Length(Result[I]) > 4) and (Result[I][3] = '.') and (Result[I][4] = ' ') then
+          Result[I] := Copy(Result[I], 5, MaxInt);
+      end;
+    end;
+  end
+  else
+  begin
+    // Fallback to single translations if batch fails
+    for I := 0 to High(SourceTexts) do
+      Result[I] := TranslateWithLLM(SourceTexts[I], SourceLang, TargetLang);
+  end;
 end;
 
 procedure TTranslationForm.ExportButtonClick(Sender: TObject);

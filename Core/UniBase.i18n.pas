@@ -216,13 +216,24 @@ end;
 
 { Global function implementations }
 
+/// <summary>
+/// Translate text using global callback.
+/// IMPORTANT: This function uses a volatile pattern to prevent constant folding.
+/// The compiler may otherwise optimize T('literal') to a constant at compile time,
+/// which would bypass runtime translation lookup.
+/// </summary>
+{$OPTIMIZATION OFF}
 function T(const Text: string): string;
+var
+  LText: string;  // Local copy prevents compile-time evaluation
 begin
+  LText := Text;  // Force runtime copy
   if Assigned(GTranslateCallback) then
-    Result := GTranslateCallback(Text)
+    Result := GTranslateCallback(LText)
   else
-    Result := Text;  // Fallback: return original text
+    Result := LText;  // Fallback: return original text
 end;
+{$OPTIMIZATION ON}
 
 function TFmt(const Text: string; const Args: array of const): string;
 begin
