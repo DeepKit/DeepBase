@@ -1,12 +1,15 @@
 unit UniFlow.Diagnostics.ErrorCollector;
-
-{$mode objfpc}{$H+}
-{$modeswitch advancedrecords}
+(*
+  UniFlow Diagnostics Error Collector
+  ===================================
+  增强的错误收集器，包含错误分类、上下文收集、智能建议等功能。
+*)
 
 interface
 
 uses
-  Classes, SysUtils, DateUtils, SyncObjs, Generics.Collections, fpjson, jsonparser,
+  System.SysUtils, System.Classes, System.DateUtils, System.SyncObjs, 
+  System.Generics.Collections, System.JSON, Winapi.Windows,
   UniFlow.Diagnostics;
 
 type
@@ -114,13 +117,15 @@ type
   // 错误收集器
   // ============================================================================
   
+  TErrorCollectorEvent = procedure(const Error: TEnhancedErrorContext) of object;
+
   TErrorCollector = class
   private
     FConfig: TErrorCollectorConfig;
     FErrors: TEnhancedErrorContextArray;
     FErrorIndex: Integer;
     FLock: TCriticalSection;
-    FOnError: procedure(const Error: TEnhancedErrorContext) of object;
+    FOnError: TErrorCollectorEvent;
     
     procedure AddError(const Error: TEnhancedErrorContext);
     function GetErrorCount: Integer;
@@ -168,7 +173,7 @@ type
     property Config: TErrorCollectorConfig read FConfig write FConfig;
     property ErrorCount: Integer read GetErrorCount;
     property Errors: TEnhancedErrorContextArray read GetErrors;
-    property OnError: procedure(const Error: TEnhancedErrorContext) of object read FOnError write FOnError;
+    property OnError: TErrorCollectorEvent read FOnError write FOnError;
   end;
 
 // ============================================================================
@@ -273,31 +278,31 @@ begin
   Result := TJSONObject.Create;
   
   // 基本信息
-  Result.Add('id', Id);
-  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
-  Result.Add('severity', ErrorSeverityToString(Severity));
-  Result.Add('category', ErrorCategoryToString(Category));
+  Result.AddPair('id', Id);
+  Result.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
+  Result.AddPair('severity', ErrorSeverityToString(Severity));
+  Result.AddPair('category', ErrorCategoryToString(Category));
   
   // 追踪信息
-  Result.Add('correlationId', CorrelationId);
-  Result.Add('workflowId', WorkflowId);
-  Result.Add('workflowName', WorkflowName);
-  Result.Add('stepId', StepId);
-  Result.Add('stepType', StepType);
-  Result.Add('stepIndex', StepIndex);
+  Result.AddPair('correlationId', CorrelationId);
+  Result.AddPair('workflowId', WorkflowId);
+  Result.AddPair('workflowName', WorkflowName);
+  Result.AddPair('stepId', StepId);
+  Result.AddPair('stepType', StepType);
+  Result.AddPair('stepIndex', TJSONNumber.Create(StepIndex));
   
   // 错误详情
-  if ErrorCode <> '' then Result.Add('errorCode', ErrorCode);
-  Result.Add('errorMessage', ErrorMessage);
-  Result.Add('errorClass', ErrorClass);
-  if InnerError <> '' then Result.Add('innerError', InnerError);
-  if StackTrace <> '' then Result.Add('stackTrace', StackTrace);
+  if ErrorCode <> '' then Result.AddPair('errorCode', ErrorCode);
+  Result.AddPair('errorMessage', ErrorMessage);
+  Result.AddPair('errorClass', ErrorClass);
+  if InnerError <> '' then Result.AddPair('innerError', InnerError);
+  if StackTrace <> '' then Result.AddPair('stackTrace', StackTrace);
   
   // 上下文数据
-  if Assigned(Variables) then Result.Add('variables', Variables.Clone);
-  if Assigned(InputData) then Result.Add('inputData', InputData.Clone);
-  if Assigned(OutputData) then Result.Add('outputData', OutputData.Clone);
-  if Assigned(StepConfig) then Result.Add('stepConfig', StepConfig.Clone);
+  if Assigned(Variables) then Result.AddPair('variables', Variables.Clone as TJSONObject);
+  if Assigned(InputData) then Result.AddPair('inputData', InputData.Clone as TJSONObject);
+  if Assigned(OutputData) then Result.AddPair('outputData', OutputData.Clone as TJSONObject);
+  if Assigned(StepConfig) then Result.AddPair('stepConfig', StepConfig.Clone as TJSONObject);
   
   // 执行路径
   if Length(ExecutedSteps) > 0 then
@@ -305,24 +310,24 @@ begin
     StepsArr := TJSONArray.Create;
     for I := 0 to High(ExecutedSteps) do
       StepsArr.Add(ExecutedSteps[I]);
-    Result.Add('executedSteps', StepsArr);
+    Result.AddPair('executedSteps', StepsArr as TJSONValue);
   end;
   
   if FailedAttempt > 0 then
   begin
-    Result.Add('failedAttempt', FailedAttempt);
-    Result.Add('maxRetries', MaxRetries);
+    Result.AddPair('failedAttempt', TJSONNumber.Create(FailedAttempt));
+    Result.AddPair('maxRetries', TJSONNumber.Create(MaxRetries));
   end;
   
   // 环境信息
-  if MachineName <> '' then Result.Add('machineName', MachineName);
-  if ProcessId > 0 then Result.Add('processId', ProcessId);
-  if ThreadId > 0 then Result.Add('threadId', ThreadId);
-  if MemoryUsage > 0 then Result.Add('memoryUsage', MemoryUsage);
+  if MachineName <> '' then Result.AddPair('machineName', MachineName);
+  if ProcessId > 0 then Result.AddPair('processId', TJSONNumber.Create(ProcessId));
+  if ThreadId > 0 then Result.AddPair('threadId', TJSONNumber.Create(ThreadId));
+  if MemoryUsage > 0 then Result.AddPair('memoryUsage', TJSONNumber.Create(MemoryUsage));
   
   // 建议
-  if Suggestion <> '' then Result.Add('suggestion', Suggestion);
-  if DocumentationUrl <> '' then Result.Add('documentationUrl', DocumentationUrl);
+  if Suggestion <> '' then Result.AddPair('suggestion', Suggestion);
+  if DocumentationUrl <> '' then Result.AddPair('documentationUrl', DocumentationUrl);
 end;
 
 function TEnhancedErrorContext.ToString: string;
@@ -626,7 +631,7 @@ begin
   Result.InnerError := '';
   
   if FConfig.CaptureStackTrace then
-    Result.StackTrace := BackTraceStrFunc(ExceptAddr)
+    Result.StackTrace := '' // Delphi: use madExcept or JclDebug for stack traces
   else
     Result.StackTrace := '';
   
@@ -649,8 +654,8 @@ begin
   if FConfig.CaptureEnvironment then
   begin
     Result.MachineName := GetEnvironmentVariable('COMPUTERNAME');
-    Result.ProcessId := GetProcessID;
-    Result.ThreadId := GetCurrentThreadId;
+    Result.ProcessId := Winapi.Windows.GetCurrentProcessId;
+    Result.ThreadId := TThread.CurrentThread.ThreadID;
     Result.MemoryUsage := 0; // Could add memory info
   end;
   
@@ -788,8 +793,8 @@ begin
   try
     All := GetErrors;
     for I := 0 to High(All) do
-      Arr.Add(All[I].ToJSON);
-    Result := Arr.FormatJSON;
+      Arr.AddElement(All[I].ToJSON);
+    Result := Arr.Format;
   finally
     Arr.Free;
   end;

@@ -1,12 +1,15 @@
 unit UniFlow.Diagnostics.Debugger;
-
-{$mode objfpc}{$H+}
-{$modeswitch advancedrecords}
+(*
+  UniFlow Diagnostics Debugger
+  ============================
+  工作流调试器，支持断点、单步执行、变量检查等调试功能。
+*)
 
 interface
 
 uses
-  Classes, SysUtils, SyncObjs, Generics.Collections, fpjson, jsonparser,
+  System.SysUtils, System.Classes, System.SyncObjs, System.Generics.Collections, 
+  System.JSON,
   UniFlow.Diagnostics;
 
 type
@@ -154,7 +157,7 @@ type
     
     // 变量检查
     function GetVariables: TJSONObject;
-    function GetVariable(const Name: string): TJSONData;
+    function GetVariable(const Name: string): TJSONValue;
     function EvaluateExpression(const Expr: string): string;
     
     // 步骤钩子 - 由执行器调用
@@ -688,20 +691,20 @@ begin
     Result := TJSONObject.Create;
 end;
 
-function TWorkflowDebugger.GetVariable(const Name: string): TJSONData;
+function TWorkflowDebugger.GetVariable(const Name: string): TJSONValue;
 var
   Frame: TDebugFrame;
 begin
   Result := nil;
   Frame := GetCurrentFrame;
-  if Assigned(Frame.Variables) and (Frame.Variables.Find(Name) <> nil) then
-    Result := Frame.Variables.Find(Name).Clone;
+  if Assigned(Frame.Variables) and (Frame.Variables.FindValue(Name) <> nil) then
+    Result := Frame.Variables.FindValue(Name).Clone as TJSONValue;
 end;
 
 function TWorkflowDebugger.EvaluateExpression(const Expr: string): string;
 var
   Frame: TDebugFrame;
-  Data: TJSONData;
+  Data: TJSONValue;
 begin
   Result := '<undefined>';
   Frame := GetCurrentFrame;
@@ -709,9 +712,9 @@ begin
   if Assigned(Frame.Variables) then
   begin
     // 简单变量查找
-    Data := Frame.Variables.Find(Expr);
+    Data := Frame.Variables.FindValue(Expr);
     if Assigned(Data) then
-      Result := Data.AsJSON
+      Result := Data.ToJSON
     else
       Result := Format('<variable "%s" not found>', [Expr]);
   end;
@@ -955,7 +958,7 @@ begin
     if Vars.Count = 0 then
       WriteLn('No variables in current scope')
     else
-      WriteLn(Vars.FormatJSON);
+      WriteLn(Vars.Format);
   finally
     Vars.Free;
   end;

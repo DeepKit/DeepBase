@@ -9,7 +9,10 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils, System.SyncObjs, 
-  System.Generics.Collections, System.JSON, System.Types;
+  System.Generics.Collections, System.JSON;
+
+type
+  TStringArray = TArray<string>;
 
 type
   // ============================================================================
@@ -87,6 +90,7 @@ type
     procedure Log(const Entry: TLogEntry);
     function GetMinLevel: TLogLevel;
     procedure SetMinLevel(ALevel: TLogLevel);
+    property MinLevel: TLogLevel read GetMinLevel write SetMinLevel;
   end;
   
   TConsoleLoggerFactory = class(TInterfacedObject, ILoggerFactory)
@@ -325,7 +329,7 @@ end;
 
 function NowUTC: TDateTime;
 begin
-  Result := LocalTimeToUniversal(Now);
+  Result := TTimeZone.Local.ToUniversalTime(Now);
 end;
 
 // ============================================================================
@@ -335,19 +339,19 @@ end;
 function TLogEntry.ToJSON: TJSONObject;
 begin
   Result := TJSONObject.Create;
-  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
-  Result.Add('level', LogLevelToString(Level));
-  Result.Add('category', Category);
-  Result.Add('message', Message);
+  Result.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
+  Result.AddPair('level', LogLevelToString(Level));
+  Result.AddPair('category', Category);
+  Result.AddPair('message', Message);
   
   if CorrelationId <> '' then
-    Result.Add('correlationId', CorrelationId);
+    Result.AddPair('correlationId', CorrelationId);
   if WorkflowId <> '' then
-    Result.Add('workflowId', WorkflowId);
+    Result.AddPair('workflowId', WorkflowId);
   if StepId <> '' then
-    Result.Add('stepId', StepId);
+    Result.AddPair('stepId', StepId);
   if Assigned(Data) then
-    Result.Add('data', Data.Clone);
+    Result.AddPair('data', Data.Clone as TJSONObject);
 end;
 
 function TLogEntry.ToString: string;
@@ -380,21 +384,21 @@ end;
 function TTraceEntry.ToJSON: TJSONObject;
 begin
   Result := TJSONObject.Create;
-  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
-  Result.Add('correlationId', CorrelationId);
-  Result.Add('workflowId', WorkflowId);
-  Result.Add('stepId', StepId);
-  Result.Add('stepType', StepType);
-  Result.Add('action', Action);
+  Result.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
+  Result.AddPair('correlationId', CorrelationId);
+  Result.AddPair('workflowId', WorkflowId);
+  Result.AddPair('stepId', StepId);
+  Result.AddPair('stepType', StepType);
+  Result.AddPair('action', Action);
   
   if Duration > 0 then
-    Result.Add('durationMs', Duration);
+    Result.AddPair('durationMs', TJSONNumber.Create(Duration));
   if InputData <> '' then
-    Result.Add('input', InputData);
+    Result.AddPair('input', InputData);
   if OutputData <> '' then
-    Result.Add('output', OutputData);
+    Result.AddPair('output', OutputData);
   if ErrorMessage <> '' then
-    Result.Add('error', ErrorMessage);
+    Result.AddPair('error', ErrorMessage);
 end;
 
 // ============================================================================
@@ -407,30 +411,30 @@ var
   I: Integer;
 begin
   Result := TJSONObject.Create;
-  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
-  Result.Add('correlationId', CorrelationId);
-  Result.Add('workflowId', WorkflowId);
-  Result.Add('workflowName', WorkflowName);
-  Result.Add('stepId', StepId);
-  Result.Add('stepType', StepType);
-  Result.Add('errorMessage', ErrorMessage);
-  Result.Add('errorClass', ErrorClass);
+  Result.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', Timestamp));
+  Result.AddPair('correlationId', CorrelationId);
+  Result.AddPair('workflowId', WorkflowId);
+  Result.AddPair('workflowName', WorkflowName);
+  Result.AddPair('stepId', StepId);
+  Result.AddPair('stepType', StepType);
+  Result.AddPair('errorMessage', ErrorMessage);
+  Result.AddPair('errorClass', ErrorClass);
   
   if StackTrace <> '' then
-    Result.Add('stackTrace', StackTrace);
+    Result.AddPair('stackTrace', StackTrace);
   
   if Assigned(Variables) then
-    Result.Add('variables', Variables.Clone);
+    Result.AddPair('variables', Variables.Clone as TJSONObject);
   
   if Assigned(InputData) then
-    Result.Add('inputData', InputData.Clone);
+    Result.AddPair('inputData', InputData.Clone as TJSONObject);
   
   if Length(PreviousSteps) > 0 then
   begin
     StepsArr := TJSONArray.Create;
     for I := 0 to High(PreviousSteps) do
       StepsArr.Add(PreviousSteps[I]);
-    Result.Add('previousSteps', StepsArr);
+    Result.AddPair('previousSteps', StepsArr);
   end;
 end;
 
@@ -871,7 +875,7 @@ begin
   Entry.ErrorMessage := '';
   
   if (FConfig.TraceLevel >= tlVerbose) and Assigned(Input) then
-    Entry.InputData := Input.AsJSON
+    Entry.InputData := Input.ToJSON
   else
     Entry.InputData := '';
   
@@ -923,7 +927,7 @@ begin
   end;
   
   if (FConfig.TraceLevel >= tlVerbose) and Assigned(Output) then
-    Entry.OutputData := Output.AsJSON
+    Entry.OutputData := Output.ToJSON
   else
     Entry.OutputData := '';
   
@@ -995,7 +999,7 @@ begin
   Result.ErrorClass := ErrorClass;
   
   if FConfig.CaptureStackTrace then
-    Result.StackTrace := BackTraceStrFunc(ExceptAddr)
+    Result.StackTrace := '' // Delphi: use madExcept or JclDebug for stack traces
   else
     Result.StackTrace := '';
   
@@ -1043,24 +1047,24 @@ var
 begin
   JSON := TJSONObject.Create;
   try
-    JSON.Add('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', NowUTC));
-    JSON.Add('correlationId', FCurrentCorrelationId);
-    JSON.Add('workflowId', FCurrentWorkflowId);
-    JSON.Add('traceLevel', TraceLevelToString(FConfig.TraceLevel));
-    JSON.Add('logLevel', LogLevelToString(FConfig.LogLevel));
-    JSON.Add('traceEntryCount', FTraceIndex);
+    JSON.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', NowUTC));
+    JSON.AddPair('correlationId', FCurrentCorrelationId);
+    JSON.AddPair('workflowId', FCurrentWorkflowId);
+    JSON.AddPair('traceLevel', TraceLevelToString(FConfig.TraceLevel));
+    JSON.AddPair('logLevel', LogLevelToString(FConfig.LogLevel));
+    JSON.AddPair('traceEntryCount', TJSONNumber.Create(FTraceIndex));
     
     FLock.Enter;
     try
       StepsArr := TJSONArray.Create;
       for I := 0 to FExecutedSteps.Count - 1 do
         StepsArr.Add(FExecutedSteps[I]);
-      JSON.Add('executedSteps', StepsArr);
+      JSON.AddPair('executedSteps', StepsArr as TJSONValue);
     finally
       FLock.Leave;
     end;
     
-    Result := JSON.FormatJSON;
+    Result := JSON.Format;
   finally
     JSON.Free;
   end;
@@ -1080,8 +1084,8 @@ begin
     JSON := TJSONArray.Create;
     try
       for I := 0 to High(Entries) do
-        JSON.Add(Entries[I].ToJSON);
-      Result := JSON.FormatJSON;
+        JSON.AddElement(Entries[I].ToJSON);
+      Result := JSON.Format;
     finally
       JSON.Free;
     end;

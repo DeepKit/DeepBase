@@ -2,7 +2,7 @@
 
 > 最后更新: 2025-12-05
 >
-> 当前: Phase 8 调试与诊断
+> 当前: P4 Direction C - Event Sourcing
 
 ---
 
@@ -19,8 +19,8 @@
 | Phase 7 | 可选增强 (P2) | ✅ |
 | Phase 8 | 调试与诊断 | ✅ |
 
-**累计代码**: ~43,560 行
-- Pascal: 32 文件 (~33,310 行)
+**累计代码**: ~48,000 行
+- Pascal: 37 文件 (~37,750 行)
 - Python: 4 文件 (~1,450 行)
 - Node.js: 7 文件 (~1,100 行)
 - Web Editor: 8 文件 (~2,600 行)
@@ -134,7 +134,7 @@ end;
 |---------|------|------|------|
 | TASK-1001 | Facade 单元 | 创建 `UniBase.UniFlow.pas` 统一导出 API | ✅ |
 | TASK-1002 | 集成示例 | 创建 UniBase 中的 UniFlow 集成 Demo | ✅ |
-| TASK-1003 | 端到端验证 | 验证完整工作流（输入→Commander→Workflow→LLM→输出） | |
+| TASK-1003 | 端到端验证 | 验证完整工作流（输入→Commander→Workflow→LLM→输出） | ✅ |
 
 ### 方向 B: 中文文档补全 [TASK-1010~1013]
 
@@ -145,14 +145,20 @@ end;
 | TASK-1012 | 中文 Skill 开发 | `docs/zh/skills-development.md` | |
 | TASK-1013 | 中文部署指南 | `docs/zh/deployment.md` | |
 
-### 方向 C: Event Sourcing 架构对齐 [TASK-1020~1023]
+### 方向 C: Event Sourcing 架构对齐 [TASK-1020~1023] ✅
 
 | 任务 ID | 名称 | 描述 | 状态 |
 |---------|------|------|------|
-| TASK-1020 | UniFlowEvent | 引入事件源作为一等公民 | |
-| TASK-1021 | FlowInstance | 实现 FlowDefinition → FlowInstance 生命周期 | |
-| TASK-1022 | 事件重放 | 从事件序列重建状态 | |
-| TASK-1023 | 分叉能力 | 从历史版本分叉新 FlowInstance | |
+| TASK-1020 | UniFlowEvent | 引入事件源作为一等公民 | ✅ |
+| TASK-1021 | FlowInstance | 实现 FlowDefinition → FlowInstance 生命周期 | ✅ |
+| TASK-1022 | 事件重放 | 从事件序列重建状态 | ✅ |
+| TASK-1023 | 分叉能力 | 从历史版本分叉新 FlowInstance | ✅ |
+
+**实现文件** (Source/EventSourcing/):
+- `UniFlow.EventSourcing.Types.pas` (~800 行) - 核心类型定义
+- `UniFlow.EventSourcing.Store.pas` (~1,120 行) - 事件存储接口
+- `UniFlow.EventSourcing.Instance.pas` (~900 行) - 流程实例管理
+- `UniFlow.EventSourcing.Replay.pas` (~1,290 行) - 事件重放与分叉
 
 ### 方向 D: 分析与可视化 [TASK-1030~1032]
 

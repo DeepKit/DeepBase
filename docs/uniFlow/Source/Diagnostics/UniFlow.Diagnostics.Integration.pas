@@ -1,11 +1,15 @@
 unit UniFlow.Diagnostics.Integration;
-
-{$mode objfpc}{$H+}
+(*
+  UniFlow Diagnostics Integration
+  ===============================
+  诊断集成助手，提供 HTTP/LLM/Skill 调用的简化跟踪接口。
+*)
 
 interface
 
 uses
-  Classes, SysUtils, fpjson, UniFlow.Diagnostics;
+  System.SysUtils, System.Classes, System.DateUtils, System.JSON, 
+  UniFlow.Diagnostics;
 
 type
   // ============================================================================
@@ -136,9 +140,6 @@ const
   HEADER_TRACE_ID = 'X-Trace-ID';
 
 implementation
-
-uses
-  DateUtils;
 
 // ============================================================================
 // TWorkflowDiagnostics

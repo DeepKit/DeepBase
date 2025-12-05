@@ -1,12 +1,15 @@
 unit UniFlow.Diagnostics.TraceExporter;
-
-{$mode objfpc}{$H+}
-{$modeswitch advancedrecords}
+(*
+  UniFlow Diagnostics Trace Exporter
+  ==================================
+  执行轨迹导出器，支持多种格式输出。
+*)
 
 interface
 
 uses
-  Classes, SysUtils, DateUtils, fpjson, jsonparser, UniFlow.Diagnostics;
+  System.SysUtils, System.Classes, System.DateUtils, System.JSON, System.StrUtils,
+  UniFlow.Diagnostics;
 
 type
   // ============================================================================
@@ -119,119 +122,170 @@ begin
   Result := TJSONObject.Create;
   
   // 元数据
-  Result.Add('id', Id);
-  Result.Add('capturedAt', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', CapturedAt));
-  Result.Add('version', Version);
+  Result.AddPair('id', Id);
+  Result.AddPair('capturedAt', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', CapturedAt));
+  Result.AddPair('version', Version);
   
   // 工作流信息
-  Result.Add('workflowId', WorkflowId);
-  Result.Add('workflowName', WorkflowName);
-  Result.Add('workflowVersion', WorkflowVersion);
+  Result.AddPair('workflowId', WorkflowId);
+  Result.AddPair('workflowName', WorkflowName);
+  Result.AddPair('workflowVersion', WorkflowVersion);
   
   // 追踪信息
-  Result.Add('correlationId', CorrelationId);
+  Result.AddPair('correlationId', CorrelationId);
   
   // 执行状态
-  Result.Add('currentStepId', CurrentStepId);
-  Result.Add('currentStepIndex', CurrentStepIndex);
+  Result.AddPair('currentStepId', CurrentStepId);
+  Result.AddPair('currentStepIndex', TJSONNumber.Create(CurrentStepIndex));
   
   StepsArr := TJSONArray.Create;
   for I := 0 to High(ExecutedSteps) do
     StepsArr.Add(ExecutedSteps[I]);
-  Result.Add('executedSteps', StepsArr);
+  Result.AddPair('executedSteps', StepsArr as TJSONValue);
   
   // 数据快照
   if Assigned(Variables) then
-    Result.Add('variables', Variables.Clone);
+    Result.AddPair('variables', Variables.Clone as TJSONObject);
   if Assigned(InputData) then
-    Result.Add('inputData', InputData.Clone);
+    Result.AddPair('inputData', InputData.Clone as TJSONObject);
   if Assigned(SessionData) then
-    Result.Add('sessionData', SessionData.Clone);
+    Result.AddPair('sessionData', SessionData.Clone as TJSONObject);
   
   // 追踪条目
   TracesArr := TJSONArray.Create;
   for I := 0 to High(TraceEntries) do
-    TracesArr.Add(TraceEntries[I].ToJSON);
-  Result.Add('traceEntries', TracesArr);
+    TracesArr.AddElement(TraceEntries[I].ToJSON);
+  Result.AddPair('traceEntries', TracesArr as TJSONValue);
   
   // 错误信息
-  Result.Add('hasError', HasError);
+  Result.AddPair('hasError', TJSONBool.Create(HasError));
   if HasError then
   begin
-    Result.Add('errorMessage', ErrorMessage);
-    Result.Add('errorClass', ErrorClass);
+    Result.AddPair('errorMessage', ErrorMessage);
+    Result.AddPair('errorClass', ErrorClass);
   end;
 end;
 
 class function TExecutionSnapshot.FromJSON(JSON: TJSONObject): TExecutionSnapshot;
+
+  function GetStr(const Name, Default: string): string;
+  var
+    V: TJSONValue;
+  begin
+    V := JSON.FindValue(Name);
+    if Assigned(V) then
+      Result := V.Value
+    else
+      Result := Default;
+  end;
+  
+  function GetInt(const Name: string; Default: Integer): Integer;
+  var
+    V: TJSONValue;
+  begin
+    V := JSON.FindValue(Name);
+    if Assigned(V) and (V is TJSONNumber) then
+      Result := (V as TJSONNumber).AsInt
+    else
+      Result := Default;
+  end;
+  
+  function GetBool(const Name: string; Default: Boolean): Boolean;
+  var
+    V: TJSONValue;
+  begin
+    V := JSON.FindValue(Name);
+    if Assigned(V) and (V is TJSONBool) then
+      Result := (V as TJSONBool).AsBoolean
+    else
+      Result := Default;
+  end;
+
 var
   StepsArr, TracesArr: TJSONArray;
   I: Integer;
   TraceJSON: TJSONObject;
+  TraceV: TJSONValue;
 begin
-  Result.Id := JSON.Get('id', '');
-  Result.CapturedAt := ISO8601ToDate(JSON.Get('capturedAt', ''));
-  Result.Version := JSON.Get('version', '1.0');
+  Result.Id := GetStr('id', '');
+  Result.CapturedAt := ISO8601ToDate(GetStr('capturedAt', ''));
+  Result.Version := GetStr('version', '1.0');
   
-  Result.WorkflowId := JSON.Get('workflowId', '');
-  Result.WorkflowName := JSON.Get('workflowName', '');
-  Result.WorkflowVersion := JSON.Get('workflowVersion', '');
+  Result.WorkflowId := GetStr('workflowId', '');
+  Result.WorkflowName := GetStr('workflowName', '');
+  Result.WorkflowVersion := GetStr('workflowVersion', '');
   
-  Result.CorrelationId := JSON.Get('correlationId', '');
+  Result.CorrelationId := GetStr('correlationId', '');
   
-  Result.CurrentStepId := JSON.Get('currentStepId', '');
-  Result.CurrentStepIndex := JSON.Get('currentStepIndex', 0);
+  Result.CurrentStepId := GetStr('currentStepId', '');
+  Result.CurrentStepIndex := GetInt('currentStepIndex', 0);
   
   // 执行步骤
-  StepsArr := JSON.Get('executedSteps', TJSONArray(nil));
+  StepsArr := JSON.FindValue('executedSteps') as TJSONArray;
   if Assigned(StepsArr) then
   begin
     SetLength(Result.ExecutedSteps, StepsArr.Count);
     for I := 0 to StepsArr.Count - 1 do
-      Result.ExecutedSteps[I] := StepsArr.Strings[I];
+      Result.ExecutedSteps[I] := StepsArr.Items[I].Value;
   end;
   
   // 数据
-  if JSON.Find('variables') <> nil then
-    Result.Variables := JSON.Objects['variables'].Clone as TJSONObject
+  if JSON.FindValue('variables') <> nil then
+    Result.Variables := JSON.FindValue('variables').Clone as TJSONObject
   else
     Result.Variables := nil;
     
-  if JSON.Find('inputData') <> nil then
-    Result.InputData := JSON.Objects['inputData'].Clone as TJSONObject
+  if JSON.FindValue('inputData') <> nil then
+    Result.InputData := JSON.FindValue('inputData').Clone as TJSONObject
   else
     Result.InputData := nil;
     
-  if JSON.Find('sessionData') <> nil then
-    Result.SessionData := JSON.Objects['sessionData'].Clone as TJSONObject
+  if JSON.FindValue('sessionData') <> nil then
+    Result.SessionData := JSON.FindValue('sessionData').Clone as TJSONObject
   else
     Result.SessionData := nil;
   
   // 追踪条目
-  TracesArr := JSON.Get('traceEntries', TJSONArray(nil));
+  TracesArr := JSON.FindValue('traceEntries') as TJSONArray;
   if Assigned(TracesArr) then
   begin
     SetLength(Result.TraceEntries, TracesArr.Count);
     for I := 0 to TracesArr.Count - 1 do
     begin
-      TraceJSON := TracesArr.Objects[I];
-      Result.TraceEntries[I].Timestamp := ISO8601ToDate(TraceJSON.Get('timestamp', ''));
-      Result.TraceEntries[I].CorrelationId := TraceJSON.Get('correlationId', '');
-      Result.TraceEntries[I].WorkflowId := TraceJSON.Get('workflowId', '');
-      Result.TraceEntries[I].StepId := TraceJSON.Get('stepId', '');
-      Result.TraceEntries[I].StepType := TraceJSON.Get('stepType', '');
-      Result.TraceEntries[I].Action := TraceJSON.Get('action', '');
-      Result.TraceEntries[I].Duration := TraceJSON.Get('durationMs', Int64(0));
-      Result.TraceEntries[I].InputData := TraceJSON.Get('input', '');
-      Result.TraceEntries[I].OutputData := TraceJSON.Get('output', '');
-      Result.TraceEntries[I].ErrorMessage := TraceJSON.Get('error', '');
+      TraceJSON := TracesArr.Items[I] as TJSONObject;
+      TraceV := TraceJSON.FindValue('timestamp');
+      if Assigned(TraceV) then
+        Result.TraceEntries[I].Timestamp := ISO8601ToDate(TraceV.Value)
+      else
+        Result.TraceEntries[I].Timestamp := 0;
+      TraceV := TraceJSON.FindValue('correlationId');
+      Result.TraceEntries[I].CorrelationId := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('workflowId');
+      Result.TraceEntries[I].WorkflowId := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('stepId');
+      Result.TraceEntries[I].StepId := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('stepType');
+      Result.TraceEntries[I].StepType := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('action');
+      Result.TraceEntries[I].Action := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('durationMs');
+      if Assigned(TraceV) and (TraceV is TJSONNumber) then
+        Result.TraceEntries[I].Duration := (TraceV as TJSONNumber).AsInt64
+      else
+        Result.TraceEntries[I].Duration := 0;
+      TraceV := TraceJSON.FindValue('input');
+      Result.TraceEntries[I].InputData := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('output');
+      Result.TraceEntries[I].OutputData := IfThen(Assigned(TraceV), TraceV.Value, '');
+      TraceV := TraceJSON.FindValue('error');
+      Result.TraceEntries[I].ErrorMessage := IfThen(Assigned(TraceV), TraceV.Value, '');
     end;
   end;
   
   // 错误
-  Result.HasError := JSON.Get('hasError', False);
-  Result.ErrorMessage := JSON.Get('errorMessage', '');
-  Result.ErrorClass := JSON.Get('errorClass', '');
+  Result.HasError := GetBool('hasError', False);
+  Result.ErrorMessage := GetStr('errorMessage', '');
+  Result.ErrorClass := GetStr('errorClass', '');
 end;
 
 function TExecutionSnapshot.ToString: string;
@@ -342,7 +396,7 @@ function TTraceExporter.ExportSnapshot(const Snapshot: TExecutionSnapshot;
 begin
   case Format of
     efJSON:
-      Result := Snapshot.ToJSON.FormatJSON;
+      Result := Snapshot.ToJSON.Format;
     efText:
       Result := Snapshot.ToString;
     efMarkdown:
@@ -352,7 +406,7 @@ begin
     efTimeline:
       Result := GenerateTimelineReport(Snapshot.TraceEntries);
   else
-    Result := Snapshot.ToJSON.FormatJSON;
+    Result := Snapshot.ToJSON.Format;
   end;
 end;
 
@@ -369,8 +423,8 @@ begin
         Arr := TJSONArray.Create;
         try
           for I := 0 to High(Entries) do
-            Arr.Add(Entries[I].ToJSON);
-          Result := Arr.FormatJSON;
+            Arr.AddElement(Entries[I].ToJSON);
+          Result := Arr.Format;
         finally
           Arr.Free;
         end;
@@ -417,7 +471,7 @@ begin
   try
     SL := TStringList.Create;
     try
-      SL.Text := JSON.FormatJSON;
+      SL.Text := JSON.Format;
       SL.SaveToFile(FileName);
     finally
       SL.Free;
@@ -435,7 +489,7 @@ begin
   SL := TStringList.Create;
   try
     SL.LoadFromFile(FileName);
-    JSON := GetJSON(SL.Text) as TJSONObject;
+    JSON := TJSONObject.ParseJSONValue(SL.Text) as TJSONObject;
     try
       Result := TExecutionSnapshot.FromJSON(JSON);
     finally
@@ -505,7 +559,7 @@ begin
       SB.AppendLine;
       SB.AppendLine('## Variables');
       SB.AppendLine('```json');
-      SB.AppendLine(Snapshot.Variables.FormatJSON);
+      SB.AppendLine(Snapshot.Variables.Format);
       SB.AppendLine('```');
     end;
     

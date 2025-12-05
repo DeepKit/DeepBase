@@ -887,13 +887,161 @@
     - 追踪级别配置
     - 轨迹导出
 
-### P4 代码统计
+#### TASK-1003: 端到端验证 ✅
+- ✅ 创建 Examples/Integration/UniFlowE2ETest.pas (~727 行)
+  - **测试工作流定义**
+    - WORKFLOW_SIMPLE_QA - 简单问答工作流
+    - WORKFLOW_CONDITIONAL - 条件分支工作流
+    - WORKFLOW_LOOP - 循环工作流
+    - WORKFLOW_ERROR_HANDLING - 错误处理工作流
+  - **测试用例 (12个)**
+    - Test_SimpleQA_ValidInput - 有效输入测试
+    - Test_SimpleQA_EmptyInput - 空输入回退测试
+    - Test_Conditional_Greeting - 条件分支-问候
+    - Test_Conditional_Question - 条件分支-提问
+    - Test_Conditional_Unknown - 条件分支-默认
+    - Test_ErrorHandling_Success - 错误处理-成功
+    - Test_ErrorHandling_Fallback - 错误处理-回退
+    - Test_Commander_IntentRecognition - 意图识别
+    - Test_Session_Persistence - 会话持久化
+    - Test_MultiTurn_Conversation - 多轮对话
+    - Test_Workflow_Registration - 工作流注册
+    - Test_Diagnostics_Available - 诊断可用性
+  - **测试报告**
+    - 通过/失败统计
+    - 执行时间跟踪
+    - 退出码支持 (CI 集成)
+
+### P4 Direction A 代码统计
 
 || 模块 | 文件 | 行数 |
 ||------|------|------|
 || UniBase.UniFlow | pas | ~769 |
 || Integration Demo | pas | ~440 |
-|| **P4 合计** | **2 files** | **~1,210** |
+|| E2E Test | pas | ~727 |
+|| **Direction A 合计** | **3 files** | **~1,940** |
+
+---
+
+## P4 Direction C: Event Sourcing 架构对齐
+
+### 2025-12-05
+
+#### TASK-1020: UniFlowEvent 核心类型 ✅
+- ✅ 创建 Source/EventSourcing/UniFlow.EventSourcing.Types.pas (~800 行)
+  - **基础类型**
+    - `TUniFlowType` - 流程类型 (Build/Maintain/NlConvert/SceneChange/CodeChange/Custom)
+    - `TUniFlowStatus` - 流程状态 (Created/Running/WaitingUser/Succeeded/Failed/Cancelled)
+    - `TEventStatus` - 事件状态 (Started/Succeeded/Failed)
+  - **TUniFlowEvent - 事件类**
+    - 全局唯一 ID、流程 ID、序列号
+    - 步骤名、来源模块、时间戳
+    - Payload (JSON)、ErrorCode、Metadata
+    - 工厂方法: Started/Succeeded/Failed
+    - 序列化/反序列化/克隆
+  - **TUniFlowSnapshot - 快照类**
+    - 版本号、事件序列号、状态 JSON
+  - **TFlowInstance - 流程实例类**
+    - 状态机迁移规则
+    - CreateNew/Fork 工厂方法
+  - **TUniFlowNode - 节点类**
+    - 节点路径解析
+  - 辅助函数: FlowTypeToString, StringToFlowType 等
+
+#### TASK-1021: Event Store 事件存储 ✅
+- ✅ 创建 Source/EventSourcing/UniFlow.EventSourcing.Store.pas (~1,120 行)
+  - **查询参数**
+    - `TEventQuery` - 事件查询 (序列号范围/时间范围/步骤/状态)
+    - `TSnapshotQuery` - 快照查询 (版本/最新/序列号之前)
+    - `TAppendResult` - 追加结果
+  - **IEventStore - 事件存储接口**
+    - Append/AppendBatch - Append-Only 语义
+    - ReadEvents/GetLastEvent/GetEventCount
+    - SaveSnapshot/GetSnapshot
+    - GetAllFlowIds/FlowExists
+  - **TMemoryEventStore - 内存实现**
+    - 线程安全 (TCriticalSection)
+    - 完整查询支持
+  - **TFileEventStore - 文件实现**
+    - JSON 文件持久化
+    - 可选缓存
+  - **TSnapshotPolicy - 快照策略**
+    - 每 N 个事件生成快照 (默认 10)
+    - 终态强制生成
+  - **TSnapshotManager - 快照管理器**
+  - **TEventStream - 事件流迭代器**
+
+#### TASK-1022: FlowInstance Manager 流程实例管理 ✅
+- ✅ 创建 Source/EventSourcing/UniFlow.EventSourcing.Instance.pas (~900 行)
+  - **结果类型**
+    - `TCreateFlowParams` - 创建参数
+    - `TEmitResult` - 事件发布结果
+    - `TTransitionResult` - 状态迁移结果
+  - **TFlowInstanceManager - 核心管理类**
+    - CreateFlow - 创建流程实例
+    - GetInstance - 获取实例 (从快照+事件重建)
+    - EmitEvent - 发布事件 (状态变化的唯一入口)
+    - EmitStarted/EmitSucceeded/EmitFailed - 便捷方法
+    - TransitionTo - 状态迁移
+    - StartFlow/CompleteFlow/FailFlow/CancelFlow - 生命周期
+    - PauseFlow/ResumeFlow - 暂停/恢复
+    - GetAllFlows/GetActiveFlows - 查询
+    - 自动快照生成
+  - **TFlowBuilder - 流式 API 构建器**
+    - WithType/WithSource/WithUser/WithSession
+    - Build/BuildAndStart
+  - **TFlowSession - 流程会话**
+    - BeginStep/EndStep/FailStep - 步骤管理
+    - Complete/Fail - 流程结束
+
+#### TASK-1023: Event Replay & Fork 事件重放与分叉 ✅
+- ✅ 创建 Source/EventSourcing/UniFlow.EventSourcing.Replay.pas (~1,290 行)
+  - **状态聚合器**
+    - `IStateAggregator` - 聚合器接口
+    - `TDefaultStateAggregator` - 默认实现 (收集步骤历史)
+    - `TCustomStateAggregator` - 自定义实现 (回调函数)
+  - **TEventReplayer - 事件重放器**
+    - ReplayAll - 全量重放
+    - ReplayTo - 重放到指定序列号
+    - ReplayFromSnapshot - 从快照开始重放
+    - ReplayRange - 范围重放
+    - ReplayIncremental - 增量重放
+  - **TFlowForker - 流程分叉器**
+    - `TForkOptions` - 分叉选项
+    - Fork - 从历史版本分叉
+    - ForkAt - 从指定序列号分叉
+    - CloneFlow - 完整克隆
+    - CreateWhatIf - 创建 what-if 临时分支
+  - **THistoryBrowser - 历史浏览器**
+    - `THistoryPoint` - 历史点
+    - GetAllPoints/GetPointAt/GetPointsInRange/GetPointsByStep
+  - **TTimeTravelDebugger - 时间旅行调试器**
+    - MoveFirst/MoveLast - 跳转到首/末
+    - StepForward/StepBackward - 单步前进/后退
+    - GoTo - 跳转到指定序列号
+    - GetCurrentEvent/GetCurrentState - 获取当前状态
+  - **TDiffCalculator - 差异计算器**
+    - CalculateDiff - 计算两个状态的差异
+    - CalculateVersionDiff - 计算两个版本间的差异
+
+### P4 Direction C 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| EventSourcing.Types | pas | ~800 |
+|| EventSourcing.Store | pas | ~1,120 |
+|| EventSourcing.Instance | pas | ~900 |
+|| EventSourcing.Replay | pas | ~1,290 |
+|| **Direction C 合计** | **4 files** | **~4,110** |
+
+### Event Sourcing 设计原则
+
+1. **单一事实源** - 所有状态变化通过 UniFlowEvent 体现
+2. **Append-Only** - 事件只能追加，不能修改或删除
+3. **可重放** - 任何状态都可从事件序列重建
+4. **可分叉** - 从历史版本创建新流程
+5. **CQRS** - 写路径 (EmitEvent) 和读路径 (Snapshot+Replay) 分离
+6. **快照策略** - 每 10 个事件或终态时生成快照
 
 ---
 
