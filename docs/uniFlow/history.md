@@ -632,3 +632,140 @@
 | Diagnostics.TraceExporter | pas | ~661 |
 | Diagnostics.Debugger | pas | ~1,100 |
 | **Phase 8 合计** | **5 files** | **~4,300** |
+
+---
+
+## P3: 后续维护任务
+
+### 2025-12-05
+
+#### TASK-801: SQLite 存储实现 ✅
+- ✅ 创建 Source/Storage/UniFlow.Storage.SQLite.pas (~2,270 行)
+  - **SQLite 连接抽象层**
+    - `ISQLiteRow` - 结果行接口
+    - `ISQLiteResult` - 查询结果接口
+    - `ISQLiteStatement` - 预编译语句接口
+    - `ISQLiteConnection` - 数据库连接接口
+    - `TSQLiteConnectionFactory` - 连接工厂 (可替换为 FireDAC/mORMot)
+    - `TMockSQLiteConnection` - Mock 实现 (用于测试/演示)
+  - **TSQLiteAuditStore** - 完整审计日志存储
+    - `TSQLiteAuditStoreConfig` - 配置类 (WAL模式/FTS搜索/连接池大小/保留天数)
+    - 完整 `IAuditStore` 接口实现
+    - 自动 Schema 创建和迁移
+    - 8 个索引 (timestamp/category/severity/action/user_id/session_id/workflow_id/correlation_id)
+    - 批量写入 + 事务支持
+    - 自动清理和保留策略
+    - Vacuum/Optimize/GetDatabaseSize 维护方法
+    - 导出/导入 JSON 支持
+  - **TSQLiteSessionStore** - 完整会话存储
+    - `TSQLiteSessionStoreConfig` - 配置类
+    - 完整 `ISessionStore` 接口实现
+    - 4 张表: sessions, session_messages, session_variables, session_metadata
+    - 外键级联删除
+    - 用户会话查询/过期会话清理/状态查询
+    - Touch/UpdateStatus 等便捷方法
+    - GetStats 统计信息
+  - **TSQLiteConnectionPool** - 连接池
+    - 预创建连接
+    - Acquire/Release
+    - 可配置池大小
+
+#### TASK-802: WebSocket 实时推送 ✅
+- ✅ 创建 Source/Realtime/UniFlow.Realtime.WebSocket.pas (~2,310 行)
+  - **消息类型**
+    - `TWSMessageType` - 协议消息类型 (subscribe/unsubscribe/ping/event/error等)
+    - `TWorkflowEventType` - 14种工作流事件类型
+    - `TWSMessage` - WebSocket 消息结构 (JSON序列化)
+    - `TWorkflowEvent` - 工作流事件通知
+  - **订阅管理**
+    - `TSubscription` - 订阅记录 (支持通配符)
+    - `TSubscriptionManager` - 主题订阅管理器
+    - `TTopicType` - 主题类型 (workflow/session/user/all/custom)
+  - **客户端管理**
+    - `TWebSocketClient` - 客户端连接包装
+    - 连接状态/活动追踪/消息队列
+    - Send/SendEvent/SendError/SendPong/SendWelcome
+  - **消息代理**
+    - `TMessageBroker` - 消息路由和分发
+    - Publish/PublishEvent/Broadcast/SendToClient/SendToUser
+    - 消息历史记录
+  - **WebSocket 服务器**
+    - `TWebSocketServerConfig` - 服务器配置
+    - `TWebSocketServer` - 主服务器类
+    - 自动 Ping/Pong 心跳
+    - 连接清理线程
+    - 认证支持
+  - **事件桥接**
+    - `TWorkflowEventBridge` - 工作流事件到 WebSocket 的桥接
+    - OnWorkflowStarted/Completed/Failed/Paused/Resumed/Cancelled
+    - OnStepStarted/Completed/Failed
+    - OnProgressUpdate/OnCustomEvent
+
+### P3 代码统计
+
+| 模块 | 文件 | 行数 |
+|------|------|------|
+| Storage.SQLite | pas | ~2,270 |
+| Realtime.WebSocket | pas | ~2,310 |
+| **P3 合计** | **2 files** | **~4,580** |
+
+---
+
+## Delphi 12 迁移 [DELPHI12-001]
+
+### 2025-12-05
+
+#### UniBase Core 模块 Delphi 12 兼容性修复
+
+**进度**: 75/78 (96%)
+
+##### 已修复模块 (本次会话)
+- ✅ **UniBase.IoC.pas**
+  - 使用 PTypeInfo 本地变量解决 `TypeInfo(T)^.Kind` 问题
+  - 使用 `TValue.AsType<T>` 代替直接类型转换 `T(Instance)`
+  - 简化 RegisterSingleton 方法中的类型检查
+- ✅ **UniBase.StateMachine.pas**
+  - 将 `StateToString`/`TriggerToString` 从本地函数重构为私有类方法
+  - 修复 E2570 Local procedure in generic method 错误
+  - 修复 NI19024 内部编译器错误
+
+##### 已修复模块 (前几次会话)
+- ✅ **UniBase.Template.pas** - 内联变量声明、属性访问器
+- ✅ **UniBase.CloudSync.pas** - HTTP 空请求体、TThread.Queue
+- ✅ **UniBase.Diff.pas** - TObjectList 改 TList (记录类型)
+- ✅ **UniBase.FileWatcher.pas** - TEvent 替代 TTimer、TTask.Create
+
+##### 待修复模块 (3个 - 需较大重构)
+- ❌ **UniBase.Graph.pas** - 泛型类中多个本地过程 (TTree.Traverse 等)
+- ❌ **UniBase.Net.pas** - Indy DNS API 完全重写
+- ❌ **UniBase.Serialization.pas** - ISerializer 接口架构重新设计
+
+##### 修复模式总结
+```
+// 1. TStringDynArray 缺少单元
+uses System.Types;
+
+// 2. 线程同步
+TThread.Synchronize(nil, proc) → TThread.Queue(nil, proc)
+
+// 3. 异步任务
+TTask.Run(proc) → TTask.Create(proc).Start
+
+// 4. 泛型类中本地过程
+procedure TMyClass<T>.Method;
+  function LocalFunc: string; // E2570!
+end;
+→ 重构为私有类方法
+
+// 5. 记录类型容器
+TObjectList<TMyRecord> → TList<TMyRecord>
+
+// 6. 记录属性 Inc
+Inc(LRecord.Count) → LCount := LRecord.Count; Inc(LCount); LRecord.Count := LCount;
+
+// 7. 注释格式
+{*...*} → (*...*)
+```
+
+##### Git 提交
+- `3112417` - fix(Core): Delphi 12 compatibility - IoC, StateMachine, Diff, FileWatcher

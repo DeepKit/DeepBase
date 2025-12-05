@@ -34,9 +34,30 @@
 
 ---
 
-## 待修复 Bug
+## 待修复 Bug (Delphi 12)
 
-*(暂无)*
+以下 3 个模块需要较大重构，暂缓修复：
+
+### BUG-038: Graph.pas 泛型类中的本地过程
+- **发现日期**: 2025-12-05
+- **严重程度**: High
+- **影响范围**: UniBase.Graph.pas
+- **问题描述**: TTree.Traverse 等方法中包含本地过程，触发 NI19024 错误
+- **预计工作量**: 大 - 需要重构多个方法
+
+### BUG-039: Net.pas Indy DNS API 变更
+- **发现日期**: 2025-12-05
+- **严重程度**: High
+- **影响范围**: UniBase.Net.pas
+- **问题描述**: QueryTimeout/QueryRecords/qtCNAME/TCNAMERecord 在新版 Indy 中不存在
+- **预计工作量**: 大 - 需要重写 DNS 查询功能
+
+### BUG-040: Serialization.pas 接口泛型方法限制
+- **发现日期**: 2025-12-05
+- **严重程度**: High
+- **影响范围**: UniBase.Serialization.pas
+- **问题描述**: E2535 Interface methods must not have parameterized methods
+- **预计工作量**: 大 - 需要重新设计 ISerializer 接口架构
 
 ---
 
@@ -45,10 +66,10 @@
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 0 | 0 | 0 |
-| High | 0 | 0 | 0 |
-| Medium | 1 | 0 | 1 |
+| High | 6 | 3 | 9 |
+| Medium | 5 | 0 | 5 |
 | Low | 0 | 0 | 0 |
-| **合计** | **1** | **0** | **1** |
+| **合计** | **11** | **3** | **14** |
 
 ---
 

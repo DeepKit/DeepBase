@@ -19,8 +19,8 @@
 | Phase 7 | 可选增强 (P2) | ✅ |
 | Phase 8 | 调试与诊断 | ✅ |
 
-**累计代码**: ~32,670 行
-- Pascal: 28 文件 (~27,520 行)
+**累计代码**: ~37,250 行
+- Pascal: 30 文件 (~32,100 行)
 - Python: 4 文件 (~1,450 行)
 - Node.js: 7 文件 (~1,100 行)
 - Web Editor: 8 文件 (~2,600 行)
@@ -85,13 +85,31 @@ end;
 
 ## 后续维护任务 [P3]
 
-| 任务 ID | 名称 | 描述 |
-|---------|------|------|
-| TASK-801 | SQLite 存储实现 | 实现 TSQLiteAuditStore 和 TSQLiteSessionStore |
-| TASK-802 | WebSocket 实时推送 | 工作流状态实时通知 |
-| TASK-803 | 编辑器测试 | 可视化编辑器单元测试 |
-| TASK-804 | CI/CD 集成 | GitHub Actions 自动化测试 |
-| TASK-805 | 多语言文档 | 英文 API 文档 |
+| 任务 ID | 名称 | 描述 | 状态 |
+|---------|------|------|------|
+| TASK-801 | SQLite 存储实现 | 实现 TSQLiteAuditStore 和 TSQLiteSessionStore | ✅ |
+| TASK-802 | WebSocket 实时推送 | 工作流状态实时通知 | ✅ |
+| TASK-803 | 编辑器测试 | 可视化编辑器单元测试 | |
+| TASK-804 | CI/CD 集成 | GitHub Actions 自动化测试 | |
+| TASK-805 | 多语言文档 | 英文 API 文档 | |
+
+---
+
+## 当前任务: Delphi 12 迁移 [DELPHI12-001]
+
+> UniBase Core 模块 Delphi 12 兼容性修复
+>
+> **进度**: 75/78 (96%) ✅
+
+### 待修复模块 (3个 - 需较大重构)
+
+| 任务 ID | 文件 | 问题 | 优先级 | 状态 |
+|---------|------|------|--------|------|
+| DELPHI12-002 | UniBase.Graph.pas | 泛型类中本地过程 (NI19024) | P2 | |
+| DELPHI12-003 | UniBase.Net.pas | Indy DNS API 重写 | P2 | |
+| DELPHI12-004 | UniBase.Serialization.pas | ISerializer 接口重设计 | P2 | |
+
+**说明**: 这 3 个模块需要较大重构，暂不影响 UniFlow 核心功能。可按需安排。
 
 ---
 
