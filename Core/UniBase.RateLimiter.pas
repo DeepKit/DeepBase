@@ -42,7 +42,8 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.DateUtils,
-  System.Math;
+  System.Math,
+  System.StrUtils;
 
 type
   // ============================================================================

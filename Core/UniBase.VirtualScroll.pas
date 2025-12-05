@@ -25,7 +25,7 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows, Winapi.Messages,
   {$ENDIF}
-  Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Graphics, Vcl.ExtCtrls;
+  Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Graphics, Vcl.ExtCtrls, Vcl.Forms;
 
 type
   /// <summary>虚拟列表项</summary>

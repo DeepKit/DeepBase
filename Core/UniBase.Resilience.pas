@@ -60,6 +60,7 @@ uses
   System.SyncObjs,
   System.DateUtils,
   System.Diagnostics,
+  System.Math,
   System.Threading;
 
 type
@@ -134,8 +135,8 @@ type
     procedure Reset;
     
     // Execute with circuit breaker
-    procedure Execute(Proc: TProc);
-    function Execute<T>(Func: TFunc<T>): T;
+    procedure Execute(Proc: TProc); overload;
+    function Execute<T>(Func: TFunc<T>): T; overload;
     
     // State info
     property Name: string read FName;
@@ -192,8 +193,8 @@ type
     function OnWaitEvent(Handler: TOnRetryWait): TRetryPolicy;
     
     // Execute
-    procedure Execute(Proc: TProc);
-    function Execute<T>(Func: TFunc<T>): T;
+    procedure Execute(Proc: TProc); overload;
+    function Execute<T>(Func: TFunc<T>): T; overload;
     function TryExecute(Proc: TProc; out Error: Exception): Boolean;
   end;
   
@@ -226,8 +227,8 @@ type
     function OnTimeoutEvent(Handler: TOnTimeout): TTimeoutPolicy;
     
     // Execute
-    procedure Execute(Proc: TProc);
-    function Execute<T>(Func: TFunc<T>): T;
+    procedure Execute(Proc: TProc); overload;
+    function Execute<T>(Func: TFunc<T>): T; overload;
   end;
   
   // ============================================================================
@@ -286,8 +287,8 @@ type
     function QueueTimeout(Ms: Int64): TBulkheadPolicy;
     
     // Execute
-    procedure Execute(Proc: TProc);
-    function Execute<T>(Func: TFunc<T>): T;
+    procedure Execute(Proc: TProc); overload;
+    function Execute<T>(Func: TFunc<T>): T; overload;
     function TryExecute(Proc: TProc): Boolean;
     
     // Stats
@@ -325,8 +326,8 @@ type
     function WithBulkhead(MaxConcurrency: Integer): TResiliencePolicy; overload;
     
     // Execute with all policies
-    procedure Execute(Proc: TProc);
-    function Execute<T>(Func: TFunc<T>): T;
+    procedure Execute(Proc: TProc); overload;
+    function Execute<T>(Func: TFunc<T>): T; overload;
   end;
   
   // ============================================================================
@@ -859,13 +860,15 @@ end;
 
 procedure TTimeoutPolicy.Execute(Proc: TProc);
 var
+  TaskProc: TProc;
   Task: ITask;
   Completed: Boolean;
 begin
+  TaskProc := Proc;
   Task := TTask.Create(
     procedure
     begin
-      Proc;
+      TaskProc();
     end);
   
   Task.Start;
@@ -880,19 +883,21 @@ begin
   
   // Check for exception in task
   if Task.Status = TTaskStatus.Exception then
-    raise Task.GetExceptionObject;
+    raise Exception(AcquireExceptionObject);
 end;
 
 function TTimeoutPolicy.Execute<T>(Func: TFunc<T>): T;
 var
+  TaskFunc: TFunc<T>;
   Task: ITask;
   TaskResult: T;
   Completed: Boolean;
 begin
+  TaskFunc := Func;
   Task := TTask.Create(
     procedure
     begin
-      TaskResult := Func;
+      TaskResult := TaskFunc();
     end);
   
   Task.Start;
@@ -906,7 +911,7 @@ begin
   end;
   
   if Task.Status = TTaskStatus.Exception then
-    raise Task.GetExceptionObject;
+    raise Exception(AcquireExceptionObject);
   
   Result := TaskResult;
 end;
@@ -1104,12 +1109,15 @@ begin
 end;
 
 function TBulkheadPolicy.Execute<T>(Func: TFunc<T>): T;
+var
+  R: T;
 begin
   Execute(
     procedure
     begin
-      Result := Func;
+      R := Func();
     end);
+  Result := R;
 end;
 
 function TBulkheadPolicy.TryExecute(Proc: TProc): Boolean;
@@ -1251,7 +1259,7 @@ begin
   Execute(
     procedure
     begin
-      R := Func;
+      R := Func();
     end);
   Result := R;
 end;
