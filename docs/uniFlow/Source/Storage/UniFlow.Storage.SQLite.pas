@@ -1,27 +1,27 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow SQLite Storage                                                      }
-{  Complete SQLite-based persistent storage for audit logs and sessions        }
-{                                                                              }
-{  Features:                                                                   }
-{  - TSQLiteAuditStore: Full-featured audit log storage                        }
-{  - TSQLiteSessionStore: Session persistence with messages/variables          }
-{  - Automatic schema migration                                                }
-{  - Connection pooling for high-throughput scenarios                          }
-{  - Prepared statements for performance                                       }
-{  - Full-text search support                                                  }
-{  - Automatic cleanup and retention policies                                  }
-{                                                                              }
-{  Dependencies:                                                               }
-{  - FireDAC (Delphi built-in) or mORMot SQLite3                               }
-{  - This implementation uses a minimal abstraction layer that can be          }
-{    adapted to either FireDAC or mORMot                                       }
-{                                                                              }
-{  Usage:                                                                      }
-{    var AuditStore := TSQLiteAuditStore.Create('audit.db');                   }
-{    var SessionStore := TSQLiteSessionStore.Create('sessions.db');            }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow SQLite Storage                                                       
+  Complete SQLite-based persistent storage for audit logs and sessions         
+                                                                               
+  Features:                                                                    
+  - TSQLiteAuditStore: Full-featured audit log storage                         
+  - TSQLiteSessionStore: Session persistence with messages/variables           
+  - Automatic schema migration                                                 
+  - Connection pooling for high-throughput scenarios                           
+  - Prepared statements for performance                                        
+  - Full-text search support                                                   
+  - Automatic cleanup and retention policies                                   
+                                                                               
+  Dependencies:                                                                
+  - FireDAC (Delphi built-in) or mORMot SQLite3                                
+  - This implementation uses a minimal abstraction layer that can be           
+    adapted to either FireDAC or mORMot                                        
+                                                                               
+  Usage:                                                                       
+    var AuditStore := TSQLiteAuditStore.Create('audit.db');                    
+    var SessionStore := TSQLiteSessionStore.Create('sessions.db');             
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Storage.SQLite;
 
@@ -37,6 +37,7 @@ uses
   System.DateUtils,
   System.StrUtils,
   UniFlow.Audit.Types,
+  UniFlow.Audit.Store,
   UniFlow.Session.Types,
   UniFlow.Session.Manager;
 

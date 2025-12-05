@@ -1,4 +1,4 @@
-{ ============================================================================
+(* ============================================================================
   UniFlow.Security.RateLimit - Rate Limiting and Quota Management
 
   Version: 1.0
@@ -18,7 +18,7 @@
       // Process request
     else
       // Rate limited
-  ============================================================================ }
+  ============================================================================ *)
 
 unit UniFlow.Security.RateLimit;
 
@@ -28,6 +28,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  System.Math,
   System.Generics.Collections,
   System.SyncObjs,
   System.DateUtils;

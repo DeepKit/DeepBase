@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Audit Manager                                                       }
-{  Central audit logging manager with report generation                        }
-{                                                                              }
-{  Features:                                                                   }
-{  - Centralized audit logging API                                             }
-{  - Multiple storage backends                                                 }
-{  - Report generation (Text, HTML, JSON, CSV)                                 }
-{  - Real-time event subscriptions                                             }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Audit Manager                                                        
+  Central audit logging manager with report generation                         
+                                                                               
+  Features:                                                                    
+  - Centralized audit logging API                                              
+  - Multiple storage backends                                                  
+  - Report generation (Text, HTML, JSON, CSV)                                  
+  - Real-time event subscriptions                                              
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Audit.Manager;
 
@@ -335,11 +335,11 @@ begin
 
   // Apply defaults
   if (AEntry.UserId = '') and (FDefaultUserId <> '') then
-    AEntry.FUserId := FDefaultUserId;
+    AEntry.UserId := FDefaultUserId;
   if (AEntry.SessionId = '') and (FDefaultSessionId <> '') then
-    AEntry.FSessionId := FDefaultSessionId;
+    AEntry.SessionId := FDefaultSessionId;
   if (AEntry.CorrelationId = '') and (FCorrelationId <> '') then
-    AEntry.FCorrelationId := FCorrelationId;
+    AEntry.CorrelationId := FCorrelationId;
 
   // Store
   FStore.Write(AEntry);
@@ -855,10 +855,22 @@ begin
   Result.PeriodEnd := AEndTime;
   Result.Format := AFormat;
 
-  // Get stats
+  // Get stats - copy values from stats
   Stats := FManager.GetStats(AStartTime, AEndTime);
-  Result.FStats.Free;
-  Result.FStats := Stats;
+  try
+    Result.Stats.TotalEvents := Stats.TotalEvents;
+    Result.Stats.TotalTokensUsed := Stats.TotalTokensUsed;
+    Result.Stats.TotalDurationMs := Stats.TotalDurationMs;
+    Result.Stats.AvgDurationMs := Stats.AvgDurationMs;
+    Result.Stats.ErrorCount := Stats.ErrorCount;
+    Result.Stats.UniqueUsers := Stats.UniqueUsers;
+    Result.Stats.UniqueSessions := Stats.UniqueSessions;
+    Result.Stats.UniqueWorkflows := Stats.UniqueWorkflows;
+    Result.Stats.StartTime := Stats.StartTime;
+    Result.Stats.EndTime := Stats.EndTime;
+  finally
+    Stats.Free;
+  end;
 
   // Get top errors
   ErrorQuery := TAuditQuery.Create;

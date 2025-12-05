@@ -1,4 +1,4 @@
-{ ============================================================================
+(* ============================================================================
   UniFlow.Validation.Schema - JSON Schema Validator
 
   Version: 1.0
@@ -21,7 +21,7 @@
     var Result := Schema.Validate(JSONData);
     if not Result.IsValid then
       ShowErrors(Result.Errors);
-  ============================================================================ }
+  ============================================================================ *)
 
 unit UniFlow.Validation.Schema;
 
@@ -31,6 +31,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  System.IOUtils,
   System.Generics.Collections,
   System.RegularExpressions;
 

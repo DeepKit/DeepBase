@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Audit Types                                                         }
-{  Type definitions for audit logging system                                   }
-{                                                                              }
-{  Features:                                                                   }
-{  - Audit event types and categories                                          }
-{  - Audit entry structure                                                     }
-{  - Query filters and pagination                                              }
-{  - Report types                                                              }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Audit Types                                                          
+  Type definitions for audit logging system                                    
+                                                                               
+  Features:                                                                    
+  - Audit event types and categories                                           
+  - Audit entry structure                                                      
+  - Query filters and pagination                                               
+  - Report types                                                               
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Audit.Types;
 
@@ -18,6 +18,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Rtti,
   System.Generics.Collections,
   System.JSON;
 
@@ -380,7 +381,7 @@ implementation
 
 uses
   System.DateUtils,
-  System.Rtti;
+  System.StrUtils;
 
 //------------------------------------------------------------------------------
 // TAuditCategoryHelper

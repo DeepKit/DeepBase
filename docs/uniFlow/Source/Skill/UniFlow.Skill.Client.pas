@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Skill Client                                                        }
-{  HTTP client for communicating with Python Skill service                     }
-{                                                                              }
-{  Features:                                                                   }
-{  - Synchronous and asynchronous HTTP calls                                   }
-{  - Connection pooling and retry logic                                        }
-{  - Timeout handling                                                          }
-{  - Health check support                                                      }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Skill Client                                                         
+  HTTP client for communicating with Python Skill service                      
+                                                                               
+  Features:                                                                    
+  - Synchronous and asynchronous HTTP calls                                    
+  - Connection pooling and retry logic                                         
+  - Timeout handling                                                           
+  - Health check support                                                       
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Skill.Client;
 
@@ -414,12 +414,11 @@ var
 begin
   Result := TObjectList<TSkillInfo>.Create(True);
   try
-    // The endpoint returns an array directly
     ResponseJSON := DoRequest('GET', '/skills');
     try
-      if ResponseJSON is TJSONArray then
+      // Check if response contains skills array
+      if ResponseJSON.TryGetValue<TJSONArray>('skills', SkillsArray) then
       begin
-        SkillsArray := ResponseJSON as TJSONArray;
         for I := 0 to SkillsArray.Count - 1 do
           Result.Add(TSkillInfo.FromJSON(SkillsArray.Items[I] as TJSONObject));
       end;
@@ -465,14 +464,15 @@ function TSkillClient.ExecuteSkill(const ASkillName: string;
   const AParams: TJSONObject): TSkillResponse;
 var
   Request: TSkillRequest;
+  Pair: TJSONPair;
 begin
   Request := TSkillRequest.Create;
   try
     Request.SkillName := ASkillName;
     if Assigned(AParams) then
     begin
-      Request.FParams.Free;
-      Request.FParams := AParams.Clone as TJSONObject;
+      for Pair in AParams do
+        Request.SetParamJSON(Pair.JsonString.Value, Pair.JsonValue);
     end;
     Result := ExecuteSkill(Request);
   finally
@@ -516,28 +516,33 @@ procedure TSkillClient.ExecuteSkillAsync(const ASkillName: string;
   const AOnError: TErrorCallback);
 var
   Request: TSkillRequest;
+  Pair: TJSONPair;
+  SuccessCallback: TSkillClientCallback;
+  ErrorCallback: TErrorCallback;
 begin
   Request := TSkillRequest.Create;
   Request.SkillName := ASkillName;
   if Assigned(AParams) then
   begin
-    Request.FParams.Free;
-    Request.FParams := AParams.Clone as TJSONObject;
+    for Pair in AParams do
+      Request.SetParamJSON(Pair.JsonString.Value, Pair.JsonValue);
   end;
 
-  ExecuteSkillAsync(Request,
-    procedure(const Response: TSkillResponse)
+  SuccessCallback := procedure(const Response: TSkillResponse)
     begin
       Request.Free;
       if Assigned(AOnSuccess) then
         AOnSuccess(Response);
-    end,
-    procedure(const Error: string)
+    end;
+
+  ErrorCallback := procedure(const Error: string)
     begin
       Request.Free;
       if Assigned(AOnError) then
         AOnError(Error);
-    end);
+    end;
+
+  ExecuteSkillAsync(Request, SuccessCallback, ErrorCallback);
 end;
 
 //------------------------------------------------------------------------------

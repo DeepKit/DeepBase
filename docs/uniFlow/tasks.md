@@ -19,13 +19,14 @@
 | Phase 7 | 可选增强 (P2) | ✅ |
 | Phase 8 | 调试与诊断 | ✅ |
 
-**累计代码**: ~40,100 行
-- Pascal: 30 文件 (~32,100 行)
+**累计代码**: ~43,560 行
+- Pascal: 32 文件 (~33,310 行)
 - Python: 4 文件 (~1,450 行)
 - Node.js: 7 文件 (~1,100 行)
 - Web Editor: 8 文件 (~2,600 行)
 - Editor Tests: 7 文件 (~2,300 行)
 - CI/CD: 4 文件 (~550 行)
+- English Docs: 6 文件 (~2,250 行)
 
 ---
 
@@ -93,7 +94,7 @@ end;
 | TASK-802 | WebSocket 实时推送 | 工作流状态实时通知 | ✅ |
 | TASK-803 | 编辑器测试 | 可视化编辑器单元测试 | ✅ |
 | TASK-804 | CI/CD 集成 | GitHub Actions 自动化测试 | ✅ |
-| TASK-805 | 多语言文档 | 英文 API 文档 | |
+| TASK-805 | 多语言文档 | 英文 API 文档 | ✅ |
 
 ---
 
@@ -125,9 +126,48 @@ end;
 
 ---
 
+## 后续扩展方向 [P4]
+
+### 方向 A: 集成到 UniBase 宿主 [TASK-1001~1003]
+
+| 任务 ID | 名称 | 描述 | 状态 |
+|---------|------|------|------|
+| TASK-1001 | Facade 单元 | 创建 `UniBase.UniFlow.pas` 统一导出 API | ✅ |
+| TASK-1002 | 集成示例 | 创建 UniBase 中的 UniFlow 集成 Demo | ✅ |
+| TASK-1003 | 端到端验证 | 验证完整工作流（输入→Commander→Workflow→LLM→输出） | |
+
+### 方向 B: 中文文档补全 [TASK-1010~1013]
+
+| 任务 ID | 名称 | 描述 | 状态 |
+|---------|------|------|------|
+| TASK-1010 | 中文快速入门 | `docs/zh/quick-start.md` | |
+| TASK-1011 | 中文 Workflow 格式 | `docs/zh/workflow-definition.md` | |
+| TASK-1012 | 中文 Skill 开发 | `docs/zh/skills-development.md` | |
+| TASK-1013 | 中文部署指南 | `docs/zh/deployment.md` | |
+
+### 方向 C: Event Sourcing 架构对齐 [TASK-1020~1023]
+
+| 任务 ID | 名称 | 描述 | 状态 |
+|---------|------|------|------|
+| TASK-1020 | UniFlowEvent | 引入事件源作为一等公民 | |
+| TASK-1021 | FlowInstance | 实现 FlowDefinition → FlowInstance 生命周期 | |
+| TASK-1022 | 事件重放 | 从事件序列重建状态 | |
+| TASK-1023 | 分叉能力 | 从历史版本分叉新 FlowInstance | |
+
+### 方向 D: 分析与可视化 [TASK-1030~1032]
+
+| 任务 ID | 名称 | 描述 | 状态 |
+|---------|------|------|------|
+| TASK-1030 | 统计分析 | 工作流执行统计面板 | |
+| TASK-1031 | 时间线可视化 | 事件时间线 UI 组件 | |
+| TASK-1032 | 多租户支持 | 租户/项目隔离 | |
+
+---
+
 ## 相关文档
 
 - `history.md` - 已完成任务记录
 - `bugfix.md` - Bug 修复记录
 - `docs/api-reference.md` - API 参考
 - `docs/quick-start.md` - 快速入门
+- `03.02.Design-uniFlow-CoreModelAndPrinciples-1.0.md` - 核心模型设计

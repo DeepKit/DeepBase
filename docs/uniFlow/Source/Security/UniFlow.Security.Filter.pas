@@ -1,4 +1,4 @@
-{ ============================================================================
+(* ============================================================================
   UniFlow.Security.Filter - Sensitive Information Filter
 
   Version: 1.0
@@ -15,7 +15,7 @@
     var Filter := TSensitiveFilter.Create;
     Filter.LoadPatterns('patterns.json');
     var Masked := Filter.Mask(Content);
-  ============================================================================ }
+  ============================================================================ *)
 
 unit UniFlow.Security.Filter;
 
@@ -25,6 +25,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  System.Math,
   System.Generics.Collections,
   System.RegularExpressions,
   System.SyncObjs,

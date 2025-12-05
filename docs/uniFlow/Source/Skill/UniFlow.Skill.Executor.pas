@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Skill Executor                                                      }
-{  Workflow action executor for Skill invocations                              }
-{                                                                              }
-{  Features:                                                                   }
-{  - Integration with workflow engine                                          }
-{  - Skill action execution                                                    }
-{  - Result mapping to workflow context                                        }
-{  - Error handling and retry logic                                            }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Skill Executor                                                       
+  Workflow action executor for Skill invocations                               
+                                                                               
+  Features:                                                                    
+  - Integration with workflow engine                                           
+  - Skill action execution                                                     
+  - Result mapping to workflow context                                         
+  - Error handling and retry logic                                             
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Skill.Executor;
 
@@ -18,12 +18,24 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Rtti,
   System.Generics.Collections,
   System.JSON,
   UniFlow.Skill.Types,
   UniFlow.Skill.Client;
 
 type
+  //----------------------------------------------------------------------------
+  // TSkillErrorHandling - Error handling strategy
+  //----------------------------------------------------------------------------
+
+  TSkillErrorHandling = (
+    ehRaise,      // Raise exception on error
+    ehIgnore,     // Ignore error, continue workflow
+    ehDefault,    // Use default value on error
+    ehRetry       // Retry before failing
+  );
+
   //----------------------------------------------------------------------------
   // Forward declarations
   //----------------------------------------------------------------------------
@@ -72,17 +84,6 @@ type
     property ResultMapping: TDictionary<string, string> read FResultMapping;
     property ErrorHandling: TSkillErrorHandling read FErrorHandling write FErrorHandling;
   end;
-
-  //----------------------------------------------------------------------------
-  // TSkillErrorHandling - Error handling strategy
-  //----------------------------------------------------------------------------
-
-  TSkillErrorHandling = (
-    ehRaise,      // Raise exception on error
-    ehIgnore,     // Ignore error, continue workflow
-    ehDefault,    // Use default value on error
-    ehRetry       // Retry before failing
-  );
 
   //----------------------------------------------------------------------------
   // TSkillActionResult - Result of Skill action execution
@@ -193,7 +194,6 @@ type
 implementation
 
 uses
-  System.Rtti,
   System.StrUtils,
   System.RegularExpressions;
 
@@ -507,8 +507,9 @@ begin
         Request := TSkillRequest.Create;
         try
           Request.SkillName := AConfig.SkillName;
-          Request.FParams.Free;
-          Request.FParams := ResolvedParams.Clone as TJSONObject;
+          // Copy params using public API
+          for var ResolvedPair in ResolvedParams do
+            Request.SetParamJSON(ResolvedPair.JsonString.Value, ResolvedPair.JsonValue);
           Request.TimeoutMs := AConfig.TimeoutMs;
 
           // Execute

@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Skill Types                                                         }
-{  Type definitions for Skill service integration                              }
-{                                                                              }
-{  Features:                                                                   }
-{  - Skill request/response types                                              }
-{  - Skill metadata types                                                      }
-{  - LLM message types                                                         }
-{  - Status and error types                                                    }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Skill Types                                                          
+  Type definitions for Skill service integration                               
+                                                                               
+  Features:                                                                    
+  - Skill request/response types                                               
+  - Skill metadata types                                                       
+  - LLM message types                                                          
+  - Status and error types                                                     
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Skill.Types;
 
@@ -18,6 +18,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Rtti,
   System.Generics.Collections,
   System.JSON;
 
@@ -340,8 +341,7 @@ type
 implementation
 
 uses
-  System.DateUtils,
-  System.Rtti;
+  System.DateUtils;
 
 //------------------------------------------------------------------------------
 // TSkillStatusHelper

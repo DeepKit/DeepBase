@@ -1,15 +1,15 @@
-{******************************************************************************}
-{                                                                              }
-{  UniFlow Audit Store                                                         }
-{  SQLite-based persistent audit log storage                                   }
-{                                                                              }
-{  Features:                                                                   }
-{  - SQLite storage with automatic schema migration                            }
-{  - Efficient querying with indexed columns                                   }
-{  - Batch inserts for high-throughput scenarios                               }
-{  - Automatic log rotation and cleanup                                        }
-{                                                                              }
-{******************************************************************************}
+(*******************************************************************************
+                                                                               
+  UniFlow Audit Store                                                          
+  SQLite-based persistent audit log storage                                    
+                                                                               
+  Features:                                                                    
+  - SQLite storage with automatic schema migration                             
+  - Efficient querying with indexed columns                                    
+  - Batch inserts for high-throughput scenarios                                
+  - Automatic log rotation and cleanup                                         
+                                                                               
+*******************************************************************************)
 
 unit UniFlow.Audit.Store;
 
@@ -348,7 +348,7 @@ begin
       begin
         if (Entry.Timestamp >= AStartTime) and (Entry.Timestamp <= AEndTime) then
         begin
-          Inc(Result.FTotalEvents);
+          Result.TotalEvents := Result.TotalEvents + 1;
           Result.AddCategoryCount(Entry.Category, 1);
           Result.AddSeverityCount(Entry.Severity, 1);
           Result.AddActionCount(Entry.Action, 1);
@@ -356,7 +356,7 @@ begin
           Result.TotalDurationMs := Result.TotalDurationMs + Entry.DurationMs;
 
           if Entry.Severity in [asError, asCritical] then
-            Inc(Result.FErrorCount);
+            Result.ErrorCount := Result.ErrorCount + 1;
 
           if Entry.UserId <> '' then
             Users.AddOrSetValue(Entry.UserId, True);

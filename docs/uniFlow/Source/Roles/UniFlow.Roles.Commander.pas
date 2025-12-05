@@ -1,4 +1,4 @@
-{ ============================================================================
+(* ============================================================================
   UniFlow.Roles.Commander - Request Entry Point and Workflow Router
 
   Version: 1.0
@@ -16,7 +16,7 @@
     var Commander := TCommander.Create(SessionManager, WorkflowRegistry);
     Commander.RegisterRoute('greeting', 'workflow_greeting');
     var Response := Commander.ProcessRequest(Request);
-  ============================================================================ }
+  ============================================================================ *)
 
 unit UniFlow.Roles.Commander;
 
@@ -26,6 +26,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  System.Math,
+  System.StrUtils,
   System.Generics.Collections,
   System.RegularExpressions,
   System.SyncObjs,
@@ -766,7 +768,7 @@ var
   Executor: TWorkflowExecutor;
   StepResult: TStepResult;
 begin
-  Context := TWorkflowContext.Create;
+  Context := TWorkflowContext.Create(Workflow.Id, TGUID.NewGuid.ToString);
   try
     // Set up context
     Context.SetVariable('user_message', Request.Message);
@@ -777,7 +779,7 @@ begin
     // Add session history if available
     if Assigned(Session) then
     begin
-      Context.SetVariable('session_context', Session.Context.ToJSON);
+      Context.SetVariable('session_context', Session.ToJSON);
       Context.SetVariable('message_count', IntToStr(Session.Messages.Count));
     end;
 
@@ -881,7 +883,7 @@ begin
 
   // Update request with session ID if auto-created
   if Assigned(Session) and (Request.SessionId = '') then
-    Request.SessionId := Session.SessionId;
+    Request.SessionId := Session.Id;
 
   // Add message to session history
   if Assigned(Session) then
