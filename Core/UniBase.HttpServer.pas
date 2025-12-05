@@ -46,6 +46,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.Rtti,
   System.JSON,
   System.NetEncoding,
   System.RegularExpressions,
@@ -374,7 +375,6 @@ function JsonResponse(const Pairs: array of const): TJSONObject;
 implementation
 
 uses
-  System.Rtti,
   System.IOUtils,
   REST.Json;
 

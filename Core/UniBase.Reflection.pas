@@ -77,7 +77,7 @@ type
     class function Context: TRttiContext; static;
     
     /// <summary>Get type by name</summary>
-    class function GetType(const ATypeName: string): TRttiType; static;
+    class function GetType(const ATypeName: string): TRttiType; overload; static;
     class function GetType<T>: TRttiType; overload; static;
     class function GetTypeByClass(AClass: TClass): TRttiType; static;
     
@@ -101,7 +101,7 @@ type
     class function GetSize<T>: Integer; static;
     
     /// <summary>Check assignability</summary>
-    class function IsAssignableFrom(ATarget, ASource: TRttiType): Boolean; static;
+    class function IsAssignableFrom(ATarget, ASource: TRttiType): Boolean; overload; static;
     class function IsAssignableFrom<TTarget, TSource>: Boolean; overload; static;
     
     /// <summary>Get base types</summary>
@@ -289,12 +289,12 @@ type
     
     /// <summary>From/To string</summary>
     class function ToString(const AValue: TValue): string; static;
-    class function FromString(const AValue: string; ATargetType: TRttiType): TValue; static;
-    class function FromString<T>(const AValue: string): T; static;
+    class function FromString(const AValue: string; ATargetType: TRttiType): TValue; overload; static;
+    class function FromString<T>(const AValue: string): T; overload; static;
     
     /// <summary>Check convertibility</summary>
-    class function CanConvert(const AValue: TValue; ATargetType: TRttiType): Boolean; static;
-    class function CanConvert<TSource, TTarget>: Boolean; static;
+    class function CanConvert(const AValue: TValue; ATargetType: TRttiType): Boolean; overload; static;
+    class function CanConvert<TSource, TTarget>: Boolean; overload; static;
   end;
 
   /// <summary>Enum utilities</summary>
@@ -354,14 +354,14 @@ type
     class function GetTypeName<T>: string; static;
     
     // Property access
-    class function GetProp(AObj: TObject; const AProp: string): TValue; static;
+    class function GetProp(AObj: TObject; const AProp: string): TValue; overload; static;
     class function GetProp<T>(AObj: TObject; const AProp: string): T; overload; static;
     class procedure SetProp(AObj: TObject; const AProp: string; const AValue: TValue); overload; static;
     class procedure SetProp<T>(AObj: TObject; const AProp: string; const AValue: T); overload; static;
     class function HasProp(AObj: TObject; const AProp: string): Boolean; static;
     
     // Field access
-    class function GetField(AObj: TObject; const AField: string): TValue; static;
+    class function GetField(AObj: TObject; const AField: string): TValue; overload; static;
     class function GetField<T>(AObj: TObject; const AField: string): T; overload; static;
     class procedure SetField(AObj: TObject; const AField: string; const AValue: TValue); overload; static;
     class procedure SetField<T>(AObj: TObject; const AField: string; const AValue: T); overload; static;
@@ -1334,7 +1334,7 @@ begin
         LValue1 := LProp.GetValue(AObj1);
         LValue2 := LProp.GetValue(AObj2);
         
-        if not LValue1.Equals(LValue2) then
+        if LValue1.ToString <> LValue2.ToString then
           Exit(False);
       end;
     end;
@@ -1374,7 +1374,7 @@ begin
         LValue1 := LProp.GetValue(AObj1);
         LValue2 := LProp.GetValue(AObj2);
         
-        if not LValue1.Equals(LValue2) then
+        if LValue1.ToString <> LValue2.ToString then
           LList.Add(LProp.Name);
       end;
     end;

@@ -18,7 +18,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
   System.JSON, System.DateUtils, System.RegularExpressions, System.Math,
-  UniBase.Types, UniBase.LogAggregator;
+  System.Rtti, UniBase.Types, UniBase.LogAggregator;
 
 type
   ELogQueryException = class(Exception);
@@ -233,7 +233,7 @@ type
     procedure SetDataSourceArray(const ALogs: TArray<TAggregatedLog>);
     
     /// <summary>Basic statistics</summary>
-    function GetStats: TLogStats;
+    function GetStats: TLogStats; overload;
     function GetStats(const AFilter: TLogFilter): TLogStats; overload;
     
     /// <summary>Count by category</summary>
@@ -1289,7 +1289,7 @@ var
   LevelSeries: array[TLogLevel] of TDictionary<TDateTime, Int64>;
   Log: TAggregatedLog;
   BucketTime: TDateTime;
-  Pair: TPair<TDateTime, Int64>;
+  TimePair: TPair<TDateTime, Boolean>;
   AllTimes: TDictionary<TDateTime, Boolean>;
   SortedTimes: TList<TDateTime>;
   Results: TArray<TLogTimeSeries>;
@@ -1316,8 +1316,8 @@ begin
     end;
     
     // Sort times
-    for Pair in AllTimes do
-      SortedTimes.Add(Pair.Key);
+    for TimePair in AllTimes do
+      SortedTimes.Add(TimePair.Key);
     SortedTimes.Sort;
     
     // Build result series

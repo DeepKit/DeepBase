@@ -25,7 +25,7 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
   System.JSON, System.DateUtils, System.NetEncoding, System.Net.HttpClient,
   System.Net.URLClient, System.Threading,
-  UniBase.Types;
+  UniBase.Types, UniBase.Logging;
 
 type
   ELogAggregatorException = class(Exception);
@@ -1353,7 +1353,7 @@ procedure TLogAggregator.FlushBuffer;
 var
   List: TList<TAggregatedLog>;
   Logs: TArray<TAggregatedLog>;
-  BatchCount: Integer;
+  BatchCount, I: Integer;
 begin
   List := FBuffer.LockList;
   try
@@ -1364,7 +1364,8 @@ begin
       BatchCount := FBatchSize;
       
     SetLength(Logs, BatchCount);
-    List.CopyTo(Logs, 0, BatchCount);
+    for I := 0 to BatchCount - 1 do
+      Logs[I] := List[I];
     List.DeleteRange(0, BatchCount);
   finally
     FBuffer.UnlockList;

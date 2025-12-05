@@ -17,6 +17,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.Generics.Collections,
+  System.Generics.Defaults, System.TypInfo,
   System.Net.HttpClient, System.Net.URLClient, System.Net.HttpClientComponent,
   System.NetEncoding, System.JSON, System.RegularExpressions,
   IdDNSResolver, IdGlobal, IdStack, IdTCPClient, IdHTTP, IdSSLOpenSSL,

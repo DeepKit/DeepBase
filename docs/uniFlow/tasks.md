@@ -2,7 +2,7 @@
 
 > 最后更新: 2025-12-05
 >
-> ✅ **项目已完成** - M1/M2/M3 里程碑 + 全部 P2 任务
+> 当前: Phase 8 调试与诊断
 
 ---
 
@@ -17,6 +17,7 @@
 | Phase 5 | 会话管理 | ✅ |
 | Phase 6 | 集成测试 | ✅ |
 | Phase 7 | 可选增强 (P2) | ✅ |
+| Phase 8 | 调试与诊断 | 🚧 |
 
 **累计代码**: ~28,370 行
 - Pascal: 23 文件 (~23,220 行)
@@ -41,15 +42,56 @@
 
 ---
 
+## Phase 8: 调试与诊断 [P0/P1]
+
+> 目标: 集成到宿主程序后容易定位和修复 Bug
+
+| 任务 ID | 名称 | 描述 | 优先级 | 状态 |
+|---------|------|------|--------|------|
+| TASK-901 | 诊断模块 | `UniFlow.Diagnostics.pas` - 统一日志门面 + 追踪开关 | P0 | 📌 |
+| TASK-902 | CorrelationId 支持 | 跨系统调用链追踪，全链路日志关联 | P0 | |
+| TASK-903 | 错误上下文收集 | 异常时自动快照（变量/输入/堆栈/已执行步骤） | P1 | |
+| TASK-904 | 执行轨迹导出 | 导出执行历史用于复现问题 | P1 | |
+| TASK-905 | 调试模式 | 单步执行/断点机制（开发期调试） | P2 | |
+
+### TASK-901 详细设计
+
+```pascal
+TUniFlowDiagnostics = class
+  // 统一日志门面 - 允许宿主注入
+  LoggerFactory: ILoggerFactory;
+  
+  // 执行追踪
+  TraceEnabled: Boolean;
+  TraceLevel: (tlMinimal, tlNormal, tlVerbose);
+  
+  // 调试钩子
+  OnBeforeStep: TStepEvent;
+  OnAfterStep: TStepEvent;
+  OnError: TErrorEvent;
+  
+  // 状态导出
+  function DumpState: string;
+  function ExportTrace: string;
+end;
+```
+
+设计原则:
+- **零侵入** - 宿主不用改代码就能用默认日志
+- **可插拔** - 想用自己的 Logger 随时替换
+- **低开销** - 关闭追踪时性能影响 < 1%
+
+---
+
 ## 后续维护任务 [P3]
 
-| 任务 ID | 名称 | 描述 | 优先级 |
-|---------|------|------|--------|
-| TASK-801 | SQLite 存储实现 | 实现 TSQLiteAuditStore 和 TSQLiteSessionStore | Low |
-| TASK-802 | WebSocket 实时推送 | 工作流状态实时通知 | Low |
-| TASK-803 | 编辑器测试 | 可视化编辑器单元测试 | Low |
-| TASK-804 | CI/CD 集成 | GitHub Actions 自动化测试 | Low |
-| TASK-805 | 多语言文档 | 英文 API 文档 | Low |
+| 任务 ID | 名称 | 描述 |
+|---------|------|------|
+| TASK-801 | SQLite 存储实现 | 实现 TSQLiteAuditStore 和 TSQLiteSessionStore |
+| TASK-802 | WebSocket 实时推送 | 工作流状态实时通知 |
+| TASK-803 | 编辑器测试 | 可视化编辑器单元测试 |
+| TASK-804 | CI/CD 集成 | GitHub Actions 自动化测试 |
+| TASK-805 | 多语言文档 | 英文 API 文档 |
 
 ---
 

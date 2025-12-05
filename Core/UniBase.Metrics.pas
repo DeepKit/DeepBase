@@ -192,7 +192,7 @@ type
     /// <summary>Start timing - returns a stop action</summary>
     function Start: TProc;
     /// <summary>Record a duration in seconds</summary>
-    procedure Record(ADurationSeconds: Double);
+    procedure RecordDuration(ADurationSeconds: Double);
     /// <summary>Record a duration in milliseconds</summary>
     procedure RecordMs(ADurationMs: Double);
     /// <summary>Time a procedure</summary>
@@ -399,10 +399,10 @@ type
   end;
 
 /// <summary>Create label</summary>
-function Label(const AName, AValue: string): TMetricLabel;
+function MakeLabel(const AName, AValue: string): TMetricLabel;
 
 /// <summary>Create labels array</summary>
-function Labels(const APairs: array of TMetricLabel): TMetricLabels;
+function MakeLabels(const APairs: array of TMetricLabel): TMetricLabels;
 
 /// <summary>Global metrics registry</summary>
 function Metrics: TMetricsRegistry;
@@ -416,12 +416,12 @@ var
   GMetricsRegistry: TMetricsRegistry = nil;
   GRegistryLock: TCriticalSection = nil;
 
-function Label(const AName, AValue: string): TMetricLabel;
+function MakeLabel(const AName, AValue: string): TMetricLabel;
 begin
   Result := TMetricLabel.Create(AName, AValue);
 end;
 
-function Labels(const APairs: array of TMetricLabel): TMetricLabels;
+function MakeLabels(const APairs: array of TMetricLabel): TMetricLabels;
 var
   I: Integer;
 begin
@@ -977,7 +977,7 @@ begin
   
   Result := procedure
   begin
-    Self.Record(SecondSpan(LStartTime, Now));
+    Self.RecordDuration(SecondSpan(LStartTime, Now));
     Self.FLock.Enter;
     try
       System.Dec(Self.FActiveTimers);
@@ -987,7 +987,7 @@ begin
   end;
 end;
 
-procedure TTimer.Record(ADurationSeconds: Double);
+procedure TTimer.RecordDuration(ADurationSeconds: Double);
 begin
   FHistogram.Observe(ADurationSeconds);
 end;
@@ -1013,7 +1013,7 @@ begin
   try
     AProc;
   finally
-    Record(SecondSpan(LStart, Now));
+    RecordDuration(SecondSpan(LStart, Now));
     FLock.Enter;
     try
       System.Dec(FActiveTimers);
@@ -1039,7 +1039,7 @@ begin
   try
     Result := AFunc;
   finally
-    Record(SecondSpan(LStart, Now));
+    RecordDuration(SecondSpan(LStart, Now));
     FLock.Enter;
     try
       System.Dec(FActiveTimers);
@@ -1666,7 +1666,7 @@ begin
   if not FStopped then
   begin
     FStopped := True;
-    FTimer.Record(SecondSpan(FStartTime, Now));
+    FTimer.RecordDuration(SecondSpan(FStartTime, Now));
   end;
 end;
 

@@ -21,7 +21,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.Variants, System.RegularExpressions, System.StrUtils, System.IOUtils,
-  System.JSON;
+  System.JSON, System.NetEncoding;
 
 type
   ETemplateException = class(Exception);
@@ -260,8 +260,13 @@ type
     
     property CacheEnabled: Boolean read FCacheEnabled write FCacheEnabled;
     property BasePath: string read FBasePath write FBasePath;
-    property HtmlEscape: Boolean read FRenderer.FHtmlEscape write FRenderer.FHtmlEscape;
-    property StrictMode: Boolean read FRenderer.FStrictMode write FRenderer.FStrictMode;
+    function GetHtmlEscape: Boolean;
+    procedure SetHtmlEscape(Value: Boolean);
+    function GetStrictMode: Boolean;
+    procedure SetStrictMode(Value: Boolean);
+  public
+    property HtmlEscape: Boolean read GetHtmlEscape write SetHtmlEscape;
+    property StrictMode: Boolean read GetStrictMode write SetStrictMode;
   end;
 
   /// <summary>Static template helper class</summary>
