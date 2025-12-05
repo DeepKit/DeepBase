@@ -202,6 +202,78 @@
   - `TUniBaseManager.EnsureSchemaColumns` - 添加 ParamCreate := False
 - **状态**: ✅ 已修复
 
+## 2025-12-05 Delphi 12 编译兼容性修复
+
+### BUG-028: TRttiEnumerationType 未声明
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.HttpServer.pas`, `UniBase.LogQuery.pas`, `UniBase.LogAlert.pas`, `UniBase.LogDashboard.pas`
+- **问题**: Delphi 12 中 `TRttiEnumerationType` 需要显式引用 `System.Rtti` 单元
+- **修复**: 在 uses 子句中添加 `System.Rtti`
+- **状态**: ✅ 已修复
+
+### BUG-029: Record 方法名与保留字冲突
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Metrics.pas`
+- **问题**: `Record` 是 Delphi 保留字，不能作为方法名
+- **修复**: 将 `Record` 方法重命名为 `RecordDuration`
+- **状态**: ✅ 已修复
+
+### BUG-030: TStringDynArray 未声明
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Updater.pas`, `UniBase.Feedback.pas`, `UniBase.CloudBackup.pas`
+- **问题**: Delphi 12 中 `TStringDynArray` 需要显式引用 `System.Types`
+- **修复**: 在 uses 子句中添加 `System.Types`
+- **状态**: ✅ 已修复
+
+### BUG-031: TTask.Run 不兼容
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Updater.pas`, `UniBase.Feedback.pas`
+- **问题**: Delphi 12 中 `TTask.Run` 返回值类型变更，需要显式启动
+- **修复**: 改用 `TTask.Create(proc).Start`
+- **状态**: ✅ 已修复
+
+### BUG-032: TThread.Synchronize(nil, proc) 不兼容
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Updater.pas`, `UniBase.Feedback.pas`, `UniBase.CloudBackup.pas`
+- **问题**: Delphi 12 中 `TThread.Synchronize(nil, proc)` 调用方式不兼容
+- **修复**: 改用 `TThread.Queue(TThread.CurrentThread, proc)` 或直接调用
+- **状态**: ✅ 已修复
+
+### BUG-033: TArray.Sort<T> 缺少比较器参数
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Updater.pas`
+- **问题**: Delphi 12 中 `TArray.Sort<T>` 需要显式传入比较器
+- **修复**: 添加 `TComparer<T>.Default` 参数，并引用 `Generics.Defaults`
+- **状态**: ✅ 已修复
+
+### BUG-034: TLogDashboard 类型不匹配
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.LogDashboard.pas`
+- **问题**: 使用了未定义的 `TKeyCount` 类型和 `Point.Count` 属性
+- **修复**: 改用 `TCountResult` 类型和 `Point.Value` 属性
+- **状态**: ✅ 已修复
+
+### BUG-035: TZCompressionStream.Create 不兼容
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.CloudBackup.pas`
+- **问题**: Delphi 12 中 `TZCompressionStream.Create` 参数不兼容
+- **修复**: 改用 `ZCompressStream` 函数
+- **状态**: ✅ 已修复
+
+### BUG-036: 记录属性直接赋值不兼容
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.LogDashboard.pas`
+- **问题**: 对嵌套记录属性直接赋值 (`Widget.Config.Title :=`) 在 Delphi 12 中不兼容
+- **修复**: 使用局部变量更新记录后再赋回
+- **状态**: ✅ 已修复
+
+### BUG-037: overload 指令缺失
+- **严重程度**: 🟢 低
+- **文件**: `UniBase.LogQuery.pas`
+- **问题**: 重载方法缺少 `overload` 指令
+- **修复**: 添加 `overload` 指令
+- **状态**: ✅ 已修复
+
 ---
 
 ## 代码质量检查结果 (2025-12-01)

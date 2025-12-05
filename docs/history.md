@@ -389,3 +389,30 @@
   4. 使用 SQLite 的 `CURRENT_TIMESTAMP` 替代 `datetime('now')`
   5. 使用 `|| char(10) ||` 替代字符串内的 `#13#10`
 
+## 2025-12-05 Delphi 12 兼容性修复
+
+### DELPHI12-001: Core 模块 Delphi 12 编译兼容性
+- **完成日期**: 2025-12-05
+- **描述**: 修复 UniBase Core 模块在 Delphi 12.2 (RAD Studio 23.0) 下的编译错误
+- **起始状态**: 38/78 文件编译失败
+- **当前状态**: 69/78 文件编译成功 (88%)
+- **修复的文件** (按修复顺序):
+  1. `UniBase.Metrics.pas` - 重命名 `Record` 方法为 `RecordDuration` (保留字冲突)
+  2. `UniBase.HttpServer.pas` - 添加 `System.Rtti` 引用
+  3. `UniBase.LogQuery.pas` - 添加 `System.Rtti`、`overload` 指令、修复类型不匹配
+  4. `UniBase.LogAlert.pas` - 添加 `System.Rtti` 引用
+  5. `UniBase.LogDashboard.pas` - 修复内联变量、TCountResult、TTimeBucket 类型
+  6. `UniBase.Updater.pas` - 添加 `System.Types/Generics.Defaults`，修复 `TTask.Run/TThread.Synchronize`
+  7. `UniBase.Feedback.pas` - 添加 `System.Types`，修复 HTTP Post/Put，`TThread.Synchronize`
+  8. `UniBase.CloudBackup.pas` - 添加 `System.Types`，修复 `ZCompressStream`，简化回调
+- **通用修复模式**:
+  - `TStringDynArray` → 添加 `System.Types`
+  - `TRttiEnumerationType` → 添加 `System.Rtti`
+  - `TThread.Synchronize(nil, proc)` → `TThread.Queue(TThread.CurrentThread, proc)` 或直接调用
+  - `TTask.Run(proc)` → `TTask.Create(proc).Start`
+  - `TArray.Sort<T>` → 添加 `TComparer<T>.Default` 参数
+  - 保留字方法名 (`Record`, `Label`) → 重命名
+  - 记录属性直接赋值 (`Widget.Config.Title :=`) → 使用局部变量
+  - `TKeyCount` → `TCountResult`
+  - `Point.Count` → `Point.Value`
+  - `TZCompressionStream.Create` → 使用 `ZCompressStream` 函数
