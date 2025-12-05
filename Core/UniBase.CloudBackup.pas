@@ -972,8 +972,6 @@ begin
 end;
 
 procedure TBackupCompressor.CompressStream(ASource, ADest: TStream);
-var
-  LCompressor: TZCompressionStream;
 begin
   if FCompressionLevel = clNone then
   begin
@@ -981,12 +979,7 @@ begin
     Exit;
   end;
   
-  LCompressor := TZCompressionStream.Create(ADest, GetZLibLevel);
-  try
-    LCompressor.CopyFrom(ASource, 0);
-  finally
-    LCompressor.Free;
-  end;
+  ZCompressStream(ASource, ADest, GetZLibLevel);
 end;
 
 procedure TBackupCompressor.DecompressStream(ASource, ADest: TStream);
@@ -1064,7 +1057,7 @@ begin
         begin
           LFullPath := TPath.Combine(ABasePath, AFiles[I].RelativePath);
           if TFile.Exists(LFullPath) then
-            LZip.Add(LFullPath, AFiles[I].RelativePath, GetZLibLevel);
+            LZip.Add(LFullPath, AFiles[I].RelativePath);
         end;
         
         if Assigned(AProgressCallback) then
@@ -1443,11 +1436,7 @@ begin
     if ShouldTrigger then
     begin
       if Assigned(FOnBackupTriggered) then
-        TThread.Synchronize(TThread.Current,
-          procedure
-          begin
-            FOnBackupTriggered(Self);
-          end);
+        FOnBackupTriggered(Self);
     end;
   end;
 end;
@@ -1571,33 +1560,21 @@ end;
 procedure TCloudBackupManager.DoProgress;
 begin
   if Assigned(FOnProgress) then
-    TThread.Synchronize(TThread.Current,
-      procedure
-      begin
-        FOnProgress(Self, FProgress);
-      end);
+    FOnProgress(Self, FProgress);
 end;
 
 procedure TCloudBackupManager.DoBackupComplete(Success: Boolean;
   const ABackupId, AErrorMsg: string);
 begin
   if Assigned(FOnBackupComplete) then
-    TThread.Synchronize(TThread.Current,
-      procedure
-      begin
-        FOnBackupComplete(Self, Success, ABackupId, AErrorMsg);
-      end);
+    FOnBackupComplete(Self, Success, ABackupId, AErrorMsg);
 end;
 
 procedure TCloudBackupManager.DoRestoreComplete(Success: Boolean;
   const AErrorMsg: string);
 begin
   if Assigned(FOnRestoreComplete) then
-    TThread.Synchronize(TThread.Current,
-      procedure
-      begin
-        FOnRestoreComplete(Self, Success, AErrorMsg);
-      end);
+    FOnRestoreComplete(Self, Success, AErrorMsg);
 end;
 
 function TCloudBackupManager.GenerateBackupId: string;
