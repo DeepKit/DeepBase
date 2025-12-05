@@ -15,7 +15,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.JSON, System.DateUtils, System.StrUtils,
+  System.JSON, System.DateUtils, System.StrUtils, System.Rtti,
   UniBase.Types, UniBase.LogAggregator, UniBase.LogQuery;
 
 type
@@ -399,7 +399,7 @@ end;
 
 function TDashboardWidget.ToJSON: TJSONObject;
 var
-  ConfigObj, SeriesObj: TJSONObject;
+  ConfigObj, SeriesObj, PointObj: TJSONObject;
   SeriesArr, DataArr, HeadersArr, RowsArr, RowArr: TJSONArray;
   Series: TWidgetSeries;
   Point: TWidgetDataPoint;
@@ -441,7 +441,7 @@ begin
       DataArr := TJSONArray.Create;
       for Point in Series.Data do
       begin
-        var PointObj := TJSONObject.Create;
+        PointObj := TJSONObject.Create;
         PointObj.AddPair('t', DateToISO8601(Point.Timestamp, False));
         PointObj.AddPair('v', TJSONNumber.Create(Point.Value));
         if Point.Label_ <> '' then
@@ -554,13 +554,14 @@ end;
 function TDashboardExporter.SeriesDataToJSON(ASeries: TWidgetSeries): TJSONArray;
 var
   Point: TWidgetDataPoint;
+  PointArr: TJSONArray;
 begin
   Result := TJSONArray.Create;
   for Point in ASeries.Data do
   begin
-    var PointArr := TJSONArray.Create;
-    PointArr.Add(TJSONNumber.Create(DateTimeToUnix(Point.Timestamp, False) * 1000));
-    PointArr.Add(TJSONNumber.Create(Point.Value));
+    PointArr := TJSONArray.Create;
+    PointArr.AddElement(TJSONNumber.Create(DateTimeToUnix(Point.Timestamp, False) * 1000));
+    PointArr.AddElement(TJSONNumber.Create(Point.Value));
     Result.AddElement(PointArr);
   end;
 end;
@@ -574,6 +575,7 @@ var
   Widget: TDashboardWidget;
   TagsArr: TJSONArray;
   Tag: string;
+  TimeObj: TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('id', FDashboard.Id);
@@ -582,7 +584,7 @@ begin
   Result.AddPair('refreshInterval', TJSONNumber.Create(FDashboard.RefreshIntervalSec));
   
   // Time range
-  var TimeObj := TJSONObject.Create;
+  TimeObj := TJSONObject.Create;
   if FDashboard.TimeRange.RelativeMinutes > 0 then
     TimeObj.AddPair('relative', TJSONNumber.Create(FDashboard.TimeRange.RelativeMinutes))
   else
@@ -622,6 +624,7 @@ var
   TargetsArr: TJSONArray;
   Series: TWidgetSeries;
   TargetObj: TJSONObject;
+  GridPos, Options, ReduceOpts: TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('id', TJSONNumber.Create(AIndex));
@@ -629,7 +632,7 @@ begin
   Result.AddPair('type', WidgetTypeToString(AWidget.Config.WidgetType));
   
   // Grid position
-  var GridPos := TJSONObject.Create;
+  GridPos := TJSONObject.Create;
   GridPos.AddPair('x', TJSONNumber.Create((AIndex mod 2) * 12));
   GridPos.AddPair('y', TJSONNumber.Create((AIndex div 2) * AWidget.Config.Height));
   GridPos.AddPair('w', TJSONNumber.Create(AWidget.Config.Width));
@@ -648,14 +651,15 @@ begin
   Result.AddPair('targets', TargetsArr);
   
   // Options based on type
-  var Options := TJSONObject.Create;
+  Options := TJSONObject.Create;
   case AWidget.Config.WidgetType of
     wtCounter, wtGauge:
     begin
-      Options.AddPair('reduceOptions', TJSONObject.Create
-        .AddPair('values', TJSONBool.Create(False))
-        .AddPair('calcs', TJSONArray.Create.Add('lastNotNull'))
-        .AddPair('fields', ''));
+      ReduceOpts := TJSONObject.Create;
+      ReduceOpts.AddPair('values', TJSONBool.Create(False));
+      ReduceOpts.AddPair('calcs', TJSONArray.Create.Add('lastNotNull'));
+      ReduceOpts.AddPair('fields', '');
+      Options.AddPair('reduceOptions', ReduceOpts);
     end;
   end;
   Result.AddPair('options', Options);
@@ -663,32 +667,31 @@ end;
 
 function TDashboardExporter.ToGrafanaJSON: TJSONObject;
 var
-  PanelsArr: TJSONArray;
+  PanelsArr, TagsArr: TJSONArray;
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
   PanelIndex: Integer;
+  TimeObj, RowPanel: TJSONObject;
+  Tag: string;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('uid', FDashboard.Id);
   Result.AddPair('title', FDashboard.Title);
   Result.AddPair('description', FDashboard.Description);
   Result.AddPair('schemaVersion', TJSONNumber.Create(39));
-  Result.AddPair('version', TJSONNumber.Create(1));
-  Result.AddPair('editable', TJSONBool.Create(True));
-  
-  // Time range
-  var Time := TJSONObject.Create;
+  Result.AddPair('version', TJSONNumber.Create(1));  // Time range
+  TimeObj := TJSONObject.Create;
   if FDashboard.TimeRange.RelativeMinutes > 0 then
   begin
-    Time.AddPair('from', Format('now-%dm', [FDashboard.TimeRange.RelativeMinutes]));
-    Time.AddPair('to', 'now');
+    TimeObj.AddPair('from', Format('now-%dm', [FDashboard.TimeRange.RelativeMinutes]));
+    TimeObj.AddPair('to', 'now');
   end
   else
   begin
-    Time.AddPair('from', DateToISO8601(FDashboard.TimeRange.StartTime, False));
-    Time.AddPair('to', DateToISO8601(FDashboard.TimeRange.EndTime, False));
+    TimeObj.AddPair('from', DateToISO8601(FDashboard.TimeRange.StartTime, False));
+    TimeObj.AddPair('to', DateToISO8601(FDashboard.TimeRange.EndTime, False));
   end;
-  Result.AddPair('time', Time);
+  Result.AddPair('time', TimeObj);
   
   // Refresh
   if FDashboard.RefreshIntervalSec > 0 then
@@ -700,7 +703,7 @@ begin
   for Panel in FDashboard.Panels do
   begin
     // Add row panel
-    var RowPanel := TJSONObject.Create;
+    RowPanel := TJSONObject.Create;
     RowPanel.AddPair('id', TJSONNumber.Create(PanelIndex));
     RowPanel.AddPair('type', 'row');
     RowPanel.AddPair('title', Panel.Title);
@@ -718,8 +721,8 @@ begin
   Result.AddPair('panels', PanelsArr);
   
   // Tags
-  var TagsArr := TJSONArray.Create;
-  for var Tag in FDashboard.Tags do
+  TagsArr := TJSONArray.Create;
+  for Tag in FDashboard.Tags do
     TagsArr.Add(Tag);
   Result.AddPair('tags', TagsArr);
 end;
@@ -1003,8 +1006,9 @@ var
   TimeSeries: TLogTimeSeries;
   Series: TWidgetSeries;
   Point: TTimeSeriesPoint;
-  CountByLevel: TArray<TKeyCount>;
-  KC: TKeyCount;
+  CountByLevel: TArray<TCountResult>;
+  CR: TCountResult;
+  WConfig: TWidgetConfig;
 begin
   Stats := FAnalyzer.GetStats;
   
@@ -1018,48 +1022,61 @@ begin
   
   // Total logs counter
   Widget := Panel.AddWidget('total-logs', wtCounter);
-  Widget.Config.Title := 'Total Logs';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Total Logs';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.TotalCount, 'logs');
   
   // Error count
   Widget := Panel.AddWidget('error-count', wtCounter);
-  Widget.Config.Title := 'Errors';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Errors';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.ErrorCount + Stats.FatalCount, 'errors');
   
   // Error rate
   Widget := Panel.AddWidget('error-rate', wtGauge);
-  Widget.Config.Title := 'Error Rate';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Error Rate';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.ErrorRate * 100, '%');
   
   // Unique sources
   Widget := Panel.AddWidget('unique-sources', wtCounter);
-  Widget.Config.Title := 'Unique Sources';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Unique Sources';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.UniqueSourceCount, 'sources');
   
   // Time series panel
   Panel := Result.AddPanel('timeseries', 'Log Volume Over Time');
   
   Widget := Panel.AddWidget('log-volume', wtLineChart);
-  Widget.Config.Title := 'Logs per Minute';
-  Widget.Config.Width := 12;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Logs per Minute';
+  WConfig.Width := 12;
+  Widget.Config := WConfig;
   
-  TimeSeries := FAnalyzer.CountByTime(1);
+  TimeSeries := FAnalyzer.CountByTime(tbMinute);
   Series := Widget.AddSeries('All Logs');
   for Point in TimeSeries.Points do
-    Series.AddPoint(Point.Timestamp, Point.Count);
+    Series.AddPoint(Point.Timestamp, Point.Value);
+  TimeSeries.Free;
   
   // Distribution panel
   Panel := Result.AddPanel('distribution', 'Log Distribution');
   
   Widget := Panel.AddWidget('by-level', wtTable);
-  Widget.Config.Title := 'Logs by Level';
-  Widget.Config.Width := 6;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Logs by Level';
+  WConfig.Width := 6;
+  Widget.Config := WConfig;
   Widget.SetTableHeaders(['Level', 'Count', 'Percentage']);
   
   CountByLevel := FAnalyzer.CountByLevel;
-  for KC in CountByLevel do
-    Widget.AddTableRow([KC.Key, IntToStr(KC.Count),
-      Format('%.1f%%', [KC.Count / Stats.TotalCount * 100])]);
+  for CR in CountByLevel do
+    Widget.AddTableRow([CR.Category, IntToStr(CR.Count),
+      Format('%.1f%%', [CR.Percentage])]);
 end;
 
 function TDashboardBuilder.BuildErrorDashboard: TDashboard;
@@ -1067,11 +1084,12 @@ var
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
   Stats: TLogStats;
-  TopErrors: TArray<TKeyCount>;
-  KC: TKeyCount;
+  TopErrors: TArray<TTopError>;
+  TE: TTopError;
   Series: TWidgetSeries;
   TimeSeries: TLogTimeSeries;
   Point: TTimeSeriesPoint;
+  WConfig: TWidgetConfig;
 begin
   Stats := FAnalyzer.GetStats;
   
@@ -1084,48 +1102,58 @@ begin
   Panel := Result.AddPanel('error-stats', 'Error Statistics');
   
   Widget := Panel.AddWidget('total-errors', wtCounter);
-  Widget.Config.Title := 'Total Errors';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Total Errors';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.ErrorCount + Stats.FatalCount, 'errors');
   
   Widget := Panel.AddWidget('error-rate', wtGauge);
-  Widget.Config.Title := 'Error Rate';
+  WConfig := Widget.Config;
+  WConfig.Title := 'Error Rate';
+  Widget.Config := WConfig;
   Widget.SetValue(Stats.ErrorRate * 100, '%');
   
   // Error trend
   Panel := Result.AddPanel('error-trend', 'Error Trend');
   
   Widget := Panel.AddWidget('error-timeline', wtLineChart);
-  Widget.Config.Title := 'Errors Over Time';
-  Widget.Config.Width := 12;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Errors Over Time';
+  WConfig.Width := 12;
+  Widget.Config := WConfig;
   
-  TimeSeries := FAnalyzer.ErrorRateByTime(5);
+  TimeSeries := FAnalyzer.ErrorRateByTime(tbMinute);
   Series := Widget.AddSeries('Error Rate');
   Series.Color := '#ff4444';
   for Point in TimeSeries.Points do
-    Series.AddPoint(Point.Timestamp, Point.Rate * 100);
+    Series.AddPoint(Point.Timestamp, Point.Value);
+  TimeSeries.Free;
   
   // Top errors
   Panel := Result.AddPanel('top-errors', 'Top Errors');
   
   Widget := Panel.AddWidget('error-table', wtTable);
-  Widget.Config.Title := 'Most Frequent Errors';
-  Widget.Config.Width := 12;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Most Frequent Errors';
+  WConfig.Width := 12;
+  Widget.Config := WConfig;
   Widget.SetTableHeaders(['Error Message', 'Count']);
   
   TopErrors := FAnalyzer.TopErrors(20);
-  for KC in TopErrors do
-    Widget.AddTableRow([KC.Key, IntToStr(KC.Count)]);
+  for TE in TopErrors do
+    Widget.AddTableRow([TE.Message, IntToStr(TE.Count)]);
 end;
 
 function TDashboardBuilder.BuildPerformanceDashboard: TDashboard;
 var
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
-  CountBySource: TArray<TKeyCount>;
-  KC: TKeyCount;
+  CountBySource: TArray<TCountResult>;
+  CR: TCountResult;
   Series: TWidgetSeries;
   TimeSeries: TLogTimeSeries;
   Point: TTimeSeriesPoint;
+  WConfig: TWidgetConfig;
 begin
   Result := TDashboard.Create('performance', 'Performance Dashboard');
   Result.Description := 'System performance metrics from logs';
@@ -1136,25 +1164,30 @@ begin
   Panel := Result.AddPanel('volume', 'Log Volume');
   
   Widget := Panel.AddWidget('volume-chart', wtLineChart);
-  Widget.Config.Title := 'Log Volume per Minute';
-  Widget.Config.Width := 12;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Log Volume per Minute';
+  WConfig.Width := 12;
+  Widget.Config := WConfig;
   
-  TimeSeries := FAnalyzer.CountByTime(1);
+  TimeSeries := FAnalyzer.CountByTime(tbMinute);
   Series := Widget.AddSeries('Volume');
   for Point in TimeSeries.Points do
-    Series.AddPoint(Point.Timestamp, Point.Count);
+    Series.AddPoint(Point.Timestamp, Point.Value);
+  TimeSeries.Free;
   
   // By source
   Panel := Result.AddPanel('sources', 'By Source');
   
   Widget := Panel.AddWidget('source-table', wtTable);
-  Widget.Config.Title := 'Logs by Source';
-  Widget.Config.Width := 12;
+  WConfig := Widget.Config;
+  WConfig.Title := 'Logs by Source';
+  WConfig.Width := 12;
+  Widget.Config := WConfig;
   Widget.SetTableHeaders(['Source', 'Count']);
   
   CountBySource := FAnalyzer.CountBySource;
-  for KC in CountBySource do
-    Widget.AddTableRow([KC.Key, IntToStr(KC.Count)]);
+  for CR in CountBySource do
+    Widget.AddTableRow([CR.Category, IntToStr(CR.Count)]);
 end;
 
 end.

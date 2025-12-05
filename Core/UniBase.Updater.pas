@@ -30,7 +30,9 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Types,
   System.Generics.Collections,
+  System.Generics.Defaults,
   System.IOUtils,
   System.Net.HttpClient,
   System.Net.URLClient,
@@ -570,8 +572,10 @@ begin
 end;
 
 procedure TUpdateManager.CheckForUpdates(Callback: TCheckUpdateCallback);
+var
+  LTask: ITask;
 begin
-  TTask.Run(
+  LTask := TTask.Create(
     procedure
     var
       Info: TUpdateInfo;
@@ -579,13 +583,14 @@ begin
     begin
       Available := CheckForUpdatesSync(Info);
       
-      TThread.Queue(nil,
+      TThread.Synchronize(nil,
         procedure
         begin
           if Assigned(Callback) then
             Callback(Available, Info);
         end);
     end);
+  LTask.Start;
 end;
 
 function TUpdateManager.CheckForUpdatesSync(out Info: TUpdateInfo): Boolean;
@@ -662,29 +667,7 @@ begin
     // Ensure directory exists
     ForceDirectories(TPath.GetDirectoryName(DestPath));
     
-    Response := FHttpClient.Get(Url,
-      nil,
-      procedure(const Sender: TObject; AContentLength: Int64;
-        AReadCount: Int64; var AAbort: Boolean)
-      var
-        Progress: TUpdateProgress;
-      begin
-        AAbort := FCancelled;
-        
-        if Assigned(ProgressCallback) then
-        begin
-          Progress.Status := usDownloading;
-          Progress.TotalBytes := AContentLength;
-          Progress.DownloadedBytes := AReadCount;
-          if AContentLength > 0 then
-            Progress.ProgressPercent := Round(AReadCount * 100 / AContentLength)
-          else
-            Progress.ProgressPercent := 0;
-          Progress.CurrentFile := TPath.GetFileName(DestPath);
-          Progress.StatusMessage := Format('Downloading: %d%%', [Progress.ProgressPercent]);
-          ProgressCallback(Progress);
-        end;
-      end);
+    Response := FHttpClient.Get(Url);
     
     if (Response.StatusCode = 200) and not FCancelled then
     begin
@@ -837,7 +820,7 @@ begin
     end;
     
     // Sort to get latest
-    TArray.Sort<string>(BackupDirs);
+    TArray.Sort<string>(BackupDirs, TComparer<string>.Default);
     LatestBackup := BackupDirs[High(BackupDirs)];
     
     // Copy files back
@@ -937,8 +920,10 @@ end;
 
 procedure TUpdateManager.DownloadAndInstall(const Info: TUpdateInfo;
   OnComplete: TUpdateCompleteCallback);
+var
+  LTask: ITask;
 begin
-  TTask.Run(
+  LTask := TTask.Create(
     procedure
     var
       PackagePath: string;
@@ -1020,19 +1005,22 @@ begin
       // Callback
       if Assigned(OnComplete) then
       begin
-        TThread.Queue(nil,
+        TThread.Synchronize(nil,
           procedure
           begin
             OnComplete(Success, ErrorMsg);
           end);
       end;
     end);
+  LTask.Start;
 end;
 
 procedure TUpdateManager.DownloadOnly(const Info: TUpdateInfo;
   OnComplete: TUpdateCompleteCallback);
+var
+  LTask: ITask;
 begin
-  TTask.Run(
+  LTask := TTask.Create(
     procedure
     var
       PackagePath: string;
@@ -1078,13 +1066,14 @@ begin
       
       if Assigned(OnComplete) then
       begin
-        TThread.Queue(nil,
+        TThread.Synchronize(nil,
           procedure
           begin
             OnComplete(Success, ErrorMsg);
           end);
       end;
     end);
+  LTask.Start;
 end;
 
 function TUpdateManager.InstallDownloadedUpdate(const PackagePath: string): Boolean;

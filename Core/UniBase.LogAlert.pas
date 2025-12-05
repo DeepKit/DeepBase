@@ -16,7 +16,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
-  System.JSON, System.DateUtils, System.RegularExpressions,
+  System.JSON, System.DateUtils, System.RegularExpressions, System.Rtti,
   UniBase.Types, UniBase.LogAggregator, UniBase.LogQuery;
 
 type

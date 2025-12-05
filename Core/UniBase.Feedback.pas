@@ -18,8 +18,8 @@ unit UniBase.Feedback;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections, System.JSON,
-  System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
+  System.SysUtils, System.Classes, System.Types, System.Generics.Collections,
+  System.JSON, System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading, System.IOUtils,
   System.Zip;
 
@@ -1025,7 +1025,7 @@ begin
   Result.AppVersion := '';
   Result.AppBuildDate := '';
   Result.DelphiVersion := {$IFDEF VER350}'Delphi 11.x'{$ELSE}'Delphi'{$ENDIF};
-  Result.UserLocale := TLanguages.UserDefaultLocale;
+  Result.UserLocale := IntToStr(TLanguages.UserDefaultLocale);
   
   {$IFDEF MSWINDOWS}
   var LTZInfo: TTimeZoneInformation;
@@ -1302,31 +1302,27 @@ begin
       LResponse := FHttpClient.Get(LURL, nil, LHeaders)
     else if AMethod = 'POST' then
     begin
-      if Assigned(ABody) then
-      begin
-        LStream := TStringStream.Create(ABody.ToJSON, TEncoding.UTF8);
-        try
-          LResponse := FHttpClient.Post(LURL, LStream, nil, LHeaders);
-        finally
-          LStream.Free;
-        end;
-      end
-      else
-        LResponse := FHttpClient.Post(LURL, nil, LHeaders);
+      LStream := TStringStream.Create('', TEncoding.UTF8);
+      try
+        if Assigned(ABody) then
+          LStream.WriteString(ABody.ToJSON);
+        LStream.Position := 0;
+        LResponse := FHttpClient.Post(LURL, LStream, nil, LHeaders);
+      finally
+        LStream.Free;
+      end;
     end
     else if AMethod = 'PUT' then
     begin
-      if Assigned(ABody) then
-      begin
-        LStream := TStringStream.Create(ABody.ToJSON, TEncoding.UTF8);
-        try
-          LResponse := FHttpClient.Put(LURL, LStream, nil, LHeaders);
-        finally
-          LStream.Free;
-        end;
-      end
-      else
-        LResponse := FHttpClient.Put(LURL, nil, LHeaders);
+      LStream := TStringStream.Create('', TEncoding.UTF8);
+      try
+        if Assigned(ABody) then
+          LStream.WriteString(ABody.ToJSON);
+        LStream.Position := 0;
+        LResponse := FHttpClient.Put(LURL, LStream, nil, LHeaders);
+      finally
+        LStream.Free;
+      end;
     end
     else if AMethod = 'DELETE' then
       LResponse := FHttpClient.Delete(LURL, nil, LHeaders);
@@ -1768,7 +1764,7 @@ procedure TFeedbackManager.DoFeedbackSubmit(AFeedback: TFeedbackItem;
   Success: Boolean; const AErrorMsg: string);
 begin
   if Assigned(FOnFeedbackSubmit) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnFeedbackSubmit(Self, AFeedback, Success, AErrorMsg);
@@ -1778,7 +1774,7 @@ end;
 procedure TFeedbackManager.DoSubmitProgress(const Progress: TSubmitProgress);
 begin
   if Assigned(FOnSubmitProgress) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnSubmitProgress(Self, Progress);
@@ -1788,7 +1784,7 @@ end;
 procedure TFeedbackManager.DoNotification(ANotification: TUserNotification);
 begin
   if Assigned(FOnNotification) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnNotification(Self, ANotification);
