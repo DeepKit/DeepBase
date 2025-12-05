@@ -1,5 +1,5 @@
 unit UniFlow.Workflow.State;
-{
+(*
   UniFlow Workflow State Persistence
   ==================================
   工作流状态持久化，支持：
@@ -11,7 +11,7 @@ unit UniFlow.Workflow.State;
   - workflow_instances: 工作流实例
   - workflow_snapshots: 状态快照
   - workflow_events: 执行事件
-}
+*)
 
 interface
 

@@ -1,12 +1,15 @@
 unit UniFlow.Diagnostics;
-
-{$mode objfpc}{$H+}
-{$modeswitch advancedrecords}
+(*
+  UniFlow Diagnostics
+  ===================
+  诊断与日志模块，提供统一的日志门面和执行追踪功能。
+*)
 
 interface
 
 uses
-  Classes, SysUtils, DateUtils, SyncObjs, Generics.Collections, fpjson, jsonparser;
+  System.SysUtils, System.Classes, System.DateUtils, System.SyncObjs, 
+  System.Generics.Collections, System.JSON, System.Types;
 
 type
   // ============================================================================

@@ -1,5 +1,5 @@
 unit UniFlow.Workflow.Context;
-{
+(*
   UniFlow Workflow Context
   ========================
   工作流执行上下文管理，包括：
@@ -8,7 +8,7 @@ unit UniFlow.Workflow.Context;
   - 条件表达式求值
   
   参考: 05.03.API-UniFlow-Workflow定义规范-v1.0.md 第4章
-}
+*)
 
 interface
 
@@ -858,7 +858,7 @@ begin
           begin
             var DefaultVal := Copy(FilterExpr, 9, Length(FilterExpr) - 9);
             // 去除引号
-            if (Length(DefaultVal) >= 2) and (DefaultVal[1] in ['''', '"']) then
+            if (Length(DefaultVal) >= 2) and CharInSet(DefaultVal[1], ['''', '"']) then
               DefaultVal := Copy(DefaultVal, 2, Length(DefaultVal) - 2);
             ResolvedValue := DefaultVal;
           end
@@ -1082,7 +1082,8 @@ begin
     begin
       if (ALeft.ValueType = 'boolean') or (ARight.ValueType = 'boolean') then
         Result := ALeft.AsBoolean = ARight.AsBoolean
-      else if (ALeft.ValueType in ['integer', 'float']) and (ARight.ValueType in ['integer', 'float']) then
+      else if ((ALeft.ValueType = 'integer') or (ALeft.ValueType = 'float')) and 
+              ((ARight.ValueType = 'integer') or (ARight.ValueType = 'float')) then
         Result := SameValue(ALeft.AsFloat, ARight.AsFloat)
       else
         Result := ALeft.AsString = ARight.AsString;
@@ -1286,7 +1287,7 @@ var
   FloatVal: Double;
 begin
   // 检查是否是字面量
-  if (Length(AExpr) >= 2) and (AExpr[1] in ['''', '"']) and (AExpr[Length(AExpr)] = AExpr[1]) then
+  if (Length(AExpr) >= 2) and CharInSet(AExpr[1], ['''', '"']) and (AExpr[Length(AExpr)] = AExpr[1]) then
   begin
     // 字符串字面量
     Result := TVariableValue.Create(Copy(AExpr, 2, Length(AExpr) - 2));

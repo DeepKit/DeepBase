@@ -1,5 +1,5 @@
 unit UniFlow.Workflow.Executor;
-{
+(*
   UniFlow Workflow Executor
   =========================
   工作流步骤执行引擎，实现：
@@ -13,7 +13,7 @@ unit UniFlow.Workflow.Executor;
   - 可暂停/恢复执行
   - 支持检查点
   - 事件驱动
-}
+*)
 
 interface
 
@@ -57,7 +57,7 @@ type
     class function OK(AOutput: TJSONValue = nil): TStepResult;
     class function Fail(const ACode, AMessage: string): TStepResult;
     class function Wait(AWaitData: TJSONObject): TStepResult;
-    class function Goto(const AStepId: string): TStepResult;
+    class function GotoStep(const AStepId: string): TStepResult;
     
     function Clone: TStepResult;
     
@@ -235,7 +235,7 @@ type
 implementation
 
 uses
-  System.StrUtils, System.DateUtils, System.Math;
+  System.StrUtils, System.DateUtils, System.Math, System.RegularExpressions;
 
 // ============================================================================
 // TStepResult
@@ -280,7 +280,7 @@ begin
     Result.FWaitData := TJSONObject(AWaitData.Clone);
 end;
 
-class function TStepResult.Goto(const AStepId: string): TStepResult;
+class function TStepResult.GotoStep(const AStepId: string): TStepResult;
 begin
   Result := TStepResult.Create;
   Result.FSuccess := True;
@@ -1151,7 +1151,7 @@ begin
     if Handler.FallbackStepId <> '' then
     begin
       AResult.Free;
-      Result := TStepResult.Goto(Handler.FallbackStepId);
+      Result := TStepResult.GotoStep(Handler.FallbackStepId);
       Exit;
     end;
   end
@@ -1160,7 +1160,7 @@ begin
     if Handler.GotoStepId <> '' then
     begin
       AResult.Free;
-      Result := TStepResult.Goto(Handler.GotoStepId);
+      Result := TStepResult.GotoStep(Handler.GotoStepId);
       Exit;
     end;
   end;
