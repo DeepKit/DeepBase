@@ -18,7 +18,7 @@ unit UniBase.Compression;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.ZLib, System.Zip,
+  System.SysUtils, System.Classes, System.ZLib, System.Zip, System.Types,
   System.Generics.Collections, System.IOUtils, System.SyncObjs;
 
 type
@@ -89,8 +89,8 @@ type
     function ContainsEntry(const AEntryName: string): Boolean;
     
     /// <summary>Extract single entry to stream</summary>
-    procedure ExtractToStream(const AEntryName: string; AStream: TStream);
-    procedure ExtractToStream(AIndex: Integer; AStream: TStream);
+    procedure ExtractToStream(const AEntryName: string; AStream: TStream); overload;
+    procedure ExtractToStream(AIndex: Integer; AStream: TStream); overload;
     
     /// <summary>Extract single entry to file</summary>
     procedure ExtractToFile(const AEntryName, ADestFileName: string);
@@ -405,15 +405,14 @@ begin
   LIndex := FindEntry(AEntryName);
   if LIndex < 0 then
     raise ECompressionException.CreateFmt('Entry not found: %s', [AEntryName]);
-  ExtractToStream(LIndex, AStream);
+  ExtractToStream(Integer(LIndex), AStream);
 end;
 
 procedure TZipArchiveReader.ExtractToStream(AIndex: Integer; AStream: TStream);
 var
   LBytes: TBytes;
-  LHeader: TZipHeader;
 begin
-  FZipFile.Read(AIndex, LBytes, LHeader);
+  FZipFile.Read(AIndex, LBytes);
   if Length(LBytes) > 0 then
     AStream.WriteBuffer(LBytes[0], Length(LBytes));
 end;

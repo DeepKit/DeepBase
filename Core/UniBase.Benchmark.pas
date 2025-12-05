@@ -432,7 +432,7 @@ begin
   Result.Median := Sorted[N div 2];
   Result.P90 := Sorted[Trunc(N * 0.90)];
   Result.P95 := Sorted[Trunc(N * 0.95)];
-  Result.P99 := Sorted[Min(Trunc(N * 0.99), N - 1)];
+  Result.P99 := Sorted[System.Math.Min(Trunc(N * 0.99), N - 1)];
 end;
 
 function TBenchmarkStats.ToString(const TimeUnit: string): string;
@@ -488,14 +488,11 @@ begin
 end;
 
 procedure TBenchmarkReport.CollectEnvironmentInfo;
-var
-  OSVer: TOSVersion;
 begin
   FEnvironmentInfo.Clear;
   
-  OSVer := TOSVersion.Create;
   FEnvironmentInfo.Add('OS', Format('%s %d.%d.%d',
-    [OSVer.Name, OSVer.Major, OSVer.Minor, OSVer.Build]));
+    [TOSVersion.Name, TOSVersion.Major, TOSVersion.Minor, TOSVersion.Build]));
   FEnvironmentInfo.Add('CPU Cores', IntToStr(System.CPUCount));
   FEnvironmentInfo.Add('Delphi Version', {$IFDEF VER360}'12.2 Athens'{$ELSE}'Unknown'{$ENDIF});
   FEnvironmentInfo.Add('Timestamp', FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));

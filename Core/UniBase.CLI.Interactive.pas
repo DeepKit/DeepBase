@@ -1230,7 +1230,8 @@ end;
 function TInteractiveCLI.ExecuteScript(const FileName: string): TCommandResult;
 var
   Lines: TStringList;
-  Line: string;
+  Line, TrimmedLine: string;
+  I: Integer;
 begin
   Result := TCommandResult.OK;
   
@@ -1240,13 +1241,13 @@ begin
   Lines := TStringList.Create;
   try
     Lines.LoadFromFile(FileName);
-    for Line in Lines do
+    for I := 0 to Lines.Count - 1 do
     begin
-      Line := Trim(Line);
-      if (Line = '') or Line.StartsWith('#') then
+      TrimmedLine := Trim(Lines[I]);
+      if (TrimmedLine = '') or TrimmedLine.StartsWith('#') then
         Continue;
       
-      Result := Execute(Line);
+      Result := Execute(TrimmedLine);
       if not Result.Success then
         Break;
     end;
@@ -1302,28 +1303,33 @@ end;
 
 function TInteractiveCLI.ExpandVariables(const Line: string): string;
 var
+  Matches: TMatchCollection;
+  Match: TMatch;
   VarName, VarValue: string;
 begin
   Result := Line;
   
-  // Expand $varname and ${varname}
-  Result := TRegEx.Replace(Result, '\$\{([^}]+)\}',
-    TMatchEvaluator(
-      function(const Match: TMatch): string
-      begin
-        VarName := Match.Groups[1].Value;
-        Result := GetVariable(VarName, '');
-      end
-    ));
+  // Expand ${varname} - process in reverse to preserve positions
+  Matches := TRegEx.Matches(Result, '\$\{([^}]+)\}');
+  for var I := Matches.Count - 1 downto 0 do
+  begin
+    Match := Matches[I];
+    VarName := Match.Groups[1].Value;
+    VarValue := GetVariable(VarName, '');
+    Result := Copy(Result, 1, Match.Index - 1) + VarValue +
+              Copy(Result, Match.Index + Match.Length, MaxInt);
+  end;
     
-  Result := TRegEx.Replace(Result, '\$([a-zA-Z_][a-zA-Z0-9_]*)',
-    TMatchEvaluator(
-      function(const Match: TMatch): string
-      begin
-        VarName := Match.Groups[1].Value;
-        Result := GetVariable(VarName, Match.Value);
-      end
-    ));
+  // Expand $varname
+  Matches := TRegEx.Matches(Result, '\$([a-zA-Z_][a-zA-Z0-9_]*)');
+  for var I := Matches.Count - 1 downto 0 do
+  begin
+    Match := Matches[I];
+    VarName := Match.Groups[1].Value;
+    VarValue := GetVariable(VarName, Match.Value);  // Keep original if not found
+    Result := Copy(Result, 1, Match.Index - 1) + VarValue +
+              Copy(Result, Match.Index + Match.Length, MaxInt);
+  end;
 end;
 
 function TInteractiveCLI.GetFormatter: IOutputFormatter;

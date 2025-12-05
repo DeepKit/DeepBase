@@ -995,7 +995,8 @@ begin
     SetQueryParams(Query, Entity, Metadata, False);
     Query.ParamByName('pk_value').Value := GetPrimaryKeyValue(Entity, Metadata);
     
-    if Query.ExecSQL = 0 then
+    Query.ExecSQL;
+    if Query.RowsAffected = 0 then
       raise EConcurrencyException.Create('Entity was not found or has been modified');
   finally
     Query.Free;
@@ -1130,7 +1131,8 @@ begin
     Query.SQL.Text := SQL;
     for I := 0 to High(Params) do
       Query.Params[I].Value := Params[I];
-    Result := Query.ExecSQL;
+    Query.ExecSQL;
+    Result := Query.RowsAffected;
   finally
     Query.Free;
   end;

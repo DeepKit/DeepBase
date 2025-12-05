@@ -677,6 +677,7 @@ end;
 function TCommandLineConfigurationSource.Load: TDictionary<string, string>;
 var
   LArg: string;
+  LArgTrimmed: string;
   LKey, LValue: string;
   LPos: Integer;
 begin
@@ -686,16 +687,16 @@ begin
   begin
     if LArg.StartsWith(FPrefix) then
     begin
-      LArg := Copy(LArg, Length(FPrefix) + 1, MaxInt);
-      LPos := Pos('=', LArg);
+      LArgTrimmed := Copy(LArg, Length(FPrefix) + 1, MaxInt);
+      LPos := Pos('=', LArgTrimmed);
       if LPos > 0 then
       begin
-        LKey := Copy(LArg, 1, LPos - 1);
-        LValue := Copy(LArg, LPos + 1, MaxInt);
+        LKey := Copy(LArgTrimmed, 1, LPos - 1);
+        LValue := Copy(LArgTrimmed, LPos + 1, MaxInt);
       end
       else
       begin
-        LKey := LArg;
+        LKey := LArgTrimmed;
         LValue := 'true';
       end;
       Result.AddOrSetValue(LKey, LValue);

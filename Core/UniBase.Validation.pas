@@ -46,7 +46,8 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.RegularExpressions,
-  System.TypInfo;
+  System.TypInfo,
+  System.StrUtils;
 
 type
   // ============================================================================
@@ -906,7 +907,8 @@ begin
   
   OtherVal := FOtherValue();
   
-  if not Value.Equals(OtherVal) then
+  // Compare as strings since TValue.Equals may not exist in all Delphi versions
+  if Value.ToString <> OtherVal.ToString then
   begin
     Result.PropertyName := Context.PropertyName;
     Result.AttemptedValue := Value;

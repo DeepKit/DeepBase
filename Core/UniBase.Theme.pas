@@ -259,27 +259,34 @@ procedure TUniBaseTheme.ApplyTheme(const ThemeName: string);
 {$IFNDEF FMX}
 var
   Success: Boolean;
+  ActualTheme: string;
 {$ENDIF}
 begin
   {$IFNDEF FMX}
   Success := False;
   
+  // 先检查主题是否可用，如果不可用则回退到 Windows
+  if TStyleManager.IsValidStyle(ThemeName) or (ThemeName = 'Windows') then
+    ActualTheme := ThemeName
+  else
+    ActualTheme := 'Windows';  // 回退到默认主题，避免弹出错误框
+  
   // VCL 样式切换必须在主线程
   if TThread.CurrentThread.ThreadID = MainThreadID then
   begin
-    Success := TStyleManager.TrySetStyle(ThemeName);
+    Success := TStyleManager.TrySetStyle(ActualTheme);
     if Success then
     begin
-      FCurrentThemeName := ThemeName;
+      FCurrentThemeName := ActualTheme;
       DoThemeChanged;
     end;
   end
   else
   begin
     // 在非主线程中，使用 TThread.Synchronize 切换主题
-    FPendingThemeName := ThemeName;
+    FPendingThemeName := ActualTheme;
     TThread.Synchronize(nil, ApplyThemeSync);
-    Success := FCurrentThemeName = ThemeName;
+    Success := FCurrentThemeName = ActualTheme;
   end;
   {$ELSE}
   // FMX: Just update the name and notify - actual styling via FMX.Styles

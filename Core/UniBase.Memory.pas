@@ -277,9 +277,10 @@ type
       StackTrace: string;
       AllocatedAt: TDateTime;
     end;
+  private class var
+    FInstance: TMemoryTracker;
+    FLock: TCriticalSection;
   private
-    class var FInstance: TMemoryTracker;
-    class var FLock: TCriticalSection;
     FAllocations: TDictionary<Pointer, TAllocationInfo>;
     FEnabled: Boolean;
     FTrackStackTrace: Boolean;
@@ -548,6 +549,7 @@ end;
 procedure TObjectPool<T>.Release(Obj: T);
 var
   Index: Integer;
+  LPoolable: IPoolable;
 begin
   if Obj = nil then
     Exit;
@@ -562,8 +564,8 @@ begin
       // 重置对象
       if Assigned(FResetProc) then
         FResetProc(Obj)
-      else if Supports(Obj, IPoolable) then
-        (Obj as IPoolable).Reset;
+      else if Supports(Obj, IPoolable, LPoolable) then
+        LPoolable.Reset;
 
       if FPool.Count < FMaxSize then
         FPool.Add(Obj)

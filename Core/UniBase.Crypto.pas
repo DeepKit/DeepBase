@@ -450,20 +450,48 @@ uses
 { THashUtils }
 
 class function THashUtils.HashBytes(const AData: TBytes; AAlgorithm: THashAlgorithm): TBytes;
+var
+  Hash: THashMD5;
+  HashSHA1: THashSHA1;
+  HashSHA2: THashSHA2;
 begin
   case AAlgorithm of
     haMD5:
-      Result := THashMD5.GetHashBytes(AData);
+      begin
+        Hash := THashMD5.Create;
+        Hash.Update(AData, Length(AData));
+        Result := Hash.HashAsBytes;
+      end;
     haSHA1:
-      Result := THashSHA1.GetHashBytes(AData);
+      begin
+        HashSHA1 := THashSHA1.Create;
+        HashSHA1.Update(AData, Length(AData));
+        Result := HashSHA1.HashAsBytes;
+      end;
     haSHA256:
-      Result := THashSHA2.GetHashBytes(AData, THashSHA2.TSHA2Version.SHA256);
+      begin
+        HashSHA2 := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+        HashSHA2.Update(AData, Length(AData));
+        Result := HashSHA2.HashAsBytes;
+      end;
     haSHA384:
-      Result := THashSHA2.GetHashBytes(AData, THashSHA2.TSHA2Version.SHA384);
+      begin
+        HashSHA2 := THashSHA2.Create(THashSHA2.TSHA2Version.SHA384);
+        HashSHA2.Update(AData, Length(AData));
+        Result := HashSHA2.HashAsBytes;
+      end;
     haSHA512:
-      Result := THashSHA2.GetHashBytes(AData, THashSHA2.TSHA2Version.SHA512);
+      begin
+        HashSHA2 := THashSHA2.Create(THashSHA2.TSHA2Version.SHA512);
+        HashSHA2.Update(AData, Length(AData));
+        Result := HashSHA2.HashAsBytes;
+      end;
   else
-    Result := THashSHA2.GetHashBytes(AData, THashSHA2.TSHA2Version.SHA256);
+    begin
+      HashSHA2 := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+      HashSHA2.Update(AData, Length(AData));
+      Result := HashSHA2.HashAsBytes;
+    end;
   end;
 end;
 

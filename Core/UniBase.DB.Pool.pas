@@ -44,7 +44,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.DateUtils,
-  System.Generics.Collections, System.Diagnostics,
+  System.Generics.Collections, System.Diagnostics, System.TimeSpan,
   FireDAC.Comp.Client, FireDAC.Stan.Def, FireDAC.Stan.Async,
   FireDAC.DApt, FireDAC.Stan.Option, FireDAC.Stan.Error,
   FireDAC.Phys.Intf, FireDAC.Stan.Pool;

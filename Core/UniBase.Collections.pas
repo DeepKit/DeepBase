@@ -33,6 +33,7 @@ type
     FDuplicates: TDuplicates;
     
     function BinarySearch(const AItem: T; out AIndex: Integer): Boolean;
+    function GetItem(AIndex: Integer): T;
   public
     constructor Create; overload;
     constructor Create(AComparer: IComparer<T>); overload;
@@ -55,7 +56,7 @@ type
     function Count: Integer;
     function IsEmpty: Boolean;
     
-    property Items[AIndex: Integer]: T read FItems.Items[AIndex]; default;
+    property Items[AIndex: Integer]: T read GetItem; default;
     property Duplicates: TDuplicates read FDuplicates write FDuplicates;
   end;
 
@@ -424,6 +425,11 @@ begin
   end;
   
   AIndex := L;
+end;
+
+function TSortedList<T>.GetItem(AIndex: Integer): T;
+begin
+  Result := FItems[AIndex];
 end;
 
 function TSortedList<T>.Add(const AItem: T): Integer;

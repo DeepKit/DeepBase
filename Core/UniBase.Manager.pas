@@ -458,25 +458,11 @@ begin
       if TFile.Exists(FallbackPath) then
       begin
         FConfigDBPath := FallbackPath;
-      end
-      else
-      begin
-        FInitErrorCode := ecConfigDBNotFound;
-        FLastError := Format('Config database not found: %s; also checked %s',
-          [FConfigDBPath, FallbackPath]);
-        ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-          InitErrorCodeToStr(FInitErrorCode), FLastError]);
-        Exit;
       end;
-    end
-    else
-    begin
-      FInitErrorCode := ecConfigDBNotFound;
-      FLastError := 'Config database not found and APPDATA directory unavailable';
-      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-        InitErrorCodeToStr(FInitErrorCode), FLastError]);
-      Exit;
+      // 如果两个位置都不存在，保持 FConfigDBPath 指向 RootPath 下的路径
+      // ConnectToDatabase 会使用 OpenMode=CreateUTF8 自动创建数据库文件
     end;
+    // 不再报错，让 ConnectToDatabase 自动创建数据库
   end;
   
   Result := True;
@@ -985,6 +971,7 @@ var
   Stmt: string;
   I, MaxRetry: Integer;
   ErrorMsg: string;
+  LastStmt: string;
   
   function SplitSQLStatements(const SQL: string): TArray<string>;
   var
@@ -1049,6 +1036,7 @@ begin
         begin
           if Trim(Stmt) <> '' then
           begin
+            LastStmt := Stmt;  // keep for error reporting
             Query.SQL.Text := Stmt;
             Query.ExecSQL;
           end;
@@ -1072,7 +1060,11 @@ begin
           else
           begin
             FInitErrorCode := ecConfigDBCorrupted;
-            FLastError := 'Failed to create schema: ' + ErrorMsg;
+            // include failing statement for diagnosis (truncate if too long)
+            if Length(LastStmt) > 400 then
+              LastStmt := Copy(LastStmt, 1, 400) + '...';
+            FLastError := 'Failed to create schema: ' + ErrorMsg + sLineBreak +
+                          'Statement: ' + LastStmt;
           end;
         end;
       end;
@@ -1123,13 +1115,29 @@ begin
     AddColumnIfMissing('Settings', 'ValueType', 'TEXT DEFAULT ''String''');
     AddColumnIfMissing('Settings', 'Category', 'TEXT DEFAULT ''General''');
     AddColumnIfMissing('Settings', 'Description', 'TEXT');
+    AddColumnIfMissing('Settings', 'DefaultValue', 'TEXT');
+    AddColumnIfMissing('Settings', 'MinValue', 'TEXT');
+    AddColumnIfMissing('Settings', 'MaxValue', 'TEXT');
+    AddColumnIfMissing('Settings', 'Options', 'TEXT');
     AddColumnIfMissing('Settings', 'IsEncrypted', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Settings', 'IsReadOnly', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Settings', 'IsHidden', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Settings', 'SortOrder', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Settings', 'CreatedAt', 'TEXT');
+    AddColumnIfMissing('Settings', 'UpdatedAt', 'TEXT');
     
     // === Languages table columns ===
     AddColumnIfMissing('Languages', 'NativeName', 'TEXT');
     AddColumnIfMissing('Languages', 'FlagIcon', 'TEXT');
+    AddColumnIfMissing('Languages', 'DateFormat', 'TEXT');
+    AddColumnIfMissing('Languages', 'TimeFormat', 'TEXT');
+    AddColumnIfMissing('Languages', 'NumberFormat', 'TEXT');
+    AddColumnIfMissing('Languages', 'CurrencySymbol', 'TEXT');
+    AddColumnIfMissing('Languages', 'TextDirection', 'TEXT DEFAULT ''LTR''');
+    AddColumnIfMissing('Languages', 'FontFamily', 'TEXT');
     AddColumnIfMissing('Languages', 'IsEnabled', 'INTEGER DEFAULT 1');
     AddColumnIfMissing('Languages', 'IsDefault', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('Languages', 'IsComplete', 'INTEGER DEFAULT 0');
     AddColumnIfMissing('Languages', 'SortOrder', 'INTEGER DEFAULT 0');
     
     // === Logs table columns (renamed from old schema) ===
@@ -1149,6 +1157,11 @@ begin
     
     // === FormStates table columns ===
     AddColumnIfMissing('FormStates', 'MonitorIndex', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('FormStates', 'Splitters', 'TEXT');
+    AddColumnIfMissing('FormStates', 'Columns', 'TEXT');
+    AddColumnIfMissing('FormStates', 'TabIndex', 'INTEGER DEFAULT 0');
+    AddColumnIfMissing('FormStates', 'ScrollPos', 'TEXT');
+    AddColumnIfMissing('FormStates', 'LastAccess', 'TEXT');
     AddColumnIfMissing('FormStates', 'Extra', 'TEXT');
     
     // === Hotkeys table columns ===

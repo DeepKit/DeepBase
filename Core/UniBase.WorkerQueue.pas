@@ -21,8 +21,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.SyncObjs, System.JSON, System.IOUtils, System.DateUtils,
-  System.Threading;
+  System.Generics.Defaults, System.SyncObjs, System.JSON, System.IOUtils,
+  System.DateUtils, System.Variants, System.Threading;
 
 type
   EWorkerQueueException = class(Exception);

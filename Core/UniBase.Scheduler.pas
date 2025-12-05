@@ -51,9 +51,11 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.Generics.Defaults,
   System.SyncObjs,
   System.Threading,
   System.DateUtils,
+  System.Math,
   System.RegularExpressions;
 
 type
@@ -340,7 +342,7 @@ var
   Parts: TArray<string>;
   Part: string;
   Values: TList<Integer>;
-  I, Start, Stop, Step, Val: Integer;
+  I, J, Start, Stop, Step, Val: Integer;
   RangeParts, StepParts: TArray<string>;
 begin
   Values := TList<Integer>.Create;
@@ -357,10 +359,11 @@ begin
     // Split by comma
     Parts := Field.Split([',']);
     
-    for Part := Low(Parts) to High(Parts) do
+    for I := Low(Parts) to High(Parts) do
     begin
+      Part := Parts[I];
       // Check for step
-      StepParts := Parts[Part].Split(['/']);
+      StepParts := Part.Split(['/']);
       Step := 1;
       if Length(StepParts) = 2 then
         Step := StrToIntDef(StepParts[1], 1);
@@ -386,12 +389,12 @@ begin
       end;
       
       // Add values with step
-      I := Start;
-      while I <= Stop do
+      J := Start;
+      while J <= Stop do
       begin
-        if (I >= Min) and (I <= Max) and not Values.Contains(I) then
-          Values.Add(I);
-        Inc(I, Step);
+        if (J >= Min) and (J <= Max) and not Values.Contains(J) then
+          Values.Add(J);
+        Inc(J, Step);
       end;
     end;
     
@@ -845,13 +848,17 @@ begin
 end;
 
 procedure TTaskScheduler.ExecuteTask(Task: TScheduledTask);
+var
+  TaskRef: TScheduledTask;
+  RunTask: ITask;
 begin
   Task.FState := tsRunning;
   Inc(FRunningCount);
   Inc(FStats.RunningTasks);
   Dec(FStats.PendingTasks);
   
-  TTask.Run(
+  TaskRef := Task;
+  RunTask := TTask.Create(
     procedure
     var
       StartTime: TDateTime;
@@ -932,6 +939,7 @@ begin
         end;
       end;
     end);
+  RunTask.Start;
 end;
 
 function TTaskScheduler.Schedule(const TaskId: string;

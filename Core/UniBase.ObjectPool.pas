@@ -20,7 +20,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.SyncObjs, System.DateUtils, System.Threading;
+  System.SyncObjs, System.DateUtils, System.Threading, System.Math;
 
 type
   EObjectPoolException = class(Exception);
@@ -130,7 +130,6 @@ type
     FLock: TCriticalSection;
     FAvailable: TEvent;
     FStats: TPoolStats;
-    FCleanupTimer: TTimer;
     FShutdown: Boolean;
     FCleanupTask: ITask;
     
@@ -499,7 +498,7 @@ begin
   // Start cleanup task
   if FConfig.CleanupIntervalSec > 0 then
   begin
-    FCleanupTask := TTask.Run(
+    FCleanupTask := TTask.Create(
       procedure
       begin
         while not FShutdown do
@@ -510,6 +509,7 @@ begin
         end;
       end
     );
+    FCleanupTask.Start;
   end;
 end;
 

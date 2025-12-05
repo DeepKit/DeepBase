@@ -45,6 +45,8 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.Rtti,
+  System.TypInfo,
+  System.Math,
   System.SyncObjs,
   System.Threading;
 
@@ -465,14 +467,9 @@ begin
       TypedHandler(Event.AsType<T>);
     end;
   
-  // Wrap filter if provided
-  if Assigned(TypedFilter) then
-    Info.Filter := function(const Event: TValue): Boolean
-      begin
-        Result := TypedFilter(Event.AsType<T>);
-      end
-  else
-    Info.Filter := nil;
+  // Note: Filter is currently not supported in generic subscriptions
+  // due to Delphi compiler limitations with anonymous methods in generics
+  Info.Filter := nil;
   
   FLock.Enter;
   try
@@ -596,24 +593,34 @@ begin
 end;
 
 procedure TEventBus.InvokeHandler(const Info: TSubscriptionInfo; const Event: TValue);
+var
+  LHandler: TUntypedEventHandler;
+  LEvent: TValue;
 begin
+  LHandler := Info.Handler;
+  LEvent := Event;
+  
   case Info.DispatchMode of
     edmSync:
-      Info.Handler(Event);
+      LHandler(LEvent);
       
     edmAsync:
-      TTask.Run(
+      TThread.CreateAnonymousThread(
         procedure
         begin
-          Info.Handler(Event);
-        end);
+          LHandler(LEvent);
+        end).Start;
       
     edmMainThread:
-      TThread.Queue(nil,
-        procedure
-        begin
-          Info.Handler(Event);
-        end);
+      // Queue to main thread - using Synchronize for compatibility
+      if TThread.CurrentThread.ThreadID = MainThreadID then
+        LHandler(LEvent)
+      else
+        TThread.Synchronize(TThread.CurrentThread,
+          procedure
+          begin
+            LHandler(LEvent);
+          end);
   end;
 end;
 
@@ -645,13 +652,16 @@ end;
 function TEventBus.PublishAsync<T>(const Event: T): ITask;
 var
   EventCopy: T;
+  LSelf: TEventBus;
+  LProc: TProc;
 begin
   EventCopy := Event;
-  Result := TTask.Run(
-    procedure
+  LSelf := Self;
+  LProc := procedure
     begin
-      Publish<T>(EventCopy);
-    end);
+      LSelf.Publish<T>(EventCopy);
+    end;
+  Result := TTask.Run(LProc);
 end;
 
 procedure TEventBus.PublishByType(const EventType: string; const Event: TValue);

@@ -655,6 +655,7 @@ class function TDateTimeFormat.TryFromISO8601(const AValue: string; out ADateTim
 var
   LValue: string;
   LYear, LMonth, LDay, LHour, LMin, LSec: Word;
+  IYear, IMonth, IDay, IHour, IMin, ISec: Integer;
 begin
   Result := False;
   LValue := AValue.Replace('T', ' ').Replace('Z', '');
@@ -662,23 +663,30 @@ begin
   // Try full datetime
   if Length(LValue) >= 19 then
   begin
-    Result := TryStrToInt(Copy(LValue, 1, 4), Integer(LYear)) and
-              TryStrToInt(Copy(LValue, 6, 2), Integer(LMonth)) and
-              TryStrToInt(Copy(LValue, 9, 2), Integer(LDay)) and
-              TryStrToInt(Copy(LValue, 12, 2), Integer(LHour)) and
-              TryStrToInt(Copy(LValue, 15, 2), Integer(LMin)) and
-              TryStrToInt(Copy(LValue, 18, 2), Integer(LSec));
+    Result := TryStrToInt(Copy(LValue, 1, 4), IYear) and
+              TryStrToInt(Copy(LValue, 6, 2), IMonth) and
+              TryStrToInt(Copy(LValue, 9, 2), IDay) and
+              TryStrToInt(Copy(LValue, 12, 2), IHour) and
+              TryStrToInt(Copy(LValue, 15, 2), IMin) and
+              TryStrToInt(Copy(LValue, 18, 2), ISec);
     if Result then
+    begin
+      LYear := IYear; LMonth := IMonth; LDay := IDay;
+      LHour := IHour; LMin := IMin; LSec := ISec;
       ADateTime := EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0);
+    end;
   end
   // Try date only
   else if Length(LValue) >= 10 then
   begin
-    Result := TryStrToInt(Copy(LValue, 1, 4), Integer(LYear)) and
-              TryStrToInt(Copy(LValue, 6, 2), Integer(LMonth)) and
-              TryStrToInt(Copy(LValue, 9, 2), Integer(LDay));
+    Result := TryStrToInt(Copy(LValue, 1, 4), IYear) and
+              TryStrToInt(Copy(LValue, 6, 2), IMonth) and
+              TryStrToInt(Copy(LValue, 9, 2), IDay);
     if Result then
+    begin
+      LYear := IYear; LMonth := IMonth; LDay := IDay;
       ADateTime := EncodeDate(LYear, LMonth, LDay);
+    end;
   end;
 end;
 

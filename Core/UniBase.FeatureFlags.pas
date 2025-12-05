@@ -26,6 +26,9 @@ uses
 
 type
   EFeatureFlagException = class(Exception);
+  
+  /// <summary>Days of week set for scheduling</summary>
+  TDaysOfWeekSet = set of 0..6;
 
   /// <summary>Flag state</summary>
   TFlagState = (fsDisabled, fsEnabled, fsRollout, fsTargeted, fsScheduled, fsVariant);
@@ -132,7 +135,7 @@ type
     FStartTime: TDateTime;
     FEndTime: TDateTime;
     FTimezone: string;
-    FDaysOfWeek: set of 0..6;
+    FDaysOfWeek: TDaysOfWeekSet;
     FStartHour: Integer;
     FEndHour: Integer;
   public
@@ -144,7 +147,7 @@ type
     property StartTime: TDateTime read FStartTime write FStartTime;
     property EndTime: TDateTime read FEndTime write FEndTime;
     property Timezone: string read FTimezone write FTimezone;
-    property DaysOfWeek: set of 0..6 read FDaysOfWeek write FDaysOfWeek;
+    property DaysOfWeek: TDaysOfWeekSet read FDaysOfWeek write FDaysOfWeek;
     property StartHour: Integer read FStartHour write FStartHour;
     property EndHour: Integer read FEndHour write FEndHour;
   end;

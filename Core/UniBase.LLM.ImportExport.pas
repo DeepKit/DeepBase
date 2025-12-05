@@ -780,18 +780,16 @@ begin
       end;
       
       Result.Success := True;
-    finally
-      RootObj.Free;
+    except
+      on E: Exception do
+      begin
+        var ErrLen := Length(Result.Errors);
+        SetLength(Result.Errors, ErrLen + 1);
+        Result.Errors[ErrLen] := 'Import error: ' + E.Message;
+      end;
     end;
-  except
-    on E: Exception do
-    begin
-      var ErrLen := Length(Result.Errors);
-      SetLength(Result.Errors, ErrLen + 1);
-      Result.Errors[ErrLen] := 'Import error: ' + E.Message;
-    end;
-  end;
   finally
+    RootObj.Free;
     OldCatIdMap.Free;
   end;
   

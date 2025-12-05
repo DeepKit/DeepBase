@@ -21,6 +21,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.UITypes,
+  System.Math,
   Vcl.Graphics,
   Vcl.Controls,
   Vcl.Forms,
