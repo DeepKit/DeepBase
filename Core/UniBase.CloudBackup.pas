@@ -18,8 +18,8 @@ unit UniBase.CloudBackup;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections, System.JSON,
-  System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
+  System.SysUtils, System.Classes, System.Types, System.Generics.Collections,
+  System.JSON, System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading, System.IOUtils,
   System.Zip, System.ZLib;
 
@@ -746,9 +746,7 @@ var
 begin
   LStream := TFileStream.Create(APath, fmOpenRead or fmShareDenyWrite);
   try
-    LHash := THashSHA2.Create;
-    LHash.Update(LStream);
-    Result := LHash.HashAsString;
+    Result := THashSHA2.GetHashString(LStream);
   finally
     LStream.Free;
   end;
@@ -800,7 +798,7 @@ begin
       if not ShouldInclude(LFile, AIncludePatterns, AExcludePatterns) then
         Continue;
         
-      LRelPath := TPath.GetRelativePath(FBasePath, LFile);
+      LRelPath := ExtractRelativePath(FBasePath + PathDelim, LFile);
       LInfo.RelativePath := LRelPath;
       LInfo.FileSize := TFile.GetSize(LFile);
       LInfo.ModifiedTime := TFile.GetLastWriteTime(LFile);
@@ -840,7 +838,7 @@ begin
         if not ShouldInclude(LFile, AIncludePatterns, AExcludePatterns) then
           Continue;
           
-        LRelPath := TPath.GetRelativePath(FBasePath, LFile);
+        LRelPath := ExtractRelativePath(FBasePath + PathDelim, LFile);
         LInfo.RelativePath := LRelPath;
         LInfo.FileSize := TFile.GetSize(LFile);
         LInfo.ModifiedTime := TFile.GetLastWriteTime(LFile);
@@ -1445,7 +1443,7 @@ begin
     if ShouldTrigger then
     begin
       if Assigned(FOnBackupTriggered) then
-        TThread.Synchronize(nil,
+        TThread.Synchronize(TThread.Current,
           procedure
           begin
             FOnBackupTriggered(Self);
@@ -1573,7 +1571,7 @@ end;
 procedure TCloudBackupManager.DoProgress;
 begin
   if Assigned(FOnProgress) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnProgress(Self, FProgress);
@@ -1584,7 +1582,7 @@ procedure TCloudBackupManager.DoBackupComplete(Success: Boolean;
   const ABackupId, AErrorMsg: string);
 begin
   if Assigned(FOnBackupComplete) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnBackupComplete(Self, Success, ABackupId, AErrorMsg);
@@ -1595,7 +1593,7 @@ procedure TCloudBackupManager.DoRestoreComplete(Success: Boolean;
   const AErrorMsg: string);
 begin
   if Assigned(FOnRestoreComplete) then
-    TThread.Synchronize(nil,
+    TThread.Synchronize(TThread.Current,
       procedure
       begin
         FOnRestoreComplete(Self, Success, AErrorMsg);

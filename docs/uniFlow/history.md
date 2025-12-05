@@ -543,3 +543,41 @@
 - Import existing workflow definitions
 - Auto-save to browser localStorage
 - Undo/redo with 50-level history
+
+---
+
+## Phase 8: 调试与诊断
+
+### 2025-12-05
+
+#### TASK-901: 诊断模块 ✅
+- ✅ 创建 Source/Diagnostics/UniFlow.Diagnostics.pas (~1,200 行)
+  - TLogLevel - 日志级别 (Trace/Debug/Info/Warning/Error/Fatal)
+  - TTraceLevel - 追踪级别 (Off/Minimal/Normal/Verbose)
+  - TLogEntry - 日志条目 (支持 CorrelationId/WorkflowId/StepId)
+  - ILogger / ILoggerFactory - 日志接口（宿主可注入）
+  - TConsoleLogger - 默认控制台日志（ANSI 彩色）
+  - TTraceEntry - 执行追踪条目
+  - TErrorContext - 错误上下文（变量/输入/堆栈/执行路径）
+  - TUniFlowDiagnostics - 核心诊断类
+    - 日志方法: Trace/Debug/Info/Warning/Error/Fatal
+    - 步骤追踪: TraceStepEnter/TraceStepExit/TraceStepError
+    - 错误上下文: CaptureErrorContext
+    - 状态导出: DumpState/ExportTrace
+    - 事件钩子: OnBeforeStep/OnAfterStep/OnError
+  - 全局实例: Diagnostics() 函数
+  - 设计原则: 零侵入、可插拔、低开销
+
+#### TASK-902: CorrelationId 支持 ✅
+- ✅ 创建 Source/Diagnostics/UniFlow.Diagnostics.Integration.pas (~408 行)
+  - TWorkflowDiagnostics - 工作流诊断包装器
+    - 自动管理 CorrelationId 生命周期
+    - StepBegin/StepEnd/StepError 快捷方法
+    - CaptureError 错误上下文收集
+  - THTTPDiagnostics - HTTP 请求诊断助手
+    - AddTraceHeaders - 添加追踪头
+    - ExtractCorrelationId - 提取追踪 ID
+  - TLLMDiagnostics - LLM 调用诊断助手
+    - LogRequest/LogResponse/LogTokenUsage
+  - TSkillDiagnostics - Skill 调用诊断助手
+  - HTTP 追踪头常量: X-Correlation-ID, X-Trace-ID 等
