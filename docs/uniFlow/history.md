@@ -1103,3 +1103,562 @@ Inc(LRecord.Count) → LCount := LRecord.Count; Inc(LCount); LRecord.Count := LC
 
 ##### Git 提交
 - `3112417` - fix(Core): Delphi 12 compatibility - IoC, StateMachine, Diff, FileWatcher
+
+---
+
+## P4 Direction D: 分析与可视化
+
+### 2025-12-05
+
+#### TASK-1032: Analytics API 后端 ✅
+- ✅ 创建 Source/Analytics/UniFlow.Analytics.pas (~1,546 行)
+  - **时间范围类型**
+    - `TTimeRange` - 时间范围 (Today/Yesterday/Last7Days/Last30Days/ThisMonth/LastMonth/Custom)
+    - `TTimeGranularity` - 粒度 (Minute/Hour/Day/Week/Month)
+  - **统计结构**
+    - `TBasicStats` - 基础统计 (Count/Sum/Min/Max/Avg/StdDev)
+    - `TWorkflowStats` - 按工作流统计
+    - `TStepStats` - 按步骤统计
+    - `TTimeBucketStats` - 时序分桶统计
+    - `TErrorStats` - 错误统计
+    - `TLLMUsageStats` - LLM 使用统计
+    - `TExecutionSummary` - 执行摘要
+    - `TTrendReport/TTrendPoint` - 趋势报告
+  - **TAnalyticsEngine - 核心分析引擎**
+    - GetExecutionSummary - 获取执行摘要
+    - GetWorkflowStats - 按工作流统计
+    - GetStepStats - 按步骤统计
+    - GetTimeSeriesStats - 时序统计
+    - GetErrorStats - 错误统计
+    - GetSuccessRateTrend/GetExecutionCountTrend/GetLatencyTrend - 趋势数据
+    - GetHotspotSteps/GetFailureHotspots - 热点分析
+    - DetectAnomalies - 异常检测
+    - ExportFullReport/ExportHTMLReport - 报告导出
+    - 缓存支持 (TTL 可配)
+  - **TDashboardAPI - REST 风格 API**
+    - /overview - 概览数据
+    - /workflows - 工作流统计
+    - /timeline - 时间线数据
+    - /errors - 错误列表
+    - /trends - 趋势数据
+    - 参数解析 (时间范围/粒度)
+
+#### TASK-1030: Analytics Dashboard UI ✅
+- ✅ 创建 Analytics/index.html (~235 行)
+  - 仪表板布局 (Header/Summary Cards/Charts/Tables/Timeline)
+  - 时间范围选择器 (Today/7Days/30Days/Custom)
+  - 自定义日期范围模态框
+  - 导出/刷新按钮
+- ✅ 创建 Analytics/css/dashboard.css (~712 行)
+  - Catppuccin Mocha 暗色主题
+  - CSS 变量系统 (语义颜色/间距/圆角)
+  - Summary Cards / Chart Cards / Tables 样式
+  - Modal / Form / Button / Badge 组件
+  - 响应式布局 (1400/1200/768/480 断点)
+  - 自定义滚动条样式
+- ✅ 创建 Analytics/css/charts.css (~479 行)
+  - SVG 图表基础样式
+  - Line/Bar/Donut/Gauge/Histogram 图表样式
+  - Tooltip / Legend / Grid / Axis 样式
+  - Loading / Empty 状态
+  - Sparkline / Heatmap 样式
+  - Progress Bar 样式
+
+#### TASK-1031: Event Timeline UI ✅
+- ✅ 创建 Analytics/js/utils.js (~451 行)
+  - 日期格式化 (formatDate/formatDuration/relativeTime/getTimeRange)
+  - 数字格式化 (formatNumber/formatPercent/formatBytes/compactNumber)
+  - 统计计算 (calcStats/percentile)
+  - 颜色工具 (getStatusColor/interpolateColor)
+  - DOM 工具 (createSVGElement/createElement)
+  - 节流/防抖 (debounce/throttle)
+  - 数据处理 (groupBy/sortBy/generateTimeBuckets)
+  - API 工具 (fetch/buildQueryString)
+  - LocalStorage 工具
+- ✅ 创建 Analytics/js/charts.js (~786 行)
+  - lineChart - 折线图 (多系列/面积填充/网格/Tooltip)
+  - barChart - 柱状图 (水平/垂直/动画)
+  - histogram - 用于延迟分布
+  - donutChart - 环形图 (内径/圆心标签/图例)
+  - gaugeChart - 仪表盘 (阈值颜色)
+  - sparkline - 迷你趋势图
+  - stackedBarChart - 堆叠柱状图
+- ✅ 创建 Analytics/js/timeline.js (~631 行)
+  - Timeline 组件
+    - init/setData/setFilter - 初始化与数据设置
+    - zoomIn/zoomOut/reset - 缩放控制
+    - render/renderEvent/renderAxis - 渲染
+    - setupInteractions - 拖拽平移/滚轮缩放
+  - Swimlane 分组显示
+  - 事件状态颜色编码
+  - 时间轴自动格式化
+  - 事件选中与详情面板
+- ✅ 创建 Analytics/js/dashboard.js (~641 行)
+  - Dashboard 主控制器
+    - 时间范围选择器
+    - 自动刷新 (30 秒)
+    - 粒度选择器
+    - 导出报告 (JSON)
+  - Demo 数据生成器
+    - 随机执行历史
+    - 工作流统计
+    - 错误统计
+    - 异常检测
+  - UI 更新方法
+    - updateSummaryCards - 摘要卡片
+    - updateCharts - 图表
+    - updateWorkflowTable - 工作流表格
+    - updateErrorTable - 错误表格
+    - updateAnomalies - 异常列表
+    - updateTimeline - 时间线
+
+### P4 Direction D 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| UniFlow.Analytics | pas | ~1,546 |
+|| index.html | html | ~235 |
+|| dashboard.css | css | ~712 |
+|| charts.css | css | ~479 |
+|| utils.js | js | ~451 |
+|| charts.js | js | ~786 |
+|| timeline.js | js | ~631 |
+|| dashboard.js | js | ~641 |
+|| **Direction D 合计** | **8 files** | **~5,481** |
+
+### 分析仪表板功能
+
+1. **摘要卡片** - 总流程数/成功/失败/成功率/平均时长
+2. **执行趋势图** - 成功/失败折线图，支持粒度切换
+3. **成功率仪表盘** - 环形进度显示
+4. **工作流统计表** - 执行次数/成功率/平均时长，支持搜索
+5. **延迟分布图** - 直方图分布
+6. **错误列表** - 错误码/消息/次数/影响工作流
+7. **异常警报** - 自动检测高失败率/慢执行
+8. **事件时间线** - Swimlane 分组/缩放平移/事件选中
+
+---
+
+## P4 Direction F: 多租户支持
+
+### 2025-12-05
+
+#### TASK-1050~1052: 多租户核心功能 ✅
+- ✅ 创建 Source/Tenant/UniFlow.Tenant.pas (~1,372 行)
+  - **租户类型**
+    - `TTenantStatus` - 租户状态 (Active/Suspended/Archived/Deleted)
+    - `TTenantPlan` - 租户计划 (Free/Basic/Professional/Enterprise)
+  - **配额管理**
+    - `TTenantQuota` - 配额配置
+      - 流程配额: MaxActiveFlows/MaxFlowsPerDay/MaxEventsPerFlow
+      - 存储配额: MaxStorageMB/MaxSnapshotsPerFlow
+      - API 配额: MaxRequestsPerMinute/MaxRequestsPerDay
+      - LLM 配额: MaxLLMRequestsPerDay/MaxTokensPerDay
+      - 功能开关: AllowParallelExecution/AllowSubworkflows/AllowCustomSkills
+    - 预设配额: Free/Basic/Professional/Enterprise/Unlimited
+  - **使用量追踪**
+    - `TTenantUsage` - 使用情况记录
+      - 流程使用: ActiveFlows/FlowsToday/TotalFlows
+      - 存储使用: StorageUsedMB/TotalEvents/TotalSnapshots
+      - API 使用: RequestsThisMinute/RequestsToday
+      - LLM 使用: LLMRequestsToday/TokensToday
+  - **租户类**
+    - `TTenant` - 租户实体
+      - Id/Name/DisplayName/Status/Plan
+      - Quota/Usage
+      - Metadata/Settings/OwnerUserId/ContactEmail
+      - CheckQuota/IncrementUsage/IsActive
+  - **租户隔离 EventStore**
+    - `TTenantEventStore` - 租户隔离的事件存储包装器
+      - 实现 IEventStore 接口
+      - FlowId 前缀隔离
+      - 自动配额检查
+  - **租户存储接口**
+    - `ITenantStore` - 租户存储接口
+    - `TMemoryTenantStore` - 内存实现
+  - **租户管理器**
+    - `TTenantManager` - 租户管理
+      - CreateTenant/GetTenant/UpdateTenant/DeleteTenant
+      - SuspendTenant/ActivateTenant
+      - ChangePlan/GetAllTenants/GetTenantsByStatus
+      - GetEventStoreForTenant - 获取租户隔离的 EventStore
+  - **租户上下文**
+    - `TTenantContext` - 线程本地租户上下文
+      - SetCurrent/GetCurrent/Clear
+      - 用于请求处理时透明传递租户信息
+
+### P4 Direction F 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| UniFlow.Tenant | pas | ~1,372 |
+|| **Direction F 后端合计** | **1 file** | **~1,372** |
+
+#### TASK-1053: 租户控制台 Web UI ✅
+- ✅ 创建 TenantConsole/index.html (~601 行)
+  - 侧边栏导航 (Dashboard/Tenants/Quotas/Usage/Workflows/Settings)
+  - 仪表板视图 (摘要卡片/图表/活动表格)
+  - 租户管理视图 (筛选/CRUD 操作)
+  - 配额管理视图 (按计划配置)
+  - 使用统计视图 (趋势/排名)
+  - 工作流视图 (状态筛选)
+  - 设置视图 (系统配置)
+  - 模态对话框 (租户创建/编辑/确认)
+- ✅ 创建 TenantConsole/css/console.css (~1,176 行)
+  - Catppuccin Mocha 暗色主题
+  - CSS 变量 (颜色/间距/字体)
+  - 侧边栏/头部/卡片/表格/表单/模态框/Toast 样式
+  - 响应式断点 (1200/768/480px)
+  - 进度条/徽章/分页组件
+- ✅ 创建 TenantConsole/js/utils.js (~658 行)
+  - 日期工具 (format/relative/duration/getTimeRange)
+  - 数字工具 (format/compact/percent/bytes)
+  - DOM 工具 ($/$$, create/show/hide/addClass/removeClass)
+  - Storage (localStorage 封装)
+  - EventBus 类
+  - 验证器 (email/tenantName/required/range)
+  - StatusMap (租户/计划/工作流状态配置)
+  - ChartUtils (createSVG/lineChart/donutChart/barChart)
+- ✅ 创建 TenantConsole/js/api.js (~646 行)
+  - DemoData 生成器 (租户/工作流/趋势/活动)
+  - API 方法: getDashboardOverview/getTenantDistribution/getFlowTrend
+  - 租户 CRUD: getTenants/createTenant/updateTenant/deleteTenant/suspend/activate
+  - 配额: getPlanQuota/updatePlanQuota
+  - 使用: getUsageOverview/getUsageTrend/getUsageRanking
+  - 工作流: getWorkflows/cancelWorkflow
+  - 设置: getSettings/saveSettings
+- ✅ 创建 TenantConsole/js/components.js (~512 行)
+  - Toast 通知 (success/error/warning/info)
+  - Modal (open/close/confirm)
+  - Pagination 渲染器
+  - 表格行渲染器 (tenant/workflow/activity/usageRanking)
+  - Loading / Empty 状态
+  - Form 工具 (getData/setData/reset/validate)
+  - Dropdown 填充辅助函数
+- ✅ 创建 TenantConsole/js/console.js (~623 行)
+  - AppState 管理
+  - ViewManager 视图切换
+  - 各视图加载函数 (dashboard/tenants/quotas/usage/workflows/settings)
+  - 事件绑定 (导航/筛选/表单/模态框)
+  - EventBus 处理器 (租户/工作流操作)
+
+### Tenant Console 功能
+
+1. **仪表板** - 租户总数/活跃数/流程数/API 调用数摘要卡片；租户分布环形图；流程趋势折线图；最近活动表格
+2. **租户管理** - 状态/计划筛选；搜索；创建/编辑/删除租户；暂停/激活操作
+3. **配额管理** - 按计划查看/编辑配额；流程/存储/API/LLM 配额配置
+4. **使用统计** - 总览数据；使用趋势图；租户排名表格
+5. **工作流监控** - 状态筛选；搜索；取消操作
+6. **系统设置** - 默认计划/会话超时/最大租户数等配置
+
+### P4 Direction F 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| UniFlow.Tenant | pas | ~1,372 |
+|| index.html | html | ~601 |
+|| console.css | css | ~1,176 |
+|| utils.js | js | ~658 |
+|| api.js | js | ~646 |
+|| components.js | js | ~512 |
+|| console.js | js | ~623 |
+|| **Direction F 合计** | **7 files** | **~5,588** |
+
+---
+
+## P4 Direction E: 性能优化
+
+### 2025-12-05
+
+#### TASK-1040: 内存池优化 ✅
+- ✅ 创建 Source/Performance/UniFlow.Performance.Pool.pas (~1,020 行)
+  - `IPoolable` - 可池化对象接口
+  - `TPoolStats` - 池统计信息
+  - `TPoolConfig` - 池配置 (Default/Small/Large 预设)
+  - `TPooledItem<T>` - 池化对象包装
+  - `TObjectPool<T>` - 泛型对象池
+    - Acquire/Release - 获取/释放对象
+    - Warmup/Shrink/Clear - 预热/收缩/清空
+    - 对象重置器/验证器支持
+  - 专用池: `TJSONObjectPool`, `TStringBuilderPool`, `TStringListPool`
+  - `TPoolManager` - 池管理器
+  - `TPooledScope<T>` - RAII 风格作用域
+
+#### TASK-1041: JSON 解析加速 ✅
+- ✅ 创建 Source/Performance/UniFlow.Performance.JSON.pas (~1,760 行)
+  - **流式解析**
+    - `TJSONToken` - JSON Token 结构
+    - `TJSONStreamReader` - 流式 JSON 读取器
+      - ReadToken - 逐个解析 Token
+      - ForEach - 遍历回调
+      - SkipValue/ReadValue - 跳过/读取值
+    - `TJSONLinesReader` - JSON Lines 格式读取器
+  - **路径提取**
+    - `TPathSegment` - 路径段 (Property/Index/Wildcard/Recursive)
+    - `TJSONPathExtractor` - JSON Path 提取器
+      - 支持 `$.path.to.value` 语法
+      - Extract/ExtractAll - 单值/多值提取
+      - ExtractString/Integer/Boolean - 类型化提取
+  - **解析缓存**
+    - `TJSONCacheItem` - 缓存项
+    - `TJSONCache` - JSON 解析结果缓存
+      - LRU 淘汰策略
+      - TTL 过期
+      - 内容哈希缓存键
+  - **高效构建**
+    - `TJSONBuilder` - 流式 JSON 构建器
+      - BeginObject/EndObject - 对象边界
+      - BeginArray/EndArray - 数组边界
+      - WriteString/Integer/Float/Boolean/Null - 值写入
+      - WriteJSON/WriteRaw - 原始 JSON 写入
+  - 工具函数: EscapeJSONString, UnescapeJSONString, EstimateJSONSize, CloneJSON, MergeJSON
+
+#### TASK-1042: 并发执行优化 ✅
+- ✅ 创建 Source/Performance/UniFlow.Performance.Concurrent.pas (~1,600 行)
+  - **工作窃取队列**
+    - `TWorkStealingQueue<T>` - 双端队列
+      - Push - 本地推入
+      - Pop - 本地弹出 (无竞争)
+      - Steal - 远程窃取
+  - **增强线程池**
+    - `TWorkItem` - 工作项 (ID/优先级/超时)
+    - `TWorkerThread` - 工作线程 (LocalQueue/统计)
+    - `TThreadPoolStats` - 线程池统计
+    - `TThreadPoolConfig` - 线程池配置
+    - `TEnhancedThreadPool` - 增强线程池
+      - Submit - 提交任务
+      - SubmitTo - 提交到指定工作线程
+      - WaitAll - 等待所有任务
+      - 动态线程数调整
+      - 工作窃取支持
+  - **Future/Promise**
+    - `TFutureBase` - Future 基类
+    - `TFuture<T>` - 泛型 Future
+    - `TPromise<T>` - Promise
+  - **并行执行器**
+    - `TParallelResult<T>` - 并行结果
+    - `TParallelExecutor` - 并行执行器
+      - ForEach - 并行遍历
+      - Map - 并行映射
+      - Any - 任一完成
+      - All - 全部完成
+      - Batch - 批量执行
+  - **异步工作流**
+    - `TAsyncStep` - 异步步骤
+    - `TAsyncWorkflowExecutor` - 异步工作流执行器
+      - AddStep/AddDependency - 步骤/依赖管理
+      - Start/WaitAll - 执行控制
+  - 全局函数: GlobalThreadPool, ParallelFor
+
+#### TASK-1043: 缓存策略 ✅
+- ✅ 创建 Source/Performance/UniFlow.Performance.Cache.pas (~1,320 行)
+  - **LRU 缓存**
+    - `TLRUNode<K,V>` - 双向链表节点
+    - `TCacheStats` - 缓存统计
+    - `TCacheConfig` - 缓存配置
+    - `TLRUCache<K,V>` - 泛型 LRU 缓存
+      - Get/Put/Remove - 基本操作
+      - TTL 过期
+      - 最大字节数限制
+      - 淘汰回调
+    - `TStringCache` - 字符串缓存 (GetOrCompute)
+  - **工作流定义缓存**
+    - `TCachedWorkflowDef` - 缓存的工作流定义
+    - `TWorkflowDefinitionCache` - 工作流定义缓存
+      - LoadFromFile - 文件加载 (自动变更检测)
+      - LoadFromString - 字符串加载
+      - Invalidate/InvalidateAll - 失效
+      - Preload - 预加载
+  - **Schema 缓存**
+    - `TCachedSchema` - 缓存的 Schema
+    - `TSchemaCache` - Schema 缓存
+      - Get/LoadSchema/Register - 获取/加载/注册
+  - **多级缓存**
+    - `TCacheLevel` - 缓存级别 (L1/L2/L3)
+    - `TMultiLevelCache` - 多级字符串缓存
+      - 命中时自动提升级别
+  - **缓存管理器**
+    - `TCacheManager` - 统一缓存管理
+      - WorkflowCache/SchemaCache/StringCache - 内置缓存
+      - RegisterCache - 注册自定义缓存
+      - Warmup - 预热
+      - GetAllStats - 统计信息
+
+### P4 Direction E 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| UniFlow.Performance.Pool | pas | ~1,020 |
+|| UniFlow.Performance.JSON | pas | ~1,760 |
+|| UniFlow.Performance.Cache | pas | ~1,320 |
+|| UniFlow.Performance.Concurrent | pas | ~1,600 |
+||| **Direction E 合计** | **4 files** | **~5,700** |
+
+---
+
+## P4 Direction G: 插件系统
+
+### 2025-12-05
+
+#### TASK-1060: 插件接口定义 ✅
+- ✅ 创建 Source/Plugin/UniFlow.Plugin.Intf.pas (~830 行)
+  - **基础类型**
+    - `TPluginCapability` - 能力标记 (ActionExecutor/Validator/EventHandler/Transformer)
+    - `TPluginStatus` - 插件状态 (Unloaded/Loaded/Active/Failed/Disabled)
+    - `TPluginInfo` - 插件元数据 (Id/Name/Version/Dependencies)
+    - `TPluginResult` - 执行结果 (OK/Fail 工厂方法)
+  - **上下文接口**
+    - `IPluginLogger` - 日志接口 (Trace/Debug/Info/Warning/Error)
+    - `IPluginConfig` - 配置接口 (GetString/Integer/Boolean/JSON)
+    - `IPluginServices` - 服务定位器
+    - `IPluginContext` - 运行时上下文
+  - **插件接口**
+    - `IUniFlowPlugin` - 主插件接口 (Initialize/Finalize/GetExecutors)
+    - `IPluginActionExecutor` - 自定义 Action 执行器
+    - `IPluginValidator` - 自定义验证器
+    - `IPluginEventHandler` - 事件处理器
+    - `IPluginTransformer` - 数据变换器
+  - **基类**
+    - `TBaseUniFlowPlugin` - 插件基类 (RegisterActionExecutor/Validator/...)
+  - 常量: UNIFLOW_PLUGIN_VERSION = 1
+
+#### TASK-1061: 插件加载器 ✅
+- ✅ 创建 Source/Plugin/UniFlow.Plugin.Loader.pas (~1,604 行)
+  - **上下文实现**
+    - `TPluginLogger` - 默认日志实现
+    - `TPluginConfig` - JSON 配置实现 (LoadFromFile/SaveToFile)
+    - `TPluginServices` - 服务定位器实现
+    - `TPluginContextImpl` - 上下文实现
+  - **BPL 加载器**
+    - `TBPLPluginLoader` - Delphi 包加载器
+      - LoadPackage/UnloadPackage
+      - 线程安全
+  - **DLL 加载器**
+    - `TDLLPluginLoader` - 原生 DLL 加载器
+      - 导出函数: GetUniFlowPlugin
+      - LoadLibrary/FreeLibrary
+  - **统一加载器**
+    - `TPluginLoader` - 统一加载接口
+      - LoadPlugin/UnloadPlugin/UnloadAll
+      - ScanDirectory/DiscoverPlugins
+      - GetAllActionExecutors/Validators/EventHandlers/Transformers
+      - FindActionExecutor/FindValidator
+  - 版本兼容性检查
+  - 异常隔离
+
+#### TASK-1062: 插件注册表 ✅
+- ✅ 创建 Source/Plugin/UniFlow.Plugin.Registry.pas (~1,338 行)
+  - **依赖解析**
+    - `TDependencyNode` - 依赖图节点
+    - `TDependencyResult` - 解析结果 (MissingDeps/CircularDeps)
+    - `TPluginDependencyResolver` - 依赖解析器
+      - BuildGraph - 构建依赖图
+      - DetectCycle - 环检测
+      - TopologicalSort - 拓扑排序
+  - **生命周期管理**
+    - `TLifecycleState` - 状态枚举
+    - `TPluginLifecycleManager` - 生命周期管理器
+      - BeginInitialize/EndInitialize
+      - BeginFinalize/EndFinalize
+      - GetInitOrder/GetFinalizeOrder
+  - **插件注册表**
+    - `TPluginRegistry` - 中央插件管理器
+      - RegisterPlugin/UnregisterPlugin/UnregisterAll
+      - LoadAndRegister/DiscoverAndRegister
+      - EnablePlugin/DisablePlugin
+      - GetPluginsByCapability
+      - GetActionExecutors/Validators/EventHandlers/Transformers
+  - 全局实例: PluginRegistry()/InitializePluginRegistry/FinalizePluginRegistry
+
+#### TASK-1063: 示例插件 ✅
+- ✅ 创建 Source/Plugin/UniFlow.Plugin.Examples.pas (~873 行)
+  - **自定义 Action 执行器**
+    - `TDelayActionExecutor` - 延迟执行 Action
+      - 参数: milliseconds (0-60000)
+      - 返回: delayed_ms, actual_ms
+    - `TEmailActionExecutor` - 邮件发送 Action (Mock)
+      - 参数: to, subject, body
+      - 返回: message_id, sent_at
+    - `THttpGetActionExecutor` - HTTP GET Action
+      - 参数: url, timeout_ms
+      - 返回: status_code, body
+  - **自定义验证器**
+    - `TChinaPhoneValidator` - 中国手机号验证
+      - 11位数字、以1开头
+      - 严格模式: 运营商前缀检查
+    - `TIDCardValidator` - 中国身份证验证
+      - 18位、校验码计算
+      - 出生日期验证
+    - `TEmailValidator` - 邮箱格式验证
+  - **示例插件**
+    - `TCustomActionsPlugin` - 自定义 Action 插件
+    - `TCustomValidatorsPlugin` - 自定义验证器插件
+    - `TCombinedExamplePlugin` - 组合示例插件
+  - 工厂函数: CreateCustomActionsPlugin/CreateCustomValidatorsPlugin/CreateCombinedExamplePlugin
+
+### 插件系统设计原则
+
+1. **最小侵入** - 插件不修改核心代码
+2. **安全隔离** - 插件错误不影响宿主
+3. **版本兼容** - 接口版本化，向后兼容
+4. **热加载** - 支持运行时加载/卸载
+5. **依赖注入** - 通过 Context 提供服务
+
+### P4 Direction G 代码统计
+
+|| 模块 | 文件 | 行数 |
+||------|------|------|
+|| UniFlow.Plugin.Intf | pas | ~830 |
+|| UniFlow.Plugin.Loader | pas | ~1,604 |
+|| UniFlow.Plugin.Registry | pas | ~1,338 |
+|| UniFlow.Plugin.Examples | pas | ~873 |
+|| **Direction G 合计** | **4 files** | **~4,645** |
+
+---
+
+## P4 Direction B: 中文文档补全
+
+### 2025-12-05
+
+#### TASK-1010: 中文快速入门 ✅
+- ✅ 创建 docs/zh/quick-start.md (~353 行)
+  - 翻译完整快速入门指南
+  - 包含安装、工作流创建、LLM 集成
+  - 包含会话管理、错误处理、诊断
+  - 保留所有代码示例
+
+#### TASK-1011: 中文 Workflow 格式 ✅
+- ✅ 创建 docs/zh/workflow-definition.md (~653 行)
+  - 翻译完整工作流 JSON 格式参考
+  - 翻译所有步骤类型（Action/Condition/Loop/Parallel/Wait/Subworkflow/End）
+  - 翻译所有动作类型（LLM/Skill/HTTP/Script/Assign/Log/Guard）
+  - 翻译表达式语法、触发器、钩子
+  - 包含完整客户支持工作流示例
+
+#### TASK-1012: 中文 Skill 开发 ✅
+- ✅ 创建 docs/zh/skills-development.md (~724 行)
+  - 翻译 Python Skill 开发指南
+  - 翻译 Node.js Skill 开发指南
+  - 翻译 API 契约、注册、最佳实践
+  - 翻译测试、部署（Docker Compose/Kubernetes）
+  - 包含代码执行和知识搜索示例 Skill
+
+#### TASK-1013: 中文部署指南 ✅
+- ✅ 创建 docs/zh/deployment.md (~858 行)
+  - 翻译架构概览
+  - 翻译 Docker 部署（docker-compose.yml、Nginx 配置）
+  - 翻译 Kubernetes 部署（Namespace/ConfigMap/Secrets/Deployment/Ingress/HPA）
+  - 翻译环境配置、监控（Prometheus/Grafana）
+  - 翻译安全（网络策略、Pod 安全、API 认证）
+  - 翻译备份恢复、故障排除、性能调优
+  - 包含部署检查清单
+
+### P4 Direction B 代码统计
+
+|| 文件 | 类型 | 行数 |
+||------|------|------|
+|| quick-start.md | 中文文档 | ~353 |
+|| workflow-definition.md | 中文文档 | ~653 |
+|| skills-development.md | 中文文档 | ~724 |
+|| deployment.md | 中文文档 | ~858 |
+|| **Direction B 合计** | **4 files** | **~2,588** |
