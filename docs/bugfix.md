@@ -274,6 +274,48 @@
 - **修复**: 添加 `overload` 指令
 - **状态**: ✅ 已修复
 
+### BUG-038: TTemplateEngine 属性访问器未实现
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Template.pas`
+- **问题**: `GetHtmlEscape/SetHtmlEscape/GetStrictMode/SetStrictMode` 方法在 interface 中声明但未实现
+- **修复**: 添加访问器实现，委托到 FRenderer 对应属性
+- **状态**: ✅ 已修复
+
+### BUG-039: TTemplateEngine 头部注释语法错误
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Template.pas`
+- **问题**: 文件头使用 `{*...*}` 格式，`{` 和 `}` 在 Delphi 12 中被误认为字符常量
+- **修复**: 改用 `(*...*)`
+- **状态**: ✅ 已修复
+
+### BUG-040: TTemplateRenderer 内联变量声明不兼容
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Template.pas`
+- **问题**: `TryStrToInt(LArg, var LInt: Integer)` 内联变量声明在 Delphi 12 中不兼容
+- **修复**: 先声明变量再调用 `TryStrToInt(LArg, LInt)`
+- **状态**: ✅ 已修复
+
+### BUG-041: TCloudConfigSync.DoProgress TThread.Queue 参数
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.CloudSync.pas`
+- **问题**: `TThread.Queue(TThread.CurrentThread, proc)` 在 Delphi 12 中不兼容
+- **修复**: 改用 `TThread.Queue(nil, proc)` 并先将变量复制到局部变量
+- **状态**: ✅ 已修复
+
+### BUG-042: TCloudConfigSync 记录属性直接赋值
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.CloudSync.pas`
+- **问题**: `LItem.LocalVersion.Version := ...` 在 Delphi 12 中不能直接赋值给记录属性的子字段
+- **修复**: 使用局部变量 `LVersion := LItem.LocalVersion; LVersion.Version := ...; LItem.LocalVersion := LVersion`
+- **状态**: ✅ 已修复
+
+### BUG-043: THTTPClient.Post/Put 空体参数
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.CloudSync.pas`
+- **问题**: `FHttpClient.Post(LURL, nil, LHeaders)` 在 Delphi 12 中不兼容
+- **修复**: 改用 `FHttpClient.Post(LURL, TStringStream.Create('', TEncoding.UTF8), nil, LHeaders)`
+- **状态**: ✅ 已修复
+
 ---
 
 ## 代码质量检查结果 (2025-12-01)

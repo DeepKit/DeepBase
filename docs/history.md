@@ -405,14 +405,21 @@
   6. `UniBase.Updater.pas` - 添加 `System.Types/Generics.Defaults`，修复 `TTask.Run/TThread.Synchronize`
   7. `UniBase.Feedback.pas` - 添加 `System.Types`，修复 HTTP Post/Put，`TThread.Synchronize`
   8. `UniBase.CloudBackup.pas` - 添加 `System.Types`，修复 `ZCompressStream`，简化回调
+- **已修复文件** (2025-12-05 补充):
+  9. `UniBase.Template.pas` - 修复头部注释 `{*...*}` → `(*...*)`, 内联变量 TryStrToInt/TryStrToFloat, 添加属性访问器
+  10. `UniBase.CloudSync.pas` - 添加 System.ZLib/Math, 修复 HTTP Post/Put 空体, TThread.Queue, 记录属性赋值
+- **当前状态**: **71/78 成功 (91%)**
 - **通用修复模式**:
   - `TStringDynArray` → 添加 `System.Types`
   - `TRttiEnumerationType` → 添加 `System.Rtti`
-  - `TThread.Synchronize(nil, proc)` → `TThread.Queue(TThread.CurrentThread, proc)` 或直接调用
+  - `TThread.Synchronize(nil, proc)` → `TThread.Queue(nil, proc)` 或直接调用
   - `TTask.Run(proc)` → `TTask.Create(proc).Start`
   - `TArray.Sort<T>` → 添加 `TComparer<T>.Default` 参数
   - 保留字方法名 (`Record`, `Label`) → 重命名
   - 记录属性直接赋值 (`Widget.Config.Title :=`) → 使用局部变量
   - `TKeyCount` → `TCountResult`
   - `Point.Count` → `Point.Value`
-  - `TZCompressionStream.Create` → 使用 `ZCompressStream` 函数
+  - `TZCompressionStream.Create` → 使用 `ZCompress` 函数
+  - `{*...*}` 注释 → `(*...*)`
+  - 内联变量 `TryStrToInt(s, var i: Integer)` → 先声明变量
+  - HTTP `Post/Put(URL, nil, Headers)` → `Post/Put(URL, TStringStream.Create(''), Headers)`
