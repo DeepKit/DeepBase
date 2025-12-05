@@ -70,8 +70,10 @@ type
     FDefaultUserId: string;
     FDefaultSessionId: string;
     FCorrelationId: string;
+    FSanitizeEnabled: Boolean;  // SEC-002: 启用日志脱敏
 
     procedure NotifySubscribers(const AEntry: TAuditEntry);
+    function SanitizeMessage(const AMessage: string): string;  // SEC-002: 消息脱敏
   public
     constructor Create(AStore: IAuditStore);
     destructor Destroy; override;
@@ -147,6 +149,8 @@ type
     property Enabled: Boolean read FEnabled;
     property MinLogLevel: TAuditSeverity read FMinLogLevel;
     property CorrelationId: string read FCorrelationId;
+    /// <summary>SEC-002: 启用审计日志敏感信息脱敏</summary>
+    property SanitizeEnabled: Boolean read FSanitizeEnabled write FSanitizeEnabled;
   end;
 
   //----------------------------------------------------------------------------
@@ -261,6 +265,49 @@ begin
   FLock := TCriticalSection.Create;
   FEnabled := True;
   FMinLogLevel := asDebug;
+  FSanitizeEnabled := True;  // SEC-002: 默认启用脱敏
+end;
+
+function TAuditManager.SanitizeMessage(const AMessage: string): string;
+var
+  SensitivePatterns: TArray<string>;
+  Pattern: string;
+  I: Integer;
+begin
+  // SEC-002: 简单的敏感信息脱敏
+  Result := AMessage;
+  if not FSanitizeEnabled then Exit;
+  
+  // 敏感模式列表
+  SensitivePatterns := ['password', 'passwd', 'pwd', 'secret', 'token', 
+    'api_key', 'apikey', 'authorization', 'credential', 'private_key'];
+  
+  // 对每个模式进行脱敏
+  for Pattern in SensitivePatterns do
+  begin
+    // 查找并替换 pattern=value 或 pattern:value 模式
+    I := Pos(LowerCase(Pattern), LowerCase(Result));
+    while I > 0 do
+    begin
+      // 查找到值的结束位置（空格、逗号、引号结束）
+      var StartPos := I + Length(Pattern);
+      // 跳过分隔符 (=, :, 空格)
+      while (StartPos <= Length(Result)) and CharInSet(Result[StartPos], ['=', ':', ' ', '"', '''']) do
+        Inc(StartPos);
+      
+      var EndPos := StartPos;
+      while (EndPos <= Length(Result)) and not CharInSet(Result[EndPos], [' ', ',', '}', ']', '"', '''', #13, #10]) do
+        Inc(EndPos);
+      
+      // 替换敏感值
+      if EndPos > StartPos then
+        Result := Copy(Result, 1, StartPos - 1) + '[REDACTED]' + Copy(Result, EndPos, MaxInt);
+      
+      // 继续查找下一个
+      I := Pos(LowerCase(Pattern), LowerCase(Result));
+      if I <= StartPos then Break;  // 避免无限循环
+    end;
+  end;
 end;
 
 destructor TAuditManager.Destroy;
@@ -340,6 +387,10 @@ begin
     AEntry.SessionId := FDefaultSessionId;
   if (AEntry.CorrelationId = '') and (FCorrelationId <> '') then
     AEntry.CorrelationId := FCorrelationId;
+
+  // SEC-002: 审计日志脱敏
+  if FSanitizeEnabled then
+    AEntry.Message := SanitizeMessage(AEntry.Message);
 
   // Store
   FStore.Write(AEntry);

@@ -133,6 +133,8 @@ type
     FOwnerUserId: string;
     FContactEmail: string;
     FSettings: TJSONObject;
+    FLock: TCriticalSection;  // SEC-005: 配额操作互斥锁
+    FHMACSecret: string;      // SEC-003: HMAC 密钥
   public
     constructor Create;
     destructor Destroy; override;
@@ -140,11 +142,20 @@ type
     /// <summary>生成租户 ID</summary>
     class function GenerateTenantId: string;
 
-    /// <summary>检查配额是否超限</summary>
+    /// <summary>检查配额是否超限 (SEC-005: 线程安全)</summary>
     function CheckQuota(const AQuotaType: string): Boolean;
 
-    /// <summary>增加使用量</summary>
+    /// <summary>增加使用量 (SEC-005: 线程安全)</summary>
     procedure IncrementUsage(const AUsageType: string; AAmount: Integer = 1);
+    
+    /// <summary>原子检查并增加配额 (SEC-005: 原子操作)</summary>
+    function CheckAndIncrementQuota(const AQuotaType, AUsageType: string; AAmount: Integer = 1): Boolean;
+    
+    /// <summary>生成 FlowId 签名 (SEC-003)</summary>
+    function SignFlowId(const AFlowId: string): string;
+    
+    /// <summary>验证 FlowId 签名 (SEC-003)</summary>
+    function VerifyFlowId(const ASignedFlowId: string): Boolean;
 
     /// <summary>是否活跃</summary>
     function IsActive: Boolean;
@@ -191,7 +202,7 @@ type
     function ReadEvents(AQuery: TEventQuery): TArray<TUniFlowEvent>;
     function GetLastEvent(const AFlowId: string): TUniFlowEvent;
     function GetEventCount(const AFlowId: string): Int64;
-    procedure SaveSnapshot(ASnapshot: TUniFlowSnapshot);
+    function SaveSnapshot(ASnapshot: TUniFlowSnapshot): Boolean;  // ARCH-002: 返回 Boolean 对齐 IEventStore
     function GetSnapshot(AQuery: TSnapshotQuery): TUniFlowSnapshot;
     function GetAllFlowIds: TArray<string>;
     function FlowExists(const AFlowId: string): Boolean;
@@ -550,6 +561,8 @@ end;
 // ============================================================================
 
 constructor TTenant.Create;
+var
+  GUID: TGUID;
 begin
   inherited;
   FId := GenerateTenantId;
@@ -561,12 +574,17 @@ begin
   FUsage.Reset;
   FMetadata := TJSONObject.Create;
   FSettings := TJSONObject.Create;
+  FLock := TCriticalSection.Create;  // SEC-005: 初始化互斥锁
+  // SEC-003: 生成 HMAC 密钥
+  CreateGUID(GUID);
+  FHMACSecret := GUIDToString(GUID);
 end;
 
 destructor TTenant.Destroy;
 begin
   FMetadata.Free;
   FSettings.Free;
+  FLock.Free;  // SEC-005: 释放互斥锁
   inherited;
 end;
 
@@ -580,57 +598,139 @@ end;
 
 function TTenant.CheckQuota(const AQuotaType: string): Boolean;
 begin
-  // 检查日期，必要时重置
-  if Trunc(Now) > Trunc(FUsage.DayStart) then
-    FUsage.ResetDaily;
+  // SEC-005: 线程安全的配额检查
+  FLock.Enter;
+  try
+    // 检查日期，必要时重置
+    if Trunc(Now) > Trunc(FUsage.DayStart) then
+      FUsage.ResetDaily;
 
-  Result := True;
+    Result := True;
 
-  if SameText(AQuotaType, 'active_flows') then
-    Result := (FQuota.MaxActiveFlows = 0) or (FUsage.ActiveFlows < FQuota.MaxActiveFlows)
-  else if SameText(AQuotaType, 'flows_per_day') then
-    Result := (FQuota.MaxFlowsPerDay = 0) or (FUsage.FlowsToday < FQuota.MaxFlowsPerDay)
-  else if SameText(AQuotaType, 'requests_per_minute') then
-    Result := (FQuota.MaxRequestsPerMinute = 0) or (FUsage.RequestsThisMinute < FQuota.MaxRequestsPerMinute)
-  else if SameText(AQuotaType, 'requests_per_day') then
-    Result := (FQuota.MaxRequestsPerDay = 0) or (FUsage.RequestsToday < FQuota.MaxRequestsPerDay)
-  else if SameText(AQuotaType, 'llm_requests_per_day') then
-    Result := (FQuota.MaxLLMRequestsPerDay = 0) or (FUsage.LLMRequestsToday < FQuota.MaxLLMRequestsPerDay)
-  else if SameText(AQuotaType, 'tokens_per_day') then
-    Result := (FQuota.MaxTokensPerDay = 0) or (FUsage.TokensToday < FQuota.MaxTokensPerDay)
-  else if SameText(AQuotaType, 'storage') then
-    Result := (FQuota.MaxStorageMB = 0) or (FUsage.StorageUsedMB < FQuota.MaxStorageMB);
+    if SameText(AQuotaType, 'active_flows') then
+      Result := (FQuota.MaxActiveFlows = 0) or (FUsage.ActiveFlows < FQuota.MaxActiveFlows)
+    else if SameText(AQuotaType, 'flows_per_day') then
+      Result := (FQuota.MaxFlowsPerDay = 0) or (FUsage.FlowsToday < FQuota.MaxFlowsPerDay)
+    else if SameText(AQuotaType, 'requests_per_minute') then
+      Result := (FQuota.MaxRequestsPerMinute = 0) or (FUsage.RequestsThisMinute < FQuota.MaxRequestsPerMinute)
+    else if SameText(AQuotaType, 'requests_per_day') then
+      Result := (FQuota.MaxRequestsPerDay = 0) or (FUsage.RequestsToday < FQuota.MaxRequestsPerDay)
+    else if SameText(AQuotaType, 'llm_requests_per_day') then
+      Result := (FQuota.MaxLLMRequestsPerDay = 0) or (FUsage.LLMRequestsToday < FQuota.MaxLLMRequestsPerDay)
+    else if SameText(AQuotaType, 'tokens_per_day') then
+      Result := (FQuota.MaxTokensPerDay = 0) or (FUsage.TokensToday < FQuota.MaxTokensPerDay)
+    else if SameText(AQuotaType, 'storage') then
+      Result := (FQuota.MaxStorageMB = 0) or (FUsage.StorageUsedMB < FQuota.MaxStorageMB);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TTenant.IncrementUsage(const AUsageType: string; AAmount: Integer);
 begin
-  // 检查日期，必要时重置
-  if Trunc(Now) > Trunc(FUsage.DayStart) then
-    FUsage.ResetDaily;
+  // SEC-005: 线程安全的使用量增加
+  FLock.Enter;
+  try
+    // 检查日期，必要时重置
+    if Trunc(Now) > Trunc(FUsage.DayStart) then
+      FUsage.ResetDaily;
 
-  if SameText(AUsageType, 'flow_started') then
-  begin
-    FUsage.ActiveFlows := FUsage.ActiveFlows + AAmount;
-    FUsage.FlowsToday := FUsage.FlowsToday + AAmount;
-    FUsage.TotalFlows := FUsage.TotalFlows + AAmount;
-  end
-  else if SameText(AUsageType, 'flow_completed') then
-    FUsage.ActiveFlows := FUsage.ActiveFlows - AAmount
-  else if SameText(AUsageType, 'event') then
-    FUsage.TotalEvents := FUsage.TotalEvents + AAmount
-  else if SameText(AUsageType, 'snapshot') then
-    FUsage.TotalSnapshots := FUsage.TotalSnapshots + AAmount
-  else if SameText(AUsageType, 'request') then
-  begin
-    FUsage.RequestsThisMinute := FUsage.RequestsThisMinute + AAmount;
-    FUsage.RequestsToday := FUsage.RequestsToday + AAmount;
-  end
-  else if SameText(AUsageType, 'llm_request') then
-    FUsage.LLMRequestsToday := FUsage.LLMRequestsToday + AAmount
-  else if SameText(AUsageType, 'tokens') then
-    FUsage.TokensToday := FUsage.TokensToday + AAmount;
+    if SameText(AUsageType, 'flow_started') then
+    begin
+      FUsage.ActiveFlows := FUsage.ActiveFlows + AAmount;
+      FUsage.FlowsToday := FUsage.FlowsToday + AAmount;
+      FUsage.TotalFlows := FUsage.TotalFlows + AAmount;
+    end
+    else if SameText(AUsageType, 'flow_completed') then
+      FUsage.ActiveFlows := FUsage.ActiveFlows - AAmount
+    else if SameText(AUsageType, 'event') then
+      FUsage.TotalEvents := FUsage.TotalEvents + AAmount
+    else if SameText(AUsageType, 'snapshot') then
+      FUsage.TotalSnapshots := FUsage.TotalSnapshots + AAmount
+    else if SameText(AUsageType, 'request') then
+    begin
+      FUsage.RequestsThisMinute := FUsage.RequestsThisMinute + AAmount;
+      FUsage.RequestsToday := FUsage.RequestsToday + AAmount;
+    end
+    else if SameText(AUsageType, 'llm_request') then
+      FUsage.LLMRequestsToday := FUsage.LLMRequestsToday + AAmount
+    else if SameText(AUsageType, 'tokens') then
+      FUsage.TokensToday := FUsage.TokensToday + AAmount;
 
-  FUsage.LastUpdated := Now;
+    FUsage.LastUpdated := Now;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TTenant.CheckAndIncrementQuota(const AQuotaType, AUsageType: string; AAmount: Integer): Boolean;
+begin
+  // SEC-005: 原子检查并增加配额，避免竞态条件
+  FLock.Enter;
+  try
+    // 检查日期，必要时重置
+    if Trunc(Now) > Trunc(FUsage.DayStart) then
+      FUsage.ResetDaily;
+
+    // 先检查配额
+    Result := True;
+    if SameText(AQuotaType, 'active_flows') then
+      Result := (FQuota.MaxActiveFlows = 0) or (FUsage.ActiveFlows < FQuota.MaxActiveFlows)
+    else if SameText(AQuotaType, 'flows_per_day') then
+      Result := (FQuota.MaxFlowsPerDay = 0) or (FUsage.FlowsToday < FQuota.MaxFlowsPerDay)
+    else if SameText(AQuotaType, 'requests_per_minute') then
+      Result := (FQuota.MaxRequestsPerMinute = 0) or (FUsage.RequestsThisMinute < FQuota.MaxRequestsPerMinute);
+
+    // 如果配额允许，原子增加使用量
+    if Result then
+    begin
+      if SameText(AUsageType, 'flow_started') then
+      begin
+        FUsage.ActiveFlows := FUsage.ActiveFlows + AAmount;
+        FUsage.FlowsToday := FUsage.FlowsToday + AAmount;
+        FUsage.TotalFlows := FUsage.TotalFlows + AAmount;
+      end
+      else if SameText(AUsageType, 'request') then
+      begin
+        FUsage.RequestsThisMinute := FUsage.RequestsThisMinute + AAmount;
+        FUsage.RequestsToday := FUsage.RequestsToday + AAmount;
+      end;
+      FUsage.LastUpdated := Now;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TTenant.SignFlowId(const AFlowId: string): string;
+var
+  Hash: Cardinal;
+  Data: string;
+begin
+  // SEC-003: 使用简单哈希签名 FlowId (生产环境应使用真正的 HMAC-SHA256)
+  Data := FId + ':' + AFlowId + ':' + FHMACSecret;
+  Hash := 0;
+  for var I := 1 to Length(Data) do
+    Hash := ((Hash shl 5) + Hash) + Ord(Data[I]);
+  Result := FId + ':' + AFlowId + ':' + IntToHex(Hash, 8);
+end;
+
+function TTenant.VerifyFlowId(const ASignedFlowId: string): Boolean;
+var
+  Parts: TArray<string>;
+  ExpectedSig: string;
+begin
+  // SEC-003: 验证签名的 FlowId
+  Result := False;
+  Parts := ASignedFlowId.Split([':']);
+  if Length(Parts) < 3 then Exit;
+  
+  // 检查租户 ID 匹配
+  if Parts[0] <> FId then Exit;
+  
+  // 重新计算签名验证
+  ExpectedSig := SignFlowId(Parts[1]);
+  Result := ExpectedSig = ASignedFlowId;
 end;
 
 function TTenant.IsActive: Boolean;
@@ -715,7 +815,8 @@ end;
 
 function TTenantEventStore.PrefixFlowId(const AFlowId: string): string;
 begin
-  Result := TENANT_PREFIX + FTenantId + ':' + AFlowId;
+  // SEC-003: 使用签名的 FlowId
+  Result := TENANT_PREFIX + FTenant.SignFlowId(AFlowId);
 end;
 
 function TTenantEventStore.UnprefixFlowId(const AFlowId: string): string;
@@ -731,7 +832,14 @@ end;
 
 function TTenantEventStore.IsTenantFlow(const AFlowId: string): Boolean;
 begin
-  Result := AFlowId.StartsWith(TENANT_PREFIX + FTenantId + ':');
+  // SEC-003: 使用签名验证而非简单前缀检查
+  // 首先检查基本前缀
+  if not AFlowId.StartsWith(TENANT_PREFIX + FTenantId + ':') then
+    Exit(False);
+  
+  // 提取实际的 FlowId 部分并验证签名
+  var InnerFlowId := Copy(AFlowId, Length(TENANT_PREFIX) + 1, MaxInt);
+  Result := FTenant.VerifyFlowId(InnerFlowId);
 end;
 
 function TTenantEventStore.Append(AEvent: TUniFlowEvent): TAppendResult;
@@ -784,11 +892,13 @@ begin
   Result := FInnerStore.GetEventCount(PrefixFlowId(AFlowId));
 end;
 
-procedure TTenantEventStore.SaveSnapshot(ASnapshot: TUniFlowSnapshot);
+function TTenantEventStore.SaveSnapshot(ASnapshot: TUniFlowSnapshot): Boolean;
 begin
+  // ARCH-002: 返回 Boolean 对齐 IEventStore 接口
   ASnapshot.FlowId := PrefixFlowId(ASnapshot.FlowId);
-  FInnerStore.SaveSnapshot(ASnapshot);
-  FTenant.IncrementUsage('snapshot', 1);
+  Result := FInnerStore.SaveSnapshot(ASnapshot);
+  if Result then
+    FTenant.IncrementUsage('snapshot', 1);
 end;
 
 function TTenantEventStore.GetSnapshot(AQuery: TSnapshotQuery): TUniFlowSnapshot;

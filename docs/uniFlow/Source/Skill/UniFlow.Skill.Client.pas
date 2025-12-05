@@ -30,6 +30,19 @@ type
   // TSkillClientConfig - Client configuration
   //----------------------------------------------------------------------------
 
+  /// <summary>认证类型 (SEC-004)</summary>
+  TSkillAuthType = (
+    satNone,       // 无认证
+    satApiKey,     // API Key 认证
+    satBearer,     // Bearer Token 认证
+    satBasic       // Basic 认证
+  );
+
+  /// <summary>
+  /// Skill 客户端配置
+  /// CODE-004: 所有超时/重试参数均可配置
+  /// SEC-004: 支持多种认证方式
+  /// </summary>
   TSkillClientConfig = class
   private
     FBaseURL: string;
@@ -37,14 +50,48 @@ type
     FMaxRetries: Integer;
     FRetryDelayMs: Integer;
     FConnectTimeoutMs: Integer;
+    // SEC-004: 认证配置
+    FAuthType: TSkillAuthType;
+    FApiKey: string;
+    FApiKeyHeader: string;      // 默认 'X-API-Key'
+    FBearerToken: string;
+    FBasicUsername: string;
+    FBasicPassword: string;
+    // CODE-004: 高级配置
+    FRetryBackoffMultiplier: Double;  // 退避乘数
+    FMaxRetryDelayMs: Integer;        // 最大重试延迟
+    FEnableRetryOnTimeout: Boolean;   // 超时时重试
+    FEnableRetryOn5xx: Boolean;       // 5xx 时重试
   public
     constructor Create;
 
+    /// <summary>从 JSON 加载配置</summary>
+    procedure LoadFromJSON(AJson: TJSONObject);
+    /// <summary>导出为 JSON</summary>
+    function ToJSON: TJSONObject;
+    /// <summary>从文件加载</summary>
+    procedure LoadFromFile(const AFilePath: string);
+    /// <summary>保存到文件</summary>
+    procedure SaveToFile(const AFilePath: string);
+
+    // 基本配置
     property BaseURL: string read FBaseURL write FBaseURL;
     property TimeoutMs: Integer read FTimeoutMs write FTimeoutMs;
     property MaxRetries: Integer read FMaxRetries write FMaxRetries;
     property RetryDelayMs: Integer read FRetryDelayMs write FRetryDelayMs;
     property ConnectTimeoutMs: Integer read FConnectTimeoutMs write FConnectTimeoutMs;
+    // SEC-004: 认证配置
+    property AuthType: TSkillAuthType read FAuthType write FAuthType;
+    property ApiKey: string read FApiKey write FApiKey;
+    property ApiKeyHeader: string read FApiKeyHeader write FApiKeyHeader;
+    property BearerToken: string read FBearerToken write FBearerToken;
+    property BasicUsername: string read FBasicUsername write FBasicUsername;
+    property BasicPassword: string read FBasicPassword write FBasicPassword;
+    // CODE-004: 高级重试配置
+    property RetryBackoffMultiplier: Double read FRetryBackoffMultiplier write FRetryBackoffMultiplier;
+    property MaxRetryDelayMs: Integer read FMaxRetryDelayMs write FMaxRetryDelayMs;
+    property EnableRetryOnTimeout: Boolean read FEnableRetryOnTimeout write FEnableRetryOnTimeout;
+    property EnableRetryOn5xx: Boolean read FEnableRetryOn5xx write FEnableRetryOn5xx;
   end;
 
   //----------------------------------------------------------------------------
@@ -63,6 +110,9 @@ type
     FOwnsConfig: Boolean;
 
     function BuildURL(const AEndpoint: string): string;
+    procedure ApplyAuthentication;  // SEC-004: 应用认证头
+    function CalculateRetryDelay(AAttempt: Integer): Integer;  // CODE-004: 计算重试延迟
+    function ShouldRetry(AStatusCode: Integer; const AError: string): Boolean;  // CODE-004: 判断是否重试
     function DoRequest(const AMethod, AEndpoint: string;
       const ABody: TJSONObject = nil): TJSONObject;
     procedure DoRequestAsync(const AMethod, AEndpoint: string;
@@ -169,7 +219,9 @@ implementation
 
 uses
   System.DateUtils,
-  System.NetEncoding;
+  System.NetEncoding,
+  System.IOUtils,
+  System.Math;
 
 //------------------------------------------------------------------------------
 // TSkillClientConfig
@@ -178,11 +230,103 @@ uses
 constructor TSkillClientConfig.Create;
 begin
   inherited Create;
+  // CODE-004: 默认配置
   FBaseURL := 'http://localhost:8000';
   FTimeoutMs := 30000;
   FMaxRetries := 3;
   FRetryDelayMs := 1000;
   FConnectTimeoutMs := 5000;
+  // SEC-004: 默认无认证
+  FAuthType := satNone;
+  FApiKeyHeader := 'X-API-Key';
+  // CODE-004: 高级重试配置
+  FRetryBackoffMultiplier := 2.0;
+  FMaxRetryDelayMs := 30000;
+  FEnableRetryOnTimeout := True;
+  FEnableRetryOn5xx := True;
+end;
+
+procedure TSkillClientConfig.LoadFromJSON(AJson: TJSONObject);
+var
+  AuthStr: string;
+begin
+  if AJson = nil then Exit;
+  
+  // 基本配置
+  AJson.TryGetValue<string>('baseUrl', FBaseURL);
+  AJson.TryGetValue<Integer>('timeoutMs', FTimeoutMs);
+  AJson.TryGetValue<Integer>('maxRetries', FMaxRetries);
+  AJson.TryGetValue<Integer>('retryDelayMs', FRetryDelayMs);
+  AJson.TryGetValue<Integer>('connectTimeoutMs', FConnectTimeoutMs);
+  
+  // SEC-004: 认证配置
+  if AJson.TryGetValue<string>('authType', AuthStr) then
+  begin
+    if SameText(AuthStr, 'apiKey') then FAuthType := satApiKey
+    else if SameText(AuthStr, 'bearer') then FAuthType := satBearer
+    else if SameText(AuthStr, 'basic') then FAuthType := satBasic
+    else FAuthType := satNone;
+  end;
+  AJson.TryGetValue<string>('apiKey', FApiKey);
+  AJson.TryGetValue<string>('apiKeyHeader', FApiKeyHeader);
+  AJson.TryGetValue<string>('bearerToken', FBearerToken);
+  AJson.TryGetValue<string>('basicUsername', FBasicUsername);
+  AJson.TryGetValue<string>('basicPassword', FBasicPassword);
+  
+  // CODE-004: 高级重试配置
+  AJson.TryGetValue<Double>('retryBackoffMultiplier', FRetryBackoffMultiplier);
+  AJson.TryGetValue<Integer>('maxRetryDelayMs', FMaxRetryDelayMs);
+  AJson.TryGetValue<Boolean>('enableRetryOnTimeout', FEnableRetryOnTimeout);
+  AJson.TryGetValue<Boolean>('enableRetryOn5xx', FEnableRetryOn5xx);
+end;
+
+function TSkillClientConfig.ToJSON: TJSONObject;
+const
+  AuthNames: array[TSkillAuthType] of string = ('none', 'apiKey', 'bearer', 'basic');
+begin
+  Result := TJSONObject.Create;
+  // 基本配置
+  Result.AddPair('baseUrl', FBaseURL);
+  Result.AddPair('timeoutMs', TJSONNumber.Create(FTimeoutMs));
+  Result.AddPair('maxRetries', TJSONNumber.Create(FMaxRetries));
+  Result.AddPair('retryDelayMs', TJSONNumber.Create(FRetryDelayMs));
+  Result.AddPair('connectTimeoutMs', TJSONNumber.Create(FConnectTimeoutMs));
+  // SEC-004: 认证配置 (不导出敏感信息)
+  Result.AddPair('authType', AuthNames[FAuthType]);
+  Result.AddPair('apiKeyHeader', FApiKeyHeader);
+  // CODE-004: 高级重试配置
+  Result.AddPair('retryBackoffMultiplier', TJSONNumber.Create(FRetryBackoffMultiplier));
+  Result.AddPair('maxRetryDelayMs', TJSONNumber.Create(FMaxRetryDelayMs));
+  Result.AddPair('enableRetryOnTimeout', TJSONBool.Create(FEnableRetryOnTimeout));
+  Result.AddPair('enableRetryOn5xx', TJSONBool.Create(FEnableRetryOn5xx));
+end;
+
+procedure TSkillClientConfig.LoadFromFile(const AFilePath: string);
+var
+  Json: TJSONObject;
+  Content: string;
+begin
+  if not TFile.Exists(AFilePath) then Exit;
+  Content := TFile.ReadAllText(AFilePath);
+  Json := TJSONObject.ParseJSONValue(Content) as TJSONObject;
+  if Json <> nil then
+  try
+    LoadFromJSON(Json);
+  finally
+    Json.Free;
+  end;
+end;
+
+procedure TSkillClientConfig.SaveToFile(const AFilePath: string);
+var
+  Json: TJSONObject;
+begin
+  Json := ToJSON;
+  try
+    TFile.WriteAllText(AFilePath, Json.Format(2));
+  finally
+    Json.Free;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -208,6 +352,58 @@ begin
   FHttpClient.Accept := 'application/json';
   FHttpClient.ResponseTimeout := FConfig.TimeoutMs;
   FHttpClient.ConnectionTimeout := FConfig.ConnectTimeoutMs;
+  
+  // SEC-004: 应用认证
+  ApplyAuthentication;
+end;
+
+procedure TSkillClient.ApplyAuthentication;
+var
+  Credentials: string;
+begin
+  // SEC-004: 根据配置应用认证头
+  case FConfig.AuthType of
+    satApiKey:
+      if FConfig.ApiKey <> '' then
+        FHttpClient.CustomHeaders[FConfig.ApiKeyHeader] := FConfig.ApiKey;
+    satBearer:
+      if FConfig.BearerToken <> '' then
+        FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + FConfig.BearerToken;
+    satBasic:
+      if (FConfig.BasicUsername <> '') or (FConfig.BasicPassword <> '') then
+      begin
+        Credentials := TNetEncoding.Base64.Encode(
+          FConfig.BasicUsername + ':' + FConfig.BasicPassword);
+        FHttpClient.CustomHeaders['Authorization'] := 'Basic ' + Credentials;
+      end;
+  end;
+end;
+
+function TSkillClient.CalculateRetryDelay(AAttempt: Integer): Integer;
+begin
+  // CODE-004: 指数退避计算
+  Result := Round(FConfig.RetryDelayMs * Power(FConfig.RetryBackoffMultiplier, AAttempt - 1));
+  // 限制最大延迟
+  if Result > FConfig.MaxRetryDelayMs then
+    Result := FConfig.MaxRetryDelayMs;
+end;
+
+function TSkillClient.ShouldRetry(AStatusCode: Integer; const AError: string): Boolean;
+begin
+  // CODE-004: 判断是否应该重试
+  Result := False;
+  
+  // 5xx 服务器错误
+  if (AStatusCode >= 500) and (AStatusCode < 600) then
+    Result := FConfig.EnableRetryOn5xx;
+  
+  // 超时错误
+  if Pos('timeout', LowerCase(AError)) > 0 then
+    Result := FConfig.EnableRetryOnTimeout;
+  
+  // 连接错误
+  if Pos('connection', LowerCase(AError)) > 0 then
+    Result := True;
 end;
 
 destructor TSkillClient.Destroy;
@@ -238,10 +434,13 @@ var
   ResponseStr: string;
   Attempt: Integer;
   LastError: string;
+  LastStatusCode: Integer;
+  DelayMs: Integer;
 begin
   Result := nil;
   URL := BuildURL(AEndpoint);
   LastError := '';
+  LastStatusCode := 0;
 
   for Attempt := 1 to FConfig.MaxRetries do
   begin
@@ -262,6 +461,8 @@ begin
         else
           raise ESkillException.CreateFmt('Unsupported HTTP method: %s', [AMethod]);
 
+        LastStatusCode := Response.StatusCode;
+        
         if Response.StatusCode >= 200 then
         begin
           if Response.StatusCode < 300 then
@@ -273,6 +474,11 @@ begin
               Result := TJSONObject.Create;
             Exit;
           end
+          // SEC-004: 401/403 认证错误不重试
+          else if Response.StatusCode = 401 then
+            raise ESkillException.Create('Authentication required (401)')
+          else if Response.StatusCode = 403 then
+            raise ESkillException.Create('Access forbidden (403)')
           else if Response.StatusCode = 404 then
             raise ESkillNotFound.CreateFmt('Resource not found: %s', [AEndpoint])
           else if Response.StatusCode >= 500 then
@@ -290,13 +496,27 @@ begin
     except
       on E: ESkillNotFound do
         raise;
+      on E: ESkillException do
+      begin
+        // SEC-004: 认证错误不重试
+        if (Pos('401', E.Message) > 0) or (Pos('403', E.Message) > 0) then
+          raise;
+        LastError := E.Message;
+      end;
       on E: Exception do
       begin
         LastError := E.Message;
-        if Attempt < FConfig.MaxRetries then
-          Sleep(FConfig.RetryDelayMs * Attempt);
       end;
     end;
+    
+    // CODE-004: 判断是否重试
+    if (Attempt < FConfig.MaxRetries) and ShouldRetry(LastStatusCode, LastError) then
+    begin
+      DelayMs := CalculateRetryDelay(Attempt);
+      Sleep(DelayMs);
+    end
+    else if Attempt >= FConfig.MaxRetries then
+      Break;
   end;
 
   raise ESkillConnectionError.CreateFmt('Request failed after %d attempts: %s',

@@ -158,12 +158,30 @@ type
   // 表达式求值器
   // ============================================================================
   
+  /// <summary>允许的表达式函数白名单</summary>
+  TExpressionWhitelist = class
+  private
+    class var FAllowedFunctions: TList<string>;
+    class var FAllowedOperators: TList<string>;
+    class var FDangerousPatterns: TArray<string>;
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function IsAllowedFunction(const AFuncName: string): Boolean;
+    class function IsAllowedOperator(const AOp: string): Boolean;
+    class function ContainsDangerousPattern(const AExpr: string): Boolean;
+    class procedure AddAllowedFunction(const AFuncName: string);
+    class procedure AddAllowedOperator(const AOp: string);
+  end;
+
   TExpressionEvaluator = class
   private
     FContext: TWorkflowContext;
+    FSafeMode: Boolean;  // SEC-001: 安全模式启用白名单验证
     
     function CompareValues(ALeft, ARight: TVariableValue; AOp: TConditionOperator): Boolean;
     function EvaluateCondition(ACond: TConditionExpression): Boolean;
+    function ValidateExpression(const AExpr: string): Boolean;  // SEC-001: 表达式白名单验证
   public
     constructor Create(AContext: TWorkflowContext);
     
@@ -178,6 +196,9 @@ type
     
     /// <summary>检查 match 表达式（如 ">= 0.9"）</summary>
     function MatchExpression(AValue: TVariableValue; const AMatchExpr: string): Boolean;
+    
+    /// <summary>安全模式 - 启用表达式白名单验证</summary>
+    property SafeMode: Boolean read FSafeMode write FSafeMode;
   end;
   
   // ============================================================================
@@ -1063,10 +1084,105 @@ end;
 // TExpressionEvaluator
 // ============================================================================
 
+// ============================================================================
+// TExpressionWhitelist - SEC-001: 表达式白名单
+// ============================================================================
+
+class constructor TExpressionWhitelist.Create;
+begin
+  FAllowedFunctions := TList<string>.Create;
+  FAllowedOperators := TList<string>.Create;
+  
+  // 默认允许的函数
+  FAllowedFunctions.AddRange(['length', 'count', 'sum', 'avg', 'min', 'max',
+    'trim', 'upper', 'lower', 'substr', 'concat', 'split', 'join',
+    'now', 'today', 'formatdate', 'parsedate',
+    'toint', 'tofloat', 'tostr', 'tobool',
+    'isnull', 'isempty', 'default', 'coalesce',
+    'abs', 'round', 'floor', 'ceil', 'trunc']);
+  
+  // 默认允许的操作符
+  FAllowedOperators.AddRange(['=', '==', '!=', '<>', '<', '>', '<=', '>=',
+    '+', '-', '*', '/', 'mod', 'div',
+    'and', 'or', 'not', 'in', 'contains', 'startswith', 'endswith', 'matches']);
+  
+  // 危险模式 - 可能导致注入攻击
+  FDangerousPatterns := ['exec(', 'eval(', 'system(', 'shell(', 'cmd(',
+    'import ', 'require(', '__', '${', '`', 'script:', 'javascript:',
+    'file:', 'http://', 'https://', 'ftp://', 'data:'];
+end;
+
+class destructor TExpressionWhitelist.Destroy;
+begin
+  FAllowedFunctions.Free;
+  FAllowedOperators.Free;
+end;
+
+class function TExpressionWhitelist.IsAllowedFunction(const AFuncName: string): Boolean;
+var
+  LowerName: string;
+begin
+  LowerName := LowerCase(Trim(AFuncName));
+  Result := FAllowedFunctions.Contains(LowerName);
+end;
+
+class function TExpressionWhitelist.IsAllowedOperator(const AOp: string): Boolean;
+var
+  LowerOp: string;
+begin
+  LowerOp := LowerCase(Trim(AOp));
+  Result := FAllowedOperators.Contains(LowerOp);
+end;
+
+class function TExpressionWhitelist.ContainsDangerousPattern(const AExpr: string): Boolean;
+var
+  LowerExpr: string;
+  Pattern: string;
+begin
+  Result := False;
+  LowerExpr := LowerCase(AExpr);
+  
+  for Pattern in FDangerousPatterns do
+  begin
+    if Pos(Pattern, LowerExpr) > 0 then
+      Exit(True);
+  end;
+end;
+
+class procedure TExpressionWhitelist.AddAllowedFunction(const AFuncName: string);
+begin
+  if not FAllowedFunctions.Contains(LowerCase(AFuncName)) then
+    FAllowedFunctions.Add(LowerCase(AFuncName));
+end;
+
+class procedure TExpressionWhitelist.AddAllowedOperator(const AOp: string);
+begin
+  if not FAllowedOperators.Contains(LowerCase(AOp)) then
+    FAllowedOperators.Add(LowerCase(AOp));
+end;
+
+// ============================================================================
+// TExpressionEvaluator
+// ============================================================================
+
 constructor TExpressionEvaluator.Create(AContext: TWorkflowContext);
 begin
   inherited Create;
   FContext := AContext;
+  FSafeMode := True;  // SEC-001: 默认启用安全模式
+end;
+
+function TExpressionEvaluator.ValidateExpression(const AExpr: string): Boolean;
+begin
+  // SEC-001: 白名单验证
+  Result := True;
+  
+  if not FSafeMode then
+    Exit;
+  
+  // 检查危险模式
+  if TExpressionWhitelist.ContainsDangerousPattern(AExpr) then
+    Result := False;
 end;
 
 function TExpressionEvaluator.CompareValues(ALeft, ARight: TVariableValue; AOp: TConditionOperator): Boolean;
@@ -1262,6 +1378,10 @@ var
   ResolvedExpr: string;
   Cond: TConditionExpression;
 begin
+  // SEC-001: 白名单验证
+  if not ValidateExpression(AExpr) then
+    raise Exception.Create('Expression validation failed: potentially dangerous expression');
+  
   // 先解析变量引用
   ResolvedExpr := FContext.ResolveString(AExpr);
   

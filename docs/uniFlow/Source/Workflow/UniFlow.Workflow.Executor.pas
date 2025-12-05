@@ -41,15 +41,24 @@ type
   // 步骤执行结果
   // ============================================================================
   
+  /// <summary>
+  /// 步骤执行结果
+  /// CODE-001: Output 所有权说明
+  ///   - 当 OwnsOutput=True 时，TStepResult 拥有 Output 的所有权，析构时会释放
+  ///   - 当 OwnsOutput=False 时，调用者负责管理 Output 生命周期
+  ///   - 默认 OwnsOutput=True
+  /// </summary>
   TStepResult = class
   private
     FSuccess: Boolean;
     FOutput: TJSONValue;
+    FOwnsOutput: Boolean;    // CODE-001: 明确 Output 所有权
     FErrorCode: string;
     FErrorMessage: string;
     FNextStepId: string;     // 跳转到指定步骤
     FNeedsWait: Boolean;     // 需要等待外部输入
     FWaitData: TJSONObject;  // 等待配置
+    procedure SetOutput(AValue: TJSONValue);
   public
     constructor Create;
     destructor Destroy; override;
@@ -61,8 +70,13 @@ type
     
     function Clone: TStepResult;
     
+    /// <summary>释放 Output 所有权，返回 Output 并清除引用</summary>
+    function ReleaseOutput: TJSONValue;
+    
     property Success: Boolean read FSuccess write FSuccess;
-    property Output: TJSONValue read FOutput write FOutput;
+    property Output: TJSONValue read FOutput write SetOutput;
+    /// <summary>CODE-001: 是否拥有 Output 的所有权，默认 True</summary>
+    property OwnsOutput: Boolean read FOwnsOutput write FOwnsOutput;
     property ErrorCode: string read FErrorCode write FErrorCode;
     property ErrorMessage: string read FErrorMessage write FErrorMessage;
     property NextStepId: string read FNextStepId write FNextStepId;
@@ -246,13 +260,32 @@ begin
   inherited Create;
   FSuccess := True;
   FNeedsWait := False;
+  FOwnsOutput := True;  // CODE-001: 默认拥有所有权
 end;
 
 destructor TStepResult.Destroy;
 begin
-  FOutput.Free;
+  // CODE-001: 仅在拥有所有权时释放
+  if FOwnsOutput then
+    FOutput.Free;
   FWaitData.Free;
   inherited;
+end;
+
+procedure TStepResult.SetOutput(AValue: TJSONValue);
+begin
+  // CODE-001: 设置新值前释放旧值
+  if FOwnsOutput and (FOutput <> AValue) then
+    FOutput.Free;
+  FOutput := AValue;
+end;
+
+function TStepResult.ReleaseOutput: TJSONValue;
+begin
+  // CODE-001: 释放所有权并返回
+  Result := FOutput;
+  FOutput := nil;
+  FOwnsOutput := False;
 end;
 
 class function TStepResult.OK(AOutput: TJSONValue): TStepResult;
@@ -293,6 +326,7 @@ begin
   Result.FSuccess := FSuccess;
   if Assigned(FOutput) then
     Result.FOutput := FOutput.Clone as TJSONValue;
+  Result.FOwnsOutput := True;  // CODE-001: 克隆的结果拥有所有权
   Result.FErrorCode := FErrorCode;
   Result.FErrorMessage := FErrorMessage;
   Result.FNextStepId := FNextStepId;
@@ -674,33 +708,43 @@ function TWorkflowExecutor.ExecuteAction(AStep: TWorkflowStep): TStepResult;
 var
   Executor: IActionExecutor;
 begin
-  // 查找能处理此动作类型的执行器
-  for Executor in FActionExecutors do
-  begin
-    if Executor.CanHandle(AStep.Action.ActionType) then
+  Result := nil;  // CODE-003: 初始化
+  try
+    // 查找能处理此动作类型的执行器
+    for Executor in FActionExecutors do
     begin
-      Result := Executor.Execute(AStep.Action, FContext);
-      Exit;
+      if Executor.CanHandle(AStep.Action.ActionType) then
+      begin
+        Result := Executor.Execute(AStep.Action, FContext);
+        Exit;
+      end;
     end;
-  end;
-  
-  // 默认处理
-  case AStep.Action.ActionType of
-    atSkill:
-      Result := TStepResult.Fail('SKILL_NOT_IMPLEMENTED', 
-        Format('Skill executor not registered for: %s', [AStep.Action.SkillId]));
-    atLLM:
-      Result := TStepResult.Fail('LLM_NOT_IMPLEMENTED', 
-        'LLM executor not registered');
-    atHttp:
-      Result := TStepResult.Fail('HTTP_NOT_IMPLEMENTED', 
-        'HTTP executor not registered');
-    atScript:
-      Result := TStepResult.Fail('SCRIPT_NOT_IMPLEMENTED', 
-        'Script executor not registered');
-  else
-    Result := TStepResult.Fail('ACTION_NOT_HANDLED', 
-      Format('No executor for action type: %s', [ActionTypeToStr(AStep.Action.ActionType)]));
+    
+    // 默认处理
+    case AStep.Action.ActionType of
+      atSkill:
+        Result := TStepResult.Fail('SKILL_NOT_IMPLEMENTED', 
+          Format('Skill executor not registered for: %s', [AStep.Action.SkillId]));
+      atLLM:
+        Result := TStepResult.Fail('LLM_NOT_IMPLEMENTED', 
+          'LLM executor not registered');
+      atHttp:
+        Result := TStepResult.Fail('HTTP_NOT_IMPLEMENTED', 
+          'HTTP executor not registered');
+      atScript:
+        Result := TStepResult.Fail('SCRIPT_NOT_IMPLEMENTED', 
+          'Script executor not registered');
+    else
+      Result := TStepResult.Fail('ACTION_NOT_HANDLED', 
+        Format('No executor for action type: %s', [ActionTypeToStr(AStep.Action.ActionType)]));
+    end;
+  except
+    on E: Exception do
+    begin
+      // CODE-003: 异常时释放已创建的结果
+      FreeAndNil(Result);
+      Result := TStepResult.Fail('EXECUTION_ERROR', E.Message);
+    end;
   end;
 end;
 
@@ -716,60 +760,68 @@ begin
   SelectedBranch := nil;
   DefaultBranch := nil;
   
-  // 求值条件表达式
-  ExprValue := FContext.ResolveString(AStep.Expression);
-  
-  // 查找匹配的分支
-  for Branch in AStep.Branches do
-  begin
-    if Branch.IsDefault then
-    begin
-      DefaultBranch := Branch;
-      Continue;
-    end;
+  try  // CODE-003: 资源释放保护
+    // 求值条件表达式
+    ExprValue := FContext.ResolveString(AStep.Expression);
     
-    if EvaluateBranch(Branch, ExprValue) then
+    // 查找匹配的分支
+    for Branch in AStep.Branches do
     begin
-      SelectedBranch := Branch;
-      Break;
-    end;
-  end;
-  
-  // 使用默认分支
-  if (SelectedBranch = nil) and (DefaultBranch <> nil) then
-    SelectedBranch := DefaultBranch;
-  
-  if SelectedBranch = nil then
-    Exit(TStepResult.OK);
-  
-  // 执行选中分支的步骤
-  FContext.PushScope(vsStep, AStep.Id + '.branch');
-  try
-    for SubStep in SelectedBranch.Steps do
-    begin
-      if FCancelled then Break;
-      
-      if Assigned(SubStep.Condition) then
+      if Branch.IsDefault then
       begin
-        if not FEvaluator.Evaluate(SubStep.Condition) then
-          Continue;
+        DefaultBranch := Branch;
+        Continue;
       end;
       
-      Result := ExecuteStep(SubStep);
-      
-      if not Result.Success or Result.NeedsWait then
-        Exit;
-      
-      SaveStepOutput(SubStep, Result);
-      Result.Free;
-      Result := nil;
+      if EvaluateBranch(Branch, ExprValue) then
+      begin
+        SelectedBranch := Branch;
+        Break;
+      end;
     end;
-  finally
-    FContext.PopScope;
+    
+    // 使用默认分支
+    if (SelectedBranch = nil) and (DefaultBranch <> nil) then
+      SelectedBranch := DefaultBranch;
+    
+    if SelectedBranch = nil then
+      Exit(TStepResult.OK);
+    
+    // 执行选中分支的步骤
+    FContext.PushScope(vsStep, AStep.Id + '.branch');
+    try
+      for SubStep in SelectedBranch.Steps do
+      begin
+        if FCancelled then Break;
+        
+        if Assigned(SubStep.Condition) then
+        begin
+          if not FEvaluator.Evaluate(SubStep.Condition) then
+            Continue;
+        end;
+        
+        Result := ExecuteStep(SubStep);
+        
+        if not Result.Success or Result.NeedsWait then
+          Exit;
+        
+        SaveStepOutput(SubStep, Result);
+        FreeAndNil(Result);  // CODE-003: 使用 FreeAndNil
+      end;
+    finally
+      FContext.PopScope;
+    end;
+    
+    if Result = nil then
+      Result := TStepResult.OK;
+  except
+    on E: Exception do
+    begin
+      // CODE-003: 异常时释放已创建的结果
+      FreeAndNil(Result);
+      Result := TStepResult.Fail('CONDITION_ERROR', E.Message);
+    end;
   end;
-  
-  if Result = nil then
-    Result := TStepResult.OK;
 end;
 
 function TWorkflowExecutor.EvaluateBranch(ABranch: TConditionBranch; const AExprValue: string): Boolean;
@@ -1093,11 +1145,67 @@ begin
 end;
 
 function TWorkflowExecutor.ExecuteSubWorkflow(AStep: TWorkflowStep): TStepResult;
+var
+  SubContext: TWorkflowContext;
+  SubExecutor: TWorkflowExecutor;
+  SubWorkflow: TWorkflowDefinition;
 begin
-  // TODO: 实现子工作流执行
-  // 需要加载子工作流定义并创建新的执行器
-  Result := TStepResult.Fail('SUBWORKFLOW_NOT_IMPLEMENTED', 
-    Format('SubWorkflow execution not implemented: %s', [AStep.SubWorkflowId]));
+  // CODE-005: 子工作流使用克隆的独立上下文，避免变量污染
+  Result := nil;
+  SubContext := nil;
+  SubExecutor := nil;
+  
+  try
+    // 加载子工作流定义 (实际应该从仓库加载)
+    SubWorkflow := nil;  // TODO: WorkflowRepository.Load(AStep.SubWorkflowId)
+    if SubWorkflow = nil then
+    begin
+      Result := TStepResult.Fail('SUBWORKFLOW_NOT_FOUND', 
+        Format('SubWorkflow not found: %s', [AStep.SubWorkflowId]));
+      Exit;
+    end;
+    
+    // CODE-005: 创建独立的子上下文，仅复制必要的输入变量
+    SubContext := TWorkflowContext.Create(AStep.SubWorkflowId, TGUID.NewGuid.ToString);
+    SubContext.CorrelationId := FContext.CorrelationId;  // 保持关联 ID
+    SubContext.UserId := FContext.UserId;
+    
+    // 仅复制明确传递的输入参数，而非整个上下文
+    if Assigned(AStep.Action) and Assigned(AStep.Action.Params) then
+    begin
+      for var I := 0 to AStep.Action.Params.Count - 1 do
+      begin
+        var Pair := AStep.Action.Params.Pairs[I];
+        var ResolvedValue := FContext.ResolveString(Pair.JsonValue.Value);
+        SubContext.SetVariable(Pair.JsonString.Value, ResolvedValue);
+      end;
+    end;
+    
+    // 创建子执行器
+    SubExecutor := TWorkflowExecutor.Create(SubWorkflow, SubContext);
+    try
+      // 注册相同的动作执行器
+      for var Executor in FActionExecutors do
+        SubExecutor.RegisterActionExecutor(Executor);
+      
+      // 执行子工作流
+      Result := SubExecutor.Start;
+      
+      // CODE-005: 子工作流结果不会自动合并到父上下文
+      // 仅通过明确的输出配置传递结果
+    finally
+      SubExecutor.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      FreeAndNil(Result);
+      Result := TStepResult.Fail('SUBWORKFLOW_ERROR', E.Message);
+    end;
+  end;
+  
+  // CODE-005: 子上下文在这里释放，不会污染父上下文
+  SubContext.Free;
 end;
 
 function TWorkflowExecutor.HandleStepError(AStep: TWorkflowStep; AResult: TStepResult): TStepResult;

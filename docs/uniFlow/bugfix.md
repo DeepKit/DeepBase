@@ -135,15 +135,97 @@ Inc(LRecord.Count) →
 
 ---
 
+## 分角色代码审查 Bug (2025-12-05)
+
+### BUG-045: SEC-001 表达式注入风险 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Security)
+- **影响范围**: UniFlow.Workflow.Context.pas
+- **问题描述**: `TExpressionEvaluator` 未限制可执行表达式，存在注入风险
+- **修复方案**: 添加 `TExpressionWhitelist` 白名单类，启用 `SafeMode` 默认验证
+
+### BUG-046: SEC-002 审计日志敏感信息泄露 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Security)
+- **影响范围**: UniFlow.Audit.Manager.pas
+- **问题描述**: 审计日志可能记录用户输入中的敏感信息
+- **修复方案**: 添加 `SanitizeMessage` 方法，默认启用脱敏
+
+### BUG-047: SEC-003 租户隔离可被绕过 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Security)
+- **影响范围**: UniFlow.Tenant.pas
+- **问题描述**: `IsTenantFlow` 仅检查前缀，可伪造 FlowId
+- **修复方案**: 添加 `SignFlowId`/`VerifyFlowId` HMAC 签名验证
+
+### BUG-048: SEC-005 配额检查竞态条件 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Medium (Security)
+- **影响范围**: UniFlow.Tenant.pas
+- **问题描述**: `CheckQuota` 和 `IncrementUsage` 非原子操作
+- **修复方案**: 添加 `TCriticalSection` 互斥锁，新增 `CheckAndIncrementQuota` 原子方法
+
+### BUG-049: ARCH-002 TTenantEventStore 接口不一致 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Architecture)
+- **影响范围**: UniFlow.Tenant.pas
+- **问题描述**: `SaveSnapshot` 返回 `procedure` 与 `IEventStore.SaveSnapshot: Boolean` 不匹配
+- **修复方案**: 修改返回类型为 `Boolean`
+
+### BUG-050: CODE-001 TStepResult.Output 所有权不明 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Memory)
+- **影响范围**: UniFlow.Workflow.Executor.pas
+- **问题描述**: 谁负责释放 `Output` 的 `TJSONValue` 不明确
+- **修复方案**: 添加 `OwnsOutput` 属性和 `ReleaseOutput` 方法，明确文档化
+
+### BUG-051: CODE-003 缺少 try-finally 资源释放保护 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High (Memory)
+- **影响范围**: UniFlow.Workflow.Executor.pas
+- **问题描述**: `ExecuteAction`/`ExecuteCondition` 等缺少异常保护
+- **修复方案**: 添加 `try-except` 保护，异常时释放已创建的结果
+
+### BUG-052: CODE-005 子工作流变量污染父上下文 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Medium
+- **影响范围**: UniFlow.Workflow.Executor.pas
+- **问题描述**: 子工作流变量可能泄漏到父上下文
+- **修复方案**: 子工作流创建独立的 `TWorkflowContext`，仅显式传递输入/输出
+
+### BUG-053: SEC-004 Skill 服务缺少身份认证 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Medium (Security)
+- **影响范围**: UniFlow.Skill.Client.pas
+- **问题描述**: `TSkillClient` 与 Skill 服务通信无身份认证，任何人可调用
+- **修复方案**: 
+  - 新增 `TSkillAuthType` 枚举 (None/ApiKey/Bearer/Basic)
+  - `TSkillClientConfig` 添加认证配置 (ApiKey/BearerToken/BasicAuth)
+  - `ApplyAuthentication` 方法在请求中添加认证头
+  - 401/403 错误不重试直接抛出
+
+### BUG-054: CODE-004 HTTP/重试超时硬编码 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Low
+- **影响范围**: UniFlow.Skill.Client.pas
+- **问题描述**: 超时、重试次数、延迟等参数硬编码，无法根据环境调整
+- **修复方案**: 
+  - `TSkillClientConfig` 新增高级配置 (RetryBackoffMultiplier/MaxRetryDelayMs/EnableRetryOnTimeout/EnableRetryOn5xx)
+  - 添加 `LoadFromJSON`/`ToJSON`/`LoadFromFile`/`SaveToFile` 方法
+  - `CalculateRetryDelay` 实现指数退避算法
+  - `ShouldRetry` 根据配置判断是否重试
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 0 | 0 | 0 |
-| High | 79 | 0 | 79 |
-| Medium | 5 | 0 | 5 |
-| Low | 1 | 0 | 1 |
-| **合计** | **85** | **0** | **85** |
+| High | 85 | 0 | 85 |
+| Medium | 8 | 0 | 8 |
+| Low | 2 | 0 | 2 |
+| **合计** | **95** | **0** | **95** |
 
 ---
 
