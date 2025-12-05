@@ -1,6 +1,6 @@
 unit UniBase.Graph;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase Graph Data Structure
   A comprehensive graph implementation with:
   - Generic graph structure (directed/undirected)
@@ -15,13 +15,13 @@ unit UniBase.Graph;
   
   Author: UniBase Team
   Created: 2025-11-29
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.Generics.Defaults, System.SyncObjs;
+  System.Generics.Defaults, System.SyncObjs, System.Math, System.Rtti;
 
 type
   EGraphException = class(Exception);
@@ -1125,56 +1125,16 @@ var
   LParent: TDictionary<T, T>;
   LCycle: TList<T>;
   LFound: Boolean;
-  
-  function DFSCycle(const ANode: T): Boolean;
-  var
-    LNeighbors: TNodeList;
-    LNeighbor, LCurrent: T;
-  begin
-    Result := False;
-    LVisited[ANode] := True;
-    LRecStack[ANode] := True;
-    
-    LNeighbors := GetNeighbors(ANode);
-    if Assigned(LNeighbors) then
-    begin
-      for LNeighbor in LNeighbors do
-      begin
-        if not LVisited.ContainsKey(LNeighbor) or not LVisited[LNeighbor] then
-        begin
-          LParent.AddOrSetValue(LNeighbor, ANode);
-          if DFSCycle(LNeighbor) then
-            Exit(True);
-        end
-        else if LRecStack.ContainsKey(LNeighbor) and LRecStack[LNeighbor] then
-        begin
-          // Found cycle, reconstruct it
-          LCycle.Clear;
-          LCurrent := ANode;
-          LCycle.Add(LNeighbor);
-          while not FComparer.Equals(LCurrent, LNeighbor) do
-          begin
-            LCycle.Insert(0, LCurrent);
-            if LParent.ContainsKey(LCurrent) then
-              LCurrent := LParent[LCurrent]
-            else
-              Break;
-          end;
-          LCycle.Insert(0, LNeighbor);
-          Exit(True);
-        end;
-      end;
-    end;
-    
-    LRecStack[ANode] := False;
-  end;
-  
+  LStack: TStack<T>;
+  LCurrent, LNeighbor, LTemp: T;
+  LNeighbors: TNodeList;
 begin
   Result := nil;
   LVisited := TDictionary<T, Boolean>.Create(FComparer);
   LRecStack := TDictionary<T, Boolean>.Create(FComparer);
   LParent := TDictionary<T, T>.Create(FComparer);
   LCycle := TList<T>.Create;
+  LStack := TStack<T>.Create;
   try
     for var LNode in FNodes do
     begin
@@ -1187,17 +1147,67 @@ begin
     begin
       if not LVisited[LNode] then
       begin
-        if DFSCycle(LNode) then
+        // Iterative DFS for cycle detection
+        LStack.Clear;
+        LStack.Push(LNode);
+        
+        while (LStack.Count > 0) and (not LFound) do
         begin
-          LFound := True;
-          Break;
+          LCurrent := LStack.Pop;
+          
+          if not LVisited[LCurrent] then
+          begin
+            LVisited[LCurrent] := True;
+            LRecStack[LCurrent] := True;
+            LStack.Push(LCurrent); // Push back for post-processing
+            
+            LNeighbors := GetNeighbors(LCurrent);
+            if Assigned(LNeighbors) then
+            begin
+              for LNeighbor in LNeighbors do
+              begin
+                if not LVisited[LNeighbor] then
+                begin
+                  LParent.AddOrSetValue(LNeighbor, LCurrent);
+                  LStack.Push(LNeighbor);
+                end
+                else if LRecStack.ContainsKey(LNeighbor) and LRecStack[LNeighbor] then
+                begin
+                  // Found cycle
+                  LCycle.Clear;
+                  LTemp := LCurrent;
+                  LCycle.Add(LNeighbor);
+                  while not FComparer.Equals(LTemp, LNeighbor) do
+                  begin
+                    LCycle.Insert(0, LTemp);
+                    if LParent.ContainsKey(LTemp) then
+                      LTemp := LParent[LTemp]
+                    else
+                      Break;
+                  end;
+                  LCycle.Insert(0, LNeighbor);
+                  LFound := True;
+                  Break;
+                end;
+              end;
+            end;
+          end
+          else
+          begin
+            // Post-processing: remove from recursion stack
+            LRecStack[LCurrent] := False;
+          end;
         end;
+        
+        if LFound then
+          Break;
       end;
     end;
     
     if LFound then
       Result := LCycle.ToArray;
   finally
+    LStack.Free;
     LCycle.Free;
     LParent.Free;
     LRecStack.Free;
@@ -1208,21 +1218,41 @@ end;
 function TGraph<T>.IsConnected: Boolean;
 var
   LVisited: TDictionary<T, Boolean>;
+  LQueue: TQueue<T>;
+  LCurrent: T;
+  LNeighbors: TNodeList;
+  LNeighbor: T;
 begin
   Result := False;
   if FNodes.Count = 0 then
     Exit(True);
     
   LVisited := TDictionary<T, Boolean>.Create(FComparer);
+  LQueue := TQueue<T>.Create;
   try
-    BFS(FNodes[0],
-      procedure(const ANode: T; var AContinue: Boolean)
+    LQueue.Enqueue(FNodes[0]);
+    LVisited.Add(FNodes[0], True);
+    
+    while LQueue.Count > 0 do
+    begin
+      LCurrent := LQueue.Dequeue;
+      LNeighbors := GetNeighbors(LCurrent);
+      if Assigned(LNeighbors) then
       begin
-        LVisited.Add(ANode, True);
-        AContinue := True;
-      end);
+        for LNeighbor in LNeighbors do
+        begin
+          if not LVisited.ContainsKey(LNeighbor) then
+          begin
+            LVisited.Add(LNeighbor, True);
+            LQueue.Enqueue(LNeighbor);
+          end;
+        end;
+      end;
+    end;
+    
     Result := LVisited.Count = FNodes.Count;
   finally
+    LQueue.Free;
     LVisited.Free;
   end;
 end;
@@ -1232,9 +1262,13 @@ var
   LVisited: TDictionary<T, Boolean>;
   LComponents: TList<TArray<T>>;
   LComponent: TList<T>;
+  LQueue: TQueue<T>;
+  LCurrent, LNeighbor: T;
+  LNeighbors: TNodeList;
 begin
   LVisited := TDictionary<T, Boolean>.Create(FComparer);
   LComponents := TList<TArray<T>>.Create;
+  LQueue := TQueue<T>.Create;
   try
     for var LNode in FNodes do
     begin
@@ -1242,13 +1276,29 @@ begin
       begin
         LComponent := TList<T>.Create;
         try
-          BFS(LNode,
-            procedure(const AVisitNode: T; var AContinue: Boolean)
+          LQueue.Clear;
+          LQueue.Enqueue(LNode);
+          LVisited.Add(LNode, True);
+          LComponent.Add(LNode);
+          
+          while LQueue.Count > 0 do
+          begin
+            LCurrent := LQueue.Dequeue;
+            LNeighbors := GetNeighbors(LCurrent);
+            if Assigned(LNeighbors) then
             begin
-              LVisited.Add(AVisitNode, True);
-              LComponent.Add(AVisitNode);
-              AContinue := True;
-            end);
+              for LNeighbor in LNeighbors do
+              begin
+                if not LVisited.ContainsKey(LNeighbor) then
+                begin
+                  LVisited.Add(LNeighbor, True);
+                  LComponent.Add(LNeighbor);
+                  LQueue.Enqueue(LNeighbor);
+                end;
+              end;
+            end;
+          end;
+          
           LComponents.Add(LComponent.ToArray);
         finally
           LComponent.Free;
@@ -1257,6 +1307,7 @@ begin
     end;
     Result := LComponents.ToArray;
   finally
+    LQueue.Free;
     LComponents.Free;
     LVisited.Free;
   end;
@@ -1265,64 +1316,75 @@ end;
 function TGraph<T>.StronglyConnectedComponents: TArray<TArray<T>>;
 var
   LVisited: TDictionary<T, Boolean>;
-  LStack: TStack<T>;
+  LStack, LDFSStack: TStack<T>;
+  LFinishOrder: TStack<T>;
   LTransposed: TGraph<T>;
   LComponents: TList<TArray<T>>;
   LComponent: TList<T>;
-  
-  procedure FillOrder(const ANode: T);
-  var
-    LNeighbors: TNodeList;
-    LNeighbor: T;
-  begin
-    LVisited[ANode] := True;
-    LNeighbors := GetNeighbors(ANode);
-    if Assigned(LNeighbors) then
-    begin
-      for LNeighbor in LNeighbors do
-      begin
-        if not LVisited[LNeighbor] then
-          FillOrder(LNeighbor);
-      end;
-    end;
-    LStack.Push(ANode);
-  end;
-  
-  procedure DFSUtil(const ANode: T);
-  var
-    LNeighbors: TNodeList;
-    LNeighbor: T;
-  begin
-    LVisited[ANode] := True;
-    LComponent.Add(ANode);
-    LNeighbors := LTransposed.GetNeighbors(ANode);
-    if Assigned(LNeighbors) then
-    begin
-      for LNeighbor in LNeighbors do
-      begin
-        if not LVisited[LNeighbor] then
-          DFSUtil(LNeighbor);
-      end;
-    end;
-  end;
-  
+  LCurrent, LNeighbor: T;
+  LNeighbors: TNodeList;
+  LInProcess: TDictionary<T, Boolean>;
 begin
   if not FDirected then
     Exit(ConnectedComponents);
     
   LVisited := TDictionary<T, Boolean>.Create(FComparer);
   LStack := TStack<T>.Create;
+  LFinishOrder := TStack<T>.Create;
+  LDFSStack := TStack<T>.Create;
+  LInProcess := TDictionary<T, Boolean>.Create(FComparer);
   LComponents := TList<TArray<T>>.Create;
   try
     // Initialize visited
     for var LNode in FNodes do
       LVisited.Add(LNode, False);
       
-    // Fill stack
+    // Iterative FillOrder DFS
     for var LNode in FNodes do
     begin
       if not LVisited[LNode] then
-        FillOrder(LNode);
+      begin
+        LDFSStack.Clear;
+        LInProcess.Clear;
+        LDFSStack.Push(LNode);
+        
+        while LDFSStack.Count > 0 do
+        begin
+          LCurrent := LDFSStack.Peek;
+          
+          if not LVisited[LCurrent] then
+          begin
+            LVisited[LCurrent] := True;
+            LInProcess.AddOrSetValue(LCurrent, True);
+          end;
+          
+          // Find unvisited neighbor
+          LNeighbors := GetNeighbors(LCurrent);
+          var LFoundUnvisited := False;
+          if Assigned(LNeighbors) then
+          begin
+            for LNeighbor in LNeighbors do
+            begin
+              if not LVisited[LNeighbor] then
+              begin
+                LDFSStack.Push(LNeighbor);
+                LFoundUnvisited := True;
+                Break;
+              end;
+            end;
+          end;
+          
+          if not LFoundUnvisited then
+          begin
+            LDFSStack.Pop;
+            if LInProcess.ContainsKey(LCurrent) and LInProcess[LCurrent] then
+            begin
+              LFinishOrder.Push(LCurrent);
+              LInProcess[LCurrent] := False;
+            end;
+          end;
+        end;
+      end;
     end;
     
     // Create transposed graph
@@ -1332,15 +1394,38 @@ begin
       for var LNode in FNodes do
         LVisited[LNode] := False;
         
-      // Process in order of finish times
-      while LStack.Count > 0 do
+      // Process in order of finish times (iterative DFS on transposed)
+      while LFinishOrder.Count > 0 do
       begin
-        var LNode := LStack.Pop;
+        var LNode := LFinishOrder.Pop;
         if not LVisited[LNode] then
         begin
           LComponent := TList<T>.Create;
           try
-            DFSUtil(LNode);
+            // Iterative DFS on transposed graph
+            LDFSStack.Clear;
+            LDFSStack.Push(LNode);
+            
+            while LDFSStack.Count > 0 do
+            begin
+              LCurrent := LDFSStack.Pop;
+              if not LVisited[LCurrent] then
+              begin
+                LVisited[LCurrent] := True;
+                LComponent.Add(LCurrent);
+                
+                LNeighbors := LTransposed.GetNeighbors(LCurrent);
+                if Assigned(LNeighbors) then
+                begin
+                  for LNeighbor in LNeighbors do
+                  begin
+                    if not LVisited[LNeighbor] then
+                      LDFSStack.Push(LNeighbor);
+                  end;
+                end;
+              end;
+            end;
+            
             LComponents.Add(LComponent.ToArray);
           finally
             LComponent.Free;
@@ -1353,6 +1438,9 @@ begin
     
     Result := LComponents.ToArray;
   finally
+    LInProcess.Free;
+    LDFSStack.Free;
+    LFinishOrder.Free;
     LComponents.Free;
     LStack.Free;
     LVisited.Free;
@@ -1361,37 +1449,95 @@ end;
 
 function TGraph<T>.IsReachable(const AFrom, ATo: T): Boolean;
 var
-  LFound: Boolean;
+  LVisited: TDictionary<T, Boolean>;
+  LQueue: TQueue<T>;
+  LCurrent, LNeighbor: T;
+  LNeighbors: TNodeList;
 begin
-  LFound := False;
-  BFS(AFrom,
-    procedure(const ANode: T; var AContinue: Boolean)
+  Result := False;
+  if not HasNode(AFrom) or not HasNode(ATo) then
+    Exit;
+    
+  if FComparer.Equals(AFrom, ATo) then
+    Exit(True);
+    
+  LVisited := TDictionary<T, Boolean>.Create(FComparer);
+  LQueue := TQueue<T>.Create;
+  try
+    LQueue.Enqueue(AFrom);
+    LVisited.Add(AFrom, True);
+    
+    while LQueue.Count > 0 do
     begin
-      if FComparer.Equals(ANode, ATo) then
+      LCurrent := LQueue.Dequeue;
+      LNeighbors := GetNeighbors(LCurrent);
+      if Assigned(LNeighbors) then
       begin
-        LFound := True;
-        AContinue := False;
-      end
-      else
-        AContinue := True;
-    end);
-  Result := LFound;
+        for LNeighbor in LNeighbors do
+        begin
+          if FComparer.Equals(LNeighbor, ATo) then
+          begin
+            Result := True;
+            Exit;
+          end;
+          if not LVisited.ContainsKey(LNeighbor) then
+          begin
+            LVisited.Add(LNeighbor, True);
+            LQueue.Enqueue(LNeighbor);
+          end;
+        end;
+      end;
+    end;
+  finally
+    LQueue.Free;
+    LVisited.Free;
+  end;
 end;
 
 function TGraph<T>.ReachableFrom(const ANode: T): TArray<T>;
 var
   LReachable: TList<T>;
+  LVisited: TDictionary<T, Boolean>;
+  LQueue: TQueue<T>;
+  LCurrent, LNeighbor: T;
+  LNeighbors: TNodeList;
 begin
   LReachable := TList<T>.Create;
+  LVisited := TDictionary<T, Boolean>.Create(FComparer);
+  LQueue := TQueue<T>.Create;
   try
-    BFS(ANode,
-      procedure(const AVisitNode: T; var AContinue: Boolean)
+    if not HasNode(ANode) then
+    begin
+      Result := nil;
+      Exit;
+    end;
+    
+    LQueue.Enqueue(ANode);
+    LVisited.Add(ANode, True);
+    LReachable.Add(ANode);
+    
+    while LQueue.Count > 0 do
+    begin
+      LCurrent := LQueue.Dequeue;
+      LNeighbors := GetNeighbors(LCurrent);
+      if Assigned(LNeighbors) then
       begin
-        LReachable.Add(AVisitNode);
-        AContinue := True;
-      end);
+        for LNeighbor in LNeighbors do
+        begin
+          if not LVisited.ContainsKey(LNeighbor) then
+          begin
+            LVisited.Add(LNeighbor, True);
+            LReachable.Add(LNeighbor);
+            LQueue.Enqueue(LNeighbor);
+          end;
+        end;
+      end;
+    end;
+    
     Result := LReachable.ToArray;
   finally
+    LQueue.Free;
+    LVisited.Free;
     LReachable.Free;
   end;
 end;
@@ -1813,16 +1959,33 @@ end;
 
 function TTree<T>.Find(const AValue: T): TTreeNode<T>;
 var
-  LFound: TTreeNode<T>;
+  LStack: TStack<TTreeNode<T>>;
+  LCurrent: TTreeNode<T>;
+  I: Integer;
+  LComparer: IEqualityComparer<T>;
 begin
-  LFound := nil;
-  Traverse(ttoPreOrder,
-    procedure(const ANodeValue: T; var AContinue: Boolean)
+  Result := nil;
+  if not Assigned(FRoot) then
+    Exit;
+    
+  LComparer := TEqualityComparer<T>.Default;
+  LStack := TStack<TTreeNode<T>>.Create;
+  try
+    LStack.Push(FRoot);
+    while LStack.Count > 0 do
     begin
-      // Note: This simplified implementation doesn't properly track nodes
-      AContinue := True;
-    end);
-  Result := LFound;
+      LCurrent := LStack.Pop;
+      if LComparer.Equals(LCurrent.Value, AValue) then
+      begin
+        Result := LCurrent;
+        Exit;
+      end;
+      for I := LCurrent.FChildren.Count - 1 downto 0 do
+        LStack.Push(LCurrent.FChildren[I]);
+    end;
+  finally
+    LStack.Free;
+  end;
 end;
 
 function TTree<T>.Contains(const AValue: T): Boolean;
@@ -1833,68 +1996,192 @@ end;
 procedure TTree<T>.Traverse(AOrder: TTreeTraversalOrder; AVisitor: TGraphVisitor<T>);
 var
   LContinue: Boolean;
-  
-  procedure PreOrder(ANode: TTreeNode<T>);
-  begin
-    if not Assigned(ANode) or not LContinue then
-      Exit;
-    AVisitor(ANode.Value, LContinue);
-    for var LChild in ANode.FChildren do
-      PreOrder(LChild);
-  end;
-  
-  procedure PostOrder(ANode: TTreeNode<T>);
-  begin
-    if not Assigned(ANode) or not LContinue then
-      Exit;
-    for var LChild in ANode.FChildren do
-      PostOrder(LChild);
-    AVisitor(ANode.Value, LContinue);
-  end;
-  
-  procedure LevelOrder(ANode: TTreeNode<T>);
-  var
-    LQueue: TQueue<TTreeNode<T>>;
-    LCurrent: TTreeNode<T>;
-  begin
-    if not Assigned(ANode) then
-      Exit;
-    LQueue := TQueue<TTreeNode<T>>.Create;
-    try
-      LQueue.Enqueue(ANode);
-      while (LQueue.Count > 0) and LContinue do
-      begin
-        LCurrent := LQueue.Dequeue;
-        AVisitor(LCurrent.Value, LContinue);
-        for var LChild in LCurrent.FChildren do
-          LQueue.Enqueue(LChild);
-      end;
-    finally
-      LQueue.Free;
-    end;
-  end;
-  
+  LStack: TStack<TTreeNode<T>>;
+  LQueue: TQueue<TTreeNode<T>>;
+  LCurrent: TTreeNode<T>;
+  LVisited: TDictionary<TTreeNode<T>, Boolean>;
+  LAllChildrenVisited: Boolean;
+  I: Integer;
 begin
+  if not Assigned(FRoot) then
+    Exit;
+    
   LContinue := True;
+  
   case AOrder of
-    ttoPreOrder: PreOrder(FRoot);
-    ttoPostOrder: PostOrder(FRoot);
-    ttoLevelOrder: LevelOrder(FRoot);
+    ttoPreOrder:
+    begin
+      // Iterative pre-order using stack
+      LStack := TStack<TTreeNode<T>>.Create;
+      try
+        LStack.Push(FRoot);
+        while (LStack.Count > 0) and LContinue do
+        begin
+          LCurrent := LStack.Pop;
+          AVisitor(LCurrent.Value, LContinue);
+          // Push children in reverse order for correct traversal
+          for I := LCurrent.FChildren.Count - 1 downto 0 do
+            LStack.Push(LCurrent.FChildren[I]);
+        end;
+      finally
+        LStack.Free;
+      end;
+    end;
+    
+    ttoPostOrder:
+    begin
+      // Iterative post-order using stack and visited tracking
+      LStack := TStack<TTreeNode<T>>.Create;
+      LVisited := TDictionary<TTreeNode<T>, Boolean>.Create;
+      try
+        LStack.Push(FRoot);
+        while (LStack.Count > 0) and LContinue do
+        begin
+          LCurrent := LStack.Peek;
+          
+          // Check if all children visited
+          LAllChildrenVisited := True;
+          for I := 0 to LCurrent.FChildren.Count - 1 do
+          begin
+            if not LVisited.ContainsKey(LCurrent.FChildren[I]) then
+            begin
+              LAllChildrenVisited := False;
+              Break;
+            end;
+          end;
+          
+          if (LCurrent.FChildren.Count = 0) or LAllChildrenVisited then
+          begin
+            LStack.Pop;
+            LVisited.AddOrSetValue(LCurrent, True);
+            AVisitor(LCurrent.Value, LContinue);
+          end
+          else
+          begin
+            // Push children in reverse order
+            for I := LCurrent.FChildren.Count - 1 downto 0 do
+            begin
+              if not LVisited.ContainsKey(LCurrent.FChildren[I]) then
+                LStack.Push(LCurrent.FChildren[I]);
+            end;
+          end;
+        end;
+      finally
+        LVisited.Free;
+        LStack.Free;
+      end;
+    end;
+    
+    ttoLevelOrder:
+    begin
+      // Iterative level-order using queue
+      LQueue := TQueue<TTreeNode<T>>.Create;
+      try
+        LQueue.Enqueue(FRoot);
+        while (LQueue.Count > 0) and LContinue do
+        begin
+          LCurrent := LQueue.Dequeue;
+          AVisitor(LCurrent.Value, LContinue);
+          for I := 0 to LCurrent.FChildren.Count - 1 do
+            LQueue.Enqueue(LCurrent.FChildren[I]);
+        end;
+      finally
+        LQueue.Free;
+      end;
+    end;
   end;
 end;
 
 function TTree<T>.ToArray(AOrder: TTreeTraversalOrder): TArray<T>;
 var
   LList: TList<T>;
+  LStack: TStack<TTreeNode<T>>;
+  LQueue: TQueue<TTreeNode<T>>;
+  LCurrent: TTreeNode<T>;
+  LVisited: TDictionary<TTreeNode<T>, Boolean>;
+  LAllChildrenVisited: Boolean;
+  I: Integer;
 begin
   LList := TList<T>.Create;
   try
-    Traverse(AOrder,
-      procedure(const AValue: T; var AContinue: Boolean)
-      begin
-        LList.Add(AValue);
-        AContinue := True;
-      end);
+    if Assigned(FRoot) then
+    begin
+      case AOrder of
+        ttoPreOrder:
+        begin
+          LStack := TStack<TTreeNode<T>>.Create;
+          try
+            LStack.Push(FRoot);
+            while LStack.Count > 0 do
+            begin
+              LCurrent := LStack.Pop;
+              LList.Add(LCurrent.Value);
+              for I := LCurrent.FChildren.Count - 1 downto 0 do
+                LStack.Push(LCurrent.FChildren[I]);
+            end;
+          finally
+            LStack.Free;
+          end;
+        end;
+        
+        ttoPostOrder:
+        begin
+          LStack := TStack<TTreeNode<T>>.Create;
+          LVisited := TDictionary<TTreeNode<T>, Boolean>.Create;
+          try
+            LStack.Push(FRoot);
+            while LStack.Count > 0 do
+            begin
+              LCurrent := LStack.Peek;
+              LAllChildrenVisited := True;
+              for I := 0 to LCurrent.FChildren.Count - 1 do
+              begin
+                if not LVisited.ContainsKey(LCurrent.FChildren[I]) then
+                begin
+                  LAllChildrenVisited := False;
+                  Break;
+                end;
+              end;
+              
+              if (LCurrent.FChildren.Count = 0) or LAllChildrenVisited then
+              begin
+                LStack.Pop;
+                LVisited.AddOrSetValue(LCurrent, True);
+                LList.Add(LCurrent.Value);
+              end
+              else
+              begin
+                for I := LCurrent.FChildren.Count - 1 downto 0 do
+                begin
+                  if not LVisited.ContainsKey(LCurrent.FChildren[I]) then
+                    LStack.Push(LCurrent.FChildren[I]);
+                end;
+              end;
+            end;
+          finally
+            LVisited.Free;
+            LStack.Free;
+          end;
+        end;
+        
+        ttoLevelOrder:
+        begin
+          LQueue := TQueue<TTreeNode<T>>.Create;
+          try
+            LQueue.Enqueue(FRoot);
+            while LQueue.Count > 0 do
+            begin
+              LCurrent := LQueue.Dequeue;
+              LList.Add(LCurrent.Value);
+              for I := 0 to LCurrent.FChildren.Count - 1 do
+                LQueue.Enqueue(LCurrent.FChildren[I]);
+            end;
+          finally
+            LQueue.Free;
+          end;
+        end;
+      end;
+    end;
     Result := LList.ToArray;
   finally
     LList.Free;
@@ -1903,16 +2190,27 @@ end;
 
 function TTree<T>.NodeCount: Integer;
 var
-  LCount: Integer;
+  LStack: TStack<TTreeNode<T>>;
+  LCurrent: TTreeNode<T>;
+  I: Integer;
 begin
-  LCount := 0;
-  Traverse(ttoPreOrder,
-    procedure(const AValue: T; var AContinue: Boolean)
+  Result := 0;
+  if not Assigned(FRoot) then
+    Exit;
+    
+  LStack := TStack<TTreeNode<T>>.Create;
+  try
+    LStack.Push(FRoot);
+    while LStack.Count > 0 do
     begin
-      Inc(LCount);
-      AContinue := True;
-    end);
-  Result := LCount;
+      LCurrent := LStack.Pop;
+      Inc(Result);
+      for I := LCurrent.FChildren.Count - 1 downto 0 do
+        LStack.Push(LCurrent.FChildren[I]);
+    end;
+  finally
+    LStack.Free;
+  end;
 end;
 
 function TTree<T>.Height: Integer;
