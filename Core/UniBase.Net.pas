@@ -1,6 +1,6 @@
 unit UniBase.Net;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase Network Utilities
   A comprehensive network module with:
   - HTTP client wrapper
@@ -11,7 +11,7 @@ unit UniBase.Net;
   
   Author: UniBase Team
   Created: 2025-11-29
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
@@ -950,7 +950,7 @@ begin
     FDnsServer := '8.8.8.8';  // Google DNS
     
   FResolver.Host := FDnsServer;
-  FResolver.QueryTimeout := FTimeout;
+  FResolver.WaitingTime := FTimeout;
 end;
 
 destructor TDnsResolver_.Destroy;
@@ -981,8 +981,8 @@ begin
     FLock.Enter;
     try
       FResolver.Host := FDnsServer;
-      FResolver.QueryTimeout := FTimeout;
-      FResolver.QueryRecords := [qtA];
+      FResolver.WaitingTime := FTimeout;
+      FResolver.QueryType := [qtA];
       FResolver.Resolve(AHostname);
       
       for I := 0 to FResolver.QueryResult.Count - 1 do
@@ -1007,8 +1007,8 @@ begin
   FLock.Enter;
   try
     FResolver.Host := FDnsServer;
-    FResolver.QueryTimeout := FTimeout;
-    FResolver.QueryRecords := [qtAAAA];
+    FResolver.WaitingTime := FTimeout;
+    FResolver.QueryType := [qtAAAA];
     FResolver.Resolve(AHostname);
     
     for I := 0 to FResolver.QueryResult.Count - 1 do
@@ -1032,8 +1032,8 @@ begin
   FLock.Enter;
   try
     FResolver.Host := FDnsServer;
-    FResolver.QueryTimeout := FTimeout;
-    FResolver.QueryRecords := [qtPTR];
+    FResolver.WaitingTime := FTimeout;
+    FResolver.QueryType := [qtPTR];
     FResolver.Resolve(AIPAddress);
     
     for I := 0 to FResolver.QueryResult.Count - 1 do
@@ -1060,18 +1060,18 @@ begin
     FLock.Enter;
     try
       FResolver.Host := FDnsServer;
-      FResolver.QueryTimeout := FTimeout;
+      FResolver.WaitingTime := FTimeout;
       
       case ARecordType of
-        drtA: FResolver.QueryRecords := [qtA];
-        drtAAAA: FResolver.QueryRecords := [qtAAAA];
-        drtCNAME: FResolver.QueryRecords := [qtCNAME];
-        drtMX: FResolver.QueryRecords := [qtMX];
-        drtNS: FResolver.QueryRecords := [qtNS];
-        drtPTR: FResolver.QueryRecords := [qtPTR];
-        drtSOA: FResolver.QueryRecords := [qtSOA];
-        drtSRV: FResolver.QueryRecords := [qtService];
-        drtTXT: FResolver.QueryRecords := [qtTXT];
+        drtA: FResolver.QueryType := [qtA];
+        drtAAAA: FResolver.QueryType := [qtAAAA];
+        drtCNAME: FResolver.QueryType := [qtName];
+        drtMX: FResolver.QueryType := [qtMX];
+        drtNS: FResolver.QueryType := [qtNS];
+        drtPTR: FResolver.QueryType := [qtPTR];
+        drtSOA: FResolver.QueryType := [qtSOA];
+        drtSRV: FResolver.QueryType := [qtService];
+        drtTXT: FResolver.QueryType := [qtTXT];
       end;
       
       FResolver.Resolve(AHostname);
@@ -1087,8 +1087,8 @@ begin
           LRecord.Value := TARecord(FResolver.QueryResult[I]).IPAddress
         else if FResolver.QueryResult[I] is TAAAARecord then
           LRecord.Value := TAAAARecord(FResolver.QueryResult[I]).Address
-        else if FResolver.QueryResult[I] is TCNAMERecord then
-          LRecord.Value := TCNAMERecord(FResolver.QueryResult[I]).HostName
+        else if FResolver.QueryResult[I] is TCNRecord then
+          LRecord.Value := TCNRecord(FResolver.QueryResult[I]).HostName
         else if FResolver.QueryResult[I] is TMXRecord then
         begin
           LRecord.Value := TMXRecord(FResolver.QueryResult[I]).ExchangeServer;

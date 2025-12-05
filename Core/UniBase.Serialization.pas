@@ -1,6 +1,6 @@
 unit UniBase.Serialization;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase Serialization Framework
   A unified serialization system with:
   - Multiple format support (JSON, XML, Binary)
@@ -14,7 +14,7 @@ unit UniBase.Serialization;
   
   Author: UniBase Team
   Created: 2025-11-29
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
@@ -157,18 +157,14 @@ type
     property Depth: Integer read FDepth;
   end;
 
-  /// <summary>Serializer interface</summary>
+  /// <summary>Serializer interface (non-generic methods only)</summary>
   ISerializer = interface
     ['{B1C2D3E4-5678-9ABC-DEF0-123456789ABC}']
-    function Serialize<T>(const AValue: T): string; overload;
-    function Serialize(AObject: TObject): string; overload;
-    function SerializeToStream<T>(const AValue: T; AStream: TStream): Boolean; overload;
-    function SerializeToStream(AObject: TObject; AStream: TStream): Boolean; overload;
+    function Serialize(AObject: TObject): string;
+    function SerializeToStream(AObject: TObject; AStream: TStream): Boolean;
     
-    function Deserialize<T>(const AData: string): T; overload;
-    function Deserialize(const AData: string; AClass: TClass): TObject; overload;
-    function DeserializeFromStream<T>(AStream: TStream): T; overload;
-    function DeserializeFromStream(AStream: TStream; AClass: TClass): TObject; overload;
+    function Deserialize(const AData: string; AClass: TClass): TObject;
+    function DeserializeFromStream(AStream: TStream; AClass: TClass): TObject;
     
     function GetOptions: TSerializationOptions;
     procedure SetOptions(const AOptions: TSerializationOptions);
@@ -668,10 +664,16 @@ end;
 function TBaseSerializer.Deserialize<T>(const AData: string): T;
 var
   LType: TRttiType;
+  LObj: TObject;
+  LValue: TValue;
 begin
   LType := FRttiContext.GetType(TypeInfo(T));
   if LType.IsInstance then
-    Result := T(Deserialize(AData, LType.AsInstance.MetaclassType))
+  begin
+    LObj := Deserialize(AData, LType.AsInstance.MetaclassType);
+    TValue.Make(@LObj, TypeInfo(T), LValue);
+    Result := LValue.AsType<T>;
+  end
   else
     raise ESerializationException.Create('Only objects can be deserialized');
 end;
@@ -851,6 +853,8 @@ var
   LValue: TValue;
   LJsonValue: TJSONValue;
   LName: string;
+  LKind: TTypeKind;
+  LObj: TObject;
 begin
   if not Assigned(AObject) then
     Exit(nil);
@@ -869,12 +873,20 @@ begin
       AContext.PushPath(LName);
       try
         LValue := LProp.GetValue(AObject);
+        LKind := LValue.Kind;
         
         // Skip nil if not including nulls
-        if LValue.IsEmpty or (LValue.IsObject and not Assigned(LValue.AsObject)) then
+        if LValue.IsEmpty then
         begin
           if not FOptions.IncludeNulls then
             Continue;
+        end;
+        if LKind = tkClass then
+        begin
+          LObj := LValue.AsObject;
+          if not Assigned(LObj) then
+            if not FOptions.IncludeNulls then
+              Continue;
         end;
         
         LJsonValue := ValueToJson(LValue, AContext);
@@ -1190,6 +1202,8 @@ var
   LPropName: string;
   LIndentStr: string;
   LNewLine: string;
+  LKind: TTypeKind;
+  LObj: TObject;
 begin
   if not Assigned(AObject) then
   begin
@@ -1225,11 +1239,19 @@ begin
       AContext.PushPath(LPropName);
       try
         LValue := LProp.GetValue(AObject);
+        LKind := LValue.Kind;
         
-        if LValue.IsEmpty or (LValue.IsObject and not Assigned(LValue.AsObject)) then
+        if LValue.IsEmpty then
         begin
           if not FOptions.IncludeNulls then
             Continue;
+        end;
+        if LKind = tkClass then
+        begin
+          LObj := LValue.AsObject;
+          if not Assigned(LObj) then
+            if not FOptions.IncludeNulls then
+              Continue;
         end;
         
         Result := Result + ValueToXml(LValue, LPropName, AIndent + 1, AContext);
@@ -1696,8 +1718,15 @@ begin
 end;
 
 class function TSerializer.ToJson<T>(const AValue: T): string;
+var
+  LSer: TJsonSerializer;
 begin
-  Result := Json.Serialize<T>(AValue);
+  LSer := TJsonSerializer.Create;
+  try
+    Result := LSer.Serialize<T>(AValue);
+  finally
+    LSer.Free;
+  end;
 end;
 
 class function TSerializer.ToJson(AObject: TObject): string;
@@ -1719,8 +1748,15 @@ begin
 end;
 
 class function TSerializer.FromJson<T>(const AJson: string): T;
+var
+  LSer: TJsonSerializer;
 begin
-  Result := Json.Deserialize<T>(AJson);
+  LSer := TJsonSerializer.Create;
+  try
+    Result := LSer.Deserialize<T>(AJson);
+  finally
+    LSer.Free;
+  end;
 end;
 
 class function TSerializer.FromJson(const AJson: string; AClass: TClass): TObject;
@@ -1729,8 +1765,15 @@ begin
 end;
 
 class function TSerializer.ToXml<T>(const AValue: T): string;
+var
+  LSer: TXmlSerializer;
 begin
-  Result := Xml.Serialize<T>(AValue);
+  LSer := TXmlSerializer.Create;
+  try
+    Result := LSer.Serialize<T>(AValue);
+  finally
+    LSer.Free;
+  end;
 end;
 
 class function TSerializer.ToXml(AObject: TObject): string;
@@ -1739,8 +1782,15 @@ begin
 end;
 
 class function TSerializer.FromXml<T>(const AXml: string): T;
+var
+  LSer: TXmlSerializer;
 begin
-  Result := Xml.Deserialize<T>(AXml);
+  LSer := TXmlSerializer.Create;
+  try
+    Result := LSer.Deserialize<T>(AXml);
+  finally
+    LSer.Free;
+  end;
 end;
 
 class function TSerializer.FromXml(const AXml: string; AClass: TClass): TObject;
