@@ -533,8 +533,11 @@ begin
         
         FStats.CurrentPoolSize := FPool.Count;
         
-        // 计算命中率
-        FStats.HitRate := (FStats.TotalAcquired - FStats.TotalCreated) / FStats.TotalAcquired;
+        // 计算命中率 (保护除零)
+        if FStats.TotalAcquired > 0 then
+          FStats.HitRate := (FStats.TotalAcquired - FStats.TotalCreated) / FStats.TotalAcquired
+        else
+          FStats.HitRate := 0;
         
         Exit;
       end;
@@ -673,10 +676,17 @@ begin
   
   FPool.SetResetter(
     procedure(AJson: TJSONObject)
+    var
+      I: Integer;
+      Pair: TJSONPair;
     begin
-      // 清空 JSON 对象
-      while AJson.Count > 0 do
-        AJson.RemovePair(AJson.Pairs[0].JsonString.Value).Free;
+      // 清空 JSON 对象 - 使用倒序删除避免索引问题
+      for I := AJson.Count - 1 downto 0 do
+      begin
+        Pair := AJson.Pairs[I];
+        AJson.RemovePair(Pair.JsonString.Value);
+        Pair.Free; // Free pair (also frees JsonValue)
+      end;
     end
   );
 end;

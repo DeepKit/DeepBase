@@ -63,30 +63,75 @@ Inc(LRecord.Count) →
 
 ---
 
-## 待修复 Bug (Delphi 12)
+## 已修复 Bug (Delphi 12 兼容性)
 
-> 以下 3 个模块需要较大重构，暂缓修复
-
-### BUG-038: Graph.pas 泛型类中的本地过程
+### BUG-038: Graph.pas 泛型类中的本地过程 ✅
+- **发现/修复日期**: 2025-12-05
 - **严重程度**: High
 - **影响范围**: UniBase.Graph.pas
 - **问题描述**: TTree.Traverse 等方法中包含本地过程，触发 NI19024 错误
-- **预计工作量**: 大 - 需要重构多个方法
-- **修复方案**: 将本地过程重构为私有方法或使用迭代实现
+- **修复方案**: 将所有递归遍历重构为迭代式实现 (Stack/Queue)
+- **修复内容**:
+  - `TTree.Traverse` 使用 TStack/TQueue 迭代
+  - `TTree.ToArray` 使用 TStack/TQueue 迭代
+  - `TTree.Find` 使用 TStack 迭代
+  - `TTree.NodeCount` 使用 TStack 迭代
+  - `TGraph.FindCycle` 使用 TStack 迭代 DFS
+  - `TGraph.StronglyConnectedComponents` 使用 TStack 迭代 Kosaraju
 
-### BUG-039: Net.pas Indy DNS API 变更
+### BUG-039: Net.pas Indy DNS API 变更 ✅
+- **发现/修复日期**: 2025-12-05
 - **严重程度**: High
 - **影响范围**: UniBase.Net.pas
-- **问题描述**: QueryTimeout/QueryRecords/qtCNAME/TCNAMERecord 在新版 Indy 中不存在
-- **预计工作量**: 大 - 需要重写 DNS 查询功能
-- **修复方案**: 使用 WaitingTime 替代 QueryTimeout，QueryType 替代 qtXXX
+- **问题描述**: QueryTimeout/qtCNAME/TCNAMERecord 在新版 Indy 中不存在
+- **修复方案**: 使用新版 Indy API
+- **修复内容**:
+  - `QueryTimeout` → `WaitingTime`
+  - `qtCNAME` → `qtName`
+  - `TCNAMERecord` → `TCNRecord`
 
-### BUG-040: Serialization.pas 接口泛型方法限制
+### BUG-040: Serialization.pas 接口泛型方法限制 ✅
+- **发现/修复日期**: 2025-12-05
 - **严重程度**: High
 - **影响范围**: UniBase.Serialization.pas
 - **问题描述**: E2535 Interface methods must not have parameterized methods
-- **预计工作量**: 大 - 需要重新设计 ISerializer 接口架构
-- **修复方案**: 接口移除泛型方法，改用泛型类实现
+- **修复方案**: 接口移除泛型方法，保留在类中实现
+- **修复内容**:
+  - `ISerializer` 接口只包含非泛型方法
+  - `TBaseSerializer` 类保留泛型方法 (Delphi 12 允许类有泛型方法)
+  - 添加 `TSerializer` 静态帮助类提供泛型入口
+
+---
+
+## 代码审查 Bug (2025-12-05)
+
+### BUG-041: JSON Unicode 转义处理不完整 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Medium
+- **影响范围**: UniFlow.Performance.JSON.pas
+- **问题描述**: `TJSONStreamReader.ReadString` 中 `\uXXXX` 未转换为字符
+- **修复方案**: 解析 4 位十六进制并转换为 Char
+
+### BUG-042: TJSONObjectPool 重置器内存泄漏 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Medium
+- **影响范围**: UniFlow.Performance.Pool.pas
+- **问题描述**: `RemovePair().Free` 正序删除可能导致索引错误
+- **修复方案**: 使用倒序删除并正确释放 Pair
+
+### BUG-043: TWorkStealingQueue Pop 竞态条件 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: High
+- **影响范围**: UniFlow.Performance.Concurrent.pas
+- **问题描述**: Pop 方法在只有一个元素时逻辑错误
+- **修复方案**: 简化 Pop 逻辑，先检查空再弹出
+
+### BUG-044: TPoolStats.HitRate 除零风险 ✅
+- **发现/修复日期**: 2025-12-05
+- **严重程度**: Low
+- **影响范围**: UniFlow.Performance.Pool.pas
+- **问题描述**: `TotalAcquired = 0` 时除零
+- **修复方案**: 添加除零保护
 
 ---
 
@@ -95,10 +140,10 @@ Inc(LRecord.Count) →
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 0 | 0 | 0 |
-| High | 75 | 3 | 78 |
-| Medium | 3 | 0 | 3 |
-| Low | 0 | 0 | 0 |
-| **合计** | **78** | **3** | **81** |
+| High | 79 | 0 | 79 |
+| Medium | 5 | 0 | 5 |
+| Low | 1 | 0 | 1 |
+| **合计** | **85** | **0** | **85** |
 
 ---
 

@@ -482,12 +482,17 @@ begin
           'r': SB.Append(#13);
           't': SB.Append(#9);
           'u': begin
-            // Unicode escape - simplified
-            SB.Append('\u');
-            SB.Append(ReadChar);
-            SB.Append(ReadChar);
-            SB.Append(ReadChar);
-            SB.Append(ReadChar);
+            // Unicode escape - parse 4 hex digits
+            var HexStr := '';
+            HexStr := HexStr + ReadChar;
+            HexStr := HexStr + ReadChar;
+            HexStr := HexStr + ReadChar;
+            HexStr := HexStr + ReadChar;
+            var CodePoint: Integer;
+            if TryStrToInt('$' + HexStr, CodePoint) then
+              SB.Append(Char(CodePoint))
+            else
+              SB.Append('\u' + HexStr); // Keep original if invalid
           end;
         end;
       end

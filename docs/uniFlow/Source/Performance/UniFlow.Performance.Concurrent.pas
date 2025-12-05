@@ -453,26 +453,21 @@ var
 begin
   FLock.Enter;
   try
-    H := FHead - 1;
-    FHead := H;
-
+    H := FHead;
     T := FTail;
-    if T <= H then
+    
+    // 检查队列是否为空
+    if T >= H then
     begin
-      AItem := FItems[H and FMask];
-      if T = H then
-      begin
-        // 最后一个元素，可能与 Steal 竞争
-        FHead := T + 1;
-      end;
-      Result := True;
-    end
-    else
-    begin
-      // 队列空
-      FHead := T;
       Result := False;
+      Exit;
     end;
+    
+    // 从头部弹出（LIFO）
+    Dec(H);
+    FHead := H;
+    AItem := FItems[H and FMask];
+    Result := True;
   finally
     FLock.Exit;
   end;
