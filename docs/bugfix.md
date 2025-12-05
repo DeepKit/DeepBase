@@ -372,6 +372,53 @@
 - **建议**: 使用 `UniBase.Security.SaveSecret/LoadSecret` 或 `GetConfigEncrypted/SetConfigEncrypted` 封装存取敏感配置
 - **状态**: ✅ 已解决
 
+### BUG-044 ~ BUG-053: Delphi 12 剩余模块兼容性修复 (2025-12-05)
+- **严重程度**: 🟡 中
+- **文件**: `UniBase.Diff.pas`, `UniBase.FileWatcher.pas`, `UniBase.IoC.pas`, `UniBase.StateMachine.pas`, `UniBase.Graph.pas`, `UniBase.Net.pas`, `UniBase.Serialization.pas`
+- **修复内容**:
+
+#### BUG-044: Diff.pas 泛型约束
+- **问题**: `TDiffComparer<T>` 泛型约束 `T must be class type`
+- **修复**: 增加 `T: class` 约束，调整记录属性赋值
+
+#### BUG-045: FileWatcher.pas 缺少单元引用
+- **问题**: 缺少 `Vcl.ExtCtrls` (TTimer), `PFILE_NOTIFY_INFORMATION` 未声明
+- **修复**: 添加 `Vcl.ExtCtrls`，将 `PFILE_NOTIFY_INFORMATION` 改为 `^TFileNotifyInformation`
+
+#### BUG-046: IoC.pas 泛型类型约束
+- **问题**: `TypeInfo(T).Kind` 在泛型方法中不能使用 (E2018)
+- **修复**: 使用 PTypeInfo 局部变量存储，改用 TValue.AsType<T>
+
+#### BUG-047: StateMachine.pas 本地过程
+- **问题**: NI19024 - 泛型方法中的本地过程不支持
+- **修复**: 将 `StateToString`/`TriggerToString` 提取为私有类方法
+
+#### BUG-048 ~ BUG-051: Graph.pas 迭代重构
+- **问题**: NI19024 - 多个方法使用本地过程或匿名方法回调
+- **修复**: 
+  - `TTree.Traverse`, `ToArray`, `NodeCount`, `Find` 改为迭代实现
+  - `TGraph.FindCycle`, `IsConnected`, `ConnectedComponents` 改为迭代实现
+  - `StronglyConnectedComponents` FillOrder/DFSUtil 改为迭代 DFS
+  - `IsReachable`, `ReachableFrom` 直接使用 BFS 而非回调
+
+#### BUG-052: Net.pas Indy DNS API 变更
+- **问题**: `QueryTimeout`, `QueryRecords` 在 Delphi 12 Indy 中不存在
+- **修复**:
+  - `QueryTimeout` → `WaitingTime`
+  - `QueryRecords` → `QueryType`
+  - `qtCNAME` → `qtName`, `TCNAMERecord` → `TCNRecord`
+
+#### BUG-053: Serialization.pas 接口泛型方法
+- **问题**: E2535 - 接口不能有参数化（泛型）方法
+- **修复**:
+  - 从 `ISerializer` 接口中移除泛型方法 (`Serialize<T>`, `Deserialize<T>` 等)
+  - 泛型方法仅在 `TBaseSerializer` 类中保留
+  - 使用局部变量存储 `TValue.Kind` 和 `TValue.AsObject` 避免 E2036
+  - `TSerializer` 静态方法改为创建具体序列化器实例
+
+- **状态**: ✅ 已修复
+- **结果**: 78/78 (100%) Core 模块编译成功
+
 ---
 
 ## 代码质量总结

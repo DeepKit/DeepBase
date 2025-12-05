@@ -28,26 +28,13 @@
 - **状态**: ⏳ 未开始
 - **说明**: 按 `07.02` 文档中第 5 节的指标设计，补充 `insight_decision_*` 系列指标与相关审计日志字段，确保可观察性与回溯能力。
 
-## 进行中（P1）
+## 已完成（P1）
 
-### DELPHI12-001: Core 模块 Delphi 12 编译兼容性
-- **状态**: 🚧 进行中 (71/78, 91%)
+### DELPHI12-001: Core 模块 Delphi 12 编译兼容性 ✅
+- **状态**: ✅ 已完成 (78/78, 100%)
+- **完成日期**: 2025-12-05
 - **说明**: 修复 UniBase Core 模块在 Delphi 12.2 (RAD Studio 23.0) 下的编译错误
-- **已修复文件** (2025-12-05):
-  - `UniBase.Template.pas` - 修复头部注释、内联变量、属性访问器
-  - `UniBase.CloudSync.pas` - 修复 HTTP Post/Put、TThread.Queue、记录属性赋值
-- **剩余 7 个失败文件**:
-  1. `UniBase.Diff.pas` - 泛型约束问题 (`T must be class type`), 记录属性赋值
-  2. `UniBase.FileWatcher.pas` - 缺少 Vcl.ExtCtrls (TTimer), PFILE_NOTIFY_INFORMATION 未声明
-  3. `UniBase.Graph.pas` - 缺少 System.Rtti, NI19024 内部错误 (泛型方法中的本地过程)
-  4. `UniBase.IoC.pas` - 泛型类型约束问题 (E2018)
-  5. `UniBase.Net.pas` - Indy DNS API 已更改 (QueryTimeout, QueryRecords 不存在)
-  6. `UniBase.Serialization.pas` - E2535 接口不能有泛型方法
-  7. `UniBase.StateMachine.pas` - NI19024 内部错误 (泛型方法中的本地过程)
-- **难度评估**:
-  - 🟢 简单: (已完成)
-  - 🟡 中等: Diff, IoC, FileWatcher (泛型约束/类型调整)
-  - 🔴 困难: Graph, StateMachine (编译器内部错误, 需要重构), Net (大量 API 变更), Serialization (架构调整)
+- **详细修复记录**: 见 `bugfix.md` BUG-028 ~ BUG-053
 
 ---
 
@@ -93,4 +80,4 @@
 
 ---
 
-最后更新：2025-12-05
+最后更新：2025-12-05 (Delphi 12 迁移完成)
