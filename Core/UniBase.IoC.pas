@@ -723,24 +723,15 @@ begin
   Reg.OwnsInstance := False; // Caller owns the instance
   
   // Get underlying object from interface
-  // Note: TService must be an interface type that the object implements
+  // Note: TService is constrained to IInterface
   Obj := nil;
-  if TypeInfo(TService)^.Kind = tkInterface then
+  // For interfaces, try to get the implementing object
+  if Instance.QueryInterface(IInterface, IntfInstance) = S_OK then
   begin
-    // For interfaces, try to get the implementing object
-    // First, check if the instance directly supports IInterface
-    if Instance.QueryInterface(IInterface, IntfInstance) = S_OK then
-    begin
-      // Use RTTI or a known pattern to extract the object
-      // Most Delphi objects implementing interfaces inherit from TInterfacedObject
-      // and the interface reference points to the object instance
-      Obj := IntfInstance as TObject;
-    end;
-  end
-  else if TypeInfo(TService)^.Kind = tkClass then
-  begin
-    // Direct class registration
-    Obj := TObject((@Instance)^);
+    // Use RTTI or a known pattern to extract the object
+    // Most Delphi objects implementing interfaces inherit from TInterfacedObject
+    // and the interface reference points to the object instance
+    Obj := IntfInstance as TObject;
   end;
   
   Reg.SingletonInstance := Obj;
@@ -848,19 +839,25 @@ function TIoCContainer.Resolve<T>: T;
 var
   Instance: TObject;
   TypeData: PTypeData;
+  ServiceTypeInfo: PTypeInfo;
+  V: TValue;
 begin
-  Instance := ResolveInternal(TypeInfo(T), nil);
+  ServiceTypeInfo := TypeInfo(T);
+  Instance := ResolveInternal(ServiceTypeInfo, nil);
   
   // Handle interface types
-  if TypeInfo(T)^.Kind = tkInterface then
+  if ServiceTypeInfo^.Kind = tkInterface then
   begin
-    TypeData := GetTypeData(TypeInfo(T));
+    TypeData := GetTypeData(ServiceTypeInfo);
     if not Instance.GetInterface(TypeData^.GUID, Result) then
-      raise EIoCException.CreateFmt('Cannot cast to interface: %s', [GetTypeName(TypeInfo(T))]);
+      raise EIoCException.CreateFmt('Cannot cast to interface: %s', [GetTypeName(ServiceTypeInfo)]);
   end
   else
-    // Handle class types
-    Result := T(Instance);
+  begin
+    // Handle class types using TValue to avoid direct cast issues
+    V := TValue.From<TObject>(Instance);
+    Result := V.AsType<T>;
+  end;
 end;
 
 function TIoCContainer.Resolve(ServiceType: PTypeInfo): TObject;
@@ -872,33 +869,45 @@ function TIoCContainer.Resolve<T>(const Name: string): T;
 var
   Instance: TObject;
   TypeData: PTypeData;
+  ServiceTypeInfo: PTypeInfo;
+  V: TValue;
 begin
-  Instance := ResolveInternal(TypeInfo(T), nil, Name);
+  ServiceTypeInfo := TypeInfo(T);
+  Instance := ResolveInternal(ServiceTypeInfo, nil, Name);
   
-  if TypeInfo(T)^.Kind = tkInterface then
+  if ServiceTypeInfo^.Kind = tkInterface then
   begin
-    TypeData := GetTypeData(TypeInfo(T));
+    TypeData := GetTypeData(ServiceTypeInfo);
     if not Instance.GetInterface(TypeData^.GUID, Result) then
-      raise EIoCException.CreateFmt('Cannot cast to interface: %s', [GetTypeName(TypeInfo(T))]);
+      raise EIoCException.CreateFmt('Cannot cast to interface: %s', [GetTypeName(ServiceTypeInfo)]);
   end
   else
-    Result := T(Instance);
+  begin
+    V := TValue.From<TObject>(Instance);
+    Result := V.AsType<T>;
+  end;
 end;
 
 function TIoCContainer.TryResolve<T>(out Service: T): Boolean;
 var
   Instance: TObject;
+  ServiceTypeInfo: PTypeInfo;
+  V: TValue;
 begin
-  Result := TryResolve(TypeInfo(T), Instance);
+  ServiceTypeInfo := TypeInfo(T);
+  Result := TryResolve(ServiceTypeInfo, Instance);
   if Result then
   begin
-    if TypeInfo(T)^.Kind = tkInterface then
+    if ServiceTypeInfo^.Kind = tkInterface then
     begin
-      if not Instance.GetInterface(GetTypeData(TypeInfo(T))^.GUID, Service) then
+      if not Instance.GetInterface(GetTypeData(ServiceTypeInfo)^.GUID, Service) then
         Result := False;
     end
     else
-      Service := T(Instance);
+    begin
+      V := TValue.From<TObject>(Instance);
+      Service := V.AsType<T>;
+    end;
   end;
 end;
 

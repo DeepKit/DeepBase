@@ -1,6 +1,6 @@
 unit UniBase.Diff;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase Text Diff
   A text comparison and patching system with:
   - Longest Common Subsequence (LCS) algorithm
@@ -13,10 +13,10 @@ unit UniBase.Diff;
   - Diff statistics
   - Ignore whitespace/case options
   - Binary file detection
-  
+
   Author: UniBase Team
   Created: 2025-11-28
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
@@ -77,7 +77,7 @@ type
   /// <summary>Diff result</summary>
   TDiffResult = class
   private
-    FItems: TObjectList<TDiffItem>;
+    FItems: TList<TDiffItem>;
     FHunks: TObjectList<TDiffHunk>;
     FOldLines: TArray<string>;
     FNewLines: TArray<string>;
@@ -108,7 +108,7 @@ type
     /// <summary>Get summary statistics</summary>
     function GetSummary: string;
     
-    property Items: TObjectList<TDiffItem> read FItems;
+    property Items: TList<TDiffItem> read FItems;
     property Hunks: TObjectList<TDiffHunk> read FHunks;
     property OldLines: TArray<string> read FOldLines write FOldLines;
     property NewLines: TArray<string> read FNewLines write FNewLines;
@@ -336,7 +336,7 @@ end;
 constructor TDiffResult.Create;
 begin
   inherited;
-  FItems := TObjectList<TDiffItem>.Create(True);
+  FItems := TList<TDiffItem>.Create;
   FHunks := TObjectList<TDiffHunk>.Create(True);
   FOptions := TDiffOptions.Default;
 end;
@@ -1237,16 +1237,18 @@ begin
           end
           else
           begin
-            // End hunk
-            LHunk.OldCount := 0;
-            LHunk.NewCount := 0;
+          // End hunk - count items
+            var LOldCnt := 0;
+            var LNewCnt := 0;
             for LItem in LHunk.Items do
             begin
               if LItem.Operation in [doEqual, doDelete] then
-                Inc(LHunk.OldCount);
+                Inc(LOldCnt);
               if LItem.Operation in [doEqual, doInsert] then
-                Inc(LHunk.NewCount);
+                Inc(LNewCnt);
             end;
+            LHunk.OldCount := LOldCnt;
+            LHunk.NewCount := LNewCnt;
             
             AResult.Hunks.Add(LHunk);
             LHunk := nil;
@@ -1262,15 +1264,17 @@ begin
     // Finalize last hunk if open
     if LInHunk and Assigned(LHunk) then
     begin
-      LHunk.OldCount := 0;
-      LHunk.NewCount := 0;
+      var LFinalOldCnt := 0;
+      var LFinalNewCnt := 0;
       for LItem in LHunk.Items do
       begin
         if LItem.Operation in [doEqual, doDelete] then
-          Inc(LHunk.OldCount);
+          Inc(LFinalOldCnt);
         if LItem.Operation in [doEqual, doInsert] then
-          Inc(LHunk.NewCount);
+          Inc(LFinalNewCnt);
       end;
+      LHunk.OldCount := LFinalOldCnt;
+      LHunk.NewCount := LFinalNewCnt;
       AResult.Hunks.Add(LHunk);
     end;
   finally

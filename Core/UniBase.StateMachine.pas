@@ -1,6 +1,6 @@
 unit UniBase.StateMachine;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase State Machine
   A flexible finite state machine implementation with:
   - Fluent configuration API
@@ -14,7 +14,7 @@ unit UniBase.StateMachine;
   
   Author: UniBase Team
   Created: 2025-11-28
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
@@ -190,6 +190,8 @@ type
     function GetSuperstate(const AState: TState): TState;
     function IsInState(const AState: TState; const ATargetState: TState): Boolean;
     function GetCurrentConfig: TStateConfiguration<TState, TTrigger>;
+    function StateToString(const AState: TState): string;
+    function TriggerToString(const ATrigger: TTrigger): string;
   public
     constructor Create(const AInitialState: TState);
     destructor Destroy; override;
@@ -921,42 +923,41 @@ begin
   end;
 end;
 
+function TStateMachine<TState, TTrigger>.StateToString(const AState: TState): string;
+var
+  LValue: TValue;
+begin
+  LValue := TValue.From<TState>(AState);
+  if LValue.Kind = tkEnumeration then
+    Result := GetEnumName(LValue.TypeInfo, LValue.AsOrdinal)
+  else if LValue.Kind in [tkString, tkUString, tkLString, tkWString] then
+    Result := LValue.AsString
+  else if LValue.Kind in [tkInteger, tkInt64] then
+    Result := LValue.AsOrdinal.ToString
+  else
+    Result := 'State_' + IntToStr(LValue.AsOrdinal);
+end;
+
+function TStateMachine<TState, TTrigger>.TriggerToString(const ATrigger: TTrigger): string;
+var
+  LValue: TValue;
+begin
+  LValue := TValue.From<TTrigger>(ATrigger);
+  if LValue.Kind = tkEnumeration then
+    Result := GetEnumName(LValue.TypeInfo, LValue.AsOrdinal)
+  else if LValue.Kind in [tkString, tkUString, tkLString, tkWString] then
+    Result := LValue.AsString
+  else if LValue.Kind in [tkInteger, tkInt64] then
+    Result := LValue.AsOrdinal.ToString
+  else
+    Result := 'Trigger_' + IntToStr(LValue.AsOrdinal);
+end;
+
 function TStateMachine<TState, TTrigger>.ToDotGraph: string;
 var
   LBuilder: TStringBuilder;
   LStatePair: TPair<TState, TStateConfiguration<TState, TTrigger>>;
   LTransition: TTransition<TState, TTrigger>;
-  
-  function StateToString(const AState: TState): string;
-  var
-    LValue: TValue;
-  begin
-    LValue := TValue.From<TState>(AState);
-    if LValue.Kind = tkEnumeration then
-      Result := GetEnumName(LValue.TypeInfo, LValue.AsOrdinal)
-    else if LValue.Kind in [tkString, tkUString, tkLString, tkWString] then
-      Result := LValue.AsString
-    else if LValue.Kind in [tkInteger, tkInt64] then
-      Result := LValue.AsOrdinal.ToString
-    else
-      Result := 'State_' + IntToStr(LValue.AsOrdinal);
-  end;
-  
-  function TriggerToString(const ATrigger: TTrigger): string;
-  var
-    LValue: TValue;
-  begin
-    LValue := TValue.From<TTrigger>(ATrigger);
-    if LValue.Kind = tkEnumeration then
-      Result := GetEnumName(LValue.TypeInfo, LValue.AsOrdinal)
-    else if LValue.Kind in [tkString, tkUString, tkLString, tkWString] then
-      Result := LValue.AsString
-    else if LValue.Kind in [tkInteger, tkInt64] then
-      Result := LValue.AsOrdinal.ToString
-    else
-      Result := 'Trigger_' + IntToStr(LValue.AsOrdinal);
-  end;
-  
 begin
   LBuilder := TStringBuilder.Create;
   try
