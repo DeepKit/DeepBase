@@ -19,7 +19,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.JSON,
   System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
-  System.Net.HttpClient, System.Net.URLClient, System.Threading;
+  System.Net.HttpClient, System.Net.URLClient, System.Threading,
+  System.ZLib, System.Math;
 
 type
   /// <summary>同步状态</summary>
@@ -406,7 +407,7 @@ procedure JSONMergeArrays(ATarget, ASource: TJSONArray;
 implementation
 
 uses
-  System.ZLib, System.IOUtils;
+  System.IOUtils;
 
 var
   GCloudSync: TCloudConfigSync = nil;
@@ -907,7 +908,14 @@ begin
             end;
           end
           else
-            LResponse := FHttpClient.Post(LURL, nil, LHeaders);
+          begin
+            LStream := TStringStream.Create('', TEncoding.UTF8);
+            try
+              LResponse := FHttpClient.Post(LURL, LStream, nil, LHeaders);
+            finally
+              LStream.Free;
+            end;
+          end;
         end
         else if AMethod = 'PUT' then
         begin
@@ -924,7 +932,14 @@ begin
             end;
           end
           else
-            LResponse := FHttpClient.Put(LURL, nil, LHeaders);
+          begin
+            LStream := TStringStream.Create('', TEncoding.UTF8);
+            try
+              LResponse := FHttpClient.Put(LURL, LStream, nil, LHeaders);
+            finally
+              LStream.Free;
+            end;
+          end;
         end
         else if AMethod = 'DELETE' then
         begin
@@ -981,22 +996,10 @@ end;
 
 function TCloudSyncClient.CompressData(const AData: TBytes): TBytes;
 var
-  LCompressor: TZCompressionStream;
-  LOutput: TBytesStream;
+  LOutput: TBytes;
 begin
-  LOutput := TBytesStream.Create;
-  try
-    LCompressor := TZCompressionStream.Create(clDefault, LOutput);
-    try
-      LCompressor.WriteBuffer(AData[0], Length(AData));
-    finally
-      LCompressor.Free;
-    end;
-    Result := LOutput.Bytes;
-    SetLength(Result, LOutput.Size);
-  finally
-    LOutput.Free;
-  end;
+  ZCompress(AData, LOutput, zcDefault);
+  Result := LOutput;
 end;
 
 function TCloudSyncClient.DecompressData(const AData: TBytes): TBytes;
@@ -1419,34 +1422,56 @@ begin
 end;
 
 procedure TCloudConfigSync.DoProgress;
+var
+  LProgress: TSyncProgress;
 begin
   if Assigned(FOnProgress) then
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        FOnProgress(Self, FProgress);
-      end);
+  begin
+    LProgress := FProgress;
+    if TThread.CurrentThread.ThreadID = MainThreadID then
+      FOnProgress(Self, LProgress)
+    else
+      TThread.Queue(nil,
+        procedure
+        begin
+          if Assigned(FOnProgress) then
+            FOnProgress(Self, LProgress);
+        end);
+  end;
 end;
 
 procedure TCloudConfigSync.DoComplete(Success: Boolean; const ErrorMsg: string);
+var
+  LSuccess: Boolean;
+  LErrorMsg: string;
 begin
   if Assigned(FOnComplete) then
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        FOnComplete(Self, Success, ErrorMsg);
-      end);
+  begin
+    LSuccess := Success;
+    LErrorMsg := ErrorMsg;
+    if TThread.CurrentThread.ThreadID = MainThreadID then
+      FOnComplete(Self, LSuccess, LErrorMsg)
+    else
+      TThread.Queue(nil,
+        procedure
+        begin
+          if Assigned(FOnComplete) then
+            FOnComplete(Self, LSuccess, LErrorMsg);
+        end);
+  end;
 end;
 
 function TCloudConfigSync.DoResolveConflict(AConflict: TSyncConflict): TConflictResolution;
 begin
   Result := FConfig.ConflictResolution;
+  // Note: Conflict resolution callback must be synchronous because we need the result immediately
+  // If not on main thread, use default resolution strategy
   if Assigned(FOnConflict) then
-    TThread.Synchronize(nil,
-      procedure
-      begin
-        FOnConflict(Self, AConflict, Result);
-      end);
+  begin
+    if TThread.CurrentThread.ThreadID = MainThreadID then
+      FOnConflict(Self, AConflict, Result);
+    // Cannot call async for conflict resolution as we need the result immediately
+  end;
 end;
 
 function TCloudConfigSync.DetectConflicts(ALocalItems,
@@ -1485,6 +1510,7 @@ end;
 function TCloudConfigSync.MergeItems(ALocal, ARemote: TConfigItem): TConfigItem;
 var
   LLocalJSON, LRemoteJSON: TJSONObject;
+  LVersion: TConfigVersion;
 begin
   // 合并策略：
   // - JSON类型：深度合并（本地为基础，远程覆盖/追加）
@@ -1528,10 +1554,11 @@ begin
       Result.Value := ARemote.Value;
   end;
   
-  Result.LocalVersion := ALocal.LocalVersion;
-  Result.LocalVersion.Version := Result.LocalVersion.Version + 1;
-  Result.LocalVersion.ModifiedAt := Now;
-  Result.LocalVersion.Checksum := CalculateChecksum(Result.Value);
+  LVersion := ALocal.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.Checksum := CalculateChecksum(Result.Value);
+  Result.LocalVersion := LVersion;
   Result.IsDirty := True;
 end;
 
@@ -1839,76 +1866,94 @@ end;
 procedure TCloudConfigSync.SetString(const AKey, AValue: string);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citString);
   LItem.SetStringValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
-  LItem.LocalVersion.Checksum := CalculateChecksum(AValue);
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion.Checksum := CalculateChecksum(AValue);
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.SetInteger(const AKey: string; AValue: Integer);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citInteger);
   LItem.SetIntegerValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
-  LItem.LocalVersion.Checksum := CalculateChecksum(IntToStr(AValue));
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion.Checksum := CalculateChecksum(IntToStr(AValue));
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.SetFloat(const AKey: string; AValue: Double);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citFloat);
   LItem.SetFloatValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
-  LItem.LocalVersion.Checksum := CalculateChecksum(FloatToStr(AValue));
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion.Checksum := CalculateChecksum(FloatToStr(AValue));
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.SetBoolean(const AKey: string; AValue: Boolean);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citBoolean);
   LItem.SetBooleanValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
-  LItem.LocalVersion.Checksum := CalculateChecksum(BoolToStr(AValue, True));
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion.Checksum := CalculateChecksum(BoolToStr(AValue, True));
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.SetDateTime(const AKey: string; AValue: TDateTime);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citDateTime);
   LItem.SetDateTimeValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
-  LItem.LocalVersion.Checksum := CalculateChecksum(DateToISO8601(AValue));
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion.Checksum := CalculateChecksum(DateToISO8601(AValue));
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.SetJSON(const AKey: string; AValue: TJSONValue);
 var
   LItem: TConfigItem;
+  LVersion: TConfigVersion;
 begin
   LItem := FLocalStore.GetOrCreate(AKey, citJSON);
   LItem.SetJSONValue(AValue);
-  LItem.LocalVersion.Version := LItem.LocalVersion.Version + 1;
-  LItem.LocalVersion.ModifiedAt := Now;
-  LItem.LocalVersion.ModifiedBy := FConfig.DeviceId;
+  LVersion := LItem.LocalVersion;
+  LVersion.Version := LVersion.Version + 1;
+  LVersion.ModifiedAt := Now;
+  LVersion.ModifiedBy := FConfig.DeviceId;
   if Assigned(AValue) then
-    LItem.LocalVersion.Checksum := CalculateChecksum(AValue.ToJSON)
+    LVersion.Checksum := CalculateChecksum(AValue.ToJSON)
   else
-    LItem.LocalVersion.Checksum := '';
+    LVersion.Checksum := '';
+  LItem.LocalVersion := LVersion;
 end;
 
 procedure TCloudConfigSync.DeleteKey(const AKey: string);

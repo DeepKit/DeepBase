@@ -1,6 +1,6 @@
 unit UniBase.Template;
 
-{*******************************************************************************
+(*******************************************************************************
   UniBase Template Engine
   A flexible string template rendering engine with:
   - Variable substitution: {{variable}}
@@ -11,10 +11,10 @@ unit UniBase.Template;
   - Comments: {{! this is a comment }}
   - Raw output: {{{rawVariable}}} (no HTML escaping)
   - Custom functions and filters
-  
+
   Author: UniBase Team
   Created: 2025-11-28
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
@@ -260,6 +260,7 @@ type
     
     property CacheEnabled: Boolean read FCacheEnabled write FCacheEnabled;
     property BasePath: string read FBasePath write FBasePath;
+  private
     function GetHtmlEscape: Boolean;
     procedure SetHtmlEscape(Value: Boolean);
     function GetStrictMode: Boolean;
@@ -1427,13 +1428,15 @@ begin
       for var I := 0 to High(LArgStrings) do
       begin
         var LArg := Trim(LArgStrings[I]);
+        var LInt: Integer;
+        var LFloat: Double;
         if LArg = '' then
           LArgs[I] := Null
         else if (LArg[1] = '"') or (LArg[1] = '''') then
           LArgs[I] := Copy(LArg, 2, Length(LArg) - 2)
-        else if TryStrToInt(LArg, var LInt: Integer) then
+        else if TryStrToInt(LArg, LInt) then
           LArgs[I] := LInt
-        else if TryStrToFloat(LArg, var LFloat: Double) then
+        else if TryStrToFloat(LArg, LFloat) then
           LArgs[I] := LFloat
         else
           LArgs[I] := ResolveValue(LArg, AContext);
@@ -1629,12 +1632,14 @@ begin
     Exit(Null);
     
   // Handle literals
+  var LIntVal: Integer;
+  var LFloatVal: Double;
   if (APath[1] = '"') or (APath[1] = '''') then
     Exit(Copy(APath, 2, Length(APath) - 2));
-  if TryStrToInt(APath, var LInt: Integer) then
-    Exit(LInt);
-  if TryStrToFloat(APath, var LFloat: Double) then
-    Exit(LFloat);
+  if TryStrToInt(APath, LIntVal) then
+    Exit(LIntVal);
+  if TryStrToFloat(APath, LFloatVal) then
+    Exit(LFloatVal);
   if SameText(APath, 'true') then
     Exit(True);
   if SameText(APath, 'false') then
@@ -1751,12 +1756,14 @@ begin
       for I := 0 to High(LArgStrings) do
       begin
         var LArg := Trim(LArgStrings[I]);
+        var LIntArg: Integer;
+        var LFloatArg: Double;
         if (LArg <> '') and ((LArg[1] = '"') or (LArg[1] = '''')) then
           AArgs[I] := Copy(LArg, 2, Length(LArg) - 2)
-        else if TryStrToInt(LArg, var LInt: Integer) then
-          AArgs[I] := LInt
-        else if TryStrToFloat(LArg, var LFloat: Double) then
-          AArgs[I] := LFloat
+        else if TryStrToInt(LArg, LIntArg) then
+          AArgs[I] := LIntArg
+        else if TryStrToFloat(LArg, LFloatArg) then
+          AArgs[I] := LFloatArg
         else
           AArgs[I] := LArg;
       end;
@@ -2087,6 +2094,26 @@ end;
 procedure TTemplateEngine.SetIncludeResolver(AResolver: TTemplateIncludeResolver);
 begin
   FRenderer.IncludeResolver := AResolver;
+end;
+
+function TTemplateEngine.GetHtmlEscape: Boolean;
+begin
+  Result := FRenderer.HtmlEscape;
+end;
+
+procedure TTemplateEngine.SetHtmlEscape(Value: Boolean);
+begin
+  FRenderer.HtmlEscape := Value;
+end;
+
+function TTemplateEngine.GetStrictMode: Boolean;
+begin
+  Result := FRenderer.StrictMode;
+end;
+
+procedure TTemplateEngine.SetStrictMode(Value: Boolean);
+begin
+  FRenderer.StrictMode := Value;
 end;
 
 { TTemplate }
