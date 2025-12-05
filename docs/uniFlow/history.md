@@ -581,3 +581,54 @@
     - LogRequest/LogResponse/LogTokenUsage
   - TSkillDiagnostics - Skill 调用诊断助手
   - HTTP 追踪头常量: X-Correlation-ID, X-Trace-ID 等
+
+#### TASK-903: 错误上下文收集 ✅
+- ✅ 创建 Source/Diagnostics/UniFlow.Diagnostics.ErrorCollector.pas (~931 行)
+  - TErrorSeverity - 错误严重级别 (Warning/Error/Critical/Fatal)
+  - TErrorCategory - 13种错误分类 (Validation/Network/Timeout/LLM/Skill等)
+  - TEnhancedErrorContext - 增强错误上下文
+    - 追踪信息 (CorrelationId/WorkflowId/StepId)
+    - 执行路径 (已执行步骤列表)
+    - 环境信息 (机器名/进程ID/线程ID)
+    - 自动建议生成
+  - TErrorCollector - 错误收集器
+    - 自动错误分类
+    - 按 CorrelationId/WorkflowId/Category/Severity 查询
+    - 导出: JSON/Markdown/CSV
+
+#### TASK-904: 执行轨迹导出 ✅
+- ✅ 创建 Source/Diagnostics/UniFlow.Diagnostics.TraceExporter.pas (~661 行)
+  - TExecutionSnapshot - 执行快照 (用于复现问题)
+  - TTraceExporter - 轨迹导出器
+    - 创建/保存/加载快照
+    - 多种导出格式 (JSON/Text/Markdown/Timeline)
+    - 执行报告生成
+    - 时间线报告
+    - 性能报告
+
+#### TASK-905: 调试模式 ✅
+- ✅ 创建 Source/Diagnostics/UniFlow.Diagnostics.Debugger.pas (~1,100 行)
+  - TDebuggerState - 调试器状态 (Idle/Running/Paused/Stepping/Breakpoint)
+  - TBreakpointType - 断点类型 (Step/Conditional/Error/Watch)
+  - TBreakpoint - 断点定义 (支持忽略计数/命中计数)
+  - TDebugFrame - 调试帧 (调用栈)
+  - TWorkflowDebugger - 工作流调试器
+    - 断点管理: Add/Remove/Enable/Disable
+    - 执行控制: Continue/Pause/StepInto/StepOver/StepOut/Stop
+    - 调用栈: GetCallStack/GetCallStackDepth
+    - 变量检查: GetVariables/GetVariable/EvaluateExpression
+  - TDebugConsole - 交互式调试控制台
+    - GDB风格命令: c/s/n/o/bt/v/b/d/bl/e
+
+---
+
+### Phase 8 代码统计
+
+| 模块 | 文件 | 行数 |
+|------|------|------|
+| Diagnostics | pas | ~1,200 |
+| Diagnostics.Integration | pas | ~408 |
+| Diagnostics.ErrorCollector | pas | ~931 |
+| Diagnostics.TraceExporter | pas | ~661 |
+| Diagnostics.Debugger | pas | ~1,100 |
+| **Phase 8 合计** | **5 files** | **~4,300** |
