@@ -367,6 +367,10 @@ end;
 type
   // 使用记录访问 TForm 的属性，避免直接依赖 Vcl.Forms
   TFormAccessor = class
+  private
+    class var FCtx: System.Rtti.TRttiContext;
+    class var FCtxInitialized: Boolean;
+    class function GetRttiContext: System.Rtti.TRttiContext; static;
   public
     class function GetFormName(AForm: TObject): string;
     class function GetFormHandle(AForm: TObject): HWND;
@@ -377,7 +381,20 @@ type
     class procedure SetFormWindowState(AForm: TObject; State: Integer);
   end;
 
+class function TFormAccessor.GetRttiContext: System.Rtti.TRttiContext;
+begin
+  if not FCtxInitialized then
+  begin
+    FCtx := System.Rtti.TRttiContext.Create;
+    FCtxInitialized := True;
+  end;
+  Result := FCtx;
+end;
+
 class function TFormAccessor.GetFormName(AForm: TObject): string;
+var
+  Ctx: System.Rtti.TRttiContext;
+  Prop: System.Rtti.TRttiProperty;
 begin
   Result := '';
   if AForm = nil then Exit;
@@ -385,133 +402,126 @@ begin
   // 使用 RTTI 获取 Name 属性
   if AForm.ClassName.Contains('Form') then
   begin
-    var Ctx := System.Rtti.TRttiContext.Create;
-    try
-      var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Name');
-      if Prop <> nil then
-        Result := Prop.GetValue(AForm).AsString;
-    finally
-      Ctx.Free;
-    end;
+    Ctx := GetRttiContext;
+    Prop := Ctx.GetType(AForm.ClassType).GetProperty('Name');
+    if Prop <> nil then
+      Result := Prop.GetValue(AForm).AsString;
   end;
 end;
 
 class function TFormAccessor.GetFormHandle(AForm: TObject): HWND;
+var
+  Ctx: System.Rtti.TRttiContext;
+  Prop: System.Rtti.TRttiProperty;
 begin
   Result := 0;
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Handle');
-    if Prop <> nil then
-      Result := HWND(Prop.GetValue(AForm).AsOrdinal);
-  finally
-    Ctx.Free;
-  end;
+  Ctx := GetRttiContext;
+  Prop := Ctx.GetType(AForm.ClassType).GetProperty('Handle');
+  if Prop <> nil then
+    Result := HWND(Prop.GetValue(AForm).AsOrdinal);
 end;
 
 class function TFormAccessor.GetFormBounds(AForm: TObject): TRect;
+var
+  Ctx: System.Rtti.TRttiContext;
+  RttiType: System.Rtti.TRttiType;
+  PropLeft, PropTop, PropWidth, PropHeight: System.Rtti.TRttiProperty;
 begin
   Result := TRect.Empty;
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var RttiType := Ctx.GetType(AForm.ClassType);
-    var PropLeft := RttiType.GetProperty('Left');
-    var PropTop := RttiType.GetProperty('Top');
-    var PropWidth := RttiType.GetProperty('Width');
-    var PropHeight := RttiType.GetProperty('Height');
-    
-    if (PropLeft <> nil) and (PropTop <> nil) and 
-       (PropWidth <> nil) and (PropHeight <> nil) then
-    begin
-      Result.Left := PropLeft.GetValue(AForm).AsInteger;
-      Result.Top := PropTop.GetValue(AForm).AsInteger;
-      Result.Width := PropWidth.GetValue(AForm).AsInteger;
-      Result.Height := PropHeight.GetValue(AForm).AsInteger;
-    end;
-  finally
-    Ctx.Free;
+  Ctx := GetRttiContext;
+  RttiType := Ctx.GetType(AForm.ClassType);
+  PropLeft := RttiType.GetProperty('Left');
+  PropTop := RttiType.GetProperty('Top');
+  PropWidth := RttiType.GetProperty('Width');
+  PropHeight := RttiType.GetProperty('Height');
+  
+  if (PropLeft <> nil) and (PropTop <> nil) and 
+     (PropWidth <> nil) and (PropHeight <> nil) then
+  begin
+    Result.Left := PropLeft.GetValue(AForm).AsInteger;
+    Result.Top := PropTop.GetValue(AForm).AsInteger;
+    Result.Width := PropWidth.GetValue(AForm).AsInteger;
+    Result.Height := PropHeight.GetValue(AForm).AsInteger;
   end;
 end;
 
 class function TFormAccessor.GetFormWindowState(AForm: TObject): Integer;
+var
+  Ctx: System.Rtti.TRttiContext;
+  Prop: System.Rtti.TRttiProperty;
 begin
   Result := 0; // wsNormal
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
-    if Prop <> nil then
-      Result := Prop.GetValue(AForm).AsOrdinal;
-  finally
-    Ctx.Free;
-  end;
+  Ctx := GetRttiContext;
+  Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
+  if Prop <> nil then
+    Result := Prop.GetValue(AForm).AsOrdinal;
 end;
 
 class function TFormAccessor.GetFormMonitorIndex(AForm: TObject): Integer;
+var
+  Ctx: System.Rtti.TRttiContext;
+  Prop, MonProp: System.Rtti.TRttiProperty;
+  Monitor: TObject;
 begin
   Result := 0;
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Monitor');
-    if Prop <> nil then
+  Ctx := GetRttiContext;
+  Prop := Ctx.GetType(AForm.ClassType).GetProperty('Monitor');
+  if Prop <> nil then
+  begin
+    Monitor := Prop.GetValue(AForm).AsObject;
+    if Monitor <> nil then
     begin
-      var Monitor := Prop.GetValue(AForm).AsObject;
-      if Monitor <> nil then
-      begin
-        var MonProp := Ctx.GetType(Monitor.ClassType).GetProperty('MonitorNum');
-        if MonProp <> nil then
-          Result := MonProp.GetValue(Monitor).AsInteger;
-      end;
+      MonProp := Ctx.GetType(Monitor.ClassType).GetProperty('MonitorNum');
+      if MonProp <> nil then
+        Result := MonProp.GetValue(Monitor).AsInteger;
     end;
-  finally
-    Ctx.Free;
   end;
 end;
 
 class procedure TFormAccessor.SetFormBounds(AForm: TObject; const R: TRect);
+var
+  Ctx: System.Rtti.TRttiContext;
+  RttiType: System.Rtti.TRttiType;
+  PropLeft, PropTop, PropWidth, PropHeight: System.Rtti.TRttiProperty;
 begin
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var RttiType := Ctx.GetType(AForm.ClassType);
-    var PropLeft := RttiType.GetProperty('Left');
-    var PropTop := RttiType.GetProperty('Top');
-    var PropWidth := RttiType.GetProperty('Width');
-    var PropHeight := RttiType.GetProperty('Height');
-    
-    if (PropLeft <> nil) and (PropTop <> nil) and 
-       (PropWidth <> nil) and (PropHeight <> nil) then
-    begin
-      PropLeft.SetValue(AForm, R.Left);
-      PropTop.SetValue(AForm, R.Top);
-      PropWidth.SetValue(AForm, R.Width);
-      PropHeight.SetValue(AForm, R.Height);
-    end;
-  finally
-    Ctx.Free;
+  Ctx := GetRttiContext;
+  RttiType := Ctx.GetType(AForm.ClassType);
+  PropLeft := RttiType.GetProperty('Left');
+  PropTop := RttiType.GetProperty('Top');
+  PropWidth := RttiType.GetProperty('Width');
+  PropHeight := RttiType.GetProperty('Height');
+  
+  if (PropLeft <> nil) and (PropTop <> nil) and 
+     (PropWidth <> nil) and (PropHeight <> nil) then
+  begin
+    PropLeft.SetValue(AForm, R.Left);
+    PropTop.SetValue(AForm, R.Top);
+    PropWidth.SetValue(AForm, R.Width);
+    PropHeight.SetValue(AForm, R.Height);
   end;
 end;
 
 class procedure TFormAccessor.SetFormWindowState(AForm: TObject; State: Integer);
+var
+  Ctx: System.Rtti.TRttiContext;
+  Prop: System.Rtti.TRttiProperty;
 begin
   if AForm = nil then Exit;
   
-  var Ctx := System.Rtti.TRttiContext.Create;
-  try
-    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
-    if Prop <> nil then
-      Prop.SetValue(AForm, TValue.FromOrdinal(Prop.PropertyType.Handle, State));
-  finally
-    Ctx.Free;
-  end;
+  Ctx := GetRttiContext;
+  Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
+  if Prop <> nil then
+    Prop.SetValue(AForm, TValue.FromOrdinal(Prop.PropertyType.Handle, State));
 end;
 
 procedure TUniBaseFormState.SaveFormState(AForm: TObject; const ExtraData: string);

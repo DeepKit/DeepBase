@@ -387,9 +387,9 @@
 
 ## 总体统计
 
-- **总 Bug 数**: 33 (原 22 + 2025-12-01 7个 + 2025-12-06 4个)
-- **已修复**: 33 ✅
-- **严重性分布**: 🔴 9, 🟡 21, 🟢 3
+- **总 Bug 数**: 36 (原 22 + 2025-12-01 7个 + 2025-12-06 7个)
+- **已修复**: 36 ✅
+- **严重性分布**: 🔴 9, 🟡 24, 🟢 3
 - **平均修复时间**: 2-4 小时
 - **已解决 Issue**: 4 ✅ (2025-12-02)
 - **待处理 Issue**: 0
@@ -484,4 +484,32 @@
   - 添加高级 API: `SaveFormState(AForm)`, `RestoreFormState(AForm)`, `DeleteFormState`, `FormStateExists`, `GetFormStateExtra`
   - 使用 RTTI 访问 TForm 属性，避免 Core 层依赖 VCL
   - 使用 `{$IFDEF MSWINDOWS}` 条件编译
+- 状态: ✅ 已修复
+
+### CODE-BUG-001: ClearOldLogs 只清理 .txt 文件
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.Logging.pas:801`
+- 问题: `ClearOldLogs` 只清理 `Log_*.txt`，未清理 `Log_*.jsonl`
+- 修复: 添加单独的 `.jsonl` 文件清理循环
+- 状态: ✅ 已修复
+
+### TEST-BUG-001: Test.UniBase.FormState 引用不存在的 FormState 属性
+- 严重程度: 🟡 中
+- 文件: `Tests/Test.UniBase.FormState.pas:76`, `Core/UniBase.Manager.pas`
+- 问题: 测试代码调用 `UniBase.FormState` 但 Manager 未暴露该属性
+- 修复: 
+  - 在 Manager 中添加 `FFormState` 字段和 `FormState` 属性
+  - 添加 `UBFormState` 快捷函数
+  - 在 `InitializeModules`/`FinalizeModules` 中初始化和释放
+  - 修复测试代码使用正确 API (`IsInitialized`, `InitializeWithDB`)
+- 状态: ✅ 已修复
+
+### ARCH-BUG-001: TFormAccessor 每次调用创建新 TRttiContext
+- 严重程度: 🟡 中 (性能)
+- 文件: `Core/UniBase.FormState.pas`
+- 问题: `TFormAccessor` 的每个 class 方法都创建新的 `TRttiContext`，影响性能
+- 修复: 
+  - 添加 `class var FCtx: TRttiContext` 和 `FCtxInitialized: Boolean`
+  - 添加 `GetRttiContext` 类方法进行懒加载缓存
+  - 所有 RTTI 访问方法改用缓存的 Context
 - 状态: ✅ 已修复

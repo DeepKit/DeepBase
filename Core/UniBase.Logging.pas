@@ -794,9 +794,10 @@ begin
     end;
   end;
   
-  // 清理旧日志文件
+  // 清理旧日志文件 (.txt 和 .jsonl)
   if DirectoryExists(FLogFileDir) then
   begin
+    // 清理 .txt 日志文件
     try
       LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.txt');
       for LogFile in LogFiles do
@@ -804,6 +805,32 @@ begin
         FileName := ExtractFileName(LogFile);
         // 解析日期: Log_yyyy-MM-dd.txt
         if Length(FileName) >= 14 then
+        begin
+          try
+            FileDate := EncodeDate(
+              StrToInt(Copy(FileName, 5, 4)),
+              StrToInt(Copy(FileName, 10, 2)),
+              StrToInt(Copy(FileName, 13, 2))
+            );
+            if FileDate < IncDay(Now, -DaysToKeep) then
+              TFile.Delete(LogFile);
+          except
+            // 跳过解析失败的文件
+          end;
+        end;
+      end;
+    except
+      // ignore
+    end;
+    
+    // 清理 .jsonl 日志文件
+    try
+      LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.jsonl');
+      for LogFile in LogFiles do
+      begin
+        FileName := ExtractFileName(LogFile);
+        // 解析日期: Log_yyyy-MM-dd.jsonl
+        if Length(FileName) >= 16 then
         begin
           try
             FileDate := EncodeDate(

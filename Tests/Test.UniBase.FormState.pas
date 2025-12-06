@@ -70,8 +70,8 @@ implementation
 
 procedure TTestUniBaseFormState.Setup;
 begin
-  if not UniBase.Initialized then
-    UniBase.Initialize(':memory:');
+  if not UniBase.IsInitialized then
+    UniBase.InitializeWithDB(':memory:');
   
   FFormState := UniBase.FormState;
   

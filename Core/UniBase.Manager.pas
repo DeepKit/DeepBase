@@ -35,7 +35,8 @@ uses
   UniBase.Logging,
   UniBase.Security,
   UniBase.Plugin,
-  UniBase.PluginManager;
+  UniBase.PluginManager,
+  UniBase.FormState;
 
 const
   UNIBASE_VERSION = '0.3';
@@ -88,6 +89,7 @@ type
     FLogger: TUniBaseLogger;
     FSecurity: TUniBaseSecurity;
     FPluginManager: TUniBasePluginManager;
+    FFormState: TUniBaseFormState;
     
     // 内部方法
     procedure InitializeModules;
@@ -213,6 +215,7 @@ type
     property Logger: TUniBaseLogger read FLogger;
     property Security: TUniBaseSecurity read FSecurity;
     property PluginManager: TUniBasePluginManager read FPluginManager;
+    property FormState: TUniBaseFormState read FFormState;
     
     /// <summary>项目根目录</summary>
     property RootPath: string read FRootPath;
@@ -280,6 +283,8 @@ function UBLogger: TUniBaseLogger;
 function UBSecurity: TUniBaseSecurity;
 /// <summary>Direct access to PluginManager module</summary>
 function UBPlugins: TUniBasePluginManager;
+/// <summary>Direct access to FormState module</summary>
+function UBFormState: TUniBaseFormState;
 
 implementation
 
@@ -362,6 +367,11 @@ end;
 function UBPlugins: TUniBasePluginManager;
 begin
   Result := UniBase.PluginManager;
+end;
+
+function UBFormState: TUniBaseFormState;
+begin
+  Result := UniBase.FormState;
 end;
 
 { TUniBaseManager }
@@ -662,7 +672,10 @@ begin
     FLogger.MinLevel := StrToLogLevel(LogLevelStr);
   end;
   
-  // 7. PluginManager - create and load plugins
+  // 7. FormState - form position persistence
+  FFormState := TUniBaseFormState.Create(FConfigDB, FLock);
+  
+  // 8. PluginManager - create and load plugins
   FPluginManager := TUniBasePluginManager.Create(
     TPath.Combine(FRootPath, DEFAULT_PLUGINS_DIR),
     CreatePluginContext);
@@ -719,6 +732,7 @@ procedure TUniBaseManager.FinalizeModules;
 begin
   // Unload plugins first (reverse order of initialization)
   if Assigned(FPluginManager) then FreeAndNil(FPluginManager);
+  if Assigned(FFormState) then FreeAndNil(FFormState);
   if Assigned(FSecurity) then FreeAndNil(FSecurity);
   if Assigned(FTheme) then FreeAndNil(FTheme);
   if Assigned(FI18n) then FreeAndNil(FI18n);
