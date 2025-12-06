@@ -434,17 +434,60 @@ Inc(LRecord.Count) →
 
 ---
 
+## P5-C 平台集成 (2025-12-06)
+
+### TASK-2020: MCP 协议完整支持 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: High
+- **影响范围**: MCP
+- **内容**: 
+  - 新建 `Source/MCP/` 目录
+  - `UniFlow.MCP.Types.pas` (~1158 行): MCP 协议类型定义
+    - JSON-RPC 2.0 基础类型
+    - `TMCPTool` / `TMCPResource` / `TMCPPrompt` 定义
+    - 请求/响应消息类型 (Initialize/ListTools/CallTool/ListResources/ReadResource/ListPrompts/GetPrompt)
+    - MCP 通知类型
+  - `UniFlow.MCP.Server.pas` (~752 行): MCP Server 实现
+    - `TMCPServer` 服务器核心类
+    - `IMCPToolHandler` / `IMCPResourceProvider` / `IMCPPromptProvider` 提供器接口
+    - `TMCPSession` 会话管理
+    - JSON-RPC 请求路由与响应
+    - `TLambdaToolHandler` Lambda 工具处理器
+  - `UniFlow.MCP.Client.pas` (~769 行): MCP Client 实现
+    - `TMCPClient` 客户端核心类
+    - HTTP 传输层
+    - Tool/Resource/Prompt 缓存
+    - `TMCPClientManager` 多服务器管理
+  - 支持 MCP 协议版本 2024-11-05
+
+### TASK-2021: 更多 LLM 提供商 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: AI
+- **内容**: 
+  - 新增 `UniFlow.LLM.Providers.pas` (~1078 行)
+  - `ILLMProvider` 提供商接口
+  - `TOpenAIProvider` - OpenAI GPT-4/GPT-3.5
+  - `TClaudeProvider` - Anthropic Claude 3.5/3
+  - `TGeminiProvider` - Google Gemini Pro/Flash
+  - `TOllamaProvider` - 本地模型 (Ollama/LM Studio)
+  - `TAzureOpenAIProvider` - Azure OpenAI
+  - `TDeepSeekProvider` - DeepSeek
+  - `TLLMProviderManager` 多提供商管理器
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
-| High | 89 | 0 | 89 |
-| Medium | 16 | 0 | 16 |
+| High | 90 | 0 | 90 |
+| Medium | 17 | 0 | 17 |
 | Low | 7 | 0 | 7 |
-| **合计** | **113** | **0** | **113** |
+| **合计** | **115** | **0** | **115** |
 
-*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务*
+*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务 + P5-C 平台集成 2 个任务*
 
 ---
 
