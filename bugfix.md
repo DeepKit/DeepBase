@@ -15,6 +15,15 @@
 - 修复 commit: bcb2237 (同批次补丁)
 - 验证: 运行 MRU/Hotkeys 测试，能正确实例化并通过基础用例 ✅
 
+### BUG-040: License 测试使用不存在的 Connection 属性
+- 发现日期: 2025-12-06
+- 严重性: 🟡 Medium
+- 描述: `Test.UniBase.License.pas` 中使用了 `UniBase.Connection`，但 Manager 只有 `ConfigDB` 属性，导致编译失败。
+- 修复: 修改为 `UniBase.ConfigDB`。
+- 影响范围: License 测试。
+- 修复 commit: 648033a
+- 验证: 编译通过 ✅
+
 ---
 
 ## 2025-11-27 Bug 修复
