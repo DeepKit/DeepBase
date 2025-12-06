@@ -387,9 +387,9 @@
 
 ## 总体统计
 
-- **总 Bug 数**: 29 (原 22 + 2025-12-01 7个)
-- **已修复**: 29 ✅
-- **严重性分布**: 🔴 7, 🟡 19, 🟢 3
+- **总 Bug 数**: 33 (原 22 + 2025-12-01 7个 + 2025-12-06 4个)
+- **已修复**: 33 ✅
+- **严重性分布**: 🔴 9, 🟡 21, 🟢 3
 - **平均修复时间**: 2-4 小时
 - **已解决 Issue**: 4 ✅ (2025-12-02)
 - **待处理 Issue**: 0
@@ -443,4 +443,45 @@
 - 文件: `Core/UniBase.DB.DoQry.pas`
 - 问题: `TClientDataSet` 与 `TFDQuery` 不兼容
 - 修复: `CopyQueryToClientDataSet` 辅助函数复制数据
+- 状态: ✅ 已修复
+
+---
+
+## 2025-12-06 FormState 模块 Bug 修复
+
+### FORM-001: 双屏变单屏后窗体恢复到屏幕外
+- 严重程度: 🔴 高
+- 文件: `VCL/UniBase.VCL.FormStateHelper.pas`
+- 问题: `EnsureFormVisible` 只检查窗体与显示器有无交集，未检查标题栏是否可见
+- 修复: 
+  - 新增 `MIN_VISIBLE_HEIGHT`/`MIN_VISIBLE_WIDTH` 常量
+  - 计算标题栏区域与显示器的重叠面积
+  - 确保至少 40px 高度和 100px 宽度可见
+- 状态: ✅ 已修复
+
+### FORM-002: 最大化状态保存错误的窗体尺寸
+- 严重程度: 🔴 高
+- 文件: `VCL/UniBase.VCL.FormStateHelper.pas`
+- 问题: 最大化时保存的是最大化后的尺寸，而非 RestoreBounds
+- 修复: 使用 `GetWindowPlacement` API 获取 `rcNormalPosition`
+- 状态: ✅ 已修复
+
+### FORM-003: MonitorIndex 未正确处理
+- 严重程度: 🟡 中
+- 文件: `VCL/UniBase.VCL.FormStateHelper.pas`
+- 问题: 保存的 MonitorIndex 在恢复时未被使用
+- 修复: 
+  - 首先尝试定位到原显示器
+  - 如果原显示器不可用，找到与标题栏重叠最多的显示器
+  - 最后回退到主显示器
+- 状态: ✅ 已修复
+
+### FORM-004: 测试代码调用不存在的 API
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.FormState.pas`, `Tests/Test.UniBase.FormState.pas`
+- 问题: 测试调用 `SaveFormState(TForm)` 但实际只有低级 `SaveState(string, TFormStateData)`
+- 修复: 
+  - 添加高级 API: `SaveFormState(AForm)`, `RestoreFormState(AForm)`, `DeleteFormState`, `FormStateExists`, `GetFormStateExtra`
+  - 使用 RTTI 访问 TForm 属性，避免 Core 层依赖 VCL
+  - 使用 `{$IFDEF MSWINDOWS}` 条件编译
 - 状态: ✅ 已修复

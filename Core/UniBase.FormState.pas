@@ -14,6 +14,12 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Math,
+  System.Rtti,
+  System.Types,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   FireDAC.Comp.Client,
   UniBase.Types;
 
@@ -86,6 +92,37 @@ type
     /// Clear all states
     /// </summary>
     procedure ClearAll;
+    
+    {$IFDEF MSWINDOWS}
+    // ========================================
+    // High-level VCL Form API
+    // ========================================
+    
+    /// <summary>
+    /// Save form state directly from a TForm
+    /// </summary>
+    procedure SaveFormState(AForm: TObject; const ExtraData: string = '');
+    
+    /// <summary>
+    /// Restore form state directly to a TForm
+    /// </summary>
+    procedure RestoreFormState(AForm: TObject);
+    
+    /// <summary>
+    /// Delete form state by form name
+    /// </summary>
+    procedure DeleteFormState(const FormName: string);
+    
+    /// <summary>
+    /// Check if form state exists
+    /// </summary>
+    function FormStateExists(const FormName: string): Boolean;
+    
+    /// <summary>
+    /// Get extra data for a form
+    /// </summary>
+    function GetFormStateExtra(const FormName: string): string;
+    {$ENDIF}
   end;
 
 implementation
@@ -321,5 +358,283 @@ begin
     TMonitor.Exit(FLock);
   end;
 end;
+
+{$IFDEF MSWINDOWS}
+// ============================================================================
+// High-level VCL Form API
+// ============================================================================
+
+type
+  // 使用记录访问 TForm 的属性，避免直接依赖 Vcl.Forms
+  TFormAccessor = class
+  public
+    class function GetFormName(AForm: TObject): string;
+    class function GetFormHandle(AForm: TObject): HWND;
+    class function GetFormBounds(AForm: TObject): TRect;
+    class function GetFormWindowState(AForm: TObject): Integer; // 0=Normal, 1=Min, 2=Max
+    class function GetFormMonitorIndex(AForm: TObject): Integer;
+    class procedure SetFormBounds(AForm: TObject; const R: TRect);
+    class procedure SetFormWindowState(AForm: TObject; State: Integer);
+  end;
+
+class function TFormAccessor.GetFormName(AForm: TObject): string;
+begin
+  Result := '';
+  if AForm = nil then Exit;
+  
+  // 使用 RTTI 获取 Name 属性
+  if AForm.ClassName.Contains('Form') then
+  begin
+    var Ctx := System.Rtti.TRttiContext.Create;
+    try
+      var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Name');
+      if Prop <> nil then
+        Result := Prop.GetValue(AForm).AsString;
+    finally
+      Ctx.Free;
+    end;
+  end;
+end;
+
+class function TFormAccessor.GetFormHandle(AForm: TObject): HWND;
+begin
+  Result := 0;
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Handle');
+    if Prop <> nil then
+      Result := HWND(Prop.GetValue(AForm).AsOrdinal);
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class function TFormAccessor.GetFormBounds(AForm: TObject): TRect;
+begin
+  Result := TRect.Empty;
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var RttiType := Ctx.GetType(AForm.ClassType);
+    var PropLeft := RttiType.GetProperty('Left');
+    var PropTop := RttiType.GetProperty('Top');
+    var PropWidth := RttiType.GetProperty('Width');
+    var PropHeight := RttiType.GetProperty('Height');
+    
+    if (PropLeft <> nil) and (PropTop <> nil) and 
+       (PropWidth <> nil) and (PropHeight <> nil) then
+    begin
+      Result.Left := PropLeft.GetValue(AForm).AsInteger;
+      Result.Top := PropTop.GetValue(AForm).AsInteger;
+      Result.Width := PropWidth.GetValue(AForm).AsInteger;
+      Result.Height := PropHeight.GetValue(AForm).AsInteger;
+    end;
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class function TFormAccessor.GetFormWindowState(AForm: TObject): Integer;
+begin
+  Result := 0; // wsNormal
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
+    if Prop <> nil then
+      Result := Prop.GetValue(AForm).AsOrdinal;
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class function TFormAccessor.GetFormMonitorIndex(AForm: TObject): Integer;
+begin
+  Result := 0;
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('Monitor');
+    if Prop <> nil then
+    begin
+      var Monitor := Prop.GetValue(AForm).AsObject;
+      if Monitor <> nil then
+      begin
+        var MonProp := Ctx.GetType(Monitor.ClassType).GetProperty('MonitorNum');
+        if MonProp <> nil then
+          Result := MonProp.GetValue(Monitor).AsInteger;
+      end;
+    end;
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class procedure TFormAccessor.SetFormBounds(AForm: TObject; const R: TRect);
+begin
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var RttiType := Ctx.GetType(AForm.ClassType);
+    var PropLeft := RttiType.GetProperty('Left');
+    var PropTop := RttiType.GetProperty('Top');
+    var PropWidth := RttiType.GetProperty('Width');
+    var PropHeight := RttiType.GetProperty('Height');
+    
+    if (PropLeft <> nil) and (PropTop <> nil) and 
+       (PropWidth <> nil) and (PropHeight <> nil) then
+    begin
+      PropLeft.SetValue(AForm, R.Left);
+      PropTop.SetValue(AForm, R.Top);
+      PropWidth.SetValue(AForm, R.Width);
+      PropHeight.SetValue(AForm, R.Height);
+    end;
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class procedure TFormAccessor.SetFormWindowState(AForm: TObject; State: Integer);
+begin
+  if AForm = nil then Exit;
+  
+  var Ctx := System.Rtti.TRttiContext.Create;
+  try
+    var Prop := Ctx.GetType(AForm.ClassType).GetProperty('WindowState');
+    if Prop <> nil then
+      Prop.SetValue(AForm, TValue.FromOrdinal(Prop.PropertyType.Handle, State));
+  finally
+    Ctx.Free;
+  end;
+end;
+
+procedure TUniBaseFormState.SaveFormState(AForm: TObject; const ExtraData: string);
+var
+  Data: TFormStateData;
+  FormName: string;
+  Placement: TWindowPlacement;
+  NormalRect: TRect;
+  Handle: HWND;
+begin
+  if AForm = nil then Exit;
+  
+  FormName := TFormAccessor.GetFormName(AForm);
+  if FormName = '' then Exit;
+  
+  Data.Init;
+  
+  // 使用 GetWindowPlacement 获取正常状态下的窗口边界
+  Handle := TFormAccessor.GetFormHandle(AForm);
+  if Handle <> 0 then
+  begin
+    Placement.length := SizeOf(TWindowPlacement);
+    if GetWindowPlacement(Handle, @Placement) then
+    begin
+      NormalRect := Placement.rcNormalPosition;
+      Data.Left := NormalRect.Left;
+      Data.Top := NormalRect.Top;
+      Data.Width := NormalRect.Width;
+      Data.Height := NormalRect.Height;
+    end
+    else
+    begin
+      var Bounds := TFormAccessor.GetFormBounds(AForm);
+      Data.Left := Bounds.Left;
+      Data.Top := Bounds.Top;
+      Data.Width := Bounds.Width;
+      Data.Height := Bounds.Height;
+    end;
+  end
+  else
+  begin
+    var Bounds := TFormAccessor.GetFormBounds(AForm);
+    Data.Left := Bounds.Left;
+    Data.Top := Bounds.Top;
+    Data.Width := Bounds.Width;
+    Data.Height := Bounds.Height;
+  end;
+  
+  Data.WindowState := TFormAccessor.GetFormWindowState(AForm);
+  Data.MonitorIndex := TFormAccessor.GetFormMonitorIndex(AForm);
+  Data.Extra := ExtraData;
+  
+  SaveState(FormName, Data);
+end;
+
+procedure TUniBaseFormState.RestoreFormState(AForm: TObject);
+const
+  MIN_VISIBLE_HEIGHT = 40;
+  MIN_VISIBLE_WIDTH = 100;
+var
+  Data: TFormStateData;
+  FormName: string;
+  MonitorRect: TRect;
+  ScreenWidth, ScreenHeight: Integer;
+begin
+  if AForm = nil then Exit;
+  
+  FormName := TFormAccessor.GetFormName(AForm);
+  if FormName = '' then Exit;
+  
+  if RestoreState(FormName, Data) then
+  begin
+    // 边界检查 - 确保窗体在可见范围内
+    ScreenWidth := GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    ScreenHeight := GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    
+    // 确保窗体尺寸合理
+    if Data.Width < 100 then Data.Width := 400;
+    if Data.Height < 100 then Data.Height := 300;
+    if Data.Width > ScreenWidth then Data.Width := ScreenWidth - 20;
+    if Data.Height > ScreenHeight then Data.Height := ScreenHeight - 20;
+    
+    // 确保标题栏在可见范围内
+    if Data.Left < -Data.Width + MIN_VISIBLE_WIDTH then
+      Data.Left := 0;
+    if Data.Left > ScreenWidth - MIN_VISIBLE_WIDTH then
+      Data.Left := ScreenWidth - Data.Width;
+    if Data.Top < 0 then
+      Data.Top := 0;
+    if Data.Top > ScreenHeight - MIN_VISIBLE_HEIGHT then
+      Data.Top := ScreenHeight - Data.Height;
+    
+    // 先设置为正常状态以便设置位置
+    TFormAccessor.SetFormWindowState(AForm, 0); // wsNormal
+    
+    // 应用位置和大小
+    TFormAccessor.SetFormBounds(AForm, TRect.Create(Data.Left, Data.Top, 
+      Data.Left + Data.Width, Data.Top + Data.Height));
+    
+    // 恢复窗口状态 (不恢复最小化状态)
+    if Data.WindowState = 2 then // wsMaximized
+      TFormAccessor.SetFormWindowState(AForm, 2);
+  end;
+end;
+
+procedure TUniBaseFormState.DeleteFormState(const FormName: string);
+begin
+  DeleteState(FormName);
+end;
+
+function TUniBaseFormState.FormStateExists(const FormName: string): Boolean;
+begin
+  Result := HasState(FormName);
+end;
+
+function TUniBaseFormState.GetFormStateExtra(const FormName: string): string;
+var
+  Data: TFormStateData;
+begin
+  Result := '';
+  if RestoreState(FormName, Data) then
+    Result := Data.Extra;
+end;
+{$ENDIF}
 
 end.

@@ -112,6 +112,7 @@ type
 implementation
 
 uses
+  Winapi.Windows,
   Vcl.Controls,
   System.Types;
 
@@ -263,47 +264,99 @@ begin
 end;
 
 procedure TFormStateHelper.EnsureFormVisible(var Data: TFormStateData);
+const
+  MIN_VISIBLE_HEIGHT = 40;  // 至少需要40像素高度可见（标题栏+一点内容）
+  MIN_VISIBLE_WIDTH = 100;  // 至少需要100像素宽度可见（可以拖动）
 var
   I: Integer;
   MonitorRect: TRect;
-  FormRect: TRect;
-  FoundMonitor: Boolean;
+  TitleBarRect: TRect;
+  VisibleWidth, VisibleHeight: Integer;
+  BestMonitor: Integer;
+  BestOverlap: Integer;
+  CurrentOverlap: Integer;
+  TargetMonitor: TMonitor;
 begin
-  // 检查窗体是否在任一显示器的可见范围内
-  FormRect := Rect(Data.Left, Data.Top, Data.Left + Data.Width, Data.Top + Data.Height);
-  FoundMonitor := False;
+  // 策略：确保窗体标题栏区域有足够的可见部分让用户能够拖动
+  // 标题栏区域定义为窗体顶部 MIN_VISIBLE_HEIGHT 像素
+  TitleBarRect := Rect(
+    Data.Left, 
+    Data.Top, 
+    Data.Left + Data.Width, 
+    Data.Top + MIN_VISIBLE_HEIGHT
+  );
   
-  for I := 0 to Screen.MonitorCount - 1 do
+  BestMonitor := -1;
+  BestOverlap := 0;
+  
+  // 首先尝试找到保存时的显示器
+  if (Data.MonitorIndex >= 0) and (Data.MonitorIndex < Screen.MonitorCount) then
   begin
-    MonitorRect := Screen.Monitors[I].WorkareaRect;
-    
-    // 检查窗体是否与显示器有交集（至少有一部分可见）
-    if (FormRect.Left < MonitorRect.Right) and 
-       (FormRect.Right > MonitorRect.Left) and
-       (FormRect.Top < MonitorRect.Bottom) and 
-       (FormRect.Bottom > MonitorRect.Top) then
+    MonitorRect := Screen.Monitors[Data.MonitorIndex].WorkareaRect;
+    // 检查窗体是否在这个显示器的合理范围内
+    if (Data.Left >= MonitorRect.Left - Data.Width + MIN_VISIBLE_WIDTH) and
+       (Data.Left <= MonitorRect.Right - MIN_VISIBLE_WIDTH) and
+       (Data.Top >= MonitorRect.Top) and
+       (Data.Top <= MonitorRect.Bottom - MIN_VISIBLE_HEIGHT) then
     begin
-      FoundMonitor := True;
-      Break;
+      // 原显示器仍然有效，只需要微调确保可见
+      BestMonitor := Data.MonitorIndex;
     end;
   end;
   
-  // 如果窗体完全不在任何显示器上，移到主显示器
-  if not FoundMonitor then
+  // 如果原显示器不可用，找到与标题栏重叠最多的显示器
+  if BestMonitor < 0 then
   begin
-    MonitorRect := Screen.PrimaryMonitor.WorkareaRect;
-    
-    // 确保窗体不超出屏幕
-    if Data.Width > MonitorRect.Width then
-      Data.Width := MonitorRect.Width - 20;
-    if Data.Height > MonitorRect.Height then
-      Data.Height := MonitorRect.Height - 20;
+    for I := 0 to Screen.MonitorCount - 1 do
+    begin
+      MonitorRect := Screen.Monitors[I].WorkareaRect;
       
-    // 居中显示
-    Data.Left := MonitorRect.Left + (MonitorRect.Width - Data.Width) div 2;
-    Data.Top := MonitorRect.Top + (MonitorRect.Height - Data.Height) div 2;
-    Data.MonitorIndex := Screen.PrimaryMonitor.MonitorNum;
+      // 计算标题栏与显示器的重叠面积
+      VisibleWidth := Min(TitleBarRect.Right, MonitorRect.Right) - 
+                      Max(TitleBarRect.Left, MonitorRect.Left);
+      VisibleHeight := Min(TitleBarRect.Bottom, MonitorRect.Bottom) - 
+                       Max(TitleBarRect.Top, MonitorRect.Top);
+      
+      if (VisibleWidth > 0) and (VisibleHeight > 0) then
+      begin
+        CurrentOverlap := VisibleWidth * VisibleHeight;
+        if CurrentOverlap > BestOverlap then
+        begin
+          BestOverlap := CurrentOverlap;
+          BestMonitor := I;
+        end;
+      end;
+    end;
   end;
+  
+  // 如果没有找到任何重叠的显示器，使用主显示器
+  if BestMonitor < 0 then
+    BestMonitor := Screen.PrimaryMonitor.MonitorNum;
+  
+  TargetMonitor := Screen.Monitors[BestMonitor];
+  MonitorRect := TargetMonitor.WorkareaRect;
+  
+  // 确保窗体尺寸不超出目标显示器
+  if Data.Width > MonitorRect.Width - 20 then
+    Data.Width := MonitorRect.Width - 20;
+  if Data.Height > MonitorRect.Height - 20 then
+    Data.Height := MonitorRect.Height - 20;
+  
+  // 确保标题栏完全在显示器内
+  // 左边界：至少 MIN_VISIBLE_WIDTH 像素在屏幕内
+  if Data.Left < MonitorRect.Left - Data.Width + MIN_VISIBLE_WIDTH then
+    Data.Left := MonitorRect.Left;
+  // 右边界：至少 MIN_VISIBLE_WIDTH 像素在屏幕内
+  if Data.Left > MonitorRect.Right - MIN_VISIBLE_WIDTH then
+    Data.Left := MonitorRect.Right - Data.Width;
+  // 上边界：标题栏必须在屏幕内
+  if Data.Top < MonitorRect.Top then
+    Data.Top := MonitorRect.Top;
+  // 下边界：至少 MIN_VISIBLE_HEIGHT 像素在屏幕内
+  if Data.Top > MonitorRect.Bottom - MIN_VISIBLE_HEIGHT then
+    Data.Top := MonitorRect.Bottom - Data.Height;
+    
+  Data.MonitorIndex := BestMonitor;
 end;
 
 procedure TFormStateHelper.SaveState;
@@ -312,6 +365,8 @@ var
   ExtraData: string;
   FormState: TUniBaseFormState;
   EffectiveName: string;
+  Placement: TWindowPlacement;
+  NormalRect: TRect;
 begin
   if FForm = nil then Exit;
   if not UniBase.Manager.UniBase.IsInitialized then Exit;
@@ -324,30 +379,31 @@ begin
     // 收集状态数据
     Data.Init;
     
-    // 如果是最大化状态，保存 RestoreBounds
-    if FForm.WindowState = wsMaximized then
+    // 使用 GetWindowPlacement 获取正常状态下的窗口边界
+    // 这在最大化/最小化状态下也能正确返回 RestoreBounds
+    Placement.length := SizeOf(TWindowPlacement);
+    if GetWindowPlacement(FForm.Handle, @Placement) then
     begin
-      Data.Left := FForm.Left;
-      Data.Top := FForm.Top;
-      Data.Width := FForm.Width;
-      Data.Height := FForm.Height;
-      Data.WindowState := 2;
-    end
-    else if FForm.WindowState = wsMinimized then
-    begin
-      // 最小化时，尝试获取正常状态的位置
-      Data.Left := FForm.Left;
-      Data.Top := FForm.Top;
-      Data.Width := FForm.Width;
-      Data.Height := FForm.Height;
-      Data.WindowState := 1;
+      NormalRect := Placement.rcNormalPosition;
+      Data.Left := NormalRect.Left;
+      Data.Top := NormalRect.Top;
+      Data.Width := NormalRect.Width;
+      Data.Height := NormalRect.Height;
     end
     else
     begin
+      // 回退到直接读取属性
       Data.Left := FForm.Left;
       Data.Top := FForm.Top;
       Data.Width := FForm.Width;
       Data.Height := FForm.Height;
+    end;
+    
+    // 保存窗口状态
+    case FForm.WindowState of
+      wsMaximized: Data.WindowState := 2;
+      wsMinimized: Data.WindowState := 1;
+    else
       Data.WindowState := 0;
     end;
     
