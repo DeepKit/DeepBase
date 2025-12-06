@@ -83,7 +83,7 @@ begin
   if not UniBase.IsInitialized then
     UniBase.InitializeWithDB(':memory:');
   
-  FLicense := TUniBaseLicense.Create(UniBase.Connection);
+  FLicense := TUniBaseLicense.Create(UniBase.ConfigDB);
 end;
 
 procedure TTestUniBaseLicense.TearDown;
