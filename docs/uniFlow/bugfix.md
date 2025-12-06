@@ -521,17 +521,99 @@ Inc(LRecord.Count) →
 
 ---
 
+## P6-A 云原生支持 (2025-12-06)
+
+### TASK-3001: Kubernetes 部署模板 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Deploy
+- **内容**: 
+  - 新建 `Deploy/k8s/` 目录
+  - `uniflow-deployment.yaml` (~587 行): 主部署清单
+    - Namespace / ConfigMap / Secret
+    - Deployment (API) + initContainers
+    - Service (ClusterIP + Headless)
+    - HPA (CPU/Memory/RPS 自动伸缩)
+    - PDB (Pod 中断预算)
+    - ServiceAccount / RBAC
+    - Ingress (TLS + 限流)
+    - PVC (持久化存储)
+  - `uniflow-worker.yaml` (~435 行): Worker 部署
+    - Worker Deployment + HPA
+    - Scheduler Deployment (单实例 + Leader Election)
+    - Leader Election RBAC
+  - `kustomization.yaml` Kustomize 入口
+
+### TASK-3002: Helm Chart 包 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Deploy
+- **内容**: 
+  - 新建 `Deploy/helm/uniflow/` 目录
+  - `Chart.yaml` Chart 定义 (依赖 PostgreSQL/Redis/RabbitMQ)
+  - `values.yaml` (~337 行): 完整配置
+    - API/Worker/Scheduler 配置
+    - 应用配置 (Server/Workflow/Cache/Queue/Monitoring/Tracing/Security)
+    - Secrets 配置 (Database/Redis/RabbitMQ/JWT/LLM)
+    - 子图表配置 (PostgreSQL/Redis/RabbitMQ)
+  - `templates/_helpers.tpl` (~282 行): 模板助手函数
+  - `templates/api-deployment.yaml` API Deployment 模板
+  - `templates/service.yaml` / `templates/ingress.yaml`
+  - `templates/hpa.yaml` / `templates/rbac.yaml`
+  - `templates/configmap.yaml` / `templates/secrets.yaml`
+
+### TASK-3003: Service Mesh 集成 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: High
+- **影响范围**: Deploy
+- **内容**: 
+  - 新建 `Deploy/istio/` 目录
+  - `uniflow-mesh.yaml` (~407 行): Istio 配置
+    - Gateway (HTTP/HTTPS 入口)
+    - VirtualService (路由规则 + 重试 + 超时)
+    - DestinationRule (负载均衡 + 熔断 + 子集)
+    - PeerAuthentication (mTLS 强制)
+    - AuthorizationPolicy (API 访问控制)
+    - RequestAuthentication (JWT 验证)
+    - ServiceEntry (外部 LLM 提供商访问)
+    - Sidecar (出站流量限制)
+    - EnvoyFilter (本地限流)
+    - Telemetry (追踪 + 日志 + 指标)
+
+### TASK-3004: 分布式追踪 (OpenTelemetry) ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Cloud
+- **内容**: 
+  - 新建 `Source/Cloud/` 目录
+  - `UniFlow.Cloud.Telemetry.Types.pas` (~1507 行): OTel 类型
+    - Trace 类型: TSpan / TTraceContext / TSpanEvent / TSpanLink
+    - Metrics 类型: TCounter / TGauge / THistogramMetric
+    - Logs 类型: TLogRecord / TLogSeverity
+    - 资源配置: TResource / TExporterConfig / TSamplerConfig / TOTelConfig
+    - 工作流属性: TWorkflowTraceAttributes / TWorkflowMetrics
+  - `UniFlow.Cloud.Telemetry.SDK.pas` (~1689 行): OTel SDK
+    - TracerProvider / Tracer / 采样器 (AlwaysOn/Off/Ratio/ParentBased)
+    - MeterProvider / Meter
+    - LoggerProvider / Logger
+    - 批处理处理器 (TBatchSpanProcessor)
+    - OTLP HTTP 导出器 (Traces/Metrics/Logs)
+    - 控制台导出器
+    - TOpenTelemetry 全局单例
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
-|| High | 92 | 0 | 92 |
-|| Medium | 17 | 0 | 17 |
+|| High | 93 | 0 | 93 |
+|| Medium | 20 | 0 | 20 |
 || Low | 7 | 0 | 7 |
-|| **合计** | **117** | **0** | **117** |
+|| **合计** | **121** | **0** | **121** |
 
-*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务 + P5-C 平台集成 4 个任务*
+*注: 包含 P5-A/B/C (12任务) + P6-A 云原生 (4任务)*
 
 ---
 
