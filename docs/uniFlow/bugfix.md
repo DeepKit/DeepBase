@@ -250,6 +250,41 @@ Inc(LRecord.Count) →
 - **问题描述**: 缺少边界条件、并发场景、错误恢复测试
 - **修复方案**: 新增 `TBoundaryConditionTests`/`TConcurrencyTests`/`TErrorRecoveryTests` 测试套件
 
+### BUG-060: ARCH-003 Skill URL 配置硬编码 ✅
+- **发现/修复日期**: 2025-12-06
+- **严重程度**: Low
+- **影响范围**: UniFlow.Skill.Executor.pas
+- **问题描述**: Skill 服务 URL 硬编码在构造函数，无法通过配置调整
+- **修复方案**: 
+  - 新增 `TSkillServiceConfig` 配置类
+  - 支持从 JSON/环境变量/配置文件加载
+  - 环境变量前缀: `UNIFLOW_SKILL_URL/TIMEOUT/RETRY_COUNT/RETRY_DELAY`
+  - `TSkillActionExecutor.CreateDefault` 使用全局默认配置
+
+### BUG-061: CODE-002 ExecuteLoop 对象频繁创建 ✅
+- **发现/修复日期**: 2025-12-06
+- **严重程度**: Medium
+- **影响范围**: UniFlow.Performance.Pool.pas
+- **问题描述**: 循环每次迭代都创建新的 `TVariableValue`，GC 压力大
+- **修复方案**: 
+  - 新增 `TPooledLoopVar` 轻量级循环变量类
+  - 新增 `TVariableValuePool` 对象池
+  - 支持整数/字符串/JSON 值的池化复用
+  - 预热 16 个整数 + 8 个字符串对象
+
+### BUG-062: UX-002 缺少工作流模板 ✅
+- **发现/修复日期**: 2025-12-06
+- **严重程度**: Low (UX)
+- **影响范围**: Templates
+- **问题描述**: 新用户缺少参考模板，上手困难
+- **修复方案**: 
+  - 新建 `Templates/` 目录
+  - 添加 3 个常用模板:
+    - `01-sequential-approval.json` - 顺序审批流程
+    - `02-data-sync.json` - ETL 数据同步
+    - `03-ai-chat.json` - AI 智能对话
+  - 添加 `README.md` 模板使用指南
+
 ---
 
 ## Bug 统计
@@ -258,9 +293,9 @@ Inc(LRecord.Count) →
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
 | High | 87 | 0 | 87 |
-| Medium | 10 | 0 | 10 |
-| Low | 2 | 0 | 2 |
-| **合计** | **100** | **0** | **100** |
+| Medium | 11 | 0 | 11 |
+| Low | 4 | 0 | 4 |
+| **合计** | **103** | **0** | **103** |
 
 ---
 

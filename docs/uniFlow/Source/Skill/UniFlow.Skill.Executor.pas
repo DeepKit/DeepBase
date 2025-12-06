@@ -116,12 +116,44 @@ type
   TContextResolver = reference to function(const AExpression: string): TValue;
   TContextUpdater = reference to procedure(const AName: string; const AValue: TValue);
 
+  /// <summary>
+  /// ARCH-003: Skill 服务配置
+  /// 支持从配置文件或环境变量加载
+  /// </summary>
+  TSkillServiceConfig = class
+  private
+    FBaseURL: string;
+    FTimeoutMs: Integer;
+    FRetryCount: Integer;
+    FRetryDelayMs: Integer;
+    class var FDefault: TSkillServiceConfig;
+    class function GetDefault: TSkillServiceConfig; static;
+  public
+    constructor Create;
+    
+    /// <summary>从 JSON 加载配置</summary>
+    procedure LoadFromJSON(AJson: TJSONObject);
+    /// <summary>从环境变量加载 (前缀 UNIFLOW_SKILL_)</summary>
+    procedure LoadFromEnvironment;
+    /// <summary>从配置文件加载</summary>
+    procedure LoadFromFile(const APath: string);
+    
+    property BaseURL: string read FBaseURL write FBaseURL;
+    property TimeoutMs: Integer read FTimeoutMs write FTimeoutMs;
+    property RetryCount: Integer read FRetryCount write FRetryCount;
+    property RetryDelayMs: Integer read FRetryDelayMs write FRetryDelayMs;
+    
+    class property Default: TSkillServiceConfig read GetDefault;
+    class destructor Destroy;
+  end;
+
   TSkillActionExecutor = class
   private
     FClient: TSkillClient;
     FOwnsClient: Boolean;
     FDefaultTimeout: Integer;
     FDefaultRetryCount: Integer;
+    FConfig: TSkillServiceConfig;  // ARCH-003: 引用配置
 
     function ResolveParams(const AParams: TJSONObject;
       const AResolver: TContextResolver): TJSONObject;
@@ -133,6 +165,10 @@ type
   public
     constructor Create(AClient: TSkillClient; AOwnsClient: Boolean = False); overload;
     constructor Create(const ABaseURL: string); overload;
+    /// <summary>ARCH-003: 使用配置创建</summary>
+    constructor Create(AConfig: TSkillServiceConfig); overload;
+    /// <summary>ARCH-003: 使用默认配置创建</summary>
+    constructor CreateDefault;
     destructor Destroy; override;
 
     /// <summary>Execute a Skill action</summary>
@@ -195,7 +231,80 @@ implementation
 
 uses
   System.StrUtils,
-  System.RegularExpressions;
+  System.RegularExpressions,
+  System.IOUtils;
+
+//------------------------------------------------------------------------------
+// TSkillServiceConfig - ARCH-003
+//------------------------------------------------------------------------------
+
+constructor TSkillServiceConfig.Create;
+begin
+  inherited Create;
+  // 默认配置
+  FBaseURL := 'http://localhost:8000';
+  FTimeoutMs := 30000;
+  FRetryCount := 3;
+  FRetryDelayMs := 1000;
+end;
+
+class destructor TSkillServiceConfig.Destroy;
+begin
+  FDefault.Free;
+end;
+
+class function TSkillServiceConfig.GetDefault: TSkillServiceConfig;
+begin
+  if FDefault = nil then
+  begin
+    FDefault := TSkillServiceConfig.Create;
+    FDefault.LoadFromEnvironment;
+  end;
+  Result := FDefault;
+end;
+
+procedure TSkillServiceConfig.LoadFromJSON(AJson: TJSONObject);
+begin
+  if AJson = nil then Exit;
+  AJson.TryGetValue<string>('baseUrl', FBaseURL);
+  AJson.TryGetValue<Integer>('timeoutMs', FTimeoutMs);
+  AJson.TryGetValue<Integer>('retryCount', FRetryCount);
+  AJson.TryGetValue<Integer>('retryDelayMs', FRetryDelayMs);
+end;
+
+procedure TSkillServiceConfig.LoadFromEnvironment;
+var
+  EnvVal: string;
+begin
+  // ARCH-003: 从环境变量加载
+  EnvVal := GetEnvironmentVariable('UNIFLOW_SKILL_URL');
+  if EnvVal <> '' then FBaseURL := EnvVal;
+  
+  EnvVal := GetEnvironmentVariable('UNIFLOW_SKILL_TIMEOUT');
+  if EnvVal <> '' then FTimeoutMs := StrToIntDef(EnvVal, FTimeoutMs);
+  
+  EnvVal := GetEnvironmentVariable('UNIFLOW_SKILL_RETRY_COUNT');
+  if EnvVal <> '' then FRetryCount := StrToIntDef(EnvVal, FRetryCount);
+  
+  EnvVal := GetEnvironmentVariable('UNIFLOW_SKILL_RETRY_DELAY');
+  if EnvVal <> '' then FRetryDelayMs := StrToIntDef(EnvVal, FRetryDelayMs);
+end;
+
+procedure TSkillServiceConfig.LoadFromFile(const APath: string);
+var
+  Json: TJSONObject;
+  Content: string;
+begin
+  if not TFile.Exists(APath) then Exit;
+  Content := TFile.ReadAllText(APath);
+  Json := TJSONObject.ParseJSONValue(Content) as TJSONObject;
+  if Json <> nil then
+  try
+    LoadFromJSON(Json);
+  finally
+    Json.Free;
+  end;
+end;
 
 //------------------------------------------------------------------------------
 // TSkillActionConfig
@@ -323,6 +432,7 @@ begin
   inherited Create;
   FClient := AClient;
   FOwnsClient := AOwnsClient;
+  FConfig := nil;
   FDefaultTimeout := 30000;
   FDefaultRetryCount := 0;
 end;
@@ -330,6 +440,21 @@ end;
 constructor TSkillActionExecutor.Create(const ABaseURL: string);
 begin
   Create(TSkillClient.Create(ABaseURL), True);
+end;
+
+// ARCH-003: 使用配置创建
+constructor TSkillActionExecutor.Create(AConfig: TSkillServiceConfig);
+begin
+  FConfig := AConfig;
+  Create(TSkillClient.Create(AConfig.BaseURL), True);
+  FDefaultTimeout := AConfig.TimeoutMs;
+  FDefaultRetryCount := AConfig.RetryCount;
+end;
+
+// ARCH-003: 使用默认配置创建
+constructor TSkillActionExecutor.CreateDefault;
+begin
+  Create(TSkillServiceConfig.Default);
 end;
 
 destructor TSkillActionExecutor.Destroy;

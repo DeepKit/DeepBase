@@ -215,6 +215,62 @@ type
   end;
   
   // ============================================================================
+  // CODE-002: 循环变量对象池 (轻量级)
+  // ============================================================================
+  
+  /// <summary>池化循环变量（不依赖 TVariableValue）</summary>
+  TPooledLoopVar = class
+  private
+    FValueType: string;
+    FStringValue: string;
+    FIntValue: Int64;
+    FJsonValue: TJSONValue;  // 不拥有
+    FIsNull: Boolean;
+    FPooled: Boolean;
+  public
+    constructor Create;
+    procedure Reset;
+    procedure SetInt(AValue: Int64);
+    procedure SetStr(const AValue: string);
+    procedure SetJson(AValue: TJSONValue);
+    
+    function AsString: string;
+    function AsInteger: Int64;
+    function AsJSON: TJSONValue;  // 可能创建新对象，调用者负责释放
+    
+    property ValueType: string read FValueType;
+    property IsPooled: Boolean read FPooled write FPooled;
+    property IsNull: Boolean read FIsNull;
+  end;
+  
+  TVariableValuePool = class
+  private
+    FIntPool: TObjectList<TPooledLoopVar>;     // 整数值池
+    FStrPool: TObjectList<TPooledLoopVar>;     // 字符串值池
+    FLock: TCriticalSection;
+    FStats: TPoolStats;
+    class var FInstance: TVariableValuePool;
+    class var FLock: TCriticalSection;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    
+    /// <summary>获取整数值包装</summary>
+    function AcquireInt(AValue: Int64): TPooledLoopVar;
+    /// <summary>获取字符串值包装</summary>
+    function AcquireStr(const AValue: string): TPooledLoopVar;
+    /// <summary>获取 JSON 值包装</summary>
+    function AcquireJson(AValue: TJSONValue): TPooledLoopVar;
+    /// <summary>释放值回池</summary>
+    procedure Release(AValue: TPooledLoopVar);
+    /// <summary>获取统计</summary>
+    function GetStats: TPoolStats;
+    
+    class function GetInstance: TVariableValuePool;
+    class procedure ReleaseInstance;
+  end;
+
+  // ============================================================================
   // 对象池管理器
   // ============================================================================
   
@@ -274,10 +330,14 @@ function StringListPool: TStringListPool;
 /// <summary>获取池管理器实例</summary>
 function PoolManager: TPoolManager;
 
+/// <summary>CODE-002: 获取 TVariableValue 池实例</summary>
+function VariableValuePool: TVariableValuePool;
+
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  System.StrUtils;
 
 // ============================================================================
 // TPoolStats
@@ -1019,12 +1079,295 @@ begin
   Result := TPoolManager.GetInstance;
 end;
 
+function VariableValuePool: TVariableValuePool;
+begin
+  Result := TVariableValuePool.GetInstance;
+end;
+
+// ============================================================================
+// TVariableValuePool - CODE-002
+// 使用轻量级循环变量包装类，包含完整字段
+// ============================================================================
+
+constructor TPooledLoopVar.Create;
+begin
+  inherited Create;
+  FValueType := 'null';
+  FIsNull := True;
+  FPooled := False;
+end;
+
+procedure TPooledLoopVar.Reset;
+begin
+  FValueType := 'null';
+  FStringValue := '';
+  FIntValue := 0;
+  FJsonValue := nil;  // 不拥有，不释放
+  FIsNull := True;
+end;
+
+procedure TPooledLoopVar.SetInt(AValue: Int64);
+begin
+  FValueType := 'integer';
+  FIntValue := AValue;
+  FIsNull := False;
+end;
+
+procedure TPooledLoopVar.SetStr(const AValue: string);
+begin
+  FValueType := 'string';
+  FStringValue := AValue;
+  FIsNull := False;
+end;
+
+procedure TPooledLoopVar.SetJson(AValue: TJSONValue);
+begin
+  FValueType := 'json';
+  FJsonValue := AValue;  // 不拥有
+  FIsNull := (AValue = nil);
+end;
+
+function TPooledLoopVar.AsString: string;
+begin
+  if FIsNull then Exit('');
+  case IndexStr(FValueType, ['string', 'integer', 'json']) of
+    0: Result := FStringValue;
+    1: Result := IntToStr(FIntValue);
+    2: if FJsonValue <> nil then Result := FJsonValue.Value else Result := '';
+  else
+    Result := '';
+  end;
+end;
+
+function TPooledLoopVar.AsInteger: Int64;
+begin
+  if FIsNull then Exit(0);
+  case IndexStr(FValueType, ['integer', 'string']) of
+    0: Result := FIntValue;
+    1: Result := StrToInt64Def(FStringValue, 0);
+  else
+    Result := 0;
+  end;
+end;
+
+function TPooledLoopVar.AsJSON: TJSONValue;
+begin
+  if FIsNull then Exit(nil);
+  case IndexStr(FValueType, ['json', 'string', 'integer']) of
+    0: Result := FJsonValue;
+    1: Result := TJSONString.Create(FStringValue);
+    2: Result := TJSONNumber.Create(FIntValue);
+  else
+    Result := nil;
+  end;
+end;
+
+constructor TVariableValuePool.Create;
+begin
+  inherited Create;
+  FIntPool := TObjectList<TPooledLoopVar>.Create(True);
+  FStrPool := TObjectList<TPooledLoopVar>.Create(True);
+  FLock := TCriticalSection.Create;
+  FStats.Reset;
+  
+  // 预热：循环常用 16 个整数和 8 个字符串
+  for var I := 0 to 15 do
+  begin
+    var V := TPooledLoopVar.Create;
+    V.FPooled := True;
+    FIntPool.Add(V);
+  end;
+  for var I := 0 to 7 do
+  begin
+    var V := TPooledLoopVar.Create;
+    V.FPooled := True;
+    FStrPool.Add(V);
+  end;
+  FStats.CurrentPoolSize := FIntPool.Count + FStrPool.Count;
+  FStats.TotalCreated := FStats.CurrentPoolSize;
+end;
+
+destructor TVariableValuePool.Destroy;
+begin
+  FIntPool.Free;
+  FStrPool.Free;
+  FLock.Free;
+  inherited;
+end;
+
+function TVariableValuePool.AcquireInt(AValue: Int64): TPooledLoopVar;
+begin
+  FLock.Enter;
+  try
+    Inc(FStats.TotalAcquired);
+    
+    if FIntPool.Count > 0 then
+    begin
+      FIntPool.OwnsObjects := False;
+      Result := FIntPool.Last;
+      FIntPool.Delete(FIntPool.Count - 1);
+      FIntPool.OwnsObjects := True;
+    end
+    else
+    begin
+      Result := TPooledLoopVar.Create;
+      Result.FPooled := True;
+      Inc(FStats.TotalCreated);
+    end;
+    
+    Result.SetInt(AValue);
+    Inc(FStats.CurrentInUse);
+    if FStats.CurrentInUse > FStats.PeakInUse then
+      FStats.PeakInUse := FStats.CurrentInUse;
+    FStats.CurrentPoolSize := FIntPool.Count + FStrPool.Count;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TVariableValuePool.AcquireStr(const AValue: string): TPooledLoopVar;
+begin
+  FLock.Enter;
+  try
+    Inc(FStats.TotalAcquired);
+    
+    if FStrPool.Count > 0 then
+    begin
+      FStrPool.OwnsObjects := False;
+      Result := FStrPool.Last;
+      FStrPool.Delete(FStrPool.Count - 1);
+      FStrPool.OwnsObjects := True;
+    end
+    else
+    begin
+      Result := TPooledLoopVar.Create;
+      Result.FPooled := True;
+      Inc(FStats.TotalCreated);
+    end;
+    
+    Result.SetStr(AValue);
+    Inc(FStats.CurrentInUse);
+    if FStats.CurrentInUse > FStats.PeakInUse then
+      FStats.PeakInUse := FStats.CurrentInUse;
+    FStats.CurrentPoolSize := FIntPool.Count + FStrPool.Count;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TVariableValuePool.AcquireJson(AValue: TJSONValue): TPooledLoopVar;
+begin
+  FLock.Enter;
+  try
+    Inc(FStats.TotalAcquired);
+    
+    // JSON 使用字符串池
+    if FStrPool.Count > 0 then
+    begin
+      FStrPool.OwnsObjects := False;
+      Result := FStrPool.Last;
+      FStrPool.Delete(FStrPool.Count - 1);
+      FStrPool.OwnsObjects := True;
+    end
+    else
+    begin
+      Result := TPooledLoopVar.Create;
+      Result.FPooled := True;
+      Inc(FStats.TotalCreated);
+    end;
+    
+    Result.SetJson(AValue);
+    Inc(FStats.CurrentInUse);
+    if FStats.CurrentInUse > FStats.PeakInUse then
+      FStats.PeakInUse := FStats.CurrentInUse;
+    FStats.CurrentPoolSize := FIntPool.Count + FStrPool.Count;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TVariableValuePool.Release(AValue: TPooledLoopVar);
+begin
+  if (AValue = nil) or (not AValue.FPooled) then
+  begin
+    AValue.Free;  // 非池化对象直接释放
+    Exit;
+  end;
+  
+  FLock.Enter;
+  try
+    Inc(FStats.TotalReleased);
+    Dec(FStats.CurrentInUse);
+    Inc(FStats.TotalReset);
+    
+    // 按原类型放回对应池
+    if AValue.FValueType = 'integer' then
+    begin
+      AValue.Reset;
+      FIntPool.Add(AValue);
+    end
+    else
+    begin
+      AValue.Reset;
+      FStrPool.Add(AValue);
+    end;
+    
+    FStats.CurrentPoolSize := FIntPool.Count + FStrPool.Count;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TVariableValuePool.GetStats: TPoolStats;
+begin
+  FLock.Enter;
+  try
+    if FStats.TotalAcquired > 0 then
+      FStats.HitRate := (FStats.TotalAcquired - FStats.TotalCreated) / FStats.TotalAcquired;
+    Result := FStats;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+class function TVariableValuePool.GetInstance: TVariableValuePool;
+begin
+  if FInstance = nil then
+  begin
+    if FLock = nil then
+      FLock := TCriticalSection.Create;
+    FLock.Enter;
+    try
+      if FInstance = nil then
+        FInstance := TVariableValuePool.Create;
+    finally
+      FLock.Leave;
+    end;
+  end;
+  Result := FInstance;
+end;
+
+class procedure TVariableValuePool.ReleaseInstance;
+begin
+  if FLock <> nil then
+  begin
+    FLock.Enter;
+    try
+      FreeAndNil(FInstance);
+    finally
+      FLock.Leave;
+    end;
+    FreeAndNil(FLock);
+  end;
+end;
+
 initialization
 
 finalization
   TJSONObjectPool.ReleaseInstance;
   TStringBuilderPool.ReleaseInstance;
   TStringListPool.ReleaseInstance;
+  TVariableValuePool.ReleaseInstance;
   TPoolManager.ReleaseInstance;
 
 end.
