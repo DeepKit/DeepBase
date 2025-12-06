@@ -4,6 +4,19 @@
 
 ---
 
+## 2025-12-06 Bug 修复
+
+### BUG-039: Manager 未暴露 MRU/Hotkeys 导致测试无法通过
+- 发现日期: 2025-12-06
+- 严重性: 🔴 Critical
+- 描述: 测试代码通过 `UniBase.MRU` 和 `UniBase.Hotkeys` 访问模块，但 `TUniBaseManager` 未提供对应属性，编译/运行期会失败。
+- 修复: 在 `UniBase.Manager.pas` 中新增字段 `FMRU`, `FHotkeys`；新增属性 `MRU`, `Hotkeys`；在 `InitializeModules` 中创建 `TUniBaseMRU` 与 `TUniBaseHotkeys`，在 `FinalizeModules` 中按逆序释放；新增便捷函数 `UBMRU`, `UBHotkeys`；在 uses 中加入 `UniBase.MRU`, `UniBase.Hotkeys`。
+- 影响范围: 核心 Manager、MRU/Hotkeys 模块、所有直接通过 `UniBase.*` 访问的代码（含单元测试）。
+- 修复 commit: bcb2237 (同批次补丁)
+- 验证: 运行 MRU/Hotkeys 测试，能正确实例化并通过基础用例 ✅
+
+---
+
 ## 2025-11-27 Bug 修复
 
 ### BUG-001: Config 模块在高并发写入时出现死锁
