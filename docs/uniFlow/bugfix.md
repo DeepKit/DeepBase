@@ -316,15 +316,69 @@ Inc(LRecord.Count) →
 
 ---
 
+## P5-A 生产加固 (2025-12-06)
+
+### TASK-2001: 端到端集成测试 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Tests
+- **内容**: 
+  - 新增 `UniFlow.Tests.E2E.pas` (~1040 行)
+  - `TMockLLMProvider` / `TMockSkillService` Mock 组件
+  - `TWorkflowE2ETests` 完整工作流测试套件
+  - `TSessionE2ETests` 会话管理测试套件
+  - `TFullIntegrationTests` 集成场景测试
+  - 覆盖: LLM集成/Skill调用/条件分支/状态持久化
+
+### TASK-2002: 压力测试与基准 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Tests
+- **内容**: 
+  - 新增 `UniFlow.Tests.Benchmark.pas` (~1270 行)
+  - `TBenchmarkRunner` / `TBenchmarkReport` 基准测试框架
+  - `TMemoryMonitor` 内存监控器
+  - `TThroughputBenchmarkTests` 吞吐量测试
+  - `TConcurrencyBenchmarkTests` 并发压力测试 (10/50/100 并发)
+  - `TMemoryBenchmarkTests` 内存泄漏检测
+  - `TStabilityBenchmarkTests` 稳定性测试
+  - `TObjectPoolBenchmarkTests` 对象池效率
+  - JSON 格式基准报告输出
+
+### TASK-2003: 生产部署脚本 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Low
+- **影响范围**: Deploy
+- **内容**: 
+  - 新建 `Deploy/` 目录
+  - `docker-compose.prod.yml` 生产环境配置
+  - `nginx.conf` 反向代理配置 (HTTPS/限流/CORS)
+  - `.env.example` 环境变量模板
+  - `deploy.sh` 一键部署脚本
+
+### TASK-2004: 监控告警集成 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Monitoring
+- **内容**: 
+  - `Deploy/monitoring/prometheus.yml` Prometheus 配置
+  - `Deploy/monitoring/grafana/dashboards/uniflow.json` Grafana 仪表板
+  - 仪表板包含: 工作流统计/LLM指标/Skill指标/系统指标
+  - 告警阈值: 错误率/延迟/并发数
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
 | High | 87 | 0 | 87 |
-| Medium | 12 | 0 | 12 |
-| Low | 5 | 0 | 5 |
-| **合计** | **105** | **0** | **105** |
+| Medium | 15 | 0 | 15 |
+| Low | 6 | 0 | 6 |
+| **合计** | **109** | **0** | **109** |
+
+*注: 包含 P5-A 生产加固 4 个任务 (TASK-2001~2004)*
 
 ---
 
