@@ -368,17 +368,83 @@ Inc(LRecord.Count) →
 
 ---
 
+## P5-B 功能增强 (2025-12-06)
+
+### TASK-2010: 工作流版本控制 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: High
+- **影响范围**: Workflow/Editor
+- **内容**: 
+  - 新增 `UniFlow.Workflow.Version.pas` (~1236 行)
+  - `TSemVer` 语义化版本号支持
+  - `TWorkflowVersion` 版本实体 (草稿/激活/归档/废弃)
+  - `TVersionComparator` JSON 深度比较器
+  - `TVersionDiff` 版本差异 (Markdown/Text/JSON)
+  - `TVersionManager` 版本管理器 (创建/激活/回滚)
+  - `IVersionStore` / `TMemoryVersionStore` 存储层
+  - 新增 `UniFlow.Workflow.Version.API.pas` (~788 行)
+  - `TVersionAPIService` REST API 服务
+  - 支持分页/筛选/排序/标签
+  - 新增 `Source/Editor/version-history.html` (~1220 行)
+  - 版本历史列表与详情面板
+  - Diff 可视化查看器
+  - 版本时间轴
+  - 回滚确认对话框
+
+### TASK-2011: 可视化编辑器增强 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Editor
+- **内容**: 
+  - 新增 `Source/Editor/workflow-editor-enhanced.html` (~1474 行)
+  - 增强节点类型: Start/End/Action/Condition/Loop/Parallel/SubWorkflow/LLM/Skill
+  - 改进拖拽体验: 网格对齐 (20px)、智能贝塞尔曲线连线
+  - Command Pattern 撤销/重做系统
+  - 完整快捷键支持 (Ctrl+Z/Y/C/V/A/S, Delete, Esc, ?)
+  - 节点复制/粘贴、批量选择
+  - 画布缩放 (25%-200%)、迷你地图
+  - 节点对齐/分布工具
+  - 属性面板: 节点配置编辑
+
+### TASK-2012: 更多 Skill 模板 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Low
+- **影响范围**: Skill/Templates
+- **内容**: 
+  - 新建 `Source/Skill/Templates/` 目录
+  - `python-http-client.py` (~295 行): HTTP GET/POST/PUT/DELETE/PATCH，自动重试，超时处理
+  - `python-data-transformer.py` (~418 行): 数据转换 (map/filter/reduce/sort/group/flatten/unique/pick/omit/rename/convert/validate)
+  - `nodejs-file-utils.js` (~517 行): 文件操作 (read/write/delete/copy/move)，目录操作，Glob 匹配
+  - `README.md` (~187 行): 模板文档与使用指南
+
+### TASK-2013: 工作流导入/导出 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Workflow
+- **内容**: 
+  - 新增 `UniFlow.Workflow.ImportExport.pas` (~1256 行)
+  - `TExportOptions` / `TImportOptions` 导入导出选项
+  - `TExportResult` / `TImportResult` 操作结果
+  - `TExportPackage` 导出包 (多工作流 + 依赖打包)
+  - `TValidationResult` 导入验证
+  - `TWorkflowImportExport` 导入导出服务
+  - 支持: 单个/批量导出、JSON/Package 格式
+  - 支持: 冲突策略 (Skip/Overwrite/Rename/Version)
+  - 支持: 导入前验证、试运行模式、跨租户迁移
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
-| High | 87 | 0 | 87 |
-| Medium | 15 | 0 | 15 |
-| Low | 6 | 0 | 6 |
-| **合计** | **109** | **0** | **109** |
+| High | 89 | 0 | 89 |
+| Medium | 16 | 0 | 16 |
+| Low | 7 | 0 | 7 |
+| **合计** | **113** | **0** | **113** |
 
-*注: 包含 P5-A 生产加固 4 个任务 (TASK-2001~2004)*
+*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务*
 
 ---
 
