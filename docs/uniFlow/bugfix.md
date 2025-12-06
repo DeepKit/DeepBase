@@ -475,6 +475,50 @@ Inc(LRecord.Count) →
   - `TDeepSeekProvider` - DeepSeek
   - `TLLMProviderManager` 多提供商管理器
 
+### TASK-2022: 消息队列集成 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Queue
+- **内容**: 
+  - 新建 `Source/Queue/` 目录
+  - `UniFlow.Queue.Types.pas` (~953 行): 消息队列类型定义
+    - `TQueueMessage` / `TMessageHeaders` 消息类型
+    - `TQueueConfig` / `TExchangeConfig` / `TBindingConfig` 配置
+    - `TKafkaRecord` / `TKafkaTopicConfig` / `TKafkaConsumerConfig` Kafka 类型
+    - `TWorkflowTriggerMessage` 工作流触发消息
+  - `UniFlow.Queue.RabbitMQ.pas` (~1479 行): RabbitMQ 集成
+    - `IRabbitMQConnection` / `IRabbitMQChannel` 接口
+    - `TRabbitMQConnection` / `TRabbitMQChannel` 实现
+    - `TRabbitMQProducer` / `TRabbitMQConsumer` 生产者/消费者
+    - `TRabbitMQWorkflowTrigger` 工作流触发器
+    - `TRabbitMQConnectionPool` 连接池
+  - `UniFlow.Queue.Kafka.pas` (~300 行): Kafka 集成
+    - `IKafkaProducer` / `IKafkaConsumer` 接口
+    - `TKafkaProducer` / `TKafkaConsumer` REST Proxy 实现
+    - `TKafkaWorkflowTrigger` 工作流触发器
+  - 支持异步工作流触发、延迟消息、消息优先级
+
+### TASK-2023: 数据库存储后端 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: Storage
+- **内容**: 
+  - 新建 `Source/Storage/` 目录
+  - `UniFlow.Storage.Types.pas` (~1293 行): 存储类型定义
+    - `TDatabaseConfig` / `TPostgreSQLConfig` 数据库配置
+    - `TResultRow` / `TResultSet` 查询结果
+    - `TQueryBuilder` 查询构建器 (Select/Insert/Update/Delete)
+    - `TStorageEntity` / `TWorkflowEntity` / `TSessionEntity` / `TSkillEntity` 存储实体
+    - `TPagination` / `TSortField` / `TFilterCondition` 分页/排序/筛选
+  - `UniFlow.Storage.PostgreSQL.pas` (~1663 行): PostgreSQL 实现
+    - `IDbConnection` / `TPostgreSQLConnection` 数据库连接
+    - `TConnectionPool` 连接池
+    - `IRepository<T>` 仓库接口
+    - `TWorkflowRepository` / `TSessionRepository` / `TSkillRepository` 仓库实现
+    - `TPostgreSQLStorageBackend` 存储后端
+    - `TSchemaMigrator` Schema 迁移器
+  - 支持事务、连接池、多租户
+
 ---
 
 ## Bug 统计
@@ -482,12 +526,12 @@ Inc(LRecord.Count) →
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
-| High | 90 | 0 | 90 |
-| Medium | 17 | 0 | 17 |
-| Low | 7 | 0 | 7 |
-| **合计** | **115** | **0** | **115** |
+|| High | 92 | 0 | 92 |
+|| Medium | 17 | 0 | 17 |
+|| Low | 7 | 0 | 7 |
+|| **合计** | **117** | **0** | **117** |
 
-*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务 + P5-C 平台集成 2 个任务*
+*注: 包含 P5-A 生产加固 4 个任务 + P5-B 功能增强 4 个任务 + P5-C 平台集成 4 个任务*
 
 ---
 
