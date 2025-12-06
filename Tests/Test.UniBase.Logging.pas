@@ -22,7 +22,7 @@ type
   [TestFixture]
   TTestUniBaseLogging = class
   private
-    FLog: TUniBaseLogging;
+    FLog: TUniBaseLogger;
   public
     [Setup]
     procedure Setup;
@@ -78,10 +78,10 @@ uses
 
 procedure TTestUniBaseLogging.Setup;
 begin
-  if not UniBase.Initialized then
-    UniBase.Initialize(':memory:');
+  if not UniBase.IsInitialized then
+    UniBase.InitializeWithDB(':memory:');
   
-  FLog := UniBase.Log;
+  FLog := UniBase.Logger;
 end;
 
 procedure TTestUniBaseLogging.TearDown;

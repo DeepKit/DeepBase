@@ -387,9 +387,9 @@
 
 ## 总体统计
 
-- **总 Bug 数**: 36 (原 22 + 2025-12-01 7个 + 2025-12-06 7个)
-- **已修复**: 36 ✅
-- **严重性分布**: 🔴 9, 🟡 24, 🟢 3
+- **总 Bug 数**: 37 (原 22 + 2025-12-01 7个 + 2025-12-06 8个)
+- **已修复**: 37 ✅
+- **严重性分布**: 🔴 9, 🟡 25, 🟢 3
 - **平均修复时间**: 2-4 小时
 - **已解决 Issue**: 4 ✅ (2025-12-02)
 - **待处理 Issue**: 0
@@ -512,4 +512,17 @@
   - 添加 `class var FCtx: TRttiContext` 和 `FCtxInitialized: Boolean`
   - 添加 `GetRttiContext` 类方法进行懒加载缓存
   - 所有 RTTI 访问方法改用缓存的 Context
+- 状态: ✅ 已修复
+
+### TEST-BUG-002: 多个测试文件使用错误的 Manager API
+- 严重程度: 🟡 中
+- 文件: 6个测试文件
+  - `Tests/Test.UniBase.Logging.pas`
+  - `Tests/Test.UniBase.i18n.pas`
+  - `Tests/Test.UniBase.MRU.pas`
+  - `Tests/Test.UniBase.Theme.pas`
+  - `Tests/Test.UniBase.Hotkeys.pas`
+  - `Tests/Test.UniBase.License.pas`
+- 问题: 使用了不存在的 `UniBase.Initialized` 和 `UniBase.Initialize(':memory:')`
+- 修复: 改为 `UniBase.IsInitialized` 和 `UniBase.InitializeWithDB(':memory:')`
 - 状态: ✅ 已修复

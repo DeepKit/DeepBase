@@ -76,8 +76,8 @@ uses
 procedure TTestUniBaseI18n.Setup;
 begin
   // 使用内存数据库初始化
-  if not UniBase.Initialized then
-    UniBase.Initialize(':memory:');
+  if not UniBase.IsInitialized then
+    UniBase.InitializeWithDB(':memory:');
   
   FI18n := UniBase.I18n;
 end;
