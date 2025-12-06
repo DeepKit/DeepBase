@@ -603,17 +603,91 @@ Inc(LRecord.Count) →
 
 ---
 
+## P6-B AI Enhancement (2025-12-06)
+
+### TASK-3010: 智能工作流推荐 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: AI
+- **内容**: 
+  - `UniFlow.AI.Recommendation.pas` (~2228 行)
+    - `TRecommendation` / `TUserPreferences` / `TWorkflowFeatures` 基础类型
+    - `TFeatureExtractor` 特征提取器 (执行频率/平均时间/错误率等)
+    - `TCollaborativeFilter` 协同过滤推荐 (用户-物品矩阵)
+    - `TContentBasedRecommender` 基于内容推荐 (余弦相似度)
+    - `THybridRecommender` 混合推荐引擎
+    - `TOptimizationAnalyzer` 优化建议分析 (并行化/缓存/批处理/错误处理)
+    - `TErrorPatternAnalyzer` 错误模式分析
+    - `TRecommendationService` 推荐服务 (模板/优化/类似工作流)
+    - `TTemplateRecommender` 模板推荐
+
+### TASK-3011: 自然语言工作流生成 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: High
+- **影响范围**: AI
+- **内容**: 
+  - `UniFlow.AI.NLWorkflowGen.pas` (~1641 行)
+    - `TIntentType` / `TEntityType` / `TParsedIntent` 意图解析类型
+    - `TIntentParser` 意图解析器 (正则模式匹配)
+    - `TSkillDefinition` / `TSkillMatcher` Skill 匹配器
+    - `TWorkflowGenerator` 基础工作流生成器 (意图→步骤)
+    - `TLLMWorkflowGenerator` LLM 增强生成器 (低置信度时调用 LLM)
+    - `TConversationalBuilder` 对话式工作流构建器
+    - `TTemplateManager` 模板管理器
+
+### TASK-3012: AI 异常检测 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: High
+- **影响范围**: AI
+- **内容**: 
+  - `UniFlow.AI.AnomalyDetection.pas` (~2297 行)
+    - `TAnomalyType` / `TAnomalySeverity` / `TDetectedAnomaly` 异常类型
+    - `TSlidingWindowStats` 滑动窗口统计 (Mean/Variance/Percentile)
+    - `TEWMACalculator` 指数加权移动平均
+    - `IAnomalyDetector` 检测器接口
+    - `TZScoreDetector` Z-Score 检测器
+    - `TIQRDetector` 四分位距检测器
+    - `TEWMADetector` EWMA 检测器
+    - `TIsolationForestDetector` Isolation Forest (简化版)
+    - `TSeasonalDetector` 季节性分解检测器
+    - `TMultiDimensionalDetector` 多维度异常检测
+    - `TCorrelationMatrix` 相关性矩阵
+    - `TRootCauseAnalyzer` 根因分析器
+    - `TAdaptiveThresholdManager` 自适应阈值
+    - `TAnomalyDetectionService` 异常检测服务
+    - `TWorkflowAnomalyMonitor` 工作流健康监控
+
+### TASK-3013: 智能重试策略 ✅
+- **完成日期**: 2025-12-06
+- **优先级**: Medium
+- **影响范围**: AI
+- **内容**: 
+  - `UniFlow.AI.SmartRetry.pas` (~2080 行)
+    - `TErrorCategory` / `TErrorSeverity` / `TErrorClassification` 错误分类
+    - `TErrorClassifier` 错误分类器 (正则模式+HTTP状态码+学习)
+    - `TBackoffType` 退避策略 (Fixed/Linear/Exponential/Fibonacci/Decorrelated)
+    - `IRetryStrategy` 重试策略接口
+    - `TFixedDelayStrategy` / `TExponentialBackoffStrategy` / `TAdaptiveRetryStrategy`
+    - `TCircuitBreaker` 熔断器 (Closed/Open/HalfOpen)
+    - `TCircuitBreakerRegistry` 熔断器注册表
+    - `TRetryExecutor` 重试执行器 (泛型执行)
+    - `TSmartStrategySelector` 智能策略选择器 (历史分析+启发式)
+    - `TSmartRetryService` 智能重试服务
+    - `TRetryStrategyBuilder` 策略构建器 (Fluent API)
+
+---
+
 ## Bug 统计
 
 | 严重程度 | 已修复 | 待修复 | 合计 |
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
-|| High | 93 | 0 | 93 |
-|| Medium | 20 | 0 | 20 |
+|| High | 95 | 0 | 95 |
+|| Medium | 22 | 0 | 22 |
 || Low | 7 | 0 | 7 |
-|| **合计** | **121** | **0** | **121** |
+|| **合计** | **125** | **0** | **125** |
 
-*注: 包含 P5-A/B/C (12任务) + P6-A 云原生 (4任务)*
+*注: 包含 P5-A/B/C (12任务) + P6-A 云原生 (4任务) + P6-B AI增强 (4任务)*
 
 ---
 
