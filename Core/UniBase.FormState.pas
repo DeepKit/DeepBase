@@ -584,7 +584,6 @@ const
 var
   Data: TFormStateData;
   FormName: string;
-  MonitorRect: TRect;
   ScreenWidth, ScreenHeight: Integer;
 begin
   if AForm = nil then Exit;

@@ -1017,10 +1017,8 @@ var
   
   function SplitSQLStatements(const SQL: string): TArray<string>;
   var
-    Lines: TArray<string>;
     Current: string;
     List: TList<string>;
-    Line: string;
     InString: Boolean;
     C: Char;
     J: Integer;
