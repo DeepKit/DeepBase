@@ -285,6 +285,35 @@ Inc(LRecord.Count) →
     - `03-ai-chat.json` - AI 智能对话
   - 添加 `README.md` 模板使用指南
 
+### BUG-063: UX-003 缺少调试器可视化 ✅
+- **发现/修复日期**: 2025-12-06
+- **严重程度**: Medium (UX)
+- **影响范围**: Debug
+- **问题描述**: 工作流执行时缺少调试工具，难以排查问题
+- **修复方案**: 
+  - 新增 `UniFlow.Debug.Debugger.pas` (~1350 行)
+  - `TWorkflowDebugger` 工作流调试器
+  - `TBreakpoint` 断点管理 (普通/条件/监视)
+  - `TStackFrame` 调用栈查看
+  - `TDebugConsole` 文本调试控制台
+  - 支持 Step Over/Into/Out 单步执行
+  - 支持变量监视和修改
+  - 支持执行历史回溯
+
+### BUG-064: UX-004 缺少性能分析面板 ✅
+- **发现/修复日期**: 2025-12-06
+- **严重程度**: Low (UX)
+- **影响范围**: Debug
+- **问题描述**: 缺少性能分析工具，难以识别瓶颈
+- **修复方案**: 
+  - 新增 `UniFlow.Debug.Profiler.pas` (~1170 行)
+  - `TWorkflowProfiler` 性能分析器
+  - `TStepProfile` 步骤性能数据
+  - `THotspot` 热点检测 (慢步骤/高频/内存/易错)
+  - `TProfileReport` 性能报告 (JSON/Text/HTML/CSV)
+  - `TProfilerPanel` 文本监控面板
+  - 支持实时统计和历史分析
+
 ---
 
 ## Bug 统计
@@ -293,9 +322,9 @@ Inc(LRecord.Count) →
 |----------|--------|--------|------|
 | Critical | 1 | 0 | 1 |
 | High | 87 | 0 | 87 |
-| Medium | 11 | 0 | 11 |
-| Low | 4 | 0 | 4 |
-| **合计** | **103** | **0** | **103** |
+| Medium | 12 | 0 | 12 |
+| Low | 5 | 0 | 5 |
+| **合计** | **105** | **0** | **105** |
 
 ---
 
