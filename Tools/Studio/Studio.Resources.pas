@@ -60,6 +60,37 @@ const
   RSStatusDatabaseOpened  = 'Database opened';
   RSStatusDatabaseClosed  = 'Database closed';
   RSStatusDatabaseLabel   = 'Database: %s';
+  
+  // Help panel texts
+  RSHelpHotkey            = 'Hotkey Editor: Customize keyboard shortcuts for application actions.'#13#10 +
+                            '- Double-click or press F2 to edit a shortcut'#13#10 +
+                            '- Press new key combination to assign'#13#10 +
+                            '- Press Delete to clear a shortcut'#13#10 +
+                            '- Conflicts are detected automatically';
+  RSHelpTheme             = 'Theme Editor: Preview and switch application themes.'#13#10 +
+                            '- Select a theme to preview its appearance'#13#10 +
+                            '- Double-click or click Apply to switch themes'#13#10 +
+                            '- Dark/Light indicator shows theme type';
+  RSHelpSQL               = 'SQL Query Editor: Execute SQL queries on the database.'#13#10 +
+                            '- Press F5 or Ctrl+Enter to execute'#13#10 +
+                            '- Results shown in grid with export to CSV'#13#10 +
+                            '- Query history saved for quick recall';
+  RSHelpSchema            = 'Schema Viewer: Explore database structure.'#13#10 +
+                            '- Click table to view columns, indexes, foreign keys'#13#10 +
+                            '- DDL tab shows CREATE TABLE statement'#13#10 +
+                            '- Tree structure for easy navigation';
+  RSHelpBackup            = 'Backup/Restore Wizard: Manage database backups.'#13#10 +
+                            '- Create backups with optional compression'#13#10 +
+                            '- Restore from previous backups'#13#10 +
+                            '- Auto-backup before restore for safety';
+  RSHelpImportExport      = 'Data Import/Export: Transfer data to/from files.'#13#10 +
+                            '- Export to CSV, JSON, XML formats'#13#10 +
+                            '- Import with preview and validation'#13#10 +
+                            '- Batch export multiple tables';
+  RSHelpProfiler          = 'Performance Profiler: Analyze database performance.'#13#10 +
+                            '- Table statistics and row counts'#13#10 +
+                            '- Query plan analysis (EXPLAIN)'#13#10 +
+                            '- Index overview and suggestions';
 
 // Chinese translation mappings
 type
@@ -289,6 +320,14 @@ begin
     else if Key = 'RSStatusDatabaseOpened' then Result := ZH_DBOpened
     else if Key = 'RSStatusDatabaseClosed' then Result := ZH_DBClosed
     else if Key = 'RSStatusDatabaseLabel' then Result := ZH_DBLabel
+    // Help texts - keep English for technical clarity
+    else if Key = 'RSHelpHotkey' then Result := RSHelpHotkey
+    else if Key = 'RSHelpTheme' then Result := RSHelpTheme
+    else if Key = 'RSHelpSQL' then Result := RSHelpSQL
+    else if Key = 'RSHelpSchema' then Result := RSHelpSchema
+    else if Key = 'RSHelpBackup' then Result := RSHelpBackup
+    else if Key = 'RSHelpImportExport' then Result := RSHelpImportExport
+    else if Key = 'RSHelpProfiler' then Result := RSHelpProfiler
     else Result := Key;
   end
   else
@@ -326,6 +365,14 @@ begin
     else if Key = 'RSStatusDatabaseOpened' then Result := 'Database opened'
     else if Key = 'RSStatusDatabaseClosed' then Result := 'Database closed'
     else if Key = 'RSStatusDatabaseLabel' then Result := 'Database: %s'
+    // Help texts
+    else if Key = 'RSHelpHotkey' then Result := RSHelpHotkey
+    else if Key = 'RSHelpTheme' then Result := RSHelpTheme
+    else if Key = 'RSHelpSQL' then Result := RSHelpSQL
+    else if Key = 'RSHelpSchema' then Result := RSHelpSchema
+    else if Key = 'RSHelpBackup' then Result := RSHelpBackup
+    else if Key = 'RSHelpImportExport' then Result := RSHelpImportExport
+    else if Key = 'RSHelpProfiler' then Result := RSHelpProfiler
     else Result := Key;
   end;
 end;

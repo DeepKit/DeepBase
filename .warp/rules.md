@@ -188,8 +188,8 @@ TTask.Run(
 
 | 文档 | 路径 | 用途 |
 |------|------|------|
-| 权威规范 | `docs/01_UniBase规范.md` | 架构设计参考 |
-| 开发指南 | `docs/02_开发指南.md` | 快速上手 |
-| 数据库指南 | `docs/03_数据库指南.md` | DoQry 使用 |
-| AI 硬约束 | `docs/V1.0版/23_AI编码硬约束-强约束AI.md` | 强制规则 |
-| AI 上下文 | `docs/V1.0版/24_AI开发完整上下文-给AI看.md` | 技术背景 |
+| 文档索引 | `docs/00.00.uniBase-文档索引-v1.0.md` | 全部文档导航 |
+| AI集成指南 | `docs/01.01.uniBase-4AI-集成指南-v1.0.md` | ★ AI唯一入口 |
+| 技术规范 | `docs/03.03.uniBase-4H-技术规范-v1.0.md` | 架构设计参考 |
+| 数据库指南 | `docs/04.03.uniBase-4AI-数据库指南-v1.0.md` | DoQry 使用 |
+| Schema说明 | `docs/04.01.uniBase-4AI-数据库Schema说明-v1.0.md` | 23张表定义 |

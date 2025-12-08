@@ -76,6 +76,7 @@ type
     cardHotkey: TCard;
     cardTheme: TCard;
     cardSQL: TCard;
+    cardQueries: TCard;
     cardSchema: TCard;
     cardBackup: TCard;
     cardImportExport: TCard;
@@ -171,12 +172,7 @@ begin
   FHotkeyFrame.Align := alClient;
   
   // Add help label for hotkey page
-  HelpLabelHotkey := CreateHelpLabel(cardHotkey, 
-    'Hotkey Editor: Customize keyboard shortcuts for application actions.'#13#10 +
-    '- Double-click or press F2 to edit a shortcut'#13#10 +
-    '- Press new key combination to assign'#13#10 +
-    '- Press Delete to clear a shortcut'#13#10 +
-    '- Conflicts are detected automatically');
+  HelpLabelHotkey := CreateHelpLabel(cardHotkey, TStudioResources.GetString('RSHelpHotkey'));
   HelpLabelHotkey.BringToFront;
   
   // Create and embed Theme Frame
@@ -185,11 +181,7 @@ begin
   FThemeFrame.Align := alClient;
   
   // Add help label for theme page
-  HelpLabelTheme := CreateHelpLabel(cardTheme,
-    'Theme Editor: Preview and switch application themes.'#13#10 +
-    '- Select a theme to preview its appearance'#13#10 +
-    '- Double-click or click Apply to switch themes'#13#10 +
-    '- Dark/Light indicator shows theme type');
+  HelpLabelTheme := CreateHelpLabel(cardTheme, TStudioResources.GetString('RSHelpTheme'));
   HelpLabelTheme.BringToFront;
   
   // Create and embed SQL Editor Frame
@@ -203,11 +195,7 @@ begin
   FQueriesFrame.Align := alClient;
   
   // Add help label for SQL page
-  HelpLabelSQL := CreateHelpLabel(cardSQL,
-    'SQL Query Editor: Execute SQL queries on the database.'#13#10 +
-    '- Press F5 or Ctrl+Enter to execute'#13#10 +
-    '- Results shown in grid with export to CSV'#13#10 +
-    '- Query history saved for quick recall');
+  HelpLabelSQL := CreateHelpLabel(cardSQL, TStudioResources.GetString('RSHelpSQL'));
   HelpLabelSQL.BringToFront;
   
   // Create and embed Schema Viewer Frame
@@ -216,11 +204,7 @@ begin
   FSchemaFrame.Align := alClient;
   
   // Add help label for Schema page
-  HelpLabelSchema := CreateHelpLabel(cardSchema,
-    'Schema Viewer: Explore database structure.'#13#10 +
-    '- Click table to view columns, indexes, foreign keys'#13#10 +
-    '- DDL tab shows CREATE TABLE statement'#13#10 +
-    '- Tree structure for easy navigation');
+  HelpLabelSchema := CreateHelpLabel(cardSchema, TStudioResources.GetString('RSHelpSchema'));
   HelpLabelSchema.BringToFront;
   
   // Create and embed Backup Wizard Frame
@@ -229,11 +213,7 @@ begin
   FBackupFrame.Align := alClient;
   
   // Add help label for Backup page
-  HelpLabelBackup := CreateHelpLabel(cardBackup,
-    'Backup/Restore Wizard: Manage database backups.'#13#10 +
-    '- Create backups with optional compression'#13#10 +
-    '- Restore from previous backups'#13#10 +
-    '- Auto-backup before restore for safety');
+  HelpLabelBackup := CreateHelpLabel(cardBackup, TStudioResources.GetString('RSHelpBackup'));
   HelpLabelBackup.BringToFront;
   
   // Create and embed Import/Export Frame
@@ -242,11 +222,7 @@ begin
   FImportExportFrame.Align := alClient;
   
   // Add help label for Import/Export page
-  HelpLabelImportExport := CreateHelpLabel(cardImportExport,
-    'Data Import/Export: Transfer data to/from files.'#13#10 +
-    '- Export to CSV, JSON, XML formats'#13#10 +
-    '- Import with preview and validation'#13#10 +
-    '- Batch export multiple tables');
+  HelpLabelImportExport := CreateHelpLabel(cardImportExport, TStudioResources.GetString('RSHelpImportExport'));
   HelpLabelImportExport.BringToFront;
   
   // Create and embed Profiler Frame
@@ -255,11 +231,7 @@ begin
   FProfileFrame.Align := alClient;
   
   // Add help label for Profiler page
-  HelpLabelProfile := CreateHelpLabel(cardProfile,
-    'Performance Profiler: Analyze database performance.'#13#10 +
-    '- Table statistics and row counts'#13#10 +
-    '- Query plan analysis (EXPLAIN)'#13#10 +
-    '- Index overview and suggestions');
+  HelpLabelProfile := CreateHelpLabel(cardProfile, TStudioResources.GetString('RSHelpProfiler'));
   HelpLabelProfile.BringToFront;
   
   // Create and embed LLM Frame
@@ -441,10 +413,10 @@ begin
     FConfigFrame.SetConnection(FConnection);
     FLogFrame.SetConnection(FConnection);
     FHotkeyFrame.SetConnection(FConnection);
-    FThemeFrame.SetConnection(AConnection);
-    FSQLFrame.SetConnection(AConnection);
-    FQueriesFrame.SetConnection(AConnection);
-    FSchemaFrame.SetConnection(AConnection);
+    FThemeFrame.SetConnection(FConnection);
+    FSQLFrame.SetConnection(FConnection);
+    FQueriesFrame.SetConnection(FConnection);
+    FSchemaFrame.SetConnection(FConnection);
     FBackupFrame.SetConnection(FConnection);
     FBackupFrame.SetDatabasePath(APath);
     FImportExportFrame.SetConnection(FConnection);
@@ -497,9 +469,9 @@ begin
   end;
   
   FCurrentDBPath := '';
-  lblCurrentDB.Caption := 'No DB Opened';
+  lblCurrentDB.Caption := TStudioResources.GetString('RSNoDBOpened');
   lblCurrentDB.Font.Color := clGrayText;
-  Caption := 'UniBase Studio';
+  Caption := TStudioResources.GetString('RSFormCaption');
 end;
 
 end.

@@ -467,9 +467,16 @@ begin
       TypedHandler(Event.AsType<T>);
     end;
   
-  // Note: Filter is currently not supported in generic subscriptions
-  // due to Delphi compiler limitations with anonymous methods in generics
-  Info.Filter := nil;
+  // BUG-043 FIX: Wrap typed filter to untyped filter
+  if Assigned(TypedFilter) then
+  begin
+    Info.Filter := function(const Event: TValue): Boolean
+      begin
+        Result := TypedFilter(Event.AsType<T>);
+      end;
+  end
+  else
+    Info.Filter := nil;
   
   FLock.Enter;
   try

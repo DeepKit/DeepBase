@@ -7,6 +7,53 @@
 import { z } from 'zod';
 import { BaseSkill, SkillError, withTimeout, withRetry } from './base.js';
 
+// SSRF Protection: Block internal/private network requests
+const BLOCKED_HOSTS = [
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  '[::1]',
+  '169.254.169.254',  // AWS/GCP metadata endpoint
+  'metadata.google.internal',
+];
+
+const PRIVATE_IP_RANGES = [
+  /^10\./,           // 10.0.0.0/8
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,  // 172.16.0.0/12
+  /^192\.168\./,     // 192.168.0.0/16
+  /^169\.254\./,     // Link-local
+  /^127\./,          // Loopback
+  /^0\./,            // Current network
+];
+
+function isBlockedUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+    
+    // Check blocked hosts
+    if (BLOCKED_HOSTS.includes(hostname)) {
+      return true;
+    }
+    
+    // Check private IP ranges
+    for (const pattern of PRIVATE_IP_RANGES) {
+      if (pattern.test(hostname)) {
+        return true;
+      }
+    }
+    
+    // Block .local and .internal domains
+    if (hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return true; // Invalid URL, block it
+  }
+}
+
 const inputSchema = z.object({
   url: z.string().url().describe('Request URL'),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
@@ -78,6 +125,14 @@ export class HttpRequestSkill extends BaseSkill {
 
     // Build URL with query parameters
     const requestUrl = this._buildUrl(url, query);
+
+    // SSRF Protection: Block requests to internal/private networks
+    if (isBlockedUrl(requestUrl)) {
+      throw new SkillError(
+        'SSRF_BLOCKED',
+        `Request to internal/private network address is not allowed: ${new URL(requestUrl).hostname}`
+      );
+    }
 
     // Prepare fetch options
     const fetchOptions = {

@@ -246,11 +246,20 @@ const Storage = {
     }
   },
   
+  /**
+   * Set a value in localStorage
+   * @param {string} key - Storage key
+   * @param {any} value - Value to store
+   * @returns {boolean} - true if successful, false if failed (e.g., quota exceeded)
+   */
   set(key, value) {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
+      return true;
     } catch (e) {
-      console.warn('Storage.set failed:', e);
+      console.error('Storage.set failed:', e.name, e.message);
+      // Notify caller of failure - could be QuotaExceededError
+      return false;
     }
   },
   
@@ -262,6 +271,22 @@ const Storage = {
     Object.keys(localStorage)
       .filter(k => k.startsWith(this.prefix))
       .forEach(k => localStorage.removeItem(k));
+  },
+  
+  /**
+   * Get approximate storage usage
+   * @returns {{ used: number, available: number }} - Storage info in bytes
+   */
+  getUsage() {
+    let used = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key) && key.startsWith(this.prefix)) {
+        used += localStorage[key].length * 2; // UTF-16 = 2 bytes per char
+      }
+    }
+    // Most browsers have 5MB limit
+    const limit = 5 * 1024 * 1024;
+    return { used, available: limit - used };
   }
 };
 

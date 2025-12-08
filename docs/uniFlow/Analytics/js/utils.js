@@ -428,12 +428,17 @@ const Utils = {
 
   /**
    * Set item in localStorage with JSON stringify
+   * @param {string} key - Storage key
+   * @param {any} value - Value to store
+   * @returns {boolean} - true if successful, false if failed
    */
   setStorage(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      return true;
     } catch (e) {
-      console.warn('localStorage write failed:', e);
+      console.error('localStorage write failed:', e.name, e.message);
+      return false;
     }
   },
 

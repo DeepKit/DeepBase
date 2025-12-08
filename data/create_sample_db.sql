@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS Hotkeys (
   Description TEXT,
   IsEnabled INTEGER DEFAULT 1,
   IsGlobal INTEGER DEFAULT 0,
-  IsCustom INTEGER DEFAULT 0,
+  IsCustomized INTEGER DEFAULT 0,
   SortOrder INTEGER DEFAULT 0,
   Extra TEXT,
   Remarks TEXT

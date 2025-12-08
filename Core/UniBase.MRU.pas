@@ -348,8 +348,10 @@ begin
           ItemKey := Query.FieldByName('ItemKey').AsString;
           
           // Check if file path and does not exist
+          // BUG-042 FIX: Also handle UNC paths (\\server\share)
           if (ItemKey <> '') and 
-             ((ItemKey[1] = '/') or ((Length(ItemKey) > 1) and (ItemKey[2] = ':'))) then
+             ((ItemKey[1] = '/') or (ItemKey[1] = '\') or 
+              ((Length(ItemKey) > 1) and (ItemKey[2] = ':'))) then
           begin
             if not FileExists(ItemKey) and not DirectoryExists(ItemKey) then
               ToDelete.Add(TPair<string, string>.Create(Cat, ItemKey));

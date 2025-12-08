@@ -729,7 +729,7 @@ begin
     LIssue.WorkflowId := '';
     LIssue.Severity := 'error';
     LIssue.Code := 'MISSING_ID';
-    LIssue.Message := 'Workflow ID is required';
+    LIssue.Message := 'FlowDefinition ID is required';
     LIssue.Path := 'id';
     Result.AddIssue(LIssue);
   end;
@@ -739,7 +739,7 @@ begin
     LIssue.WorkflowId := AWorkflow.Id;
     LIssue.Severity := 'warning';
     LIssue.Code := 'MISSING_NAME';
-    LIssue.Message := 'Workflow name is empty';
+    LIssue.Message := 'FlowDefinition name is empty';
     LIssue.Path := 'name';
     Result.AddIssue(LIssue);
   end;
@@ -749,7 +749,7 @@ begin
     LIssue.WorkflowId := AWorkflow.Id;
     LIssue.Severity := 'warning';
     LIssue.Code := 'NO_STEPS';
-    LIssue.Message := 'Workflow has no steps';
+    LIssue.Message := 'FlowDefinition has no steps';
     LIssue.Path := 'steps';
     Result.AddIssue(LIssue);
   end;
@@ -805,7 +805,7 @@ begin
   if not Assigned(LWorkflow) then
   begin
     Result.Success := False;
-    Result.ErrorMessage := 'Workflow not found: ' + AWorkflowId;
+    Result.ErrorMessage := 'FlowDefinition not found: ' + AWorkflowId;
     Exit;
   end;
   
@@ -852,7 +852,7 @@ begin
           CollectDependencies(LWorkflow, LDeps);
       end
       else
-        Result.Warnings.Add('Workflow not found: ' + LId);
+        Result.Warnings.Add('FlowDefinition not found: ' + LId);
     end;
     
     // 添加依赖
@@ -879,7 +879,7 @@ begin
   if not Assigned(LWorkflow) then
   begin
     Result.Success := False;
-    Result.ErrorMessage := 'Workflow not found';
+    Result.ErrorMessage := 'FlowDefinition not found';
     Exit;
   end;
   

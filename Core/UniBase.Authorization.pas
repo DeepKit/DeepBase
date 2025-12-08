@@ -1513,15 +1513,29 @@ end;
 
 function TAuthorizationManager.GetAuditLog(const Username: string;
   StartDate, EndDate: TDateTime; MaxEntries: Integer): TArray<TAuditLogEntry>;
-const
-  ACTION_MAP: array[0..15] of TAuditAction = (
-    aaLogin, aaLogout, aaLoginFailed,
-    aaPermissionGranted, aaPermissionDenied, aaPermissionRevoked,
-    aaRoleAssigned, aaRoleRevoked,
-    aaUserCreated, aaUserUpdated, aaUserDeleted,
-    aaRoleCreated, aaRoleUpdated, aaRoleDeleted,
-    aaResourceAccessed, aaResourceModified
-  );
+
+  // BUG-048 FIX: Map action string to TAuditAction enum
+  function MapActionString(const ActionStr: string): TAuditAction;
+  begin
+    if ActionStr = 'LOGIN' then Result := aaLogin
+    else if ActionStr = 'LOGOUT' then Result := aaLogout
+    else if ActionStr = 'LOGIN_FAILED' then Result := aaLoginFailed
+    else if ActionStr = 'PERMISSION_GRANTED' then Result := aaPermissionGranted
+    else if ActionStr = 'PERMISSION_DENIED' then Result := aaPermissionDenied
+    else if ActionStr = 'PERMISSION_REVOKED' then Result := aaPermissionRevoked
+    else if ActionStr = 'ROLE_ASSIGNED' then Result := aaRoleAssigned
+    else if ActionStr = 'ROLE_REVOKED' then Result := aaRoleRevoked
+    else if ActionStr = 'USER_CREATED' then Result := aaUserCreated
+    else if ActionStr = 'USER_UPDATED' then Result := aaUserUpdated
+    else if ActionStr = 'USER_DELETED' then Result := aaUserDeleted
+    else if ActionStr = 'ROLE_CREATED' then Result := aaRoleCreated
+    else if ActionStr = 'ROLE_UPDATED' then Result := aaRoleUpdated
+    else if ActionStr = 'ROLE_DELETED' then Result := aaRoleDeleted
+    else if ActionStr = 'RESOURCE_ACCESSED' then Result := aaResourceAccessed
+    else if ActionStr = 'RESOURCE_MODIFIED' then Result := aaResourceModified
+    else Result := aaResourceAccessed;  // Default fallback
+  end;
+  
 var
   Query: TFDQuery;
   List: TList<TAuditLogEntry>;
@@ -1562,8 +1576,8 @@ begin
         Entry.Details := Query.FieldByName('details').AsString;
         Entry.IPAddress := Query.FieldByName('ip_address').AsString;
         Entry.Success := Query.FieldByName('success').AsInteger = 1;
-        // Note: Action mapping would need proper implementation
-        Entry.Action := aaResourceAccessed;
+        // BUG-048 FIX: Map action string to enum
+        Entry.Action := MapActionString(Query.FieldByName('action').AsString);
         List.Add(Entry);
         Query.Next;
       end;

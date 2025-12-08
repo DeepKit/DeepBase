@@ -739,7 +739,13 @@ begin
       try
         UnloadPackage(Handle);
       except
-        // Ignore unload errors during destruction
+        on E: Exception do
+        begin
+          // ENTROPY-011: 记录卸载错误（析构时允许继续）
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar(Format('[PluginLoader] Package unload error: %s', [E.Message])));
+          {$ENDIF}
+        end;
       end;
       {$ENDIF}
     end;

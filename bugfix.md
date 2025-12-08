@@ -409,9 +409,9 @@
 
 ## 总体统计
 
-- **总 Bug 数**: 37 (原 22 + 2025-12-01 7个 + 2025-12-06 8个)
-- **已修复**: 37 ✅
-- **严重性分布**: 🔴 9, 🟡 25, 🟢 3
+- **总 Bug 数**: 38 (原 22 + 2025-12-01 7个 + 2025-12-06 8个 + 2025-12-08 1个)
+- **已修复**: 38 ✅
+- **严重性分布**: 🔴 10, 🟡 25, 🟢 3
 - **平均修复时间**: 2-4 小时
 - **已解决 Issue**: 4 ✅ (2025-12-02)
 - **待处理 Issue**: 0
@@ -547,4 +547,18 @@
   - `Tests/Test.UniBase.License.pas`
 - 问题: 使用了不存在的 `UniBase.Initialized` 和 `UniBase.Initialize(':memory:')`
 - 修复: 改为 `UniBase.IsInitialized` 和 `UniBase.InitializeWithDB(':memory:')`
+- 状态: ✅ 已修复
+
+---
+
+## 2025-12-08 Schema 修复
+
+### HOTKEYS-001: Hotkeys 表 IsCustomized 列名与代码不一致
+- 严重程度: 🔴 高
+- 文件:
+  - `data/create_sample_db.sql:198`
+  - `Core/UniBase.Schema.pas:230`
+- 问题: Schema 定义中 Hotkeys 表使用列名 `IsCustom`，但 `UniBase.Hotkeys.pas` 代码中使用 `IsCustomized`，导致运行时错误 `table Hotkeys has no column named IsCustomized`
+- 修复: 将两个文件中的 `IsCustom` 改为 `IsCustomized`
+- 升级脚本: `sql/upgrade_hotkeys_column.sql` - 重命名已有数据库中的列
 - 状态: ✅ 已修复

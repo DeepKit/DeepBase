@@ -25,6 +25,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
   System.IOUtils, System.SyncObjs, System.DateUtils,
+  {$IFDEF MSWINDOWS}Winapi.Windows,{$ENDIF}
   UniFlow.EventSourcing.Types;
 
 type
@@ -632,7 +633,13 @@ begin
         JsonArr.Free;
       end;
     except
-      // 文件损坏，返回空列表
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录文件解析错误而非静默忽略
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[EventStore] Failed to load events for %s: %s', [AFlowId, E.Message])));
+        {$ENDIF}
+      end;
     end;
   end;
   
@@ -671,7 +678,13 @@ begin
         JsonArr.Free;
       end;
     except
-      // 文件损坏，返回空列表
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录快照解析错误
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[EventStore] Failed to load snapshots for %s: %s', [AFlowId, E.Message])));
+        {$ENDIF}
+      end;
     end;
   end;
 end;

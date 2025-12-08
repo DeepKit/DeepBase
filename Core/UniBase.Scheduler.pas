@@ -852,10 +852,16 @@ var
   TaskRef: TScheduledTask;
   RunTask: ITask;
 begin
-  Task.FState := tsRunning;
-  Inc(FRunningCount);
-  Inc(FStats.RunningTasks);
-  Dec(FStats.PendingTasks);
+  // BUG-041 FIX: Protect concurrent counter updates with lock
+  FLock.Enter;
+  try
+    Task.FState := tsRunning;
+    Inc(FRunningCount);
+    Inc(FStats.RunningTasks);
+    Dec(FStats.PendingTasks);
+  finally
+    FLock.Leave;
+  end;
   
   TaskRef := Task;
   RunTask := TTask.Create(

@@ -7,15 +7,14 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 When you start working in this repo, orient yourself using these files first:
 
 - `README.md` (root): high-level project positioning, core features, and an overview of the directory structure (Core, VCL, FMX, Tools, Examples, Tests, sql, docs). Also shows a minimal example of initializing UniBase and a basic DUnitX test command.
-- `QUICK_START.md` (root): documentation index for project status and history:
-  - `tasks.md`, `history.md`, `bugfix.md`, `tasks_next.md`, `DOCS_UPDATE.md` – progress tracking, completed work, planned tasks, and documentation rules.
-- `ARCH-QUICKSTART.md` (root): **primary entry for AI tools and new developers**. Defines:
+- `docs/00.00.uniBase-文档索引-v1.0.md`: **documentation index**. Lists all documentation with naming conventions and audience markers.
+- `docs/01.01.uniBase-4AI-集成指南-v1.0.md`: **primary entry for AI tools and external developers**. Defines:
   - The architectural layering model (View → Controller → Domain → Data Access/uDM/DoQry).
   - Mandatory reuse of existing UniBase subsystems (Config, i18n, Logging, MRU, Hotkeys, DoQry, TestHelper, etc.).
   - Hard constraints for AI (what is forbidden, how to integrate with tests & automation, and how to search the codebase before generating new code).
-- `docs/00_README.md`: documentation hub. Points to architecture, API reference, FAQ/Troubleshooting, the formal spec, and (future) AI-specific rule documents.
-- `docs/01_Architecture.md`: **canonical architecture design**. Describes the layered structure (Application → Tools → VCL/FMX → Core → Foundation), technical choices (SQLite config DB, logging, i18n, security), and key modules like `UniBase.Manager`, `UniBase.Config`, `UniBase.i18n`, Logging, Plugin, DataBinding, MVVM, ORM, IoC, and Security.
-- `docs/Best_Practices.md`: concrete examples of how to use UniBase for configuration, i18n, logging, exceptions, performance, database access, plugins, MVVM, security, and testing. Use this when you need non-trivial code patterns (e.g., MVVM bindings, plugin lifecycle, secure configuration).
+  - Complete API reference and code templates.
+- `docs/03.03.uniBase-4H-技术规范-v1.0.md`: **canonical technical specification**. Describes the layered structure (Application → Tools → VCL/FMX → Core → Foundation), technical choices (SQLite config DB, logging, i18n, security), and key modules like `UniBase.Manager`, `UniBase.Config`, `UniBase.i18n`, Logging, Plugin, DataBinding, MVVM, ORM, IoC, and Security.
+- `docs/04.01.uniBase-4AI-数据库Schema说明-v1.0.md`: complete schema definition for all 23 infrastructure tables.
 - `CloudServices/README.md`: explains the JSON formats and deployment patterns for cloud-hosted version metadata (`version.json`) and remote configuration (`remote-config.json`) that UniBase clients consume.
 - `sql/README.md`: explains the schema of the local SQLite `config.db` (Tier 0 core tables like `SchemaInfo`, `Settings`, `FormStates`, `Languages`, `I18nTexts`), initialization and upgrade scripts, and schema-versioning conventions.
 - `UniBaseRun/QUICK_START.md`: describes `UniBaseRun/` – a separate FMX sample application that demonstrates UniBase usage (logging viewer, config editor, login/CRUD skeleton). It outlines its own docs and planned scripts; treat it as a client app built on this framework.
@@ -83,7 +82,7 @@ Guidance:
 
 (If you need more advanced filters such as categories or name patterns, follow the standard DUnitX command-line conventions.)
 
-### 2.4 CI-style build + test (from `ARCH-QUICKSTART.md`)
+### 2.4 CI-style build + test
 
 For non-interactive builds/tests (e.g., CI agents), the recommended flow is:
 
@@ -115,7 +114,7 @@ This section summarizes the “big picture” architecture so you can quickly lo
 
 ### 3.1 Layering overview
 
-From `docs/01_Architecture.md` and `ARCH-QUICKSTART.md`, UniBase uses two complementary views of the architecture:
+From `docs/03.03.uniBase-4H-技术规范-v1.0.md` and `docs/01.01.uniBase-4AI-集成指南-v1.0.md`, UniBase uses two complementary views of the architecture:
 
 1. **Framework layering (inside UniBase itself):**
    - **Foundation layer** (`Core/UniBase.Types`, `UniBase.Manager`, base DB and utils): low-level types, lifecycle management, DB access primitives, and common utilities.
@@ -200,7 +199,7 @@ When modifying or adding features in Core/UI/Tools, you should expect to create 
 
 ## 4. Guidance and constraints for WARP / AI agents
 
-This section adapts the AI-specific rules from `ARCH-QUICKSTART.md` and related docs to WARP.
+This section adapts the AI-specific rules from `docs/01.01.uniBase-4AI-集成指南-v1.0.md` to WARP.
 
 ### 4.1 Search and reuse before generating code
 
@@ -225,7 +224,7 @@ If you find code that violates these rules, prefer refactoring it toward the Uni
 
 ### 4.3 Hard prohibitions
 
-From `ARCH-QUICKSTART.md`, the following are explicitly forbidden for AI-generated changes and should generally be avoided by humans as well:
+From `docs/01.01.uniBase-4AI-集成指南-v1.0.md`, the following are explicitly forbidden for AI-generated changes and should generally be avoided by humans as well:
 
 - Introducing new configuration mechanisms based on INI files, Windows Registry, or arbitrary JSON files instead of `UniBase.Config`/`config.db`.
 - Hardcoding user-visible text (Chinese, English, or any language) directly in code without going through the i18n system.
@@ -249,7 +248,7 @@ When you change behavior in Core, UI components, or Tools:
 When using WARP to implement or change features in this repo:
 
 1. **Determine scope and layer:** decide whether the request belongs to Core (`Core/`), Framework UI (`VCL/`/`FMX/`), Tools (`Tools/`), Example apps (`Examples/`), or UniBaseRun (`UniBaseRun/`).
-2. **Read relevant docs:** at minimum, consult `README.md`, `ARCH-QUICKSTART.md`, `docs/01_Architecture.md`, and (when patterns are involved) the relevant parts of `docs/Best_Practices.md`.
+2. **Read relevant docs:** at minimum, consult `README.md`, `docs/01.01.uniBase-4AI-集成指南-v1.0.md`, `docs/03.03.uniBase-4H-技术规范-v1.0.md`, and `docs/00.00.uniBase-文档索引-v1.0.md`.
 3. **Reuse patterns:** look for similar modules or features and follow their patterns (naming, folder placement, public API style, test structure) instead of designing new ones from scratch.
 4. **Keep changes minimal and localized:** prefer small, well-scoped changes with clear tests over wide-reaching refactors unless the user explicitly asks for architectural work.
 5. **Explain build/test impact:** when you propose or apply code, always mention how to build and test the affected parts using the commands in section 2.

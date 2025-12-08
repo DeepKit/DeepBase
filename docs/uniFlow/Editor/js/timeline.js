@@ -633,7 +633,8 @@ class TimelineWidget {
   formatJson(obj) {
     try {
       return JSON.stringify(obj, null, 2);
-    } catch {
+    } catch (e) {
+      console.warn('Failed to stringify JSON:', e.message);
       return String(obj);
     }
   }

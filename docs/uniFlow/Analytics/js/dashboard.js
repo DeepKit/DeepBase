@@ -619,16 +619,20 @@ const Dashboard = {
   },
 
   /**
-   * Escape HTML
+   * Escape HTML to prevent XSS attacks
+   * @param {any} str - String to escape
+   * @returns {string} - Escaped HTML string
    */
   escapeHtml(str) {
-    if (!str) return '';
+    if (str == null) return '';
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/'/g, '&#039;')
+      .replace(/`/g, '&#x60;')      // Prevent template literal injection
+      .replace(/\//g, '&#x2F;');    // Prevent closing tags
   }
 };
 

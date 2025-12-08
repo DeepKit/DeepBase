@@ -1,0 +1,174 @@
+object FMXUpdateDialog: TFMXUpdateDialog
+  Left = 0
+  Top = 0
+  BorderStyle = None
+  Caption = #26356#26032#25552#31034
+  ClientHeight = 420
+  ClientWidth = 480
+  Position = ScreenCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop, iPhone, iPad]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  OnResize = FormResize
+  DesignerMasterStyle = 0
+  object LayoutMain: TLayout
+    Align = Client
+    Size.Width = 480.000000000000000000
+    Size.Height = 420.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object RectBackground: TRectangle
+      Align = Client
+      Fill.Color = claWhite
+      Size.Width = 480.000000000000000000
+      Size.Height = 420.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Color = claGainsboro
+      XRadius = 8.000000000000000000
+      YRadius = 8.000000000000000000
+      object ShadowEffect: TShadowEffect
+        Distance = 4.000000000000000000
+        Direction = 45.000000000000000000
+        Softness = 0.400000005960464500
+        Opacity = 0.300000011920929000
+        ShadowColor = claBlack
+      end
+      object LayoutContent: TLayout
+        Align = Client
+        Margins.Left = 24.000000000000000000
+        Margins.Top = 24.000000000000000000
+        Margins.Right = 24.000000000000000000
+        Margins.Bottom = 24.000000000000000000
+        Size.Width = 432.000000000000000000
+        Size.Height = 372.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object LayoutHeader: TLayout
+          Align = Top
+          Size.Width = 432.000000000000000000
+          Size.Height = 64.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          object ImgIcon: TImage
+            Align = Left
+            Size.Width = 48.000000000000000000
+            Size.Height = 64.000000000000000000
+            Size.PlatformDefault = False
+          end
+          object LblTitle: TLabel
+            Align = Top
+            Margins.Left = 8.000000000000000000
+            Position.X = 56.000000000000000000
+            Size.Width = 376.000000000000000000
+            Size.Height = 32.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 18.000000000000000000
+            TextSettings.Font.Style = [fsBold]
+            TextSettings.FontColor = xFF333333
+            Text = #21457#29616#26032#29256#26412
+          end
+          object LblVersion: TLabel
+            Align = Bottom
+            Margins.Left = 8.000000000000000000
+            Position.X = 56.000000000000000000
+            Position.Y = 40.000000000000000000
+            Size.Width = 376.000000000000000000
+            Size.Height = 24.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 13.000000000000000000
+            TextSettings.FontColor = xFF666666
+            Text = #29256#26412' 1.0.0 '#8594' 1.1.0'
+          end
+        end
+        object LayoutBody: TLayout
+          Align = Client
+          Margins.Top = 16.000000000000000000
+          Margins.Bottom = 16.000000000000000000
+          Size.Width = 432.000000000000000000
+          Size.Height = 180.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 1
+          object MemoChangelog: TMemo
+            Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+            DataDetectorTypes = []
+            ReadOnly = True
+            TextSettings.Font.Size = 13.000000000000000000
+            TextSettings.FontColor = xFF444444
+            Align = Client
+            Size.Width = 432.000000000000000000
+            Size.Height = 180.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 0
+            Viewport.Width = 428.000000000000000000
+            Viewport.Height = 176.000000000000000000
+          end
+        end
+        object LayoutProgress: TLayout
+          Align = Bottom
+          Position.Y = 276.000000000000000000
+          Size.Width = 432.000000000000000000
+          Size.Height = 48.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 2
+          Visible = False
+          object ProgressBar: TProgressBar
+            Align = Top
+            Size.Width = 432.000000000000000000
+            Size.Height = 20.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 0
+          end
+          object LblProgressStatus: TLabel
+            Align = Bottom
+            Position.Y = 28.000000000000000000
+            Size.Width = 432.000000000000000000
+            Size.Height = 20.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.Font.Size = 12.000000000000000000
+            TextSettings.FontColor = xFF666666
+            Text = #20934#22791#19979#36733'...'
+          end
+        end
+        object LayoutButtons: TLayout
+          Align = Bottom
+          Position.Y = 324.000000000000000000
+          Size.Width = 432.000000000000000000
+          Size.Height = 48.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 3
+          object BtnUpdate: TButton
+            Align = Right
+            Position.X = 320.000000000000000000
+            Size.Width = 112.000000000000000000
+            Size.Height = 48.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 0
+            Text = #31435#21363#26356#26032
+            OnClick = BtnUpdateClick
+          end
+          object BtnLater: TButton
+            Align = Right
+            Position.X = 228.000000000000000000
+            Size.Width = 84.000000000000000000
+            Size.Height = 48.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 1
+            Text = #31245#21518
+            OnClick = BtnLaterClick
+          end
+          object BtnSkip: TButton
+            Align = Left
+            Size.Width = 100.000000000000000000
+            Size.Height = 48.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 2
+            Text = #36339#36807#27492#29256#26412
+            OnClick = BtnSkipClick
+          end
+        </object>
+      end
+    end
+  end
+end

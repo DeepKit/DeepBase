@@ -165,9 +165,9 @@ UniBase/
 
 ## 📖 文档
 
-- [完整规范](docs/unibase-spec-v0.3.md) - 设计规范和 API 参考
-- [任务清单](docs/tasks.md) - 开发任务和进度
-- [快速开始](docs/QuickStart.md) - 快速入门指南
+- [完整规范](docs/03.03.uniBase-4H-技术规范-v1.0.md) - 设计规范和 API 参考
+- [集成指南](docs/01.01.uniBase-4AI-集成指南-v1.0.md) - AI/外部程序集成入口
+- [文档索引](docs/00.00.uniBase-文档索引-v1.0.md) - 全部文档导航
 
 ## 🧪 运行测试
 

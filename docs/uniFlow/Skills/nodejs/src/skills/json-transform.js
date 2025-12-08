@@ -191,8 +191,11 @@ export class JsonTransformSkill extends BaseSkill {
       throw new Error('Map operation requires an array');
     }
     
+    // SECURITY: Validate expression before evaluation
+    this._validateExpression(expression);
+    
     // Simple expression evaluation (x => x.field or x => x * 2)
-    const fn = new Function('x', `return ${expression}`);
+    const fn = new Function('x', `"use strict"; return ${expression}`);
     return array.map(fn);
   }
 
@@ -203,8 +206,50 @@ export class JsonTransformSkill extends BaseSkill {
       throw new Error('Filter operation requires an array');
     }
     
-    const fn = new Function('x', `return ${condition}`);
+    // SECURITY: Validate condition before evaluation
+    this._validateExpression(condition);
+    
+    const fn = new Function('x', `"use strict"; return ${condition}`);
     return array.filter(fn);
+  }
+  
+  /**
+   * SECURITY: Validate expression to prevent code injection
+   * @private
+   */
+  _validateExpression(expr) {
+    if (!expr || typeof expr !== 'string') {
+      throw new SkillError('INVALID_EXPRESSION', 'Expression must be a non-empty string');
+    }
+    
+    // Dangerous patterns that could lead to code injection
+    const dangerousPatterns = [
+      /\beval\s*\(/i,
+      /\bFunction\s*\(/i,
+      /\bimport\s*\(/i,
+      /\brequire\s*\(/i,
+      /\bprocess\b/i,
+      /\bglobal\b/i,
+      /\bwindow\b/i,
+      /\bdocument\b/i,
+      /\b__proto__\b/,
+      /\bconstructor\b/,
+      /\bprototype\b/,
+      /\bthis\b/,
+      /\bfetch\s*\(/i,
+      /\bXMLHttpRequest\b/i,
+      /\bsetTimeout\s*\(/i,
+      /\bsetInterval\s*\(/i,
+    ];
+    
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(expr)) {
+        throw new SkillError(
+          'UNSAFE_EXPRESSION',
+          `Expression contains potentially dangerous code: ${expr.substring(0, 50)}`
+        );
+      }
+    }
   }
 
   _flatten(data, path) {

@@ -188,7 +188,7 @@ const
   ERR_INTERNAL = 500;
   
   MSG_VERSION_NOT_FOUND = 'Version not found';
-  MSG_WORKFLOW_NOT_FOUND = 'Workflow not found';
+  MSG_WORKFLOW_NOT_FOUND = 'FlowDefinition not found';
   MSG_INVALID_VERSION = 'Invalid version format';
   MSG_VERSION_EXISTS = 'Version already exists';
   MSG_CANNOT_DELETE_ACTIVE = 'Cannot delete active version';

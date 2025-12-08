@@ -2278,11 +2278,11 @@ begin
   try
     // 检查必填字段
     if FId = '' then
-      Errors.Add('Workflow id is required');
+      Errors.Add('FlowDefinition id is required');
     if FName = '' then
-      Errors.Add('Workflow name is required');
+      Errors.Add('FlowDefinition name is required');
     if FSteps.Count = 0 then
-      Errors.Add('Workflow must have at least one step');
+      Errors.Add('FlowDefinition must have at least one step');
     
     // 检查步骤 ID 唯一性
     for I := 0 to FSteps.Count - 1 do

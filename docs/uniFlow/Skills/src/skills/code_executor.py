@@ -19,6 +19,47 @@ logger = structlog.get_logger(__name__)
 # Safe Builtins
 # -----------------------------------------------------------------------------
 
+# Dangerous attribute patterns that could be used for sandbox escape
+DANGEROUS_ATTRS = {
+    '__class__', '__bases__', '__mro__', '__subclasses__',
+    '__globals__', '__code__', '__func__', '__self__',
+    '__dict__', '__builtins__', '__import__', '__loader__',
+    '__spec__', '__cached__', '__file__', '__name__',
+    '__qualname__', '__module__', '__annotations__',
+    '__closure__', '__defaults__', '__kwdefaults__',
+}
+
+def safe_getattr(obj, name, *default):
+    """
+    Safe getattr that blocks access to dangerous attributes.
+    
+    Args:
+        obj: Object to get attribute from
+        name: Attribute name
+        default: Optional default value
+        
+    Returns:
+        Attribute value
+        
+    Raises:
+        AttributeError: If attribute is blocked or doesn't exist
+    """
+    # Block dangerous attribute access
+    if name in DANGEROUS_ATTRS:
+        raise AttributeError(f"Access to '{name}' is not allowed in sandbox")
+    
+    # Block any dunder attributes except safe ones
+    if name.startswith('__') and name.endswith('__'):
+        allowed_dunders = {'__init__', '__str__', '__repr__', '__len__', 
+                          '__iter__', '__next__', '__getitem__', '__contains__'}
+        if name not in allowed_dunders:
+            raise AttributeError(f"Access to '{name}' is not allowed in sandbox")
+    
+    if default:
+        return getattr(obj, name, default[0])
+    return getattr(obj, name)
+
+
 # Allowed built-in functions for sandboxed execution
 SAFE_BUILTINS = {
     # Type constructors
@@ -74,10 +115,10 @@ SAFE_BUILTINS = {
     "hash": hash,
     "id": id,
     "callable": callable,
-    "getattr": getattr,
-    "setattr": setattr,
+    "getattr": safe_getattr,  # SECURITY: Wrapped with safe_getattr to block dangerous attrs
+    # "setattr": setattr,  # SECURITY: Removed - allows arbitrary attribute modification
     "hasattr": hasattr,
-    "delattr": delattr,
+    # "delattr": delattr,  # SECURITY: Removed - allows arbitrary attribute deletion
     
     # Exceptions (for catching)
     "Exception": Exception,

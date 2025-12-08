@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Schema - Database Schema SQL Definitions
   
   Version: 1.0.0
@@ -227,7 +227,7 @@ const
     '  Description TEXT,' +
     '  IsEnabled INTEGER DEFAULT 1,' +
     '  IsGlobal INTEGER DEFAULT 0,' +
-    '  IsCustom INTEGER DEFAULT 0,' +
+    '  IsCustomized INTEGER DEFAULT 0,' +
     '  SortOrder INTEGER DEFAULT 0,' +
     '  Extra TEXT,' +
     '  Remarks TEXT' +

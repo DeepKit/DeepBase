@@ -157,9 +157,9 @@
 
 ## 维护与文档
 
-### MAINT-001: 完善 API 文档和代码注释
+### MAINT-001: 完善 API 文档和代码注释 ✅
 - **优先级**: P0
-- **状态**: 待开始
+- **状态**: ✅ 已完成 (2025-12-08)
 - **预计工时**: 20-30 小时
 - **任务内容**:
   - 补充所有 Core 模块的 XML 文档注释
@@ -167,6 +167,14 @@
   - 更新快速开始指南中的示例代码
   - 生成 CHM 帮助文件
   - 添加架构设计文档
+- **已完成** (2025-12-08):
+  - ✅ 更新 `docs/05.01.uniBase-4AI-API参考-v1.0.md`
+    - 添加 11. 国际化扩展模块 (TGenderVariant/TRTLUtils/TCaseUtils)
+    - 添加 12. 数学工具模块 (TVector/TStatistics/TInterpolation/TEasing)
+    - 添加 13. 指标收集模块 (TCounter/TGauge/THistogram/TMetricsRegistry)
+    - 添加 14. 网络工具模块 (THttpClient_/TIPv4Address/TIPv4Subnet)
+    - 更新全局函数和异常类型附录
+  - ✅ 更新 `docs/CORE_MODULES.md` - 添加 i18n.Gender 模块
 
 ---
 
@@ -183,6 +191,12 @@
 - **已完成** (2025-11-28):
   - ✅ Test.UniBase.DB.ConnectionPool.pas - 连接池测试 (8个测试用例)
   - ✅ Test.UniBase.Config.pas - 添加加密配置测试 (3个新测试)
+- **已完成** (2025-12-08):
+  - ✅ Test.UniBase.Math.pas - 数学工具测试 (40+ 测试用例，向量/矩阵/统计/插值/缓动/随机)
+  - ✅ Test.UniBase.Metrics.pas - 指标收集测试 (35+ 测试用例，Counter/Gauge/Histogram/Timer/Registry)
+  - ✅ Test.UniBase.Net.pas - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
+  - ✅ Test.UniBase.HttpServer.pas - HTTP服务器测试 (35+ 测试用例，路由/中间件/请求响应)
+  - ✅ Test.UniBase.FileWatcher.pas - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
 
 ---
 
@@ -1788,14 +1802,21 @@
 
 ---
 
-### I18N-002: 实现性别和大小写变体
+### I18N-002: 实现性别和大小写变体 ✅
 - **优先级**: P3
-- **状态**: 待开始
+- **状态**: ✅ 已完成 (2025-12-08)
 - **预计工时**: 10-15 小时
-- **功能描述**:
-  - 性别敏感的翻译
-  - 大小写变体支持
-  - RTL 语言布局支持
+- **完成工作**:
+  - `Core/UniBase.i18n.Gender.pas` (~660 行) - 性别和大小写变体模块
+    - TGrammaticalGender 枚举 (Masculine/Feminine/Neuter/Common/Animate/Inanimate)
+    - TGrammaticalCase 枚举 (Nominative/Genitive/Dative/Accusative 等 9 种格)
+    - TTextDirection 枚举 (LeftToRight/RightToLeft)
+    - TGenderVariant 性别变体类 (Select/Transform/Format)
+    - TCaseVariant 语法格变体类
+    - TRTLUtils RTL 工具类 (IsRTLChar/ContainsRTL/EmbedRTL/EmbedLTR)
+    - TCaseUtils 大小写工具类 (ToLower/ToUpper/ToTitleCase/ToSentenceCase)
+    - 支持 25+ 种语言的性别/格/方向配置
+  - `Tests/Test.UniBase.i18n.Gender.pas` (~300 行) - 单元测试 (35+ 测试用例)
 
 ---
 
@@ -2170,22 +2191,50 @@
     - 文档编辑对话框
     - 分类管理对话框
     - README 文档
-- **待扩展** (未来版本):
-  - 🔲 电商应用模板
-  - 🔲 实时通信应用模板
+- **已完成** (2025-12-08):
+  - ✅ `Examples/Templates/ECommerceApp/` - 电商应用模板
+    - ECommerce.Entities.pas: TProduct/TCategory/TCustomer/TOrder/TCartItem 实体
+    - ECommerce.Services.pas: ProductService/CartService/OrderService/CustomerService/InventoryService
+    - README.md 使用文档
+  - ✅ `Examples/Templates/RealtimeChatApp/` - 实时通信应用模板
+    - Chat.Types.pas: TChatUser/TChatRoom/TChatMessage/TRoomMember 实体
+    - Chat.Services.pas: ChatService/RoomService/UserService/PresenceService
+    - README.md 使用文档
 
 ---
 
-### ECO-002: 社区扩展包
+### ECO-002: 社区扩展包 ✅
 - **优先级**: P3
-- **状态**: 待开始
+- **状态**: ✅ 已完成 (2025-12-08)
 - **预计工时**: 持续开发
-- **扩展方向**:
-  - 🔲 第三方数据库驱动包（PostgreSQL, MySQL）
-  - 🔲 第三方 UI 主题包
-  - 🔲 支付接口集成包
-  - 🔲 社交媒体集成包
-  - 🔲 云存储集成包
+- **已完成** (2025-12-08):
+  - ✅ `ThirdParty/DB/UniBase.DB.PostgreSQL.pas` - PostgreSQL 驱动适配器
+    - JSONB 操作 (jsonb_set/jsonb_remove/jsonb_concat)
+    - 全文搜索 (tsvector/tsquery/ts_rank)
+    - LISTEN/NOTIFY 实时事件
+    - 数组类型支持
+    - COPY 数据导入导出
+  - ✅ `ThirdParty/DB/UniBase.DB.MySQL.pas` - MySQL 驱动适配器
+    - JSON 操作 (JSON_SET/JSON_REMOVE/JSON_SEARCH)
+    - 全文搜索 (MATCH AGAINST)
+    - 存储过程调用
+    - 批量插入 TMySQLBulkInsert
+    - 表维护 (OPTIMIZE/ANALYZE/REPAIR)
+  - ✅ `ThirdParty/UI/UniBase.UI.Themes.pas` - UI 主题系统
+    - Material Design 主题 (10种配色)
+    - Fluent Design 主题 (4种配色)
+    - macOS 风格主题 (4种配色)
+    - 运行时主题切换
+    - 自定义主题支持
+  - ✅ `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` - 云存储集成
+    - AWS S3 支持
+    - Azure Blob Storage 支持
+    - 阿里云 OSS 支持
+    - MinIO 支持 (S3 兼容)
+    - 分片上传/批量操作
+- **待扩展** (未来版本):
+  - 🔲 支付接口集成包 (Stripe/PayPal/Alipay)
+  - 🔲 社交媒体集成包 (WeChat/Weibo/Twitter)
 
 ---
 
@@ -2264,5 +2313,5 @@
 
 ---
 
-**最后更新**: 2025-11-30
+**最后更新**: 2025-12-08
 **维护者**: 李冰、鲁班

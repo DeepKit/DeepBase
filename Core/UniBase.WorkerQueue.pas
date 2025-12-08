@@ -1646,7 +1646,8 @@ begin
     AJob.FCompletedAt := Now;
     
     AtomicIncrement(FTotalProcessed);
-    AtomicExchange(FTotalProcessingTime, FTotalProcessingTime + LElapsed);
+    // BUG-047 FIX: Use proper atomic addition for total processing time
+    TInterlocked.Add(FTotalProcessingTime, LElapsed);
     
     if Assigned(FOnJobCompleted) then
       FOnJobCompleted(Self, AJob);
@@ -1775,15 +1776,20 @@ end;
 procedure TWorkerQueue.WaitForCompletion(ATimeoutMs: Integer);
 var
   LStartTime: TDateTime;
+  LStats: TQueueStats;
 begin
   LStartTime := Now;
   
-  while GetPendingCount > 0 do
-  begin
+  // BUG-046 FIX: Wait for both pending AND running jobs to complete
+  repeat
+    LStats := GetStats;
+    if (LStats.PendingJobs = 0) and (LStats.RunningJobs = 0) then
+      Break;
+      
     Sleep(100);
     if (ATimeoutMs <> INFINITE) and (MilliSecondsBetween(Now, LStartTime) > ATimeoutMs) then
       raise EWorkerQueueException.Create('Timeout waiting for job completion');
-  end;
+  until False;
 end;
 
 procedure TWorkerQueue.SetWorkerCount(ACount: Integer);

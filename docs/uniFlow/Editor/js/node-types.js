@@ -2,6 +2,17 @@
  * UniFlow Workflow Editor - Node Type Definitions
  */
 
+// Safe JSON parse helper to prevent crashes on invalid input
+function safeJsonParse(str, fallback = {}) {
+  if (!str || str.trim() === '') return fallback;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    console.warn('Failed to parse JSON:', e.message, 'Input:', str.substring(0, 100));
+    return fallback;
+  }
+}
+
 const NodeTypes = {
   // ============================================================================
   // Basic Nodes
@@ -200,7 +211,7 @@ const NodeTypes = {
       action: {
         type: 'skill',
         skill: node.properties.skillName,
-        input: JSON.parse(node.properties.input || '{}')
+        input: safeJsonParse(node.properties.input, {})
       },
       output: {
         target: node.properties.outputVar
@@ -270,8 +281,8 @@ const NodeTypes = {
         type: 'http',
         method: node.properties.method,
         url: node.properties.url,
-        headers: JSON.parse(node.properties.headers || '{}'),
-        body: node.properties.body ? JSON.parse(node.properties.body) : undefined
+        headers: safeJsonParse(node.properties.headers, {}),
+        body: node.properties.body ? safeJsonParse(node.properties.body, null) : undefined
       },
       output: {
         target: node.properties.outputVar
@@ -675,7 +686,7 @@ const NodeTypes = {
       type: 'subworkflow',
       name: node.properties.name,
       workflow_id: node.properties.workflowId,
-      input: JSON.parse(node.properties.input || '{}')
+      input: safeJsonParse(node.properties.input, {})
     })
   },
 
@@ -720,7 +731,7 @@ const NodeTypes = {
       name: node.properties.name,
       action: {
         type: 'guard',
-        schema: JSON.parse(node.properties.schema || '{}'),
+        schema: safeJsonParse(node.properties.schema, {}),
         sanitize: node.properties.sanitize
       }
     })

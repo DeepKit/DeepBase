@@ -264,29 +264,42 @@ var
 begin
   {$IFNDEF FMX}
   Success := False;
+  ActualTheme := 'Windows';  // 默认回退到 Windows
   
   // 先检查主题是否可用，如果不可用则回退到 Windows
-  if TStyleManager.IsValidStyle(ThemeName) or (ThemeName = 'Windows') then
-    ActualTheme := ThemeName
-  else
-    ActualTheme := 'Windows';  // 回退到默认主题，避免弹出错误框
+  // 使用 try-except 包装，因为 IsValidStyle 可能尝试从文件加载样式
+  try
+    if (ThemeName = 'Windows') or TStyleManager.IsValidStyle(ThemeName) then
+      ActualTheme := ThemeName;
+  except
+    // 忽略样式检查错误，使用 Windows 默认主题
+    ActualTheme := 'Windows';
+  end;
   
   // VCL 样式切换必须在主线程
   if TThread.CurrentThread.ThreadID = MainThreadID then
   begin
-    Success := TStyleManager.TrySetStyle(ActualTheme);
-    if Success then
-    begin
-      FCurrentThemeName := ActualTheme;
-      DoThemeChanged;
+    try
+      Success := TStyleManager.TrySetStyle(ActualTheme);
+      if Success then
+      begin
+        FCurrentThemeName := ActualTheme;
+        DoThemeChanged;
+      end;
+    except
+      // 样式切换失败，保持当前主题
     end;
   end
   else
   begin
     // 在非主线程中，使用 TThread.Synchronize 切换主题
     FPendingThemeName := ActualTheme;
-    TThread.Synchronize(nil, ApplyThemeSync);
-    Success := FCurrentThemeName = ActualTheme;
+    try
+      TThread.Synchronize(nil, ApplyThemeSync);
+      Success := FCurrentThemeName = ActualTheme;
+    except
+      // 忽略同步错误
+    end;
   end;
   {$ELSE}
   // FMX: Just update the name and notify - actual styling via FMX.Styles

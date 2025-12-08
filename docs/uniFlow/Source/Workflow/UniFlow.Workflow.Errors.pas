@@ -9,6 +9,11 @@ unit UniFlow.Workflow.Errors;
   - 多语言支持 (中/英)
   - 错误诊断建议
   - 错误上下文信息
+  
+  错误码格式:
+  - 统一格式: {Source}/{Category}/{Specific}
+  - 示例: UniFlow/Validation/InvalidWorkflow, Skill/Network/ConnectionFailed
+  - 参考: docs/AI编程低熵约束指南.md
 *)
 
 interface
@@ -17,6 +22,21 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.JSON;
 
 type
+  // ============================================================================
+  // 错误来源 (Source)
+  // ============================================================================
+  
+  TErrorSource = (
+    esSoIs,         // SoIs 代理 (需求澄清)
+    esSayDone,      // SayDone 代理 (代码生成)
+    esDevDirector,  // DevDirector 代理 (流程协调)
+    esUniFlow,      // UniFlow 流程引擎
+    esSkill,        // 外部 Skill 插件
+    esUser,         // 用户手动操作
+    esSystem,       // 系统自动触发
+    esExternal      // 外部系统集成
+  );
+  
   // ============================================================================
   // 错误严重级别
   // ============================================================================
@@ -29,17 +49,21 @@ type
   );
   
   // ============================================================================
-  // 错误分类
+  // 错误分类 (Category)
   // ============================================================================
   
   TErrorCategory = (
     ecValidation,   // 验证错误
-    ecExecution,    // 执行错误
-    ecConfiguration,// 配置错误
+    ecTimeout,      // 超时错误
+    ecLLM,          // LLM 调用错误
+    ecSkill,        // Skill 执行错误
     ecNetwork,      // 网络错误
-    ecPermission,   // 权限错误
-    ecResource,     // 资源错误
-    ecInternal      // 内部错误
+    ecInternal,     // 内部错误
+    ecExternal,     // 外部依赖错误
+    ecExecution,    // 执行错误 (v1 兼容)
+    ecConfiguration,// 配置错误 (v1 兼容)
+    ecPermission,   // 权限错误 (v1 兼容)
+    ecResource      // 资源错误 (v1 兼容)
   );
   
   // ============================================================================
@@ -51,6 +75,28 @@ type
   // ============================================================================
   // 友好错误信息
   // ============================================================================
+  
+  // ============================================================================
+  // 错误码解析器 - 支持 {Source}/{Category}/{Specific} 格式
+  // ============================================================================
+  
+  TErrorCode = record
+    Source: string;         // 来源: SoIs, SayDone, DevDirector, UniFlow, Skill, User, System, External
+    Category: string;       // 分类: Validation, Timeout, LLM, Skill, Network, Internal, External
+    Specific: string;       // 具体错误: InvalidWorkflow, StepTimeout, ConnectionFailed 等
+    
+    /// <summary>从字符串解析错误码</summary>
+    class function Parse(const ACode: string): TErrorCode; static;
+    
+    /// <summary>生成错误码字符串</summary>
+    function ToString: string;
+    
+    /// <summary>是否为新格式错误码 (Source/Category/Specific)</summary>
+    class function IsNewFormat(const ACode: string): Boolean; static;
+    
+    /// <summary>快速创建错误码</summary>
+    class function Make(const ASource, ACategory, ASpecific: string): string; static;
+  end;
   
   TFriendlyError = record
     Code: string;
@@ -108,54 +154,138 @@ type
   end;
   
   // ============================================================================
-  // 常用错误代码常量
+  // 常用错误代码常量 - 新格式 {Source}/{Category}/{Specific}
   // ============================================================================
 
 const
-  // 验证错误
-  ERR_INVALID_WORKFLOW = 'INVALID_WORKFLOW';
-  ERR_INVALID_STEP = 'INVALID_STEP';
-  ERR_INVALID_EXPRESSION = 'INVALID_EXPRESSION';
-  ERR_MISSING_REQUIRED = 'MISSING_REQUIRED';
-  ERR_TYPE_MISMATCH = 'TYPE_MISMATCH';
+  // === UniFlow/Validation/* - 验证错误 ===
+  ERR_INVALID_WORKFLOW = 'UniFlow/Validation/InvalidWorkflow';
+  ERR_INVALID_STEP = 'UniFlow/Validation/InvalidStep';
+  ERR_INVALID_EXPRESSION = 'UniFlow/Validation/InvalidExpression';
+  ERR_MISSING_REQUIRED = 'UniFlow/Validation/MissingRequired';
+  ERR_TYPE_MISMATCH = 'UniFlow/Validation/TypeMismatch';
   
-  // 执行错误
-  ERR_EXECUTION_FAILED = 'EXECUTION_FAILED';
-  ERR_STEP_TIMEOUT = 'STEP_TIMEOUT';
-  ERR_CANCELLED = 'CANCELLED';
-  ERR_PARALLEL_FAILED = 'PARALLEL_FAILED';
-  ERR_LOOP_EXCEEDED = 'LOOP_EXCEEDED';
-  ERR_CONDITION_ERROR = 'CONDITION_ERROR';
+  // === UniFlow/Timeout/* - 超时错误 ===
+  ERR_STEP_TIMEOUT = 'UniFlow/Timeout/StepTimeout';
+  ERR_CONNECTION_TIMEOUT = 'UniFlow/Timeout/ConnectionTimeout';
   
-  // 配置错误
-  ERR_CONFIG_INVALID = 'CONFIG_INVALID';
-  ERR_SKILL_NOT_FOUND = 'SKILL_NOT_FOUND';
-  ERR_NO_EXECUTOR = 'NO_EXECUTOR';
-  ERR_SUBWORKFLOW_NOT_FOUND = 'SUBWORKFLOW_NOT_FOUND';
+  // === UniFlow/Execution/* - 执行错误 ===
+  ERR_EXECUTION_FAILED = 'UniFlow/Execution/Failed';
+  ERR_CANCELLED = 'UniFlow/Execution/Cancelled';
+  ERR_PARALLEL_FAILED = 'UniFlow/Execution/ParallelFailed';
+  ERR_LOOP_EXCEEDED = 'UniFlow/Execution/LoopExceeded';
+  ERR_CONDITION_ERROR = 'UniFlow/Execution/ConditionError';
   
-  // 网络错误
-  ERR_CONNECTION_FAILED = 'CONNECTION_FAILED';
-  ERR_CONNECTION_TIMEOUT = 'CONNECTION_TIMEOUT';
-  ERR_SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE';
-  ERR_RATE_LIMITED = 'RATE_LIMITED';
+  // === UniFlow/Internal/* - 内部错误 ===
+  ERR_CONFIG_INVALID = 'UniFlow/Internal/ConfigInvalid';
+  ERR_NO_EXECUTOR = 'UniFlow/Internal/NoExecutor';
+  ERR_SUBWORKFLOW_NOT_FOUND = 'UniFlow/Internal/SubworkflowNotFound';
+  ERR_INTERNAL = 'UniFlow/Internal/Error';
+  ERR_NOT_IMPLEMENTED = 'UniFlow/Internal/NotImplemented';
+  ERR_UNKNOWN = 'UniFlow/Internal/Unknown';
   
-  // 权限错误
-  ERR_AUTH_REQUIRED = 'AUTH_REQUIRED';
-  ERR_ACCESS_DENIED = 'ACCESS_DENIED';
-  ERR_QUOTA_EXCEEDED = 'QUOTA_EXCEEDED';
-  ERR_TENANT_INVALID = 'TENANT_INVALID';
+  // === Skill/* - Skill 相关错误 ===
+  ERR_SKILL_NOT_FOUND = 'Skill/Validation/NotFound';
+  ERR_SKILL_EXECUTION_FAILED = 'Skill/Execution/Failed';
   
-  // 资源错误
-  ERR_RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND';
-  ERR_RESOURCE_LOCKED = 'RESOURCE_LOCKED';
-  ERR_OUT_OF_MEMORY = 'OUT_OF_MEMORY';
+  // === UniFlow/Network/* - 网络错误 ===
+  ERR_CONNECTION_FAILED = 'UniFlow/Network/ConnectionFailed';
+  ERR_SERVICE_UNAVAILABLE = 'UniFlow/Network/ServiceUnavailable';
+  ERR_RATE_LIMITED = 'UniFlow/Network/RateLimited';
   
-  // 内部错误
-  ERR_INTERNAL = 'INTERNAL_ERROR';
-  ERR_NOT_IMPLEMENTED = 'NOT_IMPLEMENTED';
-  ERR_UNKNOWN = 'UNKNOWN_ERROR';
+  // === UniFlow/Permission/* - 权限错误 ===
+  ERR_AUTH_REQUIRED = 'UniFlow/Permission/AuthRequired';
+  ERR_ACCESS_DENIED = 'UniFlow/Permission/AccessDenied';
+  ERR_QUOTA_EXCEEDED = 'UniFlow/Permission/QuotaExceeded';
+  ERR_TENANT_INVALID = 'UniFlow/Permission/TenantInvalid';
+  
+  // === UniFlow/Resource/* - 资源错误 ===
+  ERR_RESOURCE_NOT_FOUND = 'UniFlow/Resource/NotFound';
+  ERR_RESOURCE_LOCKED = 'UniFlow/Resource/Locked';
+  ERR_OUT_OF_MEMORY = 'UniFlow/Resource/OutOfMemory';
+  
+  // === LLM 相关错误 ===
+  ERR_LLM_CALL_FAILED = 'UniFlow/LLM/CallFailed';
+  ERR_LLM_TOKEN_EXCEEDED = 'UniFlow/LLM/TokenExceeded';
+  ERR_LLM_RATE_LIMITED = 'UniFlow/LLM/RateLimited';
+  
+  // === 外部系统集成错误 ===
+  ERR_EXTERNAL_SERVICE_FAILED = 'External/Execution/ServiceFailed';
+  ERR_EXTERNAL_TIMEOUT = 'External/Timeout/ServiceTimeout';
+  
+  // === UniFlow/Guard/* - Guard 校验错误 (ENTROPY-010) ===
+  ERR_GUARD_REQUIRED = 'UniFlow/Guard/Required';
+  ERR_GUARD_MIN_LENGTH = 'UniFlow/Guard/MinLength';
+  ERR_GUARD_MAX_LENGTH = 'UniFlow/Guard/MaxLength';
+  ERR_GUARD_PATTERN = 'UniFlow/Guard/Pattern';
+  
+  // === UniFlow/Execution/* - 执行错误补充 (ENTROPY-010) ===
+  ERR_ALREADY_RUNNING = 'UniFlow/Execution/AlreadyRunning';
+  ERR_UNKNOWN_STEP_TYPE = 'UniFlow/Execution/UnknownStepType';
+  ERR_ACTION_NOT_HANDLED = 'UniFlow/Execution/ActionNotHandled';
+  ERR_INVALID_COLLECTION = 'UniFlow/Execution/InvalidCollection';
+  ERR_PARALLEL_ERROR = 'UniFlow/Execution/ParallelError';
+  ERR_SUBWORKFLOW_ERROR = 'UniFlow/Execution/SubworkflowError';
+  
+  // === UniFlow/Internal/* - 未实现错误 ===
+  ERR_SKILL_NOT_IMPLEMENTED = 'UniFlow/Internal/SkillNotImplemented';
+  ERR_LLM_NOT_IMPLEMENTED = 'UniFlow/Internal/LLMNotImplemented';
+  ERR_HTTP_NOT_IMPLEMENTED = 'UniFlow/Internal/HTTPNotImplemented';
+  ERR_SCRIPT_NOT_IMPLEMENTED = 'UniFlow/Internal/ScriptNotImplemented';
+  
+  // === v1 兼容 (deprecated, 将在未来版本移除) ===
+  ERR_INVALID_WORKFLOW_V1 = 'INVALID_WORKFLOW' deprecated 'Use ERR_INVALID_WORKFLOW';
+  ERR_STEP_TIMEOUT_V1 = 'STEP_TIMEOUT' deprecated 'Use ERR_STEP_TIMEOUT';
 
 implementation
+
+{ TErrorCode }
+
+class function TErrorCode.Parse(const ACode: string): TErrorCode;
+var
+  Parts: TArray<string>;
+begin
+  Result.Source := '';
+  Result.Category := '';
+  Result.Specific := '';
+  
+  if IsNewFormat(ACode) then
+  begin
+    Parts := ACode.Split(['/']);
+    if Length(Parts) >= 1 then Result.Source := Parts[0];
+    if Length(Parts) >= 2 then Result.Category := Parts[1];
+    if Length(Parts) >= 3 then Result.Specific := Parts[2];
+  end
+  else
+  begin
+    // v1 兼容: 旧格式错误码映射到新格式
+    Result.Source := 'UniFlow';
+    Result.Category := 'Internal';
+    Result.Specific := ACode;
+  end;
+end;
+
+function TErrorCode.ToString: string;
+begin
+  Result := Source + '/' + Category + '/' + Specific;
+end;
+
+class function TErrorCode.IsNewFormat(const ACode: string): Boolean;
+var
+  SlashCount: Integer;
+  I: Integer;
+begin
+  SlashCount := 0;
+  for I := 1 to Length(ACode) do
+    if ACode[I] = '/' then
+      Inc(SlashCount);
+  Result := SlashCount >= 2;
+end;
+
+class function TErrorCode.Make(const ASource, ACategory, ASpecific: string): string;
+begin
+  Result := ASource + '/' + ACategory + '/' + ASpecific;
+end;
 
 { TErrorHelper }
 
@@ -203,10 +333,10 @@ class procedure TErrorHelper.InitMessages;
 begin
   // === 验证错误 ===
   AddMessage(ERR_INVALID_WORKFLOW, ecValidation, esError,
-    'Invalid Workflow', 'The workflow definition is invalid or corrupted.',
-    'Check the workflow JSON format and required fields.',
-    '工作流无效', '工作流定义格式错误或已损坏。',
-    '请检查工作流 JSON 格式和必填字段。',
+    'Invalid FlowDefinition', 'The FlowDefinition is invalid or corrupted.',
+    'Check the FlowDefinition JSON format and required fields.',
+    '流程定义无效', '流程定义格式错误或已损坏。',
+    '请检查流程定义 JSON 格式和必填字段。',
     'docs/workflow-definition.md');
     
   AddMessage(ERR_INVALID_STEP, ecValidation, esError,

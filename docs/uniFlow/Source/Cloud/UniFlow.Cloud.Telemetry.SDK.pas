@@ -20,6 +20,7 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.JSON, System.SyncObjs, System.Threading, System.Net.HttpClient,
   System.Net.URLClient, System.DateUtils, System.NetEncoding,
+  {$IFDEF MSWINDOWS}Winapi.Windows,{$ENDIF}
   UniFlow.Cloud.Telemetry.Types;
 
 type
@@ -1282,7 +1283,13 @@ begin
         TStringStream.Create(Request.ToJSON, TEncoding.UTF8),
         nil, Headers);
     except
-      // 忽略导出错误
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录遥测导出失败（不影响主流程）
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[OTLP] Trace export failed: %s', [E.Message])));
+        {$ENDIF}
+      end;
     end;
   finally
     Request.Free;
@@ -1375,7 +1382,13 @@ begin
         TStringStream.Create(Request.ToJSON, TEncoding.UTF8),
         nil, Headers);
     except
-      // 忽略导出错误
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录指标导出失败
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[OTLP] Metrics export failed: %s', [E.Message])));
+        {$ENDIF}
+      end;
     end;
   finally
     Request.Free;
@@ -1490,7 +1503,13 @@ begin
         TStringStream.Create(Request.ToJSON, TEncoding.UTF8),
         nil, Headers);
     except
-      // 忽略导出错误
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录日志导出失败
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[OTLP] Log export failed: %s', [E.Message])));
+        {$ENDIF}
+      end;
     end;
   finally
     Request.Free;

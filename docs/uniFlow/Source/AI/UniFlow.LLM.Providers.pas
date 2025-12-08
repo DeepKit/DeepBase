@@ -11,82 +11,39 @@ unit UniFlow.LLM.Providers;
   - 本地模型 (Ollama, LM Studio)
   - Azure OpenAI
   - DeepSeek
+  
+  ENTROPY-007: 重构说明
+  =====================
+  本单元已重构以复用 UniBase.LLM 中的核心类型:
+  - TLLMMessage     -> 使用 UniBase.LLM.TLLMMessage
+  - TLLMResponse    -> 新增 TProviderResponse 作为适配类型
+  - TLLMRequestOptions -> 保留（UniBase.LLM 无此类型）
+  
+  Provider 管理器已改为包装 UniBase.LLM 的功能
 *)
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
-  System.Net.HttpClient, System.Net.URLClient, System.SyncObjs;
+  System.Net.HttpClient, System.Net.URLClient, System.SyncObjs,
+  {$IFDEF MSWINDOWS}Winapi.Windows,{$ENDIF}
+  UniBase.LLM;
 
 type
   // ============================================================================
-  // LLM 消息类型
+  // 复用 UniBase.LLM 类型
   // ============================================================================
   
-  TLLMRole = (lrSystem, lrUser, lrAssistant, lrTool);
+  // 直接使用 UniBase.LLM.TLLMMessage
+  // 直接使用 UniBase.LLM.TLLMMessages
+  // 直接使用 UniBase.LLM.TLLMChatResponse
+  // 直接使用 UniBase.LLM.TLLMRequestOptions
+  // 直接使用 UniBase.LLM.ILLMProvider
   
-  TLLMMessage = record
-    Role: TLLMRole;
-    Content: string;
-    Name: string;        // 可选: 工具调用名
-    ToolCallId: string;  // 可选: 工具调用 ID
-    
-    class function System(const AContent: string): TLLMMessage; static;
-    class function User(const AContent: string): TLLMMessage; static;
-    class function Assistant(const AContent: string): TLLMMessage; static;
-    function ToJSON: TJSONObject;
-  end;
-  
-  TLLMMessages = TArray<TLLMMessage>;
-  
-  // ============================================================================
-  // LLM 请求选项
-  // ============================================================================
-  
-  TLLMRequestOptions = record
-    Model: string;
-    MaxTokens: Integer;
-    Temperature: Double;
-    TopP: Double;
-    Stop: TArray<string>;
-    Stream: Boolean;
-    
-    class function Default: TLLMRequestOptions; static;
-  end;
-  
-  // ============================================================================
-  // LLM 响应
-  // ============================================================================
-  
-  TLLMResponse = record
-    Success: Boolean;
-    Content: string;
-    FinishReason: string;
-    InputTokens: Integer;
-    OutputTokens: Integer;
-    TotalTokens: Integer;
-    Model: string;
-    ErrorMessage: string;
-    DurationMs: Int64;
-    
-    procedure Init;
-  end;
-  
-  // ============================================================================
-  // LLM 提供商接口
-  // ============================================================================
-  
-  ILLMProvider = interface
-    ['{E1F2A3B4-C5D6-4789-8901-23456789ABCD}']
-    function GetName: string;
-    function GetModels: TArray<string>;
-    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse;
-    function IsAvailable: Boolean;
-    
-    property Name: string read GetName;
-    property Models: TArray<string> read GetModels;
-  end;
+  // 向后兼容别名
+  TProviderResponse = TLLMChatResponse;
+  TLLMResponse = TLLMChatResponse;
   
   // ============================================================================
   // 基础 HTTP Provider
@@ -102,16 +59,17 @@ type
     FDefaultModel: string;
     FTimeoutMs: Integer;
     
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; virtual; abstract;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; virtual; abstract;
     function BuildHeaders: TArray<TNameValuePair>; virtual;
     function PostJSON(const AUrl: string; const ABody: TJSONObject): TJSONObject;
+    function MessageToJSON(const AMsg: TLLMMessage): TJSONObject;
   public
     constructor Create(const AApiKey: string; const ABaseUrl: string = '');
     destructor Destroy; override;
     
     function GetName: string;
     function GetModels: TArray<string>;
-    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse;
+    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse;
     function IsAvailable: Boolean; virtual;
     
     property ApiKey: string read FApiKey write FApiKey;
@@ -126,7 +84,7 @@ type
   
   TOpenAIProvider = class(TBaseLLMProvider)
   protected
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
     function BuildHeaders: TArray<TNameValuePair>; override;
   public
     constructor Create(const AApiKey: string);
@@ -139,7 +97,7 @@ type
   TClaudeProvider = class(TBaseLLMProvider)
   protected
     FAnthropicVersion: string;
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
     function BuildHeaders: TArray<TNameValuePair>; override;
   public
     constructor Create(const AApiKey: string);
@@ -151,7 +109,7 @@ type
   
   TGeminiProvider = class(TBaseLLMProvider)
   protected
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
   public
     constructor Create(const AApiKey: string);
   end;
@@ -162,7 +120,7 @@ type
   
   TOllamaProvider = class(TBaseLLMProvider)
   protected
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
   public
     constructor Create(const ABaseUrl: string = 'http://localhost:11434');
     function IsAvailable: Boolean; override;
@@ -178,7 +136,7 @@ type
     FDeploymentName: string;
     FApiVersion: string;
   protected
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
     function BuildHeaders: TArray<TNameValuePair>; override;
   public
     constructor Create(const AApiKey, AEndpoint, ADeploymentName: string;
@@ -194,7 +152,7 @@ type
   
   TDeepSeekProvider = class(TBaseLLMProvider)
   protected
-    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; override;
+    function DoChat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; override;
     function BuildHeaders: TArray<TNameValuePair>; override;
   public
     constructor Create(const AApiKey: string);
@@ -236,94 +194,19 @@ type
     function GetProviderNames: TArray<string>;
     
     /// <summary>聊天 (使用默认提供商)</summary>
-    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse; overload;
+    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse; overload;
     
     /// <summary>聊天 (指定提供商)</summary>
     function Chat(const AProviderName: string; const AMessages: TLLMMessages; 
-      const AOptions: TLLMRequestOptions): TLLMResponse; overload;
+      const AOptions: TLLMRequestOptions): TProviderResponse; overload;
     
     property DefaultProvider: string read FDefaultProvider write SetDefaultProvider;
   end;
-
-// ============================================================================
-// 辅助函数
-// ============================================================================
-
-function LLMRoleToString(ARole: TLLMRole): string;
-function StringToLLMRole(const AStr: string): TLLMRole;
 
 implementation
 
 uses
   System.DateUtils, System.StrUtils;
-
-// ============================================================================
-// TLLMMessage
-// ============================================================================
-
-class function TLLMMessage.System(const AContent: string): TLLMMessage;
-begin
-  Result.Role := lrSystem;
-  Result.Content := AContent;
-  Result.Name := '';
-  Result.ToolCallId := '';
-end;
-
-class function TLLMMessage.User(const AContent: string): TLLMMessage;
-begin
-  Result.Role := lrUser;
-  Result.Content := AContent;
-  Result.Name := '';
-  Result.ToolCallId := '';
-end;
-
-class function TLLMMessage.Assistant(const AContent: string): TLLMMessage;
-begin
-  Result.Role := lrAssistant;
-  Result.Content := AContent;
-  Result.Name := '';
-  Result.ToolCallId := '';
-end;
-
-function TLLMMessage.ToJSON: TJSONObject;
-begin
-  Result := TJSONObject.Create;
-  Result.AddPair('role', LLMRoleToString(Role));
-  Result.AddPair('content', Content);
-  if not Name.IsEmpty then
-    Result.AddPair('name', Name);
-end;
-
-// ============================================================================
-// TLLMRequestOptions
-// ============================================================================
-
-class function TLLMRequestOptions.Default: TLLMRequestOptions;
-begin
-  Result.Model := '';
-  Result.MaxTokens := 4096;
-  Result.Temperature := 0.7;
-  Result.TopP := 1.0;
-  SetLength(Result.Stop, 0);
-  Result.Stream := False;
-end;
-
-// ============================================================================
-// TLLMResponse
-// ============================================================================
-
-procedure TLLMResponse.Init;
-begin
-  Success := False;
-  Content := '';
-  FinishReason := '';
-  InputTokens := 0;
-  OutputTokens := 0;
-  TotalTokens := 0;
-  Model := '';
-  ErrorMessage := '';
-  DurationMs := 0;
-end;
 
 // ============================================================================
 // TBaseLLMProvider
@@ -356,7 +239,7 @@ begin
 end;
 
 function TBaseLLMProvider.Chat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LStartTime: TDateTime;
 begin
@@ -372,6 +255,13 @@ begin
     end;
   end;
   Result.DurationMs := MilliSecondsBetween(Now, LStartTime);
+end;
+
+function TBaseLLMProvider.MessageToJSON(const AMsg: TLLMMessage): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair('role', AMsg.Role);
+  Result.AddPair('content', AMsg.Content);
 end;
 
 function TBaseLLMProvider.IsAvailable: Boolean;
@@ -423,7 +313,7 @@ begin
 end;
 
 function TOpenAIProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LMessagesArray: TJSONArray;
@@ -445,7 +335,7 @@ begin
     // 消息
     LMessagesArray := TJSONArray.Create;
     for LMsg in AMessages do
-      LMessagesArray.Add(LMsg.ToJSON);
+      LMessagesArray.Add(MessageToJSON(LMsg));
     LBody.AddPair('messages', LMessagesArray);
     
     // 选项
@@ -502,7 +392,7 @@ begin
 end;
 
 function TClaudeProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LMessagesArray: TJSONArray;
@@ -527,10 +417,10 @@ begin
     LMessagesArray := TJSONArray.Create;
     for LMsg in AMessages do
     begin
-      if LMsg.Role = lrSystem then
+      if LMsg.Role = 'system' then
         LSystemPrompt := LMsg.Content
       else
-        LMessagesArray.Add(LMsg.ToJSON);
+        LMessagesArray.Add(MessageToJSON(LMsg));
     end;
     
     if not LSystemPrompt.IsEmpty then
@@ -583,7 +473,7 @@ begin
 end;
 
 function TGeminiProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LContents, LParts: TJSONArray;
@@ -607,11 +497,11 @@ begin
     LContents := TJSONArray.Create;
     for LMsg in AMessages do
     begin
-      if LMsg.Role = lrSystem then
+      if LMsg.Role = 'system' then
         Continue; // Gemini 使用不同方式处理 system
       
       LContent := TJSONObject.Create;
-      if LMsg.Role = lrUser then
+      if LMsg.Role = 'user' then
         LContent.AddPair('role', 'user')
       else
         LContent.AddPair('role', 'model');
@@ -717,12 +607,18 @@ begin
       end;
     end;
   except
-    // 保持默认模型列表
+    on E: Exception do
+    begin
+      // ENTROPY-011: 记录模型列表获取失败，保持默认
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar(Format('[Ollama] Failed to fetch models: %s', [E.Message])));
+      {$ENDIF}
+    end;
   end;
 end;
 
 function TOllamaProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LMessagesArray: TJSONArray;
@@ -742,7 +638,7 @@ begin
     // 消息
     LMessagesArray := TJSONArray.Create;
     for LMsg in AMessages do
-      LMessagesArray.Add(LMsg.ToJSON);
+      LMessagesArray.Add(MessageToJSON(LMsg));
     LBody.AddPair('messages', LMessagesArray);
     
     // 选项
@@ -794,7 +690,7 @@ begin
 end;
 
 function TAzureOpenAIProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LMessagesArray: TJSONArray;
@@ -811,7 +707,7 @@ begin
     // 消息
     LMessagesArray := TJSONArray.Create;
     for LMsg in AMessages do
-      LMessagesArray.Add(LMsg.ToJSON);
+      LMessagesArray.Add(MessageToJSON(LMsg));
     LBody.AddPair('messages', LMessagesArray);
     
     // 选项
@@ -869,7 +765,7 @@ begin
 end;
 
 function TDeepSeekProvider.DoChat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LBody: TJSONObject;
   LMessagesArray: TJSONArray;
@@ -891,7 +787,7 @@ begin
     // 消息
     LMessagesArray := TJSONArray.Create;
     for LMsg in AMessages do
-      LMessagesArray.Add(LMsg.ToJSON);
+      LMessagesArray.Add(MessageToJSON(LMsg));
     LBody.AddPair('messages', LMessagesArray);
     
     // 选项
@@ -1026,7 +922,7 @@ begin
 end;
 
 function TLLMProviderManager.Chat(const AMessages: TLLMMessages;
-  const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LProvider: ILLMProvider;
 begin
@@ -1039,7 +935,7 @@ begin
 end;
 
 function TLLMProviderManager.Chat(const AProviderName: string;
-  const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMResponse;
+  const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TProviderResponse;
 var
   LProvider: ILLMProvider;
 begin
@@ -1049,30 +945,6 @@ begin
     Result := LProvider.Chat(AMessages, AOptions)
   else
     Result.ErrorMessage := 'LLM provider not found: ' + AProviderName;
-end;
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-function LLMRoleToString(ARole: TLLMRole): string;
-begin
-  case ARole of
-    lrSystem: Result := 'system';
-    lrUser: Result := 'user';
-    lrAssistant: Result := 'assistant';
-    lrTool: Result := 'tool';
-  else
-    Result := 'user';
-  end;
-end;
-
-function StringToLLMRole(const AStr: string): TLLMRole;
-begin
-  if AStr = 'system' then Result := lrSystem
-  else if AStr = 'assistant' then Result := lrAssistant
-  else if AStr = 'tool' then Result := lrTool
-  else Result := lrUser;
 end;
 
 end.

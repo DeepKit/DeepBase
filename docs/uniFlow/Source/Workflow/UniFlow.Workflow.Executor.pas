@@ -20,7 +20,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.JSON, System.SyncObjs, System.Threading,
-  UniFlow.Workflow.Definition, UniFlow.Workflow.Context;
+  UniFlow.Workflow.Definition, UniFlow.Workflow.Context, UniFlow.Workflow.Errors;
 
 type
   // ============================================================================
@@ -441,7 +441,7 @@ begin
   FLock.Enter;
   try
     if FStatus = esRunning then
-      Exit(TStepResult.Fail('ALREADY_RUNNING', 'Workflow is already running'));
+      Exit(TStepResult.Fail(ERR_ALREADY_RUNNING, 'FlowInstance is already running'));
     
     FStatus := esRunning;
     FCancelled := False;
@@ -525,7 +525,7 @@ begin
   if FCancelled then
   begin
     FStatus := esCancelled;
-    Result := TStepResult.Fail('CANCELLED', 'Workflow was cancelled');
+    Result := TStepResult.Fail(ERR_CANCELLED, 'FlowInstance was cancelled');
   end
   else
   begin
@@ -607,7 +607,7 @@ begin
   if FCancelled then
   begin
     FStatus := esCancelled;
-    Result := TStepResult.Fail('CANCELLED', 'Workflow was cancelled');
+    Result := TStepResult.Fail(ERR_CANCELLED, 'FlowInstance was cancelled');
   end
   else
   begin
@@ -700,7 +700,7 @@ begin
     stEnd:
       Result := TStepResult.OK;
   else
-    Result := TStepResult.Fail('UNKNOWN_STEP_TYPE', 'Unknown step type');
+    Result := TStepResult.Fail(ERR_UNKNOWN_STEP_TYPE, 'Unknown step type');
   end;
 end;
 
@@ -723,19 +723,19 @@ begin
     // 默认处理
     case AStep.Action.ActionType of
       atSkill:
-        Result := TStepResult.Fail('SKILL_NOT_IMPLEMENTED', 
+        Result := TStepResult.Fail(ERR_SKILL_NOT_IMPLEMENTED, 
           Format('Skill executor not registered for: %s', [AStep.Action.SkillId]));
       atLLM:
-        Result := TStepResult.Fail('LLM_NOT_IMPLEMENTED', 
+        Result := TStepResult.Fail(ERR_LLM_NOT_IMPLEMENTED, 
           'LLM executor not registered');
       atHttp:
-        Result := TStepResult.Fail('HTTP_NOT_IMPLEMENTED', 
+        Result := TStepResult.Fail(ERR_HTTP_NOT_IMPLEMENTED, 
           'HTTP executor not registered');
       atScript:
-        Result := TStepResult.Fail('SCRIPT_NOT_IMPLEMENTED', 
+        Result := TStepResult.Fail(ERR_SCRIPT_NOT_IMPLEMENTED, 
           'Script executor not registered');
     else
-      Result := TStepResult.Fail('ACTION_NOT_HANDLED', 
+      Result := TStepResult.Fail(ERR_ACTION_NOT_HANDLED, 
         Format('No executor for action type: %s', [ActionTypeToStr(AStep.Action.ActionType)]));
     end;
   except
@@ -743,7 +743,7 @@ begin
     begin
       // CODE-003: 异常时释放已创建的结果
       FreeAndNil(Result);
-      Result := TStepResult.Fail('EXECUTION_ERROR', E.Message);
+      Result := TStepResult.Fail(ERR_EXECUTION_FAILED, E.Message);
     end;
   end;
 end;
@@ -819,7 +819,7 @@ begin
     begin
       // CODE-003: 异常时释放已创建的结果
       FreeAndNil(Result);
-      Result := TStepResult.Fail('CONDITION_ERROR', E.Message);
+      Result := TStepResult.Fail(ERR_CONDITION_ERROR, E.Message);
     end;
   end;
 end;
@@ -880,7 +880,7 @@ begin
         CollectionJson := FContext.ResolveJSON(AStep.LoopConfig.Collection);
         try
           if not (CollectionJson is TJSONArray) then
-            Exit(TStepResult.Fail('INVALID_COLLECTION', 'Collection must be an array'));
+            Exit(TStepResult.Fail(ERR_INVALID_COLLECTION, 'Collection must be an array'));
           
           Collection := TJSONArray(CollectionJson);
           Iteration := 0;
@@ -1108,7 +1108,7 @@ begin
               if FCancelled or CancelFlag then
               begin
                 FreeAndNil(StepResult);
-                StepResult := TStepResult.Fail('CANCELLED', 'Execution cancelled');
+                StepResult := TStepResult.Fail(ERR_CANCELLED, 'Execution cancelled');
                 Break;
               end;
               
@@ -1128,7 +1128,7 @@ begin
                     end;
                   end;
                   if StepResult = nil then
-                    StepResult := TStepResult.Fail('NO_EXECUTOR', 'No executor for action');
+                    StepResult := TStepResult.Fail(ERR_NO_EXECUTOR, 'No executor for action');
                 end;
               else
                 StepResult := TStepResult.OK;  // 简化: 并行内仅支持 Action
@@ -1145,7 +1145,7 @@ begin
             on E: Exception do
             begin
               FreeAndNil(StepResult);
-              StepResult := TStepResult.Fail('PARALLEL_ERROR', E.Message);
+              StepResult := TStepResult.Fail(ERR_PARALLEL_ERROR, E.Message);
               if FailFast then
                 CancelFlag := True;
             end;
@@ -1198,7 +1198,7 @@ begin
       if FailedResult <> nil then
         Result := FailedResult.Clone
       else
-        Result := TStepResult.Fail('PARALLEL_FAILED', 'Parallel execution failed');
+        Result := TStepResult.Fail(ERR_PARALLEL_FAILED, 'Parallel execution failed');
     end;
     
   finally
@@ -1246,7 +1246,7 @@ begin
     SubWorkflow := nil;  // TODO: WorkflowRepository.Load(AStep.SubWorkflowId)
     if SubWorkflow = nil then
     begin
-      Result := TStepResult.Fail('SUBWORKFLOW_NOT_FOUND', 
+      Result := TStepResult.Fail(ERR_SUBWORKFLOW_NOT_FOUND, 
         Format('SubWorkflow not found: %s', [AStep.SubWorkflowId]));
       Exit;
     end;
@@ -1286,7 +1286,7 @@ begin
     on E: Exception do
     begin
       FreeAndNil(Result);
-      Result := TStepResult.Fail('SUBWORKFLOW_ERROR', E.Message);
+      Result := TStepResult.Fail(ERR_SUBWORKFLOW_ERROR, E.Message);
     end;
   end;
   
@@ -1566,7 +1566,7 @@ begin
         if RuleType = 'required' then
         begin
           if FieldValue.IsNull or FieldValue.IsEmpty then
-            Exit(TStepResult.Fail('GUARD_REQUIRED', Format('Field %s is required', [Field])));
+            Exit(TStepResult.Fail(ERR_GUARD_REQUIRED, Format('Field %s is required', [Field])));
         end;
       end;
       
@@ -1574,14 +1574,14 @@ begin
       if Rule.TryGetValue<Integer>('minLength', MinLen) then
       begin
         if Length(FieldValue.AsString) < MinLen then
-          Exit(TStepResult.Fail('GUARD_MIN_LENGTH', 
+          Exit(TStepResult.Fail(ERR_GUARD_MIN_LENGTH, 
             Format('Field %s must be at least %d characters', [Field, MinLen])));
       end;
       
       if Rule.TryGetValue<Integer>('maxLength', MaxLen) then
       begin
         if Length(FieldValue.AsString) > MaxLen then
-          Exit(TStepResult.Fail('GUARD_MAX_LENGTH', 
+          Exit(TStepResult.Fail(ERR_GUARD_MAX_LENGTH, 
             Format('Field %s must be at most %d characters', [Field, MaxLen])));
       end;
       
@@ -1589,7 +1589,7 @@ begin
       if Rule.TryGetValue<string>('pattern', Pattern) then
       begin
         if not TRegEx.IsMatch(FieldValue.AsString, Pattern) then
-          Exit(TStepResult.Fail('GUARD_PATTERN', 
+          Exit(TStepResult.Fail(ERR_GUARD_PATTERN, 
             Format('Field %s does not match pattern', [Field])));
       end;
     finally

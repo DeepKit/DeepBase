@@ -13,6 +13,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Variants,
   System.Generics.Collections,
   Vcl.Menus, // For TShortCut, ShortCutToText, TextToShortCut
   FireDAC.Comp.Client,
@@ -178,8 +179,28 @@ begin
       while not Query.Eof do
       begin
         ActionName := Query.FieldByName('ActionName').AsString;
-        Shortcut := Query.FieldByName('Shortcut').AsInteger;
-        DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger;
+        // Shortcut 字段可能是整数或文本格式，尝试两种方式读取
+        try
+          if Query.FieldByName('Shortcut').IsNull then
+            Shortcut := 0
+          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
+            Shortcut := Query.FieldByName('Shortcut').AsInteger
+          else
+            Shortcut := TextToShortCut(Query.FieldByName('Shortcut').AsString);
+        except
+          Shortcut := 0;
+        end;
+        
+        try
+          if Query.FieldByName('DefaultShortcut').IsNull then
+            DefaultShortcut := 0
+          else if VarIsNumeric(Query.FieldByName('DefaultShortcut').Value) then
+            DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger
+          else
+            DefaultShortcut := TextToShortCut(Query.FieldByName('DefaultShortcut').AsString);
+        except
+          DefaultShortcut := 0;
+        end;
         
         FCache.AddOrSetValue(ActionName, Shortcut);
         if DefaultShortcut <> 0 then
@@ -400,8 +421,27 @@ begin
       while not Query.Eof do
       begin
         Item.ActionName := Query.FieldByName('ActionName').AsString;
-        Item.Shortcut := Query.FieldByName('Shortcut').AsInteger;
-        Item.DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger;
+        // Shortcut 字段可能是整数或文本格式
+        try
+          if Query.FieldByName('Shortcut').IsNull then
+            Item.Shortcut := 0
+          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
+            Item.Shortcut := Query.FieldByName('Shortcut').AsInteger
+          else
+            Item.Shortcut := TextToShortCut(Query.FieldByName('Shortcut').AsString);
+        except
+          Item.Shortcut := 0;
+        end;
+        try
+          if Query.FieldByName('DefaultShortcut').IsNull then
+            Item.DefaultShortcut := 0
+          else if VarIsNumeric(Query.FieldByName('DefaultShortcut').Value) then
+            Item.DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger
+          else
+            Item.DefaultShortcut := TextToShortCut(Query.FieldByName('DefaultShortcut').AsString);
+        except
+          Item.DefaultShortcut := 0;
+        end;
         Item.Category := Query.FieldByName('Category').AsString;
         Item.Description := Query.FieldByName('Description').AsString;
         Item.IsEnabled := Query.FieldByName('IsEnabled').AsInteger <> 0;
@@ -441,7 +481,17 @@ begin
       while not Query.Eof do
       begin
         Item.ActionName := Query.FieldByName('ActionName').AsString;
-        Item.Shortcut := ShortCutToText(Query.FieldByName('Shortcut').AsInteger);
+        // Shortcut 字段可能是整数或文本格式
+        try
+          if Query.FieldByName('Shortcut').IsNull then
+            Item.Shortcut := ''
+          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
+            Item.Shortcut := ShortCutToText(Query.FieldByName('Shortcut').AsInteger)
+          else
+            Item.Shortcut := Query.FieldByName('Shortcut').AsString;
+        except
+          Item.Shortcut := '';
+        end;
         Item.Description := Query.FieldByName('Description').AsString;
         Item.Category := Query.FieldByName('Category').AsString;
         List.Add(Item);

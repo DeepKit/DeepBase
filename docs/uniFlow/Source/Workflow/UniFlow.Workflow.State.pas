@@ -123,7 +123,8 @@ type
     wetResumed,       // 恢复执行
     wetCompleted,     // 工作流完成
     wetFailed,        // 工作流失败
-    wetCancelled      // 工作流取消
+    wetCancelled,     // 工作流取消
+    wetStatusChanged  // 状态变化（ENTROPY-006）
   );
   
   TWorkflowEvent = class
@@ -351,6 +352,7 @@ begin
     wetCompleted:     Result := 'completed';
     wetFailed:        Result := 'failed';
     wetCancelled:     Result := 'cancelled';
+    wetStatusChanged: Result := 'status_changed';
   else
     Result := 'unknown';
   end;
@@ -370,6 +372,7 @@ begin
   else if LowerS = 'completed' then Result := wetCompleted
   else if LowerS = 'failed' then Result := wetFailed
   else if LowerS = 'cancelled' then Result := wetCancelled
+  else if LowerS = 'status_changed' then Result := wetStatusChanged
   else
     Result := wetStarted;
 end;
@@ -951,11 +954,14 @@ procedure TWorkflowStateManager.UpdateInstanceStatus(
 );
 var
   Instance: TWorkflowInstance;
+  Event: TWorkflowEvent;
+  OldStatus: TWorkflowInstanceStatus;
 begin
   Instance := FStore.GetInstance(AInstanceId);
   if Instance = nil then Exit;
   
   try
+    OldStatus := Instance.Status;
     Instance.Status := AStatus;
     Instance.UpdatedAt := Now;
     
@@ -965,6 +971,23 @@ begin
       Instance.CurrentStepIndex := ACurrentStepIndex;
     
     FStore.UpdateInstance(Instance);
+    
+    // ENTROPY-006: 记录状态变化事件（Event Sourcing 合规）
+    Event := TWorkflowEvent.Create;
+    try
+      Event.InstanceId := AInstanceId;
+      Event.EventType := wetStatusChanged;
+      Event.Payload := TJSONObject.Create;
+      Event.Payload.AddPair('oldStatus', InstanceStatusToStr(OldStatus));
+      Event.Payload.AddPair('newStatus', InstanceStatusToStr(AStatus));
+      if ACurrentStepId <> '' then
+        Event.Payload.AddPair('currentStepId', ACurrentStepId);
+      if ACurrentStepIndex >= 0 then
+        Event.Payload.AddPair('currentStepIndex', TJSONNumber.Create(ACurrentStepIndex));
+      FStore.AppendEvent(Event);
+    finally
+      Event.Free;
+    end;
   finally
     Instance.Free;
   end;

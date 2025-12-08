@@ -76,10 +76,20 @@ class DataTransformer:
         """映射转换 - 对每个元素应用表达式"""
         expression = config.get("expression", "x")
         
+        # SECURITY: Validate expression before eval
+        if not self._is_safe_expression(expression):
+            raise ValueError(f"Unsafe expression rejected: {expression}")
+        
         def eval_expr(x, idx=0):
-            # 安全的表达式求值
-            local_vars = {"x": x, "idx": idx, "len": len, "str": str, "int": int, "float": float}
-            return eval(expression, {"__builtins__": {}}, local_vars)
+            # 安全的表达式求值 - 严格限制可用函数
+            safe_builtins = {
+                "len": len, "str": str, "int": int, "float": float,
+                "abs": abs, "min": min, "max": max, "sum": sum,
+                "round": round, "bool": bool, "list": list,
+                "True": True, "False": False, "None": None
+            }
+            local_vars = {"x": x, "idx": idx}
+            return eval(expression, {"__builtins__": safe_builtins}, local_vars)
         
         return [eval_expr(item, i) for i, item in enumerate(data)]
     
@@ -87,11 +97,36 @@ class DataTransformer:
         """过滤 - 根据条件筛选"""
         condition = config.get("condition", "True")
         
+        # SECURITY: Validate condition before eval
+        if not self._is_safe_expression(condition):
+            raise ValueError(f"Unsafe condition rejected: {condition}")
+        
         def eval_condition(x, idx=0):
-            local_vars = {"x": x, "idx": idx, "len": len, "str": str, "int": int, "float": float}
-            return eval(condition, {"__builtins__": {}}, local_vars)
+            safe_builtins = {
+                "len": len, "str": str, "int": int, "float": float,
+                "abs": abs, "min": min, "max": max, "sum": sum,
+                "round": round, "bool": bool, "list": list,
+                "True": True, "False": False, "None": None
+            }
+            local_vars = {"x": x, "idx": idx}
+            return eval(condition, {"__builtins__": safe_builtins}, local_vars)
         
         return [item for i, item in enumerate(data) if eval_condition(item, i)]
+    
+    def _is_safe_expression(self, expr: str) -> bool:
+        """验证表达式是否安全"""
+        # 禁止危险关键字
+        dangerous_patterns = [
+            r'\bimport\b', r'\bexec\b', r'\beval\b', r'\bcompile\b',
+            r'\bopen\b', r'\bfile\b', r'\binput\b', r'\b__\w+__\b',
+            r'\bgetattr\b', r'\bsetattr\b', r'\bdelattr\b', r'\bglobals\b',
+            r'\blocals\b', r'\bvars\b', r'\bdir\b', r'\btype\b',
+            r'\bbreakpoint\b', r'\bexit\b', r'\bquit\b',
+        ]
+        for pattern in dangerous_patterns:
+            if re.search(pattern, expr, re.IGNORECASE):
+                return False
+        return True
     
     def transform_reduce(self, data: List, config: Dict) -> Any:
         """归约 - 聚合为单个值"""

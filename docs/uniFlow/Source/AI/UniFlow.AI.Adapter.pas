@@ -24,6 +24,7 @@ uses
   System.Classes,
   System.JSON,
   System.Generics.Collections,
+  {$IFDEF MSWINDOWS}Winapi.Windows,{$ENDIF}
   UniBase.LLM,
   UniBase.Types,
   UniFlow.Workflow.Context,
@@ -314,7 +315,13 @@ begin
             ParsedJSON.Free;
           end;
         except
-          // JSON parsing failed, ignore
+          on E: Exception do
+          begin
+            // ENTROPY-011: 记录 JSON 解析失败
+            {$IFDEF DEBUG}
+            OutputDebugString(PChar(Format('[LLMAdapter] JSON output parsing failed: %s', [E.Message])));
+            {$ENDIF}
+          end;
         end;
       end;
     end
@@ -354,7 +361,13 @@ begin
         ParamsJSON.Free;
       end;
     except
-      // Use defaults if parsing fails
+      on E: Exception do
+      begin
+        // ENTROPY-011: 记录参数解析失败，使用默认值
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(Format('[LLMAdapter] Action params parsing failed: %s', [E.Message])));
+        {$ENDIF}
+      end;
     end;
   end;
 

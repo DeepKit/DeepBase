@@ -132,8 +132,10 @@ type
     FStatusText: string;
     FHeaders: TDictionary<string, string>;
     FBody: string;
+    FBodyBytes: TBytes;  // BUG-049 FIX: Add binary body support
     FContentType: string;
     FSent: Boolean;
+    FIsBinary: Boolean;  // BUG-049 FIX: Flag to indicate binary response
   public
     constructor Create;
     destructor Destroy; override;
@@ -147,6 +149,7 @@ type
     function Html(const Content: string): THttpResponse;
     function Json(const Data: TJSONValue; OwnsData: Boolean = False): THttpResponse; overload;
     function Json(const Data: string): THttpResponse; overload;
+    function Bytes(const ABytes: TBytes): THttpResponse;  // BUG-049 FIX: Binary response method
     function Redirect(const Url: string; Permanent: Boolean = False): THttpResponse;
     function NotFound(const Message: string = 'Not Found'): THttpResponse;
     function BadRequest(const Message: string = 'Bad Request'): THttpResponse;
@@ -158,8 +161,10 @@ type
     property StatusText: string read FStatusText;
     property HeadersDict: TDictionary<string, string> read FHeaders;
     property BodyContent: string read FBody;
+    property BodyBytesContent: TBytes read FBodyBytes;  // BUG-049 FIX
     property ContentTypeValue: string read FContentType;
     property Sent: Boolean read FSent write FSent;
+    property IsBinary: Boolean read FIsBinary;  // BUG-049 FIX
   end;
   
   // ============================================================================
@@ -610,6 +615,14 @@ begin
   Result := Self;
 end;
 
+// BUG-049 FIX: Binary response method for static files
+function THttpResponse.Bytes(const ABytes: TBytes): THttpResponse;
+begin
+  FBodyBytes := ABytes;
+  FIsBinary := True;
+  Result := Self;
+end;
+
 function THttpResponse.Redirect(const Url: string; Permanent: Boolean): THttpResponse;
 begin
   if Permanent then
@@ -965,7 +978,8 @@ end;
 procedure TStaticFileMiddleware.Execute(const Ctx: THttpContext; Next: TProc);
 var
   Path, FilePath, RelPath: string;
-  Content: string;
+  MimeType: string;
+  Bytes: TBytes;
 begin
   Path := Ctx.Request.Path;
   
@@ -988,10 +1002,12 @@ begin
   if TFile.Exists(FilePath) then
   begin
     try
-      Content := TFile.ReadAllText(FilePath, TEncoding.UTF8);
+      MimeType := GetMimeType(FilePath);
+      // BUG-049 FIX: Use binary read for all files to prevent corruption
+      Bytes := TFile.ReadAllBytes(FilePath);
       Ctx.Response
-        .ContentType(GetMimeType(FilePath))
-        .Text(Content);
+        .ContentType(MimeType)
+        .Bytes(Bytes);
     except
       on E: Exception do
         Ctx.Response.InternalError('Failed to read file');
@@ -1270,7 +1286,17 @@ begin
     AResponseInfo.ResponseNo := Ctx.Response.StatusCode;
     AResponseInfo.ResponseText := Ctx.Response.StatusText;
     AResponseInfo.ContentType := Ctx.Response.ContentTypeValue;
-    AResponseInfo.ContentText := Ctx.Response.BodyContent;
+    
+    // BUG-049 FIX: Handle binary responses properly
+    if Ctx.Response.IsBinary then
+    begin
+      AResponseInfo.ContentStream := TMemoryStream.Create;
+      AResponseInfo.ContentStream.Write(Ctx.Response.BodyBytesContent[0], Length(Ctx.Response.BodyBytesContent));
+      AResponseInfo.ContentStream.Position := 0;
+      AResponseInfo.FreeContentStream := True;
+    end
+    else
+      AResponseInfo.ContentText := Ctx.Response.BodyContent;
     
     for Pair in Ctx.Response.HeadersDict do
       AResponseInfo.CustomHeaders.AddValue(Pair.Key, Pair.Value);

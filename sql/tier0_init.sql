@@ -1,7 +1,12 @@
 -- ============================================================================
--- UniBase Tier 0 Schema 初始化脚本
+-- ⚠️ DEPRECATED - 此脚本已废弃
+-- 请使用: data/create_sample_db.sql 或直接复制 data/样例Config.db
+-- ============================================================================
+--
+-- UniBase Tier 0 Schema 初始化脚本 (已废弃)
 -- 版本: 0.3
 -- 说明: 创建最小核心表结构，包含 6 张表
+-- 废弃原因: 与 create_sample_db.sql 表结构不一致，已统一使用后者
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -93,14 +98,18 @@ CREATE TABLE IF NOT EXISTS I18nTexts (
   TranslatedText TEXT,                 -- 翻译后文本
   PluralForm TEXT,                     -- 复数形式（JSON）：{"one": "...", "other": "..."}
   Context TEXT,                        -- 上下文说明（帮助翻译）
-  LastUsedTime TEXT,                   -- 最后使用时间
+  Module TEXT,                         -- 模块名称（用于分组）
+  LastUsedAt TEXT,                     -- 最后使用时间（统一命名为 LastUsedAt）
   IsAutoTranslated INTEGER DEFAULT 0,  -- 是否机器翻译
   IsVerified INTEGER DEFAULT 0,        -- 是否人工校验
+  Extra TEXT,                          -- 扩展字段
+  Remarks TEXT,                        -- 备注
   UNIQUE(SourceText, LangCode)
 );
 
 CREATE INDEX IF NOT EXISTS idx_i18n_lang ON I18nTexts(LangCode);
 CREATE INDEX IF NOT EXISTS idx_i18n_source ON I18nTexts(SourceText);
+CREATE INDEX IF NOT EXISTS idx_i18n_module ON I18nTexts(Module);
 
 -- 预置基础翻译
 INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) 

@@ -120,6 +120,40 @@ type
   end;
 
   /// <summary>
+  /// LLM Request options for provider calls
+  /// </summary>
+  TLLMRequestOptions = record
+    Model: string;
+    MaxTokens: Integer;
+    Temperature: Double;
+    TopP: Double;
+    Stop: TArray<string>;
+    Stream: Boolean;
+    
+    class function Default: TLLMRequestOptions; static;
+    class function FromConfig(const AConfig: TLLMConfig): TLLMRequestOptions; static;
+  end;
+
+  /// <summary>
+  /// Unified LLM Provider interface for extensibility
+  /// Allows custom providers to be registered without modifying core code
+  /// </summary>
+  ILLMProvider = interface
+    ['{A1B2C3D4-E5F6-4789-8901-ABCDEF012345}']
+    /// <summary>Get provider display name (e.g., 'OpenAI', 'Claude')</summary>
+    function GetName: string;
+    /// <summary>Get list of available models</summary>
+    function GetModels: TArray<string>;
+    /// <summary>Execute chat completion</summary>
+    function Chat(const AMessages: TLLMMessages; const AOptions: TLLMRequestOptions): TLLMChatResponse;
+    /// <summary>Check if provider is available (API key set, server reachable)</summary>
+    function IsAvailable: Boolean;
+    
+    property Name: string read GetName;
+    property Models: TArray<string> read GetModels;
+  end;
+
+  /// <summary>
   /// Prompt template example (input/output pair)
   /// </summary>
   TLLMTemplateExample = record
@@ -415,6 +449,28 @@ begin
   DurationMs := 0;
   ErrorCode := '';
   ErrorMessage := '';
+end;
+
+{ TLLMRequestOptions }
+
+class function TLLMRequestOptions.Default: TLLMRequestOptions;
+begin
+  Result.Model := '';
+  Result.MaxTokens := 4096;
+  Result.Temperature := 0.7;
+  Result.TopP := 1.0;
+  SetLength(Result.Stop, 0);
+  Result.Stream := False;
+end;
+
+class function TLLMRequestOptions.FromConfig(const AConfig: TLLMConfig): TLLMRequestOptions;
+begin
+  Result.Model := AConfig.Model;
+  Result.MaxTokens := AConfig.MaxTokens;
+  Result.Temperature := AConfig.Temperature;
+  Result.TopP := 1.0;
+  SetLength(Result.Stop, 0);
+  Result.Stream := False;
 end;
 
 { TLLMPromptTemplate }

@@ -172,9 +172,9 @@ for file in *.md; do mmdc -i "$file" -o "${file%.md}.png"; done
 
 ## 🔗 相关文档
 
-- 主规范文档：`../unibase-spec-v0.3.md`
-- 代码示例：`../examples/`
-- API 参考：`../api-reference/`
+- 文档索引：`../00.00.uniBase-文档索引-v1.0.md`
+- 技术规范：`../03.03.uniBase-4H-技术规范-v1.0.md`
+- AI集成指南：`../01.01.uniBase-4AI-集成指南-v1.0.md`
 
 ---
 

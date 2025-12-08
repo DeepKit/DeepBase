@@ -4,34 +4,67 @@
 
 ```
 sql/
-├── tier0_init.sql        # Tier 0 最小核心表（必需）
-├── tier1_init.sql        # Tier 1 推荐功能表（待创建）
-├── tier2_init.sql        # Tier 2 高级功能表（待创建）
-└── upgrade_v*.sql        # Schema 升级脚本（待创建）
+├── README.md                    # 本文件
+├── upgrade_v*.sql               # Schema 升级脚本
+│
+├── [DEPRECATED] tier0_init.sql  # 已废弃，请使用 create_sample_db.sql
+├── [DEPRECATED] tier1_init.sql  # 已废弃，请使用 create_sample_db.sql
+├── [DEPRECATED] tier2_init.sql  # 已废弃，请使用 create_sample_db.sql
+│
+data/
+├── create_sample_db.sql         # ★ 标准初始化脚本（23张表）
+└── 样例Config.db                # ★ 可直接复制使用的样例数据库
 ```
 
-## 🗄️ Tier 0 Schema 说明
+## ★ 推荐：使用样例数据库
 
-### 表结构概览
+**最简单的集成方式**：直接复制 `data/样例Config.db`，重命名为 `{AppName}Config.db`。
 
-| 表名 | 用途 | 记录数 |
-|------|------|--------|
-| `SchemaInfo` | 数据库版本信息 | 3 条 |
-| `ProjectInfo` | 项目元信息 | 5 条 |
-| `Settings` | 通用配置 | 3+ 条 |
-| `FormStates` | 窗体状态 | 动态 |
-| `Languages` | 支持的语言列表 | 4 条（预置） |
-| `I18nTexts` | 国际化翻译文本 | 5+ 条（预置） |
+## 🗄️ Schema 说明 (v1.0.0)
+
+### 表结构概览 (共23张表)
+
+| Tier | 表名 | 用途 |
+|------|------|------|
+| **0-核心** | SchemaInfo | 数据库版本信息 |
+| **0-核心** | Settings | 应用配置存储 |
+| **0-核心** | FormStates | 窗体状态持久化 |
+| **0-核心** | Languages | 支持的语言定义 |
+| **0-核心** | I18nTexts | 翻译文本存储 |
+| **1-推荐** | Logs | 应用日志 |
+| **1-推荐** | MRU | 最近使用项 |
+| **1-推荐** | Hotkeys | 快捷键配置 |
+| **1-推荐** | Queries | SQL查询定义(doQry) |
+| **1-推荐** | Themes | UI主题 |
+| **1-推荐** | Categories | 通用分类表 |
+| **1-推荐** | Tags | 标签系统 |
+| **2-扩展** | Providers | LLM服务提供商 |
+| **2-扩展** | Models | LLM模型元数据 |
+| **2-扩展** | LLMConfig | LLM配置 |
+| **2-扩展** | LLMCalls | LLM调用历史 |
+| **2-扩展** | LLMPrompts | 提示词模板 |
+| **2-扩展** | LLMApiKeys | API密钥(加密) |
+| **2-扩展** | ExceptionReports | 异常报告 |
+| **2-扩展** | AnimationAssets | 动画资源 |
+| **2-扩展** | Attachments | 附件存储 |
+| **2-扩展** | TagMappings | 标签关联 |
+| **2-扩展** | Notifications | 用户通知 |
 
 ### 初始化脚本使用
 
-#### 方法一：通过 SQLite 命令行
+#### 方法一：复制样例数据库（推荐）
 
 ```bash
-sqlite3 config.db < tier0_init.sql
+copy data\样例Config.db MyAppConfig.db
 ```
 
-#### 方法二：通过 Delphi 代码
+#### 方法二：通过 SQLite 命令行
+
+```bash
+sqlite3 config.db < data/create_sample_db.sql
+```
+
+#### 方法三：通过 Delphi 代码
 
 ```delphi
 var
@@ -46,7 +79,7 @@ begin
     Connection.Open;
     
     Script.Connection := Connection;
-    Script.SQLScripts[0].SQL.LoadFromFile('sql/tier0_init.sql');
+    Script.SQLScripts[0].SQL.LoadFromFile('data/create_sample_db.sql');
     Script.ExecuteAll;
   finally
     Script.Free;
@@ -55,7 +88,7 @@ begin
 end;
 ```
 
-#### 方法三：通过 UniBase Manager (推荐)
+#### 方法四：通过 UniBase Manager（自动）
 
 ```delphi
 // UniBase 会自动检测数据库是否存在，不存在则自动初始化
@@ -203,6 +236,6 @@ CREATE INDEX idx_i18n_source ON I18nTexts(SourceText);
 
 ## 🔗 相关文档
 
-- [UniBase 规范](../docs/unibase-spec-v0.3.md)
-- [快速开始](../docs/QuickStart.md)
-- [API 参考](../docs/API-Reference-Phase0.md)
+- [UniBase 规范](../docs/03.03.uniBase-4H-技术规范-v1.0.md)
+- [快速开始](../docs/01.01.uniBase-4AI-集成指南-v1.0.md)
+- [API 参考](../docs/05.01.uniBase-4AI-API参考-v1.0.md)

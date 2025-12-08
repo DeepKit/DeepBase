@@ -652,6 +652,12 @@ procedure UniDbSetCacheTTL(Seconds: Integer);
 begin
   if Seconds < 0 then
     Seconds := 0;
+  // BUG-044 FIX: Check if lock object is initialized before using
+  if not Assigned(GQueryCacheLock) then
+  begin
+    GCacheTTLSec := Seconds;
+    Exit;
+  end;
   TMonitor.Enter(GQueryCacheLock);
   try
     GCacheTTLSec := Seconds;

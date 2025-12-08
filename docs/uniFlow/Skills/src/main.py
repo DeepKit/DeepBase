@@ -200,9 +200,15 @@ async def global_exception_handler(request: Request, exc: Exception):
         path=request.url.path,
         method=request.method
     )
+    # SECURITY: Only include error details in development mode
+    if APP_ENV == "development":
+        content = {"detail": "Internal server error", "error": str(exc)}
+    else:
+        content = {"detail": "Internal server error"}
+    
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error", "error": str(exc)}
+        content=content
     )
 
 # -----------------------------------------------------------------------------

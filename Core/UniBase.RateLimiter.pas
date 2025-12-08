@@ -361,6 +361,11 @@ end;
 constructor TTokenBucketLimiter.Create(ACapacity: Integer; ARefillRate: Double);
 begin
   inherited Create;
+  // BUG-045 FIX: Validate parameters to prevent division by zero
+  if ACapacity <= 0 then
+    raise EArgumentException.Create('TokenBucket capacity must be positive');
+  if ARefillRate <= 0 then
+    raise EArgumentException.Create('TokenBucket refill rate must be positive');
   FCapacity := ACapacity;
   FRefillRate := ARefillRate;
   FBuckets := TDictionary<string, TBucket>.Create;
