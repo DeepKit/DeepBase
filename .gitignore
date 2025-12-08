@@ -66,3 +66,7 @@ config.db
 # 日志和临时数据
 logs/
 *.sqlite-journal
+
+# 参考资料（可能含敏感内容）
+**/Agent参考/
+**/*参考*/
