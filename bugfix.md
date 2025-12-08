@@ -562,3 +562,12 @@
 - 修复: 将两个文件中的 `IsCustom` 改为 `IsCustomized`
 - 升级脚本: `sql/upgrade_hotkeys_column.sql` - 重命名已有数据库中的列
 - 状态: ✅ 已修复
+
+### THEME-001: FMX 应用中 Theme 模块尝试加载 VCL 样式导致 EFOpenError
+- 严重程度: 🔴 高
+- 文件: `Core/UniBase.Theme.pas`
+- 问题: UniBase.Theme.pas 使用 `{$IFDEF FMX}` 条件编译区分 VCL 和 FMX 代码路径，但如果 FMX 应用项目未显式定义 `FMX` 条件，则会走 VCL 代码路径。VCL 代码中的 `TStyleManager.IsValidStyle(ThemeName)` 会尝试将主题名（如 "Windows11"）作为文件路径加载，抛出 `EFOpenError: Cannot open file "...\Windows11"`
+- 根本原因: Delphi 不会自动定义 `FMX` 条件，即使项目 FrameworkType 为 FMX
+- 解决方案: FMX 项目必须在项目选项中显式定义 `FMX` 条件（`DCC_Define=FMX;$(DCC_Define)`）
+- 验证: 编译时应看到 Hint H1054: "UniBase.Theme: FMX detected - VCL theme features disabled"
+- 状态: ✅ 已记录 (需项目端配置)

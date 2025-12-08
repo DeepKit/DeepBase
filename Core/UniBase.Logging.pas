@@ -184,6 +184,7 @@ uses
   System.JSON,
   System.NetEncoding,
   Winapi.Windows,
+  Data.DB,
   FireDAC.Stan.Def,
   FireDAC.Phys.SQLite,
   FireDAC.DApt;
@@ -322,8 +323,15 @@ begin
     FInsertLogQuery.Connection := FWriteConnection;
     FInsertLogQuery.SQL.Text := 
       'INSERT INTO Logs (LogTime, LogLevel, Source, Message, StackTrace, ThreadId) ' +
-      'VALUES (:Time, :Level, :Source, :Msg, :Stack, :TID)';
-    FInsertLogQuery.Prepare;  // Compile SQL once
+      'VALUES (:LogTime, :Level, :Source, :Msg, :Stack, :TID)';
+    // 显式设置参数类型以避免 Prepare 时类型未知错误
+    FInsertLogQuery.ParamByName('LogTime').DataType := ftString;
+    FInsertLogQuery.ParamByName('Level').DataType := ftString;
+    FInsertLogQuery.ParamByName('Source').DataType := ftString;
+    FInsertLogQuery.ParamByName('Msg').DataType := ftString;
+    FInsertLogQuery.ParamByName('Stack').DataType := ftString;
+    FInsertLogQuery.ParamByName('TID').DataType := ftInteger;
+    FInsertLogQuery.Prepare;
   end;
 end;
 
@@ -414,7 +422,7 @@ begin
       Exit;
     
     // ISO8601 format
-    FInsertLogQuery.ParamByName('Time').AsString := DateToISO8601(Entry.Timestamp);
+    FInsertLogQuery.ParamByName('LogTime').AsString := DateToISO8601(Entry.Timestamp);
     FInsertLogQuery.ParamByName('Level').AsString := LogLevelToStr(Entry.Level);
     FInsertLogQuery.ParamByName('Source').AsString := Entry.Source;
     FInsertLogQuery.ParamByName('Msg').AsString := Entry.Msg;
@@ -783,8 +791,8 @@ begin
       Query := TFDQuery.Create(nil);
       try
         Query.Connection := FWriteConnection;
-        Query.SQL.Text := 'DELETE FROM Logs WHERE LogTime < :Time';
-        Query.ParamByName('Time').AsString := CutoffDate;
+        Query.SQL.Text := 'DELETE FROM Logs WHERE LogTime < :CutoffTime';
+        Query.ParamByName('CutoffTime').AsString := CutoffDate;
         Query.ExecSQL;
       finally
         Query.Free;

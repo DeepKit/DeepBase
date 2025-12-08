@@ -79,6 +79,10 @@ type
     // 线程同步
     FLock: TObject;
     
+    // 延迟初始化回调
+    FReadyCallbacks: TList<TProc>;
+    FReadyFired: Boolean;
+    
     // 事件
     FOnLanguageChanged: TNotifyEvent;
     FOnThemeChanged: TNotifyEvent;
@@ -156,6 +160,26 @@ type
     /// 使用指定数据库路径初始化（支持 :memory: 用于测试）
     /// </summary>
     function InitializeWithDB(const DBPath: string): Boolean;
+    
+    /// <summary>
+    /// 注册初始化完成后的回调。如果已初始化则立即执行。
+    /// 用于解决窗体 FormShow 中访问 UniBase 功能时对象未就绪的问题。
+    /// </summary>
+    /// <example>
+    /// procedure TMyForm.FormShow(Sender: TObject);
+    /// begin
+    ///   UniBase.WhenReady(procedure
+    ///   begin
+    ///     LoadProviders;  // 安全：此时 UniBase 已完全初始化
+    ///   end);
+    /// end;
+    /// </example>
+    procedure WhenReady(ACallback: TProc);
+    
+    /// <summary>
+    /// 触发所有已注册的 Ready 回调（由 Application.Run 前调用）
+    /// </summary>
+    procedure FireReadyCallbacks;
     
     /// <summary>Clean up resources</summary>
     procedure Finalize;
@@ -400,6 +424,8 @@ constructor TUniBaseManager.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FLock := TObject.Create;
+  FReadyCallbacks := TList<TProc>.Create;
+  FReadyFired := False;
   FIsInitialized := False;
   FInitErrorCode := ecUnknown;
   FLastError := '';
@@ -410,6 +436,7 @@ end;
 destructor TUniBaseManager.Destroy;
 begin
   Finalize;
+  FReadyCallbacks.Free;
   FLock.Free;
   inherited;
 end;
@@ -637,8 +664,65 @@ begin
     end;
     
     FIsInitialized := False;
+    FReadyFired := False;
     FRootPath := '';
     FConfigDBPath := '';
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseManager.WhenReady(ACallback: TProc);
+begin
+  if not Assigned(ACallback) then
+    Exit;
+    
+  // 如果已经触发过 Ready，立即执行回调
+  if FReadyFired then
+  begin
+    try
+      ACallback();
+    except
+      on E: Exception do
+        if Assigned(FLogger) then
+          FLogger.Error('WhenReady callback failed: ' + E.Message, 'UniBase');
+    end;
+    Exit;
+  end;
+  
+  // 否则加入队列等待
+  TMonitor.Enter(FLock);
+  try
+    FReadyCallbacks.Add(ACallback);
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseManager.FireReadyCallbacks;
+var
+  Callback: TProc;
+  I: Integer;
+begin
+  if FReadyFired then
+    Exit;
+    
+  FReadyFired := True;
+  
+  TMonitor.Enter(FLock);
+  try
+    for I := 0 to FReadyCallbacks.Count - 1 do
+    begin
+      Callback := FReadyCallbacks[I];
+      try
+        Callback();
+      except
+        on E: Exception do
+          if Assigned(FLogger) then
+            FLogger.Error('Ready callback failed: ' + E.Message, 'UniBase');
+      end;
+    end;
+    FReadyCallbacks.Clear;
   finally
     TMonitor.Exit(FLock);
   end;

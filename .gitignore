@@ -61,6 +61,7 @@ __history/
 
 # 数据库文件（示例除外）
 config.db
+uniBase.db
 !Examples/**/config.db
 
 # 日志和临时数据
@@ -70,3 +71,6 @@ logs/
 # 参考资料（可能含敏感内容）
 **/Agent参考/
 **/*参考*/
+
+# 备份目录
+backup/
