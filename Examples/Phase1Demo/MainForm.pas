@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   FireDAC.VCLUI.Wait, FireDAC.Comp.UI, Vcl.ComCtrls,
-  UniBase.Manager, UniBase.VCL.Controls, UniBase.VCL.ConfigControls,
+  UniBase.Manager, UniBase.Logging, UniBase.VCL.Controls, UniBase.VCL.ConfigControls,
   UniBase.VCL.I18nControls, UniBase.VCL.ComboBoxes, UniBase.VCL.FormStateHelper,
   UniBase.VCL.LogListView, UniBase.VCL.UIHelper, UniBase.VCL.LLMConfigPanel,
   UniBase.VCL.WaitForm, UniBase.VCL.NotificationBar, UniBase.Exception;
@@ -172,7 +172,7 @@ end;
 
 procedure TfrmMain.btnTestLogClick(Sender: TObject);
 begin
-  UniBase.Manager.UniBase.Logger.Info('User clicked test log button.');
+  Logger.Info('User clicked test log button.');
 end;
 
 end.
