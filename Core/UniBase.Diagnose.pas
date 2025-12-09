@@ -582,7 +582,10 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        // Ignore query errors (e.g. column doesn't exist)
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Diagnose: FK check error: ' + E.Message));
+          {$ENDIF}
       end;
     end;
     
@@ -639,7 +642,10 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        // Ignore query errors
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Diagnose: Required field check error: ' + E.Message));
+          {$ENDIF}
       end;
     end;
     
@@ -701,7 +707,10 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        // Ignore query errors
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Diagnose: Enum check error: ' + E.Message));
+          {$ENDIF}
       end;
     end;
     
@@ -792,7 +801,10 @@ begin
       [ATableName, AColumnName, AColumnDef]));
     Result := True;
   except
-    // Ignore errors
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Diagnose: AddColumn failed: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 
