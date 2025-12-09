@@ -571,3 +571,84 @@
 - 解决方案: FMX 项目必须在项目选项中显式定义 `FMX` 条件（`DCC_Define=FMX;$(DCC_Define)`）
 - 验证: 编译时应看到 Hint H1054: "UniBase.Theme: FMX detected - VCL theme features disabled"
 - 状态: ✅ 已记录 (需项目端配置)
+
+---
+
+## 2025-12-08 代码质量改进
+
+### BUG-050: Manager Schema修复错误被静默忽略
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.Manager.pas`
+- 问题: `EnsureSchemaColumns` 调用失败时，错误被完全忽略，导致数据库迁移问题难以排查
+- 修复: 添加 `FLogger.Warn` 记录错误信息
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-051: PluginManager 插件错误被静默忽略
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.PluginManager.pas`
+- 问题: 插件 `Finalize`、`OnLanguageChanged`、`OnThemeChanged`、`OnConfigChanged` 错误被忽略，集成方无法感知插件异常
+- 修复: 改用 `FirePluginError` 通知机制，触发 `OnPluginError` 事件
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-052: Logging GLoggerLock 竞态条件
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.Logging.pas`
+- 问题: `Logger()` 和 `SetGlobalLogger()` 函数中对 `GLoggerLock` 的 nil 检查和创建操作非原子，极端并发情况下可能导致重复创建或内存泄漏
+- 修复: 使用 `TInterlocked.CompareExchange` 实现原子操作
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-053: Theme 模块多处错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.Theme.pas`
+- 问题: `LoadThemeCache`、`IsValidStyle`、`TrySetStyle`、`Synchronize` 错误无日志，主题问题难以排查
+- 修复: 添加 `{$IFDEF DEBUG} OutputDebugString {$ENDIF}` 调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-054: Updater 模块多处错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.Updater.pas`
+- 问题: `GetReleaseNotes`、`GetUpdateHistory`、`CleanupTempFiles` 错误无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-055: VirtualScroll 渲染回调错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.VirtualScroll.pas`
+- 问题: 渲染回调异常无日志，UI 问题难以排查
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-056: DB.Pool 连接池多处错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.DB.Pool.pas`
+- 问题: 连接关闭、池预热、事件处理错误无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-057: CLI.SSH 多处错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.CLI.SSH.pas`
+- 问题: 会话清理、别名解析错误无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-058: SplashScreen 图片加载错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.SplashScreen.pas`
+- 问题: 启动画面图片加载失败无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-059: Feedback 轮询错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.Feedback.pas`
+- 问题: 反馈轮询异常无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit 3af9446)
+
+### BUG-060: Diagnose 模块多处错误被静默忽略
+- 严重程度: 🟢 低
+- 文件: `Core/UniBase.Diagnose.pas`
+- 问题: FK检查、必填字段检查、枚举检查、添加列错误无日志
+- 修复: 添加 DEBUG 模式调试日志
+- 状态: ✅ 已修复 (commit af260c3)

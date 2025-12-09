@@ -859,3 +859,56 @@ var HTML := Exporter.ToHTML;
 - 新增代码: ~6600 行
 - 新增模块: 4 个核心模块
 - 新增测试: ~813 行 (35 个测试用例)
+
+---
+
+## Phase MAINT-2: 项目清理与代码质量 ✅ (完成)
+
+> 完成日期: 2025-12-08
+> 负责人: Claude
+
+### MAINT-2-001: 项目结构清理 ✅
+- **完成日期**: 2025-12-08
+- **输出物**:
+  - 创建 `backup/` 目录存放不确定是否需要的文件
+  - 移动 7 个过时状态文件到 backup (Phase*_Status.md, Studio_Status.md, better.md, DOCS_UPDATE.md)
+  - 移动 `docs/V1.0版/` 旧文档目录到 backup
+  - 移动 `docs/uniFlow/` 错位源码目录到 backup
+  - 移动 `UniBase` 空单元文件到 backup
+  - 移动 `uniBase.db` 开发数据库到 backup
+  - 删除 90+ 编译产物文件 (.dcu, .exe, .dproj.local)
+  - 更新 `.gitignore` 添加 backup/ 和 uniBase.db
+- **commit**: e5f0cd5
+- **影响**: 312 文件变更，删除 176,557 行
+
+### MAINT-2-002: 代码质量深度检查 ✅
+- **完成日期**: 2025-12-08
+- **检查维度**:
+  - ✅ 异常处理 - 发现 30+ 处空 except 块
+  - ✅ 内存管理 - 确认 FreeAndNil 使用规范
+  - ✅ 线程安全 - 发现 1 处竞态条件
+  - ✅ 初始化顺序 - 确认模块依赖正确
+  - ✅ API 一致性 - 确认命名规范统一
+  - ✅ Schema 兼容性 - 已有版本检查机制
+
+### MAINT-2-003: 异常处理改进 ✅
+- **完成日期**: 2025-12-08
+- **修复内容**:
+  - `UniBase.Manager.pas`: Schema 修复错误记录到 Logger.Warn
+  - `UniBase.PluginManager.pas`: 5 处插件错误改用 FirePluginError 通知
+  - `UniBase.Logging.pas`: 使用 TInterlocked.CompareExchange 修复竞态条件
+  - `UniBase.Theme.pas`: 4 处主题错误添加 DEBUG 日志
+  - `UniBase.Updater.pas`: 3 处更新错误添加 DEBUG 日志
+  - `UniBase.VirtualScroll.pas`: 渲染回调错误添加 DEBUG 日志
+  - `UniBase.DB.Pool.pas`: 3 处连接池错误添加 DEBUG 日志
+  - `UniBase.CLI.SSH.pas`: 2 处 SSH 错误添加 DEBUG 日志
+  - `UniBase.SplashScreen.pas`: 图片加载错误添加 DEBUG 日志
+  - `UniBase.Feedback.pas`: 轮询错误添加 DEBUG 日志
+  - `UniBase.Diagnose.pas`: 4 处诊断检查错误添加 DEBUG 日志
+- **commit**: 3af9446, af260c3
+- **影响**: 11 文件，132 行新增
+
+### 统计
+- 清理文件: 312 个
+- 修复模块: 11 个
+- 新增 Bug 修复记录: 11 个 (BUG-050 ~ BUG-060)
