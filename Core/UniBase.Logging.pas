@@ -195,10 +195,22 @@ var
   GLoggerInitializedByManager: Boolean = False;
 
 function Logger: TUniBaseLogger;
+var
+  NewLock: TObject;
 begin
   // 单例模式，按需创建
   // 注意：应由 Manager 调用 SetGlobalLogger 初始化
   // 如果未初始化，创建一个仅支持文件日志的实例（确保日志不会失败）
+
+  // 防御性检查：如果 GLoggerLock 还未创建（单元 initialization 未执行），先创建它
+  // 使用原子操作避免竞态条件
+  if GLoggerLock = nil then
+  begin
+    NewLock := TObject.Create;
+    if TInterlocked.CompareExchange(Pointer(GLoggerLock), Pointer(NewLock), nil) <> nil then
+      NewLock.Free;  // 另一个线程先创建了，释放我们创建的
+  end;
+
   if GLogger = nil then
   begin
     TMonitor.Enter(GLoggerLock);
@@ -221,7 +233,17 @@ begin
 end;
 
 procedure SetGlobalLogger(ALogger: TUniBaseLogger);
+var
+  NewLock: TObject;
 begin
+  // 防御性检查 - 使用原子操作避免竞态条件
+  if GLoggerLock = nil then
+  begin
+    NewLock := TObject.Create;
+    if TInterlocked.CompareExchange(Pointer(GLoggerLock), Pointer(NewLock), nil) <> nil then
+      NewLock.Free;
+  end;
+
   TMonitor.Enter(GLoggerLock);
   try
     // 释放旧的临时 Logger（如果有），但不释放由 Manager 管理的实例

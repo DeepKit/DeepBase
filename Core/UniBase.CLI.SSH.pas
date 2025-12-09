@@ -729,7 +729,10 @@ begin
       try
         FPool.DoCleanupIdleSessions;
       except
-        // Ignore cleanup errors
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.CLI.SSH: Cleanup error: ' + E.Message));
+          {$ENDIF}
       end;
     end
     else if LWaitResult = wrSignaled then
@@ -1264,7 +1267,10 @@ begin
       JSON.Free;
     end;
   except
-    // Ignore parse errors
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.CLI.SSH: LoadAliases parse error: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 

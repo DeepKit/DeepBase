@@ -384,7 +384,10 @@ begin
       if FConnection.Connected then
         FConnection.Close;
     except
-      // 忽略关闭错误
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.DB.Pool: Connection close failed: ' + E.Message));
+        {$ENDIF}
     end;
     FConnection.Free;
   end;
@@ -996,8 +999,13 @@ begin
         Pooled := TPooledConnection.Create(Self, CreateConnection);
         FPool.Add(Pooled);
       except
-        // 忽略预热错误
-        Break;
+        on E: Exception do
+        begin
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.DB.Pool: Warmup failed: ' + E.Message));
+          {$ENDIF}
+          Break;
+        end;
       end;
     end;
   finally
@@ -1013,7 +1021,10 @@ begin
     try
       FOnPoolEvent(Self, EventType, Msg);
     except
-      // 忽略事件处理错误
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.DB.Pool: OnPoolEvent handler error: ' + E.Message));
+        {$ENDIF}
     end;
   end;
 end;

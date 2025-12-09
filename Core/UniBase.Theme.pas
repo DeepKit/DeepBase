@@ -192,8 +192,12 @@ begin
           Query.Next;
         end;
       except
-        // 表不存在或字段缺失时忽略错误：
-        // 主题信息将回退到系统内置主题，避免因缺表阻塞应用启动。
+        on E: Exception do
+          // 表不存在或字段缺失时忽略错误：
+          // 主题信息将回退到系统内置主题，避免因缺表阻塞应用启动。
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Theme: LoadThemeCache failed: ' + E.Message));
+          {$ENDIF}
       end;
     finally
       Query.Free;
@@ -272,8 +276,14 @@ begin
     if (ThemeName = 'Windows') or TStyleManager.IsValidStyle(ThemeName) then
       ActualTheme := ThemeName;
   except
-    // 忽略样式检查错误，使用 Windows 默认主题
-    ActualTheme := 'Windows';
+    on E: Exception do
+    begin
+      // 忽略样式检查错误，使用 Windows 默认主题
+      ActualTheme := 'Windows';
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Theme: IsValidStyle failed: ' + E.Message));
+      {$ENDIF}
+    end;
   end;
   
   // VCL 样式切换必须在主线程
@@ -287,7 +297,11 @@ begin
         DoThemeChanged;
       end;
     except
-      // 样式切换失败，保持当前主题
+      on E: Exception do
+        // 样式切换失败，保持当前主题
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Theme: TrySetStyle failed: ' + E.Message));
+        {$ENDIF}
     end;
   end
   else
@@ -298,7 +312,11 @@ begin
       TThread.Synchronize(nil, ApplyThemeSync);
       Success := FCurrentThemeName = ActualTheme;
     except
-      // 忽略同步错误
+      on E: Exception do
+        // 忽略同步错误
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Theme: Synchronize failed: ' + E.Message));
+        {$ENDIF}
     end;
   end;
   {$ELSE}

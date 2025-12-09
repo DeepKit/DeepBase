@@ -1915,7 +1915,10 @@ begin
       LNotifications.Free;
     end;
   except
-    // 忽略轮询错误
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Feedback: Polling error: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 

@@ -1178,7 +1178,9 @@ begin
             try
               EnsureSchemaColumns;  // Add missing columns to existing tables
             except
-              // Ignore errors during column fix attempt
+              on E2: Exception do
+                if Assigned(FLogger) then
+                  FLogger.Warn('Schema column fix attempt failed: ' + E2.Message, 'UniBase.Manager');
             end;
           end
           else
@@ -1221,7 +1223,10 @@ var
           [TableName, ColumnName, ColumnDef]);
         Query.ExecSQL;
       except
-        // Ignore errors (table might not exist yet)
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Manager: ALTER TABLE failed: ' + E.Message));
+          {$ENDIF}
       end;
     end;
   end;

@@ -1129,7 +1129,10 @@ begin
     if Response.StatusCode = 200 then
       Result := Response.ContentAsString;
   except
-    // Ignore errors
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Updater: GetReleaseNotes failed: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 
@@ -1164,7 +1167,10 @@ begin
       end;
     end;
   except
-    // Ignore errors
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Updater: GetUpdateHistory failed: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 
@@ -1183,7 +1189,10 @@ begin
     try
       TFile.Delete(F);
     except
-      // Ignore
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Updater: CleanupTempFiles failed to delete: ' + E.Message));
+        {$ENDIF}
     end;
   end;
 end;

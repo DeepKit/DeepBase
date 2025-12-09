@@ -310,7 +310,10 @@ begin
       UnloadPackage(Handle);
       {$ENDIF}
     except
-      // Ignore unload errors
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.PluginManager: UnloadPackage failed: ' + E.Message));
+        {$ENDIF}
     end;
   end;
 end;
@@ -552,7 +555,8 @@ begin
       try
         LoadedRec.Plugin.Finalize;
       except
-        // Log but continue unloading
+        on E: Exception do
+          FirePluginError(PluginID, LoadedRec.Info.Name, 'Finalize failed: ' + E.Message, False);
       end;
       LoadedRec.Plugin := nil;
     end;
@@ -689,7 +693,9 @@ begin
         try
           EventHandler.OnLanguageChanged(NewLanguage);
         except
-          // Ignore errors from plugins
+          on E: Exception do
+            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
+              'OnLanguageChanged error: ' + E.Message, False);
         end;
       end;
     end;
@@ -712,7 +718,9 @@ begin
         try
           EventHandler.OnThemeChanged(NewTheme);
         except
-          // Ignore errors from plugins
+          on E: Exception do
+            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
+              'OnThemeChanged error: ' + E.Message, False);
         end;
       end;
     end;
@@ -735,7 +743,9 @@ begin
         try
           EventHandler.OnConfigChanged(Key, OldValue, NewValue);
         except
-          // Ignore errors from plugins
+          on E: Exception do
+            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
+              'OnConfigChanged error: ' + E.Message, False);
         end;
       end;
     end;

@@ -233,7 +233,10 @@ begin
     Left := (Screen.Width - Width) div 2;
     Top := (Screen.Height - Height) div 2;
   except
-    // Ignore load errors
+    on E: Exception do
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.SplashScreen: LoadImage failed: ' + E.Message));
+      {$ENDIF}
   end;
 end;
 

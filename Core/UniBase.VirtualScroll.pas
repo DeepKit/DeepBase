@@ -778,7 +778,11 @@ begin
           try
             Item.Callback();
           except
-            // 忽略渲染错误
+            on E: Exception do
+              // 忽略渲染错误，但记录调试信息
+              {$IFDEF DEBUG}
+              OutputDebugString(PChar('UniBase.VirtualScroll: Render callback error: ' + E.Message));
+              {$ENDIF}
           end;
         end;
       end;
