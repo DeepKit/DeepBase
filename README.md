@@ -20,8 +20,9 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 - ❌ 科学计算库
 - ❌ 网络协议栈
 - ❌ "大而全"的万能框架
+- ❌ 强制绑定特定后端平台的中间件
 
-详见：[docs/00_项目定位与开发边界.md](docs/00_项目定位与开发边界.md)
+详见：[docs/01.03.uniBase-4H-项目定位与边界-v1.0.md](docs/01.03.uniBase-4H-项目定位与边界-v1.0.md)
 
 ## 📦 核心特性
 
@@ -44,6 +45,12 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 - 🔒 单实例检测 - 防止应用多开
 - 📄 简单报表导出 - CSV/HTML
 - 🌅 启动画面 - 淡入淡出、进度条
+
+### ThirdParty 扩展（可选）
+- ☁️ 云存储集成 - AWS S3/Azure Blob/阿里云 OSS
+- 💾 数据库驱动 - PostgreSQL/MySQL 适配器
+- 🎨 UI 主题 - Material/Fluent/macOS 风格
+- 💳 支付集成 - Stripe/PayPal/Alipay（计划中）
 
 ## 🚀 快速开始
 
@@ -168,6 +175,8 @@ UniBase/
 - [完整规范](docs/03.03.uniBase-4H-技术规范-v1.0.md) - 设计规范和 API 参考
 - [集成指南](docs/01.01.uniBase-4AI-集成指南-v1.0.md) - AI/外部程序集成入口
 - [文档索引](docs/00.00.uniBase-文档索引-v1.0.md) - 全部文档导航
+- [项目边界](docs/01.03.uniBase-4H-项目定位与边界-v1.0.md) - 什么能做/不能做
+- [扩展开发](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md) - 开发第三方集成
 
 ## 🧪 运行测试
 
@@ -191,10 +200,28 @@ UniBaseTests.exe
 ### 开发流程
 
 1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交变更 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+2. 阅读[项目边界文档](docs/01.03.uniBase-4H-项目定位与边界-v1.0.md)确认功能在边界内
+3. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+4. 提交变更 (`git commit -m 'Add some AmazingFeature'`)
+5. 推送分支 (`git push origin feature/AmazingFeature`)
+6. 提交 Pull Request
+
+### 开发第三方集成
+
+如果你想贡献新的 ThirdParty 扩展（如支付、社交媒体集成）：
+
+1. 阅读 [ThirdParty 扩展开发指南](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
+2. 遵循「统一接口 + 多实现 + 工厂函数」模式
+3. 参考 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 实现
+
+### 与外部后端平台集成
+
+UniBase 保持独立，不强制依赖特定后端。如需对接你的后端 API：
+
+- 使用 `UniBase.Net` 调用 HTTP API
+- 使用 `UniBase.Config` 存储 API 配置
+- 使用 `UniBase.Authorization` 管理 Token
+- 可选：在 `ThirdParty/` 下创建可复用的适配器
 
 ## 📝 版本历史
 

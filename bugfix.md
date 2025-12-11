@@ -4,6 +4,137 @@
 
 ---
 
+## 2025-12-11 Bug 修复
+
+### BUG-061: DBException UserMessage 中文+英文混排被截断
+- 发现日期: 2025-12-11
+- 严重性: 🟡 Medium
+- 描述: `Core/UniBase.DBException.pas` 中 `EUniBaseDB.UserMessage` 在同时包含中文和英文操作描述时，字符串拼接逻辑存在编码/格式问题，导致用户可见的操作文本只剩下部分英文字符（例如只显示 "s"）。
+- 修复: 重写 `UserMessage` 拼接逻辑，改用简单可靠的字符串连接顺序，避免格式化与编码混用导致的截断问题，并为该场景增加回归单元测试。
+- 影响范围: 所有通过 `EUniBaseDB` 抛出的数据库异常的用户提示信息，尤其是包含中文操作描述的场景。
+- 验证: 使用中英混排消息构造异常，检查 `Message` / `UserMessage` / `Suggestion` 输出，确认完整操作文本被正确包含且单元测试通过 ✅
+
+### BUG-062: WebAPI 查询字符串解析导致 Query 参数丢失
+- 发现日期: 2025-12-11
+- 严重性: 🟡 Medium
+- 描述: WebAPI 核心在 `TApiServer.DoCommandGet` 中通过 `ARequestInfo.URI` 手工按 `?` 拆分路径和查询字符串，但在部分 Indy 配置下 `URI` 不包含查询部分，导致如 `/api/users/42?verbose=1` 中的 `verbose` 参数未被解析，集成测试中返回空字符串。
+- 修复: 改为使用 Indy 提供的 `ARequestInfo.Document` 和 `ARequestInfo.UnparsedParams` 填充 `TApiRequest.Path` 与 `QueryString`，并在必要时去掉前导 `?`，保证 `ParseQueryString` 能稳定解析所有查询参数。
+- 影响范围: 所有通过 WebAPI 访问的 GET/POST 等 HTTP 路由的查询参数解析，尤其是依赖 `Request.GetQueryParam` 的接口。
+- 验证: 通过 `Test.Integration.WebAPI.pas` 中 `Test_RouteParams_And_QueryParams_Parsed` 用例访问 `/api/users/42?verbose=1`，确认响应 JSON 中 `id="42"` 且 `verbose="1"`，集成测试通过 ✅
+
+### BUG-063: JWT Base64 编码包含换行导致 Authorization 头无效
+- 发现日期: 2025-12-11
+- 严重性: 🟡 Medium
+- 描述: `TJWTManager.Base64URLEncode` 使用标准 Base64 编码，默认在输出中插入换行符。生成的 JWT 用于 `Authorization: Bearer <token>` 头时，包含 CR/LF 的长行在 HTTP 客户端中被视为无效，`THttpRequest.Execute` 捕获异常并返回 StatusCode = -1，导致受保护接口请求始终失败。
+- 修复: 在 Base64URL 转换前显式移除所有换行符（`sLineBreak`），再将 `+`/`/` 替换为 URL 安全字符并去掉尾部 `=` 填充，确保生成的 JWT 始终为单行字符串，可安全放入 HTTP 头部。
+- 影响范围: 所有使用 `TJWTManager.GenerateToken` 生成的 Bearer Token 认证流程，尤其是 WebAPI 中 `TAuthMiddleware` 依赖的 JWT 认证。
+- 验证: 通过 WebAPI 集成测试 `Test_Auth_JwtBearer_Succeeds`，确认携带 Bearer Token 访问 `/secure/profile` 时返回 200 且包含正确的 `userId`/`username` 字段；异常不再出现，StatusCode 不再为 -1 ✅
+
+---
+
+## 2025-12-09 Bug 修复
+
+### BUG-050: Manager Schema 修复错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟡 Medium
+- 描述: 数据库 Schema 修复失败时仅被 try/except 吃掉，既不写日志也不返回错误码，导致升级失败时难以排查。
+- 修复: 在 `UniBase.Manager.pas` 中为 Schema 修复增加明确的异常捕获和 `Logger.Warn` 日志输出，并将错误原因写入 LastError。
+- 影响范围: 数据库 Schema 升级与修复流程。
+- 修复 commit: 3af9446
+- 验证: 人为制造 Schema 错误，确认日志中有警告且调用方能收到失败状态 ✅
+
+### BUG-051: PluginManager 插件错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟡 Medium
+- 描述: 多处插件加载/执行异常被空 except 屏蔽，导致插件失败时没有任何提示。
+- 修复: 在 `UniBase.PluginManager.pas` 中为 5 处异常路径改用 `FirePluginError` 事件，并在 DEBUG 模式下输出日志。
+- 影响范围: 所有通过 PluginManager 加载的插件。
+- 修复 commit: 3af9446
+- 验证: 构造抛异常的测试插件，确认能收到错误事件且不崩溃 ✅
+
+### BUG-052: Logging GLoggerLock 竞态条件
+- 发现日期: 2025-12-09
+- 严重性: 🟡 Medium
+- 描述: 全局 Logger 锁使用不当，在高并发场景下可能出现竞态条件甚至 AV。
+- 修复: 在 `UniBase.Logging.pas` 中改用 `TInterlocked.CompareExchange` 管理全局实例与锁，避免双重检查锁带来的竞态。
+- 影响范围: 日志写入（多线程场景）。
+- 修复 commit: af260c3
+- 验证: 100 线程并发写日志压测，未再出现 AV 或死锁 ✅
+
+### BUG-053: Theme 模块多处错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 主题加载失败、资源缺失等异常被直接忽略，导致界面异常但无任何线索。
+- 修复: 在 `UniBase.Theme.pas` 中为 4 处异常添加 DEBUG 日志输出，并在必要时回退到默认主题。
+- 影响范围: 主题切换与加载。
+- 修复 commit: 3af9446
+- 验证: 手动删除主题资源，确认日志中可见错误且程序自动回退到默认主题 ✅
+
+### BUG-054: Updater 模块多处错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 更新检查/下载失败时，仅返回 False，不写日志也不暴露详细错误。
+- 修复: 在 `UniBase.Updater.pas` 中为 3 处异常添加 DEBUG 日志，填充 LastError，并在状态机中设置 usFailed。
+- 影响范围: 自动更新流程。
+- 修复 commit: 3af9446
+- 验证: 关闭网络环境测试，确认失败原因写入 LastError 且日志可见 ✅
+
+### BUG-055: VirtualScroll 渲染回调错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 虚拟列表在渲染回调中发生异常时被静默吃掉，可能出现空白行或 UI 异常而无日志。
+- 修复: 在 `UniBase.VirtualScroll.pas` 中包裹回调调用并输出 DEBUG 日志，避免异常传播导致崩溃。
+- 影响范围: 使用 VirtualScroll 的 UI 组件。
+- 修复 commit: 3af9446
+- 验证: 模拟回调中抛异常，确认 UI 不崩溃且日志中记录详细错误 ✅
+
+### BUG-056: DB.Pool 连接池多处错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 连接创建/归还失败被静默忽略，可能导致连接泄漏或池耗尽而难以定位。
+- 修复: 在 `UniBase.DB.Pool.pas` 中为 3 处关键路径添加 DEBUG 日志和错误计数，必要时触发健康检查。
+- 影响范围: 所有通过连接池访问数据库的模块。
+- 修复 commit: 3af9446
+- 验证: 人为制造连接失败场景，确认日志中有详细记录且不会无限重试 ✅
+
+### BUG-057: CLI.SSH 多处错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: SSH 连接/执行命令失败时未记录任何信息，仅返回失败。
+- 修复: 在 `UniBase.CLI.SSH.pas` 中为 2 处异常路径添加 DEBUG 日志输出，并补充错误信息到返回结果。
+- 影响范围: CLI SSH 子命令。
+- 修复 commit: 3af9446
+- 验证: 连到无效主机，确认命令行能显示失败原因且日志中有记录 ✅
+
+### BUG-058: SplashScreen 图片加载错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 启动闪屏图片缺失或损坏时，仅导致空白闪屏，无错误提示。
+- 修复: 在 `UniBase.SplashScreen.pas` 中捕获加载异常并输出 DEBUG 日志，必要时使用占位图。
+- 影响范围: 使用闪屏的应用启动体验。
+- 修复 commit: 3af9446
+- 验证: 删改图片文件，确认日志有错误信息且程序继续正常启动 ✅
+
+### BUG-059: Feedback 轮询错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 反馈轮询线程遇到网络/解析错误时被吞掉，无法诊断轮询失败原因。
+- 修复: 在 `UniBase.Feedback.pas` 中为轮询逻辑添加 DEBUG 日志，并对连续失败进行退避处理。
+- 影响范围: 反馈收集与后台轮询。
+- 修复 commit: 3af9446
+- 验证: 模拟服务端不可用，确认日志中看到连续错误且线程不会崩溃 ✅
+
+### BUG-060: Diagnose 模块多处错误被静默忽略
+- 发现日期: 2025-12-09
+- 严重性: 🟢 Low
+- 描述: 诊断检查中多处异常被吞掉，导致健康检查结果不准确。
+- 修复: 在 `UniBase.Diagnose.pas` 中为 4 处诊断检查添加 DEBUG 日志和错误统计。
+- 影响范围: 健康检查与诊断报告。
+- 修复 commit: 3af9446
+- 验证: 注入故障场景，确认诊断报告中可见错误详情且日志完整记录 ✅
+
+---
+
 ## 2025-12-06 Bug 修复
 
 ### BUG-039: Manager 未暴露 MRU/Hotkeys 导致测试无法通过
@@ -409,14 +540,15 @@
 
 ## 总体统计
 
-- **总 Bug 数**: 38 (原 22 + 2025-12-01 7个 + 2025-12-06 8个 + 2025-12-08 1个)
-- **已修复**: 38 ✅
-- **严重性分布**: 🔴 10, 🟡 25, 🟢 3
+- **总 Bug 数**: 60+ (原 22 + 代码审查期间 17个 + FormState 6个 + 代码质量 11个 + 其他)
+- **已修复**: 60+ ✅
+- **严重性分布**: 🔴 12, 🟡 35, 🟢 13
 - **平均修复时间**: 2-4 小时
 - **已解决 Issue**: 4 ✅ (2025-12-02)
 - **待处理 Issue**: 0
 - **性能优化**: 4 项
 - **文档更新**: 2 项
+- **最后更新**: 2025-12-11
 
 ---
 

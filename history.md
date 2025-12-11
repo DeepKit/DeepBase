@@ -912,3 +912,143 @@ var HTML := Exporter.ToHTML;
 - 清理文件: 312 个
 - 修复模块: 11 个
 - 新增 Bug 修复记录: 11 个 (BUG-050 ~ BUG-060)
+
+---
+
+## 商业化基础阶段 (P0) ✅
+
+### PUB-001: 模块整理归并 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - SeedTool 移动到 `UniBase/Tools/SeedTool`
+  - 反调试/保护单元归并为 `Core/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`
+  - About 界面重构为 `VCL/UniBase.VCL.AboutFrame.pas`
+  - 更新相关 uses 和命名空间，确保编译通过
+
+### PUB-002: UniBase.Unlock 轻量解锁模块 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - 新增核心单元 `Core/UniBase.Unlock.pas`
+  - 定义解锁等级: ulFree / ulFollow / ulShare
+  - 约定解锁码规则: [产品代码][年月][类型]（如 TK2412A），包含有效期和校验位
+  - 解锁状态持久化到本地配置
+  - 新增 `VCL/UniBase.VCL.UnlockDialog.pas` 解锁弹窗，支持公众号二维码展示
+
+### PUB-003: UniBase.Updater 增强 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - 扩展 `Core/UniBase.AutoUpdate.pas` 支持 GitHub/Gitee Release API
+  - 通过 `github:owner/repo` / `gitee:owner/repo` 约定自动选择更新源
+  - 保持对静态 `version.json` 的向后兼容
+  - VCL 端新增/完善 `VCL/UniBase.VCL.UpdateDialog.pas` 更新对话框
+
+### PUB-004: UniPublisher 发布工具 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - 创建 `Tools/UniPublisher` VCL 工具项目
+  - 支持读取/写入 .dproj 版本号
+  - 打包输出目录为 ZIP 安装包
+  - 按 UniBase 规范生成 `version.json` 清单
+  - 通过 gh CLI 发布 GitHub Release，并通过 HTTP API 创建 Gitee Release
+  - 集成基于 `UniBase.Unlock` 的解锁码生成器和发布说明编辑
+
+### PUB-005: TwoKeyRun 集成验证 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - 在 `TwoKeyRun` 中初始化 `TUniBaseManager` 以启用通用配置/解锁/自动更新
+  - 使用 `TUniBaseUnlock` 重构 TwoKeyRun 解锁逻辑，统一 24/58/60 格策略
+  - 用 `UniBase.VCL.UnlockDialog` 取代自定义解锁对话框
+  - 集成 `UniBase.VCL.AutoUpdater`，支持通过 UniBase.Config 配置 UpdateUrl 自动检查更新
+
+---
+
+## 商业化扩展阶段 (P1) ✅
+
+### FMX-003: FMX 缺失控件补全 ✅
+- **完成日期**: 2025-12-10
+- **内容摘要**:
+  - 完成 `FMX/UniBase.FMX.LogListView.pas` 实现，基于日志数据库表的 FMX 日志查看器
+  - 完成 `FMX/UniBase.FMX.NotificationBar.pas` 实现，跨平台底部通知栏（进度/成功/错误/信息，支持自动隐藏与取消）
+  - 完成 `FMX/UniBase.FMX.LicenseStatusPanel.pas` 实现，展示 License 状态、类型、到期时间与授权对象
+  - 在 `FMX/UniBase.FMX.Controls.pas` 中注册上述三个控件，加入 "UniBase FMX" 组件面板，API 与 VCL 版本保持一致风格
+
+### SEC-002: 高级加密支持 ✅
+- **完成日期**: 2025-12-10
+- **内容摘要**:
+  - 基于 `Core/UniBase.Crypto.pas` 实现 Windows 上使用 BCrypt 的 AES-256-CBC 对称加密（TAESCrypto），并提供安全随机数生成（BCryptGenRandom）
+  - 新增 `Core/UniBase.Security.pas`，使用 Windows DPAPI / OpenSSL AES-256-GCM 提供跨平台安全存储（Secrets 表 + ProtectStringDpapi/UnprotectStringDpapi）
+  - 新增 `Core/UniBase.KeyManager.pas`，实现分层密钥管理（Master/KEK/DEK），支持 `TKeyManager` 全局单例和 `TKeyStore` JSON 持久化
+  - 提供 `THardwareFingerprint` 收集机器指纹（ComputerName/ProcessorId/BiosSerial/DiskSerial 等）并生成 SHA-256 指纹，用于硬件绑定
+  - 通过 `TMasterKey.DeriveWithHardwareBinding` + `TKeyManager.ValidateHardwareBinding` 支持主密钥与硬件绑定的加密模型
+  - 为配置场景提供 `TKeyManager.EncryptConfig/DecryptConfig` 封装，用于基于 AES-256 的配置值加解密
+
+### PERF-001: 性能优化 ✅
+- **完成日期**: 2025-12-10
+- **内容摘要**:
+  - 日志写入批量优化（TUniBaseLogger 异步写线程 + MAX_BATCH_SIZE 批处理 + 预编译 INSERT）
+  - 配置缓存预热（TUniBaseConfig.PreloadCache 在 TUniBaseManager.InitializeModules 中启动时预热 Settings 表）
+  - ORM 延迟加载优化（OneToManyAttribute.LazyLoad 标记 + TLazyLoadManager 分页惰性加载支持）
+
+---
+
+## 工具与 CLI 增强阶段 (P2) ✅
+
+### CLI-002: CLI 交互增强 ✅
+- **完成日期**: 2025-11-29
+- **内容摘要**:
+  - 新增核心交互式 CLI 模块 `Core/UniBase.CLI.Interactive.pas`，提供 `TInteractiveCLI` REPL（命令历史、变量、脚本执行、输出格式切换）
+  - 新增 `Core/UniBase.CLI.Pipeline.pas` 管道模块，支持 `|`/`>`/`>>`/`tee` 以及 grep/sort/head/tail/uniq/wc/rev/cut/tr/jq 等过滤器
+  - 在交互模块中引入 `TAnsiColor` 终端颜色工具类，用于统一的错误/警告/成功彩色输出
+  - CLI 工具层通过 `CLI.Commands.TCliUtils` 复用颜色输出能力，为常规 `unibase` 命令提供彩色状态提示
+
+### TOOL-002: Studio 增强 ✅
+- **完成日期**: 2025-11-29
+- **内容摘要**:
+  - SQL 查询编辑器（Studio.SQLFrame：语法高亮、执行/历史、结果网格、CSV 导出、DoQry 集成）
+  - Schema 可视化浏览器（Studio.SchemaFrame：表/列/索引/外键树状浏览 + DDL 查看）
+  - 数据导入导出向导（Studio.ImportExportFrame：CSV/JSON/XML 导出 + CSV/JSON 导入预览与事务导入）
+
+---
+
+## 维护阶段 (MAINT) - 进行中
+
+### MAINT-002: 单元测试覆盖率提升 🟡
+- **状态**: 进行中
+- **目标**:
+  - 单元测试整体覆盖率提升到 95%+，并覆盖关键安全/网络/工具模块的边界条件与错误路径。
+- **已完成 (2025-12-08)**:
+  - ✅ `Test.UniBase.Math.pas` - 数学工具测试 (40+ 测试用例，向量/矩阵/统计/插值/缓动/随机)
+  - ✅ `Test.UniBase.Metrics.pas` - 指标收集测试 (35+ 测试用例，Counter/Gauge/Histogram/Timer/Registry)
+  - ✅ `Test.UniBase.Net.pas` - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
+  - ✅ `Test.UniBase.HttpServer.pas` - HTTP服务器测试 (35+ 测试用例，路由/中间件/请求响应)
+  - ✅ `Test.UniBase.FileWatcher.pas` - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
+- **已完成 (2025-12-10)**:
+  - ✅ CLI 与反射相关测试：`Test.UniBase.CLI.Pipeline.pas`, `Test.UniBase.CLI.Interactive.pas`, `Test.UniBase.Reflection.pas`, `Test.UniBase.Export.pas`
+  - ✅ 数据库与诊断相关测试：`Test.UniBase.Diagnose.pas`, `Test.UniBase.DB.Pool.pas`, `Test.UniBase.DBException.pas`, `Test.UniBase.SQLLogger.pas`
+  - ✅ 核心基础设施测试：`Test.UniBase.SingleInstance.pas`, `Test.UniBase.Schema.pas`, `Test.UniBase.Exception.pas`, `Test.UniBase.Consts.pas`
+  - ✅ 云与后台服务测试：`Test.UniBase.CloudBackup.pas`, `Test.UniBase.Feedback.pas`, `Test.UniBase.PluginManager.pas`, `Test.UniBase.AutoUpdate.pas`
+  - ✅ UI 与体验相关测试：`Test.UniBase.VirtualScroll.pas`, `Test.UniBase.SplashScreen.pas`, `Test.UniBase.AntiTamper.pas`, `Test.UniBase.Protection.pas`
+  - ✅ 安全与密钥管理测试：`Test.UniBase.KeyManager.pas`, `Test.UniBase.Interfaces.pas`, `Test.UniBase.LLM.Manager.pas`, `Test.UniBase.LLM.ImportExport.pas`, `Test.UniBase.ORM.Mapping.pas`, `Test.UniBase.Updater.pas`
+- **已完成 (2025-12-11)**:
+  - ✅ 为 OpenSSL 与 LLM 核心类型补充单元测试：`Test.UniBase.Crypto.OpenSSL.pas`, `Test.UniBase.LLM.pas`，覆盖加解密、错误路径与配置/消息模型序列化。
+  - ✅ 为 GUI 测试基础设施增加回归测试：`Test.UniBase.TestHelper.pas`，覆盖快照捕获/校验、控件查找与用户交互模拟。
+  - ✅ 修复并补充 DB 异常测试：`Core/UniBase.DBException.pas` 改进 `EUniBaseDB.UserMessage` 中文+英文混排场景，`Test.UniBase.DBException.pas` 增加回归用例。
+  - ✅ 新增 WebAPI 集成测试：`Tests/Integration/Test.Integration.WebAPI.pas`，覆盖 HTTP 路由、查询参数解析、CORS、JWT 认证、OpenAPI 生成与 WebSocket 消息路由，相关 Core/Auth 单元问题已修复并通过测试。
+- **下一步**:
+  - 将测试覆盖率统计集成到 `Scripts/run_tests.ps1` 与 CI/CD 流程，生成 HTML/XML 覆盖率报告，并在开发过程中持续监控覆盖率。
+  - （可选）进一步稳定数据库相关 Integration Tests（配置 FireDAC/SQLite 驱动或将其标记为「环境依赖」测试），避免在默认集成测试运行中产生干扰。
+
+---
+
+## 社区与生态（ECO）
+
+### ECO-002: 社区扩展包（第一阶段） ✅
+- **完成日期**: 2025-12-08
+- **内容摘要**:
+  - ✅ `ThirdParty/DB/UniBase.DB.PostgreSQL.pas` - PostgreSQL 驱动适配器
+  - ✅ `ThirdParty/DB/UniBase.DB.MySQL.pas` - MySQL 驱动适配器
+  - ✅ `ThirdParty/UI/UniBase.UI.Themes.pas` - UI 主题系统
+  - ✅ `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` - 云存储集成（对象存储封装）
+- **说明**:
+  - 以上为 ECO-002 的第一批官方扩展包，实现数据库驱动、主题与云存储三类集成。
+  - 第二阶段（支付/社交集成）作为后续任务，已记录在 `tasks.md` 中的 ECO-002 小节。

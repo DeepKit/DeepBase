@@ -197,6 +197,27 @@
   - ✅ Test.UniBase.Net.pas - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
   - ✅ Test.UniBase.HttpServer.pas - HTTP服务器测试 (35+ 测试用例，路由/中间件/请求响应)
   - ✅ Test.UniBase.FileWatcher.pas - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
+- **已完成** (2025-12-10):
+  - ✅ Test.UniBase.CLI.Pipeline.pas - CLI管道测试 (55+ 测试用例，TPipelineData/Parser/Filters: grep/sort/head/tail/uniq/wc/rev/cut/tr)
+  - ✅ Test.UniBase.Reflection.pas - 反射工具测试 (60+ 测试用例，TTypeInfo/TPropertyAccess/TFieldAccess/TMethodInvoke/TObjectUtils/TTypeRegistry/TEnumUtils)
+  - ✅ Test.UniBase.Export.pas - 数据导出测试 (25+ 测试用例，CSV/HTML导出，选项配置，转义处理)
+  - ✅ Test.UniBase.CLI.Interactive.pas - 交互式CLI测试 (70+ 测试用例)
+    - TTableColumn/TCommandResult/TCommandDef 基础类型
+    - TCommandContext 参数解析、选项、标志
+    - TInteractiveCLI 命令注册、执行、历史、变量
+    - 输出格式化器: Text/JSON/CSV
+    - TAnsiColor 终端颜色工具
+  - ✅ Test.UniBase.Diagnose.pas - 数据库诊断测试 (40+ 测试用例)
+    - TableExists/ColumnExists/IndexExists 基础检测
+    - GetSchemaVersion/CheckSchemaVersion 版本检查
+    - CheckTablesExist/CheckColumnsExist 完整性检查
+    - AutoFix/AddColumnIfNotExists 自动修复
+    - 报告生成 GenerateDiagnoseReport/Summary
+  - ✅ Test.UniBase.SingleInstance.pas - 单实例测试 (25+ 测试用例)
+    - TAppInstance 属性和方法
+    - CheckSingleInstance 逻辑
+    - 消息常量 WM_UNIBASE_*
+    - Release 清理
 
 ---
 
@@ -2313,5 +2334,5 @@
 
 ---
 
-**最后更新**: 2025-12-08
-**维护者**: 李冰、鲁班
+**最后更新**: 2025-12-10
+**维护者**: 李冰、鲁班、Claude

@@ -28,9 +28,23 @@ uses
   //Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
   // Test units - Phase 4
   //Test.UniBase.License in 'Test.UniBase.License.pas',
+  //Test.UniBase.Updater in 'Test.UniBase.Updater.pas',
+  Test.UniBase.Unlock in 'Test.UniBase.Unlock.pas',
+  // MAINT: Core infra tests
+  Test.UniBase.Consts in 'Test.UniBase.Consts.pas',
+  Test.UniBase.DBException in 'Test.UniBase.DBException.pas',
+  Test.UniBase.SQLLogger in 'Test.UniBase.SQLLogger.pas',
+  Test.UniBase.Protection in 'Test.UniBase.Protection.pas',
+  // LLM & Crypto tests
+  Test.UniBase.Crypto in 'Test.UniBase.Crypto.pas',
+  Test.UniBase.LLM in 'Test.UniBase.LLM.pas',
+  Test.UniBase.Crypto.OpenSSL in 'Test.UniBase.Crypto.OpenSSL.pas',
+  // GUI Test helper
+  Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
   // Core units
   UniBase.Types in '..\Core\UniBase.Types.pas',
   UniBase.Manager in '..\Core\UniBase.Manager.pas',
+  UniBase.Unlock in '..\Core\UniBase.Unlock.pas',
   UniBase.Config in '..\Core\UniBase.Config.pas',
   UniBase.i18n in '..\Core\UniBase.i18n.pas',
   UniBase.FormState in '..\Core\UniBase.FormState.pas',
@@ -39,9 +53,8 @@ uses
   UniBase.Hotkeys in '..\Core\UniBase.Hotkeys.pas',
   UniBase.Theme in '..\Core\UniBase.Theme.pas',
   UniBase.License in '..\Core\UniBase.License.pas',
-  // DoQry 集成模块
-  UniBase.DB.DoQry in '..\Core\UniBase.DB.DoQry.pas',
-  Test.UniBase.DB.DoQry in 'Test.UniBase.DB.DoQry.pas';
+  // DoQry 集成模块（在单独的测试工程中覆盖，这里不包含以避免 DBClient 依赖问题）
+  UniBase.DB.DoQry in '..\Core\UniBase.DB.DoQry.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

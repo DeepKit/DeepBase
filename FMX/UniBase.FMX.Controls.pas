@@ -27,7 +27,10 @@ uses
   UniBase.FMX.MRUControls,
   UniBase.FMX.ListView,
   UniBase.FMX.FormControls,
-  UniBase.FMX.LLMConfigPanel;
+  UniBase.FMX.LLMConfigPanel,
+  UniBase.FMX.LogListView,
+  UniBase.FMX.NotificationBar,
+  UniBase.FMX.LicenseStatusPanel;
 
 procedure Register;
 begin
@@ -67,6 +70,13 @@ begin
   // LLM Controls
   RegisterComponents('UniBase FMX', [
     TFMXLLMConfigPanel
+  ]);
+
+  // Logging & License Controls
+  RegisterComponents('UniBase FMX', [
+    TFMXLogListView,
+    TFMXNotificationBar,
+    TFMXLicenseStatusPanel
   ]);
 end;
 

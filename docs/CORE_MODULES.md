@@ -95,20 +95,21 @@
 
 ### UniBase UI Core (UI 层核心)
 
-| 模块 | 说明 |
-|------|------|
-| `UniBase.Theme.pas` | 主题系统 |
-| `UniBase.MVVM.pas` | MVVM 框架 |
-| `UniBase.DataBinding.pas` | 数据绑定 |
-| `UniBase.FormState.pas` | 窗体状态 |
-| `UniBase.Hotkeys.pas` | 快捷键 |
-| `UniBase.VirtualScroll.pas` | 虚拟滚动 |
-| `UniBase.SplashScreen.pas` | 启动画面 |
-| `UniBase.SingleInstance.pas` | 单实例 |
-| `UniBase.MRU.pas` | 最近使用 |
-| `UniBase.FileWatcher.pas` | 文件监控 |
-| `UniBase.Feedback.pas` | 用户反馈 |
-| `UniBase.TestHelper.pas` | 测试辅助 |
+|| 模块 | 说明 |
+||------|------|
+|| `UniBase.Theme.pas` | 主题系统 |
+|| `UniBase.MVVM.pas` | MVVM 框架 |
+|| `UniBase.DataBinding.pas` | 数据绑定 |
+|| `UniBase.FormState.pas` | 窗体状态 |
+|| `UniBase.Hotkeys.pas` | 快捷键 |
+|| `UniBase.VirtualScroll.pas` | 虚拟滚动 |
+|| `UniBase.SplashScreen.pas` | 启动画面 |
+|| `UniBase.SingleInstance.pas` | 单实例 |
+|| `UniBase.MRU.pas` | 最近使用 |
+|| `UniBase.FileWatcher.pas` | 文件监控 |
+|| `UniBase.Feedback.pas` | 用户反馈 |
+|| `UniBase.TestHelper.pas` | 测试辅助 |
+|| `UniBase.GUITest.pas` | 测试 | GUI 自动化测试与集成测试报告生成框架（供开发者使用） |
 
 ### UniBase FMX (跨平台 UI)
 

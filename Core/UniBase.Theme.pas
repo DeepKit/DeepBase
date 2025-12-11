@@ -24,6 +24,9 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  {$IFDEF DEBUG}
+  Winapi.Windows,
+  {$ENDIF}
   {$IFNDEF FMX}
   Vcl.Themes,
   Vcl.Styles,

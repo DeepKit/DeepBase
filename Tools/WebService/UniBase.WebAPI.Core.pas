@@ -25,6 +25,7 @@ uses
   System.DateUtils,
   System.Hash,
   System.RegularExpressions,
+  System.Rtti,
   IdHTTPServer,
   IdContext,
   IdCustomHTTPServer,
@@ -487,8 +488,7 @@ implementation
 
 uses
   System.IOUtils,
-  System.TypInfo,
-  System.Rtti;
+  System.TypInfo;
 
 { 辅助函数 }
 
@@ -1472,17 +1472,15 @@ begin
   try
     // 解析请求
     LContext.Request.Method := ParseHttpMethod(ARequestInfo.Command);
-    LContext.Request.RawPath := ARequestInfo.URI;
 
-    // 分离路径和查询字符串
-    LPos := Pos('?', ARequestInfo.URI);
-    if LPos > 0 then
-    begin
-      LContext.Request.Path := Copy(ARequestInfo.URI, 1, LPos - 1);
-      LContext.Request.QueryString := Copy(ARequestInfo.URI, LPos + 1, Length(ARequestInfo.URI));
-    end
-    else
-      LContext.Request.Path := ARequestInfo.URI;
+    // 使用 Indy 的 Document / UnparsedParams 来获得路径和查询字符串，
+    // 避免依赖 URI 是否包含 '?' 的差异，实现更稳定的解析行为。
+    LContext.Request.RawPath := ARequestInfo.Document;
+    LContext.Request.Path := ARequestInfo.Document;
+    LContext.Request.QueryString := ARequestInfo.UnparsedParams;
+    if (LContext.Request.QueryString <> '') and
+       (LContext.Request.QueryString[1] = '?') then
+      Delete(LContext.Request.QueryString, 1, 1);
 
     // 复制头部
     for LHeader in ARequestInfo.RawHeaders do

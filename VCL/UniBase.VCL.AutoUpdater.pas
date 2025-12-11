@@ -23,21 +23,27 @@ type
   private
     FUpdateUrl: string;
     FAutoCheck: Boolean;
-    
+    FAutoUpdate: TUniBaseAutoUpdate;
+    FCurrentVersion: string;
+
     procedure CheckUpdate;
   protected
     procedure Loaded; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    
+
     /// <summary>
     /// 手动检查更新
     /// </summary>
     procedure Execute;
-    
+
   published
+    /// <summary>版本信息 JSON 的 URL（通常是 version.json 的完整地址）。</summary>
     property UpdateUrl: string read FUpdateUrl write FUpdateUrl;
+    /// <summary>当前应用版本号（例如 '1.0.0'）。用于与远程版本比较。</summary>
+    property CurrentVersion: string read FCurrentVersion write FCurrentVersion;
+    /// <summary>是否在 Loaded 时自动检查更新。</summary>
     property AutoCheck: Boolean read FAutoCheck write FAutoCheck default True;
   end;
 
@@ -49,10 +55,14 @@ constructor TAutoUpdater.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FAutoCheck := True;
+  FUpdateUrl := '';
+  FCurrentVersion := '';
+  FAutoUpdate := TUniBaseAutoUpdate.Create('', '');
 end;
 
 destructor TAutoUpdater.Destroy;
 begin
+  FAutoUpdate.Free;
   inherited;
 end;
 
@@ -76,35 +86,33 @@ end;
 
 procedure TAutoUpdater.CheckUpdate;
 var
-  AutoUpdate: TUniBaseAutoUpdate;
   Info: TUpdateInfo;
 begin
-  if not UniBase.Manager.UniBase.IsInitialized then Exit;
-  
-  // Use Manager's AutoUpdate module
-  AutoUpdate := UniBase.Manager.UniBase.AutoUpdate;
-  if AutoUpdate = nil then Exit;
-  
-  // Override URL if property set
+  // Configure URL
   if FUpdateUrl <> '' then
-    AutoUpdate.UpdateUrl := FUpdateUrl
+    FAutoUpdate.UpdateUrl := FUpdateUrl;
+
+  // If URL is still empty, try to read from config when UniBase is available
+  if (FAutoUpdate.UpdateUrl = '') and UniBase.Manager.UniBase.IsInitialized then
+    FAutoUpdate.UpdateUrl := UniBase.Manager.UniBase.Config.GetConfig('App.UpdateUrl', '');
+
+  if FAutoUpdate.UpdateUrl = '' then
+    Exit;
+
+  // Configure current version (fallback to 0.0.0)
+  if FCurrentVersion <> '' then
+    FAutoUpdate.CurrentVersion := FCurrentVersion
   else
-  begin
-    // Use default from Manager/Config if not set
-    if AutoUpdate.UpdateUrl = '' then
-      AutoUpdate.UpdateUrl := UniBase.Manager.UniBase.Config.GetConfig('App.UpdateUrl', '');
-  end;
-  
-  if AutoUpdate.UpdateUrl = '' then Exit;
-  
-  // Async Check
-  AutoUpdate.CheckForUpdateAsync(
+    FAutoUpdate.CurrentVersion := '0.0.0';
+
+  // Async check
+  FAutoUpdate.CheckForUpdateAsync(
     procedure(Success: Boolean; UpdateInfo: TUpdateInfo)
     begin
       if Success then
       begin
-        // Show Dialog
-        TUpdateDialog.Execute(AutoUpdate, UpdateInfo);
+        // Show dialog for this update
+        TUpdateDialog.Execute(FAutoUpdate, UpdateInfo);
       end;
     end).Start;
 end;

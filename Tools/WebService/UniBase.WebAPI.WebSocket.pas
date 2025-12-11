@@ -24,6 +24,7 @@ uses
   System.DateUtils,
   System.Hash,
   System.NetEncoding,
+  System.Rtti,
   IdHTTPServer,
   IdContext,
   IdCustomHTTPServer,
@@ -474,6 +475,7 @@ var
   LSecondByte: Byte;
   LPayloadLen: Int64;
   LExtLen: TBytes;
+  LMaskBytes: TIdBytes;
   I: Integer;
 begin
   FillChar(Result, SizeOf(Result), 0);
@@ -510,7 +512,12 @@ begin
 
   // 读取掩码
   if Result.Masked then
-    FContext.Connection.IOHandler.ReadBytes(TIdBytes(@Result.MaskingKey[0]), 4, False);
+  begin
+    SetLength(LMaskBytes, 4);
+    FContext.Connection.IOHandler.ReadBytes(LMaskBytes, 4, False);
+    // 拷贝到固定数组
+    Move(LMaskBytes[0], Result.MaskingKey[0], 4);
+  end;
 
   // 读取负载
   if LPayloadLen > 0 then

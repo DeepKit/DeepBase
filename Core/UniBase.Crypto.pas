@@ -867,7 +867,8 @@ var
   LGuid: TGUID;
 begin
   CreateGUID(LGuid);
-  Result := GUIDToString(LGuid);
+  // Return canonical 36-char GUID without braces: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  Result := GUIDToString(LGuid).Replace('{', '').Replace('}', '');
 end;
 
 class function TRandomGenerator.NewGuidNoDashes: string;
@@ -1454,51 +1455,74 @@ end;
 
 class function TSimpleCrypto.Encrypt(const AData, APassword: string): string;
 var
-  LAES: TAESCrypto;
+  Plain: TBytes;
+  Enc: TBytes;
 begin
-  LAES := TAESCrypto.Create(aes256, aesCBC);
-  try
-    LAES.SetKeyFromPassword(APassword);
-    Result := LAES.EncryptString(AData);
-  finally
-    LAES.Free;
-  end;
+  // Encrypt UTF-8 bytes and return Base64 of (IV || Ciphertext)
+  Plain := TEncoding.UTF8.GetBytes(AData);
+  Enc := EncryptBytes(Plain, APassword);
+  Result := TEncodingUtils.Base64Encode(Enc);
 end;
 
 class function TSimpleCrypto.Decrypt(const AData, APassword: string): string;
 var
-  LAES: TAESCrypto;
+  Enc, Plain: TBytes;
 begin
-  LAES := TAESCrypto.Create(aes256, aesCBC);
-  try
-    LAES.SetKeyFromPassword(APassword);
-    Result := LAES.DecryptString(AData);
-  finally
-    LAES.Free;
-  end;
+  // Decode Base64 then decrypt (expects (IV || Ciphertext))
+  Enc := TEncodingUtils.Base64Decode(AData);
+  Plain := DecryptBytes(Enc, APassword);
+  Result := TEncoding.UTF8.GetString(Plain);
 end;
 
 class function TSimpleCrypto.EncryptBytes(const AData: TBytes; const APassword: string): TBytes;
 var
   LAES: TAESCrypto;
+  Cipher, IV: TBytes;
+  BlockSize: Integer;
 begin
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
+    // Derive key from password; IV is generated in constructor
     LAES.SetKeyFromPassword(APassword);
-    Result := LAES.Encrypt(AData);
+    Cipher := LAES.Encrypt(AData);
+    IV := LAES.IV;
+    BlockSize := Length(IV);
+
+    SetLength(Result, BlockSize + Length(Cipher));
+    if BlockSize > 0 then
+      Move(IV[0], Result[0], BlockSize);
+    if Length(Cipher) > 0 then
+      Move(Cipher[0], Result[BlockSize], Length(Cipher));
   finally
     LAES.Free;
   end;
 end;
 
 class function TSimpleCrypto.DecryptBytes(const AData: TBytes; const APassword: string): TBytes;
+const
+  AES_BLOCK_SIZE = 16; // bytes
 var
   LAES: TAESCrypto;
+  IV, Cipher: TBytes;
 begin
+  if Length(AData) = 0 then
+    Exit(nil);
+
+  if Length(AData) < AES_BLOCK_SIZE then
+    raise ECryptoException.Create('Invalid encrypted data (too short)');
+
+  SetLength(IV, AES_BLOCK_SIZE);
+  Move(AData[0], IV[0], AES_BLOCK_SIZE);
+
+  SetLength(Cipher, Length(AData) - AES_BLOCK_SIZE);
+  if Length(Cipher) > 0 then
+    Move(AData[AES_BLOCK_SIZE], Cipher[0], Length(Cipher));
+
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
     LAES.SetKeyFromPassword(APassword);
-    Result := LAES.Decrypt(AData);
+    LAES.SetIV(IV);
+    Result := LAES.Decrypt(Cipher);
   finally
     LAES.Free;
   end;

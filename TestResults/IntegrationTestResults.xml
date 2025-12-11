@@ -1,0 +1,339 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\UniBase\Tests\Integration\UniBaseIntegrationTests.exe" total="35" errors="26" failures="2" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-12-11" time="10:50:30">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="UniBaseIntegrationTests.exe" executed="true" result="Failure" success="False" time="10:50:30" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Failure" success="False" time="0.053" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Integration" executed="true" result="Failure" success="False" time="0.053" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="Core" executed="true" result="Success" success="True" time="0.012" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TConfigIntegrationTest" executed="True" result="Success" success="True" time="0.002" >
+                            <results>
+                              <test-case name="Test_ConfigReadWrite_BasicFlow.Basic read/write" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigBatchOperations" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigConcurrentAccess" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigPersistence" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigEncryption_EndToEnd" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigChangeNotification" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TDatabaseIntegrationTest" executed="True" result="Success" success="True" time="0.001" >
+                            <results>
+                              <test-case name="Test_ConnectionPooling" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_TransactionRollback" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_BulkInsertPerformance" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_QueryCaching" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConcurrentQueries" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TLoggingIntegrationTest" executed="True" result="Success" success="True" time="0.007" >
+                            <results>
+                              <test-case name="Test_LogWriteAndQuery" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_LogLevelFiltering" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_LogHighVolume" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_LogRotation" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_LogConcurrentWrites" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Object factory for class {3E9B315B-F456-4175-A864-B2573C4A2101} is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TPerformanceRegressionTest" executed="True" result="Success" success="True" time="0.001" >
+                            <results>
+                              <test-case name="Test_ConfigReadPerformance" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigWritePerformance" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_DatabaseQueryPerformance" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_LogWritePerformance" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_MemoryUsage" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TWorkflowIntegrationTest" executed="True" result="Success" success="True" time="0.001" >
+                            <results>
+                              <test-case name="Test_UserRegistrationWorkflow" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_ConfigurationMigration" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_DataExportImport" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_SystemInitialization" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_GracefulShutdown" executed="True" result="Error" success="False" time="0.000" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Access violation at address 00CE0453 in module 'UniBaseIntegrationTests.exe' (offset 3C0453). Read of address 00000004 ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="WebAPI" executed="true" result="Failure" success="False" time="0.041" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TWebApiIntegrationTest" executed="True" result="Failure" success="False" time="0.041" >
+                            <results>
+                              <test-case name="Test_BasicGetRoute_ReturnsJson" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                              <test-case name="Test_PostJson_EchoesRequestBody" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_RouteParams_And_QueryParams_Parsed" executed="True" result="Failure" success="False" time="0.003" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Expected [1] but got []  ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_CORS_Preflight_Options_ReturnsHeaders" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Auth_JwtBearer_Succeeds" executed="True" result="Failure" success="False" time="0.001" asserts="0" >
+                                <failure>
+                                  <message>
+                                    <![CDATA[ Expected [200] but got [-1] Authorized request should succeed ]]>
+                                  </message>
+                                  <stack-trace>
+                                    <![CDATA[  ]]>
+                                  </stack-trace>
+                                </failure>
+                              </test-case>
+                              <test-case name="Test_Auth_MissingToken_Returns401" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_OpenApiGenerator_Includes_RegisteredRoutes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TWebSocketRouterIntegrationTest" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_MessageRouter_RoutesByEventName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MessageRouter_UsesDefaultHandler_ForNonJsonOrUnknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

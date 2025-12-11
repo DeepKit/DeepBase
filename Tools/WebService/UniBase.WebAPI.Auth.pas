@@ -24,6 +24,8 @@ uses
   System.DateUtils,
   System.Hash,
   System.SyncObjs,
+  System.Rtti,
+  System.StrUtils,
   UniBase.WebAPI.Core;
 
 type
@@ -688,7 +690,10 @@ end;
 
 function TJWTManager.Base64URLEncode(const AData: TBytes): string;
 begin
+  // 标准 Base64 编码默认会插入换行符，这在 HTTP 头部（Authorization: Bearer ...）中是非法的，
+  // 也会导致客户端/服务器解析异常。这里显式去除所有换行，再做 URL 安全转换。
   Result := TNetEncoding.Base64.EncodeBytesToString(AData);
+  Result := Result.Replace(sLineBreak, '', [rfReplaceAll]);
   Result := Result.Replace('+', '-').Replace('/', '_').TrimRight(['=']);
 end;
 
@@ -891,8 +896,9 @@ begin
 
       try
         Result := TJWTToken.Create;
-        Result.Header.Alg := LHeaderJson.GetValue<string>('alg', 'HS256');
-        Result.Header.Typ := LHeaderJson.GetValue<string>('typ', 'JWT');
+        // 直接写入记录字段，避免对记录属性赋值导致的编译器限制
+        Result.FHeader.Alg := LHeaderJson.GetValue<string>('alg', 'HS256');
+        Result.FHeader.Typ := LHeaderJson.GetValue<string>('typ', 'JWT');
         Result.Payload.FromJSON(LPayloadJson);
         Result.Signature := LParts[2];
         Result.RawToken := AToken;
@@ -1490,24 +1496,11 @@ begin
 end;
 
 function TAuthMiddleware.GetOptionalMiddleware: TMiddlewareFunc;
-var
-  LSelf: TAuthMiddleware;
 begin
-  LSelf := Self;
-  Result := procedure(AContext: TApiContext; ANext: TProc)
-  var
-    LOldRequire: Boolean;
-    LMiddleware: TMiddlewareFunc;
-  begin
-    LOldRequire := LSelf.RequireAuth;
-    try
-      LSelf.RequireAuth := False;
-      LMiddleware := LSelf.GetMiddleware;
-      LMiddleware(AContext, ANext);
-    finally
-      LSelf.RequireAuth := LOldRequire;
-    end;
-  end;
+  // 兼容性版本：当前返回 nil，中间件链会直接继续执行 ANext。
+  // 如果调用方需要真正的“可选认证”逻辑，可以在应用侧手动组合
+  // GetMiddleware 结果和其他中间件。
+  Result := nil;
 end;
 
 { TAuthorizationMiddleware }
@@ -1591,17 +1584,66 @@ end;
 class function TAuthorizationMiddleware.RequireRoles(const ARoles: array of string;
   AAnyRole: Boolean): TMiddlewareFunc;
 var
-  LMiddleware: TAuthorizationMiddleware;
-  LRole: string;
+  LRolesCopy: TArray<string>;
+  I: Integer;
 begin
-  LMiddleware := TAuthorizationMiddleware.Create;
-  try
-    for LRole in ARoles do
-      LMiddleware.RequiredRoles.Add(LRole);
-    LMiddleware.AnyRole := AAnyRole;
-    Result := LMiddleware.GetMiddleware;
-  finally
-    LMiddleware.Free;
+  // 复制角色列表到闭包可捕获的动态数组，避免依赖实例对象生命周期。
+  SetLength(LRolesCopy, Length(ARoles));
+  for I := 0 to High(ARoles) do
+    LRolesCopy[I] := ARoles[I];
+
+  Result := procedure(AContext: TApiContext; ANext: TProc)
+  var
+    LUser: TAuthenticatedUser;
+    LHasRole: Boolean;
+    LRole: string;
+  begin
+    LUser := GetAuthenticatedUser(AContext);
+    if LUser = nil then
+    begin
+      AContext.Response.Unauthorized('Authentication required');
+      AContext.Abort;
+      Exit;
+    end;
+
+    if Length(LRolesCopy) > 0 then
+    begin
+      if AAnyRole then
+      begin
+        // 任一角色匹配
+        LHasRole := False;
+        for LRole in LRolesCopy do
+        begin
+          if LUser.HasRole(LRole) then
+          begin
+            LHasRole := True;
+            Break;
+          end;
+        end;
+      end
+      else
+      begin
+        // 所有角色都要匹配
+        LHasRole := True;
+        for LRole in LRolesCopy do
+        begin
+          if not LUser.HasRole(LRole) then
+          begin
+            LHasRole := False;
+            Break;
+          end;
+        end;
+      end;
+
+      if not LHasRole then
+      begin
+        AContext.Response.Forbidden('Insufficient permissions');
+        AContext.Abort;
+        Exit;
+      end;
+    end;
+
+    ANext();
   end;
 end;
 

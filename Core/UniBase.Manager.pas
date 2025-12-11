@@ -741,6 +741,16 @@ begin
   FConfig := TUniBaseConfig.Create(FConfigDB, FLock);
   FConfig.OnConfigChanged := HandleConfigChanged;
   
+  // PERF-001: 预热配置缓存，避免首次访问时产生多次小查询
+  try
+    FConfig.PreloadCache;
+  except
+    // 预热失败不影响正常运行，保持静默或在 DEBUG 下输出
+    {$IFDEF DEBUG}
+    OutputDebugString('UniBase.Manager: PreloadCache failed');
+    {$ENDIF}
+  end;
+  
   // 3. i18n
   FI18n := TUniBaseI18n.Create(FConfigDB, FLock);
   FI18n.OnLanguageChanged := HandleLanguageChanged;

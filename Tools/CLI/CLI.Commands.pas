@@ -60,6 +60,10 @@ type
 
 implementation
 
+uses
+  System.IOUtils,
+  UniBase.CLI.Interactive;
+
 { TCliUtils }
 
 class constructor TCliUtils.Create;
@@ -175,32 +179,32 @@ end;
 
 class procedure TCliUtils.Success(const Msg: string);
 begin
-  Writeln('[OK] ', Msg);
+  Writeln(TAnsiColor.Colorize('[OK] ' + Msg, TAnsiColor.Green));
 end;
 
 class procedure TCliUtils.Success(const Fmt: string; const Args: array of const);
 begin
-  Writeln('[OK] ', Format(Fmt, Args));
+  Writeln(TAnsiColor.Colorize('[OK] ' + Format(Fmt, Args), TAnsiColor.Green));
 end;
 
 class procedure TCliUtils.Warning(const Msg: string);
 begin
-  Writeln('[WARN] ', Msg);
+  Writeln(TAnsiColor.Colorize('[WARN] ' + Msg, TAnsiColor.Yellow));
 end;
 
 class procedure TCliUtils.Warning(const Fmt: string; const Args: array of const);
 begin
-  Writeln('[WARN] ', Format(Fmt, Args));
+  Writeln(TAnsiColor.Colorize('[WARN] ' + Format(Fmt, Args), TAnsiColor.Yellow));
 end;
 
 class procedure TCliUtils.Error(const Msg: string);
 begin
-  Writeln('[ERROR] ', Msg);
+  Writeln(TAnsiColor.Colorize('[ERROR] ' + Msg, TAnsiColor.Red));
 end;
 
 class procedure TCliUtils.Error(const Fmt: string; const Args: array of const);
 begin
-  Writeln('[ERROR] ', Format(Fmt, Args));
+  Writeln(TAnsiColor.Colorize('[ERROR] ' + Format(Fmt, Args), TAnsiColor.Red));
 end;
 
 class procedure TCliUtils.Progress(Current, Total: Integer; const Task: string);

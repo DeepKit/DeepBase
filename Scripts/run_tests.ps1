@@ -46,8 +46,10 @@ if ($CI) {
 $UnitPaths = @(
     "$BaseDir\Core",
     "$BaseDir\VCL",
+    "$BaseDir\Tools\WebService",
     "$TestsDir",
-    "$IntegrationDir"
+    "$IntegrationDir",
+    "D:\ProgramData\delphi\DUnitX\Source\"
 )
 $SearchPath = $UnitPaths -join ";"
 
@@ -91,7 +93,8 @@ function Run-TestProject {
     
     $args = @()
     if ($XmlOutput) {
-        $args += "--xmloutput:$XmlOutput"
+        # DUnitX expects --xmlfile or -xml, not --xmloutput
+        $args += "--xmlfile:$XmlOutput"
     }
     $args += "--exitbehavior:Continue"
     

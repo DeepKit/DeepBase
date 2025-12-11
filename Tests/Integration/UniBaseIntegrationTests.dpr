@@ -18,7 +18,8 @@ uses
   // Integration Test Framework
   UniBase.IntegrationTest in 'UniBase.IntegrationTest.pas',
   // Integration Tests
-  Test.Integration.Core in 'Test.Integration.Core.pas';
+  Test.Integration.Core in 'Test.Integration.Core.pas',
+  Test.Integration.WebAPI in 'Test.Integration.WebAPI.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

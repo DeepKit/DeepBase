@@ -18,6 +18,8 @@ uses
   System.JSON,
   System.IOUtils,
   System.Diagnostics,
+  System.Threading,
+  System.SyncObjs,
   DUnitX.TestFramework,
   FireDAC.Comp.Client,
   UniBase.IntegrationTest;

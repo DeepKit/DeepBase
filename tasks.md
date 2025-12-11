@@ -1,7 +1,7 @@
 # UniBase 开发任务
 
-> **最后更新**: 2025-12-09
-> **项目状态**: Phase 0~7 + Phase R + MAINT-2 全部完成，进入功能扩展阶段
+> **最后更新**: 2025-12-11
+> **项目状态**: 核心完成，扩展开发中
 
 ---
 
@@ -9,82 +9,87 @@
 
 | 文档 | 说明 |
 |------|------|
-| **[history.md](history.md)** | 已完成任务记录 (70+ 任务) |
-| **[bugfix.md](bugfix.md)** | Bug 修复记录 (49+ Bug) |
+| **[history.md](history.md)** | 已完成任务记录 (80+ 任务) |
+| **[bugfix.md](bugfix.md)** | Bug 修复记录 (60+ Bug) |
 | **[tasks_next.md](tasks_next.md)** | 后续扩展任务规划 |
 | **[README.md](README.md)** | 项目说明 |
 
 ---
 
-## 已完成统计
+## 项目进度概览
 
-| 阶段 | 任务数 | 状态 |
-|------|--------|------|
-| Phase 0 (最小核心) | 8 | ✅ 100% |
-| Phase 1 (推荐功能) | 9 | ✅ 100% |
-| Phase T (Tray工具) | 8 | ✅ 100% |
-| Phase 2 (扩展功能) | 9 | ✅ 100% |
-| Phase 3 (高级功能) | 7 | ✅ 100% |
-| Phase 4 (完善文档) | 7 | ✅ 100% |
-| Phase 5 (代码审查) | 9 | ✅ 100% |
-| Phase 6 (LLM系统) | 8 | ✅ 100% |
-| Phase 7 (功能补充) | 3 | ✅ 100% |
-| Phase R (重构) | 7 | ✅ 100% |
-| MAINT (维护) | 2 | ✅ 100% |
-| MAINT-2 (代码质量) | 3 | ✅ 100% |
-| I18N (国际化) | 2 | ✅ 100% |
-| ECO (生态) | 2 | ✅ 100% |
-| **总计** | **84** | **✅ 100%** |
+| 阶段 | 状态 | 完成日期 |
+|------|------|----------|
+| Phase 0: 最小核心 | ✅ 完成 | 2025-11-27 |
+| Phase 1: 推荐功能 | ✅ 完成 | 2025-11-27 |
+| Phase 2: 扩展功能 | ✅ 完成 | 2025-11-27 |
+| Phase 3: 高级功能 | ✅ 完成 | 2025-11-27 |
+| Phase 4: 完善与文档 | ✅ 完成 | 2025-11-27 |
+| Phase 5: 代码审查优化 | ✅ 完成 | 2025-11-28 |
+| Phase P0: 商业化基础 | ✅ 完成 | 2025-12-09 |
+| Phase P1: 商业化扩展 | ✅ 完成 | 2025-12-10 |
+| Phase P2: 工具与CLI | ✅ 完成 | 2025-11-29 |
+| Phase MAINT: 维护优化 | 🟡 进行中 | - |
 
 ---
 
 ## 待开发任务
 
-### 高优先级 (P1)
+### 进行中 (MAINT)
 
-#### FMX-003: FMX 缺失控件补全
+#### MAINT-002: 单元测试覆盖率提升至 95%+
+- **状态**: 🟡 进行中
+- **优先级**: P0
+- **目标**:
+  - 单元测试整体覆盖率提升到 95%+，并确保关键安全/网络模块有稳定回归测试。
+- **下一步任务**:
+  - 将覆盖率统计集成到 `Scripts/run_tests.ps1` 与 CI/CD 流程，生成 HTML/XML 覆盖率报告。
+  - （可选）进一步稳定数据库相关 Integration Tests（FireDAC/SQLite 驱动配置），或在默认集成测试运行中将其标记为「环境依赖」测试。
+- **已完成工作**:
+  - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
+
+### 商业化与工具集成 (P1)
+
+#### PUBL-101: AboutFrame + AntiTamper 规范与文档更新
 - **状态**: 🔲 待开始
-- **预计工时**: 8-12 小时
+- **优先级**: P1
 - **内容**:
-  - [ ] FMX 版 TLogListView
-  - [ ] FMX 版 TNotificationBar
-  - [ ] FMX 版 TLicenseStatusPanel
+  - 在 `04.01.uniBase-4AI-数据库Schema说明-v1.0.md` 中明确定义 `aboutMeImages` 表结构，新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段，约定 6 个标准 key（official_gzh / wechat / alipay / btc / usdt / aboutme）。
+  - 在 `10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 中补充 AboutFrame 接入规范：DB1 = `{AppName}Config.db`（目标规范）、最小尺寸 600×320、「公司公众号」页签文案与跳转 `https://www.goodmem.cn/tools`。
+  - 在 `10.03.uniBase-4H-私域流量运营指南-v1.0.md` 中增加“关于页面推荐结构”小节，说明与公众号/解锁体系的关系。
 
-#### SEC-002: 高级加密支持
+#### PUBL-102: 实现 UniBase.AntiTamper 与 UniBase.VCL.AboutFrame
 - **状态**: 🔲 待开始
-- **预计工时**: 10-15 小时
+- **优先级**: P1
 - **内容**:
-  - [ ] AES-256 配置加密
-  - [ ] 密钥管理器
-  - [ ] 硬件绑定加密
+  - 从 `uAntiTamperPackage` / `uBasicProtection` 抽象出 `UniBase.AntiTamper`，提供统一的初始化与 `LoadSecureImage` API，默认表名为 `aboutMeImages`。
+  - 在 `UniBase.VCL.AboutFrame` 中实现 About/打赏/公司公众号通用 Frame：6 个 Tab（公司公众号/微信/支付宝/BTC/USDT/关于我），从 DB1 的 `aboutMeImages` 表按 key 读取图像和文本，按 `enabled` 控制显隐。
+  - 对接 `UniBase.i18n`，预留文案本地化能力。
 
----
-
-### 中优先级 (P2)
-
-#### PERF-001: 性能优化
+#### PUBL-103: SeedTool aboutMeImages + enabled 改造
 - **状态**: 🔲 待开始
-- **预计工时**: 15-20 小时
+- **优先级**: P1
 - **内容**:
-  - [ ] 日志写入批量优化
-  - [ ] 配置缓存预热
-  - [ ] ORM 延迟加载优化
+  - 将 SeedTool 默认目标表从 `images` 迁移为 `aboutMeImages`，并支持新字段 `enabled`（0/1）。
+  - 在 SeedTool UI 中增加启用勾选或列，允许为 each image_key（official_gzh / wechat / alipay / btc / usdt / aboutme）控制是否在 AboutFrame 中显示。
+  - 同步更新 `加密防篡改集成说明.md` 与 `播种与主程序对应说明.md` 的表结构与示例 SQL。
 
-#### TOOL-002: Studio 增强
+#### PUBL-104: MoveC 参考实现对齐新规范
 - **状态**: 🔲 待开始
-- **预计工时**: 20-30 小时
+- **优先级**: P1
 - **内容**:
-  - [ ] SQL 查询编辑器
-  - [ ] Schema 可视化浏览器
-  - [ ] 数据导入导出向导
+  - 将 MoveC 当前使用的 `images` 表迁移/改名为 `aboutMeImages`，增加 `enabled` 字段并默认置为 1。
+  - 逐步将 MoveC 的配置数据库命名统一为目标规范（例如 `MoveCConfig.db`），并更新 `FrameAboutMe` 中的连接与 `FDTable1.TableName`。
+  - 使用 SeedTool 为 aboutMeImages 表补齐 6 个 key（official_gzh / wechat / alipay / btc / usdt / aboutme），作为 UniBase.VCL.AboutFrame 的演示样例数据库。
+  - 同步更新 `02.MoveC-Integration.md` 文档，标注“现状 vs 目标规范”。
 
-#### CLI-002: CLI 交互增强
+#### PUBL-105: 工具项目接入 AboutFrame + aboutMeImages（TwoKeyRun / OmniSync / 其它）
 - **状态**: 🔲 待开始
-- **预计工时**: 10-15 小时
+- **优先级**: P1
 - **内容**:
-  - [ ] 交互式 Shell 模式
-  - [ ] 命令自动补全
-  - [ ] 彩色输出支持
+  - TwoKeyRun: 规划/实现 DB1（目标名 `TwoKeyRunConfig.db`），在其 DB1 中创建 `aboutMeImages` 表并通过 SeedTool 播种 6 个 key；在主窗体 About/帮助区域嵌入 UniBase.VCL.AboutFrame，并验证与解锁/公众号流程的一致性。
+  - OmniSync: 规划/实现 DB1（目标名 `OmniSyncConfig.db`），按同样模式接入 AboutFrame 与公司公众号页签。
+  - SVGThing / Stocks / TransSuccess 等其它 GUI 工具：分别创建 `0X.ProjectName-Integration.md`，记录现状 DB1 名称与目标 `{AppName}Config.db`，并规划接入 AboutFrame + aboutMeImages 的步骤。
 
 ---
 
@@ -92,16 +97,19 @@
 
 #### ECO-002: 社区扩展包 (持续)
 - **状态**: 🟡 进行中
-- **已完成**:
-  - ✅ PostgreSQL/MySQL 驱动
-  - ✅ UI 主题包
-  - ✅ 云存储集成
-- **待扩展**:
-  - [ ] 支付接口集成 (Stripe/PayPal/Alipay)
-  - [ ] 社交媒体集成 (WeChat/Weibo/Twitter)
+- **性质**: ThirdParty 可选扩展（非 Core 核心功能）
+- **已完成阶段**:
+  - 第一批扩展（PostgreSQL/MySQL 驱动、UI 主题包、云存储集成）已记录在 `history.md` 的 “ECO-002: 社区扩展包（第一阶段）” 小节，此处不再重复细节。
+- **下一步任务**:
+  - [ ] 支付接口集成 (`ThirdParty/Payment/`) - Stripe/PayPal/Alipay
+  - [ ] 社交媒体集成 (`ThirdParty/Social/`) - WeChat/Weibo/Twitter
+- **开发指南**:
+  - 参考 [06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
+  - 参考已实现的 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 模式
 
 #### DOC-004: 视频教程
 - **状态**: 🔲 待开始
+- **优先级**: P3
 - **内容**:
   - [ ] 快速入门视频
   - [ ] 模块深度讲解
@@ -109,65 +117,20 @@
 
 ---
 
-## 近期完成 (2025-12-09)
+## 性能基准
 
-### MAINT-2: 项目清理与代码质量 ✅
-- **完成日期**: 2025-12-09
-- **内容**:
-  - 项目结构清理: 移动 11 项到 backup，删除 90+ 编译产物
-  - 代码质量深度检查: 异常处理、线程安全、内存管理等 8 维度
-  - 异常处理改进: 11 个模块添加错误日志/通知机制
-  - 线程安全修复: Logging 模块竞态条件修复
-- **commit**: e5f0cd5, 3af9446, af260c3
-- **Bug 修复**: BUG-050 ~ BUG-060 (11 个)
-
-### FMX-002: FMX 自动更新组件 ✅
-- **完成日期**: 2025-12-08
-- **输出物**:
-  - `FMX/UniBase.FMX.AutoUpdater.pas` - 非可视组件
-  - `FMX/UniBase.FMX.UpdateDialog.pas` - 更新对话框
-  - `FMX/UniBase.FMX.UpdateDialog.fmx` - 对话框布局
-
-### ECO-001: 应用模板 ✅
-- **完成日期**: 2025-12-08
-- **输出物**:
-  - `Examples/Templates/ECommerceApp/` - 电商应用模板
-  - `Examples/Templates/RealtimeChatApp/` - 实时通信模板
+| 操作 | 目标 | 实际 |
+|------|------|------|
+| Config 读取 (缓存) | < 1ms | ✅ |
+| Config 写入 | < 10ms | ✅ |
+| 日志写入 10000条 | < 5s | ✅ 3s |
+| i18n 查询 | < 0.5ms | ✅ |
 
 ---
 
-## Bug 修复 (2025-12-09)
+## Schema 迁移
 
-| Bug ID | 描述 | 严重性 | 状态 |
-|--------|------|--------|------|
-| BUG-050 | Manager Schema修复错误被静默忽略 | MEDIUM | ✅ |
-| BUG-051 | PluginManager 插件错误被静默忽略 | MEDIUM | ✅ |
-| BUG-052 | Logging GLoggerLock 竞态条件 | MEDIUM | ✅ |
-| BUG-053 | Theme 模块多处错误被静默忽略 | LOW | ✅ |
-| BUG-054 | Updater 模块多处错误被静默忽略 | LOW | ✅ |
-| BUG-055 | VirtualScroll 渲染回调错误被静默忽略 | LOW | ✅ |
-| BUG-056 | DB.Pool 连接池多处错误被静默忽略 | LOW | ✅ |
-| BUG-057 | CLI.SSH 多处错误被静默忽略 | LOW | ✅ |
-| BUG-058 | SplashScreen 图片加载错误被静默忽略 | LOW | ✅ |
-| BUG-059 | Feedback 轮询错误被静默忽略 | LOW | ✅ |
-| BUG-060 | Diagnose 模块多处错误被静默忽略 | LOW | ✅ |
-
----
-
-## 开发规范
-
-### 线程安全
-- 统一使用 `TMonitor` 进行同步
-- 读多写少场景使用 `TMultiReadExclusiveWriteSynchronizer`
-
-### Schema 迁移
-- 升级脚本: `sql/upgrade_v{old}_to_v{new}.sql`
-
-### 性能基准
-- Config 读取: < 1ms (缓存)
-- Config 写入: < 10ms
-- 日志写入: 10000 条 < 5s
-- i18n 查询: < 0.5ms
+升级脚本位置: `sql/upgrade_v{old}_to_v{new}.sql`
 
 ---
 

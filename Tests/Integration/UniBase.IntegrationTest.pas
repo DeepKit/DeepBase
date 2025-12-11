@@ -315,7 +315,7 @@ type
     
     /// <summary>Compare with baseline</summary>
     function CompareWithBaseline(const Name: string;
-      const Result: TBenchmarkResult): Double;
+      const ABenchmark: TBenchmarkResult): Double;
     
     /// <summary>Set baseline for comparison</summary>
     procedure SetBaseline(const Name: string; OpsPerSecond: Double);
@@ -1509,12 +1509,12 @@ begin
 end;
 
 function TPerformanceBenchmark.CompareWithBaseline(const Name: string;
-  const Result: TBenchmarkResult): Double;
+  const ABenchmark: TBenchmarkResult): Double;
 var
   Baseline: Double;
 begin
   if FBaselines.TryGetValue(Name, Baseline) and (Baseline > 0) then
-    Result := ((Result.OpsPerSecond - Baseline) / Baseline) * 100
+    Result := ((ABenchmark.OpsPerSecond - Baseline) / Baseline) * 100
   else
     Result := 0;
 end;

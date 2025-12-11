@@ -381,7 +381,8 @@ function EUniBaseDB.UserMessage: string;
 begin
   // User-friendly message - no SQL or technical details
   if FOperation <> '' then
-    Result := Format('%s（%s）', [Message, FOperation])
+    // Avoid Format() here to keep Unicode + ASCII mixing simple and predictable
+    Result := Message + '（' + FOperation + '）'
   else
     Result := Message;
     

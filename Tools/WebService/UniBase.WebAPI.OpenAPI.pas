@@ -429,7 +429,10 @@ implementation
 
 uses
   System.IOUtils,
-  System.RegularExpressions;
+  System.RegularExpressions,
+  System.Math;
+
+function ExtractFirstPathSegment(const APath: string): string; forward;
 
 { 辅助函数 }
 
