@@ -1,0 +1,5 @@
+object FMXAboutFrame: TFMXAboutFrame
+  Size.Width = 480.000000000000000000
+  Size.Height = 560.000000000000000000
+  Size.PlatformDefault = False
+end
