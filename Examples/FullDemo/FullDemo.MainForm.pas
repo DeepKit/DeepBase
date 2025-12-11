@@ -35,7 +35,9 @@ uses
   UniBase.VCL.WaitForm,
   UniBase.VCL.LicenseStatusPanel,
   UniBase.VCL.LicenseAuthDialog,
-  UniBase.VCL.FeedbackDialog;
+  UniBase.VCL.FeedbackDialog,
+  UniBase.TestCenter,
+  UniBase.VCL.TestCenterFrame;
 
 type
   TMainForm = class(TForm)
@@ -94,6 +96,10 @@ type
     FBtnShowWait: TButton;
     FBtnShowProgress: TButton;
     
+    // Test Center Tab
+    FTabTestCenter: TTabSheet;
+    FTestCenterFrame: TTestCenterFrame;
+    
     procedure CreateUI;
     procedure CreateConfigTab;
     procedure CreateI18nTab;
@@ -102,6 +108,7 @@ type
     procedure CreateThemeTab;
     procedure CreateLicenseTab;
     procedure CreateWaitTab;
+    procedure CreateTestCenterTab;
     procedure CreateMainMenu;
     
     // Event handlers
@@ -205,6 +212,7 @@ begin
   CreateThemeTab;
   CreateLicenseTab;
   CreateWaitTab;
+  CreateTestCenterTab;
 end;
 
 procedure TMainForm.CreateMainMenu;
@@ -582,6 +590,23 @@ begin
   FBtnShowProgress.Caption := 'Show Progress Dialog';
   FBtnShowProgress.SetBounds(20, Y, 180, 28);
   FBtnShowProgress.OnClick := HandleShowProgressClick;
+end;
+
+procedure TMainForm.CreateTestCenterTab;
+begin
+  FTabTestCenter := TTabSheet.Create(FPageControl);
+  FTabTestCenter.PageControl := FPageControl;
+  FTabTestCenter.Caption := '测试中心';
+  
+  FTestCenterFrame := TTestCenterFrame.Create(Self);
+  FTestCenterFrame.Parent := FTabTestCenter;
+  FTestCenterFrame.Align := alClient;
+  FTestCenterFrame.Initialize(nil);  // Use built-in manager
+  FTestCenterFrame.RegisterSampleTests;
+  
+  // UniPublisher path - adjust as needed for your setup
+  FTestCenterFrame.UniPublisherPath := 
+    TPath.Combine(ExtractFilePath(ParamStr(0)), '..\..\Tools\UniPublisher\Win32\Release\UniPublisher.exe');
 end;
 
 // Event Handlers

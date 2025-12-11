@@ -109,7 +109,7 @@ class function TAntiTamperPackage.GetDefaultConfig: TAntiTamperConfig;
 begin
   Result.EncryptionKey := 'Default_AntiTamper_Key_2025';
   Result.DownloadURL := 'https://your-website.com/download';
-  Result.TableName := 'images';
+  Result.TableName := 'aboutMeImages';
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
   Result.EncryptionType := etAES256; // 默认使用AES-256
@@ -332,6 +332,7 @@ begin
           '  image_data BLOB NOT NULL,' +
           '  address_text TEXT,' +
           '  description TEXT,' +
+          '  enabled INTEGER NOT NULL DEFAULT 1,' +
           '  sha256_hash TEXT NOT NULL,' +
           '  hmac_sha256 TEXT NOT NULL,' +
           '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
@@ -390,6 +391,14 @@ begin
         WriteLog('hmac_sha256字段添加成功');
       except
         WriteLog('hmac_sha256字段可能已存在');
+      end;
+      // 为现有表添加enabled字段
+      try
+        Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1';
+        Query.ExecSQL;
+        WriteLog('enabled字段添加成功');
+      except
+        WriteLog('enabled字段可能已存在');
       end;
       
       Result := True;

@@ -201,3 +201,71 @@
   - 所有基于 UniBase 的项目文档应在“开发说明”章节中说明：
     - 控制台测试 Runner 的位置与用法。
     - GUI 测试中心的入口位置与主要功能。
+
+---
+
+## 7. 与 UniPublisher 的协同（测试中心 + 发布工具）
+
+### 7.1 职责划分
+
+- **Developer Test Center（本文件）**：
+  - 面向开发者/内部使用，负责 **运行测试、查看结果、导出报告**。
+  - 每个应用各自实现，集成在主程序 UI 中（Debug/内部版本必备）。
+- **UniPublisher（独立 GUI 发布工具）**：
+  - 面向开发者/发布负责人，负责 **打包、生成 version.json、上传发布**。
+  - 所有应用共用一套工具：`Tools/UniPublisher/UniPublisher.exe`。
+
+> 约定：**每个使用 UniBase 的桌面应用，都必须在开发者测试中心中提供一个统一的「打开 UniPublisher」入口**，不再各自实现一套打包 GUI。
+
+### 7.2 测试中心中的「打开 UniPublisher」按钮
+
+在测试中心窗体/页签底部，推荐增加一个简单按钮：
+
+- 按钮文本：`打开 UniPublisher...`
+- 目标用户：**开发者/内部测试人员**（Release 版本可隐藏）。
+- 行为：
+  - 通过 `ShellExecute` 或等价 API 启动 `UniPublisher.exe`。
+  - **不传递任何命令行参数**，由 UniPublisher 自己记住最近使用的项目（MRU）。
+
+伪代码示例：
+
+```delphi path=null start=null
+procedure TTestCenterForm.btnOpenUniPublisherClick(Sender: TObject);
+begin
+  // 1) 解析 UniPublisher 路径：
+  //    - 优先从 Settings 中读取配置项，例如：Update.UniPublisherPath
+  //    - 若未配置，可尝试相对路径： ..\Tools\UniPublisher\UniPublisher.exe
+  // 2) 若文件不存在，则给出友好错误提示。
+
+  if not FileExists(FUniPublisherPath) then
+  begin
+    ShowMessage('未找到 UniPublisher.exe，请检查 Tools 目录或配置项 Update.UniPublisherPath');
+    Exit;
+  end;
+
+  ShellExecute(0, 'open', PChar(FUniPublisherPath), nil, nil, SW_SHOWNORMAL);
+end;
+```
+
+> 注意：按钮本身**不负责**选择 `.publish.json` 或填写版本号，只是把开发者带到统一的 UniPublisher 界面中；项目选择和版本信息在 UniPublisher 内通过 MRU 和 UI 完成。
+
+### 7.3 推荐工作流
+
+1. 开发者在当前应用中打开“测试中心”页签。
+2. 运行关键的 Unit / Integration / GUI Tests，确保全部通过。
+3. 若需要发布新版本：点击“打开 UniPublisher...”。
+4. UniPublisher 启动后：
+   - 自动加载最近一次使用的 `{AppName}.publish.json`。
+   - 开发者确认/调整：新版本号、Channel(Stable/Beta/Dev)、Release Notes。
+   - 选择需要的发布目标（HTTP / GitHub / Gitee）。
+5. 在 UniPublisher 中一键执行“打包 + 生成 version.json + 上传发布”。
+6. 发布完成后，可以在测试中心中附加一次“安装后回归测试”（可选）。
+
+### 7.4 与 10.01/UniPublisher 规范文档的关系
+
+- 本文件只规定**测试中心一侧**的要求：
+  - 必须有统一的“打开 UniPublisher”入口。
+  - 入口行为是“启动工具”,而不是直接执行打包逻辑。
+- 关于 UniPublisher 的详细规范（`.publish.json` 配置、`version.json` 字段、发布目标配置等）,请参考：
+  - `docs/tools/UniPublisher-Spec.md`
+  - `docs/10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 第 2 章与 UniPublisher 相关小节。

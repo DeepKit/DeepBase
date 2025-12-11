@@ -43,53 +43,54 @@
 - **目标**:
   - 单元测试整体覆盖率提升到 95%+，并确保关键安全/网络模块有稳定回归测试。
 - **下一步任务**:
-  - 将覆盖率统计集成到 `Scripts/run_tests.ps1` 与 CI/CD 流程，生成 HTML/XML 覆盖率报告。
-  - （可选）进一步稳定数据库相关 Integration Tests（FireDAC/SQLite 驱动配置），或在默认集成测试运行中将其标记为「环境依赖」测试。
+-  - （可选）在后续 CI 环境中补充针对数据库 Integration Tests 的专用配置说明文档（如何启用 UNIBASE_RUN_DB_INTEGRATION 与 FireDAC/SQLite 驱动）。
 - **已完成工作**:
   - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
 
 ### 商业化与工具集成 (P1)
 
-#### PUBL-101: AboutFrame + AntiTamper 规范与文档更新
-- **状态**: 🔲 待开始
-- **优先级**: P1
-- **内容**:
-  - 在 `04.01.uniBase-4AI-数据库Schema说明-v1.0.md` 中明确定义 `aboutMeImages` 表结构，新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段，约定 6 个标准 key（official_gzh / wechat / alipay / btc / usdt / aboutme）。
-  - 在 `10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 中补充 AboutFrame 接入规范：DB1 = `{AppName}Config.db`（目标规范）、最小尺寸 600×320、「公司公众号」页签文案与跳转 `https://www.goodmem.cn/tools`。
-  - 在 `10.03.uniBase-4H-私域流量运营指南-v1.0.md` 中增加“关于页面推荐结构”小节，说明与公众号/解锁体系的关系。
-
-#### PUBL-102: 实现 UniBase.AntiTamper 与 UniBase.VCL.AboutFrame
-- **状态**: 🔲 待开始
-- **优先级**: P1
-- **内容**:
-  - 从 `uAntiTamperPackage` / `uBasicProtection` 抽象出 `UniBase.AntiTamper`，提供统一的初始化与 `LoadSecureImage` API，默认表名为 `aboutMeImages`。
-  - 在 `UniBase.VCL.AboutFrame` 中实现 About/打赏/公司公众号通用 Frame：6 个 Tab（公司公众号/微信/支付宝/BTC/USDT/关于我），从 DB1 的 `aboutMeImages` 表按 key 读取图像和文本，按 `enabled` 控制显隐。
-  - 对接 `UniBase.i18n`，预留文案本地化能力。
-
-#### PUBL-103: SeedTool aboutMeImages + enabled 改造
-- **状态**: 🔲 待开始
-- **优先级**: P1
-- **内容**:
-  - 将 SeedTool 默认目标表从 `images` 迁移为 `aboutMeImages`，并支持新字段 `enabled`（0/1）。
-  - 在 SeedTool UI 中增加启用勾选或列，允许为 each image_key（official_gzh / wechat / alipay / btc / usdt / aboutme）控制是否在 AboutFrame 中显示。
-  - 同步更新 `加密防篡改集成说明.md` 与 `播种与主程序对应说明.md` 的表结构与示例 SQL。
-
-#### PUBL-104: MoveC 参考实现对齐新规范
-- **状态**: 🔲 待开始
-- **优先级**: P1
-- **内容**:
-  - 将 MoveC 当前使用的 `images` 表迁移/改名为 `aboutMeImages`，增加 `enabled` 字段并默认置为 1。
-  - 逐步将 MoveC 的配置数据库命名统一为目标规范（例如 `MoveCConfig.db`），并更新 `FrameAboutMe` 中的连接与 `FDTable1.TableName`。
-  - 使用 SeedTool 为 aboutMeImages 表补齐 6 个 key（official_gzh / wechat / alipay / btc / usdt / aboutme），作为 UniBase.VCL.AboutFrame 的演示样例数据库。
-  - 同步更新 `02.MoveC-Integration.md` 文档，标注“现状 vs 目标规范”。
-
 #### PUBL-105: 工具项目接入 AboutFrame + aboutMeImages（TwoKeyRun / OmniSync / 其它）
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中 (规划完成)
 - **优先级**: P1
-- **内容**:
-  - TwoKeyRun: 规划/实现 DB1（目标名 `TwoKeyRunConfig.db`），在其 DB1 中创建 `aboutMeImages` 表并通过 SeedTool 播种 6 个 key；在主窗体 About/帮助区域嵌入 UniBase.VCL.AboutFrame，并验证与解锁/公众号流程的一致性。
-  - OmniSync: 规划/实现 DB1（目标名 `OmniSyncConfig.db`），按同样模式接入 AboutFrame 与公司公众号页签。
-  - SVGThing / Stocks / TransSuccess 等其它 GUI 工具：分别创建 `0X.ProjectName-Integration.md`，记录现状 DB1 名称与目标 `{AppName}Config.db`，并规划接入 AboutFrame + aboutMeImages 的步骤。
+- **规划文档**: `docs/integrations/README.md`
+- **已完成**:
+  - ✅ 5个工具项目集成规划文档:
+    - `01.TwoKeyRun-Integration.md` - VCL, 已有Frame, 3-4h
+    - `02.OmniSync-Integration.md` - FMX, 需新建, 4.5-5.5h (含FMX组件开发)
+    - `03.SVGThing-Integration.md` - VCL, 已有Frame, 2h
+    - `04.Stocks-Integration.md` - FMX, 需新建, 2h
+    - `05.TransSuccess-Integration.md` - VCL, 需新建, 2.5h
+  - ✅ 总工时估算: ~14h
+- **待实施**:
+  - [ ] VCL项目实施 (TwoKeyRun → SVGThing → TransSuccess)
+  - [ ] 创建 `UniBase.FMX.AboutFrame.pas` (FMX版组件)
+  - [ ] FMX项目实施 (OmniSync → Stocks/InfoCenter)
+
+#### PUBL-106: UniPublisher 配置模型与 version.json 统一规范落地 ✅
+- **状态**: ✅ 完成
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Publisher.Config.pas`: `TPublishConfig` 配置模型、`TPublishConfigMRU` MRU 管理
+  - 新增 `Publisher.Manifest.pas`: `TVersionManifest` 新版格式、`TManifestGenerator` 新旧格式生成
+  - 扩展 `UniBase.AutoUpdate.pas`: 自动识别新版/旧版 version.json 格式
+  - 重构 `UniPublisher.MainForm.pas`: 集成配置加载/保存和 MRU 下拉框
+  - 新增单元测试 `Test.UniBase.PublishConfig.pas`: 26 个测试用例
+
+#### PUBL-107: UniPublisher 发布目标与开发体验优化 ✅
+- **状态**: ✅ 完成
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Tools/UniPublisher/Core/Publisher.Targets.pas` (~895 行): TPublishResult/TPublishResults/TValidationResult 结果类型，TTargetValidator 配置验证，THttpPublisher/TGitHubPublisher/TGiteePublisher 三类发布器，TUnifiedPublisher 统一发布入口
+  - 增强 `UniPublisher.MainForm.pas`: 右侧状态面板（目标状态指示灯 + 验证按钮），快捷操作按钮（重新加载配置/打开输出目录/打开 version URL/一键发布），发布日志 Memo
+  - GitHub 发布通过 gh CLI 执行，输出命令和 Release URL；Gitee 发布通过 HTTP API + Access Token
+
+#### PUBL-108: Developer Test Center + UniPublisher 集成参考实现 ✅
+- **状态**: ✅ 完成
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Core/UniBase.TestCenter.pas` (~636 行): TTestCategory/TTestItem/TTestStatus 测试模型，ITestRunner 接口，TTestCenterManager 测试管理器，TStandardCategories 标准分类
+  - 新增 `VCL/UniBase.VCL.TestCenterFrame.pas` (~655 行): 左树（分类）/中列表（测试项）/右详情（日志）/底部控制区布局，"打开 UniPublisher..." 按钮通过 ShellExecute 启动
+  - 在 `Examples/FullDemo/FullDemo.MainForm.pas` 中集成测试中心页签，注册示例测试用例
 
 ---
 

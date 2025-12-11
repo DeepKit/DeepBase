@@ -20,21 +20,41 @@ uses
   Vcl.StdCtrls,
   Vcl.ExtCtrls,
   Vcl.ComCtrls,
+  Winapi.Messages,
   UniBase.Compression,
-  UniBase.Unlock;
+  UniBase.Unlock,
+  Publisher.Config,
+  Publisher.Manifest,
+  Publisher.Targets;
 
 const
   DEFAULT_VERSION_JSON_NAME = 'version.json';
 
+const
+  UNIPUBLISHER_MRU_FILE = 'UniPublisher.mru.json';
+  UNIPUBLISHER_DATA_DIR = 'UniPublisher';
+
 type
   TfrmUniPublisherMain = class(TForm)
   private
+    // Config and MRU
+    FConfig: TPublishConfig;
+    FMRU: TPublishConfigMRU;
+    FConfigLoaded: Boolean;
+
     // Layout
     FMainPanel: TPanel;
     FPageControl: TPageControl;
     tsGeneral: TTabSheet;
     tsGit: TTabSheet;
     tsUnlock: TTabSheet;
+
+    // Project selection controls (new)
+    pnlProject: TPanel;
+    lblProject: TLabel;
+    cmbProjectMRU: TComboBox;
+    btnBrowseConfig: TButton;
+    btnSaveConfig: TButton;
 
     // General tab controls
     lblProjectDproj: TLabel;
@@ -98,6 +118,29 @@ type
     // Status bar
     StatusBar: TStatusBar;
 
+    // Publish status & log panel (new)
+    pnlPublishStatus: TPanel;
+    grpTargetStatus: TGroupBox;
+    lblHttpStatus: TLabel;
+    shpHttpStatus: TShape;
+    lblGitHubStatus: TLabel;
+    shpGitHubStatus: TShape;
+    lblGiteeStatus: TLabel;
+    shpGiteeStatus: TShape;
+    btnValidateConfig: TButton;
+
+    // Convenience buttons panel
+    pnlQuickActions: TPanel;
+    btnReloadConfig: TButton;
+    btnOpenOutputDir: TButton;
+    btnOpenVersionUrl: TButton;
+    btnPublishAll: TButton;
+
+    // Publish log
+    grpPublishLog: TGroupBox;
+    memPublishLog: TMemo;
+    btnClearLog: TButton;
+
     procedure CreateUI;
     procedure WireEvents;
 
@@ -112,10 +155,30 @@ type
     procedure BtnPublishGitHubClick(Sender: TObject);
     procedure BtnPublishGiteeClick(Sender: TObject);
     procedure BtnGenerateUnlockClick(Sender: TObject);
+    procedure CmbProjectMRUChange(Sender: TObject);
+    procedure BtnBrowseConfigClick(Sender: TObject);
+    procedure BtnSaveConfigClick(Sender: TObject);
+    procedure BtnValidateConfigClick(Sender: TObject);
+    procedure BtnReloadConfigClick(Sender: TObject);
+    procedure BtnOpenOutputDirClick(Sender: TObject);
+    procedure BtnOpenVersionUrlClick(Sender: TObject);
+    procedure BtnPublishAllClick(Sender: TObject);
+    procedure BtnClearLogClick(Sender: TObject);
 
     // Helpers
     procedure SetStatus(const Msg: string; IsError: Boolean = False);
     function Confirm(const Msg: string): Boolean;
+    procedure AppendLog(const Msg: string);
+    procedure UpdateTargetStatusUI;
+
+    // Config helpers
+    function GetMRUStoragePath: string;
+    procedure LoadConfigFromFile(const APath: string);
+    procedure SaveConfigToFile(const APath: string);
+    procedure ConfigToUI;
+    procedure UIToConfig;
+    procedure RefreshMRUComboBox;
+    procedure LoadLastProject;
 
     function ReadDprojVersion(const DprojPath: string; out Version: string): Boolean;
     function WriteDprojVersion(const DprojPath, Version: string): Boolean;
@@ -135,6 +198,7 @@ type
     function PublishToGitee(const Repo, Tag, Token, PackagePath, ReleaseNotes: string): Boolean;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var
@@ -151,8 +215,12 @@ begin
   inherited Create(AOwner);
   Caption := 'UniPublisher - 通用发布工具';
   Width := 900;
-  Height := 700;
+  Height := 750;
   Position := poScreenCenter;
+
+  FConfig := TPublishConfig.Create;
+  FMRU := TPublishConfigMRU.Create(GetMRUStoragePath, 10);
+  FConfigLoaded := False;
 
   CreateUI;
   WireEvents;
@@ -162,7 +230,144 @@ begin
   cmbUnlockLevel.ItemIndex := 0; // Free
   dtpUnlockDate.Date := Date;
 
+  // Load MRU and last project
+  RefreshMRUComboBox;
+  LoadLastProject;
+  UpdateTargetStatusUI;
+
   SetStatus('就绪');
+end;
+
+destructor TfrmUniPublisherMain.Destroy;
+begin
+  FMRU.Free;
+  FConfig.Free;
+  inherited;
+end;
+
+function TfrmUniPublisherMain.GetMRUStoragePath: string;
+var
+  DataDir: string;
+begin
+  DataDir := TPath.Combine(TPath.GetHomePath, UNIPUBLISHER_DATA_DIR);
+  ForceDirectories(DataDir);
+  Result := TPath.Combine(DataDir, UNIPUBLISHER_MRU_FILE);
+end;
+
+procedure TfrmUniPublisherMain.RefreshMRUComboBox;
+var
+  Items: TArray<string>;
+  S: string;
+begin
+  cmbProjectMRU.Items.Clear;
+  Items := FMRU.GetItems;
+  for S in Items do
+    cmbProjectMRU.Items.Add(S);
+  if cmbProjectMRU.Items.Count > 0 then
+    cmbProjectMRU.ItemIndex := 0;
+end;
+
+procedure TfrmUniPublisherMain.LoadLastProject;
+var
+  LastPath: string;
+begin
+  LastPath := FMRU.GetMostRecent;
+  if (LastPath <> '') and TFile.Exists(LastPath) then
+    LoadConfigFromFile(LastPath);
+end;
+
+procedure TfrmUniPublisherMain.LoadConfigFromFile(const APath: string);
+begin
+  if not TFile.Exists(APath) then
+  begin
+    SetStatus('配置文件不存在: ' + APath, True);
+    Exit;
+  end;
+
+  if FConfig.LoadFromFile(APath) then
+  begin
+    FConfigLoaded := True;
+    FMRU.Add(APath);
+    RefreshMRUComboBox;
+    ConfigToUI;
+    UpdateTargetStatusUI;
+    SetStatus('已加载配置: ' + ExtractFileName(APath));
+  end
+  else
+    SetStatus('加载配置失败: ' + APath, True);
+end;
+
+procedure TfrmUniPublisherMain.SaveConfigToFile(const APath: string);
+begin
+  UIToConfig;
+  if FConfig.SaveToFile(APath) then
+  begin
+    FConfigLoaded := True;
+    FMRU.Add(APath);
+    RefreshMRUComboBox;
+    SetStatus('已保存配置: ' + ExtractFileName(APath));
+  end
+  else
+    SetStatus('保存配置失败: ' + APath, True);
+end;
+
+procedure TfrmUniPublisherMain.ConfigToUI;
+begin
+  // Basic info
+  edtDprojPath.Text := FConfig.Dproj;
+  edtSourceDir.Text := FConfig.OutputDir;  // OutputDir is actually the build dir
+  edtOutputDir.Text := ExtractFilePath(FConfig.OutputDir); // Package output goes here
+
+  // GitHub
+  if FConfig.PublishTargets.GitHub.Enabled then
+  begin
+    edtGitHubRepo.Text := FConfig.PublishTargets.GitHub.GetRepoSlug;
+  end;
+
+  // Gitee
+  if FConfig.PublishTargets.Gitee.Enabled then
+  begin
+    edtGiteeRepo.Text := FConfig.PublishTargets.Gitee.GetRepoSlug;
+    // Token is not loaded from config for security
+  end;
+
+  // Update package name based on config
+  if FConfig.AppName <> '' then
+  begin
+    edtPackageName.Text := FConfig.GetDefaultPackageName(edtCurrentVersion.Text);
+  end;
+end;
+
+procedure TfrmUniPublisherMain.UIToConfig;
+var
+  Parts: TArray<string>;
+begin
+  FConfig.Dproj := edtDprojPath.Text;
+  FConfig.OutputDir := edtSourceDir.Text;
+
+  // Parse GitHub repo
+  if edtGitHubRepo.Text <> '' then
+  begin
+    Parts := edtGitHubRepo.Text.Split(['/']);
+    if Length(Parts) >= 2 then
+    begin
+      FConfig.PublishTargets.GitHub.Owner := Parts[0];
+      FConfig.PublishTargets.GitHub.Repo := Parts[1];
+      FConfig.PublishTargets.GitHub.Enabled := True;
+    end;
+  end;
+
+  // Parse Gitee repo
+  if edtGiteeRepo.Text <> '' then
+  begin
+    Parts := edtGiteeRepo.Text.Split(['/']);
+    if Length(Parts) >= 2 then
+    begin
+      FConfig.PublishTargets.Gitee.Owner := Parts[0];
+      FConfig.PublishTargets.Gitee.Repo := Parts[1];
+      FConfig.PublishTargets.Gitee.Enabled := edtGiteeToken.Text <> '';
+    end;
+  end;
 end;
 
 procedure TfrmUniPublisherMain.CreateUI;
@@ -175,6 +380,40 @@ begin
   StatusBar := TStatusBar.Create(Self);
   StatusBar.Parent := Self;
   StatusBar.Align := alBottom;
+
+  // Project selection panel (top)
+  pnlProject := TPanel.Create(Self);
+  pnlProject.Parent := FMainPanel;
+  pnlProject.Align := alTop;
+  pnlProject.Height := 44;
+  pnlProject.BevelOuter := bvNone;
+
+  lblProject := TLabel.Create(Self);
+  lblProject.Parent := pnlProject;
+  lblProject.Left := 16;
+  lblProject.Top := 14;
+  lblProject.Caption := '项目配置:';
+
+  cmbProjectMRU := TComboBox.Create(Self);
+  cmbProjectMRU.Parent := pnlProject;
+  cmbProjectMRU.Left := 90;
+  cmbProjectMRU.Top := 10;
+  cmbProjectMRU.Width := 550;
+  cmbProjectMRU.Style := csDropDownList;
+
+  btnBrowseConfig := TButton.Create(Self);
+  btnBrowseConfig.Parent := pnlProject;
+  btnBrowseConfig.Left := 650;
+  btnBrowseConfig.Top := 8;
+  btnBrowseConfig.Width := 80;
+  btnBrowseConfig.Caption := '浏览...';
+
+  btnSaveConfig := TButton.Create(Self);
+  btnSaveConfig.Parent := pnlProject;
+  btnSaveConfig.Left := 740;
+  btnSaveConfig.Top := 8;
+  btnSaveConfig.Width := 100;
+  btnSaveConfig.Caption := '保存配置';
 
   FPageControl := TPageControl.Create(Self);
   FPageControl.Parent := FMainPanel;
@@ -497,10 +736,141 @@ begin
   memUnlockCodes.ScrollBars := ssVertical;
   memUnlockCodes.Font.Name := 'Consolas';
   memUnlockCodes.Font.Size := 10;
+
+  // ---------- Publish status & log panel (bottom right) ----------
+  pnlPublishStatus := TPanel.Create(Self);
+  pnlPublishStatus.Parent := FMainPanel;
+  pnlPublishStatus.Align := alRight;
+  pnlPublishStatus.Width := 280;
+  pnlPublishStatus.BevelOuter := bvNone;
+
+  // Target status group
+  grpTargetStatus := TGroupBox.Create(Self);
+  grpTargetStatus.Parent := pnlPublishStatus;
+  grpTargetStatus.Align := alTop;
+  grpTargetStatus.Height := 130;
+  grpTargetStatus.Caption := '发布目标状态';
+
+  // HTTP status
+  shpHttpStatus := TShape.Create(Self);
+  shpHttpStatus.Parent := grpTargetStatus;
+  shpHttpStatus.Left := 16;
+  shpHttpStatus.Top := 28;
+  shpHttpStatus.Width := 16;
+  shpHttpStatus.Height := 16;
+  shpHttpStatus.Shape := stCircle;
+  shpHttpStatus.Brush.Color := clGray;
+
+  lblHttpStatus := TLabel.Create(Self);
+  lblHttpStatus.Parent := grpTargetStatus;
+  lblHttpStatus.Left := 40;
+  lblHttpStatus.Top := 28;
+  lblHttpStatus.Caption := 'HTTP: 未配置';
+
+  // GitHub status
+  shpGitHubStatus := TShape.Create(Self);
+  shpGitHubStatus.Parent := grpTargetStatus;
+  shpGitHubStatus.Left := 16;
+  shpGitHubStatus.Top := 52;
+  shpGitHubStatus.Width := 16;
+  shpGitHubStatus.Height := 16;
+  shpGitHubStatus.Shape := stCircle;
+  shpGitHubStatus.Brush.Color := clGray;
+
+  lblGitHubStatus := TLabel.Create(Self);
+  lblGitHubStatus.Parent := grpTargetStatus;
+  lblGitHubStatus.Left := 40;
+  lblGitHubStatus.Top := 52;
+  lblGitHubStatus.Caption := 'GitHub: 未配置';
+
+  // Gitee status
+  shpGiteeStatus := TShape.Create(Self);
+  shpGiteeStatus.Parent := grpTargetStatus;
+  shpGiteeStatus.Left := 16;
+  shpGiteeStatus.Top := 76;
+  shpGiteeStatus.Width := 16;
+  shpGiteeStatus.Height := 16;
+  shpGiteeStatus.Shape := stCircle;
+  shpGiteeStatus.Brush.Color := clGray;
+
+  lblGiteeStatus := TLabel.Create(Self);
+  lblGiteeStatus.Parent := grpTargetStatus;
+  lblGiteeStatus.Left := 40;
+  lblGiteeStatus.Top := 76;
+  lblGiteeStatus.Caption := 'Gitee: 未配置';
+
+  btnValidateConfig := TButton.Create(Self);
+  btnValidateConfig.Parent := grpTargetStatus;
+  btnValidateConfig.Left := 140;
+  btnValidateConfig.Top := 96;
+  btnValidateConfig.Width := 120;
+  btnValidateConfig.Caption := '验证配置';
+
+  // Quick actions panel
+  pnlQuickActions := TPanel.Create(Self);
+  pnlQuickActions.Parent := pnlPublishStatus;
+  pnlQuickActions.Align := alTop;
+  pnlQuickActions.Height := 100;
+  pnlQuickActions.BevelOuter := bvNone;
+
+  btnReloadConfig := TButton.Create(Self);
+  btnReloadConfig.Parent := pnlQuickActions;
+  btnReloadConfig.Left := 16;
+  btnReloadConfig.Top := 8;
+  btnReloadConfig.Width := 120;
+  btnReloadConfig.Caption := '重新加载配置';
+
+  btnOpenOutputDir := TButton.Create(Self);
+  btnOpenOutputDir.Parent := pnlQuickActions;
+  btnOpenOutputDir.Left := 144;
+  btnOpenOutputDir.Top := 8;
+  btnOpenOutputDir.Width := 120;
+  btnOpenOutputDir.Caption := '打开输出目录';
+
+  btnOpenVersionUrl := TButton.Create(Self);
+  btnOpenVersionUrl.Parent := pnlQuickActions;
+  btnOpenVersionUrl.Left := 16;
+  btnOpenVersionUrl.Top := 40;
+  btnOpenVersionUrl.Width := 120;
+  btnOpenVersionUrl.Caption := '打开 version URL';
+
+  btnPublishAll := TButton.Create(Self);
+  btnPublishAll.Parent := pnlQuickActions;
+  btnPublishAll.Left := 144;
+  btnPublishAll.Top := 40;
+  btnPublishAll.Width := 120;
+  btnPublishAll.Height := 40;
+  btnPublishAll.Caption := '一键发布';
+  btnPublishAll.Font.Style := [fsBold];
+
+  // Publish log
+  grpPublishLog := TGroupBox.Create(Self);
+  grpPublishLog.Parent := pnlPublishStatus;
+  grpPublishLog.Align := alClient;
+  grpPublishLog.Caption := '发布日志';
+
+  memPublishLog := TMemo.Create(Self);
+  memPublishLog.Parent := grpPublishLog;
+  memPublishLog.Align := alClient;
+  memPublishLog.ReadOnly := True;
+  memPublishLog.ScrollBars := ssBoth;
+  memPublishLog.Font.Name := 'Consolas';
+  memPublishLog.Font.Size := 9;
+
+  btnClearLog := TButton.Create(Self);
+  btnClearLog.Parent := grpPublishLog;
+  btnClearLog.Align := alBottom;
+  btnClearLog.Caption := '清除日志';
 end;
 
 procedure TfrmUniPublisherMain.WireEvents;
 begin
+  // Project controls
+  cmbProjectMRU.OnChange := CmbProjectMRUChange;
+  btnBrowseConfig.OnClick := BtnBrowseConfigClick;
+  btnSaveConfig.OnClick := BtnSaveConfigClick;
+
+  // General tab
   btnBrowseDproj.OnClick := BtnBrowseDprojClick;
   btnReadVersion.OnClick := BtnReadVersionClick;
   btnWriteVersion.OnClick := BtnWriteVersionClick;
@@ -511,6 +881,76 @@ begin
   btnPublishGitHub.OnClick := BtnPublishGitHubClick;
   btnPublishGitee.OnClick := BtnPublishGiteeClick;
   btnGenerateUnlock.OnClick := BtnGenerateUnlockClick;
+
+  // New controls
+  btnValidateConfig.OnClick := BtnValidateConfigClick;
+  btnReloadConfig.OnClick := BtnReloadConfigClick;
+  btnOpenOutputDir.OnClick := BtnOpenOutputDirClick;
+  btnOpenVersionUrl.OnClick := BtnOpenVersionUrlClick;
+  btnPublishAll.OnClick := BtnPublishAllClick;
+  btnClearLog.OnClick := BtnClearLogClick;
+end;
+
+procedure TfrmUniPublisherMain.CmbProjectMRUChange(Sender: TObject);
+var
+  SelectedPath: string;
+begin
+  if cmbProjectMRU.ItemIndex >= 0 then
+  begin
+    SelectedPath := cmbProjectMRU.Items[cmbProjectMRU.ItemIndex];
+    if (SelectedPath <> '') and TFile.Exists(SelectedPath) then
+      LoadConfigFromFile(SelectedPath)
+    else
+      SetStatus('配置文件不存在: ' + SelectedPath, True);
+  end;
+end;
+
+procedure TfrmUniPublisherMain.BtnBrowseConfigClick(Sender: TObject);
+var
+  D: TOpenDialog;
+begin
+  D := TOpenDialog.Create(Self);
+  try
+    D.Filter := 'Publish Config (*.publish.json)|*.publish.json|All files (*.*)|*.*';
+    D.DefaultExt := 'publish.json';
+    if D.Execute then
+      LoadConfigFromFile(D.FileName);
+  finally
+    D.Free;
+  end;
+end;
+
+procedure TfrmUniPublisherMain.BtnSaveConfigClick(Sender: TObject);
+var
+  D: TSaveDialog;
+  DefaultName: string;
+begin
+  D := TSaveDialog.Create(Self);
+  try
+    D.Filter := 'Publish Config (*.publish.json)|*.publish.json|All files (*.*)|*.*';
+    D.DefaultExt := 'publish.json';
+
+    // Suggest name based on dproj
+    if edtDprojPath.Text <> '' then
+    begin
+      DefaultName := ChangeFileExt(ExtractFileName(edtDprojPath.Text), '.publish.json');
+      D.FileName := DefaultName;
+      D.InitialDir := ExtractFilePath(edtDprojPath.Text);
+    end;
+
+    if D.Execute then
+    begin
+      // Auto-fill appName if empty
+      if FConfig.AppName = '' then
+        FConfig.AppName := ChangeFileExt(ExtractFileName(edtDprojPath.Text), '');
+      if FConfig.AppId = '' then
+        FConfig.AppId := 'com.example.' + LowerCase(FConfig.AppName);
+
+      SaveConfigToFile(D.FileName);
+    end;
+  finally
+    D.Free;
+  end;
 end;
 
 procedure TfrmUniPublisherMain.SetStatus(const Msg: string; IsError: Boolean);
@@ -520,6 +960,212 @@ begin
     StatusBar.Font.Color := clRed
   else
     StatusBar.Font.Color := clWindowText;
+end;
+
+procedure TfrmUniPublisherMain.AppendLog(const Msg: string);
+begin
+  memPublishLog.Lines.Add(FormatDateTime('hh:nn:ss', Now) + ' ' + Msg);
+  // Scroll to bottom
+  SendMessage(memPublishLog.Handle, EM_SCROLLCARET, 0, 0);
+end;
+
+procedure TfrmUniPublisherMain.UpdateTargetStatusUI;
+
+  procedure SetStatusIndicator(Shape: TShape; Lbl: TLabel; 
+    const TargetName: string; Enabled, Valid: Boolean);
+  begin
+    if not Enabled then
+    begin
+      Shape.Brush.Color := clGray;
+      Lbl.Caption := TargetName + ': 未启用';
+    end
+    else if Valid then
+    begin
+      Shape.Brush.Color := clLime;
+      Lbl.Caption := TargetName + ': 就绪';
+    end
+    else
+    begin
+      Shape.Brush.Color := clYellow;
+      Lbl.Caption := TargetName + ': 配置不完整';
+    end;
+  end;
+
+var
+  HttpValid, GitHubValid, GiteeValid: Boolean;
+  V: TValidationResult;
+begin
+  // Validate each target
+  V := TTargetValidator.ValidateHttp(FConfig);
+  HttpValid := V.IsValid;
+  
+  V := TTargetValidator.ValidateGitHub(FConfig);
+  GitHubValid := V.IsValid;
+  
+  V := TTargetValidator.ValidateGitee(FConfig);
+  GiteeValid := V.IsValid;
+
+  SetStatusIndicator(shpHttpStatus, lblHttpStatus, 'HTTP', 
+    FConfig.PublishTargets.Http.Enabled, HttpValid);
+  SetStatusIndicator(shpGitHubStatus, lblGitHubStatus, 'GitHub', 
+    FConfig.PublishTargets.GitHub.Enabled, GitHubValid);
+  SetStatusIndicator(shpGiteeStatus, lblGiteeStatus, 'Gitee', 
+    FConfig.PublishTargets.Gitee.Enabled, GiteeValid);
+end;
+
+procedure TfrmUniPublisherMain.BtnValidateConfigClick(Sender: TObject);
+var
+  V: TValidationResult;
+begin
+  UIToConfig;
+  V := TTargetValidator.ValidateAll(FConfig);
+  UpdateTargetStatusUI;
+  
+  AppendLog('=== 配置验证 ===');
+  AppendLog(V.GetSummary);
+  
+  if V.IsValid then
+    SetStatus('配置验证通过')
+  else
+    SetStatus('配置验证失败，请检查日志', True);
+end;
+
+procedure TfrmUniPublisherMain.BtnReloadConfigClick(Sender: TObject);
+var
+  CurrentPath: string;
+begin
+  if cmbProjectMRU.ItemIndex >= 0 then
+  begin
+    CurrentPath := cmbProjectMRU.Items[cmbProjectMRU.ItemIndex];
+    if TFile.Exists(CurrentPath) then
+    begin
+      LoadConfigFromFile(CurrentPath);
+      UpdateTargetStatusUI;
+      AppendLog('已重新加载配置: ' + ExtractFileName(CurrentPath));
+    end
+    else
+      SetStatus('配置文件不存在', True);
+  end
+  else
+    SetStatus('请先选择一个配置文件', True);
+end;
+
+procedure TfrmUniPublisherMain.BtnOpenOutputDirClick(Sender: TObject);
+var
+  Dir: string;
+begin
+  Dir := Trim(edtOutputDir.Text);
+  if Dir = '' then
+    Dir := FConfig.OutputDir;
+    
+  if (Dir <> '') and TDirectory.Exists(Dir) then
+  begin
+    ShellExecute(Handle, 'open', PChar(Dir), nil, nil, SW_SHOWNORMAL);
+    AppendLog('已打开输出目录: ' + Dir);
+  end
+  else
+    SetStatus('输出目录不存在: ' + Dir, True);
+end;
+
+procedure TfrmUniPublisherMain.BtnOpenVersionUrlClick(Sender: TObject);
+var
+  Url: string;
+begin
+  // Try HTTP version.json path first
+  Url := FConfig.PublishTargets.Http.VersionJsonPath;
+  
+  if Url = '' then
+  begin
+    // Fallback to local file
+    Url := Trim(edtVersionJsonPath.Text);
+    if TFile.Exists(Url) then
+    begin
+      ShellExecute(Handle, 'open', PChar(Url), nil, nil, SW_SHOWNORMAL);
+      AppendLog('已打开本地 version.json: ' + Url);
+      Exit;
+    end;
+  end;
+  
+  if Url <> '' then
+  begin
+    ShellExecute(Handle, 'open', PChar(Url), nil, nil, SW_SHOWNORMAL);
+    AppendLog('已打开 version.json URL: ' + Url);
+  end
+  else
+    SetStatus('未配置 version.json URL', True);
+end;
+
+procedure TfrmUniPublisherMain.BtnPublishAllClick(Sender: TObject);
+var
+  Publisher: TUnifiedPublisher;
+  Results: TPublishResults;
+  PackagePath, VersionJsonPath, Tag, Notes: string;
+  V: TValidationResult;
+begin
+  UIToConfig;
+  
+  // Validate first
+  V := TTargetValidator.ValidateAll(FConfig);
+  if not V.IsValid then
+  begin
+    AppendLog('=== 配置验证失败，无法发布 ===');
+    AppendLog(V.GetSummary);
+    SetStatus('配置验证失败', True);
+    Exit;
+  end;
+  
+  // Gather params
+  PackagePath := TPath.Combine(edtOutputDir.Text, edtPackageName.Text);
+  VersionJsonPath := edtVersionJsonPath.Text;
+  Tag := 'v' + Trim(edtCurrentVersion.Text);
+  Notes := memReleaseNotes.Text;
+  
+  if not TFile.Exists(PackagePath) then
+  begin
+    SetStatus('包文件不存在: ' + PackagePath, True);
+    Exit;
+  end;
+  
+  if not Confirm(Format('发布 %s 到所有启用的目标?', [Tag])) then
+    Exit;
+  
+  // Publish
+  Publisher := TUnifiedPublisher.Create(FConfig);
+  try
+    Publisher.OnLog := AppendLog;
+    Publisher.OnProgress := 
+      procedure(const TargetName: string; Progress: Integer; const StatusText: string)
+      begin
+        SetStatus(Format('[%s] %d%% - %s', [TargetName, Progress, StatusText]));
+        Application.ProcessMessages;
+      end;
+    
+    Results := Publisher.PublishAll(PackagePath, VersionJsonPath, Tag, Notes);
+    
+    // Update status UI
+    if Results.Http.Status = psSuccess then
+      shpHttpStatus.Brush.Color := clGreen;
+    if Results.GitHub.Status = psSuccess then
+      shpGitHubStatus.Brush.Color := clGreen;
+    if Results.Gitee.Status = psSuccess then
+      shpGiteeStatus.Brush.Color := clGreen;
+      
+    if Results.Http.Status = psFailed then
+      shpHttpStatus.Brush.Color := clRed;
+    if Results.GitHub.Status = psFailed then
+      shpGitHubStatus.Brush.Color := clRed;
+    if Results.Gitee.Status = psFailed then
+      shpGiteeStatus.Brush.Color := clRed;
+    
+    SetStatus(Results.GetSummary);
+  finally
+    Publisher.Free;
+  end;
+end;
+
+procedure TfrmUniPublisherMain.BtnClearLogClick(Sender: TObject);
+begin
+  memPublishLog.Clear;
 end;
 
 function TfrmUniPublisherMain.Confirm(const Msg: string): Boolean;

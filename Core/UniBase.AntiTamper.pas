@@ -82,7 +82,7 @@ class function TAntiTamperPackage.GetDefaultConfig: TAntiTamperConfig;
 begin
   Result.EncryptionKey := 'Default_AntiTamper_Key_2025';
   Result.DownloadURL := 'https://your-website.com/download';
-  Result.TableName := 'images';
+  Result.TableName := 'aboutMeImages';
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
   Result.EncryptionType := etAES256;
@@ -294,6 +294,7 @@ begin
           '  image_data BLOB NOT NULL,' +
           '  address_text TEXT,' +
           '  description TEXT,' +
+          '  enabled INTEGER NOT NULL DEFAULT 1,' +
           '  sha256_hash TEXT NOT NULL,' +
           '  hmac_sha256 TEXT NOT NULL,' +
           '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
@@ -346,6 +347,13 @@ begin
         WriteLog('hmac_sha256字段添加成功');
       except
         WriteLog('hmac_sha256字段可能已存在');
+      end;
+      try
+        Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1';
+        Query.ExecSQL;
+        WriteLog('enabled字段添加成功');
+      except
+        WriteLog('enabled字段可能已存在');
       end;
       Result := True;
     finally
@@ -443,6 +451,7 @@ var
   AddressField: TField;
   SHAField: TField;
   HMACField: TField;
+  EnabledField: TField;
   ExpectedHMAC, ActualHMAC: string;
 begin
   Result := False;
@@ -463,6 +472,13 @@ begin
     if ATable.Locate('image_key', AImageKey, []) then
     begin
       WriteLog('在数据库中找到记录: ' + AImageKey);
+
+      EnabledField := ATable.FindField('enabled');
+      if (EnabledField <> nil) and (not EnabledField.IsNull) and (EnabledField.AsInteger = 0) then
+      begin
+        WriteLog('记录已禁用(enabled=0): ' + AImageKey);
+        Exit;
+      end;
 
       ImageField := ATable.FieldByName('image_data');
       AddressField := ATable.FieldByName('address_text');

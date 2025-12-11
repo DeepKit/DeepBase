@@ -490,6 +490,17 @@ object frmSeedMain: TfrmSeedMain
             TabOrder = 3
             OnChange = cboImageSelectChange
           end
+          object chkEnabled: TCheckBox
+            Left = 630
+            Top = 135
+            Width = 160
+            Height = 17
+            Caption = '启用（在 About 中显示）'
+            Checked = True
+            State = cbChecked
+            TabOrder = 4
+            OnClick = chkEnabledClick
+          end
         end
       end
     end

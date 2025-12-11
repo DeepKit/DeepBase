@@ -30,6 +30,7 @@ type
   // ============================================================================
   
   [TestFixture]
+  [Category('DBEnv')]
   TConfigIntegrationTest = class(TIntegrationTestBase)
   protected
     procedure InitializeTestData; override;
@@ -60,6 +61,7 @@ type
   // ============================================================================
   
   [TestFixture]
+  [Category('DBEnv')]
   TLoggingIntegrationTest = class(TIntegrationTestBase)
   protected
     procedure InitializeTestData; override;
@@ -86,6 +88,7 @@ type
   // ============================================================================
   
   [TestFixture]
+  [Category('DBEnv')]
   TDatabaseIntegrationTest = class(TIntegrationTestBase)
   protected
     procedure InitializeTestData; override;
@@ -112,6 +115,7 @@ type
   // ============================================================================
   
   [TestFixture]
+  [Category('DBEnv')]
   TWorkflowIntegrationTest = class(TIntegrationTestBase)
   protected
     procedure InitializeTestData; override;
@@ -138,6 +142,7 @@ type
   // ============================================================================
   
   [TestFixture]
+  [Category('DBEnv')]
   TPerformanceRegressionTest = class(TIntegrationTestBase)
   private
     FBenchmark: TPerformanceBenchmark;

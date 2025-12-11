@@ -963,7 +963,7 @@ var HTML := Exporter.ToHTML;
 ---
 
 ## 商业化扩展阶段 (P1) ✅
-
+|
 ### FMX-003: FMX 缺失控件补全 ✅
 - **完成日期**: 2025-12-10
 - **内容摘要**:
@@ -971,7 +971,7 @@ var HTML := Exporter.ToHTML;
   - 完成 `FMX/UniBase.FMX.NotificationBar.pas` 实现，跨平台底部通知栏（进度/成功/错误/信息，支持自动隐藏与取消）
   - 完成 `FMX/UniBase.FMX.LicenseStatusPanel.pas` 实现，展示 License 状态、类型、到期时间与授权对象
   - 在 `FMX/UniBase.FMX.Controls.pas` 中注册上述三个控件，加入 "UniBase FMX" 组件面板，API 与 VCL 版本保持一致风格
-
+|
 ### SEC-002: 高级加密支持 ✅
 - **完成日期**: 2025-12-10
 - **内容摘要**:
@@ -981,13 +981,129 @@ var HTML := Exporter.ToHTML;
   - 提供 `THardwareFingerprint` 收集机器指纹（ComputerName/ProcessorId/BiosSerial/DiskSerial 等）并生成 SHA-256 指纹，用于硬件绑定
   - 通过 `TMasterKey.DeriveWithHardwareBinding` + `TKeyManager.ValidateHardwareBinding` 支持主密钥与硬件绑定的加密模型
   - 为配置场景提供 `TKeyManager.EncryptConfig/DecryptConfig` 封装，用于基于 AES-256 的配置值加解密
-
+|
 ### PERF-001: 性能优化 ✅
 - **完成日期**: 2025-12-10
 - **内容摘要**:
   - 日志写入批量优化（TUniBaseLogger 异步写线程 + MAX_BATCH_SIZE 批处理 + 预编译 INSERT）
   - 配置缓存预热（TUniBaseConfig.PreloadCache 在 TUniBaseManager.InitializeModules 中启动时预热 Settings 表）
   - ORM 延迟加载优化（OneToManyAttribute.LazyLoad 标记 + TLazyLoadManager 分页惰性加载支持）
+|
+### PUBL-101: AboutFrame + AntiTamper 规范与文档更新 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 在 `04.01.uniBase-4AI-数据库Schema说明-v1.0.md` 中补充 `aboutMeImages` 表定义,增加 `Enabled INTEGER NOT NULL DEFAULT 1` 字段,并约定 6 个标准 ImageKey (official_gzh / wechat / alipay / btc / usdt / aboutme)。
+  - 在 `10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 中完善 AboutFrame 接入规范: 统一使用 `{AppName}Config.db` 作为 DB1, 说明 aboutMeImages 表字段语义,给出 AntiTamper + SeedTool 播种流程示例。
+  - 在 `10.03.uniBase-4H-私域流量运营指南-v1.0.md` 中新增“关于页面推荐结构”章节,定义 6 个 Tab(公司公众号/微信/支付宝/BTC/USDT/关于我) 的布局与文案骨架,并明确与公众号/解锁体系的关系。
+|
+### PUBL-102: AntiTamper / AboutFrame 模块实现与集成 ✅
+- **完成日期**: 2025-12-09
+- **内容摘要**:
+  - 将原有 `uAntiTamperPackage` / `uBasicProtection` 等分散单元整理归并为 `Core/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`, 提供统一的防篡改初始化与图像解密 API(含 AES/HMAC 支持)。
+  - 实现 `VCL/UniBase.VCL.AboutFrame.pas` 与配套 DFM, 作为统一的 About/打赏/公司公众号 Frame, 从 DB1 的 `aboutMeImages` 表按 ImageKey 读取图像和文本,并根据 `Enabled` 字段控制 Tab 显示。
+  - 与 `UniBase.i18n` 集成, 为 About 页签标题/按钮文案预留多语言支持,以便在工具侧进行本地化。
+
+### PUBL-103: SeedTool aboutMeImages + enabled 改造 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 将 AntiTamper 默认表名从 `images` 统一调整为 `aboutMeImages` (包括 `Core/UniBase.AntiTamper.pas` 与 `Tools/SeedTool/uAntiTamperPackage.pas`), 并在建表/升级逻辑中新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段。
+  - 扩展 SeedTool 数据模型 (`TImageFileInfo`) 增加 `Enabled: Boolean`, 在“文字配置”页签新增 `chkEnabled` 勾选框, 用于控制每个 ImageKey 是否在 AboutFrame 中显示。
+  - 从 `aboutMeImages` 加载数据时一并读取 `enabled` 列, 只读文本模式/完整播种模式下均会在播种后通过 `UPDATE aboutMeImages SET enabled = ...` 同步启用状态。
+
+### PUBL-104: MoveC 参考实现对齐新规范 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 将 MoveC 与 UniBase 示例中的 About/打赏页面统一迁移到 `{AppName}Config.db` + `aboutMeImages` 规范: `FrameAboutMe.pas` 与 `VCL/UniBase.VCL.AboutFrame.pas` 默认连接 `MoveCConfig.db`, 表名绑定为 `aboutMeImages`。
+  - 在 MoveC 与 UniBase AntiTamper 中启用 `enabled` 字段支持, 并在 `LoadSecureImage` 中检测 `enabled=0` 时直接跳过记录, 实现逻辑禁用而不删除数据。
+  - 通过新版 SeedTool 为 MoveC 的 `aboutMeImages` 表播种 6 个标准 key(official_gzh / wechat / alipay / btc / usdt / aboutme) 的图像与文本, 验证 Win32/Win64 下 About 页签显示与禁用行为, 为后续 TwoKeyRun/OmniSync 等项目接入提供参考实现。
+
+### PUBL-106: UniPublisher 配置模型与 version.json 统一规范落地 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Tools/UniPublisher/Core/Publisher.Config.pas` (~700 行):
+    - `TPublishConfig` 配置模型,映射 `.publish.json` 字段 (appId/appName/displayName/dproj/outputDir/packageLayout/publishTargets/metadata)
+    - `TPackageLayout`/`THttpTarget`/`TGitHubTarget`/`TGiteeTarget`/`TPublishMetadata` 记录类型
+    - `TPublishConfigMRU` MRU 管理类,支持最近项目列表持久化
+  - 新增 `Tools/UniPublisher/Core/Publisher.Manifest.pas` (~530 行):
+    - `TVersionManifest` 新版 version.json 结构 (appId/version/channel/publishedAt/files[]/releaseNotes/mandatory/minVersion)
+    - `TManifestFile`/`TManifestMetadata` 记录类型
+    - `TManifestGenerator` 工具类,支持新版 `GenerateManifest` 和旧版 `GenerateLegacyJSON` 格式生成
+    - `IsNewFormat` 自动检测 JSON 格式
+  - 扩展 `Core/UniBase.AutoUpdate.pas` (v0.3 → v0.4):
+    - 新增 `IsNewFormatJson` 格式检测方法
+    - 新增 `CheckForUpdateFromNewFormat`/`CheckForUpdateFromLegacyFormat` 分离解析逻辑
+    - `CheckForUpdateFromJson` 自动识别新旧格式并调用对应解析器
+  - 重构 `Tools/UniPublisher/Forms/UniPublisher.MainForm.pas`:
+    - 顶部新增项目配置选择区域 (MRU 下拉框 + 浏览/保存按钮)
+    - 启动时自动加载最近项目 (`LoadLastProject`)
+    - `ConfigToUI`/`UIToConfig` 配置与 UI 双向同步
+  - 新增单元测试 `Tests/Test.UniBase.PublishConfig.pas` (~580 行):
+    - `TTestPublishConfig`: 7 个测试用例 (序列化/反序列化/验证/持久化)
+    - `TTestVersionManifest`: 7 个测试用例 (新旧格式生成/解析/保存)
+    - `TTestPublishConfigMRU`: 8 个测试用例 (MRU 增删改查/持久化)
+    - `TTestAutoUpdateFormatDetection`: 4 个测试用例 (格式检测/版本提取)
+- **统计**:
+  - 新增代码: ~1800 行
+  - 新增测试: 26 个测试用例
+
+### PUBL-107: UniPublisher 发布目标与开发体验优化 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Tools/UniPublisher/Core/Publisher.Targets.pas` (~895 行):
+    - `TPublishStatus`/`TPublishResult`/`TPublishResults` 发布结果模型
+    - `TValidationResult` 配置验证结果，支持错误和警告收集
+    - `TTargetValidator` 静态验证类，验证 HTTP/GitHub/Gitee 配置完整性，检测 gh CLI 可用性
+    - `THttpPublisher` HTTP 上传发布器，支持 multipart form-data
+    - `TGitHubPublisher` GitHub 发布器，通过 gh CLI 创建 Release 并上传资产
+    - `TGiteePublisher` Gitee 发布器，通过 HTTP API + Access Token 创建 Release
+    - `TUnifiedPublisher` 统一发布入口，支持一键发布到所有启用目标
+  - 增强 `UniPublisher.MainForm.pas`:
+    - 右侧新增发布状态面板 (`pnlPublishStatus`)，包含目标状态指示灯 (圆形 Shape + 标签)
+    - 快捷操作按钮: 重新加载配置 / 打开输出目录 / 打开 version URL / 一键发布
+    - 发布日志 Memo，实时显示发布进度和结果
+    - `UpdateTargetStatusUI` 根据配置自动更新状态指示灯颜色
+- **统计**:
+  - 新增代码: ~895 行 (Publisher.Targets.pas) + ~200 行 (MainForm 增强)
+
+### PUBL-108: Developer Test Center + UniPublisher 集成参考实现 ✅
+- **完成日期**: 2025-12-11
+- **内容摘要**:
+  - 新增 `Core/UniBase.TestCenter.pas` (~636 行):
+    - `TTestStatus` 测试状态枚举 (NotRun/Running/Passed/Failed/Skipped)
+    - `TTestCategory` 测试分类记录
+    - `TTestItem` 测试项类，支持执行回调、状态跟踪、JSON 序列化
+    - `ITestRunner` 测试运行器接口，`TDefaultTestRunner` 默认实现
+    - `TTestCenterManager` 测试中心管理器，支持分类/测试注册、批量执行、结果统计、持久化
+    - `TStandardCategories` 标准分类常量 (core/vcl/fmx/network/database/autoupdate/publisher/tools)
+  - 新增 `VCL/UniBase.VCL.TestCenterFrame.pas` (~655 行):
+    - 三栏布局: 左侧分类树 (TTreeView) / 中间测试列表 (TListView) / 右侧详情日志 (TMemo)
+    - 底部控制区: 运行选中 / 运行全部 / 重置 / 打开 UniPublisher...
+    - "打开 UniPublisher..." 通过 ShellExecute 启动，自动搜索常见路径
+    - `RegisterSampleTests` 注册示例测试用例
+  - 集成到 `Examples/FullDemo/FullDemo.MainForm.pas`:
+    - 新增 "测试中心" 页签，嵌入 TTestCenterFrame
+    - 自动初始化并注册示例测试
+- **统计**:
+  - 新增代码: ~1291 行 (TestCenter + Frame)
+
+### PUBL-105: 工具项目 AboutFrame 集成规划 🟡
+- **完成日期**: 2025-12-11 (规划阶段)
+- **内容摘要**:
+  - 新增 `docs/integrations/README.md` - 集成规划索引文档
+  - 新增 5 个工具项目集成规划文档:
+    - `01.TwoKeyRun-Integration.md` - VCL项目, 已有 FrameAboutMe, 结构分析和迁移方案
+    - `02.OmniSync-Integration.md` - FMX项目, 需新建 AboutFrame, 含 FMX 组件开发计划
+    - `03.SVGThing-Integration.md` - VCL项目, 已有 FrameAboutMe, 数据库迁移方案
+    - `04.Stocks-Integration.md` - FMX项目 (InfoCenter), 已集成 UniBase, 需 FMX 组件
+    - `05.TransSuccess-Integration.md` - VCL项目, 轻量级工具, 弹窗式集成方案
+  - 每个文档包含: 项目概况/当前状态分析/目标架构/集成方案/SeedTool工作流/测试清单/时间估算
+- **统计**:
+  - VCL 项目: 3 个 (TwoKeyRun/SVGThing/TransSuccess), 预估 ~7.5h
+  - FMX 项目: 2 个 (OmniSync/Stocks), 预估 ~6.5h (含 FMX 组件开发)
+  - 总工时估算: ~14h
+- **下一步**:
+  - 按顺序实施: TwoKeyRun → SVGThing → TransSuccess → OmniSync → Stocks
+  - 创建 `UniBase.FMX.AboutFrame.pas` (FMX 版组件)
 
 ---
 
@@ -1013,31 +1129,31 @@ var HTML := Exporter.ToHTML;
 ## 维护阶段 (MAINT) - 进行中
 
 ### MAINT-002: 单元测试覆盖率提升 🟡
-- **状态**: 进行中
-- **目标**:
-  - 单元测试整体覆盖率提升到 95%+，并覆盖关键安全/网络/工具模块的边界条件与错误路径。
-- **已完成 (2025-12-08)**:
-  - ✅ `Test.UniBase.Math.pas` - 数学工具测试 (40+ 测试用例，向量/矩阵/统计/插值/缓动/随机)
-  - ✅ `Test.UniBase.Metrics.pas` - 指标收集测试 (35+ 测试用例，Counter/Gauge/Histogram/Timer/Registry)
-  - ✅ `Test.UniBase.Net.pas` - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
-  - ✅ `Test.UniBase.HttpServer.pas` - HTTP服务器测试 (35+ 测试用例，路由/中间件/请求响应)
-  - ✅ `Test.UniBase.FileWatcher.pas` - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
-- **已完成 (2025-12-10)**:
-  - ✅ CLI 与反射相关测试：`Test.UniBase.CLI.Pipeline.pas`, `Test.UniBase.CLI.Interactive.pas`, `Test.UniBase.Reflection.pas`, `Test.UniBase.Export.pas`
-  - ✅ 数据库与诊断相关测试：`Test.UniBase.Diagnose.pas`, `Test.UniBase.DB.Pool.pas`, `Test.UniBase.DBException.pas`, `Test.UniBase.SQLLogger.pas`
-  - ✅ 核心基础设施测试：`Test.UniBase.SingleInstance.pas`, `Test.UniBase.Schema.pas`, `Test.UniBase.Exception.pas`, `Test.UniBase.Consts.pas`
-  - ✅ 云与后台服务测试：`Test.UniBase.CloudBackup.pas`, `Test.UniBase.Feedback.pas`, `Test.UniBase.PluginManager.pas`, `Test.UniBase.AutoUpdate.pas`
-  - ✅ UI 与体验相关测试：`Test.UniBase.VirtualScroll.pas`, `Test.UniBase.SplashScreen.pas`, `Test.UniBase.AntiTamper.pas`, `Test.UniBase.Protection.pas`
-  - ✅ 安全与密钥管理测试：`Test.UniBase.KeyManager.pas`, `Test.UniBase.Interfaces.pas`, `Test.UniBase.LLM.Manager.pas`, `Test.UniBase.LLM.ImportExport.pas`, `Test.UniBase.ORM.Mapping.pas`, `Test.UniBase.Updater.pas`
-- **已完成 (2025-12-11)**:
-  - ✅ 为 OpenSSL 与 LLM 核心类型补充单元测试：`Test.UniBase.Crypto.OpenSSL.pas`, `Test.UniBase.LLM.pas`，覆盖加解密、错误路径与配置/消息模型序列化。
-  - ✅ 为 GUI 测试基础设施增加回归测试：`Test.UniBase.TestHelper.pas`，覆盖快照捕获/校验、控件查找与用户交互模拟。
-  - ✅ 修复并补充 DB 异常测试：`Core/UniBase.DBException.pas` 改进 `EUniBaseDB.UserMessage` 中文+英文混排场景，`Test.UniBase.DBException.pas` 增加回归用例。
-  - ✅ 新增 WebAPI 集成测试：`Tests/Integration/Test.Integration.WebAPI.pas`，覆盖 HTTP 路由、查询参数解析、CORS、JWT 认证、OpenAPI 生成与 WebSocket 消息路由，相关 Core/Auth 单元问题已修复并通过测试。
-- **下一步**:
-  - 将测试覆盖率统计集成到 `Scripts/run_tests.ps1` 与 CI/CD 流程，生成 HTML/XML 覆盖率报告，并在开发过程中持续监控覆盖率。
-  - （可选）进一步稳定数据库相关 Integration Tests（配置 FireDAC/SQLite 驱动或将其标记为「环境依赖」测试），避免在默认集成测试运行中产生干扰。
-
+|- **状态**: 进行中
+|- **目标**:
+|  - 单元测试整体覆盖率提升到 95%+，并覆盖关键安全/网络/工具模块的边界条件与错误路径。
+|- **已完成 (2025-12-08)**:
+|  - ✅ `Test.UniBase.Math.pas` - 数学工具测试 (40+ 测试用例，向量/矩阵/统计/插值/缓动/随机)
+|  - ✅ `Test.UniBase.Metrics.pas` - 指标收集测试 (35+ 测试用例，Counter/Gauge/Histogram/Timer/Registry)
+|  - ✅ `Test.UniBase.Net.pas` - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
+|  - ✅ `Test.UniBase.HttpServer.pas` - HTTP服务器测试 (35+ 测试用例，路由/中间件/请求响应)
+|  - ✅ `Test.UniBase.FileWatcher.pas` - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
+|- **已完成 (2025-12-10)**:
+|  - ✅ CLI 与反射相关测试：`Test.UniBase.CLI.Pipeline.pas`, `Test.UniBase.CLI.Interactive.pas`, `Test.UniBase.Reflection.pas`, `Test.UniBase.Export.pas`
+|  - ✅ 数据库与诊断相关测试：`Test.UniBase.Diagnose.pas`, `Test.UniBase.DB.Pool.pas`, `Test.UniBase.DBException.pas`, `Test.UniBase.SQLLogger.pas`
+|  - ✅ 核心基础设施测试：`Test.UniBase.SingleInstance.pas`, `Test.UniBase.Schema.pas`, `Test.UniBase.Exception.pas`, `Test.UniBase.Consts.pas`
+|  - ✅ 云与后台服务测试：`Test.UniBase.CloudBackup.pas`, `Test.UniBase.Feedback.pas`, `Test.UniBase.PluginManager.pas`, `Test.UniBase.AutoUpdate.pas`
+|  - ✅ UI 与体验相关测试：`Test.UniBase.VirtualScroll.pas`, `Test.UniBase.SplashScreen.pas`, `Test.UniBase.AntiTamper.pas`, `Test.UniBase.Protection.pas`
+|  - ✅ 安全与密钥管理测试：`Test.UniBase.KeyManager.pas`, `Test.UniBase.Interfaces.pas`, `Test.UniBase.LLM.Manager.pas`, `Test.UniBase.LLM.ImportExport.pas`, `Test.UniBase.ORM.Mapping.pas`, `Test.UniBase.Updater.pas`
+|- **已完成 (2025-12-11)**:
+|  - ✅ 为 OpenSSL 与 LLM 核心类型补充单元测试：`Test.UniBase.Crypto.OpenSSL.pas`, `Test.UniBase.LLM.pas`，覆盖加解密、错误路径与配置/消息模型序列化。
+|  - ✅ 为 GUI 测试基础设施增加回归测试：`Test.UniBase.TestHelper.pas`，覆盖快照捕获/校验、控件查找与用户交互模拟。
+|  - ✅ 修复并补充 DB 异常测试：`Core/UniBase.DBException.pas` 改进 `EUniBaseDB.UserMessage` 中文+英文混排场景，`Test.UniBase.DBException.pas` 增加回归用例。
+|  - ✅ 新增 WebAPI 集成测试：`Tests/Integration/Test.Integration.WebAPI.pas`，覆盖 HTTP 路由、查询参数解析、CORS、JWT 认证、OpenAPI 生成与 WebSocket 消息路由，相关 Core/Auth 单元问题已修复并通过测试。
+|  - ✅ 将测试覆盖率统计集成到 `Scripts/run_tests.ps1`，支持在本地/CI 中输出 DUnitX XML 结果及简易 HTML 汇总页面，便于持续监控覆盖率。
+|  - ✅ 将数据库相关 Integration Tests 标记为「环境依赖」：在 `Test.Integration.Core.pas` 中为所有依赖 SQLite/FireDAC 的集成测试 Fixture 添加 `Category("DBEnv")`，并在 `Scripts/run_tests.ps1` 中默认通过 `--exclude_category:DBEnv` 排除这些测试；当需要完整运行数据库集成测试时，可通过设置环境变量 `UNIBASE_RUN_DB_INTEGRATION=1` 显式启用。
+|- **下一步**:
+|  - （可选）在持续集成环境中补充针对数据库 Integration Tests 的文档与示例配置（包括 FireDAC/SQLite 驱动部署方式、专用测试数据库路径等），方便在有完整数据库环境的机器上重新启用 DB 集成测试。
 ---
 
 ## 社区与生态（ECO）

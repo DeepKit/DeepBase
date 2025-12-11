@@ -9,7 +9,11 @@ param(
     
     [switch]$Report,
     
-    [string]$OutputDir = "TestResults"
+    [string]$OutputDir = "TestResults",
+    
+    [switch]$Coverage,
+    
+    [string]$CoverageToolPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,9 +25,23 @@ $IntegrationDir = Join-Path $TestsDir "Integration"
 $OutputPath = Join-Path $BaseDir $OutputDir
 $DelphiCompiler = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc32.exe"
 
+# Resolve coverage tool path (if requested)
+if (-not $CoverageToolPath) {
+    if ($env:DELPHI_COVERAGE_TOOL) {
+        $CoverageToolPath = $env:DELPHI_COVERAGE_TOOL
+    } else {
+        $CoverageToolPath = "CodeCoverage.exe"
+    }
+}
+$CoverageOutputDir = Join-Path $OutputPath "coverage"
+
 # Ensure output directory exists
 if (-not (Test-Path $OutputPath)) {
     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+}
+
+if ($Coverage -and -not (Test-Path $CoverageOutputDir)) {
+    New-Item -ItemType Directory -Path $CoverageOutputDir -Force | Out-Null
 }
 
 Write-Host "=============================================="
@@ -53,6 +71,15 @@ $UnitPaths = @(
 )
 $SearchPath = $UnitPaths -join ";"
 
+# Unit directories for code coverage (只统计 UniBase 自身及测试代码)
+$CoverageUnitDirs = @(
+    "$BaseDir\Core",
+    "$BaseDir\VCL",
+    "$BaseDir\FMX",
+    "$TestsDir"
+)
+$CoverageUnitParam = $CoverageUnitDirs -join ";"
+
 function Compile-TestProject {
     param(
         [string]$ProjectFile,
@@ -66,6 +93,12 @@ function Compile-TestProject {
         "-Q",
         "-B"
     )
+
+    if ($Coverage) {
+        # 生成详细 MAP 文件,供覆盖率工具使用
+        $args += "-GD"
+    }
+
     $args += $BuildFlags
     $args += $ProjectFile
     
@@ -84,7 +117,8 @@ function Run-TestProject {
     param(
         [string]$ExePath,
         [string]$TestName,
-        [string]$XmlOutput
+        [string]$XmlOutput,
+        [string[]]$ExtraArgs = @()
     )
     
     Write-Host ""
@@ -97,6 +131,10 @@ function Run-TestProject {
         $args += "--xmlfile:$XmlOutput"
     }
     $args += "--exitbehavior:Continue"
+
+    if ($ExtraArgs -and $ExtraArgs.Length -gt 0) {
+        $args += $ExtraArgs
+    }
     
     $process = Start-Process -FilePath $ExePath -ArgumentList $args -Wait -PassThru -NoNewWindow
     
@@ -104,10 +142,60 @@ function Run-TestProject {
     
     if ($process.ExitCode -eq 0) {
         Write-Host "SUCCESS: All $TestName tests passed" -ForegroundColor Green
+
+        if ($Coverage) {
+            Run-CodeCoverage -ExePath $ExePath -CoverageName $TestName
+        }
+
         return $true
     } else {
         Write-Host "FAILED: Some $TestName tests failed (Exit code: $($process.ExitCode))" -ForegroundColor Red
         return $false
+    }
+}
+
+function Run-CodeCoverage {
+    param(
+        [string]$ExePath,
+        [string]$CoverageName
+    )
+
+    if (-not $Coverage) {
+        return
+    }
+
+    if (-not (Test-Path $CoverageToolPath)) {
+        Write-Host "WARNING: Coverage requested but tool not found at $CoverageToolPath" -ForegroundColor Yellow
+        return
+    }
+
+    $mapPath = [System.IO.Path]::ChangeExtension($ExePath, ".map")
+    if (-not (Test-Path $mapPath)) {
+        Write-Host "WARNING: MAP file not found for coverage: $mapPath" -ForegroundColor Yellow
+        return
+    }
+
+    $outDir = Join-Path $CoverageOutputDir $CoverageName
+    if (-not (Test-Path $outDir)) {
+        New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+    }
+
+    Write-Host "Running code coverage for $CoverageName..."
+
+    $args = @(
+        "-e", "`"$ExePath`"",
+        "-m", "`"$mapPath`"",
+        "-u", "`"$CoverageUnitParam`"",
+        "-od", "`"$outDir`"",
+        "-html",
+        "-xml"
+    )
+
+    $process = Start-Process -FilePath $CoverageToolPath -ArgumentList $args -Wait -PassThru -NoNewWindow
+    if ($process.ExitCode -ne 0) {
+        Write-Host "WARNING: Coverage tool exited with code $($process.ExitCode) for $CoverageName" -ForegroundColor Yellow
+    } else {
+        Write-Host "Coverage report generated at $outDir" -ForegroundColor Green
     }
 }
 
@@ -151,7 +239,13 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
     
     if (Test-Path $intProject) {
         if (Compile-TestProject -ProjectFile $intProject -ProjectName "Integration Tests") {
-            $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml
+            # 默认排除需要数据库环境的集成测试,除非显式设置 UNIBASE_RUN_DB_INTEGRATION=1
+            $extraArgs = @()
+            if ($env:UNIBASE_RUN_DB_INTEGRATION -ne '1') {
+                $extraArgs += "--exclude_category:DBEnv"
+            }
+
+            $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs
         } else {
             $Results.IntegrationTests = $false
         }

@@ -30,6 +30,14 @@
 - 影响范围: 所有使用 `TJWTManager.GenerateToken` 生成的 Bearer Token 认证流程，尤其是 WebAPI 中 `TAuthMiddleware` 依赖的 JWT 认证。
 - 验证: 通过 WebAPI 集成测试 `Test_Auth_JwtBearer_Succeeds`，确认携带 Bearer Token 访问 `/secure/profile` 时返回 200 且包含正确的 `userId`/`username` 字段；异常不再出现，StatusCode 不再为 -1 ✅
 
+### BUG-064: AboutFrame / AntiTamper 表结构与配置 DB 不一致导致 enabled 无法生效
+- 发现日期: 2025-12-11
+- 严重性: 🟡 Medium
+- 描述: 文档与 PUBL-101/102 规范要求 About/打赏信息使用 `{AppName}Config.db` 中的 `aboutMeImages` 表并通过 `enabled` 控制显示，但实际代码中 AntiTamper 默认表名仍为 `images`，AboutFrame/MoveC 的 About 窗体也绑定到 `MoveC.db` + `images`，SeedTool 又缺少启用勾选，导致运行时无法按规范切换配置库，也无法通过 `enabled` 按 key 控制 Tab 显示。
+- 修复: 统一 `Core/UniBase.AntiTamper.pas`、`Tools/SeedTool/uAntiTamperPackage.pas` 和 MoveC 的 AntiTamper 包默认表名为 `aboutMeImages`，建表/升级时新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段；更新 `VCL/UniBase.VCL.AboutFrame.pas` 与 MoveC `FrameAboutMe.pas` 默认连接 `MoveCConfig.db` 并绑定 `aboutMeImages`；在 `LoadSecureImage` 中检测 `enabled=0` 时直接跳过记录，同时为 SeedTool 增加 `Enabled` 字段与勾选框，并在播种/文本更新后回写 `aboutMeImages.enabled`。
+- 影响范围: 所有使用 UniBase AboutFrame 或 MoveC About 窗体展示打赏/关于信息的应用，以及依赖 SeedTool 播种 `aboutMeImages` 的工具项目。
+- 验证: 使用新版 SeedTool 为 `MoveCConfig.db.aboutMeImages` 播种 6 个标准 key 并分别设置 `enabled`，在 Win32/Win64 下启动 MoveC 和 UniBase 示例应用，确认 About 页签只显示启用项，禁用项被正确隐藏且 AntiTamper 解密/校验通过 ✅
+
 ---
 
 ## 2025-12-09 Bug 修复

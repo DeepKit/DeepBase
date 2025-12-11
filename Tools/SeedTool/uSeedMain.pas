@@ -20,6 +20,7 @@ type
     FilePath: string;      // 图像文件路径
     AddressText: string;   // 地址文本
     Description: string;   // 描述信息
+    Enabled: Boolean;      // 是否启用（About 中显示）
   end;
 
   TfrmSeedMain = class(TForm)
@@ -59,6 +60,7 @@ type
     memoDescription: TMemo;
     btnSaveText: TBitBtn;
     cboImageSelect: TComboBox;
+    chkEnabled: TCheckBox;
     pnlBottom: TPanel;
     btnSeed: TBitBtn;
     btnClose: TBitBtn;
@@ -78,6 +80,7 @@ type
     procedure cboImageSelectChange(Sender: TObject);
     procedure edtAddressTextChange(Sender: TObject);
     procedure memoDescriptionChange(Sender: TObject);
+    procedure chkEnabledClick(Sender: TObject);
     procedure btnSaveTextClick(Sender: TObject);
     procedure pcMainChange(Sender: TObject);
     procedure btnLoadFromDbClick(Sender: TObject);
@@ -157,6 +160,7 @@ begin
   FImageFiles[NewIndex].FilePath := AFilePath;
   FImageFiles[NewIndex].AddressText := '';
   FImageFiles[NewIndex].Description := '';
+  FImageFiles[NewIndex].Enabled := True;
   
   lstImages.Items.Add(Format('%s -> %s', [FileName, TPath.GetFileName(AFilePath)]));
   UpdateComboBox;
@@ -210,6 +214,7 @@ begin
   lblCurrentImageKey.Caption := FImageFiles[Index].Key;
   edtAddressText.Text := FImageFiles[Index].AddressText;
   memoDescription.Text := FImageFiles[Index].Description;
+  chkEnabled.Checked := FImageFiles[Index].Enabled;
   FTextModified := False;
   btnSaveText.Enabled := False;
 end;
@@ -220,6 +225,7 @@ begin
   begin
     FImageFiles[FCurrentEditIndex].AddressText := edtAddressText.Text;
     FImageFiles[FCurrentEditIndex].Description := memoDescription.Text;
+    FImageFiles[FCurrentEditIndex].Enabled := chkEnabled.Checked;
     FTextModified := False;
     btnSaveText.Enabled := False;
     Log(Format('已保存 %s 的文本配置', [FImageFiles[FCurrentEditIndex].Key]));
@@ -232,6 +238,7 @@ begin
   lblCurrentImageKey.Caption := '未选择';
   edtAddressText.Text := '';
   memoDescription.Text := '';
+  chkEnabled.Checked := True;
   FTextModified := False;
   btnSaveText.Enabled := False;
 end;
@@ -246,6 +253,15 @@ begin
 end;
 
 procedure TfrmSeedMain.memoDescriptionChange(Sender: TObject);
+begin
+  if FCurrentEditIndex >= 0 then
+  begin
+    FTextModified := True;
+    btnSaveText.Enabled := True;
+  end;
+end;
+
+procedure TfrmSeedMain.chkEnabledClick(Sender: TObject);
 begin
   if FCurrentEditIndex >= 0 then
   begin
@@ -304,6 +320,8 @@ var
   Query: TFDQuery;
   ImageKey, AddressText, Description: string;
   NewIndex, ExistingIndex: Integer;
+  EnabledField: TField;
+  EnabledValue: Boolean;
 begin
   if Trim(edtDbPath.Text) = '' then
   begin
@@ -328,7 +346,7 @@ begin
     
     Query := TFDQuery.Create(nil);
     Query.Connection := Conn;
-    Query.SQL.Text := 'SELECT image_key, address_text, description FROM images';
+    Query.SQL.Text := 'SELECT image_key, address_text, description, enabled FROM aboutMeImages';
     Query.Open;
     
     if Query.IsEmpty then
@@ -345,6 +363,12 @@ begin
       ImageKey := Query.FieldByName('image_key').AsString;
       AddressText := Query.FieldByName('address_text').AsString;
       Description := Query.FieldByName('description').AsString;
+
+      EnabledField := Query.FindField('enabled');
+      if Assigned(EnabledField) and (not EnabledField.IsNull) then
+        EnabledValue := EnabledField.AsInteger <> 0
+      else
+        EnabledValue := True;
       
       // 检查是否已存在
       ExistingIndex := FindImageIndex(ImageKey);
@@ -354,6 +378,7 @@ begin
         // 更新现有记录的文本
         FImageFiles[ExistingIndex].AddressText := AddressText;
         FImageFiles[ExistingIndex].Description := Description;
+        FImageFiles[ExistingIndex].Enabled := EnabledValue;
         Log(Format('  更新: %s', [ImageKey]));
       end
       else
@@ -365,6 +390,7 @@ begin
         FImageFiles[NewIndex].FilePath := '';  // 无文件路径
         FImageFiles[NewIndex].AddressText := AddressText;
         FImageFiles[NewIndex].Description := Description;
+        FImageFiles[NewIndex].Enabled := EnabledValue;
         
         lstImages.Items.Add(Format('%s [仅文本]', [ImageKey]));
         Log(Format('  加载: %s (address=%s)', [ImageKey, IfThen(AddressText <> '', AddressText, '空')]));
@@ -729,9 +755,10 @@ begin
       Query := TFDQuery.Create(nil);
       try
         Query.Connection := AConn;
-        Query.SQL.Text := 'UPDATE images SET address_text = :addr, description = :desc, updated_at = CURRENT_TIMESTAMP WHERE image_key = :key';
+        Query.SQL.Text := 'UPDATE aboutMeImages SET address_text = :addr, description = :desc, enabled = :enabled, updated_at = CURRENT_TIMESTAMP WHERE image_key = :key';
         Query.ParamByName('addr').AsString := AddressText;
         Query.ParamByName('desc').AsString := Description;
+        Query.ParamByName('enabled').AsInteger := Ord(FImageFiles[Index].Enabled);
         Query.ParamByName('key').AsString := ImageKey;
         Query.ExecSQL;
         
@@ -780,6 +807,19 @@ begin
         if TAntiTamperPackage.SaveSecureImage(AConn, ImageKey, ImageData, AddressText, Description) then
         begin
           Log(Format('  ✓ 播种成功: %s', [ImageKey]));
+
+          // 播种成功后更新 aboutMeImages.enabled
+          Query := TFDQuery.Create(nil);
+          try
+            Query.Connection := AConn;
+            Query.SQL.Text := 'UPDATE aboutMeImages SET enabled = :enabled, updated_at = CURRENT_TIMESTAMP WHERE image_key = :key';
+            Query.ParamByName('enabled').AsInteger := Ord(FImageFiles[Index].Enabled);
+            Query.ParamByName('key').AsString := ImageKey;
+            Query.ExecSQL;
+          finally
+            Query.Free;
+          end;
+
           Result := True;
         end
         else

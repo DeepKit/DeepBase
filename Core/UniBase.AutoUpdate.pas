@@ -1,7 +1,7 @@
 { ============================================================================
   UniBase.AutoUpdate - High-Level Auto-Update Helper
   
-  Version: 0.3
+  Version: 0.4
   Description:
     Lightweight helper for application auto-update based on a static
     version.json file hosted on a web server or CDN.
@@ -12,7 +12,21 @@
       - Each channel (stable/beta/dev) contains version info and download URL
       - Optionally mark releases as mandatory with SHA256 checksum
 
-    Expected version.json structure (see CloudServices/README.md):
+    Supports two version.json formats:
+    
+    1. New Standard Format (UniPublisher-Spec.md compliant):
+      {
+        "appId": "com.goodmem.app",
+        "version": "1.2.0",
+        "channel": "stable",
+        "publishedAt": "2025-12-11T08:00:00Z",
+        "files": [{ "name": "...", "url": "...", "size": ..., "sha256": "..." }],
+        "releaseNotes": "...",
+        "mandatory": false,
+        "minVersion": "1.0.0"
+      }
+    
+    2. Legacy Format (backward compatible):
       {
         "stable": {
           "version": "1.0.0",
@@ -90,8 +104,11 @@ type
 
     class function ChannelKey(Channel: TUpdateChannel): string; static;
     class function NormalizeVersion(const S: string): string; static;
+    class function IsNewFormatJson(ARoot: TJSONObject): Boolean; static;
 
     function CheckForUpdateFromJson(out Info: TUpdateInfo): Boolean;
+    function CheckForUpdateFromNewFormat(ARoot: TJSONObject; out Info: TUpdateInfo): Boolean;
+    function CheckForUpdateFromLegacyFormat(ARoot: TJSONObject; out Info: TUpdateInfo): Boolean;
     function CheckForUpdateFromGitHub(const RepoSlug: string; out Info: TUpdateInfo): Boolean;
     function CheckForUpdateFromGitee(const RepoSlug: string; out Info: TUpdateInfo): Boolean;
   public
@@ -193,11 +210,7 @@ function TUniBaseAutoUpdate.CheckForUpdateFromJson(out Info: TUpdateInfo): Boole
 var
   Client: THTTPClient;
   Response: IHTTPResponse;
-  Root, ChanObj: TJSONObject;
-  ChannelName: string;
-  VerStr: string;
-  CurVer, RemoteVer: TSemanticVersion;
-  DateStr: string;
+  Root: TJSONObject;
 begin
   Result := False;
   Info.Version := '';
@@ -220,41 +233,11 @@ begin
       if Root = nil then
         Exit;
 
-      ChannelName := ChannelKey(FChannel);
-      ChanObj := Root.GetValue<TJSONObject>(ChannelName);
-      if ChanObj = nil then
-        Exit;
-
-      VerStr := ChanObj.GetValue<string>('version', '');
-      if VerStr = '' then
-        Exit;
-
-      CurVer := TSemanticVersion.Parse(NormalizeVersion(GetCurrentVersion));
-      RemoteVer := TSemanticVersion.Parse(NormalizeVersion(VerStr));
-
-      // Only treat as update when remote version is strictly newer
-      if not RemoteVer.IsNewerThan(CurVer) then
-        Exit;
-
-      Info.Version := VerStr;
-      Info.Channel := FChannel;
-      Info.DownloadUrl := ChanObj.GetValue<string>('downloadUrl', '');
-      Info.DownloadSize := ChanObj.GetValue<Int64>('fileSize', 0);
-      Info.Sha256 := ChanObj.GetValue<string>('sha256', '');
-      Info.Changelog := ChanObj.GetValue<string>('releaseNotes', '');
-      Info.ForceUpdate := ChanObj.GetValue<Boolean>('isMandatory', False);
-
-      DateStr := ChanObj.GetValue<string>('releaseDate', '');
-      if DateStr <> '' then
-      try
-        Info.ReleaseDate := ISO8601ToDate(DateStr);
-      except
-        Info.ReleaseDate := Now;
-      end
+      // Auto-detect format and parse accordingly
+      if IsNewFormatJson(Root) then
+        Result := CheckForUpdateFromNewFormat(Root, Info)
       else
-        Info.ReleaseDate := Now;
-
-      Result := (Info.DownloadUrl <> '');
+        Result := CheckForUpdateFromLegacyFormat(Root, Info);
     finally
       Root.Free;
     end;

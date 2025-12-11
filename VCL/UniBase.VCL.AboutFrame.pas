@@ -217,7 +217,7 @@ begin
     if FDatabasePath <> '' then
       DatabasePath := FDatabasePath
     else
-      DatabasePath := GetProjectRootPath + 'MoveC.db';
+      DatabasePath := GetProjectRootPath + 'MoveCConfig.db';
     Log('Setting database path: ' + DatabasePath);
 
     // 检查数据库文件是否存在
@@ -232,9 +232,9 @@ begin
     FDConnection1.Params.Values['Database'] := DatabasePath;
     // Note: Password is not set here as encryption is handled at application level
 
-    // 绑定表到 images（防止设计时指向错误的表）
+    // 绑定表到 aboutMeImages（防止设计时指向错误的表）
     FDTable1.Connection := FDConnection1;
-    FDTable1.TableName := 'images';
+    FDTable1.TableName := 'aboutMeImages';
 
     // 检查设计时数据库组件状态
     Log('Checking design-time database components:');
@@ -303,10 +303,10 @@ begin
   CurrentPath := ExtractFilePath(ParamStr(0));
   SearchCount := 0;
 
-  // 向上查找项目根目录，直到找到MoveC.db文件
+  // 向上查找项目根目录，直到找到 MoveCConfig.db 文件
   while (CurrentPath <> '') and (SearchCount < 5) do
   begin
-    TestPath := IncludeTrailingPathDelimiter(CurrentPath) + 'MoveC.db';
+    TestPath := IncludeTrailingPathDelimiter(CurrentPath) + 'MoveCConfig.db';
     if TFile.Exists(TestPath) then
     begin
       Result := IncludeTrailingPathDelimiter(CurrentPath);
