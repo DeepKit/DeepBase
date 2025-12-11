@@ -66,32 +66,6 @@
   - [ ] 创建 `UniBase.FMX.AboutFrame.pas` (FMX版组件)
   - [ ] FMX项目实施 (OmniSync → Stocks/InfoCenter)
 
-#### PUBL-106: UniPublisher 配置模型与 version.json 统一规范落地 ✅
-- **状态**: ✅ 完成
-- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Publisher.Config.pas`: `TPublishConfig` 配置模型、`TPublishConfigMRU` MRU 管理
-  - 新增 `Publisher.Manifest.pas`: `TVersionManifest` 新版格式、`TManifestGenerator` 新旧格式生成
-  - 扩展 `UniBase.AutoUpdate.pas`: 自动识别新版/旧版 version.json 格式
-  - 重构 `UniPublisher.MainForm.pas`: 集成配置加载/保存和 MRU 下拉框
-  - 新增单元测试 `Test.UniBase.PublishConfig.pas`: 26 个测试用例
-
-#### PUBL-107: UniPublisher 发布目标与开发体验优化 ✅
-- **状态**: ✅ 完成
-- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Tools/UniPublisher/Core/Publisher.Targets.pas` (~895 行): TPublishResult/TPublishResults/TValidationResult 结果类型，TTargetValidator 配置验证，THttpPublisher/TGitHubPublisher/TGiteePublisher 三类发布器，TUnifiedPublisher 统一发布入口
-  - 增强 `UniPublisher.MainForm.pas`: 右侧状态面板（目标状态指示灯 + 验证按钮），快捷操作按钮（重新加载配置/打开输出目录/打开 version URL/一键发布），发布日志 Memo
-  - GitHub 发布通过 gh CLI 执行，输出命令和 Release URL；Gitee 发布通过 HTTP API + Access Token
-
-#### PUBL-108: Developer Test Center + UniPublisher 集成参考实现 ✅
-- **状态**: ✅ 完成
-- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Core/UniBase.TestCenter.pas` (~636 行): TTestCategory/TTestItem/TTestStatus 测试模型，ITestRunner 接口，TTestCenterManager 测试管理器，TStandardCategories 标准分类
-  - 新增 `VCL/UniBase.VCL.TestCenterFrame.pas` (~655 行): 左树（分类）/中列表（测试项）/右详情（日志）/底部控制区布局，"打开 UniPublisher..." 按钮通过 ShellExecute 启动
-  - 在 `Examples/FullDemo/FullDemo.MainForm.pas` 中集成测试中心页签，注册示例测试用例
-
 ---
 
 ### 低优先级 (P3)
