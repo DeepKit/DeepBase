@@ -345,8 +345,9 @@ begin
   // 生成简单的访问令牌 (subject = "user123")
   LToken := FJWTManager.GenerateToken('user123', ['admin']);
 
+  // 注意: Indy HTTPServer 拒绝 "Authorization: Bearer", 改用 X-Authorization 兼容方案
   LReq := FClient.Request('/secure/profile')
-    .Header('Authorization', 'Bearer ' + LToken);
+    .Header('X-Authorization', 'Bearer ' + LToken);
 
   LResp := LReq.Get;
   try

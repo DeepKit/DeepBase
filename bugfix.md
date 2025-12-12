@@ -4,6 +4,30 @@
 
 ---
 
+## 2025-12-12 Bug 修复
+
+### BUG-065: Indy HTTPServer 拒绝 Authorization: Bearer 导致 JWT 中间件无法工作
+- 发现日期: 2025-12-12
+- 严重性: 🟡 Medium
+- 描述: 在 Indy `TIdHTTPServer` 场景下，请求携带 `Authorization: Bearer <token>` 会被 Indy 在进入业务路由前直接拒绝（401，Body 为 `Unsupported authorization scheme.`），导致 `TAuthMiddleware` 无法读取 token 并完成认证。
+- 修复:
+  - `Tools/WebService/UniBase.WebAPI.Auth.pas`: Bearer 提取逻辑兼容 `X-Authorization: Bearer <token>`（当 `Authorization` 不可用时作为替代入口），并对提取结果做 Trim。
+  - `Tools/WebService/UniBase.WebAPI.Core.pas`: 修复请求头解析，支持折行 header continuation lines，并确保自定义头（如 `X-Authorization`）可被正确读取。
+  - `Tools/WebService/UniBase.WebAPI.Auth.pas`: 修复认证中间件中每请求用户对象生命周期，避免内存泄漏。
+  - `Tests/Integration/Test.Integration.WebAPI.pas`: 测试用例改用 `X-Authorization` 头以兼容 Indy。
+- 影响范围: UniBase WebAPI（Indy HTTPServer）下的 JWT Bearer 认证。
+- 验证: 运行 `Scripts/run_tests.ps1 -Type Integration`，9/9 测试通过 ✅
+
+### BUG-066: Integration Tests 缺少 FireDAC SQLite 驱动导致测试失败
+- 发现日期: 2025-12-12
+- 严重性: 🟡 Medium
+- 描述: `UniBaseIntegrationTests.dpr` 项目缺少 FireDAC SQLite 驱动引用，导致运行时报错 `Object factory for class ... is missing. To register it, you can drop component [TFDPhysXXXDriverLink] into your project`。
+- 修复: 在 `UniBaseIntegrationTests.dpr` 的 uses 中添加 `FireDAC.Phys.SQLite`, `FireDAC.Phys.SQLiteDef`, `FireDAC.Stan.ExprFuncs`。
+- 影响范围: 集成测试项目。
+- 验证: 重新编译并运行集成测试，9/9 测试通过 ✅
+
+---
+
 ## 2025-12-11 Bug 修复
 
 ### BUG-061: DBException UserMessage 中文+英文混排被截断
@@ -22,13 +46,13 @@
 - 影响范围: 所有通过 WebAPI 访问的 GET/POST 等 HTTP 路由的查询参数解析，尤其是依赖 `Request.GetQueryParam` 的接口。
 - 验证: 通过 `Test.Integration.WebAPI.pas` 中 `Test_RouteParams_And_QueryParams_Parsed` 用例访问 `/api/users/42?verbose=1`，确认响应 JSON 中 `id="42"` 且 `verbose="1"`，集成测试通过 ✅
 
-### BUG-063: JWT Base64 编码包含换行导致 Authorization 头无效
+### BUG-063: JWT Base64 编码包含换行导致 Token 无法安全放入 HTTP Header
 - 发现日期: 2025-12-11
 - 严重性: 🟡 Medium
-- 描述: `TJWTManager.Base64URLEncode` 使用标准 Base64 编码，默认在输出中插入换行符。生成的 JWT 用于 `Authorization: Bearer <token>` 头时，包含 CR/LF 的长行在 HTTP 客户端中被视为无效，`THttpRequest.Execute` 捕获异常并返回 StatusCode = -1，导致受保护接口请求始终失败。
-- 修复: 在 Base64URL 转换前显式移除所有换行符（`sLineBreak`），再将 `+`/`/` 替换为 URL 安全字符并去掉尾部 `=` 填充，确保生成的 JWT 始终为单行字符串，可安全放入 HTTP 头部。
-- 影响范围: 所有使用 `TJWTManager.GenerateToken` 生成的 Bearer Token 认证流程，尤其是 WebAPI 中 `TAuthMiddleware` 依赖的 JWT 认证。
-- 验证: 通过 WebAPI 集成测试 `Test_Auth_JwtBearer_Succeeds`，确认携带 Bearer Token 访问 `/secure/profile` 时返回 200 且包含正确的 `userId`/`username` 字段；异常不再出现，StatusCode 不再为 -1 ✅
+- 描述: `TJWTManager.Base64URLEncode` 使用标准 Base64 编码时可能插入 CRLF/LF/CR 换行。JWT 若携带换行符，放入 HTTP Header（如 `Authorization`/`X-Authorization`）会被客户端/服务器视为非法或被截断，导致认证失败。
+- 修复: 在 Base64URL 转换前显式移除所有 CR/LF（`#13`/`#10`），再将 `+`/`/` 替换为 URL 安全字符并去掉尾部 `=` 填充，确保生成的 JWT 始终为单行字符串。
+- 影响范围: 所有使用 `TJWTManager.GenerateToken` 生成 JWT 并通过 HTTP Header 传输的认证流程。
+- 验证: WebAPI 集成测试 `Test_Auth_JwtBearer_Succeeds` 通过 ✅
 
 ### BUG-064: AboutFrame / AntiTamper 表结构与配置 DB 不一致导致 enabled 无法生效
 - 发现日期: 2025-12-11

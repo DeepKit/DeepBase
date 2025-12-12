@@ -15,6 +15,10 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF}
   DUnitX.TestFramework,
+  // FireDAC SQLite Driver
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  FireDAC.Stan.ExprFuncs,
   // Integration Test Framework
   UniBase.IntegrationTest in 'UniBase.IntegrationTest.pas',
   // Integration Tests

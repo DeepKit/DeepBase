@@ -242,7 +242,8 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
             # 默认排除需要数据库环境的集成测试,除非显式设置 UNIBASE_RUN_DB_INTEGRATION=1
             $extraArgs = @()
             if ($env:UNIBASE_RUN_DB_INTEGRATION -ne '1') {
-                $extraArgs += "--exclude_category:DBEnv"
+                # DUnitX uses --exclude:<Category> to exclude categories
+                $extraArgs += "--exclude:DBEnv"
             }
 
             $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs

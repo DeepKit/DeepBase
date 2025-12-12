@@ -1467,6 +1467,8 @@ var
   LContext: TApiContext;
   LHeader: string;
   LPos: Integer;
+  LLastHeaderName: string;
+  LLastHeaderValue: string;
 begin
   LContext := TApiContext.Create(Self);
   try
@@ -1480,17 +1482,34 @@ begin
     LContext.Request.QueryString := ARequestInfo.UnparsedParams;
     if (LContext.Request.QueryString <> '') and
        (LContext.Request.QueryString[1] = '?') then
-      Delete(LContext.Request.QueryString, 1, 1);
+      LContext.Request.QueryString := Copy(LContext.Request.QueryString, 2, MaxInt);
 
-    // 复制头部
+    // 复制头部（支持折行 Header continuation lines）
+    // 说明：某些客户端/编码实现可能会对超长 header 值进行折行（obs-fold），
+    // 此处将以空白开头的行拼接到上一条 header 值，避免 JWT 等值被截断。
+    LLastHeaderName := '';
+    LLastHeaderValue := '';
+
     for LHeader in ARequestInfo.RawHeaders do
     begin
+      if LHeader = '' then
+        Continue;
+
+      // Header continuation line (line starts with space or tab)
+      if ((LHeader[1] = ' ') or (LHeader[1] = #9)) and (LLastHeaderName <> '') then
+      begin
+        LLastHeaderValue := LLastHeaderValue + ' ' + Trim(LHeader);
+        LContext.Request.Headers.AddOrSetValue(LLastHeaderName, LLastHeaderValue);
+        Continue;
+      end;
+
       LPos := Pos(':', LHeader);
       if LPos > 0 then
-        LContext.Request.Headers.AddOrSetValue(
-          LowerCase(Trim(Copy(LHeader, 1, LPos - 1))),
-          Trim(Copy(LHeader, LPos + 1, Length(LHeader)))
-        );
+      begin
+        LLastHeaderName := LowerCase(Trim(Copy(LHeader, 1, LPos - 1)));
+        LLastHeaderValue := Trim(Copy(LHeader, LPos + 1, Length(LHeader)));
+        LContext.Request.Headers.AddOrSetValue(LLastHeaderName, LLastHeaderValue);
+      end;
     end;
 
     // 读取请求体

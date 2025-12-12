@@ -21,7 +21,8 @@ interface
 
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  System.Hash, System.IOUtils, System.NetEncoding,
+  System.Hash, System.IOUtils,
+  UniBase.AntiTamper,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.TabControl, FMX.Objects, FMX.StdCtrls, FMX.Controls.Presentation,
   FMX.Layouts, FMX.Clipboard, FMX.Platform,
@@ -40,6 +41,7 @@ type
     // 数据库
     FConnection: TFDConnection;
     FQuery: TFDQuery;
+    FTable: TFDTable;
     FDatabasePath: string;
 
     // UI 控件
@@ -96,8 +98,6 @@ type
     procedure BtnCopyBTCClick(Sender: TObject);
     procedure BtnCopyUSDTClick(Sender: TObject);
     procedure LblMachineCodeValueClick(Sender: TObject);
-    function VerifyHMAC(const ImageData: TBytes; const StoredSignature: string): Boolean;
-    function GetHMACKey: string;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -142,12 +142,18 @@ begin
   FQuery := TFDQuery.Create(Self);
   FQuery.Connection := FConnection;
 
+  FTable := TFDTable.Create(Self);
+  FTable.Connection := FConnection;
+  FTable.TableName := 'aboutMeImages';
+
   // 创建 UI 控件
   CreateUIControls;
 end;
 
 destructor TFMXAboutFrame.Destroy;
 begin
+  if Assigned(FTable) and FTable.Active then
+    FTable.Active := False;
   if FConnection.Connected then
     FConnection.Connected := False;
   inherited;
@@ -345,17 +351,47 @@ begin
   FConnection.Params.Database := FDatabasePath;
   FConnection.Connected := True;
 
-  // 确保表存在
+  // 确保表存在（与 UniBase.AntiTamper / SeedTool 协议一致）
   FQuery.SQL.Text :=
     'CREATE TABLE IF NOT EXISTS aboutMeImages (' +
-    '  image_key TEXT PRIMARY KEY,' +
-    '  image_data BLOB,' +
+    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  image_key TEXT NOT NULL UNIQUE,' +
+    '  image_data BLOB NOT NULL,' +
     '  address_text TEXT,' +
-    '  sha256_hash TEXT,' +
-    '  hmac_signature TEXT,' +
-    '  enabled INTEGER DEFAULT 1' +
+    '  description TEXT,' +
+    '  enabled INTEGER NOT NULL DEFAULT 1,' +
+    '  sha256_hash TEXT NOT NULL,' +
+    '  hmac_sha256 TEXT NOT NULL,' +
+    '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
+    '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
     ')';
   FQuery.ExecSQL;
+
+  // 兼容旧表：尽力补齐关键字段（忽略重复/失败）
+  try
+    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN sha256_hash TEXT';
+    FQuery.ExecSQL;
+  except
+  end;
+  try
+    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN hmac_sha256 TEXT';
+    FQuery.ExecSQL;
+  except
+  end;
+  try
+    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1';
+    FQuery.ExecSQL;
+  except
+  end;
+  try
+    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN description TEXT';
+    FQuery.ExecSQL;
+  except
+  end;
+
+  // 打开表，供 Locate/读取使用
+  if not FTable.Active then
+    FTable.Active := True;
 end;
 
 procedure TFMXAboutFrame.UpdateTabVisibility;
@@ -391,106 +427,67 @@ end;
 
 procedure TFMXAboutFrame.LoadAllImages;
 begin
+  // 清空地址显示
+  FBTCAddress := '';
+  FUSDTAddress := '';
+  if Assigned(FLblBTCAddress) then
+    FLblBTCAddress.Text := '';
+  if Assigned(FLblUSDTAddress) then
+    FLblUSDTAddress.Text := '';
+
   LoadSecureImage(KEY_OFFICIAL_GZH, FImgOfficialGzh);
   LoadSecureImage(KEY_WECHAT, FImgWechat);
   LoadSecureImage(KEY_ALIPAY, FImgAlipay);
   LoadSecureImage(KEY_BTC, FImgBTC);
   LoadSecureImage(KEY_USDT, FImgUSDT);
   LoadSecureImage(KEY_ABOUTME, FImgAboutMe);
-
-  // 加载地址文本
-  if FConnection.Connected then
-  begin
-    try
-      // BTC 地址
-      FQuery.SQL.Text := 'SELECT address_text FROM aboutMeImages WHERE image_key = :key';
-      FQuery.ParamByName('key').AsString := KEY_BTC;
-      FQuery.Open;
-      try
-        if not FQuery.Eof then
-        begin
-          FBTCAddress := FQuery.FieldByName('address_text').AsString;
-          FLblBTCAddress.Text := FBTCAddress;
-        end;
-      finally
-        FQuery.Close;
-      end;
-
-      // USDT 地址
-      FQuery.ParamByName('key').AsString := KEY_USDT;
-      FQuery.Open;
-      try
-        if not FQuery.Eof then
-        begin
-          FUSDTAddress := FQuery.FieldByName('address_text').AsString;
-          FLblUSDTAddress.Text := FUSDTAddress;
-        end;
-      finally
-        FQuery.Close;
-      end;
-    except
-      // 忽略错误
-    end;
-  end;
 end;
 
 procedure TFMXAboutFrame.LoadSecureImage(const ImageKey: string; TargetImage: TImage);
 var
-  ImageData: TBytes;
-  StoredSignature: string;
+  DecryptedData: TBytes;
+  AddressText: string;
   Stream: TBytesStream;
 begin
   if not Assigned(TargetImage) then Exit;
-  if not FConnection.Connected then Exit;
+  if not Assigned(FTable) or not FTable.Active then Exit;
 
   try
-    FQuery.SQL.Text := 'SELECT image_data, hmac_signature FROM aboutMeImages WHERE image_key = :key AND enabled = 1';
-    FQuery.ParamByName('key').AsString := ImageKey;
-    FQuery.Open;
-    try
-      if FQuery.Eof then Exit;
-      if FQuery.FieldByName('image_data').IsNull then Exit;
-
-      // 读取图片数据
-      ImageData := FQuery.FieldByName('image_data').AsBytes;
-      StoredSignature := FQuery.FieldByName('hmac_signature').AsString;
-
-      // 验证 HMAC 签名
-      if (StoredSignature <> '') and not VerifyHMAC(ImageData, StoredSignature) then
+    AddressText := '';
+    if TAntiTamperPackage.LoadSecureImageBytes(FTable, ImageKey, DecryptedData, AddressText) then
+    begin
+      // 加载图像（解密后的原始图像字节）
+      if Length(DecryptedData) > 0 then
       begin
-        // 签名验证失败，不显示图片
-        Exit;
+        Stream := TBytesStream.Create(DecryptedData);
+        try
+          try
+            TargetImage.Bitmap.LoadFromStream(Stream);
+          except
+            // 忽略图像解码错误
+          end;
+        finally
+          Stream.Free;
+        end;
       end;
 
-      // 加载图片
-      Stream := TBytesStream.Create(ImageData);
-      try
-        TargetImage.Bitmap.LoadFromStream(Stream);
-      finally
-        Stream.Free;
+      // BTC/USDT 地址文本
+      if SameText(ImageKey, KEY_BTC) then
+      begin
+        FBTCAddress := AddressText;
+        if Assigned(FLblBTCAddress) then
+          FLblBTCAddress.Text := FBTCAddress;
+      end
+      else if SameText(ImageKey, KEY_USDT) then
+      begin
+        FUSDTAddress := AddressText;
+        if Assigned(FLblUSDTAddress) then
+          FLblUSDTAddress.Text := FUSDTAddress;
       end;
-    finally
-      FQuery.Close;
     end;
   except
     // 忽略加载错误
   end;
-end;
-
-function TFMXAboutFrame.VerifyHMAC(const ImageData: TBytes; const StoredSignature: string): Boolean;
-var
-  ComputedSignature: string;
-begin
-  // 计算 HMAC-SHA256
-  ComputedSignature := THashSHA2.GetHMACAsString(ImageData, GetHMACKey, THashSHA2.TSHA2Version.SHA256);
-  Result := SameText(ComputedSignature, StoredSignature);
-end;
-
-function TFMXAboutFrame.GetHMACKey: string;
-begin
-  // 使用固定密钥 (与 VCL 版和 SeedTool 保持一致)
-  // 实际项目中应使用更安全的密钥派生方式
-  Result := 'UniBase_AboutMe_HMAC_Key_2024';
 end;
 
 function TFMXAboutFrame.GenerateMachineCode: string;

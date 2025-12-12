@@ -8,7 +8,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils,
-  Vcl.Dialogs, Vcl.Graphics, Vcl.ExtCtrls, Winapi.ShellAPI, Winapi.Windows,
+  Winapi.ShellAPI, Winapi.Windows,
   FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, UniBase.Protection;
 
 // 加密算法类型
@@ -65,8 +65,13 @@ uses
     // 安全图像操作
     class function SaveSecureImage(AConnection: TFDConnection; const AImageKey: string;
       const AImageData: TBytes; const AAddressText: string = ''; const ADescription: string = ''): Boolean; static;
-    class function LoadSecureImage(ATable: TFDTable; const AImageKey: string;
-      AImage: TImage; out AAddressText: string): Boolean; static;
+
+    /// <summary>
+    /// 从 aboutMeImages 读取并验证图像数据，返回解密后的原始图像字节。
+    /// 注意：此方法不依赖任何 UI 框架（VCL/FMX），由调用方自行加载到控件。
+    /// </summary>
+    class function LoadSecureImageBytes(ATable: TFDTable; const AImageKey: string;
+      out ADecryptedImageData: TBytes; out AAddressText: string): Boolean; static;
 
     // 安全响应
     class procedure HandleSecurityViolation(const ImageKey: string; const Reason: string); static;
@@ -145,26 +150,20 @@ class function TAntiTamperPackage.CalculateMD5(const Data: TBytes): string;
 var
   Hash: THashMD5;
 begin
+  // THashMD5 is a record (no .Free needed)
   Hash := THashMD5.Create;
-  try
-    Hash.Update(Data);
-    Result := Hash.HashAsString;
-  finally
-    Hash.Free;
-  end;
+  Hash.Update(Data);
+  Result := Hash.HashAsString;
 end;
 
 class function TAntiTamperPackage.CalculateSHA256(const Data: TBytes): string;
 var
   Hash: THashSHA2;
 begin
+  // THashSHA2 is a record (no .Free needed)
   Hash := THashSHA2.Create;
-  try
-    Hash.Update(Data);
-    Result := Hash.HashAsString;
-  finally
-    Hash.Free;
-  end;
+  Hash.Update(Data);
+  Result := Hash.HashAsString;
 end;
 
 class function TAntiTamperPackage.DeriveKeyBytes: TBytes;
@@ -223,7 +222,7 @@ end;
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create('防篡改包未初始化');
+    raise Exception.Create(string('防篡改包未初始化'));
 
   case FConfig.EncryptionType of
     etXOR:
@@ -231,19 +230,19 @@ begin
     etAES256:
       Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   else
-    raise Exception.Create('未知的加密类型');
+    raise Exception.Create(string('未知的加密类型'));
   end;
 
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256加密，数据长度: %d bytes', [Length(Result)]))
+    WriteLog(Format(string('使用AES-256加密，数据长度: %d bytes'), [Length(Result)]))
   else
-    WriteLog(Format('使用XOR加密，数据长度: %d bytes', [Length(Result)]));
+    WriteLog(Format(string('使用XOR加密，数据长度: %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create('防篡改包未初始化');
+    raise Exception.Create(string('防篡改包未初始化'));
 
   case FConfig.EncryptionType of
     etXOR:
@@ -251,13 +250,13 @@ begin
     etAES256:
       Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   else
-    raise Exception.Create('未知的加密类型');
+    raise Exception.Create(string('未知的加密类型'));
   end;
 
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256解密，数据长度: %d bytes', [Length(Result)]))
+    WriteLog(Format(string('使用AES-256解密，数据长度: %d bytes'), [Length(Result)]))
   else
-    WriteLog(Format('使用XOR解密，数据长度: %d bytes', [Length(Result)]));
+    WriteLog(Format(string('使用XOR解密，数据长度: %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
@@ -267,7 +266,7 @@ begin
   ActualHash := CalculateSHA256(DecryptedData);
   Result := SameText(ActualHash, ExpectedHash);
   if not Result then
-    WriteLog(Format('SHA-256校验失败: 期望=%s, 实际=%s', [ExpectedHash, ActualHash]));
+    WriteLog(Format(string('SHA-256校验失败: 期望=%s, 实际=%s'), [ExpectedHash, ActualHash]));
 end;
 
 class function TAntiTamperPackage.SetupDatabase(AConnection: TFDConnection): Boolean;
@@ -440,8 +439,8 @@ begin
   end;
 end;
 
-class function TAntiTamperPackage.LoadSecureImage(ATable: TFDTable; const AImageKey: string;
-  AImage: TImage; out AAddressText: string): Boolean;
+class function TAntiTamperPackage.LoadSecureImageBytes(ATable: TFDTable; const AImageKey: string;
+  out ADecryptedImageData: TBytes; out AAddressText: string): Boolean;
 var
   EncryptedData: TBytes;
   DecryptedData: TBytes;
@@ -456,13 +455,9 @@ var
 begin
   Result := False;
   AAddressText := '';
-  try
-    if not Assigned(AImage) then
-    begin
-      WriteLog('Image控件未分配: ' + AImageKey);
-      Exit;
-    end;
+  SetLength(ADecryptedImageData, 0);
 
+  try
     if not ATable.Active then
     begin
       WriteLog('数据表未激活: ' + AImageKey);
@@ -485,69 +480,65 @@ begin
       SHAField := ATable.FieldByName('sha256_hash');
       HMACField := ATable.FindField('hmac_sha256');
 
-      if not ImageField.IsNull then
+      if ImageField.IsNull then
       begin
-        MemoryStream := TMemoryStream.Create;
-        try
-          TBlobField(ImageField).SaveToStream(MemoryStream);
-          MemoryStream.Position := 0;
+        WriteLog('图像字段为空: ' + AImageKey);
+        Exit;
+      end;
 
-          SetLength(EncryptedData, MemoryStream.Size);
+      MemoryStream := TMemoryStream.Create;
+      try
+        TBlobField(ImageField).SaveToStream(MemoryStream);
+        MemoryStream.Position := 0;
+
+        SetLength(EncryptedData, MemoryStream.Size);
+        if MemoryStream.Size > 0 then
           MemoryStream.ReadBuffer(EncryptedData[0], MemoryStream.Size);
 
-          WriteLog(Format('加密数据长度: %d bytes - %s', [Length(EncryptedData), AImageKey]));
+        WriteLog(Format('加密数据长度: %d bytes - %s', [Length(EncryptedData), AImageKey]));
 
-          DecryptedData := DecryptImageData(EncryptedData);
-          WriteLog(Format('解密数据长度: %d bytes - %s', [Length(DecryptedData), AImageKey]));
+        DecryptedData := DecryptImageData(EncryptedData);
+        WriteLog(Format('解密数据长度: %d bytes - %s', [Length(DecryptedData), AImageKey]));
 
-          if (SHAField = nil) or SHAField.IsNull then
-          begin
-            HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为空');
-            Exit;
-          end;
-
-          ExpectedHash := SHAField.AsString;
-          if not VerifyImageIntegrity(DecryptedData, ExpectedHash) then
-          begin
-            HandleSecurityViolation(AImageKey, 'SHA-256校验失败，图像数据可能被篡改');
-            Exit;
-          end;
-
-          if (HMACField = nil) or HMACField.IsNull then
-          begin
-            HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为空');
-            Exit;
-          end;
-
-          if FConfig.EnableHMAC then
-          begin
-            ExpectedHMAC := HMACField.AsString;
-            ActualHMAC := ComputeHMACSHA256(DecryptedData);
-            if not SameText(ExpectedHMAC, ActualHMAC) then
-            begin
-              HandleSecurityViolation(AImageKey, 'HMAC-SHA256校验失败，图像数据可能被篡改');
-              Exit;
-            end;
-          end;
-
-          WriteLog(Format('SHA-256校验通过: %s', [AImageKey]));
-
-          MemoryStream.Clear;
-          MemoryStream.WriteBuffer(DecryptedData[0], Length(DecryptedData));
-          MemoryStream.Position := 0;
-          AImage.Picture.LoadFromStream(MemoryStream);
-          WriteLog(Format('安全图像加载成功: %s, 尺寸: %dx%d', [AImageKey, AImage.Picture.Width, AImage.Picture.Height]));
-
-          if not AddressField.IsNull then
-            AAddressText := AddressField.AsString;
-
-          Result := True;
-        finally
-          MemoryStream.Free;
+        if (SHAField = nil) or SHAField.IsNull then
+        begin
+          HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为空');
+          Exit;
         end;
-      end
-      else
-        WriteLog('图像字段为空: ' + AImageKey);
+
+        ExpectedHash := SHAField.AsString;
+        if not VerifyImageIntegrity(DecryptedData, ExpectedHash) then
+        begin
+          HandleSecurityViolation(AImageKey, 'SHA-256校验失败，图像数据可能被篡改');
+          Exit;
+        end;
+
+        if (HMACField = nil) or HMACField.IsNull then
+        begin
+          HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为空');
+          Exit;
+        end;
+
+        if FConfig.EnableHMAC then
+        begin
+          ExpectedHMAC := HMACField.AsString;
+          ActualHMAC := ComputeHMACSHA256(DecryptedData);
+          if not SameText(ExpectedHMAC, ActualHMAC) then
+          begin
+            HandleSecurityViolation(AImageKey, 'HMAC-SHA256校验失败，图像数据可能被篡改');
+            Exit;
+          end;
+        end;
+
+        if (AddressField <> nil) and (not AddressField.IsNull) then
+          AAddressText := AddressField.AsString;
+
+        ADecryptedImageData := DecryptedData;
+        WriteLog(Format('安全图像读取成功: %s, 明文长度: %d bytes', [AImageKey, Length(ADecryptedImageData)]));
+        Result := True;
+      finally
+        MemoryStream.Free;
+      end;
     end
     else
       WriteLog('数据库中未找到记录: ' + AImageKey);

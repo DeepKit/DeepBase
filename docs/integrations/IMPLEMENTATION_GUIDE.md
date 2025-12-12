@@ -12,6 +12,7 @@
 - UniBase 项目已编译
 - SeedTool 可用 (`UniBase/Tools/SeedTool/SeedTool.exe`)
 - 准备好 6 张标准图片资源
+- 应用启动时需初始化 `UniBase.AntiTamper`（`EncryptionKey/Salt/KdfIterations/EnableHMAC` 必须与 SeedTool 播种一致）
 
 ### 标准图片资源清单
 
@@ -26,7 +27,7 @@
 | `usdt.png` | `usdt` | USDT 钱包二维码 |
 | `aboutme.png` | `aboutme` | 开发者照片/名片 |
 
-将图片放置到：`D:\_Progs\02Business\UniBase\Tools\SeedTool\assets\`
+图片可放在任意目录，使用 SeedTool GUI 直接导入即可（本仓库未强制要求固定 assets 目录）。
 
 ---
 
@@ -50,91 +51,49 @@
 6. 验证: 点击 "查看数据" 确认 6 条记录存在
 ```
 
-### 步骤 2: 修改 FrameAboutMe.pas
+### 步骤 2: 接入 UniBase.VCL.AboutFrame（推荐）
 
-**文件位置**: `D:\_Progs\02Business\TwoKeyRun\FrameAboutMe.pas`
+TwoKeyRun 当前已有自定义 About UI。为减少维护成本，建议直接替换为 UniBase 提供的统一 AboutFrame。
 
-#### 2.1 修改 uses 区域
+#### 2.1 新建 About 窗口（或在现有页面中嵌入 Frame）
+
+**推荐方式**：新建 `AboutForm.pas`，内部放置 `TUniAboutFrame`。
 
 ```pascal
-// 在 uses 中添加
 uses
-  // ... 现有引用 ...
-  UniBase.Security;  // 添加这行
-```
+  System.SysUtils,
+  Vcl.Forms,
+  Vcl.Controls,
+  UniBase.AntiTamper,
+  UniBase.VCL.AboutFrame;
 
-#### 2.2 修改构造函数中的数据库连接
-
-找到构造函数 `Create`，修改安全管理器初始化：
-
-```pascal
-constructor TFrameAboutMe.Create(AOwner: TComponent; AController: IControllerMain);
-begin
-  inherited Create(AOwner);
-  FController := AController;
-
-  // 【修改】使用 TwoKeyRunConfig.db 而不是 TwoKeyRun.db
-  FSecurityManager := TDatabaseSecurityManager.Create(
-    ExtractFilePath(ParamStr(0)) + 'TwoKeyRunConfig.db', nil, nil);
-
-  // ... 其余代码不变 ...
-end;
-```
-
-#### 2.3 修改图片加载方法
-
-找到 `LoadImageFromDB` 方法，替换为使用 UniBase 安全加载：
-
-```pascal
-procedure TFrameAboutMe.LoadImageFromDB(const ImageKey: string; TargetImage: TSkAnimatedImage);
+procedure TMainForm.ShowAbout;
 var
-  ImageStream: TMemoryStream;
-  DBPath: string;
+  Frame: TUniAboutFrame;
+  Config: TAntiTamperConfig;
+  DbPath: string;
 begin
-  LogMessage(Format('LoadImageFromDB: 开始加载图片 - %s', [ImageKey]));
+  // 1) AntiTamper 初始化（参数必须与 SeedTool 播种时一致）
+  Config := TAntiTamperPackage.GetDefaultConfig;
+  Config.EncryptionKey := 'TwoKeyRun_AntiTamper_Key_2025';
+  Config.Salt := 'TwoKeyRun_Salt_v1';
+  Config.KdfIterations := 10000;
+  Config.EnableHMAC := True;
+  TAntiTamperPackage.Initialize(Config);
 
-  if not Assigned(TargetImage) then
-  begin
-    LogMessage(Format('LoadImageFromDB: 目标图片控件不可用 - %s', [ImageKey]));
-    Exit;
-  end;
+  // 2) DB1：{AppName}Config.db
+  DbPath := ExtractFilePath(ParamStr(0)) + 'TwoKeyRunConfig.db';
 
-  DBPath := ExtractFilePath(ParamStr(0)) + 'TwoKeyRunConfig.db';
-  ImageStream := TMemoryStream.Create;
-  try
-    // 【修改】使用 UniBase 的安全图片加载
-    if TAntiTamperPackage.LoadSecureImage(DBPath, ImageKey, ImageStream) then
-    begin
-      LogMessage(Format('LoadImageFromDB: 安全加载成功 - %s, 大小: %d', [ImageKey, ImageStream.Size]));
-      ImageStream.Position := 0;
-      TargetImage.LoadFromStream(ImageStream);
-    end
-    else
-    begin
-      LogMessage(Format('LoadImageFromDB: 图片不存在或验证失败 - %s', [ImageKey]));
-    end;
-  finally
-    ImageStream.Free;
-  end;
+  // 3) 创建并显示 AboutFrame
+  Frame := TUniAboutFrame.Create(Self);
+  Frame.Parent := Self; // 或者某个 Panel
+  Frame.Align := alClient;
+  Frame.DatabasePath := DbPath;
+  Frame.ManualInitialize;
 end;
 ```
 
-#### 2.4 修改 LoadAllImages 方法
-
-确保使用标准 ImageKey：
-
-```pascal
-procedure TFrameAboutMe.LoadAllImages;
-begin
-  // 使用标准 ImageKey
-  LoadImageFromDB('wechat', imgWechat);
-  LoadImageFromDB('alipay', imgAlipay);
-  LoadImageFromDB('btc', imgBTC);
-  LoadImageFromDB('usdt', imgUSDT);
-  LoadImageFromDB('aboutme', imgAboutMe);
-  // 如需公众号页签，添加: LoadImageFromDB('official_gzh', imgOfficialGzh);
-end;
-```
+> 说明：如果 TwoKeyRun 必须保留现有自定义 UI（Skia 等），需要按相同算法从 `aboutMeImages.image_data` 解密并校验 `sha256_hash/hmac_sha256`。可参考 `Core/UniBase.AntiTamper.pas` 的实现。
 
 ### 步骤 3: 更新项目搜索路径
 
@@ -171,11 +130,13 @@ end;
 
 #### 2.1 修改 uses 区域
 
+VCL 项目推荐直接使用 `UniBase.VCL.AboutFrame`（配合 `UniBase.AntiTamper` 初始化）。
+
 ```pascal
 uses
   // ... 现有引用 ...
-  // 【移除】 uAntiTamperPackage, uBasicProtection  // 旧版
-  UniBase.Security;  // 【添加】新版
+  UniBase.AntiTamper,
+  UniBase.VCL.AboutFrame;
 ```
 
 #### 2.2 修改数据库路径
@@ -228,13 +189,15 @@ unit AboutForm;
 interface
 
 uses
-  Vcl.Forms, Vcl.Controls, System.Classes, System.SysUtils,
+  System.Classes, System.SysUtils,
+  Vcl.Controls, Vcl.Forms,
+  UniBase.AntiTamper,
   UniBase.VCL.AboutFrame;
 
 type
   TfrmAbout = class(TForm)
   private
-    FAboutFrame: TAboutFrame;
+    FAboutFrame: TUniAboutFrame;
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -247,6 +210,8 @@ implementation
 {$R *.dfm}
 
 constructor TfrmAbout.Create(AOwner: TComponent);
+var
+  Config: TAntiTamperConfig;
 begin
   inherited;
   Caption := '关于 码到成功';
@@ -256,7 +221,15 @@ begin
   BorderStyle := bsSingle;
   BorderIcons := [biSystemMenu];
 
-  FAboutFrame := TAboutFrame.Create(Self);
+  // AntiTamper 初始化（参数必须与 SeedTool 播种时一致）
+  Config := TAntiTamperPackage.GetDefaultConfig;
+  Config.EncryptionKey := 'TransSuccess_AntiTamper_Key_2025';
+  Config.Salt := 'TransSuccess_Salt_v1';
+  Config.KdfIterations := 10000;
+  Config.EnableHMAC := True;
+  TAntiTamperPackage.Initialize(Config);
+
+  FAboutFrame := TUniAboutFrame.Create(Self);
   FAboutFrame.Parent := Self;
   FAboutFrame.Align := alClient;
   FAboutFrame.DatabasePath := ExtractFilePath(ParamStr(0)) + 'TransSuccessConfig.db';
@@ -325,11 +298,11 @@ uses
 
 ## 项目 4: OmniSync (FMX)
 
-### 状态: 无 AboutFrame，需开发 FMX 版组件
+### 状态: 无 AboutFrame，依赖 FMX 组件对齐后集成
 
-### 前置任务: 创建 UniBase.FMX.AboutFrame.pas
+### 前置任务: 对齐 UniBase.FMX.AboutFrame.pas（与 SeedTool/AntiTamper）
 
-**此任务由 Claude 完成**，见下方 "FMX 组件开发" 章节。
+`FMX/UniBase.FMX.AboutFrame.pas` 已存在，但需要先对齐字段名/解密/sha256+hmac 校验逻辑，确保可读取 SeedTool 播种的数据后再在 OmniSync 集成。
 
 ### 步骤 1: 创建配置数据库 (SeedTool)
 
@@ -387,31 +360,40 @@ uses
 
 ---
 
-## FMX 组件开发 ✅
+## FMX 组件开发（✅ 已完成对齐）
 
 ### UniBase.FMX.AboutFrame.pas
 
-**已完成**，文件位置：`D:\_Progs\02Business\UniBase\FMX\UniBase.FMX.AboutFrame.pas`
+文件位置：`D:\_Progs\02Business\UniBase\FMX\UniBase.FMX.AboutFrame.pas`
 
-此组件提供：
-- FMX 原生 `TTabControl` + `TTabItem` 布局 (6 个 Tab 页)
-- 与 VCL 版相同的功能接口
+当前实现提供：
+- FMX 原生 `TTabControl` + `TTabItem` 布局（6 个 Tab 页）
 - 支持 `DatabasePath` 属性配置
-- HMAC-SHA256 签名验证
 - 根据 `enabled` 字段动态显示/隐藏 Tab
 - BTC/USDT 地址复制功能
 - 机器码生成与显示
+- 使用 `TAntiTamperPackage.LoadSecureImageBytes()` 统一解密和校验
+- 字段名与 SeedTool/AntiTamper 一致：`sha256_hash`、`hmac_sha256`
 
-### 使用示例 (OmniSync/Stocks)
+### 使用示例（OmniSync/Stocks）
 
 ```pascal
 uses
+  UniBase.AntiTamper,
   UniBase.FMX.AboutFrame;
 
 procedure TMainForm.ShowAboutFrame;
 var
   Frame: TFMXAboutFrame;
+  Config: TAntiTamperConfig;
 begin
+  Config := TAntiTamperPackage.GetDefaultConfig;
+  Config.EncryptionKey := 'OmniSync_AntiTamper_Key_2025';
+  Config.Salt := 'OmniSync_Salt_v1';
+  Config.KdfIterations := 10000;
+  Config.EnableHMAC := True;
+  TAntiTamperPackage.Initialize(Config);
+
   Frame := TFMXAboutFrame.Create(Self);
   Frame.Parent := SomeContainer;  // 或 Self
   Frame.Align := TAlignLayout.Client;
@@ -426,15 +408,7 @@ end;
 
 ### 命令行模式 (批量操作)
 
-```powershell
-cd D:\_Progs\02Business\UniBase\Tools\SeedTool
-
-# 初始化数据库
-.\SeedTool.exe --init --db "C:\MyApp\AppConfig.db"
-
-# 批量播种
-.\SeedTool.exe --seed --db "C:\MyApp\AppConfig.db" --dir ".\assets" --keys "official_gzh,wechat,alipay,btc,usdt,aboutme"
-```
+当前仓库内的 SeedTool 以 GUI 方式使用（未实现 CLI 参数）。如需批量化能力，请在后续单独实现 CLI 或提供脚本化入口。
 
 ### GUI 模式操作流程
 
@@ -460,13 +434,14 @@ cd D:\_Progs\02Business\UniBase\Tools\SeedTool
 ### Q2: 编译报错找不到 UniBase 单元
 - 确认项目搜索路径包含 `UniBase\Core` 和 `UniBase\VCL`（或 `UniBase\FMX`）
 
-### Q3: HMAC 签名验证失败
-- 重新使用 SeedTool 播种图片
-- 确保播种时使用的机器与运行程序的机器一致
+### Q3: sha256 / hmac 校验失败（或图片解密失败）
+- 确认应用启动时调用 `TAntiTamperPackage.Initialize(...)`，且参数与 SeedTool 播种时一致（EncryptionKey/Salt/KdfIterations/EnableHMAC）
+- 重新使用 SeedTool 播种图片（确保写入 `sha256_hash`/`hmac_sha256` 且 `image_data` 非空）
+- 确认数据库表字段名为 `sha256_hash`/`hmac_sha256`（不是 `hmac_signature`）
 
 ### Q4: FMX 项目如何使用？
-- 等待 `UniBase.FMX.AboutFrame.pas` 开发完成
-- 或先完成 VCL 项目的集成
+- FMX AboutFrame 已与 `UniBase.AntiTamper`/SeedTool 协议对齐，可直接用于 OmniSync/Stocks
+- 使用方式与 VCL 版本类似，参考上方示例代码
 
 ---
 
@@ -477,23 +452,20 @@ cd D:\_Progs\02Business\UniBase\Tools\SeedTool
 - [ ] 运行 SeedTool 创建各项目的 Config.db
 - [ ] 在 IDE 中编译测试各项目
 
-### 自动任务 (由 Claude 完成)
-- [x] TwoKeyRun 集成代码修改说明
-- [x] SVGThing 集成代码修改说明
-- [x] TransSuccess 集成代码 (AboutForm.pas)
-- [x] UniBase.FMX.AboutFrame.pas 开发 ✅
-- [x] OmniSync 集成说明
-- [x] Stocks/InfoCenter 集成说明
+### 仓库侧（UniBase）已提供/待办
+- [x] VCL 版 AboutFrame（`TUniAboutFrame`）
+- [x] SeedTool（GUI）播种
+- [x] 本文档与集成规划文档
+- [x] FMX 版 AboutFrame 与 AntiTamper/SeedTool 协议对齐（2025-12-12 已完成）
+- [ ] 各工具项目手工集成与验证
 
 ---
 
 ## 下一步
 
-所有代码已准备完毕，您只需完成以下人工任务：
+建议按以下顺序推进：
 
-1. **准备图片资源** - 6 张标准图片
-2. **运行 SeedTool** - 为各项目创建 Config.db 并播种图片
-3. **在 IDE 中集成** - 按本文档修改各项目代码
-4. **编译测试** - 验证 About 页面显示正常
-
-如有问题，参考“常见问题”章节或联系开发者。
+1. ~~**先对齐 FMX AboutFrame**~~（✅ 已完成）
+2. **完成 VCL 项目集成**（TwoKeyRun/SVGThing/TransSuccess）并验证图片可显示
+3. **完成 FMX 项目集成**（OmniSync/Stocks）并验证
+4. **统一跑测试**（`Scripts/run_tests.ps1`）确保回归通过

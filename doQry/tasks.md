@@ -1,5 +1,11 @@
 # tasks.md（uDoQry 库）
 
+> **状态更新**: 2025-12-12
+> 
+> - uDoQry 的核心能力已在 UniBase 中形成统一入口：`Core/UniBase.DB.DoQry.pas`
+> - 对外文档以 UniBase 文档为准：`docs/05.03.uniBase-4AI-DoQry指南-v1.0.md`
+> - 本目录更多作为历史实现/对照参考；后续优化方向见 `.kiro/specs/doqry-optimization/`
+
 状态标记：
 - [ ] 未开始  [~] 进行中  [x] 已完成
 
@@ -64,9 +70,8 @@
 
 ## 六、文档与交付
 
-- [x] docs/integration_guide.md（对接指南）
-- [x] docs/development_guide.md（开发文档）
-- [x] tasks.md（本文件）
+- [x] UniBase 文档（对接/使用指南）：`docs/05.03.uniBase-4AI-DoQry指南-v1.0.md`
+- [x] tasks.md（本文件，保留为历史/对照）
 
 ---
 

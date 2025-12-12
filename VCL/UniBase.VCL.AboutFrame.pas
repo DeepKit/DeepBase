@@ -29,12 +29,17 @@ type
 
   TUniAboutFrame = class(TFrame)
     pcAboutMe: TPageControl;
+    tsOfficialGzh: TTabSheet;
     tsWechat: TTabSheet;
     tsAlipay: TTabSheet;
     tsBTC: TTabSheet;
     tsUSDT: TTabSheet;
     tsAboutMe: TTabSheet;
     
+    // 公众号页面
+    imgOfficialGzh: TImage;
+    lblOfficialGzhTip: TLabel;
+
     // 微信页面
     imgWechat: TImage;
     lblWechatTip: TLabel;
@@ -75,7 +80,7 @@ type
   private
     // 字段应在方法之前声明，避免E2169
     FInitTimer: TTimer;
-    FImageMappings: array[0..4] of TImageMapping;
+    FImageMappings: array[0..5] of TImageMapping;  // 6 个图像: official_gzh, wechat, alipay, btc, usdt, aboutme
     FDatabasePath: string;
 
     // 日志与内部方法
@@ -343,6 +348,7 @@ begin
 
   Log('开始初始化图像映射数组');
   Log('验证Image控件分配状态:');
+  Log(Format('  imgOfficialGzh: %s (地址: %p)', [BoolToStr(Assigned(imgOfficialGzh), True), Pointer(imgOfficialGzh)]));
   Log(Format('  imgWechat: %s (地址: %p)', [BoolToStr(Assigned(imgWechat), True), Pointer(imgWechat)]));
   Log(Format('  imgAlipay: %s (地址: %p)', [BoolToStr(Assigned(imgAlipay), True), Pointer(imgAlipay)]));
   Log(Format('  imgBTC: %s (地址: %p)', [BoolToStr(Assigned(imgBTC), True), Pointer(imgBTC)]));
@@ -353,30 +359,36 @@ begin
   Log(Format('  Frame.Visible: %s', [BoolToStr(Visible, True)]));
   Log(Format('  Frame.ComponentCount: %d', [ComponentCount]));
 
-  FImageMappings[0].Key := 'wechat';
-  FImageMappings[0].Image := imgWechat;
-  FImageMappings[0].AddressLabel := lblWechatAddress;
-  FImageMappings[0].DefaultAddress := '微信收款码';
+  // 6 个图像映射，与 FMX 版本保持一致
+  FImageMappings[0].Key := 'official_gzh';
+  FImageMappings[0].Image := imgOfficialGzh;
+  FImageMappings[0].AddressLabel := nil;
+  FImageMappings[0].DefaultAddress := '';
 
-  FImageMappings[1].Key := 'alipay';
-  FImageMappings[1].Image := imgAlipay;
-  FImageMappings[1].AddressLabel := lblAlipayAddress;
-  FImageMappings[1].DefaultAddress := '支付宝收款码';
+  FImageMappings[1].Key := 'wechat';
+  FImageMappings[1].Image := imgWechat;
+  FImageMappings[1].AddressLabel := lblWechatAddress;
+  FImageMappings[1].DefaultAddress := '微信收款码';
 
-  FImageMappings[2].Key := 'btc';
-  FImageMappings[2].Image := imgBTC;
-  FImageMappings[2].AddressLabel := lblBTCAddress;
-  FImageMappings[2].DefaultAddress := 'BTC地址';
+  FImageMappings[2].Key := 'alipay';
+  FImageMappings[2].Image := imgAlipay;
+  FImageMappings[2].AddressLabel := lblAlipayAddress;
+  FImageMappings[2].DefaultAddress := '支付宝收款码';
 
-  FImageMappings[3].Key := 'usdt';
-  FImageMappings[3].Image := imgUSDT;
-  FImageMappings[3].AddressLabel := lblUSDTAddress;
-  FImageMappings[3].DefaultAddress := 'USDT地址';
+  FImageMappings[3].Key := 'btc';
+  FImageMappings[3].Image := imgBTC;
+  FImageMappings[3].AddressLabel := lblBTCAddress;
+  FImageMappings[3].DefaultAddress := 'BTC地址';
 
-  FImageMappings[4].Key := 'aboutme';
-  FImageMappings[4].Image := imgAboutMe;
-  FImageMappings[4].AddressLabel := nil;
-  FImageMappings[4].DefaultAddress := '';
+  FImageMappings[4].Key := 'usdt';
+  FImageMappings[4].Image := imgUSDT;
+  FImageMappings[4].AddressLabel := lblUSDTAddress;
+  FImageMappings[4].DefaultAddress := 'USDT地址';
+
+  FImageMappings[5].Key := 'aboutme';
+  FImageMappings[5].Image := imgAboutMe;
+  FImageMappings[5].AddressLabel := nil;
+  FImageMappings[5].DefaultAddress := '';
 
   Log('图像映射数组初始化完成');
 end;
@@ -385,6 +397,8 @@ procedure TUniAboutFrame.LoadAndDisplayImages;
 var
   I: Integer;
   AddressText: string;
+  ImageBytes: TBytes;
+  Stream: TBytesStream;
 begin
   Log('开始加载和显示图像');
 
@@ -396,16 +410,23 @@ begin
       if FDTable1.Active and Assigned(FImageMappings[I].Image) then
       begin
         try
-          // 使用 TAntiTamperPackage.LoadSecureImage 统一处理解密和校验
-          // 该方法内部处理 AES-256 解密、SHA-256 校验和 HMAC 校验
-          if TAntiTamperPackage.LoadSecureImage(
+          // 统一处理解密和校验：AES-256 解密、SHA-256 校验和 HMAC 校验
+          if TAntiTamperPackage.LoadSecureImageBytes(
                FDTable1,
                FImageMappings[I].Key,
-               FImageMappings[I].Image,
+               ImageBytes,
                AddressText) then
           begin
+            // 将解密后的原始图像字节加载到 VCL TImage
+            Stream := TBytesStream.Create(ImageBytes);
+            try
+              FImageMappings[I].Image.Picture.LoadFromStream(Stream);
+            finally
+              Stream.Free;
+            end;
+
             Log(Format('图像加载成功: %s', [FImageMappings[I].Key]));
-            
+
             // 设置地址标签
             if Assigned(FImageMappings[I].AddressLabel) then
             begin

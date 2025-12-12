@@ -690,10 +690,14 @@ end;
 
 function TJWTManager.Base64URLEncode(const AData: TBytes): string;
 begin
-  // 标准 Base64 编码默认会插入换行符，这在 HTTP 头部（Authorization: Bearer ...）中是非法的，
-  // 也会导致客户端/服务器解析异常。这里显式去除所有换行，再做 URL 安全转换。
+  // 标准 Base64 编码可能会插入换行符，这在 HTTP 头部（Authorization: Bearer ...）中是非法的，
+  // 也会导致客户端/服务器解析异常。这里显式去除所有 CR/LF，再做 URL 安全转换。
   Result := TNetEncoding.Base64.EncodeBytesToString(AData);
-  Result := Result.Replace(sLineBreak, '', [rfReplaceAll]);
+
+  // 注意：不同实现/平台可能插入 CRLF 或单独的 LF/CR。
+  Result := Result.Replace(#13, '', [rfReplaceAll]);
+  Result := Result.Replace(#10, '', [rfReplaceAll]);
+
   Result := Result.Replace('+', '-').Replace('/', '_').TrimRight(['=']);
 end;
 
@@ -874,28 +878,28 @@ var
   LPayloadBytes: TBytes;
 begin
   Result := nil;
+  LHeaderJson := nil;
+  LPayloadJson := nil;
+
   LParts := AToken.Split(['.']);
   if Length(LParts) <> 3 then
     Exit;
 
   try
-    LHeaderBytes := Base64URLDecode(LParts[0]);
-    LPayloadBytes := Base64URLDecode(LParts[1]);
-
-    LHeaderJson := TJSONObject.ParseJSONValue(TEncoding.UTF8.GetString(LHeaderBytes)) as TJSONObject;
-    if LHeaderJson = nil then
-      Exit;
-
     try
+      LHeaderBytes := Base64URLDecode(LParts[0]);
+      LPayloadBytes := Base64URLDecode(LParts[1]);
+
+      LHeaderJson := TJSONObject.ParseJSONValue(TEncoding.UTF8.GetString(LHeaderBytes)) as TJSONObject;
+      if LHeaderJson = nil then
+        Exit;
+
       LPayloadJson := TJSONObject.ParseJSONValue(TEncoding.UTF8.GetString(LPayloadBytes)) as TJSONObject;
       if LPayloadJson = nil then
-      begin
-        LHeaderJson.Free;
         Exit;
-      end;
 
+      Result := TJWTToken.Create;
       try
-        Result := TJWTToken.Create;
         // 直接写入记录字段，避免对记录属性赋值导致的编译器限制
         Result.FHeader.Alg := LHeaderJson.GetValue<string>('alg', 'HS256');
         Result.FHeader.Typ := LHeaderJson.GetValue<string>('typ', 'JWT');
@@ -905,10 +909,12 @@ begin
       except
         FreeAndNil(Result);
       end;
-    finally
-      LPayloadJson.Free;
+    except
+      // 任意解析/解码异常都视为无效 token
+      FreeAndNil(Result);
     end;
   finally
+    LPayloadJson.Free;
     LHeaderJson.Free;
   end;
 end;
@@ -1392,9 +1398,16 @@ var
   LAuth: string;
 begin
   Result := '';
+
+  // 注意：Indy HTTP Server 在收到 "Authorization: Bearer ..." 时可能会直接拒绝请求
+  // (返回 401: "Unsupported authorization scheme.")。
+  // 因此同时支持自定义头部 X-Authorization: Bearer <token> 作为兼容入口。
   LAuth := AContext.Request.GetHeader('Authorization');
+  if LAuth = '' then
+    LAuth := AContext.Request.GetHeader('X-Authorization');
+
   if LAuth.StartsWith('Bearer ', True) then
-    Result := Copy(LAuth, 8, Length(LAuth));
+    Result := Copy(LAuth, 8, Length(LAuth)).Trim;
 end;
 
 function TAuthMiddleware.ExtractBasicCredentials(AContext: TApiContext;
@@ -1491,7 +1504,14 @@ begin
       Exit;
     end;
 
-    ANext();
+    try
+      ANext();
+    finally
+      // 当前中间件创建/持有的用户对象生命周期仅限本次请求，避免泄漏。
+      // 如果应用层希望复用/缓存用户对象，应自行在回调中管理生命周期。
+      if LUser <> nil then
+        LUser.Free;
+    end;
   end;
 end;
 

@@ -43,23 +43,26 @@
 - **目标**:
   - 单元测试整体覆盖率提升到 95%+，并确保关键安全/网络模块有稳定回归测试。
 - **下一步任务**:
--  - （可选）在后续 CI 环境中补充针对数据库 Integration Tests 的专用配置说明文档（如何启用 UNIBASE_RUN_DB_INTEGRATION 与 FireDAC/SQLite 驱动）。
+  - （可选）在后续 CI 环境中补充针对数据库 Integration Tests 的专用配置说明文档（如何启用 `UNIBASE_RUN_DB_INTEGRATION=1` 与 FireDAC/SQLite 驱动）。
+  - 将已新增的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），避免“写了但没跑”的覆盖率失真。
 - **已完成工作**:
   - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
 
 ### 商业化与工具集成 (P1)
 
 #### PUBL-105: 工具项目接入 AboutFrame + aboutMeImages（TwoKeyRun / OmniSync / 其它）
-- **状态**: 🟡 进行中 (代码完成，待人工集成)
+- **状态**: 🟡 进行中（UniBase 侧开发已完成，待人工集成）
 - **优先级**: P1
 - **实施指南**: `docs/integrations/IMPLEMENTATION_GUIDE.md`
 - **已完成**:
-  - ✅ 5个工具项目集成规划文档
-  - ✅ `FMX/UniBase.FMX.AboutFrame.pas` - FMX版组件 (~546行)
-  - ✅ 集成代码示例和修改说明
-- **待人工完成**:
+  - ✅ 5 个工具项目集成规划文档（见 `docs/integrations/`）
+  - ✅ VCL 版 AboutFrame：`VCL/UniBase.VCL.AboutFrame.pas`（6 个 Tab，含公众号）
+  - ✅ FMX 版 AboutFrame：`FMX/UniBase.FMX.AboutFrame.pas`（6 个 Tab，已对齐 AntiTamper）
+  - ✅ SeedTool（GUI）已包含 Enabled 字段、可播种 `aboutMeImages`
+  - ✅ IMPLEMENTATION_GUIDE.md 文档已更新（2025-12-12）
+- **待人工完成（集成）**:
   - [ ] 准备 6 张标准图片资源
-  - [ ] 运行 SeedTool 为各项目创建 Config.db
+  - [ ] 运行 SeedTool 为各项目创建 `*Config.db` 并播种 6 个标准 key
   - [ ] 在 IDE 中按指南修改各项目代码并编译测试
 
 ---

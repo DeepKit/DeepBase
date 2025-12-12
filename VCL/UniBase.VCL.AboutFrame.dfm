@@ -13,9 +13,40 @@ object UniAboutFrame: TUniAboutFrame
     Margins.Top = 6
     Margins.Right = 6
     Margins.Bottom = 6
-    ActivePage = tsWechat
+    ActivePage = tsOfficialGzh
     Align = alClient
     TabOrder = 0
+    object tsOfficialGzh: TTabSheet
+      Margins.Left = 6
+      Margins.Top = 6
+      Margins.Right = 6
+      Margins.Bottom = 6
+      Caption = #20844#20247#21495
+      object lblOfficialGzhTip: TLabel
+        Left = 152
+        Top = 16
+        Width = 143
+        Height = 15
+        Margins.Left = 6
+        Margins.Top = 6
+        Margins.Right = 6
+        Margins.Bottom = 6
+        Caption = #25195#30721#20851#27880#20844#20247#21495#33719#21462#35299#38145#30721
+      end
+      object imgOfficialGzh: TImage
+        Left = 16
+        Top = 16
+        Width = 120
+        Height = 120
+        Margins.Left = 6
+        Margins.Top = 6
+        Margins.Right = 6
+        Margins.Bottom = 6
+        Center = True
+        Proportional = True
+        Stretch = True
+      end
+    end
     object tsWechat: TTabSheet
       Margins.Left = 6
       Margins.Top = 6
