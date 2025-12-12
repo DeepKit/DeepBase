@@ -1,6 +1,6 @@
 # UniBase 开发任务
 
-> **最后更新**: 2025-12-11
+> **最后更新**: 2025-12-12
 > **项目状态**: 核心完成，扩展开发中
 
 ---
@@ -50,21 +50,17 @@
 ### 商业化与工具集成 (P1)
 
 #### PUBL-105: 工具项目接入 AboutFrame + aboutMeImages（TwoKeyRun / OmniSync / 其它）
-- **状态**: 🟡 进行中 (规划完成)
+- **状态**: 🟡 进行中 (代码完成，待人工集成)
 - **优先级**: P1
-- **规划文档**: `docs/integrations/README.md`
+- **实施指南**: `docs/integrations/IMPLEMENTATION_GUIDE.md`
 - **已完成**:
-  - ✅ 5个工具项目集成规划文档:
-    - `01.TwoKeyRun-Integration.md` - VCL, 已有Frame, 3-4h
-    - `02.OmniSync-Integration.md` - FMX, 需新建, 4.5-5.5h (含FMX组件开发)
-    - `03.SVGThing-Integration.md` - VCL, 已有Frame, 2h
-    - `04.Stocks-Integration.md` - FMX, 需新建, 2h
-    - `05.TransSuccess-Integration.md` - VCL, 需新建, 2.5h
-  - ✅ 总工时估算: ~14h
-- **待实施**:
-  - [ ] VCL项目实施 (TwoKeyRun → SVGThing → TransSuccess)
-  - [ ] 创建 `UniBase.FMX.AboutFrame.pas` (FMX版组件)
-  - [ ] FMX项目实施 (OmniSync → Stocks/InfoCenter)
+  - ✅ 5个工具项目集成规划文档
+  - ✅ `FMX/UniBase.FMX.AboutFrame.pas` - FMX版组件 (~546行)
+  - ✅ 集成代码示例和修改说明
+- **待人工完成**:
+  - [ ] 准备 6 张标准图片资源
+  - [ ] 运行 SeedTool 为各项目创建 Config.db
+  - [ ] 在 IDE 中按指南修改各项目代码并编译测试
 
 ---
 
