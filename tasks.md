@@ -47,8 +47,10 @@
   - 将已新增的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），避免“写了但没跑”的覆盖率失真。
   - 检查 Test.UniBase.Config.pas 等被注释的测试单元与当前 API 的兼容性问题。
 - **当前测试状态** (2025-12-13):
-  - 单元测试: 181/181 通过 ✅ (+3 Config 测试)
+  - 单元测试: 181/181 通过 ✅
   - 集成测试: 9/9 通过 ✅
+- **最近修复**:
+  - BUG-067: 主题 EFOpenError 问题 (IsStyleInList 替代 IsValidStyle)
 - **已完成工作**:
   - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
 
