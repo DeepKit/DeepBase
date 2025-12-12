@@ -26,6 +26,17 @@
 - 影响范围: 集成测试项目。
 - 验证: 重新编译并运行集成测试，9/9 测试通过 ✅
 
+### BUG-067: TStyleManager.IsValidStyle 抛出 EFOpenError 导致主题加载失败
+- 发现日期: 2025-12-13
+- 严重性: 🟡 Medium
+- 描述: 当数据库中存储了无效的主题名（如 `Iceberg Classico`）时，`TStyleManager.IsValidStyle()` 会尝试将其作为文件路径加载，抛出 `EFOpenError: Cannot open file 'xxx'` 异常，导致应用程序启动失败。
+- 修复: 
+  - `Core/UniBase.Theme.pas`: 新增 `IsStyleInList()` 辅助函数，通过 `TStyleManager.StyleNames` 列表检查样式是否已注册，而不是调用可能抛异常的 `IsValidStyle()`。
+  - `ApplyTheme()`、`GetAvailableThemes()`、`IsThemeAvailable()` 方法均改用 `IsStyleInList()` 进行样式验证。
+  - 无效主题名会自动回退到 `Windows` 默认主题。
+- 影响范围: 所有使用 UniBase 主题功能的 VCL 应用程序。
+- 验证: 单元测试 181/181 通过 ✅
+
 ---
 
 ## 2025-12-11 Bug 修复

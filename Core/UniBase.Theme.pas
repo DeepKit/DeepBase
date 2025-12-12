@@ -262,6 +262,18 @@ begin
   end;
 end;
 
+function IsStyleInList(const StyleName: string): Boolean;
+var
+  Names: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  Names := TStyleManager.StyleNames;
+  for I := 0 to High(Names) do
+    if SameText(Names[I], StyleName) then
+      Exit(True);
+end;
+
 procedure TUniBaseTheme.ApplyTheme(const ThemeName: string);
 {$IFNDEF FMX}
 var
@@ -273,10 +285,10 @@ begin
   Success := False;
   ActualTheme := 'Windows';  // 默认回退到 Windows
   
-  // 先检查主题是否可用，如果不可用则回退到 Windows
-  // 使用 try-except 包装，因为 IsValidStyle 可能尝试从文件加载样式
+  // 先检查主题是否在已注册的样式列表中
+  // 注意：不直接调用 IsValidStyle，因为它会尝试从文件加载样式并可能抛出 EFOpenError
   try
-    if (ThemeName = 'Windows') or TStyleManager.IsValidStyle(ThemeName) then
+    if (ThemeName = 'Windows') or IsStyleInList(ThemeName) then
       ActualTheme := ThemeName;
   except
     on E: Exception do
@@ -284,7 +296,7 @@ begin
       // 忽略样式检查错误，使用 Windows 默认主题
       ActualTheme := 'Windows';
       {$IFDEF DEBUG}
-      OutputDebugString(PChar('UniBase.Theme: IsValidStyle failed: ' + E.Message));
+      OutputDebugString(PChar('UniBase.Theme: Style check failed: ' + E.Message));
       {$ENDIF}
     end;
   end;
@@ -347,12 +359,16 @@ begin
     try
       for Info in FThemeCache.Values do
       begin
-        {$IFNDEF FMX}
-        // VCL: 确保 VCL 样式实际可用
-        if TStyleManager.IsValidStyle(Info.Name) or (Info.Name = 'Windows') then
-        begin
-          List.Add(Info);
-          AddedNames.Add(Info.Name);
+      {$IFNDEF FMX}
+        // VCL: 确保 VCL 样式实际可用（使用 StyleNames 列表检查，避免 IsValidStyle 抛异常）
+        try
+          if (Info.Name = 'Windows') or IsStyleInList(Info.Name) then
+          begin
+            List.Add(Info);
+            AddedNames.Add(Info.Name);
+          end;
+        except
+          // 跳过无效样式
         end;
         {$ELSE}
         // FMX: Add all cached themes (validation done elsewhere)
@@ -408,7 +424,14 @@ begin
   if ThemeName = 'Windows' then
     Result := True
   else
-    Result := TStyleManager.IsValidStyle(ThemeName);
+  begin
+    // 使用 StyleNames 列表检查，避免 IsValidStyle 抛出 EFOpenError
+    try
+      Result := IsStyleInList(ThemeName);
+    except
+      Result := False;
+    end;
+  end;
   {$ELSE}
   // FMX: Return true for cached themes, false otherwise
   TMonitor.Enter(FLock);
