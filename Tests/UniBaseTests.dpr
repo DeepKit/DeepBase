@@ -17,8 +17,8 @@ uses
   DUnitX.TestFramework,
   // Test units - Phase 0
   Test.UniBase.Manager in 'Test.UniBase.Manager.pas',
-  // Test units (more to be enabled after fixing API compatibility issues)
-  // Test.UniBase.Config in 'Test.UniBase.Config.pas',  // TODO: check SetConfig Category param
+  // Test units - Phase 0 (more)
+  Test.UniBase.Config in 'Test.UniBase.Config.pas',
   // Test.UniBase.i18n in 'Test.UniBase.i18n.pas',
   // Test.UniBase.FormState in 'Test.UniBase.FormState.pas',
   // Test.UniBase.Logging in 'Test.UniBase.Logging.pas',

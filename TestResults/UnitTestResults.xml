@@ -1,12 +1,19 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\_Progs\02Business\UniBase\Tests\UniBaseTests.exe" total="178" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-12-13" time="07:37:32">
+<test-results name="D:\_Progs\02Business\UniBase\Tests\UniBaseTests.exe" total="181" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-12-13" time="07:46:02">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="UniBaseTests.exe" executed="true" result="Success" success="True" time="07:37:32" asserts="0">
+  <test-suite type="Assembly" name="UniBaseTests.exe" executed="true" result="Success" success="True" time="07:46:02" asserts="0">
     <results>
-        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="5.914" asserts="0" >
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="4.677" asserts="0" >
           <results>
-              <test-suite type="Namespace" name="UniBase" executed="true" result="Success" success="True" time="5.914" asserts="0" >
+              <test-suite type="Namespace" name="UniBase" executed="true" result="Success" success="True" time="4.677" asserts="0" >
                 <results>
+                    <test-suite type="Fixture" name="TTestUniBaseConfig" executed="True" result="Success" success="True" time="0.025" >
+                      <results>
+                        <test-case name="Test_GetSetConfig_String" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_GetSetConfig_Integer" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_GetSetConfig_Boolean" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
                     <test-suite type="Fixture" name="TTestUniBaseConsts" executed="True" result="Success" success="True" time="0.000" >
                       <results>
                         <test-case name="ConfigKeys_AreNotEmpty_AndDistinct" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -16,15 +23,15 @@
                         <test-case name="LogLevelStrings_AreUppercaseAndExpected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
-                    <test-suite type="Namespace" name="Crypto" executed="true" result="Success" success="True" time="2.133" asserts="0" >
+                    <test-suite type="Namespace" name="Crypto" executed="true" result="Success" success="True" time="2.258" asserts="0" >
                       <results>
-                          <test-suite type="Fixture" name="TAESCryptoTests" executed="True" result="Success" success="True" time="0.024" >
+                          <test-suite type="Fixture" name="TAESCryptoTests" executed="True" result="Success" success="True" time="0.030" >
                             <results>
                               <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_GenerateKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_GenerateIV" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_SetKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                              <test-case name="Test_SetKeyFromPassword" executed="True" result="Success" success="True" time="0.024" asserts="0" />
+                              <test-case name="Test_SetKeyFromPassword" executed="True" result="Success" success="True" time="0.029" asserts="0" />
                               <test-case name="Test_Encrypt_Decrypt_Bytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_EncryptString_DecryptString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_Encrypt_Decrypt_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -42,7 +49,7 @@
                               <test-case name="Test_Adler32_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                             </results>
                           </test-suite>
-                          <test-suite type="Fixture" name="TCryptoHelperTests" executed="True" result="Success" success="True" time="0.876" >
+                          <test-suite type="Fixture" name="TCryptoHelperTests" executed="True" result="Success" success="True" time="0.924" >
                             <results>
                               <test-case name="Test_MD5" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_SHA1" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -52,9 +59,9 @@
                               <test-case name="Test_Base64Decode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_HexEncode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_HexDecode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                              <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.209" asserts="0" />
-                              <test-case name="Test_VerifyPassword" executed="True" result="Success" success="True" time="0.627" asserts="0" />
-                              <test-case name="Test_Encrypt_Decrypt" executed="True" result="Success" success="True" time="0.039" asserts="0" />
+                              <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.243" asserts="0" />
+                              <test-case name="Test_VerifyPassword" executed="True" result="Success" success="True" time="0.639" asserts="0" />
+                              <test-case name="Test_Encrypt_Decrypt" executed="True" result="Success" success="True" time="0.041" asserts="0" />
                               <test-case name="Test_RandomString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_RandomBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_NewGuid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -104,16 +111,16 @@
                               <test-case name="Test_DifferentInput_DifferentOutput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                             </results>
                           </test-suite>
-                          <test-suite type="Fixture" name="TPasswordUtilsTests" executed="True" result="Success" success="True" time="1.032" >
+                          <test-suite type="Fixture" name="TPasswordUtilsTests" executed="True" result="Success" success="True" time="1.079" >
                             <results>
-                              <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.199" asserts="0" />
-                              <test-case name="Test_VerifyPassword_Correct" executed="True" result="Success" success="True" time="0.400" asserts="0" />
-                              <test-case name="Test_VerifyPassword_Incorrect" executed="True" result="Success" success="True" time="0.402" asserts="0" />
+                              <test-case name="Test_HashPassword" executed="True" result="Success" success="True" time="0.209" asserts="0" />
+                              <test-case name="Test_VerifyPassword_Correct" executed="True" result="Success" success="True" time="0.421" asserts="0" />
+                              <test-case name="Test_VerifyPassword_Incorrect" executed="True" result="Success" success="True" time="0.415" asserts="0" />
                               <test-case name="Test_GenerateSalt_Length" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_GenerateSalt_Unique" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                              <test-case name="Test_PBKDF2" executed="True" result="Success" success="True" time="0.020" asserts="0" />
-                              <test-case name="Test_PBKDF2_DifferentSalts" executed="True" result="Success" success="True" time="0.004" asserts="0" />
-                              <test-case name="Test_PBKDF2_DifferentIterations" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_PBKDF2" executed="True" result="Success" success="True" time="0.022" asserts="0" />
+                              <test-case name="Test_PBKDF2_DifferentSalts" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                              <test-case name="Test_PBKDF2_DifferentIterations" executed="True" result="Success" success="True" time="0.008" asserts="0" />
                               <test-case name="Test_CheckStrength_Weak" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_CheckStrength_Medium" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                               <test-case name="Test_CheckStrength_Strong" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -153,13 +160,13 @@
                               <test-case name="Test_Uniqueness" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                             </results>
                           </test-suite>
-                          <test-suite type="Fixture" name="TSimpleCryptoTests" executed="True" result="Success" success="True" time="0.201" >
+                          <test-suite type="Fixture" name="TSimpleCryptoTests" executed="True" result="Success" success="True" time="0.224" >
                             <results>
-                              <test-case name="Test_Encrypt_Decrypt_String" executed="True" result="Success" success="True" time="0.039" asserts="0" />
-                              <test-case name="Test_Encrypt_Decrypt_Bytes" executed="True" result="Success" success="True" time="0.041" asserts="0" />
-                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.040" asserts="0" />
-                              <test-case name="Test_DifferentPasswords_DifferentResults" executed="True" result="Success" success="True" time="0.040" asserts="0" />
-                              <test-case name="Test_WrongPassword_Fails" executed="True" result="Success" success="True" time="0.041" asserts="0" />
+                              <test-case name="Test_Encrypt_Decrypt_String" executed="True" result="Success" success="True" time="0.048" asserts="0" />
+                              <test-case name="Test_Encrypt_Decrypt_Bytes" executed="True" result="Success" success="True" time="0.042" asserts="0" />
+                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.045" asserts="0" />
+                              <test-case name="Test_DifferentPasswords_DifferentResults" executed="True" result="Success" success="True" time="0.047" asserts="0" />
+                              <test-case name="Test_WrongPassword_Fails" executed="True" result="Success" success="True" time="0.042" asserts="0" />
                             </results>
                           </test-suite>
                       </results>
@@ -208,30 +215,30 @@
                           </test-suite>
                       </results>
                     </test-suite>
-                    <test-suite type="Fixture" name="TTestUniBaseManager" executed="True" result="Success" success="True" time="0.262" >
+                    <test-suite type="Fixture" name="TTestUniBaseManager" executed="True" result="Success" success="True" time="0.322" >
                       <results>
-                        <test-case name="Test_Initialize_WithMemoryDB" executed="True" result="Success" success="True" time="0.030" asserts="0" />
-                        <test-case name="Test_Initialize_WithFilePath" executed="True" result="Success" success="True" time="0.129" asserts="0" />
-                        <test-case name="Test_Initialize_DoubleInit_ShouldSucceed" executed="True" result="Success" success="True" time="0.013" asserts="0" />
-                        <test-case name="Test_Finalize_WithoutInit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_InitializeEx_ReturnsErrorMsg" executed="True" result="Success" success="True" time="0.013" asserts="0" />
-                        <test-case name="Test_HealthCheck_AfterInit" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                        <test-case name="Test_Initialize_WithMemoryDB" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                        <test-case name="Test_Initialize_WithFilePath" executed="True" result="Success" success="True" time="0.165" asserts="0" />
+                        <test-case name="Test_Initialize_DoubleInit_ShouldSucceed" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                        <test-case name="Test_Finalize_WithoutInit" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_InitializeEx_ReturnsErrorMsg" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                        <test-case name="Test_HealthCheck_AfterInit" executed="True" result="Success" success="True" time="0.039" asserts="0" />
                         <test-case name="Test_HealthCheck_BeforeInit_ShouldFail" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_ErrorCode_Success_AfterSuccessfulInit" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_ErrorCode_Success_AfterSuccessfulInit" executed="True" result="Success" success="True" time="0.029" asserts="0" />
                         <test-case name="Test_Singleton_ReturnsSameInstance" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_Properties_AfterInit" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_Properties_AfterInit" executed="True" result="Success" success="True" time="0.014" asserts="0" />
                       </results>
                     </test-suite>
                     <test-suite type="Fixture" name="TTestBasicProtection" executed="True" result="Success" success="True" time="0.006" >
                       <results>
-                        <test-case name="EncryptDecryptSensitive_Roundtrip_SimpleText" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="EncryptDecryptSensitive_Roundtrip_Unicode" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="EncryptDecryptSensitive_Roundtrip_SimpleText" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="EncryptDecryptSensitive_Roundtrip_Unicode" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="EncryptSensitive_SameInput_ProducesDifferentCiphertext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="EncryptDecryptBinary_Roundtrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="EncryptDecryptBinary_Roundtrip" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="VerifyDataIntegrity_ReturnsFalse_WhenDataTampered" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="CalculateFileHash_FileNotFound_RaisesException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="CalculateFileHash_FileHashChanges_WhenContentChanges" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="CalculateFileHash_FileNotFound_RaisesException" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="CalculateFileHash_FileHashChanges_WhenContentChanges" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="CalculateDataHash_IsStableAndDistinct" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
@@ -245,30 +252,30 @@
                         <test-case name="ExecuteCustom_LogsAndReraisesExceptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
-                    <test-suite type="Fixture" name="TTestUniBaseTestHelper" executed="True" result="Success" success="True" time="3.474" >
+                    <test-suite type="Fixture" name="TTestUniBaseTestHelper" executed="True" result="Success" success="True" time="2.051" >
                       <results>
                         <test-case name="Test_SnapshotPath_Is_Set_And_Directory_Created" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_CaptureFormState_Includes_Form_And_Control_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_SaveSnapshot_And_GetSnapshot_File_Mode" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="Test_VerifySnapshot_Success_When_State_Unchanged" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_CaptureFormState_Includes_Form_And_Control_Properties" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_SaveSnapshot_And_GetSnapshot_File_Mode" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_VerifySnapshot_Success_When_State_Unchanged" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="Test_VerifySnapshot_Returns_NotFound_When_Snapshot_Missing" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_VerifySnapshot_Detects_Differences_And_Populates_Diffs" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="Test_ListSnapshots_Includes_Saved_Snapshot" executed="True" result="Success" success="True" time="0.002" asserts="0" />
-                        <test-case name="Test_DeleteSnapshot_Removes_JSON_And_PNG" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_VerifySnapshot_Detects_Differences_And_Populates_Diffs" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_ListSnapshots_Includes_Saved_Snapshot" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_DeleteSnapshot_Removes_JSON_And_PNG" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="Test_GetControlValue_And_AssertValue_Work_For_Common_Controls" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                        <test-case name="Test_AssertVisible_And_AssertEnabled_Raise_When_Conditions_Not_Met" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                        <test-case name="Test_AssertVisible_And_AssertEnabled_Raise_When_Conditions_Not_Met" executed="True" result="Success" success="True" time="0.003" asserts="0" />
                         <test-case name="Test_FindControl_And_FindControlByClass_Work_Correctly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="Test_FindAllControlsByClass_Returns_All_Instances" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="Test_SimulateSelect_ByIndex_And_ByText_Updates_Index" executed="True" result="Success" success="True" time="0.002" asserts="0" />
                         <test-case name="Test_SimulateCheck_Updates_Checked_State" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="Test_SimulateInput_Updates_Text" executed="True" result="Success" success="True" time="0.026" asserts="0" />
-                        <test-case name="Test_SimulateClick_And_DoubleClick_Do_Not_Raise" executed="True" result="Success" success="True" time="0.108" asserts="0" />
-                        <test-case name="Test_SimulateKeyPress_And_MouseMove_Do_Not_Raise" executed="True" result="Success" success="True" time="0.133" asserts="0" />
+                        <test-case name="Test_SimulateInput_Updates_Text" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                        <test-case name="Test_SimulateClick_And_DoubleClick_Do_Not_Raise" executed="True" result="Success" success="True" time="0.150" asserts="0" />
+                        <test-case name="Test_SimulateKeyPress_And_MouseMove_Do_Not_Raise" executed="True" result="Success" success="True" time="0.010" asserts="0" />
                         <test-case name="Test_CaptureScreenshot_And_SaveScreenshotToFile_Work" executed="True" result="Success" success="True" time="0.007" asserts="0" />
                         <test-case name="Test_SnapshotDiff_And_VerifyResult_Clear_Reset_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
-                    <test-suite type="Fixture" name="TTestUniBaseUnlock" executed="True" result="Success" success="True" time="0.037" >
+                    <test-suite type="Fixture" name="TTestUniBaseUnlock" executed="True" result="Success" success="True" time="0.015" >
                       <results>
                         <test-case name="Test_GenerateAndValidate_AllLevels" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="Test_ExpiredCode_Detected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
