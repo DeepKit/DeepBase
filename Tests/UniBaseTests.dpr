@@ -17,18 +17,16 @@ uses
   DUnitX.TestFramework,
   // Test units - Phase 0
   Test.UniBase.Manager in 'Test.UniBase.Manager.pas',
-  // TODO: 修复其他测试文件中的 UniBase 函数调用问题后启用
-  //Test.UniBase.Config in 'Test.UniBase.Config.pas',
-  //Test.UniBase.i18n in 'Test.UniBase.i18n.pas',
-  //Test.UniBase.FormState in 'Test.UniBase.FormState.pas',
-  // Test units - Phase 1
-  //Test.UniBase.Logging in 'Test.UniBase.Logging.pas',
-  //Test.UniBase.MRU in 'Test.UniBase.MRU.pas',
-  //Test.UniBase.Hotkeys in 'Test.UniBase.Hotkeys.pas',
-  //Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
-  // Test units - Phase 4
-  //Test.UniBase.License in 'Test.UniBase.License.pas',
-  //Test.UniBase.Updater in 'Test.UniBase.Updater.pas',
+  // Test units (more to be enabled after fixing API compatibility issues)
+  // Test.UniBase.Config in 'Test.UniBase.Config.pas',  // TODO: check SetConfig Category param
+  // Test.UniBase.i18n in 'Test.UniBase.i18n.pas',
+  // Test.UniBase.FormState in 'Test.UniBase.FormState.pas',
+  // Test.UniBase.Logging in 'Test.UniBase.Logging.pas',
+  // Test.UniBase.MRU in 'Test.UniBase.MRU.pas',
+  // Test.UniBase.Hotkeys in 'Test.UniBase.Hotkeys.pas',
+  // Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
+  // Test.UniBase.License in 'Test.UniBase.License.pas',
+  // Test.UniBase.Updater in 'Test.UniBase.Updater.pas',
   Test.UniBase.Unlock in 'Test.UniBase.Unlock.pas',
   // MAINT: Core infra tests
   Test.UniBase.Consts in 'Test.UniBase.Consts.pas',
