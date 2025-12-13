@@ -23,6 +23,7 @@ type
   TTestUniBaseHotkeys = class
   private
     FHotkeys: TUniBaseHotkeys;
+    FManager: TUniBaseManager;
   public
     [Setup]
     procedure Setup;
@@ -75,10 +76,10 @@ implementation
 
 procedure TTestUniBaseHotkeys.Setup;
 begin
-  if not UniBase.IsInitialized then
-    UniBase.InitializeWithDB(':memory:');
-  
-  FHotkeys := UniBase.Hotkeys;
+  FManager := UniBase.Manager.UniBase;
+  if not FManager.IsInitialized then
+    FManager.InitializeWithDB(':memory:');
+  FHotkeys := FManager.Hotkeys;
 end;
 
 procedure TTestUniBaseHotkeys.TearDown;

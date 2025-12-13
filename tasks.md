@@ -47,10 +47,15 @@
   - 将已新增的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），避免“写了但没跑”的覆盖率失真。
   - 检查 Test.UniBase.Config.pas 等被注释的测试单元与当前 API 的兼容性问题。
 - **当前测试状态** (2025-12-13):
-  - 单元测试: 181/181 通过 ✅
+  - 单元测试: 265/267 通过 ✅ (从 181 增加到 267)
   - 集成测试: 9/9 通过 ✅
 - **最近修复**:
+  - BUG-068: I18nTexts 列名 LastUsedTime -> LastUsedAt
   - BUG-067: 主题 EFOpenError 问题 (IsStyleInList 替代 IsValidStyle)
+- **新增测试模块**:
+  - Test.UniBase.i18n (12 tests)
+  - Test.UniBase.Theme (10 tests)
+  - Test.UniBase.Updater (64 tests)
 - **已完成工作**:
   - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
 

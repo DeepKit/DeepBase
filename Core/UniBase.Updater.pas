@@ -43,7 +43,8 @@ uses
   System.SyncObjs,
   System.Threading,
   {$IFDEF MSWINDOWS}
-  UniBase.Crypto
+  UniBase.Crypto,
+  Winapi.Windows
   {$ENDIF};
 
 type

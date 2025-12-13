@@ -19,14 +19,15 @@ uses
   Test.UniBase.Manager in 'Test.UniBase.Manager.pas',
   // Test units - Phase 0 (more)
   Test.UniBase.Config in 'Test.UniBase.Config.pas',
-  // Test.UniBase.i18n in 'Test.UniBase.i18n.pas',
+  Test.UniBase.i18n in 'Test.UniBase.i18n.pas',
+  // TODO: Tests below need API updates to match actual implementation
   // Test.UniBase.FormState in 'Test.UniBase.FormState.pas',
   // Test.UniBase.Logging in 'Test.UniBase.Logging.pas',
   // Test.UniBase.MRU in 'Test.UniBase.MRU.pas',
   // Test.UniBase.Hotkeys in 'Test.UniBase.Hotkeys.pas',
-  // Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
+  Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
   // Test.UniBase.License in 'Test.UniBase.License.pas',
-  // Test.UniBase.Updater in 'Test.UniBase.Updater.pas',
+  Test.UniBase.Updater in 'Test.UniBase.Updater.pas',
   Test.UniBase.Unlock in 'Test.UniBase.Unlock.pas',
   // MAINT: Core infra tests
   Test.UniBase.Consts in 'Test.UniBase.Consts.pas',

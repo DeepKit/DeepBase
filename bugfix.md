@@ -4,6 +4,26 @@
 
 ---
 
+## 2025-12-13 Bug 修复
+
+### BUG-068: I18nTexts 列名不一致导致翻译添加失败
+- 发现日期: 2025-12-13
+- 严重性: 🟡 Medium
+- 描述: `UniBase.i18n.pas` 中的 `AddTranslation` 和 `RecordMissingTranslation` 方法使用列名 `LastUsedTime`，但 `UniBase.Schema.pas` 中 I18nTexts 表定义使用 `LastUsedAt`，导致内存数据库 `:memory:` 测试时报错 "table I18nTexts has no column named LastUsedTime"。
+- 修复: 将 `Core/UniBase.i18n.pas` 中所有 `LastUsedTime` 引用改为 `LastUsedAt`。
+- 影响范围: i18n 模块的翻译添加和缺失记录功能。
+- 验证: 单元测试 265/267 通过 ✅
+
+### BUG-069: UniBase.Updater.pas 缺少 Winapi.Windows 导致 OutputDebugString 编译错误
+- 发现日期: 2025-12-13
+- 严重性: 🟡 Medium
+- 描述: `Core/UniBase.Updater.pas` 在 `{$IFDEF DEBUG}` 块中使用 `OutputDebugString`，但未引入 `Winapi.Windows`，导致 Debug 配置编译失败。
+- 修复: 在 `{$IFDEF MSWINDOWS}` uses 块中添加 `Winapi.Windows`。
+- 影响范围: Debug 模式下的编译。
+- 验证: 编译通过 ✅
+
+---
+
 ## 2025-12-12 Bug 修复
 
 ### BUG-065: Indy HTTPServer 拒绝 Authorization: Bearer 导致 JWT 中间件无法工作

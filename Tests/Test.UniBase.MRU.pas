@@ -23,6 +23,7 @@ type
   private
     FMRU: TUniBaseMRU;
     FTestCategory: string;
+    FManager: TUniBaseManager;
   public
     [Setup]
     procedure Setup;
@@ -75,10 +76,10 @@ implementation
 
 procedure TTestUniBaseMRU.Setup;
 begin
-  if not UniBase.IsInitialized then
-    UniBase.InitializeWithDB(':memory:');
-  
-  FMRU := UniBase.MRU;
+  FManager := UniBase.Manager.UniBase;
+  if not FManager.IsInitialized then
+    FManager.InitializeWithDB(':memory:');
+  FMRU := FManager.MRU;
   FTestCategory := 'test_' + TGUID.NewGuid.ToString;
 end;
 

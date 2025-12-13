@@ -24,6 +24,7 @@ type
   private
     FFormState: TUniBaseFormState;
     FTestForm: TForm;
+    FManager: TUniBaseManager;
   public
     [Setup]
     procedure Setup;
@@ -70,10 +71,10 @@ implementation
 
 procedure TTestUniBaseFormState.Setup;
 begin
-  if not UniBase.IsInitialized then
-    UniBase.InitializeWithDB(':memory:');
-  
-  FFormState := UniBase.FormState;
+  FManager := UniBase.Manager.UniBase;
+  if not FManager.IsInitialized then
+    FManager.InitializeWithDB(':memory:');
+  FFormState := FManager.FormState;
   
   // 创建测试窗体
   FTestForm := TForm.CreateNew(nil);

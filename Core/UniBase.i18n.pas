@@ -454,20 +454,20 @@ begin
     try
       Query.Connection := FConnection;
       Query.SQL.Text := 
-        'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, LastUsedTime) ' +
-        'VALUES (:SourceText, :LangCode, :LastUsedTime)';
+        'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, LastUsedAt) ' +
+        'VALUES (:SourceText, :LangCode, :LastUsedAt)';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
-      Query.ParamByName('LastUsedTime').AsString := NowStr;
+      Query.ParamByName('LastUsedAt').AsString := NowStr;
       Query.ExecSQL;
       
       // Update last used time
       Query.SQL.Text := 
-        'UPDATE I18nTexts SET LastUsedTime = :LastUsedTime ' +
+        'UPDATE I18nTexts SET LastUsedAt = :LastUsedAt ' +
         'WHERE SourceText = :SourceText AND LangCode = :LangCode';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
-      Query.ParamByName('LastUsedTime').AsString := NowStr;
+      Query.ParamByName('LastUsedAt').AsString := NowStr;
       Query.ExecSQL;
     finally
       Query.Free;
@@ -698,12 +698,12 @@ begin
       Query.Connection := FConnection;
       // Insert or replace translation
       Query.SQL.Text := 
-        'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedTime) ' +
-        'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedTime)';
+        'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedAt) ' +
+        'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedAt)';
       Query.ParamByName('SourceText').AsString := SourceText;
       Query.ParamByName('LangCode').AsString := LangCode;
       Query.ParamByName('TranslatedText').AsString := TranslatedText;
-      Query.ParamByName('LastUsedTime').AsString := NowStr;
+      Query.ParamByName('LastUsedAt').AsString := NowStr;
       Query.ExecSQL;
     finally
       Query.Free;

@@ -79,11 +79,13 @@ implementation
 { TTestUniBaseLicense }
 
 procedure TTestUniBaseLicense.Setup;
+var
+  Manager: TUniBaseManager;
 begin
-  if not UniBase.IsInitialized then
-    UniBase.InitializeWithDB(':memory:');
-  
-  FLicense := TUniBaseLicense.Create(UniBase.ConfigDB);
+  Manager := UniBase.Manager.UniBase;
+  if not Manager.IsInitialized then
+    Manager.InitializeWithDB(':memory:');
+  FLicense := TUniBaseLicense.Create(Manager.ConfigDB);
 end;
 
 procedure TTestUniBaseLicense.TearDown;
