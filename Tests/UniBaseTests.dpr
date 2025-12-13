@@ -23,7 +23,7 @@ uses
   // TODO: Tests below need API updates to match actual implementation
   // Test.UniBase.FormState in 'Test.UniBase.FormState.pas',
   // Test.UniBase.Logging in 'Test.UniBase.Logging.pas',
-  // Test.UniBase.MRU in 'Test.UniBase.MRU.pas',
+  Test.UniBase.MRU in 'Test.UniBase.MRU.pas',
   // Test.UniBase.Hotkeys in 'Test.UniBase.Hotkeys.pas',
   Test.UniBase.Theme in 'Test.UniBase.Theme.pas',
   // Test.UniBase.License in 'Test.UniBase.License.pas',

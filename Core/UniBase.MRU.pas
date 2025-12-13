@@ -144,6 +144,7 @@ var
   Query: TFDQuery;
   ActualDisplayName: string;
   NowStr: string;
+  ExistingCount: Integer;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -161,22 +162,42 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 使用 SQLite UPSERT 语法
-    Query.SQL.Text := 
-      'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
-      'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0) ' +
-      'ON CONFLICT(Category, ItemKey) DO UPDATE SET ' +
-      'DisplayName = :Display, IconIndex = :Icon, ' +
-      'LastAccess = :NowTime, ' +
-      'AccessCount = AccessCount + 1';
-      
+    // Check if entry exists and get current AccessCount
+    Query.SQL.Text := 'SELECT AccessCount FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
     Query.ParamByName('Cat').AsString := Category;
     Query.ParamByName('Key').AsString := ItemKey;
-    Query.ParamByName('Display').AsString := ActualDisplayName;
-    Query.ParamByName('Icon').AsInteger := IconIndex;
-    Query.ParamByName('NowTime').AsString := NowStr;
+    Query.Open;
     
-    Query.ExecSQL;
+    if Query.Eof then
+    begin
+      // Insert new entry
+      Query.Close;
+      Query.SQL.Text := 
+        'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
+        'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0)';
+      Query.ParamByName('Cat').AsString := Category;
+      Query.ParamByName('Key').AsString := ItemKey;
+      Query.ParamByName('Display').AsString := ActualDisplayName;
+      Query.ParamByName('Icon').AsInteger := IconIndex;
+      Query.ParamByName('NowTime').AsString := NowStr;
+      Query.ExecSQL;
+    end
+    else
+    begin
+      // Update existing entry
+      ExistingCount := Query.FieldByName('AccessCount').AsInteger;
+      Query.Close;
+      Query.SQL.Text := 
+        'UPDATE MRU SET DisplayName = :Display, IconIndex = :Icon, ' +
+        'LastAccess = :NowTime, AccessCount = :Count WHERE Category = :Cat AND ItemKey = :Key';
+      Query.ParamByName('Cat').AsString := Category;
+      Query.ParamByName('Key').AsString := ItemKey;
+      Query.ParamByName('Display').AsString := ActualDisplayName;
+      Query.ParamByName('Icon').AsInteger := IconIndex;
+      Query.ParamByName('NowTime').AsString := NowStr;
+      Query.ParamByName('Count').AsInteger := ExistingCount + 1;
+      Query.ExecSQL;
+    end;
   finally
     Query.Free;
   end;
@@ -292,8 +313,13 @@ begin
         Item.DisplayName := Query.FieldByName('DisplayName').AsString;
         if Item.DisplayName = '' then
           Item.DisplayName := Item.ItemKey;
-          
-        Item.LastAccess := Query.FieldByName('LastAccess').AsDateTime;
+        
+        // LastAccess is stored as TEXT (ISO8601), parse it
+        try
+          Item.LastAccess := ISO8601ToDate(Query.FieldByName('LastAccess').AsString, False);
+        except
+          Item.LastAccess := Now;
+        end;
         Item.AccessCount := Query.FieldByName('AccessCount').AsInteger;
         Item.IconIndex := Query.FieldByName('IconIndex').AsInteger;
         

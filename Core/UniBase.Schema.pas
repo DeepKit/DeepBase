@@ -202,7 +202,7 @@ const
     'CREATE TABLE IF NOT EXISTS MRU (' +
     '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
     '  Category TEXT NOT NULL DEFAULT ''File'',' +
-    '  ItemPath TEXT NOT NULL,' +
+    '  ItemKey TEXT NOT NULL,' +
     '  DisplayName TEXT,' +
     '  IconIndex INTEGER DEFAULT 0,' +
     '  IsPinned INTEGER DEFAULT 0,' +
@@ -211,7 +211,7 @@ const
     '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
     '  Extra TEXT,' +
     '  Remarks TEXT,' +
-    '  UNIQUE(Category, ItemPath)' +
+  '  UNIQUE(Category, ItemKey)' +
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_mru_category ON MRU(Category);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_mru_access ON MRU(LastAccess DESC);';
