@@ -1,7 +1,7 @@
 # UniBase 开发任务
 
-> **最后更新**: 2025-12-14
-> **项目状态**: 核心完成，扩展开发中
+> **最后更新**: 2025-12-15
+> **项目状态**: 核心完成，AipexBase 集成中
 
 ---
 
@@ -129,19 +129,79 @@
 
 ---
 
+### AipexBase 集成 (P0)
+
+#### AIPEX-001: 用户认证与计费 UI 组件
+- **状态**: ✅ 前端完成，等待后端 (2025-12-15)
+- **优先级**: P0
+- **API 文档**: `docs/api/前端对接后端用户认证、计费指南.md`
+- **已完成 (前端)**:
+  - [x] `Core/UniBase.AipexBase.Client.pas` - API 客户端
+  - [x] VCL 组件 (7个): LoginDialog, RegisterDialog, ForgotPasswordDialog, UserProfileFrame, BalanceFrame, UsageStatsFrame, BillingFrame
+  - [x] FMX 组件 (7个): 同上 FMX 版本
+  - [x] `Examples/UserAuthDemo/` - VCL 演示程序
+  - [x] `docs/ui/svg/` - 7 个 UI 线框图
+  - [x] `docs/integrations/AipexBase-Integration.md` - 集成指南
+- **等待后端 (Phase 6)**:
+  - [ ] POST /api/auth/login
+  - [ ] POST /api/auth/register
+  - [ ] POST /api/auth/forgot-password
+  - [ ] POST /api/auth/refresh
+  - [ ] GET /api/user/profile
+  - [ ] GET /api/billing/balance
+  - [ ] POST /api/billing/recharge
+  - [ ] GET /api/billing/transactions
+  - [ ] GET /api/billing/invoices
+
+#### AIPEX-002: LLM 调用与用量统计 UI
+- **状态**: ✅ 前端完成，等待后端 (2025-12-15)
+- **优先级**: P0
+- **API 文档**: `docs/api/前端对接后端LLM能力与计费指南.md`
+- **已完成 (前端)**:
+  - [x] `VCL/UniBase.VCL.UsageStatsFrame.pas` - VCL 用量统计
+  - [x] `FMX/UniBase.FMX.UsageStatsFrame.pas` - FMX 用量统计
+  - [x] `VCL/UniBase.VCL.LLMChatFrame.pas` - VCL 聊天界面
+  - [x] `FMX/UniBase.FMX.LLMChatFrame.pas` - FMX 聊天界面
+- **等待后端 (Phase 5-6)**:
+  - [ ] POST /api/llm/chat/completions (流式)
+  - [ ] GET /api/llm/models
+  - [ ] GET /api/usage/summary
+  - [ ] GET /api/usage/trend
+  - [ ] GET /api/usage/models
+  - [ ] GET /api/usage/calls
+
+#### AIPEX-003: 前后端联调测试
+- **状态**: 🔲 待后端就绪
+- **优先级**: P0
+- **任务**:
+  - [ ] 后端部署开发环境 (http://localhost:8090)
+  - [ ] 运行 UserAuthDemo 测试登录/注册
+  - [ ] 测试余额充值流程 (沙箱支付)
+  - [ ] 测试 LLM 调用和计费
+  - [ ] 测试用量统计数据展示
+  - [ ] 修复前后端字段对接问题
+
+---
+
 ### 低优先级 (P3)
 
 #### ECO-002: 社区扩展包 (持续)
 - **状态**: 🟡 进行中
 - **性质**: ThirdParty 可选扩展（非 Core 核心功能）
 - **已完成阶段**:
-  - 第一批扩展（PostgreSQL/MySQL 驱动、UI 主题包、云存储集成）已记录在 `history.md` 的 “ECO-002: 社区扩展包（第一阶段）” 小节，此处不再重复细节。
+  - 第一批扩展（PostgreSQL/MySQL 驱动、UI 主题包、云存储集成）已记录在 `history.md` 的 "ECO-002: 社区扩展包（第一阶段）" 小节
+  - 支付接口集成 (2025-12-15):
+    - [x] `ThirdParty/Payment/UniBase.Payment.pas` - 统一支付接口
+    - [x] `ThirdParty/Payment/UniBase.Payment.Alipay.pas` - 支付宝实现
+    - [x] `ThirdParty/Payment/UniBase.Payment.WeChatPay.pas` - 微信支付实现 (APIv3)
+    - [x] `ThirdParty/Payment/UniBase.Payment.Stripe.pas` - Stripe 实现
 - **下一步任务**:
-  - [ ] 支付接口集成 (`ThirdParty/Payment/`) - Stripe/PayPal/Alipay
+  - [ ] 支付接口扩展: PayPal
   - [ ] 社交媒体集成 (`ThirdParty/Social/`) - WeChat/Weibo/Twitter
 - **开发指南**:
   - 参考 [06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
   - 参考已实现的 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 模式
+  - 支付接口文档: `ThirdParty/Payment/README.md`
 
 #### DOC-004: 视频教程
 - **状态**: 🔲 待开始

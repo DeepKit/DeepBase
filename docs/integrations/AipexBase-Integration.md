@@ -181,10 +181,11 @@ end;
 
 #### 用户认证
 ```pascal
-function Login(const Email, Password: string): TAipexLoginResult;
-function Register(const Username, Email, Password: string): TAipexLoginResult;
+// 登录支持邮箱/手机/用户名作为登录标识
+function Login(const Username, Password: string): TAipexLoginResult;
+function Register(const Username, Email, Password, ConfirmPassword: string): TAipexLoginResult;
 function ForgotPassword(const Email: string): Boolean;
-function RefreshToken: string;
+function RefreshAccessToken: Boolean;
 procedure Logout;
 ```
 
@@ -261,7 +262,7 @@ begin
   try
     // 测试注册（使用测试邮箱）
     try
-      Client.Register('testuser', 'test@example.com', 'Test123456');
+      Client.Register('testuser', 'test@example.com', 'Test123456', 'Test123456');
       WriteLn('注册成功');
     except
       on E: Exception do
@@ -313,11 +314,8 @@ end;
 
 ### 服务器地址
 
-| 环境 | 地址 |
-|------|------|
-| 开发 | `https://dev.aipexbase.com/api` |
-| 测试 | `https://test.aipexbase.com/api` |
-| 生产 | `https://api.aipexbase.com` |
+- **本地开发**: `http://localhost:8090`
+- **生产环境**: `https://api.aipexbase.com`
 
 ### 本地存储
 

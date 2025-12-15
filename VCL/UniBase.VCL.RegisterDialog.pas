@@ -461,7 +461,8 @@ begin
     FRegisterResult := FApiClient.Register(
       Trim(FEdtUsername.Text),
       Trim(FEdtEmail.Text),
-      FEdtPassword.Text
+      FEdtPassword.Text,
+      FEdtConfirmPassword.Text
     );
     
     if FRegisterResult.Success then

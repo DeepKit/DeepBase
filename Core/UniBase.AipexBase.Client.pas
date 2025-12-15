@@ -20,7 +20,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.JSON, System.DateUtils,
   System.Net.HttpClient, System.Net.HttpClientComponent, System.Net.URLClient,
-  System.Generics.Collections, System.NetEncoding;
+  System.Generics.Collections, System.NetEncoding, System.Net.Mime;
 
 type
   /// <summary>API Exception base class</summary>
@@ -38,7 +38,7 @@ type
 
   /// <summary>User info record</summary>
   TAipexUser = record
-    UserId: string;
+    UserId: Integer;  // Backend uses integer user_id
     Username: string;
     Email: string;
     Phone: string;
@@ -181,11 +181,11 @@ type
     
     // ===== Authentication =====
     
-    /// <summary>User login</summary>
-    function Login(const AEmail, APassword: string; ARememberMe: Boolean = False): TAipexLoginResult;
+    /// <summary>User login (supports email/phone/username)</summary>
+    function Login(const AUsername, APassword: string; ARememberMe: Boolean = False): TAipexLoginResult;
     
     /// <summary>User registration</summary>
-    function Register(const AUsername, AEmail, APassword: string): TAipexLoginResult;
+    function Register(const AUsername, AEmail, APassword, AConfirmPassword: string): TAipexLoginResult;
     
     /// <summary>Send password reset email</summary>
     function ForgotPassword(const AEmail: string): Boolean;
@@ -281,7 +281,7 @@ end;
 
 procedure TAipexUser.Clear;
 begin
-  UserId := '';
+  UserId := 0;
   Username := '';
   Email := '';
   Phone := '';
@@ -439,7 +439,7 @@ end;
 
 // ===== Authentication =====
 
-function TAipexBaseClient.Login(const AEmail, APassword: string; ARememberMe: Boolean): TAipexLoginResult;
+function TAipexBaseClient.Login(const AUsername, APassword: string; ARememberMe: Boolean): TAipexLoginResult;
 var
   ReqBody: TJSONObject;
   Response: TAipexApiResponse;
@@ -450,7 +450,8 @@ begin
   
   ReqBody := TJSONObject.Create;
   try
-    ReqBody.AddPair('email', AEmail);
+    // Backend accepts email/phone/username as login identifier
+    ReqBody.AddPair('username', AUsername);
     ReqBody.AddPair('password', APassword);
     ReqBody.AddPair('remember_me', TJSONBool.Create(ARememberMe));
     
@@ -471,7 +472,7 @@ begin
         
         if TJSONObject(Response.Data).TryGetValue<TJSONObject>('user', UserObj) then
         begin
-          UserObj.TryGetValue<string>('user_id', Result.User.UserId);
+          UserObj.TryGetValue<Integer>('user_id', Result.User.UserId);
           UserObj.TryGetValue<string>('username', Result.User.Username);
           UserObj.TryGetValue<string>('email', Result.User.Email);
           UserObj.TryGetValue<string>('phone', Result.User.Phone);
@@ -487,7 +488,7 @@ begin
   end;
 end;
 
-function TAipexBaseClient.Register(const AUsername, AEmail, APassword: string): TAipexLoginResult;
+function TAipexBaseClient.Register(const AUsername, AEmail, APassword, AConfirmPassword: string): TAipexLoginResult;
 var
   ReqBody: TJSONObject;
   Response: TAipexApiResponse;
@@ -500,6 +501,7 @@ begin
     ReqBody.AddPair('username', AUsername);
     ReqBody.AddPair('email', AEmail);
     ReqBody.AddPair('password', APassword);
+    ReqBody.AddPair('confirm_password', AConfirmPassword);
     
     Response := ParseJsonResponse(DoPost('/api/auth/register', ReqBody.ToString));
     Result.Success := Response.Success;
@@ -622,7 +624,7 @@ begin
   if Response.Success and Assigned(Response.Data) and (Response.Data is TJSONObject) then
   begin
     UserObj := TJSONObject(Response.Data);
-    UserObj.TryGetValue<string>('user_id', Result.UserId);
+    UserObj.TryGetValue<Integer>('user_id', Result.UserId);
     UserObj.TryGetValue<string>('username', Result.Username);
     UserObj.TryGetValue<string>('email', Result.Email);
     UserObj.TryGetValue<string>('phone', Result.Phone);
