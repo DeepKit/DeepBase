@@ -40,6 +40,8 @@ uses
   // Payment & Social tests
   Test.UniBase.Payment in 'Test.UniBase.Payment.pas',
   Test.UniBase.Social in 'Test.UniBase.Social.pas',
+  // Types tests
+  Test.UniBase.Types in 'Test.UniBase.Types.pas',
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
   // Core units
