@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 600" width="750" height="600">
+  <defs>
+    <filter id="shadow7" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+    <linearGradient id="headerGrad7" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="750" height="600" fill="#f5f7fa"/>
+  
+  <!-- Header -->
+  <rect width="750" height="120" fill="url(#headerGrad7)"/>
+  <text x="30" y="45" fill="white" font-family="Arial" font-size="20" font-weight="bold">账单与发票</text>
+  <text x="30" y="70" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="13">查看历史账单，下载电子发票</text>
+  
+  <!-- Summary Card -->
+  <rect x="30" y="90" width="690" height="70" rx="10" fill="white" filter="url(#shadow7)"/>
+  <text x="60" y="125" fill="#999" font-family="Arial" font-size="12">本月消费</text>
+  <text x="60" y="147" fill="#333" font-family="Arial" font-size="20" font-weight="bold">¥156.80</text>
+  
+  <line x1="200" y1="105" x2="200" y2="145" stroke="#eee"/>
+  
+  <text x="230" y="125" fill="#999" font-family="Arial" font-size="12">待开票金额</text>
+  <text x="230" y="147" fill="#333" font-family="Arial" font-size="20" font-weight="bold">¥89.50</text>
+  
+  <line x1="370" y1="105" x2="370" y2="145" stroke="#eee"/>
+  
+  <text x="400" y="125" fill="#999" font-family="Arial" font-size="12">已开票金额</text>
+  <text x="400" y="147" fill="#333" font-family="Arial" font-size="20" font-weight="bold">¥67.30</text>
+  
+  <!-- Apply Invoice Button -->
+  <rect x="580" y="110" width="120" height="36" rx="18" fill="#667eea"/>
+  <text x="640" y="133" text-anchor="middle" fill="white" font-family="Arial" font-size="13">申请开票</text>
+  
+  <!-- Filter Bar -->
+  <rect x="30" y="180" width="690" height="50" rx="8" fill="white" filter="url(#shadow7)"/>
+  
+  <!-- Status Filter -->
+  <text x="50" y="210" fill="#999" font-family="Arial" font-size="12">状态:</text>
+  <rect x="85" y="193" width="70" height="28" rx="14" fill="#667eea"/>
+  <text x="120" y="211" text-anchor="middle" fill="white" font-family="Arial" font-size="12">全部</text>
+  <rect x="162" y="193" width="70" height="28" rx="14" fill="#f5f5f5"/>
+  <text x="197" y="211" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">已开票</text>
+  <rect x="239" y="193" width="70" height="28" rx="14" fill="#f5f5f5"/>
+  <text x="274" y="211" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">未开票</text>
+  
+  <!-- Date Filter -->
+  <text x="350" y="210" fill="#999" font-family="Arial" font-size="12">时间:</text>
+  <rect x="385" y="193" width="140" height="28" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="400" y="211" fill="#333" font-family="Arial" font-size="11">2024年12月</text>
+  <text x="510" y="211" fill="#667eea" font-family="Arial" font-size="11">▼</text>
+  
+  <!-- Search -->
+  <rect x="560" y="193" width="140" height="28" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="575" y="211" fill="#999" font-family="Arial" font-size="11">🔍 搜索账单...</text>
+  
+  <!-- Invoice List -->
+  <rect x="30" y="250" width="690" height="330" rx="10" fill="white" filter="url(#shadow7)"/>
+  
+  <!-- Table Header -->
+  <rect x="30" y="250" width="690" height="40" rx="10" fill="#fafafa"/>
+  <rect x="30" y="275" width="690" height="15" fill="#fafafa"/>
+  <text x="50" y="275" fill="#999" font-family="Arial" font-size="12">账单编号</text>
+  <text x="200" y="275" fill="#999" font-family="Arial" font-size="12">账单周期</text>
+  <text x="350" y="275" fill="#999" font-family="Arial" font-size="12">金额</text>
+  <text x="450" y="275" fill="#999" font-family="Arial" font-size="12">状态</text>
+  <text x="570" y="275" fill="#999" font-family="Arial" font-size="12">操作</text>
+  
+  <!-- Invoice Row 1 -->
+  <line x1="50" y1="305" x2="700" y2="305" stroke="#f5f5f5"/>
+  <text x="50" y="335" fill="#333" font-family="Arial" font-size="13">INV-2024120001</text>
+  <text x="200" y="335" fill="#666" font-family="Arial" font-size="13">2024-12-01 ~ 12-07</text>
+  <text x="350" y="335" fill="#333" font-family="Arial" font-size="13" font-weight="bold">¥45.60</text>
+  <rect x="450" y="320" width="60" height="22" rx="11" fill="#e8f5e9"/>
+  <text x="480" y="335" text-anchor="middle" fill="#4caf50" font-family="Arial" font-size="11">已开票</text>
+  <text x="570" y="335" fill="#667eea" font-family="Arial" font-size="12">下载</text>
+  <text x="620" y="335" fill="#667eea" font-family="Arial" font-size="12">详情</text>
+  
+  <!-- Invoice Row 2 -->
+  <line x1="50" y1="360" x2="700" y2="360" stroke="#f5f5f5"/>
+  <text x="50" y="390" fill="#333" font-family="Arial" font-size="13">INV-2024120002</text>
+  <text x="200" y="390" fill="#666" font-family="Arial" font-size="13">2024-12-08 ~ 12-14</text>
+  <text x="350" y="390" fill="#333" font-family="Arial" font-size="13" font-weight="bold">¥67.30</text>
+  <rect x="450" y="375" width="60" height="22" rx="11" fill="#fff3e0"/>
+  <text x="480" y="390" text-anchor="middle" fill="#ff9800" font-family="Arial" font-size="11">未开票</text>
+  <text x="570" y="390" fill="#667eea" font-family="Arial" font-size="12">开票</text>
+  <text x="620" y="390" fill="#667eea" font-family="Arial" font-size="12">详情</text>
+  
+  <!-- Invoice Row 3 -->
+  <line x1="50" y1="415" x2="700" y2="415" stroke="#f5f5f5"/>
+  <text x="50" y="445" fill="#333" font-family="Arial" font-size="13">INV-2024110003</text>
+  <text x="200" y="445" fill="#666" font-family="Arial" font-size="13">2024-11-01 ~ 11-30</text>
+  <text x="350" y="445" fill="#333" font-family="Arial" font-size="13" font-weight="bold">¥128.90</text>
+  <rect x="450" y="430" width="60" height="22" rx="11" fill="#e8f5e9"/>
+  <text x="480" y="445" text-anchor="middle" fill="#4caf50" font-family="Arial" font-size="11">已开票</text>
+  <text x="570" y="445" fill="#667eea" font-family="Arial" font-size="12">下载</text>
+  <text x="620" y="445" fill="#667eea" font-family="Arial" font-size="12">详情</text>
+  
+  <!-- Invoice Row 4 -->
+  <line x1="50" y1="470" x2="700" y2="470" stroke="#f5f5f5"/>
+  <text x="50" y="500" fill="#333" font-family="Arial" font-size="13">INV-2024100004</text>
+  <text x="200" y="500" fill="#666" font-family="Arial" font-size="13">2024-10-01 ~ 10-31</text>
+  <text x="350" y="500" fill="#333" font-family="Arial" font-size="13" font-weight="bold">¥98.50</text>
+  <rect x="450" y="485" width="60" height="22" rx="11" fill="#e8f5e9"/>
+  <text x="480" y="500" text-anchor="middle" fill="#4caf50" font-family="Arial" font-size="11">已开票</text>
+  <text x="570" y="500" fill="#667eea" font-family="Arial" font-size="12">下载</text>
+  <text x="620" y="500" fill="#667eea" font-family="Arial" font-size="12">详情</text>
+  
+  <!-- Pagination -->
+  <text x="50" y="555" fill="#999" font-family="Arial" font-size="12">共 12 条记录</text>
+  
+  <rect x="550" y="538" width="28" height="28" rx="4" fill="#f5f5f5"/>
+  <text x="564" y="556" text-anchor="middle" fill="#999" font-family="Arial" font-size="12">&lt;</text>
+  
+  <rect x="585" y="538" width="28" height="28" rx="4" fill="#667eea"/>
+  <text x="599" y="556" text-anchor="middle" fill="white" font-family="Arial" font-size="12">1</text>
+  
+  <rect x="620" y="538" width="28" height="28" rx="4" fill="#f5f5f5"/>
+  <text x="634" y="556" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">2</text>
+  
+  <rect x="655" y="538" width="28" height="28" rx="4" fill="#f5f5f5"/>
+  <text x="669" y="556" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">3</text>
+  
+  <rect x="690" y="538" width="28" height="28" rx="4" fill="#f5f5f5"/>
+  <text x="704" y="556" text-anchor="middle" fill="#999" font-family="Arial" font-size="12">&gt;</text>
+</svg>

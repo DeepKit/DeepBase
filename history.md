@@ -1160,8 +1160,14 @@ var HTML := Exporter.ToHTML;
 |  - ✅ 修复并补充 DB 异常测试：`Core/UniBase.DBException.pas` 改进 `EUniBaseDB.UserMessage` 中文+英文混排场景，`Test.UniBase.DBException.pas` 增加回归用例。
 |  - ✅ 新增 WebAPI 集成测试：`Tests/Integration/Test.Integration.WebAPI.pas`，覆盖 HTTP 路由、查询参数解析、CORS、JWT 认证、OpenAPI 生成与 WebSocket 消息路由，相关 Core/Auth 单元问题已修复并通过测试。
 |  - ✅ 将测试覆盖率统计集成到 `Scripts/run_tests.ps1`，支持在本地/CI 中输出 DUnitX XML 结果及简易 HTML 汇总页面，便于持续监控覆盖率。
-||  - ✅ 将数据库相关 Integration Tests 标记为「环境依赖」：在 `Test.Integration.Core.pas` 中为所有依赖 SQLite/FireDAC 的集成测试 Fixture 添加 `Category(\"DBEnv\")`，并在 `Scripts/run_tests.ps1` 中默认通过 `--exclude:DBEnv` 排除这些测试；当需要完整运行数据库集成测试时，可通过设置环境变量 `UNIBASE_RUN_DB_INTEGRATION=1` 显式启用。
-|- **下一步**:
+|||  - ✅ 将数据库相关 Integration Tests 标记为「环境依赖」：在 `Test.Integration.Core.pas` 中为所有依赖 SQLite/FireDAC 的集成测试 Fixture 添加 `Category(\"DBEnv\")`，并在 `Scripts/run_tests.ps1` 中默认通过 `--exclude:DBEnv` 排除这些测试；当需要完整运行数据库集成测试时，可通过设置环境变量 `UNIBASE_RUN_DB_INTEGRATION=1` 显式启用。
+|||- **已完成 (2025-12-13)**:
+|||  - ✅ `Test.UniBase.i18n.pas` - i18n 模块回归测试补全
+|||  - ✅ `Test.UniBase.Theme.pas` - 主题模块回归测试补全
+|||  - ✅ `Test.UniBase.FormState.pas` - 修复测试稳定性并恢复到 `UniBaseTests.dpr`
+|||  - ✅ `Test.UniBase.Logging.pas` - 重写为 file-only 异步写入可验证的测试，并恢复到 `UniBaseTests.dpr`
+|||  - ✅ `Test.UniBase.License.pas` - 恢复到 `UniBaseTests.dpr`
+||- **下一步**:
 |  - （可选）在持续集成环境中补充针对数据库 Integration Tests 的文档与示例配置（包括 FireDAC/SQLite 驱动部署方式、专用测试数据库路径等），方便在有完整数据库环境的机器上重新启用 DB 集成测试。
 ---
 

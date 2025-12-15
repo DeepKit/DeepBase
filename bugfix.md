@@ -6,6 +6,17 @@
 
 ## 2025-12-13 Bug 修复
 
+### BUG-067: TStyleManager.IsValidStyle 抛出 EFOpenError 导致主题加载失败
+- 发现日期: 2025-12-13
+- 严重性: 🟡 Medium
+- 描述: 当数据库中存储了无效的主题名（如 `Iceberg Classico`）时，`TStyleManager.IsValidStyle()` 会尝试将其作为文件路径加载，抛出 `EFOpenError: Cannot open file 'xxx'` 异常，导致应用程序启动失败。
+- 修复: 
+  - `Core/UniBase.Theme.pas`: 新增 `IsStyleInList()` 辅助函数，通过 `TStyleManager.StyleNames` 列表检查样式是否已注册，而不是调用可能抛异常的 `IsValidStyle()`。
+  - `ApplyTheme()`、`GetAvailableThemes()`、`IsThemeAvailable()` 方法均改用 `IsStyleInList()` 进行样式验证。
+  - 无效主题名会自动回退到 `Windows` 默认主题。
+- 影响范围: 所有使用 UniBase 主题功能的 VCL 应用程序。
+- 验证: 单元测试 181/181 通过 ✅
+
 ### BUG-068: I18nTexts 列名不一致导致翻译添加失败
 - 发现日期: 2025-12-13
 - 严重性: 🟡 Medium
@@ -21,6 +32,48 @@
 - 修复: 在 `{$IFDEF MSWINDOWS}` uses 块中添加 `Winapi.Windows`。
 - 影响范围: Debug 模式下的编译。
 - 验证: 编译通过 ✅
+
+### BUG-070: MRU LastAccess 时间精度不足导致排序不稳定
+- 发现日期: 2025-12-13
+- 严重性: 🟡 Medium
+- 描述: `Core/UniBase.MRU.pas` 写入 LastAccess 使用秒级时间戳（`yyyy-mm-dd"T"hh:nn:ss`），在短时间内连续写入（如单元测试 Sleep(100)）会出现同一秒内多条记录 LastAccess 相同，导致 `ORDER BY LastAccess DESC` 出现排序不稳定。
+- 修复: LastAccess 改为毫秒精度（`yyyy-mm-dd"T"hh:nn:ss.zzz`），避免同秒冲突。
+- 影响范围: MRU 列表排序与稳定性（尤其是测试/高频写入场景）。
+- 验证: 单元测试全部通过（293/293）✅
+
+### BUG-071: Hotkeys / i18n 单元测试用例与框架语义不一致导致失败
+- 发现日期: 2025-12-13
+- 严重性: 🟢 Low
+- 描述:
+  - `Test.UniBase.Hotkeys.Test_CheckHotkeyConflict_NoConflict` 假设 `Ctrl+F` 不会被默认快捷键占用，但框架初始化可能已注册默认快捷键，导致返回冲突 ActionName。
+  - `Test.UniBase.i18n` 测试之间共享单例 I18n 实例，部分用例切换语言后未复位，导致后续复数规则/缓存相关用例受到污染；同时框架将 `en-US` 视为英文源语言（TranslateTo 直接返回原文），测试用例不应要求 `en-US` 有独立翻译。
+- 修复:
+  - Hotkeys 测试改为动态寻找未占用快捷键（候选集合 Ctrl+Shift+Alt+F1..F12）。
+  - i18n 测试在 Setup/TearDown 统一复位 CurrentLanguage= en-US 并 ClearCache；语言切换用例改用 `fr-FR` 作为第二语言。
+- 影响范围: 仅测试代码，但可避免误报并提升回归稳定性。
+- 验证: 单元测试全部通过（323/323）✅
+
+### BUG-072: FormState 单元测试使用无效窗体 Name / 句柄创建时机导致位置断言失败
+- 发现日期: 2025-12-13
+- 严重性: 🟢 Low
+- 描述:
+  - `Test.UniBase.FormState.pas` 使用 `TGUID.ToString` 生成窗体 Name，包含 `{}` 导致 VCL 抛出 “not a valid component name”。
+  - 测试窗体未提前创建 Handle，导致 `SaveFormState` 内部首次访问 Handle 时触发 Windows 默认窗口摆放，`GetWindowPlacement().rcNormalPosition` 与测试设置的 Left/Top 不一致。
+- 修复:
+  - 生成 Name 时剥离 GUID 的 `{}` 与 `-`。
+  - 在设置窗体 Bounds 之前调用 `HandleNeeded`，并使用 `SetBounds` 让窗口位置/大小真正落到 WinAPI 句柄上。
+- 影响范围: 仅测试代码；同时更准确地覆盖 `GetWindowPlacement` 分支。
+- 验证: 单元测试全部通过（323/323）✅
+
+### BUG-073: Logging 单元测试与现有 Logger API 不一致导致无法编译
+- 发现日期: 2025-12-13
+- 严重性: 🟢 Low
+- 描述: `Test.UniBase.Logging.pas` 使用了旧接口（`LogInfo/Flush/GetLogs/OnLogAdded` 等），与当前 `TUniBaseLogger`（`Info/InfoFmt`、异步写入线程、无 GetLogs API）不匹配，导致测试工程无法编译。
+- 修复:
+  - 重写 Logging 测试：改为 file-only 模式（避免 SQLite `:memory:` 多连接限制），并通过轮询当天日志文件内容验证异步写入。
+  - 修复 Delphi 兼容性：避免 `Exit([])` 写法。
+- 影响范围: 仅测试代码，但能恢复 Logging 回归测试覆盖。
+- 验证: 单元测试全部通过（323/323）✅
 
 ---
 
@@ -45,17 +98,6 @@
 - 修复: 在 `UniBaseIntegrationTests.dpr` 的 uses 中添加 `FireDAC.Phys.SQLite`, `FireDAC.Phys.SQLiteDef`, `FireDAC.Stan.ExprFuncs`。
 - 影响范围: 集成测试项目。
 - 验证: 重新编译并运行集成测试，9/9 测试通过 ✅
-
-### BUG-067: TStyleManager.IsValidStyle 抛出 EFOpenError 导致主题加载失败
-- 发现日期: 2025-12-13
-- 严重性: 🟡 Medium
-- 描述: 当数据库中存储了无效的主题名（如 `Iceberg Classico`）时，`TStyleManager.IsValidStyle()` 会尝试将其作为文件路径加载，抛出 `EFOpenError: Cannot open file 'xxx'` 异常，导致应用程序启动失败。
-- 修复: 
-  - `Core/UniBase.Theme.pas`: 新增 `IsStyleInList()` 辅助函数，通过 `TStyleManager.StyleNames` 列表检查样式是否已注册，而不是调用可能抛异常的 `IsValidStyle()`。
-  - `ApplyTheme()`、`GetAvailableThemes()`、`IsThemeAvailable()` 方法均改用 `IsStyleInList()` 进行样式验证。
-  - 无效主题名会自动回退到 `Windows` 默认主题。
-- 影响范围: 所有使用 UniBase 主题功能的 VCL 应用程序。
-- 验证: 单元测试 181/181 通过 ✅
 
 ---
 
@@ -611,7 +653,7 @@
 - **待处理 Issue**: 0
 - **性能优化**: 4 项
 - **文档更新**: 2 项
-- **最后更新**: 2025-12-11
+- **最后更新**: 2025-12-13
 
 ---
 

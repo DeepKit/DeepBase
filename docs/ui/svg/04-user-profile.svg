@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" width="600" height="500">
+  <defs>
+    <filter id="shadow4" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="500" fill="#f5f7fa"/>
+  
+  <!-- Header -->
+  <rect width="600" height="60" fill="white" filter="url(#shadow4)"/>
+  <text x="30" y="38" fill="#333" font-family="Arial" font-size="18" font-weight="bold">个人信息</text>
+  <text x="570" y="38" text-anchor="end" fill="#667eea" font-family="Arial" font-size="14">退出登录</text>
+  
+  <!-- Left Panel - Avatar & Basic Info -->
+  <rect x="20" y="80" width="200" height="400" rx="10" fill="white" filter="url(#shadow4)"/>
+  
+  <!-- Avatar -->
+  <circle cx="120" cy="160" r="50" fill="#e3e8f0"/>
+  <circle cx="120" cy="150" r="20" fill="#667eea"/>
+  <ellipse cx="120" cy="190" rx="30" ry="20" fill="#667eea"/>
+  <circle cx="120" cy="210" r="18" fill="#667eea" stroke="white" stroke-width="2"/>
+  <text x="120" y="215" text-anchor="middle" fill="white" font-family="Arial" font-size="10">编辑</text>
+  
+  <!-- User Info -->
+  <text x="120" y="245" text-anchor="middle" fill="#333" font-family="Arial" font-size="16" font-weight="bold">张三</text>
+  <text x="120" y="265" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">zhangsan@example.com</text>
+  
+  <!-- Account Status -->
+  <rect x="85" y="280" width="70" height="22" rx="11" fill="#e8f5e9"/>
+  <text x="120" y="295" text-anchor="middle" fill="#4caf50" font-family="Arial" font-size="11">已验证</text>
+  
+  <!-- Stats -->
+  <line x1="40" y1="320" x2="200" y2="320" stroke="#eee"/>
+  <text x="120" y="350" text-anchor="middle" fill="#999" font-family="Arial" font-size="11">注册时间</text>
+  <text x="120" y="370" text-anchor="middle" fill="#333" font-family="Arial" font-size="13">2024-01-15</text>
+  
+  <text x="120" y="400" text-anchor="middle" fill="#999" font-family="Arial" font-size="11">最后登录</text>
+  <text x="120" y="420" text-anchor="middle" fill="#333" font-family="Arial" font-size="13">2024-12-14 10:30</text>
+  
+  <!-- Logout Button -->
+  <rect x="40" y="445" width="160" height="36" rx="6" fill="none" stroke="#ff5252" stroke-width="1.5"/>
+  <text x="120" y="468" text-anchor="middle" fill="#ff5252" font-family="Arial" font-size="13">退出登录</text>
+  
+  <!-- Right Panel - Edit Form -->
+  <rect x="240" y="80" width="340" height="400" rx="10" fill="white" filter="url(#shadow4)"/>
+  
+  <!-- Tabs -->
+  <text x="270" y="115" fill="#667eea" font-family="Arial" font-size="14" font-weight="bold">基本信息</text>
+  <line x1="270" y1="125" x2="340" y2="125" stroke="#667eea" stroke-width="2"/>
+  <text x="380" y="115" fill="#999" font-family="Arial" font-size="14">修改密码</text>
+  <text x="480" y="115" fill="#999" font-family="Arial" font-size="14">安全设置</text>
+  <line x1="260" y1="130" x2="560" y2="130" stroke="#eee"/>
+  
+  <!-- Form Fields -->
+  <text x="270" y="165" fill="#333" font-family="Arial" font-size="12" font-weight="500">用户名</text>
+  <rect x="260" y="172" width="300" height="36" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="275" y="195" fill="#333" font-family="Arial" font-size="13">zhangsan</text>
+  
+  <text x="270" y="230" fill="#333" font-family="Arial" font-size="12" font-weight="500">显示名称</text>
+  <rect x="260" y="237" width="300" height="36" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="275" y="260" fill="#333" font-family="Arial" font-size="13">张三</text>
+  
+  <text x="270" y="295" fill="#333" font-family="Arial" font-size="12" font-weight="500">邮箱地址</text>
+  <rect x="260" y="302" width="300" height="36" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="275" y="325" fill="#333" font-family="Arial" font-size="13">zhangsan@example.com</text>
+  <text x="545" y="325" text-anchor="end" fill="#4caf50" font-family="Arial" font-size="11">✓</text>
+  
+  <text x="270" y="360" fill="#333" font-family="Arial" font-size="12" font-weight="500">手机号码</text>
+  <rect x="260" y="367" width="300" height="36" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="275" y="390" fill="#999" font-family="Arial" font-size="13">未绑定</text>
+  <text x="545" y="390" text-anchor="end" fill="#667eea" font-family="Arial" font-size="11">绑定</text>
+  
+  <!-- Save Button -->
+  <rect x="260" y="425" width="140" height="40" rx="6" fill="#667eea"/>
+  <text x="330" y="450" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">保存修改</text>
+  
+  <rect x="420" y="425" width="140" height="40" rx="6" fill="none" stroke="#ddd"/>
+  <text x="490" y="450" text-anchor="middle" fill="#666" font-family="Arial" font-size="14">取消</text>
+</svg>

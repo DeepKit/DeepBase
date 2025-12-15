@@ -80,10 +80,20 @@ begin
   if not FManager.IsInitialized then
     FManager.InitializeWithDB(':memory:');
   FI18n := FManager.I18n;
+
+  // IMPORTANT: UniBase 使用单例 Manager，测试之间会共享 I18n 实例。
+  // 为避免前序用例切换语言/缓存影响后续用例，这里统一复位。
+  FI18n.CurrentLanguage := 'en-US';
+  FI18n.ClearCache;
 end;
 
 procedure TTestUniBaseI18n.TearDown;
 begin
+  if FI18n <> nil then
+  begin
+    FI18n.CurrentLanguage := 'en-US';
+    FI18n.ClearCache;
+  end;
   FI18n := nil;
 end;
 
@@ -142,6 +152,9 @@ procedure TTestUniBaseI18n.Test_TN_Plural;
 var
   Singular, Plural, Res: string;
 begin
+  // 该用例验证英文复数规则；确保当前语言为 en-US。
+  FI18n.CurrentLanguage := 'en-US';
+
   Singular := '%d item';
   Plural := '%d items';
   
@@ -250,17 +263,21 @@ begin
   Translation1 := '翻译1';
   Translation2 := 'Translation2';
   
+  // 说明:
+  // UniBase 将 en-US 视为“英文源语言”，TranslateTo('en-US') 会直接返回原文。
+  // 因此这里用 fr-FR 作为第二语言，以验证切换语言后缓存不会误命中。
+
   // 添加两种语言的翻译 (SourceText, LangCode, TranslatedText)
   FI18n.AddTranslation(Text, 'zh-CN', Translation1);
-  FI18n.AddTranslation(Text, 'en-US', Translation2);
+  FI18n.AddTranslation(Text, 'fr-FR', Translation2);
   
   // 测试中文
   FI18n.CurrentLanguage := 'zh-CN';
   Res := FI18n.Translate(Text);
   Assert.AreEqual(Translation1, Res, '中文翻译应该正确');
   
-  // 切换到英文
-  FI18n.CurrentLanguage := 'en-US';
+  // 切换到法语
+  FI18n.CurrentLanguage := 'fr-FR';
   Res := FI18n.Translate(Text);
   Assert.AreEqual(Translation2, Res, '切换语言后应该返回新语言的翻译');
 end;

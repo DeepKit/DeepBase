@@ -35,6 +35,11 @@ type
   THotkeyInfoArray = TArray<THotkeyInfo>;
 
   /// <summary>
+  /// Hotkey changed callback type
+  /// </summary>
+  THotkeyChangedProc = reference to procedure(const ActionName: string);
+
+  /// <summary>
   /// Hotkey manager
   /// </summary>
   TUniBaseHotkeys = class
@@ -44,10 +49,12 @@ type
     FOwnsLock: Boolean;
     FCache: TDictionary<string, TShortCut>; // ActionName -> Shortcut
     FDefaultCache: TDictionary<string, TShortCut>; // ActionName -> DefaultShortcut
+    FOnHotkeyChanged: THotkeyChangedProc;
     
     procedure LoadCache;
     procedure InternalWriteHotkey(const ActionName: string; Shortcut, DefaultShortcut: TShortCut; 
       const Description, Category: string; IsCustomized: Boolean);
+    procedure DoHotkeyChanged(const ActionName: string);
     
   public
     constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
@@ -119,6 +126,16 @@ type
     /// 快捷键数量
     /// </summary>
     function Count: Integer;
+    
+    /// <summary>
+    /// 删除快捷键
+    /// </summary>
+    procedure DeleteHotkey(const ActionName: string);
+    
+    /// <summary>
+    /// 快捷键变更事件
+    /// </summary>
+    property OnHotkeyChanged: THotkeyChangedProc read FOnHotkeyChanged write FOnHotkeyChanged;
   end;
 
 implementation
@@ -285,6 +302,12 @@ begin
   end;
 end;
 
+procedure TUniBaseHotkeys.DoHotkeyChanged(const ActionName: string);
+begin
+  if Assigned(FOnHotkeyChanged) then
+    FOnHotkeyChanged(ActionName);
+end;
+
 procedure TUniBaseHotkeys.SetHotkey(const ActionName: string; Shortcut: TShortCut);
 var
   DefaultShortcut: TShortCut;
@@ -303,6 +326,7 @@ begin
   finally
     TMonitor.Exit(FLock);
   end;
+  DoHotkeyChanged(ActionName);
 end;
 
 function TUniBaseHotkeys.GetHotkey(const ActionName: string): TShortCut;
@@ -527,6 +551,32 @@ begin
   TMonitor.Enter(FLock);
   try
     Result := FCache.Count;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TUniBaseHotkeys.DeleteHotkey(const ActionName: string);
+var
+  Query: TFDQuery;
+begin
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+    
+  TMonitor.Enter(FLock);
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'DELETE FROM Hotkeys WHERE ActionName = :Action';
+      Query.ParamByName('Action').AsString := ActionName;
+      Query.ExecSQL;
+      
+      FCache.Remove(ActionName);
+      FDefaultCache.Remove(ActionName);
+    finally
+      Query.Free;
+    end;
   finally
     TMonitor.Exit(FLock);
   end;

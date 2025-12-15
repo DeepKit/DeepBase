@@ -1,16 +1,40 @@
 # UniBase Tool Projects Integration
 
-本目录包含各工具项目集成 UniBase AboutFrame 的规划文档。
+本目录包含各工具项目集成 UniBase 的规划文档，包括：
+- **AntiTamper** - 防篡改机制（收款二维码等敏感资源保护）
+- **AboutFrame** - 统一的关于/打赏页面
+- **Unlock** - 解锁码/激活码体系
+- **Updater** - 自动更新
 
-## 概览
+## 项目分类
 
-| # | 项目 | UI 框架 | 当前数据库 | 目标数据库 | 状态 | 预估时间 |
-|---|------|---------|------------|------------|------|----------|
-| 01 | TwoKeyRun | VCL | TwoKeyRun.db | TwoKeyRunConfig.db | 已有 Frame | 3-4h |
-| 02 | OmniSync | FMX | SyncLocal.db | OmniSyncConfig.db | 需新建 | 4.5-5.5h |
-| 03 | SVGThing | VCL | data.db | SVGThingConfig.db | 已有 Frame | 2h |
-| 04 | Stocks/InfoCenter | FMX | InfoCenterConfig.db | InfoCenterConfig.db | 需新建 | 2h |
-| 05 | TransSuccess | VCL | 无 | TransSuccessConfig.db | 需新建 | 2.5h |
+### 单机运行（9个）
+本地工具，无需多租户/账号体系：
+
+| # | 项目 | UI 框架 | AntiTamper | Unlock | AboutFrame |
+|---|------|---------|------------|--------|------------|
+| 1 | MoveC | VCL | ✅ | - | ✅ |
+| 2 | TwoKeyRun | VCL | 待集成 | ✅ | 待集成 |
+| 3 | TransSuccess | VCL | 待集成 | 待集成 | 待集成 |
+| 4 | uniSVG | VCL | ✅ | 待集成 | ✅ |
+| 5 | EasyConfig | FMX | 待集成 | 待集成 | 待集成 |
+| 6 | OmniSync | FMX | 待集成 | 待集成 | 待集成 |
+| 7 | Touchstone | VCL | 待集成 | 待集成 | 待集成 |
+| 8 | wyjx | VCL | 待集成 | 待集成 | 待集成 |
+| 9 | Chain2VFactory | VCL | 待集成 | 待集成 | 待集成 |
+
+### 多租户项目（5个）
+需要用户账号/云端同步/订阅计费：
+
+| # | 项目 | 多租户需求 |
+|---|------|------------|
+| 1 | TheSenate | 用户账号 + Token 计费 + 账务中心 |
+| 2 | Insight | 用户身份 + 数据同步 |
+| 3 | InfoCenter | 用户账号 + 订阅会员 |
+| 4 | DevDirector | 团队协作 + 云端项目 |
+| 5 | TheLot | 用户账号 + 云存储 |
+
+> 详细分类说明见 [07.Project-Classification.md](./07.Project-Classification.md)
 
 ## 关键依赖
 
@@ -90,9 +114,20 @@ UniBase 不直接实现支付渠道 SDK(Stripe/微信/PayPal 等)。
 
 ## 文档列表
 
+### 集成指南
+- [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md) - AboutFrame 集成实施指南
+- [AipexBase-Integration.md](./AipexBase-Integration.md) - **用户认证与账务系统集成指南** ⭐ 新增
+- [06.AntiTamper-Integration.md](./06.AntiTamper-Integration.md) - **防篡改机制集成指南**
+- [07.Project-Classification.md](./07.Project-Classification.md) - **项目分类与多租户规划**
+
+### 项目集成文档
 - 01.TwoKeyRun-Integration.md
 - 02.OmniSync-Integration.md
 - 03.SVGThing-Integration.md
 - 04.Stocks-Integration.md
 - 05.TransSuccess-Integration.md
-- IMPLEMENTATION_GUIDE.md
+
+### SeedTool 文档
+- [SeedTool_README.md](../../Tools/SeedTool/SeedTool_README.md) - 播种工具使用说明
+- [加密防篡改集成说明.md](../../Tools/SeedTool/加密防篡改集成说明.md) - 详细集成步骤
+- [播种与主程序对应说明.md](../../Tools/SeedTool/播种与主程序对应说明.md) - ImageKey 对应关系

@@ -1,0 +1,7 @@
+// Minimal resources for SeedTool
+// Generated to ensure SeedTool.res exists for {$R *.res}
+
+STRINGTABLE
+BEGIN
+  1 "SeedTool"
+END

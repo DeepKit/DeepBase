@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 550" width="700" height="550">
+  <defs>
+    <filter id="shadow5" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.1"/>
+    </filter>
+    <linearGradient id="balanceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="700" height="550" fill="#f5f7fa"/>
+  
+  <!-- Header -->
+  <rect width="700" height="60" fill="white" filter="url(#shadow5)"/>
+  <text x="30" y="38" fill="#333" font-family="Arial" font-size="18" font-weight="bold">账户余额</text>
+  
+  <!-- Balance Card -->
+  <rect x="20" y="80" width="320" height="160" rx="12" fill="url(#balanceGrad)" filter="url(#shadow5)"/>
+  <text x="45" y="115" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="14">可用余额</text>
+  <text x="45" y="165" fill="white" font-family="Arial" font-size="42" font-weight="bold">¥ 128.50</text>
+  <text x="45" y="195" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="12">≈ $18.07 USD</text>
+  
+  <!-- Recharge Button -->
+  <rect x="220" y="200" width="100" height="32" rx="16" fill="rgba(255,255,255,0.25)"/>
+  <text x="270" y="221" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">立即充值</text>
+  
+  <!-- Quick Stats Cards -->
+  <rect x="360" y="80" width="150" height="75" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="380" y="110" fill="#999" font-family="Arial" font-size="12">本月消费</text>
+  <text x="380" y="140" fill="#333" font-family="Arial" font-size="22" font-weight="bold">¥ 45.20</text>
+  
+  <rect x="530" y="80" width="150" height="75" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="550" y="110" fill="#999" font-family="Arial" font-size="12">累计充值</text>
+  <text x="550" y="140" fill="#333" font-family="Arial" font-size="22" font-weight="bold">¥ 500.00</text>
+  
+  <rect x="360" y="165" width="150" height="75" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="380" y="195" fill="#999" font-family="Arial" font-size="12">API调用次数</text>
+  <text x="380" y="225" fill="#333" font-family="Arial" font-size="22" font-weight="bold">1,234</text>
+  
+  <rect x="530" y="165" width="150" height="75" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="550" y="195" fill="#999" font-family="Arial" font-size="12">Token使用量</text>
+  <text x="550" y="225" fill="#333" font-family="Arial" font-size="22" font-weight="bold">89.5K</text>
+  
+  <!-- Recharge Options -->
+  <rect x="20" y="260" width="320" height="270" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="40" y="295" fill="#333" font-family="Arial" font-size="16" font-weight="bold">充值金额</text>
+  
+  <!-- Amount Options -->
+  <rect x="40" y="315" width="90" height="45" rx="6" fill="#f0f4ff" stroke="#667eea"/>
+  <text x="85" y="345" text-anchor="middle" fill="#667eea" font-family="Arial" font-size="16" font-weight="bold">¥50</text>
+  
+  <rect x="140" y="315" width="90" height="45" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="185" y="345" text-anchor="middle" fill="#333" font-family="Arial" font-size="16" font-weight="bold">¥100</text>
+  
+  <rect x="240" y="315" width="80" height="45" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="280" y="345" text-anchor="middle" fill="#333" font-family="Arial" font-size="16" font-weight="bold">¥200</text>
+  
+  <rect x="40" y="370" width="90" height="45" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="85" y="400" text-anchor="middle" fill="#333" font-family="Arial" font-size="16" font-weight="bold">¥500</text>
+  
+  <rect x="140" y="370" width="90" height="45" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="185" y="400" text-anchor="middle" fill="#333" font-family="Arial" font-size="16" font-weight="bold">¥1000</text>
+  
+  <rect x="240" y="370" width="80" height="45" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="280" y="393" text-anchor="middle" fill="#999" font-family="Arial" font-size="12">自定义</text>
+  
+  <!-- Payment Methods -->
+  <text x="40" y="445" fill="#333" font-family="Arial" font-size="14" font-weight="500">支付方式</text>
+  <rect x="40" y="455" width="130" height="35" rx="6" fill="#f0f4ff" stroke="#667eea"/>
+  <text x="105" y="478" text-anchor="middle" fill="#667eea" font-family="Arial" font-size="12">支付宝</text>
+  <rect x="180" y="455" width="130" height="35" rx="6" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="245" y="478" text-anchor="middle" fill="#333" font-family="Arial" font-size="12">微信支付</text>
+  
+  <!-- Confirm Button -->
+  <rect x="40" y="505" width="280" height="40" rx="6" fill="#667eea"/>
+  <text x="180" y="531" text-anchor="middle" fill="white" font-family="Arial" font-size="15" font-weight="bold">确认充值 ¥50.00</text>
+  
+  <!-- Transaction History -->
+  <rect x="360" y="260" width="320" height="270" rx="10" fill="white" filter="url(#shadow5)"/>
+  <text x="380" y="295" fill="#333" font-family="Arial" font-size="16" font-weight="bold">交易记录</text>
+  <text x="660" y="295" text-anchor="end" fill="#667eea" font-family="Arial" font-size="12">查看全部</text>
+  
+  <!-- Transaction Items -->
+  <line x1="380" y1="315" x2="660" y2="315" stroke="#eee"/>
+  
+  <text x="380" y="345" fill="#333" font-family="Arial" font-size="13">充值</text>
+  <text x="380" y="362" fill="#999" font-family="Arial" font-size="11">2024-12-14 10:30</text>
+  <text x="660" y="352" text-anchor="end" fill="#4caf50" font-family="Arial" font-size="14" font-weight="bold">+¥100.00</text>
+  
+  <line x1="380" y1="380" x2="660" y2="380" stroke="#eee"/>
+  
+  <text x="380" y="410" fill="#333" font-family="Arial" font-size="13">API调用消费</text>
+  <text x="380" y="427" fill="#999" font-family="Arial" font-size="11">2024-12-14 09:15</text>
+  <text x="660" y="417" text-anchor="end" fill="#ff5252" font-family="Arial" font-size="14" font-weight="bold">-¥2.35</text>
+  
+  <line x1="380" y1="445" x2="660" y2="445" stroke="#eee"/>
+  
+  <text x="380" y="475" fill="#333" font-family="Arial" font-size="13">API调用消费</text>
+  <text x="380" y="492" fill="#999" font-family="Arial" font-size="11">2024-12-13 18:42</text>
+  <text x="660" y="482" text-anchor="end" fill="#ff5252" font-family="Arial" font-size="14" font-weight="bold">-¥5.80</text>
+</svg>

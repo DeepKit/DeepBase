@@ -75,7 +75,8 @@ var
 begin
   // 1) AntiTamper 初始化（参数必须与 SeedTool 播种时一致）
   Config := TAntiTamperPackage.GetDefaultConfig;
-  Config.EncryptionKey := 'TwoKeyRun_AntiTamper_Key_2025';
+  // TwoKeyRun 现有工程里已使用 @2241114 作为密码/口令（DB/Debug 等）；这里复用它作为 AntiTamper 的 EncryptionKey
+  Config.EncryptionKey := '@2241114';
   Config.Salt := 'TwoKeyRun_Salt_v1';
   Config.KdfIterations := 10000;
   Config.EnableHMAC := True;

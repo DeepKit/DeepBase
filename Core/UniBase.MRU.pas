@@ -155,8 +155,9 @@ begin
   if ActualDisplayName = '' then
     ActualDisplayName := ItemKey;
   
-  // Use ISO8601 format for SQLite datetime compatibility
-  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+  // Use ISO8601 format (with milliseconds) for SQLite datetime compatibility.
+  // NOTE: second-level precision can cause ordering ties in fast operations/tests.
+  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz', Now);
   
   Query := TFDQuery.Create(nil);
   try

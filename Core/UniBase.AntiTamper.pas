@@ -296,6 +296,7 @@ begin
           '  enabled INTEGER NOT NULL DEFAULT 1,' +
           '  sha256_hash TEXT NOT NULL,' +
           '  hmac_sha256 TEXT NOT NULL,' +
+          '  md5_hash TEXT,' +
           '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
           '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
           ')';
@@ -353,6 +354,14 @@ begin
         WriteLog('enabled字段添加成功');
       except
         WriteLog('enabled字段可能已存在');
+      end;
+      // 兼容旧实现：md5_hash 字段（不再使用，但 SaveSecureImage 仍会写入空字符串）
+      try
+        Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN md5_hash TEXT';
+        Query.ExecSQL;
+        WriteLog('md5_hash字段添加成功');
+      except
+        WriteLog('md5_hash字段可能已存在');
       end;
       Result := True;
     finally

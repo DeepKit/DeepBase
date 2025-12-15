@@ -180,10 +180,30 @@ UniBase/
 
 ## 🧪 运行测试
 
+推荐使用一键脚本（会自动编译 + 运行，并输出 NUnit XML 到 `TestResults/`）：
+
+```powershell
+# 运行全部（Unit + Integration）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type All
+
+# 只运行 Unit Tests
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit
+
+# 只运行 Integration Tests
+# 默认会排除需要数据库环境的用例分类：DBEnv
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Integration
+
+# 如需启用数据库环境相关的 Integration Tests：
+$env:UNIBASE_RUN_DB_INTEGRATION = '1'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Integration
+Remove-Item Env:UNIBASE_RUN_DB_INTEGRATION
+```
+
+也可以直接用 `dcc32` 编译 runner 并手工运行（不推荐，脚本更省事）：
+
 ```bash
-# 编译并运行单元测试
 dcc32 Tests/UniBaseTests.dpr
-UniBaseTests.exe
+Tests\UniBaseTests.exe --exitbehavior:Continue --xmlfile:TestResults\UnitTestResults.xml
 ```
 
 ## 🤝 贡献指南

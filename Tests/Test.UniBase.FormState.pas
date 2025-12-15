@@ -78,11 +78,20 @@ begin
   
   // 创建测试窗体
   FTestForm := TForm.CreateNew(nil);
-  FTestForm.Name := 'TestForm_' + StringReplace(TGUID.NewGuid.ToString, '-', '', [rfReplaceAll]);
-  FTestForm.Left := 100;
-  FTestForm.Top := 100;
-  FTestForm.Width := 400;
-  FTestForm.Height := 300;
+  // Component name must be a valid identifier (no braces / no dashes)
+  FTestForm.Name := 'TestForm_' +
+    StringReplace(
+      StringReplace(
+        StringReplace(TGUID.NewGuid.ToString, '-', '', [rfReplaceAll]),
+        '{', '', [rfReplaceAll]
+      ),
+      '}', '', [rfReplaceAll]
+    );
+  // Ensure window handle exists before setting bounds; otherwise Windows will pick default placement
+  // and GetWindowPlacement() may not reflect our assigned Left/Top values.
+  FTestForm.HandleNeeded;
+
+  FTestForm.SetBounds(100, 100, 400, 300);
   FTestForm.WindowState := wsNormal;
 end;
 
@@ -255,12 +264,19 @@ var
 begin
   Form2 := TForm.CreateNew(nil);
   try
-    Form2.Name := 'TestForm2_' + StringReplace(TGUID.NewGuid.ToString, '-', '', [rfReplaceAll]);
-    Form2.Left := 200;
-    Form2.Width := 600;
-    
-    FTestForm.Left := 100;
-    FTestForm.Width := 400;
+    Form2.Name := 'TestForm2_' +
+      StringReplace(
+        StringReplace(
+          StringReplace(TGUID.NewGuid.ToString, '-', '', [rfReplaceAll]),
+          '{', '', [rfReplaceAll]
+        ),
+        '}', '', [rfReplaceAll]
+      );
+    Form2.HandleNeeded;
+    Form2.SetBounds(200, 100, 600, 300);
+
+    FTestForm.HandleNeeded;
+    FTestForm.SetBounds(100, 100, 400, 300);
     
     FFormState.SaveFormState(FTestForm);
     FFormState.SaveFormState(Form2);

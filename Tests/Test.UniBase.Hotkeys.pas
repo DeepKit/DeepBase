@@ -134,16 +134,16 @@ var
 begin
   SetLength(Defaults, 2);
   Defaults[0].ActionName := 'default.action1';
-  Defaults[0].DefaultShortcut := TextToShortCut('Ctrl+1');
+  Defaults[0].Shortcut := 'Ctrl+1';
   Defaults[0].Description := 'Action 1';
   Defaults[1].ActionName := 'default.action2';
-  Defaults[1].DefaultShortcut := TextToShortCut('Ctrl+2');
+  Defaults[1].Shortcut := 'Ctrl+2';
   Defaults[1].Description := 'Action 2';
   
   FHotkeys.RegisterDefaultHotkeys(Defaults);
   
   Retrieved := FHotkeys.GetHotkey('default.action1');
-  Assert.AreEqual(Defaults[0].DefaultShortcut, Retrieved, '默认快捷键应该被注册');
+  Assert.AreEqual<TShortCut>(TextToShortCut(Defaults[0].Shortcut), Retrieved, '默认快捷键应该被注册');
 end;
 
 procedure TTestUniBaseHotkeys.Test_ResetHotkey_ToDefault;
@@ -156,7 +156,7 @@ begin
   
   SetLength(Defaults, 1);
   Defaults[0].ActionName := Action;
-  Defaults[0].DefaultShortcut := TextToShortCut('Ctrl+R');
+  Defaults[0].Shortcut := 'Ctrl+R';
   Defaults[0].Description := 'Reset Test';
   
   FHotkeys.RegisterDefaultHotkeys(Defaults);
@@ -169,7 +169,7 @@ begin
   FHotkeys.ResetHotkey(Action);
   Retrieved := FHotkeys.GetHotkey(Action);
   
-  Assert.AreEqual(Defaults[0].DefaultShortcut, Retrieved, '重置后应该恢复默认值');
+  Assert.AreEqual<TShortCut>(TextToShortCut(Defaults[0].Shortcut), Retrieved, '重置后应该恢复默认值');
 end;
 
 procedure TTestUniBaseHotkeys.Test_ResetAllHotkeys;
@@ -178,10 +178,10 @@ var
 begin
   SetLength(Defaults, 2);
   Defaults[0].ActionName := 'resetall.action1';
-  Defaults[0].DefaultShortcut := TextToShortCut('Ctrl+1');
+  Defaults[0].Shortcut := 'Ctrl+1';
   Defaults[0].Description := 'Action 1';
   Defaults[1].ActionName := 'resetall.action2';
-  Defaults[1].DefaultShortcut := TextToShortCut('Ctrl+2');
+  Defaults[1].Shortcut := 'Ctrl+2';
   Defaults[1].Description := 'Action 2';
   
   FHotkeys.RegisterDefaultHotkeys(Defaults);
@@ -193,20 +193,42 @@ begin
   // 全部重置
   FHotkeys.ResetAllHotkeys;
   
-  Assert.AreEqual(Defaults[0].DefaultShortcut, FHotkeys.GetHotkey('resetall.action1'), 
+  Assert.AreEqual<TShortCut>(TextToShortCut(Defaults[0].Shortcut), FHotkeys.GetHotkey('resetall.action1'), 
     'Action1 应该恢复默认');
-  Assert.AreEqual(Defaults[1].DefaultShortcut, FHotkeys.GetHotkey('resetall.action2'), 
+  Assert.AreEqual<TShortCut>(TextToShortCut(Defaults[1].Shortcut), FHotkeys.GetHotkey('resetall.action2'), 
     'Action2 应该恢复默认');
 end;
 
 procedure TTestUniBaseHotkeys.Test_CheckHotkeyConflict_NoConflict;
+const
+  Candidates: array[0..11] of string = (
+    'Ctrl+Shift+Alt+F1', 'Ctrl+Shift+Alt+F2', 'Ctrl+Shift+Alt+F3', 'Ctrl+Shift+Alt+F4',
+    'Ctrl+Shift+Alt+F5', 'Ctrl+Shift+Alt+F6', 'Ctrl+Shift+Alt+F7', 'Ctrl+Shift+Alt+F8',
+    'Ctrl+Shift+Alt+F9', 'Ctrl+Shift+Alt+F10', 'Ctrl+Shift+Alt+F11', 'Ctrl+Shift+Alt+F12'
+  );
 var
   Conflict: string;
+  I: Integer;
+  Unused: TShortCut;
 begin
+  // Hotkeys 模块在初始化时可能已预置了一批默认快捷键，
+  // 因此这里不要假设 'Ctrl+F' 一定不会被占用。
+
   FHotkeys.SetHotkey('existing.action', TextToShortCut('Ctrl+E'));
-  
-  Conflict := FHotkeys.CheckHotkeyConflict(TextToShortCut('Ctrl+F'));
-  
+
+  Unused := 0;
+  for I := Low(Candidates) to High(Candidates) do
+  begin
+    if FHotkeys.CheckHotkeyConflict(TextToShortCut(Candidates[I])) = '' then
+    begin
+      Unused := TextToShortCut(Candidates[I]);
+      Break;
+    end;
+  end;
+
+  Assert.AreNotEqual(TShortCut(0), Unused, '应能找到一个未被占用的快捷键用于测试');
+
+  Conflict := FHotkeys.CheckHotkeyConflict(Unused);
   Assert.IsEmpty(Conflict, '不同的快捷键不应该有冲突');
 end;
 

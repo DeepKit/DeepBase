@@ -1,6 +1,6 @@
 # UniBase 开发任务
 
-> **最后更新**: 2025-12-12
+> **最后更新**: 2025-12-14
 > **项目状态**: 核心完成，扩展开发中
 
 ---
@@ -44,20 +44,15 @@
   - 单元测试整体覆盖率提升到 95%+，并确保关键安全/网络模块有稳定回归测试。
 - **下一步任务**:
   - （可选）在后续 CI 环境中补充针对数据库 Integration Tests 的专用配置说明文档（如何启用 `UNIBASE_RUN_DB_INTEGRATION=1` 与 FireDAC/SQLite 驱动）。
-  - 将已新增的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），避免“写了但没跑”的覆盖率失真。
-  - 检查 Test.UniBase.Config.pas 等被注释的测试单元与当前 API 的兼容性问题。
-- **当前测试状态** (2025-12-13):
-  - 单元测试: 265/267 通过 ✅ (从 181 增加到 267)
+  - 将新增/修复的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），并在 README/Docs 中明确一键测试命令。
+  - 检查 `Test.UniBase.Config.pas` 等被注释的测试单元与当前 API 的兼容性问题（能恢复则恢复，不能则删除/重写，避免长期“注释债务”）。
+- **当前测试状态** (2025-12-14):
+  - 单元测试: 345/345 通过 ✅ (+22 LLM/DPAPI 测试)
   - 集成测试: 9/9 通过 ✅
-- **最近修复**:
-  - BUG-068: I18nTexts 列名 LastUsedTime -> LastUsedAt
-  - BUG-067: 主题 EFOpenError 问题 (IsStyleInList 替代 IsValidStyle)
-- **新增测试模块**:
-  - Test.UniBase.i18n (12 tests)
-  - Test.UniBase.Theme (10 tests)
-  - Test.UniBase.Updater (64 tests)
-- **已完成工作**:
-  - 已完成的大量测试模块（Math/Metrics/Net/HttpServer/FileWatcher/CLI/CloudBackup/Feedback 等）已记录在 `history.md` 中的 “MAINT-002: 单元测试覆盖率提升 🟡” 小节，此处不再重复列出。
+- **备注**:
+  - Unit 测试入口 `Tests/UniBaseTests.dpr` 已恢复包含 `Test.UniBase.FormState` / `Test.UniBase.Logging` / `Test.UniBase.License`。
+  - Bug 修复记录统一写入 `bugfix.md`。
+  - 已完成的测试模块清单见 `history.md` 中 “MAINT-002: 单元测试覆盖率提升 🟡” 小节。
 
 ### 商业化与工具集成 (P1)
 
@@ -75,6 +70,62 @@
   - [ ] 准备 6 张标准图片资源
   - [ ] 运行 SeedTool 为各项目创建 `*Config.db` 并播种 6 个标准 key
   - [ ] 在 IDE 中按指南修改各项目代码并编译测试
+
+---
+
+### LLM 集成 (P2)
+
+#### LLM-001: Delphi LLM 客户端封装库
+- **状态**: ✅ 完成 (2025-12-14)
+- **优先级**: P2
+- **相关文档**: `../远程Delphi客户端连接和LLM调用指南.md`
+- **实现文件**: `Core/UniBase.LLM.BillingClient.pas`
+- **已完成**:
+  - [x] `TBillingClient` 轻量级客户端（不依赖数据库）
+  - [x] 流式/非流式响应支持 (SSE 解析)
+  - [x] `TChatHistory` 对话历史管理
+  - [x] 自定义异常层次 (`EBillingError`, `EBillingAuthError`, `EBillingBalanceError`, `EBillingRateLimitError`)
+  - [x] 重试机制 (`ChatWithRetry` 指数退避)
+  - [x] 请求取消 (`Cancel`)
+  - [x] 异步调用 (`ChatAsync`)
+
+#### LLM-002: API Key 安全存储模块
+- **状态**: ✅ 完成 (2025-12-14)
+- **优先级**: P2
+- **实现文件**: `Core/UniBase.Security.DPAPI.pas`
+- **已完成**:
+  - [x] `TDPAPIHelper` - Windows DPAPI 加密/解密
+  - [x] `ProtectString` / `UnprotectString` 字符串加解密
+  - [x] `ProtectToFile` / `UnprotectFromFile` 文件加解密
+  - [x] `TCredentialManager` - Windows Credential Manager 集成
+  - [x] `TSecureString` - 安全字符串（自动清除内存）
+
+#### LLM-003: VCL/FMX LLM 聊天组件
+- **状态**: ✅ 完成 (2025-12-14)
+- **优先级**: P3
+- **实现文件**:
+  - `VCL/UniBase.VCL.LLMChatFrame.pas`
+  - `FMX/UniBase.FMX.LLMChatFrame.pas`
+- **已完成**:
+  - [x] VCL 聊天 Frame（RichEdit 支持富文本）
+  - [x] FMX 聊天 Frame（跨平台）
+  - [x] 流式文本逐字显示
+  - [x] 取消按钮/加载状态
+  - [x] 历史记录导出
+
+#### LLM-004: LLM 模块单元测试
+- **状态**: ✅ 完成 (2025-12-14)
+- **优先级**: P2
+- **测试文件**:
+  - `Tests/Test.UniBase.LLM.BillingClient.pas` (22 测试用例)
+  - `Tests/Test.UniBase.Security.DPAPI.pas` (23 测试用例)
+- **测试覆盖**:
+  - [x] `TChatMessage` 消息记录测试
+  - [x] `TChatHistory` 历史管理测试
+  - [x] `TBillingClient` 属性/URL 处理测试
+  - [x] `TDPAPIHelper` 加解密测试
+  - [x] `TCredentialManager` 凭据管理测试
+  - [x] `TSecureString` 安全字符串测试
 
 ---
 
