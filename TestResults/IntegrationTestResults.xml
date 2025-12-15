@@ -1,21 +1,21 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\_Progs\02Business\UniBase\Tests\Integration\UniBaseIntegrationTests.exe" total="9" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-12-13" time="12:32:13">
+<test-results name="D:\_Progs\02Business\UniBase\Tests\Integration\UniBaseIntegrationTests.exe" total="9" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-12-15" time="14:47:01">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="UniBaseIntegrationTests.exe" executed="true" result="Success" success="True" time="12:32:13" asserts="0">
+  <test-suite type="Assembly" name="UniBaseIntegrationTests.exe" executed="true" result="Success" success="True" time="14:47:01" asserts="0">
     <results>
-        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.039" asserts="0" >
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.032" asserts="0" >
           <results>
-              <test-suite type="Namespace" name="WebAPI" executed="true" result="Success" success="True" time="0.039" asserts="0" >
+              <test-suite type="Namespace" name="WebAPI" executed="true" result="Success" success="True" time="0.032" asserts="0" >
                 <results>
-                    <test-suite type="Fixture" name="TWebApiIntegrationTest" executed="True" result="Success" success="True" time="0.039" >
+                    <test-suite type="Fixture" name="TWebApiIntegrationTest" executed="True" result="Success" success="True" time="0.032" >
                       <results>
-                        <test-case name="Test_BasicGetRoute_ReturnsJson" executed="True" result="Success" success="True" time="0.019" asserts="0" />
-                        <test-case name="Test_PostJson_EchoesRequestBody" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="Test_RouteParams_And_QueryParams_Parsed" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_BasicGetRoute_ReturnsJson" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                        <test-case name="Test_PostJson_EchoesRequestBody" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                        <test-case name="Test_RouteParams_And_QueryParams_Parsed" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="Test_CORS_Preflight_Options_ReturnsHeaders" executed="True" result="Success" success="True" time="0.002" asserts="0" />
                         <test-case name="Test_Auth_JwtBearer_Succeeds" executed="True" result="Success" success="True" time="0.001" asserts="0" />
                         <test-case name="Test_Auth_MissingToken_Returns401" executed="True" result="Success" success="True" time="0.001" asserts="0" />
-                        <test-case name="Test_OpenApiGenerator_Includes_RegisteredRoutes" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_OpenApiGenerator_Includes_RegisteredRoutes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
                     <test-suite type="Fixture" name="TWebSocketRouterIntegrationTest" executed="True" result="Success" success="True" time="0.000" >

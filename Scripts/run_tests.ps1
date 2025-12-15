@@ -64,6 +64,8 @@ if ($CI) {
 $UnitPaths = @(
     "$BaseDir\Core",
     "$BaseDir\VCL",
+    "$BaseDir\ThirdParty\Payment",
+    "$BaseDir\ThirdParty\Social",
     "$BaseDir\Tools\WebService",
     "$TestsDir",
     "$IntegrationDir",

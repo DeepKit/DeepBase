@@ -37,6 +37,9 @@ uses
   Test.UniBase.Crypto in 'Test.UniBase.Crypto.pas',
   Test.UniBase.LLM in 'Test.UniBase.LLM.pas',
   Test.UniBase.Crypto.OpenSSL in 'Test.UniBase.Crypto.OpenSSL.pas',
+  // Payment & Social tests
+  Test.UniBase.Payment in 'Test.UniBase.Payment.pas',
+  Test.UniBase.Social in 'Test.UniBase.Social.pas',
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
   // Core units
@@ -52,7 +55,12 @@ uses
   UniBase.Theme in '..\Core\UniBase.Theme.pas',
   UniBase.License in '..\Core\UniBase.License.pas',
   // DoQry 集成模块（在单独的测试工程中覆盖，这里不包含以避免 DBClient 依赖问题）
-  UniBase.DB.DoQry in '..\Core\UniBase.DB.DoQry.pas';
+  UniBase.DB.DoQry in '..\Core\UniBase.DB.DoQry.pas',
+  // LLM unit for LLM tests
+  UniBase.LLM in '..\Core\UniBase.LLM.pas',
+  // Payment & Social integration units
+  UniBase.Payment in '..\ThirdParty\Payment\UniBase.Payment.pas',
+  UniBase.Social in '..\ThirdParty\Social\UniBase.Social.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
