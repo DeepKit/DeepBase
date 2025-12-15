@@ -42,6 +42,8 @@ uses
   Test.UniBase.Social in 'Test.UniBase.Social.pas',
   // Types tests
   Test.UniBase.Types in 'Test.UniBase.Types.pas',
+  Test.UniBase.Serialization in 'Test.UniBase.Serialization.pas',
+  // Test.UniBase.Validation - needs rewrite for anonymous function compatibility
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
   // Core units

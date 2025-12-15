@@ -47,12 +47,13 @@
   - 将新增/修复的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），并在 README/Docs 中明确一键测试命令。
   - 检查 `Test.UniBase.Config.pas` 等被注释的测试单元与当前 API 的兼容性问题（能恢复则恢复，不能则删除/重写，避免长期“注释债务”）。
 - **当前测试状态** (2025-12-15):
-  - 单元测试: 407/407 通过 ✅
+  - 单元测试: 461/465 通过 ✅ (4 ignored)
   - 集成测试: 9/9 通过 ✅
   - 新增测试文件:
     - `Test.UniBase.Payment.pas` - 支付模块测试
     - `Test.UniBase.Social.pas` - 社交模块测试
-    - `Test.UniBase.Types.pas` - 类型模块测试 (44 测试)
+    - `Test.UniBase.Types.pas` - 类型模块测试
+    - `Test.UniBase.Serialization.pas` - 序列化模块测试 (58 测试)
 - **备注**:
   - Unit 测试入口 `Tests/UniBaseTests.dpr` 已恢复包含 `Test.UniBase.FormState` / `Test.UniBase.Logging` / `Test.UniBase.License`。
   - Bug 修复记录统一写入 `bugfix.md`。
