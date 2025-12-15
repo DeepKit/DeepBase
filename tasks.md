@@ -195,9 +195,13 @@
     - [x] `ThirdParty/Payment/UniBase.Payment.Alipay.pas` - 支付宝实现
     - [x] `ThirdParty/Payment/UniBase.Payment.WeChatPay.pas` - 微信支付实现 (APIv3)
     - [x] `ThirdParty/Payment/UniBase.Payment.Stripe.pas` - Stripe 实现
+  - 社交媒体集成 (2025-12-15):
+    - [x] `ThirdParty/Social/UniBase.Social.pas` - 统一社交接口
+    - [x] `ThirdParty/Social/UniBase.Social.OAuth.pas` - OAuth 2.0 通用实现 (GitHub/Google)
+    - [x] `ThirdParty/Social/UniBase.Social.WeChat.pas` - 微信登录实现
 - **下一步任务**:
   - [ ] 支付接口扩展: PayPal
-  - [ ] 社交媒体集成 (`ThirdParty/Social/`) - WeChat/Weibo/Twitter
+  - [ ] 社交媒体扩展: Weibo/QQ
 - **开发指南**:
   - 参考 [06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
   - 参考已实现的 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 模式
