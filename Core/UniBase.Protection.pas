@@ -4,7 +4,8 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Hash, System.NetEncoding,
-  System.IOUtils, System.AnsiStrings, System.DateUtils, System.Math;
+  System.IOUtils, System.AnsiStrings, System.DateUtils, System.Math,
+  UniBase.Logging;
 
 const
   // Windows Crypto API 常量
@@ -89,7 +90,17 @@ implementation
 
 class function TBasicProtection.GetDynamicKey: string;
 begin
+  // 移除动态密钥生成，返回空字符串
+  // 这个方法已被弃用，建议使用更安全的密钥管理方案
   Result := '';
+  
+  // 记录警告日志
+  try
+    if UniBase.Logging.Logger <> nil then
+      UniBase.Logging.Logger.Warn('GetDynamicKey is deprecated and returns empty string for security reasons');
+  except
+    // Ignore logging errors
+  end;
 end;
 
 class function TBasicProtection.GenerateRandomIV: TBytes;

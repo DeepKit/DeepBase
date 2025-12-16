@@ -7,9 +7,10 @@ unit UniBase.AntiTamper;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils,
+  System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils, System.Math,
   Winapi.ShellAPI, Winapi.Windows,
-  FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, UniBase.Protection;
+  FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, UniBase.Protection,
+  System.Generics.Collections, UniBase.Crypto.PBKDF2;
 
 // 加密算法类型
  type
@@ -180,14 +181,22 @@ var
   I, Iterations: Integer;
   AccHex: string;
   SeedStr: string;
+  PBKDF2: TPBKDF2;
+  Salt: TBytes;
 begin
-  SeedStr := FConfig.EncryptionKey + '|' + FConfig.Salt;
-  AccHex := THashSHA2.GetHashString(SeedStr);
-  Iterations := FConfig.KdfIterations;
-  if Iterations < 2 then Iterations := 2;
-  for I := 2 to Iterations do
-    AccHex := THashSHA2.GetHashString(AccHex);
-  Result := HexToBytes(AccHex);
+  // 使用更安全的PBKDF2密钥派生函数
+  SeedStr := FConfig.EncryptionKey;
+  Salt := TEncoding.UTF8.GetBytes(FConfig.Salt);
+  
+  // 确保最小迭代次数符合安全标准
+  Iterations := Max(FConfig.KdfIterations, 10000); // 最少10000次迭代
+  
+  PBKDF2 := TPBKDF2.Create;
+  try
+    Result := PBKDF2.GetBytes(TEncoding.UTF8.GetBytes(SeedStr), Salt, Iterations, 32);
+  finally
+    PBKDF2.Free;
+  end;
 end;
 
 class function TAntiTamperPackage.GetEffectiveKeyString: string;
