@@ -99,8 +99,8 @@ begin
   
   Items := FMRU.GetMRUList(FTestCategory);
   
-  Assert.AreEqual(1, Length(Items), '应该有 1 个项目');
-  Assert.AreEqual('key1', Items[0], 'Key 应该正确');
+  Assert.AreEqual(Integer(1), Integer(Length(Items)), '应该有 1 个项目');
+  Assert.AreEqual('key1', string(Items[0]), 'Key 应该正确');
 end;
 
 procedure TTestUniBaseMRU.Test_AddMRU_MultipleItems;
@@ -113,7 +113,7 @@ begin
   
   Items := FMRU.GetMRUList(FTestCategory);
   
-  Assert.AreEqual(3, Length(Items), '应该有 3 个项目');
+  Assert.AreEqual(Integer(3), Integer(Length(Items)), '应该有 3 个项目');
 end;
 
 procedure TTestUniBaseMRU.Test_AddMRU_DuplicateKey_UpdatesTimestamp;
@@ -128,7 +128,7 @@ begin
   FMRU.AddMRU(FTestCategory, 'key1', 'Display 1 Updated');
   ItemsAfter := FMRU.GetMRUItems(FTestCategory);
   
-  Assert.AreEqual(1, Length(ItemsAfter), '不应该有重复项');
+  Assert.AreEqual(Integer(1), Integer(Length(ItemsAfter)), '不应该有重复项');
   Assert.IsTrue(ItemsAfter[0].LastAccess >= ItemsBefore[0].LastAccess, 
     '时间戳应该更新');
 end;
@@ -142,7 +142,7 @@ begin
   
   Items := FMRU.GetMRUList(FTestCategory);
   
-  Assert.AreEqual(2, Length(Items), '应该有 2 个项目');
+  Assert.AreEqual(Integer(2), Integer(Length(Items)), '应该有 2 个项目');
 end;
 
 procedure TTestUniBaseMRU.Test_GetMRUItems_ReturnsFullInfo;
@@ -153,9 +153,9 @@ begin
   
   Items := FMRU.GetMRUItems(FTestCategory);
   
-  Assert.AreEqual(1, Length(Items), '应该有 1 个项目');
-  Assert.AreEqual('mykey', Items[0].ItemKey, 'ItemKey 应该正确');
-  Assert.AreEqual('My Display Name', Items[0].DisplayName, 'DisplayName 应该正确');
+  Assert.AreEqual(Integer(1), Integer(Length(Items)), '应该有 1 个项目');
+  Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 应该正确');
+  Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 应该正确');
   Assert.IsTrue(Items[0].AccessCount >= 1, 'AccessCount 应该至少为 1');
 end;
 
@@ -171,7 +171,7 @@ begin
   // 只获取 5 个
   Items := FMRU.GetMRUList(FTestCategory, 5);
   
-  Assert.AreEqual(5, Length(Items), '应该只返回 5 个项目');
+  Assert.AreEqual(Integer(5), Integer(Length(Items)), '应该只返回 5 个项目');
 end;
 
 procedure TTestUniBaseMRU.Test_GetMRUList_SortedByLastAccess;
@@ -185,7 +185,7 @@ begin
   Items := FMRU.GetMRUItems(FTestCategory);
   
   // 最新的应该排在前面
-  Assert.AreEqual('new', Items[0].ItemKey, '最新项应该排在第一位');
+  Assert.AreEqual('new', string(Items[0].ItemKey), '最新项应该排在第一位');
 end;
 
 procedure TTestUniBaseMRU.Test_ClearMRU;
@@ -199,7 +199,7 @@ begin
   
   Items := FMRU.GetMRUList(FTestCategory);
   
-  Assert.AreEqual(0, Length(Items), '清除后应该没有项目');
+  Assert.AreEqual(Integer(0), Integer(Length(Items)), '清除后应该没有项目');
 end;
 
 procedure TTestUniBaseMRU.Test_ClearMRU_ByCategory;
@@ -217,8 +217,8 @@ begin
   Items1 := FMRU.GetMRUList(FTestCategory);
   Items2 := FMRU.GetMRUList(OtherCategory);
   
-  Assert.AreEqual(0, Length(Items1), '清除的分类应该没有项目');
-  Assert.AreEqual(1, Length(Items2), '其他分类不应该受影响');
+  Assert.AreEqual(Integer(0), Integer(Length(Items1)), '清除的分类应该没有项目');
+  Assert.AreEqual(Integer(1), Integer(Length(Items2)), '其他分类不应该受影响');
   
   // 清理
   FMRU.ClearMRU(OtherCategory);
@@ -235,8 +235,8 @@ begin
   
   Items := FMRU.GetMRUList(FTestCategory);
   
-  Assert.AreEqual(1, Length(Items), '删除后应该只有 1 个项目');
-  Assert.AreEqual('key2', Items[0], '剩余的应该是 key2');
+  Assert.AreEqual(Integer(1), Integer(Length(Items)), '删除后应该只有 1 个项目');
+  Assert.AreEqual('key2', string(Items[0]), '剩余的应该是 key2');
 end;
 
 procedure TTestUniBaseMRU.Test_RemoveInvalidMRU_RemovesNonexistentFiles;
@@ -258,8 +258,8 @@ begin
     
     Items := FMRU.GetMRUList(FTestCategory);
     
-    Assert.AreEqual(1, Length(Items), '只有存在的文件应该保留');
-    Assert.AreEqual(TempFile, Items[0], '保留的应该是存在的文件');
+    Assert.AreEqual(Integer(1), Integer(Length(Items)), '只有存在的文件应该保留');
+    Assert.AreEqual(TempFile, string(Items[0]), '保留的应该是存在的文件');
   finally
     if TFile.Exists(TempFile) then
       TFile.Delete(TempFile);
@@ -296,10 +296,10 @@ begin
   Items1 := FMRU.GetMRUList(Cat1);
   Items2 := FMRU.GetMRUList(Cat2);
   
-  Assert.AreEqual(1, Length(Items1), 'Cat1 应该有 1 个项目');
-  Assert.AreEqual(1, Length(Items2), 'Cat2 应该有 1 个项目');
-  Assert.AreEqual('key1', Items1[0], 'Cat1 的 key 应该正确');
-  Assert.AreEqual('key2', Items2[0], 'Cat2 的 key 应该正确');
+  Assert.AreEqual(Integer(1), Integer(Length(Items1)), 'Cat1 应该有 1 个项目');
+  Assert.AreEqual(Integer(1), Integer(Length(Items2)), 'Cat2 应该有 1 个项目');
+  Assert.AreEqual('key1', string(Items1[0]), 'Cat1 的 key 应该正确');
+  Assert.AreEqual('key2', string(Items2[0]), 'Cat2 的 key 应该正确');
   
   // 清理
   FMRU.ClearMRU(Cat1);

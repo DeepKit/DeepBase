@@ -492,6 +492,8 @@ function TUniBaseI18n.TranslateTo(const Text, LangCode: string): string;
 var
   CacheKey: string;
   Item: TLRUCacheItem;
+  CacheHit: Boolean;
+  NeedRecord: Boolean;
 begin
   // English source text doesn't need translation
   if LangCode = SLangCodeEnUS then
@@ -500,13 +502,16 @@ begin
     Exit;
   end;
   
+  CacheKey := MakeCacheKey(Text, LangCode);
+  CacheHit := False;
+  NeedRecord := False;
+  
+  // 减少锁的持有时间 - 先检查缓存
   TMonitor.Enter(FLock);
   try
-    CacheKey := MakeCacheKey(Text, LangCode);
-    
-    // Check cache
     if FCache.TryGetValue(CacheKey, Item) then
     begin
+      CacheHit := True;
       // Update access time
       Item.LastAccess := Now;
       FCache.AddOrSetValue(CacheKey, Item);
@@ -515,13 +520,21 @@ begin
         Result := Item.Value
       else
         Result := Text; // Empty translation, return original
-      Exit;
     end;
-    
-    // Query database
-    Result := ReadFromDB(Text, LangCode);
-    
-    // Cache result (even if empty to avoid repeated queries)
+  finally
+    TMonitor.Exit(FLock);
+  end;
+  
+  // 缓存命中，直接返回
+  if CacheHit then
+    Exit;
+  
+  // 缓存未命中，查询数据库（在锁外进行）
+  Result := ReadFromDB(Text, LangCode);
+  
+  // 更新缓存（重新获取锁，但持有时间更短）
+  TMonitor.Enter(FLock);
+  try
     EvictOldestIfNeeded;
     Item.Value := Result;
     Item.LastAccess := Now;
@@ -531,14 +544,14 @@ begin
     if Result = '' then
     begin
       Result := Text;
-      // Record missing translation outside lock
+      NeedRecord := True;
     end;
   finally
     TMonitor.Exit(FLock);
   end;
   
   // 在锁外记录缺失翻译
-  if Result = Text then
+  if NeedRecord then
     RecordMissingTranslation(Text, LangCode);
 end;
 
@@ -718,5 +731,12 @@ begin
     TMonitor.Exit(FLock);
   end;
 end;
+
+// BUG-003 FIX: 清理全局回调引用，防止循环引用导致内存泄漏
+initialization
+
+finalization
+  GTranslateCallback := nil;
+  GLanguageCallback := nil;
 
 end.
