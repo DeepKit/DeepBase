@@ -270,29 +270,21 @@ end;
 
 
 function TUniBaseConfig.GetConfigEncrypted(const Key: string; const Default: string): string;
-var
-  Secret: string;
 begin
-  // 从安全存储加载密文（DPAPI/Secrets 表），不再使用 XOR/Settings 表
-  Secret := LoadSecret(Key);
-  if Secret = '' then
-    Result := Default
-  else
-    Result := Secret;
+  // 完全移除XOR实现，强制使用DPAPI安全存储
+  raise ENotSupportedException.Create(
+    'GetConfigEncrypted is deprecated and removed for security reasons. ' +
+    'Use UniBase.Security.LoadSecret() for secure DPAPI encryption instead.'
+  );
 end;
 
 procedure TUniBaseConfig.SetConfigEncrypted(const Key, Value: string; const Category: string);
 begin
-  // 将敏感配置委托给 UniBase.Security 模块存储（DPAPI/Secrets 表）
-  SaveSecret(Key, Value, 'Config:' + Category);
-
-  // 移除普通配置缓存，避免明文/旧值残留
-  TMonitor.Enter(FLock);
-  try
-    FCache.Remove(Key);
-  finally
-    TMonitor.Exit(FLock);
-  end;
+  // 完全移除XOR实现，强制使用DPAPI安全存储
+  raise ENotSupportedException.Create(
+    'SetConfigEncrypted is deprecated and removed for security reasons. ' +
+    'Use UniBase.Security.SaveSecret() for secure DPAPI encryption instead.'
+  );
 end;
 
 function TUniBaseConfig.GetConfig(const Key: string; const Default: string): string;

@@ -210,6 +210,7 @@ begin
   if Assigned(FAnimationTimer) then
   begin
     FAnimationTimer.Enabled := False;
+    FreeAndNil(FAnimationTimer);  // 确保释放定时器对象
   end;
   inherited;
 end;

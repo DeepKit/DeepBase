@@ -496,23 +496,28 @@ begin
               var
                 Item: TChatDisplayItem;
               begin
-                FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                FRichEditChat.SelText := LocalContent + #13#10#13#10;
-                
-                FHistory.AddAssistantMessage(LocalContent);
-                
-                Item.Role := mrAssistant;
-                Item.Content := LocalContent;
-                Item.Timestamp := Now;
-                Item.TokenCount := LocalTokenCount;
-                FChatItems.Add(Item);
-                
-                FIsGenerating := False;
-                UpdateUI;
-                SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
-                
-                if Assigned(FOnResponseReceived) then
-                  FOnResponseReceived(Self, Response);
+                // 检查控件有效性，防止访问已释放的控件
+                if Assigned(Self) and not (csDestroying in ComponentState) and 
+                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+                begin
+                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
+                  FRichEditChat.SelText := LocalContent + #13#10#13#10;
+                  
+                  FHistory.AddAssistantMessage(LocalContent);
+                  
+                  Item.Role := mrAssistant;
+                  Item.Content := LocalContent;
+                  Item.Timestamp := Now;
+                  Item.TokenCount := LocalTokenCount;
+                  FChatItems.Add(Item);
+                  
+                  FIsGenerating := False;
+                  UpdateUI;
+                  SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
+                  
+                  if Assigned(FOnResponseReceived) then
+                    FOnResponseReceived(Self, Response);
+                end;
               end);
           end
           else
@@ -521,14 +526,19 @@ begin
             TThread.Synchronize(nil,
               procedure
               begin
-                FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                FRichEditChat.SelAttributes.Color := clRed;
-                FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-                FRichEditChat.SelAttributes.Color := clBlack;
-                
-                FIsGenerating := False;
-                UpdateUI;
-                SetStatus('错误: ' + LocalErrorMsg);
+                // 检查控件有效性
+                if Assigned(Self) and not (csDestroying in ComponentState) and 
+                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+                begin
+                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
+                  FRichEditChat.SelAttributes.Color := clRed;
+                  FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                  FRichEditChat.SelAttributes.Color := clBlack;
+                  
+                  FIsGenerating := False;
+                  UpdateUI;
+                  SetStatus('错误: ' + LocalErrorMsg);
+                end;
               end);
           end;
         end
@@ -545,36 +555,41 @@ begin
             var
               Item: TChatDisplayItem;
             begin
-              if Response.Success then
+              // 检查控件有效性
+              if Assigned(Self) and not (csDestroying in ComponentState) and 
+                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
               begin
-                FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                FRichEditChat.SelText := LocalContent + #13#10#13#10;
+                if Response.Success then
+                begin
+                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
+                  FRichEditChat.SelText := LocalContent + #13#10#13#10;
+                  
+                  FHistory.AddAssistantMessage(LocalContent);
+                  
+                  Item.Role := mrAssistant;
+                  Item.Content := LocalContent;
+                  Item.Timestamp := Now;
+                  Item.TokenCount := LocalTokenCount;
+                  FChatItems.Add(Item);
+                  
+                  SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
+                end
+                else
+                begin
+                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
+                  FRichEditChat.SelAttributes.Color := clRed;
+                  FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                  FRichEditChat.SelAttributes.Color := clBlack;
+                  
+                  SetStatus('错误: ' + LocalErrorMsg);
+                end;
                 
-                FHistory.AddAssistantMessage(LocalContent);
+                FIsGenerating := False;
+                UpdateUI;
                 
-                Item.Role := mrAssistant;
-                Item.Content := LocalContent;
-                Item.Timestamp := Now;
-                Item.TokenCount := LocalTokenCount;
-                FChatItems.Add(Item);
-                
-                SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
-              end
-              else
-              begin
-                FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                FRichEditChat.SelAttributes.Color := clRed;
-                FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-                FRichEditChat.SelAttributes.Color := clBlack;
-                
-                SetStatus('错误: ' + LocalErrorMsg);
+                if Assigned(FOnResponseReceived) then
+                  FOnResponseReceived(Self, Response);
               end;
-              
-              FIsGenerating := False;
-              UpdateUI;
-              
-              if Assigned(FOnResponseReceived) then
-                FOnResponseReceived(Self, Response);
             end);
         end;
       except
@@ -584,14 +599,19 @@ begin
           TThread.Synchronize(nil,
             procedure
             begin
-              FRichEditChat.SelStart := Length(FRichEditChat.Text);
-              FRichEditChat.SelAttributes.Color := clRed;
-              FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-              FRichEditChat.SelAttributes.Color := clBlack;
-              
-              FIsGenerating := False;
-              UpdateUI;
-              SetStatus('错误: ' + LocalErrorMsg);
+              // 检查控件有效性
+              if Assigned(Self) and not (csDestroying in ComponentState) and 
+                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+              begin
+                FRichEditChat.SelStart := Length(FRichEditChat.Text);
+                FRichEditChat.SelAttributes.Color := clRed;
+                FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                FRichEditChat.SelAttributes.Color := clBlack;
+                
+                FIsGenerating := False;
+                UpdateUI;
+                SetStatus('错误: ' + LocalErrorMsg);
+              end;
             end);
         end;
       end;

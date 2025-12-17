@@ -19,7 +19,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.SyncObjs, System.Math, System.DateUtils, System.JSON;
+  System.SyncObjs, System.Math, System.DateUtils, System.JSON,
+  UniBase.Constants;
 
 type
   EMetricsException = class(Exception);
@@ -227,7 +228,7 @@ type
     FCount: Int64;
   public
     constructor Create(const AName, ADescription: string; const ALabels: TMetricLabels;
-      const AQuantiles: TArray<Double>; AMaxSamples: Integer = 10000);
+      const AQuantiles: TArray<Double>; AMaxSamples: Integer = DEFAULT_BATCH_SIZE);
     destructor Destroy; override;
     
     /// <summary>Observe a value</summary>
@@ -1093,9 +1094,20 @@ begin
     FSum := FSum + AValue;
     System.Inc(FCount);
     
-    // Limit samples
-    while FValues.Count > FMaxSamples do
-      FValues.Delete(0);
+    // 添加数据点数量限制和定期清理机制
+    if FValues.Count > FMaxSamples then
+    begin
+      // 清理最旧的一半数据点，防止内存无限增长
+      while FValues.Count > FMaxSamples div 2 do
+        FValues.Delete(0);
+    end;
+    
+    // 定期清理：每1000次观测清理一次旧数据
+    if FCount mod 1000 = 0 then
+    begin
+      while FValues.Count > FMaxSamples div 2 do
+        FValues.Delete(0);
+    end;
   finally
     FLock.Leave;
   end;

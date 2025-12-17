@@ -442,13 +442,141 @@ begin
   Result := False;
 end;
 
-{ TAWSS3Client }
+{ TAWSS3Client - AWS Signature Version 4 Implementation }
 
 function TAWSS3Client.SignAWSRequest(const AMethod, AService, ARegion, APath: string;
   const APayload: string; AHeaders: TNetHeaders): TNetHeaders;
+var
+  AmzDate, DateStamp: string;
+  Host: string;
+  CanonicalUri, CanonicalQueryString: string;
+  CanonicalHeaders, SignedHeaders: string;
+  PayloadHash: string;
+  CanonicalRequest: string;
+  Algorithm, CredentialScope: string;
+  StringToSign: string;
+  SigningKey: TBytes;
+  Signature: string;
+  AuthorizationHeader: string;
+  I: Integer;
+  HeaderList: TStringList;
+  
+  function HMACSHA256(const AData: TBytes; const AKey: TBytes): TBytes;
+  begin
+    Result := THashSHA2.GetHMACAsBytes(AData, AKey, THashSHA2.TSHA2Version.SHA256);
+  end;
+  
+  function GetSignatureKey(const AKey, ADateStamp, ARegionName, AServiceName: string): TBytes;
+  var
+    kDate, kRegion, kService: TBytes;
+  begin
+    kDate := HMACSHA256(TEncoding.UTF8.GetBytes(ADateStamp), 
+                        TEncoding.UTF8.GetBytes('AWS4' + AKey));
+    kRegion := HMACSHA256(TEncoding.UTF8.GetBytes(ARegionName), kDate);
+    kService := HMACSHA256(TEncoding.UTF8.GetBytes(AServiceName), kRegion);
+    Result := HMACSHA256(TEncoding.UTF8.GetBytes('aws4_request'), kService);
+  end;
+  
+  function BytesToHex(const ABytes: TBytes): string;
+  var
+    B: Byte;
+  begin
+    Result := '';
+    for B in ABytes do
+      Result := Result + IntToHex(B, 2);
+    Result := LowerCase(Result);
+  end;
+  
 begin
-  // AWS Signature Version 4 implementation would go here
-  Result := AHeaders;
+  // Get current time in UTC
+  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+  
+  // Host header
+  Host := Credentials.Endpoint;
+  
+  // Canonical URI (URL-encoded path)
+  CanonicalUri := APath;
+  if CanonicalUri = '' then
+    CanonicalUri := '/';
+  
+  // Canonical query string (empty for most requests)
+  CanonicalQueryString := '';
+  
+  // Payload hash
+  if APayload <> '' then
+    PayloadHash := LowerCase(THashSHA2.GetHashString(APayload, THashSHA2.TSHA2Version.SHA256))
+  else
+    PayloadHash := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'; // Empty string hash
+  
+  // Build canonical headers
+  HeaderList := TStringList.Create;
+  try
+    HeaderList.CaseSensitive := False;
+    HeaderList.Sorted := True;
+    
+    // Add required headers
+    HeaderList.Values['host'] := Host;
+    HeaderList.Values['x-amz-content-sha256'] := PayloadHash;
+    HeaderList.Values['x-amz-date'] := AmzDate;
+    
+    // Add existing headers
+    for I := 0 to Length(AHeaders) - 1 do
+      HeaderList.Values[LowerCase(AHeaders[I].Name)] := AHeaders[I].Value;
+    
+    // Build canonical headers string
+    CanonicalHeaders := '';
+    SignedHeaders := '';
+    for I := 0 to HeaderList.Count - 1 do
+    begin
+      if HeaderList.Names[I] <> '' then
+      begin
+        CanonicalHeaders := CanonicalHeaders + LowerCase(HeaderList.Names[I]) + ':' + 
+                           Trim(HeaderList.ValueFromIndex[I]) + #10;
+        if SignedHeaders <> '' then
+          SignedHeaders := SignedHeaders + ';';
+        SignedHeaders := SignedHeaders + LowerCase(HeaderList.Names[I]);
+      end;
+    end;
+  finally
+    HeaderList.Free;
+  end;
+  
+  // Create canonical request
+  CanonicalRequest := AMethod + #10 +
+                      CanonicalUri + #10 +
+                      CanonicalQueryString + #10 +
+                      CanonicalHeaders + #10 +
+                      SignedHeaders + #10 +
+                      PayloadHash;
+  
+  // Create string to sign
+  Algorithm := 'AWS4-HMAC-SHA256';
+  CredentialScope := DateStamp + '/' + ARegion + '/' + AService + '/aws4_request';
+  StringToSign := Algorithm + #10 +
+                  AmzDate + #10 +
+                  CredentialScope + #10 +
+                  LowerCase(THashSHA2.GetHashString(CanonicalRequest, THashSHA2.TSHA2Version.SHA256));
+  
+  // Calculate signature
+  SigningKey := GetSignatureKey(Credentials.SecretAccessKey, DateStamp, ARegion, AService);
+  Signature := BytesToHex(HMACSHA256(TEncoding.UTF8.GetBytes(StringToSign), SigningKey));
+  
+  // Create authorization header
+  AuthorizationHeader := Algorithm + ' ' +
+                         'Credential=' + Credentials.AccessKeyId + '/' + CredentialScope + ', ' +
+                         'SignedHeaders=' + SignedHeaders + ', ' +
+                         'Signature=' + Signature;
+  
+  // Build result headers
+  SetLength(Result, Length(AHeaders) + 4);
+  for I := 0 to Length(AHeaders) - 1 do
+    Result[I] := AHeaders[I];
+  
+  Result[Length(AHeaders)] := TNameValuePair.Create('Host', Host);
+  Result[Length(AHeaders) + 1] := TNameValuePair.Create('x-amz-date', AmzDate);
+  Result[Length(AHeaders) + 2] := TNameValuePair.Create('x-amz-content-sha256', PayloadHash);
+  Result[Length(AHeaders) + 3] := TNameValuePair.Create('Authorization', AuthorizationHeader);
 end;
 
 function TAWSS3Client.SignRequest(const AMethod, APath: string;
@@ -465,18 +593,188 @@ end;
 
 function TAWSS3Client.GetPresignedUrl(const ABucketName, AKey: string;
   AExpiresInSeconds: Integer): string;
+var
+  AmzDate, DateStamp: string;
+  Host: string;
+  CanonicalUri: string;
+  CredentialScope: string;
+  SignedHeaders: string;
+  CanonicalQueryString: string;
+  CanonicalRequest: string;
+  StringToSign: string;
+  SigningKey: TBytes;
+  Signature: string;
+  
+  function HMACSHA256(const AData: TBytes; const AKey: TBytes): TBytes;
+  begin
+    Result := THashSHA2.GetHMACAsBytes(AData, AKey, THashSHA2.TSHA2Version.SHA256);
+  end;
+  
+  function GetSignatureKey(const AKey, ADateStamp, ARegionName, AServiceName: string): TBytes;
+  var
+    kDate, kRegion, kService: TBytes;
+  begin
+    kDate := HMACSHA256(TEncoding.UTF8.GetBytes(ADateStamp), 
+                        TEncoding.UTF8.GetBytes('AWS4' + AKey));
+    kRegion := HMACSHA256(TEncoding.UTF8.GetBytes(ARegionName), kDate);
+    kService := HMACSHA256(TEncoding.UTF8.GetBytes(AServiceName), kRegion);
+    Result := HMACSHA256(TEncoding.UTF8.GetBytes('aws4_request'), kService);
+  end;
+  
+  function BytesToHex(const ABytes: TBytes): string;
+  var
+    B: Byte;
+  begin
+    Result := '';
+    for B in ABytes do
+      Result := Result + IntToHex(B, 2);
+    Result := LowerCase(Result);
+  end;
+  
 begin
-  // Generate presigned URL with AWS Signature V4
-  Result := BuildUrl(ABucketName, AKey);
+  AmzDate := FormatDateTime('yyyymmdd"T"hhnnss"Z"', TTimeZone.Local.ToUniversalTime(Now));
+  DateStamp := FormatDateTime('yyyymmdd', TTimeZone.Local.ToUniversalTime(Now));
+  
+  Host := ABucketName + '.s3.' + Credentials.Region + '.amazonaws.com';
+  CanonicalUri := '/' + TNetEncoding.URL.Encode(AKey);
+  CredentialScope := DateStamp + '/' + Credentials.Region + '/s3/aws4_request';
+  SignedHeaders := 'host';
+  
+  // Build query string for presigned URL
+  CanonicalQueryString := 'X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+    '&X-Amz-Credential=' + TNetEncoding.URL.Encode(Credentials.AccessKeyId + '/' + CredentialScope) +
+    '&X-Amz-Date=' + AmzDate +
+    '&X-Amz-Expires=' + IntToStr(AExpiresInSeconds) +
+    '&X-Amz-SignedHeaders=' + SignedHeaders;
+  
+  // Create canonical request
+  CanonicalRequest := 'GET' + #10 +
+                      CanonicalUri + #10 +
+                      CanonicalQueryString + #10 +
+                      'host:' + Host + #10 + #10 +
+                      SignedHeaders + #10 +
+                      'UNSIGNED-PAYLOAD';
+  
+  // Create string to sign
+  StringToSign := 'AWS4-HMAC-SHA256' + #10 +
+                  AmzDate + #10 +
+                  CredentialScope + #10 +
+                  LowerCase(THashSHA2.GetHashString(CanonicalRequest, THashSHA2.TSHA2Version.SHA256));
+  
+  // Calculate signature
+  SigningKey := GetSignatureKey(Credentials.SecretAccessKey, DateStamp, Credentials.Region, 's3');
+  Signature := BytesToHex(HMACSHA256(TEncoding.UTF8.GetBytes(StringToSign), SigningKey));
+  
+  // Build presigned URL
+  Result := 'https://' + Host + CanonicalUri + '?' + CanonicalQueryString + 
+            '&X-Amz-Signature=' + Signature;
 end;
 
-{ TAzureBlobClient }
+{ TAzureBlobClient - Azure SharedKey Authentication Implementation }
 
 function TAzureBlobClient.SignAzureRequest(const AMethod, AResource: string;
   AHeaders: TNetHeaders): TNetHeaders;
+var
+  DateStr: string;
+  ContentLength, ContentType: string;
+  CanonicalizedHeaders: string;
+  CanonicalizedResource: string;
+  StringToSign: string;
+  SignatureBytes: TBytes;
+  Signature: string;
+  AuthHeader: string;
+  I: Integer;
+  HeaderList: TStringList;
+  
+  function GetHeaderValue(const AName: string): string;
+  var
+    J: Integer;
+  begin
+    Result := '';
+    for J := 0 to Length(AHeaders) - 1 do
+      if SameText(AHeaders[J].Name, AName) then
+      begin
+        Result := AHeaders[J].Value;
+        Break;
+      end;
+  end;
+  
 begin
-  // Azure SharedKey authentication would go here
-  Result := AHeaders;
+  // Get current time in RFC 1123 format
+  DateStr := FormatDateTime('ddd, dd mmm yyyy hh:nn:ss "GMT"', 
+    TTimeZone.Local.ToUniversalTime(Now), TFormatSettings.Create('en-US'));
+  
+  // Get content headers
+  ContentLength := GetHeaderValue('Content-Length');
+  ContentType := GetHeaderValue('Content-Type');
+  
+  // Build canonicalized headers (x-ms-* headers sorted alphabetically)
+  HeaderList := TStringList.Create;
+  try
+    HeaderList.CaseSensitive := False;
+    HeaderList.Sorted := True;
+    
+    // Add required x-ms headers
+    HeaderList.Values['x-ms-date'] := DateStr;
+    HeaderList.Values['x-ms-version'] := '2021-06-08';
+    
+    // Add existing x-ms headers
+    for I := 0 to Length(AHeaders) - 1 do
+      if StartsText('x-ms-', AHeaders[I].Name) then
+        HeaderList.Values[LowerCase(AHeaders[I].Name)] := AHeaders[I].Value;
+    
+    // Build canonicalized headers string
+    CanonicalizedHeaders := '';
+    for I := 0 to HeaderList.Count - 1 do
+    begin
+      if StartsText('x-ms-', HeaderList.Names[I]) then
+        CanonicalizedHeaders := CanonicalizedHeaders + 
+          LowerCase(HeaderList.Names[I]) + ':' + Trim(HeaderList.ValueFromIndex[I]) + #10;
+    end;
+  finally
+    HeaderList.Free;
+  end;
+  
+  // Build canonicalized resource
+  CanonicalizedResource := '/' + Credentials.AccountName + AResource;
+  
+  // Build string to sign (SharedKey format)
+  // VERB\nContent-Encoding\nContent-Language\nContent-Length\nContent-MD5\nContent-Type\n
+  // Date\nIf-Modified-Since\nIf-Match\nIf-None-Match\nIf-Unmodified-Since\nRange\n
+  // CanonicalizedHeaders\nCanonicalizedResource
+  StringToSign := AMethod + #10 +                    // VERB
+                  '' + #10 +                          // Content-Encoding
+                  '' + #10 +                          // Content-Language
+                  ContentLength + #10 +               // Content-Length
+                  '' + #10 +                          // Content-MD5
+                  ContentType + #10 +                 // Content-Type
+                  '' + #10 +                          // Date (empty, using x-ms-date)
+                  '' + #10 +                          // If-Modified-Since
+                  '' + #10 +                          // If-Match
+                  '' + #10 +                          // If-None-Match
+                  '' + #10 +                          // If-Unmodified-Since
+                  '' + #10 +                          // Range
+                  CanonicalizedHeaders +
+                  CanonicalizedResource;
+  
+  // Calculate HMAC-SHA256 signature
+  SignatureBytes := THashSHA2.GetHMACAsBytes(
+    TEncoding.UTF8.GetBytes(StringToSign),
+    TNetEncoding.Base64.DecodeStringToBytes(Credentials.SecretAccessKey),
+    THashSHA2.TSHA2Version.SHA256);
+  Signature := TNetEncoding.Base64.EncodeBytesToString(SignatureBytes);
+  
+  // Build authorization header
+  AuthHeader := 'SharedKey ' + Credentials.AccountName + ':' + Signature;
+  
+  // Build result headers
+  SetLength(Result, Length(AHeaders) + 3);
+  for I := 0 to Length(AHeaders) - 1 do
+    Result[I] := AHeaders[I];
+  
+  Result[Length(AHeaders)] := TNameValuePair.Create('x-ms-date', DateStr);
+  Result[Length(AHeaders) + 1] := TNameValuePair.Create('x-ms-version', '2021-06-08');
+  Result[Length(AHeaders) + 2] := TNameValuePair.Create('Authorization', AuthHeader);
 end;
 
 function TAzureBlobClient.SignRequest(const AMethod, APath: string;
@@ -500,24 +798,139 @@ begin
   // Azure creates containers, not buckets
   Url := Format('https://%s.blob.core.windows.net/%s?restype=container',
     [Credentials.AccountName, ABucketName]);
-  Headers := SignRequest('PUT', '/' + ABucketName, nil);
+  Headers := SignRequest('PUT', '/' + ABucketName + #10 + 'restype:container', nil);
   Response := FHttpClient.Put(Url, nil, nil, Headers);
   Result := Response.StatusCode in [200, 201];
 end;
 
-{ TAliOSSClient }
+{ TAliOSSClient - Alibaba Cloud OSS Signature Implementation }
 
 function TAliOSSClient.SignAliRequest(const AMethod, ABucket, AKey: string;
   AHeaders: TNetHeaders): TNetHeaders;
+var
+  DateStr: string;
+  ContentType, ContentMD5: string;
+  CanonicalizedOSSHeaders: string;
+  CanonicalizedResource: string;
+  StringToSign: string;
+  SignatureBytes: TBytes;
+  Signature: string;
+  AuthHeader: string;
+  I: Integer;
+  HeaderList: TStringList;
+  
+  function GetHeaderValue(const AName: string): string;
+  var
+    J: Integer;
+  begin
+    Result := '';
+    for J := 0 to Length(AHeaders) - 1 do
+      if SameText(AHeaders[J].Name, AName) then
+      begin
+        Result := AHeaders[J].Value;
+        Break;
+      end;
+  end;
+  
 begin
-  // Alibaba OSS signature would go here
-  Result := AHeaders;
+  // Get current time in RFC 1123 format (GMT)
+  DateStr := FormatDateTime('ddd, dd mmm yyyy hh:nn:ss "GMT"', 
+    TTimeZone.Local.ToUniversalTime(Now), TFormatSettings.Create('en-US'));
+  
+  // Get content headers
+  ContentType := GetHeaderValue('Content-Type');
+  ContentMD5 := GetHeaderValue('Content-MD5');
+  
+  // Build canonicalized OSS headers (x-oss-* headers sorted alphabetically)
+  HeaderList := TStringList.Create;
+  try
+    HeaderList.CaseSensitive := False;
+    HeaderList.Sorted := True;
+    
+    // Add existing x-oss headers
+    for I := 0 to Length(AHeaders) - 1 do
+      if StartsText('x-oss-', AHeaders[I].Name) then
+        HeaderList.Values[LowerCase(AHeaders[I].Name)] := AHeaders[I].Value;
+    
+    // Build canonicalized headers string
+    CanonicalizedOSSHeaders := '';
+    for I := 0 to HeaderList.Count - 1 do
+    begin
+      if StartsText('x-oss-', HeaderList.Names[I]) then
+        CanonicalizedOSSHeaders := CanonicalizedOSSHeaders + 
+          LowerCase(HeaderList.Names[I]) + ':' + Trim(HeaderList.ValueFromIndex[I]) + #10;
+    end;
+  finally
+    HeaderList.Free;
+  end;
+  
+  // Build canonicalized resource
+  if ABucket <> '' then
+  begin
+    if AKey <> '' then
+      CanonicalizedResource := '/' + ABucket + '/' + AKey
+    else
+      CanonicalizedResource := '/' + ABucket + '/';
+  end
+  else
+    CanonicalizedResource := '/';
+  
+  // Build string to sign (OSS format)
+  // VERB + "\n" + Content-MD5 + "\n" + Content-Type + "\n" + Date + "\n" + 
+  // CanonicalizedOSSHeaders + CanonicalizedResource
+  StringToSign := AMethod + #10 +
+                  ContentMD5 + #10 +
+                  ContentType + #10 +
+                  DateStr + #10 +
+                  CanonicalizedOSSHeaders +
+                  CanonicalizedResource;
+  
+  // Calculate HMAC-SHA1 signature (OSS uses SHA1)
+  SignatureBytes := THashSHA1.GetHMACAsBytes(
+    TEncoding.UTF8.GetBytes(StringToSign),
+    TEncoding.UTF8.GetBytes(Credentials.SecretAccessKey));
+  Signature := TNetEncoding.Base64.EncodeBytesToString(SignatureBytes);
+  
+  // Build authorization header
+  AuthHeader := 'OSS ' + Credentials.AccessKeyId + ':' + Signature;
+  
+  // Build result headers
+  SetLength(Result, Length(AHeaders) + 2);
+  for I := 0 to Length(AHeaders) - 1 do
+    Result[I] := AHeaders[I];
+  
+  Result[Length(AHeaders)] := TNameValuePair.Create('Date', DateStr);
+  Result[Length(AHeaders) + 1] := TNameValuePair.Create('Authorization', AuthHeader);
 end;
 
 function TAliOSSClient.SignRequest(const AMethod, APath: string;
   AHeaders: TNetHeaders): TNetHeaders;
+var
+  Bucket, Key: string;
+  SlashPos: Integer;
 begin
-  Result := SignAliRequest(AMethod, '', '', AHeaders);
+  // Parse bucket and key from path
+  if (Length(APath) > 1) and (APath[1] = '/') then
+  begin
+    SlashPos := Pos('/', Copy(APath, 2, MaxInt));
+    if SlashPos > 0 then
+    begin
+      Bucket := Copy(APath, 2, SlashPos - 1);
+      Key := Copy(APath, SlashPos + 2, MaxInt);
+    end
+    else
+    begin
+      Bucket := Copy(APath, 2, MaxInt);
+      Key := '';
+    end;
+  end
+  else
+  begin
+    Bucket := '';
+    Key := '';
+  end;
+  
+  Result := SignAliRequest(AMethod, Bucket, Key, AHeaders);
 end;
 
 function TAliOSSClient.BuildUrl(const ABucketName, AKey: string): string;

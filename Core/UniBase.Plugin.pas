@@ -202,7 +202,7 @@ type
     /// <summary>Get configuration value</summary>
     function GetConfig(const Key: string; const Default: string = ''): string;
     
-    /// <summary>Set configuration value</summary>
+    /// <summary>Set configuration value (restricted to plugin-specific keys)</summary>
     procedure SetConfig(const Key, Value: string);
     
     /// <summary>Translate text using current language</summary>

@@ -182,7 +182,8 @@ uses
   System.DateUtils, System.IOUtils, System.JSON, System.Generics.Collections,
   Data.DB,
   FireDAC.Stan.Option,
-  UniBase.Logging;
+  UniBase.Logging,
+  UniBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监控
 
 type
   TQueryCacheEntry = record
@@ -796,11 +797,11 @@ var
 begin
   Result := 0;
   StartTime := Now;
-  
+
   // 从 Queries 表加载 SQL 或直接使用
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
-  
+
   if Pooled then
     Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
   else
@@ -809,11 +810,11 @@ begin
     Q.Connection := Ctx.Connection;
     Q.SQL.Text := SQL;
   end;
-  
+
   try
     try
       Q.FetchOptions.Mode := fmAll;
-      
+
       // 绑定参数
       if ParamsJson <> '' then
       begin
@@ -835,25 +836,35 @@ begin
           Params.Free;
         end;
       end;
-      
+
       Q.Open;
       Result := Q.RecordCount;
-      
+
       // 复制数据到 TFDMemTable
       if Data = nil then
         Data := TFDMemTable.Create(nil);
       CopyQueryToMemTable(Q, Data);
-      
+
       DurationMs := MilliSecondsBetween(Now, StartTime);
-      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT', 
+
+      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, Result, True,
+        'DoQry:' + Ctx.CorrelationId);
+
+      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
         SQL, ParamsJson, DurationMs, Result, '');
     except
       on E: Exception do
       begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
+
+        // BUG-032 FIX: 记录失败的查询到SQLLogger
+        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
+          'DoQry:' + Ctx.CorrelationId);
+
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
           SQL, ParamsJson, DurationMs, 0, E.Message);
-        raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson, 
+        raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
           Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E.Message));
       end;
     end;
@@ -875,10 +886,10 @@ var
 begin
   Result := 0;
   StartTime := Now;
-  
+
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
-  
+
   if Pooled then
     Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
   else
@@ -887,7 +898,7 @@ begin
     Q.Connection := Ctx.Connection;
     Q.SQL.Text := SQL;
   end;
-  
+
   try
     try
       // 绑定参数
@@ -911,17 +922,27 @@ begin
           Params.Free;
         end;
       end;
-      
+
       Q.ExecSQL;
       Result := Q.RowsAffected;
-      
+
       DurationMs := MilliSecondsBetween(Now, StartTime);
+
+      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, Result, True,
+        'DoQry:' + Ctx.CorrelationId);
+
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
         SQL, ParamsJson, DurationMs, Result, '');
     except
       on E: Exception do
       begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
+
+        // BUG-032 FIX: 记录失败的查询到SQLLogger
+        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
+          'DoQry:' + Ctx.CorrelationId);
+
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
@@ -943,9 +964,9 @@ var
 begin
   Result := 0;
   StartTime := Now;
-  
+
   SQL := LoadQuerySQL(ProcName, Ctx);
-  
+
   // 根据数据库类型处理返回 ID
   case Ctx.DBType of
     udbPostgreSQL:
@@ -954,16 +975,16 @@ begin
     udbSQLite:
       ; // SQLite 使用 last_insert_rowid()
   end;
-  
+
   Q := TFDQuery.Create(nil);
   try
     try
       Q.Connection := Ctx.Connection;
       Q.SQL.Text := SQL;
-      
+
       // 参数绑定（简化）
       // ...
-      
+
       case Ctx.DBType of
         udbPostgreSQL:
         begin
@@ -980,14 +1001,24 @@ begin
             Result := Q.Fields[0].AsInteger;
         end;
       end;
-      
+
       DurationMs := MilliSecondsBetween(Now, StartTime);
+
+      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 1, True,
+        'DoQry:' + Ctx.CorrelationId);
+
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
         SQL, ParamsJson, DurationMs, 1, '');
     except
       on E: Exception do
       begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
+
+        // BUG-032 FIX: 记录失败的查询到SQLLogger
+        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
+          'DoQry:' + Ctx.CorrelationId);
+
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
@@ -1010,10 +1041,10 @@ var
 begin
   Result := Null;
   StartTime := Now;
-  
+
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
-  
+
   if Pooled then
     Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
   else
@@ -1022,21 +1053,31 @@ begin
     Q.Connection := Ctx.Connection;
     Q.SQL.Text := SQL;
   end;
-  
+
   try
     try
       Q.Open;
-      
+
       if not Q.Eof and (Q.Fields.Count > 0) then
         Result := Q.Fields[0].Value;
-      
+
       DurationMs := MilliSecondsBetween(Now, StartTime);
+
+      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 1, True,
+        'DoQry:' + Ctx.CorrelationId);
+
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
         SQL, ParamsJson, DurationMs, 1, '');
     except
       on E: Exception do
       begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
+
+        // BUG-032 FIX: 记录失败的查询到SQLLogger
+        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
+          'DoQry:' + Ctx.CorrelationId);
+
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,

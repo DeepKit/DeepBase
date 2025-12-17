@@ -125,7 +125,7 @@ end;
 
 destructor TUserProfileFrame.Destroy;
 begin
-  FOpenDialog.Free;
+  FreeAndNil(FOpenDialog);  // 使用FreeAndNil避免悬空指针
   inherited;
 end;
 

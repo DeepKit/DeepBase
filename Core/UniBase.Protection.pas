@@ -71,15 +71,16 @@ type
     class function GetHashBytes(hHash: HCRYPTHASH): TBytes; static;
   public
     // 密钥生成（为兼容保留，当前返回空字符串）
-    class function GetDynamicKey: string; static;
+    class function GetDynamicKey: string; static; deprecated 'Use UniBase.Security for key management';
     // 加密解密
-    class function EncryptSensitiveData(const AData: string; const APassword: string = '@2241114'): string; static;
-    class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string = '@2241114'): string; static;
-    class function EncryptBinaryData(const AData: TBytes; const APassword: string = '@2241114'): TBytes; static;
-    class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string = '@2241114'): TBytes; static;
+    // BUG-034 FIX: Remove hardcoded default password - require explicit password
+    class function EncryptSensitiveData(const AData: string; const APassword: string): string; static;
+    class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string): string; static;
+    class function EncryptBinaryData(const AData: TBytes; const APassword: string): TBytes; static;
+    class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
     // 完整性校验
-    class function CalculateHMAC(const AData: string; const APassword: string = '@2241114'): string; static;
-    class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string = '@2241114'): Boolean; static;
+    class function CalculateHMAC(const AData: string; const APassword: string): string; static;
+    class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string): Boolean; static;
     class function CalculateFileHash(const AFileName: string): string; static;
     class function CalculateDataHash(const AData: TBytes): string; static;
   end;
@@ -427,8 +428,22 @@ begin
 end;
 
 class function TBasicProtection.VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string): Boolean;
+var
+  ExpectedHMAC: string;
+  I, Diff: Integer;
 begin
-  Result := SameText(CalculateHMAC(AData, APassword), AHMAC);
+  // BUG-036 FIX: Use constant-time comparison to prevent timing attacks
+  ExpectedHMAC := CalculateHMAC(AData, APassword);
+  
+  // Constant-time string comparison
+  if Length(ExpectedHMAC) <> Length(AHMAC) then
+    Exit(False);
+  
+  Diff := 0;
+  for I := 1 to Length(ExpectedHMAC) do
+    Diff := Diff or (Ord(ExpectedHMAC[I]) xor Ord(AHMAC[I]));
+  
+  Result := Diff = 0;
 end;
 
 class function TBasicProtection.CalculateFileHash(const AFileName: string): string;

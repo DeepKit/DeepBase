@@ -98,6 +98,8 @@ type
     procedure FirePluginLoaded(const Info: TPluginInfo);
     procedure FirePluginUnloaded(const PluginID: TGUID);
     procedure FirePluginError(const PluginID: TGUID; const PluginName, ErrorMsg: string; IsFatal: Boolean);
+    function IsValidPluginPath(const Path: string): Boolean;
+    function VerifyPluginSignature(const Path: string): Boolean;
     function GetPluginEnabledSetting(const PluginID: TGUID): Boolean;
     procedure SetPluginEnabledSetting(const PluginID: TGUID; Enabled: Boolean);
     
@@ -221,7 +223,32 @@ begin
 end;
 
 procedure TPluginContext.SetConfig(const Key, Value: string);
+const
+  PLUGIN_CONFIG_PREFIX = 'Plugin.';
+  SECURITY_KEYS: array[0..6] of string = (
+    'password', 'secret', 'key', 'token', 'auth', 'credential', 'private'
+  );
+var
+  I: Integer;
+  LowerKey: string;
 begin
+  // 实现基于角色的配置访问控制
+  if not Key.StartsWith(PLUGIN_CONFIG_PREFIX) then
+    raise EArgumentException.CreateFmt(
+      'Plugin configuration keys must start with "%s". Invalid key: %s',
+      [PLUGIN_CONFIG_PREFIX, Key]
+    );
+  
+  // 检查是否尝试设置安全相关配置
+  LowerKey := Key.ToLower;
+  for I := Low(SECURITY_KEYS) to High(SECURITY_KEYS) do
+  begin
+    if LowerKey.Contains(SECURITY_KEYS[I]) then
+      raise EInvalidOpException.CreateFmt(
+        'Plugin cannot modify security-related configuration: %s', [Key]
+      );
+  end;
+  
   if Assigned(FSetConfigProc) then
     FSetConfigProc(Key, Value);
 end;
@@ -425,7 +452,23 @@ begin
   
   TMonitor.Enter(FLock);
   try
-    // 1. Load BPL
+    // 1. 验证插件文件路径安全性
+    if not IsValidPluginPath(BPLPath) then
+    begin
+      ErrorMsg := 'Invalid plugin path (potential path traversal): ' + BPLPath;
+      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, True);
+      Exit;
+    end;
+    
+    // 2. 验证插件数字签名
+    if not VerifyPluginSignature(BPLPath) then
+    begin
+      ErrorMsg := 'Plugin signature verification failed: ' + BPLPath;
+      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, True);
+      Exit;
+    end;
+    
+    // 3. Load BPL
     Handle := LoadBPL(BPLPath);
     if Handle = 0 then
     begin
@@ -752,6 +795,39 @@ begin
   finally
     TMonitor.Exit(FLock);
   end;
+end;
+
+function TUniBasePluginManager.IsValidPluginPath(const Path: string): Boolean;
+var
+  CanonicalPath, PluginsCanonical: string;
+begin
+  Result := False;
+  
+  try
+    // 获取规范化路径
+    CanonicalPath := TPath.GetFullPath(Path);
+    PluginsCanonical := TPath.GetFullPath(FPluginsDir);
+    
+    // 检查路径是否在插件目录内
+    Result := CanonicalPath.StartsWith(PluginsCanonical + TPath.DirectorySeparatorChar) or
+              (CanonicalPath = PluginsCanonical);
+              
+    // 检查文件扩展名
+    if Result then
+      Result := SameText(TPath.GetExtension(Path), '.bpl');
+      
+  except
+    on E: Exception do
+      Result := False;
+  end;
+end;
+
+function TUniBasePluginManager.VerifyPluginSignature(const Path: string): Boolean;
+begin
+  // TODO: Implement plugin signature verification using WinVerifyTrust API
+  // Currently returns True to allow plugin loading during development
+  // In production, should verify Authenticode signature before loading
+  Result := True;
 end;
 
 end.

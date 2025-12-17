@@ -18,6 +18,7 @@ uses
   System.IOUtils,
   System.SyncObjs,
   System.Math,
+  System.Threading,  // BUG-007 FIX: Added for TTask.Run
   System.Generics.Collections,
   FireDAC.Comp.Client,
   FireDAC.Stan.Def,
@@ -677,16 +678,20 @@ begin
   if not Assigned(ACallback) then
     Exit;
     
-  // 如果已经触发过 Ready，立即执行回调
+  // 如果已经触发过 Ready，使用异步执行避免嵌套锁定导致死锁
+  // BUG-007 FIX: Use TTask.Run to prevent deadlock when callback calls UniBase functions
   if FReadyFired then
   begin
-    try
-      ACallback();
-    except
-      on E: Exception do
-        if Assigned(FLogger) then
-          FLogger.Error('WhenReady callback failed: ' + E.Message, 'UniBase');
-    end;
+    TTask.Run(procedure
+    begin
+      try
+        ACallback();
+      except
+        on E: Exception do
+          if Assigned(FLogger) then
+            FLogger.Error('WhenReady callback failed: ' + E.Message, 'UniBase');
+      end;
+    end);
     Exit;
   end;
   

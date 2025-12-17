@@ -138,11 +138,9 @@ type
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Winapi.Windows,  // R-006: OutputDebugString 支持
-  {$ENDIF}
   System.Math,
-  System.DateUtils;
+  System.DateUtils,
+  UniBase.Logging;
 
 { TPooledConnection }
 
@@ -263,11 +261,11 @@ begin
         except
           on E: Exception do
           begin
-            // R-006: 连接重连失败，从池中移除
-            {$IFDEF DEBUG}
-            OutputDebugString(PChar('UniBase.ConnectionPool reconnect failed, removing: ' + E.Message));
-            {$ENDIF}
+            // 连接重连失败，从池中移除并记录日志
+            if Assigned(UniBase.Logging.Logger) then
+              UniBase.Logging.Logger.Warning('Connection pool reconnect failed: ' + E.Message);
             FPool.Delete(i);
+            Pooled.Free; // 释放失效的连接对象
             Exit;
           end;
         end;
@@ -319,10 +317,9 @@ begin
         except
           on E: Exception do
           begin
-            // R-006: 新连接创建失败
-            {$IFDEF DEBUG}
-            OutputDebugString(PChar('UniBase.ConnectionPool new connection failed: ' + E.Message));
-            {$ENDIF}
+            // 新连接创建失败，记录日志
+            if Assigned(UniBase.Logging.Logger) then
+              UniBase.Logging.Logger.Error('Connection pool new connection failed: ' + E.Message);
           end;
         end;
       end;
@@ -366,7 +363,9 @@ begin
     end;
     
     // Connection not found in pool - might be externally created
-    // Just ignore
+    // 记录警告日志，可能存在连接泄漏
+    if Assigned(UniBase.Logging.Logger) then
+      UniBase.Logging.Logger.Warning('Attempting to release connection not in pool - possible connection leak');
   finally
     FLock.Leave;
   end;

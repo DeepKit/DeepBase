@@ -21,7 +21,7 @@ uses
   System.Net.HttpClient, System.Net.URLClient, System.Net.HttpClientComponent,
   System.NetEncoding, System.JSON, System.RegularExpressions,
   IdDNSResolver, IdGlobal, IdStack, IdTCPClient, IdHTTP, IdSSLOpenSSL,
-  IdUDPClient, IdICMPClient;
+  IdUDPClient, IdICMPClient, IdURI;
 
 type
   ENetException = class(Exception);
@@ -331,6 +331,10 @@ type
     /// <summary>Well-known services</summary>
     class function GetServiceName(APort: Integer): string; static;
     class function GetServicePort(const AServiceName: string): Integer; static;
+    
+    /// <summary>Security validation</summary>
+    class function IsValidHttpHeader(const AName, AValue: string): Boolean; static;
+    class function IsSafeUrl(const AUrl: string): Boolean; static;
   end;
 
   /// <summary>IP address utilities</summary>
@@ -561,9 +565,15 @@ begin
     LClient.HandleRedirects := FFollowRedirects;
     LClient.MaxRedirects := FMaxRedirects;
     
-    // Set headers
+    // Set headers with validation
     for LPair in FHeaders do
-      LClient.CustomHeaders[LPair.Key] := LPair.Value;
+    begin
+      // 验证HTTP头部，防止头部注入攻击
+      if IsValidHttpHeader(LPair.Key, LPair.Value) then
+        LClient.CustomHeaders[LPair.Key] := LPair.Value
+      else
+        raise EArgumentException.CreateFmt('Invalid HTTP header: %s: %s', [LPair.Key, LPair.Value]);
+    end;
       
     if FContentType <> '' then
       LClient.ContentType := FContentType;
@@ -577,6 +587,10 @@ begin
       LClient.CustomHeaders['Authorization'] := 'Bearer ' + FBearerToken;
     
     LStartTime := Now;
+    
+    // 验证URL安全性，防止SSRF攻击
+    if not IsSafeUrl(LUrl) then
+      raise ENetException.CreateFmt('Unsafe URL detected: %s', [LUrl]);
     
     try
       case FMethod of
@@ -1925,6 +1939,76 @@ begin
       Result := CompareIPv4(A, B);
     end
   ));
+end;
+
+class function TNetworkUtils.IsValidHttpHeader(const AName, AValue: string): Boolean;
+begin
+  Result := False;
+  
+  // 检查头部名称
+  if AName.IsEmpty or (Length(AName) > 255) then
+    Exit;
+    
+  // 头部名称只能包含可见ASCII字符，不能包含分隔符
+  for var C in AName do
+  begin
+    if (Ord(C) < 33) or (Ord(C) > 126) or 
+       CharInSet(C, ['(', ')', '<', '>', '@', ',', ';', ':', '\', '"', '/', '[', ']', '?', '=', '{', '}', ' ', #9]) then
+      Exit;
+  end;
+  
+  // 检查头部值
+  if Length(AValue) > 8192 then // 限制头部值长度
+    Exit;
+    
+  // 头部值不能包含控制字符（除了TAB）
+  for var C in AValue do
+  begin
+    if (Ord(C) < 32) and (C <> #9) then
+      Exit;
+    if Ord(C) = 127 then
+      Exit;
+  end;
+  
+  // 检查是否包含CRLF注入
+  if AValue.Contains(#13) or AValue.Contains(#10) then
+    Exit;
+    
+  Result := True;
+end;
+
+class function TNetworkUtils.IsSafeUrl(const AUrl: string): Boolean;
+var
+  URI: TURI;
+  Host: string;
+begin
+  Result := False;
+  
+  try
+    URI := TURI.Create(AUrl);
+    
+    // 只允许HTTP和HTTPS协议
+    if not SameText(URI.Scheme, 'http') and not SameText(URI.Scheme, 'https') then
+      Exit;
+      
+    Host := URI.Host.ToLower;
+    
+    // 防止SSRF攻击 - 禁止访问内网地址
+    if TIPUtils.IsPrivateIP(Host) or TIPUtils.IsLoopbackIP(Host) or TIPUtils.IsLinkLocalIP(Host) then
+      Exit;
+      
+    // 禁止访问元数据服务
+    if Host.Contains('169.254.169.254') or Host.Contains('metadata') then
+      Exit;
+      
+    // 禁止访问localhost的各种形式
+    if Host.Contains('localhost') or Host.Contains('127.') or Host.Contains('::1') then
+      Exit;
+      
+    Result := True;
+  except
+    Result := False;
+  end;
 end;
 
 initialization

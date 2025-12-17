@@ -173,6 +173,13 @@ type
     procedure Clear;
   end;
 
+  /// <summary>Key storage mode for sensitive data</summary>
+  TKeyStorageMode = (
+    ksmPlainText,      // Not recommended: store as plain text (legacy)
+    ksmDPAPI,          // Windows DPAPI encryption (recommended)
+    ksmCredential      // Windows Credential Manager
+  );
+
   /// <summary>Base payment configuration</summary>
   TPaymentConfig = class
   private
@@ -181,14 +188,30 @@ type
     FTimeout: Integer;
     FNotifyUrl: string;
     FReturnUrl: string;
+    FKeyStorageMode: TKeyStorageMode;  // BUG-019 FIX: 密钥存储模式
+    FCredentialTarget: string;          // BUG-019 FIX: Credential Manager 目标名称前缀
+  protected
+    // BUG-019 FIX: 安全存储/读取密钥
+    function ProtectKey(const APlainKey: string): string;
+    function UnprotectKey(const AEncryptedKey: string): string;
+    function GetCredentialKey(const AKeyName: string): string;
+    procedure SetCredentialKey(const AKeyName, AValue: string);
   public
     constructor Create(AProvider: TPaymentProvider); virtual;
-    
+
+    /// <summary>Load keys from secure storage (Credential Manager)</summary>
+    procedure LoadKeysFromCredentialManager; virtual;
+    /// <summary>Save keys to secure storage (Credential Manager)</summary>
+    procedure SaveKeysToCredentialManager; virtual;
+
     property Provider: TPaymentProvider read FProvider;
     property IsSandbox: Boolean read FIsSandbox write FIsSandbox;
     property Timeout: Integer read FTimeout write FTimeout;
     property NotifyUrl: string read FNotifyUrl write FNotifyUrl;
     property ReturnUrl: string read FReturnUrl write FReturnUrl;
+    // BUG-019 FIX: 密钥安全存储属性
+    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
   end;
 
   /// <summary>Unified payment client interface</summary>
@@ -266,6 +289,9 @@ type
   end;
 
 implementation
+
+uses
+  UniBase.Security.DPAPI;  // BUG-019 FIX: 安全密钥存储支持
 
 { EPaymentError }
 
@@ -414,6 +440,81 @@ begin
   FProvider := AProvider;
   FIsSandbox := False;
   FTimeout := 30000;
+  // BUG-019 FIX: 初始化安全存储设置
+  FKeyStorageMode := ksmDPAPI;  // 默认使用 DPAPI（推荐）
+  FCredentialTarget := 'UniBase.Payment.' + TPaymentHelper.ProviderToString(AProvider);
+end;
+
+{ BUG-019 FIX: TPaymentConfig 安全存储方法实现 }
+
+function TPaymentConfig.ProtectKey(const APlainKey: string): string;
+begin
+  if APlainKey = '' then
+    Exit('');
+
+  case FKeyStorageMode of
+    ksmDPAPI:
+      Result := TDPAPIHelper.ProtectString(APlainKey);
+    ksmCredential:
+      // Credential Manager 模式下不需要额外加密
+      Result := APlainKey;
+  else
+    // ksmPlainText - 不推荐，但保持兼容性
+    Result := APlainKey;
+  end;
+end;
+
+function TPaymentConfig.UnprotectKey(const AEncryptedKey: string): string;
+begin
+  if AEncryptedKey = '' then
+    Exit('');
+
+  case FKeyStorageMode of
+    ksmDPAPI:
+      Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
+    ksmCredential:
+      // Credential Manager 模式下数据已经安全存储
+      Result := AEncryptedKey;
+  else
+    // ksmPlainText
+    Result := AEncryptedKey;
+  end;
+end;
+
+function TPaymentConfig.GetCredentialKey(const AKeyName: string): string;
+var
+  TargetName: string;
+begin
+  Result := '';
+  if FKeyStorageMode <> ksmCredential then
+    Exit;
+
+  TargetName := FCredentialTarget + '.' + AKeyName;
+  Result := TCredentialManager.GetCredential(TargetName);
+end;
+
+procedure TPaymentConfig.SetCredentialKey(const AKeyName, AValue: string);
+var
+  TargetName: string;
+begin
+  if FKeyStorageMode <> ksmCredential then
+    Exit;
+
+  TargetName := FCredentialTarget + '.' + AKeyName;
+  if AValue <> '' then
+    TCredentialManager.SaveCredential(TargetName, '', AValue)
+  else
+    TCredentialManager.DeleteCredential(TargetName);
+end;
+
+procedure TPaymentConfig.LoadKeysFromCredentialManager;
+begin
+  // 基类空实现，子类根据具体密钥字段重写
+end;
+
+procedure TPaymentConfig.SaveKeysToCredentialManager;
+begin
+  // 基类空实现，子类根据具体密钥字段重写
 end;
 
 { TPaymentClient }

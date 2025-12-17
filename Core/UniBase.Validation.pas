@@ -47,7 +47,9 @@ uses
   System.Rtti,
   System.RegularExpressions,
   System.TypInfo,
-  System.StrUtils;
+  System.StrUtils,
+  System.Threading,
+  System.DateUtils;
 
 type
   // ============================================================================
@@ -231,12 +233,14 @@ type
   TRegexRule = class(TValidationRule)
   private
     FPattern: string;
+    FTimeoutMs: Integer;
   protected
     function GetDefaultMessage: string; override;
   public
-    constructor Create(const APattern: string);
+    constructor Create(const APattern: string; ATimeoutMs: Integer = 1000);
     function Validate(const Value: TValue; Context: TValidationContext): TValidationError; override;
     property Pattern: string read FPattern;
+    property TimeoutMs: Integer read FTimeoutMs write FTimeoutMs;
   end;
   
   TMatchesRule = class(TValidationRule)
@@ -846,10 +850,11 @@ end;
 // TRegexRule
 // ============================================================================
 
-constructor TRegexRule.Create(const APattern: string);
+constructor TRegexRule.Create(const APattern: string; ATimeoutMs: Integer = 1000);
 begin
   inherited Create;
   FPattern := APattern;
+  FTimeoutMs := Max(ATimeoutMs, 100); // 最小100ms超时
 end;
 
 function TRegexRule.GetDefaultMessage: string;
@@ -860,6 +865,11 @@ end;
 function TRegexRule.Validate(const Value: TValue; Context: TValidationContext): TValidationError;
 var
   S: string;
+  Regex: TRegEx;
+  StartTime: TDateTime;
+  Task: ITask;
+  IsMatched: Boolean;
+  TaskCompleted: Boolean;
 begin
   Result := Default(TValidationError);
   
@@ -867,15 +877,61 @@ begin
     Exit;
   
   S := Value.AsString;
-  if (S <> '') and not TRegEx.IsMatch(S, FPattern) then
+  if S <> '' then
   begin
-    Result.PropertyName := Context.PropertyName;
-    Result.AttemptedValue := Value;
-    Result.ErrorCode := IfThen(ErrorCode <> '', ErrorCode, 'REGEX');
-    if ErrorMessage <> '' then
-      Result.ErrorMessage := ErrorMessage
-    else
-      Result.ErrorMessage := Format(GetDefaultMessage, [Context.DisplayName]);
+    try
+      // 使用异步任务执行正则表达式，防止ReDoS攻击
+      IsMatched := False;
+      TaskCompleted := False;
+      
+      Task := TTask.Run(
+        procedure
+        begin
+          try
+            Regex := TRegEx.Create(FPattern, [roCompiled]);
+            IsMatched := Regex.IsMatch(S);
+            TaskCompleted := True;
+          except
+            TaskCompleted := True; // 即使出错也标记为完成
+          end;
+        end);
+      
+      // 等待任务完成或超时
+      StartTime := Now;
+      while not TaskCompleted and (MilliSecondsBetween(Now, StartTime) < FTimeoutMs) do
+      begin
+        Sleep(10); // 短暂休眠避免CPU占用过高
+      end;
+      
+      if not TaskCompleted then
+      begin
+        // 超时，认为是ReDoS攻击
+        Result.PropertyName := Context.PropertyName;
+        Result.AttemptedValue := Value;
+        Result.ErrorCode := 'REGEX_TIMEOUT';
+        Result.ErrorMessage := 'Regular expression validation timeout (possible ReDoS attack)';
+        Exit;
+      end;
+        
+      if not IsMatched then
+      begin
+        Result.PropertyName := Context.PropertyName;
+        Result.AttemptedValue := Value;
+        Result.ErrorCode := IfThen(ErrorCode <> '', ErrorCode, 'REGEX');
+        if ErrorMessage <> '' then
+          Result.ErrorMessage := ErrorMessage
+        else
+          Result.ErrorMessage := Format(GetDefaultMessage, [Context.DisplayName]);
+      end;
+    except
+      on E: ERegularExpressionError do
+      begin
+        Result.PropertyName := Context.PropertyName;
+        Result.AttemptedValue := Value;
+        Result.ErrorCode := 'REGEX_ERROR';
+        Result.ErrorMessage := 'Regular expression error: ' + E.Message;
+      end;
+    end;
   end;
 end;
 

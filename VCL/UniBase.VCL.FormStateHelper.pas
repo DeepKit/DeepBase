@@ -114,7 +114,8 @@ implementation
 uses
   Winapi.Windows,
   Vcl.Controls,
-  System.Types;
+  System.Types,
+  UniBase.Logging;  // BUG-023 FIX: 添加日志支持
 
 { TFormStateHelper }
 
@@ -138,10 +139,13 @@ begin
     try
       SaveState;
     except
-      // 忽略销毁时的错误
+      // BUG-023 FIX: 记录异常信息用于调试，而不是完全忽略
+      on E: Exception do
+        Logger.Warn('FormStateHelper.Destroy: Failed to save state for form "%s": %s',
+          [GetEffectiveFormName, E.Message], 'FormStateHelper');
     end;
   end;
-  
+
   UnhookFormEvents;
   inherited;
 end;
@@ -254,10 +258,13 @@ begin
       SaveState;
       FStateSaved := True;
     except
-      // 忽略销毁时的错误
+      // BUG-023 FIX: 记录异常信息用于调试，而不是完全忽略
+      on E: Exception do
+        Logger.Warn('FormStateHelper.OnDestroy: Failed to save state for form "%s": %s',
+          [GetEffectiveFormName, E.Message], 'FormStateHelper');
     end;
   end;
-  
+
   // 链式调用原始 OnDestroy
   if Assigned(FOldOnDestroy) then
     FOldOnDestroy(Sender);

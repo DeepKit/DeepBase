@@ -543,6 +543,9 @@ begin
   if FDataSource = nil then
     Exit;
 
+  // 加强边界检查
+  if (Index < 0) or (FDataSource.ItemCount = 0) then
+    Exit;
   Index := EnsureRange(Index, 0, FDataSource.ItemCount - 1);
   ItemOffset := FDataSource.GetOffsetToIndex(Index);
 
@@ -582,13 +585,15 @@ begin
   StartWatch := TStopwatch.StartNew;
   FVisibleItems.Clear;
 
-  // 计算第一个可见项
+  // 计算第一个可见项，加强边界检查
   FirstIndex := FDataSource.GetIndexAtOffset(FScrollOffset);
   FirstIndex := Max(0, FirstIndex - FOverscan);
+  FirstIndex := Min(FirstIndex, FDataSource.ItemCount - 1);
 
-  // 计算最后一个可见项
+  // 计算最后一个可见项，加强边界检查
   LastIndex := FDataSource.GetIndexAtOffset(FScrollOffset + FViewportHeight);
   LastIndex := Min(FDataSource.ItemCount - 1, LastIndex + FOverscan);
+  LastIndex := Max(FirstIndex, LastIndex); // 确保LastIndex >= FirstIndex
 
   // 请求数据加载
   if Assigned(FDataSource.OnDataRequest) then
@@ -599,14 +604,29 @@ begin
 
   for I := FirstIndex to LastIndex do
   begin
+    // 防止无限循环 - 检查索引有效性
+    if (I < 0) or (I >= FDataSource.ItemCount) then
+      Break;
+      
     Item.Index := I;
     Item.Data := nil;
     Item.Height := FDataSource.GetItemHeight(I);
+    
+    // 防止负高度或过大高度
+    if Item.Height <= 0 then
+      Item.Height := FDataSource.DefaultItemHeight;
+    if Item.Height > 10000 then // 限制最大高度
+      Item.Height := 10000;
+      
     Item.Top := CurrentTop;
     Item.Visible := (CurrentTop + Item.Height > 0) and (CurrentTop < FViewportHeight);
     Item.Selected := False;
     FVisibleItems.Add(Item);
     Inc(CurrentTop, Item.Height);
+    
+    // 防止整数溢出
+    if CurrentTop > MaxInt - Item.Height then
+      Break;
   end;
 
   // 更新统计

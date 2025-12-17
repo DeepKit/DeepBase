@@ -186,6 +186,9 @@ type
     /// <summary>Remove callback</summary>
     procedure RemoveCallback(ACallback: TFileChangeCallback);
     
+    /// <summary>Validate watch path for security</summary>
+    class function IsValidWatchPath(const APath: string): Boolean; static;
+    
     /// <summary>Events</summary>
     property OnFileChanged: TFileChangeEvent read FOnFileChanged write FOnFileChanged;
     property OnError: TFileWatcherErrorEvent read FOnError write FOnError;
@@ -230,6 +233,9 @@ type
     
     /// <summary>Clear all watchers</summary>
     procedure Clear;
+    
+    /// <summary>Validate watch path security</summary>
+    function IsValidWatchPath(const APath: string): Boolean;
     
     /// <summary>Events</summary>
     property OnFileChanged: TFileChangeEvent read FOnFileChanged write FOnFileChanged;
@@ -859,6 +865,10 @@ function TFileWatcherManager.Watch(const ADirectory: string;
 var
   LNormalized: string;
 begin
+  // 验证路径安全性，防止路径遍历攻击
+  if not IsValidWatchPath(ADirectory) then
+    raise EArgumentException.CreateFmt('Invalid or unsafe watch path: %s', [ADirectory]);
+    
   LNormalized := IncludeTrailingPathDelimiter(ExpandFileName(ADirectory));
   
   FLock.Enter;
@@ -880,6 +890,10 @@ var
   LNormalized: string;
   LWatcher: TFileWatcher;
 begin
+  // 验证路径安全性
+  if not IsValidWatchPath(ADirectory) then
+    raise EArgumentException.CreateFmt('Invalid or unsafe watch path: %s', [ADirectory]);
+    
   LNormalized := IncludeTrailingPathDelimiter(ExpandFileName(ADirectory));
   
   FLock.Enter;
@@ -1168,6 +1182,97 @@ begin
   Result := TFileWatcherBuilder.Create(ADirectory)
     .OnCallback(ACallback)
     .BuildAndStart;
+end;
+
+function TFileWatcherManager.IsValidWatchPath(const APath: string): Boolean;
+var
+  CanonicalPath: string;
+  AllowedPaths: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  
+  try
+    // 获取规范化路径
+    CanonicalPath := TPath.GetFullPath(APath);
+    
+    // 定义允许监控的路径前缀
+    AllowedPaths := TArray<string>.Create(
+      TPath.GetFullPath(TPath.GetDocumentsPath),
+      TPath.GetFullPath(TPath.GetTempPath),
+      TPath.GetFullPath(ExtractFilePath(ParamStr(0)))  // 应用程序目录
+    );
+    
+    // 检查路径是否在允许的目录内
+    for I := Low(AllowedPaths) to High(AllowedPaths) do
+    begin
+      if CanonicalPath.StartsWith(AllowedPaths[I]) then
+      begin
+        Result := True;
+        Break;
+      end;
+    end;
+    
+    // 禁止监控系统关键目录
+    if CanonicalPath.StartsWith('C:\Windows\') or
+       CanonicalPath.StartsWith('C:\System32\') or
+       CanonicalPath.Contains('..') then
+      Result := False;
+      
+  except
+    on E: Exception do
+      Result := False;
+  end;
+end;
+
+class function TFileWatcher.IsValidWatchPath(const APath: string): Boolean;
+var
+  CanonicalPath: string;
+  AllowedPaths: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  
+  try
+    // 检查基本要求
+    if APath.IsEmpty or (Length(APath) > 260) then // Windows路径长度限制
+      Exit;
+      
+    // 获取规范化路径
+    CanonicalPath := TPath.GetFullPath(APath).ToUpper;
+    
+    // 检查路径遍历攻击
+    if CanonicalPath.Contains('..') or CanonicalPath.Contains('~') then
+      Exit;
+      
+    // 定义允许的根目录
+    AllowedPaths := TArray<string>.Create(
+      TPath.GetFullPath(TPath.GetDocumentsPath).ToUpper,
+      TPath.GetFullPath(TPath.GetTempPath).ToUpper,
+      TPath.GetFullPath(ExtractFilePath(ParamStr(0))).ToUpper  // 应用程序目录
+    );
+    
+    // 检查路径是否在允许的目录内
+    for I := Low(AllowedPaths) to High(AllowedPaths) do
+    begin
+      if CanonicalPath.StartsWith(AllowedPaths[I]) then
+      begin
+        Result := True;
+        Break;
+      end;
+    end;
+    
+    // 禁止监控系统关键目录
+    if CanonicalPath.StartsWith('C:\WINDOWS\') or
+       CanonicalPath.StartsWith('C:\SYSTEM32\') or
+       CanonicalPath.StartsWith('C:\PROGRAM FILES\') or
+       CanonicalPath.StartsWith('C:\PROGRAM FILES (X86)\') then
+      Result := False;
+      
+  except
+    on E: Exception do
+      Result := False;
+  end;
 end;
 
 class function TFileWatchers.Manager: TFileWatcherManager;

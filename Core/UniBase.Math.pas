@@ -17,7 +17,13 @@ interface
 
 uses
   System.SysUtils, System.Math, System.SyncObjs, System.Generics.Collections,
-  System.Generics.Defaults;
+  System.Generics.Defaults, Winapi.Windows;
+
+// 添加数值稳定性检查函数
+function IsFinite(const Value: Double): Boolean; inline;
+begin
+  Result := not (IsNaN(Value) or IsInfinite(Value));
+end;
 
 type
   EMathException = class(Exception);
@@ -137,6 +143,21 @@ type
     class operator Subtract(const A, B: TMatrix3): TMatrix3;
     class operator Multiply(const A, B: TMatrix3): TMatrix3;
     class operator Multiply(const A: TMatrix3; B: Double): TMatrix3;
+  end;
+
+  /// <summary>Secure random number generator using system entropy</summary>
+  TSecureRandom = class
+  private
+    class var FInstance: TSecureRandom;
+    class var FLock: TObject;
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function Instance: TSecureRandom;
+    function NextBytes(const ALength: Integer): TBytes;
+    function NextInt(const AMax: Integer): Integer;
+    function NextDouble: Double;
+    function NextString(const ALength: Integer): string;
   end;
 
   /// <summary>Statistical functions</summary>
@@ -589,6 +610,9 @@ end;
 
 class operator TVector2.Divide(const A: TVector2; B: Double): TVector2;
 begin
+  // BUG-026 FIX: 添加除零检查
+  if TMathUtils.IsZero(B) then
+    raise EMathException.Create('Division by zero in TVector2.Divide');
   Result := TVector2.Create(A.X / B, A.Y / B);
 end;
 
@@ -734,6 +758,9 @@ end;
 
 class operator TVector3.Divide(const A: TVector3; B: Double): TVector3;
 begin
+  // BUG-026 FIX: 添加除零检查
+  if TMathUtils.IsZero(B) then
+    raise EMathException.Create('Division by zero in TVector3.Divide');
   Result := TVector3.Create(A.X / B, A.Y / B, A.Z / B);
 end;
 
@@ -775,12 +802,31 @@ end;
 function TMatrix2.Inverse: TMatrix2;
 var
   LDet: Double;
+const
+  MIN_DETERMINANT = 1e-15; // 最小行列式值，防止数值不稳定
 begin
   LDet := Determinant;
-  if TMathUtils.IsZero(LDet) then
-    raise EMathException.Create('Matrix is singular');
-  Result := TMatrix2.Create(M[1, 1] / LDet, -M[0, 1] / LDet, 
-                            -M[1, 0] / LDet, M[0, 0] / LDet);
+  
+  // 改进的奇异性检查，使用更严格的阈值
+  if Abs(LDet) < MIN_DETERMINANT then
+    raise EMathException.CreateFmt('Matrix is singular or near-singular (det=%.2e)', [LDet]);
+    
+  // 检查数值稳定性
+  var InvDet := 1.0 / LDet;
+  if not IsFinite(InvDet) then
+    raise EMathException.Create('Matrix inversion resulted in infinite values');
+    
+  Result := TMatrix2.Create(
+    M[1, 1] * InvDet, 
+    -M[0, 1] * InvDet, 
+    -M[1, 0] * InvDet, 
+    M[0, 0] * InvDet
+  );
+  
+  // 验证结果的数值稳定性
+  if not (IsFinite(Result.M[0,0]) and IsFinite(Result.M[0,1]) and 
+          IsFinite(Result.M[1,0]) and IsFinite(Result.M[1,1])) then
+    raise EMathException.Create('Matrix inversion produced invalid results');
 end;
 
 function TMatrix2.Transform(const AVector: TVector2): TVector2;
@@ -885,21 +931,37 @@ end;
 
 function TMatrix3.Inverse: TMatrix3;
 var
-  LDet: Double;
+  LDet, InvDet: Double;
+  I, J: Integer;
+const
+  MIN_DETERMINANT = 1e-15; // BUG-026 FIX: 最小行列式值，防止数值不稳定
 begin
   LDet := Determinant;
-  if TMathUtils.IsZero(LDet) then
-    raise EMathException.Create('Matrix is singular');
-    
-  Result.M[0, 0] := (M[1, 1] * M[2, 2] - M[1, 2] * M[2, 1]) / LDet;
-  Result.M[0, 1] := (M[0, 2] * M[2, 1] - M[0, 1] * M[2, 2]) / LDet;
-  Result.M[0, 2] := (M[0, 1] * M[1, 2] - M[0, 2] * M[1, 1]) / LDet;
-  Result.M[1, 0] := (M[1, 2] * M[2, 0] - M[1, 0] * M[2, 2]) / LDet;
-  Result.M[1, 1] := (M[0, 0] * M[2, 2] - M[0, 2] * M[2, 0]) / LDet;
-  Result.M[1, 2] := (M[0, 2] * M[1, 0] - M[0, 0] * M[1, 2]) / LDet;
-  Result.M[2, 0] := (M[1, 0] * M[2, 1] - M[1, 1] * M[2, 0]) / LDet;
-  Result.M[2, 1] := (M[0, 1] * M[2, 0] - M[0, 0] * M[2, 1]) / LDet;
-  Result.M[2, 2] := (M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]) / LDet;
+
+  // BUG-026 FIX: 改进的奇异性检查，使用更严格的阈值
+  if Abs(LDet) < MIN_DETERMINANT then
+    raise EMathException.CreateFmt('Matrix is singular or near-singular (det=%.2e)', [LDet]);
+
+  // 检查数值稳定性
+  InvDet := 1.0 / LDet;
+  if not IsFinite(InvDet) then
+    raise EMathException.Create('Matrix inversion resulted in infinite values');
+
+  Result.M[0, 0] := (M[1, 1] * M[2, 2] - M[1, 2] * M[2, 1]) * InvDet;
+  Result.M[0, 1] := (M[0, 2] * M[2, 1] - M[0, 1] * M[2, 2]) * InvDet;
+  Result.M[0, 2] := (M[0, 1] * M[1, 2] - M[0, 2] * M[1, 1]) * InvDet;
+  Result.M[1, 0] := (M[1, 2] * M[2, 0] - M[1, 0] * M[2, 2]) * InvDet;
+  Result.M[1, 1] := (M[0, 0] * M[2, 2] - M[0, 2] * M[2, 0]) * InvDet;
+  Result.M[1, 2] := (M[0, 2] * M[1, 0] - M[0, 0] * M[1, 2]) * InvDet;
+  Result.M[2, 0] := (M[1, 0] * M[2, 1] - M[1, 1] * M[2, 0]) * InvDet;
+  Result.M[2, 1] := (M[0, 1] * M[2, 0] - M[0, 0] * M[2, 1]) * InvDet;
+  Result.M[2, 2] := (M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]) * InvDet;
+
+  // BUG-026 FIX: 验证结果的数值稳定性
+  for I := 0 to 2 do
+    for J := 0 to 2 do
+      if not IsFinite(Result.M[I, J]) then
+        raise EMathException.Create('Matrix inversion produced invalid results');
 end;
 
 function TMatrix3.Transform(const AVector: TVector3): TVector3;
@@ -1192,14 +1254,18 @@ begin
   LN := Length(AValues);
   if LN < 3 then
     raise EMathException.Create('Need at least 3 values');
-    
+
   LMean := Mean(AValues);
   LStdDev := StdDev(AValues);
-  
+
+  // BUG-026 FIX: 检查标准差是否为零（所有数据相同时）
+  if TMathUtils.IsZero(LStdDev) then
+    raise EMathException.Create('Cannot compute skewness: standard deviation is zero');
+
   LSum := 0;
   for LValue in AValues do
     LSum := LSum + Power((LValue - LMean) / LStdDev, 3);
-    
+
   Result := LSum * LN / ((LN - 1) * (LN - 2));
 end;
 
@@ -1213,15 +1279,19 @@ begin
   LN := Length(AValues);
   if LN < 4 then
     raise EMathException.Create('Need at least 4 values');
-    
+
   LMean := Mean(AValues);
   LStdDev := StdDev(AValues);
-  
+
+  // BUG-026 FIX: 检查标准差是否为零（所有数据相同时）
+  if TMathUtils.IsZero(LStdDev) then
+    raise EMathException.Create('Cannot compute kurtosis: standard deviation is zero');
+
   LSum := 0;
   for LValue in AValues do
     LSum := LSum + Power((LValue - LMean) / LStdDev, 4);
-    
-  Result := (LSum * LN * (LN + 1)) / ((LN - 1) * (LN - 2) * (LN - 3)) - 
+
+  Result := (LSum * LN * (LN + 1)) / ((LN - 1) * (LN - 2) * (LN - 3)) -
             (3 * Sqr(LN - 1)) / ((LN - 2) * (LN - 3));
 end;
 
@@ -2058,9 +2128,18 @@ var
 begin
   if Length(AWeights) = 0 then
     raise EMathException.Create('Weights array cannot be empty');
+    
+  // 加强边界条件检查
+  for I := 0 to High(AWeights) do
+  begin
+    if (AWeights[I] < 0) or IsNaN(AWeights[I]) or IsInfinite(AWeights[I]) then
+      raise EMathException.CreateFmt('Invalid weight at index %d: %g', [I, AWeights[I]]);
+  end;
+  
   LTotal := TStatistics.Sum(AWeights);
   if TMathUtils.IsZero(LTotal) or (LTotal < 0) then
     raise EMathException.Create('Sum of weights must be positive');
+    
   LRandom := Random * LTotal;
   
   for I := 0 to High(AWeights) do
@@ -2445,7 +2524,98 @@ begin
   Result := WrapAngle(ATarget - ACurrent);
 end;
 
+{ TSecureRandom }
+
+class constructor TSecureRandom.Create;
+begin
+  FLock := TObject.Create;
+end;
+
+class destructor TSecureRandom.Destroy;
+begin
+  FInstance.Free;
+  FLock.Free;
+end;
+
+class function TSecureRandom.Instance: TSecureRandom;
+begin
+  if not Assigned(FInstance) then
+  begin
+    TMonitor.Enter(FLock);
+    try
+      if not Assigned(FInstance) then
+        FInstance := TSecureRandom.Create;
+    finally
+      TMonitor.Exit(FLock);
+    end;
+  end;
+  Result := FInstance;
+end;
+
+function TSecureRandom.NextBytes(const ALength: Integer): TBytes;
+var
+  hProv: HCRYPTPROV;
+begin
+  if ALength <= 0 then
+    raise EArgumentException.Create('Length must be positive');
+    
+  SetLength(Result, ALength);
+  
+  // Use Windows CryptoAPI for secure random
+  if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
+    raise Exception.Create('Failed to acquire crypto context');
+    
+  try
+    if not CryptGenRandom(hProv, ALength, @Result[0]) then
+      raise Exception.Create('Failed to generate secure random bytes');
+  finally
+    CryptReleaseContext(hProv, 0);
+  end;
+end;
+
+function TSecureRandom.NextInt(const AMax: Integer): Integer;
+var
+  Bytes: TBytes;
+  Value: Cardinal;
+begin
+  if AMax <= 0 then
+    raise EArgumentException.Create('Max must be positive');
+    
+  Bytes := NextBytes(4);
+  Value := (Cardinal(Bytes[0]) shl 24) or (Cardinal(Bytes[1]) shl 16) or 
+           (Cardinal(Bytes[2]) shl 8) or Cardinal(Bytes[3]);
+  Result := Integer(Value mod Cardinal(AMax));
+end;
+
+function TSecureRandom.NextDouble: Double;
+var
+  Bytes: TBytes;
+  Value: UInt64;
+begin
+  Bytes := NextBytes(8);
+  Value := (UInt64(Bytes[0]) shl 56) or (UInt64(Bytes[1]) shl 48) or
+           (UInt64(Bytes[2]) shl 40) or (UInt64(Bytes[3]) shl 32) or
+           (UInt64(Bytes[4]) shl 24) or (UInt64(Bytes[5]) shl 16) or
+           (UInt64(Bytes[6]) shl 8) or UInt64(Bytes[7]);
+  Result := (Value shr 11) * (1.0 / (1 shl 53));
+end;
+
+function TSecureRandom.NextString(const ALength: Integer): string;
+const
+  CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+var
+  I: Integer;
+begin
+  if ALength <= 0 then
+    raise EArgumentException.Create('Length must be positive');
+    
+  SetLength(Result, ALength);
+  for I := 1 to ALength do
+    Result[I] := CHARSET[NextInt(Length(CHARSET)) + 1];
+end;
+
 initialization
-  Randomize;
+  // 移除不安全的Randomize调用
+  // Randomize; // 已移除 - 使用安全随机数生成器
 
 end.

@@ -186,6 +186,9 @@ type
       Handler: TUntypedEventHandler;
       Priority: TEventPriority = epNormal;
       DispatchMode: TEventDispatchMode = edmSync): ISubscription;
+      
+    /// <summary>Validate event type for security</summary>
+    class function IsValidEventType(const EventType: string): Boolean; static;
     
     // ========================================================================
     // Unsubscribe
@@ -500,11 +503,31 @@ function TEventBus.SubscribeByType(const EventType: string;
   Handler: TUntypedEventHandler;
   Priority: TEventPriority;
   DispatchMode: TEventDispatchMode): ISubscription;
+const
+  // 事件类型白名单
+  ALLOWED_EVENT_TYPES: array[0..4] of string = (
+    'TUserEvent', 'TSystemEvent', 'TDataEvent', 'TUIEvent', 'TLogEvent'
+  );
 var
   Info: TSubscriptionInfo;
   List: TList<TSubscriptionInfo>;
   I: Integer;
+  IsAllowed: Boolean;
 begin
+  // 实现事件类型白名单验证机制
+  IsAllowed := False;
+  for I := Low(ALLOWED_EVENT_TYPES) to High(ALLOWED_EVENT_TYPES) do
+  begin
+    if EventType.StartsWith(ALLOWED_EVENT_TYPES[I]) then
+    begin
+      IsAllowed := True;
+      Break;
+    end;
+  end;
+  
+  if not IsAllowed then
+    raise EArgumentException.CreateFmt('Event type not allowed: %s', [EventType]);
+  
   Info.Id := TGUID.NewGuid;
   Info.Handler := Handler;
   Info.Priority := Priority;
@@ -839,6 +862,64 @@ begin
   finally
     FLock.Leave;
   end;
+end;
+
+class function TEventBus.IsValidEventType(const EventType: string): Boolean;
+var
+  AllowedTypes: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  
+  // 检查基本要求
+  if EventType.IsEmpty or (Length(EventType) > 255) then
+    Exit;
+    
+  // 检查字符有效性 - 只允许字母、数字、点和下划线
+  for var C in EventType do
+  begin
+    if not CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '.', '_']) then
+      Exit;
+  end;
+  
+  // 不能以点开头或结尾
+  if EventType.StartsWith('.') or EventType.EndsWith('.') then
+    Exit;
+    
+  // 不允许连续的点
+  if EventType.Contains('..') then
+    Exit;
+    
+  // 定义允许的事件类型前缀
+  AllowedTypes := TArray<string>.Create(
+    'TUser',
+    'TSystem',
+    'TApplication',
+    'TData',
+    'TUI',
+    'TConfig',
+    'TLog',
+    'TMetric',
+    'TSession',
+    'TFile',
+    'TNetwork',
+    'TDatabase'
+  );
+  
+  // 检查是否以允许的前缀开头
+  for I := Low(AllowedTypes) to High(AllowedTypes) do
+  begin
+    if EventType.StartsWith(AllowedTypes[I]) then
+    begin
+      Result := True;
+      Break;
+    end;
+  end;
+  
+  // 禁止危险的事件类型
+  var LowerType := EventType.ToLower;
+  if LowerType.Contains('system') and (LowerType.Contains('exec') or LowerType.Contains('cmd')) then
+    Result := False;
 end;
 
 // ============================================================================

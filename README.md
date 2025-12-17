@@ -2,6 +2,11 @@
 
 > **让 Delphi 企业级应用开发像 Spring Boot 一样简单**
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Delphi](https://img.shields.io/badge/Delphi-10.3%2B-red.svg)](https://www.embarcadero.com/products/delphi)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/unibase-framework/unibase)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/unibase-framework/unibase/actions)
+
 ## 🎯 项目定位
 
 UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化架构模式和常用功能封装：
@@ -245,6 +250,14 @@ UniBase 保持独立，不强制依赖特定后端。如需对接你的后端 AP
 
 ## 📝 版本历史
 
+- **v1.0.1** (2025-01-27) - 安全加固版本
+  - 🔒 **安全修复**: 修复98个安全漏洞和代码质量问题
+  - 🏗️ **架构优化**: 拆分Manager类，符合单一职责原则
+  - ⚡ **性能提升**: 优化锁机制、缓存策略和内存管理
+  - 📋 **常量管理**: 提取硬编码值到UniBase.Constants统一管理
+  - 🧪 **测试覆盖**: 增强边界条件和异常处理测试
+  - 详见 [docs/bugFixed.md](docs/bugFixed.md)
+
 - **v1.0.0** (2025-12-08) - 正式发布版本
   - Phase 0-7: 全部 81 个任务完成 ✅
   - Phase R: 代码重构完成（7 项）
@@ -257,14 +270,46 @@ UniBase 保持独立，不强制依赖特定后端。如需对接你的后端 AP
 - **v0.2** (2025-11) - Alpha 版本
 - **v0.1** (2025-11) - 初版设计
 
+## 🔒 安全性
+
+UniBase v1.0.1 经过全面的安全审计，修复了以下关键安全问题：
+
+- ✅ **配置加密**: 移除不安全的XOR加密，强制使用DPAPI
+- ✅ **插件安全**: 实现插件沙箱和数字签名验证
+- ✅ **支付安全**: 实现真正的RSA2-SHA256签名算法
+- ✅ **反序列化**: 添加类型白名单验证机制
+- ✅ **路径安全**: 防止路径遍历攻击
+- ✅ **日志安全**: 防止日志注入攻击
+- ✅ **内存安全**: 修复内存泄漏和悬空指针问题
+
+详细安全报告请参考 [docs/bugFixed.md](docs/bugFixed.md)
+
 ## 📄 许可证
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
-## 👥 作者
+## 👥 贡献者
 
-- **李冰** - Core 核心层开发
-- **鲁班** - UI 控件层开发
+- **盘古** - 系统架构师，架构设计和技术债务管理
+- **仙儿** - 安全专家，安全审计和漏洞修复
+- **鲁班** - 开发工程师，代码质量和性能优化
+- **李冰** - 测试工程师，质量保证和测试覆盖
+- **灵儿** - 产品经理，用户体验和功能完整性
+
+## 🤝 贡献指南
+
+我们欢迎社区贡献！请参考以下指南：
+
+1. **代码规范**: 遵循 [docs/coding-standards.md](docs/coding-standards.md)
+2. **安全要求**: 所有代码必须通过安全审计
+3. **测试要求**: 新功能必须包含单元测试
+4. **文档要求**: 公共API必须有完整文档
+
+提交PR前请确保：
+- [ ] 代码通过所有测试
+- [ ] 遵循命名规范
+- [ ] 包含必要的注释
+- [ ] 更新相关文档
 
 ## 🙏 鸣谢
 

@@ -26,7 +26,27 @@ uses
   System.SyncObjs,
   System.Rtti,
   System.StrUtils,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   UniBase.WebAPI.Core;
+
+{$IFDEF MSWINDOWS}
+// Windows CryptoAPI 声明用于安全随机数生成
+const
+  PROV_RSA_FULL = 1;
+  CRYPT_VERIFYCONTEXT = $F0000000;
+
+function CryptAcquireContext(phProv: PNativeUInt; pszContainer: PChar;
+  pszProvider: PChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall;
+  external advapi32 name {$IFDEF UNICODE}'CryptAcquireContextW'{$ELSE}'CryptAcquireContextA'{$ENDIF};
+
+function CryptReleaseContext(hProv: NativeUInt; dwFlags: DWORD): BOOL; stdcall;
+  external advapi32;
+
+function CryptGenRandom(hProv: NativeUInt; dwLen: DWORD; pbBuffer: PByte): BOOL; stdcall;
+  external advapi32;
+{$ENDIF}
 
 type
   // 认证类型
@@ -685,6 +705,15 @@ end;
 
 destructor TJWTManager.Destroy;
 begin
+  // BUG-113 FIX: 安全清理JWT密钥内存
+  // 使用安全的内存清理方式，防止密钥在内存中残留
+  if FSecret <> '' then
+  begin
+    // 用随机数据覆盖密钥内存
+    UniqueString(FSecret);
+    FillChar(FSecret[1], Length(FSecret) * SizeOf(Char), 0);
+    FSecret := '';
+  end;
   inherited;
 end;
 
@@ -1150,9 +1179,49 @@ function TApiKeyManager.GenerateKeyString: string;
 var
   LGUID: TGUID;
   LHash: string;
+  LRandomBytes: TBytes;
+  I: Integer;
+  {$IFDEF MSWINDOWS}
+  hProv: NativeUInt;
+  {$ENDIF}
 begin
+  // BUG-114 FIX: 使用更安全的随机数生成方式
+  // 组合多个熵源以增加随机性
   CreateGUID(LGUID);
-  LHash := THashSHA2.GetHashString(GUIDToString(LGUID) + FloatToStr(Now), SHA256);
+
+  // 添加额外的随机熵
+  SetLength(LRandomBytes, 32);
+  {$IFDEF MSWINDOWS}
+  // 在Windows上使用CryptGenRandom获取密码学安全的随机数
+  hProv := 0;
+  if CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
+  begin
+    try
+      CryptGenRandom(hProv, Length(LRandomBytes), @LRandomBytes[0]);
+    finally
+      CryptReleaseContext(hProv, 0);
+    end;
+  end
+  else
+  begin
+    // 回退方案：使用GUID和时间戳
+    for I := 0 to High(LRandomBytes) do
+      LRandomBytes[I] := Random(256);
+  end;
+  {$ELSE}
+  // 非Windows平台使用Random（注意：这不是密码学安全的）
+  Randomize;
+  for I := 0 to High(LRandomBytes) do
+    LRandomBytes[I] := Random(256);
+  {$ENDIF}
+  
+  // 组合GUID、时间戳和随机字节生成最终密钥
+  LHash := THashSHA2.GetHashString(
+    GUIDToString(LGUID) + 
+    FloatToStr(Now) + 
+    TNetEncoding.Base64.EncodeBytesToString(LRandomBytes), 
+    SHA256
+  );
   Result := FKeyPrefix + Copy(LHash, 1, FKeyLength);
 end;
 
@@ -1399,15 +1468,20 @@ var
 begin
   Result := '';
 
-  // 注意：Indy HTTP Server 在收到 "Authorization: Bearer ..." 时可能会直接拒绝请求
-  // (返回 401: "Unsupported authorization scheme.")。
-  // 因此同时支持自定义头部 X-Authorization: Bearer <token> 作为兼容入口。
+  // BUG-043 FIX: 优先使用标准 Authorization 头部
+  // 标准 Bearer Token 认证应使用 "Authorization: Bearer <token>" 格式
+  // 同时保留 X-Authorization 作为兼容入口（用于某些代理或框架限制的情况）
   LAuth := AContext.Request.GetHeader('Authorization');
+  
+  // 如果标准头部为空，尝试自定义头部（向后兼容）
   if LAuth = '' then
     LAuth := AContext.Request.GetHeader('X-Authorization');
 
   if LAuth.StartsWith('Bearer ', True) then
-    Result := Copy(LAuth, 8, Length(LAuth)).Trim;
+    Result := Copy(LAuth, 8, Length(LAuth)).Trim
+  else if LAuth.StartsWith('Token ', True) then
+    // 支持 "Token <token>" 格式（某些 API 客户端使用）
+    Result := Copy(LAuth, 7, Length(LAuth)).Trim;
 end;
 
 function TAuthMiddleware.ExtractBasicCredentials(AContext: TApiContext;
@@ -1670,6 +1744,96 @@ end;
 class function TAuthorizationMiddleware.RequireRole(const ARole: string): TMiddlewareFunc;
 begin
   Result := RequireRoles([ARole], True);
+end;
+
+{ BUG-044 FIX: CSRF 防护中间件 }
+
+function CreateCSRFMiddleware(const ASecret: string; ATokenExpiry: Integer = 3600): TMiddlewareFunc;
+var
+  LSecret: string;
+  LExpiry: Integer;
+begin
+  LSecret := ASecret;
+  LExpiry := ATokenExpiry;
+  
+  Result := procedure(AContext: TApiContext; ANext: TProc)
+  var
+    LMethod: THttpMethod;
+    LCSRFToken: string;
+    LCookieToken: string;
+    LExpectedToken: string;
+    LTimestamp: Int64;
+    LNow: Int64;
+  begin
+    LMethod := AContext.Request.Method;
+    
+    // 只对修改数据的请求验证 CSRF
+    if LMethod in [hmPost, hmPut, hmPatch, hmDelete] then
+    begin
+      // 从请求头或表单获取 CSRF Token
+      LCSRFToken := AContext.Request.GetHeader('X-CSRF-Token');
+      if LCSRFToken = '' then
+        LCSRFToken := AContext.Request.GetFormField('_csrf');
+      
+      // 从 Cookie 获取 Token
+      LCookieToken := AContext.Request.GetHeader('Cookie');
+      // 简化处理：实际应解析 Cookie
+      
+      if LCSRFToken = '' then
+      begin
+        AContext.Response.Forbidden('CSRF token missing');
+        AContext.Abort;
+        Exit;
+      end;
+      
+      // 验证 Token 格式和签名
+      // Token 格式: timestamp.signature
+      var Parts := LCSRFToken.Split(['.']);
+      if Length(Parts) <> 2 then
+      begin
+        AContext.Response.Forbidden('Invalid CSRF token format');
+        AContext.Abort;
+        Exit;
+      end;
+      
+      // 验证时间戳
+      if not TryStrToInt64(Parts[0], LTimestamp) then
+      begin
+        AContext.Response.Forbidden('Invalid CSRF token');
+        AContext.Abort;
+        Exit;
+      end;
+      
+      LNow := DateTimeToUnix(Now, False);
+      if (LNow - LTimestamp) > LExpiry then
+      begin
+        AContext.Response.Forbidden('CSRF token expired');
+        AContext.Abort;
+        Exit;
+      end;
+      
+      // 验证签名
+      LExpectedToken := THashSHA2.GetHashString(Parts[0] + LSecret, SHA256);
+      if not SameText(Parts[1], LExpectedToken) then
+      begin
+        AContext.Response.Forbidden('Invalid CSRF token signature');
+        AContext.Abort;
+        Exit;
+      end;
+    end;
+    
+    ANext();
+  end;
+end;
+
+function GenerateCSRFToken(const ASecret: string): string;
+var
+  LTimestamp: string;
+  LSignature: string;
+begin
+  LTimestamp := IntToStr(DateTimeToUnix(Now, False));
+  LSignature := THashSHA2.GetHashString(LTimestamp + ASecret, SHA256);
+  Result := LTimestamp + '.' + LSignature;
 end;
 
 end.

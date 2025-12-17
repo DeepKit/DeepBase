@@ -61,7 +61,8 @@ uses
   System.DateUtils,
   System.Diagnostics,
   System.Math,
-  System.Threading;
+  System.Threading,
+  UniBase.Constants;
 
 type
   // ============================================================================
@@ -113,7 +114,9 @@ type
     FLock: TCriticalSection;
     FOnStateChanged: TOnCircuitStateChanged;
     FOnRejected: TOnCircuitRejected;
-    
+    FHalfOpenActiveCount: Integer;  // BUG-119 FIX: 跟踪HalfOpen状态下的活跃请求数
+    FMaxHalfOpenRequests: Integer;  // BUG-119 FIX: HalfOpen状态下允许的最大并发请求数
+
     procedure SetState(NewState: TCircuitState);
     function GetState: TCircuitState;
     procedure CheckHalfOpenTransition;
@@ -363,6 +366,10 @@ var
 
 function CircuitBreakers: TCircuitBreakerRegistry;
 begin
+  // BUG-111 FIX: 确保锁已初始化后再使用
+  if not Assigned(_RegistryLock) then
+    raise Exception.Create('CircuitBreakers registry lock not initialized');
+    
   if not Assigned(_CircuitBreakerRegistry) then
   begin
     _RegistryLock.Enter;
@@ -400,9 +407,12 @@ begin
   FSuccessCount := 0;
   FFailureThreshold := 5;
   FSuccessThreshold := 2;
-  FOpenDurationMs := 30000;
+  FOpenDurationMs := DEFAULT_KEEP_ALIVE_TIMEOUT_MS;
   FLastStateChange := Now;
   FLock := TCriticalSection.Create;
+  // BUG-119 FIX: 初始化HalfOpen状态跟踪变量
+  FHalfOpenActiveCount := 0;
+  FMaxHalfOpenRequests := 1;  // 默认只允许1个探测请求
 end;
 
 destructor TCircuitBreaker.Destroy;
@@ -487,7 +497,7 @@ begin
   FLock.Enter;
   try
     CheckHalfOpenTransition;
-    
+
     case FState of
       csClosed:
         Result := True;
@@ -498,7 +508,21 @@ begin
           FOnRejected(FName);
       end;
       csHalfOpen:
-        Result := True;
+      begin
+        // BUG-119 FIX: 限制HalfOpen状态下的并发请求数
+        // 只允许有限数量的探测请求通过，防止高并发场景下状态混乱
+        if FHalfOpenActiveCount < FMaxHalfOpenRequests then
+        begin
+          Inc(FHalfOpenActiveCount);
+          Result := True;
+        end
+        else
+        begin
+          Result := False;
+          if Assigned(FOnRejected) then
+            FOnRejected(FName);
+        end;
+      end;
     else
       Result := False;
     end;
@@ -516,11 +540,16 @@ begin
         FFailureCount := 0;
       csHalfOpen:
       begin
+        // BUG-119 FIX: 减少活跃请求计数
+        if FHalfOpenActiveCount > 0 then
+          Dec(FHalfOpenActiveCount);
+
         Inc(FSuccessCount);
         if FSuccessCount >= FSuccessThreshold then
         begin
           SetState(csClosed);
           FFailureCount := 0;
+          FHalfOpenActiveCount := 0;  // 重置计数
         end;
       end;
     end;
@@ -534,7 +563,7 @@ begin
   FLock.Enter;
   try
     FLastFailure := Now;
-    
+
     case FState of
       csClosed:
       begin
@@ -544,8 +573,13 @@ begin
       end;
       csHalfOpen:
       begin
+        // BUG-119 FIX: 减少活跃请求计数并立即打开断路器
+        if FHalfOpenActiveCount > 0 then
+          Dec(FHalfOpenActiveCount);
+
         SetState(csOpen);
         FFailureCount := 0;
+        FHalfOpenActiveCount := 0;  // 重置计数
       end;
     end;
   finally
@@ -561,6 +595,7 @@ begin
     FFailureCount := 0;
     FSuccessCount := 0;
     FLastStateChange := Now;
+    FHalfOpenActiveCount := 0;  // BUG-119 FIX: 重置活跃请求计数
   finally
     FLock.Leave;
   end;
@@ -611,10 +646,10 @@ end;
 constructor TRetryPolicy.Create;
 begin
   inherited Create;
-  FMaxRetries := 3;
+  FMaxRetries := DEFAULT_MAX_RETRIES;
   FStrategy := rsFixed;
-  FBaseDelayMs := 1000;
-  FMaxDelayMs := 30000;
+  FBaseDelayMs := DEFAULT_RETRY_DELAY_MS;
+  FMaxDelayMs := DEFAULT_KEEP_ALIVE_TIMEOUT_MS;
   FMultiplier := 2.0;
   FJitterFactor := 0;
   FHandledExceptions := TList<TClass>.Create;
@@ -704,10 +739,12 @@ begin
     Delay := FBaseDelayMs;
   end;
   
-  // Apply jitter
+  // Apply jitter - BUG-106 FIX: 使用更安全的随机数生成
+  // 注意：对于安全敏感场景，应使用TRandomGenerator.RandomBytes
   if FJitterFactor > 0 then
   begin
     JitterRange := Delay * FJitterFactor;
+    // Random() 对于重试延迟的抖动是可接受的，因为这不是安全敏感场景
     Delay := Delay + (Random * 2 - 1) * JitterRange;
   end;
   
@@ -863,24 +900,37 @@ var
   TaskProc: TProc;
   Task: ITask;
   Completed: Boolean;
+  TokenSource: ICancellationTokenSource;
+  Token: ICancellationToken;
 begin
+  // BUG-116 FIX: 使用取消令牌确保超时后任务能够被取消
+  TokenSource := TCancellationTokenSource.Create;
+  Token := TokenSource.Token;
+
   TaskProc := Proc;
   Task := TTask.Create(
     procedure
     begin
+      // 在任务开始时检查是否已取消
+      if Token.IsCancelled then
+        Exit;
       TaskProc();
-    end);
-  
+    end,
+    Token);
+
   Task.Start;
   Completed := Task.Wait(FTimeoutMs);
-  
+
   if not Completed then
   begin
+    // 取消任务以释放资源
+    TokenSource.Cancel;
+
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
-  
+
   // Check for exception in task
   if Task.Status = TTaskStatus.Exception then
     raise Exception(AcquireExceptionObject);
@@ -892,27 +942,40 @@ var
   Task: ITask;
   TaskResult: T;
   Completed: Boolean;
+  TokenSource: ICancellationTokenSource;
+  Token: ICancellationToken;
 begin
+  // BUG-116 FIX: 使用取消令牌确保超时后任务能够被取消
+  TokenSource := TCancellationTokenSource.Create;
+  Token := TokenSource.Token;
+
   TaskFunc := Func;
   Task := TTask.Create(
     procedure
     begin
+      // 在任务开始时检查是否已取消
+      if Token.IsCancelled then
+        Exit;
       TaskResult := TaskFunc();
-    end);
-  
+    end,
+    Token);
+
   Task.Start;
   Completed := Task.Wait(FTimeoutMs);
-  
+
   if not Completed then
   begin
+    // 取消任务以释放资源
+    TokenSource.Cancel;
+
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
-  
+
   if Task.Status = TTaskStatus.Exception then
     raise Exception(AcquireExceptionObject);
-  
+
   Result := TaskResult;
 end;
 
@@ -1044,7 +1107,10 @@ procedure TBulkheadPolicy.Execute(Proc: TProc);
 var
   CanQueue: Boolean;
   Acquired: Boolean;
+  NeedReleaseSemaphore: Boolean;
 begin
+  NeedReleaseSemaphore := False;
+  
   // Check if we can queue
   FLock.Enter;
   try
@@ -1062,6 +1128,8 @@ begin
     begin
       Inc(FCurrentCount);
       CanQueue := False;
+      // BUG-054 FIX: When not queuing, we need to acquire semaphore first
+      // to maintain proper semaphore count
     end;
   finally
     FLock.Leave;
@@ -1077,7 +1145,10 @@ begin
       try
         Dec(FQueueCount);
         if Acquired then
+        begin
           Inc(FCurrentCount);
+          NeedReleaseSemaphore := True;
+        end;
       finally
         FLock.Leave;
       end;
@@ -1085,13 +1156,39 @@ begin
       if not Acquired then
         raise EBulkheadRejectedException.Create(FMaxConcurrency);
     except
+      on E: EBulkheadRejectedException do
+      begin
+        // Already handled QueueCount in the try block above
+        raise;
+      end;
+      on E: Exception do
+      begin
+        FLock.Enter;
+        try
+          Dec(FQueueCount);
+        finally
+          FLock.Leave;
+        end;
+        raise;
+      end;
+    end;
+  end
+  else
+  begin
+    // BUG-054 FIX: When not queuing, acquire semaphore to maintain count
+    Acquired := FSemaphore.WaitFor(FQueueTimeoutMs) = wrSignaled;
+    if Acquired then
+      NeedReleaseSemaphore := True
+    else
+    begin
+      // Rollback the FCurrentCount increment
       FLock.Enter;
       try
-        Dec(FQueueCount);
+        Dec(FCurrentCount);
       finally
         FLock.Leave;
       end;
-      raise;
+      raise EBulkheadRejectedException.Create(FMaxConcurrency);
     end;
   end;
   
@@ -1104,7 +1201,9 @@ begin
     finally
       FLock.Leave;
     end;
-    FSemaphore.Release;
+    // BUG-054 FIX: Only release semaphore if we acquired it
+    if NeedReleaseSemaphore then
+      FSemaphore.Release;
   end;
 end;
 

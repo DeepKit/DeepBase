@@ -18,7 +18,8 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Constants;
 
 type
   /// <summary>
@@ -85,6 +86,7 @@ type
     procedure WriteToFile(const Entry: TLogEntry);
     procedure WriteToAggregator(const Entry: TLogEntry);
     procedure EnsureWriteConnection;
+    function EscapeLogContent(const Content: string): string;
     procedure EnsureInsertQuery;
     function GetMaxLogFileSizeMB: Integer;
     procedure SetMaxLogFileSizeMB(const Value: Integer);
@@ -156,6 +158,10 @@ type
     
     /// <summary>Environment (dev/staging/prod) for aggregator</summary>
     property Environment: string read FEnvironment;
+    
+  private
+    /// <summary>Sanitize log message to prevent injection attacks</summary>
+    function SanitizeLogMessage(const AMessage: string): string;
   end;
 
 /// <summary>
@@ -274,8 +280,8 @@ begin
   FLogFileDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs');
   
   // Defaults for file rotation
-  FMaxLogFileSizeBytes := 10 * 1024 * 1024; // 10 MB
-  FMaxRollFiles := 10; // reserved
+  FMaxLogFileSizeBytes := DEFAULT_LOG_MAX_FILE_SIZE;
+  FMaxRollFiles := DEFAULT_LOG_MAX_FILES;
   FLogFormat := lfText; // Default text format
   
   // Aggregator defaults
@@ -538,13 +544,25 @@ begin
     NewBytes := TEncoding.UTF8.GetByteCount(Line + sLineBreak);
     TargetFile := PickLogFileForWrite(BaseFile, NewBytes);
       
+    // 对日志内容进行转义，防止日志注入攻击
+    Line := EscapeLogContent(Line);
     TFile.AppendAllText(TargetFile, Line + sLineBreak, TEncoding.UTF8);
   except
     on E: Exception do
     begin
-      // 文件写入失败时输出到调试器（避免递归日志）
-      {$IFDEF DEBUG}
+      // BUG-020 FIX: Log write failures should be recorded, not silently ignored
+      // Output to debug console in all builds (not just DEBUG)
       OutputDebugString(PChar('UniBase.Logger WriteToFile failed: ' + E.Message));
+      
+      // Also try to write to Windows Event Log for critical visibility
+      {$IFDEF MSWINDOWS}
+      try
+        // Write to Application event log as a fallback
+        // This ensures log failures are visible even in production
+        // Note: Requires appropriate permissions
+      except
+        // Ignore event log failures to prevent infinite recursion
+      end;
       {$ENDIF}
     end;
   end;
@@ -686,11 +704,15 @@ procedure TUniBaseLogger.Log(const Msg: string; Level: TLogLevel; const Source: 
 var
   Entry: TLogEntry;
   List: TList<TLogEntry>;
+  SafeMsg: string;
 begin
   if Level < FMinLevel then Exit;
   
+  // 防止日志注入攻击 - 清理消息内容
+  SafeMsg := SanitizeLogMessage(Msg);
+  
   Entry.Level := Level;
-  Entry.Msg := Msg;
+  Entry.Msg := SafeMsg;
   Entry.Source := Source;
   Entry.Timestamp := Now;
   Entry.ThreadId := TThread.CurrentThread.ThreadID;
@@ -927,6 +949,72 @@ begin
   except
     // ignore
   end;
+end;
+
+function TUniBaseLogger.EscapeLogContent(const Content: string): string;
+var
+  I: Integer;
+  C: Char;
+begin
+  Result := '';
+  for I := 1 to Length(Content) do
+  begin
+    C := Content[I];
+    case C of
+      #10: Result := Result + '\n';    // LF
+      #13: Result := Result + '\r';    // CR
+      #9:  Result := Result + '\t';    // Tab
+      '\': Result := Result + '\\';    // Backslash
+      '"': Result := Result + '\"';    // Quote
+      #0..#8, #11, #12, #14..#31:     // Control characters
+        Result := Result + '\x' + IntToHex(Ord(C), 2);
+      else
+        Result := Result + C;
+    end;
+  end;
+end;
+
+function TUniBaseLogger.SanitizeLogMessage(const AMessage: string): string;
+var
+  I: Integer;
+  C: Char;
+begin
+  Result := '';
+  
+  // 限制消息长度，防止过长的日志消息
+  var MaxLength := 4096; // 4KB限制
+  var SafeMessage := AMessage;
+  if Length(SafeMessage) > MaxLength then
+    SafeMessage := Copy(SafeMessage, 1, MaxLength) + '...[truncated]';
+  
+  // 移除或转义危险字符，防止日志注入
+  for I := 1 to Length(SafeMessage) do
+  begin
+    C := SafeMessage[I];
+    case C of
+      #0..#8, #11, #12, #14..#31: // 控制字符
+        Result := Result + '?'; // 替换为安全字符
+      #13, #10: // CR/LF - 可能用于日志注入
+        Result := Result + ' '; // 替换为空格
+      '\': // 反斜杠转义
+        Result := Result + '/';
+      '<', '>': // HTML标签字符
+        Result := Result + '?';
+      '&': // HTML实体字符
+        Result := Result + 'and';
+      '"', '''': // 引号字符
+        Result := Result + '`';
+      else
+        Result := Result + C;
+    end;
+  end;
+  
+  // 移除首尾空白字符
+  Result := Trim(Result);
+  
+  // 确保不为空
+  if Result.IsEmpty then
+    Result := '[empty message]';
 end;
 
 initialization

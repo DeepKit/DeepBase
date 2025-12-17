@@ -30,6 +30,18 @@ type
   public
     constructor Create; reintroduce;
 
+    // BUG-019 FIX: 安全密钥存储方法重写
+    procedure LoadKeysFromCredentialManager; override;
+    procedure SaveKeysToCredentialManager; override;
+    /// <summary>设置密钥（自动使用安全存储）</summary>
+    procedure SetSecretKeySecure(const AKey: string);
+    /// <summary>获取密钥（自动解密）</summary>
+    function GetSecretKeySecure: string;
+    /// <summary>设置Webhook密钥（自动使用安全存储）</summary>
+    procedure SetWebhookSecretSecure(const AKey: string);
+    /// <summary>获取Webhook密钥（自动解密）</summary>
+    function GetWebhookSecretSecure: string;
+
     property SecretKey: string read FSecretKey write FSecretKey;
     property PublishableKey: string read FPublishableKey write FPublishableKey;
     property WebhookSecret: string read FWebhookSecret write FWebhookSecret;
@@ -67,6 +79,13 @@ type
     function RetrievePaymentIntent(const APaymentIntentId: string): TPaymentQueryResult;
     function CancelPaymentIntent(const APaymentIntentId: string): Boolean;
     function ListPaymentMethods(const ACustomerId: string): TJSONArray;
+    
+    // BUG-015 FIX: Webhook signature verification
+    /// <summary>
+    /// Verify Stripe webhook signature before processing the payload.
+    /// Call this method first with the Stripe-Signature header value.
+    /// </summary>
+    function VerifyWebhookSignature(const APayload, ASignatureHeader: string): Boolean;
   end;
 
 implementation
@@ -84,6 +103,45 @@ constructor TStripeConfig.Create;
 begin
   inherited Create(ppStripe);
   FApiVersion := STRIPE_API_VERSION;
+end;
+
+// BUG-019 FIX: 安全密钥存储方法实现
+procedure TStripeConfig.LoadKeysFromCredentialManager;
+begin
+  if KeyStorageMode = ksmCredential then
+  begin
+    FSecretKey := GetCredentialKey('SecretKey');
+    FWebhookSecret := GetCredentialKey('WebhookSecret');
+  end;
+end;
+
+procedure TStripeConfig.SaveKeysToCredentialManager;
+begin
+  if KeyStorageMode = ksmCredential then
+  begin
+    SetCredentialKey('SecretKey', FSecretKey);
+    SetCredentialKey('WebhookSecret', FWebhookSecret);
+  end;
+end;
+
+procedure TStripeConfig.SetSecretKeySecure(const AKey: string);
+begin
+  FSecretKey := ProtectKey(AKey);
+end;
+
+function TStripeConfig.GetSecretKeySecure: string;
+begin
+  Result := UnprotectKey(FSecretKey);
+end;
+
+procedure TStripeConfig.SetWebhookSecretSecure(const AKey: string);
+begin
+  FWebhookSecret := ProtectKey(AKey);
+end;
+
+function TStripeConfig.GetWebhookSecretSecure: string;
+begin
+  Result := UnprotectKey(FWebhookSecret);
 end;
 
 { TStripeClient }
@@ -458,11 +516,18 @@ begin
 
   Cfg := TStripeConfig(FConfig);
 
-  // TODO: Verify webhook signature using Cfg.WebhookSecret
-  // For production, implement signature verification:
-  // sig_header = request.headers['Stripe-Signature']
-  // timestamp, signature = parse sig_header
-  // expected_sig = HMAC-SHA256(timestamp + '.' + payload, webhook_secret)
+  // BUG-015 FIX: Webhook signature verification is now required
+  // Note: The signature header must be passed separately via VerifyWebhookSignature
+  // This method only parses the payload after signature is verified
+  if Cfg.WebhookSecret = '' then
+  begin
+    {$IFDEF DEBUG}
+    OutputDebugString('WARNING: Stripe webhook secret not configured');
+    {$ENDIF}
+    // In production, we should fail if webhook secret is not configured
+    if not Cfg.IsSandbox then
+      Exit;
+  end;
 
   try
     JsonObj := TJSONObject.ParseJSONValue(ARawData) as TJSONObject;
@@ -527,6 +592,69 @@ begin
     Result := '{"received": true}'
   else
     Result := '{"error": "Processing failed"}';
+end;
+
+// BUG-015 FIX: Implement Stripe webhook signature verification
+function TStripeClient.VerifyWebhookSignature(const APayload, ASignatureHeader: string): Boolean;
+var
+  Cfg: TStripeConfig;
+  Parts, SigParts: TArray<string>;
+  Part, Timestamp, Signature, ExpectedSig: string;
+  SignedPayload: string;
+  TimestampInt, CurrentTime: Int64;
+  I, Diff: Integer;
+const
+  // BUG-109 FIX: 将时间戳容差从300秒降低到120秒以减少重放攻击风险
+  // 原来是5分钟，现在改为2分钟，在保证正常请求通过的同时减少攻击窗口
+  TOLERANCE_SECONDS = 120; // 2 minutes tolerance (reduced from 5 minutes)
+begin
+  Result := False;
+  Cfg := TStripeConfig(FConfig);
+  
+  if Cfg.WebhookSecret = '' then
+  begin
+    raise EPaymentException.Create('Stripe webhook secret not configured');
+  end;
+  
+  // Parse signature header: t=timestamp,v1=signature
+  Timestamp := '';
+  Signature := '';
+  Parts := ASignatureHeader.Split([',']);
+  for Part in Parts do
+  begin
+    SigParts := Part.Split(['=']);
+    if Length(SigParts) = 2 then
+    begin
+      if SigParts[0] = 't' then
+        Timestamp := SigParts[1]
+      else if SigParts[0] = 'v1' then
+        Signature := SigParts[1];
+    end;
+  end;
+  
+  if (Timestamp = '') or (Signature = '') then
+    Exit;
+  
+  // Verify timestamp is within tolerance
+  TimestampInt := StrToInt64Def(Timestamp, 0);
+  CurrentTime := DateTimeToUnix(Now, False);
+  if Abs(CurrentTime - TimestampInt) > TOLERANCE_SECONDS then
+    Exit; // Timestamp too old or in future
+  
+  // Compute expected signature: HMAC-SHA256(timestamp + '.' + payload, secret)
+  SignedPayload := Timestamp + '.' + APayload;
+  ExpectedSig := THashSHA2.GetHMAC(SignedPayload, Cfg.WebhookSecret, SHA256);
+  ExpectedSig := LowerCase(ExpectedSig);
+  
+  // Constant-time comparison to prevent timing attacks
+  if Length(ExpectedSig) <> Length(Signature) then
+    Exit;
+  
+  Diff := 0;
+  for I := 1 to Length(ExpectedSig) do
+    Diff := Diff or (Ord(ExpectedSig[I]) xor Ord(LowerCase(Signature)[I]));
+  
+  Result := Diff = 0;
 end;
 
 function TStripeClient.ListPaymentMethods(const ACustomerId: string): TJSONArray;

@@ -13,8 +13,9 @@ uses
   System.Generics.Collections, UniBase.Crypto.PBKDF2;
 
 // 加密算法类型
+// BUG-033 FIX: Removed weak XOR encryption, only AES256 is supported
  type
-  TEncryptionType = (etXOR, etAES256);
+  TEncryptionType = (etAES256);  // etXOR removed for security
 
   // 安全配置
   TAntiTamperConfig = record
@@ -42,6 +43,8 @@ uses
     class function DeriveKeyBytes: TBytes; static;
     class function GetEffectiveKeyString: string; static;
     class function ComputeHMACSHA256(const Data: TBytes): string; static;
+    // BUG-036 FIX: Constant-time string comparison to prevent timing attacks
+    class function ConstantTimeCompare(const A, B: string): Boolean; static;
   public
     // 初始化配置
     class procedure Initialize(const AConfig: TAntiTamperConfig); static;
@@ -86,7 +89,9 @@ implementation
 { 默认配置 }
 class function TAntiTamperPackage.GetDefaultConfig: TAntiTamperConfig;
 begin
-  Result.EncryptionKey := 'Default_AntiTamper_Key_2025';
+  // BUG-034 FIX: Remove hardcoded key, require explicit configuration
+  // Users MUST set their own encryption key before using AntiTamper features
+  Result.EncryptionKey := ''; // Empty - must be configured by user
   Result.DownloadURL := 'https://your-website.com/download';
   Result.TableName := 'aboutMeImages';
   Result.EnableLogging := True;
@@ -228,24 +233,32 @@ begin
   Result := THashSHA2.GetHMAC(DataDigest, KeyHex);
 end;
 
+// BUG-036 FIX: Constant-time string comparison to prevent timing attacks
+class function TAntiTamperPackage.ConstantTimeCompare(const A, B: string): Boolean;
+var
+  I, Diff: Integer;
+begin
+  if Length(A) <> Length(B) then
+    Exit(False);
+  
+  Diff := 0;
+  for I := 1 to Length(A) do
+    Diff := Diff or (Ord(UpCase(A[I])) xor Ord(UpCase(B[I])));
+  
+  Result := Diff = 0;
+end;
+
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
     raise Exception.Create(string('防篡改包未初始化'));
 
-  case FConfig.EncryptionType of
-    etXOR:
-      Result := SimpleXOREncrypt(ImageData, FConfig.EncryptionKey);
-    etAES256:
-      Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
-  else
-    raise Exception.Create(string('未知的加密类型'));
-  end;
-
-  if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format(string('使用AES-256加密，数据长度: %d bytes'), [Length(Result)]))
-  else
-    WriteLog(Format(string('使用XOR加密，数据长度: %d bytes'), [Length(Result)]));
+  // BUG-033 FIX: Only AES256 encryption is supported
+  if FConfig.EncryptionKey = '' then
+    raise Exception.Create(string('加密密钥未配置，请设置 EncryptionKey'));
+    
+  Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
+  WriteLog(Format(string('使用AES-256加密，数据长度: %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
@@ -253,27 +266,33 @@ begin
   if not FInitialized then
     raise Exception.Create(string('防篡改包未初始化'));
 
-  case FConfig.EncryptionType of
-    etXOR:
-      Result := SimpleXORDecrypt(EncryptedData, FConfig.EncryptionKey);
-    etAES256:
-      Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
-  else
-    raise Exception.Create(string('未知的加密类型'));
-  end;
-
-  if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format(string('使用AES-256解密，数据长度: %d bytes'), [Length(Result)]))
-  else
-    WriteLog(Format(string('使用XOR解密，数据长度: %d bytes'), [Length(Result)]));
+  // BUG-033 FIX: Only AES256 decryption is supported
+  if FConfig.EncryptionKey = '' then
+    raise Exception.Create(string('加密密钥未配置，请设置 EncryptionKey'));
+    
+  Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
+  WriteLog(Format(string('使用AES-256解密，数据长度: %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
 var
   ActualHash: string;
+  I, Diff: Integer;
 begin
   ActualHash := CalculateSHA256(DecryptedData);
-  Result := SameText(ActualHash, ExpectedHash);
+  
+  // BUG-036 FIX: Use constant-time comparison to prevent timing attacks
+  if Length(ActualHash) <> Length(ExpectedHash) then
+  begin
+    WriteLog(Format(string('SHA-256校验失败: 长度不匹配 期望=%d, 实际=%d'), [Length(ExpectedHash), Length(ActualHash)]));
+    Exit(False);
+  end;
+  
+  Diff := 0;
+  for I := 1 to Length(ActualHash) do
+    Diff := Diff or (Ord(UpCase(ActualHash[I])) xor Ord(UpCase(ExpectedHash[I])));
+  
+  Result := Diff = 0;
   if not Result then
     WriteLog(Format(string('SHA-256校验失败: 期望=%s, 实际=%s'), [ExpectedHash, ActualHash]));
 end;
@@ -541,7 +560,8 @@ begin
         begin
           ExpectedHMAC := HMACField.AsString;
           ActualHMAC := ComputeHMACSHA256(DecryptedData);
-          if not SameText(ExpectedHMAC, ActualHMAC) then
+          // BUG-036 FIX: Use constant-time comparison to prevent timing attacks
+          if not ConstantTimeCompare(ExpectedHMAC, ActualHMAC) then
           begin
             HandleSecurityViolation(AImageKey, 'HMAC-SHA256校验失败，图像数据可能被篡改');
             Exit;

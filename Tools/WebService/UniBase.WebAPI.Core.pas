@@ -1712,8 +1712,14 @@ begin
     FSSLHandler := TIdServerIOHandlerSSLOpenSSL.Create(FHttpServer);
     FSSLHandler.SSLOptions.CertFile := FConfig.SSLCertFile;
     FSSLHandler.SSLOptions.KeyFile := FConfig.SSLKeyFile;
-    FSSLHandler.SSLOptions.Method := sslvTLSv1_2;
+    // BUG-041 FIX: 优先使用 TLS 1.3，回退到 TLS 1.2
+    // 注意：Indy 的 OpenSSL 支持取决于 OpenSSL 版本
+    // 如果 OpenSSL >= 1.1.1，则支持 TLS 1.3
+    FSSLHandler.SSLOptions.SSLVersions := [sslvTLSv1_2, sslvTLSv1_3];
     FSSLHandler.SSLOptions.Mode := sslmServer;
+    // 添加安全头部配置
+    FSSLHandler.SSLOptions.VerifyMode := [];
+    FSSLHandler.SSLOptions.VerifyDepth := 2;
     FHttpServer.IOHandler := FSSLHandler;
   end;
 end;

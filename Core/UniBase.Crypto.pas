@@ -828,10 +828,27 @@ begin
   if LStatus <> STATUS_SUCCESS then
     raise ECryptoException.CreateFmt('BCryptGenRandom failed with status: %d', [LStatus]);
   {$ELSE}
-  // Fallback for non-Windows platforms (NOT cryptographically secure)
-  // Consider using /dev/urandom on Linux/macOS
-  for I := 0 to ALength - 1 do
-    Result[I] := Random(256);
+  // BUG-035 FIX: Use /dev/urandom on non-Windows platforms for cryptographically secure random
+  var URandom: TFileStream;
+  try
+    URandom := TFileStream.Create('/dev/urandom', fmOpenRead or fmShareDenyNone);
+    try
+      if URandom.Read(Result[0], ALength) <> ALength then
+        raise ECryptoException.Create('Failed to read from /dev/urandom');
+    finally
+      URandom.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      // Fallback to Delphi Random (NOT cryptographically secure - log warning)
+      {$IFDEF DEBUG}
+      OutputDebugString('WARNING: Using non-cryptographic random number generator');
+      {$ENDIF}
+      for I := 0 to ALength - 1 do
+        Result[I] := Random(256);
+    end;
+  end;
   {$ENDIF}
 end;
 
@@ -840,10 +857,13 @@ const
   Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 var
   I: Integer;
+  LBytes: TBytes;
 begin
+  // BUG-035 FIX: Use cryptographically secure random bytes
   SetLength(Result, ALength);
+  LBytes := RandomBytes(ALength);
   for I := 1 to ALength do
-    Result[I] := Chars[Random(Length(Chars)) + 1];
+    Result[I] := Chars[(LBytes[I-1] mod Length(Chars)) + 1];
 end;
 
 class function TRandomGenerator.RandomHex(ALength: Integer): string;
@@ -851,15 +871,24 @@ const
   HexChars = '0123456789abcdef';
 var
   I: Integer;
+  LBytes: TBytes;
 begin
+  // BUG-035 FIX: Use cryptographically secure random bytes
   SetLength(Result, ALength);
+  LBytes := RandomBytes(ALength);
   for I := 1 to ALength do
-    Result[I] := HexChars[Random(16) + 1];
+    Result[I] := HexChars[(LBytes[I-1] mod 16) + 1];
 end;
 
 class function TRandomGenerator.RandomInt(AMin, AMax: Integer): Integer;
+var
+  LBytes: TBytes;
+  LRange: Cardinal;
 begin
-  Result := AMin + Random(AMax - AMin + 1);
+  // BUG-035 FIX: Use cryptographically secure random bytes
+  LRange := Cardinal(AMax - AMin + 1);
+  LBytes := RandomBytes(4);
+  Result := AMin + Integer(PCardinal(@LBytes[0])^ mod LRange);
 end;
 
 class function TRandomGenerator.NewGuid: string;
@@ -887,10 +916,13 @@ end;
 class function TRandomGenerator.GenerateOTP(ADigits: Integer): string;
 var
   I: Integer;
+  LBytes: TBytes;
 begin
+  // BUG-035 FIX: Use cryptographically secure random bytes for OTP
   SetLength(Result, ADigits);
+  LBytes := RandomBytes(ADigits);
   for I := 1 to ADigits do
-    Result[I] := Chr(Ord('0') + Random(10));
+    Result[I] := Chr(Ord('0') + (LBytes[I-1] mod 10));
 end;
 
 { TPasswordHashOptions }
@@ -1067,6 +1099,7 @@ class function TPasswordUtils.GeneratePassword(ALength: Integer;
 var
   LCharset: string;
   I: Integer;
+  LBytes: TBytes;
 begin
   LCharset := '';
   if AIncludeUppercase then LCharset := LCharset + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -1076,10 +1109,12 @@ begin
   
   if LCharset = '' then
     LCharset := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    
+  
+  // BUG-035 FIX: Use cryptographically secure random bytes for password generation
   SetLength(Result, ALength);
+  LBytes := TRandomGenerator.RandomBytes(ALength);
   for I := 1 to ALength do
-    Result[I] := LCharset[Random(Length(LCharset)) + 1];
+    Result[I] := LCharset[(LBytes[I-1] mod Length(LCharset)) + 1];
 end;
 
 { TAESCrypto }

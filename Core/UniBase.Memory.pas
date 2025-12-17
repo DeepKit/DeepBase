@@ -40,7 +40,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.DateUtils,
   System.Generics.Collections, System.Generics.Defaults, System.Diagnostics,
-  System.TypInfo, System.Rtti;
+  System.TypInfo, System.Rtti, UniBase.Logging;
 
 type
   /// <summary>内存相关异常基类</summary>
@@ -191,6 +191,7 @@ type
     AccessCount: Int64;
     TTLSeconds: Integer;
     Size: Integer;
+    CreatedTicks: Int64;  // BUG-120 FIX: 使用单调时钟时间戳，不受系统时间调整影响
   end;
 
   /// <summary>
@@ -550,6 +551,7 @@ procedure TObjectPool<T>.Release(Obj: T);
 var
   Index: Integer;
   LPoolable: IPoolable;
+  IsValid: Boolean;
 begin
   if Obj = nil then
     Exit;
@@ -561,17 +563,39 @@ begin
     begin
       FInUse.Delete(Index);
 
-      // 重置对象
-      if Assigned(FResetProc) then
-        FResetProc(Obj)
-      else if Supports(Obj, IPoolable, LPoolable) then
-        LPoolable.Reset;
+      // BUG-110 FIX: 改进对象重置异常处理
+      // 验证对象状态，防止损坏的对象进入池
+      IsValid := True;
+      try
+        // 重置对象
+        if Assigned(FResetProc) then
+          FResetProc(Obj)
+        else if Supports(Obj, IPoolable, LPoolable) then
+          LPoolable.Reset;
+      except
+        on E: Exception do
+        begin
+          IsValid := False;
+          // 记录对象重置失败
+          if Assigned(UniBase.Logging.Logger) then
+            UniBase.Logging.Logger.Warning('Object reset failed, destroying object: ' + E.Message);
+        end;
+      end;
 
-      if FPool.Count < FMaxSize then
+      // BUG-110 FIX: 重置失败的对象必须被销毁，不能重新入池
+      if IsValid and (FPool.Count < FMaxSize) then
         FPool.Add(Obj)
       else
       begin
-        Obj.Free;
+        // 无论是重置失败还是池已满，都需要销毁对象
+        try
+          Obj.Free;
+        except
+          // 忽略销毁时的异常，但记录日志
+          on E: Exception do
+            if Assigned(UniBase.Logging.Logger) then
+              UniBase.Logging.Logger.Warning('Object destruction failed: ' + E.Message);
+        end;
         Inc(FStats.FreeCount);
       end;
     end;
@@ -870,6 +894,7 @@ begin
     Entry.CreatedAt := Now;
     Entry.LastAccessedAt := Now;
     Entry.AccessCount := 0;
+    Entry.CreatedTicks := TStopwatch.GetTimeStamp;  // BUG-120 FIX: 记录单调时钟时间戳
     if TTLSeconds >= 0 then
       Entry.TTLSeconds := TTLSeconds
     else
@@ -1181,9 +1206,26 @@ begin
 end;
 
 function TSmartCache<K, V>.IsExpired(const Entry: TEntry): Boolean;
+var
+  ElapsedTicks: Int64;
+  ElapsedSeconds: Double;
 begin
-  Result := (Entry.TTLSeconds > 0) and
-            (SecondsBetween(Now, Entry.CreatedAt) > Entry.TTLSeconds);
+  // BUG-120 FIX: 使用单调时钟进行时间比较，不受系统时间调整影响
+  if Entry.TTLSeconds <= 0 then
+    Exit(False);
+
+  // 优先使用单调时钟（CreatedTicks）
+  if Entry.CreatedTicks > 0 then
+  begin
+    ElapsedTicks := TStopwatch.GetTimeStamp - Entry.CreatedTicks;
+    ElapsedSeconds := ElapsedTicks / TStopwatch.Frequency;
+    Result := ElapsedSeconds > Entry.TTLSeconds;
+  end
+  else
+  begin
+    // 向后兼容：对于旧条目仍使用 DateTime（可能受系统时间影响）
+    Result := SecondsBetween(Now, Entry.CreatedAt) > Entry.TTLSeconds;
+  end;
 end;
 
 { TMemoryTracker }
@@ -1205,11 +1247,20 @@ begin
 end;
 
 class function TMemoryTracker.Instance: TMemoryTracker;
+var
+  NewLock: TCriticalSection;
 begin
+  // BUG-108 FIX: 修复单例初始化竞态条件
+  // 使用双重检查锁定模式，但需要确保锁的创建是线程安全的
   if FInstance = nil then
   begin
+    // 使用原子操作确保锁只被创建一次
     if FLock = nil then
-      FLock := TCriticalSection.Create;
+    begin
+      NewLock := TCriticalSection.Create;
+      if TInterlocked.CompareExchange(Pointer(FLock), Pointer(NewLock), nil) <> nil then
+        NewLock.Free; // 另一个线程已经创建了锁
+    end;
 
     FLock.Enter;
     try
@@ -1375,18 +1426,36 @@ end;
 
 function TWeakRef<T>.GetTarget: T;
 begin
+  // BUG-102 FIX: 改进弱引用实现 - 添加有效性检查和更清晰的错误处理
+  // 注意：这是一个简化的弱引用实现，真正的弱引用需要与对象生命周期管理集成
+  if FRef = nil then
+    raise EMemoryException.Create('Weak reference target is no longer alive');
   Result := T(FRef);
 end;
 
 function TWeakRef<T>.GetIsAlive: Boolean;
 begin
+  // BUG-102 FIX: 改进弱引用有效性检查
+  // 简单的nil检查，实际实现需要更复杂的生命周期跟踪
   Result := FRef <> nil;
+  
+  // 警告：这是一个简化实现，存在以下限制：
+  // 1. 无法检测目标对象是否已被释放（悬空指针风险）
+  // 2. 需要与对象的生命周期管理集成才能实现真正的弱引用
+  // 3. 建议使用Delphi内置的[weak]属性（如果支持）或实现通知模式
+  // 
+  // 使用建议：
+  // - 在使用Target之前始终调用TryGetTarget
+  // - 确保在对象释放时手动清理弱引用
 end;
 
 function TWeakRef<T>.TryGetTarget(out Target: T): Boolean;
 begin
-  Target := T(FRef);
   Result := FRef <> nil;
+  if Result then
+    Target := T(FRef)
+  else
+    Target := Default(T);
 end;
 
 { TRingBuffer<T> }
@@ -1413,9 +1482,14 @@ begin
   Result := False;
   FLock.Enter;
   try
-    if FCount >= FCapacity then
+    // BUG-049 FIX: 加强边界检查，防止索引越界
+    if (FCount >= FCapacity) or (FCapacity <= 0) then
       Exit;
 
+    // 确保 FTail 在有效范围内
+    if (FTail < 0) or (FTail >= FCapacity) then
+      FTail := 0;
+      
     FBuffer[FTail] := Item;
     FTail := (FTail + 1) mod FCapacity;
     Inc(FCount);
@@ -1452,9 +1526,14 @@ begin
   Result := False;
   FLock.Enter;
   try
-    if FCount = 0 then
+    // BUG-049 FIX: 加强边界检查
+    if (FCount = 0) or (FCapacity <= 0) then
       Exit;
 
+    // 确保 FHead 在有效范围内
+    if (FHead < 0) or (FHead >= FCapacity) then
+      FHead := 0;
+      
     Item := FBuffer[FHead];
     FHead := (FHead + 1) mod FCapacity;
     Dec(FCount);
@@ -1580,6 +1659,14 @@ begin
   // 获取文件大小
   FFileSize := GetFileSize(FFileHandle, @FileSizeHigh);
   FFileSize := FFileSize or (Int64(FileSizeHigh) shl 32);
+  
+  // 防止映射过大的文件（限制为1GB）
+  if FFileSize > 1024 * 1024 * 1024 then
+  begin
+    CloseHandle(FFileHandle);
+    FFileHandle := INVALID_HANDLE_VALUE;
+    raise EMemoryException.Create('File too large for memory mapping (max 1GB)');
+  end;
 
   // 创建文件映射
   FMappingHandle := CreateFileMapping(

@@ -235,6 +235,9 @@ type
     /// <summary>Restore state from JSON</summary>
     procedure FromJSON(const AJSON: string);
     
+    /// <summary>Validate if state is valid</summary>
+    function IsValidState(const AState: TState): Boolean;
+    
     property CurrentState: TState read FCurrentState;
     property InitialState: TState read FInitialState;
     property Context: TObject read FContext write FContext;
@@ -669,19 +672,28 @@ begin
     
     if not Assigned(LTransition) then
     begin
-      // Unhandled trigger
+      // 加强非法状态转换检查
       if Assigned(FOnUnhandledTrigger) then
         FOnUnhandledTrigger(Self, FCurrentState, ATrigger, 'No valid transition found');
         
       if FThrowOnUnhandledTrigger then
         raise EInvalidTransitionException.CreateFmt(
-          'No valid transition from state for trigger', []);
+          'Invalid transition from state %s with trigger %s', 
+          [TValue.From<TState>(FCurrentState).ToString, TValue.From<TTrigger>(ATrigger).ToString]);
           
       Result := TTransitionResult<TState, TTrigger>.CreateFailure(
         FCurrentState, ATrigger, 'No valid transition found');
       
       if Assigned(FOnTransitionFailed) then
         FOnTransitionFailed(Self, FCurrentState, ATrigger, Result.ErrorMessage);
+      Exit;
+    end;
+    
+    // 验证目标状态是否有效
+    if not IsValidState(LTransition.DestinationState) then
+    begin
+      Result := TTransitionResult<TState, TTrigger>.CreateFailure(
+        FCurrentState, ATrigger, 'Invalid destination state');
       Exit;
     end;
     
@@ -1166,6 +1178,12 @@ function TStateMachineBuilder<TState, TTrigger>.OnStateChanged(
 begin
   FStateMachine.OnStateChanged := AHandler;
   Result := Self;
+end;
+
+function TStateMachine<TState, TTrigger>.IsValidState(const AState: TState): Boolean;
+begin
+  // 基本实现：检查状态是否在配置中
+  Result := FStateConfigurations.ContainsKey(AState);
 end;
 
 function TStateMachineBuilder<TState, TTrigger>.Build: TStateMachine<TState, TTrigger>;

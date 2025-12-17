@@ -22,7 +22,11 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.Generics.Defaults, System.SyncObjs, System.JSON, System.IOUtils,
-  System.DateUtils, System.Variants, System.Threading;
+  System.DateUtils, System.Variants, System.Threading,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
+  UniBase.Constants;
 
 type
   EWorkerQueueException = class(Exception);
@@ -290,8 +294,11 @@ type
   private
     FDirectory: string;
     FLock: TCriticalSection;
-    
+    FLockFilePath: string;  // BUG-117 FIX: 进程间文件锁路径
+
     function GetJobPath(const AJobId: TJobId): string;
+    function AcquireFileLock: THandle;  // BUG-117 FIX: 获取进程间文件锁
+    procedure ReleaseFileLock(AHandle: THandle);  // BUG-117 FIX: 释放进程间文件锁
   public
     constructor Create(const ADirectory: string);
     destructor Destroy; override;
@@ -323,6 +330,7 @@ type
     FJobAvailable: TEvent;
     FShutdownEvent: TEvent;
     FMaxWorkers: Integer;
+    FMinWorkers: Integer;  // BUG-056 FIX: 最小工作线程数
     FMaxPendingJobs: Integer;
     FDefaultRetryPolicy: TRetryPolicy;
     FDefaultTimeout: Integer;
@@ -332,6 +340,12 @@ type
     FTotalProcessed: Int64;
     FTotalErrors: Int64;
     FTotalProcessingTime: Int64;
+    // BUG-056 FIX: 动态线程池调整相关字段
+    FAutoScale: Boolean;
+    FScaleUpThreshold: Double;    // 队列饱和度超过此值时增加线程
+    FScaleDownThreshold: Double;  // 空闲率超过此值时减少线程
+    FLastScaleTime: TDateTime;
+    FScaleCooldownMs: Integer;    // 调整冷却时间(毫秒)
     
     FOnJobQueued: TQueueEvent;
     FOnJobStarted: TQueueEvent;
@@ -345,7 +359,8 @@ type
     procedure MoveToDeadLetter(AJob: TJob);
     function AreDependenciesMet(const AJob: TJob): Boolean;
     procedure SortPendingQueue;
-    
+    procedure CheckAutoScale;  // BUG-056 FIX: 检查并执行自动调整
+
     function GetStats: TQueueStats;
     function GetActiveWorkerCount: Integer;
   public
@@ -423,6 +438,7 @@ type
     
     property Name: string read FName;
     property MaxWorkers: Integer read FMaxWorkers write FMaxWorkers;
+    property MinWorkers: Integer read FMinWorkers write FMinWorkers;  // BUG-056 FIX
     property MaxPendingJobs: Integer read FMaxPendingJobs write FMaxPendingJobs;
     property DefaultRetryPolicy: TRetryPolicy read FDefaultRetryPolicy write FDefaultRetryPolicy;
     property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
@@ -431,6 +447,11 @@ type
     property IsShuttingDown: Boolean read FShuttingDown;
     property Stats: TQueueStats read GetStats;
     property ActiveWorkerCount: Integer read GetActiveWorkerCount;
+    // BUG-056 FIX: 动态线程池调整属性
+    property AutoScale: Boolean read FAutoScale write FAutoScale;
+    property ScaleUpThreshold: Double read FScaleUpThreshold write FScaleUpThreshold;
+    property ScaleDownThreshold: Double read FScaleDownThreshold write FScaleDownThreshold;
+    property ScaleCooldownMs: Integer read FScaleCooldownMs write FScaleCooldownMs;
     
     property OnJobQueued: TQueueEvent read FOnJobQueued write FOnJobQueued;
     property OnJobStarted: TQueueEvent read FOnJobStarted write FOnJobStarted;
@@ -800,15 +821,35 @@ end;
 
 class function TJob.FromJSON(AJSON: TJSONObject): TJob;
 var
-  LPriorityStr, LStatusStr: string;
+  LPriorityStr, LStatusStr, LJobType, LJobId: string;
   LTags, LDeps: TJSONArray;
   I: Integer;
   LMetadata: TJSONObject;
   LPair: TJSONPair;
 begin
-  Result := TJob.Create(AJSON.GetValue<string>('jobType', ''));
+  // BUG-107 FIX: 添加输入验证
+  if AJSON = nil then
+    raise EWorkerQueueException.Create('Invalid JSON: nil object');
   
-  Result.FId := AJSON.GetValue<string>('id', Result.FId);
+  // 验证必要字段
+  LJobType := AJSON.GetValue<string>('jobType', '');
+  if LJobType = '' then
+    raise EWorkerQueueException.Create('Invalid JSON: missing jobType');
+  
+  // 验证jobType长度，防止过长的输入
+  if Length(LJobType) > 256 then
+    raise EWorkerQueueException.Create('Invalid JSON: jobType too long');
+  
+  Result := TJob.Create(LJobType);
+  
+  // 验证并设置ID
+  LJobId := AJSON.GetValue<string>('id', Result.FId);
+  if Length(LJobId) > 256 then
+  begin
+    Result.Free;
+    raise EWorkerQueueException.Create('Invalid JSON: id too long');
+  end;
+  Result.FId := LJobId;
   
   if AJSON.TryGetValue<TJSONObject>('data', Result.FData) then
     Result.FData := AJSON.GetValue<TJSONObject>('data').Clone as TJSONObject;
@@ -1084,9 +1125,12 @@ begin
   inherited Create;
   FDirectory := ADirectory;
   FLock := TCriticalSection.Create;
-  
+
   if not TDirectory.Exists(FDirectory) then
     TDirectory.CreateDirectory(FDirectory);
+
+  // BUG-117 FIX: 初始化进程间锁文件路径
+  FLockFilePath := TPath.Combine(FDirectory, '.lock');
 end;
 
 destructor TFileJobStorage.Destroy;
@@ -1100,36 +1144,97 @@ begin
   Result := TPath.Combine(FDirectory, AJobId + '.json');
 end;
 
+// BUG-117 FIX: 实现进程间文件锁
+function TFileJobStorage.AcquireFileLock: THandle;
+{$IFDEF MSWINDOWS}
+var
+  LRetries: Integer;
+begin
+  Result := INVALID_HANDLE_VALUE;
+  LRetries := 0;
+
+  // 尝试获取文件锁，最多重试50次（5秒）
+  while LRetries < 50 do
+  begin
+    Result := CreateFile(
+      PChar(FLockFilePath),
+      GENERIC_READ or GENERIC_WRITE,
+      0,  // 不共享，独占访问
+      nil,
+      CREATE_ALWAYS,
+      FILE_ATTRIBUTE_HIDDEN or FILE_FLAG_DELETE_ON_CLOSE,
+      0
+    );
+
+    if Result <> INVALID_HANDLE_VALUE then
+      Exit;
+
+    Inc(LRetries);
+    Sleep(100);  // 等待100ms后重试
+  end;
+
+  // 超时后仍无法获取锁，记录警告但继续执行
+  // 在单进程环境下这不会成为问题
+end;
+{$ELSE}
+begin
+  // 非Windows平台暂不支持进程间锁
+  Result := 0;
+end;
+{$ENDIF}
+
+procedure TFileJobStorage.ReleaseFileLock(AHandle: THandle);
+begin
+  {$IFDEF MSWINDOWS}
+  if AHandle <> INVALID_HANDLE_VALUE then
+    CloseHandle(AHandle);
+  {$ENDIF}
+end;
+
 procedure TFileJobStorage.SaveJob(const AJob: TJob);
 var
   LPath: string;
   LJSON: TJSONObject;
+  LFileLock: THandle;
 begin
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    LPath := GetJobPath(AJob.Id);
-    LJSON := AJob.ToJSON;
+    FLock.Enter;
     try
-      TFile.WriteAllText(LPath, LJSON.Format(2), TEncoding.UTF8);
+      LPath := GetJobPath(AJob.Id);
+      LJSON := AJob.ToJSON;
+      try
+        TFile.WriteAllText(LPath, LJSON.Format(2), TEncoding.UTF8);
+      finally
+        LJSON.Free;
+      end;
     finally
-      LJSON.Free;
+      FLock.Leave;
     end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
 procedure TFileJobStorage.DeleteJob(const AJobId: TJobId);
 var
   LPath: string;
+  LFileLock: THandle;
 begin
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    LPath := GetJobPath(AJobId);
-    if TFile.Exists(LPath) then
-      TFile.Delete(LPath);
+    FLock.Enter;
+    try
+      LPath := GetJobPath(AJobId);
+      if TFile.Exists(LPath) then
+        TFile.Delete(LPath);
+    finally
+      FLock.Leave;
+    end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
@@ -1137,26 +1242,33 @@ function TFileJobStorage.LoadJob(const AJobId: TJobId): TJob;
 var
   LPath, LContent: string;
   LJSON: TJSONObject;
+  LFileLock: THandle;
 begin
   Result := nil;
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    LPath := GetJobPath(AJobId);
-    if not TFile.Exists(LPath) then
-      Exit;
-      
-    LContent := TFile.ReadAllText(LPath, TEncoding.UTF8);
-    LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
-    if Assigned(LJSON) then
-    begin
-      try
-        Result := TJob.FromJSON(LJSON);
-      finally
-        LJSON.Free;
+    FLock.Enter;
+    try
+      LPath := GetJobPath(AJobId);
+      if not TFile.Exists(LPath) then
+        Exit;
+
+      LContent := TFile.ReadAllText(LPath, TEncoding.UTF8);
+      LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
+      if Assigned(LJSON) then
+      begin
+        try
+          Result := TJob.FromJSON(LJSON);
+        finally
+          LJSON.Free;
+        end;
       end;
+    finally
+      FLock.Leave;
     end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
@@ -1166,33 +1278,40 @@ var
   LFile, LContent: string;
   LJSON: TJSONObject;
   LJob: TJob;
+  LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    if not TDirectory.Exists(FDirectory) then
-      Exit;
-      
-    LFiles := TDirectory.GetFiles(FDirectory, '*.json');
-    for LFile in LFiles do
-    begin
-      LContent := TFile.ReadAllText(LFile, TEncoding.UTF8);
-      LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
-      if Assigned(LJSON) then
+    FLock.Enter;
+    try
+      if not TDirectory.Exists(FDirectory) then
+        Exit;
+
+      LFiles := TDirectory.GetFiles(FDirectory, '*.json');
+      for LFile in LFiles do
       begin
-        try
-          LJob := TJob.FromJSON(LJSON);
-          if LJob.Status in [jsPending, jsScheduled, jsRetrying] then
-            Result.Add(LJob)
-          else
-            LJob.Free;
-        finally
-          LJSON.Free;
+        LContent := TFile.ReadAllText(LFile, TEncoding.UTF8);
+        LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
+        if Assigned(LJSON) then
+        begin
+          try
+            LJob := TJob.FromJSON(LJSON);
+            if LJob.Status in [jsPending, jsScheduled, jsRetrying] then
+              Result.Add(LJob)
+            else
+              LJob.Free;
+          finally
+            LJSON.Free;
+          end;
         end;
       end;
+    finally
+      FLock.Leave;
     end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
@@ -1202,33 +1321,40 @@ var
   LFile, LContent: string;
   LJSON: TJSONObject;
   LJob: TJob;
+  LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    if not TDirectory.Exists(FDirectory) then
-      Exit;
-      
-    LFiles := TDirectory.GetFiles(FDirectory, '*.json');
-    for LFile in LFiles do
-    begin
-      LContent := TFile.ReadAllText(LFile, TEncoding.UTF8);
-      LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
-      if Assigned(LJSON) then
+    FLock.Enter;
+    try
+      if not TDirectory.Exists(FDirectory) then
+        Exit;
+
+      LFiles := TDirectory.GetFiles(FDirectory, '*.json');
+      for LFile in LFiles do
       begin
-        try
-          LJob := TJob.FromJSON(LJSON);
-          if LJob.Status = AStatus then
-            Result.Add(LJob)
-          else
-            LJob.Free;
-        finally
-          LJSON.Free;
+        LContent := TFile.ReadAllText(LFile, TEncoding.UTF8);
+        LJSON := TJSONObject.ParseJSONValue(LContent) as TJSONObject;
+        if Assigned(LJSON) then
+        begin
+          try
+            LJob := TJob.FromJSON(LJSON);
+            if LJob.Status = AStatus then
+              Result.Add(LJob)
+            else
+              LJob.Free;
+          finally
+            LJSON.Free;
+          end;
         end;
       end;
+    finally
+      FLock.Leave;
     end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
@@ -1236,17 +1362,24 @@ procedure TFileJobStorage.Clear;
 var
   LFiles: TArray<string>;
   LFile: string;
+  LFileLock: THandle;
 begin
-  FLock.Enter;
+  // BUG-117 FIX: 使用进程间文件锁保护
+  LFileLock := AcquireFileLock;
   try
-    if TDirectory.Exists(FDirectory) then
-    begin
-      LFiles := TDirectory.GetFiles(FDirectory, '*.json');
-      for LFile in LFiles do
-        TFile.Delete(LFile);
+    FLock.Enter;
+    try
+      if TDirectory.Exists(FDirectory) then
+      begin
+        LFiles := TDirectory.GetFiles(FDirectory, '*.json');
+        for LFile in LFiles do
+          TFile.Delete(LFile);
+      end;
+    finally
+      FLock.Leave;
     end;
   finally
-    FLock.Leave;
+    ReleaseFileLock(LFileLock);
   end;
 end;
 
@@ -1257,6 +1390,7 @@ begin
   inherited Create;
   FName := AName;
   FMaxWorkers := AMaxWorkers;
+  FMinWorkers := 1;  // BUG-056 FIX: 默认最小1个工作线程
   FMaxPendingJobs := 10000;
   FDefaultTimeout := 300000; // 5 minutes
   FHandlers := TDictionary<string, TJobHandler>.Create;
@@ -1264,10 +1398,19 @@ begin
   FPendingQueue := TList<TJob>.Create;
   FWorkers := TObjectList<TWorkerThread>.Create(True);
   FLock := TCriticalSection.Create;
-  FJobAvailable := TEvent.Create(nil, False, False, '');
+  // BUG-055 FIX: 改为手动重置事件，防止多线程场景下信号丢失
+  // 自动重置事件(ManualReset=False)只唤醒一个线程后就重置，
+  // 导致队列中有多个作业时其他作业无法被及时处理
+  FJobAvailable := TEvent.Create(nil, True, False, '');
   FShutdownEvent := TEvent.Create(nil, True, False, '');
   FDefaultRetryPolicy := TRetryPolicy.Exponential(3, 1000, 60000);
   FStorage := TMemoryJobStorage.Create;
+  // BUG-056 FIX: 初始化动态线程池调整相关字段
+  FAutoScale := False;  // 默认关闭自动调整
+  FScaleUpThreshold := 0.8;    // 队列饱和度超过80%时增加线程
+  FScaleDownThreshold := 0.2;  // 空闲率超过80%(即利用率低于20%)时减少线程
+  FLastScaleTime := 0;
+  FScaleCooldownMs := 5000;    // 5秒冷却时间
 end;
 
 destructor TWorkerQueue.Destroy;
@@ -1544,30 +1687,45 @@ function TWorkerQueue.GetNextJob: TJob;
 var
   I: Integer;
   LJob: TJob;
+  LHasAvailableJobs: Boolean;
 begin
   Result := nil;
   FLock.Enter;
   try
+    LHasAvailableJobs := False;
     for I := 0 to FPendingQueue.Count - 1 do
     begin
       LJob := FPendingQueue[I];
-      
+
       // Skip if scheduled for later
       if (LJob.Status = jsScheduled) and (LJob.ScheduledAt > Now) then
         Continue;
-        
+
       // Skip if retrying and not ready
       if (LJob.Status = jsRetrying) and (LJob.NextRetryAt > Now) then
         Continue;
-        
+
       // Skip if dependencies not met
       if not AreDependenciesMet(LJob) then
         Continue;
-        
-      Result := LJob;
-      FPendingQueue.Delete(I);
-      Break;
+
+      // BUG-055 FIX: 标记找到可用作业
+      LHasAvailableJobs := True;
+
+      if Result = nil then
+      begin
+        Result := LJob;
+        FPendingQueue.Delete(I);
+        // 继续检查是否还有更多可用作业
+        Continue;
+      end;
     end;
+
+    // BUG-055 FIX: 手动重置事件管理
+    // 如果没有找到任何可用作业，重置事件以防止无效唤醒
+    // 如果还有可用作业，保持事件信号状态以唤醒其他工作线程
+    if not LHasAvailableJobs then
+      FJobAvailable.ResetEvent;
   finally
     FLock.Leave;
   end;
@@ -1620,13 +1778,14 @@ begin
       AJob.FStatus := jsFailed;
       Exit;
     end;
+    
+    // BUG-010 FIX: Protect status changes with lock to prevent race conditions
+    AJob.FStatus := jsRunning;
+    AJob.FStartedAt := Now;
+    Inc(AJob.FAttempt);
   finally
     FLock.Leave;
   end;
-  
-  AJob.FStatus := jsRunning;
-  AJob.FStartedAt := Now;
-  Inc(AJob.FAttempt);
   
   if Assigned(FOnJobStarted) then
     FOnJobStarted(Self, AJob);
@@ -1640,10 +1799,17 @@ begin
     LHandler(AJob);
     
     LElapsed := MilliSecondsBetween(Now, LStartTime);
-    AJob.FResult := TJobResult.CreateSuccess;
-    AJob.FResult.ExecutionTime := LElapsed;
-    AJob.FStatus := jsCompleted;
-    AJob.FCompletedAt := Now;
+    
+    // BUG-010 FIX: Protect status changes with lock
+    FLock.Enter;
+    try
+      AJob.FResult := TJobResult.CreateSuccess;
+      AJob.FResult.ExecutionTime := LElapsed;
+      AJob.FStatus := jsCompleted;
+      AJob.FCompletedAt := Now;
+    finally
+      FLock.Leave;
+    end;
     
     AtomicIncrement(FTotalProcessed);
     // BUG-047 FIX: Use proper atomic addition for total processing time
@@ -1685,8 +1851,14 @@ begin
       end
       else
       begin
-        AJob.FStatus := jsFailed;
-        AJob.FCompletedAt := Now;
+        // BUG-010 FIX: Protect status changes with lock
+        FLock.Enter;
+        try
+          AJob.FStatus := jsFailed;
+          AJob.FCompletedAt := Now;
+        finally
+          FLock.Leave;
+        end;
         MoveToDeadLetter(AJob);
         
         if Assigned(FOnJobFailed) then
@@ -1700,11 +1872,20 @@ begin
   
   if Assigned(FStorage) then
     FStorage.SaveJob(AJob);
+
+  // BUG-056 FIX: 作业处理完成后检查是否需要动态调整线程池
+  CheckAutoScale;
 end;
 
 procedure TWorkerQueue.MoveToDeadLetter(AJob: TJob);
 begin
-  AJob.FStatus := jsDeadLetter;
+  // BUG-010 FIX: Protect status changes with lock
+  FLock.Enter;
+  try
+    AJob.FStatus := jsDeadLetter;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TWorkerQueue.Start;
@@ -1780,16 +1961,85 @@ var
 begin
   LStartTime := Now;
   
-  // BUG-046 FIX: Wait for both pending AND running jobs to complete
+  // 等待所有挂起和运行中的作业完成
   repeat
     LStats := GetStats;
     if (LStats.PendingJobs = 0) and (LStats.RunningJobs = 0) then
       Break;
       
-    Sleep(100);
+    Sleep(50); // 减少轮询间隔，提高响应性
     if (ATimeoutMs <> INFINITE) and (MilliSecondsBetween(Now, LStartTime) > ATimeoutMs) then
       raise EWorkerQueueException.Create('Timeout waiting for job completion');
   until False;
+end;
+
+// BUG-056 FIX: 实现线程池动态调整
+procedure TWorkerQueue.CheckAutoScale;
+var
+  LStats: TQueueStats;
+  LSaturation: Double;
+  LIdleRate: Double;
+  LNewCount: Integer;
+  LElapsedMs: Int64;
+begin
+  // 检查是否启用自动调整
+  if not FAutoScale then
+    Exit;
+
+  // 检查是否正在关闭
+  if FShuttingDown or FPaused then
+    Exit;
+
+  // 检查冷却时间
+  if FLastScaleTime > 0 then
+  begin
+    LElapsedMs := MilliSecondsBetween(Now, FLastScaleTime);
+    if LElapsedMs < FScaleCooldownMs then
+      Exit;
+  end;
+
+  // 获取当前统计信息（不加锁，因为GetStats内部会加锁）
+  LStats := GetStats;
+
+  // 如果没有工作线程，不进行调整
+  if LStats.ActiveWorkers + LStats.IdleWorkers = 0 then
+    Exit;
+
+  LNewCount := FWorkers.Count;
+
+  // 计算队列饱和度 = 待处理作业数 / 最大待处理数
+  if FMaxPendingJobs > 0 then
+    LSaturation := LStats.PendingJobs / FMaxPendingJobs
+  else
+    LSaturation := 0;
+
+  // 计算空闲率 = 空闲线程数 / 总线程数
+  if LStats.ActiveWorkers + LStats.IdleWorkers > 0 then
+    LIdleRate := LStats.IdleWorkers / (LStats.ActiveWorkers + LStats.IdleWorkers)
+  else
+    LIdleRate := 1;
+
+  // 判断是否需要扩容
+  // 条件：队列饱和度超过阈值 且 当前线程数未达上限
+  if (LSaturation > FScaleUpThreshold) and (LNewCount < FMaxWorkers) then
+  begin
+    // 扩容：增加 1 个线程，或者根据饱和度增加更多
+    LNewCount := Min(LNewCount + Max(1, Round((LSaturation - FScaleUpThreshold) * 5)), FMaxWorkers);
+  end
+  // 判断是否需要缩容
+  // 条件：空闲率超过阈值（即利用率低）且 当前线程数超过最小值
+  else if (LIdleRate > (1 - FScaleDownThreshold)) and (LNewCount > FMinWorkers) then
+  begin
+    // 缩容：减少 1 个线程
+    LNewCount := Max(LNewCount - 1, FMinWorkers);
+  end;
+
+  // 如果需要调整，执行调整
+  if LNewCount <> FWorkers.Count then
+  begin
+    FLastScaleTime := Now;
+    SetWorkerCount(LNewCount);
+  end;
 end;
 
 procedure TWorkerQueue.SetWorkerCount(ACount: Integer);
@@ -1965,7 +2215,7 @@ end;
 
 function TJobBuilder.Retry(AMaxRetries: Integer): TJobBuilder;
 begin
-  FJob.WithRetryPolicy(TRetryPolicy.Exponential(AMaxRetries, 1000, 60000));
+  FJob.WithRetryPolicy(TRetryPolicy.Exponential(AMaxRetries, DEFAULT_RETRY_DELAY_MS, DEFAULT_WORKER_TIMEOUT_MS));
   Result := Self;
 end;
 

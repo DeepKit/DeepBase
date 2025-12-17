@@ -42,7 +42,8 @@ uses
   System.SyncObjs,
   System.DateUtils,
   System.TimeSpan,
-  System.TypInfo;
+  System.TypInfo,
+  UniBase.Constants;
 
 type
   /// <summary>缓存相关异常</summary>
@@ -321,8 +322,8 @@ begin
   FAccessOrder := TAccessList.Create;
   FInsertOrder := TQueue<K>.Create;
   
-  FMaxItems := 10000;
-  FMaxSizeBytes := 0;  // No limit
+  FMaxItems := DEFAULT_CACHE_MAX_ITEMS;
+  FMaxSizeBytes := DEFAULT_CACHE_MAX_SIZE_BYTES;
   FDefaultTTL := 0;    // No expiration
   FEvictionPolicy := cepLRU;
   FOwnValues := False;
@@ -332,6 +333,11 @@ end;
 
 destructor TCache<K, V>.Destroy;
 begin
+  // BUG-047 FIX: 清理回调引用，防止循环引用导致内存泄漏
+  FOnEvict := nil;
+  FOnExpire := nil;
+  FOnLoad := nil;
+  
   Clear;
   FInsertOrder.Free;
   FAccessOrder.Free;
@@ -378,6 +384,11 @@ var
 begin
   FLock.Enter;
   try
+    // 检查单个项目大小限制（防止单个大对象占用过多内存）
+    if (FMaxSizeBytes > 0) and (SizeBytes > FMaxSizeBytes div 10) then
+      raise ECacheException.CreateFmt('Single item too large: %d bytes (max: %d)', 
+        [SizeBytes, FMaxSizeBytes div 10]);
+    
     // Check if key already exists
     if FEntries.TryGetValue(Key, OldEntry) then
     begin
@@ -398,6 +409,18 @@ begin
       FInsertOrder.Enqueue(Key);
     end;
     
+    // Check memory limit with more aggressive eviction
+    if (FMaxSizeBytes > 0) and (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) then
+    begin
+      // Try to free space by evicting more aggressively
+      while (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) and (FEntries.Count > 0) do
+        Evict(Max(1, FEntries.Count div 10)); // 每次清理10%的条目
+      
+      // If still over limit, reject
+      if FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes then
+        raise ECacheException.Create('Cache memory limit exceeded');
+    end;
+    
     // Create entry
     Entry.Value := Value;
     Entry.CreatedAt := Now;
@@ -416,10 +439,6 @@ begin
     
     // Update access order for LRU
     UpdateAccessOrder(Key);
-    
-    // Check size limit
-    if (FMaxSizeBytes > 0) and (FStats.TotalSizeBytes > FMaxSizeBytes) then
-      Evict(1);
       
   finally
     FLock.Leave;
@@ -863,8 +882,8 @@ begin
       if FInstance = nil then
       begin
         FInstance := TCache<string, Variant>.Create;
-        FInstance.MaxItems := 10000;
-        FInstance.DefaultTTL := 3600;  // 1 hour default
+        FInstance.MaxItems := DEFAULT_CACHE_MAX_ITEMS;
+        FInstance.DefaultTTL := DEFAULT_CACHE_TTL_SECONDS;
         FInstance.EvictionPolicy := cepLRU;
       end;
     finally

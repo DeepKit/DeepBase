@@ -58,9 +58,11 @@ type
     function GetConfigFloat(const Key: string; Default: Double = 0): Double;
     procedure SetConfigFloat(const Key: string; Value: Double; const Category: string = 'General');
     
-    // Encrypted config
+    // Encrypted config - DEPRECATED for security reasons
     function GetConfigEncrypted(const Key: string; const Default: string = ''): string;
+      deprecated 'Use UniBase.Security.LoadSecret() for secure DPAPI encryption';
     procedure SetConfigEncrypted(const Key, Value: string; const Category: string = 'General');
+      deprecated 'Use UniBase.Security.SaveSecret() for secure DPAPI encryption';
     
     // Utility
     procedure DeleteConfig(const Key: string);

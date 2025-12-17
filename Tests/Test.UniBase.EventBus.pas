@@ -526,26 +526,34 @@ procedure TTestUniBaseEventBus.Test_DispatchMode_Async_ExecutesInBackground;
 var
   Executed: Boolean;
   StartTime: TDateTime;
+  CompletionEvent: TEvent;  // BUG-027 FIX: 使用事件同步替代固定延时
+  WaitResult: TWaitResult;
 begin
   Executed := False;
-  
-  FEventBus.Subscribe<TTestEvent>(
-    procedure(const Event: TTestEvent)
-    begin
-      Sleep(100);
-      Executed := True;
-    end, epNormal, edmAsync);
-  
-  var TestEvent: TTestEvent;
-  StartTime := Now;
-  FEventBus.Publish<TTestEvent>(TestEvent);
-  
-  // Should return quickly (not wait for 100ms sleep)
-  Assert.IsFalse(Executed, 'Async handler should not have completed immediately');
-  
-  // Wait for async completion
-  Sleep(200);
-  Assert.IsTrue(Executed, 'Async handler should complete eventually');
+  CompletionEvent := TEvent.Create(nil, True, False, '');  // Manual reset
+  try
+    FEventBus.Subscribe<TTestEvent>(
+      procedure(const Event: TTestEvent)
+      begin
+        Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特性
+        Executed := True;
+        CompletionEvent.SetEvent;  // BUG-027 FIX: 信号通知完成
+      end, epNormal, edmAsync);
+
+    var TestEvent: TTestEvent;
+    StartTime := Now;
+    FEventBus.Publish<TTestEvent>(TestEvent);
+
+    // Should return quickly (not wait for sleep)
+    Assert.IsFalse(Executed, 'Async handler should not have completed immediately');
+
+    // BUG-027 FIX: 使用事件等待替代固定Sleep，超时设为2000ms以适应高负载系统
+    WaitResult := CompletionEvent.WaitFor(2000);
+    Assert.AreEqual(wrSignaled, WaitResult, 'Async handler should complete within timeout');
+    Assert.IsTrue(Executed, 'Async handler should complete eventually');
+  finally
+    CompletionEvent.Free;
+  end;
 end;
 
 procedure TTestUniBaseEventBus.Test_Stats_TotalPublished;

@@ -98,7 +98,28 @@ type
     /// Get all secret names (without values for security).
     /// </summary>
     function GetSecretNames: TArray<string>;
+    
+    /// <summary>
+    /// Validate secret name format for security
+    /// </summary>
+    class function IsValidSecretName(const AName: string): Boolean; static;
   end;
+
+// ============================================================================
+// BUG-038 FIX: Secure Memory Functions
+// ============================================================================
+
+/// <summary>
+/// Securely zero memory to prevent sensitive data from remaining in memory.
+/// Uses volatile write to prevent compiler optimization.
+/// </summary>
+procedure SecureZeroMemory(var Data: TBytes); overload;
+procedure SecureZeroMemory(var Data: string); overload;
+
+/// <summary>
+/// Securely clear a byte array and set length to 0.
+/// </summary>
+procedure SecureClearBytes(var Data: TBytes);
 
 // ============================================================================
 // Global Shortcut Functions
@@ -148,6 +169,45 @@ uses
   System.NetEncoding,
   UniBase.Manager,
   UniBase.Consts;
+
+// ============================================================================
+// BUG-038 FIX: Secure Memory Functions Implementation
+// ============================================================================
+
+procedure SecureZeroMemory(var Data: TBytes);
+var
+  I: Integer;
+begin
+  // Use volatile write pattern to prevent compiler optimization
+  for I := 0 to High(Data) do
+    Data[I] := 0;
+  // Memory barrier to ensure writes are not optimized away
+  {$IFDEF MSWINDOWS}
+  MemoryBarrier;
+  {$ENDIF}
+end;
+
+procedure SecureZeroMemory(var Data: string);
+var
+  I: Integer;
+  P: PChar;
+begin
+  if Length(Data) > 0 then
+  begin
+    P := PChar(Data);
+    for I := 0 to Length(Data) - 1 do
+      P[I] := #0;
+    {$IFDEF MSWINDOWS}
+    MemoryBarrier;
+    {$ENDIF}
+  end;
+end;
+
+procedure SecureClearBytes(var Data: TBytes);
+begin
+  SecureZeroMemory(Data);
+  SetLength(Data, 0);
+end;
 
 {$IFDEF MSWINDOWS}
 // ============================================================================
@@ -551,6 +611,14 @@ var
   CipherBase64: string;
   NowStr: string;
 begin
+  // 验证密钥名称，防止SQL注入和路径遍历
+  if not IsValidSecretName(AName) then
+    raise EArgumentException.Create('Invalid secret name format');
+    
+  // 限制明文值的长度，防止过大数据攻击
+  if Length(APlainValue) > 64 * 1024 then // 64KB限制
+    raise EArgumentException.Create('Secret value too large (max 64KB)');
+    
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
   
@@ -677,6 +745,48 @@ begin
   finally
     TMonitor.Exit(FLock);
   end;
+end;
+
+class function TUniBaseSecurity.IsValidSecretName(const AName: string): Boolean;
+var
+  I: Integer;
+  C: Char;
+begin
+  Result := False;
+  
+  // 检查基本要求
+  if AName.IsEmpty or (Length(AName) > 255) then
+    Exit;
+    
+  // 不能以点开头（防止隐藏文件）
+  if AName.StartsWith('.') then
+    Exit;
+    
+  // 检查每个字符
+  for I := 1 to Length(AName) do
+  begin
+    C := AName[I];
+    
+    // 只允许字母、数字、下划线、连字符和点
+    if not (CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '_', '-', '.'])) then
+      Exit;
+      
+    // 不允许连续的点（防止路径遍历）
+    if (C = '.') and (I > 1) and (AName[I-1] = '.') then
+      Exit;
+  end;
+  
+  // 不能以点结尾
+  if AName.EndsWith('.') then
+    Exit;
+    
+  // 检查保留名称
+  var LowerName := AName.ToLower;
+  if (LowerName = 'con') or (LowerName = 'prn') or (LowerName = 'aux') or 
+     (LowerName = 'nul') or LowerName.StartsWith('com') or LowerName.StartsWith('lpt') then
+    Exit;
+    
+  Result := True;
 end;
 
 end.

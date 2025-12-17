@@ -24,6 +24,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.Threading,
   {$IFDEF DEBUG}
   Winapi.Windows,
   {$ENDIF}
@@ -33,7 +34,8 @@ uses
   Vcl.Controls,
   {$ENDIF}
   FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Logging;
 
 type
   /// <summary>
@@ -286,18 +288,16 @@ begin
   ActualTheme := 'Windows';  // 默认回退到 Windows
   
   // 先检查主题是否在已注册的样式列表中
-  // 注意：不直接调用 IsValidStyle，因为它会尝试从文件加载样式并可能抛出 EFOpenError
   try
     if (ThemeName = 'Windows') or IsStyleInList(ThemeName) then
       ActualTheme := ThemeName;
   except
     on E: Exception do
     begin
-      // 忽略样式检查错误，使用 Windows 默认主题
+      // 记录主题加载错误，但不忽略
       ActualTheme := 'Windows';
-      {$IFDEF DEBUG}
-      OutputDebugString(PChar('UniBase.Theme: Style check failed: ' + E.Message));
-      {$ENDIF}
+      if IsLoggerInitialized then
+        Logger.Error('Theme loading failed: ' + E.Message);
     end;
   end;
   
@@ -313,26 +313,33 @@ begin
       end;
     except
       on E: Exception do
-        // 样式切换失败，保持当前主题
-        {$IFDEF DEBUG}
-        OutputDebugString(PChar('UniBase.Theme: TrySetStyle failed: ' + E.Message));
-        {$ENDIF}
+      begin
+        // 样式切换失败，记录错误
+        if IsLoggerInitialized then
+          Logger.Error('Style switching failed: ' + E.Message);
+      end;
     end;
   end
   else
   begin
-    // 在非主线程中，使用 TThread.Synchronize 切换主题
+    // 在非主线程中，使用异步方式避免UI阻塞
     FPendingThemeName := ActualTheme;
-    try
-      TThread.Synchronize(nil, ApplyThemeSync);
-      Success := FCurrentThemeName = ActualTheme;
-    except
-      on E: Exception do
-        // 忽略同步错误
-        {$IFDEF DEBUG}
-        OutputDebugString(PChar('UniBase.Theme: Synchronize failed: ' + E.Message));
-        {$ENDIF}
-    end;
+    
+    // 使用TTask异步执行，避免阻塞调用线程
+    TTask.Run(
+      procedure
+      begin
+        try
+          TThread.Synchronize(nil, ApplyThemeSync);
+        except
+          on E: Exception do
+          begin
+            // 记录同步错误
+            if IsLoggerInitialized then
+              Logger.Error('Theme synchronization failed: ' + E.Message);
+          end;
+        end;
+      end);
   end;
   {$ELSE}
   // FMX: Just update the name and notify - actual styling via FMX.Styles
