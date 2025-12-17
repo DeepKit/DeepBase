@@ -98,6 +98,9 @@ type
     property TypeName: string read FTypeName;
   end;
 
+  /// <summary>Attribute: Mark class as safe for deserialization</summary>
+  SerializeSafeAttribute = class(TCustomAttribute);
+
   /// <summary>Attribute: Mark class for serialization</summary>
   SerializableAttribute = class(TCustomAttribute);
 
@@ -147,6 +150,9 @@ type
     procedure EnterObject(AObj: TObject);
     procedure LeaveObject(AObj: TObject);
     function IsVisited(AObj: TObject): Boolean;
+    function IsAllowedType(AClass: TClass): Boolean;
+    function IsClassAllowed(const AClassName: string; const AAllowedClasses: TArray<string>): Boolean;
+    function GetAllowedClasses: TArray<string>;
     
     function FindConverter(ATypeInfo: PTypeInfo): IValueConverter;
     procedure AddConverter(AConverter: IValueConverter);
@@ -536,7 +542,8 @@ end;
 
 procedure TSerializationContext.CheckDepth;
 begin
-  if FDepth >= FOptions.MaxDepth then
+  // 降低最大深度限制，防止深度嵌套攻击
+  if FDepth >= Min(FOptions.MaxDepth, 8) then
     raise ESerializationException.CreateFmt('Maximum serialization depth exceeded at: %s', [GetPath]);
 end;
 
@@ -577,6 +584,49 @@ end;
 procedure TSerializationContext.AddConverter(AConverter: IValueConverter);
 begin
   FConverters.Add(AConverter);
+end;
+
+function TSerializationContext.IsAllowedType(AClass: TClass): Boolean;
+const
+  // 类型白名单 - 只允许安全的基础类型
+  ALLOWED_TYPES: array[0..9] of string = (
+    'TObject', 'TStringList', 'TList', 'TDictionary', 'TArray',
+    'TDateTime', 'TDate', 'TTime', 'TGUID', 'TBytes'
+  );
+var
+  I: Integer;
+  ClassName: string;
+begin
+  Result := False;
+  ClassName := AClass.ClassName;
+  
+  // 检查是否在白名单中
+  for I := Low(ALLOWED_TYPES) to High(ALLOWED_TYPES) do
+  begin
+    if SameText(ClassName, ALLOWED_TYPES[I]) or 
+       ClassName.StartsWith(ALLOWED_TYPES[I]) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  
+  // 允许标记了SerializableAttribute的类
+  var LRttiCtx := TRttiContext.Create;
+  try
+    var LRttiType := LRttiCtx.GetType(AClass);
+    if Assigned(LRttiType) then
+    begin
+      for var LAttr in LRttiType.GetAttributes do
+        if LAttr is SerializableAttribute then
+        begin
+          Result := True;
+          Exit;
+        end;
+    end;
+  finally
+    LRttiCtx.Free;
+  end;
 end;
 
 { TBaseSerializer }
@@ -998,6 +1048,10 @@ begin
   if not Assigned(AJson) then
     Exit(nil);
     
+  // 添加类型白名单验证
+  if not AContext.IsAllowedType(AClass) then
+    raise ESerializationException.CreateFmt('Unauthorized type for deserialization: %s', [AClass.ClassName]);
+  
   // Create instance
   LType := FRttiContext.GetType(AClass);
   Result := LType.AsInstance.MetaclassType.Create;
@@ -1915,6 +1969,51 @@ begin
     LSer.RegisterType(LType.Key, LType.Value);
     
   Result := LSer;
+end;
+
+// 安全相关的辅助函数实现
+function TSerializationContext.IsClassAllowed(const AClassName: string; const AAllowedClasses: TArray<string>): Boolean;
+var
+  AllowedClass: string;
+begin
+  Result := False;
+  for AllowedClass in AAllowedClasses do
+  begin
+    if SameText(AClassName, AllowedClass) then
+    begin
+      Result := True;
+      Break;
+    end;
+  end;
+end;
+
+function TSerializationContext.GetAllowedClasses: TArray<string>;
+begin
+  // 定义允许反序列化的安全类列表
+  Result := [
+    'TObject',
+    'TStringList',
+    'TList',
+    'TDictionary',
+    'TArray',
+    'TDateTime',
+    'TDate',
+    'TTime',
+    'TGuid',
+    'TPoint',
+    'TRect',
+    'TSize',
+    // 添加项目特定的安全类
+    'TUniBaseConfig',
+    'TConfigItem',
+    'TLogEntry',
+    'TMetricData',
+    'TUserInfo',
+    'TSessionInfo'
+  ];
+  
+  // 还可以从配置文件或注册表中读取额外的允许类列表
+  // 但默认应该是最小权限原则
 end;
 
 end.

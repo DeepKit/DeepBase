@@ -229,7 +229,7 @@ begin
   Assert.AreEqual('', Share.Description);
   Assert.AreEqual('', Share.Url);
   Assert.AreEqual('', Share.ImageUrl);
-  Assert.AreEqual(0, Length(Share.ImageData));
+  Assert.AreEqual(Integer(0), Integer(Length(Share.ImageData)));
   Assert.AreEqual('', Share.VideoUrl);
   Assert.AreEqual('', Share.MusicUrl);
   Assert.AreEqual('', Share.MiniAppId);
@@ -426,7 +426,7 @@ var
 begin
   Params := TSocialHelper.ParseQueryString('code=abc123&state=xyz');
   try
-    Assert.AreEqual(2, Params.Count);
+    Assert.AreEqual(Integer(2), Integer(Params.Count));
     Assert.AreEqual('abc123', Params['code']);
     Assert.AreEqual('xyz', Params['state']);
   finally

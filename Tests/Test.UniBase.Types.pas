@@ -312,7 +312,7 @@ var
 begin
   Result.Init;
   Assert.AreEqual(0, Result.MessageCount);
-  Assert.AreEqual(0, Length(Result.Messages));
+  Assert.AreEqual(Integer(0), Integer(Length(Result.Messages)));
 end;
 
 procedure THealthCheckResultTests.Test_AddMessage_Single;
@@ -385,8 +385,8 @@ begin
   Result.TrimMessages;
   
   // After trim, Length equals MessageCount
-  Assert.AreEqual(Result.MessageCount, Length(Result.Messages));
-  Assert.AreEqual(2, Length(Result.Messages));
+  Assert.AreEqual(Result.MessageCount, Integer(Length(Result.Messages)));
+  Assert.AreEqual(Integer(2), Integer(Length(Result.Messages)));
 end;
 
 procedure THealthCheckResultTests.Test_TrimMessages_WhenAlreadyTrimmed;
@@ -401,7 +401,7 @@ begin
   Result.TrimMessages;
   
   Assert.AreEqual(1, Result.MessageCount);
-  Assert.AreEqual(1, Length(Result.Messages));
+  Assert.AreEqual(Integer(1), Integer(Length(Result.Messages)));
 end;
 
 // ============================================================================
@@ -453,8 +453,8 @@ begin
   SetLength(Arr, 2);
   Arr[0].LangCode := 'en';
   Arr[1].LangCode := 'zh';
-  
-  Assert.AreEqual(2, Length(Arr));
+
+  Assert.AreEqual(Integer(2), Integer(Length(Arr)));
   Assert.AreEqual('en', Arr[0].LangCode);
   Assert.AreEqual('zh', Arr[1].LangCode);
 end;
@@ -501,8 +501,8 @@ begin
   Arr[0].ItemKey := 'key0';
   Arr[1].ItemKey := 'key1';
   Arr[2].ItemKey := 'key2';
-  
-  Assert.AreEqual(3, Length(Arr));
+
+  Assert.AreEqual(Integer(3), Integer(Length(Arr)));
   Assert.AreEqual('key1', Arr[1].ItemKey);
 end;
 
@@ -548,8 +548,8 @@ begin
   Arr[0].IsDark := False;
   Arr[1].Name := 'Dark';
   Arr[1].IsDark := True;
-  
-  Assert.AreEqual(2, Length(Arr));
+
+  Assert.AreEqual(Integer(2), Integer(Length(Arr)));
   Assert.IsFalse(Arr[0].IsDark);
   Assert.IsTrue(Arr[1].IsDark);
 end;

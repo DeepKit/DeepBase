@@ -130,7 +130,7 @@ begin
   TSQLLogger.LogSQLEx('fail', 150, False, '', 'boom', -1);
 
   Logs := TSQLLogger.GetRecentLogs(10);
-  Assert.AreEqual(3, Length(Logs), 'Expected exactly three log entries');
+  Assert.AreEqual(Integer(3), Integer(Length(Logs)), 'Expected exactly three log entries');
 
   FastEntry := Logs[0];
   SlowEntry := Logs[1];
@@ -156,14 +156,14 @@ begin
   TSQLLogger.LogSQLEx('C', 400, False, '', 'err', -1);
 
   Slow := TSQLLogger.GetSlowQueries(10);
-  Assert.AreEqual(2, Length(Slow), 'Expected two slow queries');
+  Assert.AreEqual(Integer(2), Integer(Length(Slow)), 'Expected two slow queries');
   Assert.IsTrue((Slow[0].SQL = 'C') or (Slow[1].SQL = 'C'),
     'One of slow queries should be C');
   Assert.IsTrue((Slow[0].SQL = 'B') or (Slow[1].SQL = 'B'),
     'One of slow queries should be B');
 
   Failed := TSQLLogger.GetFailedQueries(10);
-  Assert.AreEqual(1, Length(Failed), 'Expected one failed query');
+  Assert.AreEqual(Integer(1), Integer(Length(Failed)), 'Expected one failed query');
   Assert.AreEqual('C', Failed[0].SQL);
 end;
 
@@ -230,8 +230,7 @@ begin
         begin
           raise Exception.Create('boom');
         end);
-    end,
-    Exception
+    end
   );
 
   Logs := TSQLLogger.GetRecentLogs(10);

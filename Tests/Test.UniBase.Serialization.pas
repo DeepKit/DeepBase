@@ -620,7 +620,7 @@ begin
   Json := '{"Items":["A","B","C"]}';
   Order := FSerializer.Deserialize(Json, TTestOrder) as TTestOrder;
   try
-    Assert.AreEqual(3, Length(Order.Items));
+    Assert.AreEqual(Integer(3), Integer(Length(Order.Items)));
     Assert.AreEqual('A', Order.Items[0]);
     Assert.AreEqual('C', Order.Items[2]);
   finally

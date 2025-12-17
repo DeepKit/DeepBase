@@ -537,7 +537,7 @@ begin
   R.Message := 'msg';
   R.Clear;
   Assert.IsFalse(R.Success, 'Clear should reset Success to False');
-  Assert.AreEqual(0, Length(R.Diffs), 'Clear should reset Diffs length to 0');
+  Assert.AreEqual(Integer(0), Integer(Length(R.Diffs)), 'Clear should reset Diffs length to 0');
   Assert.AreEqual('', R.Message, 'Clear should reset Message to empty');
 end;
 

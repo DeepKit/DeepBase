@@ -164,7 +164,7 @@ begin
   Assert.AreEqual(4096, O.MaxTokens);
   Assert.AreEqual(0.7, O.Temperature, 0.0001);
   Assert.AreEqual(1.0, O.TopP, 0.0001);
-  Assert.AreEqual(0, Length(O.Stop));
+  Assert.AreEqual(Integer(0), Integer(Length(O.Stop)));
   Assert.IsFalse(O.Stream);
 end;
 
@@ -183,7 +183,7 @@ begin
   Assert.AreEqual(1234, O.MaxTokens);
   Assert.AreEqual(1.1, O.Temperature, 0.0001);
   Assert.AreEqual(1.0, O.TopP, 0.0001);
-  Assert.AreEqual(0, Length(O.Stop));
+  Assert.AreEqual(Integer(0), Integer(Length(O.Stop)));
   Assert.IsFalse(O.Stream);
 end;
 
@@ -202,8 +202,8 @@ begin
   Assert.IsTrue(T.IsEnabled);
   Assert.IsFalse(T.IsBuiltIn);
   Assert.AreEqual(0, T.SortOrder);
-  Assert.AreEqual(0, Length(T.Variables));
-  Assert.AreEqual(0, Length(T.IncludeTemplates));
+  Assert.AreEqual(Integer(0), Integer(Length(T.Variables)));
+  Assert.AreEqual(Integer(0), Integer(Length(T.IncludeTemplates)));
   Assert.IsNull(T.DefaultValues);
 end;
 
