@@ -11,11 +11,11 @@
 
 ## 📊 修复统计
 
-- **总计修复**: 71 个 🎉
+- **总计修复**: 74 个 🎉
 - **P0 (Critical)**: 10 个
-- **P1 (High)**: 32 个  
-- **P2 (Medium)**: 23 个
-- **P3 (Low)**: 6 个
+- **P1 (High)**: 32 个
+- **P2 (Medium)**: 25 个
+- **P3 (Low)**: 7 个
 
 ## 🔧 已修复问题列表
 
@@ -602,3 +602,34 @@
 - **问题描述**: 使用TInterlocked.CompareExchange后的锁操作可能不是原子的
 - **修复方案**: 代码已正确实现双重检查锁定模式（Double-Checked Locking），使用 TInterlocked.CompareExchange 创建锁对象，然后使用 TMonitor 进行同步；写入线程使用 TThreadList 的 LockList/UnlockList 进行线程安全的队列访问
 - **修复时间**: 2025-12-16 (已在代码中确认修复)
+
+
+### 第六轮修复的问题 (2025-12-18)
+
+#### BUG-099: DateTime.FormatOffset 格式错误 ✅ 已修复
+- **严重性**: Medium
+- **优先级**: P2
+- **文件**: `Core/UniBase.DateTime.pas`
+- **问题描述**: `TTimeZones.FormatOffset` 方法输出格式错误，如 `+ 8: 0` 而非 `+08:00`，原因是使用 `%s%02d:%02d` 格式字符串将符号作为字符串变量传入
+- **修复方案**: 将格式字符串改为 `+%.2d:%.2d` / `-%.2d:%.2d`，分别处理正负偏移量，确保输出格式正确
+- **修复时间**: 2025-12-18
+
+#### BUG-100: DateTime.NextDayOfWeek/PreviousDayOfWeek 计算错误 ✅ 已修复
+- **严重性**: Medium
+- **优先级**: P2
+- **文件**: `Core/UniBase.DateTime.pas`
+- **问题描述**: `TDateTimeCalc.NextDayOfWeek` 和 `PreviousDayOfWeek` 方法计算结果偏差一天，原因是 `TDayOfWeekEx` 枚举（0=Sunday..6=Saturday）与 `DayOfTheWeek` 函数返回值（1=Monday..7=Sunday）映射不正确
+- **修复方案**: 添加正确的枚举映射转换，Sunday 特殊处理为 7，其他星期直接使用 Ord 值
+- **修复时间**: 2025-12-18
+
+#### BUG-101: DateTime 测试期望值与实现不一致 ✅ 已修复
+- **严重性**: Low
+- **优先级**: P3
+- **文件**: `Tests/Test.UniBase.DateTime.pas`
+- **问题描述**: 多个测试用例期望值与 `TDateRange` 实现不一致：
+  - `Test_DayCount` 期望 30 天（排他），实现返回 31 天（包含首尾）
+  - `Test_Today.DayCount` 期望 0 天，实现返回 1 天
+  - `Test_LastNDays.DayCount` 期望 6 天，实现返回 7 天
+  - `Test_TryParse_Valid` 使用硬编码日期格式，与系统 locale 不兼容
+- **修复方案**: 更新测试期望值以匹配实现的包含式计数逻辑；`TryParse_Valid` 改用 `DateToStr` 生成系统 locale 兼容的日期字符串
+- **修复时间**: 2025-12-18

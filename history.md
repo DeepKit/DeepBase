@@ -1167,6 +1167,10 @@ var HTML := Exporter.ToHTML;
 |||  - ✅ `Test.UniBase.FormState.pas` - 修复测试稳定性并恢复到 `UniBaseTests.dpr`
 |||  - ✅ `Test.UniBase.Logging.pas` - 重写为 file-only 异步写入可验证的测试，并恢复到 `UniBaseTests.dpr`
 |||  - ✅ `Test.UniBase.License.pas` - 恢复到 `UniBaseTests.dpr`
+|- **已完成 (2025-12-18)**:
+|  - ✅ `Test.UniBase.DateTime.pas` - DateTime 模块测试修复 (FormatOffset 格式问题、NextDayOfWeek/PreviousDayOfWeek 枚举映射问题、测试期望值修正)
+|  - ✅ 测试通过率提升：824 测试中 751 通过 (91.1%)，11 失败，58 错误（Access Violation）
+|  - ✅ 错误分类：Access Violation 主要来自 Config/FormState/Hotkeys/MRU/Theme/i18n 模块（需 UniBaseManager 初始化）
 ||- **下一步**:
 |  - （可选）在持续集成环境中补充针对数据库 Integration Tests 的文档与示例配置（包括 FireDAC/SQLite 驱动部署方式、专用测试数据库路径等），方便在有完整数据库环境的机器上重新启用 DB 集成测试。
 ---
