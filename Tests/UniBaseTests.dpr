@@ -1,4 +1,4 @@
-﻿program UniBaseTests;
+program UniBaseTests;
 
 {$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}
@@ -43,9 +43,28 @@ uses
   // Types tests
   Test.UniBase.Types in 'Test.UniBase.Types.pas',
   Test.UniBase.Serialization in 'Test.UniBase.Serialization.pas',
-  // Test.UniBase.Validation - needs rewrite for anonymous function compatibility
+  // Resilience tests (core module fixed)
+  Test.UniBase.Resilience in 'Test.UniBase.Resilience.pas',
+  // Additional tests that should compile
+  Test.UniBase.DateTime in 'Test.UniBase.DateTime.pas',
+  Test.UniBase.Math in 'Test.UniBase.Math.pas',
+  // Test.UniBase.Memory in 'Test.UniBase.Memory.pas',  // TODO: Fix variable required error
+  // Test.UniBase.RateLimiter in 'Test.UniBase.RateLimiter.pas',
+  // Test.UniBase.FeatureFlags in 'Test.UniBase.FeatureFlags.pas',  // TODO: Fix multiple test issues
+  // Test.UniBase.Metrics in 'Test.UniBase.Metrics.pas',
+  Test.UniBase.i18n.Plural in 'Test.UniBase.i18n.Plural.pas',
+  Test.UniBase.i18n.Gender in 'Test.UniBase.i18n.Gender.pas',
+  // Test.UniBase.Compression in 'Test.UniBase.Compression.pas',  // TODO: Fix StringOfChar call
+  // Test.UniBase.Benchmark in 'Test.UniBase.Benchmark.pas',  // TODO: Fix AreEqual type inference
+  // Test.UniBase.Diagnose in 'Test.UniBase.Diagnose.pas',  // TODO: Fix OutputDebugString missing
+  // Test.UniBase.Exception in 'Test.UniBase.Exception.pas',  // TODO: Fix IsInitialized reference
+  // Test.UniBase.Security in 'Test.UniBase.Security.pas',  // TODO: Fix WillRaise overload
+  // Test.UniBase.Authorization in 'Test.UniBase.Authorization.pas',
+  // Test.UniBase.Interfaces in 'Test.UniBase.Interfaces.pas',  // TODO: Fix undeclared identifiers
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
+  // Services module tests (OPT-007) - TODO: Fix interface lifetime issues
+  // Test.UniBase.Services.HealthCheck in 'Test.UniBase.Services.HealthCheck.pas',
   // Core units
   UniBase.Types in '..\Core\UniBase.Types.pas',
   UniBase.Manager in '..\Core\UniBase.Manager.pas',

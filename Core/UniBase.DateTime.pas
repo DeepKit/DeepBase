@@ -1,4 +1,4 @@
-unit UniBase.DateTime;
+﻿unit UniBase.DateTime;
 
 {*******************************************************************************
   UniBase Date/Time Utilities
@@ -564,7 +564,7 @@ end;
 
 class destructor TTimeZones.Destroy;
 begin
-  FCache.Free;
+  FreeAndNil(FCache);
 end;
 
 class procedure TTimeZones.InitCache;
@@ -620,19 +620,21 @@ end;
 
 class function TTimeZones.FormatOffset(AMinutes: Integer): string;
 var
-  LSign: Char;
   LHours, LMins: Integer;
 begin
   if AMinutes >= 0 then
-    LSign := '+'
+  begin
+    LHours := AMinutes div 60;
+    LMins := AMinutes mod 60;
+    Result := System.SysUtils.Format('+%.2d:%.2d', [LHours, LMins]);
+  end
   else
   begin
-    LSign := '-';
     AMinutes := -AMinutes;
+    LHours := AMinutes div 60;
+    LMins := AMinutes mod 60;
+    Result := System.SysUtils.Format('-%.2d:%.2d', [LHours, LMins]);
   end;
-  LHours := AMinutes div 60;
-  LMins := AMinutes mod 60;
-  Result := System.SysUtils.Format('%s%02d:%02d', [LSign, LHours, LMins]);
 end;
 
 { TDateTimeFormat }
@@ -1005,24 +1007,38 @@ end;
 
 class function TDateTimeCalc.NextDayOfWeek(ADateTime: TDateTime; ADayOfWeek: TDayOfWeekEx): TDateTime;
 var
-  LCurrent, LTarget: Integer;
+  LCurrent, LTarget, LDiff: Integer;
 begin
-  LCurrent := DayOfTheWeek(ADateTime);
-  LTarget := Ord(ADayOfWeek) + 1;
-  if LTarget <= LCurrent then
-    LTarget := LTarget + 7;
-  Result := Trunc(ADateTime) + (LTarget - LCurrent);
+  // DayOfTheWeek returns 1=Mon..7=Sun, TDayOfWeekEx is 0=Sun,1=Mon..6=Sat
+  LCurrent := DayOfTheWeek(ADateTime); // 1-7 (Mon-Sun)
+  // Convert TDayOfWeekEx to DayOfTheWeek format
+  if ADayOfWeek = dowSunday then
+    LTarget := 7
+  else
+    LTarget := Ord(ADayOfWeek); // Mon=1..Sat=6
+
+  LDiff := LTarget - LCurrent;
+  if LDiff <= 0 then
+    LDiff := LDiff + 7;
+  Result := Trunc(ADateTime) + LDiff;
 end;
 
 class function TDateTimeCalc.PreviousDayOfWeek(ADateTime: TDateTime; ADayOfWeek: TDayOfWeekEx): TDateTime;
 var
-  LCurrent, LTarget: Integer;
+  LCurrent, LTarget, LDiff: Integer;
 begin
-  LCurrent := DayOfTheWeek(ADateTime);
-  LTarget := Ord(ADayOfWeek) + 1;
-  if LTarget >= LCurrent then
-    LTarget := LTarget - 7;
-  Result := Trunc(ADateTime) - (LCurrent - LTarget);
+  // DayOfTheWeek returns 1=Mon..7=Sun, TDayOfWeekEx is 0=Sun,1=Mon..6=Sat
+  LCurrent := DayOfTheWeek(ADateTime); // 1-7 (Mon-Sun)
+  // Convert TDayOfWeekEx to DayOfTheWeek format
+  if ADayOfWeek = dowSunday then
+    LTarget := 7
+  else
+    LTarget := Ord(ADayOfWeek); // Mon=1..Sat=6
+
+  LDiff := LCurrent - LTarget;
+  if LDiff <= 0 then
+    LDiff := LDiff + 7;
+  Result := Trunc(ADateTime) - LDiff;
 end;
 
 class function TDateTimeCalc.RoundToMinute(ADateTime: TDateTime): TDateTime;
@@ -1089,7 +1105,7 @@ end;
 
 class destructor TBusinessDays.Destroy;
 begin
-  FHolidays.Free;
+  FreeAndNil(FHolidays);
 end;
 
 class procedure TBusinessDays.SetWeekendDays(const ADays: array of TDayOfWeekEx);
