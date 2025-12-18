@@ -41,22 +41,27 @@
 ### 🔴 P1 - 立即处理
 
 #### OPT-001: 替换泛型异常为特定异常类
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中 (Core 模块完成)
 - **优先级**: P1
-- **问题**: 代码中有 **86 处** 使用 `raise Exception.Create(...)`
+- **问题**: 代码中有 **186 处** 使用 `raise Exception.Create(...)`
 - **影响**: 难以精确捕获和处理特定错误
 - **任务**:
-  - [ ] 创建异常类层次结构 (`Core/UniBase.Exceptions.pas`)
-  - [ ] 定义模块特定异常 (ECryptoException, EConfigException, ECacheException 等)
-  - [ ] 替换所有 `raise Exception.Create` 为特定异常类型
+  - [x] 创建异常类层次结构 (`Core/UniBase.Exceptions.pas`)
+  - [x] 定义模块特定异常 (ESecurityException, EDatabaseException, EBackupException 等)
+  - [x] 替换 Core 模块的泛型异常 (0 处剩余)
+  - [ ] 替换 ThirdParty 模块的泛型异常
+  - [ ] 替换 Tools/VCL 模块的泛型异常
   - [ ] 更新相关测试用例
-- **示例**:
-  ```delphi
-  // ❌ 当前
-  raise Exception.Create('生成随机IV失败');
-  // ✅ 改进
-  raise ECryptoException.Create('Failed to generate IV: ' + SysErrorMessage(GetLastError));
-  ```
+- **已创建的异常类**:
+  - EUniBaseException (基类)
+  - ESecurityException, EEncryptionException, EDecryptionException, EHashException
+  - EAntiTamperException, EProtectionException, ERandomException
+  - EDatabaseException, EPoolException, EConnectionTimeoutException
+  - EBackupException, EBackupCancelledException, EBackupInProgressException
+  - ENetworkException, EHttpServerException, EServerAlreadyRunningException
+  - EResilienceException, ECircuitBreakerException
+  - EOperationException, EInvalidOperationException, EOperationCancelledException
+  - EConfigException, EConfigNotFoundException, EMissingConfigurationException
 
 #### OPT-002: 重构静态方法为依赖注入服务
 - **状态**: 🔲 待开始

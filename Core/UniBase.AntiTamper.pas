@@ -10,7 +10,7 @@ uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils, System.Math,
   Winapi.ShellAPI, Winapi.Windows,
   FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, UniBase.Protection,
-  System.Generics.Collections, UniBase.Crypto.PBKDF2;
+  System.Generics.Collections, UniBase.Crypto.PBKDF2, UniBase.Exceptions;
 
 // 加密算法类型
 // BUG-033 FIX: Removed weak XOR encryption, only AES256 is supported
@@ -251,11 +251,11 @@ end;
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create(string('防篡改包未初始化'));
+    raise EAntiTamperException.Create('AntiTamper package not initialized');
 
   // BUG-033 FIX: Only AES256 encryption is supported
   if FConfig.EncryptionKey = '' then
-    raise Exception.Create(string('加密密钥未配置，请设置 EncryptionKey'));
+    raise EMissingConfigurationException.Create('EncryptionKey not configured');
     
   Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   WriteLog(Format(string('使用AES-256加密，数据长度: %d bytes'), [Length(Result)]));
@@ -264,11 +264,11 @@ end;
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create(string('防篡改包未初始化'));
+    raise EAntiTamperException.Create('AntiTamper package not initialized');
 
   // BUG-033 FIX: Only AES256 decryption is supported
   if FConfig.EncryptionKey = '' then
-    raise Exception.Create(string('加密密钥未配置，请设置 EncryptionKey'));
+    raise EMissingConfigurationException.Create('EncryptionKey not configured');
     
   Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   WriteLog(Format(string('使用AES-256解密，数据长度: %d bytes'), [Length(Result)]));

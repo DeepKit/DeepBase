@@ -47,7 +47,7 @@ uses
   System.Generics.Collections, System.Diagnostics, System.TimeSpan,
   FireDAC.Comp.Client, FireDAC.Stan.Def, FireDAC.Stan.Async,
   FireDAC.DApt, FireDAC.Stan.Option, FireDAC.Stan.Error,
-  FireDAC.Phys.Intf, FireDAC.Stan.Pool;
+  FireDAC.Phys.Intf, FireDAC.Stan.Pool, UniBase.Exceptions;
 
 type
   /// <summary>支持的数据库类型</summary>
@@ -600,7 +600,7 @@ end;
 procedure TUniConnectionPool.SetDatabaseType(const Value: TDatabaseType);
 begin
   if FInitialized then
-    raise Exception.Create('无法在初始化后更改数据库类型');
+    raise EInvalidOperationException.Create('Cannot change database type after initialization');
   FDatabaseType := Value;
 
   // 设置默认验证查询
@@ -617,7 +617,7 @@ end;
 procedure TUniConnectionPool.SetConnectionString(const Value: string);
 begin
   if FInitialized then
-    raise Exception.Create('无法在初始化后更改连接字符串');
+    raise EInvalidOperationException.Create('Cannot change connection string after initialization');
   FConnectionString := Value;
 end;
 
@@ -633,7 +633,7 @@ begin
     on E: Exception do
     begin
       Result.Free;
-      raise Exception.CreateFmt('创建数据库连接失败: %s', [E.Message]);
+      raise EDatabaseException.CreateFmt('Failed to create database connection: %s', [E.Message]);
     end;
   end;
 end;
@@ -765,7 +765,7 @@ begin
   begin
     Inc(FStatistics.TotalTimeouts);
     DoPoolEvent(pePoolExhausted, '连接池耗尽，获取连接超时');
-    raise Exception.Create('获取数据库连接超时');
+    raise EConnectionTimeoutException.Create('Database connection acquisition timeout');
   end;
 end;
 
@@ -781,7 +781,7 @@ begin
   Conn := nil;
 
   if not FInitialized then
-    raise Exception.Create('连接池未初始化');
+    raise EPoolNotInitializedException.Create('Connection pool not initialized');
 
   StartTime := Now;
   Stopwatch := TStopwatch.StartNew;

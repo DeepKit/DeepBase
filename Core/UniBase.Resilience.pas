@@ -62,7 +62,8 @@ uses
   System.Diagnostics,
   System.Math,
   System.Threading,
-  UniBase.Constants;
+  UniBase.Constants,
+  UniBase.Exceptions;
 
 type
   // ============================================================================
@@ -368,7 +369,7 @@ function CircuitBreakers: TCircuitBreakerRegistry;
 begin
   // BUG-111 FIX: 确保锁已初始化后再使用
   if not Assigned(_RegistryLock) then
-    raise Exception.Create('CircuitBreakers registry lock not initialized');
+    raise ECircuitBreakerNotInitializedException.Create('CircuitBreakers registry lock not initialized');
     
   if not Assigned(_CircuitBreakerRegistry) then
   begin
@@ -604,7 +605,7 @@ end;
 procedure TCircuitBreaker.Execute(Proc: TProc);
 begin
   if not AllowRequest then
-    raise Exception.CreateFmt('Circuit breaker "%s" is open', [FName]);
+    raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
   
   try
     Proc;
@@ -618,7 +619,7 @@ end;
 function TCircuitBreaker.Execute<T>(Func: TFunc<T>): T;
 begin
   if not AllowRequest then
-    raise Exception.CreateFmt('Circuit breaker "%s" is open', [FName]);
+    raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
   
   try
     Result := Func;

@@ -3,7 +3,8 @@ unit UniBase.Random;
 interface
 
 uses
-  System.SysUtils, System.Classes, Winapi.Windows, System.Hash;
+  System.SysUtils, System.Classes, Winapi.Windows, System.Hash,
+  UniBase.Exceptions;
 
 type
   /// <summary>
@@ -112,11 +113,11 @@ begin
   
   // Use Windows CryptoAPI for cryptographically secure random bytes
   if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('Failed to acquire crypto context');
-    
+    raise ERandomException.Create('Failed to acquire crypto context');
+
   try
     if not CryptGenRandom(hProv, ALength, @Result[0]) then
-      raise Exception.Create('Failed to generate secure random bytes');
+      raise ERandomException.Create('Failed to generate secure random bytes');
   finally
     CryptReleaseContext(hProv, 0);
   end;

@@ -20,7 +20,7 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.JSON,
   System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading,
-  System.ZLib, System.Math;
+  System.ZLib, System.Math, UniBase.Exceptions;
 
 type
   /// <summary>同步状态</summary>
@@ -2260,7 +2260,7 @@ begin
   FLock.Enter;
   try
     if FSyncInstances.ContainsKey(ATenantId) then
-      raise Exception.CreateFmt('Tenant "%s" already registered', [ATenantId]);
+      raise EInvalidOperationException.CreateFmt('Tenant "%s" already registered', [ATenantId]);
       
     Result := TCloudConfigSync.Create(AConfig, ALocalStorePath);
     FSyncInstances.Add(ATenantId, Result);
@@ -2315,7 +2315,7 @@ begin
     if FSyncInstances.ContainsKey(ATenantId) then
       FDefaultTenantId := ATenantId
     else
-      raise Exception.CreateFmt('Tenant "%s" not found', [ATenantId]);
+      raise EConfigNotFoundException.CreateFmt('Tenant "%s" not found', [ATenantId]);
   finally
     FLock.Leave;
   end;

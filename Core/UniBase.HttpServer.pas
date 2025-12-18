@@ -49,6 +49,7 @@ uses
   System.Rtti,
   System.JSON,
   System.NetEncoding,
+  UniBase.Exceptions,
   System.RegularExpressions,
   System.SyncObjs,
   IdHTTPServer,
@@ -1323,7 +1324,7 @@ begin
   FLock.Enter;
   try
     if FActive then
-      raise Exception.Create('Server is already running');
+      raise EServerAlreadyRunningException.Create('Server is already running');
     
     FPort := APort;
     FIdServer.DefaultPort := APort;

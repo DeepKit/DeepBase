@@ -23,7 +23,8 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(cmd /c \"call compile_test.bat && type compile_output.txt\")"
     ]
   }
 }

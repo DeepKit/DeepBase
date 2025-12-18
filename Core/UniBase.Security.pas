@@ -35,7 +35,8 @@ uses
   System.Classes,
   System.Generics.Collections,
   FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Exceptions;
 
 type
   /// <summary>
@@ -392,7 +393,7 @@ end;
 {$ELSE}
 begin
   // Unsupported platform - raise error instead of silent failure
-  raise Exception.Create('Encryption not supported on this platform');
+  raise EEncryptionException.Create('Encryption not supported on this platform');
 end;
 {$ENDIF}
 
@@ -424,23 +425,23 @@ begin
   Result := '';
   
   if Length(AData) < UBS2_HEADER_SIZE + UBS2_TAG_SIZE then
-    raise Exception.Create('Invalid encrypted data: too short');
+    raise EDecryptionException.Create('Invalid encrypted data: too short');
   
   // Verify magic header
   for I := 0 to 3 do
     if AData[I] <> UBS2_MAGIC[I] then
-      raise Exception.Create('Invalid encrypted data: bad header (expected UBS2)');
+      raise EDecryptionException.Create('Invalid encrypted data: bad header (expected UBS2)');
   
   Offset := 4;
   
   // Check version
   if AData[Offset] <> UBS2_VERSION then
-    raise Exception.CreateFmt('Unsupported UBS2 version: %d', [AData[Offset]]);
+    raise EDecryptionException.CreateFmt('Unsupported UBS2 version: %d', [AData[Offset]]);
   Inc(Offset);
   
   // Check KDF type
   if AData[Offset] <> UBS2_KDF_PBKDF2_SHA256 then
-    raise Exception.CreateFmt('Unsupported KDF type: %d', [AData[Offset]]);
+    raise EDecryptionException.CreateFmt('Unsupported KDF type: %d', [AData[Offset]]);
   Inc(Offset);
   
   // Read iterations (little-endian)
@@ -463,7 +464,7 @@ begin
   // Extract ciphertext
   CiphertextLen := Length(AData) - Offset - UBS2_TAG_SIZE;
   if CiphertextLen < 0 then
-    raise Exception.Create('Invalid encrypted data: corrupted');
+    raise EDecryptionException.Create('Invalid encrypted data: corrupted');
   SetLength(Ciphertext, CiphertextLen);
   if CiphertextLen > 0 then
     Move(AData[Offset], Ciphertext[0], CiphertextLen);
@@ -487,7 +488,7 @@ begin
 end;
 {$ELSE}
 begin
-  raise Exception.Create('Decryption not supported on this platform');
+  raise EDecryptionException.Create('Decryption not supported on this platform');
 end;
 {$ENDIF}
 

@@ -56,7 +56,8 @@ uses
   System.Threading,
   System.DateUtils,
   System.Math,
-  System.RegularExpressions;
+  System.RegularExpressions,
+  UniBase.Exceptions;
 
 type
   // ============================================================================
@@ -954,7 +955,7 @@ begin
   FLock.Enter;
   try
     if FTasks.ContainsKey(TaskId) then
-      raise Exception.CreateFmt('Task "%s" already exists', [TaskId]);
+      raise EInvalidOperationException.CreateFmt('Task "%s" already exists', [TaskId]);
     
     Result := TScheduledTask.Create(Self, TaskId);
     Result.FProc := Proc;

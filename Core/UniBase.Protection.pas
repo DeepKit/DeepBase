@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Hash, System.NetEncoding,
   System.IOUtils, System.AnsiStrings, System.DateUtils, System.Math,
-  UniBase.Logging;
+  UniBase.Logging, UniBase.Exceptions;
 
 const
   // Windows Crypto API 常量
@@ -113,12 +113,12 @@ begin
   if CryptAcquireContext(hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
   try
     if not CryptGenRandom(hProv, 16, @Result[0]) then
-      raise Exception.Create('生成随机IV失败');
+      raise ERandomException.Create('Failed to generate random IV');
   finally
     CryptReleaseContext(hProv, 0);
   end
   else
-    raise Exception.Create('获取加密上下文失败');
+    raise EEncryptionException.Create('Failed to acquire crypto context');
 end;
 
 class function TBasicProtection.PadData(const AData: TBytes; ABlockSize: Integer): TBytes;
@@ -153,7 +153,7 @@ begin
   for I := Length(AData) - PadLength to High(AData) do
   begin
     if AData[I] <> PadLength then
-      raise Exception.Create('无效的数据填充');
+      raise EDecryptionException.Create('Invalid data padding');
   end;
 
   SetLength(Result, Length(AData) - PadLength);
@@ -181,24 +181,24 @@ begin
   IV := GenerateRandomIV;
 
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('获取AES加密上下文失败');
+    raise EEncryptionException.Create('Failed to acquire AES encryption context');
 
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise Exception.Create('创建哈希对象失败');
+      raise EHashException.Create('Failed to create hash object');
     try
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
-        raise Exception.Create('哈希密钥数据失败');
+        raise EHashException.Create('Failed to hash key data');
 
       if not CryptDeriveKey(hProv, CALG_AES_256, hHash, CRYPT_EXPORTABLE, hKey) then
-        raise Exception.Create('派生AES密钥失败');
+        raise EEncryptionException.Create('Failed to derive AES key');
       try
         var Mode: DWORD := CRYPT_MODE_CBC;
         if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
-          raise Exception.Create('设置CBC模式失败');
+          raise EEncryptionException.Create('Failed to set CBC mode');
 
         if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
-          raise Exception.Create('设置IV失败');
+          raise EEncryptionException.Create('Failed to set IV');
 
         PaddedData := PadData(DataBytes, 16);
         DataLen := Length(PaddedData);
@@ -207,7 +207,7 @@ begin
         Move(PaddedData[0], EncryptedData[0], DataLen);
 
         if not CryptEncrypt(hKey, 0, True, 0, @EncryptedData[0], DataLen, Length(EncryptedData)) then
-          raise Exception.Create('AES加密失败');
+          raise EEncryptionException.Create('AES encryption failed');
 
         SetLength(EncryptedData, DataLen);
         Result := BytesToHex(IV) + '|' + BytesToHex(EncryptedData);
@@ -238,7 +238,7 @@ begin
 
   Parts := AEncryptedData.Split(['|']);
   if Length(Parts) <> 2 then
-    raise Exception.Create('加密数据格式错误');
+    raise EDecryptionException.Create('Invalid encrypted data format');
 
   IV := HexToBytes(Parts[0]);
   EncryptedBytes := HexToBytes(Parts[1]);
@@ -246,29 +246,29 @@ begin
   KeyBytes := TEncoding.UTF8.GetBytes(APassword + GetDynamicKey);
 
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('获取AES解密上下文失败');
+    raise EDecryptionException.Create('Failed to acquire AES decryption context');
 
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise Exception.Create('创建哈希对象失败');
+      raise EHashException.Create('Failed to create hash object');
     try
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
-        raise Exception.Create('哈希密钥数据失败');
+        raise EHashException.Create('Failed to hash key data');
 
       if not CryptDeriveKey(hProv, CALG_AES_256, hHash, CRYPT_EXPORTABLE, hKey) then
-        raise Exception.Create('派生AES密钥失败');
+        raise EEncryptionException.Create('Failed to derive AES key');
       try
         var Mode: DWORD := CRYPT_MODE_CBC;
         if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
-          raise Exception.Create('设置CBC模式失败');
+          raise EEncryptionException.Create('Failed to set CBC mode');
 
         if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
-          raise Exception.Create('设置IV失败');
+          raise EEncryptionException.Create('Failed to set IV');
 
         DecryptedData := Copy(EncryptedBytes);
         DataLen := Length(DecryptedData);
         if not CryptDecrypt(hKey, 0, True, 0, @DecryptedData[0], DataLen) then
-          raise Exception.Create('AES解密失败');
+          raise EDecryptionException.Create('AES decryption failed');
 
         SetLength(DecryptedData, DataLen);
         DecryptedData := UnpadData(DecryptedData);
@@ -303,24 +303,24 @@ begin
   IV := GenerateRandomIV;
 
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('获取AES加密上下文失败');
+    raise EEncryptionException.Create('Failed to acquire AES encryption context');
 
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise Exception.Create('创建哈希对象失败');
+      raise EHashException.Create('Failed to create hash object');
     try
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
-        raise Exception.Create('哈希密钥数据失败');
+        raise EHashException.Create('Failed to hash key data');
 
       if not CryptDeriveKey(hProv, CALG_AES_256, hHash, CRYPT_EXPORTABLE, hKey) then
-        raise Exception.Create('派生AES密钥失败');
+        raise EEncryptionException.Create('Failed to derive AES key');
       try
         var Mode: DWORD := CRYPT_MODE_CBC;
         if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
-          raise Exception.Create('设置CBC模式失败');
+          raise EEncryptionException.Create('Failed to set CBC mode');
 
         if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
-          raise Exception.Create('设置IV失败');
+          raise EEncryptionException.Create('Failed to set IV');
 
         PaddedData := PadData(AData, 16);
         DataLen := Length(PaddedData);
@@ -329,7 +329,7 @@ begin
         Move(PaddedData[0], EncryptedData[0], DataLen);
 
         if not CryptEncrypt(hKey, 0, True, 0, @EncryptedData[0], DataLen, Length(EncryptedData)) then
-          raise Exception.Create('AES加密失败');
+          raise EEncryptionException.Create('AES encryption failed');
 
         SetLength(EncryptedData, DataLen);
 
@@ -368,27 +368,27 @@ begin
   KeyBytes := TEncoding.UTF8.GetBytes(APassword);
 
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('Failed to acquire AES decryption context');
+    raise EDecryptionException.Create('Failed to acquire AES decryption context');
 
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise Exception.Create('Failed to create hash object');
+      raise EHashException.Create('Failed to create hash object');
     try
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
-        raise Exception.Create('Failed to hash key data');
+        raise EHashException.Create('Failed to hash key data');
       if not CryptDeriveKey(hProv, CALG_AES_256, hHash, CRYPT_EXPORTABLE, hKey) then
-        raise Exception.Create('Failed to derive AES key');
+        raise EEncryptionException.Create('Failed to derive AES key');
       try
         Mode := CRYPT_MODE_CBC;
         if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
-          raise Exception.Create('Failed to set CBC mode');
+          raise EEncryptionException.Create('Failed to set CBC mode');
         if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
-          raise Exception.Create('Failed to set IV');
+          raise EEncryptionException.Create('Failed to set IV');
 
         DecryptedData := Copy(EncryptedBytes);
         DataLen := Length(DecryptedData);
         if not CryptDecrypt(hKey, 0, True, 0, @DecryptedData[0], DataLen) then
-          raise Exception.Create('AES decryption failed');
+          raise EDecryptionException.Create('AES decryption failed');
 
         SetLength(DecryptedData, DataLen);
         Result := UnpadData(DecryptedData);
@@ -409,15 +409,15 @@ var
   hHash: HCRYPTHASH;
 begin
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('获取SHA256哈希上下文失败');
+    raise EHashException.Create('Failed to acquire SHA256 hash context');
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise Exception.Create('创建SHA256哈希对象失败');
+      raise EHashException.Create('Failed to create SHA256 hash object');
     try
       if not CryptHashData(hHash, @AKey[0], Length(AKey), 0) then
-        raise Exception.Create('哈希密钥数据失败');
+        raise EHashException.Create('Failed to hash key data');
       if not CryptHashData(hHash, @AData[0], Length(AData), 0) then
-        raise Exception.Create('哈希数据失败');
+        raise EHashException.Create('Failed to hash data');
       Result := GetHashBytes(hHash);
     finally
       CryptDestroyHash(hHash);
@@ -451,7 +451,7 @@ var
   FileStream: TFileStream;
 begin
   if not TFile.Exists(AFileName) then
-    raise Exception.Create('文件不存在: ' + AFileName);
+    raise EFileNotFoundExceptionEx.Create('File not found: ' + AFileName);
 
   FileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -495,7 +495,7 @@ begin
   Len := HashLen;
   SetLength(Result, HashLen);
   if not CryptGetHashParam(hHash, HP_HASHVAL, @Result[0], Len, 0) then
-    raise Exception.Create('Failed to get hash value');
+    raise EHashException.Create('Failed to get hash value');
 end;
 
 class function TBasicProtection.CalculateHMAC(const AData: string; const APassword: string): string;

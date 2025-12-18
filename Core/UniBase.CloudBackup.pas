@@ -21,7 +21,7 @@ uses
   System.SysUtils, System.Classes, System.Types, System.Generics.Collections,
   System.JSON, System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading, System.IOUtils,
-  System.Zip, System.ZLib;
+  System.Zip, System.ZLib, UniBase.Exceptions;
 
 type
   /// <summary>备份状态</summary>
@@ -1674,7 +1674,7 @@ begin
       end;
       
       if FCancelled then
-        raise Exception.Create('备份已取消');
+        raise EBackupCancelledException.Create('Backup cancelled');
         
       FProgress.TotalFiles := LManifest.FileCount;
       FProgress.TotalBytes := LManifest.TotalSize;
@@ -1695,7 +1695,7 @@ begin
       if FCancelled then
       begin
         TFile.Delete(LTempPath);
-        raise Exception.Create('备份已取消');
+        raise EBackupCancelledException.Create('Backup cancelled');
       end;
       
       LArchivePath := GetBackupArchivePath(LBackupId);
@@ -1797,7 +1797,7 @@ begin
     LArchivePath := GetBackupArchivePath(ABackupId);
     
     if not TFile.Exists(LArchivePath) then
-      raise Exception.CreateFmt('备份文件不存在: %s', [LArchivePath]);
+      raise EBackupFileNotFoundException.CreateFmt('Backup file not found: %s', [LArchivePath]);
       
     // 加载清单
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
@@ -1830,7 +1830,7 @@ begin
       begin
         if LTempPath <> LArchivePath then
           TFile.Delete(LTempPath);
-        raise Exception.Create('恢复已取消');
+        raise EBackupCancelledException.Create('Restore cancelled');
       end;
       
       // 解压
@@ -1954,7 +1954,7 @@ end;
 procedure TCloudBackupManager.BackupFull(const ADescription: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('备份操作正在进行中');
+    raise EBackupInProgressException.Create('Backup operation in progress');
     
   FLock.Enter;
   try
@@ -1967,7 +1967,7 @@ end;
 procedure TCloudBackupManager.BackupIncremental(const ADescription: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('备份操作正在进行中');
+    raise EBackupInProgressException.Create('Backup operation in progress');
     
   // 如果没有之前的备份，执行全量备份
   if FVersions.Count = 0 then
@@ -1987,7 +1987,7 @@ end;
 procedure TCloudBackupManager.BackupDifferential(const ADescription: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('备份操作正在进行中');
+    raise EBackupInProgressException.Create('Backup operation in progress');
     
   if FVersions.Count = 0 then
   begin
@@ -2006,7 +2006,7 @@ end;
 procedure TCloudBackupManager.BackupFullAsync(const ADescription: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('备份操作正在进行中');
+    raise EBackupInProgressException.Create('Backup operation in progress');
     
   FBackupThread := TThread.CreateAnonymousThread(
     procedure
@@ -2025,7 +2025,7 @@ end;
 procedure TCloudBackupManager.BackupIncrementalAsync(const ADescription: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('备份操作正在进行中');
+    raise EBackupInProgressException.Create('Backup operation in progress');
     
   if FVersions.Count = 0 then
   begin
@@ -2051,7 +2051,7 @@ procedure TCloudBackupManager.Restore(const ABackupId: string;
   const ATargetPath: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('操作正在进行中');
+    raise EOperationInProgressException.Create('Operation in progress');
     
   FLock.Enter;
   try
@@ -2065,7 +2065,7 @@ procedure TCloudBackupManager.RestoreAsync(const ABackupId: string;
   const ATargetPath: string);
 begin
   if FStatus <> bsIdle then
-    raise Exception.Create('操作正在进行中');
+    raise EOperationInProgressException.Create('Operation in progress');
     
   FRestoreThread := TThread.CreateAnonymousThread(
     procedure
@@ -2084,7 +2084,7 @@ end;
 procedure TCloudBackupManager.RestoreLatest(const ATargetPath: string);
 begin
   if FVersions.Count = 0 then
-    raise Exception.Create('没有可用的备份');
+    raise EBackupFileNotFoundException.Create('No available backups');
     
   Restore(FVersions[FVersions.Count - 1].BackupId, ATargetPath);
 end;
@@ -2164,15 +2164,15 @@ var
   LArchivePath: string;
 begin
   if not Assigned(FCloudClient) then
-    raise Exception.Create('云服务未配置');
+    raise ECloudServiceNotConfiguredException.Create('Cloud service not configured');
     
   LVersion := GetVersion(ABackupId);
   if not Assigned(LVersion) then
-    raise Exception.CreateFmt('备份版本不存在: %s', [ABackupId]);
+    raise EBackupFileNotFoundException.CreateFmt('Backup version not found: %s', [ABackupId]);
     
   LArchivePath := GetBackupArchivePath(ABackupId);
   if not TFile.Exists(LArchivePath) then
-    raise Exception.Create('本地备份文件不存在');
+    raise EBackupFileNotFoundException.Create('Local backup file not found');
     
   FStatus := bsUploading;
   FProgress.Status := bsUploading;
@@ -2191,7 +2191,7 @@ begin
       SaveVersions;
     end
     else
-      raise Exception.Create('上传失败');
+      raise EBackupTransferException.Create('Upload failed');
   finally
     FStatus := bsIdle;
   end;
@@ -2203,7 +2203,7 @@ var
   LVersion: TBackupVersion;
 begin
   if not Assigned(FCloudClient) then
-    raise Exception.Create('云服务未配置');
+    raise ECloudServiceNotConfiguredException.Create('Cloud service not configured');
     
   LArchivePath := GetBackupArchivePath(ABackupId);
   
@@ -2236,7 +2236,7 @@ begin
       end;
     end
     else
-      raise Exception.Create('下载失败');
+      raise EBackupTransferException.Create('Download failed');
   finally
     FStatus := bsIdle;
   end;
@@ -2256,7 +2256,7 @@ end;
 function TCloudBackupManager.GetCloudVersions: TObjectList<TBackupVersion>;
 begin
   if not Assigned(FCloudClient) then
-    raise Exception.Create('云服务未配置');
+    raise ECloudServiceNotConfiguredException.Create('Cloud service not configured');
     
   Result := FCloudClient.ListBackups;
 end;

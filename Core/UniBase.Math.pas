@@ -17,7 +17,7 @@ interface
 
 uses
   System.SysUtils, System.Math, System.SyncObjs, System.Generics.Collections,
-  System.Generics.Defaults, Winapi.Windows;
+  System.Generics.Defaults, Winapi.Windows, UniBase.Exceptions;
 
 // 添加数值稳定性检查函数
 function IsFinite(const Value: Double): Boolean; inline;
@@ -2563,11 +2563,11 @@ begin
   
   // Use Windows CryptoAPI for secure random
   if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
-    raise Exception.Create('Failed to acquire crypto context');
+    raise ERandomException.Create('Failed to acquire crypto context');
     
   try
     if not CryptGenRandom(hProv, ALength, @Result[0]) then
-      raise Exception.Create('Failed to generate secure random bytes');
+      raise ERandomException.Create('Failed to generate secure random bytes');
   finally
     CryptReleaseContext(hProv, 0);
   end;
