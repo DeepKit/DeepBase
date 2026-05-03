@@ -738,14 +738,18 @@
   - 模块头部示例已改为 `Breaker.Execute(...)` 推荐用法，避免新代码继续采用 `AllowRequest → RecordSuccess/RecordFailure` 手工三段式调用。
 
 #### ARCH-033: 微信/QQ OAuth AppSecret 通过 GET URL 暴露
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (安全)
 - **问题**: `ExchangeCode` 和 `RefreshToken` 将 AppSecret 作为 URL 查询参数，会被记录在浏览器历史、代理日志、Referrer 中
 - **影响**: AppSecret 泄露风险
 - **任务**:
-  - [ ] 微信 API 限制：在文档中标注风险，建议使用服务端代理
-  - [ ] QQ：检查是否可改用 POST body 传输 client_secret
-  - [ ] 添加安全最佳实践文档
+  - [x] 微信 API 限制：在文档中标注风险，建议使用服务端代理
+  - [x] QQ：检查是否可改用 POST body 传输 client_secret
+  - [x] 添加安全最佳实践文档
+- **阶段进展**:
+  - `ThirdParty/Social/README.md`：新增 OAuth 凭据传输安全建议，明确微信 token 交换接口存在 URL 暴露风险，推荐服务端代理中转。
+  - `ThirdParty/Social/README.md`：补充 QQ 建议策略为 POST body 传输 `client_secret`，仅在兼容性要求下回退 GET，并要求日志脱敏。
+  - 代码核查结论：QQ OAuth token 交换路径可采用 POST body（兼容分支可保留 GET 回退）；微信官方接口限制仍需通过部署策略（后端代理）规避风险。
 
 #### ARCH-034: EncryptWithIV/DecryptWithIV 忽略 IV + OAuth Microsoft 映射错误
 - **状态**: ✅ 完成 (2026-05-03)

@@ -228,6 +228,9 @@ end;
 2. **CSRF 防护**: 使用随机 state 参数并验证
 3. **HTTPS**: 回调地址必须使用 HTTPS（本地开发除外）
 4. **Token 存储**: Access Token 应安全存储，不要明文保存
+5. **微信 Token 交换**: 微信 `oauth2/access_token` 与 `oauth2/refresh_token` 接口要求将 `secret` 放在 URL 查询参数。生产环境建议通过服务端代理中转（客户端仅传 `code`/`refresh_token`），避免 AppSecret 出现在网关日志、反向代理日志或监控链路中。
+6. **QQ Token 交换**: 优先使用 `application/x-www-form-urlencoded` POST body 传输 `client_secret`。仅在第三方端点兼容性要求下再回退 GET 查询参数，并确保日志脱敏。
+7. **最小暴露面**: AppSecret 仅允许存在于后端进程内存，不下发到前端、移动端或桌面端配置文件。
 
 ## 相关文档
 
