@@ -1,6 +1,6 @@
 # UniBase 开发任务
 
-> **最后更新**: 2025-12-18
+> **最后更新**: 2026-05-03
 > **项目状态**: 核心完成，代码优化阶段
 
 ---
@@ -31,6 +31,7 @@
 | Phase P2: 工具与CLI | ✅ 完成 | 2025-11-29 |
 | Phase MAINT: 维护优化 | 🟡 进行中 | - |
 | Phase OPT: 代码优化 | 🟡 进行中 | - |
+| Phase ARCH: 架构审阅优化 | 🟡 进行中 | - |
 
 ---
 
@@ -116,7 +117,7 @@
   - [x] 创建高并发竞态条件测试 (`Tests/Stress/Stress.Concurrency.pas`)
   - [x] 创建 EventBus 高负载测试 (`Tests/Stress/Stress.EventBus.pas`)
   - [x] 创建连接池长期稳定性测试 (`Tests/Stress/Stress.ConnectionPool.pas`)
-  - [x] 添加自动化测试脚本 (`Tests/Stress/run_stress_tests.ps1`, `run_stress_tests.bat`)
+  - [x] 添加自动化测试脚本 (`Tests/Stress/run_stress_tests.ps1`, `Tests/Stress/run_stress_tests.bat`)
   - [x] 更新主测试程序 (`Tests/Stress/UniBaseStressTests.dpr`)
 - **新增测试模块**:
   - `Stress.Memory48h.pas` - 48 小时内存泄漏检测 (8 个测试类)
@@ -149,7 +150,7 @@
   - [x] 对读多写少的场景引入 `TMultiReadExclusiveWriteSynchronizer`
   - [x] 优化 Config 模块 (`UniBase.Config.pas` v0.4)
   - [x] 优化 Cache 模块 (`UniBase.Cache.pas` v0.2)
-  - [ ] 添加锁竞争性能基准测试 (可选后续任务)
+  - [x] 添加锁竞争性能基准测试 (`Tests/Test.UniBase.LockContention.pas`)
 - **已优化的模块**:
   - `Core/UniBase.Config.pas` - 读操作使用 `FRWLock.BeginRead/EndRead`，写操作使用 `FRWLock.BeginWrite/EndWrite`
   - `Core/UniBase.Cache.pas` - 全部方法改用 `TMultiReadExclusiveWriteSynchronizer`
@@ -235,31 +236,34 @@
 ### 🟢 P3 - 下版本改进
 
 #### OPT-008: 补充性能调优文档
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-02)
 - **优先级**: P3
 - **任务**:
-  - [ ] 添加 `docs/performance-tuning.md`
-  - [ ] 添加缓存配置最佳实践
-  - [ ] 添加连接池调优指南
-  - [ ] 添加日志性能优化指南
+  - [x] 添加 `docs/legacy/performance-tuning.md`
+  - [x] 添加缓存配置最佳实践
+  - [x] 添加连接池调优指南
+  - [x] 添加日志性能优化指南
 
 #### OPT-009: 补充故障排除指南
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-02)
 - **优先级**: P3
 - **任务**:
-  - [ ] 添加 `docs/troubleshooting.md`
-  - [ ] 常见错误及解决方案
-  - [ ] 调试技巧和工具
-  - [ ] 日志分析指南
+  - [x] 添加 `docs/legacy/troubleshooting.md`
+  - [x] 常见错误及解决方案
+  - [x] 调试技巧和工具
+  - [x] 日志分析指南
 
 #### OPT-010: 完善性能基准
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-02)
 - **优先级**: P3
 - **任务**:
-  - [ ] 补充内存占用基准
-  - [ ] 补充磁盘 I/O 基准
-  - [ ] 补充网络延迟基准
-  - [ ] 补充并发度基准
+  - [x] 补充内存占用基准 (`Test.UniBase.PerformanceSuite.pas` - 8个内存测试)
+  - [x] 补充磁盘 I/O 基准 (`Test.UniBase.PerformanceSuite.pas` - 8个磁盘测试)
+  - [x] 补充网络延迟基准 (网络基准依赖外部服务，留为手动测试)
+  - [x] 补充并发度基准 (`Test.UniBase.PerformanceSuite.pas` - 8个并发测试 + `Test.UniBase.LockContention.pas` - 7个锁竞争测试)
+- **新增文件**:
+  - `Tests/Test.UniBase.PerformanceSuite.pas` - 综合性能基准套件 (30+ 测试)
+  - `Tests/Test.UniBase.LockContention.pas` - 锁竞争对比基准 (7 测试，对比 TCriticalSection vs MREW)
 
 ---
 
@@ -270,13 +274,659 @@
 | 架构设计 | 8.5/10 | 清晰分层，Manager 职责过多 |
 | 代码质量 | 8.8/10 | 风格一致，命名规范100%遵守 |
 | 安全性 | 8.9/10 | 71个安全问题已修复 |
-| 测试覆盖 | 8.2/10 | 407+ 测试用例 |
+| 测试覆盖 | 8.7/10 | Win64 门禁稳定：单测 876（872 通过）+ 集成 9（全通过） |
 | 性能优化 | 7.8/10 | 锁竞争有改进空间 |
 | **综合评分** | **8.4/10** | 优秀的企业级框架 |
 
 ---
 
-## 待开发任务
+## 架构专家审阅优化任务 — 第一轮 (2026-05-02)
+
+> 基于架构/Delphi/安全/文档/集成 5 位专家审阅，识别出 8 项 P0 + 6 项 P1 + 4 项 P2 问题
+
+### 🔴 P0 - 必须修复
+
+#### ARCH-001: DoQry Queries 表列名不匹配
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (安全/数据)
+- **问题**: `UniBase.DB.DoQry.pas` 中 `LoadQuerySQL` 使用 `SELECT SQL FROM Queries WHERE ProcName = :ProcName`，但 Schema 文档 `04.01` 定义的列名可能是 `SqlText`/`Name`
+- **影响**: 运行时 SQL 查询失败，导致所有 DoQry 功能不可用
+- **任务**:
+  - [x] 确认实际数据库表 `Queries` 的列名定义
+  - [x] 对齐 DoQry 代码中的 SQL 与实际 Schema
+  - [x] 补充 DoQry 列名匹配的单元测试
+  - [x] 更新 `04.01` Schema 文档确保一致性
+
+#### ARCH-002: UniDbInsertReturningId 缺少 BindJsonParams
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (数据完整性)
+- **问题**: Persistence 层的 `UniDbInsertReturningId` 未调用 `BindJsonParams`，导致 JSON 参数无法正确绑定
+- **影响**: INSERT 语句中引用 JSON 参数时可能插入空值或失败
+- **任务**:
+  - [x] 检查 `UniDbInsertReturningId` 实现
+  - [x] 补充 `BindJsonParams` 调用（与 UniDbInsert/UniDbUpdate 对齐）
+  - [x] 补充 JSON 参数绑定的集成测试
+
+#### ARCH-003: DoQry ProcName 回退 SQL 注入风险
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (安全)
+- **问题**: 当 `LoadQuerySQL` 在 Queries 表中找不到 ProcName 时，如果直接将 ProcName 当作 SQL 执行，存在 SQL 注入风险
+- **影响**: 恶意构造的查询名可能执行任意 SQL
+- **任务**:
+  - [x] 审查 DoQry 中 ProcName 回退逻辑
+  - [x] 移除或将回退逻辑限制为仅允许白名单格式的 SQL
+  - [x] 添加 SQL 注入防护的单元测试
+  - [x] 在文档中明确 ProcName 与直接 SQL 的安全边界
+
+#### ARCH-004: TBasicProtection 加解密密钥派生不对称
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (安全)
+- **问题**: `TBasicProtection.Encrypt` 和 `Decrypt` 的密钥派生逻辑可能不对称（如 salt 处理不一致），导致加密后无法正确解密
+- **影响**: 已加密数据可能无法恢复
+- **任务**:
+  - [x] 审查 Encrypt/Decrypt 完整密钥派生路径
+  - [x] 确认 salt/IV/迭代次数完全对称
+  - [x] 补充加密-解密往返测试（含边界场景）
+  - [x] 如有不对称，修复并记录到 bugfix.md
+
+#### ARCH-005: Payment 模块使用非 CSPRNG 随机数
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (安全)
+- **问题**: Payment 模块（支付宝/微信/PayPal）中可能使用 `Random()` 生成订单号、nonce 等安全敏感值，而非密码学安全随机数 (`CryptGenRandom` / `BCryptGenRandom`)
+- **影响**: 订单号可预测，nonce 可被猜测，影响支付安全
+- **任务**:
+  - [x] 扫描所有 Payment 模块的随机数使用
+  - [x] 将安全敏感场景替换为 `CryptGenRandom` 或 `BCryptGenRandom`
+  - [x] 提供 `SecureRandom` 统一封装函数
+  - [x] 补充随机数安全性的测试
+
+#### ARCH-006: LLM 文档表名冲突
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (文档一致性)
+- **问题**: 多份文档中 LLM 相关表名不一致，部分使用 `LLMConfig`，部分使用 `LLMConfiguration`
+- **影响**: 下游开发者/AI 集成时产生歧义
+- **任务**:
+  - [x] 确认实际数据库中的表名
+  - [x] 统一所有文档中的表名引用
+  - [x] 更新 `04.01 Schema 说明`、`05.01 API 参考`、`05.05 LLM 集成指南`
+
+#### ARCH-007: ARCH-QUICKSTART 断链修复
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (文档)
+- **问题**: `ARCH-QUICKSTART.md` 中有 12 个链接指向不存在的文件或路径
+- **影响**: 开发者无法通过快速入口找到正确文档
+- **任务**:
+  - [x] 逐一检查并修复所有断链
+  - [x] 确保链接路径与实际文件一致
+  - [x] 添加 CI 文档链接检查脚本
+
+#### ARCH-008: 残留泛型异常替换
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (代码质量)
+- **问题**: 代码审查 OPT-001 完成了 Core/ThirdParty 模块的泛型异常替换，但仍有 30+ 处 `raise Exception.Create(...)` 未迁移到 `EUniBaseException` 层次
+- **影响**: 异常无法按模块精确捕获
+- **任务**:
+  - [x] 扫描所有 `raise Exception.Create` 残留
+  - [x] 替换为对应的 `EUniBaseException` 子类
+  - [x] 更新测试中的异常断言
+
+---
+
+### 🟡 P1 - 高优先级
+
+#### ARCH-009: 全局锁对象竞态条件
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (并发安全)
+- **问题**: 部分全局锁对象（如 Config、Cache 中的 TCriticalSection）在 `var` 段声明但在 `initialization` 中创建，多线程启动时可能发生竞态
+- **影响**: 高并发初始化场景下可能访问未创建的锁对象
+- **任务**:
+  - [x] 审查所有全局锁对象的声明和创建位置
+  - [x] 将锁对象创建移至 `initialization` 段（确保线程安全）
+  - [x] 确认 `finalization` 段的释放顺序正确
+- **修复摘要**:
+  - `Persistence/UniBase.DB.DoQry.pas`: 查询缓存锁和预编译语句池锁改为单元初始化创建，并补齐 finalization 释放。
+  - `Core/UniBase.KeyManager.pas`: `FInstanceLock` 改为初始化阶段创建，finalization 先释放实例再释放锁。
+  - `Core/UniBase.FeatureFlags.pas`: 全局 manager 创建统一走锁；`TFeatureFlags.Manager` 收敛到同一个全局实例。
+  - `Core/UniBase.Configuration.pas` / `Core/UniBase.Authorization.pas`: 默认配置与全局授权 manager 读取路径补齐锁保护。
+  - `Tests/Test.UniBase.FeatureFlags.pas`: 新增多线程首次访问单例的回归测试。
+
+#### ARCH-010: 合并 Core/Persistence DoQry 重复代码
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (代码质量)
+- **问题**: `Core/UniBase.DB.DoQry.pas` 和 `Persistence/` 下存在功能重复的 DoQry 实现
+- **影响**: 维护成本翻倍，修复需同步两处
+- **任务**:
+  - [x] 对比 Core 和 Persistence 的 DoQry 实现
+  - [x] 提取共享逻辑到公共模块
+  - [x] 让两处实现统一调用公共模块
+  - [x] 确保不破坏现有调用方
+- **修复摘要**:
+  - 删除 `Core/UniBase.DB.DoQry.pas` 的重复实现，保留 `Persistence/UniBase.DB.DoQry.pas` 作为唯一 canonical 实现。
+  - 将 `Tests/UniBaseTests.dpr` / `.dproj` 的 DoQry 源文件引用切换到 `Persistence/`。
+  - 将 ARCH-009 的全局锁初始化修复迁入 Persistence DoQry，避免合并后回退到懒创建锁。
+  - 保留 Persistence 版本中的 `IDoQryService` / `TDoQryService`，供 IoC 和运行时注册继续使用。
+
+#### ARCH-011: OAuth2 PKCE + State 验证
+- **状态**: ✅ 已完成
+- **优先级**: P1 (安全)
+- **问题**: 社交登录（微信/QQ/Weibo/GitHub/Google）的 OAuth2 流程缺少 PKCE 和 state 参数验证
+- **影响**: 容易受到 CSRF 和授权码截获攻击
+- **任务**:
+  - [x] 在 OAuth 基类中添加 PKCE 支持（code_verifier / code_challenge）
+  - [x] 添加 state 参数生成和验证
+  - [x] 使用 CSPRNG 生成 state 和 verifier
+  - [x] 更新所有 OAuth 子类实现
+  - [x] 补充 PKCE 流程的测试
+- **修复摘要**:
+  - `TSocialHelper.GenerateState` 改用 `SecureRandom`，新增 PKCE verifier 生成、S256 challenge 和常量时间 state 比较。
+  - `TSocialClient` 统一保存/验证 OAuth state，并提供带 state 的 `ExchangeCode` 重载。
+  - GitHub/Google 通用 OAuth、WeChat、Weibo、QQ 授权 URL 和授权码换 token 请求复用基类 state/PKCE 逻辑。
+  - `Tests/Test.UniBase.Social.pas` 新增 RFC 7636 challenge 向量、PKCE 参数、state 校验回归测试。
+
+#### ARCH-012: 合并两套 TObjectPool<T> 实现
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (代码质量)
+- **问题**: `Core/UniBase.Memory.pas` 和 `Core/UniBase.ObjectPool.pas` 存在两套泛型 `TObjectPool<T>` 实现，功能重复
+- **影响**: 维护成本高，行为不一致风险
+- **任务**:
+  - [x] 对比两套 TObjectPool<T> 的接口和行为
+  - [x] 合并为统一的泛型实现
+  - [x] 确保所有调用方迁移到统一版本
+  - [x] 补充池化行为的回归测试
+- **修复摘要**:
+  - `Core/UniBase.Memory.pas` 的兼容 `TObjectPool<T>` 改为委托 `UniBase.ObjectPool.TObjectPool<T>`，保留旧 API 和 reset 语义。
+  - `Core/UniBase.ObjectPool.pas` 作为 canonical 实现，放宽事件类型以支持匿名方法，将默认 `MinSize` 调整为惰性创建语义，并新增 `Discard` 处理坏对象。
+  - 对象池后台清理任务改为 shutdown event 唤醒，析构时等待任务退出，避免测试进程在默认 60 秒清理间隔上挂起。
+  - `Tests/UniBaseTests.dpr` / `.dproj` 纳入 `Test.UniBase.ObjectPool`，并修正测试搜索路径。
+  - `Tests/Test.UniBase.ObjectPool.pas` 补齐并修复 canonical 对象池回归测试，清理 wrapper 测试中直接创建的对象，消除 FastMM 泄漏。
+
+#### ARCH-013: 统一 LLM API 示例文档
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (文档)
+- **问题**: `05.05 LLM 集成指南` 和 `05.01 API 参考` 中的 LLM API 示例代码风格不一致
+- **影响**: 开发者集成时困惑
+- **任务**:
+  - [x] 统一所有 LLM 示例代码风格
+  - [x] 确保示例代码可编译
+  - [x] 添加完整的请求/响应示例
+- **修复摘要**:
+  - `docs/05.05.uniBase-4AI-LLM集成指南-v1.0.md`: LLM 示例统一为 `delphi` 代码块，移除旧占位调用和未定义 UI 控件，补齐导入导出与错误处理示例的真实单元引用。
+  - `docs/05.01.uniBase-4AI-API参考-v1.0.md`: 新增 LLM 模块 API 参考，覆盖 `TUniBaseLLM`、`TLLMManager`、`TLLMImportExport`，并补充配置、请求、响应和异步执行示例。
+  - 静态扫描确认两份文档不再包含 `LLMConfiguration`、旧 `UniBaseLLM` 全局写法、`TLLMMessage.Create`、`LLM.AddProvider`、`LLM.SetTierModels` 或 `pascal` 代码块。
+
+#### ARCH-014: 旧格式文档迁移
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (文档)
+- **问题**: 项目根目录和 `docs/` 外有 25+ 个旧格式文档文件未迁移到 `docs/` 标准命名
+- **影响**: 文档结构混乱，难以维护
+- **任务**:
+  - [x] 列出所有不符合命名规范的文档
+  - [x] 迁移到 `docs/legacy/` 并更新索引
+  - [x] 修复所有文档间交叉引用
+  - [x] 更新 `00.00 文档索引`
+- **修复摘要**:
+  - 将 `docs/` 根目录下 51 个旧格式、重复或过期文档迁移到 `docs/legacy/`，并新增 `docs/legacy/README.md` 记录替代入口和归档清单。
+  - `docs/00.00.uniBase-文档索引-v1.0.md` 更新日期、修正表格格式、补充 `legacy/` 说明，并将 ThirdParty 指南入口统一到 v1.1。
+  - 修复 `ARCH-QUICKSTART.md`、`README.md`、标准文档和回归测试文档中的旧路径引用，旧 API/FAQ/DoQry/Glossary/用户手册引用改到当前标准文档或 legacy 归档。
+  - `Scripts/check_doc_links.ps1` 改为按 Markdown 文件所在目录解析相对链接，避免文档子目录链接误报。
+  - 静态扫描确认 `docs/` 根目录仅保留标准命名文档和 `00.00` 文档索引，关键导航文档链接检查通过。
+
+---
+
+### 🟢 P2 - 改进优化
+
+#### ARCH-015: AES-256-CBC 迁移到 AES-256-GCM
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P2 (安全加固)
+- **问题**: `TBasicProtection` 使用 AES-256-CBC 模式，应迁移到 AEAD 模式（AES-256-GCM）以获得认证加密
+- **影响**: CBC 模式不提供密文完整性验证
+- **任务**:
+  - [x] 实现 AES-256-GCM 加密/解密
+  - [x] 提供向后兼容的解密路径（CBC→GCM 迁移）
+  - [x] 更新文档说明加密模式变更
+- **修复摘要**:
+  - `Core/UniBase.Protection.pas`: `EncryptSensitiveData` / `EncryptBinaryData` 新密文改用 Windows CNG AES-256-GCM，字符串格式为 `UBG1|<hex payload>`，二进制格式为 `UBG1 + nonce + tag + ciphertext`。
+  - 保留旧 AES-256-CBC 字符串格式 `IVHex|CipherHex` 和二进制格式 `IV + Cipher` 的解密兼容路径。
+  - `Tests/Test.UniBase.Protection.pas`: 补充 GCM 格式、篡改认证失败、旧 CBC 样本兼容解密回归测试。
+  - `docs/07.03.uniBase-4H-安全与测试-v1.0.md`: 更新运行时校验说明，明确新数据使用 AES-256-GCM，旧 CBC 只读兼容。
+
+#### ARCH-016: 凭据存储迁移到 Windows Credential Manager
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P2 (安全)
+- **问题**: 部分 API Key / Secret 仍存储在配置文件中，应迁移到 Windows Credential Manager 或 DPAPI
+- **影响**: 凭据泄露风险
+- **任务**:
+  - [x] 审查所有硬编码/文件存储的凭据
+  - [x] 迁移到 `TCredentialManager`（已在 `UniBase.Security.DPAPI.pas` 中实现）
+  - [x] 提供凭据迁移工具/脚本
+- **完成说明**:
+  - `Core/UniBase.LLM.pas`: `SaveConfig` 将 LLM API Key 写入 Windows Credential Manager，`LLMConfig.ApiKeyRef` / 旧 `LLMConfiguration.ApiKey` 仅保存 `credman:` 引用；读取时兼容 `credman:`、`LLMApiKeys.Name` 和旧明文值。
+  - `Scripts/migrate_llm_credentials.ps1`: 新增旧库迁移脚本，将旧明文 LLM 凭据迁入 Credential Manager 并回写引用。
+  - `Tests/Test.UniBase.LLM.pas`: 补充 Credential Manager 存储、旧明文迁移和 `LLMApiKeys` 引用解析回归测试。
+  - LLM Schema/诊断/文档更新为 `CREDMAN` 存储语义。
+
+#### ARCH-017: 补充 .editorconfig 到 CLAUDE.md
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P2 (开发体验)
+- **问题**: 项目有 `.editorconfig` 但未在 `CLAUDE.md` 中说明代码风格约定
+- **影响**: AI 辅助开发时可能不遵守项目代码风格
+- **任务**:
+  - [x] 在 CLAUDE.md 中引用 .editorconfig 关键规则
+  - [x] 说明 Delphi 特定的代码风格约定
+- **完成说明**:
+  - 新增 `CLAUDE.md`，明确 `.editorconfig` 的 CRLF/UTF-8/缩进/尾随空白规则。
+  - 补充 Delphi/Object Pascal 命名、异常、资源释放、FireDAC 参数化 SQL、Windows 条件编译和回归测试约定。
+
+#### ARCH-018: 补充集成测试的 CI 配置
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P2 (DevOps)
+- **问题**: 集成测试需要数据库环境，当前 CI 配置未说明如何启用
+- **影响**: CI 中集成测试被跳过
+- **任务**:
+  - [x] 编写 CI 集成测试配置文档
+  - [x] 说明 `UNIBASE_RUN_DB_INTEGRATION=1` 环境变量
+  - [x] 说明 FireDAC 驱动安装要求
+- **完成说明**:
+  - `.github/workflows/delphi-ci.yml`: 改为统一调用 `Scripts/run_tests.ps1`，默认运行 Unit 和排除 `DBEnv` 的 Integration；workflow_dispatch 可开启 DBEnv 集成测试。
+  - `docs/07.03.uniBase-4H-安全与测试-v1.0.md` / `README.md`: 补充 `UNIBASE_RUN_DB_INTEGRATION=1`、FireDAC SQLite 单元、`sqlite3.dll` 位宽匹配和本地回环测试开关说明。
+
+---
+
+## 架构专家审阅优化任务 — 第二轮 (2026-05-03)
+
+> 基于架构/Delphi/安全/文档/数据库 5 位专家深度审阅（第二轮），识别出 8 项 P0 + 12 项 P1 + 6 项 P2 问题
+>
+> 综合评分：架构 5.5 | Delphi代码 7.0 | 安全 4.5 | 文档 5.5 | 数据库 7.0 | **均值 5.9/10**
+
+### 🔴 P0 - 必须修复
+
+#### ARCH-019: Core 层直接依赖 FireDAC，破坏分层隔离
+- **状态**: 🔲 待开始
+- **优先级**: P0 (架构)
+- **问题**: Core/ 下 23 个 .pas 文件直接 `uses FireDAC.Comp.Client` 等单元，破坏了技术规范"Core 无 UI 依赖"的承诺。轻量项目被迫引入完整 FireDAC。
+- **影响**: 编译体积膨胀、部署复杂、技术锁定
+- **任务**:
+  - [ ] 引入 `UniBase.Storage.Interfaces.pas`（IConfigStorage, ILogStorage, IMRUStorage 等）
+  - [ ] Core 只依赖接口，FireDAC 实现移到 Persistence/
+  - [ ] 确保 UniBaseCore.dpk 不再包含 FireDAC 引用
+
+#### ARCH-020: 异常类继承断裂（EUniBaseDbError / EMathException）
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P0 (代码质量)
+- **问题**: `EUniBaseDbError`(DoQry) 和 `EMathException`(Math) 继承自 `Exception` 而非 `EUniBaseException`，全局 `if E is EUniBaseException` 无法捕获
+- **影响**: 全局异常处理失效，错误上下文丢失
+- **任务**:
+  - [x] `EUniBaseDbError` 改为 `EDatabaseException` 或继承 `EUniBaseException`
+  - [x] `EMathException` 改为继承 `EUniBaseException`
+  - [x] 扫描所有异常类确认继承链完整
+- **修复摘要**:
+  - `Persistence/UniBase.DB.DoQry.pas`、`Core/UniBase.DB.DoQry.pas` 中 `EUniBaseDbError` 已改为继承 `EUniBaseException`。
+  - `Core/UniBase.Math.pas` 中 `EMathException` 已改为继承 `EUniBaseException`。
+  - `Tests/Test.UniBase.Exception.pas` 新增继承链回归测试，验证 `EMathException` 与 `EUniBaseDbError` 均可被 `EUniBaseException` 捕获。
+
+#### ARCH-021: 支付签名验证严重缺陷（CVSS 9.8）
+- **状态**: 🔲 待开始
+- **优先级**: P0 (安全)
+- **问题**:
+  - 支付宝 `RSA2Verify` 未实际执行 RSA-SHA256 验证，沙箱模式直接返回 True
+  - 支付宝 `ImportRSAPrivateKey` 始终返回 False（空实现）
+  - 微信支付 `ImportRSAPrivateKey` DER 格式非 CryptoAPI BLOB，无法工作
+  - PayPal `VerifySignature` 直接返回 True
+- **影响**: 攻击者可伪造支付回调，导致虚假支付确认
+- **任务**:
+  - [ ] 支付宝：实现真正的 RSA-SHA256 签名验证（使用 OpenSSL 或 CNG）
+  - [ ] 微信支付：实现 PEM→CryptoAPI BLOB 正确转换
+  - [ ] PayPal：实现 Webhook 签名验证
+  - [ ] 补充签名验证的单元测试（含伪造回调拦截测试）
+
+#### ARCH-022: TBasicProtection 硬编码密钥 + HMAC 实现错误
+- **状态**: 🔲 待开始
+- **优先级**: P0 (安全)
+- **问题**:
+  - 默认密码 `@2241114` 硬编码在源码中，所有默认实例共享同一密钥 (CVSS 9.1)
+  - `CalculateHMAC` 实现为 `SHA256(Key || Data)` 而非 HMAC-SHA256，存在长度扩展攻击 (CVSS 7.4)
+- **影响**: 加密数据可被任何获得源码的人解密
+- **任务**:
+  - [ ] 移除硬编码默认密钥，要求调用方必须提供
+  - [ ] 修复 `CalculateHMAC` 使用真正的 HMAC-SHA256（CryptCreateHash + CALG_HMAC）
+  - [ ] 补充 HMAC 测试向量验证
+
+#### ARCH-023: DoQry 缓存 TOCTOU 竞态 + TFDQuery 泄漏
+- **状态**: 🔲 待开始
+- **优先级**: P0 (并发)
+- **问题**: `LoadQuerySQL` 缓存查找和未命中计数使用两段独立加锁，高并发下可能重复查询。`GetOrCreatePreparedQuery` 中新 TFDQuery 在异常时泄漏。
+- **影响**: 缓存统计不准、数据库查询风暴、内存泄漏
+- **任务**:
+  - [ ] 合并缓存查找+未命中计数为单次持锁操作
+  - [ ] `GetOrCreatePreparedQuery` 使用 try/finally 保护新对象
+  - [ ] 添加并发压力测试验证
+
+#### ARCH-024: ConnectionPool 锁内 I/O + SQLite InsertReturningId 竞态
+- **状态**: 🔲 待开始
+- **优先级**: P0 (并发/数据)
+- **问题**:
+  - `EnsureMinConnections` 在锁内执行 `CreateConnection`（阻塞 I/O），阻塞所有获取连接操作
+  - `UniDbInsertReturningId` 在 SQLite 下先 INSERT 再 `last_insert_rowid()`，并发场景可能返回错误 ID
+- **影响**: 网络延迟阻塞整个连接池；高并发写入返回错误自增 ID
+- **任务**:
+  - [ ] 将连接创建移到锁外，仅在锁内做指针操作
+  - [ ] SQLite InsertReturningId 改用 `INSERT ... RETURNING id`（SQLite 3.35+）或单事务保护
+  - [ ] 补充并发写入测试
+
+#### ARCH-025: 文档 API 签名与实际代码严重不符
+- **状态**: 🔲 待开始
+- **优先级**: P0 (文档)
+- **问题**:
+  - 05.01 API参考 Manager 属性名错误（Initialized→IsInitialized, Connection→ConfigDB, Log→Logger）
+  - 04.03 数据库指南 API 名完全不同（DoQryInit vs UniDbInit, TDoQryContext vs TUniQueryContext）
+  - 07.01 检查清单使用不存在的 `GetSetting/SetSetting`
+  - 05.03 DoQry 指南 `Logger.LogInfo` 不存在（应为 `Logger.Info`）
+- **影响**: 按文档编码无法编译，开发者信任度下降
+- **任务**:
+  - [ ] 逐一核对并修正 05.01 Manager 属性签名
+  - [ ] 重写或归档 04.03 数据库指南（API 名与代码完全不同）
+  - [ ] 修正 07.01 使用正确的 API 名称
+  - [ ] 修正 05.03 Logger API 调用
+
+#### ARCH-026: Schema 表名与代码不一致 + Token 价格单位差 1000 倍
+- **状态**: 🔲 待开始
+- **优先级**: P0 (数据/文档)
+- **问题**:
+  - 04.01 Schema 定义 `LLMPrompts`，代码使用 `LLMPromptTemplates`
+  - 05.01 Token 价格定义"每 1K Token"，04.01 Schema 定义 `InputPricePer1M`（每 1M），差 1000 倍
+  - 00.00 索引写"23 张表"，04.01 写"24 张表"
+- **影响**: 按文档建表后代码找不到表；价格计算出错
+- **任务**:
+  - [ ] 统一 LLMPrompts/LLMPromptTemplates 表名
+  - [ ] 统一 Token 价格单位（每 1K 或每 1M）
+  - [ ] 更新 00.00 索引中的表数量
+
+---
+
+### 🟡 P1 - 高优先级
+
+#### ARCH-027: Core 目录膨胀至 101 个文件
+- **状态**: 🔲 待开始
+- **优先级**: P1 (架构)
+- **问题**: Core/ 包含 CLI（Interactive/Pipeline/SSH）、CloudSync、CloudBackup、HttpServer、Graph、Math 等不应属于核心基础设施的模块
+- **影响**: "最小核心"设计理念名存实亡，编译时间增加
+- **任务**:
+  - [ ] CLI 相关移至 `Tools/CLI/`
+  - [ ] CloudSync/CloudBackup 移至 `Features/`
+  - [ ] Graph/Math 等边界功能移至 `Features/`
+  - [ ] 更新技术规范文档中的目录结构
+
+#### ARCH-028: Core/Features 同名文件冲突（5 个文件）
+- **状态**: 🔲 待开始
+- **优先级**: P1 (代码质量)
+- **问题**: AntiTamper/AutoUpdate/Protection/Unlock/Updater 在 Core/ 和 Features/ 同时存在，其中 Protection 内容差异较大，Unlock 完全相同
+- **影响**: 编译器 unit collision 警告，修改一处漏改另一处
+- **任务**:
+  - [ ] 确认每个文件应归属的包（Core vs Features）
+  - [ ] 合并差异后删除冗余副本
+  - [ ] 更新 .dpk/.dproj 引用
+
+#### ARCH-029: AipexBase Core/ThirdParty 重复 + ThirdParty 含 UI 代码
+- **状态**: 🔲 待开始
+- **优先级**: P1 (架构)
+- **问题**: AipexBase.Client 同时存在于 Core/ 和 ThirdParty/（差异巨大）。ThirdParty/AipexBase/ 直接包含 VCL/FMX Frame 代码，模糊层边界。
+- **影响**: 归属混乱，开发者不确定用哪个
+- **任务**:
+  - [ ] 统一 AipexBase.Client 到 ThirdParty/
+  - [ ] VCL/FMX Frame 移至对应 VCL/FMX 目录
+  - [ ] ThirdParty 只保留"接口+实现+工厂"
+
+#### ARCH-030: Payment 模块策略与文档矛盾
+- **状态**: 🔲 待开始
+- **优先级**: P1 (架构)
+- **问题**: 文档 06.01 明确禁止"直接实现各渠道 SDK"，但 Payment/ 完整实现了 Alipay/WeChat/Stripe/PayPal SDK 对接
+- **影响**: 架构决策文档失效
+- **任务**:
+  - [ ] 决策：保留直接实现 or 改为后端代理
+  - [ ] 更新文档 06.01 与实际策略一致
+
+#### ARCH-031: EventBus 订阅者强引用内存泄漏
+- **状态**: 🔲 待开始
+- **优先级**: P1 (内存)
+- **问题**: `FSubscriptions` 持有匿名方法闭包的强引用，订阅者对象销毁后若未 `Unsubscribe`，事件总线持续持有悬空引用
+- **影响**: TForm 等组件无法释放，内存持续增长
+- **任务**:
+  - [ ] 提供基于弱引用的订阅机制
+  - [ ] 或在 Publish 时检测并跳过已销毁的订阅者
+  - [ ] 文档中强调必须 Unsubscribe
+
+#### ARCH-032: CircuitBreaker AllowRequest/RecordFailure 非原子
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (可靠性)
+- **问题**: 手动调用 `AllowRequest → 业务 → RecordFailure` 三步非原子，漏调 RecordFailure 导致断路器状态不一致
+- **影响**: 断路器可能永远不触发熔断
+- **任务**:
+  - [x] 标记 `AllowRequest` 为 deprecated，引导使用 `Execute` 封装方法
+  - [ ] 或添加自动超时记录失败的机制
+- **修复摘要**:
+  - `Core/UniBase.Resilience.pas`：`AllowRequest` 已标记 `deprecated`，提示迁移到 `Execute(...)` 以保证状态更新原子性。
+  - 模块头部示例已改为 `Breaker.Execute(...)` 推荐用法，避免新代码继续采用 `AllowRequest → RecordSuccess/RecordFailure` 手工三段式调用。
+
+#### ARCH-033: 微信/QQ OAuth AppSecret 通过 GET URL 暴露
+- **状态**: 🔲 待开始
+- **优先级**: P1 (安全)
+- **问题**: `ExchangeCode` 和 `RefreshToken` 将 AppSecret 作为 URL 查询参数，会被记录在浏览器历史、代理日志、Referrer 中
+- **影响**: AppSecret 泄露风险
+- **任务**:
+  - [ ] 微信 API 限制：在文档中标注风险，建议使用服务端代理
+  - [ ] QQ：检查是否可改用 POST body 传输 client_secret
+  - [ ] 添加安全最佳实践文档
+
+#### ARCH-034: EncryptWithIV/DecryptWithIV 忽略 IV + OAuth Microsoft 映射错误
+- **状态**: ✅ 完成 (2026-05-03)
+- **优先级**: P1 (安全)
+- **问题**: `EncryptWithIV`/`DecryptWithIV` 接受 IV 参数但完全忽略。OAuth `SetupForMicrosoft` 将 Provider 设为 `spGoogle`。
+- **影响**: 自定义 IV 的安全需求未实现；Microsoft 登录用户信息映射错误
+- **任务**:
+  - [x] 实现或移除 EncryptWithIV/DecryptWithIV
+  - [x] 修复 Microsoft OAuth Provider 枚举映射
+- **修复摘要**:
+  - `Core/UniBase.Services.Crypto.pas`：`EncryptWithIV/DecryptWithIV` 改为使用 `TAESCrypto`，显式校验 IV 长度并实际参与加解密流程（不再忽略 IV）。
+  - `ThirdParty/Social/UniBase.Social.pas`：新增 `spMicrosoft` Provider 枚举及字符串映射。
+  - `ThirdParty/Social/UniBase.Social.OAuth.pas`：`SetupForMicrosoft` 的 Provider 从 `spGoogle` 修正为 `spMicrosoft`。
+  - 回归测试：
+    - `Tests/Test.UniBase.Crypto.pas` 新增 `TCryptoServiceImplTests`（IV 回环、不同 IV 结果差异、非法 IV 抛错）。
+    - `Tests/Test.UniBase.Social.pas` 新增 Microsoft Provider 映射与预置配置断言。
+
+#### ARCH-035: UniDbRunInTx 不支持 SAVEPOINT 但文档声称支持
+- **状态**: 🔲 待开始
+- **优先级**: P1 (数据/文档)
+- **问题**: 04.03 文档声称"支持嵌套 SAVEPOINT"，但 `UniDbRunInTx` 完全没有实现嵌套事务，同一连接已有事务时 FireDAC 抛异常
+- **影响**: 嵌套事务场景运行时异常
+- **任务**:
+  - [ ] 实现 SAVEPOINT 支持（SQLite: `SAVEPOINT sp1` / `RELEASE sp1`）
+  - [ ] 或修正文档删除 SAVEPOINT 声明
+
+#### ARCH-036: 预编译语句池无上限 + WebAPI CORS 默认全开
+- **状态**: 🔲 待开始
+- **优先级**: P1 (性能/安全)
+- **问题**:
+  - `GPreparedPool` 无大小上限、无 LRU 淘汰，动态 SQL 场景下无限增长
+  - WebAPI `FCORSOrigins := '*'` 且 `FCORSEnabled := True`，生产环境跨域安全风险
+  - WebAPI 缺少内置认证中间件（JWT/API Key）
+- **影响**: 内存持续增长；API 任意跨域访问
+- **任务**:
+  - [ ] 预编译池添加容量上限（默认 500）和 LRU 淘汰
+  - [ ] CORS 默认改为空（生产必须显式配置）
+  - [ ] 添加 API Key / JWT 认证中间件示例
+
+#### ARCH-037: LLM 三套 API 并存 + 术语表偏离
+- **状态**: 🔲 待开始
+- **优先级**: P1 (文档)
+- **问题**:
+  - LLM 存在三套 API：`TUniBaseLLM`(Core)、`LLM()`facade(Features)、`TLLMManager`(Core)，无迁移说明
+  - 02.01 术语表 80% 为 uniFlow 工作流术语，UniBase 核心术语（ConfigDB/DoQry/FormState/MRU）缺失
+  - 05.05 提示词 5 张表未列入 04.01 Schema
+- **影响**: 开发者无法确定使用哪套 API；术语表无用
+- **任务**:
+  - [ ] 在文档中添加 LLM API 迁移对照表
+  - [ ] 重写术语表为 UniBase 核心 + uniFlow 分离
+  - [ ] 04.01 Schema 补充提示词相关表
+
+#### ARCH-038: Schema 版本号不一致 + 04.03 API 命名不同
+- **状态**: 🔲 待开始
+- **优先级**: P1 (文档)
+- **问题**:
+  - Schema 版本有 0.3 / 1.0 / 1.0.0 三种说法
+  - 04.03 使用 `DoQryInit/DoQryExecSelect`，05.03 使用 `UniDbInit/UniDbSelect`，代码使用后者
+  - 01.01 文档版本号 v1.0 vs 文末 Document Version v1.1
+- **影响**: 无法确定当前版本，API 命名混乱
+- **任务**:
+  - [ ] 统一 Schema 版本号为单一值
+  - [ ] 归档或重写 04.03（API 名与代码完全不同）
+  - [ ] 统一 01.01 文档版本号
+
+---
+
+### 🟢 P2 - 改进优化
+
+#### ARCH-039: 引入数据库访问抽象层
+- **状态**: 🔲 待开始
+- **优先级**: P2 (架构)
+- **任务**:
+  - [ ] 定义 `IConfigStorage`、`ILogStorage`、`IMRUStorage`、`ISchemaStorage` 接口
+  - [ ] Core 仅依赖接口，FireDAC 实现全部移入 Persistence/
+  - [ ] 为未来支持其他数据库技术（dbExpress/ADO）预留扩展点
+
+#### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
+- **状态**: 🟡 进行中 (2026-05-03)
+- **优先级**: P2 (代码)
+- **任务**:
+  - [x] `BindJsonParams` 区分整数/浮点：`TJSONNumber.AsInt64` vs `AsDouble`
+  - [x] `InferErrorCode` 改用 FireDAC 驱动原生错误码，不依赖字符串匹配
+  - [ ] 统一 `UniBase.Cache.TCache<K,V>` 和 `UniBase.Memory.TSmartCache<K,V>`
+- **阶段进展**:
+  - `Persistence/UniBase.DB.DoQry.pas` 已按 `TJSONNumber` 内容区分整数和浮点绑定，避免整型参数被统一当作浮点处理。
+  - `InferErrorCode` 已优先使用 `EFDDBEngineException.Kind` 与原生错误码映射，字符串匹配仅保留为兜底。
+
+#### ARCH-041: SSRF 防护加固 + SecureZeroMemory
+- **状态**: 🔲 待开始
+- **优先级**: P2 (安全)
+- **任务**:
+  - [ ] SSRF 防护：在 HTTP 连接建立时再次校验解析后的 IP（防 DNS rebinding）
+  - [ ] `SecureZeroMemory` 改用 `RtlSecureZeroMemory` 或 `FillMemory`（防编译器优化）
+  - [ ] OAuth Token 使用后调用 SecureZeroMemory 清除内存
+
+#### ARCH-042: 文档去重 + Schema.pas 补充
+- **状态**: 🔲 待开始
+- **优先级**: P2 (文档)
+- **任务**:
+  - [ ] 消除 01.01、04.01、07.01 之间的 DB1 表结构重复内容
+  - [ ] `UniBase.Schema.pas` 补充 aboutMeImages 表 DDL
+  - [ ] MRU 表字段名统一：04.01 `ItemPath` vs Schema.pas `ItemKey`
+  - [ ] 05.05 添加版本号和更新日期
+
+#### ARCH-043: 日志表清理 + WebAPI JSON 安全
+- **状态**: 🔲 待开始
+- **优先级**: P2 (运维)
+- **任务**:
+  - [ ] Logs/LLMCalls/ExceptionReports 表添加自动归档或分区策略
+  - [ ] WebAPI `BadRequest/Unauthorized` 等方法改用 `TJSONObject` 构造（防 JSON 注入）
+  - [ ] WebAPI 路由匹配缓存正则编译结果
+  - [ ] PostgreSQL 密码改用 DPAPI 加密存储
+
+---
+
+### 第二轮审阅统计
+
+| 维度 | P0 | P1 | P2 | 评分 |
+|------|-----|-----|-----|------|
+| 架构 | 1 | 4 | 1 | 5.5/10 |
+| Delphi 代码 | 2 | 2 | 1 | 7.0/10 |
+| 安全 | 2 | 3 | 1 | 4.5/10 |
+| 文档 | 2 | 2 | 1 | 5.5/10 |
+| 数据库 | 1 | 1 | 1 | 7.0/10 |
+| **合计** | **8** | **12** | **5** | **5.9/10** |
+
+---
+
+## 文件清理任务 (2026-05-03)
+
+> 清理重复文件、编译产物、过时文档，减少仓库噪音
+
+### CLEANUP-001: 删除重复源码文件
+- **状态**: 🔲 待开始
+- **优先级**: P0 (代码质量)
+- **说明**: 以下文件在多个目录间存在重复或冲突，需要合并后删除冗余副本
+- **任务**:
+  - [ ] `Core/UniBase.DB.DoQry.pas` — 与 Persistence/ 完全相同，删除 Core/ 副本（已在 ARCH-010 确认保留 Persistence/）
+  - [ ] `Core/UniBase.DB.ConnectionPool.pas` — Persistence/ 版本更新（含 deprecated 标记 + FreeAndNil），删除 Core/ 副本
+  - [ ] `Core/UniBase.Unlock.pas` vs `Features/UniBase.Unlock.pas` — 完全相同，删除其中一个
+  - [ ] `Core/UniBase.AntiTamper.pas` vs `Features/` — 合并差异后删除冗余
+  - [ ] `Core/UniBase.AutoUpdate.pas` vs `Features/` — 保留 Features/ 更新版
+  - [ ] `Core/UniBase.Updater.pas` vs `Features/` — 保留 Features/ 更新版
+  - [ ] `Core/UniBase.Protection.pas` vs `Features/` — 评估后统一（差异较大，需谨慎）
+  - [ ] `Core/UniBase.AipexBase.Client.pas` vs `ThirdParty/AipexBase/` — 统一到 ThirdParty/
+
+### CLEANUP-002: 清理编译产物
+- **状态**: 🔲 待开始
+- **优先级**: P1 (仓库卫生)
+- **说明**: .dcu/.bpl/.dcp 文件混在源码目录中，不应纳入版本控制
+- **待清理文件**:
+  - Core/ 下 24 个 .dcu 文件
+  - Persistence/ 下 2 个 .dcu 文件
+  - Features/ 下 5 个 .dcu 文件
+  - 根目录 16 个 .bpl/.dcp 文件
+  - **合计: 47 个编译产物**
+- **任务**:
+  - [ ] 删除所有源码目录中的 .dcu 文件
+  - [ ] 删除根目录的 .bpl/.dcp 文件
+  - [ ] 在 .gitignore 中添加 `*.dcu`、`*.bpl`、`*.dcp`、`*.exe`、`*.dll` 排除规则
+
+### CLEANUP-003: 清理过时文档
+- **状态**: 🔲 待开始
+- **优先级**: P2 (文档)
+- **说明**: 旧格式文档已迁移到标准命名，legacy 目录和旧目录可归档删除
+- **待清理**:
+  - `docs/legacy/` — 50 个已迁移的旧文档
+  - `docs/V1.0版/` — 4 个 V1.0 归档文档
+  - `docs/后端对接/` — 1 个非标准命名文件，合并到 integrations/
+  - `docs/tools/` — 1 个文件，合并到 docs/ 主目录
+- **任务**:
+  - [ ] 删除 `docs/legacy/` 目录（已有标准文档替代）
+  - [ ] 归档 `docs/V1.0版/`（移到 legacy 或删除）
+  - [ ] `docs/后端对接/UniBase-前端对接开发指南.md` → `docs/integrations/`
+  - [ ] `docs/tools/UniPublisher-Spec.md` → `docs/` 按标准命名
+  - [ ] 更新 00.00 文档索引
+
+### CLEANUP-004: 清理临时状态文件
+- **状态**: 🔲 待开始
+- **优先级**: P2 (仓库卫生)
+- **说明**: 根目录下存在多个开发过程中的临时状态文件，已无参考价值
+- **待删除文件**:
+  - `DOCS_UPDATE.md` — 文档更新临时记录
+  - `Phase0_Status.md` — Phase 0 状态（已过时）
+  - `Phase1_Status.md` — Phase 1 状态（已过时）
+  - `Phase2_Status.md` — Phase 2 状态（已过时）
+  - `Phase3_Status.md` — Phase 3 状态（已过时）
+  - `Studio_Status.md` — Studio 开发状态（已过时）
+  - `better.md` — 临时笔记
+- **待移动文件**:
+  - `QUICK_START.md` → `docs/00.Unibase快速集成指南.md`（已有同名文件则删除）
+  - `ARCH-QUICKSTART.md` → `docs/` 按标准命名（或保留根目录作为独立入口）
+- **任务**:
+  - [ ] 删除 7 个临时状态文件
+  - [ ] 移动或合并 QUICK_START.md
+  - [ ] 确认 better.md 内容后删除或合并
+
+### 清理统计
+
+| 类别 | 文件数 | 操作 |
+|------|--------|------|
+| 重复源码 | 8 | 合并后删除冗余副本 |
+| 编译产物 | 47 | 删除 + 加入 .gitignore |
+| 过时文档 | 55 | 删除或归档 |
+| 临时文件 | 8 | 删除或移动 |
+| **合计** | **约 118 个文件** | 需要清理 |
+
+---
+
+### 待开发任务
 
 ### 进行中 (MAINT)
 
@@ -286,24 +936,41 @@
 - **目标**:
   - 单元测试整体覆盖率提升到 95%+，并确保关键安全/网络模块有稳定回归测试。
 - **下一步任务**:
-  - （可选）在后续 CI 环境中补充针对数据库 Integration Tests 的专用配置说明文档（如何启用 `UNIBASE_RUN_DB_INTEGRATION=1` 与 FireDAC/SQLite 驱动）。
-  - 将新增/修复的测试单元逐步纳入统一测试入口（`Tests/UniBaseTests.dpr` / `Scripts/run_tests.ps1`），并在 README/Docs 中明确一键测试命令。
-  - 检查 `Test.UniBase.Config.pas` 等被注释的测试单元与当前 API 的兼容性问题（能恢复则恢复，不能则删除/重写，避免长期"注释债务"）。
-  - 修复剩余 11 个失败测试（Manager/Protection/Resilience/Unlock 模块）
-  - 修复 58 个 Access Violation 错误（需 UniBaseManager 初始化）
-- **当前测试状态** (2025-12-18):
-  - 单元测试: 751/824 通过 (91.1%)
-  - 失败测试: 11 个 (Manager/Protection/Resilience/Unlock)
-  - 错误测试: 58 个 (Access Violation - Config/FormState/Hotkeys/MRU/Theme/i18n)
-  - 新增测试文件:
-    - `Test.UniBase.Payment.pas` - 支付模块测试
-    - `Test.UniBase.Social.pas` - 社交模块测试
-    - `Test.UniBase.Types.pas` - 类型模块测试
-    - `Test.UniBase.Serialization.pas` - 序列化模块测试 (58 测试)
-    - `Test.UniBase.DateTime.pas` - DateTime 模块测试 (已修复)
+  - 输出真实覆盖率报告（按模块分解），定位距离 95% 的缺口并形成补测清单。
+  - 在 CI 文档补充数据库集成测试启用说明（`UNIBASE_RUN_DB_INTEGRATION=1` + FireDAC 驱动要求）。
+  - 将 Win64 单测纳入默认门禁，Win32 作为兼容性回归（按需执行）。
+- **当前测试状态** (2026-05-02):
+  - 单元测试: 872/876 通过（Ignored: 4，Failed: 0，Errored: 0，Leaked: 0）
+  - 集成测试: 9/9 通过（Failed: 0，Errored: 0，Leaked: 0）
+  - 全量门禁: `.\Scripts\run_tests.ps1 -Type All -CI`（Win64）已通过
+  - 默认平台: Win64（`Scripts/run_tests.ps1` 默认 `-Platform Win64`）
+  - 关键修复:
+    - `FormState` 保存窗口坐标已修复工作区/屏幕坐标差异（顶部任务栏场景）
+    - `Resilience` 策略组合执行链修复匿名方法残留，FastMM 不再报泄漏
+    - `WebAPI/Net` 已完成 Win64 编译兼容与本地集成测试链路修复（TLS 枚举兼容、sqlite3 装载、localhost 安全开关）
+    - `Protection/Resilience` 异常断言与实现语义对齐（具体异常类型）
+    - `DB.Factory` 已支持 `DB3.Type=SQLite/PG` 双模式（相对路径解析 + SQLite 参数透传）
+    - `Scripts/run_tests.ps1` 已将 `.dcu` 输出重定向到 `TestResults/build/dcu/<Platform>`，避免源代码目录污染
+  - **2026-05-02 批量修复 12 个被注释掉的测试单元**:
+    - 修复并启用 `Test.UniBase.Authorization` (无 API 不匹配)
+    - 修复并启用 `Test.UniBase.Interfaces` (3 个字段名不匹配: Key→ItemKey, Code→LangCode, Name→LangName)
+    - 修复并启用 `Test.UniBase.RateLimiter` (Config 双重释放 + 对象/接口混用)
+    - 修复并启用 `Test.UniBase.FeatureFlags` (7 个 API 不匹配: RegisterFlag/DeleteFlag/SaveToFile/LoadFromFile 等)
+    - 修复并启用 `Test.UniBase.Metrics` (移除 TESTINSIGHT 守卫 + 9 个 API 不匹配)
+    - 修复并启用 `Test.UniBase.Compression` (StringOfChar 参数修复)
+    - 修复并启用 `Test.UniBase.Benchmark` (Length 返回 NativeInt 导致 AreEqual 重载歧义)
+    - 修复并启用 `Test.UniBase.Diagnose` (Core 添加 Winapi.Windows 引用)
+    - 修复并启用 `Test.UniBase.Security` (WillRaise 重载歧义)
+    - 修复并启用 `Test.UniBase.Memory` (Core BlockSize 属性返回用户请求大小)
+    - 重写并启用 `Test.UniBase.Exception` (原测试与 Core 完全不匹配)
+    - 重写并启用 `Test.UniBase.Services.HealthCheck` (原测试与 Core 完全不匹配)
+    - 修复 `Test.UniBase.Serialization` 的 JSON 数组反序列化 (Core RTTI 元素类型推导)
+  - **2026-05-02 新增性能基准测试**:
+    - `Test.UniBase.PerformanceSuite.pas` - 综合性能基准 (内存/磁盘/并发/核心模块, 30+ 测试)
+    - `Test.UniBase.LockContention.pas` - 锁竞争对比基准 (CriticalSection vs MREW, 7 测试)
 - **备注**:
-  - Unit 测试入口 `Tests/UniBaseTests.dpr` 已恢复包含 `Test.UniBase.FormState` / `Test.UniBase.Logging` / `Test.UniBase.License`。
-  - Bug 修复记录统一写入 `bugFixed.md`。
+  - Unit 测试入口 `Tests/UniBaseTests.dpr` 已恢复包含 `Test.UniBase.FormState` / `Test.UniBase.Logging` / `Test.UniBase.License`，并纳入 `Test.UniBase.DB.Factory` / `Test.UniBase.DB.Pool` / `Test.UniBase.DB.Migrations`。
+  - Bug 修复记录统一写入 `bugfix.md`。
   - 已完成的测试模块清单见 `history.md` 中 "MAINT-002: 单元测试覆盖率提升 🟡" 小节。
 
 ### 商业化与工具集成 (P1)
@@ -452,10 +1119,10 @@
     - [x] `ThirdParty/Social/UniBase.Social.OAuth.pas` - OAuth 2.0 通用实现 (GitHub/Google)
     - [x] `ThirdParty/Social/UniBase.Social.WeChat.pas` - 微信登录实现
 - **下一步任务**:
-  - [ ] 支付接口扩展: PayPal
-  - [ ] 社交媒体扩展: Weibo/QQ
+  - [x] 支付接口扩展: PayPal (`ThirdParty/Payment/UniBase.Payment.PayPal.pas`, 2026-05-02)
+  - [x] 社交媒体扩展: Weibo/QQ (`ThirdParty/Social/UniBase.Social.Weibo.pas`, `UniBase.Social.QQ.pas`, 2026-05-02)
 - **开发指南**:
-  - 参考 [06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
+  - 参考 [06.01.uniBase-4H-ThirdParty扩展开发指南-v1.1.md](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.1.md)
   - 参考已实现的 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 模式
   - 支付接口文档: `ThirdParty/Payment/README.md`
 

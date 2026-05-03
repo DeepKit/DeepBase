@@ -4,6 +4,9 @@
 param(
     [ValidateSet('Unit', 'Integration', 'All')]
     [string]$Type = 'All',
+
+    [ValidateSet('Win32', 'Win64')]
+    [string]$Platform = 'Win64',
     
     [switch]$CI,
     
@@ -23,7 +26,20 @@ $BaseDir = Split-Path -Parent $PSScriptRoot
 $TestsDir = Join-Path $BaseDir "Tests"
 $IntegrationDir = Join-Path $TestsDir "Integration"
 $OutputPath = Join-Path $BaseDir $OutputDir
-$DelphiCompiler = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc32.exe"
+$BuildOutputDir = Join-Path $OutputPath "build"
+$DcuOutputDir = Join-Path $BuildOutputDir "dcu\$Platform"
+$Dcc32 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc32.exe"
+$Dcc64 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe"
+
+if ($Platform -eq 'Win64') {
+    $DelphiCompiler = $Dcc64
+} else {
+    $DelphiCompiler = $Dcc32
+}
+
+if (-not (Test-Path $DelphiCompiler)) {
+    throw "Delphi compiler not found: $DelphiCompiler"
+}
 
 # Resolve coverage tool path (if requested)
 if (-not $CoverageToolPath) {
@@ -44,14 +60,20 @@ if ($Coverage -and -not (Test-Path $CoverageOutputDir)) {
     New-Item -ItemType Directory -Path $CoverageOutputDir -Force | Out-Null
 }
 
+if (-not (Test-Path $DcuOutputDir)) {
+    New-Item -ItemType Directory -Path $DcuOutputDir -Force | Out-Null
+}
+
 Write-Host "=============================================="
 Write-Host "        UniBase Test Runner"
 Write-Host "=============================================="
 Write-Host ""
 Write-Host "Base Directory: $BaseDir"
 Write-Host "Test Type: $Type"
+Write-Host "Platform: $Platform"
 Write-Host "CI Mode: $CI"
 Write-Host "Output: $OutputPath"
+Write-Host "DCU Output: $DcuOutputDir"
 Write-Host ""
 
 # Build flags
@@ -63,7 +85,10 @@ if ($CI) {
 # Unit paths
 $UnitPaths = @(
     "$BaseDir\Core",
+    "$BaseDir\Features",
+    "$BaseDir\Persistence",
     "$BaseDir\VCL",
+    "$BaseDir\FMX",
     "$BaseDir\ThirdParty\Payment",
     "$BaseDir\ThirdParty\Social",
     "$BaseDir\Tools\WebService",
@@ -89,9 +114,16 @@ function Compile-TestProject {
     )
     
     Write-Host "Compiling $ProjectName..."
+
+    $safeProjectName = ($ProjectName -replace '[^A-Za-z0-9_-]', '_')
+    $projectDcuDir = Join-Path $DcuOutputDir $safeProjectName
+    if (-not (Test-Path $projectDcuDir)) {
+        New-Item -ItemType Directory -Path $projectDcuDir -Force | Out-Null
+    }
     
     $args = @(
         "-U$SearchPath",
+        "-N0$projectDcuDir",
         "-Q",
         "-B"
     )
@@ -201,6 +233,67 @@ function Run-CodeCoverage {
     }
 }
 
+function Get-PeMachine {
+    param(
+        [string]$Path
+    )
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+        return [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+    } catch {
+        return 0
+    }
+}
+
+function Test-BitnessMatch {
+    param(
+        [string]$Path,
+        [string]$TargetPlatform
+    )
+    $machine = Get-PeMachine -Path $Path
+    if ($TargetPlatform -eq 'Win64') {
+        return $machine -eq 0x8664
+    }
+    return $machine -eq 0x14C
+}
+
+function Ensure-SqliteDll {
+    param(
+        [string]$TargetDir
+    )
+
+    $targetDll = Join-Path $TargetDir "sqlite3.dll"
+    if (Test-Path $targetDll) {
+        if (Test-BitnessMatch -Path $targetDll -TargetPlatform $Platform) {
+            return $false
+        }
+        Remove-Item -Force $targetDll
+    }
+
+    $compilerDir = Split-Path -Parent $DelphiCompiler
+    $candidatePaths = @(
+        (Join-Path $TargetDir "sqlite3.dll"),
+        (Join-Path $TestsDir "sqlite3.dll"),
+        (Join-Path $BaseDir "sqlite3.dll"),
+        (Join-Path $compilerDir "sqlite3.dll"),
+        "D:\UserData\Administrator\AppData\Local\Programs\Python\Python311\DLLs\sqlite3.dll",
+        "D:\ProgramData\Python313\DLLs\sqlite3.dll",
+        "D:\ProgramData\anaconda3\Library\bin\sqlite3.dll"
+    )
+
+    foreach ($candidate in $candidatePaths) {
+        if ((Test-Path $candidate) -and (Test-BitnessMatch -Path $candidate -TargetPlatform $Platform)) {
+            Copy-Item -Path $candidate -Destination $targetDll -Force
+            Write-Host "SQLite vendor copied: $candidate -> $targetDll"
+            return $true
+        }
+    }
+
+    Write-Host "WARNING: sqlite3.dll ($Platform) not found for $TargetDir" -ForegroundColor Yellow
+    return $false
+}
+
 $Results = @{
     UnitTests = $null
     IntegrationTests = $null
@@ -241,6 +334,9 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
     
     if (Test-Path $intProject) {
         if (Compile-TestProject -ProjectFile $intProject -ProjectName "Integration Tests") {
+            $sqliteCopied = Ensure-SqliteDll -TargetDir $IntegrationDir
+            $sqliteInIntegration = Join-Path $IntegrationDir "sqlite3.dll"
+
             # 默认排除需要数据库环境的集成测试,除非显式设置 UNIBASE_RUN_DB_INTEGRATION=1
             $extraArgs = @()
             if ($env:UNIBASE_RUN_DB_INTEGRATION -ne '1') {
@@ -248,7 +344,23 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
                 $extraArgs += "--exclude:DBEnv"
             }
 
-            $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs
+            # 集成测试会访问本地回环地址（127.0.0.1），显式开启本地URL白名单
+            $oldAllowLocalhost = $env:UNIBASE_ALLOW_LOCALHOST_HTTP
+            $env:UNIBASE_ALLOW_LOCALHOST_HTTP = '1'
+            try {
+                $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs
+            } finally {
+                if ($null -eq $oldAllowLocalhost) {
+                    Remove-Item Env:\UNIBASE_ALLOW_LOCALHOST_HTTP -ErrorAction SilentlyContinue
+                } else {
+                    $env:UNIBASE_ALLOW_LOCALHOST_HTTP = $oldAllowLocalhost
+                }
+
+                if ($sqliteCopied -and (Test-Path $sqliteInIntegration)) {
+                    Remove-Item -Path $sqliteInIntegration -Force -ErrorAction SilentlyContinue
+                    Write-Host "Temporary sqlite3.dll removed from Integration directory."
+                }
+            }
         } else {
             $Results.IntegrationTests = $false
         }

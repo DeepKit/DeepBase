@@ -108,6 +108,12 @@ type
     procedure Test_GenerateState_Unique;
 
     [Test]
+    procedure Test_GenerateCodeVerifier_UsesPKCECharset;
+
+    [Test]
+    procedure Test_GenerateCodeChallengeS256_RFC7636Vector;
+
+    [Test]
     procedure Test_UrlEncode_SpecialChars;
 
     [Test]
@@ -120,10 +126,47 @@ type
     procedure Test_ParseQueryString;
   end;
 
+  /// <summary>
+  /// Tests for OAuth2 state validation and PKCE support.
+  /// </summary>
+  [TestFixture]
+  TOAuthClientPKCETests = class
+  public
+    [Test]
+    procedure Test_GetAuthUrl_StoresStateAndAddsPKCE;
+
+    [Test]
+    procedure Test_ValidateState_ReturnsExpectedResult;
+
+    [Test]
+    procedure Test_ExchangeCode_WithInvalidState_RaisesBeforeNetwork;
+
+    [Test]
+    procedure Test_MicrosoftPreset_UsesMicrosoftProvider;
+  end;
+
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  UniBase.Social.OAuth;
+
+function ExtractUrlQueryParams(const AUrl: string): TDictionary<string, string>;
+var
+  Query: string;
+  QueryStart, FragmentStart: Integer;
+begin
+  QueryStart := Pos('?', AUrl);
+  if QueryStart = 0 then
+    Exit(TDictionary<string, string>.Create);
+
+  Query := Copy(AUrl, QueryStart + 1, MaxInt);
+  FragmentStart := Pos('#', Query);
+  if FragmentStart > 0 then
+    Query := Copy(Query, 1, FragmentStart - 1);
+
+  Result := TSocialHelper.ParseQueryString(Query);
+end;
 
 { TSocialTokenTests }
 
@@ -323,6 +366,7 @@ begin
   Assert.AreEqual('google', TSocialHelper.ProviderToString(spGoogle));
   Assert.AreEqual('twitter', TSocialHelper.ProviderToString(spTwitter));
   Assert.AreEqual('facebook', TSocialHelper.ProviderToString(spFacebook));
+  Assert.AreEqual('microsoft', TSocialHelper.ProviderToString(spMicrosoft));
   Assert.AreEqual('apple', TSocialHelper.ProviderToString(spApple));
 end;
 
@@ -335,6 +379,7 @@ begin
   Assert.AreEqual(spGoogle, TSocialHelper.StringToProvider('google'));
   Assert.AreEqual(spTwitter, TSocialHelper.StringToProvider('twitter'));
   Assert.AreEqual(spFacebook, TSocialHelper.StringToProvider('facebook'));
+  Assert.AreEqual(spMicrosoft, TSocialHelper.StringToProvider('microsoft'));
   Assert.AreEqual(spApple, TSocialHelper.StringToProvider('apple'));
 end;
 
@@ -342,6 +387,7 @@ procedure TSocialHelperTests.Test_StringToProvider_CaseInsensitive;
 begin
   Assert.AreEqual(spGitHub, TSocialHelper.StringToProvider('GITHUB'));
   Assert.AreEqual(spGoogle, TSocialHelper.StringToProvider('Google'));
+  Assert.AreEqual(spMicrosoft, TSocialHelper.StringToProvider('MICROSOFT'));
   Assert.AreEqual(spWeChat, TSocialHelper.StringToProvider('WECHAT'));
 end;
 
@@ -381,6 +427,29 @@ begin
   S1 := TSocialHelper.GenerateState(32);
   S2 := TSocialHelper.GenerateState(32);
   Assert.AreNotEqual(S1, S2, 'Generated states should be unique');
+end;
+
+procedure TSocialHelperTests.Test_GenerateCodeVerifier_UsesPKCECharset;
+const
+  Allowed = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+var
+  Verifier: string;
+  I: Integer;
+begin
+  Verifier := TSocialHelper.GenerateCodeVerifier;
+
+  Assert.AreEqual(64, Length(Verifier));
+  for I := 1 to Length(Verifier) do
+    Assert.IsTrue(Pos(Verifier[I], Allowed) > 0,
+      'Verifier contains a character outside the RFC 7636 charset');
+end;
+
+procedure TSocialHelperTests.Test_GenerateCodeChallengeS256_RFC7636Vector;
+const
+  Verifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
+  Challenge = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
+begin
+  Assert.AreEqual(Challenge, TSocialHelper.GenerateCodeChallengeS256(Verifier));
 end;
 
 procedure TSocialHelperTests.Test_UrlEncode_SpecialChars;
@@ -434,6 +503,102 @@ begin
   end;
 end;
 
+{ TOAuthClientPKCETests }
+
+procedure TOAuthClientPKCETests.Test_GetAuthUrl_StoresStateAndAddsPKCE;
+var
+  Config: TOAuthConfig;
+  Client: TOAuthClient;
+  AuthUrl: string;
+  Params: TDictionary<string, string>;
+begin
+  Config := TOAuthConfig.Create(opGitHub);
+  Client := TOAuthClient.Create(Config);
+  try
+    Config.AppId := 'client-id';
+    Config.AppSecret := 'client-secret';
+    Config.RedirectUri := 'http://localhost/callback';
+
+    AuthUrl := Client.GetAuthUrl('fixed-state');
+    Params := ExtractUrlQueryParams(AuthUrl);
+    try
+      Assert.AreEqual('fixed-state', Client.LastState);
+      Assert.AreEqual('fixed-state', Params['state']);
+      Assert.AreEqual('S256', Params['code_challenge_method']);
+      Assert.IsTrue(Params.ContainsKey('code_challenge'));
+      Assert.AreEqual(64, Length(Client.LastCodeVerifier));
+      Assert.AreEqual(
+        TSocialHelper.GenerateCodeChallengeS256(Client.LastCodeVerifier),
+        Params['code_challenge']);
+    finally
+      Params.Free;
+    end;
+  finally
+    Client.Free;
+    Config.Free;
+  end;
+end;
+
+procedure TOAuthClientPKCETests.Test_ValidateState_ReturnsExpectedResult;
+var
+  Config: TOAuthConfig;
+  Client: TOAuthClient;
+begin
+  Config := TOAuthConfig.Create(opGoogle);
+  Client := TOAuthClient.Create(Config);
+  try
+    Config.AppId := 'client-id';
+    Config.RedirectUri := 'http://localhost/callback';
+
+    Client.GetAuthUrl('state-ok');
+
+    Assert.IsTrue(Client.ValidateState('state-ok'));
+    Assert.IsFalse(Client.ValidateState('state-bad'));
+  finally
+    Client.Free;
+    Config.Free;
+  end;
+end;
+
+procedure TOAuthClientPKCETests.Test_ExchangeCode_WithInvalidState_RaisesBeforeNetwork;
+var
+  Config: TOAuthConfig;
+  Client: TOAuthClient;
+begin
+  Config := TOAuthConfig.Create(opGitHub);
+  Client := TOAuthClient.Create(Config);
+  try
+    Config.AppId := 'client-id';
+    Config.AppSecret := 'client-secret';
+    Config.RedirectUri := 'http://localhost/callback';
+
+    Client.GetAuthUrl('state-ok');
+
+    Assert.WillRaise(
+      procedure begin Client.ExchangeCode('auth-code', 'state-bad'); end,
+      ESocialAuthError
+    );
+  finally
+    Client.Free;
+    Config.Free;
+  end;
+end;
+
+procedure TOAuthClientPKCETests.Test_MicrosoftPreset_UsesMicrosoftProvider;
+var
+  Config: TOAuthConfig;
+begin
+  Config := TOAuthConfig.Create(opMicrosoft);
+  try
+    Assert.AreEqual(spMicrosoft, Config.Provider);
+    Assert.IsTrue(Config.AuthorizationEndpoint.Contains('microsoftonline.com'));
+    Assert.IsTrue(Config.TokenEndpoint.Contains('microsoftonline.com'));
+    Assert.IsTrue(Config.UserInfoEndpoint.Contains('graph.microsoft.com'));
+  finally
+    Config.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TSocialTokenTests);
   TDUnitX.RegisterTestFixture(TSocialUserInfoTests);
@@ -441,5 +606,6 @@ initialization
   TDUnitX.RegisterTestFixture(TSocialShareResultTests);
   TDUnitX.RegisterTestFixture(TSocialConfigTests);
   TDUnitX.RegisterTestFixture(TSocialHelperTests);
+  TDUnitX.RegisterTestFixture(TOAuthClientPKCETests);
 
 end.

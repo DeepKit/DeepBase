@@ -66,7 +66,7 @@ type
 
     // ISocialClient
     function GetAuthUrl(const AState: string = ''): string; override;
-    function ExchangeCode(const ACode: string): TSocialToken; override;
+    function ExchangeCode(const ACode: string): TSocialToken; overload; override;
     function RefreshToken(const ARefreshToken: string): TSocialToken; override;
     function GetUserInfo(const AToken: TSocialToken): TSocialUserInfo; override;
 
@@ -171,7 +171,7 @@ end;
 
 procedure TOAuthConfig.SetupForMicrosoft;
 begin
-  FProvider := spGoogle; // Map to generic
+  FProvider := spMicrosoft;
   FAuthorizationEndpoint := MICROSOFT_AUTH_URL;
   FTokenEndpoint := MICROSOFT_TOKEN_URL;
   FUserInfoEndpoint := MICROSOFT_USER_URL;
@@ -195,9 +195,7 @@ var
   Params: TDictionary<string, string>;
   State: string;
 begin
-  State := AState;
-  if State = '' then
-    State := GenerateState;
+  State := PrepareOAuthState(AState);
 
   Params := TDictionary<string, string>.Create;
   try
@@ -208,6 +206,8 @@ begin
 
     if FConfig.Scope <> '' then
       Params.Add('scope', FConfig.Scope);
+
+    AddPKCEAuthParams(Params);
 
     // Google specific: access_type for refresh token
     if OAuthConfig.OAuthProvider = opGoogle then
@@ -234,6 +234,7 @@ begin
     Params.Add('code', ACode);
     Params.Add('redirect_uri', FConfig.RedirectUri);
     Params.Add('grant_type', 'authorization_code');
+    AddPKCETokenParams(Params);
 
     PostData := TSocialHelper.BuildQueryString(Params);
 

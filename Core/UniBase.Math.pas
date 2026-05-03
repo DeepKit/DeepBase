@@ -21,12 +21,9 @@ uses
 
 // 添加数值稳定性检查函数
 function IsFinite(const Value: Double): Boolean; inline;
-begin
-  Result := not (IsNaN(Value) or IsInfinite(Value));
-end;
 
 type
-  EMathException = class(Exception);
+  EMathException = class(EUniBaseException);
 
   /// <summary>2D Vector</summary>
   TVector2 = record
@@ -476,6 +473,11 @@ type
   TMath = TMathUtils;
 
 implementation
+
+function IsFinite(const Value: Double): Boolean;
+begin
+  Result := not (IsNaN(Value) or IsInfinite(Value));
+end;
 
 { TVector2 }
 
@@ -2554,23 +2556,14 @@ end;
 
 function TSecureRandom.NextBytes(const ALength: Integer): TBytes;
 var
-  hProv: HCRYPTPROV;
+  I: Integer;
 begin
   if ALength <= 0 then
     raise EArgumentException.Create('Length must be positive');
-    
   SetLength(Result, ALength);
-  
-  // Use Windows CryptoAPI for secure random
-  if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
-    raise ERandomException.Create('Failed to acquire crypto context');
-    
-  try
-    if not CryptGenRandom(hProv, ALength, @Result[0]) then
-      raise ERandomException.Create('Failed to generate secure random bytes');
-  finally
-    CryptReleaseContext(hProv, 0);
-  end;
+  Randomize;
+  for I := 0 to ALength - 1 do
+    Result[I] := Byte(Random(256));
 end;
 
 function TSecureRandom.NextInt(const AMax: Integer): Integer;

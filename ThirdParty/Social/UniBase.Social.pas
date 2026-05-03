@@ -34,6 +34,7 @@ type
     spGoogle,     // Google
     spTwitter,    // Twitter/X
     spFacebook,   // Facebook
+    spMicrosoft,  // Microsoft
     spApple       // Apple
   );
 
@@ -146,6 +147,7 @@ type
     FRedirectUri: string;
     FScope: string;
     FTimeout: Integer;
+    FEnablePKCE: Boolean;
   public
     constructor Create(AProvider: TSocialProvider); virtual;
 
@@ -155,6 +157,7 @@ type
     property RedirectUri: string read FRedirectUri write FRedirectUri;
     property Scope: string read FScope write FScope;
     property Timeout: Integer read FTimeout write FTimeout;
+    property EnablePKCE: Boolean read FEnablePKCE write FEnablePKCE;
   end;
 
   /// <summary>Unified social client interface</summary>
@@ -184,12 +187,18 @@ type
   protected
     FConfig: TSocialConfig;
     FHttpClient: THTTPClient;
+    FLastState: string;
+    FLastCodeVerifier: string;
 
     function DoGet(const AUrl: string): string; virtual;
     function DoPost(const AUrl: string; const AData: string;
       const AContentType: string = 'application/x-www-form-urlencoded'): string; virtual;
     function DoPostJson(const AUrl: string; AJson: TJSONObject): string; virtual;
     function GenerateState: string; virtual;
+    function PrepareOAuthState(const AState: string = ''): string; virtual;
+    procedure AddPKCEAuthParams(AParams: TDictionary<string, string>); virtual;
+    procedure AddPKCETokenParams(AParams: TDictionary<string, string>); virtual;
+    procedure RequireValidState(const AState: string); virtual;
   public
     constructor Create(AConfig: TSocialConfig); virtual;
     destructor Destroy; override;
@@ -197,15 +206,19 @@ type
     // ISocialClient
     function GetProvider: TSocialProvider;
     function GetAuthUrl(const AState: string = ''): string; virtual; abstract;
-    function ExchangeCode(const ACode: string): TSocialToken; virtual; abstract;
+    function ExchangeCode(const ACode: string): TSocialToken; overload; virtual; abstract;
+    function ExchangeCode(const ACode, AState: string): TSocialToken; overload; virtual;
     function RefreshToken(const ARefreshToken: string): TSocialToken; virtual; abstract;
     function GetUserInfo(const ACode: string): TSocialUserInfo; overload; virtual;
     function GetUserInfo(const AToken: TSocialToken): TSocialUserInfo; overload; virtual; abstract;
     function Share(const AContent: TSocialShare;
       ATarget: TSocialShareTarget = stDefault): TSocialShareResult; virtual;
     function CanShare: Boolean; virtual;
+    function ValidateState(const AState: string): Boolean; virtual;
 
     property Config: TSocialConfig read FConfig;
+    property LastState: string read FLastState;
+    property LastCodeVerifier: string read FLastCodeVerifier;
   end;
 
   /// <summary>Helper functions</summary>
@@ -216,6 +229,9 @@ type
     class function GenderToString(AGender: TSocialGender): string;
     class function IntToGender(AValue: Integer): TSocialGender;
     class function GenerateState(ALength: Integer = 16): string;
+    class function GenerateCodeVerifier(ALength: Integer = 64): string;
+    class function GenerateCodeChallengeS256(const AVerifier: string): string;
+    class function ConstantTimeEquals(const A, B: string): Boolean;
     class function BuildQueryString(const AParams: TDictionary<string, string>): string;
     class function ParseQueryString(const AQueryStr: string): TDictionary<string, string>;
     class function UrlEncode(const AValue: string): string;
@@ -223,6 +239,22 @@ type
   end;
 
 implementation
+
+uses
+  System.Hash,
+  UniBase.Random;
+
+const
+  STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  PKCE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+
+function Base64UrlEncodeBytes(const ABytes: TBytes): string;
+begin
+  Result := TNetEncoding.Base64.EncodeBytesToString(ABytes);
+  Result := Result.Replace(#13, '', [rfReplaceAll]);
+  Result := Result.Replace(#10, '', [rfReplaceAll]);
+  Result := Result.Replace('+', '-').Replace('/', '_').TrimRight(['=']);
+end;
 
 { ESocialError }
 
@@ -325,6 +357,7 @@ begin
   inherited Create;
   FProvider := AProvider;
   FTimeout := 30000;
+  FEnablePKCE := True;
 end;
 
 { TSocialClient }
@@ -393,6 +426,56 @@ begin
   Result := TSocialHelper.GenerateState;
 end;
 
+function TSocialClient.PrepareOAuthState(const AState: string): string;
+begin
+  Result := AState;
+  if Result = '' then
+    Result := GenerateState;
+  FLastState := Result;
+end;
+
+procedure TSocialClient.AddPKCEAuthParams(AParams: TDictionary<string, string>);
+var
+  Challenge: string;
+begin
+  if (AParams = nil) or (FConfig = nil) or not FConfig.EnablePKCE then
+    Exit;
+
+  FLastCodeVerifier := TSocialHelper.GenerateCodeVerifier;
+  Challenge := TSocialHelper.GenerateCodeChallengeS256(FLastCodeVerifier);
+  AParams.AddOrSetValue('code_challenge', Challenge);
+  AParams.AddOrSetValue('code_challenge_method', 'S256');
+end;
+
+procedure TSocialClient.AddPKCETokenParams(AParams: TDictionary<string, string>);
+begin
+  if (AParams = nil) or (FConfig = nil) or not FConfig.EnablePKCE then
+    Exit;
+  if FLastCodeVerifier = '' then
+    Exit;
+
+  AParams.AddOrSetValue('code_verifier', FLastCodeVerifier);
+end;
+
+function TSocialClient.ValidateState(const AState: string): Boolean;
+begin
+  Result := (FLastState <> '') and TSocialHelper.ConstantTimeEquals(FLastState, AState);
+end;
+
+procedure TSocialClient.RequireValidState(const AState: string);
+begin
+  if not ValidateState(AState) then
+    raise ESocialAuthError.Create('Invalid OAuth state', 'INVALID_STATE', FConfig.Provider);
+
+  FLastState := '';
+end;
+
+function TSocialClient.ExchangeCode(const ACode, AState: string): TSocialToken;
+begin
+  RequireValidState(AState);
+  Result := ExchangeCode(ACode);
+end;
+
 function TSocialClient.GetUserInfo(const ACode: string): TSocialUserInfo;
 var
   Token: TSocialToken;
@@ -425,6 +508,7 @@ begin
     spGoogle: Result := 'google';
     spTwitter: Result := 'twitter';
     spFacebook: Result := 'facebook';
+    spMicrosoft: Result := 'microsoft';
     spApple: Result := 'apple';
   else
     Result := 'unknown';
@@ -443,6 +527,7 @@ begin
   else if S = 'google' then Result := spGoogle
   else if S = 'twitter' then Result := spTwitter
   else if S = 'facebook' then Result := spFacebook
+  else if S = 'microsoft' then Result := spMicrosoft
   else if S = 'apple' then Result := spApple
   else Result := spWeChat;
 end;
@@ -468,14 +553,57 @@ begin
 end;
 
 class function TSocialHelper.GenerateState(ALength: Integer): string;
-const
-  Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-var
-  I: Integer;
 begin
-  SetLength(Result, ALength);
-  for I := 1 to ALength do
-    Result[I] := Chars[Random(Length(Chars)) + 1];
+  Result := SecureRandom.NextString(ALength, STATE_CHARSET);
+end;
+
+class function TSocialHelper.GenerateCodeVerifier(ALength: Integer): string;
+begin
+  if (ALength < 43) or (ALength > 128) then
+    raise EArgumentException.Create('PKCE code verifier length must be between 43 and 128');
+
+  Result := SecureRandom.NextString(ALength, PKCE_CHARSET);
+end;
+
+class function TSocialHelper.GenerateCodeChallengeS256(const AVerifier: string): string;
+var
+  Hash: THashSHA2;
+begin
+  if AVerifier = '' then
+    raise EArgumentException.Create('PKCE code verifier cannot be empty');
+
+  Hash := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+  Hash.Update(TEncoding.ASCII.GetBytes(AVerifier));
+  Result := Base64UrlEncodeBytes(Hash.HashAsBytes);
+end;
+
+class function TSocialHelper.ConstantTimeEquals(const A, B: string): Boolean;
+var
+  I, MaxLen, Diff: Integer;
+  AChar, BChar: Integer;
+begin
+  if Length(A) > Length(B) then
+    MaxLen := Length(A)
+  else
+    MaxLen := Length(B);
+
+  Diff := Length(A) xor Length(B);
+  for I := 1 to MaxLen do
+  begin
+    if I <= Length(A) then
+      AChar := Ord(A[I])
+    else
+      AChar := 0;
+
+    if I <= Length(B) then
+      BChar := Ord(B[I])
+    else
+      BChar := 0;
+
+    Diff := Diff or (AChar xor BChar);
+  end;
+
+  Result := Diff = 0;
 end;
 
 class function TSocialHelper.BuildQueryString(
@@ -536,8 +664,5 @@ class function TSocialHelper.UrlDecode(const AValue: string): string;
 begin
   Result := TNetEncoding.URL.Decode(AValue);
 end;
-
-initialization
-  Randomize;
 
 end.

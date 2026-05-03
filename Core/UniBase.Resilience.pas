@@ -30,16 +30,11 @@
       .SuccessThreshold(2)
       .OpenDuration(30000);
     
-    if Breaker.AllowRequest then
-    begin
-      try
+    Breaker.Execute(
+      procedure
+      begin
         CallService;
-        Breaker.RecordSuccess;
-      except
-        Breaker.RecordFailure;
-        raise;
-      end;
-    end;
+      end);
     
     // Combined policy
     var Policy := TResiliencePolicy.Create
@@ -133,7 +128,7 @@ type
     function OnRejected(Handler: TOnCircuitRejected): TCircuitBreaker;
     
     // Operations
-    function AllowRequest: Boolean;
+    function AllowRequest: Boolean; deprecated 'Use Execute(...) to keep state transitions atomic';
     procedure RecordSuccess;
     procedure RecordFailure;
     procedure Reset;
@@ -901,40 +896,36 @@ var
   TaskProc: TProc;
   Task: ITask;
   Completed: Boolean;
-  TokenSource: ICancellationTokenSource;
-  Token: ICancellationToken;
+  ErrorClass: ExceptClass;
+  ErrorMsg: string;
 begin
-  // BUG-116 FIX: 使用取消令牌确保超时后任务能够被取消
-  TokenSource := TCancellationTokenSource.Create;
-  Token := TokenSource.Token;
-
+  ErrorClass := nil;
+  ErrorMsg := '';
   TaskProc := Proc;
-  Task := TTask.Create(
+  Task := TTask.Run(
     procedure
     begin
-      // 在任务开始时检查是否已取消
-      if Token.IsCancelled then
-        Exit;
-      TaskProc();
-    end,
-    Token);
-
-  Task.Start;
+      try
+        TaskProc();
+      except
+        on E: Exception do
+        begin
+          ErrorClass := ExceptClass(E.ClassType);
+          ErrorMsg := E.Message;
+        end;
+      end;
+    end);
   Completed := Task.Wait(FTimeoutMs);
 
   if not Completed then
   begin
-    // 取消任务以释放资源
-    TokenSource.Cancel;
-
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
 
-  // Check for exception in task
-  if Task.Status = TTaskStatus.Exception then
-    raise Exception(AcquireExceptionObject);
+  if Assigned(ErrorClass) then
+    raise ErrorClass.Create(ErrorMsg);
 end;
 
 function TTimeoutPolicy.Execute<T>(Func: TFunc<T>): T;
@@ -943,39 +934,36 @@ var
   Task: ITask;
   TaskResult: T;
   Completed: Boolean;
-  TokenSource: ICancellationTokenSource;
-  Token: ICancellationToken;
+  ErrorClass: ExceptClass;
+  ErrorMsg: string;
 begin
-  // BUG-116 FIX: 使用取消令牌确保超时后任务能够被取消
-  TokenSource := TCancellationTokenSource.Create;
-  Token := TokenSource.Token;
-
+  ErrorClass := nil;
+  ErrorMsg := '';
   TaskFunc := Func;
-  Task := TTask.Create(
+  Task := TTask.Run(
     procedure
     begin
-      // 在任务开始时检查是否已取消
-      if Token.IsCancelled then
-        Exit;
-      TaskResult := TaskFunc();
-    end,
-    Token);
-
-  Task.Start;
+      try
+        TaskResult := TaskFunc();
+      except
+        on E: Exception do
+        begin
+          ErrorClass := ExceptClass(E.ClassType);
+          ErrorMsg := E.Message;
+        end;
+      end;
+    end);
   Completed := Task.Wait(FTimeoutMs);
 
   if not Completed then
   begin
-    // 取消任务以释放资源
-    TokenSource.Cancel;
-
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
 
-  if Task.Status = TTaskStatus.Exception then
-    raise Exception(AcquireExceptionObject);
+  if Assigned(ErrorClass) then
+    raise ErrorClass.Create(ErrorMsg);
 
   Result := TaskResult;
 end;
@@ -1306,13 +1294,21 @@ end;
 procedure TResiliencePolicy.Execute(Proc: TProc);
 var
   InnerProc: TProc;
+  TimeoutProc: TProc;
+  BreakerProc: TProc;
+  RetryProc: TProc;
+  BulkheadProc: TProc;
 begin
   InnerProc := Proc;
+  TimeoutProc := nil;
+  BreakerProc := nil;
+  RetryProc := nil;
+  BulkheadProc := nil;
   
   // Wrap with timeout
   if Assigned(FTimeout) then
   begin
-    var TimeoutProc := InnerProc;
+    TimeoutProc := InnerProc;
     InnerProc := procedure
       begin
         FTimeout.Execute(TimeoutProc);
@@ -1322,7 +1318,7 @@ begin
   // Wrap with circuit breaker
   if Assigned(FCircuitBreaker) then
   begin
-    var BreakerProc := InnerProc;
+    BreakerProc := InnerProc;
     InnerProc := procedure
       begin
         FCircuitBreaker.Execute(BreakerProc);
@@ -1332,7 +1328,7 @@ begin
   // Wrap with retry
   if Assigned(FRetry) then
   begin
-    var RetryProc := InnerProc;
+    RetryProc := InnerProc;
     InnerProc := procedure
       begin
         FRetry.Execute(RetryProc);
@@ -1342,26 +1338,83 @@ begin
   // Wrap with bulkhead
   if Assigned(FBulkhead) then
   begin
-    var BulkheadProc := InnerProc;
+    BulkheadProc := InnerProc;
     InnerProc := procedure
       begin
         FBulkhead.Execute(BulkheadProc);
       end;
   end;
   
-  InnerProc;
+  try
+    InnerProc();
+  finally
+    InnerProc := nil;
+    TimeoutProc := nil;
+    BreakerProc := nil;
+    RetryProc := nil;
+    BulkheadProc := nil;
+  end;
 end;
 
 function TResiliencePolicy.Execute<T>(Func: TFunc<T>): T;
 var
-  R: T;
+  InnerFunc: TFunc<T>;
+  TimeoutFunc: TFunc<T>;
+  BreakerFunc: TFunc<T>;
+  RetryFunc: TFunc<T>;
+  BulkheadFunc: TFunc<T>;
 begin
-  Execute(
-    procedure
-    begin
-      R := Func();
-    end);
-  Result := R;
+  InnerFunc := Func;
+  TimeoutFunc := nil;
+  BreakerFunc := nil;
+  RetryFunc := nil;
+  BulkheadFunc := nil;
+
+  if Assigned(FTimeout) then
+  begin
+    TimeoutFunc := InnerFunc;
+    InnerFunc := function: T
+      begin
+        Result := FTimeout.Execute<T>(TimeoutFunc);
+      end;
+  end;
+
+  if Assigned(FCircuitBreaker) then
+  begin
+    BreakerFunc := InnerFunc;
+    InnerFunc := function: T
+      begin
+        Result := FCircuitBreaker.Execute<T>(BreakerFunc);
+      end;
+  end;
+
+  if Assigned(FRetry) then
+  begin
+    RetryFunc := InnerFunc;
+    InnerFunc := function: T
+      begin
+        Result := FRetry.Execute<T>(RetryFunc);
+      end;
+  end;
+
+  if Assigned(FBulkhead) then
+  begin
+    BulkheadFunc := InnerFunc;
+    InnerFunc := function: T
+      begin
+        Result := FBulkhead.Execute<T>(BulkheadFunc);
+      end;
+  end;
+
+  try
+    Result := InnerFunc();
+  finally
+    InnerFunc := nil;
+    TimeoutFunc := nil;
+    BreakerFunc := nil;
+    RetryFunc := nil;
+    BulkheadFunc := nil;
+  end;
 end;
 
 // ============================================================================

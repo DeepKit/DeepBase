@@ -11,7 +11,8 @@ uses
   System.SysUtils,
   System.Classes,
   DUnitX.TestFramework,
-  UniBase.Crypto;
+  UniBase.Crypto,
+  UniBase.Services.Crypto;
 
 type
   /// <summary>
@@ -227,6 +228,20 @@ type
     procedure Test_DifferentPasswords_DifferentResults;
     [Test]
     procedure Test_WrongPassword_Fails;
+  end;
+
+  /// <summary>
+  /// Tests for TCryptoServiceImpl IV-aware APIs
+  /// </summary>
+  [TestFixture]
+  TCryptoServiceImplTests = class
+  public
+    [Test]
+    procedure Test_EncryptWithIV_DecryptWithIV_RoundTrip;
+    [Test]
+    procedure Test_EncryptWithIV_DifferentIV_ProducesDifferentCiphertext;
+    [Test]
+    procedure Test_EncryptWithIV_InvalidIVLength_Raises;
   end;
 
   /// <summary>
@@ -1126,6 +1141,74 @@ begin
 end;
 
 // ============================================================================
+// TCryptoServiceImplTests
+// ============================================================================
+
+procedure TCryptoServiceImplTests.Test_EncryptWithIV_DecryptWithIV_RoundTrip;
+var
+  Svc: TCryptoServiceImpl;
+  Data, Key, IV, Encrypted, Decrypted: TBytes;
+begin
+  Svc := TCryptoServiceImpl.Create;
+  try
+    Data := TEncoding.UTF8.GetBytes('service-iv-roundtrip');
+    Key := TEncoding.UTF8.GetBytes('service-key');
+    IV := TEncoding.UTF8.GetBytes('0123456789ABCDEF');
+
+    Encrypted := Svc.EncryptWithIV(Data, Key, IV);
+    Decrypted := Svc.DecryptWithIV(Encrypted, Key, IV);
+
+    Assert.AreEqual(TEncoding.UTF8.GetString(Data), TEncoding.UTF8.GetString(Decrypted));
+  finally
+    Svc.Free;
+  end;
+end;
+
+procedure TCryptoServiceImplTests.Test_EncryptWithIV_DifferentIV_ProducesDifferentCiphertext;
+var
+  Svc: TCryptoServiceImpl;
+  Data, Key, IV1, IV2, Enc1, Enc2: TBytes;
+begin
+  Svc := TCryptoServiceImpl.Create;
+  try
+    Data := TEncoding.UTF8.GetBytes('same-plain-text');
+    Key := TEncoding.UTF8.GetBytes('service-key');
+    IV1 := TEncoding.UTF8.GetBytes('0123456789ABCDEF');
+    IV2 := TEncoding.UTF8.GetBytes('FEDCBA9876543210');
+
+    Enc1 := Svc.EncryptWithIV(Data, Key, IV1);
+    Enc2 := Svc.EncryptWithIV(Data, Key, IV2);
+
+    Assert.AreNotEqual(TEncodingUtils.HexEncode(Enc1), TEncodingUtils.HexEncode(Enc2));
+  finally
+    Svc.Free;
+  end;
+end;
+
+procedure TCryptoServiceImplTests.Test_EncryptWithIV_InvalidIVLength_Raises;
+var
+  Svc: TCryptoServiceImpl;
+  Data, Key, InvalidIV: TBytes;
+begin
+  Svc := TCryptoServiceImpl.Create;
+  try
+    Data := TEncoding.UTF8.GetBytes('payload');
+    Key := TEncoding.UTF8.GetBytes('service-key');
+    InvalidIV := TEncoding.UTF8.GetBytes('too-short');
+
+    Assert.WillRaise(
+      procedure
+      begin
+        Svc.EncryptWithIV(Data, Key, InvalidIV);
+      end,
+      ECryptoException
+    );
+  finally
+    Svc.Free;
+  end;
+end;
+
+// ============================================================================
 // TCRCUtilsTests
 // ============================================================================
 
@@ -1412,6 +1495,7 @@ initialization
   TDUnitX.RegisterTestFixture(TPasswordUtilsTests);
   TDUnitX.RegisterTestFixture(TAESCryptoTests);
   TDUnitX.RegisterTestFixture(TSimpleCryptoTests);
+  TDUnitX.RegisterTestFixture(TCryptoServiceImplTests);
   TDUnitX.RegisterTestFixture(TCRCUtilsTests);
   TDUnitX.RegisterTestFixture(TCryptoHelperTests);
   {$IFDEF MSWINDOWS}

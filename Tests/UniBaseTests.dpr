@@ -33,6 +33,10 @@ uses
   Test.UniBase.DBException in 'Test.UniBase.DBException.pas',
   Test.UniBase.SQLLogger in 'Test.UniBase.SQLLogger.pas',
   Test.UniBase.Protection in 'Test.UniBase.Protection.pas',
+  // Persistence tests
+  Test.UniBase.DB.Factory in 'Test.UniBase.DB.Factory.pas',
+  Test.UniBase.DB.Pool in 'Test.UniBase.DB.Pool.pas',
+  Test.UniBase.DB.Migrations in 'Test.UniBase.DB.Migrations.pas',
   // LLM & Crypto tests
   Test.UniBase.Crypto in 'Test.UniBase.Crypto.pas',
   Test.UniBase.LLM in 'Test.UniBase.LLM.pas',
@@ -48,27 +52,30 @@ uses
   // Additional tests that should compile
   Test.UniBase.DateTime in 'Test.UniBase.DateTime.pas',
   Test.UniBase.Math in 'Test.UniBase.Math.pas',
-  // Test.UniBase.Memory in 'Test.UniBase.Memory.pas',  // TODO: Fix variable required error
-  // Test.UniBase.RateLimiter in 'Test.UniBase.RateLimiter.pas',
-  // Test.UniBase.FeatureFlags in 'Test.UniBase.FeatureFlags.pas',  // TODO: Fix multiple test issues
-  // Test.UniBase.Metrics in 'Test.UniBase.Metrics.pas',
+  Test.UniBase.Memory in 'Test.UniBase.Memory.pas',
+  Test.UniBase.ObjectPool in 'Test.UniBase.ObjectPool.pas',
+  Test.UniBase.RateLimiter in 'Test.UniBase.RateLimiter.pas',
+  Test.UniBase.FeatureFlags in 'Test.UniBase.FeatureFlags.pas',
+  Test.UniBase.Metrics in 'Test.UniBase.Metrics.pas',
   Test.UniBase.i18n.Plural in 'Test.UniBase.i18n.Plural.pas',
   Test.UniBase.i18n.Gender in 'Test.UniBase.i18n.Gender.pas',
-  // Test.UniBase.Compression in 'Test.UniBase.Compression.pas',  // TODO: Fix StringOfChar call
-  // Test.UniBase.Benchmark in 'Test.UniBase.Benchmark.pas',  // TODO: Fix AreEqual type inference
-  // Test.UniBase.Diagnose in 'Test.UniBase.Diagnose.pas',  // TODO: Fix OutputDebugString missing
-  // Test.UniBase.Exception in 'Test.UniBase.Exception.pas',  // TODO: Fix IsInitialized reference
-  // Test.UniBase.Security in 'Test.UniBase.Security.pas',  // TODO: Fix WillRaise overload
-  // Test.UniBase.Authorization in 'Test.UniBase.Authorization.pas',
-  // Test.UniBase.Interfaces in 'Test.UniBase.Interfaces.pas',  // TODO: Fix undeclared identifiers
+  Test.UniBase.Compression in 'Test.UniBase.Compression.pas',
+  Test.UniBase.Benchmark in 'Test.UniBase.Benchmark.pas',
+  Test.UniBase.LockContention in 'Test.UniBase.LockContention.pas',
+  Test.UniBase.PerformanceSuite in 'Test.UniBase.PerformanceSuite.pas',
+  Test.UniBase.Diagnose in 'Test.UniBase.Diagnose.pas',
+  Test.UniBase.Exception in 'Test.UniBase.Exception.pas',
+  Test.UniBase.Security in 'Test.UniBase.Security.pas',
+  Test.UniBase.Authorization in 'Test.UniBase.Authorization.pas',
+  Test.UniBase.Interfaces in 'Test.UniBase.Interfaces.pas',
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
-  // Services module tests (OPT-007) - TODO: Fix interface lifetime issues
-  // Test.UniBase.Services.HealthCheck in 'Test.UniBase.Services.HealthCheck.pas',
+  // Services module tests (OPT-007)
+  Test.UniBase.Services.HealthCheck in 'Test.UniBase.Services.HealthCheck.pas',
   // Core units
   UniBase.Types in '..\Core\UniBase.Types.pas',
   UniBase.Manager in '..\Core\UniBase.Manager.pas',
-  UniBase.Unlock in '..\Core\UniBase.Unlock.pas',
+  UniBase.Unlock in '..\Features\UniBase.Unlock.pas',
   UniBase.Config in '..\Core\UniBase.Config.pas',
   UniBase.i18n in '..\Core\UniBase.i18n.pas',
   UniBase.FormState in '..\Core\UniBase.FormState.pas',
@@ -77,13 +84,37 @@ uses
   UniBase.Hotkeys in '..\Core\UniBase.Hotkeys.pas',
   UniBase.Theme in '..\Core\UniBase.Theme.pas',
   UniBase.License in '..\Core\UniBase.License.pas',
-  // DoQry 集成模块（在单独的测试工程中覆盖，这里不包含以避免 DBClient 依赖问题）
-  UniBase.DB.DoQry in '..\Core\UniBase.DB.DoQry.pas',
+  UniBase.RateLimiter in '..\Core\UniBase.RateLimiter.pas',
+  UniBase.FeatureFlags in '..\Core\UniBase.FeatureFlags.pas',
+  // DoQry 集成模块（Persistence 包的唯一实现）
+  UniBase.DB.DoQry in '..\Persistence\UniBase.DB.DoQry.pas',
   // LLM unit for LLM tests
   UniBase.LLM in '..\Core\UniBase.LLM.pas',
   // Payment & Social integration units
+  UniBase.Authorization in '..\Core\UniBase.Authorization.pas',
+  UniBase.Interfaces in '..\Core\UniBase.Interfaces.pas',
   UniBase.Payment in '..\ThirdParty\Payment\UniBase.Payment.pas',
-  UniBase.Social in '..\ThirdParty\Social\UniBase.Social.pas';
+  UniBase.Social in '..\ThirdParty\Social\UniBase.Social.pas',
+  UniBase.Social.OAuth in '..\ThirdParty\Social\UniBase.Social.OAuth.pas',
+  UniBase.Social.WeChat in '..\ThirdParty\Social\UniBase.Social.WeChat.pas',
+  UniBase.Social.Weibo in '..\ThirdParty\Social\UniBase.Social.Weibo.pas',
+  UniBase.Social.QQ in '..\ThirdParty\Social\UniBase.Social.QQ.pas',
+  UniBase.Metrics in '..\Core\UniBase.Metrics.pas',
+  UniBase.Compression in '..\Core\UniBase.Compression.pas',
+  UniBase.Diagnose in '..\Core\UniBase.Diagnose.pas',
+  UniBase.Schema in '..\Core\UniBase.Schema.pas',
+  UniBase.Benchmark in '..\Core\UniBase.Benchmark.pas',
+  // Cache unit for PerformanceSuite tests
+  UniBase.Cache in '..\Core\UniBase.Cache.pas',
+  // Security unit for Security tests
+  UniBase.Security in '..\Core\UniBase.Security.pas',
+  // Services units for HealthCheck tests
+  UniBase.Services.HealthCheck in '..\Core\UniBase.Services.HealthCheck.pas',
+  // Exception handler unit for Exception tests
+  UniBase.Exception in '..\Core\UniBase.Exception.pas',
+  // Memory unit for Memory tests
+  UniBase.ObjectPool in '..\Core\UniBase.ObjectPool.pas',
+  UniBase.Memory in '..\Core\UniBase.Memory.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
