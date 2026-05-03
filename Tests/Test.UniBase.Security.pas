@@ -76,6 +76,12 @@ type
     // Global Function Tests
     [Test]
     procedure Test_GlobalLoadSaveSecret;
+
+    [Test]
+    procedure Test_SecureZeroMemory_Bytes;
+
+    [Test]
+    procedure Test_SecureZeroMemory_String;
     
     // Tamper Detection Tests
     [Test]
@@ -323,6 +329,34 @@ begin
   Loaded := UniBase.Security.LoadSecret('test_global');
   
   Assert.AreEqual('global_value', Loaded);
+end;
+
+procedure TTestUniBaseSecurity.Test_SecureZeroMemory_Bytes;
+var
+  Data: TBytes;
+  B: Byte;
+begin
+  Data := TEncoding.UTF8.GetBytes('sensitive-bytes');
+  Assert.IsTrue(Length(Data) > 0);
+
+  SecureZeroMemory(Data);
+
+  for B in Data do
+    Assert.AreEqual(Byte(0), B);
+end;
+
+procedure TTestUniBaseSecurity.Test_SecureZeroMemory_String;
+var
+  Data: string;
+  I: Integer;
+begin
+  Data := 'sensitive-string';
+  Assert.IsTrue(Length(Data) > 0);
+
+  SecureZeroMemory(Data);
+
+  for I := 1 to Length(Data) do
+    Assert.AreEqual(#0, Data[I]);
 end;
 
 // ============================================================================

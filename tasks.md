@@ -847,12 +847,16 @@
   - `Tests/Test.UniBase.Memory.pas`：新增 `Test_EvictionPolicy_None_RaisesWhenFull`，锁定 `epNone` 满容量抛异常行为。
 
 #### ARCH-041: SSRF 防护加固 + SecureZeroMemory
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P2 (安全)
 - **任务**:
-  - [ ] SSRF 防护：在 HTTP 连接建立时再次校验解析后的 IP（防 DNS rebinding）
-  - [ ] `SecureZeroMemory` 改用 `RtlSecureZeroMemory` 或 `FillMemory`（防编译器优化）
-  - [ ] OAuth Token 使用后调用 SecureZeroMemory 清除内存
+  - [x] SSRF 防护：在 HTTP 连接建立时再次校验解析后的 IP（防 DNS rebinding）
+  - [x] `SecureZeroMemory` 改用 `RtlSecureZeroMemory` 或 `FillMemory`（防编译器优化）
+  - [x] OAuth Token 使用后调用 SecureZeroMemory 清除内存
+- **阶段进展**:
+  - `Core/UniBase.Net.pas`：`THttpRequest.Execute` 在 `IsSafeUrl` 之后新增解析结果二次校验（`ValidateResolvedUrlForHttp`），对解析出的 IPv4/IPv6 地址执行内网、回环、链路本地与元数据地址拦截。
+  - `Core/UniBase.Security.pas`：`SecureZeroMemory` 在 Windows 改为调用 `RtlSecureZeroMemory`，非 Windows 使用 `FillChar`，并对字符串执行 `UniqueString` 后清除。
+  - `ThirdParty/Social/UniBase.Social.pas` 与 `ThirdParty/Social/UniBase.Social.OAuth.pas`：OAuth token 与授权头相关临时字符串在 `finally` 中执行安全擦除，授权码换取用户信息后的临时 token 立即清理。
 
 #### ARCH-042: 文档去重 + Schema.pas 补充
 - **状态**: 🔲 待开始

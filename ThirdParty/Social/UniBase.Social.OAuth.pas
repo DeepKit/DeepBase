@@ -93,6 +93,9 @@ type
 
 implementation
 
+uses
+  UniBase.Security;
+
 const
   // GitHub OAuth endpoints
   GITHUB_AUTH_URL = 'https://github.com/login/oauth/authorize';
@@ -227,6 +230,8 @@ var
 begin
   Result.Clear;
 
+  PostData := '';
+  Response := '';
   Params := TDictionary<string, string>.Create;
   try
     Params.Add('client_id', FConfig.AppId);
@@ -245,6 +250,10 @@ begin
     Response := DoPost(OAuthConfig.TokenEndpoint, PostData);
     Result := ParseTokenResponse(Response);
   finally
+    if PostData <> '' then
+      UniBase.Security.SecureZeroMemory(PostData);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
     Params.Free;
   end;
 end;
@@ -259,6 +268,8 @@ begin
   if ARefreshToken = '' then
     raise ESocialAuthError.Create('Refresh token is empty', 'NO_REFRESH_TOKEN', FConfig.Provider);
 
+  PostData := '';
+  Response := '';
   Params := TDictionary<string, string>.Create;
   try
     Params.Add('client_id', FConfig.AppId);
@@ -274,6 +285,10 @@ begin
     if Result.RefreshToken = '' then
       Result.RefreshToken := ARefreshToken;
   finally
+    if PostData <> '' then
+      UniBase.Security.SecureZeroMemory(PostData);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
     Params.Free;
   end;
 end;
@@ -315,47 +330,57 @@ end;
 
 function TOAuthClient.GetUserInfo(const AToken: TSocialToken): TSocialUserInfo;
 var
+  AuthHeader: string;
   Response: string;
   JsonObj: TJSONObject;
 begin
   Result.Clear;
   Result.Provider := FConfig.Provider;
 
-  FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AToken.AccessToken;
-
+  AuthHeader := 'Bearer ' + AToken.AccessToken;
+  Response := '';
+  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
   try
-    Response := DoGet(OAuthConfig.UserInfoEndpoint);
-    Result.RawJson := Response;
-
-    JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-    if not Assigned(JsonObj) then
-    begin
-      Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
-      Exit;
-    end;
-
     try
-      // Generic mapping - subclasses override for specific providers
-      JsonObj.TryGetValue<string>('id', Result.OpenId);
-      JsonObj.TryGetValue<string>('name', Result.Nickname);
-      JsonObj.TryGetValue<string>('email', Result.Email);
-      JsonObj.TryGetValue<string>('picture', Result.Avatar);
+      Response := DoGet(OAuthConfig.UserInfoEndpoint);
+      Result.RawJson := Response;
 
-      Result.Success := True;
-    finally
-      JsonObj.Free;
+      JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+      if not Assigned(JsonObj) then
+      begin
+        Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
+        Exit;
+      end;
+
+      try
+        // Generic mapping - subclasses override for specific providers
+        JsonObj.TryGetValue<string>('id', Result.OpenId);
+        JsonObj.TryGetValue<string>('name', Result.Nickname);
+        JsonObj.TryGetValue<string>('email', Result.Email);
+        JsonObj.TryGetValue<string>('picture', Result.Avatar);
+
+        Result.Success := True;
+      finally
+        JsonObj.Free;
+      end;
+    except
+      on E: ESocialError do
+      begin
+        Result.ErrorCode := E.ErrorCode;
+        Result.ErrorMessage := E.Message;
+      end;
+      on E: Exception do
+      begin
+        Result.ErrorCode := 'ERROR';
+        Result.ErrorMessage := E.Message;
+      end;
     end;
-  except
-    on E: ESocialError do
-    begin
-      Result.ErrorCode := E.ErrorCode;
-      Result.ErrorMessage := E.Message;
-    end;
-    on E: Exception do
-    begin
-      Result.ErrorCode := 'ERROR';
-      Result.ErrorMessage := E.Message;
-    end;
+  finally
+    FHttpClient.CustomHeaders['Authorization'] := '';
+    if AuthHeader <> '' then
+      UniBase.Security.SecureZeroMemory(AuthHeader);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
   end;
 end;
 
@@ -367,12 +392,16 @@ begin
   if OAuthConfig.RevokeEndpoint = '' then
     Exit;
 
+  PostData := '';
   try
     PostData := 'token=' + TSocialHelper.UrlEncode(AToken);
     DoPost(OAuthConfig.RevokeEndpoint, PostData);
     Result := True;
   except
     Result := False;
+  finally
+    if PostData <> '' then
+      UniBase.Security.SecureZeroMemory(PostData);
   end;
 end;
 
@@ -391,6 +420,7 @@ end;
 
 function TGitHubClient.GetUserInfo(const AToken: TSocialToken): TSocialUserInfo;
 var
+  AuthHeader: string;
   Response: string;
   JsonObj: TJSONObject;
   Emails: TArray<string>;
@@ -398,7 +428,9 @@ begin
   Result.Clear;
   Result.Provider := spGitHub;
 
-  FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AToken.AccessToken;
+  AuthHeader := 'Bearer ' + AToken.AccessToken;
+  Response := '';
+  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
   FHttpClient.CustomHeaders['Accept'] := 'application/vnd.github+json';
   FHttpClient.CustomHeaders['X-GitHub-Api-Version'] := '2022-11-28';
 
@@ -442,11 +474,18 @@ begin
       Result.ErrorCode := 'ERROR';
       Result.ErrorMessage := E.Message;
     end;
+  finally
+    FHttpClient.CustomHeaders['Authorization'] := '';
+    if AuthHeader <> '' then
+      UniBase.Security.SecureZeroMemory(AuthHeader);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
   end;
 end;
 
 function TGitHubClient.GetUserEmails(const AAccessToken: string): TArray<string>;
 var
+  AuthHeader: string;
   Response: string;
   JsonArr: TJSONArray;
   I: Integer;
@@ -456,7 +495,9 @@ var
 begin
   SetLength(Result, 0);
 
-  FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AAccessToken;
+  AuthHeader := 'Bearer ' + AAccessToken;
+  Response := '';
+  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
   FHttpClient.CustomHeaders['Accept'] := 'application/vnd.github+json';
 
   try
@@ -486,6 +527,12 @@ begin
     end;
   except
     SetLength(Result, 0);
+  finally
+    FHttpClient.CustomHeaders['Authorization'] := '';
+    if AuthHeader <> '' then
+      UniBase.Security.SecureZeroMemory(AuthHeader);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
   end;
 end;
 
@@ -504,13 +551,16 @@ end;
 
 function TGoogleClient.GetUserInfo(const AToken: TSocialToken): TSocialUserInfo;
 var
+  AuthHeader: string;
   Response: string;
   JsonObj: TJSONObject;
 begin
   Result.Clear;
   Result.Provider := spGoogle;
 
-  FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AToken.AccessToken;
+  AuthHeader := 'Bearer ' + AToken.AccessToken;
+  Response := '';
+  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
 
   try
     Response := DoGet(GOOGLE_USER_URL);
@@ -545,6 +595,12 @@ begin
       Result.ErrorCode := 'ERROR';
       Result.ErrorMessage := E.Message;
     end;
+  finally
+    FHttpClient.CustomHeaders['Authorization'] := '';
+    if AuthHeader <> '' then
+      UniBase.Security.SecureZeroMemory(AuthHeader);
+    if Response <> '' then
+      UniBase.Security.SecureZeroMemory(Response);
   end;
 end;
 

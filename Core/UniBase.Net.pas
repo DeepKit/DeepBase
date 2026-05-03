@@ -293,6 +293,12 @@ type
 
   /// <summary>Network utilities</summary>
   TNetworkUtils = class
+  strict private
+    class function IsUnsafeResolvedAddress(const AAddress: string;
+      AAllowPrivateNet, AAllowLocalHost: Boolean): Boolean; static;
+    class procedure ValidateResolvedHostForHttp(const AHost: string;
+      AAllowPrivateNet, AAllowLocalHost: Boolean); static;
+    class procedure ValidateResolvedUrlForHttp(const AUrl: string); static;
   public
     /// <summary>Connectivity check</summary>
     class function IsInternetAvailable: Boolean; static;
@@ -349,6 +355,7 @@ type
     
     class function IsPrivateIP(const AAddress: string): Boolean; static;
     class function IsLoopbackIP(const AAddress: string): Boolean; static;
+    class function IsLinkLocalIP(const AAddress: string): Boolean; static;
     class function IsMulticastIP(const AAddress: string): Boolean; static;
     class function IsReservedIP(const AAddress: string): Boolean; static;
     
@@ -569,7 +576,7 @@ begin
     for LPair in FHeaders do
     begin
       // 验证HTTP头部，防止头部注入攻击
-      if IsValidHttpHeader(LPair.Key, LPair.Value) then
+      if TNetworkUtils.IsValidHttpHeader(LPair.Key, LPair.Value) then
         LClient.CustomHeaders[LPair.Key] := LPair.Value
       else
         raise EArgumentException.CreateFmt('Invalid HTTP header: %s: %s', [LPair.Key, LPair.Value]);
@@ -589,8 +596,10 @@ begin
     LStartTime := Now;
     
     // 验证URL安全性，防止SSRF攻击
-    if not IsSafeUrl(LUrl) then
+    if not TNetworkUtils.IsSafeUrl(LUrl) then
       raise ENetException.CreateFmt('Unsafe URL detected: %s', [LUrl]);
+    // 在发起连接前再次解析并校验目标IP，降低DNS rebinding风险
+    TNetworkUtils.ValidateResolvedUrlForHttp(LUrl);
     
     try
       case FMethod of
@@ -1868,6 +1877,22 @@ begin
   Result := LIP.IsLoopback;
 end;
 
+class function TIPUtils.IsLinkLocalIP(const AAddress: string): Boolean;
+var
+  LIP: TIPv4Address;
+  LLower: string;
+begin
+  if TIPv4Address.TryParse(AAddress, LIP) then
+    Exit((LIP.Octets[0] = 169) and (LIP.Octets[1] = 254));
+
+  // IPv6 link-local range: fe80::/10 (fe8x-febx)
+  LLower := LowerCase(Trim(AAddress));
+  Result := LLower.StartsWith('fe8') or
+            LLower.StartsWith('fe9') or
+            LLower.StartsWith('fea') or
+            LLower.StartsWith('feb');
+end;
+
 class function TIPUtils.IsMulticastIP(const AAddress: string): Boolean;
 var
   LIP: TIPv4Address;
@@ -1977,10 +2002,137 @@ begin
   Result := True;
 end;
 
+class function TNetworkUtils.IsUnsafeResolvedAddress(const AAddress: string;
+  AAllowPrivateNet, AAllowLocalHost: Boolean): Boolean;
+var
+  LAddress: string;
+  LZoneIndex: Integer;
+begin
+  LAddress := LowerCase(Trim(AAddress));
+  if LAddress = '' then
+    Exit(True);
+
+  if (Length(LAddress) > 2) and LAddress.StartsWith('[') and LAddress.EndsWith(']') then
+    LAddress := Copy(LAddress, 2, Length(LAddress) - 2);
+
+  LZoneIndex := Pos('%', LAddress);
+  if LZoneIndex > 0 then
+    LAddress := Copy(LAddress, 1, LZoneIndex - 1);
+
+  if (not AAllowPrivateNet) and
+     (TIPUtils.IsPrivateIP(LAddress) or TIPUtils.IsLinkLocalIP(LAddress)) then
+    Exit(True);
+
+  // IPv6 Unique Local Address: fc00::/7
+  if (not AAllowPrivateNet) and TNetworkUtils.IsValidIPv6(LAddress) and
+     (LAddress.StartsWith('fc') or LAddress.StartsWith('fd')) then
+    Exit(True);
+
+  if (not AAllowLocalHost) and
+     (TIPUtils.IsLoopbackIP(LAddress) or
+      SameText(LAddress, '::1') or
+      SameText(LAddress, '0:0:0:0:0:0:0:1')) then
+    Exit(True);
+
+  if SameText(LAddress, '169.254.169.254') then
+    Exit(True);
+
+  Result := False;
+end;
+
+class procedure TNetworkUtils.ValidateResolvedHostForHttp(const AHost: string;
+  AAllowPrivateNet, AAllowLocalHost: Boolean);
+var
+  LHost: string;
+  LResolver: TDnsResolver_;
+  LResolved: TArray<string>;
+  LIPv6: string;
+  LAddress: string;
+  LExists: Boolean;
+begin
+  LHost := LowerCase(Trim(AHost));
+  if LHost = '' then
+    raise ENetException.Create('Unsafe URL detected: empty host');
+
+  if (not AAllowLocalHost) and
+     (LHost.Contains('localhost') or LHost.Contains('127.') or LHost.Contains('::1')) then
+    raise ENetException.CreateFmt('Unsafe resolved address: %s', [LHost]);
+
+  if TNetworkUtils.IsValidIPv4(LHost) or TNetworkUtils.IsValidIPv6(LHost) then
+  begin
+    if IsUnsafeResolvedAddress(LHost, AAllowPrivateNet, AAllowLocalHost) then
+      raise ENetException.CreateFmt('Unsafe resolved address: %s', [LHost]);
+    Exit;
+  end;
+
+  LResolver := TDnsResolver_.Create;
+  try
+    try
+      LResolved := LResolver.ResolveAll(LHost);
+      LIPv6 := LResolver.ResolveIPv6(LHost);
+    except
+      on E: Exception do
+        raise ENetException.CreateFmt(
+          'Failed to resolve host for SSRF validation: %s (%s)',
+          [LHost, E.Message]);
+    end;
+  finally
+    LResolver.Free;
+  end;
+
+  if LIPv6 <> '' then
+  begin
+    LExists := False;
+    for LAddress in LResolved do
+    begin
+      if SameText(LAddress, LIPv6) then
+      begin
+        LExists := True;
+        Break;
+      end;
+    end;
+
+    if not LExists then
+    begin
+      SetLength(LResolved, Length(LResolved) + 1);
+      LResolved[High(LResolved)] := LIPv6;
+    end;
+  end;
+
+  if Length(LResolved) = 0 then
+    raise ENetException.CreateFmt(
+      'Failed to resolve host for SSRF validation: %s',
+      [LHost]);
+
+  for LAddress in LResolved do
+  begin
+    if IsUnsafeResolvedAddress(LAddress, AAllowPrivateNet, AAllowLocalHost) then
+      raise ENetException.CreateFmt(
+        'Unsafe resolved address for host %s: %s',
+        [LHost, LAddress]);
+  end;
+end;
+
+class procedure TNetworkUtils.ValidateResolvedUrlForHttp(const AUrl: string);
+var
+  URI: TURI;
+  Host: string;
+  AllowPrivateNet: Boolean;
+  AllowLocalHost: Boolean;
+begin
+  URI := TURI.Create(AUrl);
+  Host := URI.Host;
+  AllowPrivateNet := SameText(GetEnvironmentVariable('UNIBASE_ALLOW_PRIVATE_NET_HTTP'), '1');
+  AllowLocalHost := SameText(GetEnvironmentVariable('UNIBASE_ALLOW_LOCALHOST_HTTP'), '1');
+  ValidateResolvedHostForHttp(Host, AllowPrivateNet, AllowLocalHost);
+end;
+
 class function TNetworkUtils.IsSafeUrl(const AUrl: string): Boolean;
 var
   URI: TURI;
   Host: string;
+  AllowPrivateNet: Boolean;
+  AllowLocalHost: Boolean;
 begin
   Result := False;
   
@@ -1992,17 +2144,23 @@ begin
       Exit;
       
     Host := URI.Host.ToLower;
+    if Host = '' then
+      Exit;
+
+    AllowPrivateNet := SameText(GetEnvironmentVariable('UNIBASE_ALLOW_PRIVATE_NET_HTTP'), '1');
+    AllowLocalHost := SameText(GetEnvironmentVariable('UNIBASE_ALLOW_LOCALHOST_HTTP'), '1');
     
-    // 防止SSRF攻击 - 禁止访问内网地址
-    if TIPUtils.IsPrivateIP(Host) or TIPUtils.IsLoopbackIP(Host) or TIPUtils.IsLinkLocalIP(Host) then
+    // 防止SSRF攻击 - 默认禁止内网地址（可通过环境变量显式放开）
+    if (TIPUtils.IsPrivateIP(Host) or TIPUtils.IsLinkLocalIP(Host)) and (not AllowPrivateNet) then
+      Exit;
+
+    // 默认禁止回环地址（可通过环境变量显式放开，用于本地集成测试/开发）
+    if (TIPUtils.IsLoopbackIP(Host) or Host.Contains('localhost') or Host.Contains('127.') or Host.Contains('::1')) and
+       (not AllowLocalHost) then
       Exit;
       
     // 禁止访问元数据服务
     if Host.Contains('169.254.169.254') or Host.Contains('metadata') then
-      Exit;
-      
-    // 禁止访问localhost的各种形式
-    if Host.Contains('localhost') or Host.Contains('127.') or Host.Contains('::1') then
       Exit;
       
     Result := True;

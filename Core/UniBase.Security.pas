@@ -175,31 +175,32 @@ uses
 // BUG-038 FIX: Secure Memory Functions Implementation
 // ============================================================================
 
+{$IFDEF MSWINDOWS}
+function RtlSecureZeroMemory(ptr: Pointer; cnt: NativeUInt): Pointer; stdcall;
+  external 'kernel32.dll' name 'RtlSecureZeroMemory';
+{$ENDIF}
+
 procedure SecureZeroMemory(var Data: TBytes);
-var
-  I: Integer;
 begin
-  // Use volatile write pattern to prevent compiler optimization
-  for I := 0 to High(Data) do
-    Data[I] := 0;
-  // Memory barrier to ensure writes are not optimized away
+  if Length(Data) = 0 then
+    Exit;
+
   {$IFDEF MSWINDOWS}
-  MemoryBarrier;
+  RtlSecureZeroMemory(@Data[0], Length(Data));
+  {$ELSE}
+  FillChar(Data[0], Length(Data), 0);
   {$ENDIF}
 end;
 
 procedure SecureZeroMemory(var Data: string);
-var
-  I: Integer;
-  P: PChar;
 begin
   if Length(Data) > 0 then
   begin
-    P := PChar(Data);
-    for I := 0 to Length(Data) - 1 do
-      P[I] := #0;
+    UniqueString(Data);
     {$IFDEF MSWINDOWS}
-    MemoryBarrier;
+    RtlSecureZeroMemory(PChar(Data), Length(Data) * SizeOf(Char));
+    {$ELSE}
+    FillChar(PChar(Data)^, Length(Data) * SizeOf(Char), 0);
     {$ENDIF}
   end;
 end;

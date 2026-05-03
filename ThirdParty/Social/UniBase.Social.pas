@@ -242,7 +242,8 @@ implementation
 
 uses
   System.Hash,
-  UniBase.Random;
+  UniBase.Random,
+  UniBase.Security;
 
 const
   STATE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -270,6 +271,19 @@ end;
 
 procedure TSocialToken.Clear;
 begin
+  if AccessToken <> '' then
+    UniBase.Security.SecureZeroMemory(AccessToken);
+  if RefreshToken <> '' then
+    UniBase.Security.SecureZeroMemory(RefreshToken);
+  if TokenType <> '' then
+    UniBase.Security.SecureZeroMemory(TokenType);
+  if Scope <> '' then
+    UniBase.Security.SecureZeroMemory(Scope);
+  if OpenId <> '' then
+    UniBase.Security.SecureZeroMemory(OpenId);
+  if UnionId <> '' then
+    UniBase.Security.SecureZeroMemory(UnionId);
+
   AccessToken := '';
   RefreshToken := '';
   ExpiresIn := 0;
@@ -481,7 +495,11 @@ var
   Token: TSocialToken;
 begin
   Token := ExchangeCode(ACode);
-  Result := GetUserInfo(Token);
+  try
+    Result := GetUserInfo(Token);
+  finally
+    Token.Clear;
+  end;
 end;
 
 function TSocialClient.Share(const AContent: TSocialShare;

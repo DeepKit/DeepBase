@@ -108,6 +108,8 @@ type
     [Test]
     procedure TestIsValidPort;
     [Test]
+    procedure TestIsSafeUrl;
+    [Test]
     procedure TestGetServiceName;
     [Test]
     procedure TestGetServicePort;
@@ -580,6 +582,13 @@ begin
   Assert.IsFalse(TNetworkUtils.IsValidPort(0));
   Assert.IsFalse(TNetworkUtils.IsValidPort(65536));
   Assert.IsFalse(TNetworkUtils.IsValidPort(-1));
+end;
+
+procedure TTestUniBaseNet.TestIsSafeUrl;
+begin
+  Assert.IsTrue(TNetworkUtils.IsSafeUrl('https://example.com/api'));
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('ftp://example.com/resource'));
+  Assert.IsFalse(TNetworkUtils.IsSafeUrl('http://169.254.169.254/latest/meta-data'));
 end;
 
 procedure TTestUniBaseNet.TestGetServiceName;
