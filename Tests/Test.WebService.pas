@@ -82,6 +82,9 @@ type
 
     [Test]
     procedure Test_Router_Middleware;
+
+    [Test]
+    procedure Test_Router_Match_ExtractsRouteParams;
   end;
 
   // ============================================================================
@@ -343,6 +346,27 @@ begin
     Router.Use(procedure(Ctx: TApiContext; Next: TProc) begin Next(); end);
     Assert.IsNotNull(Router);
   finally
+    Router.Free;
+  end;
+end;
+
+procedure TApiRouterTests.Test_Router_Match_ExtractsRouteParams;
+var
+  Router: TApiRouter;
+  Params: TRouteParams;
+  Route: TRouteDefinition;
+begin
+  Router := TApiRouter.Create;
+  Params := TRouteParams.Create;
+  try
+    Router.Get('/users/:id', procedure(Ctx: TApiContext) begin end);
+
+    Route := Router.Match(hmGet, '/users/42', Params);
+    Assert.IsNotNull(Route, 'Route should match');
+    Assert.IsTrue(Params.ContainsKey('id'));
+    Assert.AreEqual('42', Params['id']);
+  finally
+    Params.Free;
     Router.Free;
   end;
 end;

@@ -270,6 +270,7 @@ type
   private
     FPattern: string;
     FRegexPattern: string;
+    FCompiledRegex: TRegEx;
     FMethods: THttpMethods;
     FHandler: TRouteHandler;
     FMiddlewares: TList<TMiddlewareFunc>;
@@ -1201,16 +1202,15 @@ begin
   if not LPattern.EndsWith('/') then
     LPattern := LPattern + '/?';
   FRegexPattern := '^' + LPattern + '$';
+  FCompiledRegex := TRegEx.Create(FRegexPattern, [roIgnoreCase]);
 end;
 
 function TRouteDefinition.Match(const APath: string; AParams: TRouteParams): Boolean;
 var
-  LRegex: TRegEx;
   LMatch: TMatch;
   I: Integer;
 begin
-  LRegex := TRegEx.Create(FRegexPattern, [roIgnoreCase]);
-  LMatch := LRegex.Match(APath);
+  LMatch := FCompiledRegex.Match(APath);
   Result := LMatch.Success;
   if Result and (AParams <> nil) then
   begin

@@ -867,11 +867,13 @@
 - **任务**:
   - [ ] Logs/LLMCalls/ExceptionReports 表添加自动归档或分区策略
   - [x] WebAPI `BadRequest/Unauthorized` 等方法改用 `TJSONObject` 构造（防 JSON 注入）
-  - [ ] WebAPI 路由匹配缓存正则编译结果
+  - [x] WebAPI 路由匹配缓存正则编译结果
   - [ ] PostgreSQL 密码改用 DPAPI 加密存储
 - **阶段进展**:
   - `Tools/WebService/UniBase.WebAPI.Core.pas`：`BadRequest/Unauthorized/Forbidden/NotFound/Conflict/InternalError/TooManyRequests` 改为统一 `SendErrorResponse(...)`，通过 `TJSONObject` 生成错误 JSON，消除字符串拼接注入风险。
+  - `Tools/WebService/UniBase.WebAPI.Core.pas`：`TRouteDefinition` 在 `CompilePattern` 阶段预编译 `TRegEx` 并在 `Match` 阶段复用，避免每次路由匹配重复构造正则对象。
   - `Tests/Test.WebService.pas`：新增 `Test_Response_ErrorEscapesJSONPayload`，验证包含引号和换行的错误消息仍能生成合法 JSON。
+  - `Tests/Test.WebService.pas`：新增 `Test_Router_Match_ExtractsRouteParams`，覆盖参数路由匹配与参数提取回归。
 
 ---
 
