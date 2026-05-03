@@ -110,6 +110,315 @@ uses
 const
   WECHAT_API_URL = 'https://api.mch.weixin.qq.com';
 
+{$IFDEF MSWINDOWS}
+const
+  BCRYPT_RSAPRIVATE_BLOB = 'RSAPRIVATEBLOB';
+  BCRYPT_RSAPRIVATE_MAGIC = $32415352; // 'RSA2'
+
+function BCryptSignHash(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
+  pbInput: PByte; cbInput: ULONG; pbOutput: PByte; cbOutput: ULONG;
+  out pcbResult: ULONG; dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+
+type
+  TRSAPrivateKeyParts = record
+    Modulus: TBytes;
+    PublicExponent: TBytes;
+    Prime1: TBytes;
+    Prime2: TBytes;
+  end;
+
+function TrimIntegerBytes(const AValue: TBytes): TBytes;
+var
+  I: Integer;
+begin
+  if Length(AValue) = 0 then
+    Exit(nil);
+
+  I := 0;
+  while (I < Length(AValue) - 1) and (AValue[I] = 0) do
+    Inc(I);
+
+  Result := Copy(AValue, I, Length(AValue) - I);
+end;
+
+function ReadDerLength(const AData: TBytes; var APos: Integer): Integer;
+var
+  First, Count, I: Integer;
+begin
+  if APos >= Length(AData) then
+    raise EPaymentSignError.Create('Invalid DER length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+  First := AData[APos];
+  Inc(APos);
+
+  if (First and $80) = 0 then
+    Exit(First);
+
+  Count := First and $7F;
+  if Count = 0 then
+    raise EPaymentSignError.Create('Unsupported DER length form', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+  if APos + Count > Length(AData) then
+    raise EPaymentSignError.Create('Truncated DER length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+  Result := 0;
+  for I := 1 to Count do
+  begin
+    Result := (Result shl 8) or AData[APos];
+    Inc(APos);
+  end;
+end;
+
+procedure ExpectDerTag(const AData: TBytes; var APos: Integer; ATag: Byte);
+begin
+  if APos >= Length(AData) then
+    raise EPaymentSignError.Create('Unexpected DER end', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+  if AData[APos] <> ATag then
+    raise EPaymentSignError.Create('Unexpected DER tag', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+  Inc(APos);
+end;
+
+function ReadDerInteger(const AData: TBytes; var APos: Integer): TBytes;
+var
+  LLen: Integer;
+begin
+  ExpectDerTag(AData, APos, $02); // INTEGER
+  LLen := ReadDerLength(AData, APos);
+  if (LLen < 0) or (APos + LLen > Length(AData)) then
+    raise EPaymentSignError.Create('Invalid DER integer length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+  Result := Copy(AData, APos, LLen);
+  Inc(APos, LLen);
+  Result := TrimIntegerBytes(Result);
+end;
+
+function ParsePemToDer(const APem: string): TBytes;
+var
+  Normalized: string;
+  Lines: TArray<string>;
+  L: string;
+  LineText: string;
+  Capture: Boolean;
+  Base64Data: TStringBuilder;
+begin
+  Capture := False;
+  Base64Data := TStringBuilder.Create;
+  try
+    Normalized := StringReplace(APem, #13, #10, [rfReplaceAll]);
+    Lines := Normalized.Split([#10], TStringSplitOptions.ExcludeEmpty);
+    for L in Lines do
+    begin
+      LineText := Trim(L);
+      if LineText = '' then
+        Continue;
+
+      if StartsText('-----BEGIN ', LineText) then
+      begin
+        if (Pos('PRIVATE KEY', UpperCase(LineText)) > 0) then
+          Capture := True;
+        Continue;
+      end;
+
+      if StartsText('-----END ', LineText) then
+      begin
+        if Capture then
+          Break;
+        Continue;
+      end;
+
+      if Capture then
+        Base64Data.Append(LineText);
+    end;
+
+    // fallback: allow plain base64 content without PEM header
+    if Base64Data.Length = 0 then
+      Base64Data.Append(StringReplace(StringReplace(Trim(APem), #13, '', [rfReplaceAll]), #10, '', [rfReplaceAll]));
+
+    if Base64Data.Length = 0 then
+      raise EPaymentSignError.Create('Empty private key', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+    Result := TEncodingUtils.Base64Decode(Base64Data.ToString);
+  finally
+    Base64Data.Free;
+  end;
+end;
+
+function ExtractPkcs1PrivateKey(const ADer: TBytes): TBytes;
+var
+  Pos, Len: Integer;
+begin
+  Result := nil;
+  if Length(ADer) = 0 then
+    Exit;
+
+  Pos := 0;
+  ExpectDerTag(ADer, Pos, $30); // SEQUENCE
+  Len := ReadDerLength(ADer, Pos);
+  if Pos + Len > Length(ADer) then
+    raise EPaymentSignError.Create('Invalid PKCS#8 sequence length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+  // version
+  ReadDerInteger(ADer, Pos);
+
+  if (Pos < Length(ADer)) and (ADer[Pos] = $30) then
+  begin
+    // PKCS#8: skip algorithm identifier sequence
+    Inc(Pos);
+    Len := ReadDerLength(ADer, Pos);
+    Inc(Pos, Len);
+
+    // privateKey OCTET STRING
+    ExpectDerTag(ADer, Pos, $04);
+    Len := ReadDerLength(ADer, Pos);
+    if Pos + Len > Length(ADer) then
+      raise EPaymentSignError.Create('Invalid PKCS#8 privateKey length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+    Result := Copy(ADer, Pos, Len);
+    Exit;
+  end;
+
+  // already PKCS#1
+  Result := ADer;
+end;
+
+function ParseRsaPrivateKey(const APkcs1Der: TBytes): TRSAPrivateKeyParts;
+var
+  Pos, Len: Integer;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Pos := 0;
+
+  ExpectDerTag(APkcs1Der, Pos, $30); // SEQUENCE
+  Len := ReadDerLength(APkcs1Der, Pos);
+  if Pos + Len > Length(APkcs1Der) then
+    raise EPaymentSignError.Create('Invalid PKCS#1 sequence length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+  // version
+  ReadDerInteger(APkcs1Der, Pos);
+  Result.Modulus := ReadDerInteger(APkcs1Der, Pos);
+  Result.PublicExponent := ReadDerInteger(APkcs1Der, Pos);
+  // privateExponent (skip)
+  ReadDerInteger(APkcs1Der, Pos);
+  Result.Prime1 := ReadDerInteger(APkcs1Der, Pos);
+  Result.Prime2 := ReadDerInteger(APkcs1Der, Pos);
+end;
+
+function BuildRsaPrivateBlob(const AParts: TRSAPrivateKeyParts): TBytes;
+var
+  Header: BCRYPT_RSAKEY_BLOB;
+  Pos: Integer;
+  BlobSize: Integer;
+begin
+  if (Length(AParts.Modulus) = 0) or
+     (Length(AParts.PublicExponent) = 0) or
+     (Length(AParts.Prime1) = 0) or
+     (Length(AParts.Prime2) = 0) then
+    raise EPaymentSignError.Create('Incomplete RSA private key', 'INVALID_PRIVATE_KEY', ppWeChatPay);
+
+  Header.Magic := BCRYPT_RSAPRIVATE_MAGIC;
+  Header.BitLength := Length(AParts.Modulus) * 8;
+  Header.cbPublicExp := Length(AParts.PublicExponent);
+  Header.cbModulus := Length(AParts.Modulus);
+  Header.cbPrime1 := Length(AParts.Prime1);
+  Header.cbPrime2 := Length(AParts.Prime2);
+
+  BlobSize := SizeOf(BCRYPT_RSAKEY_BLOB) + Header.cbPublicExp + Header.cbModulus +
+    Header.cbPrime1 + Header.cbPrime2;
+
+  SetLength(Result, BlobSize);
+  Pos := 0;
+
+  Move(Header, Result[Pos], SizeOf(BCRYPT_RSAKEY_BLOB));
+  Inc(Pos, SizeOf(BCRYPT_RSAKEY_BLOB));
+
+  Move(AParts.PublicExponent[0], Result[Pos], Header.cbPublicExp);
+  Inc(Pos, Header.cbPublicExp);
+  Move(AParts.Modulus[0], Result[Pos], Header.cbModulus);
+  Inc(Pos, Header.cbModulus);
+  Move(AParts.Prime1[0], Result[Pos], Header.cbPrime1);
+  Inc(Pos, Header.cbPrime1);
+  Move(AParts.Prime2[0], Result[Pos], Header.cbPrime2);
+end;
+
+function SignWithPrivateKeyPem(const AData, APrivateKeyPem: string): string;
+var
+  Der, Pkcs1Der, PrivateBlob: TBytes;
+  Parts: TRSAPrivateKeyParts;
+  AlgHandle, KeyHandle, HashAlgHandle: BCRYPT_ALG_HANDLE;
+  Hash: TBytes;
+  Padding: BCRYPT_PKCS1_PADDING_INFO;
+  Status: NTSTATUS;
+  SigLen: ULONG;
+  SigBytes: TBytes;
+  AlgId: WideString;
+  DataBytes: TBytes;
+begin
+  Result := '';
+  AlgHandle := 0;
+  KeyHandle := 0;
+  HashAlgHandle := 0;
+
+  Der := ParsePemToDer(APrivateKeyPem);
+  Pkcs1Der := ExtractPkcs1PrivateKey(Der);
+  Parts := ParseRsaPrivateKey(Pkcs1Der);
+  PrivateBlob := BuildRsaPrivateBlob(Parts);
+
+  Status := BCryptOpenAlgorithmProvider(AlgHandle, BCRYPT_RSA_ALGORITHM, nil, 0);
+  if Status <> STATUS_SUCCESS then
+    raise EPaymentSignError.Create(Format('BCryptOpenAlgorithmProvider(RSA) failed: $%x',
+      [Status]), 'SIGN_INIT_FAILED', ppWeChatPay);
+
+  try
+    Status := BCryptImportKeyPair(AlgHandle, 0, BCRYPT_RSAPRIVATE_BLOB,
+      KeyHandle, @PrivateBlob[0], Length(PrivateBlob), 0);
+    if Status <> STATUS_SUCCESS then
+      raise EPaymentSignError.Create(Format('BCryptImportKeyPair(private) failed: $%x',
+        [Status]), 'SIGN_KEY_IMPORT_FAILED', ppWeChatPay);
+
+    Status := BCryptOpenAlgorithmProvider(HashAlgHandle, BCRYPT_SHA256_ALGORITHM, nil, 0);
+    if Status <> STATUS_SUCCESS then
+      raise EPaymentSignError.Create(Format('BCryptOpenAlgorithmProvider(SHA256) failed: $%x',
+        [Status]), 'SIGN_HASH_INIT_FAILED', ppWeChatPay);
+
+    SetLength(Hash, 32);
+    DataBytes := TEncoding.UTF8.GetBytes(AData);
+    if Length(DataBytes) > 0 then
+      Status := BCryptHash(HashAlgHandle, nil, 0, @DataBytes[0], Length(DataBytes), @Hash[0], 32)
+    else
+      Status := BCryptHash(HashAlgHandle, nil, 0, nil, 0, @Hash[0], 32);
+
+    if Status <> STATUS_SUCCESS then
+      raise EPaymentSignError.Create(Format('BCryptHash failed: $%x',
+        [Status]), 'SIGN_HASH_FAILED', ppWeChatPay);
+
+    AlgId := BCRYPT_SHA256_ALGORITHM;
+    Padding.pszAlgId := PWideChar(AlgId);
+
+    SigLen := 0;
+    Status := BCryptSignHash(KeyHandle, @Padding, @Hash[0], Length(Hash),
+      nil, 0, SigLen, BCRYPT_PAD_PKCS1);
+    if Status <> STATUS_SUCCESS then
+      raise EPaymentSignError.Create(Format('BCryptSignHash(size) failed: $%x',
+        [Status]), 'SIGN_FAILED', ppWeChatPay);
+
+    SetLength(SigBytes, SigLen);
+    Status := BCryptSignHash(KeyHandle, @Padding, @Hash[0], Length(Hash),
+      @SigBytes[0], Length(SigBytes), SigLen, BCRYPT_PAD_PKCS1);
+    if Status <> STATUS_SUCCESS then
+      raise EPaymentSignError.Create(Format('BCryptSignHash failed: $%x',
+        [Status]), 'SIGN_FAILED', ppWeChatPay);
+
+    SetLength(SigBytes, SigLen);
+    Result := TNetEncoding.Base64.EncodeBytesToString(SigBytes);
+  finally
+    if HashAlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(HashAlgHandle, 0);
+    if KeyHandle <> 0 then
+      BCryptDestroyKey(KeyHandle);
+    if AlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(AlgHandle, 0);
+  end;
+end;
+{$ENDIF}
+
 { TWeChatPayConfig }
 
 constructor TWeChatPayConfig.Create;
@@ -176,10 +485,22 @@ begin
 end;
 
 function TWeChatPayClient.RSASign(const AContent: string): string;
+var
+  Cfg: TWeChatPayConfig;
 begin
+  Cfg := TWeChatPayConfig(FConfig);
+  if Trim(Cfg.PrivateKey) = '' then
+    raise EPaymentSignError.Create(
+      'Missing WeChat merchant private key.',
+      'MISSING_PRIVATE_KEY', ppWeChatPay);
+
+  {$IFDEF MSWINDOWS}
+  Result := SignWithPrivateKeyPem(AContent, Cfg.PrivateKey);
+  {$ELSE}
   raise EPaymentSignError.Create(
     'RSA signing is unavailable in this build. Use provider SDK signing flow.',
     'SIGN_NOT_IMPLEMENTED', ppWeChatPay);
+  {$ENDIF}
 end;
 
 function TWeChatPayClient.BuildAuthorizationHeader(const AMethod, AUrl, ABody: string): string;

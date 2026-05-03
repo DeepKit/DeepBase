@@ -10,9 +10,9 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.SysUtils, System.IOUtils, System.Variants,
-  FireDAC.Comp.Client, FireDAC.Stan.Def, FireDAC.Phys.SQLite,
-  DBClient,
+  System.SysUtils, System.IOUtils, System.Variants, System.Threading, System.SyncObjs,
+  System.Generics.Collections,
+  FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Def, FireDAC.Phys.SQLite,
   UniBase.DB.DoQry;
 
 type
@@ -59,6 +59,24 @@ type
     
     [Test]
     procedure Test_InvalidSQL_RaisesEUniBaseDbError;
+
+    [Test]
+    procedure Test_QueryTable_NameSqlText_LoadsSql;
+
+    [Test]
+    procedure Test_MissingProcName_DoesNotFallbackToSQL;
+
+    [Test]
+    procedure Test_DirectDDL_IsBlockedUnlessStoredInQueries;
+
+    [Test]
+    procedure Test_InsertReturningId_BindsJsonParams;
+
+    [Test]
+    procedure Test_InsertReturningId_WithTrigger_ReturnsTargetTableId;
+
+    [Test]
+    procedure Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds;
     
     [Test]
     procedure Test_CacheTTL_Expiry;
@@ -68,6 +86,9 @@ type
     
     [Test]
     procedure Test_CacheStats_Accuracy;
+
+    [Test]
+    procedure Test_CacheConcurrentLoad_SingleMissAndStableResult;
     
     [Test]
     procedure Test_MultiTypeFields_CopyCorrectly;
@@ -95,6 +116,9 @@ type
     
     [Test]
     procedure Test_PreparedPool_ClearRemovesAll;
+
+    [Test]
+    procedure Test_PreparedPool_MaxSizeEnforcesLRUEviction;
   end;
 
 implementation
@@ -152,6 +176,15 @@ begin
       '  description TEXT' +
       ')';
     Q.ExecSQL;
+
+    Q.SQL.Text :=
+      'CREATE TABLE IF NOT EXISTS Queries (' +
+      '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+      '  Name TEXT NOT NULL UNIQUE,' +
+      '  SqlText TEXT NOT NULL,' +
+      '  IsEnabled INTEGER DEFAULT 1' +
+      ')';
+    Q.ExecSQL;
   finally
     Q.Free;
   end;
@@ -167,6 +200,8 @@ begin
     Q.SQL.Text := 'DROP TABLE IF EXISTS test_users';
     Q.ExecSQL;
     Q.SQL.Text := 'DROP TABLE IF EXISTS test_multitype';
+    Q.ExecSQL;
+    Q.SQL.Text := 'DROP TABLE IF EXISTS Queries';
     Q.ExecSQL;
   finally
     Q.Free;
@@ -216,7 +251,7 @@ end;
 procedure TTestUniBaseDoQry.Test_Select_ReturnsData;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   Rows: Integer;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -228,7 +263,7 @@ begin
     Ctx
   );
   
-  Data := TClientDataSet.Create(nil);
+  Data := TFDMemTable.Create(nil);
   try
     Rows := UniDbSelect(
       'SELECT * FROM test_users WHERE name = :name',
@@ -342,11 +377,293 @@ begin
   Assert.WillRaise(
     procedure
     begin
-      UniDbExec('INVALID SQL SYNTAX', '', Ctx);
+      UniDbExec('SELECT FROM', '', Ctx);
     end,
     EUniBaseDbError,
     'Should raise EUniBaseDbError for invalid SQL'
   );
+end;
+
+procedure TTestUniBaseDoQry.Test_QueryTable_NameSqlText_LoadsSql;
+var
+  Ctx: TUniQueryContext;
+  Data: TFDMemTable;
+  Rows: Integer;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  UniDbExec(
+    'INSERT INTO Queries (Name, SqlText, IsEnabled) VALUES (:query_name, :sql_text, 1)',
+    '{"query_name": "user.by_name", "sql_text": "SELECT * FROM test_users WHERE name = :name"}',
+    Ctx
+  );
+  UniDbExec(
+    'INSERT INTO test_users (name, age) VALUES (:name, :age)',
+    '{"name": "StoredQueryUser", "age": 31}',
+    Ctx
+  );
+
+  Data := TFDMemTable.Create(nil);
+  try
+    Rows := UniDbSelect('user.by_name', '{"name": "StoredQueryUser"}', Data, Ctx);
+    Assert.AreEqual(1, Rows);
+    Assert.AreEqual('StoredQueryUser', Data.FieldByName('name').AsString);
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_MissingProcName_DoesNotFallbackToSQL;
+var
+  Ctx: TUniQueryContext;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  try
+    UniDbExec('missing.proc.name', '', Ctx);
+    Assert.Fail('Missing query name should not be executed as SQL');
+  except
+    on E: EUniBaseDbError do
+      Assert.AreEqual(DOQRY_ERR_QUERY_NOT_FOUND, E.ErrorCode);
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_DirectDDL_IsBlockedUnlessStoredInQueries;
+var
+  Ctx: TUniQueryContext;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  try
+    UniDbExec('DROP TABLE test_users', '', Ctx);
+    Assert.Fail('DDL text should not be accepted as direct SQL');
+  except
+    on E: EUniBaseDbError do
+      Assert.AreEqual(DOQRY_ERR_QUERY_NOT_FOUND, E.ErrorCode);
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_InsertReturningId_BindsJsonParams;
+var
+  Ctx: TUniQueryContext;
+  NewId: Integer;
+  Name: Variant;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  NewId := UniDbInsertReturningId(
+    'INSERT INTO test_users (name, age) VALUES (:name, :age)',
+    '{"name": "InsertIdUser", "age": 41}',
+    Ctx
+  );
+
+  Assert.IsTrue(NewId > 0, 'InsertReturningId should return the new row id');
+  Name := UniDbScalar('SELECT name FROM test_users WHERE id = :id',
+    '{"id": ' + IntToStr(NewId) + '}', Ctx);
+  Assert.AreEqual('InsertIdUser', string(Name));
+end;
+
+procedure TTestUniBaseDoQry.Test_InsertReturningId_WithTrigger_ReturnsTargetTableId;
+var
+  Ctx: TUniQueryContext;
+  Q: TFDQuery;
+  I: Integer;
+  NewId: Integer;
+  ActualId: Integer;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text :=
+      'CREATE TABLE IF NOT EXISTS test_users_audit (' +
+      '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+      '  user_name TEXT NOT NULL' +
+      ')';
+    Q.ExecSQL;
+
+    for I := 1 to 20 do
+    begin
+      Q.SQL.Text := 'INSERT INTO test_users_audit (user_name) VALUES (:n)';
+      Q.ParamByName('n').AsString := 'seed-' + IntToStr(I);
+      Q.ExecSQL;
+    end;
+
+    Q.SQL.Text :=
+      'CREATE TRIGGER IF NOT EXISTS trg_test_users_audit ' +
+      'AFTER INSERT ON test_users ' +
+      'BEGIN ' +
+      '  INSERT INTO test_users_audit (user_name) VALUES (NEW.name); ' +
+      'END';
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+
+  try
+    NewId := UniDbInsertReturningId(
+      'INSERT INTO test_users (name, age) VALUES (:name, :age)',
+      '{"name": "TriggerUser", "age": 22}',
+      Ctx
+    );
+
+    ActualId := Integer(UniDbScalar(
+      'SELECT id FROM test_users WHERE name = :name',
+      '{"name": "TriggerUser"}',
+      Ctx
+    ));
+
+    Assert.AreEqual(ActualId, NewId,
+      'InsertReturningId should return inserted test_users.id, not trigger side-effect rowid');
+  finally
+    Q := TFDQuery.Create(nil);
+    try
+      Q.Connection := FConnection;
+      Q.SQL.Text := 'DROP TRIGGER IF EXISTS trg_test_users_audit';
+      Q.ExecSQL;
+      Q.SQL.Text := 'DROP TABLE IF EXISTS test_users_audit';
+      Q.ExecSQL;
+    finally
+      Q.Free;
+    end;
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds;
+const
+  CThreadCount = 8;
+var
+  TempDbPath: string;
+  SetupConn: TFDConnection;
+  Q: TFDQuery;
+  Tasks: TArray<ITask>;
+  IdLock: TCriticalSection;
+  ReturnedIds: TList<Integer>;
+  ErrorCount: Integer;
+  I: Integer;
+  DistinctCount: Integer;
+begin
+  TempDbPath := TPath.Combine(TPath.GetTempPath,
+    Format('unibase_insert_id_%d.db', [GetTickCount]));
+  if TFile.Exists(TempDbPath) then
+    TFile.Delete(TempDbPath);
+
+  SetupConn := TFDConnection.Create(nil);
+  try
+    SetupConn.DriverName := 'SQLite';
+    SetupConn.Params.Database := TempDbPath;
+    SetupConn.Params.Values['OpenMode'] := 'CreateUTF8';
+    SetupConn.Open;
+
+    Q := TFDQuery.Create(nil);
+    try
+      Q.Connection := SetupConn;
+      Q.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS test_users (' +
+        '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+        '  name TEXT NOT NULL,' +
+        '  age INTEGER,' +
+        '  active INTEGER DEFAULT 1' +
+        ')';
+      Q.ExecSQL;
+    finally
+      Q.Free;
+    end;
+  finally
+    SetupConn.Free;
+  end;
+
+  UniDbInit(ExtractFilePath(ParamStr(0)));
+
+  IdLock := TCriticalSection.Create;
+  ReturnedIds := TList<Integer>.Create;
+  try
+    ErrorCount := 0;
+    SetLength(Tasks, CThreadCount);
+    for I := 0 to CThreadCount - 1 do
+    begin
+      var WorkerIndex := I;
+      Tasks[I] := TTask.Run(
+        procedure
+        var
+          Conn: TFDConnection;
+          Ctx: TUniQueryContext;
+          InsertId: Integer;
+          Attempt: Integer;
+          Success: Boolean;
+          Payload: string;
+        begin
+          Conn := TFDConnection.Create(nil);
+          try
+            Conn.DriverName := 'SQLite';
+            Conn.Params.Database := TempDbPath;
+            Conn.Params.Values['OpenMode'] := 'CreateUTF8';
+            Conn.Params.Values['JournalMode'] := 'WAL';
+            Conn.Params.Values['BusyTimeout'] := '5000';
+            Conn.Open;
+
+            Ctx := UniDbMakeContext(Conn, udbSQLite);
+            Payload := Format('{"name":"ConcUser-%d","age":%d}', [WorkerIndex, 20 + WorkerIndex]);
+
+            Success := False;
+            for Attempt := 1 to 5 do
+            begin
+              try
+                InsertId := UniDbInsertReturningId(
+                  'INSERT INTO test_users (name, age) VALUES (:name, :age)',
+                  Payload,
+                  Ctx
+                );
+                Success := True;
+                Break;
+              except
+                on E: EUniBaseDbError do
+                begin
+                  if E.ErrorCode = DOQRY_ERR_TX_CONFLICT then
+                    Sleep(Attempt * 10)
+                  else
+                    raise;
+                end;
+              end;
+            end;
+
+            if not Success then
+            begin
+              TInterlocked.Increment(ErrorCount);
+              Exit;
+            end;
+
+            IdLock.Enter;
+            try
+              ReturnedIds.Add(InsertId);
+            finally
+              IdLock.Leave;
+            end;
+          except
+            TInterlocked.Increment(ErrorCount);
+          end;
+          Conn.Free;
+        end
+      );
+    end;
+
+    TTask.WaitForAll(Tasks);
+    Assert.AreEqual(0, ErrorCount, 'Concurrent insert should not produce errors');
+    Assert.AreEqual(CThreadCount, ReturnedIds.Count, 'Each worker should return one id');
+
+    ReturnedIds.Sort;
+    DistinctCount := 1;
+    for I := 1 to ReturnedIds.Count - 1 do
+      if ReturnedIds[I] <> ReturnedIds[I - 1] then
+        Inc(DistinctCount);
+    Assert.AreEqual(CThreadCount, DistinctCount, 'Returned ids should be unique');
+  finally
+    ReturnedIds.Free;
+    IdLock.Free;
+    if TFile.Exists(TempDbPath) then
+      TFile.Delete(TempDbPath);
+  end;
 end;
 
 procedure TTestUniBaseDoQry.Test_CacheTTL_Expiry;
@@ -409,10 +726,113 @@ begin
   Assert.AreEqual(Int64(0), Hits, 'Direct SQL should not count as hits');
 end;
 
+procedure TTestUniBaseDoQry.Test_CacheConcurrentLoad_SingleMissAndStableResult;
+const
+  CThreadCount = 8;
+var
+  TempDbPath: string;
+  SetupConn: TFDConnection;
+  Q: TFDQuery;
+  Tasks: TArray<ITask>;
+  I: Integer;
+  Hits, Misses, EntryCount: Int64;
+  ErrorCount: Integer;
+begin
+  TempDbPath := TPath.Combine(TPath.GetTempPath,
+    Format('unibase_doqry_cache_%d.db', [GetTickCount]));
+  if TFile.Exists(TempDbPath) then
+    TFile.Delete(TempDbPath);
+
+  SetupConn := TFDConnection.Create(nil);
+  try
+    SetupConn.DriverName := 'SQLite';
+    SetupConn.Params.Database := TempDbPath;
+    SetupConn.Open;
+
+    Q := TFDQuery.Create(nil);
+    try
+      Q.Connection := SetupConn;
+      Q.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS test_users (' +
+        '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+        '  name TEXT NOT NULL,' +
+        '  age INTEGER' +
+        ')';
+      Q.ExecSQL;
+
+      Q.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS Queries (' +
+        '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+        '  Name TEXT NOT NULL UNIQUE,' +
+        '  SqlText TEXT NOT NULL,' +
+        '  IsEnabled INTEGER DEFAULT 1' +
+        ')';
+      Q.ExecSQL;
+
+      Q.SQL.Text :=
+        'INSERT INTO Queries (Name, SqlText, IsEnabled) VALUES ' +
+        '(''user.count_by_name'', ''SELECT COUNT(*) FROM test_users WHERE name = :name'', 1)';
+      Q.ExecSQL;
+
+      Q.SQL.Text := 'INSERT INTO test_users (name, age) VALUES (''ConcurrentUser'', 18)';
+      Q.ExecSQL;
+    finally
+      Q.Free;
+    end;
+  finally
+    SetupConn.Free;
+  end;
+
+  UniDbInit(ExtractFilePath(ParamStr(0)));
+  UniDbSetCacheTTL(300);
+  UniDbClearQueryCache;
+
+  ErrorCount := 0;
+  SetLength(Tasks, CThreadCount);
+  for I := 0 to CThreadCount - 1 do
+  begin
+    Tasks[I] := TTask.Run(
+      procedure
+      var
+        Conn: TFDConnection;
+        Ctx: TUniQueryContext;
+        V: Variant;
+      begin
+        try
+          Conn := TFDConnection.Create(nil);
+          try
+            Conn.DriverName := 'SQLite';
+            Conn.Params.Database := TempDbPath;
+            Conn.Open;
+            Ctx := UniDbMakeContext(Conn, udbSQLite);
+            V := UniDbScalar('user.count_by_name', '{"name":"ConcurrentUser"}', Ctx);
+            if Integer(V) <> 1 then
+              TInterlocked.Increment(ErrorCount);
+          finally
+            Conn.Free;
+          end;
+        except
+          TInterlocked.Increment(ErrorCount);
+        end;
+      end);
+  end;
+
+  TTask.WaitForAll(Tasks);
+  UniDbGetCacheStats(Hits, Misses, EntryCount);
+
+  Assert.AreEqual(0, ErrorCount, 'Concurrent stored-query load should remain stable');
+  Assert.AreEqual(Int64(1), Misses, 'Only one cache miss is expected for same ProcName concurrent load');
+  Assert.AreEqual(Int64(CThreadCount - 1), Hits, 'Remaining calls should hit cache');
+  Assert.AreEqual(Int64(1), EntryCount, 'Cache should contain one entry for loaded ProcName');
+
+  if TFile.Exists(TempDbPath) then
+    TFile.Delete(TempDbPath);
+end;
+
 procedure TTestUniBaseDoQry.Test_MultiTypeFields_CopyCorrectly;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   Rows: Integer;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -425,7 +845,7 @@ begin
     Ctx
   );
   
-  Data := TClientDataSet.Create(nil);
+  Data := TFDMemTable.Create(nil);
   try
     Rows := UniDbSelect(
       'SELECT * FROM test_multitype WHERE name = :name',
@@ -449,7 +869,7 @@ end;
 procedure TTestUniBaseDoQry.Test_NullFields_CopyCorrectly;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   Rows: Integer;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -461,7 +881,7 @@ begin
     Ctx
   );
   
-  Data := TClientDataSet.Create(nil);
+  Data := TFDMemTable.Create(nil);
   try
     Rows := UniDbSelect(
       'SELECT * FROM test_multitype WHERE name = :name',
@@ -482,7 +902,7 @@ end;
 procedure TTestUniBaseDoQry.Test_DateTimeFields_CopyCorrectly;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   Rows: Integer;
   TestDate: string;
 begin
@@ -497,7 +917,7 @@ begin
     Ctx
   );
   
-  Data := TClientDataSet.Create(nil);
+  Data := TFDMemTable.Create(nil);
   try
     Rows := UniDbSelect(
       'SELECT * FROM test_multitype WHERE name = :name',
@@ -520,7 +940,7 @@ begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
   try
-    UniDbExec('INVALID SQL SYNTAX', '', Ctx);
+    UniDbExec('SELECT FROM', '', Ctx);
     Assert.Fail('Should have raised EUniBaseDbError');
   except
     on E: EUniBaseDbError do
@@ -595,7 +1015,7 @@ end;
 procedure TTestUniBaseDoQry.Test_PreparedPool_EnabledCreatesPooledQuery;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   PoolSize1, PoolSize2, ReuseCount: Int64;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -627,7 +1047,7 @@ end;
 procedure TTestUniBaseDoQry.Test_PreparedPool_StatsTracksReuse;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   PoolSize, ReuseCount1, ReuseCount2: Int64;
   I: Integer;
 begin
@@ -658,7 +1078,7 @@ end;
 procedure TTestUniBaseDoQry.Test_PreparedPool_ClearRemovesAll;
 var
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   PoolSize, ReuseCount: Int64;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -686,6 +1106,47 @@ begin
   finally
     Data.Free;
     UniDbSetPreparedStatementPooling(False);
+  end;
+end;
+
+procedure TTestUniBaseDoQry.Test_PreparedPool_MaxSizeEnforcesLRUEviction;
+var
+  Ctx: TUniQueryContext;
+  Data: TFDMemTable;
+  PoolSize: Int64;
+  ReuseBefore: Int64;
+  ReuseAfter: Int64;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  Data := nil;
+
+  UniDbClearPreparedStatements;
+  UniDbSetPreparedStatementPooling(True);
+  UniDbSetPreparedPoolMaxSize(2);
+  try
+    UniDbSelect('SELECT 1', '', Data, Ctx); // A
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 2', '', Data, Ctx); // B
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 1', '', Data, Ctx); // touch A, make B oldest
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 3', '', Data, Ctx); // C, should evict B
+
+    UniDbGetPreparedStats(PoolSize, ReuseBefore);
+    Assert.AreEqual(Int64(2), PoolSize, 'Pool size should be capped to 2');
+
+    Data.Free; Data := nil;
+    UniDbSelect('SELECT 2', '', Data, Ctx); // B was evicted, should be re-created
+
+    UniDbGetPreparedStats(PoolSize, ReuseAfter);
+    Assert.AreEqual(Int64(2), PoolSize, 'Pool size should remain capped to 2');
+    Assert.AreEqual(ReuseBefore, ReuseAfter,
+      'Evicted SQL should not contribute to reuse count when created again');
+  finally
+    Data.Free;
+    UniDbSetPreparedPoolMaxSize(500);
+    UniDbSetPreparedStatementPooling(False);
+    UniDbClearPreparedStatements;
   end;
 end;
 

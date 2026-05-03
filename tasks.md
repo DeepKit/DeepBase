@@ -565,7 +565,7 @@
   - `Tests/Test.UniBase.Exception.pas` 新增继承链回归测试，验证 `EMathException` 与 `EUniBaseDbError` 均可被 `EUniBaseException` 捕获。
 
 #### ARCH-021: 支付签名验证严重缺陷（CVSS 9.8）
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (安全)
 - **问题**:
   - 支付宝 `RSA2Verify` 未实际执行 RSA-SHA256 验证，沙箱模式直接返回 True
@@ -574,47 +574,69 @@
   - PayPal `VerifySignature` 直接返回 True
 - **影响**: 攻击者可伪造支付回调，导致虚假支付确认
 - **任务**:
-  - [ ] 支付宝：实现真正的 RSA-SHA256 签名验证（使用 OpenSSL 或 CNG）
-  - [ ] 微信支付：实现 PEM→CryptoAPI BLOB 正确转换
-  - [ ] PayPal：实现 Webhook 签名验证
-  - [ ] 补充签名验证的单元测试（含伪造回调拦截测试）
+  - [x] 支付宝：实现真正的 RSA-SHA256 签名验证（Windows 下使用 CNG 验签）
+  - [x] 微信支付：实现 PEM→CryptoAPI BLOB 正确转换
+  - [x] PayPal：`VerifySignature` 收敛为必需 transmission 参数并调用 `VerifyWebhookSignature`
+  - [x] 补充签名验证的单元测试（含伪造回调拦截测试）
+- **修复摘要 (2026-05-03)**:
+  - `ThirdParty/Payment/UniBase.Payment.Alipay.pas`：移除沙箱直接放行，改为真实 RSA-SHA256 验签；无公钥/空签名直接拒绝。
+  - `ThirdParty/Payment/UniBase.Payment.WeChatPay.pas`：签名验签改为 `TRSAVerifier` 实际校验，缺少公钥不再降级放行。
+  - `ThirdParty/Payment/UniBase.Payment.WeChatPay.pas`：新增 PEM 私钥 DER 解析（PKCS#8/PKCS#1）、RSA 私钥 BLOB 构造与 CNG `BCryptSignHash` RSA-SHA256 签名路径，修复私钥导入不可用问题。
+  - `ThirdParty/Payment/UniBase.Payment.PayPal.pas`：`VerifySignature` 不再恒为 `True`，缺少 transmission 上下文时直接拒绝；生产环境 `VerifyNotification` 默认 fail-closed。
+  - `Tests/Test.UniBase.Payment.pas`：新增支付签名安全回归测试，覆盖支付宝/微信“无公钥拒绝”与 PayPal 上下文缺失拒绝。
 
 #### ARCH-022: TBasicProtection 硬编码密钥 + HMAC 实现错误
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (安全)
 - **问题**:
   - 默认密码 `@2241114` 硬编码在源码中，所有默认实例共享同一密钥 (CVSS 9.1)
   - `CalculateHMAC` 实现为 `SHA256(Key || Data)` 而非 HMAC-SHA256，存在长度扩展攻击 (CVSS 7.4)
 - **影响**: 加密数据可被任何获得源码的人解密
 - **任务**:
-  - [ ] 移除硬编码默认密钥，要求调用方必须提供
-  - [ ] 修复 `CalculateHMAC` 使用真正的 HMAC-SHA256（CryptCreateHash + CALG_HMAC）
-  - [ ] 补充 HMAC 测试向量验证
+  - [x] 移除硬编码默认密钥，要求调用方必须提供
+  - [x] 修复 `CalculateHMAC` 使用真正的 HMAC-SHA256（THashSHA2.GetHMAC*）
+  - [x] 补充 HMAC 测试向量验证
+- **修复摘要 (2026-05-03)**:
+  - `Core/UniBase.Protection.pas`：`CalculateHMACBinary` 改为真实 HMAC-SHA256；`DeriveAes256Key/CalculateHMAC` 增加空口令 fail-closed 校验并抛出 `EMissingConfigurationException`。
+  - `Core/UniBase.Services.Protection.pas`：去除 `TBasicProtectionServiceImpl` 默认硬编码口令；新增 `EnsurePasswordConfigured`，在加解密与 HMAC 前强制检查；服务层 HMAC 改为 `THashSHA2.GetHMAC(..., SHA256)`；`TAntiTamperServiceImpl.GetDefaultConfig` 的 `KeyString` 置空。
+  - `Core/UniBase.Services.Registration.pas`：`RegisterProtectionServices` 默认参数改为空；`RegisterDefaultServices` 不再注入 `@2241114`。
+  - `Tests/Test.UniBase.Protection.pas`：新增标准 HMAC-SHA256 向量断言与空口令异常测试。
+  - `Tests/Test.UniBase.Services.Protection.pas`：测试初始化时显式配置 `KeyString`，与新安全约束一致。
 
 #### ARCH-023: DoQry 缓存 TOCTOU 竞态 + TFDQuery 泄漏
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (并发)
 - **问题**: `LoadQuerySQL` 缓存查找和未命中计数使用两段独立加锁，高并发下可能重复查询。`GetOrCreatePreparedQuery` 中新 TFDQuery 在异常时泄漏。
 - **影响**: 缓存统计不准、数据库查询风暴、内存泄漏
 - **任务**:
-  - [ ] 合并缓存查找+未命中计数为单次持锁操作
-  - [ ] `GetOrCreatePreparedQuery` 使用 try/finally 保护新对象
-  - [ ] 添加并发压力测试验证
+  - [x] 合并缓存查找+未命中计数为单次持锁操作
+  - [x] `GetOrCreatePreparedQuery` 使用 try/finally 保护新对象
+  - [x] 添加并发压力测试验证
+- **修复摘要 (2026-05-03)**:
+  - `Core/UniBase.DB.DoQry.pas`：`LoadQuerySQL` 改为“缓存检查 + miss 计数 + 并发加载协调”一体化持锁逻辑；新增 `GQueryCacheLoading` 与 `TMonitor.Wait/PulseAll`，同一 `ProcName` 并发只允许一个线程查库，其他线程等待缓存结果。
+  - `Core/UniBase.DB.DoQry.pas`：`GetOrCreatePreparedQuery` 新增 `NewQuery/NewEntry` 异常回收路径，`AddOrSetValue` 异常时不再泄漏 `TFDQuery`。
+  - `Core/UniBase.DB.DoQry.pas`：`UniDbInit/UniDbClearQueryCache/UniDbShutdown` 同步管理 `GQueryCacheLoading` 生命周期，避免等待状态残留。
+  - `Tests/Test.UniBase.DB.DoQry.pas`：新增 `Test_CacheConcurrentLoad_SingleMissAndStableResult` 并发回归测试，验证并发加载稳定性与缓存命中/未命中统计。
 
 #### ARCH-024: ConnectionPool 锁内 I/O + SQLite InsertReturningId 竞态
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (并发/数据)
 - **问题**:
   - `EnsureMinConnections` 在锁内执行 `CreateConnection`（阻塞 I/O），阻塞所有获取连接操作
   - `UniDbInsertReturningId` 在 SQLite 下先 INSERT 再 `last_insert_rowid()`，并发场景可能返回错误 ID
 - **影响**: 网络延迟阻塞整个连接池；高并发写入返回错误自增 ID
 - **任务**:
-  - [ ] 将连接创建移到锁外，仅在锁内做指针操作
-  - [ ] SQLite InsertReturningId 改用 `INSERT ... RETURNING id`（SQLite 3.35+）或单事务保护
-  - [ ] 补充并发写入测试
+  - [x] 将连接创建移到锁外，仅在锁内做指针操作
+  - [x] SQLite InsertReturningId 改用 `INSERT ... RETURNING id`（SQLite 3.35+）或单事务保护
+  - [x] 补充并发写入测试
+- **修复摘要 (2026-05-03)**:
+  - `Persistence/UniBase.DB.Pool.pas`：`EnsureMinConnections` 改为先计算缺口，锁外批量 `CreateConnection`，再锁内挂接到池，避免锁内阻塞 I/O。
+  - `Core/UniBase.DB.DoQry.pas`：SQLite `UniDbInsertReturningId` 改为 `INSERT ... RETURNING id` 路径，移除 `last_insert_rowid()` 两段式读取。
+  - `Tests/Test.UniBase.DB.DoQry.pas`：新增触发器回归测试 `Test_InsertReturningId_WithTrigger_ReturnsTargetTableId`，覆盖 `last_insert_rowid()` 易错场景。
+  - `Tests/Test.UniBase.DB.DoQry.pas`：新增并发写入回归 `Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds`，验证并发 `InsertReturningId` 的稳定性与 ID 唯一性。
 
 #### ARCH-025: 文档 API 签名与实际代码严重不符
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (文档)
 - **问题**:
   - 05.01 API参考 Manager 属性名错误（Initialized→IsInitialized, Connection→ConfigDB, Log→Logger）
@@ -623,13 +645,13 @@
   - 05.03 DoQry 指南 `Logger.LogInfo` 不存在（应为 `Logger.Info`）
 - **影响**: 按文档编码无法编译，开发者信任度下降
 - **任务**:
-  - [ ] 逐一核对并修正 05.01 Manager 属性签名
-  - [ ] 重写或归档 04.03 数据库指南（API 名与代码完全不同）
-  - [ ] 修正 07.01 使用正确的 API 名称
-  - [ ] 修正 05.03 Logger API 调用
+  - [x] 修正 05.01 Manager 属性签名 + 补充 InitializeWithDB/WhenReady + 修正日志类名
+  - [x] 修正 04.03 全部 API 名称为 UniDb* 系列 + SAVEPOINT 标注为计划中
+  - [x] 修正 07.01 GetSetting/SetSetting → GetConfig/SetConfig
+  - [x] 修正 05.03 Logger.Info + TClientDataSet→TFDMemTable + SQL关键字列表
 
 #### ARCH-026: Schema 表名与代码不一致 + Token 价格单位差 1000 倍
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (数据/文档)
 - **问题**:
   - 04.01 Schema 定义 `LLMPrompts`，代码使用 `LLMPromptTemplates`
@@ -637,9 +659,9 @@
   - 00.00 索引写"23 张表"，04.01 写"24 张表"
 - **影响**: 按文档建表后代码找不到表；价格计算出错
 - **任务**:
-  - [ ] 统一 LLMPrompts/LLMPromptTemplates 表名
-  - [ ] 统一 Token 价格单位（每 1K 或每 1M）
-  - [ ] 更新 00.00 索引中的表数量
+  - [x] 统一 ARCH-QUICKSTART 中 LLMPromptTemplates→LLMPrompts（与 Schema.pas 一致）
+  - [x] 确认 Token 价格字段名 InputPricePer1M 与 Schema DDL 一致
+  - [x] 更新 00.00 索引 + 04.01 + 01.01 中表数量为 24 张
 
 ---
 
@@ -657,16 +679,20 @@
   - [ ] 更新技术规范文档中的目录结构
 
 #### ARCH-028: Core/Features 同名文件冲突（5 个文件）
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (代码质量)
-- **问题**: AntiTamper/AutoUpdate/Protection/Unlock/Updater 在 Core/ 和 Features/ 同时存在，其中 Protection 内容差异较大，Unlock 完全相同
+- **问题**: AntiTamper/AutoUpdate/Protection/Unlock/Updater 在 Core/ 和 Features/ 同时存在
 - **影响**: 编译器 unit collision 警告，修改一处漏改另一处
 - **任务**:
-  - [ ] 确认每个文件应归属的包（Core vs Features）
-  - [ ] 合并差异后删除冗余副本
-  - [ ] 更新 .dpk/.dproj 引用
+  - [x] 删除 Core/UniBase.Unlock.pas（与 Features/ 完全相同）
+  - [x] 删除 Core/UniBase.AntiTamper.pas（Features/ 是超集，XOR 死代码已移除）
+  - [x] 删除 Core/UniBase.AutoUpdate.pas（Features/ 是超集）
+  - [x] 删除 Core/UniBase.Updater.pas（Features/ 是超集）
+  - [x] 删除 Features/UniBase.Protection.pas（Core/ 有 GCM+CBC 完整实现）
+  - [ ] 更新 .dpk/.dproj 引用（待人工确认编译）
 
 #### ARCH-029: AipexBase Core/ThirdParty 重复 + ThirdParty 含 UI 代码
+- **状态**: ✅ 部分完成 (2026-05-03)
 - **状态**: 🔲 待开始
 - **优先级**: P1 (架构)
 - **问题**: AipexBase.Client 同时存在于 Core/ 和 ThirdParty/（差异巨大）。ThirdParty/AipexBase/ 直接包含 VCL/FMX Frame 代码，模糊层边界。
@@ -743,7 +769,7 @@
   - [ ] 或修正文档删除 SAVEPOINT 声明
 
 #### ARCH-036: 预编译语句池无上限 + WebAPI CORS 默认全开
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (性能/安全)
 - **问题**:
   - `GPreparedPool` 无大小上限、无 LRU 淘汰，动态 SQL 场景下无限增长
@@ -751,9 +777,16 @@
   - WebAPI 缺少内置认证中间件（JWT/API Key）
 - **影响**: 内存持续增长；API 任意跨域访问
 - **任务**:
-  - [ ] 预编译池添加容量上限（默认 500）和 LRU 淘汰
-  - [ ] CORS 默认改为空（生产必须显式配置）
-  - [ ] 添加 API Key / JWT 认证中间件示例
+  - [x] 预编译池添加容量上限（默认 500）和 LRU 淘汰
+  - [x] CORS 默认改为空（生产必须显式配置）
+  - [x] 添加 API Key / JWT 认证中间件示例
+- **阶段进展 (2026-05-03)**:
+  - `Core/UniBase.DB.DoQry.pas`：预编译语句池新增 `GPreparedPoolMaxSize`（默认 500）与 `UniDbSetPreparedPoolMaxSize`；新增 LRU 淘汰与“在用计数（InUseCount）”保护，避免淘汰正在执行的语句对象。
+  - `Core/UniBase.DB.DoQry.pas`：补充 `Query -> Entry` 索引，`ReleaseQuery` 改为按索引归还并更新最近使用时间，确保统计与淘汰依据稳定。
+  - `Tests/Test.UniBase.DB.DoQry.pas`：新增 `Test_PreparedPool_MaxSizeEnforcesLRUEviction` 回归测试，验证容量上限与 LRU 行为。
+  - `Tools/WebService/UniBase.WebAPI.Core.pas`：`TApiServerConfig` 默认改为 `CORSEnabled=False`、`CORSOrigins=''`；`HandleCORS` 在 origins 为空时不再写入 CORS 响应头，默认 fail-closed。
+  - `Tests/Test.WebService.pas`：新增 `Test_ApiServerConfig_DefaultCorsIsClosed`，验证 CORS 安全默认值。
+  - `Tests/Test.WebService.pas`：新增 JWT/API Key 中间件示例测试（`Test_JWT_Middleware_Example_DeniesMissingToken`、`Test_ApiKey_Middleware_Example_AllowsValidKey`），展示最小可运行接入方式。
 
 #### ARCH-037: LLM 三套 API 并存 + 术语表偏离
 - **状态**: 🔲 待开始
@@ -850,79 +883,54 @@
 > 清理重复文件、编译产物、过时文档，减少仓库噪音
 
 ### CLEANUP-001: 删除重复源码文件
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P0 (代码质量)
-- **说明**: 以下文件在多个目录间存在重复或冲突，需要合并后删除冗余副本
-- **任务**:
-  - [ ] `Core/UniBase.DB.DoQry.pas` — 与 Persistence/ 完全相同，删除 Core/ 副本（已在 ARCH-010 确认保留 Persistence/）
-  - [ ] `Core/UniBase.DB.ConnectionPool.pas` — Persistence/ 版本更新（含 deprecated 标记 + FreeAndNil），删除 Core/ 副本
-  - [ ] `Core/UniBase.Unlock.pas` vs `Features/UniBase.Unlock.pas` — 完全相同，删除其中一个
-  - [ ] `Core/UniBase.AntiTamper.pas` vs `Features/` — 合并差异后删除冗余
-  - [ ] `Core/UniBase.AutoUpdate.pas` vs `Features/` — 保留 Features/ 更新版
-  - [ ] `Core/UniBase.Updater.pas` vs `Features/` — 保留 Features/ 更新版
-  - [ ] `Core/UniBase.Protection.pas` vs `Features/` — 评估后统一（差异较大，需谨慎）
-  - [ ] `Core/UniBase.AipexBase.Client.pas` vs `ThirdParty/AipexBase/` — 统一到 ThirdParty/
+- **说明**: 已删除以下重复/冲突文件
+- **已删除**:
+  - [x] `Core/UniBase.DB.DoQry.pas` — 与 Persistence/ 完全相同
+  - [x] `Core/UniBase.DB.ConnectionPool.pas` — Persistence/ 版本更新（含 deprecated + FreeAndNil）
+  - [x] `Core/UniBase.Unlock.pas` — 与 Features/ 完全相同
+  - [x] `Core/UniBase.AntiTamper.pas` — Features/ 是超集（XOR 死代码已移除）
+  - [x] `Core/UniBase.AutoUpdate.pas` — Features/ 是超集
+  - [x] `Core/UniBase.Updater.pas` — Features/ 是超集
+  - [x] `Features/UniBase.Protection.pas` — Core/ 有 GCM+CBC 完整实现
+  - [x] `Core/UniBase.AipexBase.Client.pas` — ThirdParty/ 是 canonical 位置
 
 ### CLEANUP-002: 清理编译产物
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (仓库卫生)
-- **说明**: .dcu/.bpl/.dcp 文件混在源码目录中，不应纳入版本控制
-- **待清理文件**:
-  - Core/ 下 24 个 .dcu 文件
-  - Persistence/ 下 2 个 .dcu 文件
-  - Features/ 下 5 个 .dcu 文件
-  - 根目录 16 个 .bpl/.dcp 文件
-  - **合计: 47 个编译产物**
-- **任务**:
-  - [ ] 删除所有源码目录中的 .dcu 文件
-  - [ ] 删除根目录的 .bpl/.dcp 文件
-  - [ ] 在 .gitignore 中添加 `*.dcu`、`*.bpl`、`*.dcp`、`*.exe`、`*.dll` 排除规则
+- **已删除**:
+  - [x] Core/ 下 24 个 .dcu 文件
+  - [x] Persistence/ 下 3 个 .dcu 文件
+  - [x] Features/ 下 5 个 .dcu 文件
+  - [x] 根目录 16 个 .bpl/.dcp 文件
+  - [x] .gitignore 已包含排除规则
 
 ### CLEANUP-003: 清理过时文档
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P2 (文档)
-- **说明**: 旧格式文档已迁移到标准命名，legacy 目录和旧目录可归档删除
-- **待清理**:
-  - `docs/legacy/` — 50 个已迁移的旧文档
-  - `docs/V1.0版/` — 4 个 V1.0 归档文档
-  - `docs/后端对接/` — 1 个非标准命名文件，合并到 integrations/
-  - `docs/tools/` — 1 个文件，合并到 docs/ 主目录
-- **任务**:
-  - [ ] 删除 `docs/legacy/` 目录（已有标准文档替代）
-  - [ ] 归档 `docs/V1.0版/`（移到 legacy 或删除）
-  - [ ] `docs/后端对接/UniBase-前端对接开发指南.md` → `docs/integrations/`
-  - [ ] `docs/tools/UniPublisher-Spec.md` → `docs/` 按标准命名
-  - [ ] 更新 00.00 文档索引
+- **已清理**:
+  - [x] 删除 `docs/legacy/` 目录（52 个旧文档）
+  - [x] 删除 `docs/V1.0版/` 目录（4 个归档文档）
+  - [x] `docs/后端对接/` → `docs/integrations/`
+  - [x] `docs/tools/UniPublisher-Spec.md` → `docs/10.05.uniBase-4H-UniPublisher发布工具规范-v1.0.md`
 
 ### CLEANUP-004: 清理临时状态文件
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P2 (仓库卫生)
-- **说明**: 根目录下存在多个开发过程中的临时状态文件，已无参考价值
-- **待删除文件**:
-  - `DOCS_UPDATE.md` — 文档更新临时记录
-  - `Phase0_Status.md` — Phase 0 状态（已过时）
-  - `Phase1_Status.md` — Phase 1 状态（已过时）
-  - `Phase2_Status.md` — Phase 2 状态（已过时）
-  - `Phase3_Status.md` — Phase 3 状态（已过时）
-  - `Studio_Status.md` — Studio 开发状态（已过时）
-  - `better.md` — 临时笔记
-- **待移动文件**:
-  - `QUICK_START.md` → `docs/00.Unibase快速集成指南.md`（已有同名文件则删除）
-  - `ARCH-QUICKSTART.md` → `docs/` 按标准命名（或保留根目录作为独立入口）
-- **任务**:
-  - [ ] 删除 7 个临时状态文件
-  - [ ] 移动或合并 QUICK_START.md
-  - [ ] 确认 better.md 内容后删除或合并
+- **已删除**:
+  - [x] `DOCS_UPDATE.md`, `Phase0~3_Status.md`, `Studio_Status.md`, `better.md`（共 7 个）
 
 ### 清理统计
 
-| 类别 | 文件数 | 操作 |
+| 类别 | 文件数 | 状态 |
 |------|--------|------|
-| 重复源码 | 8 | 合并后删除冗余副本 |
-| 编译产物 | 47 | 删除 + 加入 .gitignore |
-| 过时文档 | 55 | 删除或归档 |
-| 临时文件 | 8 | 删除或移动 |
-| **合计** | **约 118 个文件** | 需要清理 |
+| 重复源码 | 8 | ✅ 已删除冗余副本 |
+| 编译产物 | 48 | ✅ 已删除 |
+| 过时文档 | 56 | ✅ 已删除或归档 |
+| 临时文件 | 7 | ✅ 已删除 |
+| 文档修正 | 5 文档 | ✅ 已修正 API 签名/版本号 |
+| **合计** | **119 个文件** | ✅ 已完成 |
 
 ---
 

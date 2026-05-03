@@ -2,6 +2,7 @@
   UniBase.DB.DoQry - DoQry 数据库访问集成模块
   
   版本: 1.0
+  所属包: UniBasePersistence
   说明: 将 DoQry 库集成到 UniBase 框架，统一日志和错误处理
   线程安全: 所有公共方法均线程安全
   ============================================================================ }
@@ -13,7 +14,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Variants,
   FireDAC.Comp.Client, FireDAC.Comp.DataSet,
-  UniBase.Types;
+  UniBase.Types, UniBase.Exceptions;
 
 const
   /// <summary>
@@ -64,7 +65,7 @@ type
   /// <summary>
   /// 数据库错误异常（携带上下文和错误码）
   /// </summary>
-  EUniBaseDbError = class(Exception)
+  EUniBaseDbError = class(EUniBaseException)
   private
     FErrorCode: Integer;
     FProcName: string;
@@ -176,12 +177,47 @@ procedure UniDbClearPreparedStatements;
 /// </summary>
 procedure UniDbGetPreparedStats(out PoolSize, ReuseCount: Int64);
 
+/// <summary>
+/// 设置预编译语句池容量上限（默认 500）
+/// </summary>
+procedure UniDbSetPreparedPoolMaxSize(MaxSize: Integer);
+
+/// <summary>
+/// 释放全局缓存与预编译语句池（用于测试或程序退出）
+/// </summary>
+procedure UniDbShutdown;
+
+type
+  /// <summary>DoQry service interface for IoC injection and testing</summary>
+  IDoQryService = interface
+    ['{B1C2D3E4-F5A6-4B7C-8D9E-0F1A2B3C4D5E}']
+    function Select(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    function Exec(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    function Scalar(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    procedure RunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
+    procedure ClearCache;
+    procedure Shutdown;
+  end;
+
+  /// <summary>DoQry service implementation — delegates to global functions</summary>
+  TDoQryService = class(TInterfacedObject, IDoQryService)
+  public
+    function Select(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    function Exec(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    function Scalar(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+    procedure RunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
+    procedure ClearCache;
+    procedure Shutdown;
+  end;
+
 implementation
 
 uses
   System.DateUtils, System.IOUtils, System.JSON, System.Generics.Collections,
   Data.DB,
   FireDAC.Stan.Option,
+  FireDAC.Stan.Param,
+  FireDAC.Stan.Error,
   UniBase.Logging,
   UniBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监控
 
@@ -202,20 +238,25 @@ type
     FSQLHash: Cardinal;
     FLastUsed: TDateTime;
     FReuseCount: Int64;
+    FInUseCount: Integer;
   public
     constructor Create(AQuery: TFDQuery; AConnection: TFDConnection; ASQLHash: Cardinal);
     destructor Destroy; override;
+    procedure IncrementUse;
+    procedure DecrementUse;
     property Query: TFDQuery read FQuery;
     property Connection: TFDConnection read FConnection;
     property SQLHash: Cardinal read FSQLHash;
     property LastUsed: TDateTime read FLastUsed write FLastUsed;
     property ReuseCount: Int64 read FReuseCount write FReuseCount;
+    property InUseCount: Integer read FInUseCount;
   end;
 
 var
   GRootPath: string = '';
   GInitialized: Boolean = False;
   GQueryCache: TDictionary<string, TQueryCacheEntry> = nil;
+  GQueryCacheLoading: TDictionary<string, Byte> = nil;
   GQueryCacheLock: TObject = nil;
   GCacheTTLSec: Integer = 300;  // 默认 5 分钟
   GCacheHits: Int64 = 0;
@@ -223,8 +264,10 @@ var
   
   // 预编译语句池
   GPreparedPool: TObjectDictionary<string, TPreparedEntry> = nil;  // Key = ConnPtr + SQLHash
+  GPreparedQueryIndex: TDictionary<TFDQuery, TPreparedEntry> = nil; // Query -> Entry
   GPreparedPoolLock: TObject = nil;
   GPreparedPoolEnabled: Boolean = True;
+  GPreparedPoolMaxSize: Integer = 500;
   GPreparedReuseCount: Int64 = 0;
 
 { TPreparedEntry }
@@ -237,11 +280,60 @@ begin
   FSQLHash := ASQLHash;
   FLastUsed := Now;
   FReuseCount := 0;
+  FInUseCount := 0;
+end;
+
+procedure TPreparedEntry.IncrementUse;
+begin
+  Inc(FInUseCount);
+end;
+
+procedure TPreparedEntry.DecrementUse;
+begin
+  if FInUseCount > 0 then
+    Dec(FInUseCount);
+end;
+
+procedure UniDbShutdown;
+begin
+  // 清理查询缓存；锁对象由 initialization/finalization 管理。
+  if Assigned(GQueryCacheLock) then
+  begin
+    TMonitor.Enter(GQueryCacheLock);
+    try
+      FreeAndNil(GQueryCacheLoading);
+      FreeAndNil(GQueryCache);
+    finally
+      TMonitor.Exit(GQueryCacheLock);
+    end;
+  end
+  else
+  begin
+    FreeAndNil(GQueryCacheLoading);
+    FreeAndNil(GQueryCache);
+  end;
+
+  // 清理预编译语句池；锁对象由 initialization/finalization 管理。
+  if Assigned(GPreparedPoolLock) then
+  begin
+    TMonitor.Enter(GPreparedPoolLock);
+    try
+      FreeAndNil(GPreparedQueryIndex);
+      FreeAndNil(GPreparedPool);
+    finally
+      TMonitor.Exit(GPreparedPoolLock);
+    end;
+  end
+  else
+  begin
+    FreeAndNil(GPreparedQueryIndex);
+    FreeAndNil(GPreparedPool);
+  end;
 end;
 
 destructor TPreparedEntry.Destroy;
 begin
-  FQuery.Free;
+  FreeAndNil(FQuery);
   inherited;
 end;
 
@@ -260,9 +352,9 @@ begin
 end;
 
 /// <summary>
-/// 根据异常消息推断错误码
+/// 根据异常消息推断错误码（兼容回退）
 /// </summary>
-function InferErrorCode(const ErrMsg: string): Integer;
+function InferErrorCodeFromMessage(const ErrMsg: string): Integer;
 var
   UpperMsg: string;
 begin
@@ -303,6 +395,45 @@ begin
   Result := DOQRY_ERR_UNKNOWN;
 end;
 
+/// <summary>
+/// 根据异常对象推断错误码（优先使用 FireDAC 原生错误类型）
+/// </summary>
+function InferErrorCode(E: Exception): Integer;
+var
+  DbError: EFDDBEngineException;
+  NativeCode: Integer;
+begin
+  if E is EFDDBEngineException then
+  begin
+    DbError := EFDDBEngineException(E);
+
+    case DbError.Kind of
+      ekUKViolated: Exit(DOQRY_ERR_UNIQUE);
+      ekFKViolated: Exit(DOQRY_ERR_FOREIGN_KEY);
+      ekRecordLocked: Exit(DOQRY_ERR_TX_CONFLICT);
+      ekInvalidParams: Exit(DOQRY_ERR_PARAM_INVALID);
+      ekCmdAborted: Exit(DOQRY_ERR_TIMEOUT);
+      ekServerGone, ekUserPwdInvalid, ekUserPwdExpired, ekUserPwdWillExpire:
+        Exit(DOQRY_ERR_CONNECTION);
+    end;
+
+    try
+      NativeCode := Abs(DbError.Errors[0].ErrorCode);
+      case NativeCode of
+        1: Exit(DOQRY_ERR_SQL_SYNTAX);     // SQLite: SQL error
+        5, 6: Exit(DOQRY_ERR_TX_CONFLICT); // SQLite: BUSY/LOCKED
+        19: Exit(DOQRY_ERR_CONSTRAINT);    // SQLite: constraint
+        787: Exit(DOQRY_ERR_FOREIGN_KEY);  // SQLite: FK constraint failed
+        2067: Exit(DOQRY_ERR_UNIQUE);      // SQLite: UNIQUE constraint failed
+      end;
+    except
+      // Fall through to message-based inference below.
+    end;
+  end;
+
+  Result := InferErrorCodeFromMessage(E.Message);
+end;
+
 { 预编译语句池辅助函数 }
 
 /// <summary>
@@ -325,6 +456,65 @@ begin
   Result := IntToHex(NativeInt(Conn), 16) + '_' + IntToStr(SimpleHash(SQL));
 end;
 
+procedure EnsurePreparedPoolStructures;
+begin
+  if GPreparedPool = nil then
+    GPreparedPool := TObjectDictionary<string, TPreparedEntry>.Create([doOwnsValues]);
+  if GPreparedQueryIndex = nil then
+    GPreparedQueryIndex := TDictionary<TFDQuery, TPreparedEntry>.Create;
+end;
+
+function EvictOnePreparedLruEntry(const ExcludeEntry: TPreparedEntry): Boolean;
+var
+  Pair: TPair<string, TPreparedEntry>;
+  EvictKey: string;
+  EvictEntry: TPreparedEntry;
+  Found: Boolean;
+begin
+  Result := False;
+  if (GPreparedPool = nil) or (GPreparedPool.Count = 0) then
+    Exit;
+
+  Found := False;
+  EvictKey := '';
+  EvictEntry := nil;
+
+  for Pair in GPreparedPool do
+  begin
+    if (Pair.Value = nil) or (Pair.Value = ExcludeEntry) then
+      Continue;
+    if Pair.Value.InUseCount > 0 then
+      Continue;
+
+    if (not Found) or (Pair.Value.LastUsed < EvictEntry.LastUsed) then
+    begin
+      Found := True;
+      EvictKey := Pair.Key;
+      EvictEntry := Pair.Value;
+    end;
+  end;
+
+  if not Found then
+    Exit;
+
+  if Assigned(GPreparedQueryIndex) and Assigned(EvictEntry.Query) then
+    GPreparedQueryIndex.Remove(EvictEntry.Query);
+  GPreparedPool.Remove(EvictKey);
+  Result := True;
+end;
+
+procedure EnforcePreparedPoolLimit(const ExcludeEntry: TPreparedEntry);
+begin
+  if GPreparedPoolMaxSize < 1 then
+    GPreparedPoolMaxSize := 1;
+
+  while Assigned(GPreparedPool) and (GPreparedPool.Count > GPreparedPoolMaxSize) do
+  begin
+    if not EvictOnePreparedLruEntry(ExcludeEntry) then
+      Break;
+  end;
+end;
+
 /// <summary>
 /// 从池中获取或创建预编译查询
 /// </summary>
@@ -332,6 +522,8 @@ function GetOrCreatePreparedQuery(Conn: TFDConnection; const SQL: string): TFDQu
 var
   Key: string;
   Entry: TPreparedEntry;
+  NewQuery: TFDQuery;
+  NewEntry: TPreparedEntry;
 begin
   if not GPreparedPoolEnabled then
   begin
@@ -345,12 +537,15 @@ begin
   
   TMonitor.Enter(GPreparedPoolLock);
   try
+    EnsurePreparedPoolStructures;
+
     if GPreparedPool.TryGetValue(Key, Entry) then
     begin
       // 检查连接是否仍然有效
       if Entry.Connection = Conn then
       begin
         Entry.LastUsed := Now;
+        Entry.IncrementUse;
         Inc(Entry.FReuseCount);
         Inc(GPreparedReuseCount);
         Result := Entry.Query;
@@ -359,24 +554,35 @@ begin
       else
       begin
         // 连接已变，移除旧条目
+        if Assigned(GPreparedQueryIndex) and Assigned(Entry.Query) then
+          GPreparedQueryIndex.Remove(Entry.Query);
         GPreparedPool.Remove(Key);
       end;
     end;
-  finally
-    TMonitor.Exit(GPreparedPoolLock);
-  end;
-  
-  // 创建新的预编译查询
-  Result := TFDQuery.Create(nil);
-  Result.Connection := Conn;
-  Result.SQL.Text := SQL;
-  Result.Prepare;  // 预编译
-  
-  Entry := TPreparedEntry.Create(Result, Conn, SimpleHash(SQL));
-  
-  TMonitor.Enter(GPreparedPoolLock);
-  try
-    GPreparedPool.AddOrSetValue(Key, Entry);
+
+    NewQuery := nil;
+    NewEntry := nil;
+    try
+      NewQuery := TFDQuery.Create(nil);
+      NewQuery.Connection := Conn;
+      NewQuery.SQL.Text := SQL;
+      // 不在此处预编译：参数值未绑定时会导致类型未知错误
+
+      NewEntry := TPreparedEntry.Create(NewQuery, Conn, SimpleHash(SQL));
+      NewEntry.IncrementUse;
+      NewQuery := nil; // ownership transferred to entry
+
+      GPreparedPool.AddOrSetValue(Key, NewEntry);
+      if Assigned(GPreparedQueryIndex) then
+        GPreparedQueryIndex.AddOrSetValue(NewEntry.Query, NewEntry);
+      EnforcePreparedPoolLimit(NewEntry);
+      Result := NewEntry.Query;
+      NewEntry := nil; // ownership transferred to pool
+    except
+      NewEntry.Free;
+      NewQuery.Free;
+      raise;
+    end;
   finally
     TMonitor.Exit(GPreparedPoolLock);
   end;
@@ -386,14 +592,38 @@ end;
 /// 释放查询（如果启用池化，则保留；否则释放）
 /// </summary>
 procedure ReleaseQuery(Q: TFDQuery; Pooled: Boolean);
+var
+  Entry: TPreparedEntry;
 begin
-  if not Pooled or not GPreparedPoolEnabled then
+  if Q = nil then
+    Exit;
+
+  if not Pooled then
     Q.Free
   else
   begin
     // 池化的查询不释放，只关闭
     if Q.Active then
       Q.Close;
+
+    Entry := nil;
+    if Assigned(GPreparedPoolLock) and Assigned(GPreparedQueryIndex) then
+    begin
+      TMonitor.Enter(GPreparedPoolLock);
+      try
+        if GPreparedQueryIndex.TryGetValue(Q, Entry) then
+        begin
+          Entry.DecrementUse;
+          Entry.LastUsed := Now;
+        end;
+      finally
+        TMonitor.Exit(GPreparedPoolLock);
+      end;
+    end;
+
+    // 安全兜底：若未追踪到池条目，按非池化释放，避免泄漏
+    if Entry = nil then
+      Q.Free;
   end;
 end;
 
@@ -471,30 +701,161 @@ begin
   Dest.CopyDataSet(Src, [coStructure, coRestart, coAppend]);
 end;
 
+/// <summary>
+/// 绑定 JSON 参数到查询（自动识别 GUID）
+/// </summary>
+procedure BindJsonParams(Q: TFDQuery; const ParamsJson: string);
+var
+  Params: TJSONObject;
+  Pair: TJSONPair;
+  P: TFDParam;
+  S: string;
+  G: TGUID;
+
+  // Check if a string contains only hex digits and dashes (GUID characters)
+  function IsHexWithDashes(const Value: string; Start, Len: Integer): Boolean;
+  var
+    I: Integer;
+    C: Char;
+  begin
+    Result := True;
+    for I := Start to Start + Len - 1 do
+    begin
+      C := Value[I];
+      if not CharInSet(C, ['0'..'9', 'a'..'f', 'A'..'F', '-']) then
+        Exit(False);
+    end;
+  end;
+
+  // Validate GUID format before calling StringToGUID (avoids exception-based flow control)
+  function TryParseGuid(const Value: string; out Guid: TGUID): Boolean;
+  begin
+    Result := False;
+    // Value must be in {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx} format
+    if (Length(Value) <> 38) or (Value[1] <> '{') or (Value[38] <> '}') then
+      Exit;
+    // Quick check: positions of dashes
+    if (Value[10] <> '-') or (Value[15] <> '-') or
+       (Value[20] <> '-') or (Value[25] <> '-') then
+      Exit;
+    // Check hex characters (skip braces and dashes)
+    if not IsHexWithDashes(Value, 2, 36) then
+      Exit;
+    try
+      Guid := StringToGUID(Value);
+      Result := True;
+    except
+      Result := False;
+    end;
+  end;
+
+begin
+  if ParamsJson = '' then
+    Exit;
+
+  Params := TJSONObject.ParseJSONValue(ParamsJson) as TJSONObject;
+  if not Assigned(Params) then
+    Exit;
+  try
+    for Pair in Params do
+    begin
+      P := Q.ParamByName(Pair.JsonString.Value);
+      if Pair.JsonValue is TJSONNull then
+        P.Clear
+      else if Pair.JsonValue is TJSONNumber then
+      begin
+        if (Pos('.', Pair.JsonValue.Value) > 0) or
+           (Pos('e', LowerCase(Pair.JsonValue.Value)) > 0) then
+          P.AsFloat := TJSONNumber(Pair.JsonValue).AsDouble
+        else
+          P.AsLargeInt := TJSONNumber(Pair.JsonValue).AsInt64;
+      end
+      else if Pair.JsonValue is TJSONBool then
+        P.AsBoolean := TJSONBool(Pair.JsonValue).AsBoolean
+      else
+      begin
+        S := Trim(Pair.JsonValue.Value);
+        if (S <> '') then
+        begin
+          // Try GUID detection: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+          if (Length(S) = 38) and (S[1] = '{') and (S[Length(S)] = '}') then
+          begin
+            if TryParseGuid(S, G) then
+            begin
+              P.DataType := ftGuid;
+              P.AsGUID := G;
+              Continue;
+            end;
+          end
+          // Try GUID without braces: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          else if (Length(S) = 36) and (S[9] = '-') and IsHexWithDashes(S, 1, 36) then
+          begin
+            if TryParseGuid('{' + S + '}', G) then
+            begin
+              P.DataType := ftGuid;
+              P.AsGUID := G;
+              Continue;
+            end;
+          end
+          // Try compact GUID: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (32 hex chars)
+          else if (Length(S) = 32) and IsHexWithDashes(S, 1, 32) then
+          begin
+            if TryParseGuid('{' + Copy(S,1,8) + '-' + Copy(S,9,4) + '-' +
+               Copy(S,13,4) + '-' + Copy(S,17,4) + '-' + Copy(S,21,12) + '}', G) then
+            begin
+              P.DataType := ftGuid;
+              P.AsGUID := G;
+              Continue;
+            end;
+          end;
+        end;
+        if S = '' then
+          P.AsString := S
+        else
+        begin
+          if Length(S) > 4000 then
+            P.DataType := ftWideMemo
+          else
+            P.DataType := ftWideString;
+          P.AsWideString := S;
+        end;
+      end;
+    end;
+  finally
+    Params.Free;
+  end;
+end;
+
 { 公共函数 }
 
 procedure UniDbInit(const RootPath: string);
 begin
   GRootPath := RootPath;
   GInitialized := True;
-  
-  // 初始化查询缓存
-  if GQueryCacheLock = nil then
-    GQueryCacheLock := TObject.Create;
-  if GQueryCache = nil then
-    GQueryCache := TDictionary<string, TQueryCacheEntry>.Create;
-  
-  // 初始化预编译语句池
-  if GPreparedPoolLock = nil then
-    GPreparedPoolLock := TObject.Create;
-  if GPreparedPool = nil then
-    GPreparedPool := TObjectDictionary<string, TPreparedEntry>.Create([doOwnsValues]);
-  
-  // 重置统计
-  GCacheHits := 0;
-  GCacheMisses := 0;
-  GPreparedReuseCount := 0;
-  
+
+  TMonitor.Enter(GQueryCacheLock);
+  try
+    if GQueryCache = nil then
+      GQueryCache := TDictionary<string, TQueryCacheEntry>.Create;
+    if GQueryCacheLoading = nil then
+      GQueryCacheLoading := TDictionary<string, Byte>.Create;
+    GQueryCacheLoading.Clear;
+    GCacheHits := 0;
+    GCacheMisses := 0;
+  finally
+    TMonitor.Exit(GQueryCacheLock);
+  end;
+
+  TMonitor.Enter(GPreparedPoolLock);
+  try
+    EnsurePreparedPoolStructures;
+    if GPreparedPoolMaxSize < 1 then
+      GPreparedPoolMaxSize := 500;
+    GPreparedReuseCount := 0;
+  finally
+    TMonitor.Exit(GPreparedPoolLock);
+  end;
+
   // 确保日志目录存在
   ForceDirectories(TPath.Combine(RootPath, 'logs'));
 end;
@@ -511,11 +872,7 @@ begin
             (Pos('INSERT ', Upper) = 1) or
             (Pos('UPDATE ', Upper) = 1) or
             (Pos('DELETE ', Upper) = 1) or
-            (Pos('CREATE ', Upper) = 1) or
-            (Pos('DROP ', Upper) = 1) or
-            (Pos('ALTER ', Upper) = 1) or
-            (Pos('WITH ', Upper) = 1) or
-            (Pos('PRAGMA ', Upper) = 1);
+            (Pos('WITH ', Upper) = 1);
 end;
 
 /// <summary>
@@ -525,9 +882,30 @@ function LoadQuerySQL(const ProcName: string; const Ctx: TUniQueryContext): stri
 var
   Q: TFDQuery;
   Entry: TQueryCacheEntry;
-  Found: Boolean;
+  LoadedSQL: string;
+  LoadSucceeded: Boolean;
+
+  function TryLoadQueryDef(const QuerySQL, ParamName, FieldName: string): Boolean;
+  begin
+    Result := False;
+    Q.Close;
+    Q.SQL.Text := QuerySQL;
+    Q.ParamByName(ParamName).AsString := ProcName;
+    try
+      Q.Open;
+      if not Q.Eof then
+      begin
+        Result := True;
+        LoadedSQL := Q.FieldByName(FieldName).AsString;
+      end;
+    except
+      Result := False;
+    end;
+  end;
 begin
   Result := '';
+  LoadedSQL := '';
+  LoadSucceeded := False;
   
   // 如果是直接 SQL，直接返回
   if IsDirectSQL(ProcName) then
@@ -536,77 +914,91 @@ begin
     Exit;
   end;
   
-  // 检查缓存
-  Found := False;
-  if Assigned(GQueryCacheLock) and Assigned(GQueryCache) then
+  // 检查缓存并协调并发加载（同一 ProcName 只允许一个线程查库）
+  if Assigned(GQueryCacheLock) then
   begin
     TMonitor.Enter(GQueryCacheLock);
     try
-      if GQueryCache.TryGetValue(ProcName, Entry) then
+      if GQueryCache = nil then
+        GQueryCache := TDictionary<string, TQueryCacheEntry>.Create;
+      if GQueryCacheLoading = nil then
+        GQueryCacheLoading := TDictionary<string, Byte>.Create;
+
+      while True do
       begin
-        // 检查 TTL
-        if Now < Entry.ExpireTime then
+        if GQueryCache.TryGetValue(ProcName, Entry) then
         begin
-          Result := Entry.SQL;
-          Found := True;
-          Inc(GCacheHits);
-        end
-        else
-          GQueryCache.Remove(ProcName);  // 已过期，移除
+          // 检查 TTL
+          if Now < Entry.ExpireTime then
+          begin
+            Result := Entry.SQL;
+            Inc(GCacheHits);
+            Exit;
+          end
+          else
+            GQueryCache.Remove(ProcName);  // 已过期，移除
+        end;
+
+        if GQueryCacheLoading.ContainsKey(ProcName) then
+        begin
+          TMonitor.Wait(GQueryCacheLock, 1000);
+          Continue;
+        end;
+
+        Inc(GCacheMisses);
+        GQueryCacheLoading.AddOrSetValue(ProcName, 1);
+        Break;
       end;
     finally
       TMonitor.Exit(GQueryCacheLock);
     end;
   end;
-  
-  if Found then
-    Exit;
-  
-  // 缓存未命中
-  TMonitor.Enter(GQueryCacheLock);
+
   try
-    Inc(GCacheMisses);
-  finally
-    TMonitor.Exit(GQueryCacheLock);
-  end;
-  
-  // 从数据库查询
-  if not Assigned(Ctx.Connection) or not Ctx.Connection.Connected then
-  begin
-    Result := ProcName;  // 回退到直接使用
-    Exit;
-  end;
-  
-  Q := TFDQuery.Create(nil);
-  try
-    Q.Connection := Ctx.Connection;
-    Q.SQL.Text := 'SELECT SQL FROM Queries WHERE ProcName = :ProcName AND IsEnabled = 1';
-    Q.ParamByName('ProcName').AsString := ProcName;
-    try
-      Q.Open;
-      if not Q.Eof then
-        Result := Q.FieldByName('SQL').AsString;
-    except
-      // 表可能不存在，回退到直接使用
-      Result := '';
-    end;
-  finally
-    Q.Free;
-  end;
-  
-  // 未找到时，使用 ProcName 作为 SQL（向后兼容）
-  if Result = '' then
-    Result := ProcName
-  else
-  begin
-    // 缓存结果（带 TTL）
-    if Assigned(GQueryCacheLock) and Assigned(GQueryCache) then
+    // 从数据库查询
+    if not Assigned(Ctx.Connection) or not Ctx.Connection.Connected then
     begin
-      Entry.SQL := Result;
-      Entry.ExpireTime := IncSecond(Now, GCacheTTLSec);
+      raise EUniBaseDbError.Create(
+        Format('Query definition "%s" requires an active connection', [ProcName]),
+        ProcName, '', '', Ctx.DBType, Ctx.CorrelationId, DOQRY_ERR_QUERY_NOT_FOUND);
+    end;
+
+    Q := TFDQuery.Create(nil);
+    try
+      Q.Connection := Ctx.Connection;
+      if not TryLoadQueryDef(
+        'SELECT SqlText FROM Queries WHERE Name = :Name AND IsEnabled = 1',
+        'Name', 'SqlText') then
+        TryLoadQueryDef(
+          'SELECT SQL FROM Queries WHERE ProcName = :ProcName AND IsEnabled = 1',
+          'ProcName', 'SQL');
+      Result := LoadedSQL;
+    finally
+      Q.Free;
+    end;
+
+    if Result = '' then
+      raise EUniBaseDbError.Create(
+        Format('Query definition not found: %s', [ProcName]),
+        ProcName, '', '', Ctx.DBType, Ctx.CorrelationId, DOQRY_ERR_QUERY_NOT_FOUND);
+
+    LoadSucceeded := True;
+  finally
+    if Assigned(GQueryCacheLock) then
+    begin
       TMonitor.Enter(GQueryCacheLock);
       try
-        GQueryCache.AddOrSetValue(ProcName, Entry);
+        if Assigned(GQueryCacheLoading) then
+          GQueryCacheLoading.Remove(ProcName);
+
+        if LoadSucceeded and Assigned(GQueryCache) then
+        begin
+          Entry.SQL := Result;
+          Entry.ExpireTime := IncSecond(Now, GCacheTTLSec);
+          GQueryCache.AddOrSetValue(ProcName, Entry);
+        end;
+
+        TMonitor.PulseAll(GQueryCacheLock);
       finally
         TMonitor.Exit(GQueryCacheLock);
       end;
@@ -624,6 +1016,11 @@ begin
     TMonitor.Enter(GQueryCacheLock);
     try
       GQueryCache.Clear;
+      if Assigned(GQueryCacheLoading) then
+      begin
+        GQueryCacheLoading.Clear;
+        TMonitor.PulseAll(GQueryCacheLock);
+      end;
     finally
       TMonitor.Exit(GQueryCacheLock);
     end;
@@ -790,12 +1187,9 @@ var
   Q: TFDQuery;
   StartTime: TDateTime;
   DurationMs: Int64;
-  Params: TJSONObject;
-  Pair: TJSONPair;
   SQL: string;
   Pooled: Boolean;
 begin
-  Result := 0;
   StartTime := Now;
 
   // 从 Queries 表加载 SQL 或直接使用
@@ -813,29 +1207,13 @@ begin
 
   try
     try
+      if Q.Prepared then
+        Q.Unprepare;
+      Q.Params.ClearValues;
       Q.FetchOptions.Mode := fmAll;
 
       // 绑定参数
-      if ParamsJson <> '' then
-      begin
-        Params := TJSONObject.ParseJSONValue(ParamsJson) as TJSONObject;
-        if Assigned(Params) then
-        try
-          for Pair in Params do
-          begin
-            if Pair.JsonValue is TJSONNull then
-              Q.ParamByName(Pair.JsonString.Value).Clear
-            else if Pair.JsonValue is TJSONNumber then
-              Q.ParamByName(Pair.JsonString.Value).AsFloat := TJSONNumber(Pair.JsonValue).AsDouble
-            else if Pair.JsonValue is TJSONBool then
-              Q.ParamByName(Pair.JsonString.Value).AsBoolean := TJSONBool(Pair.JsonValue).AsBoolean
-            else
-              Q.ParamByName(Pair.JsonString.Value).AsString := Pair.JsonValue.Value;
-          end;
-        finally
-          Params.Free;
-        end;
-      end;
+      BindJsonParams(Q, ParamsJson);
 
       Q.Open;
       Result := Q.RecordCount;
@@ -848,8 +1226,7 @@ begin
       DurationMs := MilliSecondsBetween(Now, StartTime);
 
       // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, Result, True,
-        'DoQry:' + Ctx.CorrelationId);
+      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
 
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
         SQL, ParamsJson, DurationMs, Result, '');
@@ -859,13 +1236,12 @@ begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
         // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
-          'DoQry:' + Ctx.CorrelationId);
+        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
 
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E.Message));
+          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
       end;
     end;
   finally
@@ -879,12 +1255,9 @@ var
   Q: TFDQuery;
   StartTime: TDateTime;
   DurationMs: Int64;
-  Params: TJSONObject;
-  Pair: TJSONPair;
   SQL: string;
   Pooled: Boolean;
 begin
-  Result := 0;
   StartTime := Now;
 
   SQL := LoadQuerySQL(ProcName, Ctx);
@@ -901,27 +1274,11 @@ begin
 
   try
     try
+      if Q.Prepared then
+        Q.Unprepare;
+      Q.Params.ClearValues;
       // 绑定参数
-      if ParamsJson <> '' then
-      begin
-        Params := TJSONObject.ParseJSONValue(ParamsJson) as TJSONObject;
-        if Assigned(Params) then
-        try
-          for Pair in Params do
-          begin
-            if Pair.JsonValue is TJSONNull then
-              Q.ParamByName(Pair.JsonString.Value).Clear
-            else if Pair.JsonValue is TJSONNumber then
-              Q.ParamByName(Pair.JsonString.Value).AsFloat := TJSONNumber(Pair.JsonValue).AsDouble
-            else if Pair.JsonValue is TJSONBool then
-              Q.ParamByName(Pair.JsonString.Value).AsBoolean := TJSONBool(Pair.JsonValue).AsBoolean
-            else
-              Q.ParamByName(Pair.JsonString.Value).AsString := Pair.JsonValue.Value;
-          end;
-        finally
-          Params.Free;
-        end;
-      end;
+      BindJsonParams(Q, ParamsJson);
 
       Q.ExecSQL;
       Result := Q.RowsAffected;
@@ -929,8 +1286,7 @@ begin
       DurationMs := MilliSecondsBetween(Now, StartTime);
 
       // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, Result, True,
-        'DoQry:' + Ctx.CorrelationId);
+      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
 
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
         SQL, ParamsJson, DurationMs, Result, '');
@@ -940,13 +1296,12 @@ begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
         // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
-          'DoQry:' + Ctx.CorrelationId);
+        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
 
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E.Message));
+          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
       end;
     end;
   finally
@@ -961,6 +1316,15 @@ var
   StartTime: TDateTime;
   DurationMs: Int64;
   SQL: string;
+  function EnsureReturningId(const RawSQL: string): string;
+  begin
+    Result := Trim(RawSQL);
+    if (Result <> '') and (Result[Length(Result)] = ';') then
+      Delete(Result, Length(Result), 1);
+
+    if Pos('RETURNING', UpperCase(Result)) = 0 then
+      Result := Result + ' RETURNING id';
+  end;
 begin
   Result := 0;
   StartTime := Now;
@@ -970,10 +1334,9 @@ begin
   // 根据数据库类型处理返回 ID
   case Ctx.DBType of
     udbPostgreSQL:
-      if Pos('RETURNING', UpperCase(SQL)) = 0 then
-        SQL := SQL + ' RETURNING id';
+      SQL := EnsureReturningId(SQL);
     udbSQLite:
-      ; // SQLite 使用 last_insert_rowid()
+      SQL := EnsureReturningId(SQL);
   end;
 
   Q := TFDQuery.Create(nil);
@@ -982,20 +1345,11 @@ begin
       Q.Connection := Ctx.Connection;
       Q.SQL.Text := SQL;
 
-      // 参数绑定（简化）
-      // ...
+      BindJsonParams(Q, ParamsJson);
 
       case Ctx.DBType of
-        udbPostgreSQL:
+        udbPostgreSQL, udbSQLite:
         begin
-          Q.Open;
-          if not Q.Eof then
-            Result := Q.Fields[0].AsInteger;
-        end;
-        udbSQLite:
-        begin
-          Q.ExecSQL;
-          Q.SQL.Text := 'SELECT last_insert_rowid()';
           Q.Open;
           if not Q.Eof then
             Result := Q.Fields[0].AsInteger;
@@ -1005,8 +1359,7 @@ begin
       DurationMs := MilliSecondsBetween(Now, StartTime);
 
       // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 1, True,
-        'DoQry:' + Ctx.CorrelationId);
+      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
 
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
         SQL, ParamsJson, DurationMs, 1, '');
@@ -1016,13 +1369,12 @@ begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
         // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
-          'DoQry:' + Ctx.CorrelationId);
+        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
 
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E.Message));
+          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
       end;
     end;
   finally
@@ -1056,6 +1408,12 @@ begin
 
   try
     try
+      if Q.Prepared then
+        Q.Unprepare;
+      Q.Params.ClearValues;
+      // 绑定参数（与 UniDbSelect/UniDbExec 一致）
+      BindJsonParams(Q, ParamsJson);
+
       Q.Open;
 
       if not Q.Eof and (Q.Fields.Count > 0) then
@@ -1064,8 +1422,7 @@ begin
       DurationMs := MilliSecondsBetween(Now, StartTime);
 
       // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 1, True,
-        'DoQry:' + Ctx.CorrelationId);
+      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
 
       LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
         SQL, ParamsJson, DurationMs, 1, '');
@@ -1075,13 +1432,12 @@ begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
         // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, ParamsJson, DurationMs, 0, False,
-          'DoQry:' + Ctx.CorrelationId);
+        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
 
         LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
           SQL, ParamsJson, DurationMs, 0, E.Message);
         raise EUniBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E.Message));
+          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
       end;
     end;
   finally
@@ -1117,11 +1473,15 @@ end;
 
 procedure UniDbClearPreparedStatements;
 begin
-  if Assigned(GPreparedPoolLock) and Assigned(GPreparedPool) then
+  if Assigned(GPreparedPoolLock) then
   begin
     TMonitor.Enter(GPreparedPoolLock);
     try
-      GPreparedPool.Clear;
+      if Assigned(GPreparedPool) then
+        GPreparedPool.Clear;
+      if Assigned(GPreparedQueryIndex) then
+        GPreparedQueryIndex.Clear;
+      GPreparedReuseCount := 0;
     finally
       TMonitor.Exit(GPreparedPoolLock);
     end;
@@ -1147,4 +1507,77 @@ begin
   end;
 end;
 
+procedure UniDbSetPreparedPoolMaxSize(MaxSize: Integer);
+begin
+  if MaxSize < 1 then
+    MaxSize := 1;
+
+  if Assigned(GPreparedPoolLock) then
+  begin
+    TMonitor.Enter(GPreparedPoolLock);
+    try
+      GPreparedPoolMaxSize := MaxSize;
+      if Assigned(GPreparedPool) then
+        EnforcePreparedPoolLimit(nil);
+    finally
+      TMonitor.Exit(GPreparedPoolLock);
+    end;
+  end
+  else
+    GPreparedPoolMaxSize := MaxSize;
+end;
+
+{ TDoQryService }
+
+function TDoQryService.Select(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+var
+  Data: TFDMemTable;
+begin
+  Data := TFDMemTable.Create(nil);
+  try
+    Result := IntToStr(UniDbSelect(ProcName, ParamsJson, Data, Ctx));
+  finally
+    Data.Free;
+  end;
+end;
+
+function TDoQryService.Exec(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+begin
+  Result := IntToStr(UniDbExec(ProcName, ParamsJson, Ctx));
+end;
+
+function TDoQryService.Scalar(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
+begin
+  Result := VarToStr(UniDbScalar(ProcName, ParamsJson, Ctx));
+end;
+
+procedure TDoQryService.RunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
+begin
+  UniDbRunInTx(Ctx, Proc);
+end;
+
+procedure TDoQryService.ClearCache;
+begin
+  UniDbClearQueryCache;
+end;
+
+procedure TDoQryService.Shutdown;
+begin
+  UniDbShutdown;
+end;
+
+initialization
+  GQueryCacheLock := TObject.Create;
+  GQueryCache := TDictionary<string, TQueryCacheEntry>.Create;
+  GQueryCacheLoading := TDictionary<string, Byte>.Create;
+  GPreparedPoolLock := TObject.Create;
+  GPreparedPool := TObjectDictionary<string, TPreparedEntry>.Create([doOwnsValues]);
+  GPreparedQueryIndex := TDictionary<TFDQuery, TPreparedEntry>.Create;
+
+finalization
+  UniDbShutdown;
+  FreeAndNil(GPreparedPoolLock);
+  FreeAndNil(GQueryCacheLock);
+
 end.
+

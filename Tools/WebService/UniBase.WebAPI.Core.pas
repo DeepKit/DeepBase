@@ -1418,8 +1418,8 @@ begin
   FReadTimeout := 30000;
   FWriteTimeout := 30000;
   FMaxRequestSize := 10 * 1024 * 1024;  // 10 MB
-  FCORSEnabled := True;
-  FCORSOrigins := '*';
+  FCORSEnabled := False;
+  FCORSOrigins := '';
   FCORSMethods := 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
   FCORSHeaders := 'Content-Type, Authorization, X-Requested-With';
   FCompressResponse := True;
@@ -1712,10 +1712,13 @@ begin
     FSSLHandler := TIdServerIOHandlerSSLOpenSSL.Create(FHttpServer);
     FSSLHandler.SSLOptions.CertFile := FConfig.SSLCertFile;
     FSSLHandler.SSLOptions.KeyFile := FConfig.SSLKeyFile;
-    // BUG-041 FIX: 优先使用 TLS 1.3，回退到 TLS 1.2
-    // 注意：Indy 的 OpenSSL 支持取决于 OpenSSL 版本
-    // 如果 OpenSSL >= 1.1.1，则支持 TLS 1.3
+    // BUG-041 FIX: 优先使用 TLS 1.3，回退到 TLS 1.2。
+    // 不同 Indy 版本枚举项不同，编译期按可用符号适配。
+    {$IF Declared(sslvTLSv1_3)}
     FSSLHandler.SSLOptions.SSLVersions := [sslvTLSv1_2, sslvTLSv1_3];
+    {$ELSE}
+    FSSLHandler.SSLOptions.SSLVersions := [sslvTLSv1_2];
+    {$IFEND}
     FSSLHandler.SSLOptions.Mode := sslmServer;
     // 添加安全头部配置
     FSSLHandler.SSLOptions.VerifyMode := [];
@@ -1726,6 +1729,9 @@ end;
 
 procedure TApiServer.HandleCORS(AContext: TApiContext);
 begin
+  if Trim(FConfig.CORSOrigins) = '' then
+    Exit;
+
   AContext.Response.SetHeader('Access-Control-Allow-Origin', FConfig.CORSOrigins);
   AContext.Response.SetHeader('Access-Control-Allow-Methods', FConfig.CORSMethods);
   AContext.Response.SetHeader('Access-Control-Allow-Headers', FConfig.CORSHeaders);
