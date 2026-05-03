@@ -394,11 +394,13 @@ begin
 
   PostData := '';
   try
-    PostData := 'token=' + TSocialHelper.UrlEncode(AToken);
-    DoPost(OAuthConfig.RevokeEndpoint, PostData);
-    Result := True;
-  except
-    Result := False;
+    try
+      PostData := 'token=' + TSocialHelper.UrlEncode(AToken);
+      DoPost(OAuthConfig.RevokeEndpoint, PostData);
+      Result := True;
+    except
+      Result := False;
+    end;
   finally
     if PostData <> '' then
       UniBase.Security.SecureZeroMemory(PostData);
@@ -435,44 +437,46 @@ begin
   FHttpClient.CustomHeaders['X-GitHub-Api-Version'] := '2022-11-28';
 
   try
-    Response := DoGet(GITHUB_USER_URL);
-    Result.RawJson := Response;
-
-    JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-    if not Assigned(JsonObj) then
-    begin
-      Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
-      Exit;
-    end;
-
     try
-      Result.OpenId := JsonObj.GetValue<Integer>('id', 0).ToString;
-      JsonObj.TryGetValue<string>('login', Result.Nickname);
-      JsonObj.TryGetValue<string>('avatar_url', Result.Avatar);
-      JsonObj.TryGetValue<string>('email', Result.Email);
+      Response := DoGet(GITHUB_USER_URL);
+      Result.RawJson := Response;
 
-      // If email is not public, fetch from emails API
-      if Result.Email = '' then
+      JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+      if not Assigned(JsonObj) then
       begin
-        Emails := GetUserEmails(AToken.AccessToken);
-        if Length(Emails) > 0 then
-          Result.Email := Emails[0];
+        Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
+        Exit;
       end;
 
-      Result.Success := True;
-    finally
-      JsonObj.Free;
-    end;
-  except
-    on E: ESocialError do
-    begin
-      Result.ErrorCode := E.ErrorCode;
-      Result.ErrorMessage := E.Message;
-    end;
-    on E: Exception do
-    begin
-      Result.ErrorCode := 'ERROR';
-      Result.ErrorMessage := E.Message;
+      try
+        Result.OpenId := JsonObj.GetValue<Integer>('id', 0).ToString;
+        JsonObj.TryGetValue<string>('login', Result.Nickname);
+        JsonObj.TryGetValue<string>('avatar_url', Result.Avatar);
+        JsonObj.TryGetValue<string>('email', Result.Email);
+
+        // If email is not public, fetch from emails API
+        if Result.Email = '' then
+        begin
+          Emails := GetUserEmails(AToken.AccessToken);
+          if Length(Emails) > 0 then
+            Result.Email := Emails[0];
+        end;
+
+        Result.Success := True;
+      finally
+        JsonObj.Free;
+      end;
+    except
+      on E: ESocialError do
+      begin
+        Result.ErrorCode := E.ErrorCode;
+        Result.ErrorMessage := E.Message;
+      end;
+      on E: Exception do
+      begin
+        Result.ErrorCode := 'ERROR';
+        Result.ErrorMessage := E.Message;
+      end;
     end;
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
@@ -501,32 +505,34 @@ begin
   FHttpClient.CustomHeaders['Accept'] := 'application/vnd.github+json';
 
   try
-    Response := DoGet(GITHUB_EMAILS_URL);
-
-    JsonArr := TJSONObject.ParseJSONValue(Response) as TJSONArray;
-    if not Assigned(JsonArr) then Exit;
-
     try
-      SetLength(Result, JsonArr.Count);
-      for I := 0 to JsonArr.Count - 1 do
-      begin
-        Email := JsonArr.Items[I] as TJSONObject;
-        Email.TryGetValue<string>('email', EmailStr);
-        Email.TryGetValue<Boolean>('primary', IsPrimary);
+      Response := DoGet(GITHUB_EMAILS_URL);
 
-        if IsPrimary then
+      JsonArr := TJSONObject.ParseJSONValue(Response) as TJSONArray;
+      if not Assigned(JsonArr) then Exit;
+
+      try
+        SetLength(Result, JsonArr.Count);
+        for I := 0 to JsonArr.Count - 1 do
         begin
-          // Put primary email first
-          Result[0] := EmailStr;
-        end
-        else
-          Result[I] := EmailStr;
+          Email := JsonArr.Items[I] as TJSONObject;
+          Email.TryGetValue<string>('email', EmailStr);
+          Email.TryGetValue<Boolean>('primary', IsPrimary);
+
+          if IsPrimary then
+          begin
+            // Put primary email first
+            Result[0] := EmailStr;
+          end
+          else
+            Result[I] := EmailStr;
+        end;
+      finally
+        JsonArr.Free;
       end;
-    finally
-      JsonArr.Free;
+    except
+      SetLength(Result, 0);
     end;
-  except
-    SetLength(Result, 0);
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';
     if AuthHeader <> '' then
@@ -563,37 +569,39 @@ begin
   FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
 
   try
-    Response := DoGet(GOOGLE_USER_URL);
-    Result.RawJson := Response;
-
-    JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-    if not Assigned(JsonObj) then
-    begin
-      Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
-      Exit;
-    end;
-
     try
-      JsonObj.TryGetValue<string>('sub', Result.OpenId);
-      JsonObj.TryGetValue<string>('name', Result.Nickname);
-      JsonObj.TryGetValue<string>('picture', Result.Avatar);
-      JsonObj.TryGetValue<string>('email', Result.Email);
-      JsonObj.TryGetValue<string>('locale', Result.Language);
+      Response := DoGet(GOOGLE_USER_URL);
+      Result.RawJson := Response;
 
-      Result.Success := True;
-    finally
-      JsonObj.Free;
-    end;
-  except
-    on E: ESocialError do
-    begin
-      Result.ErrorCode := E.ErrorCode;
-      Result.ErrorMessage := E.Message;
-    end;
-    on E: Exception do
-    begin
-      Result.ErrorCode := 'ERROR';
-      Result.ErrorMessage := E.Message;
+      JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+      if not Assigned(JsonObj) then
+      begin
+        Result := TSocialUserInfo.Fail('INVALID_JSON', 'Invalid user info response');
+        Exit;
+      end;
+
+      try
+        JsonObj.TryGetValue<string>('sub', Result.OpenId);
+        JsonObj.TryGetValue<string>('name', Result.Nickname);
+        JsonObj.TryGetValue<string>('picture', Result.Avatar);
+        JsonObj.TryGetValue<string>('email', Result.Email);
+        JsonObj.TryGetValue<string>('locale', Result.Language);
+
+        Result.Success := True;
+      finally
+        JsonObj.Free;
+      end;
+    except
+      on E: ESocialError do
+      begin
+        Result.ErrorCode := E.ErrorCode;
+        Result.ErrorMessage := E.Message;
+      end;
+      on E: Exception do
+      begin
+        Result.ErrorCode := 'ERROR';
+        Result.ErrorMessage := E.Message;
+      end;
     end;
   finally
     FHttpClient.CustomHeaders['Authorization'] := '';

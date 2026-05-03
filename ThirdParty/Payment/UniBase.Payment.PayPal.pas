@@ -92,7 +92,11 @@ type
 implementation
 
 uses
-  System.Hash, System.StrUtils;
+  System.Hash, System.StrUtils
+  {$IFDEF MSWINDOWS}
+  , Winapi.Windows
+  {$ENDIF}
+  ;
 
 const
   PAYPAL_SANDBOX_URL    = 'https://api-mvc.sandbox.paypal.com';
