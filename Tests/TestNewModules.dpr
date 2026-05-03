@@ -17,7 +17,7 @@ uses
   UniBase.Types in '..\Core\UniBase.Types.pas',
   UniBase.CloudSync in '..\Core\UniBase.CloudSync.pas',
   UniBase.CLI.SSH in '..\Core\UniBase.CLI.SSH.pas',
-  UniBase.Updater in '..\Core\UniBase.Updater.pas',
+  UniBase.Updater in '..\Features\UniBase.Updater.pas',
   UniBase.Crypto in '..\Core\UniBase.Crypto.pas',
   // Test units
   Test.UniBase.CloudSync in 'Test.UniBase.CloudSync.pas',

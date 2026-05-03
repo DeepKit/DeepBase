@@ -689,7 +689,11 @@
   - [x] 删除 Core/UniBase.AutoUpdate.pas（Features/ 是超集）
   - [x] 删除 Core/UniBase.Updater.pas（Features/ 是超集）
   - [x] 删除 Features/UniBase.Protection.pas（Core/ 有 GCM+CBC 完整实现）
-  - [ ] 更新 .dpk/.dproj 引用（待人工确认编译）
+  - [x] 更新 .dpk/.dproj 引用并验证构建（2026-05-03，`cmd /c build_test.bat` `errorlevel 0`）
+- **阶段进展**:
+  - `UniBaseCore.dpk`：移除对已删除 `Core\UniBase.AutoUpdate.pas`、`Core\UniBase.AntiTamper.pas` 的无效引用。
+  - `UniBaseFeatures.dpk`：移除对已删除 `Features\UniBase.Protection.pas` 的无效引用，保留 `UniBaseCore` 中 `UniBase.Protection` 实现。
+  - `Tests/TestNewModules.dpr` 与 `Examples/FullDemo/FullDemo.dpr`：将 `Updater/AutoUpdate` 路径统一到 `Features\` 实现，避免旧路径编译失败。
 
 #### ARCH-029: AipexBase Core/ThirdParty 重复 + ThirdParty 含 UI 代码
 - **状态**: ✅ 部分完成 (2026-05-03)

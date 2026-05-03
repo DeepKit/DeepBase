@@ -60,10 +60,8 @@ contains
   UniBase.Hotkeys in 'Core\UniBase.Hotkeys.pas',
   UniBase.Theme in 'Core\UniBase.Theme.pas',
   UniBase.LLM in 'Core\UniBase.LLM.pas',
-  UniBase.AutoUpdate in 'Core\UniBase.AutoUpdate.pas',
   UniBase.RemoteConfig in 'Core\UniBase.RemoteConfig.pas',
   UniBase.Protection in 'Core\UniBase.Protection.pas',
-  UniBase.AntiTamper in 'Core\UniBase.AntiTamper.pas',
   UniBase.VCL.AboutFrame in 'VCL\UniBase.VCL.AboutFrame.pas',
   UniBase.Unlock in 'Core\UniBase.Unlock.pas',
   UniBase.VCL.UnlockDialog in 'VCL\UniBase.VCL.UnlockDialog.pas';

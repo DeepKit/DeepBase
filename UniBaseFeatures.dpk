@@ -1,0 +1,25 @@
+package UniBaseFeatures;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'UniBase Optional Feature Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  UniBaseCore;
+
+contains
+  UniBase.LLM.Types in 'Features\UniBase.LLM.Types.pas',
+  UniBase.LLM.Client in 'Features\UniBase.LLM.Client.pas',
+  UniBase.LLM.HTTP in 'Features\UniBase.LLM.HTTP.pas',
+  UniBase.LLM.Config in 'Features\UniBase.LLM.Config.pas',
+  UniBase.LLM.Service in 'Features\UniBase.LLM.Service.pas',
+  UniBase.Updater in 'Features\UniBase.Updater.pas',
+  UniBase.AutoUpdate in 'Features\UniBase.AutoUpdate.pas',
+  UniBase.AntiTamper in 'Features\UniBase.AntiTamper.pas',
+  UniBase.Unlock in 'Features\UniBase.Unlock.pas';
+
+end.

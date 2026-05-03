@@ -19,7 +19,7 @@ uses
   UniBase.Hotkeys,
   UniBase.Theme,
   UniBase.LLM,
-  UniBase.AutoUpdate,
+  UniBase.AutoUpdate in '..\..\Features\UniBase.AutoUpdate.pas',
   UniBase.RemoteConfig,
   UniBase.License;
 
