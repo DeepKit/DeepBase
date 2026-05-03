@@ -73,6 +73,12 @@ type
     
     [Test]
     procedure Test_UnsubscribeByTag_RemovesTaggedHandlers;
+
+    [Test]
+    procedure Test_SubscribeWeak_AutoUnsubscribe_OnOwnerDestroy;
+
+    [Test]
+    procedure Test_SubscribeWeak_ManualUnsubscribe_DetachesOwnerLink;
     
     // Event Priorities
     [Test]
@@ -359,6 +365,71 @@ begin
   
   Assert.AreEqual(0, TaggedCount, 'Tagged handler should be removed');
   Assert.AreEqual(1, UntaggedCount, 'Untagged handler should remain');
+end;
+
+procedure TTestUniBaseEventBus.Test_SubscribeWeak_AutoUnsubscribe_OnOwnerDestroy;
+var
+  Owner: TComponent;
+  DeliveryCount: Integer;
+  TestEvent: TTestEvent;
+begin
+  DeliveryCount := 0;
+  Owner := TComponent.Create(nil);
+  try
+    FEventBus.SubscribeWeak<TTestEvent>(Owner,
+      procedure(const Event: TTestEvent)
+      begin
+        Inc(DeliveryCount);
+      end);
+
+    Assert.AreEqual(1, FEventBus.GetSubscriberCount<TTestEvent>,
+      'Weak subscription should be registered');
+
+    Owner.Free;
+    Owner := nil;
+
+    Assert.AreEqual(0, FEventBus.GetSubscriberCount<TTestEvent>,
+      'Owner destruction should auto-unsubscribe');
+
+    TestEvent.Id := 1;
+    FEventBus.Publish<TTestEvent>(TestEvent);
+
+    Assert.AreEqual(0, DeliveryCount,
+      'Handler should not be invoked after owner is destroyed');
+  finally
+    Owner.Free;
+  end;
+end;
+
+procedure TTestUniBaseEventBus.Test_SubscribeWeak_ManualUnsubscribe_DetachesOwnerLink;
+var
+  Owner: TComponent;
+  DeliveryCount: Integer;
+  Subscription: ISubscription;
+  TestEvent: TTestEvent;
+begin
+  DeliveryCount := 0;
+  Owner := TComponent.Create(nil);
+  try
+    Subscription := FEventBus.SubscribeWeak<TTestEvent>(Owner,
+      procedure(const Event: TTestEvent)
+      begin
+        Inc(DeliveryCount);
+      end);
+
+    Subscription.Unsubscribe;
+    Assert.AreEqual(0, FEventBus.GetSubscriberCount<TTestEvent>,
+      'Manual unsubscribe should remove weak subscription');
+
+    Owner.Free;
+    Owner := nil;
+
+    TestEvent.Id := 2;
+    FEventBus.Publish<TTestEvent>(TestEvent);
+    Assert.AreEqual(0, DeliveryCount);
+  finally
+    Owner.Free;
+  end;
 end;
 
 procedure TTestUniBaseEventBus.Test_Priority_HighBeforeNormal;

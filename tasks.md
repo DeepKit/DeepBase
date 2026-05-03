@@ -712,14 +712,18 @@
   - [ ] 更新文档 06.01 与实际策略一致
 
 #### ARCH-031: EventBus 订阅者强引用内存泄漏
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (内存)
 - **问题**: `FSubscriptions` 持有匿名方法闭包的强引用，订阅者对象销毁后若未 `Unsubscribe`，事件总线持续持有悬空引用
 - **影响**: TForm 等组件无法释放，内存持续增长
 - **任务**:
-  - [ ] 提供基于弱引用的订阅机制
-  - [ ] 或在 Publish 时检测并跳过已销毁的订阅者
-  - [ ] 文档中强调必须 Unsubscribe
+  - [x] 提供基于弱引用的订阅机制
+  - [x] 或在 Publish 时检测并跳过已销毁的订阅者
+  - [x] 文档中强调必须 Unsubscribe
+- **修复摘要**:
+  - `Core/UniBase.EventBus.pas`：新增 `SubscribeWeak<T>(AOwner, ...)`，将订阅绑定到 `TComponent` 生命周期，owner 销毁时自动退订，避免悬空订阅持续保留。
+  - `Core/UniBase.EventBus.pas`：在 `Unsubscribe/UnsubscribeAll/UnsubscribeByTag/Clear` 同步清理弱订阅链接，防止重复回调与链接残留。
+  - `Tests/Test.UniBase.EventBus.pas`：新增弱订阅回归测试（owner 销毁自动退订、手工退订后 owner 销毁无副作用）。
 
 #### ARCH-032: CircuitBreaker AllowRequest/RecordFailure 非原子
 - **状态**: ✅ 完成 (2026-05-03)

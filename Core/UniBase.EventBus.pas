@@ -95,6 +95,24 @@ type
     function GetEventType: string;
     property SubscriptionId: TGUID read FSubscriptionId;
   end;
+
+  TEventBus = class;
+
+  /// <summary>
+  /// Owner-bound helper component for weak subscriptions.
+  /// When owner is destroyed, this link auto-unsubscribes the subscription.
+  /// </summary>
+  TWeakSubscriptionLink = class(TComponent)
+  private
+    FEventBus: TEventBus;
+    FSubscriptionId: TGUID;
+  public
+    constructor Create(AOwner: TComponent; AEventBus: TEventBus;
+      const ASubscriptionId: TGUID); reintroduce;
+    destructor Destroy; override;
+    procedure DetachEventBus;
+    property SubscriptionId: TGUID read FSubscriptionId;
+  end;
   
   // ============================================================================
   // Subscription Info
@@ -141,6 +159,7 @@ type
   TEventBus = class
   private
     FSubscriptions: TDictionary<string, TList<TSubscriptionInfo>>;
+    FOwnerLinks: TList<TWeakSubscriptionLink>;
     FLock: TCriticalSection;
     FStats: TEventBusStats;
     FOnDeadLetter: TDeadLetterHandler;
@@ -152,6 +171,18 @@ type
     
     function GetEventTypeName<T>: string;
     function GetSubscriptionList(const EventType: string): TList<TSubscriptionInfo>;
+    function SubscribeInternal<T>(Handler: TEventHandler<T>;
+      Priority: TEventPriority;
+      DispatchMode: TEventDispatchMode;
+      Filter: TEventFilter<T>;
+      const Tag: string;
+      out SubscriptionId: TGUID): ISubscription;
+    procedure RegisterWeakSubscriptionLink(AOwner: TComponent;
+      const SubscriptionId: TGUID);
+    procedure RemoveWeakSubscriptionLink(const SubscriptionId: TGUID);
+    procedure OwnerLinkDestroyed(ALink: TWeakSubscriptionLink;
+      const SubscriptionId: TGUID);
+    procedure DetachWeakSubscriptionLinks;
     procedure InvokeHandler(const Info: TSubscriptionInfo; const Event: TValue);
     procedure AddToHistory(const EventType: string; const Event: TValue);
   public
@@ -162,7 +193,10 @@ type
     // Subscribe
     // ========================================================================
     
-    /// <summary>Subscribe to events of type T</summary>
+    /// <summary>
+    /// Subscribe to events of type T.
+    /// Note: this is a strong subscription; caller must Unsubscribe explicitly.
+    /// </summary>
     function Subscribe<T>(Handler: TEventHandler<T>): ISubscription; overload;
     
     /// <summary>Subscribe with options</summary>
@@ -176,6 +210,23 @@ type
     
     /// <summary>Subscribe with all options</summary>
     function Subscribe<T>(Handler: TEventHandler<T>;
+      Priority: TEventPriority;
+      DispatchMode: TEventDispatchMode;
+      Filter: TEventFilter<T>;
+      const Tag: string = ''): ISubscription; overload;
+
+    /// <summary>
+    /// Weak subscription bound to component lifecycle.
+    /// Owner destruction triggers automatic Unsubscribe.
+    /// </summary>
+    function SubscribeWeak<T>(AOwner: TComponent;
+      Handler: TEventHandler<T>): ISubscription; overload;
+    function SubscribeWeak<T>(AOwner: TComponent;
+      Handler: TEventHandler<T>;
+      Priority: TEventPriority;
+      DispatchMode: TEventDispatchMode = edmSync): ISubscription; overload;
+    function SubscribeWeak<T>(AOwner: TComponent;
+      Handler: TEventHandler<T>;
       Priority: TEventPriority;
       DispatchMode: TEventDispatchMode;
       Filter: TEventFilter<T>;
@@ -376,6 +427,34 @@ begin
 end;
 
 // ============================================================================
+// TWeakSubscriptionLink
+// ============================================================================
+
+constructor TWeakSubscriptionLink.Create(AOwner: TComponent; AEventBus: TEventBus;
+  const ASubscriptionId: TGUID);
+begin
+  inherited Create(AOwner);
+  FEventBus := AEventBus;
+  FSubscriptionId := ASubscriptionId;
+end;
+
+destructor TWeakSubscriptionLink.Destroy;
+var
+  LEventBus: TEventBus;
+begin
+  LEventBus := FEventBus;
+  FEventBus := nil;
+  if LEventBus <> nil then
+    LEventBus.OwnerLinkDestroyed(Self, FSubscriptionId);
+  inherited;
+end;
+
+procedure TWeakSubscriptionLink.DetachEventBus;
+begin
+  FEventBus := nil;
+end;
+
+// ============================================================================
 // TEventBus
 // ============================================================================
 
@@ -383,6 +462,7 @@ constructor TEventBus.Create;
 begin
   inherited Create;
   FSubscriptions := TDictionary<string, TList<TSubscriptionInfo>>.Create;
+  FOwnerLinks := TList<TWeakSubscriptionLink>.Create;
   FLock := TCriticalSection.Create;
   FEventHistory := TList<TPair<string, TValue>>.Create;
   FEnabled := True;
@@ -397,6 +477,8 @@ var
 begin
   FLock.Enter;
   try
+    DetachWeakSubscriptionLinks;
+    FOwnerLinks.Free;
     for List in FSubscriptions.Values do
       List.Free;
     FSubscriptions.Free;
@@ -420,6 +502,68 @@ begin
     Result := TList<TSubscriptionInfo>.Create;
     FSubscriptions.Add(EventType, Result);
   end;
+end;
+
+function TEventBus.SubscribeInternal<T>(Handler: TEventHandler<T>;
+  Priority: TEventPriority;
+  DispatchMode: TEventDispatchMode;
+  Filter: TEventFilter<T>;
+  const Tag: string;
+  out SubscriptionId: TGUID): ISubscription;
+var
+  EventType: string;
+  Info: TSubscriptionInfo;
+  List: TList<TSubscriptionInfo>;
+  I: Integer;
+  TypedHandler: TEventHandler<T>;
+  TypedFilter: TEventFilter<T>;
+begin
+  EventType := GetEventTypeName<T>;
+  TypedHandler := Handler;
+  TypedFilter := Filter;
+
+  SubscriptionId := TGUID.NewGuid;
+  Info.Id := SubscriptionId;
+  Info.Priority := Priority;
+  Info.DispatchMode := DispatchMode;
+  Info.Tag := Tag;
+  Info.CreatedAt := Now;
+  Info.InvokeCount := 0;
+
+  // Wrap typed handler
+  Info.Handler := procedure(const Event: TValue)
+    begin
+      TypedHandler(Event.AsType<T>);
+    end;
+
+  // BUG-043 FIX: Wrap typed filter to untyped filter
+  if Assigned(TypedFilter) then
+  begin
+    Info.Filter := TFunc<TValue, Boolean>(
+      function(const Event: TValue): Boolean
+      begin
+        Result := TypedFilter(Event.AsType<T>);
+      end);
+  end
+  else
+    Info.Filter := nil;
+
+  FLock.Enter;
+  try
+    List := GetSubscriptionList(EventType);
+
+    // Insert by priority (higher priority first)
+    I := 0;
+    while (I < List.Count) and (List[I].Priority >= Priority) do
+      Inc(I);
+    List.Insert(I, Info);
+
+    Inc(FStats.ActiveSubscriptions);
+  finally
+    FLock.Leave;
+  end;
+
+  Result := TSubscription.Create(Self, EventType, SubscriptionId);
 end;
 
 function TEventBus.Subscribe<T>(Handler: TEventHandler<T>): ISubscription;
@@ -446,57 +590,41 @@ function TEventBus.Subscribe<T>(Handler: TEventHandler<T>;
   Filter: TEventFilter<T>;
   const Tag: string): ISubscription;
 var
-  EventType: string;
-  Info: TSubscriptionInfo;
-  List: TList<TSubscriptionInfo>;
-  I: Integer;
-  TypedHandler: TEventHandler<T>;
-  TypedFilter: TEventFilter<T>;
+  SubscriptionId: TGUID;
 begin
-  EventType := GetEventTypeName<T>;
-  TypedHandler := Handler;
-  TypedFilter := Filter;
-  
-  Info.Id := TGUID.NewGuid;
-  Info.Priority := Priority;
-  Info.DispatchMode := DispatchMode;
-  Info.Tag := Tag;
-  Info.CreatedAt := Now;
-  Info.InvokeCount := 0;
-  
-  // Wrap typed handler
-  Info.Handler := procedure(const Event: TValue)
-    begin
-      TypedHandler(Event.AsType<T>);
-    end;
-  
-  // BUG-043 FIX: Wrap typed filter to untyped filter
-  if Assigned(TypedFilter) then
-  begin
-    Info.Filter := function(const Event: TValue): Boolean
-      begin
-        Result := TypedFilter(Event.AsType<T>);
-      end;
-  end
-  else
-    Info.Filter := nil;
-  
-  FLock.Enter;
-  try
-    List := GetSubscriptionList(EventType);
-    
-    // Insert by priority (higher priority first)
-    I := 0;
-    while (I < List.Count) and (List[I].Priority >= Priority) do
-      Inc(I);
-    List.Insert(I, Info);
-    
-    Inc(FStats.ActiveSubscriptions);
-  finally
-    FLock.Leave;
-  end;
-  
-  Result := TSubscription.Create(Self, EventType, Info.Id);
+  Result := SubscribeInternal<T>(Handler, Priority, DispatchMode, Filter, Tag,
+    SubscriptionId);
+end;
+
+function TEventBus.SubscribeWeak<T>(AOwner: TComponent;
+  Handler: TEventHandler<T>): ISubscription;
+begin
+  Result := SubscribeWeak<T>(AOwner, Handler, epNormal, edmSync, nil, '');
+end;
+
+function TEventBus.SubscribeWeak<T>(AOwner: TComponent;
+  Handler: TEventHandler<T>;
+  Priority: TEventPriority;
+  DispatchMode: TEventDispatchMode): ISubscription;
+begin
+  Result := SubscribeWeak<T>(AOwner, Handler, Priority, DispatchMode, nil, '');
+end;
+
+function TEventBus.SubscribeWeak<T>(AOwner: TComponent;
+  Handler: TEventHandler<T>;
+  Priority: TEventPriority;
+  DispatchMode: TEventDispatchMode;
+  Filter: TEventFilter<T>;
+  const Tag: string): ISubscription;
+var
+  SubscriptionId: TGUID;
+begin
+  if AOwner = nil then
+    raise EArgumentNilException.Create('AOwner');
+
+  Result := SubscribeInternal<T>(Handler, Priority, DispatchMode, Filter, Tag,
+    SubscriptionId);
+  RegisterWeakSubscriptionLink(AOwner, SubscriptionId);
 end;
 
 function TEventBus.SubscribeByType(const EventType: string;
@@ -554,6 +682,63 @@ begin
   Result := TSubscription.Create(Self, EventType, Info.Id);
 end;
 
+procedure TEventBus.RegisterWeakSubscriptionLink(AOwner: TComponent;
+  const SubscriptionId: TGUID);
+var
+  Link: TWeakSubscriptionLink;
+begin
+  Link := TWeakSubscriptionLink.Create(AOwner, Self, SubscriptionId);
+  FLock.Enter;
+  try
+    FOwnerLinks.Add(Link);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TEventBus.RemoveWeakSubscriptionLink(const SubscriptionId: TGUID);
+var
+  I: Integer;
+  Link: TWeakSubscriptionLink;
+begin
+  for I := FOwnerLinks.Count - 1 downto 0 do
+  begin
+    Link := FOwnerLinks[I];
+    if Link.SubscriptionId = SubscriptionId then
+    begin
+      Link.DetachEventBus;
+      FOwnerLinks.Delete(I);
+      Break;
+    end;
+  end;
+end;
+
+procedure TEventBus.OwnerLinkDestroyed(ALink: TWeakSubscriptionLink;
+  const SubscriptionId: TGUID);
+begin
+  if ALink = nil then
+    Exit;
+
+  FLock.Enter;
+  try
+    FOwnerLinks.Remove(ALink);
+  finally
+    FLock.Leave;
+  end;
+
+  Unsubscribe(SubscriptionId);
+end;
+
+procedure TEventBus.DetachWeakSubscriptionLinks;
+var
+  Link: TWeakSubscriptionLink;
+begin
+  for Link in FOwnerLinks do
+    if Link <> nil then
+      Link.DetachEventBus;
+  FOwnerLinks.Clear;
+end;
+
 procedure TEventBus.Unsubscribe(const SubscriptionId: TGUID);
 var
   List: TList<TSubscriptionInfo>;
@@ -568,6 +753,7 @@ begin
         if List[I].Id = SubscriptionId then
         begin
           List.Delete(I);
+          RemoveWeakSubscriptionLink(SubscriptionId);
           Dec(FStats.ActiveSubscriptions);
           Exit;
         end;
@@ -586,11 +772,14 @@ end;
 procedure TEventBus.UnsubscribeAll(const EventType: string);
 var
   List: TList<TSubscriptionInfo>;
+  I: Integer;
 begin
   FLock.Enter;
   try
     if FSubscriptions.TryGetValue(EventType, List) then
     begin
+      for I := List.Count - 1 downto 0 do
+        RemoveWeakSubscriptionLink(List[I].Id);
       Dec(FStats.ActiveSubscriptions, List.Count);
       List.Clear;
     end;
@@ -612,6 +801,7 @@ begin
       begin
         if List[I].Tag = Tag then
         begin
+          RemoveWeakSubscriptionLink(List[I].Id);
           List.Delete(I);
           Dec(FStats.ActiveSubscriptions);
         end;
@@ -642,11 +832,11 @@ begin
         end).Start;
       
     edmMainThread:
-      // Queue to main thread - using Synchronize for compatibility
+      // Queue to main thread - using Queue for compatibility
       if TThread.CurrentThread.ThreadID = MainThreadID then
         LHandler(LEvent)
       else
-        TThread.Synchronize(TThread.CurrentThread,
+        TThread.Queue(nil,
           procedure
           begin
             LHandler(LEvent);
@@ -841,6 +1031,7 @@ var
 begin
   FLock.Enter;
   try
+    DetachWeakSubscriptionLinks;
     for List in FSubscriptions.Values do
       List.Clear;
     FStats.ActiveSubscriptions := 0;
