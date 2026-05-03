@@ -67,10 +67,6 @@ type
       ABizContent: TJSONObject): TJSONObject;
     function RSA2Sign(const AContent: string): string;
     function RSA2Verify(const AContent, ASign: string): Boolean;
-    {$IFDEF MSWINDOWS}
-    function ImportRSAPrivateKey(hProv: HCRYPTPROV; const PEMKey: string; out hKey: HCRYPTKEY): Boolean;
-    function ValidatePrivateKey(const PEMKey: string): Boolean;
-    {$ENDIF}
   protected
     function SignRequest(const AParams: TDictionary<string, string>): string; override;
     function VerifySignature(const AParams: TDictionary<string, string>;
@@ -98,7 +94,7 @@ type
 implementation
 
 uses
-  System.Hash, System.StrUtils;
+  System.Hash, System.StrUtils, UniBase.Crypto;
 
 const
   ALIPAY_GATEWAY = 'https://openapi.alipay.com/gateway.do';
@@ -198,94 +194,43 @@ begin
 end;
 
 function TAlipayClient.RSA2Sign(const AContent: string): string;
-{$IFDEF MSWINDOWS}
-var
-  PrivateKey: string;
-  hProv: HCRYPTPROV;
-  hKey: HCRYPTKEY;
-  hHash: HCRYPTHASH;
-  dwSigLen: DWORD;
-  pbSignature: PByte;
-  ContentBytes: TBytes;
-{$ENDIF}
 begin
-  {$IFDEF MSWINDOWS}
-  PrivateKey := TAlipayConfig(FConfig).PrivateKey;
-  
-  if PrivateKey = '' then
-    raise EPaymentException.Create('Private key not configured for RSA signing');
-  
-  // 使用安全的RSA2-SHA256签名实现
-  if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EPaymentException.Create('Failed to acquire crypto context');
-    
-  try
-    // 验证私钥格式和安全性
-    if not ValidatePrivateKey(PrivateKey) then
-      raise EPaymentException.Create('Invalid or insecure private key format');
-      
-    // 导入私钥 (需要将PEM格式转换为Windows格式)
-    if not ImportRSAPrivateKey(hProv, PrivateKey, hKey) then
-      raise EPaymentException.Create('Failed to import RSA private key');
-      
-    try
-      // 创建SHA256哈希
-      if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, @hHash) then
-        raise EPaymentException.Create('Failed to create SHA256 hash');
-        
-      try
-        ContentBytes := TEncoding.UTF8.GetBytes(AContent);
-        
-        // 验证内容长度，防止过大数据攻击
-        if Length(ContentBytes) > 1024 * 1024 then // 1MB限制
-          raise EPaymentException.Create('Content too large for signing');
-        
-        // 计算哈希
-        if not CryptHashData(hHash, @ContentBytes[0], Length(ContentBytes), 0) then
-          raise EPaymentException.Create('Failed to hash data');
-          
-        // 获取签名长度
-        dwSigLen := 0;
-        if not CryptSignHash(hHash, AT_SIGNATURE, nil, 0, nil, @dwSigLen) then
-          raise EPaymentException.Create('Failed to get signature length');
-          
-        // 分配签名缓冲区
-        GetMem(pbSignature, dwSigLen);
-        try
-          // 生成签名
-          if not CryptSignHash(hHash, AT_SIGNATURE, nil, 0, pbSignature, @dwSigLen) then
-            raise EPaymentException.Create('Failed to sign hash');
-            
-          // 转换为Base64
-          Result := TPaymentHelper.Base64Encode(pbSignature, dwSigLen);
-        finally
-          FreeMem(pbSignature);
-        end;
-      finally
-        CryptDestroyHash(hHash);
-      end;
-    finally
-      CryptDestroyKey(hKey);
-    end;
-  finally
-    CryptReleaseContext(hProv, 0);
-  end;
-  {$ELSE}
-  // 非Windows平台需要使用OpenSSL或其他加密库
-  raise ENotImplemented.Create('RSA2 signing not implemented for this platform. Use OpenSSL library.');
-  {$ENDIF}
+  raise EPaymentSignError.Create(
+    'RSA2 signing is unavailable in this build. Use provider SDK signing flow.',
+    'SIGN_NOT_IMPLEMENTED', ppAlipay);
 end;
 
 function TAlipayClient.RSA2Verify(const AContent, ASign: string): Boolean;
 var
   PublicKey: string;
+  NormalizedKey: string;
+{$IFDEF MSWINDOWS}
+  Verifier: TRSAVerifier;
+{$ENDIF}
 begin
-  PublicKey := TAlipayConfig(FConfig).AlipayPublicKey;
-  // TODO: Implement actual RSA2-SHA256 verification
-  // For now, always return True in sandbox mode for testing
-  Result := FConfig.IsSandbox or (PublicKey <> '');
+  PublicKey := Trim(TAlipayConfig(FConfig).AlipayPublicKey);
+  if (PublicKey = '') or (Trim(ASign) = '') or (AContent = '') then
+    Exit(False);
 
-  // Production implementation should verify the signature properly
+  {$IFDEF MSWINDOWS}
+  // 兼容仅传入 Base64 主体的公钥配置
+  NormalizedKey := PublicKey;
+  if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
+    NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+      NormalizedKey + sLineBreak +
+      '-----END PUBLIC KEY-----';
+
+  Verifier := TRSAVerifier.Create;
+  try
+    if not Verifier.LoadPublicKeyPEM(NormalizedKey) then
+      Exit(False);
+    Result := Verifier.VerifySignature(AContent, ASign);
+  finally
+    Verifier.Free;
+  end;
+  {$ELSE}
+  Result := False;
+  {$ENDIF}
 end;
 
 function TAlipayClient.ExecuteRequest(const AMethod: string;
@@ -712,53 +657,5 @@ begin
   else
     Result := 'failure';
 end;
-
-{$IFDEF MSWINDOWS}
-function TAlipayClient.ValidatePrivateKey(const PEMKey: string): Boolean;
-begin
-  Result := False;
-  
-  // 验证PEM格式
-  if not PEMKey.Contains('-----BEGIN PRIVATE KEY-----') and 
-     not PEMKey.Contains('-----BEGIN RSA PRIVATE KEY-----') then
-    Exit;
-    
-  if not PEMKey.Contains('-----END PRIVATE KEY-----') and 
-     not PEMKey.Contains('-----END RSA PRIVATE KEY-----') then
-    Exit;
-  
-  // 验证密钥长度（至少2048位）
-  var KeyContent := PEMKey.Replace('-----BEGIN PRIVATE KEY-----', '')
-                          .Replace('-----END PRIVATE KEY-----', '')
-                          .Replace('-----BEGIN RSA PRIVATE KEY-----', '')
-                          .Replace('-----END RSA PRIVATE KEY-----', '')
-                          .Replace(#13, '').Replace(#10, '').Replace(' ', '');
-  
-  // Base64解码后的RSA私钥长度检查（2048位密钥约为1200+字节）
-  if Length(KeyContent) < 1000 then
-    Exit;
-    
-  Result := True;
-end;
-
-function TAlipayClient.ImportRSAPrivateKey(hProv: HCRYPTPROV; const PEMKey: string; out hKey: HCRYPTKEY): Boolean;
-var
-  KeyBlob: TBytes;
-  BlobHeader: BLOBHEADER;
-  RSAHeader: RSAPUBKEY;
-begin
-  Result := False;
-  hKey := 0;
-  
-  // 这里需要实现PEM格式私钥到Windows CryptoAPI格式的转换
-  // 实际实现需要解析PEM格式，提取RSA参数，构造PRIVATEKEYBLOB
-  // 为简化示例，这里返回False，实际项目中需要完整实现
-  
-  // TODO: 实现完整的PEM到CryptoAPI格式转换
-  // 可以使用第三方库如OpenSSL或Indy来简化这个过程
-  
-  Result := False;
-end;
-{$ENDIF}
 
 end.

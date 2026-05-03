@@ -613,7 +613,8 @@ begin
   
   if Cfg.WebhookSecret = '' then
   begin
-    raise EPaymentException.Create('Stripe webhook secret not configured');
+    raise EPaymentConfigError.Create('Stripe webhook secret not configured',
+      'MISSING_WEBHOOK_SECRET', ppStripe);
   end;
   
   // Parse signature header: t=timestamp,v1=signature

@@ -4,8 +4,12 @@ interface
 
 uses
   System.SysUtils,
+  System.Generics.Collections,
   DUnitX.TestFramework,
-  UniBase.Payment;
+  UniBase.Payment,
+  UniBase.Payment.Alipay,
+  UniBase.Payment.WeChatPay,
+  UniBase.Payment.PayPal;
 
 type
   /// <summary>
@@ -87,7 +91,60 @@ type
     procedure Test_SHA256_Hash;
   end;
 
+  [TestFixture]
+  TPaymentSignatureSecurityTests = class
+  public
+    [Test]
+    procedure Test_Alipay_VerifySignature_DoesNotBypassInSandboxWithoutPublicKey;
+
+    [Test]
+    procedure Test_WeChat_VerifySignature_WithoutPublicKey_ReturnsFalse;
+
+    [Test]
+    procedure Test_PayPal_VerifySignature_RequiresTransmissionHeaders;
+
+    [Test]
+    procedure Test_PayPal_VerifyNotification_RejectsProductionWithoutHeaderContext;
+  end;
+
 implementation
+
+type
+  TTestableAlipayClient = class(TAlipayClient)
+  public
+    function PublicVerifySignature(const AParams: TDictionary<string, string>;
+      const ASign: string): Boolean;
+  end;
+
+  TTestableWeChatPayClient = class(TWeChatPayClient)
+  public
+    function PublicVerifySignature(const AParams: TDictionary<string, string>;
+      const ASign: string): Boolean;
+  end;
+
+  TTestablePayPalClient = class(TPayPalClient)
+  public
+    function PublicVerifySignature(const AParams: TDictionary<string, string>;
+      const ASign: string): Boolean;
+  end;
+
+function TTestableAlipayClient.PublicVerifySignature(
+  const AParams: TDictionary<string, string>; const ASign: string): Boolean;
+begin
+  Result := VerifySignature(AParams, ASign);
+end;
+
+function TTestableWeChatPayClient.PublicVerifySignature(
+  const AParams: TDictionary<string, string>; const ASign: string): Boolean;
+begin
+  Result := VerifySignature(AParams, ASign);
+end;
+
+function TTestablePayPalClient.PublicVerifySignature(
+  const AParams: TDictionary<string, string>; const ASign: string): Boolean;
+begin
+  Result := VerifySignature(AParams, ASign);
+end;
 
 { TPaymentOrderTests }
 
@@ -315,15 +372,24 @@ end;
 procedure TPaymentHelperTests.Test_GenerateNonceStr_CorrectLength;
 var
   S: string;
+  C: Char;
 begin
   S := TPaymentHelper.GenerateNonceStr(16);
   Assert.AreEqual(16, Length(S));
+  for C in S do
+    Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
 
   S := TPaymentHelper.GenerateNonceStr(32);
   Assert.AreEqual(32, Length(S));
+  for C in S do
+    Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
 
   S := TPaymentHelper.GenerateNonceStr; // Default 32
   Assert.AreEqual(32, Length(S));
+  for C in S do
+    Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
+
+  Assert.AreEqual('', TPaymentHelper.GenerateNonceStr(0));
 end;
 
 procedure TPaymentHelperTests.Test_MD5_Hash;
@@ -342,10 +408,117 @@ begin
   Assert.AreEqual('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', Hash.ToLower);
 end;
 
+{ TPaymentSignatureSecurityTests }
+
+procedure TPaymentSignatureSecurityTests.Test_Alipay_VerifySignature_DoesNotBypassInSandboxWithoutPublicKey;
+var
+  Config: TAlipayConfig;
+  Client: TTestableAlipayClient;
+  Params: TDictionary<string, string>;
+begin
+  Config := TAlipayConfig.Create;
+  try
+    Config.IsSandbox := True;
+    Config.AlipayPublicKey := '';
+    Client := TTestableAlipayClient.Create(Config);
+    try
+      Params := TDictionary<string, string>.Create;
+      try
+        Params.Add('out_trade_no', 'T20260503');
+        Params.Add('total_amount', '1.00');
+        Assert.IsFalse(Client.PublicVerifySignature(Params, 'fake-signature'));
+      finally
+        Params.Free;
+      end;
+    finally
+      Client.Free;
+    end;
+  finally
+    Config.Free;
+  end;
+end;
+
+procedure TPaymentSignatureSecurityTests.Test_WeChat_VerifySignature_WithoutPublicKey_ReturnsFalse;
+var
+  Config: TWeChatPayConfig;
+  Client: TTestableWeChatPayClient;
+  Params: TDictionary<string, string>;
+begin
+  Config := TWeChatPayConfig.Create;
+  try
+    Config.WeChatPublicKey := '';
+    Client := TTestableWeChatPayClient.Create(Config);
+    try
+      Params := TDictionary<string, string>.Create;
+      try
+        Params.Add('appid', 'wx_test');
+        Params.Add('mchid', 'mch_test');
+        Assert.IsFalse(Client.PublicVerifySignature(Params, 'fake-signature'));
+      finally
+        Params.Free;
+      end;
+    finally
+      Client.Free;
+    end;
+  finally
+    Config.Free;
+  end;
+end;
+
+procedure TPaymentSignatureSecurityTests.Test_PayPal_VerifySignature_RequiresTransmissionHeaders;
+var
+  Config: TPayPalConfig;
+  Client: TTestablePayPalClient;
+  Params: TDictionary<string, string>;
+begin
+  Config := TPayPalConfig.Create;
+  try
+    Config.WebhookId := 'wh_test_001';
+    Client := TTestablePayPalClient.Create(Config);
+    try
+      Params := TDictionary<string, string>.Create;
+      try
+        Params.Add('payload', '{"id":"evt_test"}');
+        // 缺少 transmission_id / transmission_time，应拒绝
+        Assert.IsFalse(Client.PublicVerifySignature(Params, 'fake-signature'));
+      finally
+        Params.Free;
+      end;
+    finally
+      Client.Free;
+    end;
+  finally
+    Config.Free;
+  end;
+end;
+
+procedure TPaymentSignatureSecurityTests.Test_PayPal_VerifyNotification_RejectsProductionWithoutHeaderContext;
+var
+  Config: TPayPalConfig;
+  Client: TPayPalClient;
+  Notification: TPaymentNotification;
+begin
+  Config := TPayPalConfig.Create;
+  try
+    Config.IsSandbox := False;
+    Config.WebhookId := 'wh_test_002';
+    Client := TPayPalClient.Create(Config);
+    try
+      Assert.IsFalse(Client.VerifyNotification('{"event_type":"CHECKOUT.ORDER.COMPLETED"}',
+        Notification));
+    finally
+      Client.Free;
+    end;
+  finally
+    Config.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TPaymentOrderTests);
   TDUnitX.RegisterTestFixture(TPaymentResultTests);
   TDUnitX.RegisterTestFixture(TRefundRequestTests);
   TDUnitX.RegisterTestFixture(TPaymentHelperTests);
+  TDUnitX.RegisterTestFixture(TPaymentSignatureSecurityTests);
 
 end.
