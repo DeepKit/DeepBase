@@ -10,7 +10,7 @@ program UserAuthDemo;
 uses
   Vcl.Forms,
   UserAuthDemo.MainForm in 'UserAuthDemo.MainForm.pas' {MainForm},
-  UniBase.AipexBase.Client in '..\..\Core\UniBase.AipexBase.Client.pas',
+  UniBase.AipexBase.Client in '..\..\ThirdParty\AipexBase\UniBase.AipexBase.Client.pas',
   UniBase.VCL.LoginDialog in '..\..\VCL\UniBase.VCL.LoginDialog.pas',
   UniBase.VCL.RegisterDialog in '..\..\VCL\UniBase.VCL.RegisterDialog.pas',
   UniBase.VCL.ForgotPasswordDialog in '..\..\VCL\UniBase.VCL.ForgotPasswordDialog.pas',

@@ -697,14 +697,15 @@
 
 #### ARCH-029: AipexBase Core/ThirdParty 重复 + ThirdParty 含 UI 代码
 - **状态**: ✅ 部分完成 (2026-05-03)
-- **状态**: 🔲 待开始
 - **优先级**: P1 (架构)
 - **问题**: AipexBase.Client 同时存在于 Core/ 和 ThirdParty/（差异巨大）。ThirdParty/AipexBase/ 直接包含 VCL/FMX Frame 代码，模糊层边界。
 - **影响**: 归属混乱，开发者不确定用哪个
 - **任务**:
-  - [ ] 统一 AipexBase.Client 到 ThirdParty/
+  - [x] 统一 AipexBase.Client 到 ThirdParty/
   - [ ] VCL/FMX Frame 移至对应 VCL/FMX 目录
   - [ ] ThirdParty 只保留"接口+实现+工厂"
+- **阶段进展**:
+  - `Examples/UserAuthDemo/UserAuthDemo.dpr` 已改为引用 `ThirdParty\AipexBase\UniBase.AipexBase.Client.pas`，并清除 `Core\UniBase.AipexBase.Client.pas` 路径残留引用。
 
 #### ARCH-030: Payment 模块策略与文档矛盾
 - **状态**: 🔲 待开始
