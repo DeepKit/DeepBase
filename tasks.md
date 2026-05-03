@@ -834,15 +834,17 @@
   - [ ] 为未来支持其他数据库技术（dbExpress/ADO）预留扩展点
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
-- **状态**: 🟡 进行中 (2026-05-03)
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P2 (代码)
 - **任务**:
   - [x] `BindJsonParams` 区分整数/浮点：`TJSONNumber.AsInt64` vs `AsDouble`
   - [x] `InferErrorCode` 改用 FireDAC 驱动原生错误码，不依赖字符串匹配
-  - [ ] 统一 `UniBase.Cache.TCache<K,V>` 和 `UniBase.Memory.TSmartCache<K,V>`
+  - [x] 统一 `UniBase.Cache.TCache<K,V>` 和 `UniBase.Memory.TSmartCache<K,V>`
 - **阶段进展**:
   - `Persistence/UniBase.DB.DoQry.pas` 已按 `TJSONNumber` 内容区分整数和浮点绑定，避免整型参数被统一当作浮点处理。
   - `InferErrorCode` 已优先使用 `EFDDBEngineException.Kind` 与原生错误码映射，字符串匹配仅保留为兜底。
+  - `Core/UniBase.Memory.pas`：`TSmartCache<K,V>` 内部实现收敛为 `UniBase.Cache.TCache<K,V>` 代理，保留原 API（`TEvictionPolicy`、TTL、OnEvict、统计）并移除重复缓存实现。
+  - `Tests/Test.UniBase.Memory.pas`：新增 `Test_EvictionPolicy_None_RaisesWhenFull`，锁定 `epNone` 满容量抛异常行为。
 
 #### ARCH-041: SSRF 防护加固 + SecureZeroMemory
 - **状态**: 🔲 待开始

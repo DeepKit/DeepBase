@@ -40,7 +40,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.DateUtils,
   System.Generics.Collections, System.Generics.Defaults, System.Diagnostics,
-  System.TypInfo, System.Rtti, UniBase.Logging;
+  System.TypInfo, System.Rtti, UniBase.Logging, UniBase.ObjectPool,
+  UniBase.Cache;
 
 type
   /// <summary>内存相关异常基类</summary>
@@ -202,28 +203,32 @@ type
     TEntry = TCacheEntry<V>;
     PEntry = ^TEntry;
   private
-    FCache: TDictionary<K, TEntry>;
-    FAccessOrder: TList<K>;  // 用于 LRU
-    FLock: TCriticalSection;
+    FInnerCache: UniBase.Cache.TCache<K, V>;
     FMaxSize: Integer;
     FMaxMemory: Int64;
-    FCurrentMemory: Int64;
     FEvictionPolicy: TEvictionPolicy;
     FDefaultTTL: Integer;
-    FStats: TMemoryStats;
     FOnEvict: TProc<K, V>;
+    FStatsBaseline: UniBase.Cache.TCacheStats;
+    FPutCount: Int64;
+
+    class function ToCacheEvictionPolicy(const Value: TEvictionPolicy): UniBase.Cache.TCacheEvictionPolicy; static;
+    procedure SyncLimitsToInner;
+    procedure SyncPolicyToInner;
+    procedure HandleInnerEvict(const Key: K; const Value: V);
+    function EffectiveTTL(TTLSeconds: Integer): Integer;
+    function EstimateSize(const Value: V): Integer;
 
     function GetCount: Integer;
-    procedure Evict(Count: Integer = 1);
-    procedure EvictByLRU;
-    procedure EvictByLFU;
-    procedure EvictByFIFO;
-    procedure EvictByTTL;
-    procedure EvictByRandom;
-    procedure UpdateAccessOrder(const Key: K);
-    procedure CleanExpired;
-    function IsExpired(const Entry: TEntry): Boolean;
-    function EstimateSize(const Value: V): Integer;
+    function GetMaxSize: Integer;
+    procedure SetMaxSize(const Value: Integer);
+    function GetMaxMemory: Int64;
+    procedure SetMaxMemory(const Value: Int64);
+    function GetEvictionPolicy: TEvictionPolicy;
+    procedure SetEvictionPolicy(const Value: TEvictionPolicy);
+    function GetDefaultTTL: Integer;
+    procedure SetDefaultTTL(const Value: Integer);
+    procedure SetOnEvict(const Value: TProc<K, V>);
   public
     constructor Create;
     destructor Destroy; override;
@@ -259,11 +264,11 @@ type
     procedure ResetStats;
 
     property Count: Integer read GetCount;
-    property MaxSize: Integer read FMaxSize write FMaxSize;
-    property MaxMemory: Int64 read FMaxMemory write FMaxMemory;
-    property EvictionPolicy: TEvictionPolicy read FEvictionPolicy write FEvictionPolicy;
-    property DefaultTTL: Integer read FDefaultTTL write FDefaultTTL;
-    property OnEvict: TProc<K, V> read FOnEvict write FOnEvict;
+    property MaxSize: Integer read GetMaxSize write SetMaxSize;
+    property MaxMemory: Int64 read GetMaxMemory write SetMaxMemory;
+    property EvictionPolicy: TEvictionPolicy read GetEvictionPolicy write SetEvictionPolicy;
+    property DefaultTTL: Integer read GetDefaultTTL write SetDefaultTTL;
+    property OnEvict: TProc<K, V> read FOnEvict write SetOnEvict;
   end;
 
   /// <summary>
@@ -829,84 +834,193 @@ end;
 constructor TSmartCache<K, V>.Create;
 begin
   inherited Create;
-  FCache := TDictionary<K, TEntry>.Create;
-  FAccessOrder := TList<K>.Create;
-  FLock := TCriticalSection.Create;
+  FInnerCache := UniBase.Cache.TCache<K, V>.Create;
   FMaxSize := 1000;
   FMaxMemory := 100 * 1024 * 1024; // 100MB
-  FCurrentMemory := 0;
   FEvictionPolicy := epLRU;
   FDefaultTTL := 0; // 不过期
-  FillChar(FStats, SizeOf(FStats), 0);
+  FPutCount := 0;
+  SyncLimitsToInner;
+  SyncPolicyToInner;
+  FInnerCache.OnEvict := HandleInnerEvict;
+  FStatsBaseline := FInnerCache.Stats;
 end;
 
 destructor TSmartCache<K, V>.Destroy;
 begin
-  FCache.Free;
-  FAccessOrder.Free;
-  FLock.Free;
+  FInnerCache.Free;
   inherited;
 end;
 
-function TSmartCache<K, V>.GetCount: Integer;
+class function TSmartCache<K, V>.ToCacheEvictionPolicy(
+  const Value: TEvictionPolicy): UniBase.Cache.TCacheEvictionPolicy;
 begin
-  FLock.Enter;
-  try
-    Result := FCache.Count;
-  finally
-    FLock.Leave;
+  case Value of
+    epNone: Result := cepNone;
+    epLRU: Result := cepLRU;
+    epLFU: Result := cepLFU;
+    epFIFO: Result := cepFIFO;
+    epTTL: Result := cepTTL;
+  else
+    // epRandom does not have a direct equivalent in UniBase.Cache.
+    Result := cepLRU;
   end;
+end;
+
+procedure TSmartCache<K, V>.SyncLimitsToInner;
+begin
+  FInnerCache.MaxItems := FMaxSize;
+  FInnerCache.MaxSizeBytes := FMaxMemory;
+  FInnerCache.DefaultTTL := FDefaultTTL;
+end;
+
+procedure TSmartCache<K, V>.SyncPolicyToInner;
+begin
+  FInnerCache.EvictionPolicy := ToCacheEvictionPolicy(FEvictionPolicy);
+end;
+
+procedure TSmartCache<K, V>.HandleInnerEvict(const Key: K; const Value: V);
+begin
+  if Assigned(FOnEvict) then
+    FOnEvict(Key, Value);
+end;
+
+function TSmartCache<K, V>.EffectiveTTL(TTLSeconds: Integer): Integer;
+begin
+  if TTLSeconds >= 0 then
+    Result := TTLSeconds
+  else
+    Result := FDefaultTTL;
 end;
 
 function TSmartCache<K, V>.EstimateSize(const Value: V): Integer;
 begin
-  // 简单估算，实际应该根据类型计算
   Result := SizeOf(V);
   if SizeOf(V) = SizeOf(Pointer) then
-    Result := 100; // 假设引用类型平均100字节
+    Result := 100;
+end;
+
+function TSmartCache<K, V>.GetCount: Integer;
+begin
+  Result := FInnerCache.Count;
+end;
+
+function TSmartCache<K, V>.GetMaxSize: Integer;
+begin
+  Result := FMaxSize;
+end;
+
+procedure TSmartCache<K, V>.SetMaxSize(const Value: Integer);
+begin
+  if Value < 0 then
+    FMaxSize := 0
+  else
+    FMaxSize := Value;
+  SyncLimitsToInner;
+end;
+
+function TSmartCache<K, V>.GetMaxMemory: Int64;
+begin
+  Result := FMaxMemory;
+end;
+
+procedure TSmartCache<K, V>.SetMaxMemory(const Value: Int64);
+begin
+  if Value < 0 then
+    FMaxMemory := 0
+  else
+    FMaxMemory := Value;
+  SyncLimitsToInner;
+end;
+
+function TSmartCache<K, V>.GetEvictionPolicy: TEvictionPolicy;
+begin
+  Result := FEvictionPolicy;
+end;
+
+procedure TSmartCache<K, V>.SetEvictionPolicy(const Value: TEvictionPolicy);
+begin
+  FEvictionPolicy := Value;
+  SyncPolicyToInner;
+end;
+
+function TSmartCache<K, V>.GetDefaultTTL: Integer;
+begin
+  Result := FDefaultTTL;
+end;
+
+procedure TSmartCache<K, V>.SetDefaultTTL(const Value: Integer);
+begin
+  if Value < 0 then
+    FDefaultTTL := 0
+  else
+    FDefaultTTL := Value;
+  SyncLimitsToInner;
+end;
+
+procedure TSmartCache<K, V>.SetOnEvict(const Value: TProc<K, V>);
+begin
+  FOnEvict := Value;
 end;
 
 procedure TSmartCache<K, V>.Put(const Key: K; const Value: V; TTLSeconds: Integer);
 var
-  Entry: TEntry;
-  OldEntry: TEntry;
+  ItemSize: Int64;
+  Keys: TArray<K>;
+  Chosen: Integer;
+  Stats: UniBase.Cache.TCacheStats;
 begin
-  FLock.Enter;
   try
-    // 检查是否需要淘汰
-    while (FCache.Count >= FMaxSize) or
-          ((FMaxMemory > 0) and (FCurrentMemory >= FMaxMemory)) do
+    ItemSize := EstimateSize(Value);
+
+    if FEvictionPolicy = epNone then
     begin
-      if FEvictionPolicy = epNone then
+      if (FMaxSize > 0) and (not FInnerCache.Contains(Key)) and
+         (FInnerCache.Count >= FMaxSize) then
         raise EMemoryCacheException.Create('缓存已满');
-      Evict;
+      if FMaxMemory > 0 then
+      begin
+        Stats := FInnerCache.Stats;
+        if (Stats.TotalSizeBytes + ItemSize > FMaxMemory) and
+           (not FInnerCache.Contains(Key)) then
+          raise EMemoryCacheException.Create('缓存已满');
+      end;
     end;
 
-    // 如果存在旧值，先移除
-    if FCache.TryGetValue(Key, OldEntry) then
+    if FEvictionPolicy = epRandom then
     begin
-      Dec(FCurrentMemory, OldEntry.Size);
-      FAccessOrder.Remove(Key);
+      if (FMaxSize > 0) and (not FInnerCache.Contains(Key)) then
+      begin
+        while FInnerCache.Count >= FMaxSize do
+        begin
+          Keys := FInnerCache.Keys;
+          if Length(Keys) = 0 then
+            Break;
+          Chosen := Random(Length(Keys));
+          FInnerCache.Remove(Keys[Chosen]);
+        end;
+      end;
+
+      if FMaxMemory > 0 then
+      begin
+        Stats := FInnerCache.Stats;
+        while (Stats.TotalSizeBytes + ItemSize > FMaxMemory) and
+              (FInnerCache.Count > 0) do
+        begin
+          Keys := FInnerCache.Keys;
+          if Length(Keys) = 0 then
+            Break;
+          Chosen := Random(Length(Keys));
+          FInnerCache.Remove(Keys[Chosen]);
+          Stats := FInnerCache.Stats;
+        end;
+      end;
     end;
-
-    // 创建新条目
-    Entry.Value := Value;
-    Entry.CreatedAt := Now;
-    Entry.LastAccessedAt := Now;
-    Entry.AccessCount := 0;
-    Entry.CreatedTicks := TStopwatch.GetTimeStamp;  // BUG-120 FIX: 记录单调时钟时间戳
-    if TTLSeconds >= 0 then
-      Entry.TTLSeconds := TTLSeconds
-    else
-      Entry.TTLSeconds := FDefaultTTL;
-    Entry.Size := EstimateSize(Value);
-
-    FCache.AddOrSetValue(Key, Entry);
-    FAccessOrder.Add(Key);
-    Inc(FCurrentMemory, Entry.Size);
-    Inc(FStats.AllocationCount);
-  finally
-    FLock.Leave;
+    FInnerCache.Put(Key, Value, EffectiveTTL(TTLSeconds), ItemSize);
+    Inc(FPutCount);
+  except
+    on E: ECacheException do
+      raise EMemoryCacheException.Create(E.Message);
   end;
 end;
 
@@ -917,92 +1031,23 @@ begin
 end;
 
 function TSmartCache<K, V>.TryGet(const Key: K; out Value: V): Boolean;
-var
-  Entry: TEntry;
 begin
-  Result := False;
-  FLock.Enter;
-  try
-    if FCache.TryGetValue(Key, Entry) then
-    begin
-      // 检查是否过期
-      if IsExpired(Entry) then
-      begin
-        FCache.Remove(Key);
-        FAccessOrder.Remove(Key);
-        Dec(FCurrentMemory, Entry.Size);
-        Inc(FStats.CacheMisses);
-        Exit;
-      end;
-
-      // 更新访问信息
-      Entry.LastAccessedAt := Now;
-      Inc(Entry.AccessCount);
-      FCache.AddOrSetValue(Key, Entry);
-      UpdateAccessOrder(Key);
-
-      Value := Entry.Value;
-      Result := True;
-      Inc(FStats.CacheHits);
-    end
-    else
-      Inc(FStats.CacheMisses);
-  finally
-    FLock.Leave;
-  end;
+  Result := FInnerCache.TryGet(Key, Value);
 end;
 
 function TSmartCache<K, V>.Contains(const Key: K): Boolean;
-var
-  Entry: TEntry;
 begin
-  FLock.Enter;
-  try
-    Result := FCache.TryGetValue(Key, Entry) and not IsExpired(Entry);
-  finally
-    FLock.Leave;
-  end;
+  Result := FInnerCache.Contains(Key);
 end;
 
 function TSmartCache<K, V>.Remove(const Key: K): Boolean;
-var
-  Entry: TEntry;
 begin
-  Result := False;
-  FLock.Enter;
-  try
-    if FCache.TryGetValue(Key, Entry) then
-    begin
-      if Assigned(FOnEvict) then
-        FOnEvict(Key, Entry.Value);
-      Dec(FCurrentMemory, Entry.Size);
-      FCache.Remove(Key);
-      FAccessOrder.Remove(Key);
-      Inc(FStats.FreeCount);
-      Result := True;
-    end;
-  finally
-    FLock.Leave;
-  end;
+  Result := FInnerCache.Remove(Key);
 end;
 
 procedure TSmartCache<K, V>.Clear;
-var
-  Pair: TPair<K, TEntry>;
 begin
-  FLock.Enter;
-  try
-    if Assigned(FOnEvict) then
-    begin
-      for Pair in FCache do
-        FOnEvict(Pair.Key, Pair.Value.Value);
-    end;
-    FCache.Clear;
-    FAccessOrder.Clear;
-    FCurrentMemory := 0;
-  finally
-    FLock.Leave;
-  end;
+  FInnerCache.Clear;
 end;
 
 function TSmartCache<K, V>.GetOrAdd(const Key: K; Factory: TFunc<V>): V;
@@ -1016,216 +1061,31 @@ end;
 
 function TSmartCache<K, V>.GetKeys: TArray<K>;
 begin
-  FLock.Enter;
-  try
-    Result := FCache.Keys.ToArray;
-  finally
-    FLock.Leave;
-  end;
+  Result := FInnerCache.Keys;
 end;
 
 function TSmartCache<K, V>.GetStats: TMemoryStats;
+var
+  Current: UniBase.Cache.TCacheStats;
 begin
-  FLock.Enter;
-  try
-    Result := FStats;
-    Result.CurrentUsage := FCurrentMemory;
-  finally
-    FLock.Leave;
-  end;
+  Result := Default(TMemoryStats);
+  Current := FInnerCache.Stats;
+
+  Result.CacheHits := Current.Hits - FStatsBaseline.Hits;
+  Result.CacheMisses := Current.Misses - FStatsBaseline.Misses;
+  Result.CurrentUsage := Current.TotalSizeBytes;
+  Result.PeakUsage := Current.TotalSizeBytes;
+  Result.TotalAllocated := Current.TotalSizeBytes;
+  Result.AllocationCount := FPutCount;
+  Result.FreeCount :=
+    (Current.Evictions + Current.Expirations) -
+    (FStatsBaseline.Evictions + FStatsBaseline.Expirations);
 end;
 
 procedure TSmartCache<K, V>.ResetStats;
 begin
-  FLock.Enter;
-  try
-    FillChar(FStats, SizeOf(FStats), 0);
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TSmartCache<K, V>.Evict(Count: Integer);
-var
-  I: Integer;
-begin
-  // 先清理过期项
-  CleanExpired;
-
-  // 如果仍需淘汰
-  for I := 1 to Count do
-  begin
-    if FCache.Count = 0 then
-      Break;
-
-    case FEvictionPolicy of
-      epLRU: EvictByLRU;
-      epLFU: EvictByLFU;
-      epFIFO: EvictByFIFO;
-      epTTL: EvictByTTL;
-      epRandom: EvictByRandom;
-    end;
-  end;
-end;
-
-procedure TSmartCache<K, V>.EvictByLRU;
-var
-  Key: K;
-  Entry: TEntry;
-begin
-  if FAccessOrder.Count > 0 then
-  begin
-    Key := FAccessOrder[0];
-    if FCache.TryGetValue(Key, Entry) then
-    begin
-      if Assigned(FOnEvict) then
-        FOnEvict(Key, Entry.Value);
-      Dec(FCurrentMemory, Entry.Size);
-      FCache.Remove(Key);
-      Inc(FStats.FreeCount);
-    end;
-    FAccessOrder.Delete(0);
-  end;
-end;
-
-procedure TSmartCache<K, V>.EvictByLFU;
-var
-  MinKey: K;
-  MinCount: Int64;
-  Pair: TPair<K, TEntry>;
-  Found: Boolean;
-begin
-  MinCount := High(Int64);
-  Found := False;
-
-  for Pair in FCache do
-  begin
-    if Pair.Value.AccessCount < MinCount then
-    begin
-      MinCount := Pair.Value.AccessCount;
-      MinKey := Pair.Key;
-      Found := True;
-    end;
-  end;
-
-  if Found then
-    Remove(MinKey);
-end;
-
-procedure TSmartCache<K, V>.EvictByFIFO;
-var
-  OldestKey: K;
-  OldestTime: TDateTime;
-  Pair: TPair<K, TEntry>;
-  Found: Boolean;
-begin
-  OldestTime := Now;
-  Found := False;
-
-  for Pair in FCache do
-  begin
-    if Pair.Value.CreatedAt < OldestTime then
-    begin
-      OldestTime := Pair.Value.CreatedAt;
-      OldestKey := Pair.Key;
-      Found := True;
-    end;
-  end;
-
-  if Found then
-    Remove(OldestKey);
-end;
-
-procedure TSmartCache<K, V>.EvictByTTL;
-var
-  Pair: TPair<K, TEntry>;
-  ToRemove: TList<K>;
-begin
-  ToRemove := TList<K>.Create;
-  try
-    for Pair in FCache do
-    begin
-      if IsExpired(Pair.Value) then
-        ToRemove.Add(Pair.Key);
-    end;
-
-    for var Key in ToRemove do
-      Remove(Key);
-
-    // 如果没有过期的，使用 LRU
-    if ToRemove.Count = 0 then
-      EvictByLRU;
-  finally
-    ToRemove.Free;
-  end;
-end;
-
-procedure TSmartCache<K, V>.EvictByRandom;
-var
-  Keys: TArray<K>;
-  Index: Integer;
-begin
-  Keys := FCache.Keys.ToArray;
-  if Length(Keys) > 0 then
-  begin
-    Index := Random(Length(Keys));
-    Remove(Keys[Index]);
-  end;
-end;
-
-procedure TSmartCache<K, V>.UpdateAccessOrder(const Key: K);
-var
-  Index: Integer;
-begin
-  Index := FAccessOrder.IndexOf(Key);
-  if Index >= 0 then
-  begin
-    FAccessOrder.Delete(Index);
-    FAccessOrder.Add(Key);
-  end;
-end;
-
-procedure TSmartCache<K, V>.CleanExpired;
-var
-  Pair: TPair<K, TEntry>;
-  ToRemove: TList<K>;
-begin
-  ToRemove := TList<K>.Create;
-  try
-    for Pair in FCache do
-    begin
-      if IsExpired(Pair.Value) then
-        ToRemove.Add(Pair.Key);
-    end;
-
-    for var Key in ToRemove do
-      Remove(Key);
-  finally
-    ToRemove.Free;
-  end;
-end;
-
-function TSmartCache<K, V>.IsExpired(const Entry: TEntry): Boolean;
-var
-  ElapsedTicks: Int64;
-  ElapsedSeconds: Double;
-begin
-  // BUG-120 FIX: 使用单调时钟进行时间比较，不受系统时间调整影响
-  if Entry.TTLSeconds <= 0 then
-    Exit(False);
-
-  // 优先使用单调时钟（CreatedTicks）
-  if Entry.CreatedTicks > 0 then
-  begin
-    ElapsedTicks := TStopwatch.GetTimeStamp - Entry.CreatedTicks;
-    ElapsedSeconds := ElapsedTicks / TStopwatch.Frequency;
-    Result := ElapsedSeconds > Entry.TTLSeconds;
-  end
-  else
-  begin
-    // 向后兼容：对于旧条目仍使用 DateTime（可能受系统时间影响）
-    Result := SecondsBetween(Now, Entry.CreatedAt) > Entry.TTLSeconds;
-  end;
+  FStatsBaseline := FInnerCache.Stats;
+  FPutCount := 0;
 end;
 
 { TMemoryTracker }

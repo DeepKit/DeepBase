@@ -162,6 +162,9 @@ type
     
     [Test]
     procedure Test_MaxSize_TriggersEviction;
+
+    [Test]
+    procedure Test_EvictionPolicy_None_RaisesWhenFull;
     
     [Test]
     procedure Test_EvictionPolicy_LRU;
@@ -868,6 +871,28 @@ begin
       Cache.Put('key' + I.ToString, I);
     
     Assert.IsTrue(Cache.Count <= 5);
+  finally
+    Cache.Free;
+  end;
+end;
+
+procedure TTestSmartCache.Test_EvictionPolicy_None_RaisesWhenFull;
+var
+  Cache: TSmartCache<string, Integer>;
+begin
+  Cache := TSmartCache<string, Integer>.Create;
+  try
+    Cache.MaxSize := 2;
+    Cache.EvictionPolicy := epNone;
+    Cache.Put('A', 1);
+    Cache.Put('B', 2);
+
+    Assert.WillRaise(
+      procedure
+      begin
+        Cache.Put('C', 3);
+      end,
+      EMemoryCacheException);
   finally
     Cache.Free;
   end;
