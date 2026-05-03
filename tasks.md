@@ -760,13 +760,16 @@
     - `Tests/Test.UniBase.Social.pas` 新增 Microsoft Provider 映射与预置配置断言。
 
 #### ARCH-035: UniDbRunInTx 不支持 SAVEPOINT 但文档声称支持
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P1 (数据/文档)
 - **问题**: 04.03 文档声称"支持嵌套 SAVEPOINT"，但 `UniDbRunInTx` 完全没有实现嵌套事务，同一连接已有事务时 FireDAC 抛异常
 - **影响**: 嵌套事务场景运行时异常
 - **任务**:
-  - [ ] 实现 SAVEPOINT 支持（SQLite: `SAVEPOINT sp1` / `RELEASE sp1`）
-  - [ ] 或修正文档删除 SAVEPOINT 声明
+  - [x] 实现 SAVEPOINT 支持（SQLite: `SAVEPOINT sp1` / `RELEASE sp1`）
+  - [x] 已实现 SAVEPOINT，文档声明保留
+- **修复摘要 (2026-05-03)**:
+  - `Core/UniBase.DB.DoQry.pas`：`TUniTransaction` 新增嵌套事务检测；外层事务仍使用 `StartTransaction/Commit/Rollback`，内层事务自动切换到 `SAVEPOINT/RELEASE/ROLLBACK TO SAVEPOINT`。
+  - `Tests/Test.UniBase.DB.DoQry.pas`：新增 `Test_RunInTx_NestedSavepoint_CommitWorks` 与 `Test_RunInTx_NestedSavepoint_InnerRollbackKeepsOuter`，验证嵌套提交与内层回滚行为。
 
 #### ARCH-036: 预编译语句池无上限 + WebAPI CORS 默认全开
 - **状态**: ✅ 完成 (2026-05-03)

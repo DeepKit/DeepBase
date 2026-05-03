@@ -56,6 +56,12 @@ type
     
     [Test]
     procedure Test_RunInTx_AutoRollbackOnException;
+
+    [Test]
+    procedure Test_RunInTx_NestedSavepoint_CommitWorks;
+
+    [Test]
+    procedure Test_RunInTx_NestedSavepoint_InnerRollbackKeepsOuter;
     
     [Test]
     procedure Test_InvalidSQL_RaisesEUniBaseDbError;
@@ -366,6 +372,77 @@ begin
   
   Count := UniDbScalar('SELECT COUNT(*) FROM test_users WHERE name = ''WillRollback''', '', Ctx);
   Assert.AreEqual(0, Integer(Count), 'Data should be rolled back on exception');
+end;
+
+procedure TTestUniBaseDoQry.Test_RunInTx_NestedSavepoint_CommitWorks;
+var
+  Ctx: TUniQueryContext;
+  Count: Variant;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  UniDbRunInTx(Ctx,
+    procedure
+    begin
+      UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+        '{"name": "OuterA", "age": 10}', Ctx);
+
+      UniDbRunInTx(Ctx,
+        procedure
+        begin
+          UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+            '{"name": "InnerB", "age": 20}', Ctx);
+        end);
+
+      UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+        '{"name": "OuterC", "age": 30}', Ctx);
+    end);
+
+  Count := UniDbScalar(
+    'SELECT COUNT(*) FROM test_users WHERE name IN (''OuterA'', ''InnerB'', ''OuterC'')',
+    '', Ctx);
+  Assert.AreEqual(3, Integer(Count), 'Nested transaction commit should persist all rows');
+end;
+
+procedure TTestUniBaseDoQry.Test_RunInTx_NestedSavepoint_InnerRollbackKeepsOuter;
+var
+  Ctx: TUniQueryContext;
+  KeepCount: Variant;
+  InnerCount: Variant;
+begin
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  UniDbRunInTx(Ctx,
+    procedure
+    begin
+      UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+        '{"name": "OuterKeep", "age": 11}', Ctx);
+
+      try
+        UniDbRunInTx(Ctx,
+          procedure
+          begin
+            UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+              '{"name": "InnerRollback", "age": 22}', Ctx);
+            raise Exception.Create('force inner rollback');
+          end);
+      except
+        // expected inner rollback
+      end;
+
+      UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)',
+        '{"name": "OuterAfter", "age": 33}', Ctx);
+    end);
+
+  KeepCount := UniDbScalar(
+    'SELECT COUNT(*) FROM test_users WHERE name IN (''OuterKeep'', ''OuterAfter'')',
+    '', Ctx);
+  InnerCount := UniDbScalar(
+    'SELECT COUNT(*) FROM test_users WHERE name = ''InnerRollback''',
+    '', Ctx);
+
+  Assert.AreEqual(2, Integer(KeepCount), 'Outer transaction data should remain committed');
+  Assert.AreEqual(0, Integer(InnerCount), 'Inner transaction should be rolled back by savepoint');
 end;
 
 procedure TTestUniBaseDoQry.Test_InvalidSQL_RaisesEUniBaseDbError;

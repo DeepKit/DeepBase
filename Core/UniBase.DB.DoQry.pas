@@ -1119,6 +1119,10 @@ type
     FCtx: TUniQueryContext;
     FCommitted: Boolean;
     FRolledBack: Boolean;
+    FUseSavepoint: Boolean;
+    FSavepointName: string;
+    procedure ExecTxSql(const ASQL: string);
+    class function NewSavepointName: string; static;
   public
     constructor Create(const Ctx: TUniQueryContext);
     destructor Destroy; override;
@@ -1126,13 +1130,45 @@ type
     procedure Rollback;
   end;
 
+procedure TUniTransaction.ExecTxSql(const ASQL: string);
+var
+  Q: TFDQuery;
+begin
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FCtx.Connection;
+    Q.SQL.Text := ASQL;
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+end;
+
+class function TUniTransaction.NewSavepointName: string;
+var
+  G: TGUID;
+begin
+  CreateGUID(G);
+  Result := 'sp_' + StringReplace(StringReplace(Copy(GuidToString(G), 2, 36),
+    '-', '', [rfReplaceAll]), '}', '', [rfReplaceAll]);
+end;
+
 constructor TUniTransaction.Create(const Ctx: TUniQueryContext);
 begin
   inherited Create;
   FCtx := Ctx;
   FCommitted := False;
   FRolledBack := False;
-  FCtx.Connection.StartTransaction;
+  FUseSavepoint := Assigned(FCtx.Connection) and FCtx.Connection.InTransaction;
+  FSavepointName := '';
+
+  if FUseSavepoint then
+  begin
+    FSavepointName := NewSavepointName;
+    ExecTxSql('SAVEPOINT ' + FSavepointName);
+  end
+  else
+    FCtx.Connection.StartTransaction;
 end;
 
 destructor TUniTransaction.Destroy;
@@ -1146,7 +1182,10 @@ procedure TUniTransaction.Commit;
 begin
   if not FCommitted and not FRolledBack then
   begin
-    FCtx.Connection.Commit;
+    if FUseSavepoint then
+      ExecTxSql('RELEASE SAVEPOINT ' + FSavepointName)
+    else
+      FCtx.Connection.Commit;
     FCommitted := True;
   end;
 end;
@@ -1155,7 +1194,13 @@ procedure TUniTransaction.Rollback;
 begin
   if not FCommitted and not FRolledBack then
   begin
-    FCtx.Connection.Rollback;
+    if FUseSavepoint then
+    begin
+      ExecTxSql('ROLLBACK TO SAVEPOINT ' + FSavepointName);
+      ExecTxSql('RELEASE SAVEPOINT ' + FSavepointName);
+    end
+    else
+      FCtx.Connection.Rollback;
     FRolledBack := True;
   end;
 end;
