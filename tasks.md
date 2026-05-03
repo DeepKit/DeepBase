@@ -862,13 +862,16 @@
   - [ ] 05.05 添加版本号和更新日期
 
 #### ARCH-043: 日志表清理 + WebAPI JSON 安全
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中 (2026-05-03)
 - **优先级**: P2 (运维)
 - **任务**:
   - [ ] Logs/LLMCalls/ExceptionReports 表添加自动归档或分区策略
-  - [ ] WebAPI `BadRequest/Unauthorized` 等方法改用 `TJSONObject` 构造（防 JSON 注入）
+  - [x] WebAPI `BadRequest/Unauthorized` 等方法改用 `TJSONObject` 构造（防 JSON 注入）
   - [ ] WebAPI 路由匹配缓存正则编译结果
   - [ ] PostgreSQL 密码改用 DPAPI 加密存储
+- **阶段进展**:
+  - `Tools/WebService/UniBase.WebAPI.Core.pas`：`BadRequest/Unauthorized/Forbidden/NotFound/Conflict/InternalError/TooManyRequests` 改为统一 `SendErrorResponse(...)`，通过 `TJSONObject` 生成错误 JSON，消除字符串拼接注入风险。
+  - `Tests/Test.WebService.pas`：新增 `Test_Response_ErrorEscapesJSONPayload`，验证包含引号和换行的错误消息仍能生成合法 JSON。
 
 ---
 

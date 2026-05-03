@@ -134,6 +134,9 @@ type
 
     [Test]
     procedure Test_Response_SetHeader;
+
+    [Test]
+    procedure Test_Response_ErrorEscapesJSONPayload;
   end;
 
   // ============================================================================
@@ -524,6 +527,33 @@ begin
   try
     Response.SetHeader('X-Custom-Header', 'CustomValue');
     Assert.AreEqual('CustomValue', Response.Headers['X-Custom-Header']);
+  finally
+    Response.Free;
+  end;
+end;
+
+procedure TApiResponseTests.Test_Response_ErrorEscapesJSONPayload;
+var
+  Response: TApiResponse;
+  JsonValue: TJSONValue;
+  JsonObj: TJSONObject;
+  Msg: string;
+begin
+  Response := TApiResponse.Create;
+  try
+    Msg := 'bad "input" {' + #10 + '}';
+    Response.BadRequest(Msg);
+
+    JsonValue := TJSONObject.ParseJSONValue(Response.BodyAsString);
+    try
+      Assert.IsNotNull(JsonValue, 'Error response should be valid JSON');
+      Assert.IsTrue(JsonValue is TJSONObject);
+      JsonObj := JsonValue as TJSONObject;
+      Assert.AreEqual(Msg, JsonObj.GetValue<string>('error'));
+      Assert.AreEqual(THttpStatus.BadRequest, JsonObj.GetValue<Integer>('code'));
+    finally
+      JsonValue.Free;
+    end;
   finally
     Response.Free;
   end;

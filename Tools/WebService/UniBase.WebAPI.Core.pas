@@ -189,6 +189,7 @@ type
     procedure SetStatusCode(const Value: Integer);
     function GetBodyAsString: string;
     procedure SetBodyAsString(const Value: string);
+    function SendErrorResponse(AStatusCode: Integer; const AMessage: string): TApiResponse;
   public
     constructor Create;
     destructor Destroy; override;
@@ -886,6 +887,25 @@ begin
   FBody := TEncoding.UTF8.GetBytes(Value);
 end;
 
+function TApiResponse.SendErrorResponse(AStatusCode: Integer;
+  const AMessage: string): TApiResponse;
+var
+  LJson: TJSONObject;
+begin
+  StatusCode := AStatusCode;
+  FContentType := TContentType.JSON;
+
+  LJson := TJSONObject.Create;
+  try
+    LJson.AddPair('error', AMessage);
+    LJson.AddPair('code', TJSONNumber.Create(AStatusCode));
+    Result := SendJSON(LJson, True);
+  except
+    LJson.Free;
+    raise;
+  end;
+end;
+
 function TApiResponse.SetHeader(const AName, AValue: string): TApiResponse;
 begin
   FHeaders.AddOrSetValue(AName, AValue);
@@ -987,51 +1007,37 @@ end;
 
 function TApiResponse.BadRequest(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.BadRequest;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.BadRequest, AMessage);
 end;
 
 function TApiResponse.Unauthorized(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.Unauthorized;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.Unauthorized, AMessage);
 end;
 
 function TApiResponse.Forbidden(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.Forbidden;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.Forbidden, AMessage);
 end;
 
 function TApiResponse.NotFound(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.NotFound;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.NotFound, AMessage);
 end;
 
 function TApiResponse.Conflict(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.Conflict;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.Conflict, AMessage);
 end;
 
 function TApiResponse.InternalError(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.InternalServerError;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.InternalServerError, AMessage);
 end;
 
 function TApiResponse.TooManyRequests(const AMessage: string): TApiResponse;
 begin
-  FStatusCode := THttpStatus.TooManyRequests;
-  FContentType := TContentType.JSON;
-  Result := Send(Format('{"error":"%s","code":%d}', [AMessage, FStatusCode]));
+  Result := SendErrorResponse(THttpStatus.TooManyRequests, AMessage);
 end;
 
 function TApiResponse.JSON(AObj: TObject; AOwns: Boolean): TApiResponse;
