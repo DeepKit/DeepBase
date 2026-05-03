@@ -15,6 +15,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils, System.IOUtils, System.Classes,
+  FireDAC.Comp.Client,
   UniBase.Types, UniBase.Manager;
 
 type
@@ -58,9 +59,15 @@ type
     
     [Test]
     procedure Test_Properties_AfterInit;
+
+    [Test]
+    procedure Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables;
   end;
 
 implementation
+
+uses
+  System.DateUtils;
 
 { TTestUniBaseManager }
 
@@ -193,6 +200,114 @@ begin
   
   Assert.AreEqual(UNIBASE_VERSION, UNIBASE_VERSION, 'Version 常量应存在');
   Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该为 True');
+end;
+
+procedure TTestUniBaseManager.Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables;
+var
+  DBPath: string;
+  Query: TFDQuery;
+  OldTime, NewTime: string;
+
+  function CountRows(const SQL: string): Integer;
+  begin
+    Result := 0;
+    Query.SQL.Text := SQL;
+    Query.Open;
+    try
+      if not Query.Eof then
+        Result := Query.Fields[0].AsInteger;
+    finally
+      Query.Close;
+    end;
+  end;
+begin
+  DBPath := TPath.Combine(FTempPath, 'retention_test.db');
+  Assert.IsTrue(FManager.InitializeWithDB(DBPath));
+
+  OldTime := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', IncDay(Now, -45));
+  NewTime := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', IncDay(Now, -5));
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FManager.ConfigDB;
+
+    // Force retention to run again on next initialization.
+    Query.SQL.Text :=
+      'INSERT OR REPLACE INTO Settings (Key, Value) VALUES ' +
+      '(:Key1, :Value1), (:Key2, :Value2), (:Key3, :Value3), (:Key4, :Value4)';
+    Query.ParamByName('Key1').AsString := 'Maintenance.Retention.LogsDays';
+    Query.ParamByName('Value1').AsString := '30';
+    Query.ParamByName('Key2').AsString := 'Maintenance.Retention.LLMCallsDays';
+    Query.ParamByName('Value2').AsString := '30';
+    Query.ParamByName('Key3').AsString := 'Maintenance.Retention.ExceptionReportsDays';
+    Query.ParamByName('Value3').AsString := '30';
+    Query.ParamByName('Key4').AsString := 'Maintenance.Retention.LastRunDate';
+    Query.ParamByName('Value4').AsString := '2000-01-01';
+    Query.ExecSQL;
+
+    Query.SQL.Text :=
+      'INSERT INTO Logs (LogTime, LogLevel, Source, Message, StackTrace, ThreadId) ' +
+      'VALUES (:LogTime, ''INFO'', ''RetentionCase'', :Msg, '''', 1)';
+    Query.ParamByName('LogTime').AsString := OldTime;
+    Query.ParamByName('Msg').AsString := 'old-log';
+    Query.ExecSQL;
+    Query.ParamByName('LogTime').AsString := NewTime;
+    Query.ParamByName('Msg').AsString := 'new-log';
+    Query.ExecSQL;
+
+    Query.SQL.Text :=
+      'INSERT INTO LLMCalls (ConfigName, ProviderCode, ModelId, UserPrompt, AssistantResponse, CallTime) ' +
+      'VALUES (''RetentionCfg'', ''openai'', ''gpt-test'', :Prompt, ''ok'', :CallTime)';
+    Query.ParamByName('Prompt').AsString := 'old-llm';
+    Query.ParamByName('CallTime').AsString := OldTime;
+    Query.ExecSQL;
+    Query.ParamByName('Prompt').AsString := 'new-llm';
+    Query.ParamByName('CallTime').AsString := NewTime;
+    Query.ExecSQL;
+
+    Query.SQL.Text :=
+      'INSERT INTO ExceptionReports (ExceptionClass, ExceptionMessage, StackTrace, OccurredAt) ' +
+      'VALUES (''RetentionCaseEx'', :Msg, '''', :OccurredAt)';
+    Query.ParamByName('Msg').AsString := 'old-ex';
+    Query.ParamByName('OccurredAt').AsString := OldTime;
+    Query.ExecSQL;
+    Query.ParamByName('Msg').AsString := 'new-ex';
+    Query.ParamByName('OccurredAt').AsString := NewTime;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+
+  FManager.Finalize;
+  Assert.IsTrue(FManager.InitializeWithDB(DBPath));
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FManager.ConfigDB;
+
+    Assert.AreEqual(0, CountRows(
+      'SELECT COUNT(*) FROM Logs WHERE Source = ''RetentionCase'' AND Message = ''old-log'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM Logs WHERE Source = ''RetentionCase'' AND Message = ''new-log'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM Logs_Archive WHERE Source = ''RetentionCase'' AND Message = ''old-log'''));
+
+    Assert.AreEqual(0, CountRows(
+      'SELECT COUNT(*) FROM LLMCalls WHERE ConfigName = ''RetentionCfg'' AND UserPrompt = ''old-llm'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM LLMCalls WHERE ConfigName = ''RetentionCfg'' AND UserPrompt = ''new-llm'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM LLMCalls_Archive WHERE ConfigName = ''RetentionCfg'' AND UserPrompt = ''old-llm'''));
+
+    Assert.AreEqual(0, CountRows(
+      'SELECT COUNT(*) FROM ExceptionReports WHERE ExceptionClass = ''RetentionCaseEx'' AND ExceptionMessage = ''old-ex'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM ExceptionReports WHERE ExceptionClass = ''RetentionCaseEx'' AND ExceptionMessage = ''new-ex'''));
+    Assert.AreEqual(1, CountRows(
+      'SELECT COUNT(*) FROM ExceptionReports_Archive WHERE ExceptionClass = ''RetentionCaseEx'' AND ExceptionMessage = ''old-ex'''));
+  finally
+    Query.Free;
+  end;
 end;
 
 initialization

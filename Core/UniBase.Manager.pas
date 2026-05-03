@@ -17,6 +17,7 @@ uses
   System.Classes,
   System.IOUtils,
   System.SyncObjs,
+  System.DateUtils,
   System.Math,
   System.Threading,  // BUG-007 FIX: Added for TTask.Run
   System.Generics.Collections,
@@ -114,6 +115,15 @@ type
     function MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
     function RunMigrationScript(const ScriptPath: string): Boolean;
     procedure EnsureSchemaColumns;
+    procedure RunOperationalRetention;
+    function GetRetentionDays(const SettingKey: string;
+      DefaultValue: Integer): Integer;
+    function TableExists(const TableName: string): Boolean;
+    function TableHasColumn(const TableName, ColumnName: string): Boolean;
+    function ResolveTimeColumn(const TableName, Preferred,
+      Fallback: string): string;
+    procedure ArchiveAndTrimTable(const TableName, TimeColumn: string;
+      DaysToKeep: Integer);
     function GetExeDir: string;
     function GetAppDataDir: string;
     function CheckWritePermission(const Path: string): Boolean;
@@ -790,6 +800,7 @@ begin
     var LogLevelStr := FConfig.GetConfig(SConfigKeyLogLevel, 'INFO');
     FLogger.MinLevel := StrToLogLevel(LogLevelStr);
   end;
+  RunOperationalRetention;
   
   // 7. FormState - form position persistence
   FFormState := TUniBaseFormState.Create(FConfigDB, FLock);
@@ -1318,10 +1329,10 @@ begin
     AddColumnIfMissing('Themes', 'AccentColor', 'INTEGER');
     AddColumnIfMissing('Themes', 'CustomCSS', 'TEXT');
     
-    // === LLMConfiguration table columns ===
-    AddColumnIfMissing('LLMConfiguration', 'ContextWindow', 'INTEGER DEFAULT 4096');
-    AddColumnIfMissing('LLMConfiguration', 'PricePer1kPrompt', 'REAL DEFAULT 0');
-    AddColumnIfMissing('LLMConfiguration', 'PricePer1kCompletion', 'REAL DEFAULT 0');
+    // === LLMConfig table columns ===
+    AddColumnIfMissing('LLMConfig', 'ContextWindow', 'INTEGER DEFAULT 4096');
+    AddColumnIfMissing('LLMConfig', 'PricePer1kPrompt', 'REAL DEFAULT 0');
+    AddColumnIfMissing('LLMConfig', 'PricePer1kCompletion', 'REAL DEFAULT 0');
     
     // === LLMCalls table columns ===
     AddColumnIfMissing('LLMCalls', 'CallTime', 'TEXT');  // Alias for RequestTime
@@ -1332,7 +1343,7 @@ begin
     AddColumnIfMissing('LLMCalls', 'Success', 'INTEGER DEFAULT 1');
     AddColumnIfMissing('LLMCalls', 'ErrorCode', 'TEXT');
     AddColumnIfMissing('LLMCalls', 'CallerModule', 'TEXT');
-    AddColumnIfMissing('LLMCalls', 'CallerFunc', 'TEXT');
+    AddColumnIfMissing('LLMCalls', 'CallerFunction', 'TEXT');
     
     // === LLMPromptTemplates table columns ===
     AddColumnIfMissing('LLMPromptTemplates', 'DefaultValues', 'TEXT');
@@ -1348,6 +1359,157 @@ begin
   finally
     Query.Free;
   end;
+end;
+
+function TUniBaseManager.GetRetentionDays(const SettingKey: string;
+  DefaultValue: Integer): Integer;
+var
+  RawValue: string;
+begin
+  Result := DefaultValue;
+  if Assigned(FConfig) then
+    RawValue := Trim(FConfig.GetConfig(SettingKey, IntToStr(DefaultValue)))
+  else
+    RawValue := IntToStr(DefaultValue);
+
+  Result := StrToIntDef(RawValue, DefaultValue);
+  if Result < 0 then
+    Result := DefaultValue;
+  if Result > 36500 then
+    Result := 36500;
+end;
+
+function TUniBaseManager.TableExists(const TableName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  if not Assigned(FConfigDB) or not FConfigDB.Connected or (Trim(TableName) = '') then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
+    try
+      Query.Open;
+      Result := True;
+    except
+      Result := False;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TUniBaseManager.TableHasColumn(const TableName, ColumnName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  if not TableExists(TableName) or (Trim(ColumnName) = '') then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
+    try
+      Query.Open;
+      Result := Assigned(Query.FindField(ColumnName));
+    except
+      Result := False;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TUniBaseManager.ResolveTimeColumn(const TableName, Preferred,
+  Fallback: string): string;
+begin
+  Result := '';
+  if (Preferred <> '') and TableHasColumn(TableName, Preferred) then
+    Exit(Preferred);
+  if (Fallback <> '') and TableHasColumn(TableName, Fallback) then
+    Exit(Fallback);
+end;
+
+procedure TUniBaseManager.ArchiveAndTrimTable(const TableName, TimeColumn: string;
+  DaysToKeep: Integer);
+var
+  Query: TFDQuery;
+  ArchiveTable: string;
+  CutoffIso: string;
+begin
+  if (DaysToKeep = 0) or not TableExists(TableName) or (TimeColumn = '') then
+    Exit;
+
+  ArchiveTable := TableName + '_Archive';
+  CutoffIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', IncDay(Now, -DaysToKeep));
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConfigDB;
+
+    Query.SQL.Text := Format(
+      'CREATE TABLE IF NOT EXISTS %s AS SELECT * FROM %s WHERE 1 = 0',
+      [ArchiveTable, TableName]);
+    Query.ExecSQL;
+
+    Query.SQL.Text := Format(
+      'INSERT INTO %s SELECT * FROM %s WHERE %s < :CutoffTime',
+      [ArchiveTable, TableName, TimeColumn]);
+    Query.ParamByName('CutoffTime').AsString := CutoffIso;
+    Query.ExecSQL;
+
+    Query.SQL.Text := Format(
+      'DELETE FROM %s WHERE %s < :CutoffTime',
+      [TableName, TimeColumn]);
+    Query.ParamByName('CutoffTime').AsString := CutoffIso;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TUniBaseManager.RunOperationalRetention;
+const
+  KEY_LAST_RUN = 'Maintenance.Retention.LastRunDate';
+  KEY_LOGS_DAYS = 'Maintenance.Retention.LogsDays';
+  KEY_LLMCALLS_DAYS = 'Maintenance.Retention.LLMCallsDays';
+  KEY_EXCEPTION_DAYS = 'Maintenance.Retention.ExceptionReportsDays';
+  DEFAULT_LOGS_DAYS = 30;
+  DEFAULT_LLMCALLS_DAYS = 90;
+  DEFAULT_EXCEPTION_DAYS = 180;
+var
+  TodayTag: string;
+begin
+  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+    Exit;
+
+  TodayTag := FormatDateTime('yyyy-mm-dd', Date);
+  if Assigned(FConfig) and SameText(Trim(FConfig.GetConfig(KEY_LAST_RUN, '')), TodayTag) then
+    Exit;
+
+  try
+    ArchiveAndTrimTable('Logs',
+      ResolveTimeColumn('Logs', 'LogTime', 'CreatedAt'),
+      GetRetentionDays(KEY_LOGS_DAYS, DEFAULT_LOGS_DAYS));
+    ArchiveAndTrimTable('LLMCalls',
+      ResolveTimeColumn('LLMCalls', 'CallTime', 'RequestTime'),
+      GetRetentionDays(KEY_LLMCALLS_DAYS, DEFAULT_LLMCALLS_DAYS));
+    ArchiveAndTrimTable('ExceptionReports',
+      ResolveTimeColumn('ExceptionReports', 'OccurredAt', 'ReportTime'),
+      GetRetentionDays(KEY_EXCEPTION_DAYS, DEFAULT_EXCEPTION_DAYS));
+  except
+    on E: Exception do
+      if Assigned(FLogger) then
+        FLogger.Warn('Operational retention failed: ' + E.Message, 'UniBase.Manager');
+  end;
+
+  if Assigned(FConfig) then
+    FConfig.SetConfig(KEY_LAST_RUN, TodayTag);
 end;
 
 function TUniBaseManager.GetSchemaVersionInternal: string;

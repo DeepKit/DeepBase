@@ -862,18 +862,22 @@
   - [ ] 05.05 添加版本号和更新日期
 
 #### ARCH-043: 日志表清理 + WebAPI JSON 安全
-- **状态**: 🟡 进行中 (2026-05-03)
+- **状态**: ✅ 完成 (2026-05-03)
 - **优先级**: P2 (运维)
 - **任务**:
-  - [ ] Logs/LLMCalls/ExceptionReports 表添加自动归档或分区策略
+  - [x] Logs/LLMCalls/ExceptionReports 表添加自动归档或分区策略
   - [x] WebAPI `BadRequest/Unauthorized` 等方法改用 `TJSONObject` 构造（防 JSON 注入）
   - [x] WebAPI 路由匹配缓存正则编译结果
-  - [ ] PostgreSQL 密码改用 DPAPI 加密存储
+  - [x] PostgreSQL 密码改用 DPAPI 加密存储
 - **阶段进展**:
   - `Tools/WebService/UniBase.WebAPI.Core.pas`：`BadRequest/Unauthorized/Forbidden/NotFound/Conflict/InternalError/TooManyRequests` 改为统一 `SendErrorResponse(...)`，通过 `TJSONObject` 生成错误 JSON，消除字符串拼接注入风险。
   - `Tools/WebService/UniBase.WebAPI.Core.pas`：`TRouteDefinition` 在 `CompilePattern` 阶段预编译 `TRegEx` 并在 `Match` 阶段复用，避免每次路由匹配重复构造正则对象。
   - `Tests/Test.WebService.pas`：新增 `Test_Response_ErrorEscapesJSONPayload`，验证包含引号和换行的错误消息仍能生成合法 JSON。
   - `Tests/Test.WebService.pas`：新增 `Test_Router_Match_ExtractsRouteParams`，覆盖参数路由匹配与参数提取回归。
+  - `Core/UniBase.Manager.pas`：新增按日自动归档策略（`Logs`/`LLMCalls`/`ExceptionReports`），按 `Maintenance.Retention.*Days` 配置将超期数据迁移到 `*_Archive` 再清理主表。
+  - `Tests/Test.UniBase.Manager.pas`：新增 `Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables`，覆盖三张核心表的归档+保留行为。
+  - `Persistence/UniBase.DB.Factory.pas`：`DB3.Password` 支持 `credman:` 引用解析，并在 Windows 下将明文密码自动迁移到 Credential Manager。
+  - `Tests/Test.UniBase.DB.Factory.pas`：新增 PostgreSQL 密码迁移与引用解析回归测试。
 
 ---
 
