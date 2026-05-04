@@ -555,6 +555,7 @@
   - `Scripts/build_packages_win64.ps1 -Profile Runtime` 已通过（Core/Services/Persistence/Features 全链路编译通过），为后续继续拆分 Core 依赖提供稳定基线。
   - `UniBaseCore.dpk` 中历史重复/无效单元已清理，当前剩余阻塞点是 Core 多模块仍直接 `uses FireDAC.*`，需继续下沉到 Persistence。
   - `Core/UniBase.Manager.pas` 已接入 `IManagerStorage` 工厂扩展点（`SetStorageFactory/CreateStorageFromConnection`），并在 Schema 校验/ProjectInfo/SchemaVersion 等路径优先走抽象接口，保留 SQL 回退。
+  - `2026-05-04`：`Core/UniBase.Manager.pas` 已将 `FireDAC.Stan.Def/Async/DApt/Stan.ExprFuncs/Phys.SQLite/Phys.SQLiteDef` 从 interface uses 下沉到 implementation uses，仅保留 `TFDConnection` 所需最小公开类型依赖。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
