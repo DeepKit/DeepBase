@@ -227,7 +227,8 @@ type
       const FinalPrompt: string; const Response: TLLMResponse);
     procedure UpdateVersionStats(PromptId, VersionNum: Integer; const Response: TLLMResponse);
     function GetFDConnection: TObject;
-    
+    function HasActiveConnection: Boolean;
+
   public
     constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False);
     destructor Destroy; override;
@@ -650,6 +651,12 @@ begin
     Result := nil;
 end;
 
+function TLLMManager.HasActiveConnection: Boolean;
+begin
+  Result := (FConnection <> nil) and (FConnection is TFDConnection)
+    and TFDConnection(FConnection).Connected;
+end;
+
 destructor TLLMManager.Destroy;
 begin
   FCacheLock.Free;
@@ -688,12 +695,12 @@ var
   Query: TFDQuery;
   Cat: TPromptCategory;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'SELECT * FROM PromptCategories WHERE IsActive = 1 ORDER BY Level, SortOrder, Name';
     Query.Open;
     
@@ -721,12 +728,12 @@ var
   Query: TFDQuery;
   Meta: TMetaPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'SELECT * FROM PromptMeta WHERE IsActive = 1 ORDER BY Priority';
     Query.Open;
     
@@ -755,12 +762,12 @@ var
   Query: TFDQuery;
   Prompt: TPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY InternalCode';
     Query.Open;
     
@@ -800,7 +807,7 @@ begin
   try
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := TFDConnection(GetFDConnection);
+      Query.Connection := TFDConnection(FConnection);
       Query.SQL.Text := 'SELECT * FROM PromptVersions WHERE PromptId = :PromptId ORDER BY VersionNumber';
       Query.ParamByName('PromptId').AsInteger := Prompt.Id;
       Query.Open;
@@ -845,7 +852,7 @@ begin
   try
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := TFDConnection(GetFDConnection);
+      Query.Connection := TFDConnection(FConnection);
       Query.SQL.Text := 
         'SELECT m.* FROM PromptMeta m ' +
         'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
@@ -999,7 +1006,7 @@ var
   Query: TFDQuery;
   Status, NowStr: string;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   if Response.Success then
@@ -1017,7 +1024,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text :=
       'INSERT INTO LLMCalls (PromptId, VersionNumber, ConfigId, Provider, Model, ' +
       'InputText, OutputText, InputTokens, OutputTokens, TotalTokens, Duration, ' +
@@ -1055,14 +1062,14 @@ var
   Query: TFDQuery;
   NowStr: string;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
   
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text :=
       'UPDATE PromptVersions SET ' +
       'TestCount = TestCount + 1, ' +
@@ -1159,12 +1166,12 @@ procedure TLLMManager.SaveCategory(var Category: TPromptCategory);
 var
   Query: TFDQuery;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     
     if Category.Id > 0 then
     begin
@@ -1220,12 +1227,12 @@ procedure TLLMManager.DeleteCategory(CategoryId: Integer);
 var
   Query: TFDQuery;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'DELETE FROM PromptCategories WHERE Id = :Id';
     Query.ParamByName('Id').AsInteger := CategoryId;
     Query.ExecSQL;
@@ -1303,12 +1310,12 @@ procedure TLLMManager.SavePrompt(var Prompt: TPrompt);
 var
   Query: TFDQuery;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     
     if Prompt.Id > 0 then
     begin
@@ -1371,12 +1378,12 @@ procedure TLLMManager.DeletePrompt(const InternalCode: string);
 var
   Query: TFDQuery;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'DELETE FROM Prompts WHERE InternalCode = :InternalCode';
     Query.ParamByName('InternalCode').AsString := InternalCode;
     Query.ExecSQL;
@@ -1423,7 +1430,7 @@ var
   Query: TFDQuery;
   Prompt: TPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Prompt := GetPrompt(InternalCode);
@@ -1434,7 +1441,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     
     if Version.Id > 0 then
     begin
@@ -1479,7 +1486,7 @@ var
   Query: TFDQuery;
   Prompt: TPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Prompt := GetPrompt(InternalCode);
@@ -1488,7 +1495,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     
     // Reset all versions
     Query.SQL.Text := 'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId';
@@ -1512,7 +1519,7 @@ var
   Query: TFDQuery;
   Prompt: TPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Prompt := GetPrompt(InternalCode);
@@ -1521,7 +1528,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'DELETE FROM PromptVersions WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber';
     Query.ParamByName('PromptId').AsInteger := Prompt.Id;
     Query.ParamByName('VersionNumber').AsInteger := VersionNum;
@@ -1580,12 +1587,12 @@ procedure TLLMManager.SaveMetaPrompt(var Meta: TMetaPrompt);
 var
   Query: TFDQuery;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     
     if Meta.Id > 0 then
     begin
@@ -1640,7 +1647,7 @@ var
   Query: TFDQuery;
   Meta: TMetaPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Meta := GetMetaPrompt(InternalCode);
@@ -1649,7 +1656,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'DELETE FROM PromptMeta WHERE InternalCode = :InternalCode';
     Query.ParamByName('InternalCode').AsString := InternalCode;
     Query.ExecSQL;
@@ -1671,7 +1678,7 @@ var
   Prompt: TPrompt;
   Meta: TMetaPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Prompt := GetPrompt(PromptCode);
@@ -1681,7 +1688,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text :=
       'INSERT OR REPLACE INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
       'VALUES (:PromptId, :MetaPromptId, :OrderIndex, 1)';
@@ -1702,7 +1709,7 @@ var
   Prompt: TPrompt;
   Meta: TMetaPrompt;
 begin
-  if not Assigned(GetFDConnection) or not TFDConnection(GetFDConnection).Connected then
+  if not HasActiveConnection then
     Exit;
     
   Prompt := GetPrompt(PromptCode);
@@ -1712,7 +1719,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := TFDConnection(GetFDConnection);
+    Query.Connection := TFDConnection(FConnection);
     Query.SQL.Text := 'DELETE FROM PromptMetaBinding WHERE PromptId = :PromptId AND MetaPromptId = :MetaPromptId';
     Query.ParamByName('PromptId').AsInteger := Prompt.Id;
     Query.ParamByName('MetaPromptId').AsInteger := Meta.Id;
