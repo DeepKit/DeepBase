@@ -1,6 +1,6 @@
 { ============================================================================
   UniBase.MRU - Most Recently Used Module
-  
+
   Version: 1.0
   Description: Manages various types of MRU (Most Recently Used) lists.
   Thread Safety: All public methods are thread-safe.
@@ -14,8 +14,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -23,21 +23,30 @@ type
   /// </summary>
   TUniBaseMRU = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: IMRUStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
-    
-    procedure WriteMRU(const Category, ItemKey, DisplayName: string; IconIndex: Integer);
+    class var FConnectionStorageFactory: TFunc<TObject, IMRUStorage>;
+
+    procedure WriteMRU(const Category, ItemKey, DisplayName: string;
+      IconIndex: Integer);
     procedure InternalRemoveMRU(const Category, ItemKey: string);
-    
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IMRUStorage; static;
+
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
+    constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
+    constructor Create(const AStorage: IMRUStorage; ALock: TObject = nil); overload;
     destructor Destroy; override;
-    
+
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, IMRUStorage>); static;
+
     // ========================================
     // Core Methods
     // ========================================
-    
+
     /// <summary>
     /// 添加或更新 MRU 项
     /// </summary>
@@ -45,82 +54,91 @@ type
     /// <param name="ItemKey">唯一键（如文件路径）</param>
     /// <param name="DisplayName">显示名称（可选，不提供则使用 ItemKey）</param>
     /// <param name="IconIndex">图标索引（可选）</param>
-    procedure AddMRU(const Category, ItemKey: string; const DisplayName: string = ''; IconIndex: Integer = 0);
-    
+    procedure AddMRU(const Category, ItemKey: string;
+      const DisplayName: string = ''; IconIndex: Integer = 0);
+
     /// <summary>
     /// 获取 MRU 列表 (仅返回 ItemKey)
     /// </summary>
-    function GetMRUList(const Category: string; MaxItems: Integer = 10): TArray<string>;
-    
+    function GetMRUList(const Category: string;
+      MaxItems: Integer = 10): TArray<string>;
+
     /// <summary>
     /// 获取 MRU 完整项列表
     /// </summary>
-    function GetMRUItems(const Category: string; MaxItems: Integer = 10): TMRUItemArray;
-    
+    function GetMRUItems(const Category: string;
+      MaxItems: Integer = 10): TMRUItemArray;
+
     /// <summary>
     /// 清空指定类别的 MRU
     /// </summary>
     procedure ClearMRU(const Category: string);
-    
+
     /// <summary>
     /// 移除单个 MRU 项
     /// </summary>
     procedure RemoveMRU(const Category, ItemKey: string);
-    
+
     /// <summary>
     /// 移除不存在的文件路径 MRU 项
     /// </summary>
     /// <param name="Category">类别（留空则检查所有文件相关类别）</param>
     /// <returns>移除的项数</returns>
     function RemoveInvalidMRU(const Category: string = ''): Integer;
-    
+
     // ========================================
     // Pinning
     // ========================================
-    
+
     /// <summary>
     /// 置顶/取消置顶 MRU 项
     /// </summary>
     procedure SetPinned(const Category, ItemKey: string; IsPinned: Boolean);
-    
+
     /// <summary>
     /// 检查是否置顶
     /// </summary>
     function IsPinned(const Category, ItemKey: string): Boolean;
-    
+
     // ========================================
     // Statistics
     // ========================================
-    
+
     /// <summary>
     /// 获取 MRU 项数量
     /// </summary>
     function GetMRUCount(const Category: string): Integer;
-    
+
     /// <summary>
     /// 获取访问次数
     /// </summary>
     function GetAccessCount(const Category, ItemKey: string): Integer;
-    
+
     // Backward compatibility
-    procedure DeleteMRU(const Category, ItemKey: string); deprecated 'Use RemoveMRU instead';
-    procedure RemoveInvalidFileMRU(const Category: string); deprecated 'Use RemoveInvalidMRU instead';
+    procedure DeleteMRU(const Category, ItemKey: string);
+      deprecated 'Use RemoveMRU instead';
+    procedure RemoveInvalidFileMRU(const Category: string);
+      deprecated 'Use RemoveInvalidMRU instead';
   end;
 
 implementation
 
 uses
-  System.IOUtils,
-  System.DateUtils,
-  FireDAC.Stan.Param;
+  System.IOUtils;
 
 { TUniBaseMRU }
 
-constructor TUniBaseMRU.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseMRU.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseMRU.Create(const AStorage: IMRUStorage; ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
-  if ALock <> nil then
+  FStorage := AStorage;
+  if Assigned(ALock) then
   begin
     FLock := ALock;
     FOwnsLock := False;
@@ -139,91 +157,39 @@ begin
   inherited;
 end;
 
-procedure TUniBaseMRU.WriteMRU(const Category, ItemKey, DisplayName: string; IconIndex: Integer);
-var
-  Query: TFDQuery;
-  ActualDisplayName: string;
-  NowStr: string;
-  ExistingCount: Integer;
+class procedure TUniBaseMRU.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, IMRUStorage>);
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-  if (Category = '') or (ItemKey = '') then
-    Exit;
-    
-  ActualDisplayName := DisplayName;
-  if ActualDisplayName = '' then
-    ActualDisplayName := ItemKey;
-  
-  // Use ISO8601 format (with milliseconds) for SQLite datetime compatibility.
-  // NOTE: second-level precision can cause ordering ties in fast operations/tests.
-  NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz', Now);
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    
-    // Check if entry exists and get current AccessCount
-    Query.SQL.Text := 'SELECT AccessCount FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-    Query.ParamByName('Cat').AsString := Category;
-    Query.ParamByName('Key').AsString := ItemKey;
-    Query.Open;
-    
-    if Query.Eof then
-    begin
-      // Insert new entry
-      Query.Close;
-      Query.SQL.Text := 
-        'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
-        'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0)';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.ParamByName('Display').AsString := ActualDisplayName;
-      Query.ParamByName('Icon').AsInteger := IconIndex;
-      Query.ParamByName('NowTime').AsString := NowStr;
-      Query.ExecSQL;
-    end
-    else
-    begin
-      // Update existing entry
-      ExistingCount := Query.FieldByName('AccessCount').AsInteger;
-      Query.Close;
-      Query.SQL.Text := 
-        'UPDATE MRU SET DisplayName = :Display, IconIndex = :Icon, ' +
-        'LastAccess = :NowTime, AccessCount = :Count WHERE Category = :Cat AND ItemKey = :Key';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.ParamByName('Display').AsString := ActualDisplayName;
-      Query.ParamByName('Icon').AsInteger := IconIndex;
-      Query.ParamByName('NowTime').AsString := NowStr;
-      Query.ParamByName('Count').AsInteger := ExistingCount + 1;
-      Query.ExecSQL;
-    end;
-  finally
-    Query.Free;
-  end;
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseMRU.CreateStorageFromConnection(
+  AConnection: TObject): IMRUStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No MRU storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.MRU.FireDAC or UniBase.Persistence.Manager.FireDAC.');
+end;
+
+procedure TUniBaseMRU.WriteMRU(const Category, ItemKey, DisplayName: string;
+  IconIndex: Integer);
+begin
+  if Assigned(FStorage) then
+    FStorage.Upsert(Category, ItemKey, DisplayName, IconIndex);
 end;
 
 procedure TUniBaseMRU.InternalRemoveMRU(const Category, ItemKey: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-    Query.ParamByName('Cat').AsString := Category;
-    Query.ParamByName('Key').AsString := ItemKey;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    FStorage.Delete(Category, ItemKey);
 end;
 
-procedure TUniBaseMRU.AddMRU(const Category, ItemKey: string; const DisplayName: string; IconIndex: Integer);
+procedure TUniBaseMRU.AddMRU(const Category, ItemKey: string;
+  const DisplayName: string; IconIndex: Integer);
 begin
   TMonitor.Enter(FLock);
   try
@@ -249,29 +215,18 @@ begin
 end;
 
 procedure TUniBaseMRU.ClearMRU(const Category: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM MRU WHERE Category = :Category';
-      Query.ParamByName('Category').AsString := Category;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      FStorage.Clear(Category);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
-function TUniBaseMRU.GetMRUList(const Category: string; MaxItems: Integer): TArray<string>;
+function TUniBaseMRU.GetMRUList(const Category: string;
+  MaxItems: Integer): TArray<string>;
 var
   Items: TMRUItemArray;
   I: Integer;
@@ -282,139 +237,67 @@ begin
     Result[I] := Items[I].ItemKey;
 end;
 
-function TUniBaseMRU.GetMRUItems(const Category: string; MaxItems: Integer): TMRUItemArray;
-var
-  Query: TFDQuery;
-  List: TList<TMRUItem>;
-  Item: TMRUItem;
+function TUniBaseMRU.GetMRUItems(const Category: string;
+  MaxItems: Integer): TMRUItemArray;
 begin
   SetLength(Result, 0);
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
-  List := TList<TMRUItem>.Create;
+
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-        // Pinned items first, then by last access time desc
-      Query.SQL.Text := 
-        'SELECT ItemKey, DisplayName, LastAccess, AccessCount, IconIndex, IsPinned ' +
-        'FROM MRU WHERE Category = :Cat ' +
-        'ORDER BY IsPinned DESC, LastAccess DESC ' +
-        'LIMIT :Max';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Max').AsInteger := MaxItems;
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        Item.ItemKey := Query.FieldByName('ItemKey').AsString;
-        Item.DisplayName := Query.FieldByName('DisplayName').AsString;
-        if Item.DisplayName = '' then
-          Item.DisplayName := Item.ItemKey;
-        
-        // LastAccess is stored as TEXT (ISO8601), parse it
-        try
-          Item.LastAccess := ISO8601ToDate(Query.FieldByName('LastAccess').AsString, False);
-        except
-          Item.LastAccess := Now;
-        end;
-        Item.AccessCount := Query.FieldByName('AccessCount').AsInteger;
-        Item.IconIndex := Query.FieldByName('IconIndex').AsInteger;
-        
-        List.Add(Item);
-        Query.Next;
-      end;
-    finally
-      Query.Free;
-    end;
-    
-    Result := List.ToArray;
+    Result := FStorage.ReadItems(Category, MaxItems);
   finally
-    List.Free;
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseMRU.RemoveInvalidMRU(const Category: string): Integer;
+const
+  FILE_CATEGORIES: array[0..3] of string = (
+    'File', 'Project', 'RecentFiles', 'RecentProjects'
+  );
 var
-  Query, DeleteQuery: TFDQuery;
-  ItemKey, Cat: string;
-  ToDelete: TList<TPair<string, string>>;
-  Pair: TPair<string, string>;
+  Categories: TArray<string>;
+  Cat: string;
+  Items: TMRUItemArray;
+  Item: TMRUItem;
 begin
   Result := 0;
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
-  ToDelete := TList<TPair<string, string>>.Create;
+
+  if Category <> '' then
+    Categories := TArray<string>.Create(Category)
+  else
+    Categories := TArray<string>.Create(
+      FILE_CATEGORIES[0], FILE_CATEGORIES[1],
+      FILE_CATEGORIES[2], FILE_CATEGORIES[3]);
+
+  TMonitor.Enter(FLock);
   try
-    TMonitor.Enter(FLock);
-    try
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-        
-        // Only check file-related categories
-        if Category <> '' then
-        begin
-          Query.SQL.Text := 'SELECT Category, ItemKey FROM MRU WHERE Category = :Cat';
-          Query.ParamByName('Cat').AsString := Category;
-        end
-        else
-          Query.SQL.Text := 
-            'SELECT Category, ItemKey FROM MRU WHERE Category IN (''File'', ''Project'', ''RecentFiles'', ''RecentProjects'')';
-            
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          Cat := Query.FieldByName('Category').AsString;
-          ItemKey := Query.FieldByName('ItemKey').AsString;
-          
-          // Check if file path and does not exist
-          // BUG-042 FIX: Also handle UNC paths (\\server\share)
-          if (ItemKey <> '') and 
-             ((ItemKey[1] = '/') or (ItemKey[1] = '\') or 
-              ((Length(ItemKey) > 1) and (ItemKey[2] = ':'))) then
-          begin
-            if not FileExists(ItemKey) and not DirectoryExists(ItemKey) then
-              ToDelete.Add(TPair<string, string>.Create(Cat, ItemKey));
-          end;
-          
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
-      
-      // Delete invalid items
-      if ToDelete.Count > 0 then
+    for Cat in Categories do
+    begin
+      Items := FStorage.ReadItems(Cat, MaxInt);
+      for Item in Items do
       begin
-        DeleteQuery := TFDQuery.Create(nil);
-        try
-          DeleteQuery.Connection := FConnection;
-          DeleteQuery.SQL.Text := 'DELETE FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-          
-          for Pair in ToDelete do
+        if Item.ItemKey = '' then
+          Continue;
+
+        // BUG-042 FIX: Also handle UNC paths (\\server\share)
+        if (Item.ItemKey[1] = '/') or (Item.ItemKey[1] = '\') or
+           ((Length(Item.ItemKey) > 1) and (Item.ItemKey[2] = ':')) then
+        begin
+          if not FileExists(Item.ItemKey) and not DirectoryExists(Item.ItemKey) then
           begin
-            DeleteQuery.ParamByName('Cat').AsString := Pair.Key;
-            DeleteQuery.ParamByName('Key').AsString := Pair.Value;
-            DeleteQuery.ExecSQL;
+            FStorage.Delete(Cat, Item.ItemKey);
+            Inc(Result);
           end;
-          
-          Result := ToDelete.Count;
-        finally
-          DeleteQuery.Free;
         end;
       end;
-    finally
-      TMonitor.Exit(FLock);
     end;
   finally
-    ToDelete.Free;
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -423,111 +306,49 @@ begin
   RemoveInvalidMRU(Category);
 end;
 
-procedure TUniBaseMRU.SetPinned(const Category, ItemKey: string; IsPinned: Boolean);
-var
-  Query: TFDQuery;
+procedure TUniBaseMRU.SetPinned(const Category, ItemKey: string;
+  IsPinned: Boolean);
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'UPDATE MRU SET IsPinned = :Pinned WHERE Category = :Cat AND ItemKey = :Key';
-      Query.ParamByName('Pinned').AsInteger := Ord(IsPinned);
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      FStorage.SetPinned(Category, ItemKey, IsPinned);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseMRU.IsPinned(const Category, ItemKey: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'SELECT IsPinned FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.Open;
-      
-      if not Query.Eof then
-        Result := Query.FieldByName('IsPinned').AsInteger <> 0;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      Result := FStorage.IsPinned(Category, ItemKey);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseMRU.GetMRUCount(const Category: string): Integer;
-var
-  Query: TFDQuery;
 begin
   Result := 0;
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT COUNT(*) FROM MRU WHERE Category = :Cat';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.Open;
-      
-      Result := Query.Fields[0].AsInteger;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      Result := FStorage.Count(Category);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseMRU.GetAccessCount(const Category, ItemKey: string): Integer;
-var
-  Query: TFDQuery;
 begin
   Result := 0;
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'SELECT AccessCount FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.Open;
-      
-      if not Query.Eof then
-        Result := Query.FieldByName('AccessCount').AsInteger;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      Result := FStorage.AccessCount(Category, ItemKey);
   finally
     TMonitor.Exit(FLock);
   end;

@@ -19,6 +19,7 @@ uses
   FireDAC.Phys.SQLite,
   FireDAC.Phys.SQLiteDef,
   FireDAC.Stan.ExprFuncs,
+  UniBase.Persistence.Manager.FireDAC in '..\..\Persistence\UniBase.Persistence.Manager.FireDAC.pas',
   // Integration Test Framework
   UniBase.IntegrationTest in 'UniBase.IntegrationTest.pas',
   // Integration Tests

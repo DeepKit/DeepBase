@@ -557,6 +557,8 @@
   - `Core/UniBase.Manager.pas` 已接入 `IManagerStorage` 工厂扩展点（`SetStorageFactory/CreateStorageFromConnection`），并在 Schema 校验/ProjectInfo/SchemaVersion 等路径优先走抽象接口，保留 SQL 回退。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
+  - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
+  - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Manager.FireDAC`，确保测试入口稳定完成 Manager/模块存储工厂注册。
   - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
 
@@ -879,6 +881,9 @@
   - `Persistence/UniBase.Persistence.FormState.FireDAC.pas` 调整为 FireDAC 版 `IFormStateStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.MRU.pas` 新增存储注入能力：支持 `TUniBaseMRU.Create(const AStorage: IMRUStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
   - `Persistence/UniBase.Persistence.MRU.FireDAC.pas` 重构为 FireDAC 版 `IMRUStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已删除 FireDAC 内嵌 SQL 实现（`TFireDAC*Storage`），Core 侧仅保留抽象存储注入与工厂回调。
+  - 连接构造路径在未注册工厂时改为显式抛错（提示引入 `UniBase.Persistence.*.FireDAC` 或 `UniBase.Persistence.Manager.FireDAC`），避免静默降级为无持久化行为。
+  - 回归验证：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
   - `Core/UniBase.Hotkeys.pas` 新增存储注入能力：支持 `TUniBaseHotkeys.Create(const AStorage: IHotkeyStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
   - `Persistence/UniBase.Persistence.Hotkeys.FireDAC.pas` 调整为 FireDAC 版 `IHotkeyStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.Theme.pas` 新增存储注入能力：支持 `TUniBaseTheme.Create(const AStorage: IThemeStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。

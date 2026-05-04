@@ -16,10 +16,10 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.NetEncoding,
-  FireDAC.Comp.Client,
   UniBase.Types,
   UniBase.Consts,
-  UniBase.Interfaces;
+  UniBase.Interfaces,
+  UniBase.Storage.Interfaces;
 
 // ============================================================================
 // Unit-level convenience functions
@@ -57,22 +57,30 @@ type
   /// </summary>
   TUniBaseConfig = class(TInterfacedObject, IUniBaseConfig)
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: IConfigStorage;
     FLock: TObject;
+    FOwnsLock: Boolean;
     FCache: TDictionary<string, string>;
     FCacheEnabled: Boolean;
     FOnConfigChanged: TConfigChangedEvent;
+    class var FConnectionStorageFactory: TFunc<TObject, IConfigStorage>;
     
     function ReadFromDB(const Key: string; const Default: string = ''): string;
     procedure WriteToDB(const Key, Value: string; const Category: string; 
       const ValueType: string; const Description: string);
+    class function CreateStorageFromConnection(AConnection: TObject): IConfigStorage; static;
     
     // R-002: 公共设置逻辑（消除 SetConfig* 重复代码）
     procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string);
     
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject);
+    constructor Create(AConnection: TObject; ALock: TObject); overload;
+    constructor Create(const AStorage: IConfigStorage; ALock: TObject = nil); overload;
     destructor Destroy; override;
+    
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, IConfigStorage>); static;
     
     /// <summary>Clear cache</summary>
     procedure ClearCache;
@@ -163,19 +171,54 @@ uses
 
 { TUniBaseConfig }
 
-constructor TUniBaseConfig.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseConfig.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseConfig.Create(const AStorage: IConfigStorage; ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
-  FLock := ALock;
+  FStorage := AStorage;
+  if Assigned(ALock) then
+  begin
+    FLock := ALock;
+    FOwnsLock := False;
+  end
+  else
+  begin
+    FLock := TObject.Create;
+    FOwnsLock := True;
+  end;
   FCache := TDictionary<string, string>.Create;
   FCacheEnabled := True;
 end;
 
 destructor TUniBaseConfig.Destroy;
 begin
+  if FOwnsLock then
+    FLock.Free;
   FCache.Free;
   inherited;
+end;
+
+class procedure TUniBaseConfig.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, IConfigStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseConfig.CreateStorageFromConnection(
+  AConnection: TObject): IConfigStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No config storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.Config.FireDAC or UniBase.Persistence.Manager.FireDAC.');
 end;
 
 procedure TUniBaseConfig.ClearCache;
@@ -189,83 +232,30 @@ begin
 end;
 
 procedure TUniBaseConfig.PreloadCache;
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
-    FCache.Clear;
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT Key, Value FROM Settings';
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        FCache.AddOrSetValue(
-          Query.FieldByName('Key').AsString,
-          Query.FieldByName('Value').AsString
-        );
-        Query.Next;
-      end;
-    finally
-      Query.Free;
-    end;
+    FStorage.LoadAll(FCache);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseConfig.ReadFromDB(const Key: string; const Default: string): string;
-var
-  Query: TFDQuery;
 begin
-  Result := Default;
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT Value FROM Settings WHERE Key = :Key';
-    Query.ParamByName('Key').AsString := Key;
-    Query.Open;
-    
-    if not Query.Eof then
-      Result := Query.FieldByName('Value').AsString;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    Result := FStorage.ReadValue(Key, Default)
+  else
+    Result := Default;
 end;
 
 procedure TUniBaseConfig.WriteToDB(const Key, Value, Category, ValueType, Description: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'INSERT OR REPLACE INTO Settings (Key, Value, Category, ValueType, Description) ' +
-      'VALUES (:Key, :Value, :Category, :ValueType, :Description)';
-    Query.ParamByName('Key').AsString := Key;
-    Query.ParamByName('Value').AsString := Value;
-    Query.ParamByName('Category').AsString := Category;
-    Query.ParamByName('ValueType').AsString := ValueType;
-    Query.ParamByName('Description').AsString := Description;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    FStorage.WriteValue(Key, Value, Category, ValueType, Description);
 end;
 
 
@@ -423,69 +413,35 @@ begin
 end;
 
 function TUniBaseConfig.GetConfigsByCategory(const Category: string): TDictionary<string, string>;
-var
-  Query: TFDQuery;
 begin
   Result := TDictionary<string, string>.Create;
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
+
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT Key, Value FROM Settings WHERE Category = :Category';
-      Query.ParamByName('Category').AsString := Category;
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        Result.Add(
-          Query.FieldByName('Key').AsString,
-          Query.FieldByName('Value').AsString
-        );
-        Query.Next;
-      end;
-    finally
-      Query.Free;
-    end;
+    FStorage.LoadByCategory(Category, Result);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TUniBaseConfig.DeleteConfig(const Key: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
     // Delete from cache
     FCache.Remove(Key);
-    
-    // Delete from database
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM Settings WHERE Key = :Key';
-      Query.ParamByName('Key').AsString := Key;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+
+    // Delete from storage
+    if Assigned(FStorage) then
+      FStorage.DeleteValue(Key);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseConfig.ConfigExists(const Key: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
   
@@ -497,21 +453,9 @@ begin
       Result := True;
       Exit;
     end;
-    
-    // Query database
-    if not Assigned(FConnection) or not FConnection.Connected then
-      Exit;
-      
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT 1 FROM Settings WHERE Key = :Key';
-      Query.ParamByName('Key').AsString := Key;
-      Query.Open;
-      Result := not Query.Eof;
-    finally
-      Query.Free;
-    end;
+
+    if Assigned(FStorage) then
+      Result := FStorage.ValueExists(Key);
   finally
     TMonitor.Exit(FLock);
   end;

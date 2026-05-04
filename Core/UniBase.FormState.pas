@@ -19,49 +19,38 @@ uses
   System.Types,
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
+  Winapi.MultiMon,
   {$ENDIF}
-  FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Storage.Interfaces;
 
 type
-  /// <summary>
-  /// Form state data
-  /// </summary>
-  TFormStateData = record
-    Left: Integer;
-    Top: Integer;
-    Width: Integer;
-    Height: Integer;
-    WindowState: Integer; // 0=Normal, 1=Minimized, 2=Maximized
-    MonitorIndex: Integer;
-    Extra: string;
-    
-    /// <summary>
-    /// Initialize to default values
-    /// </summary>
-    procedure Init;
-    
-    /// <summary>
-    /// Check if data is valid
-    /// </summary>
-    function IsValid: Boolean;
-  end;
+  TFormStateData = UniBase.Storage.Interfaces.TFormStateData;
 
   /// <summary>
   /// Form state manager
   /// </summary>
   TUniBaseFormState = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: IFormStateStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
+    class var FConnectionStorageFactory: TFunc<TObject, IFormStateStorage>;
     
     procedure WriteToDB(const FormName: string; const Data: TFormStateData);
     function ReadFromDB(const FormName: string; out Data: TFormStateData): Boolean;
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IFormStateStorage; static;
     
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
+    constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
+    constructor Create(const AStorage: IFormStateStorage;
+      ALock: TObject = nil); overload;
     destructor Destroy; override;
+    
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, IFormStateStorage>); static;
     
     /// <summary>
     /// Save form state
@@ -127,33 +116,19 @@ type
 
 implementation
 
-uses
-  FireDAC.Stan.Param;
-
-{ TFormStateData }
-
-procedure TFormStateData.Init;
-begin
-  Left := 100;
-  Top := 100;
-  Width := 800;
-  Height := 600;
-  WindowState := 0;
-  MonitorIndex := 0;
-  Extra := '';
-end;
-
-function TFormStateData.IsValid: Boolean;
-begin
-  Result := (Width > 0) and (Height > 0);
-end;
-
 { TUniBaseFormState }
 
-constructor TUniBaseFormState.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseFormState.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseFormState.Create(const AStorage: IFormStateStorage;
+  ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
+  FStorage := AStorage;
   if ALock <> nil then
   begin
     FLock := ALock;
@@ -171,6 +146,24 @@ begin
   if FOwnsLock then
     FLock.Free;
   inherited;
+end;
+
+class procedure TUniBaseFormState.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, IFormStateStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseFormState.CreateStorageFromConnection(
+  AConnection: TObject): IFormStateStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No form-state storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.FormState.FireDAC or UniBase.Persistence.Manager.FireDAC.');
 end;
 
 procedure TUniBaseFormState.SaveState(const FormName: string; const Data: TFormStateData);
@@ -194,166 +187,65 @@ begin
 end;
 
 procedure TUniBaseFormState.DeleteState(const FormName: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM FormStates WHERE FormName = :FormName';
-      Query.ParamByName('FormName').AsString := FormName;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      FStorage.DeleteState(FormName);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TUniBaseFormState.WriteToDB(const FormName: string; const Data: TFormStateData);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'INSERT OR REPLACE INTO FormStates ' +
-      '(FormName, Left, Top, Width, Height, WindowState, MonitorIndex, Extra) ' +
-      'VALUES (:FormName, :Left, :Top, :Width, :Height, :WindowState, :MonitorIndex, :Extra)';
-      
-    Query.ParamByName('FormName').AsString := FormName;
-    Query.ParamByName('Left').AsInteger := Data.Left;
-    Query.ParamByName('Top').AsInteger := Data.Top;
-    Query.ParamByName('Width').AsInteger := Data.Width;
-    Query.ParamByName('Height').AsInteger := Data.Height;
-    Query.ParamByName('WindowState').AsInteger := Data.WindowState;
-    Query.ParamByName('MonitorIndex').AsInteger := Data.MonitorIndex;
-    Query.ParamByName('Extra').AsString := Data.Extra;
-    
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    FStorage.WriteState(FormName, Data);
 end;
 
 function TUniBaseFormState.ReadFromDB(const FormName: string; out Data: TFormStateData): Boolean;
-var
-  Query: TFDQuery;
 begin
-  Result := False;
-  Data.Init;
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT * FROM FormStates WHERE FormName = :FormName';
-    Query.ParamByName('FormName').AsString := FormName;
-    Query.Open;
-    
-    if not Query.Eof then
-    begin
-      Data.Left := Query.FieldByName('Left').AsInteger;
-      Data.Top := Query.FieldByName('Top').AsInteger;
-      Data.Width := Query.FieldByName('Width').AsInteger;
-      Data.Height := Query.FieldByName('Height').AsInteger;
-      Data.WindowState := Query.FieldByName('WindowState').AsInteger;
-      Data.MonitorIndex := Query.FieldByName('MonitorIndex').AsInteger;
-      Data.Extra := Query.FieldByName('Extra').AsString;
-      Result := Data.IsValid;
-    end;
-  finally
-    Query.Free;
+  if Assigned(FStorage) then
+    Result := FStorage.ReadState(FormName, Data)
+  else
+  begin
+    Data.Init;
+    Result := False;
   end;
 end;
 
 function TUniBaseFormState.HasState(const FormName: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
     
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT 1 FROM FormStates WHERE FormName = :FormName';
-      Query.ParamByName('FormName').AsString := FormName;
-      Query.Open;
-      Result := not Query.Eof;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      Result := FStorage.StateExists(FormName);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseFormState.GetAllFormNames: TArray<string>;
-var
-  Query: TFDQuery;
-  List: TArray<string>;
 begin
   Result := nil;
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
     
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT FormName FROM FormStates ORDER BY FormName';
-      Query.Open;
-      
-      SetLength(List, 0);
-      while not Query.Eof do
-      begin
-        SetLength(List, Length(List) + 1);
-        List[High(List)] := Query.FieldByName('FormName').AsString;
-        Query.Next;
-      end;
-      Result := List;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      Result := FStorage.ReadFormNames;
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TUniBaseFormState.ClearAll;
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM FormStates';
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    if Assigned(FStorage) then
+      FStorage.ClearAll;
   finally
     TMonitor.Exit(FLock);
   end;
@@ -531,6 +423,8 @@ var
   Placement: TWindowPlacement;
   NormalRect: TRect;
   Handle: HWND;
+  Mon: HMONITOR;
+  MonInfo: TMonitorInfo;
 begin
   if AForm = nil then Exit;
   
@@ -547,6 +441,18 @@ begin
     if GetWindowPlacement(Handle, @Placement) then
     begin
       NormalRect := Placement.rcNormalPosition;
+      // WINDOWPLACEMENT.rcNormalPosition for regular top-level windows uses
+      // workspace coordinates. Convert to monitor screen coordinates so we
+      // persist absolute Left/Top consistently across taskbar positions.
+      Mon := MonitorFromWindow(Handle, MONITOR_DEFAULTTONEAREST);
+      if Mon <> 0 then
+      begin
+        MonInfo.cbSize := SizeOf(MONITORINFO);
+        if GetMonitorInfo(Mon, @MonInfo) then
+          OffsetRect(NormalRect,
+            MonInfo.rcWork.Left - MonInfo.rcMonitor.Left,
+            MonInfo.rcWork.Top - MonInfo.rcMonitor.Top);
+      end;
       Data.Left := NormalRect.Left;
       Data.Top := NormalRect.Top;
       Data.Width := NormalRect.Width;
