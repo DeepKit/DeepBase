@@ -35,7 +35,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
-  FireDAC.Comp.Client;
+  System.StrUtils;
 
 type
   TSQLLogLevel = (sllDebug, sllInfo, sllWarn, sllError);
@@ -75,7 +75,7 @@ type
     class var FSessionId: string;
     class var FOnLog: TProc<TSQLLogEntry>;
     class var FOnSlowQuery: TProc<TSQLLogEntry>;
-    class var FDBConnection: TFDConnection;
+    class var FDBConnection: TObject;
     class var FTotalQueries: Int64;
     class var FTotalDurationMs: Int64;
     class var FSlowQueryCount: Int64;
@@ -115,7 +115,7 @@ type
     /// <summary>
     /// Execute a query with automatic logging
     /// </summary>
-    class procedure Execute(AQuery: TFDQuery; AProc: TProc; 
+    class procedure Execute(AQuery: TObject; AProc: TProc;
       const AOperation: string = '');
     
     /// <summary>
@@ -162,7 +162,7 @@ type
     /// <summary>
     /// Set database connection for database logging
     /// </summary>
-    class procedure SetDBConnection(AConnection: TFDConnection);
+    class procedure SetDBConnection(AConnection: TObject);
     
     /// <summary>
     /// Generate new session ID
@@ -190,7 +190,8 @@ type
 implementation
 
 uses
-  System.DateUtils, System.IOUtils, System.StrUtils;
+  System.DateUtils, System.IOUtils,
+  FireDAC.Comp.Client;
 
 { TSQLLogger }
 
@@ -321,15 +322,21 @@ begin
   end;
 end;
 
-class procedure TSQLLogger.Execute(AQuery: TFDQuery; AProc: TProc;
+class procedure TSQLLogger.Execute(AQuery: TObject; AProc: TProc;
   const AOperation: string);
 var
+  FDQuery: TFDQuery;
   StartTime: TDateTime;
   SQL: string;
   Success: Boolean;
   ErrorMsg: string;
   RowsAffected: Integer;
 begin
+  if Assigned(AQuery) and (AQuery is TFDQuery) then
+    FDQuery := TFDQuery(AQuery)
+  else
+    FDQuery := nil;
+
   if not FEnabled then
   begin
     AProc;
@@ -337,17 +344,23 @@ begin
   end;
   
   StartTime := StartTiming;
-  SQL := AQuery.SQL.Text;
+  if Assigned(FDQuery) then
+    SQL := FDQuery.SQL.Text
+  else
+    SQL := '';
   Success := True;
   ErrorMsg := '';
   RowsAffected := -1;
   
   try
     AProc;
-    if AQuery.Active then
-      RowsAffected := AQuery.RecordCount
-    else
-      RowsAffected := AQuery.RowsAffected;
+    if Assigned(FDQuery) then
+    begin
+      if FDQuery.Active then
+        RowsAffected := FDQuery.RecordCount
+      else
+        RowsAffected := FDQuery.RowsAffected;
+    end;
   except
     on E: Exception do
     begin
@@ -452,15 +465,21 @@ end;
 
 class procedure TSQLLogger.WriteToDatabase(const AEntry: TSQLLogEntry);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  if not Assigned(FDBConnection) then Exit;
-  if not FDBConnection.Connected then Exit;
+  if Assigned(FDBConnection) and (FDBConnection is TFDConnection) then
+    Conn := TFDConnection(FDBConnection)
+  else
+    Conn := nil;
+
+  if not Assigned(Conn) then Exit;
+  if not Conn.Connected then Exit;
   
   Query := TFDQuery.Create(nil);
   try
     try
-      Query.Connection := FDBConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 
         'INSERT INTO Logs (Level, Source, Message, Timestamp, SessionId, MachineName, Extra) ' +
         'VALUES (:Level, :Source, :Message, :Timestamp, :SessionId, :MachineName, :Extra)';
@@ -642,7 +661,7 @@ begin
   end;
 end;
 
-class procedure TSQLLogger.SetDBConnection(AConnection: TFDConnection);
+class procedure TSQLLogger.SetDBConnection(AConnection: TObject);
 begin
   FDBConnection := AConnection;
 end;
