@@ -182,7 +182,7 @@ function CheckDataIntegrity(AConnection: TFDConnection): TDiagnoseResults;
 function CheckDataIntegrityWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
-/// Create default FireDAC-backed diagnose storage adapter.
+/// Create connection-backed diagnose storage from registered factory.
 /// </summary>
 function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
 
@@ -200,108 +200,14 @@ uses
   {$ENDIF}
   UniBase.Schema;
 
-type
-  TFireDACDiagnoseStorage = class(TInterfacedObject, IDiagnoseStorage)
-  private
-    FConnection: TFDConnection;
-  public
-    constructor Create(AConnection: TFDConnection);
-    function DiagnoseAll: TDiagnoseResults;
-    function CheckTablesExist: TDiagnoseResults;
-    function CheckColumnsExist: TDiagnoseResults;
-    function CheckIndexesExist: TDiagnoseResults;
-    function CheckSchemaVersion: TDiagnoseResults;
-    function CheckDataIntegrity: TDiagnoseResults;
-    function AutoFix(const AResults: TDiagnoseResults): Integer;
-    function AddColumnIfNotExists(const ATableName, AColumnName,
-      AColumnDef: string): Boolean;
-    function TableExists(const ATableName: string): Boolean;
-    function ColumnExists(const ATableName, AColumnName: string): Boolean;
-    function IndexExists(const AIndexName: string): Boolean;
-    function GetSchemaVersion: string;
-  end;
-
 var
   GConnectionStorageFactory: TFunc<TObject, IDiagnoseStorage>;
 
-constructor TFireDACDiagnoseStorage.Create(AConnection: TFDConnection);
-begin
-  inherited Create;
-  FConnection := AConnection;
-end;
-
-function TFireDACDiagnoseStorage.DiagnoseAll: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.DiagnoseAll(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.CheckTablesExist: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.CheckTablesExist(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.CheckColumnsExist: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.CheckColumnsExist(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.CheckIndexesExist: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.CheckIndexesExist(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.CheckSchemaVersion: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.CheckSchemaVersion(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.CheckDataIntegrity: TDiagnoseResults;
-begin
-  Result := UniBase.Diagnose.CheckDataIntegrity(FConnection);
-end;
-
-function TFireDACDiagnoseStorage.AutoFix(
-  const AResults: TDiagnoseResults): Integer;
-begin
-  Result := UniBase.Diagnose.AutoFix(FConnection, AResults);
-end;
-
-function TFireDACDiagnoseStorage.AddColumnIfNotExists(const ATableName,
-  AColumnName, AColumnDef: string): Boolean;
-begin
-  Result := UniBase.Diagnose.AddColumnIfNotExists(FConnection, ATableName,
-    AColumnName, AColumnDef);
-end;
-
-function TFireDACDiagnoseStorage.TableExists(const ATableName: string): Boolean;
-begin
-  Result := UniBase.Diagnose.TableExists(FConnection, ATableName);
-end;
-
-function TFireDACDiagnoseStorage.ColumnExists(const ATableName,
-  AColumnName: string): Boolean;
-begin
-  Result := UniBase.Diagnose.ColumnExists(FConnection, ATableName, AColumnName);
-end;
-
-function TFireDACDiagnoseStorage.IndexExists(const AIndexName: string): Boolean;
-begin
-  Result := UniBase.Diagnose.IndexExists(FConnection, AIndexName);
-end;
-
-function TFireDACDiagnoseStorage.GetSchemaVersion: string;
-begin
-  Result := UniBase.Diagnose.GetSchemaVersion(FConnection);
-end;
-
 function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
 begin
+  Result := nil;
   if Assigned(AConnection) and Assigned(GConnectionStorageFactory) then
-    Result := GConnectionStorageFactory(AConnection)
-  else if Assigned(AConnection) then
-    Result := TFireDACDiagnoseStorage.Create(AConnection)
-  else
-    Result := nil;
+    Result := GConnectionStorageFactory(AConnection);
 end;
 
 procedure SetDiagnoseStorageFactory(

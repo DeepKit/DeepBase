@@ -561,6 +561,7 @@
   - `Core/UniBase.Theme.pas`、`Core/UniBase.Hotkeys.pas`、`Core/UniBase.i18n.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
   - `2026-05-04`：`Config/FormState/MRU/Theme/Hotkeys/i18n/License/Security` 的 `CreateStorageFromConnection` 已统一为“仅在 `AConnection<>nil` 时调用工厂”，修复空连接场景触发 `Expected TFDConnection` 的误报。
   - `2026-05-04`：`Core/UniBase.Exception.pas` 已移除 `TFireDACExceptionReportStorage` 与 `FireDAC.*` 依赖，异常上报仅通过 `IExceptionReportStorage` 工厂解析，FireDAC 适配器完全下沉到 `Persistence/UniBase.Persistence.Exception.FireDAC.pas`。
+  - `2026-05-04`：`Core/UniBase.Diagnose.pas` 已移除内置 `TFireDACDiagnoseStorage` 回退，`CreateDiagnoseStorage` 改为仅通过注册工厂解析，FireDAC 适配器统一由 `Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 提供。
   - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Manager.FireDAC`，确保测试入口稳定完成 Manager/模块存储工厂注册。
   - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
@@ -917,6 +918,7 @@
   - `Tests/Test.UniBase.Exception.pas` 增加注入存储回归测试，覆盖全局异常处理器经注入存储写入异常报告行为。
   - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Exception.FireDAC`，确保测试入口始终注册异常报告存储工厂。
   - `Tests/Test.UniBase.Diagnose.pas` 增加存储注入回归测试，覆盖 `DiagnoseAllWithStorage` 聚合结果与 `AutoFixWithStorage` 委托行为。
+  - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Diagnose.FireDAC`，确保 Diagnose 存储工厂在测试入口稳定注册。
   - `Core/UniBase.Storage.Interfaces.pas` 的日志契约已扩展为 `TLogStorageData` + `ILogQueryStorage`，支持完整日志字段与计数查询。
   - `Core/UniBase.Logging.pas` 已完成日志存储抽象切片：DB 写入/清理/计数均走 `ILogStorage` 注入，Core 不再包含 FireDAC SQL 细节。
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已实现 FireDAC 版 `ILogStorage/ILogQueryStorage`，并保留 `Logs.Extra` 列缺失时的兼容写入路径。
