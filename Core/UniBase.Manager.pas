@@ -1312,11 +1312,16 @@ begin
   
   for I := 1 to MaxRetry do
   begin
-    Query := TFDQuery.Create(nil);
+    Query := nil;
+    if not Assigned(FStorage) then
+      Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConfigDB;
-      // Disable parameter parsing to avoid issues with :name patterns in string literals
-      Query.ResourceOptions.ParamCreate := False;
+      if Assigned(Query) then
+      begin
+        Query.Connection := FConfigDB;
+        // Disable parameter parsing to avoid issues with :name patterns in string literals
+        Query.ResourceOptions.ParamCreate := False;
+      end;
       
       FullSQL := GetFullSchemaSQL;
       Statements := SplitSQLStatements(FullSQL);
@@ -1327,8 +1332,13 @@ begin
           if Trim(Stmt) <> '' then
           begin
             LastStmt := Stmt;  // keep for error reporting
-            Query.SQL.Text := Stmt;
-            Query.ExecSQL;
+            if Assigned(FStorage) then
+              FStorage.ExecuteStatement(Stmt)
+            else
+            begin
+              Query.SQL.Text := Stmt;
+              Query.ExecSQL;
+            end;
           end;
         end;
         try
@@ -1470,11 +1480,19 @@ begin
     if ColumnExists('MRU', 'ItemPath') and ColumnExists('MRU', 'ItemKey') then
     begin
       try
-        Query.SQL.Text :=
-          'UPDATE MRU SET ItemKey = ItemPath ' +
-          'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
-          'AND ItemPath IS NOT NULL AND ItemPath <> ''''';
-        Query.ExecSQL;
+        if Assigned(FStorage) then
+          FStorage.ExecuteStatement(
+            'UPDATE MRU SET ItemKey = ItemPath ' +
+            'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
+            'AND ItemPath IS NOT NULL AND ItemPath <> ''''')
+        else
+        begin
+          Query.SQL.Text :=
+            'UPDATE MRU SET ItemKey = ItemPath ' +
+            'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
+            'AND ItemPath IS NOT NULL AND ItemPath <> ''''';
+          Query.ExecSQL;
+        end;
       except
         on E: Exception do
           {$IFDEF DEBUG}
@@ -1485,10 +1503,17 @@ begin
     if ColumnExists('MRU', 'ItemKey') then
     begin
       try
-        Query.SQL.Text :=
-          'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
-          'ON MRU(Category, ItemKey)';
-        Query.ExecSQL;
+        if Assigned(FStorage) then
+          FStorage.ExecuteStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
+            'ON MRU(Category, ItemKey)')
+        else
+        begin
+          Query.SQL.Text :=
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
+            'ON MRU(Category, ItemKey)';
+          Query.ExecSQL;
+        end;
       except
         on E: Exception do
           {$IFDEF DEBUG}
@@ -1787,18 +1812,27 @@ begin
       if (Current <> '') and not Current.StartsWith('--') then
         Statements.Add(Current);
       
-      Query := TFDQuery.Create(nil);
-      try
+      Query := nil;
+      if not Assigned(FStorage) then
+      begin
+        Query := TFDQuery.Create(nil);
         Query.Connection := FConfigDB;
         // Disable parameter parsing to avoid issues with :name patterns in string literals
         Query.ResourceOptions.ParamCreate := False;
-        
+      end;
+
+      try
         for Stmt in Statements do
         begin
           if Trim(Stmt) <> '' then
           begin
-            Query.SQL.Text := Stmt;
-            Query.ExecSQL;
+            if Assigned(FStorage) then
+              FStorage.ExecuteStatement(Stmt)
+            else
+            begin
+              Query.SQL.Text := Stmt;
+              Query.ExecSQL;
+            end;
           end;
         end;
         Result := True;
