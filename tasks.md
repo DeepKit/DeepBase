@@ -560,6 +560,7 @@
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
   - `Core/UniBase.Theme.pas`、`Core/UniBase.Hotkeys.pas`、`Core/UniBase.i18n.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
   - `2026-05-04`：`Config/FormState/MRU/Theme/Hotkeys/i18n/License/Security` 的 `CreateStorageFromConnection` 已统一为“仅在 `AConnection<>nil` 时调用工厂”，修复空连接场景触发 `Expected TFDConnection` 的误报。
+  - `2026-05-04`：`Core/UniBase.Exception.pas` 已移除 `TFireDACExceptionReportStorage` 与 `FireDAC.*` 依赖，异常上报仅通过 `IExceptionReportStorage` 工厂解析，FireDAC 适配器完全下沉到 `Persistence/UniBase.Persistence.Exception.FireDAC.pas`。
   - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Manager.FireDAC`，确保测试入口稳定完成 Manager/模块存储工厂注册。
   - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
@@ -900,7 +901,7 @@
   - `Core/UniBase.Authorization.pas` 新增存储注入能力：支持 `TAuthorizationManager.Create(const AStorage: IAuthorizationStorage)`，并通过 `SetStorageFactory` / `CreateStorageFromConnection` 对接外部实现；兼容保留 `Create(AConnection: TFDConnection)` 构造。
   - `Persistence/UniBase.Persistence.Authorization.FireDAC.pas` 对齐为 FireDAC 版 `IAuthorizationStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.Storage.Interfaces.pas` 新增 `TExceptionReportData` 与 `IExceptionReportStorage` 契约，统一异常报告持久化数据结构。
-  - `Core/UniBase.Exception.pas` 新增异常报告存储注入能力：支持 `SetStorageFactory` / `CreateStorageFromConnection`，并保留 FireDAC 兼容回退。
+  - `Core/UniBase.Exception.pas` 新增异常报告存储注入能力：支持 `SetStorageFactory` / `CreateStorageFromConnection`，并移除 Core 内置 FireDAC 回退实现。
   - `Persistence/UniBase.Persistence.Exception.FireDAC.pas` 新增 FireDAC 版 `IExceptionReportStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.Diagnose.pas` 新增 `IDiagnoseStorage` 抽象与 `*WithStorage` 注入入口（如 `DiagnoseAllWithStorage`、`AutoFixWithStorage`），保留原 `TFDConnection` API 兼容调用。
   - `Core/UniBase.Diagnose.pas` 新增 `SetDiagnoseStorageFactory`/`CreateDiagnoseStorage` 工厂扩展点，可由 Persistence 层注册连接适配器。
@@ -914,6 +915,7 @@
   - `Tests/Test.UniBase.License.pas` 增加注入存储回归测试，覆盖激活持久化、重建实例恢复与停用清理行为。
   - `Tests/Test.UniBase.Authorization.pas` 增加注入存储回归测试，覆盖角色授权写入与重建实例恢复行为。
   - `Tests/Test.UniBase.Exception.pas` 增加注入存储回归测试，覆盖全局异常处理器经注入存储写入异常报告行为。
+  - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Exception.FireDAC`，确保测试入口始终注册异常报告存储工厂。
   - `Tests/Test.UniBase.Diagnose.pas` 增加存储注入回归测试，覆盖 `DiagnoseAllWithStorage` 聚合结果与 `AutoFixWithStorage` 委托行为。
   - `Core/UniBase.Storage.Interfaces.pas` 的日志契约已扩展为 `TLogStorageData` + `ILogQueryStorage`，支持完整日志字段与计数查询。
   - `Core/UniBase.Logging.pas` 已完成日志存储抽象切片：DB 写入/清理/计数均走 `ILogStorage` 注入，Core 不再包含 FireDAC SQL 细节。

@@ -14,8 +14,6 @@ uses
   System.Classes,
   Vcl.Forms,
   Vcl.Dialogs,
-  Data.DB,
-  FireDAC.Comp.Client,
   UniBase.Manager,
   UniBase.Logging,
   UniBase.Storage.Interfaces;
@@ -45,48 +43,6 @@ implementation
 uses
   System.DateUtils;
 
-type
-  TFireDACExceptionReportStorage = class(TInterfacedObject,
-    IExceptionReportStorage)
-  private
-    FConnection: TFDConnection;
-  public
-    constructor Create(AConnection: TFDConnection);
-    procedure WriteReport(const Data: TExceptionReportData);
-  end;
-
-{ TFireDACExceptionReportStorage }
-
-constructor TFireDACExceptionReportStorage.Create(AConnection: TFDConnection);
-begin
-  inherited Create;
-  FConnection := AConnection;
-end;
-
-procedure TFireDACExceptionReportStorage.WriteReport(
-  const Data: TExceptionReportData);
-var
-  Query: TFDQuery;
-begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'INSERT INTO ExceptionReports (ReportTime, ExceptionClass, Message, StackTrace) ' +
-      'VALUES (:Time, :Class, :Msg, :Stack)';
-    Query.ParamByName('Time').AsString := Data.ReportTimeISO;
-    Query.ParamByName('Class').AsString := Data.ExceptionClass;
-    Query.ParamByName('Msg').AsString := Data.MessageText;
-    Query.ParamByName('Stack').AsString := Data.StackTrace;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
-end;
-
 { TUniBaseExceptionHandler }
 
 class constructor TUniBaseExceptionHandler.Create;
@@ -113,12 +69,9 @@ end;
 class function TUniBaseExceptionHandler.CreateStorageFromConnection(
   AConnection: TObject): IExceptionReportStorage;
 begin
+  Result := nil;
   if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection)
-  else if AConnection is TFDConnection then
-    Result := TFireDACExceptionReportStorage.Create(TFDConnection(AConnection))
-  else
-    Result := nil;
+    Result := FConnectionStorageFactory(AConnection);
 end;
 
 class function TUniBaseExceptionHandler.BuildExceptionReportData(
@@ -159,29 +112,20 @@ var
 begin
   // Save detailed report to ExceptionReports table via injected storage.
   try
-    Storage := nil;
     ReportData := BuildExceptionReportData(E);
+    Storage := nil;
 
-    // 1) Prefer explicit storage injection (can ignore connection parameter).
-    try
-      Storage := CreateStorageFromConnection(nil);
-    except
-      Storage := nil;
-    end;
-
-    // 2) Fallback to manager connection when available.
-    if not Assigned(Storage) then
-    begin
+    if UniBase.Manager.UniBase.IsInitialized then
+      ConnectionObject := UniBase.Manager.UniBase.ConfigDB
+    else
       ConnectionObject := nil;
-      if UniBase.Manager.UniBase.IsInitialized then
-        ConnectionObject := UniBase.Manager.UniBase.ConfigDB;
-      if Assigned(ConnectionObject) then
-      begin
-        try
-          Storage := CreateStorageFromConnection(ConnectionObject);
-        except
-          Storage := nil;
-        end;
+
+    if Assigned(ConnectionObject) then
+    begin
+      try
+        Storage := CreateStorageFromConnection(ConnectionObject);
+      except
+        Storage := nil;
       end;
     end;
 

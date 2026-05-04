@@ -90,6 +90,7 @@ uses
   UniBase.DB.DoQry in '..\Persistence\UniBase.DB.DoQry.pas',
   UniBase.Persistence.Manager.FireDAC in '..\Persistence\UniBase.Persistence.Manager.FireDAC.pas',
   UniBase.Persistence.License.FireDAC in '..\Persistence\UniBase.Persistence.License.FireDAC.pas',
+  UniBase.Persistence.Exception.FireDAC in '..\Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   // LLM unit for LLM tests
   UniBase.LLM in '..\Core\UniBase.LLM.pas',
   // Payment & Social integration units
