@@ -715,13 +715,17 @@
   - `ThirdParty/AipexBase/` 新增 `UniBase.AipexBase.Factory.pas`，并将 `UniBase.AipexBase.Client.pas` 纳入版本库，收敛为 API 客户端 + 工厂实现。
 
 #### ARCH-030: Payment 模块策略与文档矛盾
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-04)
 - **优先级**: P1 (架构)
 - **问题**: 文档 06.01 明确禁止"直接实现各渠道 SDK"，但 Payment/ 完整实现了 Alipay/WeChat/Stripe/PayPal SDK 对接
 - **影响**: 架构决策文档失效
 - **任务**:
-  - [ ] 决策：保留直接实现 or 改为后端代理
-  - [ ] 更新文档 06.01 与实际策略一致
+  - [x] 决策：保留直接实现 or 改为后端代理
+  - [x] 更新文档 06.01 与实际策略一致
+- **决策与完成摘要 (2026-05-04)**:
+  - 采用“双模式并行”策略：`ThirdParty/Payment` 继续支持直连 SDK；`ThirdParty/AipexBase` 作为企业化后端代理推荐路径。
+  - `docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.1.md`：将“仅后端代理”更新为“双模式策略”，并明确适用场景与边界约束。
+  - `ThirdParty/Payment/README.md`：新增架构定位，明确与 AipexBase 代理模式的关系与选型建议。
 
 #### ARCH-031: EventBus 订阅者强引用内存泄漏
 - **状态**: ✅ 完成 (2026-05-03)
