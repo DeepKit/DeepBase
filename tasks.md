@@ -1,6 +1,6 @@
 # UniBase 开发任务
 
-> **最后更新**: 2026-05-03
+> **最后更新**: 2026-05-04
 > **项目状态**: 核心完成，代码优化阶段
 
 ---
@@ -541,14 +541,19 @@
 ### 🔴 P0 - 必须修复
 
 #### ARCH-019: Core 层直接依赖 FireDAC，破坏分层隔离
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中（2026-05-04）
 - **优先级**: P0 (架构)
 - **问题**: Core/ 下 23 个 .pas 文件直接 `uses FireDAC.Comp.Client` 等单元，破坏了技术规范"Core 无 UI 依赖"的承诺。轻量项目被迫引入完整 FireDAC。
 - **影响**: 编译体积膨胀、部署复杂、技术锁定
 - **任务**:
-  - [ ] 引入 `UniBase.Storage.Interfaces.pas`（IConfigStorage, ILogStorage, IMRUStorage 等）
+  - [x] 引入 `UniBase.Storage.Interfaces.pas`（IConfigStorage, IFormStateStorage, II18nStorage, ISecuritySecretStorage, ILicenseStorage, IMRUStorage, IHotkeyStorage, IThemeStorage, ILogStorage 等）并补齐 Authorization 专用存储抽象
   - [ ] Core 只依赖接口，FireDAC 实现移到 Persistence/
   - [ ] 确保 UniBaseCore.dpk 不再包含 FireDAC 引用
+- **阶段进展**:
+  - `Core/UniBase.Logging.pas` 已移除 `FireDAC/Data.DB/TFDConnection/TFDQuery` 直接依赖，改为 `ILogStorage` 工厂注入。
+  - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已重写为 FireDAC 适配器，并在 initialization 自动注册到 Logger 存储工厂。
+  - `Scripts/build_packages_win64.ps1 -Profile Runtime` 已通过（Core/Services/Persistence/Features 全链路编译通过），为后续继续拆分 Core 依赖提供稳定基线。
+  - `UniBaseCore.dpk` 中历史重复/无效单元已清理，当前剩余阻塞点是 Core 多模块仍直接 `uses FireDAC.*`，需继续下沉到 Persistence。
 
 #### ARCH-020: 异常类继承断裂（EUniBaseDbError / EMathException）
 - **状态**: ✅ 完成 (2026-05-03)
@@ -809,7 +814,7 @@
   - `Tests/Test.WebService.pas`：新增 JWT/API Key 中间件示例测试（`Test_JWT_Middleware_Example_DeniesMissingToken`、`Test_ApiKey_Middleware_Example_AllowsValidKey`），展示最小可运行接入方式。
 
 #### ARCH-037: LLM 三套 API 并存 + 术语表偏离
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-04)
 - **优先级**: P1 (文档)
 - **问题**:
   - LLM 存在三套 API：`TUniBaseLLM`(Core)、`LLM()`facade(Features)、`TLLMManager`(Core)，无迁移说明
@@ -817,12 +822,16 @@
   - 05.05 提示词 5 张表未列入 04.01 Schema
 - **影响**: 开发者无法确定使用哪套 API；术语表无用
 - **任务**:
-  - [ ] 在文档中添加 LLM API 迁移对照表
-  - [ ] 重写术语表为 UniBase 核心 + uniFlow 分离
-  - [ ] 04.01 Schema 补充提示词相关表
+  - [x] 在文档中添加 LLM API 迁移对照表
+  - [x] 重写术语表为 UniBase 核心 + uniFlow 分离
+  - [x] 04.01 Schema 补充提示词相关表
+- **完成摘要 (2026-05-04)**:
+  - `docs/05.05.uniBase-4AI-LLM集成指南-v1.0.md`：新增 LLM 三套 API 迁移对照矩阵（`TUniBaseLLM` / `TLLMManager` / `LLM()`）。
+  - `docs/02.01.uniBase-4AI-术语表-v1.0.md`：重写为“UniBase 核心术语 + uniFlow 术语”双区结构，补齐 ConfigDB/UniDb/FormState/MRU/LLM 术语。
+  - `docs/04.01.uniBase-4AI-数据库Schema说明-v1.0.md`：补充 Prompt Studio 5 张扩展表映射说明（`PromptCategories` 等）。
 
 #### ARCH-038: Schema 版本号不一致 + 04.03 API 命名不同
-- **状态**: 🔲 待开始
+- **状态**: ✅ 完成 (2026-05-04)
 - **优先级**: P1 (文档)
 - **问题**:
   - Schema 版本有 0.3 / 1.0 / 1.0.0 三种说法
@@ -830,21 +839,65 @@
   - 01.01 文档版本号 v1.0 vs 文末 Document Version v1.1
 - **影响**: 无法确定当前版本，API 命名混乱
 - **任务**:
-  - [ ] 统一 Schema 版本号为单一值
-  - [ ] 归档或重写 04.03（API 名与代码完全不同）
-  - [ ] 统一 01.01 文档版本号
+  - [x] 统一 Schema 版本号为单一值
+  - [x] 归档或重写 04.03（API 名与代码完全不同）
+  - [x] 统一 01.01 文档版本号
+- **完成摘要 (2026-05-04)**:
+  - `docs/03.03.uniBase-4H-技术规范-v1.0.md`：`SchemaVersion` 示例统一为 `1.0.0`，DoQry 示例 API 统一收敛为 `UniDb*` 命名（含 `TUniQueryContext`）。
+  - `docs/04.03.uniBase-4AI-数据库指南-v1.0.md`：已使用 `UniDbInit/UniDbSelect` 命名并说明 `UniDbRunInTx` 嵌套 `SAVEPOINT` 支持。
+  - `docs/01.01.uniBase-4AI-集成指南-v1.0.md`：文末版本元数据已统一为 `Document Version: 1.0`。
 
 ---
 
 ### 🟢 P2 - 改进优化
 
 #### ARCH-039: 引入数据库访问抽象层
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中（2026-05-04）
 - **优先级**: P2 (架构)
 - **任务**:
-  - [ ] 定义 `IConfigStorage`、`ILogStorage`、`IMRUStorage`、`ISchemaStorage` 接口
+  - [x] 定义 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage` 接口，并补齐 `IAuthorizationStorage`
   - [ ] Core 仅依赖接口，FireDAC 实现全部移入 Persistence/
   - [ ] 为未来支持其他数据库技术（dbExpress/ADO）预留扩展点
+- **阶段进展**:
+  - 新增 `Core/UniBase.Storage.Interfaces.pas`，统一声明 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage`。
+  - `Core/UniBase.Config.pas` 新增存储注入能力：支持 `TUniBaseConfig.Create(const AStorage: IConfigStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - 新增 `Persistence/UniBase.Persistence.Config.FireDAC.pas`，提供 FireDAC 版 `IConfigStorage` 适配器与工厂注册。
+  - `Core/UniBase.FormState.pas` 新增存储注入能力：支持 `TUniBaseFormState.Create(const AStorage: IFormStateStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - `Persistence/UniBase.Persistence.FormState.FireDAC.pas` 调整为 FireDAC 版 `IFormStateStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.MRU.pas` 新增存储注入能力：支持 `TUniBaseMRU.Create(const AStorage: IMRUStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - `Persistence/UniBase.Persistence.MRU.FireDAC.pas` 重构为 FireDAC 版 `IMRUStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Hotkeys.pas` 新增存储注入能力：支持 `TUniBaseHotkeys.Create(const AStorage: IHotkeyStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - `Persistence/UniBase.Persistence.Hotkeys.FireDAC.pas` 调整为 FireDAC 版 `IHotkeyStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Theme.pas` 新增存储注入能力：支持 `TUniBaseTheme.Create(const AStorage: IThemeStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - `Persistence/UniBase.Persistence.Theme.FireDAC.pas` 调整为 FireDAC 版 `IThemeStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.i18n.pas` 新增存储注入能力：支持 `TUniBaseI18n.Create(const AStorage: II18nStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
+  - `Persistence/UniBase.Persistence.I18n.FireDAC.pas` 调整为 FireDAC 版 `II18nStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Security.pas` 新增存储注入能力：支持 `TUniBaseSecurity.Create(const AStorage: ISecuritySecretStorage)`，并通过 `SetStorageFactory` 对接外部实现；同时保留 `Create(AConnection: TFDConnection)` 兼容构造。
+  - `Persistence/UniBase.Persistence.Security.FireDAC.pas` 对齐为 FireDAC 版 `ISecuritySecretStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.License.pas` 新增存储注入能力：支持 `TUniBaseLicense.Create(const AStorage: ILicenseStorage)`，并通过 `SetStorageFactory` 对接外部实现；兼容保留 `Create(AConnection: TFDConnection)` 构造。
+  - `Persistence/UniBase.Persistence.License.FireDAC.pas` 对齐为 FireDAC 版 `ILicenseStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Authorization.pas` 新增存储注入能力：支持 `TAuthorizationManager.Create(const AStorage: IAuthorizationStorage)`，并通过 `SetStorageFactory` / `CreateStorageFromConnection` 对接外部实现；兼容保留 `Create(AConnection: TFDConnection)` 构造。
+  - `Persistence/UniBase.Persistence.Authorization.FireDAC.pas` 对齐为 FireDAC 版 `IAuthorizationStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Storage.Interfaces.pas` 新增 `TExceptionReportData` 与 `IExceptionReportStorage` 契约，统一异常报告持久化数据结构。
+  - `Core/UniBase.Exception.pas` 新增异常报告存储注入能力：支持 `SetStorageFactory` / `CreateStorageFromConnection`，并保留 FireDAC 兼容回退。
+  - `Persistence/UniBase.Persistence.Exception.FireDAC.pas` 新增 FireDAC 版 `IExceptionReportStorage` 适配器，与 Core 抽象对齐。
+  - `Core/UniBase.Diagnose.pas` 新增 `IDiagnoseStorage` 抽象与 `*WithStorage` 注入入口（如 `DiagnoseAllWithStorage`、`AutoFixWithStorage`），保留原 `TFDConnection` API 兼容调用。
+  - `Core/UniBase.Diagnose.pas` 新增 `SetDiagnoseStorageFactory`/`CreateDiagnoseStorage` 工厂扩展点，可由 Persistence 层注册连接适配器。
+  - `Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 新增 FireDAC 版 `IDiagnoseStorage` 适配器并自动注册工厂。
+  - `Tests/Test.UniBase.Config.pas` 增加注入存储回归测试，覆盖无 DB 场景下的读写/存在性/删除行为。
+  - `Tests/Test.UniBase.FormState.pas` 增加注入存储回归测试，覆盖无 DB 场景下的状态保存/恢复行为。
+  - `Tests/Test.UniBase.Hotkeys.pas` 增加注入存储回归测试，覆盖默认注册/修改/重置/删除完整链路。
+  - `Tests/Test.UniBase.Theme.pas` 增加注入存储回归测试，覆盖注入主题元数据读取行为。
+  - `Tests/Test.UniBase.i18n.pas` 增加注入存储回归测试，覆盖翻译读取、默认语言与语言列表行为。
+  - `Tests/Test.UniBase.Security.pas` 增加注入存储回归测试，覆盖秘密读写/存在性/删除/列表行为。
+  - `Tests/Test.UniBase.License.pas` 增加注入存储回归测试，覆盖激活持久化、重建实例恢复与停用清理行为。
+  - `Tests/Test.UniBase.Authorization.pas` 增加注入存储回归测试，覆盖角色授权写入与重建实例恢复行为。
+  - `Tests/Test.UniBase.Exception.pas` 增加注入存储回归测试，覆盖全局异常处理器经注入存储写入异常报告行为。
+  - `Tests/Test.UniBase.Diagnose.pas` 增加存储注入回归测试，覆盖 `DiagnoseAllWithStorage` 聚合结果与 `AutoFixWithStorage` 委托行为。
+  - `Core/UniBase.Storage.Interfaces.pas` 的日志契约已扩展为 `TLogStorageData` + `ILogQueryStorage`，支持完整日志字段与计数查询。
+  - `Core/UniBase.Logging.pas` 已完成日志存储抽象切片：DB 写入/清理/计数均走 `ILogStorage` 注入，Core 不再包含 FireDAC SQL 细节。
+  - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已实现 FireDAC 版 `ILogStorage/ILogQueryStorage`，并保留 `Logs.Extra` 列缺失时的兼容写入路径。
+  - `Tests/Test.UniBase.Logging.pas` 新增 `Test_StorageInjection_DelegatesDbWriteAndQuery`，覆盖注入写入、计数与清理委托行为。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
 - **状态**: ✅ 完成 (2026-05-03)
@@ -872,18 +925,20 @@
   - `ThirdParty/Social/UniBase.Social.pas` 与 `ThirdParty/Social/UniBase.Social.OAuth.pas`：OAuth token 与授权头相关临时字符串在 `finally` 中执行安全擦除，授权码换取用户信息后的临时 token 立即清理。
 
 #### ARCH-042: 文档去重 + Schema.pas 补充
-- **状态**: 🟡 进行中（代码侧已完成，文档侧待同步）
+- **状态**: ✅ 完成 (2026-05-04)
 - **优先级**: P2 (文档)
 - **任务**:
-  - [ ] 消除 01.01、04.01、07.01 之间的 DB1 表结构重复内容
+  - [x] 消除 01.01、04.01、07.01 之间的 DB1 表结构重复内容
   - [x] `UniBase.Schema.pas` 补充 aboutMeImages 表 DDL
   - [x] MRU 表字段名统一：04.01 `ItemPath` vs Schema.pas `ItemKey`
-  - [ ] 05.05 添加版本号和更新日期
+  - [x] 05.05 添加版本号和更新日期
 - **阶段进展**:
   - `Core/UniBase.Schema.pas`：Tier2 新增 `aboutMeImages` DDL（含 `Enabled`、`Sha256Hash`、`HmacSha256` 等字段），并纳入 `GetTier2SchemaSQL`。
   - `data/create_sample_db.sql`：MRU 字段统一为 `ItemKey`（替代 `ItemPath`），并补充 `aboutMeImages` 表定义与索引。
   - `Core/UniBase.Manager.pas`：`CreateSchema` 成功后增加兼容补丁阶段，`EnsureSchemaColumns` 为旧库补齐 `MRU.ItemKey`，并将 `ItemPath` 历史数据迁移到 `ItemKey`，同时补建 `(Category, ItemKey)` 唯一索引。
   - `Tests/Test.UniBase.Manager.pas`：新增 `Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase`，覆盖旧 MRU 结构自动迁移回归。
+  - `docs/01.01.uniBase-4AI-集成指南-v1.0.md` 与 `docs/07.01.uniBase-4AI-集成检查清单-v1.0.md`：删除重复 DDL/删表 SQL，统一引用 `04.01` 作为 DB1 Schema 权威来源。
+  - `docs/04.01.uniBase-4AI-数据库Schema说明-v1.0.md`：Tier2 数量与可选扩展说明补齐，作为唯一结构定义入口。
 
 #### ARCH-043: 日志表清理 + WebAPI JSON 安全
 - **状态**: ✅ 完成 (2026-05-03)
@@ -987,18 +1042,23 @@
   - 输出真实覆盖率报告（按模块分解），定位距离 95% 的缺口并形成补测清单。
   - 在 CI 文档补充数据库集成测试启用说明（`UNIBASE_RUN_DB_INTEGRATION=1` + FireDAC 驱动要求）。
   - 将 Win64 单测纳入默认门禁，Win32 作为兼容性回归（按需执行）。
-- **当前测试状态** (2026-05-02):
-  - 单元测试: 872/876 通过（Ignored: 4，Failed: 0，Errored: 0，Leaked: 0）
+- **当前测试状态** (2026-05-04):
+  - 单元测试: 1442/1445 通过（Ignored: 3，Failed: 0，Errored: 0，Leaked: 0）
   - 集成测试: 9/9 通过（Failed: 0，Errored: 0，Leaked: 0）
   - 全量门禁: `.\Scripts\run_tests.ps1 -Type All -CI`（Win64）已通过
   - 默认平台: Win64（`Scripts/run_tests.ps1` 默认 `-Platform Win64`）
+  - 覆盖率阻塞: `.\Scripts\run_tests.ps1 -Type Unit -Platform Win64 -CI -Coverage` 已验证测试通过，但本机缺失 `CodeCoverage.exe`，暂无法产出覆盖率报告。
   - 关键修复:
+    - `Core/UniBase.Security.pas` 的 `SecureZeroMemory` 改为运行时解析（`RtlSecureZeroMemory`→`RtlZeroMemory`→`FillChar` 回退），修复 Unit 运行期 `0xC0000139` 启动崩溃。
+    - `Scripts/run_tests.ps1`：Unit 路径新增 `Ensure-SqliteDll`，并补充 x64 候选 `bin\windows\lldb\sqlite3.dll`，解决 Win64 单测加载 32 位 sqlite3 失败。
+    - `Tests/Test.UniBase.Resilience.pas`：`Test_Execute_RejectedWhenOpen` 异常断言对齐为 `ECircuitBreakerException`。
     - `FormState` 保存窗口坐标已修复工作区/屏幕坐标差异（顶部任务栏场景）
     - `Resilience` 策略组合执行链修复匿名方法残留，FastMM 不再报泄漏
     - `WebAPI/Net` 已完成 Win64 编译兼容与本地集成测试链路修复（TLS 枚举兼容、sqlite3 装载、localhost 安全开关）
     - `Protection/Resilience` 异常断言与实现语义对齐（具体异常类型）
     - `DB.Factory` 已支持 `DB3.Type=SQLite/PG` 双模式（相对路径解析 + SQLite 参数透传）
     - `Scripts/run_tests.ps1` 已将 `.dcu` 输出重定向到 `TestResults/build/dcu/<Platform>`，避免源代码目录污染
+    - `Tests/Test.UniBase.FormState.pas` 的测试窗体基准坐标统一为 `Left=100, Top=300`（含工作区边界保护），减少不同桌面布局下的位置漂移。
   - **2026-05-02 批量修复 12 个被注释掉的测试单元**:
     - 修复并启用 `Test.UniBase.Authorization` (无 API 不匹配)
     - 修复并启用 `Test.UniBase.Interfaces` (3 个字段名不匹配: Key→ItemKey, Code→LangCode, Name→LangName)
