@@ -1662,12 +1662,28 @@ var
   Query: TFDQuery;
   ArchiveTable: string;
   CutoffIso: string;
+  CutoffValue: string;
 begin
   if (DaysToKeep = 0) or not TableExists(TableName) or (TimeColumn = '') then
     Exit;
 
   ArchiveTable := TableName + '_Archive';
   CutoffIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', IncDay(Now, -DaysToKeep));
+  CutoffValue := QuotedStr(CutoffIso);
+
+  if Assigned(FStorage) then
+  begin
+    FStorage.ExecuteStatement(Format(
+      'CREATE TABLE IF NOT EXISTS %s AS SELECT * FROM %s WHERE 1 = 0',
+      [ArchiveTable, TableName]));
+    FStorage.ExecuteStatement(Format(
+      'INSERT INTO %s SELECT * FROM %s WHERE %s < %s',
+      [ArchiveTable, TableName, TimeColumn, CutoffValue]));
+    FStorage.ExecuteStatement(Format(
+      'DELETE FROM %s WHERE %s < %s',
+      [TableName, TimeColumn, CutoffValue]));
+    Exit;
+  end;
 
   Query := TFDQuery.Create(nil);
   try

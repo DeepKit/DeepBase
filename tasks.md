@@ -557,6 +557,7 @@
   - `Core/UniBase.Manager.pas` 已接入 `IManagerStorage` 工厂扩展点（`SetStorageFactory/CreateStorageFromConnection`），并在 Schema 校验/ProjectInfo/SchemaVersion 等路径优先走抽象接口，保留 SQL 回退。
   - `2026-05-04`：`Core/UniBase.Manager.pas` 已将 `FireDAC.Stan.Def/Async/DApt/Stan.ExprFuncs/Phys.SQLite/Phys.SQLiteDef` 从 interface uses 下沉到 implementation uses，仅保留 `TFDConnection` 所需最小公开类型依赖。
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `CreateSchema`、`RunMigrationScript`、`EnsureSchemaColumns`（MRU 补丁 DDL）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
+  - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `ArchiveAndTrimTable`（运维保留策略归档/清理）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
@@ -929,6 +930,7 @@
   - `2026-05-04`：`Core/UniBase.Diagnose.pas` 的公开连接参数已统一为 `TObject`（内部仍兼容 FireDAC 转换），并将 `FireDAC.Comp.Client` 从 interface uses 下沉到 implementation uses，降低调用侧编译耦合。
   - `2026-05-04`：`Core/UniBase.Authorization.pas` 已移除 Core 内置 FireDAC SQL 回退（`TFDConnection/TFDQuery`），授权读写与审计持久化仅通过 `IAuthorizationStorage`。
   - `2026-05-04`：`Tests/Test.UniBase.Authorization.pas` 的主测试夹具改为显式注入内存 `IAuthorizationStorage`，不再依赖 FireDAC 内存连接隐式回退；`run_tests -Type All` 回归通过。
+  - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `ArchiveAndTrimTable`（`Logs/LLMCalls/ExceptionReports` 归档清理）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
