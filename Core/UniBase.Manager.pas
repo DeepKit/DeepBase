@@ -448,7 +448,7 @@ class function TUniBaseManager.CreateStorageFromConnection(
   AConnection: TObject): IManagerStorage;
 begin
   Result := nil;
-  if Assigned(FStorageFactory) then
+  if Assigned(AConnection) and Assigned(FStorageFactory) then
     Result := FStorageFactory(AConnection);
 end;
 

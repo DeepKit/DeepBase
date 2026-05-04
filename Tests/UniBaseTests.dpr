@@ -89,6 +89,7 @@ uses
   // DoQry 集成模块（Persistence 包的唯一实现）
   UniBase.DB.DoQry in '..\Persistence\UniBase.DB.DoQry.pas',
   UniBase.Persistence.Manager.FireDAC in '..\Persistence\UniBase.Persistence.Manager.FireDAC.pas',
+  UniBase.Persistence.License.FireDAC in '..\Persistence\UniBase.Persistence.License.FireDAC.pas',
   // LLM unit for LLM tests
   UniBase.LLM in '..\Core\UniBase.LLM.pas',
   // Payment & Social integration units

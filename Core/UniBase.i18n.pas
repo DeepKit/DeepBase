@@ -325,7 +325,7 @@ class function TUniBaseI18n.CreateStorageFromConnection(
   AConnection: TObject): II18nStorage;
 begin
   Result := nil;
-  if Assigned(FConnectionStorageFactory) then
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
     Result := FConnectionStorageFactory(AConnection);
   if (Result = nil) and Assigned(AConnection) then
     raise EInvalidOp.Create(

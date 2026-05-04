@@ -23,7 +23,7 @@ uses
   System.NetEncoding,
   System.JSON,
   System.Generics.Collections,
-  FireDAC.Comp.Client;
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -74,24 +74,33 @@ type
   /// </summary>
   TUniBaseLicense = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: ILicenseStorage;
     FCurrentLicense: TLicenseInfo;
     FCachedDeviceId: string;
     FSecretKey: string;
     FOnLicenseChanged: TNotifyEvent;
+    class var FConnectionStorageFactory: TFunc<TObject, ILicenseStorage>;
     
     function GenerateDeviceFingerprint: string;
     function EncodePayload(const Payload: string): string;
     function DecodePayload(const Encoded: string): string;
     function SignData(const Data: string): string;
     function VerifySignature(const Data, Signature: string): Boolean;
+    class function CreateStorageFromConnection(
+      AConnection: TObject): ILicenseStorage; static;
     procedure LoadLicenseFromDB;
     procedure SaveLicenseToDB(const LicenseKey: string);
     procedure ClearLicenseFromDB;
+    procedure SetConnection(const Value: TObject);
     
   public
-    constructor Create(AConnection: TFDConnection = nil);
+    constructor Create(AConnection: TObject = nil); overload;
+    constructor Create(const AStorage: ILicenseStorage); overload;
     destructor Destroy; override;
+
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, ILicenseStorage>); static;
     
     /// <summary>Get unique device identifier</summary>
     function GetDeviceId: string;
@@ -112,7 +121,7 @@ type
     property CurrentLicenseInfo: TLicenseInfo read FCurrentLicense;
     
     /// <summary>Database connection</summary>
-    property Connection: TFDConnection read FConnection write FConnection;
+    property Connection: TObject read FConnection write SetConnection;
     
     /// <summary>License changed event</summary>
     property OnLicenseChanged: TNotifyEvent read FOnLicenseChanged write FOnLicenseChanged;
@@ -205,21 +214,53 @@ end;
 
 { TUniBaseLicense }
 
-constructor TUniBaseLicense.Create(AConnection: TFDConnection);
+constructor TUniBaseLicense.Create(AConnection: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection));
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseLicense.Create(const AStorage: ILicenseStorage);
 begin
   inherited Create;
-  FConnection := AConnection;
+  FStorage := AStorage;
   FSecretKey := LICENSE_SECRET;
   FCachedDeviceId := '';
   FCurrentLicense := TLicenseInfo.Empty;
-  
-  if Assigned(FConnection) and FConnection.Connected then
+
+  if Assigned(FStorage) then
     LoadLicenseFromDB;
 end;
 
 destructor TUniBaseLicense.Destroy;
 begin
   inherited;
+end;
+
+class procedure TUniBaseLicense.SetStorageFactory(
+  const AFactory: TFunc<TObject, ILicenseStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseLicense.CreateStorageFromConnection(
+  AConnection: TObject): ILicenseStorage;
+begin
+  Result := nil;
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No license storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.License.FireDAC or UniBase.Persistence.Manager.FireDAC.');
+end;
+
+procedure TUniBaseLicense.SetConnection(const Value: TObject);
+begin
+  FConnection := Value;
+  FStorage := CreateStorageFromConnection(Value);
+  if Assigned(FStorage) then
+    LoadLicenseFromDB;
 end;
 
 function TUniBaseLicense.GenerateDeviceFingerprint: string;
@@ -473,7 +514,7 @@ begin
   if Result then
   begin
     FCurrentLicense := Info;
-    if Assigned(FConnection) and FConnection.Connected then
+    if Assigned(FStorage) then
       SaveLicenseToDB(LicenseKey);
     
     if Assigned(FOnLicenseChanged) then
@@ -485,7 +526,7 @@ procedure TUniBaseLicense.DeactivateLicense;
 begin
   FCurrentLicense := TLicenseInfo.Empty;
   
-  if Assigned(FConnection) and FConnection.Connected then
+  if Assigned(FStorage) then
     ClearLicenseFromDB;
   
   if Assigned(FOnLicenseChanged) then
@@ -502,68 +543,34 @@ end;
 
 procedure TUniBaseLicense.LoadLicenseFromDB;
 var
-  Query: TFDQuery;
   StoredKey: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-  
-  Query := TFDQuery.Create(nil);
+
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT Value FROM Settings WHERE Key = ''license_key''';
-    
-    try
-      Query.Open;
-      if not Query.Eof then
-      begin
-        StoredKey := Query.FieldByName('Value').AsString;
-        if StoredKey <> '' then
-          FCurrentLicense := ValidateLicense(StoredKey);
-      end;
-    except
-      // Table might not exist yet
-    end;
-  finally
-    Query.Free;
+    StoredKey := FStorage.ReadLicenseKey;
+    if StoredKey <> '' then
+      FCurrentLicense := ValidateLicense(StoredKey);
+  except
+    // Table might not exist yet
   end;
 end;
 
 procedure TUniBaseLicense.SaveLicenseToDB(const LicenseKey: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'INSERT OR REPLACE INTO Settings (Key, Value, Category, Description) ' +
-      'VALUES (''license_key'', :Value, ''License'', ''License activation key'')';
-    Query.ParamByName('Value').AsString := LicenseKey;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.WriteLicenseKey(LicenseKey);
 end;
 
 procedure TUniBaseLicense.ClearLicenseFromDB;
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM Settings WHERE Key = ''license_key''';
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.DeleteLicenseKey;
 end;
 
 class function TUniBaseLicense.LicenseTypeToStr(LType: TLicenseType): string;

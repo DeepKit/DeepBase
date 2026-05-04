@@ -34,9 +34,9 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  FireDAC.Comp.Client,
   UniBase.Types,
-  UniBase.Exceptions;
+  UniBase.Exceptions,
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -44,14 +44,23 @@ type
   /// </summary>
   TUniBaseSecurity = class
   private
-    FConnection: TFDConnection;
+    FStorage: ISecuritySecretStorage;
     FLock: TObject;
-    
+    FOwnsLock: Boolean;
+    class var FConnectionStorageFactory: TFunc<TObject, ISecuritySecretStorage>;
+
     procedure EnsureSecretsTable;
-    
+    class function CreateStorageFromConnection(
+      AConnection: TObject): ISecuritySecretStorage; static;
+
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject);
+    constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
+    constructor Create(const AStorage: ISecuritySecretStorage;
+      ALock: TObject = nil); overload;
     destructor Destroy; override;
+
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, ISecuritySecretStorage>); static;
     
     // ========================================
     // DPAPI Encryption Functions
@@ -176,8 +185,42 @@ uses
 // ============================================================================
 
 {$IFDEF MSWINDOWS}
-function RtlSecureZeroMemory(ptr: Pointer; cnt: NativeUInt): Pointer; stdcall;
-  external 'kernel32.dll' name 'RtlSecureZeroMemory';
+type
+  TSecureZeroProc = function(ptr: Pointer; cnt: NativeUInt): Pointer; stdcall;
+
+function ResolveSecureZeroProc: Pointer;
+var
+  LModule: HMODULE;
+begin
+  Result := nil;
+
+  // Some Windows builds do not export RtlSecureZeroMemory from kernel32.
+  // Resolve at runtime to avoid load-time STATUS_ENTRYPOINT_NOT_FOUND.
+  LModule := GetModuleHandle('kernel32.dll');
+  if LModule <> 0 then
+    Result := GetProcAddress(LModule, 'RtlSecureZeroMemory');
+
+  if Result = nil then
+  begin
+    LModule := GetModuleHandle('ntdll.dll');
+    if LModule <> 0 then
+      Result := GetProcAddress(LModule, 'RtlZeroMemory');
+  end;
+end;
+
+procedure ZeroMemorySecure(Ptr: Pointer; Count: NativeUInt);
+var
+  LProc: Pointer;
+begin
+  if (Ptr = nil) or (Count = 0) then
+    Exit;
+
+  LProc := ResolveSecureZeroProc;
+  if LProc <> nil then
+    TSecureZeroProc(LProc)(Ptr, Count)
+  else
+    FillChar(Ptr^, Count, 0);
+end;
 {$ENDIF}
 
 procedure SecureZeroMemory(var Data: TBytes);
@@ -186,7 +229,7 @@ begin
     Exit;
 
   {$IFDEF MSWINDOWS}
-  RtlSecureZeroMemory(@Data[0], Length(Data));
+  ZeroMemorySecure(@Data[0], Length(Data));
   {$ELSE}
   FillChar(Data[0], Length(Data), 0);
   {$ENDIF}
@@ -198,7 +241,7 @@ begin
   begin
     UniqueString(Data);
     {$IFDEF MSWINDOWS}
-    RtlSecureZeroMemory(PChar(Data), Length(Data) * SizeOf(Char));
+    ZeroMemorySecure(PChar(Data), Length(Data) * SizeOf(Char));
     {$ELSE}
     FillChar(PChar(Data)^, Length(Data) * SizeOf(Char), 0);
     {$ENDIF}
@@ -318,7 +361,7 @@ begin
   
   // User-scope encryption (not using CRYPTPROTECT_LOCAL_MACHINE)
   if not CryptProtectData(@InBlob, nil, nil, nil, nil, 0, @OutBlob) then
-    RaiseLastOSError;
+    raise EEncryptionException.CreateFmt('DPAPI encryption failed: %s', [SysErrorMessage(GetLastError)]);
   
   SetLength(Result, OutBlob.cbData);
   Move(OutBlob.pbData^, Result[0], OutBlob.cbData);
@@ -411,7 +454,7 @@ begin
   InBlob.pbData := @AData[0];
   
   if not CryptUnprotectData(@InBlob, nil, nil, nil, nil, 0, @OutBlob) then
-    RaiseLastOSError;
+    raise EDecryptionException.CreateFmt('DPAPI decryption failed: %s', [SysErrorMessage(GetLastError)]);
   
   SetString(WideText, PWideChar(OutBlob.pbData), OutBlob.cbData div SizeOf(WideChar));
   Result := WideText;
@@ -527,32 +570,57 @@ end;
 // TUniBaseSecurity
 // ============================================================================
 
-constructor TUniBaseSecurity.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseSecurity.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+end;
+
+constructor TUniBaseSecurity.Create(const AStorage: ISecuritySecretStorage;
+  ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
-  FLock := ALock;
+  FStorage := AStorage;
+  if Assigned(ALock) then
+  begin
+    FLock := ALock;
+    FOwnsLock := False;
+  end
+  else
+  begin
+    FLock := TObject.Create;
+    FOwnsLock := True;
+  end;
 end;
 
 destructor TUniBaseSecurity.Destroy;
 begin
+  if FOwnsLock then
+    FreeAndNil(FLock);
   inherited;
 end;
 
 procedure TUniBaseSecurity.EnsureSecretsTable;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  FConnection.ExecSQL(
-    'CREATE TABLE IF NOT EXISTS ' + STableSecrets + ' (' +
-    '  Name        TEXT PRIMARY KEY,' +
-    '  CipherBlob  TEXT NOT NULL,' +
-    '  Description TEXT,' +
-    '  CreatedAt   TEXT NOT NULL,' +
-    '  UpdatedAt   TEXT NOT NULL' +
-    ')'
-  );
+  if Assigned(FStorage) then
+    FStorage.EnsureSecretsTable;
+end;
+
+class procedure TUniBaseSecurity.SetStorageFactory(
+  const AFactory: TFunc<TObject, ISecuritySecretStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseSecurity.CreateStorageFromConnection(
+  AConnection: TObject): ISecuritySecretStorage;
+begin
+  Result := nil;
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No security storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.Security.FireDAC or UniBase.Persistence.Manager.FireDAC.');
 end;
 
 function TUniBaseSecurity.ProtectString(const AText: string): TBytes;
@@ -567,39 +635,25 @@ end;
 
 function TUniBaseSecurity.LoadSecret(const AName: string): string;
 var
-  Query: TFDQuery;
   CipherBase64: string;
   CipherBytes: TBytes;
 begin
   Result := '';
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+
+  if not Assigned(FStorage) then
     Exit;
-  
+
   TMonitor.Enter(FLock);
   try
     EnsureSecretsTable;
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT CipherBlob FROM ' + STableSecrets + 
-        ' WHERE Name = :Name';
-      Query.ParamByName('Name').AsString := AName;
-      Query.Open;
-      
-      if Query.Eof then
-        Exit;
-      
-      CipherBase64 := Query.FieldByName('CipherBlob').AsString;
-      if CipherBase64 = '' then
-        Exit;
-        
-      CipherBytes := TNetEncoding.Base64.DecodeStringToBytes(CipherBase64);
-      Result := UnprotectString(CipherBytes);
-    finally
-      Query.Free;
-    end;
+
+    if not FStorage.TryReadCipherBlob(AName, CipherBase64) then
+      Exit;
+    if CipherBase64 = '' then
+      Exit;
+
+    CipherBytes := TNetEncoding.Base64.DecodeStringToBytes(CipherBase64);
+    Result := UnprotectString(CipherBytes);
   finally
     TMonitor.Exit(FLock);
   end;
@@ -608,7 +662,6 @@ end;
 procedure TUniBaseSecurity.SaveSecret(const AName, APlainValue: string;
   const ADescription: string);
 var
-  Query: TFDQuery;
   CipherBytes: TBytes;
   CipherBase64: string;
   NowStr: string;
@@ -620,130 +673,67 @@ begin
   // 限制明文值的长度，防止过大数据攻击
   if Length(APlainValue) > 64 * 1024 then // 64KB限制
     raise EArgumentException.Create('Secret value too large (max 64KB)');
-    
-  if not Assigned(FConnection) or not FConnection.Connected then
+
+  if not Assigned(FStorage) then
     Exit;
-  
+
   TMonitor.Enter(FLock);
   try
     EnsureSecretsTable;
-    
+
     CipherBytes := ProtectString(APlainValue);
     CipherBase64 := TNetEncoding.Base64.EncodeBytesToString(CipherBytes);
-    
+
     // Use ISO8601 format for SQLite datetime compatibility
     NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text :=
-        'INSERT OR REPLACE INTO ' + STableSecrets + 
-        ' (Name, CipherBlob, Description, CreatedAt, UpdatedAt) ' +
-        'VALUES (:Name, :CipherBlob, :Description, ' +
-        '  COALESCE((SELECT CreatedAt FROM ' + STableSecrets + ' WHERE Name = :Name2), :NowTime), ' +
-        '  :UpdatedAt)';
-      Query.ParamByName('Name').AsString := AName;
-      Query.ParamByName('Name2').AsString := AName;
-      Query.ParamByName('CipherBlob').AsString := CipherBase64;
-      Query.ParamByName('Description').AsString := ADescription;
-      Query.ParamByName('NowTime').AsString := NowStr;
-      Query.ParamByName('UpdatedAt').AsString := NowStr;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+
+    FStorage.UpsertSecret(AName, CipherBase64, ADescription, NowStr);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TUniBaseSecurity.DeleteSecret(const AName: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-  
+
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM ' + STableSecrets + ' WHERE Name = :Name';
-      Query.ParamByName('Name').AsString := AName;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    EnsureSecretsTable;
+    FStorage.DeleteSecret(AName);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseSecurity.SecretExists(const AName: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+
+  if not Assigned(FStorage) then
     Exit;
-  
+
   TMonitor.Enter(FLock);
   try
     EnsureSecretsTable;
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT 1 FROM ' + STableSecrets + ' WHERE Name = :Name';
-      Query.ParamByName('Name').AsString := AName;
-      Query.Open;
-      Result := not Query.Eof;
-    finally
-      Query.Free;
-    end;
+    Result := FStorage.SecretExists(AName);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseSecurity.GetSecretNames: TArray<string>;
-var
-  Query: TFDQuery;
-  List: TList<string>;
 begin
   SetLength(Result, 0);
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+
+  if not Assigned(FStorage) then
     Exit;
-  
+
   TMonitor.Enter(FLock);
   try
     EnsureSecretsTable;
-    
-    List := TList<string>.Create;
-    try
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-        Query.SQL.Text := 'SELECT Name FROM ' + STableSecrets + ' ORDER BY Name';
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          List.Add(Query.FieldByName('Name').AsString);
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
-      
-      Result := List.ToArray;
-    finally
-      List.Free;
-    end;
+    Result := FStorage.ReadSecretNames;
   finally
     TMonitor.Exit(FLock);
   end;

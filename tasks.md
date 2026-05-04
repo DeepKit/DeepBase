@@ -559,6 +559,7 @@
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
   - `Core/UniBase.Theme.pas`、`Core/UniBase.Hotkeys.pas`、`Core/UniBase.i18n.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
+  - `2026-05-04`：`Config/FormState/MRU/Theme/Hotkeys/i18n/License/Security` 的 `CreateStorageFromConnection` 已统一为“仅在 `AConnection<>nil` 时调用工厂”，修复空连接场景触发 `Expected TFDConnection` 的误报。
   - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Manager.FireDAC`，确保测试入口稳定完成 Manager/模块存储工厂注册。
   - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
@@ -918,6 +919,8 @@
   - `Core/UniBase.Logging.pas` 已完成日志存储抽象切片：DB 写入/清理/计数均走 `ILogStorage` 注入，Core 不再包含 FireDAC SQL 细节。
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已实现 FireDAC 版 `ILogStorage/ILogQueryStorage`，并保留 `Logs.Extra` 列缺失时的兼容写入路径。
   - `Tests/Test.UniBase.Logging.pas` 新增 `Test_StorageInjection_DelegatesDbWriteAndQuery`，覆盖注入写入、计数与清理委托行为。
+  - `2026-05-04`：`Core/UniBase.Authorization.pas`、`Core/UniBase.Exception.pas`、`Core/UniBase.Diagnose.pas`、`Core/UniBase.Manager.pas` 的工厂入口已补齐空连接保护（仅连接非空时调用注册工厂），避免适配器类型检查在 `nil` 输入下误抛异常。
+  - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
 - **状态**: ✅ 完成 (2026-05-03)

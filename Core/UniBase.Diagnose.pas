@@ -51,6 +51,27 @@ type
   
   TDiagnoseResults = TArray<TDiagnoseResult>;
 
+  /// <summary>
+  /// Diagnose storage abstraction (ARCH-039 incremental slice).
+  /// Allows callers to inject non-FireDAC implementations.
+  /// </summary>
+  IDiagnoseStorage = interface
+    ['{B9B9E3A0-A1F5-4FE9-95EF-C79E60DE0E38}']
+    function DiagnoseAll: TDiagnoseResults;
+    function CheckTablesExist: TDiagnoseResults;
+    function CheckColumnsExist: TDiagnoseResults;
+    function CheckIndexesExist: TDiagnoseResults;
+    function CheckSchemaVersion: TDiagnoseResults;
+    function CheckDataIntegrity: TDiagnoseResults;
+    function AutoFix(const AResults: TDiagnoseResults): Integer;
+    function AddColumnIfNotExists(const ATableName, AColumnName,
+      AColumnDef: string): Boolean;
+    function TableExists(const ATableName: string): Boolean;
+    function ColumnExists(const ATableName, AColumnName: string): Boolean;
+    function IndexExists(const AIndexName: string): Boolean;
+    function GetSchemaVersion: string;
+  end;
+
 const
   // Expected tables for each tier
   TIER0_TABLES: array[0..4] of string = (
@@ -72,52 +93,71 @@ const
 function DiagnoseAll(AConnection: TFDConnection): TDiagnoseResults;
 
 /// <summary>
+/// Perform comprehensive diagnosis via injected storage.
+/// </summary>
+function DiagnoseAllWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
+
+/// <summary>
 /// Check if all expected tables exist
 /// </summary>
 function CheckTablesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckTablesExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check if required columns exist in each table
 /// </summary>
 function CheckColumnsExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckColumnsExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check if required indexes exist
 /// </summary>
 function CheckIndexesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckIndexesExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check schema version compatibility
 /// </summary>
 function CheckSchemaVersion(AConnection: TFDConnection): TDiagnoseResults;
+function CheckSchemaVersionWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Attempt to automatically fix detected issues
 /// </summary>
 /// <returns>Number of issues fixed</returns>
 function AutoFix(AConnection: TFDConnection; const AResults: TDiagnoseResults): Integer;
+function AutoFixWithStorage(const AStorage: IDiagnoseStorage;
+  const AResults: TDiagnoseResults): Integer;
 
 /// <summary>
 /// Add a column to a table if it doesn't exist
 /// </summary>
 function AddColumnIfNotExists(AConnection: TFDConnection; 
   const ATableName, AColumnName, AColumnDef: string): Boolean;
+function AddColumnIfNotExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName, AColumnName, AColumnDef: string): Boolean;
 
 /// <summary>
 /// Check if a table exists in the database
 /// </summary>
 function TableExists(AConnection: TFDConnection; const ATableName: string): Boolean;
+function TableExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName: string): Boolean;
 
 /// <summary>
 /// Check if a column exists in a table
 /// </summary>
 function ColumnExists(AConnection: TFDConnection; 
   const ATableName, AColumnName: string): Boolean;
+function ColumnExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName, AColumnName: string): Boolean;
 
 /// <summary>
 /// Check if an index exists
 /// </summary>
 function IndexExists(AConnection: TFDConnection; const AIndexName: string): Boolean;
+function IndexExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const AIndexName: string): Boolean;
 
 /// <summary>
 /// Generate a human-readable diagnostic report
@@ -133,16 +173,238 @@ function GenerateDiagnoseSummary(const AResults: TDiagnoseResults): string;
 /// Get the current schema version from database
 /// </summary>
 function GetSchemaVersion(AConnection: TFDConnection): string;
+function GetSchemaVersionWithStorage(const AStorage: IDiagnoseStorage): string;
 
 /// <summary>
 /// Check data integrity: foreign keys, required fields, enum values
 /// </summary>
 function CheckDataIntegrity(AConnection: TFDConnection): TDiagnoseResults;
+function CheckDataIntegrityWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
+
+/// <summary>
+/// Create default FireDAC-backed diagnose storage adapter.
+/// </summary>
+function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
+
+/// <summary>
+/// Register custom connection->storage factory (ARCH-039).
+/// </summary>
+procedure SetDiagnoseStorageFactory(
+  const AFactory: TFunc<TObject, IDiagnoseStorage>);
 
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   UniBase.Schema;
+
+type
+  TFireDACDiagnoseStorage = class(TInterfacedObject, IDiagnoseStorage)
+  private
+    FConnection: TFDConnection;
+  public
+    constructor Create(AConnection: TFDConnection);
+    function DiagnoseAll: TDiagnoseResults;
+    function CheckTablesExist: TDiagnoseResults;
+    function CheckColumnsExist: TDiagnoseResults;
+    function CheckIndexesExist: TDiagnoseResults;
+    function CheckSchemaVersion: TDiagnoseResults;
+    function CheckDataIntegrity: TDiagnoseResults;
+    function AutoFix(const AResults: TDiagnoseResults): Integer;
+    function AddColumnIfNotExists(const ATableName, AColumnName,
+      AColumnDef: string): Boolean;
+    function TableExists(const ATableName: string): Boolean;
+    function ColumnExists(const ATableName, AColumnName: string): Boolean;
+    function IndexExists(const AIndexName: string): Boolean;
+    function GetSchemaVersion: string;
+  end;
+
+var
+  GConnectionStorageFactory: TFunc<TObject, IDiagnoseStorage>;
+
+constructor TFireDACDiagnoseStorage.Create(AConnection: TFDConnection);
+begin
+  inherited Create;
+  FConnection := AConnection;
+end;
+
+function TFireDACDiagnoseStorage.DiagnoseAll: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.DiagnoseAll(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.CheckTablesExist: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.CheckTablesExist(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.CheckColumnsExist: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.CheckColumnsExist(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.CheckIndexesExist: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.CheckIndexesExist(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.CheckSchemaVersion: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.CheckSchemaVersion(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.CheckDataIntegrity: TDiagnoseResults;
+begin
+  Result := UniBase.Diagnose.CheckDataIntegrity(FConnection);
+end;
+
+function TFireDACDiagnoseStorage.AutoFix(
+  const AResults: TDiagnoseResults): Integer;
+begin
+  Result := UniBase.Diagnose.AutoFix(FConnection, AResults);
+end;
+
+function TFireDACDiagnoseStorage.AddColumnIfNotExists(const ATableName,
+  AColumnName, AColumnDef: string): Boolean;
+begin
+  Result := UniBase.Diagnose.AddColumnIfNotExists(FConnection, ATableName,
+    AColumnName, AColumnDef);
+end;
+
+function TFireDACDiagnoseStorage.TableExists(const ATableName: string): Boolean;
+begin
+  Result := UniBase.Diagnose.TableExists(FConnection, ATableName);
+end;
+
+function TFireDACDiagnoseStorage.ColumnExists(const ATableName,
+  AColumnName: string): Boolean;
+begin
+  Result := UniBase.Diagnose.ColumnExists(FConnection, ATableName, AColumnName);
+end;
+
+function TFireDACDiagnoseStorage.IndexExists(const AIndexName: string): Boolean;
+begin
+  Result := UniBase.Diagnose.IndexExists(FConnection, AIndexName);
+end;
+
+function TFireDACDiagnoseStorage.GetSchemaVersion: string;
+begin
+  Result := UniBase.Diagnose.GetSchemaVersion(FConnection);
+end;
+
+function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
+begin
+  if Assigned(AConnection) and Assigned(GConnectionStorageFactory) then
+    Result := GConnectionStorageFactory(AConnection)
+  else if Assigned(AConnection) then
+    Result := TFireDACDiagnoseStorage.Create(AConnection)
+  else
+    Result := nil;
+end;
+
+procedure SetDiagnoseStorageFactory(
+  const AFactory: TFunc<TObject, IDiagnoseStorage>);
+begin
+  GConnectionStorageFactory := AFactory;
+end;
+
+function DiagnoseAllWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.DiagnoseAll
+  else
+    SetLength(Result, 0);
+end;
+
+function CheckTablesExistWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.CheckTablesExist
+  else
+    SetLength(Result, 0);
+end;
+
+function CheckColumnsExistWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.CheckColumnsExist
+  else
+    SetLength(Result, 0);
+end;
+
+function CheckIndexesExistWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.CheckIndexesExist
+  else
+    SetLength(Result, 0);
+end;
+
+function CheckSchemaVersionWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.CheckSchemaVersion
+  else
+    SetLength(Result, 0);
+end;
+
+function AutoFixWithStorage(const AStorage: IDiagnoseStorage;
+  const AResults: TDiagnoseResults): Integer;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.AutoFix(AResults)
+  else
+    Result := 0;
+end;
+
+function AddColumnIfNotExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName, AColumnName, AColumnDef: string): Boolean;
+begin
+  Result := Assigned(AStorage) and
+    AStorage.AddColumnIfNotExists(ATableName, AColumnName, AColumnDef);
+end;
+
+function TableExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName: string): Boolean;
+begin
+  Result := Assigned(AStorage) and AStorage.TableExists(ATableName);
+end;
+
+function ColumnExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const ATableName, AColumnName: string): Boolean;
+begin
+  Result := Assigned(AStorage) and AStorage.ColumnExists(ATableName, AColumnName);
+end;
+
+function IndexExistsWithStorage(const AStorage: IDiagnoseStorage;
+  const AIndexName: string): Boolean;
+begin
+  Result := Assigned(AStorage) and AStorage.IndexExists(AIndexName);
+end;
+
+function GetSchemaVersionWithStorage(const AStorage: IDiagnoseStorage): string;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.GetSchemaVersion
+  else
+    Result := '';
+end;
+
+function CheckDataIntegrityWithStorage(
+  const AStorage: IDiagnoseStorage): TDiagnoseResults;
+begin
+  if Assigned(AStorage) then
+    Result := AStorage.CheckDataIntegrity
+  else
+    SetLength(Result, 0);
+end;
 
 function TableExists(AConnection: TFDConnection; const ATableName: string): Boolean;
 var
@@ -152,7 +414,7 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := AConnection;
-    Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''table'' AND name=:tablename';
+    Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''table'' AND LOWER(name)=LOWER(:tablename)';
     Query.ParamByName('tablename').AsString := ATableName;
     Query.Open;
     Result := not Query.IsEmpty;
@@ -527,7 +789,7 @@ const
     (TableName: 'Languages'; ColumnName: 'TextDirection'; ValidValues: 'LTR,RTL'),
     (TableName: 'Notifications'; ColumnName: 'Priority'; ValidValues: 'LOW,NORMAL,HIGH,URGENT'),
     (TableName: 'Notifications'; ColumnName: 'Status'; ValidValues: 'PENDING,SHOWN,READ,DISMISSED'),
-    (TableName: 'LLMApiKeys'; ColumnName: 'EncryptionMethod'; ValidValues: 'PLAIN,DPAPI,AES'),
+    (TableName: 'LLMApiKeys'; ColumnName: 'EncryptionMethod'; ValidValues: 'PLAIN,DPAPI,AES,CREDMAN'),
     (TableName: 'MRU'; ColumnName: 'ItemType'; ValidValues: 'FILE,FOLDER,URL,QUERY,OTHER')
   );
 
@@ -851,7 +1113,7 @@ begin
     
     if Length(AResults) = 0 then
     begin
-      SB.AppendLine('[✓] All checks passed. Database schema is valid.');
+      SB.AppendLine('[OK] No issues found. Database schema is valid.');
     end
     else
     begin
@@ -875,6 +1137,16 @@ begin
         R := AResults[I];
         SB.AppendFormat('%d. %s', [I + 1, R.Issue]);
         SB.AppendLine;
+        if R.TableName <> '' then
+        begin
+          SB.AppendFormat('   Table: %s', [R.TableName]);
+          SB.AppendLine;
+        end;
+        if R.ObjectName <> '' then
+        begin
+          SB.AppendFormat('   Object: %s', [R.ObjectName]);
+          SB.AppendLine;
+        end;
         SB.AppendFormat('   Suggestion: %s', [R.Suggestion]);
         SB.AppendLine;
         if R.CanAutoFix then
@@ -905,7 +1177,7 @@ var
 begin
   if Length(AResults) = 0 then
   begin
-    Result := 'Database check passed.';
+    Result := 'No issues found. 0 issue(s).';
     Exit;
   end;
   

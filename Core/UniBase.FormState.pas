@@ -158,7 +158,7 @@ class function TUniBaseFormState.CreateStorageFromConnection(
   AConnection: TObject): IFormStateStorage;
 begin
   Result := nil;
-  if Assigned(FConnectionStorageFactory) then
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
     Result := FConnectionStorageFactory(AConnection);
   if (Result = nil) and Assigned(AConnection) then
     raise EInvalidOp.Create(
