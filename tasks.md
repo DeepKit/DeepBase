@@ -696,16 +696,18 @@
   - `Tests/TestNewModules.dpr` 与 `Examples/FullDemo/FullDemo.dpr`：将 `Updater/AutoUpdate` 路径统一到 `Features\` 实现，避免旧路径编译失败。
 
 #### ARCH-029: AipexBase Core/ThirdParty 重复 + ThirdParty 含 UI 代码
-- **状态**: ✅ 部分完成 (2026-05-03)
+- **状态**: ✅ 完成 (2026-05-04)
 - **优先级**: P1 (架构)
 - **问题**: AipexBase.Client 同时存在于 Core/ 和 ThirdParty/（差异巨大）。ThirdParty/AipexBase/ 直接包含 VCL/FMX Frame 代码，模糊层边界。
 - **影响**: 归属混乱，开发者不确定用哪个
 - **任务**:
   - [x] 统一 AipexBase.Client 到 ThirdParty/
-  - [ ] VCL/FMX Frame 移至对应 VCL/FMX 目录
-  - [ ] ThirdParty 只保留"接口+实现+工厂"
+  - [x] VCL/FMX Frame 移至对应 VCL/FMX 目录
+  - [x] ThirdParty 只保留"接口+实现+工厂"
 - **阶段进展**:
   - `Examples/UserAuthDemo/UserAuthDemo.dpr` 已改为引用 `ThirdParty\AipexBase\UniBase.AipexBase.Client.pas`，并清除 `Core\UniBase.AipexBase.Client.pas` 路径残留引用。
+  - `VCL/` 与 `FMX/` 已承载 `LoginDialog/RegisterDialog/ForgotPasswordDialog/UserProfileFrame/BalanceFrame/UsageStatsFrame/BillingFrame`，项目入口不再引用 `ThirdParty\AipexBase\VCL|FMX` 路径。
+  - `ThirdParty/AipexBase/` 新增 `UniBase.AipexBase.Factory.pas`，并将 `UniBase.AipexBase.Client.pas` 纳入版本库，收敛为 API 客户端 + 工厂实现。
 
 #### ARCH-030: Payment 模块策略与文档矛盾
 - **状态**: 🔲 待开始
