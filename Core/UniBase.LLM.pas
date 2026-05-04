@@ -26,7 +26,6 @@ uses
   System.Generics.Collections,
   System.DateUtils,
   System.SyncObjs,
-  FireDAC.Comp.Client,
   UniBase.Types;
 
 type
@@ -51,7 +50,7 @@ type
     Name: string;           // Config name (Default, Translation, CodeGen)
     Provider: TLLMProvider;
     BaseUrl: string;        // API base URL
-    ApiKey: string;         // API key
+    ApiKey: string;         // Runtime API key; persisted as a Credential Manager reference
     Model: string;          // Model name
     MaxTokens: Integer;     // Max output tokens
     Temperature: Double;    // Temperature (0.0-2.0)
@@ -217,12 +216,13 @@ type
   /// </summary>
   TUniBaseLLM = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
     FConfigCache: TDictionary<string, TLLMConfig>;
     FCacheLock: TCriticalSection;
     FHttpClient: TNetHTTPClient;
     FDefaultTimeout: Integer;
     
+    function GetFDConnection: TObject;
     function GetDefaultBaseUrl(Provider: TLLMProvider): string;
     function BuildRequestBody(const Config: TLLMConfig; const Messages: TLLMMessages): string;
     function BuildAnthropicRequestBody(const Config: TLLMConfig; const Messages: TLLMMessages): string;
@@ -233,7 +233,7 @@ type
     function EstimateCost(const Config: TLLMConfig; InputTokens, OutputTokens: Integer): Double;
     
   public
-    constructor Create(AConnection: TFDConnection);
+    constructor Create(AConnection: TObject);
     destructor Destroy; override;
     
     // ========================================================================
@@ -334,7 +334,7 @@ type
     // Properties
     // ========================================================================
     
-    property Connection: TFDConnection read FConnection;
+    property Connection: TObject read FConnection;
     property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
   end;
 
@@ -347,13 +347,21 @@ function StrToLLMProvider(const S: string): TLLMProvider;
 implementation
 
 uses
+  Data.DB,
+  FireDAC.Comp.Client,
   System.NetEncoding,
   System.RegularExpressions,
-  System.StrUtils;
+  System.StrUtils
+  {$IFDEF MSWINDOWS}
+  , UniBase.Security.DPAPI
+  {$ENDIF};
 
 const
   DEFAULT_TIMEOUT = 60000; // 60 seconds
   TEST_PROMPT = 'Reply with exactly: OK';
+  LLM_CREDENTIAL_REF_PREFIX = 'credman:';
+  LLM_CREDENTIAL_TARGET_PREFIX = 'UniBase_LLM_';
+  LLM_CREDENTIAL_TARGET_SUFFIX = '_ApiKey';
   
   URL_OPENAI = 'https://api.openai.com/v1';
   URL_ANTHROPIC = 'https://api.anthropic.com/v1';
@@ -386,6 +394,345 @@ begin
   else if Lower = 'ollama' then Result := lpOllama
   else if Lower = 'custom' then Result := lpCustom
   else Result := lpOpenAI;
+end;
+
+function UniBaseTableExists(Connection: TFDConnection; const TableName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  if not Assigned(Connection) or not Connection.Connected then
+    Exit;
+
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type = ''table'' AND name = :Name';
+      Query.ParamByName('Name').AsString := TableName;
+      Query.Open;
+      Result := not Query.Eof;
+    finally
+      Query.Free;
+    end;
+  except
+    Result := False;
+  end;
+end;
+
+function UniBaseTableHasColumn(Connection: TFDConnection; const TableName, ColumnName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  if not UniBaseTableExists(Connection, TableName) then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
+    try
+      Query.Open;
+      Result := Assigned(Query.FindField(ColumnName));
+    except
+      Result := False;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function QueryFieldString(Query: TFDQuery; const FieldName: string; const DefaultValue: string = ''): string;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsString;
+end;
+
+function QueryFieldInteger(Query: TFDQuery; const FieldName: string; DefaultValue: Integer = 0): Integer;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsInteger;
+end;
+
+function QueryFieldFloat(Query: TFDQuery; const FieldName: string; DefaultValue: Double = 0): Double;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsFloat;
+end;
+
+function QueryFieldDateTime(Query: TFDQuery; const FieldName: string): TDateTime;
+var
+  Field: TField;
+begin
+  Result := 0;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+  begin
+    try
+      Result := Field.AsDateTime;
+    except
+      Result := 0;
+    end;
+  end;
+end;
+
+function GetLLMConfigTableName(Connection: TFDConnection): string;
+begin
+  if UniBaseTableExists(Connection, 'LLMConfig') then
+    Result := 'LLMConfig'
+  else if UniBaseTableExists(Connection, 'LLMConfiguration') then
+    Result := 'LLMConfiguration'
+  else
+    Result := 'LLMConfig';
+end;
+
+function GetLLMCallsSelectSQL(Connection: TFDConnection; const ConfigName: string): string;
+var
+  HasCanonicalProvider: Boolean;
+begin
+  HasCanonicalProvider := UniBaseTableHasColumn(Connection, 'LLMCalls', 'ProviderCode');
+  if HasCanonicalProvider then
+  begin
+    Result :=
+      'SELECT Id, ConfigName, ProviderCode AS Provider, ModelId AS Model, ' +
+      'UserPrompt AS Prompt, AssistantResponse AS Response, InputTokens, OutputTokens, ' +
+      'TotalTokens, EstimatedCost, DurationMs, Success, ErrorCode, ErrorMessage, CallTime ' +
+      'FROM LLMCalls';
+  end
+  else
+  begin
+    Result :=
+      'SELECT Id, ConfigName, Provider, Model, Prompt, Response, InputTokens, OutputTokens, ' +
+      'TotalTokens, EstimatedCost, DurationMs, Success, ErrorCode, ErrorMessage, CallTime ' +
+      'FROM LLMCalls';
+  end;
+
+  if ConfigName <> '' then
+    Result := Result + ' WHERE ConfigName = :ConfigName';
+  Result := Result + ' ORDER BY CallTime DESC LIMIT :Limit';
+end;
+
+function IsLLMCredentialRef(const Value: string): Boolean;
+begin
+  Result := StartsText(LLM_CREDENTIAL_REF_PREFIX, Trim(Value));
+end;
+
+function ExtractLLMCredentialTarget(const CredentialRef: string): string;
+begin
+  Result := '';
+  if IsLLMCredentialRef(CredentialRef) then
+    Result := Copy(Trim(CredentialRef), Length(LLM_CREDENTIAL_REF_PREFIX) + 1, MaxInt);
+end;
+
+function BuildLLMCredentialRef(const TargetName: string): string;
+begin
+  if TargetName = '' then
+    Result := ''
+  else
+    Result := LLM_CREDENTIAL_REF_PREFIX + TargetName;
+end;
+
+function SanitizeCredentialTargetPart(const Value: string): string;
+const
+  INVALID_TARGET_CHARS: array[0..8] of Char = ('\', '/', ':', '*', '?', '"', '<', '>', '|');
+var
+  C: Char;
+begin
+  Result := Trim(Value);
+  for C in INVALID_TARGET_CHARS do
+    Result := StringReplace(Result, string(C), '_', [rfReplaceAll]);
+  if Result = '' then
+    Result := 'Default';
+end;
+
+function MakeLLMApiKeyCredentialTarget(const ConfigName: string): string;
+begin
+  Result := LLM_CREDENTIAL_TARGET_PREFIX +
+    SanitizeCredentialTargetPart(ConfigName) +
+    LLM_CREDENTIAL_TARGET_SUFFIX;
+end;
+
+function ResolveLLMCredentialOrRaw(const StoredValue: string): string;
+var
+  TargetName: string;
+begin
+  Result := StoredValue;
+  TargetName := ExtractLLMCredentialTarget(StoredValue);
+  if TargetName = '' then
+    Exit;
+
+  {$IFDEF MSWINDOWS}
+  Result := TCredentialManager.GetCredential(TargetName, '');
+  {$ELSE}
+  Result := '';
+  {$ENDIF}
+end;
+
+procedure DeleteLLMCredentialRef(const StoredValue: string);
+var
+  TargetName: string;
+begin
+  TargetName := ExtractLLMCredentialTarget(StoredValue);
+  if TargetName = '' then
+    Exit;
+
+  {$IFDEF MSWINDOWS}
+  TCredentialManager.DeleteCredential(TargetName);
+  {$ENDIF}
+end;
+
+function TryLoadLLMApiKeyByName(Connection: TFDConnection; const ApiKeyName: string;
+  out ApiKey: string): Boolean;
+var
+  Query: TFDQuery;
+  StoredApiKey: string;
+begin
+  Result := False;
+  ApiKey := '';
+  if (ApiKeyName = '') or not Assigned(Connection) or not Connection.Connected or
+    not UniBaseTableExists(Connection, 'LLMApiKeys') then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text :=
+      'SELECT ApiKey FROM LLMApiKeys ' +
+      'WHERE Name = :Name AND IsEnabled = 1 ' +
+      'ORDER BY IsDefault DESC, Id LIMIT 1';
+    Query.ParamByName('Name').AsString := ApiKeyName;
+    Query.Open;
+    if not Query.Eof then
+    begin
+      StoredApiKey := QueryFieldString(Query, 'ApiKey', '');
+      ApiKey := ResolveLLMCredentialOrRaw(StoredApiKey);
+      Result := True;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function ResolveLLMApiKey(Connection: TFDConnection; const ConfigName, StoredValue: string): string;
+begin
+  Result := '';
+  if StoredValue = '' then
+    Exit;
+
+  if IsLLMCredentialRef(StoredValue) then
+    Exit(ResolveLLMCredentialOrRaw(StoredValue));
+
+  if TryLoadLLMApiKeyByName(Connection, StoredValue, Result) then
+    Exit;
+
+  // Backward compatibility: older databases wrote the real key directly into
+  // LLMConfig.ApiKeyRef or LLMConfiguration.ApiKey.
+  Result := StoredValue;
+end;
+
+function ReadStoredApiKeyRefFromConfig(Connection: TFDConnection; const ConfigTable, ConfigName: string): string;
+var
+  Query: TFDQuery;
+begin
+  Result := '';
+  if not Assigned(Connection) or not Connection.Connected or
+    not UniBaseTableExists(Connection, ConfigTable) then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := Format('SELECT * FROM %s WHERE Name = :Name', [ConfigTable]);
+    Query.ParamByName('Name').AsString := ConfigName;
+    Query.Open;
+    if not Query.Eof then
+      Result := QueryFieldString(Query, 'ApiKeyRef',
+        QueryFieldString(Query, 'ApiKey', ''));
+  finally
+    Query.Free;
+  end;
+end;
+
+function PersistLLMApiKey(Connection: TFDConnection; const ConfigTable, ConfigName, ApiKey: string): string;
+var
+  ExistingRef: string;
+  ReferencedApiKey: string;
+  TargetName: string;
+begin
+  ExistingRef := ReadStoredApiKeyRefFromConfig(Connection, ConfigTable, ConfigName);
+
+  if ApiKey = '' then
+  begin
+    DeleteLLMCredentialRef(ExistingRef);
+    DeleteLLMCredentialRef(BuildLLMCredentialRef(MakeLLMApiKeyCredentialTarget(ConfigName)));
+    Exit('');
+  end;
+
+  if IsLLMCredentialRef(ApiKey) then
+    Exit(Trim(ApiKey));
+
+  ReferencedApiKey := '';
+  if TryLoadLLMApiKeyByName(Connection, ApiKey, ReferencedApiKey) then
+    Exit(ApiKey);
+
+  {$IFDEF MSWINDOWS}
+  TargetName := MakeLLMApiKeyCredentialTarget(ConfigName);
+  TCredentialManager.SaveCredential(TargetName, '', ApiKey);
+  Result := BuildLLMCredentialRef(TargetName);
+  if IsLLMCredentialRef(ExistingRef) and
+     not SameText(Trim(ExistingRef), Result) then
+    DeleteLLMCredentialRef(ExistingRef);
+  {$ELSE}
+  Result := ApiKey;
+  {$ENDIF}
+end;
+
+procedure LoadConfigFromQuery(Query: TFDQuery; Connection: TFDConnection; var Config: TLLMConfig);
+var
+  InputPricePer1M: Double;
+  OutputPricePer1M: Double;
+  StoredApiKey: string;
+begin
+  Config.Init;
+  Config.Name := QueryFieldString(Query, 'Name', Config.Name);
+  Config.Provider := TLLMConfig.StrToProvider(
+    QueryFieldString(Query, 'ProviderCode',
+      QueryFieldString(Query, 'Provider', Config.ProviderToStr)));
+  Config.BaseUrl := QueryFieldString(Query, 'BaseUrl',
+    QueryFieldString(Query, 'ApiUrl', Config.BaseUrl));
+  StoredApiKey := QueryFieldString(Query, 'ApiKeyRef',
+    QueryFieldString(Query, 'ApiKey', Config.ApiKey));
+  Config.ApiKey := ResolveLLMApiKey(Connection, Config.Name, StoredApiKey);
+  Config.Model := QueryFieldString(Query, 'ModelId',
+    QueryFieldString(Query, 'Model', Config.Model));
+  Config.MaxTokens := QueryFieldInteger(Query, 'MaxTokens', Config.MaxTokens);
+  Config.Temperature := QueryFieldFloat(Query, 'Temperature', Config.Temperature);
+  Config.SystemPrompt := QueryFieldString(Query, 'SystemPrompt', Config.SystemPrompt);
+  Config.IsEnabled := QueryFieldInteger(Query, 'IsEnabled', Ord(Config.IsEnabled)) = 1;
+  Config.IsDefault := QueryFieldInteger(Query, 'IsDefault', Ord(Config.IsDefault)) = 1;
+
+  Config.InputTokenPrice := QueryFieldFloat(Query, 'InputTokenPrice', Config.InputTokenPrice);
+  Config.OutputTokenPrice := QueryFieldFloat(Query, 'OutputTokenPrice', Config.OutputTokenPrice);
+
+  InputPricePer1M := QueryFieldFloat(Query, 'InputPricePer1M', -1);
+  OutputPricePer1M := QueryFieldFloat(Query, 'OutputPricePer1M', -1);
+  if InputPricePer1M >= 0 then
+    Config.InputTokenPrice := InputPricePer1M / 1000.0;
+  if OutputPricePer1M >= 0 then
+    Config.OutputTokenPrice := OutputPricePer1M / 1000.0;
 end;
 
 { TLLMConfig }
@@ -555,7 +902,7 @@ end;
 
 { TUniBaseLLM }
 
-constructor TUniBaseLLM.Create(AConnection: TFDConnection);
+constructor TUniBaseLLM.Create(AConnection: TObject);
 begin
   inherited Create;
   FConnection := AConnection;
@@ -567,6 +914,14 @@ begin
   FDefaultTimeout := DEFAULT_TIMEOUT;
   
   RefreshConfigCache;
+end;
+
+function TUniBaseLLM.GetFDConnection: TObject;
+begin
+  if Assigned(FConnection) and (FConnection is TFDConnection) then
+    Result := FConnection
+  else
+    Result := nil;
 end;
 
 destructor TUniBaseLLM.Destroy;
@@ -593,10 +948,13 @@ end;
 
 procedure TUniBaseLLM.RefreshConfigCache;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   Config: TLLMConfig;
+  ConfigTable: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   FCacheLock.Enter;
@@ -605,26 +963,17 @@ begin
     
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT * FROM LLMConfiguration WHERE IsEnabled = 1';
+      Query.Connection := Conn;
+      ConfigTable := GetLLMConfigTableName(Conn);
+      if not UniBaseTableExists(Conn, ConfigTable) then
+        Exit;
+
+      Query.SQL.Text := Format('SELECT * FROM %s WHERE IsEnabled = 1', [ConfigTable]);
       Query.Open;
       
       while not Query.Eof do
       begin
-        Config.Init;
-        Config.Name := Query.FieldByName('Name').AsString;
-        Config.Provider := TLLMConfig.StrToProvider(Query.FieldByName('Provider').AsString);
-        Config.BaseUrl := Query.FieldByName('BaseUrl').AsString;
-        Config.ApiKey := Query.FieldByName('ApiKey').AsString;
-        Config.Model := Query.FieldByName('Model').AsString;
-        Config.MaxTokens := Query.FieldByName('MaxTokens').AsInteger;
-        Config.Temperature := Query.FieldByName('Temperature').AsFloat;
-        Config.SystemPrompt := Query.FieldByName('SystemPrompt').AsString;
-        Config.InputTokenPrice := Query.FieldByName('InputTokenPrice').AsFloat;
-        Config.OutputTokenPrice := Query.FieldByName('OutputTokenPrice').AsFloat;
-        Config.IsEnabled := Query.FieldByName('IsEnabled').AsInteger = 1;
-        Config.IsDefault := Query.FieldByName('IsDefault').AsInteger = 1;
-        
+        LoadConfigFromQuery(Query, Conn, Config);
         FConfigCache.AddOrSetValue(Config.Name, Config);
         Query.Next;
       end;
@@ -679,44 +1028,78 @@ end;
 
 procedure TUniBaseLLM.SaveConfig(const AConfig: TLLMConfig);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   NowStr: string;
+  ConfigTable: string;
+  StoredApiKey: string;
+  CachedConfig: TLLMConfig;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
   
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'INSERT OR REPLACE INTO LLMConfiguration ' +
-      '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
-      'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
-      'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
-      ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)';
-    
-    Query.ParamByName('Name').AsString := AConfig.Name;
-    Query.ParamByName('Provider').AsString := AConfig.ProviderToStr;
-    Query.ParamByName('BaseUrl').AsString := AConfig.BaseUrl;
-    Query.ParamByName('ApiKey').AsString := AConfig.ApiKey;
-    Query.ParamByName('Model').AsString := AConfig.Model;
-    Query.ParamByName('MaxTokens').AsInteger := AConfig.MaxTokens;
-    Query.ParamByName('Temperature').AsFloat := AConfig.Temperature;
-    Query.ParamByName('SystemPrompt').AsString := AConfig.SystemPrompt;
-    Query.ParamByName('InputTokenPrice').AsFloat := AConfig.InputTokenPrice;
-    Query.ParamByName('OutputTokenPrice').AsFloat := AConfig.OutputTokenPrice;
-    Query.ParamByName('IsEnabled').AsInteger := Ord(AConfig.IsEnabled);
-    Query.ParamByName('IsDefault').AsInteger := Ord(AConfig.IsDefault);
-    Query.ParamByName('UpdatedAt').AsString := NowStr;
-    
+    Query.Connection := Conn;
+    ConfigTable := GetLLMConfigTableName(Conn);
+    StoredApiKey := PersistLLMApiKey(Conn, ConfigTable, AConfig.Name, AConfig.ApiKey);
+    if SameText(ConfigTable, 'LLMConfig') then
+    begin
+      Query.SQL.Text :=
+        'INSERT OR REPLACE INTO LLMConfig ' +
+        '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
+        'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt)';
+
+      Query.ParamByName('Name').AsString := AConfig.Name;
+      Query.ParamByName('Description').AsString := '';
+      Query.ParamByName('ProviderCode').AsString := AConfig.ProviderToStr;
+      Query.ParamByName('ModelId').AsString := AConfig.Model;
+      Query.ParamByName('BaseUrl').AsString := AConfig.BaseUrl;
+      Query.ParamByName('ApiKeyRef').AsString := StoredApiKey;
+      Query.ParamByName('MaxTokens').AsInteger := AConfig.MaxTokens;
+      Query.ParamByName('Temperature').AsFloat := AConfig.Temperature;
+      Query.ParamByName('SystemPrompt').AsString := AConfig.SystemPrompt;
+      Query.ParamByName('IsEnabled').AsInteger := Ord(AConfig.IsEnabled);
+      Query.ParamByName('IsDefault').AsInteger := Ord(AConfig.IsDefault);
+      Query.ParamByName('UpdatedAt').AsString := NowStr;
+    end
+    else
+    begin
+      Query.SQL.Text :=
+        'INSERT OR REPLACE INTO LLMConfiguration ' +
+        '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
+        'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)';
+
+      Query.ParamByName('Name').AsString := AConfig.Name;
+      Query.ParamByName('Provider').AsString := AConfig.ProviderToStr;
+      Query.ParamByName('BaseUrl').AsString := AConfig.BaseUrl;
+      Query.ParamByName('ApiKey').AsString := StoredApiKey;
+      Query.ParamByName('Model').AsString := AConfig.Model;
+      Query.ParamByName('MaxTokens').AsInteger := AConfig.MaxTokens;
+      Query.ParamByName('Temperature').AsFloat := AConfig.Temperature;
+      Query.ParamByName('SystemPrompt').AsString := AConfig.SystemPrompt;
+      Query.ParamByName('InputTokenPrice').AsFloat := AConfig.InputTokenPrice;
+      Query.ParamByName('OutputTokenPrice').AsFloat := AConfig.OutputTokenPrice;
+      Query.ParamByName('IsEnabled').AsInteger := Ord(AConfig.IsEnabled);
+      Query.ParamByName('IsDefault').AsInteger := Ord(AConfig.IsDefault);
+      Query.ParamByName('UpdatedAt').AsString := NowStr;
+    end;
+
     Query.ExecSQL;
+    CachedConfig := AConfig;
+    CachedConfig.ApiKey := ResolveLLMApiKey(Conn, AConfig.Name, StoredApiKey);
     
     // Update cache
     FCacheLock.Enter;
     try
-      FConfigCache.AddOrSetValue(AConfig.Name, AConfig);
+      FConfigCache.AddOrSetValue(AConfig.Name, CachedConfig);
     finally
       FCacheLock.Leave;
     end;
@@ -727,15 +1110,24 @@ end;
 
 procedure TUniBaseLLM.DeleteConfig(const AConfigName: string);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
+  ConfigTable: string;
+  StoredApiKey: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM LLMConfiguration WHERE Name = :Name';
+    Query.Connection := Conn;
+    ConfigTable := GetLLMConfigTableName(Conn);
+    StoredApiKey := ReadStoredApiKeyRefFromConfig(Conn, ConfigTable, AConfigName);
+    DeleteLLMCredentialRef(StoredApiKey);
+    DeleteLLMCredentialRef(BuildLLMCredentialRef(MakeLLMApiKeyCredentialTarget(AConfigName)));
+
+    Query.SQL.Text := Format('DELETE FROM %s WHERE Name = :Name', [ConfigTable]);
     Query.ParamByName('Name').AsString := AConfigName;
     Query.ExecSQL;
     
@@ -1023,11 +1415,13 @@ end;
 procedure TUniBaseLLM.RecordCall(const Config: TLLMConfig; const Prompt: string;
   const Response: TLLMChatResponse; const CallerModule, CallerFunc: string);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   Cost: Double;
   NowStr: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   Cost := EstimateCost(Config, Response.InputTokens, Response.OutputTokens);
@@ -1035,14 +1429,28 @@ begin
   
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'INSERT INTO LLMCalls (ConfigName, Provider, Model, Prompt, Response, ' +
-      'InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
-      'Success, ErrorCode, ErrorMessage, FinishReason, CallerModule, CallerFunction, CallTime) ' +
-      'VALUES (:ConfigName, :Provider, :Model, :Prompt, :Response, ' +
-      ':InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
-      ':Success, :ErrorCode, :ErrorMessage, :FinishReason, :CallerModule, :CallerFunction, :CallTime)';
+    Query.Connection := Conn;
+    if UniBaseTableHasColumn(Conn, 'LLMCalls', 'ProviderCode') then
+    begin
+      Query.SQL.Text :=
+        'INSERT INTO LLMCalls (ConfigName, ProviderCode, ModelId, SystemPrompt, UserPrompt, AssistantResponse, ' +
+        'FinishReason, InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
+        'Success, ErrorCode, ErrorMessage, CallerModule, CallerFunction, CallTime) ' +
+        'VALUES (:ConfigName, :Provider, :Model, :SystemPrompt, :Prompt, :Response, ' +
+        ':FinishReason, :InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
+        ':Success, :ErrorCode, :ErrorMessage, :CallerModule, :CallerFunction, :CallTime)';
+      Query.ParamByName('SystemPrompt').AsString := Config.SystemPrompt;
+    end
+    else
+    begin
+      Query.SQL.Text :=
+        'INSERT INTO LLMCalls (ConfigName, Provider, Model, Prompt, Response, ' +
+        'InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
+        'Success, ErrorCode, ErrorMessage, FinishReason, CallerModule, CallerFunction, CallTime) ' +
+        'VALUES (:ConfigName, :Provider, :Model, :Prompt, :Response, ' +
+        ':InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
+        ':Success, :ErrorCode, :ErrorMessage, :FinishReason, :CallerModule, :CallerFunction, :CallTime)';
+    end;
     
     Query.ParamByName('ConfigName').AsString := Config.Name;
     Query.ParamByName('Provider').AsString := Config.ProviderToStr;
@@ -1240,16 +1648,18 @@ end;
 
 function TUniBaseLLM.GetTemplate(const TemplateName: string): TLLMPromptTemplate;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
 begin
   Result.Init;
   
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE Name = :Name AND IsEnabled = 1';
     Query.ParamByName('Name').AsString := TemplateName;
     Query.Open;
@@ -1263,20 +1673,22 @@ end;
 
 function TUniBaseLLM.GetAllTemplates: TLLMPromptTemplateArray;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   List: TList<TLLMPromptTemplate>;
   Template: TLLMPromptTemplate;
 begin
   SetLength(Result, 0);
   
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   List := TList<TLLMPromptTemplate>.Create;
   try
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE IsEnabled = 1 ORDER BY SortOrder, Name';
       Query.Open;
       
@@ -1298,20 +1710,22 @@ end;
 
 function TUniBaseLLM.GetTemplatesByCategory(const Category: string): TLLMPromptTemplateArray;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   List: TList<TLLMPromptTemplate>;
   Template: TLLMPromptTemplate;
 begin
   SetLength(Result, 0);
   
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   List := TList<TLLMPromptTemplate>.Create;
   try
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE Category = :Category AND IsEnabled = 1 ORDER BY SortOrder, Name';
       Query.ParamByName('Category').AsString := Category;
       Query.Open;
@@ -1371,49 +1785,51 @@ end;
 
 function TUniBaseLLM.GetCallHistory(ALimit: Integer; const ConfigName: string): TLLMCallRecordArray;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   List: TList<TLLMCallRecord>;
   Rec: TLLMCallRecord;
 begin
   SetLength(Result, 0);
   
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   List := TList<TLLMCallRecord>.Create;
   try
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       
       if ConfigName <> '' then
       begin
-        Query.SQL.Text := 'SELECT * FROM LLMCalls WHERE ConfigName = :ConfigName ORDER BY CallTime DESC LIMIT :Limit';
+        Query.SQL.Text := GetLLMCallsSelectSQL(Conn, ConfigName);
         Query.ParamByName('ConfigName').AsString := ConfigName;
       end
       else
-        Query.SQL.Text := 'SELECT * FROM LLMCalls ORDER BY CallTime DESC LIMIT :Limit';
+        Query.SQL.Text := GetLLMCallsSelectSQL(Conn, '');
       
       Query.ParamByName('Limit').AsInteger := ALimit;
       Query.Open;
       
       while not Query.Eof do
       begin
-        Rec.Id := Query.FieldByName('Id').AsInteger;
-        Rec.ConfigName := Query.FieldByName('ConfigName').AsString;
-        Rec.Provider := Query.FieldByName('Provider').AsString;
-        Rec.Model := Query.FieldByName('Model').AsString;
-        Rec.Prompt := Query.FieldByName('Prompt').AsString;
-        Rec.Response := Query.FieldByName('Response').AsString;
-        Rec.InputTokens := Query.FieldByName('InputTokens').AsInteger;
-        Rec.OutputTokens := Query.FieldByName('OutputTokens').AsInteger;
-        Rec.TotalTokens := Query.FieldByName('TotalTokens').AsInteger;
-        Rec.EstimatedCost := Query.FieldByName('EstimatedCost').AsFloat;
-        Rec.DurationMs := Query.FieldByName('DurationMs').AsInteger;
-        Rec.Success := Query.FieldByName('Success').AsInteger = 1;
-        Rec.ErrorCode := Query.FieldByName('ErrorCode').AsString;
-        Rec.ErrorMessage := Query.FieldByName('ErrorMessage').AsString;
-        Rec.CallTime := Query.FieldByName('CallTime').AsDateTime;
+        Rec.Id := QueryFieldInteger(Query, 'Id');
+        Rec.ConfigName := QueryFieldString(Query, 'ConfigName');
+        Rec.Provider := QueryFieldString(Query, 'Provider');
+        Rec.Model := QueryFieldString(Query, 'Model');
+        Rec.Prompt := QueryFieldString(Query, 'Prompt');
+        Rec.Response := QueryFieldString(Query, 'Response');
+        Rec.InputTokens := QueryFieldInteger(Query, 'InputTokens');
+        Rec.OutputTokens := QueryFieldInteger(Query, 'OutputTokens');
+        Rec.TotalTokens := QueryFieldInteger(Query, 'TotalTokens');
+        Rec.EstimatedCost := QueryFieldFloat(Query, 'EstimatedCost');
+        Rec.DurationMs := QueryFieldInteger(Query, 'DurationMs');
+        Rec.Success := QueryFieldInteger(Query, 'Success', 1) = 1;
+        Rec.ErrorCode := QueryFieldString(Query, 'ErrorCode');
+        Rec.ErrorMessage := QueryFieldString(Query, 'ErrorMessage');
+        Rec.CallTime := QueryFieldDateTime(Query, 'CallTime');
         
         List.Add(Rec);
         Query.Next;
@@ -1431,6 +1847,7 @@ end;
 procedure TUniBaseLLM.GetUsageStats(const ConfigName: string; DaysBack: Integer;
   out TotalCalls: Integer; out TotalTokens: Integer; out TotalCost: Double);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   CutoffDate: string;
 begin
@@ -1438,7 +1855,8 @@ begin
   TotalTokens := 0;
   TotalCost := 0;
   
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
   
   // 使用参数化方式避免 FireDAC 误解 datetime('now')
@@ -1446,7 +1864,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     
     if ConfigName <> '' then
     begin
@@ -1477,15 +1895,17 @@ end;
 
 procedure TUniBaseLLM.ClearOldCalls(DaysToKeep: Integer);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   CutoffDate: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     
     if DaysToKeep <= 0 then
       Query.SQL.Text := 'DELETE FROM LLMCalls'
@@ -1507,6 +1927,7 @@ end;
 
 procedure TUniBaseLLM.SaveTemplate(const Template: TLLMPromptTemplate);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   VarsJson, IncJson: TJSONArray;
   DefsJson: TJSONObject;
@@ -1514,7 +1935,8 @@ var
   Key: string;
   NowStr: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
   if Template.Name = '' then
     raise ELLMException.Create('Template name cannot be empty');
@@ -1542,7 +1964,7 @@ begin
         
         Query := TFDQuery.Create(nil);
         try
-          Query.Connection := FConnection;
+          Query.Connection := Conn;
           
           // Check if exists
           Query.SQL.Text := 'SELECT Id FROM LLMPromptTemplates WHERE Name = :Name';
@@ -1618,14 +2040,16 @@ end;
 
 procedure TUniBaseLLM.DeleteTemplate(const TemplateName: string);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  Conn := TFDConnection(GetFDConnection);
+  if not Assigned(Conn) or not Conn.Connected then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := 'DELETE FROM LLMPromptTemplates WHERE Name = :Name AND IsBuiltIn = 0';
     Query.ParamByName('Name').AsString := TemplateName;
     Query.ExecSQL;
