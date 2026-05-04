@@ -123,9 +123,6 @@ type
 
 implementation
 
-uses
-  FMX.MultiResMgr;
-
 { TFMXFormStateHelper }
 
 constructor TFMXFormStateHelper.Create(AOwner: TComponent);
@@ -217,10 +214,10 @@ begin
   if FForm = nil then Exit;
   
   // 恢复原始事件（只在我们的处理器还在时才恢复）
-  if @FForm.OnShow = @InternalOnShow then
+  if TMethod(FForm.OnShow).Code = @TFMXFormStateHelper.InternalOnShow then
     FForm.OnShow := FOldOnShow;
-    
-  if @FForm.OnClose = @InternalOnClose then
+
+  if TMethod(FForm.OnClose).Code = @TFMXFormStateHelper.InternalOnClose then
     FForm.OnClose := FOldOnClose;
 end;
 
@@ -259,7 +256,7 @@ begin
   Result := TRectF.Create(0, 0, 1920, 1080); // 默认值
   
   if TPlatformServices.Current.SupportsPlatformService(IFMXScreenService, ScreenSvc) then
-    Result := ScreenSvc.GetWorkAreaRect;
+    Result := TRectF.Create(0, 0, ScreenSvc.GetScreenSize.X, ScreenSvc.GetScreenSize.Y);
 end;
 
 procedure TFMXFormStateHelper.EnsureFormVisible(var Data: TFormStateData);
@@ -298,50 +295,46 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    // 收集状态数据
-    Data.Init;
-    
-    // FMX 窗体状态处理
-    if FForm.WindowState = TWindowState.wsMaximized then
-    begin
-      // 最大化时，保存当前位置（FMX 在最大化时也有 Bounds）
-      Data.Left := Round(FForm.Left);
-      Data.Top := Round(FForm.Top);
-      Data.Width := Round(FForm.ClientWidth);
-      Data.Height := Round(FForm.ClientHeight);
-      Data.WindowState := 2;
-    end
-    else if FForm.WindowState = TWindowState.wsMinimized then
-    begin
-      Data.Left := Round(FForm.Left);
-      Data.Top := Round(FForm.Top);
-      Data.Width := Round(FForm.ClientWidth);
-      Data.Height := Round(FForm.ClientHeight);
-      Data.WindowState := 1;
-    end
-    else
-    begin
-      Data.Left := Round(FForm.Left);
-      Data.Top := Round(FForm.Top);
-      Data.Width := Round(FForm.ClientWidth);
-      Data.Height := Round(FForm.ClientHeight);
-      Data.WindowState := 0;
-    end;
-    
-    Data.MonitorIndex := 0; // FMX 暂不支持多显示器索引
-    
-    // 收集额外数据
-    ExtraData := '';
-    if Assigned(FOnSaveExtra) then
-      FOnSaveExtra(Self, ExtraData);
-    Data.Extra := ExtraData;
-    
-    FormState.SaveState(EffectiveName, Data);
-  finally
-    FormState.Free;
+  FormState := UniBase.Manager.UniBase.FormState;
+  // 收集状态数据
+  Data.Init;
+  
+  // FMX 窗体状态处理
+  if FForm.WindowState = TWindowState.wsMaximized then
+  begin
+    // 最大化时，保存当前位置（FMX 在最大化时也有 Bounds）
+    Data.Left := Round(FForm.Left);
+    Data.Top := Round(FForm.Top);
+    Data.Width := Round(FForm.ClientWidth);
+    Data.Height := Round(FForm.ClientHeight);
+    Data.WindowState := 2;
+  end
+  else if FForm.WindowState = TWindowState.wsMinimized then
+  begin
+    Data.Left := Round(FForm.Left);
+    Data.Top := Round(FForm.Top);
+    Data.Width := Round(FForm.ClientWidth);
+    Data.Height := Round(FForm.ClientHeight);
+    Data.WindowState := 1;
+  end
+  else
+  begin
+    Data.Left := Round(FForm.Left);
+    Data.Top := Round(FForm.Top);
+    Data.Width := Round(FForm.ClientWidth);
+    Data.Height := Round(FForm.ClientHeight);
+    Data.WindowState := 0;
   end;
+  
+  Data.MonitorIndex := 0; // FMX 暂不支持多显示器索引
+  
+  // 收集额外数据
+  ExtraData := '';
+  if Assigned(FOnSaveExtra) then
+    FOnSaveExtra(Self, ExtraData);
+  Data.Extra := ExtraData;
+  
+  FormState.SaveState(EffectiveName, Data);
 end;
 
 procedure TFMXFormStateHelper.RestoreState;
@@ -356,31 +349,27 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    if FormState.RestoreState(EffectiveName, Data) then
-    begin
-      // 确保窗体在可见范围内
-      EnsureFormVisible(Data);
-      
-      // 先设置为正常状态以便设置位置
-      FForm.WindowState := TWindowState.wsNormal;
-      
-      // 应用位置和大小
-      FForm.SetBounds(Data.Left, Data.Top, Data.Width, Data.Height);
-      
-      // 恢复窗口状态
-      case Data.WindowState of
-        2: FForm.WindowState := TWindowState.wsMaximized;
-        // 不恢复最小化状态，因为用户显然想看到窗体
-      end;
-      
-      // 恢复额外数据
-      if Assigned(FOnRestoreExtra) and (Data.Extra <> '') then
-        FOnRestoreExtra(Self, Data.Extra);
+  FormState := UniBase.Manager.UniBase.FormState;
+  if FormState.RestoreState(EffectiveName, Data) then
+  begin
+    // 确保窗体在可见范围内
+    EnsureFormVisible(Data);
+    
+    // 先设置为正常状态以便设置位置
+    FForm.WindowState := TWindowState.wsNormal;
+    
+    // 应用位置和大小
+    FForm.SetBounds(Data.Left, Data.Top, Data.Width, Data.Height);
+    
+    // 恢复窗口状态
+    case Data.WindowState of
+      2: FForm.WindowState := TWindowState.wsMaximized;
+      // 不恢复最小化状态，因为用户显然想看到窗体
     end;
-  finally
-    FormState.Free;
+    
+    // 恢复额外数据
+    if Assigned(FOnRestoreExtra) and (Data.Extra <> '') then
+      FOnRestoreExtra(Self, Data.Extra);
   end;
 end;
 
@@ -395,12 +384,8 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    Result := FormState.HasState(EffectiveName);
-  finally
-    FormState.Free;
-  end;
+  FormState := UniBase.Manager.UniBase.FormState;
+  Result := FormState.HasState(EffectiveName);
 end;
 
 procedure TFMXFormStateHelper.DeleteSavedState;
@@ -413,12 +398,8 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    FormState.DeleteState(EffectiveName);
-  finally
-    FormState.Free;
-  end;
+  FormState := UniBase.Manager.UniBase.FormState;
+  FormState.DeleteState(EffectiveName);
 end;
 
 end.

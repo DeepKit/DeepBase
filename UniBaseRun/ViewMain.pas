@@ -105,8 +105,8 @@ begin
   FFormState := nil;
   
   // 初始化 FormState 管理器
-  if FUB.IsInitialized and Assigned(FUB.ConfigDB) then
-    FFormState := TUniBaseFormState.Create(FUB.ConfigDB, FUB.Lock);
+  if FUB.IsInitialized then
+    FFormState := FUB.FormState;
   
   InitializeController;
   SetupWelcomePage;
@@ -135,8 +135,7 @@ begin
   // 保存窗体状态
   SaveFormState;
   
-  if Assigned(FFormState) then
-    FreeAndNil(FFormState);
+  FFormState := nil;
     
   Action := TCloseAction.caFree;
 end;

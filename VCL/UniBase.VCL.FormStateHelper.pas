@@ -114,6 +114,7 @@ implementation
 uses
   Winapi.Windows,
   Vcl.Controls,
+  System.Math,
   System.Types,
   UniBase.Logging;  // BUG-023 FIX: 添加日志支持
 
@@ -141,7 +142,7 @@ begin
     except
       // BUG-023 FIX: 记录异常信息用于调试，而不是完全忽略
       on E: Exception do
-        Logger.Warn('FormStateHelper.Destroy: Failed to save state for form "%s": %s',
+        Logger.WarnFmt('FormStateHelper.Destroy: Failed to save state for form "%s": %s',
           [GetEffectiveFormName, E.Message], 'FormStateHelper');
     end;
   end;
@@ -208,16 +209,33 @@ end;
 
 procedure TFormStateHelper.UnhookFormEvents;
 begin
+  var CurrentHandler: TMethod;
+  var InternalHandler: TMethod;
+  var NotifyHandler: TNotifyEvent;
+  var CloseHandler: TCloseEvent;
+
   if FForm = nil then Exit;
-  
+
   // 恢复原始事件（只在我们的处理器还在时才恢复）
-  if @FForm.OnShow = @InternalOnShow then
+  CurrentHandler := TMethod(FForm.OnShow);
+  NotifyHandler := InternalOnShow;
+  InternalHandler := TMethod(NotifyHandler);
+  if (CurrentHandler.Code = InternalHandler.Code) and
+     (CurrentHandler.Data = InternalHandler.Data) then
     FForm.OnShow := FOldOnShow;
-    
-  if @FForm.OnClose = @InternalOnClose then
+
+  CurrentHandler := TMethod(FForm.OnClose);
+  CloseHandler := InternalOnClose;
+  InternalHandler := TMethod(CloseHandler);
+  if (CurrentHandler.Code = InternalHandler.Code) and
+     (CurrentHandler.Data = InternalHandler.Data) then
     FForm.OnClose := FOldOnClose;
-    
-  if @FForm.OnDestroy = @InternalOnDestroy then
+
+  CurrentHandler := TMethod(FForm.OnDestroy);
+  NotifyHandler := InternalOnDestroy;
+  InternalHandler := TMethod(NotifyHandler);
+  if (CurrentHandler.Code = InternalHandler.Code) and
+     (CurrentHandler.Data = InternalHandler.Data) then
     FForm.OnDestroy := FOldOnDestroy;
 end;
 
@@ -260,7 +278,7 @@ begin
     except
       // BUG-023 FIX: 记录异常信息用于调试，而不是完全忽略
       on E: Exception do
-        Logger.Warn('FormStateHelper.OnDestroy: Failed to save state for form "%s": %s',
+        Logger.WarnFmt('FormStateHelper.OnDestroy: Failed to save state for form "%s": %s',
           [GetEffectiveFormName, E.Message], 'FormStateHelper');
     end;
   end;
@@ -381,51 +399,47 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    // 收集状态数据
-    Data.Init;
-    
-    // 使用 GetWindowPlacement 获取正常状态下的窗口边界
-    // 这在最大化/最小化状态下也能正确返回 RestoreBounds
-    Placement.length := SizeOf(TWindowPlacement);
-    if GetWindowPlacement(FForm.Handle, @Placement) then
-    begin
-      NormalRect := Placement.rcNormalPosition;
-      Data.Left := NormalRect.Left;
-      Data.Top := NormalRect.Top;
-      Data.Width := NormalRect.Width;
-      Data.Height := NormalRect.Height;
-    end
-    else
-    begin
-      // 回退到直接读取属性
-      Data.Left := FForm.Left;
-      Data.Top := FForm.Top;
-      Data.Width := FForm.Width;
-      Data.Height := FForm.Height;
-    end;
-    
-    // 保存窗口状态
-    case FForm.WindowState of
-      wsMaximized: Data.WindowState := 2;
-      wsMinimized: Data.WindowState := 1;
-    else
-      Data.WindowState := 0;
-    end;
-    
-    Data.MonitorIndex := FForm.Monitor.MonitorNum;
-    
-    // 收集额外数据
-    ExtraData := '';
-    if Assigned(FOnSaveExtra) then
-      FOnSaveExtra(Self, ExtraData);
-    Data.Extra := ExtraData;
-    
-    FormState.SaveState(EffectiveName, Data);
-  finally
-    FormState.Free;
+  FormState := UniBase.Manager.UniBase.FormState;
+  // 收集状态数据
+  Data.Init;
+  
+  // 使用 GetWindowPlacement 获取正常状态下的窗口边界
+  // 这在最大化/最小化状态下也能正确返回 RestoreBounds
+  Placement.length := SizeOf(TWindowPlacement);
+  if GetWindowPlacement(FForm.Handle, @Placement) then
+  begin
+    NormalRect := Placement.rcNormalPosition;
+    Data.Left := NormalRect.Left;
+    Data.Top := NormalRect.Top;
+    Data.Width := NormalRect.Width;
+    Data.Height := NormalRect.Height;
+  end
+  else
+  begin
+    // 回退到直接读取属性
+    Data.Left := FForm.Left;
+    Data.Top := FForm.Top;
+    Data.Width := FForm.Width;
+    Data.Height := FForm.Height;
   end;
+  
+  // 保存窗口状态
+  case FForm.WindowState of
+    wsMaximized: Data.WindowState := 2;
+    wsMinimized: Data.WindowState := 1;
+  else
+    Data.WindowState := 0;
+  end;
+  
+  Data.MonitorIndex := FForm.Monitor.MonitorNum;
+  
+  // 收集额外数据
+  ExtraData := '';
+  if Assigned(FOnSaveExtra) then
+    FOnSaveExtra(Self, ExtraData);
+  Data.Extra := ExtraData;
+  
+  FormState.SaveState(EffectiveName, Data);
 end;
 
 procedure TFormStateHelper.RestoreState;
@@ -440,31 +454,27 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    if FormState.RestoreState(EffectiveName, Data) then
-    begin
-      // 确保窗体在可见范围内
-      EnsureFormVisible(Data);
-      
-      // 先设置为正常状态以便设置位置
-      FForm.WindowState := wsNormal;
-      
-      // 应用位置和大小
-      FForm.SetBounds(Data.Left, Data.Top, Data.Width, Data.Height);
-      
-      // 恢复窗口状态
-      case Data.WindowState of
-        2: FForm.WindowState := wsMaximized;
-        // 不恢复最小化状态，因为用户显然想看到窗体
-      end;
-      
-      // 恢复额外数据
-      if Assigned(FOnRestoreExtra) and (Data.Extra <> '') then
-        FOnRestoreExtra(Self, Data.Extra);
+  FormState := UniBase.Manager.UniBase.FormState;
+  if FormState.RestoreState(EffectiveName, Data) then
+  begin
+    // 确保窗体在可见范围内
+    EnsureFormVisible(Data);
+    
+    // 先设置为正常状态以便设置位置
+    FForm.WindowState := wsNormal;
+    
+    // 应用位置和大小
+    FForm.SetBounds(Data.Left, Data.Top, Data.Width, Data.Height);
+    
+    // 恢复窗口状态
+    case Data.WindowState of
+      2: FForm.WindowState := wsMaximized;
+      // 不恢复最小化状态，因为用户显然想看到窗体
     end;
-  finally
-    FormState.Free;
+    
+    // 恢复额外数据
+    if Assigned(FOnRestoreExtra) and (Data.Extra <> '') then
+      FOnRestoreExtra(Self, Data.Extra);
   end;
 end;
 
@@ -479,12 +489,8 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    Result := FormState.HasState(EffectiveName);
-  finally
-    FormState.Free;
-  end;
+  FormState := UniBase.Manager.UniBase.FormState;
+  Result := FormState.HasState(EffectiveName);
 end;
 
 procedure TFormStateHelper.DeleteSavedState;
@@ -497,12 +503,8 @@ begin
   EffectiveName := GetEffectiveFormName;
   if EffectiveName = '' then Exit;
   
-  FormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
-  try
-    FormState.DeleteState(EffectiveName);
-  finally
-    FormState.Free;
-  end;
+  FormState := UniBase.Manager.UniBase.FormState;
+  FormState.DeleteState(EffectiveName);
 end;
 
 end.

@@ -557,6 +557,7 @@
   - `Core/UniBase.Manager.pas` 已接入 `IManagerStorage` 工厂扩展点（`SetStorageFactory/CreateStorageFromConnection`），并在 Schema 校验/ProjectInfo/SchemaVersion 等路径优先走抽象接口，保留 SQL 回退。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
+  - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
 
 #### ARCH-020: 异常类继承断裂（EUniBaseDbError / EMathException）
@@ -870,6 +871,7 @@
   - `Core/UniBase.Storage.Interfaces.pas` 新增 `IManagerStorage` 契约；`Core/UniBase.Manager.pas` 增加存储工厂注入点并将部分元数据访问迁移为接口优先路径（Schema 校验、列检查、版本/项目信息读写）。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 与 `UniBasePersistence.dpk` 已打通，Manager 抽象层具备 FireDAC 适配落地。
   - `IManagerStorage` 已新增 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage` 扩展点；`TUniBaseManager.InitializeModules` 对 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 采用“接口优先 + 兼容回退”创建策略，减少对连接构造路径的绑定。
+  - VCL/FMX 辅助组件与 Demo/Runner 入口已优先复用 Manager 管理的子模块实例，减少外层调用对 `TUniBase*.Create(ConfigDB, Lock)` 构造路径的耦合。
   - 新增 `Core/UniBase.Storage.Interfaces.pas`，统一声明 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage`。
   - `Core/UniBase.Config.pas` 新增存储注入能力：支持 `TUniBaseConfig.Create(const AStorage: IConfigStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
   - 新增 `Persistence/UniBase.Persistence.Config.FireDAC.pas`，提供 FireDAC 版 `IConfigStorage` 适配器与工厂注册。

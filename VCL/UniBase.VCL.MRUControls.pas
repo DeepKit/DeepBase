@@ -129,12 +129,8 @@ begin
   if FCategory = '' then Exit;
   
   // 从 MRU 模块获取项目
-  MRU := TUniBaseMRU.Create(UniBase.Manager.UniBase.ConfigDB);
-  try
-    MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
-  finally
-    MRU.Free;
-  end;
+  MRU := UniBase.Manager.UniBase.MRU;
+  MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
   
   if Length(MRUItems) = 0 then
   begin
@@ -203,17 +199,13 @@ begin
   if not UniBase.Manager.UniBase.IsInitialized then Exit;
   if FCategory = '' then Exit;
   
-  MRU := TUniBaseMRU.Create(UniBase.Manager.UniBase.ConfigDB);
-  try
-    MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
-    
-    for Item in MRUItems do
-    begin
-      Items.AddObject(Item.DisplayName, TObject(NativeInt(Items.Count)));
-      // 存储完整数据需要更复杂的方案，这里简化处理
-    end;
-  finally
-    MRU.Free;
+  MRU := UniBase.Manager.UniBase.MRU;
+  MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
+  
+  for Item in MRUItems do
+  begin
+    Items.AddObject(Item.DisplayName, TObject(NativeInt(Items.Count)));
+    // 存储完整数据需要更复杂的方案，这里简化处理
   end;
 end;
 
@@ -233,14 +225,10 @@ begin
   if ItemIndex < 0 then Exit;
   if not UniBase.Manager.UniBase.IsInitialized then Exit;
   
-  MRU := TUniBaseMRU.Create(UniBase.Manager.UniBase.ConfigDB);
-  try
-    MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
-    if ItemIndex < Length(MRUItems) then
-      Result := MRUItems[ItemIndex].ItemKey;
-  finally
-    MRU.Free;
-  end;
+  MRU := UniBase.Manager.UniBase.MRU;
+  MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
+  if ItemIndex < Length(MRUItems) then
+    Result := MRUItems[ItemIndex].ItemKey;
 end;
 
 procedure TMRUComboBox.SelectByItemKey(const ItemKey: string);
@@ -251,19 +239,15 @@ var
 begin
   if not UniBase.Manager.UniBase.IsInitialized then Exit;
   
-  MRU := TUniBaseMRU.Create(UniBase.Manager.UniBase.ConfigDB);
-  try
-    MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
-    for I := 0 to High(MRUItems) do
+  MRU := UniBase.Manager.UniBase.MRU;
+  MRUItems := MRU.GetMRUItems(FCategory, FMaxItems);
+  for I := 0 to High(MRUItems) do
+  begin
+    if MRUItems[I].ItemKey = ItemKey then
     begin
-      if MRUItems[I].ItemKey = ItemKey then
-      begin
-        ItemIndex := I;
-        Exit;
-      end;
+      ItemIndex := I;
+      Exit;
     end;
-  finally
-    MRU.Free;
   end;
 end;
 

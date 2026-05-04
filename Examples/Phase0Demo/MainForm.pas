@@ -93,14 +93,14 @@ begin
     Log('UniBase Initialized.');
     Log('Root Path: ' + UniBase.Manager.UniBase.RootPath);
     
-    // Instantiate Modules
-    FConfig := TUniBaseConfig.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
+    // Reuse Manager-owned Modules
+    FConfig := UniBase.Manager.UniBase.Config;
     FConfig.OnConfigChanged := OnConfigChanged;
     
-    FI18n := TUniBaseI18n.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
+    FI18n := UniBase.Manager.UniBase.I18n;
     FI18n.OnLanguageChanged := OnLanguageChanged;
     
-    FFormState := TUniBaseFormState.Create(UniBase.Manager.UniBase.ConfigDB, UniBase.Manager.UniBase.Lock);
+    FFormState := UniBase.Manager.UniBase.FormState;
     
     // Load initial data
     edtConfig.Text := FConfig.GetConfig('Demo.TestValue', 'Default Value');
@@ -129,9 +129,9 @@ end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  if Assigned(FFormState) then FFormState.Free;
-  if Assigned(FI18n) then FI18n.Free;
-  if Assigned(FConfig) then FConfig.Free;
+  FFormState := nil;
+  FI18n := nil;
+  FConfig := nil;
 end;
 
 procedure TfrmMain.FormShow(Sender: TObject);
