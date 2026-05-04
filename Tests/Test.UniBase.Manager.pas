@@ -61,6 +61,9 @@ type
     procedure Test_Properties_AfterInit;
 
     [Test]
+    procedure Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase;
+
+    [Test]
     procedure Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables;
   end;
 
@@ -200,6 +203,82 @@ begin
   
   Assert.AreEqual(UNIBASE_VERSION, UNIBASE_VERSION, 'Version 常量应存在');
   Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该为 True');
+end;
+
+procedure TTestUniBaseManager.Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase;
+var
+  DBPath, LegacyItemPath: string;
+  SetupConn: TFDConnection;
+  Query: TFDQuery;
+begin
+  DBPath := TPath.Combine(FTempPath, 'legacy_mru.db');
+  LegacyItemPath := TPath.Combine(FTempPath, 'legacy_file.txt');
+
+  SetupConn := TFDConnection.Create(nil);
+  try
+    SetupConn.DriverName := 'SQLite';
+    SetupConn.Params.Database := DBPath;
+    SetupConn.LoginPrompt := False;
+    SetupConn.Connected := True;
+
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := SetupConn;
+      Query.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS MRU (' +
+        'ID INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+        'Category TEXT NOT NULL DEFAULT ''File'', ' +
+        'ItemPath TEXT NOT NULL, ' +
+        'DisplayName TEXT, ' +
+        'IconIndex INTEGER DEFAULT 0, ' +
+        'LastAccess TEXT, ' +
+        'AccessCount INTEGER DEFAULT 1, ' +
+        'IsPinned INTEGER DEFAULT 0, ' +
+        'Extra TEXT, ' +
+        'UNIQUE(Category, ItemPath)' +
+        ')';
+      Query.ExecSQL;
+
+      Query.SQL.Text :=
+        'INSERT INTO MRU (Category, ItemPath, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
+        'VALUES (''File'', :ItemPath, ''legacy-item'', 0, :LastAccess, 3, 0)';
+      Query.ParamByName('ItemPath').AsString := LegacyItemPath;
+      Query.ParamByName('LastAccess').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
+  finally
+    SetupConn.Free;
+  end;
+
+  Assert.IsTrue(FManager.InitializeWithDB(DBPath), '初始化旧 MRU 数据库应成功');
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FManager.ConfigDB;
+
+    Query.SQL.Text := 'SELECT COUNT(*) FROM pragma_table_info(''MRU'') WHERE name = ''ItemKey''';
+    Query.Open;
+    try
+      Assert.AreEqual(1, Query.Fields[0].AsInteger, 'MRU.ItemKey 列应被自动补齐');
+    finally
+      Query.Close;
+    end;
+
+    Query.SQL.Text :=
+      'SELECT ItemKey FROM MRU WHERE Category = ''File'' AND DisplayName = ''legacy-item''';
+    Query.Open;
+    try
+      Assert.IsFalse(Query.Eof, '旧 MRU 记录应继续存在');
+      Assert.AreEqual(LegacyItemPath, Query.FieldByName('ItemKey').AsString,
+        '旧 ItemPath 应迁移到 ItemKey');
+    finally
+      Query.Close;
+    end;
+  finally
+    Query.Free;
+  end;
 end;
 
 procedure TTestUniBaseManager.Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables;

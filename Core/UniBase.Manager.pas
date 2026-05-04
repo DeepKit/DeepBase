@@ -1191,6 +1191,15 @@ begin
             Query.ExecSQL;
           end;
         end;
+        try
+          // Run compatibility column patching even when schema creation succeeds.
+          // Some legacy tables (e.g. MRU ItemPath -> ItemKey) won't fail CREATE IF NOT EXISTS.
+          EnsureSchemaColumns;
+        except
+          on E: Exception do
+            if Assigned(FLogger) then
+              FLogger.Warn('Post-schema compatibility patch failed: ' + E.Message, 'UniBase.Manager');
+        end;
         Result := True;
         FInitErrorCode := ecSuccess;
         Exit;  // Success, exit loop
@@ -1305,10 +1314,40 @@ begin
     AddColumnIfMissing('Logs', 'UserId', 'TEXT');
     
     // === MRU table columns ===
+    AddColumnIfMissing('MRU', 'ItemKey', 'TEXT');
     AddColumnIfMissing('MRU', 'DisplayName', 'TEXT');
     AddColumnIfMissing('MRU', 'IconIndex', 'INTEGER DEFAULT 0');
     AddColumnIfMissing('MRU', 'IsPinned', 'INTEGER DEFAULT 0');
     AddColumnIfMissing('MRU', 'Extra', 'TEXT');
+    if ColumnExists('MRU', 'ItemPath') and ColumnExists('MRU', 'ItemKey') then
+    begin
+      try
+        Query.SQL.Text :=
+          'UPDATE MRU SET ItemKey = ItemPath ' +
+          'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
+          'AND ItemPath IS NOT NULL AND ItemPath <> ''''';
+        Query.ExecSQL;
+      except
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Manager: MRU ItemPath->ItemKey migration failed: ' + E.Message));
+          {$ENDIF}
+      end;
+    end;
+    if ColumnExists('MRU', 'ItemKey') then
+    begin
+      try
+        Query.SQL.Text :=
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
+          'ON MRU(Category, ItemKey)';
+        Query.ExecSQL;
+      except
+        on E: Exception do
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar('UniBase.Manager: MRU unique index patch failed: ' + E.Message));
+          {$ENDIF}
+      end;
+    end;
     
     // === FormStates table columns ===
     AddColumnIfMissing('FormStates', 'MonitorIndex', 'INTEGER DEFAULT 0');

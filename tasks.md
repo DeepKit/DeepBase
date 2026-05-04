@@ -880,6 +880,8 @@
 - **阶段进展**:
   - `Core/UniBase.Schema.pas`：Tier2 新增 `aboutMeImages` DDL（含 `Enabled`、`Sha256Hash`、`HmacSha256` 等字段），并纳入 `GetTier2SchemaSQL`。
   - `data/create_sample_db.sql`：MRU 字段统一为 `ItemKey`（替代 `ItemPath`），并补充 `aboutMeImages` 表定义与索引。
+  - `Core/UniBase.Manager.pas`：`CreateSchema` 成功后增加兼容补丁阶段，`EnsureSchemaColumns` 为旧库补齐 `MRU.ItemKey`，并将 `ItemPath` 历史数据迁移到 `ItemKey`，同时补建 `(Category, ItemKey)` 唯一索引。
+  - `Tests/Test.UniBase.Manager.pas`：新增 `Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase`，覆盖旧 MRU 结构自动迁移回归。
 
 #### ARCH-043: 日志表清理 + WebAPI JSON 安全
 - **状态**: ✅ 完成 (2026-05-03)
