@@ -9,8 +9,9 @@
   Tier Structure:
     - Tier 0: Core tables (5): SchemaInfo, Settings, FormStates, Languages, I18nTexts
     - Tier 1: Recommended tables (7): Logs, MRU, Hotkeys, Queries, Themes, Categories, Tags
-    - Tier 2: Extended tables (11): Providers, Models, LLMConfig, LLMCalls, LLMPrompts,
-              LLMApiKeys, ExceptionReports, AnimationAssets, Attachments, TagMappings, Notifications
+    - Tier 2: Extended tables (12): Providers, Models, LLMConfig, LLMCalls, LLMPrompts,
+              LLMApiKeys, ExceptionReports, AnimationAssets, Attachments, TagMappings,
+              Notifications, aboutMeImages
   
   Design Principles:
     - Every table has Extra TEXT (JSON) and Remarks TEXT fallback fields
@@ -371,9 +372,10 @@ const
     'CREATE INDEX IF NOT EXISTS idx_tags_usage ON Tags(UsageCount DESC);';
 
   // ============================================================================
-  // Tier 2: Extended Tables (11 tables)
+  // Tier 2: Extended Tables (12 tables)
   // Tables: Providers, Models, LLMConfig, LLMCalls, LLMPrompts, LLMApiKeys,
-  //         ExceptionReports, AnimationAssets, Attachments, TagMappings, Notifications
+  //         ExceptionReports, AnimationAssets, Attachments, TagMappings, Notifications,
+  //         aboutMeImages
   // ============================================================================
   
   // 13. Providers - LLM service providers
@@ -580,7 +582,7 @@ const
     '  ApiKey TEXT NOT NULL,' +
     '  OrgId TEXT,' +
     '  IsEncrypted INTEGER DEFAULT 1,' +
-    '  EncryptionMethod TEXT DEFAULT ''DPAPI'',' +
+    '  EncryptionMethod TEXT DEFAULT ''CREDMAN'',' +
     '  IsEnabled INTEGER DEFAULT 1,' +
     '  IsDefault INTEGER DEFAULT 0,' +
     '  UsageCount INTEGER DEFAULT 0,' +
@@ -727,6 +729,26 @@ const
     'CREATE INDEX IF NOT EXISTS idx_notifications_read ON Notifications(IsRead);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_notifications_time ON Notifications(CreatedAt DESC);';
 
+  // 24. aboutMeImages - About/Donation/Official QR images (DB1 optional)
+  SQL_TIER2_ABOUTME_IMAGES =
+    'CREATE TABLE IF NOT EXISTS aboutMeImages (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  ImageKey TEXT NOT NULL UNIQUE,' +
+    '  ImageData BLOB NOT NULL,' +
+    '  AddressText TEXT,' +
+    '  Description TEXT,' +
+    '  Enabled INTEGER NOT NULL DEFAULT 1,' +
+    '  Sha256Hash TEXT NOT NULL,' +
+    '  HmacSha256 TEXT NOT NULL,' +
+    '  Md5Hash TEXT,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  UpdatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  Extra TEXT,' +
+    '  Remarks TEXT' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_aboutmeimages_enabled ON aboutMeImages(Enabled);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_aboutmeimages_updated ON aboutMeImages(UpdatedAt DESC);';
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -790,7 +812,8 @@ begin
     SQL_TIER2_ANIMATION_ASSETS + #13#10 +
     SQL_TIER2_ATTACHMENTS + #13#10 +
     SQL_TIER2_TAG_MAPPINGS + #13#10 +
-    SQL_TIER2_NOTIFICATIONS;
+    SQL_TIER2_NOTIFICATIONS + #13#10 +
+    SQL_TIER2_ABOUTME_IMAGES;
 end;
 
 function GetFullSchemaSQL: string;

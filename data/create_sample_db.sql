@@ -170,7 +170,7 @@ CREATE INDEX IF NOT EXISTS idx_logs_source ON Logs(Source);
 CREATE TABLE IF NOT EXISTS MRU (
   Id INTEGER PRIMARY KEY AUTOINCREMENT,
   Category TEXT NOT NULL DEFAULT 'File',
-  ItemPath TEXT NOT NULL,
+  ItemKey TEXT NOT NULL,
   DisplayName TEXT,
   IconIndex INTEGER DEFAULT 0,
   IsPinned INTEGER DEFAULT 0,
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS MRU (
   CreatedAt TEXT DEFAULT (datetime('now')),
   Extra TEXT,
   Remarks TEXT,
-  UNIQUE(Category, ItemPath)
+  UNIQUE(Category, ItemKey)
 );
 
 CREATE INDEX IF NOT EXISTS idx_mru_category ON MRU(Category);
@@ -334,7 +334,7 @@ CREATE INDEX IF NOT EXISTS idx_tags_group ON Tags(GroupName);
 CREATE INDEX IF NOT EXISTS idx_tags_usage ON Tags(UsageCount DESC);
 
 -- ============================================================================
--- TIER 2: Extended Tables (11 tables)
+-- TIER 2: Extended Tables (12 tables)
 -- ============================================================================
 
 -- 13. Providers - LLM service providers
@@ -427,7 +427,7 @@ CREATE TABLE IF NOT EXISTS LLMConfig (
   ProviderCode TEXT NOT NULL,
   ModelId TEXT NOT NULL,
   BaseUrl TEXT,
-  ApiKeyRef TEXT,
+  ApiKeyRef TEXT, -- Credential Manager ref (credman:...) or LLMApiKeys.Name
   MaxTokens INTEGER DEFAULT 4096,
   Temperature REAL DEFAULT 0.7,
   TopP REAL DEFAULT 1.0,
@@ -535,10 +535,10 @@ CREATE TABLE IF NOT EXISTS LLMApiKeys (
   Id INTEGER PRIMARY KEY AUTOINCREMENT,
   Name TEXT NOT NULL UNIQUE,
   ProviderCode TEXT NOT NULL,
-  ApiKey TEXT NOT NULL,
+  ApiKey TEXT NOT NULL, -- Credential Manager ref (credman:...)
   OrgId TEXT,
   IsEncrypted INTEGER DEFAULT 1,
-  EncryptionMethod TEXT DEFAULT 'DPAPI',
+  EncryptionMethod TEXT DEFAULT 'CREDMAN',
   IsEnabled INTEGER DEFAULT 1,
   IsDefault INTEGER DEFAULT 0,
   UsageCount INTEGER DEFAULT 0,
@@ -697,6 +697,26 @@ CREATE TABLE IF NOT EXISTS Notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON Notifications(UserId);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON Notifications(IsRead);
 CREATE INDEX IF NOT EXISTS idx_notifications_time ON Notifications(CreatedAt DESC);
+
+-- 24. aboutMeImages - About/Donation/Official QR images (DB1 optional)
+CREATE TABLE IF NOT EXISTS aboutMeImages (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ImageKey TEXT NOT NULL UNIQUE,
+  ImageData BLOB NOT NULL,
+  AddressText TEXT,
+  Description TEXT,
+  Enabled INTEGER NOT NULL DEFAULT 1,
+  Sha256Hash TEXT NOT NULL,
+  HmacSha256 TEXT NOT NULL,
+  Md5Hash TEXT,
+  CreatedAt TEXT DEFAULT (datetime('now')),
+  UpdatedAt TEXT DEFAULT (datetime('now')),
+  Extra TEXT,
+  Remarks TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_aboutmeimages_enabled ON aboutMeImages(Enabled);
+CREATE INDEX IF NOT EXISTS idx_aboutmeimages_updated ON aboutMeImages(UpdatedAt DESC);
 
 -- ============================================================================
 -- Final: Update schema info

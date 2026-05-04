@@ -870,13 +870,16 @@
   - `ThirdParty/Social/UniBase.Social.pas` 与 `ThirdParty/Social/UniBase.Social.OAuth.pas`：OAuth token 与授权头相关临时字符串在 `finally` 中执行安全擦除，授权码换取用户信息后的临时 token 立即清理。
 
 #### ARCH-042: 文档去重 + Schema.pas 补充
-- **状态**: 🔲 待开始
+- **状态**: 🟡 进行中（代码侧已完成，文档侧待同步）
 - **优先级**: P2 (文档)
 - **任务**:
   - [ ] 消除 01.01、04.01、07.01 之间的 DB1 表结构重复内容
-  - [ ] `UniBase.Schema.pas` 补充 aboutMeImages 表 DDL
-  - [ ] MRU 表字段名统一：04.01 `ItemPath` vs Schema.pas `ItemKey`
+  - [x] `UniBase.Schema.pas` 补充 aboutMeImages 表 DDL
+  - [x] MRU 表字段名统一：04.01 `ItemPath` vs Schema.pas `ItemKey`
   - [ ] 05.05 添加版本号和更新日期
+- **阶段进展**:
+  - `Core/UniBase.Schema.pas`：Tier2 新增 `aboutMeImages` DDL（含 `Enabled`、`Sha256Hash`、`HmacSha256` 等字段），并纳入 `GetTier2SchemaSQL`。
+  - `data/create_sample_db.sql`：MRU 字段统一为 `ItemKey`（替代 `ItemPath`），并补充 `aboutMeImages` 表定义与索引。
 
 #### ARCH-043: 日志表清理 + WebAPI JSON 安全
 - **状态**: ✅ 完成 (2026-05-03)
