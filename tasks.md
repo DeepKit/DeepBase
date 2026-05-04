@@ -899,7 +899,7 @@
   - `Persistence/UniBase.Persistence.Security.FireDAC.pas` 对齐为 FireDAC 版 `ISecuritySecretStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.License.pas` 新增存储注入能力：支持 `TUniBaseLicense.Create(const AStorage: ILicenseStorage)`，并通过 `SetStorageFactory` 对接外部实现；兼容保留 `Create(AConnection: TFDConnection)` 构造。
   - `Persistence/UniBase.Persistence.License.FireDAC.pas` 对齐为 FireDAC 版 `ILicenseStorage` 适配器，与 Core 抽象对齐。
-  - `Core/UniBase.Authorization.pas` 新增存储注入能力：支持 `TAuthorizationManager.Create(const AStorage: IAuthorizationStorage)`，并通过 `SetStorageFactory` / `CreateStorageFromConnection` 对接外部实现；兼容保留 `Create(AConnection: TFDConnection)` 构造。
+  - `Core/UniBase.Authorization.pas` 新增存储注入能力：支持 `TAuthorizationManager.Create(const AStorage: IAuthorizationStorage)`，并通过 `SetStorageFactory` / `CreateStorageFromConnection` 对接外部实现；连接构造统一为 `Create(AConnection: TObject)` 并仅通过工厂解析存储。
   - `Persistence/UniBase.Persistence.Authorization.FireDAC.pas` 对齐为 FireDAC 版 `IAuthorizationStorage` 适配器，与 Core 抽象对齐。
   - `Core/UniBase.Storage.Interfaces.pas` 新增 `TExceptionReportData` 与 `IExceptionReportStorage` 契约，统一异常报告持久化数据结构。
   - `Core/UniBase.Exception.pas` 新增异常报告存储注入能力：支持 `SetStorageFactory` / `CreateStorageFromConnection`，并移除 Core 内置 FireDAC 回退实现。
@@ -924,6 +924,8 @@
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已实现 FireDAC 版 `ILogStorage/ILogQueryStorage`，并保留 `Logs.Extra` 列缺失时的兼容写入路径。
   - `Tests/Test.UniBase.Logging.pas` 新增 `Test_StorageInjection_DelegatesDbWriteAndQuery`，覆盖注入写入、计数与清理委托行为。
   - `2026-05-04`：`Core/UniBase.Authorization.pas`、`Core/UniBase.Exception.pas`、`Core/UniBase.Diagnose.pas`、`Core/UniBase.Manager.pas` 的工厂入口已补齐空连接保护（仅连接非空时调用注册工厂），避免适配器类型检查在 `nil` 输入下误抛异常。
+  - `2026-05-04`：`Core/UniBase.Authorization.pas` 已移除 Core 内置 FireDAC SQL 回退（`TFDConnection/TFDQuery`），授权读写与审计持久化仅通过 `IAuthorizationStorage`。
+  - `2026-05-04`：`Tests/Test.UniBase.Authorization.pas` 的主测试夹具改为显式注入内存 `IAuthorizationStorage`，不再依赖 FireDAC 内存连接隐式回退；`run_tests -Type All` 回归通过。
   - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱

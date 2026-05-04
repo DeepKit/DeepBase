@@ -10,16 +10,13 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
-  FireDAC.Comp.Client,
-  FireDAC.Stan.Def,
-  FireDAC.Phys.SQLite,
+  System.Generics.Collections,
   UniBase.Authorization;
 
 type
   [TestFixture]
   TAuthorizationTests = class
   private
-    FConnection: TFDConnection;
     FAuthManager: TAuthorizationManager;
   public
     [Setup]
@@ -96,26 +93,331 @@ type
     procedure Test_AuditLog_PermissionDenied;
     [Test]
     procedure Test_GetAuditLog;
+    [Test]
+    procedure Test_StorageInjection_BasicFlow;
   end;
 
 implementation
 
+type
+  TInMemoryAuthorizationStorage = class(TInterfacedObject, IAuthorizationStorage)
+  private
+    FRoles: TDictionary<string, TAuthorizationRoleData>;
+    FUsers: TDictionary<string, TAuthorizationUserData>;
+    FRolePermissions: TList<TAuthorizationRolePermissionData>;
+    FUserRoles: TList<TAuthorizationUserRoleData>;
+    FAudit: TList<TAuthorizationAuditData>;
+    FNextRoleId: Integer;
+    FNextUserId: Integer;
+    FNextAuditId: Int64;
+    function TryFindRoleNameById(RoleId: Integer; out RoleName: string): Boolean;
+    function TryFindUserNameById(UserId: Integer; out Username: string): Boolean;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure EnsureTablesExist;
+    function ReadRoles: TArray<TAuthorizationRoleData>;
+    function ReadRolePermissions: TArray<TAuthorizationRolePermissionData>;
+    function ReadUsers: TArray<TAuthorizationUserData>;
+    function ReadUserRoles: TArray<TAuthorizationUserRoleData>;
+    function InsertUser(const Data: TAuthorizationUserData): Integer;
+    procedure UpdateUser(const Data: TAuthorizationUserData);
+    procedure DeleteUser(const Username: string);
+    function InsertRole(const Data: TAuthorizationRoleData): Integer;
+    procedure UpdateRole(const Data: TAuthorizationRoleData);
+    procedure ReplaceRolePermissions(RoleId: Integer; const Permissions: TArray<string>);
+    procedure DeleteRole(const RoleName: string);
+    procedure AssignUserRole(UserId, RoleId: Integer);
+    procedure RemoveUserRole(UserId, RoleId: Integer);
+    procedure InsertAudit(const Username, ActionName, Resource, Details: string;
+      Success: Boolean);
+    function ReadAudit(const Username: string; StartDate, EndDate: TDateTime;
+      MaxEntries: Integer): TArray<TAuthorizationAuditData>;
+    procedure ClearAuditBefore(const CutoffDate: TDateTime);
+  end;
+
+constructor TInMemoryAuthorizationStorage.Create;
+begin
+  inherited Create;
+  FRoles := TDictionary<string, TAuthorizationRoleData>.Create;
+  FUsers := TDictionary<string, TAuthorizationUserData>.Create;
+  FRolePermissions := TList<TAuthorizationRolePermissionData>.Create;
+  FUserRoles := TList<TAuthorizationUserRoleData>.Create;
+  FAudit := TList<TAuthorizationAuditData>.Create;
+  FNextRoleId := 1;
+  FNextUserId := 1;
+  FNextAuditId := 1;
+end;
+
+destructor TInMemoryAuthorizationStorage.Destroy;
+begin
+  FAudit.Free;
+  FUserRoles.Free;
+  FRolePermissions.Free;
+  FUsers.Free;
+  FRoles.Free;
+  inherited;
+end;
+
+procedure TInMemoryAuthorizationStorage.EnsureTablesExist;
+begin
+  // no-op for in-memory storage
+end;
+
+function TInMemoryAuthorizationStorage.ReadRoles: TArray<TAuthorizationRoleData>;
+var
+  Data: TAuthorizationRoleData;
+begin
+  SetLength(Result, 0);
+  for Data in FRoles.Values do
+    if Data.IsActive then
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Data;
+    end;
+end;
+
+function TInMemoryAuthorizationStorage.ReadRolePermissions: TArray<TAuthorizationRolePermissionData>;
+begin
+  Result := FRolePermissions.ToArray;
+end;
+
+function TInMemoryAuthorizationStorage.ReadUsers: TArray<TAuthorizationUserData>;
+var
+  Data: TAuthorizationUserData;
+begin
+  SetLength(Result, 0);
+  for Data in FUsers.Values do
+    if Data.IsActive then
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Data;
+    end;
+end;
+
+function TInMemoryAuthorizationStorage.ReadUserRoles: TArray<TAuthorizationUserRoleData>;
+begin
+  Result := FUserRoles.ToArray;
+end;
+
+function TInMemoryAuthorizationStorage.InsertUser(const Data: TAuthorizationUserData): Integer;
+var
+  Stored: TAuthorizationUserData;
+begin
+  Stored := Data;
+  Stored.Id := FNextUserId;
+  Inc(FNextUserId);
+  if Stored.CreatedAt = 0 then
+    Stored.CreatedAt := Now;
+  Stored.UpdatedAt := Now;
+  FUsers.AddOrSetValue(Stored.Username, Stored);
+  Result := Stored.Id;
+end;
+
+procedure TInMemoryAuthorizationStorage.UpdateUser(const Data: TAuthorizationUserData);
+begin
+  FUsers.AddOrSetValue(Data.Username, Data);
+end;
+
+procedure TInMemoryAuthorizationStorage.DeleteUser(const Username: string);
+var
+  I: Integer;
+begin
+  FUsers.Remove(Username);
+  for I := FUserRoles.Count - 1 downto 0 do
+    if SameText(FUserRoles[I].Username, Username) then
+      FUserRoles.Delete(I);
+end;
+
+function TInMemoryAuthorizationStorage.InsertRole(const Data: TAuthorizationRoleData): Integer;
+var
+  Stored: TAuthorizationRoleData;
+begin
+  Stored := Data;
+  Stored.Id := FNextRoleId;
+  Inc(FNextRoleId);
+  if Stored.CreatedAt = 0 then
+    Stored.CreatedAt := Now;
+  Stored.UpdatedAt := Now;
+  FRoles.AddOrSetValue(Stored.Name, Stored);
+  Result := Stored.Id;
+end;
+
+procedure TInMemoryAuthorizationStorage.UpdateRole(const Data: TAuthorizationRoleData);
+begin
+  FRoles.AddOrSetValue(Data.Name, Data);
+end;
+
+function TInMemoryAuthorizationStorage.TryFindRoleNameById(RoleId: Integer;
+  out RoleName: string): Boolean;
+var
+  Pair: TPair<string, TAuthorizationRoleData>;
+begin
+  for Pair in FRoles do
+    if Pair.Value.Id = RoleId then
+    begin
+      RoleName := Pair.Key;
+      Exit(True);
+    end;
+  RoleName := '';
+  Result := False;
+end;
+
+function TInMemoryAuthorizationStorage.TryFindUserNameById(UserId: Integer;
+  out Username: string): Boolean;
+var
+  Pair: TPair<string, TAuthorizationUserData>;
+begin
+  for Pair in FUsers do
+    if Pair.Value.Id = UserId then
+    begin
+      Username := Pair.Key;
+      Exit(True);
+    end;
+  Username := '';
+  Result := False;
+end;
+
+procedure TInMemoryAuthorizationStorage.ReplaceRolePermissions(RoleId: Integer;
+  const Permissions: TArray<string>);
+var
+  RoleName: string;
+  I: Integer;
+  Item: TAuthorizationRolePermissionData;
+  Permission: string;
+begin
+  if not TryFindRoleNameById(RoleId, RoleName) then
+    Exit;
+
+  for I := FRolePermissions.Count - 1 downto 0 do
+    if SameText(FRolePermissions[I].RoleName, RoleName) then
+      FRolePermissions.Delete(I);
+
+  for Permission in Permissions do
+  begin
+    Item.RoleName := RoleName;
+    Item.Permission := Permission;
+    FRolePermissions.Add(Item);
+  end;
+end;
+
+procedure TInMemoryAuthorizationStorage.DeleteRole(const RoleName: string);
+var
+  I: Integer;
+begin
+  FRoles.Remove(RoleName);
+
+  for I := FRolePermissions.Count - 1 downto 0 do
+    if SameText(FRolePermissions[I].RoleName, RoleName) then
+      FRolePermissions.Delete(I);
+
+  for I := FUserRoles.Count - 1 downto 0 do
+    if SameText(FUserRoles[I].RoleName, RoleName) then
+      FUserRoles.Delete(I);
+end;
+
+procedure TInMemoryAuthorizationStorage.AssignUserRole(UserId, RoleId: Integer);
+var
+  Username: string;
+  RoleName: string;
+  I: Integer;
+  Item: TAuthorizationUserRoleData;
+begin
+  if not TryFindUserNameById(UserId, Username) then
+    Exit;
+  if not TryFindRoleNameById(RoleId, RoleName) then
+    Exit;
+
+  for I := 0 to FUserRoles.Count - 1 do
+    if SameText(FUserRoles[I].Username, Username) and
+       SameText(FUserRoles[I].RoleName, RoleName) then
+      Exit;
+
+  Item.Username := Username;
+  Item.RoleName := RoleName;
+  FUserRoles.Add(Item);
+end;
+
+procedure TInMemoryAuthorizationStorage.RemoveUserRole(UserId, RoleId: Integer);
+var
+  Username: string;
+  RoleName: string;
+  I: Integer;
+begin
+  if not TryFindUserNameById(UserId, Username) then
+    Exit;
+  if not TryFindRoleNameById(RoleId, RoleName) then
+    Exit;
+
+  for I := FUserRoles.Count - 1 downto 0 do
+    if SameText(FUserRoles[I].Username, Username) and
+       SameText(FUserRoles[I].RoleName, RoleName) then
+      FUserRoles.Delete(I);
+end;
+
+procedure TInMemoryAuthorizationStorage.InsertAudit(const Username, ActionName,
+  Resource, Details: string; Success: Boolean);
+var
+  Item: TAuthorizationAuditData;
+begin
+  Item.Id := FNextAuditId;
+  Inc(FNextAuditId);
+  Item.Timestamp := Now;
+  Item.Username := Username;
+  Item.Action := ActionName;
+  Item.Resource := Resource;
+  Item.Details := Details;
+  Item.IPAddress := '';
+  Item.Success := Success;
+  FAudit.Add(Item);
+end;
+
+function TInMemoryAuthorizationStorage.ReadAudit(const Username: string;
+  StartDate, EndDate: TDateTime; MaxEntries: Integer): TArray<TAuthorizationAuditData>;
+var
+  I: Integer;
+  Item: TAuthorizationAuditData;
+begin
+  SetLength(Result, 0);
+  for I := FAudit.Count - 1 downto 0 do
+  begin
+    Item := FAudit[I];
+    if (Username <> '') and (not SameText(Item.Username, Username)) then
+      Continue;
+    if (StartDate > 0) and (Item.Timestamp < StartDate) then
+      Continue;
+    if (EndDate > 0) and (Item.Timestamp > EndDate) then
+      Continue;
+
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := Item;
+    if (MaxEntries > 0) and (Length(Result) >= MaxEntries) then
+      Break;
+  end;
+end;
+
+procedure TInMemoryAuthorizationStorage.ClearAuditBefore(const CutoffDate: TDateTime);
+var
+  I: Integer;
+begin
+  for I := FAudit.Count - 1 downto 0 do
+    if FAudit[I].Timestamp < CutoffDate then
+      FAudit.Delete(I);
+end;
+
 { TAuthorizationTests }
 
 procedure TAuthorizationTests.Setup;
+var
+  Storage: IAuthorizationStorage;
 begin
-  FConnection := TFDConnection.Create(nil);
-  FConnection.DriverName := 'SQLite';
-  FConnection.Params.Database := ':memory:';
-  FConnection.Connected := True;
-  
-  FAuthManager := TAuthorizationManager.Create(FConnection);
+  Storage := TInMemoryAuthorizationStorage.Create;
+  FAuthManager := TAuthorizationManager.Create(Storage);
 end;
 
 procedure TAuthorizationTests.TearDown;
 begin
   FAuthManager.Free;
-  FConnection.Free;
 end;
 
 // ============================================================================
@@ -287,7 +589,7 @@ begin
   FAuthManager.AssignRole('testuser', 'admin');
   
   Roles := FAuthManager.GetUserRoles('testuser');
-  Assert.AreEqual(1, Length(Roles));
+  Assert.AreEqual<Integer>(1, Length(Roles));
   Assert.AreEqual('admin', Roles[0]);
 end;
 
@@ -302,7 +604,7 @@ begin
   FAuthManager.RemoveRole('testuser', 'admin');
   
   Roles := FAuthManager.GetUserRoles('testuser');
-  Assert.AreEqual(0, Length(Roles));
+  Assert.AreEqual<Integer>(0, Length(Roles));
 end;
 
 procedure TAuthorizationTests.Test_UserHasRole;
@@ -429,17 +731,20 @@ begin
 end;
 
 procedure TAuthorizationTests.Test_RequirePermission_Denied;
+var
+  Raised: Boolean;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
   FAuthManager.SetCurrentUser('testuser');
-  
-  Assert.WillRaise(
-    procedure
-    begin
-      FAuthManager.RequirePermission('users.manage');
-    end,
-    EPermissionDeniedException
-  );
+
+  Raised := False;
+  try
+    FAuthManager.RequirePermission('users.manage');
+  except
+    on E: EPermissionDeniedException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised);
 end;
 
 // ============================================================================
@@ -491,6 +796,35 @@ begin
   // Get logs for specific user
   Logs := FAuthManager.GetAuditLog('user1');
   Assert.IsTrue(Length(Logs) >= 1);
+end;
+
+procedure TAuthorizationTests.Test_StorageInjection_BasicFlow;
+var
+  Storage: IAuthorizationStorage;
+  ManagerA: TAuthorizationManager;
+  ManagerB: TAuthorizationManager;
+begin
+  Storage := TInMemoryAuthorizationStorage.Create;
+
+  ManagerA := TAuthorizationManager.Create(Storage);
+  try
+    ManagerA.CreateUser('inject_user', 'Inject User');
+    ManagerA.CreateRole('inject_admin', 'Inject Admin');
+    ManagerA.GrantPermission('inject_admin', 'users.manage');
+    ManagerA.AssignRole('inject_user', 'inject_admin');
+    Assert.IsTrue(ManagerA.HasPermission('inject_user', 'users.manage'));
+  finally
+    ManagerA.Free;
+  end;
+
+  ManagerB := TAuthorizationManager.Create(Storage);
+  try
+    Assert.IsTrue(ManagerB.UserExists('inject_user'));
+    Assert.IsTrue(ManagerB.RoleExists('inject_admin'));
+    Assert.IsTrue(ManagerB.HasPermission('inject_user', 'users.manage'));
+  finally
+    ManagerB.Free;
+  end;
 end;
 
 initialization

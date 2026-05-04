@@ -37,8 +37,7 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.SyncObjs,
-  System.DateUtils,
-  FireDAC.Comp.Client;
+  System.DateUtils;
 
 type
   // Forward declarations
@@ -270,7 +269,6 @@ type
   /// </summary>
   TAuthorizationManager = class
   private
-    FConnection: TFDConnection;
     FStorage: IAuthorizationStorage;
     FUsers: TObjectDictionary<string, TUser>;
     FRoles: TObjectDictionary<string, TRole>;
@@ -295,7 +293,7 @@ type
     class function CreateStorageFromConnection(
       AConnection: TObject): IAuthorizationStorage; static;
   public
-    constructor Create(AConnection: TFDConnection); overload;
+    constructor Create(AConnection: TObject); overload;
     constructor Create(const AStorage: IAuthorizationStorage); overload;
     destructor Destroy; override;
 
@@ -640,10 +638,9 @@ end;
 // TAuthorizationManager
 // ============================================================================
 
-constructor TAuthorizationManager.Create(AConnection: TFDConnection);
+constructor TAuthorizationManager.Create(AConnection: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
   FStorage := CreateStorageFromConnection(AConnection);
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
@@ -652,7 +649,7 @@ begin
   FLock := TCriticalSection.Create;
   FAuditEnabled := True;
 
-  if Assigned(FStorage) or Assigned(FConnection) then
+  if Assigned(FStorage) then
   begin
     EnsureTablesExist;
     LoadFromDatabase;
@@ -662,7 +659,6 @@ end;
 constructor TAuthorizationManager.Create(const AStorage: IAuthorizationStorage);
 begin
   inherited Create;
-  FConnection := nil;
   FStorage := AStorage;
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
@@ -708,86 +704,13 @@ begin
 end;
 
 procedure TAuthorizationManager.EnsureTablesExist;
-const
-  CREATE_USERS_TABLE = 
-    'CREATE TABLE IF NOT EXISTS auth_users (' +
-    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-    '  username VARCHAR(100) NOT NULL UNIQUE,' +
-    '  display_name VARCHAR(200),' +
-    '  email VARCHAR(255),' +
-    '  is_active INTEGER DEFAULT 1,' +
-    '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  last_login_at DATETIME,' +
-    '  metadata TEXT' +
-    ')';
-    
-  CREATE_ROLES_TABLE = 
-    'CREATE TABLE IF NOT EXISTS auth_roles (' +
-    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-    '  name VARCHAR(100) NOT NULL UNIQUE,' +
-    '  display_name VARCHAR(200),' +
-    '  description TEXT,' +
-    '  parent_role VARCHAR(100),' +
-    '  is_active INTEGER DEFAULT 1,' +
-    '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
-    ')';
-    
-  CREATE_ROLE_PERMISSIONS_TABLE = 
-    'CREATE TABLE IF NOT EXISTS auth_role_permissions (' +
-    '  role_id INTEGER NOT NULL,' +
-    '  permission VARCHAR(100) NOT NULL,' +
-    '  granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  PRIMARY KEY (role_id, permission),' +
-    '  FOREIGN KEY (role_id) REFERENCES auth_roles(id) ON DELETE CASCADE' +
-    ')';
-    
-  CREATE_USER_ROLES_TABLE = 
-    'CREATE TABLE IF NOT EXISTS auth_user_roles (' +
-    '  user_id INTEGER NOT NULL,' +
-    '  role_id INTEGER NOT NULL,' +
-    '  assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  PRIMARY KEY (user_id, role_id),' +
-    '  FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE,' +
-    '  FOREIGN KEY (role_id) REFERENCES auth_roles(id) ON DELETE CASCADE' +
-    ')';
-    
-  CREATE_AUDIT_LOG_TABLE = 
-    'CREATE TABLE IF NOT EXISTS auth_audit_log (' +
-    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-    '  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  username VARCHAR(100),' +
-    '  action VARCHAR(50) NOT NULL,' +
-    '  resource VARCHAR(200),' +
-    '  details TEXT,' +
-    '  ip_address VARCHAR(50),' +
-    '  success INTEGER DEFAULT 1' +
-    ')';
-    
-  CREATE_AUDIT_INDEX = 
-    'CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON auth_audit_log(timestamp)';
 begin
   if Assigned(FStorage) then
-  begin
     FStorage.EnsureTablesExist;
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
-    Exit;
-
-  FConnection.ExecSQL(CREATE_USERS_TABLE);
-  FConnection.ExecSQL(CREATE_ROLES_TABLE);
-  FConnection.ExecSQL(CREATE_ROLE_PERMISSIONS_TABLE);
-  FConnection.ExecSQL(CREATE_USER_ROLES_TABLE);
-  FConnection.ExecSQL(CREATE_AUDIT_LOG_TABLE);
-  FConnection.ExecSQL(CREATE_AUDIT_INDEX);
 end;
 
 procedure TAuthorizationManager.LoadFromDatabase;
 var
-  Query: TFDQuery;
   User: TUser;
   Role: TRole;
   RoleData: TAuthorizationRoleData;
@@ -795,306 +718,105 @@ var
   UserData: TAuthorizationUserData;
   UserRoleData: TAuthorizationUserRoleData;
 begin
-  if Assigned(FStorage) then
+  if not Assigned(FStorage) then
+    Exit;
+
+  for RoleData in FStorage.ReadRoles do
   begin
-    for RoleData in FStorage.ReadRoles do
-    begin
-      Role := TRole.Create(RoleData.Name);
-      Role.Id := RoleData.Id;
-      Role.DisplayName := RoleData.DisplayName;
-      Role.Description := RoleData.Description;
-      Role.ParentRole := RoleData.ParentRole;
-      Role.IsActive := RoleData.IsActive;
-      Role.CreatedAt := RoleData.CreatedAt;
-      Role.UpdatedAt := RoleData.UpdatedAt;
-      FRoles.Add(Role.Name, Role);
-    end;
-
-    for RolePermissionData in FStorage.ReadRolePermissions do
-      if FRoles.TryGetValue(RolePermissionData.RoleName, Role) then
-        Role.AddPermission(RolePermissionData.Permission);
-
-    for UserData in FStorage.ReadUsers do
-    begin
-      User := TUser.Create(UserData.Username);
-      User.Id := UserData.Id;
-      User.DisplayName := UserData.DisplayName;
-      User.Email := UserData.Email;
-      User.IsActive := UserData.IsActive;
-      User.CreatedAt := UserData.CreatedAt;
-      User.UpdatedAt := UserData.UpdatedAt;
-      if UserData.HasLastLoginAt then
-        User.LastLoginAt := UserData.LastLoginAt;
-      FUsers.Add(User.Username, User);
-    end;
-
-    for UserRoleData in FStorage.ReadUserRoles do
-      if FUsers.TryGetValue(UserRoleData.Username, User) then
-        User.AddRole(UserRoleData.RoleName);
-    Exit;
+    Role := TRole.Create(RoleData.Name);
+    Role.Id := RoleData.Id;
+    Role.DisplayName := RoleData.DisplayName;
+    Role.Description := RoleData.Description;
+    Role.ParentRole := RoleData.ParentRole;
+    Role.IsActive := RoleData.IsActive;
+    Role.CreatedAt := RoleData.CreatedAt;
+    Role.UpdatedAt := RoleData.UpdatedAt;
+    FRoles.Add(Role.Name, Role);
   end;
 
-  if not Assigned(FConnection) then
-    Exit;
+  for RolePermissionData in FStorage.ReadRolePermissions do
+    if FRoles.TryGetValue(RolePermissionData.RoleName, Role) then
+      Role.AddPermission(RolePermissionData.Permission);
 
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    
-    // Load roles
-    Query.SQL.Text := 'SELECT * FROM auth_roles WHERE is_active = 1';
-    Query.Open;
-    while not Query.Eof do
-    begin
-      Role := TRole.Create(Query.FieldByName('name').AsString);
-      Role.Id := Query.FieldByName('id').AsInteger;
-      Role.DisplayName := Query.FieldByName('display_name').AsString;
-      Role.Description := Query.FieldByName('description').AsString;
-      Role.ParentRole := Query.FieldByName('parent_role').AsString;
-      Role.CreatedAt := Query.FieldByName('created_at').AsDateTime;
-      Role.UpdatedAt := Query.FieldByName('updated_at').AsDateTime;
-      FRoles.Add(Role.Name, Role);
-      Query.Next;
-    end;
-    Query.Close;
-    
-    // Load role permissions
-    Query.SQL.Text := 
-      'SELECT r.name as role_name, rp.permission ' +
-      'FROM auth_role_permissions rp ' +
-      'JOIN auth_roles r ON r.id = rp.role_id';
-    Query.Open;
-    while not Query.Eof do
-    begin
-      if FRoles.TryGetValue(Query.FieldByName('role_name').AsString, Role) then
-        Role.AddPermission(Query.FieldByName('permission').AsString);
-      Query.Next;
-    end;
-    Query.Close;
-    
-    // Load users
-    Query.SQL.Text := 'SELECT * FROM auth_users WHERE is_active = 1';
-    Query.Open;
-    while not Query.Eof do
-    begin
-      User := TUser.Create(Query.FieldByName('username').AsString);
-      User.Id := Query.FieldByName('id').AsInteger;
-      User.DisplayName := Query.FieldByName('display_name').AsString;
-      User.Email := Query.FieldByName('email').AsString;
-      User.CreatedAt := Query.FieldByName('created_at').AsDateTime;
-      User.UpdatedAt := Query.FieldByName('updated_at').AsDateTime;
-      if not Query.FieldByName('last_login_at').IsNull then
-        User.LastLoginAt := Query.FieldByName('last_login_at').AsDateTime;
-      FUsers.Add(User.Username, User);
-      Query.Next;
-    end;
-    Query.Close;
-    
-    // Load user roles
-    Query.SQL.Text := 
-      'SELECT u.username, r.name as role_name ' +
-      'FROM auth_user_roles ur ' +
-      'JOIN auth_users u ON u.id = ur.user_id ' +
-      'JOIN auth_roles r ON r.id = ur.role_id';
-    Query.Open;
-    while not Query.Eof do
-    begin
-      if FUsers.TryGetValue(Query.FieldByName('username').AsString, User) then
-        User.AddRole(Query.FieldByName('role_name').AsString);
-      Query.Next;
-    end;
-  finally
-    Query.Free;
+  for UserData in FStorage.ReadUsers do
+  begin
+    User := TUser.Create(UserData.Username);
+    User.Id := UserData.Id;
+    User.DisplayName := UserData.DisplayName;
+    User.Email := UserData.Email;
+    User.IsActive := UserData.IsActive;
+    User.CreatedAt := UserData.CreatedAt;
+    User.UpdatedAt := UserData.UpdatedAt;
+    if UserData.HasLastLoginAt then
+      User.LastLoginAt := UserData.LastLoginAt;
+    FUsers.Add(User.Username, User);
   end;
+
+  for UserRoleData in FStorage.ReadUserRoles do
+    if FUsers.TryGetValue(UserRoleData.Username, User) then
+      User.AddRole(UserRoleData.RoleName);
 end;
 
 procedure TAuthorizationManager.SaveUserToDatabase(User: TUser);
 var
-  Query: TFDQuery;
   Data: TAuthorizationUserData;
 begin
-  if Assigned(FStorage) then
-  begin
-    Data.Id := User.Id;
-    Data.Username := User.Username;
-    Data.DisplayName := User.DisplayName;
-    Data.Email := User.Email;
-    Data.IsActive := User.IsActive;
-    Data.CreatedAt := User.CreatedAt;
-    Data.UpdatedAt := User.UpdatedAt;
-    Data.LastLoginAt := User.LastLoginAt;
-    Data.HasLastLoginAt := User.LastLoginAt > 0;
-    if User.Id = 0 then
-      User.Id := FStorage.InsertUser(Data)
-    else
-      FStorage.UpdateUser(Data);
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
+  if not Assigned(FStorage) then
     Exit;
 
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    
-    if User.Id = 0 then
-    begin
-      // Insert new user
-      Query.SQL.Text := 
-        'INSERT INTO auth_users (username, display_name, email, is_active) ' +
-        'VALUES (:username, :display_name, :email, :is_active)';
-      Query.ParamByName('username').AsString := User.Username;
-      Query.ParamByName('display_name').AsString := User.DisplayName;
-      Query.ParamByName('email').AsString := User.Email;
-      Query.ParamByName('is_active').AsInteger := Ord(User.IsActive);
-      Query.ExecSQL;
-      User.Id := FConnection.GetLastAutoGenValue('');
-    end
-    else
-    begin
-      // Update existing user
-      Query.SQL.Text := 
-        'UPDATE auth_users SET display_name = :display_name, email = :email, ' +
-        'is_active = :is_active, updated_at = CURRENT_TIMESTAMP ' +
-        'WHERE id = :id';
-      Query.ParamByName('display_name').AsString := User.DisplayName;
-      Query.ParamByName('email').AsString := User.Email;
-      Query.ParamByName('is_active').AsInteger := Ord(User.IsActive);
-      Query.ParamByName('id').AsInteger := User.Id;
-      Query.ExecSQL;
-    end;
-  finally
-    Query.Free;
-  end;
+  Data.Id := User.Id;
+  Data.Username := User.Username;
+  Data.DisplayName := User.DisplayName;
+  Data.Email := User.Email;
+  Data.IsActive := User.IsActive;
+  Data.CreatedAt := User.CreatedAt;
+  Data.UpdatedAt := User.UpdatedAt;
+  Data.LastLoginAt := User.LastLoginAt;
+  Data.HasLastLoginAt := User.LastLoginAt > 0;
+  if User.Id = 0 then
+    User.Id := FStorage.InsertUser(Data)
+  else
+    FStorage.UpdateUser(Data);
 end;
 
 procedure TAuthorizationManager.SaveRoleToDatabase(Role: TRole);
 var
-  Query: TFDQuery;
-  Perm: string;
   Data: TAuthorizationRoleData;
 begin
-  if Assigned(FStorage) then
-  begin
-    Data.Id := Role.Id;
-    Data.Name := Role.Name;
-    Data.DisplayName := Role.DisplayName;
-    Data.Description := Role.Description;
-    Data.ParentRole := Role.ParentRole;
-    Data.IsActive := Role.IsActive;
-    Data.CreatedAt := Role.CreatedAt;
-    Data.UpdatedAt := Role.UpdatedAt;
-
-    if Role.Id = 0 then
-      Role.Id := FStorage.InsertRole(Data)
-    else
-      FStorage.UpdateRole(Data);
-
-    FStorage.ReplaceRolePermissions(Role.Id, Role.Permissions.ToArray);
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
+  if not Assigned(FStorage) then
     Exit;
 
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    
-    if Role.Id = 0 then
-    begin
-      // Insert new role
-      Query.SQL.Text := 
-        'INSERT INTO auth_roles (name, display_name, description, parent_role, is_active) ' +
-        'VALUES (:name, :display_name, :description, :parent_role, :is_active)';
-      Query.ParamByName('name').AsString := Role.Name;
-      Query.ParamByName('display_name').AsString := Role.DisplayName;
-      Query.ParamByName('description').AsString := Role.Description;
-      Query.ParamByName('parent_role').AsString := Role.ParentRole;
-      Query.ParamByName('is_active').AsInteger := Ord(Role.IsActive);
-      Query.ExecSQL;
-      Role.Id := FConnection.GetLastAutoGenValue('');
-    end
-    else
-    begin
-      // Update existing role
-      Query.SQL.Text := 
-        'UPDATE auth_roles SET display_name = :display_name, description = :description, ' +
-        'parent_role = :parent_role, is_active = :is_active, updated_at = CURRENT_TIMESTAMP ' +
-        'WHERE id = :id';
-      Query.ParamByName('display_name').AsString := Role.DisplayName;
-      Query.ParamByName('description').AsString := Role.Description;
-      Query.ParamByName('parent_role').AsString := Role.ParentRole;
-      Query.ParamByName('is_active').AsInteger := Ord(Role.IsActive);
-      Query.ParamByName('id').AsInteger := Role.Id;
-      Query.ExecSQL;
-    end;
-    
-    // Update permissions
-    Query.SQL.Text := 'DELETE FROM auth_role_permissions WHERE role_id = :role_id';
-    Query.ParamByName('role_id').AsInteger := Role.Id;
-    Query.ExecSQL;
-    
-    for Perm in Role.Permissions do
-    begin
-      Query.SQL.Text := 
-        'INSERT INTO auth_role_permissions (role_id, permission) VALUES (:role_id, :permission)';
-      Query.ParamByName('role_id').AsInteger := Role.Id;
-      Query.ParamByName('permission').AsString := Perm;
-      Query.ExecSQL;
-    end;
-  finally
-    Query.Free;
-  end;
+  Data.Id := Role.Id;
+  Data.Name := Role.Name;
+  Data.DisplayName := Role.DisplayName;
+  Data.Description := Role.Description;
+  Data.ParentRole := Role.ParentRole;
+  Data.IsActive := Role.IsActive;
+  Data.CreatedAt := Role.CreatedAt;
+  Data.UpdatedAt := Role.UpdatedAt;
+
+  if Role.Id = 0 then
+    Role.Id := FStorage.InsertRole(Data)
+  else
+    FStorage.UpdateRole(Data);
+
+  FStorage.ReplaceRolePermissions(Role.Id, Role.Permissions.ToArray);
 end;
 
 procedure TAuthorizationManager.DeleteUserFromDatabase(const Username: string);
-var
-  Query: TFDQuery;
 begin
-  if Assigned(FStorage) then
-  begin
-    FStorage.DeleteUser(Username);
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
+  if not Assigned(FStorage) then
     Exit;
 
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM auth_users WHERE username = :username';
-    Query.ParamByName('username').AsString := Username;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  FStorage.DeleteUser(Username);
 end;
 
 procedure TAuthorizationManager.DeleteRoleFromDatabase(const RoleName: string);
-var
-  Query: TFDQuery;
 begin
-  if Assigned(FStorage) then
-  begin
-    FStorage.DeleteRole(RoleName);
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
+  if not Assigned(FStorage) then
     Exit;
 
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM auth_roles WHERE name = :name';
-    Query.ParamByName('name').AsString := RoleName;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  FStorage.DeleteRole(RoleName);
 end;
 
 procedure TAuthorizationManager.LogAudit(const Username: string; Action: TAuditAction;
@@ -1109,7 +831,6 @@ const
     'RESOURCE_ACCESSED', 'RESOURCE_MODIFIED'
   );
 var
-  Query: TFDQuery;
   Entry: TAuditLogEntry;
 begin
   if not FAuditEnabled then
@@ -1122,30 +843,7 @@ begin
     FOnAuditLog(Entry);
 
   if Assigned(FStorage) then
-  begin
     FStorage.InsertAudit(Username, ACTION_NAMES[Action], Resource, Details, Success);
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
-    Exit;
-
-  // Save to database
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'INSERT INTO auth_audit_log (username, action, resource, details, success) ' +
-      'VALUES (:username, :action, :resource, :details, :success)';
-    Query.ParamByName('username').AsString := Username;
-    Query.ParamByName('action').AsString := ACTION_NAMES[Action];
-    Query.ParamByName('resource').AsString := Resource;
-    Query.ParamByName('details').AsString := Details;
-    Query.ParamByName('success').AsInteger := Ord(Success);
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
 end;
 
 function TAuthorizationManager.GetEffectivePermissions(User: TUser): TList<string>;
@@ -1485,7 +1183,6 @@ procedure TAuthorizationManager.AssignRole(const Username, RoleName: string);
 var
   User: TUser;
   Role: TRole;
-  Query: TFDQuery;
 begin
   FLock.Enter;
   try
@@ -1500,22 +1197,7 @@ begin
       User.AddRole(RoleName);
 
       if Assigned(FStorage) then
-        FStorage.AssignUserRole(User.Id, Role.Id)
-      else if Assigned(FConnection) then
-      begin
-        Query := TFDQuery.Create(nil);
-        try
-          Query.Connection := FConnection;
-          Query.SQL.Text :=
-            'INSERT OR IGNORE INTO auth_user_roles (user_id, role_id) ' +
-            'VALUES (:user_id, :role_id)';
-          Query.ParamByName('user_id').AsInteger := User.Id;
-          Query.ParamByName('role_id').AsInteger := Role.Id;
-          Query.ExecSQL;
-        finally
-          Query.Free;
-        end;
-      end;
+        FStorage.AssignUserRole(User.Id, Role.Id);
 
       LogAudit(Username, aaRoleAssigned, RoleName,
         Format('Assigned role %s to user %s', [RoleName, Username]), True);
@@ -1529,7 +1211,6 @@ procedure TAuthorizationManager.RemoveRole(const Username, RoleName: string);
 var
   User: TUser;
   Role: TRole;
-  Query: TFDQuery;
 begin
   FLock.Enter;
   try
@@ -1542,21 +1223,7 @@ begin
     User.RemoveRole(RoleName);
 
     if Assigned(FStorage) then
-      FStorage.RemoveUserRole(User.Id, Role.Id)
-    else if Assigned(FConnection) then
-    begin
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-        Query.SQL.Text :=
-          'DELETE FROM auth_user_roles WHERE user_id = :user_id AND role_id = :role_id';
-        Query.ParamByName('user_id').AsInteger := User.Id;
-        Query.ParamByName('role_id').AsInteger := Role.Id;
-        Query.ExecSQL;
-      finally
-        Query.Free;
-      end;
-    end;
+      FStorage.RemoveUserRole(User.Id, Role.Id);
 
     LogAudit(Username, aaRoleRevoked, RoleName,
       Format('Removed role %s from user %s', [RoleName, Username]), True);
@@ -1794,10 +1461,8 @@ function TAuthorizationManager.GetAuditLog(const Username: string;
   end;
   
 var
-  Query: TFDQuery;
   List: TList<TAuditLogEntry>;
   Entry: TAuditLogEntry;
-  SQL: string;
   AuditData: TAuthorizationAuditData;
 begin
   List := TList<TAuditLogEntry>.Create;
@@ -1816,49 +1481,6 @@ begin
         Entry.Action := MapActionString(AuditData.Action);
         List.Add(Entry);
       end;
-    end
-    else if Assigned(FConnection) then
-    begin
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-
-        SQL := 'SELECT * FROM auth_audit_log WHERE 1=1';
-        if Username <> '' then
-          SQL := SQL + ' AND username = :username';
-        if StartDate > 0 then
-          SQL := SQL + ' AND timestamp >= :start_date';
-        if EndDate > 0 then
-          SQL := SQL + ' AND timestamp <= :end_date';
-        SQL := SQL + ' ORDER BY timestamp DESC LIMIT :max_entries';
-
-        Query.SQL.Text := SQL;
-        if Username <> '' then
-          Query.ParamByName('username').AsString := Username;
-        if StartDate > 0 then
-          Query.ParamByName('start_date').AsDateTime := StartDate;
-        if EndDate > 0 then
-          Query.ParamByName('end_date').AsDateTime := EndDate;
-        Query.ParamByName('max_entries').AsInteger := MaxEntries;
-
-        Query.Open;
-        while not Query.Eof do
-        begin
-          Entry.Id := Query.FieldByName('id').AsLargeInt;
-          Entry.Timestamp := Query.FieldByName('timestamp').AsDateTime;
-          Entry.Username := Query.FieldByName('username').AsString;
-          Entry.Resource := Query.FieldByName('resource').AsString;
-          Entry.Details := Query.FieldByName('details').AsString;
-          Entry.IPAddress := Query.FieldByName('ip_address').AsString;
-          Entry.Success := Query.FieldByName('success').AsInteger = 1;
-          // BUG-048 FIX: Map action string to enum
-          Entry.Action := MapActionString(Query.FieldByName('action').AsString);
-          List.Add(Entry);
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
     end;
     
     Result := List.ToArray;
@@ -1868,28 +1490,9 @@ begin
 end;
 
 procedure TAuthorizationManager.ClearAuditLog(DaysToKeep: Integer);
-var
-  Query: TFDQuery;
 begin
   if Assigned(FStorage) then
-  begin
     FStorage.ClearAuditBefore(IncDay(Now, -DaysToKeep));
-    Exit;
-  end;
-
-  if not Assigned(FConnection) then
-    Exit;
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text :=
-      'DELETE FROM auth_audit_log WHERE timestamp < :cutoff_date';
-    Query.ParamByName('cutoff_date').AsDateTime := IncDay(Now, -DaysToKeep);
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
 end;
 
 initialization
