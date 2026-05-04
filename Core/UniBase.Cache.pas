@@ -42,6 +42,7 @@ uses
   System.SyncObjs,
   System.DateUtils,
   System.TimeSpan,
+  System.Math,
   System.TypInfo,
   UniBase.Constants;
 
@@ -650,6 +651,7 @@ var
 begin
   MinCount := High(Int64);
   Found := False;
+  MinKey := Default(K);
   
   for Pair in FEntries do
   begin
