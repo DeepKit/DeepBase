@@ -40,7 +40,8 @@ uses
   UniBase.PluginManager,
   UniBase.FormState,
   UniBase.MRU,
-  UniBase.Hotkeys;
+  UniBase.Hotkeys,
+  UniBase.Storage.Interfaces;
 
 const
   UNIBASE_VERSION = '0.3';
@@ -70,6 +71,7 @@ type
     FRootPath: string;
     FConfigDBPath: string;
     FConfigDB: TFDConnection;
+    FStorage: IManagerStorage;
     FIsInitialized: Boolean;
     FLastError: string;
     FInitErrorCode: TInitErrorCode;
@@ -100,6 +102,7 @@ type
     FFormState: TUniBaseFormState;
     FMRU: TUniBaseMRU;
     FHotkeys: TUniBaseHotkeys;
+    class var FStorageFactory: TFunc<TObject, IManagerStorage>;
     
     // 内部方法
     procedure InitializeModules;
@@ -129,6 +132,8 @@ type
     function CheckWritePermission(const Path: string): Boolean;
     function FindRootPath: string;
     function CreatePluginContext: IUniBasePluginContext;
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IManagerStorage; static;
     
     // InitializeEx 辅助方法（R-001 重构）
     function DoFindRootPath(out ErrorMsg: string): Boolean;
@@ -152,6 +157,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, IManagerStorage>); static;
     
     // ========================================
     // 初始化方法
@@ -431,6 +438,20 @@ end;
 
 { TUniBaseManager }
 
+class procedure TUniBaseManager.SetStorageFactory(
+  const AFactory: TFunc<TObject, IManagerStorage>);
+begin
+  FStorageFactory := AFactory;
+end;
+
+class function TUniBaseManager.CreateStorageFromConnection(
+  AConnection: TObject): IManagerStorage;
+begin
+  Result := nil;
+  if Assigned(FStorageFactory) then
+    Result := FStorageFactory(AConnection);
+end;
+
 constructor TUniBaseManager.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -442,6 +463,7 @@ begin
   FLastError := '';
   FCurrentLanguage := 'en-US';
   FCurrentTheme := 'Windows11';
+  FStorage := nil;
 end;
 
 destructor TUniBaseManager.Destroy;
@@ -673,6 +695,7 @@ begin
         FConfigDB.Close;
       FreeAndNil(FConfigDB);
     end;
+    FStorage := nil;
     
     FIsInitialized := False;
     FReadyFired := False;
@@ -1013,6 +1036,20 @@ begin
     
     FConfigDB.Open;
     Result := FConfigDB.Connected;
+    FStorage := nil;
+    if Result then
+    begin
+      try
+        FStorage := CreateStorageFromConnection(FConfigDB);
+      except
+        on E: Exception do
+        begin
+          FStorage := nil;
+          if Assigned(FLogger) then
+            FLogger.Warn('Manager storage factory failed: ' + E.Message, 'UniBase.Manager');
+        end;
+      end;
+    end;
     
     if not Result then
     begin
@@ -1040,41 +1077,46 @@ begin
   
   if not Assigned(FConfigDB) or not FConfigDB.Connected then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConfigDB;
-    
-    // R-004: 使用 REQUIRED_CORE_TABLES 常量构建查询
-    TableList := '';
-    for I := Low(REQUIRED_CORE_TABLES) to High(REQUIRED_CORE_TABLES) do
-    begin
-      if I > Low(REQUIRED_CORE_TABLES) then
-        TableList := TableList + ', ';
-      TableList := TableList + QuotedStr(REQUIRED_CORE_TABLES[I]);
+
+  if Assigned(FStorage) then
+    TableCount := FStorage.CountCoreTables(REQUIRED_CORE_TABLES)
+  else
+  begin
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConfigDB;
+
+      // R-004: 使用 REQUIRED_CORE_TABLES 常量构建查询
+      TableList := '';
+      for I := Low(REQUIRED_CORE_TABLES) to High(REQUIRED_CORE_TABLES) do
+      begin
+        if I > Low(REQUIRED_CORE_TABLES) then
+          TableList := TableList + ', ';
+        TableList := TableList + QuotedStr(REQUIRED_CORE_TABLES[I]);
+      end;
+
+      Query.SQL.Text := Format(
+        'SELECT COUNT(*) FROM sqlite_master WHERE type=''table'' AND name IN (%s)',
+        [TableList]);
+      Query.Open;
+      TableCount := Query.Fields[0].AsInteger;
+    finally
+      Query.Free;
     end;
-    
-    Query.SQL.Text := Format(
-      'SELECT COUNT(*) FROM sqlite_master WHERE type=''table'' AND name IN (%s)',
-      [TableList]);
-    Query.Open;
-    
-    TableCount := Query.Fields[0].AsInteger;
-    Result := (TableCount = Length(REQUIRED_CORE_TABLES));
-    
-    if not Result then
-    begin
-      FInitErrorCode := ecConfigDBCorrupted;
-      FLastError := Format('Schema validation failed: expected %d tables, found %d',
-        [Length(REQUIRED_CORE_TABLES), TableCount]);
-      Exit;
-    end;
-    
-    // 验证 Schema 版本兼容性
-    Result := ValidateSchemaVersion;
-  finally
-    Query.Free;
   end;
+
+  Result := (TableCount = Length(REQUIRED_CORE_TABLES));
+
+  if not Result then
+  begin
+    FInitErrorCode := ecConfigDBCorrupted;
+    FLastError := Format('Schema validation failed: expected %d tables, found %d',
+      [Length(REQUIRED_CORE_TABLES), TableCount]);
+    Exit;
+  end;
+
+  // 验证 Schema 版本兼容性
+  Result := ValidateSchemaVersion;
 end;
 
 function TUniBaseManager.ValidateSchemaVersion: Boolean;
@@ -1241,6 +1283,9 @@ var
   
   function ColumnExists(const TableName, ColumnName: string): Boolean;
   begin
+    if Assigned(FStorage) then
+      Exit(FStorage.ColumnExists(TableName, ColumnName));
+
     Query.SQL.Text := Format(
       'SELECT COUNT(*) FROM pragma_table_info(''%s'') WHERE name = ''%s''',
       [TableName, ColumnName]);
@@ -1254,9 +1299,14 @@ var
     if not ColumnExists(TableName, ColumnName) then
     begin
       try
-        Query.SQL.Text := Format('ALTER TABLE %s ADD COLUMN %s %s',
-          [TableName, ColumnName, ColumnDef]);
-        Query.ExecSQL;
+        if Assigned(FStorage) then
+          FStorage.AddColumn(TableName, ColumnName, ColumnDef)
+        else
+        begin
+          Query.SQL.Text := Format('ALTER TABLE %s ADD COLUMN %s %s',
+            [TableName, ColumnName, ColumnDef]);
+          Query.ExecSQL;
+        end;
       except
         on E: Exception do
           {$IFDEF DEBUG}
@@ -1426,6 +1476,9 @@ begin
   if not Assigned(FConfigDB) or not FConfigDB.Connected or (Trim(TableName) = '') then
     Exit;
 
+  if Assigned(FStorage) then
+    Exit(FStorage.TableExists(TableName));
+
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConfigDB;
@@ -1446,7 +1499,13 @@ var
   Query: TFDQuery;
 begin
   Result := False;
-  if not TableExists(TableName) or (Trim(ColumnName) = '') then
+  if (Trim(ColumnName) = '') then
+    Exit;
+
+  if Assigned(FStorage) then
+    Exit(FStorage.ColumnExists(TableName, ColumnName));
+
+  if not TableExists(TableName) then
     Exit;
 
   Query := TFDQuery.Create(nil);
@@ -1559,6 +1618,9 @@ begin
   
   if not Assigned(FConfigDB) or not FConfigDB.Connected then
     Exit;
+
+  if Assigned(FStorage) then
+    Exit(FStorage.ReadSchemaVersion);
     
   Query := TFDQuery.Create(nil);
   try
@@ -1660,6 +1722,7 @@ function TUniBaseManager.MigrateSchemaInternal(const FromVersion, ToVersion: str
 var
   ScriptPath: string;
   Query: TFDQuery;
+  UpgradeTimeISO: string;
 begin
   Result := False;
   
@@ -1674,6 +1737,14 @@ begin
   if not RunMigrationScript(ScriptPath) then
     Exit;
   
+  UpgradeTimeISO := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+
+  if Assigned(FStorage) then
+  begin
+    FStorage.UpdateSchemaInfo(ToVersion, UpgradeTimeISO);
+    Exit(True);
+  end;
+
   // Update SchemaInfo
   Query := TFDQuery.Create(nil);
   try
@@ -1684,7 +1755,7 @@ begin
     
     // Use ISO8601 format for SQLite datetime compatibility
     Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
-    Query.ParamByName('NowTime').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    Query.ParamByName('NowTime').AsString := UpgradeTimeISO;
     Query.ExecSQL;
     
     Result := True;
@@ -1890,6 +1961,9 @@ begin
     
   TMonitor.Enter(FLock);
   try
+    if Assigned(FStorage) then
+      Exit(FStorage.ReadProjectInfo(Key));
+
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConfigDB;
@@ -1916,6 +1990,12 @@ begin
     
   TMonitor.Enter(FLock);
   try
+    if Assigned(FStorage) then
+    begin
+      FStorage.UpsertProjectInfo(Key, Value);
+      Exit;
+    end;
+
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConfigDB;

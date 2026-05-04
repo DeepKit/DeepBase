@@ -554,6 +554,8 @@
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已重写为 FireDAC 适配器，并在 initialization 自动注册到 Logger 存储工厂。
   - `Scripts/build_packages_win64.ps1 -Profile Runtime` 已通过（Core/Services/Persistence/Features 全链路编译通过），为后续继续拆分 Core 依赖提供稳定基线。
   - `UniBaseCore.dpk` 中历史重复/无效单元已清理，当前剩余阻塞点是 Core 多模块仍直接 `uses FireDAC.*`，需继续下沉到 Persistence。
+  - `Core/UniBase.Manager.pas` 已接入 `IManagerStorage` 工厂扩展点（`SetStorageFactory/CreateStorageFromConnection`），并在 Schema 校验/ProjectInfo/SchemaVersion 等路径优先走抽象接口，保留 SQL 回退。
+  - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
 
 #### ARCH-020: 异常类继承断裂（EUniBaseDbError / EMathException）
 - **状态**: ✅ 完成 (2026-05-03)
@@ -859,10 +861,12 @@
 - **状态**: 🟡 进行中（2026-05-04）
 - **优先级**: P2 (架构)
 - **任务**:
-  - [x] 定义 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage` 接口，并补齐 `IAuthorizationStorage`
+  - [x] 定义 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage`、`IManagerStorage` 接口，并补齐 `IAuthorizationStorage`
   - [ ] Core 仅依赖接口，FireDAC 实现全部移入 Persistence/
   - [ ] 为未来支持其他数据库技术（dbExpress/ADO）预留扩展点
 - **阶段进展**:
+  - `Core/UniBase.Storage.Interfaces.pas` 新增 `IManagerStorage` 契约；`Core/UniBase.Manager.pas` 增加存储工厂注入点并将部分元数据访问迁移为接口优先路径（Schema 校验、列检查、版本/项目信息读写）。
+  - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 与 `UniBasePersistence.dpk` 已打通，Manager 抽象层具备 FireDAC 适配落地。
   - 新增 `Core/UniBase.Storage.Interfaces.pas`，统一声明 `IConfigStorage`、`IFormStateStorage`、`II18nStorage`、`ISecuritySecretStorage`、`ILicenseStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`ILogStorage`、`ISchemaStorage`。
   - `Core/UniBase.Config.pas` 新增存储注入能力：支持 `TUniBaseConfig.Create(const AStorage: IConfigStorage)`，并通过 `SetConnectionStorageFactory` 对接外部实现。
   - 新增 `Persistence/UniBase.Persistence.Config.FireDAC.pas`，提供 FireDAC 版 `IConfigStorage` 适配器与工厂注册。

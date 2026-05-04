@@ -1,0 +1,43 @@
+package UniBasePersistence;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'UniBase Persistence Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACSqliteDriver,
+  FireDACPGDriver,
+  UniBaseCore,
+  UniBaseServices;
+
+contains
+  UniBase.Persistence.FormState.FireDAC in 'Persistence\UniBase.Persistence.FormState.FireDAC.pas',
+  UniBase.Persistence.Config.FireDAC in 'Persistence\UniBase.Persistence.Config.FireDAC.pas',
+  UniBase.Persistence.MRU.FireDAC in 'Persistence\UniBase.Persistence.MRU.FireDAC.pas',
+  UniBase.Persistence.Hotkeys.FireDAC in 'Persistence\UniBase.Persistence.Hotkeys.FireDAC.pas',
+  UniBase.Persistence.I18n.FireDAC in 'Persistence\UniBase.Persistence.I18n.FireDAC.pas',
+  UniBase.Persistence.Logging.FireDAC in 'Persistence\UniBase.Persistence.Logging.FireDAC.pas',
+  UniBase.Persistence.Protection.FireDAC in 'Persistence\UniBase.Persistence.Protection.FireDAC.pas',
+  UniBase.Persistence.Theme.FireDAC in 'Persistence\UniBase.Persistence.Theme.FireDAC.pas',
+  UniBase.Persistence.License.FireDAC in 'Persistence\UniBase.Persistence.License.FireDAC.pas',
+  UniBase.Persistence.Security.FireDAC in 'Persistence\UniBase.Persistence.Security.FireDAC.pas',
+  UniBase.Persistence.Authorization.FireDAC in 'Persistence\UniBase.Persistence.Authorization.FireDAC.pas',
+  UniBase.Persistence.Exception.FireDAC in 'Persistence\UniBase.Persistence.Exception.FireDAC.pas',
+  UniBase.Persistence.Diagnose.FireDAC in 'Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
+  UniBase.Persistence.Manager.FireDAC in 'Persistence\UniBase.Persistence.Manager.FireDAC.pas',
+  UniBase.Persistence.RuntimeRegistration in 'Persistence\UniBase.Persistence.RuntimeRegistration.pas',
+  UniBase.DB.ConnectionPool in 'Persistence\UniBase.DB.ConnectionPool.pas',
+  UniBase.SQLLogger in 'Persistence\UniBase.SQLLogger.pas',
+  UniBase.DB.DoQry in 'Persistence\UniBase.DB.DoQry.pas',
+  UniBase.DB.AutoRefreshConfig in 'Persistence\UniBase.DB.AutoRefreshConfig.pas',
+  UniBase.DB.Factory in 'Persistence\UniBase.DB.Factory.pas',
+  UniBase.DB.JobQueue in 'Persistence\UniBase.DB.JobQueue.pas',
+  UniBase.DB.Migrations in 'Persistence\UniBase.DB.Migrations.pas',
+  UniBase.DB.StatusMachine in 'Persistence\UniBase.DB.StatusMachine.pas',
+  UniBase.DB.Pool in 'Persistence\UniBase.DB.Pool.pas';
+
+end.
