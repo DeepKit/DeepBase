@@ -739,10 +739,12 @@
 - **影响**: 断路器可能永远不触发熔断
 - **任务**:
   - [x] 标记 `AllowRequest` 为 deprecated，引导使用 `Execute` 封装方法
-  - [ ] 或添加自动超时记录失败的机制
+  - [x] 添加自动超时记录失败的机制
 - **修复摘要**:
   - `Core/UniBase.Resilience.pas`：`AllowRequest` 已标记 `deprecated`，提示迁移到 `Execute(...)` 以保证状态更新原子性。
   - 模块头部示例已改为 `Breaker.Execute(...)` 推荐用法，避免新代码继续采用 `AllowRequest → RecordSuccess/RecordFailure` 手工三段式调用。
+  - `Core/UniBase.Resilience.pas`：`TCircuitBreaker` 新增 `Execute(Proc, TimeoutMs)` / `Execute<T>(Func, TimeoutMs)` 重载，将超时异常纳入断路器失败统计。
+  - `Tests/Test.UniBase.Resilience.pas`：新增超时回归测试，验证超时会触发 `ETimeoutException` 且按阈值打开断路器。
 
 #### ARCH-033: 微信/QQ OAuth AppSecret 通过 GET URL 暴露
 - **状态**: ✅ 完成 (2026-05-03)

@@ -135,7 +135,9 @@ type
     
     // Execute with circuit breaker
     procedure Execute(Proc: TProc); overload;
+    procedure Execute(Proc: TProc; TimeoutMs: Int64); overload;
     function Execute<T>(Func: TFunc<T>): T; overload;
+    function Execute<T>(Func: TFunc<T>; TimeoutMs: Int64): T; overload;
     
     // State info
     property Name: string read FName;
@@ -611,6 +613,22 @@ begin
   end;
 end;
 
+procedure TCircuitBreaker.Execute(Proc: TProc; TimeoutMs: Int64);
+var
+  TimeoutPolicy: TTimeoutPolicy;
+begin
+  TimeoutPolicy := TTimeoutPolicy.Create(TimeoutMs);
+  try
+    Execute(
+      procedure
+      begin
+        TimeoutPolicy.Execute(Proc);
+      end);
+  finally
+    TimeoutPolicy.Free;
+  end;
+end;
+
 function TCircuitBreaker.Execute<T>(Func: TFunc<T>): T;
 begin
   if not AllowRequest then
@@ -622,6 +640,22 @@ begin
   except
     RecordFailure;
     raise;
+  end;
+end;
+
+function TCircuitBreaker.Execute<T>(Func: TFunc<T>; TimeoutMs: Int64): T;
+var
+  TimeoutPolicy: TTimeoutPolicy;
+begin
+  TimeoutPolicy := TTimeoutPolicy.Create(TimeoutMs);
+  try
+    Result := Execute<T>(
+      function: T
+      begin
+        Result := TimeoutPolicy.Execute<T>(Func);
+      end);
+  finally
+    TimeoutPolicy.Free;
   end;
 end;
 

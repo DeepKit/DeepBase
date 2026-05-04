@@ -71,6 +71,10 @@ type
     procedure Test_Execute_Func_Failure;
     [Test]
     procedure Test_Execute_RejectedWhenOpen;
+    [Test]
+    procedure Test_Execute_Proc_Timeout_RecordsFailure;
+    [Test]
+    procedure Test_Execute_Func_Timeout_RecordsFailure;
 
     // AllowRequest tests
     [Test]
@@ -635,6 +639,43 @@ begin
           // Should not execute
         end);
     end, Exception);
+end;
+
+procedure TCircuitBreakerTests.Test_Execute_Proc_Timeout_RecordsFailure;
+begin
+  FCircuitBreaker.FailureThreshold(1);
+
+  Assert.WillRaise(
+    procedure
+    begin
+      FCircuitBreaker.Execute(
+        procedure
+        begin
+          Sleep(300);
+        end, 30);
+    end, ETimeoutException);
+
+  Assert.AreEqual(csOpen, FCircuitBreaker.State,
+    '超时异常应计入失败并触发熔断');
+end;
+
+procedure TCircuitBreakerTests.Test_Execute_Func_Timeout_RecordsFailure;
+begin
+  FCircuitBreaker.FailureThreshold(1);
+
+  Assert.WillRaise(
+    procedure
+    begin
+      FCircuitBreaker.Execute<Integer>(
+        function: Integer
+        begin
+          Sleep(300);
+          Result := 1;
+        end, 30);
+    end, ETimeoutException);
+
+  Assert.AreEqual(csOpen, FCircuitBreaker.State,
+    '函数超时异常应计入失败并触发熔断');
 end;
 
 procedure TCircuitBreakerTests.Test_AllowRequest_TrueWhenClosed;
@@ -2207,7 +2248,7 @@ begin
     TTask.WaitForAll(Tasks);
 
     // All threads should get the same breaker
-    Assert.AreEqual(1, Breakers.Count);
+    Assert.AreEqual<Integer>(1, Breakers.Count);
   finally
     Breakers.Free;
     Lock.Free;
