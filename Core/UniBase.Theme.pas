@@ -33,9 +33,9 @@ uses
   Vcl.Styles,
   Vcl.Controls,
   {$ENDIF}
-  FireDAC.Comp.Client,
   UniBase.Types,
-  UniBase.Logging;
+  UniBase.Logging,
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -43,23 +43,32 @@ type
   /// </summary>
   TUniBaseTheme = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: IThemeStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
     FCurrentThemeName: string;
     FOnThemeChanged: TNotifyEvent;
     FThemeCache: TDictionary<string, TThemeInfo>;
     FPendingThemeName: string;
+    class var FConnectionStorageFactory: TFunc<TObject, IThemeStorage>;
 
     function GetSystemThemeInfo(const StyleName: string): TThemeInfo;
     function GetDBThemeInfo(const ThemeName: string): TThemeInfo;
     procedure LoadThemeCache;
     procedure DoThemeChanged;
     procedure ApplyThemeSync; // runs on main thread via TThread.Synchronize
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IThemeStorage; static;
 
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
+    constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
+    constructor Create(const AStorage: IThemeStorage;
+      ALock: TObject = nil); overload;
     destructor Destroy; override;
+
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, IThemeStorage>); static;
     
     // ========================================
     // Core Methods
@@ -123,10 +132,17 @@ implementation
 
 { TUniBaseTheme }
 
-constructor TUniBaseTheme.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseTheme.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseTheme.Create(const AStorage: IThemeStorage;
+  ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
+  FStorage := AStorage;
   if ALock <> nil then
   begin
     FLock := ALock;
@@ -161,52 +177,48 @@ begin
   inherited;
 end;
 
+class procedure TUniBaseTheme.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, IThemeStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseTheme.CreateStorageFromConnection(
+  AConnection: TObject): IThemeStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No theme storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.Theme.FireDAC or UniBase.Persistence.Manager.FireDAC.');
+end;
+
 procedure TUniBaseTheme.LoadThemeCache;
 var
-  Query: TFDQuery;
+  Themes: TThemeInfoArray;
   Info: TThemeInfo;
 begin
-  if (FConnection = nil) or (not FConnection.Connected) then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
     FThemeCache.Clear;
-    
-    Query := TFDQuery.Create(nil);
+
     try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'SELECT ThemeName, DisplayName, StyleFile, IsDark, IsBuiltIn, IsEnabled ' +
-        'FROM Themes WHERE IsEnabled = 1 ORDER BY SortOrder';
-      try
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          Info.Name := Query.FieldByName('ThemeName').AsString;
-          // StyleFile 可能为空
-          if Query.FindField('StyleFile') <> nil then
-            Info.StyleFile := Query.FieldByName('StyleFile').AsString
-          else
-            Info.StyleFile := '';
-          Info.IsDark := Query.FieldByName('IsDark').AsInteger <> 0;
-          Info.IsBuiltIn := Query.FieldByName('IsBuiltIn').AsInteger <> 0;
-          
-          FThemeCache.AddOrSetValue(Info.Name, Info);
-          Query.Next;
-        end;
-      except
-        on E: Exception do
-          // 表不存在或字段缺失时忽略错误：
-          // 主题信息将回退到系统内置主题，避免因缺表阻塞应用启动。
-          {$IFDEF DEBUG}
-          OutputDebugString(PChar('UniBase.Theme: LoadThemeCache failed: ' + E.Message));
-          {$ENDIF}
+      Themes := FStorage.ReadEnabledThemes;
+      for Info in Themes do
+        FThemeCache.AddOrSetValue(Info.Name, Info);
+    except
+      on E: Exception do
+        // 表不存在或字段缺失时忽略错误：
+        // 主题信息将回退到系统内置主题，避免因缺表阻塞应用启动。
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Theme: LoadThemeCache failed: ' + E.Message));
+        {$ENDIF}
       end;
-    finally
-      Query.Free;
-    end;
   finally
     TMonitor.Exit(FLock);
   end;

@@ -13,11 +13,10 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.Variants,
   System.Generics.Collections,
   Vcl.Menus, // For TShortCut, ShortCutToText, TextToShortCut
-  FireDAC.Comp.Client,
-  UniBase.Types;
+  UniBase.Types,
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -44,21 +43,29 @@ type
   /// </summary>
   TUniBaseHotkeys = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: IHotkeyStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
     FCache: TDictionary<string, TShortCut>; // ActionName -> Shortcut
     FDefaultCache: TDictionary<string, TShortCut>; // ActionName -> DefaultShortcut
     FOnHotkeyChanged: THotkeyChangedProc;
+    class var FConnectionStorageFactory: TFunc<TObject, IHotkeyStorage>;
     
     procedure LoadCache;
     procedure InternalWriteHotkey(const ActionName: string; Shortcut, DefaultShortcut: TShortCut; 
       const Description, Category: string; IsCustomized: Boolean);
     procedure DoHotkeyChanged(const ActionName: string);
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IHotkeyStorage; static;
     
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject = nil);
+    constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
+    constructor Create(const AStorage: IHotkeyStorage;
+      ALock: TObject = nil); overload;
     destructor Destroy; override;
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, IHotkeyStorage>); static;
     
     // ========================================
     // Core Methods
@@ -140,15 +147,19 @@ type
 
 implementation
 
-uses
-  FireDAC.Stan.Param;
-
 { TUniBaseHotkeys }
 
-constructor TUniBaseHotkeys.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseHotkeys.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseHotkeys.Create(const AStorage: IHotkeyStorage;
+  ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
+  FStorage := AStorage;
   if ALock <> nil then
   begin
     FLock := ALock;
@@ -173,60 +184,44 @@ begin
   inherited;
 end;
 
+class procedure TUniBaseHotkeys.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, IHotkeyStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseHotkeys.CreateStorageFromConnection(
+  AConnection: TObject): IHotkeyStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No hotkey storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.Hotkeys.FireDAC or UniBase.Persistence.Manager.FireDAC.');
+end;
+
 procedure TUniBaseHotkeys.LoadCache;
 var
-  Query: TFDQuery;
-  ActionName: string;
-  Shortcut, DefaultShortcut: TShortCut;
+  Items: THotkeyStorageDataArray;
+  Item: THotkeyStorageData;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
     FCache.Clear;
     FDefaultCache.Clear;
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT ActionName, Shortcut, DefaultShortcut FROM Hotkeys WHERE IsEnabled = 1';
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        ActionName := Query.FieldByName('ActionName').AsString;
-        // Shortcut 字段可能是整数或文本格式，尝试两种方式读取
-        try
-          if Query.FieldByName('Shortcut').IsNull then
-            Shortcut := 0
-          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
-            Shortcut := Query.FieldByName('Shortcut').AsInteger
-          else
-            Shortcut := TextToShortCut(Query.FieldByName('Shortcut').AsString);
-        except
-          Shortcut := 0;
-        end;
-        
-        try
-          if Query.FieldByName('DefaultShortcut').IsNull then
-            DefaultShortcut := 0
-          else if VarIsNumeric(Query.FieldByName('DefaultShortcut').Value) then
-            DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger
-          else
-            DefaultShortcut := TextToShortCut(Query.FieldByName('DefaultShortcut').AsString);
-        except
-          DefaultShortcut := 0;
-        end;
-        
-        FCache.AddOrSetValue(ActionName, Shortcut);
-        if DefaultShortcut <> 0 then
-          FDefaultCache.AddOrSetValue(ActionName, DefaultShortcut);
-          
-        Query.Next;
-      end;
-    finally
-      Query.Free;
+
+    Items := FStorage.ReadEnabledHotkeys;
+    for Item in Items do
+    begin
+      FCache.AddOrSetValue(Item.ActionName, TShortCut(Item.Shortcut));
+      if Item.DefaultShortcut <> 0 then
+        FDefaultCache.AddOrSetValue(Item.ActionName,
+          TShortCut(Item.DefaultShortcut));
     end;
   finally
     TMonitor.Exit(FLock);
@@ -236,43 +231,38 @@ end;
 procedure TUniBaseHotkeys.RegisterDefaultHotkeys(const Defaults: TArray<THotkeyDefault>);
 var
   Def: THotkeyDefault;
-  Query: TFDQuery;
+  StorageDefaults: THotkeyStorageDataArray;
   ShortcutVal: TShortCut;
+  I: Integer;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
+  SetLength(StorageDefaults, Length(Defaults));
+
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      // Use INSERT OR IGNORE to insert only if not exists
-      Query.SQL.Text := 
-        'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description, IsEnabled, IsCustomized) ' +
-        'VALUES (:Action, :Shortcut, :Default, :Cat, :Desc, 1, 0)';
-        
-      for Def in Defaults do
-      begin
-        ShortcutVal := TextToShortCut(Def.Shortcut);
-        
-        Query.ParamByName('Action').AsString := Def.ActionName;
-        Query.ParamByName('Shortcut').AsInteger := ShortcutVal;
-        Query.ParamByName('Default').AsInteger := ShortcutVal;
-        Query.ParamByName('Cat').AsString := Def.Category;
-        Query.ParamByName('Desc').AsString := Def.Description;
-        Query.ExecSQL;
-        
-        // Add to cache if not exists
-        if not FCache.ContainsKey(Def.ActionName) then
-        begin
-          FCache.Add(Def.ActionName, ShortcutVal);
-          FDefaultCache.Add(Def.ActionName, ShortcutVal);
-        end;
-      end;
-    finally
-      Query.Free;
+    for I := 0 to High(Defaults) do
+    begin
+      Def := Defaults[I];
+      ShortcutVal := TextToShortCut(Def.Shortcut);
+      StorageDefaults[I].ActionName := Def.ActionName;
+      StorageDefaults[I].Shortcut := Word(ShortcutVal);
+      StorageDefaults[I].DefaultShortcut := Word(ShortcutVal);
+      StorageDefaults[I].Category := Def.Category;
+      StorageDefaults[I].Description := Def.Description;
+      StorageDefaults[I].IsEnabled := True;
+      StorageDefaults[I].IsCustomized := False;
     end;
+
+    if Assigned(FStorage) then
+      FStorage.RegisterDefaults(StorageDefaults);
+
+    for I := 0 to High(StorageDefaults) do
+      if not FCache.ContainsKey(StorageDefaults[I].ActionName) then
+      begin
+        FCache.Add(StorageDefaults[I].ActionName,
+          TShortCut(StorageDefaults[I].Shortcut));
+        FDefaultCache.Add(StorageDefaults[I].ActionName,
+          TShortCut(StorageDefaults[I].DefaultShortcut));
+      end;
   finally
     TMonitor.Exit(FLock);
   end;
@@ -280,26 +270,9 @@ end;
 
 procedure TUniBaseHotkeys.InternalWriteHotkey(const ActionName: string; Shortcut, DefaultShortcut: TShortCut; 
   const Description, Category: string; IsCustomized: Boolean);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'UPDATE Hotkeys SET Shortcut = :Shortcut, IsCustomized = :Customized ' +
-      'WHERE ActionName = :Action';
-      
-    Query.ParamByName('Action').AsString := ActionName;
-    Query.ParamByName('Shortcut').AsInteger := Shortcut;
-    Query.ParamByName('Customized').AsInteger := Ord(IsCustomized);
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    FStorage.UpdateShortcut(ActionName, Word(Shortcut), IsCustomized);
 end;
 
 procedure TUniBaseHotkeys.DoHotkeyChanged(const ActionName: string);
@@ -364,30 +337,18 @@ end;
 
 procedure TUniBaseHotkeys.ResetHotkey(const ActionName: string);
 var
-  Query: TFDQuery;
   DefaultShortcut: TShortCut;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      // Restore to default
-      Query.SQL.Text := 
-        'UPDATE Hotkeys SET Shortcut = DefaultShortcut, IsCustomized = 0 ' +
-        'WHERE ActionName = :Action';
-      Query.ParamByName('Action').AsString := ActionName;
-      Query.ExecSQL;
-      
-      // Update cache
-      if FDefaultCache.TryGetValue(ActionName, DefaultShortcut) then
-        FCache.AddOrSetValue(ActionName, DefaultShortcut);
-    finally
-      Query.Free;
-    end;
+    FStorage.ResetShortcut(ActionName);
+
+    // Update cache
+    if FDefaultCache.TryGetValue(ActionName, DefaultShortcut) then
+      FCache.AddOrSetValue(ActionName, DefaultShortcut);
   finally
     TMonitor.Exit(FLock);
   end;
@@ -395,23 +356,14 @@ end;
 
 procedure TUniBaseHotkeys.ResetAllHotkeys;
 var
-  Query: TFDQuery;
   Pair: TPair<string, TShortCut>;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      // Reset all hotkeys to default
-      Query.SQL.Text := 'UPDATE Hotkeys SET Shortcut = DefaultShortcut, IsCustomized = 0';
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    FStorage.ResetAllShortcuts;
     
     // Update cache
     for Pair in FDefaultCache do
@@ -423,110 +375,56 @@ end;
 
 function TUniBaseHotkeys.GetAllHotkeys: THotkeyInfoArray;
 var
-  Query: TFDQuery;
-  List: TList<THotkeyInfo>;
-  Item: THotkeyInfo;
+  DataItems: THotkeyStorageDataArray;
+  I: Integer;
 begin
   SetLength(Result, 0);
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
-  List := TList<THotkeyInfo>.Create;
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'SELECT ActionName, Shortcut, DefaultShortcut, Category, Description, IsEnabled, IsCustomized ' +
-        'FROM Hotkeys ORDER BY Category, ActionName';
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        Item.ActionName := Query.FieldByName('ActionName').AsString;
-        // Shortcut 字段可能是整数或文本格式
-        try
-          if Query.FieldByName('Shortcut').IsNull then
-            Item.Shortcut := 0
-          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
-            Item.Shortcut := Query.FieldByName('Shortcut').AsInteger
-          else
-            Item.Shortcut := TextToShortCut(Query.FieldByName('Shortcut').AsString);
-        except
-          Item.Shortcut := 0;
-        end;
-        try
-          if Query.FieldByName('DefaultShortcut').IsNull then
-            Item.DefaultShortcut := 0
-          else if VarIsNumeric(Query.FieldByName('DefaultShortcut').Value) then
-            Item.DefaultShortcut := Query.FieldByName('DefaultShortcut').AsInteger
-          else
-            Item.DefaultShortcut := TextToShortCut(Query.FieldByName('DefaultShortcut').AsString);
-        except
-          Item.DefaultShortcut := 0;
-        end;
-        Item.Category := Query.FieldByName('Category').AsString;
-        Item.Description := Query.FieldByName('Description').AsString;
-        Item.IsEnabled := Query.FieldByName('IsEnabled').AsInteger <> 0;
-        Item.IsCustomized := Query.FieldByName('IsCustomized').AsInteger <> 0;
-        List.Add(Item);
-        Query.Next;
-      end;
-    finally
-      Query.Free;
+    DataItems := FStorage.ReadAllHotkeys;
+    SetLength(Result, Length(DataItems));
+    for I := 0 to High(DataItems) do
+    begin
+      Result[I].ActionName := DataItems[I].ActionName;
+      Result[I].Shortcut := TShortCut(DataItems[I].Shortcut);
+      Result[I].DefaultShortcut := TShortCut(DataItems[I].DefaultShortcut);
+      Result[I].Category := DataItems[I].Category;
+      Result[I].Description := DataItems[I].Description;
+      Result[I].IsEnabled := DataItems[I].IsEnabled;
+      Result[I].IsCustomized := DataItems[I].IsCustomized;
     end;
-    Result := List.ToArray;
   finally
-    List.Free;
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseHotkeys.GetAllHotkeyDefaults: TArray<THotkeyDefault>;
 var
-  Query: TFDQuery;
-  List: TList<THotkeyDefault>;
-  Item: THotkeyDefault;
+  DataItems: THotkeyStorageDataArray;
+  I: Integer;
 begin
   SetLength(Result, 0);
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
-  List := TList<THotkeyDefault>.Create;
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT ActionName, Shortcut, Description, Category FROM Hotkeys ORDER BY Category, ActionName';
-      Query.Open;
-      
-      while not Query.Eof do
-      begin
-        Item.ActionName := Query.FieldByName('ActionName').AsString;
-        // Shortcut 字段可能是整数或文本格式
-        try
-          if Query.FieldByName('Shortcut').IsNull then
-            Item.Shortcut := ''
-          else if VarIsNumeric(Query.FieldByName('Shortcut').Value) then
-            Item.Shortcut := ShortCutToText(Query.FieldByName('Shortcut').AsInteger)
-          else
-            Item.Shortcut := Query.FieldByName('Shortcut').AsString;
-        except
-          Item.Shortcut := '';
-        end;
-        Item.Description := Query.FieldByName('Description').AsString;
-        Item.Category := Query.FieldByName('Category').AsString;
-        List.Add(Item);
-        Query.Next;
-      end;
-    finally
-      Query.Free;
+    DataItems := FStorage.ReadAllHotkeys;
+    SetLength(Result, Length(DataItems));
+    for I := 0 to High(DataItems) do
+    begin
+      Result[I].ActionName := DataItems[I].ActionName;
+      if DataItems[I].Shortcut = 0 then
+        Result[I].Shortcut := ''
+      else
+        Result[I].Shortcut := ShortCutToText(TShortCut(DataItems[I].Shortcut));
+      Result[I].Description := DataItems[I].Description;
+      Result[I].Category := DataItems[I].Category;
     end;
-    Result := List.ToArray;
   finally
-    List.Free;
     TMonitor.Exit(FLock);
   end;
 end;
@@ -557,26 +455,16 @@ begin
 end;
 
 procedure TUniBaseHotkeys.DeleteHotkey(const ActionName: string);
-var
-  Query: TFDQuery;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'DELETE FROM Hotkeys WHERE ActionName = :Action';
-      Query.ParamByName('Action').AsString := ActionName;
-      Query.ExecSQL;
-      
-      FCache.Remove(ActionName);
-      FDefaultCache.Remove(ActionName);
-    finally
-      Query.Free;
-    end;
+    FStorage.DeleteHotkey(ActionName);
+
+    FCache.Remove(ActionName);
+    FDefaultCache.Remove(ActionName);
   finally
     TMonitor.Exit(FLock);
   end;

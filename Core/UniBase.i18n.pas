@@ -15,10 +15,10 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  FireDAC.Comp.Client,
   UniBase.Types,
   UniBase.Consts,
-  UniBase.Interfaces;
+  UniBase.Interfaces,
+  UniBase.Storage.Interfaces;
 
 const
   DEFAULT_CACHE_CAPACITY = 10000;
@@ -38,13 +38,16 @@ type
   /// </summary>
   TUniBaseI18n = class(TInterfacedObject, IUniBaseI18n)
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
+    FStorage: II18nStorage;
     FLock: TObject;
+    FOwnsLock: Boolean;
     FCache: TDictionary<string, TLRUCacheItem>;
     FCacheCapacity: Integer;
     FCurrentLanguage: string;
     FOnLanguageChanged: TNotifyEvent;
     FLanguageChangeListeners: TList<TNotifyEvent>;
+    class var FConnectionStorageFactory: TFunc<TObject, II18nStorage>;
 
     function MakeCacheKey(const SourceText, LangCode: string): string;
     function ReadFromDB(const SourceText, LangCode: string): string;
@@ -52,10 +55,18 @@ type
     procedure RecordMissingTranslation(const SourceText, LangCode: string);
     function GetCurrentLanguage: string;
     procedure SetCurrentLanguage(const Value: string);
+    class function CreateStorageFromConnection(
+      AConnection: TObject): II18nStorage; static;
 
   public
-    constructor Create(AConnection: TFDConnection; ALock: TObject);
+    constructor Create(AConnection: TObject;
+      ALock: TObject = nil); overload;
+    constructor Create(const AStorage: II18nStorage;
+      ALock: TObject = nil); overload;
     destructor Destroy; override;
+
+    class procedure SetConnectionStorageFactory(
+      const AFactory: TFunc<TObject, II18nStorage>); static;
     
     /// <summary>Clear cache</summary>
     procedure ClearCache;
@@ -269,11 +280,26 @@ begin
   FCurrentLanguage := Value;
 end;
 
-constructor TUniBaseI18n.Create(AConnection: TFDConnection; ALock: TObject);
+constructor TUniBaseI18n.Create(AConnection: TObject; ALock: TObject);
+begin
+  Create(CreateStorageFromConnection(AConnection), ALock);
+  FConnection := AConnection;
+end;
+
+constructor TUniBaseI18n.Create(const AStorage: II18nStorage; ALock: TObject);
 begin
   inherited Create;
-  FConnection := AConnection;
-  FLock := ALock;
+  FStorage := AStorage;
+  if Assigned(ALock) then
+  begin
+    FLock := ALock;
+    FOwnsLock := False;
+  end
+  else
+  begin
+    FLock := TObject.Create;
+    FOwnsLock := True;
+  end;
   FCache := TDictionary<string, TLRUCacheItem>.Create;
   FLanguageChangeListeners := TList<TNotifyEvent>.Create;
   FCacheCapacity := DEFAULT_CACHE_CAPACITY;
@@ -282,9 +308,29 @@ end;
 
 destructor TUniBaseI18n.Destroy;
 begin
+  if FOwnsLock then
+    FLock.Free;
   FLanguageChangeListeners.Free;
   FCache.Free;
   inherited;
+end;
+
+class procedure TUniBaseI18n.SetConnectionStorageFactory(
+  const AFactory: TFunc<TObject, II18nStorage>);
+begin
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseI18n.CreateStorageFromConnection(
+  AConnection: TObject): II18nStorage;
+begin
+  Result := nil;
+  if Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No i18n storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.I18n.FireDAC or UniBase.Persistence.Manager.FireDAC.');
 end;
 
 procedure TUniBaseI18n.SubscribeLanguageChange(AHandler: TNotifyEvent);
@@ -352,35 +398,30 @@ end;
 
 procedure TUniBaseI18n.PreloadCache(const LangCode: string);
 var
-  Query: TFDQuery;
+  Translations: TDictionary<string, string>;
+  Pair: TPair<string, string>;
   CacheKey: string;
   Item: TLRUCacheItem;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
-  TMonitor.Enter(FLock);
+
+  Translations := FStorage.ReadTranslations(LangCode);
   try
-    Query := TFDQuery.Create(nil);
+    TMonitor.Enter(FLock);
     try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT SourceText, TranslatedText FROM I18nTexts WHERE LangCode = :LangCode';
-      Query.ParamByName('LangCode').AsString := LangCode;
-      Query.Open;
-      
-      while not Query.Eof do
+      for Pair in Translations do
       begin
-        CacheKey := MakeCacheKey(Query.FieldByName('SourceText').AsString, LangCode);
-        Item.Value := Query.FieldByName('TranslatedText').AsString;
+        CacheKey := MakeCacheKey(Pair.Key, LangCode);
+        Item.Value := Pair.Value;
         Item.LastAccess := Now;
         FCache.AddOrSetValue(CacheKey, Item);
-        Query.Next;
       end;
     finally
-      Query.Free;
+      TMonitor.Exit(FLock);
     end;
   finally
-    TMonitor.Exit(FLock);
+    Translations.Free;
   end;
 end;
 
@@ -412,66 +453,21 @@ begin
 end;
 
 function TUniBaseI18n.ReadFromDB(const SourceText, LangCode: string): string;
-var
-  Query: TFDQuery;
 begin
-  Result := '';
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
-    Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 
-      'SELECT TranslatedText FROM I18nTexts ' +
-      'WHERE SourceText = :SourceText AND LangCode = :LangCode';
-    Query.ParamByName('SourceText').AsString := SourceText;
-    Query.ParamByName('LangCode').AsString := LangCode;
-    Query.Open;
-    
-    if not Query.Eof then
-      Result := Query.FieldByName('TranslatedText').AsString;
-  finally
-    Query.Free;
-  end;
+  if Assigned(FStorage) then
+    Result := FStorage.ReadTranslation(SourceText, LangCode)
+  else
+    Result := '';
 end;
 
 procedure TUniBaseI18n.RecordMissingTranslation(const SourceText, LangCode: string);
-var
-  Query: TFDQuery;
-  NowStr: string;
 begin
   // Record missing translation for later processing
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   try
-    // Use ISO8601 format for SQLite datetime compatibility
-    NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 
-        'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, LastUsedAt) ' +
-        'VALUES (:SourceText, :LangCode, :LastUsedAt)';
-      Query.ParamByName('SourceText').AsString := SourceText;
-      Query.ParamByName('LangCode').AsString := LangCode;
-      Query.ParamByName('LastUsedAt').AsString := NowStr;
-      Query.ExecSQL;
-      
-      // Update last used time
-      Query.SQL.Text := 
-        'UPDATE I18nTexts SET LastUsedAt = :LastUsedAt ' +
-        'WHERE SourceText = :SourceText AND LangCode = :LangCode';
-      Query.ParamByName('SourceText').AsString := SourceText;
-      Query.ParamByName('LangCode').AsString := LangCode;
-      Query.ParamByName('LastUsedAt').AsString := NowStr;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    FStorage.RecordMissingTranslation(SourceText, LangCode);
   except
     on E: Exception do
     begin
@@ -575,117 +571,42 @@ begin
 end;
 
 function TUniBaseI18n.GetAvailableLanguages: TLanguageInfoArray;
-var
-  Query: TFDQuery;
-  List: TList<TLanguageInfo>;
-  Info: TLanguageInfo;
 begin
   SetLength(Result, 0);
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
+
   TMonitor.Enter(FLock);
   try
-    List := TList<TLanguageInfo>.Create;
-    try
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-        Query.SQL.Text := 'SELECT * FROM Languages ORDER BY SortOrder';
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          Info.LangCode := Query.FieldByName('LangCode').AsString;
-          Info.LangName := Query.FieldByName('LangName').AsString;
-          Info.NativeName := Query.FieldByName('NativeName').AsString;
-          Info.FlagIcon := Query.FieldByName('FlagIcon').AsString;
-          Info.IsEnabled := Query.FieldByName('IsEnabled').AsInteger = 1;
-          Info.IsDefault := Query.FieldByName('IsDefault').AsInteger = 1;
-          List.Add(Info);
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
-      
-      Result := List.ToArray;
-    finally
-      List.Free;
-    end;
+    Result := FStorage.ReadLanguages(False);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseI18n.GetEnabledLanguages: TLanguageInfoArray;
-var
-  Query: TFDQuery;
-  List: TList<TLanguageInfo>;
-  Info: TLanguageInfo;
 begin
   SetLength(Result, 0);
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
+
   TMonitor.Enter(FLock);
   try
-    List := TList<TLanguageInfo>.Create;
-    try
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FConnection;
-        Query.SQL.Text := 'SELECT * FROM Languages WHERE IsEnabled = 1 ORDER BY SortOrder';
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          Info.LangCode := Query.FieldByName('LangCode').AsString;
-          Info.LangName := Query.FieldByName('LangName').AsString;
-          Info.NativeName := Query.FieldByName('NativeName').AsString;
-          Info.FlagIcon := Query.FieldByName('FlagIcon').AsString;
-          Info.IsEnabled := True;
-          Info.IsDefault := Query.FieldByName('IsDefault').AsInteger = 1;
-          List.Add(Info);
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
-      
-      Result := List.ToArray;
-    finally
-      List.Free;
-    end;
+    Result := FStorage.ReadLanguages(True);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 function TUniBaseI18n.GetDefaultLanguage: string;
-var
-  Query: TFDQuery;
 begin
   Result := 'en-US'; // Default to English
-  
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
-    
+
   TMonitor.Enter(FLock);
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      Query.SQL.Text := 'SELECT LangCode FROM Languages WHERE IsDefault = 1 LIMIT 1';
-      Query.Open;
-      
-      if not Query.Eof then
-        Result := Query.FieldByName('LangCode').AsString;
-    finally
-      Query.Free;
-    end;
+    Result := FStorage.ReadDefaultLanguage(Result);
   finally
     TMonitor.Exit(FLock);
   end;
@@ -693,35 +614,16 @@ end;
 
 procedure TUniBaseI18n.AddTranslation(const SourceText, LangCode, TranslatedText: string);
 var
-  Query: TFDQuery;
   CacheKey: string;
   Item: TLRUCacheItem;
-  NowStr: string;
 begin
-  if not Assigned(FConnection) or not FConnection.Connected then
+  if not Assigned(FStorage) then
     Exit;
     
   TMonitor.Enter(FLock);
   try
-    // Use ISO8601 format for SQLite datetime compatibility
-    NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FConnection;
-      // Insert or replace translation
-      Query.SQL.Text := 
-        'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedAt) ' +
-        'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedAt)';
-      Query.ParamByName('SourceText').AsString := SourceText;
-      Query.ParamByName('LangCode').AsString := LangCode;
-      Query.ParamByName('TranslatedText').AsString := TranslatedText;
-      Query.ParamByName('LastUsedAt').AsString := NowStr;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
-    
+    FStorage.UpsertTranslation(SourceText, LangCode, TranslatedText);
+
     // Update cache
     CacheKey := MakeCacheKey(SourceText, LangCode);
     Item.Value := TranslatedText;
