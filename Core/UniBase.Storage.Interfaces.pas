@@ -228,8 +228,12 @@ type
     function ReadProjectInfo(const Key: string): string;
     procedure UpsertProjectInfo(const Key, Value: string);
     function CreateConfigStorage: IConfigStorage;
+    function CreateI18nStorage: II18nStorage;
+    function CreateThemeStorage: IThemeStorage;
+    function CreateSecuritySecretStorage: ISecuritySecretStorage;
     function CreateFormStateStorage: IFormStateStorage;
     function CreateMRUStorage: IMRUStorage;
+    function CreateHotkeyStorage: IHotkeyStorage;
   end;
 
 implementation

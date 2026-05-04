@@ -771,8 +771,12 @@ var
   I18nRef: TUniBaseI18n;
   TranslateCallback: TTranslateCallback;
   ConfigStorage: IConfigStorage;
+  I18nStorage: II18nStorage;
+  ThemeStorage: IThemeStorage;
+  SecurityStorage: ISecuritySecretStorage;
   FormStateStorage: IFormStateStorage;
   MRUStorage: IMRUStorage;
+  HotkeyStorage: IHotkeyStorage;
 begin
   // 1. Logger - create and register as global logger
   FLogger := TUniBaseLogger.Create(FConfigDBPath);
@@ -806,7 +810,20 @@ begin
   end;
   
   // 3. i18n
-  FI18n := TUniBaseI18n.Create(FConfigDB, FLock);
+  I18nStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      I18nStorage := FStorage.CreateI18nStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateI18nStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(I18nStorage) then
+    FI18n := TUniBaseI18n.Create(I18nStorage, FLock)
+  else
+    FI18n := TUniBaseI18n.Create(FConfigDB, FLock);
   FI18n.OnLanguageChanged := HandleLanguageChanged;
   // Set global T() callback to decouple i18n from Manager
   I18nRef := FI18n;
@@ -817,11 +834,37 @@ begin
   SetGlobalTranslateCallback(TranslateCallback);
   
   // 4. Theme
-  FTheme := TUniBaseTheme.Create(FConfigDB, FLock);
+  ThemeStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      ThemeStorage := FStorage.CreateThemeStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateThemeStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(ThemeStorage) then
+    FTheme := TUniBaseTheme.Create(ThemeStorage, FLock)
+  else
+    FTheme := TUniBaseTheme.Create(FConfigDB, FLock);
   FTheme.OnThemeChanged := HandleThemeChanged;
   
   // 5. Security (DPAPI encryption for secrets)
-  FSecurity := TUniBaseSecurity.Create(FConfigDB, FLock);
+  SecurityStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      SecurityStorage := FStorage.CreateSecuritySecretStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateSecuritySecretStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(SecurityStorage) then
+    FSecurity := TUniBaseSecurity.Create(SecurityStorage, FLock)
+  else
+    FSecurity := TUniBaseSecurity.Create(FConfigDB, FLock);
   
   // Load Initial Settings
   FCurrentLanguage := FConfig.GetConfig(SConfigKeyLanguage, SDefaultLanguage);
@@ -874,7 +917,20 @@ begin
     FMRU := TUniBaseMRU.Create(FConfigDB, FLock);
   
   // 9. Hotkeys - keyboard shortcut management
-  FHotkeys := TUniBaseHotkeys.Create(FConfigDB, FLock);
+  HotkeyStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      HotkeyStorage := FStorage.CreateHotkeyStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateHotkeyStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(HotkeyStorage) then
+    FHotkeys := TUniBaseHotkeys.Create(HotkeyStorage, FLock)
+  else
+    FHotkeys := TUniBaseHotkeys.Create(FConfigDB, FLock);
   
   // 10. PluginManager - create and load plugins
   FPluginManager := TUniBasePluginManager.Create(

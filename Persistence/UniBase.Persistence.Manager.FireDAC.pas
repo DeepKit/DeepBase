@@ -22,8 +22,12 @@ implementation
 uses
   System.SysUtils,
   UniBase.Persistence.Config.FireDAC,
+  UniBase.Persistence.I18n.FireDAC,
+  UniBase.Persistence.Theme.FireDAC,
+  UniBase.Persistence.Security.FireDAC,
   UniBase.Persistence.FormState.FireDAC,
-  UniBase.Persistence.MRU.FireDAC;
+  UniBase.Persistence.MRU.FireDAC,
+  UniBase.Persistence.Hotkeys.FireDAC;
 
 type
   TFireDACManagerStorage = class(TInterfacedObject, IManagerStorage)
@@ -43,8 +47,12 @@ type
     function ReadProjectInfo(const Key: string): string;
     procedure UpsertProjectInfo(const Key, Value: string);
     function CreateConfigStorage: IConfigStorage;
+    function CreateI18nStorage: II18nStorage;
+    function CreateThemeStorage: IThemeStorage;
+    function CreateSecuritySecretStorage: ISecuritySecretStorage;
     function CreateFormStateStorage: IFormStateStorage;
     function CreateMRUStorage: IMRUStorage;
+    function CreateHotkeyStorage: IHotkeyStorage;
   end;
 
 constructor TFireDACManagerStorage.Create(AConnection: TFDConnection);
@@ -324,6 +332,21 @@ begin
   Result := UniBase.Persistence.Config.FireDAC.CreateConfigStorage(FConnection);
 end;
 
+function TFireDACManagerStorage.CreateI18nStorage: II18nStorage;
+begin
+  Result := UniBase.Persistence.I18n.FireDAC.CreateI18nStorage(FConnection);
+end;
+
+function TFireDACManagerStorage.CreateThemeStorage: IThemeStorage;
+begin
+  Result := UniBase.Persistence.Theme.FireDAC.CreateThemeStorage(FConnection);
+end;
+
+function TFireDACManagerStorage.CreateSecuritySecretStorage: ISecuritySecretStorage;
+begin
+  Result := UniBase.Persistence.Security.FireDAC.CreateSecuritySecretStorage(FConnection);
+end;
+
 function TFireDACManagerStorage.CreateFormStateStorage: IFormStateStorage;
 begin
   Result := UniBase.Persistence.FormState.FireDAC.CreateFormStateStorage(FConnection);
@@ -332,6 +355,11 @@ end;
 function TFireDACManagerStorage.CreateMRUStorage: IMRUStorage;
 begin
   Result := UniBase.Persistence.MRU.FireDAC.CreateMRUStorage(FConnection);
+end;
+
+function TFireDACManagerStorage.CreateHotkeyStorage: IHotkeyStorage;
+begin
+  Result := UniBase.Persistence.Hotkeys.FireDAC.CreateHotkeyStorage(FConnection);
 end;
 
 function CreateManagerStorage(AConnection: TFDConnection): IManagerStorage;
