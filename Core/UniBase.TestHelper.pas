@@ -36,8 +36,7 @@ uses
   Vcl.ExtCtrls,
   Vcl.Buttons,
   Vcl.Graphics,
-  Vcl.Imaging.pngimage,
-  FireDAC.Comp.Client;
+  Vcl.Imaging.pngimage;
 
 type
   /// <summary>
@@ -69,9 +68,10 @@ type
   /// </summary>
   TUniBaseTestHelper = class
   private
-    class var FConnection: TFDConnection;
+    class var FConnection: TObject;
     class var FSnapshotPath: string;
     
+    class function ConnectionAsFD: TObject;
     class function CaptureControlState(AControl: TControl; const Prefix: string = ''): TJSONObject;
     class function CompareJSON(Expected, Actual: TJSONObject; const Path: string; 
       var Diffs: TList<TSnapshotDiff>): Boolean;
@@ -81,7 +81,7 @@ type
     /// <summary>
     /// 初始化测试辅助模块
     /// </summary>
-    class procedure Initialize(AConnection: TFDConnection; const ASnapshotPath: string = '');
+    class procedure Initialize(AConnection: TObject; const ASnapshotPath: string = '');
     
     /// <summary>
     /// 捕获窗体状态为 JSON
@@ -216,6 +216,9 @@ type
 
 implementation
 
+uses
+  FireDAC.Comp.Client;
+
 { TSnapshotDiff }
 
 procedure TSnapshotDiff.Clear;
@@ -236,7 +239,15 @@ end;
 
 { TUniBaseTestHelper }
 
-class procedure TUniBaseTestHelper.Initialize(AConnection: TFDConnection; 
+class function TUniBaseTestHelper.ConnectionAsFD: TObject;
+begin
+  if Assigned(FConnection) and (FConnection is TFDConnection) then
+    Result := FConnection
+  else
+    Result := nil;
+end;
+
+class procedure TUniBaseTestHelper.Initialize(AConnection: TObject;
   const ASnapshotPath: string);
 begin
   FConnection := AConnection;
@@ -357,6 +368,7 @@ end;
 class procedure TUniBaseTestHelper.SaveSnapshot(const TestName: string; AForm: TForm;
   SaveScreenshot: Boolean);
 var
+  Conn: TFDConnection;
   StateJSON: string;
   Query: TFDQuery;
   FileName: string;
@@ -364,13 +376,14 @@ var
   ScreenshotPath: string;
 begin
   StateJSON := CaptureFormState(AForm);
+  Conn := TFDConnection(ConnectionAsFD);
   
   // 保存到数据库
-  if Assigned(FConnection) and FConnection.Connected then
+  if Assigned(Conn) and Conn.Connected then
   begin
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 
         'INSERT OR REPLACE INTO TestSnapshots (TestName, FormClass, StateJSON, ScreenshotPath, CreatedAt) ' +
         'VALUES (:Name, :FormClass, :State, :Screenshot, CURRENT_TIMESTAMP)';
@@ -408,17 +421,19 @@ end;
 
 class function TUniBaseTestHelper.GetSnapshot(const TestName: string): string;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   FileName: string;
 begin
   Result := '';
+  Conn := TFDConnection(ConnectionAsFD);
   
   // 优先从数据库读取
-  if Assigned(FConnection) and FConnection.Connected then
+  if Assigned(Conn) and Conn.Connected then
   begin
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 'SELECT StateJSON FROM TestSnapshots WHERE TestName = :Name';
       Query.ParamByName('Name').AsString := TestName;
       Query.Open;
@@ -548,15 +563,18 @@ end;
 
 class procedure TUniBaseTestHelper.DeleteSnapshot(const TestName: string);
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   FileName: string;
 begin
+  Conn := TFDConnection(ConnectionAsFD);
+
   // 从数据库删除
-  if Assigned(FConnection) and FConnection.Connected then
+  if Assigned(Conn) and Conn.Connected then
   begin
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := Conn;
       Query.SQL.Text := 'DELETE FROM TestSnapshots WHERE TestName = :Name';
       Query.ParamByName('Name').AsString := TestName;
       Query.ExecSQL;
@@ -577,19 +595,21 @@ end;
 
 class function TUniBaseTestHelper.ListSnapshots: TArray<string>;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   NameList: TList<string>;
   Files: TArray<string>;
   FileName: string;
 begin
+  Conn := TFDConnection(ConnectionAsFD);
   NameList := TList<string>.Create;
   try
     // 从数据库
-    if Assigned(FConnection) and FConnection.Connected then
+    if Assigned(Conn) and Conn.Connected then
     begin
       Query := TFDQuery.Create(nil);
       try
-        Query.Connection := FConnection;
+        Query.Connection := Conn;
         Query.SQL.Text := 'SELECT DISTINCT TestName FROM TestSnapshots ORDER BY TestName';
         Query.Open;
         

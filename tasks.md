@@ -559,6 +559,7 @@
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `CreateSchema`、`RunMigrationScript`、`EnsureSchemaColumns`（MRU 补丁 DDL）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `ArchiveAndTrimTable`（运维保留策略归档/清理）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `2026-05-04`：`Core/UniBase.SQLLogger.pas` 的公开签名已从 `TFDConnection/TFDQuery` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses，调用侧不再被迫在接口层引用 FireDAC 类型。
+  - `2026-05-04`：`Core/UniBase.TestHelper.pas` 的公开连接参数已从 `TFDConnection` 收敛为 `TObject`，并通过内部安全转换访问 FireDAC，实现接口层去耦。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
@@ -933,6 +934,7 @@
   - `2026-05-04`：`Tests/Test.UniBase.Authorization.pas` 的主测试夹具改为显式注入内存 `IAuthorizationStorage`，不再依赖 FireDAC 内存连接隐式回退；`run_tests -Type All` 回归通过。
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `ArchiveAndTrimTable`（`Logs/LLMCalls/ExceptionReports` 归档清理）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `2026-05-04`：`Core/UniBase.SQLLogger.pas` 的公开签名已从 `TFDConnection/TFDQuery` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses，调用侧不再被迫在接口层引用 FireDAC 类型。
+  - `2026-05-04`：`Core/UniBase.TestHelper.pas` 的公开连接参数已从 `TFDConnection` 收敛为 `TObject`，并通过内部安全转换访问 FireDAC，实现接口层去耦。
   - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
