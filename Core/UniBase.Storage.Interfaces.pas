@@ -227,6 +227,9 @@ type
     procedure UpdateSchemaInfo(const SchemaVersion, LastUpgradeIso8601: string);
     function ReadProjectInfo(const Key: string): string;
     procedure UpsertProjectInfo(const Key, Value: string);
+    function CreateConfigStorage: IConfigStorage;
+    function CreateFormStateStorage: IFormStateStorage;
+    function CreateMRUStorage: IMRUStorage;
   end;
 
 implementation

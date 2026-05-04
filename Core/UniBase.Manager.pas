@@ -770,13 +770,29 @@ procedure TUniBaseManager.InitializeModules;
 var
   I18nRef: TUniBaseI18n;
   TranslateCallback: TTranslateCallback;
+  ConfigStorage: IConfigStorage;
+  FormStateStorage: IFormStateStorage;
+  MRUStorage: IMRUStorage;
 begin
   // 1. Logger - create and register as global logger
   FLogger := TUniBaseLogger.Create(FConfigDBPath);
   SetGlobalLogger(FLogger);  // Register with global Logger() function
   
   // 2. Config
-  FConfig := TUniBaseConfig.Create(FConfigDB, FLock);
+  ConfigStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      ConfigStorage := FStorage.CreateConfigStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateConfigStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(ConfigStorage) then
+    FConfig := TUniBaseConfig.Create(ConfigStorage, FLock)
+  else
+    FConfig := TUniBaseConfig.Create(FConfigDB, FLock);
   FConfig.OnConfigChanged := HandleConfigChanged;
   
   // PERF-001: 预热配置缓存，避免首次访问时产生多次小查询
@@ -826,10 +842,36 @@ begin
   RunOperationalRetention;
   
   // 7. FormState - form position persistence
-  FFormState := TUniBaseFormState.Create(FConfigDB, FLock);
+  FormStateStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      FormStateStorage := FStorage.CreateFormStateStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateFormStateStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(FormStateStorage) then
+    FFormState := TUniBaseFormState.Create(FormStateStorage, FLock)
+  else
+    FFormState := TUniBaseFormState.Create(FConfigDB, FLock);
   
   // 8. MRU - Most Recently Used tracking
-  FMRU := TUniBaseMRU.Create(FConfigDB, FLock);
+  MRUStorage := nil;
+  if Assigned(FStorage) then
+  begin
+    try
+      MRUStorage := FStorage.CreateMRUStorage;
+    except
+      on E: Exception do
+        FLogger.Warn('CreateMRUStorage failed: ' + E.Message, 'UniBase.Manager');
+    end;
+  end;
+  if Assigned(MRUStorage) then
+    FMRU := TUniBaseMRU.Create(MRUStorage, FLock)
+  else
+    FMRU := TUniBaseMRU.Create(FConfigDB, FLock);
   
   // 9. Hotkeys - keyboard shortcut management
   FHotkeys := TUniBaseHotkeys.Create(FConfigDB, FLock);

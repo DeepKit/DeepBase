@@ -20,7 +20,10 @@ procedure RegisterManagerStorageFactory;
 implementation
 
 uses
-  System.SysUtils;
+  System.SysUtils,
+  UniBase.Persistence.Config.FireDAC,
+  UniBase.Persistence.FormState.FireDAC,
+  UniBase.Persistence.MRU.FireDAC;
 
 type
   TFireDACManagerStorage = class(TInterfacedObject, IManagerStorage)
@@ -39,6 +42,9 @@ type
     procedure UpdateSchemaInfo(const SchemaVersion, LastUpgradeIso8601: string);
     function ReadProjectInfo(const Key: string): string;
     procedure UpsertProjectInfo(const Key, Value: string);
+    function CreateConfigStorage: IConfigStorage;
+    function CreateFormStateStorage: IFormStateStorage;
+    function CreateMRUStorage: IMRUStorage;
   end;
 
 constructor TFireDACManagerStorage.Create(AConnection: TFDConnection);
@@ -311,6 +317,21 @@ begin
     ExistsQuery.Free;
     InsertQuery.Free;
   end;
+end;
+
+function TFireDACManagerStorage.CreateConfigStorage: IConfigStorage;
+begin
+  Result := UniBase.Persistence.Config.FireDAC.CreateConfigStorage(FConnection);
+end;
+
+function TFireDACManagerStorage.CreateFormStateStorage: IFormStateStorage;
+begin
+  Result := UniBase.Persistence.FormState.FireDAC.CreateFormStateStorage(FConnection);
+end;
+
+function TFireDACManagerStorage.CreateMRUStorage: IMRUStorage;
+begin
+  Result := UniBase.Persistence.MRU.FireDAC.CreateMRUStorage(FConnection);
 end;
 
 function CreateManagerStorage(AConnection: TFDConnection): IManagerStorage;
