@@ -30,8 +30,7 @@ unit UniBase.Diagnose;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections,
-  FireDAC.Comp.Client;
+  System.SysUtils, System.Classes, System.Generics.Collections;
 
 type
   TDiagnoseIssueType = (ditMissingTable, ditMissingColumn, ditMissingIndex, 
@@ -90,7 +89,7 @@ const
 /// <summary>
 /// Perform comprehensive diagnosis of the database schema
 /// </summary>
-function DiagnoseAll(AConnection: TFDConnection): TDiagnoseResults;
+function DiagnoseAll(AConnection: TObject): TDiagnoseResults;
 
 /// <summary>
 /// Perform comprehensive diagnosis via injected storage.
@@ -100,39 +99,39 @@ function DiagnoseAllWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResu
 /// <summary>
 /// Check if all expected tables exist
 /// </summary>
-function CheckTablesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckTablesExist(AConnection: TObject): TDiagnoseResults;
 function CheckTablesExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check if required columns exist in each table
 /// </summary>
-function CheckColumnsExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckColumnsExist(AConnection: TObject): TDiagnoseResults;
 function CheckColumnsExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check if required indexes exist
 /// </summary>
-function CheckIndexesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckIndexesExist(AConnection: TObject): TDiagnoseResults;
 function CheckIndexesExistWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Check schema version compatibility
 /// </summary>
-function CheckSchemaVersion(AConnection: TFDConnection): TDiagnoseResults;
+function CheckSchemaVersion(AConnection: TObject): TDiagnoseResults;
 function CheckSchemaVersionWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Attempt to automatically fix detected issues
 /// </summary>
 /// <returns>Number of issues fixed</returns>
-function AutoFix(AConnection: TFDConnection; const AResults: TDiagnoseResults): Integer;
+function AutoFix(AConnection: TObject; const AResults: TDiagnoseResults): Integer;
 function AutoFixWithStorage(const AStorage: IDiagnoseStorage;
   const AResults: TDiagnoseResults): Integer;
 
 /// <summary>
 /// Add a column to a table if it doesn't exist
 /// </summary>
-function AddColumnIfNotExists(AConnection: TFDConnection; 
+function AddColumnIfNotExists(AConnection: TObject; 
   const ATableName, AColumnName, AColumnDef: string): Boolean;
 function AddColumnIfNotExistsWithStorage(const AStorage: IDiagnoseStorage;
   const ATableName, AColumnName, AColumnDef: string): Boolean;
@@ -140,14 +139,14 @@ function AddColumnIfNotExistsWithStorage(const AStorage: IDiagnoseStorage;
 /// <summary>
 /// Check if a table exists in the database
 /// </summary>
-function TableExists(AConnection: TFDConnection; const ATableName: string): Boolean;
+function TableExists(AConnection: TObject; const ATableName: string): Boolean;
 function TableExistsWithStorage(const AStorage: IDiagnoseStorage;
   const ATableName: string): Boolean;
 
 /// <summary>
 /// Check if a column exists in a table
 /// </summary>
-function ColumnExists(AConnection: TFDConnection; 
+function ColumnExists(AConnection: TObject; 
   const ATableName, AColumnName: string): Boolean;
 function ColumnExistsWithStorage(const AStorage: IDiagnoseStorage;
   const ATableName, AColumnName: string): Boolean;
@@ -155,7 +154,7 @@ function ColumnExistsWithStorage(const AStorage: IDiagnoseStorage;
 /// <summary>
 /// Check if an index exists
 /// </summary>
-function IndexExists(AConnection: TFDConnection; const AIndexName: string): Boolean;
+function IndexExists(AConnection: TObject; const AIndexName: string): Boolean;
 function IndexExistsWithStorage(const AStorage: IDiagnoseStorage;
   const AIndexName: string): Boolean;
 
@@ -172,19 +171,19 @@ function GenerateDiagnoseSummary(const AResults: TDiagnoseResults): string;
 /// <summary>
 /// Get the current schema version from database
 /// </summary>
-function GetSchemaVersion(AConnection: TFDConnection): string;
+function GetSchemaVersion(AConnection: TObject): string;
 function GetSchemaVersionWithStorage(const AStorage: IDiagnoseStorage): string;
 
 /// <summary>
 /// Check data integrity: foreign keys, required fields, enum values
 /// </summary>
-function CheckDataIntegrity(AConnection: TFDConnection): TDiagnoseResults;
+function CheckDataIntegrity(AConnection: TObject): TDiagnoseResults;
 function CheckDataIntegrityWithStorage(const AStorage: IDiagnoseStorage): TDiagnoseResults;
 
 /// <summary>
 /// Create connection-backed diagnose storage from registered factory.
 /// </summary>
-function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
+function CreateDiagnoseStorage(AConnection: TObject): IDiagnoseStorage;
 
 /// <summary>
 /// Register custom connection->storage factory (ARCH-039).
@@ -198,12 +197,13 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
+  FireDAC.Comp.Client,
   UniBase.Schema;
 
 var
   GConnectionStorageFactory: TFunc<TObject, IDiagnoseStorage>;
 
-function CreateDiagnoseStorage(AConnection: TFDConnection): IDiagnoseStorage;
+function CreateDiagnoseStorage(AConnection: TObject): IDiagnoseStorage;
 begin
   Result := nil;
   if Assigned(AConnection) and Assigned(GConnectionStorageFactory) then
@@ -312,14 +312,14 @@ begin
     SetLength(Result, 0);
 end;
 
-function TableExists(AConnection: TFDConnection; const ATableName: string): Boolean;
+function TableExists(AConnection: TObject; const ATableName: string): Boolean;
 var
   Query: TFDQuery;
 begin
   Result := False;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''table'' AND LOWER(name)=LOWER(:tablename)';
     Query.ParamByName('tablename').AsString := ATableName;
     Query.Open;
@@ -329,7 +329,7 @@ begin
   end;
 end;
 
-function ColumnExists(AConnection: TFDConnection; 
+function ColumnExists(AConnection: TObject; 
   const ATableName, AColumnName: string): Boolean;
 var
   Query: TFDQuery;
@@ -337,7 +337,7 @@ begin
   Result := False;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     Query.SQL.Text := Format('PRAGMA table_info(%s)', [ATableName]);
     Query.Open;
     while not Query.Eof do
@@ -354,14 +354,14 @@ begin
   end;
 end;
 
-function IndexExists(AConnection: TFDConnection; const AIndexName: string): Boolean;
+function IndexExists(AConnection: TObject; const AIndexName: string): Boolean;
 var
   Query: TFDQuery;
 begin
   Result := False;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''index'' AND name=:indexname';
     Query.ParamByName('indexname').AsString := AIndexName;
     Query.Open;
@@ -371,7 +371,7 @@ begin
   end;
 end;
 
-function GetSchemaVersion(AConnection: TFDConnection): string;
+function GetSchemaVersion(AConnection: TObject): string;
 var
   Query: TFDQuery;
 begin
@@ -381,7 +381,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     Query.SQL.Text := 'SELECT Value FROM SchemaInfo WHERE Key = ''SchemaVersion''';
     Query.Open;
     if not Query.IsEmpty then
@@ -391,7 +391,7 @@ begin
   end;
 end;
 
-function CheckSchemaVersion(AConnection: TFDConnection): TDiagnoseResults;
+function CheckSchemaVersion(AConnection: TObject): TDiagnoseResults;
 var
   DBVersion: string;
   Issue: TDiagnoseResult;
@@ -471,7 +471,7 @@ begin
   else if SameText(ATableName, 'Notifications') then Result := SQL_TIER2_NOTIFICATIONS;
 end;
 
-function CheckTablesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckTablesExist(AConnection: TObject): TDiagnoseResults;
 var
   AllTables: TArray<string>;
   TableName: string;
@@ -586,7 +586,7 @@ const
     (TableName: 'Notifications'; ColumnName: 'Remarks'; ColumnType: 'TEXT'; DefaultValue: '')
   );
 
-function CheckColumnsExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckColumnsExist(AConnection: TObject): TDiagnoseResults;
 var
   ColDef: TColumnDef;
   Issue: TDiagnoseResult;
@@ -631,7 +631,7 @@ begin
   end;
 end;
 
-function CheckIndexesExist(AConnection: TFDConnection): TDiagnoseResults;
+function CheckIndexesExist(AConnection: TObject): TDiagnoseResults;
 begin
   // Basic implementation - can be expanded
   SetLength(Result, 0);
@@ -699,7 +699,7 @@ const
     (TableName: 'MRU'; ColumnName: 'ItemType'; ValidValues: 'FILE,FOLDER,URL,QUERY,OTHER')
   );
 
-function CheckForeignKeys(AConnection: TFDConnection): TDiagnoseResults;
+function CheckForeignKeys(AConnection: TObject): TDiagnoseResults;
 var
   FK: TForeignKeyDef;
   Query: TFDQuery;
@@ -711,7 +711,7 @@ begin
   ResultList := TList<TDiagnoseResult>.Create;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     
     for I := Low(FK_RELATIONS) to High(FK_RELATIONS) do
     begin
@@ -764,7 +764,7 @@ begin
   end;
 end;
 
-function CheckRequiredFields(AConnection: TFDConnection): TDiagnoseResults;
+function CheckRequiredFields(AConnection: TObject): TDiagnoseResults;
 var
   RF: TRequiredFieldDef;
   Query: TFDQuery;
@@ -776,7 +776,7 @@ begin
   ResultList := TList<TDiagnoseResult>.Create;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     
     for I := Low(REQUIRED_FIELDS) to High(REQUIRED_FIELDS) do
     begin
@@ -824,7 +824,7 @@ begin
   end;
 end;
 
-function CheckEnumValues(AConnection: TFDConnection): TDiagnoseResults;
+function CheckEnumValues(AConnection: TObject): TDiagnoseResults;
 var
   EF: TEnumFieldDef;
   Query: TFDQuery;
@@ -837,7 +837,7 @@ begin
   ResultList := TList<TDiagnoseResult>.Create;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := AConnection;
+    Query.Connection := TFDConnection(AConnection);
     
     for I := Low(ENUM_FIELDS) to High(ENUM_FIELDS) do
     begin
@@ -889,7 +889,7 @@ begin
   end;
 end;
 
-function CheckDataIntegrity(AConnection: TFDConnection): TDiagnoseResults;
+function CheckDataIntegrity(AConnection: TObject): TDiagnoseResults;
 var
   FKResults, NullResults, EnumResults: TDiagnoseResults;
   ResultList: TList<TDiagnoseResult>;
@@ -918,7 +918,7 @@ begin
   end;
 end;
 
-function DiagnoseAll(AConnection: TFDConnection): TDiagnoseResults;
+function DiagnoseAll(AConnection: TObject): TDiagnoseResults;
 var
   VersionResults, TableResults, ColumnResults, IndexResults, IntegrityResults: TDiagnoseResults;
   ResultList: TList<TDiagnoseResult>;
@@ -957,7 +957,7 @@ begin
   end;
 end;
 
-function AddColumnIfNotExists(AConnection: TFDConnection; 
+function AddColumnIfNotExists(AConnection: TObject; 
   const ATableName, AColumnName, AColumnDef: string): Boolean;
 begin
   Result := False;
@@ -965,7 +965,7 @@ begin
     Exit;
     
   try
-    AConnection.ExecSQL(Format('ALTER TABLE %s ADD COLUMN %s %s', 
+    TFDConnection(AConnection).ExecSQL(Format('ALTER TABLE %s ADD COLUMN %s %s', 
       [ATableName, AColumnName, AColumnDef]));
     Result := True;
   except
@@ -976,7 +976,7 @@ begin
   end;
 end;
 
-function AutoFix(AConnection: TFDConnection; const AResults: TDiagnoseResults): Integer;
+function AutoFix(AConnection: TObject; const AResults: TDiagnoseResults): Integer;
 var
   R: TDiagnoseResult;
 begin
@@ -991,7 +991,7 @@ begin
       Continue;
       
     try
-      AConnection.ExecSQL(R.FixSQL);
+      TFDConnection(AConnection).ExecSQL(R.FixSQL);
       Inc(Result);
     except
       // Log error but continue

@@ -924,6 +924,7 @@
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已实现 FireDAC 版 `ILogStorage/ILogQueryStorage`，并保留 `Logs.Extra` 列缺失时的兼容写入路径。
   - `Tests/Test.UniBase.Logging.pas` 新增 `Test_StorageInjection_DelegatesDbWriteAndQuery`，覆盖注入写入、计数与清理委托行为。
   - `2026-05-04`：`Core/UniBase.Authorization.pas`、`Core/UniBase.Exception.pas`、`Core/UniBase.Diagnose.pas`、`Core/UniBase.Manager.pas` 的工厂入口已补齐空连接保护（仅连接非空时调用注册工厂），避免适配器类型检查在 `nil` 输入下误抛异常。
+  - `2026-05-04`：`Core/UniBase.Diagnose.pas` 的公开连接参数已统一为 `TObject`（内部仍兼容 FireDAC 转换），并将 `FireDAC.Comp.Client` 从 interface uses 下沉到 implementation uses，降低调用侧编译耦合。
   - `2026-05-04`：`Core/UniBase.Authorization.pas` 已移除 Core 内置 FireDAC SQL 回退（`TFDConnection/TFDQuery`），授权读写与审计持久化仅通过 `IAuthorizationStorage`。
   - `2026-05-04`：`Tests/Test.UniBase.Authorization.pas` 的主测试夹具改为显式注入内存 `IAuthorizationStorage`，不再依赖 FireDAC 内存连接隐式回退；`run_tests -Type All` 回归通过。
   - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
