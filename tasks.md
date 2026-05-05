@@ -954,6 +954,8 @@
   - `2026-05-04`：`Core/UniBase.TestHelper.pas` 的公开连接参数已从 `TFDConnection` 收敛为 `TObject`，并通过内部安全转换访问 FireDAC，实现接口层去耦。
   - `2026-05-05`：`Core/UniBase.TestHelper.pas` 已完成存储抽象切片：快照持久化改为 `ITestSnapshotStorage` 委托，Core 不再内嵌 FireDAC SQL。
   - `2026-05-05`：`Persistence/UniBase.Persistence.TestHelper.FireDAC.pas` 已实现 FireDAC 版 `ITestSnapshotStorage`，并在 `Tests/UniBaseTests.dpr` 显式引入以确保测试入口稳定注册。
+  - `2026-05-05`：`Core/UniBase.ORM.pas` 已完成 ORM 存储抽象切片：`TDbContext/TQueryBuilder` 改为 `IORMStorage/IORMTransaction` 委托，Core 不再直接依赖 `TFDConnection/TFDQuery/TFDTransaction`。
+  - `2026-05-05`：新增 `Persistence/UniBase.Persistence.ORM.FireDAC.pas` 承接 FireDAC 实现并自动注册工厂；补充 `Test.UniBase.ORM` 缺失工厂的清晰报错回归测试。
   - `2026-05-04`：`Core/UniBase.LLM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-05`：`Core/UniBase.ORM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；查询映射签名改为 `TDataSet`，内部通过类型检查与转换访问 FireDAC。

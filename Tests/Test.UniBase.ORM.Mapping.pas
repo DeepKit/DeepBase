@@ -467,7 +467,7 @@ begin
   A1 := CompositeIndexAttribute.Create('IX_Composite', ['A', 'B']);
   try
     Assert.AreEqual('IX_Composite', A1.IndexName);
-    Assert.AreEqual(2, Length(A1.Columns));
+    Assert.AreEqual<Integer>(2, Length(A1.Columns));
     Assert.IsFalse(A1.Unique);
   finally
     A1.Free;
@@ -476,7 +476,7 @@ begin
   A2 := CompositeIndexAttribute.Create('IX_Composite', ['A', 'B', 'C'], True);
   try
     Assert.AreEqual('IX_Composite', A2.IndexName);
-    Assert.AreEqual(3, Length(A2.Columns));
+    Assert.AreEqual<Integer>(3, Length(A2.Columns));
     Assert.IsTrue(A2.Unique);
   finally
     A2.Free;

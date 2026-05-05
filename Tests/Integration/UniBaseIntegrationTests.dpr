@@ -22,6 +22,7 @@ uses
   UniBase.Persistence.Manager.FireDAC in '..\..\Persistence\UniBase.Persistence.Manager.FireDAC.pas',
   UniBase.Persistence.Exception.FireDAC in '..\..\Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   UniBase.Persistence.Diagnose.FireDAC in '..\..\Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
+  UniBase.Persistence.ORM.FireDAC in '..\..\Persistence\UniBase.Persistence.ORM.FireDAC.pas',
   // Integration Test Framework
   UniBase.IntegrationTest in 'UniBase.IntegrationTest.pas',
   // Integration Tests

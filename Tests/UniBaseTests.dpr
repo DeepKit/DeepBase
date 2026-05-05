@@ -68,6 +68,8 @@ uses
   Test.UniBase.Security in 'Test.UniBase.Security.pas',
   Test.UniBase.Authorization in 'Test.UniBase.Authorization.pas',
   Test.UniBase.Interfaces in 'Test.UniBase.Interfaces.pas',
+  Test.UniBase.ORM in 'Test.UniBase.ORM.pas',
+  Test.UniBase.ORM.Mapping in 'Test.UniBase.ORM.Mapping.pas',
   // GUI Test helper
   Test.UniBase.TestHelper in 'Test.UniBase.TestHelper.pas',
   // Services module tests (OPT-007)
@@ -92,6 +94,7 @@ uses
   UniBase.Persistence.License.FireDAC in '..\Persistence\UniBase.Persistence.License.FireDAC.pas',
   UniBase.Persistence.Exception.FireDAC in '..\Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   UniBase.Persistence.Diagnose.FireDAC in '..\Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
+  UniBase.Persistence.ORM.FireDAC in '..\Persistence\UniBase.Persistence.ORM.FireDAC.pas',
   UniBase.Persistence.TestHelper.FireDAC in '..\Persistence\UniBase.Persistence.TestHelper.FireDAC.pas',
   // LLM unit for LLM tests
   UniBase.LLM in '..\Core\UniBase.LLM.pas',

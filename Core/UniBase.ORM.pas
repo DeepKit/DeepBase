@@ -158,6 +158,28 @@ type
     function Count: Integer;
     function Exists: Boolean;
   end;
+
+  /// <summary>
+  /// Abstract transaction handle for ORM storage.
+  /// </summary>
+  IORMTransaction = interface
+    ['{A2D8A4D1-9E6B-46F7-9A40-1F12B5E7C3B8}']
+    procedure Commit;
+    procedure Rollback;
+  end;
+
+  /// <summary>
+  /// Abstract ORM storage contract (ARCH-039).
+  /// FireDAC implementation should live in Persistence/.
+  /// </summary>
+  IORMStorage = interface
+    ['{8C7F451E-12EF-4EA4-956C-5BEF048E3A17}']
+    function Execute(const SQL: string; const Params: array of Variant): Integer;
+    function OpenDataSet(const SQL: string; const Params: array of Variant): TDataSet;
+    function ExecuteScalar(const SQL: string; const Params: array of Variant): Variant;
+    function BeginTransaction: IORMTransaction;
+    function GetLastAutoGenValue(const AGeneratorName: string): Variant;
+  end;
   
   // ============================================================================
   // Query Builder Implementation
@@ -224,20 +246,29 @@ type
   TDbContext = class
   private
     FConnection: TObject;
+    FStorage: IORMStorage;
     FOwnsConnection: Boolean;
     FInTransaction: Boolean;
-    FTransaction: TObject;
-    
-    function GetFDConnection: TObject;
+    FTransaction: IORMTransaction;
+    class var FConnectionStorageFactory: TFunc<TObject, IORMStorage>;
+
+    class function CreateStorageFromConnection(
+      AConnection: TObject): IORMStorage; static;
+    class function CollectEntityParams(Entity: TObject; Metadata: TEntityMetadata;
+      IncludePrimaryKey: Boolean): TArray<Variant>; static;
+    function RequireStorage: IORMStorage;
     function GetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata): Variant;
     procedure SetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata; Value: Variant);
     function BuildInsertSQL(Metadata: TEntityMetadata; IncludePK: Boolean): string;
     function BuildUpdateSQL(Metadata: TEntityMetadata): string;
     function BuildDeleteSQL(Metadata: TEntityMetadata): string;
-    procedure SetQueryParams(Query: TObject; Entity: TObject; Metadata: TEntityMetadata; IncludePK: Boolean);
   public
-    constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False);
+    constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False); overload;
+    constructor Create(const AStorage: IORMStorage); overload;
     destructor Destroy; override;
+
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, IORMStorage>); static;
     
     // ========================================================================
     // CRUD Operations
@@ -334,7 +365,6 @@ type
 implementation
 
 uses
-  FireDAC.Comp.Client,
   System.StrUtils;
 
 // ============================================================================
@@ -615,6 +645,7 @@ var
   Col: TColumnMetadata;
   Field: TField;
   Value: TValue;
+  BoolText: string;
 begin
   Result := T(FMetadata.EntityType.Create);
   
@@ -628,7 +659,23 @@ begin
         ctBigInt: Value := TValue.From<Int64>(Field.AsLargeInt);
         ctFloat, ctDecimal: Value := TValue.From<Double>(Field.AsFloat);
         ctString, ctText: Value := TValue.From<string>(Field.AsString);
-        ctBoolean: Value := TValue.From<Boolean>(Field.AsBoolean);
+        ctBoolean:
+          begin
+            case Field.DataType of
+              ftBoolean:
+                Value := TValue.From<Boolean>(Field.AsBoolean);
+              ftSmallint, ftInteger, ftWord, ftLongWord, ftShortint, ftByte,
+              ftLargeint, ftAutoInc:
+                Value := TValue.From<Boolean>(Field.AsLargeInt <> 0);
+            else
+              begin
+                BoolText := Trim(Field.AsString).ToLower;
+                Value := TValue.From<Boolean>(
+                  (BoolText = '1') or (BoolText = 'true') or
+                  (BoolText = 'yes') or (BoolText = 'y'));
+              end;
+            end;
+          end;
         ctDateTime: Value := TValue.From<TDateTime>(Field.AsDateTime);
         ctDate: Value := TValue.From<TDate>(Field.AsDateTime);
         ctTime: Value := TValue.From<TTime>(Field.AsDateTime);
@@ -737,23 +784,11 @@ end;
 
 function TQueryBuilder<T>.ToList: TObjectList<T>;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
-  I: Integer;
+  Query: TDataSet;
 begin
   Result := TObjectList<T>.Create(True);
-  Query := TFDQuery.Create(nil);
+  Query := FContext.RequireStorage.OpenDataSet(BuildSelectSQL, FWhereParams);
   try
-    Conn := TFDConnection(FContext.GetFDConnection);
-    if Conn = nil then
-      raise EORMException.Create('TDbContext requires a TFDConnection instance');
-    Query.Connection := Conn;
-    Query.SQL.Text := BuildSelectSQL;
-    
-    for I := 0 to High(FWhereParams) do
-      Query.Params[I].Value := FWhereParams[I];
-    
-    Query.Open;
     while not Query.Eof do
     begin
       Result.Add(MapRowToEntity(Query));
@@ -791,25 +826,13 @@ end;
 
 function TQueryBuilder<T>.Count: Integer;
 var
-  Conn: TFDConnection;
   OldSelect: string;
-  Query: TFDQuery;
-  I: Integer;
+  Query: TDataSet;
 begin
   OldSelect := FSelectColumns;
   FSelectColumns := 'COUNT(*)';
-  Query := TFDQuery.Create(nil);
+  Query := FContext.RequireStorage.OpenDataSet(BuildSelectSQL, FWhereParams);
   try
-    Conn := TFDConnection(FContext.GetFDConnection);
-    if Conn = nil then
-      raise EORMException.Create('TDbContext requires a TFDConnection instance');
-    Query.Connection := Conn;
-    Query.SQL.Text := BuildSelectSQL;
-    
-    for I := 0 to High(FWhereParams) do
-      Query.Params[I].Value := FWhereParams[I];
-    
-    Query.Open;
     Result := Query.Fields[0].AsInteger;
   finally
     Query.Free;
@@ -828,9 +851,17 @@ end;
 
 constructor TDbContext.Create(AConnection: TObject; AOwnsConnection: Boolean);
 begin
-  inherited Create;
+  Create(CreateStorageFromConnection(AConnection));
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
+end;
+
+constructor TDbContext.Create(const AStorage: IORMStorage);
+begin
+  inherited Create;
+  FStorage := AStorage;
+  FConnection := nil;
+  FOwnsConnection := False;
   FInTransaction := False;
   FTransaction := nil;
 end;
@@ -839,18 +870,66 @@ destructor TDbContext.Destroy;
 begin
   if FInTransaction then
     Rollback;
-  FTransaction.Free;
+  FTransaction := nil;
   if FOwnsConnection then
     FConnection.Free;
   inherited;
 end;
 
-function TDbContext.GetFDConnection: TObject;
+class procedure TDbContext.SetStorageFactory(
+  const AFactory: TFunc<TObject, IORMStorage>);
 begin
-  if Assigned(FConnection) and (FConnection is TFDConnection) then
-    Result := FConnection
-  else
-    Result := nil;
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TDbContext.CreateStorageFromConnection(
+  AConnection: TObject): IORMStorage;
+begin
+  Result := nil;
+  if Assigned(AConnection) and Supports(AConnection, IORMStorage, Result) then
+    Exit;
+
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No ORM storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.ORM.FireDAC.');
+end;
+
+function TDbContext.RequireStorage: IORMStorage;
+begin
+  Result := FStorage;
+  if not Assigned(Result) then
+    raise EORMException.Create(
+      'No ORM storage configured for DbContext. ' +
+      'Provide IORMStorage or register UniBase.Persistence.ORM.FireDAC.');
+end;
+
+class function TDbContext.CollectEntityParams(Entity: TObject;
+  Metadata: TEntityMetadata; IncludePrimaryKey: Boolean): TArray<Variant>;
+var
+  Col: TColumnMetadata;
+  Value: TValue;
+  ParamList: TList<Variant>;
+begin
+  ParamList := TList<Variant>.Create;
+  try
+    for Col in Metadata.Columns do
+    begin
+      if Col.IsPrimaryKey and (not IncludePrimaryKey) then
+        Continue;
+      if Col.IsPrimaryKey and Col.IsAutoIncrement and (not IncludePrimaryKey) then
+        Continue;
+
+      Value := Col.RttiField.GetValue(Entity);
+      ParamList.Add(Value.AsVariant);
+    end;
+    Result := ParamList.ToArray;
+  finally
+    ParamList.Free;
+  end;
 end;
 
 function TDbContext.GetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata): Variant;
@@ -955,85 +1034,45 @@ begin
     [Metadata.GetFullTableName, Metadata.PrimaryKey.ColumnName]);
 end;
 
-procedure TDbContext.SetQueryParams(Query: TObject; Entity: TObject;
-  Metadata: TEntityMetadata; IncludePK: Boolean);
-var
-  Col: TColumnMetadata;
-  FDQuery: TFDQuery;
-  Value: TValue;
-begin
-  if not Assigned(Query) or not (Query is TFDQuery) then
-    raise EORMException.Create('TDbContext requires TFDQuery for parameter binding');
-
-  FDQuery := TFDQuery(Query);
-  for Col in Metadata.Columns do
-  begin
-    if Col.IsPrimaryKey and Col.IsAutoIncrement and (not IncludePK) then
-      Continue;
-    
-    Value := Col.RttiField.GetValue(Entity);
-    FDQuery.ParamByName(Col.ColumnName).Value := Value.AsVariant;
-  end;
-end;
-
 procedure TDbContext.Insert<T>(Entity: T);
 var
-  Conn: TFDConnection;
   Metadata: TEntityMetadata;
-  Query: TFDQuery;
+  Params: TArray<Variant>;
   NewId: Variant;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
   Metadata := TMetadataCache.GetMetadata<T>;
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := BuildInsertSQL(Metadata, False);
-    SetQueryParams(Query, Entity, Metadata, False);
-    Query.ExecSQL;
-    
-    // Get auto-generated ID
-    if (Metadata.PrimaryKey <> nil) and Metadata.PrimaryKey.IsAutoIncrement then
-    begin
-      NewId := Conn.GetLastAutoGenValue('');
-      SetPrimaryKeyValue(Entity, Metadata, NewId);
-    end;
-  finally
-    Query.Free;
+  Params := CollectEntityParams(TObject(Entity), Metadata, False);
+  RequireStorage.Execute(BuildInsertSQL(Metadata, False), Params);
+
+  // Get auto-generated ID
+  if (Metadata.PrimaryKey <> nil) and Metadata.PrimaryKey.IsAutoIncrement then
+  begin
+    NewId := RequireStorage.GetLastAutoGenValue('');
+    SetPrimaryKeyValue(Entity, Metadata, NewId);
   end;
 end;
 
 procedure TDbContext.Update<T>(Entity: T);
 var
-  Conn: TFDConnection;
   Metadata: TEntityMetadata;
-  Query: TFDQuery;
+  Params, BaseParams: TArray<Variant>;
+  I: Integer;
+  RowsAffected: Integer;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
   Metadata := TMetadataCache.GetMetadata<T>;
   
   if Metadata.PrimaryKey = nil then
     raise EInvalidEntityException.Create('Cannot update entity without primary key');
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := BuildUpdateSQL(Metadata);
-    SetQueryParams(Query, Entity, Metadata, False);
-    Query.ParamByName('pk_value').Value := GetPrimaryKeyValue(Entity, Metadata);
-    
-    Query.ExecSQL;
-    if Query.RowsAffected = 0 then
-      raise EConcurrencyException.Create('Entity was not found or has been modified');
-  finally
-    Query.Free;
-  end;
+
+  BaseParams := CollectEntityParams(TObject(Entity), Metadata, False);
+  SetLength(Params, Length(BaseParams) + 1);
+  for I := 0 to High(BaseParams) do
+    Params[I] := BaseParams[I];
+  Params[High(Params)] := GetPrimaryKeyValue(Entity, Metadata);
+
+  RowsAffected := RequireStorage.Execute(BuildUpdateSQL(Metadata), Params);
+  if RowsAffected = 0 then
+    raise EConcurrencyException.Create('Entity was not found or has been modified');
 end;
 
 procedure TDbContext.Delete<T>(Entity: T);
@@ -1046,28 +1085,14 @@ end;
 
 procedure TDbContext.DeleteById<T>(const Id: Variant);
 var
-  Conn: TFDConnection;
   Metadata: TEntityMetadata;
-  Query: TFDQuery;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
   Metadata := TMetadataCache.GetMetadata<T>;
   
   if Metadata.PrimaryKey = nil then
     raise EInvalidEntityException.Create('Cannot delete entity without primary key');
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := BuildDeleteSQL(Metadata);
-    Query.ParamByName('pk_value').Value := Id;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  RequireStorage.Execute(BuildDeleteSQL(Metadata), [Id]);
 end;
 
 function TDbContext.Find<T>(const Id: Variant): T;
@@ -1109,25 +1134,13 @@ begin
 end;
 
 procedure TDbContext.BeginTransaction;
-var
-  Conn: TFDConnection;
-  Tran: TFDTransaction;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
   if FInTransaction then
     raise EORMException.Create('Transaction already active');
-  
-  if FTransaction = nil then
-  begin
-    Tran := TFDTransaction.Create(nil);
-    Tran.Connection := Conn;
-    FTransaction := Tran;
-  end;
-  
-  TFDTransaction(FTransaction).StartTransaction;
+
+  FTransaction := RequireStorage.BeginTransaction;
+  if not Assigned(FTransaction) then
+    raise EORMException.Create('Storage did not provide a transaction handle');
   FInTransaction := True;
 end;
 
@@ -1135,11 +1148,12 @@ procedure TDbContext.Commit;
 begin
   if not FInTransaction then
     raise EORMException.Create('No active transaction');
-  
-  if not Assigned(FTransaction) or not (FTransaction is TFDTransaction) then
-    raise EORMException.Create('No active FireDAC transaction');
 
-  TFDTransaction(FTransaction).Commit;
+  if not Assigned(FTransaction) then
+    raise EORMException.Create('No active transaction handle');
+
+  FTransaction.Commit;
+  FTransaction := nil;
   FInTransaction := False;
 end;
 
@@ -1147,9 +1161,10 @@ procedure TDbContext.Rollback;
 begin
   if not FInTransaction then
     Exit;
-  
-  if Assigned(FTransaction) and (FTransaction is TFDTransaction) then
-    TFDTransaction(FTransaction).Rollback;
+
+  if Assigned(FTransaction) then
+    FTransaction.Rollback;
+  FTransaction := nil;
   FInTransaction := False;
 end;
 
@@ -1166,36 +1181,13 @@ begin
 end;
 
 function TDbContext.ExecuteSQL(const SQL: string): Integer;
-var
-  Conn: TFDConnection;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-  Result := Conn.ExecSQL(SQL);
+  Result := ExecuteSQL(SQL, []);
 end;
 
 function TDbContext.ExecuteSQL(const SQL: string; const Params: array of Variant): Integer;
-var
-  Conn: TFDConnection;
-  Query: TFDQuery;
-  I: Integer;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := SQL;
-    for I := 0 to High(Params) do
-      Query.Params[I].Value := Params[I];
-    Query.ExecSQL;
-    Result := Query.RowsAffected;
-  finally
-    Query.Free;
-  end;
+  Result := RequireStorage.Execute(SQL, Params);
 end;
 
 function TDbContext.ExecuteScalar(const SQL: string): Variant;
@@ -1204,29 +1196,8 @@ begin
 end;
 
 function TDbContext.ExecuteScalar(const SQL: string; const Params: array of Variant): Variant;
-var
-  Conn: TFDConnection;
-  Query: TFDQuery;
-  I: Integer;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if Conn = nil then
-    raise EORMException.Create('TDbContext requires a TFDConnection instance');
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := SQL;
-    for I := 0 to High(Params) do
-      Query.Params[I].Value := Params[I];
-    Query.Open;
-    if not Query.IsEmpty then
-      Result := Query.Fields[0].Value
-    else
-      Result := Null;
-  finally
-    Query.Free;
-  end;
+  Result := RequireStorage.ExecuteScalar(SQL, Params);
 end;
 
 procedure TDbContext.CreateTable<T>;

@@ -28,6 +28,7 @@ contains
   UniBase.Persistence.Authorization.FireDAC in 'Persistence\UniBase.Persistence.Authorization.FireDAC.pas',
   UniBase.Persistence.Exception.FireDAC in 'Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   UniBase.Persistence.Diagnose.FireDAC in 'Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
+  UniBase.Persistence.ORM.FireDAC in 'Persistence\UniBase.Persistence.ORM.FireDAC.pas',
   UniBase.Persistence.Manager.FireDAC in 'Persistence\UniBase.Persistence.Manager.FireDAC.pas',
   UniBase.Persistence.RuntimeRegistration in 'Persistence\UniBase.Persistence.RuntimeRegistration.pas',
   UniBase.DB.ConnectionPool in 'Persistence\UniBase.DB.ConnectionPool.pas',

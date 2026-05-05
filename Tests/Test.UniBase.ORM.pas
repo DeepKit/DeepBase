@@ -102,9 +102,15 @@ type
     
     [Test]
     procedure Test_Transaction_Rollback;
+
+    [Test]
+    procedure Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly;
   end;
 
 implementation
+
+uses
+  UniBase.Persistence.ORM.FireDAC;
 
 // ============================================================================
 // TORMTests
@@ -156,7 +162,7 @@ begin
   Assert.IsNotNull(Metadata.PrimaryKey);
   Assert.AreEqual('id', Metadata.PrimaryKey.ColumnName);
   Assert.IsTrue(Metadata.PrimaryKey.IsAutoIncrement);
-  Assert.AreEqual(5, Metadata.Columns.Count);
+  Assert.AreEqual<Integer>(5, Metadata.Columns.Count);
 end;
 
 procedure TORMTests.Test_CreateTable;
@@ -296,7 +302,7 @@ begin
   // Get all
   AllUsers := FContext.GetAll<TTestUser>;
   try
-    Assert.AreEqual(2, AllUsers.Count);
+    Assert.AreEqual<Integer>(2, AllUsers.Count);
   finally
     AllUsers.Free;
   end;
@@ -327,7 +333,7 @@ begin
     .Where('age > ?', [25])
     .ToList;
   try
-    Assert.AreEqual(1, Results.Count);
+    Assert.AreEqual<Integer>(1, Results.Count);
     Assert.AreEqual('Bob', Results[0].Name);
   finally
     Results.Free;
@@ -361,7 +367,7 @@ begin
     .OrderBy('name')
     .ToList;
   try
-    Assert.AreEqual(3, Results.Count);
+    Assert.AreEqual<Integer>(3, Results.Count);
     Assert.AreEqual('Alice', Results[0].Name);
     Assert.AreEqual('Bob', Results[1].Name);
     Assert.AreEqual('Charlie', Results[2].Name);
@@ -393,7 +399,7 @@ begin
     .Limit(3)
     .ToList;
   try
-    Assert.AreEqual(3, Results.Count);
+    Assert.AreEqual<Integer>(3, Results.Count);
   finally
     Results.Free;
   end;
@@ -476,6 +482,31 @@ begin
   
   Count := FContext.Query<TTestUser>.Count;
   Assert.AreEqual(0, Count);
+end;
+
+procedure TORMTests.Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly;
+var
+  TempContext: TDbContext;
+  RaisedMsg: string;
+begin
+  TDbContext.SetStorageFactory(nil);
+  try
+    TempContext := nil;
+    RaisedMsg := '';
+    try
+      TempContext := TDbContext.Create(FConnection, False);
+      Assert.Fail('Expected EInvalidOp when ORM storage factory is missing');
+    except
+      on E: EInvalidOp do
+        RaisedMsg := E.Message;
+    end;
+    TempContext.Free;
+
+    Assert.IsTrue(RaisedMsg.Contains('UniBase.Persistence.ORM.FireDAC'),
+      'Error should point to ORM FireDAC adapter registration');
+  finally
+    RegisterORMStorageFactory;
+  end;
 end;
 
 initialization
