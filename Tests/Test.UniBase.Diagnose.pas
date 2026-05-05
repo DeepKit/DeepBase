@@ -25,6 +25,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.IOUtils,
+  System.Generics.Collections,
   FireDAC.Comp.Client,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,
@@ -206,10 +207,125 @@ type
     procedure Test_Result_Fields;
   end;
 
+  [TestFixture]
+  TTestDiagnoseStorageInjection = class
+  public
+    [Test]
+    procedure Test_DiagnoseAllWithStorage_AggregatesProvidedResults;
+    [Test]
+    procedure Test_AutoFixWithStorage_DelegatesToStorage;
+    [Test]
+    procedure Test_DiagnoseAll_WithoutFactory_RaisesHelpfulError;
+  end;
+
 implementation
 
 uses
-  UniBase.Schema;
+  UniBase.Schema,
+  UniBase.Persistence.Diagnose.FireDAC;
+
+type
+  TInMemoryDiagnoseStorage = class(TInterfacedObject, IDiagnoseStorage)
+  public
+    VersionResults: TDiagnoseResults;
+    TableResults: TDiagnoseResults;
+    ColumnResults: TDiagnoseResults;
+    IndexResults: TDiagnoseResults;
+    IntegrityResults: TDiagnoseResults;
+    AutoFixResult: Integer;
+    LastAutoFixInputCount: Integer;
+
+    function DiagnoseAll: TDiagnoseResults;
+    function CheckTablesExist: TDiagnoseResults;
+    function CheckColumnsExist: TDiagnoseResults;
+    function CheckIndexesExist: TDiagnoseResults;
+    function CheckSchemaVersion: TDiagnoseResults;
+    function CheckDataIntegrity: TDiagnoseResults;
+    function AutoFix(const AResults: TDiagnoseResults): Integer;
+    function AddColumnIfNotExists(const ATableName, AColumnName,
+      AColumnDef: string): Boolean;
+    function TableExists(const ATableName: string): Boolean;
+    function ColumnExists(const ATableName, AColumnName: string): Boolean;
+    function IndexExists(const AIndexName: string): Boolean;
+    function GetSchemaVersion: string;
+  end;
+
+function TInMemoryDiagnoseStorage.DiagnoseAll: TDiagnoseResults;
+var
+  R: TDiagnoseResult;
+  L: TList<TDiagnoseResult>;
+begin
+  L := TList<TDiagnoseResult>.Create;
+  try
+    for R in VersionResults do L.Add(R);
+    for R in TableResults do L.Add(R);
+    for R in ColumnResults do L.Add(R);
+    for R in IndexResults do L.Add(R);
+    for R in IntegrityResults do L.Add(R);
+    Result := L.ToArray;
+  finally
+    L.Free;
+  end;
+end;
+
+function TInMemoryDiagnoseStorage.CheckTablesExist: TDiagnoseResults;
+begin
+  Result := TableResults;
+end;
+
+function TInMemoryDiagnoseStorage.CheckColumnsExist: TDiagnoseResults;
+begin
+  Result := ColumnResults;
+end;
+
+function TInMemoryDiagnoseStorage.CheckIndexesExist: TDiagnoseResults;
+begin
+  Result := IndexResults;
+end;
+
+function TInMemoryDiagnoseStorage.CheckSchemaVersion: TDiagnoseResults;
+begin
+  Result := VersionResults;
+end;
+
+function TInMemoryDiagnoseStorage.CheckDataIntegrity: TDiagnoseResults;
+begin
+  Result := IntegrityResults;
+end;
+
+function TInMemoryDiagnoseStorage.AutoFix(
+  const AResults: TDiagnoseResults): Integer;
+begin
+  LastAutoFixInputCount := Length(AResults);
+  Result := AutoFixResult;
+end;
+
+function TInMemoryDiagnoseStorage.AddColumnIfNotExists(const ATableName,
+  AColumnName, AColumnDef: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TInMemoryDiagnoseStorage.TableExists(const ATableName: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TInMemoryDiagnoseStorage.ColumnExists(const ATableName,
+  AColumnName: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TInMemoryDiagnoseStorage.IndexExists(const AIndexName: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TInMemoryDiagnoseStorage.GetSchemaVersion: string;
+begin
+  Result := SCHEMA_VERSION;
+end;
 
 { Helper functions }
 
@@ -351,7 +467,7 @@ var
 begin
   CreateSchemaInfoTable;
   Results := CheckSchemaVersion(FConnection);
-  Assert.AreEqual(1, Length(Results));
+  Assert.AreEqual<Integer>(1, Length(Results));
   Assert.AreEqual(ditVersionMismatch, Results[0].IssueType);
   Assert.IsFalse(Results[0].IsOK);
   Assert.IsTrue(Results[0].CanAutoFix);
@@ -364,7 +480,7 @@ begin
   CreateSchemaInfoTable;
   SetSchemaVersion('0.1.0');  // Very old version
   Results := CheckSchemaVersion(FConnection);
-  Assert.AreEqual(1, Length(Results));
+  Assert.AreEqual<Integer>(1, Length(Results));
   Assert.IsFalse(Results[0].CanAutoFix);
   Assert.IsTrue(Results[0].Issue.Contains('too old'));
 end;
@@ -376,7 +492,7 @@ begin
   CreateSchemaInfoTable;
   SetSchemaVersion(SCHEMA_VERSION);
   Results := CheckSchemaVersion(FConnection);
-  Assert.AreEqual(0, Length(Results));  // No issues
+  Assert.AreEqual<Integer>(0, Length(Results));  // No issues
 end;
 
 procedure TTestSchemaVersion.Test_CheckSchemaVersion_DifferentVersion;
@@ -442,7 +558,7 @@ begin
     ExecuteSQL(FConnection, Format('CREATE TABLE %s (ID INTEGER PRIMARY KEY)', [TIER2_TABLES[I]]));
   
   Results := CheckTablesExist(FConnection);
-  Assert.AreEqual(0, Length(Results));  // All tables exist
+  Assert.AreEqual<Integer>(0, Length(Results));  // All tables exist
 end;
 
 procedure TTestCheckTables.Test_CheckTablesExist_MissingOne;
@@ -790,6 +906,87 @@ begin
   Assert.IsTrue(R.CanAutoFix);
 end;
 
+{ TTestDiagnoseStorageInjection }
+
+procedure TTestDiagnoseStorageInjection.Test_DiagnoseAllWithStorage_AggregatesProvidedResults;
+var
+  Storage: IDiagnoseStorage;
+  Mem: TInMemoryDiagnoseStorage;
+  Results: TDiagnoseResults;
+begin
+  Mem := TInMemoryDiagnoseStorage.Create;
+  Storage := Mem;
+
+  SetLength(Mem.VersionResults, 1);
+  Mem.VersionResults[0].IssueType := ditVersionMismatch;
+  Mem.VersionResults[0].Issue := 'version issue';
+
+  SetLength(Mem.TableResults, 1);
+  Mem.TableResults[0].IssueType := ditMissingTable;
+  Mem.TableResults[0].Issue := 'table issue';
+
+  SetLength(Mem.ColumnResults, 1);
+  Mem.ColumnResults[0].IssueType := ditMissingColumn;
+  Mem.ColumnResults[0].Issue := 'column issue';
+
+  SetLength(Mem.IndexResults, 1);
+  Mem.IndexResults[0].IssueType := ditMissingIndex;
+  Mem.IndexResults[0].Issue := 'index issue';
+
+  SetLength(Mem.IntegrityResults, 1);
+  Mem.IntegrityResults[0].IssueType := ditDataIntegrity;
+  Mem.IntegrityResults[0].Issue := 'integrity issue';
+
+  Results := DiagnoseAllWithStorage(Storage);
+
+  Assert.AreEqual<Integer>(5, Length(Results));
+  Assert.AreEqual(ditVersionMismatch, Results[0].IssueType);
+  Assert.AreEqual(ditMissingTable, Results[1].IssueType);
+  Assert.AreEqual(ditMissingColumn, Results[2].IssueType);
+  Assert.AreEqual(ditMissingIndex, Results[3].IssueType);
+  Assert.AreEqual(ditDataIntegrity, Results[4].IssueType);
+end;
+
+procedure TTestDiagnoseStorageInjection.Test_AutoFixWithStorage_DelegatesToStorage;
+var
+  Storage: IDiagnoseStorage;
+  Mem: TInMemoryDiagnoseStorage;
+  Input: TDiagnoseResults;
+begin
+  Mem := TInMemoryDiagnoseStorage.Create;
+  Storage := Mem;
+  Mem.AutoFixResult := 7;
+
+  SetLength(Input, 2);
+  Input[0].IssueType := ditMissingTable;
+  Input[1].IssueType := ditMissingColumn;
+
+  Assert.AreEqual(7, AutoFixWithStorage(Storage, Input));
+  Assert.AreEqual(2, Mem.LastAutoFixInputCount);
+end;
+
+procedure TTestDiagnoseStorageInjection.Test_DiagnoseAll_WithoutFactory_RaisesHelpfulError;
+var
+  RaisedMsg: string;
+begin
+  SetDiagnoseStorageFactory(nil);
+  try
+    RaisedMsg := '';
+    try
+      DiagnoseAll(nil);
+      Assert.Fail('missing factory should raise');
+    except
+      on E: EInvalidOperation do
+        RaisedMsg := E.Message;
+    end;
+
+    Assert.IsTrue(RaisedMsg.Contains('UniBase.Persistence.Diagnose.FireDAC'),
+      'error message should guide persistence module registration');
+  finally
+    RegisterDiagnoseStorageFactory;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestDiagnoseHelpers);
   TDUnitX.RegisterTestFixture(TTestSchemaVersion);
@@ -799,5 +996,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestDiagnoseAll);
   TDUnitX.RegisterTestFixture(TTestReportGeneration);
   TDUnitX.RegisterTestFixture(TTestDiagnoseResult);
+  TDUnitX.RegisterTestFixture(TTestDiagnoseStorageInjection);
 
 end.

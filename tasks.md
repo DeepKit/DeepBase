@@ -578,6 +578,8 @@
   - `2026-05-04`：`Config/FormState/MRU/Theme/Hotkeys/i18n/License/Security` 的 `CreateStorageFromConnection` 已统一为“仅在 `AConnection<>nil` 时调用工厂”，修复空连接场景触发 `Expected TFDConnection` 的误报。
   - `2026-05-04`：`Core/UniBase.Exception.pas` 已移除 `TFireDACExceptionReportStorage` 与 `FireDAC.*` 依赖，异常上报仅通过 `IExceptionReportStorage` 工厂解析，FireDAC 适配器完全下沉到 `Persistence/UniBase.Persistence.Exception.FireDAC.pas`。
   - `2026-05-04`：`Core/UniBase.Diagnose.pas` 已移除内置 `TFireDACDiagnoseStorage` 回退，`CreateDiagnoseStorage` 改为仅通过注册工厂解析，FireDAC 适配器统一由 `Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 提供。
+  - `2026-05-05`：`Core/UniBase.Diagnose.pas` 已彻底移除 `FireDAC.*` / `TFDConnection` / `TFDQuery` 直接 SQL 路径，`DiagnoseAll/Check*/AutoFix` 全部改为通过 `IDiagnoseStorage` 委托；无工厂时抛出明确提示（引入 `UniBase.Persistence.Diagnose.FireDAC`）。
+  - `2026-05-05`：`Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 已承接完整 FireDAC 诊断实现（SchemaVersion/Tables/Columns/DataIntegrity/AutoFix），消除 Core↔Persistence 递归调用并完成 Diagnose 切片下沉。
   - `Tests/UniBaseTests.dpr`、`Tests/Integration/UniBaseIntegrationTests.dpr` 已显式引入 `UniBase.Persistence.Manager.FireDAC`，确保测试入口稳定完成 Manager/模块存储工厂注册。
   - `VCL/UniBase.VCL.FormStateHelper.pas`、`FMX/UniBase.FMX.FormStateHelper.pas`、`VCL/UniBase.VCL.MRUControls.pas`、`UniBaseRun/ViewMain.pas`、`Examples/Phase0Demo/MainForm.pas` 已改为优先复用 `UniBase.Manager` 持有的 `FormState/MRU/Config/I18n` 模块实例，减少直接按 `ConfigDB` 构造子模块的路径。
   - 回归验证通过：`Scripts/build_packages_win64.ps1 -Profile Runtime`、`Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`、`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`。
@@ -923,6 +925,8 @@
   - `Core/UniBase.Diagnose.pas` 新增 `IDiagnoseStorage` 抽象与 `*WithStorage` 注入入口（如 `DiagnoseAllWithStorage`、`AutoFixWithStorage`），保留原 `TFDConnection` API 兼容调用。
   - `Core/UniBase.Diagnose.pas` 新增 `SetDiagnoseStorageFactory`/`CreateDiagnoseStorage` 工厂扩展点，可由 Persistence 层注册连接适配器。
   - `Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 新增 FireDAC 版 `IDiagnoseStorage` 适配器并自动注册工厂。
+  - `2026-05-05`：`Core/UniBase.Diagnose.pas` 已彻底移除 `FireDAC.*` / `TFDConnection` / `TFDQuery` 直接依赖；`DiagnoseAll/Check*/AutoFix` 全路径改为 `IDiagnoseStorage` 委托。
+  - `2026-05-05`：`Persistence/UniBase.Persistence.Diagnose.FireDAC.pas` 已承接完整 FireDAC SQL 诊断实现（版本/表/列/完整性/自动修复），并保持工厂自动注册。
   - `Tests/Test.UniBase.Config.pas` 增加注入存储回归测试，覆盖无 DB 场景下的读写/存在性/删除行为。
   - `Tests/Test.UniBase.FormState.pas` 增加注入存储回归测试，覆盖无 DB 场景下的状态保存/恢复行为。
   - `Tests/Test.UniBase.Hotkeys.pas` 增加注入存储回归测试，覆盖默认注册/修改/重置/删除完整链路。
