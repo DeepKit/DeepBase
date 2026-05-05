@@ -256,7 +256,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FManager.ConfigDB;
+    Query.Connection := TFDConnection(FManager.ConfigDB);
 
     Query.SQL.Text := 'SELECT COUNT(*) FROM pragma_table_info(''MRU'') WHERE name = ''ItemKey''';
     Query.Open;
@@ -308,7 +308,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FManager.ConfigDB;
+    Query.Connection := TFDConnection(FManager.ConfigDB);
 
     // Force retention to run again on next initialization.
     Query.SQL.Text :=
@@ -362,7 +362,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FManager.ConfigDB;
+    Query.Connection := TFDConnection(FManager.ConfigDB);
 
     Assert.AreEqual(0, CountRows(
       'SELECT COUNT(*) FROM Logs WHERE Source = ''RetentionCase'' AND Message = ''old-log'''));

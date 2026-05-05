@@ -21,7 +21,6 @@ uses
   System.Math,
   System.Threading,  // BUG-007 FIX: Added for TTask.Run
   System.Generics.Collections,
-  FireDAC.Comp.Client,
   UniBase.Types,
   UniBase.Consts,
   UniBase.Interfaces,
@@ -64,7 +63,7 @@ type
     // 核心状态
     FRootPath: string;
     FConfigDBPath: string;
-    FConfigDB: TFDConnection;
+    FConfigDB: TObject;
     FStorage: IManagerStorage;
     FIsInitialized: Boolean;
     FLastError: string;
@@ -246,7 +245,7 @@ type
     // ========================================
     
     /// <summary>数据库连接（供子模块使用）</summary>
-    property ConfigDB: TFDConnection read FConfigDB;
+    property ConfigDB: TObject read FConfigDB;
     
     // 子模块访问点
     property Config: TUniBaseConfig read FConfig;
@@ -339,6 +338,7 @@ uses
   Winapi.Windows,
   Winapi.ShlObj,
   {$ENDIF}
+  FireDAC.Comp.Client,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,
   FireDAC.DApt,
@@ -691,8 +691,8 @@ begin
     
     if Assigned(FConfigDB) then
     begin
-      if FConfigDB.Connected then
-        FConfigDB.Close;
+      if Assigned(FConfigDB) and TFDConnection(FConfigDB).Connected then
+        TFDConnection(FConfigDB).Close;
       FreeAndNil(FConfigDB);
     end;
     FStorage := nil;
@@ -1123,17 +1123,17 @@ begin
     FreeAndNil(FConfigDB);
     FConfigDB := TFDConnection.Create(nil);
     
-    FConfigDB.DriverName := 'SQLite';
-    FConfigDB.Params.Database := DBPath;
+    TFDConnection(FConfigDB).DriverName := 'SQLite';
+    TFDConnection(FConfigDB).Params.Database := DBPath;
     
     // SQLite 特定设置
-    FConfigDB.Params.Values['LockingMode'] := 'Normal';
-    FConfigDB.Params.Values['Synchronous'] := 'Normal';
-    FConfigDB.Params.Values['JournalMode'] := 'WAL';
-    FConfigDB.Params.Values['OpenMode'] := 'CreateUTF8';
+    TFDConnection(FConfigDB).Params.Values['LockingMode'] := 'Normal';
+    TFDConnection(FConfigDB).Params.Values['Synchronous'] := 'Normal';
+    TFDConnection(FConfigDB).Params.Values['JournalMode'] := 'WAL';
+    TFDConnection(FConfigDB).Params.Values['OpenMode'] := 'CreateUTF8';
     
-    FConfigDB.Open;
-    Result := FConfigDB.Connected;
+    TFDConnection(FConfigDB).Open;
+    Result := TFDConnection(FConfigDB).Connected;
     FStorage := nil;
     if Result then
     begin
@@ -1173,7 +1173,7 @@ var
 begin
   Result := False;
   
-  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
     Exit;
 
   if Assigned(FStorage) then
@@ -1182,7 +1182,7 @@ begin
   begin
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConfigDB;
+      Query.Connection := TFDConnection(FConfigDB);
 
       // R-004: 使用 REQUIRED_CORE_TABLES 常量构建查询
       TableList := '';
@@ -1305,7 +1305,7 @@ var
 begin
   Result := False;
   
-  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
     Exit;
   
   MaxRetry := 2;  // Try twice: first attempt, then after fixing columns
@@ -1318,7 +1318,7 @@ begin
     try
       if Assigned(Query) then
       begin
-        Query.Connection := FConfigDB;
+        Query.Connection := TFDConnection(FConfigDB);
         // Disable parameter parsing to avoid issues with :name patterns in string literals
         Query.ResourceOptions.ParamCreate := False;
       end;
@@ -1425,12 +1425,12 @@ var
   end;
   
 begin
-  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
     Exit;
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
     Query.ResourceOptions.ParamCreate := False;
     
     // === Settings table columns ===
@@ -1596,7 +1596,7 @@ var
   Query: TFDQuery;
 begin
   Result := False;
-  if not Assigned(FConfigDB) or not FConfigDB.Connected or (Trim(TableName) = '') then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected or (Trim(TableName) = '') then
     Exit;
 
   if Assigned(FStorage) then
@@ -1604,7 +1604,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
     Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
     try
       Query.Open;
@@ -1633,7 +1633,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
     Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
     try
       Query.Open;
@@ -1687,7 +1687,7 @@ begin
 
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
 
     Query.SQL.Text := Format(
       'CREATE TABLE IF NOT EXISTS %s AS SELECT * FROM %s WHERE 1 = 0',
@@ -1722,7 +1722,7 @@ const
 var
   TodayTag: string;
 begin
-  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
     Exit;
 
   TodayTag := FormatDateTime('yyyy-mm-dd', Date);
@@ -1755,7 +1755,7 @@ var
 begin
   Result := '';
   
-  if not Assigned(FConfigDB) or not FConfigDB.Connected then
+  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
     Exit;
 
   if Assigned(FStorage) then
@@ -1763,7 +1763,7 @@ begin
     
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
     Query.SQL.Text := 'SELECT Value FROM SchemaInfo WHERE Key = ''SchemaVersion''';
     Query.Open;
     
@@ -1832,7 +1832,7 @@ begin
       if not Assigned(FStorage) then
       begin
         Query := TFDQuery.Create(nil);
-        Query.Connection := FConfigDB;
+        Query.Connection := TFDConnection(FConfigDB);
         // Disable parameter parsing to avoid issues with :name patterns in string literals
         Query.ResourceOptions.ParamCreate := False;
       end;
@@ -1896,7 +1896,7 @@ begin
   // Update SchemaInfo
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConfigDB;
+    Query.Connection := TFDConnection(FConfigDB);
     Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
     Query.ParamByName('Ver').AsString := ToVersion;
     Query.ExecSQL;
@@ -2065,7 +2065,7 @@ begin
   end;
   
   // Check database connection
-  if Assigned(FConfigDB) and FConfigDB.Connected then
+  if Assigned(FConfigDB) and TFDConnection(FConfigDB).Connected then
   begin
     Result.ConfigDBOk := True;
     Result.AddMessage('ConfigDB: OK');
@@ -2114,7 +2114,7 @@ begin
 
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConfigDB;
+      Query.Connection := TFDConnection(FConfigDB);
       Query.SQL.Text := 'SELECT Value FROM ProjectInfo WHERE Key = :Key';
       Query.ParamByName('Key').AsString := Key;
       Query.Open;
@@ -2146,7 +2146,7 @@ begin
 
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConfigDB;
+      Query.Connection := TFDConnection(FConfigDB);
       Query.SQL.Text := 'INSERT OR REPLACE INTO ProjectInfo (Key, Value) VALUES (:Key, :Value)';
       Query.ParamByName('Key').AsString := Key;
       Query.ParamByName('Value').AsString := Value;

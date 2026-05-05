@@ -563,6 +563,7 @@
   - `2026-05-04`：`Core/UniBase.LLM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-05`：`Core/UniBase.ORM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；查询映射签名改为 `TDataSet`，内部通过类型检查与转换访问 FireDAC。
+  - `2026-05-05`：`Core/UniBase.Manager.pas` 的公开 `ConfigDB` 属性与内部连接字段已收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；核心 DB 访问点改为内部显式转换使用 FireDAC，调用侧不再需要接口层 FireDAC 类型。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
@@ -941,7 +942,8 @@
   - `2026-05-04`：`Core/UniBase.LLM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-05`：`Core/UniBase.ORM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；查询映射签名改为 `TDataSet`，内部通过类型检查与转换访问 FireDAC。
-  - 回归验证（2026-05-04）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
+  - `2026-05-05`：`Core/UniBase.Manager.pas` 的公开 `ConfigDB` 属性与内部连接字段已收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；核心 DB 访问点改为内部显式转换使用 FireDAC，调用侧不再需要接口层 FireDAC 类型。
+  - 回归验证（2026-05-05）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
 - **状态**: ✅ 完成 (2026-05-03)
