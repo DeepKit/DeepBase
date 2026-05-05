@@ -560,6 +560,8 @@
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `CreateSchema`、`RunMigrationScript`、`EnsureSchemaColumns`（MRU 补丁 DDL）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `2026-05-04`：`Core/UniBase.Manager.pas` 的 `ArchiveAndTrimTable`（运维保留策略归档/清理）已改为优先走 `IManagerStorage.ExecuteStatement`，仅在无存储适配器时回退 `TFDQuery`。
   - `2026-05-04`：`Core/UniBase.SQLLogger.pas` 的公开签名已从 `TFDConnection/TFDQuery` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses，调用侧不再被迫在接口层引用 FireDAC 类型。
+  - `2026-05-05`：`UniBase.SQLLogger` 已统一迁移到 `Persistence/UniBase.SQLLogger.pas` 作为唯一实现，`Core/UniBase.SQLLogger.pas` 重复单元已删除，测试入口不再解析 Core 版本。
+  - `2026-05-05`：`UniBase.SQLLogger` 已统一迁移到 `Persistence/UniBase.SQLLogger.pas` 作为唯一实现，`Core/UniBase.SQLLogger.pas` 重复单元已删除，消除 Core/Persistence 双份漂移。
   - `2026-05-04`：`Core/UniBase.TestHelper.pas` 的公开连接参数已从 `TFDConnection` 收敛为 `TObject`，并通过内部安全转换访问 FireDAC，实现接口层去耦。
   - `2026-05-04`：`Core/UniBase.LLM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
