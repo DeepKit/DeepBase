@@ -61,6 +61,12 @@ type
     procedure Test_Properties_AfterInit;
 
     [Test]
+    procedure Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly;
+
+    [Test]
+    procedure Test_InitializeWithDB_WithoutStorageFactory_ShouldFailClearly;
+
+    [Test]
     procedure Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase;
 
     [Test]
@@ -70,7 +76,8 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  UniBase.Persistence.Manager.FireDAC;
 
 { TTestUniBaseManager }
 
@@ -203,6 +210,36 @@ begin
   
   Assert.AreEqual(UNIBASE_VERSION, UNIBASE_VERSION, 'Version 常量应存在');
   Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该为 True');
+end;
+
+procedure TTestUniBaseManager.Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly;
+begin
+  TUniBaseManager.SetConnectionAdapter(nil, nil, nil);
+  try
+    Assert.IsFalse(FManager.InitializeWithDB(':memory:'),
+      '未注册连接适配器时初始化应失败');
+    Assert.IsFalse(FManager.IsInitialized, '失败后不应处于已初始化状态');
+    Assert.IsTrue(FManager.LastError.Contains('connection adapter'),
+      '错误信息应提示缺少 connection adapter');
+  finally
+    RegisterManagerConnectionAdapter;
+    RegisterManagerStorageFactory;
+  end;
+end;
+
+procedure TTestUniBaseManager.Test_InitializeWithDB_WithoutStorageFactory_ShouldFailClearly;
+begin
+  RegisterManagerConnectionAdapter;
+  TUniBaseManager.SetStorageFactory(nil);
+  try
+    Assert.IsFalse(FManager.InitializeWithDB(':memory:'),
+      '未注册存储工厂时初始化应失败');
+    Assert.IsFalse(FManager.IsInitialized, '失败后不应处于已初始化状态');
+    Assert.IsTrue(FManager.LastError.Contains('storage factory'),
+      '错误信息应提示缺少 storage factory');
+  finally
+    RegisterManagerStorageFactory;
+  end;
 end;
 
 procedure TTestUniBaseManager.Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase;
