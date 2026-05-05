@@ -49,6 +49,8 @@ type
     [Test]
     procedure ExportToFile_WritesHeaderAndEntries;
     [Test]
+    procedure ExportToFile_UsesEntrySessionIdPerLine;
+    [Test]
     procedure NewSession_ChangesSessionId;
     [Test]
     procedure ExecuteCustom_LogsAndReraisesExceptions;
@@ -193,6 +195,45 @@ begin
   finally
     Lines.Free;
     TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestSQLLogger.ExportToFile_UsesEntrySessionIdPerLine;
+var
+  Logs: TSQLLogEntries;
+  TempFile: string;
+  Lines: TStringList;
+  SessionA, SessionB: string;
+begin
+  TSQLLogger.ClearMemoryLog;
+
+  SessionA := TSQLLogger.SessionId;
+  TSQLLogger.LogSQLEx('SELECT A', 100, True, 'SessionA', '', 1);
+
+  TSQLLogger.NewSession;
+  SessionB := TSQLLogger.SessionId;
+  TSQLLogger.LogSQLEx('SELECT B', 120, True, 'SessionB', '', 1);
+
+  Assert.IsFalse(SameText(SessionA, SessionB), 'Session ids should differ in this test');
+
+  Logs := TSQLLogger.GetRecentLogs(10);
+  TempFile := TPath.Combine(TPath.GetTempPath, 'unibase_sqllogger_sessions.log');
+  if TFile.Exists(TempFile) then
+    TFile.Delete(TempFile);
+
+  TSQLLogger.ExportToFile(TempFile, Logs);
+
+  Lines := TStringList.Create;
+  try
+    Lines.LoadFromFile(TempFile, TEncoding.UTF8);
+    Assert.IsTrue(Lines.Text.Contains('[' + SessionA + ']'),
+      'Export should contain first entry session id');
+    Assert.IsTrue(Lines.Text.Contains('[' + SessionB + ']'),
+      'Export should contain second entry session id');
+  finally
+    Lines.Free;
+    if TFile.Exists(TempFile) then
+      TFile.Delete(TempFile);
   end;
 end;
 

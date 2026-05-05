@@ -425,7 +425,7 @@ begin
     
   Result := Format('%s [%s] [%s] %dms %s | %s',
     [FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp),
-     FSessionId,
+     AEntry.SessionId,
      LevelNames[AEntry.LogLevel],
      AEntry.DurationMs,
      StatusStr,
