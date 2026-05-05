@@ -570,6 +570,7 @@
   - `2026-05-05`：`Core/UniBase.Manager.pas` 已彻底移除 `FireDAC.*` 直接依赖与 `TFDQuery` SQL 回退路径；数据库连接生命周期改为 `SetConnectionAdapter` 注入，Schema/ProjectInfo/Migration/Retention 全路径仅依赖 `IManagerStorage` 抽象。
   - `2026-05-05`：`Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已新增并自动注册 Manager 连接适配器（Create/IsConnected/Close），保证 Core 在无 FireDAC 直连前提下仍可完成初始化与释放。
   - `2026-05-05`：`UniBaseCore.dpk` 已移除 `FireDAC/FireDACCommonDriver/FireDACSqliteDriver` 引用，并将 `UniBase.LLM` 单元迁移到 `UniBaseFeatures.dpk`，Core 运行包完成 FireDAC 去依赖。
+  - `2026-05-05`：回归验证通过：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime`。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。
