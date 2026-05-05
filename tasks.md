@@ -549,7 +549,7 @@
 - **任务**:
   - [x] 引入 `UniBase.Storage.Interfaces.pas`（IConfigStorage, IFormStateStorage, II18nStorage, ISecuritySecretStorage, ILicenseStorage, IMRUStorage, IHotkeyStorage, IThemeStorage, ILogStorage 等）并补齐 Authorization 专用存储抽象
   - [ ] Core 只依赖接口，FireDAC 实现移到 Persistence/
-  - [ ] 确保 UniBaseCore.dpk 不再包含 FireDAC 引用
+  - [x] 确保 UniBaseCore.dpk 不再包含 FireDAC 引用
 - **阶段进展**:
   - `Core/UniBase.Logging.pas` 已移除 `FireDAC/Data.DB/TFDConnection/TFDQuery` 直接依赖，改为 `ILogStorage` 工厂注入。
   - `Persistence/UniBase.Persistence.Logging.FireDAC.pas` 已重写为 FireDAC 适配器，并在 initialization 自动注册到 Logger 存储工厂。
@@ -567,6 +567,9 @@
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-05`：`Core/UniBase.ORM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；查询映射签名改为 `TDataSet`，内部通过类型检查与转换访问 FireDAC。
   - `2026-05-05`：`Core/UniBase.Manager.pas` 的公开 `ConfigDB` 属性与内部连接字段已收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；核心 DB 访问点改为内部显式转换使用 FireDAC，调用侧不再需要接口层 FireDAC 类型。
+  - `2026-05-05`：`Core/UniBase.Manager.pas` 已彻底移除 `FireDAC.*` 直接依赖与 `TFDQuery` SQL 回退路径；数据库连接生命周期改为 `SetConnectionAdapter` 注入，Schema/ProjectInfo/Migration/Retention 全路径仅依赖 `IManagerStorage` 抽象。
+  - `2026-05-05`：`Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已新增并自动注册 Manager 连接适配器（Create/IsConnected/Close），保证 Core 在无 FireDAC 直连前提下仍可完成初始化与释放。
+  - `2026-05-05`：`UniBaseCore.dpk` 已移除 `FireDAC/FireDACCommonDriver/FireDACSqliteDriver` 引用，并将 `UniBase.LLM` 单元迁移到 `UniBaseFeatures.dpk`，Core 运行包完成 FireDAC 去依赖。
   - `Persistence/UniBase.Persistence.Manager.FireDAC.pas` 已补齐 `IManagerStorage` 适配并纳入 `UniBasePersistence.dpk`，运行时可自动注册 Manager 存储实现。
   - `IManagerStorage` 已扩展 `CreateConfigStorage/CreateI18nStorage/CreateThemeStorage/CreateSecuritySecretStorage/CreateFormStateStorage/CreateMRUStorage/CreateHotkeyStorage`；`Core/UniBase.Manager.pas` 初始化 `Config/I18n/Theme/Security/FormState/MRU/Hotkeys` 时优先使用接口存储（失败自动回退旧路径），进一步减少模块级 FireDAC 耦合。
   - `Core/UniBase.Config.pas`、`Core/UniBase.FormState.pas`、`Core/UniBase.MRU.pas` 已移除内嵌 `TFireDAC*Storage` 与 `FireDAC.*` 直接依赖；连接构造统一为 `Create(AConnection: TObject)`，仅通过已注册存储工厂解析。

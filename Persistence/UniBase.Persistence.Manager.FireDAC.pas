@@ -16,6 +16,7 @@ uses
 
 function CreateManagerStorage(AConnection: TFDConnection): IManagerStorage;
 procedure RegisterManagerStorageFactory;
+procedure RegisterManagerConnectionAdapter;
 
 implementation
 
@@ -367,6 +368,55 @@ begin
   Result := TFireDACManagerStorage.Create(AConnection);
 end;
 
+function CreateManagerConnection(const DBPath: string): TFDConnection;
+begin
+  Result := TFDConnection.Create(nil);
+  try
+    Result.DriverName := 'SQLite';
+    Result.Params.Database := DBPath;
+    Result.LoginPrompt := False;
+    Result.Params.Values['LockingMode'] := 'Normal';
+    Result.Params.Values['Synchronous'] := 'Normal';
+    Result.Params.Values['JournalMode'] := 'WAL';
+    Result.Params.Values['OpenMode'] := 'CreateUTF8';
+    Result.Open;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function ManagerConnectionFactory(const DBPath: string): TObject;
+begin
+  Result := CreateManagerConnection(DBPath);
+end;
+
+function ManagerConnectionIsConnected(AConnection: TObject): Boolean;
+begin
+  Result := (AConnection is TFDConnection) and
+    TFDConnection(AConnection).Connected;
+end;
+
+procedure ManagerConnectionClose(AConnection: TObject);
+begin
+  if not Assigned(AConnection) then
+    Exit;
+  if AConnection is TFDConnection then
+  begin
+    if TFDConnection(AConnection).Connected then
+      TFDConnection(AConnection).Close;
+  end;
+  AConnection.Free;
+end;
+
+procedure RegisterManagerConnectionAdapter;
+begin
+  TUniBaseManager.SetConnectionAdapter(
+    @ManagerConnectionFactory,
+    @ManagerConnectionIsConnected,
+    @ManagerConnectionClose);
+end;
+
 procedure RegisterManagerStorageFactory;
 begin
   TUniBaseManager.SetStorageFactory(
@@ -383,6 +433,7 @@ begin
 end;
 
 initialization
+  RegisterManagerConnectionAdapter;
   RegisterManagerStorageFactory;
 
 end.

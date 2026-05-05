@@ -54,6 +54,9 @@ const
 
 type
   TUniBaseManager = class;
+  TManagerConnectionFactory = function(const DBPath: string): TObject;
+  TManagerConnectionIsConnected = function(AConnection: TObject): Boolean;
+  TManagerConnectionCloser = procedure(AConnection: TObject);
 
   /// <summary>
   /// UniBase 核心管理器
@@ -96,6 +99,9 @@ type
     FMRU: TUniBaseMRU;
     FHotkeys: TUniBaseHotkeys;
     class var FStorageFactory: TFunc<TObject, IManagerStorage>;
+    class var FConnectionFactory: TManagerConnectionFactory;
+    class var FConnectionIsConnected: TManagerConnectionIsConnected;
+    class var FConnectionCloser: TManagerConnectionCloser;
     
     // 内部方法
     procedure InitializeModules;
@@ -127,6 +133,8 @@ type
     function CreatePluginContext: IUniBasePluginContext;
     class function CreateStorageFromConnection(
       AConnection: TObject): IManagerStorage; static;
+    class function IsConnectionAlive(AConnection: TObject): Boolean; static;
+    class procedure CloseConnection(var AConnection: TObject); static;
     
     // InitializeEx 辅助方法（R-001 重构）
     function DoFindRootPath(out ErrorMsg: string): Boolean;
@@ -152,6 +160,10 @@ type
     destructor Destroy; override;
     class procedure SetStorageFactory(
       const AFactory: TFunc<TObject, IManagerStorage>); static;
+    class procedure SetConnectionAdapter(
+      const AFactory: TManagerConnectionFactory;
+      const AIsConnected: TManagerConnectionIsConnected;
+      const ACloser: TManagerConnectionCloser); static;
     
     // ========================================
     // 初始化方法
@@ -338,21 +350,6 @@ uses
   Winapi.Windows,
   Winapi.ShlObj,
   {$ENDIF}
-  FireDAC.Comp.Client,
-  FireDAC.Stan.Def,
-  FireDAC.Stan.Async,
-  FireDAC.DApt,
-  FireDAC.Stan.ExprFuncs,
-  FireDAC.Phys.SQLite,
-  FireDAC.Phys.SQLiteDef,
-  FireDAC.Stan.Intf,
-  FireDAC.Stan.Option,
-  FireDAC.Stan.Error,
-  FireDAC.UI.Intf,
-  FireDAC.Phys.Intf,
-  FireDAC.Comp.ScriptCommands,
-  FireDAC.Stan.Util,
-  FireDAC.Comp.Script,
   UniBase.Schema;
 
 var
@@ -444,12 +441,48 @@ begin
   FStorageFactory := AFactory;
 end;
 
+class procedure TUniBaseManager.SetConnectionAdapter(
+  const AFactory: TManagerConnectionFactory;
+  const AIsConnected: TManagerConnectionIsConnected;
+  const ACloser: TManagerConnectionCloser);
+begin
+  FConnectionFactory := AFactory;
+  FConnectionIsConnected := AIsConnected;
+  FConnectionCloser := ACloser;
+end;
+
 class function TUniBaseManager.CreateStorageFromConnection(
   AConnection: TObject): IManagerStorage;
 begin
   Result := nil;
   if Assigned(AConnection) and Assigned(FStorageFactory) then
     Result := FStorageFactory(AConnection);
+end;
+
+class function TUniBaseManager.IsConnectionAlive(AConnection: TObject): Boolean;
+begin
+  if not Assigned(AConnection) then
+    Exit(False);
+
+  if Assigned(FConnectionIsConnected) then
+    Exit(FConnectionIsConnected(AConnection));
+
+  Result := True;
+end;
+
+class procedure TUniBaseManager.CloseConnection(var AConnection: TObject);
+var
+  Connection: TObject;
+begin
+  Connection := AConnection;
+  AConnection := nil;
+  if not Assigned(Connection) then
+    Exit;
+
+  if Assigned(FConnectionCloser) then
+    FConnectionCloser(Connection)
+  else
+    Connection.Free;
 end;
 
 constructor TUniBaseManager.Create(AOwner: TComponent);
@@ -688,13 +721,8 @@ begin
   TMonitor.Enter(FLock);
   try
     FinalizeModules;
-    
-    if Assigned(FConfigDB) then
-    begin
-      if Assigned(FConfigDB) and TFDConnection(FConfigDB).Connected then
-        TFDConnection(FConfigDB).Close;
-      FreeAndNil(FConfigDB);
-    end;
+
+    CloseConnection(FConfigDB);
     FStorage := nil;
     
     FIsInitialized := False;
@@ -1116,45 +1144,62 @@ begin
 end;
 
 function TUniBaseManager.ConnectToDatabase(const DBPath: string): Boolean;
+var
+  Connection: TObject;
 begin
   Result := False;
-  
+
   try
-    FreeAndNil(FConfigDB);
-    FConfigDB := TFDConnection.Create(nil);
-    
-    TFDConnection(FConfigDB).DriverName := 'SQLite';
-    TFDConnection(FConfigDB).Params.Database := DBPath;
-    
-    // SQLite 特定设置
-    TFDConnection(FConfigDB).Params.Values['LockingMode'] := 'Normal';
-    TFDConnection(FConfigDB).Params.Values['Synchronous'] := 'Normal';
-    TFDConnection(FConfigDB).Params.Values['JournalMode'] := 'WAL';
-    TFDConnection(FConfigDB).Params.Values['OpenMode'] := 'CreateUTF8';
-    
-    TFDConnection(FConfigDB).Open;
-    Result := TFDConnection(FConfigDB).Connected;
-    FStorage := nil;
-    if Result then
-    begin
-      try
-        FStorage := CreateStorageFromConnection(FConfigDB);
-      except
-        on E: Exception do
-        begin
-          FStorage := nil;
-          if Assigned(FLogger) then
-            FLogger.Warn('Manager storage factory failed: ' + E.Message, 'UniBase.Manager');
-        end;
-      end;
-    end;
-    
-    if not Result then
+    if not Assigned(FConnectionFactory) then
     begin
       FInitErrorCode := ecConfigDBNotFound;
-      FLastError := 'Failed to connect to database';
+      FLastError :=
+        'No DB connection adapter registered. Include UniBase.Persistence.Manager.FireDAC.';
+      Exit;
     end;
-    
+
+    Connection := FConnectionFactory(DBPath);
+    if not Assigned(Connection) then
+    begin
+      FInitErrorCode := ecConfigDBNotFound;
+      FLastError := 'Connection adapter returned nil.';
+      Exit;
+    end;
+
+    if not IsConnectionAlive(Connection) then
+    begin
+      CloseConnection(Connection);
+      FInitErrorCode := ecConfigDBNotFound;
+      FLastError := 'Connection adapter returned a disconnected connection.';
+      Exit;
+    end;
+
+    CloseConnection(FConfigDB);
+    FConfigDB := Connection;
+
+    FStorage := nil;
+    try
+      FStorage := CreateStorageFromConnection(FConfigDB);
+    except
+      on E: Exception do
+      begin
+        FStorage := nil;
+        if Assigned(FLogger) then
+          FLogger.Warn('Manager storage factory failed: ' + E.Message, 'UniBase.Manager');
+      end;
+    end;
+
+    if not Assigned(FStorage) then
+    begin
+      CloseConnection(FConfigDB);
+      FInitErrorCode := ecConfigDBCorrupted;
+      FLastError :=
+        'No manager storage factory registered. Include UniBase.Persistence.Manager.FireDAC.';
+      Exit;
+    end;
+
+    FInitErrorCode := ecSuccess;
+    Result := True;
   except
     on E: Exception do
     begin
@@ -1166,43 +1211,21 @@ end;
 
 function TUniBaseManager.ValidateSchema: Boolean;
 var
-  Query: TFDQuery;
   TableCount: Integer;
-  I: Integer;
-  TableList: string;
 begin
   Result := False;
-  
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
+
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) then
     Exit;
 
-  if Assigned(FStorage) then
-    TableCount := FStorage.CountCoreTables(REQUIRED_CORE_TABLES)
-  else
+  if not Assigned(FStorage) then
   begin
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := TFDConnection(FConfigDB);
-
-      // R-004: 使用 REQUIRED_CORE_TABLES 常量构建查询
-      TableList := '';
-      for I := Low(REQUIRED_CORE_TABLES) to High(REQUIRED_CORE_TABLES) do
-      begin
-        if I > Low(REQUIRED_CORE_TABLES) then
-          TableList := TableList + ', ';
-        TableList := TableList + QuotedStr(REQUIRED_CORE_TABLES[I]);
-      end;
-
-      Query.SQL.Text := Format(
-        'SELECT COUNT(*) FROM sqlite_master WHERE type=''table'' AND name IN (%s)',
-        [TableList]);
-      Query.Open;
-      TableCount := Query.Fields[0].AsInteger;
-    finally
-      Query.Free;
-    end;
+    FInitErrorCode := ecConfigDBCorrupted;
+    FLastError := 'Schema validation requires manager storage registration.';
+    Exit;
   end;
 
+  TableCount := FStorage.CountCoreTables(REQUIRED_CORE_TABLES);
   Result := (TableCount = Length(REQUIRED_CORE_TABLES));
 
   if not Result then
@@ -1257,7 +1280,6 @@ end;
 
 function TUniBaseManager.CreateSchema: Boolean;
 var
-  Query: TFDQuery;
   FullSQL: string;
   Statements: TArray<string>;
   Stmt: string;
@@ -1304,102 +1326,78 @@ var
   
 begin
   Result := False;
-  
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
+
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) then
     Exit;
-  
+  if not Assigned(FStorage) then
+  begin
+    FInitErrorCode := ecConfigDBCorrupted;
+    FLastError := 'Schema creation requires manager storage registration.';
+    Exit;
+  end;
+
   MaxRetry := 2;  // Try twice: first attempt, then after fixing columns
-  
+
   for I := 1 to MaxRetry do
   begin
-    Query := nil;
-    if not Assigned(FStorage) then
-      Query := TFDQuery.Create(nil);
+    FullSQL := GetFullSchemaSQL;
+    Statements := SplitSQLStatements(FullSQL);
+
     try
-      if Assigned(Query) then
+      for Stmt in Statements do
       begin
-        Query.Connection := TFDConnection(FConfigDB);
-        // Disable parameter parsing to avoid issues with :name patterns in string literals
-        Query.ResourceOptions.ParamCreate := False;
-      end;
-      
-      FullSQL := GetFullSchemaSQL;
-      Statements := SplitSQLStatements(FullSQL);
-      
-      try
-        for Stmt in Statements do
+        if Trim(Stmt) <> '' then
         begin
-          if Trim(Stmt) <> '' then
-          begin
-            LastStmt := Stmt;  // keep for error reporting
-            if Assigned(FStorage) then
-              FStorage.ExecuteStatement(Stmt)
-            else
-            begin
-              Query.SQL.Text := Stmt;
-              Query.ExecSQL;
-            end;
-          end;
+          LastStmt := Stmt;  // keep for error reporting
+          FStorage.ExecuteStatement(Stmt);
         end;
-        try
-          // Run compatibility column patching even when schema creation succeeds.
-          // Some legacy tables (e.g. MRU ItemPath -> ItemKey) won't fail CREATE IF NOT EXISTS.
-          EnsureSchemaColumns;
-        except
-          on E: Exception do
-            if Assigned(FLogger) then
-              FLogger.Warn('Post-schema compatibility patch failed: ' + E.Message, 'UniBase.Manager');
-        end;
-        Result := True;
-        FInitErrorCode := ecSuccess;
-        Exit;  // Success, exit loop
+      end;
+      try
+        // Run compatibility column patching even when schema creation succeeds.
+        // Some legacy tables (e.g. MRU ItemPath -> ItemKey) won't fail CREATE IF NOT EXISTS.
+        EnsureSchemaColumns;
       except
         on E: Exception do
+          if Assigned(FLogger) then
+            FLogger.Warn('Post-schema compatibility patch failed: ' + E.Message, 'UniBase.Manager');
+      end;
+      Result := True;
+      FInitErrorCode := ecSuccess;
+      Exit;  // Success, exit loop
+    except
+      on E: Exception do
+      begin
+        ErrorMsg := E.Message;
+        // If first attempt fails, try to fix schema columns
+        if I < MaxRetry then
         begin
-          ErrorMsg := E.Message;
-          // If first attempt fails, try to fix schema columns
-          if I < MaxRetry then
-          begin
-            try
-              EnsureSchemaColumns;  // Add missing columns to existing tables
-            except
-              on E2: Exception do
-                if Assigned(FLogger) then
-                  FLogger.Warn('Schema column fix attempt failed: ' + E2.Message, 'UniBase.Manager');
-            end;
-          end
-          else
-          begin
-            FInitErrorCode := ecConfigDBCorrupted;
-            // include failing statement for diagnosis (truncate if too long)
-            if Length(LastStmt) > 400 then
-              LastStmt := Copy(LastStmt, 1, 400) + '...';
-            FLastError := 'Failed to create schema: ' + ErrorMsg + sLineBreak +
-                          'Statement: ' + LastStmt;
+          try
+            EnsureSchemaColumns;  // Add missing columns to existing tables
+          except
+            on E2: Exception do
+              if Assigned(FLogger) then
+                FLogger.Warn('Schema column fix attempt failed: ' + E2.Message, 'UniBase.Manager');
           end;
+        end
+        else
+        begin
+          FInitErrorCode := ecConfigDBCorrupted;
+          // include failing statement for diagnosis (truncate if too long)
+          if Length(LastStmt) > 400 then
+            LastStmt := Copy(LastStmt, 1, 400) + '...';
+          FLastError := 'Failed to create schema: ' + ErrorMsg + sLineBreak +
+                        'Statement: ' + LastStmt;
         end;
       end;
-    finally
-      Query.Free;
     end;
   end;
 end;
 
 procedure TUniBaseManager.EnsureSchemaColumns;
-var
-  Query: TFDQuery;
-  
+ 
   function ColumnExists(const TableName, ColumnName: string): Boolean;
   begin
-    if Assigned(FStorage) then
-      Exit(FStorage.ColumnExists(TableName, ColumnName));
-
-    Query.SQL.Text := Format(
-      'SELECT COUNT(*) FROM pragma_table_info(''%s'') WHERE name = ''%s''',
-      [TableName, ColumnName]);
-    Query.Open;
-    Result := Query.Fields[0].AsInteger > 0;
-    Query.Close;
+    Result := Assigned(FStorage) and FStorage.ColumnExists(TableName, ColumnName);
   end;
   
   procedure AddColumnIfMissing(const TableName, ColumnName, ColumnDef: string);
@@ -1407,14 +1405,7 @@ var
     if not ColumnExists(TableName, ColumnName) then
     begin
       try
-        if Assigned(FStorage) then
-          FStorage.AddColumn(TableName, ColumnName, ColumnDef)
-        else
-        begin
-          Query.SQL.Text := Format('ALTER TABLE %s ADD COLUMN %s %s',
-            [TableName, ColumnName, ColumnDef]);
-          Query.ExecSQL;
-        end;
+        FStorage.AddColumn(TableName, ColumnName, ColumnDef);
       except
         on E: Exception do
           {$IFDEF DEBUG}
@@ -1425,152 +1416,128 @@ var
   end;
   
 begin
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-    Query.ResourceOptions.ParamCreate := False;
-    
-    // === Settings table columns ===
-    AddColumnIfMissing('Settings', 'ValueType', 'TEXT DEFAULT ''String''');
-    AddColumnIfMissing('Settings', 'Category', 'TEXT DEFAULT ''General''');
-    AddColumnIfMissing('Settings', 'Description', 'TEXT');
-    AddColumnIfMissing('Settings', 'DefaultValue', 'TEXT');
-    AddColumnIfMissing('Settings', 'MinValue', 'TEXT');
-    AddColumnIfMissing('Settings', 'MaxValue', 'TEXT');
-    AddColumnIfMissing('Settings', 'Options', 'TEXT');
-    AddColumnIfMissing('Settings', 'IsEncrypted', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Settings', 'IsReadOnly', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Settings', 'IsHidden', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Settings', 'SortOrder', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Settings', 'CreatedAt', 'TEXT');
-    AddColumnIfMissing('Settings', 'UpdatedAt', 'TEXT');
-    
-    // === Languages table columns ===
-    AddColumnIfMissing('Languages', 'NativeName', 'TEXT');
-    AddColumnIfMissing('Languages', 'FlagIcon', 'TEXT');
-    AddColumnIfMissing('Languages', 'DateFormat', 'TEXT');
-    AddColumnIfMissing('Languages', 'TimeFormat', 'TEXT');
-    AddColumnIfMissing('Languages', 'NumberFormat', 'TEXT');
-    AddColumnIfMissing('Languages', 'CurrencySymbol', 'TEXT');
-    AddColumnIfMissing('Languages', 'TextDirection', 'TEXT DEFAULT ''LTR''');
-    AddColumnIfMissing('Languages', 'FontFamily', 'TEXT');
-    AddColumnIfMissing('Languages', 'IsEnabled', 'INTEGER DEFAULT 1');
-    AddColumnIfMissing('Languages', 'IsDefault', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Languages', 'IsComplete', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('Languages', 'SortOrder', 'INTEGER DEFAULT 0');
-    
-    // === Logs table columns (renamed from old schema) ===
-    AddColumnIfMissing('Logs', 'LogTime', 'TEXT');
-    AddColumnIfMissing('Logs', 'LogLevel', 'TEXT');
-    AddColumnIfMissing('Logs', 'Source', 'TEXT');
-    AddColumnIfMissing('Logs', 'ExceptionClass', 'TEXT');
-    AddColumnIfMissing('Logs', 'ExceptionMessage', 'TEXT');
-    AddColumnIfMissing('Logs', 'ThreadId', 'INTEGER');
-    AddColumnIfMissing('Logs', 'UserId', 'TEXT');
-    
-    // === MRU table columns ===
-    AddColumnIfMissing('MRU', 'ItemKey', 'TEXT');
-    AddColumnIfMissing('MRU', 'DisplayName', 'TEXT');
-    AddColumnIfMissing('MRU', 'IconIndex', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('MRU', 'IsPinned', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('MRU', 'Extra', 'TEXT');
-    if ColumnExists('MRU', 'ItemPath') and ColumnExists('MRU', 'ItemKey') then
-    begin
-      try
-        if Assigned(FStorage) then
-          FStorage.ExecuteStatement(
-            'UPDATE MRU SET ItemKey = ItemPath ' +
-            'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
-            'AND ItemPath IS NOT NULL AND ItemPath <> ''''')
-        else
-        begin
-          Query.SQL.Text :=
-            'UPDATE MRU SET ItemKey = ItemPath ' +
-            'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
-            'AND ItemPath IS NOT NULL AND ItemPath <> ''''';
-          Query.ExecSQL;
-        end;
-      except
-        on E: Exception do
-          {$IFDEF DEBUG}
-          OutputDebugString(PChar('UniBase.Manager: MRU ItemPath->ItemKey migration failed: ' + E.Message));
-          {$ENDIF}
-      end;
+  if not Assigned(FStorage) then
+    Exit;
+
+  // === Settings table columns ===
+  AddColumnIfMissing('Settings', 'ValueType', 'TEXT DEFAULT ''String''');
+  AddColumnIfMissing('Settings', 'Category', 'TEXT DEFAULT ''General''');
+  AddColumnIfMissing('Settings', 'Description', 'TEXT');
+  AddColumnIfMissing('Settings', 'DefaultValue', 'TEXT');
+  AddColumnIfMissing('Settings', 'MinValue', 'TEXT');
+  AddColumnIfMissing('Settings', 'MaxValue', 'TEXT');
+  AddColumnIfMissing('Settings', 'Options', 'TEXT');
+  AddColumnIfMissing('Settings', 'IsEncrypted', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Settings', 'IsReadOnly', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Settings', 'IsHidden', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Settings', 'SortOrder', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Settings', 'CreatedAt', 'TEXT');
+  AddColumnIfMissing('Settings', 'UpdatedAt', 'TEXT');
+
+  // === Languages table columns ===
+  AddColumnIfMissing('Languages', 'NativeName', 'TEXT');
+  AddColumnIfMissing('Languages', 'FlagIcon', 'TEXT');
+  AddColumnIfMissing('Languages', 'DateFormat', 'TEXT');
+  AddColumnIfMissing('Languages', 'TimeFormat', 'TEXT');
+  AddColumnIfMissing('Languages', 'NumberFormat', 'TEXT');
+  AddColumnIfMissing('Languages', 'CurrencySymbol', 'TEXT');
+  AddColumnIfMissing('Languages', 'TextDirection', 'TEXT DEFAULT ''LTR''');
+  AddColumnIfMissing('Languages', 'FontFamily', 'TEXT');
+  AddColumnIfMissing('Languages', 'IsEnabled', 'INTEGER DEFAULT 1');
+  AddColumnIfMissing('Languages', 'IsDefault', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Languages', 'IsComplete', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('Languages', 'SortOrder', 'INTEGER DEFAULT 0');
+
+  // === Logs table columns (renamed from old schema) ===
+  AddColumnIfMissing('Logs', 'LogTime', 'TEXT');
+  AddColumnIfMissing('Logs', 'LogLevel', 'TEXT');
+  AddColumnIfMissing('Logs', 'Source', 'TEXT');
+  AddColumnIfMissing('Logs', 'ExceptionClass', 'TEXT');
+  AddColumnIfMissing('Logs', 'ExceptionMessage', 'TEXT');
+  AddColumnIfMissing('Logs', 'ThreadId', 'INTEGER');
+  AddColumnIfMissing('Logs', 'UserId', 'TEXT');
+
+  // === MRU table columns ===
+  AddColumnIfMissing('MRU', 'ItemKey', 'TEXT');
+  AddColumnIfMissing('MRU', 'DisplayName', 'TEXT');
+  AddColumnIfMissing('MRU', 'IconIndex', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('MRU', 'IsPinned', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('MRU', 'Extra', 'TEXT');
+  if ColumnExists('MRU', 'ItemPath') and ColumnExists('MRU', 'ItemKey') then
+  begin
+    try
+      FStorage.ExecuteStatement(
+        'UPDATE MRU SET ItemKey = ItemPath ' +
+        'WHERE (ItemKey IS NULL OR ItemKey = '''') ' +
+        'AND ItemPath IS NOT NULL AND ItemPath <> ''''');
+    except
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Manager: MRU ItemPath->ItemKey migration failed: ' + E.Message));
+        {$ENDIF}
     end;
-    if ColumnExists('MRU', 'ItemKey') then
-    begin
-      try
-        if Assigned(FStorage) then
-          FStorage.ExecuteStatement(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
-            'ON MRU(Category, ItemKey)')
-        else
-        begin
-          Query.SQL.Text :=
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
-            'ON MRU(Category, ItemKey)';
-          Query.ExecSQL;
-        end;
-      except
-        on E: Exception do
-          {$IFDEF DEBUG}
-          OutputDebugString(PChar('UniBase.Manager: MRU unique index patch failed: ' + E.Message));
-          {$ENDIF}
-      end;
-    end;
-    
-    // === FormStates table columns ===
-    AddColumnIfMissing('FormStates', 'MonitorIndex', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('FormStates', 'Splitters', 'TEXT');
-    AddColumnIfMissing('FormStates', 'Columns', 'TEXT');
-    AddColumnIfMissing('FormStates', 'TabIndex', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('FormStates', 'ScrollPos', 'TEXT');
-    AddColumnIfMissing('FormStates', 'LastAccess', 'TEXT');
-    AddColumnIfMissing('FormStates', 'Extra', 'TEXT');
-    
-    // === Hotkeys table columns ===
-    AddColumnIfMissing('Hotkeys', 'Description', 'TEXT');
-    AddColumnIfMissing('Hotkeys', 'Category', 'TEXT');
-    
-    // === Themes table columns ===
-    AddColumnIfMissing('Themes', 'DisplayName', 'TEXT');
-    AddColumnIfMissing('Themes', 'StyleFile', 'TEXT');
-    AddColumnIfMissing('Themes', 'AccentColor', 'INTEGER');
-    AddColumnIfMissing('Themes', 'CustomCSS', 'TEXT');
-    
-    // === LLMConfig table columns ===
-    AddColumnIfMissing('LLMConfig', 'ContextWindow', 'INTEGER DEFAULT 4096');
-    AddColumnIfMissing('LLMConfig', 'PricePer1kPrompt', 'REAL DEFAULT 0');
-    AddColumnIfMissing('LLMConfig', 'PricePer1kCompletion', 'REAL DEFAULT 0');
-    
-    // === LLMCalls table columns ===
-    AddColumnIfMissing('LLMCalls', 'CallTime', 'TEXT');  // Alias for RequestTime
-    AddColumnIfMissing('LLMCalls', 'Prompt', 'TEXT');     // Alias for InputText
-    AddColumnIfMissing('LLMCalls', 'Response', 'TEXT');   // Alias for OutputText
-    AddColumnIfMissing('LLMCalls', 'EstimatedCost', 'REAL DEFAULT 0');
-    AddColumnIfMissing('LLMCalls', 'DurationMs', 'INTEGER DEFAULT 0');
-    AddColumnIfMissing('LLMCalls', 'Success', 'INTEGER DEFAULT 1');
-    AddColumnIfMissing('LLMCalls', 'ErrorCode', 'TEXT');
-    AddColumnIfMissing('LLMCalls', 'CallerModule', 'TEXT');
-    AddColumnIfMissing('LLMCalls', 'CallerFunction', 'TEXT');
-    
-    // === LLMPromptTemplates table columns ===
-    AddColumnIfMissing('LLMPromptTemplates', 'DefaultValues', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'ParentTemplate', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'IncludeTemplates', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'OutputFormat', 'TEXT DEFAULT ''text''');
-    AddColumnIfMissing('LLMPromptTemplates', 'ValidationRegex', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'Examples', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'RecommendedConfig', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'RecommendedModel', 'TEXT');
-    AddColumnIfMissing('LLMPromptTemplates', 'MaxTokens', 'INTEGER DEFAULT 0');
-    
-  finally
-    Query.Free;
   end;
+  if ColumnExists('MRU', 'ItemKey') then
+  begin
+    try
+      FStorage.ExecuteStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_mru_category_itemkey ' +
+        'ON MRU(Category, ItemKey)');
+    except
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('UniBase.Manager: MRU unique index patch failed: ' + E.Message));
+        {$ENDIF}
+    end;
+  end;
+
+  // === FormStates table columns ===
+  AddColumnIfMissing('FormStates', 'MonitorIndex', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('FormStates', 'Splitters', 'TEXT');
+  AddColumnIfMissing('FormStates', 'Columns', 'TEXT');
+  AddColumnIfMissing('FormStates', 'TabIndex', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('FormStates', 'ScrollPos', 'TEXT');
+  AddColumnIfMissing('FormStates', 'LastAccess', 'TEXT');
+  AddColumnIfMissing('FormStates', 'Extra', 'TEXT');
+
+  // === Hotkeys table columns ===
+  AddColumnIfMissing('Hotkeys', 'Description', 'TEXT');
+  AddColumnIfMissing('Hotkeys', 'Category', 'TEXT');
+
+  // === Themes table columns ===
+  AddColumnIfMissing('Themes', 'DisplayName', 'TEXT');
+  AddColumnIfMissing('Themes', 'StyleFile', 'TEXT');
+  AddColumnIfMissing('Themes', 'AccentColor', 'INTEGER');
+  AddColumnIfMissing('Themes', 'CustomCSS', 'TEXT');
+
+  // === LLMConfig table columns ===
+  AddColumnIfMissing('LLMConfig', 'ContextWindow', 'INTEGER DEFAULT 4096');
+  AddColumnIfMissing('LLMConfig', 'PricePer1kPrompt', 'REAL DEFAULT 0');
+  AddColumnIfMissing('LLMConfig', 'PricePer1kCompletion', 'REAL DEFAULT 0');
+
+  // === LLMCalls table columns ===
+  AddColumnIfMissing('LLMCalls', 'CallTime', 'TEXT');  // Alias for RequestTime
+  AddColumnIfMissing('LLMCalls', 'Prompt', 'TEXT');     // Alias for InputText
+  AddColumnIfMissing('LLMCalls', 'Response', 'TEXT');   // Alias for OutputText
+  AddColumnIfMissing('LLMCalls', 'EstimatedCost', 'REAL DEFAULT 0');
+  AddColumnIfMissing('LLMCalls', 'DurationMs', 'INTEGER DEFAULT 0');
+  AddColumnIfMissing('LLMCalls', 'Success', 'INTEGER DEFAULT 1');
+  AddColumnIfMissing('LLMCalls', 'ErrorCode', 'TEXT');
+  AddColumnIfMissing('LLMCalls', 'CallerModule', 'TEXT');
+  AddColumnIfMissing('LLMCalls', 'CallerFunction', 'TEXT');
+
+  // === LLMPromptTemplates table columns ===
+  AddColumnIfMissing('LLMPromptTemplates', 'DefaultValues', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'ParentTemplate', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'IncludeTemplates', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'OutputFormat', 'TEXT DEFAULT ''text''');
+  AddColumnIfMissing('LLMPromptTemplates', 'ValidationRegex', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'Examples', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'RecommendedConfig', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'RecommendedModel', 'TEXT');
+  AddColumnIfMissing('LLMPromptTemplates', 'MaxTokens', 'INTEGER DEFAULT 0');
 end;
 
 function TUniBaseManager.GetRetentionDays(const SettingKey: string;
@@ -1592,58 +1559,24 @@ begin
 end;
 
 function TUniBaseManager.TableExists(const TableName: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected or (Trim(TableName) = '') then
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) or
+     (Trim(TableName) = '') then
     Exit;
-
-  if Assigned(FStorage) then
-    Exit(FStorage.TableExists(TableName));
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
-    try
-      Query.Open;
-      Result := True;
-    except
-      Result := False;
-    end;
-  finally
-    Query.Free;
-  end;
+  if not Assigned(FStorage) then
+    Exit(False);
+  Result := FStorage.TableExists(TableName);
 end;
 
 function TUniBaseManager.TableHasColumn(const TableName, ColumnName: string): Boolean;
-var
-  Query: TFDQuery;
 begin
   Result := False;
-  if (Trim(ColumnName) = '') then
+  if Trim(ColumnName) = '' then
     Exit;
-
-  if Assigned(FStorage) then
-    Exit(FStorage.ColumnExists(TableName, ColumnName));
-
-  if not TableExists(TableName) then
+  if not TableExists(TableName) or not Assigned(FStorage) then
     Exit;
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
-    try
-      Query.Open;
-      Result := Assigned(Query.FindField(ColumnName));
-    except
-      Result := False;
-    end;
-  finally
-    Query.Free;
-  end;
+  Result := FStorage.ColumnExists(TableName, ColumnName);
 end;
 
 function TUniBaseManager.ResolveTimeColumn(const TableName, Preferred,
@@ -1659,7 +1592,6 @@ end;
 procedure TUniBaseManager.ArchiveAndTrimTable(const TableName, TimeColumn: string;
   DaysToKeep: Integer);
 var
-  Query: TFDQuery;
   ArchiveTable: string;
   CutoffIso: string;
   CutoffValue: string;
@@ -1679,34 +1611,9 @@ begin
     FStorage.ExecuteStatement(Format(
       'INSERT INTO %s SELECT * FROM %s WHERE %s < %s',
       [ArchiveTable, TableName, TimeColumn, CutoffValue]));
-    FStorage.ExecuteStatement(Format(
-      'DELETE FROM %s WHERE %s < %s',
-      [TableName, TimeColumn, CutoffValue]));
-    Exit;
-  end;
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-
-    Query.SQL.Text := Format(
-      'CREATE TABLE IF NOT EXISTS %s AS SELECT * FROM %s WHERE 1 = 0',
-      [ArchiveTable, TableName]);
-    Query.ExecSQL;
-
-    Query.SQL.Text := Format(
-      'INSERT INTO %s SELECT * FROM %s WHERE %s < :CutoffTime',
-      [ArchiveTable, TableName, TimeColumn]);
-    Query.ParamByName('CutoffTime').AsString := CutoffIso;
-    Query.ExecSQL;
-
-    Query.SQL.Text := Format(
-      'DELETE FROM %s WHERE %s < :CutoffTime',
-      [TableName, TimeColumn]);
-    Query.ParamByName('CutoffTime').AsString := CutoffIso;
-    Query.ExecSQL;
-  finally
-    Query.Free;
+  FStorage.ExecuteStatement(Format(
+    'DELETE FROM %s WHERE %s < %s',
+    [TableName, TimeColumn, CutoffValue]));
   end;
 end;
 
@@ -1722,7 +1629,7 @@ const
 var
   TodayTag: string;
 begin
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) then
     Exit;
 
   TodayTag := FormatDateTime('yyyy-mm-dd', Date);
@@ -1750,28 +1657,14 @@ begin
 end;
 
 function TUniBaseManager.GetSchemaVersionInternal: string;
-var
-  Query: TFDQuery;
 begin
   Result := '';
-  
-  if not Assigned(FConfigDB) or not TFDConnection(FConfigDB).Connected then
-    Exit;
 
-  if Assigned(FStorage) then
-    Exit(FStorage.ReadSchemaVersion);
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-    Query.SQL.Text := 'SELECT Value FROM SchemaInfo WHERE Key = ''SchemaVersion''';
-    Query.Open;
-    
-    if not Query.Eof then
-      Result := Query.FieldByName('Value').AsString;
-  finally
-    Query.Free;
-  end;
+  if not Assigned(FConfigDB) or not IsConnectionAlive(FConfigDB) then
+    Exit;
+  if not Assigned(FStorage) then
+    Exit;
+  Result := FStorage.ReadSchemaVersion;
 end;
 
 function TUniBaseManager.GetCurrentSchemaVersion: string;
@@ -1786,7 +1679,6 @@ end;
 
 function TUniBaseManager.RunMigrationScript(const ScriptPath: string): Boolean;
 var
-  Query: TFDQuery;
   ScriptSQL, Stmt, Current: string;
   Statements: TList<string>;
   InString: Boolean;
@@ -1827,34 +1719,19 @@ begin
       Current := Trim(Current);
       if (Current <> '') and not Current.StartsWith('--') then
         Statements.Add(Current);
-      
-      Query := nil;
+
       if not Assigned(FStorage) then
       begin
-        Query := TFDQuery.Create(nil);
-        Query.Connection := TFDConnection(FConfigDB);
-        // Disable parameter parsing to avoid issues with :name patterns in string literals
-        Query.ResourceOptions.ParamCreate := False;
+        FLastError := 'Migration requires manager storage registration.';
+        Exit(False);
       end;
 
-      try
-        for Stmt in Statements do
-        begin
-          if Trim(Stmt) <> '' then
-          begin
-            if Assigned(FStorage) then
-              FStorage.ExecuteStatement(Stmt)
-            else
-            begin
-              Query.SQL.Text := Stmt;
-              Query.ExecSQL;
-            end;
-          end;
-        end;
-        Result := True;
-      finally
-        Query.Free;
+      for Stmt in Statements do
+      begin
+        if Trim(Stmt) <> '' then
+          FStorage.ExecuteStatement(Stmt);
       end;
+      Result := True;
     finally
       Statements.Free;
     end;
@@ -1869,7 +1746,6 @@ end;
 function TUniBaseManager.MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
 var
   ScriptPath: string;
-  Query: TFDQuery;
   UpgradeTimeISO: string;
 begin
   Result := False;
@@ -1886,30 +1762,14 @@ begin
     Exit;
   
   UpgradeTimeISO := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-
-  if Assigned(FStorage) then
+  if not Assigned(FStorage) then
   begin
-    FStorage.UpdateSchemaInfo(ToVersion, UpgradeTimeISO);
-    Exit(True);
+    FLastError := 'Schema migration requires manager storage registration.';
+    Exit(False);
   end;
 
-  // Update SchemaInfo
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConfigDB);
-    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
-    Query.ParamByName('Ver').AsString := ToVersion;
-    Query.ExecSQL;
-    
-    // Use ISO8601 format for SQLite datetime compatibility
-    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
-    Query.ParamByName('NowTime').AsString := UpgradeTimeISO;
-    Query.ExecSQL;
-    
-    Result := True;
-  finally
-    Query.Free;
-  end;
+  FStorage.UpdateSchemaInfo(ToVersion, UpgradeTimeISO);
+  Result := True;
 end;
 
 function TUniBaseManager.CheckAndMigrateSchema(const TargetVersion: string): Boolean;
@@ -2065,7 +1925,7 @@ begin
   end;
   
   // Check database connection
-  if Assigned(FConfigDB) and TFDConnection(FConfigDB).Connected then
+  if Assigned(FConfigDB) and IsConnectionAlive(FConfigDB) then
   begin
     Result.ConfigDBOk := True;
     Result.AddMessage('ConfigDB: OK');
@@ -2099,8 +1959,6 @@ begin
 end;
 
 function TUniBaseManager.GetProjectInfo(const Key: string): string;
-var
-  Query: TFDQuery;
 begin
   Result := '';
   
@@ -2109,29 +1967,15 @@ begin
     
   TMonitor.Enter(FLock);
   try
-    if Assigned(FStorage) then
-      Exit(FStorage.ReadProjectInfo(Key));
-
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := TFDConnection(FConfigDB);
-      Query.SQL.Text := 'SELECT Value FROM ProjectInfo WHERE Key = :Key';
-      Query.ParamByName('Key').AsString := Key;
-      Query.Open;
-      
-      if not Query.Eof then
-        Result := Query.FieldByName('Value').AsString;
-    finally
-      Query.Free;
-    end;
+    if not Assigned(FStorage) then
+      Exit('');
+    Result := FStorage.ReadProjectInfo(Key);
   finally
     TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TUniBaseManager.SetProjectInfo(const Key, Value: string);
-var
-  Query: TFDQuery;
 begin
   if not FIsInitialized then
     Exit;
@@ -2139,21 +1983,7 @@ begin
   TMonitor.Enter(FLock);
   try
     if Assigned(FStorage) then
-    begin
       FStorage.UpsertProjectInfo(Key, Value);
-      Exit;
-    end;
-
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := TFDConnection(FConfigDB);
-      Query.SQL.Text := 'INSERT OR REPLACE INTO ProjectInfo (Key, Value) VALUES (:Key, :Value)';
-      Query.ParamByName('Key').AsString := Key;
-      Query.ParamByName('Value').AsString := Value;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
   finally
     TMonitor.Exit(FLock);
   end;

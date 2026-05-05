@@ -12,6 +12,7 @@ requires
   UniBaseCore;
 
 contains
+  UniBase.LLM in 'Core\UniBase.LLM.pas',
   UniBase.LLM.Types in 'Features\UniBase.LLM.Types.pas',
   UniBase.LLM.Client in 'Features\UniBase.LLM.Client.pas',
   UniBase.LLM.HTTP in 'Features\UniBase.LLM.HTTP.pas',
