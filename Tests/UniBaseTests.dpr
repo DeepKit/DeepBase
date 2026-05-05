@@ -92,6 +92,7 @@ uses
   UniBase.Persistence.License.FireDAC in '..\Persistence\UniBase.Persistence.License.FireDAC.pas',
   UniBase.Persistence.Exception.FireDAC in '..\Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   UniBase.Persistence.Diagnose.FireDAC in '..\Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
+  UniBase.Persistence.TestHelper.FireDAC in '..\Persistence\UniBase.Persistence.TestHelper.FireDAC.pas',
   // LLM unit for LLM tests
   UniBase.LLM in '..\Core\UniBase.LLM.pas',
   // Payment & Social integration units

@@ -62,6 +62,15 @@ type
     
     procedure Clear;
   end;
+
+  ITestSnapshotStorage = interface
+    ['{F2F06B03-2F6A-4B4D-8C79-C9BB8A0D86D8}']
+    procedure WriteSnapshot(const TestName, FormClass, StateJSON,
+      ScreenshotPath: string);
+    function TryReadSnapshot(const TestName: string; out StateJSON: string): Boolean;
+    procedure DeleteSnapshot(const TestName: string);
+    function ReadSnapshotNames: TArray<string>;
+  end;
   
   /// <summary>
   /// GUI 测试辅助类
@@ -70,8 +79,9 @@ type
   private
     class var FConnection: TObject;
     class var FSnapshotPath: string;
+    class var FSnapshotStorageFactory: TFunc<TObject, ITestSnapshotStorage>;
     
-    class function ConnectionAsFD: TObject;
+    class function CreateSnapshotStorage: ITestSnapshotStorage;
     class function CaptureControlState(AControl: TControl; const Prefix: string = ''): TJSONObject;
     class function CompareJSON(Expected, Actual: TJSONObject; const Path: string; 
       var Diffs: TList<TSnapshotDiff>): Boolean;
@@ -82,6 +92,8 @@ type
     /// 初始化测试辅助模块
     /// </summary>
     class procedure Initialize(AConnection: TObject; const ASnapshotPath: string = '');
+    class procedure SetSnapshotStorageFactory(
+      const AFactory: TFunc<TObject, ITestSnapshotStorage>);
     
     /// <summary>
     /// 捕获窗体状态为 JSON
@@ -217,7 +229,7 @@ type
 implementation
 
 uses
-  FireDAC.Comp.Client;
+  System.Types;
 
 { TSnapshotDiff }
 
@@ -239,12 +251,11 @@ end;
 
 { TUniBaseTestHelper }
 
-class function TUniBaseTestHelper.ConnectionAsFD: TObject;
+class function TUniBaseTestHelper.CreateSnapshotStorage: ITestSnapshotStorage;
 begin
-  if Assigned(FConnection) and (FConnection is TFDConnection) then
-    Result := FConnection
-  else
-    Result := nil;
+  Result := nil;
+  if Assigned(FConnection) and Assigned(FSnapshotStorageFactory) then
+    Result := FSnapshotStorageFactory(FConnection);
 end;
 
 class procedure TUniBaseTestHelper.Initialize(AConnection: TObject;
@@ -260,6 +271,12 @@ begin
   // 确保目录存在
   if not TDirectory.Exists(FSnapshotPath) then
     TDirectory.CreateDirectory(FSnapshotPath);
+end;
+
+class procedure TUniBaseTestHelper.SetSnapshotStorageFactory(
+  const AFactory: TFunc<TObject, ITestSnapshotStorage>);
+begin
+  FSnapshotStorageFactory := AFactory;
 end;
 
 class function TUniBaseTestHelper.CaptureControlState(AControl: TControl; 
@@ -368,89 +385,107 @@ end;
 class procedure TUniBaseTestHelper.SaveSnapshot(const TestName: string; AForm: TForm;
   SaveScreenshot: Boolean);
 var
-  Conn: TFDConnection;
+  Storage: ITestSnapshotStorage;
   StateJSON: string;
-  Query: TFDQuery;
   FileName: string;
-  Bitmap: TBitmap;
   ScreenshotPath: string;
 begin
   StateJSON := CaptureFormState(AForm);
-  Conn := TFDConnection(ConnectionAsFD);
-  
-  // 保存到数据库
-  if Assigned(Conn) and Conn.Connected then
+  Storage := CreateSnapshotStorage;
+
+  if SaveScreenshot then
   begin
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := Conn;
-      Query.SQL.Text := 
-        'INSERT OR REPLACE INTO TestSnapshots (TestName, FormClass, StateJSON, ScreenshotPath, CreatedAt) ' +
-        'VALUES (:Name, :FormClass, :State, :Screenshot, CURRENT_TIMESTAMP)';
-      Query.ParamByName('Name').AsString := TestName;
-      Query.ParamByName('FormClass').AsString := AForm.ClassName;
-      Query.ParamByName('State').AsString := StateJSON;
-      
-      if SaveScreenshot then
-      begin
-        ScreenshotPath := TPath.Combine(FSnapshotPath, TestName + '.png');
-        SaveScreenshotToFile(AForm, ScreenshotPath);
-        Query.ParamByName('Screenshot').AsString := ScreenshotPath;
-      end
-      else
-        Query.ParamByName('Screenshot').AsString := '';
-        
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
+    ScreenshotPath := TPath.Combine(FSnapshotPath, TestName + '.png');
+    SaveScreenshotToFile(AForm, ScreenshotPath);
+  end
+  else
+    ScreenshotPath := '';
+  
+  // 保存到存储
+  if Assigned(Storage) then
+  begin
+    Storage.WriteSnapshot(TestName, AForm.ClassName, StateJSON, ScreenshotPath);
   end
   else
   begin
     // 保存到文件
     FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
     TFile.WriteAllText(FileName, StateJSON, TEncoding.UTF8);
-    
-    if SaveScreenshot then
-    begin
-      ScreenshotPath := TPath.Combine(FSnapshotPath, TestName + '.png');
-      SaveScreenshotToFile(AForm, ScreenshotPath);
-    end;
   end;
 end;
 
 class function TUniBaseTestHelper.GetSnapshot(const TestName: string): string;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ITestSnapshotStorage;
   FileName: string;
 begin
   Result := '';
-  Conn := TFDConnection(ConnectionAsFD);
+  Storage := CreateSnapshotStorage;
   
-  // 优先从数据库读取
-  if Assigned(Conn) and Conn.Connected then
-  begin
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := Conn;
-      Query.SQL.Text := 'SELECT StateJSON FROM TestSnapshots WHERE TestName = :Name';
-      Query.ParamByName('Name').AsString := TestName;
-      Query.Open;
-      
-      if not Query.IsEmpty then
-        Result := Query.FieldByName('StateJSON').AsString;
-    finally
-      Query.Free;
-    end;
-  end;
+  // 优先从已注册存储读取
+  if Assigned(Storage) and Storage.TryReadSnapshot(TestName, Result) then
+    Exit;
   
   // 回退到文件
-  if Result = '' then
-  begin
-    FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
-    if TFile.Exists(FileName) then
-      Result := TFile.ReadAllText(FileName, TEncoding.UTF8);
+  FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
+  if TFile.Exists(FileName) then
+    Result := TFile.ReadAllText(FileName, TEncoding.UTF8);
+end;
+
+class procedure TUniBaseTestHelper.DeleteSnapshot(const TestName: string);
+var
+  Storage: ITestSnapshotStorage;
+  FileName: string;
+begin
+  Storage := CreateSnapshotStorage;
+  if Assigned(Storage) then
+    Storage.DeleteSnapshot(TestName);
+  
+  // 删除文件
+  FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
+  if TFile.Exists(FileName) then
+    TFile.Delete(FileName);
+    
+  FileName := TPath.Combine(FSnapshotPath, TestName + '.png');
+  if TFile.Exists(FileName) then
+    TFile.Delete(FileName);
+end;
+
+class function TUniBaseTestHelper.ListSnapshots: TArray<string>;
+var
+  Storage: ITestSnapshotStorage;
+  NameList: TList<string>;
+  Files: TArray<string>;
+  FileName: string;
+  SnapshotName: string;
+begin
+  NameList := TList<string>.Create;
+  try
+    Storage := CreateSnapshotStorage;
+    if Assigned(Storage) then
+    begin
+      for SnapshotName in Storage.ReadSnapshotNames do
+      begin
+        if NameList.IndexOf(SnapshotName) < 0 then
+          NameList.Add(SnapshotName);
+      end;
+    end;
+
+    // 从文件系统补充
+    if TDirectory.Exists(FSnapshotPath) then
+    begin
+      Files := TDirectory.GetFiles(FSnapshotPath, '*.json');
+      for FileName in Files do
+      begin
+        SnapshotName := TPath.GetFileNameWithoutExtension(FileName);
+        if NameList.IndexOf(SnapshotName) < 0 then
+          NameList.Add(SnapshotName);
+      end;
+    end;
+
+    Result := NameList.ToArray;
+  finally
+    NameList.Free;
   end;
 end;
 
@@ -558,85 +593,6 @@ begin
     DiffList.Free;
     Expected.Free;
     Actual.Free;
-  end;
-end;
-
-class procedure TUniBaseTestHelper.DeleteSnapshot(const TestName: string);
-var
-  Conn: TFDConnection;
-  Query: TFDQuery;
-  FileName: string;
-begin
-  Conn := TFDConnection(ConnectionAsFD);
-
-  // 从数据库删除
-  if Assigned(Conn) and Conn.Connected then
-  begin
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := Conn;
-      Query.SQL.Text := 'DELETE FROM TestSnapshots WHERE TestName = :Name';
-      Query.ParamByName('Name').AsString := TestName;
-      Query.ExecSQL;
-    finally
-      Query.Free;
-    end;
-  end;
-  
-  // 删除文件
-  FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
-  if TFile.Exists(FileName) then
-    TFile.Delete(FileName);
-    
-  FileName := TPath.Combine(FSnapshotPath, TestName + '.png');
-  if TFile.Exists(FileName) then
-    TFile.Delete(FileName);
-end;
-
-class function TUniBaseTestHelper.ListSnapshots: TArray<string>;
-var
-  Conn: TFDConnection;
-  Query: TFDQuery;
-  NameList: TList<string>;
-  Files: TArray<string>;
-  FileName: string;
-begin
-  Conn := TFDConnection(ConnectionAsFD);
-  NameList := TList<string>.Create;
-  try
-    // 从数据库
-    if Assigned(Conn) and Conn.Connected then
-    begin
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := Conn;
-        Query.SQL.Text := 'SELECT DISTINCT TestName FROM TestSnapshots ORDER BY TestName';
-        Query.Open;
-        
-        while not Query.Eof do
-        begin
-          NameList.Add(Query.FieldByName('TestName').AsString);
-          Query.Next;
-        end;
-      finally
-        Query.Free;
-      end;
-    end;
-    
-    // 从文件系统
-    if TDirectory.Exists(FSnapshotPath) then
-    begin
-      Files := TDirectory.GetFiles(FSnapshotPath, '*.json');
-      for FileName in Files do
-      begin
-        if NameList.IndexOf(TPath.GetFileNameWithoutExtension(FileName)) < 0 then
-          NameList.Add(TPath.GetFileNameWithoutExtension(FileName));
-      end;
-    end;
-    
-    Result := NameList.ToArray;
-  finally
-    NameList.Free;
   end;
 end;
 
