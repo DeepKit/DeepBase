@@ -405,6 +405,7 @@
   - 将 `Tests/UniBaseTests.dpr` / `.dproj` 的 DoQry 源文件引用切换到 `Persistence/`。
   - 将 ARCH-009 的全局锁初始化修复迁入 Persistence DoQry，避免合并后回退到懒创建锁。
   - 保留 Persistence 版本中的 `IDoQryService` / `TDoQryService`，供 IoC 和运行时注册继续使用。
+  - `2026-05-05`：`Persistence/UniBase.DB.DoQry.pas` 已与 `Core/UniBase.DB.DoQry.pas` 再次对齐，补齐并发缓存加载协调、预编译池容量上限与 LRU 淘汰、嵌套事务 SAVEPOINT、SQLite `INSERT ... RETURNING id` 等修复，消除双实现漂移。
 
 #### ARCH-011: OAuth2 PKCE + State 验证
 - **状态**: ✅ 已完成
@@ -943,6 +944,7 @@
   - `2026-05-04`：`Core/UniBase.LLM.Manager.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，并通过 `GetFDConnection` 内部安全转换使用 FireDAC，`FireDAC.Comp.Client` 已下沉到 implementation uses。
   - `2026-05-05`：`Core/UniBase.ORM.pas` 的公开连接字段/构造参数/属性已从 `TFDConnection` 收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；查询映射签名改为 `TDataSet`，内部通过类型检查与转换访问 FireDAC。
   - `2026-05-05`：`Core/UniBase.Manager.pas` 的公开 `ConfigDB` 属性与内部连接字段已收敛为 `TObject`，`FireDAC.Comp.Client` 下沉到 implementation uses；核心 DB 访问点改为内部显式转换使用 FireDAC，调用侧不再需要接口层 FireDAC 类型。
+  - `2026-05-05`：`Persistence/UniBase.DB.DoQry.pas` 已与 `Core` 版本修复集对齐（缓存并发加载协调、预编译池 LRU/容量上限、嵌套事务 SAVEPOINT、SQLite `INSERT ... RETURNING id`），测试入口所用实现与主修复路径一致。
   - 回归验证（2026-05-05）：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`、`Scripts/build_packages_win64.ps1 -Profile Runtime` 均通过。
 
 #### ARCH-040: BindJsonParams 精度 + InferErrorCode 脆弱
