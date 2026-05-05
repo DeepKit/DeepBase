@@ -49,7 +49,6 @@ uses
   System.Generics.Collections,
   System.Variants,
   Data.DB,
-  FireDAC.Comp.Client,
   UniBase.ORM.Mapping;
 
 type
@@ -180,7 +179,7 @@ type
     FSelectColumns: string;
     
     function BuildSelectSQL: string;
-    function MapRowToEntity(Query: TFDQuery): T;
+    function MapRowToEntity(Query: TDataSet): T;
   public
     constructor Create(AContext: TDbContext);
     
@@ -224,19 +223,20 @@ type
   /// </summary>
   TDbContext = class
   private
-    FConnection: TFDConnection;
+    FConnection: TObject;
     FOwnsConnection: Boolean;
     FInTransaction: Boolean;
-    FTransaction: TFDTransaction;
+    FTransaction: TObject;
     
+    function GetFDConnection: TObject;
     function GetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata): Variant;
     procedure SetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata; Value: Variant);
     function BuildInsertSQL(Metadata: TEntityMetadata; IncludePK: Boolean): string;
     function BuildUpdateSQL(Metadata: TEntityMetadata): string;
     function BuildDeleteSQL(Metadata: TEntityMetadata): string;
-    procedure SetQueryParams(Query: TFDQuery; Entity: TObject; Metadata: TEntityMetadata; IncludePK: Boolean);
+    procedure SetQueryParams(Query: TObject; Entity: TObject; Metadata: TEntityMetadata; IncludePK: Boolean);
   public
-    constructor Create(AConnection: TFDConnection; AOwnsConnection: Boolean = False);
+    constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False);
     destructor Destroy; override;
     
     // ========================================================================
@@ -318,7 +318,7 @@ type
     // Properties
     // ========================================================================
     
-    property Connection: TFDConnection read FConnection;
+    property Connection: TObject read FConnection;
     property InTransaction: Boolean read FInTransaction;
   end;
   
@@ -334,6 +334,7 @@ type
 implementation
 
 uses
+  FireDAC.Comp.Client,
   System.StrUtils;
 
 // ============================================================================
@@ -609,7 +610,7 @@ begin
   end;
 end;
 
-function TQueryBuilder<T>.MapRowToEntity(Query: TFDQuery): T;
+function TQueryBuilder<T>.MapRowToEntity(Query: TDataSet): T;
 var
   Col: TColumnMetadata;
   Field: TField;
@@ -736,13 +737,17 @@ end;
 
 function TQueryBuilder<T>.ToList: TObjectList<T>;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   I: Integer;
 begin
   Result := TObjectList<T>.Create(True);
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FContext.Connection;
+    Conn := TFDConnection(FContext.GetFDConnection);
+    if Conn = nil then
+      raise EORMException.Create('TDbContext requires a TFDConnection instance');
+    Query.Connection := Conn;
     Query.SQL.Text := BuildSelectSQL;
     
     for I := 0 to High(FWhereParams) do
@@ -786,6 +791,7 @@ end;
 
 function TQueryBuilder<T>.Count: Integer;
 var
+  Conn: TFDConnection;
   OldSelect: string;
   Query: TFDQuery;
   I: Integer;
@@ -794,7 +800,10 @@ begin
   FSelectColumns := 'COUNT(*)';
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FContext.Connection;
+    Conn := TFDConnection(FContext.GetFDConnection);
+    if Conn = nil then
+      raise EORMException.Create('TDbContext requires a TFDConnection instance');
+    Query.Connection := Conn;
     Query.SQL.Text := BuildSelectSQL;
     
     for I := 0 to High(FWhereParams) do
@@ -817,7 +826,7 @@ end;
 // TDbContext
 // ============================================================================
 
-constructor TDbContext.Create(AConnection: TFDConnection; AOwnsConnection: Boolean);
+constructor TDbContext.Create(AConnection: TObject; AOwnsConnection: Boolean);
 begin
   inherited Create;
   FConnection := AConnection;
@@ -830,9 +839,18 @@ destructor TDbContext.Destroy;
 begin
   if FInTransaction then
     Rollback;
+  FTransaction.Free;
   if FOwnsConnection then
     FConnection.Free;
   inherited;
+end;
+
+function TDbContext.GetFDConnection: TObject;
+begin
+  if Assigned(FConnection) and (FConnection is TFDConnection) then
+    Result := FConnection
+  else
+    Result := nil;
 end;
 
 function TDbContext.GetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata): Variant;
@@ -937,32 +955,42 @@ begin
     [Metadata.GetFullTableName, Metadata.PrimaryKey.ColumnName]);
 end;
 
-procedure TDbContext.SetQueryParams(Query: TFDQuery; Entity: TObject; 
+procedure TDbContext.SetQueryParams(Query: TObject; Entity: TObject;
   Metadata: TEntityMetadata; IncludePK: Boolean);
 var
   Col: TColumnMetadata;
+  FDQuery: TFDQuery;
   Value: TValue;
 begin
+  if not Assigned(Query) or not (Query is TFDQuery) then
+    raise EORMException.Create('TDbContext requires TFDQuery for parameter binding');
+
+  FDQuery := TFDQuery(Query);
   for Col in Metadata.Columns do
   begin
     if Col.IsPrimaryKey and Col.IsAutoIncrement and (not IncludePK) then
       Continue;
     
     Value := Col.RttiField.GetValue(Entity);
-    Query.ParamByName(Col.ColumnName).Value := Value.AsVariant;
+    FDQuery.ParamByName(Col.ColumnName).Value := Value.AsVariant;
   end;
 end;
 
 procedure TDbContext.Insert<T>(Entity: T);
 var
+  Conn: TFDConnection;
   Metadata: TEntityMetadata;
   Query: TFDQuery;
   NewId: Variant;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   Metadata := TMetadataCache.GetMetadata<T>;
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := BuildInsertSQL(Metadata, False);
     SetQueryParams(Query, Entity, Metadata, False);
     Query.ExecSQL;
@@ -970,7 +998,7 @@ begin
     // Get auto-generated ID
     if (Metadata.PrimaryKey <> nil) and Metadata.PrimaryKey.IsAutoIncrement then
     begin
-      NewId := FConnection.GetLastAutoGenValue('');
+      NewId := Conn.GetLastAutoGenValue('');
       SetPrimaryKeyValue(Entity, Metadata, NewId);
     end;
   finally
@@ -980,9 +1008,14 @@ end;
 
 procedure TDbContext.Update<T>(Entity: T);
 var
+  Conn: TFDConnection;
   Metadata: TEntityMetadata;
   Query: TFDQuery;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   Metadata := TMetadataCache.GetMetadata<T>;
   
   if Metadata.PrimaryKey = nil then
@@ -990,7 +1023,7 @@ begin
   
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := BuildUpdateSQL(Metadata);
     SetQueryParams(Query, Entity, Metadata, False);
     Query.ParamByName('pk_value').Value := GetPrimaryKeyValue(Entity, Metadata);
@@ -1013,9 +1046,14 @@ end;
 
 procedure TDbContext.DeleteById<T>(const Id: Variant);
 var
+  Conn: TFDConnection;
   Metadata: TEntityMetadata;
   Query: TFDQuery;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   Metadata := TMetadataCache.GetMetadata<T>;
   
   if Metadata.PrimaryKey = nil then
@@ -1023,7 +1061,7 @@ begin
   
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := BuildDeleteSQL(Metadata);
     Query.ParamByName('pk_value').Value := Id;
     Query.ExecSQL;
@@ -1071,17 +1109,25 @@ begin
 end;
 
 procedure TDbContext.BeginTransaction;
+var
+  Conn: TFDConnection;
+  Tran: TFDTransaction;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   if FInTransaction then
     raise EORMException.Create('Transaction already active');
   
   if FTransaction = nil then
   begin
-    FTransaction := TFDTransaction.Create(nil);
-    FTransaction.Connection := FConnection;
+    Tran := TFDTransaction.Create(nil);
+    Tran.Connection := Conn;
+    FTransaction := Tran;
   end;
   
-  FTransaction.StartTransaction;
+  TFDTransaction(FTransaction).StartTransaction;
   FInTransaction := True;
 end;
 
@@ -1090,7 +1136,10 @@ begin
   if not FInTransaction then
     raise EORMException.Create('No active transaction');
   
-  FTransaction.Commit;
+  if not Assigned(FTransaction) or not (FTransaction is TFDTransaction) then
+    raise EORMException.Create('No active FireDAC transaction');
+
+  TFDTransaction(FTransaction).Commit;
   FInTransaction := False;
 end;
 
@@ -1099,7 +1148,8 @@ begin
   if not FInTransaction then
     Exit;
   
-  FTransaction.Rollback;
+  if Assigned(FTransaction) and (FTransaction is TFDTransaction) then
+    TFDTransaction(FTransaction).Rollback;
   FInTransaction := False;
 end;
 
@@ -1116,18 +1166,28 @@ begin
 end;
 
 function TDbContext.ExecuteSQL(const SQL: string): Integer;
+var
+  Conn: TFDConnection;
 begin
-  Result := FConnection.ExecSQL(SQL);
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+  Result := Conn.ExecSQL(SQL);
 end;
 
 function TDbContext.ExecuteSQL(const SQL: string; const Params: array of Variant): Integer;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   I: Integer;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := SQL;
     for I := 0 to High(Params) do
       Query.Params[I].Value := Params[I];
@@ -1145,12 +1205,17 @@ end;
 
 function TDbContext.ExecuteScalar(const SQL: string; const Params: array of Variant): Variant;
 var
+  Conn: TFDConnection;
   Query: TFDQuery;
   I: Integer;
 begin
+  Conn := TFDConnection(GetFDConnection);
+  if Conn = nil then
+    raise EORMException.Create('TDbContext requires a TFDConnection instance');
+
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
+    Query.Connection := Conn;
     Query.SQL.Text := SQL;
     for I := 0 to High(Params) do
       Query.Params[I].Value := Params[I];
