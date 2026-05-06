@@ -11,7 +11,8 @@ uses
   UniBase.Commerce.Backend.Contract,
   UniBase.Commerce.Backend.Http,
   UniBase.Commerce.Storage,
-  UniBase.Commerce.Service;
+  UniBase.Commerce.Service,
+  UniBase.Commerce.PaymentBridge;
 
 type
   [TestFixture]
@@ -66,6 +67,12 @@ type
 
     [Test]
     procedure Test_BeginPayment_WithHttpPaymentGateway_UsesBackendProxy;
+
+    [Test]
+    procedure Test_VerifyAndConfirmPayment_RequiresRegisteredVerifier;
+
+    [Test]
+    procedure Test_VerifyAndConfirmPayment_VerifiesAndConfirms;
   end;
 
 implementation
@@ -572,6 +579,61 @@ begin
   Assert.IsTrue(Pos('"out_trade_no":"' + Order.OutTradeNo + '"', Request.Body) > 0);
   Assert.AreEqual('api_key_123', HeaderValue(Request.Headers, 'X-API-Key'));
   Assert.IsTrue(HeaderValue(Request.Headers, 'Idempotency-Key').StartsWith('pay_'));
+end;
+
+procedure TCommerceServiceTests.Test_VerifyAndConfirmPayment_RequiresRegisteredVerifier;
+var
+  User: TCommerceUserData;
+  Order: TCommerceOrderData;
+  Raised: Boolean;
+begin
+  RegisterProduct('pro_year', 'desktop.pro', 9900);
+  User := EnsureUser;
+  Order := FService.CreateOrder(User.UserId, 'desktop_tool', 'pro_year');
+
+  Raised := False;
+  try
+    FService.VerifyAndConfirmPayment(cppWeChatPay, '{}', nil);
+  except
+    on E: EUniBaseCommercePaymentError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised);
+end;
+
+procedure TCommerceServiceTests.Test_VerifyAndConfirmPayment_VerifiesAndConfirms;
+var
+  User: TCommerceUserData;
+  Order: TCommerceOrderData;
+  ConfirmedOrder: TCommerceOrderData;
+  Verifier: ICommerceNotificationVerifier;
+begin
+  RegisterProduct('pro_year', 'desktop.pro', 9900);
+  FService.RegisterPaymentGateway(cppWeChatPay, TFakePaymentGateway.Create);
+  User := EnsureUser;
+  Order := FService.CreateOrder(User.UserId, 'desktop_tool', 'pro_year');
+  FService.BeginPayment(Order.OrderId, cppWeChatPay, cpcMiniProgram, 'openid_001');
+
+  Verifier := TCallbackNotificationVerifier.Create(
+    function(const ARawBody: string;
+      const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification
+    begin
+      Result.Provider := cppWeChatPay;
+      Result.OutTradeNo := Order.OutTradeNo;
+      Result.ProviderTradeNo := 'wx_trade_003';
+      Result.AmountMinor := Order.AmountMinor;
+      Result.Currency := Order.Currency;
+      Result.Success := True;
+      Result.PaidAtISO := CommerceNowISO;
+      Result.RawPayload := ARawBody;
+    end);
+  FService.RegisterNotificationVerifier(cppWeChatPay, Verifier);
+
+  ConfirmedOrder := FService.VerifyAndConfirmPayment(
+    cppWeChatPay, '{"event_type":"TRANSACTION.SUCCESS"}', nil);
+
+  Assert.AreEqual(cosPaid, ConfirmedOrder.Status);
+  Assert.IsTrue(FService.HasEntitlement(User.UserId, 'desktop_tool', 'desktop.pro'));
 end;
 
 initialization

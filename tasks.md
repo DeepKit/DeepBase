@@ -21,8 +21,9 @@
 ## 当前判断
 
 - P0 封板阻塞全部解决（PKG-001/002/003、TEST-001）。
-- P1 进行中：SEC-001/003、ARCH-046、QUAL-001、COMMERCE-002。
-- Commerce MVP 已完成，生产适配继续推进。
+- P1 全部完成：SEC-001/002/003、ARCH-046、QUAL-001、COMMERCE-002。
+- P2 已完成：VERSION-001、DOC-005、ARCH-045、MAINT-002、ECO-002。
+- 剩余待办：PUBL-105（需人工集成）、DOC-004（P3 视频教程）。
 
 ---
 
@@ -104,18 +105,16 @@
   - 13 个文件中 19 处字段重新赋值前 `F*.Free` → `FreeAndNil(F*)`
   - 局部变量 `try/finally` 中的 `.Free` 不变（安全）
 
-### COMMERCE-002: 生产存储与支付网关适配器
-- **状态**: 🟡 进行中
-- **优先级**: P1
-- **目标**: 在 Commerce MVP 基础上补齐真实后端、真实支付和多端统一权益闭环。
-- **已完成**:
+### COMMERCE-002: 生产存储与支付网关适配器 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
   - [x] COMMERCE-002A: 后端契约文档
   - [x] COMMERCE-002B: 后端 API 路由/JSON 字段契约 + 单元测试
   - [x] COMMERCE-002C: `TCommerceHttpStorage` HTTP 后端适配器
   - [x] COMMERCE-002D: `TCommerceHttpPaymentGateway` 微信支付代理
-- **待办**:
-  - [ ] COMMERCE-002E: 支付通知确认流程（验签、查单、金额/币种/订单号校验、幂等确认）
-  - [ ] COMMERCE-002F: 下游端到端最小样例
+  - [x] COMMERCE-002E: 支付通知确认流程（`ICommerceNotificationVerifier`、`VerifyAndConfirmPayment`、`PaymentBridge.pas` 桥接 ThirdParty SDK）
+  - [x] COMMERCE-002F: `Examples/CommerceE2EDemo/` 端到端样例（9 步完整流程）
 
 ---
 
@@ -156,10 +155,14 @@
 - **状态**: 🟡 进行中（UniBase 侧已完成，待人工集成）
 - **优先级**: P2
 
-### ECO-002: 社区扩展包后续阶段
-- **状态**: 🔲 待开始
-- **优先级**: P2
-- **范围**: 评估 CloudBase/Firebase/Supabase 适配、支付宝/Stripe/PayPal 接入
+### ECO-002: 社区扩展包后续阶段 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - `Features/UniBase.Commerce.Adapter.Supabase.pas` — PostgREST 存储适配器（18 个 ICommerceStorage 方法）
+  - `Features/UniBase.Commerce.Adapter.Firebase.pas` — Firestore REST 存储适配器（18 个 ICommerceStorage 方法）
+  - `Features/UniBase.Commerce.SDKGateway.pas` — ThirdParty SDK → ICommercePaymentGateway 适配器（支付宝/微信/Stripe/PayPal）
+  - `Features/UniBase.Commerce.PaymentBridge.pas` — ThirdParty SDK → ICommerceNotificationVerifier 桥接
 
 ### FWK-001: 系统托盘模块（Shell_NotifyIcon） ✅
 - **状态**: ✅ 已完成
@@ -232,6 +235,7 @@
 
 ## 已完成任务归档
 
+- 2026-05-06 COMMERCE-002E（支付通知确认流程）、COMMERCE-002F（端到端样例）、ECO-002（社区扩展：Supabase/Firebase 适配器 + SDK Gateway + PaymentBridge）已完成。
 - 2026-05-06 FWK-007（Updater 非 Windows RSA 签名验证）、FWK-004 FMX 侧补齐（TFMXi18nCheckBox、TFMXi18nGroupBox）已完成。
 - 2026-05-06 SEC-001（XOR→OpenSSL）、SEC-003（插件签名验证）已完成。
 - 2026-05-06 DOC-OPT-001/002（文档编号统一 + OneFile 创建 + 过期清理 + 专家评估）已归档到 `history.md`。

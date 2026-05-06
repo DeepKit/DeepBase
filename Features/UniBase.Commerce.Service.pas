@@ -16,10 +16,17 @@ type
       const APayment: TCommercePaymentData; const APayerOpenId: string): TCommercePaymentIntent;
   end;
 
+  ICommerceNotificationVerifier = interface
+    ['{D7E8F9A0-B1C2-4D3E-A5B6-7C8D9E0F1A2B}']
+    function VerifyNotification(const ARawBody: string;
+      const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification;
+  end;
+
   TUniBaseCommerceService = class
   private
     FStorage: ICommerceStorage;
     FGateways: TDictionary<Integer, ICommercePaymentGateway>;
+    FVerifiers: TDictionary<Integer, ICommerceNotificationVerifier>;
     function GatewayKey(AProvider: TCommercePaymentProvider): Integer;
     function RequireProduct(const AAppId, AProductId: string): TCommerceProductData;
     function IsEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
@@ -30,6 +37,8 @@ type
 
     procedure RegisterPaymentGateway(AProvider: TCommercePaymentProvider;
       const AGateway: ICommercePaymentGateway);
+    procedure RegisterNotificationVerifier(AProvider: TCommercePaymentProvider;
+      const AVerifier: ICommerceNotificationVerifier);
     procedure RegisterProduct(const AProduct: TCommerceProductData);
 
     function EnsureUserForIdentity(AProvider: TCommerceAuthProvider;
@@ -38,6 +47,9 @@ type
     function BeginPayment(const AOrderId: string; AProvider: TCommercePaymentProvider;
       AChannel: TCommercePaymentChannel; const APayerOpenId: string = ''): TCommercePaymentIntent;
     function ConfirmPayment(const ANotification: TCommercePaymentNotification): TCommerceOrderData;
+    function VerifyAndConfirmPayment(AProvider: TCommercePaymentProvider;
+      const ARawBody: string;
+      const AHeaders: TArray<TPair<string, string>>): TCommerceOrderData;
 
     function ListEntitlements(const AUserId, AAppId: string): TCommerceEntitlementArray;
     function HasEntitlement(const AUserId, AAppId, ACode: string): Boolean;
@@ -58,10 +70,12 @@ begin
     raise EUniBaseCommerceValidationError.Create('Commerce storage is required');
   FStorage := AStorage;
   FGateways := TDictionary<Integer, ICommercePaymentGateway>.Create;
+  FVerifiers := TDictionary<Integer, ICommerceNotificationVerifier>.Create;
 end;
 
 destructor TUniBaseCommerceService.Destroy;
 begin
+  FreeAndNil(FVerifiers);
   FreeAndNil(FGateways);
   inherited;
 end;
@@ -78,6 +92,15 @@ begin
   if not Assigned(AGateway) then
     raise EUniBaseCommerceValidationError.Create('Payment gateway is required');
   FGateways.AddOrSetValue(GatewayKey(AProvider), AGateway);
+end;
+
+procedure TUniBaseCommerceService.RegisterNotificationVerifier(
+  AProvider: TCommercePaymentProvider;
+  const AVerifier: ICommerceNotificationVerifier);
+begin
+  if not Assigned(AVerifier) then
+    raise EUniBaseCommerceValidationError.Create('Notification verifier is required');
+  FVerifiers.AddOrSetValue(GatewayKey(AProvider), AVerifier);
 end;
 
 procedure TUniBaseCommerceService.RegisterProduct(
@@ -265,6 +288,21 @@ begin
     Result.Status := cosFailed;
     FStorage.UpdateOrder(Result);
   end;
+end;
+
+function TUniBaseCommerceService.VerifyAndConfirmPayment(
+  AProvider: TCommercePaymentProvider; const ARawBody: string;
+  const AHeaders: TArray<TPair<string, string>>): TCommerceOrderData;
+var
+  Verifier: ICommerceNotificationVerifier;
+  Notification: TCommercePaymentNotification;
+begin
+  if not FVerifiers.TryGetValue(GatewayKey(AProvider), Verifier) then
+    raise EUniBaseCommercePaymentError.CreateFmt(
+      'Notification verifier not registered for provider: %s',
+      [CommercePaymentProviderToStr(AProvider)]);
+  Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
+  Result := ConfirmPayment(Notification);
 end;
 
 procedure TUniBaseCommerceService.GrantEntitlementForOrder(
