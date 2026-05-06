@@ -18,7 +18,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.UITypes, System.Generics.Collections,
-  FMX.Types, FMX.Forms, FMX.Styles, FMX.Controls, FMX.Graphics;
+  FMX.Types, FMX.Forms, FMX.Styles, FMX.Controls, FMX.Graphics,
+  UniBase.Theme;
 
 type
   /// <summary>Theme mode</summary>
@@ -444,6 +445,44 @@ begin
 end;
 
 initialization
+  // Register as Core UniBase.Theme platform adapter
+  UniBase.Theme.TUniBaseTheme.SetPlatformAdapter(
+    function(const ThemeName: string; out ActiveThemeName: string): Boolean
+    begin
+      try
+        if SameText(ThemeName, 'dark') then
+          TUniFMXTheme.Instance.SetMode(utmDark)
+        else if SameText(ThemeName, 'light') then
+          TUniFMXTheme.Instance.SetMode(utmLight)
+        else
+          TUniFMXTheme.Instance.SetMode(utmSystem);
+        case TUniFMXTheme.Instance.Mode of
+          utmLight: ActiveThemeName := 'light';
+          utmDark: ActiveThemeName := 'dark';
+        else
+          ActiveThemeName := 'system';
+        end;
+        Result := True;
+      except
+        Result := False;
+        ActiveThemeName := '';
+      end;
+    end,
+    nil, // ListThemes: FMX themes managed separately
+    function(const ThemeName: string): Boolean
+    begin
+      Result := SameText(ThemeName, 'light') or SameText(ThemeName, 'dark') or SameText(ThemeName, 'system');
+    end,
+    function: string
+    begin
+      case TUniFMXTheme.Instance.Mode of
+        utmLight: Result := 'light';
+        utmDark: Result := 'dark';
+      else
+        Result := 'system';
+      end;
+    end
+  );
 
 finalization
   TUniFMXTheme.FreeInstance;

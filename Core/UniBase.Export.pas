@@ -16,6 +16,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.JSON,
   Data.DB,
   Vcl.Grids;
 
@@ -154,6 +155,18 @@ type
       const Title: string = ''); overload;
     class procedure ToHTML(Grid: TStringGrid; const FileName: string;
       const Title: string = ''); overload;
+
+    // ========================================
+    // JSON Export
+    // ========================================
+
+    class function DataSetToJSON(DataSet: TDataSet): string;
+    class function GridToJSON(Grid: TStringGrid): string;
+    class function ArrayToJSON(const Data: TArray<TArray<string>>;
+      const Headers: TArray<string>): string;
+
+    /// <summary>Quick JSON export</summary>
+    class procedure ToJSON(DataSet: TDataSet; const FileName: string);
   end;
 
 implementation
@@ -679,6 +692,86 @@ class procedure TDataExport.ToHTML(Grid: TStringGrid; const FileName: string;
   const Title: string);
 begin
   GridToHTML(Grid, FileName, Title);
+end;
+
+// ========================================
+// JSON Export
+// ========================================
+
+class function TDataExport.DataSetToJSON(DataSet: TDataSet): string;
+var
+  LArray: TJSONArray;
+  LObj: TJSONObject;
+  I: Integer;
+begin
+  LArray := TJSONArray.Create;
+  try
+    if not DataSet.Active then
+      DataSet.Open;
+    DataSet.First;
+    while not DataSet.Eof do
+    begin
+      LObj := TJSONObject.Create;
+      for I := 0 to DataSet.FieldCount - 1 do
+        LObj.AddPair(DataSet.Fields[I].FieldName, TJSONString.Create(DataSet.Fields[I].AsString));
+      LArray.AddElement(LObj);
+      DataSet.Next;
+    end;
+    Result := LArray.Format(2);
+  finally
+    LArray.Free;
+  end;
+end;
+
+class function TDataExport.GridToJSON(Grid: TStringGrid): string;
+var
+  LArray: TJSONArray;
+  LObj: TJSONObject;
+  Row, Col: Integer;
+begin
+  LArray := TJSONArray.Create;
+  try
+    for Row := Grid.FixedRows to Grid.RowCount - 1 do
+    begin
+      LObj := TJSONObject.Create;
+      for Col := Grid.FixedCols to Grid.ColCount - 1 do
+        LObj.AddPair(Grid.Cells[Col, 0], TJSONString.Create(Grid.Cells[Col, Row]));
+      LArray.AddElement(LObj);
+    end;
+    Result := LArray.Format(2);
+  finally
+    LArray.Free;
+  end;
+end;
+
+class function TDataExport.ArrayToJSON(const Data: TArray<TArray<string>>;
+  const Headers: TArray<string>): string;
+var
+  LArray: TJSONArray;
+  LObj: TJSONObject;
+  Row, Col: Integer;
+begin
+  LArray := TJSONArray.Create;
+  try
+    for Row := 0 to Length(Data) - 1 do
+    begin
+      LObj := TJSONObject.Create;
+      for Col := 0 to Min(Length(Headers), Length(Data[Row])) - 1 do
+        LObj.AddPair(Headers[Col], TJSONString.Create(Data[Row][Col]));
+      LArray.AddElement(LObj);
+    end;
+    Result := LArray.Format(2);
+  finally
+    LArray.Free;
+  end;
+end;
+
+class procedure TDataExport.ToJSON(DataSet: TDataSet; const FileName: string);
+var
+  LStr: string;
+begin
+  LStr := DataSetToJSON(DataSet);
+  TFile.WriteAllText(FileName, LStr, TEncoding.UTF8);
 end;
 
 end.

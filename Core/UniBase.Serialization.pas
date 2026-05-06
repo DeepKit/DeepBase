@@ -1339,10 +1339,138 @@ begin
 end;
 
 function TXmlSerializer.DoDeserialize(const AData: string; AClass: TClass; AContext: TSerializationContext): TObject;
+
+  function ExtractTagContent(const AXml: string; const ATag: string; out AContent: string): Boolean;
+  var
+    OpenTag, CloseTag: string;
+    StartPos, EndPos: Integer;
+  begin
+    OpenTag := '<' + ATag + '>';
+    CloseTag := '</' + ATag + '>';
+    StartPos := AXml.IndexOf(OpenTag);
+    if StartPos < 0 then
+      Exit(False);
+    StartPos := StartPos + Length(OpenTag);
+    EndPos := AXml.IndexOf(CloseTag, StartPos);
+    if EndPos < 0 then
+      Exit(False);
+    AContent := AXml.Substring(StartPos, EndPos - StartPos).Trim;
+    Result := True;
+  end;
+
+  procedure ParseElementToValue(const AText: string; ATypeInfo: PTypeInfo; out AValue: TValue);
+  var
+    LConverter: IValueConverter;
+    LStr: string;
+  begin
+    LStr := UnescapeXml(AText);
+    LConverter := AContext.FindConverter(ATypeInfo);
+    if Assigned(LConverter) then
+    begin
+      AValue := LConverter.Deserialize(TValue.From<string>(LStr), ATypeInfo, AContext);
+      Exit;
+    end;
+
+    case ATypeInfo.Kind of
+      tkInteger:
+        AValue := TValue.From<Integer>(StrToIntDef(LStr, 0));
+      tkInt64:
+        AValue := TValue.From<Int64>(StrToInt64Def(LStr, 0));
+      tkFloat:
+        begin
+          if ATypeInfo = TypeInfo(TDateTime) then
+            AValue := TValue.From<TDateTime>(StrToDateTimeDef(LStr, 0))
+          else
+            AValue := TValue.From<Double>(StrToFloatDef(LStr, 0));
+        end;
+      tkString, tkLString, tkWString, tkUString:
+        AValue := TValue.From<string>(LStr);
+      tkEnumeration:
+        begin
+          if ATypeInfo = TypeInfo(Boolean) then
+            AValue := TValue.From<Boolean>(SameText(LStr, 'True'))
+          else
+            AValue := TValue.FromOrdinal(ATypeInfo, GetEnumValue(ATypeInfo, LStr));
+        end;
+    else
+      AValue := TValue.Empty;
+    end;
+  end;
+
+  function XmlToObject(const AXml: string; ATargetClass: TClass): TObject;
+  var
+    LType: TRttiType;
+    LProp: TRttiProperty;
+    LPropName: string;
+    LContent: string;
+    LValue: TValue;
+  begin
+    if not AContext.IsAllowedType(ATargetClass) then
+      raise ESerializationException.CreateFmt('Unauthorized type for deserialization: %s', [ATargetClass.ClassName]);
+
+    LType := FRttiContext.GetType(ATargetClass);
+    Result := LType.AsInstance.MetaclassType.Create;
+
+    AContext.EnterObject(Result);
+    try
+      for LProp in LType.GetProperties do
+      begin
+        if not ShouldSerialize(LProp) then
+          Continue;
+
+        LPropName := GetPropertyName(LProp);
+        AContext.PushPath(LPropName);
+        try
+          if not ExtractTagContent(AXml, LPropName, LContent) then
+            Continue;
+
+          if LProp.PropertyType.TypeKind = tkClass then
+          begin
+            if LContent <> '' then
+              LValue := TValue.From<TObject>(XmlToObject(LContent, LProp.PropertyType.AsInstance.MetaclassType))
+            else
+              LValue := TValue.Empty;
+          end
+          else
+            ParseElementToValue(LContent, LProp.PropertyType.Handle, LValue);
+
+          if not LValue.IsEmpty then
+            LProp.SetValue(Result, LValue);
+        finally
+          AContext.PopPath;
+        end;
+      end;
+    finally
+      AContext.LeaveObject(Result);
+    end;
+  end;
+
+var
+  LXml: string;
+  LClassName: string;
+  LRootContent: string;
+  LDeclEnd: Integer;
 begin
-  // XML deserialization would require XML parser
-  // Simplified implementation
-  raise ESerializationException.Create('XML deserialization not implemented');
+  if AData.Trim.IsEmpty then
+    raise ESerializationException.Create('Cannot deserialize empty XML');
+
+  LXml := AData.Trim;
+  if LXml.StartsWith('<?xml') then
+  begin
+    LDeclEnd := LXml.IndexOf('?>');
+    if LDeclEnd >= 0 then
+      LXml := LXml.Substring(LDeclEnd + 2).Trim;
+  end;
+
+  LClassName := AClass.ClassName;
+
+  if not AContext.IsAllowedType(AClass) then
+    raise ESerializationException.CreateFmt('Unauthorized type for deserialization: %s', [AClass.ClassName]);
+
+  if ExtractTagContent(LXml, LClassName, LRootContent) then
+    Result := XmlToObject(LRootContent, AClass)
+  else
+    Result := XmlToObject(LXml, AClass);
 end;
 
 { TBinarySerializer }

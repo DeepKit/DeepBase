@@ -41,6 +41,7 @@ contains
   UniBase.Export in 'Core\UniBase.Export.pas',
   UniBase.SplashScreen in 'Core\UniBase.SplashScreen.pas',
   UniBase.VirtualScroll in 'Core\UniBase.VirtualScroll.pas',
-  UniBase.TestHelper in 'Core\UniBase.TestHelper.pas';
+  UniBase.TestHelper in 'Core\UniBase.TestHelper.pas',
+  UniBase.VCL.TrayIcon in 'VCL\UniBase.VCL.TrayIcon.pas';
 
 end.

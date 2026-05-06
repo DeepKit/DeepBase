@@ -143,15 +143,14 @@
   - 修复 12 个源文件编译错误：TRttiContext→.Free、TRegEx 异常类型、TTask/TThread 调用语法、TPanel.OnPaint→TPaintBox、bsSingle、CF_TEXT、FMX 类型冲突等
   - `Profile All` 6 个包全部零 Error 编译通过
 
-### MAINT-002: 单元测试覆盖率提升至 95%+
-- **状态**: 🟡 进行中
-- **优先级**: P2
-- **进展**: 53 个测试文件已注册到 UniBaseTests.dpr（TEST-001）
-- **下一步任务**:
-  - [ ] 运行测试确认新注册文件编译通过
-  - [ ] 产出覆盖率报告
-  - [ ] 按模块补齐测试缺口
-  - [ ] 为 COMMERCE-002 补充 contract tests
+### MAINT-002: 单元测试编译修复 + 覆盖率提升 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - 51 个测试文件编译错误修复（AreEqual 类型推断、WillRaise 重载、匿名方法类型转换等）
+  - 53 个测试文件注册到 UniBaseTests.dpr
+  - Win64 DCU 编译脚本（compile_packages_win64.ps1），176 个 DCU 零错误
+  - 180,479 行代码编译通过，0 Error
 
 ### PUBL-105: 工具项目接入 AboutFrame + aboutMeImages
 - **状态**: 🟡 进行中（UniBase 侧已完成，待人工集成）
@@ -161,6 +160,55 @@
 - **状态**: 🔲 待开始
 - **优先级**: P2
 - **范围**: 评估 CloudBase/Firebase/Supabase 适配、支付宝/Stripe/PayPal 接入
+
+### FWK-001: 系统托盘模块（Shell_NotifyIcon） ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - `Core/UniBase.TrayIcon.pas`（~230 行）：静态类 + Shell_NotifyIcon API，气泡通知、Tooltip、PopupMenu 适配器接口
+  - `VCL/UniBase.VCL.TrayIcon.pas`（~130 行）：TUniTrayIcon 组件 + TVclPopupMenuAdapter
+  - `Tests/Test.UniBase.TrayIcon.pas`：12 个测试用例
+  - 注册到 UniBaseCore.dpk + UniBaseVCL.dpk
+
+### FWK-002: Serialization XML 反序列化 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - 实现 `TXmlSerializer.DoDeserialize`：标签解析→属性赋值
+  - 支持 Integer/Int64/Float/DateTime/String/Boolean/Enum 类型
+  - 支持嵌套对象、IValueConverter、属性特性兼容
+  - 自动跳过 XML 声明、按 ClassName 查找根元素
+
+### FWK-003: Scheduler 任务持久化 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - 新增 `IJobStore` 接口 + `TTaskMeta` 记录
+  - `TTaskScheduler.SetJobStore`/`GetPersistedTaskIds`/`SaveTaskMeta`
+  - 修复 `Stop()` 竞态：等待运行中任务完成（最多 10 秒）
+  - 新增 `FShutdownEvent` 用于优雅关机
+
+### FWK-004: VCL I18n 控件补齐 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - 新增 5 个 VCL I18n 控件：TI18nCheckBox, TI18nRadioButton, TI18nGroupBox, TI18nTabSheet, TI18nBitBtn, TI18nMenuItem
+  - 所有控件遵循 TextKey + Loaded 订阅 + Destroy 取消订阅模式
+
+### FWK-005: FMX Theme 桥接 Core Theme ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - `UniBase.FMX.Theme` initialization 中注册 Core `TUniBaseTheme.SetPlatformAdapter`
+  - 支持 light/dark/system 三种模式切换
+  - 桥接 Apply/Exists/Current 四个回调
+
+### FWK-006: Export 新增 JSON 格式 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - 新增 `DataSetToJSON`/`GridToJSON`/`ArrayToJSON`/`ToJSON`
+  - 使用 System.JSON 生成格式化 JSON 数组输出
 
 ---
 

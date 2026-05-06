@@ -66,6 +66,35 @@ type
   
   TTaskState = (tsIdle, tsPending, tsRunning, tsCompleted, tsFailed, tsCancelled);
   TTaskPriority = (tpLow, tpNormal, tpHigh, tpCritical);
+
+  /// <summary>
+  /// Persisted task metadata (no proc reference — callers re-register on restart).
+  /// </summary>
+  TTaskMeta = record
+    Id: string;
+    Name: string;
+    State: TTaskState;
+    Priority: TTaskPriority;
+    DelayMs: Integer;
+    IntervalMs: Integer;
+    CronExpr: string;
+    UseCron: Boolean;
+    RunCount: Integer;
+    MaxRuns: Integer;
+    CreatedAt: TDateTime;
+    NextRunAt: TDateTime;
+    LastRunAt: TDateTime;
+    Tags: string;
+    DependsOn: string;
+  end;
+
+  IJobStore = interface
+    ['{A7B3C9D2-E4F5-4A6B-8C9D-0E1F2A3B4C5D}']
+    procedure SaveTask(const AMeta: TTaskMeta);
+    procedure RemoveTask(const ATaskId: string);
+    function LoadAll: TArray<TTaskMeta>;
+    procedure Clear;
+  end;
   
   TTaskProc = reference to procedure;
   TTaskProcWithContext = reference to procedure(const TaskId: string);
@@ -233,20 +262,29 @@ type
     FCheckIntervalMs: Integer;
     FMaxConcurrentTasks: Integer;
     FRunningCount: Integer;
-    
+    FJobStore: IJobStore;
+    FShutdownEvent: TEvent;
+
     procedure TimerProc;
     procedure ExecuteTask(Task: TScheduledTask);
     procedure ProcessPendingTasks;
     function CanRunTask(Task: TScheduledTask): Boolean;
+    procedure SaveTaskMeta(Task: TScheduledTask);
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     /// <summary>Start scheduler</summary>
     procedure Start;
-    
-    /// <summary>Stop scheduler</summary>
+
+    /// <summary>Stop scheduler (waits for running tasks)</summary>
     procedure Stop;
+
+    /// <summary>Set job store for persistence</summary>
+    procedure SetJobStore(const AStore: IJobStore);
+
+    /// <summary>Get persisted task IDs (for re-registration on restart)</summary>
+    function GetPersistedTaskIds: TArray<string>;
     
     /// <summary>Create new task</summary>
     function Schedule(const TaskId: string; Proc: TTaskProc): TScheduledTask;
@@ -722,10 +760,12 @@ begin
   inherited Create;
   FTasks := TObjectDictionary<string, TScheduledTask>.Create([doOwnsValues]);
   FLock := TCriticalSection.Create;
+  FShutdownEvent := TEvent.Create(nil, True, False, '');
   FRunning := False;
   FCheckIntervalMs := 100;
   FMaxConcurrentTasks := 4;
   FRunningCount := 0;
+  FJobStore := nil;
   FStats.Reset;
 end;
 
@@ -734,7 +774,72 @@ begin
   Stop;
   FreeAndNil(FTasks);
   FreeAndNil(FLock);
+  FreeAndNil(FShutdownEvent);
   inherited;
+end;
+
+procedure TTaskScheduler.SetJobStore(const AStore: IJobStore);
+begin
+  FLock.Enter;
+  try
+    FJobStore := AStore;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TTaskScheduler.GetPersistedTaskIds: TArray<string>;
+var
+  Metas: TArray<TTaskMeta>;
+  I: Integer;
+begin
+  if FJobStore = nil then
+    Exit(nil);
+  Metas := FJobStore.LoadAll;
+  SetLength(Result, Length(Metas));
+  for I := 0 to High(Metas) do
+    Result[I] := Metas[I].Id;
+end;
+
+procedure TTaskScheduler.SaveTaskMeta(Task: TScheduledTask);
+var
+  Meta: TTaskMeta;
+  DepsStr, TagsStr: string;
+  I: Integer;
+begin
+  if FJobStore = nil then
+    Exit;
+  Meta.Id := Task.Id;
+  Meta.Name := Task.Name;
+  Meta.State := Task.State;
+  Meta.Priority := tpNormal;
+  Meta.DelayMs := Task.FDelayMs;
+  Meta.IntervalMs := Task.FIntervalMs;
+  if Task.FUseCron then
+    Meta.CronExpr := Task.FCronExpr.ToString
+  else
+    Meta.CronExpr := '';
+  Meta.UseCron := Task.FUseCron;
+  Meta.RunCount := Task.FRunCount;
+  Meta.MaxRuns := Task.FMaxRuns;
+  Meta.CreatedAt := Task.FCreatedAt;
+  Meta.NextRunAt := Task.FNextRunAt;
+  Meta.LastRunAt := Task.FLastRunAt;
+  DepsStr := '';
+  for I := 0 to High(Task.FDependsOn) do
+  begin
+    if I > 0 then DepsStr := DepsStr + ',';
+    DepsStr := DepsStr + Task.FDependsOn[I];
+  end;
+  Meta.DependsOn := DepsStr;
+  TagsStr := '';
+  for I := 0 to High(Task.FTags) do
+  begin
+    if I > 0 then TagsStr := TagsStr + ',';
+    TagsStr := TagsStr + Task.FTags[I];
+  end;
+  Meta.Tags := TagsStr;
+  FJobStore.SaveTask(Meta);
 end;
 
 procedure TTaskScheduler.Start;
@@ -749,17 +854,30 @@ begin
 end;
 
 procedure TTaskScheduler.Stop;
+var
+  WaitCount: Integer;
 begin
   if not FRunning then
     Exit;
-  
+
   FRunning := False;
-  
+
+  // Signal timer thread to stop
+  if FShutdownEvent <> nil then
+    FShutdownEvent.SetEvent;
+
   if FTimerThread <> nil then
   begin
     FTimerThread.WaitFor;
     FreeAndNil(FTimerThread);
-    FTimerThread := nil;
+  end;
+
+  // Wait for running tasks to finish (up to 10 seconds)
+  WaitCount := 0;
+  while (FRunningCount > 0) and (WaitCount < 100) do
+  begin
+    Sleep(100);
+    Inc(WaitCount);
   end;
 end;
 

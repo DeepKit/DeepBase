@@ -77,6 +77,7 @@ contains
   UniBase.Reflection in 'Core\UniBase.Reflection.pas',
   UniBase.Cache in 'Core\UniBase.Cache.pas',
   UniBase.Memory in 'Core\UniBase.Memory.pas',
-  UniBase.Security in 'Core\UniBase.Security.pas';
+  UniBase.Security in 'Core\UniBase.Security.pas',
+  UniBase.TrayIcon in 'Core\UniBase.TrayIcon.pas';
 
 end.

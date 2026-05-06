@@ -126,6 +126,7 @@ uses
   Test.UniBase.Validation in 'Test.UniBase.Validation.pas',
   Test.UniBase.VirtualScroll in 'Test.UniBase.VirtualScroll.pas',
   Test.UniBase.WorkerQueue in 'Test.UniBase.WorkerQueue.pas',
+  Test.UniBase.TrayIcon in 'Test.UniBase.TrayIcon.pas',
   // Core units
   UniBase.Types in '..\Core\UniBase.Types.pas',
   UniBase.Manager in '..\Core\UniBase.Manager.pas',
@@ -181,7 +182,9 @@ uses
   UniBase.Exception in '..\Core\UniBase.Exception.pas',
   // Memory unit for Memory tests
   UniBase.ObjectPool in '..\Core\UniBase.ObjectPool.pas',
-  UniBase.Memory in '..\Core\UniBase.Memory.pas';
+  UniBase.Memory in '..\Core\UniBase.Memory.pas',
+  // TrayIcon unit for TrayIcon tests
+  UniBase.TrayIcon in '..\Core\UniBase.TrayIcon.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
