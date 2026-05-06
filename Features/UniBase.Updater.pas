@@ -41,10 +41,12 @@ uses
   System.DateUtils,
   System.Zip,
   System.SyncObjs,
-  System.Threading,
+  System.Threading
   {$IFDEF MSWINDOWS}
-  UniBase.Crypto,
-  Winapi.Windows
+  , UniBase.Crypto, Winapi.Windows
+  {$ENDIF}
+  {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+  , UniBase.Crypto.OpenSSL
   {$ENDIF};
 
 type
@@ -1154,6 +1156,11 @@ function TUpdateManager.VerifySignature(const Data, Signature,
 var
   LVerifier: TRSAVerifier;
 {$ENDIF}
+{$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+var
+  LDataBytes: TBytes;
+  LError: string;
+{$ENDIF}
 var
   LAlgorithm: string;
   LExpected: string;
@@ -1212,8 +1219,15 @@ begin
     LVerifier.Free;
   end;
   {$ELSE}
-  Result := False;
-  FLastError := 'Signature verification not implemented on this platform';
+    {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
+    LDataBytes := TEncoding.UTF8.GetBytes(Data);
+    Result := OpenSSL_RSAVerifySHA256(FPublicKey, LDataBytes, Signature, LError);
+    if not Result then
+      FLastError := LError;
+    {$ELSE}
+    Result := False;
+    FLastError := 'Signature verification not implemented on this platform';
+    {$ENDIF}
   {$ENDIF}
 end;
 

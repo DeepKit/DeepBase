@@ -80,6 +80,15 @@ type
   /// </summary>
   function OpenSSL_AES256CBC_Decrypt(const AKey, AIV, ACiphertext: TBytes): TBytes;
 
+  /// <summary>
+  /// RSA-SHA256 signature verification using PEM public key.
+  /// ASignatureBase64 is the Base64-encoded signature.
+  /// Returns True if the signature is valid.
+  /// </summary>
+  function OpenSSL_RSAVerifySHA256(const APEMPublicKey: string;
+    const AData: TBytes; const ASignatureBase64: string;
+    out AError: string): Boolean;
+
 {$ENDIF}
 
 implementation
@@ -91,7 +100,8 @@ uses
   Macapi.Helpers,
   {$ENDIF}
   System.IOUtils,
-  System.SyncObjs;
+  System.SyncObjs,
+  System.NetEncoding;
 
 const
   // OpenSSL library names
@@ -148,6 +158,24 @@ type
     keylen: Integer; outkey: PByte): Integer; cdecl;
   TOpenSSL_version = function(t: Integer): PAnsiChar; cdecl;
 
+  // RSA verification types
+  PBIO = Pointer;
+  PEVP_PKEY = Pointer;
+  PEVP_MD_CTX = Pointer;
+
+  TBIO_new_mem_buf = function(buf: Pointer; len: Integer): PBIO; cdecl;
+  TBIO_free = function(a: PBIO): Integer; cdecl;
+  TPEM_read_bio_PUBKEY = function(bp: PBIO; x: Pointer; cb: Pointer; u: Pointer): PEVP_PKEY; cdecl;
+  TEVP_PKEY_free = procedure(pkey: PEVP_PKEY); cdecl;
+  TEVP_MD_CTX_new = function: PEVP_MD_CTX; cdecl;
+  TEVP_MD_CTX_free = procedure(ctx: PEVP_MD_CTX); cdecl;
+  TEVP_DigestVerifyInit = function(ctx: PEVP_MD_CTX; pctx: Pointer;
+    const dtype: PEVP_MD; e: Pointer; pkey: PEVP_PKEY): Integer; cdecl;
+  TEVP_DigestVerifyUpdate = function(ctx: PEVP_MD_CTX; data: PByte;
+    datalen: NativeUInt): Integer; cdecl;
+  TEVP_DigestVerifyFinal = function(ctx: PEVP_MD_CTX; const sigret: PByte;
+    siglen: NativeUInt): Integer; cdecl;
+
 var
   GLibHandle: NativeUInt = 0;
   GInitLock: TCriticalSection = nil;
@@ -169,6 +197,17 @@ var
   _EVP_sha256: TEVP_sha256 = nil;
   _PKCS5_PBKDF2_HMAC: TPKCS5_PBKDF2_HMAC = nil;
   _OpenSSL_version: TOpenSSL_version = nil;
+
+  // RSA verification function pointers
+  _BIO_new_mem_buf: TBIO_new_mem_buf = nil;
+  _BIO_free: TBIO_free = nil;
+  _PEM_read_bio_PUBKEY: TPEM_read_bio_PUBKEY = nil;
+  _EVP_PKEY_free: TEVP_PKEY_free = nil;
+  _EVP_MD_CTX_new: TEVP_MD_CTX_new = nil;
+  _EVP_MD_CTX_free: TEVP_MD_CTX_free = nil;
+  _EVP_DigestVerifyInit: TEVP_DigestVerifyInit = nil;
+  _EVP_DigestVerifyUpdate: TEVP_DigestVerifyUpdate = nil;
+  _EVP_DigestVerifyFinal: TEVP_DigestVerifyFinal = nil;
 
 const
   EVP_CTRL_GCM_SET_IVLEN = $9;
@@ -292,6 +331,17 @@ begin
   @_EVP_sha256 := GetProc(GLibHandle, 'EVP_sha256');
   @_PKCS5_PBKDF2_HMAC := GetProc(GLibHandle, 'PKCS5_PBKDF2_HMAC');
   @_OpenSSL_version := GetProc(GLibHandle, 'OpenSSL_version');
+
+  // RSA verification symbols
+  @_BIO_new_mem_buf := GetProc(GLibHandle, 'BIO_new_mem_buf');
+  @_BIO_free := GetProc(GLibHandle, 'BIO_free');
+  @_PEM_read_bio_PUBKEY := GetProc(GLibHandle, 'PEM_read_bio_PUBKEY');
+  @_EVP_PKEY_free := GetProc(GLibHandle, 'EVP_PKEY_free');
+  @_EVP_MD_CTX_new := GetProc(GLibHandle, 'EVP_MD_CTX_new');
+  @_EVP_MD_CTX_free := GetProc(GLibHandle, 'EVP_MD_CTX_free');
+  @_EVP_DigestVerifyInit := GetProc(GLibHandle, 'EVP_DigestVerifyInit');
+  @_EVP_DigestVerifyUpdate := GetProc(GLibHandle, 'EVP_DigestVerifyUpdate');
+  @_EVP_DigestVerifyFinal := GetProc(GLibHandle, 'EVP_DigestVerifyFinal');
   
   // Check required symbols
   Result := Assigned(_RAND_bytes) and
@@ -627,6 +677,98 @@ begin
     SetLength(Result, OutLen + FinalLen);
   finally
     _EVP_CIPHER_CTX_free(Ctx);
+  end;
+end;
+
+function OpenSSL_RSAVerifySHA256(const APEMPublicKey: string;
+  const AData: TBytes; const ASignatureBase64: string;
+  out AError: string): Boolean;
+var
+  Bio: PBIO;
+  PKey: PEVP_PKEY;
+  MDCtx: PEVP_MD_CTX;
+  SigBytes, PemBytes: TBytes;
+begin
+  Result := False;
+  AError := '';
+  PKey := nil;
+  Bio := nil;
+  MDCtx := nil;
+
+  if not GIsLoaded then
+    OpenSSL_Init;
+
+  if not Assigned(_BIO_new_mem_buf) or not Assigned(_PEM_read_bio_PUBKEY) or
+     not Assigned(_EVP_PKEY_free) or not Assigned(_EVP_MD_CTX_new) or
+     not Assigned(_EVP_MD_CTX_free) or not Assigned(_EVP_DigestVerifyInit) or
+     not Assigned(_EVP_DigestVerifyUpdate) or not Assigned(_EVP_DigestVerifyFinal) then
+  begin
+    AError := 'OpenSSL RSA verification symbols not available';
+    Exit;
+  end;
+
+  SigBytes := TNetEncoding.Base64.DecodeStringToBytes(ASignatureBase64);
+  if Length(SigBytes) = 0 then
+  begin
+    AError := 'Invalid Base64 signature';
+    Exit;
+  end;
+
+  PemBytes := TEncoding.ANSI.GetBytes(APEMPublicKey);
+  if Length(PemBytes) = 0 then
+  begin
+    AError := 'Empty public key';
+    Exit;
+  end;
+
+  Bio := _BIO_new_mem_buf(@PemBytes[0], Length(PemBytes));
+  if Bio = nil then
+  begin
+    AError := 'BIO_new_mem_buf failed';
+    Exit;
+  end;
+  try
+    PKey := _PEM_read_bio_PUBKEY(Bio, nil, nil, nil);
+    if PKey = nil then
+    begin
+      AError := 'Failed to parse PEM public key';
+      Exit;
+    end;
+    try
+      MDCtx := _EVP_MD_CTX_new();
+      if MDCtx = nil then
+      begin
+        AError := 'EVP_MD_CTX_new failed';
+        Exit;
+      end;
+      try
+        if _EVP_DigestVerifyInit(MDCtx, nil, _EVP_sha256(), nil, PKey) <> 1 then
+        begin
+          AError := 'EVP_DigestVerifyInit failed';
+          Exit;
+        end;
+
+        if Length(AData) > 0 then
+        begin
+          if _EVP_DigestVerifyUpdate(MDCtx, @AData[0], Length(AData)) <> 1 then
+          begin
+            AError := 'EVP_DigestVerifyUpdate failed';
+            Exit;
+          end;
+        end;
+
+        if _EVP_DigestVerifyFinal(MDCtx, @SigBytes[0], Length(SigBytes)) = 1 then
+          Result := True
+        else
+          AError := 'RSA-SHA256 signature verification failed';
+      finally
+        _EVP_MD_CTX_free(MDCtx);
+      end;
+    finally
+      _EVP_PKEY_free(PKey);
+    end;
+  finally
+    _BIO_free(Bio);
   end;
 end;
 

@@ -188,11 +188,12 @@
   - 修复 `Stop()` 竞态：等待运行中任务完成（最多 10 秒）
   - 新增 `FShutdownEvent` 用于优雅关机
 
-### FWK-004: VCL I18n 控件补齐 ✅
+### FWK-004: VCL/FMX I18n 控件补齐 ✅
 - **状态**: ✅ 已完成
 - **完成日期**: 2026-05-06
 - **内容**:
-  - 新增 5 个 VCL I18n 控件：TI18nCheckBox, TI18nRadioButton, TI18nGroupBox, TI18nTabSheet, TI18nBitBtn, TI18nMenuItem
+  - VCL 新增 6 个控件：TI18nCheckBox, TI18nRadioButton, TI18nGroupBox, TI18nTabSheet, TI18nBitBtn, TI18nMenuItem
+  - FMX 新增 2 个控件：TFMXi18nCheckBox, TFMXi18nGroupBox
   - 所有控件遵循 TextKey + Loaded 订阅 + Destroy 取消订阅模式
 
 ### FWK-005: FMX Theme 桥接 Core Theme ✅
@@ -210,6 +211,15 @@
   - 新增 `DataSetToJSON`/`GridToJSON`/`ArrayToJSON`/`ToJSON`
   - 使用 System.JSON 生成格式化 JSON 数组输出
 
+### FWK-007: Updater 非 Windows RSA 签名验证 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - `UniBase.Crypto.OpenSSL.pas` 新增 `OpenSSL_RSAVerifySHA256` 函数
+  - 加载 9 个 OpenSSL 符号（BIO、EVP_PKEY、EVP_MD_CTX、DigestVerify 系列）
+  - `UniBase.Updater.pas` 非 Windows 分支从 stub 替换为 OpenSSL RSA-SHA256 真实验证
+  - 修复 uses 子句非 Windows 平台尾逗号编译问题
+
 ---
 
 ## P3 低优先级
@@ -222,8 +232,8 @@
 
 ## 已完成任务归档
 
+- 2026-05-06 FWK-007（Updater 非 Windows RSA 签名验证）、FWK-004 FMX 侧补齐（TFMXi18nCheckBox、TFMXi18nGroupBox）已完成。
 - 2026-05-06 SEC-001（XOR→OpenSSL）、SEC-003（插件签名验证）已完成。
-- 2026-05-06 PKG-001/002/003（86 孤立文件注册 + Math/Unlock 重复修复）、TEST-001（53 测试文件注册）、SEC-002（硬编码 Salt 移除）、VERSION-001（版本号统一）、DOC-005（README 示例修复）、ARCH-046（循环依赖解除）、QUAL-001（438 处 FreeAndNil 规范化）已完成。
 - 2026-05-06 DOC-OPT-001/002（文档编号统一 + OneFile 创建 + 过期清理 + 专家评估）已归档到 `history.md`。
 - 2026-05-05 架构整理、Commerce MVP、HTTP 后端存储/支付网关适配已归档到 `history.md`。
 - BUG-061~064 已记录到 `bugfix.md`。
