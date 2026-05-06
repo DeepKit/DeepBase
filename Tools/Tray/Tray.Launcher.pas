@@ -13,7 +13,8 @@ interface
 
 uses
   Winapi.Windows, Winapi.ShellAPI,
-  System.SysUtils, System.Classes, System.IniFiles;
+  System.SysUtils, System.Classes, System.IniFiles,
+  UniBase.Exceptions;
 
 type
   TTrayLauncher = class
@@ -130,7 +131,7 @@ begin
   if (FStudioPath <> '') and FileExists(FStudioPath) then
     LaunchProgram(FStudioPath)
   else
-    raise Exception.Create('Studio 路径未配置或文件不存在');
+    raise EConfigException.Create('Studio 路径未配置或文件不存在');
 end;
 
 class procedure TTrayLauncher.LaunchCmd(const AWorkingDir: string);

@@ -806,7 +806,7 @@ var
   FastSize, MaxSize: Int64;
   LargeContent: string;
 begin
-  LargeContent := StringOfChar('ABCDEF', 10000);
+  LargeContent := StringOfChar('A', 60000);
   
   FastZip := TPath.Combine(FTempDir, 'fast.zip');
   MaxZip := TPath.Combine(FTempDir, 'max.zip');
@@ -1030,7 +1030,7 @@ begin
   Reader := TZipArchiveReader.Create(FTempZip);
   try
     Entries := Reader.GetEntries;
-    Assert.AreEqual(3, Length(Entries));
+    Assert.AreEqual<Integer>(3, Length(Entries));
   finally
     Reader.Free;
   end;

@@ -4,8 +4,8 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.SysUtils, System.Classes,
-  UniBase.Types, UniBase.Manager, UniBase.Config;
+  System.SysUtils, System.Classes, System.Generics.Collections,
+  UniBase.Types, UniBase.Manager, UniBase.Config, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -27,9 +27,98 @@ type
     
     [Test]
     procedure Test_GetSetConfig_Boolean;
+
+    [Test]
+    procedure Test_StorageInjection_WorksWithoutManagerDB;
   end;
 
 implementation
+
+type
+  TInMemoryConfigStorage = class(TInterfacedObject, IConfigStorage)
+  private
+    FValues: TDictionary<string, string>;
+    FCategories: TDictionary<string, string>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function ReadValue(const Key: string; const Default: string = ''): string;
+    procedure WriteValue(const Key, Value, Category, ValueType,
+      Description: string);
+    procedure LoadAll(AValues: TDictionary<string, string>);
+    procedure LoadByCategory(const Category: string;
+      AValues: TDictionary<string, string>);
+    procedure DeleteValue(const Key: string);
+    function ValueExists(const Key: string): Boolean;
+  end;
+
+constructor TInMemoryConfigStorage.Create;
+begin
+  inherited Create;
+  FValues := TDictionary<string, string>.Create;
+  FCategories := TDictionary<string, string>.Create;
+end;
+
+destructor TInMemoryConfigStorage.Destroy;
+begin
+  FCategories.Free;
+  FValues.Free;
+  inherited;
+end;
+
+function TInMemoryConfigStorage.ReadValue(const Key: string;
+  const Default: string): string;
+begin
+  if not FValues.TryGetValue(Key, Result) then
+    Result := Default;
+end;
+
+procedure TInMemoryConfigStorage.WriteValue(const Key, Value, Category, ValueType,
+  Description: string);
+begin
+  FValues.AddOrSetValue(Key, Value);
+  FCategories.AddOrSetValue(Key, Category);
+end;
+
+procedure TInMemoryConfigStorage.LoadAll(AValues: TDictionary<string, string>);
+var
+  Pair: TPair<string, string>;
+begin
+  if not Assigned(AValues) then
+    Exit;
+  AValues.Clear;
+  for Pair in FValues do
+    AValues.AddOrSetValue(Pair.Key, Pair.Value);
+end;
+
+procedure TInMemoryConfigStorage.LoadByCategory(const Category: string;
+  AValues: TDictionary<string, string>);
+var
+  Pair: TPair<string, string>;
+  KeyCategory: string;
+begin
+  if not Assigned(AValues) then
+    Exit;
+  AValues.Clear;
+
+  for Pair in FValues do
+  begin
+    if FCategories.TryGetValue(Pair.Key, KeyCategory) and
+       SameText(KeyCategory, Category) then
+      AValues.AddOrSetValue(Pair.Key, Pair.Value);
+  end;
+end;
+
+procedure TInMemoryConfigStorage.DeleteValue(const Key: string);
+begin
+  FValues.Remove(Key);
+  FCategories.Remove(Key);
+end;
+
+function TInMemoryConfigStorage.ValueExists(const Key: string): Boolean;
+begin
+  Result := FValues.ContainsKey(Key);
+end;
 
 procedure TTestUniBaseConfig.Setup;
 begin
@@ -86,6 +175,28 @@ begin
   FConfig.SetConfigBool(Key, Value);
   Retrieved := FConfig.GetConfigBool(Key);
   Assert.AreEqual(Value, Retrieved, 'Boolean False should match');
+end;
+
+procedure TTestUniBaseConfig.Test_StorageInjection_WorksWithoutManagerDB;
+var
+  Storage: IConfigStorage;
+  LocalConfig: TUniBaseConfig;
+begin
+  Storage := TInMemoryConfigStorage.Create;
+  LocalConfig := TUniBaseConfig.Create(Storage);
+  try
+    LocalConfig.SetConfig('Inject.Key', 'InjectValue', 'InjectCategory');
+    Assert.AreEqual('InjectValue', LocalConfig.GetConfig('Inject.Key'),
+      'Injected storage read/write should work');
+    Assert.IsTrue(LocalConfig.ConfigExists('Inject.Key'),
+      'Injected storage should support existence checks');
+
+    LocalConfig.DeleteConfig('Inject.Key');
+    Assert.IsFalse(LocalConfig.ConfigExists('Inject.Key'),
+      'Injected storage delete should remove key');
+  finally
+    LocalConfig.Free;
+  end;
 end;
 
 initialization

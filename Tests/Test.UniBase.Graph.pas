@@ -511,7 +511,7 @@ begin
   FGraph.AddNode(2);
   FGraph.AddNode(3);
   Nodes := FGraph.GetNodes;
-  Assert.AreEqual(3, Length(Nodes));
+  Assert.AreEqual(3, Integer(Length(Nodes)));
 end;
 
 procedure TGraphBasicTests.Test_GetEdges;
@@ -523,7 +523,7 @@ begin
   FGraph.AddEdge(1, 2);
   FGraph.AddEdge(2, 1);
   Edges := FGraph.GetEdges;
-  Assert.AreEqual(2, Length(Edges));
+  Assert.AreEqual(2, Integer(Length(Edges)));
 end;
 
 procedure TGraphBasicTests.Test_Neighbors;
@@ -536,7 +536,7 @@ begin
   FGraph.AddEdge(1, 2);
   FGraph.AddEdge(1, 3);
   N := FGraph.Neighbors(1);
-  Assert.AreEqual(2, Length(N));
+  Assert.AreEqual(2, Integer(Length(N)));
 end;
 
 procedure TGraphBasicTests.Test_Degree;
@@ -656,7 +656,7 @@ begin
     begin
       FVisited.Add(N);
     end);
-  Assert.AreEqual(4, FVisited.Count);
+  Assert.AreEqual(4, Integer(FVisited.Count));
   Assert.IsTrue(FVisited.Contains(1));
   Assert.IsTrue(FVisited.Contains(4));
 end;
@@ -678,7 +678,7 @@ begin
     begin
       FVisited.Add(N);
     end);
-  Assert.AreEqual(4, FVisited.Count);
+  Assert.AreEqual(4, Integer(FVisited.Count));
 end;
 
 procedure TGraphTraversalTests.Test_DFS_Order;
@@ -817,7 +817,7 @@ var
   Sorted: TArray<string>;
 begin
   Sorted := FGraph.TopologicalSort;
-  Assert.AreEqual(4, Length(Sorted));
+  Assert.AreEqual(4, Integer(Length(Sorted)));
 end;
 
 procedure TGraphTopologicalTests.Test_TopologicalSort_Order;
@@ -845,7 +845,7 @@ var
   Sorted: TArray<string>;
 begin
   Assert.IsTrue(FGraph.TryTopologicalSort(Sorted));
-  Assert.AreEqual(4, Length(Sorted));
+  Assert.AreEqual(4, Integer(Length(Sorted)));
 end;
 
 procedure TGraphTopologicalTests.Test_TryTopologicalSort_Cycle;
@@ -968,7 +968,7 @@ begin
   FGraph.AddEdge(3, 4);
   
   Components := FGraph.ConnectedComponents;
-  Assert.AreEqual(2, Length(Components));
+  Assert.AreEqual(2, Integer(Length(Components)));
 end;
 
 procedure TGraphConnectedTests.Test_IsReachable;
@@ -1005,7 +1005,7 @@ begin
     G.AddEdge(2, 3);
     
     Reachable := G.ReachableFrom(1);
-    Assert.AreEqual(3, Length(Reachable)); // 1, 2, 3
+    Assert.AreEqual(3, Integer(Length(Reachable))); // 1, 2, 3
   finally
     G.Free;
   end;
@@ -1034,7 +1034,7 @@ end;
 procedure TPriorityQueueTests.Test_Enqueue;
 begin
   FQueue.Enqueue('A', 1.0);
-  Assert.AreEqual(1, FQueue.Count);
+  Assert.AreEqual(1, Integer(FQueue.Count));
 end;
 
 procedure TPriorityQueueTests.Test_Dequeue_Priority;
@@ -1055,7 +1055,7 @@ begin
   FQueue.Enqueue('B', 1.0);
   
   Assert.AreEqual('B', FQueue.Peek);
-  Assert.AreEqual(2, FQueue.Count); // Peek doesn't remove
+  Assert.AreEqual(2, Integer(FQueue.Count)); // Peek doesn't remove
 end;
 
 procedure TPriorityQueueTests.Test_Contains;
@@ -1076,10 +1076,10 @@ end;
 
 procedure TPriorityQueueTests.Test_Count;
 begin
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
   FQueue.Enqueue('A', 1.0);
   FQueue.Enqueue('B', 2.0);
-  Assert.AreEqual(2, FQueue.Count);
+  Assert.AreEqual(2, Integer(FQueue.Count));
 end;
 
 procedure TPriorityQueueTests.Test_IsEmpty;
@@ -1195,7 +1195,7 @@ begin
   C3 := FRoot.AddChild('C3');
   
   Sibs := C1.Siblings;
-  Assert.AreEqual(2, Length(Sibs)); // C2 and C3
+  Assert.AreEqual(2, Integer(Length(Sibs))); // C2 and C3
 end;
 
 procedure TTreeNodeTests.Test_Path;
@@ -1207,7 +1207,7 @@ begin
   GrandChild := Child.AddChild('GrandChild');
   
   PathNodes := GrandChild.Path;
-  Assert.AreEqual(3, Length(PathNodes));
+  Assert.AreEqual(3, Integer(Length(PathNodes)));
   Assert.AreSame(FRoot, PathNodes[0]);
   Assert.AreSame(GrandChild, PathNodes[2]);
 end;
@@ -1279,7 +1279,7 @@ begin
         Values.Add(V);
       end);
     
-    Assert.AreEqual(3, Values.Count);
+    Assert.AreEqual(3, Integer(Values.Count));
     Assert.AreEqual('Root', Values[0]); // PreOrder: root first
   finally
     Values.Free;
@@ -1300,7 +1300,7 @@ begin
         Values.Add(V);
       end);
     
-    Assert.AreEqual(3, Values.Count);
+    Assert.AreEqual(3, Integer(Values.Count));
     Assert.AreEqual('Root', Values[2]); // PostOrder: root last
   finally
     Values.Free;
@@ -1321,7 +1321,7 @@ begin
         Values.Add(V);
       end);
     
-    Assert.AreEqual(4, Values.Count);
+    Assert.AreEqual(4, Integer(Values.Count));
     Assert.AreEqual('Root', Values[0]); // Level 0
   finally
     Values.Free;
@@ -1336,7 +1336,7 @@ begin
   FTree.Root.AddChild('B');
   
   Arr := FTree.ToArray;
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
 end;
 
 procedure TTreeTests.Test_NodeCount;

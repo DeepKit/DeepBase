@@ -15,8 +15,8 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.SysUtils, System.Classes,
-  UniBase.Types, UniBase.Manager, UniBase.i18n;
+  System.SysUtils, System.Classes, System.Generics.Collections,
+  UniBase.Types, UniBase.Manager, UniBase.i18n, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -65,12 +65,135 @@ type
     
     [Test]
     procedure Test_LanguageSwitch_ClearCache;
+
+    [Test]
+    procedure Test_StorageInjection_BasicFlow;
   end;
 
 implementation
 
 uses
   System.Diagnostics;
+
+type
+  TInMemoryI18nStorage = class(TInterfacedObject, II18nStorage)
+  private
+    FTranslations: TDictionary<string, string>;
+    FLanguages: TArray<TLanguageInfo>;
+    function MakeKey(const SourceText, LangCode: string): string;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function ReadTranslation(const SourceText, LangCode: string): string;
+    function ReadTranslations(const LangCode: string): TDictionary<string, string>;
+    procedure RecordMissingTranslation(const SourceText, LangCode: string);
+    function ReadLanguages(EnabledOnly: Boolean): TLanguageInfoArray;
+    function ReadDefaultLanguage(const Fallback: string): string;
+    procedure UpsertTranslation(const SourceText, LangCode,
+      TranslatedText: string);
+  end;
+
+constructor TInMemoryI18nStorage.Create;
+begin
+  inherited Create;
+  FTranslations := TDictionary<string, string>.Create;
+  SetLength(FLanguages, 2);
+
+  FLanguages[0].LangCode := 'en-US';
+  FLanguages[0].LangName := 'English';
+  FLanguages[0].NativeName := 'English';
+  FLanguages[0].FlagIcon := '';
+  FLanguages[0].IsEnabled := True;
+  FLanguages[0].IsDefault := True;
+
+  FLanguages[1].LangCode := 'zh-CN';
+  FLanguages[1].LangName := 'Chinese';
+  FLanguages[1].NativeName := '中文';
+  FLanguages[1].FlagIcon := '';
+  FLanguages[1].IsEnabled := True;
+  FLanguages[1].IsDefault := False;
+end;
+
+destructor TInMemoryI18nStorage.Destroy;
+begin
+  FTranslations.Free;
+  inherited;
+end;
+
+function TInMemoryI18nStorage.MakeKey(const SourceText, LangCode: string): string;
+begin
+  Result := LangCode + #1 + SourceText;
+end;
+
+function TInMemoryI18nStorage.ReadTranslation(const SourceText,
+  LangCode: string): string;
+begin
+  if not FTranslations.TryGetValue(MakeKey(SourceText, LangCode), Result) then
+    Result := '';
+end;
+
+function TInMemoryI18nStorage.ReadTranslations(
+  const LangCode: string): TDictionary<string, string>;
+var
+  Pair: TPair<string, string>;
+  SplitPos: Integer;
+  KeyLang, SourceText: string;
+begin
+  Result := TDictionary<string, string>.Create;
+  for Pair in FTranslations do
+  begin
+    SplitPos := Pos(#1, Pair.Key);
+    if SplitPos <= 0 then
+      Continue;
+
+    KeyLang := Copy(Pair.Key, 1, SplitPos - 1);
+    if not SameText(KeyLang, LangCode) then
+      Continue;
+
+    SourceText := Copy(Pair.Key, SplitPos + 1, MaxInt);
+    Result.AddOrSetValue(SourceText, Pair.Value);
+  end;
+end;
+
+procedure TInMemoryI18nStorage.RecordMissingTranslation(const SourceText,
+  LangCode: string);
+begin
+  // no-op for in-memory test storage
+end;
+
+function TInMemoryI18nStorage.ReadLanguages(
+  EnabledOnly: Boolean): TLanguageInfoArray;
+var
+  Item: TLanguageInfo;
+begin
+  if not EnabledOnly then
+    Exit(FLanguages);
+
+  SetLength(Result, 0);
+  for Item in FLanguages do
+    if Item.IsEnabled then
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Item;
+    end;
+end;
+
+function TInMemoryI18nStorage.ReadDefaultLanguage(
+  const Fallback: string): string;
+var
+  Item: TLanguageInfo;
+begin
+  Result := Fallback;
+  for Item in FLanguages do
+    if Item.IsDefault then
+      Exit(Item.LangCode);
+end;
+
+procedure TInMemoryI18nStorage.UpsertTranslation(const SourceText, LangCode,
+  TranslatedText: string);
+begin
+  FTranslations.AddOrSetValue(MakeKey(SourceText, LangCode), TranslatedText);
+end;
 
 { TTestUniBaseI18n }
 
@@ -280,6 +403,31 @@ begin
   FI18n.CurrentLanguage := 'fr-FR';
   Res := FI18n.Translate(Text);
   Assert.AreEqual(Translation2, Res, '切换语言后应该返回新语言的翻译');
+end;
+
+procedure TTestUniBaseI18n.Test_StorageInjection_BasicFlow;
+var
+  Storage: II18nStorage;
+  LocalI18n: TUniBaseI18n;
+  Languages: TArray<TLanguageInfo>;
+begin
+  Storage := TInMemoryI18nStorage.Create;
+  LocalI18n := TUniBaseI18n.Create(Storage);
+  try
+    LocalI18n.AddTranslation('Inject.Hello', 'zh-CN', '注入你好');
+    LocalI18n.CurrentLanguage := 'zh-CN';
+    Assert.AreEqual('注入你好', LocalI18n.Translate('Inject.Hello'),
+      'Injected storage should serve translated text');
+
+    Assert.AreEqual('en-US', LocalI18n.GetDefaultLanguage,
+      'Injected storage should provide default language');
+
+    Languages := LocalI18n.GetAvailableLanguages;
+    Assert.IsTrue(Length(Languages) >= 2,
+      'Injected storage should expose available languages');
+  finally
+    LocalI18n.Free;
+  end;
 end;
 
 initialization

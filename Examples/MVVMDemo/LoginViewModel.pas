@@ -16,7 +16,8 @@ uses
   System.Rtti,
   System.Generics.Collections,
   UniBase.DataBinding,
-  UniBase.MVVM;
+  UniBase.MVVM,
+  UniBase.Exceptions;
 
 type
   /// <summary>
@@ -182,11 +183,11 @@ begin
   if FUsername = 'admin' then
   begin
     if FPassword <> 'admin123' then
-      raise Exception.Create('Invalid password for admin account');
+      raise EOperationException.Create('Invalid password for admin account');
   end
   else if FUsername = 'error' then
   begin
-    raise Exception.Create('Simulated server error');
+    raise EOperationException.Create('Simulated server error');
   end;
   
   // Success - OnCompleted will be called

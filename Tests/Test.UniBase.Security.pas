@@ -175,7 +175,7 @@ begin
   Original := '';
   
   Encrypted := ProtectStringDpapi(Original);
-  Assert.AreEqual(0, Length(Encrypted), 'Empty string should produce empty bytes');
+  Assert.AreEqual(Integer(0), Integer(Length(Encrypted)), 'Empty string should produce empty bytes');
   
   Decrypted := UnprotectStringDpapi(Encrypted);
   Assert.AreEqual(Original, Decrypted);
@@ -381,8 +381,7 @@ begin
     begin
       UnprotectStringDpapi(Encrypted);
     end,
-    Exception,
-    'Tampered data should raise exception'
+    Exception
   );
 end;
 
@@ -393,18 +392,17 @@ var
 begin
   Original := 'Secret data';
   Encrypted := ProtectStringDpapi(Original);
-  
+
   // Truncate to half length
   SetLength(Truncated, Length(Encrypted) div 2);
   Move(Encrypted[0], Truncated[0], Length(Truncated));
-  
+
   Assert.WillRaise(
     procedure
     begin
       UnprotectStringDpapi(Truncated);
     end,
-    Exception,
-    'Truncated data should raise exception'
+    Exception
   );
 end;
 
@@ -419,14 +417,13 @@ begin
   BadData[1] := Ord('Y');
   BadData[2] := Ord('Z');
   BadData[3] := Ord('!');
-  
+
   Assert.WillRaise(
     procedure
     begin
       UnprotectStringDpapi(BadData);
     end,
-    Exception,
-    'Invalid header should raise exception'
+    Exception
   );
 end;
 
@@ -484,7 +481,7 @@ begin
   Assert.AreEqual(32, Length(Bytes), 'Should return requested length');
   
   Bytes := OpenSSL_RandomBytes(1024);
-  Assert.AreEqual(1024, Length(Bytes));
+  Assert.AreEqual(1024, Integer(Length(Bytes)));
   
   // Check entropy (not all zeros)
   Bytes := OpenSSL_RandomBytes(32);
@@ -510,8 +507,8 @@ begin
   Key1 := OpenSSL_PBKDF2_SHA256(Password, Salt, 1000, 32);
   Key2 := OpenSSL_PBKDF2_SHA256(Password, Salt, 1000, 32);
   
-  Assert.AreEqual(32, Length(Key1));
-  Assert.AreEqual(32, Length(Key2));
+  Assert.AreEqual(32, Integer(Length(Key1)));
+  Assert.AreEqual(32, Integer(Length(Key2)));
   
   // Same inputs should produce same key
   Assert.IsTrue(CompareMem(@Key1[0], @Key2[0], 32), 

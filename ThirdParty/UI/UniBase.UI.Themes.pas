@@ -15,7 +15,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.UITypes,
-  Vcl.Graphics, Vcl.Themes, Vcl.Styles, Vcl.Controls, Vcl.Forms;
+  Vcl.Graphics, Vcl.Themes, Vcl.Styles, Vcl.Controls, Vcl.Forms,
+  UniBase.Exceptions;
 
 type
   TThemeColorScheme = (tcsLight, tcsDark, tcsAuto);
@@ -178,6 +179,9 @@ implementation
 
 uses
   Winapi.Windows, System.Math;
+
+type
+  TControlAccess = class(TWinControl);
 
 const
   // Material Design Colors
@@ -365,7 +369,7 @@ end;
 class function TUniBaseThemeManager.GetTheme(const AName: string): TThemeDefinition;
 begin
   if not FThemes.TryGetValue(AName, Result) then
-    raise Exception.CreateFmt('Theme "%s" not found', [AName]);
+    raise EInvalidOperationException.CreateFmt('Theme "%s" not found', [AName]);
 end;
 
 class function TUniBaseThemeManager.GetThemeNames: TArray<string>;
@@ -402,8 +406,12 @@ begin
   // Apply VCL style if specified
   if Theme.VclStyleName <> '' then
   begin
-    if TStyleManager.IsValidStyle(Theme.VclStyleName) then
-      TStyleManager.TrySetStyle(Theme.VclStyleName);
+    try
+      if TStyleManager.IsValidStyle(Theme.VclStyleName) then
+        TStyleManager.TrySetStyle(Theme.VclStyleName);
+    except
+      // VCL style file not available, skip
+    end;
   end;
   
   // Apply to all forms
@@ -426,12 +434,14 @@ begin
   ApplyTypographyToForm(AForm, Theme.Typography);
 end;
 
-class procedure TUniBaseThemeManager.ApplyThemeToControl(AControl: TControl; 
+class procedure TUniBaseThemeManager.ApplyThemeToControl(AControl: TControl;
   const AColors: TThemeColors);
 begin
   if AControl is TWinControl then
-    TWinControl(AControl).Color := AColors.Surface;
-  AControl.Font.Color := AColors.OnSurface;
+  begin
+    TControlAccess(AControl).Color := AColors.Surface;
+    TControlAccess(AControl).Font.Color := AColors.OnSurface;
+  end;
 end;
 
 class function TUniBaseThemeManager.GetCurrentTheme: string;

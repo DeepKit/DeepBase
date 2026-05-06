@@ -1,4 +1,4 @@
-unit UniBase.Net;
+﻿unit UniBase.Net;
 
 (*******************************************************************************
   UniBase Network Utilities
@@ -298,7 +298,6 @@ type
       AAllowPrivateNet, AAllowLocalHost: Boolean): Boolean; static;
     class procedure ValidateResolvedHostForHttp(const AHost: string;
       AAllowPrivateNet, AAllowLocalHost: Boolean); static;
-    class procedure ValidateResolvedUrlForHttp(const AUrl: string); static;
   public
     /// <summary>Connectivity check</summary>
     class function IsInternetAvailable: Boolean; static;
@@ -341,6 +340,7 @@ type
     /// <summary>Security validation</summary>
     class function IsValidHttpHeader(const AName, AValue: string): Boolean; static;
     class function IsSafeUrl(const AUrl: string): Boolean; static;
+    class procedure ValidateResolvedUrlForHttp(const AUrl: string); static;
   end;
 
   /// <summary>IP address utilities</summary>
@@ -440,9 +440,9 @@ end;
 
 destructor THttpRequest.Destroy;
 begin
-  FHeaders.Free;
-  FQueryParams.Free;
-  FFormParams.Free;
+  FreeAndNil(FHeaders);
+  FreeAndNil(FQueryParams);
+  FreeAndNil(FFormParams);
   inherited;
 end;
 
@@ -731,8 +731,8 @@ end;
 
 destructor THttpClient_.Destroy;
 begin
-  FDefaultHeaders.Free;
-  FLock.Free;
+  FreeAndNil(FDefaultHeaders);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -891,7 +891,7 @@ destructor TWebSocketClient.Destroy;
 begin
   if FState in [wssConnecting, wssOpen] then
     Disconnect;
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -978,8 +978,8 @@ end;
 
 destructor TDnsResolver_.Destroy;
 begin
-  FResolver.Free;
-  FLock.Free;
+  FreeAndNil(FResolver);
+  FreeAndNil(FLock);
   inherited;
 end;
 

@@ -219,7 +219,7 @@ begin
   Loaded := FLLM.GetTemplate('test_get');
   Assert.AreEqual('Code', Loaded.Category);
   Assert.AreEqual('You are a test assistant', Loaded.SystemPrompt);
-  Assert.AreEqual(2, Length(Loaded.Variables));
+  Assert.AreEqual(2, Integer(Length(Loaded.Variables)));
   Assert.IsNotNull(Loaded.DefaultValues);
   Assert.AreEqual('English', Loaded.DefaultValues['lang']);
   Assert.AreEqual(0.5, Loaded.Temperature, 0.001);

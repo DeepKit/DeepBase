@@ -278,26 +278,26 @@ begin
   FCache.Put('key2', 'value2');
   FCache.Put('key3', 'value3');
   
-  Assert.AreEqual(3, FCache.Count);
+  Assert.AreEqual(3, Integer(FCache.Count));
   
   FCache.Clear;
   
-  Assert.AreEqual(0, FCache.Count);
+  Assert.AreEqual(0, Integer(FCache.Count));
   Assert.IsFalse(FCache.Contains('key1'));
 end;
 
 procedure TTestUniBaseCache.Test_Count_Property;
 begin
-  Assert.AreEqual(0, FCache.Count);
+  Assert.AreEqual(0, Integer(FCache.Count));
   
   FCache.Put('key1', 'value1');
-  Assert.AreEqual(1, FCache.Count);
+  Assert.AreEqual(1, Integer(FCache.Count));
   
   FCache.Put('key2', 'value2');
-  Assert.AreEqual(2, FCache.Count);
+  Assert.AreEqual(2, Integer(FCache.Count));
   
   FCache.Remove('key1');
-  Assert.AreEqual(1, FCache.Count);
+  Assert.AreEqual(1, Integer(FCache.Count));
 end;
 
 procedure TTestUniBaseCache.Test_Keys_Property;
@@ -310,7 +310,7 @@ begin
   
   Keys := FCache.Keys;
   
-  Assert.AreEqual(3, Length(Keys));
+  Assert.AreEqual(3, Integer(Length(Keys)));
 end;
 
 procedure TTestUniBaseCache.Test_LRU_EvictsLeastRecentlyUsed;
@@ -551,7 +551,7 @@ begin
   Keys := TArray<string>.Create('key1', 'key3', 'nonexistent');
   Results := FCache.GetMany(Keys);
   try
-    Assert.AreEqual(2, Results.Count);
+    Assert.AreEqual(2, Integer(Results.Count));
     Assert.AreEqual('value1', Results['key1']);
     Assert.AreEqual('value3', Results['key3']);
     Assert.IsFalse(Results.ContainsKey('nonexistent'));
@@ -571,7 +571,7 @@ begin
   
   FCache.PutMany(Items);
   
-  Assert.AreEqual(3, FCache.Count);
+  Assert.AreEqual(3, Integer(FCache.Count));
   Assert.AreEqual('value1', FCache.Get('key1'));
   Assert.AreEqual('value2', FCache.Get('key2'));
   Assert.AreEqual('value3', FCache.Get('key3'));
@@ -589,7 +589,7 @@ begin
   Keys := TArray<string>.Create('key1', 'key3');
   FCache.RemoveMany(Keys);
   
-  Assert.AreEqual(2, FCache.Count);
+  Assert.AreEqual(2, Integer(FCache.Count));
   Assert.IsFalse(FCache.Contains('key1'));
   Assert.IsTrue(FCache.Contains('key2'));
   Assert.IsFalse(FCache.Contains('key3'));
@@ -659,17 +659,13 @@ begin
     begin
       Tasks[I] := TTask.Run(
         procedure
-        var
-          J: Integer;
-          Key, Value: string;
-          ThreadId: Integer;
         begin
-          ThreadId := TThread.CurrentThread.ThreadID;
-          for J := 1 to ITERATIONS do
+          var ThreadId: Integer := TThread.CurrentThread.ThreadID;
+          for var J := 1 to ITERATIONS do
           begin
             try
-              Key := Format('key_%d_%d', [ThreadId, J]);
-              Value := Format('value_%d_%d', [ThreadId, J]);
+              var Key := Format('key_%d_%d', [ThreadId, J]);
+              var Value := Format('value_%d_%d', [ThreadId, J]);
               
               FCache.Put(Key, Value);
               

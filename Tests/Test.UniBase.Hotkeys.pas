@@ -15,8 +15,9 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils, System.Classes,
+  System.Generics.Collections,
   Vcl.Menus,
-  UniBase.Types, UniBase.Manager, UniBase.Hotkeys;
+  UniBase.Types, UniBase.Manager, UniBase.Hotkeys, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -68,9 +69,120 @@ type
     
     [Test]
     procedure Test_OnHotkeyChanged_Event;
+
+    [Test]
+    procedure Test_StorageInjection_BasicLifecycle;
   end;
 
 implementation
+
+type
+  TInMemoryHotkeyStorage = class(TInterfacedObject, IHotkeyStorage)
+  private
+    FData: TDictionary<string, THotkeyStorageData>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function ReadEnabledHotkeys: THotkeyStorageDataArray;
+    procedure RegisterDefaults(const Defaults: THotkeyStorageDataArray);
+    procedure UpdateShortcut(const ActionName: string; Shortcut: Word;
+      IsCustomized: Boolean);
+    procedure ResetShortcut(const ActionName: string);
+    procedure ResetAllShortcuts;
+    function ReadAllHotkeys: THotkeyStorageDataArray;
+    procedure DeleteHotkey(const ActionName: string);
+  end;
+
+constructor TInMemoryHotkeyStorage.Create;
+begin
+  inherited Create;
+  FData := TDictionary<string, THotkeyStorageData>.Create;
+end;
+
+destructor TInMemoryHotkeyStorage.Destroy;
+begin
+  FData.Free;
+  inherited;
+end;
+
+function TInMemoryHotkeyStorage.ReadEnabledHotkeys: THotkeyStorageDataArray;
+var
+  Pair: TPair<string, THotkeyStorageData>;
+begin
+  SetLength(Result, 0);
+  for Pair in FData do
+    if Pair.Value.IsEnabled then
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Pair.Value;
+    end;
+end;
+
+procedure TInMemoryHotkeyStorage.RegisterDefaults(
+  const Defaults: THotkeyStorageDataArray);
+var
+  Item: THotkeyStorageData;
+begin
+  for Item in Defaults do
+    if not FData.ContainsKey(Item.ActionName) then
+      FData.Add(Item.ActionName, Item);
+end;
+
+procedure TInMemoryHotkeyStorage.UpdateShortcut(const ActionName: string;
+  Shortcut: Word; IsCustomized: Boolean);
+var
+  Data: THotkeyStorageData;
+begin
+  if FData.TryGetValue(ActionName, Data) then
+  begin
+    Data.Shortcut := Shortcut;
+    Data.IsCustomized := IsCustomized;
+    FData.AddOrSetValue(ActionName, Data);
+  end;
+end;
+
+procedure TInMemoryHotkeyStorage.ResetShortcut(const ActionName: string);
+var
+  Data: THotkeyStorageData;
+begin
+  if FData.TryGetValue(ActionName, Data) then
+  begin
+    Data.Shortcut := Data.DefaultShortcut;
+    Data.IsCustomized := False;
+    FData.AddOrSetValue(ActionName, Data);
+  end;
+end;
+
+procedure TInMemoryHotkeyStorage.ResetAllShortcuts;
+var
+  Pair: TPair<string, THotkeyStorageData>;
+  Data: THotkeyStorageData;
+begin
+  for Pair in FData do
+  begin
+    Data := Pair.Value;
+    Data.Shortcut := Data.DefaultShortcut;
+    Data.IsCustomized := False;
+    FData.AddOrSetValue(Pair.Key, Data);
+  end;
+end;
+
+function TInMemoryHotkeyStorage.ReadAllHotkeys: THotkeyStorageDataArray;
+var
+  Pair: TPair<string, THotkeyStorageData>;
+begin
+  SetLength(Result, 0);
+  for Pair in FData do
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := Pair.Value;
+  end;
+end;
+
+procedure TInMemoryHotkeyStorage.DeleteHotkey(const ActionName: string);
+begin
+  FData.Remove(ActionName);
+end;
 
 { TTestUniBaseHotkeys }
 
@@ -322,6 +434,48 @@ begin
     Assert.AreEqual('event.test.action', ChangedAction, '事件应该传递正确的 Action');
   finally
     FHotkeys.OnHotkeyChanged := nil;
+  end;
+end;
+
+procedure TTestUniBaseHotkeys.Test_StorageInjection_BasicLifecycle;
+var
+  Storage: IHotkeyStorage;
+  LocalHotkeys: TUniBaseHotkeys;
+  Defaults: TArray<THotkeyDefault>;
+  NewShortcut: TShortCut;
+begin
+  Storage := TInMemoryHotkeyStorage.Create;
+  LocalHotkeys := TUniBaseHotkeys.Create(Storage);
+  try
+    SetLength(Defaults, 1);
+    Defaults[0].ActionName := 'inject.action';
+    Defaults[0].Shortcut := 'Ctrl+I';
+    Defaults[0].Description := 'Injected hotkey';
+    Defaults[0].Category := 'Test';
+
+    LocalHotkeys.RegisterDefaultHotkeys(Defaults);
+    Assert.AreEqual<TShortCut>(TextToShortCut('Ctrl+I'),
+      LocalHotkeys.GetHotkey('inject.action'),
+      'Injected storage should provide registered defaults');
+
+    NewShortcut := TextToShortCut('Ctrl+Shift+I');
+    LocalHotkeys.SetHotkey('inject.action', NewShortcut);
+    Assert.AreEqual<TShortCut>(NewShortcut,
+      LocalHotkeys.GetHotkey('inject.action'),
+      'Injected storage should persist hotkey updates');
+    Assert.IsTrue(LocalHotkeys.IsHotkeyCustomized('inject.action'),
+      'Changed hotkey should be marked customized');
+
+    LocalHotkeys.ResetHotkey('inject.action');
+    Assert.AreEqual<TShortCut>(TextToShortCut('Ctrl+I'),
+      LocalHotkeys.GetHotkey('inject.action'),
+      'Reset should restore default shortcut');
+
+    LocalHotkeys.DeleteHotkey('inject.action');
+    Assert.AreEqual<TShortCut>(0, LocalHotkeys.GetHotkey('inject.action'),
+      'Delete should remove injected hotkey');
+  finally
+    LocalHotkeys.Free;
   end;
 end;
 

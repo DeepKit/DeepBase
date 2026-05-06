@@ -144,7 +144,7 @@ Id, LogTime, LogLevel, Source, Message, ExceptionClass, ExceptionMessage, StackT
 
 ## 临时解决方案
 
-根据 `docs/MIGRATION-v0.3-fix.md` 文档：
+根据当前 Schema 迁移策略：
 
 1. **方案 A (开发环境)**: 删除 `Config.db` 文件，让程序重建
 2. **方案 B (生产环境)**: 执行 `upgrade_schema_fix.sql` 迁移脚本

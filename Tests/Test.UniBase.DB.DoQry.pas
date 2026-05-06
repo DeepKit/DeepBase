@@ -622,7 +622,7 @@ var
   DistinctCount: Integer;
 begin
   TempDbPath := TPath.Combine(TPath.GetTempPath,
-    Format('unibase_insert_id_%d.db', [GetTickCount]));
+    Format('unibase_insert_id_%d.db', [Random(MaxInt)]));
   if TFile.Exists(TempDbPath) then
     TFile.Delete(TempDbPath);
 
@@ -663,15 +663,8 @@ begin
       var WorkerIndex := I;
       Tasks[I] := TTask.Run(
         procedure
-        var
-          Conn: TFDConnection;
-          Ctx: TUniQueryContext;
-          InsertId: Integer;
-          Attempt: Integer;
-          Success: Boolean;
-          Payload: string;
         begin
-          Conn := TFDConnection.Create(nil);
+          var Conn := TFDConnection.Create(nil);
           try
             Conn.DriverName := 'SQLite';
             Conn.Params.Database := TempDbPath;
@@ -680,11 +673,12 @@ begin
             Conn.Params.Values['BusyTimeout'] := '5000';
             Conn.Open;
 
-            Ctx := UniDbMakeContext(Conn, udbSQLite);
-            Payload := Format('{"name":"ConcUser-%d","age":%d}', [WorkerIndex, 20 + WorkerIndex]);
+            var Ctx := UniDbMakeContext(Conn, udbSQLite);
+            var Payload := Format('{"name":"ConcUser-%d","age":%d}', [WorkerIndex, 20 + WorkerIndex]);
 
-            Success := False;
-            for Attempt := 1 to 5 do
+            var Success := False;
+            var InsertId := 0;
+            for var Attempt := 1 to 5 do
             begin
               try
                 InsertId := UniDbInsertReturningId(
@@ -727,7 +721,7 @@ begin
 
     TTask.WaitForAll(Tasks);
     Assert.AreEqual(0, ErrorCount, 'Concurrent insert should not produce errors');
-    Assert.AreEqual(CThreadCount, ReturnedIds.Count, 'Each worker should return one id');
+    Assert.AreEqual(CThreadCount, Integer(ReturnedIds.Count), 'Each worker should return one id');
 
     ReturnedIds.Sort;
     DistinctCount := 1;
@@ -816,7 +810,7 @@ var
   ErrorCount: Integer;
 begin
   TempDbPath := TPath.Combine(TPath.GetTempPath,
-    Format('unibase_doqry_cache_%d.db', [GetTickCount]));
+    Format('unibase_doqry_cache_%d.db', [Random(MaxInt)]));
   if TFile.Exists(TempDbPath) then
     TFile.Delete(TempDbPath);
 
@@ -870,19 +864,15 @@ begin
   begin
     Tasks[I] := TTask.Run(
       procedure
-      var
-        Conn: TFDConnection;
-        Ctx: TUniQueryContext;
-        V: Variant;
       begin
         try
-          Conn := TFDConnection.Create(nil);
+          var Conn := TFDConnection.Create(nil);
           try
             Conn.DriverName := 'SQLite';
             Conn.Params.Database := TempDbPath;
             Conn.Open;
-            Ctx := UniDbMakeContext(Conn, udbSQLite);
-            V := UniDbScalar('user.count_by_name', '{"name":"ConcurrentUser"}', Ctx);
+            var Ctx := UniDbMakeContext(Conn, udbSQLite);
+            var V := UniDbScalar('user.count_by_name', '{"name":"ConcurrentUser"}', Ctx);
             if Integer(V) <> 1 then
               TInterlocked.Increment(ErrorCount);
           finally

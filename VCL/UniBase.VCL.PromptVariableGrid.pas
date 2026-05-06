@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.PromptVariableGrid - Custom Variable Grid Control
   
   Version: 1.0
@@ -247,7 +247,6 @@ begin
   FInlineEdit := TEdit.Create(Self);
   FInlineEdit.Parent := Self;
   FInlineEdit.Visible := False;
-  FInlineEdit.BorderStyle := bsSingle;
   FInlineEdit.OnExit := EditorExit;
   FInlineEdit.OnKeyDown := EditorKeyDown;
   
@@ -290,7 +289,7 @@ end;
 
 destructor TPromptVariableGrid.Destroy;
 begin
-  FVariables.Free;
+  FreeAndNil(FVariables);
   inherited;
 end;
 

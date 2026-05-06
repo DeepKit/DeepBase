@@ -1,4 +1,4 @@
-unit UniBase.Feedback;
+﻿unit UniBase.Feedback;
 
 {*******************************************************************************
   UniBase Framework - User Feedback System
@@ -673,8 +673,8 @@ end;
 
 destructor TFeedbackItem.Destroy;
 begin
-  FAttachments.Free;
-  FTags.Free;
+  FreeAndNil(FAttachments);
+  FreeAndNil(FTags);
   inherited;
 end;
 
@@ -1049,7 +1049,7 @@ end;
 
 destructor TLogCollector.Destroy;
 begin
-  FLogPaths.Free;
+  FreeAndNil(FLogPaths);
   inherited;
 end;
 
@@ -1275,8 +1275,8 @@ end;
 
 destructor TFeedbackServiceClient.Destroy;
 begin
-  FHttpClient.Free;
-  FLock.Free;
+  FreeAndNil(FHttpClient);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1594,8 +1594,8 @@ end;
 destructor TOfflineFeedbackQueue.Destroy;
 begin
   SaveQueue;
-  FItems.Free;
-  FLock.Free;
+  FreeAndNil(FItems);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1752,11 +1752,11 @@ end;
 destructor TFeedbackManager.Destroy;
 begin
   StopNotificationPolling;
-  FNotifications.Free;
-  FLogCollector.Free;
-  FOfflineQueue.Free;
-  FClient.Free;
-  FLock.Free;
+  FreeAndNil(FNotifications);
+  FreeAndNil(FLogCollector);
+  FreeAndNil(FOfflineQueue);
+  FreeAndNil(FClient);
+  FreeAndNil(FLock);
   inherited;
 end;
 

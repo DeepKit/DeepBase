@@ -1,8 +1,10 @@
-{ ============================================================================
-  UniBase.Exception - 异常处理模块
-  
-  版本: 0.3
-  说明: 全局异常捕获、记录和报告
+﻿{ ============================================================================
+  UniBase.Exception - Exception logging and platform exception dispatch
+
+  Version: 0.5
+  Description: Core exception report logging without a direct VCL/FMX dependency.
+               UI packages can register adapters for Application.OnException.
+               No direct dependency on UniBase.Manager — uses registered callbacks.
   ============================================================================ }
 
 unit UniBase.Exception;
@@ -12,30 +14,41 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  Vcl.Forms,
-  Vcl.Dialogs,
-  UniBase.Manager,
   UniBase.Logging,
   UniBase.Storage.Interfaces;
 
 type
+  TExceptionInstallProc = reference to procedure;
+  TExceptionShowProc = reference to procedure(Sender: TObject; E: Exception);
+
   TUniBaseExceptionHandler = class
   private
     class var FInstance: TUniBaseExceptionHandler;
     class var FConnectionStorageFactory: TFunc<TObject, IExceptionReportStorage>;
+    class var FPlatformInstallProc: TExceptionInstallProc;
+    class var FPlatformShowProc: TExceptionShowProc;
+    class var FIsInitializedProc: TFunc<Boolean>;
+    class var FGetLoggerProc: TFunc<TUniBaseLogger>;
+    class var FGetConfigDBProc: TFunc<TObject>;
     class function CreateStorageFromConnection(
       AConnection: TObject): IExceptionReportStorage; static;
     class function BuildExceptionReportData(
       E: Exception): TExceptionReportData; static;
-    procedure OnException(Sender: TObject; E: Exception);
-    procedure LogExceptionToDB(E: Exception);
+    class procedure LogExceptionToDB(E: Exception); static;
   public
     class constructor Create;
     class destructor Destroy;
-    
+
     class procedure Install;
+    class procedure HandleException(Sender: TObject; E: Exception); static;
     class procedure SetStorageFactory(
       const AFactory: TFunc<TObject, IExceptionReportStorage>); static;
+    class procedure SetPlatformAdapter(const AInstallProc: TExceptionInstallProc;
+      const AShowProc: TExceptionShowProc); static;
+    class procedure SetManagerCallbacks(
+      const AIsInitialized: TFunc<Boolean>;
+      const AGetLogger: TFunc<TUniBaseLogger>;
+      const AGetConfigDB: TFunc<TObject>); static;
   end;
 
 implementation
@@ -52,18 +65,36 @@ end;
 
 class destructor TUniBaseExceptionHandler.Destroy;
 begin
-  FInstance.Free;
+  FreeAndNil(FInstance);
 end;
 
 class procedure TUniBaseExceptionHandler.Install;
 begin
-  Application.OnException := FInstance.OnException;
+  if Assigned(FPlatformInstallProc) then
+    FPlatformInstallProc;
 end;
 
 class procedure TUniBaseExceptionHandler.SetStorageFactory(
   const AFactory: TFunc<TObject, IExceptionReportStorage>);
 begin
   FConnectionStorageFactory := AFactory;
+end;
+
+class procedure TUniBaseExceptionHandler.SetPlatformAdapter(
+  const AInstallProc: TExceptionInstallProc; const AShowProc: TExceptionShowProc);
+begin
+  FPlatformInstallProc := AInstallProc;
+  FPlatformShowProc := AShowProc;
+end;
+
+class procedure TUniBaseExceptionHandler.SetManagerCallbacks(
+  const AIsInitialized: TFunc<Boolean>;
+  const AGetLogger: TFunc<TUniBaseLogger>;
+  const AGetConfigDB: TFunc<TObject>);
+begin
+  FIsInitializedProc := AIsInitialized;
+  FGetLoggerProc := AGetLogger;
+  FGetConfigDBProc := AGetConfigDB;
 end;
 
 class function TUniBaseExceptionHandler.CreateStorageFromConnection(
@@ -80,43 +111,52 @@ begin
   Result.ReportTimeISO := DateToISO8601(Now);
   Result.ExceptionClass := E.ClassName;
   Result.MessageText := E.Message;
-  {$IF CompilerVersion >= 33.0} // Rio+
+  {$IF CompilerVersion >= 33.0}
   Result.StackTrace := E.StackTrace;
   {$ELSE}
   Result.StackTrace := '';
   {$ENDIF}
 end;
 
-procedure TUniBaseExceptionHandler.OnException(Sender: TObject; E: Exception);
+class procedure TUniBaseExceptionHandler.HandleException(Sender: TObject;
+  E: Exception);
+var
+  IsInit: Boolean;
+  Logger: TUniBaseLogger;
 begin
-  // 1. Log to System Logger
-  if UniBase.Manager.UniBase.IsInitialized then
+  IsInit := Assigned(FIsInitializedProc) and FIsInitializedProc;
+
+  if IsInit then
   begin
-    if UniBase.Manager.UniBase.Logger <> nil then
-      UniBase.Manager.UniBase.Logger.LogException(E);
+    Logger := nil;
+    if Assigned(FGetLoggerProc) then
+      Logger := FGetLoggerProc;
+    if Assigned(Logger) then
+      Logger.LogException(E);
   end;
+
   LogExceptionToDB(E);
-  
-  // 2. Show User Dialog
-  // In production, maybe show a custom error dialog (P3 task)
-  // For now, standard VCL dialog
-  if not (E is EAbort) then
-    Application.ShowException(E);
+
+  if Assigned(FPlatformShowProc) then
+    FPlatformShowProc(Sender, E);
 end;
 
-procedure TUniBaseExceptionHandler.LogExceptionToDB(E: Exception);
+class procedure TUniBaseExceptionHandler.LogExceptionToDB(E: Exception);
 var
   Storage: IExceptionReportStorage;
   ReportData: TExceptionReportData;
   ConnectionObject: TObject;
 begin
-  // Save detailed report to ExceptionReports table via injected storage.
   try
     ReportData := BuildExceptionReportData(E);
     Storage := nil;
 
-    if UniBase.Manager.UniBase.IsInitialized then
-      ConnectionObject := UniBase.Manager.UniBase.ConfigDB
+    if Assigned(FIsInitializedProc) and FIsInitializedProc then
+    begin
+      ConnectionObject := nil;
+      if Assigned(FGetConfigDBProc) then
+        ConnectionObject := FGetConfigDBProc;
+    end
     else
       ConnectionObject := nil;
 
@@ -132,7 +172,7 @@ begin
     if Assigned(Storage) then
       Storage.WriteReport(ReportData);
   except
-    // Avoid recursive crash
+    // Avoid recursive exception reporting.
   end;
 end;
 

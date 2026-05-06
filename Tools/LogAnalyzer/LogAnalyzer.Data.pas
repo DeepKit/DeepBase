@@ -7,7 +7,8 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.DateUtils,
-  FireDAC.Comp.Client;
+  FireDAC.Comp.Client,
+  UniBase.Exceptions;
 
 type
   TLogLevel = (llTrace, llDebug, llInfo, llWarn, llError, llFatal);
@@ -95,7 +96,7 @@ var
   E: TLogEntry;
 begin
   if FConnection = nil then
-    raise Exception.Create('TDbLogSource requires a valid FireDAC connection');
+    raise EDatabaseException.Create('TDbLogSource requires a valid FireDAC connection');
 
   List := TList<TLogEntry>.Create;
   Q := TFDQuery.Create(nil);

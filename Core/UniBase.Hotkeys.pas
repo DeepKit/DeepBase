@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Hotkeys - Hotkey Management Module
   
   Version: 1.0
@@ -14,7 +14,6 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  Vcl.Menus, // For TShortCut, ShortCutToText, TextToShortCut
   UniBase.Types,
   UniBase.Storage.Interfaces;
 
@@ -147,6 +146,117 @@ type
 
 implementation
 
+function UniBaseTextToShortCut(const Text: string): TShortCut;
+const
+  VK_BACK = $08;
+  VK_TAB = $09;
+  VK_RETURN = $0D;
+  VK_ESCAPE = $1B;
+  VK_SPACE = $20;
+  VK_INSERT = $2D;
+  VK_DELETE = $2E;
+  VK_F1 = $70;
+var
+  Parts: TArray<string>;
+  RawPart: string;
+  Part: string;
+  KeyPart: string;
+  KeyCode: Word;
+  FKeyNumber: Integer;
+begin
+  Result := 0;
+  KeyPart := '';
+
+  Parts := Text.Split(['+']);
+  for RawPart in Parts do
+  begin
+    Part := Trim(RawPart).ToUpperInvariant;
+    if Part = '' then
+      Continue;
+
+    if Part = 'CTRL' then
+      Result := Result or scCtrl
+    else if Part = 'SHIFT' then
+      Result := Result or scShift
+    else if Part = 'ALT' then
+      Result := Result or scAlt
+    else
+      KeyPart := Part;
+  end;
+
+  if KeyPart = '' then
+    Exit(0);
+
+  KeyCode := 0;
+  if (Length(KeyPart) = 1) and CharInSet(KeyPart[1], ['A'..'Z', '0'..'9']) then
+    KeyCode := Ord(KeyPart[1])
+  else if (Length(KeyPart) >= 2) and (KeyPart[1] = 'F') and
+    TryStrToInt(Copy(KeyPart, 2, MaxInt), FKeyNumber) and
+    (FKeyNumber >= 1) and (FKeyNumber <= 24) then
+    KeyCode := VK_F1 + FKeyNumber - 1
+  else if (KeyPart = 'ESC') or (KeyPart = 'ESCAPE') then
+    KeyCode := VK_ESCAPE
+  else if (KeyPart = 'ENTER') or (KeyPart = 'RETURN') then
+    KeyCode := VK_RETURN
+  else if KeyPart = 'TAB' then
+    KeyCode := VK_TAB
+  else if KeyPart = 'SPACE' then
+    KeyCode := VK_SPACE
+  else if (KeyPart = 'INS') or (KeyPart = 'INSERT') then
+    KeyCode := VK_INSERT
+  else if (KeyPart = 'DEL') or (KeyPart = 'DELETE') then
+    KeyCode := VK_DELETE
+  else if (KeyPart = 'BACKSPACE') or (KeyPart = 'BKSP') then
+    KeyCode := VK_BACK;
+
+  if KeyCode = 0 then
+    Result := 0
+  else
+    Result := Result or KeyCode;
+end;
+
+function UniBaseShortCutToText(Shortcut: TShortCut): string;
+var
+  KeyCode: Word;
+  KeyText: string;
+begin
+  Result := '';
+  if Shortcut = 0 then
+    Exit;
+
+  if (Shortcut and scCtrl) <> 0 then
+    Result := Result + 'Ctrl+';
+  if (Shortcut and scShift) <> 0 then
+    Result := Result + 'Shift+';
+  if (Shortcut and scAlt) <> 0 then
+    Result := Result + 'Alt+';
+
+  KeyCode := Shortcut and not (scCtrl or scShift or scAlt);
+  if (KeyCode >= Ord('A')) and (KeyCode <= Ord('Z')) then
+    KeyText := Chr(KeyCode)
+  else if (KeyCode >= Ord('0')) and (KeyCode <= Ord('9')) then
+    KeyText := Chr(KeyCode)
+  else if (KeyCode >= $70) and (KeyCode <= $87) then
+    KeyText := 'F' + IntToStr(KeyCode - $70 + 1)
+  else
+    case KeyCode of
+      $08: KeyText := 'Backspace';
+      $09: KeyText := 'Tab';
+      $0D: KeyText := 'Enter';
+      $1B: KeyText := 'Esc';
+      $20: KeyText := 'Space';
+      $2D: KeyText := 'Ins';
+      $2E: KeyText := 'Del';
+    else
+      KeyText := '';
+    end;
+
+  if KeyText = '' then
+    Result := ''
+  else
+    Result := Result + KeyText;
+end;
+
 { TUniBaseHotkeys }
 
 constructor TUniBaseHotkeys.Create(AConnection: TObject; ALock: TObject);
@@ -177,10 +287,10 @@ end;
 
 destructor TUniBaseHotkeys.Destroy;
 begin
-  FCache.Free;
-  FDefaultCache.Free;
+  FreeAndNil(FCache);
+  FreeAndNil(FDefaultCache);
   if FOwnsLock then
-    FLock.Free;
+    FreeAndNil(FLock);
   inherited;
 end;
 
@@ -242,7 +352,7 @@ begin
     for I := 0 to High(Defaults) do
     begin
       Def := Defaults[I];
-      ShortcutVal := TextToShortCut(Def.Shortcut);
+      ShortcutVal := UniBaseTextToShortCut(Def.Shortcut);
       StorageDefaults[I].ActionName := Def.ActionName;
       StorageDefaults[I].Shortcut := Word(ShortcutVal);
       StorageDefaults[I].DefaultShortcut := Word(ShortcutVal);
@@ -420,7 +530,7 @@ begin
       if DataItems[I].Shortcut = 0 then
         Result[I].Shortcut := ''
       else
-        Result[I].Shortcut := ShortCutToText(TShortCut(DataItems[I].Shortcut));
+        Result[I].Shortcut := UniBaseShortCutToText(TShortCut(DataItems[I].Shortcut));
       Result[I].Description := DataItems[I].Description;
       Result[I].Category := DataItems[I].Category;
     end;

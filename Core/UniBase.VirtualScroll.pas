@@ -1,4 +1,4 @@
-unit UniBase.VirtualScroll;
+﻿unit UniBase.VirtualScroll;
 
 {*******************************************************************************
   UniBase.VirtualScroll - 虚拟滚动和 UI 渲染优化
@@ -397,8 +397,8 @@ end;
 
 destructor TVirtualDataSource.Destroy;
 begin
-  FItemHeights.Free;
-  FLock.Free;
+  FreeAndNil(FItemHeights);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -492,7 +492,7 @@ end;
 
 destructor TVirtualScrollController.Destroy;
 begin
-  FVisibleItems.Free;
+  FreeAndNil(FVisibleItems);
   inherited;
 end;
 
@@ -682,7 +682,7 @@ end;
 
 destructor TFrameRateController.Destroy;
 begin
-  FTimer.Free;
+  FreeAndNil(FTimer);
   inherited;
 end;
 
@@ -743,8 +743,8 @@ end;
 
 destructor TRenderQueue.Destroy;
 begin
-  FQueue.Free;
-  FLock.Free;
+  FreeAndNil(FQueue);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -847,7 +847,7 @@ end;
 
 destructor TDoubleBufferPainter.Destroy;
 begin
-  FBuffer.Free;
+  FreeAndNil(FBuffer);
   inherited;
 end;
 
@@ -919,11 +919,11 @@ end;
 
 destructor TUniVirtualListBox.Destroy;
 begin
-  FFrameController.Free;
-  FRenderQueue.Free;
-  FBufferPainter.Free;
-  FScrollController.Free;
-  FDataSource.Free;
+  FreeAndNil(FFrameController);
+  FreeAndNil(FRenderQueue);
+  FreeAndNil(FBufferPainter);
+  FreeAndNil(FScrollController);
+  FreeAndNil(FDataSource);
   inherited;
 end;
 
@@ -1208,8 +1208,8 @@ end;
 
 destructor TLazyLoadManager.Destroy;
 begin
-  FLoadedRanges.Free;
-  FLock.Free;
+  FreeAndNil(FLoadedRanges);
+  FreeAndNil(FLock);
   inherited;
 end;
 

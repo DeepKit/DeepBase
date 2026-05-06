@@ -1,4 +1,4 @@
-unit UniBase.LogAlert;
+﻿unit UniBase.LogAlert;
 
 {*******************************************************************************
   UniBase Log Alert System
@@ -452,7 +452,7 @@ end;
 
 destructor TAlertRule.Destroy;
 begin
-  FActions.Free;
+  FreeAndNil(FActions);
   inherited;
 end;
 
@@ -576,8 +576,8 @@ end;
 
 destructor TAlertContext.Destroy;
 begin
-  FAnalyzer.Free;
-  FLogs.Free;
+  FreeAndNil(FAnalyzer);
+  FreeAndNil(FLogs);
   inherited;
 end;
 
@@ -620,13 +620,13 @@ begin
   
   for Rule in FRules.Values do
     Rule.Free;
-  FRules.Free;
+  FreeAndNil(FRules);
   
-  FHistory.Free;
-  FLogBuffer.Free;
-  FLogBufferLock.Free;
-  FLock.Free;
-  FStopEvent.Free;
+  FreeAndNil(FHistory);
+  FreeAndNil(FLogBuffer);
+  FreeAndNil(FLogBufferLock);
+  FreeAndNil(FLock);
+  FreeAndNil(FStopEvent);
   inherited;
 end;
 

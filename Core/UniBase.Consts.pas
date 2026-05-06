@@ -1,7 +1,7 @@
 { ============================================================================
   UniBase.Consts - Framework Constants
   
-  Version: 0.3
+  Version: 1.0.2
   Description: Centralized string constants for the UniBase framework.
                Eliminates magic strings scattered throughout the codebase.
   
@@ -23,6 +23,15 @@ unit UniBase.Consts;
 interface
 
 const
+  // ========================================
+  // Framework Version
+  // ========================================
+
+  UNIBASE_VERSION_MAJOR = 1;
+  UNIBASE_VERSION_MINOR = 0;
+  UNIBASE_VERSION_PATCH = 2;
+  UNIBASE_VERSION_STRING = '1.0.2';
+
   // ========================================
   // Configuration Keys
   // ========================================

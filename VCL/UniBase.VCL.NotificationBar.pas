@@ -41,7 +41,7 @@ type
   private
     FMessageLabel: TLabel;
     FProgressBar: TProgressBar;
-    FSpinner: TPanel;
+    FSpinner: TPaintBox;
     FCancelButton: TSpeedButton;
     FCloseButton: TSpeedButton;
     FStatusIcon: TShape;
@@ -214,14 +214,10 @@ begin
   FStatusIcon.Visible := False;
   
   // 旋转加载指示器
-  FSpinner := TPanel.Create(Self);
+  FSpinner := TPaintBox.Create(Self);
   FSpinner.Parent := Self;
   FSpinner.SetBounds(10, 8, 24, 24);
-  FSpinner.BevelOuter := bvNone;
-  FSpinner.ParentBackground := False;
-  FSpinner.Color := Color;
   FSpinner.OnPaint := SpinnerPaint;
-  FSpinner.DoubleBuffered := True;
   
   // 消息标签
   FMessageLabel := TLabel.Create(Self);
@@ -348,14 +344,14 @@ end;
 
 procedure TNotificationBar.SpinnerPaint(Sender: TObject);
 var
-  Panel: TPanel;
+  PaintBox: TPaintBox;
 begin
-  if Sender is TPanel then
+  if Sender is TPaintBox then
   begin
-    Panel := TPanel(Sender);
-    Panel.Canvas.Brush.Color := Panel.Color;
-    Panel.Canvas.FillRect(Panel.ClientRect);
-    DrawSpinner(Panel.Canvas, Panel.ClientRect);
+    PaintBox := TPaintBox(Sender);
+    PaintBox.Canvas.Brush.Color := Color;
+    PaintBox.Canvas.FillRect(PaintBox.ClientRect);
+    DrawSpinner(PaintBox.Canvas, PaintBox.ClientRect);
   end;
 end;
 

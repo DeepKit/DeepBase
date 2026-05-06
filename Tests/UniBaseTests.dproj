@@ -35,7 +35,7 @@
         <DCC_K>false</DCC_K>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
-        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\ThirdParty\Social;..\ThirdParty\Payment;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>UniBaseTests</SanitizedProjectName>
         <VerInfo_Locale>2052</VerInfo_Locale>
@@ -78,8 +78,14 @@
         <DCCReference Include="..\Core\UniBase.Hotkeys.pas"/>
         <DCCReference Include="..\Core\UniBase.Theme.pas"/>
         <DCCReference Include="..\Core\UniBase.License.pas"/>
-        <DCCReference Include="..\Core\UniBase.DB.DoQry.pas"/>
+        <DCCReference Include="..\Persistence\UniBase.DB.DoQry.pas"/>
         <DCCReference Include="Test.UniBase.DB.DoQry.pas"/>
+        <DCCReference Include="..\ThirdParty\Social\UniBase.Social.OAuth.pas"/>
+        <DCCReference Include="..\ThirdParty\Social\UniBase.Social.WeChat.pas"/>
+        <DCCReference Include="..\ThirdParty\Social\UniBase.Social.Weibo.pas"/>
+        <DCCReference Include="..\ThirdParty\Social\UniBase.Social.QQ.pas"/>
+        <DCCReference Include="..\Core\UniBase.ObjectPool.pas"/>
+        <DCCReference Include="Test.UniBase.ObjectPool.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

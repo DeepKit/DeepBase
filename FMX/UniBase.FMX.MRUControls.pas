@@ -17,6 +17,7 @@ uses
   FMX.Types,
   FMX.Controls,
   FMX.ListBox,
+  UniBase.Types,
   UniBase.MRU;
 
 type
@@ -133,7 +134,7 @@ begin
     Items.Add(MRUItems[I].DisplayName);
     // Store key in tag
     if Items.Count > 0 then
-      Items.ListItems[Items.Count - 1].Tag := NativeInt(PChar(MRUItems[I].ItemKey));
+      ListItems[Items.Count - 1].Tag := NativeInt(PChar(MRUItems[I].ItemKey));
   end;
   
   // Restore selection if possible

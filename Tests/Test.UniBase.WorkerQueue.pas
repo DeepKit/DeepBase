@@ -20,6 +20,7 @@ uses
   System.Classes,
   System.JSON,
   System.DateUtils,
+  System.SyncObjs,
   System.Threading,
   DUnitX.TestFramework;
 
@@ -529,7 +530,7 @@ begin
   try
     Job.WithTag('urgent');
     Job.WithTag('email');
-    Assert.AreEqual(2, Length(Job.Tags));
+    Assert.AreEqual(2, Integer(Length(Job.Tags)));
   finally
     Job.Free;
   end;
@@ -543,7 +544,7 @@ begin
   try
     Job.DependsOn('job-123');
     Job.DependsOn('job-456');
-    Assert.AreEqual(2, Length(Job.Dependencies));
+    Assert.AreEqual(2, Integer(Length(Job.Dependencies)));
   finally
     Job.Free;
   end;
@@ -805,7 +806,7 @@ begin
   try
     Job := TJob.Create('test');
     Queue.Enqueue(Job);
-    Assert.IsTrue(Queue.PendingCount > 0);
+    Assert.IsTrue(Queue.GetPendingCount > 0);
   finally
     Queue.Free;
   end;
@@ -911,9 +912,9 @@ begin
   Queue := TWorkerQueue.Create;
   try
     Queue.Start;
-    Assert.IsTrue(Queue.IsRunning);
+    Assert.IsTrue(Queue.ActiveWorkerCount > 0);
     Queue.Stop;
-    Assert.IsFalse(Queue.IsRunning);
+    Assert.IsTrue(Queue.ActiveWorkerCount = 0);
   finally
     Queue.Free;
   end;
@@ -1108,7 +1109,7 @@ begin
     Sleep(1000);
     Queue.Stop;
     
-    Assert.IsTrue(Queue.DeadLetterCount > 0);
+    Assert.IsTrue(Queue.Stats.DeadLetterJobs > 0);
   finally
     Queue.Free;
   end;
@@ -1132,7 +1133,7 @@ begin
     Sleep(500);
     Queue.Stop;
     
-    Stats := Queue.GetStats;
+    Stats := Queue.Stats;
     Assert.IsTrue(Stats.TotalProcessed > 0);
   finally
     Queue.Free;

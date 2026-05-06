@@ -22,7 +22,8 @@ unit UniFlow.Role;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.JSON, UniFlow.Message;
+  System.SysUtils, System.Classes, System.JSON, UniFlow.Message,
+  UniBase.Exceptions;
 
 type
   /// <summary>角色层级</summary>
@@ -250,7 +251,7 @@ end;
 procedure TUniFlowRoleBase.Initialize;
 begin
   if FState <> rsUninitialized then
-    raise Exception.CreateFmt('Role %s already initialized', [FMetaInfo.Name]);
+    raise EOperationException.CreateFmt('Role %s already initialized', [FMetaInfo.Name]);
   
   SetState(rsInitializing);
   try
@@ -265,7 +266,7 @@ end;
 procedure TUniFlowRoleBase.Start;
 begin
   if not (FState in [rsReady, rsStopped]) then
-    raise Exception.CreateFmt('Role %s cannot start from state %d', [FMetaInfo.Name, Ord(FState)]);
+    raise EOperationException.CreateFmt('Role %s cannot start from state %d', [FMetaInfo.Name, Ord(FState)]);
   
   DoStart;
   SetState(rsRunning);
@@ -301,7 +302,7 @@ end;
 function TUniFlowRoleBase.HandleMessage(const AMessage: TUniFlowMessage): TUniFlowMessage;
 begin
   if FState <> rsRunning then
-    raise Exception.CreateFmt('Role %s is not running', [FMetaInfo.Name]);
+    raise EOperationException.CreateFmt('Role %s is not running', [FMetaInfo.Name]);
   
   Result := DoHandleMessage(AMessage);
 end;

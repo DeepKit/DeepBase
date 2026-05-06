@@ -1,4 +1,4 @@
-unit UniBase.FMX.FormControls;
+﻿unit UniBase.FMX.FormControls;
 
 {*******************************************************************************
   UniBase FMX Form Controls - Enhanced Cross-Platform Input Controls
@@ -35,7 +35,7 @@ type
   TValidationFunc = reference to function(const Value: string): TValidationResult;
 
   /// <summary>Input state</summary>
-  TInputState = (isNormal, isFocused, isError, isDisabled);
+  TInputState = (uisNormal, uisFocused, uisError, uisDisabled);
 
   /// <summary>
   /// Material Design style text input with floating label
@@ -214,6 +214,7 @@ type
 
     procedure EditKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
+    procedure ChipCloseClick(Sender: TObject);
     procedure AddChipControl(const Text: string);
     procedure RemoveChipControl(const Text: string);
     procedure RebuildChips;
@@ -300,7 +301,7 @@ begin
   FPrimaryColor := $FF1976D2;
   FErrorColor := $FFB00020;
   FHelperColor := $8A000000;
-  FState := isNormal;
+  FState := uisNormal;
   FMaxLength := 0;
 
   // Create underline background
@@ -366,7 +367,7 @@ end;
 
 destructor TUniMaterialEdit.Destroy;
 begin
-  FValidators.Free;
+  FreeAndNil(FValidators);
   inherited;
 end;
 
@@ -379,14 +380,14 @@ end;
 procedure TUniMaterialEdit.SetHelperText(const Value: string);
 begin
   FHelperText := Value;
-  if FState <> isError then
+  if FState <> uisError then
     FHelperLabel.Text := Value;
 end;
 
 procedure TUniMaterialEdit.SetErrorText(const Value: string);
 begin
   FErrorText := Value;
-  if FState = isError then
+  if FState = uisError then
     FHelperLabel.Text := Value;
 end;
 
@@ -432,8 +433,8 @@ end;
 
 procedure TUniMaterialEdit.EditEnter(Sender: TObject);
 begin
-  if FState <> isError then
-    FState := isFocused;
+  if FState <> uisError then
+    FState := uisFocused;
   UpdateFloatingLabel(True);
   UpdateUnderline;
   UpdateState;
@@ -441,8 +442,8 @@ end;
 
 procedure TUniMaterialEdit.EditExit(Sender: TObject);
 begin
-  if FState = isFocused then
-    FState := isNormal;
+  if FState = uisFocused then
+    FState := uisNormal;
   UpdateFloatingLabel(True);
   UpdateUnderline;
   DoValidate;
@@ -452,9 +453,9 @@ procedure TUniMaterialEdit.EditChange(Sender: TObject);
 begin
   UpdateCharCounter;
   // Clear error state on change
-  if FState = isError then
+  if FState = uisError then
   begin
-    FState := isFocused;
+    FState := uisFocused;
     UpdateState;
   end;
 end;
@@ -518,28 +519,28 @@ var
   LabelColor, UnderlineColor: TAlphaColor;
 begin
   case FState of
-    isNormal:
+    uisNormal:
       begin
         LabelColor := FHelperColor;
         UnderlineColor := FPrimaryColor;
         FHelperLabel.Text := FHelperText;
         FHelperLabel.TextSettings.FontColor := FHelperColor;
       end;
-    isFocused:
+    uisFocused:
       begin
         LabelColor := FPrimaryColor;
         UnderlineColor := FPrimaryColor;
         FHelperLabel.Text := FHelperText;
         FHelperLabel.TextSettings.FontColor := FHelperColor;
       end;
-    isError:
+    uisError:
       begin
         LabelColor := FErrorColor;
         UnderlineColor := FErrorColor;
         FHelperLabel.Text := FErrorText;
         FHelperLabel.TextSettings.FontColor := FErrorColor;
       end;
-    isDisabled:
+    uisDisabled:
       begin
         LabelColor := $42000000;
         UnderlineColor := $42000000;
@@ -559,7 +560,7 @@ begin
   // Check required first
   if FRequired and (FEdit.Text = '') then
   begin
-    FState := isError;
+    FState := uisError;
     FErrorText := 'This field is required';
     UpdateState;
     Exit;
@@ -571,7 +572,7 @@ begin
     ValidationResult := Validator(FEdit.Text);
     if not ValidationResult.IsValid then
     begin
-      FState := isError;
+      FState := uisError;
       FErrorText := ValidationResult.ErrorMessage;
       UpdateState;
       Exit;
@@ -579,9 +580,9 @@ begin
   end;
 
   // Validation passed
-  if FState = isError then
+  if FState = uisError then
   begin
-    FState := isNormal;
+    FState := uisNormal;
     UpdateState;
   end;
 
@@ -602,7 +603,7 @@ end;
 function TUniMaterialEdit.Validate: Boolean;
 begin
   DoValidate;
-  Result := FState <> isError;
+  Result := FState <> uisError;
 end;
 
 class function TUniMaterialEdit.RequiredValidator: TValidationFunc;
@@ -689,8 +690,8 @@ end;
 
 destructor TUniSearchComboBox.Destroy;
 begin
-  FItems.Free;
-  FFilteredItems.Free;
+  FreeAndNil(FItems);
+  FreeAndNil(FFilteredItems);
   inherited;
 end;
 
@@ -817,7 +818,7 @@ end;
 
 destructor TUniFormValidator.Destroy;
 begin
-  FControls.Free;
+  FreeAndNil(FControls);
   inherited;
 end;
 
@@ -857,12 +858,12 @@ begin
       IsValid: Boolean;
     begin
       IsValid := ValidateAll;
-      TThread.Synchronize(nil,
+      TThread.Synchronize(nil, TThreadProcedure(
         procedure
         begin
           if Assigned(FOnValidationComplete) then
             FOnValidationComplete(IsValid);
-        end);
+        end));
     end).Start;
 end;
 
@@ -890,7 +891,7 @@ end;
 
 destructor TUniChipInput.Destroy;
 begin
-  FChips.Free;
+  FreeAndNil(FChips);
   inherited;
 end;
 
@@ -915,10 +916,16 @@ begin
   end;
 end;
 
+procedure TUniChipInput.ChipCloseClick(Sender: TObject);
+begin
+  if Sender is TLabel then
+    RemoveChip(TLabel(Sender).TagString);
+end;
+
 procedure TUniChipInput.AddChipControl(const Text: string);
 var
   ChipLayout: TLayout;
-  ChipRect: TRoundRect;
+  ChipRect: TRectangle;
   ChipLabel: TLabel;
   CloseBtn: TLabel;
 begin
@@ -931,7 +938,7 @@ begin
   ChipLayout.Tag := FChips.IndexOf(Text);
   ChipLayout.TagString := Text;
 
-  ChipRect := TRoundRect.Create(ChipLayout);
+  ChipRect := TRectangle.Create(ChipLayout);
   ChipRect.Parent := ChipLayout;
   ChipRect.Align := TAlignLayout.Client;
   ChipRect.Fill.Color := FChipColor;
@@ -963,10 +970,7 @@ begin
   CloseBtn.HitTest := True;
   CloseBtn.Cursor := crHandPoint;
   CloseBtn.TagString := Text;
-  CloseBtn.OnClick := procedure(Sender: TObject)
-    begin
-      RemoveChip(TLabel(Sender).TagString);
-    end;
+  CloseBtn.OnClick := ChipCloseClick;
 
   // Auto-size chip width
   ChipLayout.Width := ChipLabel.Width + 44;

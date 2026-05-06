@@ -1,4 +1,4 @@
-unit UniBase.Serialization;
+﻿unit UniBase.Serialization;
 
 (*******************************************************************************
   UniBase Serialization Framework
@@ -441,9 +441,9 @@ end;
 
 destructor TTypeRegistry.Destroy;
 begin
-  FLock.Free;
-  FNames.Free;
-  FTypes.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FNames);
+  FreeAndNil(FTypes);
   inherited;
 end;
 
@@ -507,10 +507,10 @@ end;
 
 destructor TSerializationContext.Destroy;
 begin
-  FPath.Free;
-  FVisited.Free;
-  FTypeRegistry.Free;
-  FConverters.Free;
+  FreeAndNil(FPath);
+  FreeAndNil(FVisited);
+  FreeAndNil(FTypeRegistry);
+  FreeAndNil(FConverters);
   inherited;
 end;
 
@@ -648,8 +648,8 @@ end;
 destructor TBaseSerializer.Destroy;
 begin
   FRttiContext.Free;
-  FConverters.Free;
-  FTypeRegistry.Free;
+  FreeAndNil(FConverters);
+  FreeAndNil(FTypeRegistry);
   inherited;
 end;
 
@@ -1112,8 +1112,11 @@ begin
   LLen := AJson.Count;
   SetLength(LValues, LLen);
   
-  // Get element type - simplified
-  LElementType := nil;
+  // Get element type from dynamic array RTTI
+  if (ATypeInfo <> nil) and (ATypeInfo.Kind = tkDynArray) then
+    LElementType := GetTypeData(ATypeInfo)^.ElType2^
+  else
+    LElementType := nil;
   
   for I := 0 to LLen - 1 do
     LValues[I] := JsonToValue(AJson.Items[I], LElementType, AContext);
@@ -1883,8 +1886,8 @@ end;
 
 destructor TSerializerBuilder.Destroy;
 begin
-  FTypes.Free;
-  FConverters.Free;
+  FreeAndNil(FTypes);
+  FreeAndNil(FConverters);
   inherited;
 end;
 

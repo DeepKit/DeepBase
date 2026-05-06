@@ -14,9 +14,10 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.SysUtils, System.Classes, System.JSON,
+  System.SysUtils, System.Classes, System.JSON, System.Types,
+  System.Generics.Collections,
   Vcl.Forms, Vcl.Controls,
-  UniBase.Types, UniBase.Manager, UniBase.FormState;
+  UniBase.Types, UniBase.Manager, UniBase.FormState, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -51,6 +52,9 @@ type
     
     [Test]
     procedure Test_RestoreFormState_BoundaryCheck;
+
+    [Test]
+    procedure Test_RestoreFormState_ClampsStaleMultiMonitorBounds;
     
     [Test]
     procedure Test_SaveRestore_Extra_JSON;
@@ -63,13 +67,88 @@ type
     
     [Test]
     procedure Test_MultipleFormsIsolated;
+
+    [Test]
+    procedure Test_StorageInjection_SaveRestoreState;
   end;
 
 implementation
 
+type
+  TInMemoryFormStateStorage = class(TInterfacedObject, IFormStateStorage)
+  private
+    FValues: TDictionary<string, TFormStateData>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure WriteState(const FormName: string; const Data: TFormStateData);
+    function ReadState(const FormName: string; out Data: TFormStateData): Boolean;
+    procedure DeleteState(const FormName: string);
+    function StateExists(const FormName: string): Boolean;
+    function ReadFormNames: TArray<string>;
+    procedure ClearAll;
+  end;
+
+constructor TInMemoryFormStateStorage.Create;
+begin
+  inherited Create;
+  FValues := TDictionary<string, TFormStateData>.Create;
+end;
+
+destructor TInMemoryFormStateStorage.Destroy;
+begin
+  FValues.Free;
+  inherited;
+end;
+
+procedure TInMemoryFormStateStorage.WriteState(const FormName: string;
+  const Data: TFormStateData);
+begin
+  FValues.AddOrSetValue(FormName, Data);
+end;
+
+function TInMemoryFormStateStorage.ReadState(const FormName: string;
+  out Data: TFormStateData): Boolean;
+begin
+  Result := FValues.TryGetValue(FormName, Data);
+  if not Result then
+    Data.Init;
+end;
+
+procedure TInMemoryFormStateStorage.DeleteState(const FormName: string);
+begin
+  FValues.Remove(FormName);
+end;
+
+function TInMemoryFormStateStorage.StateExists(const FormName: string): Boolean;
+begin
+  Result := FValues.ContainsKey(FormName);
+end;
+
+function TInMemoryFormStateStorage.ReadFormNames: TArray<string>;
+var
+  Pair: TPair<string, TFormStateData>;
+begin
+  SetLength(Result, 0);
+  for Pair in FValues do
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := Pair.Key;
+  end;
+end;
+
+procedure TInMemoryFormStateStorage.ClearAll;
+begin
+  FValues.Clear;
+end;
+
 { TTestUniBaseFormState }
 
 procedure TTestUniBaseFormState.Setup;
+var
+  WorkArea: TRect;
+  InitialLeft: Integer;
+  InitialTop: Integer;
 begin
   FManager := UniBase.Manager.UniBase;
   if not FManager.IsInitialized then
@@ -91,7 +170,26 @@ begin
   // and GetWindowPlacement() may not reflect our assigned Left/Top values.
   FTestForm.HandleNeeded;
 
-  FTestForm.SetBounds(100, 100, 400, 300);
+  WorkArea := Screen.WorkAreaRect;
+  InitialLeft := 100;
+  InitialTop := 300;
+
+  // Keep requested baseline coordinates (Left=100, Top=300) while ensuring
+  // the form still fits when runner desktop/workarea is constrained.
+  if InitialLeft < WorkArea.Left then
+    InitialLeft := WorkArea.Left;
+  if InitialTop < WorkArea.Top then
+    InitialTop := WorkArea.Top;
+  if InitialLeft + 400 > WorkArea.Right then
+    InitialLeft := WorkArea.Right - 400;
+  if InitialTop + 300 > WorkArea.Bottom then
+    InitialTop := WorkArea.Bottom - 300;
+  if InitialLeft < WorkArea.Left then
+    InitialLeft := WorkArea.Left;
+  if InitialTop < WorkArea.Top then
+    InitialTop := WorkArea.Top;
+
+  FTestForm.SetBounds(InitialLeft, InitialTop, 400, 300);
   FTestForm.WindowState := wsNormal;
 end;
 
@@ -214,6 +312,59 @@ begin
   Assert.IsTrue(FTestForm.Top >= -FTestForm.Height, '顶部位置应该在合理范围内');
 end;
 
+procedure TTestUniBaseFormState.Test_RestoreFormState_ClampsStaleMultiMonitorBounds;
+var
+  Storage: IFormStateStorage;
+  LocalFormState: TUniBaseFormState;
+  Data: TFormStateData;
+  FormRect: TRect;
+  WorkArea: TRect;
+  I: Integer;
+  FitsOnMonitor: Boolean;
+  VirtualRight: Integer;
+  VirtualBottom: Integer;
+begin
+  Storage := TInMemoryFormStateStorage.Create;
+  LocalFormState := TUniBaseFormState.Create(Storage);
+  try
+    VirtualRight := Screen.DesktopRect.Right;
+    VirtualBottom := Screen.DesktopRect.Bottom;
+
+    Data.Init;
+    Data.Left := VirtualRight + 5000;
+    Data.Top := VirtualBottom + 5000;
+    Data.Width := 50000;
+    Data.Height := 50000;
+    Data.WindowState := 0;
+    Data.MonitorIndex := 99;
+
+    LocalFormState.SaveState(FTestForm.Name, Data);
+    LocalFormState.RestoreFormState(FTestForm);
+
+    FormRect := Rect(FTestForm.Left, FTestForm.Top,
+      FTestForm.Left + FTestForm.Width,
+      FTestForm.Top + FTestForm.Height);
+    FitsOnMonitor := False;
+    for I := 0 to Screen.MonitorCount - 1 do
+    begin
+      WorkArea := Screen.Monitors[I].WorkareaRect;
+      if (FormRect.Left >= WorkArea.Left) and
+         (FormRect.Top >= WorkArea.Top) and
+         (FormRect.Right <= WorkArea.Right) and
+         (FormRect.Bottom <= WorkArea.Bottom) then
+      begin
+        FitsOnMonitor := True;
+        Break;
+      end;
+    end;
+
+    Assert.IsTrue(FitsOnMonitor,
+      'Stale multi-monitor bounds should be clamped into a current monitor work area');
+  finally
+    LocalFormState.Free;
+  end;
+end;
+
 procedure TTestUniBaseFormState.Test_SaveRestore_Extra_JSON;
 var
   ExtraJson: TJSONObject;
@@ -296,6 +447,37 @@ begin
   finally
     FFormState.DeleteFormState(Form2.Name);
     Form2.Free;
+  end;
+end;
+
+procedure TTestUniBaseFormState.Test_StorageInjection_SaveRestoreState;
+var
+  Storage: IFormStateStorage;
+  LocalFormState: TUniBaseFormState;
+  InputData, OutputData: TFormStateData;
+begin
+  Storage := TInMemoryFormStateStorage.Create;
+  LocalFormState := TUniBaseFormState.Create(Storage);
+  try
+    InputData.Init;
+    InputData.Left := 123;
+    InputData.Top := 456;
+    InputData.Width := 789;
+    InputData.Height := 321;
+    InputData.WindowState := 2;
+    InputData.Extra := '{"k":"v"}';
+
+    LocalFormState.SaveState('Form_A', InputData);
+    Assert.IsTrue(LocalFormState.RestoreState('Form_A', OutputData),
+      'Injected storage should restore previously saved state');
+    Assert.AreEqual(InputData.Left, OutputData.Left);
+    Assert.AreEqual(InputData.Top, OutputData.Top);
+    Assert.AreEqual(InputData.Width, OutputData.Width);
+    Assert.AreEqual(InputData.Height, OutputData.Height);
+    Assert.AreEqual(InputData.WindowState, OutputData.WindowState);
+    Assert.AreEqual(InputData.Extra, OutputData.Extra);
+  finally
+    LocalFormState.Free;
   end;
 end;
 

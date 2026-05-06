@@ -15,8 +15,8 @@ uses
   DUnitX.TestFramework,
   // Core dependencies
   UniBase.Types in '..\Core\UniBase.Types.pas',
-  UniBase.CloudSync in '..\Core\UniBase.CloudSync.pas',
-  UniBase.CLI.SSH in '..\Core\UniBase.CLI.SSH.pas',
+  UniBase.CloudSync in '..\Features\UniBase.CloudSync.pas',
+  UniBase.CLI.SSH in '..\Tools\CLI\UniBase.CLI.SSH.pas',
   UniBase.Updater in '..\Features\UniBase.Updater.pas',
   UniBase.Crypto in '..\Core\UniBase.Crypto.pas',
   // Test units
@@ -74,7 +74,7 @@ begin
     WriteLn(Format('  Passed:   %d', [Results.PassCount]));
     WriteLn(Format('  Failed:   %d', [Results.FailureCount]));
     WriteLn(Format('  Errors:   %d', [Results.ErrorCount]));
-    WriteLn(Format('  Skipped:  %d', [Results.SkippedCount]));
+    WriteLn(Format('  Ignored:  %d', [Results.IgnoredCount]));
     WriteLn('');
     
     if Results.AllPassed then

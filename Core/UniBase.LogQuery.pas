@@ -1,4 +1,4 @@
-unit UniBase.LogQuery;
+﻿unit UniBase.LogQuery;
 
 {*******************************************************************************
   UniBase Log Query and Analysis
@@ -326,7 +326,7 @@ end;
 
 destructor TLogQueryResult.Destroy;
 begin
-  FItems.Free;
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -400,7 +400,7 @@ end;
 
 destructor TLogTimeSeries.Destroy;
 begin
-  FPoints.Free;
+  FreeAndNil(FPoints);
   inherited;
 end;
 
@@ -513,14 +513,14 @@ end;
 destructor TLogQueryBuilder.Destroy;
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
   inherited;
 end;
 
 function TLogQueryBuilder.From(ADataSource: TList<TAggregatedLog>): TLogQueryBuilder;
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
   FDataSource := ADataSource;
   FOwnsDataSource := False;
   Result := Self;
@@ -531,7 +531,7 @@ var
   Log: TAggregatedLog;
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
     
   FDataSource := TList<TAggregatedLog>.Create;
   FOwnsDataSource := True;
@@ -894,14 +894,14 @@ end;
 destructor TLogAnalyzer.Destroy;
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
   inherited;
 end;
 
 procedure TLogAnalyzer.SetDataSource(ADataSource: TList<TAggregatedLog>; AOwns: Boolean);
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
   FDataSource := ADataSource;
   FOwnsDataSource := AOwns;
 end;
@@ -911,7 +911,7 @@ var
   Log: TAggregatedLog;
 begin
   if FOwnsDataSource and Assigned(FDataSource) then
-    FDataSource.Free;
+    FreeAndNil(FDataSource);
     
   FDataSource := TList<TAggregatedLog>.Create;
   FOwnsDataSource := True;

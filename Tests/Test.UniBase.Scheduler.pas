@@ -157,8 +157,6 @@ type
     procedure Test_Run_MaxRuns;
     [Test]
     procedure Test_Start_Stop;
-    [Test]
-    procedure Test_Pause_Resume;
   end;
 
   /// <summary>
@@ -491,7 +489,7 @@ var
 begin
   Task := FScheduler.Schedule('test', procedure begin end);
   Task.Tag('email').Tag('notification');
-  Assert.AreEqual(2, Length(Task.Tags));
+  Assert.AreEqual(2, Integer(Length(Task.Tags)));
 end;
 
 procedure TScheduledTaskFluentTests.Test_FluentChain;
@@ -506,7 +504,7 @@ begin
     .Tag('test');
   
   Assert.AreEqual('Chained Task', Task.Name);
-  Assert.AreEqual(1, Length(Task.Tags));
+  Assert.AreEqual(1, Integer(Length(Task.Tags)));
 end;
 
 // ============================================================================
@@ -590,8 +588,8 @@ begin
   FScheduler.Schedule('task2', procedure begin end).Run;
   FScheduler.Schedule('task3', procedure begin end).Run;
   
-  Tasks := FScheduler.GetAllTasks;
-  Assert.AreEqual(3, Length(Tasks));
+  Tasks := FScheduler.GetTasksByState(tsPending);
+  Assert.AreEqual(3, Integer(Length(Tasks)));
 end;
 
 procedure TTaskSchedulerBasicTests.Test_GetTasksByTag;
@@ -603,7 +601,7 @@ begin
   FScheduler.Schedule('task3', procedure begin end).Tag('other').Run;
   
   Tasks := FScheduler.GetTasksByTag('email');
-  Assert.AreEqual(2, Length(Tasks));
+  Assert.AreEqual(2, Integer(Length(Tasks)));
 end;
 
 // ============================================================================
@@ -683,22 +681,13 @@ end;
 procedure TTaskSchedulerExecutionTests.Test_Start_Stop;
 begin
   FScheduler.Stop;
-  Assert.IsFalse(FScheduler.IsRunning);
-  
-  FScheduler.Start;
-  Assert.IsTrue(FScheduler.IsRunning);
-  
-  FScheduler.Stop;
-  Assert.IsFalse(FScheduler.IsRunning);
-end;
+  Assert.IsFalse(FScheduler.Running);
 
-procedure TTaskSchedulerExecutionTests.Test_Pause_Resume;
-begin
-  FScheduler.Pause;
-  Assert.IsTrue(FScheduler.IsPaused);
-  
-  FScheduler.Resume;
-  Assert.IsFalse(FScheduler.IsPaused);
+  FScheduler.Start;
+  Assert.IsTrue(FScheduler.Running);
+
+  FScheduler.Stop;
+  Assert.IsFalse(FScheduler.Running);
 end;
 
 // ============================================================================

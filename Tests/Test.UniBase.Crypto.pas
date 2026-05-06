@@ -467,15 +467,15 @@ var
   Mac: string;
 begin
   Mac := THashUtils.HMAC('secret', 'message', haSHA256);
-  Assert.AreEqual(64, Length(Mac));
+  Assert.AreEqual(64, Integer(Length(Mac)));
 end;
 
 procedure THashUtilsTests.Test_DifferentAlgorithms_DifferentLengths;
 begin
-  Assert.AreEqual(32, Length(THashUtils.MD5('test')));   // 16 bytes
-  Assert.AreEqual(40, Length(THashUtils.SHA1('test')));  // 20 bytes
-  Assert.AreEqual(64, Length(THashUtils.SHA256('test'))); // 32 bytes
-  Assert.AreEqual(128, Length(THashUtils.SHA512('test'))); // 64 bytes
+  Assert.AreEqual(32, Integer(Length(THashUtils.MD5('test'))));   // 16 bytes
+  Assert.AreEqual(40, Integer(Length(THashUtils.SHA1('test'))));  // 20 bytes
+  Assert.AreEqual(64, Integer(Length(THashUtils.SHA256('test')))); // 32 bytes
+  Assert.AreEqual(128, Integer(Length(THashUtils.SHA512('test')))); // 64 bytes
 end;
 
 procedure THashUtilsTests.Test_SameInput_SameOutput;
@@ -699,7 +699,7 @@ var
   S: string;
 begin
   S := TRandomGenerator.RandomString(20);
-  Assert.AreEqual(20, Length(S));
+  Assert.AreEqual(20, Integer(Length(S)));
 end;
 
 procedure TRandomGeneratorTests.Test_RandomString_Alphanumeric;
@@ -716,7 +716,7 @@ var
   S: string;
 begin
   S := TRandomGenerator.RandomHex(16);
-  Assert.AreEqual(16, Length(S));
+  Assert.AreEqual(16, Integer(Length(S)));
 end;
 
 procedure TRandomGeneratorTests.Test_RandomHex_ValidChars;
@@ -744,7 +744,7 @@ var
   Guid: string;
 begin
   Guid := TRandomGenerator.NewGuid;
-  Assert.AreEqual(36, Length(Guid)); // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  Assert.AreEqual(36, Integer(Length(Guid))); // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   Assert.AreEqual('-', Guid[9]);
   Assert.AreEqual('-', Guid[14]);
   Assert.AreEqual('-', Guid[19]);
@@ -756,7 +756,7 @@ var
   Guid: string;
 begin
   Guid := TRandomGenerator.NewGuidNoDashes;
-  Assert.AreEqual(32, Length(Guid));
+  Assert.AreEqual(32, Integer(Length(Guid)));
   Assert.IsFalse(Guid.Contains('-'));
 end;
 
@@ -773,7 +773,7 @@ var
   OTP: string;
 begin
   OTP := TRandomGenerator.GenerateOTP(6);
-  Assert.AreEqual(6, Length(OTP));
+  Assert.AreEqual(6, Integer(Length(OTP)));
 end;
 
 procedure TRandomGeneratorTests.Test_GenerateOTP_OnlyDigits;
@@ -902,7 +902,7 @@ var
   Pwd: string;
 begin
   Pwd := TPasswordUtils.GeneratePassword(20);
-  Assert.AreEqual(20, Length(Pwd));
+  Assert.AreEqual(20, Integer(Length(Pwd)));
 end;
 
 procedure TPasswordUtilsTests.Test_GeneratePassword_WithUppercase;
@@ -1006,13 +1006,13 @@ var
 begin
   Key := TRandomGenerator.RandomBytes(32);
   FAES.SetKey(Key);
-  Assert.AreEqual(Integer(32), Integer(Length(FAES.Key)));
+  Assert.AreEqual(32, Integer(Length(FAES.Key)));
 end;
 
 procedure TAESCryptoTests.Test_SetKeyFromPassword;
 begin
-  FAES.SetKeyFromPassword('testPassword');
-  Assert.AreEqual(Integer(32), Integer(Length(FAES.Key)));
+  FAES.SetKeyFromPassword('testPassword', TSimpleCrypto.DeriveSalt('testPassword'));
+  Assert.AreEqual(32, Integer(Length(FAES.Key)));
 end;
 
 procedure TAESCryptoTests.Test_Encrypt_Decrypt_Bytes;
@@ -1129,15 +1129,18 @@ end;
 procedure TSimpleCryptoTests.Test_WrongPassword_Fails;
 var
   Encrypted: string;
+  Raised: Boolean;
 begin
   Encrypted := TSimpleCrypto.Encrypt('Test', 'correctPassword');
   // Decrypting with a wrong password should fail with a crypto error
-  Assert.WillRaise(
-    procedure
-    begin
-      TSimpleCrypto.Decrypt(Encrypted, 'wrongPassword');
-    end
-  );
+  Raised := False;
+  try
+    TSimpleCrypto.Decrypt(Encrypted, 'wrongPassword');
+  except
+    on ECryptoException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'Expected ECryptoException');
 end;
 
 // ============================================================================
@@ -1189,6 +1192,7 @@ procedure TCryptoServiceImplTests.Test_EncryptWithIV_InvalidIVLength_Raises;
 var
   Svc: TCryptoServiceImpl;
   Data, Key, InvalidIV: TBytes;
+  Raised: Boolean;
 begin
   Svc := TCryptoServiceImpl.Create;
   try
@@ -1196,13 +1200,14 @@ begin
     Key := TEncoding.UTF8.GetBytes('service-key');
     InvalidIV := TEncoding.UTF8.GetBytes('too-short');
 
-    Assert.WillRaise(
-      procedure
-      begin
-        Svc.EncryptWithIV(Data, Key, InvalidIV);
-      end,
-      ECryptoException
-    );
+    Raised := False;
+    try
+      Svc.EncryptWithIV(Data, Key, InvalidIV);
+    except
+      on ECryptoException do
+        Raised := True;
+    end;
+    Assert.IsTrue(Raised, 'Expected ECryptoException');
   finally
     Svc.Free;
   end;
@@ -1272,22 +1277,22 @@ end;
 
 procedure TCryptoHelperTests.Test_MD5;
 begin
-  Assert.AreEqual(32, Length(TCrypto.MD5('test')));
+  Assert.AreEqual(32, Integer(Length(TCrypto.MD5('test'))));
 end;
 
 procedure TCryptoHelperTests.Test_SHA1;
 begin
-  Assert.AreEqual(40, Length(TCrypto.SHA1('test')));
+  Assert.AreEqual(40, Integer(Length(TCrypto.SHA1('test'))));
 end;
 
 procedure TCryptoHelperTests.Test_SHA256;
 begin
-  Assert.AreEqual(64, Length(TCrypto.SHA256('test')));
+  Assert.AreEqual(64, Integer(Length(TCrypto.SHA256('test'))));
 end;
 
 procedure TCryptoHelperTests.Test_SHA512;
 begin
-  Assert.AreEqual(128, Length(TCrypto.SHA512('test')));
+  Assert.AreEqual(128, Integer(Length(TCrypto.SHA512('test'))));
 end;
 
 procedure TCryptoHelperTests.Test_Base64Encode;
@@ -1337,7 +1342,7 @@ end;
 
 procedure TCryptoHelperTests.Test_RandomString;
 begin
-  Assert.AreEqual(16, Length(TCrypto.RandomString(16)));
+  Assert.AreEqual(16, Integer(Length(TCrypto.RandomString(16))));
 end;
 
 procedure TCryptoHelperTests.Test_RandomBytes;
@@ -1347,7 +1352,7 @@ end;
 
 procedure TCryptoHelperTests.Test_NewGuid;
 begin
-  Assert.AreEqual(36, Length(TCrypto.NewGuid));
+  Assert.AreEqual(36, Integer(Length(TCrypto.NewGuid)));
 end;
 
 {$IFDEF MSWINDOWS}

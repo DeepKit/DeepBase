@@ -1,4 +1,4 @@
-unit UniBase.Random;
+﻿unit UniBase.Random;
 
 interface
 
@@ -71,6 +71,23 @@ implementation
 uses
   UniBase.Logging;
 
+type
+  HCRYPTPROV = THandle;
+
+const
+  PROV_RSA_FULL = 1;
+  CRYPT_VERIFYCONTEXT = $F0000000;
+
+function CryptAcquireContext(var phProv: HCRYPTPROV; pszContainer: PAnsiChar;
+  pszProvider: PAnsiChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall;
+  external 'advapi32.dll' name 'CryptAcquireContextA';
+
+function CryptReleaseContext(hProv: HCRYPTPROV; dwFlags: DWORD): BOOL; stdcall;
+  external 'advapi32.dll';
+
+function CryptGenRandom(hProv: HCRYPTPROV; dwLen: DWORD; pbBuffer: PByte): BOOL; stdcall;
+  external 'advapi32.dll';
+
 { TSecureRandom }
 
 class constructor TSecureRandom.Create;
@@ -80,8 +97,8 @@ end;
 
 class destructor TSecureRandom.Destroy;
 begin
-  FInstance.Free;
-  FLock.Free;
+  FreeAndNil(FInstance);
+  FreeAndNil(FLock);
 end;
 
 class function TSecureRandom.Instance: TSecureRandom;
@@ -112,7 +129,7 @@ begin
   SetLength(Result, ALength);
   
   // Use Windows CryptoAPI for cryptographically secure random bytes
-  if not CryptAcquireContext(@hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
+  if not CryptAcquireContext(hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
     raise ERandomException.Create('Failed to acquire crypto context');
 
   try

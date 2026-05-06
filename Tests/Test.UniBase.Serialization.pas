@@ -149,7 +149,6 @@ type
     [Test]
     procedure Test_Deserialize_NestedObject;
     [Test]
-    [Ignore('JSON array deserialization has access violation - needs investigation')]
     procedure Test_Deserialize_Array;
     [Test]
     procedure Test_RoundTrip;

@@ -87,7 +87,7 @@ begin
     Exit; // 环境未加载 OpenSSL，跳过具体行为验证
 
   Bytes := OpenSSL_RandomBytes(32);
-  Assert.AreEqual(32, Length(Bytes));
+  Assert.AreEqual(32, Integer(Length(Bytes)));
 end;
 
 procedure TOpenSSLBasicTests.Test_PBKDF2_Returns_Key_With_Requested_Length_WhenLoaded;
@@ -101,7 +101,7 @@ begin
   Salt := TEncoding.UTF8.GetBytes('test-salt');
 
   Key := OpenSSL_PBKDF2_SHA256(Password, Salt, 1000, 48);
-  Assert.AreEqual(48, Length(Key));
+  Assert.AreEqual(48, Integer(Length(Key)));
 end;
 
 procedure TOpenSSLBasicTests.Test_AES256GCM_Encrypt_Decrypt_RoundTrip_WhenLoaded;

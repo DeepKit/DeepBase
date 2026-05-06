@@ -113,6 +113,7 @@ implementation
 
 uses
   Winapi.Windows,
+  Winapi.MultiMon,
   Vcl.Controls,
   System.Math,
   System.Types,
@@ -392,6 +393,8 @@ var
   EffectiveName: string;
   Placement: TWindowPlacement;
   NormalRect: TRect;
+  Mon: HMONITOR;
+  MonInfo: TMonitorInfo;
 begin
   if FForm = nil then Exit;
   if not UniBase.Manager.UniBase.IsInitialized then Exit;
@@ -409,6 +412,15 @@ begin
   if GetWindowPlacement(FForm.Handle, @Placement) then
   begin
     NormalRect := Placement.rcNormalPosition;
+    Mon := MonitorFromWindow(FForm.Handle, MONITOR_DEFAULTTONEAREST);
+    if Mon <> 0 then
+    begin
+      MonInfo.cbSize := SizeOf(MONITORINFO);
+      if GetMonitorInfo(Mon, @MonInfo) then
+        OffsetRect(NormalRect,
+          MonInfo.rcWork.Left - MonInfo.rcMonitor.Left,
+          MonInfo.rcWork.Top - MonInfo.rcMonitor.Top);
+    end;
     Data.Left := NormalRect.Left;
     Data.Top := NormalRect.Top;
     Data.Width := NormalRect.Width;

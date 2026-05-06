@@ -2,7 +2,7 @@
 
 > **让 Delphi 企业级应用开发像 Spring Boot 一样简单**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#-许可证)
 [![Delphi](https://img.shields.io/badge/Delphi-10.3%2B-red.svg)](https://www.embarcadero.com/products/delphi)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/unibase-framework/unibase)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/unibase-framework/unibase/actions)
@@ -15,7 +15,7 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 |------|------|
 | 🏗️ **架构模式** | IoC 依赖注入、EventBus 事件总线、MVVM、状态机 |
 | 📦 **基础设施** | 配置管理、日志系统、缓存、对象池、工作队列 |
-| 💼 **业务功能** | 数据验证、权限授权、国际化、功能开关、ORM |
+| 💼 **业务功能** | 数据验证、权限授权、国际化、功能开关、ORM、Commerce |
 | 🛡️ **可靠性** | 熔断/重试/超时、限流、定时调度、指标收集 |
 | 🛠️ **工具封装** | 集合扩展、日期时间、加密哈希、序列化、模板引擎 |
 
@@ -55,7 +55,7 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 - ☁️ 云存储集成 - AWS S3/Azure Blob/阿里云 OSS
 - 💾 数据库驱动 - PostgreSQL/MySQL 适配器
 - 🎨 UI 主题 - Material/Fluent/macOS 风格
-- 💳 支付集成 - Stripe/PayPal/Alipay（计划中）
+- 💳 支付集成 - WeChat Pay/Alipay/Stripe/PayPal 直连 SDK，订单与权益流程走 Commerce
 
 ## 🚀 快速开始
 
@@ -65,12 +65,15 @@ UniBase 是一个 **Delphi 企业级应用开发基础框架**，提供现代化
 - **数据库**：FireDAC + SQLite（系统自带）
 - **单元测试**：DUnitX（可选）
 
-### 第一步：安装包
+### 1. 安装包
 
-1. 打开 `UniBaseCore.dpk`
-2. 编译并安装设计时包 `dclUniBaseCore.dpk`
+1. 基础能力：编译 `UniBaseCore.dpk`
+2. 服务/数据库/可选能力按需编译：`UniBaseServices.dpk`、`UniBasePersistence.dpk`、`UniBaseFeatures.dpk`
+3. 需要 IDE 拖控件时再安装 VCL/FMX 设计时包：`dclUniBaseVCL.dpk` / `dclUniBaseFMX.dpk`
 
-### 第二步：初始化 UniBase
+运行时包边界：`UniBaseCore.dpk` 不直接依赖 VCL/FMX/FireDAC；主题切换、全局异常展示等 UI 行为由 `UniBaseVCL.dpk` / `UniBaseFMX.dpk` 适配层承接。`UniBaseFeatures.dpk` 依赖 `UniBaseServices.dpk`，避免底层服务单元被重复打包。
+
+### 2. 初始化 UniBase
 
 ```delphi
 program MyApp;
@@ -96,7 +99,7 @@ begin
 end.
 ```
 
-### 第三步：使用核心功能
+### 3. 使用核心功能
 
 ```delphi
 // 读写配置
@@ -161,13 +164,17 @@ TSplashScreen.Hide; // 淡出关闭
 
 ```
 UniBase/
-├── Core/                    # 核心库（无 UI 依赖）
+├── Core/                    # 核心与兼容门面源码（UniBaseCore.dpk 只选最小核心）
 │   ├── UniBase.Manager.pas
 │   ├── UniBase.Config.pas
 │   ├── UniBase.i18n.pas
 │   └── UniBase.Types.pas
-├── VCL/                     # VCL 控件包
+├── Persistence/             # FireDAC/DB 持久化适配器
+├── Features/                # 可选功能（LLM、Commerce、更新、云同步、Graph、HttpServer 等）
+├── VCL/                     # VCL 控件包与平台适配器
 ├── FMX/                     # FMX 控件包
+├── ThirdParty/              # 第三方服务/SDK 适配器
+├── Tools/                   # Studio / Tray / CLI 等工具
 ├── Tests/                   # 单元测试
 ├── Examples/                # 示例工程
 ├── sql/                     # 数据库脚本
@@ -180,8 +187,9 @@ UniBase/
 - [完整规范](docs/03.03.uniBase-4H-技术规范-v1.0.md) - 设计规范和 API 参考
 - [集成指南](docs/01.01.uniBase-4AI-集成指南-v1.0.md) - AI/外部程序集成入口
 - [文档索引](docs/00.00.uniBase-文档索引-v1.0.md) - 全部文档导航
+- [下游集成](docs/UniBase-Downstream-Integration.md) - 下游工程接入与 Commerce 流程
 - [项目边界](docs/01.03.uniBase-4H-项目定位与边界-v1.0.md) - 什么能做/不能做
-- [扩展开发](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md) - 开发第三方集成
+- [扩展开发](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.1.md) - 开发第三方集成
 
 ## 🧪 运行测试
 
@@ -194,6 +202,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" 
 # 只运行 Unit Tests
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit
 
+# 模块级快速回归（预置别名）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit -SkipCompile -Module LLM
+
+# 按修改单元自动映射测试（支持单元名或 .pas 路径）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit -SkipCompile -FromUnit UniBase.LLM,UniBase.LLM.Manager
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit -SkipCompile -FromUnit ".\Core\UniBase.ORM.pas,.\Core\UniBase.ORM.Mapping.pas"
+
+# 按 Git 改动自动映射测试（默认对比 HEAD + 工作区改动）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit -SkipCompile -FromGitChanged
+# 指定基线引用
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Unit -SkipCompile -FromGitChanged -GitRef "origin/main"
+
 # 只运行 Integration Tests
 # 默认会排除需要数据库环境的用例分类：DBEnv
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Integration
@@ -203,6 +223,9 @@ $env:UNIBASE_RUN_DB_INTEGRATION = '1'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Scripts\run_tests.ps1" -Type Integration
 Remove-Item Env:UNIBASE_RUN_DB_INTEGRATION
 ```
+
+Integration 默认排除 `DBEnv` 分类；CI 中需要完整数据库集成测试时显式设置 `UNIBASE_RUN_DB_INTEGRATION=1`。Runner 需要安装 Delphi/RAD Studio 的 FireDAC SQLite 驱动，并能提供与 `-Platform` 匹配的 `sqlite3.dll`，脚本会自动复制到 `Tests\Integration` 后清理。
+可用模块别名可通过 `-ListModules` 查看；`-Module` / `-FromUnit` / `-FromGitChanged` 与 `-RunList` 互斥。
 
 也可以直接用 `dcc32` 编译 runner 并手工运行（不推荐，脚本更省事）：
 
@@ -235,7 +258,7 @@ Tests\UniBaseTests.exe --exitbehavior:Continue --xmlfile:TestResults\UnitTestRes
 
 如果你想贡献新的 ThirdParty 扩展（如支付、社交媒体集成）：
 
-1. 阅读 [ThirdParty 扩展开发指南](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.0.md)
+1. 阅读 [ThirdParty 扩展开发指南](docs/06.01.uniBase-4H-ThirdParty扩展开发指南-v1.1.md)
 2. 遵循「统一接口 + 多实现 + 工厂函数」模式
 3. 参考 `ThirdParty/Cloud/UniBase.Cloud.Storage.pas` 实现
 
@@ -256,7 +279,7 @@ UniBase 保持独立，不强制依赖特定后端。如需对接你的后端 AP
   - ⚡ **性能提升**: 优化锁机制、缓存策略和内存管理
   - 📋 **常量管理**: 提取硬编码值到UniBase.Constants统一管理
   - 🧪 **测试覆盖**: 增强边界条件和异常处理测试
-  - 详见 [docs/bugFixed.md](docs/bugFixed.md)
+  - 详见 [bugfix.md](bugfix.md)
 
 - **v1.0.0** (2025-12-08) - 正式发布版本
   - Phase 0-7: 全部 81 个任务完成 ✅
@@ -274,7 +297,7 @@ UniBase 保持独立，不强制依赖特定后端。如需对接你的后端 AP
 
 UniBase v1.0.1 经过全面的安全审计，修复了以下关键安全问题：
 
-- ✅ **配置加密**: 移除不安全的XOR加密，强制使用DPAPI
+- ✅ **配置加密**: 移除不安全的XOR加密，Secret 使用 DPAPI，LLM API Key 使用 Windows Credential Manager
 - ✅ **插件安全**: 实现插件沙箱和数字签名验证
 - ✅ **支付安全**: 实现真正的RSA2-SHA256签名算法
 - ✅ **反序列化**: 添加类型白名单验证机制
@@ -282,11 +305,11 @@ UniBase v1.0.1 经过全面的安全审计，修复了以下关键安全问题�
 - ✅ **日志安全**: 防止日志注入攻击
 - ✅ **内存安全**: 修复内存泄漏和悬空指针问题
 
-详细安全报告请参考 [docs/bugFixed.md](docs/bugFixed.md)
+详细安全报告请参考 [bugfix.md](bugfix.md)
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+MIT License
 
 ## 👥 贡献者
 
@@ -300,7 +323,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 我们欢迎社区贡献！请参考以下指南：
 
-1. **代码规范**: 遵循 [docs/coding-standards.md](docs/coding-standards.md)
+1. **代码规范**: 遵循 [技术规范](docs/03.03.uniBase-4H-技术规范-v1.0.md)
 2. **安全要求**: 所有代码必须通过安全审计
 3. **测试要求**: 新功能必须包含单元测试
 4. **文档要求**: 公共API必须有完整文档

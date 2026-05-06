@@ -3,8 +3,7 @@ unit UniBase.Services.HealthCheck;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections,
-  UniBase.Common;
+  System.SysUtils, System.Classes, System.Generics.Collections;
 
 type
   /// <summary>健康检查状态</summary>
@@ -94,7 +93,7 @@ var
   Check: IHealthCheck;
   Name: string;
   StartTime: TDateTime;
-  Result: THealthCheckResult;
+  CheckResult: THealthCheckResult;
 begin
   Result := TDictionary<string, THealthCheckResult>.Create;
   
@@ -105,17 +104,17 @@ begin
       Check := FChecks[Name];
       StartTime := Now;
       try
-        Result := Check.Check;
-        Result.Duration := MilliSecondsBetween(Now, StartTime);
+        CheckResult := Check.Check;
+        CheckResult.Duration := MilliSecondsBetween(Now, StartTime);
       except
         on E: Exception do
         begin
-          Result.Status := hsUnhealthy;
-          Result.Description := E.Message;
-          Result.Duration := MilliSecondsBetween(Now, StartTime);
+          CheckResult.Status := hsUnhealthy;
+          CheckResult.Description := E.Message;
+          CheckResult.Duration := MilliSecondsBetween(Now, StartTime);
         end;
       end;
-      Result.AddOrSetValue(Name, Result);
+      Result.AddOrSetValue(Name, CheckResult);
     end;
   finally
     TMonitor.Exit(FLock);

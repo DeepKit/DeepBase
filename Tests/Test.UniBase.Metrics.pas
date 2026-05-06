@@ -7,7 +7,6 @@ unit Test.UniBase.Metrics;
 
 interface
 
-{$IFDEF TESTINSIGHT}
 uses
   DUnitX.TestFramework;
 
@@ -118,11 +117,9 @@ type
     [Test]
     procedure TestMetricsStaticGauge;
   end;
-{$ENDIF}
 
 implementation
 
-{$IFDEF TESTINSIGHT}
 uses
   System.SysUtils, System.Classes, System.JSON, System.SyncObjs,
   UniBase.Metrics;
@@ -384,10 +381,11 @@ begin
     Histogram.Observe(15.0); // > 10.0
 
     Buckets := Histogram.Buckets;
-    Assert.AreEqual(3, Length(Buckets));
+    Assert.AreEqual<Integer>(4, Length(Buckets));
     Assert.AreEqual(Int64(1), Buckets[0].Count);
     Assert.AreEqual(Int64(2), Buckets[1].Count);
     Assert.AreEqual(Int64(3), Buckets[2].Count);
+    Assert.AreEqual(Int64(4), Buckets[3].Count);
   finally
     Histogram.Free;
   end;
@@ -407,7 +405,7 @@ var
   Buckets: TArray<Double>;
 begin
   Buckets := THistogram.LinearBuckets(0.0, 1.0, 5);
-  Assert.AreEqual(5, Length(Buckets));
+  Assert.AreEqual<Integer>(5, Length(Buckets));
   Assert.AreEqual(0.0, Buckets[0], EPSILON);
   Assert.AreEqual(1.0, Buckets[1], EPSILON);
   Assert.AreEqual(4.0, Buckets[4], EPSILON);
@@ -418,7 +416,7 @@ var
   Buckets: TArray<Double>;
 begin
   Buckets := THistogram.ExponentialBuckets(1.0, 2.0, 4);
-  Assert.AreEqual(4, Length(Buckets));
+  Assert.AreEqual<Integer>(4, Length(Buckets));
   Assert.AreEqual(1.0, Buckets[0], EPSILON);
   Assert.AreEqual(2.0, Buckets[1], EPSILON);
   Assert.AreEqual(4.0, Buckets[2], EPSILON);
@@ -464,7 +462,7 @@ begin
   try
     Timer.RecordDuration(0.25);
     Timer.RecordMs(500);
-    Assert.AreEqual(Int64(2), Timer.Count);
+    Assert.AreEqual(Int64(2), Timer.Histogram.Count);
   finally
     Timer.Free;
   end;
@@ -480,8 +478,8 @@ begin
     begin
       Sleep(10);
     end);
-    Assert.AreEqual(Int64(1), Timer.Count);
-    Assert.IsTrue(Timer.Sum > 0);
+    Assert.AreEqual(Int64(1), Timer.Histogram.Count);
+    Assert.IsTrue(Timer.Histogram.Sum > 0);
   finally
     Timer.Free;
   end;
@@ -494,11 +492,11 @@ var
 begin
   Timer := TTimer.Create('test_timer', 'Test timer', [], [0.01, 0.1, 1.0]);
   try
-    StopTimer := Timer.Start;
+    StopTimer := Timer.Start();
     Sleep(10);
     StopTimer();
-    Assert.AreEqual(Int64(1), Timer.Count);
-    Assert.IsTrue(Timer.Sum > 0);
+    Assert.AreEqual(Int64(1), Timer.Histogram.Count);
+    Assert.IsTrue(Timer.Histogram.Sum > 0);
   finally
     Timer.Free;
   end;
@@ -537,13 +535,15 @@ end;
 procedure TTestUniBaseMetrics.TestSummaryQuantiles;
 var
   Summary: TSummary;
+  Quantiles: TArray<TSummaryQuantile>;
   I: Integer;
 begin
   Summary := TSummary.Create('test_summary', 'Test summary', [], [0.5, 0.9, 0.99]);
   try
     for I := 1 to 100 do
       Summary.Observe(I);
-    Assert.IsTrue(Summary.Quantile(0.5) > 0);
+    Quantiles := Summary.GetQuantiles;
+    Assert.IsTrue(Length(Quantiles) > 0);
   finally
     Summary.Free;
   end;
@@ -555,7 +555,7 @@ procedure TTestUniBaseMetrics.TestMetricFamilyCreate;
 var
   Family: TMetricFamily<TCounter>;
 begin
-  Family := TMetricFamily<TCounter>.Create('test_family', 'Test family', ['method', 'path']);
+  Family := TMetricFamily<TCounter>.Create('test_family', 'Test family');
   try
     Assert.AreEqual('test_family', Family.Name);
   finally
@@ -568,13 +568,13 @@ var
   Family: TMetricFamily<TCounter>;
   Counter: TCounter;
 begin
-  Family := TMetricFamily<TCounter>.Create('http_requests', 'HTTP requests', ['method', 'status']);
+  Family := TMetricFamily<TCounter>.Create('http_requests', 'HTTP requests');
   try
-    Counter := Family.WithLabels(['GET', '200']);
+    Counter := Family.WithLabels(['method', 'status'], ['GET', '200']);
     Counter.Inc;
     Assert.AreEqual(Int64(1), Counter.Value);
 
-    Counter := Family.WithLabels(['POST', '201']);
+    Counter := Family.WithLabels(['method', 'status'], ['POST', '201']);
     Counter.Inc(5);
     Assert.AreEqual(Int64(5), Counter.Value);
   finally
@@ -638,7 +638,7 @@ var
 begin
   Registry := TMetricsRegistry.Create;
   try
-    Histogram := Registry.Histogram('test_histogram', 'Test histogram');
+    Histogram := Registry.Histogram('test_histogram', 'Test histogram', []);
     Assert.IsNotNull(Histogram);
     Histogram.Observe(1.0);
     Assert.AreEqual(Int64(1), Histogram.Count);
@@ -657,7 +657,7 @@ begin
     Registry.Counter('counter1', '');
     Registry.Gauge('gauge1', '');
     Metrics := Registry.GetAll;
-    Assert.AreEqual(2, Length(Metrics));
+    Assert.AreEqual<Integer>(2, Length(Metrics));
   finally
     Registry.Free;
   end;
@@ -666,7 +666,7 @@ end;
 procedure TTestUniBaseMetrics.TestRegistryToJSON;
 var
   Registry: TMetricsRegistry;
-  JSON: TJSONArray;
+  JSON: TJSONObject;
 begin
   Registry := TMetricsRegistry.Create;
   try
@@ -705,7 +705,7 @@ begin
   Registry := TMetricsRegistry.Create;
   try
     Registry.Counter('test_counter', '').Inc;
-    S := Registry.ToInfluxLines('app');
+    S := Registry.ToInfluxLines;
     Assert.IsTrue(Length(S) > 0);
   finally
     Registry.Free;
@@ -796,7 +796,5 @@ begin
   TMetrics.Gauge('static_gauge').SetValue(100.0);
   Assert.AreEqual(100.0, TMetrics.Gauge('static_gauge').Value, EPSILON);
 end;
-
-{$ENDIF}
 
 end.

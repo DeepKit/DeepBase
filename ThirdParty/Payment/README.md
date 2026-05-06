@@ -5,10 +5,9 @@
 ## 架构定位（2026-05）
 
 - 本目录提供 **直连支付渠道 SDK** 的客户端能力（Alipay/WeChat/Stripe/PayPal）。
-- 与 `ThirdParty/AipexBase` 的 **后端代理模式** 并行存在：
-  - 直连 SDK：适合桌面端、轻后端、快速接入。
-  - 后端代理：适合企业化多端、密钥集中托管、审计与风控统一。
-- Core 层不承载支付渠道实现；支付细节只在 `ThirdParty/`。
+- 订单、用户和权益流程统一走 `Features/UniBase.Commerce.*`。
+- 多端统一、密钥集中托管、审计与风控统一的项目，应实现 `ICommercePaymentGateway` 调用后端 API。
+- Core 层不承载支付渠道实现；支付细节只在 `ThirdParty/` 或业务后端适配器中。
 
 ## 支持的支付方式
 

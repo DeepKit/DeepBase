@@ -370,7 +370,7 @@ begin
   
   Services := FContainer.ResolveAll<ITestService>;
   
-  Assert.AreEqual(2, Length(Services), 'Should resolve all implementations');
+  Assert.AreEqual(Integer(2), Integer(Length(Services)), 'Should resolve all implementations');
 end;
 
 procedure TIoCContainerTests.Test_ScopeDisposed_RaisesException;
@@ -387,8 +387,7 @@ begin
     begin
       Scope.Resolve<ITestService>;
     end,
-    EScopeDisposedException,
-    'Should raise exception when scope is disposed');
+    EScopeDisposedException);
 end;
 
 procedure TIoCContainerTests.Test_Interceptor_BeforeAndAfter;

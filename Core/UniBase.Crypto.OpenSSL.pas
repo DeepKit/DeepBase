@@ -70,6 +70,16 @@ type
   function OpenSSL_AES256GCM_Decrypt(const AKey, AIV, ACiphertext: TBytes;
     const AAAD, ATag: TBytes): TBytes;
 
+  /// <summary>
+  /// AES-256-CBC encryption. Returns ciphertext (no padding — caller must pre-pad).
+  /// </summary>
+  function OpenSSL_AES256CBC_Encrypt(const AKey, AIV, APlaintext: TBytes): TBytes;
+
+  /// <summary>
+  /// AES-256-CBC decryption. Returns plaintext (no unpadding — caller must post-unpad).
+  /// </summary>
+  function OpenSSL_AES256CBC_Decrypt(const AKey, AIV, ACiphertext: TBytes): TBytes;
+
 {$ENDIF}
 
 implementation
@@ -104,6 +114,7 @@ const
   GCM_TAG_SIZE = 16;
   GCM_IV_SIZE = 12;
   AES_KEY_SIZE = 32; // AES-256
+  AES_BLOCK_SIZE = 16;
 
 type
   // OpenSSL opaque types
@@ -116,6 +127,7 @@ type
   TEVP_CIPHER_CTX_new = function: PEVP_CIPHER_CTX; cdecl;
   TEVP_CIPHER_CTX_free = procedure(ctx: PEVP_CIPHER_CTX); cdecl;
   TEVP_aes_256_gcm = function: PEVP_CIPHER; cdecl;
+  TEVP_aes_256_cbc = function: PEVP_CIPHER; cdecl;
   TEVP_EncryptInit_ex = function(ctx: PEVP_CIPHER_CTX; cipher: PEVP_CIPHER;
     impl: Pointer; key, iv: PByte): Integer; cdecl;
   TEVP_DecryptInit_ex = function(ctx: PEVP_CIPHER_CTX; cipher: PEVP_CIPHER;
@@ -146,6 +158,7 @@ var
   _EVP_CIPHER_CTX_new: TEVP_CIPHER_CTX_new = nil;
   _EVP_CIPHER_CTX_free: TEVP_CIPHER_CTX_free = nil;
   _EVP_aes_256_gcm: TEVP_aes_256_gcm = nil;
+  _EVP_aes_256_cbc: TEVP_aes_256_cbc = nil;
   _EVP_EncryptInit_ex: TEVP_EncryptInit_ex = nil;
   _EVP_DecryptInit_ex: TEVP_DecryptInit_ex = nil;
   _EVP_EncryptUpdate: TEVP_EncryptUpdate = nil;
@@ -268,6 +281,7 @@ begin
   @_EVP_CIPHER_CTX_new := GetProc(GLibHandle, 'EVP_CIPHER_CTX_new');
   @_EVP_CIPHER_CTX_free := GetProc(GLibHandle, 'EVP_CIPHER_CTX_free');
   @_EVP_aes_256_gcm := GetProc(GLibHandle, 'EVP_aes_256_gcm');
+  @_EVP_aes_256_cbc := GetProc(GLibHandle, 'EVP_aes_256_cbc');
   @_EVP_EncryptInit_ex := GetProc(GLibHandle, 'EVP_EncryptInit_ex');
   @_EVP_DecryptInit_ex := GetProc(GLibHandle, 'EVP_DecryptInit_ex');
   @_EVP_EncryptUpdate := GetProc(GLibHandle, 'EVP_EncryptUpdate');
@@ -545,13 +559,84 @@ function dlclose(handle: Pointer): Integer; cdecl;
   external 'libdl.dylib' name 'dlclose';
 {$ENDIF}
 
+function OpenSSL_AES256CBC_Encrypt(const AKey, AIV, APlaintext: TBytes): TBytes;
+var
+  Ctx: PEVP_CIPHER_CTX;
+  OutLen, FinalLen: Integer;
+begin
+  if not GIsLoaded then
+    OpenSSL_Init;
+
+  if Length(AKey) <> AES_KEY_SIZE then
+    raise EOpenSSLError.CreateFmt('Invalid key size: expected %d, got %d',
+      [AES_KEY_SIZE, Length(AKey)]);
+  if Length(AIV) <> AES_BLOCK_SIZE then
+    raise EOpenSSLError.CreateFmt('Invalid IV size: expected %d, got %d',
+      [AES_BLOCK_SIZE, Length(AIV)]);
+
+  Ctx := _EVP_CIPHER_CTX_new();
+  if Ctx = nil then
+    raise EOpenSSLError.Create('EVP_CIPHER_CTX_new failed');
+  try
+    if _EVP_EncryptInit_ex(Ctx, _EVP_aes_256_cbc(), nil, @AKey[0], @AIV[0]) <> 1 then
+      raise EOpenSSLError.Create('EVP_EncryptInit_ex (CBC) failed');
+    // Disable padding — caller provides pre-padded data
+    _EVP_CIPHER_CTX_ctrl(Ctx, 1, 0, nil);
+    SetLength(Result, Length(APlaintext) + AES_BLOCK_SIZE);
+    if _EVP_EncryptUpdate(Ctx, @Result[0], OutLen, @APlaintext[0],
+         Length(APlaintext)) <> 1 then
+      raise EOpenSSLError.Create('EVP_EncryptUpdate (CBC) failed');
+    if _EVP_EncryptFinal_ex(Ctx, @Result[OutLen], FinalLen) <> 1 then
+      raise EOpenSSLError.Create('EVP_EncryptFinal_ex (CBC) failed');
+    SetLength(Result, OutLen + FinalLen);
+  finally
+    _EVP_CIPHER_CTX_free(Ctx);
+  end;
+end;
+
+function OpenSSL_AES256CBC_Decrypt(const AKey, AIV, ACiphertext: TBytes): TBytes;
+var
+  Ctx: PEVP_CIPHER_CTX;
+  OutLen, FinalLen: Integer;
+begin
+  if not GIsLoaded then
+    OpenSSL_Init;
+
+  if Length(AKey) <> AES_KEY_SIZE then
+    raise EOpenSSLError.CreateFmt('Invalid key size: expected %d, got %d',
+      [AES_KEY_SIZE, Length(AKey)]);
+  if Length(AIV) <> AES_BLOCK_SIZE then
+    raise EOpenSSLError.CreateFmt('Invalid IV size: expected %d, got %d',
+      [AES_BLOCK_SIZE, Length(AIV)]);
+  if (Length(ACiphertext) mod AES_BLOCK_SIZE) <> 0 then
+    raise EOpenSSLError.Create('Invalid ciphertext length for CBC');
+
+  Ctx := _EVP_CIPHER_CTX_new();
+  if Ctx = nil then
+    raise EOpenSSLError.Create('EVP_CIPHER_CTX_new failed');
+  try
+    if _EVP_DecryptInit_ex(Ctx, _EVP_aes_256_cbc(), nil, @AKey[0], @AIV[0]) <> 1 then
+      raise EOpenSSLError.Create('EVP_DecryptInit_ex (CBC) failed');
+    _EVP_CIPHER_CTX_ctrl(Ctx, 1, 0, nil);
+    SetLength(Result, Length(ACiphertext));
+    if _EVP_DecryptUpdate(Ctx, @Result[0], OutLen, @ACiphertext[0],
+         Length(ACiphertext)) <> 1 then
+      raise EOpenSSLError.Create('EVP_DecryptUpdate (CBC) failed');
+    if _EVP_DecryptFinal_ex(Ctx, @Result[OutLen], FinalLen) <> 1 then
+      raise EOpenSSLError.Create('EVP_DecryptFinal_ex (CBC) failed');
+    SetLength(Result, OutLen + FinalLen);
+  finally
+    _EVP_CIPHER_CTX_free(Ctx);
+  end;
+end;
+
 initialization
   GInitLock := TCriticalSection.Create;
-  
+
 finalization
   if GLibHandle <> 0 then
     FreeLib(GLibHandle);
-  GInitLock.Free;
+  FreeAndNil(GInitLock);
 
 {$ENDIF}
 

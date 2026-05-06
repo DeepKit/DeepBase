@@ -16,8 +16,8 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
-  UniBase.AutoUpdate,
-  UniBase.Updater;
+  UniBase.Updater,
+  UniBase.AutoUpdate;
 
 type
   [TestFixture]
@@ -181,7 +181,7 @@ var
   Info: TUpdateInfo;
 begin
   Info.Sha256 := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-  Assert.AreEqual(64, Length(Info.Sha256));
+  Assert.AreEqual(64, Integer(Length(Info.Sha256)));
 end;
 
 procedure TTestUpdateInfo.Test_ReleaseDateField;

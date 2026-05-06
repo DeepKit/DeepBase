@@ -343,9 +343,10 @@ end;
 procedure TFMXAboutFrame.ConnectDatabase;
 begin
   if FDatabasePath = '' then
-    FDatabasePath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'AppConfig.db');
+    FDatabasePath := System.IOUtils.TPath.Combine(
+      System.IOUtils.TPath.GetDirectoryName(ParamStr(0)), 'AppConfig.db');
 
-  if not TFile.Exists(FDatabasePath) then
+  if not System.IOUtils.TFile.Exists(FDatabasePath) then
     Exit;
 
   FConnection.Params.Database := FDatabasePath;

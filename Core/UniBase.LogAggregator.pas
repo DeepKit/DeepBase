@@ -1,4 +1,4 @@
-unit UniBase.LogAggregator;
+﻿unit UniBase.LogAggregator;
 
 {*******************************************************************************
   UniBase Log Aggregator
@@ -531,8 +531,8 @@ end;
 
 destructor TLogBatch.Destroy;
 begin
-  FLock.Free;
-  FLogs.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FLogs);
   inherited;
 end;
 
@@ -737,8 +737,8 @@ end;
 destructor TLogBackendBase.Destroy;
 begin
   Disconnect;
-  FHttpClient.Free;
-  FLock.Free;
+  FreeAndNil(FHttpClient);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1054,7 +1054,7 @@ end;
 
 destructor TLokiBackend.Destroy;
 begin
-  FLabels.Free;
+  FreeAndNil(FLabels);
   inherited;
 end;
 
@@ -1176,7 +1176,7 @@ end;
 
 destructor THttpWebhookBackend.Destroy;
 begin
-  FHeaders.Free;
+  FreeAndNil(FHeaders);
   inherited;
 end;
 
@@ -1286,12 +1286,12 @@ destructor TLogAggregator.Destroy;
 begin
   Stop;
   
-  FFlushEvent.Free;
-  FStopEvent.Free;
-  FStatsLock.Free;
-  FLock.Free;
-  FBuffer.Free;
-  FBackends.Free;
+  FreeAndNil(FFlushEvent);
+  FreeAndNil(FStopEvent);
+  FreeAndNil(FStatsLock);
+  FreeAndNil(FLock);
+  FreeAndNil(FBuffer);
+  FreeAndNil(FBackends);
   inherited;
 end;
 

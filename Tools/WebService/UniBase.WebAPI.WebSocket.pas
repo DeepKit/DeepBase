@@ -30,7 +30,8 @@ uses
   IdCustomHTTPServer,
   IdTCPConnection,
   IdGlobal,
-  IdIOHandler;
+  IdIOHandler,
+  UniBase.Exceptions;
 
 type
   // WebSocket 操作码
@@ -523,7 +524,7 @@ begin
   if LPayloadLen > 0 then
   begin
     if LPayloadLen > FServer.Config.MaxFrameSize then
-      raise Exception.Create('Frame too large');
+      raise EWebSocketException.Create('Frame too large');
 
     SetLength(Result.Payload, LPayloadLen);
     FContext.Connection.IOHandler.ReadBytes(TIdBytes(Result.Payload), LPayloadLen, False);

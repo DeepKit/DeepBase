@@ -438,7 +438,7 @@ begin
   
   Errors := FViewModel.Validate;
   
-  Assert.AreEqual(3, Length(Errors), 'Should have 3 errors');
+  Assert.AreEqual(3, Integer(Length(Errors)), 'Should have 3 errors');
 end;
 
 procedure TTestValidation.Test_ValidateProperty_ReturnsPropertyErrors;
@@ -449,7 +449,7 @@ begin
   
   Errors := FViewModel.ValidateProperty('Name');
   
-  Assert.AreEqual(1, Length(Errors));
+  Assert.AreEqual(1, Integer(Length(Errors)));
   Assert.AreEqual('Name', Errors[0].PropertyName);
 end;
 
@@ -480,7 +480,7 @@ begin
   
   Errors := FViewModel.GetErrors('Name');
   
-  Assert.AreEqual(1, Length(Errors));
+  Assert.AreEqual(1, Integer(Length(Errors)));
   Assert.AreEqual('Name is required', Errors[0].ErrorMessage);
 end;
 
@@ -671,13 +671,13 @@ var
   Command: ICommand;
 begin
   Command := TRelayCommand.Create(
-    procedure
+    TExecuteProc(procedure
     begin
       Inc(FExecuteCount);
-    end);
-  
+    end));
+
   Command.Execute(TValue.Empty);
-  
+
   Assert.AreEqual(1, FExecuteCount);
 end;
 
@@ -686,11 +686,11 @@ var
   Command: ICommand;
 begin
   Command := TRelayCommand.Create(
-    procedure(const Parameter: TValue)
+    TExecuteProcParam(procedure(const Parameter: TValue)
     begin
       Inc(FExecuteCount);
       FLastParameter := Parameter;
-    end);
+    end));
   
   Command.Execute(TValue.From<Integer>(42));
   
@@ -703,11 +703,11 @@ var
   Command: ICommand;
 begin
   Command := TRelayCommand.Create(
-    procedure
+    TExecuteProc(procedure
     begin
       // do nothing
-    end);
-  
+    end));
+
   Assert.IsTrue(Command.CanExecute(TValue.Empty));
 end;
 
@@ -716,16 +716,16 @@ var
   Command: ICommand;
 begin
   FCanExecuteResult := False;
-  
+
   Command := TRelayCommand.Create(
-    procedure
+    TExecuteProc(procedure
     begin
       Inc(FExecuteCount);
-    end,
-    function: Boolean
+    end),
+    TCanExecuteFunc(function: Boolean
     begin
       Result := FCanExecuteResult;
-    end);
+    end));
   
   Assert.IsFalse(Command.CanExecute(TValue.Empty));
   
@@ -738,14 +738,14 @@ var
   Command: ICommand;
 begin
   Command := TRelayCommand.Create(
-    procedure
+    TExecuteProc(procedure
     begin
       Inc(FExecuteCount);
-    end,
-    function: Boolean
+    end),
+    TCanExecuteFunc(function: Boolean
     begin
       Result := False;
-    end);
+    end));
   
   Command.Execute(TValue.Empty);
   
@@ -757,11 +757,11 @@ var
   Command: ICommand;
 begin
   Command := TRelayCommand.Create(
-    procedure
+    TExecuteProc(procedure
     begin
       // do nothing
-    end);
-  
+    end));
+
   Command.AddCanExecuteChangedHandler(HandleCanExecuteChanged);
   Command.RaiseCanExecuteChanged;
   
@@ -789,11 +789,11 @@ var
   Command: TAsyncCommand;
 begin
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       Inc(FExecuteCount);
       Sleep(50);
-    end);
+    end));
   try
     Command.Execute(TValue.Empty);
     Command.Wait(2000);
@@ -812,11 +812,11 @@ begin
   WasBusy := False;
   
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       WasBusy := FViewModel.IsBusy;
       Sleep(50);
-    end);
+    end));
   try
     Command.Execute(TValue.Empty);
     Command.Wait(2000);
@@ -833,10 +833,10 @@ var
   Command: TAsyncCommand;
 begin
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       Sleep(100);
-    end);
+    end));
   try
     Assert.AreEqual(Ord(acsIdle), Ord(Command.State), 'Initial state should be Idle');
     
@@ -861,10 +861,10 @@ begin
   CanExecuteDuringRun := True;
   
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       Sleep(100);
-    end);
+    end));
   try
     Assert.IsTrue(Command.CanExecute(TValue.Empty), 'Should be able to execute when idle');
     
@@ -883,10 +883,10 @@ var
   Command: TAsyncCommand;
 begin
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       Sleep(50);
-    end);
+    end));
   try
     Command.OnCompleted := 
       procedure
@@ -911,10 +911,10 @@ var
   Command: TAsyncCommand;
 begin
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
       raise Exception.Create('Test error');
-    end);
+    end));
   try
     Command.OnError := 
       procedure(E: Exception)
@@ -945,10 +945,9 @@ begin
   WasCancelled := False;
   
   Command := TAsyncCommand.Create(FViewModel,
-    procedure(IsCancelled: TFunc<Boolean>)
-    var
-      i: Integer;
+    TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)
     begin
+      var i: Integer;
       for i := 1 to 100 do
       begin
         if IsCancelled() then
@@ -958,7 +957,7 @@ begin
         end;
         Sleep(10);
       end;
-    end);
+    end));
   try
     Command.Execute(TValue.Empty);
     Sleep(50);

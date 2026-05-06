@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Validation - Data Validation Framework
   
   A fluent validation framework for validating data and objects.
@@ -49,7 +49,8 @@ uses
   System.TypInfo,
   System.StrUtils,
   System.Threading,
-  System.DateUtils;
+  System.DateUtils,
+  System.Math;
 
 type
   // ============================================================================
@@ -502,7 +503,7 @@ end;
 
 destructor TValidationContext.Destroy;
 begin
-  FCustomData.Free;
+  FreeAndNil(FCustomData);
   inherited;
 end;
 
@@ -924,7 +925,7 @@ begin
           Result.ErrorMessage := Format(GetDefaultMessage, [Context.DisplayName]);
       end;
     except
-      on E: ERegularExpressionError do
+      on E: Exception do
       begin
         Result.PropertyName := Context.PropertyName;
         Result.AttemptedValue := Value;
@@ -1077,7 +1078,7 @@ end;
 
 destructor TRuleBuilder<T>.Destroy;
 begin
-  FRules.Free;
+  FreeAndNil(FRules);
   inherited;
 end;
 
@@ -1258,7 +1259,7 @@ end;
 
 destructor TValidator<T>.Destroy;
 begin
-  FRuleBuilders.Free;
+  FreeAndNil(FRuleBuilders);
   inherited;
 end;
 

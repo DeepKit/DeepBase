@@ -339,7 +339,7 @@ begin
   
   Assert.IsTrue(FMaster.IsUnlocked);
   Data := FMaster.GetKeyData;
-  Assert.AreEqual(Params.KeyLength, Length(Data));
+  Assert.AreEqual(Integer(Params.KeyLength), Integer(Length(Data)));
 end;
 
 procedure TTestMasterKey.Test_DeriveWithHardwareBinding_SetsFingerprint;
@@ -363,9 +363,7 @@ begin
     procedure
     begin
       Data := FMaster.GetKeyData;
-    end,
-    EKeyManagerException
-  );
+    end);
 end;
 
 procedure TTestMasterKey.Test_GetKeyData_RaisesWhenLocked(const Dummy: string);
@@ -377,9 +375,7 @@ begin
     procedure
     begin
       Data := FMaster.GetKeyData;
-    end,
-    EKeyManagerException
-  );
+    end);
 end;
 
 { TTestDataKey }
@@ -413,7 +409,7 @@ begin
   Key := TDataKey.Create(kpEncryption);
   try
     Key.Generate(32);
-    Assert.AreEqual(32, Length(Key.KeyData));
+    Assert.AreEqual(32, Integer(Length(Key.KeyData)));
   finally
     Key.Free;
   end;

@@ -19,6 +19,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.SyncObjs,
   System.Threading,
   DUnitX.TestFramework;
 
@@ -76,6 +77,9 @@ type
     
     [Test]
     procedure Test_SetResetProc_CallsOnRelease;
+
+    [Test]
+    procedure Test_ResetProcException_DiscardsObject;
     
     [Test]
     procedure Test_GetStats_ReturnsStatistics;
@@ -442,6 +446,36 @@ begin
   end;
 end;
 
+procedure TTestObjectPool.Test_ResetProcException_DiscardsObject;
+var
+  Pool: TObjectPool<TTestPoolObject>;
+  Obj: TTestPoolObject;
+  Replacement: TTestPoolObject;
+begin
+  Pool := TObjectPool<TTestPoolObject>.Create(
+    function: TTestPoolObject begin Result := TTestPoolObject.Create; end,
+    0, 1);
+  try
+    Pool.SetResetProc(
+      procedure(O: TTestPoolObject)
+      begin
+        raise Exception.Create('reset failed');
+      end);
+
+    Obj := Pool.Acquire;
+    Pool.Release(Obj);
+
+    Assert.AreEqual(0, Pool.InUseCount);
+    Assert.AreEqual(0, Pool.AvailableCount);
+
+    Pool.SetResetProc(nil);
+    Assert.IsTrue(Pool.TryAcquire(Replacement));
+    Pool.Release(Replacement);
+  finally
+    Pool.Free;
+  end;
+end;
+
 procedure TTestObjectPool.Test_GetStats_ReturnsStatistics;
 var
   Pool: TObjectPool<TTestPoolObject>;
@@ -659,10 +693,12 @@ procedure TTestMemoryBlockPool.Test_MultipleAllocations;
 var
   Pool: TMemoryBlockPool;
   Ptrs: array[0..9] of Pointer;
-  I: Integer;
+  I, InitFree: Integer;
 begin
   Pool := TMemoryBlockPool.Create(64, 20, 10);
   try
+    InitFree := Pool.FreeCount;
+
     for I := 0 to 9 do
       Ptrs[I] := Pool.Allocate;
     
@@ -671,7 +707,7 @@ begin
     for I := 0 to 9 do
       Pool.Deallocate(Ptrs[I]);
       
-    Assert.AreEqual(10, Pool.FreeCount);
+    Assert.AreEqual(InitFree, Pool.FreeCount);
   finally
     Pool.Free;
   end;
@@ -686,7 +722,7 @@ begin
   Cache := TSmartCache<string, Integer>.Create;
   try
     Assert.IsNotNull(Cache);
-    Assert.AreEqual(0, Cache.Count);
+    Assert.AreEqual(0, Integer(Cache.Count));
   finally
     Cache.Free;
   end;
@@ -699,7 +735,7 @@ begin
   Cache := TSmartCache<string, Integer>.Create;
   try
     Cache.Put('key1', 100);
-    Assert.AreEqual(1, Cache.Count);
+    Assert.AreEqual(1, Integer(Cache.Count));
   finally
     Cache.Free;
   end;
@@ -801,7 +837,7 @@ begin
     Cache.Put('key2', 2);
     Cache.Put('key3', 3);
     Cache.Clear;
-    Assert.AreEqual(0, Cache.Count);
+    Assert.AreEqual(0, Integer(Cache.Count));
   finally
     Cache.Free;
   end;

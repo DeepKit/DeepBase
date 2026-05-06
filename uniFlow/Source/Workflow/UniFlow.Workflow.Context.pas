@@ -20,7 +20,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
   System.RegularExpressions, System.Variants,
-  UniFlow.Workflow.Definition;
+  UniFlow.Workflow.Definition,
+  UniBase.Exceptions;
 
 type
   /// <summary>变量作用域</summary>
@@ -345,7 +346,7 @@ begin
     FVariables.Add(Key, VarValue);
   end
   else if VarValue.ReadOnly then
-    raise Exception.CreateFmt('Variable %s is read-only', [AName]);
+    raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
   
   if VarIsType(AValue, varString) or VarIsType(AValue, varUString) then
     VarValue.SetString(AValue)
@@ -373,7 +374,7 @@ begin
     FVariables.Add(Key, VarValue);
   end
   else if VarValue.ReadOnly then
-    raise Exception.CreateFmt('Variable %s is read-only', [AName]);
+    raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
   
   VarValue.SetJSON(AValue);
 end;

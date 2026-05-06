@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.LLM.BillingClient - Lightweight Billing-Admin LLM Proxy Client
   
   Version: 1.0
@@ -289,7 +289,7 @@ end;
 
 destructor TChatHistory.Destroy;
 begin
-  FMessages.Free;
+  FreeAndNil(FMessages);
   inherited;
 end;
 
@@ -387,8 +387,8 @@ end;
 
 destructor TBillingClient.Destroy;
 begin
-  FHttpClient.Free;
-  FLock.Free;
+  FreeAndNil(FHttpClient);
+  FreeAndNil(FLock);
   inherited;
 end;
 

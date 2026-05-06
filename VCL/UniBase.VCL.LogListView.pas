@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.LogListView - 高性能日志列表控件
   
   版本: 1.0
@@ -16,6 +16,7 @@ uses
   System.UITypes,
   Vcl.Controls,
   Vcl.ComCtrls,
+  Vcl.ExtCtrls,
   Vcl.Graphics,
   Vcl.Forms,
   Vcl.Menus,
@@ -51,8 +52,8 @@ type
     
   protected
     procedure CreateWnd; override;
-    procedure Data(Item: TListItem); override;
-    procedure CustomDrawItem(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean); override;
+    procedure HandleData(Sender: TObject; Item: TListItem);
+    procedure HandleCustomDrawItem(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
     
   public
     constructor Create(AOwner: TComponent); override;
@@ -89,13 +90,16 @@ begin
   FRefreshTimer.Interval := 2000; // 2s
   FRefreshTimer.OnTimer := OnTimer;
   FRefreshTimer.Enabled := False;
+
+  OnData := HandleData;
+  OnCustomDrawItem := HandleCustomDrawItem;
   
   SetupPopupMenu;
 end;
 
 destructor TLogListView.Destroy;
 begin
-  FCache.Free;
+  FreeAndNil(FCache);
   if Assigned(FQuery) then FQuery.Free;
   if Assigned(FConnection) then FConnection.Free; // 如果我们拥有它
   inherited;
@@ -244,7 +248,7 @@ begin
   end;
 end;
 
-procedure TLogListView.Data(Item: TListItem);
+procedure TLogListView.HandleData(Sender: TObject; Item: TListItem);
 var
   Parts: TArray<string>;
   DataStr: string;
@@ -258,6 +262,7 @@ begin
   if Length(Parts) >= 5 then
   begin
     Item.Caption := Parts[0]; // Time
+    Item.SubItems.Clear;
     
     // 将数字级别转换为字符串
     LevelInt := StrToIntDef(Parts[1], 1);
@@ -269,7 +274,7 @@ begin
   end;
 end;
 
-procedure TLogListView.CustomDrawItem(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
+procedure TLogListView.HandleCustomDrawItem(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
 var
   Lvl: string;
 begin

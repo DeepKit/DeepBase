@@ -1,9 +1,9 @@
 { ============================================================================
   UniBase.FMX.UpdateDialog - FMX 更新对话框
-  
+
   版本: 1.0
   说明: 跨平台更新提示对话框，支持 Windows/macOS/iOS/Android
-  
+
   特性:
     - 自适应布局（手机/平板/桌面）
     - 显示版本信息和更新日志
@@ -72,14 +72,16 @@ type
     FAutoUpdater: TComponent;
     FIsDownloading: Boolean;
     FIsMobile: Boolean;
-    
+
     procedure UpdateLayout;
     procedure StartDownload;
     procedure UpdateProgress(const Progress: TUpdateProgress);
     procedure DownloadComplete(Success: Boolean; const ErrorMessage: string);
     function IsMobilePlatform: Boolean;
+    procedure HandleAutoUpdaterProgress(Sender: TObject; const Progress: TUpdateProgress);
+    procedure HandleAutoUpdaterComplete(Sender: TObject; Success: Boolean; const ErrorMessage: string);
   public
-    class procedure Show(AAutoUpdater: TComponent; const Info: TUpdateInfo;
+    class procedure ShowDialog(AAutoUpdater: TComponent; const Info: TUpdateInfo;
       Callback: TUpdateDialogCallback);
   end;
 
@@ -89,12 +91,11 @@ implementation
 
 uses
   FMX.Platform,
-  FMX.DialogService,
   UniBase.FMX.AutoUpdater;
 
 { TFMXUpdateDialog }
 
-class procedure TFMXUpdateDialog.Show(AAutoUpdater: TComponent;
+class procedure TFMXUpdateDialog.ShowDialog(AAutoUpdater: TComponent;
   const Info: TUpdateInfo; Callback: TUpdateDialogCallback);
 var
   Dialog: TFMXUpdateDialog;
@@ -103,31 +104,31 @@ begin
   Dialog.FAutoUpdater := AAutoUpdater;
   Dialog.FUpdateInfo := Info;
   Dialog.FCallback := Callback;
-  
+
   // 设置版本信息
   Dialog.LblTitle.Text := Info.Title;
   if Dialog.LblTitle.Text = '' then
     Dialog.LblTitle.Text := '发现新版本';
-  
-  Dialog.LblVersion.Text := Format('版本 %s → %s', 
+
+  Dialog.LblVersion.Text := Format('版本 %s → %s',
     [TFMXAutoUpdater(AAutoUpdater).CurrentVersion, Info.Version.ToString]);
-  
+
   // 设置更新日志
   Dialog.MemoChangelog.Lines.Text := Info.ReleaseNotes;
   if Dialog.MemoChangelog.Lines.Text = '' then
     Dialog.MemoChangelog.Lines.Text := Info.Description;
-  
+
   // 强制更新时禁用跳过和稍后按钮
   if Info.IsMandatory then
   begin
     Dialog.BtnLater.Enabled := False;
     Dialog.BtnSkip.Visible := False;
   end;
-  
+
   // 移动端显示"前往商店"而不是"下载"
   if Dialog.IsMobilePlatform then
     Dialog.BtnUpdate.Text := '前往商店';
-  
+
   Dialog.Show;
 end;
 
@@ -135,19 +136,19 @@ procedure TFMXUpdateDialog.FormCreate(Sender: TObject);
 begin
   FIsDownloading := False;
   FIsMobile := IsMobilePlatform;
-  
+
   // 初始隐藏进度条
   LayoutProgress.Visible := False;
-  
+
   // 根据平台调整样式
   UpdateLayout;
-  
+
   {$IFDEF MSWINDOWS}
   // Windows 上添加圆角
   RectBackground.XRadius := 8;
   RectBackground.YRadius := 8;
   {$ENDIF}
-  
+
   {$IFDEF MACOS}
   // macOS 风格
   RectBackground.XRadius := 12;
@@ -183,7 +184,7 @@ var
   IsCompact: Boolean;
 begin
   IsCompact := (Width < 400) or FIsMobile;
-  
+
   if IsCompact then
   begin
     // 紧凑布局（移动端/小窗口）
@@ -236,7 +237,7 @@ begin
     if FAutoUpdater is TFMXAutoUpdater then
       TFMXAutoUpdater(FAutoUpdater).Cancel;
     FIsDownloading := False;
-    
+
     // 重置 UI
     LayoutProgress.Visible := False;
     BtnUpdate.Enabled := True;
@@ -252,21 +253,13 @@ end;
 
 procedure TFMXUpdateDialog.BtnSkipClick(Sender: TObject);
 begin
-  TDialogService.MessageDialog(
-    '确定要跳过此版本吗？您可以稍后在设置中手动检查更新。',
-    TMsgDlgType.mtConfirmation,
-    [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo],
-    TMsgDlgBtn.mbNo,
-    0,
-    procedure(const AResult: TModalResult)
-    begin
-      if AResult = mrYes then
-      begin
-        if Assigned(FCallback) then
-          FCallback(udaSkip);
-        Close;
-      end;
-    end);
+  if MessageDlg('确定要跳过此版本吗？您可以稍后在设置中手动检查更新。',
+    TMsgDlgType.mtConfirmation, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes then
+  begin
+    if Assigned(FCallback) then
+      FCallback(udaSkip);
+    Close;
+  end;
 end;
 
 procedure TFMXUpdateDialog.StartDownload;
@@ -275,10 +268,10 @@ var
 begin
   if not (FAutoUpdater is TFMXAutoUpdater) then
     Exit;
-  
+
   AutoUpdater := TFMXAutoUpdater(FAutoUpdater);
   FIsDownloading := True;
-  
+
   // 更新 UI
   LayoutProgress.Visible := True;
   ProgressBar.Value := 0;
@@ -286,29 +279,13 @@ begin
   BtnUpdate.Enabled := False;
   BtnLater.Text := '取消';
   BtnSkip.Visible := False;
-  
+
   // 设置进度回调
-  AutoUpdater.OnProgress :=
-    procedure(Sender: TObject; const Progress: TUpdateProgress)
-    begin
-      TThread.Queue(nil,
-        procedure
-        begin
-          UpdateProgress(Progress);
-        end);
-    end;
-  
+  AutoUpdater.OnProgress := HandleAutoUpdaterProgress;
+
   // 设置完成回调
-  AutoUpdater.OnUpdateComplete :=
-    procedure(Sender: TObject; Success: Boolean; const ErrorMessage: string)
-    begin
-      TThread.Queue(nil,
-        procedure
-        begin
-          DownloadComplete(Success, ErrorMessage);
-        end);
-    end;
-  
+  AutoUpdater.OnUpdateComplete := HandleAutoUpdaterComplete;
+
   // 开始下载
   AutoUpdater.DownloadAndInstall;
 end;
@@ -316,7 +293,7 @@ end;
 procedure TFMXUpdateDialog.UpdateProgress(const Progress: TUpdateProgress);
 begin
   ProgressBar.Value := Progress.ProgressPercent;
-  
+
   case Progress.Status of
     usDownloading:
       begin
@@ -345,64 +322,68 @@ end;
 procedure TFMXUpdateDialog.DownloadComplete(Success: Boolean; const ErrorMessage: string);
 begin
   FIsDownloading := False;
-  
+
   if Success then
   begin
     LblProgressStatus.Text := '更新完成！';
     ProgressBar.Value := 100;
-    
-    TDialogService.MessageDialog(
-      '更新已安装完成。是否立即重启应用？',
-      TMsgDlgType.mtInformation,
-      [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo],
-      TMsgDlgBtn.mbYes,
-      0,
-      procedure(const AResult: TModalResult)
-      begin
-        if AResult = mrYes then
-        begin
-          // TODO: 重启应用
-          // Application.Terminate;
-        end;
-        
-        if Assigned(FCallback) then
-          FCallback(udaDownload);
-        Close;
-      end);
+
+    if MessageDlg('更新已安装完成。是否立即重启应用？',
+      TMsgDlgType.mtInformation, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes then
+    begin
+      // TODO: 重启应用
+      // Application.Terminate;
+    end;
+
+    if Assigned(FCallback) then
+      FCallback(udaDownload);
+    Close;
   end
   else
   begin
     // 下载失败
     LblProgressStatus.Text := '更新失败';
-    
-    TDialogService.MessageDialog(
-      '更新失败: ' + ErrorMessage + #13#10#13#10 + '是否重试？',
-      TMsgDlgType.mtError,
-      [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo],
-      TMsgDlgBtn.mbYes,
-      0,
-      procedure(const AResult: TModalResult)
-      begin
-        if AResult = mrYes then
-        begin
-          // 重置 UI 并重试
-          LayoutProgress.Visible := False;
-          BtnUpdate.Enabled := True;
-          BtnLater.Text := '稍后';
-          if not FUpdateInfo.IsMandatory then
-            BtnSkip.Visible := True;
-        end
-        else
-        begin
-          // 重置 UI
-          LayoutProgress.Visible := False;
-          BtnUpdate.Enabled := True;
-          BtnLater.Text := '稍后';
-          if not FUpdateInfo.IsMandatory then
-            BtnSkip.Visible := True;
-        end;
-      end);
+
+    if MessageDlg('更新失败: ' + ErrorMessage + #13#10#13#10 + '是否重试？',
+      TMsgDlgType.mtError, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes then
+    begin
+      // 重置 UI 并重试
+      LayoutProgress.Visible := False;
+      BtnUpdate.Enabled := True;
+      BtnLater.Text := '稍后';
+      if not FUpdateInfo.IsMandatory then
+        BtnSkip.Visible := True;
+    end
+    else
+    begin
+      // 重置 UI
+      LayoutProgress.Visible := False;
+      BtnUpdate.Enabled := True;
+      BtnLater.Text := '稍后';
+      if not FUpdateInfo.IsMandatory then
+        BtnSkip.Visible := True;
+    end;
   end;
+end;
+
+procedure TFMXUpdateDialog.HandleAutoUpdaterProgress(Sender: TObject;
+  const Progress: TUpdateProgress);
+begin
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      UpdateProgress(Progress);
+    end);
+end;
+
+procedure TFMXUpdateDialog.HandleAutoUpdaterComplete(Sender: TObject;
+  Success: Boolean; const ErrorMessage: string);
+begin
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      DownloadComplete(Success, ErrorMessage);
+    end);
 end;
 
 end.

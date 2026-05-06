@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.FMX.LLMChatFrame - FMX LLM Chat Component
   
   Version: 1.0
@@ -192,9 +192,9 @@ end;
 destructor TFMXLLMChatFrame.Destroy;
 begin
   if FOwnsClient and Assigned(FClient) then
-    FClient.Free;
-  FHistory.Free;
-  FChatItems.Free;
+    FreeAndNil(FClient);
+  FreeAndNil(FHistory);
+  FreeAndNil(FChatItems);
   inherited;
 end;
 
@@ -292,7 +292,7 @@ end;
 procedure TFMXLLMChatFrame.SetClient(AValue: TBillingClient);
 begin
   if FOwnsClient and Assigned(FClient) then
-    FClient.Free;
+    FreeAndNil(FClient);
   FClient := AValue;
   FOwnsClient := False;
 end;

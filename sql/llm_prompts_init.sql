@@ -145,46 +145,45 @@ CREATE INDEX IF NOT EXISTS idx_promptmetabinding_prompt ON PromptMetaBinding(Pro
 CREATE INDEX IF NOT EXISTS idx_promptmetabinding_meta ON PromptMetaBinding(MetaPromptId);
 
 -- ============================================================================
--- 6. LLMConfigurations - 更新LLM配置表 (添加新字段)
+-- 6. LLMConfig - LLM配置表
 -- ============================================================================
--- 检查并添加 IsDefault 字段
--- SQLite 不支持 IF NOT EXISTS 添加列，使用 PRAGMA 检查
-
--- 如果 LLMConfigurations 表不存在则创建
-CREATE TABLE IF NOT EXISTS LLMConfigurations (
-    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name            TEXT NOT NULL UNIQUE,                         -- 配置名称
-    Provider        TEXT NOT NULL,                                -- Provider: LiteLLM/OpenAI/Azure/Anthropic/Ollama
-    Model           TEXT NOT NULL,                                -- 模型名称
-    ApiUrl          TEXT,                                         -- API地址
-    ApiKey          TEXT,                                         -- API密钥 (加密存储)
-    Temperature     REAL DEFAULT 0.7,                             -- 温度参数
-    MaxTokens       INTEGER DEFAULT 4096,                         -- 最大Token数
-    TopP            REAL DEFAULT 1.0,                             -- Top-P参数
-    Timeout         INTEGER DEFAULT 60000,                        -- 超时(ms)
-    RetryCount      INTEGER DEFAULT 3,                            -- 重试次数
-    RetryDelay      INTEGER DEFAULT 1000,                         -- 重试延迟(ms)
-    InputPrice      REAL DEFAULT 0,                               -- 输入价格 $/1K tokens
-    OutputPrice     REAL DEFAULT 0,                               -- 输出价格 $/1K tokens
-    ConcurrentLimit INTEGER DEFAULT 5,                            -- 并发限制
-    IsEnabled       INTEGER DEFAULT 1,                            -- 是否启用
-    IsDefault       INTEGER DEFAULT 0,                            -- 是否为默认配置
-    LastTestedAt    TEXT,                                         -- 最后测试时间
-    LastTestStatus  TEXT,                                         -- 最后测试状态
-    CreatedAt       TEXT DEFAULT (datetime('now', 'localtime')),
-    UpdatedAt       TEXT
+-- LLMConfig 是 UniBase 统一的 LLM 配置表名；不要再创建旧版配置表名。
+CREATE TABLE IF NOT EXISTS LLMConfig (
+    Id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    Name             TEXT NOT NULL UNIQUE,
+    Description      TEXT,
+    ProviderCode     TEXT NOT NULL,
+    ModelId          TEXT NOT NULL,
+    BaseUrl          TEXT,
+    ApiKeyRef        TEXT,
+    MaxTokens        INTEGER DEFAULT 4096,
+    Temperature      REAL DEFAULT 0.7,
+    TopP             REAL DEFAULT 1.0,
+    FrequencyPenalty REAL DEFAULT 0,
+    PresencePenalty  REAL DEFAULT 0,
+    SystemPrompt     TEXT,
+    StopSequences    TEXT,
+    TimeoutMs        INTEGER DEFAULT 60000,
+    RetryCount       INTEGER DEFAULT 3,
+    IsEnabled        INTEGER DEFAULT 1,
+    IsDefault        INTEGER DEFAULT 0,
+    SortOrder        INTEGER DEFAULT 0,
+    CreatedAt        TEXT DEFAULT (datetime('now', 'localtime')),
+    UpdatedAt        TEXT,
+    Extra            TEXT,
+    Remarks          TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_llmconfig_provider ON LLMConfigurations(Provider);
-CREATE INDEX IF NOT EXISTS idx_llmconfig_enabled ON LLMConfigurations(IsEnabled);
-CREATE INDEX IF NOT EXISTS idx_llmconfig_default ON LLMConfigurations(IsDefault);
+CREATE INDEX IF NOT EXISTS idx_llmconfig_provider ON LLMConfig(ProviderCode);
+CREATE INDEX IF NOT EXISTS idx_llmconfig_enabled ON LLMConfig(IsEnabled);
+CREATE INDEX IF NOT EXISTS idx_llmconfig_default ON LLMConfig(IsDefault);
 
 -- 确保只有一个默认配置
 CREATE TRIGGER IF NOT EXISTS trg_llmconfig_single_default
-BEFORE UPDATE OF IsDefault ON LLMConfigurations
+BEFORE UPDATE OF IsDefault ON LLMConfig
 WHEN NEW.IsDefault = 1
 BEGIN
-    UPDATE LLMConfigurations 
+    UPDATE LLMConfig
     SET IsDefault = 0 
     WHERE Id != NEW.Id;
 END;
@@ -196,7 +195,7 @@ CREATE TABLE IF NOT EXISTS LLMCalls (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
     PromptId        INTEGER REFERENCES Prompts(Id) ON DELETE SET NULL,  -- 关联的提示词
     VersionNumber   INTEGER,                                      -- 使用的版本号
-    ConfigId        INTEGER REFERENCES LLMConfigurations(Id) ON DELETE SET NULL,
+    ConfigId        INTEGER REFERENCES LLMConfig(Id) ON DELETE SET NULL,
     Provider        TEXT,                                         -- Provider名称
     Model           TEXT,                                         -- 模型名称
     InputText       TEXT,                                         -- 输入文本 (可选，用于调试)
@@ -231,7 +230,7 @@ CREATE TABLE IF NOT EXISTS PromptTestCases (
     InputVariables  TEXT,                                         -- 输入变量 JSON
     ExpectedOutput  TEXT,                                         -- 期望输出 (可选)
     ActualOutput    TEXT,                                         -- 实际输出
-    ConfigId        INTEGER REFERENCES LLMConfigurations(Id),     -- 使用的LLM配置
+    ConfigId        INTEGER REFERENCES LLMConfig(Id),             -- 使用的LLM配置
     Status          TEXT CHECK (Status IN ('pending', 'passed', 'failed', 'error')),
     Duration        INTEGER,                                      -- 耗时(ms)
     Tokens          INTEGER,                                      -- Token数

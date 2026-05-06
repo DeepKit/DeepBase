@@ -230,7 +230,7 @@ end;
 procedure TTestBackupManifest.Test_Create_Defaults;
 begin
   Assert.IsNotNull(FManifest.Files);
-  Assert.AreEqual(0, FManifest.Files.Count);
+  Assert.AreEqual(Integer(0), Integer(FManifest.Files.Count));
   Assert.IsNotNull(FManifest.Tags);
 end;
 
@@ -241,7 +241,7 @@ begin
   FileInfo := TBackupFileInfo.Create('test.txt', 100, Now, 'hash1');
   FManifest.AddFile(FileInfo);
   
-  Assert.AreEqual(1, FManifest.Files.Count);
+  Assert.AreEqual(Integer(1), Integer(FManifest.Files.Count));
   Assert.AreEqual('test.txt', FManifest.Files[0].RelativePath);
 end;
 
@@ -251,7 +251,7 @@ begin
   FManifest.AddFile(TBackupFileInfo.Create('file2.txt', 200, Now, 'h2'));
   FManifest.AddFile(TBackupFileInfo.Create('file3.txt', 300, Now, 'h3'));
   
-  Assert.AreEqual(3, FManifest.Files.Count);
+  Assert.AreEqual(Integer(3), Integer(FManifest.Files.Count));
 end;
 
 procedure TTestBackupManifest.Test_RemoveFile;
@@ -261,7 +261,7 @@ begin
   
   FManifest.RemoveFile('remove.txt');
   
-  Assert.AreEqual(1, FManifest.Files.Count);
+  Assert.AreEqual(Integer(1), Integer(FManifest.Files.Count));
   Assert.AreEqual('keep.txt', FManifest.Files[0].RelativePath);
 end;
 
@@ -373,7 +373,7 @@ begin
   FManifest.Tags.Add('critical');
   FManifest.Tags.Add('database');
   
-  Assert.AreEqual(3, FManifest.Tags.Count);
+  Assert.AreEqual(Integer(3), Integer(FManifest.Tags.Count));
   Assert.AreEqual('production', FManifest.Tags[0]);
   Assert.AreEqual('critical', FManifest.Tags[1]);
   Assert.AreEqual('database', FManifest.Tags[2]);
@@ -596,7 +596,7 @@ begin
   Config.SourcePaths[1] := 'C:\Config';
   Config.SourcePaths[2] := 'C:\Logs';
   
-  Assert.AreEqual(3, Length(Config.SourcePaths));
+  Assert.AreEqual(Integer(3), Integer(Length(Config.SourcePaths)));
   Assert.AreEqual('C:\Data', Config.SourcePaths[0]);
 end;
 
@@ -608,7 +608,7 @@ begin
   Config.ExcludePatterns[0] := '*.tmp';
   Config.ExcludePatterns[1] := '*.bak';
   
-  Assert.AreEqual(2, Length(Config.ExcludePatterns));
+  Assert.AreEqual(Integer(2), Integer(Length(Config.ExcludePatterns)));
   Assert.AreEqual('*.tmp', Config.ExcludePatterns[0]);
 end;
 

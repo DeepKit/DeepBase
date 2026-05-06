@@ -2,8 +2,9 @@
   Test.UniBase.Protection - Unit tests for UniBase.Protection (TBasicProtection)
 
   Coverage:
-    - AES-256-CBC string encryption/decryption (Encrypt/DecryptSensitiveData)
-    - AES-256-CBC binary encryption/decryption (Encrypt/DecryptBinaryData)
+    - AES-256-GCM string encryption/decryption (Encrypt/DecryptSensitiveData)
+    - AES-256-GCM binary encryption/decryption (Encrypt/DecryptBinaryData)
+    - Legacy AES-256-CBC decryption compatibility
     - HMAC calculation and integrity verification
     - File hash and data hash helpers
   ============================================================================ }
@@ -18,7 +19,8 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.IOUtils,
-  UniBase.Protection;
+  UniBase.Protection,
+  UniBase.Exceptions;
 
 type
   [TestFixture]
@@ -34,10 +36,37 @@ type
     procedure EncryptSensitive_SameInput_ProducesDifferentCiphertext;
 
     [Test]
+    procedure EncryptSensitive_UsesGcmTextFormat;
+
+    [Test]
     procedure EncryptDecryptBinary_Roundtrip;
 
     [Test]
+    procedure EncryptBinary_UsesGcmEnvelope;
+
+    [Test]
+    procedure DecryptSensitive_WithWrongPassword_RaisesException;
+
+    [Test]
+    procedure DecryptSensitive_TamperedGcmPayload_RaisesException;
+
+    [Test]
+    procedure DecryptBinary_TamperedGcmPayload_RaisesException;
+
+    [Test]
+    procedure DecryptSensitive_LegacyCbcPayload_Roundtrip;
+
+    [Test]
+    procedure DecryptBinary_LegacyCbcPayload_Roundtrip;
+
+    [Test]
     procedure CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue;
+
+    [Test]
+    procedure CalculateHMAC_UsesStandardHmacSha256Vector;
+
+    [Test]
+    procedure CalculateHMAC_EmptyPassword_RaisesMissingConfiguration;
 
     [Test]
     procedure VerifyDataIntegrity_ReturnsFalse_WhenDataTampered;
@@ -57,6 +86,24 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
+
+function TestBytesToHex(const ABytes: TBytes): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to High(ABytes) do
+    Result := Result + IntToHex(ABytes[I], 2);
+end;
+
+function TestHexToBytes(const AHex: string): TBytes;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(AHex) div 2);
+  for I := 0 to High(Result) do
+    Result[I] := StrToInt('$' + Copy(AHex, I * 2 + 1, 2));
+end;
 
 { TTestBasicProtection }
 
@@ -99,6 +146,15 @@ begin
   Assert.AreNotEqual(C1, C2, 'Two encryptions with random IV should produce different ciphertext');
 end;
 
+procedure TTestBasicProtection.EncryptSensitive_UsesGcmTextFormat;
+var
+  Encrypted: string;
+begin
+  Encrypted := TBasicProtection.EncryptSensitiveData('Secret', 'Key-123');
+
+  Assert.IsTrue(Encrypted.StartsWith('UBG1|'), 'New string encryption should use UBG1 AES-GCM format');
+end;
+
 procedure TTestBasicProtection.EncryptDecryptBinary_Roundtrip;
 var
   Data, Encrypted, Decrypted: TBytes;
@@ -117,6 +173,92 @@ begin
     Assert.AreEqual<Integer>(Data[I], Decrypted[I], Format('Byte %d mismatch', [I]));
 end;
 
+procedure TTestBasicProtection.EncryptBinary_UsesGcmEnvelope;
+var
+  Data, Encrypted: TBytes;
+begin
+  Data := TEncoding.UTF8.GetBytes('Binary payload');
+  Encrypted := TBasicProtection.EncryptBinaryData(Data, 'Bin-Key');
+
+  Assert.IsTrue(Length(Encrypted) > Length(Data), 'GCM envelope should include magic, nonce and tag');
+  Assert.AreEqual<Integer>(Ord('U'), Encrypted[0]);
+  Assert.AreEqual<Integer>(Ord('B'), Encrypted[1]);
+  Assert.AreEqual<Integer>(Ord('G'), Encrypted[2]);
+  Assert.AreEqual<Integer>(Ord('1'), Encrypted[3]);
+end;
+
+procedure TTestBasicProtection.DecryptSensitive_WithWrongPassword_RaisesException;
+var
+  Encrypted: string;
+begin
+  Encrypted := TBasicProtection.EncryptSensitiveData('Secret payload', 'Correct-Key');
+
+  Assert.WillRaise(
+    procedure
+    begin
+      TBasicProtection.DecryptSensitiveData(Encrypted, 'Wrong-Key');
+    end,
+    EDecryptionException
+  );
+end;
+
+procedure TTestBasicProtection.DecryptSensitive_TamperedGcmPayload_RaisesException;
+var
+  Payload: TBytes;
+  Tampered: string;
+begin
+  Payload := TBasicProtection.EncryptBinaryData(TEncoding.UTF8.GetBytes('Secret payload'), 'Correct-Key');
+  Payload[High(Payload)] := Payload[High(Payload)] xor $01;
+  Tampered := 'UBG1|' + TestBytesToHex(Payload);
+
+  Assert.WillRaise(
+    procedure
+    begin
+      TBasicProtection.DecryptSensitiveData(Tampered, 'Correct-Key');
+    end,
+    EDecryptionException
+  );
+end;
+
+procedure TTestBasicProtection.DecryptBinary_TamperedGcmPayload_RaisesException;
+var
+  Encrypted: TBytes;
+begin
+  Encrypted := TBasicProtection.EncryptBinaryData(TEncoding.UTF8.GetBytes('Secret payload'), 'Correct-Key');
+  Encrypted[High(Encrypted)] := Encrypted[High(Encrypted)] xor $01;
+
+  Assert.WillRaise(
+    procedure
+    begin
+      TBasicProtection.DecryptBinaryData(Encrypted, 'Correct-Key');
+    end,
+    EDecryptionException
+  );
+end;
+
+procedure TTestBasicProtection.DecryptSensitive_LegacyCbcPayload_Roundtrip;
+const
+  LegacyEncrypted =
+    '000102030405060708090A0B0C0D0E0F|' +
+    'DC6F517AA8AF2D0EC67AAFDCFA2017C2EB2C504CA17BC02B1422157E833536FCFD9B0E759A3BE80F3409EEB404B94134';
+begin
+  Assert.AreEqual('Legacy CBC payload',
+    TBasicProtection.DecryptSensitiveData(LegacyEncrypted, 'Legacy-Key'));
+end;
+
+procedure TTestBasicProtection.DecryptBinary_LegacyCbcPayload_Roundtrip;
+const
+  LegacyEncrypted =
+    '000102030405060708090A0B0C0D0E0F' +
+    'DC6F517AA8AF2D0EC67AAFDCFA2017C2EB2C504CA17BC02B1422157E833536FCFD9B0E759A3BE80F3409EEB404B94134';
+var
+  Decrypted: TBytes;
+begin
+  Decrypted := TBasicProtection.DecryptBinaryData(TestHexToBytes(LegacyEncrypted), 'Legacy-Key');
+
+  Assert.AreEqual('Legacy CBC payload', TEncoding.UTF8.GetString(Decrypted));
+end;
+
 procedure TTestBasicProtection.CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue;
 var
   Data, HMAC: string;
@@ -127,6 +269,29 @@ begin
 
   Assert.IsTrue(TBasicProtection.VerifyDataIntegrity(Data, HMAC, 'HMAC-Key'),
     'VerifyDataIntegrity should return True for unchanged data and same key');
+end;
+
+procedure TTestBasicProtection.CalculateHMAC_UsesStandardHmacSha256Vector;
+const
+  CData = 'The quick brown fox jumps over the lazy dog';
+  CKey = 'key';
+  CExpected = 'f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8';
+var
+  Actual: string;
+begin
+  Actual := LowerCase(TBasicProtection.CalculateHMAC(CData, CKey));
+  Assert.AreEqual(CExpected, Actual, 'HMAC-SHA256 vector mismatch');
+end;
+
+procedure TTestBasicProtection.CalculateHMAC_EmptyPassword_RaisesMissingConfiguration;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      TBasicProtection.CalculateHMAC('payload', '');
+    end,
+    EMissingConfigurationException
+  );
 end;
 
 procedure TTestBasicProtection.VerifyDataIntegrity_ReturnsFalse_WhenDataTampered;
@@ -148,7 +313,7 @@ begin
     begin
       TBasicProtection.CalculateFileHash('Z:\this_file_should_not_exist_123456789.txt');
     end,
-    Exception
+    EFileNotFoundExceptionEx
   );
 end;
 

@@ -1,4 +1,4 @@
-unit UniBase.StateMachine;
+﻿unit UniBase.StateMachine;
 
 (*******************************************************************************
   UniBase State Machine
@@ -359,10 +359,10 @@ end;
 
 destructor TStateConfiguration<TState, TTrigger>.Destroy;
 begin
-  FIgnoredTriggers.Free;
-  FExitActions.Free;
-  FEntryActions.Free;
-  FTransitions.Free;
+  FreeAndNil(FIgnoredTriggers);
+  FreeAndNil(FExitActions);
+  FreeAndNil(FEntryActions);
+  FreeAndNil(FTransitions);
   inherited;
 end;
 
@@ -551,10 +551,10 @@ end;
 destructor TStateMachine<TState, TTrigger>.Destroy;
 begin
   if FOwnsContext and Assigned(FContext) then
-    FContext.Free;
-  FHistory.Free;
-  FLock.Free;
-  FStates.Free;
+    FreeAndNil(FContext);
+  FreeAndNil(FHistory);
+  FreeAndNil(FLock);
+  FreeAndNil(FStates);
   inherited;
 end;
 
@@ -690,7 +690,7 @@ begin
     end;
     
     // 验证目标状态是否有效
-    if not IsValidState(LTransition.DestinationState) then
+    if not IsValidState(LTransition.TargetState) then
     begin
       Result := TTransitionResult<TState, TTrigger>.CreateFailure(
         FCurrentState, ATrigger, 'Invalid destination state');
@@ -1183,7 +1183,7 @@ end;
 function TStateMachine<TState, TTrigger>.IsValidState(const AState: TState): Boolean;
 begin
   // 基本实现：检查状态是否在配置中
-  Result := FStateConfigurations.ContainsKey(AState);
+  Result := FStates.ContainsKey(AState);
 end;
 
 function TStateMachineBuilder<TState, TTrigger>.Build: TStateMachine<TState, TTrigger>;

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Manager - Core Manager
   
   Version: 0.3
@@ -350,7 +350,8 @@ uses
   Winapi.Windows,
   Winapi.ShlObj,
   {$ENDIF}
-  UniBase.Schema;
+  UniBase.Schema,
+  UniBase.Exception;
 
 var
   GUniBaseManager: TUniBaseManager = nil;
@@ -502,8 +503,8 @@ end;
 destructor TUniBaseManager.Destroy;
 begin
   Finalize;
-  FReadyCallbacks.Free;
-  FLock.Free;
+  FreeAndNil(FReadyCallbacks);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -641,11 +642,17 @@ begin
     
     // 4. 初始化子模块
     InitializeModules;
-    
+
+    // 5. 注册异常处理器回调（解除 Exception↔Manager 编译时依赖）
+    TUniBaseExceptionHandler.SetManagerCallbacks(
+      function: Boolean begin Result := FIsInitialized end,
+      function: TUniBaseLogger begin Result := FLogger end,
+      function: TObject begin Result := FConfigDB end);
+
     FIsInitialized := True;
     FInitErrorCode := ecSuccess;
     Result := True;
-    
+
   except
     on E: Exception do
     begin
@@ -699,11 +706,16 @@ begin
     end;
     
     InitializeModules;
-    
+
+    TUniBaseExceptionHandler.SetManagerCallbacks(
+      function: Boolean begin Result := FIsInitialized end,
+      function: TUniBaseLogger begin Result := FLogger end,
+      function: TObject begin Result := FConfigDB end);
+
     FIsInitialized := True;
     FInitErrorCode := ecSuccess;
     Result := True;
-    
+
   except
     on E: Exception do
     begin

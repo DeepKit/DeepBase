@@ -41,7 +41,7 @@ type
   private
     FMessageLabel: TLabel;
     FProgressBar: TProgressBar;
-    FAnimationPanel: TPanel;
+    FAnimationPanel: TPaintBox;
     FAnimationTimer: TTimer;
     FCancelButton: TButton;
     
@@ -224,13 +224,10 @@ end;
 procedure TWaitForm.CreateControls;
 begin
   // 动画面板
-  FAnimationPanel := TPanel.Create(Self);
+  FAnimationPanel := TPaintBox.Create(Self);
   FAnimationPanel.Parent := Self;
   FAnimationPanel.SetBounds(20, 20, 48, 48);
-  FAnimationPanel.BevelOuter := bvNone;
-  FAnimationPanel.ParentBackground := False;
   FAnimationPanel.OnPaint := AnimationPanelPaint;
-  FAnimationPanel.DoubleBuffered := True;
   
   // 消息标签
   FMessageLabel := TLabel.Create(Self);
@@ -305,14 +302,14 @@ end;
 
 procedure TWaitForm.AnimationPanelPaint(Sender: TObject);
 var
-  Panel: TPanel;
+  PaintBox: TPaintBox;
 begin
-  if Sender is TPanel then
+  if Sender is TPaintBox then
   begin
-    Panel := TPanel(Sender);
-    Panel.Canvas.Brush.Color := Panel.Color;
-    Panel.Canvas.FillRect(Panel.ClientRect);
-    DrawSpinner(Panel.Canvas, Panel.ClientRect);
+    PaintBox := TPaintBox(Sender);
+    PaintBox.Canvas.Brush.Color := Color;
+    PaintBox.Canvas.FillRect(PaintBox.ClientRect);
+    DrawSpinner(PaintBox.Canvas, PaintBox.ClientRect);
   end;
 end;
 

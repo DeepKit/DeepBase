@@ -98,7 +98,8 @@ type
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils,
+  System.TypInfo;
 
 { TFeedbackDialog }
 
@@ -313,11 +314,8 @@ begin
   SL := TStringList.Create;
   try
     SL.Add('OS: ' + TOSVersion.ToString);
-    SL.Add('Platform: ' + TOSVersion.Platform.ToString);
-    SL.Add('Architecture: ' + TOSVersion.Architecture.ToString);
     SL.Add('App: ' + FAppName);
     SL.Add('Version: ' + FAppVersion);
-    SL.Add('Locale: ' + SysUtils.GetLocaleStr(GetUserDefaultLCID, LOCALE_SENGLANGUAGE, ''));
     Result := SL.Text;
   finally
     SL.Free;
@@ -340,10 +338,10 @@ begin
           procedure
           begin
             Sleep(1500);
-            TThread.Synchronize(nil,
+            TThread.Queue(nil,
               procedure
               begin
-                ModalResult := mrOk;
+                Self.ModalResult := mrOk;
               end);
           end).Start;
       end
@@ -366,6 +364,11 @@ procedure TFeedbackDialog.SubmitFeedback(Callback: TFeedbackSubmitCallback);
 var
   FeedbackType: TFeedbackType;
   Subject, Content, Email, Logs, SystemInfo: string;
+  Client: THTTPClient;
+  Response: IHTTPResponse;
+  JsonObj: TJSONObject;
+  Success: Boolean;
+  Msg: string;
 begin
   FeedbackType := TFeedbackType(FCmbType.ItemIndex);
   Subject := Trim(FEdtSubject.Text);
@@ -391,22 +394,16 @@ begin
   // 异步提交
   TThread.CreateAnonymousThread(
     procedure
-    var
-      Client: THTTPClient;
-      Response: IHTTPResponse;
-      JsonObj: TJSONObject;
-      Success: Boolean;
-      Message: string;
     begin
       Success := False;
-      Message := '';
+      Msg := '';
       
       if FFeedbackUrl = '' then
       begin
         // 无提交 URL，模拟成功
         Sleep(1000);
         Success := True;
-        Message := 'Feedback saved locally';
+        Msg := 'Feedback saved locally';
       end
       else
       begin
@@ -414,7 +411,7 @@ begin
         try
           try
             Client.ContentType := 'application/json';
-            
+
             JsonObj := TJSONObject.Create;
             try
               JsonObj.AddPair('type', GetFeedbackTypeName(FeedbackType));
@@ -423,41 +420,41 @@ begin
               JsonObj.AddPair('email', Email);
               JsonObj.AddPair('app', FAppName);
               JsonObj.AddPair('version', FAppVersion);
-              
+
               if Logs <> '' then
                 JsonObj.AddPair('logs', Logs);
               if SystemInfo <> '' then
                 JsonObj.AddPair('system_info', SystemInfo);
-              
-              Response := Client.Post(FFeedbackUrl, 
+
+              Response := Client.Post(FFeedbackUrl,
                 TStringStream.Create(JsonObj.ToString, TEncoding.UTF8));
             finally
               JsonObj.Free;
             end;
-            
+
             if (Response.StatusCode >= 200) and (Response.StatusCode < 300) then
             begin
               Success := True;
-              Message := 'OK';
+              Msg := 'OK';
             end
             else
             begin
-              Message := 'Server returned: ' + Response.StatusCode.ToString;
+              Msg := 'Server returned: ' + Response.StatusCode.ToString;
             end;
           except
             on E: Exception do
-              Message := E.Message;
+              Msg := E.Message;
           end;
         finally
           Client.Free;
         end;
       end;
-      
-      TThread.Synchronize(nil,
+
+      TThread.Queue(nil,
         procedure
         begin
           if Assigned(Callback) then
-            Callback(Success, Message);
+            Callback(Success, Msg);
         end);
     end).Start;
 end;

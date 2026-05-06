@@ -391,7 +391,7 @@ end;
 procedure TSortedListTests.Test_Create;
 begin
   Assert.IsNotNull(FList);
-  Assert.AreEqual(0, FList.Count);
+  Assert.AreEqual(0, Integer(FList.Count));
 end;
 
 procedure TSortedListTests.Test_Add_SortsAutomatically;
@@ -412,7 +412,7 @@ begin
   FList.Add(10);
   FList.Add(20);
   FList.Add(30);
-  Assert.AreEqual(3, FList.Count);
+  Assert.AreEqual(3, Integer(FList.Count));
 end;
 
 procedure TSortedListTests.Test_Contains;
@@ -440,7 +440,7 @@ begin
   FList.Add(5);
   FList.Add(10);
   Assert.IsTrue(FList.Remove(5));
-  Assert.AreEqual(1, FList.Count);
+  Assert.AreEqual(1, Integer(FList.Count));
   Assert.IsFalse(FList.Contains(5));
 end;
 
@@ -450,7 +450,7 @@ begin
   FList.Add(10);
   FList.Add(15);
   FList.Delete(1);
-  Assert.AreEqual(2, FList.Count);
+  Assert.AreEqual(2, Integer(FList.Count));
   Assert.AreEqual(5, FList[0]);
   Assert.AreEqual(15, FList[1]);
 end;
@@ -460,16 +460,16 @@ begin
   FList.Add(1);
   FList.Add(2);
   FList.Clear;
-  Assert.AreEqual(0, FList.Count);
+  Assert.AreEqual(0, Integer(FList.Count));
 end;
 
 procedure TSortedListTests.Test_Count;
 begin
-  Assert.AreEqual(0, FList.Count);
+  Assert.AreEqual(0, Integer(FList.Count));
   FList.Add(1);
-  Assert.AreEqual(1, FList.Count);
+  Assert.AreEqual(1, Integer(FList.Count));
   FList.Add(2);
-  Assert.AreEqual(2, FList.Count);
+  Assert.AreEqual(2, Integer(FList.Count));
 end;
 
 procedure TSortedListTests.Test_IsEmpty;
@@ -503,7 +503,7 @@ begin
   FList.Add(1);
   FList.Add(2);
   Arr := FList.ToArray;
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
   Assert.AreEqual(1, Arr[0]);
   Assert.AreEqual(2, Arr[1]);
   Assert.AreEqual(3, Arr[2]);
@@ -519,7 +519,7 @@ begin
   FList.Add(4);
   FList.Add(5);
   Arr := FList.GetRange(1, 3);
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
   Assert.AreEqual(2, Arr[0]);
   Assert.AreEqual(3, Arr[1]);
   Assert.AreEqual(4, Arr[2]);
@@ -530,7 +530,7 @@ begin
   FList.Duplicates := dupIgnore;
   FList.Add(5);
   FList.Add(5);
-  Assert.AreEqual(1, FList.Count);
+  Assert.AreEqual(1, Integer(FList.Count));
 end;
 
 procedure TSortedListTests.Test_Duplicates_Accept;
@@ -538,7 +538,7 @@ begin
   FList.Duplicates := dupAccept;
   FList.Add(5);
   FList.Add(5);
-  Assert.AreEqual(2, FList.Count);
+  Assert.AreEqual(2, Integer(FList.Count));
 end;
 
 // ============================================================================
@@ -559,13 +559,13 @@ procedure TCircularBufferTests.Test_Create;
 begin
   Assert.IsNotNull(FBuffer);
   Assert.AreEqual(5, FBuffer.Capacity);
-  Assert.AreEqual(0, FBuffer.Count);
+  Assert.AreEqual(0, Integer(FBuffer.Count));
 end;
 
 procedure TCircularBufferTests.Test_Push;
 begin
   FBuffer.Push(10);
-  Assert.AreEqual(1, FBuffer.Count);
+  Assert.AreEqual(1, Integer(FBuffer.Count));
 end;
 
 procedure TCircularBufferTests.Test_Pop;
@@ -597,7 +597,7 @@ begin
   FBuffer.Push(10);
   FBuffer.Push(20);
   Assert.AreEqual(10, FBuffer.Peek);
-  Assert.AreEqual(2, FBuffer.Count); // Peek doesn't remove
+  Assert.AreEqual(2, Integer(FBuffer.Count)); // Peek doesn't remove
 end;
 
 procedure TCircularBufferTests.Test_IsFull;
@@ -629,7 +629,7 @@ begin
   FBuffer.Push(6);
   FBuffer.Push(7);
   
-  Assert.AreEqual(5, FBuffer.Count);
+  Assert.AreEqual(5, Integer(FBuffer.Count));
 end;
 
 procedure TCircularBufferTests.Test_Overwrite_Oldest;
@@ -640,7 +640,7 @@ begin
   // Push one more, should overwrite oldest
   FBuffer.Push(6);
   
-  Assert.AreEqual(5, FBuffer.Count);
+  Assert.AreEqual(5, Integer(FBuffer.Count));
   Assert.AreEqual(2, FBuffer.Peek); // 1 was overwritten
 end;
 
@@ -649,7 +649,7 @@ begin
   FBuffer.Push(1);
   FBuffer.Push(2);
   FBuffer.Clear;
-  Assert.AreEqual(0, FBuffer.Count);
+  Assert.AreEqual(0, Integer(FBuffer.Count));
   Assert.IsTrue(FBuffer.IsEmpty);
 end;
 
@@ -661,18 +661,18 @@ begin
   FBuffer.Push(2);
   FBuffer.Push(3);
   Arr := FBuffer.ToArray;
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
 end;
 
 procedure TCircularBufferTests.Test_Count;
 begin
-  Assert.AreEqual(0, FBuffer.Count);
+  Assert.AreEqual(0, Integer(FBuffer.Count));
   FBuffer.Push(1);
-  Assert.AreEqual(1, FBuffer.Count);
+  Assert.AreEqual(1, Integer(FBuffer.Count));
   FBuffer.Push(2);
-  Assert.AreEqual(2, FBuffer.Count);
+  Assert.AreEqual(2, Integer(FBuffer.Count));
   FBuffer.Pop;
-  Assert.AreEqual(1, FBuffer.Count);
+  Assert.AreEqual(1, Integer(FBuffer.Count));
 end;
 
 // ============================================================================
@@ -738,16 +738,16 @@ begin
   FCache.Put('a', 1);
   FCache.Put('b', 2);
   FCache.Clear;
-  Assert.AreEqual(0, FCache.Count);
+  Assert.AreEqual(0, Integer(FCache.Count));
 end;
 
 procedure TLRUCacheTests.Test_Count;
 begin
-  Assert.AreEqual(0, FCache.Count);
+  Assert.AreEqual(0, Integer(FCache.Count));
   FCache.Put('a', 1);
-  Assert.AreEqual(1, FCache.Count);
+  Assert.AreEqual(1, Integer(FCache.Count));
   FCache.Put('b', 2);
-  Assert.AreEqual(2, FCache.Count);
+  Assert.AreEqual(2, Integer(FCache.Count));
 end;
 
 procedure TLRUCacheTests.Test_IsFull;
@@ -820,7 +820,7 @@ begin
   FCache.Put('a', 1);
   FCache.Put('b', 2);
   K := FCache.Keys;
-  Assert.AreEqual(2, Length(K));
+  Assert.AreEqual(2, Integer(Length(K)));
 end;
 
 // ============================================================================
@@ -840,13 +840,13 @@ end;
 procedure TBidiDictionaryTests.Test_Create;
 begin
   Assert.IsNotNull(FDict);
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_Add;
 begin
   FDict.Add('one', 1);
-  Assert.AreEqual(1, FDict.Count);
+  Assert.AreEqual(1, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_GetValue;
@@ -899,14 +899,14 @@ procedure TBidiDictionaryTests.Test_Remove;
 begin
   FDict.Add('key', 1);
   FDict.Remove('key');
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_RemoveValue;
 begin
   FDict.Add('key', 1);
   FDict.RemoveValue(1);
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_Clear;
@@ -914,14 +914,14 @@ begin
   FDict.Add('a', 1);
   FDict.Add('b', 2);
   FDict.Clear;
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_Count;
 begin
   FDict.Add('a', 1);
   FDict.Add('b', 2);
-  Assert.AreEqual(2, FDict.Count);
+  Assert.AreEqual(2, Integer(FDict.Count));
 end;
 
 procedure TBidiDictionaryTests.Test_Keys;
@@ -931,7 +931,7 @@ begin
   FDict.Add('x', 1);
   FDict.Add('y', 2);
   K := FDict.Keys;
-  Assert.AreEqual(2, Length(K));
+  Assert.AreEqual(2, Integer(Length(K)));
 end;
 
 procedure TBidiDictionaryTests.Test_Values;
@@ -941,7 +941,7 @@ begin
   FDict.Add('x', 1);
   FDict.Add('y', 2);
   V := FDict.Values;
-  Assert.AreEqual(2, Length(V));
+  Assert.AreEqual(2, Integer(Length(V)));
 end;
 
 // ============================================================================
@@ -983,7 +983,7 @@ begin
   FMap.Add('key', 10);
   FMap.Add('key', 20);
   V := FMap.GetValues('key');
-  Assert.AreEqual(2, Length(V));
+  Assert.AreEqual(2, Integer(Length(V)));
 end;
 
 procedure TMultiMapTests.Test_TryGetValues;
@@ -1068,7 +1068,7 @@ begin
   FMap.Add('x', 1);
   FMap.Add('y', 2);
   K := FMap.Keys;
-  Assert.AreEqual(2, Length(K));
+  Assert.AreEqual(2, Integer(Length(K)));
 end;
 
 procedure TMultiMapTests.Test_AllValues;
@@ -1079,7 +1079,7 @@ begin
   FMap.Add('a', 2);
   FMap.Add('b', 3);
   V := FMap.AllValues;
-  Assert.AreEqual(3, Length(V));
+  Assert.AreEqual(3, Integer(Length(V)));
 end;
 
 // ============================================================================
@@ -1099,13 +1099,13 @@ end;
 procedure TOrderedDictionaryTests.Test_Create;
 begin
   Assert.IsNotNull(FDict);
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TOrderedDictionaryTests.Test_Add;
 begin
   FDict.Add('key', 1);
-  Assert.AreEqual(1, FDict.Count);
+  Assert.AreEqual(1, Integer(FDict.Count));
 end;
 
 procedure TOrderedDictionaryTests.Test_PreservesOrder;
@@ -1115,9 +1115,9 @@ begin
   FDict.Add('b', 2);
   
   // Should preserve insertion order
-  Assert.AreEqual('c', FDict.GetKeyAt(0));
-  Assert.AreEqual('a', FDict.GetKeyAt(1));
-  Assert.AreEqual('b', FDict.GetKeyAt(2));
+  Assert.AreEqual('c', FDict.ItemsByIndex[0].Key);
+  Assert.AreEqual('a', FDict.ItemsByIndex[1].Key);
+  Assert.AreEqual('b', FDict.ItemsByIndex[2].Key);
 end;
 
 procedure TOrderedDictionaryTests.Test_GetItem;
@@ -1153,7 +1153,7 @@ procedure TOrderedDictionaryTests.Test_Remove;
 begin
   FDict.Add('key', 1);
   FDict.Remove('key');
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TOrderedDictionaryTests.Test_Clear;
@@ -1161,30 +1161,30 @@ begin
   FDict.Add('a', 1);
   FDict.Add('b', 2);
   FDict.Clear;
-  Assert.AreEqual(0, FDict.Count);
+  Assert.AreEqual(0, Integer(FDict.Count));
 end;
 
 procedure TOrderedDictionaryTests.Test_Count;
 begin
   FDict.Add('a', 1);
   FDict.Add('b', 2);
-  Assert.AreEqual(2, FDict.Count);
+  Assert.AreEqual(2, Integer(FDict.Count));
 end;
 
 procedure TOrderedDictionaryTests.Test_GetKeyAt;
 begin
   FDict.Add('first', 1);
   FDict.Add('second', 2);
-  Assert.AreEqual('first', FDict.GetKeyAt(0));
-  Assert.AreEqual('second', FDict.GetKeyAt(1));
+  Assert.AreEqual('first', FDict.ItemsByIndex[0].Key);
+  Assert.AreEqual('second', FDict.ItemsByIndex[1].Key);
 end;
 
 procedure TOrderedDictionaryTests.Test_GetValueAt;
 begin
   FDict.Add('first', 100);
   FDict.Add('second', 200);
-  Assert.AreEqual(100, FDict.GetValueAt(0));
-  Assert.AreEqual(200, FDict.GetValueAt(1));
+  Assert.AreEqual(100, FDict.ItemsByIndex[0].Value);
+  Assert.AreEqual(200, FDict.ItemsByIndex[1].Value);
 end;
 
 // ============================================================================
@@ -1204,7 +1204,7 @@ end;
 procedure TDequeTests.Test_Create;
 begin
   Assert.IsNotNull(FDeque);
-  Assert.AreEqual(0, FDeque.Count);
+  Assert.AreEqual(0, Integer(FDeque.Count));
 end;
 
 procedure TDequeTests.Test_PushFront;
@@ -1244,7 +1244,7 @@ begin
   FDeque.PushBack(10);
   FDeque.PushBack(20);
   Assert.AreEqual(10, FDeque.PeekFront);
-  Assert.AreEqual(2, FDeque.Count); // Peek doesn't remove
+  Assert.AreEqual(2, Integer(FDeque.Count)); // Peek doesn't remove
 end;
 
 procedure TDequeTests.Test_PeekBack;
@@ -1252,7 +1252,7 @@ begin
   FDeque.PushBack(10);
   FDeque.PushBack(20);
   Assert.AreEqual(20, FDeque.PeekBack);
-  Assert.AreEqual(2, FDeque.Count);
+  Assert.AreEqual(2, Integer(FDeque.Count));
 end;
 
 procedure TDequeTests.Test_Clear;
@@ -1260,16 +1260,16 @@ begin
   FDeque.PushBack(1);
   FDeque.PushBack(2);
   FDeque.Clear;
-  Assert.AreEqual(0, FDeque.Count);
+  Assert.AreEqual(0, Integer(FDeque.Count));
 end;
 
 procedure TDequeTests.Test_Count;
 begin
-  Assert.AreEqual(0, FDeque.Count);
+  Assert.AreEqual(0, Integer(FDeque.Count));
   FDeque.PushBack(1);
-  Assert.AreEqual(1, FDeque.Count);
+  Assert.AreEqual(1, Integer(FDeque.Count));
   FDeque.PushFront(2);
-  Assert.AreEqual(2, FDeque.Count);
+  Assert.AreEqual(2, Integer(FDeque.Count));
 end;
 
 procedure TDequeTests.Test_IsEmpty;
@@ -1287,7 +1287,7 @@ begin
   FDeque.PushBack(2);
   FDeque.PushBack(3);
   Arr := FDeque.ToArray;
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
   Assert.AreEqual(1, Arr[0]);
   Assert.AreEqual(3, Arr[2]);
 end;
@@ -1322,7 +1322,7 @@ begin
   FSet.Add('apple');
   FSet.Add('apple');
   FSet.Add('apple');
-  Assert.AreEqual(3, FSet.GetCount('apple'));
+  Assert.AreEqual(3, FSet.CountOf('apple'));
 end;
 
 procedure TCountingSetTests.Test_Remove;
@@ -1330,7 +1330,7 @@ begin
   FSet.Add('apple');
   FSet.Add('apple');
   FSet.Remove('apple');
-  Assert.AreEqual(1, FSet.GetCount('apple'));
+  Assert.AreEqual(1, FSet.CountOf('apple'));
   FSet.Remove('apple');
   Assert.IsFalse(FSet.Contains('apple'));
 end;
@@ -1340,9 +1340,9 @@ begin
   FSet.Add('a');
   FSet.Add('a');
   FSet.Add('b');
-  Assert.AreEqual(2, FSet.GetCount('a'));
-  Assert.AreEqual(1, FSet.GetCount('b'));
-  Assert.AreEqual(0, FSet.GetCount('c'));
+  Assert.AreEqual(2, FSet.CountOf('a'));
+  Assert.AreEqual(1, FSet.CountOf('b'));
+  Assert.AreEqual(0, FSet.CountOf('c'));
 end;
 
 procedure TCountingSetTests.Test_Contains;
@@ -1363,7 +1363,7 @@ end;
 
 procedure TCountingSetTests.Test_MostCommon;
 var
-  Items: TArray<string>;
+  Items: TArray<TPair<string, Integer>>;
 begin
   FSet.Add('apple');
   FSet.Add('banana');
@@ -1371,11 +1371,11 @@ begin
   FSet.Add('cherry');
   FSet.Add('cherry');
   FSet.Add('cherry');
-  
+
   Items := FSet.MostCommon(2);
-  Assert.AreEqual(2, Length(Items));
-  Assert.AreEqual('cherry', Items[0]);
-  Assert.AreEqual('banana', Items[1]);
+  Assert.AreEqual(2, Integer(Length(Items)));
+  Assert.AreEqual('cherry', Items[0].Key);
+  Assert.AreEqual('banana', Items[1].Key);
 end;
 
 procedure TCountingSetTests.Test_TotalCount;
@@ -1403,13 +1403,13 @@ end;
 procedure TBlockingQueueTests.Test_Create;
 begin
   Assert.IsNotNull(FQueue);
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
 end;
 
 procedure TBlockingQueueTests.Test_Enqueue;
 begin
   FQueue.Enqueue(10);
-  Assert.AreEqual(1, FQueue.Count);
+  Assert.AreEqual(1, Integer(FQueue.Count));
 end;
 
 procedure TBlockingQueueTests.Test_Dequeue;
@@ -1440,9 +1440,9 @@ procedure TBlockingQueueTests.Test_Count;
 begin
   FQueue.Enqueue(1);
   FQueue.Enqueue(2);
-  Assert.AreEqual(2, FQueue.Count);
+  Assert.AreEqual(2, Integer(FQueue.Count));
   FQueue.Dequeue;
-  Assert.AreEqual(1, FQueue.Count);
+  Assert.AreEqual(1, Integer(FQueue.Count));
 end;
 
 procedure TBlockingQueueTests.Test_Clear;
@@ -1450,7 +1450,7 @@ begin
   FQueue.Enqueue(1);
   FQueue.Enqueue(2);
   FQueue.Clear;
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
 end;
 
 initialization

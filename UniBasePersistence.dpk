@@ -1,5 +1,6 @@
 package UniBasePersistence;
 
+{$IMPORTEDDATA ON}
 {$IMPLICITBUILD ON}
 {$DESCRIPTION 'UniBase Persistence Runtime Package'}
 {$RUNONLY}
@@ -29,6 +30,7 @@ contains
   UniBase.Persistence.Exception.FireDAC in 'Persistence\UniBase.Persistence.Exception.FireDAC.pas',
   UniBase.Persistence.Diagnose.FireDAC in 'Persistence\UniBase.Persistence.Diagnose.FireDAC.pas',
   UniBase.Persistence.ORM.FireDAC in 'Persistence\UniBase.Persistence.ORM.FireDAC.pas',
+  UniBase.Persistence.LLM.FireDAC in 'Persistence\UniBase.Persistence.LLM.FireDAC.pas',
   UniBase.Persistence.Manager.FireDAC in 'Persistence\UniBase.Persistence.Manager.FireDAC.pas',
   UniBase.Persistence.RuntimeRegistration in 'Persistence\UniBase.Persistence.RuntimeRegistration.pas',
   UniBase.DB.ConnectionPool in 'Persistence\UniBase.DB.ConnectionPool.pas',
@@ -39,6 +41,7 @@ contains
   UniBase.DB.JobQueue in 'Persistence\UniBase.DB.JobQueue.pas',
   UniBase.DB.Migrations in 'Persistence\UniBase.DB.Migrations.pas',
   UniBase.DB.StatusMachine in 'Persistence\UniBase.DB.StatusMachine.pas',
-  UniBase.DB.Pool in 'Persistence\UniBase.DB.Pool.pas';
+  UniBase.DB.Pool in 'Persistence\UniBase.DB.Pool.pas',
+  UniBase.Persistence.TestHelper.FireDAC in 'Persistence\UniBase.Persistence.TestHelper.FireDAC.pas';
 
 end.

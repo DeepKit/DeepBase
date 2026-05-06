@@ -170,7 +170,7 @@ begin
     Key := Text;
     
   if UniBase.Manager.UniBase.IsInitialized then
-    Text := UniBase.Manager.UniBase.i18n.T(Key)
+    Text := UniBase.Manager.UniBase.i18n.Translate(Key)
   else
     Text := Key;
 end;
@@ -263,7 +263,7 @@ begin
     Key := Text;
     
   if UniBase.Manager.UniBase.IsInitialized then
-    Text := UniBase.Manager.UniBase.i18n.T(Key)
+    Text := UniBase.Manager.UniBase.i18n.Translate(Key)
   else
     Text := Key;
 end;

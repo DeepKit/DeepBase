@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.IoC - Inversion of Control / Dependency Injection Container
   
   Version: 0.3
@@ -329,7 +329,7 @@ begin
   FGlobalContainerLock.Enter;
   try
     if (FGlobalContainer <> nil) and (FGlobalContainer <> Container) then
-      FGlobalContainer.Free;
+      FreeAndNil(FGlobalContainer);
     FGlobalContainer := Container;
   finally
     FGlobalContainerLock.Leave;
@@ -372,7 +372,7 @@ end;
 destructor TServiceRegistration.Destroy;
 begin
   if FOwnsInstance and (FSingletonInstance <> nil) then
-    FSingletonInstance.Free;
+    FreeAndNil(FSingletonInstance);
   inherited;
 end;
 
@@ -391,7 +391,7 @@ end;
 destructor TIoCScope.Destroy;
 begin
   FDisposed := True;
-  FScopedInstances.Free;
+  FreeAndNil(FScopedInstances);
   inherited;
 end;
 
@@ -431,14 +431,14 @@ destructor TIoCContainer.Destroy;
 begin
   FLock.Enter;
   try
-    FInterceptors.Free;
-    FNamedRegistrations.Free;
-    FRegistrations.Free;
-    FResolving.Free;
+    FreeAndNil(FInterceptors);
+    FreeAndNil(FNamedRegistrations);
+    FreeAndNil(FRegistrations);
+    FreeAndNil(FResolving);
   finally
     FLock.Leave;
   end;
-  FLock.Free;
+  FreeAndNil(FLock);
   FRttiContext.Free;
   inherited;
 end;

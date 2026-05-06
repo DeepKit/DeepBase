@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.FMX.LogListView - FMX 高性能日志列表控件
   
   Version: 1.0
@@ -115,7 +115,7 @@ end;
 destructor TFMXLogListView.Destroy;
 begin
   FRefreshTimer.Enabled := False;
-  FLogCache.Free;
+  FreeAndNil(FLogCache);
   if Assigned(FQuery) then FQuery.Free;
   if Assigned(FConnection) then FConnection.Free;
   inherited;

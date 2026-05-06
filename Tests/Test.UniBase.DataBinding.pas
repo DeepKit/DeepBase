@@ -68,8 +68,10 @@ type
     FPerson: TTestPerson;
     FChangedProps: TList<string>;
     FChangeCount: Integer;
-    
+    FChangeCount2: Integer;
+
     procedure OnPropertyChanged(const Args: TPropertyChangedEventArgs);
+    procedure OnPropertyChanged2(const Args: TPropertyChangedEventArgs);
   public
     [Setup]
     procedure Setup;
@@ -242,6 +244,7 @@ begin
   FPerson := TTestPerson.Create;
   FChangedProps := TList<string>.Create;
   FChangeCount := 0;
+  FChangeCount2 := 0;
 end;
 
 procedure TTestObservableObject.TearDown;
@@ -256,6 +259,11 @@ begin
   FChangedProps.Add(Args.PropertyName);
 end;
 
+procedure TTestObservableObject.OnPropertyChanged2(const Args: TPropertyChangedEventArgs);
+begin
+  Inc(FChangeCount2);
+end;
+
 procedure TTestObservableObject.Test_NotifyPropertyChanged_FiresEvent;
 begin
   FPerson.AddPropertyChangedHandler(OnPropertyChanged);
@@ -266,23 +274,14 @@ begin
 end;
 
 procedure TTestObservableObject.Test_MultipleHandlers_AllReceiveNotification;
-var
-  Count2: Integer;
-  Handler2: TPropertyChangedEvent;
 begin
-  Count2 := 0;
-  Handler2 := procedure(const Args: TPropertyChangedEventArgs)
-              begin
-                Inc(Count2);
-              end;
-  
   FPerson.AddPropertyChangedHandler(OnPropertyChanged);
-  FPerson.AddPropertyChangedHandler(Handler2);
-  
+  FPerson.AddPropertyChangedHandler(OnPropertyChanged2);
+
   FPerson.Name := 'Test';
-  
+
   Assert.AreEqual(1, FChangeCount);
-  Assert.AreEqual(1, Count2);
+  Assert.AreEqual(1, FChangeCount2);
 end;
 
 procedure TTestObservableObject.Test_RemoveHandler_StopsNotification;
@@ -347,7 +346,7 @@ begin
   
   Assert.AreEqual(1, FChangeCount);
   Assert.AreEqual(Ord(caAdd), Ord(FLastAction));
-  Assert.AreEqual(1, FList.Count);
+  Assert.AreEqual(1, Integer(FList.Count));
 end;
 
 procedure TTestObservableList.Test_Insert_NotifiesChange;
@@ -359,7 +358,7 @@ begin
   
   Assert.AreEqual(1, FChangeCount);
   Assert.AreEqual(Ord(caAdd), Ord(FLastAction));
-  Assert.AreEqual(2, FList.Count);
+  Assert.AreEqual(2, Integer(FList.Count));
 end;
 
 procedure TTestObservableList.Test_Delete_NotifiesChange;
@@ -371,7 +370,7 @@ begin
   
   Assert.AreEqual(1, FChangeCount);
   Assert.AreEqual(Ord(caRemove), Ord(FLastAction));
-  Assert.AreEqual(0, FList.Count);
+  Assert.AreEqual(0, Integer(FList.Count));
 end;
 
 procedure TTestObservableList.Test_Clear_NotifiesChange;
@@ -384,7 +383,7 @@ begin
   
   Assert.AreEqual(1, FChangeCount);
   Assert.AreEqual(Ord(caClear), Ord(FLastAction));
-  Assert.AreEqual(0, FList.Count);
+  Assert.AreEqual(0, Integer(FList.Count));
 end;
 
 procedure TTestObservableList.Test_SetItem_NotifiesReplace;
@@ -420,7 +419,7 @@ begin
   Index := FList.Remove(Person);
   
   Assert.AreEqual(1, Index);
-  Assert.AreEqual(2, FList.Count);
+  Assert.AreEqual(2, Integer(FList.Count));
 end;
 
 { TTestBindingManager }

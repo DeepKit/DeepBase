@@ -21,6 +21,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.SyncObjs,
   System.Threading,
   DUnitX.TestFramework;
 
@@ -154,6 +155,9 @@ type
     
     [Test]
     procedure Test_Release_ReturnsToPool;
+
+    [Test]
+    procedure Test_Discard_DestroysInUseObject;
     
     [Test]
     procedure Test_Clear_RemovesAllObjects;
@@ -305,6 +309,7 @@ begin
     Assert.AreSame(Item, Pooled.Obj);
   finally
     Pooled.Free;
+    Item.Free;
   end;
 end;
 
@@ -321,6 +326,7 @@ begin
     Assert.IsTrue(Pooled.InUse);
   finally
     Pooled.Free;
+    Item.Free;
   end;
 end;
 
@@ -337,6 +343,7 @@ begin
     Assert.IsFalse(Pooled.InUse);
   finally
     Pooled.Free;
+    Item.Free;
   end;
 end;
 
@@ -356,6 +363,7 @@ begin
     Assert.AreEqual(2, Pooled.UseCount);
   finally
     Pooled.Free;
+    Item.Free;
   end;
 end;
 
@@ -374,6 +382,7 @@ begin
     Assert.IsTrue(Pooled.LastUsedAt >= BeforeUse);
   finally
     Pooled.Free;
+    Item.Free;
   end;
 end;
 
@@ -664,6 +673,33 @@ begin
     Pool.Release(Item);
     IdleAfter := Pool.IdleCount;
     Assert.AreEqual(IdleBefore + 1, IdleAfter);
+  finally
+    Pool.Free;
+  end;
+end;
+
+procedure TTestAdvancedObjectPool.Test_Discard_DestroysInUseObject;
+var
+  Factory: IObjectFactory<TPoolTestItem>;
+  Pool: TObjectPool<TPoolTestItem>;
+  Config: TPoolConfig;
+  Item: TPoolTestItem;
+begin
+  Factory := TDefaultObjectFactory<TPoolTestItem>.Create;
+  Config := TPoolConfig.Default;
+  Config.MinSize := 0;
+  Config.MaxSize := 1;
+  Pool := TObjectPool<TPoolTestItem>.Create(Factory, Config);
+  try
+    Item := Pool.Acquire;
+    Assert.AreEqual(1, Pool.InUseCount);
+
+    Pool.Discard(Item);
+
+    Assert.AreEqual(0, Pool.InUseCount);
+    Assert.AreEqual(0, Pool.CurrentSize);
+    Assert.IsTrue(Pool.TryAcquire(Item));
+    Pool.Release(Item);
   finally
     Pool.Free;
   end;
@@ -1099,6 +1135,7 @@ begin
     Scoped := TScopedPoolObject<TPoolTestItem>.Create(Pool, Item);
     Assert.AreSame(Item, Scoped.Obj);
   finally
+    Scoped := nil;
     Pool.Free;
   end;
 end;
@@ -1147,6 +1184,7 @@ begin
     Scoped := TScopedPoolObject<TPoolTestItem>.Create(Pool, Item);
     Assert.AreEqual('Test', Scoped.Obj.Data);
   finally
+    Scoped := nil;
     Pool.Free;
   end;
 end;

@@ -32,7 +32,8 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
   FireDAC.DApt,
-  UniBase.DB.DoQry;
+  UniBase.DB.DoQry,
+  UniBase.Exceptions;
 
 type
   TQueryHistoryItem = record
@@ -126,7 +127,11 @@ implementation
 
 uses
   System.IOUtils,
-  Vcl.Clipbrd;
+  System.StrUtils,
+  Vcl.Clipbrd
+  {$IFDEF MSWINDOWS}
+  , UniBase.Security.DPAPI
+  {$ENDIF};
 
 const
   SQL_KEYWORDS: array[0..49] of string = (
@@ -138,6 +143,25 @@ const
     'NULL', 'NOT', 'EXISTS', 'AS', 'JOIN', 'LEFT', 'RIGHT', 'INNER',
     'OUTER', 'ON', 'UNION', 'ALL', 'DISTINCT', 'COUNT', 'SUM'
   );
+
+function ResolveStoredCredentialValue(const StoredValue: string): string;
+var
+  TargetName: string;
+begin
+  Result := StoredValue;
+  if not StartsText('credman:', Trim(Result)) then
+    Exit;
+
+  TargetName := Copy(Trim(Result), Length('credman:') + 1, MaxInt);
+  if TargetName = '' then
+    Exit('');
+
+  {$IFDEF MSWINDOWS}
+  Result := TCredentialManager.GetCredential(TargetName, '');
+  {$ELSE}
+  Result := '';
+  {$ENDIF}
+end;
 
 { TfraSQLEditor }
 
@@ -524,7 +548,7 @@ begin
   try
     Conn := CreateBusinessConnection(Target, DBType);
     if Conn = nil then
-      raise Exception.Create('Failed to create business DB connection');
+      raise EDatabaseException.Create('Failed to create business DB connection');
 
     Ctx := UniDbMakeContext(Conn, DBType, 30, UniDbNewCorrelationId);
     PreviewSQL := UniDbBuildSqlPreview(ProcName, ParamsJson, Ctx);
@@ -585,7 +609,7 @@ begin
   try
     Conn := CreateBusinessConnection(Target, DBType);
     if Conn = nil then
-      raise Exception.Create('Failed to create business DB connection');
+      raise EDatabaseException.Create('Failed to create business DB connection');
 
     Ctx := UniDbMakeContext(Conn, DBType, 30, UniDbNewCorrelationId);
 
@@ -685,7 +709,7 @@ begin
     // SQLite business DB
     DBPath := GetSetting('DB2.Path', '');
     if DBPath = '' then
-      raise Exception.Create('DB2.Path not configured in Settings');
+      raise EDatabaseException.Create('DB2.Path not configured in Settings');
 
     if TPath.IsPathRooted(DBPath) then
       FullPath := DBPath
@@ -708,7 +732,7 @@ begin
     Server   := GetSetting('DB3.Server', '127.0.0.1');
     Database := GetSetting('DB3.Database', 'postgres');
     UserName := GetSetting('DB3.User', 'postgres');
-    Password := GetSetting('DB3.Password', '');
+    Password := ResolveStoredCredentialValue(GetSetting('DB3.Password', ''));
     Port     := StrToIntDef(GetSetting('DB3.Port', '5432'), 5432);
 
     Result := TFDConnection.Create(nil);

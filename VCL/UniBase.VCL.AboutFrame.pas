@@ -12,7 +12,8 @@ uses
   FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs,
   FireDAC.VCLUI.Wait, FireDAC.Phys.SQLiteWrapper.Stat, Data.DB,
   FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf,
-  FireDAC.DApt, FireDAC.Comp.DataSet, UniBase.AntiTamper, UniBase.Protection;
+  FireDAC.DApt, FireDAC.Comp.DataSet, UniBase.AntiTamper, UniBase.Protection,
+  UniBase.Exceptions;
 
 type
   // 打赏地址类型
@@ -229,7 +230,7 @@ begin
     if not TFile.Exists(DatabasePath) then
     begin
       Log('Database file does not exist: ' + DatabasePath);
-      raise Exception.Create('Database file not found');
+      raise EFileNotFoundExceptionEx.Create('Database file not found');
     end;
 
     // 设置数据库连接字符串

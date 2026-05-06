@@ -167,7 +167,7 @@ object FMXUpdateDialog: TFMXUpdateDialog
             Text = #36339#36807#27492#29256#26412
             OnClick = BtnSkipClick
           end
-        </object>
+        end
       end
     end
   end

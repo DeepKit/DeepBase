@@ -15,6 +15,7 @@ uses
   System.Generics.Collections,
   System.DateUtils,
   DUnitX.TestFramework,
+  UniBase.Exceptions,
   UniBase.Resilience;
 
 type
@@ -638,7 +639,7 @@ begin
         begin
           // Should not execute
         end);
-    end, Exception);
+    end, ECircuitBreakerException);
 end;
 
 procedure TCircuitBreakerTests.Test_Execute_Proc_Timeout_RecordsFailure;

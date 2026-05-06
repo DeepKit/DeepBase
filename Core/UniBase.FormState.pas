@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.FormState - Form State Management Module
   
   Version: 1.0
@@ -144,7 +144,7 @@ end;
 destructor TUniBaseFormState.Destroy;
 begin
   if FOwnsLock then
-    FLock.Free;
+    FreeAndNil(FLock);
   inherited;
 end;
 
@@ -416,6 +416,86 @@ begin
     Prop.SetValue(AForm, TValue.FromOrdinal(Prop.PropertyType.Handle, State));
 end;
 
+function RectWidth(const R: TRect): Integer;
+begin
+  Result := R.Right - R.Left;
+end;
+
+function RectHeight(const R: TRect): Integer;
+begin
+  Result := R.Bottom - R.Top;
+end;
+
+function VirtualScreenWorkArea: TRect;
+begin
+  Result.Left := GetSystemMetrics(SM_XVIRTUALSCREEN);
+  Result.Top := GetSystemMetrics(SM_YVIRTUALSCREEN);
+  Result.Right := Result.Left + GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  Result.Bottom := Result.Top + GetSystemMetrics(SM_CYVIRTUALSCREEN);
+end;
+
+function WorkAreaForSavedBounds(const Data: TFormStateData): TRect;
+var
+  SavedRect: TRect;
+  Mon: HMONITOR;
+  MonInfo: TMonitorInfo;
+begin
+  SavedRect := Rect(Data.Left, Data.Top,
+    Data.Left + Max(Data.Width, 1),
+    Data.Top + Max(Data.Height, 1));
+
+  Result := VirtualScreenWorkArea;
+  Mon := MonitorFromRect(@SavedRect, MONITOR_DEFAULTTONEAREST);
+  if Mon <> 0 then
+  begin
+    MonInfo.cbSize := SizeOf(MONITORINFO);
+    if GetMonitorInfo(Mon, @MonInfo) then
+      Result := MonInfo.rcWork;
+  end;
+end;
+
+procedure EnsureFormStateVisible(var Data: TFormStateData);
+const
+  MIN_FORM_WIDTH = 100;
+  MIN_FORM_HEIGHT = 100;
+  DEFAULT_FORM_WIDTH = 400;
+  DEFAULT_FORM_HEIGHT = 300;
+  WORKAREA_MARGIN = 20;
+var
+  WorkArea: TRect;
+  WorkWidth: Integer;
+  WorkHeight: Integer;
+begin
+  WorkArea := WorkAreaForSavedBounds(Data);
+  WorkWidth := Max(RectWidth(WorkArea), 1);
+  WorkHeight := Max(RectHeight(WorkArea), 1);
+
+  if Data.Width < MIN_FORM_WIDTH then
+    Data.Width := DEFAULT_FORM_WIDTH;
+  if Data.Height < MIN_FORM_HEIGHT then
+    Data.Height := DEFAULT_FORM_HEIGHT;
+
+  if Data.Width > WorkWidth then
+    Data.Width := Max(MIN_FORM_WIDTH, WorkWidth - WORKAREA_MARGIN);
+  if Data.Width > WorkWidth then
+    Data.Width := WorkWidth;
+
+  if Data.Height > WorkHeight then
+    Data.Height := Max(MIN_FORM_HEIGHT, WorkHeight - WORKAREA_MARGIN);
+  if Data.Height > WorkHeight then
+    Data.Height := WorkHeight;
+
+  if Data.Left + Data.Width > WorkArea.Right then
+    Data.Left := WorkArea.Right - Data.Width;
+  if Data.Left < WorkArea.Left then
+    Data.Left := WorkArea.Left;
+
+  if Data.Top + Data.Height > WorkArea.Bottom then
+    Data.Top := WorkArea.Bottom - Data.Height;
+  if Data.Top < WorkArea.Top then
+    Data.Top := WorkArea.Top;
+end;
+
 procedure TUniBaseFormState.SaveFormState(AForm: TObject; const ExtraData: string);
 var
   Data: TFormStateData;
@@ -484,13 +564,9 @@ begin
 end;
 
 procedure TUniBaseFormState.RestoreFormState(AForm: TObject);
-const
-  MIN_VISIBLE_HEIGHT = 40;
-  MIN_VISIBLE_WIDTH = 100;
 var
   Data: TFormStateData;
   FormName: string;
-  ScreenWidth, ScreenHeight: Integer;
 begin
   if AForm = nil then Exit;
   
@@ -499,25 +575,8 @@ begin
   
   if RestoreState(FormName, Data) then
   begin
-    // 边界检查 - 确保窗体在可见范围内
-    ScreenWidth := GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    ScreenHeight := GetSystemMetrics(SM_CYVIRTUALSCREEN);
-    
-    // 确保窗体尺寸合理
-    if Data.Width < 100 then Data.Width := 400;
-    if Data.Height < 100 then Data.Height := 300;
-    if Data.Width > ScreenWidth then Data.Width := ScreenWidth - 20;
-    if Data.Height > ScreenHeight then Data.Height := ScreenHeight - 20;
-    
-    // 确保标题栏在可见范围内
-    if Data.Left < -Data.Width + MIN_VISIBLE_WIDTH then
-      Data.Left := 0;
-    if Data.Left > ScreenWidth - MIN_VISIBLE_WIDTH then
-      Data.Left := ScreenWidth - Data.Width;
-    if Data.Top < 0 then
-      Data.Top := 0;
-    if Data.Top > ScreenHeight - MIN_VISIBLE_HEIGHT then
-      Data.Top := ScreenHeight - Data.Height;
+    // Clamp stale multi-monitor coordinates to the nearest current work area.
+    EnsureFormStateVisible(Data);
     
     // 先设置为正常状态以便设置位置
     TFormAccessor.SetFormWindowState(AForm, 0); // wsNormal

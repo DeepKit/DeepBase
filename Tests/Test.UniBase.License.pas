@@ -15,7 +15,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils, System.Classes, System.DateUtils,
-  UniBase.Types, UniBase.Manager, UniBase.License;
+  UniBase.Types, UniBase.Manager, UniBase.License, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -72,9 +72,43 @@ type
     
     [Test]
     procedure Test_CurrentLicenseInfo;
+
+    [Test]
+    procedure Test_StorageInjection_BasicFlow;
   end;
 
 implementation
+
+type
+  TInMemoryLicenseStorage = class(TInterfacedObject, ILicenseStorage)
+  private
+    FHasValue: Boolean;
+    FValue: string;
+  public
+    function ReadLicenseKey: string;
+    procedure WriteLicenseKey(const LicenseKey: string);
+    procedure DeleteLicenseKey;
+  end;
+
+function TInMemoryLicenseStorage.ReadLicenseKey: string;
+begin
+  if FHasValue then
+    Result := FValue
+  else
+    Result := '';
+end;
+
+procedure TInMemoryLicenseStorage.WriteLicenseKey(const LicenseKey: string);
+begin
+  FHasValue := True;
+  FValue := LicenseKey;
+end;
+
+procedure TInMemoryLicenseStorage.DeleteLicenseKey;
+begin
+  FHasValue := False;
+  FValue := '';
+end;
 
 { TTestUniBaseLicense }
 
@@ -323,6 +357,42 @@ begin
   
   Assert.AreEqual(Ord(ltPro), Ord(Info.LicenseType), '当前许可证类型应该正确');
   Assert.AreEqual('Current Test', Info.IssuedTo, 'IssuedTo 应该正确');
+end;
+
+procedure TTestUniBaseLicense.Test_StorageInjection_BasicFlow;
+var
+  Storage: ILicenseStorage;
+  LicenseA: TUniBaseLicense;
+  LicenseB: TUniBaseLicense;
+  Key: string;
+begin
+  Storage := TInMemoryLicenseStorage.Create;
+
+  LicenseA := TUniBaseLicense.Create(Storage);
+  try
+    Key := TUniBaseLicense.GenerateLicenseKey(
+      ltStandard,
+      IncYear(Now, 1),
+      'Storage Test',
+      LicenseA.GetDeviceId,
+      []
+    );
+
+    Assert.IsTrue(LicenseA.ActivateLicense(Key), '注入存储模式下应可激活许可证');
+    Assert.IsNotEmpty(Storage.ReadLicenseKey, '激活后应持久化许可证');
+  finally
+    LicenseA.Free;
+  end;
+
+  LicenseB := TUniBaseLicense.Create(Storage);
+  try
+    Assert.AreEqual(Ord(lsValid), Ord(LicenseB.CurrentLicenseInfo.Status),
+      '新实例应从注入存储恢复许可证');
+    LicenseB.DeactivateLicense;
+    Assert.AreEqual('', Storage.ReadLicenseKey, '停用后应清除持久化许可证');
+  finally
+    LicenseB.Free;
+  end;
 end;
 
 initialization

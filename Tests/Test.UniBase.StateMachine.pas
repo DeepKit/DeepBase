@@ -480,7 +480,7 @@ begin
   Config := FStateMachine.Configure(tsIdle);
   Config.Permit(ttStart, tsRunning);
   Config.Permit(ttComplete, tsCompleted);
-  Assert.AreEqual(2, Config.Transitions.Count);
+  Assert.AreEqual(2, Integer(Config.Transitions.Count));
 end;
 
 procedure TStateConfigurationTests.Test_PermitIf_WithGuard;
@@ -493,7 +493,7 @@ begin
     begin
       Result := True;
     end);
-  Assert.AreEqual(1, Config.Transitions.Count);
+  Assert.AreEqual(1, Integer(Config.Transitions.Count));
   Assert.IsNotNull(@Config.Transitions[0].Guard);
 end;
 
@@ -539,7 +539,7 @@ var
 begin
   Config := FStateMachine.Configure(tsRunning);
   Config.InternalTransition(ttPause,
-    procedure(const From, To: TTestState; const Trigger: TTestTrigger; const Ctx: TObject)
+    procedure(const AFrom, AToState: TTestState; const ATrigger: TTestTrigger; const ACtx: TObject)
     begin
     end);
   Assert.IsTrue(Config.Transitions[0].IsInternal);
@@ -555,7 +555,7 @@ begin
     begin
       Result := True;
     end,
-    procedure(const From, To: TTestState; const Trigger: TTestTrigger; const Ctx: TObject)
+    procedure(const AFrom, AToState: TTestState; const ATrigger: TTestTrigger; const ACtx: TObject)
     begin
     end);
   Assert.IsTrue(Config.Transitions[0].IsInternal);
@@ -568,7 +568,7 @@ var
 begin
   Config := FStateMachine.Configure(tsIdle);
   Config.Ignore(ttPause);
-  Assert.AreEqual(1, Config.IgnoredTriggers.Count);
+  Assert.AreEqual(1, Integer(Config.IgnoredTriggers.Count));
 end;
 
 procedure TStateConfigurationTests.Test_IgnoreIf;
@@ -593,7 +593,7 @@ begin
     procedure(const Ctx: TObject)
     begin
     end);
-  Assert.AreEqual(1, Config.EntryActions.Count);
+  Assert.AreEqual(1, Integer(Config.EntryActions.Count));
 end;
 
 procedure TStateConfigurationTests.Test_OnExit;
@@ -605,7 +605,7 @@ begin
     procedure(const Ctx: TObject)
     begin
     end);
-  Assert.AreEqual(1, Config.ExitActions.Count);
+  Assert.AreEqual(1, Integer(Config.ExitActions.Count));
 end;
 
 procedure TStateConfigurationTests.Test_MultipleEntryActions;
@@ -617,7 +617,7 @@ begin
     .OnEntry(procedure(const Ctx: TObject) begin end)
     .OnEntry(procedure(const Ctx: TObject) begin end)
     .OnEntry(procedure(const Ctx: TObject) begin end);
-  Assert.AreEqual(3, Config.EntryActions.Count);
+  Assert.AreEqual(3, Integer(Config.EntryActions.Count));
 end;
 
 procedure TStateConfigurationTests.Test_MultipleExitActions;
@@ -628,7 +628,7 @@ begin
   Config
     .OnExit(procedure(const Ctx: TObject) begin end)
     .OnExit(procedure(const Ctx: TObject) begin end);
-  Assert.AreEqual(2, Config.ExitActions.Count);
+  Assert.AreEqual(2, Integer(Config.ExitActions.Count));
 end;
 
 procedure TStateConfigurationTests.Test_SubstateOf;
@@ -865,7 +865,7 @@ begin
     .Permit(ttStart, tsRunning)
     .Permit(ttComplete, tsCompleted);
   Triggers := FStateMachine.GetPermittedTriggers;
-  Assert.AreEqual(2, Length(Triggers));
+  Assert.AreEqual(2, Integer(Length(Triggers)));
 end;
 
 // ============================================================================
@@ -958,7 +958,7 @@ begin
   FStateMachine.Configure(tsIdle)
     .Permit(ttStart, tsRunning)
     .OnTransition(ttStart,
-      procedure(const From, To: TTestState; const Trigger: TTestTrigger; const Ctx: TObject)
+      procedure(const AFrom, AToState: TTestState; const ATrigger: TTestTrigger; const ACtx: TObject)
       begin
         ActionExecuted := True;
       end);
@@ -974,11 +974,11 @@ begin
   FStateMachine.Configure(tsIdle)
     .Permit(ttStart, tsRunning)
     .OnTransition(ttStart,
-      procedure(const From, To: TTestState; const Trigger: TTestTrigger; const Ctx: TObject)
+      procedure(const AFrom, AToState: TTestState; const ATrigger: TTestTrigger; const ACtx: TObject)
       begin
-        ReceivedFrom := From;
-        ReceivedTo := To;
-        ReceivedTrigger := Trigger;
+        ReceivedFrom := AFrom;
+        ReceivedTo := AToState;
+        ReceivedTrigger := ATrigger;
       end);
   FStateMachine.Fire(ttStart);
   Assert.AreEqual(tsIdle, ReceivedFrom);
@@ -994,7 +994,7 @@ begin
   FStateMachine.Configure(tsRunning)
     .OnEntry(procedure(const Ctx: TObject) begin FActionLog.Add('Entry'); end);
   FStateMachine.Fire(ttStart);
-  Assert.AreEqual(2, FActionLog.Count);
+  Assert.AreEqual(2, Integer(FActionLog.Count));
   Assert.AreEqual('Exit', FActionLog[0]);
   Assert.AreEqual('Entry', FActionLog[1]);
 end;
@@ -1006,7 +1006,7 @@ begin
     .OnExit(procedure(const Ctx: TObject) begin FActionLog.Add('Exit1'); end)
     .OnExit(procedure(const Ctx: TObject) begin FActionLog.Add('Exit2'); end);
   FStateMachine.Fire(ttStart);
-  Assert.AreEqual(2, FActionLog.Count);
+  Assert.AreEqual(2, Integer(FActionLog.Count));
   Assert.AreEqual('Exit1', FActionLog[0]);
   Assert.AreEqual('Exit2', FActionLog[1]);
 end;
@@ -1017,12 +1017,12 @@ begin
     .OnEntry(procedure(const Ctx: TObject) begin FActionLog.Add('Entry'); end)
     .OnExit(procedure(const Ctx: TObject) begin FActionLog.Add('Exit'); end)
     .InternalTransition(ttStart,
-      procedure(const From, To: TTestState; const Trigger: TTestTrigger; const Ctx: TObject)
+      procedure(const AFrom, AToState: TTestState; const ATrigger: TTestTrigger; const ACtx: TObject)
       begin
         FActionLog.Add('Internal');
       end);
   FStateMachine.Fire(ttStart);
-  Assert.AreEqual(1, FActionLog.Count);
+  Assert.AreEqual(1, Integer(FActionLog.Count));
   Assert.AreEqual('Internal', FActionLog[0]);
 end;
 
@@ -1033,7 +1033,7 @@ begin
     .OnEntry(procedure(const Ctx: TObject) begin FActionLog.Add('Entry'); end)
     .OnExit(procedure(const Ctx: TObject) begin FActionLog.Add('Exit'); end);
   FStateMachine.Fire(ttReset);
-  Assert.AreEqual(2, FActionLog.Count);
+  Assert.AreEqual(2, Integer(FActionLog.Count));
 end;
 
 // ============================================================================
@@ -1120,7 +1120,7 @@ var
   History: TArray<TStateHistoryEntry<TTestState, TTestTrigger>>;
 begin
   History := FStateMachine.GetHistory;
-  Assert.AreEqual(0, Length(History));
+  Assert.AreEqual(0, Integer(Length(History)));
 end;
 
 procedure TStateMachineHistoryTests.Test_GetHistory_AfterTransitions;
@@ -1132,7 +1132,7 @@ begin
   FStateMachine.Fire(ttStart);
   FStateMachine.Fire(ttPause);
   History := FStateMachine.GetHistory;
-  Assert.AreEqual(2, Length(History));
+  Assert.AreEqual(2, Integer(Length(History)));
 end;
 
 procedure TStateMachineHistoryTests.Test_ClearHistory;
@@ -1143,7 +1143,7 @@ begin
   FStateMachine.Fire(ttStart);
   FStateMachine.ClearHistory;
   History := FStateMachine.GetHistory;
-  Assert.AreEqual(0, Length(History));
+  Assert.AreEqual(0, Integer(Length(History)));
 end;
 
 procedure TStateMachineHistoryTests.Test_MaxHistorySize;

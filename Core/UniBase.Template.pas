@@ -1,4 +1,4 @@
-unit UniBase.Template;
+﻿unit UniBase.Template;
 
 (*******************************************************************************
   UniBase Template Engine
@@ -313,7 +313,7 @@ end;
 
 destructor TTemplateContext.Destroy;
 begin
-  FValues.Free;
+  FreeAndNil(FValues);
   inherited;
 end;
 
@@ -448,8 +448,8 @@ end;
 
 destructor TTemplateNode.Destroy;
 begin
-  FChildren.Free;
-  FElseBranch.Free;
+  FreeAndNil(FChildren);
+  FreeAndNil(FElseBranch);
   inherited;
 end;
 
@@ -938,16 +938,16 @@ destructor TTemplateRenderer.Destroy;
 var
   LPair: TPair<string, TTemplateNodeList>;
 begin
-  FFilters.Free;
-  FFunctions.Free;
+  FreeAndNil(FFilters);
+  FreeAndNil(FFunctions);
   
   for LPair in FPartials do
     LPair.Value.Free;
-  FPartials.Free;
+  FreeAndNil(FPartials);
   
   for LPair in FBlocks do
     LPair.Value.Free;
-  FBlocks.Free;
+  FreeAndNil(FBlocks);
   
   inherited;
 end;
@@ -1955,9 +1955,9 @@ end;
 destructor TTemplateEngine.Destroy;
 begin
   ClearCache;
-  FCache.Free;
-  FRenderer.Free;
-  FParser.Free;
+  FreeAndNil(FCache);
+  FreeAndNil(FRenderer);
+  FreeAndNil(FParser);
   inherited;
 end;
 

@@ -778,7 +778,7 @@ begin
   
   Types := FEventBus.GetEventTypes;
   
-  Assert.AreEqual(2, Length(Types));
+  Assert.AreEqual(2, Integer(Length(Types)));
 end;
 
 procedure TTestUniBaseEventBus.Test_KeepHistory_StoresEvents;

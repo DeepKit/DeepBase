@@ -94,10 +94,10 @@ end;
 
 ### 国际化
 
-将所有用户可见文本替换为 `_()` 函数调用：
+将所有用户可见文本替换为 `T()` 函数调用：
 ```pascal
-Caption := _('Customer Management');
-MessageDlg(_('Are you sure?'), mtConfirmation, [mbYes, mbNo], 0);
+Caption := T('Customer Management');
+MessageDlg(T('Are you sure?'), mtConfirmation, [mbYes, mbNo], 0);
 ```
 
 ## 依赖

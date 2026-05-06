@@ -1,11 +1,12 @@
-﻿unit uDM;
+unit uDM;
 
 interface
 
 uses
   System.SysUtils, System.Classes,
   FireDAC.Comp.Client, FireDAC.Comp.UI,
-  FireDAC.VCLUI.Wait;
+  FireDAC.VCLUI.Wait,
+  UniBase.Exceptions;
 
 type
   TDM = class(TDataModule)
@@ -46,7 +47,7 @@ begin
     FDConnection.Connected := True;
   except
     on E: Exception do
-      raise Exception.Create('Failed to initialize database: ' + E.Message);
+      raise EDatabaseException.Create('Failed to initialize database: ' + E.Message);
   end;
 end;
 

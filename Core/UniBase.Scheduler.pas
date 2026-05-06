@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Scheduler - Task Scheduler
   
   A flexible task scheduling system for background job execution.
@@ -732,8 +732,8 @@ end;
 destructor TTaskScheduler.Destroy;
 begin
   Stop;
-  FTasks.Free;
-  FLock.Free;
+  FreeAndNil(FTasks);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -758,7 +758,7 @@ begin
   if FTimerThread <> nil then
   begin
     FTimerThread.WaitFor;
-    FTimerThread.Free;
+    FreeAndNil(FTimerThread);
     FTimerThread := nil;
   end;
 end;

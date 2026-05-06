@@ -1,4 +1,4 @@
-unit UniBase.ObjectPool;
+﻿unit UniBase.ObjectPool;
 
 {*******************************************************************************
   UniBase Object Pool
@@ -118,8 +118,8 @@ type
   end;
 
   /// <summary>Pool events</summary>
-  TPoolEvent<T: class> = procedure(Sender: TObject; AObject: T) of object;
-  TPoolValidationEvent<T: class> = procedure(Sender: TObject; AObject: T; var AValid: Boolean) of object;
+  TPoolEvent<T: class> = reference to procedure(Sender: TObject; AObject: T);
+  TPoolValidationEvent<T: class> = reference to procedure(Sender: TObject; AObject: T; var AValid: Boolean);
 
   /// <summary>Generic object pool</summary>
   TObjectPool<T: class> = class
@@ -129,6 +129,7 @@ type
     FPool: TObjectList<TPooledObject<T>>;
     FLock: TCriticalSection;
     FAvailable: TEvent;
+    FShutdownEvent: TEvent;
     FStats: TPoolStats;
     FShutdown: Boolean;
     FCleanupTask: ITask;
@@ -163,6 +164,9 @@ type
     
     /// <summary>Release object back to pool</summary>
     procedure Release(AObject: T);
+
+    /// <summary>Discard a broken object from the pool</summary>
+    procedure Discard(AObject: T);
     
     /// <summary>Clear all objects from pool</summary>
     procedure Clear;
@@ -440,7 +444,7 @@ end;
 
 class function TPoolConfig.Default: TPoolConfig;
 begin
-  Result.MinSize := 2;
+  Result.MinSize := 0;
   Result.MaxSize := 20;
   Result.IdleTimeoutSec := 300; // 5 minutes
   Result.AcquireTimeoutMs := 30000; // 30 seconds
@@ -465,6 +469,7 @@ begin
   FPool := TObjectList<TPooledObject<T>>.Create(True);
   FLock := TCriticalSection.Create;
   FAvailable := TEvent.Create(nil, True, False, '');
+  FShutdownEvent := TEvent.Create(nil, True, False, '');
   FStats.Reset;
   FShutdown := False;
   
@@ -474,19 +479,27 @@ end;
 destructor TObjectPool<T>.Destroy;
 begin
   FShutdown := True;
+  if Assigned(FShutdownEvent) then
+    FShutdownEvent.SetEvent;
   
   // Wait for cleanup task
   if Assigned(FCleanupTask) then
   begin
     FCleanupTask.Cancel;
+    try
+      FCleanupTask.Wait;
+    except
+      // Shutdown must continue even if a background cleanup task is cancelled.
+    end;
     FCleanupTask := nil;
   end;
   
   Clear;
   
-  FAvailable.Free;
-  FLock.Free;
-  FPool.Free;
+  FreeAndNil(FShutdownEvent);
+  FreeAndNil(FAvailable);
+  FreeAndNil(FLock);
+  FreeAndNil(FPool);
   inherited;
 end;
 
@@ -500,11 +513,13 @@ begin
   begin
     FCleanupTask := TTask.Create(
       procedure
+      var
+        LWaitResult: TWaitResult;
       begin
         while not FShutdown do
         begin
-          Sleep(FConfig.CleanupIntervalSec * 1000);
-          if not FShutdown then
+          LWaitResult := FShutdownEvent.WaitFor(FConfig.CleanupIntervalSec * 1000);
+          if (LWaitResult = wrTimeout) and not FShutdown then
             CleanupIdleObjects;
         end;
       end
@@ -769,6 +784,34 @@ begin
     raise EObjectPoolException.Create('Object not found in pool');
 end;
 
+procedure TObjectPool<T>.Discard(AObject: T);
+var
+  I: Integer;
+  LPooled: TPooledObject<T>;
+begin
+  if AObject = nil then
+    Exit;
+
+  FLock.Enter;
+  try
+    for I := 0 to FPool.Count - 1 do
+    begin
+      LPooled := FPool[I];
+      if LPooled.Obj = AObject then
+      begin
+        DestroyPooledObject(LPooled);
+        FPool.Delete(I);
+        EnsureMinSize;
+        Exit;
+      end;
+    end;
+  finally
+    FLock.Leave;
+  end;
+
+  raise EObjectPoolException.Create('Object not found in pool');
+end;
+
 procedure TObjectPool<T>.CleanupIdleObjects;
 var
   I: Integer;
@@ -966,8 +1009,8 @@ end;
 
 destructor TKeyedObjectPool<TKey, T>.Destroy;
 begin
-  FLock.Free;
-  FPools.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FPools);
   inherited;
 end;
 
@@ -1072,8 +1115,8 @@ var
 begin
   for LPair in FPools do
     LPair.Value.Free;
-  FPools.Free;
-  FPoolLock.Free;
+  FreeAndNil(FPools);
+  FreeAndNil(FPoolLock);
   inherited;
 end;
 

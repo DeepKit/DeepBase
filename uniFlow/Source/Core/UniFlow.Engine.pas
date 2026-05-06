@@ -23,7 +23,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.JSON, System.SyncObjs,
   System.Generics.Collections, System.Generics.Defaults,
-  UniFlow.Message, UniFlow.Role, UniFlow.Config;
+  UniFlow.Message, UniFlow.Role, UniFlow.Config,
+  UniBase.Exceptions;
 
 type
   /// <summary>引擎状态</summary>
@@ -227,7 +228,7 @@ begin
     Initialize;
   
   if FState <> esReady then
-    raise Exception.Create('Engine cannot start: not in Ready state');
+    raise EOperationException.Create('Engine cannot start: not in Ready state');
   
   FStartTime := Now;
   FStopFlag := False;
@@ -306,7 +307,7 @@ begin
   FRoleLock.Enter;
   try
     if FRoles.ContainsKey(RoleName) then
-      raise Exception.CreateFmt('Role %s already registered', [RoleName]);
+      raise EOperationException.CreateFmt('Role %s already registered', [RoleName]);
     
     FRoles.Add(RoleName, ARole);
     

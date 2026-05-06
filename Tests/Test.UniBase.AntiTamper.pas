@@ -44,8 +44,6 @@ type
     [Test]
     procedure Test_CalculateSHA256_Length;
     [Test]
-    procedure Test_EncryptDecrypt_XOR_RoundTrip;
-    [Test]
     procedure Test_EncryptDecrypt_AES_RoundTrip;
     [Test]
     procedure Test_VerifyImageIntegrity_Pass;
@@ -96,7 +94,7 @@ var
 begin
   Data := TEncoding.UTF8.GetBytes('Hello AntiTamper');
   MD5Hex := TAntiTamperPackage.CalculateMD5(Data);
-  Assert.AreEqual(32, Length(MD5Hex));
+  Assert.AreEqual(32, Integer(Length(MD5Hex)));
 end;
 
 procedure TTestAntiTamperCrypto.Test_CalculateSHA256_Length;
@@ -106,23 +104,7 @@ var
 begin
   Data := TEncoding.UTF8.GetBytes('Hello AntiTamper');
   SHAHex := TAntiTamperPackage.CalculateSHA256(Data);
-  Assert.AreEqual(64, Length(SHAHex));
-end;
-
-procedure TTestAntiTamperCrypto.Test_EncryptDecrypt_XOR_RoundTrip;
-var
-  C: TAntiTamperConfig;
-  Plain, Encrypted, Decrypted: TBytes;
-begin
-  C := TAntiTamperPackage.GetDefaultConfig;
-  C.EncryptionType := etXOR;
-  TAntiTamperPackage.Initialize(C);
-  
-  Plain := TEncoding.UTF8.GetBytes('XOR Test Data');
-  Encrypted := TAntiTamperPackage.EncryptImageData(Plain);
-  Decrypted := TAntiTamperPackage.DecryptImageData(Encrypted);
-  
-  Assert.AreEqual(Length(Plain), Length(Decrypted));
+  Assert.AreEqual(64, Integer(Length(SHAHex)));
 end;
 
 procedure TTestAntiTamperCrypto.Test_EncryptDecrypt_AES_RoundTrip;

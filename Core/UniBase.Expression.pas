@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Expression - Expression Parser and Evaluator
   
   A mathematical and logical expression parser with variable support.
@@ -466,8 +466,8 @@ end;
 
 destructor TExpressionContext.Destroy;
 begin
-  FVariables.Free;
-  FFunctions.Free;
+  FreeAndNil(FVariables);
+  FreeAndNil(FFunctions);
   inherited;
 end;
 
@@ -816,8 +816,8 @@ end;
 
 destructor TBinaryOpNode.Destroy;
 begin
-  FLeft.Free;
-  FRight.Free;
+  FreeAndNil(FLeft);
+  FreeAndNil(FRight);
   inherited;
 end;
 
@@ -881,7 +881,7 @@ end;
 
 destructor TUnaryOpNode.Destroy;
 begin
-  FOperand.Free;
+  FreeAndNil(FOperand);
   inherited;
 end;
 
@@ -915,7 +915,7 @@ end;
 
 destructor TFunctionCallNode.Destroy;
 begin
-  FArgs.Free;
+  FreeAndNil(FArgs);
   inherited;
 end;
 
@@ -960,9 +960,9 @@ end;
 
 destructor TConditionalNode.Destroy;
 begin
-  FCondition.Free;
-  FTrueExpr.Free;
-  FFalseExpr.Free;
+  FreeAndNil(FCondition);
+  FreeAndNil(FTrueExpr);
+  FreeAndNil(FFalseExpr);
   inherited;
 end;
 
@@ -1278,7 +1278,7 @@ end;
 
 destructor TExpressionParser.Destroy;
 begin
-  FLexer.Free;
+  FreeAndNil(FLexer);
   inherited;
 end;
 
@@ -1524,7 +1524,7 @@ end;
 
 destructor TCompiledExpression.Destroy;
 begin
-  FAST.Free;
+  FreeAndNil(FAST);
   inherited;
 end;
 
@@ -1559,9 +1559,9 @@ end;
 class destructor TExpression.Destroy;
 begin
   ClearCache;
-  FCache.Free;
-  FCacheLock.Free;
-  FGlobalContext.Free;
+  FreeAndNil(FCache);
+  FreeAndNil(FCacheLock);
+  FreeAndNil(FGlobalContext);
 end;
 
 class function TExpression.Evaluate(const Expression: string;

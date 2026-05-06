@@ -8,6 +8,7 @@
     - TPromptVersion (SuccessRate)
     - TPrompt (GetProductionVersion / HasVersion / GetVersion)
     - TLLMResponse.Init
+    - TLLMManager storage factory error path
   ============================================================================ }
 
 unit Test.UniBase.LLM.Manager;
@@ -17,6 +18,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
+  System.Variants,
   System.Classes,
   System.Generics.Collections,
   UniBase.LLM.Manager;
@@ -74,7 +76,72 @@ type
     procedure Test_Init_SetsDefaults;
   end;
 
+  [TestFixture]
+  TTestLLMManagerStorageFactory = class
+  public
+    [Test]
+    procedure Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly;
+    [Test]
+    procedure Test_CreateWithStorageObject_WithoutStorageFactory_ShouldSucceed;
+    [Test]
+    procedure Test_CreateWithStorageInterface_ShouldSucceed;
+  end;
+
 implementation
+
+uses
+  Data.DB,
+  FireDAC.Comp.Client,
+  UniBase.LLM,
+  UniBase.Persistence.LLM.FireDAC;
+
+type
+  TMockDisconnectedLLMStorage = class(TInterfacedObject, ILLMStorage)
+  public
+    function IsConnected: Boolean;
+    function TableExists(const TableName: string): Boolean;
+    function TableHasColumn(const TableName, ColumnName: string): Boolean;
+    function OpenDataSet(const SQL: string;
+      const Params: array of TLLMStorageParam): TDataSet;
+    function Execute(const SQL: string;
+      const Params: array of TLLMStorageParam): Integer;
+    function ExecuteScalar(const SQL: string;
+      const Params: array of TLLMStorageParam): Variant;
+  end;
+
+function TMockDisconnectedLLMStorage.IsConnected: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockDisconnectedLLMStorage.TableExists(const TableName: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockDisconnectedLLMStorage.TableHasColumn(const TableName,
+  ColumnName: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockDisconnectedLLMStorage.OpenDataSet(const SQL: string;
+  const Params: array of TLLMStorageParam): TDataSet;
+begin
+  raise EInvalidOp.Create('OpenDataSet should not be called for disconnected storage');
+end;
+
+function TMockDisconnectedLLMStorage.Execute(const SQL: string;
+  const Params: array of TLLMStorageParam): Integer;
+begin
+  Result := 0;
+end;
+
+function TMockDisconnectedLLMStorage.ExecuteScalar(const SQL: string;
+  const Params: array of TLLMStorageParam): Variant;
+begin
+  Result := 0;
+end;
 
 { TTestPromptVariable }
 
@@ -197,7 +264,7 @@ var
 begin
   Ver.TestCount := 4;
   Ver.SuccessCount := 3;
-  Assert.AreEqual(0.75, Ver.SuccessRate, 0.0001);
+  Assert.AreEqual(75.0, Ver.SuccessRate, 0.0001);
 end;
 
 { TTestPromptHelpers }
@@ -286,13 +353,92 @@ begin
   Assert.AreEqual(0, R.InputTokens);
   Assert.AreEqual(0, R.OutputTokens);
   Assert.AreEqual(0, R.TotalTokens);
-  Assert.AreEqual(0, R.DurationMs);
+  Assert.AreEqual<Int64>(0, R.DurationMs);
   Assert.AreEqual('', R.ErrorCode);
   Assert.AreEqual('', R.ErrorMessage);
   Assert.AreEqual(0, R.PromptId);
   Assert.AreEqual(0, R.VersionNumber);
   Assert.AreEqual('', R.ConfigName);
   Assert.AreEqual(0.0, R.Cost, 0.0001);
+end;
+
+{ TTestLLMManagerStorageFactory }
+
+procedure TTestLLMManagerStorageFactory.Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly;
+var
+  Conn: TFDConnection;
+  Manager: TLLMManager;
+  RaisedMsg: string;
+begin
+  TLLMManager.SetStorageFactory(nil);
+  try
+    Conn := TFDConnection.Create(nil);
+    try
+      Conn.DriverName := 'SQLite';
+      Conn.Params.Database := ':memory:';
+      Conn.Connected := True;
+
+      Manager := nil;
+      RaisedMsg := '';
+      try
+        Manager := TLLMManager.Create(Conn);
+        Assert.Fail('Expected EInvalidOp when LLM manager storage factory is missing');
+      except
+        on E: EInvalidOp do
+          RaisedMsg := E.Message;
+      end;
+      Manager.Free;
+
+      Assert.IsTrue(RaisedMsg.Contains('UniBase.Persistence.LLM.FireDAC'),
+        'Error should point to LLM FireDAC adapter registration');
+    finally
+      Conn.Free;
+    end;
+  finally
+    RegisterLLMStorageFactory;
+  end;
+end;
+
+procedure TTestLLMManagerStorageFactory.Test_CreateWithStorageObject_WithoutStorageFactory_ShouldSucceed;
+var
+  StorageObj: TObject;
+  Manager: TLLMManager;
+begin
+  TLLMManager.SetStorageFactory(nil);
+  TUniBaseLLM.SetStorageFactory(nil);
+  try
+    StorageObj := TMockDisconnectedLLMStorage.Create;
+    Manager := nil;
+    try
+      Manager := TLLMManager.Create(StorageObj);
+      Assert.IsNotNull(Manager, 'Manager should be created when connection object implements ILLMStorage');
+    finally
+      Manager.Free;
+    end;
+  finally
+    RegisterLLMStorageFactory;
+  end;
+end;
+
+procedure TTestLLMManagerStorageFactory.Test_CreateWithStorageInterface_ShouldSucceed;
+var
+  Storage: ILLMStorage;
+  Manager: TLLMManager;
+begin
+  TLLMManager.SetStorageFactory(nil);
+  TUniBaseLLM.SetStorageFactory(nil);
+  try
+    Storage := TMockDisconnectedLLMStorage.Create;
+    Manager := nil;
+    try
+      Manager := TLLMManager.Create(Storage);
+      Assert.IsNotNull(Manager, 'Manager should be created when storage interface is injected directly');
+    finally
+      Manager.Free;
+    end;
+  finally
+    RegisterLLMStorageFactory;
+  end;
 end;
 
 initialization
@@ -302,5 +448,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestPromptVersion);
   TDUnitX.RegisterTestFixture(TTestPromptHelpers);
   TDUnitX.RegisterTestFixture(TTestLLMResponse);
+  TDUnitX.RegisterTestFixture(TTestLLMManagerStorageFactory);
 
 end.

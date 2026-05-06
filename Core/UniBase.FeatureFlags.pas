@@ -1,4 +1,4 @@
-unit UniBase.FeatureFlags;
+﻿unit UniBase.FeatureFlags;
 
 {*******************************************************************************
   UniBase Feature Flags
@@ -22,7 +22,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.SyncObjs, System.JSON, System.IOUtils, System.DateUtils,
-  System.Hash, System.Variants;
+  System.Hash, System.Variants, System.RegularExpressions;
 
 type
   EFeatureFlagException = class(Exception);
@@ -96,6 +96,7 @@ type
     FValues: TArray<string>;
   public
     constructor Create(const AAttribute: string; AOperator: TTargetOperator; const AValue: Variant); overload;
+    constructor Create(const AAttribute: string; AOperator: TTargetOperator; const AValue: string); overload;
     constructor Create(const AAttribute: string; AOperator: TTargetOperator; const AValues: array of string); overload;
     
     /// <summary>Evaluate rule against context</summary>
@@ -447,17 +448,14 @@ var
 
 function FeatureFlags: TFeatureFlagManager;
 begin
-  if not Assigned(GFeatureFlagManager) then
-  begin
-    GManagerLock.Enter;
-    try
-      if not Assigned(GFeatureFlagManager) then
-        GFeatureFlagManager := TFeatureFlagManager.Create;
-    finally
-      GManagerLock.Leave;
-    end;
+  GManagerLock.Enter;
+  try
+    if not Assigned(GFeatureFlagManager) then
+      GFeatureFlagManager := TFeatureFlagManager.Create;
+    Result := GFeatureFlagManager;
+  finally
+    GManagerLock.Leave;
   end;
-  Result := GFeatureFlagManager;
 end;
 
 { TFlagContext }
@@ -470,7 +468,7 @@ end;
 
 destructor TFlagContext.Destroy;
 begin
-  FAttributes.Free;
+  FreeAndNil(FAttributes);
   inherited;
 end;
 
@@ -525,6 +523,14 @@ end;
 { TTargetingRule }
 
 constructor TTargetingRule.Create(const AAttribute: string; AOperator: TTargetOperator; const AValue: Variant);
+begin
+  inherited Create;
+  FAttribute := AAttribute;
+  FOperator := AOperator;
+  FValue := AValue;
+end;
+
+constructor TTargetingRule.Create(const AAttribute: string; AOperator: TTargetOperator; const AValue: string);
 begin
   inherited Create;
   FAttribute := AAttribute;
@@ -637,8 +643,11 @@ begin
       
     toRegex:
       begin
-        // Simplified regex - just check for pattern presence
-        Result := Pos(LStrValue, LAttrStr) > 0;
+        try
+          Result := TRegEx.IsMatch(LAttrStr, LStrValue);
+        except
+          Result := False;
+        end;
       end;
       
     toSemVerGT, toSemVerLT, toSemVerEQ:
@@ -748,7 +757,7 @@ end;
 
 destructor TFlagVariant.Destroy;
 begin
-  FPayload.Free;
+  FreeAndNil(FPayload);
   inherited;
 end;
 
@@ -814,10 +823,10 @@ end;
 
 destructor TFeatureFlag.Destroy;
 begin
-  FMetadata.Free;
-  FVariants.Free;
-  FTargetingRules.Free;
-  FSchedule.Free;
+  FreeAndNil(FMetadata);
+  FreeAndNil(FVariants);
+  FreeAndNil(FTargetingRules);
+  FreeAndNil(FSchedule);
   inherited;
 end;
 
@@ -977,7 +986,7 @@ end;
 
 function TFeatureFlag.WithSchedule(ASchedule: TFlagSchedule): TFeatureFlag;
 begin
-  FSchedule.Free;
+  FreeAndNil(FSchedule);
   FSchedule := ASchedule;
   FState := fsScheduled;
   FUpdatedAt := Now;
@@ -1198,8 +1207,8 @@ end;
 
 destructor TMemoryFlagStorage.Destroy;
 begin
-  FLock.Free;
-  FFlags.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FFlags);
   inherited;
 end;
 
@@ -1273,7 +1282,7 @@ end;
 
 destructor TFileFlagStorage.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1428,11 +1437,11 @@ end;
 
 destructor TFeatureFlagManager.Destroy;
 begin
-  FOverrides.Free;
-  FEvaluationHistory.Free;
-  FDefaultContext.Free;
-  FLock.Free;
-  FFlags.Free;
+  FreeAndNil(FOverrides);
+  FreeAndNil(FEvaluationHistory);
+  FreeAndNil(FDefaultContext);
+  FreeAndNil(FLock);
+  FreeAndNil(FFlags);
   inherited;
 end;
 
@@ -2015,9 +2024,7 @@ end;
 
 class function TFeatureFlags.GetManager: TFeatureFlagManager;
 begin
-  if not Assigned(FManager) then
-    FManager := TFeatureFlagManager.Create;
-  Result := FManager;
+  Result := FeatureFlags;
 end;
 
 class function TFeatureFlags.IsEnabled(const AKey: string): Boolean;

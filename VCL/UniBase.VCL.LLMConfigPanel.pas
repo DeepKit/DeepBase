@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.LLMConfigPanel - LLM 配置面板组件
   
   版本: 1.0
@@ -155,7 +155,7 @@ end;
 destructor TLLMConfigPanel.Destroy;
 begin
   if FOwnsLLM and Assigned(FLLM) then
-    FLLM.Free;
+    FreeAndNil(FLLM);
   inherited;
 end;
 
@@ -215,7 +215,7 @@ begin
   FApiKeyEdit := TEdit.Create(Self);
   FApiKeyEdit.Parent := FConfigGroupBox;
   FApiKeyEdit.SetBounds(100, Y - 3, 380, 24);
-  FApiKeyEdit.PasswordChar := '•';
+  FApiKeyEdit.PasswordChar := '*';
   
   Inc(Y, 30);
   
@@ -373,7 +373,7 @@ begin
     // 如果有内部 LLM，释放它
     if FOwnsLLM and Assigned(FLLM) then
     begin
-      FLLM.Free;
+      FreeAndNil(FLLM);
       FLLM := nil;
       FOwnsLLM := False;
     end;

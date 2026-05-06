@@ -1,0 +1,35 @@
+package UniBaseFMX;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'UniBase FMX Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  fmx,
+  UniBaseCore,
+  UniBaseServices,
+  UniBaseFeatures;
+
+contains
+  UniBase.FMX.ConfigControls in 'FMX\UniBase.FMX.ConfigControls.pas',
+  UniBase.FMX.I18nControls in 'FMX\UniBase.FMX.I18nControls.pas',
+  UniBase.FMX.MRUControls in 'FMX\UniBase.FMX.MRUControls.pas',
+  UniBase.FMX.FormControls in 'FMX\UniBase.FMX.FormControls.pas',
+  UniBase.FMX.LogListView in 'FMX\UniBase.FMX.LogListView.pas',
+  UniBase.FMX.NotificationBar in 'FMX\UniBase.FMX.NotificationBar.pas',
+  UniBase.FMX.WaitForm in 'FMX\UniBase.FMX.WaitForm.pas',
+  UniBase.FMX.Dialogs in 'FMX\UniBase.FMX.Dialogs.pas',
+  UniBase.FMX.Platform in 'FMX\UniBase.FMX.Platform.pas',
+  UniBase.FMX.Theme in 'FMX\UniBase.FMX.Theme.pas',
+  UniBase.FMX.ListView in 'FMX\UniBase.FMX.ListView.pas',
+  UniBase.FMX.ConfigEdit in 'FMX\UniBase.FMX.ConfigEdit.pas',
+  UniBase.FMX.LicenseStatusPanel in 'FMX\UniBase.FMX.LicenseStatusPanel.pas',
+  UniBase.FMX.AboutFrame in 'FMX\UniBase.FMX.AboutFrame.pas',
+  UniBase.FMX.AutoUpdater in 'FMX\UniBase.FMX.AutoUpdater.pas',
+  UniBase.FMX.LLMChatFrame in 'FMX\UniBase.FMX.LLMChatFrame.pas',
+  UniBase.FMX.LLMConfigPanel in 'FMX\UniBase.FMX.LLMConfigPanel.pas',
+  UniBase.FMX.UpdateDialog in 'FMX\UniBase.FMX.UpdateDialog.pas',
+  UniBase.FMX.FormStateHelper in 'FMX\UniBase.FMX.FormStateHelper.pas';
+
+end.

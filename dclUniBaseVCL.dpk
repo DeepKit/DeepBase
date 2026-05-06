@@ -1,0 +1,17 @@
+package dclUniBaseVCL;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'UniBase VCL Design-Time Package'}
+{$DESIGNONLY}
+
+requires
+  rtl,
+  vcl,
+  designide,
+  UniBaseCore,
+  UniBaseVCL;
+
+contains
+  UniBase.VCL.Controls in 'VCL\UniBase.VCL.Controls.pas';
+
+end.

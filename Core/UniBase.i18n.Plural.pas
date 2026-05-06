@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.i18n.Plural - CLDR Plural Rules Implementation
   
   Version: 0.3
@@ -162,7 +162,7 @@ end;
 
 class destructor TPluralRules.Destroy;
 begin
-  FRules.Free;
+  FreeAndNil(FRules);
 end;
 
 class procedure TPluralRules.Initialize;

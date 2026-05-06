@@ -341,7 +341,7 @@ var
 begin
   SetLength(Values, 0);
   Stats := TBenchmarkStats.Calculate(Values);
-  Assert.AreEqual(0, Stats.Count);
+  Assert.AreEqual(0, Integer(Stats.Count));
 end;
 
 procedure TTestBenchmarkStats.Test_Calculate_SingleValue;
@@ -351,7 +351,7 @@ var
 begin
   Values := [42.0];
   Stats := TBenchmarkStats.Calculate(Values);
-  Assert.AreEqual(1, Stats.Count);
+  Assert.AreEqual(1, Integer(Stats.Count));
   Assert.AreEqual(42.0, Stats.Min, 0.001);
   Assert.AreEqual(42.0, Stats.Max, 0.001);
   Assert.AreEqual(42.0, Stats.Mean, 0.001);
@@ -504,7 +504,7 @@ begin
         Sleep(1);
       end);
     Assert.AreEqual(5, Bench.LastResult.Iterations);
-    Assert.AreEqual(5, Length(Bench.LastResult.RawTimings));
+    Assert.AreEqual(5, Integer(Length(Bench.LastResult.RawTimings)));
   finally
     Bench.Free;
   end;
@@ -565,7 +565,7 @@ begin
     Bench.Iterations := 1;
     Bench.WarmupIterations := 0;
     Bench.Run(procedure begin end);
-    Assert.AreEqual(2, Length(Bench.LastResult.Tags));
+    Assert.AreEqual(2, Integer(Length(Bench.LastResult.Tags)));
   finally
     Bench.Free;
   end;
@@ -637,7 +637,7 @@ begin
     Bench.WarmupIterations := 0;
     Bench.Run(procedure begin end);
     Report.AddResult(Bench.LastResult);
-    Assert.AreEqual(1, Report.Results.Count);
+    Assert.AreEqual<Integer>(1, Report.Results.Count);
   finally
     Bench.Free;
     Report.Free;
@@ -657,7 +657,7 @@ begin
     Bench.Run(procedure begin end);
     Report.AddResult(Bench.LastResult);
     Report.Clear;
-    Assert.AreEqual(0, Report.Results.Count);
+    Assert.AreEqual<Integer>(0, Report.Results.Count);
   finally
     Bench.Free;
     Report.Free;

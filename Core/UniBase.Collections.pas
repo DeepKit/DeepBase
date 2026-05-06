@@ -1,4 +1,4 @@
-unit UniBase.Collections;
+﻿unit UniBase.Collections;
 
 {*******************************************************************************
   UniBase Extended Collections
@@ -396,7 +396,7 @@ end;
 
 destructor TSortedList<T>.Destroy;
 begin
-  FItems.Free;
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -538,7 +538,7 @@ end;
 
 destructor TCircularBuffer<T>.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -670,9 +670,9 @@ end;
 
 destructor TLRUCache<K,V>.Destroy;
 begin
-  FLock.Free;
-  FKeys.Free;
-  FMap.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FKeys);
+  FreeAndNil(FMap);
   inherited;
 end;
 
@@ -833,9 +833,9 @@ end;
 
 destructor TBidiDictionary<K,V>.Destroy;
 begin
-  FLock.Free;
-  FReverse.Free;
-  FForward.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FReverse);
+  FreeAndNil(FForward);
   inherited;
 end;
 
@@ -1012,8 +1012,8 @@ var
 begin
   for LList in FMap.Values do
     LList.Free;
-  FMap.Free;
-  FLock.Free;
+  FreeAndNil(FMap);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1226,9 +1226,9 @@ end;
 
 destructor TOrderedDictionary<K,V>.Destroy;
 begin
-  FLock.Free;
-  FKeys.Free;
-  FMap.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FKeys);
+  FreeAndNil(FMap);
   inherited;
 end;
 
@@ -1439,8 +1439,8 @@ end;
 
 destructor TDeque<T>.Destroy;
 begin
-  FLock.Free;
-  FItems.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -1604,8 +1604,8 @@ end;
 
 destructor TCountingSet<T>.Destroy;
 begin
-  FLock.Free;
-  FCounts.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FCounts);
   inherited;
 end;
 
@@ -1798,10 +1798,10 @@ end;
 
 destructor TMinMaxStack<T>.Destroy;
 begin
-  FLock.Free;
-  FMaxStack.Free;
-  FMinStack.Free;
-  FItems.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FMaxStack);
+  FreeAndNil(FMinStack);
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -1946,9 +1946,9 @@ end;
 
 destructor TBlockingQueue<T>.Destroy;
 begin
-  FNotEmpty.Free;
-  FLock.Free;
-  FItems.Free;
+  FreeAndNil(FNotEmpty);
+  FreeAndNil(FLock);
+  FreeAndNil(FItems);
   inherited;
 end;
 

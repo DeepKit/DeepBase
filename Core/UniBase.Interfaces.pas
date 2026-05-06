@@ -30,6 +30,7 @@ type
   IUniBaseLogger = interface;
   IUniBaseI18n = interface;
   IUniBaseMRU = interface;
+  IAutoRefreshConfig = interface;
 
   // ========================================
   // IUniBaseConfig - Configuration Interface
@@ -154,6 +155,21 @@ type
     
     // Statistics
     function GetMRUCount(const Category: string): Integer;
+  end;
+
+  // ========================================
+  // IAutoRefreshConfig - Auto-refresh config reader
+  // ========================================
+
+  /// <summary>
+  /// Reads configuration values from database with transparent cache refresh.
+  /// </summary>
+  IAutoRefreshConfig = interface
+    ['{BF52A31E-8A95-4F0D-9E6C-2E2F6E8A5B31}']
+    function GetValue(const ASection, AKey, ADefault: string): string;
+    function GetInt(const ASection, AKey: string; ADefault: Integer): Integer;
+    function GetBool(const ASection, AKey: string; ADefault: Boolean): Boolean;
+    procedure ClearCache;
   end;
 
   // ========================================

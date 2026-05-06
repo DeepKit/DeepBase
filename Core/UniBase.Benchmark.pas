@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Benchmark - Performance Benchmark Framework
   
   A lightweight benchmarking framework for measuring execution time,
@@ -253,7 +253,7 @@ type
 /// <summary>Create a scoped timer that logs on destruction</summary>
 function TimeScope(const Name: string; Callback: TProc<string, Double> = nil): IScopedTimer;
 
-/// <summary>Measure single execution time in microseconds</summary>
+/// <summary>Measure single execution time in milliseconds</summary>
 function MeasureTime(const Proc: TBenchmarkProc): Double;
 
 /// <summary>Measure average execution time over N iterations</summary>
@@ -284,13 +284,23 @@ end;
 
 procedure THiResStopwatch.Start;
 begin
+  if FIsRunning then
+    Exit;
+
   QueryPerformanceCounter(FStartTick);
   FIsRunning := True;
 end;
 
 procedure THiResStopwatch.Stop;
+var
+  CurrentTick: Int64;
 begin
-  QueryPerformanceCounter(FStopTick);
+  if not FIsRunning then
+    Exit;
+
+  QueryPerformanceCounter(CurrentTick);
+  FStopTick := FStopTick + (CurrentTick - FStartTick);
+  FStartTick := 0;
   FIsRunning := False;
 end;
 
@@ -308,10 +318,10 @@ begin
   if FIsRunning then
   begin
     QueryPerformanceCounter(CurrentTick);
-    Result := CurrentTick - FStartTick;
+    Result := FStopTick + (CurrentTick - FStartTick);
   end
   else
-    Result := FStopTick - FStartTick;
+    Result := FStopTick;
 end;
 
 function THiResStopwatch.ElapsedMicroseconds: Double;
@@ -429,7 +439,10 @@ begin
   Sorted := Copy(Values);
   TArray.Sort<Double>(Sorted);
   
-  Result.Median := Sorted[N div 2];
+  if Odd(N) then
+    Result.Median := Sorted[N div 2]
+  else
+    Result.Median := (Sorted[(N div 2) - 1] + Sorted[N div 2]) / 2;
   Result.P90 := Sorted[Trunc(N * 0.90)];
   Result.P95 := Sorted[Trunc(N * 0.95)];
   Result.P99 := Sorted[System.Math.Min(Trunc(N * 0.99), N - 1)];
@@ -472,8 +485,8 @@ end;
 
 destructor TBenchmarkReport.Destroy;
 begin
-  FEnvironmentInfo.Free;
-  FResults.Free;
+  FreeAndNil(FEnvironmentInfo);
+  FreeAndNil(FResults);
   inherited;
 end;
 
@@ -835,8 +848,8 @@ end;
 
 destructor TBenchmark.Destroy;
 begin
-  FTags.Free;
-  FReport.Free;
+  FreeAndNil(FTags);
+  FreeAndNil(FReport);
   inherited;
 end;
 
@@ -999,7 +1012,7 @@ begin
   SW.Start;
   Proc;
   SW.Stop;
-  Result := SW.ElapsedMicroseconds;
+  Result := SW.ElapsedMilliseconds;
 end;
 
 function MeasureTimeAvg(const Proc: TBenchmarkProc; Iterations: Integer): Double;
@@ -1015,7 +1028,7 @@ begin
     SW.Start;
     Proc;
     SW.Stop;
-    Total := Total + SW.ElapsedMicroseconds;
+    Total := Total + SW.ElapsedMilliseconds;
   end;
   Result := Total / Iterations;
 end;

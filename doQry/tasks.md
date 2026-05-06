@@ -11,7 +11,7 @@
 
 ---
 
-## 一、核心库
+## 1. 核心库
 
 - [~] 门面单元 uDoQry（唯一对外）
 - [ ] uDoQryTypes（TDBType、TDoQryContext、IDoQryTx）
@@ -25,7 +25,7 @@
 
 ---
 
-## 二、API 暴露（由 uDoQry 提供）
+## 2. API 暴露（由 uDoQry 提供）
 
 - [ ] DoQryInit(ProjectRoot)
 - [ ] DoQryMakeContext(Conn, DBType, TimeoutSec, CorrelationId)
@@ -39,7 +39,7 @@
 
 ---
 
-## 三、数据库与配置
+## 3. 数据库与配置
 
 - [ ] `queries` 表新增列：`sql_template`、`param_schema_json`、`timeout_sec`、`default_limit`、`allow_full_scan`
 - [ ] 删除旧表 `query_parameters`，全部使用 `queries.param_schema_json` 维护参数 Schema
@@ -48,14 +48,14 @@
 
 ---
 
-## 四、GUI 支持
+## 4. GUI 支持
 
 - [ ] 选择“项目根目录”（决定 logs\query.log 位置）
 - [ ] 日志查看面板（过滤：level/proc/corrId/时间范围）
 
 ---
 
-## 五、测试矩阵
+## 5. 测试矩阵
 
 - [ ] JSON 参数解析/校验/默认值
 - [ ] IN 展开/数组绑定
@@ -68,14 +68,14 @@
 
 ---
 
-## 六、文档与交付
+## 6. 文档与交付
 
 - [x] UniBase 文档（对接/使用指南）：`docs/05.03.uniBase-4AI-DoQry指南-v1.0.md`
 - [x] tasks.md（本文件，保留为历史/对照）
 
 ---
 
-## 七、默认策略（可覆盖）
+## 7. 默认策略（可覆盖）
 
 - 默认超时：30s（per-query 可覆盖）
 - SELECT 默认 LIMIT：1000（per-query 可覆盖）
@@ -85,7 +85,7 @@
 
 ---
 
-## 八、里程碑
+## 8. 里程碑
 
 - M1：最小可用（PG/SQLite、参数化、事务与日志）
 - M2：参数池与缓存、SQL 预览、GUI 日志
@@ -93,7 +93,7 @@
 
 ---
 
-## 九、优化与 UniBase 集成
+## 9. 优化与 UniBase 集成
 
 - [ ] 优化与重构 doQry 核心（Executor / Dialect / JsonParams / TxManager / ParamPool / Query 池）
 - [ ] 将 doQry 收编为 UniBase.DB.DoQry 模块，由 UniBase.Manager 初始化（RootPath + ConfigDB + Logging）

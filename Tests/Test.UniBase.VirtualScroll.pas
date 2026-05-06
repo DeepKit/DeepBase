@@ -693,13 +693,13 @@ end;
 
 procedure TTestRenderQueue.Test_Create_Empty;
 begin
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
 end;
 
 procedure TTestRenderQueue.Test_Enqueue;
 begin
   FQueue.Enqueue(0, nil);
-  Assert.AreEqual(1, FQueue.Count);
+  Assert.AreEqual(1, Integer(FQueue.Count));
 end;
 
 procedure TTestRenderQueue.Test_Enqueue_Multiple;
@@ -707,7 +707,7 @@ begin
   FQueue.Enqueue(0, nil);
   FQueue.Enqueue(1, nil);
   FQueue.Enqueue(2, nil);
-  Assert.AreEqual(3, FQueue.Count);
+  Assert.AreEqual(3, Integer(FQueue.Count));
 end;
 
 procedure TTestRenderQueue.Test_ProcessQueue;
@@ -721,7 +721,7 @@ begin
   
   FQueue.ProcessQueue;
   
-  Assert.AreEqual(2, FProcessedIndices.Count);
+  Assert.AreEqual(2, Integer(FProcessedIndices.Count));
 end;
 
 procedure TTestRenderQueue.Test_ProcessQueue_MaxItems;
@@ -739,7 +739,7 @@ begin
   FQueue.ProcessQueue;
   
   // Only MaxItemsPerFrame should be processed
-  Assert.AreEqual(2, FProcessedIndices.Count);
+  Assert.AreEqual(2, Integer(FProcessedIndices.Count));
 end;
 
 procedure TTestRenderQueue.Test_ProcessQueue_Priority;
@@ -755,7 +755,7 @@ begin
   FQueue.ProcessQueue;
   
   // Higher priority should be processed first
-  Assert.AreEqual(3, FProcessedIndices.Count);
+  Assert.AreEqual(3, Integer(FProcessedIndices.Count));
 end;
 
 procedure TTestRenderQueue.Test_Clear;
@@ -763,16 +763,16 @@ begin
   FQueue.Enqueue(0, nil);
   FQueue.Enqueue(1, nil);
   FQueue.Clear;
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
 end;
 
 procedure TTestRenderQueue.Test_Count;
 begin
-  Assert.AreEqual(0, FQueue.Count);
+  Assert.AreEqual(0, Integer(FQueue.Count));
   FQueue.Enqueue(0, nil);
-  Assert.AreEqual(1, FQueue.Count);
+  Assert.AreEqual(1, Integer(FQueue.Count));
   FQueue.Enqueue(1, nil);
-  Assert.AreEqual(2, FQueue.Count);
+  Assert.AreEqual(2, Integer(FQueue.Count));
 end;
 
 { TTestDoubleBufferPainter }

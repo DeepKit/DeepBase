@@ -1,4 +1,4 @@
-unit UniBase.Memory;
+﻿unit UniBase.Memory;
 
 {*******************************************************************************
   UniBase.Memory - 高级内存管理
@@ -91,19 +91,29 @@ type
   public type
     TObjectFactory = reference to function: T;
     TObjectReset = reference to procedure(Obj: T);
+  private type
+    TFactoryAdapter = class(TInterfacedObject, IObjectFactory<T>)
+    private
+      FOwner: TObjectPool<T>;
+    public
+      constructor Create(AOwner: TObjectPool<T>);
+      function CreateObject: T;
+      procedure DestroyObject(AObject: T);
+      function ValidateObject(AObject: T): Boolean;
+      procedure ResetObject(AObject: T);
+    end;
   private
     FFactory: TObjectFactory;
     FResetProc: TObjectReset;
-    FPool: TList<T>;
-    FInUse: TList<T>;
-    FLock: TCriticalSection;
+    FFactoryAdapter: IObjectFactory<T>;
+    FInner: UniBase.ObjectPool.TObjectPool<T>;
     FMinSize: Integer;
     FMaxSize: Integer;
     FGrowBy: Integer;
-    FStats: TMemoryStats;
 
-    procedure EnsureMinSize;
-    procedure Shrink;
+    function CreateCanonicalConfig: UniBase.ObjectPool.TPoolConfig;
+    procedure SetMinSize(const Value: Integer);
+    procedure SetMaxSize(const Value: Integer);
   public
     constructor Create(Factory: TObjectFactory; MinSize: Integer = 5;
       MaxSize: Integer = 100; GrowBy: Integer = 5);
@@ -139,8 +149,8 @@ type
     /// <summary>获取统计</summary>
     function GetStats: TMemoryStats;
 
-    property MinSize: Integer read FMinSize write FMinSize;
-    property MaxSize: Integer read FMaxSize write FMaxSize;
+    property MinSize: Integer read FMinSize write SetMinSize;
+    property MaxSize: Integer read FMaxSize write SetMaxSize;
   end;
 
   /// <summary>
@@ -155,6 +165,7 @@ type
     end;
   private
     FBlockSize: Integer;
+    FUserBlockSize: Integer;
     FFreeList: PBlockHeader;
     FAllBlocks: TList<Pointer>;
     FLock: TCriticalSection;
@@ -177,7 +188,7 @@ type
     /// <summary>清空池</summary>
     procedure Clear;
 
-    property BlockSize: Integer read FBlockSize;
+    property BlockSize: Integer read FUserBlockSize;
     property AllocatedCount: Integer read FAllocatedCount;
     property FreeCount: Integer read FFreeCount;
   end;
@@ -427,6 +438,37 @@ uses
   {$ENDIF}
   System.Math;
 
+{ TObjectPool<T>.TFactoryAdapter }
+
+constructor TObjectPool<T>.TFactoryAdapter.Create(AOwner: TObjectPool<T>);
+begin
+  inherited Create;
+  FOwner := AOwner;
+end;
+
+function TObjectPool<T>.TFactoryAdapter.CreateObject: T;
+begin
+  if not Assigned(FOwner.FFactory) then
+    raise EMemoryPoolException.Create('对象池工厂未设置');
+
+  Result := FOwner.FFactory();
+end;
+
+procedure TObjectPool<T>.TFactoryAdapter.DestroyObject(AObject: T);
+begin
+  AObject.Free;
+end;
+
+function TObjectPool<T>.TFactoryAdapter.ValidateObject(AObject: T): Boolean;
+begin
+  Result := AObject <> nil;
+end;
+
+procedure TObjectPool<T>.TFactoryAdapter.ResetObject(AObject: T);
+begin
+  // UniBase.Memory keeps its legacy reset semantics on Release.
+end;
+
 { TMemoryStats }
 
 function TMemoryStats.ToString: string;
@@ -457,220 +499,137 @@ begin
   FMinSize := MinSize;
   FMaxSize := MaxSize;
   FGrowBy := GrowBy;
-  FPool := TList<T>.Create;
-  FInUse := TList<T>.Create;
-  FLock := TCriticalSection.Create;
-  FillChar(FStats, SizeOf(FStats), 0);
-  EnsureMinSize;
+  FFactoryAdapter := TFactoryAdapter.Create(Self);
+  FInner := UniBase.ObjectPool.TObjectPool<T>.Create(FFactoryAdapter,
+    CreateCanonicalConfig);
 end;
 
 destructor TObjectPool<T>.Destroy;
-var
-  Obj: T;
 begin
-  FLock.Enter;
-  try
-    for Obj in FPool do
-      Obj.Free;
-    for Obj in FInUse do
-      Obj.Free;
-    FPool.Free;
-    FInUse.Free;
-  finally
-    FLock.Leave;
-  end;
-  FLock.Free;
+  FreeAndNil(FInner);
+  FFactoryAdapter := nil;
   inherited;
 end;
 
-procedure TObjectPool<T>.EnsureMinSize;
-var
-  I: Integer;
+function TObjectPool<T>.CreateCanonicalConfig: UniBase.ObjectPool.TPoolConfig;
 begin
-  while FPool.Count < FMinSize do
+  Result := UniBase.ObjectPool.TPoolConfig.Default;
+  Result.MinSize := FMinSize;
+  Result.MaxSize := FMaxSize;
+  Result.AcquireTimeoutMs := 0;
+  Result.IdleTimeoutSec := 0;
+  Result.CleanupIntervalSec := 0;
+  Result.ValidationOnAcquire := False;
+  Result.ValidationOnRelease := False;
+end;
+
+procedure TObjectPool<T>.SetMinSize(const Value: Integer);
+var
+  Config: UniBase.ObjectPool.TPoolConfig;
+begin
+  FMinSize := Value;
+  if Assigned(FInner) then
   begin
-    try
-      FPool.Add(FFactory());
-      Inc(FStats.AllocationCount);
-    except
-      Break;
-    end;
+    Config := FInner.Config;
+    Config.MinSize := Value;
+    FInner.Config := Config;
   end;
 end;
 
-procedure TObjectPool<T>.Shrink;
+procedure TObjectPool<T>.SetMaxSize(const Value: Integer);
 var
-  Obj: T;
+  Config: UniBase.ObjectPool.TPoolConfig;
 begin
-  while FPool.Count > FMaxSize do
+  FMaxSize := Value;
+  if Assigned(FInner) then
   begin
-    Obj := FPool[FPool.Count - 1];
-    FPool.Delete(FPool.Count - 1);
-    Obj.Free;
-    Inc(FStats.FreeCount);
+    Config := FInner.Config;
+    Config.MaxSize := Value;
+    FInner.Config := Config;
   end;
 end;
 
 function TObjectPool<T>.Acquire: T;
 begin
-  if not TryAcquire(Result) then
+  try
+    Result := FInner.Acquire;
+  except
+    on E: EObjectPoolException do
+      raise EMemoryPoolException.Create('对象池已耗尽');
+  end;
+
+  if Result = nil then
     raise EMemoryPoolException.Create('对象池已耗尽');
 end;
 
 function TObjectPool<T>.TryAcquire(out Obj: T): Boolean;
-var
-  I: Integer;
 begin
-  Result := False;
   Obj := nil;
-
-  FLock.Enter;
   try
-    if FPool.Count > 0 then
-    begin
-      Obj := FPool[FPool.Count - 1];
-      FPool.Delete(FPool.Count - 1);
-      FInUse.Add(Obj);
-      Inc(FStats.PoolHits);
-      Result := True;
-    end
-    else if FInUse.Count < FMaxSize then
-    begin
-      // 创建新对象
-      try
-        Obj := FFactory();
-        FInUse.Add(Obj);
-        Inc(FStats.AllocationCount);
-        Inc(FStats.PoolMisses);
-        Result := True;
-      except
-        Result := False;
-      end;
-    end;
-  finally
-    FLock.Leave;
+    Result := FInner.TryAcquire(Obj, 0);
+  except
+    Result := False;
+    Obj := nil;
   end;
 end;
 
 procedure TObjectPool<T>.Release(Obj: T);
 var
-  Index: Integer;
   LPoolable: IPoolable;
   IsValid: Boolean;
+  LLogger: TUniBaseLogger;
 begin
   if Obj = nil then
     Exit;
 
-  FLock.Enter;
+  IsValid := True;
   try
-    Index := FInUse.IndexOf(Obj);
-    if Index >= 0 then
+    if Assigned(FResetProc) then
+      FResetProc(Obj)
+    else if Supports(Obj, IPoolable, LPoolable) then
+      LPoolable.Reset;
+  except
+    on E: Exception do
     begin
-      FInUse.Delete(Index);
-
-      // BUG-110 FIX: 改进对象重置异常处理
-      // 验证对象状态，防止损坏的对象进入池
-      IsValid := True;
-      try
-        // 重置对象
-        if Assigned(FResetProc) then
-          FResetProc(Obj)
-        else if Supports(Obj, IPoolable, LPoolable) then
-          LPoolable.Reset;
-      except
-        on E: Exception do
-        begin
-          IsValid := False;
-          // 记录对象重置失败
-          if Assigned(UniBase.Logging.Logger) then
-            UniBase.Logging.Logger.Warning('Object reset failed, destroying object: ' + E.Message);
-        end;
-      end;
-
-      // BUG-110 FIX: 重置失败的对象必须被销毁，不能重新入池
-      if IsValid and (FPool.Count < FMaxSize) then
-        FPool.Add(Obj)
-      else
-      begin
-        // 无论是重置失败还是池已满，都需要销毁对象
-        try
-          Obj.Free;
-        except
-          // 忽略销毁时的异常，但记录日志
-          on E: Exception do
-            if Assigned(UniBase.Logging.Logger) then
-              UniBase.Logging.Logger.Warning('Object destruction failed: ' + E.Message);
-        end;
-        Inc(FStats.FreeCount);
-      end;
+      IsValid := False;
+      LLogger := UniBase.Logging.Logger;
+      if Assigned(LLogger) then
+        LLogger.Warn('Object reset failed before pool release: ' + E.Message);
     end;
-  finally
-    FLock.Leave;
+  end;
+
+  if not IsValid then
+  begin
+    try
+      FInner.Discard(Obj);
+    except
+      on E: EObjectPoolException do
+        ; // Preserve the legacy Memory pool behavior for foreign objects.
+    end;
+    Exit;
+  end;
+
+  try
+    FInner.Release(Obj);
+  except
+    on E: EObjectPoolException do
+      ; // Preserve the legacy Memory pool behavior for foreign objects.
   end;
 end;
 
 procedure TObjectPool<T>.Clear;
-var
-  Obj: T;
 begin
-  FLock.Enter;
-  try
-    for Obj in FPool do
-    begin
-      Obj.Free;
-      Inc(FStats.FreeCount);
-    end;
-    FPool.Clear;
-
-    for Obj in FInUse do
-    begin
-      Obj.Free;
-      Inc(FStats.FreeCount);
-    end;
-    FInUse.Clear;
-  finally
-    FLock.Leave;
-  end;
+  FInner.Clear;
 end;
 
 procedure TObjectPool<T>.Warmup(Count: Integer);
-var
-  I, Target: Integer;
 begin
-  Target := Min(Count, FMaxSize);
-
-  FLock.Enter;
-  try
-    for I := FPool.Count to Target - 1 do
-    begin
-      try
-        FPool.Add(FFactory());
-        Inc(FStats.AllocationCount);
-      except
-        Break;
-      end;
-    end;
-  finally
-    FLock.Leave;
-  end;
+  FInner.Warm(Count);
 end;
 
 procedure TObjectPool<T>.Compact;
-var
-  Obj: T;
 begin
-  FLock.Enter;
-  try
-    while FPool.Count > FMinSize do
-    begin
-      Obj := FPool[FPool.Count - 1];
-      FPool.Delete(FPool.Count - 1);
-      Obj.Free;
-      Inc(FStats.FreeCount);
-    end;
-  finally
-    FLock.Leave;
-  end;
+  FInner.Shrink;
 end;
 
 procedure TObjectPool<T>.SetResetProc(Proc: TObjectReset);
@@ -680,32 +639,26 @@ end;
 
 function TObjectPool<T>.AvailableCount: Integer;
 begin
-  FLock.Enter;
-  try
-    Result := FPool.Count;
-  finally
-    FLock.Leave;
-  end;
+  Result := FInner.IdleCount;
 end;
 
 function TObjectPool<T>.InUseCount: Integer;
 begin
-  FLock.Enter;
-  try
-    Result := FInUse.Count;
-  finally
-    FLock.Leave;
-  end;
+  Result := FInner.InUseCount;
 end;
 
 function TObjectPool<T>.GetStats: TMemoryStats;
+var
+  Stats: UniBase.ObjectPool.TPoolStats;
 begin
-  FLock.Enter;
-  try
-    Result := FStats;
-  finally
-    FLock.Leave;
-  end;
+  FillChar(Result, SizeOf(Result), 0);
+  Stats := FInner.GetStats;
+  Result.AllocationCount := Stats.TotalCreated;
+  Result.FreeCount := Stats.TotalDestroyed;
+  Result.CurrentUsage := Stats.CurrentPoolSize;
+  Result.PeakUsage := Stats.PeakUsage;
+  Result.PoolHits := Stats.TotalReleases;
+  Result.PoolMisses := Stats.TotalCreated;
 end;
 
 { TMemoryBlockPool }
@@ -713,6 +666,7 @@ end;
 constructor TMemoryBlockPool.Create(BlockSize, InitialCount, GrowBy: Integer);
 begin
   inherited Create;
+  FUserBlockSize := BlockSize;
   FBlockSize := BlockSize + SizeOf(TBlockHeader);
   FGrowBy := GrowBy;
   FFreeList := nil;
@@ -734,11 +688,11 @@ begin
   try
     for P in FAllBlocks do
       FreeMem(P);
-    FAllBlocks.Free;
+    FreeAndNil(FAllBlocks);
   finally
     FLock.Leave;
   end;
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -810,19 +764,14 @@ end;
 procedure TMemoryBlockPool.Clear;
 var
   P: Pointer;
-  Block: PBlockHeader;
 begin
   FLock.Enter;
   try
     FFreeList := nil;
     for P in FAllBlocks do
-    begin
-      Block := PBlockHeader(P);
-      Block^.InUse := False;
-      Block^.Next := FFreeList;
-      FFreeList := Block;
-    end;
-    FFreeCount := FAllBlocks.Count;
+      FreeMem(P);
+    FAllBlocks.Clear;
+    FFreeCount := 0;
     FAllocatedCount := 0;
   finally
     FLock.Leave;
@@ -848,7 +797,7 @@ end;
 
 destructor TSmartCache<K, V>.Destroy;
 begin
-  FInnerCache.Free;
+  FreeAndNil(FInnerCache);
   inherited;
 end;
 
@@ -1101,8 +1050,8 @@ end;
 
 destructor TMemoryTracker.Destroy;
 begin
-  FAllocations.Free;
-  FAllocLock.Free;
+  FreeAndNil(FAllocations);
+  FreeAndNil(FAllocLock);
   inherited;
 end;
 
@@ -1333,7 +1282,7 @@ end;
 
 destructor TRingBuffer<T>.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 

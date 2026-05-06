@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.AutoUpdater - 自动更新组件
   
   版本: 0.3
@@ -62,7 +62,7 @@ end;
 
 destructor TAutoUpdater.Destroy;
 begin
-  FAutoUpdate.Free;
+  FreeAndNil(FAutoUpdate);
   inherited;
 end;
 
@@ -107,7 +107,7 @@ begin
 
   // Async check
   FAutoUpdate.CheckForUpdateAsync(
-    procedure(Success: Boolean; UpdateInfo: TUpdateInfo)
+    procedure(Success: Boolean; const UpdateInfo: TUpdateInfo)
     begin
       if Success then
       begin

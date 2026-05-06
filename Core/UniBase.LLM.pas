@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.LLM - LLM Integration Module
   
   Version: 1.0
@@ -19,6 +19,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  Data.DB,
   System.Net.HttpClient,
   System.Net.HttpClientComponent,
   System.Net.URLClient,
@@ -212,17 +213,49 @@ type
   TLLMStreamCallback = reference to procedure(const Chunk: string; IsDone: Boolean);
 
   /// <summary>
+  /// Named SQL parameter for LLM storage operations.
+  /// </summary>
+  TLLMStorageParam = record
+    Name: string;
+    Value: Variant;
+    class function Create(const AName: string;
+      const AValue: Variant): TLLMStorageParam; static;
+  end;
+  TLLMStorageParams = TArray<TLLMStorageParam>;
+
+  /// <summary>
+  /// Abstract storage contract for LLM module (ARCH-039).
+  /// FireDAC implementation should live in Persistence/.
+  /// </summary>
+  ILLMStorage = interface
+    ['{63C2F028-8E99-41C2-83E8-8F5316A6B03E}']
+    function IsConnected: Boolean;
+    function TableExists(const TableName: string): Boolean;
+    function TableHasColumn(const TableName, ColumnName: string): Boolean;
+    function OpenDataSet(const SQL: string;
+      const Params: array of TLLMStorageParam): TDataSet;
+    function Execute(const SQL: string;
+      const Params: array of TLLMStorageParam): Integer;
+    function ExecuteScalar(const SQL: string;
+      const Params: array of TLLMStorageParam): Variant;
+  end;
+
+  /// <summary>
   /// UniBase LLM Manager Class
   /// </summary>
   TUniBaseLLM = class
   private
     FConnection: TObject;
+    FStorage: ILLMStorage;
     FConfigCache: TDictionary<string, TLLMConfig>;
     FCacheLock: TCriticalSection;
     FHttpClient: TNetHTTPClient;
     FDefaultTimeout: Integer;
-    
-    function GetFDConnection: TObject;
+    class var FConnectionStorageFactory: TFunc<TObject, ILLMStorage>;
+
+    class function CreateStorageFromConnection(
+      AConnection: TObject): ILLMStorage; static;
+    function GetStorage: ILLMStorage;
     function GetDefaultBaseUrl(Provider: TLLMProvider): string;
     function BuildRequestBody(const Config: TLLMConfig; const Messages: TLLMMessages): string;
     function BuildAnthropicRequestBody(const Config: TLLMConfig; const Messages: TLLMMessages): string;
@@ -233,8 +266,12 @@ type
     function EstimateCost(const Config: TLLMConfig; InputTokens, OutputTokens: Integer): Double;
     
   public
-    constructor Create(AConnection: TObject);
+    constructor Create(AConnection: TObject); overload;
+    constructor Create(const AStorage: ILLMStorage); overload;
     destructor Destroy; override;
+
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, ILLMStorage>); static;
     
     // ========================================================================
     // Configuration Management
@@ -347,8 +384,7 @@ function StrToLLMProvider(const S: string): TLLMProvider;
 implementation
 
 uses
-  Data.DB,
-  FireDAC.Comp.Client,
+  System.Variants,
   System.NetEncoding,
   System.RegularExpressions,
   System.StrUtils
@@ -367,6 +403,18 @@ const
   URL_ANTHROPIC = 'https://api.anthropic.com/v1';
 
 { Helper Functions }
+
+class function TLLMStorageParam.Create(const AName: string;
+  const AValue: Variant): TLLMStorageParam;
+begin
+  Result.Name := AName;
+  Result.Value := AValue;
+end;
+
+function LLMParam(const AName: string; const AValue: Variant): TLLMStorageParam;
+begin
+  Result := TLLMStorageParam.Create(AName, AValue);
+end;
 
 function LLMProviderToStr(Provider: TLLMProvider): string;
 begin
@@ -396,54 +444,19 @@ begin
   else Result := lpOpenAI;
 end;
 
-function UniBaseTableExists(Connection: TFDConnection; const TableName: string): Boolean;
-var
-  Query: TFDQuery;
+function UniBaseTableExists(const Storage: ILLMStorage;
+  const TableName: string): Boolean;
 begin
-  Result := False;
-  if not Assigned(Connection) or not Connection.Connected then
-    Exit;
-
-  try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := Connection;
-      Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type = ''table'' AND name = :Name';
-      Query.ParamByName('Name').AsString := TableName;
-      Query.Open;
-      Result := not Query.Eof;
-    finally
-      Query.Free;
-    end;
-  except
-    Result := False;
-  end;
+  Result := Assigned(Storage) and Storage.TableExists(TableName);
 end;
 
-function UniBaseTableHasColumn(Connection: TFDConnection; const TableName, ColumnName: string): Boolean;
-var
-  Query: TFDQuery;
+function UniBaseTableHasColumn(const Storage: ILLMStorage;
+  const TableName, ColumnName: string): Boolean;
 begin
-  Result := False;
-  if not UniBaseTableExists(Connection, TableName) then
-    Exit;
-
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Connection;
-    Query.SQL.Text := Format('SELECT * FROM %s WHERE 1 = 0', [TableName]);
-    try
-      Query.Open;
-      Result := Assigned(Query.FindField(ColumnName));
-    except
-      Result := False;
-    end;
-  finally
-    Query.Free;
-  end;
+  Result := Assigned(Storage) and Storage.TableHasColumn(TableName, ColumnName);
 end;
 
-function QueryFieldString(Query: TFDQuery; const FieldName: string; const DefaultValue: string = ''): string;
+function QueryFieldString(Query: TDataSet; const FieldName: string; const DefaultValue: string = ''): string;
 var
   Field: TField;
 begin
@@ -453,7 +466,7 @@ begin
     Result := Field.AsString;
 end;
 
-function QueryFieldInteger(Query: TFDQuery; const FieldName: string; DefaultValue: Integer = 0): Integer;
+function QueryFieldInteger(Query: TDataSet; const FieldName: string; DefaultValue: Integer = 0): Integer;
 var
   Field: TField;
 begin
@@ -463,7 +476,7 @@ begin
     Result := Field.AsInteger;
 end;
 
-function QueryFieldFloat(Query: TFDQuery; const FieldName: string; DefaultValue: Double = 0): Double;
+function QueryFieldFloat(Query: TDataSet; const FieldName: string; DefaultValue: Double = 0): Double;
 var
   Field: TField;
 begin
@@ -473,7 +486,7 @@ begin
     Result := Field.AsFloat;
 end;
 
-function QueryFieldDateTime(Query: TFDQuery; const FieldName: string): TDateTime;
+function QueryFieldDateTime(Query: TDataSet; const FieldName: string): TDateTime;
 var
   Field: TField;
 begin
@@ -489,21 +502,21 @@ begin
   end;
 end;
 
-function GetLLMConfigTableName(Connection: TFDConnection): string;
+function GetLLMConfigTableName(const Storage: ILLMStorage): string;
 begin
-  if UniBaseTableExists(Connection, 'LLMConfig') then
+  if UniBaseTableExists(Storage, 'LLMConfig') then
     Result := 'LLMConfig'
-  else if UniBaseTableExists(Connection, 'LLMConfiguration') then
+  else if UniBaseTableExists(Storage, 'LLMConfiguration') then
     Result := 'LLMConfiguration'
   else
     Result := 'LLMConfig';
 end;
 
-function GetLLMCallsSelectSQL(Connection: TFDConnection; const ConfigName: string): string;
+function GetLLMCallsSelectSQL(const Storage: ILLMStorage; const ConfigName: string): string;
 var
   HasCanonicalProvider: Boolean;
 begin
-  HasCanonicalProvider := UniBaseTableHasColumn(Connection, 'LLMCalls', 'ProviderCode');
+  HasCanonicalProvider := UniBaseTableHasColumn(Storage, 'LLMCalls', 'ProviderCode');
   if HasCanonicalProvider then
   begin
     Result :=
@@ -594,27 +607,24 @@ begin
   {$ENDIF}
 end;
 
-function TryLoadLLMApiKeyByName(Connection: TFDConnection; const ApiKeyName: string;
+function TryLoadLLMApiKeyByName(const Storage: ILLMStorage; const ApiKeyName: string;
   out ApiKey: string): Boolean;
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   StoredApiKey: string;
 begin
   Result := False;
   ApiKey := '';
-  if (ApiKeyName = '') or not Assigned(Connection) or not Connection.Connected or
-    not UniBaseTableExists(Connection, 'LLMApiKeys') then
+  if (ApiKeyName = '') or not Assigned(Storage) or not Storage.IsConnected or
+    not UniBaseTableExists(Storage, 'LLMApiKeys') then
     Exit;
 
-  Query := TFDQuery.Create(nil);
+  Query := Storage.OpenDataSet(
+    'SELECT ApiKey FROM LLMApiKeys ' +
+    'WHERE Name = :Name AND IsEnabled = 1 ' +
+    'ORDER BY IsDefault DESC, Id LIMIT 1',
+    [LLMParam('Name', ApiKeyName)]);
   try
-    Query.Connection := Connection;
-    Query.SQL.Text :=
-      'SELECT ApiKey FROM LLMApiKeys ' +
-      'WHERE Name = :Name AND IsEnabled = 1 ' +
-      'ORDER BY IsDefault DESC, Id LIMIT 1';
-    Query.ParamByName('Name').AsString := ApiKeyName;
-    Query.Open;
     if not Query.Eof then
     begin
       StoredApiKey := QueryFieldString(Query, 'ApiKey', '');
@@ -626,7 +636,8 @@ begin
   end;
 end;
 
-function ResolveLLMApiKey(Connection: TFDConnection; const ConfigName, StoredValue: string): string;
+function ResolveLLMApiKey(const Storage: ILLMStorage; const ConfigName,
+  StoredValue: string): string;
 begin
   Result := '';
   if StoredValue = '' then
@@ -635,7 +646,7 @@ begin
   if IsLLMCredentialRef(StoredValue) then
     Exit(ResolveLLMCredentialOrRaw(StoredValue));
 
-  if TryLoadLLMApiKeyByName(Connection, StoredValue, Result) then
+  if TryLoadLLMApiKeyByName(Storage, StoredValue, Result) then
     Exit;
 
   // Backward compatibility: older databases wrote the real key directly into
@@ -643,21 +654,20 @@ begin
   Result := StoredValue;
 end;
 
-function ReadStoredApiKeyRefFromConfig(Connection: TFDConnection; const ConfigTable, ConfigName: string): string;
+function ReadStoredApiKeyRefFromConfig(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName: string): string;
 var
-  Query: TFDQuery;
+  Query: TDataSet;
 begin
   Result := '';
-  if not Assigned(Connection) or not Connection.Connected or
-    not UniBaseTableExists(Connection, ConfigTable) then
+  if not Assigned(Storage) or not Storage.IsConnected or
+    not UniBaseTableExists(Storage, ConfigTable) then
     Exit;
 
-  Query := TFDQuery.Create(nil);
+  Query := Storage.OpenDataSet(
+    Format('SELECT * FROM %s WHERE Name = :Name', [ConfigTable]),
+    [LLMParam('Name', ConfigName)]);
   try
-    Query.Connection := Connection;
-    Query.SQL.Text := Format('SELECT * FROM %s WHERE Name = :Name', [ConfigTable]);
-    Query.ParamByName('Name').AsString := ConfigName;
-    Query.Open;
     if not Query.Eof then
       Result := QueryFieldString(Query, 'ApiKeyRef',
         QueryFieldString(Query, 'ApiKey', ''));
@@ -666,13 +676,14 @@ begin
   end;
 end;
 
-function PersistLLMApiKey(Connection: TFDConnection; const ConfigTable, ConfigName, ApiKey: string): string;
+function PersistLLMApiKey(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName, ApiKey: string): string;
 var
   ExistingRef: string;
   ReferencedApiKey: string;
   TargetName: string;
 begin
-  ExistingRef := ReadStoredApiKeyRefFromConfig(Connection, ConfigTable, ConfigName);
+  ExistingRef := ReadStoredApiKeyRefFromConfig(Storage, ConfigTable, ConfigName);
 
   if ApiKey = '' then
   begin
@@ -685,7 +696,7 @@ begin
     Exit(Trim(ApiKey));
 
   ReferencedApiKey := '';
-  if TryLoadLLMApiKeyByName(Connection, ApiKey, ReferencedApiKey) then
+  if TryLoadLLMApiKeyByName(Storage, ApiKey, ReferencedApiKey) then
     Exit(ApiKey);
 
   {$IFDEF MSWINDOWS}
@@ -700,7 +711,8 @@ begin
   {$ENDIF}
 end;
 
-procedure LoadConfigFromQuery(Query: TFDQuery; Connection: TFDConnection; var Config: TLLMConfig);
+procedure LoadConfigFromQuery(Query: TDataSet; const Storage: ILLMStorage;
+  var Config: TLLMConfig);
 var
   InputPricePer1M: Double;
   OutputPricePer1M: Double;
@@ -715,7 +727,7 @@ begin
     QueryFieldString(Query, 'ApiUrl', Config.BaseUrl));
   StoredApiKey := QueryFieldString(Query, 'ApiKeyRef',
     QueryFieldString(Query, 'ApiKey', Config.ApiKey));
-  Config.ApiKey := ResolveLLMApiKey(Connection, Config.Name, StoredApiKey);
+  Config.ApiKey := ResolveLLMApiKey(Storage, Config.Name, StoredApiKey);
   Config.Model := QueryFieldString(Query, 'ModelId',
     QueryFieldString(Query, 'Model', Config.Model));
   Config.MaxTokens := QueryFieldInteger(Query, 'MaxTokens', Config.MaxTokens);
@@ -904,8 +916,15 @@ end;
 
 constructor TUniBaseLLM.Create(AConnection: TObject);
 begin
-  inherited Create;
+  Create(CreateStorageFromConnection(AConnection));
   FConnection := AConnection;
+end;
+
+constructor TUniBaseLLM.Create(const AStorage: ILLMStorage);
+begin
+  inherited Create;
+  FConnection := nil;
+  FStorage := AStorage;
   FConfigCache := TDictionary<string, TLLMConfig>.Create;
   FCacheLock := TCriticalSection.Create;
   FHttpClient := TNetHTTPClient.Create(nil);
@@ -916,19 +935,38 @@ begin
   RefreshConfigCache;
 end;
 
-function TUniBaseLLM.GetFDConnection: TObject;
+class procedure TUniBaseLLM.SetStorageFactory(
+  const AFactory: TFunc<TObject, ILLMStorage>);
 begin
-  if Assigned(FConnection) and (FConnection is TFDConnection) then
-    Result := FConnection
-  else
-    Result := nil;
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TUniBaseLLM.CreateStorageFromConnection(
+  AConnection: TObject): ILLMStorage;
+begin
+  Result := nil;
+  if Assigned(AConnection) and Supports(AConnection, ILLMStorage, Result) then
+    Exit;
+
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No LLM storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.LLM.FireDAC.');
+end;
+
+function TUniBaseLLM.GetStorage: ILLMStorage;
+begin
+  Result := FStorage;
 end;
 
 destructor TUniBaseLLM.Destroy;
 begin
-  FHttpClient.Free;
-  FCacheLock.Free;
-  FConfigCache.Free;
+  FreeAndNil(FHttpClient);
+  FreeAndNil(FCacheLock);
+  FreeAndNil(FConfigCache);
   inherited;
 end;
 
@@ -948,32 +986,29 @@ end;
 
 procedure TUniBaseLLM.RefreshConfigCache;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
   Config: TLLMConfig;
   ConfigTable: string;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   FCacheLock.Enter;
   try
     FConfigCache.Clear;
-    
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := Conn;
-      ConfigTable := GetLLMConfigTableName(Conn);
-      if not UniBaseTableExists(Conn, ConfigTable) then
-        Exit;
+    ConfigTable := GetLLMConfigTableName(Storage);
+    if not UniBaseTableExists(Storage, ConfigTable) then
+      Exit;
 
-      Query.SQL.Text := Format('SELECT * FROM %s WHERE IsEnabled = 1', [ConfigTable]);
-      Query.Open;
-      
+    Query := Storage.OpenDataSet(
+      Format('SELECT * FROM %s WHERE IsEnabled = 1', [ConfigTable]),
+      []);
+    try
       while not Query.Eof do
       begin
-        LoadConfigFromQuery(Query, Conn, Config);
+        LoadConfigFromQuery(Query, Storage, Config);
         FConfigCache.AddOrSetValue(Config.Name, Config);
         Query.Next;
       end;
@@ -1028,117 +1063,104 @@ end;
 
 procedure TUniBaseLLM.SaveConfig(const AConfig: TLLMConfig);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
   NowStr: string;
   ConfigTable: string;
   StoredApiKey: string;
   CachedConfig: TLLMConfig;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-  
-  Query := TFDQuery.Create(nil);
+
+  ConfigTable := GetLLMConfigTableName(Storage);
+  StoredApiKey := PersistLLMApiKey(Storage, ConfigTable, AConfig.Name, AConfig.ApiKey);
+  if SameText(ConfigTable, 'LLMConfig') then
+  begin
+    Storage.Execute(
+      'INSERT OR REPLACE INTO LLMConfig ' +
+      '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
+      'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
+      'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
+      ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt)',
+      [
+        LLMParam('Name', AConfig.Name),
+        LLMParam('Description', ''),
+        LLMParam('ProviderCode', AConfig.ProviderToStr),
+        LLMParam('ModelId', AConfig.Model),
+        LLMParam('BaseUrl', AConfig.BaseUrl),
+        LLMParam('ApiKeyRef', StoredApiKey),
+        LLMParam('MaxTokens', AConfig.MaxTokens),
+        LLMParam('Temperature', AConfig.Temperature),
+        LLMParam('SystemPrompt', AConfig.SystemPrompt),
+        LLMParam('IsEnabled', Ord(AConfig.IsEnabled)),
+        LLMParam('IsDefault', Ord(AConfig.IsDefault)),
+        LLMParam('UpdatedAt', NowStr)
+      ]);
+  end
+  else
+  begin
+    Storage.Execute(
+      'INSERT OR REPLACE INTO LLMConfiguration ' +
+      '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
+      'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
+      'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
+      ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)',
+      [
+        LLMParam('Name', AConfig.Name),
+        LLMParam('Provider', AConfig.ProviderToStr),
+        LLMParam('BaseUrl', AConfig.BaseUrl),
+        LLMParam('ApiKey', StoredApiKey),
+        LLMParam('Model', AConfig.Model),
+        LLMParam('MaxTokens', AConfig.MaxTokens),
+        LLMParam('Temperature', AConfig.Temperature),
+        LLMParam('SystemPrompt', AConfig.SystemPrompt),
+        LLMParam('InputTokenPrice', AConfig.InputTokenPrice),
+        LLMParam('OutputTokenPrice', AConfig.OutputTokenPrice),
+        LLMParam('IsEnabled', Ord(AConfig.IsEnabled)),
+        LLMParam('IsDefault', Ord(AConfig.IsDefault)),
+        LLMParam('UpdatedAt', NowStr)
+      ]);
+  end;
+
+  CachedConfig := AConfig;
+  CachedConfig.ApiKey := ResolveLLMApiKey(Storage, AConfig.Name, StoredApiKey);
+
+  // Update cache
+  FCacheLock.Enter;
   try
-    Query.Connection := Conn;
-    ConfigTable := GetLLMConfigTableName(Conn);
-    StoredApiKey := PersistLLMApiKey(Conn, ConfigTable, AConfig.Name, AConfig.ApiKey);
-    if SameText(ConfigTable, 'LLMConfig') then
-    begin
-      Query.SQL.Text :=
-        'INSERT OR REPLACE INTO LLMConfig ' +
-        '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
-        'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
-        'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
-        ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt)';
-
-      Query.ParamByName('Name').AsString := AConfig.Name;
-      Query.ParamByName('Description').AsString := '';
-      Query.ParamByName('ProviderCode').AsString := AConfig.ProviderToStr;
-      Query.ParamByName('ModelId').AsString := AConfig.Model;
-      Query.ParamByName('BaseUrl').AsString := AConfig.BaseUrl;
-      Query.ParamByName('ApiKeyRef').AsString := StoredApiKey;
-      Query.ParamByName('MaxTokens').AsInteger := AConfig.MaxTokens;
-      Query.ParamByName('Temperature').AsFloat := AConfig.Temperature;
-      Query.ParamByName('SystemPrompt').AsString := AConfig.SystemPrompt;
-      Query.ParamByName('IsEnabled').AsInteger := Ord(AConfig.IsEnabled);
-      Query.ParamByName('IsDefault').AsInteger := Ord(AConfig.IsDefault);
-      Query.ParamByName('UpdatedAt').AsString := NowStr;
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT OR REPLACE INTO LLMConfiguration ' +
-        '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
-        'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
-        'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
-        ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)';
-
-      Query.ParamByName('Name').AsString := AConfig.Name;
-      Query.ParamByName('Provider').AsString := AConfig.ProviderToStr;
-      Query.ParamByName('BaseUrl').AsString := AConfig.BaseUrl;
-      Query.ParamByName('ApiKey').AsString := StoredApiKey;
-      Query.ParamByName('Model').AsString := AConfig.Model;
-      Query.ParamByName('MaxTokens').AsInteger := AConfig.MaxTokens;
-      Query.ParamByName('Temperature').AsFloat := AConfig.Temperature;
-      Query.ParamByName('SystemPrompt').AsString := AConfig.SystemPrompt;
-      Query.ParamByName('InputTokenPrice').AsFloat := AConfig.InputTokenPrice;
-      Query.ParamByName('OutputTokenPrice').AsFloat := AConfig.OutputTokenPrice;
-      Query.ParamByName('IsEnabled').AsInteger := Ord(AConfig.IsEnabled);
-      Query.ParamByName('IsDefault').AsInteger := Ord(AConfig.IsDefault);
-      Query.ParamByName('UpdatedAt').AsString := NowStr;
-    end;
-
-    Query.ExecSQL;
-    CachedConfig := AConfig;
-    CachedConfig.ApiKey := ResolveLLMApiKey(Conn, AConfig.Name, StoredApiKey);
-    
-    // Update cache
-    FCacheLock.Enter;
-    try
-      FConfigCache.AddOrSetValue(AConfig.Name, CachedConfig);
-    finally
-      FCacheLock.Leave;
-    end;
+    FConfigCache.AddOrSetValue(AConfig.Name, CachedConfig);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
 procedure TUniBaseLLM.DeleteConfig(const AConfigName: string);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
   ConfigTable: string;
   StoredApiKey: string;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    ConfigTable := GetLLMConfigTableName(Conn);
-    StoredApiKey := ReadStoredApiKeyRefFromConfig(Conn, ConfigTable, AConfigName);
-    DeleteLLMCredentialRef(StoredApiKey);
-    DeleteLLMCredentialRef(BuildLLMCredentialRef(MakeLLMApiKeyCredentialTarget(AConfigName)));
 
-    Query.SQL.Text := Format('DELETE FROM %s WHERE Name = :Name', [ConfigTable]);
-    Query.ParamByName('Name').AsString := AConfigName;
-    Query.ExecSQL;
-    
-    FCacheLock.Enter;
-    try
-      FConfigCache.Remove(AConfigName);
-    finally
-      FCacheLock.Leave;
-    end;
+  ConfigTable := GetLLMConfigTableName(Storage);
+  StoredApiKey := ReadStoredApiKeyRefFromConfig(Storage, ConfigTable, AConfigName);
+  DeleteLLMCredentialRef(StoredApiKey);
+  DeleteLLMCredentialRef(BuildLLMCredentialRef(MakeLLMApiKeyCredentialTarget(AConfigName)));
+
+  Storage.Execute(
+    Format('DELETE FROM %s WHERE Name = :Name', [ConfigTable]),
+    [LLMParam('Name', AConfigName)]);
+
+  FCacheLock.Enter;
+  try
+    FConfigCache.Remove(AConfigName);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
@@ -1415,64 +1437,75 @@ end;
 procedure TUniBaseLLM.RecordCall(const Config: TLLMConfig; const Prompt: string;
   const Response: TLLMChatResponse; const CallerModule, CallerFunc: string);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
   Cost: Double;
   NowStr: string;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   Cost := EstimateCost(Config, Response.InputTokens, Response.OutputTokens);
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-  
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    if UniBaseTableHasColumn(Conn, 'LLMCalls', 'ProviderCode') then
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO LLMCalls (ConfigName, ProviderCode, ModelId, SystemPrompt, UserPrompt, AssistantResponse, ' +
-        'FinishReason, InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
-        'Success, ErrorCode, ErrorMessage, CallerModule, CallerFunction, CallTime) ' +
-        'VALUES (:ConfigName, :Provider, :Model, :SystemPrompt, :Prompt, :Response, ' +
-        ':FinishReason, :InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
-        ':Success, :ErrorCode, :ErrorMessage, :CallerModule, :CallerFunction, :CallTime)';
-      Query.ParamByName('SystemPrompt').AsString := Config.SystemPrompt;
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO LLMCalls (ConfigName, Provider, Model, Prompt, Response, ' +
-        'InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
-        'Success, ErrorCode, ErrorMessage, FinishReason, CallerModule, CallerFunction, CallTime) ' +
-        'VALUES (:ConfigName, :Provider, :Model, :Prompt, :Response, ' +
-        ':InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
-        ':Success, :ErrorCode, :ErrorMessage, :FinishReason, :CallerModule, :CallerFunction, :CallTime)';
-    end;
-    
-    Query.ParamByName('ConfigName').AsString := Config.Name;
-    Query.ParamByName('Provider').AsString := Config.ProviderToStr;
-    Query.ParamByName('Model').AsString := Config.Model;
-    Query.ParamByName('Prompt').AsString := Prompt;
-    Query.ParamByName('Response').AsString := Response.Content;
-    Query.ParamByName('InputTokens').AsInteger := Response.InputTokens;
-    Query.ParamByName('OutputTokens').AsInteger := Response.OutputTokens;
-    Query.ParamByName('TotalTokens').AsInteger := Response.TotalTokens;
-    Query.ParamByName('EstimatedCost').AsFloat := Cost;
-    Query.ParamByName('DurationMs').AsInteger := Response.DurationMs;
-    Query.ParamByName('Success').AsInteger := Ord(Response.Success);
-    Query.ParamByName('ErrorCode').AsString := Response.ErrorCode;
-    Query.ParamByName('ErrorMessage').AsString := Response.ErrorMessage;
-    Query.ParamByName('FinishReason').AsString := Response.FinishReason;
-    Query.ParamByName('CallerModule').AsString := CallerModule;
-    Query.ParamByName('CallerFunction').AsString := CallerFunc;
-    Query.ParamByName('CallTime').AsString := NowStr;
-    
-    Query.ExecSQL;
-  finally
-    Query.Free;
+
+  if UniBaseTableHasColumn(Storage, 'LLMCalls', 'ProviderCode') then
+  begin
+    Storage.Execute(
+      'INSERT INTO LLMCalls (ConfigName, ProviderCode, ModelId, SystemPrompt, UserPrompt, AssistantResponse, ' +
+      'FinishReason, InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
+      'Success, ErrorCode, ErrorMessage, CallerModule, CallerFunction, CallTime) ' +
+      'VALUES (:ConfigName, :Provider, :Model, :SystemPrompt, :Prompt, :Response, ' +
+      ':FinishReason, :InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
+      ':Success, :ErrorCode, :ErrorMessage, :CallerModule, :CallerFunction, :CallTime)',
+      [
+        LLMParam('ConfigName', Config.Name),
+        LLMParam('Provider', Config.ProviderToStr),
+        LLMParam('Model', Config.Model),
+        LLMParam('SystemPrompt', Config.SystemPrompt),
+        LLMParam('Prompt', Prompt),
+        LLMParam('Response', Response.Content),
+        LLMParam('FinishReason', Response.FinishReason),
+        LLMParam('InputTokens', Response.InputTokens),
+        LLMParam('OutputTokens', Response.OutputTokens),
+        LLMParam('TotalTokens', Response.TotalTokens),
+        LLMParam('EstimatedCost', Cost),
+        LLMParam('DurationMs', Response.DurationMs),
+        LLMParam('Success', Ord(Response.Success)),
+        LLMParam('ErrorCode', Response.ErrorCode),
+        LLMParam('ErrorMessage', Response.ErrorMessage),
+        LLMParam('CallerModule', CallerModule),
+        LLMParam('CallerFunction', CallerFunc),
+        LLMParam('CallTime', NowStr)
+      ]);
+  end
+  else
+  begin
+    Storage.Execute(
+      'INSERT INTO LLMCalls (ConfigName, Provider, Model, Prompt, Response, ' +
+      'InputTokens, OutputTokens, TotalTokens, EstimatedCost, DurationMs, ' +
+      'Success, ErrorCode, ErrorMessage, FinishReason, CallerModule, CallerFunction, CallTime) ' +
+      'VALUES (:ConfigName, :Provider, :Model, :Prompt, :Response, ' +
+      ':InputTokens, :OutputTokens, :TotalTokens, :EstimatedCost, :DurationMs, ' +
+      ':Success, :ErrorCode, :ErrorMessage, :FinishReason, :CallerModule, :CallerFunction, :CallTime)',
+      [
+        LLMParam('ConfigName', Config.Name),
+        LLMParam('Provider', Config.ProviderToStr),
+        LLMParam('Model', Config.Model),
+        LLMParam('Prompt', Prompt),
+        LLMParam('Response', Response.Content),
+        LLMParam('InputTokens', Response.InputTokens),
+        LLMParam('OutputTokens', Response.OutputTokens),
+        LLMParam('TotalTokens', Response.TotalTokens),
+        LLMParam('EstimatedCost', Cost),
+        LLMParam('DurationMs', Response.DurationMs),
+        LLMParam('Success', Ord(Response.Success)),
+        LLMParam('ErrorCode', Response.ErrorCode),
+        LLMParam('ErrorMessage', Response.ErrorMessage),
+        LLMParam('FinishReason', Response.FinishReason),
+        LLMParam('CallerModule', CallerModule),
+        LLMParam('CallerFunction', CallerFunc),
+        LLMParam('CallTime', NowStr)
+      ]);
   end;
 end;
 
@@ -1575,7 +1608,7 @@ begin
   end;
 end;
 
-procedure LoadTemplateFromQuery(Query: TFDQuery; var Template: TLLMPromptTemplate);
+procedure LoadTemplateFromQuery(Query: TDataSet; var Template: TLLMPromptTemplate);
 var
   VarJson, IncJson, DefJson: TJSONValue;
   I: Integer;
@@ -1648,22 +1681,19 @@ end;
 
 function TUniBaseLLM.GetTemplate(const TemplateName: string): TLLMPromptTemplate;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
 begin
   Result.Init;
   
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  Query := Storage.OpenDataSet(
+    'SELECT * FROM LLMPromptTemplates WHERE Name = :Name AND IsEnabled = 1',
+    [LLMParam('Name', TemplateName)]);
   try
-    Query.Connection := Conn;
-    Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE Name = :Name AND IsEnabled = 1';
-    Query.ParamByName('Name').AsString := TemplateName;
-    Query.Open;
-    
     if not Query.Eof then
       LoadTemplateFromQuery(Query, Result);
   finally
@@ -1673,25 +1703,23 @@ end;
 
 function TUniBaseLLM.GetAllTemplates: TLLMPromptTemplateArray;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
   List: TList<TLLMPromptTemplate>;
   Template: TLLMPromptTemplate;
 begin
   SetLength(Result, 0);
   
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   List := TList<TLLMPromptTemplate>.Create;
   try
-    Query := TFDQuery.Create(nil);
+    Query := Storage.OpenDataSet(
+      'SELECT * FROM LLMPromptTemplates WHERE IsEnabled = 1 ORDER BY SortOrder, Name',
+      []);
     try
-      Query.Connection := Conn;
-      Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE IsEnabled = 1 ORDER BY SortOrder, Name';
-      Query.Open;
-      
       while not Query.Eof do
       begin
         LoadTemplateFromQuery(Query, Template);
@@ -1710,26 +1738,23 @@ end;
 
 function TUniBaseLLM.GetTemplatesByCategory(const Category: string): TLLMPromptTemplateArray;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
   List: TList<TLLMPromptTemplate>;
   Template: TLLMPromptTemplate;
 begin
   SetLength(Result, 0);
   
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   List := TList<TLLMPromptTemplate>.Create;
   try
-    Query := TFDQuery.Create(nil);
+    Query := Storage.OpenDataSet(
+      'SELECT * FROM LLMPromptTemplates WHERE Category = :Category AND IsEnabled = 1 ORDER BY SortOrder, Name',
+      [LLMParam('Category', Category)]);
     try
-      Query.Connection := Conn;
-      Query.SQL.Text := 'SELECT * FROM LLMPromptTemplates WHERE Category = :Category AND IsEnabled = 1 ORDER BY SortOrder, Name';
-      Query.ParamByName('Category').AsString := Category;
-      Query.Open;
-      
       while not Query.Eof do
       begin
         LoadTemplateFromQuery(Query, Template);
@@ -1785,34 +1810,28 @@ end;
 
 function TUniBaseLLM.GetCallHistory(ALimit: Integer; const ConfigName: string): TLLMCallRecordArray;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
   List: TList<TLLMCallRecord>;
   Rec: TLLMCallRecord;
 begin
   SetLength(Result, 0);
   
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
     
   List := TList<TLLMCallRecord>.Create;
   try
-    Query := TFDQuery.Create(nil);
+    if ConfigName <> '' then
+      Query := Storage.OpenDataSet(
+        GetLLMCallsSelectSQL(Storage, ConfigName),
+        [LLMParam('ConfigName', ConfigName), LLMParam('Limit', ALimit)])
+    else
+      Query := Storage.OpenDataSet(
+        GetLLMCallsSelectSQL(Storage, ''),
+        [LLMParam('Limit', ALimit)]);
     try
-      Query.Connection := Conn;
-      
-      if ConfigName <> '' then
-      begin
-        Query.SQL.Text := GetLLMCallsSelectSQL(Conn, ConfigName);
-        Query.ParamByName('ConfigName').AsString := ConfigName;
-      end
-      else
-        Query.SQL.Text := GetLLMCallsSelectSQL(Conn, '');
-      
-      Query.ParamByName('Limit').AsInteger := ALimit;
-      Query.Open;
-      
       while not Query.Eof do
       begin
         Rec.Id := QueryFieldInteger(Query, 'Id');
@@ -1847,44 +1866,34 @@ end;
 procedure TUniBaseLLM.GetUsageStats(const ConfigName: string; DaysBack: Integer;
   out TotalCalls: Integer; out TotalTokens: Integer; out TotalCost: Double);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
+  Query: TDataSet;
   CutoffDate: string;
 begin
   TotalCalls := 0;
   TotalTokens := 0;
   TotalCost := 0;
   
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
   
   // 使用参数化方式避免 FireDAC 误解 datetime('now')
   CutoffDate := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now - DaysBack);
-    
-  Query := TFDQuery.Create(nil);
+
+  if ConfigName <> '' then
+    Query := Storage.OpenDataSet(
+      'SELECT COUNT(*) AS Calls, COALESCE(SUM(TotalTokens), 0) AS Tokens, ' +
+      'COALESCE(SUM(EstimatedCost), 0) AS Cost FROM LLMCalls ' +
+      'WHERE ConfigName = :ConfigName AND CallTime >= :CutoffDate',
+      [LLMParam('ConfigName', ConfigName), LLMParam('CutoffDate', CutoffDate)])
+  else
+    Query := Storage.OpenDataSet(
+      'SELECT COUNT(*) AS Calls, COALESCE(SUM(TotalTokens), 0) AS Tokens, ' +
+      'COALESCE(SUM(EstimatedCost), 0) AS Cost FROM LLMCalls ' +
+      'WHERE CallTime >= :CutoffDate',
+      [LLMParam('CutoffDate', CutoffDate)]);
   try
-    Query.Connection := Conn;
-    
-    if ConfigName <> '' then
-    begin
-      Query.SQL.Text :=
-        'SELECT COUNT(*) AS Calls, COALESCE(SUM(TotalTokens), 0) AS Tokens, ' +
-        'COALESCE(SUM(EstimatedCost), 0) AS Cost FROM LLMCalls ' +
-        'WHERE ConfigName = :ConfigName AND CallTime >= :CutoffDate';
-      Query.ParamByName('ConfigName').AsString := ConfigName;
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'SELECT COUNT(*) AS Calls, COALESCE(SUM(TotalTokens), 0) AS Tokens, ' +
-        'COALESCE(SUM(EstimatedCost), 0) AS Cost FROM LLMCalls ' +
-        'WHERE CallTime >= :CutoffDate';
-    end;
-    
-    Query.ParamByName('CutoffDate').AsString := CutoffDate;
-    Query.Open;
-    
     TotalCalls := Query.FieldByName('Calls').AsInteger;
     TotalTokens := Query.FieldByName('Tokens').AsInteger;
     TotalCost := Query.FieldByName('Cost').AsFloat;
@@ -1895,31 +1904,22 @@ end;
 
 procedure TUniBaseLLM.ClearOldCalls(DaysToKeep: Integer);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
   CutoffDate: string;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    
-    if DaysToKeep <= 0 then
-      Query.SQL.Text := 'DELETE FROM LLMCalls'
-    else
-    begin
-      // 使用参数化方式避免 FireDAC 误解 datetime('now')
-      CutoffDate := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now - DaysToKeep);
-      Query.SQL.Text := 'DELETE FROM LLMCalls WHERE CallTime < :CutoffDate';
-      Query.ParamByName('CutoffDate').AsString := CutoffDate;
-    end;
-    
-    Query.ExecSQL;
-  finally
-    Query.Free;
+
+  if DaysToKeep <= 0 then
+    Storage.Execute('DELETE FROM LLMCalls', [])
+  else
+  begin
+    // 使用参数化方式避免 FireDAC 误解 datetime('now')
+    CutoffDate := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now - DaysToKeep);
+    Storage.Execute(
+      'DELETE FROM LLMCalls WHERE CallTime < :CutoffDate',
+      [LLMParam('CutoffDate', CutoffDate)]);
   end;
 end;
 
@@ -1927,16 +1927,16 @@ end;
 
 procedure TUniBaseLLM.SaveTemplate(const Template: TLLMPromptTemplate);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
   VarsJson, IncJson: TJSONArray;
   DefsJson: TJSONObject;
   I: Integer;
   Key: string;
   NowStr: string;
+  ExistingId: Variant;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
   if Template.Name = '' then
     raise ELLMException.Create('Template name cannot be empty');
@@ -1961,71 +1961,78 @@ begin
         if Assigned(Template.DefaultValues) then
           for Key in Template.DefaultValues.Keys do
             DefsJson.AddPair(Key, Template.DefaultValues[Key]);
-        
-        Query := TFDQuery.Create(nil);
-        try
-          Query.Connection := Conn;
-          
-          // Check if exists
-          Query.SQL.Text := 'SELECT Id FROM LLMPromptTemplates WHERE Name = :Name';
-          Query.ParamByName('Name').AsString := Template.Name;
-          Query.Open;
-          
-          if Query.Eof then
-          begin
-            // Insert
-            Query.SQL.Text := 
-              'INSERT INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, ' +
-              'UserPromptTemplate, Variables, DefaultValues, ParentTemplate, IncludeTemplates, ' +
-              'OutputFormat, ValidationRegex, Examples, RecommendedConfig, RecommendedModel, ' +
-              'MaxTokens, Temperature, IsEnabled, IsBuiltIn, SortOrder, CreatedAt, UpdatedAt) ' +
-              'VALUES (:Name, :Category, :Description, :SystemPrompt, :UserPromptTemplate, ' +
-              ':Variables, :DefaultValues, :ParentTemplate, :IncludeTemplates, :OutputFormat, ' +
-              ':ValidationRegex, :Examples, :RecommendedConfig, :RecommendedModel, :MaxTokens, ' +
-              ':Temperature, :IsEnabled, :IsBuiltIn, :SortOrder, :CreatedAt, :UpdatedAt)';
-          end
-          else
-          begin
-            // Update
-            Query.SQL.Text := 
-              'UPDATE LLMPromptTemplates SET Category = :Category, Description = :Description, ' +
-              'SystemPrompt = :SystemPrompt, UserPromptTemplate = :UserPromptTemplate, ' +
-              'Variables = :Variables, DefaultValues = :DefaultValues, ParentTemplate = :ParentTemplate, ' +
-              'IncludeTemplates = :IncludeTemplates, OutputFormat = :OutputFormat, ' +
-              'ValidationRegex = :ValidationRegex, Examples = :Examples, ' +
-              'RecommendedConfig = :RecommendedConfig, RecommendedModel = :RecommendedModel, ' +
-              'MaxTokens = :MaxTokens, Temperature = :Temperature, IsEnabled = :IsEnabled, ' +
-              'SortOrder = :SortOrder, UpdatedAt = :UpdatedAt WHERE Name = :Name';
-          end;
-          
-          Query.ParamByName('Name').AsString := Template.Name;
-          Query.ParamByName('Category').AsString := Template.Category;
-          Query.ParamByName('Description').AsString := Template.Description;
-          Query.ParamByName('SystemPrompt').AsString := Template.SystemPrompt;
-          Query.ParamByName('UserPromptTemplate').AsString := Template.UserPromptTemplate;
-          Query.ParamByName('Variables').AsString := VarsJson.ToString;
-          Query.ParamByName('DefaultValues').AsString := DefsJson.ToString;
-          Query.ParamByName('ParentTemplate').AsString := Template.ParentTemplate;
-          Query.ParamByName('IncludeTemplates').AsString := IncJson.ToString;
-          Query.ParamByName('OutputFormat').AsString := Template.OutputFormat;
-          Query.ParamByName('ValidationRegex').AsString := Template.ValidationRegex;
-          Query.ParamByName('Examples').AsString := Template.Examples;
-          Query.ParamByName('RecommendedConfig').AsString := Template.RecommendedConfig;
-          Query.ParamByName('RecommendedModel').AsString := Template.RecommendedModel;
-          Query.ParamByName('MaxTokens').AsInteger := Template.MaxTokens;
-          Query.ParamByName('Temperature').AsFloat := Template.Temperature;
-          Query.ParamByName('IsEnabled').AsInteger := Ord(Template.IsEnabled);
-          Query.ParamByName('SortOrder').AsInteger := Template.SortOrder;
-          Query.ParamByName('UpdatedAt').AsString := NowStr;
-          
-          if Query.Params.FindParam('IsBuiltIn') <> nil then
-            Query.ParamByName('IsBuiltIn').AsInteger := Ord(Template.IsBuiltIn);
-          if Query.Params.FindParam('CreatedAt') <> nil then
-            Query.ParamByName('CreatedAt').AsString := NowStr;
-          
-          Query.ExecSQL;
-        finally
-          Query.Free;
+
+        ExistingId := Storage.ExecuteScalar(
+          'SELECT Id FROM LLMPromptTemplates WHERE Name = :Name',
+          [LLMParam('Name', Template.Name)]);
+
+        if VarIsNull(ExistingId) then
+        begin
+          Storage.Execute(
+            'INSERT INTO LLMPromptTemplates (Name, Category, Description, SystemPrompt, ' +
+            'UserPromptTemplate, Variables, DefaultValues, ParentTemplate, IncludeTemplates, ' +
+            'OutputFormat, ValidationRegex, Examples, RecommendedConfig, RecommendedModel, ' +
+            'MaxTokens, Temperature, IsEnabled, IsBuiltIn, SortOrder, CreatedAt, UpdatedAt) ' +
+            'VALUES (:Name, :Category, :Description, :SystemPrompt, :UserPromptTemplate, ' +
+            ':Variables, :DefaultValues, :ParentTemplate, :IncludeTemplates, :OutputFormat, ' +
+            ':ValidationRegex, :Examples, :RecommendedConfig, :RecommendedModel, :MaxTokens, ' +
+            ':Temperature, :IsEnabled, :IsBuiltIn, :SortOrder, :CreatedAt, :UpdatedAt)',
+            [
+              LLMParam('Name', Template.Name),
+              LLMParam('Category', Template.Category),
+              LLMParam('Description', Template.Description),
+              LLMParam('SystemPrompt', Template.SystemPrompt),
+              LLMParam('UserPromptTemplate', Template.UserPromptTemplate),
+              LLMParam('Variables', VarsJson.ToString),
+              LLMParam('DefaultValues', DefsJson.ToString),
+              LLMParam('ParentTemplate', Template.ParentTemplate),
+              LLMParam('IncludeTemplates', IncJson.ToString),
+              LLMParam('OutputFormat', Template.OutputFormat),
+              LLMParam('ValidationRegex', Template.ValidationRegex),
+              LLMParam('Examples', Template.Examples),
+              LLMParam('RecommendedConfig', Template.RecommendedConfig),
+              LLMParam('RecommendedModel', Template.RecommendedModel),
+              LLMParam('MaxTokens', Template.MaxTokens),
+              LLMParam('Temperature', Template.Temperature),
+              LLMParam('IsEnabled', Ord(Template.IsEnabled)),
+              LLMParam('IsBuiltIn', Ord(Template.IsBuiltIn)),
+              LLMParam('SortOrder', Template.SortOrder),
+              LLMParam('CreatedAt', NowStr),
+              LLMParam('UpdatedAt', NowStr)
+            ]);
+        end
+        else
+        begin
+          Storage.Execute(
+            'UPDATE LLMPromptTemplates SET Category = :Category, Description = :Description, ' +
+            'SystemPrompt = :SystemPrompt, UserPromptTemplate = :UserPromptTemplate, ' +
+            'Variables = :Variables, DefaultValues = :DefaultValues, ParentTemplate = :ParentTemplate, ' +
+            'IncludeTemplates = :IncludeTemplates, OutputFormat = :OutputFormat, ' +
+            'ValidationRegex = :ValidationRegex, Examples = :Examples, ' +
+            'RecommendedConfig = :RecommendedConfig, RecommendedModel = :RecommendedModel, ' +
+            'MaxTokens = :MaxTokens, Temperature = :Temperature, IsEnabled = :IsEnabled, ' +
+            'SortOrder = :SortOrder, UpdatedAt = :UpdatedAt WHERE Name = :Name',
+            [
+              LLMParam('Name', Template.Name),
+              LLMParam('Category', Template.Category),
+              LLMParam('Description', Template.Description),
+              LLMParam('SystemPrompt', Template.SystemPrompt),
+              LLMParam('UserPromptTemplate', Template.UserPromptTemplate),
+              LLMParam('Variables', VarsJson.ToString),
+              LLMParam('DefaultValues', DefsJson.ToString),
+              LLMParam('ParentTemplate', Template.ParentTemplate),
+              LLMParam('IncludeTemplates', IncJson.ToString),
+              LLMParam('OutputFormat', Template.OutputFormat),
+              LLMParam('ValidationRegex', Template.ValidationRegex),
+              LLMParam('Examples', Template.Examples),
+              LLMParam('RecommendedConfig', Template.RecommendedConfig),
+              LLMParam('RecommendedModel', Template.RecommendedModel),
+              LLMParam('MaxTokens', Template.MaxTokens),
+              LLMParam('Temperature', Template.Temperature),
+              LLMParam('IsEnabled', Ord(Template.IsEnabled)),
+              LLMParam('SortOrder', Template.SortOrder),
+              LLMParam('UpdatedAt', NowStr)
+            ]);
         end;
       finally
         DefsJson.Free;
@@ -2040,22 +2047,15 @@ end;
 
 procedure TUniBaseLLM.DeleteTemplate(const TemplateName: string);
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
+  Storage: ILLMStorage;
 begin
-  Conn := TFDConnection(GetFDConnection);
-  if not Assigned(Conn) or not Conn.Connected then
+  Storage := GetStorage;
+  if not Assigned(Storage) or not Storage.IsConnected then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := Conn;
-    Query.SQL.Text := 'DELETE FROM LLMPromptTemplates WHERE Name = :Name AND IsBuiltIn = 0';
-    Query.ParamByName('Name').AsString := TemplateName;
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  Storage.Execute(
+    'DELETE FROM LLMPromptTemplates WHERE Name = :Name AND IsBuiltIn = 0',
+    [LLMParam('Name', TemplateName)]);
 end;
 
 function TUniBaseLLM.CopyTemplate(const SourceName, NewName: string): Boolean;

@@ -4,6 +4,141 @@
 
 ---
 
+## 2026-05-05 架构整理与封板前优化归档 ✅
+
+### ARCH-019 / ARCH-039: Core 与 Persistence 分层收敛 ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - `Core/` 已移除 `FireDAC.*` / `TFD*` / `EFD*` 直接类型依赖，Core 运行包不再要求 FireDAC。
+  - 引入 `UniBase.Storage.Interfaces.pas`，统一 `IConfigStorage`、`IFormStateStorage`、`IMRUStorage`、`IHotkeyStorage`、`IThemeStorage`、`II18nStorage`、`ILogStorage`、`IManagerStorage`、`ILLMStorage`、`IORMStorage` 等抽象。
+  - FireDAC 实现下沉到 `Persistence/UniBase.Persistence.*.FireDAC.pas`，通过 initialization 自动注册工厂。
+  - `Manager/Config/FormState/MRU/Hotkeys/Theme/i18n/Security/License/Authorization/Exception/Diagnose/Logging/LLM/ORM/TestHelper` 已完成主要存储注入切片。
+  - `Scripts/run_tests.ps1` 增加模块化测试入口：`-Module`、`-FromUnit`、`-FromGitChanged`。
+- **验证**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`
+  - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`
+  - `Scripts/build_packages_win64.ps1 -Profile Runtime`
+
+### ARCH-027 / ARCH-044: Core 目录和包边界整理 ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - `Core` 中与 UI、Features、Persistence 强相关的实现完成迁移或边界收敛。
+  - `UniBaseCore.dpk`、`UniBaseServices.dpk`、`UniBasePersistence.dpk`、`UniBaseFeatures.dpk`、`UniBaseVCL.dpk`、`UniBaseFMX.dpk` 已按当前分层重新对齐。
+  - `Theme/Exception/Hotkeys/Plugin` 等模块去除 Core 对 VCL/FMX 的直接绑定，由平台包提供适配器。
+  - `Profile All` 包门禁已覆盖 VCL/FMX 包，并检查源目录 `.dcu` 泄漏。
+
+### FEATURE-001: 统一用户/订单/支付/权益 Commerce MVP ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - 新增 `Features/UniBase.Commerce.Types.pas`：统一用户、身份、商品、订单、支付、权益数据结构。
+  - 新增 `Features/UniBase.Commerce.Storage.pas`：定义 `ICommerceStorage`，提供 `TInMemoryCommerceStorage` 用于开发和测试。
+  - 新增 `Features/UniBase.Commerce.Service.pas`：实现 `EnsureUserForIdentity`、`CreateOrder`、`BeginPayment`、`ConfirmPayment`、`HasEntitlement`、`ConsumeEntitlement` 主流程。
+  - 新增 `ICommercePaymentGateway`，为微信支付、CloudBase、自建后端等真实网关预留适配点。
+  - 新增 `Tests/Test.UniBase.Commerce.pas`，覆盖用户绑定、订单、支付意图、回调确认、权益幂等发放、金额不匹配拒绝和消费型权益扣减。
+- **验证**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.UniBase.Commerce"`：7/7 passed。
+  - `Scripts/build_packages_win64.ps1 -Profile All`：通过。
+
+### COMMERCE-002A-D: Commerce 后端契约与 HTTP 后端适配器 ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - 新增 `docs/Commerce-Backend-Adapter-Spec.md`，固化后端数据表、HTTP API、幂等、安全边界和实施顺序。
+  - 新增 `Features/UniBase.Commerce.Backend.Contract.pas`，统一后端路由与 snake_case JSON 字段常量。
+  - 新增 `Features/UniBase.Commerce.Backend.Http.pas`，提供 `TCommerceHttpStorage` 作为生产 `ICommerceStorage` HTTP 后端适配器。
+  - `TCommerceHttpStorage` 支持 `BaseUrl`、Bearer token、API key、超时配置，并通过 `ICommerceBackendHttpTransport` 支持单元测试注入。
+  - 新增 `TCommerceHttpPaymentGateway`，作为生产 `ICommercePaymentGateway` 后端代理适配器，统一调用 `POST /commerce/payments/intents` 并使用 `Idempotency-Key` 防重试冲突。
+  - 更新下游集成文档，生产路线从“自行实现 ICommerceStorage”收敛为“优先接入统一后端 HTTP API”。
+- **验证**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.UniBase.Commerce"`：13/13 passed。
+
+### ARCH-029 / ARCH-030 / CLEANUP-005 / CLEANUP-006: 旧商业化路线与文档清理 ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - 删除未使用的 AiPEX/AipexBase、旧后端认证/计费客户端、旧认证/计费 UI 组件和演示工程。
+  - 删除过期 API/集成文档，不再保留误导 AI 的历史入口。
+  - `ThirdParty/Payment` 明确定位为渠道 SDK 能力；统一用户、订单、支付、权益流程由 `Features/UniBase.Commerce.*` 承接。
+  - `docs/integrations` 已扁平化到 `docs/`，空目录删除，相关链接修正。
+  - 新增 `docs/UniBase-Downstream-Integration.md` 作为下游最干净的集成入口。
+
+### LLM-001 ~ LLM-004: Delphi LLM 客户端、安全存储与聊天组件 ✅
+- **完成日期**: 2025-12-14
+- **内容摘要**:
+  - `Core/UniBase.LLM.BillingClient.pas` 提供轻量 LLM 代理客户端，支持流式/非流式、重试、取消、异步调用和对话历史。
+  - `Core/UniBase.Security.DPAPI.pas` 提供 DPAPI、Credential Manager 与 `TSecureString`。
+  - `VCL/UniBase.VCL.LLMChatFrame.pas`、`FMX/UniBase.FMX.LLMChatFrame.pas` 提供可复用聊天 Frame。
+  - `Tests/Test.UniBase.LLM.BillingClient.pas` 与 `Tests/Test.UniBase.Security.DPAPI.pas` 覆盖核心行为。
+
+### BUG-098: FormState 多显示器坐标恢复修复 ✅
+- **完成日期**: 2026-05-05
+- **内容摘要**:
+  - `Core/UniBase.FormState.pas` 恢复窗口时按当前显示器工作区夹回坐标，避免旧多屏坐标导致窗口不可见。
+  - `VCL/UniBase.VCL.FormStateHelper.pas` 保存路径补齐 `GetWindowPlacement` 工作区坐标到屏幕坐标转换。
+  - 详细修复记录见 `bugfix.md`。
+- **验证**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.UniBase.FormState"`：13/13 passed。
+  - `Scripts/build_packages_win64.ps1 -Profile All`：通过。
+
+---
+
+## 2026-05-02 持续优化迭代 ✅
+
+### MAINT-002-A: 单元测试稳定性清零（Win64 基线）✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Scripts/run_tests.ps1` 新增 `-Platform` 参数（`Win32|Win64`），默认改为 `Win64`
+  - ✅ Win64 单元测试全绿：`Tests Found 824 / Ignored 4 / Passed 820 / Failed 0 / Errored 0 / Leaked 0`
+  - ✅ 修复 Win64 下 `Test.UniBase.Resilience` 泛型断言类型推断问题（显式 `Assert.AreEqual<Integer>`）
+
+### MAINT-002-B: FormState 坐标持久化修正（顶部任务栏场景）✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Core/UniBase.FormState.pas`：`GetWindowPlacement.rcNormalPosition` 工作区坐标转换为屏幕坐标后再持久化
+  - ✅ `Tests/Test.UniBase.FormState.pas`：测试窗体默认放置到左下工作区，降低测试过程误击风险
+
+### MAINT-002-C: Resilience 执行链闭包泄漏修复 ✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Core/UniBase.Resilience.pas`：重构 `TResiliencePolicy.Execute` / `Execute<T>` 闭包链，显式释放捕获引用
+  - ✅ 清除 FastMM 末尾 `TResiliencePolicy.Execute` 相关小块泄漏告警
+
+### MAINT-002-D: 异常语义与测试断言对齐 ✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Tests/Test.UniBase.Protection.pas`：文件不存在断言改为 `EFileNotFoundExceptionEx`
+  - ✅ `Tests/Test.UniBase.Resilience.pas`：断路器打开断言改为 `ECircuitBreakerException`
+
+### MAINT-002-E: 构建产物清理 ✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ 已清理仓库内 `.dcu` 文件 65 个（满足“源库不保留 dcu”要求）
+
+### MAINT-002-F: Win64 集成测试链路打通 ✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Tools/WebService/UniBase.WebAPI.Core.pas`：TLS 版本枚举兼容 Indy 版本差异（`sslvTLSv1_3` 可选）
+  - ✅ `Core/UniBase.Net.pas`：修复静态方法调用限定，补齐 `TIPUtils.IsLinkLocalIP`
+  - ✅ `Core/UniBase.Net.pas`：新增本地/内网 URL 安全开关（环境变量）
+  - ✅ `Scripts/run_tests.ps1`：集成测试自动准备位宽匹配 `sqlite3.dll` 并启用 localhost 白名单
+  - ✅ Win64 Integration 全绿：9/9 通过
+
+### MAINT-002-G: 全量 Win64 门禁通过 ✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `.\Scripts\run_tests.ps1 -Type All -CI` 执行通过（Unit + Integration）
+  - ✅ 最终清理 `.dcu` 与临时集成依赖文件，仓库保持可提交状态
+
+### MAINT-002-H: DB.Factory 双共享模式补齐（SQLite / PostgreSQL）✅
+- **完成日期**: 2026-05-02
+- **输出物**:
+  - ✅ `Persistence/UniBase.DB.Factory.pas`：`LoadSharedProfile` 支持 `DB3.Type=SQLite`（保留 `PostgreSQL/PG` 兼容）
+  - ✅ SQLite 共享库路径支持相对 `RootPath` 解析（`DB3.Database`，兼容 `DB3.Path`）
+  - ✅ 支持 `DB3.SQLiteLockingMode/SQLiteSynchronous/SQLiteJournalMode/SQLiteOpenMode/ExtraParams` 配置透传
+  - ✅ 新增单测 `Test_CreateSharedUnopenedConnection_FromLocalSettings_SQLite`
+  - ✅ 更新当时的快速集成文档（补充 `DB3.Type=SQLite` 配置键；当前入口见 `docs/UniBase-Downstream-Integration.md`）
+  - ✅ 更新文档索引 `docs/00.00.uniBase-文档索引-v1.0.md`（快速入口优先指向新集成指南）
+
+---
+
 ## Phase 0: 最小核心 ✅ (完成)
 
 ### P0-001: 创建项目结构和包配置 ✅
@@ -123,9 +258,9 @@
 - **完成日期**: 2025-11-27
 - **负责人**: 李冰
 - **输出物**:
-  - ✅ `Tests/Integration/Test.Phase0.Integration.pas`
-  - ✅ `docs/API-Reference-Phase0.md`
-  - ✅ `docs/QuickStart.md`
+  - ✅ 旧 Phase0 集成测试入口
+  - ✅ Phase0 API 参考文档（后续并入 `docs/05.01.uniBase-4AI-API参考-v1.0.md`）
+  - ✅ 快速入门文档（当前入口见 `ARCH-QUICKSTART.md`）
 - **测试覆盖**:
   - ✅ 所有单元测试通过
   - ✅ 集成测试通过
@@ -239,7 +374,7 @@
 
 ### PT-001: 创建 UniBaseTray 项目结构 ✅
 - **完成日期**: 2025-11-27
-- **输出物**: `Tools/Tray/UniBaseTray.dproj`
+- **输出物**: `Tools/Tray/UniBaseTray.dpr`
 - **功能**:
   - ✅ 悬浮窗口基础框架
   - ✅ 系统托盘图标
@@ -543,9 +678,9 @@
 ### P4-006: 撰写完整 API 文档 ✅
 - **完成日期**: 2025-11-27
 - **输出物**:
-  - ✅ `docs/api-reference.md`
-  - ✅ `docs/getting-started.md`
-  - ✅ `docs/faq.md`
+  - ✅ `docs/05.01.uniBase-4AI-API参考-v1.0.md`
+  - ✅ `ARCH-QUICKSTART.md`
+  - ✅ `docs/03.01.uniBase-4AI-FAQ与错误速查-v1.0.md`
 
 ---
 
@@ -574,7 +709,7 @@
 ### P5-002: DoQry 查询表加载与缓存 ✅
 - **完成日期**: 2025-11-28
 - **负责人**: Claude
-- **输出物**: `Core/UniBase.DB.DoQry.pas` 更新
+- **输出物**: `Persistence/UniBase.DB.DoQry.pas` 更新
 - **功能**:
   - ✅ 实现 `LoadQuerySQL(ProcName, Ctx)` 带缓存
   - ✅ 实现 `IsDirectSQL()` 判断 SQL 关键字
@@ -734,7 +869,7 @@
 ### doQry 模块增强 (2025-12-01)
 - DOQRY-001: CopyQueryToClientDataSet 扩展（Field.Assign + 性能优化）
 - DOQRY-002: 查询缓存 TTL 策略（UniDbInvalidateQuery/UniDbSetCacheTTL/UniDbGetCacheStats）
-- DOQRY-003: doQry 使用指南文档（`docs/doQry_Guide.md`）
+- DOQRY-003: doQry 使用指南文档（`docs/05.03.uniBase-4AI-DoQry指南-v1.0.md`）
 - DOQRY-004: 日志输出结构化 JSON 格式
 - DOQRY-005: 预编译语句池（UniDbSetPreparedStatementPooling/UniDbClearPreparedStatements/UniDbGetPreparedStats）
 - DOQRY-006: 错误码规范化（17 个 DOQRY_ERR_* 常量 + InferErrorCode）
@@ -872,7 +1007,7 @@ var HTML := Exporter.ToHTML;
 - **输出物**:
   - 创建 `backup/` 目录存放不确定是否需要的文件
   - 移动 7 个过时状态文件到 backup (Phase*_Status.md, Studio_Status.md, better.md, DOCS_UPDATE.md)
-  - 移动 `docs/V1.0版/` 旧文档目录到 backup
+  - 移动旧版规划文档目录到 backup
   - 移动 `docs/uniFlow/` 错位源码目录到 backup
   - 移动 `UniBase` 空单元文件到 backup
   - 移动 `uniBase.db` 开发数据库到 backup
@@ -921,7 +1056,7 @@ var HTML := Exporter.ToHTML;
 - **完成日期**: 2025-12-09
 - **内容摘要**:
   - SeedTool 移动到 `UniBase/Tools/SeedTool`
-  - 反调试/保护单元归并为 `Core/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`
+  - 反调试/保护单元归并为 `Features/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`
   - About 界面重构为 `VCL/UniBase.VCL.AboutFrame.pas`
   - 更新相关 uses 和命名空间，确保编译通过
 
@@ -937,7 +1072,7 @@ var HTML := Exporter.ToHTML;
 ### PUB-003: UniBase.Updater 增强 ✅
 - **完成日期**: 2025-12-09
 - **内容摘要**:
-  - 扩展 `Core/UniBase.AutoUpdate.pas` 支持 GitHub/Gitee Release API
+  - 扩展 `Features/UniBase.AutoUpdate.pas` 支持 GitHub/Gitee Release API
   - 通过 `github:owner/repo` / `gitee:owner/repo` 约定自动选择更新源
   - 保持对静态 `version.json` 的向后兼容
   - VCL 端新增/完善 `VCL/UniBase.VCL.UpdateDialog.pas` 更新对话框
@@ -992,21 +1127,21 @@ var HTML := Exporter.ToHTML;
 ### PUBL-101: AboutFrame + AntiTamper 规范与文档更新 ✅
 - **完成日期**: 2025-12-11
 - **内容摘要**:
-  - 在 `04.01.uniBase-4AI-数据库Schema说明-v1.0.md` 中补充 `aboutMeImages` 表定义,增加 `Enabled INTEGER NOT NULL DEFAULT 1` 字段,并约定 6 个标准 ImageKey (official_gzh / wechat / alipay / btc / usdt / aboutme)。
-  - 在 `10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 中完善 AboutFrame 接入规范: 统一使用 `{AppName}Config.db` 作为 DB1, 说明 aboutMeImages 表字段语义,给出 AntiTamper + SeedTool 播种流程示例。
-  - 在 `10.03.uniBase-4H-私域流量运营指南-v1.0.md` 中新增“关于页面推荐结构”章节,定义 6 个 Tab(公司公众号/微信/支付宝/BTC/USDT/关于我) 的布局与文案骨架,并明确与公众号/解锁体系的关系。
+  - 在 `docs/04.01.uniBase-4AI-数据库Schema说明-v1.0.md` 中补充 `aboutMeImages` 表定义,增加 `Enabled INTEGER NOT NULL DEFAULT 1` 字段,并约定 6 个标准 ImageKey (official_gzh / wechat / alipay / btc / usdt / aboutme)。
+  - AboutFrame 接入规范已归并到 `docs/IMPLEMENTATION_GUIDE.md`: 统一使用 `{AppName}Config.db` 作为 DB1，说明 aboutMeImages 表字段语义，给出 AntiTamper + SeedTool 播种流程示例。
+  - 关于页面推荐结构已归并到 `docs/README.md` 与具体项目集成文档，定义 6 个 Tab(公司公众号/微信/支付宝/BTC/USDT/关于我) 的布局与 ImageKey 关系。
 |
 ### PUBL-102: AntiTamper / AboutFrame 模块实现与集成 ✅
 - **完成日期**: 2025-12-09
 - **内容摘要**:
-  - 将原有 `uAntiTamperPackage` / `uBasicProtection` 等分散单元整理归并为 `Core/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`, 提供统一的防篡改初始化与图像解密 API(含 AES/HMAC 支持)。
+  - 将原有 `uAntiTamperPackage` / `uBasicProtection` 等分散单元整理归并为 `Features/UniBase.AntiTamper.pas` 与 `Core/UniBase.Protection.pas`, 提供统一的防篡改初始化与图像解密 API(含 AES/HMAC 支持)。
   - 实现 `VCL/UniBase.VCL.AboutFrame.pas` 与配套 DFM, 作为统一的 About/打赏/公司公众号 Frame, 从 DB1 的 `aboutMeImages` 表按 ImageKey 读取图像和文本,并根据 `Enabled` 字段控制 Tab 显示。
   - 与 `UniBase.i18n` 集成, 为 About 页签标题/按钮文案预留多语言支持,以便在工具侧进行本地化。
 
 ### PUBL-103: SeedTool aboutMeImages + enabled 改造 ✅
 - **完成日期**: 2025-12-11
 - **内容摘要**:
-  - 将 AntiTamper 默认表名从 `images` 统一调整为 `aboutMeImages` (包括 `Core/UniBase.AntiTamper.pas` 与 `Tools/SeedTool/uAntiTamperPackage.pas`), 并在建表/升级逻辑中新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段。
+  - 将 AntiTamper 默认表名从 `images` 统一调整为 `aboutMeImages` (包括 `Features/UniBase.AntiTamper.pas` 与 `Tools/SeedTool/uAntiTamperPackage.pas`), 并在建表/升级逻辑中新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段。
   - 扩展 SeedTool 数据模型 (`TImageFileInfo`) 增加 `Enabled: Boolean`, 在“文字配置”页签新增 `chkEnabled` 勾选框, 用于控制每个 ImageKey 是否在 AboutFrame 中显示。
   - 从 `aboutMeImages` 加载数据时一并读取 `enabled` 列, 只读文本模式/完整播种模式下均会在播种后通过 `UPDATE aboutMeImages SET enabled = ...` 同步启用状态。
 
@@ -1029,7 +1164,7 @@ var HTML := Exporter.ToHTML;
     - `TManifestFile`/`TManifestMetadata` 记录类型
     - `TManifestGenerator` 工具类,支持新版 `GenerateManifest` 和旧版 `GenerateLegacyJSON` 格式生成
     - `IsNewFormat` 自动检测 JSON 格式
-  - 扩展 `Core/UniBase.AutoUpdate.pas` (v0.3 → v0.4):
+  - 扩展 `Features/UniBase.AutoUpdate.pas` (v0.3 → v0.4):
     - 新增 `IsNewFormatJson` 格式检测方法
     - 新增 `CheckForUpdateFromNewFormat`/`CheckForUpdateFromLegacyFormat` 分离解析逻辑
     - `CheckForUpdateFromJson` 自动识别新旧格式并调用对应解析器
@@ -1089,20 +1224,20 @@ var HTML := Exporter.ToHTML;
 ### PUBL-105: 工具项目 AboutFrame 集成 ✅
 - **完成日期**: 2025-12-12 (UniBase 侧开发完成，待人工集成)
 - **内容摘要**:
-  - 新增 `docs/integrations/README.md` - 集成规划索引文档
+  - 新增集成规划索引文档（当前位于 `docs/README.md`）
   - 新增 5 个工具项目集成规划文档:
-    - `01.TwoKeyRun-Integration.md` - VCL项目, 已有 FrameAboutMe, 结构分析和迁移方案
-    - `02.OmniSync-Integration.md` - FMX项目, 需新建 AboutFrame, 含 FMX 组件开发计划
-    - `03.SVGThing-Integration.md` - VCL项目, 已有 FrameAboutMe, 数据库迁移方案
-    - `04.Stocks-Integration.md` - FMX项目 (InfoCenter), 已集成 UniBase, 需 FMX 组件
-    - `05.TransSuccess-Integration.md` - VCL项目, 轻量级工具, 弹窗式集成方案
+    - `docs/01.TwoKeyRun-Integration.md` - VCL项目, 已有 FrameAboutMe, 结构分析和迁移方案
+    - `docs/02.OmniSync-Integration.md` - FMX项目, 需新建 AboutFrame, 含 FMX 组件开发计划
+    - `docs/03.SVGThing-Integration.md` - VCL项目, 已有 FrameAboutMe, 数据库迁移方案
+    - `docs/04.Stocks-Integration.md` - FMX项目 (InfoCenter), 已集成 UniBase, 需 FMX 组件
+    - `docs/05.TransSuccess-Integration.md` - VCL项目, 轻量级工具, 弹窗式集成方案
   - VCL AboutFrame (`VCL/UniBase.VCL.AboutFrame.pas`) 扩展为 6 个 Tab：
     - 新增 `tsOfficialGzh` 公众号页面，与 FMX 版本保持一致
     - 图像映射数组扩展为 6 个: official_gzh/wechat/alipay/btc/usdt/aboutme
   - FMX AboutFrame (`FMX/UniBase.FMX.AboutFrame.pas`) 已对齐:
     - 使用 `TAntiTamperPackage.LoadSecureImageBytes()` 统一解密和校验
     - 字段名与 SeedTool/AntiTamper 一致: `sha256_hash`/`hmac_sha256`
-  - 更新 `docs/integrations/IMPLEMENTATION_GUIDE.md`:
+  - 更新 `docs/IMPLEMENTATION_GUIDE.md`:
     - 标记 FMX AboutFrame 已完成对齐
     - 更新 Q4 常见问题解答
     - 更新任务检查清单和下一步建议
@@ -1121,8 +1256,8 @@ var HTML := Exporter.ToHTML;
 ### CLI-002: CLI 交互增强 ✅
 - **完成日期**: 2025-11-29
 - **内容摘要**:
-  - 新增核心交互式 CLI 模块 `Core/UniBase.CLI.Interactive.pas`，提供 `TInteractiveCLI` REPL（命令历史、变量、脚本执行、输出格式切换）
-  - 新增 `Core/UniBase.CLI.Pipeline.pas` 管道模块，支持 `|`/`>`/`>>`/`tee` 以及 grep/sort/head/tail/uniq/wc/rev/cut/tr/jq 等过滤器
+  - 新增核心交互式 CLI 模块 `Tools/CLI/UniBase.CLI.Interactive.pas`，提供 `TInteractiveCLI` REPL（命令历史、变量、脚本执行、输出格式切换）
+  - 新增 `Tools/CLI/UniBase.CLI.Pipeline.pas` 管道模块，支持 `|`/`>`/`>>`/`tee` 以及 grep/sort/head/tail/uniq/wc/rev/cut/tr/jq 等过滤器
   - 在交互模块中引入 `TAnsiColor` 终端颜色工具类，用于统一的错误/警告/成功彩色输出
   - CLI 工具层通过 `CLI.Commands.TCliUtils` 复用颜色输出能力，为常规 `unibase` 命令提供彩色状态提示
 
@@ -1173,6 +1308,67 @@ var HTML := Exporter.ToHTML;
 |  - ✅ 错误分类：Access Violation 主要来自 Config/FormState/Hotkeys/MRU/Theme/i18n 模块（需 UniBaseManager 初始化）
 ||- **下一步**:
 |  - （可选）在持续集成环境中补充针对数据库 Integration Tests 的文档与示例配置（包括 FireDAC/SQLite 驱动部署方式、专用测试数据库路径等），方便在有完整数据库环境的机器上重新启用 DB 集成测试。
+---
+
+## 文档优化（DOC-OPT）
+
+### DOC-OPT-001: 文档编号统一 + OneFile 入口创建 + 过期文档清理 ✅
+- **完成日期**: 2026-05-06
+- **内容摘要**:
+  - ✅ **Phase 1 编号统一**：18 个 .md 文件的中文序数标题统一为阿拉伯数字标准（`## N.` / `### N.N` / `#### N.N.N`）
+    - docs/: `06.AntiTamper-Integration.md`, `07.Project-Classification.md`, `07.01.uniBase-4AI-集成检查清单-v1.0.md`, `99.07.uniBase-4H-迁移修复记录-v0.3.md`
+    - Tools/SeedTool/: `加密防篡改集成说明.md`, `播种与主程序对应说明.md`
+    - README.md
+    - doQry/tasks.md
+    - docs/uniFlow/: `01.02.Quick-UniFlow-开发者快速上手指南-v1.0.md`
+    - docs/uniFlow/SayDone/ (8 files): `03.01`, `03.03`, `03.07`, `03.09`, `01.09`, `01.11`, `06.03`, `06.05`
+  - ✅ **Phase 2 M1 对外唯一入口**：创建 `docs/UniBase-Integration-OneFile.md`，整合 DB1~DB4 边界、全模块能力清单、推荐接入组合、平台网站跳转流程、最小端到端步骤、关键约束
+  - ✅ **Phase 3 M2 入口收敛**：更新 `docs/README.md` 和 `docs/00.00.uniBase-文档索引-v1.0.md`，标注 OneFile 为对外唯一入口
+  - ✅ **Phase 4 M3 内容纠错**：修复 `docs/06.AntiTamper-Integration.md` 中的过期路径引用；统一 DB 口径
+  - ✅ **Phase 5 M4 过期文档清理**：删除 10 个过期/重复文件
+    - backup/: `Phase0-3_Status.md`, `Studio_Status.md`, `DOCS_UPDATE.md`, `better.md`
+    - docs/: `99.07.uniBase-4H-迁移修复记录-v0.3.md`, `99.09.uniBase-4H-术语审计报告-v1.0.md`
+    - `QUICK_START.md`
+  - ✅ **验证**：`grep` 确认零中文序数残留；`check_doc_links.ps1` 确认链接有效
+- **说明**: 文档优化计划源自 `better.md` 的 M1-M5 里程碑定义，已全部执行完成。
+
+### DOC-OPT-002: 五位专家框架评估 ✅
+- **完成日期**: 2026-05-06
+- **内容摘要**:
+  - ✅ 邀请 5 位专家（打包/安全/测试/架构/文档）独立评估框架完善度
+  - ✅ 综合评分 6.7/10，打包 (5.5) 最低，架构 (7.5) 最高
+  - ✅ 识别 5 个封板阻塞问题 (B1-B5)、10 个重要改进 (I1-I10)
+  - ✅ 结果已转化为可执行任务写入 `tasks.md`
+
+### PKG-001: 86 个孤立 .pas 文件注册到 .dpk 包 ✅
+- **完成日期**: 2026-05-06
+- **内容摘要**:
+  - ✅ 32 文件 → UniBaseCore.dpk（46 单元）
+  - ✅ 22 文件 → UniBaseServices.dpk（34 单元）
+  - ✅ 3 文件 → UniBaseFeatures.dpk（LLM.Manager/BillingClient/ImportExport）
+  - ✅ 20 文件 → UniBaseVCL.dpk（16 VCL + 4 VCL-only Core）
+  - ✅ 13 文件 → UniBaseFMX.dpk（+ UniBaseFeatures requires）
+  - ✅ 1 文件 → UniBasePersistence.dpk
+
+### PKG-002/003: Math/Unlock 重复修复 ✅
+- **完成日期**: 2026-05-06
+
+### TEST-001: 53 个测试文件注册 ✅
+- **完成日期**: 2026-05-06
+
+### SEC-002: 硬编码默认 Salt 移除 ✅
+- **完成日期**: 2026-05-06
+
+### ARCH-046: Exception↔Manager 循环依赖解除 ✅
+- **完成日期**: 2026-05-06
+
+### QUAL-001: 438 处 FreeAndNil 规范化 ✅
+- **完成日期**: 2026-05-06
+- **内容摘要**: 82 文件 438 处析构函数内 + 13 文件 19 处字段重新赋值
+
+### VERSION-001: 版本号统一 ✅
+- **完成日期**: 2026-05-06
+
 ---
 
 ## 社区与生态（ECO）

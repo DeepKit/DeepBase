@@ -29,8 +29,7 @@ package UniBaseCore;
 {$RUNONLY}
 
 requires
-  rtl,
-  dbrtl;
+  rtl;
 
 contains
   UniBase.Types in 'Core\UniBase.Types.pas',
@@ -47,6 +46,37 @@ contains
   UniBase.MRU in 'Core\UniBase.MRU.pas',
   UniBase.Hotkeys in 'Core\UniBase.Hotkeys.pas',
   UniBase.Theme in 'Core\UniBase.Theme.pas',
-  UniBase.Protection in 'Core\UniBase.Protection.pas';
+  UniBase.Protection in 'Core\UniBase.Protection.pas',
+  UniBase.Interfaces in 'Core\UniBase.Interfaces.pas',
+  UniBase.Constants in 'Core\UniBase.Constants.pas',
+  UniBase.Exceptions in 'Core\UniBase.Exceptions.pas',
+  UniBase.DBException in 'Core\UniBase.DBException.pas',
+  UniBase.Schema in 'Core\UniBase.Schema.pas',
+  UniBase.Configuration in 'Core\UniBase.Configuration.pas',
+  UniBase.FeatureFlags in 'Core\UniBase.FeatureFlags.pas',
+  UniBase.Collections in 'Core\UniBase.Collections.pas',
+  UniBase.DateTime in 'Core\UniBase.DateTime.pas',
+  UniBase.RuntimeContext in 'Core\UniBase.RuntimeContext.pas',
+  UniBase.ORM.Mapping in 'Core\UniBase.ORM.Mapping.pas',
+  UniBase.DataBinding in 'Core\UniBase.DataBinding.pas',
+  UniBase.Expression in 'Core\UniBase.Expression.pas',
+  UniBase.Diff in 'Core\UniBase.Diff.pas',
+  UniBase.MVVM in 'Core\UniBase.MVVM.pas',
+  UniBase.Validation in 'Core\UniBase.Validation.pas',
+  UniBase.StateMachine in 'Core\UniBase.StateMachine.pas',
+  UniBase.Template in 'Core\UniBase.Template.pas',
+  UniBase.i18n.Plural in 'Core\UniBase.i18n.Plural.pas',
+  UniBase.Random in 'Core\UniBase.Random.pas',
+  UniBase.Authorization in 'Core\UniBase.Authorization.pas',
+  UniBase.TestCenter in 'Core\UniBase.TestCenter.pas',
+  UniBase.Diagnose in 'Core\UniBase.Diagnose.pas',
+  UniBase.Services.Init in 'Core\UniBase.Services.Init.pas',
+  UniBase.Services.HealthCheck in 'Core\UniBase.Services.HealthCheck.pas',
+  UniBase.ObjectPool in 'Core\UniBase.ObjectPool.pas',
+  UniBase.Benchmark in 'Core\UniBase.Benchmark.pas',
+  UniBase.Reflection in 'Core\UniBase.Reflection.pas',
+  UniBase.Cache in 'Core\UniBase.Cache.pas',
+  UniBase.Memory in 'Core\UniBase.Memory.pas',
+  UniBase.Security in 'Core\UniBase.Security.pas';
 
 end.

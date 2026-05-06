@@ -883,6 +883,7 @@ var
   CallbackCalled: Boolean;
   CallbackSuccess: Boolean;
   Event: TEvent;
+  Deadline: TDateTime;
 begin
   CallbackCalled := False;
   CallbackSuccess := False;
@@ -900,8 +901,11 @@ begin
         Event.SetEvent;
       end, 5000);
     
-    // Wait for callback (with timeout)
-    Event.WaitFor(3000);
+    // GetSessionAsync marshals the callback via TThread.Synchronize.
+    // Console test runners must pump CheckSynchronize while waiting.
+    Deadline := IncMilliSecond(Now, 3000);
+    while (Event.WaitFor(10) <> wrSignaled) and (Now < Deadline) do
+      CheckSynchronize(10);
     
     Assert.IsTrue(CallbackCalled, 'Callback should be called');
   finally

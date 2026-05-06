@@ -398,20 +398,20 @@ begin
   Assert.AreEqual('', FCmd.Description);
   Assert.AreEqual('', FCmd.Usage);
   Assert.IsNotNull(FCmd.Aliases);
-  Assert.AreEqual(0, FCmd.Aliases.Count);
+  Assert.AreEqual(0, Integer(FCmd.Aliases.Count));
 end;
 
 procedure TTestCommandDef.Test_AddAlias_Single;
 begin
   FCmd.AddAlias('t');
-  Assert.AreEqual(1, FCmd.Aliases.Count);
+  Assert.AreEqual(1, Integer(FCmd.Aliases.Count));
   Assert.AreEqual('t', FCmd.Aliases[0]);
 end;
 
 procedure TTestCommandDef.Test_AddAlias_Multiple;
 begin
   FCmd.AddAlias('t').AddAlias('tst');
-  Assert.AreEqual(2, FCmd.Aliases.Count);
+  Assert.AreEqual(2, Integer(FCmd.Aliases.Count));
   Assert.IsTrue(FCmd.Aliases.Contains('t'));
   Assert.IsTrue(FCmd.Aliases.Contains('tst'));
 end;
@@ -419,7 +419,7 @@ end;
 procedure TTestCommandDef.Test_AddAlias_Duplicate;
 begin
   FCmd.AddAlias('t').AddAlias('t');
-  Assert.AreEqual(1, FCmd.Aliases.Count);
+  Assert.AreEqual(1, Integer(FCmd.Aliases.Count));
 end;
 
 procedure TTestCommandDef.Test_AddOption;
@@ -469,8 +469,8 @@ begin
   FCmd.AddAlias('t')
       .AddOption('-v', 'Verbose')
       .AddOption('-q', 'Quiet');
-  Assert.AreEqual(1, FCmd.Aliases.Count);
-  Assert.AreEqual(2, FCmd.Options.Count);
+  Assert.AreEqual(1, Integer(FCmd.Aliases.Count));
+  Assert.AreEqual(2, Integer(FCmd.Options.Count));
 end;
 
 { TTestCommandContext }
@@ -491,14 +491,14 @@ procedure TTestCommandContext.Test_Parse_SimpleCommand;
 begin
   FContext.Parse('help');
   Assert.AreEqual('help', FContext.Command);
-  Assert.AreEqual(0, Length(FContext.Args));
+  Assert.AreEqual(0, Integer(Length(FContext.Args)));
 end;
 
 procedure TTestCommandContext.Test_Parse_CommandWithArgs;
 begin
   FContext.Parse('config set key value');
   Assert.AreEqual('config', FContext.Command);
-  Assert.AreEqual(3, Length(FContext.Args));
+  Assert.AreEqual(3, Integer(Length(FContext.Args)));
   Assert.AreEqual('set', FContext.Args[0]);
   Assert.AreEqual('key', FContext.Args[1]);
   Assert.AreEqual('value', FContext.Args[2]);
@@ -538,7 +538,7 @@ procedure TTestCommandContext.Test_Parse_QuotedArgs;
 begin
   FContext.Parse('echo "hello world" ''single quotes''');
   Assert.AreEqual('echo', FContext.Command);
-  Assert.AreEqual(2, Length(FContext.Args));
+  Assert.AreEqual(2, Integer(Length(FContext.Args)));
   Assert.AreEqual('hello world', FContext.Args[0]);
   Assert.AreEqual('single quotes', FContext.Args[1]);
 end;
@@ -717,7 +717,7 @@ begin
   R := FCLI.Execute('test arg1 arg2');
   Assert.IsTrue(R.Success);
   Assert.IsTrue(FHandlerCalled);
-  Assert.AreEqual(2, Length(FLastArgs));
+  Assert.AreEqual(2, Integer(Length(FLastArgs)));
 end;
 
 procedure TTestInteractiveCLI.Test_Execute_Error;
@@ -786,7 +786,7 @@ procedure TTestInteractiveCLI.Test_History_Add;
 begin
   FCLI.AddToHistory('cmd1');
   FCLI.AddToHistory('cmd2');
-  Assert.AreEqual(2, FCLI.History.Count);
+  Assert.AreEqual(2, Integer(FCLI.History.Count));
   Assert.AreEqual('cmd1', FCLI.GetHistoryEntry(0));
   Assert.AreEqual('cmd2', FCLI.GetHistoryEntry(1));
 end;
@@ -798,7 +798,7 @@ begin
   FCLI.MaxHistorySize := 5;
   for I := 1 to 10 do
     FCLI.AddToHistory('cmd' + IntToStr(I));
-  Assert.AreEqual(5, FCLI.History.Count);
+  Assert.AreEqual(5, Integer(FCLI.History.Count));
   Assert.AreEqual('cmd6', FCLI.GetHistoryEntry(0));
 end;
 
@@ -820,7 +820,7 @@ begin
     end);
   FCLI.Execute('use $db');
   // Variable expansion should replace $db with mydb
-  Assert.AreEqual(1, Length(FLastArgs));
+  Assert.AreEqual(1, Integer(Length(FLastArgs)));
 end;
 
 procedure TTestInteractiveCLI.Test_OutputFormat_Change;

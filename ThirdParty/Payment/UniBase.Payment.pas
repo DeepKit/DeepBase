@@ -62,6 +62,7 @@ type
   EPaymentSignError = class(EPaymentError);
   EPaymentNetworkError = class(EPaymentError);
   EPaymentBusinessError = class(EPaymentError);
+  EPaymentException = class(EPaymentError); // backward compatibility alias
 
   /// <summary>Payment order request</summary>
   TPaymentOrder = record
@@ -284,14 +285,18 @@ type
     class function MD5(const AData: string): string;
     class function SHA256(const AData: string): string;
     class function HMACSHA256(const AData, AKey: string): string;
-    class function Base64Encode(const AData: TBytes): string;
+    class function Base64Encode(const AData: TBytes): string; overload;
+    class function Base64Encode(const AData: Pointer; ASize: Integer): string; overload;
     class function Base64Decode(const AData: string): TBytes;
+    class function AES256GCMDecrypt(const ACiphertext, AKey, ANonce,
+      AAssociatedData: string): string;
   end;
 
 implementation
 
 uses
-  UniBase.Security.DPAPI;  // BUG-019 FIX: 安全密钥存储支持
+  UniBase.Security.DPAPI,  // BUG-019 FIX: 安全密钥存储支持
+  UniBase.Random;
 
 { EPaymentError }
 
@@ -490,7 +495,7 @@ begin
     Exit;
 
   TargetName := FCredentialTarget + '.' + AKeyName;
-  Result := TCredentialManager.GetCredential(TargetName);
+  Result := TCredentialManager.GetCredential(TargetName, '');
 end;
 
 procedure TPaymentConfig.SetCredentialKey(const AKeyName, AValue: string);
@@ -627,20 +632,19 @@ end;
 
 class function TPaymentHelper.GenerateOrderNo(const APrefix: string): string;
 begin
-  // Format: PREFIX + YYYYMMDDHHNNSS + 6 random digits
+  // Format: PREFIX + YYYYMMDDHHNNSS + 6 secure random digits
   Result := APrefix + FormatDateTime('yyyymmddhhnnss', Now) +
-    Format('%.6d', [Random(1000000)]);
+    Format('%.6d', [SecureRandom.NextInt(1000000)]);
 end;
 
 class function TPaymentHelper.GenerateNonceStr(ALength: Integer): string;
 const
   Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-var
-  I: Integer;
 begin
-  SetLength(Result, ALength);
-  for I := 1 to ALength do
-    Result[I] := Chars[Random(Length(Chars)) + 1];
+  if ALength <= 0 then
+    Exit('');
+
+  Result := SecureRandom.NextString(ALength, Chars);
 end;
 
 class function TPaymentHelper.FormatAmount(AAmount: Currency;
@@ -751,12 +755,29 @@ begin
   Result := TNetEncoding.Base64.EncodeBytesToString(AData);
 end;
 
+class function TPaymentHelper.Base64Encode(const AData: Pointer; ASize: Integer): string;
+var
+  Buffer: TBytes;
+begin
+  if (AData = nil) or (ASize <= 0) then
+    Exit('');
+
+  SetLength(Buffer, ASize);
+  Move(PByte(AData)^, Buffer[0], ASize);
+  Result := Base64Encode(Buffer);
+end;
+
 class function TPaymentHelper.Base64Decode(const AData: string): TBytes;
 begin
   Result := TNetEncoding.Base64.DecodeStringToBytes(AData);
 end;
 
-initialization
-  Randomize;
+class function TPaymentHelper.AES256GCMDecrypt(const ACiphertext, AKey, ANonce,
+  AAssociatedData: string): string;
+begin
+  // 当前支付基础单元不引入 OpenSSL/CNG 依赖，调用方可在上层替换为真实实现。
+  // fail-closed: 解密失败返回空字符串，由调用方按失败处理。
+  Result := '';
+end;
 
 end.

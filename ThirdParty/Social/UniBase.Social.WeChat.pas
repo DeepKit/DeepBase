@@ -47,7 +47,7 @@ type
 
     // ISocialClient
     function GetAuthUrl(const AState: string = ''): string; override;
-    function ExchangeCode(const ACode: string): TSocialToken; override;
+    function ExchangeCode(const ACode: string): TSocialToken; overload; override;
     function RefreshToken(const ARefreshToken: string): TSocialToken; override;
     function GetUserInfo(const AToken: TSocialToken): TSocialUserInfo; override;
     function Share(const AContent: TSocialShare;
@@ -125,9 +125,7 @@ var
   Params: TDictionary<string, string>;
   State: string;
 begin
-  State := AState;
-  if State = '' then
-    State := GenerateState;
+  State := PrepareOAuthState(AState);
 
   Params := TDictionary<string, string>.Create;
   try
@@ -136,6 +134,7 @@ begin
     Params.Add('response_type', 'code');
     Params.Add('scope', FConfig.Scope);
     Params.Add('state', State);
+    AddPKCEAuthParams(Params);
 
     Result := GetAuthBaseUrl + '?' + TSocialHelper.BuildQueryString(Params);
 
@@ -148,6 +147,7 @@ end;
 
 function TWeChatClient.ExchangeCode(const ACode: string): TSocialToken;
 var
+  Params: TDictionary<string, string>;
   Url, Response: string;
   JsonObj: TJSONObject;
   ErrCode: Integer;
@@ -155,37 +155,47 @@ var
 begin
   Result.Clear;
 
-  Url := Format('%s/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code',
-    [GetApiBaseUrl, FConfig.AppId, FConfig.AppSecret, ACode]);
-
-  Response := DoGet(Url);
-
-  JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-  if not Assigned(JsonObj) then
-    raise ESocialNetworkError.Create('Invalid token response', 'INVALID_JSON', spWeChat);
-
+  Params := TDictionary<string, string>.Create;
   try
-    // Check for error
-    if JsonObj.TryGetValue<Integer>('errcode', ErrCode) and (ErrCode <> 0) then
-    begin
-      JsonObj.TryGetValue<string>('errmsg', ErrMsg);
-      raise ESocialAuthError.Create(ErrMsg, IntToStr(ErrCode), spWeChat);
+    Params.Add('appid', FConfig.AppId);
+    Params.Add('secret', FConfig.AppSecret);
+    Params.Add('code', ACode);
+    Params.Add('grant_type', 'authorization_code');
+    AddPKCETokenParams(Params);
+
+    Url := GetApiBaseUrl + '/oauth2/access_token?' +
+      TSocialHelper.BuildQueryString(Params);
+    Response := DoGet(Url);
+
+    JsonObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+    if not Assigned(JsonObj) then
+      raise ESocialNetworkError.Create('Invalid token response', 'INVALID_JSON', spWeChat);
+
+    try
+      // Check for error
+      if JsonObj.TryGetValue<Integer>('errcode', ErrCode) and (ErrCode <> 0) then
+      begin
+        JsonObj.TryGetValue<string>('errmsg', ErrMsg);
+        raise ESocialAuthError.Create(ErrMsg, IntToStr(ErrCode), spWeChat);
+      end;
+
+      JsonObj.TryGetValue<string>('access_token', Result.AccessToken);
+      JsonObj.TryGetValue<string>('refresh_token', Result.RefreshToken);
+      JsonObj.TryGetValue<Integer>('expires_in', Result.ExpiresIn);
+      JsonObj.TryGetValue<string>('openid', Result.OpenId);
+      JsonObj.TryGetValue<string>('unionid', Result.UnionId);
+      JsonObj.TryGetValue<string>('scope', Result.Scope);
+
+      if Result.ExpiresIn > 0 then
+        Result.ExpiresAt := Now + Result.ExpiresIn / 86400;
+
+      if Result.AccessToken = '' then
+        raise ESocialAuthError.Create('No access token in response', 'NO_TOKEN', spWeChat);
+    finally
+      JsonObj.Free;
     end;
-
-    JsonObj.TryGetValue<string>('access_token', Result.AccessToken);
-    JsonObj.TryGetValue<string>('refresh_token', Result.RefreshToken);
-    JsonObj.TryGetValue<Integer>('expires_in', Result.ExpiresIn);
-    JsonObj.TryGetValue<string>('openid', Result.OpenId);
-    JsonObj.TryGetValue<string>('unionid', Result.UnionId);
-    JsonObj.TryGetValue<string>('scope', Result.Scope);
-
-    if Result.ExpiresIn > 0 then
-      Result.ExpiresAt := Now + Result.ExpiresIn / 86400;
-
-    if Result.AccessToken = '' then
-      raise ESocialAuthError.Create('No access token in response', 'NO_TOKEN', spWeChat);
   finally
-    JsonObj.Free;
+    Params.Free;
   end;
 end;
 

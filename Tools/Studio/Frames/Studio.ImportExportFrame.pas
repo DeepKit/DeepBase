@@ -30,7 +30,8 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   Data.DB,
-  FireDAC.Comp.Client;
+  FireDAC.Comp.Client,
+  UniBase.Exceptions;
 
 type
   TExportFormat = (efCSV, efJSON, efXML);
@@ -945,7 +946,7 @@ begin
     
     JSONValue := TJSONObject.ParseJSONValue(Lines.Text);
     if JSONValue = nil then
-      raise Exception.Create('Invalid JSON format');
+      raise EOperationException.Create('Invalid JSON format');
     
     try
       if JSONValue is TJSONArray then
@@ -954,10 +955,10 @@ begin
       begin
         JSONArray := TJSONObject(JSONValue).GetValue('data') as TJSONArray;
         if JSONArray = nil then
-          raise Exception.Create('JSON must be an array or contain "data" array');
+          raise EOperationException.Create('JSON must be an array or contain "data" array');
       end
       else
-        raise Exception.Create('JSON must be an array');
+        raise EOperationException.Create('JSON must be an array');
       
       if JSONArray.Count = 0 then
       begin
@@ -1041,7 +1042,7 @@ end;
 procedure TfraImportExport.ImportFromXML(const AFilePath, ATableName: string);
 begin
   // XML import is more complex - placeholder for now
-  raise Exception.Create('XML import not yet implemented');
+  raise EOperationException.Create('XML import not yet implemented');
 end;
 
 end.

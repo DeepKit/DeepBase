@@ -174,7 +174,7 @@
     - 添加 13. 指标收集模块 (TCounter/TGauge/THistogram/TMetricsRegistry)
     - 添加 14. 网络工具模块 (THttpClient_/TIPv4Address/TIPv4Subnet)
     - 更新全局函数和异常类型附录
-  - ✅ 更新 `docs/CORE_MODULES.md` - 添加 i18n.Gender 模块
+  - ✅ 更新核心模块清单内容 - 添加 i18n.Gender 模块
 
 ---
 
@@ -2111,14 +2111,14 @@
   - ✅ 扩展开发指南（Plugin、DataBinding）
   - ✅ 故障排查指南
 - **已完成** (2025-11-29):
-  - ✅ `docs/01_Architecture.md` - 架构设计文档 (~490 行)
+  - ✅ 架构设计文档 (~490 行，后续归并到当前技术规范)
     - 系统架构图
     - 核心模块说明 (Manager/Config/i18n/Logging)
     - 高级模块说明 (Plugin/DataBinding/MVVM/ORM/IoC)
     - 安全模块说明
     - 数据库设计 (Schema)
     - 线程安全、错误处理、性能指标
-  - ✅ `docs/02_API_Reference.md` - API 参考手册 (~900 行)
+  - ✅ `docs/05.01.uniBase-4AI-API参考-v1.0.md` - API 参考手册 (~900 行)
     - 核心管理器 API
     - 配置模块 API (全部方法/事件)
     - 国际化模块 API
@@ -2127,7 +2127,7 @@
     - 数据绑定/MVVM/ORM/IoC API
     - 安全模块 API
     - 全局函数和异常类型
-  - ✅ `docs/03_FAQ_Troubleshooting.md` - FAQ 与故障排查 (~610 行)
+  - ✅ `docs/03.01.uniBase-4AI-FAQ与错误速查-v1.0.md` - FAQ 与故障排查 (~610 行)
     - 常见问题 (15+ 个 Q&A)
     - 故障排查 (数据库/内存/线程/编译)
     - 性能优化指南
@@ -2142,7 +2142,7 @@
 - **状态**: ✅ 已完成 (2025-11-29)
 - **预计工时**: 15-25 小时
 - **已完成** (2025-11-29):
-  - ✅ `docs/User_Manual_Studio.md` - Studio 管理工具用户手册 (~530 行)
+  - ✅ `docs/08.03.uniBase-4H-Studio用户手册-v1.0.md` - Studio 管理工具用户手册 (~530 行)
     - 快速入门和系统要求
     - 界面概述和导航
     - 配置管理、快捷键编辑器、主题编辑器
@@ -2150,13 +2150,13 @@
     - 日志查看器、备份还原向导
     - 导入导出、性能分析器
     - 常见问题和快捷键速查表
-  - ✅ `docs/User_Manual_Tray.md` - Tray 工作台用户手册 (~540 行)
+  - ✅ `docs/08.05.uniBase-4H-Tray用户手册-v1.0.md` - Tray 工作台用户手册 (~540 行)
     - 悬浮窗口和托盘功能
     - 开发日志、常用命令、快速启动器
     - 系统监控、开发笔记、定时任务
     - 项目切换器、全局快捷键
     - 设置选项和数据存储说明
-  - ✅ `docs/User_Manual_CLI.md` - CLI 工具参考手册 (~960 行)
+  - ✅ `docs/08.01.uniBase-4H-CLI用户手册-v1.0.md` - CLI 工具参考手册 (~960 行)
     - 数据库命令 (db init/upgrade/backup/check)
     - 国际化命令 (i18n scan/sync/translate/export/import)
     - 配置命令 (config get/set/export/import)
@@ -2170,7 +2170,7 @@
 - **状态**: ✅ 已完成 (2025-11-29)
 - **预计工时**: 10-15 小时
 - **已完成** (2025-11-29):
-  - ✅ `docs/Best_Practices.md` - 最佳实践指南 (~1340 行)
+  - ✅ 最佳实践指南 (~1340 行，后续归并到当前标准文档)
     - 配置管理最佳实践 (常量定义/分类组织/加密存储/默认值/变更监听/批量操作)
     - 国际化实现最佳实践 (翻译函数/键名规范/参数化翻译/I18n控件/语言切换/复数形式)
     - 日志记录策略 (级别选择/结构化内容/Source标记/异常记录/条件日志/文件管理)

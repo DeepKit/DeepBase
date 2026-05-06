@@ -273,19 +273,19 @@ begin
     Exit;
   end;
   
-  Info := FLicense.LicenseInfo;
+  Info := FLicense.CurrentLicenseInfo;
   
   // Status indicator color
   FStatusIndicator.Fill.Color := GetStatusColor(Info.Status);
   
   // Status text
-  if FLicense.IsLicensed then
-    FLblStatus.Text := 'Status: ' + Info.StatusName
+  if Info.IsValid then
+    FLblStatus.Text := 'Status: ' + TUniBaseLicense.LicenseStatusToStr(Info.Status)
   else
     FLblStatus.Text := 'Status: Not Licensed';
-  
+
   // Type
-  FLblType.Text := 'Type: ' + Info.TypeName;
+  FLblType.Text := 'Type: ' + TUniBaseLicense.LicenseTypeToStr(Info.LicenseType);
   
   // Expiry
   if Info.ExpiresAt = 0 then
@@ -308,8 +308,8 @@ begin
     FLblIssuedTo.Text := 'Issued to: -';
   
   // Button states
-  FBtnActivate.Enabled := not FLicense.IsLicensed;
-  FBtnDeactivate.Enabled := FLicense.IsLicensed;
+  FBtnActivate.Enabled := not Info.IsValid;
+  FBtnDeactivate.Enabled := Info.IsValid;
 end;
 
 function TFMXLicenseStatusPanel.GetStatusColor(Status: TLicenseStatus): TAlphaColor;
@@ -318,7 +318,7 @@ begin
     lsValid:          Result := TAlphaColorRec.Limegreen;
     lsExpired:        Result := TAlphaColorRec.Yellow;
     lsInvalid:        Result := TAlphaColorRec.Red;
-    lsBlacklisted:    Result := TAlphaColorRec.Maroon;
+    lsTampered:       Result := TAlphaColorRec.Maroon;
     lsDeviceMismatch: Result := TAlphaColorRec.Orange;
   else
     Result := TAlphaColorRec.Gray;

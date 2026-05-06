@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.PluginManager - Plugin Manager
   
   Version: 0.3
@@ -191,7 +191,52 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
-  UniBase.Consts;
+  UniBase.Consts, UniBase.Logging;
+
+{$IFDEF MSWINDOWS}
+const
+  WINTRUST_ACTION_GENERIC_VERIFY_V2: TGUID = '{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}';
+
+type
+  WINTRUST_FILE_INFO = record
+    cbStruct: DWORD;
+    pcwszFilePath: PWideChar;
+    hFile: THandle;
+    pgKnownSubject: Pointer;
+  end;
+  PWINTRUST_FILE_INFO = ^WINTRUST_FILE_INFO;
+
+  WINTRUST_DATA = record
+    cbStruct: DWORD;
+    pPolicyCallbackData: Pointer;
+    pSIPClientData: Pointer;
+    dwUIChoice: DWORD;
+    fdwRevocationChecks: DWORD;
+    dwUnionChoice: DWORD;
+    pFile: PWINTRUST_FILE_INFO;
+    pCatalog: Pointer;
+    pBlob: Pointer;
+    pSgnr: Pointer;
+    pCert: Pointer;
+    dwStateAction: DWORD;
+    hWVTStateData: THandle;
+    pwszURLReference: PWideChar;
+    dwProvFlags: DWORD;
+    dwUIContext: DWORD;
+    pSignatureSettings: Pointer;
+  end;
+  PWINTRUST_DATA = ^WINTRUST_DATA;
+
+const
+  WTD_UI_NONE = 2;
+  WTD_REVOKE_NONE = 0;
+  WTD_CHOICE_FILE = 1;
+  WTD_STATEACTION_VERIFY = 1;
+  WTD_STATEACTION_CLOSE = 2;
+
+function WinVerifyTrust(hwnd: THandle; pgActionID: PGUID; pWVTData: Pointer): Longint;
+  stdcall; external 'wintrust.dll' name 'WinVerifyTrust';
+{$ENDIF}
 
 const
   UNIBASE_VERSION = '0.3';
@@ -299,9 +344,9 @@ end;
 destructor TUniBasePluginManager.Destroy;
 begin
   UnloadAllPlugins;
-  FLoadOrder.Free;
-  FPlugins.Free;
-  FLock.Free;
+  FreeAndNil(FLoadOrder);
+  FreeAndNil(FPlugins);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -823,11 +868,48 @@ begin
 end;
 
 function TUniBasePluginManager.VerifyPluginSignature(const Path: string): Boolean;
+{$IFDEF MSWINDOWS}
+var
+  FileInfo: WINTRUST_FILE_INFO;
+  TrustData: WINTRUST_DATA;
+  ActionId: TGUID;
+  Status: Longint;
 begin
-  // TODO: Implement plugin signature verification using WinVerifyTrust API
-  // Currently returns True to allow plugin loading during development
-  // In production, should verify Authenticode signature before loading
+  if not FileExists(Path) then
+    Exit(False);
+
+  FillChar(FileInfo, SizeOf(FileInfo), 0);
+  FileInfo.cbStruct := SizeOf(FileInfo);
+  FileInfo.pcwszFilePath := PWideChar(WideString(Path));
+
+  FillChar(TrustData, SizeOf(TrustData), 0);
+  TrustData.cbStruct := SizeOf(TrustData);
+  TrustData.dwUIChoice := WTD_UI_NONE;
+  TrustData.fdwRevocationChecks := WTD_REVOKE_NONE;
+  TrustData.dwUnionChoice := WTD_CHOICE_FILE;
+  TrustData.pFile := @FileInfo;
+  TrustData.dwStateAction := WTD_STATEACTION_VERIFY;
+
+  ActionId := WINTRUST_ACTION_GENERIC_VERIFY_V2;
+  Status := WinVerifyTrust(INVALID_HANDLE_VALUE, @ActionId, @TrustData);
+
+  // Close state handle
+  TrustData.dwStateAction := WTD_STATEACTION_CLOSE;
+  WinVerifyTrust(INVALID_HANDLE_VALUE, @ActionId, @TrustData);
+
+  Result := (Status = 0);
+  if not Result then
+  begin
+    if UniBase.Logging.Logger <> nil then
+      UniBase.Logging.Logger.Warn(Format('Plugin signature verification failed (0x%.8x): %s', [Cardinal(Status), Path]), 'Plugin');
+  end;
+end;
+{$ELSE}
+begin
+  if UniBase.Logging.Logger <> nil then
+    UniBase.Logging.Logger.Warn('Plugin signature verification not available on this platform: ' + Path, 'Plugin');
   Result := True;
 end;
+{$ENDIF}
 
 end.

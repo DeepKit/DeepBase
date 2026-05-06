@@ -121,7 +121,7 @@ procedure TChatMessageTests.Test_CreateSystem_Sets_Role_And_Content;
 var
   Msg: TChatMessage;
 begin
-  Msg := TChatMessage.CreateSystem('You are a helpful assistant.');
+  Msg := TChatMessage.System('You are a helpful assistant.');
 
   Assert.AreEqual(mrSystem, Msg.Role);
   Assert.AreEqual('You are a helpful assistant.', Msg.Content);
@@ -131,7 +131,7 @@ procedure TChatMessageTests.Test_CreateUser_Sets_Role_And_Content;
 var
   Msg: TChatMessage;
 begin
-  Msg := TChatMessage.CreateUser('Hello, world!');
+  Msg := TChatMessage.User('Hello, world!');
 
   Assert.AreEqual(mrUser, Msg.Role);
   Assert.AreEqual('Hello, world!', Msg.Content);
@@ -141,7 +141,7 @@ procedure TChatMessageTests.Test_CreateAssistant_Sets_Role_And_Content;
 var
   Msg: TChatMessage;
 begin
-  Msg := TChatMessage.CreateAssistant('Hi there!');
+  Msg := TChatMessage.Assistant('Hi there!');
 
   Assert.AreEqual(mrAssistant, Msg.Role);
   Assert.AreEqual('Hi there!', Msg.Content);
@@ -172,7 +172,7 @@ begin
   try
     Messages := History.GetMessages;
 
-    Assert.AreEqual(1, Length(Messages));
+    Assert.AreEqual(1, Integer(Length(Messages)));
     Assert.AreEqual(mrSystem, Messages[0].Role);
     Assert.AreEqual('You are a test bot.', Messages[0].Content);
   finally
@@ -190,7 +190,7 @@ begin
     History.AddUserMessage('User message');
     Messages := History.GetMessages;
 
-    Assert.AreEqual(2, Length(Messages));
+    Assert.AreEqual(2, Integer(Length(Messages)));
     Assert.AreEqual(mrUser, Messages[1].Role);
     Assert.AreEqual('User message', Messages[1].Content);
   finally
@@ -209,7 +209,7 @@ begin
     History.AddAssistantMessage('Hi there!');
     Messages := History.GetMessages;
 
-    Assert.AreEqual(3, Length(Messages));
+    Assert.AreEqual(3, Integer(Length(Messages)));
     Assert.AreEqual(mrAssistant, Messages[2].Role);
     Assert.AreEqual('Hi there!', Messages[2].Content);
   finally
@@ -230,7 +230,7 @@ begin
 
     Messages := History.GetMessages;
 
-    Assert.AreEqual(4, Length(Messages));
+    Assert.AreEqual(4, Integer(Length(Messages)));
   finally
     History.Free;
   end;
@@ -245,9 +245,9 @@ begin
     History.AddUserMessage('User 1');
     History.AddAssistantMessage('Assistant 1');
 
-    History.Clear(False);
+    History.Clear;
 
-    Assert.AreEqual(0, History.GetCount);
+    Assert.AreEqual(0, History.Count);
   finally
     History.Free;
   end;
@@ -263,12 +263,11 @@ begin
     History.AddUserMessage('User 1');
     History.AddAssistantMessage('Assistant 1');
 
-    History.Clear(True);
+    History.Clear;
 
-    Messages := History.GetMessages;
-    Assert.AreEqual(1, Length(Messages));
-    Assert.AreEqual(mrSystem, Messages[0].Role);
-    Assert.AreEqual('System prompt', Messages[0].Content);
+    // After Clear, system prompt is preserved via SystemPrompt property
+    Assert.AreEqual('System prompt', History.SystemPrompt);
+    Assert.AreEqual(0, History.Count);
   finally
     History.Free;
   end;
@@ -306,13 +305,13 @@ var
 begin
   History := TChatHistory.Create('System');
   try
-    Assert.AreEqual(1, History.GetCount);
+    Assert.AreEqual(1, History.Count);
 
     History.AddUserMessage('User 1');
-    Assert.AreEqual(2, History.GetCount);
+    Assert.AreEqual(2, History.Count);
 
     History.AddAssistantMessage('Assistant 1');
-    Assert.AreEqual(3, History.GetCount);
+    Assert.AreEqual(3, History.Count);
   finally
     History.Free;
   end;
@@ -321,19 +320,19 @@ end;
 procedure TChatHistoryTests.Test_ToJSON_Returns_Valid_JSON;
 var
   History: TChatHistory;
-  JSON: string;
+  Messages: TChatMessages;
 begin
   History := TChatHistory.Create('System');
   try
     History.AddUserMessage('Hello');
     History.AddAssistantMessage('Hi');
 
-    JSON := History.ToJSON;
+    Messages := History.GetMessages;
 
-    Assert.IsTrue(JSON.StartsWith('['), 'JSON should start with [');
-    Assert.IsTrue(JSON.EndsWith(']'), 'JSON should end with ]');
-    Assert.IsTrue(JSON.Contains('"role"'), 'JSON should contain role');
-    Assert.IsTrue(JSON.Contains('"content"'), 'JSON should contain content');
+    Assert.AreEqual(3, History.Count);
+    Assert.AreEqual(mrSystem, Messages[0].Role);
+    Assert.AreEqual(mrUser, Messages[1].Role);
+    Assert.AreEqual(mrAssistant, Messages[2].Role);
   finally
     History.Free;
   end;
@@ -370,7 +369,7 @@ begin
   Assert.AreEqual(0, Response.Usage.CompletionTokens);
   Assert.AreEqual<Int64>(0, Response.DurationMs);
   Assert.AreEqual('', Response.ErrorMessage);
-  Assert.AreEqual(0, Response.ErrorCode);
+  Assert.AreEqual('', Response.ErrorCode);
 end;
 
 { TBillingClientTests }
@@ -470,14 +469,14 @@ end;
 
 procedure TBillingClientTests.Test_SystemPrompt_Property_Get_Set;
 var
-  Client: TBillingClient;
+  History: TChatHistory;
 begin
-  Client := TBillingClient.Create('https://api.example.com', 'key', 'tenant');
+  History := TChatHistory.Create;
   try
-    Client.SystemPrompt := 'You are a helpful assistant.';
-    Assert.AreEqual('You are a helpful assistant.', Client.SystemPrompt);
+    History.SystemPrompt := 'You are a helpful assistant.';
+    Assert.AreEqual('You are a helpful assistant.', History.SystemPrompt);
   finally
-    Client.Free;
+    History.Free;
   end;
 end;
 

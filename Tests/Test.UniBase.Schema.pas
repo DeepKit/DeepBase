@@ -1,10 +1,11 @@
 { ============================================================================
   Test.UniBase.Schema - Unit Tests for Database Schema Module
-  
+
   Test Coverage:
     - Schema version constants
     - Tier 0/1/2 table SQL definitions
     - SQL validation and structure
+    - Helper functions (GetTier*SchemaSQL, GetFullSchemaSQL)
   ============================================================================ }
 
 unit Test.UniBase.Schema;
@@ -26,66 +27,74 @@ type
     [Test]
     procedure Test_SCHEMA_VERSION_NonEmpty;
     [Test]
-    procedure Test_SCHEMA_MAJOR_VERSION;
+    procedure Test_SCHEMA_VERSION_MajorIsAtLeast1;
     [Test]
-    procedure Test_SCHEMA_MINOR_VERSION;
+    procedure Test_SCHEMA_VERSION_MinorIsNonNegative;
+    [Test]
+    procedure Test_CompatibleVersionRange;
   end;
 
   [TestFixture]
   TTestTier0Schema = class
   public
     [Test]
-    procedure Test_SQL_CREATE_CONFIG_NotEmpty;
+    procedure Test_SQL_TIER0_SCHEMA_INFO_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_CONFIG_HasPrimaryKey;
+    procedure Test_SQL_TIER0_SCHEMA_INFO_HasPrimaryKey;
     [Test]
-    procedure Test_SQL_CREATE_CONFIG_HasKeyColumn;
+    procedure Test_SQL_TIER0_SETTINGS_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_CONFIG_HasValueColumn;
+    procedure Test_SQL_TIER0_SETTINGS_HasPrimaryKey;
     [Test]
-    procedure Test_SQL_CREATE_LOG_NotEmpty;
+    procedure Test_SQL_TIER0_SETTINGS_HasKeyColumn;
     [Test]
-    procedure Test_SQL_CREATE_LOG_HasTimestamp;
+    procedure Test_SQL_TIER0_SETTINGS_HasValueColumn;
     [Test]
-    procedure Test_SQL_CREATE_LOG_HasLevel;
+    procedure Test_SQL_TIER0_FORM_STATES_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_LOG_HasMessage;
+    procedure Test_SQL_TIER0_LANGUAGES_NotEmpty;
+    [Test]
+    procedure Test_SQL_TIER0_I18N_TEXTS_NotEmpty;
   end;
 
   [TestFixture]
   TTestTier1Schema = class
   public
     [Test]
-    procedure Test_SQL_CREATE_USER_NotEmpty;
+    procedure Test_SQL_TIER1_LOGS_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_USER_HasIdColumn;
+    procedure Test_SQL_TIER1_LOGS_HasTimestamp;
     [Test]
-    procedure Test_SQL_CREATE_USER_HasNameColumn;
+    procedure Test_SQL_TIER1_LOGS_HasLevel;
     [Test]
-    procedure Test_SQL_CREATE_SESSION_NotEmpty;
+    procedure Test_SQL_TIER1_LOGS_HasMessage;
     [Test]
-    procedure Test_SQL_CREATE_SESSION_HasTokenColumn;
+    procedure Test_SQL_TIER1_MRU_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_SESSION_HasUserIdColumn;
+    procedure Test_SQL_TIER1_HOTKEYS_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_SESSION_HasExpiresAt;
+    procedure Test_SQL_TIER1_QUERIES_NotEmpty;
+    [Test]
+    procedure Test_SQL_TIER1_THEMES_NotEmpty;
   end;
 
   [TestFixture]
   TTestTier2Schema = class
   public
     [Test]
-    procedure Test_SQL_CREATE_AUDIT_NotEmpty;
+    procedure Test_SQL_TIER2_PROVIDERS_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_AUDIT_HasAction;
+    procedure Test_SQL_TIER2_PROVIDERS_HasBaseUrl;
     [Test]
-    procedure Test_SQL_CREATE_AUDIT_HasUserId;
+    procedure Test_SQL_TIER2_EXCEPTION_REPORTS_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_CACHE_NotEmpty;
+    procedure Test_SQL_TIER2_EXCEPTION_REPORTS_HasExceptionClass;
     [Test]
-    procedure Test_SQL_CREATE_CACHE_HasKey;
+    procedure Test_SQL_TIER2_LLM_CONFIG_NotEmpty;
     [Test]
-    procedure Test_SQL_CREATE_CACHE_HasExpiry;
+    procedure Test_SQL_TIER2_NOTIFICATIONS_NotEmpty;
+    [Test]
+    procedure Test_SQL_TIER2_NOTIFICATIONS_HasContent;
   end;
 
   [TestFixture]
@@ -104,7 +113,7 @@ type
     [Test]
     procedure Test_GetFullSchemaSQL_ContainsTier2;
     [Test]
-    procedure Test_GetSchemaVersion_NotEmpty;
+    procedure Test_GetFullSchemaSQL_ContainsVersion;
   end;
 
 implementation
@@ -113,7 +122,7 @@ implementation
 
 procedure TTestSchemaVersion.Test_SCHEMA_VERSION_Format;
 begin
-  // Version should be in format like "1.0", "1.2", etc.
+  // Version should be in format like "1.0.0" (major.minor.patch)
   Assert.IsTrue(SCHEMA_VERSION.Contains('.'), 'Version should contain a dot separator');
 end;
 
@@ -122,199 +131,201 @@ begin
   Assert.IsNotEmpty(SCHEMA_VERSION);
 end;
 
-procedure TTestSchemaVersion.Test_SCHEMA_MAJOR_VERSION;
+procedure TTestSchemaVersion.Test_SCHEMA_VERSION_MajorIsAtLeast1;
+var
+  MajorStr: string;
+  MajorVal: Integer;
 begin
-  Assert.IsTrue(SCHEMA_MAJOR_VERSION >= 1, 'Major version should be at least 1');
+  // SCHEMA_VERSION = '1.0.0' — extract major part before first dot
+  MajorStr := SCHEMA_VERSION.Split(['.'])[0];
+  MajorVal := StrToIntDef(MajorStr, 0);
+  Assert.IsTrue(MajorVal >= 1, 'Major version should be at least 1');
 end;
 
-procedure TTestSchemaVersion.Test_SCHEMA_MINOR_VERSION;
+procedure TTestSchemaVersion.Test_SCHEMA_VERSION_MinorIsNonNegative;
+var
+  Parts: TArray<string>;
+  MinorVal: Integer;
 begin
-  Assert.IsTrue(SCHEMA_MINOR_VERSION >= 0, 'Minor version should be non-negative');
+  // SCHEMA_VERSION = '1.0.0' — extract minor part (second segment)
+  Parts := SCHEMA_VERSION.Split(['.']);
+  Assert.IsTrue(Length(Parts) >= 2, 'Version should have at least major.minor');
+  MinorVal := StrToIntDef(Parts[1], 0);
+  Assert.IsTrue(MinorVal >= 0, 'Minor version should be non-negative');
+end;
+
+procedure TTestSchemaVersion.Test_CompatibleVersionRange;
+begin
+  Assert.IsNotEmpty(MIN_COMPATIBLE_SCHEMA_VERSION, 'MIN_COMPATIBLE_SCHEMA_VERSION should be set');
+  Assert.IsNotEmpty(MAX_COMPATIBLE_SCHEMA_VERSION, 'MAX_COMPATIBLE_SCHEMA_VERSION should be set');
 end;
 
 { TTestTier0Schema }
 
-procedure TTestTier0Schema.Test_SQL_CREATE_CONFIG_NotEmpty;
+procedure TTestTier0Schema.Test_SQL_TIER0_SCHEMA_INFO_NotEmpty;
 begin
-  Assert.IsNotEmpty(SQL_CREATE_CONFIG);
+  Assert.IsNotEmpty(SQL_TIER0_SCHEMA_INFO);
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_CONFIG_HasPrimaryKey;
+procedure TTestTier0Schema.Test_SQL_TIER0_SCHEMA_INFO_HasPrimaryKey;
 begin
   Assert.IsTrue(
-    SQL_CREATE_CONFIG.ToUpper.Contains('PRIMARY KEY') or
-    SQL_CREATE_CONFIG.ToUpper.Contains('PRIMARY'),
-    'Config table should have a primary key'
+    SQL_TIER0_SCHEMA_INFO.ToUpper.Contains('PRIMARY KEY'),
+    'SchemaInfo table should have a primary key'
   );
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_CONFIG_HasKeyColumn;
+procedure TTestTier0Schema.Test_SQL_TIER0_SETTINGS_NotEmpty;
+begin
+  Assert.IsNotEmpty(SQL_TIER0_SETTINGS);
+end;
+
+procedure TTestTier0Schema.Test_SQL_TIER0_SETTINGS_HasPrimaryKey;
 begin
   Assert.IsTrue(
-    SQL_CREATE_CONFIG.ToUpper.Contains('KEY') or
-    SQL_CREATE_CONFIG.ToUpper.Contains('NAME') or
-    SQL_CREATE_CONFIG.ToUpper.Contains('SETTING'),
-    'Config table should have a key/name column'
+    SQL_TIER0_SETTINGS.ToUpper.Contains('PRIMARY KEY'),
+    'Settings table should have a primary key'
   );
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_CONFIG_HasValueColumn;
+procedure TTestTier0Schema.Test_SQL_TIER0_SETTINGS_HasKeyColumn;
 begin
   Assert.IsTrue(
-    SQL_CREATE_CONFIG.ToUpper.Contains('VALUE') or
-    SQL_CREATE_CONFIG.ToUpper.Contains('DATA') or
-    SQL_CREATE_CONFIG.ToUpper.Contains('SETTING'),
-    'Config table should have a value column'
+    SQL_TIER0_SETTINGS.ToUpper.Contains('KEY') or
+    SQL_TIER0_SETTINGS.ToUpper.Contains('NAME') or
+    SQL_TIER0_SETTINGS.ToUpper.Contains('SETTING'),
+    'Settings table should have a key/name column'
   );
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_LOG_NotEmpty;
-begin
-  Assert.IsNotEmpty(SQL_CREATE_LOG);
-end;
-
-procedure TTestTier0Schema.Test_SQL_CREATE_LOG_HasTimestamp;
+procedure TTestTier0Schema.Test_SQL_TIER0_SETTINGS_HasValueColumn;
 begin
   Assert.IsTrue(
-    SQL_CREATE_LOG.ToUpper.Contains('TIMESTAMP') or
-    SQL_CREATE_LOG.ToUpper.Contains('CREATED') or
-    SQL_CREATE_LOG.ToUpper.Contains('TIME') or
-    SQL_CREATE_LOG.ToUpper.Contains('DATE'),
-    'Log table should have a timestamp column'
+    SQL_TIER0_SETTINGS.ToUpper.Contains('VALUE') or
+    SQL_TIER0_SETTINGS.ToUpper.Contains('DATA') or
+    SQL_TIER0_SETTINGS.ToUpper.Contains('SETTING'),
+    'Settings table should have a value column'
   );
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_LOG_HasLevel;
+procedure TTestTier0Schema.Test_SQL_TIER0_FORM_STATES_NotEmpty;
 begin
-  Assert.IsTrue(
-    SQL_CREATE_LOG.ToUpper.Contains('LEVEL') or
-    SQL_CREATE_LOG.ToUpper.Contains('SEVERITY') or
-    SQL_CREATE_LOG.ToUpper.Contains('TYPE'),
-    'Log table should have a level/severity column'
-  );
+  Assert.IsNotEmpty(SQL_TIER0_FORM_STATES);
 end;
 
-procedure TTestTier0Schema.Test_SQL_CREATE_LOG_HasMessage;
+procedure TTestTier0Schema.Test_SQL_TIER0_LANGUAGES_NotEmpty;
 begin
-  Assert.IsTrue(
-    SQL_CREATE_LOG.ToUpper.Contains('MESSAGE') or
-    SQL_CREATE_LOG.ToUpper.Contains('MSG') or
-    SQL_CREATE_LOG.ToUpper.Contains('TEXT') or
-    SQL_CREATE_LOG.ToUpper.Contains('CONTENT'),
-    'Log table should have a message column'
-  );
+  Assert.IsNotEmpty(SQL_TIER0_LANGUAGES);
+end;
+
+procedure TTestTier0Schema.Test_SQL_TIER0_I18N_TEXTS_NotEmpty;
+begin
+  Assert.IsNotEmpty(SQL_TIER0_I18N_TEXTS);
 end;
 
 { TTestTier1Schema }
 
-procedure TTestTier1Schema.Test_SQL_CREATE_USER_NotEmpty;
+procedure TTestTier1Schema.Test_SQL_TIER1_LOGS_NotEmpty;
 begin
-  Assert.IsNotEmpty(SQL_CREATE_USER);
+  Assert.IsNotEmpty(SQL_TIER1_LOGS);
 end;
 
-procedure TTestTier1Schema.Test_SQL_CREATE_USER_HasIdColumn;
+procedure TTestTier1Schema.Test_SQL_TIER1_LOGS_HasTimestamp;
 begin
   Assert.IsTrue(
-    SQL_CREATE_USER.ToUpper.Contains('ID') or
-    SQL_CREATE_USER.ToUpper.Contains('USER_ID'),
-    'User table should have an ID column'
+    SQL_TIER1_LOGS.ToUpper.Contains('LOGTIME') or
+    SQL_TIER1_LOGS.ToUpper.Contains('TIMESTAMP') or
+    SQL_TIER1_LOGS.ToUpper.Contains('CREATED') or
+    SQL_TIER1_LOGS.ToUpper.Contains('TIME'),
+    'Logs table should have a timestamp/time column'
   );
 end;
 
-procedure TTestTier1Schema.Test_SQL_CREATE_USER_HasNameColumn;
+procedure TTestTier1Schema.Test_SQL_TIER1_LOGS_HasLevel;
 begin
   Assert.IsTrue(
-    SQL_CREATE_USER.ToUpper.Contains('NAME') or
-    SQL_CREATE_USER.ToUpper.Contains('USERNAME') or
-    SQL_CREATE_USER.ToUpper.Contains('LOGIN'),
-    'User table should have a name/username column'
+    SQL_TIER1_LOGS.ToUpper.Contains('LOGLEVEL') or
+    SQL_TIER1_LOGS.ToUpper.Contains('LEVEL') or
+    SQL_TIER1_LOGS.ToUpper.Contains('SEVERITY'),
+    'Logs table should have a level/severity column'
   );
 end;
 
-procedure TTestTier1Schema.Test_SQL_CREATE_SESSION_NotEmpty;
-begin
-  Assert.IsNotEmpty(SQL_CREATE_SESSION);
-end;
-
-procedure TTestTier1Schema.Test_SQL_CREATE_SESSION_HasTokenColumn;
+procedure TTestTier1Schema.Test_SQL_TIER1_LOGS_HasMessage;
 begin
   Assert.IsTrue(
-    SQL_CREATE_SESSION.ToUpper.Contains('TOKEN') or
-    SQL_CREATE_SESSION.ToUpper.Contains('SESSION_ID') or
-    SQL_CREATE_SESSION.ToUpper.Contains('KEY'),
-    'Session table should have a token column'
+    SQL_TIER1_LOGS.ToUpper.Contains('MESSAGE') or
+    SQL_TIER1_LOGS.ToUpper.Contains('MSG'),
+    'Logs table should have a message column'
   );
 end;
 
-procedure TTestTier1Schema.Test_SQL_CREATE_SESSION_HasUserIdColumn;
+procedure TTestTier1Schema.Test_SQL_TIER1_MRU_NotEmpty;
 begin
-  Assert.IsTrue(
-    SQL_CREATE_SESSION.ToUpper.Contains('USER_ID') or
-    SQL_CREATE_SESSION.ToUpper.Contains('USERID') or
-    SQL_CREATE_SESSION.ToUpper.Contains('USER'),
-    'Session table should have a user_id column'
-  );
+  Assert.IsNotEmpty(SQL_TIER1_MRU);
 end;
 
-procedure TTestTier1Schema.Test_SQL_CREATE_SESSION_HasExpiresAt;
+procedure TTestTier1Schema.Test_SQL_TIER1_HOTKEYS_NotEmpty;
 begin
-  Assert.IsTrue(
-    SQL_CREATE_SESSION.ToUpper.Contains('EXPIRES') or
-    SQL_CREATE_SESSION.ToUpper.Contains('EXPIRY') or
-    SQL_CREATE_SESSION.ToUpper.Contains('VALID_UNTIL'),
-    'Session table should have an expiration column'
-  );
+  Assert.IsNotEmpty(SQL_TIER1_HOTKEYS);
+end;
+
+procedure TTestTier1Schema.Test_SQL_TIER1_QUERIES_NotEmpty;
+begin
+  Assert.IsNotEmpty(SQL_TIER1_QUERIES);
+end;
+
+procedure TTestTier1Schema.Test_SQL_TIER1_THEMES_NotEmpty;
+begin
+  Assert.IsNotEmpty(SQL_TIER1_THEMES);
 end;
 
 { TTestTier2Schema }
 
-procedure TTestTier2Schema.Test_SQL_CREATE_AUDIT_NotEmpty;
+procedure TTestTier2Schema.Test_SQL_TIER2_PROVIDERS_NotEmpty;
 begin
-  Assert.IsNotEmpty(SQL_CREATE_AUDIT);
+  Assert.IsNotEmpty(SQL_TIER2_PROVIDERS);
 end;
 
-procedure TTestTier2Schema.Test_SQL_CREATE_AUDIT_HasAction;
+procedure TTestTier2Schema.Test_SQL_TIER2_PROVIDERS_HasBaseUrl;
 begin
   Assert.IsTrue(
-    SQL_CREATE_AUDIT.ToUpper.Contains('ACTION') or
-    SQL_CREATE_AUDIT.ToUpper.Contains('OPERATION') or
-    SQL_CREATE_AUDIT.ToUpper.Contains('EVENT'),
-    'Audit table should have an action column'
+    SQL_TIER2_PROVIDERS.ToUpper.Contains('BASEURL') or
+    SQL_TIER2_PROVIDERS.ToUpper.Contains('URL'),
+    'Providers table should have a URL/BaseUrl column'
   );
 end;
 
-procedure TTestTier2Schema.Test_SQL_CREATE_AUDIT_HasUserId;
+procedure TTestTier2Schema.Test_SQL_TIER2_EXCEPTION_REPORTS_NotEmpty;
+begin
+  Assert.IsNotEmpty(SQL_TIER2_EXCEPTION_REPORTS);
+end;
+
+procedure TTestTier2Schema.Test_SQL_TIER2_EXCEPTION_REPORTS_HasExceptionClass;
 begin
   Assert.IsTrue(
-    SQL_CREATE_AUDIT.ToUpper.Contains('USER') or
-    SQL_CREATE_AUDIT.ToUpper.Contains('ACTOR') or
-    SQL_CREATE_AUDIT.ToUpper.Contains('PERFORMER'),
-    'Audit table should have a user reference'
+    SQL_TIER2_EXCEPTION_REPORTS.ToUpper.Contains('EXCEPTIONCLASS') or
+    SQL_TIER2_EXCEPTION_REPORTS.ToUpper.Contains('EXCEPTION'),
+    'ExceptionReports table should have an ExceptionClass column'
   );
 end;
 
-procedure TTestTier2Schema.Test_SQL_CREATE_CACHE_NotEmpty;
+procedure TTestTier2Schema.Test_SQL_TIER2_LLM_CONFIG_NotEmpty;
 begin
-  Assert.IsNotEmpty(SQL_CREATE_CACHE);
+  Assert.IsNotEmpty(SQL_TIER2_LLM_CONFIG);
 end;
 
-procedure TTestTier2Schema.Test_SQL_CREATE_CACHE_HasKey;
+procedure TTestTier2Schema.Test_SQL_TIER2_NOTIFICATIONS_NotEmpty;
 begin
-  Assert.IsTrue(
-    SQL_CREATE_CACHE.ToUpper.Contains('KEY') or
-    SQL_CREATE_CACHE.ToUpper.Contains('CACHE_KEY') or
-    SQL_CREATE_CACHE.ToUpper.Contains('NAME'),
-    'Cache table should have a key column'
-  );
+  Assert.IsNotEmpty(SQL_TIER2_NOTIFICATIONS);
 end;
 
-procedure TTestTier2Schema.Test_SQL_CREATE_CACHE_HasExpiry;
+procedure TTestTier2Schema.Test_SQL_TIER2_NOTIFICATIONS_HasContent;
 begin
   Assert.IsTrue(
-    SQL_CREATE_CACHE.ToUpper.Contains('EXPIR') or
-    SQL_CREATE_CACHE.ToUpper.Contains('TTL') or
-    SQL_CREATE_CACHE.ToUpper.Contains('VALID'),
-    'Cache table should have an expiry column'
+    SQL_TIER2_NOTIFICATIONS.ToUpper.Contains('CONTENT') or
+    SQL_TIER2_NOTIFICATIONS.ToUpper.Contains('TITLE'),
+    'Notifications table should have a content/title column'
   );
 end;
 
@@ -349,14 +360,15 @@ end;
 
 procedure TTestSchemaHelpers.Test_GetFullSchemaSQL_ContainsTier0;
 var
-  FullSQL, Tier0SQL: string;
+  FullSQL: string;
 begin
   FullSQL := GetFullSchemaSQL;
-  Tier0SQL := GetTier0SchemaSQL;
-  
-  Assert.IsTrue(FullSQL.Contains(Tier0SQL) or 
-                (FullSQL.ToUpper.Contains('CONFIG') and FullSQL.ToUpper.Contains('LOG')),
-                'Full schema should contain Tier0 tables');
+
+  Assert.IsTrue(
+    FullSQL.ToUpper.Contains('SCHEMAINFO') and
+    FullSQL.ToUpper.Contains('SETTINGS'),
+    'Full schema should contain Tier0 tables (SchemaInfo, Settings)'
+  );
 end;
 
 procedure TTestSchemaHelpers.Test_GetFullSchemaSQL_ContainsTier1;
@@ -364,10 +376,12 @@ var
   FullSQL: string;
 begin
   FullSQL := GetFullSchemaSQL;
-  
-  Assert.IsTrue(FullSQL.ToUpper.Contains('USER') and 
-                FullSQL.ToUpper.Contains('SESSION'),
-                'Full schema should contain Tier1 tables');
+
+  Assert.IsTrue(
+    FullSQL.ToUpper.Contains('LOGS') and
+    FullSQL.ToUpper.Contains('MRU'),
+    'Full schema should contain Tier1 tables (Logs, MRU)'
+  );
 end;
 
 procedure TTestSchemaHelpers.Test_GetFullSchemaSQL_ContainsTier2;
@@ -375,19 +389,24 @@ var
   FullSQL: string;
 begin
   FullSQL := GetFullSchemaSQL;
-  
-  Assert.IsTrue(FullSQL.ToUpper.Contains('AUDIT') and 
-                FullSQL.ToUpper.Contains('CACHE'),
-                'Full schema should contain Tier2 tables');
+
+  Assert.IsTrue(
+    FullSQL.ToUpper.Contains('PROVIDERS') and
+    FullSQL.ToUpper.Contains('MODELS'),
+    'Full schema should contain Tier2 tables (Providers, Models)'
+  );
 end;
 
-procedure TTestSchemaHelpers.Test_GetSchemaVersion_NotEmpty;
+procedure TTestSchemaHelpers.Test_GetFullSchemaSQL_ContainsVersion;
 var
-  Version: string;
+  FullSQL: string;
 begin
-  Version := GetSchemaVersion;
-  Assert.IsNotEmpty(Version);
-  Assert.AreEqual(SCHEMA_VERSION, Version);
+  FullSQL := GetFullSchemaSQL;
+
+  Assert.IsTrue(
+    FullSQL.Contains(SCHEMA_VERSION),
+    'Full schema should reference SCHEMA_VERSION'
+  );
 end;
 
 initialization

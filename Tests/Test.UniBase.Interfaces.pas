@@ -17,6 +17,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
+  System.Math,
   System.Generics.Collections,
   UniBase.Types,
   UniBase.Interfaces;
@@ -327,10 +328,10 @@ end;
 function TMockI18n.GetAvailableLanguages: TLanguageInfoArray;
 begin
   SetLength(Result, 2);
-  Result[0].Code := 'en';
-  Result[0].Name := 'English';
-  Result[1].Code := 'zh-CN';
-  Result[1].Name := '简体中文';
+  Result[0].LangCode := 'en';
+  Result[0].LangName := 'English';
+  Result[1].LangCode := 'zh-CN';
+  Result[1].LangName := '简体中文';
 end;
 
 function TMockI18n.GetCurrentLanguage: string;
@@ -385,7 +386,10 @@ var
   I, Count: Integer;
 begin
   if not FItems.TryGetValue(Category, List) then
-    Exit([]);
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
   Count := Min(MaxItems, List.Count);
   SetLength(Result, Count);
   for I := 0 to Count - 1 do
@@ -398,7 +402,7 @@ begin
   var Keys := GetMRUList(Category, MaxItems);
   SetLength(Result, Length(Keys));
   for var I := 0 to High(Keys) do
-    Result[I].Key := Keys[I];
+    Result[I].ItemKey := Keys[I];
 end;
 
 procedure TMockMRU.RemoveMRU(const Category, ItemKey: string);

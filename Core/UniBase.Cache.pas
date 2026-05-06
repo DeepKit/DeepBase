@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Cache - Generic Caching System
   
   A flexible caching system with multiple eviction strategies.
@@ -340,10 +340,10 @@ begin
   FOnLoad := nil;
   
   Clear;
-  FInsertOrder.Free;
-  FAccessOrder.Free;
-  FEntries.Free;
-  FLock.Free;
+  FreeAndNil(FInsertOrder);
+  FreeAndNil(FAccessOrder);
+  FreeAndNil(FEntries);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -871,8 +871,8 @@ end;
 
 class destructor TMemoryCache.Destroy;
 begin
-  FInstance.Free;
-  FLock.Free;
+  FreeAndNil(FInstance);
+  FreeAndNil(FLock);
 end;
 
 class function TMemoryCache.GetInstance: TCache<string, Variant>;

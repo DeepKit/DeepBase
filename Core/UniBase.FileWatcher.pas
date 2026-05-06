@@ -1,4 +1,4 @@
-unit UniBase.FileWatcher;
+﻿unit UniBase.FileWatcher;
 
 (*******************************************************************************
   UniBase File Watcher
@@ -657,11 +657,11 @@ end;
 destructor TFileWatcher.Destroy;
 begin
   Stop;
-  FDebounceStopEvent.Free;
-  FDebounceLock.Free;
-  FDebouncedChanges.Free;
-  FCallbacks.Free;
-  FLock.Free;
+  FreeAndNil(FDebounceStopEvent);
+  FreeAndNil(FDebounceLock);
+  FreeAndNil(FDebouncedChanges);
+  FreeAndNil(FCallbacks);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -757,14 +757,15 @@ begin
     LChange.ScheduledTime := IncMilliSecond(Now, FConfig.DebounceMs);
     FDebouncedChanges.AddOrSetValue(LKey, LChange);
     
-    // Schedule processing using TTask.Create().Start pattern for Delphi 12
-    TTask.Create(
+    // Schedule processing
+    var LTask: ITask := TTask.Create(
       procedure
       begin
         Sleep(FConfig.DebounceMs + 10);
         ProcessDebouncedChanges(nil);
       end
-    ).Start;
+    );
+    LTask.Start;
   finally
     FDebounceLock.Leave;
   end;
@@ -838,8 +839,8 @@ end;
 destructor TFileWatcherManager.Destroy;
 begin
   StopAll;
-  FLock.Free;
-  FWatchers.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FWatchers);
   inherited;
 end;
 
@@ -1006,7 +1007,7 @@ end;
 
 destructor TFileWatcherBuilder.Destroy;
 begin
-  FCallbacks.Free;
+  FreeAndNil(FCallbacks);
   inherited;
 end;
 

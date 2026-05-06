@@ -566,7 +566,7 @@ begin
   Value.Value := 'a,b,c,d';
   Arr := Value.AsArray;
   
-  Assert.AreEqual(4, Length(Arr));
+  Assert.AreEqual(4, Integer(Length(Arr)));
   Assert.AreEqual('a', Arr[0]);
   Assert.AreEqual('b', Arr[1]);
   Assert.AreEqual('c', Arr[2]);
@@ -645,10 +645,10 @@ var
 begin
   FSource.SetValues(['a=1', 'b=2']);
   FSource.Clear;
-  
+
   Data := FSource.Load;
   try
-    Assert.AreEqual(0, Data.Count);
+    Assert.AreEqual(0, Integer(Data.Count));
   finally
     Data.Free;
   end;
@@ -746,7 +746,7 @@ begin
   try
     Data := Source.Load;
     try
-      Assert.AreEqual(0, Data.Count);
+      Assert.AreEqual(0, Integer(Data.Count));
     finally
       Data.Free;
     end;
@@ -874,7 +874,7 @@ begin
   try
     Data := Source.Load;
     try
-      Assert.AreEqual(0, Data.Count);
+      Assert.AreEqual(0, Integer(Data.Count));
     finally
       Data.Free;
     end;
@@ -928,15 +928,18 @@ end;
 procedure TTestConfigurationBuilder.Test_AddIniFile_Required_RaisesException;
 var
   Builder: TConfigurationBuilder;
+  Raised: Boolean;
 begin
   Builder := TConfigurationBuilder.Create;
   try
-    Assert.WillRaise(
-      procedure
-      begin
-        Builder.AddIniFile('C:\nonexistent.ini', False);
-      end,
-      EConfigurationException);
+    Raised := False;
+    try
+      Builder.AddIniFile('C:\nonexistent.ini', False);
+    except
+      on EConfigurationException do
+        Raised := True;
+    end;
+    Assert.IsTrue(Raised, 'Expected EConfigurationException');
   finally
     Builder.Free;
   end;
@@ -958,15 +961,18 @@ end;
 procedure TTestConfigurationBuilder.Test_AddJsonFile_Required_RaisesException;
 var
   Builder: TConfigurationBuilder;
+  Raised: Boolean;
 begin
   Builder := TConfigurationBuilder.Create;
   try
-    Assert.WillRaise(
-      procedure
-      begin
-        Builder.AddJsonFile('C:\nonexistent.json', False);
-      end,
-      EConfigurationException);
+    Raised := False;
+    try
+      Builder.AddJsonFile('C:\nonexistent.json', False);
+    except
+      on EConfigurationException do
+        Raised := True;
+    end;
+    Assert.IsTrue(Raised, 'Expected EConfigurationException');
   finally
     Builder.Free;
   end;
@@ -1100,7 +1106,7 @@ var
   Arr: TArray<string>;
 begin
   Arr := FConfig.GetArray('arrayKey');
-  Assert.AreEqual(3, Length(Arr));
+  Assert.AreEqual(3, Integer(Length(Arr)));
   Assert.AreEqual('a', Arr[0]);
 end;
 
@@ -1568,15 +1574,11 @@ begin
     begin
       Tasks[I] := TTask.Run(
         procedure
-        var
-          J: Integer;
-          Value: string;
         begin
-          for J := 1 to READS_PER_THREAD do
+          for var J := 1 to READS_PER_THREAD do
           begin
             try
-              Value := Config.GetString('key');
-              if Value <> 'value' then
+              if Config.GetString('key') <> 'value' then
               begin
                 Lock.Enter;
                 try
@@ -1596,7 +1598,7 @@ begin
           end;
         end);
     end;
-    
+
     TTask.WaitForAll(Tasks);
     Assert.AreEqual(0, ErrorCount);
   finally
@@ -1628,13 +1630,11 @@ begin
       var ThreadNum := I;
       Tasks[I] := TTask.Run(
         procedure
-        var
-          J: Integer;
         begin
-          for J := 1 to WRITES_PER_THREAD do
+          for var J := 1 to WRITES_PER_THREAD do
           begin
             try
-              Config.SetValue('key_' + IntToStr(ThreadNum) + '_' + IntToStr(J), 
+              Config.SetValue('key_' + IntToStr(ThreadNum) + '_' + IntToStr(J),
                              'value_' + IntToStr(J));
             except
               Lock.Enter;
@@ -1647,7 +1647,7 @@ begin
           end;
         end);
     end;
-    
+
     TTask.WaitForAll(Tasks);
     Assert.AreEqual(0, ErrorCount);
   finally
@@ -1680,10 +1680,8 @@ begin
       var ThreadNum := I;
       Tasks[I] := TTask.Run(
         procedure
-        var
-          J: Integer;
         begin
-          for J := 1 to OPS_PER_THREAD do
+          for var J := 1 to OPS_PER_THREAD do
           begin
             try
               if IsWriter then
@@ -1701,7 +1699,7 @@ begin
           end;
         end);
     end;
-    
+
     TTask.WaitForAll(Tasks);
     Assert.AreEqual(0, ErrorCount);
   finally

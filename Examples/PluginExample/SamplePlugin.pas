@@ -39,7 +39,7 @@ type
     // IUniBasePluginUI
     function GetMenuItems: TArray<TPluginMenuItem>;
     function GetToolbarItems: TArray<TPluginToolbarItem>;
-    function GetSettingsPage(AOwner: TComponent): TFrame;
+    function GetSettingsPage(AOwner: TComponent): TComponent;
     procedure OnMenuClick(const MenuItemID: string);
     procedure OnToolbarClick(const ToolbarItemID: string);
     
@@ -162,7 +162,7 @@ begin
   SetLength(Result, 0);
 end;
 
-function TSamplePlugin.GetSettingsPage(AOwner: TComponent): TFrame;
+function TSamplePlugin.GetSettingsPage(AOwner: TComponent): TComponent;
 begin
   // This plugin doesn't provide a settings page
   Result := nil;

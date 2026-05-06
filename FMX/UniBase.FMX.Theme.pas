@@ -68,6 +68,7 @@ type
   TUniFMXTheme = class
   private
     class var FInstance: TUniFMXTheme;
+    var
     FMode: TUniThemeMode;
     FLightColors: TUniColorScheme;
     FDarkColors: TUniColorScheme;
@@ -404,42 +405,35 @@ end;
 
 function TUniFMXTheme.Lighten(Color: TAlphaColor; Amount: Single): TAlphaColor;
 var
-  R, G, B: Byte;
+  Rec: TAlphaColorRec;
 begin
   Amount := EnsureRange(Amount, 0, 1);
-  R := TAlphaColorRec(Color).R;
-  G := TAlphaColorRec(Color).G;
-  B := TAlphaColorRec(Color).B;
-
-  R := Min(255, Round(R + (255 - R) * Amount));
-  G := Min(255, Round(G + (255 - G) * Amount));
-  B := Min(255, Round(B + (255 - B) * Amount));
-
-  Result := MakeColor(TAlphaColorRec(Color).A, R, G, B);
+  Rec := TAlphaColorRec(Color);
+  Rec.R := Min(255, Round(Rec.R + (255 - Rec.R) * Amount));
+  Rec.G := Min(255, Round(Rec.G + (255 - Rec.G) * Amount));
+  Rec.B := Min(255, Round(Rec.B + (255 - Rec.B) * Amount));
+  Result := TAlphaColor(Rec);
 end;
 
 function TUniFMXTheme.Darken(Color: TAlphaColor; Amount: Single): TAlphaColor;
 var
-  R, G, B: Byte;
+  Rec: TAlphaColorRec;
 begin
   Amount := EnsureRange(Amount, 0, 1);
-  R := TAlphaColorRec(Color).R;
-  G := TAlphaColorRec(Color).G;
-  B := TAlphaColorRec(Color).B;
-
-  R := Max(0, Round(R * (1 - Amount)));
-  G := Max(0, Round(G * (1 - Amount)));
-  B := Max(0, Round(B * (1 - Amount)));
-
-  Result := MakeColor(TAlphaColorRec(Color).A, R, G, B);
+  Rec := TAlphaColorRec(Color);
+  Rec.R := Max(0, Round(Rec.R * (1 - Amount)));
+  Rec.G := Max(0, Round(Rec.G * (1 - Amount)));
+  Rec.B := Max(0, Round(Rec.B * (1 - Amount)));
+  Result := TAlphaColor(Rec);
 end;
 
 function TUniFMXTheme.WithAlpha(Color: TAlphaColor; Alpha: Byte): TAlphaColor;
+var
+  Rec: TAlphaColorRec;
 begin
-  Result := MakeColor(Alpha,
-    TAlphaColorRec(Color).R,
-    TAlphaColorRec(Color).G,
-    TAlphaColorRec(Color).B);
+  Rec := TAlphaColorRec(Color);
+  Rec.A := Alpha;
+  Result := TAlphaColor(Rec);
 end;
 
 { Global function }

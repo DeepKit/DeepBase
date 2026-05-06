@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.ORM - Object-Relational Mapping Core
   
   Version: 0.3
@@ -379,7 +379,7 @@ end;
 
 destructor TEntityMetadata.Destroy;
 begin
-  FColumns.Free;
+  FreeAndNil(FColumns);
   inherited;
 end;
 
@@ -423,7 +423,7 @@ end;
 
 class destructor TMetadataCache.Destroy;
 begin
-  FCache.Free;
+  FreeAndNil(FCache);
   FRttiContext.Free;
 end;
 
@@ -872,7 +872,7 @@ begin
     Rollback;
   FTransaction := nil;
   if FOwnsConnection then
-    FConnection.Free;
+    FreeAndNil(FConnection);
   inherited;
 end;
 

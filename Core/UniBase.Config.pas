@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Config - Configuration Management Module
   
   Version: 0.3
@@ -198,8 +198,8 @@ end;
 destructor TUniBaseConfig.Destroy;
 begin
   if FOwnsLock then
-    FLock.Free;
-  FCache.Free;
+    FreeAndNil(FLock);
+  FreeAndNil(FCache);
   inherited;
 end;
 

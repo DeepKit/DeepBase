@@ -309,9 +309,9 @@ end;
 destructor TUniBaseI18n.Destroy;
 begin
   if FOwnsLock then
-    FLock.Free;
-  FLanguageChangeListeners.Free;
-  FCache.Free;
+    FreeAndNil(FLock);
+  FreeAndNil(FLanguageChangeListeners);
+  FreeAndNil(FCache);
   inherited;
 end;
 

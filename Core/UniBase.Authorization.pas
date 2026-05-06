@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Authorization - Role-Based Access Control (RBAC)
   
   Version: 0.3
@@ -482,7 +482,7 @@ begin
   FAuthManagerLock.Enter;
   try
     if (FAuthManager <> nil) and (FAuthManager <> Manager) then
-      FAuthManager.Free;
+      FreeAndNil(FAuthManager);
     FAuthManager := Manager;
   finally
     FAuthManagerLock.Leave;
@@ -536,7 +536,7 @@ end;
 
 destructor TRole.Destroy;
 begin
-  FPermissions.Free;
+  FreeAndNil(FPermissions);
   inherited;
 end;
 
@@ -580,8 +580,8 @@ end;
 
 destructor TUser.Destroy;
 begin
-  FMetadata.Free;
-  FRoles.Free;
+  FreeAndNil(FMetadata);
+  FreeAndNil(FRoles);
   inherited;
 end;
 
@@ -693,13 +693,13 @@ destructor TAuthorizationManager.Destroy;
 begin
   FLock.Enter;
   try
-    FPermissions.Free;
-    FRoles.Free;
-    FUsers.Free;
+    FreeAndNil(FPermissions);
+    FreeAndNil(FRoles);
+    FreeAndNil(FUsers);
   finally
     FLock.Leave;
   end;
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 

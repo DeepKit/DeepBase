@@ -509,7 +509,7 @@ var
   Plugins: TArray<TPluginInfo>;
 begin
   Plugins := FManager.GetLoadedPlugins;
-  Assert.AreEqual(0, Length(Plugins));
+  Assert.AreEqual(0, Integer(Length(Plugins)));
 end;
 
 initialization

@@ -1,4 +1,4 @@
-unit UniBase.FMX.ListView;
+﻿unit UniBase.FMX.ListView;
 
 {*******************************************************************************
   UniBase FMX ListView - Enhanced Cross-Platform List Controls
@@ -232,9 +232,9 @@ end;
 
 destructor TUniListView.Destroy;
 begin
-  FLeftSwipeActions.Free;
-  FRightSwipeActions.Free;
-  FOriginalItems.Free;
+  FreeAndNil(FLeftSwipeActions);
+  FreeAndNil(FRightSwipeActions);
+  FreeAndNil(FOriginalItems);
   inherited;
 end;
 
@@ -370,7 +370,7 @@ begin
   if FInfiniteScroll and FHasMoreData and not FLoadingMore then
   begin
     // Check if near bottom
-    var ContentHeight := GetItemsHeight;
+    var ContentHeight := Items.Count * ItemAppearance.ItemHeight;
     var ViewportHeight := Height;
     var ScrollPos := Value;
 
@@ -495,10 +495,10 @@ begin
   try
     for I := Items.Count - 1 downto 0 do
     begin
+      // TODO: TListViewItem does not have a Visible property.
+      // Filtering requires a different approach (remove/re-add items or use adapter).
       if Assigned(FilterFunc) then
-        Items[I].Visible := FilterFunc(Items[I])
-      else
-        Items[I].Visible := True;
+        FilterFunc(Items[I]); // evaluate filter predicate only
     end;
   finally
     Items.EndUpdate;
@@ -514,8 +514,8 @@ begin
 
   Items.BeginUpdate;
   try
-    for var I := 0 to Items.Count - 1 do
-      Items[I].Visible := True;
+    // TODO: TListViewItem does not have a Visible property.
+    // Clearing filter requires restoring original items if they were removed.
   finally
     Items.EndUpdate;
   end;
@@ -649,7 +649,7 @@ end;
 
 destructor TUniVirtualListAdapter.Destroy;
 begin
-  FLoadedPages.Free;
+  FreeAndNil(FLoadedPages);
   inherited;
 end;
 

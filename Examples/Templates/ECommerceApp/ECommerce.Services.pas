@@ -17,7 +17,8 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   FireDAC.Comp.Client,
   ECommerce.Entities,
-  UniBase.ORM;
+  UniBase.ORM,
+  UniBase.Exceptions;
 
 type
   TProductFilter = record
@@ -716,7 +717,7 @@ var
   Errors: TArray<string>;
 begin
   if not FCartService.ValidateCart(ACustomerId, Errors) then
-    raise Exception.Create('Cart validation failed: ' + string.Join('; ', Errors));
+    raise EInvalidOperationException.Create('Cart validation failed: ' + string.Join('; ', Errors));
   
   Result := TOrder.Create;
   Result.OrderNumber := GenerateOrderNumber;
@@ -882,7 +883,7 @@ end;
 function TCustomerService.Register(const AEmail, APassword, AFirstName, ALastName: string): TCustomer;
 begin
   if Assigned(GetByEmail(AEmail)) then
-    raise Exception.Create('Email already registered');
+    raise EInvalidOperationException.Create('Email already registered');
     
   Result := TCustomer.Create;
   Result.Email := LowerCase(AEmail);
@@ -909,7 +910,7 @@ begin
   if Assigned(Customer) then
   begin
     if not VerifyPassword(AOldPassword, Customer.PasswordHash) then
-      raise Exception.Create('Invalid current password');
+      raise EInvalidOperationException.Create('Invalid current password');
     Customer.PasswordHash := HashPassword(ANewPassword);
     FContext.Update(Customer);
     Customer.Free;

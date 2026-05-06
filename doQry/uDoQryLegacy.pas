@@ -6,7 +6,8 @@ uses
   System.SysUtils, System.Variants, System.Classes, System.Generics.Collections,
   System.Generics.Defaults,
   FireDAC.Stan.Intf, ADODB, Data.DB, DBClient,Winapi.Windows,
-  StrUtils, Vcl.Dialogs; // 添加 Vcl.Dialogs
+  StrUtils, Vcl.Dialogs,
+  UniBase.Exceptions;
 
 //  run_type ö
 type
@@ -121,7 +122,7 @@ begin
           Parameters.ParamByName('TableName').Value := TableName;
         end;
     else
-      raise Exception.Create('不支持的数据库类型');
+      raise EDatabaseException.Create('不支持的数据库类型');
     end;
 
     // ִвѯ
@@ -135,7 +136,7 @@ begin
   end;
 
   if Result = '' then
-    raise Exception.Create('无法获取表 ' + TableName + ' 的主键字段名');
+    raise EDatabaseException.Create('无法获取表 ' + TableName + ' 的主键字段名');
 end;
 
 function GetDatabaseType(Conn: TAdoConnection): TDatabaseType;
@@ -174,7 +175,7 @@ begin
   else if lowerRunType = 'call' then
     Result := rtCall
   else
-    raise Exception.Create('不支持的 run_type: ' + runType);
+    raise EDatabaseException.Create('不支持的 run_type: ' + runType);
 end;
 
 function StringToParaType(const paraType: string): TParaType;
@@ -190,7 +191,7 @@ begin
   else if paraType = 'boolean' then
     Result := ptBoolean
   else
-    raise Exception.Create('不支持的参数类型: ' + paraType);
+    raise EDatabaseException.Create('不支持的参数类型: ' + paraType);
 end;
 
 function ShowCurrRecord(aDataset: TDataset;field_num:Integer = 5): String;
@@ -201,7 +202,7 @@ var
 begin
   // ݼǷѴ
   if not aDataset.Active then
-    raise Exception.Create('数据集未打开');
+    raise EDatabaseException.Create('数据集未打开');
 
   // ʼַ
   ResultStr := '';
@@ -447,12 +448,12 @@ begin
     end;
     
     if setClause = '' then
-      raise Exception.Create('没有找到任何字段用于更新');
+      raise EDatabaseException.Create('没有找到任何字段用于更新');
     
     // 构建WHERE子句
     whereClause := BuildWhereClauseFromDict(qry, Params);
     if whereClause = '' then
-      raise Exception.Create('更新操作必须包含WHERE条件');
+      raise EDatabaseException.Create('更新操作必须包含WHERE条件');
     
     Result := Format('UPDATE %s SET %s WHERE %s', 
       [tableName, setClause, whereClause]);
@@ -526,7 +527,7 @@ begin
     end;
     
     if fieldNames = '' then
-      raise Exception.Create('没有找到任何字段用于插入');
+      raise EDatabaseException.Create('没有找到任何字段用于插入');
     
     Result := Format('INSERT INTO %s (%s) VALUES (%s)', 
       [tableName, fieldNames, fieldValues]);
@@ -562,7 +563,7 @@ begin
   if qry.FindField('run_type') <> nil then
     sqlType := LowerCase(qry.FieldByName('run_type').AsString)
   else
-    raise Exception.Create('字段 "run_type" 未找到，无法确定SQL类型');
+    raise EDatabaseException.Create('字段 "run_type" 未找到，无法确定SQL类型');
   
   // 根据SQL类型调用相应的构建函数
   if sqlType = 'select' then
@@ -576,7 +577,7 @@ begin
   else if sqlType = 'call' then
     Result := BuildCallSQL(qry, Params)
   else
-    raise Exception.Create('不支持的SQL类型: ' + sqlType);
+    raise EDatabaseException.Create('不支持的SQL类型: ' + sqlType);
     
   ValidateSQL(Result);
 end;
@@ -686,7 +687,7 @@ function GetLastInsertedRecord(aQry: TADOQuery; const TableName, PrimaryKeyField
 begin
   Result := -1;
   if (TableName = '') or (PrimaryKeyField = '') then
-    raise Exception.Create('表名或主键字段名不能为空');
+    raise EDatabaseException.Create('表名或主键字段名不能为空');
 
   aQry.Close;
   aQry.SQL.Clear;
@@ -707,7 +708,7 @@ function ExecuteAndGetResult(const aSQL: string; aQry: TAdoQuery;
 begin
   Result := -1;
   if aSQL = '' then
-    raise Exception.Create('SQL语句为空');
+    raise EDatabaseException.Create('SQL语句为空');
 
   with aQry do
   begin
@@ -722,7 +723,7 @@ begin
             Open;
             Result := RecordCount;
             if Result = 0 then
-              raise Exception.Create('查询没有返回任何记录');
+              raise EDatabaseException.Create('查询没有返回任何记录');
           end;
         rtUpdate, rtDelete:
           begin
@@ -733,7 +734,7 @@ begin
         rtInsert:
           begin
             if TableName = '' then
-              raise Exception.Create('插入操作需要指定表名');
+              raise EDatabaseException.Create('插入操作需要指定表名');
 
             // 执行INSERT
             ExecSQL;
@@ -745,14 +746,14 @@ begin
             // 获取并装载新记录
             Result := GetLastInsertedRecord(aQry, TableName, PrimaryKeyField);
             if Result = -1 then
-              raise Exception.Create('无法获取新插入记录的ID');
+              raise EDatabaseException.Create('无法获取新插入记录的ID');
           end;
         rtCall:
-          raise Exception.Create('存储过程调用未实现');
+          raise EDatabaseException.Create('存储过程调用未实现');
       end;
     except
       on E: Exception do
-        raise Exception.CreateFmt('SQL执行错误: %s'#13#10'SQL: %s', [E.Message, aSQL]);
+        raise EDatabaseException.CreateFmt('SQL执行错误: %s'#13#10'SQL: %s', [E.Message, aSQL]);
     end;
   end;
 end;
@@ -774,7 +775,7 @@ begin
     except
       on E: Exception do
       begin
-        raise Exception.Create('doQry Error::SQL执行错误：' + E.Message + #13#10 + 'SQL:' + SQL);
+        raise EDatabaseException.Create('doQry Error::SQL执行错误：' + E.Message + #13#10 + 'SQL:' + SQL);
       end;
     end;
   finally
@@ -878,14 +879,14 @@ begin
       begin
         msg := Format('未找到对应的 proc_name: %s'#13#10'SQL: %s', 
           [ProcName, SQL.Text]);
-        raise Exception.Create(msg);
+        raise EDatabaseException.Create(msg);
       end;
       
       if FindField('run_type') = nil then
       begin
         msg := Format('字段 run_type 不存在'#13#10'SQL: %s',
           [SQL.Text]);
-        raise Exception.Create(msg);
+        raise EDatabaseException.Create(msg);
       end;
 
       RunType := StringToRunType(FieldByName('run_type').AsString);
@@ -897,12 +898,12 @@ begin
     if sSQL = '' then
     begin
       msg := '无法构建SQL语句';
-      raise Exception.Create(msg);
+      raise EDatabaseException.Create(msg);
     end;
 
     // 在执行SQL前调用此函数
     if not ValidateSQLQuotes(sSQL) then
-      raise Exception.Create('SQL语句中的引号不匹配，请检查参数值');
+      raise EDatabaseException.Create('SQL语句中的引号不匹配，请检查参数值');
 
     Result := ExecuteAndGetResult(sSQL, aQry, RunType, TableName);
     
@@ -913,7 +914,7 @@ begin
           if Result < 0 then
           begin
             msg := Format('SQL执行失败'#13#10'SQL: %s', [sSQL]);
-            raise Exception.Create(msg);
+            raise EDatabaseException.Create(msg);
           end
           else if Result = 0 then
           begin
@@ -947,7 +948,7 @@ begin
           if Result <= 0 then
           begin
             msg := Format('查询未返回数据'#13#10'SQL: %s', [sSQL]);
-            raise Exception.Create(msg);
+            raise EDatabaseException.Create(msg);
           end
           else
             msg := Format('查询返回 %d 条记录'#13#10'SQL: %s', [Result, sSQL]);
@@ -957,7 +958,7 @@ begin
           if Result <= 0 then
           begin
             msg := Format('插入操作失败'#13#10'SQL: %s', [sSQL]);
-            raise Exception.Create(msg);
+            raise EDatabaseException.Create(msg);
           end
           else
             msg := Format('成功插入记录，ID: %d'#13#10'SQL: %s', [Result, sSQL]);
@@ -965,7 +966,7 @@ begin
       rtCall:
         begin
           msg := Format('存储过程调用未实现'#13#10'SQL: %s', [sSQL]);
-          raise Exception.Create(msg);
+          raise EDatabaseException.Create(msg);
         end;
     end;
 
@@ -978,7 +979,7 @@ begin
         msg := Format('doQry Error: %s'#13#10'SQL: %s',
           [E.Message, sSQL]);
       end;
-      raise Exception.Create(msg);
+      raise EDatabaseException.Create(msg);
     end;
   end;
 end;
@@ -1051,7 +1052,7 @@ begin
   try
     // 检查输入字符串是否为空
     if ParamString.Trim = '' then
-      raise Exception.Create('参数字符串不能为空');
+      raise EDatabaseException.Create('参数字符串不能为空');
 
     // 使用分割方法
     splitArray := ParamString.Split(['|||']);
@@ -1064,7 +1065,7 @@ begin
     
     // 检查是否成功分割
     if Result.Count = 0 then
-      raise Exception.CreateFmt('无法分割参数字符串: "%s"', [ParamString]);
+      raise EDatabaseException.CreateFmt('无法分割参数字符串: "%s"', [ParamString]);
 
     // 移除空项
     for var i := Result.Count - 1 downto 0 do
@@ -1073,12 +1074,12 @@ begin
 
     // 如果分割后仍为空，抛出异常
     if Result.Count = 0 then
-      raise Exception.CreateFmt('分割后没有有效参数: "%s"', [ParamString]);
+      raise EDatabaseException.CreateFmt('分割后没有有效参数: "%s"', [ParamString]);
   except
     on E: Exception do
     begin
       Result.Free;
-      raise Exception.Create('分割参数字符串失败: ' + E.Message);
+      raise EDatabaseException.Create('分割参数字符串失败: ' + E.Message);
     end;
   end;
 end;
@@ -1283,7 +1284,7 @@ begin
     qry.Open;
     
     if qry.IsEmpty then
-      raise Exception.Create('未找到查询定义: ' + ProcName);
+      raise EDatabaseException.Create('未找到查询定义: ' + ProcName);
       
     Result := qry;
   except

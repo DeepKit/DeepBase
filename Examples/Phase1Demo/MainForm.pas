@@ -9,7 +9,8 @@ uses
   UniBase.Manager, UniBase.Logging, UniBase.VCL.Controls, UniBase.VCL.ConfigControls,
   UniBase.VCL.I18nControls, UniBase.VCL.ComboBoxes, UniBase.VCL.FormStateHelper,
   UniBase.VCL.LogListView, UniBase.VCL.UIHelper, UniBase.VCL.LLMConfigPanel,
-  UniBase.VCL.WaitForm, UniBase.VCL.NotificationBar, UniBase.Exception;
+  UniBase.VCL.WaitForm, UniBase.VCL.NotificationBar, UniBase.Exception,
+  UniBase.Exceptions;
 
 type
   TfrmMain = class(TForm)
@@ -167,7 +168,7 @@ end;
 
 procedure TfrmMain.btnTriggerErrorClick(Sender: TObject);
 begin
-  raise Exception.Create('This is a test exception handled by UniBase!');
+  raise EOperationException.Create('This is a test exception handled by UniBase!');
 end;
 
 procedure TfrmMain.btnTestLogClick(Sender: TObject);

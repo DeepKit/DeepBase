@@ -229,19 +229,19 @@ begin
     Exit;
   end;
   
-  Info := FLicense.LicenseInfo;
+  Info := FLicense.CurrentLicenseInfo;
   
   // 状态指示灯颜色
   FShapeStatus.Brush.Color := GetStatusColor(Info.Status);
   
   // 状态文字
-  if FLicense.IsLicensed then
-    FLblStatus.Caption := 'Status: ' + Info.StatusName
+  if Info.IsValid then
+    FLblStatus.Caption := 'Status: ' + TUniBaseLicense.LicenseStatusToStr(Info.Status)
   else
     FLblStatus.Caption := 'Status: Not Licensed';
   
   // 类型
-  FLblType.Caption := 'Type: ' + Info.TypeName;
+  FLblType.Caption := 'Type: ' + TUniBaseLicense.LicenseTypeToStr(Info.LicenseType);
   
   // 过期时间
   if Info.ExpiresAt = 0 then
@@ -264,8 +264,8 @@ begin
     FLblIssuedTo.Caption := 'Issued to: -';
   
   // 按钮状态
-  FBtnActivate.Enabled := not FLicense.IsLicensed;
-  FBtnDeactivate.Enabled := FLicense.IsLicensed;
+  FBtnActivate.Enabled := not Info.IsValid;
+  FBtnDeactivate.Enabled := Info.IsValid;
 end;
 
 function TLicenseStatusPanel.GetStatusColor(Status: TLicenseStatus): TColor;
@@ -274,8 +274,8 @@ begin
     lsValid: Result := clLime;
     lsExpired: Result := clYellow;
     lsInvalid: Result := clRed;
-    lsBlacklisted: Result := clMaroon;
-    lsDeviceMismatch: Result := clOrange;
+    lsTampered: Result := clMaroon;
+    lsDeviceMismatch: Result := clWebOrange;
   else
     Result := clGray;
   end;

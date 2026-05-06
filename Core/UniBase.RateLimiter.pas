@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.RateLimiter - Rate Limiting Module
   
   A comprehensive rate limiting implementation for API throttling.
@@ -375,8 +375,8 @@ end;
 
 destructor TTokenBucketLimiter.Destroy;
 begin
-  FBuckets.Free;
-  FLock.Free;
+  FreeAndNil(FBuckets);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -520,8 +520,8 @@ end;
 
 destructor TFixedWindowLimiter.Destroy;
 begin
-  FWindows.Free;
-  FLock.Free;
+  FreeAndNil(FWindows);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -669,8 +669,8 @@ var
 begin
   for Pair in FRequestLogs do
     Pair.Value.Free;
-  FRequestLogs.Free;
-  FLock.Free;
+  FreeAndNil(FRequestLogs);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -805,8 +805,8 @@ end;
 
 destructor TSlidingWindowCounterLimiter.Destroy;
 begin
-  FCounters.Free;
-  FLock.Free;
+  FreeAndNil(FCounters);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1087,8 +1087,8 @@ end;
 
 destructor TRateLimitManager.Destroy;
 begin
-  FLimiters.Free;
-  FLock.Free;
+  FreeAndNil(FLimiters);
+  FreeAndNil(FLock);
   inherited;
 end;
 

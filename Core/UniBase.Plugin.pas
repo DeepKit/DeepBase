@@ -15,8 +15,7 @@ interface
 
 uses
   System.SysUtils,
-  System.Classes,
-  Vcl.Forms;
+  System.Classes;
 
 type
   /// <summary>
@@ -166,8 +165,8 @@ type
     /// <summary>Get toolbar items to add to host application</summary>
     function GetToolbarItems: TArray<TPluginToolbarItem>;
     
-    /// <summary>Get settings page frame (nil if not supported)</summary>
-    function GetSettingsPage(AOwner: TComponent): TFrame;
+    /// <summary>Get settings page component (nil if not supported)</summary>
+    function GetSettingsPage(AOwner: TComponent): TComponent;
     
     /// <summary>Called when a menu item is clicked</summary>
     procedure OnMenuClick(const MenuItemID: string);

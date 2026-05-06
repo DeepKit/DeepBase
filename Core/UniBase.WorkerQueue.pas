@@ -1,4 +1,4 @@
-unit UniBase.WorkerQueue;
+﻿unit UniBase.WorkerQueue;
 
 {*******************************************************************************
   UniBase Worker Queue
@@ -664,9 +664,9 @@ end;
 
 destructor TJob.Destroy;
 begin
-  FMetadata.Free;
-  FRetryPolicy.Free;
-  FData.Free;
+  FreeAndNil(FMetadata);
+  FreeAndNil(FRetryPolicy);
+  FreeAndNil(FData);
   inherited;
 end;
 
@@ -733,7 +733,7 @@ end;
 
 function TJob.WithRetryPolicy(APolicy: TRetryPolicy): TJob;
 begin
-  FRetryPolicy.Free;
+  FreeAndNil(FRetryPolicy);
   FRetryPolicy := APolicy;
   FMaxAttempts := APolicy.MaxRetries + 1;
   Result := Self;
@@ -1038,8 +1038,8 @@ end;
 
 destructor TMemoryJobStorage.Destroy;
 begin
-  FLock.Free;
-  FJobs.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FJobs);
   inherited;
 end;
 
@@ -1135,7 +1135,7 @@ end;
 
 destructor TFileJobStorage.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1416,14 +1416,14 @@ end;
 destructor TWorkerQueue.Destroy;
 begin
   Stop(True);
-  FDefaultRetryPolicy.Free;
-  FShutdownEvent.Free;
-  FJobAvailable.Free;
-  FLock.Free;
-  FWorkers.Free;
-  FPendingQueue.Free;
-  FJobs.Free;
-  FHandlers.Free;
+  FreeAndNil(FDefaultRetryPolicy);
+  FreeAndNil(FShutdownEvent);
+  FreeAndNil(FJobAvailable);
+  FreeAndNil(FLock);
+  FreeAndNil(FWorkers);
+  FreeAndNil(FPendingQueue);
+  FreeAndNil(FJobs);
+  FreeAndNil(FHandlers);
   inherited;
 end;
 
@@ -2290,8 +2290,8 @@ end;
 class destructor TWorkerQueues.Destroy;
 begin
   StopAll(True);
-  FLock.Free;
-  FQueues.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FQueues);
 end;
 
 class function TWorkerQueues.GetQueue(const AName: string): TWorkerQueue;

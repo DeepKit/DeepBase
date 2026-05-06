@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.TestCenter - Developer Test Center Core Logic
   
   Version: 1.0
@@ -288,8 +288,8 @@ end;
 
 destructor TTestCenterManager.Destroy;
 begin
-  FTests.Free;
-  FCategories.Free;
+  FreeAndNil(FTests);
+  FreeAndNil(FCategories);
   inherited;
 end;
 

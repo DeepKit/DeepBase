@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.UnlockDialog - Lightweight Unlock Dialog
   
   Version: 0.1
@@ -126,7 +126,7 @@ end;
 destructor TUnlockDialog.Destroy;
 begin
   if FOwnsUnlock and Assigned(FUnlock) then
-    FUnlock.Free;
+    FreeAndNil(FUnlock);
   inherited;
 end;
 
@@ -246,7 +246,7 @@ end;
 
 procedure TUnlockDialog.HandlePasteClick(Sender: TObject);
 begin
-  if Clipboard.HasFormat(CF_TEXT) then
+  if Clipboard.AsText <> '' then
   begin
     FEdtCode.Text := Clipboard.AsText;
     HandleCodeChange(nil);

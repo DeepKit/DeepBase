@@ -349,7 +349,7 @@ var
   Parts: TArray<string>;
 begin
   Parts := TPipelineParser.SplitByPipe('cmd1 | cmd2 | cmd3');
-  Assert.AreEqual(3, Length(Parts));
+  Assert.AreEqual(3, Integer(Length(Parts)));
   Assert.AreEqual('cmd1 ', Parts[0]);
   Assert.AreEqual(' cmd2 ', Parts[1]);
   Assert.AreEqual(' cmd3', Parts[2]);
@@ -360,7 +360,7 @@ var
   Parts: TArray<string>;
 begin
   Parts := TPipelineParser.SplitByPipe('echo "a|b" | grep test');
-  Assert.AreEqual(2, Length(Parts));
+  Assert.AreEqual(2, Integer(Length(Parts)));
   Assert.IsTrue(Parts[0].Contains('"a|b"'));
 end;
 
@@ -370,7 +370,7 @@ var
 begin
   Stages := TPipelineParser.Parse('ls -la');
   try
-    Assert.AreEqual(1, Stages.Count);
+    Assert.AreEqual(1, Integer(Stages.Count));
     Assert.AreEqual(pstCommand, Stages[0].StageType);
     Assert.AreEqual('ls -la', Stages[0].Command);
   finally
@@ -384,10 +384,10 @@ var
 begin
   Stages := TPipelineParser.Parse('grep test');
   try
-    Assert.AreEqual(1, Stages.Count);
+    Assert.AreEqual(1, Integer(Stages.Count));
     Assert.AreEqual(pstFilter, Stages[0].StageType);
     Assert.AreEqual('grep', Stages[0].Command);
-    Assert.AreEqual(1, Length(Stages[0].Args));
+    Assert.AreEqual(1, Integer(Length(Stages[0].Args)));
     Assert.AreEqual('test', Stages[0].Args[0]);
   finally
     Stages.Free;
@@ -400,7 +400,7 @@ var
 begin
   Stages := TPipelineParser.Parse('echo hello > output.txt');
   try
-    Assert.AreEqual(2, Stages.Count);
+    Assert.AreEqual(2, Integer(Stages.Count));
     Assert.AreEqual(pstCommand, Stages[0].StageType);
     Assert.AreEqual(pstRedirect, Stages[1].StageType);
     Assert.AreEqual('output.txt', Stages[1].TargetFile);
@@ -416,7 +416,7 @@ var
 begin
   Stages := TPipelineParser.Parse('echo hello >> log.txt');
   try
-    Assert.AreEqual(2, Stages.Count);
+    Assert.AreEqual(2, Integer(Stages.Count));
     Assert.AreEqual(pstRedirect, Stages[1].StageType);
     Assert.AreEqual('log.txt', Stages[1].TargetFile);
     Assert.IsTrue(Stages[1].AppendMode);
@@ -431,7 +431,7 @@ var
 begin
   Stages := TPipelineParser.Parse('tee output.log');
   try
-    Assert.AreEqual(1, Stages.Count);
+    Assert.AreEqual(1, Integer(Stages.Count));
     Assert.AreEqual(pstTee, Stages[0].StageType);
     Assert.AreEqual('output.log', Stages[0].TargetFile);
   finally
@@ -445,11 +445,11 @@ var
 begin
   Stages := TPipelineParser.Parse('grep -i -v pattern');
   try
-    Assert.AreEqual(1, Stages.Count);
+    Assert.AreEqual(1, Integer(Stages.Count));
     Assert.AreEqual(pstFilter, Stages[0].StageType);
     Assert.IsTrue(Stages[0].Options.ContainsKey('i'));
     Assert.IsTrue(Stages[0].Options.ContainsKey('v'));
-    Assert.AreEqual(1, Length(Stages[0].Args));
+    Assert.AreEqual(1, Integer(Length(Stages[0].Args)));
     Assert.AreEqual('pattern', Stages[0].Args[0]);
   finally
     Stages.Free;

@@ -18,7 +18,10 @@ uses
   System.IOUtils,
   System.Threading,
   System.Diagnostics,
+  System.Generics.Collections,
+  System.SyncObjs,
   UniBase.Logging,
+  UniBase.Storage.Interfaces,
   UniBase.Types;
 
 type
@@ -50,9 +53,101 @@ type
 
     [Test]
     procedure Test_ThreadSafety_ConcurrentWrites_DoesNotRaise;
+
+    [Test]
+    procedure Test_StorageInjection_DelegatesDbWriteAndQuery;
+  end;
+
+  TInMemoryLogStorage = class(TInterfacedObject, ILogStorage, ILogQueryStorage)
+  private
+    FLock: TObject;
+    FLevelCounts: TDictionary<string, Int64>;
+    FTotal: Int64;
+  public
+    WriteCount: Integer;
+    PurgeCount: Integer;
+    LastLog: TLogStorageData;
+    LastPurgeCutoff: string;
+    constructor Create;
+    destructor Destroy; override;
+    procedure WriteLog(const Data: TLogStorageData);
+    procedure PurgeOlderThan(const CutoffISO: string);
+    function CountByLevel(const LevelText: string): Int64;
+    function CountAll: Int64;
   end;
 
 implementation
+
+{ TInMemoryLogStorage }
+
+constructor TInMemoryLogStorage.Create;
+begin
+  inherited Create;
+  FLock := TObject.Create;
+  FLevelCounts := TDictionary<string, Int64>.Create;
+  FTotal := 0;
+end;
+
+destructor TInMemoryLogStorage.Destroy;
+begin
+  FLevelCounts.Free;
+  FLock.Free;
+  inherited;
+end;
+
+procedure TInMemoryLogStorage.WriteLog(const Data: TLogStorageData);
+var
+  LevelKey: string;
+  Current: Int64;
+begin
+  LevelKey := UpperCase(Trim(Data.LevelText));
+  TMonitor.Enter(FLock);
+  try
+    LastLog := Data;
+    Inc(WriteCount);
+    Inc(FTotal);
+    if not FLevelCounts.TryGetValue(LevelKey, Current) then
+      Current := 0;
+    FLevelCounts.AddOrSetValue(LevelKey, Current + 1);
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TInMemoryLogStorage.PurgeOlderThan(const CutoffISO: string);
+begin
+  TMonitor.Enter(FLock);
+  try
+    LastPurgeCutoff := CutoffISO;
+    Inc(PurgeCount);
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+function TInMemoryLogStorage.CountByLevel(const LevelText: string): Int64;
+var
+  LevelKey: string;
+begin
+  LevelKey := UpperCase(Trim(LevelText));
+  TMonitor.Enter(FLock);
+  try
+    if not FLevelCounts.TryGetValue(LevelKey, Result) then
+      Result := 0;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+function TInMemoryLogStorage.CountAll: Int64;
+begin
+  TMonitor.Enter(FLock);
+  try
+    Result := FTotal;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
 
 procedure TTestUniBaseLogging.CleanupTodayLogs;
 var
@@ -204,6 +299,56 @@ begin
     WaitForAnyTodayFileContains(Marker, 5000),
     '并发写入后应能在日志文件中找到标记字符串'
   );
+end;
+
+procedure TTestUniBaseLogging.Test_StorageInjection_DelegatesDbWriteAndQuery;
+var
+  InjectedStorageObj: TInMemoryLogStorage;
+  InjectedStorage: ILogStorage;
+  InjectedLogger: TUniBaseLogger;
+  Msg: string;
+  SW: TStopwatch;
+begin
+  InjectedStorageObj := TInMemoryLogStorage.Create;
+  InjectedStorage := InjectedStorageObj;
+
+  TUniBaseLogger.SetStorageFactory(
+    function(DBPath: string): ILogStorage
+    begin
+      Result := InjectedStorage;
+    end);
+  try
+    InjectedLogger := TUniBaseLogger.Create(':memory:');
+    try
+      InjectedLogger.StorageMode := lsmDatabase;
+      InjectedLogger.MinLevel := llDebug;
+
+      Msg := 'InjectedLogger ' + TGUID.NewGuid.ToString;
+      InjectedLogger.Info(Msg, 'InjectedTest');
+
+      SW := TStopwatch.StartNew;
+      while (InjectedStorageObj.WriteCount = 0) and (SW.ElapsedMilliseconds < 3000) do
+        Sleep(20);
+
+      Assert.AreEqual(1, InjectedStorageObj.WriteCount,
+        'Injected log storage should receive one write');
+      Assert.AreEqual(Msg, InjectedStorageObj.LastLog.MessageText);
+      Assert.AreEqual('InjectedTest', InjectedStorageObj.LastLog.Source);
+      Assert.IsTrue(InjectedStorageObj.LastLog.TimestampISO <> '');
+
+      Assert.AreEqual(Int64(1), InjectedLogger.GetLogCount(llInfo));
+      Assert.AreEqual(Int64(1), InjectedLogger.GetTotalLogCount);
+
+      InjectedLogger.ClearOldLogs(7);
+      Assert.AreEqual(1, InjectedStorageObj.PurgeCount,
+        'ClearOldLogs should delegate to injected storage');
+      Assert.IsTrue(InjectedStorageObj.LastPurgeCutoff <> '');
+    finally
+      InjectedLogger.Free;
+    end;
+  finally
+    TUniBaseLogger.SetStorageFactory(TFunc<string, ILogStorage>(nil));
+  end;
 end;
 
 initialization

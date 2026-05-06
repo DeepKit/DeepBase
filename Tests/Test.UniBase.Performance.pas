@@ -430,7 +430,7 @@ begin
   
   // 1000 batches * 10 writes = 10000 total writes
   Assert.IsTrue((R.OpsPerSecond * 10) > 5000,
-    Format('Batch write should exceed 5K effective ops/sec'));
+    Format('Batch write should exceed 5K effective ops/sec', []));
 end;
 
 { TTestLoggingPerformance }
@@ -507,7 +507,7 @@ begin
         for I := 0 to THREAD_COUNT - 1 do
         begin
           var ThreadId := I;
-          Tasks[I] := TTask.Run(
+          Tasks[I] := TTask.Create(
             procedure
             var
               J: Integer;
@@ -515,6 +515,7 @@ begin
               for J := 1 to LOGS_PER_THREAD do
                 FManager.Logger.InfoFmt('Thread %d message %d', [ThreadId, J]);
             end);
+          Tasks[I].Start;
         end;
         TTask.WaitForAll(Tasks);
       end);
@@ -532,12 +533,13 @@ end;
 
 procedure TTestCachePerformance.Setup;
 begin
-  FCache := TCache<string, string>.Create(10000);
+  FCache := TCache<string, string>.Create;
+  FCache.MaxItems := 10000;
   FBenchmark := TBenchmarkRunner.Create;
   
   // Pre-populate cache
   for var I := 1 to 1000 do
-    FCache.SetValue('key_' + IntToStr(I), 'value_' + IntToStr(I));
+    FCache.Put('key_' + IntToStr(I), 'value_' + IntToStr(I));
 end;
 
 procedure TTestCachePerformance.TearDown;
@@ -555,7 +557,7 @@ begin
   R := FBenchmark.RunBenchmark('Cache.Get.Hit', 1000000,
     procedure
     begin
-      FCache.TryGetValue('key_500', Value);
+      FCache.TryGet('key_500', Value);
     end);
   
   Assert.IsTrue(R.OpsPerSecond > 500000,
@@ -570,7 +572,7 @@ begin
   R := FBenchmark.RunBenchmark('Cache.Get.Miss', 1000000,
     procedure
     begin
-      FCache.TryGetValue('nonexistent_key', Value);
+      FCache.TryGet('nonexistent_key', Value);
     end);
   
   Assert.IsTrue(R.OpsPerSecond > 500000,
@@ -587,7 +589,7 @@ begin
     procedure
     begin
       Inc(Counter);
-      FCache.SetValue('set_key_' + IntToStr(Counter mod 1000), 'value');
+      FCache.Put('set_key_' + IntToStr(Counter mod 1000), 'value');
     end);
   
   Assert.IsTrue(R.OpsPerSecond > 200000,
@@ -600,19 +602,20 @@ var
   Counter: Integer;
 begin
   Counter := 0;
-  R := FBenchmark.RunBenchmark('Cache.GetOrAdd', 500000,
+  FCache.OnLoad := function(const Key: string): string
+    begin
+      Result := 'computed_value';
+    end;
+
+  R := FBenchmark.RunBenchmark('Cache.GetOrLoad', 500000,
     procedure
     begin
       Inc(Counter);
-      FCache.GetOrAdd('getadd_key_' + IntToStr(Counter mod 100),
-        function: string
-        begin
-          Result := 'computed_value';
-        end);
+      FCache.GetOrLoad('getadd_key_' + IntToStr(Counter mod 100));
     end);
-  
+
   Assert.IsTrue(R.OpsPerSecond > 200000,
-    Format('Cache GetOrAdd should exceed 200K ops/sec, got %.0f', [R.OpsPerSecond]));
+    Format('Cache GetOrLoad should exceed 200K ops/sec, got %.0f', [R.OpsPerSecond]));
 end;
 
 procedure TTestCachePerformance.Benchmark_CacheConcurrent;
@@ -632,7 +635,7 @@ begin
       for I := 0 to THREAD_COUNT - 1 do
       begin
         var ThreadId := I;
-        Tasks[I] := TTask.Run(
+        Tasks[I] := TTask.Create(
           procedure
           var
             J: Integer;
@@ -641,11 +644,12 @@ begin
             for J := 1 to OPS_PER_THREAD do
             begin
               if J mod 2 = 0 then
-                FCache.TryGetValue('key_' + IntToStr(J mod 1000), Value)
+                FCache.TryGet('key_' + IntToStr(J mod 1000), Value)
               else
-                FCache.SetValue('thread_' + IntToStr(ThreadId) + '_key_' + IntToStr(J mod 100), 'value');
+                FCache.Put('thread_' + IntToStr(ThreadId) + '_key_' + IntToStr(J mod 100), 'value');
             end;
           end);
+        Tasks[I].Start;
       end;
       TTask.WaitForAll(Tasks);
     end);

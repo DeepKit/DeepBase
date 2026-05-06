@@ -1,4 +1,4 @@
-unit UniBase.Reflection;
+﻿unit UniBase.Reflection;
 
 {*******************************************************************************
   UniBase Reflection/RTTI Utilities
@@ -401,7 +401,7 @@ end;
 class destructor TTypeInfo.Destroy;
 begin
   FContext.Free;
-  FLock.Free;
+  FreeAndNil(FLock);
 end;
 
 class function TTypeInfo.Context: TRttiContext;
@@ -1521,8 +1521,8 @@ end;
 
 class destructor TTypeRegistry.Destroy;
 begin
-  FRegistry.Free;
-  FLock.Free;
+  FreeAndNil(FRegistry);
+  FreeAndNil(FLock);
 end;
 
 class procedure TTypeRegistry.RegisterType(const AName: string; AClass: TClass);

@@ -1,4 +1,4 @@
-unit UniBase.Configuration;
+﻿unit UniBase.Configuration;
 
 {*******************************************************************************
   UniBase Configuration Management
@@ -441,7 +441,7 @@ end;
 
 destructor TMemoryConfigurationSource.Destroy;
 begin
-  FValues.Free;
+  FreeAndNil(FValues);
   inherited;
 end;
 
@@ -909,7 +909,7 @@ end;
 
 destructor TConfigurationBuilder.Destroy;
 begin
-  FSources.Free;
+  FreeAndNil(FSources);
   inherited;
 end;
 
@@ -990,12 +990,12 @@ end;
 destructor TConfiguration.Destroy;
 begin
   StopWatching;
-  FFileTimestamps.Free;
-  FChangeCallbacks.Free;
-  FCallbacksLock.Free;
-  FLock.Free;
-  FValues.Free;
-  FSources.Free;
+  FreeAndNil(FFileTimestamps);
+  FreeAndNil(FChangeCallbacks);
+  FreeAndNil(FCallbacksLock);
+  FreeAndNil(FLock);
+  FreeAndNil(FValues);
+  FreeAndNil(FSources);
   inherited;
 end;
 
@@ -1471,34 +1471,54 @@ end;
 
 class function TConfig.Get(const AKey: string; const ADefault: string): string;
 begin
-  if Assigned(FDefault) then
-    Result := FDefault.GetString(AKey, ADefault)
-  else
-    Result := ADefault;
+  FLock.Enter;
+  try
+    if Assigned(FDefault) then
+      Result := FDefault.GetString(AKey, ADefault)
+    else
+      Result := ADefault;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TConfig.GetInt(const AKey: string; ADefault: Integer): Integer;
 begin
-  if Assigned(FDefault) then
-    Result := FDefault.GetInteger(AKey, ADefault)
-  else
-    Result := ADefault;
+  FLock.Enter;
+  try
+    if Assigned(FDefault) then
+      Result := FDefault.GetInteger(AKey, ADefault)
+    else
+      Result := ADefault;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TConfig.GetBool(const AKey: string; ADefault: Boolean): Boolean;
 begin
-  if Assigned(FDefault) then
-    Result := FDefault.GetBoolean(AKey, ADefault)
-  else
-    Result := ADefault;
+  FLock.Enter;
+  try
+    if Assigned(FDefault) then
+      Result := FDefault.GetBoolean(AKey, ADefault)
+    else
+      Result := ADefault;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TConfig.GetFloat(const AKey: string; ADefault: Double): Double;
 begin
-  if Assigned(FDefault) then
-    Result := FDefault.GetFloat(AKey, ADefault)
-  else
-    Result := ADefault;
+  FLock.Enter;
+  try
+    if Assigned(FDefault) then
+      Result := FDefault.GetFloat(AKey, ADefault)
+    else
+      Result := ADefault;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TConfig.Builder: TConfigurationBuilder;
@@ -1533,7 +1553,7 @@ end;
 
 destructor TTypedConfiguration<T>.Destroy;
 begin
-  FInstance.Free;
+  FreeAndNil(FInstance);
   inherited;
 end;
 

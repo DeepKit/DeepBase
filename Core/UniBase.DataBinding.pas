@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.DataBinding - Data Binding Module
   
   Version: 0.3
@@ -249,7 +249,7 @@ end;
 
 destructor TObservableObject.Destroy;
 begin
-  FPropertyChangedHandlers.Free;
+  FreeAndNil(FPropertyChangedHandlers);
   inherited;
 end;
 
@@ -301,8 +301,8 @@ end;
 
 destructor TObservableList<T>.Destroy;
 begin
-  FCollectionChangedHandlers.Free;
-  FItems.Free;
+  FreeAndNil(FCollectionChangedHandlers);
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -404,7 +404,7 @@ end;
 destructor TBindingManager.Destroy;
 begin
   UnbindAll;
-  FBindings.Free;
+  FreeAndNil(FBindings);
   FRttiContext.Free;
   inherited;
 end;

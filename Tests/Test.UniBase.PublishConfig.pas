@@ -324,7 +324,7 @@ begin
     Assert.AreEqual('com.test.app', Manifest.AppId);
     Assert.AreEqual('2.0.0', Manifest.Version);
     Assert.AreEqual('beta', Manifest.Channel);
-    Assert.AreEqual(1, Length(Manifest.Files));
+    Assert.AreEqual(1, Integer(Length(Manifest.Files)));
     Assert.AreEqual('app.zip', Manifest.Files[0].Name);
     Assert.IsTrue(Manifest.Mandatory);
   finally

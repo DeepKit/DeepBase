@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.MRU - Most Recently Used Module
 
   Version: 1.0
@@ -153,7 +153,7 @@ end;
 destructor TUniBaseMRU.Destroy;
 begin
   if FOwnsLock then
-    FLock.Free;
+    FreeAndNil(FLock);
   inherited;
 end;
 

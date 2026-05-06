@@ -7,7 +7,7 @@ unit Test.UniBase.LogAggregator;
   - Query builder and analyzer
   - Alert rules and manager
   - Dashboard generation and export
-  
+
   Author: UniBase Team
   Created: 2025-12-02
 *******************************************************************************}
@@ -25,20 +25,20 @@ type
   TTestLogAggregator = class
   public
     [Test]
-    procedure Test_TAggregatedLog_Create;
-    
+    procedure Test_TAggregatedLog_FieldAssignment;
+
     [Test]
     procedure Test_TLogBatch_AddAndCount;
-    
+
     [Test]
-    procedure Test_TLogBatch_ToJSON;
-    
+    procedure Test_TLogBatch_ToArray;
+
     [Test]
     procedure Test_TLogFilter_Fluent;
-    
+
     [Test]
     procedure Test_TBackendConfig_ElasticSearch;
-    
+
     [Test]
     procedure Test_TBackendConfig_Loki;
   end;
@@ -48,41 +48,41 @@ type
   private
     FAnalyzer: TLogAnalyzer;
     FLogs: TList<TAggregatedLog>;
-    
+
     procedure SetupTestLogs;
   public
     [Setup]
     procedure Setup;
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
-    procedure Test_QueryBuilder_WhereLevelIn;
-    
+    procedure Test_QueryBuilder_WhereLevels;
+
     [Test]
-    procedure Test_QueryBuilder_WhereSourceContains;
-    
+    procedure Test_QueryBuilder_WhereSource;
+
     [Test]
     procedure Test_QueryBuilder_TimeRange;
-    
+
     [Test]
     procedure Test_Analyzer_GetStats;
-    
+
     [Test]
     procedure Test_Analyzer_CountByLevel;
-    
+
     [Test]
     procedure Test_Analyzer_CountBySource;
-    
+
     [Test]
     procedure Test_Analyzer_TopErrors;
-    
+
     [Test]
     procedure Test_Analyzer_ErrorRate;
-    
+
     [Test]
     procedure Test_QueryResult_ToJSON;
-    
+
     [Test]
     procedure Test_QueryResult_ToCSV;
   end;
@@ -98,28 +98,28 @@ type
     procedure Setup;
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure Test_AlertCondition_ErrorCount;
-    
+
     [Test]
     procedure Test_AlertCondition_ErrorRate;
-    
+
     [Test]
     procedure Test_AlertCondition_PatternMatch;
-    
+
     [Test]
     procedure Test_AlertRule_FluentAPI;
-    
+
     [Test]
     procedure Test_AlertRule_ToJSON;
-    
+
     [Test]
     procedure Test_AlertManager_AddRemoveRule;
-    
+
     [Test]
     procedure Test_AlertManager_PushLogs;
-    
+
     [Test]
     procedure Test_AlertAction_Webhook;
   end;
@@ -133,34 +133,34 @@ type
     procedure Setup;
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure Test_Dashboard_Create;
-    
+
     [Test]
     procedure Test_Dashboard_AddPanel;
-    
+
     [Test]
     procedure Test_Widget_Counter;
-    
+
     [Test]
     procedure Test_Widget_Chart;
-    
+
     [Test]
     procedure Test_Widget_Table;
-    
+
     [Test]
     procedure Test_Exporter_ToJSON;
-    
+
     [Test]
     procedure Test_Exporter_ToHTML;
-    
+
     [Test]
     procedure Test_Exporter_ToCSV;
-    
+
     [Test]
     procedure Test_TimeRange_Relative;
-    
+
     [Test]
     procedure Test_TimeRange_Custom;
   end;
@@ -169,12 +169,17 @@ implementation
 
 { TTestLogAggregator }
 
-procedure TTestLogAggregator.Test_TAggregatedLog_Create;
+procedure TTestLogAggregator.Test_TAggregatedLog_FieldAssignment;
 var
   Log: TAggregatedLog;
 begin
-  Log := TAggregatedLog.Create(llError, 'Test error message', 'TestSource');
-  
+  Log := Default(TAggregatedLog);
+  Log.Level := llError;
+  Log.Message := 'Test error message';
+  Log.Source := 'TestSource';
+  Log.Timestamp := Now;
+  Log.ThreadId := TThread.CurrentThread.ThreadID;
+
   Assert.AreEqual(llError, Log.Level);
   Assert.AreEqual('Test error message', Log.Message);
   Assert.AreEqual('TestSource', Log.Source);
@@ -190,15 +195,21 @@ begin
   Batch := TLogBatch.Create;
   try
     Assert.AreEqual(0, Batch.Count);
-    
-    Log := TAggregatedLog.Create(llInfo, 'Message 1', 'Source1');
+
+    Log := Default(TAggregatedLog);
+    Log.Level := llInfo;
+    Log.Message := 'Message 1';
+    Log.Source := 'Source1';
     Batch.Add(Log);
     Assert.AreEqual(1, Batch.Count);
-    
-    Log := TAggregatedLog.Create(llWarn, 'Message 2', 'Source2');
+
+    Log := Default(TAggregatedLog);
+    Log.Level := llWarn;
+    Log.Message := 'Message 2';
+    Log.Source := 'Source2';
     Batch.Add(Log);
     Assert.AreEqual(2, Batch.Count);
-    
+
     Batch.Clear;
     Assert.AreEqual(0, Batch.Count);
   finally
@@ -206,24 +217,23 @@ begin
   end;
 end;
 
-procedure TTestLogAggregator.Test_TLogBatch_ToJSON;
+procedure TTestLogAggregator.Test_TLogBatch_ToArray;
 var
   Batch: TLogBatch;
   Log: TAggregatedLog;
-  JsonArr: TJSONArray;
+  Arr: TArray<TAggregatedLog>;
 begin
   Batch := TLogBatch.Create;
   try
-    Log := TAggregatedLog.Create(llInfo, 'Test message', 'TestSource');
+    Log := Default(TAggregatedLog);
+    Log.Level := llInfo;
+    Log.Message := 'Test message';
+    Log.Source := 'TestSource';
     Batch.Add(Log);
-    
-    JsonArr := Batch.ToJSONArray;
-    try
-      Assert.AreEqual(1, JsonArr.Count);
-      Assert.IsNotNull(JsonArr.Items[0] as TJSONObject);
-    finally
-      JsonArr.Free;
-    end;
+
+    Arr := Batch.ToArray;
+    Assert.AreEqual(Integer(1), Integer(Length(Arr)));
+    Assert.AreEqual('Test message', Arr[0].Message);
   finally
     Batch.Free;
   end;
@@ -233,13 +243,14 @@ procedure TTestLogAggregator.Test_TLogFilter_Fluent;
 var
   Filter: TLogFilter;
 begin
-  Filter := TLogFilter.Create
+  Filter := TLogFilter.All
     .WithLevels([llError, llFatal])
     .WithSource('MyApp')
     .WithTimeRange(Now - 1, Now);
-  
-  Assert.AreEqual(2, Length(Filter.Levels));
-  Assert.AreEqual('MyApp', Filter.Source);
+
+  Assert.AreEqual(2, Integer(Length(Filter.Levels)));
+  Assert.AreEqual(1, Integer(Length(Filter.Sources)));
+  Assert.AreEqual('MyApp', Filter.Sources[0]);
   Assert.IsTrue(Filter.StartTime > 0);
   Assert.IsTrue(Filter.EndTime > 0);
 end;
@@ -249,9 +260,9 @@ var
   Config: TBackendConfig;
 begin
   Config := TBackendConfig.ElasticSearch('http://localhost:9200', 'app-logs');
-  
+
   Assert.AreEqual(lbtElasticSearch, Config.BackendType);
-  Assert.AreEqual('http://localhost:9200', Config.Endpoint);
+  Assert.AreEqual('http://localhost:9200', Config.Url);
   Assert.AreEqual('app-logs', Config.IndexName);
 end;
 
@@ -260,9 +271,9 @@ var
   Config: TBackendConfig;
 begin
   Config := TBackendConfig.Loki('http://localhost:3100');
-  
+
   Assert.AreEqual(lbtLoki, Config.BackendType);
-  Assert.AreEqual('http://localhost:3100', Config.Endpoint);
+  Assert.AreEqual('http://localhost:3100', Config.Url);
 end;
 
 { TTestLogQuery }
@@ -289,70 +300,93 @@ begin
   // Add various test logs
   for I := 1 to 10 do
   begin
-    Log := TAggregatedLog.Create(llDebug, Format('Debug message %d', [I]), 'Module1');
+    Log := Default(TAggregatedLog);
+    Log.Level := llDebug;
+    Log.Message := Format('Debug message %d', [I]);
+    Log.Source := 'Module1';
     Log.Timestamp := IncMinute(Now, -I);
     FLogs.Add(Log);
   end;
-  
+
   for I := 1 to 20 do
   begin
-    Log := TAggregatedLog.Create(llInfo, Format('Info message %d', [I]), 'Module2');
+    Log := Default(TAggregatedLog);
+    Log.Level := llInfo;
+    Log.Message := Format('Info message %d', [I]);
+    Log.Source := 'Module2';
     Log.Timestamp := IncMinute(Now, -I);
     FLogs.Add(Log);
   end;
-  
+
   for I := 1 to 5 do
   begin
-    Log := TAggregatedLog.Create(llWarn, Format('Warning message %d', [I]), 'Module1');
+    Log := Default(TAggregatedLog);
+    Log.Level := llWarn;
+    Log.Message := Format('Warning message %d', [I]);
+    Log.Source := 'Module1';
     Log.Timestamp := IncMinute(Now, -I);
     FLogs.Add(Log);
   end;
-  
+
   for I := 1 to 8 do
   begin
-    Log := TAggregatedLog.Create(llError, Format('Error: Connection failed %d', [I mod 3]), 'Module3');
+    Log := Default(TAggregatedLog);
+    Log.Level := llError;
+    Log.Message := Format('Error: Connection failed %d', [I mod 3]);
+    Log.Source := 'Module3';
     Log.Timestamp := IncMinute(Now, -I);
     FLogs.Add(Log);
   end;
-  
+
   for I := 1 to 2 do
   begin
-    Log := TAggregatedLog.Create(llFatal, 'Fatal: System crash', 'Kernel');
+    Log := Default(TAggregatedLog);
+    Log.Level := llFatal;
+    Log.Message := 'Fatal: System crash';
+    Log.Source := 'Kernel';
     Log.Timestamp := IncMinute(Now, -I);
     FLogs.Add(Log);
   end;
 end;
 
-procedure TTestLogQuery.Test_QueryBuilder_WhereLevelIn;
+procedure TTestLogQuery.Test_QueryBuilder_WhereLevels;
 var
   Query: TLogQueryBuilder;
   Results: TLogQueryResult;
 begin
-  Query := TLogQueryBuilder.Create(FLogs);
+  Query := TLogQueryBuilder.Create;
   try
+    Query.From(FLogs);
     Results := Query
-      .WhereLevelIn([llError, llFatal])
+      .WhereLevels([llError, llFatal])
       .Execute;
-    
-    Assert.AreEqual(10, Results.Count); // 8 errors + 2 fatals
-    Assert.AreEqual(10, Length(Results.Logs));
+    try
+      Assert.AreEqual(Int64(10), Results.TotalCount); // 8 errors + 2 fatals
+      Assert.AreEqual(10, Integer(Results.Items.Count));
+    finally
+      Results.Free;
+    end;
   finally
     Query.Free;
   end;
 end;
 
-procedure TTestLogQuery.Test_QueryBuilder_WhereSourceContains;
+procedure TTestLogQuery.Test_QueryBuilder_WhereSource;
 var
   Query: TLogQueryBuilder;
   Results: TLogQueryResult;
 begin
-  Query := TLogQueryBuilder.Create(FLogs);
+  Query := TLogQueryBuilder.Create;
   try
+    Query.From(FLogs);
     Results := Query
-      .WhereSourceContains('Module1')
+      .WhereSource('Module1')
       .Execute;
-    
-    Assert.AreEqual(15, Results.Count); // 10 debug + 5 warn from Module1
+    try
+      Assert.AreEqual(Int64(15), Results.TotalCount); // 10 debug + 5 warn from Module1
+    finally
+      Results.Free;
+    end;
   finally
     Query.Free;
   end;
@@ -363,15 +397,19 @@ var
   Query: TLogQueryBuilder;
   Results: TLogQueryResult;
 begin
-  Query := TLogQueryBuilder.Create(FLogs);
+  Query := TLogQueryBuilder.Create;
   try
+    Query.From(FLogs);
     Results := Query
-      .WhereTimeBetween(IncMinute(Now, -5), Now)
+      .WhereBetween(IncMinute(Now, -5), Now)
       .Execute;
-    
-    // Should get logs from last 5 minutes only
-    Assert.IsTrue(Results.Count <= 45); // Could be less depending on timing
-    Assert.IsTrue(Results.Count > 0);
+    try
+      // Should get logs from last 5 minutes only
+      Assert.IsTrue(Results.TotalCount <= Int64(45)); // Could be less depending on timing
+      Assert.IsTrue(Results.TotalCount > 0);
+    finally
+      Results.Free;
+    end;
   finally
     Query.Free;
   end;
@@ -382,7 +420,7 @@ var
   Stats: TLogStats;
 begin
   Stats := FAnalyzer.GetStats;
-  
+
   Assert.AreEqual(Int64(45), Stats.TotalCount);
   Assert.AreEqual(Int64(10), Stats.DebugCount);
   Assert.AreEqual(Int64(20), Stats.InfoCount);
@@ -394,31 +432,31 @@ end;
 
 procedure TTestLogQuery.Test_Analyzer_CountByLevel;
 var
-  Counts: TArray<TKeyCount>;
+  Counts: TArray<TCountResult>;
 begin
   Counts := FAnalyzer.CountByLevel;
-  
+
   Assert.IsTrue(Length(Counts) > 0);
   // Should have counts for each level that has logs
 end;
 
 procedure TTestLogQuery.Test_Analyzer_CountBySource;
 var
-  Counts: TArray<TKeyCount>;
+  Counts: TArray<TCountResult>;
 begin
   Counts := FAnalyzer.CountBySource;
-  
+
   Assert.IsTrue(Length(Counts) >= 4); // Module1, Module2, Module3, Kernel
 end;
 
 procedure TTestLogQuery.Test_Analyzer_TopErrors;
 var
-  TopErrors: TArray<TKeyCount>;
+  TopErrs: TArray<TTopError>;
 begin
-  TopErrors := FAnalyzer.TopErrors(5);
-  
-  Assert.IsTrue(Length(TopErrors) > 0);
-  Assert.IsTrue(Length(TopErrors) <= 5);
+  TopErrs := FAnalyzer.TopErrors(5);
+
+  Assert.IsTrue(Length(TopErrs) > 0);
+  Assert.IsTrue(Length(TopErrs) <= 5);
 end;
 
 procedure TTestLogQuery.Test_Analyzer_ErrorRate;
@@ -426,8 +464,8 @@ var
   Rate: Double;
 begin
   Rate := FAnalyzer.ErrorRate;
-  
-  // (8 errors + 2 fatals) / 45 total ≈ 22.2%
+
+  // (8 errors + 2 fatals) / 45 total = 22.2%
   Assert.IsTrue(Rate > 0.2);
   Assert.IsTrue(Rate < 0.3);
 end;
@@ -436,21 +474,28 @@ procedure TTestLogQuery.Test_QueryResult_ToJSON;
 var
   Query: TLogQueryBuilder;
   Results: TLogQueryResult;
-  Json: TJSONArray;
+  Json: TJSONObject;
+  ItemsVal: TJSONValue;
 begin
-  Query := TLogQueryBuilder.Create(FLogs);
+  Query := TLogQueryBuilder.Create;
   try
+    Query.From(FLogs);
     Results := Query
-      .WhereLevelIn([llError])
+      .WhereLevels([llError])
       .Take(5)
       .Execute;
-    
-    Json := Results.ToJSON;
     try
-      Assert.IsNotNull(Json);
-      Assert.AreEqual(5, Json.Count);
+      Json := Results.ToJSON;
+      try
+        Assert.IsNotNull(Json);
+        ItemsVal := Json.GetValue('items');
+        Assert.IsNotNull(ItemsVal);
+        Assert.AreEqual(5, Integer((ItemsVal as TJSONArray).Count));
+      finally
+        Json.Free;
+      end;
     finally
-      Json.Free;
+      Results.Free;
     end;
   finally
     Query.Free;
@@ -463,19 +508,23 @@ var
   Results: TLogQueryResult;
   CSV: string;
 begin
-  Query := TLogQueryBuilder.Create(FLogs);
+  Query := TLogQueryBuilder.Create;
   try
+    Query.From(FLogs);
     Results := Query
-      .WhereLevelIn([llInfo])
+      .WhereLevels([llInfo])
       .Take(3)
       .Execute;
-    
-    CSV := Results.ToCSV;
-    
-    Assert.IsTrue(CSV.Contains('Timestamp'));
-    Assert.IsTrue(CSV.Contains('Level'));
-    Assert.IsTrue(CSV.Contains('Message'));
-    Assert.IsTrue(CSV.Contains('Info'));
+    try
+      CSV := Results.ToCSV;
+
+      Assert.IsTrue(CSV.Contains('Timestamp') or CSV.Contains('timestamp'));
+      Assert.IsTrue(CSV.Contains('Level') or CSV.Contains('level'));
+      Assert.IsTrue(CSV.Contains('Message') or CSV.Contains('message'));
+      Assert.IsTrue(CSV.Contains('Info'));
+    finally
+      Results.Free;
+    end;
   finally
     Query.Free;
   end;
@@ -504,7 +553,7 @@ var
   Condition: TAlertCondition;
 begin
   Condition := TAlertCondition.ErrorCount(10, 5);
-  
+
   Assert.AreEqual(actErrorCount, Condition.ConditionType);
   Assert.AreEqual(Double(10), Condition.Threshold);
   Assert.AreEqual(5, Condition.TimeWindowMinutes);
@@ -515,7 +564,7 @@ var
   Condition: TAlertCondition;
 begin
   Condition := TAlertCondition.ErrorRate(5.0, 10);
-  
+
   Assert.AreEqual(actErrorRate, Condition.ConditionType);
   Assert.AreEqual(Double(5.0), Condition.Threshold);
   Assert.AreEqual(10, Condition.TimeWindowMinutes);
@@ -526,7 +575,7 @@ var
   Condition: TAlertCondition;
 begin
   Condition := TAlertCondition.PatternMatch('OutOfMemory');
-  
+
   Assert.AreEqual(actPatternMatch, Condition.ConditionType);
   Assert.AreEqual('OutOfMemory', Condition.Pattern);
 end;
@@ -546,8 +595,8 @@ begin
     Assert.AreEqual('High Error Rate', Rule.Name);
     Assert.AreEqual(asCritical, Rule.Severity);
     Assert.AreEqual(10, Rule.CooldownMinutes);
-    Assert.AreEqual(2, Length(Rule.Tags));
-    Assert.AreEqual(1, Rule.Actions.Count);
+    Assert.AreEqual(2, Integer(Length(Rule.Tags)));
+    Assert.AreEqual(1, Integer(Rule.Actions.Count));
   finally
     Rule.Free;
   end;
@@ -580,10 +629,10 @@ var
 begin
   Rule := CreateAlertRule('test-rule', 'Test')
     .WithCondition(TAlertCondition.ErrorCount(10));
-  
+
   FManager.AddRule(Rule);
   Assert.IsTrue(FManager.HasRule('test-rule'));
-  
+
   FManager.RemoveRule('test-rule');
   Assert.IsFalse(FManager.HasRule('test-rule'));
 end;
@@ -596,12 +645,15 @@ begin
   SetLength(Logs, 5);
   for I := 0 to High(Logs) do
   begin
-    Logs[I] := TAggregatedLog.Create(llError, 'Test error', 'Source');
+    Logs[I] := Default(TAggregatedLog);
+    Logs[I].Level := llError;
+    Logs[I].Message := 'Test error';
+    Logs[I].Source := 'Source';
     Logs[I].Timestamp := Now;
   end;
-  
+
   FManager.PushLogs(Logs);
-  
+
   // Just verify no exceptions
   Assert.Pass;
 end;
@@ -611,7 +663,7 @@ var
   Action: TAlertAction;
 begin
   Action := TAlertAction.Webhook('https://hooks.example.com/alert');
-  
+
   Assert.AreEqual(aatWebhook, Action.ActionType);
   Assert.AreEqual('https://hooks.example.com/alert', Action.WebhookUrl);
   Assert.AreEqual('POST', Action.WebhookMethod);
@@ -633,7 +685,7 @@ procedure TTestLogDashboard.Test_Dashboard_Create;
 begin
   Assert.AreEqual('test-dashboard', FDashboard.Id);
   Assert.AreEqual('Test Dashboard', FDashboard.Title);
-  Assert.AreEqual(0, FDashboard.Panels.Count);
+  Assert.AreEqual(0, Integer(FDashboard.Panels.Count));
 end;
 
 procedure TTestLogDashboard.Test_Dashboard_AddPanel;
@@ -641,8 +693,8 @@ var
   Panel: TDashboardPanel;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Statistics');
-  
-  Assert.AreEqual(1, FDashboard.Panels.Count);
+
+  Assert.AreEqual(1, Integer(FDashboard.Panels.Count));
   Assert.AreEqual('panel-1', Panel.Id);
   Assert.AreEqual('Statistics', Panel.Title);
 end;
@@ -651,12 +703,15 @@ procedure TTestLogDashboard.Test_Widget_Counter;
 var
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
+  Cfg: TWidgetConfig;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Stats');
   Widget := Panel.AddWidget('counter-1', wtCounter);
-  Widget.Config.Title := 'Total Logs';
+  Cfg := Widget.Config;
+  Cfg.Title := 'Total Logs';
+  Widget.Config := Cfg;
   Widget.SetValue(12345, 'logs');
-  
+
   Assert.AreEqual('counter-1', Widget.Id);
   Assert.AreEqual(wtCounter, Widget.Config.WidgetType);
   Assert.AreEqual(Double(12345), Widget.Value);
@@ -671,14 +726,14 @@ var
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Charts');
   Widget := Panel.AddWidget('chart-1', wtLineChart);
-  
+
   Series := Widget.AddSeries('Errors');
   Series.AddPoint(Now - 0.1, 5);
   Series.AddPoint(Now - 0.05, 8);
   Series.AddPoint(Now, 3);
-  
-  Assert.AreEqual(1, Widget.Series.Count);
-  Assert.AreEqual(3, Series.Data.Count);
+
+  Assert.AreEqual(1, Integer(Widget.Series.Count));
+  Assert.AreEqual(3, Integer(Series.Data.Count));
   Assert.AreEqual('Errors', Series.Name);
 end;
 
@@ -686,14 +741,28 @@ procedure TTestLogDashboard.Test_Widget_Table;
 var
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
+  JsonWidget: TJSONObject;
+  HeadersVal: TJSONValue;
+  Cfg: TWidgetConfig;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Tables');
   Widget := Panel.AddWidget('table-1', wtTable);
+  Cfg := Widget.Config;
+  Cfg.Title := 'Log Stats';
+  Widget.Config := Cfg;
   Widget.SetTableHeaders(['Source', 'Count']);
   Widget.AddTableRow(['Module1', '100']);
   Widget.AddTableRow(['Module2', '250']);
-  
-  Assert.AreEqual(2, Length(Widget.FTableHeaders));
+
+  // Verify headers via ToJSON since FTableHeaders is private
+  JsonWidget := Widget.ToJSON;
+  try
+    HeadersVal := JsonWidget.GetValue('headers');
+    Assert.IsNotNull(HeadersVal);
+    Assert.AreEqual(2, Integer((HeadersVal as TJSONArray).Count));
+  finally
+    JsonWidget.Free;
+  end;
 end;
 
 procedure TTestLogDashboard.Test_Exporter_ToJSON;
@@ -702,12 +771,15 @@ var
   Widget: TDashboardWidget;
   Exporter: TDashboardExporter;
   Json: TJSONObject;
+  Cfg: TWidgetConfig;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Test Panel');
   Widget := Panel.AddWidget('counter-1', wtCounter);
-  Widget.Config.Title := 'Test Counter';
+  Cfg := Widget.Config;
+  Cfg.Title := 'Test Counter';
+  Widget.Config := Cfg;
   Widget.SetValue(999);
-  
+
   Exporter := TDashboardExporter.Create(FDashboard);
   try
     Json := Exporter.ToJSON;
@@ -729,16 +801,19 @@ var
   Widget: TDashboardWidget;
   Exporter: TDashboardExporter;
   HTML: string;
+  Cfg: TWidgetConfig;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Test Panel');
   Widget := Panel.AddWidget('counter-1', wtCounter);
-  Widget.Config.Title := 'Error Count';
+  Cfg := Widget.Config;
+  Cfg.Title := 'Error Count';
+  Widget.Config := Cfg;
   Widget.SetValue(42, 'errors');
-  
+
   Exporter := TDashboardExporter.Create(FDashboard);
   try
     HTML := Exporter.ToHTML;
-    
+
     Assert.IsTrue(HTML.Contains('<!DOCTYPE html>'));
     Assert.IsTrue(HTML.Contains('Test Dashboard'));
     Assert.IsTrue(HTML.Contains('Test Panel'));
@@ -754,18 +829,21 @@ var
   Widget: TDashboardWidget;
   Exporter: TDashboardExporter;
   CSV: string;
+  Cfg: TWidgetConfig;
 begin
   Panel := FDashboard.AddPanel('panel-1', 'Test Panel');
   Widget := Panel.AddWidget('table-1', wtTable);
-  Widget.Config.Title := 'Log Stats';
+  Cfg := Widget.Config;
+  Cfg.Title := 'Log Stats';
+  Widget.Config := Cfg;
   Widget.SetTableHeaders(['Level', 'Count']);
   Widget.AddTableRow(['Error', '100']);
   Widget.AddTableRow(['Warn', '50']);
-  
+
   Exporter := TDashboardExporter.Create(FDashboard);
   try
     CSV := Exporter.ToCSV;
-    
+
     Assert.IsTrue(CSV.Contains('Test Dashboard'));
     Assert.IsTrue(CSV.Contains('Level'));
     Assert.IsTrue(CSV.Contains('Count'));
@@ -781,9 +859,9 @@ var
   Actual: TPair<TDateTime, TDateTime>;
 begin
   Range := TDashboardTimeRange.Last(60);
-  
+
   Assert.AreEqual(60, Range.RelativeMinutes);
-  
+
   Actual := Range.GetActualRange;
   Assert.IsTrue(Actual.Key < Actual.Value);
   Assert.IsTrue(Actual.Value <= Now);
@@ -796,9 +874,9 @@ var
 begin
   StartTime := EncodeDate(2025, 1, 1);
   EndTime := EncodeDate(2025, 1, 31);
-  
+
   Range := TDashboardTimeRange.Custom(StartTime, EndTime);
-  
+
   Assert.AreEqual(0, Range.RelativeMinutes);
   Assert.AreEqual(StartTime, Range.StartTime);
   Assert.AreEqual(EndTime, Range.EndTime);

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.EventBus - Publish-Subscribe Event Bus
   
   A flexible event bus implementation for decoupled component communication.
@@ -63,6 +63,9 @@ type
   
   /// <summary>Untyped event handler (for internal use)</summary>
   TUntypedEventHandler = reference to procedure(const Event: TValue);
+
+  /// <summary>Untyped event filter (for internal use)</summary>
+  TUntypedEventFilter = reference to function(const Event: TValue): Boolean;
   
   /// <summary>Event filter predicate</summary>
   TEventFilter<T> = reference to function(const Event: T): Boolean;
@@ -123,7 +126,7 @@ type
     Handler: TUntypedEventHandler;
     Priority: TEventPriority;
     DispatchMode: TEventDispatchMode;
-    Filter: TFunc<TValue, Boolean>;
+    Filter: TUntypedEventFilter;
     Tag: string;
     CreatedAt: TDateTime;
     InvokeCount: Int64;
@@ -478,15 +481,15 @@ begin
   FLock.Enter;
   try
     DetachWeakSubscriptionLinks;
-    FOwnerLinks.Free;
+    FreeAndNil(FOwnerLinks);
     for List in FSubscriptions.Values do
       List.Free;
-    FSubscriptions.Free;
-    FEventHistory.Free;
+    FreeAndNil(FSubscriptions);
+    FreeAndNil(FEventHistory);
   finally
     FLock.Leave;
   end;
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -517,6 +520,7 @@ var
   I: Integer;
   TypedHandler: TEventHandler<T>;
   TypedFilter: TEventFilter<T>;
+  WrappedFilter: TUntypedEventFilter;
 begin
   EventType := GetEventTypeName<T>;
   TypedHandler := Handler;
@@ -539,11 +543,12 @@ begin
   // BUG-043 FIX: Wrap typed filter to untyped filter
   if Assigned(TypedFilter) then
   begin
-    Info.Filter := TFunc<TValue, Boolean>(
+    WrappedFilter :=
       function(const Event: TValue): Boolean
       begin
         Result := TypedFilter(Event.AsType<T>);
-      end);
+      end;
+    Info.Filter := WrappedFilter;
   end
   else
     Info.Filter := nil;
@@ -816,6 +821,7 @@ procedure TEventBus.InvokeHandler(const Info: TSubscriptionInfo; const Event: TV
 var
   LHandler: TUntypedEventHandler;
   LEvent: TValue;
+  QueueProc: TThreadProcedure;
 begin
   LHandler := Info.Handler;
   LEvent := Event;
@@ -836,11 +842,13 @@ begin
       if TThread.CurrentThread.ThreadID = MainThreadID then
         LHandler(LEvent)
       else
-        TThread.Queue(nil,
-          procedure
+      begin
+        QueueProc := procedure
           begin
             LHandler(LEvent);
-          end);
+          end;
+        TThread.Queue(nil, QueueProc);
+      end;
   end;
 end;
 

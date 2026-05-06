@@ -40,7 +40,7 @@ type
     FBtnPaste: TButton;
     FLicense: TUniBaseLicense;
     FOwnsLicense: Boolean;
-    FActivationResult: TLicenseValidationResult;
+    FActivationResult: TLicenseInfo;
     
     procedure CreateControls;
     procedure LayoutControls;
@@ -64,7 +64,7 @@ type
     property License: TUniBaseLicense read FLicense write SetLicense;
     
     /// <summary>激活结果</summary>
-    property ActivationResult: TLicenseValidationResult read FActivationResult;
+    property ActivationResult: TLicenseInfo read FActivationResult;
   end;
 
 implementation
@@ -233,17 +233,19 @@ begin
   Application.ProcessMessages;
   
   // 尝试激活
-  FActivationResult := FLicense.ActivateLicense(Key);
-  
-  if FActivationResult.Success then
+  FActivationResult := FLicense.ValidateLicense(Key);
+
+  if FActivationResult.IsValid then
   begin
+    FLicense.ActivateLicense(Key);
     UpdateStatus('License activated successfully!', False);
     FLblStatus.Font.Color := clGreen;
     ModalResult := mrOk;
   end
   else
   begin
-    UpdateStatus('Activation failed: ' + FActivationResult.Message, True);
+    UpdateStatus('Activation failed: ' +
+      TUniBaseLicense.LicenseStatusToStr(FActivationResult.Status), True);
   end;
 end;
 
@@ -254,7 +256,7 @@ end;
 
 procedure TLicenseAuthDialog.HandlePasteClick(Sender: TObject);
 begin
-  if Clipboard.HasFormat(CF_TEXT) then
+  if Clipboard.AsText <> '' then
   begin
     FEdtKey.Text := Clipboard.AsText;
     HandleKeyChange(nil);

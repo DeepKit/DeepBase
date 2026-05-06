@@ -62,9 +62,9 @@ type
     FPluginLoadedCount: Integer;
     FPluginUnloadedCount: Integer;
     FLastError: string;
-    procedure OnPluginLoaded(const Info: TPluginInfo);
-    procedure OnPluginUnloaded(const PluginID: TGUID);
-    procedure OnPluginError(const PluginID: TGUID; const PluginName, ErrorMsg: string; IsFatal: Boolean);
+    procedure OnPluginLoaded(Sender: TObject; const Info: TPluginInfo);
+    procedure OnPluginUnloaded(Sender: TObject; const PluginID: TGUID);
+    procedure OnPluginError(Sender: TObject; const Args: TPluginErrorEventArgs);
     function CreateMockContext: IUniBasePluginContext;
   public
     [Setup]
@@ -261,7 +261,7 @@ end;
 procedure TTestPluginContext.Test_Log;
 begin
   FContext.Log('Test message', 2);
-  Assert.AreEqual(1, FLogMessages.Count);
+  Assert.AreEqual(1, Integer(FLogMessages.Count));
   Assert.IsTrue(FLogMessages[0].Contains('Test message'));
 end;
 
@@ -302,19 +302,19 @@ begin
   Result := TMockPluginContext.Create('C:\TestRoot');
 end;
 
-procedure TTestPluginManager.OnPluginLoaded(const Info: TPluginInfo);
+procedure TTestPluginManager.OnPluginLoaded(Sender: TObject; const Info: TPluginInfo);
 begin
   Inc(FPluginLoadedCount);
 end;
 
-procedure TTestPluginManager.OnPluginUnloaded(const PluginID: TGUID);
+procedure TTestPluginManager.OnPluginUnloaded(Sender: TObject; const PluginID: TGUID);
 begin
   Inc(FPluginUnloadedCount);
 end;
 
-procedure TTestPluginManager.OnPluginError(const PluginID: TGUID; const PluginName, ErrorMsg: string; IsFatal: Boolean);
+procedure TTestPluginManager.OnPluginError(Sender: TObject; const Args: TPluginErrorEventArgs);
 begin
-  FLastError := ErrorMsg;
+  FLastError := Args.ErrorMessage;
 end;
 
 procedure TTestPluginManager.Test_Create;
@@ -337,7 +337,7 @@ var
   Plugins: TArray<TPluginInfo>;
 begin
   Plugins := FManager.GetLoadedPlugins;
-  Assert.AreEqual(0, Length(Plugins));
+  Assert.AreEqual(0, Integer(Length(Plugins)));
 end;
 
 procedure TTestPluginManager.Test_IsPluginLoaded_False;

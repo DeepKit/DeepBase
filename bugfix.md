@@ -4,6 +4,288 @@
 
 ---
 
+## 2026-05-05 Bug 修复
+
+### BUG-098: FormState 多显示器坐标残留导致窗口恢复到屏幕外
+- 发现日期: 2026-05-05
+- 严重性: 🟡 Medium
+- 描述: 应用先在多显示器环境保存窗体位置，后续只剩单屏或显示器布局变化时，旧 `Left/Top` 会落在当前可见工作区之外，二次启动/恢复后主界面可能不可见。Core 高层 `RestoreFormState` 只使用虚拟屏幕宽高，没有使用虚拟屏幕原点和当前显示器工作区。
+- 修复:
+  - `Core/UniBase.FormState.pas`: 恢复时根据保存矩形定位当前最近的真实显示器工作区，并将窗口尺寸与坐标夹回该工作区；同时保留最大化恢复、不恢复最小化的既有策略。
+  - `VCL/UniBase.VCL.FormStateHelper.pas`: 保存 `GetWindowPlacement.rcNormalPosition` 时补齐工作区坐标到屏幕坐标的转换，和 Core 保存路径保持一致。
+  - `Tests/Test.UniBase.FormState.pas`: 新增旧多屏超界坐标回归测试，验证恢复后窗体完整落入当前某个显示器工作区。
+- 影响范围: FormState 窗口位置保存/恢复、VCL FormStateHelper 自动恢复。
+- 验证: `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.UniBase.FormState"` 通过，13/13 passed；`Scripts/build_packages_win64.ps1 -Profile All` 通过。
+
+## 2026-05-03 Bug 修复
+
+### BUG-085: 架构审阅 P0 问题批量修复
+- 发现日期: 2026-05-02
+- 严重性: 🔴 High
+- 描述: 架构审阅发现 DoQry Schema 不匹配、ProcName 回退 SQL 注入、Payment 非 CSPRNG、LLM 表名冲突、入口文档断链和残留泛型异常等 P0 问题。
+- 修复:
+  - `Persistence/UniBase.DB.DoQry.pas`: `Queries` 查询优先使用 `Name/SqlText`，缺失查询名不再回退执行；直接 SQL 收紧为 DML/查询白名单；`UniDbInsertReturningId` 绑定 JSON 参数。
+  - `Core/UniBase.Protection.pas` / `Core/UniBase.Services.Protection.pas`: 修复密钥派生不对称并补强 padding 边界校验。
+  - `ThirdParty/Payment/UniBase.Payment.pas`: 订单号和 nonce 改用 `SecureRandom`。
+  - `Core/UniBase.LLM.pas` / LLM 文档与 SQL: 统一 canonical 表名为 `LLMConfig`，保留旧表兼容读取/写入路径。
+  - `ARCH-QUICKSTART.md`: 修复旧文档路径，并新增 `Scripts/check_doc_links.ps1`。
+  - 非测试代码中的 `raise Exception.Create/CreateFmt` 已迁移到 `EUniBaseException` 层次。
+- 影响范围: DoQry、Protection、Payment、LLM 集成、文档入口、异常处理。
+- 验证: 已完成静态扫描；剩余泛型异常仅在 Tests 目录的测试场景中保留。
+
+### BUG-086: 全局锁和单例懒初始化存在并发竞态
+- 发现日期: 2026-05-03
+- 严重性: 🟡 Medium
+- 描述: 部分全局锁/单例在首次调用路径中懒创建或无锁读取，高并发启动时存在重复创建、访问 nil 锁或读到被替换实例的风险。
+- 修复:
+  - `Persistence/UniBase.DB.DoQry.pas`: 查询缓存锁、查询缓存、预编译语句池锁和池对象改为单元初始化创建，并补齐 finalization 释放。
+  - `Core/UniBase.KeyManager.pas`: `FInstanceLock` 改为 initialization 创建，finalization 先释放 `FInstance` 再释放锁。
+  - `Core/UniBase.FeatureFlags.pas`: 全局 manager 创建全程持锁，`TFeatureFlags.Manager` 统一返回 `FeatureFlags()` 的全局实例。
+  - `Core/UniBase.Configuration.pas` / `Core/UniBase.Authorization.pas`: 默认配置和全局授权 manager 的读取路径补齐锁保护。
+  - `Tests/Test.UniBase.FeatureFlags.pas`: 新增多线程访问 `TFeatureFlags.Manager` 的单例一致性回归测试。
+- 影响范围: DoQry、KeyManager、FeatureFlags、Configuration、Authorization 的全局初始化与单例访问。
+- 验证: Win64 Unit 门禁通过，1348 found / 3 ignored / 1345 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-087: Core/Persistence DoQry 双实现导致修复需要同步两处
+- 发现日期: 2026-05-03
+- 严重性: 🟡 Medium
+- 描述: 旧 Core DoQry 单元与 `Persistence/UniBase.DB.DoQry.pas` 同名同功能并存，导致安全修复、参数绑定、缓存锁初始化等改动需要重复同步，且包边界容易引用到旧实现。
+- 修复:
+  - 删除旧 Core DoQry 重复实现。
+  - 保留 `Persistence/UniBase.DB.DoQry.pas` 作为 `UniBase.DB.DoQry` 的唯一实现，并迁入全局锁初始化修复。
+  - `Tests/UniBaseTests.dpr` / `.dproj` 改为显式引用 `..\Persistence\UniBase.DB.DoQry.pas`。
+  - 保留 Persistence 版本中的 `IDoQryService` / `TDoQryService` 服务适配层，避免破坏 IoC 使用方。
+- 影响范围: DoQry 源文件归属、测试工程引用、Persistence 包边界。
+- 验证: Win64 Unit 门禁通过，1348 found / 3 ignored / 1345 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-088: 社交 OAuth2 流程缺少 PKCE 和 state 校验
+- 发现日期: 2026-05-03
+- 严重性: 🔴 High
+- 描述: WeChat/QQ/Weibo/GitHub/Google 等社交登录流程只把 `state` 放入授权 URL，未保存和校验回调 state；state 使用非 CSPRNG 生成，授权码交换也缺少 PKCE verifier/challenge，存在 CSRF 和授权码截获风险。
+- 修复:
+  - `ThirdParty/Social/UniBase.Social.pas`: `GenerateState` 改用 `SecureRandom`；新增 PKCE verifier、S256 challenge、常量时间比较；`TSocialClient` 保存 state/verifier，并提供 `ValidateState` 和带 state 的 `ExchangeCode` 重载。
+  - `ThirdParty/Social/UniBase.Social.OAuth.pas`: 通用 OAuth/GitHub/Google 授权 URL 增加 `code_challenge` / `code_challenge_method=S256`，授权码换 token 时携带 `code_verifier`。
+  - `ThirdParty/Social/UniBase.Social.WeChat.pas` / `UniBase.Social.Weibo.pas` / `UniBase.Social.QQ.pas`: 改为复用基类 state/PKCE 逻辑。
+  - `Tests/Test.UniBase.Social.pas`: 新增 RFC 7636 PKCE challenge 向量、授权 URL PKCE 参数和 state 校验回归测试。
+- 影响范围: 社交登录 OAuth2 授权 URL 构造、授权码交换和回调 state 校验。
+- 验证: Win64 Unit 门禁通过，1353 found / 3 ignored / 1350 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-089: 泛型对象池双实现导致行为分叉和测试缺口
+- 发现日期: 2026-05-03
+- 严重性: 🟡 Medium
+- 描述: `Core/UniBase.Memory.pas` 和 `Core/UniBase.ObjectPool.pas` 同时维护泛型 `TObjectPool<T>`，默认容量、事件、reset 和统计行为容易分叉；canonical 对象池测试未纳入主测试工程，wrapper 行为测试还存在直接创建对象未释放导致 FastMM 泄漏的问题。合并后还发现 reset 失败对象不能重新入池，必须显式丢弃，后台清理任务也需要可唤醒退出。
+- 修复:
+  - `Core/UniBase.Memory.pas`: 保留兼容 API，但内部委托 `UniBase.ObjectPool.TObjectPool<T>`，统一池化生命周期、统计和并发行为；释放时继续执行旧版 reset 语义。
+  - `Core/UniBase.ObjectPool.pas`: 将对象池事件类型改为匿名方法友好形式，默认 `MinSize` 调整为 0，匹配惰性创建和旧 Memory wrapper 预期；新增 `Discard` 丢弃损坏对象；后台清理任务改为 shutdown event 唤醒并在析构中等待退出。
+  - `Tests/UniBaseTests.dpr` / `.dproj`: 纳入 `Test.UniBase.ObjectPool` 和 `UniBase.ObjectPool`，主测试工程覆盖 canonical 对象池。
+  - `Tests/Test.UniBase.ObjectPool.pas` / `Tests/Test.UniBase.Memory.pas`: 补齐并修复 canonical 和兼容 wrapper 回归测试，覆盖 scoped 释放、直接创建对象释放、坏对象 discard 和 reset 失败路径。
+- 影响范围: Core 泛型对象池、Memory 模块兼容对象池、对象池单元测试覆盖。
+- 验证: Win64 Unit 门禁通过，1403 found / 3 ignored / 1400 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-090: 磁盘 I/O 基准依赖系统临时盘导致单测失败
+- 发现日期: 2026-05-03
+- 严重性: 🟢 Low
+- 描述: `Tests/Test.UniBase.PerformanceSuite.pas` 的磁盘 I/O 基准使用 `TPath.GetTempPath`，当前环境该路径指向 `Z:\Temp` 且剩余空间不足，导致 Win64 单测出现 Windows 错误 112（磁盘空间不足）。
+- 修复:
+  - `Tests/Test.UniBase.PerformanceSuite.pas`: 磁盘 I/O 基准改用当前项目下的 `TestResults/BenchmarkTemp_*` 作为工作目录，并在 `TearDown` 中继续递归清理。
+- 影响范围: PerformanceSuite 磁盘 I/O 基准测试稳定性。
+- 验证: Win64 Unit 门禁通过，1403 found / 3 ignored / 1400 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-095: Unit 测试运行期崩溃与 Win64 sqlite3 装载失败
+- 发现日期: 2026-05-04
+- 严重性: 🔴 High
+- 描述:
+  - Unit 测试可执行文件在启动阶段退出 `-1073741511 (0xC0000139)`，无法进入 DUnitX 运行。
+  - 崩溃修复后发现 Win64 Unit 仍会加载到 32 位 `sqlite3.dll`，导致 FireDAC vendor library 装载失败。
+- 修复:
+  - `Core/UniBase.Security.pas`: `SecureZeroMemory` 从静态导入改为运行时解析（`RtlSecureZeroMemory` → `RtlZeroMemory` → `FillChar` 回退），避免加载期入口点缺失。
+  - `Scripts/run_tests.ps1`: Unit 路径增加 `Ensure-SqliteDll`，并补充 x64 候选路径 `bin64\sqlite3.dll` 与 `bin\windows\lldb\sqlite3.dll`；测试结束后清理临时拷贝。
+  - `Tests/Test.UniBase.Resilience.pas`: `Test_Execute_RejectedWhenOpen` 断言类型改为 `ECircuitBreakerException`，与实现对齐。
+- 影响范围: 安全模块初始化、Win64 Unit 测试运行链路、Resilience 回归断言。
+- 验证: Win64 Unit 门禁通过，1433 found / 3 ignored / 1430 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-096: Diagnose 模块缺少存储注入入口，难以脱离 FireDAC 调用
+- 发现日期: 2026-05-04
+- 严重性: 🟡 Medium
+- 描述: `Core/UniBase.Diagnose.pas` 仅暴露 `TFDConnection` 入口，调用侧无法注入替代存储实现，不利于 ARCH-019/039 分层迁移和无数据库环境测试。
+- 修复:
+  - `Core/UniBase.Diagnose.pas`：新增 `IDiagnoseStorage` 抽象，并补充 `DiagnoseAllWithStorage`、`Check*WithStorage`、`AutoFixWithStorage`、`CreateDiagnoseStorage` 等入口。
+  - `Core/UniBase.Diagnose.pas`：新增 `SetDiagnoseStorageFactory`，支持 Persistence 层注册自定义连接适配器。
+  - `Persistence/UniBase.Persistence.Diagnose.FireDAC.pas`：新增 FireDAC 适配器并在 initialization 自动注册到 Diagnose 工厂。
+  - `Tests/Test.UniBase.Diagnose.pas`：新增注入回归测试，覆盖 `DiagnoseAllWithStorage` 结果聚合与 `AutoFixWithStorage` 委托行为。
+- 影响范围: Diagnose 模块扩展点与测试可注入性。
+- 验证: Win64 全量门禁通过，Unit 1444 found / 3 ignored / 1441 passed，Integration 9/9 passed。
+
+### BUG-097: Logging 模块缺少可注入存储 + 队列空批次重复写风险
+- 发现日期: 2026-05-04
+- 严重性: 🟡 Medium
+- 描述:
+  - `Core/UniBase.Logging.pas` 直接依赖 FireDAC，DB 写入路径无法替换为其他存储实现，不利于 ARCH-019/039 分层迁移与无数据库测试。
+  - 写线程在某些空批次轮询场景下未重置 `LocalBatch`，可能复用上次批次内容导致重复写入风险。
+- 修复:
+  - `Core/UniBase.Storage.Interfaces.pas`：扩展日志契约，新增 `TLogStorageData` 与 `ILogQueryStorage`（计数查询）。
+  - `Core/UniBase.Logging.pas`：新增 `SetStorageFactory`/`CreateStorage`，将 DB 写入、清理与计数切换为 `ILogStorage` 注入；移除 `FireDAC/Data.DB` 直接依赖。
+  - `Core/UniBase.Logging.pas`：写线程每轮显式 `SetLength(LocalBatch, 0)`，避免空批次复用旧数据。
+  - `Persistence/UniBase.Persistence.Logging.FireDAC.pas`：重写 FireDAC 适配器并自动注册；对旧库无 `Logs.Extra` 列保留兼容写入回退。
+  - `Tests/Test.UniBase.Logging.pas`：新增 `Test_StorageInjection_DelegatesDbWriteAndQuery`，覆盖注入写入、计数与清理委托链路。
+- 影响范围: Logging 模块分层边界、异步写线程稳定性、日志数据库写入兼容性。
+- 验证: Win64 全量门禁通过，Unit 1445 found / 3 ignored / 1442 passed，Integration 9/9 passed。
+
+### BUG-091: LLM API 示例文档与实际接口不一致
+- 发现日期: 2026-05-03
+- 严重性: 🟢 Low
+- 描述: `05.05 LLM 集成指南` 和 `05.01 API 参考` 中的 LLM 示例风格和接口覆盖不一致，部分示例仍使用旧代码块类型、占位调用或未定义 UI 控件，容易误导集成方。
+- 修复:
+  - `docs/05.05.uniBase-4AI-LLM集成指南-v1.0.md`: 统一 LLM 示例为 `delphi` 代码块，补齐 `TLLMManager`、`TUniBaseLLM`、`TLLMImportExport` 的真实单元引用，修正导入导出、异步和错误处理示例。
+  - `docs/05.01.uniBase-4AI-API参考-v1.0.md`: 新增 LLM 模块 API 参考，覆盖直接模型调用、提示词版本调用、响应字段和导入导出 API。
+- 影响范围: LLM 文档集成示例、API 参考目录与章节编号。
+- 验证: 静态扫描确认两份文档不再包含 `LLMConfiguration`、旧 `UniBaseLLM` 全局写法、`TLLMMessage.Create`、`LLM.AddProvider`、`LLM.SetTierModels` 或 `pascal` 代码块。
+
+### BUG-092: 旧格式文档散落在 docs 根目录导致索引混乱
+- 发现日期: 2026-05-03
+- 严重性: 🟢 Low
+- 描述: `docs/` 根目录同时存在标准命名文档和大量旧命名、重复或过期文档，索引仍引用过期 v1.0 ThirdParty 指南和旧 API/FAQ/DoQry 文档，开发者容易进入过时材料。
+- 修复:
+  - 旧格式、重复或过期文档已清理，并记录当前替代入口。
+  - `docs/00.00.uniBase-文档索引-v1.0.md`: 更新日期、修正表格格式，并统一 ThirdParty 指南入口到 v1.1。
+  - `ARCH-QUICKSTART.md` / `README.md` / 标准文档 / 回归测试文档: 修正旧路径引用，优先指向当前标准文档。
+  - `Scripts/check_doc_links.ps1`: 修正链接解析逻辑，Markdown 链接按源文件目录解析，代码路径仍支持仓库根路径。
+- 影响范围: 文档导航、归档文档路径、README 与测试文档链接。
+- 验证: 静态扫描确认 `docs/` 根目录仅保留标准命名文档和 `00.00` 文档索引；旧路径引用已从非 legacy 文档中清理；关键导航文档链接检查通过。
+
+### BUG-093: TBasicProtection 使用 CBC 缺少认证加密
+- 发现日期: 2026-05-03
+- 严重性: 🟡 Medium
+- 描述: `TBasicProtection` 新写入密文仍使用 AES-256-CBC，虽然已有 padding 校验和外部 HMAC 辅助，但加密格式本身不提供 AEAD 认证，密文篡改不能在解密层稳定表达为认证失败。
+- 修复:
+  - `Core/UniBase.Protection.pas`: 新增 Windows CNG AES-256-GCM 实现；字符串密文使用 `UBG1|<hex payload>`，二进制密文使用 `UBG1 + nonce + tag + ciphertext`。
+  - 保留旧 AES-256-CBC 字符串格式 `IVHex|CipherHex` 与二进制格式 `IV + Cipher` 的只读解密兼容路径。
+  - `Tests/Test.UniBase.Protection.pas`: 新增 GCM 格式断言、篡改 tag/ciphertext 后认证失败、旧 CBC 样本兼容解密测试。
+  - `docs/07.03.uniBase-4H-安全与测试-v1.0.md`: 更新加密模式说明。
+- 影响范围: Protection 敏感字符串/二进制加密格式、AntiTamper 等调用 `TBasicProtection` 的可选保护能力。
+- 验证: Win64 Unit 门禁通过，1409 found / 3 ignored / 1406 passed / 0 failed / 0 errored / 0 leaked。
+
+### BUG-094: LLM API Key 被写入配置表字段
+- 发现日期: 2026-05-03
+- 严重性: 🟡 Medium
+- 描述: `TUniBaseLLM.SaveConfig` 将 `TLLMConfig.ApiKey` 直接写入 `LLMConfig.ApiKeyRef` 或旧 `LLMConfiguration.ApiKey` 字段，导致 SQLite 配置库可能保存真实 API Key。
+- 修复:
+  - `Core/UniBase.LLM.pas`: 保存配置时将真实 API Key 写入 Windows Credential Manager，数据库只保存 `credman:<target>`；读取时兼容 `credman:`、`LLMApiKeys.Name` 和旧明文值。
+  - `Scripts/migrate_llm_credentials.ps1`: 新增迁移脚本，将旧明文 LLM 凭据写入 Credential Manager 并回写引用。
+  - `Core/UniBase.Schema.pas` / `Data/create_sample_db.sql` / `Core/UniBase.Diagnose.pas`: LLMApiKeys 默认存储方式更新为 `CREDMAN`，诊断枚举允许 `CREDMAN`。
+  - `Tests/Test.UniBase.LLM.pas`: 新增 Credential Manager 存储、旧明文迁移、`LLMApiKeys` 引用解析回归测试。
+- 影响范围: LLM 配置保存/读取、LLMApiKeys schema 语义、旧库凭据迁移。
+- 验证: Win64 Unit 门禁通过，1412 found / 3 ignored / 1409 passed / 0 failed / 0 errored / 0 leaked。
+
+## 2026-05-02 Bug 修复
+
+### BUG-074: FormState 使用工作区坐标导致恢复位置偏移（顶部任务栏场景）
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: `SaveFormState` 使用 `GetWindowPlacement.rcNormalPosition` 直接入库，在顶部任务栏/多显示器工作区场景会出现 `Top` 偏移，恢复后位置不一致。
+- 修复:
+  - `Core/UniBase.FormState.pas`: 将 `rcNormalPosition` 从工作区坐标转换为屏幕坐标后再持久化（基于 `MonitorFromWindow + GetMonitorInfo`）。
+- 影响范围: FormState 窗口位置保存/恢复。
+- 验证: 单元测试全绿，`Test_SaveRestore_Position` 稳定通过 ✅
+
+### BUG-075: Resilience 组合执行链匿名方法残留导致 FastMM 泄漏告警
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: `TResiliencePolicy.Execute` / `Execute<T>` 多层闭包链在测试进程结束时触发小块泄漏告警。
+- 修复:
+  - `Core/UniBase.Resilience.pas`: 重构闭包拼装逻辑并显式置空捕获引用，避免残留引用链。
+- 影响范围: Resilience 组合策略执行（Retry/Timeout/CircuitBreaker/Bulkhead 组合）。
+- 验证: Unit 测试结束后无 `TResiliencePolicy.Execute*` 相关 FastMM 泄漏告警 ✅
+
+### BUG-076: Win64 下 DUnitX 泛型断言类型推断失败
+- 发现日期: 2026-05-02
+- 严重性: 🟢 Low
+- 描述: `Test.UniBase.Resilience.pas` 在 Win64 编译时 `Assert.AreEqual(1, Breakers.Count)` 触发泛型参数推断错误。
+- 修复:
+  - `Tests/Test.UniBase.Resilience.pas`: 改为 `Assert.AreEqual<Integer>(1, Breakers.Count)`。
+- 影响范围: Win64 单测编译。
+- 验证: Win64 单测可完整编译并执行 ✅
+
+### BUG-077: 默认测试链路仍使用 Win32，不符合 64 位基线要求
+- 发现日期: 2026-05-02
+- 严重性: 🟢 Low
+- 描述: `Scripts/run_tests.ps1` 固定 `dcc32`，与“默认 64 位”基线不一致。
+- 修复:
+  - `Scripts/run_tests.ps1`: 新增 `-Platform` 参数（`Win32|Win64`），默认改为 `Win64`，并增加编译器路径存在性检查。
+- 影响范围: CI/本地单测入口。
+- 验证: 默认命令 `.\Scripts\run_tests.ps1 -Type Unit -CI` 已在 Win64 全绿 ✅
+
+### BUG-078: DoQry 调用 SQLLogger 旧签名导致编译不通过
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: 旧 Core DoQry 实现使用旧版 `TSQLLogger.LogSQL` 参数形式，与当前 SQLLogger 接口不匹配。
+- 修复:
+  - `Persistence/UniBase.DB.DoQry.pas`: 相关调用切换到 `TSQLLogger.LogSQLEx(...)`。
+- 影响范围: DoQry 模块编译与 SQL 日志记录。
+- 验证: 单元测试工程可成功编译 ✅
+
+### BUG-079: Payment 凭据管理接口签名不匹配
+- 发现日期: 2026-05-02
+- 严重性: 🟢 Low
+- 描述: `TCredentialManager.GetCredential` 调用参数缺失导致编译错误。
+- 修复:
+  - `ThirdParty/Payment/UniBase.Payment.pas`: 调整为 `GetCredential(TargetName, '')`。
+- 影响范围: Payment 模块编译。
+- 验证: 单元测试工程可成功编译 ✅
+
+### BUG-080: WebAPI TLS 配置依赖 Indy 新枚举导致 Win64 集成编译失败
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: `UniBase.WebAPI.Core` 直接引用 `sslvTLSv1_3`，在不包含该枚举的 Indy 版本上编译失败。
+- 修复:
+  - `Tools/WebService/UniBase.WebAPI.Core.pas`: 对 `sslvTLSv1_3` 使用 `{$IF Declared(...)}` 条件编译，自动回退 TLS 1.2。
+- 影响范围: WebAPI 模块跨 Indy 版本编译兼容性。
+- 验证: Win64 Integration 工程可编译通过 ✅
+
+### BUG-081: UniBase.Net 静态方法调用与 LinkLocal 检测缺失导致编译错误
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述:
+  - `THttpRequest.Execute` 中调用 `IsValidHttpHeader/IsSafeUrl` 未加类限定。
+  - `TIPUtils.IsLinkLocalIP` 被调用但未实现。
+- 修复:
+  - `Core/UniBase.Net.pas`: 改为 `TNetworkUtils.IsValidHttpHeader` 与 `TNetworkUtils.IsSafeUrl`。
+  - 新增 `TIPUtils.IsLinkLocalIP`（IPv4 169.254/16 + IPv6 fe80::/10 前缀）。
+- 影响范围: Net 模块编译与 URL 安全检查。
+- 验证: Win64 Integration 工程可编译通过 ✅
+
+### BUG-082: Win64 集成测试缺少位宽匹配 sqlite3.dll 导致运行报错
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: 集成测试执行目录缺少 x64 `sqlite3.dll`，FireDAC SQLite 驱动运行时报 `-314 Cannot load vendor library`。
+- 修复:
+  - `Scripts/run_tests.ps1`: 增加 `Ensure-SqliteDll`，自动复制位宽匹配的 `sqlite3.dll` 到 `Tests/Integration`。
+- 影响范围: Win64 Integration 运行时依赖加载。
+- 验证: 集成测试 9/9 通过 ✅
+
+### BUG-083: SSRF 安全检查默认拦截 localhost，导致本地集成测试不可用
+- 发现日期: 2026-05-02
+- 严重性: 🟢 Low
+- 描述: `IsSafeUrl` 默认禁止 `127.0.0.1/localhost`，导致 WebAPI 本地回环调用测试全部报 `Unsafe URL detected`。
+- 修复:
+  - `Core/UniBase.Net.pas`: 增加环境变量开关 `UNIBASE_ALLOW_LOCALHOST_HTTP` 与 `UNIBASE_ALLOW_PRIVATE_NET_HTTP`。
+  - `Scripts/run_tests.ps1`: 集成测试阶段临时设置 `UNIBASE_ALLOW_LOCALHOST_HTTP=1`。
+- 影响范围: 开发/测试环境本地回环请求；生产默认仍保持安全策略。
+- 验证: 集成测试 9/9 通过 ✅
+
+### BUG-084: DB.Factory 无法按配置创建共享 SQLite 连接
+- 发现日期: 2026-05-02
+- 严重性: 🟡 Medium
+- 描述: `TDBConnectionFactory.LoadSharedProfile` 仅支持 `DB3.Type=PostgreSQL/PG`，导致下游无法通过统一 `DB3.*` 配置切换到共享 SQLite。
+- 修复:
+  - `Persistence/UniBase.DB.Factory.pas`：新增 `DB3.Type=SQLite` 分支，支持 `DB3.Database`（兼容 `DB3.Path`）和相对 `RootPath` 解析。
+  - 增加 SQLite 参数透传：`DB3.SQLiteLockingMode`、`DB3.SQLiteSynchronous`、`DB3.SQLiteJournalMode`、`DB3.SQLiteOpenMode`、`DB3.ExtraParams`。
+  - `Tests/Test.UniBase.DB.Factory.pas` 新增回归用例验证 Driver/Path/参数/超时。
+- 影响范围: 下游多库接入（本地 SQLite + 共享 SQLite/PG 切换）。
+- 验证: Win64 全量门禁通过（Unit + Integration）✅
+
+---
+
 ## 2025-12-13 Bug 修复
 
 ### BUG-067: TStyleManager.IsValidStyle 抛出 EFOpenError 导致主题加载失败
@@ -28,7 +310,7 @@
 ### BUG-069: UniBase.Updater.pas 缺少 Winapi.Windows 导致 OutputDebugString 编译错误
 - 发现日期: 2025-12-13
 - 严重性: 🟡 Medium
-- 描述: `Core/UniBase.Updater.pas` 在 `{$IFDEF DEBUG}` 块中使用 `OutputDebugString`，但未引入 `Winapi.Windows`，导致 Debug 配置编译失败。
+- 描述: `Features/UniBase.Updater.pas` 在 `{$IFDEF DEBUG}` 块中使用 `OutputDebugString`，但未引入 `Winapi.Windows`，导致 Debug 配置编译失败。
 - 修复: 在 `{$IFDEF MSWINDOWS}` uses 块中添加 `Winapi.Windows`。
 - 影响范围: Debug 模式下的编译。
 - 验证: 编译通过 ✅
@@ -131,7 +413,7 @@
 - 发现日期: 2025-12-11
 - 严重性: 🟡 Medium
 - 描述: 文档与 PUBL-101/102 规范要求 About/打赏信息使用 `{AppName}Config.db` 中的 `aboutMeImages` 表并通过 `enabled` 控制显示，但实际代码中 AntiTamper 默认表名仍为 `images`，AboutFrame/MoveC 的 About 窗体也绑定到 `MoveC.db` + `images`，SeedTool 又缺少启用勾选，导致运行时无法按规范切换配置库，也无法通过 `enabled` 按 key 控制 Tab 显示。
-- 修复: 统一 `Core/UniBase.AntiTamper.pas`、`Tools/SeedTool/uAntiTamperPackage.pas` 和 MoveC 的 AntiTamper 包默认表名为 `aboutMeImages`，建表/升级时新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段；更新 `VCL/UniBase.VCL.AboutFrame.pas` 与 MoveC `FrameAboutMe.pas` 默认连接 `MoveCConfig.db` 并绑定 `aboutMeImages`；在 `LoadSecureImage` 中检测 `enabled=0` 时直接跳过记录，同时为 SeedTool 增加 `Enabled` 字段与勾选框，并在播种/文本更新后回写 `aboutMeImages.enabled`。
+- 修复: 统一 `Features/UniBase.AntiTamper.pas`、`Tools/SeedTool/uAntiTamperPackage.pas` 和 MoveC 的 AntiTamper 包默认表名为 `aboutMeImages`，建表/升级时新增 `enabled INTEGER NOT NULL DEFAULT 1` 字段；更新 `VCL/UniBase.VCL.AboutFrame.pas` 与 MoveC `FrameAboutMe.pas` 默认连接 `MoveCConfig.db` 并绑定 `aboutMeImages`；在 `LoadSecureImage` 中检测 `enabled=0` 时直接跳过记录，同时为 SeedTool 增加 `Enabled` 字段与勾选框，并在播种/文本更新后回写 `aboutMeImages.enabled`。
 - 影响范围: 所有使用 UniBase AboutFrame 或 MoveC About 窗体展示打赏/关于信息的应用，以及依赖 SeedTool 播种 `aboutMeImages` 的工具项目。
 - 验证: 使用新版 SeedTool 为 `MoveCConfig.db.aboutMeImages` 播种 6 个标准 key 并分别设置 `enabled`，在 Win32/Win64 下启动 MoveC 和 UniBase 示例应用，确认 About 页签只显示启用项，禁用项被正确隐藏且 AntiTamper 解密/校验通过 ✅
 
@@ -491,7 +773,7 @@
 - **严重性**: 🔴 Critical (P0)
 - **描述**: TFDQuery 对象在 try 块外释放，异常发生时导致内存泄漏
 - **修复**: 将 4 个函数的 `Q.Free` 移入 `finally` 块
-- **影响范围**: `Core/UniBase.DB.DoQry.pas`
+- **影响范围**: `Persistence/UniBase.DB.DoQry.pas`
 - **修改函数**:
   - `UniDbSelect`
   - `UniDbExec`
@@ -561,7 +843,7 @@
   - 已实现 `TInteractiveCLI` 完整 REPL 交互式命令行
   - 支持命令历史、自动补全、变量展开
   - 多格式输出 (Text/JSON/YAML/Table/CSV)
-- **文件**: `Core/UniBase.CLI.Interactive.pas` (~1662 行)
+- **文件**: `Tools/CLI/UniBase.CLI.Interactive.pas` (~1662 行)
 - **状态**: ✅ 已实现 (2025-11-28)
 
 ---
@@ -615,14 +897,14 @@
 ### DOC-001: API 文档补充异常处理说明
 - **日期**: 2025-11-26
 - **变更**: 添加所有公开 API 的异常类型说明
-- **文件**: `docs/api-reference.md`
+- **文件**: `docs/05.01.uniBase-4AI-API参考-v1.0.md`
 
 ---
 
 ### DOC-002: 快速开始指南补充 FAQ
 - **日期**: 2025-11-26
 - **变更**: 添加 10 个常见问题及解决方案
-- **文件**: `docs/faq.md`
+- **文件**: `docs/03.01.uniBase-4AI-FAQ与错误速查-v1.0.md`
 
 ---
 
@@ -653,7 +935,7 @@
 - **待处理 Issue**: 0
 - **性能优化**: 4 项
 - **文档更新**: 2 项
-- **最后更新**: 2025-12-13
+- **最后更新**: 2026-05-05
 
 ---
 
@@ -699,7 +981,7 @@
 
 ### BUG-007: UniDbSelect 类型不兼容
 - 严重程度: 🟡 中
-- 文件: `Core/UniBase.DB.DoQry.pas`
+- 文件: `Persistence/UniBase.DB.DoQry.pas`
 - 问题: `TClientDataSet` 与 `TFDQuery` 不兼容
 - 修复: `CopyQueryToClientDataSet` 辅助函数复制数据
 - 状态: ✅ 已修复
@@ -843,7 +1125,7 @@
 
 ### BUG-054: Updater 模块多处错误被静默忽略
 - 严重程度: 🟢 低
-- 文件: `Core/UniBase.Updater.pas`
+- 文件: `Features/UniBase.Updater.pas`
 - 问题: `GetReleaseNotes`、`GetUpdateHistory`、`CleanupTempFiles` 错误无日志
 - 修复: 添加 DEBUG 模式调试日志
 - 状态: ✅ 已修复 (commit 3af9446)
@@ -857,14 +1139,14 @@
 
 ### BUG-056: DB.Pool 连接池多处错误被静默忽略
 - 严重程度: 🟢 低
-- 文件: `Core/UniBase.DB.Pool.pas`
+- 文件: `Persistence/UniBase.DB.Pool.pas`
 - 问题: 连接关闭、池预热、事件处理错误无日志
 - 修复: 添加 DEBUG 模式调试日志
 - 状态: ✅ 已修复 (commit 3af9446)
 
 ### BUG-057: CLI.SSH 多处错误被静默忽略
 - 严重程度: 🟢 低
-- 文件: `Core/UniBase.CLI.SSH.pas`
+- 文件: `Tools/CLI/UniBase.CLI.SSH.pas`
 - 问题: 会话清理、别名解析错误无日志
 - 修复: 添加 DEBUG 模式调试日志
 - 状态: ✅ 已修复 (commit 3af9446)
@@ -889,3 +1171,85 @@
 - 问题: FK检查、必填字段检查、枚举检查、添加列错误无日志
 - 修复: 添加 DEBUG 模式调试日志
 - 状态: ✅ 已修复 (commit af260c3)
+
+### BUG-061: AntiTamper-Integration.md 过期路径引用
+- 严重程度: 🟡 中（文档）
+- 文件: `docs/06.AntiTamper-Integration.md`
+- 问题: 核心文件清单中 `UniBase.AntiTamper.pas` 未标注实际路径 `Features/`，可能导致集成者找不到文件
+- 修复: 更新为 `UniBase.AntiTamper.pas # 防篡改主模块（Features/）`
+- 状态: ✅ 已修复 (2026-05-06 DOC-OPT Phase 4)
+
+### BUG-062: 文档索引引用已删除文件
+- 严重程度: 🟡 中（文档）
+- 文件: `docs/00.00.uniBase-文档索引-v1.0.md`
+- 问题: 索引中仍引用已删除的 `99.09 术语审计报告`
+- 修复: 移除过期条目
+- 状态: ✅ 已修复 (2026-05-06 DOC-OPT Phase 5)
+
+### BUG-063: 硬编码默认 Salt 降低加密安全性
+- 严重程度: 🔴 高（安全）
+- 文件: `Core/UniBase.Crypto.pas`
+- 问题: `TAESCrypto.SetKeyFromPassword` 在未传入 Salt 时使用硬编码字符串 `'UniBaseAES256DefaultSalt'`，所有不传 Salt 的调用者共享同一 Salt，降低 PBKDF2 密钥派生的安全性
+- 修复:
+  - 移除默认 Salt，改为必传参数，不传 Salt 时抛出 `ECryptoException`
+  - 为 `TSimpleCrypto` 增加 `DeriveSalt` 类方法，基于密码确定性派生 Salt
+  - 更新所有测试文件传入 Salt
+- 状态: ✅ 已修复 (2026-05-06)
+
+### BUG-065: UniBase.Exception 对 UniBase.Manager 的循环编译依赖
+- 严重程度: 🟡 中（架构）
+- 文件: `Core/UniBase.Exception.pas`, `Core/UniBase.Manager.pas`
+- 问题: Exception 的 interface uses 直接引用 Manager，形成潜在循环依赖风险（若 Manager interface 改为引用 Exception 将导致编译失败）
+- 修复: Exception 改为通过 `SetManagerCallbacks` 注册回调访问 Manager 状态，移除 `uses UniBase.Manager`
+- 状态: ✅ 已修复 (2026-05-06)
+
+### BUG-066: 非 Windows AES 使用 XOR 伪加密
+- 严重程度: 🔴 高（安全）
+- 文件: `Core/UniBase.Crypto.pas`
+- 问题: `TAESCrypto.Encrypt/Decrypt` 的 `{$ELSE}` 分支（macOS/Linux）使用 XOR 运算模拟 AES-CBC，不提供任何真实加密保护
+- 修复:
+  - 在 `UniBase.Crypto.OpenSSL.pas` 新增 `OpenSSL_AES256CBC_Encrypt/Decrypt`
+  - `UniBase.Crypto.pas` 非 Windows 路径改用 OpenSSL EVP AES-256-CBC
+- 状态: ✅ 已修复 (2026-05-06)
+
+### BUG-064: UniBase.Services.Initialization 引用不存在的单元
+- 严重程度: 🟡 中
+- 文件: `Core/UniBase.Services.Initialization.pas`
+- 问题: `uses` 子句引用 `UniBase.Common`，该单元不存在于仓库中
+- 修复: 移除无效引用（该单元的实际代码不依赖 `UniBase.Common` 的任何类型）
+- 状态: ✅ 已修复 (2026-05-06)
+
+### BUG-067: 插件签名验证为 stub 实现
+- 严重程度: 🔴 高（安全）
+- 文件: `Core/UniBase.PluginManager.pas`
+- 问题: `VerifyPluginSignature` 方法直接返回 `True`，不执行任何实际验证，恶意插件可自由加载
+- 修复: Windows 平台使用 `WinVerifyTrust` API 验证 Authenticode 签名，验证失败拒绝加载并记录日志
+- 状态: ✅ 已修复 (2026-05-06)
+
+### BUG-068: UniBase.i18n.Gender 编译器解析失败
+- 编号: BUG-068
+- 日期: 2026-05-06
+- 严重程度: 🟡 中（功能缺失）
+- 文件: `Core/UniBase.i18n.Gender.pas`
+- 问题: Delphi 12.2 编译器在该文件的 `implementation` 节起始处报告 `E2029 Declaration expected but 'IMPLEMENTATION' found`，无论是否移除 `class constructor`/`class destructor`、`const` 块或添加 BOM，错误持续存在。疑似编译器对 `class var` 泛型字段或 `reference to function` 类型声明的解析 Bug
+- 临时处理: 从 UniBaseCore.dpk 移除该单元，性别感知文本格式化功能暂不可用
+- 状态: 🟡 待定位根因
+
+### BUG-069: 12 个源文件预存编译错误
+- 编号: BUG-069
+- 日期: 2026-05-06
+- 严重程度: 🟡 中（封板阻塞）
+- 问题: 86 个孤立 .pas 文件注册到 .dpk 后暴露 12 个文件存在编译错误（从未在包上下文中编译过）
+- 修复清单:
+  - `UniBase.DataBinding/Serialization/ORM/IoC/Reflection.pas`: TRttiContext (record) 误用 FreeAndNil → 恢复 .Free
+  - `UniBase.Validation.pas`: 缺少 System.Math (Max 函数)、ERegularExpressionError 类型不存在
+  - `UniBase.StateMachine.pas`: DestinationState→TargetState、FStateConfigurations→FStates
+  - `UniBase.FileWatcher.pas`: TThread.Queue/TTask.Create 调用语法不兼容 Delphi 12.2
+  - `UniBase.VCL.NotificationBar/WaitForm.pas`: TPanel.OnPaint 不存在 → TPaintBox
+  - `UniBase.VCL.LicenseStatusPanel/LicenseAuthDialog.pas`: 未声明标识符（License API 不匹配）
+  - `UniBase.VCL.LLMSettingsFrame.pas`: var 参数内联声明语法错误
+  - `UniBase.VCL.FeedbackDialog.pas`: TOSVersion 嵌套类型、TThread.Synchronize 重载
+  - `UniBase.VCL.PromptVariableGrid.pas`: bsSingle 不可访问（删除行，使用默认值）
+  - `UniBase.VCL.UnlockDialog.pas`: CF_TEXT 未声明 → Clipboard.AsText
+  - 8 个 FMX 文件: 类型冲突、缺少 uses、FMX 语法错误
+- 状态: ✅ 已修复 (2026-05-06)

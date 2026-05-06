@@ -185,7 +185,7 @@ begin
   Filter := TFileFilter.Create;
   try
     Filter.IncludePatterns := ['*.pas', '*.dfm'];
-    Assert.AreEqual(2, Length(Filter.IncludePatterns));
+    Assert.AreEqual(2, Integer(Length(Filter.IncludePatterns)));
   finally
     Filter.Free;
   end;
@@ -198,7 +198,7 @@ begin
   Filter := TFileFilter.Create;
   try
     Filter.ExcludePatterns := ['*.bak', '*.tmp'];
-    Assert.AreEqual(2, Length(Filter.ExcludePatterns));
+    Assert.AreEqual(2, Integer(Length(Filter.ExcludePatterns)));
   finally
     Filter.Free;
   end;
@@ -211,7 +211,7 @@ begin
   Filter := TFileFilter.Create;
   try
     Filter.IncludeExtensions := ['.pas', '.dpr', '.dpk'];
-    Assert.AreEqual(3, Length(Filter.IncludeExtensions));
+    Assert.AreEqual(3, Integer(Length(Filter.IncludeExtensions)));
   finally
     Filter.Free;
   end;
@@ -224,7 +224,7 @@ begin
   Filter := TFileFilter.Create;
   try
     Filter.ExcludeExtensions := ['.dcu', '.exe', '.dll'];
-    Assert.AreEqual(3, Length(Filter.ExcludeExtensions));
+    Assert.AreEqual(3, Integer(Length(Filter.ExcludeExtensions)));
   finally
     Filter.Free;
   end;
@@ -402,7 +402,7 @@ begin
   try
     Watcher := TFileWatcher.Create(FTestDir);
     Manager.Add('test', Watcher);
-    Assert.AreEqual(1, Manager.Count);
+    Assert.AreEqual(1, Integer(Manager.Count));
   finally
     Manager.Free;
   end;
@@ -418,7 +418,7 @@ begin
     Watcher := TFileWatcher.Create(FTestDir);
     Manager.Add('test', Watcher);
     Manager.Remove('test');
-    Assert.AreEqual(0, Manager.Count);
+    Assert.AreEqual(0, Integer(Manager.Count));
   finally
     Manager.Free;
   end;
@@ -460,11 +460,11 @@ var
 begin
   Manager := TFileWatcherManager.Create;
   try
-    Assert.AreEqual(0, Manager.Count);
+    Assert.AreEqual(0, Integer(Manager.Count));
     Manager.Add('w1', TFileWatcher.Create(FTestDir));
-    Assert.AreEqual(1, Manager.Count);
+    Assert.AreEqual(1, Integer(Manager.Count));
     Manager.Add('w2', TFileWatcher.Create(FTestDir));
-    Assert.AreEqual(2, Manager.Count);
+    Assert.AreEqual(2, Integer(Manager.Count));
   finally
     Manager.Free;
   end;

@@ -300,7 +300,7 @@ begin
     Cloned := JSONClone(Original) as TJSONArray;
     try
       Assert.IsNotNull(Cloned);
-      Assert.AreEqual(3, Cloned.Count);
+      Assert.AreEqual(3, Integer(Cloned.Count));
       Assert.AreEqual(1, Cloned.Items[0].GetValue<Integer>);
       Assert.AreEqual('two', Cloned.Items[1].Value);
       Assert.AreNotSame(Original, Cloned);
@@ -405,7 +405,7 @@ begin
   try
     JSONMergeArrays(Target, Source, amsReplace);
     
-    Assert.AreEqual(3, Target.Count);
+    Assert.AreEqual(3, Integer(Target.Count));
     Assert.AreEqual(3, Target.Items[0].GetValue<Integer>);
     Assert.AreEqual(4, Target.Items[1].GetValue<Integer>);
     Assert.AreEqual(5, Target.Items[2].GetValue<Integer>);
@@ -429,7 +429,7 @@ begin
   try
     JSONMergeArrays(Target, Source, amsAppend);
     
-    Assert.AreEqual(4, Target.Count);
+    Assert.AreEqual(4, Integer(Target.Count));
     Assert.AreEqual(1, Target.Items[0].GetValue<Integer>);
     Assert.AreEqual(2, Target.Items[1].GetValue<Integer>);
     Assert.AreEqual(3, Target.Items[2].GetValue<Integer>);
@@ -501,7 +501,7 @@ begin
   try
     JSONMergeArrays(Target, Source, amsUnion);
     
-    Assert.AreEqual(4, Target.Count);  // 1, 2, 3, 4
+    Assert.AreEqual(4, Integer(Target.Count));  // 1, 2, 3, 4
   finally
     Target.Free;
     Source.Free;
@@ -521,7 +521,7 @@ begin
   try
     JSONMergeArrays(Target, Source, amsUnion);
     
-    Assert.AreEqual(3, Target.Count);
+    Assert.AreEqual(3, Integer(Target.Count));
   finally
     Target.Free;
     Source.Free;
@@ -540,7 +540,7 @@ begin
     JSONDeepMerge(Target, Source);
     
     Assert.AreEqual('value', Target.GetValue<string>('key'));
-    Assert.AreEqual(1, Target.Count);
+    Assert.AreEqual(1, Integer(Target.Count));
   finally
     Target.Free;
     Source.Free;
@@ -628,7 +628,7 @@ begin
     JSONDeepMerge(Target, Source, amsReplace);
     
     Arr := Target.GetValue<TJSONArray>('items');
-    Assert.AreEqual(2, Arr.Count);
+    Assert.AreEqual(2, Integer(Arr.Count));
     Assert.AreEqual(3, Arr.Items[0].GetValue<Integer>);
     Assert.AreEqual(4, Arr.Items[1].GetValue<Integer>);
   finally
@@ -801,7 +801,7 @@ begin
   
   AllItems := FStore.GetAll;
   try
-    Assert.AreEqual(2, AllItems.Count);
+    Assert.AreEqual<Integer>(2, AllItems.Count);
   finally
     AllItems.Free;
   end;
@@ -822,7 +822,7 @@ begin
   
   DirtyItems := FStore.GetDirtyItems;
   try
-    Assert.AreEqual(1, DirtyItems.Count);
+    Assert.AreEqual<Integer>(1, DirtyItems.Count);
     Assert.AreEqual('dirty', DirtyItems[0].Key);
   finally
     DirtyItems.Free;
@@ -846,7 +846,7 @@ begin
   
   DirtyItems := FStore.GetDirtyItems;
   try
-    Assert.AreEqual(0, DirtyItems.Count);
+    Assert.AreEqual<Integer>(0, DirtyItems.Count);
   finally
     DirtyItems.Free;
   end;
@@ -863,7 +863,7 @@ begin
   
   AllItems := FStore.GetAll;
   try
-    Assert.AreEqual(0, AllItems.Count);
+    Assert.AreEqual<Integer>(0, AllItems.Count);
   finally
     AllItems.Free;
   end;
@@ -898,7 +898,7 @@ var
   NewStore: TLocalConfigStore;
 begin
   FStore.CurrentVersion := 42;
-  FStore.Free;
+  FreeAndNil(FStore);
   
   NewStore := TLocalConfigStore.Create(FTempPath);
   try

@@ -2,7 +2,7 @@ unit Test.UniBase.Validation;
 
 {*******************************************************************************
   UniBase Validation Module Unit Tests
-  
+
   Test Coverage:
   - Basic validation rules (Required, NotEmpty, MinLength, MaxLength, etc.)
   - Range and comparison rules (Range, GreaterThan, LessThan)
@@ -47,110 +47,110 @@ type
     // Required Rule
     [Test]
     procedure Test_Required_EmptyString_Fails;
-    
+
     [Test]
     procedure Test_Required_NonEmptyString_Passes;
-    
+
     [Test]
     procedure Test_Required_NilValue_Fails;
-    
+
     // NotEmpty Rule
     [Test]
     procedure Test_NotEmpty_EmptyString_Fails;
-    
+
     [Test]
     procedure Test_NotEmpty_WhitespaceOnly_Fails;
-    
+
     [Test]
     procedure Test_NotEmpty_NonEmpty_Passes;
-    
+
     // MinLength Rule
     [Test]
     procedure Test_MinLength_TooShort_Fails;
-    
+
     [Test]
     procedure Test_MinLength_ExactLength_Passes;
-    
+
     [Test]
     procedure Test_MinLength_LongerThanMin_Passes;
-    
+
     // MaxLength Rule
     [Test]
     procedure Test_MaxLength_TooLong_Fails;
-    
+
     [Test]
     procedure Test_MaxLength_ExactLength_Passes;
-    
+
     [Test]
     procedure Test_MaxLength_ShorterThanMax_Passes;
-    
+
     // Length Rule
     [Test]
     procedure Test_Length_TooShort_Fails;
-    
+
     [Test]
     procedure Test_Length_TooLong_Fails;
-    
+
     [Test]
     procedure Test_Length_WithinRange_Passes;
-    
+
     // Range Rule
     [Test]
     procedure Test_Range_BelowMin_Fails;
-    
+
     [Test]
     procedure Test_Range_AboveMax_Fails;
-    
+
     [Test]
     procedure Test_Range_WithinRange_Passes;
-    
+
     [Test]
     procedure Test_Range_AtBoundaries_Passes;
-    
+
     // GreaterThan Rule
     [Test]
     procedure Test_GreaterThan_Equal_Fails;
-    
+
     [Test]
     procedure Test_GreaterThan_Less_Fails;
-    
+
     [Test]
     procedure Test_GreaterThan_Greater_Passes;
-    
+
     // LessThan Rule
     [Test]
     procedure Test_LessThan_Equal_Fails;
-    
+
     [Test]
     procedure Test_LessThan_Greater_Fails;
-    
+
     [Test]
     procedure Test_LessThan_Less_Passes;
-    
+
     // Email Rule
     [Test]
     procedure Test_Email_Valid_Passes;
-    
+
     [Test]
     procedure Test_Email_Invalid_NoAt_Fails;
-    
+
     [Test]
     procedure Test_Email_Invalid_NoDomain_Fails;
-    
+
     [Test]
     procedure Test_Email_Empty_Fails;
-    
+
     // Regex/Matches Rule
     [Test]
     procedure Test_Matches_ValidPattern_Passes;
-    
+
     [Test]
     procedure Test_Matches_InvalidPattern_Fails;
-    
+
     // IsIn Rule
     [Test]
     procedure Test_IsIn_ValueInList_Passes;
-    
+
     [Test]
     procedure Test_IsIn_ValueNotInList_Fails;
   end;
@@ -160,37 +160,37 @@ type
   public
     [Test]
     procedure Test_RuleFor_SingleProperty;
-    
+
     [Test]
     procedure Test_RuleFor_MultipleProperties;
-    
+
     [Test]
     procedure Test_ChainedRules_AllApplied;
-    
+
     [Test]
     procedure Test_WithMessage_CustomErrorMessage;
-    
+
     [Test]
     procedure Test_WithErrorCode_CustomCode;
-    
+
     [Test]
     procedure Test_WithDisplayName_UsedInMessage;
-    
+
     [Test]
     procedure Test_When_ConditionTrue_RuleApplied;
-    
+
     [Test]
     procedure Test_When_ConditionFalse_RuleSkipped;
-    
+
     [Test]
     procedure Test_Must_CustomPredicate_Passes;
-    
+
     [Test]
     procedure Test_Must_CustomPredicate_Fails;
-    
+
     [Test]
     procedure Test_MatchesProperty_SameValue_Passes;
-    
+
     [Test]
     procedure Test_MatchesProperty_DifferentValue_Fails;
   end;
@@ -200,22 +200,22 @@ type
   public
     [Test]
     procedure Test_Valid_IsValidTrue;
-    
+
     [Test]
     procedure Test_Invalid_IsValidFalse;
-    
+
     [Test]
     procedure Test_AddError_IncreasesErrorCount;
-    
+
     [Test]
     procedure Test_GetErrors_FiltersByProperty;
-    
+
     [Test]
     procedure Test_GetFirstError_ReturnsFirstMessage;
-    
+
     [Test]
     procedure Test_ToString_FormatsErrors;
-    
+
     [Test]
     procedure Test_ErrorCount_ReturnsCorrectCount;
   end;
@@ -225,10 +225,10 @@ type
   public
     [Test]
     procedure Test_ValidateAndThrow_Valid_NoException;
-    
+
     [Test]
     procedure Test_ValidateAndThrow_Invalid_ThrowsException;
-    
+
     [Test]
     procedure Test_ValidationException_ContainsErrors;
   end;
@@ -238,43 +238,43 @@ type
   public
     [Test]
     procedure Test_TValidate_Required_Valid;
-    
+
     [Test]
     procedure Test_TValidate_Required_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_Email_Valid;
-    
+
     [Test]
     procedure Test_TValidate_Email_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_MinLength_Valid;
-    
+
     [Test]
     procedure Test_TValidate_MinLength_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_MaxLength_Valid;
-    
+
     [Test]
     procedure Test_TValidate_MaxLength_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_Range_Valid;
-    
+
     [Test]
     procedure Test_TValidate_Range_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_Regex_Valid;
-    
+
     [Test]
     procedure Test_TValidate_Regex_Invalid;
-    
+
     [Test]
     procedure Test_TValidate_Combine_AllValid;
-    
+
     [Test]
     procedure Test_TValidate_Combine_SomeInvalid;
   end;
@@ -284,10 +284,10 @@ type
   public
     [Test]
     procedure Test_CompleteUserValidation;
-    
+
     [Test]
     procedure Test_ProductValidation;
-    
+
     [Test]
     procedure Test_MultipleErrorsCollected;
   end;
@@ -300,21 +300,25 @@ procedure TTestValidationRules.Test_Required_EmptyString_Fails;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.AreEqual(1, Result.ErrorCount);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.AreEqual(1, ValResult.ErrorCount);
   finally
     Validator.Free;
   end;
@@ -324,20 +328,24 @@ procedure TTestValidationRules.Test_Required_NonEmptyString_Passes;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := 'john';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -345,102 +353,106 @@ end;
 
 procedure TTestValidationRules.Test_Required_NilValue_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Required('', 'Field');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Required('', 'Field');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_NotEmpty_EmptyString_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.NotEmpty('', 'Field');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.NotEmpty('', 'Field');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_NotEmpty_WhitespaceOnly_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.NotEmpty('   ', 'Field');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.NotEmpty('   ', 'Field');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_NotEmpty_NonEmpty_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.NotEmpty('hello', 'Field');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.NotEmpty('hello', 'Field');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MinLength_TooShort_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MinLength('ab', 3, 'Field');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.MinLength('ab', 3, 'Field');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MinLength_ExactLength_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MinLength('abc', 3, 'Field');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.MinLength('abc', 3, 'Field');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MinLength_LongerThanMin_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MinLength('abcdef', 3, 'Field');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.MinLength('abcdef', 3, 'Field');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MaxLength_TooLong_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MaxLength('abcdef', 5, 'Field');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.MaxLength('abcdef', 5, 'Field');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MaxLength_ExactLength_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MaxLength('abcde', 5, 'Field');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.MaxLength('abcde', 5, 'Field');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_MaxLength_ShorterThanMax_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.MaxLength('abc', 5, 'Field');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.MaxLength('abc', 5, 'Field');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Length_TooShort_Fails;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Length(3, 10);
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Length(3, 10);
+
     User.Username := 'ab';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -450,20 +462,24 @@ procedure TTestValidationRules.Test_Length_TooLong_Fails;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Length(3, 10);
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Length(3, 10);
+
     User.Username := '12345678901';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -473,20 +489,24 @@ procedure TTestValidationRules.Test_Length_WithinRange_Passes;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Length(3, 10);
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Length(3, 10);
+
     User.Username := 'johndoe';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -494,26 +514,26 @@ end;
 
 procedure TTestValidationRules.Test_Range_BelowMin_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Range(5, 10, 100, 'Age');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Range(5, 10, 100, 'Age');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Range_AboveMax_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Range(150, 10, 100, 'Age');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Range(150, 10, 100, 'Age');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Range_WithinRange_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Range(50, 10, 100, 'Age');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.Range(50, 10, 100, 'Age');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Range_AtBoundaries_Passes;
@@ -526,20 +546,24 @@ procedure TTestValidationRules.Test_GreaterThan_Equal_Fails;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetPrice: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Price',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Double>(P.Price);
-      end).GreaterThan(0);
-    
+    GetPrice :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Double>(P.Price);
+        end
+      );
+    Validator.RuleFor('Price', GetPrice).GreaterThan(0);
+
     Product.Price := 0;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -549,20 +573,24 @@ procedure TTestValidationRules.Test_GreaterThan_Less_Fails;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetPrice: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Price',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Double>(P.Price);
-      end).GreaterThan(10);
-    
+    GetPrice :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Double>(P.Price);
+        end
+      );
+    Validator.RuleFor('Price', GetPrice).GreaterThan(10);
+
     Product.Price := 5;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -572,20 +600,24 @@ procedure TTestValidationRules.Test_GreaterThan_Greater_Passes;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetPrice: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Price',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Double>(P.Price);
-      end).GreaterThan(0);
-    
+    GetPrice :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Double>(P.Price);
+        end
+      );
+    Validator.RuleFor('Price', GetPrice).GreaterThan(0);
+
     Product.Price := 99.99;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -595,20 +627,24 @@ procedure TTestValidationRules.Test_LessThan_Equal_Fails;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetQuantity: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Quantity',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Integer>(P.Quantity);
-      end).LessThan(100);
-    
+    GetQuantity :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Integer>(P.Quantity);
+        end
+      );
+    Validator.RuleFor('Quantity', GetQuantity).LessThan(100);
+
     Product.Quantity := 100;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -618,20 +654,24 @@ procedure TTestValidationRules.Test_LessThan_Greater_Fails;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetQuantity: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Quantity',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Integer>(P.Quantity);
-      end).LessThan(100);
-    
+    GetQuantity :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Integer>(P.Quantity);
+        end
+      );
+    Validator.RuleFor('Quantity', GetQuantity).LessThan(100);
+
     Product.Quantity := 150;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -641,20 +681,24 @@ procedure TTestValidationRules.Test_LessThan_Less_Passes;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetQuantity: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Quantity',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<Integer>(P.Quantity);
-      end).LessThan(100);
-    
+    GetQuantity :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<Integer>(P.Quantity);
+        end
+      );
+    Validator.RuleFor('Quantity', GetQuantity).LessThan(100);
+
     Product.Quantity := 50;
-    Result := Validator.Validate(Product);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -662,72 +706,76 @@ end;
 
 procedure TTestValidationRules.Test_Email_Valid_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Email('test@example.com');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.Email('test@example.com');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Email_Invalid_NoAt_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Email('testexample.com');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Email('testexample.com');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Email_Invalid_NoDomain_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Email('test@');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Email('test@');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Email_Empty_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Email('');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Email('');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Matches_ValidPattern_Passes;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Regex('ABC123', '^[A-Z]+[0-9]+$', 'Code');
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidate.Regex('ABC123', '^[A-Z]+[0-9]+$', 'Code');
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_Matches_InvalidPattern_Fails;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Regex('123ABC', '^[A-Z]+[0-9]+$', 'Code');
-  Assert.IsFalse(Result.IsValid);
+  ValResult := TValidate.Regex('123ABC', '^[A-Z]+[0-9]+$', 'Code');
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationRules.Test_IsIn_ValueInList_Passes;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetCategory: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Category',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<string>(P.Category);
-      end).IsIn([TValue.From<string>('Electronics'), 
-                 TValue.From<string>('Clothing'),
-                 TValue.From<string>('Food')]);
-    
+    GetCategory :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<string>(P.Category);
+        end
+      );
+    Validator.RuleFor('Category', GetCategory).IsIn([TValue.From<string>('Electronics'),
+               TValue.From<string>('Clothing'),
+               TValue.From<string>('Food')]);
+
     Product.Category := 'Electronics';
-    Result := Validator.Validate(Product);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -737,21 +785,25 @@ procedure TTestValidationRules.Test_IsIn_ValueNotInList_Fails;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetCategory: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator.RuleFor('Category',
-      function(const P: TProductDto): TValue
-      begin
-        Result := TValue.From<string>(P.Category);
-      end).IsIn([TValue.From<string>('Electronics'), 
-                 TValue.From<string>('Clothing')]);
-    
+    GetCategory :=
+      TFunc<TProductDto, TValue>(
+        function(const P: TProductDto): TValue
+        begin
+          Result := TValue.From<string>(P.Category);
+        end
+      );
+    Validator.RuleFor('Category', GetCategory).IsIn([TValue.From<string>('Electronics'),
+               TValue.From<string>('Clothing')]);
+
     Product.Category := 'Books';
-    Result := Validator.Validate(Product);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(Product);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -763,19 +815,23 @@ procedure TTestValidatorFluentAPI.Test_RuleFor_SingleProperty;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := 'john';
-    Result := Validator.Validate(User);
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -785,26 +841,34 @@ procedure TTestValidatorFluentAPI.Test_RuleFor_MultipleProperties;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
+  GetEmail: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required
-    .RuleFor('Email',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Email);
-      end).Required.Email;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    GetEmail :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Email);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required
+    .RuleFor('Email', GetEmail).Required.Email;
+
     User.Username := 'john';
     User.Email := 'john@test.com';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -814,21 +878,25 @@ procedure TTestValidatorFluentAPI.Test_ChainedRules_AllApplied;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required.MinLength(3).MaxLength(20);
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required.MinLength(3).MaxLength(20);
+
     User.Username := 'ab'; // Too short
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.IsTrue(Result.ErrorCount >= 1);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.IsTrue(ValResult.ErrorCount >= 1);
   finally
     Validator.Free;
   end;
@@ -838,21 +906,25 @@ procedure TTestValidatorFluentAPI.Test_WithMessage_CustomErrorMessage;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required.WithMessage('Custom error message');
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required.WithMessage('Custom error message');
+
     User.Username := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.AreEqual('Custom error message', Result.Errors[0].ErrorMessage);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.AreEqual('Custom error message', ValResult.Errors[0].ErrorMessage);
   finally
     Validator.Free;
   end;
@@ -862,21 +934,25 @@ procedure TTestValidatorFluentAPI.Test_WithErrorCode_CustomCode;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required.WithErrorCode('ERR001');
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required.WithErrorCode('ERR001');
+
     User.Username := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.AreEqual('ERR001', Result.Errors[0].ErrorCode);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.AreEqual('ERR001', ValResult.Errors[0].ErrorCode);
   finally
     Validator.Free;
   end;
@@ -886,23 +962,27 @@ procedure TTestValidatorFluentAPI.Test_WithDisplayName_UsedInMessage;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required.WithDisplayName('User Name');
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required.WithDisplayName('User Name');
+
     User.Username := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
     // Display name should appear in error message
-    Assert.IsTrue(Result.Errors[0].ErrorMessage.Contains('User Name') or 
-                  (Result.Errors[0].PropertyName = 'Username'));
+    Assert.IsTrue(ValResult.Errors[0].ErrorMessage.Contains('User Name') or
+                  (ValResult.Errors[0].PropertyName = 'Username'));
   finally
     Validator.Free;
   end;
@@ -912,22 +992,28 @@ procedure TTestValidatorFluentAPI.Test_When_ConditionTrue_RuleApplied;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   ApplyRule: Boolean;
+  GetEmail: TFunc<TUserDto, TValue>;
+  Cond: TFunc<Boolean>;
 begin
   ApplyRule := True;
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Email',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Email);
-      end).Required.When(function: Boolean begin Result := ApplyRule; end);
-    
+    GetEmail :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Email);
+        end
+      );
+    Cond := function: Boolean begin Result := ApplyRule; end;
+    Validator.RuleFor('Email', GetEmail).Required.When(Cond);
+
     User.Email := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid, 'Rule should be applied when condition is true');
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid, 'Rule should be applied when condition is true');
   finally
     Validator.Free;
   end;
@@ -937,22 +1023,28 @@ procedure TTestValidatorFluentAPI.Test_When_ConditionFalse_RuleSkipped;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   ApplyRule: Boolean;
+  GetEmail: TFunc<TUserDto, TValue>;
+  Cond: TFunc<Boolean>;
 begin
   ApplyRule := False;
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Email',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Email);
-      end).Required.When(function: Boolean begin Result := ApplyRule; end);
-    
+    GetEmail :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Email);
+        end
+      );
+    Cond := function: Boolean begin Result := ApplyRule; end;
+    Validator.RuleFor('Email', GetEmail).Required.When(Cond);
+
     User.Email := '';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid, 'Rule should be skipped when condition is false');
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid, 'Rule should be skipped when condition is false');
   finally
     Validator.Free;
   end;
@@ -962,24 +1054,32 @@ procedure TTestValidatorFluentAPI.Test_Must_CustomPredicate_Passes;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
+  NoSpaces: TFunc<TValue, Boolean>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Must(
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    NoSpaces :=
+      TFunc<TValue, Boolean>(
         function(const Value: TValue): Boolean
         begin
           Result := not Value.AsString.Contains(' ');
-        end, 'Username cannot contain spaces');
-    
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Must(NoSpaces, 'Username cannot contain spaces');
+
     User.Username := 'validname';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -989,25 +1089,33 @@ procedure TTestValidatorFluentAPI.Test_Must_CustomPredicate_Fails;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
+  NoSpaces: TFunc<TValue, Boolean>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Must(
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    NoSpaces :=
+      TFunc<TValue, Boolean>(
         function(const Value: TValue): Boolean
         begin
           Result := not Value.AsString.Contains(' ');
-        end, 'Username cannot contain spaces');
-    
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Must(NoSpaces, 'Username cannot contain spaces');
+
     User.Username := 'invalid name';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.AreEqual('Username cannot contain spaces', Result.Errors[0].ErrorMessage);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.AreEqual('Username cannot contain spaces', ValResult.Errors[0].ErrorMessage);
   finally
     Validator.Free;
   end;
@@ -1017,25 +1125,33 @@ procedure TTestValidatorFluentAPI.Test_MatchesProperty_SameValue_Passes;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetConfirmPassword: TFunc<TUserDto, TValue>;
+  GetPassword: TFunc<TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('ConfirmPassword',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.ConfirmPassword);
-      end).MatchesProperty('Password',
+    GetConfirmPassword :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.ConfirmPassword);
+        end
+      );
+    GetPassword :=
+      TFunc<TValue>(
         function: TValue
         begin
           Result := TValue.From<string>(User.Password);
-        end);
-    
+        end
+      );
+    Validator.RuleFor('ConfirmPassword', GetConfirmPassword).MatchesProperty('Password', GetPassword);
+
     User.Password := 'secret123';
     User.ConfirmPassword := 'secret123';
-    Result := Validator.Validate(User);
-    
-    Assert.IsTrue(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -1045,25 +1161,33 @@ procedure TTestValidatorFluentAPI.Test_MatchesProperty_DifferentValue_Fails;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetConfirmPassword: TFunc<TUserDto, TValue>;
+  GetPassword: TFunc<TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('ConfirmPassword',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.ConfirmPassword);
-      end).MatchesProperty('Password',
+    GetConfirmPassword :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.ConfirmPassword);
+        end
+      );
+    GetPassword :=
+      TFunc<TValue>(
         function: TValue
         begin
           Result := TValue.From<string>(User.Password);
-        end);
-    
+        end
+      );
+    Validator.RuleFor('ConfirmPassword', GetConfirmPassword).MatchesProperty('Password', GetPassword);
+
     User.Password := 'secret123';
     User.ConfirmPassword := 'different';
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -1073,120 +1197,120 @@ end;
 
 procedure TTestValidationResult.Test_Valid_IsValidTrue;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidationResult.Valid;
-  Assert.IsTrue(Result.IsValid);
+  ValResult := TValidationResult.Valid;
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestValidationResult.Test_Invalid_IsValidFalse;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Errors: TArray<TValidationError>;
 begin
   SetLength(Errors, 1);
   Errors[0].PropertyName := 'Test';
   Errors[0].ErrorMessage := 'Error';
-  
-  Result := TValidationResult.Invalid(Errors);
-  Assert.IsFalse(Result.IsValid);
+
+  ValResult := TValidationResult.Invalid(Errors);
+  Assert.IsFalse(ValResult.IsValid);
 end;
 
 procedure TTestValidationResult.Test_AddError_IncreasesErrorCount;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Error: TValidationError;
 begin
-  Result := TValidationResult.Valid;
-  Assert.AreEqual(0, Result.ErrorCount);
-  
+  ValResult := TValidationResult.Valid;
+  Assert.AreEqual(0, ValResult.ErrorCount);
+
   Error.PropertyName := 'Field1';
   Error.ErrorMessage := 'Error 1';
-  Result.AddError(Error);
-  
-  Assert.AreEqual(1, Result.ErrorCount);
-  
+  ValResult.AddError(Error);
+
+  Assert.AreEqual(1, ValResult.ErrorCount);
+
   Error.PropertyName := 'Field2';
   Error.ErrorMessage := 'Error 2';
-  Result.AddError(Error);
-  
-  Assert.AreEqual(2, Result.ErrorCount);
+  ValResult.AddError(Error);
+
+  Assert.AreEqual(2, ValResult.ErrorCount);
 end;
 
 procedure TTestValidationResult.Test_GetErrors_FiltersByProperty;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Error: TValidationError;
   Filtered: TArray<TValidationError>;
 begin
-  Result := TValidationResult.Valid;
-  
+  ValResult := TValidationResult.Valid;
+
   Error.PropertyName := 'Username';
   Error.ErrorMessage := 'Username error';
-  Result.AddError(Error);
-  
+  ValResult.AddError(Error);
+
   Error.PropertyName := 'Email';
   Error.ErrorMessage := 'Email error';
-  Result.AddError(Error);
-  
+  ValResult.AddError(Error);
+
   Error.PropertyName := 'Username';
   Error.ErrorMessage := 'Another username error';
-  Result.AddError(Error);
-  
-  Filtered := Result.GetErrors('Username');
-  
-  Assert.AreEqual(2, Length(Filtered));
+  ValResult.AddError(Error);
+
+  Filtered := ValResult.GetErrors('Username');
+
+  Assert.AreEqual(2, Integer(Length(Filtered)));
 end;
 
 procedure TTestValidationResult.Test_GetFirstError_ReturnsFirstMessage;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Error: TValidationError;
 begin
-  Result := TValidationResult.Valid;
-  
+  ValResult := TValidationResult.Valid;
+
   Error.PropertyName := 'Field1';
   Error.ErrorMessage := 'First error';
-  Result.AddError(Error);
-  
+  ValResult.AddError(Error);
+
   Error.PropertyName := 'Field2';
   Error.ErrorMessage := 'Second error';
-  Result.AddError(Error);
-  
-  Assert.AreEqual('First error', Result.GetFirstError);
+  ValResult.AddError(Error);
+
+  Assert.AreEqual('First error', ValResult.GetFirstError);
 end;
 
 procedure TTestValidationResult.Test_ToString_FormatsErrors;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Error: TValidationError;
   S: string;
 begin
-  Result := TValidationResult.Valid;
-  
+  ValResult := TValidationResult.Valid;
+
   Error.PropertyName := 'Username';
   Error.ErrorMessage := 'is required';
-  Result.AddError(Error);
-  
-  S := Result.ToString;
-  
+  ValResult.AddError(Error);
+
+  S := ValResult.ToString;
+
   Assert.IsTrue(S.Contains('Username'));
   Assert.IsTrue(S.Contains('required'));
 end;
 
 procedure TTestValidationResult.Test_ErrorCount_ReturnsCorrectCount;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
   Errors: TArray<TValidationError>;
 begin
   SetLength(Errors, 3);
   Errors[0].ErrorMessage := 'Error 1';
   Errors[1].ErrorMessage := 'Error 2';
   Errors[2].ErrorMessage := 'Error 3';
-  
-  Result := TValidationResult.Invalid(Errors);
-  
-  Assert.AreEqual(3, Result.ErrorCount);
+
+  ValResult := TValidationResult.Invalid(Errors);
+
+  Assert.AreEqual(3, ValResult.ErrorCount);
 end;
 
 { TTestValidateAndThrow }
@@ -1195,17 +1319,21 @@ procedure TTestValidateAndThrow.Test_ValidateAndThrow_Valid_NoException;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := 'valid_user';
-    
+
     // Should not throw
     Assert.WillNotRaise(
       procedure
@@ -1221,17 +1349,21 @@ procedure TTestValidateAndThrow.Test_ValidateAndThrow_Invalid_ThrowsException;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := '';
-    
+
     Assert.WillRaise(
       procedure
       begin
@@ -1246,17 +1378,21 @@ procedure TTestValidateAndThrow.Test_ValidationException_ContainsErrors;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
+  GetUsername: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator.RuleFor('Username',
-      function(const U: TUserDto): TValue
-      begin
-        Result := TValue.From<string>(U.Username);
-      end).Required;
-    
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
+        function(const U: TUserDto): TValue
+        begin
+          Result := TValue.From<string>(U.Username);
+        end
+      );
+    Validator.RuleFor('Username', GetUsername).Required;
+
     User.Username := '';
-    
+
     try
       Validator.ValidateAndThrow(User);
       Assert.Fail('Expected exception');
@@ -1335,29 +1471,29 @@ end;
 
 procedure TTestQuickValidators.Test_TValidate_Combine_AllValid;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Combine([
+  ValResult := TValidate.Combine([
     TValidate.Required('hello', 'Field1'),
     TValidate.Email('test@test.com', 'Email'),
     TValidate.MinLength('hello', 3, 'Field2')
   ]);
-  
-  Assert.IsTrue(Result.IsValid);
+
+  Assert.IsTrue(ValResult.IsValid);
 end;
 
 procedure TTestQuickValidators.Test_TValidate_Combine_SomeInvalid;
 var
-  Result: TValidationResult;
+  ValResult: TValidationResult;
 begin
-  Result := TValidate.Combine([
+  ValResult := TValidate.Combine([
     TValidate.Required('', 'Field1'),
     TValidate.Email('test@test.com', 'Email'),
     TValidate.MinLength('hi', 3, 'Field2')
   ]);
-  
-  Assert.IsFalse(Result.IsValid);
-  Assert.AreEqual(2, Result.ErrorCount);
+
+  Assert.IsFalse(ValResult.IsValid);
+  Assert.AreEqual(2, ValResult.ErrorCount);
 end;
 
 { TTestComplexValidation }
@@ -1366,33 +1502,45 @@ procedure TTestComplexValidation.Test_CompleteUserValidation;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
+  GetEmail: TFunc<TUserDto, TValue>;
+  GetAge: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator
-      .RuleFor('Username',
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<string>(U.Username);
-        end).Required.MinLength(3).MaxLength(50)
-      .RuleFor('Email',
+        end
+      );
+    GetEmail :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<string>(U.Email);
-        end).Required.Email
-      .RuleFor('Age',
+        end
+      );
+    GetAge :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<Integer>(U.Age);
-        end).Range(18, 120);
-    
+        end
+      );
+    Validator
+      .RuleFor('Username', GetUsername).Required.MinLength(3).MaxLength(50)
+      .RuleFor('Email', GetEmail).Required.Email
+      .RuleFor('Age', GetAge).Range(18, 120);
+
     User.Username := 'johndoe';
     User.Email := 'john@example.com';
     User.Age := 25;
-    
-    Result := Validator.Validate(User);
-    Assert.IsTrue(Result.IsValid);
+
+    ValResult := Validator.Validate(User);
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -1402,33 +1550,45 @@ procedure TTestComplexValidation.Test_ProductValidation;
 var
   Validator: TValidator<TProductDto>;
   Product: TProductDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetName: TFunc<TProductDto, TValue>;
+  GetPrice: TFunc<TProductDto, TValue>;
+  GetQuantity: TFunc<TProductDto, TValue>;
 begin
   Validator := TValidator<TProductDto>.Create;
   try
-    Validator
-      .RuleFor('Name',
+    GetName :=
+      TFunc<TProductDto, TValue>(
         function(const P: TProductDto): TValue
         begin
           Result := TValue.From<string>(P.Name);
-        end).Required.MaxLength(100)
-      .RuleFor('Price',
+        end
+      );
+    GetPrice :=
+      TFunc<TProductDto, TValue>(
         function(const P: TProductDto): TValue
         begin
           Result := TValue.From<Double>(P.Price);
-        end).GreaterThan(0)
-      .RuleFor('Quantity',
+        end
+      );
+    GetQuantity :=
+      TFunc<TProductDto, TValue>(
         function(const P: TProductDto): TValue
         begin
           Result := TValue.From<Integer>(P.Quantity);
-        end).Range(0, 10000);
-    
+        end
+      );
+    Validator
+      .RuleFor('Name', GetName).Required.MaxLength(100)
+      .RuleFor('Price', GetPrice).GreaterThan(0)
+      .RuleFor('Quantity', GetQuantity).Range(0, 10000);
+
     Product.Name := 'Laptop';
     Product.Price := 999.99;
     Product.Quantity := 50;
-    
-    Result := Validator.Validate(Product);
-    Assert.IsTrue(Result.IsValid);
+
+    ValResult := Validator.Validate(Product);
+    Assert.IsTrue(ValResult.IsValid);
   finally
     Validator.Free;
   end;
@@ -1438,36 +1598,48 @@ procedure TTestComplexValidation.Test_MultipleErrorsCollected;
 var
   Validator: TValidator<TUserDto>;
   User: TUserDto;
-  Result: TValidationResult;
+  ValResult: TValidationResult;
+  GetUsername: TFunc<TUserDto, TValue>;
+  GetEmail: TFunc<TUserDto, TValue>;
+  GetAge: TFunc<TUserDto, TValue>;
 begin
   Validator := TValidator<TUserDto>.Create;
   try
-    Validator
-      .RuleFor('Username',
+    GetUsername :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<string>(U.Username);
-        end).Required
-      .RuleFor('Email',
+        end
+      );
+    GetEmail :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<string>(U.Email);
-        end).Required.Email
-      .RuleFor('Age',
+        end
+      );
+    GetAge :=
+      TFunc<TUserDto, TValue>(
         function(const U: TUserDto): TValue
         begin
           Result := TValue.From<Integer>(U.Age);
-        end).Range(18, 120);
-    
+        end
+      );
+    Validator
+      .RuleFor('Username', GetUsername).Required
+      .RuleFor('Email', GetEmail).Required.Email
+      .RuleFor('Age', GetAge).Range(18, 120);
+
     // All invalid
     User.Username := '';
     User.Email := 'invalid';
     User.Age := 10;
-    
-    Result := Validator.Validate(User);
-    
-    Assert.IsFalse(Result.IsValid);
-    Assert.IsTrue(Result.ErrorCount >= 3, 'Should collect all errors');
+
+    ValResult := Validator.Validate(User);
+
+    Assert.IsFalse(ValResult.IsValid);
+    Assert.IsTrue(ValResult.ErrorCount >= 3, 'Should collect all errors');
   finally
     Validator.Free;
   end;

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Resilience - Resilience Patterns Module
   
   Implementation of common resilience patterns for fault tolerance.
@@ -415,7 +415,7 @@ end;
 
 destructor TCircuitBreaker.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -687,7 +687,7 @@ end;
 
 destructor TRetryPolicy.Destroy;
 begin
-  FHandledExceptions.Free;
+  FreeAndNil(FHandledExceptions);
   inherited;
 end;
 
@@ -1014,7 +1014,7 @@ end;
 
 destructor TFallbackPolicy<T>.Destroy;
 begin
-  FHandledExceptions.Free;
+  FreeAndNil(FHandledExceptions);
   inherited;
 end;
 
@@ -1109,8 +1109,8 @@ end;
 
 destructor TBulkheadPolicy.Destroy;
 begin
-  FSemaphore.Free;
-  FLock.Free;
+  FreeAndNil(FSemaphore);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -1265,13 +1265,13 @@ end;
 destructor TResiliencePolicy.Destroy;
 begin
   if FOwnsRetry and Assigned(FRetry) then
-    FRetry.Free;
+    FreeAndNil(FRetry);
   if FOwnsTimeout and Assigned(FTimeout) then
-    FTimeout.Free;
+    FreeAndNil(FTimeout);
   if FOwnsCircuitBreaker and Assigned(FCircuitBreaker) then
-    FCircuitBreaker.Free;
+    FreeAndNil(FCircuitBreaker);
   if FOwnsBulkhead and Assigned(FBulkhead) then
-    FBulkhead.Free;
+    FreeAndNil(FBulkhead);
   inherited;
 end;
 
@@ -1279,7 +1279,7 @@ function TResiliencePolicy.WithRetry(Policy: TRetryPolicy;
   OwnsPolicy: Boolean): TResiliencePolicy;
 begin
   if FOwnsRetry and Assigned(FRetry) then
-    FRetry.Free;
+    FreeAndNil(FRetry);
   FRetry := Policy;
   FOwnsRetry := OwnsPolicy;
   Result := Self;
@@ -1289,7 +1289,7 @@ function TResiliencePolicy.WithTimeout(Policy: TTimeoutPolicy;
   OwnsPolicy: Boolean): TResiliencePolicy;
 begin
   if FOwnsTimeout and Assigned(FTimeout) then
-    FTimeout.Free;
+    FreeAndNil(FTimeout);
   FTimeout := Policy;
   FOwnsTimeout := OwnsPolicy;
   Result := Self;
@@ -1304,7 +1304,7 @@ function TResiliencePolicy.WithCircuitBreaker(Breaker: TCircuitBreaker;
   OwnsBreaker: Boolean): TResiliencePolicy;
 begin
   if FOwnsCircuitBreaker and Assigned(FCircuitBreaker) then
-    FCircuitBreaker.Free;
+    FreeAndNil(FCircuitBreaker);
   FCircuitBreaker := Breaker;
   FOwnsCircuitBreaker := OwnsBreaker;
   Result := Self;
@@ -1314,7 +1314,7 @@ function TResiliencePolicy.WithBulkhead(Policy: TBulkheadPolicy;
   OwnsPolicy: Boolean): TResiliencePolicy;
 begin
   if FOwnsBulkhead and Assigned(FBulkhead) then
-    FBulkhead.Free;
+    FreeAndNil(FBulkhead);
   FBulkhead := Policy;
   FOwnsBulkhead := OwnsPolicy;
   Result := Self;
@@ -1468,8 +1468,8 @@ var
 begin
   for Pair in FBreakers do
     Pair.Value.Free;
-  FBreakers.Free;
-  FLock.Free;
+  FreeAndNil(FBreakers);
+  FreeAndNil(FLock);
   inherited;
 end;
 

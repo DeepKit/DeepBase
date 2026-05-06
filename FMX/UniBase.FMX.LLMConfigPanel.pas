@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.FMX.LLMConfigPanel - FMX LLM 配置面板组件
   
   版本: 1.0
@@ -182,7 +182,7 @@ end;
 destructor TFMXLLMConfigPanel.Destroy;
 begin
   if FOwnsLLM and Assigned(FLLM) then
-    FLLM.Free;
+    FreeAndNil(FLLM);
   inherited;
 end;
 
@@ -503,7 +503,7 @@ begin
     // 如果有内部 LLM，释放它
     if FOwnsLLM and Assigned(FLLM) then
     begin
-      FLLM.Free;
+      FreeAndNil(FLLM);
       FLLM := nil;
       FOwnsLLM := False;
     end;

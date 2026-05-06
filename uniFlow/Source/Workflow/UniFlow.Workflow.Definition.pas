@@ -25,7 +25,8 @@ unit UniFlow.Workflow.Definition;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections;
+  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
+  UniBase.Exceptions;
 
 type
   /// <summary>步骤类型</summary>
@@ -798,7 +799,7 @@ begin
     if JSONValue is TJSONObject then
       Result := FromJSON(JSONValue as TJSONObject)
     else
-      raise Exception.Create('Invalid JSON: expected object');
+      raise EOperationException.Create('Invalid JSON: expected object');
   finally
     JSONValue.Free;
   end;

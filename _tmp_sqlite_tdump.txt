@@ -1,0 +1,580 @@
+Turbo Dump  Version 6.6.2.0 Copyright (c) 1988-2022 Embarcadero Technologies, Inc.
+                 Display of File tests\sqlite3.dll
+
+Old Executable Header
+
+DOS File Size                                     178110h  (1540368. )
+Load Image Size                                      450h  (  1104. )
+Relocation Table entry count                          0000h  (     0. )
+Relocation Table address                              0040h  (    64. )
+Size of header record      (in paragraphs)            0004h  (     4. )
+Minimum Memory Requirement (in paragraphs)            0000h  (     0. )
+Maximum Memory Requirement (in paragraphs)            FFFFh  ( 65535. )
+File load checksum                                    0000h  (     0. )
+Overlay Number                                        0000h  (     0. )
+
+Initial Stack Segment  (SS:SP)			  0000:00B8
+Program Entry Point    (CS:IP)			  0000:0000
+
+
+Portable Executable (PE) File
+
+Header base: 00000108
+
+CPU type                 AMD64
+Flags                    2022 [ executable linenumbers symbols largeaddr backwards library ]
+DLL flags                0160 [ DynamicBase NXCompat HighEntropyVA ]
+Linker Version           E.29
+Time stamp               6703ACF2 : Mon Oct  7 17:42:10 2024
+O/S Version              6.0
+User Version             0.0
+Subsystem Version        6.0
+Subsystem                0002 [ Windows GUI ]
+Object count             00000006
+Symbols offset           00000000
+Symbols count            00000000
+Optional header size     00F0
+Magic #                  20B
+Code size                00133000
+Init Data size           00042800
+Uninit Data size         00000000
+Entry RVA                00132ED0
+Image base               0000000180000000
+Code base                00001000
+Object/File align        00001000/00000200
+Reserved                 00000000
+Image size               00178000
+Header size              00000400
+Checksum                 001850E7
+Stack reserve/commit     0000000000100000/0000000000001000
+Heap reserve/commit      0000000000100000/0000000000001000
+Number interesting RVAs  00000010
+Name                   RVA       Size  
+------------------  --------  --------
+Exports             0015F210  00002308
+Imports             00161518  000000B4
+Resources           00176000  00000880
+Exceptions          00168000  0000DBCC
+Security            00175200  00002F10
+Fixups              00177000  00000E58
+Debug               00149530  00000054
+Description         00000000  00000000
+Global Ptr          00000000  00000000
+TLS                 00000000  00000000
+Callbacks           001493F0  00000140
+Bound Imports       00000000  00000000
+Import Addr Table   00134000  00000458
+Delayed Imports     00000000  00000000
+COM Runtime         00000000  00000000
+reserved            00000000  00000000
+
+Object table:
+#   Name              VirtSize    RVA     PhysSize  Phys off  Flags   
+--  --------          --------  --------  --------  --------  --------
+01  .text             00132E39  00001000  00133000  00000400  60000020 [CER]
+02  .rdata            0002E32C  00134000  0002E400  00133400  40000040 [IR]
+03  .data             00004D60  00163000  00004400  00161800  C0000040 [IRW]
+04  .pdata            0000DBCC  00168000  0000DC00  00165C00  40000040 [IR]
+05  .rsrc             00000880  00176000  00000A00  00173800  40000040 [IR]
+06  .reloc            00000E58  00177000  00001000  00174200  42000040 [DIR]
+
+Key to section flags:
+  C - contains code
+  D - discardable
+  E - executable
+  I - contains initialized data
+  R - readable
+  W - writeable
+
+******************************************************************************
+Section:             Import
+File Offset:         00133400 (1258496)
+  ImportLookUpTblRVA:001615D0
+  Time Stamp:        00000000
+  Forwarder Chain:   00000000 (index of first forwarder reference)
+
+Imports from KERNEL32.dll
+    (hint = 0024) AreFileApisANSI
+    (hint = 0498) ReadFile
+    (hint = 05DF) TryEnterCriticalSection
+    (hint = 036E) HeapCreate
+    (hint = 0370) HeapFree
+    (hint = 0149) EnterCriticalSection
+    (hint = 0275) GetFullPathNameW
+    (hint = 064B) WriteFile
+    (hint = 0245) GetDiskFreeSpaceW
+    (hint = 0439) OutputDebugStringA
+    (hint = 03FC) LockFile
+    (hint = 03E0) LeaveCriticalSection
+    (hint = 0385) InitializeCriticalSection
+    (hint = 0554) SetFilePointer
+    (hint = 0272) GetFullPathNameA
+    (hint = 0542) SetEndOfFile
+    (hint = 05E8) UnlockFileEx
+    (hint = 0319) GetTempPathW
+    (hint = 00EA) CreateMutexW
+    (hint = 0610) WaitForSingleObject
+    (hint = 00DA) CreateFileW
+    (hint = 0261) GetFileAttributesW
+    (hint = 0237) GetCurrentThreadId
+    (hint = 05E9) UnmapViewOfFile
+    (hint = 0378) HeapValidate
+    (hint = 0375) HeapSize
+    (hint = 0412) MultiByteToWideChar
+    (hint = 05B4) Sleep
+    (hint = 0318) GetTempPathA
+    (hint = 01C1) FormatMessageW
+    (hint = 0242) GetDiskFreeSpaceA
+    (hint = 027D) GetLastError
+    (hint = 025C) GetFileAttributesA
+    (hint = 025E) GetFileAttributesExW
+    (hint = 043A) OutputDebugStringW
+    (hint = 01BC) FlushViewOfFile
+    (hint = 00D2) CreateFileA
+    (hint = 03E4) LoadLibraryA
+    (hint = 0611) WaitForSingleObjectEx
+    (hint = 0125) DeleteFileA
+    (hint = 0128) DeleteFileW
+    (hint = 0373) HeapReAlloc
+    (hint = 0094) CloseHandle
+    (hint = 0487) RaiseException
+    (hint = 0304) GetSystemInfo
+    (hint = 03E7) LoadLibraryW
+    (hint = 036C) HeapAlloc
+    (hint = 036D) HeapCompact
+    (hint = 036F) HeapDestroy
+    (hint = 05E7) UnlockFile
+    (hint = 02CD) GetProcAddress
+    (hint = 03F2) LocalFree
+    (hint = 03FD) LockFileEx
+    (hint = 0267) GetFileSize
+    (hint = 0123) DeleteCriticalSection
+    (hint = 0233) GetCurrentProcessId
+    (hint = 02D4) GetProcessHeap
+    (hint = 05C0) SystemTimeToFileTime
+    (hint = 01C5) FreeLibrary
+    (hint = 0637) WideCharToMultiByte
+    (hint = 030A) GetSystemTimeAsFileTime
+    (hint = 0308) GetSystemTime
+    (hint = 01C0) FormatMessageA
+    (hint = 00D7) CreateFileMappingW
+    (hint = 0401) MapViewOfFile
+    (hint = 0470) QueryPerformanceCounter
+    (hint = 032C) GetTickCount
+    (hint = 01B9) FlushFileBuffers
+    (hint = 04FD) RtlLookupFunctionEntry
+    (hint = 0504) RtlVirtualUnwind
+    (hint = 05E6) UnhandledExceptionFilter
+    (hint = 05A4) SetUnhandledExceptionFilter
+    (hint = 0232) GetCurrentProcess
+    (hint = 05C4) TerminateProcess
+    (hint = 03A8) IsProcessorFeaturePresent
+    (hint = 0134) DisableThreadLibraryCalls
+    (hint = 038A) InitializeSListHead
+    (hint = 03A0) IsDebuggerPresent
+    (hint = 04F5) RtlCaptureContext
+
+Imports from VCRUNTIME140.dll
+    (hint = 003C) memcpy
+    (hint = 003D) memmove
+    (hint = 003E) memset
+    (hint = 003B) memcmp
+    (hint = 0025) __std_type_info_destroy_list
+    (hint = 0041) strrchr
+    (hint = 0040) strchr
+    (hint = 0008) __C_specific_handler
+    (hint = 003A) memchr
+
+Imports from api-ms-win-crt-math-l1-1-0.dll
+    (hint = 0054) atan
+    (hint = 011A) tanh
+    (hint = 00FE) pow
+    (hint = 0116) sqrt
+    (hint = 0092) cosh
+    (hint = 0051) asinh
+    (hint = 00B2) exp
+    (hint = 004C) acosh
+    (hint = 0090) cos
+    (hint = 00BE) floor
+    (hint = 0114) sinh
+    (hint = 004F) asin
+    (hint = 0055) atan2
+    (hint = 0058) atanh
+    (hint = 004A) acos
+    (hint = 00DA) log
+    (hint = 00C9) fmod
+    (hint = 0118) tan
+    (hint = 007C) ceil
+    (hint = 0112) sin
+    (hint = 00DB) log10
+    (hint = 00E0) log2
+    (hint = 011F) trunc
+
+Imports from api-ms-win-crt-runtime-l1-1-0.dll
+    (hint = 0036) _initterm
+    (hint = 0033) _initialize_narrow_environment
+    (hint = 0016) _cexit
+    (hint = 0022) _execute_onexit_table
+    (hint = 0037) _initterm_e
+    (hint = 0034) _initialize_onexit_table
+    (hint = 0018) _configure_narrow_argv
+    (hint = 0014) _beginthreadex
+    (hint = 003F) _seh_filter_dll
+    (hint = 0020) _endthreadex
+
+Imports from api-ms-win-crt-time-l1-1-0.dll
+    (hint = 0024) _localtime64_s
+
+Imports from api-ms-win-crt-heap-l1-1-0.dll
+    (hint = 001A) realloc
+    (hint = 0018) free
+    (hint = 0019) malloc
+    (hint = 0011) _msize
+
+Imports from api-ms-win-crt-string-l1-1-0.dll
+    (hint = 0093) strspn
+    (hint = 008E) strncmp
+    (hint = 0086) strcmp
+    (hint = 008A) strcspn
+
+Imports from api-ms-win-crt-utility-l1-1-0.dll
+    (hint = 0019) qsort
+
+******************************************************************************
+Section:             Exports
+File Offset:         00133400 (1258496)
+  Flags:             00000000
+  Time Stamp:        FFFFFFFF : Thu Jan  1 07:59:59 1970
+  Major Version:     0000
+  Minor Version:     0000
+
+Exports from sqlite3.dll
+  286 exported name(s), 286 export addresse(s).  Ordinal base is 1.
+  Sorted by Name:
+    RVA      Ord. Hint Name
+    -------- ---- ---- ----
+    00039520    1 0000 sqlite3_aggregate_context
+    00039680    2 0001 sqlite3_aggregate_count
+    0007DD50    3 0002 sqlite3_auto_extension
+    000C3670    4 0003 sqlite3_autovacuum_pages
+    0002FA80    5 0004 sqlite3_backup_finish
+    0002EF90    6 0005 sqlite3_backup_init
+    0002FC10    7 0006 sqlite3_backup_pagecount
+    0002FC00    8 0007 sqlite3_backup_remaining
+    0002F2F0    9 0008 sqlite3_backup_step
+    0003A530   10 0009 sqlite3_bind_blob
+    0003A600   11 000A sqlite3_bind_blob64
+    0003A6D0   12 000B sqlite3_bind_double
+    0003A740   13 000C sqlite3_bind_int
+    0003A750   14 000D sqlite3_bind_int64
+    0003A7E0   15 000E sqlite3_bind_null
+    0003ABA0   16 000F sqlite3_bind_parameter_count
+    0003ABF0   17 0010 sqlite3_bind_parameter_index
+    0003ABB0   18 0011 sqlite3_bind_parameter_name
+    0003A820   19 0012 sqlite3_bind_pointer
+    0003A8E0   20 0013 sqlite3_bind_text
+    0003A930   21 0014 sqlite3_bind_text16
+    0003A900   22 0015 sqlite3_bind_text64
+    0003A960   23 0016 sqlite3_bind_value
+    0003AA70   24 0017 sqlite3_bind_zeroblob
+    0003AB10   25 0018 sqlite3_bind_zeroblob64
+    00043560   26 0019 sqlite3_blob_bytes
+    00043320   27 001A sqlite3_blob_close
+    00042B90   28 001B sqlite3_blob_open
+    00043520   29 001C sqlite3_blob_read
+    00043580   30 001D sqlite3_blob_reopen
+    00043540   31 001E sqlite3_blob_write
+    000C2920   32 001F sqlite3_busy_handler
+    000C2A10   33 0020 sqlite3_busy_timeout
+    0007DE10   34 0021 sqlite3_cancel_auto_extension
+    000C1EC0   35 0022 sqlite3_changes
+    000C1EB0   36 0023 sqlite3_changes64
+    00037F10   37 0024 sqlite3_clear_bindings
+    000C22C0   38 0025 sqlite3_close
+    000C22D0   39 0026 sqlite3_close_v2
+    000C5720   40 0027 sqlite3_collation_needed
+    000C5790   41 0028 sqlite3_collation_needed16
+    000396C0   42 0029 sqlite3_column_blob
+    00039780   43 002A sqlite3_column_bytes
+    00039870   44 002B sqlite3_column_bytes16
+    00039690   45 002C sqlite3_column_count
+    0003A220   46 002D sqlite3_column_decltype
+    0003A230   47 002E sqlite3_column_decltype16
+    00039970   48 002F sqlite3_column_double
+    00039A50   49 0030 sqlite3_column_int
+    00039B70   50 0031 sqlite3_column_int64
+    0003A200   51 0032 sqlite3_column_name
+    0003A210   52 0033 sqlite3_column_name16
+    00039C90   53 0034 sqlite3_column_text
+    00039E60   54 0035 sqlite3_column_text16
+    00039F60   55 0036 sqlite3_column_type
+    00039D90   56 0037 sqlite3_column_value
+    000C3520   57 0038 sqlite3_commit_hook
+    000C7070   58 0039 sqlite3_compileoption_get
+    000C6EF0   59 003A sqlite3_compileoption_used
+    000C0270   60 003B sqlite3_complete
+    000C0800   61 003C sqlite3_complete16
+    000C1240   62 003D sqlite3_config
+    00039170   63 003E sqlite3_context_db_handle
+    000C5590   64 003F sqlite3_create_collation
+    000C5660   65 0040 sqlite3_create_collation16
+    000C55C0   66 0041 sqlite3_create_collation_v2
+    000C6870   67 0042 sqlite3_create_filename
+    000C2FE0   68 0043 sqlite3_create_function
+    000C3100   69 0044 sqlite3_create_function16
+    000C3030   70 0045 sqlite3_create_function_v2
+    0009E370   71 0046 sqlite3_create_module
+    0009E400   72 0047 sqlite3_create_module_v2
+    000C3090   73 0048 sqlite3_create_window_function
+    000396A0   74 0049 sqlite3_data_count
+    00167950   75 004A sqlite3_data_directory
+    00019B00   76 004B sqlite3_database_file_object
+    000C1A90   77 004C sqlite3_db_cacheflush
+    000C1BB0   78 004D sqlite3_db_config
+    000C6E30   79 004E sqlite3_db_filename
+    0003AD90   80 004F sqlite3_db_handle
+    000C19D0   81 0050 sqlite3_db_mutex
+    000C6E10   82 0051 sqlite3_db_name
+    000C6EA0   83 0052 sqlite3_db_readonly
+    000C19E0   84 0053 sqlite3_db_release_memory
+    000012A0   85 0054 sqlite3_db_status
+    0009F600   86 0055 sqlite3_declare_vtab
+    00012CE0   87 0056 sqlite3_deserialize
+    0009E410   88 0057 sqlite3_drop_modules
+    0007DCF0   89 0058 sqlite3_enable_load_extension
+    00020090   90 0059 sqlite3_enable_shared_cache
+    000C3ED0   91 005A sqlite3_errcode
+    000C3BA0   92 005B sqlite3_errmsg
+    000C3D50   93 005C sqlite3_errmsg16
+    000C3CD0   94 005D sqlite3_error_offset
+    000C3FE0   95 005E sqlite3_errstr
+    0007CF30   96 005F sqlite3_exec
+    0003B040   97 0060 sqlite3_expanded_sql
+    00037C80   98 0061 sqlite3_expired
+    000C3F50   99 0062 sqlite3_extended_errcode
+    000C6060  100 0063 sqlite3_extended_result_codes
+    000C60B0  101 0064 sqlite3_file_control
+    000C6D00  102 0065 sqlite3_filename_database
+    000C6D30  103 0066 sqlite3_filename_journal
+    000C6DD0  104 0067 sqlite3_filename_wal
+    00037D60  105 0068 sqlite3_finalize
+    00006320  106 0069 sqlite3_free
+    000C6A20  107 006A sqlite3_free_filename
+    00095C50  108 006B sqlite3_free_table
+    000C5A60  109 006C sqlite3_get_autocommit
+    00039540  110 006D sqlite3_get_auxdata
+    000C5800  111 006E sqlite3_get_clientdata
+    00095990  112 006F sqlite3_get_table
+    000C5A50  113 0070 sqlite3_global_recover
+    00006020  114 0071 sqlite3_hard_heap_limit64
+    000C0B30  115 0072 sqlite3_initialize
+    000C2AC0  116 0073 sqlite3_interrupt
+    000C2AD0  117 0074 sqlite3_is_interrupted
+    000BF470  118 0075 sqlite3_keyword_check
+    000BF460  119 0076 sqlite3_keyword_count
+    000BF420  120 0077 sqlite3_keyword_name
+    000C1E60  121 0078 sqlite3_last_insert_rowid
+    000C0AF0  122 0079 sqlite3_libversion
+    000C0B00  123 007A sqlite3_libversion_number
+    000C4250  124 007B sqlite3_limit
+    0007DC70  125 007C sqlite3_load_extension
+    00009340  126 007D sqlite3_log
+    000062E0  127 007E sqlite3_malloc
+    000062F0  128 007F sqlite3_malloc64
+    00005F30  129 0080 sqlite3_memory_alarm
+    000060E0  130 0081 sqlite3_memory_highwater
+    00006090  131 0082 sqlite3_memory_used
+    00009260  132 0083 sqlite3_mprintf
+    00006300  133 0084 sqlite3_msize
+    00005C20  134 0085 sqlite3_mutex_alloc
+    00005C40  135 0086 sqlite3_mutex_enter
+    00005C30  136 0087 sqlite3_mutex_free
+    00005C60  137 0088 sqlite3_mutex_leave
+    00005C50  138 0089 sqlite3_mutex_try
+    0003AF30  139 008A sqlite3_next_stmt
+    000C5250  140 008B sqlite3_open
+    000C5270  141 008C sqlite3_open16
+    000C5260  142 008D sqlite3_open_v2
+    00011560  143 008E sqlite3_os_end
+    00011230  144 008F sqlite3_os_init
+    000C32C0  145 0090 sqlite3_overload_function
+    000856E0  146 0091 sqlite3_prepare
+    00085960  147 0092 sqlite3_prepare16
+    00085980  148 0093 sqlite3_prepare16_v2
+    000859B0  149 0094 sqlite3_prepare16_v3
+    00085710  150 0095 sqlite3_prepare_v2
+    00085740  151 0096 sqlite3_prepare_v3
+    000C34A0  152 0097 sqlite3_profile
+    000C2990  153 0098 sqlite3_progress_handler
+    00009880  154 0099 sqlite3_randomness
+    00006790  155 009A sqlite3_realloc
+    000067A0  156 009B sqlite3_realloc64
+    00005F20  157 009C sqlite3_release_memory
+    00037E50  158 009D sqlite3_reset
+    0007DEC0  159 009E sqlite3_reset_auto_extension
+    00038750  160 009F sqlite3_result_blob
+    00038770  161 00A0 sqlite3_result_blob64
+    000387E0  162 00A1 sqlite3_result_double
+    000387F0  163 00A2 sqlite3_result_error
+    00038820  164 00A3 sqlite3_result_error16
+    00038BB0  165 00A4 sqlite3_result_error_code
+    00038C90  166 00A5 sqlite3_result_error_nomem
+    00038C50  167 00A6 sqlite3_result_error_toobig
+    00038850  168 00A7 sqlite3_result_int
+    00038880  169 00A8 sqlite3_result_int64
+    000388A0  170 00A9 sqlite3_result_null
+    000388C0  171 00AA sqlite3_result_pointer
+    00038950  172 00AB sqlite3_result_subtype
+    00038960  173 00AC sqlite3_result_text
+    00038A10  174 00AD sqlite3_result_text16
+    00038A30  175 00AE sqlite3_result_text16be
+    00038A50  176 00AF sqlite3_result_text16le
+    00038980  177 00B0 sqlite3_result_text64
+    00038A70  178 00B1 sqlite3_result_value
+    00038B00  179 00B2 sqlite3_result_zeroblob
+    00038B10  180 00B3 sqlite3_result_zeroblob64
+    000C3600  181 00B4 sqlite3_rollback_hook
+    00101A30  182 00B5 sqlite3_rtree_geometry_callback
+    00101AE0  183 00B6 sqlite3_rtree_query_callback
+    000121E0  184 00B7 sqlite3_serialize
+    0005FA50  185 00B8 sqlite3_set_authorizer
+    00039580  186 00B9 sqlite3_set_auxdata
+    000C58A0  187 00BA sqlite3_set_clientdata
+    000C1E70  188 00BB sqlite3_set_last_insert_rowid
+    000C1190  189 00BC sqlite3_shutdown
+    000C5FB0  190 00BD sqlite3_sleep
+    000092E0  191 00BE sqlite3_snprintf
+    00006010  192 00BF sqlite3_soft_heap_limit
+    00005F40  193 00C0 sqlite3_soft_heap_limit64
+    00132770  194 00C1 sqlite3_sourceid
+    0003B030  195 00C2 sqlite3_sql
+    000010E0  196 00C3 sqlite3_status
+    00001000  197 00C4 sqlite3_status64
+    00038F60  198 00C5 sqlite3_step
+    0003AF10  199 00C6 sqlite3_stmt_busy
+    0003ADE0  200 00C7 sqlite3_stmt_explain
+    0003ADC0  201 00C8 sqlite3_stmt_isexplain
+    0003ADA0  202 00C9 sqlite3_stmt_readonly
+    0003AF80  203 00CA sqlite3_stmt_status
+    00008C40  204 00CB sqlite3_str_append
+    00008C70  205 00CC sqlite3_str_appendall
+    00008B90  206 00CD sqlite3_str_appendchar
+    00009410  207 00CE sqlite3_str_appendf
+    00008FC0  208 00CF sqlite3_str_errcode
+    00008EE0  209 00D0 sqlite3_str_finish
+    00008FD0  210 00D1 sqlite3_str_length
+    00009040  211 00D2 sqlite3_str_new
+    00009000  212 00D3 sqlite3_str_reset
+    00008FE0  213 00D4 sqlite3_str_value
+    00006EC0  214 00D5 sqlite3_str_vappendf
+    0006EB50  215 00D6 sqlite3_strglob
+    0000A6A0  216 00D7 sqlite3_stricmp
+    0006EB80  217 00D8 sqlite3_strlike
+    0000A740  218 00D9 sqlite3_strnicmp
+    000C3FD0  219 00DA sqlite3_system_errno
+    000C5B30  220 00DB sqlite3_table_column_metadata
+    00167958  221 00DC sqlite3_temp_directory
+    000C6290  222 00DD sqlite3_test_control
+    000C5B20  223 00DE sqlite3_thread_cleanup
+    000C0B10  224 00DF sqlite3_threadsafe
+    000C1EE0  225 00E0 sqlite3_total_changes
+    000C1ED0  226 00E1 sqlite3_total_changes64
+    000C33A0  227 00E2 sqlite3_trace
+    000C3420  228 00E3 sqlite3_trace_v2
+    0003AD40  229 00E4 sqlite3_transfer_bindings
+    000C2210  230 00E5 sqlite3_txn_state
+    000C3590  231 00E6 sqlite3_update_hook
+    000C6C70  232 00E7 sqlite3_uri_boolean
+    000C6CC0  233 00E8 sqlite3_uri_int64
+    000C6BB0  234 00E9 sqlite3_uri_key
+    000C6AD0  235 00EA sqlite3_uri_parameter
+    00039160  236 00EB sqlite3_user_data
+    00037FF0  237 00EC sqlite3_value_blob
+    00038070  238 00ED sqlite3_value_bytes
+    000380B0  239 00EE sqlite3_value_bytes16
+    000380F0  240 00EF sqlite3_value_double
+    000383B0  241 00F0 sqlite3_value_dup
+    00038370  242 00F1 sqlite3_value_encoding
+    00038580  243 00F2 sqlite3_value_free
+    000383A0  244 00F3 sqlite3_value_frombind
+    00038120  245 00F4 sqlite3_value_int
+    00038180  246 00F5 sqlite3_value_int64
+    00038380  247 00F6 sqlite3_value_nochange
+    0003B860  248 00F7 sqlite3_value_numeric_type
+    00038200  249 00F8 sqlite3_value_pointer
+    000381E0  250 00F9 sqlite3_value_subtype
+    00038250  251 00FA sqlite3_value_text
+    00038290  252 00FB sqlite3_value_text16
+    000382D0  253 00FC sqlite3_value_text16be
+    00038310  254 00FD sqlite3_value_text16le
+    00038350  255 00FE sqlite3_value_type
+    00142810  256 00FF sqlite3_version => 3.45.3
+    00005900  257 0100 sqlite3_vfs_find
+    000059B0  258 0101 sqlite3_vfs_register
+    00005A90  259 0102 sqlite3_vfs_unregister
+    000091A0  260 0103 sqlite3_vmprintf
+    00009290  261 0104 sqlite3_vsnprintf
+    000AEB50  262 0105 sqlite3_vtab_collation
+    000A0340  263 0106 sqlite3_vtab_config
+    000AECE0  264 0107 sqlite3_vtab_distinct
+    000AEBB0  265 0108 sqlite3_vtab_in
+    00039420  266 0109 sqlite3_vtab_in_first
+    00039430  267 010A sqlite3_vtab_in_next
+    00039180  268 010B sqlite3_vtab_nochange
+    000A0320  269 010C sqlite3_vtab_on_conflict
+    000AEBF0  270 010D sqlite3_vtab_rhs_value
+    000C3750  271 010E sqlite3_wal_autocheckpoint
+    000C39B0  272 010F sqlite3_wal_checkpoint
+    000C3850  273 0110 sqlite3_wal_checkpoint_v2
+    000C37E0  274 0111 sqlite3_wal_hook
+    0000D010  275 0112 sqlite3_win32_is_nt
+    0000D460  276 0113 sqlite3_win32_mbcs_to_utf8
+    0000D480  277 0114 sqlite3_win32_mbcs_to_utf8_v2
+    0000D6B0  278 0115 sqlite3_win32_set_directory
+    0000D5F0  279 0116 sqlite3_win32_set_directory16
+    0000D4C0  280 0117 sqlite3_win32_set_directory8
+    0000D000  281 0118 sqlite3_win32_sleep
+    0000D450  282 0119 sqlite3_win32_unicode_to_utf8
+    0000D490  283 011A sqlite3_win32_utf8_to_mbcs
+    0000D4B0  284 011B sqlite3_win32_utf8_to_mbcs_v2
+    0000D440  285 011C sqlite3_win32_utf8_to_unicode
+    0000CF70  286 011D sqlite3_win32_write_debug
+
+******************************************************************************
+Section:             Resources
+File Offset:         00173800 (1521664)
+  Flags:             00000000
+  Time Stamp:        00000000
+  Major Version:     0000
+  Minor Version:     0000
+
+Resources:
+Type          Name                   Lang Id
+--------------------------------------------
+[0 named entries, 2 ID entries]
+type: Version (16)  (next directory @00000020)
+
+              [0 named entries, 1 ID entries]
+              type: Cursor (1)  (next directory @00000050)
+
+                                     [0 named entries, 1 ID entries]
+                                     type: Unknown (1033)  (data @00000080)
+                                         Offset:    001765E8
+                                         Size:      00000294
+                                         Code Page: 00000000
+                                         Reserved:  00000000
+
+type: Manifest (24)  (next directory @00000038)
+
+              [0 named entries, 1 ID entries]
+              type: Bitmap (2)  (next directory @00000068)
+
+                                     [0 named entries, 1 ID entries]
+                                     type: Unknown (1033)  (data @00000090)
+                                         Offset:    001760A0
+                                         Size:      00000545
+                                         Code Page: 00000000
+                                         Reserved:  00000000
+
+
+

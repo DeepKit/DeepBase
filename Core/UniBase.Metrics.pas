@@ -1,4 +1,4 @@
-unit UniBase.Metrics;
+﻿unit UniBase.Metrics;
 
 {*******************************************************************************
   UniBase Metrics
@@ -468,7 +468,7 @@ end;
 
 destructor TMetricBase.Destroy;
 begin
-  FLock.Free;
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -959,7 +959,7 @@ end;
 
 destructor TTimer.Destroy;
 begin
-  FHistogram.Free;
+  FreeAndNil(FHistogram);
   inherited;
 end;
 
@@ -1082,7 +1082,7 @@ end;
 
 destructor TSummary.Destroy;
 begin
-  FValues.Free;
+  FreeAndNil(FValues);
   inherited;
 end;
 
@@ -1259,8 +1259,8 @@ end;
 
 destructor TMetricFamily<T>.Destroy;
 begin
-  FLock.Free;
-  FMetrics.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FMetrics);
   inherited;
 end;
 
@@ -1384,9 +1384,9 @@ end;
 
 destructor TMetricsRegistry.Destroy;
 begin
-  FLock.Free;
-  FFamilies.Free;
-  FMetrics.Free;
+  FreeAndNil(FLock);
+  FreeAndNil(FFamilies);
+  FreeAndNil(FMetrics);
   inherited;
 end;
 

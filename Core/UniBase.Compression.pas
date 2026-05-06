@@ -1,4 +1,4 @@
-unit UniBase.Compression;
+﻿unit UniBase.Compression;
 
 {*******************************************************************************
   UniBase Compression Utilities
@@ -313,7 +313,7 @@ uses
 function TCompressionStats.ToString: string;
 begin
   Result := System.SysUtils.Format('Original: %d bytes, Compressed: %d bytes, Ratio: %.1f%%, Time: %d ms',
-    [OriginalSize, CompressedSize, CompressionRatio * 100, ElapsedMs]);
+    [OriginalSize, CompressedSize, CompressionRatio, ElapsedMs]);
 end;
 
 { TZipEntryInfo }
@@ -321,7 +321,7 @@ end;
 function TZipEntryInfo.CompressionRatio: Double;
 begin
   if UncompressedSize > 0 then
-    Result := 1 - (CompressedSize / UncompressedSize)
+    Result := 100 - (CompressedSize * 100 / UncompressedSize)
   else
     Result := 0;
 end;
@@ -342,8 +342,8 @@ destructor TZipArchiveReader.Destroy;
 begin
   if FZipFile.Mode <> zmClosed then
     FZipFile.Close;
-  FZipFile.Free;
-  FEntries.Free;
+  FreeAndNil(FZipFile);
+  FreeAndNil(FEntries);
   inherited;
 end;
 
@@ -507,7 +507,7 @@ end;
 destructor TZipArchiveWriter.Destroy;
 begin
   Close;
-  FZipFile.Free;
+  FreeAndNil(FZipFile);
   inherited;
 end;
 
@@ -944,7 +944,7 @@ end;
 destructor TProgressStream.Destroy;
 begin
   if FOwnsStream then
-    FStream.Free;
+    FreeAndNil(FStream);
   inherited;
 end;
 
@@ -1185,7 +1185,7 @@ end;
 class function TCompression.CalculateRatio(AOriginal, ACompressed: Int64): Double;
 begin
   if AOriginal > 0 then
-    Result := 1 - (ACompressed / AOriginal)
+    Result := 100 - (ACompressed * 100 / AOriginal)
   else
     Result := 0;
 end;

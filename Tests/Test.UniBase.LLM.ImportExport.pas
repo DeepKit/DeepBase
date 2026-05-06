@@ -42,7 +42,7 @@ begin
   Assert.AreEqual(0, R.MetaPromptsImported);
   Assert.AreEqual(0, R.BindingsImported);
   Assert.AreEqual(0, R.Skipped);
-  Assert.AreEqual(0, Length(R.Errors));
+  Assert.AreEqual(0, Integer(Length(R.Errors)));
 end;
 
 procedure TTestImportResult.Test_Summary_Success;

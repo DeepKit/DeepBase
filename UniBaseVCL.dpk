@@ -1,0 +1,46 @@
+package UniBaseVCL;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'UniBase VCL Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  UniBaseCore,
+  UniBaseServices,
+  UniBaseFeatures;
+
+contains
+  UniBase.VCL.ThemeAdapter in 'VCL\UniBase.VCL.ThemeAdapter.pas',
+  UniBase.VCL.ExceptionAdapter in 'VCL\UniBase.VCL.ExceptionAdapter.pas',
+  UniBase.VCL.ConfigControls in 'VCL\UniBase.VCL.ConfigControls.pas',
+  UniBase.VCL.I18nControls in 'VCL\UniBase.VCL.I18nControls.pas',
+  UniBase.VCL.ComboBoxes in 'VCL\UniBase.VCL.ComboBoxes.pas',
+  UniBase.VCL.FormStateHelper in 'VCL\UniBase.VCL.FormStateHelper.pas',
+  UniBase.VCL.LogListView in 'VCL\UniBase.VCL.LogListView.pas',
+  UniBase.VCL.UIHelper in 'VCL\UniBase.VCL.UIHelper.pas',
+  UniBase.VCL.UpdateDialog in 'VCL\UniBase.VCL.UpdateDialog.pas',
+  UniBase.VCL.AutoUpdater in 'VCL\UniBase.VCL.AutoUpdater.pas',
+  UniBase.VCL.NotificationBar in 'VCL\UniBase.VCL.NotificationBar.pas',
+  UniBase.VCL.LicenseStatusPanel in 'VCL\UniBase.VCL.LicenseStatusPanel.pas',
+  UniBase.VCL.LicenseAuthDialog in 'VCL\UniBase.VCL.LicenseAuthDialog.pas',
+  UniBase.VCL.DBInitWizard in 'VCL\UniBase.VCL.DBInitWizard.pas',
+  UniBase.VCL.BindableControls in 'VCL\UniBase.VCL.BindableControls.pas',
+  UniBase.VCL.WaitForm in 'VCL\UniBase.VCL.WaitForm.pas',
+  UniBase.VCL.LLMSettingsFrame in 'VCL\UniBase.VCL.LLMSettingsFrame.pas',
+  UniBase.VCL.FeedbackDialog in 'VCL\UniBase.VCL.FeedbackDialog.pas',
+  UniBase.VCL.LLMChatFrame in 'VCL\UniBase.VCL.LLMChatFrame.pas',
+  UniBase.VCL.PromptVariableGrid in 'VCL\UniBase.VCL.PromptVariableGrid.pas',
+  UniBase.VCL.TestCenterFrame in 'VCL\UniBase.VCL.TestCenterFrame.pas',
+  UniBase.VCL.UnlockDialog in 'VCL\UniBase.VCL.UnlockDialog.pas',
+  UniBase.VCL.MVVMControls in 'VCL\UniBase.VCL.MVVMControls.pas',
+  UniBase.VCL.AboutFrame in 'VCL\UniBase.VCL.AboutFrame.pas',
+  UniBase.VCL.LLMConfigPanel in 'VCL\UniBase.VCL.LLMConfigPanel.pas',
+  UniBase.VCL.MRUControls in 'VCL\UniBase.VCL.MRUControls.pas',
+  UniBase.Export in 'Core\UniBase.Export.pas',
+  UniBase.SplashScreen in 'Core\UniBase.SplashScreen.pas',
+  UniBase.VirtualScroll in 'Core\UniBase.VirtualScroll.pas',
+  UniBase.TestHelper in 'Core\UniBase.TestHelper.pas';
+
+end.

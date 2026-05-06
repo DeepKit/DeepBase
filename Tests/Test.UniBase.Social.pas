@@ -411,13 +411,13 @@ var
   S: string;
 begin
   S := TSocialHelper.GenerateState(16);
-  Assert.AreEqual(16, Length(S));
+  Assert.AreEqual(16, Integer(Length(S)));
 
   S := TSocialHelper.GenerateState(32);
-  Assert.AreEqual(32, Length(S));
+  Assert.AreEqual(32, Integer(Length(S)));
 
   S := TSocialHelper.GenerateState; // Default 16
-  Assert.AreEqual(16, Length(S));
+  Assert.AreEqual(16, Integer(Length(S)));
 end;
 
 procedure TSocialHelperTests.Test_GenerateState_Unique;
@@ -438,7 +438,7 @@ var
 begin
   Verifier := TSocialHelper.GenerateCodeVerifier;
 
-  Assert.AreEqual(64, Length(Verifier));
+  Assert.AreEqual(64, Integer(Length(Verifier)));
   for I := 1 to Length(Verifier) do
     Assert.IsTrue(Pos(Verifier[I], Allowed) > 0,
       'Verifier contains a character outside the RFC 7636 charset');
@@ -526,7 +526,7 @@ begin
       Assert.AreEqual('fixed-state', Params['state']);
       Assert.AreEqual('S256', Params['code_challenge_method']);
       Assert.IsTrue(Params.ContainsKey('code_challenge'));
-      Assert.AreEqual(64, Length(Client.LastCodeVerifier));
+      Assert.AreEqual(64, Integer(Length(Client.LastCodeVerifier)));
       Assert.AreEqual(
         TSocialHelper.GenerateCodeChallengeS256(Client.LastCodeVerifier),
         Params['code_challenge']);

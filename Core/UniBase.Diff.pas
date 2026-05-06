@@ -1,4 +1,4 @@
-unit UniBase.Diff;
+﻿unit UniBase.Diff;
 
 (*******************************************************************************
   UniBase Text Diff
@@ -322,7 +322,7 @@ end;
 
 destructor TDiffHunk.Destroy;
 begin
-  FItems.Free;
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -343,8 +343,8 @@ end;
 
 destructor TDiffResult.Destroy;
 begin
-  FHunks.Free;
-  FItems.Free;
+  FreeAndNil(FHunks);
+  FreeAndNil(FItems);
   inherited;
 end;
 
@@ -668,7 +668,7 @@ end;
 
 destructor TPatch.Destroy;
 begin
-  FOperations.Free;
+  FreeAndNil(FOperations);
   inherited;
 end;
 
@@ -946,8 +946,8 @@ end;
 
 destructor TMergeResult.Destroy;
 begin
-  FConflicts.Free;
-  FMergedLines.Free;
+  FreeAndNil(FConflicts);
+  FreeAndNil(FMergedLines);
   inherited;
 end;
 
@@ -1477,7 +1477,7 @@ end;
 
 class destructor TDiff.Destroy;
 begin
-  FDefaultDiff.Free;
+  FreeAndNil(FDefaultDiff);
 end;
 
 class function TDiff.GetDefault: TTextDiff;

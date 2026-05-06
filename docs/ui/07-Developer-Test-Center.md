@@ -261,11 +261,9 @@ end;
 5. 在 UniPublisher 中一键执行“打包 + 生成 version.json + 上传发布”。
 6. 发布完成后，可以在测试中心中附加一次“安装后回归测试”（可选）。
 
-### 7.4 与 10.01/UniPublisher 规范文档的关系
+### 7.4 与发布工具规范的关系
 
 - 本文件只规定**测试中心一侧**的要求：
   - 必须有统一的“打开 UniPublisher”入口。
   - 入口行为是“启动工具”,而不是直接执行打包逻辑。
-- 关于 UniPublisher 的详细规范（`.publish.json` 配置、`version.json` 字段、发布目标配置等）,请参考：
-  - `docs/tools/UniPublisher-Spec.md`
-  - `docs/10.01.uniBase-4AI-发布更新解锁集成指南-v1.0.md` 第 2 章与 UniPublisher 相关小节。
+- 关于 `.publish.json`、`version.json` 和发布目标配置，归发布工具项目自身维护；UniBase 文档只保留测试中心集成入口约定。

@@ -32,7 +32,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils,
   Vcl.Dialogs, Vcl.Graphics, Vcl.ExtCtrls, Winapi.ShellAPI, Winapi.Windows,
-  FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, uBasicProtection;
+  FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, uBasicProtection,
+  UniBase.Exceptions;
 
 type
   // 加密算法类型
@@ -254,7 +255,7 @@ end;
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create('防篡改包未初始化');
+    raise EAntiTamperException.Create('防篡改包未初始化');
   
   // 根据配置选择加密算法
   case FConfig.EncryptionType of
@@ -263,7 +264,7 @@ begin
     etAES256:
       Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   else
-    raise Exception.Create('未知的加密类型');
+    raise EAntiTamperException.Create('未知的加密类型');
   end;
   
   if FConfig.EncryptionType = etAES256 then
@@ -275,7 +276,7 @@ end;
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise Exception.Create('防篡改包未初始化');
+    raise EAntiTamperException.Create('防篡改包未初始化');
   
   // 根据配置选择解密算法
   case FConfig.EncryptionType of
@@ -284,7 +285,7 @@ begin
     etAES256:
       Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   else
-    raise Exception.Create('未知的加密类型');
+    raise EAntiTamperException.Create('未知的加密类型');
   end;
   
   if FConfig.EncryptionType = etAES256 then

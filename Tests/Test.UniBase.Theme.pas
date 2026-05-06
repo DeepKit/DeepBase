@@ -15,7 +15,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils, System.Classes,
-  UniBase.Types, UniBase.Manager, UniBase.Theme;
+  UniBase.Types, UniBase.Manager, UniBase.Theme, UniBase.Storage.Interfaces;
 
 type
   [TestFixture]
@@ -58,9 +58,41 @@ type
     
     [Test]
     procedure Test_ThemeInfo_HasRequiredFields;
+
+    [Test]
+    procedure Test_StorageInjection_ReadThemes;
   end;
 
 implementation
+
+type
+  TInMemoryThemeStorage = class(TInterfacedObject, IThemeStorage)
+  private
+    FThemes: TThemeInfoArray;
+  public
+    constructor Create;
+    function ReadEnabledThemes: TThemeInfoArray;
+  end;
+
+constructor TInMemoryThemeStorage.Create;
+begin
+  inherited Create;
+  SetLength(FThemes, 2);
+  FThemes[0].Name := 'InjectedDark';
+  FThemes[0].StyleFile := '';
+  FThemes[0].IsDark := True;
+  FThemes[0].IsBuiltIn := False;
+
+  FThemes[1].Name := 'InjectedLight';
+  FThemes[1].StyleFile := '';
+  FThemes[1].IsDark := False;
+  FThemes[1].IsBuiltIn := False;
+end;
+
+function TInMemoryThemeStorage.ReadEnabledThemes: TThemeInfoArray;
+begin
+  Result := FThemes;
+end;
 
 { TTestUniBaseTheme }
 
@@ -226,6 +258,27 @@ begin
     
     Assert.IsNotEmpty(Info.Name, 'Name 字段不应该为空');
     // DisplayName 可以为空，使用 Name 作为显示名
+  end;
+end;
+
+procedure TTestUniBaseTheme.Test_StorageInjection_ReadThemes;
+var
+  Storage: IThemeStorage;
+  LocalTheme: TUniBaseTheme;
+  Info: TThemeInfo;
+begin
+  Storage := TInMemoryThemeStorage.Create;
+  LocalTheme := TUniBaseTheme.Create(Storage);
+  try
+    Info := LocalTheme.GetThemeInfo('InjectedDark');
+    Assert.AreEqual('InjectedDark', Info.Name,
+      'Injected storage metadata should be readable by name');
+    Assert.IsTrue(Info.IsDark,
+      'Injected theme metadata should be returned by GetThemeInfo');
+    Assert.IsTrue(LocalTheme.IsDarkTheme('InjectedDark'),
+      'Injected dark flag should affect IsDarkTheme(ThemeName)');
+  finally
+    LocalTheme.Free;
   end;
 end;
 

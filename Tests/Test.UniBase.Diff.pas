@@ -336,7 +336,7 @@ procedure TDiffHunkTests.Test_Create;
 begin
   Assert.IsNotNull(FHunk);
   Assert.IsNotNull(FHunk.Items);
-  Assert.AreEqual(0, FHunk.Items.Count);
+  Assert.AreEqual(0, Integer(FHunk.Items.Count));
 end;
 
 procedure TDiffHunkTests.Test_AddItem;
@@ -345,7 +345,7 @@ var
 begin
   Item := TDiffItem.CreateEqual('line', 0, 0);
   FHunk.AddItem(Item);
-  Assert.AreEqual(1, FHunk.Items.Count);
+  Assert.AreEqual(1, Integer(FHunk.Items.Count));
 end;
 
 procedure TDiffHunkTests.Test_Properties;

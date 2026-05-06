@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.TestCenterFrame - Developer Test Center UI Frame
   
   Version: 1.0
@@ -128,7 +128,7 @@ end;
 destructor TTestCenterFrame.Destroy;
 begin
   if FOwnsManager and Assigned(FManager) then
-    FManager.Free;
+    FreeAndNil(FManager);
   inherited;
 end;
 

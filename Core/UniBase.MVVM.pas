@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.MVVM - Model-View-ViewModel Framework
   
   Version: 0.3
@@ -414,7 +414,7 @@ end;
 
 destructor TRelayCommand.Destroy;
 begin
-  FCanExecuteChangedHandlers.Free;
+  FreeAndNil(FCanExecuteChangedHandlers);
   inherited;
 end;
 
@@ -505,7 +505,7 @@ begin
   Cancel;
   if FTask <> nil then
     FTask.Wait;
-  FCanExecuteChangedHandlers.Free;
+  FreeAndNil(FCanExecuteChangedHandlers);
   inherited;
 end;
 
@@ -692,8 +692,8 @@ end;
 
 destructor TViewModelBase.Destroy;
 begin
-  FPropertyErrorHandlers.Free;
-  FValidationErrors.Free;
+  FreeAndNil(FPropertyErrorHandlers);
+  FreeAndNil(FValidationErrors);
   inherited;
 end;
 

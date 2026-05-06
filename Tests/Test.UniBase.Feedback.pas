@@ -311,7 +311,7 @@ procedure TTestFeedbackItem.Test_Create_Defaults;
 begin
   Assert.IsNotNull(FItem.Attachments);
   Assert.IsNotNull(FItem.Tags);
-  Assert.AreEqual(0, FItem.Attachments.Count);
+  Assert.AreEqual(0, Integer(FItem.Attachments.Count));
   Assert.IsFalse(FItem.IsSubmitted);
 end;
 
@@ -373,7 +373,7 @@ begin
   Attachment := TAttachmentInfo.Create('test.png', 'C:\Temp\test.png');
   FItem.AddAttachment(Attachment);
   
-  Assert.AreEqual(1, FItem.Attachments.Count);
+  Assert.AreEqual(1, Integer(FItem.Attachments.Count));
   Assert.AreEqual('test.png', FItem.Attachments[0].FileName);
 end;
 
@@ -389,7 +389,7 @@ begin
   
   FItem.RemoveAttachment(Att2.Id);
   
-  Assert.AreEqual(1, FItem.Attachments.Count);
+  Assert.AreEqual(1, Integer(FItem.Attachments.Count));
   Assert.AreEqual('keep.png', FItem.Attachments[0].FileName);
 end;
 
@@ -401,7 +401,7 @@ begin
   
   FItem.ClearAttachments;
   
-  Assert.AreEqual(0, FItem.Attachments.Count);
+  Assert.AreEqual(0, Integer(FItem.Attachments.Count));
 end;
 
 procedure TTestFeedbackItem.Test_Tags;
@@ -410,7 +410,7 @@ begin
   FItem.Tags.Add('ui');
   FItem.Tags.Add('crash');
   
-  Assert.AreEqual(3, FItem.Tags.Count);
+  Assert.AreEqual(3, Integer(FItem.Tags.Count));
   Assert.AreEqual('urgent', FItem.Tags[0]);
   Assert.AreEqual('ui', FItem.Tags[1]);
   Assert.AreEqual('crash', FItem.Tags[2]);
@@ -490,7 +490,7 @@ begin
   
   Errors := FItem.Validate;
   
-  Assert.AreEqual(0, Length(Errors));
+  Assert.AreEqual(0, Integer(Length(Errors)));
 end;
 
 { TTestFeedbackComment }

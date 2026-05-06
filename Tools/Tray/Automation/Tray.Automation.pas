@@ -26,7 +26,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, Winapi.ShellAPI, Winapi.TlHelp32,
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
-  System.DateUtils;
+  System.DateUtils,
+  UniBase.Exceptions;
 
 type
   { Action 执行结果 }
@@ -390,7 +391,7 @@ begin
   if JRoot = nil then
   begin
     Result.Free;
-    raise Exception.Create('Invalid JSON format');
+    raise EInvalidOperationException.Create('Invalid JSON format');
   end;
   
   try
@@ -403,7 +404,7 @@ begin
     // 解析步骤
     JSteps := JRoot.GetValue('steps') as TJSONArray;
     if JSteps = nil then
-      raise Exception.Create('Missing "steps" array');
+      raise EInvalidOperationException.Create('Missing "steps" array');
       
     for JStep in JSteps do
     begin
@@ -414,13 +415,13 @@ begin
       
       // 获取 action 类型
       if JStepObj.GetValue('action') = nil then
-        raise Exception.Create('Missing "action" field in step');
+        raise EInvalidOperationException.Create('Missing "action" field in step');
         
       ActionStr := JStepObj.GetValue('action').Value;
       ActionType := ActionTypeFromString(ActionStr);
       
       if ActionType = atUnknown then
-        raise Exception.CreateFmt('Unknown action type: %s', [ActionStr]);
+        raise EInvalidOperationException.CreateFmt('Unknown action type: %s', [ActionStr]);
       
       // 克隆参数对象
       ParamsCopy := TJSONObject(JStepObj.Clone);

@@ -375,17 +375,17 @@ var
   C: Char;
 begin
   S := TPaymentHelper.GenerateNonceStr(16);
-  Assert.AreEqual(16, Length(S));
+  Assert.AreEqual(16, Integer(Length(S)));
   for C in S do
     Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
 
   S := TPaymentHelper.GenerateNonceStr(32);
-  Assert.AreEqual(32, Length(S));
+  Assert.AreEqual(32, Integer(Length(S)));
   for C in S do
     Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
 
   S := TPaymentHelper.GenerateNonceStr; // Default 32
-  Assert.AreEqual(32, Length(S));
+  Assert.AreEqual(32, Integer(Length(S)));
   for C in S do
     Assert.IsTrue(CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9']));
 

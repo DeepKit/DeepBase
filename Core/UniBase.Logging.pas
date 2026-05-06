@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.Logging - Logging Module
   
   Version: 1.1
@@ -17,9 +17,9 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.SyncObjs,
-  FireDAC.Comp.Client,
   UniBase.Types,
-  UniBase.Constants;
+  UniBase.Constants,
+  UniBase.Storage.Interfaces;
 
 type
   /// <summary>
@@ -53,13 +53,9 @@ type
   /// </summary>
   TUniBaseLogger = class
   private
-    // Write thread has its own connection for thread safety
-    FWriteConnection: TFDConnection;
+    FStorage: ILogStorage;
     FDBPath: string;
-    
-    // Cached prepared query for high-frequency WriteToDB (single-threaded write)
-    FInsertLogQuery: TFDQuery;
-    
+
     FLogQueue: TThreadList<TLogEntry>;
     FWriteThread: TThread;
     FStopEvent: TEvent;
@@ -80,22 +76,24 @@ type
     FAppVersion: string;
     FEnvironment: string;
     FHostname: string;
+    class var FStorageFactory: TFunc<string, ILogStorage>;
     
     procedure WriteLogThread;
     procedure WriteToDB(const Entry: TLogEntry);
     procedure WriteToFile(const Entry: TLogEntry);
     procedure WriteToAggregator(const Entry: TLogEntry);
-    procedure EnsureWriteConnection;
     function EscapeLogContent(const Content: string): string;
-    procedure EnsureInsertQuery;
     function GetMaxLogFileSizeMB: Integer;
     procedure SetMaxLogFileSizeMB(const Value: Integer);
     function NextRotatedFileName(const BaseFile: string): string;
     function PickLogFileForWrite(const BaseFile: string; NewBytes: Integer): string;
+    class function CreateStorage(const ADBPath: string): ILogStorage; static;
     
   public
     constructor Create(const DBPath: string);
     destructor Destroy; override;
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<string, ILogStorage>); static;
     
     /// <summary>Max log file size in MB (default 10)</summary>
     property MaxLogFileSizeMB: Integer read GetMaxLogFileSizeMB write SetMaxLogFileSizeMB;
@@ -189,11 +187,7 @@ uses
   System.IOUtils,
   System.JSON,
   System.NetEncoding,
-  Winapi.Windows,
-  Data.DB,
-  FireDAC.Stan.Def,
-  FireDAC.Phys.SQLite,
-  FireDAC.DApt;
+  Winapi.Windows;
 
 var
   GLogger: TUniBaseLogger = nil;
@@ -271,10 +265,37 @@ end;
 
 { TUniBaseLogger }
 
+class procedure TUniBaseLogger.SetStorageFactory(
+  const AFactory: TFunc<string, ILogStorage>);
+begin
+  FStorageFactory := AFactory;
+end;
+
+class function TUniBaseLogger.CreateStorage(
+  const ADBPath: string): ILogStorage;
+begin
+  Result := nil;
+  if (ADBPath = '') or (not Assigned(FStorageFactory)) then
+    Exit;
+
+  try
+    Result := FStorageFactory(ADBPath);
+  except
+    on E: Exception do
+    begin
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar('UniBase.Logger.CreateStorage failed: ' +
+        E.Message));
+      {$ENDIF}
+    end;
+  end;
+end;
+
 constructor TUniBaseLogger.Create(const DBPath: string);
 begin
   inherited Create;
   FDBPath := DBPath;
+  FStorage := CreateStorage(DBPath);
   FStorageMode := lsmDatabase; // 默认
   FMinLevel := llDebug;
   FLogFileDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs');
@@ -306,61 +327,13 @@ begin
   // Stop write thread
   FStopEvent.SetEvent;
   FWriteThread.WaitFor;
-  FWriteThread.Free;
+  FreeAndNil(FWriteThread);
   
-  FStopEvent.Free;
-  FLogEvent.Free;
-  FLogQueue.Free;
-  
-  // Free cached query before connection
-  FreeAndNil(FInsertLogQuery);
-  FreeAndNil(FWriteConnection);
+  FreeAndNil(FStopEvent);
+  FreeAndNil(FLogEvent);
+  FreeAndNil(FLogQueue);
     
   inherited;
-end;
-
-procedure TUniBaseLogger.EnsureWriteConnection;
-begin
-  if (FWriteConnection = nil) and (FDBPath <> '') then
-  begin
-    try
-      FWriteConnection := TFDConnection.Create(nil);
-      FWriteConnection.DriverName := 'SQLite';
-      FWriteConnection.Params.Database := FDBPath;
-      FWriteConnection.Params.Values['LockingMode'] := 'Normal';
-      FWriteConnection.Params.Values['Synchronous'] := 'Normal'; // Faster writes
-      FWriteConnection.Params.Values['JournalMode'] := 'WAL';
-      FWriteConnection.Open;
-    except
-      on E: Exception do
-      begin
-        // R-006: 连接失败时输出调试信息，WriteToDB 会检查 Connected 并回退到文件模式
-        {$IFDEF DEBUG}
-        OutputDebugString(PChar('UniBase.Logger.EnsureWriteConnection failed: ' + E.Message));
-        {$ENDIF}
-      end;
-    end;
-  end;
-end;
-
-procedure TUniBaseLogger.EnsureInsertQuery;
-begin
-  if (FInsertLogQuery = nil) and (FWriteConnection <> nil) and FWriteConnection.Connected then
-  begin
-    FInsertLogQuery := TFDQuery.Create(nil);
-    FInsertLogQuery.Connection := FWriteConnection;
-    FInsertLogQuery.SQL.Text := 
-      'INSERT INTO Logs (LogTime, LogLevel, Source, Message, StackTrace, ThreadId) ' +
-      'VALUES (:LogTime, :Level, :Source, :Msg, :Stack, :TID)';
-    // 显式设置参数类型以避免 Prepare 时类型未知错误
-    FInsertLogQuery.ParamByName('LogTime').DataType := ftString;
-    FInsertLogQuery.ParamByName('Level').DataType := ftString;
-    FInsertLogQuery.ParamByName('Source').DataType := ftString;
-    FInsertLogQuery.ParamByName('Msg').DataType := ftString;
-    FInsertLogQuery.ParamByName('Stack').DataType := ftString;
-    FInsertLogQuery.ParamByName('TID').DataType := ftInteger;
-    FInsertLogQuery.Prepare;
-  end;
 end;
 
 procedure TUniBaseLogger.WriteLogThread;
@@ -377,8 +350,6 @@ begin
   Events[0] := FStopEvent.Handle;
   Events[1] := FLogEvent.Handle;
   
-  EnsureWriteConnection;
-  
   while FStopEvent.WaitFor(0) = wrTimeout do
   begin
     WaitResult := WaitForMultipleObjects(2, @Events, False, INFINITE);
@@ -391,6 +362,7 @@ begin
     
     // R-003: 单次锁定即完成批量提取和剩余计数
     RemainingCount := 0;
+    SetLength(LocalBatch, 0);
     List := FLogQueue.LockList;
     try
       BatchCount := List.Count;
@@ -438,26 +410,25 @@ begin
 end;
 
 procedure TUniBaseLogger.WriteToDB(const Entry: TLogEntry);
+var
+  Data: TLogStorageData;
 begin
-  if (FWriteConnection = nil) or (not FWriteConnection.Connected) then
+  if not Assigned(FStorage) then
+  begin
+    if FStorageMode = lsmDatabase then
+      WriteToFile(Entry);
     Exit;
+  end;
     
   try
-    // Use cached prepared query for better performance
-    EnsureInsertQuery;
-    
-    if FInsertLogQuery = nil then
-      Exit;
-    
-    // ISO8601 format
-    FInsertLogQuery.ParamByName('LogTime').AsString := DateToISO8601(Entry.Timestamp);
-    FInsertLogQuery.ParamByName('Level').AsString := LogLevelToStr(Entry.Level);
-    FInsertLogQuery.ParamByName('Source').AsString := Entry.Source;
-    FInsertLogQuery.ParamByName('Msg').AsString := Entry.Msg;
-    FInsertLogQuery.ParamByName('Stack').AsString := Entry.StackTrace;
-    FInsertLogQuery.ParamByName('TID').AsInteger := Entry.ThreadId;
-    
-    FInsertLogQuery.ExecSQL;
+    Data.TimestampISO := DateToISO8601(Entry.Timestamp);
+    Data.LevelText := LogLevelToStr(Entry.Level);
+    Data.Source := Entry.Source;
+    Data.MessageText := Entry.Msg;
+    Data.StackTrace := Entry.StackTrace;
+    Data.ThreadId := Entry.ThreadId;
+    Data.Extra := Entry.Extra;
+    FStorage.WriteLog(Data);
   except
     // DB write failed, fallback to file mode
     if FStorageMode = lsmDatabase then
@@ -819,7 +790,6 @@ end;
 
 procedure TUniBaseLogger.ClearOldLogs(DaysToKeep: Integer);
 var
-  Query: TFDQuery;
   CutoffDate: string;
   LogFiles: TArray<string>;
   LogFile: string;
@@ -827,20 +797,12 @@ var
   FileName: string;
 begin
   // 清理数据库日志
-  if (FWriteConnection <> nil) and FWriteConnection.Connected then
+  if Assigned(FStorage) then
   begin
     CutoffDate := DateToISO8601(IncDay(Now, -DaysToKeep));
-    
+
     try
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := FWriteConnection;
-        Query.SQL.Text := 'DELETE FROM Logs WHERE LogTime < :CutoffTime';
-        Query.ParamByName('CutoffTime').AsString := CutoffDate;
-        Query.ExecSQL;
-      finally
-        Query.Free;
-      end;
+      FStorage.PurgeOlderThan(CutoffDate);
     except
       // ignore
     end;
@@ -905,24 +867,14 @@ end;
 
 function TUniBaseLogger.GetLogCount(Level: TLogLevel): Int64;
 var
-  Query: TFDQuery;
+  QueryStorage: ILogQueryStorage;
 begin
   Result := 0;
-  if (FWriteConnection = nil) or (not FWriteConnection.Connected) then
+  if not Supports(FStorage, ILogQueryStorage, QueryStorage) then
     Exit;
 
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FWriteConnection;
-      // 使用 Logs.LogLevel 字段并按字符串级别统计
-      Query.SQL.Text := 'SELECT COUNT(*) FROM Logs WHERE LogLevel = :Level';
-      Query.ParamByName('Level').AsString := LogLevelToStr(Level);
-      Query.Open;
-      Result := Query.Fields[0].AsLargeInt;
-    finally
-      Query.Free;
-    end;
+    Result := QueryStorage.CountByLevel(LogLevelToStr(Level));
   except
     // ignore
   end;
@@ -930,22 +882,14 @@ end;
 
 function TUniBaseLogger.GetTotalLogCount: Int64;
 var
-  Query: TFDQuery;
+  QueryStorage: ILogQueryStorage;
 begin
   Result := 0;
-  if (FWriteConnection = nil) or (not FWriteConnection.Connected) then
+  if not Supports(FStorage, ILogQueryStorage, QueryStorage) then
     Exit;
-    
+
   try
-    Query := TFDQuery.Create(nil);
-    try
-      Query.Connection := FWriteConnection;
-      Query.SQL.Text := 'SELECT COUNT(*) FROM Logs';
-      Query.Open;
-      Result := Query.Fields[0].AsLargeInt;
-    finally
-      Query.Free;
-    end;
+    Result := QueryStorage.CountAll;
   except
     // ignore
   end;

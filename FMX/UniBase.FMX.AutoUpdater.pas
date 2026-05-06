@@ -308,7 +308,7 @@ end;
 procedure TFMXAutoUpdater.HandleUpdateAvailable(const Info: TUpdateInfo);
 begin
   // 显示更新对话框
-  TFMXUpdateDialog.Show(Self, Info,
+  TFMXUpdateDialog.ShowDialog(Self, Info,
     procedure(Action: TUpdateDialogAction)
     begin
       case Action of

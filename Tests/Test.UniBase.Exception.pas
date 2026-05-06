@@ -19,6 +19,8 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
+  Vcl.Forms,
+  UniBase.Storage.Interfaces,
   UniBase.Exception, UniBase.Exceptions, UniBase.Math, UniBase.DB.DoQry;
 
 type
@@ -29,6 +31,8 @@ type
     procedure Test_ClassConstructor_CreatesSingleton;
     [Test]
     procedure Test_Install_DoesNotCrash;
+    [Test]
+    procedure Test_StorageInjection_LogsExceptionViaInjectedStorage;
   end;
 
   [TestFixture]
@@ -55,7 +59,24 @@ type
     procedure Test_EUniBaseDbError_IsEUniBaseException;
   end;
 
+  TInMemoryExceptionReportStorage = class(TInterfacedObject,
+    IExceptionReportStorage)
+  public
+    WriteCount: Integer;
+    LastReport: TExceptionReportData;
+    procedure WriteReport(const Data: TExceptionReportData);
+  end;
+
 implementation
+
+{ TInMemoryExceptionReportStorage }
+
+procedure TInMemoryExceptionReportStorage.WriteReport(
+  const Data: TExceptionReportData);
+begin
+  Inc(WriteCount);
+  LastReport := Data;
+end;
 
 { TTestExceptionHandlerClass }
 
@@ -79,6 +100,42 @@ begin
       Assert.Fail('Install raised unexpected exception: ' + E.Message);
   end;
   Assert.IsTrue(True, 'Install completed without error');
+end;
+
+procedure TTestExceptionHandlerClass.Test_StorageInjection_LogsExceptionViaInjectedStorage;
+var
+  StorageObj: TInMemoryExceptionReportStorage;
+  StorageRef: IExceptionReportStorage;
+  AbortError: EAbort;
+begin
+  StorageObj := TInMemoryExceptionReportStorage.Create;
+  StorageRef := StorageObj;
+
+  TUniBaseExceptionHandler.SetStorageFactory(
+    function(AConnection: TObject): IExceptionReportStorage
+    begin
+      Result := StorageRef;
+    end);
+  try
+    TUniBaseExceptionHandler.Install;
+
+    AbortError := EAbort.Create('Injected storage test');
+    try
+      Assert.IsTrue(Assigned(Application.OnException),
+        'Install should assign Application.OnException');
+      Application.OnException(nil, AbortError);
+    finally
+      AbortError.Free;
+    end;
+
+    Assert.AreEqual(1, StorageObj.WriteCount,
+      'Injected storage should receive one exception report');
+    Assert.AreEqual('EAbort', StorageObj.LastReport.ExceptionClass);
+    Assert.AreEqual('Injected storage test', StorageObj.LastReport.MessageText);
+    Assert.IsTrue(StorageObj.LastReport.ReportTimeISO <> '');
+  finally
+    TUniBaseExceptionHandler.SetStorageFactory(nil);
+  end;
 end;
 
 { TTestExceptionHierarchy }

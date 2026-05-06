@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.VCL.MVVMControls - VCL MVVM Controls
   
   Version: 0.3
@@ -34,7 +34,8 @@ uses
   Vcl.ComCtrls,
   Vcl.Graphics,
   UniBase.DataBinding,
-  UniBase.MVVM;
+  UniBase.MVVM,
+  UniBase.Exceptions;
 
 type
   // Forward declarations
@@ -372,10 +373,10 @@ begin
     FViewModelObj.RemovePropertyErrorHandler(HandlePropertyError);
   end;
   
-  FBindingManager.Free;
+  FreeAndNil(FBindingManager);
   
   if FOwnsViewModel and (FViewModelObj <> nil) then
-    FViewModelObj.Free;
+    FreeAndNil(FViewModelObj);
     
   inherited;
 end;
@@ -441,7 +442,7 @@ procedure TMVVMFormBase.BindControl(Control: TControl; const ControlProp,
   ViewModelProp: string; Mode: TBindingMode);
 begin
   if FViewModelObj = nil then
-    raise Exception.Create('ViewModel not set. Call SetViewModel first.');
+    raise EInvalidOperationException.Create('ViewModel not set. Call SetViewModel first.');
     
   FBindingManager.Bind(FViewModelObj, ViewModelProp, Control, ControlProp, Mode);
 end;
@@ -514,10 +515,10 @@ begin
     FViewModelObj.RemovePropertyErrorHandler(HandlePropertyError);
   end;
   
-  FBindingManager.Free;
+  FreeAndNil(FBindingManager);
   
   if FOwnsViewModel and (FViewModelObj <> nil) then
-    FViewModelObj.Free;
+    FreeAndNil(FViewModelObj);
     
   inherited;
 end;
@@ -567,7 +568,7 @@ procedure TMVVMFrameBase.BindControl(Control: TControl; const ControlProp,
   ViewModelProp: string; Mode: TBindingMode);
 begin
   if FViewModelObj = nil then
-    raise Exception.Create('ViewModel not set. Call SetViewModel first.');
+    raise EInvalidOperationException.Create('ViewModel not set. Call SetViewModel first.');
     
   FBindingManager.Bind(FViewModelObj, ViewModelProp, Control, ControlProp, Mode);
 end;

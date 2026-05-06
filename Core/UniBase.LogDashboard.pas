@@ -1,4 +1,4 @@
-unit UniBase.LogDashboard;
+﻿unit UniBase.LogDashboard;
 
 {*******************************************************************************
   UniBase Log Dashboard Export
@@ -287,7 +287,7 @@ end;
 
 destructor TWidgetSeries.Destroy;
 begin
-  FData.Free;
+  FreeAndNil(FData);
   inherited;
 end;
 
@@ -360,8 +360,8 @@ end;
 
 destructor TDashboardWidget.Destroy;
 begin
-  FTableRows.Free;
-  FSeries.Free;
+  FreeAndNil(FTableRows);
+  FreeAndNil(FSeries);
   inherited;
 end;
 
@@ -487,7 +487,7 @@ end;
 
 destructor TDashboardPanel.Destroy;
 begin
-  FWidgets.Free;
+  FreeAndNil(FWidgets);
   inherited;
 end;
 
@@ -515,7 +515,7 @@ end;
 
 destructor TDashboard.Destroy;
 begin
-  FPanels.Free;
+  FreeAndNil(FPanels);
   inherited;
 end;
 

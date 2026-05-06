@@ -36,7 +36,8 @@ uses
   System.NetEncoding,
   System.SyncObjs,
   System.DateUtils,
-  System.Rtti;
+  System.Rtti,
+  UniBase.Exceptions;
 
 type
   // ============================================================================
@@ -706,7 +707,7 @@ begin
   
   // Check circuit breaker
   if Options.UseCircuitBreaker and not FCircuitBreaker.CanExecute then
-    raise Exception.Create('Circuit breaker is open');
+    raise ECircuitBreakerException.Create('Circuit breaker is open');
   
   while True do
   begin

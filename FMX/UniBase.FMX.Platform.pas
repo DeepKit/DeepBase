@@ -166,6 +166,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
+  Winapi.ShellAPI,
   {$ENDIF}
   {$IFDEF ANDROID}
   Androidapi.JNI.GraphicsContentViewText,
@@ -179,7 +180,9 @@ uses
   iOSapi.Foundation,
   Macapi.Helpers,
   {$ENDIF}
-  FMX.Clipboard;
+  FMX.Clipboard,
+  System.Rtti,
+  FMX.VirtualKeyboard;
 
 { TUniSafeArea }
 

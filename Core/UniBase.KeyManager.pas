@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.KeyManager - Advanced Key Management System
   
   Version: 1.0
@@ -526,8 +526,8 @@ end;
 
 destructor TKeyStore.Destroy;
 begin
-  FKeys.Free;
-  FLock.Free;
+  FreeAndNil(FKeys);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -743,9 +743,9 @@ end;
 
 destructor TKeyManager.Destroy;
 begin
-  FKeyStore.Free;
-  FMasterKey.Free;
-  FLock.Free;
+  FreeAndNil(FKeyStore);
+  FreeAndNil(FMasterKey);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -753,9 +753,6 @@ class function TKeyManager.Instance: TKeyManager;
 begin
   if FInstance = nil then
   begin
-    if FInstanceLock = nil then
-      FInstanceLock := TCriticalSection.Create;
-      
     FInstanceLock.Enter;
     try
       if FInstance = nil then
@@ -770,13 +767,10 @@ end;
 
 class procedure TKeyManager.SetInstance(AInstance: TKeyManager);
 begin
-  if FInstanceLock = nil then
-    FInstanceLock := TCriticalSection.Create;
-    
   FInstanceLock.Enter;
   try
     if FInstance <> nil then
-      FInstance.Free;
+      FreeAndNil(FInstance);
     FInstance := AInstance;
   finally
     FInstanceLock.Leave;
@@ -976,17 +970,14 @@ begin
 end;
 
 initialization
+  TKeyManager.FInstanceLock := TCriticalSection.Create;
 
 finalization
-  if TKeyManager.FInstanceLock <> nil then
-  begin
-    TKeyManager.FInstanceLock.Free;
-    TKeyManager.FInstanceLock := nil;
-  end;
   if TKeyManager.FInstance <> nil then
   begin
     TKeyManager.FInstance.Free;
     TKeyManager.FInstance := nil;
   end;
+  FreeAndNil(TKeyManager.FInstanceLock);
 
 end.

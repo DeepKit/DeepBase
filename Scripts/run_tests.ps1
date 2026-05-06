@@ -1,5 +1,5 @@
 # UniBase Test Runner Script
-# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-Report]
+# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit UniBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules]
 
 param(
     [ValidateSet('Unit', 'Integration', 'All')]
@@ -16,7 +16,29 @@ param(
     
     [switch]$Coverage,
     
-    [string]$CoverageToolPath
+    [string]$CoverageToolPath,
+
+    [string]$Run,
+
+    [string]$RunList,
+
+    [string[]]$Module,
+
+    [switch]$ListModules,
+
+    [string[]]$FromUnit,
+
+    [switch]$FromGitChanged,
+
+    [string]$GitRef = "HEAD",
+
+    [string[]]$IncludeCategory,
+
+    [string[]]$ExcludeCategory,
+
+    [switch]$SkipCompile,
+
+    [switch]$NoRebuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +52,239 @@ $BuildOutputDir = Join-Path $OutputPath "build"
 $DcuOutputDir = Join-Path $BuildOutputDir "dcu\$Platform"
 $Dcc32 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc32.exe"
 $Dcc64 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe"
+
+# Module aliases for fast targeted regression
+$ModuleRunMap = [ordered]@{
+    "LLM"        = "Test.UniBase.LLM,Test.UniBase.LLM.Manager,Test.UniBase.LLM.PromptTemplate,Test.UniBase.LLM.ImportExport,Test.UniBase.LLM.BillingClient"
+    "ORM"        = "Test.UniBase.ORM,Test.UniBase.ORM.Mapping,Test.UniBase.TestHelper"
+    "DB"         = "Test.UniBase.DB.Factory,Test.UniBase.DB.Pool,Test.UniBase.DB.Migrations,Test.UniBase.DB.ConnectionPool,Test.UniBase.DB.AutoRefreshConfig,Test.UniBase.DB.JobQueue,Test.UniBase.DB.StatusMachine,Test.UniBase.DB.DoQry,Test.UniBase.SQLLogger"
+    "CONFIG"     = "Test.UniBase.Config,Test.UniBase.Configuration,Test.UniBase.PublishConfig"
+    "FORMSTATE"  = "Test.UniBase.FormState"
+    "I18N"       = "Test.UniBase.i18n,Test.UniBase.i18n.Plural,Test.UniBase.i18n.Gender"
+    "HOTKEYS"    = "Test.UniBase.Hotkeys"
+    "THEME"      = "Test.UniBase.Theme"
+    "SECURITY"   = "Test.UniBase.Security,Test.UniBase.Protection,Test.UniBase.KeyManager,Test.UniBase.Authorization,Test.UniBase.License"
+    "LOGGING"    = "Test.UniBase.Logging,Test.UniBase.LogAggregator"
+    "MANAGER"    = "Test.UniBase.Manager,Test.UniBase.Persistence.RuntimeRegistration"
+    "SERVICES"   = "Test.UniBase.Services.HealthCheck,Test.UniBase.Services.Protection,Test.UniBase.Services.Registration"
+    "NET"        = "Test.UniBase.Net,Test.UniBase.HttpServer,Test.WebService"
+    "RESILIENCE" = "Test.UniBase.Resilience,Test.UniBase.RateLimiter"
+    "PERF"       = "Test.UniBase.Benchmark,Test.UniBase.Performance,Test.UniBase.PerformanceSuite,Test.UniBase.LockContention"
+}
+
+function Show-ModuleAliases {
+    Write-Host "Available module aliases:"
+    foreach ($entry in $ModuleRunMap.GetEnumerator()) {
+        Write-Host ("  {0,-10} -> {1}" -f $entry.Key, $entry.Value)
+    }
+}
+
+function Resolve-ModuleRunFilter {
+    param(
+        [string[]]$ModuleNames
+    )
+
+    $resolved = @()
+
+    foreach ($moduleArg in $ModuleNames) {
+        if ([string]::IsNullOrWhiteSpace($moduleArg)) {
+            continue
+        }
+
+        $tokens = $moduleArg -split "[,;]" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+        foreach ($token in $tokens) {
+            $key = $token.ToUpperInvariant()
+            if (-not $ModuleRunMap.Contains($key)) {
+                throw "Unknown -Module alias '$token'. Use -ListModules to view supported aliases."
+            }
+            $resolved += ($ModuleRunMap[$key] -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+        }
+    }
+
+    $unique = $resolved | Select-Object -Unique
+    return ($unique -join ",")
+}
+
+function Resolve-UnitRunFilter {
+    param(
+        [string[]]$UnitTokens,
+        [switch]$IgnoreMissing
+    )
+
+    $resolved = @()
+    $missing = @()
+
+    foreach ($unitArg in $UnitTokens) {
+        if ([string]::IsNullOrWhiteSpace($unitArg)) {
+            continue
+        }
+
+        $tokens = $unitArg -split "[,;]" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+        foreach ($token in $tokens) {
+            $name = $token
+
+            if ($name.IndexOfAny(@([char]'\', [char]'/')) -ge 0) {
+                $name = [System.IO.Path]::GetFileNameWithoutExtension($name)
+            } elseif ($name.ToLowerInvariant().EndsWith('.pas')) {
+                $name = [System.IO.Path]::GetFileNameWithoutExtension($name)
+            }
+
+            if ([string]::IsNullOrWhiteSpace($name)) {
+                continue
+            }
+
+            if ($name.StartsWith('Test.', [System.StringComparison]::OrdinalIgnoreCase)) {
+                $testUnit = $name
+            } else {
+                $testUnit = "Test.$name"
+            }
+
+            $testFileName = "$testUnit.pas"
+            $unitCandidate = Join-Path $TestsDir $testFileName
+            $integrationCandidate = Join-Path $IntegrationDir $testFileName
+
+            if ((Test-Path $unitCandidate) -or (Test-Path $integrationCandidate)) {
+                $resolved += $testUnit
+            } else {
+                if ($IgnoreMissing) {
+                    $missing += $token
+                } else {
+                    throw "Cannot map -FromUnit token '$token' to an existing test unit ($testUnit)."
+                }
+            }
+        }
+    }
+
+    if ($IgnoreMissing -and $missing.Count -gt 0) {
+        $missingUnique = $missing | Select-Object -Unique
+        $previewCount = [Math]::Min(12, $missingUnique.Count)
+        $preview = ($missingUnique | Select-Object -First $previewCount) -join ', '
+        if ($missingUnique.Count -gt $previewCount) {
+            Write-Host "Skipped unmapped changed units ($($missingUnique.Count)): $preview ..." -ForegroundColor Yellow
+        } else {
+            Write-Host "Skipped unmapped changed units ($($missingUnique.Count)): $preview" -ForegroundColor Yellow
+        }
+    }
+
+    $unique = $resolved | Select-Object -Unique
+    return ($unique -join ",")
+}
+
+function Get-GitChangedUnitTokens {
+    param(
+        [string]$Reference = "HEAD"
+    )
+
+    $inside = (& git -C $BaseDir rev-parse --is-inside-work-tree 2>$null)
+    if ($LASTEXITCODE -ne 0 -or ($inside -ne 'true')) {
+        throw "Current workspace is not a git repository: $BaseDir"
+    }
+
+    $paths = @()
+
+    if (-not [string]::IsNullOrWhiteSpace($Reference)) {
+        $diffPaths = & git -C $BaseDir diff --name-only --diff-filter=ACMRTUXB $Reference -- 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Invalid -GitRef '$Reference' or git diff failed."
+        }
+        if ($diffPaths) {
+            $paths += $diffPaths
+        }
+    }
+
+    $statusLines = & git -C $BaseDir status --porcelain 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "git status failed in $BaseDir"
+    }
+
+    foreach ($line in $statusLines) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.Length -lt 4) {
+            continue
+        }
+
+        $pathPart = $line.Substring(3).Trim()
+        $renameIndex = $pathPart.IndexOf(" -> ")
+        if ($renameIndex -ge 0) {
+            $pathPart = $pathPart.Substring($renameIndex + 4).Trim()
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($pathPart)) {
+            $paths += $pathPart
+        }
+    }
+
+    $units = @()
+    $uniquePaths = $paths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+    foreach ($path in $uniquePaths) {
+        if ([System.IO.Path]::GetExtension($path).ToLowerInvariant() -ne '.pas') {
+            continue
+        }
+
+        $unitName = [System.IO.Path]::GetFileNameWithoutExtension($path)
+        if (-not [string]::IsNullOrWhiteSpace($unitName)) {
+            $units += $unitName
+        }
+    }
+
+    return ($units | Select-Object -Unique)
+}
+
+if ($ListModules) {
+    Show-ModuleAliases
+    exit 0
+}
+
+if ($Module -and $Module.Length -gt 0) {
+    if ($RunList) {
+        throw "Cannot combine -Module with -RunList. Use one filter source only."
+    }
+
+    $moduleRun = Resolve-ModuleRunFilter -ModuleNames $Module
+    if ($moduleRun) {
+        if ($Run) {
+            $Run = "$Run,$moduleRun"
+        } else {
+            $Run = $moduleRun
+        }
+    }
+}
+
+if ($FromUnit -and $FromUnit.Length -gt 0) {
+    if ($RunList) {
+        throw "Cannot combine -FromUnit with -RunList. Use one filter source only."
+    }
+
+    $unitRun = Resolve-UnitRunFilter -UnitTokens $FromUnit
+    if ($unitRun) {
+        if ($Run) {
+            $Run = "$Run,$unitRun"
+        } else {
+            $Run = $unitRun
+        }
+    }
+}
+
+if ($FromGitChanged) {
+    if ($RunList) {
+        throw "Cannot combine -FromGitChanged with -RunList. Use one filter source only."
+    }
+
+    $changedUnits = Get-GitChangedUnitTokens -Reference $GitRef
+    if (-not $changedUnits -or $changedUnits.Count -eq 0) {
+        throw "No changed Pascal units found from git status/diff."
+    }
+
+    $gitRun = Resolve-UnitRunFilter -UnitTokens $changedUnits -IgnoreMissing
+    if ([string]::IsNullOrWhiteSpace($gitRun)) {
+        throw "No test units mapped from changed Pascal units."
+    }
+
+    if ($Run) {
+        $Run = "$Run,$gitRun"
+    } else {
+        $Run = $gitRun
+    }
+}
 
 if ($Platform -eq 'Win64') {
     $DelphiCompiler = $Dcc64
@@ -72,6 +327,15 @@ Write-Host "Base Directory: $BaseDir"
 Write-Host "Test Type: $Type"
 Write-Host "Platform: $Platform"
 Write-Host "CI Mode: $CI"
+Write-Host "Skip Compile: $SkipCompile"
+Write-Host "No Rebuild: $NoRebuild"
+if ($Run) { Write-Host "Run Filter: $Run" }
+if ($RunList) { Write-Host "RunList: $RunList" }
+if ($Module) { Write-Host "Module Aliases: $($Module -join ',')" }
+if ($FromUnit) { Write-Host "From Unit: $($FromUnit -join ',')" }
+if ($FromGitChanged) { Write-Host "From Git Changed: True (Ref: $GitRef)" }
+if ($IncludeCategory) { Write-Host "Include Categories: $($IncludeCategory -join ',')" }
+if ($ExcludeCategory) { Write-Host "Exclude Categories: $($ExcludeCategory -join ',')" }
 Write-Host "Output: $OutputPath"
 Write-Host "DCU Output: $DcuOutputDir"
 Write-Host ""
@@ -80,6 +344,23 @@ Write-Host ""
 $BuildFlags = @()
 if ($CI) {
     $BuildFlags += "-DCI"
+}
+
+function Get-CommonTestArgs {
+    $args = @()
+    if ($Run) {
+        $args += "--run:$Run"
+    }
+    if ($RunList) {
+        $args += "--runlist:$RunList"
+    }
+    if ($IncludeCategory -and $IncludeCategory.Length -gt 0) {
+        $args += "--include:$($IncludeCategory -join ',')"
+    }
+    if ($ExcludeCategory -and $ExcludeCategory.Length -gt 0) {
+        $args += "--exclude:$($ExcludeCategory -join ',')"
+    }
+    return $args
 }
 
 # Unit paths
@@ -91,6 +372,7 @@ $UnitPaths = @(
     "$BaseDir\FMX",
     "$BaseDir\ThirdParty\Payment",
     "$BaseDir\ThirdParty\Social",
+    "$BaseDir\Tools\CLI",
     "$BaseDir\Tools\WebService",
     "$TestsDir",
     "$IntegrationDir",
@@ -124,9 +406,12 @@ function Compile-TestProject {
     $args = @(
         "-U$SearchPath",
         "-N0$projectDcuDir",
-        "-Q",
-        "-B"
+        "-Q"
     )
+
+    if (-not $NoRebuild) {
+        $args += "-B"
+    }
 
     if ($Coverage) {
         # 生成详细 MAP 文件,供覆盖率工具使用
@@ -165,6 +450,7 @@ function Run-TestProject {
         $args += "--xmlfile:$XmlOutput"
     }
     $args += "--exitbehavior:Continue"
+    $args += Get-CommonTestArgs
 
     if ($ExtraArgs -and $ExtraArgs.Length -gt 0) {
         $args += $ExtraArgs
@@ -272,10 +558,13 @@ function Ensure-SqliteDll {
     }
 
     $compilerDir = Split-Path -Parent $DelphiCompiler
+    $compilerRoot = Split-Path -Parent $compilerDir
     $candidatePaths = @(
         (Join-Path $TargetDir "sqlite3.dll"),
         (Join-Path $TestsDir "sqlite3.dll"),
         (Join-Path $BaseDir "sqlite3.dll"),
+        (Join-Path $compilerRoot "bin64\sqlite3.dll"),
+        (Join-Path $compilerRoot "bin\windows\lldb\sqlite3.dll"),
         (Join-Path $compilerDir "sqlite3.dll"),
         "D:\UserData\Administrator\AppData\Local\Programs\Python\Python311\DLLs\sqlite3.dll",
         "D:\ProgramData\Python313\DLLs\sqlite3.dll",
@@ -311,8 +600,25 @@ if ($Type -eq 'Unit' -or $Type -eq 'All') {
     $unitXml = Join-Path $OutputPath "UnitTestResults.xml"
     
     if (Test-Path $unitProject) {
-        if (Compile-TestProject -ProjectFile $unitProject -ProjectName "Unit Tests") {
-            $Results.UnitTests = Run-TestProject -ExePath $unitExe -TestName "Unit Tests" -XmlOutput $unitXml
+        $canRunUnit = $true
+        if (-not $SkipCompile) {
+            $canRunUnit = Compile-TestProject -ProjectFile $unitProject -ProjectName "Unit Tests"
+        } elseif (-not (Test-Path $unitExe)) {
+            Write-Host "ERROR: Unit test executable not found (use without -SkipCompile first): $unitExe" -ForegroundColor Red
+            $canRunUnit = $false
+        }
+
+        if ($canRunUnit) {
+            $sqliteCopied = Ensure-SqliteDll -TargetDir $TestsDir
+            $sqliteInTests = Join-Path $TestsDir "sqlite3.dll"
+            try {
+                $Results.UnitTests = Run-TestProject -ExePath $unitExe -TestName "Unit Tests" -XmlOutput $unitXml
+            } finally {
+                if ($sqliteCopied -and (Test-Path $sqliteInTests)) {
+                    Remove-Item -Path $sqliteInTests -Force -ErrorAction SilentlyContinue
+                    Write-Host "Temporary sqlite3.dll removed from Tests directory."
+                }
+            }
         } else {
             $Results.UnitTests = $false
         }
@@ -333,7 +639,15 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
     $intXml = Join-Path $OutputPath "IntegrationTestResults.xml"
     
     if (Test-Path $intProject) {
-        if (Compile-TestProject -ProjectFile $intProject -ProjectName "Integration Tests") {
+        $canRunIntegration = $true
+        if (-not $SkipCompile) {
+            $canRunIntegration = Compile-TestProject -ProjectFile $intProject -ProjectName "Integration Tests"
+        } elseif (-not (Test-Path $intExe)) {
+            Write-Host "ERROR: Integration test executable not found (use without -SkipCompile first): $intExe" -ForegroundColor Red
+            $canRunIntegration = $false
+        }
+
+        if ($canRunIntegration) {
             $sqliteCopied = Ensure-SqliteDll -TargetDir $IntegrationDir
             $sqliteInIntegration = Join-Path $IntegrationDir "sqlite3.dll"
 

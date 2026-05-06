@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   UniBase.LLM.Manager - LLM Prompt Management System
   
   Version: 1.0
@@ -206,6 +206,7 @@ type
   TLLMManager = class
   private
     FConnection: TObject;
+    FStorage: ILLMStorage;
     FLLMClient: TUniBaseLLM;
     FPromptCache: TDictionary<string, TPrompt>;  // InternalCode -> TPrompt
     FCategoryCache: TDictionary<Integer, TPromptCategory>;  // Id -> TPromptCategory
@@ -213,6 +214,7 @@ type
     FCacheLock: TCriticalSection;
     FContextBuilder: TContextBuilderFunc;
     FOwnsConnection: Boolean;
+    class var FConnectionStorageFactory: TFunc<TObject, ILLMStorage>;
     
     procedure LoadCategories;
     procedure LoadPrompts;
@@ -226,12 +228,17 @@ type
     procedure RecordLLMCall(const Prompt: TPrompt; VersionNum: Integer; const ConfigName: string;
       const FinalPrompt: string; const Response: TLLMResponse);
     procedure UpdateVersionStats(PromptId, VersionNum: Integer; const Response: TLLMResponse);
-    function GetFDConnection: TObject;
+    class function CreateStorageFromConnection(
+      AConnection: TObject): ILLMStorage; static;
+    function GetStorage: ILLMStorage;
     function HasActiveConnection: Boolean;
 
   public
-    constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False);
+    constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False); overload;
+    constructor Create(const AStorage: ILLMStorage); overload;
     destructor Destroy; override;
+    class procedure SetStorageFactory(
+      const AFactory: TFunc<TObject, ILLMStorage>); static;
     
     /// <summary>Initialize and load data from database</summary>
     procedure Initialize;
@@ -380,11 +387,17 @@ function VariablesToJson(const Variables: TPromptVariableArray): string;
 implementation
 
 uses
-  FireDAC.Comp.Client,
+  Data.DB,
   System.Variants,
   System.StrUtils;
 
 { Helper Functions }
+
+function LLMParam(const AName: string;
+  const AValue: Variant): TLLMStorageParam;
+begin
+  Result := TLLMStorageParam.Create(AName, AValue);
+end;
 
 function ParseVariablesJson(const Json: string): TPromptVariableArray;
 var
@@ -632,10 +645,20 @@ end;
 
 constructor TLLMManager.Create(AConnection: TObject; AOwnsConnection: Boolean);
 begin
-  inherited Create;
+  Create(CreateStorageFromConnection(AConnection));
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
+  FreeAndNil(FLLMClient);
   FLLMClient := TUniBaseLLM.Create(AConnection);
+end;
+
+constructor TLLMManager.Create(const AStorage: ILLMStorage);
+begin
+  inherited Create;
+  FConnection := nil;
+  FStorage := AStorage;
+  FOwnsConnection := False;
+  FLLMClient := TUniBaseLLM.Create(AStorage);
   FPromptCache := TDictionary<string, TPrompt>.Create;
   FCategoryCache := TDictionary<Integer, TPromptCategory>.Create;
   FMetaCache := TDictionary<Integer, TMetaPrompt>.Create;
@@ -643,29 +666,50 @@ begin
   FContextBuilder := nil;
 end;
 
-function TLLMManager.GetFDConnection: TObject;
+class procedure TLLMManager.SetStorageFactory(
+  const AFactory: TFunc<TObject, ILLMStorage>);
 begin
-  if Assigned(FConnection) and (FConnection is TFDConnection) then
-    Result := FConnection
-  else
-    Result := nil;
+  FConnectionStorageFactory := AFactory;
+end;
+
+class function TLLMManager.CreateStorageFromConnection(
+  AConnection: TObject): ILLMStorage;
+begin
+  Result := nil;
+  if Assigned(AConnection) and Supports(AConnection, ILLMStorage, Result) then
+    Exit;
+
+  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
+    Result := FConnectionStorageFactory(AConnection);
+
+  if (Result = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No LLM manager storage factory registered for connection-backed constructor. ' +
+      'Include UniBase.Persistence.LLM.FireDAC.');
+end;
+
+function TLLMManager.GetStorage: ILLMStorage;
+begin
+  Result := FStorage;
 end;
 
 function TLLMManager.HasActiveConnection: Boolean;
+var
+  Storage: ILLMStorage;
 begin
-  Result := (FConnection <> nil) and (FConnection is TFDConnection)
-    and TFDConnection(FConnection).Connected;
+  Storage := GetStorage;
+  Result := Assigned(Storage) and Storage.IsConnected;
 end;
 
 destructor TLLMManager.Destroy;
 begin
-  FCacheLock.Free;
-  FMetaCache.Free;
-  FCategoryCache.Free;
-  FPromptCache.Free;
-  FLLMClient.Free;
+  FreeAndNil(FCacheLock);
+  FreeAndNil(FMetaCache);
+  FreeAndNil(FCategoryCache);
+  FreeAndNil(FPromptCache);
+  FreeAndNil(FLLMClient);
   if FOwnsConnection then
-    FConnection.Free;
+    FreeAndNil(FConnection);
   inherited;
 end;
 
@@ -692,18 +736,16 @@ end;
 
 procedure TLLMManager.LoadCategories;
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   Cat: TPromptCategory;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  Query := FStorage.OpenDataSet(
+    'SELECT * FROM PromptCategories WHERE IsActive = 1 ORDER BY Level, SortOrder, Name',
+    []);
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'SELECT * FROM PromptCategories WHERE IsActive = 1 ORDER BY Level, SortOrder, Name';
-    Query.Open;
-    
     while not Query.Eof do
     begin
       Cat.Id := Query.FieldByName('Id').AsInteger;
@@ -725,18 +767,16 @@ end;
 
 procedure TLLMManager.LoadMetaPrompts;
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   Meta: TMetaPrompt;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  Query := FStorage.OpenDataSet(
+    'SELECT * FROM PromptMeta WHERE IsActive = 1 ORDER BY Priority',
+    []);
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'SELECT * FROM PromptMeta WHERE IsActive = 1 ORDER BY Priority';
-    Query.Open;
-    
     while not Query.Eof do
     begin
       Meta.Id := Query.FieldByName('Id').AsInteger;
@@ -759,18 +799,16 @@ end;
 
 procedure TLLMManager.LoadPrompts;
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   Prompt: TPrompt;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  Query := FStorage.OpenDataSet(
+    'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY InternalCode',
+    []);
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY InternalCode';
-    Query.Open;
-    
     while not Query.Eof do
     begin
       Prompt.Id := Query.FieldByName('Id').AsInteger;
@@ -799,19 +837,16 @@ end;
 
 procedure TLLMManager.LoadPromptVersions(var Prompt: TPrompt);
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   V: TPromptVersion;
   List: TList<TPromptVersion>;
 begin
   List := TList<TPromptVersion>.Create;
   try
-    Query := TFDQuery.Create(nil);
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM PromptVersions WHERE PromptId = :PromptId ORDER BY VersionNumber',
+      [LLMParam('PromptId', Prompt.Id)]);
     try
-      Query.Connection := TFDConnection(FConnection);
-      Query.SQL.Text := 'SELECT * FROM PromptVersions WHERE PromptId = :PromptId ORDER BY VersionNumber';
-      Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-      Query.Open;
-      
       while not Query.Eof do
       begin
         V.Id := Query.FieldByName('Id').AsInteger;
@@ -844,23 +879,19 @@ end;
 
 procedure TLLMManager.LoadPromptMetaBindings(var Prompt: TPrompt);
 var
-  Query: TFDQuery;
+  Query: TDataSet;
   Meta: TMetaPrompt;
   List: TList<TMetaPrompt>;
 begin
   List := TList<TMetaPrompt>.Create;
   try
-    Query := TFDQuery.Create(nil);
+    Query := FStorage.OpenDataSet(
+      'SELECT m.* FROM PromptMeta m ' +
+      'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
+      'WHERE b.PromptId = :PromptId AND b.IsEnabled = 1 AND m.IsActive = 1 ' +
+      'ORDER BY m.Priority, b.OrderIndex',
+      [LLMParam('PromptId', Prompt.Id)]);
     try
-      Query.Connection := TFDConnection(FConnection);
-      Query.SQL.Text := 
-        'SELECT m.* FROM PromptMeta m ' +
-        'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
-        'WHERE b.PromptId = :PromptId AND b.IsEnabled = 1 AND m.IsActive = 1 ' +
-        'ORDER BY m.Priority, b.OrderIndex';
-      Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-      Query.Open;
-      
       while not Query.Eof do
       begin
         Meta.Id := Query.FieldByName('Id').AsInteger;
@@ -1003,7 +1034,6 @@ end;
 procedure TLLMManager.RecordLLMCall(const Prompt: TPrompt; VersionNum: Integer;
   const ConfigName: string; const FinalPrompt: string; const Response: TLLMResponse);
 var
-  Query: TFDQuery;
   Status, NowStr: string;
 begin
   if not HasActiveConnection then
@@ -1021,80 +1051,65 @@ begin
     Status := 'error';
   
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text :=
-      'INSERT INTO LLMCalls (PromptId, VersionNumber, ConfigId, Provider, Model, ' +
-      'InputText, OutputText, InputTokens, OutputTokens, TotalTokens, Duration, ' +
-      'Cost, Status, ErrorMessage, CreatedAt) ' +
-      'VALUES (:PromptId, :VersionNumber, ' +
-      '(SELECT Id FROM LLMConfig WHERE Name = :ConfigName), ' +
-      ':Provider, :Model, :InputText, :OutputText, :InputTokens, :OutputTokens, ' +
-      ':TotalTokens, :Duration, :Cost, :Status, :ErrorMessage, :CreatedAt)';
-    
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ParamByName('VersionNumber').AsInteger := VersionNum;
-    Query.ParamByName('ConfigName').AsString := ConfigName;
-    Query.ParamByName('Provider').AsString := '';
-    Query.ParamByName('Model').AsString := '';
-    Query.ParamByName('InputText').AsString := FinalPrompt;
-    Query.ParamByName('OutputText').AsString := Response.Content;
-    Query.ParamByName('InputTokens').AsInteger := Response.InputTokens;
-    Query.ParamByName('OutputTokens').AsInteger := Response.OutputTokens;
-    Query.ParamByName('TotalTokens').AsInteger := Response.TotalTokens;
-    Query.ParamByName('Duration').AsInteger := Response.DurationMs;
-    Query.ParamByName('Cost').AsFloat := Response.Cost;
-    Query.ParamByName('Status').AsString := Status;
-    Query.ParamByName('ErrorMessage').AsString := Response.ErrorMessage;
-    Query.ParamByName('CreatedAt').AsString := NowStr;
-    
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.Execute(
+    'INSERT INTO LLMCalls (PromptId, VersionNumber, ConfigId, Provider, Model, ' +
+    'InputText, OutputText, InputTokens, OutputTokens, TotalTokens, Duration, ' +
+    'Cost, Status, ErrorMessage, CreatedAt) ' +
+    'VALUES (:PromptId, :VersionNumber, ' +
+    '(SELECT Id FROM LLMConfig WHERE Name = :ConfigName), ' +
+    ':Provider, :Model, :InputText, :OutputText, :InputTokens, :OutputTokens, ' +
+    ':TotalTokens, :Duration, :Cost, :Status, :ErrorMessage, :CreatedAt)',
+    [
+      LLMParam('PromptId', Prompt.Id),
+      LLMParam('VersionNumber', VersionNum),
+      LLMParam('ConfigName', ConfigName),
+      LLMParam('Provider', ''),
+      LLMParam('Model', ''),
+      LLMParam('InputText', FinalPrompt),
+      LLMParam('OutputText', Response.Content),
+      LLMParam('InputTokens', Response.InputTokens),
+      LLMParam('OutputTokens', Response.OutputTokens),
+      LLMParam('TotalTokens', Response.TotalTokens),
+      LLMParam('Duration', Response.DurationMs),
+      LLMParam('Cost', Response.Cost),
+      LLMParam('Status', Status),
+      LLMParam('ErrorMessage', Response.ErrorMessage),
+      LLMParam('CreatedAt', NowStr)
+    ]);
 end;
 
 procedure TLLMManager.UpdateVersionStats(PromptId, VersionNum: Integer; 
   const Response: TLLMResponse);
 var
-  Query: TFDQuery;
   NowStr: string;
 begin
   if not HasActiveConnection then
     Exit;
   
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text :=
-      'UPDATE PromptVersions SET ' +
-      'TestCount = TestCount + 1, ' +
-      'SuccessCount = SuccessCount + :Success, ' +
-      'TotalTokens = TotalTokens + :Tokens, ' +
-      'TotalCost = TotalCost + :Cost, ' +
-      'AvgDuration = (AvgDuration * TestCount + :Duration) / (TestCount + 1), ' +
-      'LastTestedAt = :NowTime, ' +
-      'LastResponse = :LastResponse, ' +
-      'UpdatedAt = :NowTime ' +
-      'WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber';
-    
-    Query.ParamByName('Success').AsInteger := Ord(Response.Success);
-    Query.ParamByName('Tokens').AsInteger := Response.TotalTokens;
-    Query.ParamByName('Cost').AsFloat := Response.Cost;
-    Query.ParamByName('Duration').AsFloat := Response.DurationMs;
-    Query.ParamByName('LastResponse').AsString := Response.Content;
-    Query.ParamByName('PromptId').AsInteger := PromptId;
-    Query.ParamByName('VersionNumber').AsInteger := VersionNum;
-    Query.ParamByName('NowTime').AsString := NowStr;
-    
-    Query.ExecSQL;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.Execute(
+    'UPDATE PromptVersions SET ' +
+    'TestCount = TestCount + 1, ' +
+    'SuccessCount = SuccessCount + :Success, ' +
+    'TotalTokens = TotalTokens + :Tokens, ' +
+    'TotalCost = TotalCost + :Cost, ' +
+    'AvgDuration = (AvgDuration * TestCount + :Duration) / (TestCount + 1), ' +
+    'LastTestedAt = :NowTime, ' +
+    'LastResponse = :LastResponse, ' +
+    'UpdatedAt = :NowTime ' +
+    'WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
+    [
+      LLMParam('Success', Ord(Response.Success)),
+      LLMParam('Tokens', Response.TotalTokens),
+      LLMParam('Cost', Response.Cost),
+      LLMParam('Duration', Response.DurationMs),
+      LLMParam('LastResponse', Response.Content),
+      LLMParam('PromptId', PromptId),
+      LLMParam('VersionNumber', VersionNum),
+      LLMParam('NowTime', NowStr)
+    ]);
 end;
 
 // ============================================================================
@@ -1164,87 +1179,82 @@ end;
 
 procedure TLLMManager.SaveCategory(var Category: TPromptCategory);
 var
-  Query: TFDQuery;
+  ParentValue: Variant;
+  NewId: Variant;
+  UpdatedAtIso: string;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  if Category.ParentId > 0 then
+    ParentValue := Category.ParentId
+  else
+    ParentValue := Null;
+
+  if Category.Id > 0 then
+  begin
+    UpdatedAtIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    FStorage.Execute(
+      'UPDATE PromptCategories SET ' +
+      'ParentId = :ParentId, Level = :Level, Code = :Code, Name = :Name, ' +
+      'Description = :Description, SortOrder = :SortOrder, IsActive = :IsActive, ' +
+      'UpdatedAt = :UpdatedAt ' +
+      'WHERE Id = :Id',
+      [
+        LLMParam('ParentId', ParentValue),
+        LLMParam('Level', Category.Level),
+        LLMParam('Code', Category.Code),
+        LLMParam('Name', Category.Name),
+        LLMParam('Description', Category.Description),
+        LLMParam('SortOrder', Category.SortOrder),
+        LLMParam('IsActive', Ord(Category.IsActive)),
+        LLMParam('UpdatedAt', UpdatedAtIso),
+        LLMParam('Id', Category.Id)
+      ]);
+  end
+  else
+  begin
+    FStorage.Execute(
+      'INSERT INTO PromptCategories (ParentId, Level, Code, Name, Description, SortOrder, IsActive) ' +
+      'VALUES (:ParentId, :Level, :Code, :Name, :Description, :SortOrder, :IsActive)',
+      [
+        LLMParam('ParentId', ParentValue),
+        LLMParam('Level', Category.Level),
+        LLMParam('Code', Category.Code),
+        LLMParam('Name', Category.Name),
+        LLMParam('Description', Category.Description),
+        LLMParam('SortOrder', Category.SortOrder),
+        LLMParam('IsActive', Ord(Category.IsActive))
+      ]);
+
+    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if not VarIsNull(NewId) then
+      Category.Id := NewId;
+  end;
+
+  // Update cache
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    
-    if Category.Id > 0 then
-    begin
-      Query.SQL.Text :=
-        'UPDATE PromptCategories SET ' +
-        'ParentId = :ParentId, Level = :Level, Code = :Code, Name = :Name, ' +
-        'Description = :Description, SortOrder = :SortOrder, IsActive = :IsActive, ' +
-        'UpdatedAt = :UpdatedAt ' +
-        'WHERE Id = :Id';
-      Query.ParamByName('Id').AsInteger := Category.Id;
-      Query.ParamByName('UpdatedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO PromptCategories (ParentId, Level, Code, Name, Description, SortOrder, IsActive) ' +
-        'VALUES (:ParentId, :Level, :Code, :Name, :Description, :SortOrder, :IsActive)';
-    end;
-    
-    if Category.ParentId > 0 then
-      Query.ParamByName('ParentId').AsInteger := Category.ParentId
-    else
-      Query.ParamByName('ParentId').Clear;
-    Query.ParamByName('Level').AsInteger := Category.Level;
-    Query.ParamByName('Code').AsString := Category.Code;
-    Query.ParamByName('Name').AsString := Category.Name;
-    Query.ParamByName('Description').AsString := Category.Description;
-    Query.ParamByName('SortOrder').AsInteger := Category.SortOrder;
-    Query.ParamByName('IsActive').AsInteger := Ord(Category.IsActive);
-    
-    Query.ExecSQL;
-    
-    if Category.Id = 0 then
-    begin
-      Query.SQL.Text := 'SELECT last_insert_rowid()';
-      Query.Open;
-      Category.Id := Query.Fields[0].AsInteger;
-    end;
-    
-    // Update cache
-    FCacheLock.Enter;
-    try
-      FCategoryCache.AddOrSetValue(Category.Id, Category);
-    finally
-      FCacheLock.Leave;
-    end;
+    FCategoryCache.AddOrSetValue(Category.Id, Category);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
 procedure TLLMManager.DeleteCategory(CategoryId: Integer);
-var
-  Query: TFDQuery;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  FStorage.Execute(
+    'DELETE FROM PromptCategories WHERE Id = :Id',
+    [LLMParam('Id', CategoryId)]);
+
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'DELETE FROM PromptCategories WHERE Id = :Id';
-    Query.ParamByName('Id').AsInteger := CategoryId;
-    Query.ExecSQL;
-    
-    FCacheLock.Enter;
-    try
-      FCategoryCache.Remove(CategoryId);
-    finally
-      FCacheLock.Leave;
-    end;
+    FCategoryCache.Remove(CategoryId);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
@@ -1308,94 +1318,89 @@ end;
 
 procedure TLLMManager.SavePrompt(var Prompt: TPrompt);
 var
-  Query: TFDQuery;
+  CategoryValue: Variant;
+  NewId: Variant;
+  UpdatedAtIso: string;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  if Prompt.CategoryId > 0 then
+    CategoryValue := Prompt.CategoryId
+  else
+    CategoryValue := Null;
+
+  if Prompt.Id > 0 then
+  begin
+    UpdatedAtIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    FStorage.Execute(
+      'UPDATE Prompts SET ' +
+      'CategoryId = :CategoryId, InternalCode = :InternalCode, Name = :Name, ' +
+      'Description = :Description, BoundQueryName = :BoundQueryName, ' +
+      'VariablesJson = :VariablesJson, IsActive = :IsActive, ' +
+      'UpdatedAt = :UpdatedAt, UpdatedBy = :UpdatedBy ' +
+      'WHERE Id = :Id',
+      [
+        LLMParam('CategoryId', CategoryValue),
+        LLMParam('InternalCode', Prompt.InternalCode),
+        LLMParam('Name', Prompt.Name),
+        LLMParam('Description', Prompt.Description),
+        LLMParam('BoundQueryName', Prompt.BoundQueryName),
+        LLMParam('VariablesJson', VariablesToJson(Prompt.Variables)),
+        LLMParam('IsActive', Ord(Prompt.IsActive)),
+        LLMParam('UpdatedAt', UpdatedAtIso),
+        LLMParam('UpdatedBy', ''),
+        LLMParam('Id', Prompt.Id)
+      ]);
+  end
+  else
+  begin
+    FStorage.Execute(
+      'INSERT INTO Prompts (CategoryId, InternalCode, Name, Description, ' +
+      'BoundQueryName, VariablesJson, IsActive, CreatedBy) ' +
+      'VALUES (:CategoryId, :InternalCode, :Name, :Description, ' +
+      ':BoundQueryName, :VariablesJson, :IsActive, :CreatedBy)',
+      [
+        LLMParam('CategoryId', CategoryValue),
+        LLMParam('InternalCode', Prompt.InternalCode),
+        LLMParam('Name', Prompt.Name),
+        LLMParam('Description', Prompt.Description),
+        LLMParam('BoundQueryName', Prompt.BoundQueryName),
+        LLMParam('VariablesJson', VariablesToJson(Prompt.Variables)),
+        LLMParam('IsActive', Ord(Prompt.IsActive)),
+        LLMParam('CreatedBy', '')
+      ]);
+
+    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if not VarIsNull(NewId) then
+      Prompt.Id := NewId;
+  end;
+
+  Prompt.CategoryPath := BuildCategoryPath(Prompt.CategoryId);
+  
+  // Update cache
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    
-    if Prompt.Id > 0 then
-    begin
-      Query.SQL.Text :=
-        'UPDATE Prompts SET ' +
-        'CategoryId = :CategoryId, InternalCode = :InternalCode, Name = :Name, ' +
-        'Description = :Description, BoundQueryName = :BoundQueryName, ' +
-        'VariablesJson = :VariablesJson, IsActive = :IsActive, ' +
-        'UpdatedAt = :UpdatedAt, UpdatedBy = :UpdatedBy ' +
-        'WHERE Id = :Id';
-      Query.ParamByName('Id').AsInteger := Prompt.Id;
-      Query.ParamByName('UpdatedBy').AsString := '';
-      Query.ParamByName('UpdatedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO Prompts (CategoryId, InternalCode, Name, Description, ' +
-        'BoundQueryName, VariablesJson, IsActive, CreatedBy) ' +
-        'VALUES (:CategoryId, :InternalCode, :Name, :Description, ' +
-        ':BoundQueryName, :VariablesJson, :IsActive, :CreatedBy)';
-      Query.ParamByName('CreatedBy').AsString := '';
-    end;
-    
-    if Prompt.CategoryId > 0 then
-      Query.ParamByName('CategoryId').AsInteger := Prompt.CategoryId
-    else
-      Query.ParamByName('CategoryId').Clear;
-    Query.ParamByName('InternalCode').AsString := Prompt.InternalCode;
-    Query.ParamByName('Name').AsString := Prompt.Name;
-    Query.ParamByName('Description').AsString := Prompt.Description;
-    Query.ParamByName('BoundQueryName').AsString := Prompt.BoundQueryName;
-    Query.ParamByName('VariablesJson').AsString := VariablesToJson(Prompt.Variables);
-    Query.ParamByName('IsActive').AsInteger := Ord(Prompt.IsActive);
-    
-    Query.ExecSQL;
-    
-    if Prompt.Id = 0 then
-    begin
-      Query.SQL.Text := 'SELECT last_insert_rowid()';
-      Query.Open;
-      Prompt.Id := Query.Fields[0].AsInteger;
-    end;
-    
-    Prompt.CategoryPath := BuildCategoryPath(Prompt.CategoryId);
-    
-    // Update cache
-    FCacheLock.Enter;
-    try
-      FPromptCache.AddOrSetValue(Prompt.InternalCode, Prompt);
-    finally
-      FCacheLock.Leave;
-    end;
+    FPromptCache.AddOrSetValue(Prompt.InternalCode, Prompt);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
 procedure TLLMManager.DeletePrompt(const InternalCode: string);
-var
-  Query: TFDQuery;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  FStorage.Execute(
+    'DELETE FROM Prompts WHERE InternalCode = :InternalCode',
+    [LLMParam('InternalCode', InternalCode)]);
+
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'DELETE FROM Prompts WHERE InternalCode = :InternalCode';
-    Query.ParamByName('InternalCode').AsString := InternalCode;
-    Query.ExecSQL;
-    
-    FCacheLock.Enter;
-    try
-      FPromptCache.Remove(InternalCode);
-    finally
-      FCacheLock.Leave;
-    end;
+    FPromptCache.Remove(InternalCode);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
@@ -1427,8 +1432,9 @@ end;
 
 procedure TLLMManager.SaveVersion(const InternalCode: string; var Version: TPromptVersion);
 var
-  Query: TFDQuery;
   Prompt: TPrompt;
+  UpdatedAtIso: string;
+  NewId: Variant;
 begin
   if not HasActiveConnection then
     Exit;
@@ -1438,52 +1444,45 @@ begin
     Exit;
     
   Version.PromptId := Prompt.Id;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    
-    if Version.Id > 0 then
-    begin
-      Query.SQL.Text :=
-        'UPDATE PromptVersions SET ' +
-        'Content = :Content, IsProduction = :IsProduction, ' +
-        'UpdatedAt = :UpdatedAt ' +
-        'WHERE Id = :Id';
-      Query.ParamByName('Id').AsInteger := Version.Id;
-      Query.ParamByName('UpdatedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) ' +
-        'VALUES (:PromptId, :VersionNumber, :Content, :IsProduction)';
-      Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-      Query.ParamByName('VersionNumber').AsInteger := Version.VersionNumber;
-    end;
-    
-    Query.ParamByName('Content').AsString := Version.Content;
-    Query.ParamByName('IsProduction').AsInteger := Ord(Version.IsProduction);
-    
-    Query.ExecSQL;
-    
-    if Version.Id = 0 then
-    begin
-      Query.SQL.Text := 'SELECT last_insert_rowid()';
-      Query.Open;
-      Version.Id := Query.Fields[0].AsInteger;
-    end;
-    
-    // Refresh prompt in cache
-    RefreshCache;
-  finally
-    Query.Free;
+
+  if Version.Id > 0 then
+  begin
+    UpdatedAtIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    FStorage.Execute(
+      'UPDATE PromptVersions SET ' +
+      'Content = :Content, IsProduction = :IsProduction, ' +
+      'UpdatedAt = :UpdatedAt ' +
+      'WHERE Id = :Id',
+      [
+        LLMParam('Content', Version.Content),
+        LLMParam('IsProduction', Ord(Version.IsProduction)),
+        LLMParam('UpdatedAt', UpdatedAtIso),
+        LLMParam('Id', Version.Id)
+      ]);
+  end
+  else
+  begin
+    FStorage.Execute(
+      'INSERT INTO PromptVersions (PromptId, VersionNumber, Content, IsProduction) ' +
+      'VALUES (:PromptId, :VersionNumber, :Content, :IsProduction)',
+      [
+        LLMParam('PromptId', Prompt.Id),
+        LLMParam('VersionNumber', Version.VersionNumber),
+        LLMParam('Content', Version.Content),
+        LLMParam('IsProduction', Ord(Version.IsProduction))
+      ]);
+
+    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if not VarIsNull(NewId) then
+      Version.Id := NewId;
   end;
+  
+  // Refresh prompt in cache
+  RefreshCache;
 end;
 
 procedure TLLMManager.SetProductionVersion(const InternalCode: string; VersionNum: Integer);
 var
-  Query: TFDQuery;
   Prompt: TPrompt;
 begin
   if not HasActiveConnection then
@@ -1492,31 +1491,22 @@ begin
   Prompt := GetPrompt(InternalCode);
   if Prompt.Id = 0 then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    
-    // Reset all versions
-    Query.SQL.Text := 'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId';
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ExecSQL;
-    
-    // Set the specified version as production
-    Query.SQL.Text := 'UPDATE PromptVersions SET IsProduction = 1 WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber';
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ParamByName('VersionNumber').AsInteger := VersionNum;
-    Query.ExecSQL;
-    
-    RefreshCache;
-  finally
-    Query.Free;
-  end;
+
+  // Reset all versions
+  FStorage.Execute(
+    'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId',
+    [LLMParam('PromptId', Prompt.Id)]);
+
+  // Set the specified version as production
+  FStorage.Execute(
+    'UPDATE PromptVersions SET IsProduction = 1 WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
+    [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
+
+  RefreshCache;
 end;
 
 procedure TLLMManager.DeleteVersion(const InternalCode: string; VersionNum: Integer);
 var
-  Query: TFDQuery;
   Prompt: TPrompt;
 begin
   if not HasActiveConnection then
@@ -1525,19 +1515,12 @@ begin
   Prompt := GetPrompt(InternalCode);
   if Prompt.Id = 0 then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'DELETE FROM PromptVersions WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber';
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ParamByName('VersionNumber').AsInteger := VersionNum;
-    Query.ExecSQL;
-    
-    RefreshCache;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.Execute(
+    'DELETE FROM PromptVersions WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
+    [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
+  
+  RefreshCache;
 end;
 
 // ============================================================================
@@ -1585,66 +1568,66 @@ end;
 
 procedure TLLMManager.SaveMetaPrompt(var Meta: TMetaPrompt);
 var
-  Query: TFDQuery;
+  UpdatedAtIso: string;
+  NewId: Variant;
 begin
   if not HasActiveConnection then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  if Meta.Id > 0 then
+  begin
+    UpdatedAtIso := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
+    FStorage.Execute(
+      'UPDATE PromptMeta SET ' +
+      'InternalCode = :InternalCode, Name = :Name, Category = :Category, ' +
+      'Content = :Content, MergeMode = :MergeMode, Priority = :Priority, ' +
+      'Level = :Level, IsActive = :IsActive, ' +
+      'UpdatedAt = :UpdatedAt ' +
+      'WHERE Id = :Id',
+      [
+        LLMParam('InternalCode', Meta.InternalCode),
+        LLMParam('Name', Meta.Name),
+        LLMParam('Category', Meta.CategoryToStr),
+        LLMParam('Content', Meta.Content),
+        LLMParam('MergeMode', Meta.MergeModeToStr),
+        LLMParam('Priority', Meta.Priority),
+        LLMParam('Level', Meta.Level),
+        LLMParam('IsActive', Ord(Meta.IsActive)),
+        LLMParam('UpdatedAt', UpdatedAtIso),
+        LLMParam('Id', Meta.Id)
+      ]);
+  end
+  else
+  begin
+    FStorage.Execute(
+      'INSERT INTO PromptMeta (InternalCode, Name, Category, Content, MergeMode, Priority, Level, IsActive) ' +
+      'VALUES (:InternalCode, :Name, :Category, :Content, :MergeMode, :Priority, :Level, :IsActive)',
+      [
+        LLMParam('InternalCode', Meta.InternalCode),
+        LLMParam('Name', Meta.Name),
+        LLMParam('Category', Meta.CategoryToStr),
+        LLMParam('Content', Meta.Content),
+        LLMParam('MergeMode', Meta.MergeModeToStr),
+        LLMParam('Priority', Meta.Priority),
+        LLMParam('Level', Meta.Level),
+        LLMParam('IsActive', Ord(Meta.IsActive))
+      ]);
+
+    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if not VarIsNull(NewId) then
+      Meta.Id := NewId;
+  end;
+
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    
-    if Meta.Id > 0 then
-    begin
-      Query.SQL.Text :=
-        'UPDATE PromptMeta SET ' +
-        'InternalCode = :InternalCode, Name = :Name, Category = :Category, ' +
-        'Content = :Content, MergeMode = :MergeMode, Priority = :Priority, ' +
-        'Level = :Level, IsActive = :IsActive, ' +
-        'UpdatedAt = :UpdatedAt ' +
-        'WHERE Id = :Id';
-      Query.ParamByName('Id').AsInteger := Meta.Id;
-      Query.ParamByName('UpdatedAt').AsString := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now);
-    end
-    else
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO PromptMeta (InternalCode, Name, Category, Content, MergeMode, Priority, Level, IsActive) ' +
-        'VALUES (:InternalCode, :Name, :Category, :Content, :MergeMode, :Priority, :Level, :IsActive)';
-    end;
-    
-    Query.ParamByName('InternalCode').AsString := Meta.InternalCode;
-    Query.ParamByName('Name').AsString := Meta.Name;
-    Query.ParamByName('Category').AsString := Meta.CategoryToStr;
-    Query.ParamByName('Content').AsString := Meta.Content;
-    Query.ParamByName('MergeMode').AsString := Meta.MergeModeToStr;
-    Query.ParamByName('Priority').AsInteger := Meta.Priority;
-    Query.ParamByName('Level').AsInteger := Meta.Level;
-    Query.ParamByName('IsActive').AsInteger := Ord(Meta.IsActive);
-    
-    Query.ExecSQL;
-    
-    if Meta.Id = 0 then
-    begin
-      Query.SQL.Text := 'SELECT last_insert_rowid()';
-      Query.Open;
-      Meta.Id := Query.Fields[0].AsInteger;
-    end;
-    
-    FCacheLock.Enter;
-    try
-      FMetaCache.AddOrSetValue(Meta.Id, Meta);
-    finally
-      FCacheLock.Leave;
-    end;
+    FMetaCache.AddOrSetValue(Meta.Id, Meta);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
 procedure TLLMManager.DeleteMetaPrompt(const InternalCode: string);
 var
-  Query: TFDQuery;
   Meta: TMetaPrompt;
 begin
   if not HasActiveConnection then
@@ -1653,28 +1636,21 @@ begin
   Meta := GetMetaPrompt(InternalCode);
   if Meta.Id = 0 then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
+
+  FStorage.Execute(
+    'DELETE FROM PromptMeta WHERE InternalCode = :InternalCode',
+    [LLMParam('InternalCode', InternalCode)]);
+
+  FCacheLock.Enter;
   try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'DELETE FROM PromptMeta WHERE InternalCode = :InternalCode';
-    Query.ParamByName('InternalCode').AsString := InternalCode;
-    Query.ExecSQL;
-    
-    FCacheLock.Enter;
-    try
-      FMetaCache.Remove(Meta.Id);
-    finally
-      FCacheLock.Leave;
-    end;
+    FMetaCache.Remove(Meta.Id);
   finally
-    Query.Free;
+    FCacheLock.Leave;
   end;
 end;
 
 procedure TLLMManager.BindMetaPrompt(const PromptCode, MetaCode: string; OrderIndex: Integer);
 var
-  Query: TFDQuery;
   Prompt: TPrompt;
   Meta: TMetaPrompt;
 begin
@@ -1685,27 +1661,21 @@ begin
   Meta := GetMetaPrompt(MetaCode);
   if (Prompt.Id = 0) or (Meta.Id = 0) then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text :=
-      'INSERT OR REPLACE INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
-      'VALUES (:PromptId, :MetaPromptId, :OrderIndex, 1)';
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ParamByName('MetaPromptId').AsInteger := Meta.Id;
-    Query.ParamByName('OrderIndex').AsInteger := OrderIndex;
-    Query.ExecSQL;
-    
-    RefreshCache;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.Execute(
+    'INSERT OR REPLACE INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
+    'VALUES (:PromptId, :MetaPromptId, :OrderIndex, 1)',
+    [
+      LLMParam('PromptId', Prompt.Id),
+      LLMParam('MetaPromptId', Meta.Id),
+      LLMParam('OrderIndex', OrderIndex)
+    ]);
+  
+  RefreshCache;
 end;
 
 procedure TLLMManager.UnbindMetaPrompt(const PromptCode, MetaCode: string);
 var
-  Query: TFDQuery;
   Prompt: TPrompt;
   Meta: TMetaPrompt;
 begin
@@ -1716,19 +1686,12 @@ begin
   Meta := GetMetaPrompt(MetaCode);
   if (Prompt.Id = 0) or (Meta.Id = 0) then
     Exit;
-    
-  Query := TFDQuery.Create(nil);
-  try
-    Query.Connection := TFDConnection(FConnection);
-    Query.SQL.Text := 'DELETE FROM PromptMetaBinding WHERE PromptId = :PromptId AND MetaPromptId = :MetaPromptId';
-    Query.ParamByName('PromptId').AsInteger := Prompt.Id;
-    Query.ParamByName('MetaPromptId').AsInteger := Meta.Id;
-    Query.ExecSQL;
-    
-    RefreshCache;
-  finally
-    Query.Free;
-  end;
+
+  FStorage.Execute(
+    'DELETE FROM PromptMetaBinding WHERE PromptId = :PromptId AND MetaPromptId = :MetaPromptId',
+    [LLMParam('PromptId', Prompt.Id), LLMParam('MetaPromptId', Meta.Id)]);
+
+  RefreshCache;
 end;
 
 // ============================================================================
@@ -1752,7 +1715,7 @@ function TLLMManager.Execute(const InternalCode: string;
   const ConfigName: string): TLLMResponse;
 var
   Prompt: TPrompt;
-  FinalPrompt, Context: string;
+  FinalPrompt: string;
   LLMResponse: TLLMChatResponse;
   Config: TLLMConfig;
   ActualConfigName: string;

@@ -303,7 +303,7 @@ type
     procedure SetKey(const AKey: TBytes);
     
     /// <summary>Set key from password (using PBKDF2)</summary>
-    procedure SetKeyFromPassword(const APassword: string; const ASalt: TBytes = nil);
+    procedure SetKeyFromPassword(const APassword: string; const ASalt: TBytes);
     
     /// <summary>Set initialization vector</summary>
     procedure SetIV(const AIV: TBytes);
@@ -347,15 +347,17 @@ type
   /// <summary>Simple encryption helper (password-based)</summary>
   TSimpleCrypto = class
   public
+    class function DeriveSalt(const APassword: string): TBytes; static;
+
     /// <summary>Encrypt string with password</summary>
     class function Encrypt(const AData, APassword: string): string; static;
-    
+
     /// <summary>Decrypt string with password</summary>
     class function Decrypt(const AData, APassword: string): string; static;
-    
+
     /// <summary>Encrypt bytes with password</summary>
     class function EncryptBytes(const AData: TBytes; const APassword: string): TBytes; static;
-    
+
     /// <summary>Decrypt bytes with password</summary>
     class function DecryptBytes(const AData: TBytes; const APassword: string): TBytes; static;
   end;
@@ -445,7 +447,10 @@ type
 implementation
 
 uses
-  System.Math, System.RTLConsts;
+  System.Math, System.RTLConsts
+  {$IFNDEF MSWINDOWS}
+  , UniBase.Crypto.OpenSSL
+  {$ENDIF};
 
 { THashUtils }
 
@@ -1152,15 +1157,16 @@ begin
 end;
 
 procedure TAESCrypto.SetKeyFromPassword(const APassword: string; const ASalt: TBytes);
-var
-  LSalt: TBytes;
 begin
-  if Length(ASalt) > 0 then
-    LSalt := ASalt
-  else
-    LSalt := TEncoding.UTF8.GetBytes('UniBaseAES256DefaultSalt');
-    
-  FKey := TPasswordUtils.PBKDF2(APassword, LSalt, 10000, GetKeyLength, haSHA256);
+  if Length(ASalt) = 0 then
+    raise ECryptoException.Create('Salt is required for key derivation. Pass a cryptographically random salt.');
+
+  FKey := TPasswordUtils.PBKDF2(APassword, ASalt, 10000, GetKeyLength, haSHA256);
+end;
+
+class function TSimpleCrypto.DeriveSalt(const APassword: string): TBytes;
+begin
+  Result := THashSHA2.GetHashBytes(APassword + '_salt_v1', THashSHA2.TSHA2Version.SHA256);
 end;
 
 procedure TAESCrypto.SetIV(const AIV: TBytes);
@@ -1286,23 +1292,9 @@ end;
 {$ELSE}
 var
   LPadded: TBytes;
-  I, J: Integer;
-  LBlock, LPrevBlock: array[0..15] of Byte;
 begin
-  // Fallback XOR-based encryption for non-Windows platforms
-  // WARNING: This is NOT secure - for demonstration only
   LPadded := PadData(AData);
-  SetLength(Result, Length(LPadded));
-  Move(FIV[0], LPrevBlock[0], 16);
-  I := 0;
-  while I < Length(LPadded) do
-  begin
-    for J := 0 to 15 do
-      LBlock[J] := LPadded[I + J] xor LPrevBlock[J] xor FKey[J mod Length(FKey)];
-    Move(LBlock[0], Result[I], 16);
-    Move(LBlock[0], LPrevBlock[0], 16);
-    Inc(I, 16);
-  end;
+  Result := UniBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Encrypt(FKey, FIV, LPadded);
 end;
 {$ENDIF}
 
@@ -1384,26 +1376,11 @@ begin
 end;
 {$ELSE}
 var
-  I, J: Integer;
-  LBlock, LPrevBlock, LCipherBlock: array[0..15] of Byte;
   LDecrypted: TBytes;
 begin
   if Length(AData) mod 16 <> 0 then
     raise ECryptoException.Create('Invalid ciphertext length');
-  // Fallback XOR-based decryption for non-Windows platforms  
-  // WARNING: This is NOT secure - for demonstration only
-  SetLength(LDecrypted, Length(AData));
-  Move(FIV[0], LPrevBlock[0], 16);
-  I := 0;
-  while I < Length(AData) do
-  begin
-    Move(AData[I], LCipherBlock[0], 16);
-    for J := 0 to 15 do
-      LBlock[J] := LCipherBlock[J] xor LPrevBlock[J] xor FKey[J mod Length(FKey)];
-    Move(LBlock[0], LDecrypted[I], 16);
-    Move(LCipherBlock[0], LPrevBlock[0], 16);
-    Inc(I, 16);
-  end;
+  LDecrypted := UniBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Decrypt(FKey, FIV, AData);
   Result := UnpadData(LDecrypted);
 end;
 {$ENDIF}
@@ -1517,8 +1494,7 @@ var
 begin
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
-    // Derive key from password; IV is generated in constructor
-    LAES.SetKeyFromPassword(APassword);
+    LAES.SetKeyFromPassword(APassword, DeriveSalt(APassword));
     Cipher := LAES.Encrypt(AData);
     IV := LAES.IV;
     BlockSize := Length(IV);
@@ -1555,7 +1531,7 @@ begin
 
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
-    LAES.SetKeyFromPassword(APassword);
+    LAES.SetKeyFromPassword(APassword, DeriveSalt(APassword));
     LAES.SetIV(IV);
     Result := LAES.Decrypt(Cipher);
   finally
