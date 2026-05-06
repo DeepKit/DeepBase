@@ -39,6 +39,8 @@ contains
   UniBase.VCL.LLMConfigPanel in 'VCL\UniBase.VCL.LLMConfigPanel.pas',
   UniBase.VCL.MRUControls in 'VCL\UniBase.VCL.MRUControls.pas',
   UniBase.Export in 'Core\UniBase.Export.pas',
+  UniBase.Share in 'Core\UniBase.Share.pas',
+  UniBase.VCL.Export.Image in 'VCL\UniBase.VCL.Export.Image.pas',
   UniBase.SplashScreen in 'Core\UniBase.SplashScreen.pas',
   UniBase.VirtualScroll in 'Core\UniBase.VirtualScroll.pas',
   UniBase.TestHelper in 'Core\UniBase.TestHelper.pas',

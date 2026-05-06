@@ -94,6 +94,7 @@ uses
   Test.UniBase.Diff in 'Test.UniBase.Diff.pas',
   Test.UniBase.EventBus in 'Test.UniBase.EventBus.pas',
   Test.UniBase.Export in 'Test.UniBase.Export.pas',
+  Test.UniBase.Export.Gen in 'Test.UniBase.Export.Gen.pas',
   Test.UniBase.Expression in 'Test.UniBase.Expression.pas',
   Test.UniBase.Feedback in 'Test.UniBase.Feedback.pas',
   Test.UniBase.FileWatcher in 'Test.UniBase.FileWatcher.pas',

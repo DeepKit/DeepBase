@@ -78,6 +78,8 @@ contains
   UniBase.Cache in 'Core\UniBase.Cache.pas',
   UniBase.Memory in 'Core\UniBase.Memory.pas',
   UniBase.Security in 'Core\UniBase.Security.pas',
-  UniBase.TrayIcon in 'Core\UniBase.TrayIcon.pas';
+  UniBase.TrayIcon in 'Core\UniBase.TrayIcon.pas',
+  UniBase.Export.PDF in 'Core\UniBase.Export.PDF.pas',
+  UniBase.Export.DOCX in 'Core\UniBase.Export.DOCX.pas';
 
 end.

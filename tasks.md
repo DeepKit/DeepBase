@@ -120,6 +120,16 @@
 
 ## P2 后续优化
 
+### GEN-001: 文档导出与分享框架 ✅
+- **状态**: ✅ 已完成
+- **完成日期**: 2026-05-06
+- **内容**:
+  - GEN-001A: `Core/UniBase.Export.PDF.pas` — 纯 Pascal PDF 1.4 流生成（Type0+Identity-H 中英混排、表格、JPEG 图片、多页）
+  - GEN-001B: `Core/UniBase.Export.DOCX.pas` — OOXML 格式生成（System.Zip + XML，段落/粗体/表格/图片嵌入）
+  - GEN-001C: `VCL/UniBase.VCL.Export.Image.pas` — Canvas 渲染导出 PNG/JPEG（文本、表格、圆角矩形、图片）
+  - GEN-001D: `Core/UniBase.Share.pas` — 剪贴板（文本+图片）、保存到图片文件夹、Win10+ ShareContract
+  - `Tests/Test.UniBase.Export.Gen.pas` — 15 个单元测试
+
 ### VERSION-001: 统一版本号 + Version.inc ✅
 - **状态**: ✅ 已完成
 - **完成日期**: 2026-05-06
@@ -235,6 +245,7 @@
 
 ## 已完成任务归档
 
+- 2026-05-06 GEN-001（文档导出与分享框架：PDF Writer + DOCX Writer + Image Export + Share Service）已完成。
 - 2026-05-06 COMMERCE-002E（支付通知确认流程）、COMMERCE-002F（端到端样例）、ECO-002（社区扩展：Supabase/Firebase 适配器 + SDK Gateway + PaymentBridge）已完成。
 - 2026-05-06 FWK-007（Updater 非 Windows RSA 签名验证）、FWK-004 FMX 侧补齐（TFMXi18nCheckBox、TFMXi18nGroupBox）已完成。
 - 2026-05-06 SEC-001（XOR→OpenSSL）、SEC-003（插件签名验证）已完成。
