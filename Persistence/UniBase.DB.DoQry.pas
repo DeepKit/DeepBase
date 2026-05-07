@@ -761,7 +761,10 @@ begin
     begin
       P := Q.ParamByName(Pair.JsonString.Value);
       if Pair.JsonValue is TJSONNull then
-        P.Clear
+      begin
+        P.DataType := ftWideString;
+        P.Clear;
+      end
       else if Pair.JsonValue is TJSONNumber then
       begin
         if (Pos('.', Pair.JsonValue.Value) > 0) or
@@ -775,40 +778,6 @@ begin
       else
       begin
         S := Trim(Pair.JsonValue.Value);
-        if (S <> '') then
-        begin
-          // Try GUID detection: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
-          if (Length(S) = 38) and (S[1] = '{') and (S[Length(S)] = '}') then
-          begin
-            if TryParseGuid(S, G) then
-            begin
-              P.DataType := ftGuid;
-              P.AsGUID := G;
-              Continue;
-            end;
-          end
-          // Try GUID without braces: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-          else if (Length(S) = 36) and (S[9] = '-') and IsHexWithDashes(S, 1, 36) then
-          begin
-            if TryParseGuid('{' + S + '}', G) then
-            begin
-              P.DataType := ftGuid;
-              P.AsGUID := G;
-              Continue;
-            end;
-          end
-          // Try compact GUID: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (32 hex chars)
-          else if (Length(S) = 32) and IsHexWithDashes(S, 1, 32) then
-          begin
-            if TryParseGuid('{' + Copy(S,1,8) + '-' + Copy(S,9,4) + '-' +
-               Copy(S,13,4) + '-' + Copy(S,17,4) + '-' + Copy(S,21,12) + '}', G) then
-            begin
-              P.DataType := ftGuid;
-              P.AsGUID := G;
-              Continue;
-            end;
-          end;
-        end;
         if S = '' then
           P.AsString := S
         else

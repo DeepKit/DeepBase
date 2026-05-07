@@ -226,7 +226,10 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT * FROM auth_roles WHERE is_active = 1';
+    if IsPostgreSQL then
+      Query.SQL.Text := 'SELECT * FROM auth_roles WHERE is_active = TRUE'
+    else
+      Query.SQL.Text := 'SELECT * FROM auth_roles WHERE is_active = 1';
     Query.Open;
     while not Query.Eof do
     begin
@@ -296,7 +299,10 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT * FROM auth_users WHERE is_active = 1';
+    if IsPostgreSQL then
+      Query.SQL.Text := 'SELECT * FROM auth_users WHERE is_active = TRUE'
+    else
+      Query.SQL.Text := 'SELECT * FROM auth_users WHERE is_active = 1';
     Query.Open;
     while not Query.Eof do
     begin

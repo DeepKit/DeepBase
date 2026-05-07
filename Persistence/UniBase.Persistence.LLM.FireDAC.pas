@@ -42,6 +42,7 @@ type
       const Params: array of TLLMStorageParam): Integer;
     function ExecuteScalar(const SQL: string;
       const Params: array of TLLMStorageParam): Variant;
+    function IsPostgreSQL: Boolean;
   end;
 
 constructor TFireDACLLMStorage.Create(AConnection: TFDConnection);
@@ -62,6 +63,7 @@ function TFireDACLLMStorage.PrepareQuery(const SQL: string;
 var
   I: Integer;
   Param: TFDParam;
+  V: Variant;
 begin
   Result := TFDQuery.Create(nil);
   Result.Connection := FConnection;
@@ -70,7 +72,42 @@ begin
   begin
     Param := Result.Params.FindParam(Params[I].Name);
     if Assigned(Param) then
-      Param.Value := Params[I].Value;
+    begin
+      V := Params[I].Value;
+      if VarIsNull(V) or VarIsEmpty(V) then
+      begin
+        Param.DataType := ftInteger;
+        Param.Clear;
+      end
+      else if VarIsType(V, varBoolean) then
+      begin
+        if IsPostgreSQL then
+        begin
+          Param.DataType := ftBoolean;
+          Param.AsBoolean := Boolean(V);
+        end
+        else
+        begin
+          Param.DataType := ftInteger;
+          Param.AsInteger := Ord(Boolean(V));
+        end;
+      end
+      else if VarIsType(V, varInteger) or VarIsType(V, varSmallint) then
+      begin
+        Param.DataType := ftInteger;
+        Param.AsInteger := Integer(V);
+      end
+      else if VarIsType(V, varDouble) or VarIsType(V, varSingle) then
+      begin
+        Param.DataType := ftFloat;
+        Param.AsFloat := Double(V);
+      end
+      else
+      begin
+        Param.DataType := ftWideString;
+        Param.AsWideString := VarToStr(V);
+      end;
+    end;
   end;
 end;
 
@@ -120,22 +157,53 @@ begin
   end;
 end;
 
+function TFireDACLLMStorage.IsPostgreSQL: Boolean;
+var
+  DriverName: string;
+begin
+  if not Assigned(FConnection) then
+    Exit(False);
+  DriverName := FConnection.DriverName;
+  if DriverName = '' then
+    DriverName := FConnection.Params.Values['DriverID'];
+  Result := SameText(DriverName, 'PG') or SameText(DriverName, 'PostgreSQL');
+end;
+
 function TFireDACLLMStorage.TableExists(const TableName: string): Boolean;
 var
   DataSet: TDataSet;
+  Query: TFDQuery;
 begin
   Result := False;
   if not IsConnected then
     Exit;
 
   try
-    DataSet := OpenDataSet(
-      'SELECT name FROM sqlite_master WHERE type = ''table'' AND name = :Name',
-      [TLLMStorageParam.Create('Name', TableName)]);
-    try
-      Result := not DataSet.Eof;
-    finally
-      DataSet.Free;
+    if IsPostgreSQL then
+    begin
+      Query := TFDQuery.Create(nil);
+      try
+        Query.Connection := FConnection;
+        Query.SQL.Text :=
+          'SELECT COUNT(*) FROM information_schema.tables ' +
+          'WHERE table_schema = current_schema() AND table_name = :TableName';
+        Query.ParamByName('TableName').AsString := TableName;
+        Query.Open;
+        Result := Query.Fields[0].AsInteger > 0;
+      finally
+        Query.Free;
+      end;
+    end
+    else
+    begin
+      DataSet := OpenDataSet(
+        'SELECT name FROM sqlite_master WHERE type = ''table'' AND name = :Name',
+        [TLLMStorageParam.Create('Name', TableName)]);
+      try
+        Result := not DataSet.Eof;
+      finally
+        DataSet.Free;
+      end;
     end;
   except
     Result := False;

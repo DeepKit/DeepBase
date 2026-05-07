@@ -232,6 +232,7 @@ type
       AConnection: TObject): ILLMStorage; static;
     function GetStorage: ILLMStorage;
     function HasActiveConnection: Boolean;
+    function IsPG: Boolean;
 
   public
     constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False); overload;
@@ -701,6 +702,11 @@ begin
   Result := Assigned(Storage) and Storage.IsConnected;
 end;
 
+function TLLMManager.IsPG: Boolean;
+begin
+  Result := Assigned(FStorage) and FStorage.IsPostgreSQL;
+end;
+
 destructor TLLMManager.Destroy;
 begin
   FreeAndNil(FCacheLock);
@@ -742,9 +748,14 @@ begin
   if not HasActiveConnection then
     Exit;
 
-  Query := FStorage.OpenDataSet(
-    'SELECT * FROM PromptCategories WHERE IsActive = 1 ORDER BY Level, SortOrder, Name',
-    []);
+  if IsPG then
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM PromptCategories WHERE IsActive = TRUE ORDER BY Level, SortOrder, Name',
+      [])
+  else
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM PromptCategories WHERE IsActive = 1 ORDER BY Level, SortOrder, Name',
+      []);
   try
     while not Query.Eof do
     begin
@@ -755,7 +766,7 @@ begin
       Cat.Name := Query.FieldByName('Name').AsString;
       Cat.Description := Query.FieldByName('Description').AsString;
       Cat.SortOrder := Query.FieldByName('SortOrder').AsInteger;
-      Cat.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
+      if IsPG then Cat.IsActive := Query.FieldByName('IsActive').AsBoolean else Cat.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
       
       FCategoryCache.AddOrSetValue(Cat.Id, Cat);
       Query.Next;
@@ -773,9 +784,14 @@ begin
   if not HasActiveConnection then
     Exit;
 
-  Query := FStorage.OpenDataSet(
-    'SELECT * FROM PromptMeta WHERE IsActive = 1 ORDER BY Priority',
-    []);
+  if IsPG then
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM PromptMeta WHERE IsActive = TRUE ORDER BY Priority',
+      [])
+  else
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM PromptMeta WHERE IsActive = 1 ORDER BY Priority',
+      []);
   try
     while not Query.Eof do
     begin
@@ -787,7 +803,7 @@ begin
       Meta.MergeMode := TMetaPrompt.StrToMergeMode(Query.FieldByName('MergeMode').AsString);
       Meta.Priority := Query.FieldByName('Priority').AsInteger;
       Meta.Level := Query.FieldByName('Level').AsInteger;
-      Meta.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
+      if IsPG then Meta.IsActive := Query.FieldByName('IsActive').AsBoolean else Meta.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
       
       FMetaCache.AddOrSetValue(Meta.Id, Meta);
       Query.Next;
@@ -805,9 +821,14 @@ begin
   if not HasActiveConnection then
     Exit;
 
-  Query := FStorage.OpenDataSet(
-    'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY InternalCode',
-    []);
+  if IsPG then
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM Prompts WHERE IsActive = TRUE ORDER BY InternalCode',
+      [])
+  else
+    Query := FStorage.OpenDataSet(
+      'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY InternalCode',
+      []);
   try
     while not Query.Eof do
     begin
@@ -818,7 +839,7 @@ begin
       Prompt.Description := Query.FieldByName('Description').AsString;
       Prompt.BoundQueryName := Query.FieldByName('BoundQueryName').AsString;
       Prompt.Variables := ParseVariablesJson(Query.FieldByName('VariablesJson').AsString);
-      Prompt.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
+      if IsPG then Prompt.IsActive := Query.FieldByName('IsActive').AsBoolean else Prompt.IsActive := Query.FieldByName('IsActive').AsInteger = 1;
       Prompt.CreatedAt := Query.FieldByName('CreatedAt').AsDateTime;
       Prompt.UpdatedAt := Query.FieldByName('UpdatedAt').AsDateTime;
       Prompt.CategoryPath := BuildCategoryPath(Prompt.CategoryId);
@@ -853,7 +874,7 @@ begin
         V.PromptId := Query.FieldByName('PromptId').AsInteger;
         V.VersionNumber := Query.FieldByName('VersionNumber').AsInteger;
         V.Content := Query.FieldByName('Content').AsString;
-        V.IsProduction := Query.FieldByName('IsProduction').AsInteger = 1;
+        if IsPG then V.IsProduction := Query.FieldByName('IsProduction').AsBoolean else V.IsProduction := Query.FieldByName('IsProduction').AsInteger = 1;
         V.TestCount := Query.FieldByName('TestCount').AsInteger;
         V.SuccessCount := Query.FieldByName('SuccessCount').AsInteger;
         V.TotalTokens := Query.FieldByName('TotalTokens').AsInteger;
@@ -885,12 +906,20 @@ var
 begin
   List := TList<TMetaPrompt>.Create;
   try
-    Query := FStorage.OpenDataSet(
-      'SELECT m.* FROM PromptMeta m ' +
-      'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
-      'WHERE b.PromptId = :PromptId AND b.IsEnabled = 1 AND m.IsActive = 1 ' +
-      'ORDER BY m.Priority, b.OrderIndex',
-      [LLMParam('PromptId', Prompt.Id)]);
+    if IsPG then
+      Query := FStorage.OpenDataSet(
+        'SELECT m.* FROM PromptMeta m ' +
+        'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
+        'WHERE b.PromptId = :PromptId AND b.IsEnabled = TRUE AND m.IsActive = TRUE ' +
+        'ORDER BY m.Priority, b.OrderIndex',
+        [LLMParam('PromptId', Prompt.Id)])
+    else
+      Query := FStorage.OpenDataSet(
+        'SELECT m.* FROM PromptMeta m ' +
+        'INNER JOIN PromptMetaBinding b ON m.Id = b.MetaPromptId ' +
+        'WHERE b.PromptId = :PromptId AND b.IsEnabled = 1 AND m.IsActive = 1 ' +
+        'ORDER BY m.Priority, b.OrderIndex',
+        [LLMParam('PromptId', Prompt.Id)]);
     try
       while not Query.Eof do
       begin
@@ -1207,7 +1236,7 @@ begin
         LLMParam('Name', Category.Name),
         LLMParam('Description', Category.Description),
         LLMParam('SortOrder', Category.SortOrder),
-        LLMParam('IsActive', Ord(Category.IsActive)),
+        LLMParam('IsActive', Category.IsActive),
         LLMParam('UpdatedAt', UpdatedAtIso),
         LLMParam('Id', Category.Id)
       ]);
@@ -1224,10 +1253,13 @@ begin
         LLMParam('Name', Category.Name),
         LLMParam('Description', Category.Description),
         LLMParam('SortOrder', Category.SortOrder),
-        LLMParam('IsActive', Ord(Category.IsActive))
+        LLMParam('IsActive', Category.IsActive)
       ]);
 
-    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if IsPG then
+      NewId := FStorage.ExecuteScalar('SELECT LASTVAL()', [])
+    else
+      NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
     if not VarIsNull(NewId) then
       Category.Id := NewId;
   end;
@@ -1347,7 +1379,7 @@ begin
         LLMParam('Description', Prompt.Description),
         LLMParam('BoundQueryName', Prompt.BoundQueryName),
         LLMParam('VariablesJson', VariablesToJson(Prompt.Variables)),
-        LLMParam('IsActive', Ord(Prompt.IsActive)),
+        LLMParam('IsActive', Prompt.IsActive),
         LLMParam('UpdatedAt', UpdatedAtIso),
         LLMParam('UpdatedBy', ''),
         LLMParam('Id', Prompt.Id)
@@ -1367,11 +1399,14 @@ begin
         LLMParam('Description', Prompt.Description),
         LLMParam('BoundQueryName', Prompt.BoundQueryName),
         LLMParam('VariablesJson', VariablesToJson(Prompt.Variables)),
-        LLMParam('IsActive', Ord(Prompt.IsActive)),
+        LLMParam('IsActive', Prompt.IsActive),
         LLMParam('CreatedBy', '')
       ]);
 
-    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if IsPG then
+      NewId := FStorage.ExecuteScalar('SELECT LASTVAL()', [])
+    else
+      NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
     if not VarIsNull(NewId) then
       Prompt.Id := NewId;
   end;
@@ -1455,7 +1490,7 @@ begin
       'WHERE Id = :Id',
       [
         LLMParam('Content', Version.Content),
-        LLMParam('IsProduction', Ord(Version.IsProduction)),
+        LLMParam('IsProduction', Version.IsProduction),
         LLMParam('UpdatedAt', UpdatedAtIso),
         LLMParam('Id', Version.Id)
       ]);
@@ -1469,10 +1504,13 @@ begin
         LLMParam('PromptId', Prompt.Id),
         LLMParam('VersionNumber', Version.VersionNumber),
         LLMParam('Content', Version.Content),
-        LLMParam('IsProduction', Ord(Version.IsProduction))
+        LLMParam('IsProduction', Version.IsProduction)
       ]);
 
-    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if IsPG then
+      NewId := FStorage.ExecuteScalar('SELECT LASTVAL()', [])
+    else
+      NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
     if not VarIsNull(NewId) then
       Version.Id := NewId;
   end;
@@ -1493,14 +1531,24 @@ begin
     Exit;
 
   // Reset all versions
-  FStorage.Execute(
-    'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId',
-    [LLMParam('PromptId', Prompt.Id)]);
+  if IsPG then
+    FStorage.Execute(
+      'UPDATE PromptVersions SET IsProduction = FALSE WHERE PromptId = :PromptId',
+      [LLMParam('PromptId', Prompt.Id)])
+  else
+    FStorage.Execute(
+      'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId',
+      [LLMParam('PromptId', Prompt.Id)]);
 
   // Set the specified version as production
-  FStorage.Execute(
-    'UPDATE PromptVersions SET IsProduction = 1 WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
-    [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
+  if IsPG then
+    FStorage.Execute(
+      'UPDATE PromptVersions SET IsProduction = TRUE WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
+      [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)])
+  else
+    FStorage.Execute(
+      'UPDATE PromptVersions SET IsProduction = 1 WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
+      [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
 
   RefreshCache;
 end;
@@ -1592,7 +1640,7 @@ begin
         LLMParam('MergeMode', Meta.MergeModeToStr),
         LLMParam('Priority', Meta.Priority),
         LLMParam('Level', Meta.Level),
-        LLMParam('IsActive', Ord(Meta.IsActive)),
+        LLMParam('IsActive', Meta.IsActive),
         LLMParam('UpdatedAt', UpdatedAtIso),
         LLMParam('Id', Meta.Id)
       ]);
@@ -1610,10 +1658,13 @@ begin
         LLMParam('MergeMode', Meta.MergeModeToStr),
         LLMParam('Priority', Meta.Priority),
         LLMParam('Level', Meta.Level),
-        LLMParam('IsActive', Ord(Meta.IsActive))
+        LLMParam('IsActive', Meta.IsActive)
       ]);
 
-    NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
+    if IsPG then
+      NewId := FStorage.ExecuteScalar('SELECT LASTVAL()', [])
+    else
+      NewId := FStorage.ExecuteScalar('SELECT last_insert_rowid()', []);
     if not VarIsNull(NewId) then
       Meta.Id := NewId;
   end;
@@ -1662,14 +1713,25 @@ begin
   if (Prompt.Id = 0) or (Meta.Id = 0) then
     Exit;
 
-  FStorage.Execute(
-    'INSERT OR REPLACE INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
-    'VALUES (:PromptId, :MetaPromptId, :OrderIndex, 1)',
-    [
-      LLMParam('PromptId', Prompt.Id),
-      LLMParam('MetaPromptId', Meta.Id),
-      LLMParam('OrderIndex', OrderIndex)
-    ]);
+  if IsPG then
+    FStorage.Execute(
+      'INSERT INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
+      'VALUES (:PromptId, :MetaPromptId, :OrderIndex, TRUE) ' +
+      'ON CONFLICT (PromptId, MetaPromptId) DO UPDATE SET OrderIndex = EXCLUDED.OrderIndex, IsEnabled = EXCLUDED.IsEnabled',
+      [
+        LLMParam('PromptId', Prompt.Id),
+        LLMParam('MetaPromptId', Meta.Id),
+        LLMParam('OrderIndex', OrderIndex)
+      ])
+  else
+    FStorage.Execute(
+      'INSERT OR REPLACE INTO PromptMetaBinding (PromptId, MetaPromptId, OrderIndex, IsEnabled) ' +
+      'VALUES (:PromptId, :MetaPromptId, :OrderIndex, 1)',
+      [
+        LLMParam('PromptId', Prompt.Id),
+        LLMParam('MetaPromptId', Meta.Id),
+        LLMParam('OrderIndex', OrderIndex)
+      ]);
   
   RefreshCache;
 end;

@@ -238,6 +238,7 @@ type
       const Params: array of TLLMStorageParam): Integer;
     function ExecuteScalar(const SQL: string;
       const Params: array of TLLMStorageParam): Variant;
+    function IsPostgreSQL: Boolean;
   end;
 
   /// <summary>
@@ -621,7 +622,7 @@ begin
 
   Query := Storage.OpenDataSet(
     'SELECT ApiKey FROM LLMApiKeys ' +
-    'WHERE Name = :Name AND IsEnabled = 1 ' +
+    'WHERE Name = :Name AND IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1') + ' ' +
     'ORDER BY IsDefault DESC, Id LIMIT 1',
     [LLMParam('Name', ApiKeyName)]);
   try
@@ -733,8 +734,8 @@ begin
   Config.MaxTokens := QueryFieldInteger(Query, 'MaxTokens', Config.MaxTokens);
   Config.Temperature := QueryFieldFloat(Query, 'Temperature', Config.Temperature);
   Config.SystemPrompt := QueryFieldString(Query, 'SystemPrompt', Config.SystemPrompt);
-  Config.IsEnabled := QueryFieldInteger(Query, 'IsEnabled', Ord(Config.IsEnabled)) = 1;
-  Config.IsDefault := QueryFieldInteger(Query, 'IsDefault', Ord(Config.IsDefault)) = 1;
+  Config.IsEnabled := Query.FieldByName('IsEnabled').AsBoolean;
+  Config.IsDefault := Query.FieldByName('IsDefault').AsBoolean;
 
   Config.InputTokenPrice := QueryFieldFloat(Query, 'InputTokenPrice', Config.InputTokenPrice);
   Config.OutputTokenPrice := QueryFieldFloat(Query, 'OutputTokenPrice', Config.OutputTokenPrice);
@@ -1003,7 +1004,7 @@ begin
       Exit;
 
     Query := Storage.OpenDataSet(
-      Format('SELECT * FROM %s WHERE IsEnabled = 1', [ConfigTable]),
+      Format('SELECT * FROM %s WHERE IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1'), [ConfigTable]),
       []);
     try
       while not Query.Eof do
@@ -1079,50 +1080,106 @@ begin
   StoredApiKey := PersistLLMApiKey(Storage, ConfigTable, AConfig.Name, AConfig.ApiKey);
   if SameText(ConfigTable, 'LLMConfig') then
   begin
-    Storage.Execute(
-      'INSERT OR REPLACE INTO LLMConfig ' +
-      '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
-      'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
-      'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
-      ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt)',
-      [
-        LLMParam('Name', AConfig.Name),
-        LLMParam('Description', ''),
-        LLMParam('ProviderCode', AConfig.ProviderToStr),
-        LLMParam('ModelId', AConfig.Model),
-        LLMParam('BaseUrl', AConfig.BaseUrl),
-        LLMParam('ApiKeyRef', StoredApiKey),
-        LLMParam('MaxTokens', AConfig.MaxTokens),
-        LLMParam('Temperature', AConfig.Temperature),
-        LLMParam('SystemPrompt', AConfig.SystemPrompt),
-        LLMParam('IsEnabled', Ord(AConfig.IsEnabled)),
-        LLMParam('IsDefault', Ord(AConfig.IsDefault)),
-        LLMParam('UpdatedAt', NowStr)
-      ]);
+    if Storage.IsPostgreSQL then
+      Storage.Execute(
+        'INSERT INTO LLMConfig ' +
+        '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
+        'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt) ' +
+        'ON CONFLICT (Name) DO UPDATE SET ' +
+        'Description=EXCLUDED.Description, ProviderCode=EXCLUDED.ProviderCode, ModelId=EXCLUDED.ModelId, ' +
+        'BaseUrl=EXCLUDED.BaseUrl, ApiKeyRef=EXCLUDED.ApiKeyRef, MaxTokens=EXCLUDED.MaxTokens, ' +
+        'Temperature=EXCLUDED.Temperature, SystemPrompt=EXCLUDED.SystemPrompt, ' +
+        'IsEnabled=EXCLUDED.IsEnabled, IsDefault=EXCLUDED.IsDefault, UpdatedAt=EXCLUDED.UpdatedAt',
+        [
+          LLMParam('Name', AConfig.Name),
+          LLMParam('Description', ''),
+          LLMParam('ProviderCode', AConfig.ProviderToStr),
+          LLMParam('ModelId', AConfig.Model),
+          LLMParam('BaseUrl', AConfig.BaseUrl),
+          LLMParam('ApiKeyRef', StoredApiKey),
+          LLMParam('MaxTokens', AConfig.MaxTokens),
+          LLMParam('Temperature', AConfig.Temperature),
+          LLMParam('SystemPrompt', AConfig.SystemPrompt),
+          LLMParam('IsEnabled', AConfig.IsEnabled),
+          LLMParam('IsDefault', AConfig.IsDefault),
+          LLMParam('UpdatedAt', NowStr)
+        ])
+    else
+      Storage.Execute(
+        'INSERT OR REPLACE INTO LLMConfig ' +
+        '(Name, Description, ProviderCode, ModelId, BaseUrl, ApiKeyRef, MaxTokens, Temperature, ' +
+        'SystemPrompt, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Description, :ProviderCode, :ModelId, :BaseUrl, :ApiKeyRef, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :IsEnabled, :IsDefault, :UpdatedAt)',
+        [
+          LLMParam('Name', AConfig.Name),
+          LLMParam('Description', ''),
+          LLMParam('ProviderCode', AConfig.ProviderToStr),
+          LLMParam('ModelId', AConfig.Model),
+          LLMParam('BaseUrl', AConfig.BaseUrl),
+          LLMParam('ApiKeyRef', StoredApiKey),
+          LLMParam('MaxTokens', AConfig.MaxTokens),
+          LLMParam('Temperature', AConfig.Temperature),
+          LLMParam('SystemPrompt', AConfig.SystemPrompt),
+          LLMParam('IsEnabled', AConfig.IsEnabled),
+          LLMParam('IsDefault', AConfig.IsDefault),
+          LLMParam('UpdatedAt', NowStr)
+        ]);
   end
   else
   begin
-    Storage.Execute(
-      'INSERT OR REPLACE INTO LLMConfiguration ' +
-      '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
-      'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
-      'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
-      ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)',
-      [
-        LLMParam('Name', AConfig.Name),
-        LLMParam('Provider', AConfig.ProviderToStr),
-        LLMParam('BaseUrl', AConfig.BaseUrl),
-        LLMParam('ApiKey', StoredApiKey),
-        LLMParam('Model', AConfig.Model),
-        LLMParam('MaxTokens', AConfig.MaxTokens),
-        LLMParam('Temperature', AConfig.Temperature),
-        LLMParam('SystemPrompt', AConfig.SystemPrompt),
-        LLMParam('InputTokenPrice', AConfig.InputTokenPrice),
-        LLMParam('OutputTokenPrice', AConfig.OutputTokenPrice),
-        LLMParam('IsEnabled', Ord(AConfig.IsEnabled)),
-        LLMParam('IsDefault', Ord(AConfig.IsDefault)),
-        LLMParam('UpdatedAt', NowStr)
-      ]);
+    if Storage.IsPostgreSQL then
+      Storage.Execute(
+        'INSERT INTO LLMConfiguration ' +
+        '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
+        'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt) ' +
+        'ON CONFLICT (Name) DO UPDATE SET ' +
+        'Provider=EXCLUDED.Provider, BaseUrl=EXCLUDED.BaseUrl, ApiKey=EXCLUDED.ApiKey, ' +
+        'Model=EXCLUDED.Model, MaxTokens=EXCLUDED.MaxTokens, Temperature=EXCLUDED.Temperature, ' +
+        'SystemPrompt=EXCLUDED.SystemPrompt, InputTokenPrice=EXCLUDED.InputTokenPrice, ' +
+        'OutputTokenPrice=EXCLUDED.OutputTokenPrice, IsEnabled=EXCLUDED.IsEnabled, ' +
+        'IsDefault=EXCLUDED.IsDefault, UpdatedAt=EXCLUDED.UpdatedAt',
+        [
+          LLMParam('Name', AConfig.Name),
+          LLMParam('Provider', AConfig.ProviderToStr),
+          LLMParam('BaseUrl', AConfig.BaseUrl),
+          LLMParam('ApiKey', StoredApiKey),
+          LLMParam('Model', AConfig.Model),
+          LLMParam('MaxTokens', AConfig.MaxTokens),
+          LLMParam('Temperature', AConfig.Temperature),
+          LLMParam('SystemPrompt', AConfig.SystemPrompt),
+          LLMParam('InputTokenPrice', AConfig.InputTokenPrice),
+          LLMParam('OutputTokenPrice', AConfig.OutputTokenPrice),
+          LLMParam('IsEnabled', AConfig.IsEnabled),
+          LLMParam('IsDefault', AConfig.IsDefault),
+          LLMParam('UpdatedAt', NowStr)
+        ])
+    else
+      Storage.Execute(
+        'INSERT OR REPLACE INTO LLMConfiguration ' +
+        '(Name, Provider, BaseUrl, ApiKey, Model, MaxTokens, Temperature, ' +
+        'SystemPrompt, InputTokenPrice, OutputTokenPrice, IsEnabled, IsDefault, UpdatedAt) ' +
+        'VALUES (:Name, :Provider, :BaseUrl, :ApiKey, :Model, :MaxTokens, :Temperature, ' +
+        ':SystemPrompt, :InputTokenPrice, :OutputTokenPrice, :IsEnabled, :IsDefault, :UpdatedAt)',
+        [
+          LLMParam('Name', AConfig.Name),
+          LLMParam('Provider', AConfig.ProviderToStr),
+          LLMParam('BaseUrl', AConfig.BaseUrl),
+          LLMParam('ApiKey', StoredApiKey),
+          LLMParam('Model', AConfig.Model),
+          LLMParam('MaxTokens', AConfig.MaxTokens),
+          LLMParam('Temperature', AConfig.Temperature),
+          LLMParam('SystemPrompt', AConfig.SystemPrompt),
+          LLMParam('InputTokenPrice', AConfig.InputTokenPrice),
+          LLMParam('OutputTokenPrice', AConfig.OutputTokenPrice),
+          LLMParam('IsEnabled', AConfig.IsEnabled),
+          LLMParam('IsDefault', AConfig.IsDefault),
+          LLMParam('UpdatedAt', NowStr)
+        ]);
   end;
 
   CachedConfig := AConfig;
@@ -1470,7 +1527,7 @@ begin
         LLMParam('TotalTokens', Response.TotalTokens),
         LLMParam('EstimatedCost', Cost),
         LLMParam('DurationMs', Response.DurationMs),
-        LLMParam('Success', Ord(Response.Success)),
+        LLMParam('Success', Response.Success),
         LLMParam('ErrorCode', Response.ErrorCode),
         LLMParam('ErrorMessage', Response.ErrorMessage),
         LLMParam('CallerModule', CallerModule),
@@ -1498,7 +1555,7 @@ begin
         LLMParam('TotalTokens', Response.TotalTokens),
         LLMParam('EstimatedCost', Cost),
         LLMParam('DurationMs', Response.DurationMs),
-        LLMParam('Success', Ord(Response.Success)),
+        LLMParam('Success', Response.Success),
         LLMParam('ErrorCode', Response.ErrorCode),
         LLMParam('ErrorMessage', Response.ErrorMessage),
         LLMParam('FinishReason', Response.FinishReason),
@@ -1629,8 +1686,8 @@ begin
   Template.OutputFormat := Query.FieldByName('OutputFormat').AsString;
   Template.ValidationRegex := Query.FieldByName('ValidationRegex').AsString;
   Template.Examples := Query.FieldByName('Examples').AsString;
-  Template.IsEnabled := Query.FieldByName('IsEnabled').AsInteger = 1;
-  Template.IsBuiltIn := Query.FieldByName('IsBuiltIn').AsInteger = 1;
+  Template.IsEnabled := Query.FieldByName('IsEnabled').AsBoolean;
+  Template.IsBuiltIn := Query.FieldByName('IsBuiltIn').AsBoolean;
   Template.SortOrder := Query.FieldByName('SortOrder').AsInteger;
   
   // Parse Variables JSON array
@@ -1691,7 +1748,7 @@ begin
     Exit;
 
   Query := Storage.OpenDataSet(
-    'SELECT * FROM LLMPromptTemplates WHERE Name = :Name AND IsEnabled = 1',
+    'SELECT * FROM LLMPromptTemplates WHERE Name = :Name AND IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1'),
     [LLMParam('Name', TemplateName)]);
   try
     if not Query.Eof then
@@ -1717,7 +1774,7 @@ begin
   List := TList<TLLMPromptTemplate>.Create;
   try
     Query := Storage.OpenDataSet(
-      'SELECT * FROM LLMPromptTemplates WHERE IsEnabled = 1 ORDER BY SortOrder, Name',
+      'SELECT * FROM LLMPromptTemplates WHERE IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1') + ' ORDER BY SortOrder, Name',
       []);
     try
       while not Query.Eof do
@@ -1752,7 +1809,7 @@ begin
   List := TList<TLLMPromptTemplate>.Create;
   try
     Query := Storage.OpenDataSet(
-      'SELECT * FROM LLMPromptTemplates WHERE Category = :Category AND IsEnabled = 1 ORDER BY SortOrder, Name',
+      'SELECT * FROM LLMPromptTemplates WHERE Category = :Category AND IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1') + ' ORDER BY SortOrder, Name',
       [LLMParam('Category', Category)]);
     try
       while not Query.Eof do
@@ -1845,7 +1902,7 @@ begin
         Rec.TotalTokens := QueryFieldInteger(Query, 'TotalTokens');
         Rec.EstimatedCost := QueryFieldFloat(Query, 'EstimatedCost');
         Rec.DurationMs := QueryFieldInteger(Query, 'DurationMs');
-        Rec.Success := QueryFieldInteger(Query, 'Success', 1) = 1;
+        Rec.Success := Query.FieldByName('Success').AsBoolean;
         Rec.ErrorCode := QueryFieldString(Query, 'ErrorCode');
         Rec.ErrorMessage := QueryFieldString(Query, 'ErrorMessage');
         Rec.CallTime := QueryFieldDateTime(Query, 'CallTime');
@@ -1994,8 +2051,8 @@ begin
               LLMParam('RecommendedModel', Template.RecommendedModel),
               LLMParam('MaxTokens', Template.MaxTokens),
               LLMParam('Temperature', Template.Temperature),
-              LLMParam('IsEnabled', Ord(Template.IsEnabled)),
-              LLMParam('IsBuiltIn', Ord(Template.IsBuiltIn)),
+              LLMParam('IsEnabled', Template.IsEnabled),
+              LLMParam('IsBuiltIn', Template.IsBuiltIn),
               LLMParam('SortOrder', Template.SortOrder),
               LLMParam('CreatedAt', NowStr),
               LLMParam('UpdatedAt', NowStr)
@@ -2029,7 +2086,7 @@ begin
               LLMParam('RecommendedModel', Template.RecommendedModel),
               LLMParam('MaxTokens', Template.MaxTokens),
               LLMParam('Temperature', Template.Temperature),
-              LLMParam('IsEnabled', Ord(Template.IsEnabled)),
+              LLMParam('IsEnabled', Template.IsEnabled),
               LLMParam('SortOrder', Template.SortOrder),
               LLMParam('UpdatedAt', NowStr)
             ]);
@@ -2054,7 +2111,7 @@ begin
     Exit;
 
   Storage.Execute(
-    'DELETE FROM LLMPromptTemplates WHERE Name = :Name AND IsBuiltIn = 0',
+    'DELETE FROM LLMPromptTemplates WHERE Name = :Name AND IsBuiltIn ' + IfThen(Storage.IsPostgreSQL, '= FALSE', '= 0'),
     [LLMParam('Name', TemplateName)]);
 end;
 
