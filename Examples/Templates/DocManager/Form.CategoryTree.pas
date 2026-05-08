@@ -3,7 +3,7 @@ unit Form.CategoryTree;
 {*******************************************************************************
   Category Tree Form - 分类管理窗体
 
-  UniBase 框架文档管理模板 - 分类树管理
+  DeepBase 框架文档管理模板 - 分类树管�?
 *******************************************************************************}
 
 interface
@@ -60,7 +60,7 @@ implementation
 
 uses
   Data.Module,
-  UniBase.Logger;
+  DeepBase.Logger;
 
 { TCategoryTreeForm }
 
@@ -109,7 +109,7 @@ begin
       Q.Free;
     end;
 
-    // 构建树
+    // 构建�?
     for Cat in FCategories do
     begin
       if Cat.ParentId.IsEmpty then
@@ -120,7 +120,7 @@ begin
       end;
     end;
 
-    // 添加子节点
+    // 添加子节�?
     for Cat in FCategories do
     begin
       if not Cat.ParentId.IsEmpty and NodeMap.ContainsKey(Cat.ParentId) then
@@ -145,7 +145,7 @@ var
   Cat: TCategory;
 begin
   cmbParent.Items.Clear;
-  cmbParent.Items.Add('(无 - 根分类)');
+  cmbParent.Items.Add('(�?- 根分�?');
 
   for Cat in FCategories do
     cmbParent.Items.Add(Cat.Name);
@@ -169,7 +169,7 @@ begin
   edtName.Text := Cat.Name;
   mmoDescription.Text := Cat.Description;
 
-  // 父分类
+  // 父分�?
   cmbParent.ItemIndex := 0;
   for I := 0 to FCategories.Count - 1 do
   begin
@@ -211,7 +211,7 @@ var
 begin
   if edtName.Text.Trim.IsEmpty then
   begin
-    ShowMessage('请输入分类名称');
+    ShowMessage('请输入分类名�?);
     edtName.SetFocus;
     Exit;
   end;
@@ -221,7 +221,7 @@ begin
   FCurrentCategory.Name := edtName.Text.Trim;
   FCurrentCategory.Description := mmoDescription.Text;
 
-  // 父分类
+  // 父分�?
   if cmbParent.ItemIndex > 0 then
     ParentId := FCategories[cmbParent.ItemIndex - 1].Id
   else
@@ -273,7 +273,7 @@ var
 begin
   if FCurrentCategory = nil then Exit;
 
-  if MessageDlg(Format('确定要删除分类 "%s" 吗？', [FCurrentCategory.Name]),
+  if MessageDlg(Format('确定要删除分�?"%s" 吗？', [FCurrentCategory.Name]),
     mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
     Exit;
 
@@ -281,7 +281,7 @@ begin
   try
     Q.Connection := DataModule1.FDConnection1;
 
-    // 将该分类下的文档移到根
+    // 将该分类下的文档移到�?
     Q.SQL.Text := 'UPDATE Documents SET CategoryId = NULL WHERE CategoryId = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;

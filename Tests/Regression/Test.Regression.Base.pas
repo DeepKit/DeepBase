@@ -1,15 +1,15 @@
 { ============================================================================
   Test.Regression.Base - 回归测试基类
 
-  提供所有回归测试的通用基础设施：
+  提供所有回归测试的通用基础设施�?
   - 标准化的 Bug 信息获取接口
-  - 通用的 SetUp/TearDown 逻辑
+  - 通用�?SetUp/TearDown 逻辑
   - 测试辅助方法
 
-  使用方法：
+  使用方法�?
   1. 继承 TRegressionTestBase
   2. 实现 GetBugNumber, GetBugDescription, GetFixDate
-  3. 添加具体的测试方法
+  3. 添加具体的测试方�?
   ============================================================================ }
 
 unit Test.Regression.Base;
@@ -33,19 +33,19 @@ type
     /// <summary>获取 Bug 编号，如 'BUG-058'</summary>
     function GetBugNumber: string; virtual; abstract;
 
-    /// <summary>获取 Bug 简短描述</summary>
+    /// <summary>获取 Bug 简短描�?/summary>
     function GetBugDescription: string; virtual; abstract;
 
-    /// <summary>获取修复日期，格式 'YYYY-MM-DD'</summary>
+    /// <summary>获取修复日期，格�?'YYYY-MM-DD'</summary>
     function GetFixDate: string; virtual; abstract;
 
-    /// <summary>获取 Bug 优先级，如 'P0', 'P1'</summary>
+    /// <summary>获取 Bug 优先级，�?'P0', 'P1'</summary>
     function GetPriority: string; virtual;
 
-    /// <summary>获取受影响的源文件路径</summary>
+    /// <summary>获取受影响的源文件路�?/summary>
     function GetAffectedFile: string; virtual;
 
-    /// <summary>记录测试开始信息</summary>
+    /// <summary>记录测试开始信�?/summary>
     procedure LogTestStart(const TestName: string);
 
     /// <summary>记录测试结束信息</summary>
@@ -63,29 +63,29 @@ type
     [TearDown]
     procedure TearDown; virtual;
 
-    /// <summary>获取完整的 Bug 信息字符串</summary>
+    /// <summary>获取完整�?Bug 信息字符�?/summary>
     function GetBugInfo: string;
   end;
 
   /// <summary>
   /// 并发回归测试基类
-  /// 用于测试并发相关的 Bug 修复
+  /// 用于测试并发相关�?Bug 修复
   /// </summary>
   TConcurrencyRegressionTestBase = class(TRegressionTestBase)
   private
     FThreadCount: Integer;
     FIterationCount: Integer;
   protected
-    /// <summary>默认线程数</summary>
+    /// <summary>默认线程�?/summary>
     property ThreadCount: Integer read FThreadCount write FThreadCount;
 
-    /// <summary>每个线程的迭代次数</summary>
+    /// <summary>每个线程的迭代次�?/summary>
     property IterationCount: Integer read FIterationCount write FIterationCount;
 
     /// <summary>运行并发测试</summary>
     procedure RunConcurrentTest(const TestProc: TProc);
 
-    /// <summary>等待所有线程完成</summary>
+    /// <summary>等待所有线程完�?/summary>
     procedure WaitForThreads(const Threads: array of TThread; TimeoutMs: Integer = 30000);
   public
     [SetUp]
@@ -94,16 +94,16 @@ type
 
   /// <summary>
   /// 内存回归测试基类
-  /// 用于测试内存泄漏相关的 Bug 修复
+  /// 用于测试内存泄漏相关�?Bug 修复
   /// </summary>
   TMemoryRegressionTestBase = class(TRegressionTestBase)
   private
     FInitialMemory: Int64;
   protected
-    /// <summary>获取当前内存使用量</summary>
+    /// <summary>获取当前内存使用�?/summary>
     function GetCurrentMemoryUsage: Int64;
 
-    /// <summary>检查内存泄漏</summary>
+    /// <summary>检查内存泄�?/summary>
     procedure CheckNoMemoryLeak(const OperationName: string; ToleranceBytes: Int64 = 1024);
   public
     [SetUp]
@@ -138,12 +138,12 @@ end;
 
 function TRegressionTestBase.GetPriority: string;
 begin
-  Result := 'P1'; // 默认优先级
+  Result := 'P1'; // 默认优先�?
 end;
 
 function TRegressionTestBase.GetAffectedFile: string;
 begin
-  Result := ''; // 子类可覆盖
+  Result := ''; // 子类可覆�?
 end;
 
 function TRegressionTestBase.GetBugInfo: string;
@@ -179,7 +179,7 @@ end;
 
 function TRegressionTestBase.CreateTempTestDir: string;
 begin
-  Result := TPath.Combine(TPath.GetTempPath, 'UniBaseRegression_' + IntToStr(TThread.GetTickCount));
+  Result := TPath.Combine(TPath.GetTempPath, 'DeepBaseRegression_' + IntToStr(TThread.GetTickCount));
   if not TDirectory.Exists(Result) then
     TDirectory.CreateDirectory(Result);
 end;
@@ -218,7 +218,7 @@ begin
   Errors := TStringList.Create;
   Lock := TObject.Create;
   try
-    // 创建并启动线程
+    // 创建并启动线�?
     for I := 0 to FThreadCount - 1 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -248,14 +248,14 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
 
-    // 启动所有线程
+    // 启动所有线�?
     for I := 0 to FThreadCount - 1 do
       Threads[I].Start;
 
-    // 等待所有线程完成
+    // 等待所有线程完�?
     WaitForThreads(Threads);
 
-    // 检查错误
+    // 检查错�?
     Assert.AreEqual(0, ErrorCount,
       Format('并发测试失败，错误数: %d. 错误示例: %s', [ErrorCount, Errors.Text]));
   finally
@@ -310,7 +310,7 @@ begin
 end;
 {$ELSE}
 begin
-  Result := 0; // 非 Windows 平台暂不支持
+  Result := 0; // �?Windows 平台暂不支持
 end;
 {$ENDIF}
 

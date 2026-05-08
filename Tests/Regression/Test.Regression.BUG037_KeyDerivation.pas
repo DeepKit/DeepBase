@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   Test.Regression.BUG037_KeyDerivation - Key Derivation Regression Test
 
   BUG-037: Insecure Key Derivation
@@ -10,7 +10,7 @@
        Enforce salt usage; Add key derivation validation.
   
   Fix Date: 2025-12-16
-  File: Core/UniBase.Crypto.pas
+  File: Core/DeepBase.Crypto.pas
   Priority: P1 (High)
   Category: Security
   ============================================================================ }
@@ -62,7 +62,7 @@ type
 implementation
 
 uses
-  UniBase.Crypto;
+  DeepBase.Crypto;
 
 { TBug037_KeyDerivationTest }
 
@@ -88,7 +88,7 @@ end;
 
 function TBug037_KeyDerivationTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Crypto.pas';
+  Result := 'Core/DeepBase.Crypto.pas';
 end;
 
 procedure TBug037_KeyDerivationTest.Test_PBKDF2_GeneratesSecureKey;

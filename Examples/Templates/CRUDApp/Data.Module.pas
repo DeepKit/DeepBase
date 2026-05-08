@@ -3,15 +3,15 @@ unit Data.Module;
 {*******************************************************************************
   CRUD Application Template - Data Module
   
-  This unit demonstrates how to set up a data access layer using UniBase
+  This unit demonstrates how to set up a data access layer using DeepBase
   framework features including:
-  - UniBase Manager initialization
+  - DeepBase Manager initialization
   - ORM DbContext usage
   - Repository pattern implementation
   - Connection pool management
   
   Features demonstrated:
-  - UniBase initialization with database
+  - DeepBase initialization with database
   - ORM context management
   - CRUD operations with ORM
   - Error handling and logging
@@ -90,8 +90,8 @@ implementation
 
 uses
   System.IOUtils,
-  UniBase.Manager,
-  UniBase.Logging;
+  DeepBase.Manager,
+  DeepBase.Logging;
 
 { TDataMod }
 
@@ -110,16 +110,16 @@ end;
 
 procedure TDataMod.DataModuleDestroy(Sender: TObject);
 begin
-  // UniBase cleanup is handled automatically
+  // DeepBase cleanup is handled automatically
   if FInitialized then
-    UniBase.Manager.UniBase.Finalize;
+    DeepBase.Manager.DeepBase.Finalize;
 end;
 
 procedure TDataMod.InitializeDatabase;
 begin
   try
-    // Initialize UniBase with database
-    UniBase.Manager.UniBase.InitializeWithDB(FDatabasePath);
+    // Initialize DeepBase with database
+    DeepBase.Manager.DeepBase.InitializeWithDB(FDatabasePath);
     
     // Create application-specific tables
     CreateCustomersTable;
@@ -140,7 +140,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -188,7 +188,7 @@ var
 begin
   Result := TObjectList<TCustomer>.Create(True);  // Owns objects
   
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -229,7 +229,7 @@ var
 begin
   Result := nil;
   
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -268,7 +268,7 @@ var
 begin
   Result := TObjectList<TCustomer>.Create(True);
   
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -312,7 +312,7 @@ begin
   
   SearchPattern := '%' + ASearchText + '%';
   
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -356,7 +356,7 @@ begin
   IsNew := not CustomerExists(ACustomer.Id);
   ACustomer.UpdatedAt := Now;
   
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -413,7 +413,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -436,7 +436,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -454,7 +454,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -479,7 +479,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;
@@ -497,7 +497,7 @@ var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  Conn := UniBase.Manager.UniBase.Connection;
+  Conn := DeepBase.Manager.DeepBase.Connection;
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Conn;

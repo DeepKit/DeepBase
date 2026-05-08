@@ -1,0 +1,1088 @@
+# deepBase DB4 后端开发交接文档
+
+> 收件人: 王维  
+> 发件人: 罗辑  
+> 日期: 2026-05-07  
+> 主题: deepBase 桌面软件上线所需的服务器端认证/收费/权益后端开发说明
+
+---
+
+## 1. 目标
+
+这份文档定义 deepBase 桌面软件上线后的服务器端实现边界。
+
+你负责的不是桌面端代码，而是 `DB4 生产后端`。该后端要解决以下问题：
+
+1. 用户认证
+2. 设备会话管理
+3. 商品/订单/支付
+4. 权益发放与校验
+5. 桌面端离线授权快照签发
+6. 按权益控制更新通道
+
+现有 deepBase 客户端已经有后端对接抽象，服务器端必须按既定契约实现，不能让桌面端直连生产数据库。
+
+---
+
+## 2. 总体架构
+
+```text
+deepBase 桌面端
+    |
+    | HTTPS JSON API
+    v
+DB4 业务后端服务
+    |
+    +-- PostgreSQL: deepKit
+    +-- 微信支付 / 支付宝 / Stripe / PayPal
+    +-- COS: 安装包 / 更新清单 / 补丁包
+```
+
+原则：
+
+- 桌面端不直连 `DB4`
+- `DB4` 是后端真相源
+- 本地 `License` 只是缓存，不是收费真相源
+- 支付结果以服务端验签回调为准
+- 权益 `entitlement` 是最终可用性依据
+
+---
+
+## 3. 现有客户端契约
+
+现有仓库中，客户端已经依赖以下约定：
+
+- Commerce 主流程抽象：`Features/DeepBase.Commerce.Service.pas`
+- 后端 HTTP 客户端：`Features/DeepBase.Commerce.Backend.Http.pas`
+- Commerce 契约文档：`docs/Commerce-Backend-Adapter-Spec.md`
+
+你实现服务端时，优先遵守这份契约：
+
+- [Commerce-Backend-Adapter-Spec.md](./Commerce-Backend-Adapter-Spec.md)
+
+如果确实需要改接口路径或字段名，必须先和客户端同步，否则桌面端现有适配器会失效。
+
+---
+
+## 4. PostgreSQL 数据库要求
+
+### 4.1 数据库名称
+
+服务端生产数据库使用 PostgreSQL，数据库名要求为：
+
+```sql
+"deepKit"
+```
+
+注意：
+
+- PostgreSQL 未加双引号时会自动转成小写
+- 如果要严格保留驼峰名 `deepKit`，必须用双引号创建和引用
+
+建议执行：
+
+```sql
+CREATE DATABASE "deepKit"
+  WITH
+  ENCODING = 'UTF8'
+  TEMPLATE template0;
+```
+
+### 4.2 建议账号
+
+```sql
+CREATE USER deepkit_app WITH PASSWORD '请改为强密码';
+GRANT ALL PRIVILEGES ON DATABASE "deepKit" TO deepkit_app;
+```
+
+### 4.3 建议 schema
+
+初版先用一个数据库，不拆多个库；如需隔离，先拆 schema：
+
+- `public`: 业务主表
+- `audit`: 审计日志
+- `ops`: 运维/任务/幂等键
+
+---
+
+## 5. 必须落地的数据库表
+
+初版最少需要以下表：
+
+| 表名 | 用途 |
+|---|---|
+| `users` | 平台用户 |
+| `identities` | 登录身份绑定，支持邮箱/手机号/微信/openid/unionid |
+| `products` | 商品定义 |
+| `orders` | 订单主表 |
+| `payments` | 支付流水 |
+| `payment_notifications` | 回调原文、验签、去重 |
+| `entitlements` | 权益真相源 |
+| `refresh_tokens` | 登录续期 |
+| `device_sessions` | 设备绑定、登录会话、风控 |
+| `license_snapshots` | 发给桌面端的离线授权快照 |
+| `update_channels` | 更新通道控制 |
+| `audit_logs` | 认证、支付、退款、授权、封禁等审计 |
+
+其中 `users/orders/payments/entitlements` 的字段约束优先按现有文档执行：
+
+- [Commerce-Backend-Adapter-Spec.md](./Commerce-Backend-Adapter-Spec.md)
+
+---
+
+## 6. 服务端必须提供的 API
+
+> 2026-05-08 确认：当前服务器实际挂载前缀为 `/dk`。本节标题中未写前缀的路径均为逻辑路径，生产调用时统一加 `/dk`，例如 `/auth/login` 的实际路径是 `/dk/auth/login`。
+
+## 6.1 认证 API
+
+### `POST /auth/login`
+
+用途：
+
+- 登录
+- 首次创建设备会话
+- 返回 access token / refresh token
+
+支持的登录方式建议至少有：
+
+- 邮箱 + 密码
+- 手机号 + 验证码
+- 微信身份登录
+- 设备匿名登录后再升级绑定账号
+
+响应至少包含：
+
+```json
+{
+  "user_id": "usr_xxx",
+  "access_token": "jwt_or_other_token",
+  "refresh_token": "refresh_token_xxx",
+  "expires_in": 7200
+}
+```
+
+### `POST /auth/refresh`
+
+用途：
+
+- 刷新 access token
+
+### `POST /auth/logout`
+
+用途：
+
+- 注销当前 refresh token 或设备会话
+
+### `GET /auth/me`
+
+用途：
+
+- 返回当前用户信息
+- 返回当前有效权益摘要
+
+---
+
+## 6.2 收费 API
+
+### `POST /commerce/users/ensure`
+
+用途：
+
+- 按第三方身份查找或创建平台用户
+
+### `POST /commerce/orders`
+
+用途：
+
+- 创建订单
+- 价格以服务端 `products` 表为准
+
+### `POST /commerce/payments/intents`
+
+用途：
+
+- 生成支付意图
+- 返回客户端支付参数
+
+### `POST /commerce/payments/wechat_pay/notify`
+
+用途：
+
+- 微信支付回调
+- 必须服务端验签
+- 验签成功后再更新订单/支付/权益
+
+### `POST /commerce/payments/alipay/notify`
+
+用途：
+
+- 支付宝回调
+
+### `GET /commerce/entitlements`
+
+用途：
+
+- 返回用户在指定 `app_id` 下的权益
+
+---
+
+## 6.3 授权 API
+
+### `POST /license/snapshot/issue`
+
+用途：
+
+- 根据当前用户权益签发桌面端可缓存的授权快照
+
+要求：
+
+- 快照必须有签名
+- 快照必须带过期时间
+- 快照必须带设备信息
+
+建议响应：
+
+```json
+{
+  "snapshot_id": "licsnap_xxx",
+  "issued_at": "2026-05-07T12:00:00Z",
+  "expires_at": "2026-05-14T12:00:00Z",
+  "payload": "base64_or_json",
+  "signature": "signature_xxx"
+}
+```
+
+### `POST /license/snapshot/refresh`
+
+用途：
+
+- 已登录用户续发新的快照
+
+### `POST /license/snapshot/revoke`
+
+用途：
+
+- 风控、退款、封号、纠纷后撤销离线授权
+
+---
+
+## 6.4 更新 API
+
+### `GET /updates/manifest`
+
+用途：
+
+- 根据用户权限、版本、渠道返回可见更新信息
+
+规则：
+
+- 免费版只能看到免费通道
+- Pro 用户可以看到 Pro 通道
+- 内测用户可额外看到 beta/dev
+
+建议请求参数：
+
+- `app_id`
+- `current_version`
+- `channel`
+
+---
+
+## 7. 收费与授权的核心规则
+
+这部分必须按服务端统一，不允许桌面端自己判定收费状态。
+
+### 7.1 真相源
+
+收费状态真相源是 `entitlements`，不是本地 license。
+
+### 7.2 商品类型
+
+服务端必须支持以下商品模型：
+
+| 类型 | 说明 |
+|---|---|
+| 买断版 | 一次购买，永久权益 |
+| 订阅版 | 月费/年费，到期失效 |
+| 次数包 | 比如 AI 调用次数 |
+| 升级包 | Free 升级到 Pro |
+
+### 7.3 标准流程
+
+标准业务流程如下：
+
+1. 用户登录
+2. 服务端识别用户身份
+3. 客户端请求创建订单
+4. 服务端创建支付意图
+5. 用户完成支付
+6. 支付渠道回调服务端
+7. 服务端验签
+8. 服务端更新订单/支付状态
+9. 服务端幂等发放 entitlement
+10. 客户端重新拉取 entitlement
+11. 客户端请求新的 license snapshot
+
+### 7.4 退款与撤权
+
+退款后，服务端必须能执行以下动作：
+
+1. 标记订单退款
+2. 回收或失效相关 entitlement
+3. 作废相关 license snapshot
+4. 记录 audit log
+
+---
+
+## 8. 腾讯云落地建议
+
+建议的服务器端资源如下：
+
+| 组件 | 建议 |
+|---|---|
+| 数据库 | TencentDB PostgreSQL，数据库名 `"deepKit"` |
+| API 服务 | SCF + API 网关，或自建常驻 Web 服务 |
+| 对象存储 | COS 存安装包、补丁、更新清单 |
+| HTTPS 域名 | 独立业务域名 |
+| 回调入口 | 微信支付/支付宝回调独立路由 |
+| 日志 | 服务端统一结构化日志 |
+
+如果时间紧，优先级如下：
+
+1. PostgreSQL `"deepKit"`
+2. 认证 API
+3. 下单 API
+4. 微信支付回调
+5. entitlement 发放
+6. license snapshot 签发
+7. update manifest
+
+---
+
+## 9. 服务端环境变量建议
+
+至少准备这些环境变量：
+
+```text
+APP_ENV=prod
+APP_BASE_URL=https://api.example.com
+
+PG_HOST=127.0.0.1
+PG_PORT=5432
+PG_DB=deepKit
+PG_USER=deepkit_app
+PG_PASSWORD=******
+
+JWT_ACCESS_SECRET=******
+JWT_REFRESH_SECRET=******
+
+WECHAT_APP_ID=******
+WECHAT_MCH_ID=******
+WECHAT_API_V3_KEY=******
+WECHAT_PRIVATE_KEY=******
+WECHAT_PUBLIC_KEY=******
+
+ALIPAY_APP_ID=******
+ALIPAY_PRIVATE_KEY=******
+ALIPAY_PUBLIC_KEY=******
+
+COS_BUCKET=******
+COS_REGION=******
+COS_SECRET_ID=******
+COS_SECRET_KEY=******
+```
+
+---
+
+## 10. 对王维的直接开发要求
+
+你负责的交付物不是“一个数据库”，而是一整套可上线的服务端能力：
+
+1. 创建 PostgreSQL 数据库 `"deepKit"`
+2. 建好核心表和索引
+3. 实现认证 API
+4. 实现订单和支付意图 API
+5. 实现支付回调验签和幂等处理
+6. 实现 entitlement 查询与发放
+7. 实现 license snapshot 签发
+8. 实现更新 manifest API
+9. 输出部署文档和环境变量模板
+
+---
+
+## 11. 第一阶段验收标准
+
+第一阶段上线前，至少满足：
+
+- 可以创建 `"deepKit"` 数据库并初始化 schema
+- 桌面端可以登录并拿到 token
+- 桌面端可以创建订单
+- 微信支付回调能正确验签并改订单状态
+- 支付成功后能发放 entitlement
+- 桌面端能拉到 entitlement
+- 桌面端能拿到 license snapshot
+- 免费版和 Pro 版能返回不同更新通道
+
+---
+
+## 12. 不要这样做
+
+以下做法禁止：
+
+- 让桌面端直连 PostgreSQL
+- 在桌面端保存支付私钥
+- 在客户端本地直接把订单改成 `paid`
+- 用本地 license 作为收费唯一真相源
+- 支付回调不验签直接发权益
+- 把免费版/收费版判断逻辑分散到多个地方
+
+---
+
+## 13. 推荐实施顺序
+
+### 第 1 批
+
+- 建库 `"deepKit"`
+- 建表
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `GET /auth/me`
+
+### 第 2 批
+
+- `POST /commerce/orders`
+- `POST /commerce/payments/intents`
+- `POST /commerce/payments/wechat_pay/notify`
+- `GET /commerce/entitlements`
+
+### 第 3 批
+
+- `POST /license/snapshot/issue`
+- `GET /updates/manifest`
+- 退款/撤权/审计
+
+---
+
+## 14. 补充说明
+
+客户端当前已经有 HTTP 适配层，因此服务端完成后，桌面端只需要配置：
+
+- `BaseUrl`
+- `BearerToken`
+- `ApiKey`
+
+因此本次工作的关键不是改桌面端，而是把服务器端这套能力做完整。
+
+如需扩展，优先扩展服务端，不要破坏现有客户端契约。
+
+---
+
+## 15. PostgreSQL 建表 SQL 草案
+
+下面这份 SQL 是第一版可执行草案，目标是让王维先把 `deepKit` 跑起来，支撑：
+
+- 登录
+- 订单
+- 支付
+- 权益
+- 离线授权快照
+- 更新通道
+
+如果后续业务增加字段，可以在此基础上继续迁移。
+
+### 15.1 创建数据库
+
+```sql
+CREATE DATABASE "deepKit"
+  WITH
+  ENCODING = 'UTF8'
+  TEMPLATE template0;
+```
+
+连接到 `"deepKit"` 后执行：
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+```
+
+### 15.2 核心表
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  user_id              TEXT PRIMARY KEY,
+  display_name         TEXT,
+  email                TEXT,
+  phone                TEXT,
+  password_hash        TEXT,
+  is_active            BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS identities (
+  identity_id          TEXT PRIMARY KEY,
+  user_id              TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  provider             TEXT NOT NULL,
+  provider_user_id     TEXT NOT NULL,
+  app_id               TEXT NOT NULL,
+  union_id             TEXT,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_identities_provider UNIQUE (provider, provider_user_id, app_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_identities_user_id
+  ON identities(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_identities_union_id
+  ON identities(union_id);
+
+CREATE TABLE IF NOT EXISTS products (
+  app_id                        TEXT NOT NULL,
+  product_id                    TEXT NOT NULL,
+  name                          TEXT NOT NULL,
+  description                   TEXT,
+  amount_minor                  BIGINT NOT NULL,
+  currency                      TEXT NOT NULL,
+  entitlement_code              TEXT NOT NULL,
+  entitlement_duration_days     INTEGER NOT NULL DEFAULT 0,
+  initial_quota                 INTEGER NOT NULL DEFAULT -1,
+  is_active                     BOOLEAN NOT NULL DEFAULT TRUE,
+  product_type                  TEXT NOT NULL DEFAULT 'subscription',
+  created_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (app_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_entitlement_code
+  ON products(entitlement_code);
+
+CREATE TABLE IF NOT EXISTS orders (
+  order_id              TEXT PRIMARY KEY,
+  user_id               TEXT NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+  app_id                TEXT NOT NULL,
+  product_id            TEXT NOT NULL,
+  out_trade_no          TEXT NOT NULL UNIQUE,
+  title                 TEXT NOT NULL,
+  amount_minor          BIGINT NOT NULL,
+  currency              TEXT NOT NULL,
+  status                TEXT NOT NULL,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at               TIMESTAMPTZ,
+  closed_at             TIMESTAMPTZ,
+  failed_at             TIMESTAMPTZ,
+  refunded_at           TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_user_id
+  ON orders(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_app_product
+  ON orders(app_id, product_id);
+
+CREATE INDEX IF NOT EXISTS idx_orders_status
+  ON orders(status);
+
+CREATE TABLE IF NOT EXISTS payments (
+  payment_id            TEXT PRIMARY KEY,
+  order_id              TEXT NOT NULL UNIQUE REFERENCES orders(order_id) ON DELETE CASCADE,
+  provider              TEXT NOT NULL,
+  channel               TEXT NOT NULL,
+  provider_trade_no     TEXT,
+  prepay_id             TEXT,
+  status                TEXT NOT NULL,
+  raw_payload           JSONB,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at               TIMESTAMPTZ,
+  refunded_at           TIMESTAMPTZ,
+  CONSTRAINT uq_payments_provider_trade_no UNIQUE (provider, provider_trade_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_status
+  ON payments(status);
+
+CREATE TABLE IF NOT EXISTS payment_notifications (
+  notification_id       TEXT PRIMARY KEY,
+  provider              TEXT NOT NULL,
+  notification_key      TEXT NOT NULL UNIQUE,
+  out_trade_no          TEXT NOT NULL,
+  provider_trade_no     TEXT,
+  amount_minor          BIGINT NOT NULL,
+  currency              TEXT NOT NULL,
+  verified              BOOLEAN NOT NULL DEFAULT FALSE,
+  processed             BOOLEAN NOT NULL DEFAULT FALSE,
+  raw_payload           JSONB NOT NULL,
+  received_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at          TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_notifications_out_trade_no
+  ON payment_notifications(out_trade_no);
+
+CREATE INDEX IF NOT EXISTS idx_payment_notifications_provider_trade_no
+  ON payment_notifications(provider_trade_no);
+
+CREATE TABLE IF NOT EXISTS entitlements (
+  entitlement_id        TEXT PRIMARY KEY,
+  user_id               TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  app_id                TEXT NOT NULL,
+  product_id            TEXT NOT NULL,
+  code                  TEXT NOT NULL,
+  status                TEXT NOT NULL,
+  valid_from            TIMESTAMPTZ NOT NULL,
+  valid_until           TIMESTAMPTZ,
+  remaining_quota       INTEGER NOT NULL DEFAULT -1,
+  source_order_id       TEXT NOT NULL UNIQUE REFERENCES orders(order_id) ON DELETE RESTRICT,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_entitlements_user_app
+  ON entitlements(user_id, app_id);
+
+CREATE INDEX IF NOT EXISTS idx_entitlements_user_app_code
+  ON entitlements(user_id, app_id, code);
+
+CREATE INDEX IF NOT EXISTS idx_entitlements_status
+  ON entitlements(status);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  refresh_token_id      TEXT PRIMARY KEY,
+  user_id               TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  device_id             TEXT,
+  token_hash            TEXT NOT NULL UNIQUE,
+  expires_at            TIMESTAMPTZ NOT NULL,
+  revoked_at            TIMESTAMPTZ,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id
+  ON refresh_tokens(user_id);
+
+CREATE TABLE IF NOT EXISTS device_sessions (
+  session_id            TEXT PRIMARY KEY,
+  user_id               TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  device_id             TEXT NOT NULL,
+  device_name           TEXT,
+  device_fingerprint    TEXT,
+  app_id                TEXT NOT NULL,
+  platform              TEXT,
+  app_version           TEXT,
+  last_seen_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_at            TIMESTAMPTZ,
+  CONSTRAINT uq_device_sessions_user_device UNIQUE (user_id, device_id, app_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_sessions_user_id
+  ON device_sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS license_snapshots (
+  snapshot_id           TEXT PRIMARY KEY,
+  user_id               TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  app_id                TEXT NOT NULL,
+  device_id             TEXT NOT NULL,
+  entitlement_summary   JSONB NOT NULL,
+  payload               JSONB NOT NULL,
+  signature             TEXT NOT NULL,
+  issued_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at            TIMESTAMPTZ NOT NULL,
+  revoked_at            TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_license_snapshots_user_device
+  ON license_snapshots(user_id, device_id, app_id);
+
+CREATE TABLE IF NOT EXISTS update_channels (
+  channel_id            TEXT PRIMARY KEY,
+  app_id                TEXT NOT NULL,
+  channel_name          TEXT NOT NULL,
+  min_entitlement_code  TEXT,
+  current_version       TEXT NOT NULL,
+  manifest_url          TEXT NOT NULL,
+  is_active             BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_update_channels UNIQUE (app_id, channel_name)
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  audit_id              BIGSERIAL PRIMARY KEY,
+  user_id               TEXT,
+  category              TEXT NOT NULL,
+  action                TEXT NOT NULL,
+  target_type           TEXT,
+  target_id             TEXT,
+  success               BOOLEAN NOT NULL DEFAULT TRUE,
+  details               JSONB,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id
+  ON audit_logs(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_category_action
+  ON audit_logs(category, action);
+```
+
+### 15.3 时间更新时间触发器
+
+```sql
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+CREATE TRIGGER trg_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_products_updated_at ON products;
+CREATE TRIGGER trg_products_updated_at
+BEFORE UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_entitlements_updated_at ON entitlements;
+CREATE TRIGGER trg_entitlements_updated_at
+BEFORE UPDATE ON entitlements
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_update_channels_updated_at ON update_channels;
+CREATE TRIGGER trg_update_channels_updated_at
+BEFORE UPDATE ON update_channels
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+```
+
+### 15.4 首批商品初始化建议
+
+下面只是示例，王维可以按实际产品调整：
+
+```sql
+INSERT INTO products (
+  app_id,
+  product_id,
+  name,
+  description,
+  amount_minor,
+  currency,
+  entitlement_code,
+  entitlement_duration_days,
+  initial_quota,
+  is_active,
+  product_type
+)
+VALUES
+  ('deepbase_desktop', 'pro_monthly', 'Pro Monthly', '专业版月订阅', 3900, 'CNY', 'pro', 30, -1, TRUE, 'subscription'),
+  ('deepbase_desktop', 'pro_yearly',  'Pro Yearly',  '专业版年订阅', 39900, 'CNY', 'pro', 365, -1, TRUE, 'subscription'),
+  ('deepbase_desktop', 'pro_lifetime','Pro Lifetime','专业版永久授权', 99900, 'CNY', 'pro', 0, -1, TRUE, 'perpetual'),
+  ('deepbase_desktop', 'ai_pack_1000','AI Pack 1000','AI 调用次数包 1000 次', 9900, 'CNY', 'ai_calls', 0, 1000, TRUE, 'quota')
+ON CONFLICT (app_id, product_id) DO NOTHING;
+```
+
+### 15.5 更新通道初始化建议
+
+```sql
+INSERT INTO update_channels (
+  channel_id,
+  app_id,
+  channel_name,
+  min_entitlement_code,
+  current_version,
+  manifest_url,
+  is_active
+)
+VALUES
+  ('upd_free_stable', 'deepbase_desktop', 'stable-free', NULL, '1.0.0', 'https://download.example.com/free/stable/version.json', TRUE),
+  ('upd_pro_stable',  'deepbase_desktop', 'stable-pro', 'pro', '1.0.0', 'https://download.example.com/pro/stable/version.json', TRUE),
+  ('upd_pro_beta',    'deepbase_desktop', 'beta',       'pro', '1.1.0-beta.1', 'https://download.example.com/pro/beta/version.json', TRUE)
+ON CONFLICT (app_id, channel_name) DO NOTHING;
+```
+
+### 15.6 状态枚举建议
+
+建议服务端统一使用以下文本值，避免客户端和后端各写一套：
+
+| 领域 | 值 |
+|---|---|
+| `orders.status` | `created`, `paying`, `paid`, `closed`, `failed`, `refunded` |
+| `payments.status` | `created`, `pending`, `paid`, `failed`, `refunded` |
+| `entitlements.status` | `active`, `consumed`, `expired`, `revoked` |
+| `products.product_type` | `subscription`, `perpetual`, `quota`, `upgrade` |
+
+### 15.7 服务端实现备注
+
+王维落地时需要额外注意：
+
+1. `out_trade_no` 必须全局唯一
+2. `source_order_id` 必须唯一，防止支付回调重复发权益
+3. `payment_notifications.notification_key` 必须做去重
+4. `refresh_tokens.token_hash` 不保存明文 token，只保存 hash
+5. `license_snapshots` 要能撤销
+6. `update_channels` 不要硬编码在客户端
+
+---
+
+## 16. 第二轮接口确认与整改要求
+
+> 收件人: 王维  
+> 发件人: 罗辑  
+> 日期: 2026-05-08  
+> 依据: 你反馈的 `deepkit_routes.py` 已存在，1271 行，13 个 `/dk` 路由，且已挂载到同一个 FastAPI 实例。
+
+王维，你现在的实现已经具备联调基础，但还没有达到 deepBase 桌面软件上线要求。下面这些是服务器侧必须继续补齐和确认的内容。请你按优先级处理，并把更新后的接口文档、迁移 SQL、测试命令和部署参数回传给我。
+
+### 16.1 当前状态判断
+
+| 模块 | 你反馈的状态 | 罗辑判断 | 下一步 |
+|---|---|---|---|
+| `/dk` 路由挂载 | 已挂载到 `main.py` 同一 FastAPI 实例 | 可接受 | 给出 OpenAPI 导出文件和线上 base_url |
+| 设备匿名登录 | `device_anonymous` 可用 | 可进入联调 | 补请求/响应 JSON 示例和错误码 |
+| 微信登录 | `login_type: wechat` 返回 501 | 不满足上线 | 实现 `code2session`，或明确第一版不开放微信登录 |
+| 商品查询 | 未提供独立 API | 阻塞客户端商品页 | 必须补 `GET /dk/commerce/products?app_id=` |
+| 下单和支付意图 | 可用，返回微信 H5 支付链接 | 可进入联调 | 明确是否需要先创建订单再创建支付意图，或支付意图内部创建订单 |
+| 微信支付回调 | 已做验签、解密、幂等、事务发权益 | 方向正确 | 提供沙箱/测试回调样例和重复回调测试结果 |
+| 权益查询 | 可用 | 可进入联调 | 响应必须包含 `entitlement_code`、有效期、quota、状态 |
+| 权益消耗/核销 | 未实现 | 阻塞按次收费和语音/LLM 配额 | 必须补 `POST /dk/commerce/entitlements/consume` |
+| 授权快照 | 可签发/刷新/撤销 | 需要改安全方案 | 禁止桌面端硬编码签名私钥或共享密钥 |
+| 更新通道 | `/dk/updates/manifest` 可按权益返回 | 需要补安全字段 | 返回签名 manifest、hash、channel 和下载 URL，不能只返回裸 URL |
+
+### 16.2 必须立即修正的安全问题
+
+你现在的环境变量说明里有：
+
+```bash
+LICENSE_SIGN_KEY      # 桌面端硬编码此值验证 snapshot
+```
+
+这个方案不能上线。原因很简单：如果桌面端硬编码的是签名密钥或 HMAC 共享密钥，反编译后攻击者就可以伪造任意 Pro/Enterprise 授权。
+
+请改成非对称签名：
+
+```bash
+LICENSE_PRIVATE_KEY       # 只在服务器保存，用于签发 license snapshot
+LICENSE_PUBLIC_KEY_ID     # 公钥版本号，例如 v1
+LICENSE_PUBLIC_KEYS_JSON  # 可选，给客户端或配置中心发布的公钥集合
+```
+
+要求：
+
+1. 服务器用 Ed25519、ECDSA P-256 或 RSA-PSS 私钥签名。
+2. 桌面端只内置或拉取公钥，不能拥有私钥。
+3. `license snapshot` 必须包含 `key_id`、`schema_version`、`issued_at`、`expires_at`、`revocation_version`。
+4. 签名内容必须是 canonical JSON，不能对普通字符串拼接签名。
+5. 私钥轮换时保留旧公钥验证能力，直到旧 snapshot 全部过期。
+
+### 16.3 需要补的两个接口
+
+#### 16.3.1 商品列表
+
+```http
+GET /dk/commerce/products?app_id=deepbase_desktop
+Authorization: Bearer <access_token>
+```
+
+响应建议：
+
+```json
+{
+  "app_id": "deepbase_desktop",
+  "products": [
+    {
+      "product_id": "pro_monthly",
+      "name": "Pro Monthly",
+      "amount_minor": 3900,
+      "currency": "CNY",
+      "product_type": "subscription",
+      "entitlement_code": "pro_full",
+      "entitlement_duration_days": 30,
+      "initial_quota": -1,
+      "is_active": true
+    }
+  ]
+}
+```
+
+要求：
+
+1. 客户端不能硬编码价格，以服务端 `products` 表为准。
+2. 金额字段统一用 `amount_minor`，单位为分。
+3. `product_id`、`entitlement_code` 必须和下单、权益、更新通道完全一致。
+4. 你反馈的 SKU 是 `pro_annual`、`pro_lifetime`、`enterprise`，请确认是否替换旧草案里的 `pro_yearly` 和旧价格。
+
+#### 16.3.2 权益消耗/核销
+
+```http
+POST /dk/commerce/entitlements/consume
+Authorization: Bearer <access_token>
+Content-Type: application/json
+Idempotency-Key: <uuid>
+```
+
+请求建议：
+
+```json
+{
+  "app_id": "deepbase_desktop",
+  "entitlement_code": "ai_calls",
+  "feature_code": "llm.chat",
+  "quantity": 1,
+  "request_id": "client_generated_uuid"
+}
+```
+
+响应建议：
+
+```json
+{
+  "ok": true,
+  "entitlement_code": "ai_calls",
+  "remaining_quota": 999,
+  "consumed_quantity": 1,
+  "server_time": "2026-05-08T10:00:00Z"
+}
+```
+
+要求：
+
+1. 必须从 token 推导 `user_id`，不能信任客户端提交的 `user_id`。
+2. 必须支持幂等键，重复请求不能重复扣减。
+3. `remaining_quota = -1` 表示无限额度，不扣减但要记录审计。
+4. quota 不足时返回稳定错误码，例如 `QUOTA_EXHAUSTED`。
+5. 每次扣减写入审计日志，至少记录 `user_id`、`app_id`、`feature_code`、`quantity`、`request_id`。
+
+### 16.4 建议补充的订单状态接口
+
+你现在建议客户端支付后轮询 `/dk/commerce/entitlements`，这个可以作为第一版方案。但为了桌面端显示“等待支付、已支付、已关闭、失败、已退款”，建议补一个订单状态接口：
+
+```http
+GET /dk/commerce/orders/{order_id}
+Authorization: Bearer <access_token>
+```
+
+响应至少包含：
+
+```json
+{
+  "order_id": "ord_xxx",
+  "out_trade_no": "wx_xxx",
+  "status": "paid",
+  "product_id": "pro_monthly",
+  "amount_minor": 3900,
+  "currency": "CNY",
+  "created_at": "2026-05-08T10:00:00Z",
+  "paid_at": "2026-05-08T10:01:20Z"
+}
+```
+
+### 16.5 更新通道要返回完整签名 manifest
+
+你现在返回或配置的 `manifest_url` 是：
+
+```text
+https://download.deepkit.top/deepbase/free/stable/version.json
+https://download.deepkit.top/deepbase/pro/stable/version.json
+https://download.deepkit.top/deepbase/beta/version.json
+```
+
+请确认最终域名。如果 `download.deepkit.top` 只是占位，请替换为正式的腾讯云 COS/CDN 域名。
+
+`GET /dk/updates/manifest` 不应只返回一个裸 URL，建议返回：
+
+```json
+{
+  "app_id": "deepbase_desktop",
+  "current_version": "1.2.0",
+  "channel": "stable-pro",
+  "latest_version": "1.3.0",
+  "min_version": "1.0.0",
+  "manifest_url": "https://cdn.example.com/deepbase/pro/stable/version.json",
+  "package_url": "https://cdn.example.com/deepbase/pro/stable/deepbase-1.3.0.zip",
+  "package_hash": "sha256:...",
+  "signature": "base64_signature",
+  "force_update": false,
+  "release_notes": "..."
+}
+```
+
+要求：
+
+1. 免费用户只能返回 `stable-free`。
+2. `pro_full` 用户才能返回 `stable-pro`。
+3. `enterprise_full` 用户才能返回企业通道。
+4. 付费通道下载 URL 建议使用短期签名 URL，避免裸链接被未授权用户长期传播。
+5. 客户端必须校验 `package_hash` 和 `signature`，服务器要提供公钥或签名算法说明。
+
+### 16.6 API 错误格式要统一
+
+请所有 `/dk/*` 接口统一错误响应格式：
+
+```json
+{
+  "error": {
+    "code": "QUOTA_EXHAUSTED",
+    "message": "Quota exhausted",
+    "request_id": "srv_req_xxx"
+  }
+}
+```
+
+至少固定这些错误码：
+
+| 错误码 | 场景 |
+|---|---|
+| `UNAUTHORIZED` | token 缺失、过期或签名错误 |
+| `FORBIDDEN` | 已登录但没有访问该 app/channel/feature 的权限 |
+| `PRODUCT_NOT_FOUND` | 商品不存在或下架 |
+| `ORDER_NOT_FOUND` | 订单不存在或不属于当前用户 |
+| `PAYMENT_PENDING` | 支付尚未完成 |
+| `PAYMENT_VERIFY_FAILED` | 支付回调验签失败 |
+| `ENTITLEMENT_NOT_FOUND` | 没有对应权益 |
+| `QUOTA_EXHAUSTED` | 配额不足 |
+| `LICENSE_REVOKED` | 授权快照已撤销 |
+| `UPDATE_CHANNEL_FORBIDDEN` | 无权访问付费更新通道 |
+
+### 16.7 需要你回传的文件和信息
+
+请不要只发聊天截图。请回传以下内容：
+
+1. `deepkit_routes.py` 的 git commit hash 和文件 SHA256。
+2. `/dk` OpenAPI JSON，命令例如：`curl https://<host>/openapi.json > deepkit-openapi.json`。
+3. `deepKit` 数据库 migration SQL 或 Alembic migration 文件。
+4. `.env.example`，只保留变量名和说明，不包含真实密钥。
+5. 每个接口的 curl 示例，至少覆盖登录、商品列表、下单、支付意图、支付回调测试、权益查询、权益消耗、授权快照、更新检查。
+6. 微信支付沙箱或测试商户的联调说明。
+7. 正式下载域名、COS/CDN bucket、更新包签名算法和公钥发布方式。
+
+### 16.8 第一阶段联调验收脚本
+
+第一阶段联调至少跑通以下流程：
+
+1. 设备匿名登录：`POST /dk/auth/login` 返回 access/refresh token。
+2. 商品列表：`GET /dk/commerce/products?app_id=deepbase_desktop` 返回可售 SKU。
+3. 创建订单或支付意图：服务端按 `products` 表价格生成订单，客户端不能传最终金额。
+4. 微信支付回调：重复回调不重复发权益。
+5. 权益查询：支付成功后 `GET /dk/commerce/entitlements` 返回 `pro_full`。
+6. 授权快照：`POST /dk/license/snapshot/issue` 返回可由客户端公钥验签的 snapshot。
+7. 更新检查：免费用户返回 `stable-free`，Pro 用户返回 `stable-pro`。
+8. quota 核销：`POST /dk/commerce/entitlements/consume` 能扣减 `ai_calls`，重复幂等请求不重复扣。
+9. 撤销授权：退款或封禁后，旧 snapshot 刷新失败，更新通道降回免费或拒绝。
+
+### 16.9 优先级
+
+请按这个顺序做：
+
+1. 修掉 `LICENSE_SIGN_KEY` 安全设计，改非对称签名。
+2. 补 `GET /dk/commerce/products?app_id=`。
+3. 补 `POST /dk/commerce/entitlements/consume`。
+4. 确认 SKU、价格、entitlement_code 和更新通道名称。
+5. 补统一错误格式和 request_id。
+6. 导出 OpenAPI、migration、curl 联调脚本。
+7. 再做微信 `code2session` 和订单状态接口。

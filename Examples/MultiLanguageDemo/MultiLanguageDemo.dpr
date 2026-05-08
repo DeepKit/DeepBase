@@ -1,7 +1,7 @@
 { ============================================================================
   MultiLanguageDemo
   
-  A demonstration project for UniBase internationalization (i18n) features.
+  A demonstration project for DeepBase internationalization (i18n) features.
   
   Features demonstrated:
   - T() function for simple translations
@@ -18,13 +18,13 @@ program MultiLanguageDemo;
 uses
   Vcl.Forms,
   MainForm in 'MainForm.pas' {frmMain},
-  UniBase.Manager in '..\..\Core\UniBase.Manager.pas',
-  UniBase.Types in '..\..\Core\UniBase.Types.pas',
-  UniBase.Config in '..\..\Core\UniBase.Config.pas',
-  UniBase.Logging in '..\..\Core\UniBase.Logging.pas',
-  UniBase.i18n in '..\..\Core\UniBase.i18n.pas',
-  UniBase.Consts in '..\..\Core\UniBase.Consts.pas',
-  UniBase.VCL.I18nControls in '..\..\VCL\UniBase.VCL.I18nControls.pas';
+  DeepBase.Manager in '..\..\Core\DeepBase.Manager.pas',
+  DeepBase.Types in '..\..\Core\DeepBase.Types.pas',
+  DeepBase.Config in '..\..\Core\DeepBase.Config.pas',
+  DeepBase.Logging in '..\..\Core\DeepBase.Logging.pas',
+  DeepBase.i18n in '..\..\Core\DeepBase.i18n.pas',
+  DeepBase.Consts in '..\..\Core\DeepBase.Consts.pas',
+  DeepBase.VCL.I18nControls in '..\..\VCL\DeepBase.VCL.I18nControls.pas';
 
 begin
   ReportMemoryLeaksOnShutdown := True;

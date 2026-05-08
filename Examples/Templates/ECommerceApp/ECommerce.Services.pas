@@ -17,8 +17,8 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   FireDAC.Comp.Client,
   ECommerce.Entities,
-  UniBase.ORM,
-  UniBase.Exceptions;
+  DeepBase.ORM,
+  DeepBase.Exceptions;
 
 type
   TProductFilter = record

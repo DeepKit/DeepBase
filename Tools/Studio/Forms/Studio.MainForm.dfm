@@ -1,7 +1,7 @@
 object frmStudioMain: TfrmStudioMain
   Left = 0
   Top = 0
-  Caption = 'UniBase Studio'
+  Caption = 'DeepBase Studio'
   ClientHeight = 700
   ClientWidth = 1000
   Color = clBtnFace
@@ -38,7 +38,7 @@ object frmStudioMain: TfrmStudioMain
       Top = 10
       Width = 116
       Height = 21
-      Caption = 'UniBase Studio'
+      Caption = 'DeepBase Studio'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -16

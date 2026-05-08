@@ -3,7 +3,7 @@ unit Form.DocumentEdit;
 {*******************************************************************************
   Document Edit Form - 文档编辑窗体
 
-  UniBase 框架文档管理模板 - 文档编辑对话框
+  DeepBase 框架文档管理模板 - 文档编辑对话�?
 *******************************************************************************}
 
 interface
@@ -72,7 +72,7 @@ implementation
 
 uses
   Data.Module,
-  UniBase.Logger;
+  DeepBase.Logger;
 
 { TDocumentEditForm }
 
@@ -97,7 +97,7 @@ begin
   lvAttachments.RowSelect := True;
   lvAttachments.ReadOnly := True;
   lvAttachments.Columns.Clear;
-  with lvAttachments.Columns.Add do begin Caption := '文件名'; Width := 150; end;
+  with lvAttachments.Columns.Add do begin Caption := '文件�?; Width := 150; end;
   with lvAttachments.Columns.Add do begin Caption := '大小'; Width := 80; end;
 
   LoadCategories;
@@ -106,7 +106,7 @@ end;
 procedure TDocumentEditForm.FormDestroy(Sender: TObject);
 begin
   FCategoryIds.Free;
-  // 不释放 FDocument，由调用者管理
+  // 不释�?FDocument，由调用者管�?
 end;
 
 procedure TDocumentEditForm.LoadCategories;
@@ -116,7 +116,7 @@ begin
   cmbCategory.Items.Clear;
   FCategoryIds.Clear;
 
-  cmbCategory.Items.Add('(无分类)');
+  cmbCategory.Items.Add('(无分�?');
   FCategoryIds.Add('');
 
   Q := TFDQuery.Create(nil);
@@ -173,7 +173,7 @@ begin
   FDocument := DataModule1.DocumentService.GetDocument(DocId);
   if FDocument = nil then
   begin
-    ShowMessage('文档不存在');
+    ShowMessage('文档不存�?);
     ModalResult := mrCancel;
     Exit;
   end;
@@ -261,7 +261,7 @@ var
 begin
   if edtTitle.Text.Trim.IsEmpty then
   begin
-    ShowMessage('请输入标题');
+    ShowMessage('请输入标�?);
     edtTitle.SetFocus;
     Exit;
   end;
@@ -283,7 +283,7 @@ begin
 
   if FIsNew then
   begin
-    // 创建新文档
+    // 创建新文�?
     var NewDoc := DataModule1.DocumentService.CreateDocument(
       FDocument.Title, FDocument.Content, FDocument.CategoryId);
     DataModule1.DocumentService.SetTags(NewDoc.Id, FDocument.Tags);
@@ -322,7 +322,7 @@ procedure TDocumentEditForm.btnCancelClick(Sender: TObject);
 begin
   if FModified then
   begin
-    case MessageDlg('文档已修改，是否保存？', mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
+    case MessageDlg('文档已修改，是否保存�?, mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
       mrYes: SaveDocument;
       mrNo: ModalResult := mrCancel;
       mrCancel: Exit;
@@ -353,7 +353,7 @@ begin
       if Attachment <> nil then
       begin
         LoadAttachments;
-        ShowMessage('附件已添加');
+        ShowMessage('附件已添�?);
       end;
     end;
   finally

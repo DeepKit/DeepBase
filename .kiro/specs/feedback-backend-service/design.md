@@ -1,71 +1,71 @@
-# Design Document: Feedback Backend Service
+﻿# Design Document: Feedback Backend Service
 
 ## Overview
 
-本设计文档描述 UniBase 用户反馈后端服务的技术架构和实现方案。
+本设计文档描�?DeepBase 用户反馈后端服务的技术架构和实现方案�?
 
-**推荐方案：基于 AipexBase 平台开发**
+**推荐方案：基�?AipexBase 平台开�?*
 
-经过评估，使用 AipexBase 平台可以大幅减少开发工作量：
-- 动态数据引擎提供自动 CRUD
+经过评估，使�?AipexBase 平台可以大幅减少开发工作量�?
+- 动态数据引擎提供自�?CRUD
 - 内置 API Key 认证
 - 统一文件存储服务
 - 聚合统计功能
 
-技术栈：
+技术栈�?
 - **平台**: AipexBase BaaS
-- **数据引擎**: 动态数据引擎（自动 CRUD）
-- **认证**: API Key（CODE_FLYING header）
+- **数据引擎**: 动态数据引擎（自动 CRUD�?
+- **认证**: API Key（CODE_FLYING header�?
 - **文件存储**: AipexBase 文件服务
 - **测试**: pytest + hypothesis（属性测试）
 
 如需独立部署，备选方案：
 - **框架**: FastAPI 0.100+
-- **数据库**: PostgreSQL + SQLAlchemy ORM
+- **数据�?*: PostgreSQL + SQLAlchemy ORM
 - **缓存**: Redis
 - **认证**: API Key + JWT
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     UniBase Client (Delphi)                      │
-│                    UniBase.Feedback.pas                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ HTTPS
-┌─────────────────────────────────────────────────────────────────┐
-│                      API Gateway / Nginx                         │
-│                    (Rate Limiting, SSL)                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    FastAPI Application                           │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Routers    │  │  Middleware  │  │   Schemas    │          │
-│  │  /feedback   │  │  Auth/CORS   │  │   Pydantic   │          │
-│  │  /comments   │  │  RateLimit   │  │   Models     │          │
-│  │  /notify     │  │  Logging     │  │              │          │
-│  │  /admin      │  │              │  │              │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Services   │  │ Repositories │  │    Utils     │          │
-│  │  Feedback    │  │  SQLAlchemy  │  │  TrackCode   │          │
-│  │  Comment     │  │  CRUD Ops    │  │  FileStore   │          │
-│  │  Notify      │  │              │  │  Validators  │          │
-│  │  Stats       │  │              │  │              │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-       ┌───────────┐   ┌───────────┐   ┌───────────┐
-       │PostgreSQL │   │   Redis   │   │  Storage  │
-       │ Database  │   │  (Cache)  │   │  (Files)  │
-       └───────────┘   └───────────┘   └───────────┘
+┌─────────────────────────────────────────────────────────────────�?
+�?                    DeepBase Client (Delphi)                      �?
+�?                   DeepBase.Feedback.pas                          �?
+└─────────────────────────────────────────────────────────────────�?
+                              �?
+                              �?HTTPS
+┌─────────────────────────────────────────────────────────────────�?
+�?                     API Gateway / Nginx                         �?
+�?                   (Rate Limiting, SSL)                          �?
+└─────────────────────────────────────────────────────────────────�?
+                              �?
+                              �?
+┌─────────────────────────────────────────────────────────────────�?
+�?                   FastAPI Application                           �?
+├─────────────────────────────────────────────────────────────────�?
+�? ┌──────────────�? ┌──────────────�? ┌──────────────�?         �?
+�? �?  Routers    �? �? Middleware  �? �?  Schemas    �?         �?
+�? �? /feedback   �? �? Auth/CORS   �? �?  Pydantic   �?         �?
+�? �? /comments   �? �? RateLimit   �? �?  Models     �?         �?
+�? �? /notify     �? �? Logging     �? �?             �?         �?
+�? �? /admin      �? �?             �? �?             �?         �?
+�? └──────────────�? └──────────────�? └──────────────�?         �?
+├─────────────────────────────────────────────────────────────────�?
+�? ┌──────────────�? ┌──────────────�? ┌──────────────�?         �?
+�? �?  Services   �? �?Repositories �? �?   Utils     �?         �?
+�? �? Feedback    �? �? SQLAlchemy  �? �? TrackCode   �?         �?
+�? �? Comment     �? �? CRUD Ops    �? �? FileStore   �?         �?
+�? �? Notify      �? �?             �? �? Validators  �?         �?
+�? �? Stats       �? �?             �? �?             �?         �?
+�? └──────────────�? └──────────────�? └──────────────�?         �?
+└─────────────────────────────────────────────────────────────────�?
+                              �?
+              ┌───────────────┼───────────────�?
+              �?              �?              �?
+       ┌───────────�?  ┌───────────�?  ┌───────────�?
+       │PostgreSQL �?  �?  Redis   �?  �? Storage  �?
+       �?Database  �?  �? (Cache)  �?  �? (Files)  �?
+       └───────────�?  └───────────�?  └───────────�?
 ```
 
 ## Components and Interfaces
@@ -76,10 +76,10 @@
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/` | 提交新反馈 | API Key |
+| POST | `/` | 提交新反�?| API Key |
 | GET | `/` | 获取用户反馈列表 | API Key |
 | GET | `/{feedback_id}` | 获取反馈详情 | API Key |
-| GET | `/track/{tracking_code}` | 通过追踪码查询 | API Key |
+| GET | `/track/{tracking_code}` | 通过追踪码查�?| API Key |
 | POST | `/{feedback_id}/attachments` | 上传附件 | API Key |
 | GET | `/{feedback_id}/attachments/{attachment_id}` | 下载附件 | API Key |
 
@@ -104,11 +104,11 @@
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | GET | `/feedbacks` | 管理端反馈列表（支持筛选） | Admin |
-| PUT | `/feedbacks/{feedback_id}/status` | 更新反馈状态 | Admin |
-| PUT | `/feedbacks/{feedback_id}/assign` | 分配处理人 | Admin |
+| PUT | `/feedbacks/{feedback_id}/status` | 更新反馈状�?| Admin |
+| PUT | `/feedbacks/{feedback_id}/assign` | 分配处理�?| Admin |
 | POST | `/feedbacks/{feedback_id}/comments` | 客服添加评论 | Admin |
 | GET | `/stats/overview` | 统计概览 | Admin |
-| GET | `/stats/by-type` | 按类型统计 | Admin |
+| GET | `/stats/by-type` | 按类型统�?| Admin |
 | GET | `/stats/trend` | 趋势统计 | Admin |
 | GET | `/stats/efficiency` | 效率统计 | Admin |
 
@@ -149,11 +149,11 @@ class AttachmentService:
 ```python
 # auth_middleware.py
 class APIKeyMiddleware:
-    """验证 X-API-Key 请求头"""
+    """验证 X-API-Key 请求�?""
 
 # rate_limit_middleware.py  
 class RateLimitMiddleware:
-    """基于 IP/API Key 的请求限流"""
+    """基于 IP/API Key 的请求限�?""
 
 # logging_middleware.py
 class RequestLoggingMiddleware:
@@ -347,84 +347,84 @@ class NotificationType(str, Enum):
 
 基于前置分析，以下是经过去重和合并后的核心正确性属性：
 
-### Property 1: 反馈提交完整性
-*For any* 有效的反馈数据（包含非空标题和描述），提交后系统应返回唯一的反馈 ID 和格式为 TRK-YYYY-XXXXXX 的追踪码，且反馈状态为 New
+### Property 1: 反馈提交完整�?
+*For any* 有效的反馈数据（包含非空标题和描述），提交后系统应返回唯一的反�?ID 和格式为 TRK-YYYY-XXXXXX 的追踪码，且反馈状态为 New
 **Validates: Requirements 1.1, 1.3, 1.5**
 
 ### Property 2: 反馈验证拒绝
-*For any* 缺少必填字段（标题或描述为空/纯空白）的反馈数据，提交时系统应返回 400 错误码和具体的验证错误信息
+*For any* 缺少必填字段（标题或描述为空/纯空白）的反馈数据，提交时系统应返回 400 错误码和具体的验证错误信�?
 **Validates: Requirements 1.2**
 
 ### Property 3: 系统信息关联存储
-*For any* 包含系统信息的反馈，提交后查询该反馈时应能获取到完整的系统信息
+*For any* 包含系统信息的反馈，提交后查询该反馈时应能获取到完整的系统信�?
 **Validates: Requirements 1.4, 3.5**
 
 ### Property 4: 附件上传与元数据记录
-*For any* 有效的附件文件（大小在限制内），上传后系统应返回附件 ID 和访问 URL，并正确记录文件名、大小、MIME 类型
+*For any* 有效的附件文件（大小在限制内），上传后系统应返回附件 ID 和访�?URL，并正确记录文件名、大小、MIME 类型
 **Validates: Requirements 2.1, 2.4**
 
 ### Property 5: 附件权限验证
 *For any* 附件下载请求，系统应验证请求者是反馈所有者或管理员，否则返回 403 错误
 **Validates: Requirements 2.5, 8.3**
 
-### Property 6: 追踪码查询一致性
+### Property 6: 追踪码查询一致�?
 *For any* 已提交的反馈，通过其追踪码查询应返回完整的反馈详情，包括状态、评论、附件和系统信息
 **Validates: Requirements 3.1, 3.5**
 
 ### Property 7: 用户反馈列表分页
-*For any* 用户的反馈列表查询，系统应正确支持分页参数，返回的结果数量不超过 pageSize，且按指定排序
+*For any* 用户的反馈列表查询，系统应正确支持分页参数，返回的结果数量不超过 pageSize，且按指定排�?
 **Validates: Requirements 3.2, 3.4**
 
-### Property 8: 评论创建与排序
+### Property 8: 评论创建与排�?
 *For any* 反馈的评论列表，评论应按创建时间升序排列，用户评论的 isStaff=false，客服评论的 isStaff=true
 **Validates: Requirements 4.1, 4.2, 4.3**
 
-### Property 9: 空评论拒绝
+### Property 9: 空评论拒�?
 *For any* 内容为空或纯空白的评论，系统应拒绝添加并返回验证错误
 **Validates: Requirements 4.4**
 
 ### Property 10: 评论触发通知
-*For any* 成功添加的评论，系统应为相关方创建通知（用户评论通知客服，客服评论通知用户）
+*For any* 成功添加的评论，系统应为相关方创建通知（用户评论通知客服，客服评论通知用户�?
 **Validates: Requirements 4.5, 5.1**
 
-### Property 11: 通知列表排序与已读状态
-*For any* 用户的通知列表，通知应按创建时间倒序排列；标记已读后，isRead=true 且 readAt 有值
+### Property 11: 通知列表排序与已读状�?
+*For any* 用户的通知列表，通知应按创建时间倒序排列；标记已读后，isRead=true �?readAt 有�?
 **Validates: Requirements 5.2, 5.3**
 
-### Property 12: 未读通知计数准确性
+### Property 12: 未读通知计数准确�?
 *For any* 用户，未读通知数量应等于该用户 isRead=false 的通知总数
 **Validates: Requirements 5.4**
 
 ### Property 13: 批量标记已读
-*For any* 用户执行批量标记已读操作后，该用户所有通知的 isRead 应为 true
+*For any* 用户执行批量标记已读操作后，该用户所有通知�?isRead 应为 true
 **Validates: Requirements 5.5**
 
-### Property 14: 状态变更记录
-*For any* 反馈状态变更操作，updatedAt 时间戳应更新，且变更为 Resolved 时应创建解决通知
+### Property 14: 状态变更记�?
+*For any* 反馈状态变更操作，updatedAt 时间戳应更新，且变更�?Resolved 时应创建解决通知
 **Validates: Requirements 6.1, 6.2**
 
-### Property 15: 已关闭反馈评论限制
-*For any* 状态为 Closed 或 Rejected 的反馈，用户添加评论应被拒绝
+### Property 15: 已关闭反馈评论限�?
+*For any* 状态为 Closed �?Rejected 的反馈，用户添加评论应被拒绝
 **Validates: Requirements 6.5**
 
-### Property 16: 反馈筛选功能
-*For any* 管理端反馈列表查询，按类型/优先级/状态筛选后的结果应只包含符合条件的反馈
+### Property 16: 反馈筛选功�?
+*For any* 管理端反馈列表查询，按类�?优先�?状态筛选后的结果应只包含符合条件的反馈
 **Validates: Requirements 6.4**
 
-### Property 17: 统计数据准确性
-*For any* 统计查询，返回的各状态/类型数量应与数据库中实际数量一致
+### Property 17: 统计数据准确�?
+*For any* 统计查询，返回的各状�?类型数量应与数据库中实际数量一�?
 **Validates: Requirements 7.1, 7.2**
 
 ### Property 18: API 认证
-*For any* API 请求，缺少或无效的 API Key 应返回 401 错误码
+*For any* API 请求，缺少或无效�?API Key 应返�?401 错误�?
 **Validates: Requirements 8.1, 8.2**
 
-### Property 19: 管理员权限验证
-*For any* 管理端 API 调用，非管理员用户应返回 403 错误码
+### Property 19: 管理员权限验�?
+*For any* 管理�?API 调用，非管理员用户应返回 403 错误�?
 **Validates: Requirements 8.4**
 
-### Property 20: JSON 序列化往返一致性
-*For any* 有效的反馈数据，序列化为 JSON 后再反序列化应产生等价的数据对象，字段使用 camelCase，日期使用 ISO 8601 格式，枚举使用字符串
+### Property 20: JSON 序列化往返一致�?
+*For any* 有效的反馈数据，序列化为 JSON 后再反序列化应产生等价的数据对象，字段使�?camelCase，日期使�?ISO 8601 格式，枚举使用字符串
 **Validates: Requirements 9.1, 9.2, 9.3, 9.4, 9.5**
 
 ## Error Handling
@@ -436,12 +436,12 @@ class NotificationType(str, Enum):
 | 200 | 成功 |
 | 201 | 创建成功 |
 | 400 | 请求数据验证失败 |
-| 401 | API Key 无效或缺失 |
-| 403 | 无权限访问资源 |
-| 404 | 资源不存在 |
+| 401 | API Key 无效或缺�?|
+| 403 | 无权限访问资�?|
+| 404 | 资源不存�?|
 | 413 | 文件大小超限 |
 | 429 | 请求频率超限 |
-| 500 | 服务器内部错误 |
+| 500 | 服务器内部错�?|
 
 ### Error Response Format
 
@@ -479,21 +479,21 @@ async def forbidden_exception_handler(request, exc):
 ### 测试框架
 
 - **单元测试**: pytest
-- **属性测试**: hypothesis
+- **属性测�?*: hypothesis
 - **API 测试**: pytest + httpx (TestClient)
-- **数据库测试**: pytest-asyncio + SQLAlchemy test fixtures
+- **数据库测�?*: pytest-asyncio + SQLAlchemy test fixtures
 
 ### 单元测试
 
-单元测试覆盖：
-- 追踪码生成格式验证
+单元测试覆盖�?
+- 追踪码生成格式验�?
 - 数据验证逻辑
 - 服务层业务逻辑
 - 枚举转换函数
 
-### 属性测试
+### 属性测�?
 
-使用 hypothesis 库进行属性测试，每个属性测试运行至少 100 次迭代。
+使用 hypothesis 库进行属性测试，每个属性测试运行至�?100 次迭代�?
 
 属性测试标注格式：
 ```python
@@ -502,14 +502,14 @@ async def forbidden_exception_handler(request, exc):
 
 核心属性测试：
 
-1. **Property 1 测试**: 生成随机有效反馈数据，验证提交返回 ID 和追踪码格式
+1. **Property 1 测试**: 生成随机有效反馈数据，验证提交返�?ID 和追踪码格式
 2. **Property 2 测试**: 生成缺少必填字段的数据，验证返回 400
-3. **Property 7 测试**: 生成随机分页参数，验证返回结果符合分页规则
+3. **Property 7 测试**: 生成随机分页参数，验证返回结果符合分页规�?
 4. **Property 8 测试**: 生成多个评论，验证排序和 isStaff 标记
 5. **Property 12 测试**: 生成随机通知并部分标记已读，验证计数准确
-6. **Property 16 测试**: 生成不同类型/状态的反馈，验证筛选结果
-7. **Property 17 测试**: 生成随机反馈数据，验证统计结果与实际一致
-8. **Property 20 测试**: 生成随机反馈数据，验证 JSON 往返一致性
+6. **Property 16 测试**: 生成不同类型/状态的反馈，验证筛选结�?
+7. **Property 17 测试**: 生成随机反馈数据，验证统计结果与实际一�?
+8. **Property 20 测试**: 生成随机反馈数据，验�?JSON 往返一致�?
 
 ### 测试目录结构
 
@@ -518,18 +518,18 @@ tests/
 ├── conftest.py              # pytest fixtures
 ├── test_schemas.py          # Pydantic schema 测试
 ├── test_services/
-│   ├── test_feedback.py     # 反馈服务测试
-│   ├── test_comment.py      # 评论服务测试
-│   └── test_notification.py # 通知服务测试
+�?  ├── test_feedback.py     # 反馈服务测试
+�?  ├── test_comment.py      # 评论服务测试
+�?  └── test_notification.py # 通知服务测试
 ├── test_api/
-│   ├── test_feedback_api.py # 反馈 API 测试
-│   ├── test_comment_api.py  # 评论 API 测试
-│   ├── test_notify_api.py   # 通知 API 测试
-│   └── test_admin_api.py    # 管理 API 测试
+�?  ├── test_feedback_api.py # 反馈 API 测试
+�?  ├── test_comment_api.py  # 评论 API 测试
+�?  ├── test_notify_api.py   # 通知 API 测试
+�?  └── test_admin_api.py    # 管理 API 测试
 ├── test_properties/
-│   ├── test_feedback_props.py    # 反馈属性测试
-│   ├── test_serialization_props.py # 序列化属性测试
-│   └── test_pagination_props.py  # 分页属性测试
+�?  ├── test_feedback_props.py    # 反馈属性测�?
+�?  ├── test_serialization_props.py # 序列化属性测�?
+�?  └── test_pagination_props.py  # 分页属性测�?
 └── test_utils/
-    └── test_tracking_code.py # 追踪码工具测试
+    └── test_tracking_code.py # 追踪码工具测�?
 ```

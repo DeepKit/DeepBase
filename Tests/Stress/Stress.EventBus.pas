@@ -19,7 +19,7 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================
@@ -170,13 +170,13 @@ uses
   System.DateUtils,
   System.Math,
   System.StrUtils,
-  UniBase.Manager,
-  UniBase.EventBus;
+  DeepBase.Manager,
+  DeepBase.EventBus;
 
-// Wrapper to access UniBase singleton
-function UB: TUniBaseManager; inline;
+// Wrapper to access DeepBase singleton
+function UB: TDeepBaseManager; inline;
 begin
-  Result := UniBase.Manager.UniBase;
+  Result := DeepBase.Manager.DeepBase;
 end;
 
 type
@@ -216,7 +216,7 @@ begin
   FEventsReceived := 0;
 
   // Subscribe to test events
-  UniBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
+  DeepBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
     procedure(const Event: TStressTestEvent)
     begin
       TInterlocked.Increment(FEventsReceived);
@@ -225,7 +225,7 @@ end;
 
 procedure TEventBusHighLoadTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('EventsPublished', FEventsPublished);
   AddCustomMetric('EventsReceived', FEventsReceived);
@@ -250,7 +250,7 @@ begin
     FillChar(PChar(Event.Payload)^, FEventPayloadSizeBytes * SizeOf(Char), 'X');
 
     // Publish event
-    UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
+    DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
 
     SW.Stop;
     ReportLatency(SW.Elapsed.TotalMilliseconds);
@@ -290,7 +290,7 @@ begin
   FEventCollisions := 0;
 
   // Subscribe with thread-safe handler
-  UniBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
+  DeepBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
     procedure(const Event: TStressTestEvent)
     begin
       TInterlocked.Increment(FEventsReceived);
@@ -302,7 +302,7 @@ end;
 
 procedure TEventBusMultiThreadTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('EventsPublished', FEventsPublished);
   AddCustomMetric('EventsReceived', FEventsReceived);
@@ -337,7 +337,7 @@ begin
             Event.Payload := 'Thread-' + IntToStr(TThread.CurrentThread.ThreadID) +
                             '-Event-' + IntToStr(K);
 
-            UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
+            DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
           end;
         end);
       Threads[I].FreeOnTerminate := False;
@@ -393,7 +393,7 @@ end;
 
 procedure TEventBusSubscriberChurnTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('SubscribersAdded', FSubscribersAdded);
   AddCustomMetric('SubscribersRemoved', FSubscribersRemoved);
@@ -417,7 +417,7 @@ begin
       if Random > 0.5 then
       begin
         // Add subscriber
-        UniBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
+        DeepBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
           procedure(const E: TStressTestEvent)
           begin
             TInterlocked.Increment(FEventsProcessed);
@@ -438,7 +438,7 @@ begin
       Event.ThreadID := TThread.CurrentThread.ThreadID;
       Event.Payload := 'ChurnTest';
 
-      UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
+      DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
     end;
 
     SW.Stop;
@@ -480,7 +480,7 @@ end;
 
 procedure TEventBusMainThreadTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('MainThreadEvents', FMainThreadEvents);
   AddCustomMetric('BackgroundEvents', FBackgroundEvents);
@@ -507,7 +507,7 @@ begin
     begin
       // Publish to main thread with timeout handling
       try
-        UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event, edmMainThread);
+        DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event, edmMainThread);
         TInterlocked.Increment(FMainThreadEvents);
       except
         on E: Exception do
@@ -519,7 +519,7 @@ begin
     end
     else
     begin
-      UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
+      DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
       TInterlocked.Increment(FBackgroundEvents);
     end;
 
@@ -560,7 +560,7 @@ begin
   FEventsDropped := 0;
 
   // Subscribe with slow handler to cause queue buildup
-  UniBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
+  DeepBase.EventBus.EventBus.Subscribe<TStressTestEvent>(
     procedure(const Event: TStressTestEvent)
     begin
       Sleep(1);  // Slow handler
@@ -569,7 +569,7 @@ end;
 
 procedure TEventBusQueueOverflowTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('EventsSent', FEventsSent);
   AddCustomMetric('EventsDropped', FEventsDropped);
@@ -595,7 +595,7 @@ begin
       Event.Payload := 'Burst-' + IntToStr(I);
 
       try
-        UniBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
+        DeepBase.EventBus.EventBus.Publish<TStressTestEvent>(Event);
       except
         on E: Exception do
         begin
@@ -641,7 +641,7 @@ begin
   FRaceDetected := False;
 
   // Subscribe to counter events
-  UniBase.EventBus.EventBus.Subscribe<TCounterEvent>(
+  DeepBase.EventBus.EventBus.Subscribe<TCounterEvent>(
     procedure(const Event: TCounterEvent)
     begin
       // This should detect race conditions if events are processed unsafely
@@ -651,7 +651,7 @@ end;
 
 procedure TEventBusRaceConditionTest.Teardown;
 begin
-  UniBase.EventBus.EventBus.Clear;
+  DeepBase.EventBus.EventBus.Clear;
 
   AddCustomMetric('FinalCounter', FSharedCounter);
   AddCustomMetric('ExpectedValue', FExpectedValue);
@@ -671,7 +671,7 @@ begin
     for I := 1 to FIncrementsPerOp do
     begin
       Event.IncrementBy := 1;
-      UniBase.EventBus.EventBus.Publish<TCounterEvent>(Event);
+      DeepBase.EventBus.EventBus.Publish<TCounterEvent>(Event);
       TInterlocked.Increment(FExpectedValue);
     end;
 

@@ -1,7 +1,7 @@
-unit Tray.ProjectsFrame;
+﻿unit Tray.ProjectsFrame;
 
 {*******************************************************************************
-  UniBaseTray - 项目切换器 Frame
+  DeepBaseTray - 项目切换器 Frame
   
   功能:
   - 显示最近项目列表

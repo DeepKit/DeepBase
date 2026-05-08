@@ -1,7 +1,7 @@
 { ============================================================================
   DataBindingDemo - Main Form
   
-  Demonstrates UniBase.DataBinding functionality:
+  Demonstrates DeepBase.DataBinding functionality:
   - Observable objects with property change notification
   - One-way binding (source -> target)
   - Two-way binding (source <-> target)
@@ -27,8 +27,8 @@ uses
   Vcl.StdCtrls,
   Vcl.ExtCtrls,
   Vcl.ComCtrls,
-  UniBase.DataBinding,
-  UniBase.VCL.BindableControls;
+  DeepBase.DataBinding,
+  DeepBase.VCL.BindableControls;
 
 type
   // Observable model class

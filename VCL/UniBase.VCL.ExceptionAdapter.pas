@@ -1,19 +1,19 @@
-{ ============================================================================
-  UniBase.VCL.ExceptionAdapter - VCL exception hook for UniBase.Exception
+﻿{ ============================================================================
+  DeepBase.VCL.ExceptionAdapter - VCL exception hook for DeepBase.Exception
   ============================================================================ }
 
-unit UniBase.VCL.ExceptionAdapter;
+unit DeepBase.VCL.ExceptionAdapter;
 
 interface
 
-procedure RegisterUniBaseVCLExceptionAdapter;
+procedure RegisterDeepBaseVCLExceptionAdapter;
 
 implementation
 
 uses
   System.SysUtils,
   Vcl.Forms,
-  UniBase.Exception;
+  DeepBase.Exception;
 
 type
   TVclExceptionBridge = class
@@ -27,7 +27,7 @@ var
 procedure TVclExceptionBridge.HandleApplicationException(Sender: TObject;
   E: Exception);
 begin
-  TUniBaseExceptionHandler.HandleException(Sender, E);
+  TDeepBaseExceptionHandler.HandleException(Sender, E);
 end;
 
 procedure InstallVclExceptionHandler;
@@ -43,15 +43,15 @@ begin
     Application.ShowException(E);
 end;
 
-procedure RegisterUniBaseVCLExceptionAdapter;
+procedure RegisterDeepBaseVCLExceptionAdapter;
 begin
-  TUniBaseExceptionHandler.SetPlatformAdapter(
+  TDeepBaseExceptionHandler.SetPlatformAdapter(
     InstallVclExceptionHandler,
     ShowVclException);
 end;
 
 initialization
-  RegisterUniBaseVCLExceptionAdapter;
+  RegisterDeepBaseVCLExceptionAdapter;
 
 finalization
   GVclExceptionBridge.Free;

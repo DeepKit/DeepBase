@@ -8,7 +8,7 @@ uses
   FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.Stan.Option,
   uDoQryTypes, uDoQryErrors, uDoQryParamPool, uDoQryDialect,
   uDoQryLogger, uDoQryJsonParams, uDoQryTxManager,
-  UniBase.Exceptions;
+  DeepBase.Exceptions;
 
 function ExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
 function ExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
@@ -63,7 +63,7 @@ begin
     if p2 = 0 then Break;
     Name := Trim(Copy(OutSQL, p1 + 4, p2 - (p1 + 4)));
     if not Assigned(Params) or (Params.GetValue(Name) = nil) or not (Params.GetValue(Name) is TJSONArray) then
-      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数组', [Name]);
+      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数�?, [Name]);
     JArr := TJSONArray(Params.GetValue(Name));
     if JArr.Count = 0 then
       raise EDatabaseException.CreateFmt('IN 参数 %s 不能为空数组', [Name]);
@@ -246,7 +246,7 @@ end;
 procedure GuardNonQuery(const SQL: string; const Def: TQueryDef);
 begin
   if IsUpdateOrDelete(SQL) and (not Def.AllowFullScan) and (not HasWhere(SQL)) then
-    raise EDatabaseException.Create('非查询语句缺少 WHERE，已阻止执行');
+    raise EDatabaseException.Create('非查询语句缺�?WHERE，已阻止执行');
 end;
 
 function ExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
@@ -329,7 +329,7 @@ begin
         begin
           Q.Open;
           if (Q.Fields.Count = 0) or Q.IsEmpty then
-            raise EDatabaseException.Create('未返回插入 ID');
+            raise EDatabaseException.Create('未返回插�?ID');
           Result := Q.Fields[0].AsInteger;
         end
         else

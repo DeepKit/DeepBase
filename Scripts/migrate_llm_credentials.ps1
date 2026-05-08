@@ -25,7 +25,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-public static class UniBaseCredMan {
+public static class DeepBaseCredMan {
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
   public struct CREDENTIAL {
     public UInt32 Flags;
@@ -96,34 +96,34 @@ function Test-SqliteTable {
   return [bool](Invoke-Sqlite $sql)
 }
 
-function New-UniBaseLLMCredentialTarget {
+function New-DeepBaseLLMCredentialTarget {
   param([Parameter(Mandatory = $true)][string]$ConfigName)
 
   $safe = $ConfigName.Trim() -replace '[\\/:*?"<>|]', '_'
   if ($safe -eq "") {
     $safe = "Default"
   }
-  return "UniBase_LLM_${safe}_ApiKey"
+  return "DeepBase_LLM_${safe}_ApiKey"
 }
 
-function New-UniBaseLLMApiKeyTarget {
+function New-DeepBaseLLMApiKeyTarget {
   param([Parameter(Mandatory = $true)][string]$ApiKeyName)
 
   $safe = $ApiKeyName.Trim() -replace '[\\/:*?"<>|]', '_'
   if ($safe -eq "") {
     $safe = "Default"
   }
-  return "UniBase_LLMApiKey_${safe}_ApiKey"
+  return "DeepBase_LLMApiKey_${safe}_ApiKey"
 }
 
-function Save-UniBaseCredential {
+function Save-DeepBaseCredential {
   param(
     [Parameter(Mandatory = $true)][string]$TargetName,
     [Parameter(Mandatory = $true)][string]$Secret
   )
 
   if (-not $DryRun) {
-    [UniBaseCredMan]::WriteGeneric($TargetName, "", $Secret)
+    [DeepBaseCredMan]::WriteGeneric($TargetName, "", $Secret)
   }
 }
 
@@ -159,11 +159,11 @@ WHERE t.$SecretColumn IS NOT NULL
 
     $name = $parts[0]
     $secret = $parts[1]
-    $target = New-UniBaseLLMCredentialTarget $name
+    $target = New-DeepBaseLLMCredentialTarget $name
     $ref = "credman:$target"
 
     Write-Host "Migrating $TableName.$SecretColumn for '$name' -> $ref"
-    Save-UniBaseCredential -TargetName $target -Secret $secret
+    Save-DeepBaseCredential -TargetName $target -Secret $secret
 
     if (-not $DryRun) {
       $sql = "UPDATE $TableName SET $SecretColumn=$(Quote-SqliteLiteral $ref), UpdatedAt=datetime('now') WHERE Name=$(Quote-SqliteLiteral $name);"
@@ -199,11 +199,11 @@ WHERE ApiKey IS NOT NULL
 
     $name = $parts[0]
     $secret = $parts[1]
-    $target = New-UniBaseLLMApiKeyTarget $name
+    $target = New-DeepBaseLLMApiKeyTarget $name
     $ref = "credman:$target"
 
     Write-Host "Migrating LLMApiKeys.ApiKey for '$name' -> $ref"
-    Save-UniBaseCredential -TargetName $target -Secret $secret
+    Save-DeepBaseCredential -TargetName $target -Secret $secret
 
     if (-not $DryRun) {
       $sql = "UPDATE LLMApiKeys SET ApiKey=$(Quote-SqliteLiteral $ref), EncryptionMethod='CREDMAN', IsEncrypted=1, UpdatedAt=datetime('now') WHERE Name=$(Quote-SqliteLiteral $name);"

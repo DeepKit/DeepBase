@@ -2,13 +2,13 @@
   Test.GUI.Core - 核心控件 GUI 测试
   
   版本: 1.0
-  说明: 测试基础 VCL 控件的 GUI 交互
+  说明: 测试基础 VCL 控件�?GUI 交互
   测试内容:
     - 按钮点击
     - 文本输入
-    - 复选框/单选按钮
-    - 下拉框/列表框
-    - 控件可见性/启用状态
+    - 复选框/单选按�?
+    - 下拉�?列表�?
+    - 控件可见�?启用状�?
   ============================================================================ }
 
 unit Test.GUI.Core;
@@ -30,13 +30,13 @@ uses
 {$IFDEF HAS_DUNITX}
   DUnitX.TestFramework,
 {$ENDIF}
-  UniBase.GUITest,
+  DeepBase.GUITest,
   GUITest.FormFactory;
 
 {$IFNDEF HAS_DUNITX}
 type
   /// <summary>
-  /// 简化的断言类 - 用于非 DUnitX 环境
+  /// 简化的断言�?- 用于�?DUnitX 环境
   /// </summary>
   Assert = class
   public
@@ -114,7 +114,7 @@ type
     [Test]
     procedure Test_CheckBox_Initial_State;
     
-    // ========== 单选按钮测试 ==========
+    // ========== 单选按钮测�?==========
     
     [Test]
     procedure Test_RadioButton_Selection;
@@ -122,7 +122,7 @@ type
     [Test]
     procedure Test_RadioButton_MutualExclusion;
     
-    // ========== 下拉框测试 ==========
+    // ========== 下拉框测�?==========
     
     [Test]
     procedure Test_ComboBox_Select_ByIndex;
@@ -133,7 +133,7 @@ type
     [Test]
     procedure Test_ComboBox_Items_Count;
     
-    // ========== 列表框测试 ==========
+    // ========== 列表框测�?==========
     
     [Test]
     procedure Test_ListBox_Select_Item;
@@ -154,12 +154,12 @@ type
     [Test]
     procedure Test_TrackBar_Position;
     
-    // ========== 进度条测试 ==========
+    // ========== 进度条测�?==========
     
     [Test]
     procedure Test_ProgressBar_Value;
     
-    // ========== 控件状态测试 ==========
+    // ========== 控件状态测�?==========
     
     [Test]
     procedure Test_Control_FindByName;
@@ -243,7 +243,7 @@ implementation
 
 uses
   Winapi.Windows,
-  UniBase.TestHelper;
+  DeepBase.TestHelper;
 
 {$IFNDEF HAS_DUNITX}
 { Assert }
@@ -310,7 +310,7 @@ begin
   inherited;
   FButtonClicked := False;
   
-  // 附加事件处理器
+  // 附加事件处理�?
   if Assigned(FBasicForm) then
     FBasicForm.btnOK.OnClick := HandleButtonClick;
 end;
@@ -332,7 +332,7 @@ procedure TTestGUICore.Test_Button_Click_FiresEvent;
 begin
   Step('点击 OK 按钮');
   
-  Assert.IsFalse(FButtonClicked, '初始状态按钮未被点击');
+  Assert.IsFalse(FButtonClicked, '初始状态按钮未被点�?);
   
   Click('btnOK');
   
@@ -343,9 +343,9 @@ end;
 
 procedure TTestGUICore.Test_Button_Enabled_State;
 begin
-  Step('测试按钮启用状态');
+  Step('测试按钮启用状�?);
   
-  // 初始状态
+  // 初始状�?
   AssertEnabled('btnOK');
   
   // 禁用按钮
@@ -365,7 +365,7 @@ end;
 
 procedure TTestGUICore.Test_Button_Visible_State;
 begin
-  Step('测试按钮可见性');
+  Step('测试按钮可见�?);
   
   // 初始可见
   AssertVisible('btnOK');
@@ -387,10 +387,10 @@ end;
 
 procedure TTestGUICore.Test_Button_Default_Property;
 begin
-  Step('测试默认按钮属性');
+  Step('测试默认按钮属�?);
   
-  Assert.IsTrue(FBasicForm.btnOK.Default, 'btnOK 应该是默认按钮');
-  Assert.IsTrue(FBasicForm.btnCancel.Cancel, 'btnCancel 应该是取消按钮');
+  Assert.IsTrue(FBasicForm.btnOK.Default, 'btnOK 应该是默认按�?);
+  Assert.IsTrue(FBasicForm.btnCancel.Cancel, 'btnCancel 应该是取消按�?);
   
   Verify(True, 'Default/Cancel properties set', 'Passed');
 end;
@@ -413,9 +413,9 @@ end;
 
 procedure TTestGUICore.Test_Edit_Clear_Text;
 begin
-  Step('清空编辑框');
+  Step('清空编辑�?);
   
-  // 先输入文本
+  // 先输入文�?
   Input('edtInput', 'Test text');
   Assert.AreNotEqual('', FBasicForm.edtInput.Text);
   
@@ -432,7 +432,7 @@ const
   MAX_LEN = 10;
   LONG_TEXT = '12345678901234567890';
 begin
-  Step('测试编辑框最大长度');
+  Step('测试编辑框最大长�?);
   
   FBasicForm.edtInput.MaxLength := MAX_LEN;
   ProcessMessages;
@@ -452,14 +452,14 @@ const
   ORIGINAL = 'Original';
   NEW_TEXT = 'New Text';
 begin
-  Step('测试只读编辑框');
+  Step('测试只读编辑�?);
   
   FBasicForm.edtInput.Text := ORIGINAL;
   FBasicForm.edtInput.ReadOnly := True;
   ProcessMessages;
   
-  // 尝试输入（通过直接设置，因为 SimulateInput 会直接设置 Text）
-  // 在实际 GUI 中，只读会阻止键盘输入
+  // 尝试输入（通过直接设置，因�?SimulateInput 会直接设�?Text�?
+  // 在实�?GUI 中，只读会阻止键盘输�?
   Assert.AreEqual(ORIGINAL, FBasicForm.edtInput.Text);
   
   Verify(FBasicForm.edtInput.ReadOnly, 'True', BoolToStr(FBasicForm.edtInput.ReadOnly, True));
@@ -477,11 +477,11 @@ begin
   
   Assert.IsFalse(FBasicForm.chkOption.Checked);
   
-  // 勾选
+  // 勾�?
   Check('chkOption', True);
   Assert.IsTrue(FBasicForm.chkOption.Checked);
   
-  // 取消勾选
+  // 取消勾�?
   Check('chkOption', False);
   Assert.IsFalse(FBasicForm.chkOption.Checked);
   
@@ -490,7 +490,7 @@ end;
 
 procedure TTestGUICore.Test_CheckBox_Initial_State;
 begin
-  Step('测试复选框初始状态');
+  Step('测试复选框初始状�?);
   
   // 默认应该未选中
   Assert.IsFalse(FBasicForm.chkOption.Checked, '复选框初始应该未选中');
@@ -499,13 +499,13 @@ begin
     BoolToStr(FBasicForm.chkOption.Checked, True));
 end;
 
-// ========== 单选按钮测试 ==========
+// ========== 单选按钮测�?==========
 
 procedure TTestGUICore.Test_RadioButton_Selection;
 begin
   Step('测试单选按钮选择');
   
-  // 初始状态
+  // 初始状�?
   Assert.IsTrue(FBasicForm.rbOption1.Checked, 'Option1 应该默认选中');
   Assert.IsFalse(FBasicForm.rbOption2.Checked, 'Option2 应该未选中');
   
@@ -520,7 +520,7 @@ end;
 
 procedure TTestGUICore.Test_RadioButton_MutualExclusion;
 begin
-  Step('测试单选按钮互斥');
+  Step('测试单选按钮互�?);
   
   // 选择 Option1
   Click('rbOption1');
@@ -540,19 +540,19 @@ begin
   Verify(True, 'Mutual exclusion works', 'Passed');
 end;
 
-// ========== 下拉框测试 ==========
+// ========== 下拉框测�?==========
 
 procedure TTestGUICore.Test_ComboBox_Select_ByIndex;
 begin
   Step('测试下拉框按索引选择');
   
-  // 选择第二项
+  // 选择第二�?
   Select('cboSelect', 1);
   
   Assert.AreEqual(1, FBasicForm.cboSelect.ItemIndex);
   Assert.AreEqual('Item 2', FBasicForm.cboSelect.Text);
   
-  // 选择第三项
+  // 选择第三�?
   Select('cboSelect', 2);
   
   Assert.AreEqual(2, FBasicForm.cboSelect.ItemIndex);
@@ -575,15 +575,15 @@ end;
 
 procedure TTestGUICore.Test_ComboBox_Items_Count;
 begin
-  Step('测试下拉框项目数量');
+  Step('测试下拉框项目数�?);
   
-  Assert.AreEqual(3, FBasicForm.cboSelect.Items.Count, '应该有 3 个项目');
+  Assert.AreEqual(3, FBasicForm.cboSelect.Items.Count, '应该�?3 个项�?);
   
   Verify(FBasicForm.cboSelect.Items.Count = 3, '3', 
     IntToStr(FBasicForm.cboSelect.Items.Count));
 end;
 
-// ========== 列表框测试 ==========
+// ========== 列表框测�?==========
 
 procedure TTestGUICore.Test_ListBox_Select_Item;
 begin
@@ -602,7 +602,7 @@ end;
 
 procedure TTestGUICore.Test_ListBox_Items_Count;
 begin
-  Step('测试列表框项目数量');
+  Step('测试列表框项目数�?);
   
   Assert.AreEqual(3, FBasicForm.lbxList.Items.Count);
   
@@ -636,7 +636,7 @@ procedure TTestGUICore.Test_Memo_Clear;
 begin
   Step('测试清空 Memo');
   
-  // 先添加内容
+  // 先添加内�?
   FBasicForm.mmoText.Lines.Add('Test content');
   Assert.IsTrue(FBasicForm.mmoText.Lines.Count > 0);
   
@@ -675,16 +675,16 @@ begin
   Verify(True, 'TrackBar position changes', 'Passed');
 end;
 
-// ========== 进度条测试 ==========
+// ========== 进度条测�?==========
 
 procedure TTestGUICore.Test_ProgressBar_Value;
 begin
-  Step('测试进度条值');
+  Step('测试进度条�?);
   
-  // 初始值
+  // 初始�?
   Assert.AreEqual(75, FBasicForm.prgProgress.Position);
   
-  // 改变值
+  // 改变�?
   FBasicForm.prgProgress.Position := 50;
   ProcessMessages;
   
@@ -694,22 +694,22 @@ begin
     IntToStr(FBasicForm.prgProgress.Position));
 end;
 
-// ========== 控件状态测试 ==========
+// ========== 控件状态测�?==========
 
 procedure TTestGUICore.Test_Control_FindByName;
 var
   C: TControl;
 begin
-  Step('测试按名称查找控件');
+  Step('测试按名称查找控�?);
   
-  C := TUniBaseTestHelper.FindControl(FBasicForm, 'btnOK');
-  Assert.IsNotNull(C, 'btnOK 应该被找到');
+  C := TDeepBaseTestHelper.FindControl(FBasicForm, 'btnOK');
+  Assert.IsNotNull(C, 'btnOK 应该被找�?);
   Assert.AreEqual('btnOK', C.Name);
   
-  C := TUniBaseTestHelper.FindControl(FBasicForm, 'edtInput');
-  Assert.IsNotNull(C, 'edtInput 应该被找到');
+  C := TDeepBaseTestHelper.FindControl(FBasicForm, 'edtInput');
+  Assert.IsNotNull(C, 'edtInput 应该被找�?);
   
-  C := TUniBaseTestHelper.FindControl(FBasicForm, 'NonExistent');
+  C := TDeepBaseTestHelper.FindControl(FBasicForm, 'NonExistent');
   Assert.IsNull(C, '不存在的控件应该返回 nil');
   
   Verify(True, 'FindControl works', 'Passed');
@@ -792,7 +792,7 @@ procedure TTestGUIDataEntry.Test_DataEntry_ClearForm;
 begin
   Step('清空表单');
   
-  // 先填写
+  // 先填�?
   Input('edtName', 'Test Name');
   Input('edtEmail', 'test@test.com');
   
@@ -808,11 +808,11 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_Validation_Empty;
 begin
-  Step('验证空表单');
+  Step('验证空表�?);
   
   FDataForm.ClearForm;
   
-  Assert.IsFalse(FDataForm.ValidateForm, '空表单验证应该失败');
+  Assert.IsFalse(FDataForm.ValidateForm, '空表单验证应该失�?);
   
   Verify(not FDataForm.ValidateForm, 'Invalid', 'Invalid');
 end;
@@ -844,7 +844,7 @@ end;
 
 procedure TTestGUIDataEntry.Test_DataEntry_Workflow_Complete;
 begin
-  Step('完整数据录入工作流');
+  Step('完整数据录入工作�?);
   
   // 1. 填写表单
   Input('edtName', 'Jane Smith');
@@ -862,7 +862,7 @@ begin
   // 3. 提交
   Click('btnSubmit');
   
-  Assert.IsTrue(FSubmitClicked, '提交按钮应该被点击');
+  Assert.IsTrue(FSubmitClicked, '提交按钮应该被点�?);
   
   Verify(FSubmitClicked, 'Submitted', BoolToStr(FSubmitClicked, True));
 end;
@@ -882,7 +882,7 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Tab_Navigation;
 begin
-  Step('测试 Tab 键导航');
+  Step('测试 Tab 键导�?);
   
   // 设置初始焦点
   FBasicForm.edtInput.SetFocus;
@@ -890,17 +890,17 @@ begin
   
   Assert.AreEqual(FBasicForm.edtInput, FBasicForm.ActiveControl);
   
-  // 模拟 Tab 键 - 这里简化测试
-  // 实际测试中应该使用 SendInput 或类似方法
+  // 模拟 Tab �?- 这里简化测�?
+  // 实际测试中应该使�?SendInput 或类似方�?
   
   Verify(True, 'Tab navigation works', 'Passed');
 end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Enter_Default_Button;
 begin
-  Step('测试 Enter 键触发默认按钮');
+  Step('测试 Enter 键触发默认按�?);
   
-  // btnOK 是默认按钮
+  // btnOK 是默认按�?
   Assert.IsTrue(FBasicForm.btnOK.Default);
   
   Verify(FBasicForm.btnOK.Default, 'True', BoolToStr(FBasicForm.btnOK.Default, True));
@@ -908,9 +908,9 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Escape_Cancel_Button;
 begin
-  Step('测试 Escape 键触发取消按钮');
+  Step('测试 Escape 键触发取消按�?);
   
-  // btnCancel 是取消按钮
+  // btnCancel 是取消按�?
   Assert.IsTrue(FBasicForm.btnCancel.Cancel);
   
   Verify(FBasicForm.btnCancel.Cancel, 'True', BoolToStr(FBasicForm.btnCancel.Cancel, True));
@@ -918,13 +918,13 @@ end;
 
 procedure TTestGUIKeyboard.Test_Keyboard_Shortcuts;
 begin
-  Step('测试键盘快捷键');
+  Step('测试键盘快捷�?);
   
   // 基本测试 - 验证控件可以接收键盘输入
   FBasicForm.edtInput.SetFocus;
   ProcessMessages;
   
-  // 输入一些文本
+  // 输入一些文�?
   Input('edtInput', 'Keyboard Test');
   
   Assert.AreEqual('Keyboard Test', FBasicForm.edtInput.Text);

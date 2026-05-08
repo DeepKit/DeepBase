@@ -1,4 +1,4 @@
-# UniBase Web API Service Docker Compose Configuration
+# DeepBase Web API Service Docker Compose Configuration
 # Usage: docker-compose up -d
 
 version: '3.8'

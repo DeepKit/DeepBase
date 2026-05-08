@@ -3,13 +3,13 @@
 
   BUG-073: 事件类型注入风险
   
-  原问题: 允许通过字符串动态注册事件类型，可能被恶意利用
+  原问�? 允许通过字符串动态注册事件类型，可能被恶意利�?
   
-  修复方案: 实现事件类型白名单验证机制
+  修复方案: 实现事件类型白名单验证机�?
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.EventBus.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.EventBus.pas
+  优先�? P1 (High)
   分类: Security
   ============================================================================ }
 
@@ -36,11 +36,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证事件类型白名单验证存在')]
+    [Description('验证事件类型白名单验证存�?)]
     procedure Test_EventTypeWhitelist_Exists;
     
     [Test]
-    [Description('验证恶意事件类型被拒绝')]
+    [Description('验证恶意事件类型被拒�?)]
     procedure Test_MaliciousEventType_IsRejected;
   end;
 
@@ -73,7 +73,7 @@ end;
 
 function TBug073_EventTypeInjectionTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.EventBus.pas';
+  Result := 'Core/DeepBase.EventBus.pas';
 end;
 
 procedure TBug073_EventTypeInjectionTest.Test_EventTypeWhitelist_Exists;
@@ -83,14 +83,14 @@ var
 begin
   LogTestStart('Test_EventTypeWhitelist_Exists');
   
-  SourcePath := 'Core\UniBase.EventBus.pas';
+  SourcePath := 'Core\DeepBase.EventBus.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.EventBus.pas';
+    SourcePath := '..\Core\DeepBase.EventBus.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -103,7 +103,7 @@ begin
     SourceCode.Contains('AllowedEvents') or
     SourceCode.Contains('ValidateEventType') or
     SourceCode.Contains('IsValidEventType'),
-    '代码应该包含事件类型白名单验证机制');
+    '代码应该包含事件类型白名单验证机�?);
   
   LogTestEnd('Test_EventTypeWhitelist_Exists', True);
 end;
@@ -112,7 +112,7 @@ procedure TBug073_EventTypeInjectionTest.Test_MaliciousEventType_IsRejected;
 begin
   LogTestStart('Test_MaliciousEventType_IsRejected');
   
-  // 实际测试需要 EventBus 模块的具体实现
+  // 实际测试需�?EventBus 模块的具体实�?
   Assert.Pass('恶意事件类型拒绝测试通过代码审查确认');
   
   LogTestEnd('Test_MaliciousEventType_IsRejected', True);

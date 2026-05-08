@@ -1,10 +1,10 @@
 unit Main.Form;
 
 {*******************************************************************************
-  Main Form - 主窗体
+  Main Form - 主窗�?
 
-  UniBase 框架文档管理模板 - 主界面
-  左侧分类树 + 中间文档列表 + 右侧预览/编辑
+  DeepBase 框架文档管理模板 - 主界�?
+  左侧分类�?+ 中间文档列表 + 右侧预览/编辑
 *******************************************************************************}
 
 interface
@@ -113,7 +113,7 @@ implementation
 
 uses
   Data.Module, Form.DocumentEdit,
-  UniBase.Manager, UniBase.Logger;
+  DeepBase.Manager, DeepBase.Logger;
 
 { TMainForm }
 
@@ -130,10 +130,10 @@ begin
   lvDocuments.Columns.Clear;
   with lvDocuments.Columns.Add do begin Caption := '标题'; Width := 200; end;
   with lvDocuments.Columns.Add do begin Caption := '更新时间'; Width := 150; end;
-  with lvDocuments.Columns.Add do begin Caption := '状态'; Width := 80; end;
+  with lvDocuments.Columns.Add do begin Caption := '状�?; Width := 80; end;
   with lvDocuments.Columns.Add do begin Caption := '版本'; Width := 60; end;
 
-  // 配置搜索框
+  // 配置搜索�?
   edtSearch.TextHint := '搜索文档...';
 
   Log.Info('MainForm created');
@@ -204,11 +204,11 @@ begin
 
     FCategoryTree.LoadFromList(Categories);
 
-    // 添加"全部文档"根节点
+    // 添加"全部文档"根节�?
     Node := tvCategories.Items.Add(nil, '全部文档');
     Node.Data := nil;
 
-    // 构建树节点
+    // 构建树节�?
     for Cat in FCategoryTree.RootCategories do
     begin
       Node := tvCategories.Items.Add(nil, Cat.Name);
@@ -217,14 +217,14 @@ begin
       AddChildNodes(Node, Cat);
     end;
 
-    // 展开根节点
+    // 展开根节�?
     if tvCategories.Items.Count > 0 then
     begin
       tvCategories.Items[0].Expand(False);
       tvCategories.Selected := tvCategories.Items[0];
     end;
 
-    // 保留分类列表供后续使用
+    // 保留分类列表供后续使�?
     Categories.OwnsObjects := False;
   finally
     NodeMap.Free;
@@ -321,7 +321,7 @@ end;
 
 procedure TMainForm.UpdateStatusBar;
 begin
-  StatusBar1.Panels[0].Text := Format('文档数: %d', [FDocuments.Count]);
+  StatusBar1.Panels[0].Text := Format('文档�? %d', [FDocuments.Count]);
   StatusBar1.Panels[1].Text := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now);
 end;
 
@@ -374,7 +374,7 @@ procedure TMainForm.actDeleteExecute(Sender: TObject);
 begin
   if FCurrentDocument = nil then Exit;
 
-  if MessageDlg(Format('确定要删除文档 "%s" 吗？', [FCurrentDocument.Title]),
+  if MessageDlg(Format('确定要删除文�?"%s" 吗？', [FCurrentDocument.Title]),
     mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     DataModule1.DocumentService.DeleteDocument(FCurrentDocument.Id);
@@ -446,7 +446,7 @@ end;
 procedure TMainForm.mnuAboutClick(Sender: TObject);
 begin
   MessageDlg('Document Manager'#13#10 +
-    '基于 UniBase 框架的文档管理系统'#13#10#13#10 +
+    '基于 DeepBase 框架的文档管理系�?#13#10#13#10 +
     '版本: 1.0.0',
     mtInformation, [mbOK], 0);
 end;

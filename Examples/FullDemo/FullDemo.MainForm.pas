@@ -1,8 +1,8 @@
 { ============================================================================
-  FullDemo.MainForm - 综合演示主窗体
+  FullDemo.MainForm - 综合演示主窗�?
   
   版本: 1.0
-  说明: 演示 UniBase 框架所有核心功能
+  说明: 演示 DeepBase 框架所有核心功�?
   ============================================================================ }
 
 unit FullDemo.MainForm;
@@ -13,36 +13,38 @@ uses
   System.SysUtils,
   System.Classes,
   System.IOUtils,
+  Vcl.Graphics,
   Vcl.Controls,
   Vcl.Forms,
   Vcl.StdCtrls,
   Vcl.ExtCtrls,
   Vcl.ComCtrls,
   Vcl.Menus,
-  UniBase.Manager,
-  UniBase.Config,
-  UniBase.i18n,
-  UniBase.Logging,
-  UniBase.FormState,
-  UniBase.MRU,
-  UniBase.Theme,
-  UniBase.License,
-  UniBase.VCL.ConfigControls,
-  UniBase.VCL.I18nControls,
-  UniBase.VCL.MRUControls,
-  UniBase.VCL.ComboBoxes,
-  UniBase.VCL.LogListView,
-  UniBase.VCL.WaitForm,
-  UniBase.VCL.LicenseStatusPanel,
-  UniBase.VCL.LicenseAuthDialog,
-  UniBase.VCL.FeedbackDialog,
-  UniBase.TestCenter,
-  UniBase.VCL.TestCenterFrame;
+  DeepBase.Manager,
+  DeepBase.Types,
+  DeepBase.Config,
+  DeepBase.i18n,
+  DeepBase.Logging,
+  DeepBase.FormState,
+  DeepBase.MRU,
+  DeepBase.Theme,
+  DeepBase.License,
+  DeepBase.VCL.ConfigControls,
+  DeepBase.VCL.I18nControls,
+  DeepBase.VCL.MRUControls,
+  DeepBase.VCL.ComboBoxes,
+  DeepBase.VCL.LogListView,
+  DeepBase.VCL.WaitForm,
+  DeepBase.VCL.LicenseStatusPanel,
+  DeepBase.VCL.LicenseAuthDialog,
+  DeepBase.VCL.FeedbackDialog,
+  DeepBase.TestCenter,
+  DeepBase.VCL.TestCenterFrame;
 
 type
   TMainForm = class(TForm)
   private
-    // 主界面
+    // 主界�?
     FPageControl: TPageControl;
     FStatusBar: TStatusBar;
     FMainMenu: TMainMenu;
@@ -150,38 +152,36 @@ var
 begin
   inherited CreateNew(AOwner);
   
-  Caption := 'UniBase Full Demo';
+  Caption := 'DeepBase Full Demo';
   Width := 800;
   Height := 600;
   Position := poScreenCenter;
   
-  // 初始化 UniBase
+  // 初始�?DeepBase
   DBPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'demo.db');
-  if not UniBase.InitializeWithDB(DBPath, 2) then
+  if not DeepBase.Manager.DeepBase.InitializeWithDB(DBPath) then
   begin
-    ShowMessage('UniBase 初始化失败: ' + UniBase.GetInitErrorMessage);
+    ShowMessage('DeepBase 初始化失�? ' + DeepBase.Manager.DeepBase.LastError);
   end;
   
   // 创建界面
   CreateUI;
   
-  // 恢复窗体状态
-  UniBase.FormState.RestoreFormState(Self);
+  // 恢复窗体状�?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
   // 记录启动日志
-  UniBase.Log.LogInfo('FullDemo 应用已启动', 'App');
+  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启�?, 'App');
   
   UpdateStatusBar;
 end;
 
 destructor TMainForm.Destroy;
 begin
-  // 保存窗体状态
-  if UniBase.IsInitialized then
+  // 保存窗体状�?  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.FormState.SaveFormState(Self);
-    UniBase.Log.LogInfo('FullDemo 应用正在关闭', 'App');
-    UniBase.Finalize;
+    DeepBase.Manager.DeepBase.FormState.SaveFormState(Self);
+    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用正在关闭', 'App');
+    DeepBase.Manager.DeepBase.Finalize;
   end;
   
   inherited;
@@ -196,7 +196,7 @@ begin
   FStatusBar.Panels.Add.Width := 150;
   FStatusBar.Panels.Add.Width := 100;
   
-  // 主菜单
+  // 主菜�?
   CreateMainMenu;
   
   // 页面控件
@@ -270,8 +270,8 @@ begin
   
   FConfigEdit := TConfigEdit.Create(Self);
   FConfigEdit.Parent := FTabConfig;
-  FConfigEdit.Section := 'app';
-  FConfigEdit.Key := 'username';
+  FConfigEdit.Category := 'app';
+  FConfigEdit.ConfigKey := 'app.username';
   FConfigEdit.AutoLoad := True;
   FConfigEdit.AutoSave := True;
   FConfigEdit.SetBounds(20, Y, 250, 24);
@@ -281,8 +281,8 @@ begin
   FConfigCheckBox := TConfigCheckBox.Create(Self);
   FConfigCheckBox.Parent := FTabConfig;
   FConfigCheckBox.Caption := 'Enable Notifications (app.notifications)';
-  FConfigCheckBox.Section := 'app';
-  FConfigCheckBox.Key := 'notifications';
+  FConfigCheckBox.Category := 'app';
+  FConfigCheckBox.ConfigKey := 'app.notifications';
   FConfigCheckBox.AutoLoad := True;
   FConfigCheckBox.AutoSave := True;
   FConfigCheckBox.SetBounds(20, Y, 300, 24);
@@ -297,8 +297,8 @@ begin
   
   FConfigSpinEdit := TConfigSpinEdit.Create(Self);
   FConfigSpinEdit.Parent := FTabConfig;
-  FConfigSpinEdit.Section := 'app';
-  FConfigSpinEdit.Key := 'max_items';
+  FConfigSpinEdit.Category := 'app';
+  FConfigSpinEdit.ConfigKey := 'app.max_items';
   FConfigSpinEdit.DefaultValue := 100;
   FConfigSpinEdit.AutoLoad := True;
   FConfigSpinEdit.AutoSave := True;
@@ -324,7 +324,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabI18n;
-  LblDemo.Caption := '国际化演示 - 切换语言后控件文本自动更新';
+  LblDemo.Caption := '国际化演�?- 切换语言后控件文本自动更�?;
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 400, 20);
   Inc(Y, 40);
@@ -345,7 +345,7 @@ begin
   // Current language display
   FLblCurrentLang := TLabel.Create(Self);
   FLblCurrentLang.Parent := FTabI18n;
-  FLblCurrentLang.Caption := 'Current: ' + UniBase.i18n.CurrentLanguage;
+  FLblCurrentLang.Caption := 'Current: ' + DeepBase.Manager.DeepBase.I18n.CurrentLanguage;
   FLblCurrentLang.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
   
@@ -353,7 +353,7 @@ begin
   FI18nLabel := TI18nLabel.Create(Self);
   FI18nLabel.Parent := FTabI18n;
   FI18nLabel.TextKey := 'welcome_message';
-  FI18nLabel.Caption := 'Welcome to UniBase!';
+  FI18nLabel.Caption := 'Welcome to DeepBase!';
   FI18nLabel.Font.Size := 14;
   FI18nLabel.SetBounds(20, Y, 400, 30);
   Inc(Y, 40);
@@ -537,7 +537,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabLicense;
-  LblDemo.Caption := '许可证管理演示';
+  LblDemo.Caption := '许可证管理演�?;
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -573,7 +573,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabWait;
-  LblDemo.Caption := '等待窗口和进度演示';
+  LblDemo.Caption := '等待窗口和进度演�?;
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -613,13 +613,13 @@ end;
 
 procedure TMainForm.HandleSaveConfigClick(Sender: TObject);
 begin
-  UniBase.Config.SetConfig('test', 'manual_save', DateTimeToStr(Now));
+  UBConfig.SetConfig('test', 'manual_save', DateTimeToStr(Now));
   ShowMessage('Config saved manually at ' + DateTimeToStr(Now));
 end;
 
 procedure TMainForm.HandleLanguageChange(Sender: TObject);
 begin
-  FLblCurrentLang.Caption := 'Current: ' + UniBase.i18n.CurrentLanguage;
+  FLblCurrentLang.Caption := 'Current: ' + DeepBase.Manager.DeepBase.I18n.CurrentLanguage;
 end;
 
 procedure TMainForm.HandleLogButtonClick(Sender: TObject);
@@ -629,7 +629,7 @@ var
 begin
   Level := TLogLevel(TButton(Sender).Tag);
   Msg := Format('Test %s message at %s', [TButton(Sender).Caption, TimeToStr(Now)]);
-  UniBase.Log.Log(Msg, Level, 'Demo');
+  UBLogger.Log(Msg, Level, 'Demo');
 end;
 
 procedure TMainForm.HandleClearLogsClick(Sender: TObject);
@@ -648,7 +648,7 @@ begin
     Exit;
   end;
   
-  UniBase.MRU.AddMRU('demo_items', Item, Item);
+  UBMRU.AddMRU('demo_items', Item, Item);
   FMRUComboBox.Refresh;
   RefreshMRUList;
   FEdtMRUItem.Clear;
@@ -656,7 +656,7 @@ end;
 
 procedure TMainForm.HandleClearMRUClick(Sender: TObject);
 begin
-  UniBase.MRU.ClearMRU('demo_items');
+  UBMRU.ClearMRU('demo_items');
   FMRUComboBox.Refresh;
   RefreshMRUList;
 end;
@@ -670,7 +670,7 @@ end;
 procedure TMainForm.HandleThemeChange(Sender: TObject);
 begin
   if FThemeComboBox.ItemIndex >= 0 then
-    UniBase.Theme.ApplyTheme(FThemeComboBox.Text);
+    UBTheme.ApplyTheme(FThemeComboBox.Text);
 end;
 
 procedure TMainForm.HandleActivateClick(Sender: TObject);
@@ -684,28 +684,37 @@ end;
 
 procedure TMainForm.HandleFeedbackClick(Sender: TObject);
 begin
-  TFeedbackDialog.Execute('', 'UniBase FullDemo', '1.0.0');
+  TFeedbackDialog.Execute('', 'DeepBase FullDemo', '1.0.0');
 end;
 
 procedure TMainForm.HandleShowWaitClick(Sender: TObject);
+var
+  WaitForm: TWaitForm;
 begin
-  TWaitForm.Show('Please wait...');
-  Sleep(3000);
-  TWaitForm.Hide;
+  WaitForm := TWaitForm.ShowWait('Please wait...');
+  try
+    Sleep(3000);
+  finally
+    TWaitForm.CloseWait(WaitForm);
+  end;
 end;
 
 procedure TMainForm.HandleShowProgressClick(Sender: TObject);
 var
   I: Integer;
+  WaitForm: TWaitForm;
 begin
-  TWaitForm.Show('Processing...');
-  for I := 0 to 100 do
-  begin
-    TWaitForm.UpdateProgress(I, Format('Processing... %d%%', [I]));
-    Sleep(30);
-    Application.ProcessMessages;
+  WaitForm := TWaitForm.ShowWait('Processing...');
+  try
+    for I := 0 to 100 do
+    begin
+      WaitForm.UpdateProgress(I, 100, Format('Processing... %d%%', [I]));
+      Sleep(30);
+      Application.ProcessMessages;
+    end;
+  finally
+    TWaitForm.CloseWait(WaitForm);
   end;
-  TWaitForm.Hide;
 end;
 
 procedure TMainForm.HandleMenuExit(Sender: TObject);
@@ -715,20 +724,20 @@ end;
 
 procedure TMainForm.HandleMenuAbout(Sender: TObject);
 begin
-  ShowMessage('UniBase Full Demo v1.0' + sLineBreak +
-              'A comprehensive demo of all UniBase features.' + sLineBreak +
+  ShowMessage('DeepBase Full Demo v1.0' + sLineBreak +
+              'A comprehensive demo of all DeepBase features.' + sLineBreak +
               sLineBreak +
-              'Copyright (c) 2024 UniBase');
+              'Copyright (c) 2024 DeepBase');
 end;
 
 procedure TMainForm.RefreshMRUList;
 var
-  Items: TArray<TMRUItem>;
+  Items: TMRUItemArray;
   Item: TMRUItem;
   LI: TListItem;
 begin
   FLvMRU.Items.Clear;
-  Items := UniBase.MRU.GetMRUItems('demo_items', 20);
+  Items := UBMRU.GetMRUItems('demo_items', 20);
   for Item in Items do
   begin
     LI := FLvMRU.Items.Add;
@@ -739,9 +748,9 @@ end;
 
 procedure TMainForm.UpdateStatusBar;
 begin
-  FStatusBar.Panels[0].Text := 'DB: ' + UniBase.DBPath;
-  FStatusBar.Panels[1].Text := 'Lang: ' + UniBase.i18n.CurrentLanguage;
-  if UniBase.IsInitialized then
+  FStatusBar.Panels[0].Text := 'DB: ' + DeepBase.Manager.DeepBase.ConfigDBPath;
+  FStatusBar.Panels[1].Text := 'Lang: ' + DeepBase.Manager.DeepBase.I18n.CurrentLanguage;
+  if DeepBase.Manager.DeepBase.IsInitialized then
     FStatusBar.Panels[2].Text := 'Ready'
   else
     FStatusBar.Panels[2].Text := 'Not Init';

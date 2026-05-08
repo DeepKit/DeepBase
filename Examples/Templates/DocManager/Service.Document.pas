@@ -3,8 +3,8 @@ unit Service.Document;
 {*******************************************************************************
   Document Service - 文档服务
 
-  UniBase 框架文档管理模板 - 文档业务逻辑层
-  提供 CRUD、版本控制、标签、附件管理功能
+  DeepBase 框架文档管理模板 - 文档业务逻辑�?
+  提供 CRUD、版本控制、标签、附件管理功�?
 *******************************************************************************}
 
 interface
@@ -43,14 +43,14 @@ type
     function GetDocuments(const CategoryId: string = ''; 
       Status: TDocumentStatus = dsActive): TObjectList<TDocument>;
 
-    /// <summary>获取指定分类及其子分类下的文档</summary>
+    /// <summary>获取指定分类及其子分类下的文�?/summary>
     function GetDocumentsInCategory(const CategoryId: string; 
       IncludeSubCategories: Boolean = True): TObjectList<TDocument>;
 
     /// <summary>更新文档</summary>
     procedure UpdateDocument(Doc: TDocument; SaveVersion: Boolean = True);
 
-    /// <summary>删除文档（软删除）</summary>
+    /// <summary>删除文档（软删除�?/summary>
     procedure DeleteDocument(const Id: string; HardDelete: Boolean = False);
 
     /// <summary>恢复已删除的文档</summary>
@@ -73,7 +73,7 @@ type
     /// <summary>获取指定版本</summary>
     function GetVersion(const DocId: string; Version: Integer): TDocumentVersion;
 
-    /// <summary>恢复到指定版本</summary>
+    /// <summary>恢复到指定版�?/summary>
     procedure RestoreVersion(const DocId: string; Version: Integer);
 
     /// <summary>比较两个版本</summary>
@@ -93,7 +93,7 @@ type
     /// <summary>根据标签获取文档</summary>
     function GetDocumentsByTag(const TagName: string): TObjectList<TDocument>;
 
-    /// <summary>获取文档的标签</summary>
+    /// <summary>获取文档的标�?/summary>
     function GetDocumentTags(const DocId: string): TArray<string>;
 
     // ============= 附件管理 =============
@@ -135,7 +135,7 @@ type
     /// <summary>获取文档总数</summary>
     function GetDocumentCount(Status: TDocumentStatus = dsActive): Integer;
 
-    /// <summary>获取分类下的文档数</summary>
+    /// <summary>获取分类下的文档�?/summary>
     function GetCategoryDocumentCount(const CategoryId: string): Integer;
 
     /// <summary>获取最近修改的文档</summary>
@@ -150,7 +150,7 @@ implementation
 uses
   System.DateUtils, System.StrUtils,
   Winapi.Windows, Winapi.ShellAPI,
-  UniBase.Manager, UniBase.Logger;
+  DeepBase.Manager, DeepBase.Logger;
 
 { TDocumentService }
 
@@ -176,7 +176,7 @@ begin
   Result.Title := Title;
   Result.Content := Content;
   Result.CategoryId := CategoryId;
-  Result.CreatedBy := UniBase.Config.GetConfig('user.name', 'System');
+  Result.CreatedBy := DeepBase.Config.GetConfig('user.name', 'System');
   
   Query := TFDQuery.Create(nil);
   try
@@ -412,7 +412,7 @@ begin
     begin
       Result := Original.Clone;
       
-      // 保存克隆的文档
+      // 保存克隆的文�?
       var Query := TFDQuery.Create(nil);
       try
         Query.Connection := FConnection;
@@ -428,7 +428,7 @@ begin
         Query.ParamByName('Version').AsInteger := Result.Version;
         Query.ParamByName('CreatedAt').AsDateTime := Result.CreatedAt;
         Query.ParamByName('UpdatedAt').AsDateTime := Result.UpdatedAt;
-        Query.ParamByName('CreatedBy').AsString := UniBase.Config.GetConfig('user.name', 'System');
+        Query.ParamByName('CreatedBy').AsString := DeepBase.Config.GetConfig('user.name', 'System');
         Query.ExecSQL;
         
         // 复制标签
@@ -568,8 +568,8 @@ begin
       if Doc = nil then
         Exit;
       
-      // 先保存当前版本
-      SaveVersion(DocId, Format('恢复到版本 %d 前的自动保存', [Version]));
+      // 先保存当前版�?
+      SaveVersion(DocId, Format('恢复到版�?%d 前的自动保存', [Version]));
       
       // 恢复内容
       Doc.Title := Ver.Title;
@@ -594,7 +594,7 @@ begin
   V2 := GetVersion(DocId, Version2);
   try
     if (V1 = nil) or (V2 = nil) then
-      Exit('版本不存在');
+      Exit('版本不存�?);
     
     Result := Format('版本 %d (%s) vs 版本 %d (%s)'#13#10 +
       '标题: %s -> %s'#13#10 +
@@ -621,14 +621,14 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 查找或创建标签
+    // 查找或创建标�?
     Query.SQL.Text := 'SELECT Id FROM Tags WHERE LOWER(Name) = LOWER(:Name)';
     Query.ParamByName('Name').AsString := TagName;
     Query.Open;
     
     if Query.Eof then
     begin
-      // 创建新标签
+      // 创建新标�?
       TagId := TTag.NewId;
       Query.SQL.Text := 'INSERT INTO Tags (Id, Name, Color, UsageCount, CreatedAt) ' +
         'VALUES (:Id, :Name, :Color, 0, :CreatedAt)';
@@ -693,7 +693,7 @@ begin
     Query.ParamByName('DocId').AsString := DocId;
     Query.ExecSQL;
     
-    // 添加新标签
+    // 添加新标�?
     for TagName in TagNames do
       AddTag(DocId, TagName);
   finally
@@ -810,14 +810,14 @@ function TDocumentService.GenerateAttachmentPath(const FileName: string): string
 var
   SubDir: string;
 begin
-  // 按年月组织目录
+  // 按年月组织目�?
   SubDir := FormatDateTime('yyyy-mm', Now);
   Result := TPath.Combine(FStoragePath, SubDir);
   
   if not TDirectory.Exists(Result) then
     TDirectory.CreateDirectory(Result);
   
-  // 生成唯一文件名
+  // 生成唯一文件�?
   Result := TPath.Combine(Result, Format('%s_%s', [
     FormatDateTime('yyyymmdd_hhnnss', Now),
     FileName
@@ -835,7 +835,7 @@ begin
   Result := TAttachment.CreateFromFile(FilePath);
   Result.DocumentId := DocId;
   
-  // 复制文件到存储目录
+  // 复制文件到存储目�?
   DestPath := GenerateAttachmentPath(Result.FileName);
   TFile.Copy(FilePath, DestPath);
   Result.FilePath := DestPath;

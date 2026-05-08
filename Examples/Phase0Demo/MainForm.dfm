@@ -1,7 +1,7 @@
 object frmMain: TfrmMain
   Left = 0
   Top = 0
-  Caption = 'UniBase Phase 0 Demo'
+  Caption = 'DeepBase Phase 0 Demo'
   ClientHeight = 450
   ClientWidth = 700
   Color = clBtnFace

@@ -3,7 +3,7 @@ unit Service.Search;
 {*******************************************************************************
   Search Service - 搜索服务
 
-  UniBase 框架文档管理模板 - 全文搜索服务
+  DeepBase 框架文档管理模板 - 全文搜索服务
   使用 SQLite FTS5 实现高效全文搜索
 *******************************************************************************}
 
@@ -23,7 +23,7 @@ type
     Tags: TArray<string>;     // 限定标签
     DateFrom: TDateTime;      // 日期范围起始
     DateTo: TDateTime;        // 日期范围结束
-    Status: TDocumentStatus;  // 文档状态
+    Status: TDocumentStatus;  // 文档状�?
     MaxResults: Integer;      // 最大结果数
     IncludeContent: Boolean;  // 搜索内容
     IncludeTitle: Boolean;    // 搜索标题
@@ -45,16 +45,16 @@ type
   public
     constructor Create(AConnection: TFDConnection);
 
-    /// <summary>初始化 FTS 索引表</summary>
+    /// <summary>初始�?FTS 索引�?/summary>
     procedure InitializeFTS;
 
-    /// <summary>检查 FTS 是否可用</summary>
+    /// <summary>检�?FTS 是否可用</summary>
     function IsFTSAvailable: Boolean;
 
     /// <summary>基本全文搜索</summary>
     function Search(const Query: string): TObjectList<TSearchResult>;
 
-    /// <summary>高级搜索（带选项）</summary>
+    /// <summary>高级搜索（带选项�?/summary>
     function AdvancedSearch(const Query: string; 
       const Options: TSearchOptions): TObjectList<TSearchResult>;
 
@@ -88,7 +88,7 @@ implementation
 
 uses
   System.StrUtils, System.DateUtils,
-  UniBase.Logger;
+  DeepBase.Logger;
 
 { TSearchOptions }
 
@@ -112,7 +112,7 @@ begin
   FConnection := AConnection;
   FFTSEnabled := False;
   
-  // 检查并初始化 FTS
+  // 检查并初始�?FTS
   if IsFTSAvailable then
   begin
     InitializeFTS;
@@ -129,7 +129,7 @@ begin
   try
     Query.Connection := FConnection;
     try
-      // 尝试创建一个临时 FTS5 表来测试
+      // 尝试创建一个临�?FTS5 表来测试
       Query.SQL.Text := 'SELECT sqlite_version()';
       Query.Open;
       Result := True;  // SQLite 3.9+ 支持 FTS5
@@ -149,7 +149,7 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 创建 FTS5 虚拟表
+    // 创建 FTS5 虚拟�?
     Query.SQL.Text := 
       'CREATE VIRTUAL TABLE IF NOT EXISTS Documents_FTS USING fts5(' +
       '  DocId, ' +
@@ -249,7 +249,7 @@ begin
     end
     else
     begin
-      // 回退到 LIKE 搜索
+      // 回退�?LIKE 搜索
       SQL := 
         'SELECT d.Id, d.Title, d.Content, d.UpdatedAt, d.CategoryId, ' +
         '  c.Name AS CategoryName, 0 AS Score ' +
@@ -313,11 +313,11 @@ var
   Builder: TStringBuilder;
 begin
   // 构建 FTS5 查询语法
-  // 支持：单词搜索、短语搜索（引号）、前缀搜索（*）
+  // 支持：单词搜索、短语搜索（引号）、前缀搜索�?�?
   
   Builder := TStringBuilder.Create;
   try
-    // 分割搜索词
+    // 分割搜索�?
     Terms := Query.Split([' '], TStringSplitOptions.ExcludeEmpty);
     
     for I := 0 to High(Terms) do
@@ -332,7 +332,7 @@ begin
         Builder.Append(Terms[I]);
     end;
     
-    // 限定搜索列
+    // 限定搜索�?
     if Options.IncludeTitle and Options.IncludeContent then
       Result := Builder.ToString
     else if Options.IncludeTitle then
@@ -359,7 +359,7 @@ begin
   LowerContent := Content.ToLower;
   Terms := Query.ToLower.Split([' '], TStringSplitOptions.ExcludeEmpty);
   
-  // 查找第一个匹配词的位置
+  // 查找第一个匹配词的位�?
   Pos := -1;
   for var Term in Terms do
   begin
@@ -370,7 +370,7 @@ begin
   
   if Pos < 0 then
   begin
-    // 没找到匹配，返回开头部分
+    // 没找到匹配，返回开头部�?
     if Length(Content) <= MaxLength then
       Exit(Content)
     else
@@ -381,7 +381,7 @@ begin
   StartPos := Max(0, Pos - MaxLength div 3);
   EndPos := Min(Length(Content), StartPos + MaxLength);
   
-  // 尝试从单词边界开始
+  // 尝试从单词边界开�?
   while (StartPos > 0) and (Content[StartPos + 1] <> ' ') do
     Dec(StartPos);
   
@@ -419,7 +419,7 @@ begin
                 '<mark>' + Copy(Result, Pos + 1, Length(Term)) + '</mark>' +
                 Copy(Result, Pos + Length(Term) + 1, Length(Result));
       
-      // 继续查找下一个
+      // 继续查找下一�?
       LowerText := Result.ToLower;
       Pos := LowerText.IndexOf(Term, Pos + Length('<mark></mark>') + Length(Term));
     end;
@@ -454,7 +454,7 @@ begin
         Query.Next;
       end;
       
-      // 如果建议不足，从标签中补充
+      // 如果建议不足，从标签中补�?
       if Suggestions.Count < MaxCount then
       begin
         Query.SQL.Text := 
@@ -498,7 +498,7 @@ begin
     Query.ParamByName('DocId').AsString := DocId;
     Query.ExecSQL;
     
-    // 插入新索引
+    // 插入新索�?
     Query.SQL.Text := 
       'INSERT INTO Documents_FTS (DocId, Title, Content) VALUES (:DocId, :Title, :Content)';
     Query.ParamByName('DocId').AsString := DocId;
@@ -543,7 +543,7 @@ begin
     Query.SQL.Text := 'DELETE FROM Documents_FTS';
     Query.ExecSQL;
     
-    // 重新索引所有文档
+    // 重新索引所有文�?
     Query.SQL.Text := 
       'INSERT INTO Documents_FTS (DocId, Title, Content) ' +
       'SELECT Id, Title, Content FROM Documents WHERE Status != :Deleted';
@@ -582,13 +582,13 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 文档数
+    // 文档�?
     Query.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Documents WHERE Status != :Deleted';
     Query.ParamByName('Deleted').AsInteger := Ord(dsDeleted);
     Query.Open;
     DocCount := Query.FieldByName('Cnt').AsInteger;
     
-    // 索引数
+    // 索引�?
     if FFTSEnabled then
     begin
       Query.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Documents_FTS';
@@ -598,7 +598,7 @@ begin
     else
       IndexCount := 0;
     
-    Result := Format('文档数: %d, 索引数: %d, FTS: %s', [
+    Result := Format('文档�? %d, 索引�? %d, FTS: %s', [
       DocCount, 
       IndexCount, 
       IfThen(FFTSEnabled, '启用', '禁用')

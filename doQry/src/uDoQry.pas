@@ -7,8 +7,7 @@ uses
   FireDAC.Comp.Client, DBClient,
   uDoQryTypes;
 
-// 初始化与上下文
-procedure DoQryInit(const ProjectRoot: string);
+// 初始化与上下�?procedure DoQryInit(const ProjectRoot: string);
 function DoQryMakeContext(Conn: TFDConnection; DBType: TDBType; TimeoutSec: Integer; const CorrelationId: string): TDoQryContext;
 function DoQryNewCorrelationId: string;
 
@@ -16,8 +15,7 @@ function DoQryNewCorrelationId: string;
 function DoQryBeginTx(const Ctx: TDoQryContext): IDoQryTx;
 procedure DoQryRunInTx(const Ctx: TDoQryContext; const Proc: TProc);
 
-// 执行器
-function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
+// 执行�?function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
 function DoQryExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecInsertReturningId(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecScalar(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Variant;

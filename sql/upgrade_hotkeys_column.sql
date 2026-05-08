@@ -1,5 +1,5 @@
 -- ============================================================================
--- UniBase Schema Migration Script: Rename IsCustom to IsCustomized
+-- DeepBase Schema Migration Script: Rename IsCustom to IsCustomized
 -- 
 -- Description: Fixes column name mismatch between schema and code
 -- Date: 2025-12-08
@@ -7,7 +7,7 @@
 -- 
 -- Usage: 
 --   1. Backup your database first
---   2. Run this script using SQLite CLI or UniBase migration API
+--   2. Run this script using SQLite CLI or DeepBase migration API
 --
 -- Note: SQLite doesn't support ALTER TABLE RENAME COLUMN in older versions,
 --       so we recreate the table with the correct schema.

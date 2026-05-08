@@ -31,7 +31,7 @@ uses
   Vcl.Menus,
   FireDAC.Comp.Client,
   Studio.I18nScanner,
-  UniBase.LLM;
+  DeepBase.LLM;
 
 type
   TTranslationForm = class(TForm)
@@ -64,7 +64,7 @@ type
     
     // Internal state
     FConnection: TFDConnection;
-    FLLM: TUniBaseLLM;
+    FLLM: TDeepBaseLLM;
     FScanner: TI18nScanner;
     FTranslationData: TList<TStringList>;
     FModified: Boolean;
@@ -97,7 +97,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     
-    procedure Initialize(AConnection: TFDConnection; ALLM: TUniBaseLLM = nil);
+    procedure Initialize(AConnection: TFDConnection; ALLM: TDeepBaseLLM = nil);
     procedure RefreshData;
     
     property Modified: Boolean read FModified;
@@ -293,7 +293,7 @@ begin
   FStatusBar.Panels.Add.Width := 200;
 end;
 
-procedure TTranslationForm.Initialize(AConnection: TFDConnection; ALLM: TUniBaseLLM);
+procedure TTranslationForm.Initialize(AConnection: TFDConnection; ALLM: TDeepBaseLLM);
 begin
   FConnection := AConnection;
   FLLM := ALLM;

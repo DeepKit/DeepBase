@@ -1,7 +1,7 @@
-unit Tray.Database;
+﻿unit Tray.Database;
 
 {*******************************************************************************
-  UniBaseTray - 数据库管理模块
+  DeepBaseTray - 数据库管理模块
   
   功能:
   - 管理 studio.db 连接
@@ -161,7 +161,7 @@ var
   AppDataPath: string;
 begin
   AppDataPath := GetEnvironmentVariable('APPDATA');
-  Result := TPath.Combine(AppDataPath, 'UniBase');
+  Result := TPath.Combine(AppDataPath, 'DeepBase');
   if not TDirectory.Exists(Result) then
     TDirectory.CreateDirectory(Result);
   Result := TPath.Combine(Result, 'studio.db');

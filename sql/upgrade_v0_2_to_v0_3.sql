@@ -1,12 +1,12 @@
 -- ============================================================================
--- UniBase Schema Migration Script: v0.2 -> v0.3
+-- DeepBase Schema Migration Script: v0.2 -> v0.3
 -- 
 -- Description: Adds missing columns to support v0.3 features
 -- Date: 2025-12-01
 -- 
 -- Usage: 
 --   1. Backup your database first
---   2. Run this script using SQLite CLI or UniBase.Manager.RunMigrationScript
+--   2. Run this script using SQLite CLI or DeepBase.Manager.RunMigrationScript
 -- ============================================================================
 
 -- === Settings table ===

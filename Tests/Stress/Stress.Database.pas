@@ -20,7 +20,7 @@ uses
   System.SyncObjs,
   System.Diagnostics,
   FireDAC.Comp.Client,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================
@@ -159,15 +159,15 @@ implementation
 
 uses
   System.Math,
-  UniBase.Manager;
+  DeepBase.Manager;
 
 const
   STRESS_TEST_TABLE = 'stress_test_data';
 
-// Helper function to get database connection from UniBase Manager
+// Helper function to get database connection from DeepBase Manager
 function GetDBConnection: TFDConnection;
 begin
-  Result := UniBase.Manager.UniBase.ConfigDB;
+  Result := DeepBase.Manager.DeepBase.ConfigDB;
 end;
 
 // Helper IfThen for integers
@@ -208,7 +208,7 @@ var
 begin
   SW := TStopwatch.StartNew;
   try
-    // Get connection from UniBase Manager
+    // Get connection from DeepBase Manager
     Conn := GetDBConnection;
     if Conn = nil then
     begin

@@ -1,8 +1,8 @@
 { ============================================================================
-  Studio.MainForm - UniBase Studio Main Form
+  Studio.MainForm - DeepBase Studio Main Form
   
   Version: 2.0
-  Description: Main interface for UniBase configuration management tool
+  Description: Main interface for DeepBase configuration management tool
   ============================================================================ }
 
 unit Studio.MainForm;
@@ -38,8 +38,8 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Phys.SQLite,
   FireDAC.Phys.SQLiteDef,
-  UniBase.Manager,
-  UniBase.i18n,
+  DeepBase.Manager,
+  DeepBase.i18n,
   Studio.ConfigFrame,
   Studio.LogFrame,
   Studio.HotkeyFrame,
@@ -407,7 +407,7 @@ begin
     
     lblCurrentDB.Caption := ExtractFileName(APath);
     lblCurrentDB.Font.Color := clWindowText;
-    Caption := 'UniBase Studio - ' + ExtractFileName(APath);
+    Caption := 'DeepBase Studio - ' + ExtractFileName(APath);
     
     // Pass connection to Frames
     FConfigFrame.SetConnection(FConnection);

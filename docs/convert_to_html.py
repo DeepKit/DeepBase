@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Convert UniBase-AI-Integration-Guide.md to HTML with print-friendly styling"""
+"""Convert DeepBase-AI-Integration-Guide.md to HTML with print-friendly styling"""
 
 import markdown
 import os
 
 def convert_md_to_html():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    md_file = os.path.join(script_dir, 'UniBase-AI-Integration-Guide.md')
-    html_file = os.path.join(script_dir, 'UniBase-AI-Integration-Guide.html')
+    md_file = os.path.join(script_dir, 'DeepBase-AI-Integration-Guide.md')
+    html_file = os.path.join(script_dir, 'DeepBase-AI-Integration-Guide.html')
     
     with open(md_file, 'r', encoding='utf-8') as f:
         md_content = f.read()
@@ -21,7 +21,7 @@ def convert_md_to_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniBase AI Integration Guide</title>
+    <title>DeepBase AI Integration Guide</title>
     <style>
         @media print {
             body { font-size: 10pt; }
@@ -152,7 +152,7 @@ def convert_md_to_html():
         /* Print header */
         @media print {
             body::before {
-                content: "UniBase AI Integration Guide v1.0";
+                content: "DeepBase AI Integration Guide v1.0";
                 display: block;
                 text-align: center;
                 font-size: 8pt;

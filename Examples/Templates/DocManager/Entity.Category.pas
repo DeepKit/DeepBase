@@ -3,14 +3,14 @@ unit Entity.Category;
 {*******************************************************************************
   Category Entity - 分类实体
 
-  UniBase 框架文档管理模板 - 树状分类结构
+  DeepBase 框架文档管理模板 - 树状分类结构
 *******************************************************************************}
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  UniBase.ORM.Attributes, UniBase.ORM.Entity;
+  DeepBase.ORM.Attributes, DeepBase.ORM.Entity;
 
 type
   TCategory = class;
@@ -64,22 +64,22 @@ type
     /// <summary>获取验证错误</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>添加子分类</summary>
+    /// <summary>添加子分�?/summary>
     procedure AddChild(Child: TCategory);
 
-    /// <summary>移除子分类</summary>
-    procedure RemoveChild(const ChildId: string);
+    /// <summary>移除子分�?/summary>
+    procedure ReDeepMoveChild(const ChildId: string);
 
-    /// <summary>查找子分类</summary>
+    /// <summary>查找子分�?/summary>
     function FindChild(const ChildId: string): TCategory;
 
-    /// <summary>获取所有后代分类 ID</summary>
+    /// <summary>获取所有后代分�?ID</summary>
     function GetAllDescendantIds: TArray<string>;
 
-    /// <summary>检查是否是某个分类的后代</summary>
+    /// <summary>检查是否是某个分类的后�?/summary>
     function IsDescendantOf(const CategoryId: string): Boolean;
 
-    // 属性
+    // 属�?
     property Id: string read FId write FId;
     property Name: string read FName write FName;
     property ParentId: string read FParentId write FParentId;
@@ -88,11 +88,11 @@ type
     property IconIndex: Integer read FIconIndex write FIconIndex;
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
 
-    // 关系属性
+    // 关系属�?
     property Parent: TCategory read FParent write FParent;
     property Children: TObjectList<TCategory> read FChildren;
 
-    // 计算属性
+    // 计算属�?
     property IsRoot: Boolean read GetIsRoot;
     property FullPath: string read GetFullPath;
     property HasChildren: Boolean read GetHasChildren;
@@ -116,19 +116,19 @@ type
     /// <summary>从分类列表构建树</summary>
     procedure LoadFromList(Categories: TObjectList<TCategory>);
 
-    /// <summary>清空树</summary>
+    /// <summary>清空�?/summary>
     procedure Clear;
 
     /// <summary>根据 ID 查找分类</summary>
     function FindById(const Id: string): TCategory;
 
-    /// <summary>获取分类的完整路径</summary>
+    /// <summary>获取分类的完整路�?/summary>
     function GetCategoryPath(const Id: string): string;
 
-    /// <summary>获取指定分类下的所有后代 ID</summary>
+    /// <summary>获取指定分类下的所有后�?ID</summary>
     function GetDescendantIds(const ParentId: string): TArray<string>;
 
-    /// <summary>将树扁平化为列表（按深度优先顺序）</summary>
+    /// <summary>将树扁平化为列表（按深度优先顺序�?/summary>
     function Flatten: TArray<TCategory>;
 
     property RootCategories: TObjectList<TCategory> read FRootCategories;
@@ -200,7 +200,7 @@ begin
     if Length(FName) > 100 then
       Errors.Add('分类名称不能超过 100 字符');
 
-    // 检查循环引用
+    // 检查循环引�?
     if not FParentId.IsEmpty and (FParentId = FId) then
       Errors.Add('分类不能作为自己的父分类');
 
@@ -221,7 +221,7 @@ begin
   end;
 end;
 
-procedure TCategory.RemoveChild(const ChildId: string);
+procedure TCategory.ReDeepMoveChild(const ChildId: string);
 var
   I: Integer;
 begin
@@ -321,7 +321,7 @@ begin
   for Cat in Categories do
     FAllCategories.Add(Cat.Id, Cat);
 
-  // 构建树结构
+  // 构建树结�?
   BuildTree(Categories);
 end;
 
@@ -333,13 +333,13 @@ begin
   begin
     if Cat.ParentId.IsEmpty then
     begin
-      // 根分类
+      // 根分�?
       Cat.Level := 0;
       FRootCategories.Add(Cat);
     end
     else if FAllCategories.TryGetValue(Cat.ParentId, Parent) then
     begin
-      // 找到父分类
+      // 找到父分�?
       Parent.AddChild(Cat);
     end
     else
@@ -350,7 +350,7 @@ begin
     end;
   end;
 
-  // 按 SortOrder 排序
+  // �?SortOrder 排序
   FRootCategories.Sort(TComparer<TCategory>.Construct(
     function(const A, B: TCategory): Integer
     begin

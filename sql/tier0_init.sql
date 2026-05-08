@@ -1,19 +1,19 @@
 -- ============================================================================
 -- ⚠️ DEPRECATED - 此脚本已废弃
--- 请使用: data/create_sample_db.sql 或直接复制 data/样例Config.db
+-- 请使�? data/create_sample_db.sql 或直接复�?data/样例Config.db
 -- ============================================================================
 --
--- UniBase Tier 0 Schema 初始化脚本 (已废弃)
+-- DeepBase Tier 0 Schema 初始化脚�?(已废�?
 -- 版本: 0.3
--- 说明: 创建最小核心表结构，包含 6 张表
--- 废弃原因: 与 create_sample_db.sql 表结构不一致，已统一使用后者
+-- 说明: 创建最小核心表结构，包�?6 张表
+-- 废弃原因: �?create_sample_db.sql 表结构不一致，已统一使用后�?
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
 -- 1. 元信息表
 -- ----------------------------------------------------------------------------
 
--- SchemaInfo: 数据库版本信息
+-- SchemaInfo: 数据库版本信�?
 CREATE TABLE IF NOT EXISTS SchemaInfo (
   Key TEXT PRIMARY KEY,
   Value TEXT
@@ -36,10 +36,10 @@ INSERT OR REPLACE INTO ProjectInfo VALUES ('ProjectAuthor', '');
 INSERT OR REPLACE INTO ProjectInfo VALUES ('ProjectWebsite', '');
 
 -- ----------------------------------------------------------------------------
--- 2. 核心配置表
+-- 2. 核心配置�?
 -- ----------------------------------------------------------------------------
 
--- Settings: 通用配置表
+-- Settings: 通用配置�?
 CREATE TABLE IF NOT EXISTS Settings (
   Key TEXT PRIMARY KEY,
   Value TEXT,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS FormStates (
   Height INTEGER,
   WindowState INTEGER DEFAULT 0,   -- 0=Normal, 1=Minimized, 2=Maximized
   MonitorIndex INTEGER DEFAULT 0,  -- 多显示器支持
-  Extra TEXT                       -- JSON 格式，存储其他自定义状态
+  Extra TEXT                       -- JSON 格式，存储其他自定义状�?
 );
 
 -- ----------------------------------------------------------------------------
@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS FormStates (
 CREATE TABLE IF NOT EXISTS Languages (
   LangCode TEXT PRIMARY KEY,       -- zh-CN, en-US, ja-JP
   LangName TEXT NOT NULL,          -- Chinese (Simplified), English, Japanese
-  NativeName TEXT,                 -- 简体中文, English, 日本語
-  FlagIcon TEXT,                   -- 国旗图标文件名（相对于 assets/flags/）
+  NativeName TEXT,                 -- 简体中�? English, 日本�?
+  FlagIcon TEXT,                   -- 国旗图标文件名（相对�?assets/flags/�?
   IsEnabled INTEGER DEFAULT 1,
   IsDefault INTEGER DEFAULT 0,
   SortOrder INTEGER DEFAULT 0
@@ -86,20 +86,20 @@ CREATE TABLE IF NOT EXISTS Languages (
 
 -- 预置语言
 INSERT OR REPLACE INTO Languages VALUES ('en-US', 'English', 'English', 'us.png', 1, 1, 0);
-INSERT OR REPLACE INTO Languages VALUES ('zh-CN', 'Chinese (Simplified)', '简体中文', 'cn.png', 1, 0, 1);
+INSERT OR REPLACE INTO Languages VALUES ('zh-CN', 'Chinese (Simplified)', '简体中�?, 'cn.png', 1, 0, 1);
 INSERT OR REPLACE INTO Languages VALUES ('zh-TW', 'Chinese (Traditional)', '繁體中文', 'tw.png', 0, 0, 2);
-INSERT OR REPLACE INTO Languages VALUES ('ja-JP', 'Japanese', '日本語', 'jp.png', 0, 0, 3);
+INSERT OR REPLACE INTO Languages VALUES ('ja-JP', 'Japanese', '日本�?, 'jp.png', 0, 0, 3);
 
 -- I18nTexts: 国际化文本表
 CREATE TABLE IF NOT EXISTS I18nTexts (
   Id INTEGER PRIMARY KEY AUTOINCREMENT,
-  SourceText TEXT NOT NULL,            -- 英文原文（作为 Key）
+  SourceText TEXT NOT NULL,            -- 英文原文（作�?Key�?
   LangCode TEXT NOT NULL,              -- 语言代码
-  TranslatedText TEXT,                 -- 翻译后文本
+  TranslatedText TEXT,                 -- 翻译后文�?
   PluralForm TEXT,                     -- 复数形式（JSON）：{"one": "...", "other": "..."}
-  Context TEXT,                        -- 上下文说明（帮助翻译）
+  Context TEXT,                        -- 上下文说明（帮助翻译�?
   Module TEXT,                         -- 模块名称（用于分组）
-  LastUsedAt TEXT,                     -- 最后使用时间（统一命名为 LastUsedAt）
+  LastUsedAt TEXT,                     -- 最后使用时间（统一命名�?LastUsedAt�?
   IsAutoTranslated INTEGER DEFAULT 0,  -- 是否机器翻译
   IsVerified INTEGER DEFAULT 0,        -- 是否人工校验
   Extra TEXT,                          -- 扩展字段

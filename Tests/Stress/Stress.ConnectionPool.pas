@@ -19,7 +19,7 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================
@@ -226,13 +226,13 @@ uses
   {$ENDIF}
   System.DateUtils,
   System.Math,
-  UniBase.Manager,
-  UniBase.DB.ConnectionPool;
+  DeepBase.Manager,
+  DeepBase.DB.ConnectionPool;
 
-// Wrapper to access UniBase singleton
-function UB: TUniBaseManager; inline;
+// Wrapper to access DeepBase singleton
+function UB: TDeepBaseManager; inline;
 begin
-  Result := UniBase.Manager.UniBase;
+  Result := DeepBase.Manager.DeepBase;
 end;
 
 // Simulated connection for testing when real DB is not available

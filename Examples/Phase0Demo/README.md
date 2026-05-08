@@ -1,11 +1,11 @@
-# UniBase Phase 0 Demo
+﻿# DeepBase Phase 0 Demo
 
-This is a demo project for UniBase Phase 0 functionalities.
+This is a demo project for DeepBase Phase 0 functionalities.
 It demonstrates the core modules:
-- **UniBase.Manager**: Initialization and Database connection.
-- **UniBase.Config**: Reading and writing configuration.
-- **UniBase.i18n**: Language switching and text translation.
-- **UniBase.FormState**: Saving and restoring form window state.
+- **DeepBase.Manager**: Initialization and Database connection.
+- **DeepBase.Config**: Reading and writing configuration.
+- **DeepBase.i18n**: Language switching and text translation.
+- **DeepBase.FormState**: Saving and restoring form window state.
 
 ## How to Run
 

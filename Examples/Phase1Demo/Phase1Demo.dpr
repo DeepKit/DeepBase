@@ -5,10 +5,8 @@ uses
   Vcl.Dialogs,
   FireDAC.VCLUI.Wait,
   FireDAC.Comp.UI,
-  UniBase.Manager,
-  MainForm in 'MainForm.pas' {frmMain};
-
-{$R *.res}
+  DeepBase.Manager,
+MainForm in 'MainForm.pas' {frmMain};
 
 var
   ErrorMsg: string;
@@ -17,14 +15,14 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   
-  // Initialize UniBase
-  if not UniBase.Manager.UniBase.InitializeEx(ErrorMsg) then
+  // Initialize DeepBase
+  if not DeepBase.Manager.DeepBase.InitializeEx(ErrorMsg) then
   begin
-    ShowMessage('UniBase Initialization Failed: ' + ErrorMsg);
+    ShowMessage('DeepBase Initialization Failed: ' + ErrorMsg);
   end;
 
   Application.CreateForm(TfrmMain, frmMain);
   Application.Run;
   
-  UniBase.Manager.UniBase.Finalize;
+  DeepBase.Manager.DeepBase.Finalize;
 end.

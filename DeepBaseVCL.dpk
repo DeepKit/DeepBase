@@ -1,0 +1,51 @@
+package DeepBaseVCL;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase VCL Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  DeepBaseCore,
+  DeepBaseServices,
+  DeepBaseFeatures;
+
+contains
+  DeepBase.VCL.ThemeAdapter in 'VCL\DeepBase.VCL.ThemeAdapter.pas',
+  DeepBase.VCL.ExceptionAdapter in 'VCL\DeepBase.VCL.ExceptionAdapter.pas',
+  DeepBase.VCL.ConfigControls in 'VCL\DeepBase.VCL.ConfigControls.pas',
+  DeepBase.VCL.I18nControls in 'VCL\DeepBase.VCL.I18nControls.pas',
+  DeepBase.VCL.ComboBoxes in 'VCL\DeepBase.VCL.ComboBoxes.pas',
+  DeepBase.VCL.FormStateHelper in 'VCL\DeepBase.VCL.FormStateHelper.pas',
+  DeepBase.VCL.LogListView in 'VCL\DeepBase.VCL.LogListView.pas',
+  DeepBase.VCL.UIHelper in 'VCL\DeepBase.VCL.UIHelper.pas',
+  DeepBase.VCL.UpdateDialog in 'VCL\DeepBase.VCL.UpdateDialog.pas',
+  DeepBase.VCL.AutoUpdater in 'VCL\DeepBase.VCL.AutoUpdater.pas',
+  DeepBase.VCL.NotificationBar in 'VCL\DeepBase.VCL.NotificationBar.pas',
+  DeepBase.VCL.LicenseStatusPanel in 'VCL\DeepBase.VCL.LicenseStatusPanel.pas',
+  DeepBase.VCL.LicenseAuthDialog in 'VCL\DeepBase.VCL.LicenseAuthDialog.pas',
+  DeepBase.VCL.DBInitWizard in 'VCL\DeepBase.VCL.DBInitWizard.pas',
+  DeepBase.VCL.BindableControls in 'VCL\DeepBase.VCL.BindableControls.pas',
+  DeepBase.VCL.WaitForm in 'VCL\DeepBase.VCL.WaitForm.pas',
+  DeepBase.VCL.LLMSettingsFrame in 'VCL\DeepBase.VCL.LLMSettingsFrame.pas',
+  DeepBase.VCL.FeedbackDialog in 'VCL\DeepBase.VCL.FeedbackDialog.pas',
+  DeepBase.VCL.LLMChatFrame in 'VCL\DeepBase.VCL.LLMChatFrame.pas',
+  DeepBase.VCL.PromptVariableGrid in 'VCL\DeepBase.VCL.PromptVariableGrid.pas',
+  DeepBase.VCL.TestCenterFrame in 'VCL\DeepBase.VCL.TestCenterFrame.pas',
+  DeepBase.VCL.UnlockDialog in 'VCL\DeepBase.VCL.UnlockDialog.pas',
+  DeepBase.VCL.MVVMControls in 'VCL\DeepBase.VCL.MVVMControls.pas',
+  DeepBase.VCL.AboutFrame in 'VCL\DeepBase.VCL.AboutFrame.pas',
+  DeepBase.VCL.LLMConfigPanel in 'VCL\DeepBase.VCL.LLMConfigPanel.pas',
+  DeepBase.VCL.MRUControls in 'VCL\DeepBase.VCL.MRUControls.pas',
+  DeepBase.Export in 'Core\DeepBase.Export.pas',
+  DeepBase.Share in 'Core\DeepBase.Share.pas',
+  DeepBase.VCL.Export.Image in 'VCL\DeepBase.VCL.Export.Image.pas',
+  DeepBase.SplashScreen in 'Core\DeepBase.SplashScreen.pas',
+  DeepBase.VirtualScroll in 'Core\DeepBase.VirtualScroll.pas',
+  DeepBase.TestHelper in 'Core\DeepBase.TestHelper.pas',
+  DeepBase.VCL.TrayIcon in 'VCL\DeepBase.VCL.TrayIcon.pas',
+  DeepBase.VCL.Hotkeys in 'VCL\DeepBase.VCL.Hotkeys.pas',
+  DeepBase.VCL.DesktopLifecycle in 'VCL\DeepBase.VCL.DesktopLifecycle.pas';
+
+end.

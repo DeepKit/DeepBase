@@ -14,15 +14,15 @@ uses
   DUnitX.Loggers.Console,
   DUnitX.TestFramework,
   // Core dependencies
-  UniBase.Types in '..\Core\UniBase.Types.pas',
-  UniBase.CloudSync in '..\Features\UniBase.CloudSync.pas',
-  UniBase.CLI.SSH in '..\Tools\CLI\UniBase.CLI.SSH.pas',
-  UniBase.Updater in '..\Features\UniBase.Updater.pas',
-  UniBase.Crypto in '..\Core\UniBase.Crypto.pas',
+  DeepBase.Types in '..\Core\DeepBase.Types.pas',
+  DeepBase.CloudSync in '..\Features\DeepBase.CloudSync.pas',
+  DeepBase.CLI.SSH in '..\Tools\CLI\DeepBase.CLI.SSH.pas',
+  DeepBase.Updater in '..\Features\DeepBase.Updater.pas',
+  DeepBase.Crypto in '..\Core\DeepBase.Crypto.pas',
   // Test units
-  Test.UniBase.CloudSync in 'Test.UniBase.CloudSync.pas',
-  Test.UniBase.CLI.SSH in 'Test.UniBase.CLI.SSH.pas',
-  Test.UniBase.Updater in 'Test.UniBase.Updater.pas';
+  Test.DeepBase.CloudSync in 'Test.DeepBase.CloudSync.pas',
+  Test.DeepBase.CLI.SSH in 'Test.DeepBase.CLI.SSH.pas',
+  Test.DeepBase.Updater in 'Test.DeepBase.Updater.pas';
 
 var
   Runner: ITestRunner;
@@ -33,7 +33,7 @@ begin
   try
     WriteLn('');
     WriteLn('========================================');
-    WriteLn('  UniBase New Module Tests');
+    WriteLn('  DeepBase New Module Tests');
     WriteLn('========================================');
     WriteLn('');
     WriteLn('Testing: CloudSync, SSH, Updater');

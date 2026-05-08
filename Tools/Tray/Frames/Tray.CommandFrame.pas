@@ -1,7 +1,7 @@
-unit Tray.CommandFrame;
+﻿unit Tray.CommandFrame;
 
 {*******************************************************************************
-  UniBaseTray - 命令面板 Frame
+  DeepBaseTray - 命令面板 Frame
   
   功能:
   - 显示常用命令列表（按频次排序）

@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'UniBase Microservice Client Demo'
+  Caption = 'DeepBase Microservice Client Demo'
   ClientHeight = 600
   ClientWidth = 800
   Color = clBtnFace

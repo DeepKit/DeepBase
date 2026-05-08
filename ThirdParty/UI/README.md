@@ -1,7 +1,6 @@
-# UniBase UI Theme Package
+﻿# DeepBase UI Theme Package
 
-现代化 VCL 应用主题系统，支持 Material Design、Fluent Design 和 macOS 风格主题。
-
+现代�?VCL 应用主题系统，支�?Material Design、Fluent Design �?macOS 风格主题�?
 ## 内置主题
 
 ### Material Design
@@ -25,8 +24,8 @@
 |------|----------|
 | `FluentLight` | 浅色 |
 | `FluentDark` | 深色 |
-| `FluentAcrylicLight` | 亚克力浅色 |
-| `FluentAcrylicDark` | 亚克力深色 |
+| `FluentAcrylicLight` | 亚克力浅�?|
+| `FluentAcrylicDark` | 亚克力深�?|
 
 ### macOS Style
 
@@ -39,32 +38,28 @@
 
 ## 使用示例
 
-### 初始化
-
+### 初始�?
 ```pascal
-uses UniBase.UI.Themes;
+uses DeepBase.UI.Themes;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  // 注册所有内置主题
-  RegisterBuiltInThemes;
+  // 注册所有内置主�?  RegisterBuiltInThemes;
   
   // 应用默认主题
-  TUniBaseThemeManager.ApplyTheme('MaterialLight');
+  TDeepBaseThemeManager.ApplyTheme('MaterialLight');
 end;
 ```
 
 ### 切换主题
 
 ```pascal
-// 切换到深色主题
-TUniBaseThemeManager.ApplyTheme('MaterialDark');
+// 切换到深色主�?TDeepBaseThemeManager.ApplyTheme('MaterialDark');
 
 // 切换明暗模式
-TUniBaseThemeManager.ToggleDarkMode;
+TDeepBaseThemeManager.ToggleDarkMode;
 
-// 检查当前是否深色
-if TUniBaseThemeManager.IsDarkTheme then
+// 检查当前是否深�?if TDeepBaseThemeManager.IsDarkTheme then
   // ...
 ```
 
@@ -73,13 +68,12 @@ if TUniBaseThemeManager.IsDarkTheme then
 ```pascal
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  TUniBaseThemeManager.OnThemeChange := OnThemeChanged;
+  TDeepBaseThemeManager.OnThemeChange := OnThemeChanged;
 end;
 
 procedure TMainForm.OnThemeChanged(Sender: TObject; const AThemeName: string);
 begin
-  // 主题已切换
-  UpdateUI;
+  // 主题已切�?  UpdateUI;
 end;
 ```
 
@@ -89,7 +83,7 @@ end;
 var
   Colors: TThemeColors;
 begin
-  Colors := TUniBaseThemeManager.GetCurrentColors;
+  Colors := TDeepBaseThemeManager.GetCurrentColors;
   
   Panel1.Color := Colors.Surface;
   Panel1.Font.Color := Colors.OnSurface;
@@ -99,8 +93,7 @@ begin
 end;
 ```
 
-### 自定义主题
-
+### 自定义主�?
 ```pascal
 var
   MyTheme: TThemeDefinition;
@@ -111,25 +104,21 @@ begin
   MyTheme.Author := 'Me';
   MyTheme.ColorScheme := tcsLight;
   
-  // 自定义颜色
-  MyTheme.Colors := TThemeColors.Light;
+  // 自定义颜�?  MyTheme.Colors := TThemeColors.Light;
   MyTheme.Colors.Primary := $FF5722;  // Deep Orange
   MyTheme.Colors.Secondary := $03A9F4; // Light Blue
   
-  // 自定义字体
-  MyTheme.Typography := TThemeTypography.Default;
+  // 自定义字�?  MyTheme.Typography := TThemeTypography.Default;
   MyTheme.Typography.FontFamily := 'Microsoft YaHei UI';
   
-  // 自定义间距
-  MyTheme.Spacing := TThemeSpacing.Default;
+  // 自定义间�?  MyTheme.Spacing := TThemeSpacing.Default;
   MyTheme.Spacing.BorderRadius := 8;
   
   // 关联 VCL 样式
   MyTheme.VclStyleName := 'Cobalt XEMedia';
   
-  // 注册并应用
-  TUniBaseThemeManager.RegisterTheme(MyTheme);
-  TUniBaseThemeManager.ApplyTheme('MyCustomTheme');
+  // 注册并应�?  TDeepBaseThemeManager.RegisterTheme(MyTheme);
+  TDeepBaseThemeManager.ApplyTheme('MyCustomTheme');
 end;
 ```
 
@@ -138,20 +127,11 @@ end;
 ```pascal
 TThemeColors = record
   Primary: TColor;        // 主色
-  PrimaryLight: TColor;   // 主色浅
-  PrimaryDark: TColor;    // 主色深
-  Secondary: TColor;      // 次要色
-  Background: TColor;     // 背景色
-  Surface: TColor;        // 表面色
-  Error: TColor;          // 错误色
-  OnPrimary: TColor;      // 主色上的文字
-  OnSecondary: TColor;    // 次要色上的文字
-  OnBackground: TColor;   // 背景上的文字
+  PrimaryLight: TColor;   // 主色�?  PrimaryDark: TColor;    // 主色�?  Secondary: TColor;      // 次要�?  Background: TColor;     // 背景�?  Surface: TColor;        // 表面�?  Error: TColor;          // 错误�?  OnPrimary: TColor;      // 主色上的文字
+  OnSecondary: TColor;    // 次要色上的文�?  OnBackground: TColor;   // 背景上的文字
   OnSurface: TColor;      // 表面上的文字
-  OnError: TColor;        // 错误色上的文字
-  Border: TColor;         // 边框
-  Divider: TColor;        // 分隔线
-  Shadow: TColor;         // 阴影
+  OnError: TColor;        // 错误色上的文�?  Border: TColor;         // 边框
+  Divider: TColor;        // 分隔�?  Shadow: TColor;         // 阴影
   Overlay: TColor;        // 遮罩
 end;
 ```
@@ -169,8 +149,7 @@ TThemeTypography = record
   FontSizeCaption: Integer;// 说明 (12)
   FontSizeButton: Integer; // 按钮 (14)
   LineHeight: Double;      // 行高 (1.5)
-  LetterSpacing: Double;   // 字间距
-end;
+  LetterSpacing: Double;   // 字间�?end;
 ```
 
 ## 间距配置
@@ -191,11 +170,10 @@ end;
 ## 辅助函数
 
 ```pascal
-// 颜色转 Hex
+// 颜色�?Hex
 var Hex := ColorToHex(clRed);  // '#FF0000'
 
-// Hex 转颜色
-var Color := HexToColor('#2196F3');
+// Hex 转颜�?var Color := HexToColor('#2196F3');
 
 // 混合颜色
 var Blended := BlendColors(clWhite, clBlack, 128);  // 50% 混合
@@ -207,9 +185,8 @@ var Darker := DarkenColor(clBlue, 20);  // 加深 20%
 var Lighter := LightenColor(clBlue, 20);  // 减淡 20%
 ```
 
-## 强调色
-
-| 强调色 | 说明 |
+## 强调�?
+| 强调�?| 说明 |
 |--------|------|
 | `tacBlue` | 蓝色 |
 | `tacRed` | 红色 |
@@ -224,7 +201,6 @@ var Lighter := LightenColor(clBlue, 20);  // 减淡 20%
 
 ## 注意事项
 
-1. 需要在应用启动时调用 `RegisterBuiltInThemes`
+1. 需要在应用启动时调�?`RegisterBuiltInThemes`
 2. VCL 样式需要在项目选项中启用对应的样式资源
-3. 某些 VCL 控件可能需要手动应用主题颜色
-4. 建议使用 `TStyleManager` 配合使用以获得最佳效果
+3. 某些 VCL 控件可能需要手动应用主题颜�?4. 建议使用 `TStyleManager` 配合使用以获得最佳效�?

@@ -1,7 +1,7 @@
 unit Tray.KeyboardMouse;
 
 {*******************************************************************************
-  UniBaseTray - 键盘鼠标自动化模块
+  DeepBaseTray - 键盘鼠标自动化模块
   
   功能:
   - sendKeys: 发送按键组合
@@ -17,7 +17,7 @@ uses
   Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes,
   Vcl.Clipbrd,
-  Tray.Automation;
+  Tray.Types;
 
 type
   TKeyboardMouseActions = class
@@ -43,6 +43,9 @@ type
   end;
 
 implementation
+
+uses
+  Tray.Automation;
 
 { TKeyboardMouseActions }
 

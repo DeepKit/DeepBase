@@ -19,8 +19,8 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest,
-  UniBase.Types;
+  DeepBase.StressTest,
+  DeepBase.Types;
 
 type
   // ============================================================================
@@ -162,7 +162,7 @@ type
 implementation
 
 uses
-  UniBase.Logging;
+  DeepBase.Logging;
 
 // ============================================================================
 // TLogWriteStressTest
@@ -180,7 +180,7 @@ begin
   FLogCounter := 0;
   // Ensure logger is available
   if not IsLoggerInitialized then
-    raise Exception.Create('Logger not initialized - requires UniBase.Manager');
+    raise Exception.Create('Logger not initialized - requires DeepBase.Manager');
 end;
 
 procedure TLogWriteStressTest.Teardown;

@@ -14,12 +14,23 @@ Write-Host "Root: $RootDir"
 $DCUOut = Join-Path $RootDir "DCUOutput\Win64"
 if (-not (Test-Path $DCUOut)) { New-Item -ItemType Directory -Path $DCUOut -Force | Out-Null }
 
-$Packages = @('UniBaseCore','UniBasePersistence','UniBaseServices','UniBaseFeatures','UniBaseVCL','UniBaseFMX')
+$Packages = @('DeepBaseCore','DeepBasePersistence','DeepBaseServices','DeepBaseFeatures')
+if (Test-Path (Join-Path $RootDir 'FMX')) {
+    $Packages += 'DeepBaseFMX'
+}
+if (Test-Path (Join-Path $RootDir 'VCL')) {
+    $Packages += 'DeepBaseVCL'
+} else {
+    Write-Host "VCL source directory not found; DeepBaseVCL is excluded from this compile pass." -ForegroundColor Yellow
+}
 
-$SrcPaths = "Core;Features;VCL;FMX;Persistence;ThirdParty;ThirdParty\Payment"
+$SrcPathRoots = @('Core','Features','VCL','FMX','Persistence','ThirdParty','ThirdParty\Payment') |
+    Where-Object { Test-Path (Join-Path $RootDir $_) }
+$SrcPaths = ($SrcPathRoots -join ';')
 $LibPaths = "$BDS\lib\Win64\release;$BDS\lib\Win64\debug;$DCUOut"
 $AllPaths = "$SrcPaths;$LibPaths"
 $NS = "System;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Shell;Data;FireDAC;FireDAC.Comp;FireDAC.DApt;FireDAC.Stan;Xml;Web;Soap;Winapi;System.Win"
+$OverallFailed = $false
 
 foreach ($pkg in $Packages) {
     Write-Host ""
@@ -28,16 +39,18 @@ foreach ($pkg in $Packages) {
     # Use cmd /c to avoid PowerShell parameter parsing issues with dcc64
     $cmd = "`"$BDS\bin\dcc64.exe`" `"$pkg.dpk`" -Q -B -U`"$AllPaths`" -I`"$AllPaths`" -O`"$AllPaths`" -E`"$DCUOut`" -N`"$DCUOut`" -NO`"$DCUOut`" -NS$NS"
     $result = cmd /c $cmd 2>&1
+    $exitCode = $LASTEXITCODE
 
-    $hasError = $false
+    $hasError = $exitCode -ne 0
     foreach ($line in $result) {
-        if ($line -match 'Error|Fatal') { $hasError = $true; Write-Host $line -ForegroundColor Red }
+        if ($line -match '(^|\s)(Fatal|Error):\s') { $hasError = $true; Write-Host $line -ForegroundColor Red }
         elseif ($line -match 'Warning') { Write-Host "  $line" -ForegroundColor DarkGray }
         elseif ($line -match '^\d+ lines') { Write-Host $line -ForegroundColor Green }
     }
 
     if ($hasError) {
         Write-Host "$pkg FAILED" -ForegroundColor Red
+        $OverallFailed = $true
     } else {
         Write-Host "$pkg OK" -ForegroundColor Green
     }
@@ -49,7 +62,9 @@ $dcuCount = (Get-ChildItem -Path $DCUOut -Filter "*.dcu" -ErrorAction SilentlyCo
 Write-Host "Win64 DCU files in $DCUOut : $dcuCount"
 
 # Remove any stale DCU in source dirs
-$stale = Get-ChildItem -Path "Core","Features","VCL","FMX","Persistence","ThirdParty" -Filter "*.dcu" -Recurse -ErrorAction SilentlyContinue
+$StaleRoots = @('Core','Features','VCL','FMX','Persistence','ThirdParty') |
+    Where-Object { Test-Path (Join-Path $RootDir $_) }
+$stale = Get-ChildItem -Path $StaleRoots -Filter "*.dcu" -Recurse -ErrorAction SilentlyContinue
 if ($stale) {
     Write-Host ""
     Write-Host "Cleaning stale DCU files from source dirs:" -ForegroundColor Yellow
@@ -58,3 +73,9 @@ if ($stale) {
 } else {
     Write-Host "No stale DCU files in source dirs." -ForegroundColor Green
 }
+
+if ($OverallFailed) {
+    exit 1
+}
+
+exit 0

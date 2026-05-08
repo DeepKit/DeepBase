@@ -33,7 +33,7 @@ implementation
 
 procedure TTestUpdaterHelper.Setup;
 begin
-  FTempRoot := TPath.Combine(TPath.GetTempPath, 'UniBaseUpdaterHelperTests_' + TGUID.NewGuid.ToString);
+  FTempRoot := TPath.Combine(TPath.GetTempPath, 'DeepBaseUpdaterHelperTests_' + TGUID.NewGuid.ToString);
   FAppDir := TPath.Combine(FTempRoot, 'app');
   ForceDirectories(FTempRoot);
   ForceDirectories(FAppDir);

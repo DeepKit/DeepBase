@@ -3,7 +3,7 @@ unit Data.Module;
 {*******************************************************************************
   Data Module - 数据模块
 
-  UniBase 框架文档管理模板 - 数据访问层
+  DeepBase 框架文档管理模板 - 数据访问�?
 *******************************************************************************}
 
 interface
@@ -53,13 +53,13 @@ implementation
 {$R *.dfm}
 
 uses
-  UniBase.Manager, UniBase.Logger;
+  DeepBase.Manager, DeepBase.Logger;
 
 procedure TDataModule1.DataModuleCreate(Sender: TObject);
 begin
-  // 初始化路径
-  FStoragePath := TPath.Combine(UniBase.GetAppPath, 'Documents');
-  FDatabasePath := TPath.Combine(UniBase.GetAppPath, 'docmanager.db');
+  // 初始化路�?
+  FStoragePath := TPath.Combine(DeepBase.GetAppPath, 'Documents');
+  FDatabasePath := TPath.Combine(DeepBase.GetAppPath, 'docmanager.db');
 
   if not TDirectory.Exists(FStoragePath) then
     TDirectory.CreateDirectory(FStoragePath);
@@ -105,7 +105,7 @@ begin
   try
     Q.Connection := FDConnection1;
 
-    // Documents 表
+    // Documents �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Documents (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -121,7 +121,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Categories 表
+    // Categories �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Categories (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -135,7 +135,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Tags 表
+    // Tags �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Tags (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -146,7 +146,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // DocumentTags 表
+    // DocumentTags �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS DocumentTags (' +
       '  DocumentId TEXT,' +
@@ -158,7 +158,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // Attachments 表
+    // Attachments �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS Attachments (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -172,7 +172,7 @@ begin
       ')';
     Q.ExecSQL;
 
-    // DocumentVersions 表
+    // DocumentVersions �?
     Q.SQL.Text :=
       'CREATE TABLE IF NOT EXISTS DocumentVersions (' +
       '  Id TEXT PRIMARY KEY,' +
@@ -211,7 +211,7 @@ begin
   try
     Q.Connection := FDConnection1;
 
-    // 检查是否已有分类
+    // 检查是否已有分�?
     Q.SQL.Text := 'SELECT COUNT(*) AS Cnt FROM Categories';
     Q.Open;
     if Q.FieldByName('Cnt').AsInteger > 0 then
@@ -254,7 +254,7 @@ begin
     Q.ParamByName('Name').AsString := '归档';
     Q.ParamByName('Parent').Clear;
     Q.ParamByName('Sort').AsInteger := 99;
-    Q.ParamByName('Desc').AsString := '已归档文档';
+    Q.ParamByName('Desc').AsString := '已归档文�?;
     Q.ParamByName('Created').AsDateTime := Now;
     Q.ExecSQL;
 

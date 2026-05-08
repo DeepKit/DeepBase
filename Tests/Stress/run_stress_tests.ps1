@@ -1,4 +1,4 @@
-# UniBase Stress Test Runner
+# DeepBase Stress Test Runner
 # PowerShell script for running automated stress tests
 #
 # Usage:
@@ -32,9 +32,9 @@ param(
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 $TestExeCandidates = @(
-    (Join-Path $ScriptDir "UniBaseStressTests.exe"),
-    (Join-Path $ProjectRoot "Tests\Win64\Debug\UniBaseStressTests.exe"),
-    (Join-Path $ProjectRoot "Tests\Stress\Win64\Debug\UniBaseStressTests.exe")
+    (Join-Path $ScriptDir "DeepBaseStressTests.exe"),
+    (Join-Path $ProjectRoot "Tests\Win64\Debug\DeepBaseStressTests.exe"),
+    (Join-Path $ProjectRoot "Tests\Stress\Win64\Debug\DeepBaseStressTests.exe")
 )
 $TestExe = $TestExeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 $ResultsDir = Join-Path $ProjectRoot $OutputDir
@@ -63,7 +63,7 @@ function Check-TestExecutable {
         }
         Write-Info "Please build the test project first:"
         Write-Info "  cd Tests\Stress"
-        Write-Info "  dcc64 -B -U..\..\Core;..\..\Persistence;..\..\ThirdParty\Payment;..\..\ThirdParty\DB UniBaseStressTests.dpr"
+        Write-Info "  dcc64 -B -U..\..\Core;..\..\Persistence;..\..\ThirdParty\Payment;..\..\ThirdParty\DB DeepBaseStressTests.dpr"
         exit 1
     }
 }
@@ -130,7 +130,7 @@ function Generate-HtmlReport {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>UniBase Stress Test Report - $Timestamp</title>
+    <title>DeepBase Stress Test Report - $Timestamp</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -157,7 +157,7 @@ function Generate-HtmlReport {
 </head>
 <body>
     <div class="container">
-        <h1>UniBase Stress Test Report</h1>
+        <h1>DeepBase Stress Test Report</h1>
         <p>Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")</p>
 
         <div class="summary">
@@ -242,7 +242,7 @@ function Generate-HtmlReport {
 # Main execution
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  UniBase Stress Test Runner" -ForegroundColor Cyan
+Write-Host "  DeepBase Stress Test Runner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

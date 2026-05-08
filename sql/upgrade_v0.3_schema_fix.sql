@@ -1,7 +1,7 @@
 -- ============================================================================
--- UniBase v0.3 Schema 修复脚本
+-- DeepBase v0.3 Schema 修复脚本
 -- 
--- 用途: 修复旧版 SQL 脚本创建的数据库中的表结构不一致问题
+-- 用�? 修复旧版 SQL 脚本创建的数据库中的表结构不一致问�?
 -- 执行前请备份数据库！
 -- 
 -- 执行方法:
@@ -11,7 +11,7 @@
 PRAGMA foreign_keys = OFF;
 
 -- ============================================================================
--- 1. 修复 Logs 表
+-- 1. 修复 Logs �?
 -- 旧版问题: Level (INTEGER) 应为 LogLevel (TEXT)，缺少多个列
 -- ============================================================================
 
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS Logs_new (
   UserId TEXT
 );
 
--- 尝试从旧表迁移数据（兼容两种 Schema）
+-- 尝试从旧表迁移数据（兼容两种 Schema�?
 INSERT OR IGNORE INTO Logs_new (Id, LogTime, LogLevel, Source, Message, StackTrace, ThreadId)
 SELECT 
   Id, 
@@ -62,8 +62,8 @@ CREATE INDEX idx_logs_time ON Logs(LogTime);
 CREATE INDEX idx_logs_level ON Logs(LogLevel);
 
 -- ============================================================================
--- 2. 修复 MRU 表
--- 旧版问题: 列顺序不一致
+-- 2. 修复 MRU �?
+-- 旧版问题: 列顺序不一�?
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS MRU_new (
@@ -99,7 +99,7 @@ DROP INDEX IF EXISTS idx_mru_category_time;
 CREATE INDEX idx_mru_category_time ON MRU(Category, LastAccess DESC);
 
 -- ============================================================================
--- 3. 修复 Hotkeys 表
+-- 3. 修复 Hotkeys �?
 -- 旧版问题: Shortcut (INTEGER) 应为 (TEXT)，多余列
 -- ============================================================================
 
@@ -126,8 +126,8 @@ ALTER TABLE Hotkeys RENAME TO Hotkeys_backup;
 ALTER TABLE Hotkeys_new RENAME TO Hotkeys;
 
 -- ============================================================================
--- 4. 修复 Themes 表
--- 旧版问题: 缺少 AccentColor/CustomCSS，有多余列
+-- 4. 修复 Themes �?
+-- 旧版问题: 缺少 AccentColor/CustomCSS，有多余�?
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS Themes_new (
@@ -150,7 +150,7 @@ DROP TABLE IF EXISTS Themes_backup;
 ALTER TABLE Themes RENAME TO Themes_backup;
 ALTER TABLE Themes_new RENAME TO Themes;
 
--- 插入默认主题（如果不存在）
+-- 插入默认主题（如果不存在�?
 INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) 
   VALUES ('Windows', 'Windows', 0, 1, 0);
 INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) 
@@ -159,7 +159,7 @@ INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrd
   VALUES ('Carbon', 'Carbon (Dark)', 1, 1, 2);
 
 -- ============================================================================
--- 5. 确保核心表存在（Tier 0）
+-- 5. 确保核心表存在（Tier 0�?
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS SchemaInfo (
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS Languages (
 
 -- 确保默认语言存在
 INSERT OR IGNORE INTO Languages VALUES ('en-US', 'English', 'English', 'us.png', 1, 1, 0);
-INSERT OR IGNORE INTO Languages VALUES ('zh-CN', 'Chinese (Simplified)', '简体中文', 'cn.png', 1, 0, 1);
+INSERT OR IGNORE INTO Languages VALUES ('zh-CN', 'Chinese (Simplified)', '简体中�?, 'cn.png', 1, 0, 1);
 
 -- ============================================================================
 -- 6. 更新 Schema 版本
@@ -225,7 +225,7 @@ SELECT 'Tables migrated: Logs, MRU, Hotkeys, Themes' AS Status;
 SELECT 'Backup tables created: *_backup' AS Note;
 
 -- ============================================================================
--- 8. 清理备份表（可选 - 取消注释以执行）
+-- 8. 清理备份表（可�?- 取消注释以执行）
 -- ============================================================================
 
 -- DROP TABLE IF EXISTS Logs_backup;

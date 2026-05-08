@@ -1,5 +1,5 @@
 { ============================================================================
-  CLI.DB - 数据库管理命令
+  CLI.DB - 数据库管理命�?
   
   版本: 1.0
   说明: 实现 db init/upgrade/backup/check 命令
@@ -90,7 +90,7 @@ const
     ');';
 
   TIER2_SCHEMA =
-    'CREATE TABLE IF NOT EXISTS ub_llm_history (' +
+    'CREATE TABLE IF NOT EXISTS ub_llm_hiDeepStory (' +
     '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
     '  session_id TEXT,' +
     '  timestamp TEXT NOT NULL,' +
@@ -99,7 +99,7 @@ const
     '  model TEXT,' +
     '  tokens_used INTEGER' +
     ');' +
-    'CREATE INDEX IF NOT EXISTS idx_llm_session ON ub_llm_history(session_id);' +
+    'CREATE INDEX IF NOT EXISTS idx_llm_session ON ub_llm_hiDeepStory(session_id);' +
     'CREATE TABLE IF NOT EXISTS ub_exception (' +
     '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
     '  timestamp TEXT NOT NULL,' +
@@ -143,7 +143,7 @@ class procedure TDBCommands.ShowHelp;
 begin
   Writeln('Database Management Commands');
   Writeln('');
-  Writeln('Usage: unibase db <subcommand> [options]');
+  Writeln('Usage: DeepBase db <subcommand> [options]');
   Writeln('');
   Writeln('Subcommands:');
   Writeln('  init      Initialize a new database');
@@ -169,10 +169,10 @@ begin
   Writeln('  --fix               Attempt to fix issues');
   Writeln('');
   Writeln('Examples:');
-  Writeln('  unibase db init --path myapp.db --tier 1');
-  Writeln('  unibase db upgrade --path myapp.db --tier 2');
-  Writeln('  unibase db backup --path myapp.db');
-  Writeln('  unibase db check --path myapp.db');
+  Writeln('  DeepBase db init --path myapp.db --tier 1');
+  Writeln('  DeepBase db upgrade --path myapp.db --tier 2');
+  Writeln('  DeepBase db backup --path myapp.db');
+  Writeln('  DeepBase db check --path myapp.db');
 end;
 
 class function TDBCommands.CreateConnection(const DBPath: string): TFDConnection;
@@ -510,7 +510,7 @@ begin
       TCliUtils.Info('Checking required tables...');
       Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''table'' AND name LIKE ''ub_%''';
       Query.Open;
-      TCliUtils.Info('Found %d UniBase tables.', [Query.RecordCount]);
+      TCliUtils.Info('Found %d DeepBase tables.', [Query.RecordCount]);
       Query.Close;
       
       // Summary

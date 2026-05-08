@@ -8,7 +8,7 @@ uses
   System.Generics.Collections,
   System.DateUtils,
   FireDAC.Comp.Client,
-  UniBase.Exceptions;
+  DeepBase.Exceptions;
 
 type
   TLogLevel = (llTrace, llDebug, llInfo, llWarn, llError, llFatal);
@@ -38,7 +38,7 @@ type
   end;
 
   /// <summary>
-  /// Log source implementation based on a FireDAC connection to the UniBase Logs table.
+  /// Log source implementation based on a FireDAC connection to the DeepBase Logs table.
   /// </summary>
   TDbLogSource = class(TInterfacedObject, ILogSource)
   private

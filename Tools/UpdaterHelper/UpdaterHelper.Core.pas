@@ -1,4 +1,4 @@
-unit UpdaterHelper.Core;
+﻿unit UpdaterHelper.Core;
 
 interface
 
@@ -49,7 +49,7 @@ var
   Line: string;
 begin
   try
-    LogPath := TPath.Combine(TPath.GetTempPath, 'UniBase.UpdaterHelper.log');
+    LogPath := TPath.Combine(TPath.GetTempPath, 'DeepBase.UpdaterHelper.log');
     Line := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now) + ' ' + Msg + sLineBreak;
     TFile.AppendAllText(LogPath, Line, TEncoding.UTF8);
   except
@@ -275,7 +275,7 @@ begin
   Result := False;
   ErrorMessage := '';
   CreatedFiles := TList<string>.Create;
-  TempRoot := TPath.Combine(TPath.GetTempPath, 'UniBase_UpdaterHelper');
+  TempRoot := TPath.Combine(TPath.GetTempPath, 'DeepBase_UpdaterHelper');
   ExtractDir := TPath.Combine(TempRoot, 'extract_' + FormatDateTime('yyyymmdd_hhnnss_zzz', Now));
   BackupDir := TPath.Combine(TempRoot, 'backup_' + FormatDateTime('yyyymmdd_hhnnss_zzz', Now));
 

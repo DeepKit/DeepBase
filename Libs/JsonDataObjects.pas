@@ -41,7 +41,7 @@ unit JsonDataObjects;
   {$DEFINE SUPPORTS_UTF8STRING}
 {$ELSE}
   {$IFDEF VER200}
-    // Delphi 2009's ErrorInsight parser uses the CompilerVersion's memory address instead of 20.0, failing all the
+    // Delphi 2009's ErrorDeepInsight parser uses the CompilerVersion's memory address instead of 20.0, failing all the
     // IF CompilerVersion compiler directives
     {$DEFINE CPUX86}
   {$ELSE}
@@ -560,7 +560,7 @@ type
 
     property Path[const Name: string]: TJsonDataValueHelper read GetObjectPath write SetObjectPath;
   private
-    FData: record // hide the data from CodeInsight (bug in CodeInsight)
+    FData: record // hide the data from CodeDeepInsight (bug in CodeDeepInsight)
       FIntern: PJsonDataValue;
       FName: string;
       FNameResolver: TJsonObject;

@@ -5,9 +5,9 @@ setlocal enabledelayedexpansion
 REM ============================================================
 REM  批量播种脚本 - 将模板数据库复制到各项目目录
 REM  
-REM  使用方法：
-REM  1. 先用 SeedTool.exe 播种一个 template.db
-REM  2. 运行此脚本自动复制到所有项目
+REM  使用方法�?
+REM  1. 先用 SeedTool.exe 播种一�?template.db
+REM  2. 运行此脚本自动复制到所有项�?
 REM ============================================================
 
 set "TEMPLATE_DB=template.db"
@@ -15,8 +15,8 @@ set "BASE_DIR=D:\_Progs\02Business"
 
 REM 检查模板数据库是否存在
 if not exist "%TEMPLATE_DB%" (
-    echo [错误] 模板数据库 %TEMPLATE_DB% 不存在！
-    echo 请先用 SeedTool.exe 播种一个 template.db
+    echo [错误] 模板数据�?%TEMPLATE_DB% 不存在！
+    echo 请先�?SeedTool.exe 播种一�?template.db
     pause
     exit /b 1
 )
@@ -29,16 +29,16 @@ echo ============================================================
 echo.
 
 REM 单机工具项目列表
-set "PROJECTS=MoveC TwoKeyRun TransSuccess uniSVG EasyConfig OmniSync touch wyjx Chain2VFactory"
+set "PROJECTS=DeepMoveC TwoKeyRun DeepCharset DeepSVG EasyConfig DeepSync touch wyjx Chain2VFactory"
 
-REM 对应的数据库文件名
-set "DB_MoveC=MoveCConfig.db"
+REM 对应的数据库文件�?
+set "DB_DeepMoveC=DeepMoveCConfig.db"
 set "DB_TwoKeyRun=TwoKeyRunConfig.db"
-set "DB_TransSuccess=TransSuccessConfig.db"
-set "DB_uniSVG=uniSVGConfig.db"
+set "DB_DeepCharset=DeepCharsetConfig.db"
+set "DB_DeepSVG=DeepSVGConfig.db"
 set "DB_EasyConfig=EasyConfigConfig.db"
-set "DB_OmniSync=OmniSyncConfig.db"
-set "DB_touch=TouchstoneConfig.db"
+set "DB_DeepSync=DeepSyncConfig.db"
+set "DB_touch=DeepCompareConfig.db"
 set "DB_wyjx=wyjxConfig.db"
 set "DB_Chain2VFactory=Chain2VConfig.db"
 
@@ -54,26 +54,26 @@ for %%P in (%PROJECTS%) do (
         echo [复制] %%P -^> !DB_NAME!
         copy /Y "%TEMPLATE_DB%" "!TARGET_FILE!" >nul 2>&1
         if !errorlevel! equ 0 (
-            echo        √ 成功
+            echo        �?成功
             set /a SUCCESS_COUNT+=1
         ) else (
             echo        × 失败
             set /a FAIL_COUNT+=1
         )
     ) else (
-        echo [跳过] %%P - 目录不存在
+        echo [跳过] %%P - 目录不存�?
         set /a FAIL_COUNT+=1
     )
 )
 
 echo.
 echo ============================================================
-echo  完成！成功: %SUCCESS_COUNT%  失败: %FAIL_COUNT%
+echo  完成！成�? %SUCCESS_COUNT%  失败: %FAIL_COUNT%
 echo ============================================================
 echo.
-echo 注意：所有程序需要使用相同的加密配置：
-echo   EncryptionKey: UniBase_Shared_Key_2025
-echo   Salt: UniBase_Shared_Salt_v1
+echo 注意：所有程序需要使用相同的加密配置�?
+echo   EncryptionKey: DeepBase_Shared_Key_2025
+echo   Salt: DeepBase_Shared_Salt_v1
 echo   KdfIterations: 10000
 echo   EnableHMAC: True
 echo.

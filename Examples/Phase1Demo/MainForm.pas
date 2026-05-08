@@ -6,11 +6,11 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   FireDAC.VCLUI.Wait, FireDAC.Comp.UI, Vcl.ComCtrls,
-  UniBase.Manager, UniBase.Logging, UniBase.VCL.Controls, UniBase.VCL.ConfigControls,
-  UniBase.VCL.I18nControls, UniBase.VCL.ComboBoxes, UniBase.VCL.FormStateHelper,
-  UniBase.VCL.LogListView, UniBase.VCL.UIHelper, UniBase.VCL.LLMConfigPanel,
-  UniBase.VCL.WaitForm, UniBase.VCL.NotificationBar, UniBase.Exception,
-  UniBase.Exceptions;
+  DeepBase.Manager, DeepBase.Logging, DeepBase.VCL.Controls, DeepBase.VCL.ConfigControls,
+  DeepBase.VCL.I18nControls, DeepBase.VCL.ComboBoxes, DeepBase.VCL.FormStateHelper,
+  DeepBase.VCL.LogListView, DeepBase.VCL.UIHelper, DeepBase.VCL.LLMConfigPanel,
+  DeepBase.VCL.WaitForm, DeepBase.VCL.NotificationBar, DeepBase.Exception,
+  DeepBase.Exceptions;
 
 type
   TfrmMain = class(TForm)
@@ -60,10 +60,10 @@ implementation
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  TUniBaseUIHelper.ApplyMicaEffect(Self);
+  TDeepBaseUIHelper.ApplyMicaEffect(Self);
   
   // Install Global Exception Handler
-  TUniBaseExceptionHandler.Install;
+  TDeepBaseExceptionHandler.Install;
   
   // Create Controls Dynamically for Demo purpose
   
@@ -81,7 +81,7 @@ begin
   chkAutoSave.Caption := 'Auto Save (Config Bound)';
   
   edtTestConfig.ConfigKey := 'Demo.TestString';
-  edtTestConfig.DefaultValue := 'Hello UniBase';
+  edtTestConfig.DefaultValue := 'Hello DeepBase';
   
   btnTestLog.TextKey := 'Add Log';
   
@@ -146,29 +146,32 @@ begin
 end;
 
 procedure TfrmMain.btnShowWaitClick(Sender: TObject);
+var
+  WaitForm: TWaitForm;
 begin
-  TWaitForm.ShowWait('Processing data...');
+  WaitForm := TWaitForm.ShowWait('Processing data...');
   
   // Simulate work
   TThread.CreateAnonymousThread(procedure
   begin
     Sleep(3000);
-    TThread.Synchronize(nil, procedure
-    begin
-      TWaitForm.HideWait;
-      NotificationBar1.ShowMessage('Operation Completed!', ntSuccess);
-    end);
+    TThread.Synchronize(nil, TThreadProcedure(
+      procedure
+      begin
+        TWaitForm.CloseWait(WaitForm);
+        NotificationBar1.ShowSuccess('Operation Completed!');
+      end));
   end).Start;
 end;
 
 procedure TfrmMain.btnShowNotifyClick(Sender: TObject);
 begin
-  NotificationBar1.ShowMessage('This is a non-intrusive notification.', ntInfo);
+  NotificationBar1.ShowInfo('This is a non-intrusive notification.');
 end;
 
 procedure TfrmMain.btnTriggerErrorClick(Sender: TObject);
 begin
-  raise EOperationException.Create('This is a test exception handled by UniBase!');
+  raise EOperationException.Create('This is a test exception handled by DeepBase!');
 end;
 
 procedure TfrmMain.btnTestLogClick(Sender: TObject);

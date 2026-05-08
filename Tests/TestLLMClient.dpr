@@ -1,16 +1,16 @@
-program TestLLMClient;
+﻿program TestLLMClient;
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
   System.Classes,
-  UniBase.LLM.BillingClient in '..\Core\UniBase.LLM.BillingClient.pas',
-  UniBase.Security.DPAPI in '..\Core\UniBase.Security.DPAPI.pas';
+  DeepBase.LLM.BillingClient in '..\Core\DeepBase.LLM.BillingClient.pas',
+  DeepBase.Security.DPAPI in '..\Core\DeepBase.Security.DPAPI.pas';
 
 const
   // 硅基流动 API (OpenAI 兼容)
   BASE_URL = 'https://api.siliconflow.cn/v1';
-  // 使用环境变量或直接填入 API Key 测试
+  // 使用环境变量或直接填�?API Key 测试
   API_KEY = ''; // 需要填入实际的 API Key
   TENANT_ID = 'test';
 
@@ -24,18 +24,18 @@ begin
   
   try
     Encrypted := TDPAPIHelper.ProtectString(Original);
-    WriteLn('加密后 (Base64): ', Copy(Encrypted, 1, 50), '...');
+    WriteLn('加密�?(Base64): ', Copy(Encrypted, 1, 50), '...');
     
     Decrypted := TDPAPIHelper.UnprotectString(Encrypted);
-    WriteLn('解密后: ', Decrypted);
+    WriteLn('解密�? ', Decrypted);
     
     if Original = Decrypted then
-      WriteLn('✓ DPAPI 测试通过!')
+      WriteLn('�?DPAPI 测试通过!')
     else
-      WriteLn('✗ DPAPI 测试失败: 解密结果不匹配');
+      WriteLn('�?DPAPI 测试失败: 解密结果不匹�?);
   except
     on E: Exception do
-      WriteLn('✗ DPAPI 测试失败: ', E.Message);
+      WriteLn('�?DPAPI 测试失败: ', E.Message);
   end;
   WriteLn;
 end;
@@ -61,9 +61,9 @@ begin
       WriteLn(Format('  [%d] %s: %s', [I, Messages[I].RoleToString, Copy(Messages[I].Content, 1, 30)]));
     
     if (Length(Messages) = 4) and (Messages[0].Role = mrSystem) then
-      WriteLn('✓ ChatHistory 测试通过!')
+      WriteLn('�?ChatHistory 测试通过!')
     else
-      WriteLn('✗ ChatHistory 测试失败');
+      WriteLn('�?ChatHistory 测试失败');
   finally
     History.Free;
   end;
@@ -80,8 +80,8 @@ begin
   
   if AApiKey = '' then
   begin
-    WriteLn('⚠ 跳过: 未提供 API Key');
-    WriteLn('  请设置 SILICONFLOW_API_KEY 环境变量或直接修改代码');
+    WriteLn('�?跳过: 未提�?API Key');
+    WriteLn('  请设�?SILICONFLOW_API_KEY 环境变量或直接修改代�?);
     Exit;
   end;
   
@@ -91,34 +91,34 @@ begin
     Client.MaxTokens := 100;
     Client.Timeout := 30000;
     
-    WriteLn('发送请求...');
+    WriteLn('发送请�?..');
     WriteLn('Model: ', Client.Model);
     WriteLn('BaseURL: ', Client.BaseURL);
     
-    // 测试非流式
+    // 测试非流�?
     WriteLn;
-    WriteLn('--- 非流式测试 ---');
+    WriteLn('--- 非流式测�?---');
     try
       if Client.Chat('Say "Hello World" in Chinese, just the translation.', Response) then
       begin
         WriteLn('响应: ', Response.Content);
         WriteLn('Token 使用: ', Response.Usage.TotalTokens);
         WriteLn('耗时: ', Response.DurationMs, 'ms');
-        WriteLn('✓ 非流式测试通过!');
+        WriteLn('�?非流式测试通过!');
       end
       else
       begin
-        WriteLn('✗ 请求失败: ', Response.ErrorMessage);
+        WriteLn('�?请求失败: ', Response.ErrorMessage);
       end;
     except
       on E: EBillingAuthError do
-        WriteLn('✗ 认证失败: ', E.Message);
+        WriteLn('�?认证失败: ', E.Message);
       on E: EBillingBalanceError do
-        WriteLn('✗ 余额不足: ', E.Message);
+        WriteLn('�?余额不足: ', E.Message);
       on E: EBillingError do
-        WriteLn('✗ API 错误: ', E.Message);
+        WriteLn('�?API 错误: ', E.Message);
       on E: Exception do
-        WriteLn('✗ 异常: ', E.ClassName, ' - ', E.Message);
+        WriteLn('�?异常: ', E.ClassName, ' - ', E.Message);
     end;
     
     // 测试流式
@@ -140,15 +140,15 @@ begin
           Result := True;
         end) then
       begin
-        WriteLn('✓ 流式测试通过!');
+        WriteLn('�?流式测试通过!');
       end
       else
       begin
-        WriteLn('✗ 流式请求失败');
+        WriteLn('�?流式请求失败');
       end;
     except
       on E: Exception do
-        WriteLn('✗ 流式异常: ', E.ClassName, ' - ', E.Message);
+        WriteLn('�?流式异常: ', E.ClassName, ' - ', E.Message);
     end;
     
   finally
@@ -161,7 +161,7 @@ var
   ApiKey: string;
 begin
   try
-    WriteLn('UniBase LLM Client 测试');
+    WriteLn('DeepBase LLM Client 测试');
     WriteLn('========================');
     WriteLn;
     
@@ -178,7 +178,7 @@ begin
     TestBillingClient(ApiKey);
     
     WriteLn('测试完成!');
-    WriteLn('按回车键退出...');
+    WriteLn('按回车键退�?..');
     ReadLn;
   except
     on E: Exception do

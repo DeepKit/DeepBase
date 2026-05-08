@@ -1,8 +1,8 @@
 { ============================================================================
-  AcceptanceReport - 验收报告生成器
+  AcceptanceReport - 验收报告生成�?
   
   版本: 1.0
-  说明: 生成详细的验收报告 (HTML/JSON/XML)
+  说明: 生成详细的验收报�?(HTML/JSON/XML)
   ============================================================================ }
 
 unit AcceptanceReport;
@@ -46,14 +46,14 @@ uses
 
 const
   PHASE_NAMES: array[1..8] of string = (
-    '文档与架构审查',
-    '静态代码分析', 
+    '文档与架构审�?,
+    '静态代码分�?, 
     '单元测试验证',
     '集成测试',
     '安全专项测试',
-    '兼容性测试',
+    '兼容性测�?,
     '示例项目验证',
-    '最终验收'
+    '最终验�?
   );
 
 { TAcceptanceReportGenerator }
@@ -107,11 +107,11 @@ end;
 function TAcceptanceReportGenerator.GetStatusIcon(Status: TTestStatus): string;
 begin
   case Status of
-    tsPassed: Result := '✓';
-    tsFailed: Result := '✗';
-    tsManual: Result := '⚠';
-    tsSkipped: Result := '○';
-    tsRunning: Result := '⟳';
+    tsPassed: Result := '�?;
+    tsFailed: Result := '�?;
+    tsManual: Result := '�?;
+    tsSkipped: Result := '�?;
+    tsRunning: Result := '�?;
   else
     Result := '-';
   end;
@@ -130,12 +130,12 @@ end;
 function TAcceptanceReportGenerator.GetStatusText(Status: TTestStatus): string;
 begin
   case Status of
-    tsNotRun: Result := '未执行';
-    tsRunning: Result := '执行中';
+    tsNotRun: Result := '未执�?;
+    tsRunning: Result := '执行�?;
     tsPassed: Result := '通过';
     tsFailed: Result := '失败';
     tsSkipped: Result := '跳过';
-    tsManual: Result := '待人工';
+    tsManual: Result := '待人�?;
   else
     Result := '未知';
   end;
@@ -178,7 +178,7 @@ begin
     HTML.Add('<html lang="zh-CN"><head>');
     HTML.Add('<meta charset="UTF-8">');
     HTML.Add('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
-    HTML.Add('<title>UniBase 验收报告</title>');
+    HTML.Add('<title>DeepBase 验收报告</title>');
     HTML.Add('<style>');
     HTML.Add('* { margin: 0; padding: 0; box-sizing: border-box; }');
     HTML.Add('body { font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif; background: #f5f7fa; }');
@@ -210,8 +210,8 @@ begin
     
     // Header
     HTML.Add('<div class="header">');
-    HTML.Add('<h1>🧪 UniBase 验收报告</h1>');
-    HTML.Add('<div>生成时间: ' + FormatDateTime('yyyy年mm月dd日 hh:nn:ss', Now) + '</div>');
+    HTML.Add('<h1>🧪 DeepBase 验收报告</h1>');
+    HTML.Add('<div>生成时间: ' + FormatDateTime('yyyy年mm月dd�?hh:nn:ss', Now) + '</div>');
     HTML.Add('</div>');
     
     // Statistics
@@ -230,7 +230,7 @@ begin
     HTML.Add('</div>');
     HTML.Add('<div class="stat-card stat-manual">');
     HTML.Add(Format('<div class="stat-number">%d</div>', [ManualTests]));
-    HTML.Add('<div class="stat-label">待人工确认</div>');
+    HTML.Add('<div class="stat-label">待人工确�?/div>');
     HTML.Add('</div>');
     HTML.Add('</div>');
     
@@ -241,7 +241,7 @@ begin
       if Length(PhaseTests) = 0 then Continue;
       
       HTML.Add('<div class="phase">');
-      HTML.Add(Format('<div class="phase-header">第 %d 阶段: %s</div>', [Phase, GetPhaseName(Phase)]));
+      HTML.Add(Format('<div class="phase-header">�?%d 阶段: %s</div>', [Phase, GetPhaseName(Phase)]));
       
       for Item in PhaseTests do
       begin
@@ -261,7 +261,7 @@ begin
     end;
     
     HTML.Add('<div class="footer">');
-    HTML.Add('报告由 UniBase 可视化验收测试工具自动生成');
+    HTML.Add('报告�?DeepBase 可视化验收测试工具自动生�?);
     HTML.Add('</div>');
     
     HTML.Add('</div>');
@@ -285,9 +285,9 @@ var
 begin
   JSON := TJSONObject.Create;
   try
-    JSON.AddPair('title', 'UniBase 验收报告');
+    JSON.AddPair('title', 'DeepBase 验收报告');
     JSON.AddPair('generated_at', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now));
-    JSON.AddPair('version', 'UniBase Framework v1.0');
+    JSON.AddPair('version', 'DeepBase Framework v1.0');
     
     // Statistics
     PassedCount := 0;
@@ -371,9 +371,9 @@ begin
     XML.Add('<?xml version="1.0" encoding="UTF-8"?>');
     XML.Add('<acceptance_report>');
     XML.Add('  <metadata>');
-    XML.Add('    <title>UniBase 验收报告</title>');
+    XML.Add('    <title>DeepBase 验收报告</title>');
     XML.Add('    <generated_at>' + FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now) + '</generated_at>');
-    XML.Add('    <version>UniBase Framework v1.0</version>');
+    XML.Add('    <version>DeepBase Framework v1.0</version>');
     XML.Add('  </metadata>');
     
     XML.Add('  <statistics>');

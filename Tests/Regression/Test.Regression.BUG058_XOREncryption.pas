@@ -3,15 +3,15 @@
 
   BUG-058: 配置XOR加密安全缺陷
   
-  原问题: GetConfigEncrypted和SetConfigEncrypted使用XOR混淆而非真正加密，
-          XOR加密是可逆的简单操作，不提供真正的安全保护。
+  原问�? GetConfigEncrypted和SetConfigEncrypted使用XOR混淆而非真正加密�?
+          XOR加密是可逆的简单操作，不提供真正的安全保护�?
   
-  修复方案: 完全移除XOR实现，强制抛出异常引导用户使用
-            UniBase.Security.SaveSecret() 进行安全的DPAPI加密。
+  修复方案: 完全移除XOR实现，强制抛出异常引导用户使�?
+            DeepBase.Security.SaveSecret() 进行安全的DPAPI加密�?
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.Config.pas
-  优先级: P0 (Critical)
+  文件: Core/DeepBase.Config.pas
+  优先�? P0 (Critical)
   分类: Security
   ============================================================================ }
 
@@ -39,15 +39,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 GetConfigEncrypted 已被禁用并抛出 ENotSupportedException')]
+    [Description('验证 GetConfigEncrypted 已被禁用并抛�?ENotSupportedException')]
     procedure Test_GetConfigEncrypted_ShouldRaiseException;
     
     [Test]
-    [Description('验证 SetConfigEncrypted 已被禁用并抛出 ENotSupportedException')]
+    [Description('验证 SetConfigEncrypted 已被禁用并抛�?ENotSupportedException')]
     procedure Test_SetConfigEncrypted_ShouldRaiseException;
     
     [Test]
-    [Description('验证异常消息包含正确的迁移指引')]
+    [Description('验证异常消息包含正确的迁移指�?)]
     procedure Test_ExceptionMessage_ContainsMigrationGuidance;
     
     [Test]
@@ -58,9 +58,9 @@ type
 implementation
 
 uses
-  UniBase.Config,
-  UniBase.Security,
-  UniBase.Manager;
+  DeepBase.Config,
+  DeepBase.Security,
+  DeepBase.Manager;
 
 { TBug058_XOREncryptionTest }
 
@@ -86,12 +86,12 @@ end;
 
 function TBug058_XOREncryptionTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Config.pas';
+  Result := 'Core/DeepBase.Config.pas';
 end;
 
 procedure TBug058_XOREncryptionTest.Test_GetConfigEncrypted_ShouldRaiseException;
 var
-  Config: TUniBaseConfig;
+  Config: TDeepBaseConfig;
   ExceptionRaised: Boolean;
 begin
   LogTestStart('Test_GetConfigEncrypted_ShouldRaiseException');
@@ -101,8 +101,8 @@ begin
   Config := UBConfig;
   if not Assigned(Config) then
   begin
-    // 如果 UniBase 未初始化，跳过测试
-    Assert.Pass('UniBase not initialized, skipping test');
+    // 如果 DeepBase 未初始化，跳过测�?
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -116,14 +116,14 @@ begin
   end;
   
   Assert.IsTrue(ExceptionRaised, 
-    'GetConfigEncrypted 应该抛出 ENotSupportedException，因为 XOR 加密已被移除');
+    'GetConfigEncrypted 应该抛出 ENotSupportedException，因�?XOR 加密已被移除');
   
   LogTestEnd('Test_GetConfigEncrypted_ShouldRaiseException', True);
 end;
 
 procedure TBug058_XOREncryptionTest.Test_SetConfigEncrypted_ShouldRaiseException;
 var
-  Config: TUniBaseConfig;
+  Config: TDeepBaseConfig;
   ExceptionRaised: Boolean;
 begin
   LogTestStart('Test_SetConfigEncrypted_ShouldRaiseException');
@@ -132,7 +132,7 @@ begin
   Config := UBConfig;
   if not Assigned(Config) then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -146,14 +146,14 @@ begin
   end;
   
   Assert.IsTrue(ExceptionRaised,
-    'SetConfigEncrypted 应该抛出 ENotSupportedException，因为 XOR 加密已被移除');
+    'SetConfigEncrypted 应该抛出 ENotSupportedException，因�?XOR 加密已被移除');
   
   LogTestEnd('Test_SetConfigEncrypted_ShouldRaiseException', True);
 end;
 
 procedure TBug058_XOREncryptionTest.Test_ExceptionMessage_ContainsMigrationGuidance;
 var
-  Config: TUniBaseConfig;
+  Config: TDeepBaseConfig;
   ErrorMessage: string;
 begin
   LogTestStart('Test_ExceptionMessage_ContainsMigrationGuidance');
@@ -162,7 +162,7 @@ begin
   Config := UBConfig;
   if not Assigned(Config) then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -176,10 +176,10 @@ begin
   end;
   
   // 验证错误消息包含迁移指引
-  Assert.IsTrue(ErrorMessage.Contains('UniBase.Security'),
-    '异常消息应该包含 "UniBase.Security" 迁移指引');
+  Assert.IsTrue(ErrorMessage.Contains('DeepBase.Security'),
+    '异常消息应该包含 "DeepBase.Security" 迁移指引');
   Assert.IsTrue(ErrorMessage.Contains('DPAPI') or ErrorMessage.Contains('LoadSecret'),
-    '异常消息应该提及 DPAPI 或 LoadSecret 作为替代方案');
+    '异常消息应该提及 DPAPI �?LoadSecret 作为替代方案');
   
   LogTestEnd('Test_ExceptionMessage_ContainsMigrationGuidance', True);
 end;
@@ -192,10 +192,10 @@ var
 begin
   LogTestStart('Test_SecurityModule_ShouldWorkAsReplacement');
   
-  if (not UniBase.Manager.UniBase.IsInitialized) or
-     (not Assigned(UniBase.Manager.UniBase.Security)) then
+  if (not DeepBase.Manager.DeepBase.IsInitialized) or
+     (not Assigned(DeepBase.Manager.DeepBase.Security)) then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
 
@@ -204,18 +204,18 @@ begin
   SecretValue := 'my_secure_password_12345';
 
   try
-    // 使用安全的 DPAPI 存储
-    UniBase.Manager.UniBase.Security.SaveSecret(SecretName, SecretValue);
+    // 使用安全�?DPAPI 存储
+    DeepBase.Manager.DeepBase.Security.SaveSecret(SecretName, SecretValue);
 
-    // 读取并验证
-    RetrievedValue := UniBase.Manager.UniBase.Security.LoadSecret(SecretName);
+    // 读取并验�?
+    RetrievedValue := DeepBase.Manager.DeepBase.Security.LoadSecret(SecretName);
 
     Assert.AreEqual(SecretValue, RetrievedValue,
-      'Security.SaveSecret/LoadSecret 应该正确保存和读取密钥');
+      'Security.SaveSecret/LoadSecret 应该正确保存和读取密�?);
   finally
     // 清理测试数据
     try
-      UniBase.Manager.UniBase.Security.DeleteSecret(SecretName);
+      DeepBase.Manager.DeepBase.Security.DeleteSecret(SecretName);
     except
       // 忽略清理错误
     end;

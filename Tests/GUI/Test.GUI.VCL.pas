@@ -1,13 +1,13 @@
 { ============================================================================
-  Test.GUI.VCL - UniBase VCL 控件 GUI 测试
+  Test.GUI.VCL - DeepBase VCL 控件 GUI 测试
   
   版本: 1.0
-  说明: 测试 UniBase 自定义 VCL 控件
+  说明: 测试 DeepBase 自定�?VCL 控件
   测试内容:
     - ConfigEdit / ConfigCheckBox / ConfigSpinEdit
     - I18nLabel / I18nButton
     - 配置绑定
-    - 国际化更新
+    - 国际化更�?
   ============================================================================ }
 
 unit Test.GUI.VCL;
@@ -28,8 +28,8 @@ uses
 {$IFDEF HAS_DUNITX}
   DUnitX.TestFramework,
 {$ENDIF}
-  UniBase.GUITest,
-  UniBase.Manager,
+  DeepBase.GUITest,
+  DeepBase.Manager,
   GUITest.FormFactory;
 
 {$IFNDEF HAS_DUNITX}
@@ -105,7 +105,7 @@ type
   end;
   
   /// <summary>
-  /// 国际化控件 GUI 测试
+  /// 国际化控�?GUI 测试
   /// </summary>
   [TestFixture]
   TTestGUII18nControls = class(TGUITestBase)
@@ -175,9 +175,9 @@ type
 implementation
 
 uses
-  UniBase.Config,
-  UniBase.i18n,
-  UniBase.TestHelper;
+  DeepBase.Config,
+  DeepBase.i18n,
+  DeepBase.TestHelper;
 
 {$IFNDEF HAS_DUNITX}
 class procedure Assert.IsTrue(Condition: Boolean; const Msg: string);
@@ -215,8 +215,8 @@ end;
 
 function TTestGUIConfigControls.CreateTestForm: TForm;
 begin
-  // 确保 UniBase 初始化
-  TTestFormFactory.EnsureUniBaseInitialized;
+  // 确保 DeepBase 初始�?
+  TTestFormFactory.EnsureDeepBaseInitialized;
   
   FConfigForm := TConfigControlsTestForm.Create(nil);
   Result := FConfigForm;
@@ -226,12 +226,12 @@ procedure TTestGUIConfigControls.Setup;
 begin
   inherited;
   
-  // 设置测试配置值
-  if UniBase.Manager.UniBase.IsInitialized then
+  // 设置测试配置�?
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.Config.SetConfig('test.value', 'Initial Value');
-    UniBase.Manager.UniBase.Config.SetConfigBool('test.enabled', False);
-    UniBase.Manager.UniBase.Config.SetConfigInt('test.count', 10);
+    DeepBase.Manager.DeepBase.Config.SetConfig('test.value', 'Initial Value');
+    DeepBase.Manager.DeepBase.Config.SetConfigBool('test.enabled', False);
+    DeepBase.Manager.DeepBase.Config.SetConfigInt('test.count', 10);
   end;
 end;
 
@@ -245,15 +245,15 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigEdit_Load_Value;
 begin
-  Step('测试 ConfigEdit 加载值');
+  Step('测试 ConfigEdit 加载�?);
   
-  // 设置配置值
-  if UniBase.Manager.UniBase.IsInitialized then
+  // 设置配置�?
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.Config.SetConfig('test.value', 'Loaded Value');
+    DeepBase.Manager.DeepBase.Config.SetConfig('test.value', 'Loaded Value');
   end;
   
-  // ConfigEdit 通过 AutoLoad 自动加载，这里验证控件文本
+  // ConfigEdit 通过 AutoLoad 自动加载，这里验证控件文�?
   Assert.IsTrue(FConfigForm.edtConfig.ConfigKey <> '', 'ConfigKey should be set');
   
   Verify(True, 'ConfigEdit load test', 'Passed');
@@ -263,12 +263,12 @@ procedure TTestGUIConfigControls.Test_ConfigEdit_Save_Value;
 const
   NEW_VALUE = 'New Test Value';
 begin
-  Step('测试 ConfigEdit 保存值');
+  Step('测试 ConfigEdit 保存�?);
   
   // 输入新值到控件
   Input('edtConfig', NEW_VALUE);
   
-  // AutoSave 会在 Change 事件中自动保存
+  // AutoSave 会在 Change 事件中自动保�?
   ProcessMessages;
   
   Assert.AreEqual(NEW_VALUE, FConfigForm.edtConfig.Text, '控件文本应该更新');
@@ -285,7 +285,7 @@ begin
   // 启用自动保存
   FConfigForm.edtConfig.AutoSave := True;
   
-  // 输入并移出焦点
+  // 输入并移出焦�?
   Input('edtConfig', AUTO_VALUE);
   FConfigForm.btnSave.SetFocus;  // 触发 Exit 事件
   ProcessMessages;
@@ -297,9 +297,9 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigEdit_DefaultValue;
 begin
-  Step('测试 ConfigEdit 默认值');
+  Step('测试 ConfigEdit 默认�?);
   
-  // 设置默认值
+  // 设置默认�?
   FConfigForm.edtConfig.DefaultValue := 'Default Text';
   
   Assert.AreEqual('Default Text', FConfigForm.edtConfig.DefaultValue,
@@ -312,7 +312,7 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigCheckBox_Load_Value;
 begin
-  Step('测试 ConfigCheckBox 加载值');
+  Step('测试 ConfigCheckBox 加载�?);
   
   Assert.IsTrue(FConfigForm.chkConfig.ConfigKey <> '', 'ConfigKey should be set');
   
@@ -323,13 +323,13 @@ procedure TTestGUIConfigControls.Test_ConfigCheckBox_Toggle_Save;
 begin
   Step('测试 ConfigCheckBox 切换保存');
   
-  // 勾选
+  // 勾�?
   Check('chkConfig', True);
   ProcessMessages;
   
   Assert.IsTrue(FConfigForm.chkConfig.Checked);
   
-  // 取消勾选
+  // 取消勾�?
   Check('chkConfig', False);
   ProcessMessages;
   
@@ -342,7 +342,7 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigSpinEdit_Load_Value;
 begin
-  Step('测试 ConfigSpinEdit 加载值');
+  Step('测试 ConfigSpinEdit 加载�?);
   
   Assert.IsTrue(FConfigForm.spnConfig.ConfigKey <> '', 'ConfigKey should be set');
   
@@ -351,9 +351,9 @@ end;
 
 procedure TTestGUIConfigControls.Test_ConfigSpinEdit_Change_Value;
 begin
-  Step('测试 ConfigSpinEdit 更改值');
+  Step('测试 ConfigSpinEdit 更改�?);
   
-  // 设置新值
+  // 设置新�?
   FConfigForm.spnConfig.Value := 100;
   ProcessMessages;
   
@@ -366,9 +366,9 @@ end;
 
 procedure TTestGUIConfigControls.Test_Config_Workflow_Complete;
 begin
-  Step('完整配置工作流测试');
+  Step('完整配置工作流测�?);
   
-  // 1. 修改值
+  // 1. 修改�?
   Input('edtConfig', 'Modified Value');
   Check('chkConfig', True);
   FConfigForm.spnConfig.Value := 25;
@@ -376,7 +376,7 @@ begin
   // 2. 截图
   CaptureScreenshot('config_modified');
   
-  // 3. 验证控件值
+  // 3. 验证控件�?
   Assert.AreEqual('Modified Value', FConfigForm.edtConfig.Text);
   Assert.IsTrue(FConfigForm.chkConfig.Checked);
   Assert.AreEqual(25, FConfigForm.spnConfig.Value);
@@ -388,8 +388,8 @@ end;
 
 function TTestGUII18nControls.CreateTestForm: TForm;
 begin
-  // 确保 UniBase 初始化
-  TTestFormFactory.EnsureUniBaseInitialized;
+  // 确保 DeepBase 初始�?
+  TTestFormFactory.EnsureDeepBaseInitialized;
   
   FI18nForm := TI18nControlsTestForm.Create(nil);
   Result := FI18nForm;
@@ -400,9 +400,9 @@ begin
   inherited;
   
   // 设置测试翻译
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'en';
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
   end;
 end;
 
@@ -418,19 +418,19 @@ procedure TTestGUII18nControls.Test_I18nLabel_Initial_Caption;
 begin
   Step('测试 I18nLabel 初始标题');
   
-  // 初始应该显示默认 Caption 或翻译
+  // 初始应该显示默认 Caption 或翻�?
   Assert.IsNotEmpty(FI18nForm.lblI18n.Caption,
-    'I18nLabel 应该有标题');
+    'I18nLabel 应该有标�?);
   
   Verify(FI18nForm.lblI18n.Caption <> '', 'Not empty', FI18nForm.lblI18n.Caption);
 end;
 
 procedure TTestGUII18nControls.Test_I18nLabel_TranslationKey;
 begin
-  Step('测试 I18nLabel 翻译键');
+  Step('测试 I18nLabel 翻译�?);
   
   Assert.AreEqual('app.greeting', FI18nForm.lblI18n.TranslationKey,
-    '翻译键应该正确设置');
+    '翻译键应该正确设�?);
   
   Verify(FI18nForm.lblI18n.TranslationKey = 'app.greeting',
     'app.greeting', FI18nForm.lblI18n.TranslationKey);
@@ -443,17 +443,17 @@ begin
   Step('测试 I18nButton 初始标题');
   
   Assert.IsNotEmpty(FI18nForm.btnI18n.Caption,
-    'I18nButton 应该有标题');
+    'I18nButton 应该有标�?);
   
   Verify(FI18nForm.btnI18n.Caption <> '', 'Not empty', FI18nForm.btnI18n.Caption);
 end;
 
 procedure TTestGUII18nControls.Test_I18nButton_TranslationKey;
 begin
-  Step('测试 I18nButton 翻译键');
+  Step('测试 I18nButton 翻译�?);
   
   Assert.AreEqual('button.submit', FI18nForm.btnI18n.TranslationKey,
-    '翻译键应该正确设置');
+    '翻译键应该正确设�?);
   
   Verify(FI18nForm.btnI18n.TranslationKey = 'button.submit',
     'button.submit', FI18nForm.btnI18n.TranslationKey);
@@ -465,11 +465,11 @@ procedure TTestGUII18nControls.Test_LanguageSwitch_Updates_Controls;
 begin
   Step('测试语言切换更新控件');
   
-  // 切换到中文
-  if UniBase.Manager.UniBase.IsInitialized then
+  // 切换到中�?
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'zh-CN';
-    UniBase.Manager.UniBase.i18n.NotifyLanguageChanged;
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'zh-CN';
+    DeepBase.Manager.DeepBase.i18n.NotifyLanguageChanged;
   end;
   ProcessMessages;
   
@@ -477,10 +477,10 @@ begin
   Assert.IsNotEmpty(FI18nForm.lblI18n.Caption);
   
   // 切回英文
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'en';
-    UniBase.Manager.UniBase.i18n.NotifyLanguageChanged;
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
+    DeepBase.Manager.DeepBase.i18n.NotifyLanguageChanged;
   end;
   ProcessMessages;
   
@@ -489,23 +489,23 @@ end;
 
 procedure TTestGUII18nControls.Test_LanguageSwitch_Workflow;
 begin
-  Step('语言切换工作流测试');
+  Step('语言切换工作流测�?);
   
   // 1. 初始英文
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'en';
-    UniBase.Manager.UniBase.i18n.NotifyLanguageChanged;
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
+    DeepBase.Manager.DeepBase.i18n.NotifyLanguageChanged;
   end;
   ProcessMessages;
   CaptureScreenshot('i18n_english');
   
   // 2. 选择中文
   Select('cboLanguage', 'zh-CN');
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'zh-CN';
-    UniBase.Manager.UniBase.i18n.NotifyLanguageChanged;
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'zh-CN';
+    DeepBase.Manager.DeepBase.i18n.NotifyLanguageChanged;
   end;
   ProcessMessages;
   
@@ -513,10 +513,10 @@ begin
   
   // 3. 恢复英文
   Select('cboLanguage', 'en');
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.i18n.CurrentLanguage := 'en';
-    UniBase.Manager.UniBase.i18n.NotifyLanguageChanged;
+    DeepBase.Manager.DeepBase.i18n.CurrentLanguage := 'en';
+    DeepBase.Manager.DeepBase.i18n.NotifyLanguageChanged;
   end;
   ProcessMessages;
   
@@ -527,7 +527,7 @@ end;
 
 function TTestGUITheme.CreateTestForm: TForm;
 begin
-  TTestFormFactory.EnsureUniBaseInitialized;
+  TTestFormFactory.EnsureDeepBaseInitialized;
   
   FBasicForm := TBasicControlsTestForm.Create(nil);
   Result := FBasicForm;
@@ -543,9 +543,9 @@ begin
   Step('测试应用浅色主题');
   
   // 应用浅色主题
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.Theme.ApplyTheme('Light');
+    DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
     ProcessMessages;
   end;
   
@@ -559,17 +559,17 @@ begin
   Step('测试应用深色主题');
   
   // 应用深色主题
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    UniBase.Manager.UniBase.Theme.ApplyTheme('Dark');
+    DeepBase.Manager.DeepBase.Theme.ApplyTheme('Dark');
     ProcessMessages;
   end;
   
   CaptureScreenshot('theme_dark');
   
   // 恢复浅色主题
-  if UniBase.Manager.UniBase.IsInitialized then
-    UniBase.Manager.UniBase.Theme.ApplyTheme('Light');
+  if DeepBase.Manager.DeepBase.IsInitialized then
+    DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
   ProcessMessages;
   
   Verify(True, 'Dark theme applied', 'Passed');
@@ -585,13 +585,13 @@ begin
   InitialColor := FBasicForm.Color;
   
   // 切换主题
-  if UniBase.Manager.UniBase.IsInitialized then
-    UniBase.Manager.UniBase.Theme.ApplyTheme('Dark');
+  if DeepBase.Manager.DeepBase.IsInitialized then
+    DeepBase.Manager.DeepBase.Theme.ApplyTheme('Dark');
   ProcessMessages;
   
   // 切回
-  if UniBase.Manager.UniBase.IsInitialized then
-    UniBase.Manager.UniBase.Theme.ApplyTheme('Light');
+  if DeepBase.Manager.DeepBase.IsInitialized then
+    DeepBase.Manager.DeepBase.Theme.ApplyTheme('Light');
   ProcessMessages;
   
   Verify(True, 'Theme switch works', 'Passed');

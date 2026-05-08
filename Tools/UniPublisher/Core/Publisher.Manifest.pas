@@ -1,9 +1,9 @@
-{ ============================================================================
+﻿{ ============================================================================
   Publisher.Manifest - Version Manifest Generator
   
   Version: 1.0
   Description:
-    Generates version.json manifest files for UniBase auto-update system.
+    Generates version.json manifest files for DeepBase auto-update system.
     
     Supports two formats:
     1. New Standard Format (UniPublisher-Spec.md compliant):

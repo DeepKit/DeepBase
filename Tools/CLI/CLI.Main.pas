@@ -2,7 +2,7 @@
   CLI.Main - CLI 主入口和命令分发
   
   版本: 1.0
-  说明: 解析命令行参数，分发到各子命令模块
+  说明: 解析命令行参数，分发到各子命令模�?
   ============================================================================ }
 
 unit CLI.Main;
@@ -70,16 +70,16 @@ begin
   else
   begin
     Writeln('Unknown command: ', Cmd);
-    Writeln('Use "unibase --help" for usage information.');
+    Writeln('Use "DeepBase --help" for usage information.');
     Result := 1;
   end;
 end;
 
 class procedure TCliMain.ShowHelp;
 begin
-  Writeln('UniBase CLI Tool v', VERSION);
+  Writeln('DeepBase CLI Tool v', VERSION);
   Writeln('');
-  Writeln('Usage: unibase <command> [subcommand] [options]');
+  Writeln('Usage: DeepBase <command> [subcommand] [options]');
   Writeln('');
   Writeln('Commands:');
   Writeln('  db        Database management');
@@ -106,16 +106,16 @@ begin
   Writeln('  -v, --version   Show version information');
   Writeln('');
   Writeln('Examples:');
-  Writeln('  unibase db init --tier 1 --path ./mydb.db');
-  Writeln('  unibase i18n scan --path ./src --output strings.json');
-  Writeln('  unibase config get app.theme');
+  Writeln('  DeepBase db init --tier 1 --path ./mydb.db');
+  Writeln('  DeepBase i18n scan --path ./src --output strings.json');
+  Writeln('  DeepBase config get app.theme');
 end;
 
 class procedure TCliMain.ShowVersion;
 begin
-  Writeln('UniBase CLI Tool');
+  Writeln('DeepBase CLI Tool');
   Writeln('Version: ', VERSION);
-  Writeln('Copyright (c) 2024 UniBase');
+  Writeln('Copyright (c) 2024 DeepBase');
 end;
 
 end.

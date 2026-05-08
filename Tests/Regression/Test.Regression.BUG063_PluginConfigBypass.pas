@@ -3,15 +3,15 @@
 
   BUG-063: 插件配置权限绕过
   
-  原问题: 插件可以通过SetConfig修改任意配置，包括系统级和安全相关配置，
-          存在权限提升风险。
+  原问�? 插件可以通过SetConfig修改任意配置，包括系统级和安全相关配置，
+          存在权限提升风险�?
   
   修复方案: 实现基于角色的配置访问控制，限制插件只能修改 Plugin. 前缀的配置，
-            并禁止修改包含安全关键字的配置项。
+            并禁止修改包含安全关键字的配置项�?
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.PluginManager.pas
-  优先级: P0 (Critical)
+  文件: Core/DeepBase.PluginManager.pas
+  优先�? P0 (Critical)
   分类: Security
   ============================================================================ }
 
@@ -46,7 +46,7 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证插件无法修改系统级配置')]
+    [Description('验证插件无法修改系统级配�?)]
     procedure Test_PluginCannotModifySystemConfig;
     
     [Test]
@@ -66,7 +66,7 @@ type
     procedure Test_PluginCannotModifyKeyConfig;
     
     [Test]
-    [Description('验证插件可以修改自己的配置 (Plugin.前缀)')]
+    [Description('验证插件可以修改自己的配�?(Plugin.前缀)')]
     procedure Test_PluginCanModifyOwnConfig;
     
     [Test]
@@ -77,7 +77,7 @@ type
 implementation
 
 uses
-  UniBase.PluginManager;
+  DeepBase.PluginManager;
 
 { TBug063_PluginConfigBypassTest }
 
@@ -103,7 +103,7 @@ end;
 
 function TBug063_PluginConfigBypassTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.PluginManager.pas';
+  Result := 'Core/DeepBase.PluginManager.pas';
 end;
 
 procedure TBug063_PluginConfigBypassTest.SetUp;
@@ -132,7 +132,7 @@ begin
     ExceptionType := '';
     
     try
-      // 尝试修改系统级配置
+      // 尝试修改系统级配�?
       Context.SetConfig('System.Language', 'zh-CN');
     except
       on E: EArgumentException do
@@ -169,7 +169,7 @@ begin
     ExceptionRaised := False;
     
     try
-      // 尝试修改包含 password 的配置
+      // 尝试修改包含 password 的配�?
       Context.SetConfig('Plugin.MyPlugin.password', 'stolen');
     except
       on E: EInvalidOpException do
@@ -177,7 +177,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 password 的配置应该抛出 EInvalidOpException');
+      '插件修改包含 password 的配置应该抛�?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -204,7 +204,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 secret 的配置应该抛出 EInvalidOpException');
+      '插件修改包含 secret 的配置应该抛�?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -231,7 +231,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 token 的配置应该抛出 EInvalidOpException');
+      '插件修改包含 token 的配置应该抛�?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -258,7 +258,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 key 的配置应该抛出 EInvalidOpException');
+      '插件修改包含 key 的配置应该抛�?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -286,11 +286,11 @@ begin
     end,
     nil, nil, FTempDir);
   try
-    // 设置合法的插件配置
+    // 设置合法的插件配�?
     Context.SetConfig('Plugin.MyPlugin.DisplayName', 'Test Plugin');
     
     Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置');
-    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传递');
+    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传�?);
   finally
     Context.Free;
   end;
@@ -307,7 +307,7 @@ begin
   
   Context := TPluginContext.Create(nil, nil, nil, nil, FTempDir);
   try
-    // 测试小写 plugin. 前缀（应该失败，因为要求 Plugin.）
+    // 测试小写 plugin. 前缀（应该失败，因为要求 Plugin.�?
     ExceptionRaised := False;
     try
       Context.SetConfig('plugin.MyPlugin.Setting', 'value');
@@ -317,7 +317,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '小写 plugin. 前缀应该被拒绝（要求 Plugin.）');
+      '小写 plugin. 前缀应该被拒绝（要求 Plugin.�?);
   finally
     Context.Free;
   end;

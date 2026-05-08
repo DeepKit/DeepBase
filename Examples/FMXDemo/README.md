@@ -1,6 +1,6 @@
-# UniBase FMX Platform Demo
+﻿# DeepBase FMX Platform Demo
 
-Cross-platform demonstration of UniBase FMX controls and platform abstraction layer.
+Cross-platform demonstration of DeepBase FMX controls and platform abstraction layer.
 
 ## Features Demonstrated
 
@@ -34,26 +34,26 @@ Material Design style form inputs:
 
 ## Components Used
 
-### UniBase.FMX.Platform
+### DeepBase.FMX.Platform
 - `TUniPlatformAdapter` - Platform detection singleton
 - `Platform()` - Global accessor function
 - Platform-specific path utilities
 - Screen metrics and safe area handling
 
-### UniBase.FMX.Theme
+### DeepBase.FMX.Theme
 - `TUniFMXTheme` - Theme manager singleton
 - `Theme()` - Global accessor function
 - Light/Dark color schemes
 - System theme detection
 
-### UniBase.FMX.ListView
+### DeepBase.FMX.ListView
 - `TUniListView` - Enhanced ListView
 - Pull-to-refresh support
 - Infinite scrolling
 - Search/filter capabilities
 - Empty state view
 
-### UniBase.FMX.FormControls
+### DeepBase.FMX.FormControls
 - `TUniMaterialEdit` - Material Design text input
 - `TUniSearchComboBox` - Filterable ComboBox
 - `TUniLabeledSwitch` - Switch with label
@@ -100,7 +100,7 @@ Material Design style form inputs:
 
 ### Platform Detection
 ```pascal
-uses UniBase.FMX.Platform;
+uses DeepBase.FMX.Platform;
 
 if Platform.IsMobile then
 begin
@@ -116,7 +116,7 @@ end;
 
 ### Theme Switching
 ```pascal
-uses UniBase.FMX.Theme;
+uses DeepBase.FMX.Theme;
 
 // Follow system preference
 Theme.FollowSystemTheme;
@@ -130,7 +130,7 @@ var BgColor := Theme.CurrentColors.Background;
 
 ### Enhanced ListView
 ```pascal
-uses UniBase.FMX.ListView;
+uses DeepBase.FMX.ListView;
 
 var LV := TUniListView.Create(Self);
 LV.PullToRefresh := True;
@@ -141,7 +141,7 @@ LV.OnLoadMore := HandleLoadMore;
 
 ### Form Validation
 ```pascal
-uses UniBase.FMX.FormControls;
+uses DeepBase.FMX.FormControls;
 
 var EmailEdit := TUniMaterialEdit.Create(Self);
 EmailEdit.LabelText := 'Email';
@@ -154,4 +154,4 @@ if EmailEdit.Validate then
 
 ## License
 
-Part of the UniBase Framework - see main project LICENSE.
+Part of the DeepBase Framework - see main project LICENSE.

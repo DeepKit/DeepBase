@@ -1,7 +1,7 @@
-unit Tray.SettingsForm;
+﻿unit Tray.SettingsForm;
 
 {*******************************************************************************
-  UniBaseTray - 设置窗体
+  DeepBaseTray - 设置窗体
   
   功能:
   - Studio 路径配置

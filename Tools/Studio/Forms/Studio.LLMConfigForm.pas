@@ -31,7 +31,7 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   FireDAC.Comp.Client,
-  UniBase.LLM;
+  DeepBase.LLM;
 
 type
   TConfigStatus = (csUnknown, csOnline, csOffline, csError);
@@ -100,7 +100,7 @@ type
     
     // Internal
     FConnection: TFDConnection;
-    FLLM: TUniBaseLLM;
+    FLLM: TDeepBaseLLM;
     FOwnsLLM: Boolean;
     FCurrentConfig: TLLMConfig;
     FModified: Boolean;
@@ -140,10 +140,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     
-    procedure Initialize(AConnection: TFDConnection; ALLM: TUniBaseLLM = nil);
+    procedure Initialize(AConnection: TFDConnection; ALLM: TDeepBaseLLM = nil);
     procedure RefreshData;
     
-    property LLM: TUniBaseLLM read FLLM;
+    property LLM: TDeepBaseLLM read FLLM;
     property Modified: Boolean read FModified;
   end;
 
@@ -556,7 +556,7 @@ begin
   FConfigGrid.ColWidths[GRID_COL_DEFAULT] := 60;
 end;
 
-procedure TLLMConfigForm.Initialize(AConnection: TFDConnection; ALLM: TUniBaseLLM);
+procedure TLLMConfigForm.Initialize(AConnection: TFDConnection; ALLM: TDeepBaseLLM);
 begin
   FConnection := AConnection;
   
@@ -567,7 +567,7 @@ begin
   end
   else if Assigned(FConnection) and FConnection.Connected then
   begin
-    FLLM := TUniBaseLLM.Create(FConnection);
+    FLLM := TDeepBaseLLM.Create(FConnection);
     FOwnsLLM := True;
   end;
   
@@ -735,7 +735,7 @@ begin
     FConfigGrid.Cells[GRID_COL_COST, I + 1] := FormatFloat('$0.0000', TotalCost);
     
     if Configs[I].IsDefault then
-      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := 'â˜…'
+      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := 'â˜?
     else
       FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := '';
   end;
@@ -845,13 +845,13 @@ begin
   try
     if FLLM.TestConnection(FCboConfigName.Text, DurationMs, ErrorMsg) then
     begin
-      FMmoTestResponse.Lines.Add('âœ“ Connection successful!');
+      FMmoTestResponse.Lines.Add('âœ?Connection successful!');
       FLblTestStats.Caption := Format('Response time: %d ms', [DurationMs]);
       SetStatus('Connection OK');
     end
     else
     begin
-      FMmoTestResponse.Lines.Add('âœ— Connection failed:');
+      FMmoTestResponse.Lines.Add('âœ?Connection failed:');
       FMmoTestResponse.Lines.Add(ErrorMsg);
       FLblTestStats.Caption := Format('Failed after %d ms', [DurationMs]);
       SetStatus('Connection failed', True);
@@ -981,11 +981,11 @@ begin
     // Draw star for default
     S := Grid.Cells[ACol, ARow];
     Grid.Canvas.FillRect(Rect);
-    if S = 'â˜…' then
+    if S = 'â˜? then
     begin
       Grid.Canvas.Font.Color := clYellow;
       Grid.Canvas.Font.Size := 14;
-      Grid.Canvas.TextRect(Rect, Rect.Left + 20, Rect.Top + 2, 'â˜…');
+      Grid.Canvas.TextRect(Rect, Rect.Left + 20, Rect.Top + 2, 'â˜?);
       Grid.Canvas.Font.Size := 8;
     end;
   end;

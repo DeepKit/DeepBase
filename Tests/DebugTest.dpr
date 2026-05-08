@@ -4,9 +4,9 @@ uses
   System.SysUtils,
   DUnitX.Loggers.Console,
   DUnitX.TestFramework,
-  Test.UniBase.Manager in 'Test.UniBase.Manager.pas',
-  UniBase.Types in '..\Core\UniBase.Types.pas',
-  UniBase.Manager in '..\Core\UniBase.Manager.pas';
+  Test.DeepBase.Manager in 'Test.DeepBase.Manager.pas',
+  DeepBase.Types in '..\Core\DeepBase.Types.pas',
+  DeepBase.Manager in '..\Core\DeepBase.Manager.pas';
 begin
   WriteLn('Debug Test');
 end.

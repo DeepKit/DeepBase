@@ -1,16 +1,16 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG007_WhenReadyDeadlock - WhenReady死锁风险回归测试
 
   BUG-007: 死锁风险 - WhenReady方法
   
-  原问题: WhenReady方法中存在潜在死锁，回调函数中再次调用UniBase功能时
-          可能因为嵌套锁定导致死锁。
+  原问�? WhenReady方法中存在潜在死锁，回调函数中再次调用DeepBase功能�?
+          可能因为嵌套锁定导致死锁�?
   
-  修复方案: 使用TTask.Run异步执行回调，避免嵌套锁定导致死锁。
+  修复方案: 使用TTask.Run异步执行回调，避免嵌套锁定导致死锁�?
   
   修复日期: 2025-12-16
-  文件: Core/UniBase.Manager.pas
-  优先级: P0 (Critical)
+  文件: Core/DeepBase.Manager.pas
+  优先�? P0 (Critical)
   分类: Concurrency
   ============================================================================ }
 
@@ -40,7 +40,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 WhenReady 回调中调用 UniBase 功能不会死锁')]
+    [Description('验证 WhenReady 回调中调�?DeepBase 功能不会死锁')]
     procedure Test_WhenReady_NestedCall_NoDeadlock;
     
     [Test]
@@ -52,14 +52,14 @@ type
     procedure Test_WhenReady_MultipleConcurrentCallbacks;
     
     [Test]
-    [Description('验证 WhenReady 回调异常不影响其他回调')]
+    [Description('验证 WhenReady 回调异常不影响其他回�?)]
     procedure Test_WhenReady_ExceptionInCallback_DoesNotBlockOthers;
   end;
 
 implementation
 
 uses
-  UniBase.Manager;
+  DeepBase.Manager;
 
 { TBug007_WhenReadyDeadlockTest }
 
@@ -85,22 +85,22 @@ end;
 
 function TBug007_WhenReadyDeadlockTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Manager.pas';
+  Result := 'Core/DeepBase.Manager.pas';
 end;
 
 procedure TBug007_WhenReadyDeadlockTest.Test_WhenReady_NestedCall_NoDeadlock;
 var
-  Manager: TUniBaseManager;
+  Manager: TDeepBaseManager;
   CallbackExecuted: Boolean;
   NestedCallSucceeded: Boolean;
   CompletionEvent: TEvent;
 begin
   LogTestStart('Test_WhenReady_NestedCall_NoDeadlock');
   
-  // 检查 UniBase 是否已初始化
-  if not UniBase.Manager.UniBase.IsInitialized then
+  // 检�?DeepBase 是否已初始化
+  if not DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -109,16 +109,16 @@ begin
   CompletionEvent := TEvent.Create(nil, True, False, '');
   
   try
-    // 注册一个回调，在回调中再次调用 UniBase 功能
-    UniBase.Manager.UniBase.WhenReady(procedure
+    // 注册一个回调，在回调中再次调用 DeepBase 功能
+    DeepBase.Manager.DeepBase.WhenReady(procedure
     begin
       CallbackExecuted := True;
       try
-        // 在回调中尝试访问 UniBase 功能（这在修复前会导致死锁）
-        if UniBase.Manager.UniBase.IsInitialized then
+        // 在回调中尝试访问 DeepBase 功能（这在修复前会导致死锁）
+        if DeepBase.Manager.DeepBase.IsInitialized then
         begin
-          // 尝试读取配置（这会获取锁）
-          var Lang := UniBase.Manager.UniBase.CurrentLanguage;
+          // 尝试读取配置（这会获取锁�?
+          var Lang := DeepBase.Manager.DeepBase.CurrentLanguage;
           if Lang <> '' then
             NestedCallSucceeded := True;
         end;
@@ -131,13 +131,13 @@ begin
     case CompletionEvent.WaitFor(5000) of
       wrSignaled:
         begin
-          Assert.IsTrue(CallbackExecuted, '回调应该被执行');
+          Assert.IsTrue(CallbackExecuted, '回调应该被执�?);
           Assert.IsTrue(NestedCallSucceeded, '嵌套调用应该成功');
         end;
       wrTimeout:
-        Assert.Fail('检测到死锁：WhenReady 回调在 5 秒内未完成');
+        Assert.Fail('检测到死锁：WhenReady 回调�?5 秒内未完�?);
     else
-      Assert.Fail('等待回调时发生错误');
+      Assert.Fail('等待回调时发生错�?);
     end;
   finally
     CompletionEvent.Free;
@@ -153,9 +153,9 @@ var
 begin
   LogTestStart('Test_WhenReady_AfterInit_ExecutesImmediately');
   
-  if not UniBase.Manager.UniBase.IsInitialized then
+  if not DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -164,7 +164,7 @@ begin
   
   try
     // 在已初始化后注册回调
-    UniBase.Manager.UniBase.WhenReady(procedure
+    DeepBase.Manager.DeepBase.WhenReady(procedure
     begin
       CallbackExecuted := True;
       CompletionEvent.SetEvent;
@@ -173,9 +173,9 @@ begin
     // 回调应该很快执行（异步但快速）
     case CompletionEvent.WaitFor(2000) of
       wrSignaled:
-        Assert.IsTrue(CallbackExecuted, '回调应该被执行');
+        Assert.IsTrue(CallbackExecuted, '回调应该被执�?);
       wrTimeout:
-        Assert.Fail('回调应该在初始化后快速执行');
+        Assert.Fail('回调应该在初始化后快速执�?);
     end;
   finally
     CompletionEvent.Free;
@@ -195,9 +195,9 @@ const
 begin
   LogTestStart('Test_WhenReady_MultipleConcurrentCallbacks');
   
-  if not UniBase.Manager.UniBase.IsInitialized then
+  if not DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -209,7 +209,7 @@ begin
     // 注册多个回调
     for I := 1 to CALLBACK_COUNT do
     begin
-      UniBase.Manager.UniBase.WhenReady(procedure
+      DeepBase.Manager.DeepBase.WhenReady(procedure
       begin
         TMonitor.Enter(Lock);
         try
@@ -222,11 +222,11 @@ begin
       end);
     end;
     
-    // 等待所有回调完成
+    // 等待所有回调完�?
     case CompletionEvent.WaitFor(10000) of
       wrSignaled:
         Assert.AreEqual(CALLBACK_COUNT, ExecutedCount, 
-          '所有回调都应该被执行');
+          '所有回调都应该被执�?);
       wrTimeout:
         Assert.Fail(Format('只有 %d/%d 个回调被执行', [ExecutedCount, CALLBACK_COUNT]));
     end;
@@ -246,9 +246,9 @@ var
 begin
   LogTestStart('Test_WhenReady_ExceptionInCallback_DoesNotBlockOthers');
   
-  if not UniBase.Manager.UniBase.IsInitialized then
+  if not DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    Assert.Pass('UniBase not initialized, skipping test');
+    Assert.Pass('DeepBase not initialized, skipping test');
     Exit;
   end;
   
@@ -257,21 +257,21 @@ begin
   CompletionEvent := TEvent.Create(nil, True, False, '');
   
   try
-    // 注册一个会抛出异常的回调
-    UniBase.Manager.UniBase.WhenReady(procedure
+    // 注册一个会抛出异常的回�?
+    DeepBase.Manager.DeepBase.WhenReady(procedure
     begin
       FirstCallbackExecuted := True;
       raise Exception.Create('Test exception');
     end);
     
     // 注册另一个正常的回调
-    UniBase.Manager.UniBase.WhenReady(procedure
+    DeepBase.Manager.DeepBase.WhenReady(procedure
     begin
       SecondCallbackExecuted := True;
       CompletionEvent.SetEvent;
     end);
     
-    // 等待第二个回调完成
+    // 等待第二个回调完�?
     case CompletionEvent.WaitFor(5000) of
       wrSignaled:
         begin
@@ -279,7 +279,7 @@ begin
           Assert.IsTrue(SecondCallbackExecuted, '第二个回调应该被执行（不受第一个异常影响）');
         end;
       wrTimeout:
-        Assert.Fail('第一个回调的异常不应该阻止其他回调执行');
+        Assert.Fail('第一个回调的异常不应该阻止其他回调执�?);
     end;
   finally
     CompletionEvent.Free;

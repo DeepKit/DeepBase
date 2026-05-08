@@ -125,7 +125,7 @@ begin
       proc_name := tblQueries.FieldByName('proc_name').AsString;
       aQry.SQL.Text := 'select * from queries where proc_name=' + '''' +  proc_name + '''';
       aQry.Open;
-      // ִ�� BuildSQL ����������������� MeoSQL �ı�����
+      // ִ�� BuildSQL �����������������?MeoSQL �ı�����
       if cboxParams.Checked  then               p :=  edtParams.Text;
       MeoSQL.Text := BuildSQL(aQry,p);
     end;
@@ -135,14 +135,14 @@ procedure TfrmMain.btnSearchClick(Sender: TObject);
 var
   s: string;
 begin
-  // ��ȡ�û�����������ı�
+  // ��ȡ�û�����������ı�?
   s := edtSearch.Text;
 
   // ��������ı�Ϊ�գ������������������ʾ��������
   if s = '' then
   begin
     tblQueries.Filtered := False; // �رչ���
-    tblQueries.Filter := ''; // �����������
+    tblQueries.Filter := ''; // �����������?
     dbgQry.Visible := False;
     Exit;
   end;
@@ -179,22 +179,22 @@ begin
        + '''' + '我是一头猪' + '''' + ', NULL, '+ '''' + '已经分享等待下载' + '''' + ')');
       aQry.ExecSQL;
 
-      // 获取插入后的记录数
+      // 获取插入后的记录�?
       qryCount.Close;
       qryCount.Open;
       newCount := qryCount.Fields[0].AsInteger;
 
       if newCount > oldCount then
-        ShowMessage('插入成功，新增记录数：' + IntToStr(newCount - oldCount))
+        ShowMessage('插入成功，新增记录数�? + IntToStr(newCount - oldCount))
       else
         ShowMessage('警告：没有新增记录！' + #13#10 +
-                   '执行前记录数：' + IntToStr(oldCount) + #13#10 +
-                   '执行后记录数：' + IntToStr(newCount) + #13#10 +
+                   '执行前记录数�? + IntToStr(oldCount) + #13#10 +
+                   '执行后记录数�? + IntToStr(newCount) + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
     except
       on E: Exception do
       begin
-        ShowMessage('执行出错：' + E.Message + #13#10 +
+        ShowMessage('执行出错�? + E.Message + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
       end;
     end;
@@ -210,7 +210,7 @@ begin
   cboBoxTables.Items := GetTableList(cboBoxDatabase.Text);
   if cboBoxTables.Items.Count > 0 then
   begin
-    cboBoxTables.ItemIndex := 0; // Ĭ��ѡ���һ����
+    cboBoxTables.ItemIndex := 0; // Ĭ��ѡ���һ����?
     ShowFields; // ���� ListBoxFields
   end
   else
@@ -243,11 +243,11 @@ begin
    tblQueries.Connection.Connected := true;
    tblQueries.open;
    tblParams.Open;
-  // ��� cboBoxDatabase
+  // ���?cboBoxDatabase
   cboBoxDatabase.Items := GetDatabaseList;
   if cboBoxDatabase.Items.Count > 0 then
   begin
-    cboBoxDatabase.ItemIndex := 0; // Ĭ��ѡ���һ�����ݿ�
+    cboBoxDatabase.ItemIndex := 0; // Ĭ��ѡ���һ�����ݿ�?
     UpdateTablesAndFields; // ���� cboBoxTables �� ListBoxFields
   end;
 end;
@@ -267,7 +267,7 @@ begin
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('datname').AsString); // �����ݿ��������ӵ������
+      Result.Add(aQry.FieldByName('datname').AsString); // �����ݿ��������ӵ������?
       aQry.Next;
     end;
     aQry.Close;
@@ -287,7 +287,7 @@ begin
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('table_name').AsString); // �����������ӵ������
+      Result.Add(aQry.FieldByName('table_name').AsString); // �����������ӵ������?
       aQry.Next;
     end;
     aQry.Close;
@@ -306,7 +306,7 @@ begin
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('column_name').AsString); // ���ֶ��������ӵ������
+      Result.Add(aQry.FieldByName('column_name').AsString); // ���ֶ��������ӵ������?
       aQry.Next;
     end;
     aQry.Close;

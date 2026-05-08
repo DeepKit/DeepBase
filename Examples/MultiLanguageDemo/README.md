@@ -1,6 +1,6 @@
-# MultiLanguageDemo
+﻿# MultiLanguageDemo
 
-A demonstration project showcasing UniBase i18n (internationalization) features.
+A demonstration project showcasing DeepBase i18n (internationalization) features.
 
 ## Features Demonstrated
 
@@ -17,8 +17,8 @@ Translate strings with format arguments:
 // Pattern: 'Hello, %s! You are %d years old.'
 Result := TFmt('Hello, %s! You are %d years old.', ['Alice', 25]);
 // English: "Hello, Alice! You are 25 years old."
-// Chinese: "你好，Alice！你今年 25 岁。"
-// Japanese: "こんにちは、Aliceさん！あなたは25歳です。"
+// Chinese: "你好，Alice！你今年 25 岁�?
+// Japanese: "こんにちは、Aliceさん！あなた�?5歳です�?
 ```
 
 ### 3. Plural Forms - `TN()`
@@ -45,8 +45,8 @@ end
 ### 5. Runtime Language Switching
 Change language at runtime - all registered controls update automatically:
 ```pascal
-UniBase.I18n.CurrentLanguage := 'zh-CN';  // Switch to Chinese
-UniBase.I18n.CurrentLanguage := 'ja-JP';  // Switch to Japanese
+DeepBase.I18n.CurrentLanguage := 'zh-CN';  // Switch to Chinese
+DeepBase.I18n.CurrentLanguage := 'ja-JP';  // Switch to Japanese
 ```
 
 ## Supported Languages
@@ -72,11 +72,11 @@ MultiLanguageDemo/
 └── README.md               # This file
 ```
 
-## Key UniBase Units Used
+## Key DeepBase Units Used
 
-- `UniBase.Manager` - Core framework manager
-- `UniBase.i18n` - Internationalization engine
-- `UniBase.VCL.I18nControls` - VCL controls with i18n support
+- `DeepBase.Manager` - Core framework manager
+- `DeepBase.i18n` - Internationalization engine
+- `DeepBase.VCL.I18nControls` - VCL controls with i18n support
 
 ## Adding New Languages
 
@@ -84,14 +84,14 @@ To add translations for a new language:
 
 ```pascal
 // In FormCreate or initialization
-UniBase.I18n.AddTranslation('Hello', 'ko-KR', '안녕하세요');  // Korean
-UniBase.I18n.AddTranslation('Save', 'ko-KR', '저장');
+DeepBase.I18n.AddTranslation('Hello', 'ko-KR', '안녕하세�?);  // Korean
+DeepBase.I18n.AddTranslation('Save', 'ko-KR', '저�?);
 // ... add more translations
 ```
 
 Or load from external translation files (JSON format):
 ```pascal
-UniBase.I18n.LoadTranslationsFromFile('translations_ko.json');
+DeepBase.I18n.LoadTranslationsFromFile('translations_ko.json');
 ```
 
 ## Screenshots

@@ -1,4 +1,4 @@
-# UniBase Win64 package build gate
+# DeepBase Win64 package build gate
 # Usage:
 #   .\build_packages_win64.ps1 -Profile Runtime
 #   .\build_packages_win64.ps1 -Profile All
@@ -28,7 +28,9 @@ foreach ($path in @($OutputRoot, $DcuOutputPath, $BplOutputPath, $DcpOutputPath)
 }
 
 # Keep source tree clean from stale DCU artifacts before package builds.
-foreach ($root in @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'ThirdParty', 'Tools')) {
+$AllSourceRoots = @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'ThirdParty', 'Tools')
+
+foreach ($root in $AllSourceRoots) {
     $rootPath = Join-Path $RepoRoot $root
     if (Test-Path $rootPath) {
         Get-ChildItem -Path $rootPath -Recurse -Filter *.dcu -File -ErrorAction SilentlyContinue |
@@ -36,7 +38,7 @@ foreach ($root in @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'T
     }
 }
 
-$SourceRoots = @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'ThirdParty', 'Tools')
+$SourceRoots = @($AllSourceRoots | Where-Object { Test-Path (Join-Path $RepoRoot $_) })
 $SourceSearchPath = ($SourceRoots | ForEach-Object { Join-Path $RepoRoot $_ }) -join ';'
 
 if (-not (Test-Path $Dcc64Path)) {
@@ -47,23 +49,37 @@ if (-not (Test-Path $RsVarsBat)) {
     throw "rsvars.bat not found: $RsVarsBat"
 }
 
+$RenameCheckScript = Join-Path $RepoRoot 'Scripts\check_rename_residue.ps1'
+if (Test-Path $RenameCheckScript) {
+    Write-Host "Running rename residue check ..."
+    & $RenameCheckScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Rename residue check failed"
+    }
+}
+
 $MinimalPackages = @(
-    'UniBaseCore.dpk',
-    'UniBaseServices.dpk',
-    'UniBasePersistence.dpk'
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBasePersistence.dpk'
 )
 
 $RuntimePackages = @(
-    'UniBaseCore.dpk',
-    'UniBaseServices.dpk',
-    'UniBasePersistence.dpk',
-    'UniBaseFeatures.dpk'
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBasePersistence.dpk',
+    'DeepBaseFeatures.dpk'
 )
 
-$UiPackages = @(
-    'UniBaseVCL.dpk',
-    'UniBaseFMX.dpk'
-)
+$UiPackages = @()
+if (Test-Path (Join-Path $RepoRoot 'FMX')) {
+    $UiPackages += 'DeepBaseFMX.dpk'
+}
+if (Test-Path (Join-Path $RepoRoot 'VCL')) {
+    $UiPackages += 'DeepBaseVCL.dpk'
+} else {
+    Write-Host "VCL source directory not found; DeepBaseVCL.dpk is excluded from this gate." -ForegroundColor Yellow
+}
 
 function Invoke-PackageCompile {
     param(
@@ -96,7 +112,7 @@ function Invoke-PackageCompile {
 }
 
 Write-Host "=============================================="
-Write-Host "      UniBase Win64 Package Build Gate"
+Write-Host "      DeepBase Win64 Package Build Gate"
 Write-Host "=============================================="
 Write-Host "Profile: $Profile"
 Write-Host "Repo: $RepoRoot"
@@ -129,7 +145,7 @@ switch ($Profile) {
 if (-not $SkipDcuSourceCheck) {
     Write-Host ""
     Write-Host "Checking source directories for leaked .dcu ..."
-    $leaked = & rg --files -g '*.dcu' Core Persistence Features Tests VCL FMX ThirdParty Tools
+    $leaked = & rg --files -g '*.dcu' @SourceRoots
     if ($LASTEXITCODE -gt 1) {
         throw 'Failed to run rg for DCU source check'
     }

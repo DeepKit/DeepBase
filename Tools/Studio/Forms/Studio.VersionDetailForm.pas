@@ -30,7 +30,7 @@ uses
   Vcl.ExtCtrls,
   Vcl.ComCtrls,
   Vcl.Buttons,
-  UniBase.LLM.Manager;
+  DeepBase.LLM.Manager;
 
 type
   /// <summary>
@@ -345,7 +345,7 @@ begin
   FBtnRefreshPreview.Height := 24;
   FBtnRefreshPreview.Top := 4;
   FBtnRefreshPreview.Flat := True;
-  FBtnRefreshPreview.Caption := 'â†»';
+  FBtnRefreshPreview.Caption := 'â†?;
   FBtnRefreshPreview.Font.Size := 12;
   FBtnRefreshPreview.OnClick := BtnRefreshPreviewClick;
   FBtnRefreshPreview.Hint := 'Refresh preview';

@@ -88,7 +88,7 @@ implementation
 
 uses
   System.IOUtils,
-  UniBase.Logging;
+  DeepBase.Logging;
 
 { TChartBuilder }
 

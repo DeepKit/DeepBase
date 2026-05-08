@@ -1,7 +1,7 @@
-unit Tray.SchedulerFrame;
+﻿unit Tray.SchedulerFrame;
 
 {*******************************************************************************
-  UniBaseTray - 定时任务管理 Frame
+  DeepBaseTray - 定时任务管理 Frame
   
   功能:
   - 创建/编辑/删除定时任务

@@ -1,26 +1,26 @@
 unit uAntiTamperPackage;
 
 {
-  防篡改机制打包模块
+  防篡改机制打包模�?
   
-  功能：
+  功能�?
   1. 图像数据加密/解密
-  2. SHA-256完整性校验
+  2. SHA-256完整性校�?
   3. 篡改检测和安全响应
   4. 数据库表结构管理
   
-  使用方法：
-  1. 在项目中引用此单元
+  使用方法�?
+  1. 在项目中引用此单�?
   2. 调用 TAntiTamperPackage.SetupDatabase() 初始化数据库
   3. 使用 TAntiTamperPackage.SaveSecureImage() 保存加密图像
-  4. 使用 TAntiTamperPackage.LoadSecureImage() 加载并校验图像
+  4. 使用 TAntiTamperPackage.LoadSecureImage() 加载并校验图�?
   
-  依赖：
+  依赖�?
   - FireDAC组件
   - System.Hash单元
   
-  编译指令：
-  - 在Release配置中定义RELEASE符号以禁用详细日志
+  编译指令�?
+  - 在Release配置中定义RELEASE符号以禁用详细日�?
 }
 
 {$IFDEF RELEASE}
@@ -33,7 +33,7 @@ uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils,
   Vcl.Dialogs, Vcl.Graphics, Vcl.ExtCtrls, Winapi.ShellAPI, Winapi.Windows,
   FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB, uBasicProtection,
-  UniBase.Exceptions;
+  DeepBase.Exceptions;
 
 type
   // 加密算法类型
@@ -43,14 +43,14 @@ type
   TAntiTamperConfig = record
     EncryptionKey: string;        // 加密密钥
     DownloadURL: string;          // 官网下载地址
-    TableName: string;            // 数据库表名
+    TableName: string;            // 数据库表�?
     EnableLogging: Boolean;       // 是否启用日志
-    LogFileName: string;          // 日志文件名
+    LogFileName: string;          // 日志文件�?
     EncryptionType: TEncryptionType; // 加密算法类型
-    // KDF 与 HMAC 设置
-    Salt: string;                 // KDF盐
+    // KDF �?HMAC 设置
+    Salt: string;                 // KDF�?
     KdfIterations: Integer;       // KDF迭代次数
-    EnableHMAC: Boolean;          // 是否启用HMAC完整性签名
+    EnableHMAC: Boolean;          // 是否启用HMAC完整性签�?
   end;
 
  
@@ -65,12 +65,12 @@ type
     class function SimpleXOREncrypt(const Data: TBytes; const Key: string): TBytes;
     class function SimpleXORDecrypt(const Data: TBytes; const Key: string): TBytes;
     class procedure WriteLog(const AMessage: string);
-    class function DeriveKeyBytes: TBytes; // 基于EncryptionKey+Salt的迭代哈希
-    class function GetEffectiveKeyString: string; // 供对称加解密使用的派生密钥（hex）
+    class function DeriveKeyBytes: TBytes; // 基于EncryptionKey+Salt的迭代哈�?
+    class function GetEffectiveKeyString: string; // 供对称加解密使用的派生密钥（hex�?
     class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC签名
     
   public
-    // 初始化配置
+    // 初始化配�?
     class procedure Initialize(const AConfig: TAntiTamperConfig);
     
     // 数据库表结构管理
@@ -87,7 +87,7 @@ type
     class function EncryptImageData(const ImageData: TBytes): TBytes;
     class function DecryptImageData(const EncryptedData: TBytes): TBytes;
     
-    // 完整性校验
+    // 完整性校�?
     class function VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
     
     // 安全图像操作
@@ -114,8 +114,8 @@ begin
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
   Result.EncryptionType := etAES256; // 默认使用AES-256
-  // KDF/HMAC 默认值
-  Result.Salt := 'MoveC_Default_Salt_2025';
+  // KDF/HMAC 默认�?
+  Result.Salt := 'DeepMoveC_Default_Salt_2025';
   Result.KdfIterations := 5000;
   Result.EnableHMAC := True;
 end;
@@ -124,7 +124,7 @@ class procedure TAntiTamperPackage.Initialize(const AConfig: TAntiTamperConfig);
 begin
   FConfig := AConfig;
   FInitialized := True;
-  WriteLog('防篡改包初始化完成');
+  WriteLog('防篡改包初始化完�?);
 end;
 
 class procedure TAntiTamperPackage.WriteLog(const AMessage: string);
@@ -191,7 +191,7 @@ begin
   Result := Hash.HashAsString;
 end;
 
-// 基于 SHA-256 的简单迭代KDF，输出32字节
+// 基于 SHA-256 的简单迭代KDF，输�?2字节
 class function TAntiTamperPackage.DeriveKeyBytes: TBytes;
   function HexToBytes(const Hex: string): TBytes;
   var
@@ -207,7 +207,7 @@ var
   AccHex: string;
   SeedStr: string;
 begin
-  // 种子采用UTF-8字符串参与哈希
+  // 种子采用UTF-8字符串参与哈�?
   SeedStr := FConfig.EncryptionKey + '|' + FConfig.Salt;
   AccHex := THashSHA2.GetHashString(SeedStr); // 64位十六进制字符串
   Iterations := FConfig.KdfIterations;
@@ -235,18 +235,18 @@ class function TAntiTamperPackage.GetEffectiveKeyString: string;
     Result := string.Create(S);
   end;
 begin
-  // 返回十六进制口令字符串
+  // 返回十六进制口令字符�?
   Result := BytesToHex(DeriveKeyBytes);
 end;
 
 // 计算 HMAC-SHA256 并返回HEX
-// 注意：这里实际计算的是 HMAC(SHA256(Data), Key)，而非标准 HMAC(Data, Key)
+// 注意：这里实际计算的�?HMAC(SHA256(Data), Key)，而非标准 HMAC(Data, Key)
 // 但只要播种和验证使用相同逻辑，防篡改仍然有效
 class function TAntiTamperPackage.ComputeHMACSHA256(const Data: TBytes): string;
 var
   DataDigest, KeyHex: string;
 begin
-  // 先计算 Data 的 SHA-256 摘要，再计算其 HMAC
+  // 先计�?Data �?SHA-256 摘要，再计算�?HMAC
   DataDigest := THash.DigestAsString(Data);
   KeyHex := GetEffectiveKeyString;
   Result := THashSHA2.GetHMAC(DataDigest, KeyHex);
@@ -264,13 +264,13 @@ begin
     etAES256:
       Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   else
-    raise EAntiTamperException.Create('未知的加密类型');
+    raise EAntiTamperException.Create('未知的加密类�?);
   end;
   
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256加密，数据长度: %d bytes', [Length(Result)]))
+    WriteLog(Format('使用AES-256加密，数据长�? %d bytes', [Length(Result)]))
   else
-    WriteLog(Format('使用XOR加密，数据长度: %d bytes', [Length(Result)]));
+    WriteLog(Format('使用XOR加密，数据长�? %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
@@ -285,20 +285,20 @@ begin
     etAES256:
       Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   else
-    raise EAntiTamperException.Create('未知的加密类型');
+    raise EAntiTamperException.Create('未知的加密类�?);
   end;
   
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256解密，数据长度: %d bytes', [Length(Result)]))
+    WriteLog(Format('使用AES-256解密，数据长�? %d bytes', [Length(Result)]))
   else
-    WriteLog(Format('使用XOR解密，数据长度: %d bytes', [Length(Result)]));
+    WriteLog(Format('使用XOR解密，数据长�? %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
 var
   ActualHash: string;
 begin
-  // 使用SHA-256进行完整性校验
+  // 使用SHA-256进行完整性校�?
   ActualHash := CalculateSHA256(DecryptedData);
   Result := SameText(ActualHash, ExpectedHash);
   
@@ -349,7 +349,7 @@ begin
         WriteLog('防篡改数据表已存在，检查并升级字段');
         if not UpgradeDatabase(AConnection) then
         begin
-          WriteLog('升级数据表失败');
+          WriteLog('升级数据表失�?);
           Exit;
         end;
       end;
@@ -384,7 +384,7 @@ begin
         Query.ExecSQL;
         WriteLog('sha256_hash字段添加成功');
       except
-        WriteLog('sha256_hash字段可能已存在');
+        WriteLog('sha256_hash字段可能已存�?);
       end;
       // 为现有表添加hmac_sha256字段
       try
@@ -392,7 +392,7 @@ begin
         Query.ExecSQL;
         WriteLog('hmac_sha256字段添加成功');
       except
-        WriteLog('hmac_sha256字段可能已存在');
+        WriteLog('hmac_sha256字段可能已存�?);
       end;
       // 为现有表添加enabled字段
       try
@@ -400,15 +400,15 @@ begin
         Query.ExecSQL;
         WriteLog('enabled字段添加成功');
       except
-        WriteLog('enabled字段可能已存在');
+        WriteLog('enabled字段可能已存�?);
       end;
-      // 为现有表添加md5_hash字段（兼容旧实现）
+      // 为现有表添加md5_hash字段（兼容旧实现�?
       try
         Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN md5_hash TEXT';
         Query.ExecSQL;
         WriteLog('md5_hash字段添加成功');
       except
-        WriteLog('md5_hash字段可能已存在');
+        WriteLog('md5_hash字段可能已存�?);
       end;
       
       Result := True;
@@ -419,7 +419,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLog('升级数据库失败: ' + E.Message);
+      WriteLog('升级数据库失�? ' + E.Message);
       Result := False;
     end;
   end;
@@ -452,7 +452,7 @@ begin
     try
       Query.Connection := AConnection;
       
-      // 检查记录是否存在
+      // 检查记录是否存�?
       Query.SQL.Text := 'SELECT COUNT(*) as cnt FROM ' + FConfig.TableName + ' WHERE image_key = :key';
       Query.ParamByName('key').AsString := AImageKey;
       Query.Open;
@@ -461,7 +461,7 @@ begin
       
       if RecordExists then
       begin
-        // 更新现有记录（严格模式：必须包含 sha256_hash 与 hmac_sha256，md5_hash 保持兼容）
+        // 更新现有记录（严格模式：必须包含 sha256_hash �?hmac_sha256，md5_hash 保持兼容�?
         Query.SQL.Text :=
           'UPDATE ' + FConfig.TableName + ' SET image_data = :data, address_text = :addr, description = :desc, ' +
           'sha256_hash = :hash, hmac_sha256 = :hmac, md5_hash = :md5, updated_at = CURRENT_TIMESTAMP ' +
@@ -469,7 +469,7 @@ begin
       end
       else
       begin
-        // 插入新记录（严格模式，md5_hash 写入空字符串以兼容旧表 NOT NULL 约束）
+        // 插入新记录（严格模式，md5_hash 写入空字符串以兼容旧�?NOT NULL 约束�?
         Query.SQL.Text :=
           'INSERT INTO ' + FConfig.TableName + ' (image_key, image_data, address_text, description, sha256_hash, hmac_sha256, md5_hash) ' +
           'VALUES (:key, :data, :addr, :desc, :hash, :hmac, :md5)';
@@ -485,7 +485,7 @@ begin
       finally
         Stream.Free;
       end;
-      // 写入HMAC（严格模式：必须）
+      // 写入HMAC（严格模式：必须�?
       Query.ParamByName('hmac').AsString := ComputeHMACSHA256(AImageData);
       // 写入md5_hash（兼容旧表的NOT NULL约束，写入空字符串）
       Query.ParamByName('md5').AsString := '';
@@ -520,20 +520,20 @@ begin
   try
     if not Assigned(AImage) then
     begin
-      WriteLog('Image控件未分配: ' + AImageKey);
+      WriteLog('Image控件未分�? ' + AImageKey);
       Exit;
     end;
     
     if not ATable.Active then
     begin
-      WriteLog('数据表未激活: ' + AImageKey);
+      WriteLog('数据表未激�? ' + AImageKey);
       Exit;
     end;
     
     // 查找记录
     if ATable.Locate('image_key', AImageKey, []) then
     begin
-      WriteLog('在数据库中找到记录: ' + AImageKey);
+      WriteLog('在数据库中找到记�? ' + AImageKey);
       
       // 获取字段
       var ImageField := ATable.FieldByName('image_data');
@@ -562,7 +562,7 @@ begin
           // SHA-256完整性校验（严格：字段必须存在）
           if not Assigned(SHAField) or SHAField.IsNull then
           begin
-            HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为空');
+            HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为�?);
             Exit;
           end;
           ExpectedMD5 := SHAField.AsString;
@@ -575,7 +575,7 @@ begin
           // HMAC 校验（严格：字段必须存在且匹配）
           if not Assigned(HMACField) or HMACField.IsNull then
           begin
-            HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为空');
+            HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为�?);
             Exit;
           end;
           if FConfig.EnableHMAC then
@@ -592,7 +592,7 @@ begin
           
           WriteLog(Format('SHA-256校验通过: %s', [AImageKey]));
           
-          // 从解密数据加载图像
+          // 从解密数据加载图�?
           MemoryStream.Clear;
           MemoryStream.WriteBuffer(DecryptedData[0], Length(DecryptedData));
           MemoryStream.Position := 0;
@@ -617,13 +617,13 @@ begin
     end
     else
     begin
-      WriteLog('数据库中未找到记录: ' + AImageKey);
+      WriteLog('数据库中未找到记�? ' + AImageKey);
     end;
     
   except
     on E: Exception do
     begin
-      WriteLog(Format('加载安全图像时出错: %s - %s', [AImageKey, E.Message]));
+      WriteLog(Format('加载安全图像时出�? %s - %s', [AImageKey, E.Message]));
       Result := False;
     end;
   end;
@@ -639,9 +639,9 @@ begin
   ErrorMsg := Format('安全检查失败！'#13#10#13#10 +
     '图像: %s'#13#10 +
     '原因: %s'#13#10#13#10 +
-    '检测到程序文件可能被篡改，为了您的安全，程序将退出。'#13#10 +
-    '请从官方网站下载最新版本。'#13#10#13#10 +
-    '是否现在访问官方下载页面？', [ImageKey, Reason]);
+    '检测到程序文件可能被篡改，为了您的安全，程序将退出�?#13#10 +
+    '请从官方网站下载最新版本�?#13#10#13#10 +
+    '是否现在访问官方下载页面�?, [ImageKey, Reason]);
     
   Response := MessageBox(0, PChar(ErrorMsg), '安全警告', MB_YESNO or MB_ICONERROR or MB_TOPMOST);
   
@@ -651,8 +651,8 @@ begin
     ShellExecute(0, 'open', PChar(FConfig.DownloadURL), nil, nil, SW_SHOWNORMAL);
   end;
   
-  // 强制退出程序
-  WriteLog('程序因安全违规退出');
+  // 强制退出程�?
+  WriteLog('程序因安全违规退�?);
   ExitProcess(1);
 end;
 
@@ -667,13 +667,13 @@ begin
     Q.Connection := AConnection;
     Q.SQL.Text := 'DELETE FROM ' + FConfig.TableName;
     Q.ExecSQL;
-    WriteLog('已清空防篡改数据表');
+    WriteLog('已清空防篡改数据�?);
   finally
     Q.Free;
   end;
 end;
 
-// 播种最小合法记录（严格模式辅助）
+// 播种最小合法记录（严格模式辅助�?
 class procedure TAntiTamperPackage.ReseedMinimal(AConnection: TFDConnection);
 var
   Q: TFDQuery;
@@ -702,7 +702,7 @@ begin
     Q.ParamByName('sha').AsString := SHAHex;
     Q.ParamByName('hmac').AsString := HMACHex;
     Q.ExecSQL;
-    WriteLog('已播种最小合法记录 seed');
+    WriteLog('已播种最小合法记�?seed');
   finally
     Q.Free;
   end;

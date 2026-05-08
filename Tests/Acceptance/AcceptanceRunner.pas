@@ -1,5 +1,5 @@
 { ============================================================================
-  AcceptanceRunner - 验收测试运行器
+  AcceptanceRunner - 验收测试运行�?
   
   版本: 1.0
   说明: 执行各阶段验收测试的核心逻辑
@@ -61,7 +61,7 @@ type
     procedure InitializeTests;
     function RunTest(var Item: TTestItem): Boolean;
     
-    // 各阶段测试方法
+    // 各阶段测试方�?
     function Test_Compile_Win32: Boolean;
     function Test_Compile_Win64: Boolean;
     function Test_NoTODO: Boolean;
@@ -153,59 +153,59 @@ var
 begin
   FTests.Clear;
   
-  // ========== 第一阶段: 文档与架构审查 ==========
+  // ========== 第一阶段: 文档与架构审�?==========
   T.Clear;
-  T.ID := 'P1-001'; T.Name := 'README.md 完整性'; T.Phase := 1;
-  T.Description := '检查 README.md 包含安装、配置、快速开始';
+  T.ID := 'P1-001'; T.Name := 'README.md 完整�?; T.Phase := 1;
+  T.Description := '检�?README.md 包含安装、配置、快速开�?;
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
   
   T.Clear;
   T.ID := 'P1-002'; T.Name := 'CHANGELOG.md 存在'; T.Phase := 1;
-  T.Description := '检查 CHANGELOG.md 记录版本变更';
+  T.Description := '检�?CHANGELOG.md 记录版本变更';
   T.Priority := tpP1; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
-  T.ID := 'P1-003'; T.Name := '模块依赖检查'; T.Phase := 1;
+  T.ID := 'P1-003'; T.Name := '模块依赖检�?; T.Phase := 1;
   T.Description := '检查无循环依赖';
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
 
-  // ========== 第二阶段: 静态代码分析 ==========
+  // ========== 第二阶段: 静态代码分�?==========
   T.Clear;
   T.ID := 'P2-001'; T.Name := 'Win32 编译'; T.Phase := 2;
-  T.Description := '编译 Win32 版本，零错误零警告';
+  T.Description := '编译 Win32 版本，零错误零警�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
   T.ID := 'P2-002'; T.Name := 'Win64 编译'; T.Phase := 2;
-  T.Description := '编译 Win64 版本，零错误零警告';
+  T.Description := '编译 Win64 版本，零错误零警�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
-  T.ID := 'P2-003'; T.Name := '无 TODO/FIXME'; T.Phase := 2;
-  T.Description := '检查代码中无未完成的 TODO/FIXME';
+  T.ID := 'P2-003'; T.Name := '�?TODO/FIXME'; T.Phase := 2;
+  T.Description := '检查代码中无未完成�?TODO/FIXME';
   T.Priority := tpP1; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
   T.ID := 'P2-004'; T.Name := '无硬编码密钥'; T.Phase := 2;
-  T.Description := '检查无硬编码的密钥或密码';
+  T.Description := '检查无硬编码的密钥或密�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   // ========== 第三阶段: 单元测试验证 ==========
   T.Clear;
   T.ID := 'P3-001'; T.Name := '单元测试执行'; T.Phase := 3;
-  T.Description := '运行所有单元测试';
+  T.Description := '运行所有单元测�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
-  T.ID := 'P3-002'; T.Name := '测试覆盖率'; T.Phase := 3;
+  T.ID := 'P3-002'; T.Name := '测试覆盖�?; T.Phase := 3;
   T.Description := '检查测试覆盖率 >= 80%';
   T.Priority := tpP1; T.IsManual := True;
   FTests.Add(T);
@@ -213,13 +213,13 @@ begin
   // ========== 第四阶段: 集成测试 ==========
   T.Clear;
   T.ID := 'P4-001'; T.Name := '集成测试执行'; T.Phase := 4;
-  T.Description := '运行所有集成测试';
+  T.Description := '运行所有集成测�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
   T.ID := 'P4-002'; T.Name := '压力测试'; T.Phase := 4;
-  T.Description := '运行压力测试，验证稳定性';
+  T.Description := '运行压力测试，验证稳定�?;
   T.Priority := tpP1; T.IsManual := True;
   FTests.Add(T);
   
@@ -232,7 +232,7 @@ begin
   
   T.Clear;
   T.ID := 'P5-002'; T.Name := '支付签名验证'; T.Phase := 5;
-  T.Description := '验证微信/Stripe/支付宝签名';
+  T.Description := '验证微信/Stripe/支付宝签�?;
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
   
@@ -242,23 +242,23 @@ begin
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
   
-  // ========== 第六阶段: 兼容性测试 ==========
+  // ========== 第六阶段: 兼容性测�?==========
   T.Clear;
   T.ID := 'P6-001'; T.Name := 'Delphi 11 兼容'; T.Phase := 6;
-  T.Description := '在 Delphi 11 Alexandria 编译测试';
+  T.Description := '�?Delphi 11 Alexandria 编译测试';
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
   
   T.Clear;
   T.ID := 'P6-002'; T.Name := 'Delphi 12 兼容'; T.Phase := 6;
-  T.Description := '在 Delphi 12 Athens 编译测试';
+  T.Description := '�?Delphi 12 Athens 编译测试';
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
   
   // ========== 第七阶段: 示例项目验证 ==========
   T.Clear;
   T.ID := 'P7-001'; T.Name := '示例项目编译'; T.Phase := 7;
-  T.Description := '编译所有示例项目';
+  T.Description := '编译所有示例项�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
@@ -268,15 +268,15 @@ begin
   T.Priority := tpP1; T.IsManual := True;
   FTests.Add(T);
   
-  // ========== 第八阶段: 最终验收 ==========
+  // ========== 第八阶段: 最终验�?==========
   T.Clear;
-  T.ID := 'P8-001'; T.Name := '内存泄漏检查'; T.Phase := 8;
-  T.Description := '使用 ReportMemoryLeaksOnShutdown 检查';
+  T.ID := 'P8-001'; T.Name := '内存泄漏检�?; T.Phase := 8;
+  T.Description := '使用 ReportMemoryLeaksOnShutdown 检�?;
   T.Priority := tpP0; T.IsManual := False;
   FTests.Add(T);
   
   T.Clear;
-  T.ID := 'P8-002'; T.Name := '最终签字确认'; T.Phase := 8;
+  T.ID := 'P8-002'; T.Name := '最终签字确�?; T.Phase := 8;
   T.Description := '验收组长签字确认';
   T.Priority := tpP0; T.IsManual := True;
   FTests.Add(T);
@@ -285,7 +285,7 @@ end;
 procedure TAcceptanceRunner.LoadTests;
 begin
   InitializeTests;
-  Log(Format('已加载 %d 个测试项', [FTests.Count]));
+  Log(Format('已加�?%d 个测试项', [FTests.Count]));
 end;
 
 function TAcceptanceRunner.RunTest(var Item: TTestItem): Boolean;
@@ -361,7 +361,7 @@ begin
   FCurrentPhase := PhaseNumber;
   
   PhaseResult.PhaseNumber := PhaseNumber;
-  PhaseResult.PhaseName := Format('第 %d 阶段', [PhaseNumber]);
+  PhaseResult.PhaseName := Format('�?%d 阶段', [PhaseNumber]);
   PhaseResult.TotalTests := 0;
   PhaseResult.PassedTests := 0;
   PhaseResult.FailedTests := 0;
@@ -402,7 +402,7 @@ begin
     FOnPhaseComplete(PhaseResult);
   
   FRunning := False;
-  Log(Format('第 %d 阶段完成: %d/%d 通过', 
+  Log(Format('�?%d 阶段完成: %d/%d 通过', 
     [PhaseNumber, PhaseResult.PassedTests, PhaseResult.TotalTests]));
 end;
 
@@ -432,7 +432,7 @@ begin
         Item.ErrorMessage := Notes;
       end;
       FTests[I] := Item;
-      Log(Format('手动测试 %s 标记为: %s', [TestID, IfThen(Passed, '通过', '失败')]));
+      Log(Format('手动测试 %s 标记�? %s', [TestID, IfThen(Passed, '通过', '失败')]));
       Break;
     end;
   end;
@@ -450,7 +450,7 @@ begin
     begin
       Item.Status := tsSkipped;
       FTests[I] := Item;
-      Log(Format('测试 %s 已跳过', [TestID]));
+      Log(Format('测试 %s 已跳�?, [TestID]));
       Break;
     end;
   end;
@@ -504,15 +504,15 @@ function TAcceptanceRunner.Test_Compile_Win32: Boolean;
 var
   DpkPath: string;
 begin
-  DpkPath := TPath.Combine(FBasePath, 'UniBaseCore.dpk');
+  DpkPath := TPath.Combine(FBasePath, 'DeepBaseCore.dpk');
   Result := TFile.Exists(DpkPath);
   if not Result then
-    Log('UniBaseCore.dpk 不存在', True);
+    Log('DeepBaseCore.dpk 不存�?, True);
 end;
 
 function TAcceptanceRunner.Test_Compile_Win64: Boolean;
 begin
-  Result := Test_Compile_Win32; // 简化实现
+  Result := Test_Compile_Win32; // 简化实�?
 end;
 
 function TAcceptanceRunner.Test_NoTODO: Boolean;
@@ -531,7 +531,7 @@ begin
   end;
   Result := TodoCount = 0;
   if not Result then
-    Log(Format('发现 %d 个文件包含 TODO/FIXME', [TodoCount]), True);
+    Log(Format('发现 %d 个文件包�?TODO/FIXME', [TodoCount]), True);
 end;
 
 function TAcceptanceRunner.Test_NoHardcodedKeys: Boolean;
@@ -545,7 +545,7 @@ begin
   for F in Files do
   begin
     Content := TFile.ReadAllText(F);
-    // 检查常见的硬编码密钥模式
+    // 检查常见的硬编码密钥模�?
     if Content.Contains('password :=') or 
        Content.Contains('secret :=') or
        Content.Contains('apikey :=') then
@@ -561,7 +561,7 @@ function TAcceptanceRunner.Test_UnitTests: Boolean;
 var
   TestExe: string;
 begin
-  TestExe := TPath.Combine(FBasePath, 'Tests\UniBaseTests.exe');
+  TestExe := TPath.Combine(FBasePath, 'Tests\DeepBaseTests.exe');
   Result := TFile.Exists(TestExe);
   if not Result then
     Log('单元测试可执行文件不存在', True);
@@ -571,7 +571,7 @@ function TAcceptanceRunner.Test_IntegrationTests: Boolean;
 var
   TestExe: string;
 begin
-  TestExe := TPath.Combine(FBasePath, 'Tests\Integration\UniBaseIntegrationTests.exe');
+  TestExe := TPath.Combine(FBasePath, 'Tests\Integration\DeepBaseIntegrationTests.exe');
   Result := TFile.Exists(TestExe);
 end;
 
@@ -579,7 +579,7 @@ function TAcceptanceRunner.Test_SecurityCrypto: Boolean;
 var
   CryptoFile: string;
 begin
-  CryptoFile := TPath.Combine(FBasePath, 'Core\UniBase.Crypto.pas');
+  CryptoFile := TPath.Combine(FBasePath, 'Core\DeepBase.Crypto.pas');
   Result := TFile.Exists(CryptoFile);
   if Result then
   begin
@@ -590,13 +590,13 @@ end;
 
 function TAcceptanceRunner.Test_SecurityPayment: Boolean;
 begin
-  Result := TFile.Exists(TPath.Combine(FBasePath, 'ThirdParty\Payment\UniBase.Payment.WeChatPay.pas')) and
-            TFile.Exists(TPath.Combine(FBasePath, 'ThirdParty\Payment\UniBase.Payment.Stripe.pas'));
+  Result := TFile.Exists(TPath.Combine(FBasePath, 'ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas')) and
+            TFile.Exists(TPath.Combine(FBasePath, 'ThirdParty\Payment\DeepBase.Payment.Stripe.pas'));
 end;
 
 function TAcceptanceRunner.Test_MemoryLeaks: Boolean;
 begin
-  // 简化实现 - 实际应运行测试并检查内存泄漏
+  // 简化实�?- 实际应运行测试并检查内存泄�?
   Result := True;
 end;
 
@@ -611,7 +611,7 @@ begin
   begin
     Dirs := TDirectory.GetDirectories(ExamplesDir);
     Result := Length(Dirs) >= 5;
-    Log(Format('发现 %d 个示例项目', [Length(Dirs)]));
+    Log(Format('发现 %d 个示例项�?, [Length(Dirs)]));
   end;
 end;
 
@@ -640,7 +640,7 @@ begin
   try
     HTML.Add('<!DOCTYPE html>');
     HTML.Add('<html><head><meta charset="UTF-8">');
-    HTML.Add('<title>UniBase 验收报告</title>');
+    HTML.Add('<title>DeepBase 验收报告</title>');
     HTML.Add('<style>');
     HTML.Add('body{font-family:"Segoe UI",Arial;margin:20px;background:#f5f5f5}');
     HTML.Add('.container{max-width:1000px;margin:0 auto}');
@@ -658,7 +658,7 @@ begin
     HTML.Add('</style></head><body>');
     HTML.Add('<div class="container">');
     HTML.Add('<div class="header">');
-    HTML.Add('<h1>🧪 UniBase 验收报告</h1>');
+    HTML.Add('<h1>🧪 DeepBase 验收报告</h1>');
     HTML.Add('<p>生成时间: ' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '</p>');
     HTML.Add('</div>');
     
@@ -667,26 +667,26 @@ begin
     HTML.Add(Format('<div class="stat stat-total"><div style="font-size:24px">%d</div>总计</div>', [FTests.Count]));
     HTML.Add(Format('<div class="stat stat-pass"><div style="font-size:24px">%d</div>通过</div>', [TotalPassed]));
     HTML.Add(Format('<div class="stat stat-fail"><div style="font-size:24px">%d</div>失败</div>', [TotalFailed]));
-    HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>待人工</div>', [TotalManual]));
+    HTML.Add(Format('<div class="stat stat-manual"><div style="font-size:24px">%d</div>待人�?/div>', [TotalManual]));
     HTML.Add('</div>');
     
-    // 各阶段
+    // 各阶�?
     for var Phase := 1 to 8 do
     begin
       HTML.Add('<div class="phase">');
-      HTML.Add(Format('<div class="phase-header">第 %d 阶段</div>', [Phase]));
+      HTML.Add(Format('<div class="phase-header">�?%d 阶段</div>', [Phase]));
       
       for Item in FTests do
       begin
         if Item.Phase = Phase then
         begin
           case Item.Status of
-            tsPassed: begin StatusClass := 'pass'; StatusText := '✓ 通过'; end;
-            tsFailed: begin StatusClass := 'fail'; StatusText := '✗ 失败'; end;
-            tsManual: begin StatusClass := 'manual'; StatusText := '⚠ 待人工'; end;
-            tsSkipped: begin StatusClass := 'skip'; StatusText := '○ 跳过'; end;
+            tsPassed: begin StatusClass := 'pass'; StatusText := '�?通过'; end;
+            tsFailed: begin StatusClass := 'fail'; StatusText := '�?失败'; end;
+            tsManual: begin StatusClass := 'manual'; StatusText := '�?待人�?; end;
+            tsSkipped: begin StatusClass := 'skip'; StatusText := '�?跳过'; end;
           else
-            begin StatusClass := 'notrun'; StatusText := '- 未执行'; end;
+            begin StatusClass := 'notrun'; StatusText := '- 未执�?; end;
           end;
           
           HTML.Add('<div class="test-item">');
@@ -703,7 +703,7 @@ begin
     
     ForceDirectories(ExtractFilePath(OutputPath));
     HTML.SaveToFile(OutputPath, TEncoding.UTF8);
-    Log('验收报告已生成: ' + OutputPath);
+    Log('验收报告已生�? ' + OutputPath);
   finally
     HTML.Free;
   end;

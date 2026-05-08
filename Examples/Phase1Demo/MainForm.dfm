@@ -1,7 +1,7 @@
 object frmMain: TfrmMain
   Left = 0
   Top = 0
-  Caption = 'UniBase Phase 1 Demo (VCL Controls)'
+  Caption = 'DeepBase Phase 1 Demo (VCL Controls)'
   ClientHeight = 600
   ClientWidth = 900
   Color = clBtnFace
@@ -39,12 +39,7 @@ object frmMain: TfrmMain
         Height = 15
         Caption = 'Language'
         TextKey = 'Language'
-  object FDGUIxWaitCursor1: TFDGUIxWaitCursor
-    Provider = 'Forms'
-    Left = 840
-    Top = 16
-  end
-end
+      end
       object lblTheme: TI18nLabel
         Left = 16
         Top = 72
@@ -119,9 +114,6 @@ end
     Left = 250
     Top = 0
     Height = 600
-    ExplicitLeft = 256
-    ExplicitTop = 288
-    ExplicitHeight = 100
   end
   object pnlRight: TPanel
     Left = 253
@@ -177,3 +169,9 @@ end
       end
     end
   end
+  object FDGUIxWaitCursor1: TFDGUIxWaitCursor
+    Provider = 'Forms'
+    Left = 840
+    Top = 16
+  end
+end

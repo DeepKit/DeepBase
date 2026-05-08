@@ -19,7 +19,7 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================
@@ -167,14 +167,14 @@ uses
   Winapi.Windows,
   {$ENDIF}
   System.DateUtils,
-  UniBase.Manager,
-  UniBase.Config,
-  UniBase.Logging;
+  DeepBase.Manager,
+  DeepBase.Config,
+  DeepBase.Logging;
 
-// Wrapper to access UniBase singleton (avoids namespace collision)
-function UB: TUniBaseManager; inline;
+// Wrapper to access DeepBase singleton (avoids namespace collision)
+function UB: TDeepBaseManager; inline;
 begin
-  Result := UniBase.Manager.UniBase;
+  Result := DeepBase.Manager.DeepBase;
 end;
 
 const

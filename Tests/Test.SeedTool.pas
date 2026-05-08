@@ -2,8 +2,7 @@
   Test.SeedTool - SeedTool 工具单元测试
 
   测试覆盖:
-    - TBasicProtection: 加密解密、HMAC、哈希
-    - TAntiTamperPackage: 防篡改数据包
+    - TBasicProtection: 加密解密、HMAC、哈�?    - TAntiTamperPackage: 防篡改数据包
   ============================================================================ }
 
 unit Test.SeedTool;
@@ -140,7 +139,7 @@ procedure TBasicProtectionTests.Test_EncryptDecrypt_Unicode;
 var
   Original, Encrypted, Decrypted: string;
 begin
-  Original := '中文测试 日本語 한국어 🎉';
+  Original := '中文测试 日本�?한국�?🎉';
   Encrypted := TBasicProtection.EncryptSensitiveData(Original);
   Decrypted := TBasicProtection.DecryptSensitiveData(Encrypted);
 
@@ -208,8 +207,7 @@ begin
   Data := 'Original data';
   HMAC := TBasicProtection.CalculateHMAC(Data);
 
-  // 修改数据后验证应该失败
-  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));
+  // 修改数据后验证应该失�?  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));
 end;
 
 procedure TBasicProtectionTests.Test_CalculateDataHash;
@@ -261,11 +259,9 @@ begin
   Encrypted1 := TBasicProtection.EncryptSensitiveData(Original);
   Encrypted2 := TBasicProtection.EncryptSensitiveData(Original);
 
-  // 由于随机 IV，每次加密结果应该不同
-  Assert.AreNotEqual(Encrypted1, Encrypted2);
+  // 由于随机 IV，每次加密结果应该不�?  Assert.AreNotEqual(Encrypted1, Encrypted2);
 
-  // 但两个都应该能正确解密
-  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1));
+  // 但两个都应该能正确解�?  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1));
   Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted2));
 end;
 
@@ -377,8 +373,7 @@ begin
     Package.Free;
   end;
 
-  // 篡改文件中间的一个字节
-  Content := TFile.ReadAllBytes(FileName);
+  // 篡改文件中间的一个字�?  Content := TFile.ReadAllBytes(FileName);
   if Length(Content) > 50 then
     Content[50] := Content[50] xor $FF;
   TFile.WriteAllBytes(FileName, Content);
@@ -388,12 +383,10 @@ begin
   try
     try
       Package.LoadFromFile(FileName);
-      // 如果没有抛出异常，检查完整性标志
-      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
+      // 如果没有抛出异常，检查完整性标�?      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
     except
       on E: Exception do
-        // 抛出异常也是合理的行为
-        Assert.Pass('Tampering detected via exception: ' + E.Message);
+        // 抛出异常也是合理的行�?        Assert.Pass('Tampering detected via exception: ' + E.Message);
     end;
   finally
     Package.Free;

@@ -1,7 +1,7 @@
 unit Tray.MainForm;
 
 {*******************************************************************************
-  UniBaseTray - 开发工作台悬浮窗口
+  DeepBaseTray - 开发工作台悬浮窗口
   
   功能:
   - 悬浮窗口，可拖动，半透明
@@ -14,23 +14,22 @@ unit Tray.MainForm;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, Winapi.ShellAPI,
+  Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, System.IniFiles,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.Menus, Vcl.Imaging.pngimage,
+  DeepBase.VCL.TrayIcon,
+  Tray.Hotkey,
   Tray.DevLogFrame, Tray.CommandFrame, Tray.MonitorFrame, Tray.NotesFrame,
   Tray.SchedulerFrame, Tray.ProjectsFrame;
-
-const
-  WM_TRAYICON = WM_USER + 100;
   
 type
   TTrayMainForm = class(TForm)
   private
     { 托盘相关 }
-    FTrayIcon: TNotifyIconData;
-    FTrayIconAdded: Boolean;
+    FTrayIcon: TDeepBaseTrayIcon;
     FTrayMenu: TPopupMenu;
+    FHotkeyManager: TTrayHotkeyManager;
     
     { 窗口状态 }
     FDragging: Boolean;
@@ -64,7 +63,6 @@ type
     { 托盘方法 }
     procedure CreateTrayIcon;
     procedure RemoveTrayIcon;
-    procedure OnTrayIconMessage(var Msg: TMessage); message WM_TRAYICON;
     procedure ShowFromTray;
     procedure HideToTray;
     
@@ -72,7 +70,14 @@ type
     procedure CreateTrayMenu;
     procedure OnTrayMenuShow(Sender: TObject);
     procedure OnTrayMenuHide(Sender: TObject);
+    procedure OnTrayMenuCheckUpdate(Sender: TObject);
+    procedure OnTrayMenuLicenseStatus(Sender: TObject);
+    procedure OnTrayMenuSettings(Sender: TObject);
     procedure OnTrayMenuExit(Sender: TObject);
+
+    { 热键 }
+    procedure HandleHotkey(Action: THotkeyAction);
+    procedure WMHotKey(var Msg: TMessage); message WM_HOTKEY;
     
     { 窗口拖动 }
     procedure TitleBarMouseDown(Sender: TObject; Button: TMouseButton;
@@ -128,7 +133,7 @@ var
 implementation
 
 uses
-  Tray.Launcher, Tray.Database;
+  Tray.Launcher, Tray.Database, Tray.SettingsForm;
 
 {$R *.dfm}
 
@@ -143,8 +148,9 @@ const
 constructor TTrayMainForm.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  
-  FTrayIconAdded := False;
+
+  FTrayIcon := nil;
+  FHotkeyManager := nil;
   FDragging := False;
   FOpacity := DEFAULT_OPACITY;
   FAlwaysOnTop := True;
@@ -176,10 +182,26 @@ begin
   // 创建托盘
   CreateTrayMenu;
   CreateTrayIcon;
+
+  // 全局热键（托盘/窗口联动）
+  TTrayHotkeyManager.Initialize(Handle);
+  FHotkeyManager := TrayHotkeys;
+  if Assigned(FHotkeyManager) then
+  begin
+    FHotkeyManager.OnHotkey := HandleHotkey;
+    FHotkeyManager.RegisterDefaults;
+  end;
 end;
 
 destructor TTrayMainForm.Destroy;
 begin
+  if Assigned(FHotkeyManager) then
+  begin
+    FHotkeyManager.OnHotkey := nil;
+    FHotkeyManager.UnregisterAll;
+    FHotkeyManager := nil;
+  end;
+  TTrayHotkeyManager.Finalize;
   SaveSettings;
   RemoveTrayIcon;
   FTrayMenu.Free;
@@ -203,59 +225,48 @@ end;
 
 procedure TTrayMainForm.CreateTrayIcon;
 begin
-  ZeroMemory(@FTrayIcon, SizeOf(FTrayIcon));
-  FTrayIcon.cbSize := SizeOf(TNotifyIconData);
-  FTrayIcon.Wnd := Handle;
-  FTrayIcon.uID := 1;
-  FTrayIcon.uFlags := NIF_ICON or NIF_MESSAGE or NIF_TIP;
-  FTrayIcon.uCallbackMessage := WM_TRAYICON;
-  FTrayIcon.hIcon := Application.Icon.Handle;
-  StrPCopy(FTrayIcon.szTip, 'UniBase 工作台');
-  
-  FTrayIconAdded := Shell_NotifyIcon(NIM_ADD, @FTrayIcon);
+  if Assigned(FTrayIcon) then
+    Exit;
+
+  FTrayIcon := TDeepBaseTrayIcon.Create(Self);
+  FTrayIcon.ToolTip := 'DeepBase 工作台';
+  FTrayIcon.HostForm := Self;
+  FTrayIcon.PopupMenu := FTrayMenu;
+  FTrayIcon.MinimizeToTray := True;
+  FTrayIcon.CloseToTray := TrayDB.GetSettingBool('Tray.MinimizeOnClose', True);
+  FTrayIcon.RestoreOnDoubleClick := True;
+  if Application.Icon.Handle <> 0 then
+    FTrayIcon.Icon.Handle := Application.Icon.Handle;
+  FTrayIcon.Visible := True;
 end;
 
 procedure TTrayMainForm.RemoveTrayIcon;
 begin
-  if FTrayIconAdded then
+  if Assigned(FTrayIcon) then
   begin
-    Shell_NotifyIcon(NIM_DELETE, @FTrayIcon);
-    FTrayIconAdded := False;
-  end;
-end;
-
-procedure TTrayMainForm.OnTrayIconMessage(var Msg: TMessage);
-var
-  Pt: TPoint;
-begin
-  case Msg.LParam of
-    WM_LBUTTONDBLCLK:
-      begin
-        if Visible then
-          HideToTray
-        else
-          ShowFromTray;
-      end;
-    WM_RBUTTONUP:
-      begin
-        SetForegroundWindow(Handle);
-        GetCursorPos(Pt);
-        FTrayMenu.Popup(Pt.X, Pt.Y);
-        PostMessage(Handle, WM_NULL, 0, 0);
-      end;
+    FTrayIcon.Visible := False;
+    FreeAndNil(FTrayIcon);
   end;
 end;
 
 procedure TTrayMainForm.ShowFromTray;
 begin
-  Show;
-  WindowState := wsNormal;
-  SetForegroundWindow(Handle);
+  if Assigned(FTrayIcon) then
+    FTrayIcon.ShowHostForm
+  else
+  begin
+    Show;
+    WindowState := wsNormal;
+    SetForegroundWindow(Handle);
+  end;
 end;
 
 procedure TTrayMainForm.HideToTray;
 begin
-  Hide;
+  if Assigned(FTrayIcon) then
+    FTrayIcon.HideHostForm
+  else
+    Hide;
 end;
 
 { 托盘菜单 }
@@ -280,7 +291,26 @@ begin
   MenuItem := TMenuItem.Create(FTrayMenu);
   MenuItem.Caption := '-';
   FTrayMenu.Items.Add(MenuItem);
-  
+
+  MenuItem := TMenuItem.Create(FTrayMenu);
+  MenuItem.Caption := '检查更新(&U)';
+  MenuItem.OnClick := OnTrayMenuCheckUpdate;
+  FTrayMenu.Items.Add(MenuItem);
+
+  MenuItem := TMenuItem.Create(FTrayMenu);
+  MenuItem.Caption := '授权状态(&L)';
+  MenuItem.OnClick := OnTrayMenuLicenseStatus;
+  FTrayMenu.Items.Add(MenuItem);
+
+  MenuItem := TMenuItem.Create(FTrayMenu);
+  MenuItem.Caption := '设置(&T)';
+  MenuItem.OnClick := OnTrayMenuSettings;
+  FTrayMenu.Items.Add(MenuItem);
+
+  MenuItem := TMenuItem.Create(FTrayMenu);
+  MenuItem.Caption := '-';
+  FTrayMenu.Items.Add(MenuItem);
+
   MenuItem := TMenuItem.Create(FTrayMenu);
   MenuItem.Caption := '退出(&X)';
   MenuItem.OnClick := OnTrayMenuExit;
@@ -297,9 +327,86 @@ begin
   HideToTray;
 end;
 
+procedure TTrayMainForm.OnTrayMenuCheckUpdate(Sender: TObject);
+begin
+  MessageDlg('更新检查将在 UPD-P0-001 接入服务器后启用。', mtInformation, [mbOK], 0);
+end;
+
+procedure TTrayMainForm.OnTrayMenuLicenseStatus(Sender: TObject);
+begin
+  MessageDlg('授权状态将在 SEC-P0-001 完成后接入。', mtInformation, [mbOK], 0);
+end;
+
+procedure TTrayMainForm.OnTrayMenuSettings(Sender: TObject);
+var
+  SettingsForm: TTraySettingsForm;
+begin
+  SettingsForm := TTraySettingsForm.Create(Self);
+  try
+    if SettingsForm.ShowModal = mrOk then
+    begin
+      FOpacity := TrayDB.GetSettingInt('Tray.Opacity', FOpacity);
+      AlphaBlendValue := FOpacity;
+      FAlwaysOnTop := TrayDB.GetSettingBool('Tray.AlwaysOnTop', FAlwaysOnTop);
+      if FAlwaysOnTop then
+        FormStyle := fsStayOnTop
+      else
+        FormStyle := fsNormal;
+      if Assigned(FTrayIcon) then
+        FTrayIcon.CloseToTray := TrayDB.GetSettingBool('Tray.MinimizeOnClose', True);
+    end;
+  finally
+    SettingsForm.Free;
+  end;
+end;
+
 procedure TTrayMainForm.OnTrayMenuExit(Sender: TObject);
 begin
+  if Assigned(FTrayIcon) then
+  begin
+    FTrayIcon.CloseToTray := False;
+    FTrayIcon.Visible := False;
+  end;
   Application.Terminate;
+end;
+
+{ 热键 }
+
+procedure TTrayMainForm.WMHotKey(var Msg: TMessage);
+begin
+  if Assigned(FHotkeyManager) then
+    FHotkeyManager.ProcessMessage(Msg)
+  else
+    Msg.Result := DefWindowProc(Handle, Msg.Msg, Msg.WParam, Msg.LParam);
+end;
+
+procedure TTrayMainForm.HandleHotkey(Action: THotkeyAction);
+begin
+  case Action of
+    haShowHide:
+      begin
+        if Visible then
+          HideToTray
+        else
+          ShowFromTray;
+      end;
+    haQuickNote:
+      begin
+        ShowFromTray;
+        if Assigned(FPageControl) and Assigned(FTabNotes) then
+          FPageControl.ActivePage := FTabNotes;
+      end;
+    haLaunchStudio:
+      TTrayLauncher.LaunchStudio;
+    haLaunchCmd:
+      TTrayLauncher.LaunchCmd;
+    haLaunchPwsh:
+      TTrayLauncher.LaunchPowerShell;
+    haClipboard:
+      ; // reserved
+    haScreenshot:
+      ; // reserved
+  end;
 end;
 
 { 窗口拖动 }
@@ -345,7 +452,10 @@ end;
 
 procedure TTrayMainForm.OnBtnCloseClick(Sender: TObject);
 begin
-  Application.Terminate;
+  if Assigned(FTrayIcon) and FTrayIcon.CloseToTray then
+    HideToTray
+  else
+    Application.Terminate;
 end;
 
 { 设置 }
@@ -355,7 +465,7 @@ var
   AppDataPath: string;
 begin
   AppDataPath := GetEnvironmentVariable('APPDATA');
-  Result := IncludeTrailingPathDelimiter(AppDataPath) + 'UniBase';
+  Result := IncludeTrailingPathDelimiter(AppDataPath) + 'DeepBase';
   if not DirectoryExists(Result) then
     ForceDirectories(Result);
   Result := IncludeTrailingPathDelimiter(Result) + 'tray_settings.ini';
@@ -449,7 +559,7 @@ begin
   // 标题
   FLblTitle := TLabel.Create(Self);
   FLblTitle.Parent := FTitleBar;
-  FLblTitle.Caption := 'UniBase 工作台';
+  FLblTitle.Caption := 'DeepBase 工作台';
   FLblTitle.Font.Color := clWhite;
   FLblTitle.Font.Size := 10;
   FLblTitle.Left := 10;

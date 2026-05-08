@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Tray.Hotkey - Global Hotkey Registration Module
   
   Version: 1.0
@@ -75,6 +75,7 @@ type
     function GetHotkeyInfo(Action: THotkeyAction): THotkeyInfo;
     function GetAllHotkeys: TArray<THotkeyInfo>;
     function IsRegistered(Action: THotkeyAction): Boolean;
+    procedure ProcessMessage(var Msg: TMessage);
     
     { Helpers }
     class function ModifiersToString(Modifiers: UINT): string;
@@ -240,7 +241,7 @@ procedure TTrayHotkeyManager.RegisterDefaults;
 begin
   // Ctrl+Alt+U: Show/Hide tray window
   RegisterHotkey(haShowHide, MOD_CONTROL or MOD_ALT, Ord('U'),
-    'Show/Hide UniBase Tray');
+    'Show/Hide DeepBase Tray');
   
   // Ctrl+Alt+N: Quick note
   RegisterHotkey(haQuickNote, MOD_CONTROL or MOD_ALT, Ord('N'),
@@ -248,7 +249,7 @@ begin
   
   // Ctrl+Alt+S: Launch Studio
   RegisterHotkey(haLaunchStudio, MOD_CONTROL or MOD_ALT, Ord('S'),
-    'Launch UniBase Studio');
+    'Launch DeepBase Studio');
   
   // Ctrl+Alt+C: Launch CMD
   RegisterHotkey(haLaunchCmd, MOD_CONTROL or MOD_ALT, Ord('C'),
@@ -294,6 +295,11 @@ begin
       Break;
     end;
   end;
+end;
+
+procedure TTrayHotkeyManager.ProcessMessage(var Msg: TMessage);
+begin
+  WndProc(Msg);
 end;
 
 class function TTrayHotkeyManager.ModifiersToString(Modifiers: UINT): string;

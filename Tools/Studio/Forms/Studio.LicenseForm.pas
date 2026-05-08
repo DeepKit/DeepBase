@@ -25,7 +25,7 @@ uses
   Vcl.Grids,
   Vcl.Buttons,
   Vcl.Clipbrd,
-  UniBase.License;
+  DeepBase.License;
 
 type
   TLicenseManagerForm = class(TForm)
@@ -229,7 +229,7 @@ begin
   
   FEdtSecretKey := TEdit.Create(Self);
   FEdtSecretKey.Parent := FPnlGenerate;
-  FEdtSecretKey.Text := 'UniBase2024SecretKey';
+  FEdtSecretKey.Text := 'DeepBase2024SecretKey';
   FEdtSecretKey.SetBounds(16, Y, 300, 24);
   Inc(Y, 32);
   
@@ -411,7 +411,7 @@ begin
   end;
   
   // Generate key
-  Key := TUniBaseLicense.GenerateLicenseKey(IssuedTo, LicType, ExpiresAt, Features, SecretKey);
+  Key := TDeepBaseLicense.GenerateLicenseKey(IssuedTo, LicType, ExpiresAt, Features, SecretKey);
   FMmoGeneratedKey.Text := Key;
 end;
 
@@ -427,7 +427,7 @@ end;
 procedure TLicenseManagerForm.HandleVerifyClick(Sender: TObject);
 var
   Key, SecretKey: string;
-  License: TUniBaseLicense;
+  License: TDeepBaseLicense;
   Result: TLicenseValidationResult;
   SL: TStringList;
   I: Integer;
@@ -441,7 +441,7 @@ begin
   
   SecretKey := Trim(FEdtSecretKey.Text);
   
-  License := TUniBaseLicense.Create;
+  License := TDeepBaseLicense.Create;
   try
     License.SecretKey := SecretKey;
     Result := License.ValidateLicense(Key);
@@ -451,7 +451,7 @@ begin
       SL.Add('=== Verification Result ===');
       SL.Add('');
       SL.Add('Valid: ' + BoolToStr(Result.Success, True));
-      SL.Add('Status: ' + TUniBaseLicense.LicenseStatusName(Result.Status));
+      SL.Add('Status: ' + TDeepBaseLicense.LicenseStatusName(Result.Status));
       SL.Add('Message: ' + Result.Message);
       SL.Add('');
       
@@ -593,7 +593,7 @@ var
   JsonObj: TJSONObject;
   I: Integer;
 begin
-  FilePath := TPath.Combine(TPath.GetHomePath, '.unibase_studio_keys.json');
+  FilePath := TPath.Combine(TPath.GetHomePath, '.DeepBase_studio_keys.json');
   
   if not FileExists(FilePath) then
     Exit;
@@ -629,7 +629,7 @@ var
   JsonObj: TJSONObject;
   I: Integer;
 begin
-  FilePath := TPath.Combine(TPath.GetHomePath, '.unibase_studio_keys.json');
+  FilePath := TPath.Combine(TPath.GetHomePath, '.DeepBase_studio_keys.json');
   
   JsonArr := TJSONArray.Create;
   try

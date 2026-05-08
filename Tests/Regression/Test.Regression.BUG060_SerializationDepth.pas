@@ -1,15 +1,15 @@
 { ============================================================================
-  Test.Regression.BUG060_SerializationDepth - 序列化深度限制回归测试
+  Test.Regression.BUG060_SerializationDepth - 序列化深度限制回归测�?
 
-  BUG-060: 序列化深度限制过高
+  BUG-060: 序列化深度限制过�?
   
-  原问题: MaxDepth默认值为32，可能过高，容易受到深度嵌套攻击
+  原问�? MaxDepth默认值为32，可能过高，容易受到深度嵌套攻击
   
-  修复方案: 将最大深度限制降低到8，防止深度嵌套攻击
+  修复方案: 将最大深度限制降低到8，防止深度嵌套攻�?
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.Serialization.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.Serialization.pas
+  优先�? P1 (High)
   分类: Security
   ============================================================================ }
 
@@ -40,7 +40,7 @@ type
     procedure Test_DefaultMaxDepth_IsReasonable;
     
     [Test]
-    [Description('验证深度嵌套被拒绝')]
+    [Description('验证深度嵌套被拒�?)]
     procedure Test_DeepNesting_IsRejected;
   end;
 
@@ -58,7 +58,7 @@ end;
 
 function TBug060_SerializationDepthTest.GetBugDescription: string;
 begin
-  Result := '序列化深度限制过高';
+  Result := '序列化深度限制过�?;
 end;
 
 function TBug060_SerializationDepthTest.GetFixDate: string;
@@ -73,7 +73,7 @@ end;
 
 function TBug060_SerializationDepthTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Serialization.pas';
+  Result := 'Core/DeepBase.Serialization.pas';
 end;
 
 procedure TBug060_SerializationDepthTest.Test_DefaultMaxDepth_IsReasonable;
@@ -83,14 +83,14 @@ var
 begin
   LogTestStart('Test_DefaultMaxDepth_IsReasonable');
   
-  SourcePath := 'Core\UniBase.Serialization.pas';
+  SourcePath := 'Core\DeepBase.Serialization.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Serialization.pas';
+    SourcePath := '..\Core\DeepBase.Serialization.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -104,7 +104,7 @@ begin
     SourceCode.Contains('DepthLimit'),
     '代码应该包含深度限制配置');
   
-  // 验证不包含过高的默认值
+  // 验证不包含过高的默认�?
   Assert.IsFalse(SourceCode.Contains('MaxDepth := 32') or 
                  SourceCode.Contains('MaxDepth = 32'),
     '默认深度不应该是 32（过高）');
@@ -116,7 +116,7 @@ procedure TBug060_SerializationDepthTest.Test_DeepNesting_IsRejected;
 begin
   LogTestStart('Test_DeepNesting_IsRejected');
   
-  // 实际测试需要序列化模块的具体实现
+  // 实际测试需要序列化模块的具体实�?
   Assert.Pass('深度嵌套拒绝测试通过代码审查确认');
   
   LogTestEnd('Test_DeepNesting_IsRejected', True);

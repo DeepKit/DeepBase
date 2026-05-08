@@ -1,17 +1,17 @@
 { ============================================================================
-  Test.Regression.BUG009_LoggingRace - 日志系统竞态条件回归测试
+  Test.Regression.BUG009_LoggingRace - 日志系统竞态条件回归测�?
 
-  BUG-009: 日志系统竞态条件
+  BUG-009: 日志系统竞态条�?
   
-  原问题: 使用TInterlocked.CompareExchange后的锁操作可能不是原子的
+  原问�? 使用TInterlocked.CompareExchange后的锁操作可能不是原子的
   
   修复方案: 代码已正确实现双重检查锁定模式（Double-Checked Locking），
             使用 TInterlocked.CompareExchange 创建锁对象，
             然后使用 TMonitor 进行同步
   
   修复日期: 2025-12-16
-  文件: Core/UniBase.Logging.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.Logging.pas
+  优先�? P1 (High)
   分类: Concurrency
   ============================================================================ }
 
@@ -40,7 +40,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证双重检查锁定模式存在')]
+    [Description('验证双重检查锁定模式存�?)]
     procedure Test_DoubleCheckedLocking_Exists;
     
     [Test]
@@ -57,7 +57,7 @@ implementation
 
 uses
   System.IOUtils,
-  UniBase.Logging;
+  DeepBase.Logging;
 
 { TBug009_LoggingRaceTest }
 
@@ -68,7 +68,7 @@ end;
 
 function TBug009_LoggingRaceTest.GetBugDescription: string;
 begin
-  Result := '日志系统竞态条件';
+  Result := '日志系统竞态条�?;
 end;
 
 function TBug009_LoggingRaceTest.GetFixDate: string;
@@ -83,7 +83,7 @@ end;
 
 function TBug009_LoggingRaceTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Logging.pas';
+  Result := 'Core/DeepBase.Logging.pas';
 end;
 
 procedure TBug009_LoggingRaceTest.Test_DoubleCheckedLocking_Exists;
@@ -93,25 +93,25 @@ var
 begin
   LogTestStart('Test_DoubleCheckedLocking_Exists');
   
-  SourcePath := 'Core\UniBase.Logging.pas';
+  SourcePath := 'Core\DeepBase.Logging.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Logging.pas';
+    SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在双重检查锁定相关代码
+  // 验证存在双重检查锁定相关代�?
   Assert.IsTrue(
     SourceCode.Contains('TInterlocked.CompareExchange') or 
     SourceCode.Contains('CompareExchange'),
-    '代码应该使用 TInterlocked.CompareExchange 实现双重检查锁定');
+    '代码应该使用 TInterlocked.CompareExchange 实现双重检查锁�?);
   
   Assert.IsTrue(
     SourceCode.Contains('TMonitor') or 
@@ -123,7 +123,7 @@ end;
 
 procedure TBug009_LoggingRaceTest.Test_ConcurrentLogging_NoCorruption;
 var
-  Logger: TUniBaseLogger;
+  Logger: TDeepBaseLogger;
   I: Integer;
   Threads: array[0..4] of TThread;
   TempLogPath: string;
@@ -132,9 +132,9 @@ begin
   
   TempLogPath := TPath.Combine(TPath.GetTempPath, 'test_log_' + IntToStr(TThread.GetTickCount) + '.log');
   
-  Logger := TUniBaseLogger.Create(TempLogPath);
+  Logger := TDeepBaseLogger.Create(TempLogPath);
   try
-    // 创建多个线程同时写日志
+    // 创建多个线程同时写日�?
     for I := 0 to 4 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -148,11 +148,11 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
     
-    // 启动所有线程
+    // 启动所有线�?
     for I := 0 to 4 do
       Threads[I].Start;
     
-    // 等待所有线程完成
+    // 等待所有线程完�?
     for I := 0 to 4 do
     begin
       Threads[I].WaitFor;
@@ -178,14 +178,14 @@ var
 begin
   LogTestStart('Test_ThreadList_UsedForQueue');
   
-  SourcePath := 'Core\UniBase.Logging.pas';
+  SourcePath := 'Core\DeepBase.Logging.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Logging.pas';
+    SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -197,7 +197,7 @@ begin
     SourceCode.Contains('TThreadList') or 
     SourceCode.Contains('LockList') or
     SourceCode.Contains('UnlockList'),
-    '代码应该使用 TThreadList 进行线程安全的队列访问');
+    '代码应该使用 TThreadList 进行线程安全的队列访�?);
   
   LogTestEnd('Test_ThreadList_UsedForQueue', True);
 end;

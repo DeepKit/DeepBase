@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   Test.Regression.BUG020_KeyNameValidation - Key Name Validation Regression Test
 
   BUG-020: Missing Key Name Validation
@@ -8,7 +8,7 @@
   Fix: Add key name format validation function
   
   Fix Date: 2025-01-27
-  File: Core/UniBase.Security.pas
+  File: Core/DeepBase.Security.pas
   Priority: P1 (High)
   Category: Security
   ============================================================================ }
@@ -53,7 +53,7 @@ implementation
 
 uses
   System.IOUtils,
-  UniBase.Security;
+  DeepBase.Security;
 
 { TBug020_KeyNameValidationTest }
 
@@ -79,7 +79,7 @@ end;
 
 function TBug020_KeyNameValidationTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Security.pas';
+  Result := 'Core/DeepBase.Security.pas';
 end;
 
 procedure TBug020_KeyNameValidationTest.Test_KeyNameValidation_Exists;
@@ -89,11 +89,11 @@ var
 begin
   LogTestStart('Test_KeyNameValidation_Exists');
   
-  SourcePath := 'Core\UniBase.Security.pas';
+  SourcePath := 'Core\DeepBase.Security.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Security.pas';
+    SourcePath := '..\Core\DeepBase.Security.pas';
     if not TFile.Exists(SourcePath) then
     begin
       Assert.Pass('Source file not accessible, skip static analysis test');
@@ -115,11 +115,11 @@ end;
 procedure TBug020_KeyNameValidationTest.Test_PathTraversalChars_AreRejected;
 var
   ExceptionRaised: Boolean;
-  Security: TUniBaseSecurity;
+  Security: TDeepBaseSecurity;
 begin
   LogTestStart('Test_PathTraversalChars_AreRejected');
   
-  Security := TUniBaseSecurity.Create(nil, nil);
+  Security := TDeepBaseSecurity.Create(nil, nil);
   try
     ExceptionRaised := False;
     
@@ -144,14 +144,14 @@ var
   SecretName: string;
   SecretValue: string;
   RetrievedValue: string;
-  Security: TUniBaseSecurity;
+  Security: TDeepBaseSecurity;
 begin
   LogTestStart('Test_ValidKeyName_IsAccepted');
   
   SecretName := 'valid_key_name_' + IntToStr(TThread.GetTickCount);
   SecretValue := 'test_value';
   
-  Security := TUniBaseSecurity.Create(nil, nil);
+  Security := TDeepBaseSecurity.Create(nil, nil);
   try
     try
       // Valid key name should be accepted

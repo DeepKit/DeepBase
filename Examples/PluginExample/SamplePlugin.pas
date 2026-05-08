@@ -1,14 +1,14 @@
 { ============================================================================
-  SamplePlugin - UniBase Sample Plugin
+  SamplePlugin - DeepBase Sample Plugin
   
-  Demonstrates how to create a plugin for UniBase framework.
+  Demonstrates how to create a plugin for DeepBase framework.
   
   Features demonstrated:
-  - Implementing IUniBasePlugin interface
-  - Using TUniBasePluginBase for convenience
+  - Implementing IDeepBasePlugin interface
+  - Using TDeepBasePluginBase for convenience
   - Accessing plugin context for config, translation, logging
-  - Providing menu items (IUniBasePluginUI)
-  - Handling framework events (IUniBasePluginEvents)
+  - Providing menu items (IDeepBasePluginUI)
+  - Handling framework events (IDeepBasePluginEvents)
   ============================================================================ }
 
 unit SamplePlugin;
@@ -20,13 +20,13 @@ uses
   System.Classes,
   Vcl.Forms,
   Vcl.Dialogs,
-  UniBase.Plugin;
+  DeepBase.Plugin;
 
 type
   /// <summary>
   /// Sample plugin implementation showing best practices
   /// </summary>
-  TSamplePlugin = class(TUniBasePluginBase, IUniBasePluginUI, IUniBasePluginEvents)
+  TSamplePlugin = class(TDeepBasePluginBase, IDeepBasePluginUI, IDeepBasePluginEvents)
   private
     FCounter: Integer;
   protected
@@ -36,14 +36,14 @@ type
   public
     constructor Create;
     
-    // IUniBasePluginUI
+    // IDeepBasePluginUI
     function GetMenuItems: TArray<TPluginMenuItem>;
     function GetToolbarItems: TArray<TPluginToolbarItem>;
     function GetSettingsPage(AOwner: TComponent): TComponent;
     procedure OnMenuClick(const MenuItemID: string);
     procedure OnToolbarClick(const ToolbarItemID: string);
     
-    // IUniBasePluginEvents
+    // IDeepBasePluginEvents
     procedure OnLanguageChanged(const NewLanguage: string);
     procedure OnThemeChanged(const NewTheme: string);
     procedure OnConfigChanged(const Key, OldValue, NewValue: string);
@@ -61,11 +61,11 @@ const
 /// <summary>
 /// Plugin registration function - exported from BPL
 /// </summary>
-function RegisterPlugin: IUniBasePlugin; export;
+function RegisterPlugin: IDeepBasePlugin; export;
 
 implementation
 
-function RegisterPlugin: IUniBasePlugin;
+function RegisterPlugin: IDeepBasePlugin;
 begin
   Result := TSamplePlugin.Create;
 end;
@@ -84,13 +84,13 @@ begin
     SAMPLE_PLUGIN_GUID,
     'Sample Plugin',                    // Name
     '1.0.0',                            // Version
-    'UniBase Team',                     // Author
-    'A sample plugin demonstrating the UniBase plugin API. ' +
+    'DeepBase Team',                     // Author
+    'A sample plugin demonstrating the DeepBase plugin API. ' +
     'Shows how to add menu items, handle events, and access framework services.',
     [pcMenuItems, pcEventHandler],      // Capabilities
-    '0.3'                               // Min UniBase version
+    '0.3'                               // Min DeepBase version
   );
-  Result.URL := 'https://github.com/example/unibase-sample-plugin';
+  Result.URL := 'https://github.com/example/DeepBase-sample-plugin';
 end;
 
 function TSamplePlugin.DoInitialize: Boolean;

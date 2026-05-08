@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.PromptTemplateFrame - Prompt Template Management Frame
   
   Version: 1.0
@@ -34,13 +34,13 @@ uses
   Vcl.Grids,
   Vcl.Menus,
   FireDAC.Comp.Client,
-  UniBase.LLM;
+  DeepBase.LLM;
 
 type
   TfraPromptTemplate = class(TFrame)
   private
     FConnection: TFDConnection;
-    FLLM: TUniBaseLLM;
+    FLLM: TDeepBaseLLM;
     FCurrentTemplate: TLLMPromptTemplate;
     FIsModified: Boolean;
     FCategories: TStringList;
@@ -168,7 +168,7 @@ type
     procedure SetConnection(AConnection: TFDConnection);
     procedure RefreshData;
     
-    property LLM: TUniBaseLLM read FLLM;
+    property LLM: TDeepBaseLLM read FLLM;
     property IsModified: Boolean read FIsModified;
   end;
 
@@ -705,7 +705,7 @@ begin
     
   if Assigned(FConnection) and FConnection.Connected then
   begin
-    FLLM := TUniBaseLLM.Create(FConnection);
+    FLLM := TDeepBaseLLM.Create(FConnection);
     RefreshData;
   end
   else

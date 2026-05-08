@@ -3,7 +3,7 @@ unit Entity.Customer;
 {*******************************************************************************
   CRUD Application Template - Customer Entity
   
-  This unit demonstrates how to define an entity class using UniBase ORM
+  This unit demonstrates how to define an entity class using DeepBase ORM
   attributes for database mapping.
   
   Features demonstrated:
@@ -18,7 +18,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  UniBase.ORM.Mapping;
+  DeepBase.ORM.Mapping;
 
 type
   /// <summary>

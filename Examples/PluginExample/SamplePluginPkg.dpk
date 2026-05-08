@@ -2,7 +2,7 @@
   SamplePluginPkg - Sample Plugin Package
   
   Build this package to create SamplePluginPkg.bpl which can be loaded
-  by UniBase PluginManager.
+  by DeepBase PluginManager.
   
   Build instructions:
   1. Open this package in RAD Studio
@@ -46,7 +46,7 @@ requires
 
 contains
   SamplePlugin in 'SamplePlugin.pas',
-  UniBase.Plugin in '..\..\Core\UniBase.Plugin.pas';
+  DeepBase.Plugin in '..\..\Core\DeepBase.Plugin.pas';
 
 exports
   RegisterPlugin;

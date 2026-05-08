@@ -8,7 +8,7 @@ unit Form.CustomerEdit;
   - Data binding concepts
   - Form layout patterns
   
-  UniBase features:
+  DeepBase features:
   - Entity validation
   - Logging
 *******************************************************************************}
@@ -87,7 +87,7 @@ implementation
 
 uses
   Data.Module,
-  UniBase.Logging;
+  DeepBase.Logging;
 
 { TCustomerEditForm }
 

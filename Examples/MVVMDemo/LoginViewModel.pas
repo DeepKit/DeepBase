@@ -15,9 +15,9 @@ uses
   System.Threading,
   System.Rtti,
   System.Generics.Collections,
-  UniBase.DataBinding,
-  UniBase.MVVM,
-  UniBase.Exceptions;
+  DeepBase.DataBinding,
+  DeepBase.MVVM,
+  DeepBase.Exceptions;
 
 type
   /// <summary>

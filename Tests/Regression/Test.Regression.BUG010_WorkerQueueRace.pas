@@ -1,15 +1,15 @@
 { ============================================================================
-  Test.Regression.BUG010_WorkerQueueRace - 工作队列状态竞争回归测试
+  Test.Regression.BUG010_WorkerQueueRace - 工作队列状态竞争回归测�?
 
-  BUG-010: 工作队列状态竞争
+  BUG-010: 工作队列状态竞�?
   
-  原问题: 多个线程可能同时修改作业状态，缺乏适当同步
+  原问�? 多个线程可能同时修改作业状态，缺乏适当同步
   
   修复方案: 在所有状态变更操作中添加锁保护，确保线程安全
   
   修复日期: 2025-12-16
-  文件: Core/UniBase.WorkerQueue.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.WorkerQueue.pas
+  优先�? P1 (High)
   分类: Concurrency
   ============================================================================ }
 
@@ -38,11 +38,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证状态变更操作有锁保护')]
+    [Description('验证状态变更操作有锁保�?)]
     procedure Test_StateChange_HasLockProtection;
     
     [Test]
-    [Description('验证并发状态变更不会导致数据损坏')]
+    [Description('验证并发状态变更不会导致数据损�?)]
     [RepeatTest(10)]
     procedure Test_ConcurrentStateChange_NoCorruption;
   end;
@@ -61,7 +61,7 @@ end;
 
 function TBug010_WorkerQueueRaceTest.GetBugDescription: string;
 begin
-  Result := '工作队列状态竞争';
+  Result := '工作队列状态竞�?;
 end;
 
 function TBug010_WorkerQueueRaceTest.GetFixDate: string;
@@ -76,7 +76,7 @@ end;
 
 function TBug010_WorkerQueueRaceTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.WorkerQueue.pas';
+  Result := 'Core/DeepBase.WorkerQueue.pas';
 end;
 
 procedure TBug010_WorkerQueueRaceTest.Test_StateChange_HasLockProtection;
@@ -86,26 +86,26 @@ var
 begin
   LogTestStart('Test_StateChange_HasLockProtection');
   
-  SourcePath := 'Core\UniBase.WorkerQueue.pas';
+  SourcePath := 'Core\DeepBase.WorkerQueue.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.WorkerQueue.pas';
+    SourcePath := '..\Core\DeepBase.WorkerQueue.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在锁保护相关代码
+  // 验证存在锁保护相关代�?
   Assert.IsTrue(
     SourceCode.Contains('TMonitor.Enter') or 
     SourceCode.Contains('Lock') or
     SourceCode.Contains('TCriticalSection'),
-    '代码应该包含锁保护机制');
+    '代码应该包含锁保护机�?);
   
   LogTestEnd('Test_StateChange_HasLockProtection', True);
 end;
@@ -123,7 +123,7 @@ begin
   Lock := TObject.Create;
   
   try
-    // 创建多个线程同时修改计数器
+    // 创建多个线程同时修改计数�?
     for I := 0 to 9 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -144,19 +144,19 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
     
-    // 启动所有线程
+    // 启动所有线�?
     for I := 0 to 9 do
       Threads[I].Start;
     
-    // 等待所有线程完成
+    // 等待所有线程完�?
     for I := 0 to 9 do
     begin
       Threads[I].WaitFor;
       Threads[I].Free;
     end;
     
-    // 验证计数器值正确
-    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正确');
+    // 验证计数器值正�?
+    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正�?);
   finally
     Lock.Free;
   end;

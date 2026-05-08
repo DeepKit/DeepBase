@@ -3,9 +3,9 @@
 
   版本: 1.0
   功能:
-    - 打开多个数据库
+    - 打开多个数据�?
     - 日志列表显示
-    - 时间/级别/关键词过滤
+    - 时间/级别/关键词过�?
     - 统计面板
     - 导出功能
   ============================================================================ }
@@ -75,7 +75,7 @@ type
     mnuHelp: TMenuItem;
     mnuHelpAbout: TMenuItem;
 
-    { 工具栏 }
+    { 工具�?}
     pnlToolbar: TPanel;
     lblDatabase: TLabel;
     cboDatabase: TComboBox;
@@ -119,7 +119,7 @@ type
     { 状态栏 }
     StatusBar: TStatusBar;
 
-    { 对话框 }
+    { 对话�?}
     dlgOpen: TOpenDialog;
     dlgSave: TSaveDialog;
 
@@ -183,7 +183,7 @@ implementation
 {$R *.dfm}
 
 const
-  APP_TITLE = 'UniBase 日志分析器';
+  APP_TITLE = 'DeepBase 日志分析�?;
   VERSION = '1.0';
 
 { TfrmLogAnalyzer }
@@ -201,7 +201,7 @@ begin
 
   CreateUI;
 
-  // 默认时间范围: 最近24小时
+  // 默认时间范围: 最�?4小时
   dtpFrom.DateTime := IncHour(Now, -24);
   dtpTo.DateTime := Now;
 
@@ -239,13 +239,13 @@ begin
   MainMenu.Items.Add(mnuFile);
 
   mnuFileOpen := TMenuItem.Create(mnuFile);
-  mnuFileOpen.Caption := '打开数据库(&O)...';
+  mnuFileOpen.Caption := '打开数据�?&O)...';
   mnuFileOpen.ShortCut := TextToShortCut('Ctrl+O');
   mnuFileOpen.OnClick := mnuFileOpenClick;
   mnuFile.Add(mnuFileOpen);
 
   mnuFileClose := TMenuItem.Create(mnuFile);
-  mnuFileClose.Caption := '关闭数据库(&C)';
+  mnuFileClose.Caption := '关闭数据�?&C)';
   mnuFileClose.OnClick := mnuFileCloseClick;
   mnuFile.Add(mnuFileClose);
 
@@ -254,17 +254,17 @@ begin
   mnuFile.Add(mnuFileSep1);
 
   mnuFileExportCSV := TMenuItem.Create(mnuFile);
-  mnuFileExportCSV.Caption := '导出为 CSV...';
+  mnuFileExportCSV.Caption := '导出�?CSV...';
   mnuFileExportCSV.OnClick := mnuFileExportCSVClick;
   mnuFile.Add(mnuFileExportCSV);
 
   mnuFileExportJSON := TMenuItem.Create(mnuFile);
-  mnuFileExportJSON.Caption := '导出为 JSON...';
+  mnuFileExportJSON.Caption := '导出�?JSON...';
   mnuFileExportJSON.OnClick := mnuFileExportJSONClick;
   mnuFile.Add(mnuFileExportJSON);
 
   mnuFileExportHTML := TMenuItem.Create(mnuFile);
-  mnuFileExportHTML.Caption := '导出为 HTML...';
+  mnuFileExportHTML.Caption := '导出�?HTML...';
   mnuFileExportHTML.OnClick := mnuFileExportHTMLClick;
   mnuFile.Add(mnuFileExportHTML);
 
@@ -273,7 +273,7 @@ begin
   mnuFile.Add(mnuFileSep2);
 
   mnuFileExit := TMenuItem.Create(mnuFile);
-  mnuFileExit.Caption := '退出(&X)';
+  mnuFileExit.Caption := '退�?&X)';
   mnuFileExit.ShortCut := TextToShortCut('Alt+F4');
   mnuFileExit.OnClick := mnuFileExitClick;
   mnuFile.Add(mnuFileExit);
@@ -317,7 +317,7 @@ begin
   lblDatabase := TLabel.Create(Self);
   lblDatabase.Parent := pnlToolbar;
   lblDatabase.SetBounds(10, 12, 50, 16);
-  lblDatabase.Caption := '数据库:';
+  lblDatabase.Caption := '数据�?';
 
   cboDatabase := TComboBox.Create(Self);
   cboDatabase.Parent := pnlToolbar;
@@ -343,10 +343,10 @@ begin
   btnRefresh.Caption := '刷新';
   btnRefresh.OnClick := btnRefreshClick;
 
-  // 对话框
+  // 对话�?
   dlgOpen := TOpenDialog.Create(Self);
   dlgOpen.Filter := 'SQLite 数据库|*.db;*.sqlite;*.sqlite3|所有文件|*.*';
-  dlgOpen.Title := '打开日志数据库';
+  dlgOpen.Title := '打开日志数据�?;
 
   dlgSave := TSaveDialog.Create(Self);
   dlgSave.Title := '导出日志';
@@ -361,11 +361,11 @@ begin
   pnlFilter.BevelOuter := bvNone;
   pnlFilter.ParentBackground := False;
 
-  // 第一行: 时间范围
+  // 第一�? 时间范围
   lblFromTime := TLabel.Create(Self);
   lblFromTime.Parent := pnlFilter;
   lblFromTime.SetBounds(10, 12, 50, 16);
-  lblFromTime.Caption := '从:';
+  lblFromTime.Caption := '�?';
 
   dtpFrom := TDateTimePicker.Create(Self);
   dtpFrom.Parent := pnlFilter;
@@ -375,7 +375,7 @@ begin
   lblToTime := TLabel.Create(Self);
   lblToTime.Parent := pnlFilter;
   lblToTime.SetBounds(200, 12, 30, 16);
-  lblToTime.Caption := '到:';
+  lblToTime.Caption := '�?';
 
   dtpTo := TDateTimePicker.Create(Self);
   dtpTo.Parent := pnlFilter;
@@ -417,7 +417,7 @@ begin
   chkFatal.SetBounds(775, 10, 55, 20);
   chkFatal.Caption := 'Fatal';
 
-  // 第二行: 关键词搜索
+  // 第二�? 关键词搜�?
   lblSource := TLabel.Create(Self);
   lblSource.Parent := pnlFilter;
   lblSource.SetBounds(10, 48, 40, 16);
@@ -557,7 +557,7 @@ begin
   end;
   with lvStats.Columns.Add do
   begin
-    Caption := '百分比';
+    Caption := '百分�?;
     Width := 80;
     Alignment := taRightJustify;
   end;
@@ -623,7 +623,7 @@ begin
     on E: Exception do
     begin
       Conn.Free;
-      MessageDlg('打开数据库失败: ' + E.Message, mtError, [mbOK], 0);
+      MessageDlg('打开数据库失�? ' + E.Message, mtError, [mbOK], 0);
     end;
   end;
 end;
@@ -807,19 +807,19 @@ begin
     Item.SubItems.Add('');
 
     Item := lvStats.Items.Add;
-    Item.Caption := '唯一来源数';
+    Item.Caption := '唯一来源�?;
     Item.SubItems.Add(IntToStr(Stats.UniqueSources));
     Item.SubItems.Add('');
 
     if Stats.FirstTime > 0 then
     begin
       Item := lvStats.Items.Add;
-      Item.Caption := '最早时间';
+      Item.Caption := '最早时�?;
       Item.SubItems.Add(FormatDateTime('yyyy-mm-dd hh:nn', Stats.FirstTime));
       Item.SubItems.Add('');
 
       Item := lvStats.Items.Add;
-      Item.Caption := '最晚时间';
+      Item.Caption := '最晚时�?;
       Item.SubItems.Add(FormatDateTime('yyyy-mm-dd hh:nn', Stats.LastTime));
       Item.SubItems.Add('');
     end;
@@ -831,12 +831,12 @@ end;
 procedure TfrmLogAnalyzer.UpdateStatusBar;
 begin
   if FCurrentDB <> '' then
-    StatusBar.Panels[0].Text := '已连接: ' + ExtractFileName(FCurrentDB)
+    StatusBar.Panels[0].Text := '已连�? ' + ExtractFileName(FCurrentDB)
   else
-    StatusBar.Panels[0].Text := '未连接';
+    StatusBar.Panels[0].Text := '未连�?;
 
   StatusBar.Panels[1].Text := Format('日志: %d', [Length(FLogs)]);
-  StatusBar.Panels[2].Text := Format('数据库: %d', [FConnections.Count]);
+  StatusBar.Panels[2].Text := Format('数据�? %d', [FConnections.Count]);
 end;
 
 procedure TfrmLogAnalyzer.ClearFilter;
@@ -946,7 +946,7 @@ procedure TfrmLogAnalyzer.mnuFileExportCSVClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
     Exit;
   end;
 
@@ -965,7 +965,7 @@ procedure TfrmLogAnalyzer.mnuFileExportJSONClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
     Exit;
   end;
 
@@ -984,7 +984,7 @@ procedure TfrmLogAnalyzer.mnuFileExportHTMLClick(Sender: TObject);
 begin
   if Length(FLogs) = 0 then
   begin
-    MessageDlg('没有日志可导出', mtInformation, [mbOK], 0);
+    MessageDlg('没有日志可导�?, mtInformation, [mbOK], 0);
     Exit;
   end;
 
@@ -1019,11 +1019,11 @@ procedure TfrmLogAnalyzer.mnuHelpAboutClick(Sender: TObject);
 begin
   MessageDlg(
     APP_TITLE + ' v' + VERSION + #13#10#13#10 +
-    'UniBase 日志分析工具' + #13#10 +
-    '用于查看和分析 UniBase 框架生成的日志数据。' + #13#10#13#10 +
+    'DeepBase 日志分析工具' + #13#10 +
+    '用于查看和分�?DeepBase 框架生成的日志数据�? + #13#10#13#10 +
     '功能:' + #13#10 +
     '- 多数据库支持' + #13#10 +
-    '- 时间/级别/关键词过滤' + #13#10 +
+    '- 时间/级别/关键词过�? + #13#10 +
     '- 统计信息' + #13#10 +
     '- CSV/JSON/HTML 导出',
     mtInformation, [mbOK], 0);

@@ -27,7 +27,7 @@ object frmMain: TfrmMain
       Top = 16
       Width = 180
       Height = 20
-      Caption = 'UniBase i18n Demo'
+      Caption = 'DeepBase i18n Demo'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -15

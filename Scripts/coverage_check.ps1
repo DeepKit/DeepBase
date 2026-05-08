@@ -1,4 +1,4 @@
-# UniBase Coverage Check Script
+# DeepBase Coverage Check Script
 # Usage: .\coverage_check.ps1 [-CoverageDir <path>] [-Threshold <percent>] [-FailOnLow]
 #
 # This script parses code coverage reports and checks against thresholds.
@@ -29,14 +29,16 @@ $ErrorActionPreference = "Stop"
 
 $BaseDir = Split-Path -Parent $PSScriptRoot
 $CoveragePath = Join-Path $BaseDir $CoverageDir
+$EffectiveFailOnLow = $FailOnLow -or ($env:DEEPBASE_COVERAGE_FAIL_ON_LOW -eq '1') -or ($env:CI -eq 'true')
 
 Write-Host "=============================================="
-Write-Host "        UniBase Coverage Check"
+Write-Host "        DeepBase Coverage Check"
 Write-Host "=============================================="
 Write-Host ""
 Write-Host "Coverage Directory: $CoveragePath"
 Write-Host "Minimum Threshold:  $Threshold%"
 Write-Host "Warning Threshold:  $WarningThreshold%"
+Write-Host "Fail On Low:        $EffectiveFailOnLow"
 Write-Host ""
 
 # Check if coverage directory exists
@@ -239,7 +241,7 @@ if ($overallCoverage -ge $Threshold) {
 } else {
     Write-Host "FAILED: Coverage ($overallCoverage%) is below minimum ($Threshold%)" -ForegroundColor Red
     
-    if ($FailOnLow) {
+    if ($EffectiveFailOnLow) {
         Write-Host ""
         Write-Host "Build failed due to low coverage!" -ForegroundColor Red
         exit 1

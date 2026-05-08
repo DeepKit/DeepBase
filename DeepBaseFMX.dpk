@@ -1,0 +1,38 @@
+package DeepBaseFMX;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase FMX Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  fmx,
+  DeepBaseCore,
+  DeepBaseServices,
+  DeepBaseFeatures;
+
+contains
+  DeepBase.FMX.ConfigControls in 'FMX\DeepBase.FMX.ConfigControls.pas',
+  DeepBase.FMX.I18nControls in 'FMX\DeepBase.FMX.I18nControls.pas',
+  DeepBase.FMX.MRUControls in 'FMX\DeepBase.FMX.MRUControls.pas',
+  DeepBase.FMX.FormControls in 'FMX\DeepBase.FMX.FormControls.pas',
+  DeepBase.FMX.LogListView in 'FMX\DeepBase.FMX.LogListView.pas',
+  DeepBase.FMX.NotificationBar in 'FMX\DeepBase.FMX.NotificationBar.pas',
+  DeepBase.FMX.WaitForm in 'FMX\DeepBase.FMX.WaitForm.pas',
+  DeepBase.FMX.Dialogs in 'FMX\DeepBase.FMX.Dialogs.pas',
+  DeepBase.FMX.Platform in 'FMX\DeepBase.FMX.Platform.pas',
+  DeepBase.FMX.Theme in 'FMX\DeepBase.FMX.Theme.pas',
+  DeepBase.FMX.ListView in 'FMX\DeepBase.FMX.ListView.pas',
+  DeepBase.FMX.ConfigEdit in 'FMX\DeepBase.FMX.ConfigEdit.pas',
+  DeepBase.FMX.LicenseStatusPanel in 'FMX\DeepBase.FMX.LicenseStatusPanel.pas',
+  DeepBase.FMX.AboutFrame in 'FMX\DeepBase.FMX.AboutFrame.pas',
+  DeepBase.FMX.AutoUpdater in 'FMX\DeepBase.FMX.AutoUpdater.pas',
+  DeepBase.FMX.LLMChatFrame in 'FMX\DeepBase.FMX.LLMChatFrame.pas',
+  DeepBase.FMX.LLMConfigPanel in 'FMX\DeepBase.FMX.LLMConfigPanel.pas',
+  DeepBase.FMX.UpdateDialog in 'FMX\DeepBase.FMX.UpdateDialog.pas',
+  DeepBase.FMX.FormStateHelper in 'FMX\DeepBase.FMX.FormStateHelper.pas',
+  DeepBase.FMX.HotkeyEditor in 'FMX\DeepBase.FMX.HotkeyEditor.pas',
+  DeepBase.FMX.Hotkeys in 'FMX\DeepBase.FMX.Hotkeys.pas',
+  DeepBase.FMX.DesktopLifecycle in 'FMX\DeepBase.FMX.DesktopLifecycle.pas';
+
+end.

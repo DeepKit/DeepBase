@@ -4,8 +4,8 @@
   测试范围:
     - 配置管理完整流程
     - 日志系统完整流程
-    - 数据绑定端到端测试
-    - 多模块协作测试
+    - 数据绑定端到端测�?
+    - 多模块协作测�?
   ============================================================================ }
 
 unit Test.Integration.Core;
@@ -22,7 +22,7 @@ uses
   System.SyncObjs,
   DUnitX.TestFramework,
   FireDAC.Comp.Client,
-  UniBase.IntegrationTest;
+  DeepBase.IntegrationTest;
 
 type
   // ============================================================================

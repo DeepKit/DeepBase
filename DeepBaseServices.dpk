@@ -1,0 +1,60 @@
+package DeepBaseServices;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Services Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  IndySystem,
+  IndyCore,
+  IndyProtocols,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACSqliteDriver,
+  DeepBaseCore;
+
+contains
+  DeepBase.IoC in 'Core\DeepBase.IoC.pas',
+  DeepBase.Math in 'Features\DeepBase.Math.pas',
+  DeepBase.Serialization in 'Core\DeepBase.Serialization.pas',
+  DeepBase.EventBus in 'Core\DeepBase.EventBus.pas',
+  DeepBase.Scheduler in 'Core\DeepBase.Scheduler.pas',
+  DeepBase.WorkerQueue in 'Core\DeepBase.WorkerQueue.pas',
+  DeepBase.Services.Interfaces in 'Core\DeepBase.Services.Interfaces.pas',
+  DeepBase.Services.Crypto in 'Core\DeepBase.Services.Crypto.pas',
+  DeepBase.Services.Math in 'Core\DeepBase.Services.Math.pas',
+  DeepBase.Services.Serialization in 'Core\DeepBase.Services.Serialization.pas',
+  DeepBase.Services.Protection in 'Core\DeepBase.Services.Protection.pas',
+  DeepBase.Services.Registration in 'Core\DeepBase.Services.Registration.pas',
+  DeepBase.Crypto in 'Core\DeepBase.Crypto.pas',
+  DeepBase.Crypto.OpenSSL in 'Core\DeepBase.Crypto.OpenSSL.pas',
+  DeepBase.Crypto.PBKDF2 in 'Core\DeepBase.Crypto.PBKDF2.pas',
+  DeepBase.Security.DPAPI in 'Core\DeepBase.Security.DPAPI.pas',
+  DeepBase.KeyManager in 'Core\DeepBase.KeyManager.pas',
+  DeepBase.FileWatcher in 'Core\DeepBase.FileWatcher.pas',
+  DeepBase.SingleInstance in 'Core\DeepBase.SingleInstance.pas',
+  DeepBase.AppLifecycle in 'Core\DeepBase.AppLifecycle.pas',
+  DeepBase.RateLimiter in 'Core\DeepBase.RateLimiter.pas',
+  DeepBase.Resilience.CircuitBreaker in 'Core\DeepBase.Resilience.CircuitBreaker.pas',
+  DeepBase.Resilience.Retry in 'Core\DeepBase.Resilience.Retry.pas',
+  DeepBase.Resilience.Timeout in 'Core\DeepBase.Resilience.Timeout.pas',
+  DeepBase.Resilience.Fallback in 'Core\DeepBase.Resilience.Fallback.pas',
+  DeepBase.Resilience.Bulkhead in 'Core\DeepBase.Resilience.Bulkhead.pas',
+  DeepBase.Resilience.Policy in 'Core\DeepBase.Resilience.Policy.pas',
+  DeepBase.Resilience in 'Core\DeepBase.Resilience.pas',
+  DeepBase.Metrics in 'Core\DeepBase.Metrics.pas',
+  DeepBase.LogAggregator in 'Core\DeepBase.LogAggregator.pas',
+  DeepBase.LogQuery in 'Core\DeepBase.LogQuery.pas',
+  DeepBase.LogAlert in 'Core\DeepBase.LogAlert.pas',
+  DeepBase.LogDashboard in 'Core\DeepBase.LogDashboard.pas',
+  DeepBase.Feedback in 'Core\DeepBase.Feedback.pas',
+  DeepBase.License in 'Core\DeepBase.License.pas',
+  DeepBase.Net in 'Core\DeepBase.Net.pas',
+  DeepBase.Compression in 'Core\DeepBase.Compression.pas',
+  DeepBase.ORM in 'Core\DeepBase.ORM.pas';
+
+end.
+

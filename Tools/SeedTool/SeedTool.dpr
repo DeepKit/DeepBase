@@ -1,4 +1,4 @@
-ï»¿program SeedTool;
+program SeedTool;
 
 uses
   Vcl.Forms,
@@ -11,7 +11,7 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.Title := 'é˜²ç¯¡æ”¹æ’­ç§å·¥å…·';
+  Application.Title := '·À´Û¸Ä²¥ÖÖ¹¤¾ß';
   Application.CreateForm(TfrmSeedMain, frmSeedMain);
   Application.Run;
 end.

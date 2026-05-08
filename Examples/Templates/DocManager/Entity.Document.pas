@@ -3,27 +3,27 @@ unit Entity.Document;
 {*******************************************************************************
   Document Entity - 文档实体
 
-  UniBase 框架文档管理模板 - 核心文档实体定义
-  支持 ORM 映射、版本控制、附件管理
+  DeepBase 框架文档管理模板 - 核心文档实体定义
+  支持 ORM 映射、版本控制、附件管�?
 *******************************************************************************}
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  UniBase.ORM.Attributes, UniBase.ORM.Entity;
+  DeepBase.ORM.Attributes, DeepBase.ORM.Entity;
 
 type
-  /// <summary>文档状态</summary>
+  /// <summary>文档状�?/summary>
   TDocumentStatus = (
     dsActive = 0,     // 活动
-    dsArchived = 1,   // 已归档
+    dsArchived = 1,   // 已归�?
     dsDeleted = 2     // 已删除（软删除）
   );
 
   /// <summary>导出格式</summary>
   TExportFormat = (
-    efText,           // 纯文本
+    efText,           // 纯文�?
     efHTML,           // HTML
     efMarkdown,       // Markdown
     efPDF,            // PDF
@@ -94,13 +94,13 @@ type
     /// <summary>获取验证错误</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>克隆文档（不包含 ID）</summary>
+    /// <summary>克隆文档（不包含 ID�?/summary>
     function Clone: TDocument;
 
     /// <summary>标记为已修改</summary>
     procedure MarkDirty;
 
-    /// <summary>清除已修改标记</summary>
+    /// <summary>清除已修改标�?/summary>
     procedure ClearDirty;
 
     // 标签操作
@@ -112,7 +112,7 @@ type
     procedure AddAttachment(Attachment: TAttachment);
     procedure RemoveAttachment(const AttachmentId: string);
 
-    // 属性
+    // 属�?
     property Id: string read FId write FId;
     property Title: string read FTitle write FTitle;
     property Content: string read FContent write FContent;
@@ -124,7 +124,7 @@ type
     property UpdatedAt: TDateTime read FUpdatedAt write FUpdatedAt;
     property CreatedBy: string read FCreatedBy write FCreatedBy;
 
-    // 计算属性
+    // 计算属�?
     property Tags: TArray<string> read GetTags;
     property Attachments: TArray<TAttachment> read GetAttachments;
     property DisplayStatus: string read GetDisplayStatus;
@@ -172,7 +172,7 @@ type
 
     class function NewId: string;
 
-    /// <summary>从文档创建版本快照</summary>
+    /// <summary>从文档创建版本快�?/summary>
     class function CreateFromDocument(Doc: TDocument; const Note: string = ''): TDocumentVersion;
 
     property Id: string read FId write FId;
@@ -220,10 +220,10 @@ type
 
     class function NewId: string;
 
-    /// <summary>从文件路径创建附件</summary>
+    /// <summary>从文件路径创建附�?/summary>
     class function CreateFromFile(const FilePath: string): TAttachment;
 
-    /// <summary>检查文件是否存在</summary>
+    /// <summary>检查文件是否存�?/summary>
     function FileExists: Boolean;
 
     property Id: string read FId write FId;
@@ -234,7 +234,7 @@ type
     property FilePath: string read FFilePath write FFilePath;
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
 
-    // 计算属性
+    // 计算属�?
     property DisplaySize: string read GetDisplaySize;
     property FileExtension: string read GetFileExtension;
   end;
@@ -315,7 +315,7 @@ end;
 
 function TDocument.GetDisplayStatus: string;
 const
-  StatusNames: array[TDocumentStatus] of string = ('活动', '已归档', '已删除');
+  StatusNames: array[TDocumentStatus] of string = ('活动', '已归�?, '已删�?);
 begin
   Result := StatusNames[Status];
 end;
@@ -329,7 +329,7 @@ begin
   else
     Result := Copy(FContent, 1, MaxLength) + '...';
 
-  // 移除换行符
+  // 移除换行�?
   Result := Result.Replace(#13#10, ' ').Replace(#10, ' ').Replace(#13, ' ');
 end;
 
@@ -364,7 +364,7 @@ var
   Tag: string;
 begin
   Result := TDocument.Create;
-  Result.FId := NewId;  // 新 ID
+  Result.FId := NewId;  // �?ID
   Result.FTitle := FTitle + ' (副本)';
   Result.FContent := FContent;
   Result.FCategoryId := FCategoryId;

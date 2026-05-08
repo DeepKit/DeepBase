@@ -15,7 +15,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  UniBase.ORM.Mapping;
+  DeepBase.ORM.Mapping;
 
 type
   TUserStatus = (usOnline, usAway, usBusy, usOffline, usInvisible);

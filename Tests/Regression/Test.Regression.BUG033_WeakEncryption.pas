@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   Test.Regression.BUG033_WeakEncryption - Weak Encryption Algorithm Regression Test
 
   BUG-033: Weak Encryption Algorithm Usage
@@ -10,7 +10,7 @@
        Add key configuration validation.
   
   Fix Date: 2025-12-16
-  File: Features/UniBase.AntiTamper.pas
+  File: Features/DeepBase.AntiTamper.pas
   Priority: P0 (Critical)
   Category: Security
   ============================================================================ }
@@ -65,7 +65,7 @@ type
 implementation
 
 uses
-  UniBase.Crypto;
+  DeepBase.Crypto;
 
 { TBug033_WeakEncryptionTest }
 
@@ -91,7 +91,7 @@ end;
 
 function TBug033_WeakEncryptionTest.GetAffectedFile: string;
 begin
-  Result := 'Features/UniBase.AntiTamper.pas';
+  Result := 'Features/DeepBase.AntiTamper.pas';
 end;
 
 procedure TBug033_WeakEncryptionTest.Test_AES256_Encryption_Works;

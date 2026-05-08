@@ -19,7 +19,7 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================
@@ -147,17 +147,17 @@ implementation
 
 uses
   Winapi.Windows,
-  UniBase.Manager,
-  UniBase.Config;
+  DeepBase.Manager,
+  DeepBase.Config;
 
 // Forward declarations for helper functions
 function IfThenStr(Condition: Boolean; const TrueValue, FalseValue: string): string; forward;
 function IfThenDbl(Condition: Boolean; TrueValue, FalseValue: Double): Double; forward;
 
-// Wrapper to access UniBase singleton (avoids namespace collision)
-function UB: TUniBaseManager; inline;
+// Wrapper to access DeepBase singleton (avoids namespace collision)
+function UB: TDeepBaseManager; inline;
 begin
-  Result := UniBase.Manager.UniBase;
+  Result := DeepBase.Manager.DeepBase;
 end;
 
 // ============================================================================

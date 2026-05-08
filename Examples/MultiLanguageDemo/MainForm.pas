@@ -1,7 +1,7 @@
 { ============================================================================
   MultiLanguageDemo - Main Form
   
-  Demonstrates UniBase i18n features:
+  Demonstrates DeepBase i18n features:
   - T() translation function
   - TFmt() formatted translation
   - TN() plural forms
@@ -17,7 +17,7 @@ interface
 uses
   System.SysUtils, System.Classes,
   Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Dialogs,
-  UniBase.Manager, UniBase.Types, UniBase.i18n, UniBase.VCL.I18nControls;
+  DeepBase.Manager, DeepBase.Types, DeepBase.i18n, DeepBase.VCL.I18nControls;
 
 type
   TfrmMain = class(TForm)
@@ -87,11 +87,11 @@ implementation
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 var
-  UB: TUniBaseManager;
+  UB: TDeepBaseManager;
 begin
-  UB := UniBase.Manager.UniBase;
+  UB := DeepBase.Manager.DeepBase;
   
-  // Initialize UniBase with memory database for demo
+  // Initialize DeepBase with memory database for demo
   if not UB.IsInitialized then
     UB.InitializeWithDB(':memory:');
   
@@ -116,18 +116,18 @@ begin
     UB.I18n.AddTranslation('Cancel', 'zh-CN', '取消');
     UB.I18n.AddTranslation('Open File', 'zh-CN', '打开文件');
     UB.I18n.AddTranslation('Settings', 'zh-CN', '设置');
-    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好，%s！你今年 %d 岁。');
-    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项目');
-    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项目');
+    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'zh-CN', '你好�?s！你今年 %d 岁�?);
+    UB.I18n.AddTranslation('%d item', 'zh-CN', '%d 个项�?);
+    UB.I18n.AddTranslation('%d items', 'zh-CN', '%d 个项�?);
     
     // Japanese translations
     UB.I18n.AddTranslation('Welcome', 'ja-JP', 'ようこそ');
-    UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにちは');
+    UB.I18n.AddTranslation('Hello', 'ja-JP', 'こんにち�?);
     UB.I18n.AddTranslation('Save', 'ja-JP', '保存');
-    UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセル');
-    UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開く');
+    UB.I18n.AddTranslation('Cancel', 'ja-JP', 'キャンセ�?);
+    UB.I18n.AddTranslation('Open File', 'ja-JP', 'ファイルを開�?);
     UB.I18n.AddTranslation('Settings', 'ja-JP', '設定');
-    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは、%sさん！あなたは%d歳です。');
+    UB.I18n.AddTranslation('Hello, %s! You are %d years old.', 'ja-JP', 'こんにちは�?sさん！あなた�?d歳です�?);
     UB.I18n.AddTranslation('%d item', 'ja-JP', '%d アイテム');
     UB.I18n.AddTranslation('%d items', 'ja-JP', '%d アイテム');
   end;
@@ -135,22 +135,22 @@ begin
   LoadLanguages;
   UpdateUI;
   
-  Log('UniBase MultiLanguage Demo started');
+  Log('DeepBase MultiLanguage Demo started');
   Log('Current language: ' + UB.I18n.CurrentLanguage);
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  // Cleanup handled by UniBase
+  // Cleanup handled by DeepBase
 end;
 
 procedure TfrmMain.LoadLanguages;
 var
   Langs: TLanguageInfoArray;
   i: Integer;
-  UB: TUniBaseManager;
+  UB: TDeepBaseManager;
 begin
-  UB := UniBase.Manager.UniBase;
+  UB := DeepBase.Manager.DeepBase;
   ComboLanguage.Items.Clear;
   
   if Assigned(UB.I18n) then
@@ -185,11 +185,11 @@ procedure TfrmMain.ComboLanguageChange(Sender: TObject);
 var
   SelText, LangCode: string;
   P: Integer;
-  UB: TUniBaseManager;
+  UB: TDeepBaseManager;
 begin
   if ComboLanguage.ItemIndex < 0 then Exit;
   
-  UB := UniBase.Manager.UniBase;
+  UB := DeepBase.Manager.DeepBase;
   SelText := ComboLanguage.Items[ComboLanguage.ItemIndex];
   P := Pos(' - ', SelText);
   if P > 0 then

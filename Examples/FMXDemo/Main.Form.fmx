@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'UniBase FMX Platform Demo'
+  Caption = 'DeepBase FMX Platform Demo'
   ClientHeight = 640
   ClientWidth = 400
   FormFactor.Width = 320
@@ -26,7 +26,7 @@ object MainForm: TMainForm
       Size.PlatformDefault = False
       TextSettings.Font.Size = 18.000000000000000000
       TextSettings.HorzAlign = Center
-      Text = 'UniBase FMX Demo'
+      Text = 'DeepBase FMX Demo'
       TabOrder = 0
     end
   end

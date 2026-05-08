@@ -1,0 +1,53 @@
+package DeepBaseFeatures;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Optional Feature Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  IndySystem,
+  IndyCore,
+  IndyProtocols,
+  DeepBaseCore,
+  DeepBaseServices;
+
+contains
+  DeepBase.Net.Transport in 'Features\DeepBase.Net.Transport.pas',
+  DeepBase.Net.Transport.ICS in 'Features\DeepBase.Net.Transport.ICS.pas',
+  DeepBase.LLM in 'Core\DeepBase.LLM.pas',
+  DeepBase.LLM.Types in 'Features\DeepBase.LLM.Types.pas',
+  DeepBase.LLM.Client in 'Features\DeepBase.LLM.Client.pas',
+  DeepBase.LLM.HTTP in 'Features\DeepBase.LLM.HTTP.pas',
+  DeepBase.LLM.Config in 'Features\DeepBase.LLM.Config.pas',
+  DeepBase.LLM.Service in 'Features\DeepBase.LLM.Service.pas',
+  DeepBase.LLM.Manager in 'Core\DeepBase.LLM.Manager.pas',
+  DeepBase.LLM.BillingClient in 'Core\DeepBase.LLM.BillingClient.pas',
+  DeepBase.LLM.ImportExport in 'Core\DeepBase.LLM.ImportExport.pas',
+  DeepBase.Commerce.Types in 'Features\DeepBase.Commerce.Types.pas',
+  DeepBase.Commerce.Storage in 'Features\DeepBase.Commerce.Storage.pas',
+  DeepBase.Commerce.Service in 'Features\DeepBase.Commerce.Service.pas',
+  DeepBase.Commerce.Backend.Contract in 'Features\DeepBase.Commerce.Backend.Contract.pas',
+  DeepBase.Commerce.Backend.Http in 'Features\DeepBase.Commerce.Backend.Http.pas',
+  DeepBase.Commerce.SafeClient in 'Features\DeepBase.Commerce.SafeClient.pas',
+  DeepBase.Commerce.Permissions in 'Features\DeepBase.Commerce.Permissions.pas',
+  DeepBase.Commerce.UpgradeFlow in 'Features\DeepBase.Commerce.UpgradeFlow.pas',
+  DeepBase.Desktop.Lifecycle in 'Features\DeepBase.Desktop.Lifecycle.pas',
+  DeepBase.Speech.Types in 'Features\DeepBase.Speech.Types.pas',
+  DeepBase.Speech.VAD in 'Features\DeepBase.Speech.VAD.pas',
+  DeepBase.Speech.Audio.WinMM in 'Features\DeepBase.Speech.Audio.WinMM.pas',
+  DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
+  DeepBase.Speech.Service in 'Features\DeepBase.Speech.Service.pas',
+  DeepBase.Updater in 'Features\DeepBase.Updater.pas',
+  DeepBase.AutoUpdate in 'Features\DeepBase.AutoUpdate.pas',
+  DeepBase.AntiTamper in 'Features\DeepBase.AntiTamper.pas',
+  DeepBase.Unlock in 'Features\DeepBase.Unlock.pas',
+  DeepBase.CloudSync in 'Features\DeepBase.CloudSync.pas',
+  DeepBase.CloudBackup in 'Features\DeepBase.CloudBackup.pas',
+  DeepBase.Graph in 'Features\DeepBase.Graph.pas',
+  DeepBase.HttpServer in 'Features\DeepBase.HttpServer.pas';
+
+end.

@@ -1,7 +1,7 @@
-unit Tray.NotesFrame;
+﻿unit Tray.NotesFrame;
 
 {*******************************************************************************
-  UniBaseTray - 开发笔记与提醒 Frame
+  DeepBaseTray - 开发笔记与提醒 Frame
   
   功能:
   - 快速记录开发笔记

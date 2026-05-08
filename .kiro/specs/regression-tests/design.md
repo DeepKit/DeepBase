@@ -1,26 +1,26 @@
-# Design Document: Regression Tests System
+﻿# Design Document: Regression Tests System
 
 ## Overview
 
-本设计文档描述 UniBase 框架回归测试系统的技术实现方案。该系统将为已修复的 74 个 Bug 建立系统化的回归测试，并集成到 CI 流程中。
+本设计文档描�?DeepBase 框架回归测试系统的技术实现方案。该系统将为已修复的 74 �?Bug 建立系统化的回归测试，并集成�?CI 流程中�?
 
 ## Architecture
 
 ```
 Tests/
 ├── Regression/                          # 回归测试目录
-│   ├── README.md                        # 说明文档
-│   ├── RegressionTestRegistry.pas       # 测试注册表
-│   ├── Test.Regression.BUG058_XOREncryption.pas
-│   ├── Test.Regression.BUG062_PluginSandbox.pas
-│   ├── ...
-│   └── BugTestMapping.md                # Bug-测试映射文档
-├── UniBaseTests.dpr                     # 主测试工程（包含回归测试）
+�?  ├── README.md                        # 说明文档
+�?  ├── RegressionTestRegistry.pas       # 测试注册�?
+�?  ├── Test.Regression.BUG058_XOREncryption.pas
+�?  ├── Test.Regression.BUG062_PluginSandbox.pas
+�?  ├── ...
+�?  └── BugTestMapping.md                # Bug-测试映射文档
+├── DeepBaseTests.dpr                     # 主测试工程（包含回归测试�?
 └── ...
 
 Scripts/
-├── run_tests.ps1                        # 更新：支持 -Type Regression
-└── coverage_check.ps1                   # 新增：覆盖率检查脚本
+├── run_tests.ps1                        # 更新：支�?-Type Regression
+└── coverage_check.ps1                   # 新增：覆盖率检查脚�?
 ```
 
 ## Components and Interfaces
@@ -37,7 +37,7 @@ uses
 
 type
   /// <summary>
-  /// 回归测试基类，提供通用的测试辅助方法
+  /// 回归测试基类，提供通用的测试辅助方�?
   /// </summary>
   [TestFixture]
   TRegressionTestBase = class
@@ -85,10 +85,10 @@ type
   /// <summary>
   /// BUG-058: 配置XOR加密安全缺陷
   /// 
-  /// 原问题: GetConfigEncrypted和SetConfigEncrypted使用XOR混淆而非真正加密
-  /// 修复方案: 完全移除XOR实现，强制抛出异常引导用户使用UniBase.Security.SaveSecret()
+  /// 原问�? GetConfigEncrypted和SetConfigEncrypted使用XOR混淆而非真正加密
+  /// 修复方案: 完全移除XOR实现，强制抛出异常引导用户使用DeepBase.Security.SaveSecret()
   /// 修复日期: 2025-01-27
-  /// 文件: Core/UniBase.Config.pas
+  /// 文件: Core/DeepBase.Config.pas
   /// </summary>
   [TestFixture]
   [Category('Regression')]
@@ -101,11 +101,11 @@ type
     function GetFixDate: string; override;
   public
     [Test]
-    [Description('验证 GetConfigEncrypted 已被禁用并抛出异常')]
+    [Description('验证 GetConfigEncrypted 已被禁用并抛出异�?)]
     procedure Test_GetConfigEncrypted_ShouldRaiseException;
     
     [Test]
-    [Description('验证 SetConfigEncrypted 已被禁用并抛出异常')]
+    [Description('验证 SetConfigEncrypted 已被禁用并抛出异�?)]
     procedure Test_SetConfigEncrypted_ShouldRaiseException;
     
     [Test]
@@ -117,8 +117,8 @@ implementation
 
 uses
   System.SysUtils,
-  UniBase.Config,
-  UniBase.Security;
+  DeepBase.Config,
+  DeepBase.Security;
 
 function TBug058_XOREncryptionTest.GetBugNumber: string;
 begin
@@ -140,7 +140,7 @@ begin
   Assert.WillRaise(
     procedure
     begin
-      TUniBaseConfig.GetConfigEncrypted('test_key');
+      TDeepBaseConfig.GetConfigEncrypted('test_key');
     end,
     ENotSupportedException,
     '不安全的加密方法应该抛出异常'
@@ -152,7 +152,7 @@ begin
   Assert.WillRaise(
     procedure
     begin
-      TUniBaseConfig.SetConfigEncrypted('test_key', 'test_value');
+      TDeepBaseConfig.SetConfigEncrypted('test_key', 'test_value');
     end,
     ENotSupportedException,
     '不安全的加密方法应该抛出异常'
@@ -168,20 +168,20 @@ begin
   SecretName := 'test_secret_' + IntToStr(GetTickCount);
   SecretValue := 'my_secure_password';
   
-  // 使用安全的 DPAPI 存储
-  TUniBaseSecurity.SaveSecret(SecretName, SecretValue);
-  RetrievedValue := TUniBaseSecurity.LoadSecret(SecretName);
+  // 使用安全�?DPAPI 存储
+  TDeepBaseSecurity.SaveSecret(SecretName, SecretValue);
+  RetrievedValue := TDeepBaseSecurity.LoadSecret(SecretName);
   
-  Assert.AreEqual(SecretValue, RetrievedValue, '安全存储应该正确保存和读取密钥');
+  Assert.AreEqual(SecretValue, RetrievedValue, '安全存储应该正确保存和读取密�?);
   
   // 清理
-  TUniBaseSecurity.DeleteSecret(SecretName);
+  TDeepBaseSecurity.DeleteSecret(SecretName);
 end;
 
 end.
 ```
 
-### 3. 测试注册表
+### 3. 测试注册�?
 
 ```pascal
 unit RegressionTestRegistry;
@@ -189,10 +189,10 @@ unit RegressionTestRegistry;
 interface
 
 /// <summary>
-/// 回归测试注册表
+/// 回归测试注册�?
 /// 
-/// 此文件列出所有回归测试，用于：
-/// 1. 快速查找特定 Bug 的测试
+/// 此文件列出所有回归测试，用于�?
+/// 1. 快速查找特�?Bug 的测�?
 /// 2. 验证所有已修复 Bug 都有对应测试
 /// 3. CI 报告生成
 /// </summary>
@@ -257,13 +257,13 @@ if ($Type -eq 'Regression' -or $Type -eq 'All') {
     Write-Host "        Regression Tests"
     Write-Host "=============================================="
     
-    $regProject = Join-Path $TestsDir "UniBaseTests.dpr"
-    $regExe = Join-Path $TestsDir "UniBaseTests.exe"
+    $regProject = Join-Path $TestsDir "DeepBaseTests.dpr"
+    $regExe = Join-Path $TestsDir "DeepBaseTests.exe"
     $regXml = Join-Path $OutputPath "RegressionTestResults.xml"
     
     if (Test-Path $regProject) {
         if (Compile-TestProject -ProjectFile $regProject -ProjectName "Regression Tests") {
-            # 只运行 Regression 分类的测试
+            # 只运�?Regression 分类的测�?
             $Results.RegressionTests = Run-TestProject `
                 -ExePath $regExe `
                 -TestName "Regression Tests" `
@@ -281,10 +281,10 @@ if ($Type -eq 'Regression' -or $Type -eq 'All') {
 ```pascal
 type
   TBugTestMapping = record
-    BugNumber: string;      // 如 'BUG-058'
+    BugNumber: string;      // �?'BUG-058'
     Priority: string;       // P0, P1, P2, P3
     Category: string;       // Security, Memory, Concurrency, etc.
-    TestUnit: string;       // 测试单元名
+    TestUnit: string;       // 测试单元�?
     SourceFile: string;     // 原始修复文件
     FixDate: TDate;         // 修复日期
     Description: string;    // Bug 描述
@@ -311,16 +311,16 @@ type
 
 ### 测试失败处理
 
-1. **单个测试失败**: 记录详细错误信息，继续执行其他测试
+1. **单个测试失败**: 记录详细错误信息，继续执行其他测�?
 2. **测试超时**: 默认 30 秒超时，超时视为失败
-3. **环境问题**: 如数据库连接失败，跳过相关测试并标记为 Skipped
+3. **环境问题**: 如数据库连接失败，跳过相关测试并标记�?Skipped
 
 ### CI 失败处理
 
-1. **任何回归测试失败**: CI 构建失败，阻止合并
-2. **覆盖率低于阈值**: 
-   - < 80%: 警告，允许合并
-   - < 70%: 失败，阻止合并
+1. **任何回归测试失败**: CI 构建失败，阻止合�?
+2. **覆盖率低于阈�?*: 
+   - < 80%: 警告，允许合�?
+   - < 70%: 失败，阻止合�?
 
 ## Testing Strategy
 
@@ -329,22 +329,22 @@ type
 | 层级 | 类型 | 目的 |
 |------|------|------|
 | 单元测试 | 回归测试 | 验证特定 Bug 修复 |
-| 集成测试 | 模块交互 | 验证修复不影响其他模块 |
-| 压力测试 | 并发/内存 | 验证并发和内存相关修复 |
+| 集成测试 | 模块交互 | 验证修复不影响其他模�?|
+| 压力测试 | 并发/内存 | 验证并发和内存相关修�?|
 
 ### 测试执行策略
 
-1. **每次提交**: 运行所有 P0 回归测试（约 10 个，< 1 分钟）
-2. **每次 PR**: 运行所有回归测试（约 74 个，< 5 分钟）
-3. **每日构建**: 运行回归测试 + 覆盖率检查
+1. **每次提交**: 运行所�?P0 回归测试（约 10 个，< 1 分钟�?
+2. **每次 PR**: 运行所有回归测试（�?74 个，< 5 分钟�?
+3. **每日构建**: 运行回归测试 + 覆盖率检�?
 4. **每周**: 运行压力测试 + 48 小时内存测试
 
 ### Property-Based Testing
 
-对于并发相关的回归测试（如 BUG-010, BUG-054, BUG-009），使用多线程随机测试：
+对于并发相关的回归测试（�?BUG-010, BUG-054, BUG-009），使用多线程随机测试：
 
 ```pascal
 [Test]
-[RepeatTest(100)]  // 运行 100 次以捕获竞态条件
+[RepeatTest(100)]  // 运行 100 次以捕获竞态条�?
 procedure Test_WorkerQueue_ConcurrentAccess;
 ```

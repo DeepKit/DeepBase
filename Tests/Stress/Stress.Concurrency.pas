@@ -19,7 +19,7 @@ uses
   System.Generics.Collections,
   System.SyncObjs,
   System.Diagnostics,
-  UniBase.StressTest;
+  DeepBase.StressTest;
 
 type
   // ============================================================================

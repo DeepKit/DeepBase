@@ -2,10 +2,10 @@
   Test.WebService - WebService 工具单元测试
 
   测试覆盖:
-    - UniBase.WebAPI.Core: 核心路由和请求处理
-    - UniBase.WebAPI.Auth: 认证中间件
-    - UniBase.WebAPI.OpenAPI: OpenAPI 文档生成
-    - UniBase.WebAPI.WebSocket: WebSocket 支持
+    - DeepBase.WebAPI.Core: 核心路由和请求处�?
+    - DeepBase.WebAPI.Auth: 认证中间�?
+    - DeepBase.WebAPI.OpenAPI: OpenAPI 文档生成
+    - DeepBase.WebAPI.WebSocket: WebSocket 支持
   ============================================================================ }
 
 unit Test.WebService;
@@ -199,10 +199,10 @@ type
 implementation
 
 uses
-  UniBase.WebAPI.Core,
-  UniBase.WebAPI.Auth,
-  UniBase.WebAPI.WebSocket,
-  UniBase.WebAPI.OpenAPI;
+  DeepBase.WebAPI.Core,
+  DeepBase.WebAPI.Auth,
+  DeepBase.WebAPI.WebSocket,
+  DeepBase.WebAPI.OpenAPI;
 
 { THttpConstantsTests }
 

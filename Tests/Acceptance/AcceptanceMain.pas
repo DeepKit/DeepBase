@@ -1,8 +1,8 @@
 { ============================================================================
-  AcceptanceMain - 验收测试主窗体
+  AcceptanceMain - 验收测试主窗�?
   
   版本: 1.0
-  说明: 可视化验收测试界面
+  说明: 可视化验收测试界�?
   ============================================================================ }
 
 unit AcceptanceMain;
@@ -74,14 +74,14 @@ uses
 
 const
   PHASE_NAMES: array[1..8] of string = (
-    '文档与架构审查',
-    '静态代码分析',
+    '文档与架构审�?,
+    '静态代码分�?,
     '单元测试验证',
     '集成测试',
     '安全专项测试',
-    '兼容性测试',
+    '兼容性测�?,
     '示例项目验证',
-    '最终验收'
+    '最终验�?
   );
 
 procedure TfrmAcceptanceMain.FormCreate(Sender: TObject);
@@ -105,12 +105,14 @@ end;
 
 procedure TfrmAcceptanceMain.InitUI;
 begin
-  Caption := 'UniBase 可视化验收测试工具 v1.0';
+  Caption := 'DeepBase 可视化验收测试工�?v1.0';
   Width := 1200;
   Height := 800;
-  Position := poScreenCenter;
+  Position := poDesigned;
+  Left := 100;
+  Top := 300;
   
-  // 设置 ListView 列
+  // 设置 ListView �?
   lvTests.ViewStyle := vsReport;
   lvTests.RowSelect := True;
   lvTests.GridLines := True;
@@ -118,12 +120,12 @@ begin
   with lvTests.Columns.Add do begin Caption := 'ID'; Width := 80; end;
   with lvTests.Columns.Add do begin Caption := '测试名称'; Width := 200; end;
   with lvTests.Columns.Add do begin Caption := '描述'; Width := 300; end;
-  with lvTests.Columns.Add do begin Caption := '优先级'; Width := 60; end;
-  with lvTests.Columns.Add do begin Caption := '状态'; Width := 80; end;
+  with lvTests.Columns.Add do begin Caption := '优先�?; Width := 60; end;
+  with lvTests.Columns.Add do begin Caption := '状�?; Width := 80; end;
   with lvTests.Columns.Add do begin Caption := '耗时(ms)'; Width := 80; end;
   
   mmoLog.Clear;
-  mmoLog.Lines.Add('=== UniBase 验收测试工具 ===');
+  mmoLog.Lines.Add('=== DeepBase 验收测试工具 ===');
   mmoLog.Lines.Add('按验收计划分阶段执行测试');
   mmoLog.Lines.Add('');
 end;
@@ -137,7 +139,7 @@ begin
   
   for I := 1 to 8 do
   begin
-    Node := tvPhases.Items.Add(nil, Format('第 %d 阶段: %s', [I, PHASE_NAMES[I]]));
+    Node := tvPhases.Items.Add(nil, Format('�?%d 阶段: %s', [I, PHASE_NAMES[I]]));
     Node.Data := Pointer(I);
   end;
   
@@ -170,19 +172,19 @@ begin
     end;
     
     case Item.Status of
-      tsNotRun: StatusText := '未执行';
-      tsRunning: StatusText := '执行中...';
-      tsPassed: StatusText := '✓ 通过';
-      tsFailed: StatusText := '✗ 失败';
-      tsSkipped: StatusText := '○ 跳过';
-      tsManual: StatusText := '⚠ 待人工';
+      tsNotRun: StatusText := '未执�?;
+      tsRunning: StatusText := '执行�?..';
+      tsPassed: StatusText := '�?通过';
+      tsFailed: StatusText := '�?失败';
+      tsSkipped: StatusText := '�?跳过';
+      tsManual: StatusText := '�?待人�?;
     end;
     LI.SubItems.Add(StatusText);
     LI.SubItems.Add(IntToStr(Item.DurationMs));
     LI.Data := Pointer(Phase);
   end;
   
-  lblStatus.Caption := Format('第 %d 阶段: %s - 共 %d 个测试项', 
+  lblStatus.Caption := Format('�?%d 阶段: %s - �?%d 个测试项', 
     [Phase, PHASE_NAMES[Phase], Length(Tests)]);
 end;
 
@@ -199,7 +201,7 @@ procedure TfrmAcceptanceMain.btnRunPhaseClick(Sender: TObject);
 begin
   if FRunner.Running then
   begin
-    ShowMessage('测试正在运行中...');
+    ShowMessage('测试正在运行�?..');
     Exit;
   end;
   
@@ -218,7 +220,7 @@ procedure TfrmAcceptanceMain.btnRunAllClick(Sender: TObject);
 begin
   if FRunner.Running then
   begin
-    ShowMessage('测试正在运行中...');
+    ShowMessage('测试正在运行�?..');
     Exit;
   end;
   
@@ -244,7 +246,7 @@ begin
     'AcceptanceReport_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.html');
   FRunner.GenerateReport(ReportPath);
   
-  if MessageDlg('验收报告已生成，是否打开？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  if MessageDlg('验收报告已生成，是否打开�?, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
     ShellExecute(0, 'open', PChar(ReportPath), nil, nil, SW_SHOWNORMAL);
 end;
 
@@ -275,7 +277,7 @@ begin
   end;
   
   TestID := lvTests.Selected.Caption;
-  Notes := InputBox('标记失败', '请输入失败原因:', '');
+  Notes := InputBox('标记失败', '请输入失败原�?', '');
   FRunner.MarkManualTest(TestID, False, Notes);
   LoadTestsForPhase(FSelectedPhase);
   UpdateProgress;
@@ -311,10 +313,10 @@ begin
   TThread.Synchronize(nil, procedure
   begin
     mmoLog.Lines.Add('');
-    mmoLog.Lines.Add(Format('=== 第 %d 阶段完成 ===', [Result.PhaseNumber]));
+    mmoLog.Lines.Add(Format('=== �?%d 阶段完成 ===', [Result.PhaseNumber]));
     mmoLog.Lines.Add(Format('  通过: %d', [Result.PassedTests]));
     mmoLog.Lines.Add(Format('  失败: %d', [Result.FailedTests]));
-    mmoLog.Lines.Add(Format('  待人工: %d', [Result.ManualTests]));
+    mmoLog.Lines.Add(Format('  待人�? %d', [Result.ManualTests]));
     mmoLog.Lines.Add('');
     UpdateProgress;
   end);
@@ -344,12 +346,12 @@ begin
     if LI.Caption = Item.ID then
     begin
       case Item.Status of
-        tsNotRun: StatusText := '未执行';
-        tsRunning: StatusText := '执行中...';
-        tsPassed: StatusText := '✓ 通过';
-        tsFailed: StatusText := '✗ 失败';
-        tsSkipped: StatusText := '○ 跳过';
-        tsManual: StatusText := '⚠ 待人工';
+        tsNotRun: StatusText := '未执�?;
+        tsRunning: StatusText := '执行�?..';
+        tsPassed: StatusText := '�?通过';
+        tsFailed: StatusText := '�?失败';
+        tsSkipped: StatusText := '�?跳过';
+        tsManual: StatusText := '�?待人�?;
       end;
       LI.SubItems[4] := StatusText;
       LI.SubItems[5] := IntToStr(Item.DurationMs);

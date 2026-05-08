@@ -62,7 +62,7 @@ implementation
 
 uses
   System.IOUtils,
-  UniBase.CLI.Interactive;
+  DeepBase.CLI.Interactive;
 
 { TCliUtils }
 

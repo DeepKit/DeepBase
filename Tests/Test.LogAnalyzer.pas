@@ -2,7 +2,7 @@
   Test.LogAnalyzer - LogAnalyzer 工具单元测试
 
   测试覆盖:
-    - LogAnalyzer.Data: 日志数据�?
+    - LogAnalyzer.Data: 日志数据�?
     - LogAnalyzer.Stats: 日志统计模块
     - LogAnalyzer.Export: 日志导出模块
   ============================================================================ }
@@ -230,7 +230,7 @@ begin
   begin
     FTestLogs[I].Id := I + 1;
     FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 过去 20 小时分布
-    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 个不同来�?
+    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 个不同来�?
 
     case I mod 6 of
       0: FTestLogs[I].Level := llTrace;
@@ -362,7 +362,7 @@ begin
     SourceStats := Analyzer.GetStatsBySource;
     Assert.AreEqual(Integer(4), Integer(Length(SourceStats)));
 
-    // 验证按数量降序排�?
+    // 验证按数量降序排�?
     if Length(SourceStats) > 1 then
       Assert.IsTrue(SourceStats[0].Count >= SourceStats[1].Count);
   finally
@@ -380,7 +380,7 @@ begin
     HourlyStats := Analyzer.GetHourlyStats;
     Assert.IsTrue(Length(HourlyStats) > 0);
 
-    // 验证按时间升序排�?
+    // 验证按时间升序排�?
     if Length(HourlyStats) > 1 then
       Assert.IsTrue(HourlyStats[0].SlotTime <= HourlyStats[1].SlotTime);
   finally
@@ -410,7 +410,7 @@ begin
   Analyzer := TLogStatsAnalyzer.Create(FTestLogs);
   try
     TopErrors := Analyzer.GetTopErrorSources(5);
-    // 可能没有错误，所以只检查不会崩�?
+    // 可能没有错误，所以只检查不会崩�?
     Assert.IsTrue(Length(TopErrors) <= 5);
   finally
     Analyzer.Free;
@@ -554,7 +554,7 @@ begin
   TLogExporter.ExportToCSV(FTestLogs, FileName);
 
   Content := TFile.ReadAllText(FileName, TEncoding.UTF8);
-  // 包含引号的字段应该转�?
+  // 包含引号的字段应该转�?
   Assert.IsTrue(Pos('""quotes""', Content) > 0);
 end;
 
@@ -681,7 +681,7 @@ begin
   TLogExporter.ExportToHTML(Logs, FileName);
 
   Content := TFile.ReadAllText(FileName, TEncoding.UTF8);
-  // 应该被转义，不应该包含原�?script 标签
+  // 应该被转义，不应该包含原�?script 标签
   Assert.IsTrue(Pos('&lt;script&gt;', Content) > 0);
   Assert.IsFalse(Pos('<script>', Content) > 0);
 end;

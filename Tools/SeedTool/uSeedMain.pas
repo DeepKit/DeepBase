@@ -86,9 +86,7 @@ type
     procedure btnLoadFromDbClick(Sender: TObject);
   private
     FImageFiles: array of TImageFileInfo;
-    FCurrentEditIndex: Integer;  // 当前编辑的图像索引
-    FTextModified: Boolean;      // 文本是否已修改
-    procedure Log(const Msg: string);
+    FCurrentEditIndex: Integer;  // 当前编辑的图像索�?    FTextModified: Boolean;      // 文本是否已修�?    procedure Log(const Msg: string);
     function ValidateInputs: Boolean;
     function ConnectDatabase: TFDConnection;
     function SeedImage(AConn: TFDConnection; Index: Integer): Boolean;
@@ -118,14 +116,12 @@ begin
   FCurrentEditIndex := -1;
   FTextModified := False;
   
-  Caption := '防篡改播种工具';
+  Caption := '防篡改播种工�?;
   lblTitle.Caption := '图像资源加密播种工具';
   
-  // 设置默认数据库路径（当前目录）
-  edtDbPath.Text := TPath.Combine(ExtractFilePath(ParamStr(0)), 'data.db');
+  // 设置默认数据库路径（当前目录�?  edtDbPath.Text := TPath.Combine(ExtractFilePath(ParamStr(0)), 'data.db');
   
-  // 设置默认加密配置（示例值，实际使用时需修改）
-  edtEncKey.Text := '';
+  // 设置默认加密配置（示例值，实际使用时需修改�?  edtEncKey.Text := '';
   edtSalt.Text := '';
   edtKdfIterations.Text := '10000';
   chkEnableHMAC.Checked := True;
@@ -134,11 +130,11 @@ begin
   ClearTextEditor;
   UpdateImageCount;
   
-  Log('播种工具已启动');
+  Log('播种工具已启�?);
   Log('严格模式：将写入 sha256_hash + hmac_sha256 字段');
   Log('重要：请先选择数据库文件并填写加密配置');
   Log('提示：加密配置需与主程序中的配置完全一致！');
-  Log('提示：切换到"文字配置"页签可编辑地址和描述信息');
+  Log('提示：切换到"文字配置"页签可编辑地址和描述信�?);
 end;
 
 procedure TfrmSeedMain.AddImageFile(const AFilePath: string);
@@ -153,8 +149,7 @@ begin
     if SameText(FImageFiles[I].Key, FileName) then
       Exit;
   
-  // 添加新记录
-  NewIndex := Length(FImageFiles);
+  // 添加新记�?  NewIndex := Length(FImageFiles);
   SetLength(FImageFiles, NewIndex + 1);
   FImageFiles[NewIndex].Key := FileName;
   FImageFiles[NewIndex].FilePath := AFilePath;
@@ -183,8 +178,7 @@ begin
     if FTextModified then
       SaveCurrentTextInfo;
     
-    // 加载选中图像的文本信息
-    LoadImageTextInfo(lstImages.ItemIndex);
+    // 加载选中图像的文本信�?    LoadImageTextInfo(lstImages.ItemIndex);
     cboImageSelect.ItemIndex := lstImages.ItemIndex;
   end;
 end;
@@ -228,7 +222,7 @@ begin
     FImageFiles[FCurrentEditIndex].Enabled := chkEnabled.Checked;
     FTextModified := False;
     btnSaveText.Enabled := False;
-    Log(Format('已保存 %s 的文本配置', [FImageFiles[FCurrentEditIndex].Key]));
+    Log(Format('已保�?%s 的文本配�?, [FImageFiles[FCurrentEditIndex].Key]));
   end;
 end;
 
@@ -277,13 +271,11 @@ end;
 
 procedure TfrmSeedMain.pcMainChange(Sender: TObject);
 begin
-  // 切换到"文字配置"页签时，自动选中第一个图像或当前选中的图像
-  if pcMain.ActivePage = tsTexts then
+  // 切换�?文字配置"页签时，自动选中第一个图像或当前选中的图�?  if pcMain.ActivePage = tsTexts then
   begin
     if Length(FImageFiles) > 0 then
     begin
-      // 如果当前没有选中图像，选中第一个
-      if FCurrentEditIndex < 0 then
+      // 如果当前没有选中图像，选中第一�?      if FCurrentEditIndex < 0 then
       begin
         cboImageSelect.ItemIndex := 0;
         LoadImageTextInfo(0);
@@ -331,7 +323,7 @@ begin
   
   if not TFile.Exists(edtDbPath.Text) then
   begin
-    MessageDlg('数据库文件不存在！', mtWarning, [mbOK], 0);
+    MessageDlg('数据库文件不存在�?, mtWarning, [mbOK], 0);
     Exit;
   end;
   
@@ -352,11 +344,11 @@ begin
     if Query.IsEmpty then
     begin
       Log('数据库中没有图像记录');
-      MessageDlg('数据库中没有图像记录！', mtInformation, [mbOK], 0);
+      MessageDlg('数据库中没有图像记录�?, mtInformation, [mbOK], 0);
       Exit;
     end;
     
-    Log('开始从数据库加载图像记录...');
+    Log('开始从数据库加载图像记�?..');
     
     while not Query.Eof do
     begin
@@ -375,8 +367,7 @@ begin
       
       if ExistingIndex >= 0 then
       begin
-        // 更新现有记录的文本
-        FImageFiles[ExistingIndex].AddressText := AddressText;
+        // 更新现有记录的文�?        FImageFiles[ExistingIndex].AddressText := AddressText;
         FImageFiles[ExistingIndex].Description := Description;
         FImageFiles[ExistingIndex].Enabled := EnabledValue;
         Log(Format('  更新: %s', [ImageKey]));
@@ -387,13 +378,12 @@ begin
         NewIndex := Length(FImageFiles);
         SetLength(FImageFiles, NewIndex + 1);
         FImageFiles[NewIndex].Key := ImageKey;
-        FImageFiles[NewIndex].FilePath := '';  // 无文件路径
-        FImageFiles[NewIndex].AddressText := AddressText;
+        FImageFiles[NewIndex].FilePath := '';  // 无文件路�?        FImageFiles[NewIndex].AddressText := AddressText;
         FImageFiles[NewIndex].Description := Description;
         FImageFiles[NewIndex].Enabled := EnabledValue;
         
         lstImages.Items.Add(Format('%s [仅文本]', [ImageKey]));
-        Log(Format('  加载: %s (address=%s)', [ImageKey, IfThen(AddressText <> '', AddressText, '空')]));
+        Log(Format('  加载: %s (address=%s)', [ImageKey, IfThen(AddressText <> '', AddressText, '�?)]));
       end;
       
       Query.Next;
@@ -401,14 +391,14 @@ begin
     
     UpdateComboBox;
     UpdateImageCount;
-    Log(Format('已从数据库加载 %d 条记录', [Query.RecordCount]));
-    MessageDlg(Format('已加载 %d 条记录！切换到"文字配置"页签编辑。', [Query.RecordCount]), mtInformation, [mbOK], 0);
+    Log(Format('已从数据库加�?%d 条记�?, [Query.RecordCount]));
+    MessageDlg(Format('已加�?%d 条记录！切换�?文字配置"页签编辑�?, [Query.RecordCount]), mtInformation, [mbOK], 0);
     
   except
     on E: Exception do
     begin
-      Log('❌ 加载数据库失败: ' + E.Message);
-      MessageDlg('加载数据库失败: ' + E.Message, mtError, [mbOK], 0);
+      Log('�?加载数据库失�? ' + E.Message);
+      MessageDlg('加载数据库失�? ' + E.Message, mtError, [mbOK], 0);
     end;
   end;
   
@@ -434,7 +424,7 @@ begin
       AddImageFile(OpenDialog.Files[I]);
     
     UpdateImageCount;
-    Log(Format('已添加 %d 个图像文件', [OpenDialog.Files.Count]));
+    Log(Format('已添�?%d 个图像文�?, [OpenDialog.Files.Count]));
   end;
 end;
 
@@ -473,7 +463,7 @@ begin
     end;
     
     UpdateImageCount;
-    Log(Format('从文件夹添加了 %d 个图像文件', [AddedCount]));
+    Log(Format('从文件夹添加�?%d 个图像文�?, [AddedCount]));
   end;
 end;
 
@@ -500,27 +490,26 @@ begin
     lstImages.Items.Delete(Idx);
     UpdateComboBox;
     
-    // 清空编辑器
-    if FCurrentEditIndex = Idx then
+    // 清空编辑�?    if FCurrentEditIndex = Idx then
       ClearTextEditor
     else if FCurrentEditIndex > Idx then
       Dec(FCurrentEditIndex);
     
     UpdateImageCount;
-    Log('已移除选中的图像');
+    Log('已移除选中的图�?);
   end;
 end;
 
 procedure TfrmSeedMain.btnClearAllClick(Sender: TObject);
 begin
-  if MessageDlg('确定要清空所有图像吗？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  if MessageDlg('确定要清空所有图像吗�?, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     SetLength(FImageFiles, 0);
     lstImages.Clear;
     cboImageSelect.Clear;
     ClearTextEditor;
     UpdateImageCount;
-    Log('已清空所有图像');
+    Log('已清空所有图�?);
   end;
 end;
 
@@ -537,7 +526,7 @@ begin
   btnSeed.Enabled := False;
   Screen.Cursor := crHourGlass;
   try
-    Log('===== 开始播种 =====');
+    Log('===== 开始播�?=====');
     
     // 解析 KDF 迭代次数
     if not TryStrToInt(Trim(edtKdfIterations.Text), KdfIter) then
@@ -556,29 +545,27 @@ begin
     Config.EnableHMAC := chkEnableHMAC.Checked;
     TAntiTamperPackage.Initialize(Config);
     
-    Log(Format('✓ 加密配置:', []));
+    Log(Format('�?加密配置:', []));
     Log(Format('  - EncryptionKey 长度: %d', [Length(edtEncKey.Text)]));
     Log(Format('  - Salt: %s', [Config.Salt]));
     Log(Format('  - KdfIterations: %d', [Config.KdfIterations]));
     Log(Format('  - EnableHMAC: %s', [BoolToStr(Config.EnableHMAC, True)]));
     
-    // 连接数据库
-    Conn := ConnectDatabase;
+    // 连接数据�?    Conn := ConnectDatabase;
     if not Assigned(Conn) then
     begin
-      Log('❌ 数据库连接失败');
+      Log('�?数据库连接失�?);
       Exit;
     end;
     
     try
-      // 确保表结构
-      if not TAntiTamperPackage.SetupDatabase(Conn) then
+      // 确保表结�?      if not TAntiTamperPackage.SetupDatabase(Conn) then
       begin
-        Log('❌ 创建/校验数据表失败');
+        Log('�?创建/校验数据表失�?);
         Exit;
       end;
       
-      Log('✓ 数据库表结构准备完成');
+      Log('�?数据库表结构准备完成');
       
       // 播种每个图像
       SuccessCount := 0;
@@ -592,12 +579,12 @@ begin
       end;
       
       Log('===== 播种完成 =====');
-      Log(Format('成功：%d，失败：%d', [SuccessCount, FailCount]));
+      Log(Format('成功�?d，失败：%d', [SuccessCount, FailCount]));
       
       if FailCount = 0 then
         MessageDlg('所有图像播种成功！', mtInformation, [mbOK], 0)
       else
-        MessageDlg(Format('播种完成：成功 %d 个，失败 %d 个', [SuccessCount, FailCount]), 
+        MessageDlg(Format('播种完成：成�?%d 个，失败 %d �?, [SuccessCount, FailCount]), 
           mtWarning, [mbOK], 0);
           
     finally
@@ -627,8 +614,7 @@ var
 begin
   Result := False;
   
-  // 验证数据库路径
-  if Trim(edtDbPath.Text) = '' then
+  // 验证数据库路�?  if Trim(edtDbPath.Text) = '' then
   begin
     MessageDlg('请选择数据库文件路径！', mtWarning, [mbOK], 0);
     btnSelectDb.SetFocus;
@@ -653,7 +639,7 @@ begin
   // 验证 Salt
   if Trim(edtSalt.Text) = '' then
   begin
-    MessageDlg('请输入 Salt！', mtWarning, [mbOK], 0);
+    MessageDlg('请输�?Salt�?, mtWarning, [mbOK], 0);
     edtSalt.SetFocus;
     Exit;
   end;
@@ -668,7 +654,7 @@ begin
   
   if (KdfIter < 1000) or (KdfIter > 100000) then
   begin
-    MessageDlg('KDF 迭代次数必须在 1000-100000 之间！', mtWarning, [mbOK], 0);
+    MessageDlg('KDF 迭代次数必须�?1000-100000 之间�?, mtWarning, [mbOK], 0);
     edtKdfIterations.SetFocus;
     Exit;
   end;
@@ -680,8 +666,7 @@ begin
     Exit;
   end;
   
-  // 保存当前编辑的文本
-  if FTextModified then
+  // 保存当前编辑的文�?  if FTextModified then
     SaveCurrentTextInfo;
   
   Result := True;
@@ -701,11 +686,11 @@ begin
   begin
     try
       TDirectory.CreateDirectory(DbDir);
-      Log('✓ 已创建目录: ' + DbDir);
+      Log('�?已创建目�? ' + DbDir);
     except
       on E: Exception do
       begin
-        Log('❌ 无法创建目录: ' + E.Message);
+        Log('�?无法创建目录: ' + E.Message);
         Exit;
       end;
     end;
@@ -718,11 +703,11 @@ begin
     Result.LoginPrompt := False;
     Result.Connected := True;
     
-    Log('✓ 已连接数据库: ' + DbPath);
+    Log('�?已连接数据库: ' + DbPath);
   except
     on E: Exception do
     begin
-      Log('❌ 数据库连接失败: ' + E.Message);
+      Log('�?数据库连接失�? ' + E.Message);
       if Assigned(Result) then
         FreeAndNil(Result);
     end;
@@ -747,8 +732,7 @@ begin
   Description := FImageFiles[Index].Description;
   
   try
-    // 检查是否为"仅文本"模式（无图像文件，仅更新文本字段）
-    if ImagePath = '' then
+    // 检查是否为"仅文�?模式（无图像文件，仅更新文本字段�?    if ImagePath = '' then
     begin
       Log(Format('更新文本: %s', [ImageKey]));
       
@@ -764,14 +748,14 @@ begin
         
         if Query.RowsAffected > 0 then
         begin
-          Log(Format('  ✓ 文本更新成功: %s', [ImageKey]));
+          Log(Format('  �?文本更新成功: %s', [ImageKey]));
           if AddressText <> '' then
             Log(Format('    地址: %s', [AddressText]));
           Result := True;
         end
         else
         begin
-          Log(Format('  ❌ 未找到记录: %s', [ImageKey]));
+          Log(Format('  �?未找到记�? %s', [ImageKey]));
         end;
       finally
         Query.Free;
@@ -785,7 +769,7 @@ begin
     // 读取图像文件
     if not TFile.Exists(ImagePath) then
     begin
-      Log(Format('  ❌ 文件不存在: %s', [ImagePath]));
+      Log(Format('  �?文件不存�? %s', [ImagePath]));
       Exit;
     end;
     
@@ -802,13 +786,12 @@ begin
       if Description <> '' then
         Log(Format('  描述: %s', [Copy(Description, 1, 50) + IfThen(Length(Description) > 50, '...', '')]));
       
-      // 使用 TAntiTamperPackage.SaveSecureImage 加密并保存
-      try
+      // 使用 TAntiTamperPackage.SaveSecureImage 加密并保�?      try
         if TAntiTamperPackage.SaveSecureImage(AConn, ImageKey, ImageData, AddressText, Description) then
         begin
-          Log(Format('  ✓ 播种成功: %s', [ImageKey]));
+          Log(Format('  �?播种成功: %s', [ImageKey]));
 
-          // 播种成功后更新 aboutMeImages.enabled
+          // 播种成功后更�?aboutMeImages.enabled
           Query := TFDQuery.Create(nil);
           try
             Query.Connection := AConn;
@@ -824,12 +807,12 @@ begin
         end
         else
         begin
-          Log(Format('  ❌ 播种失败: %s （SaveSecureImage 返回 False，检查 antitamper_debug.log）', [ImageKey]));
+          Log(Format('  �?播种失败: %s （SaveSecureImage 返回 False，检�?antitamper_debug.log�?, [ImageKey]));
         end;
       except
         on E: Exception do
         begin
-          Log(Format('  ❌ SaveSecureImage 抛出异常: %s - %s', [ImageKey, E.Message]));
+          Log(Format('  �?SaveSecureImage 抛出异常: %s - %s', [ImageKey, E.Message]));
         end;
       end;
       
@@ -840,14 +823,14 @@ begin
   except
     on E: Exception do
     begin
-      Log(Format('  ❌ 异常: %s - %s', [ImageKey, E.Message]));
+      Log(Format('  �?异常: %s - %s', [ImageKey, E.Message]));
     end;
   end;
 end;
 
 procedure TfrmSeedMain.UpdateImageCount;
 begin
-  lblImageCount.Caption := Format('已添加 %d 个图像', [Length(FImageFiles)]);
+  lblImageCount.Caption := Format('已添�?%d 个图�?, [Length(FImageFiles)]);
   UpdateSeedButtonState;
 end;
 

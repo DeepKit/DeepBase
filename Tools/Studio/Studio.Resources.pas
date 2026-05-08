@@ -14,10 +14,10 @@ uses
 
 const
   // Form captions and labels
-  RSFormCaption           = 'UniBase Studio';
-  RSFormCaptionWithDB     = 'UniBase Studio - %s';
+  RSFormCaption           = 'DeepBase Studio';
+  RSFormCaptionWithDB     = 'DeepBase Studio - %s';
   RSNoDBOpened            = 'No DB Opened';
-  RSLblTitle              = 'UniBase Studio';
+  RSLblTitle              = 'DeepBase Studio';
   
   // Button labels
   RSBtnOpen               = 'Open Database...';
@@ -52,7 +52,7 @@ const
   RSFileNotFound          = 'Database file not found: %s';
   RSOpenDBFailed          = 'Failed to open database: %s';
   RSOpenDBFilter          = 'SQLite Database (*.db)|*.db|All Files (*.*)|*.*';
-  RSOpenDBTitle           = 'Open UniBase Database';
+  RSOpenDBTitle           = 'Open DeepBase Database';
   
   // Status bar messages
   RSStatusReady           = 'Ready';
@@ -74,7 +74,7 @@ const
   RSHelpSQL               = 'SQL Query Editor: Execute SQL queries on the database.'#13#10 +
                             '- Press F5 or Ctrl+Enter to execute'#13#10 +
                             '- Results shown in grid with export to CSV'#13#10 +
-                            '- Query history saved for quick recall';
+                            '- Query hiDeepStory saved for quick recall';
   RSHelpSchema            = 'Schema Viewer: Explore database structure.'#13#10 +
                             '- Click table to view columns, indexes, foreign keys'#13#10 +
                             '- DDL tab shows CREATE TABLE statement'#13#10 +
@@ -110,14 +110,14 @@ class function TStudioResources.GetString(const Key: string): string;
   // Helper: Build Chinese strings using WideChar to avoid encoding issues
   function ZH_NoDBOpened: string;
   begin
-    // 未打开数据库
+    // 未打开数据�?
     Result := WideChar($672A) + WideChar($6253) + WideChar($5F00) + 
               WideChar($6570) + WideChar($636E) + WideChar($5E93);
   end;
   
   function ZH_OpenDB: string;
   begin
-    // 打开数据库...
+    // 打开数据�?..
     Result := WideChar($6253) + WideChar($5F00) + WideChar($6570) + 
               WideChar($636E) + WideChar($5E93) + '...';
   end;
@@ -159,7 +159,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Hotkeys: string;
   begin
-    Result := WideChar($5FEB) + WideChar($6377) + WideChar($952E); // 快捷键
+    Result := WideChar($5FEB) + WideChar($6377) + WideChar($952E); // 快捷�?
   end;
   
   function ZH_Themes: string;
@@ -208,7 +208,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_PromptTemplates: string;
   begin
-    // 提示词模板
+    // 提示词模�?
     Result := WideChar($63D0) + WideChar($793A) + WideChar($8BCD) + WideChar($6A21) + WideChar($677F);
   end;
   
@@ -220,13 +220,13 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_EnterKey: string;
   begin
-    // 输入键:
+    // 输入�?
     Result := WideChar($8F93) + WideChar($5165) + WideChar($952E) + ':';
   end;
   
   function ZH_EnterValue: string;
   begin
-    // 输入值:
+    // 输入�?
     Result := WideChar($8F93) + WideChar($5165) + WideChar($503C) + ':';
   end;
   
@@ -246,7 +246,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_OpenDBFailed: string;
   begin
-    // 打开数据库失败: %s
+    // 打开数据库失�? %s
     Result := WideChar($6253) + WideChar($5F00) + WideChar($6570) + WideChar($636E) + 
               WideChar($5E93) + WideChar($5931) + WideChar($8D25) + ': %s';
   end;
@@ -258,7 +258,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_Refreshed: string;
   begin
-    // 已刷新
+    // 已刷�?
     Result := WideChar($5DF2) + WideChar($5237) + WideChar($65B0);
   end;
   
@@ -278,7 +278,7 @@ class function TStudioResources.GetString(const Key: string): string;
   
   function ZH_DBLabel: string;
   begin
-    // 数据库: %s
+    // 数据�? %s
     Result := WideChar($6570) + WideChar($636E) + WideChar($5E93) + ': %s';
   end;
   
@@ -286,10 +286,10 @@ begin
   if GCurrentLanguage = 'zh-CN' then
   begin
     // Use WideChar functions to build Chinese strings
-    if Key = 'RSFormCaption' then Result := 'UniBase Studio'
-    else if Key = 'RSFormCaptionWithDB' then Result := 'UniBase Studio - %s'
+    if Key = 'RSFormCaption' then Result := 'DeepBase Studio'
+    else if Key = 'RSFormCaptionWithDB' then Result := 'DeepBase Studio - %s'
     else if Key = 'RSNoDBOpened' then Result := ZH_NoDBOpened
-    else if Key = 'RSLblTitle' then Result := 'UniBase Studio'
+    else if Key = 'RSLblTitle' then Result := 'DeepBase Studio'
     else if Key = 'RSBtnOpen' then Result := ZH_OpenDB
     else if Key = 'RSBtnRefresh' then Result := ZH_Refresh
     else if Key = 'RSBtnAdd' then Result := ZH_Add
@@ -332,10 +332,10 @@ begin
   end
   else
   begin
-    if Key = 'RSFormCaption' then Result := 'UniBase Studio'
-    else if Key = 'RSFormCaptionWithDB' then Result := 'UniBase Studio - %s'
+    if Key = 'RSFormCaption' then Result := 'DeepBase Studio'
+    else if Key = 'RSFormCaptionWithDB' then Result := 'DeepBase Studio - %s'
     else if Key = 'RSNoDBOpened' then Result := 'No DB Opened'
-    else if Key = 'RSLblTitle' then Result := 'UniBase Studio'
+    else if Key = 'RSLblTitle' then Result := 'DeepBase Studio'
     else if Key = 'RSBtnOpen' then Result := 'Open Database...'
     else if Key = 'RSBtnRefresh' then Result := 'Refresh'
     else if Key = 'RSBtnAdd' then Result := 'Add Key'

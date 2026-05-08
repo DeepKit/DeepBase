@@ -1,7 +1,7 @@
 object frmLogAnalyzer: TfrmLogAnalyzer
   Left = 0
   Top = 0
-  Caption = 'UniBase 日志分析器'
+  Caption = 'DeepBase 日志分析器'
   ClientHeight = 600
   ClientWidth = 1200
   Color = clBtnFace

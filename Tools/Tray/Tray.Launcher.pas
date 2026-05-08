@@ -1,7 +1,7 @@
-unit Tray.Launcher;
+﻿unit Tray.Launcher;
 
 {*******************************************************************************
-  UniBaseTray - 快速启动器
+  DeepBaseTray - 快速启动器
   
   功能:
   - 启动 Studio
@@ -14,7 +14,7 @@ interface
 uses
   Winapi.Windows, Winapi.ShellAPI,
   System.SysUtils, System.Classes, System.IniFiles,
-  UniBase.Exceptions;
+  DeepBase.Exceptions;
 
 type
   TTrayLauncher = class
@@ -58,7 +58,7 @@ var
   AppDataPath: string;
 begin
   AppDataPath := GetEnvironmentVariable('APPDATA');
-  Result := IncludeTrailingPathDelimiter(AppDataPath) + 'UniBase';
+  Result := IncludeTrailingPathDelimiter(AppDataPath) + 'DeepBase';
   if not DirectoryExists(Result) then
     ForceDirectories(Result);
   Result := IncludeTrailingPathDelimiter(Result) + 'tray_settings.ini';

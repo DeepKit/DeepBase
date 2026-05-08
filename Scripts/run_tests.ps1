@@ -1,5 +1,5 @@
-# UniBase Test Runner Script
-# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit UniBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules]
+# DeepBase Test Runner Script
+# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit DeepBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules] [-CoverageThreshold 70] [-CoverageFailOnLow]
 
 param(
     [ValidateSet('Unit', 'Integration', 'All')]
@@ -17,6 +17,12 @@ param(
     [switch]$Coverage,
     
     [string]$CoverageToolPath,
+
+    [int]$CoverageThreshold = 70,
+
+    [int]$CoverageWarningThreshold = 80,
+
+    [switch]$CoverageFailOnLow,
 
     [string]$Run,
 
@@ -55,21 +61,21 @@ $Dcc64 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe"
 
 # Module aliases for fast targeted regression
 $ModuleRunMap = [ordered]@{
-    "LLM"        = "Test.UniBase.LLM,Test.UniBase.LLM.Manager,Test.UniBase.LLM.PromptTemplate,Test.UniBase.LLM.ImportExport,Test.UniBase.LLM.BillingClient"
-    "ORM"        = "Test.UniBase.ORM,Test.UniBase.ORM.Mapping,Test.UniBase.TestHelper"
-    "DB"         = "Test.UniBase.DB.Factory,Test.UniBase.DB.Pool,Test.UniBase.DB.Migrations,Test.UniBase.DB.ConnectionPool,Test.UniBase.DB.AutoRefreshConfig,Test.UniBase.DB.JobQueue,Test.UniBase.DB.StatusMachine,Test.UniBase.DB.DoQry,Test.UniBase.SQLLogger"
-    "CONFIG"     = "Test.UniBase.Config,Test.UniBase.Configuration,Test.UniBase.PublishConfig"
-    "FORMSTATE"  = "Test.UniBase.FormState"
-    "I18N"       = "Test.UniBase.i18n,Test.UniBase.i18n.Plural,Test.UniBase.i18n.Gender"
-    "HOTKEYS"    = "Test.UniBase.Hotkeys"
-    "THEME"      = "Test.UniBase.Theme"
-    "SECURITY"   = "Test.UniBase.Security,Test.UniBase.Protection,Test.UniBase.KeyManager,Test.UniBase.Authorization,Test.UniBase.License"
-    "LOGGING"    = "Test.UniBase.Logging,Test.UniBase.LogAggregator"
-    "MANAGER"    = "Test.UniBase.Manager,Test.UniBase.Persistence.RuntimeRegistration"
-    "SERVICES"   = "Test.UniBase.Services.HealthCheck,Test.UniBase.Services.Protection,Test.UniBase.Services.Registration"
-    "NET"        = "Test.UniBase.Net,Test.UniBase.HttpServer,Test.WebService"
-    "RESILIENCE" = "Test.UniBase.Resilience,Test.UniBase.RateLimiter"
-    "PERF"       = "Test.UniBase.Benchmark,Test.UniBase.Performance,Test.UniBase.PerformanceSuite,Test.UniBase.LockContention"
+    "LLM"        = "Test.DeepBase.LLM,Test.DeepBase.LLM.Manager,Test.DeepBase.LLM.PromptTemplate,Test.DeepBase.LLM.ImportExport,Test.DeepBase.LLM.BillingClient"
+    "ORM"        = "Test.DeepBase.ORM,Test.DeepBase.ORM.Mapping,Test.DeepBase.TestHelper"
+    "DB"         = "Test.DeepBase.DB.Factory,Test.DeepBase.DB.Pool,Test.DeepBase.DB.Migrations,Test.DeepBase.DB.ConnectionPool,Test.DeepBase.DB.AutoRefreshConfig,Test.DeepBase.DB.JobQueue,Test.DeepBase.DB.StatusMachine,Test.DeepBase.DB.DoQry,Test.DeepBase.SQLLogger"
+    "CONFIG"     = "Test.DeepBase.Config,Test.DeepBase.Configuration,Test.DeepBase.PublishConfig"
+    "FORMSTATE"  = "Test.DeepBase.FormState"
+    "I18N"       = "Test.DeepBase.i18n,Test.DeepBase.i18n.Plural,Test.DeepBase.i18n.Gender"
+    "HOTKEYS"    = "Test.DeepBase.Hotkeys"
+    "THEME"      = "Test.DeepBase.Theme"
+    "SECURITY"   = "Test.DeepBase.Security,Test.DeepBase.Protection,Test.DeepBase.KeyManager,Test.DeepBase.Authorization,Test.DeepBase.License"
+    "LOGGING"    = "Test.DeepBase.Logging,Test.DeepBase.LogAggregator"
+    "MANAGER"    = "Test.DeepBase.Manager,Test.DeepBase.Persistence.RuntimeRegistration"
+    "SERVICES"   = "Test.DeepBase.Services.HealthCheck,Test.DeepBase.Services.Protection,Test.DeepBase.Services.Registration"
+    "NET"        = "Test.DeepBase.Net,Test.DeepBase.HttpServer,Test.WebService"
+    "RESILIENCE" = "Test.DeepBase.Resilience,Test.DeepBase.RateLimiter"
+    "PERF"       = "Test.DeepBase.Benchmark,Test.DeepBase.Performance,Test.DeepBase.PerformanceSuite,Test.DeepBase.LockContention"
 }
 
 function Show-ModuleAliases {
@@ -79,12 +85,89 @@ function Show-ModuleAliases {
     }
 }
 
+function Resolve-TestUnitFile {
+    param(
+        [string]$TestUnit
+    )
+
+    $testFileName = "$TestUnit.pas"
+    $unitCandidate = Join-Path $TestsDir $testFileName
+    $integrationCandidate = Join-Path $IntegrationDir $testFileName
+
+    if (Test-Path $unitCandidate) {
+        return $unitCandidate
+    }
+
+    if (Test-Path $integrationCandidate) {
+        return $integrationCandidate
+    }
+
+    return $null
+}
+
+function Resolve-TestUnitFixtureFilters {
+    param(
+        [string]$TestUnit,
+        [string]$TestFile
+    )
+
+    if ([string]::IsNullOrWhiteSpace($TestFile) -or -not (Test-Path $TestFile)) {
+        return @()
+    }
+
+    $source = Get-Content -Path $TestFile -Raw
+    $fixtures = [regex]::Matches(
+        $source,
+        'TDUnitX\.RegisterTestFixture\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)'
+    ) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+
+    return @($fixtures | ForEach-Object { "$TestUnit.$_" })
+}
+
+function Get-ActiveProjectTestUnits {
+    $projectFiles = @()
+
+    if ($Type -eq 'Unit' -or $Type -eq 'All') {
+        $projectFiles += (Join-Path $TestsDir "DeepBaseTests.dpr")
+    }
+
+    if ($Type -eq 'Integration' -or $Type -eq 'All') {
+        $projectFiles += (Join-Path $IntegrationDir "DeepBaseIntegrationTests.dpr")
+    }
+
+    $units = @()
+    foreach ($projectFile in $projectFiles) {
+        if (-not (Test-Path $projectFile)) {
+            continue
+        }
+
+        $projectSource = Get-Content -Path $projectFile -Raw
+        $units += [regex]::Matches(
+            $projectSource,
+            "(?m)^\s*([A-Za-z_][A-Za-z0-9_.]*)\s+in\s+'[^']+\.pas'"
+        ) | ForEach-Object { $_.Groups[1].Value }
+    }
+
+    return @($units | Select-Object -Unique)
+}
+
+function Test-ActiveProjectReferencesUnit {
+    param(
+        [string]$TestUnit
+    )
+
+    $activeUnits = Get-ActiveProjectTestUnits
+    return [bool]($activeUnits | Where-Object { $_ -ieq $TestUnit } | Select-Object -First 1)
+}
+
 function Resolve-ModuleRunFilter {
     param(
         [string[]]$ModuleNames
     )
 
     $resolved = @()
+    $missingFixtures = @()
+    $missingProjectRefs = @()
 
     foreach ($moduleArg in $ModuleNames) {
         if ([string]::IsNullOrWhiteSpace($moduleArg)) {
@@ -97,11 +180,43 @@ function Resolve-ModuleRunFilter {
             if (-not $ModuleRunMap.Contains($key)) {
                 throw "Unknown -Module alias '$token'. Use -ListModules to view supported aliases."
             }
-            $resolved += ($ModuleRunMap[$key] -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+            $moduleUnits = $ModuleRunMap[$key] -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+            foreach ($testUnit in $moduleUnits) {
+                $testFile = Resolve-TestUnitFile -TestUnit $testUnit
+                if (-not $testFile) {
+                    throw "Cannot map -Module alias '$token' entry '$testUnit' to an existing test unit."
+                }
+
+                if (-not (Test-ActiveProjectReferencesUnit -TestUnit $testUnit)) {
+                    $missingProjectRefs += $testUnit
+                    continue
+                }
+
+                $fixtureFilters = Resolve-TestUnitFixtureFilters -TestUnit $testUnit -TestFile $testFile
+                if ($fixtureFilters.Count -gt 0) {
+                    $resolved += $fixtureFilters
+                } else {
+                    $missingFixtures += $testUnit
+                }
+            }
         }
     }
 
+    if ($missingFixtures.Count -gt 0) {
+        $missingUnique = $missingFixtures | Select-Object -Unique
+        Write-Host "Skipped test units with no registered DUnitX fixtures: $($missingUnique -join ', ')" -ForegroundColor Yellow
+    }
+
+    if ($missingProjectRefs.Count -gt 0) {
+        $missingUnique = $missingProjectRefs | Select-Object -Unique
+        Write-Host "Skipped test units not referenced by active test project: $($missingUnique -join ', ')" -ForegroundColor Yellow
+    }
+
     $unique = $resolved | Select-Object -Unique
+    if (-not $unique -or $unique.Count -eq 0) {
+        throw "No registered DUnitX fixtures found for -Module '$($ModuleNames -join ',')'."
+    }
+
     return ($unique -join ",")
 }
 
@@ -139,12 +254,26 @@ function Resolve-UnitRunFilter {
                 $testUnit = "Test.$name"
             }
 
-            $testFileName = "$testUnit.pas"
-            $unitCandidate = Join-Path $TestsDir $testFileName
-            $integrationCandidate = Join-Path $IntegrationDir $testFileName
+            $testFile = Resolve-TestUnitFile -TestUnit $testUnit
 
-            if ((Test-Path $unitCandidate) -or (Test-Path $integrationCandidate)) {
-                $resolved += $testUnit
+            if ($testFile) {
+                if (-not (Test-ActiveProjectReferencesUnit -TestUnit $testUnit)) {
+                    if ($IgnoreMissing) {
+                        $missing += $token
+                        continue
+                    }
+
+                    throw "Test unit '$testUnit' is not referenced by the active test project for -Type $Type."
+                }
+
+                $fixtureFilters = Resolve-TestUnitFixtureFilters -TestUnit $testUnit -TestFile $testFile
+                if ($fixtureFilters.Count -gt 0) {
+                    $resolved += $fixtureFilters
+                } elseif ($IgnoreMissing) {
+                    $missing += $token
+                } else {
+                    throw "Test unit '$testUnit' has no TDUnitX.RegisterTestFixture registrations for the default CI runner."
+                }
             } else {
                 if ($IgnoreMissing) {
                     $missing += $token
@@ -320,7 +449,7 @@ if (-not (Test-Path $DcuOutputDir)) {
 }
 
 Write-Host "=============================================="
-Write-Host "        UniBase Test Runner"
+Write-Host "        DeepBase Test Runner"
 Write-Host "=============================================="
 Write-Host ""
 Write-Host "Base Directory: $BaseDir"
@@ -336,6 +465,11 @@ if ($FromUnit) { Write-Host "From Unit: $($FromUnit -join ',')" }
 if ($FromGitChanged) { Write-Host "From Git Changed: True (Ref: $GitRef)" }
 if ($IncludeCategory) { Write-Host "Include Categories: $($IncludeCategory -join ',')" }
 if ($ExcludeCategory) { Write-Host "Exclude Categories: $($ExcludeCategory -join ',')" }
+if ($Coverage) {
+    Write-Host "Coverage Threshold: $CoverageThreshold%"
+    Write-Host "Coverage Warning:   $CoverageWarningThreshold%"
+    Write-Host "Coverage Fail-Low: $($CoverageFailOnLow -or $CI -or ($env:DEEPBASE_COVERAGE_FAIL_ON_LOW -eq '1'))"
+}
 Write-Host "Output: $OutputPath"
 Write-Host "DCU Output: $DcuOutputDir"
 Write-Host ""
@@ -380,7 +514,7 @@ $UnitPaths = @(
 )
 $SearchPath = $UnitPaths -join ";"
 
-# Unit directories for code coverage (只统计 UniBase 自身及测试代码)
+# Unit directories for code coverage (只统计 DeepBase 自身及测试代码)
 $CoverageUnitDirs = @(
     "$BaseDir\Core",
     "$BaseDir\VCL",
@@ -461,6 +595,11 @@ function Run-TestProject {
     Write-Host ""
     
     if ($process.ExitCode -eq 0) {
+        if ($XmlOutput -and -not (Test-XmlHasExecutedTests -Path $XmlOutput)) {
+            Write-Host "FAILED: $TestName produced no executed tests in $XmlOutput" -ForegroundColor Red
+            return $false
+        }
+
         Write-Host "SUCCESS: All $TestName tests passed" -ForegroundColor Green
 
         if ($Coverage) {
@@ -532,6 +671,30 @@ function Get-PeMachine {
     }
 }
 
+function Test-XmlHasExecutedTests {
+    param(
+        [string]$Path
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "ERROR: Test XML not found: $Path" -ForegroundColor Red
+        return $false
+    }
+
+    try {
+        [xml]$xml = Get-Content -Path $Path -Raw
+        $totalAttr = $xml.DocumentElement.GetAttribute('total')
+        if (-not [string]::IsNullOrWhiteSpace($totalAttr)) {
+            return ([int]$totalAttr -gt 0)
+        }
+
+        return (@($xml.SelectNodes('//test-case')).Count -gt 0)
+    } catch {
+        Write-Host "ERROR: Failed to parse test XML $Path : $($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+}
+
 function Test-BitnessMatch {
     param(
         [string]$Path,
@@ -595,8 +758,8 @@ if ($Type -eq 'Unit' -or $Type -eq 'All') {
     Write-Host "           Unit Tests"
     Write-Host "=============================================="
     
-    $unitProject = Join-Path $TestsDir "UniBaseTests.dpr"
-    $unitExe = Join-Path $TestsDir "UniBaseTests.exe"
+    $unitProject = Join-Path $TestsDir "DeepBaseTests.dpr"
+    $unitExe = Join-Path $TestsDir "DeepBaseTests.exe"
     $unitXml = Join-Path $OutputPath "UnitTestResults.xml"
     
     if (Test-Path $unitProject) {
@@ -623,7 +786,8 @@ if ($Type -eq 'Unit' -or $Type -eq 'All') {
             $Results.UnitTests = $false
         }
     } else {
-        Write-Host "WARNING: Unit test project not found at $unitProject" -ForegroundColor Yellow
+        Write-Host "ERROR: Required unit test project not found at $unitProject" -ForegroundColor Red
+        $Results.UnitTests = $false
     }
 }
 
@@ -634,8 +798,8 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
     Write-Host "        Integration Tests"
     Write-Host "=============================================="
     
-    $intProject = Join-Path $IntegrationDir "UniBaseIntegrationTests.dpr"
-    $intExe = Join-Path $IntegrationDir "UniBaseIntegrationTests.exe"
+    $intProject = Join-Path $IntegrationDir "DeepBaseIntegrationTests.dpr"
+    $intExe = Join-Path $IntegrationDir "DeepBaseIntegrationTests.exe"
     $intXml = Join-Path $OutputPath "IntegrationTestResults.xml"
     
     if (Test-Path $intProject) {
@@ -651,23 +815,23 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
             $sqliteCopied = Ensure-SqliteDll -TargetDir $IntegrationDir
             $sqliteInIntegration = Join-Path $IntegrationDir "sqlite3.dll"
 
-            # 默认排除需要数据库环境的集成测试,除非显式设置 UNIBASE_RUN_DB_INTEGRATION=1
+            # 默认排除需要数据库环境的集成测试,除非显式设置 DEEPBASE_RUN_DB_INTEGRATION=1
             $extraArgs = @()
-            if ($env:UNIBASE_RUN_DB_INTEGRATION -ne '1') {
+            if ($env:DEEPBASE_RUN_DB_INTEGRATION -ne '1') {
                 # DUnitX uses --exclude:<Category> to exclude categories
                 $extraArgs += "--exclude:DBEnv"
             }
 
             # 集成测试会访问本地回环地址（127.0.0.1），显式开启本地URL白名单
-            $oldAllowLocalhost = $env:UNIBASE_ALLOW_LOCALHOST_HTTP
-            $env:UNIBASE_ALLOW_LOCALHOST_HTTP = '1'
+            $oldAllowLocalhost = $env:DEEPBASE_ALLOW_LOCALHOST_HTTP
+            $env:DEEPBASE_ALLOW_LOCALHOST_HTTP = '1'
             try {
                 $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs
             } finally {
                 if ($null -eq $oldAllowLocalhost) {
-                    Remove-Item Env:\UNIBASE_ALLOW_LOCALHOST_HTTP -ErrorAction SilentlyContinue
+                    Remove-Item Env:\DEEPBASE_ALLOW_LOCALHOST_HTTP -ErrorAction SilentlyContinue
                 } else {
-                    $env:UNIBASE_ALLOW_LOCALHOST_HTTP = $oldAllowLocalhost
+                    $env:DEEPBASE_ALLOW_LOCALHOST_HTTP = $oldAllowLocalhost
                 }
 
                 if ($sqliteCopied -and (Test-Path $sqliteInIntegration)) {
@@ -679,7 +843,8 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
             $Results.IntegrationTests = $false
         }
     } else {
-        Write-Host "WARNING: Integration test project not found at $intProject" -ForegroundColor Yellow
+        Write-Host "ERROR: Required integration test project not found at $intProject" -ForegroundColor Red
+        $Results.IntegrationTests = $false
     }
 }
 
@@ -695,7 +860,7 @@ if ($Report) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>UniBase Test Report</title>
+    <title>DeepBase Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         h1 { color: #333; }
@@ -706,7 +871,7 @@ if ($Report) {
     </style>
 </head>
 <body>
-    <h1>UniBase Test Report</h1>
+    <h1>DeepBase Test Report</h1>
     <p>Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</p>
     
     <div class="summary">
@@ -756,6 +921,39 @@ if ($Results.IntegrationTests -ne $null) {
     } else {
         Write-Host "Integration Tests: FAILED" -ForegroundColor Red
         $allPassed = $false
+    }
+}
+
+if ($Coverage -and $allPassed) {
+    $coverageScript = Join-Path $PSScriptRoot "coverage_check.ps1"
+    $coverageDir = Join-Path $OutputDir "coverage"
+    $shouldFailOnLow = $CoverageFailOnLow -or $CI -or ($env:DEEPBASE_COVERAGE_FAIL_ON_LOW -eq '1')
+
+    Write-Host ""
+    Write-Host "Coverage Gate: running threshold check..."
+    if (Test-Path $coverageScript) {
+        $coverageArgs = @(
+            "-CoverageDir", $coverageDir,
+            "-Threshold", $CoverageThreshold,
+            "-WarningThreshold", $CoverageWarningThreshold
+        )
+        if ($shouldFailOnLow) {
+            $coverageArgs += "-FailOnLow"
+        }
+
+        & $coverageScript @coverageArgs
+        if ($LASTEXITCODE -ne 0) {
+            $allPassed = $false
+            Write-Host "Coverage Gate: FAILED" -ForegroundColor Red
+        } else {
+            Write-Host "Coverage Gate: PASSED" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "WARNING: coverage_check.ps1 not found: $coverageScript" -ForegroundColor Yellow
+        if ($shouldFailOnLow) {
+            $allPassed = $false
+            Write-Host "Coverage Gate: FAILED (missing checker script)" -ForegroundColor Red
+        }
     }
 }
 

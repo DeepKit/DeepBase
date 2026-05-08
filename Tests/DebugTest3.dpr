@@ -5,17 +5,17 @@ uses
   DUnitX.Loggers.Console,
   DUnitX.Loggers.Xml.NUnit,
   DUnitX.TestFramework,
-  Test.UniBase.Manager in 'Test.UniBase.Manager.pas',
-  UniBase.Types in '..\Core\UniBase.Types.pas',
-  UniBase.Manager in '..\Core\UniBase.Manager.pas',
-  UniBase.Config in '..\Core\UniBase.Config.pas',
-  UniBase.i18n in '..\Core\UniBase.i18n.pas',
-  UniBase.FormState in '..\Core\UniBase.FormState.pas',
-  UniBase.Logging in '..\Core\UniBase.Logging.pas',
-  UniBase.MRU in '..\Core\UniBase.MRU.pas',
-  UniBase.Hotkeys in '..\Core\UniBase.Hotkeys.pas',
-  UniBase.Theme in '..\Core\UniBase.Theme.pas',
-  UniBase.License in '..\Core\UniBase.License.pas';
+  Test.DeepBase.Manager in 'Test.DeepBase.Manager.pas',
+  DeepBase.Types in '..\Core\DeepBase.Types.pas',
+  DeepBase.Manager in '..\Core\DeepBase.Manager.pas',
+  DeepBase.Config in '..\Core\DeepBase.Config.pas',
+  DeepBase.i18n in '..\Core\DeepBase.i18n.pas',
+  DeepBase.FormState in '..\Core\DeepBase.FormState.pas',
+  DeepBase.Logging in '..\Core\DeepBase.Logging.pas',
+  DeepBase.MRU in '..\Core\DeepBase.MRU.pas',
+  DeepBase.Hotkeys in '..\Core\DeepBase.Hotkeys.pas',
+  DeepBase.Theme in '..\Core\DeepBase.Theme.pas',
+  DeepBase.License in '..\Core\DeepBase.License.pas';
 begin
   WriteLn('Debug Test 3');
 end.

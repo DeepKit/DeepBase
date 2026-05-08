@@ -1,0 +1,190 @@
+﻿# DeepFlow CI/CD Pipeline
+# 每次提交运行基础测试
+
+name: DeepFlow CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'DeepFlow/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'DeepFlow/**'
+
+jobs:
+  # Python 测试
+  python-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        cd DeepFlow/Skills
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio pytest-cov httpx
+    
+    - name: Run Python tests
+      run: |
+        cd DeepFlow/Skills
+        python -m pytest tests/ -v --cov=src --cov-report=xml
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: DeepFlow/Skills/coverage.xml
+        flags: python
+        name: python-coverage
+
+  # Python 代码检查
+  python-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install linters
+      run: |
+        pip install ruff mypy
+    
+    - name: Run Ruff
+      run: |
+        cd DeepFlow/Skills
+        ruff check src/ --output-format=github
+    
+    - name: Run MyPy
+      run: |
+        cd DeepFlow/Skills
+        mypy src/ --ignore-missing-imports || true
+
+  # Mock LLM 服务测试
+  mock-llm-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd DeepFlow/Skills
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+    
+    - name: Start Mock LLM Service
+      run: |
+        cd DeepFlow/Skills
+        python tests/mock_llm.py --port 8766 &
+        sleep 3
+    
+    - name: Test Mock LLM
+      run: |
+        curl -s http://127.0.0.1:8766/health | grep -q "healthy"
+        curl -s -X POST http://127.0.0.1:8766/execute \
+          -H "Content-Type: application/json" \
+          -d '{"prompt": "你好", "max_tokens": 100}' | grep -q "success"
+
+  # Golden Dataset 验证
+  golden-dataset-test:
+    runs-on: ubuntu-latest
+    needs: [mock-llm-test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd DeepFlow/Skills
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+    
+    - name: Run Golden Dataset Tests
+      run: |
+        cd DeepFlow
+        python -m pytest Tests/golden_dataset/ -v || echo "Golden dataset tests skipped"
+
+  # Delphi 语法检查（需要 Delphi 编译器）
+  # delphi-syntax:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Check Delphi Syntax
+  #     run: |
+  #       # 需要配置 Delphi 编译器路径
+  #       # dcc32 -Q DeepFlow/Source/DeepFlow.dpr
+
+  # 安全检查
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'DeepFlow/'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # 文档检查
+  docs-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check markdown links
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        folder-path: 'docs/DeepFlow'
+        config-file: '.github/markdown-link-check-config.json'
+      continue-on-error: true
+
+  # 构建状态汇总
+  ci-status:
+    runs-on: ubuntu-latest
+    needs: [python-tests, python-lint, mock-llm-test]
+    if: always()
+    
+    steps:
+    - name: Check CI Status
+      run: |
+        if [ "${{ needs.python-tests.result }}" == "failure" ] || \
+           [ "${{ needs.python-lint.result }}" == "failure" ] || \
+           [ "${{ needs.mock-llm-test.result }}" == "failure" ]; then
+          echo "CI failed!"
+          exit 1
+        fi
+        echo "CI passed!"

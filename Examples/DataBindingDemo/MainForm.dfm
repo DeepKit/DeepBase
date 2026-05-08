@@ -1,7 +1,7 @@
 object frmMain: TfrmMain
   Left = 0
   Top = 0
-  Caption = 'UniBase DataBinding Demo'
+  Caption = 'DeepBase DataBinding Demo'
   ClientHeight = 560
   ClientWidth = 800
   Color = clBtnFace

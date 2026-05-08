@@ -1,26 +1,26 @@
-# Data Analyzer Application Template
+﻿# Data Analyzer Application Template
 
-基于 UniBase 框架的数据分析应用程序模板。
+基于 DeepBase 框架的数据分析应用程序模板�?
 
-## 功能特性
+## 功能特�?
 
-- 统计分析（均值、中位数、标准差、四分位数等）
-- 趋势分析（线性回归、R² 系数）
+- 统计分析（均值、中位数、标准差、四分位数等�?
+- 趋势分析（线性回归、R² 系数�?
 - 数据分组聚合
-- 多格式报表生成（Text/HTML/CSV/JSON）
-- 图表构建器框架
+- 多格式报表生成（Text/HTML/CSV/JSON�?
+- 图表构建器框�?
 
 ## 项目结构
 
 ```
 DataAnalyzer/
-├── DataAnalyzer.dpr      # 项目主文件
-├── Main.Form.pas/dfm     # 主窗体
+├── DataAnalyzer.dpr      # 项目主文�?
+├── Main.Form.pas/dfm     # 主窗�?
 ├── Data.Module.pas/dfm   # 数据访问模块
 ├── Analysis.Engine.pas   # 统计分析引擎
-├── Report.Generator.pas  # 报表生成器
-├── Chart.Builder.pas     # 图表构建器（存根）
-└── README.md             # 本文件
+├── Report.Generator.pas  # 报表生成�?
+├── Chart.Builder.pas     # 图表构建器（存根�?
+└── README.md             # 本文�?
 ```
 
 ## 核心组件
@@ -39,10 +39,10 @@ var Trend := TAnalysisEngine.AnalyzeTrend(TimeSeries);
 // Trend.Slope, Trend.RSquared, Trend.Trend ('Up'/'Down'/'Stable')
 
 // 移动平均
-var MA := TAnalysisEngine.MovingAverage(Values, 7);  // 7日移动平均
+var MA := TAnalysisEngine.MovingAverage(Values, 7);  // 7日移动平�?
 
-// 相关性分析
-var Corr := TAnalysisEngine.Correlation(X, Y);  // -1 到 1
+// 相关性分�?
+var Corr := TAnalysisEngine.Correlation(X, Y);  // -1 �?1
 ```
 
 ### Report.Generator
@@ -83,7 +83,7 @@ finally
 end;
 ```
 
-## UniBase 功能演示
+## DeepBase 功能演示
 
 ### 日志记录
 ```pascal
@@ -94,13 +94,13 @@ Log.Debug('Statistics: %s', [Stats.ToString]);
 ### 配置管理
 ```pascal
 // 保存用户偏好
-UniBase.Config.SetConfig('report.defaultFormat', 'HTML');
-UniBase.Config.SetConfigInt('analysis.defaultWindow', 30);
+DeepBase.Config.SetConfig('report.defaultFormat', 'HTML');
+DeepBase.Config.SetConfigInt('analysis.defaultWindow', 30);
 ```
 
 ### 性能基准
 ```pascal
-uses UniBase.Benchmark;
+uses DeepBase.Benchmark;
 
 var ElapsedMs := MeasureTime(procedure
 begin
@@ -113,7 +113,7 @@ Log.Info('Analysis completed in %.2f ms', [ElapsedMs]);
 
 ### 添加新的统计函数
 
-在 `Analysis.Engine.pas` 中添加：
+�?`Analysis.Engine.pas` 中添加：
 
 ```pascal
 class function TAnalysisEngine.Skewness(const Values: TArray<Double>): Double;
@@ -140,7 +140,7 @@ end;
 
 ### 集成图表组件
 
-将 `Chart.Builder.pas` 中的存根实现替换为实际图表组件：
+�?`Chart.Builder.pas` 中的存根实现替换为实际图表组件：
 
 ```pascal
 // 使用 TeeChart
@@ -165,7 +165,7 @@ end;
 
 ## 依赖
 
-- UniBase Framework
+- DeepBase Framework
 - FireDAC (用于数据访问)
 - VCL
 

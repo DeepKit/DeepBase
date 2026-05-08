@@ -3,14 +3,14 @@
 
   BUG-059: JSON反序列化类型验证缺失
   
-  原问题: JsonToObject方法缺少类型白名单验证，直接创建任意类型实例
+  原问�? JsonToObject方法缺少类型白名单验证，直接创建任意类型实例
   
   修复方案: 添加类型白名单验证机制，只允许安全的基础类型和标记了
             SerializableAttribute的类
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.Serialization.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.Serialization.pas
+  优先�? P1 (High)
   分类: Security
   ============================================================================ }
 
@@ -37,7 +37,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证类型白名单验证机制存在')]
+    [Description('验证类型白名单验证机制存�?)]
     procedure Test_TypeWhitelist_Exists;
     
     [Test]
@@ -45,7 +45,7 @@ type
     procedure Test_UnauthorizedType_IsRejected;
     
     [Test]
-    [Description('验证基础类型被允许')]
+    [Description('验证基础类型被允�?)]
     procedure Test_BasicTypes_AreAllowed;
   end;
 
@@ -78,7 +78,7 @@ end;
 
 function TBug059_JsonDeserializationTypeTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Serialization.pas';
+  Result := 'Core/DeepBase.Serialization.pas';
 end;
 
 procedure TBug059_JsonDeserializationTypeTest.Test_TypeWhitelist_Exists;
@@ -88,14 +88,14 @@ var
 begin
   LogTestStart('Test_TypeWhitelist_Exists');
   
-  SourcePath := 'Core\UniBase.Serialization.pas';
+  SourcePath := 'Core\DeepBase.Serialization.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Serialization.pas';
+    SourcePath := '..\Core\DeepBase.Serialization.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -109,7 +109,7 @@ begin
     SourceCode.Contains('AllowedTypes') or
     SourceCode.Contains('IsTypeAllowed') or
     SourceCode.Contains('ValidateType'),
-    '代码应该包含类型白名单验证机制');
+    '代码应该包含类型白名单验证机�?);
   
   LogTestEnd('Test_TypeWhitelist_Exists', True);
 end;
@@ -118,7 +118,7 @@ procedure TBug059_JsonDeserializationTypeTest.Test_UnauthorizedType_IsRejected;
 begin
   LogTestStart('Test_UnauthorizedType_IsRejected');
   
-  // 实际测试需要序列化模块的具体实现
+  // 实际测试需要序列化模块的具体实�?
   Assert.Pass('未授权类型拒绝测试通过代码审查确认');
   
   LogTestEnd('Test_UnauthorizedType_IsRejected', True);
@@ -128,7 +128,7 @@ procedure TBug059_JsonDeserializationTypeTest.Test_BasicTypes_AreAllowed;
 begin
   LogTestStart('Test_BasicTypes_AreAllowed');
   
-  // 基础类型（string, integer, boolean 等）应该被允许
+  // 基础类型（string, integer, boolean 等）应该被允�?
   Assert.Pass('基础类型允许测试通过代码审查确认');
   
   LogTestEnd('Test_BasicTypes_AreAllowed', True);

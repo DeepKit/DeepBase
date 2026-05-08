@@ -3,13 +3,13 @@
 
   BUG-001: 动画对象内存泄漏
   
-  原问题: 析构函数中FAnimationTimer只禁用但未释放
+  原问�? 析构函数中FAnimationTimer只禁用但未释�?
   
   修复方案: 使用FreeAndNil确保定时器对象被正确释放
   
   修复日期: 2025-01-27
-  文件: VCL/UniBase.VCL.WaitForm.pas
-  优先级: P1 (High)
+  文件: VCL/DeepBase.VCL.WaitForm.pas
+  优先�? P1 (High)
   分类: Memory
   ============================================================================ }
 
@@ -36,15 +36,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 WaitForm 创建和销毁不会泄漏内存')]
+    [Description('验证 WaitForm 创建和销毁不会泄漏内�?)]
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
-    [Description('验证多次创建销毁 WaitForm 内存稳定')]
+    [Description('验证多次创建销�?WaitForm 内存稳定')]
     procedure Test_WaitForm_RepeatedCreateDestroy_MemoryStable;
     
     [Test]
-    [Description('验证源代码使用 FreeAndNil')]
+    [Description('验证源代码使�?FreeAndNil')]
     procedure Test_SourceCode_UsesFreeAndNil;
   end;
 
@@ -77,18 +77,18 @@ end;
 
 function TBug001_AnimationMemoryLeakTest.GetAffectedFile: string;
 begin
-  Result := 'VCL/UniBase.VCL.WaitForm.pas';
+  Result := 'VCL/DeepBase.VCL.WaitForm.pas';
 end;
 
 procedure TBug001_AnimationMemoryLeakTest.Test_WaitForm_NoMemoryLeak;
 begin
   LogTestStart('Test_WaitForm_NoMemoryLeak');
   
-  // 由于 WaitForm 是 VCL 组件，需要在主线程中测试
+  // 由于 WaitForm �?VCL 组件，需要在主线程中测试
   // 这里验证概念：创建和销毁应该不泄漏内存
   
-  // 实际测试需要 VCL 环境，这里通过代码审查验证
-  Assert.Pass('内存泄漏测试需要 VCL 环境，通过代码审查确认修复');
+  // 实际测试需�?VCL 环境，这里通过代码审查验证
+  Assert.Pass('内存泄漏测试需�?VCL 环境，通过代码审查确认修复');
   
   LogTestEnd('Test_WaitForm_NoMemoryLeak', True);
 end;
@@ -98,7 +98,7 @@ begin
   LogTestStart('Test_WaitForm_RepeatedCreateDestroy_MemoryStable');
   
   // 多次创建销毁后内存应该稳定
-  Assert.Pass('重复创建销毁测试需要 VCL 环境，通过代码审查确认修复');
+  Assert.Pass('重复创建销毁测试需�?VCL 环境，通过代码审查确认修复');
   
   LogTestEnd('Test_WaitForm_RepeatedCreateDestroy_MemoryStable', True);
 end;
@@ -110,14 +110,14 @@ var
 begin
   LogTestStart('Test_SourceCode_UsesFreeAndNil');
   
-  SourcePath := 'VCL\UniBase.VCL.WaitForm.pas';
+  SourcePath := 'VCL\DeepBase.VCL.WaitForm.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\VCL\UniBase.VCL.WaitForm.pas';
+    SourcePath := '..\VCL\DeepBase.VCL.WaitForm.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -126,7 +126,7 @@ begin
   
   // 验证使用 FreeAndNil 而不是简单的 Free
   Assert.IsTrue(SourceCode.Contains('FreeAndNil'),
-    '析构函数应该使用 FreeAndNil 释放定时器对象');
+    '析构函数应该使用 FreeAndNil 释放定时器对�?);
   
   LogTestEnd('Test_SourceCode_UsesFreeAndNil', True);
 end;

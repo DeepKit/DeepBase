@@ -1,34 +1,34 @@
-# CRUD Application Template
+﻿# CRUD Application Template
 
-基于 UniBase 框架的 CRUD（增删改查）应用程序模板。
+基于 DeepBase 框架�?CRUD（增删改查）应用程序模板�?
 
-## 功能特性
+## 功能特�?
 
-- 客户管理（Customer）完整 CRUD 操作
-- 搜索和过滤功能
-- 状态筛选（活跃/停用/暂停）
+- 客户管理（Customer）完�?CRUD 操作
+- 搜索和过滤功�?
+- 状态筛选（活跃/停用/暂停�?
 - 表单验证
-- 软删除支持
+- 软删除支�?
 - 窗体状态持久化
 
 ## 项目结构
 
 ```
 CRUDApp/
-├── CRUDApp.dpr           # 项目主文件
-├── Main.Form.pas/dfm     # 主窗体（客户列表）
+├── CRUDApp.dpr           # 项目主文�?
+├── Main.Form.pas/dfm     # 主窗体（客户列表�?
 ├── Data.Module.pas/dfm   # 数据访问模块
-├── Entity.Customer.pas   # 客户实体类（ORM 映射）
+├── Entity.Customer.pas   # 客户实体类（ORM 映射�?
 ├── Form.CustomerEdit.pas/dfm  # 客户编辑窗体
-└── README.md             # 本文件
+└── README.md             # 本文�?
 ```
 
-## UniBase 功能演示
+## DeepBase 功能演示
 
 ### 1. 数据库初始化
 ```pascal
 // Data.Module.pas
-UniBase.Manager.UniBase.InitializeWithDB(FDatabasePath);
+DeepBase.Manager.DeepBase.InitializeWithDB(FDatabasePath);
 ```
 
 ### 2. ORM 实体定义
@@ -46,9 +46,9 @@ end;
 
 ### 3. 配置管理
 ```pascal
-// Main.Form.pas - 保存窗体状态
-UniBase.Config.SetConfigInt('MainForm.Left', Left);
-UniBase.Config.SetConfigInt('MainForm.Width', Width);
+// Main.Form.pas - 保存窗体状�?
+DeepBase.Config.SetConfigInt('MainForm.Left', Left);
+DeepBase.Config.SetConfigInt('MainForm.Width', Width);
 ```
 
 ### 4. 日志记录
@@ -74,27 +74,27 @@ end;
 
 ## 如何使用
 
-1. 在 RAD Studio 中打开 `CRUDApp.dproj`
-2. 确保 UniBase 框架路径已添加到搜索路径
-3. 编译并运行
+1. �?RAD Studio 中打开 `CRUDApp.dproj`
+2. 确保 DeepBase 框架路径已添加到搜索路径
+3. 编译并运�?
 
-## 自定义指南
+## 自定义指�?
 
-### 添加新实体
+### 添加新实�?
 
-1. 创建实体类（参考 `Entity.Customer.pas`）
-2. 在 `Data.Module.pas` 中添加 CRUD 方法
-3. 创建列表和编辑窗体
+1. 创建实体类（参�?`Entity.Customer.pas`�?
+2. �?`Data.Module.pas` 中添�?CRUD 方法
+3. 创建列表和编辑窗�?
 
 ### 添加字段
 
-1. 在实体类中添加属性和 `[Column]` 属性
+1. 在实体类中添加属性和 `[Column]` 属�?
 2. 更新 `CreateXxxTable` 方法
 3. 更新窗体 UI
 
-### 国际化
+### 国际�?
 
-将所有用户可见文本替换为 `T()` 函数调用：
+将所有用户可见文本替换为 `T()` 函数调用�?
 ```pascal
 Caption := T('Customer Management');
 MessageDlg(T('Are you sure?'), mtConfirmation, [mbYes, mbNo], 0);
@@ -102,7 +102,7 @@ MessageDlg(T('Are you sure?'), mtConfirmation, [mbYes, mbNo], 0);
 
 ## 依赖
 
-- UniBase Framework
+- DeepBase Framework
 - FireDAC (SQLite)
 - VCL
 

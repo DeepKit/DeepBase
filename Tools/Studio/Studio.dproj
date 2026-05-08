@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E0524A2D-BB72-4A5B-96F5-FEEB717506D3}</ProjectGuid>
         <MainSource>Studio.dpr</MainSource>
@@ -67,7 +67,7 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>Studio</SanitizedProjectName>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>D:\\_Progs\\02Business\\UniBase;D:\\_Progs\\02Business\\UniBase\\Core;D:\\_Progs\\02Business\\UniBase\\VCL;D:\\_Progs\\02Business\\UniBase\\FMX;D:\\_Progs\\02Business\\UniBase\\Tools\\Studio\\Forms;D:\\_Progs\\02Business\\UniBase\\Tools\\Studio\\Frames;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>D:\\_Progs\\02Business\\DeepBase;D:\\_Progs\\02Business\\DeepBase\\Core;D:\\_Progs\\02Business\\DeepBase\\VCL;D:\\_Progs\\02Business\\DeepBase\\FMX;D:\\_Progs\\02Business\\DeepBase\\Tools\\Studio\\Forms;D:\\_Progs\\02Business\\DeepBase\\Tools\\Studio\\Frames;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>2052</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
     </PropertyGroup>

@@ -1,14 +1,12 @@
-# UniBase Cloud Storage Integration
+﻿# DeepBase Cloud Storage Integration
 
-统一的云存储接口，支持多家云服务商。
-
-## 支持的云服务商
-
-| 服务商 | 类型 | 说明 |
+统一的云存储接口，支持多家云服务商�?
+## 支持的云服务�?
+| 服务�?| 类型 | 说明 |
 |--------|------|------|
 | AWS S3 | `cspAWSS3` | Amazon Simple Storage Service |
 | Azure Blob | `cspAzureBlob` | Microsoft Azure Blob Storage |
-| Alibaba OSS | `cspAliOSS` | 阿里云对象存储 |
+| Alibaba OSS | `cspAliOSS` | 阿里云对象存�?|
 | Google Cloud | `cspGoogleCloud` | Google Cloud Storage |
 | MinIO | `cspMinIO` | S3 兼容的私有云存储 |
 
@@ -17,7 +15,7 @@
 ### AWS S3
 
 ```pascal
-uses UniBase.Cloud.Storage;
+uses DeepBase.Cloud.Storage;
 
 var
   Credentials: TCloudCredentials;
@@ -42,7 +40,7 @@ begin
   for var Obj in Objects.Objects do
     WriteLn(Obj.Key, ' - ', Obj.Size, ' bytes');
   
-  // 生成预签名 URL (1小时有效)
+  // 生成预签�?URL (1小时有效)
   var Url := Client.GetPresignedUrl('my-bucket', 'docs/readme.txt', 3600);
 end;
 ```
@@ -74,7 +72,7 @@ begin
 end;
 ```
 
-### 阿里云 OSS
+### 阿里�?OSS
 
 ```pascal
 var
@@ -89,8 +87,7 @@ begin
   
   Client := CreateCloudStorageClient(Credentials);
   
-  // 检查对象是否存在
-  if Client.ObjectExists('my-bucket', 'data/file.json') then
+  // 检查对象是否存�?  if Client.ObjectExists('my-bucket', 'data/file.json') then
   begin
     // 获取对象信息
     var Info := Client.GetObjectInfo('my-bucket', 'data/file.json');
@@ -115,7 +112,7 @@ begin
   
   Client := CreateCloudStorageClient(Credentials);
   
-  // 与 S3 API 兼容
+  // �?S3 API 兼容
   Client.CreateBucket('test-bucket');
 end;
 ```
@@ -161,11 +158,9 @@ var
 begin
   PartSize := 5 * 1024 * 1024; // 5MB per part
   
-  // 初始化分片上传
-  UploadId := Client.InitiateMultipartUpload('my-bucket', 'large-file.zip');
+  // 初始化分片上�?  UploadId := Client.InitiateMultipartUpload('my-bucket', 'large-file.zip');
   
-  // 上传各分片
-  Stream := TFileStream.Create('C:\large-file.zip', fmOpenRead);
+  // 上传各分�?  Stream := TFileStream.Create('C:\large-file.zip', fmOpenRead);
   try
     var PartNum := 1;
     while Stream.Position < Stream.Size do
@@ -207,13 +202,10 @@ var PublicUrl := Client.GetPublicUrl('my-bucket', 'public/image.png');
 | `scStandard` | 标准存储 |
 | `scInfrequentAccess` | 低频访问 |
 | `scArchive` | 归档存储 |
-| `scColdline` | 冷数据存储 |
+| `scColdline` | 冷数据存�?|
 | `scGlacier` | 冰川存储 |
 
 ## 注意事项
 
-1. **凭证安全**: 不要硬编码凭证，使用环境变量或配置文件
-2. **错误处理**: 网络操作应包装在 try-except 中
-3. **大文件**: 超过 100MB 建议使用分片上传
-4. **并发**: 批量操作建议使用多线程
-5. **区域选择**: 选择离用户最近的区域以获得最佳性能
+1. **凭证安全**: 不要硬编码凭证，使用环境变量或配置文�?2. **错误处理**: 网络操作应包装在 try-except �?3. **大文�?*: 超过 100MB 建议使用分片上传
+4. **并发**: 批量操作建议使用多线�?5. **区域选择**: 选择离用户最近的区域以获得最佳性能

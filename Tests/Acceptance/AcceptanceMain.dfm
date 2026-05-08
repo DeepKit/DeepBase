@@ -1,7 +1,7 @@
 object frmAcceptanceMain: TfrmAcceptanceMain
   Left = 0
   Top = 0
-  Caption = 'UniBase 可视化验收测试工具'
+  Caption = 'DeepBase 可视化验收测试工具'
   ClientHeight = 600
   ClientWidth = 1000
   Color = clBtnFace
@@ -31,7 +31,7 @@ object frmAcceptanceMain: TfrmAcceptanceMain
       Top = 16
       Width = 300
       Height = 28
-      Caption = 'UniBase 可视化验收测试'
+      Caption = 'DeepBase 可视化验收测试'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWhite
       Font.Height = -20

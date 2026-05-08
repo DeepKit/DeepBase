@@ -4,14 +4,14 @@ uses
   System.SysUtils,
   DUnitX.Loggers.Console,
   DUnitX.TestFramework,
-  UniBase.Types in '..\Core\UniBase.Types.pas',
-  UniBase.Manager in '..\Core\UniBase.Manager.pas',
-  UniBase.Config in '..\Core\UniBase.Config.pas',
-  UniBase.i18n in '..\Core\UniBase.i18n.pas',
-  UniBase.FormState in '..\Core\UniBase.FormState.pas',
-  UniBase.Logging in '..\Core\UniBase.Logging.pas',
-  UniBase.MRU in '..\Core\UniBase.MRU.pas',
-  UniBase.Hotkeys in '..\Core\UniBase.Hotkeys.pas';
+  DeepBase.Types in '..\Core\DeepBase.Types.pas',
+  DeepBase.Manager in '..\Core\DeepBase.Manager.pas',
+  DeepBase.Config in '..\Core\DeepBase.Config.pas',
+  DeepBase.i18n in '..\Core\DeepBase.i18n.pas',
+  DeepBase.FormState in '..\Core\DeepBase.FormState.pas',
+  DeepBase.Logging in '..\Core\DeepBase.Logging.pas',
+  DeepBase.MRU in '..\Core\DeepBase.MRU.pas',
+  DeepBase.Hotkeys in '..\Core\DeepBase.Hotkeys.pas';
 begin
   WriteLn('Debug Test 6');
 end.

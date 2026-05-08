@@ -8,8 +8,8 @@ uses
   FMX.StdCtrls, FMX.Layouts, FMX.Objects, FMX.ListView, FMX.ListView.Types,
   FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.Controls.Presentation,
   FMX.Edit, FMX.Memo, FMX.ScrollBox, FMX.Memo.Types,
-  UniBase.FMX.Platform, UniBase.FMX.Theme, UniBase.FMX.ListView,
-  UniBase.FMX.FormControls;
+  DeepBase.FMX.Platform, DeepBase.FMX.Theme, DeepBase.FMX.ListView,
+  DeepBase.FMX.FormControls;
 
 type
   TMainForm = class(TForm)
@@ -49,6 +49,9 @@ type
     procedure SearchEditChange(Sender: TObject);
     procedure RefreshList(Sender: TObject);
     procedure LoadMoreItems(Sender: TObject; var HasMore: Boolean);
+    procedure ValidateButtonClick(Sender: TObject);
+    procedure PopulateRefreshedItems;
+    procedure AppendLoadedItems(StartIndex: Integer);
   public
   end;
 
@@ -59,10 +62,24 @@ implementation
 
 {$R *.fmx}
 
+function DeviceTypeToString(DeviceType: TUniDeviceType): string;
+begin
+  case DeviceType of
+    udtDesktop:
+      Result := 'Desktop';
+    udtPhone:
+      Result := 'Phone';
+    udtTablet:
+      Result := 'Tablet';
+  else
+    Result := 'Unknown';
+  end;
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   // Initialize platform
-  LabelTitle.Text := 'UniBase FMX Demo - ' + Platform.PlatformName;
+  LabelTitle.Text := 'DeepBase FMX Demo - ' + TUniPlatformAdapter.GetPlatformName;
 
   // Setup tabs
   SetupPlatformTab;
@@ -100,8 +117,8 @@ begin
   try
     Info.Add('=== Platform Information ===');
     Info.Add('');
-    Info.Add('Platform: ' + Platform.PlatformName);
-    Info.Add('Device Type: ' + Platform.DeviceTypeName);
+    Info.Add('Platform: ' + TUniPlatformAdapter.GetPlatformName);
+    Info.Add('Device Type: ' + DeviceTypeToString(TUniPlatformAdapter.GetDeviceType));
     Info.Add('');
     Info.Add('Platform Checks:');
     Info.Add('  IsWindows: ' + BoolToStr(Platform.IsWindows, True));
@@ -306,7 +323,7 @@ begin
   FEmailEdit.LabelText := 'Email Address';
   FEmailEdit.HelperText := 'Enter a valid email address';
   FEmailEdit.Required := True;
-  FEmailEdit.AddValidator(TUniMaterialEdit.EmailValidator);
+  FEmailEdit.AddValidator(TUniMaterialEdit.EmailValidator());
   FEmailEdit.Margins.Bottom := 24;
 
   // Star rating
@@ -344,16 +361,18 @@ begin
   BtnValidate.Align := TAlignLayout.Top;
   BtnValidate.Text := 'Validate Form';
   BtnValidate.Height := 44;
-  BtnValidate.OnClick := procedure(Sender: TObject)
-    var
-      IsValid: Boolean;
-    begin
-      IsValid := FNameEdit.Validate and FEmailEdit.Validate;
-      if IsValid then
-        ShowMessage('Form is valid!')
-      else
-        ShowMessage('Please fix the errors above.');
-    end;
+  BtnValidate.OnClick := ValidateButtonClick;
+end;
+
+procedure TMainForm.ValidateButtonClick(Sender: TObject);
+var
+  IsValid: Boolean;
+begin
+  IsValid := FNameEdit.Validate and FEmailEdit.Validate;
+  if IsValid then
+    ShowMessage('Form is valid!')
+  else
+    ShowMessage('Please fix the errors above.');
 end;
 
 procedure TMainForm.ThemeSwitchChange(Sender: TObject);
@@ -379,23 +398,28 @@ begin
     procedure
     begin
       Sleep(1500); // Simulate network delay
-      TThread.Synchronize(nil,
+      TThread.Synchronize(nil, TThreadProcedure(
         procedure
-        var
-          I: Integer;
         begin
-          FListView.Items.Clear;
-          for I := 1 to 20 do
-          begin
-            with FListView.Items.Add do
-            begin
-              Text := 'Refreshed Item ' + IntToStr(I);
-              Detail := 'Updated at ' + TimeToStr(Now);
-            end;
-          end;
-          FListView.EndRefresh;
-        end);
+          PopulateRefreshedItems;
+        end));
     end).Start;
+end;
+
+procedure TMainForm.PopulateRefreshedItems;
+var
+  I: Integer;
+begin
+  FListView.Items.Clear;
+  for I := 1 to 20 do
+  begin
+    with FListView.Items.Add do
+    begin
+      Text := 'Refreshed Item ' + IntToStr(I);
+      Detail := 'Updated at ' + TimeToStr(Now);
+    end;
+  end;
+  FListView.EndRefresh;
 end;
 
 procedure TMainForm.LoadMoreItems(Sender: TObject; var HasMore: Boolean);
@@ -408,26 +432,31 @@ begin
   TThread.CreateAnonymousThread(
     procedure
     var
-      I: Integer;
       LocalStart: Integer;
     begin
       LocalStart := StartIndex;
       Sleep(1000); // Simulate network delay
-      TThread.Synchronize(nil,
+      TThread.Synchronize(nil, TThreadProcedure(
         procedure
         begin
-          for I := 1 to 10 do
-          begin
-            with FListView.Items.Add do
-            begin
-              Text := 'Item ' + IntToStr(LocalStart + I);
-              Detail := 'Loaded at ' + TimeToStr(Now);
-            end;
-          end;
-          // Stop loading after 50 items
-          FListView.EndLoadMore(FListView.Items.Count < 50);
-        end);
+          AppendLoadedItems(LocalStart);
+        end));
     end).Start;
+end;
+
+procedure TMainForm.AppendLoadedItems(StartIndex: Integer);
+var
+  I: Integer;
+begin
+  for I := 1 to 10 do
+  begin
+    with FListView.Items.Add do
+    begin
+      Text := 'Item ' + IntToStr(StartIndex + I);
+      Detail := 'Loaded at ' + TimeToStr(Now);
+    end;
+  end;
+  FListView.EndLoadMore(FListView.Items.Count < 50);
 end;
 
 end.

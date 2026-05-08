@@ -123,7 +123,7 @@ type
 implementation
 
 uses
-  UniBase.Logging;
+  DeepBase.Logging;
 
 { TStatsSummary }
 

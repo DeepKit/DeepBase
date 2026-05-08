@@ -3,14 +3,14 @@
 
   BUG-054: 弹性模式信号量泄漏
   
-  原问题: TSemaphore使用后可能存在泄漏风险，异常情况下未正确释放
+  原问�? TSemaphore使用后可能存在泄漏风险，异常情况下未正确释放
   
-  修复方案: 添加 NeedReleaseSemaphore 标志，确保只在成功获取信号量后才释放；
+  修复方案: 添加 NeedReleaseSemaphore 标志，确保只在成功获取信号量后才释放�?
             修复非队列模式下的信号量获取逻辑
   
   修复日期: 2025-12-16
-  文件: Core/UniBase.Resilience.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.Resilience.pas
+  优先�? P1 (High)
   分类: Concurrency
   ============================================================================ }
 
@@ -38,7 +38,7 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证信号量释放标志存在')]
+    [Description('验证信号量释放标志存�?)]
     procedure Test_SemaphoreReleaseFlag_Exists;
     
     [Test]
@@ -79,7 +79,7 @@ end;
 
 function TBug054_SemaphoreLeakTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Resilience.pas';
+  Result := 'Core/DeepBase.Resilience.pas';
 end;
 
 procedure TBug054_SemaphoreLeakTest.Test_SemaphoreReleaseFlag_Exists;
@@ -89,21 +89,21 @@ var
 begin
   LogTestStart('Test_SemaphoreReleaseFlag_Exists');
   
-  SourcePath := 'Core\UniBase.Resilience.pas';
+  SourcePath := 'Core\DeepBase.Resilience.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Resilience.pas';
+    SourcePath := '..\Core\DeepBase.Resilience.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在信号量释放标志
+  // 验证存在信号量释放标�?
   Assert.IsTrue(
     SourceCode.Contains('NeedReleaseSemaphore') or 
     SourceCode.Contains('SemaphoreAcquired') or
@@ -123,20 +123,20 @@ begin
   InitialCount := 5;
   Semaphore := TSemaphore.Create(nil, InitialCount, InitialCount, '');
   try
-    // 获取信号量
+    // 获取信号�?
     Semaphore.Acquire;
     
     try
       // 模拟异常
       raise Exception.Create('Test exception');
     except
-      // 确保在异常情况下释放信号量
+      // 确保在异常情况下释放信号�?
       Semaphore.Release;
     end;
     
     // 验证信号量已释放（可以再次获取）
     Assert.IsTrue(Semaphore.WaitFor(100) = wrSignaled,
-      '异常后信号量应该被正确释放');
+      '异常后信号量应该被正确释�?);
     Semaphore.Release;
   finally
     Semaphore.Free;
@@ -153,7 +153,7 @@ begin
   
   Semaphore := TSemaphore.Create(nil, 1, 1, '');
   try
-    // 获取信号量
+    // 获取信号�?
     Semaphore.Acquire;
     
     // 正常释放

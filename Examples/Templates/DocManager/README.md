@@ -1,11 +1,11 @@
-# Document Manager Application Template
+﻿# Document Manager Application Template
 
-基于 UniBase 框架的文档管理系统应用程序模板。
+基于 DeepBase 框架的文档管理系统应用程序模板�?
 
-## 功能特性
+## 功能特�?
 
 - 文档分类管理（树状目录结构）
-- 全文搜索（基于 SQLite FTS）
+- 全文搜索（基�?SQLite FTS�?
 - 版本控制
 - 标签系统
 - 文件附件支持
@@ -15,22 +15,22 @@
 
 ```
 DocManager/
-├── DocManager.dpr           # 项目主文件
-├── Main.Form.pas/dfm        # 主窗体（文档列表+预览）
+├── DocManager.dpr           # 项目主文�?
+├── Main.Form.pas/dfm        # 主窗体（文档列表+预览�?
 ├── Data.Module.pas/dfm      # 数据访问模块
 ├── Entity.Document.pas      # 文档实体
 ├── Entity.Category.pas      # 分类实体
 ├── Entity.Tag.pas           # 标签实体
-├── Service.Document.pas     # 文档服务层
+├── Service.Document.pas     # 文档服务�?
 ├── Service.Search.pas       # 搜索服务
 ├── Form.DocumentEdit.pas    # 文档编辑窗体
-├── Form.CategoryTree.pas    # 分类树管理
-└── README.md                # 本文件
+├── Form.CategoryTree.pas    # 分类树管�?
+└── README.md                # 本文�?
 ```
 
-## 数据库设计
+## 数据库设�?
 
-### Documents 表
+### Documents �?
 ```sql
 CREATE TABLE Documents (
   Id TEXT PRIMARY KEY,
@@ -46,7 +46,7 @@ CREATE TABLE Documents (
 );
 ```
 
-### Categories 表
+### Categories �?
 ```sql
 CREATE TABLE Categories (
   Id TEXT PRIMARY KEY,
@@ -57,7 +57,7 @@ CREATE TABLE Categories (
 );
 ```
 
-### Tags 表
+### Tags �?
 ```sql
 CREATE TABLE Tags (
   Id TEXT PRIMARY KEY,
@@ -74,7 +74,7 @@ CREATE TABLE DocumentTags (
 );
 ```
 
-### Attachments 表
+### Attachments �?
 ```sql
 CREATE TABLE Attachments (
   Id TEXT PRIMARY KEY,
@@ -88,7 +88,7 @@ CREATE TABLE Attachments (
 );
 ```
 
-### DocumentVersions 表
+### DocumentVersions �?
 ```sql
 CREATE TABLE DocumentVersions (
   Id TEXT PRIMARY KEY,
@@ -185,7 +185,7 @@ type
 type
   TSearchService = class
   public
-    // 全文搜索（使用 SQLite FTS5）
+    // 全文搜索（使�?SQLite FTS5�?
     function Search(const Query: string): TObjectList<TSearchResult>;
     
     // 高级搜索
@@ -201,16 +201,16 @@ type
   end;
 ```
 
-## UniBase 功能演示
+## DeepBase 功能演示
 
 ### 配置管理
 ```pascal
 // 文档存储路径
-DocPath := UniBase.Config.GetConfig('docmanager.storagePath', 
+DocPath := DeepBase.Config.GetConfig('docmanager.storagePath', 
   TPath.Combine(AppPath, 'Documents'));
 
 // 自动保存间隔
-AutoSaveInterval := UniBase.Config.GetConfigInt('docmanager.autoSaveInterval', 60);
+AutoSaveInterval := DeepBase.Config.GetConfigInt('docmanager.autoSaveInterval', 60);
 ```
 
 ### 日志记录
@@ -230,11 +230,11 @@ type
   end;
 ```
 
-## 快速开始
+## 快速开�?
 
-1. 在 RAD Studio 中打开 `DocManager.dproj`
-2. 添加 UniBase 框架到搜索路径
-3. 编译并运行
+1. �?RAD Studio 中打开 `DocManager.dproj`
+2. 添加 DeepBase 框架到搜索路�?
+3. 编译并运�?
 4. 首次运行自动创建数据库和默认分类
 
 ## 扩展指南
@@ -242,10 +242,10 @@ type
 ### 添加新的文档类型
 
 1. 扩展 `TDocumentType` 枚举
-2. 在 `TDocumentService` 中添加类型特定的处理
+2. �?`TDocumentService` 中添加类型特定的处理
 3. 创建对应的编辑器 UI
 
-### 集成云存储
+### 集成云存�?
 
 ```pascal
 type
@@ -255,7 +255,7 @@ type
     function Delete(const RemoteURL: string): Boolean;
   end;
   
-  // 实现：
+  // 实现�?
   // - TLocalStorageProvider
   // - TAWSStorageProvider
   // - TAzureStorageProvider
@@ -275,7 +275,7 @@ type
 
 ## 依赖
 
-- UniBase Framework
+- DeepBase Framework
 - FireDAC (SQLite)
 - VCL
 

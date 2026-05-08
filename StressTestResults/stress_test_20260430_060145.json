@@ -1,4 +1,4 @@
-ï»¿{
+{
   "title": "Stress Test Report",
   "timestamp": "2026-04-30T06:01:45",
   "environment": {
@@ -33,7 +33,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     },
     {
@@ -60,7 +60,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     },
     {
@@ -87,7 +87,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     },
     {
@@ -114,7 +114,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     },
     {
@@ -141,7 +141,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     },
     {
@@ -168,7 +168,7 @@
         "peak_working_set": 0
       },
       "errors": [
-        "Thread Error: å¥æŸ„æ— æ•ˆã€‚ (6)"
+        "Thread Error: ¾ä±úÎŞĞ§¡£ (6)"
       ]
     }
   ]

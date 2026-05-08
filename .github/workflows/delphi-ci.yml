@@ -1,4 +1,4 @@
-# UniBase Delphi Framework CI Pipeline
+# DeepBase Delphi Framework CI Pipeline
 # Requires a Windows self-hosted runner with RAD Studio/Delphi 12 installed.
 #
 # Runner requirements:
@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       run_db_integration:
-        description: 'Run DBEnv integration tests by setting UNIBASE_RUN_DB_INTEGRATION=1'
+        description: 'Run DBEnv integration tests by setting DEEPBASE_RUN_DB_INTEGRATION=1'
         required: false
         default: false
         type: boolean
@@ -34,9 +34,59 @@ env:
   TEST_PLATFORM: Win64
 
 jobs:
+  package-gate:
+    name: Package Build Gate (Win64)
+    runs-on: [self-hosted, delphi-windows]
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Delphi environment
+        run: |
+          $compiler = Join-Path $env:DELPHI_PATH 'bin\dcc64.exe'
+          if (-not (Test-Path $compiler)) {
+            Write-Error "Delphi $env:DELPHI_VERSION Win64 compiler not found: $compiler"
+            exit 1
+          }
+          Write-Host "Delphi Win64 compiler found: $compiler"
+
+      - name: Run package build gate
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\Scripts\build_packages_win64.ps1 -Profile All
+
+  architecture-checks:
+    name: Architecture Checks
+    runs-on: [self-hosted, delphi-windows]
+    needs: package-gate
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run architecture checks
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\Scripts\run_architecture_checks.ps1 -Platform $env:TEST_PLATFORM
+
+      - name: Upload architecture results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-test-results
+          path: TestResults\ArchitectureTestResults.xml
+
   unit-tests:
     name: Unit Tests
     runs-on: [self-hosted, delphi-windows]
+    needs: architecture-checks
 
     defaults:
       run:
@@ -101,7 +151,7 @@ jobs:
         shell: powershell
 
     env:
-      UNIBASE_RUN_DB_INTEGRATION: '1'
+      DEEPBASE_RUN_DB_INTEGRATION: '1'
 
     steps:
       - name: Checkout
@@ -117,3 +167,29 @@ jobs:
         with:
           name: db-integration-test-results
           path: TestResults\IntegrationTestResults.xml
+
+  examples-build:
+    name: Examples Build Gate (Win64)
+    runs-on: [self-hosted, delphi-windows]
+    needs: integration-tests
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build required examples
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\Scripts\build_examples_win64.ps1
+
+      - name: Upload example build results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-build-results
+          path: |
+            TestResults\ExampleBuildResults.txt
+            TestResults\ExampleBuildResults.xml

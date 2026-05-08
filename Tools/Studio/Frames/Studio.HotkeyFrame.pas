@@ -27,8 +27,9 @@ uses
   Vcl.Grids,
   Vcl.Menus,
   FireDAC.Comp.Client,
-  UniBase.Types,
-  UniBase.Hotkeys;
+  DeepBase.Types,
+  DeepBase.Hotkeys,
+  DeepBase.Hotkeys.Exchange;
 
 type
   TfraHotkey = class(TFrame)
@@ -45,6 +46,8 @@ type
     pnlStatus: TPanel;
     lblStatus: TLabel;
     btnResetSelected: TButton;
+    btnExport: TButton;
+    btnImport: TButton;
     procedure lstCategoriesClick(Sender: TObject);
     procedure edtSearchChange(Sender: TObject);
     procedure grdHotkeysSelectCell(Sender: TObject; ACol, ARow: Integer;
@@ -56,9 +59,11 @@ type
     procedure btnResetAllClick(Sender: TObject);
     procedure btnResetSelectedClick(Sender: TObject);
     procedure grdHotkeysDblClick(Sender: TObject);
+    procedure btnExportClick(Sender: TObject);
+    procedure btnImportClick(Sender: TObject);
   private
     FConnection: TFDConnection;
-    FHotkeys: TUniBaseHotkeys;
+    FHotkeys: TDeepBaseHotkeys;
     FAllHotkeys: THotkeyInfoArray;
     FFilteredHotkeys: THotkeyInfoArray;
     FCategories: TStringList;
@@ -138,7 +143,7 @@ begin
   // Recreate hotkeys manager with new connection
   FreeAndNil(FHotkeys);
   if Assigned(FConnection) and FConnection.Connected then
-    FHotkeys := TUniBaseHotkeys.Create(FConnection);
+    FHotkeys := TDeepBaseHotkeys.Create(FConnection);
 end;
 
 procedure TfraHotkey.RefreshData;
@@ -512,6 +517,82 @@ begin
   FilterHotkeys;
   RefreshGrid;
   SetStatus(Format('Reset %s to default', [ActionName]), False);
+end;
+
+procedure TfraHotkey.btnExportClick(Sender: TObject);
+var
+  SaveDialog: TSaveDialog;
+begin
+  if not Assigned(FHotkeys) then
+    Exit;
+
+  SaveDialog := TSaveDialog.Create(nil);
+  try
+    SaveDialog.Filter := 'JSON Files (*.json)|*.json|All Files (*.*)|*.*';
+    SaveDialog.DefaultExt := 'json';
+    SaveDialog.FileName := 'deepbase-hotkeys.json';
+    SaveDialog.Options := SaveDialog.Options + [ofOverwritePrompt, ofPathMustExist];
+    if not SaveDialog.Execute then
+      Exit;
+
+    TDeepBaseHotkeyExchange.ExportToFile(FHotkeys, SaveDialog.FileName);
+    SetStatus(Format('Exported hotkeys to %s', [SaveDialog.FileName]), False);
+  except
+    on E: Exception do
+      SetStatus('Export failed: ' + E.Message, True);
+  end;
+  SaveDialog.Free;
+end;
+
+procedure TfraHotkey.btnImportClick(Sender: TObject);
+var
+  OpenDialog: TOpenDialog;
+  ConflictChoice: Integer;
+  ConflictMode: THotkeyImportConflictMode;
+  ImportedCount: Integer;
+begin
+  if not Assigned(FHotkeys) then
+    Exit;
+
+  OpenDialog := TOpenDialog.Create(nil);
+  try
+    OpenDialog.Filter := 'JSON Files (*.json)|*.json|All Files (*.*)|*.*';
+    OpenDialog.Options := OpenDialog.Options + [ofFileMustExist, ofPathMustExist];
+    if not OpenDialog.Execute then
+      Exit;
+
+    ConflictChoice := MessageDlg(
+      'If imported hotkeys conflict with existing assignments:'#13#10 +
+      'Yes = overwrite existing assignment'#13#10 +
+      'No = keep existing assignment and skip imported item'#13#10 +
+      'Cancel = abort import',
+      mtConfirmation,
+      [mbYes, mbNo, mbCancel],
+      0);
+    if ConflictChoice = mrCancel then
+      Exit;
+
+    if ConflictChoice = mrYes then
+      ConflictMode := hicmOverwriteConflict
+    else
+      ConflictMode := hicmKeepConflict;
+
+    ImportedCount := TDeepBaseHotkeyExchange.ImportFromFile(
+      FHotkeys,
+      OpenDialog.FileName,
+      ConflictMode);
+
+    LoadCategories;
+    LoadHotkeys;
+    FilterHotkeys;
+    RefreshGrid;
+
+    SetStatus(Format('Imported %d hotkeys from %s', [ImportedCount, OpenDialog.FileName]), False);
+  except
+    on E: Exception do
+      SetStatus('Import failed: ' + E.Message, True);
+  end;
+  OpenDialog.Free;
 end;
 
 end.

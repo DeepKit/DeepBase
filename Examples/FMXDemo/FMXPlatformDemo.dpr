@@ -4,12 +4,10 @@ uses
   System.StartUpCopy,
   FMX.Forms,
   Main.Form in 'Main.Form.pas' {MainForm},
-  UniBase.FMX.Platform in '..\..\FMX\UniBase.FMX.Platform.pas',
-  UniBase.FMX.Theme in '..\..\FMX\UniBase.FMX.Theme.pas',
-  UniBase.FMX.ListView in '..\..\FMX\UniBase.FMX.ListView.pas',
-  UniBase.FMX.FormControls in '..\..\FMX\UniBase.FMX.FormControls.pas';
-
-{$R *.res}
+  DeepBase.FMX.Platform in '..\..\FMX\DeepBase.FMX.Platform.pas',
+  DeepBase.FMX.Theme in '..\..\FMX\DeepBase.FMX.Theme.pas',
+  DeepBase.FMX.ListView in '..\..\FMX\DeepBase.FMX.ListView.pas',
+  DeepBase.FMX.FormControls in '..\..\FMX\DeepBase.FMX.FormControls.pas';
 
 begin
   Application.Initialize;

@@ -1,10 +1,10 @@
-object TrayMainForm: TTrayMainForm
+﻿object TrayMainForm: TTrayMainForm
   Left = 0
   Top = 0
   AlphaBlend = True
   AlphaBlendValue = 217
   BorderStyle = bsNone
-  Caption = 'UniBase '#24037#20316#21488
+  Caption = 'DeepBase '#24037#20316#21488
   ClientHeight = 480
   ClientWidth = 320
   Color = 2960685

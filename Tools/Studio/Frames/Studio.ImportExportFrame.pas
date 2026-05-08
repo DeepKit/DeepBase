@@ -31,7 +31,7 @@ uses
   Vcl.Grids,
   Data.DB,
   FireDAC.Comp.Client,
-  UniBase.Exceptions;
+  DeepBase.Exceptions;
 
 type
   TExportFormat = (efCSV, efJSON, efXML);

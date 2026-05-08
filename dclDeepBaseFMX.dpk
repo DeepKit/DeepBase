@@ -1,0 +1,18 @@
+package dclDeepBaseFMX;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase FMX Design-Time Package'}
+{$DESIGNONLY}
+
+requires
+  rtl,
+  fmx,
+  designide,
+  DeepBaseCore,
+  DeepBaseFMX;
+
+contains
+  DeepBase.FMX.Controls in 'FMX\DeepBase.FMX.Controls.pas';
+
+end.
+

@@ -16,7 +16,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
   Chat.Types,
-  UniBase.ORM, UniBase.EventBus;
+  DeepBase.ORM, DeepBase.EventBus;
 
 type
   TChatEvent = record
@@ -131,7 +131,7 @@ type
     function GetOnlineUsers: TObjectList<TChatUser>;
     function GetContacts(AUserId: Integer): TObjectList<TChatUser>;
     procedure AddContact(AUserId, AContactId: Integer);
-    procedure RemoveContact(AUserId, AContactId: Integer);
+    procedure ReDeepMoveContact(AUserId, AContactId: Integer);
   end;
 
   TPresenceService = class
@@ -781,7 +781,7 @@ begin
   // Add to Contacts table
 end;
 
-procedure TUserService.RemoveContact(AUserId, AContactId: Integer);
+procedure TUserService.ReDeepMoveContact(AUserId, AContactId: Integer);
 begin
   // Remove from Contacts table
 end;

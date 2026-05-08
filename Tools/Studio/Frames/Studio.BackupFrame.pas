@@ -432,7 +432,7 @@ begin
     if SameText(ExtractFileExt(ABackupPath), BACKUP_ZIP_EXT) then
     begin
       // Extract from zip
-      TempFolder := TPath.Combine(TPath.GetTempPath, 'unibase_restore_' + 
+      TempFolder := TPath.Combine(TPath.GetTempPath, 'DeepBase_restore_' + 
         FormatDateTime('hhnnss', Now));
       TDirectory.CreateDirectory(TempFolder);
       

@@ -9,7 +9,7 @@ unit Main.Form;
   - CRUD operations (Add, Edit, Delete)
   - Status bar with statistics
   
-  UniBase features demonstrated:
+  DeepBase features demonstrated:
   - Configuration management
   - Logging
   - I18n (internationalization)
@@ -111,9 +111,9 @@ implementation
 uses
   Data.Module,
   Form.CustomerEdit,
-  UniBase.Manager,
-  UniBase.Config,
-  UniBase.Logging;
+  DeepBase.Manager,
+  DeepBase.Config,
+  DeepBase.Logging;
 
 const
   COL_ID = 0;
@@ -462,7 +462,7 @@ begin
     'CRUD Application Template' + sLineBreak +
     'Version 1.0' + sLineBreak +
     sLineBreak +
-    'Built with UniBase Framework' + sLineBreak +
+    'Built with DeepBase Framework' + sLineBreak +
     sLineBreak +
     'This template demonstrates:' + sLineBreak +
     '- Entity definition with ORM' + sLineBreak +
@@ -476,12 +476,12 @@ end;
 procedure TMainForm.SaveFormState;
 begin
   try
-    UniBase.Config.SetConfigInt('MainForm.Left', Left);
-    UniBase.Config.SetConfigInt('MainForm.Top', Top);
-    UniBase.Config.SetConfigInt('MainForm.Width', Width);
-    UniBase.Config.SetConfigInt('MainForm.Height', Height);
-    UniBase.Config.SetConfigInt('MainForm.WindowState', Ord(WindowState));
-    UniBase.Config.SetConfigInt('MainForm.StatusFilter', CmbStatus.ItemIndex);
+    DeepBase.Config.SetConfigInt('MainForm.Left', Left);
+    DeepBase.Config.SetConfigInt('MainForm.Top', Top);
+    DeepBase.Config.SetConfigInt('MainForm.Width', Width);
+    DeepBase.Config.SetConfigInt('MainForm.Height', Height);
+    DeepBase.Config.SetConfigInt('MainForm.WindowState', Ord(WindowState));
+    DeepBase.Config.SetConfigInt('MainForm.StatusFilter', CmbStatus.ItemIndex);
   except
     // Ignore errors during form state save
   end;
@@ -492,14 +492,14 @@ var
   SavedState: Integer;
 begin
   try
-    Left := UniBase.Config.GetConfigInt('MainForm.Left', Left);
-    Top := UniBase.Config.GetConfigInt('MainForm.Top', Top);
-    Width := UniBase.Config.GetConfigInt('MainForm.Width', Width);
-    Height := UniBase.Config.GetConfigInt('MainForm.Height', Height);
-    SavedState := UniBase.Config.GetConfigInt('MainForm.WindowState', Ord(wsNormal));
+    Left := DeepBase.Config.GetConfigInt('MainForm.Left', Left);
+    Top := DeepBase.Config.GetConfigInt('MainForm.Top', Top);
+    Width := DeepBase.Config.GetConfigInt('MainForm.Width', Width);
+    Height := DeepBase.Config.GetConfigInt('MainForm.Height', Height);
+    SavedState := DeepBase.Config.GetConfigInt('MainForm.WindowState', Ord(wsNormal));
     if SavedState = Ord(wsMaximized) then
       WindowState := wsMaximized;
-    CmbStatus.ItemIndex := UniBase.Config.GetConfigInt('MainForm.StatusFilter', STATUS_ALL);
+    CmbStatus.ItemIndex := DeepBase.Config.GetConfigInt('MainForm.StatusFilter', STATUS_ALL);
   except
     // Ignore errors during form state load
   end;

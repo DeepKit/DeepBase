@@ -3,8 +3,8 @@
 
   版本: 1.0
   功能:
-    - 按级别统计日志数量
-    - 按来源统计日志数量
+    - 按级别统计日志数�?
+    - 按来源统计日志数�?
     - 时间范围分析
     - 趋势分析
   ============================================================================ }
@@ -47,7 +47,7 @@ type
   end;
 
   /// <summary>
-  /// 时间段统计 (用于趋势图)
+  /// 时间段统�?(用于趋势�?
   /// </summary>
   TTimeSlotStats = record
     SlotTime: TDateTime;
@@ -56,7 +56,7 @@ type
   end;
 
   /// <summary>
-  /// 日志统计分析器
+  /// 日志统计分析�?
   /// </summary>
   TLogStatsAnalyzer = class
   private
@@ -70,12 +70,12 @@ type
     function GetBasicStats: TLogStats;
 
     /// <summary>
-    /// 按来源分组统计
+    /// 按来源分组统�?
     /// </summary>
     function GetStatsBySource: TArray<TSourceStats>;
 
     /// <summary>
-    /// 按小时分组统计 (用于趋势图)
+    /// 按小时分组统�?(用于趋势�?
     /// </summary>
     function GetHourlyStats: TArray<TTimeSlotStats>;
 
@@ -90,7 +90,7 @@ type
     function GetTopErrorSources(ACount: Integer = 10): TArray<TSourceStats>;
 
     /// <summary>
-    /// 获取最活跃的来源 (Top N)
+    /// 获取最活跃的来�?(Top N)
     /// </summary>
     function GetTopActiveSources(ACount: Integer = 10): TArray<TSourceStats>;
 
@@ -119,7 +119,7 @@ begin
 
     for I := 0 to High(ALogs) do
     begin
-      // 按级别计数
+      // 按级别计�?
       Inc(Result.CountByLevel[ALogs[I].Level]);
 
       // 唯一来源
@@ -199,7 +199,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按数量降序排序
+    // 按数量降序排�?
     List.Sort(TComparer<TSourceStats>.Construct(
       function(const L, R: TSourceStats): Integer
       begin
@@ -227,7 +227,7 @@ begin
   try
     for I := 0 to High(FLogs) do
     begin
-      // 截断到小时
+      // 截断到小�?
       SlotTime := RecodeMinute(RecodeSecond(RecodeMilliSecond(FLogs[I].Timestamp, 0), 0), 0);
 
       if Dict.TryGetValue(SlotTime, Stats) then
@@ -249,7 +249,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按时间升序排序
+    // 按时间升序排�?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin
@@ -304,7 +304,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按时间升序排序
+    // 按时间升序排�?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin

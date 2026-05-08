@@ -1,6 +1,6 @@
-# UniBase Plugin Example
+﻿# DeepBase Plugin Example
 
-This example demonstrates how to create a plugin for the UniBase framework.
+This example demonstrates how to create a plugin for the DeepBase framework.
 
 ## Files
 
@@ -29,26 +29,26 @@ The plugin will be automatically loaded when the application starts.
 
 ## Plugin Features Demonstrated
 
-### IUniBasePlugin (Required)
+### IDeepBasePlugin (Required)
 - `GetPluginInfo` - Returns plugin metadata (GUID, name, version, etc.)
 - `Initialize` - Called when plugin is loaded
 - `Finalize` - Called before plugin is unloaded
 - `GetState` - Returns current plugin state
 
-### IUniBasePluginUI (Optional)
+### IDeepBasePluginUI (Optional)
 - `GetMenuItems` - Provides menu items to add to host application
 - `GetToolbarItems` - Provides toolbar buttons
 - `GetSettingsPage` - Provides a settings UI frame
 - `OnMenuClick` / `OnToolbarClick` - Handle user interactions
 
-### IUniBasePluginEvents (Optional)
+### IDeepBasePluginEvents (Optional)
 - `OnLanguageChanged` - Notified when UI language changes
 - `OnThemeChanged` - Notified when theme changes
 - `OnConfigChanged` - Notified when config values change
 
 ## Plugin Context
 
-The plugin receives an `IUniBasePluginContext` that provides:
+The plugin receives an `IDeepBasePluginContext` that provides:
 
 ```pascal
 // Get/Set configuration
@@ -68,9 +68,9 @@ Context.GetPluginDataPath;  // Plugin-specific data directory
 
 ## Best Practices
 
-1. **Use TUniBasePluginBase** - Provides default implementations and state management
+1. **Use TDeepBasePluginBase** - Provides default implementations and state management
 2. **Handle nil Context** - Context may be nil if PluginManager doesn't provide one
 3. **Save state in Finalize** - Use Context.SetConfig to persist data
 4. **Use unique GUIDs** - Each plugin must have a unique GUID
-5. **Specify MinUniBaseVersion** - Ensure compatibility with framework version
+5. **Specify MinDeepBaseVersion** - Ensure compatibility with framework version
 6. **Handle exceptions** - Don't let exceptions propagate to the host

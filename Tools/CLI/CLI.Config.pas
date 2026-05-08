@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   CLI.Config - 配置管理命令
   
   版本: 1.0
@@ -20,7 +20,7 @@ uses
   FireDAC.Stan.Async,
   FireDAC.Phys.SQLite,
   FireDAC.Phys.SQLiteDef,
-  CLI.Commands;
+  CLI.Commands, System.Math, System.StrUtils;
 
 type
   TConfigCommands = class
@@ -73,7 +73,7 @@ class procedure TConfigCommands.ShowHelp;
 begin
   Writeln('Configuration Management Commands');
   Writeln('');
-  Writeln('Usage: unibase config <subcommand> [options]');
+  Writeln('Usage: DeepBase config <subcommand> [options]');
   Writeln('');
   Writeln('Subcommands:');
   Writeln('  get       Get a configuration value');
@@ -103,10 +103,10 @@ begin
   Writeln('  --merge             Merge with existing config (default: replace)');
   Writeln('');
   Writeln('Examples:');
-  Writeln('  unibase config get --db myapp.db app.theme');
-  Writeln('  unibase config set --db myapp.db app.theme dark');
-  Writeln('  unibase config export --db myapp.db -o config.json');
-  Writeln('  unibase config import --db myapp.db -i config.json --merge');
+  Writeln('  DeepBase config get --db myapp.db app.theme');
+  Writeln('  DeepBase config set --db myapp.db app.theme dark');
+  Writeln('  DeepBase config export --db myapp.db -o config.json');
+  Writeln('  DeepBase config import --db myapp.db -i config.json --merge');
 end;
 
 class function TConfigCommands.CreateConnection(const DBPath: string): TFDConnection;

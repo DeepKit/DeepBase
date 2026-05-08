@@ -1,7 +1,7 @@
 { ============================================================================
   MVVMDemo - MVVM Framework Demo Application
   
-  Description: Demonstrates the UniBase MVVM framework with a login form
+  Description: Demonstrates the DeepBase MVVM framework with a login form
                featuring data binding, commands, validation, and async operations.
   
   Features Demonstrated:
@@ -24,9 +24,9 @@ uses
   Vcl.Forms,
   MainForm in 'MainForm.pas' {frmMain},
   LoginViewModel in 'LoginViewModel.pas',
-  UniBase.DataBinding in '..\..\Core\UniBase.DataBinding.pas',
-  UniBase.MVVM in '..\..\Core\UniBase.MVVM.pas',
-  UniBase.VCL.MVVMControls in '..\..\VCL\UniBase.VCL.MVVMControls.pas';
+  DeepBase.DataBinding in '..\..\Core\DeepBase.DataBinding.pas',
+  DeepBase.MVVM in '..\..\Core\DeepBase.MVVM.pas',
+  DeepBase.VCL.MVVMControls in '..\..\VCL\DeepBase.VCL.MVVMControls.pas';
 
 {$R *.res}
 

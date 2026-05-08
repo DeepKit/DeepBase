@@ -24,22 +24,22 @@ uses
   Vcl.ExtCtrls,
   Vcl.ComCtrls,
   Vcl.Menus,
-  UniBase.Manager,
-  UniBase.VCL.ConfigControls,
-  UniBase.VCL.I18nControls;
+  DeepBase.Manager,
+  DeepBase.VCL.ConfigControls,
+  DeepBase.VCL.I18nControls;
 
 type
   /// <summary>
   /// 测试窗体类型
   /// </summary>
   TTestFormType = (
-    tftEmpty,           // 空窗体
+    tftEmpty,           // 空窗�?
     tftBasicControls,   // 基础控件窗体
     tftConfigControls,  // 配置控件窗体
-    tftI18nControls,    // 国际化控件窗体
+    tftI18nControls,    // 国际化控件窗�?
     tftDataEntry,       // 数据录入窗体
     tftMasterDetail,    // 主从窗体
-    tftDialog           // 对话框窗体
+    tftDialog           // 对话框窗�?
   );
   
   /// <summary>
@@ -50,7 +50,9 @@ type
     Height: Integer;
     Caption: string;
     Position: TPosition;
-    InitializeUniBase: Boolean;
+    FormLeft: Integer;
+    FormTop: Integer;
+    InitializeDeepBase: Boolean;
     DBPath: string;
     
     class function Default: TTestFormConfig; static;
@@ -82,13 +84,13 @@ type
     class function CreateForm(FormType: TTestFormType): TForm; overload;
     
     /// <summary>
-    /// 创建空窗体
+    /// 创建空窗�?
     /// </summary>
     class function CreateEmptyForm(const Caption: string = 'Test Form';
       Width: Integer = 400; Height: Integer = 300): TForm;
     
     /// <summary>
-    /// 创建带基础控件的窗体
+    /// 创建带基础控件的窗�?
     /// </summary>
     class function CreateBasicControlsForm: TForm;
     
@@ -98,7 +100,7 @@ type
     class function CreateConfigTestForm: TForm;
     
     /// <summary>
-    /// 创建国际化测试窗体
+    /// 创建国际化测试窗�?
     /// </summary>
     class function CreateI18nTestForm: TForm;
     
@@ -113,9 +115,9 @@ type
     class procedure DestroyAllForms;
     
     /// <summary>
-    /// 确保 UniBase 已初始化
+    /// 确保 DeepBase 已初始化
     /// </summary>
-    class procedure EnsureUniBaseInitialized(const DBPath: string = '');
+    class procedure EnsureDeepBaseInitialized(const DBPath: string = '');
   end;
   
   /// <summary>
@@ -157,7 +159,7 @@ type
   end;
   
   /// <summary>
-  /// 国际化控件测试窗体 - 带辅助属性的包装类
+  /// 国际化控件测试窗�?- 带辅助属性的包装�?
   /// </summary>
   TI18nLabelHelper = class helper for TI18nLabel
     function GetTranslationKey: string;
@@ -172,7 +174,7 @@ type
   end;
   
   /// <summary>
-  /// 国际化控件测试窗体
+  /// 国际化控件测试窗�?
   /// </summary>
   TI18nControlsTestForm = class(TForm)
   public
@@ -217,8 +219,10 @@ begin
   Result.Width := 400;
   Result.Height := 300;
   Result.Caption := 'Test Form';
-  Result.Position := poScreenCenter;
-  Result.InitializeUniBase := True;
+  Result.Position := poDesigned;
+  Result.FormLeft := 100;
+  Result.FormTop := 300;
+  Result.InitializeDeepBase := True;
   Result.DBPath := '';
 end;
 
@@ -238,9 +242,9 @@ end;
 class function TTestFormFactory.CreateForm(FormType: TTestFormType;
   Config: TTestFormConfig): TForm;
 begin
-  // 确保 UniBase 初始化
-  if Config.InitializeUniBase then
-    EnsureUniBaseInitialized(Config.DBPath);
+  // 确保 DeepBase 初始�?
+  if Config.InitializeDeepBase then
+    EnsureDeepBaseInitialized(Config.DBPath);
   
   case FormType of
     tftEmpty:
@@ -270,6 +274,11 @@ begin
   if Assigned(Result) then
   begin
     Result.Position := Config.Position;
+    if Result.Position = poDesigned then
+    begin
+      Result.Left := Config.FormLeft;
+      Result.Top := Config.FormTop;
+    end;
     FCreatedForms.Add(Result);
   end;
 end;
@@ -286,7 +295,9 @@ begin
   Result.Caption := Caption;
   Result.Width := Width;
   Result.Height := Height;
-  Result.Position := poScreenCenter;
+  Result.Position := poDesigned;
+  Result.Left := 100;
+  Result.Top := 300;
   FCreatedForms.Add(Result);
 end;
 
@@ -298,14 +309,14 @@ end;
 
 class function TTestFormFactory.CreateConfigTestForm: TForm;
 begin
-  EnsureUniBaseInitialized;
+  EnsureDeepBaseInitialized;
   Result := TConfigControlsTestForm.Create(nil);
   FCreatedForms.Add(Result);
 end;
 
 class function TTestFormFactory.CreateI18nTestForm: TForm;
 begin
-  EnsureUniBaseInitialized;
+  EnsureDeepBaseInitialized;
   Result := TI18nControlsTestForm.Create(nil);
   FCreatedForms.Add(Result);
 end;
@@ -642,11 +653,11 @@ begin
   FCreatedForms.Clear;
 end;
 
-class procedure TTestFormFactory.EnsureUniBaseInitialized(const DBPath: string);
+class procedure TTestFormFactory.EnsureDeepBaseInitialized(const DBPath: string);
 var
   ActualPath: string;
 begin
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
     Exit;
     
   if DBPath <> '' then
@@ -654,7 +665,7 @@ begin
   else
     ActualPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'test_gui.db');
     
-  UniBase.Manager.UniBase.InitializeWithDB(ActualPath);
+  DeepBase.Manager.DeepBase.InitializeWithDB(ActualPath);
 end;
 
 { TBasicControlsTestForm }
@@ -666,7 +677,9 @@ begin
   Caption := 'Basic Controls Test';
   Width := 450;
   Height := 400;
-  Position := poScreenCenter;
+  Position := poDesigned;
+  Left := 100;
+  Top := 300;
   
   // Container panel
   pnlContainer := TPanel.Create(Self);
@@ -811,7 +824,9 @@ begin
   Caption := 'Config Controls Test';
   Width := 400;
   Height := 250;
-  Position := poScreenCenter;
+  Position := poDesigned;
+  Left := 100;
+  Top := 300;
   
   // Config Edit
   lblStatus := TLabel.Create(Self);
@@ -880,7 +895,9 @@ begin
   Caption := 'I18n Controls Test';
   Width := 350;
   Height := 200;
-  Position := poScreenCenter;
+  Position := poDesigned;
+  Left := 100;
+  Top := 300;
   
   // I18n Label
   lblI18n := TI18nLabel.Create(Self);
@@ -932,7 +949,9 @@ begin
   Caption := 'Data Entry Test';
   Width := 400;
   Height := 350;
-  Position := poScreenCenter;
+  Position := poDesigned;
+  Left := 100;
+  Top := 300;
   
   // Name field
   lblName := TLabel.Create(Self);

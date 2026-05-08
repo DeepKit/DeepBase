@@ -1,38 +1,32 @@
-# UniBase Payment Integration
+﻿# DeepBase Payment Integration
 
-统一支付接口封装，支持主流支付服务商。
+统一支付接口封装，支持主流支付服务商�?
+## 架构定位�?026-05�?
+- 本目录提�?**直连支付渠道 SDK** 的客户端能力（Alipay/WeChat/Stripe/PayPal）�?- 订单、用户和权益流程统一�?`Features/DeepBase.Commerce.*`�?- 多端统一、密钥集中托管、审计与风控统一的项目，应实�?`ICommercePaymentGateway` 调用后端 API�?- Core 层不承载支付渠道实现；支付细节只�?`ThirdParty/` 或业务后端适配器中�?
+## 支持的支付方�?
 
-## 架构定位（2026-05）
-
-- 本目录提供 **直连支付渠道 SDK** 的客户端能力（Alipay/WeChat/Stripe/PayPal）。
-- 订单、用户和权益流程统一走 `Features/UniBase.Commerce.*`。
-- 多端统一、密钥集中托管、审计与风控统一的项目，应实现 `ICommercePaymentGateway` 调用后端 API。
-- Core 层不承载支付渠道实现；支付细节只在 `ThirdParty/` 或业务后端适配器中。
-
-## 支持的支付方式
-
-| 服务商 | 类型 | 状态 |
+| 服务�?| 类型 | 状�?|
 |--------|------|------|
-| Alipay (支付宝) | 国内支付 | ✅ |
-| WeChat Pay (微信支付) | 国内支付 | ✅ |
-| Stripe | 国际支付 | ✅ |
-| PayPal | 国际支付 | ✅ |
+| Alipay (支付�? | 国内支付 | �?|
+| WeChat Pay (微信支付) | 国内支付 | �?|
+| Stripe | 国际支付 | �?|
+| PayPal | 国际支付 | �?|
 
 ## 核心文件
 
-- `UniBase.Payment.pas` - 统一支付接口和基类
-- `UniBase.Payment.Alipay.pas` - 支付宝实现
-- `UniBase.Payment.WeChatPay.pas` - 微信支付实现
-- `UniBase.Payment.Stripe.pas` - Stripe 实现
-- `UniBase.Payment.PayPal.pas` - PayPal 实现
+- `DeepBase.Payment.pas` - 统一支付接口和基�?
+- `DeepBase.Payment.Alipay.pas` - 支付宝实�?
+- `DeepBase.Payment.WeChatPay.pas` - 微信支付实现
+- `DeepBase.Payment.Stripe.pas` - Stripe 实现
+- `DeepBase.Payment.PayPal.pas` - PayPal 实现
 
-## 快速开始
+## 快速开�?
 
-### 支付宝示例
+### 支付宝示�?
 
 ```pascal
 uses
-  UniBase.Payment, UniBase.Payment.Alipay;
+  DeepBase.Payment, DeepBase.Payment.Alipay;
 
 var
   Config: TAlipayConfig;
@@ -56,7 +50,7 @@ begin
   
   Result := Client.CreateOrder(Order);
   if Result.Success then
-    // 跳转到 Result.PayUrl 或显示 Result.QRCode
+    // 跳转�?Result.PayUrl 或显�?Result.QRCode
 end;
 ```
 
@@ -64,7 +58,7 @@ end;
 
 ```pascal
 uses
-  UniBase.Payment, UniBase.Payment.Stripe;
+  DeepBase.Payment, DeepBase.Payment.Stripe;
 
 var
   Config: TStripeConfig;
@@ -85,7 +79,7 @@ begin
   Order.CancelUrl := 'https://your-site.com/cancel';
   
   Result := Client.CreateOrder(Order);
-  // 跳转到 Result.PayUrl (Stripe Checkout)
+  // 跳转�?Result.PayUrl (Stripe Checkout)
 end;
 ```
 
@@ -103,7 +97,7 @@ begin
   begin
     if Notification.Status = psSuccess then
     begin
-      // 更新订单状态
+      // 更新订单状�?
       UpdateOrderStatus(Notification.OrderNo, osCompleted);
     end;
   end;
@@ -112,21 +106,21 @@ end;
 
 ## 配置说明
 
-### 支付宝配置
+### 支付宝配�?
 
 | 参数 | 说明 |
 |------|------|
 | AppId | 应用ID |
 | PrivateKey | 应用私钥 (RSA2) |
-| AlipayPublicKey | 支付宝公钥 |
+| AlipayPublicKey | 支付宝公�?|
 | IsSandbox | 是否沙箱环境 |
 
 ### 微信支付配置
 
 | 参数 | 说明 |
 |------|------|
-| AppId | 公众号/小程序 AppID |
-| MchId | 商户号 |
+| AppId | 公众�?小程�?AppID |
+| MchId | 商户�?|
 | ApiKey | API 密钥 |
 | CertPath | 证书路径 (退款用) |
 
@@ -143,14 +137,14 @@ end;
 | 参数 | 说明 |
 |------|------|
 | ClientId | 客户端ID |
-| ClientSecret | 客户端密钥 |
+| ClientSecret | 客户端密�?|
 | IsSandbox | 是否沙箱环境 |
 
 ## 注意事项
 
-1. **密钥安全**: 使用 `UniBase.Security.DPAPI` 安全存储密钥
+1. **密钥安全**: 使用 `DeepBase.Security.DPAPI` 安全存储密钥
 2. **HTTPS**: 生产环境必须使用 HTTPS 回调地址
-3. **幂等性**: 处理支付回调时注意幂等性，避免重复处理
+3. **幂等�?*: 处理支付回调时注意幂等性，避免重复处理
 4. **日志**: 建议记录所有支付请求和回调日志
 
 ## 相关文档

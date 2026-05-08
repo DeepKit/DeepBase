@@ -1,0 +1,48 @@
+package DeepBasePersistence;
+
+{$IMPORTEDDATA ON}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Persistence Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACSqliteDriver,
+  FireDACPGDriver,
+  DeepBaseCore,
+  DeepBaseServices;
+
+contains
+  DeepBase.Persistence.FormState.FireDAC in 'Persistence\DeepBase.Persistence.FormState.FireDAC.pas',
+  DeepBase.Persistence.Config.FireDAC in 'Persistence\DeepBase.Persistence.Config.FireDAC.pas',
+  DeepBase.Persistence.MRU.FireDAC in 'Persistence\DeepBase.Persistence.MRU.FireDAC.pas',
+  DeepBase.Persistence.Hotkeys.FireDAC in 'Persistence\DeepBase.Persistence.Hotkeys.FireDAC.pas',
+  DeepBase.Persistence.I18n.FireDAC in 'Persistence\DeepBase.Persistence.I18n.FireDAC.pas',
+  DeepBase.Persistence.Logging.FireDAC in 'Persistence\DeepBase.Persistence.Logging.FireDAC.pas',
+  DeepBase.Persistence.Protection.FireDAC in 'Persistence\DeepBase.Persistence.Protection.FireDAC.pas',
+  DeepBase.Persistence.Theme.FireDAC in 'Persistence\DeepBase.Persistence.Theme.FireDAC.pas',
+  DeepBase.Persistence.License.FireDAC in 'Persistence\DeepBase.Persistence.License.FireDAC.pas',
+  DeepBase.Persistence.Security.FireDAC in 'Persistence\DeepBase.Persistence.Security.FireDAC.pas',
+  DeepBase.Persistence.Authorization.FireDAC in 'Persistence\DeepBase.Persistence.Authorization.FireDAC.pas',
+  DeepBase.Persistence.Exception.FireDAC in 'Persistence\DeepBase.Persistence.Exception.FireDAC.pas',
+  DeepBase.Persistence.Diagnose.FireDAC in 'Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas',
+  DeepBase.Persistence.ORM.FireDAC in 'Persistence\DeepBase.Persistence.ORM.FireDAC.pas',
+  DeepBase.Persistence.LLM.FireDAC in 'Persistence\DeepBase.Persistence.LLM.FireDAC.pas',
+  DeepBase.Persistence.Manager.FireDAC in 'Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
+  DeepBase.Persistence.RuntimeRegistration in 'Persistence\DeepBase.Persistence.RuntimeRegistration.pas',
+  DeepBase.DB.ConnectionPool in 'Persistence\DeepBase.DB.ConnectionPool.pas',
+  DeepBase.SQLLogger in 'Persistence\DeepBase.SQLLogger.pas',
+  DeepBase.DB.DoQry in 'Persistence\DeepBase.DB.DoQry.pas',
+  DeepBase.DB.AutoRefreshConfig in 'Persistence\DeepBase.DB.AutoRefreshConfig.pas',
+  DeepBase.DB.Factory in 'Persistence\DeepBase.DB.Factory.pas',
+  DeepBase.DB.JobQueue in 'Persistence\DeepBase.DB.JobQueue.pas',
+  DeepBase.DB.Migrations in 'Persistence\DeepBase.DB.Migrations.pas',
+  DeepBase.DB.StatusMachine in 'Persistence\DeepBase.DB.StatusMachine.pas',
+  DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas',
+  DeepBase.Persistence.TestHelper.FireDAC in 'Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas';
+
+end.
+

@@ -3,14 +3,14 @@ unit Entity.Tag;
 {*******************************************************************************
   Tag Entity - 标签实体
 
-  UniBase 框架文档管理模板 - 标签系统
+  DeepBase 框架文档管理模板 - 标签系统
 *******************************************************************************}
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.UITypes,
-  UniBase.ORM.Attributes, UniBase.ORM.Entity;
+  DeepBase.ORM.Attributes, DeepBase.ORM.Entity;
 
 type
   /// <summary>
@@ -48,10 +48,10 @@ type
     /// <summary>获取验证错误</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>预定义颜色列表</summary>
+    /// <summary>预定义颜色列�?/summary>
     class function GetPresetColors: TArray<string>;
 
-    // 属性
+    // 属�?
     property Id: string read FId write FId;
     property Name: string read FName write FName;
     property Color: string read FColor write FColor;
@@ -104,10 +104,10 @@ type
     /// <summary>根据名称获取标签</summary>
     function GetTagByName(const Name: string): TTag;
 
-    /// <summary>获取或创建标签</summary>
+    /// <summary>获取或创建标�?/summary>
     function GetOrCreateTag(const Name: string): TTag;
 
-    /// <summary>获取所有标签</summary>
+    /// <summary>获取所有标�?/summary>
     function GetAllTags: TArray<TTag>;
 
     /// <summary>获取热门标签</summary>
@@ -192,9 +192,9 @@ begin
     if Length(FName) > 50 then
       Errors.Add('标签名称不能超过 50 字符');
 
-    // 标签名不能包含特殊字符
+    // 标签名不能包含特殊字�?
     if ContainsText(FName, ',') or ContainsText(FName, ';') then
-      Errors.Add('标签名称不能包含逗号或分号');
+      Errors.Add('标签名称不能包含逗号或分�?);
 
     Result := Errors.ToArray;
   finally
@@ -209,12 +209,12 @@ begin
     '#e67e22',  // 橙色
     '#f1c40f',  // 黄色
     '#2ecc71',  // 绿色
-    '#1abc9c',  // 青绿色
+    '#1abc9c',  // 青绿�?
     '#3498db',  // 蓝色
     '#9b59b6',  // 紫色
-    '#34495e',  // 深灰蓝
+    '#34495e',  // 深灰�?
     '#95a5a6',  // 灰色
-    '#e91e63'   // 粉红色
+    '#e91e63'   // 粉红�?
   ];
 end;
 
@@ -296,7 +296,7 @@ begin
     for Pair in FTags do
       List.Add(Pair.Value);
 
-    // 按名称排序
+    // 按名称排�?
     List.Sort(TComparer<TTag>.Construct(
       function(const A, B: TTag): Integer
       begin
@@ -320,7 +320,7 @@ begin
     for Pair in FTags do
       List.Add(Pair.Value);
 
-    // 按使用次数降序排序
+    // 按使用次数降序排�?
     List.Sort(TComparer<TTag>.Construct(
       function(const A, B: TTag): Integer
       begin
@@ -328,7 +328,7 @@ begin
       end
     ));
 
-    // 取前 N 个
+    // 取前 N �?
     if List.Count > Count then
       List.DeleteRange(Count, List.Count - Count);
 

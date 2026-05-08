@@ -3,13 +3,13 @@
 
   BUG-066: 路径遍历攻击漏洞
   
-  原问题: 文件监控缺乏路径遍历验证，可通过../访问系统敏感文件
+  原问�? 文件监控缺乏路径遍历验证，可通过../访问系统敏感文件
   
   修复方案: 实现严格的路径规范化和验证函数，限制监控范围
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.FileWatcher.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.FileWatcher.pas
+  优先�? P1 (High)
   分类: Security
   ============================================================================ }
 
@@ -44,15 +44,15 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证 ../ 路径遍历被阻止')]
+    [Description('验证 ../ 路径遍历被阻�?)]
     procedure Test_DotDotSlash_IsBlocked;
     
     [Test]
-    [Description('验证绝对路径外部访问被阻止')]
+    [Description('验证绝对路径外部访问被阻�?)]
     procedure Test_AbsolutePathOutside_IsBlocked;
     
     [Test]
-    [Description('验证路径规范化函数存在')]
+    [Description('验证路径规范化函数存�?)]
     procedure Test_PathNormalization_Exists;
   end;
 
@@ -82,7 +82,7 @@ end;
 
 function TBug066_PathTraversalTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.FileWatcher.pas';
+  Result := 'Core/DeepBase.FileWatcher.pas';
 end;
 
 procedure TBug066_PathTraversalTest.SetUp;
@@ -104,7 +104,7 @@ var
 begin
   LogTestStart('Test_DotDotSlash_IsBlocked');
   
-  // 构造恶意路径
+  // 构造恶意路�?
   MaliciousPath := TPath.Combine(FTempDir, '..\..\..\Windows\System32\config');
   
   // 规范化后应该检测到路径遍历
@@ -125,9 +125,9 @@ begin
   
   ExternalPath := 'C:\Windows\System32';
   
-  // 验证外部绝对路径不在监控目录内
+  // 验证外部绝对路径不在监控目录�?
   Assert.IsFalse(ExternalPath.StartsWith(FTempDir),
-    '外部绝对路径应该被识别为不在监控范围内');
+    '外部绝对路径应该被识别为不在监控范围�?);
   
   LogTestEnd('Test_AbsolutePathOutside_IsBlocked', True);
 end;
@@ -139,14 +139,14 @@ var
 begin
   LogTestStart('Test_PathNormalization_Exists');
   
-  SourcePath := 'Core\UniBase.FileWatcher.pas';
+  SourcePath := 'Core\DeepBase.FileWatcher.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.FileWatcher.pas';
+    SourcePath := '..\Core\DeepBase.FileWatcher.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;

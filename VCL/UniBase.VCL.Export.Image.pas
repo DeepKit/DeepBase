@@ -1,5 +1,5 @@
-{==============================================================================
-  UniBase.VCL.Export.Image - Canvas-Based Image Export (VCL)
+﻿{==============================================================================
+  DeepBase.VCL.Export.Image - Canvas-Based Image Export (VCL)
 
   Renders text, tables, shapes, and images onto a TBitmap canvas and
   exports the result as PNG or JPEG.  No third-party dependencies.
@@ -15,7 +15,7 @@
     Img.Free;
 ==============================================================================}
 
-unit UniBase.VCL.Export.Image;
+unit DeepBase.VCL.Export.Image;
 
 interface
 

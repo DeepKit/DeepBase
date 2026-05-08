@@ -3,13 +3,13 @@
 
   BUG-070: 日志注入攻击风险
   
-  原问题: 使用TFile.AppendAllText直接写入用户输入，未进行转义或过滤
+  原问�? 使用TFile.AppendAllText直接写入用户输入，未进行转义或过�?
   
-  修复方案: 对所有日志内容进行转义和验证，防止日志注入攻击
+  修复方案: 对所有日志内容进行转义和验证，防止日志注入攻�?
   
   修复日期: 2025-01-27
-  文件: Core/UniBase.Logging.pas
-  优先级: P1 (High)
+  文件: Core/DeepBase.Logging.pas
+  优先�? P1 (High)
   分类: Security
   ============================================================================ }
 
@@ -44,7 +44,7 @@ type
     procedure Test_NewlineChars_AreEscaped;
     
     [Test]
-    [Description('验证控制字符被过滤')]
+    [Description('验证控制字符被过�?)]
     procedure Test_ControlChars_AreFiltered;
   end;
 
@@ -77,7 +77,7 @@ end;
 
 function TBug070_LogInjectionTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Logging.pas';
+  Result := 'Core/DeepBase.Logging.pas';
 end;
 
 procedure TBug070_LogInjectionTest.Test_LogSanitization_Exists;
@@ -87,14 +87,14 @@ var
 begin
   LogTestStart('Test_LogSanitization_Exists');
   
-  SourcePath := 'Core\UniBase.Logging.pas';
+  SourcePath := 'Core\DeepBase.Logging.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Core\UniBase.Logging.pas';
+    SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -116,7 +116,7 @@ procedure TBug070_LogInjectionTest.Test_NewlineChars_AreEscaped;
 begin
   LogTestStart('Test_NewlineChars_AreEscaped');
   
-  // 验证换行符被转义，防止日志伪造
+  // 验证换行符被转义，防止日志伪�?
   // 实际测试需要日志模块的具体实现
   Assert.Pass('换行符转义测试通过代码审查确认');
   
@@ -127,7 +127,7 @@ procedure TBug070_LogInjectionTest.Test_ControlChars_AreFiltered;
 begin
   LogTestStart('Test_ControlChars_AreFiltered');
   
-  // 验证控制字符被过滤
+  // 验证控制字符被过�?
   Assert.Pass('控制字符过滤测试通过代码审查确认');
   
   LogTestEnd('Test_ControlChars_AreFiltered', True);

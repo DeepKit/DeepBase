@@ -1,8 +1,8 @@
-ï»¿{ ============================================================================
-  UniBase FullDemo - ç»¼åˆåŠŸèƒ½æ¼”ç¤º
+{ ============================================================================
+  DeepBase FullDemo - ×ÛºÏ¹¦ÄÜÑİÊ¾
   
-  ç‰ˆæœ¬: 1.0
-  è¯´æ˜: æ¼”ç¤º UniBase æ¡†æ¶æ‰€æœ‰åŠŸèƒ½æ¨¡å—
+  °æ±¾: 1.0
+  ËµÃ÷: ÑİÊ¾ DeepBase ¿ò¼ÜËùÓĞ¹¦ÄÜÄ£¿é
   ============================================================================ }
 
 program FullDemo;
@@ -10,25 +10,24 @@ program FullDemo;
 uses
   Vcl.Forms,
   FullDemo.MainForm in 'FullDemo.MainForm.pas' {MainForm},
-  UniBase.Manager,
-  UniBase.Config,
-  UniBase.i18n,
-  UniBase.Logging,
-  UniBase.FormState,
-  UniBase.MRU,
-  UniBase.Hotkeys,
-  UniBase.Theme,
-  UniBase.LLM,
-  UniBase.AutoUpdate in '..\..\Features\UniBase.AutoUpdate.pas',
-  UniBase.RemoteConfig,
-  UniBase.License;
+  DeepBase.Manager,
+  DeepBase.Config,
+  DeepBase.i18n,
+  DeepBase.Logging,
+  DeepBase.FormState,
+  DeepBase.MRU,
+  DeepBase.Hotkeys,
+  DeepBase.Theme,
+  DeepBase.LLM,
+  DeepBase.AutoUpdate in '..\..\Features\DeepBase.AutoUpdate.pas',
+  DeepBase.License;
 
 {$R *.res}
 
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.Title := 'UniBase Full Demo';
+  Application.Title := 'DeepBase Full Demo';
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

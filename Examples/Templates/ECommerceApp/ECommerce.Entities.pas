@@ -18,7 +18,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  UniBase.ORM.Mapping;
+  DeepBase.ORM.Mapping;
 
 type
   TOrderStatus = (osCreated, osPending, osPaid, osProcessing, osShipped, 

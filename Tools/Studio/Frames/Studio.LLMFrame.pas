@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.LLMFrame - LLM Management and Testing Frame
   
   Version: 1.0
@@ -7,7 +7,7 @@
     - Provider configuration (LiteLLM/OpenAI/Anthropic/etc.)
     - Connection testing
     - Interactive chat interface
-    - Call history viewer
+    - Call hiDeepStory viewer
     - Usage statistics
   ============================================================================ }
 
@@ -32,7 +32,7 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   FireDAC.Comp.Client,
-  UniBase.LLM;
+  DeepBase.LLM;
 
 type
   TfraLLM = class(TFrame)
@@ -98,7 +98,7 @@ type
     
   private
     FConnection: TFDConnection;
-    FLLM: TUniBaseLLM;
+    FLLM: TDeepBaseLLM;
     FOwnsLLM: Boolean;
     
     procedure CreateControls;
@@ -119,7 +119,7 @@ type
     procedure SetConnection(AConnection: TFDConnection);
     procedure RefreshData;
     
-    property LLM: TUniBaseLLM read FLLM;
+    property LLM: TDeepBaseLLM read FLLM;
   end;
 
 implementation
@@ -593,7 +593,7 @@ begin
   if Assigned(FConnection) and FConnection.Connected then
   begin
     try
-      FLLM := TUniBaseLLM.Create(FConnection);
+      FLLM := TDeepBaseLLM.Create(FConnection);
       FOwnsLLM := True;
       LoadConfigList;
       if cboConfigName.Items.Count > 0 then
@@ -815,7 +815,7 @@ begin
     Form.Free;
   end;
 
-  // After prompt edits, usage history may change
+  // After prompt edits, usage hiDeepStory may change
   RefreshData;
 end;
 
@@ -857,7 +857,7 @@ begin
     grdHistory.Cells[2, 1] := '';
     grdHistory.Cells[3, 1] := '';
     grdHistory.Cells[4, 1] := '';
-    grdHistory.Cells[5, 1] := '(No history)';
+    grdHistory.Cells[5, 1] := '(No hiDeepStory)';
   end;
   
   UpdateStats;
@@ -890,7 +890,7 @@ procedure TfraLLM.btnClearHistoryClick(Sender: TObject);
 begin
   if not Assigned(FLLM) then Exit;
   
-  if MessageDlg('Clear all call history?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  if MessageDlg('Clear all call hiDeepStory?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     FLLM.ClearOldCalls(0);
     LoadHistory;

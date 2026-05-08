@@ -35,8 +35,8 @@ uses
   Vcl.Grids,
   Vcl.Menus,
   FireDAC.Comp.Client,
-  UniBase.LLM,
-  UniBase.LLM.Manager;
+  DeepBase.LLM,
+  DeepBase.LLM.Manager;
 
 type
   TPromptDebugForm = class(TForm)
@@ -965,9 +965,9 @@ begin
     Grid.Canvas.FillRect(Rect);
     S := Grid.Cells[ACol, ARow];
     if (S = '1') or (S = 'Y') or (S = 'Yes') or (S = 'true') then
-      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'âœ“')
+      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'âœ?)
     else
-      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'â—‹');
+      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'â—?);
   end;
 end;
 

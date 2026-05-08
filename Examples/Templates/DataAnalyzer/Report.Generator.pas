@@ -80,7 +80,7 @@ implementation
 uses
   System.IOUtils,
   System.JSON,
-  UniBase.Logging;
+  DeepBase.Logging;
 
 { TReportGenerator }
 

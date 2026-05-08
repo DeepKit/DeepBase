@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.ThemeFrame - Theme Editor Frame
   
   Version: 1.0
@@ -29,8 +29,8 @@ uses
   Vcl.Themes,
   Vcl.Styles,
   FireDAC.Comp.Client,
-  UniBase.Types,
-  UniBase.Theme;
+  DeepBase.Types,
+  DeepBase.Theme;
 
 type
   TfraTheme = class(TFrame)
@@ -63,7 +63,7 @@ type
     procedure btnApplyClick(Sender: TObject);
   private
     FConnection: TFDConnection;
-    FThemeManager: TUniBaseTheme;
+    FThemeManager: TDeepBaseTheme;
     FAllThemes: TThemeInfoArray;
     FSelectedThemeName: string;
     
@@ -136,7 +136,7 @@ begin
   // Recreate theme manager with new connection
   FreeAndNil(FThemeManager);
   if Assigned(FConnection) and FConnection.Connected then
-    FThemeManager := TUniBaseTheme.Create(FConnection);
+    FThemeManager := TDeepBaseTheme.Create(FConnection);
 end;
 
 procedure TfraTheme.RefreshData;

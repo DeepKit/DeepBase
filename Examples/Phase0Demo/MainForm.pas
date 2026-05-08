@@ -6,8 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   FireDAC.VCLUI.Wait, FireDAC.Comp.UI,
-  UniBase.Manager, UniBase.Config, UniBase.i18n, UniBase.FormState, UniBase.Types,
-  UniBase.VCL.UIHelper, UniBase.Logging, FireDAC.UI.Intf, FireDAC.Stan.Intf;
+  DeepBase.Manager, DeepBase.Config, DeepBase.i18n, DeepBase.FormState, DeepBase.Types,
+  DeepBase.VCL.UIHelper, DeepBase.Logging, FireDAC.UI.Intf, FireDAC.Stan.Intf;
 
 type
   TfrmMain = class(TForm)
@@ -38,9 +38,9 @@ type
     mmoHelp: TMemo;
     
     // Core Modules
-    FConfig: TUniBaseConfig;
-    FI18n: TUniBaseI18n;
-    FFormState: TUniBaseFormState;
+    FConfig: TDeepBaseConfig;
+    FI18n: TDeepBaseI18n;
+    FFormState: TDeepBaseFormState;
     
     procedure InitializeUI;
     procedure Log(const Msg: string);
@@ -73,7 +73,7 @@ var
   Langs: TLanguageInfoArray;
   Lang: TLanguageInfo;
 begin
-  if TUniBaseUIHelper.ApplyMicaEffect(Self) then
+  if TDeepBaseUIHelper.ApplyMicaEffect(Self) then
   begin
     // If Mica enabled, make controls transparent where possible
     Self.Color := clBlack; // Or let OS handle it
@@ -88,19 +88,19 @@ begin
   InitializeUI;
   
   // Initialize Modules
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
-    Log('UniBase Initialized.');
-    Log('Root Path: ' + UniBase.Manager.UniBase.RootPath);
+    Log('DeepBase Initialized.');
+    Log('Root Path: ' + DeepBase.Manager.DeepBase.RootPath);
     
     // Reuse Manager-owned Modules
-    FConfig := UniBase.Manager.UniBase.Config;
+    FConfig := DeepBase.Manager.DeepBase.Config;
     FConfig.OnConfigChanged := OnConfigChanged;
     
-    FI18n := UniBase.Manager.UniBase.I18n;
+    FI18n := DeepBase.Manager.DeepBase.I18n;
     FI18n.OnLanguageChanged := OnLanguageChanged;
     
-    FFormState := UniBase.Manager.UniBase.FormState;
+    FFormState := DeepBase.Manager.DeepBase.FormState;
     
     // Load initial data
     edtConfig.Text := FConfig.GetConfig('Demo.TestValue', 'Default Value');
@@ -123,7 +123,7 @@ begin
   end
   else
   begin
-    Log('UniBase NOT Initialized! Error: ' + InitErrorCodeToStr(UniBase.Manager.UniBase.InitErrorCode));
+    Log('DeepBase NOT Initialized! Error: ' + InitErrorCodeToStr(DeepBase.Manager.DeepBase.InitErrorCode));
   end;
 end;
 
@@ -291,7 +291,7 @@ begin
   mmoHelp.ReadOnly := True;
   mmoHelp.Color := $00F0F0F0; // Light Gray
   mmoHelp.Font.Size := 9;
-  mmoHelp.Lines.Add('UniBase Phase 0 Demo Features:');
+  mmoHelp.Lines.Add('DeepBase Phase 0 Demo Features:');
   mmoHelp.Lines.Add('');
   mmoHelp.Lines.Add('1. Initialization');
   mmoHelp.Lines.Add('   - Auto connects to SQLite DB.');
@@ -323,7 +323,7 @@ begin
   mmoLog.Lines.Add(Format('[%s] %s', [FormatDateTime('HH:mm:ss', Now), Msg]));
   
   // Also log to system logger
-  if UniBase.Manager.UniBase.IsInitialized then
+  if DeepBase.Manager.DeepBase.IsInitialized then
     Logger.Info(Msg, 'Demo');
 end;
 
@@ -378,8 +378,8 @@ procedure TfrmMain.ResetDatabase;
 begin
   if MessageDlg('Reset Database will delete config.db and restart the application. Continue?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
-    UniBase.Manager.UniBase.Finalize;
-    if DeleteFile(UniBase.Manager.UniBase.ConfigDBPath) then
+    DeepBase.Manager.DeepBase.Finalize;
+    if DeleteFile(DeepBase.Manager.DeepBase.ConfigDBPath) then
     begin
       ShowMessage('Database reset. Application will now close. Please restart it.');
       Application.Terminate;

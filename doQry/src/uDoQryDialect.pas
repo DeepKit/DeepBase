@@ -52,7 +52,7 @@ begin
       end;
     dbSQLite:
       begin
-        // SQLite 不支持 RETURNING（老版本）。在执行器中通过 last_insert_rowid() 获取
+        // SQLite 不支�?RETURNING（老版本）。在执行器中通过 last_insert_rowid() 获取
       end;
   end;
   Result := S;

@@ -1,5 +1,5 @@
 @echo off
-REM UniBase Stress Test Runner - Batch Script
+REM DeepBase Stress Test Runner - Batch Script
 REM
 REM Usage:
 REM   run_stress_tests.bat quick
@@ -14,9 +14,9 @@ setlocal enabledelayedexpansion
 
 set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..\..\
-set TEST_EXE=%SCRIPT_DIR%UniBaseStressTests.exe
-if not exist "%TEST_EXE%" set TEST_EXE=%PROJECT_ROOT%Tests\Win64\Debug\UniBaseStressTests.exe
-if not exist "%TEST_EXE%" set TEST_EXE=%PROJECT_ROOT%Tests\Stress\Win64\Debug\UniBaseStressTests.exe
+set TEST_EXE=%SCRIPT_DIR%DeepBaseStressTests.exe
+if not exist "%TEST_EXE%" set TEST_EXE=%PROJECT_ROOT%Tests\Win64\Debug\DeepBaseStressTests.exe
+if not exist "%TEST_EXE%" set TEST_EXE=%PROJECT_ROOT%Tests\Stress\Win64\Debug\DeepBaseStressTests.exe
 set RESULTS_DIR=%PROJECT_ROOT%StressTestResults
 set TIMESTAMP=%date:~-4%%date:~3,2%%date:~0,2%_%time:~0,2%%time:~3,2%%time:~6,2%
 set TIMESTAMP=%TIMESTAMP: =0%
@@ -33,7 +33,7 @@ if not "%3"=="" set THREAD_COUNT=%3
 
 echo.
 echo ========================================
-echo   UniBase Stress Test Runner
+echo   DeepBase Stress Test Runner
 echo ========================================
 echo.
 
@@ -45,7 +45,7 @@ if not exist "%TEST_EXE%" (
     echo [ERROR] Test executable not found: %TEST_EXE%
     echo [INFO] Please build the test project first:
     echo        cd Tests\Stress
-    echo        dcc64 -B -U..\..\Core;..\..\Persistence;..\..\ThirdParty\Payment;..\..\ThirdParty\DB UniBaseStressTests.dpr
+    echo        dcc64 -B -U..\..\Core;..\..\Persistence;..\..\ThirdParty\Payment;..\..\ThirdParty\DB DeepBaseStressTests.dpr
     exit /b 1
 )
 

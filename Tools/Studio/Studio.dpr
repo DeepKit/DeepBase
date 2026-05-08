@@ -1,4 +1,4 @@
-ï»¿program Studio;
+program Studio;
 
 uses
   Winapi.Windows,
@@ -9,8 +9,8 @@ uses
   FireDAC.VCLUI.Wait,
   FireDAC.Comp.UI,
   System.SysUtils,
-  UniBase.Manager,
-  UniBase.Types,
+  DeepBase.Manager,
+  DeepBase.Types,
   Studio.MainForm in 'Forms\Studio.MainForm.pas' {frmStudioMain},
   Studio.ConfigFrame in 'Frames\Studio.ConfigFrame.pas' {fraConfig: TFrame},
   Studio.LogFrame in 'Frames\Studio.LogFrame.pas' {fraLog: TFrame},
@@ -28,31 +28,31 @@ uses
 
 var
   ErrorMsg: string;
-  UB: TUniBaseManager;
+  UB: TDeepBaseManager;
   LangCode: Cardinal;
 
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.Title := 'UniBase Studio';
+  Application.Title := 'DeepBase Studio';
   
-  // è·å– UniBase å•ä¾‹
-  UB := UniBase.Manager.UniBase;
+  // »ñÈ¡ DeepBase µ¥Àı
+  UB := DeepBase.Manager.DeepBase;
   
-  // åˆå§‹åŒ– UniBase - ç”¨äºæ¼”ç¤º i18n å’Œå…¶ä»–æ ¸å¿ƒåŠŸèƒ½
+  // ³õÊ¼»¯ DeepBase - ÓÃÓÚÑİÊ¾ i18n ºÍÆäËûºËĞÄ¹¦ÄÜ
   try
     if not UB.InitializeEx(ErrorMsg) then
     begin
-      ShowMessage('Failed to initialize UniBase: ' + ErrorMsg);
+      ShowMessage('Failed to initialize DeepBase: ' + ErrorMsg);
       Exit;
     end;
     
-    // æ£€æµ‹ç³»ç»Ÿè¯­è¨€å¹¶è®¾ç½® i18n
+    // ¼ì²âÏµÍ³ÓïÑÔ²¢ÉèÖÃ i18n
     LangCode := GetUserDefaultLCID;
     case LangCode of
-      $0804: UB.CurrentLanguage := 'zh-CN';  // ç®€ä½“ä¸­æ–‡
-      $0404: UB.CurrentLanguage := 'zh-TW';  // ç¹ä½“ä¸­æ–‡
-      $0409: UB.CurrentLanguage := 'en-US';  // è‹±æ–‡
+      $0804: UB.CurrentLanguage := 'zh-CN';  // ¼òÌåÖĞÎÄ
+      $0404: UB.CurrentLanguage := 'zh-TW';  // ·±ÌåÖĞÎÄ
+      $0409: UB.CurrentLanguage := 'en-US';  // Ó¢ÎÄ
     else
       UB.CurrentLanguage := 'en-US';
     end;
@@ -67,7 +67,7 @@ begin
   Application.CreateForm(TfrmStudioMain, frmStudioMain);
   Application.Run;
   
-  // æ¸…ç†
+  // ÇåÀí
   try
     UB.Finalize;
   except

@@ -1,0 +1,88 @@
+package DeepBaseCore;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Core Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl;
+
+contains
+  DeepBase.Types in 'Core\DeepBase.Types.pas',
+  DeepBase.Consts in 'Core\DeepBase.Consts.pas',
+  DeepBase.Storage.Interfaces in 'Core\DeepBase.Storage.Interfaces.pas',
+  DeepBase.Manager in 'Core\DeepBase.Manager.pas',
+  DeepBase.Manager.Schema in 'Core\DeepBase.Manager.Schema.pas',
+  DeepBase.Manager.Operational in 'Core\DeepBase.Manager.Operational.pas',
+  DeepBase.Plugin in 'Core\DeepBase.Plugin.pas',
+  DeepBase.PluginManager in 'Core\DeepBase.PluginManager.pas',
+  DeepBase.Config in 'Core\DeepBase.Config.pas',
+  DeepBase.i18n in 'Core\DeepBase.i18n.pas',
+  DeepBase.FormState in 'Core\DeepBase.FormState.pas',
+  DeepBase.Exception in 'Core\DeepBase.Exception.pas',
+  DeepBase.Logging in 'Core\DeepBase.Logging.pas',
+  DeepBase.MRU in 'Core\DeepBase.MRU.pas',
+  DeepBase.Hotkeys in 'Core\DeepBase.Hotkeys.pas',
+  DeepBase.Hotkeys.Exchange in 'Core\DeepBase.Hotkeys.Exchange.pas',
+  DeepBase.Theme in 'Core\DeepBase.Theme.pas',
+  DeepBase.Protection in 'Core\DeepBase.Protection.pas',
+  DeepBase.Interfaces in 'Core\DeepBase.Interfaces.pas',
+  DeepBase.Constants in 'Core\DeepBase.Constants.pas',
+  DeepBase.Exceptions in 'Core\DeepBase.Exceptions.pas',
+  DeepBase.DBException in 'Core\DeepBase.DBException.pas',
+  DeepBase.Schema in 'Core\DeepBase.Schema.pas',
+  DeepBase.Configuration in 'Core\DeepBase.Configuration.pas',
+  DeepBase.FeatureFlags in 'Core\DeepBase.FeatureFlags.pas',
+  DeepBase.Collections in 'Core\DeepBase.Collections.pas',
+  DeepBase.DateTime in 'Core\DeepBase.DateTime.pas',
+  DeepBase.RuntimeContext in 'Core\DeepBase.RuntimeContext.pas',
+  DeepBase.ORM.Mapping in 'Core\DeepBase.ORM.Mapping.pas',
+  DeepBase.DataBinding in 'Core\DeepBase.DataBinding.pas',
+  DeepBase.Expression in 'Core\DeepBase.Expression.pas',
+  DeepBase.Diff in 'Core\DeepBase.Diff.pas',
+  DeepBase.MVVM in 'Core\DeepBase.MVVM.pas',
+  DeepBase.Validation in 'Core\DeepBase.Validation.pas',
+  DeepBase.StateMachine in 'Core\DeepBase.StateMachine.pas',
+  DeepBase.Template in 'Core\DeepBase.Template.pas',
+  DeepBase.i18n.Plural in 'Core\DeepBase.i18n.Plural.pas',
+  DeepBase.Random in 'Core\DeepBase.Random.pas',
+  DeepBase.Authorization in 'Core\DeepBase.Authorization.pas',
+  DeepBase.TestCenter in 'Core\DeepBase.TestCenter.pas',
+  DeepBase.Diagnose in 'Core\DeepBase.Diagnose.pas',
+  DeepBase.Services.Init in 'Core\DeepBase.Services.Init.pas',
+  DeepBase.Services.HealthCheck in 'Core\DeepBase.Services.HealthCheck.pas',
+  DeepBase.ObjectPool in 'Core\DeepBase.ObjectPool.pas',
+  DeepBase.Benchmark in 'Core\DeepBase.Benchmark.pas',
+  DeepBase.Reflection in 'Core\DeepBase.Reflection.pas',
+  DeepBase.Cache in 'Core\DeepBase.Cache.pas',
+  DeepBase.Memory in 'Core\DeepBase.Memory.pas',
+  DeepBase.Security in 'Core\DeepBase.Security.pas',
+  DeepBase.TrayIcon in 'Core\DeepBase.TrayIcon.pas',
+  DeepBase.Export.PDF in 'Core\DeepBase.Export.PDF.pas',
+  DeepBase.Export.DOCX in 'Core\DeepBase.Export.DOCX.pas';
+
+end.

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   Test.Regression.BUG035_InsecureRandom - Insecure Random Generation Regression Test
 
   BUG-035: Insecure Random Number Generation
@@ -12,7 +12,7 @@
        GeneratePassword methods to use secure random bytes.
   
   Fix Date: 2025-12-16
-  File: Core/UniBase.Crypto.pas
+  File: Core/DeepBase.Crypto.pas
   Priority: P0 (Critical)
   Category: Security
   ============================================================================ }
@@ -72,7 +72,7 @@ type
 implementation
 
 uses
-  UniBase.Crypto;
+  DeepBase.Crypto;
 
 { TBug035_InsecureRandomTest }
 
@@ -98,7 +98,7 @@ end;
 
 function TBug035_InsecureRandomTest.GetAffectedFile: string;
 begin
-  Result := 'Core/UniBase.Crypto.pas';
+  Result := 'Core/DeepBase.Crypto.pas';
 end;
 
 procedure TBug035_InsecureRandomTest.Test_RandomBytes_HasSufficientEntropy;

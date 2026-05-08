@@ -1,16 +1,16 @@
 { ============================================================================
-  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测试
+  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测�?
 
-  BUG-034: 硬编码密钥漏洞
+  BUG-034: 硬编码密钥漏�?
   
-  原问题: 多个模块存在硬编码密钥，如'@2241114'、'Default_AntiTamper_Key_2025'等，
-          这些密钥可以被逆向工程提取。
+  原问�? 多个模块存在硬编码密钥，�?@2241114'�?Default_AntiTamper_Key_2025'等，
+          这些密钥可以被逆向工程提取�?
   
-  修复方案: 移除所有硬编码默认密钥，要求用户显式配置密钥。
+  修复方案: 移除所有硬编码默认密钥，要求用户显式配置密钥�?
   
   修复日期: 2025-12-16
-  文件: Features/UniBase.Protection.pas, Features/UniBase.AntiTamper.pas
-  优先级: P0 (Critical)
+  文件: Features/DeepBase.Protection.pas, Features/DeepBase.AntiTamper.pas
+  优先�? P0 (Critical)
   分类: Security
   ============================================================================ }
 
@@ -50,21 +50,21 @@ type
     procedure Test_MissingKey_ThrowsClearError;
     
     [Test]
-    [Description('验证密钥配置后功能正常')]
+    [Description('验证密钥配置后功能正�?)]
     procedure Test_ConfiguredKey_WorksCorrectly;
   end;
 
 implementation
 
 uses
-  UniBase.Crypto;
+  DeepBase.Crypto;
 
 const
   // 已知的硬编码密钥模式（用于检测）
   KNOWN_HARDCODED_PATTERNS: array[0..4] of string = (
     '@2241114',
     'Default_AntiTamper_Key',
-    'UniBase_Default_Key',
+    'DeepBase_Default_Key',
     'CHANGE_THIS_KEY',
     '1234567890123456'
   );
@@ -78,7 +78,7 @@ end;
 
 function TBug034_HardcodedKeysTest.GetBugDescription: string;
 begin
-  Result := '硬编码密钥漏洞';
+  Result := '硬编码密钥漏�?;
 end;
 
 function TBug034_HardcodedKeysTest.GetFixDate: string;
@@ -93,7 +93,7 @@ end;
 
 function TBug034_HardcodedKeysTest.GetAffectedFile: string;
 begin
-  Result := 'Features/UniBase.Protection.pas, Features/UniBase.AntiTamper.pas';
+  Result := 'Features/DeepBase.Protection.pas, Features/DeepBase.AntiTamper.pas';
 end;
 
 procedure TBug034_HardcodedKeysTest.Test_Protection_NoHardcodedKeys;
@@ -104,15 +104,15 @@ var
 begin
   LogTestStart('Test_Protection_NoHardcodedKeys');
   
-  SourcePath := 'Features\UniBase.Protection.pas';
+  SourcePath := 'Features\DeepBase.Protection.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
     // 尝试相对于测试目录的路径
-    SourcePath := '..\Features\UniBase.Protection.pas';
+    SourcePath := '..\Features\DeepBase.Protection.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -136,14 +136,14 @@ var
 begin
   LogTestStart('Test_AntiTamper_NoHardcodedKeys');
   
-  SourcePath := 'Features\UniBase.AntiTamper.pas';
+  SourcePath := 'Features\DeepBase.AntiTamper.pas';
   
   if not TFile.Exists(SourcePath) then
   begin
-    SourcePath := '..\Features\UniBase.AntiTamper.pas';
+    SourcePath := '..\Features\DeepBase.AntiTamper.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测试');
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -173,7 +173,7 @@ begin
     ExceptionMessage := '';
     
     try
-      // 不设置密钥直接加密
+      // 不设置密钥直接加�?
       AES.GenerateIV;
       AES.EncryptString('Test data');
     except
@@ -185,7 +185,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, '未配置密钥时应该抛出异常');
-    // 异常消息应该清楚地指示问题
+    // 异常消息应该清楚地指示问�?
     Assert.IsTrue(
       ExceptionMessage.Contains('key') or 
       ExceptionMessage.Contains('Key') or
@@ -209,7 +209,7 @@ begin
   
   AES := TAESCrypto.Create(aes256, aesCBC);
   try
-    // 使用用户配置的密钥
+    // 使用用户配置的密�?
     AES.SetKeyFromPassword('UserConfiguredSecurePassword!@#$', TEncoding.UTF8.GetBytes('bug034_salt'));
     AES.GenerateIV;
     
@@ -218,7 +218,7 @@ begin
     Decrypted := AES.DecryptString(Encrypted);
     
     Assert.AreEqual(PlainText, Decrypted,
-      '使用用户配置的密钥应该能正确加密和解密');
+      '使用用户配置的密钥应该能正确加密和解�?);
   finally
     AES.Free;
   end;

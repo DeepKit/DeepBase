@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="DeepBaseExamples" tests="12" failures="0" skipped="7">
+  <testcase classname="Examples" name="Phase0Demo" file="Examples\Phase0Demo\Phase0Demo.dproj" time="1.675">
+  </testcase>
+  <testcase classname="Examples" name="Phase1Demo" file="Examples\Phase1Demo\Phase1Demo.dpr" time="1.143">
+  </testcase>
+  <testcase classname="Examples" name="FullDemo" file="Examples\FullDemo\FullDemo.dproj" time="2.126">
+  </testcase>
+  <testcase classname="Examples" name="FMXPlatformDemo" file="Examples\FMXDemo\FMXPlatformDemo.dpr" time="0.973">
+  </testcase>
+  <testcase classname="Examples" name="CommerceE2EDemo" file="Examples\CommerceE2EDemo\CommerceE2EDemo.pas" time="0.695">
+  </testcase>
+  <testcase classname="Examples" name="DataBindingDemo" file="Examples\DataBindingDemo\DataBindingDemo.dpr" time="0">
+    <skipped message="optional">Additional VCL demo</skipped>
+  </testcase>
+  <testcase classname="Examples" name="MultiLanguageDemo" file="Examples\MultiLanguageDemo\MultiLanguageDemo.dpr" time="0">
+    <skipped message="optional">Additional VCL demo</skipped>
+  </testcase>
+  <testcase classname="Examples" name="MVVMDemo" file="Examples\MVVMDemo\MVVMDemo.dpr" time="0">
+    <skipped message="optional">Additional VCL demo</skipped>
+  </testcase>
+  <testcase classname="Examples" name="MicroserviceClientDemo" file="Examples\MicroserviceClientDemo\MicroserviceClientDemo.dpr" time="0">
+    <skipped message="optional">Requires service endpoint for runtime use</skipped>
+  </testcase>
+  <testcase classname="Examples" name="TemplateCRUDApp" file="Examples\Templates\CRUDApp\CRUDApp.dpr" time="0">
+    <skipped message="optional">Template project</skipped>
+  </testcase>
+  <testcase classname="Examples" name="TemplateDocManager" file="Examples\Templates\DocManager\DocManager.dpr" time="0">
+    <skipped message="optional">Template project</skipped>
+  </testcase>
+  <testcase classname="Examples" name="TemplateDataAnalyzer" file="Examples\Templates\DataAnalyzer\DataAnalyzer.dpr" time="0">
+    <skipped message="optional">Template project</skipped>
+  </testcase>
+</testsuite>

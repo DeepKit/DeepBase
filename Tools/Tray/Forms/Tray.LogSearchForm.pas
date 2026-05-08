@@ -1,7 +1,7 @@
-unit Tray.LogSearchForm;
+﻿unit Tray.LogSearchForm;
 
 {*******************************************************************************
-  UniBaseTray - 日志搜索窗体
+  DeepBaseTray - 日志搜索窗体
   
   功能:
   - 按日期范围筛选日志

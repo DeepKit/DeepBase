@@ -1,9 +1,9 @@
 {==============================================================================
-  CommerceE2EDemo.pas - Minimal end-to-end sample for the UniBase Commerce
+  CommerceE2EDemo.pas - Minimal end-to-end sample for the DeepBase Commerce
   framework.
 
   Demonstrates the complete commerce flow in a single console application:
-    1. Create TUniBaseCommerceService with TInMemoryCommerceStorage
+    1. Create TDeepBaseCommerceService with TInMemoryCommerceStorage
     2. Register a product
     3. Ensure a user via WeChat identity
     4. Create an order
@@ -24,10 +24,10 @@ program CommerceE2EDemo;
 uses
   System.SysUtils,
   System.Generics.Collections,
-  UniBase.Commerce.Types in '..\..\Features\UniBase.Commerce.Types.pas',
-  UniBase.Commerce.Storage in '..\..\Features\UniBase.Commerce.Storage.pas',
-  UniBase.Commerce.Service in '..\..\Features\UniBase.Commerce.Service.pas',
-  UniBase.Commerce.PaymentBridge in '..\..\Features\UniBase.Commerce.PaymentBridge.pas';
+  DeepBase.Commerce.Types in '..\..\Features\DeepBase.Commerce.Types.pas',
+  DeepBase.Commerce.Storage in '..\..\Features\DeepBase.Commerce.Storage.pas',
+  DeepBase.Commerce.Service in '..\..\Features\DeepBase.Commerce.Service.pas',
+  DeepBase.Commerce.PaymentBridge in '..\..\Features\DeepBase.Commerce.PaymentBridge.pas';
 
 type
   { Fake payment gateway that always returns a successful payment intent. }
@@ -58,7 +58,7 @@ end;
 
 var
   Storage: ICommerceStorage;
-  Service: TUniBaseCommerceService;
+  Service: TDeepBaseCommerceService;
   Product: TCommerceProductData;
   User: TCommerceUserData;
   Order: TCommerceOrderData;
@@ -66,18 +66,19 @@ var
   ConfirmedOrder: TCommerceOrderData;
   Gateway: ICommercePaymentGateway;
   Verifier: ICommerceNotificationVerifier;
+  Callback: TFunc<string, TArray<TPair<string, string>>, TCommercePaymentNotification>;
   FakeRawBody: string;
 begin
   try
-    WriteLn('=== UniBase Commerce E2E Demo ===');
+    WriteLn('=== DeepBase Commerce E2E Demo ===');
     WriteLn;
 
     // -----------------------------------------------------------------------
     // Step 1: Create service with in-memory storage
     // -----------------------------------------------------------------------
-    WriteLn('Step 1: Creating TUniBaseCommerceService with TInMemoryCommerceStorage');
+    WriteLn('Step 1: Creating TDeepBaseCommerceService with TInMemoryCommerceStorage');
     Storage := TInMemoryCommerceStorage.Create;
-    Service := TUniBaseCommerceService.Create(Storage);
+    Service := TDeepBaseCommerceService.Create(Storage);
     try
       WriteLn('  Service created successfully.');
       WriteLn;
@@ -96,9 +97,9 @@ begin
         -1,                               // InitialQuota (-1 = unlimited)
         30);                              // EntitlementDurationDays
       Service.RegisterProduct(Product);
-      WriteLn('  Product registered: %s (%s %s per %d days)',
+      WriteLn(Format('  Product registered: %s (%s %s per %d days)',
         [Product.Name, Product.Currency,
-         IntToStr(Product.AmountMinor), Product.EntitlementDurationDays]);
+         IntToStr(Product.AmountMinor), Product.EntitlementDurationDays]));
       WriteLn;
 
       // -------------------------------------------------------------------
@@ -109,7 +110,7 @@ begin
         capWeChatMiniProgram,
         'wx_openid_abc123',
         'demo_app');
-      WriteLn('  User ensured: UserId=%s', [User.UserId]);
+      WriteLn(Format('  User ensured: UserId=%s', [User.UserId]));
       WriteLn;
 
       // -------------------------------------------------------------------
@@ -117,9 +118,9 @@ begin
       // -------------------------------------------------------------------
       WriteLn('Step 4: Creating order for user');
       Order := Service.CreateOrder(User.UserId, 'demo_app', 'premium_monthly');
-      WriteLn('  Order created: OrderId=%s', [Order.OrderId]);
-      WriteLn('  OutTradeNo=%s', [Order.OutTradeNo]);
-      WriteLn('  Status=%s', [CommerceOrderStatusToStr(Order.Status)]);
+      WriteLn(Format('  Order created: OrderId=%s', [Order.OrderId]));
+      WriteLn(Format('  OutTradeNo=%s', [Order.OutTradeNo]));
+      WriteLn(Format('  Status=%s', [CommerceOrderStatusToStr(Order.Status)]));
       WriteLn;
 
       // -------------------------------------------------------------------
@@ -131,9 +132,9 @@ begin
       WriteLn('  Fake payment gateway registered for WeChat Pay.');
 
       WriteLn('  Registering TCallbackNotificationVerifier');
-      Verifier := TCallbackNotificationVerifier.Create(
-        function(const ARawBody: string;
-          const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification
+      Callback :=
+        function(ARawBody: string;
+          AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification
         begin
           Result.Provider := cppWeChatPay;
           Result.OutTradeNo := Order.OutTradeNo;
@@ -143,7 +144,8 @@ begin
           Result.Success := True;
           Result.PaidAtISO := CommerceNowISO;
           Result.RawPayload := ARawBody;
-        end);
+        end;
+      Verifier := TCallbackNotificationVerifier.Create(Callback);
       Service.RegisterNotificationVerifier(cppWeChatPay, Verifier);
       WriteLn('  Callback notification verifier registered for WeChat Pay.');
       WriteLn;
@@ -157,9 +159,9 @@ begin
         cppWeChatPay,
         cpcMiniProgram,
         'wx_openid_abc123');
-      WriteLn('  Payment intent: Success=%s', [BoolToStr(Intent.Success, True)]);
-      WriteLn('  PrepayId=%s', [Intent.PrepayId]);
-      WriteLn('  OutTradeNo=%s', [Intent.OutTradeNo]);
+      WriteLn(Format('  Payment intent: Success=%s', [BoolToStr(Intent.Success, True)]));
+      WriteLn(Format('  PrepayId=%s', [Intent.PrepayId]));
+      WriteLn(Format('  OutTradeNo=%s', [Intent.OutTradeNo]));
       WriteLn;
 
       // -------------------------------------------------------------------
@@ -170,9 +172,9 @@ begin
         Order.OutTradeNo + '"}';
       ConfirmedOrder := Service.VerifyAndConfirmPayment(
         cppWeChatPay, FakeRawBody, nil);
-      WriteLn('  Payment confirmed: OrderId=%s', [ConfirmedOrder.OrderId]);
-      WriteLn('  Status=%s', [CommerceOrderStatusToStr(ConfirmedOrder.Status)]);
-      WriteLn('  PaidAtISO=%s', [ConfirmedOrder.PaidAtISO]);
+      WriteLn(Format('  Payment confirmed: OrderId=%s', [ConfirmedOrder.OrderId]));
+      WriteLn(Format('  Status=%s', [CommerceOrderStatusToStr(ConfirmedOrder.Status)]));
+      WriteLn(Format('  PaidAtISO=%s', [ConfirmedOrder.PaidAtISO]));
       WriteLn;
 
       // -------------------------------------------------------------------
@@ -202,7 +204,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLn('FATAL ERROR: %s: %s', [E.ClassName, E.Message]);
+      WriteLn(Format('FATAL ERROR: %s: %s', [E.ClassName, E.Message]));
       ExitCode := 1;
     end;
   end;

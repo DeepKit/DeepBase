@@ -1,31 +1,31 @@
-# Changelog
+﻿# Changelog
 
-All notable changes to UniBase are documented in this file.
+All notable changes to DeepBase are documented in this file.
 
 ## [1.0.0] - 2025-12-08
 
 ### Added - Core Modules
-- **UniBase.Manager** - Central management singleton with Initialize/Finalize lifecycle
-- **UniBase.Config** - Type-safe configuration with encryption support
-- **UniBase.i18n** - Internationalization with T()/TFmt()/TPlural() functions
-- **UniBase.Logging** - Async logging with file rotation and DB storage
-- **UniBase.FormState** - Window state persistence (position, size, splitters)
-- **UniBase.MRU** - Most Recently Used items with pinning
-- **UniBase.Hotkeys** - Global keyboard shortcuts management
-- **UniBase.Theme** - UI theme switching (Material/Fluent/macOS styles)
-- **UniBase.LLM** - Multi-provider LLM integration (OpenAI/Claude/Azure/Ollama)
-- **UniBase.DB.DoQry** - JSON-parameterized database access layer
-- **UniBase.ORM** - Simple ORM with TEntity/TRepository pattern
-- **UniBase.Scheduler** - Cron-based task scheduling
-- **UniBase.EventBus** - Publish/Subscribe event system
-- **UniBase.Validation** - Data validation with fluent API
-- **UniBase.Authorization** - Role-based access control
-- **UniBase.RateLimiter** - Token bucket rate limiting
-- **UniBase.CircuitBreaker** - Fault tolerance pattern
-- **UniBase.WorkerQueue** - Background job processing
-- **UniBase.Metrics** - Counter/Gauge/Histogram metrics
-- **UniBase.Math** - Vector/Matrix/Statistics/Interpolation utilities
-- **UniBase.Net** - HTTP client and network utilities
+- **DeepBase.Manager** - Central management singleton with Initialize/Finalize lifecycle
+- **DeepBase.Config** - Type-safe configuration with encryption support
+- **DeepBase.i18n** - Internationalization with T()/TFmt()/TPlural() functions
+- **DeepBase.Logging** - Async logging with file rotation and DB storage
+- **DeepBase.FormState** - Window state persistence (position, size, splitters)
+- **DeepBase.MRU** - Most Recently Used items with pinning
+- **DeepBase.Hotkeys** - Global keyboard shortcuts management
+- **DeepBase.Theme** - UI theme switching (Material/Fluent/macOS styles)
+- **DeepBase.LLM** - Multi-provider LLM integration (OpenAI/Claude/Azure/Ollama)
+- **DeepBase.DB.DoQry** - JSON-parameterized database access layer
+- **DeepBase.ORM** - Simple ORM with TEntity/TRepository pattern
+- **DeepBase.Scheduler** - Cron-based task scheduling
+- **DeepBase.EventBus** - Publish/Subscribe event system
+- **DeepBase.Validation** - Data validation with fluent API
+- **DeepBase.Authorization** - Role-based access control
+- **DeepBase.RateLimiter** - Token bucket rate limiting
+- **DeepBase.CircuitBreaker** - Fault tolerance pattern
+- **DeepBase.WorkerQueue** - Background job processing
+- **DeepBase.Metrics** - Counter/Gauge/Histogram metrics
+- **DeepBase.Math** - Vector/Matrix/Statistics/Interpolation utilities
+- **DeepBase.Net** - HTTP client and network utilities
 
 ### Added - VCL Controls (14 components)
 - TI18nLabel, TI18nButton, TI18nCheckBox, TI18nRadioButton
@@ -42,9 +42,9 @@ All notable changes to UniBase are documented in this file.
 - TFMXNotificationBar, TFMXToast
 
 ### Added - Tools
-- **UniBase Studio** - GUI management tool for database/config/logs
-- **UniBase Tray** - System tray utility for quick access
-- **UniBase CLI** - Command-line interface for automation
+- **DeepBase Studio** - GUI management tool for database/config/logs
+- **DeepBase Tray** - System tray utility for quick access
+- **DeepBase CLI** - Command-line interface for automation
 
 ### Added - Templates & Extensions
 - **ECommerceApp** - E-commerce application template
@@ -97,12 +97,12 @@ All notable changes to UniBase are documented in this file.
 - Encrypted configuration support
 
 ### Changed
-- API: `Initialize(':memory:')` → `InitializeWithDB(':memory:')`
-- API: `Initialized` → `IsInitialized`
-- API: `Connection` → `ConfigDB`
+- API: `Initialize(':memory:')` �?`InitializeWithDB(':memory:')`
+- API: `Initialized` �?`IsInitialized`
+- API: `Connection` �?`ConfigDB`
 
 ### Fixed
-- Hotkeys table column name mismatch (IsCustom → IsCustomized)
+- Hotkeys table column name mismatch (IsCustom �?IsCustomized)
 - FormState RTTI context caching
 - Logger thread safety (ResetEvent timing)
 

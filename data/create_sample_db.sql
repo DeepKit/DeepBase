@@ -1,8 +1,8 @@
 -- ============================================================================
--- UniBase Sample Config Database
+-- DeepBase Sample Config Database
 -- Version: 1.0.0
 -- Created: 2025-12-05
--- Description: Complete schema for UniBase infrastructure tables
+-- Description: Complete schema for DeepBase infrastructure tables
 -- Encoding: UTF-8
 -- ============================================================================
 
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS SchemaInfo (
 
 INSERT OR REPLACE INTO SchemaInfo (Key, Value) VALUES ('SchemaVersion', '1.0.0');
 INSERT OR REPLACE INTO SchemaInfo (Key, Value) VALUES ('CreatedAt', datetime('now'));
-INSERT OR REPLACE INTO SchemaInfo (Key, Value) VALUES ('UniBaseVersion', '1.0.0');
+INSERT OR REPLACE INTO SchemaInfo (Key, Value) VALUES ('DeepBaseVersion', '1.0.0');
 
 -- 2. Settings - Application configuration storage
 CREATE TABLE IF NOT EXISTS Settings (
@@ -101,10 +101,10 @@ CREATE INDEX IF NOT EXISTS idx_languages_enabled ON Languages(IsEnabled);
 -- Default languages
 INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES
   ('en-US', 'English (US)', 'English', 'MM/dd/yyyy', 'h:mm:ss tt', 1, 1, 0),
-  ('zh-CN', 'Chinese (Simplified)', '简体中文', 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 1),
+  ('zh-CN', 'Chinese (Simplified)', '简体中�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 1),
   ('zh-TW', 'Chinese (Traditional)', '繁體中文', 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 2),
-  ('ja-JP', 'Japanese', '日本語', 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 3),
-  ('ko-KR', 'Korean', '한국어', 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 4),
+  ('ja-JP', 'Japanese', '日本�?, 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 3),
+  ('ko-KR', 'Korean', '한국�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 4),
   ('de-DE', 'German', 'Deutsch', 'dd.MM.yyyy', 'HH:mm:ss', 1, 0, 5),
   ('fr-FR', 'French', 'Français', 'dd/MM/yyyy', 'HH:mm:ss', 1, 0, 6),
   ('es-ES', 'Spanish', 'Español', 'dd/MM/yyyy', 'HH:mm:ss', 1, 0, 7);
@@ -454,7 +454,7 @@ INSERT OR IGNORE INTO LLMConfig (Name, Description, ProviderCode, ModelId, Tempe
   ('Creative', 'Creative writing', 'openai', 'gpt-4o', 0.9, 0, 20),
   ('Precise', 'Precise/coding tasks', 'openai', 'gpt-4o', 0.2, 0, 30);
 
--- 16. LLMCalls - LLM API call history
+-- 16. LLMCalls - LLM API call hiDeepStory
 CREATE TABLE IF NOT EXISTS LLMCalls (
   Id INTEGER PRIMARY KEY AUTOINCREMENT,
   ConfigName TEXT,

@@ -32,7 +32,7 @@ object fraHotkey: TfraHotkey
     object edtSearch: TEdit
       Left = 60
       Top = 9
-      Width = 200
+      Width = 160
       Height = 23
       TabOrder = 0
       OnChange = edtSearchChange
@@ -54,6 +54,24 @@ object fraHotkey: TfraHotkey
       Caption = 'Reset Selected'
       TabOrder = 2
       OnClick = btnResetSelectedClick
+    end
+    object btnImport: TButton
+      Left = 360
+      Top = 8
+      Width = 120
+      Height = 25
+      Caption = 'Import...'
+      TabOrder = 3
+      OnClick = btnImportClick
+    end
+    object btnExport: TButton
+      Left = 230
+      Top = 8
+      Width = 120
+      Height = 25
+      Caption = 'Export...'
+      TabOrder = 4
+      OnClick = btnExportClick
     end
   end
   object pnlLeft: TPanel

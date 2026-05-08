@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.QueriesFrame - DoQry Queries Editor Frame
   
   Version: 1.0
@@ -105,7 +105,7 @@ constructor TfraQueries.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   InitLayout;
-  SetStatus('Ready - Open a UniBase config.db to manage Queries');
+  SetStatus('Ready - Open a DeepBase config.db to manage Queries');
 end;
 
 procedure TfraQueries.InitLayout;

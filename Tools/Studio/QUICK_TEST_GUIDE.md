@@ -1,4 +1,4 @@
-# Studio Tool - Quick Test Guide
+﻿# Studio Tool - Quick Test Guide
 
 **Purpose**: Verify that i18n and button functionality work correctly
 
@@ -6,7 +6,7 @@
 
 ## Pre-requisites
 
-- Windows System Language: Chinese (Simplified) - 中文(简体)
+- Windows System Language: Chinese (Simplified) - 中文(简�?
 - SQLite database with Settings table
 - Studio.exe compiled and ready
 
@@ -19,11 +19,11 @@
 2. Launch `Studio.exe`
 
 ### Expected Result
-✅ **ALL UI text should display in Chinese:**
-- Window title: `UniBase Studio`
-- Top panel: `打开数据库...` (Open Database...)
+�?**ALL UI text should display in Chinese:**
+- Window title: `DeepBase Studio`
+- Top panel: `打开数据�?..` (Open Database...)
 - Navigation: `配置` (Configuration), `数据` (Data)
-- Buttons: `打开数据库...`, `刷新`, `添加`, `删除`
+- Buttons: `打开数据�?..`, `刷新`, `添加`, `删除`
 
 ### Verify
 - [ ] Window title in Chinese
@@ -35,14 +35,14 @@
 ## Test Case 2: Open Database Button
 
 ### Steps
-1. Click `打开数据库...` button
+1. Click `打开数据�?..` button
 2. Navigate to any SQLite database file (.db)
 3. Click Open
 
 ### Expected Result
-✅ **Database opens successfully:**
+�?**Database opens successfully:**
 - Status label shows database name
-- Window title updates to `UniBase Studio - filename.db`
+- Window title updates to `DeepBase Studio - filename.db`
 - Configuration frame is ready to load data
 
 ### Verify
@@ -62,7 +62,7 @@
 1. Click `刷新` (Refresh) button in ConfigFrame
 
 ### Expected Result
-✅ **Configuration data loads:**
+�?**Configuration data loads:**
 - Settings table populates vleConfig grid
 - Each key-value pair displays correctly
 
@@ -86,7 +86,7 @@
 5. Click OK
 
 ### Expected Result
-✅ **New configuration item added:**
+�?**New configuration item added:**
 - Success message appears: `Config added successfully`
 - Grid refreshes and shows new item
 - New key-value pair visible in configuration list
@@ -96,7 +96,7 @@
 - [ ] Second dialog accepts value input
 - [ ] Success message displays
 - [ ] Grid updates with new item
-- [ ] **btnAdd event properly bound ✓**
+- [ ] **btnAdd event properly bound �?*
 
 ### Troubleshooting
 If button doesn't work:
@@ -120,7 +120,7 @@ If button doesn't work:
 4. Click Yes to confirm
 
 ### Expected Result
-✅ **Item deleted:**
+�?**Item deleted:**
 - Configuration item removed from database
 - Grid refreshes without deleted item
 
@@ -140,7 +140,7 @@ If button doesn't work:
 4. Verify Configuration view with grid returns
 
 ### Expected Result
-✅ **Navigation works:**
+�?**Navigation works:**
 - CardPanel switches between views
 - Configuration and Logs frames display correctly
 

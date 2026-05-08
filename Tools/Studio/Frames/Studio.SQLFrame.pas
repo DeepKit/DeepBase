@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.SQLFrame - SQL Query Editor Frame
   
   Version: 1.0
@@ -32,8 +32,8 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
   FireDAC.DApt,
-  UniBase.DB.DoQry,
-  UniBase.Exceptions;
+  DeepBase.DB.DoQry,
+  DeepBase.Exceptions;
 
 type
   TQueryHistoryItem = record
@@ -130,7 +130,7 @@ uses
   System.StrUtils,
   Vcl.Clipbrd
   {$IFDEF MSWINDOWS}
-  , UniBase.Security.DPAPI
+  , DeepBase.Security.DPAPI
   {$ENDIF};
 
 const
@@ -521,7 +521,7 @@ var
 begin
   if (FConnection = nil) or (not FConnection.Connected) then
   begin
-    lblDQStatus.Caption := 'No config.db connection - open a UniBase database first';
+    lblDQStatus.Caption := 'No config.db connection - open a DeepBase database first';
     lblDQStatus.Font.Color := clRed;
     Exit;
   end;
@@ -581,7 +581,7 @@ var
 begin
   if (FConnection = nil) or (not FConnection.Connected) then
   begin
-    lblDQStatus.Caption := 'No config.db connection - open a UniBase database first';
+    lblDQStatus.Caption := 'No config.db connection - open a DeepBase database first';
     lblDQStatus.Font.Color := clRed;
     Exit;
   end;

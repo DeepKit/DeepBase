@@ -1,7 +1,7 @@
-unit Tray.DevLogFrame;
+﻿unit Tray.DevLogFrame;
 
 {*******************************************************************************
-  UniBaseTray - 开发日志录入 Frame
+  DeepBaseTray - 开发日志录入 Frame
   
   功能:
   - 快速录入开发日志

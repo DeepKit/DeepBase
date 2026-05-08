@@ -1,0 +1,17 @@
+package dclDeepBaseVCL;
+
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase VCL Design-Time Package'}
+{$DESIGNONLY}
+
+requires
+  rtl,
+  vcl,
+  designide,
+  DeepBaseCore,
+  DeepBaseVCL;
+
+contains
+  DeepBase.VCL.Controls in 'VCL\DeepBase.VCL.Controls.pas';
+
+end.
