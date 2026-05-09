@@ -18,6 +18,7 @@
 - 13.1 架构检查：`Scripts/run_architecture_checks.ps1` 通过；`18/18 passed`。
 - 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
 - UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
+- Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -165,14 +166,18 @@
 
 ## 阶段 7：Steering 文件部署
 
-- [ ] 7.1 创建 `DeepBase/.kiro/steering/delphi-13-global.md`（默认加载）
+- [x] 7.1 创建 `DeepBase/.kiro/steering/delphi-13-global.md`（默认加载）
   - 内容：BDS 37.0 路径、编译器版本、禁用 API 清单
-- [ ] 7.2 创建 `DeepBase/.kiro/steering/delphi-13-syntax.md`（默认加载）
+  - 2026-05-09：已创建，包含 BDS 37.0、CompilerVersion 37.0、包规则、禁用旧路径和人工步骤边界。
+- [x] 7.2 创建 `DeepBase/.kiro/steering/delphi-13-syntax.md`（默认加载）
   - 内容：语法映射表 + before/after 代码示例
-- [ ] 7.3 创建 `DeepBase/.kiro/steering/skia-7.1-conventions.md`（fileMatch: `**/*Skia*.pas,**/FMX/*.pas`）
+  - 2026-05-09：已创建，包含三元表达式、inline var、CompilerVersion 分支和迁移限制示例。
+- [x] 7.3 创建 `DeepBase/.kiro/steering/skia-7.1-conventions.md`（fileMatch: `**/*Skia*.pas,**/FMX/*.pas`）
   - 内容：Skia 7.1.0 新 unit 名、推荐 API、弃用 API
-- [ ] 7.4 创建 `DeepBase/.kiro/steering/sse-streaming-pattern.md`（fileMatch: `**/LLM*.pas,**/Stream*.pas`）
+  - 2026-05-09：已创建，包含 Skia 7.1.0 目标、路径约束、UI 层边界和验证要求。
+- [x] 7.4 创建 `DeepBase/.kiro/steering/sse-streaming-pattern.md`（fileMatch: `**/LLM*.pas,**/Stream*.pas`）
   - 内容：13.1 SSE API 用法示例、替代旧手写解析的模式
+  - 2026-05-09：已创建，包含 SSE 请求头、解析兼容点、取消、测试和迁移记录要求。
 
 ## 阶段 8：测试验证
 
@@ -212,6 +217,6 @@
 - [ ] Warning ≤ 基线
 - [ ] 测试全绿
 - [ ] 至少 5 个样板文件已用 13.1 新语法
-- [ ] Steering 四件套到位
+- [x] Steering 四件套到位
 - [ ] 至少 3 个下游项目可引用新 BPL 编译通过
 - [ ] CHANGELOG + migration-notes 已更新

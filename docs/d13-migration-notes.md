@@ -69,3 +69,11 @@
 - Scanned `.pas`, `.dpk`, `.dproj`, and `.groupproj` files for `UniBase.VCL` and `UniBase.`; no active references remain in the repository.
 - Post-cleanup runtime package command: `Scripts/build_packages_win64.ps1 -Profile All`
 - Post-cleanup runtime package result: passed for all 6 runtime packages with BDS 37.0.
+
+## 2026-05-09 Stage 7 Steering Files
+
+- Created `.kiro/steering/delphi-13-global.md` with BDS 37.0, compiler 37.0, package, compatibility, and manual-step rules.
+- Created `.kiro/steering/delphi-13-syntax.md` with Delphi 13.1 syntax mappings and before/after samples.
+- Created `.kiro/steering/skia-7.1-conventions.md` with fileMatch `**/*Skia*.pas,**/FMX/*.pas`.
+- Created `.kiro/steering/sse-streaming-pattern.md` with fileMatch `**/LLM*.pas,**/Stream*.pas`.
+- No package build was required for this documentation-only stage.
