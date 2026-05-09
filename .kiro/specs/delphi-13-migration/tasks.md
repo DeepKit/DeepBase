@@ -93,8 +93,8 @@
 - [x] 3.3.1 Clean + Build `DeepBaseFeatures.dpk`
 - [x] 3.3.2 修复编译错误
   - 2026-05-09：13.1 编译通过，无 Features 编译错误。
-- [ ] 3.3.3 重点关注 `DeepBase.LLM.*.pas` 中 `System.Net.HttpClient` 的 SSE 新 API 兼容性
-  - 2026-05-09：13.1 兼容编译已通过；是否替换为 13.1 SSE API 留到阶段 6 评估。
+- [x] 3.3.3 重点关注 `DeepBase.LLM.*.pas` 中 `System.Net.HttpClient` 的 SSE 新 API 兼容性
+  - 2026-05-09：13.1 兼容编译已通过；阶段 6 已评估，当前 Features 层 SSE 仍通过 transport 缓冲响应解析，原生 SSE 替换需先确认 13.1 IDE API 与 fake transport 回归测试。
 - [x] 3.3.4 重点关注 `DeepBase.Net.Transport.*.pas` 网络层变化
   - 2026-05-09：13.1 编译和测试通过，当前网络层无阻断性 API 变化。
 
@@ -215,9 +215,12 @@
 
 ## 阶段 10：收尾
 
-- [ ] 10.1 确认 Warning 数量 ≤ 阶段 0 基线（或新增全部登记白名单）
-- [ ] 10.2 更新 `DeepBase/CHANGELOG.md` 记录 13.1 迁移
-- [ ] 10.3 创建 `DeepBase/docs/d13-migration-notes.md` 汇总所有迁移要点
+- [x] 10.1 确认 Warning 数量 ≤ 阶段 0 基线（或新增全部登记白名单）
+  - 2026-05-09：最新 `Scripts/build_packages_win64.ps1 -Profile All` 通过；运行时包 Warning 口径未超过阶段 0 记录的 `136` 基线。
+- [x] 10.2 更新 `DeepBase/CHANGELOG.md` 记录 13.1 迁移
+  - 2026-05-09：已新增 `[Unreleased] - 2026-05-09` 迁移记录。
+- [x] 10.3 创建 `DeepBase/docs/d13-migration-notes.md` 汇总所有迁移要点
+  - 2026-05-09：`docs/d13-migration-notes.md` 已记录基线、环境切换、设计时包修复、UniBase 清理、steering、语法样板、LLM proxy、ThirdParty 兼容性。
 - [ ] 10.4 合并 `upgrade/delphi-13` 分支到主分支
 - [ ] 10.5 打 tag `d13-deepbase-done`
 - [ ] 10.6 通知 4 组 AI 可以启动各自项目的迁移
@@ -226,14 +229,14 @@
 
 ## 完成标准 (DoD)
 
-- [ ] 6 个运行时 dpk + 3 个设计时 dpk 全部 Clean + Build 成功
-- [ ] 所有编译脚本已切到 `delphi-13.1.bat`
+- [x] 6 个运行时 dpk + 3 个设计时 dpk 全部 Clean + Build 成功
+- [x] 所有编译脚本已切到 `delphi-13.1.bat`
 - [ ] Skia4Delphi 7.1.0 已安装并集成
 - [x] `UniBase.VCL.*` 残留文件已清除
 - [ ] DFM 96 DPI 转换完成
-- [ ] Warning ≤ 基线
+- [x] Warning ≤ 基线
 - [x] 测试全绿
 - [x] 至少 5 个样板文件已用 13.1 新语法
 - [x] Steering 四件套到位
 - [ ] 至少 3 个下游项目可引用新 BPL 编译通过
-- [ ] CHANGELOG + migration-notes 已更新
+- [x] CHANGELOG + migration-notes 已更新

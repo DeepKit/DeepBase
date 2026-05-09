@@ -2,6 +2,18 @@
 
 All notable changes to DeepBase are documented in this file.
 
+## [Unreleased] - 2026-05-09
+
+### Changed
+- Migrated command-line build and test gates to Delphi 13.1 Florence / BDS 37.0.
+- Added Delphi 13.1 steering rules for global toolchain constraints, syntax samples, Skia 7.1 conventions, and SSE streaming patterns.
+- Added Delphi 13.1 syntax samples across Core, Persistence, Features, VCL, and FMX.
+
+### Fixed
+- Removed legacy `VCL/UniBase.VCL.*` source and form files after confirming `DeepBase.VCL.*` replacements and no active references.
+- Fixed Delphi 13.1 compatibility issues in ThirdParty DB and Payment helper units.
+- Verified LLM proxy client scenarios against the mock proxy under Delphi 13.1.
+
 ## [1.0.0] - 2025-12-08
 
 ### Added - Core Modules

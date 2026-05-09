@@ -127,3 +127,9 @@
   - All `ThirdParty/` units compile with BDS 37.0.
   - `Scripts/build_packages_win64.ps1 -Profile All` passed.
   - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` passed: Unit `3240/3243 passed, 3 ignored`; Integration `10/10 passed`.
+
+## 2026-05-09 Stage 10 Partial Closeout
+
+- Updated `CHANGELOG.md` with Delphi 13.1 migration entries.
+- Confirmed migration notes now cover baseline, build/test gates, design-time package command-line fixes, UniBase cleanup, steering, syntax samples, LLM proxy verification, and ThirdParty compatibility.
+- Remaining closeout steps depend on human/IDE/downstream validation: branch merge, final tag, and downstream group notification.
