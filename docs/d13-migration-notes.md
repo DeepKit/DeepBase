@@ -55,9 +55,14 @@
 
 - Fixed a package membership omission: `Features\DeepBase.LLM.Proxy.pas` is used by `DeepBase.LLM.Service` but was not listed in `DeepBaseFeatures.dpk`.
 - Added `DeepBase.LLM.Proxy` to `DeepBaseFeatures.dpk` so Win32/IDE builds no longer fail with `F2613 Unit 'DeepBase.LLM.Proxy' not found`.
+- Moved `DeepBase.Persistence.LLM.FireDAC` out of `DeepBasePersistence.dpk` and into `DeepBaseFeatures.dpk`, because it depends on `DeepBase.LLM` / `DeepBase.LLM.Manager`, which are part of the LLM feature package.
+- Removed `DeepBase.Persistence.TestHelper.FireDAC` from `DeepBasePersistence.dpk`; it depends on `DeepBase.TestHelper` and should not be part of the runtime Persistence package.
+- Kept Delphi 13.1 IDE-generated package condition blocks and made implicit dependencies explicit where the IDE surfaced them (`RESTComponents` for Features and `fmxFireDAC` for FMX).
+- Corrected `pgDeepBase.groupproj` Build/Make order to build runtime dependencies before design-time packages: Core, Services, Persistence, Features, FMX/VCL, then dcl packages.
 - Verification:
   - `msbuild DeepBaseFeatures.dproj /t:Build /p:Config=Debug /p:Platform=Win32` passed with local package outputs.
   - `msbuild DeepBaseVCL.dproj /t:Build /p:Config=Debug /p:Platform=Win32` passed with local package outputs and `TestResults\dcp32` on the unit/package search path.
+  - `pgDeepBase.groupproj` Build passed for Win32 and Win64 with local package outputs.
   - `Scripts/build_packages_win64.ps1 -Profile All` passed.
 
 ## 2026-05-09 Design-Time Package Build Fixes

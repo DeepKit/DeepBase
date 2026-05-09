@@ -1,0 +1,132 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{1A83A0B5-58F9-4BD7-B000-DF6DF0D145AD}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DeepBaseCore.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseServices.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBasePersistence.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseFeatures.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseFMX.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseVCL.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="dclDeepBaseCore.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="dclDeepBaseFMX.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="dclDeepBaseVCL.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="dclDeepBaseCore">
+        <MSBuild Projects="dclDeepBaseCore.dproj"/>
+    </Target>
+    <Target Name="dclDeepBaseCore:Clean">
+        <MSBuild Projects="dclDeepBaseCore.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="dclDeepBaseCore:Make">
+        <MSBuild Projects="dclDeepBaseCore.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="dclDeepBaseFMX">
+        <MSBuild Projects="dclDeepBaseFMX.dproj"/>
+    </Target>
+    <Target Name="dclDeepBaseFMX:Clean">
+        <MSBuild Projects="dclDeepBaseFMX.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="dclDeepBaseFMX:Make">
+        <MSBuild Projects="dclDeepBaseFMX.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="dclDeepBaseVCL">
+        <MSBuild Projects="dclDeepBaseVCL.dproj"/>
+    </Target>
+    <Target Name="dclDeepBaseVCL:Clean">
+        <MSBuild Projects="dclDeepBaseVCL.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="dclDeepBaseVCL:Make">
+        <MSBuild Projects="dclDeepBaseVCL.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseCore">
+        <MSBuild Projects="DeepBaseCore.dproj"/>
+    </Target>
+    <Target Name="DeepBaseCore:Clean">
+        <MSBuild Projects="DeepBaseCore.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseCore:Make">
+        <MSBuild Projects="DeepBaseCore.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseFeatures">
+        <MSBuild Projects="DeepBaseFeatures.dproj"/>
+    </Target>
+    <Target Name="DeepBaseFeatures:Clean">
+        <MSBuild Projects="DeepBaseFeatures.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseFeatures:Make">
+        <MSBuild Projects="DeepBaseFeatures.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseFMX">
+        <MSBuild Projects="DeepBaseFMX.dproj"/>
+    </Target>
+    <Target Name="DeepBaseFMX:Clean">
+        <MSBuild Projects="DeepBaseFMX.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseFMX:Make">
+        <MSBuild Projects="DeepBaseFMX.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBasePersistence">
+        <MSBuild Projects="DeepBasePersistence.dproj"/>
+    </Target>
+    <Target Name="DeepBasePersistence:Clean">
+        <MSBuild Projects="DeepBasePersistence.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBasePersistence:Make">
+        <MSBuild Projects="DeepBasePersistence.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseServices">
+        <MSBuild Projects="DeepBaseServices.dproj"/>
+    </Target>
+    <Target Name="DeepBaseServices:Clean">
+        <MSBuild Projects="DeepBaseServices.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseServices:Make">
+        <MSBuild Projects="DeepBaseServices.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseVCL">
+        <MSBuild Projects="DeepBaseVCL.dproj"/>
+    </Target>
+    <Target Name="DeepBaseVCL:Clean">
+        <MSBuild Projects="DeepBaseVCL.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseVCL:Make">
+        <MSBuild Projects="DeepBaseVCL.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DeepBaseCore;DeepBaseServices;DeepBasePersistence;DeepBaseFeatures;DeepBaseFMX;DeepBaseVCL;dclDeepBaseCore;dclDeepBaseFMX;dclDeepBaseVCL"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="dclDeepBaseVCL:Clean;dclDeepBaseFMX:Clean;dclDeepBaseCore:Clean;DeepBaseVCL:Clean;DeepBaseFMX:Clean;DeepBaseFeatures:Clean;DeepBasePersistence:Clean;DeepBaseServices:Clean;DeepBaseCore:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DeepBaseCore:Make;DeepBaseServices:Make;DeepBasePersistence:Make;DeepBaseFeatures:Make;DeepBaseFMX:Make;DeepBaseVCL:Make;dclDeepBaseCore:Make;dclDeepBaseFMX:Make;dclDeepBaseVCL:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

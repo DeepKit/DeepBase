@@ -30,7 +30,6 @@ contains
   DeepBase.Persistence.Exception.FireDAC in 'Persistence\DeepBase.Persistence.Exception.FireDAC.pas',
   DeepBase.Persistence.Diagnose.FireDAC in 'Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas',
   DeepBase.Persistence.ORM.FireDAC in 'Persistence\DeepBase.Persistence.ORM.FireDAC.pas',
-  DeepBase.Persistence.LLM.FireDAC in 'Persistence\DeepBase.Persistence.LLM.FireDAC.pas',
   DeepBase.Persistence.Manager.FireDAC in 'Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
   DeepBase.Persistence.RuntimeRegistration in 'Persistence\DeepBase.Persistence.RuntimeRegistration.pas',
   DeepBase.DB.ConnectionPool in 'Persistence\DeepBase.DB.ConnectionPool.pas',
@@ -41,8 +40,6 @@ contains
   DeepBase.DB.JobQueue in 'Persistence\DeepBase.DB.JobQueue.pas',
   DeepBase.DB.Migrations in 'Persistence\DeepBase.DB.Migrations.pas',
   DeepBase.DB.StatusMachine in 'Persistence\DeepBase.DB.StatusMachine.pas',
-  DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas',
-  DeepBase.Persistence.TestHelper.FireDAC in 'Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas';
+  DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas';
 
 end.
-

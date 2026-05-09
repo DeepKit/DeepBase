@@ -1,8 +1,33 @@
 package DeepBaseFeatures;
 
-{$IMPLICITBUILD ON}
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'DeepBase Optional Feature Runtime Package'}
 {$RUNONLY}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
@@ -13,7 +38,8 @@ requires
   IndyCore,
   IndyProtocols,
   DeepBaseCore,
-  DeepBaseServices;
+  DeepBaseServices,
+  RESTComponents;
 
 contains
   DeepBase.Net.Transport in 'Features\DeepBase.Net.Transport.pas',
@@ -26,6 +52,7 @@ contains
   DeepBase.LLM.Proxy in 'Features\DeepBase.LLM.Proxy.pas',
   DeepBase.LLM.Service in 'Features\DeepBase.LLM.Service.pas',
   DeepBase.LLM.Manager in 'Core\DeepBase.LLM.Manager.pas',
+  DeepBase.Persistence.LLM.FireDAC in 'Persistence\DeepBase.Persistence.LLM.FireDAC.pas',
   DeepBase.LLM.BillingClient in 'Core\DeepBase.LLM.BillingClient.pas',
   DeepBase.LLM.ImportExport in 'Core\DeepBase.LLM.ImportExport.pas',
   DeepBase.Commerce.Types in 'Features\DeepBase.Commerce.Types.pas',

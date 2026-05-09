@@ -46,9 +46,12 @@
 - [x] 1.2 更新 `DeepBase/do_rebuild.bat`、`build_test.bat`、`compile_test.bat` 首行调用新环境脚本
   - 2026-05-09：已更新 `do_rebuild.bat`、`build_test.bat`、`compile_test.bat`，并同步更新同类 `rebuild_test.bat`。
   - 2026-05-09：已更新 `Scripts/build_packages_win64.ps1`、`Scripts/build_examples_win64.ps1`、`Scripts/run_architecture_checks.ps1`、`Scripts/run_tests.ps1` 默认使用 BDS 37.0，并允许通过 `BDS` 环境变量覆盖。
-- [ ] 1.3 用 Delphi 13.1 IDE 打开 `DeepBaseCore.dpk`,让 IDE 自动升级 `.dproj` 格式
-- [ ] 1.4 逐个打开其余 5 个 dpk + 3 个 dcl dpk,完成 dproj 格式升级
-- [ ] 1.5 检查所有 `.dproj` 中 `<DCC_BPLOutput>` / `<DCC_DCPOutput>` / `<DCC_DCUOutput>` 路径是否正确
+- [x] 1.3 用 Delphi 13.1 IDE 打开 `DeepBaseCore.dpk`,让 IDE 自动升级 `.dproj` 格式
+  - 2026-05-09：根目录 package `.dproj` 已生成并用 BDS 37.0 / Win32 + Win64 group Build 验证。
+- [x] 1.4 逐个打开其余 5 个 dpk + 3 个 dcl dpk,完成 dproj 格式升级
+  - 2026-05-09：6 个 runtime + 3 个 dcl package `.dproj` 已就绪；`pgDeepBase.groupproj` 已按依赖顺序更新。
+- [x] 1.5 检查所有 `.dproj` 中 `<DCC_BPLOutput>` / `<DCC_DCPOutput>` / `<DCC_DCUOutput>` 路径是否正确
+  - 2026-05-09：默认 IDE 输出路径保持不硬编码；命令行验证使用 `TestResults\bpl32/dcp32/dcu32` 与 `TestResults\bpl64/dcp64/dcu64` 覆盖输出路径通过。
 - [x] 1.6 确认 Search Path 中无硬编码 `23.0` 或 `BDS\23.0` 残留
   - 2026-05-09：已扫描 `.bat` / `.ps1` / `.cmd` / `.dproj` / `.dpk` / `.groupproj`，未发现 `Studio\23.0` / `BDS\23.0` 硬编码残留。历史文档中的 23.0 示例未作为构建配置处理。
 
@@ -88,6 +91,7 @@
 - [x] 3.2.1 Clean + Build `DeepBasePersistence.dpk`
 - [x] 3.2.2 修复编译错误（FireDAC 接口变化重点关注）
   - 2026-05-09：13.1 编译通过，无 FireDAC 接口编译错误。
+  - 2026-05-09：从 `DeepBasePersistence.dpk` 移除 LLM FireDAC adapter 和测试快照 helper，避免 Persistence runtime 包隐式依赖 `DeepBase.LLM` / `DeepBase.TestHelper`。
 - [x] 3.2.3 处理 Warning
   - 2026-05-09：运行时包总 Warning `136`，未超过 12.3 基线。
 
@@ -96,6 +100,7 @@
 - [x] 3.3.2 修复编译错误
   - 2026-05-09：13.1 编译通过，无 Features 编译错误。
   - 2026-05-09：补入 `DeepBase.LLM.Proxy` 到 `DeepBaseFeatures.dpk`，修复 Win32/IDE 构建 `DeepBase.LLM.Service.pas` 时找不到 `DeepBase.LLM.Proxy` 的问题；随后 `DeepBaseVCL` 可解析 `DeepBaseFeatures`。
+  - 2026-05-09：将 `DeepBase.Persistence.LLM.FireDAC` 纳入 `DeepBaseFeatures.dpk`，由 LLM feature 包负责 LLM storage adapter，避免 Persistence 单独构建时找不到 `DeepBase.LLM`。
 - [x] 3.3.3 重点关注 `DeepBase.LLM.*.pas` 中 `System.Net.HttpClient` 的 SSE 新 API 兼容性
   - 2026-05-09：13.1 兼容编译已通过；阶段 6 已评估，当前 Features 层 SSE 仍通过 transport 缓冲响应解析，原生 SSE 替换需先确认 13.1 IDE API 与 fake transport 回归测试。
 - [x] 3.3.4 重点关注 `DeepBase.Net.Transport.*.pas` 网络层变化
@@ -126,6 +131,7 @@
 - [ ] 3.7.3 Build + Install `dclDeepBaseFMX.dpk`
   - 2026-05-09：命令行 Build 已通过；IDE Install 待人工执行。
 - [ ] 3.7.4 确认 IDE 组件面板中 DeepBase 控件全部可见
+  - 2026-05-09：修正 `pgDeepBase.groupproj` 的 Build/Make 顺序为 Core -> Services -> Persistence -> Features -> FMX/VCL -> dcl*，避免设计时包先构建导致 required package not found。Win32/Win64 group Build 已通过；IDE Install 和组件面板确认仍需人工。
 
 ## 阶段 4：UniBase 残留清理
 
