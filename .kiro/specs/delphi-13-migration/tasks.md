@@ -13,6 +13,10 @@
 - 当前工作区在迁移开始前已有大量未提交改动；本迁移提交只暂存本轮产生的文件，避免混入既有改动。
 - 12.3 包编译基线：`Scripts/build_packages_win64.ps1 -Profile All` 通过；Warning 基线 `136`，Error `0`。
 - 12.3 测试基线：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`，Integration `10/10 passed`。
+- 13.1 运行时包编译：`Scripts/build_packages_win64.ps1 -Profile All` 通过；Warning `136`，Error `0`，未超过 12.3 基线。
+- 13.1 测试：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`，Integration `10/10 passed`。
+- 13.1 架构检查：`Scripts/run_architecture_checks.ps1` 通过；`18/18 passed`。
+- 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -31,19 +35,24 @@
 
 ## 阶段 1：环境切换
 
-- [ ] 1.1 创建 `02Business/scripts/env/delphi-13.1.bat`（内容见总纲 §2）
-- [ ] 1.2 更新 `DeepBase/do_rebuild.bat`、`build_test.bat`、`compile_test.bat` 首行调用新环境脚本
+- [x] 1.1 创建 `02Business/scripts/env/delphi-13.1.bat`（内容见总纲 §2）
+  - 2026-05-09：已确认 `D:\_Progs\02Business\scripts\env\delphi-13.1.bat` 存在，默认 BDS 37.0。
+- [x] 1.2 更新 `DeepBase/do_rebuild.bat`、`build_test.bat`、`compile_test.bat` 首行调用新环境脚本
+  - 2026-05-09：已更新 `do_rebuild.bat`、`build_test.bat`、`compile_test.bat`，并同步更新同类 `rebuild_test.bat`。
+  - 2026-05-09：已更新 `Scripts/build_packages_win64.ps1`、`Scripts/build_examples_win64.ps1`、`Scripts/run_architecture_checks.ps1`、`Scripts/run_tests.ps1` 默认使用 BDS 37.0，并允许通过 `BDS` 环境变量覆盖。
 - [ ] 1.3 用 Delphi 13.1 IDE 打开 `DeepBaseCore.dpk`,让 IDE 自动升级 `.dproj` 格式
 - [ ] 1.4 逐个打开其余 5 个 dpk + 3 个 dcl dpk,完成 dproj 格式升级
 - [ ] 1.5 检查所有 `.dproj` 中 `<DCC_BPLOutput>` / `<DCC_DCPOutput>` / `<DCC_DCUOutput>` 路径是否正确
-- [ ] 1.6 确认 Search Path 中无硬编码 `23.0` 或 `BDS\23.0` 残留
+- [x] 1.6 确认 Search Path 中无硬编码 `23.0` 或 `BDS\23.0` 残留
+  - 2026-05-09：已扫描 `.bat` / `.ps1` / `.cmd` / `.dproj` / `.dpk` / `.groupproj`，未发现 `Studio\23.0` / `BDS\23.0` 硬编码残留。历史文档中的 23.0 示例未作为构建配置处理。
 
 ## 阶段 2：第三方组件安装与验证
 
 - [ ] 2.1 安装 Skia4Delphi 7.1.0 到 13.1 IDE
   - [ ] 2.1.1 确认 Skia 7.1.0 的 unit 路径变化,记录新旧映射
   - [ ] 2.1.2 更新 DeepBase 所有 dpk 的 Search Path 中 Skia 相关路径
-- [ ] 2.2 确认 FireDAC 随 13.1 自带,无需额外操作
+- [x] 2.2 确认 FireDAC 随 13.1 自带,无需额外操作
+  - 2026-05-09：13.1 下 Persistence、VCL/FMX 和测试套件均通过，FireDAC 单元可用。
 - [ ] 2.3 检查 `ThirdParty/` 下各子目录组件是否有 13.1 兼容版本
   - [ ] 2.3.1 `ThirdParty/UI/` — 确认 UI 组件兼容性
   - [ ] 2.3.2 `ThirdParty/DB/` — 确认数据库组件兼容性
@@ -55,40 +64,53 @@
 ## 阶段 3：逐包编译（按依赖顺序）
 
 ### 3.1 DeepBaseCore.dpk
-- [ ] 3.1.1 Clean + Build `DeepBaseCore.dpk`
-- [ ] 3.1.2 修复所有编译错误（记录到 `docs/d13-migration-notes.md`）
-- [ ] 3.1.3 处理新增 Warning（清零或登记白名单）
-- [ ] 3.1.4 确认 BPL 输出正确
+- [x] 3.1.1 Clean + Build `DeepBaseCore.dpk`
+- [x] 3.1.2 修复所有编译错误（记录到 `docs/d13-migration-notes.md`）
+  - 2026-05-09：13.1 编译通过，无 Core 编译错误。
+- [x] 3.1.3 处理新增 Warning（清零或登记白名单）
+  - 2026-05-09：运行时包总 Warning `136`，未超过 12.3 基线。
+- [x] 3.1.4 确认 BPL 输出正确
 
 ### 3.2 DeepBasePersistence.dpk
-- [ ] 3.2.1 Clean + Build `DeepBasePersistence.dpk`
-- [ ] 3.2.2 修复编译错误（FireDAC 接口变化重点关注）
-- [ ] 3.2.3 处理 Warning
+- [x] 3.2.1 Clean + Build `DeepBasePersistence.dpk`
+- [x] 3.2.2 修复编译错误（FireDAC 接口变化重点关注）
+  - 2026-05-09：13.1 编译通过，无 FireDAC 接口编译错误。
+- [x] 3.2.3 处理 Warning
+  - 2026-05-09：运行时包总 Warning `136`，未超过 12.3 基线。
 
 ### 3.3 DeepBaseFeatures.dpk
-- [ ] 3.3.1 Clean + Build `DeepBaseFeatures.dpk`
-- [ ] 3.3.2 修复编译错误
+- [x] 3.3.1 Clean + Build `DeepBaseFeatures.dpk`
+- [x] 3.3.2 修复编译错误
+  - 2026-05-09：13.1 编译通过，无 Features 编译错误。
 - [ ] 3.3.3 重点关注 `DeepBase.LLM.*.pas` 中 `System.Net.HttpClient` 的 SSE 新 API 兼容性
-- [ ] 3.3.4 重点关注 `DeepBase.Net.Transport.*.pas` 网络层变化
+  - 2026-05-09：13.1 兼容编译已通过；是否替换为 13.1 SSE API 留到阶段 6 评估。
+- [x] 3.3.4 重点关注 `DeepBase.Net.Transport.*.pas` 网络层变化
+  - 2026-05-09：13.1 编译和测试通过，当前网络层无阻断性 API 变化。
 
 ### 3.4 DeepBaseServices.dpk
-- [ ] 3.4.1 Clean + Build `DeepBaseServices.dpk`
-- [ ] 3.4.2 修复编译错误
+- [x] 3.4.1 Clean + Build `DeepBaseServices.dpk`
+- [x] 3.4.2 修复编译错误
+  - 2026-05-09：13.1 编译通过，无 Services 编译错误。
 
 ### 3.5 DeepBaseVCL.dpk
-- [ ] 3.5.1 Clean + Build `DeepBaseVCL.dpk`
-- [ ] 3.5.2 修复编译错误
+- [x] 3.5.1 Clean + Build `DeepBaseVCL.dpk`
+- [x] 3.5.2 修复编译错误
+  - 2026-05-09：13.1 编译通过；为避免设计时包重复单元，已显式声明 `vclimg`、`vclFireDAC`、`VclSmp` 运行时依赖。
 - [ ] 3.5.3 确认 VCL Styles / Win11 新样式兼容
 
 ### 3.6 DeepBaseFMX.dpk
-- [ ] 3.6.1 Clean + Build `DeepBaseFMX.dpk`
-- [ ] 3.6.2 修复 Skia 7.1.0 unit 路径变化导致的 uses 错误
+- [x] 3.6.1 Clean + Build `DeepBaseFMX.dpk`
+- [x] 3.6.2 修复 Skia 7.1.0 unit 路径变化导致的 uses 错误
+  - 2026-05-09：13.1 编译通过，当前 FMX 包未暴露 Skia unit 路径错误。
 - [ ] 3.6.3 确认 FMX 控件在 13.1 下正常渲染
 
 ### 3.7 设计时包
 - [ ] 3.7.1 Build + Install `dclDeepBaseCore.dpk`
+  - 2026-05-09：命令行 Build 已通过；IDE Install 待人工执行。
 - [ ] 3.7.2 Build + Install `dclDeepBaseVCL.dpk`
+  - 2026-05-09：命令行 Build 已通过；IDE Install 待人工执行。
 - [ ] 3.7.3 Build + Install `dclDeepBaseFMX.dpk`
+  - 2026-05-09：命令行 Build 已通过；IDE Install 待人工执行。
 - [ ] 3.7.4 确认 IDE 组件面板中 DeepBase 控件全部可见
 
 ## 阶段 4：UniBase 残留清理
@@ -148,7 +170,8 @@
 
 ## 阶段 8：测试验证
 
-- [ ] 8.1 运行 `DeepBase/Tests/` 下所有现有测试,确认全绿
+- [x] 8.1 运行 `DeepBase/Tests/` 下所有现有测试,确认全绿
+  - 2026-05-09：13.1 下 `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`；Integration `10/10 passed`。
 - [ ] 8.2 运行 `TestLLMProxyClient.dpr` 确认 LLM 模块在 13.1 编译后功能正常
 - [ ] 8.3 用 `mock_proxy_server.py` 跑 6 项集成测试场景
 - [ ] 8.4 如有失败,修复并记录原因到 `docs/d13-migration-notes.md`

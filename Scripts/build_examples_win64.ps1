@@ -16,7 +16,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$RsVarsBat = 'd:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat'
+$BdsRoot = if ($env:BDS) { $env:BDS } else { 'D:\Program Files (x86)\Embarcadero\Studio\37.0' }
+$RsVarsBat = Join-Path $BdsRoot 'bin\rsvars.bat'
 
 $OutputRoot = Join-Path $RepoRoot 'TestResults'
 $ExampleOutputRoot = Join-Path $OutputRoot 'Examples'

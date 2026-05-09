@@ -7,6 +7,9 @@ package DeepBaseVCL;
 requires
   rtl,
   vcl,
+  vclimg,
+  vclFireDAC,
+  VclSmp,
   DeepBaseCore,
   DeepBaseServices,
   DeepBaseFeatures;

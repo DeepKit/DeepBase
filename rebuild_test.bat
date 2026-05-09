@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat"
+call "%~dp0..\scripts\env\delphi-13.1.bat"
 cd /d D:\_Progs\02Business\DeepBase
 del /q Tests\*.dcu 2>nul
 del /q Tests\Win64\Debug\*.dcu 2>nul

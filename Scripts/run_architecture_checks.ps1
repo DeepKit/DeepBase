@@ -14,8 +14,9 @@ $ResultDir = Join-Path $RepoRoot 'TestResults'
 $XmlFile = Join-Path $ResultDir 'ArchitectureTestResults.xml'
 $DcuOutput = Join-Path $ResultDir "build\dcu\$Platform"
 
-$RsVarsBat = 'd:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat'
-$Dcc64 = 'd:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe'
+$BdsRoot = if ($env:BDS) { $env:BDS } else { 'D:\Program Files (x86)\Embarcadero\Studio\37.0' }
+$RsVarsBat = Join-Path $BdsRoot 'bin\rsvars.bat'
+$Dcc64 = Join-Path $BdsRoot 'bin\dcc64.exe'
 
 function Test-XmlHasExecutedTests {
     param([Parameter(Mandatory = $true)][string]$Path)

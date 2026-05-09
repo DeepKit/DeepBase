@@ -56,8 +56,9 @@ $IntegrationDir = Join-Path $TestsDir "Integration"
 $OutputPath = Join-Path $BaseDir $OutputDir
 $BuildOutputDir = Join-Path $OutputPath "build"
 $DcuOutputDir = Join-Path $BuildOutputDir "dcu\$Platform"
-$Dcc32 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc32.exe"
-$Dcc64 = "d:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe"
+$BdsRoot = if ($env:BDS) { $env:BDS } else { "D:\Program Files (x86)\Embarcadero\Studio\37.0" }
+$Dcc32 = Join-Path $BdsRoot "bin\dcc32.exe"
+$Dcc64 = Join-Path $BdsRoot "bin\dcc64.exe"
 
 # Module aliases for fast targeted regression
 $ModuleRunMap = [ordered]@{

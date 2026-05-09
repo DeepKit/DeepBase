@@ -13,8 +13,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$Dcc64Path = 'd:\Program Files (x86)\Embarcadero\Studio\23.0\bin\dcc64.exe'
-$RsVarsBat = 'd:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat'
+$BdsRoot = if ($env:BDS) { $env:BDS } else { 'D:\Program Files (x86)\Embarcadero\Studio\37.0' }
+$Dcc64Path = Join-Path $BdsRoot 'bin\dcc64.exe'
+$RsVarsBat = Join-Path $BdsRoot 'bin\rsvars.bat'
 
 $OutputRoot = Join-Path $RepoRoot 'TestResults'
 $DcuOutputPath = Join-Path $OutputRoot 'dcu64'

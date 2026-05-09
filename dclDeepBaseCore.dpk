@@ -1,6 +1,5 @@
 package dclDeepBaseCore;
 
-{$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -34,8 +33,4 @@ requires
   designide,
   DeepBaseCore;
 
-contains
-  { Temporarily empty. Component registration units will be added later. };
-
 end.
-
