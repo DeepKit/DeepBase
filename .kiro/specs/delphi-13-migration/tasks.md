@@ -19,6 +19,7 @@
 - 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
 - UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
 - Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
+- 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -149,20 +150,25 @@
 
 > 不要求一次全改 676 个文件,但每个子包至少选 1 个高频文件做样板
 
-- [ ] 6.1 Core 样板：选 `DeepBase.Config.pas` 或 `DeepBase.Collections.pas`
-  - [ ] 6.1.1 将 `if...then...else` 条件赋值改为三元表达式
-  - [ ] 6.1.2 将局部变量改为 inline var（适用处）
-  - [ ] 6.1.3 确认编译通过,测试不退化
-- [ ] 6.2 Persistence 样板：选 `DeepBase.DB.Pool.pas`
-  - [ ] 6.2.1 同上三元 + inline var 重构
-- [ ] 6.3 Features 样板：选 `DeepBase.LLM.Service.pas`
-  - [ ] 6.3.1 评估是否可用 13.1 SSE API 替换手写解析（仅评估,不强制改）
-  - [ ] 6.3.2 三元 + inline var 重构
-- [ ] 6.4 VCL 样板：选 `DeepBase.VCL.Controls.pas`
-  - [ ] 6.4.1 三元 + inline var 重构
-- [ ] 6.5 FMX 样板：选 `DeepBase.FMX.Controls.pas`
-  - [ ] 6.5.1 三元 + inline var 重构
-  - [ ] 6.5.2 Skia 7.1.0 新 API 替换（如有适用处）
+- [x] 6.1 Core 样板：选 `DeepBase.Config.pas` 或 `DeepBase.Collections.pas`
+  - [x] 6.1.1 将 `if...then...else` 条件赋值改为三元表达式
+  - [x] 6.1.2 将局部变量改为 inline var（适用处）
+  - [x] 6.1.3 确认编译通过,测试不退化
+  - 2026-05-09：选 `Core/DeepBase.Collections.pas`，在 `TSortedList<T>.BinarySearch` 中使用 inline var 和条件表达式；`DeepBase.Config.pas` 非 UTF-8，未做样板以避免转码风险。
+- [x] 6.2 Persistence 样板：选 `DeepBase.DB.Pool.pas`
+  - [x] 6.2.1 同上三元 + inline var 重构
+  - 2026-05-09：`Persistence/DeepBase.DB.Pool.pas` 的 `SplitConnStrRight` 改为 inline var；该文件非 UTF-8，仅做 ASCII 级别补丁。
+- [x] 6.3 Features 样板：选 `DeepBase.LLM.Service.pas`
+  - [x] 6.3.1 评估是否可用 13.1 SSE API 替换手写解析（仅评估,不强制改）
+  - [x] 6.3.2 三元 + inline var 重构
+  - 2026-05-09：`Features/DeepBase.LLM.Service.pas` 的 token/temperature 默认值改为条件表达式；当前 Features 层 SSE 仍通过 transport 缓冲响应解析，原生 SSE 替换需先确认 13.1 IDE API 与 fake transport 回归测试。
+- [x] 6.4 VCL 样板：选 `DeepBase.VCL.Controls.pas`
+  - [x] 6.4.1 三元 + inline var 重构
+  - 2026-05-09：注册 palette 名称改为 inline var；本注册单元无合适条件赋值点，未强造三元表达式。
+- [x] 6.5 FMX 样板：选 `DeepBase.FMX.Controls.pas`
+  - [x] 6.5.1 三元 + inline var 重构
+  - [x] 6.5.2 Skia 7.1.0 新 API 替换（如有适用处）
+  - 2026-05-09：注册 palette 名称改为 inline var；本单元无 Skia API 使用点，无需替换。
 
 ## 阶段 7：Steering 文件部署
 
@@ -216,7 +222,7 @@
 - [ ] DFM 96 DPI 转换完成
 - [ ] Warning ≤ 基线
 - [ ] 测试全绿
-- [ ] 至少 5 个样板文件已用 13.1 新语法
+- [x] 至少 5 个样板文件已用 13.1 新语法
 - [x] Steering 四件套到位
 - [ ] 至少 3 个下游项目可引用新 BPL 编译通过
 - [ ] CHANGELOG + migration-notes 已更新

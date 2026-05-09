@@ -402,7 +402,7 @@ end;
 
 function TSortedList<T>.BinarySearch(const AItem: T; out AIndex: Integer): Boolean;
 var
-  L, H, M, C: Integer;
+  L, H: Integer;
 begin
   Result := False;
   L := 0;
@@ -410,18 +410,17 @@ begin
   
   while L <= H do
   begin
-    M := (L + H) shr 1;
-    C := FComparer.Compare(FItems[M], AItem);
-    
-    if C < 0 then
-      L := M + 1
-    else if C > 0 then
-      H := M - 1
-    else
+    var M := (L + H) shr 1;
+    var C := FComparer.Compare(FItems[M], AItem);
+
+    if C = 0 then
     begin
       AIndex := M;
       Exit(True);
     end;
+
+    L := if C < 0 then M + 1 else L;
+    H := if C > 0 then M - 1 else H;
   end;
   
   AIndex := L;

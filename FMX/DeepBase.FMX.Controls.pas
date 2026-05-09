@@ -34,32 +34,34 @@ uses
 
 procedure Register;
 begin
+  var Palette := 'DeepBase FMX';
+
   // Config Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TFMXConfigEdit,
     TFMXConfigCheckBox,
     TFMXConfigSpinBox
   ]);
   
   // I18n Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TFMXi18nLabel,
     TFMXi18nButton
   ]);
   
   // MRU Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TFMXMRUComboBox
   ]);
 
   // Cross-Platform ListView Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TUniListView,
     TUniPullRefresh
   ]);
 
   // Cross-Platform Form Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TUniMaterialEdit,
     TUniSearchComboBox,
     TUniLabeledSwitch,
@@ -68,12 +70,12 @@ begin
   ]);
 
   // LLM Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TFMXLLMConfigPanel
   ]);
 
   // Logging & License Controls
-  RegisterComponents('DeepBase FMX', [
+  RegisterComponents(Palette, [
     TFMXLogListView,
     TFMXNotificationBar,
     TFMXLicenseStatusPanel

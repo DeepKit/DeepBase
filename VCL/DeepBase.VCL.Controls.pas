@@ -27,7 +27,8 @@ implementation
 
 procedure Register;
 begin
-  RegisterComponents('DeepBase Controls', [
+  var Palette := 'DeepBase Controls';
+  RegisterComponents(Palette, [
     TConfigEdit,
     TConfigCheckBox,
     TConfigSpinEdit,

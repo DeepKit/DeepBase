@@ -1002,15 +1002,12 @@ begin
 end;
 
 function SplitConnStrRight(const S: string; FieldCount: Integer): TArray<string>;
-var
-  I, Sep: Integer;
-  Remaining: string;
 begin
   SetLength(Result, FieldCount);
-  Remaining := S;
-  for I := FieldCount - 1 downto 1 do
+  var Remaining := S;
+  for var I := FieldCount - 1 downto 1 do
   begin
-    Sep := Remaining.LastDelimiter(';');
+    var Sep := Remaining.LastDelimiter(';');
     if Sep < 0 then
     begin
       Result[I] := Remaining;

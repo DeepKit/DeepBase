@@ -77,3 +77,23 @@
 - Created `.kiro/steering/skia-7.1-conventions.md` with fileMatch `**/*Skia*.pas,**/FMX/*.pas`.
 - Created `.kiro/steering/sse-streaming-pattern.md` with fileMatch `**/LLM*.pas,**/Stream*.pas`.
 - No package build was required for this documentation-only stage.
+
+## 2026-05-09 Stage 6 Syntax Samples
+
+- Core sample: `Core/DeepBase.Collections.pas`
+  - `TSortedList<T>.BinarySearch` now uses inline local variables and Delphi 13.1 conditional expressions.
+  - `Core/DeepBase.Config.pas` was not used as the sample because it contains non-UTF-8 bytes and should not be rewritten only for syntax modernization.
+- Persistence sample: `Persistence/DeepBase.DB.Pool.pas`
+  - `SplitConnStrRight` now uses inline locals for the remaining connection-string segment, loop index, and separator position.
+  - The file contains non-UTF-8 bytes, so the change was limited to ASCII byte-level replacement.
+- Features sample: `Features/DeepBase.LLM.Service.pas`
+  - `ChatWithHistory` default token and temperature selection now uses Delphi 13.1 conditional expressions.
+  - SSE evaluation: current Features streaming still goes through `TLLMHttpClient` and the transport abstraction returns a buffered response for parsing. Native Delphi 13.1 SSE replacement should wait until the IDE API and fake transport regression tests are pinned down.
+- VCL sample: `VCL/DeepBase.VCL.Controls.pas`
+  - Component palette name now uses an inline local variable.
+- FMX sample: `FMX/DeepBase.FMX.Controls.pas`
+  - Component palette name now uses an inline local variable.
+  - No Skia 7.1 API replacement was needed in this unit because it does not use Skia APIs.
+- Validation:
+  - `Scripts/build_packages_win64.ps1 -Profile All` passed.
+  - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` passed: Unit `3240/3243 passed, 3 ignored`; Integration `10/10 passed`.

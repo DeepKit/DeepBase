@@ -255,17 +255,13 @@ function TLLMService.ChatWithHistory(const ATier: TModelTier;
 begin
   EnsureLoaded;
   if AMaxTokens <= 0 then
-  begin
-    if ATier = TierFast then AMaxTokens := 2048
-    else if ATier = TierBalanced then AMaxTokens := 4096
-    else AMaxTokens := 4000;
-  end;
+    AMaxTokens := if ATier = TierFast then 2048
+      else if ATier = TierBalanced then 4096
+      else 4000;
   if ATemperature < 0 then
-  begin
-    if ATier = TierFast then ATemperature := 0.0
-    else if ATier = TierBalanced then ATemperature := 0.1
-    else ATemperature := 0.2;
-  end;
+    ATemperature := if ATier = TierFast then 0.0
+      else if ATier = TierBalanced then 0.1
+      else 0.2;
   Result := CallWithFallback(ATier, AMessages, AMaxTokens, ATemperature);
 end;
 
