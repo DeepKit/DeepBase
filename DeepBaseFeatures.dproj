@@ -11,6 +11,18 @@
         <ProjectVersion>20.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)'=='Win32'">
+        <DCC_DcuOutput>TestResults\dcu32</DCC_DcuOutput>
+        <DCC_BplOutput>TestResults\bpl32</DCC_BplOutput>
+        <DCC_DcpOutput>TestResults\dcp32</DCC_DcpOutput>
+        <DCC_UnitSearchPath>TestResults\dcp32;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)'=='Win64' or '$(Platform)'=='Win64x'">
+        <DCC_DcuOutput>TestResults\dcu64</DCC_DcuOutput>
+        <DCC_BplOutput>TestResults\bpl64</DCC_BplOutput>
+        <DCC_DcpOutput>TestResults\dcp64</DCC_DcpOutput>
+        <DCC_UnitSearchPath>TestResults\dcp64;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
     </PropertyGroup>

@@ -65,6 +65,19 @@
   - `pgDeepBase.groupproj` Build passed for Win32 and Win64 with local package outputs.
   - `Scripts/build_packages_win64.ps1 -Profile All` passed.
 
+## 2026-05-09 IDE Local Package Output Fix
+
+- Added explicit local package outputs to all 6 runtime and 3 design-time `.dproj` files:
+  - Win32: `TestResults\dcu32`, `TestResults\bpl32`, `TestResults\dcp32`
+  - Win64 / Win64x: `TestResults\dcu64`, `TestResults\bpl64`, `TestResults\dcp64`
+- Added the platform-matched `TestResults\dcp*` directory to `DCC_UnitSearchPath` in every package project so IDE/MSBuild package builds can resolve project-local runtime dependencies such as `DeepBaseFeatures.dcp`.
+- Fix target: Delphi IDE / dcc64 error `DeepBaseVCL.dpk(15): E2202 Required package 'DeepBaseFeatures' not found`.
+- Verification:
+  - `msbuild DeepBaseFeatures.dproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
+  - `msbuild DeepBaseVCL.dproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
+  - `msbuild pgDeepBase.groupproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
+  - `msbuild pgDeepBase.groupproj /t:Build /p:Config=Debug /p:Platform=Win32` passed without output-path overrides.
+
 ## 2026-05-09 Design-Time Package Build Fixes
 
 - `dclDeepBaseCore.dpk`: removed the invalid empty `contains` section. Delphi 13.1 command-line package build reported `E2029 Identifier expected but ';' found`.

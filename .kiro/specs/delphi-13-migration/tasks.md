@@ -17,6 +17,7 @@
 - 13.1 测试：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`，Integration `10/10 passed`。
 - 13.1 架构检查：`Scripts/run_architecture_checks.ps1` 通过；`18/18 passed`。
 - 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
+- IDE/MSBuild 本地 package 输出：9 个 `.dproj` 已显式写入 Win32/Win64 的 `TestResults\dcu*`、`TestResults\bpl*`、`TestResults\dcp*`，并把平台对应 `dcp` 目录加入包搜索路径；已修复 `DeepBaseVCL.dpk(15): Required package 'DeepBaseFeatures' not found`。
 - UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
 - Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
@@ -51,7 +52,8 @@
 - [x] 1.4 逐个打开其余 5 个 dpk + 3 个 dcl dpk,完成 dproj 格式升级
   - 2026-05-09：6 个 runtime + 3 个 dcl package `.dproj` 已就绪；`pgDeepBase.groupproj` 已按依赖顺序更新。
 - [x] 1.5 检查所有 `.dproj` 中 `<DCC_BPLOutput>` / `<DCC_DCPOutput>` / `<DCC_DCUOutput>` 路径是否正确
-  - 2026-05-09：默认 IDE 输出路径保持不硬编码；命令行验证使用 `TestResults\bpl32/dcp32/dcu32` 与 `TestResults\bpl64/dcp64/dcu64` 覆盖输出路径通过。
+  - 2026-05-09：9 个 package `.dproj` 已显式设置本地输出：Win32 使用 `TestResults\bpl32/dcp32/dcu32`，Win64/Win64x 使用 `TestResults\bpl64/dcp64/dcu64`；同时将平台对应 `dcp` 目录加入 `DCC_UnitSearchPath`。
+  - 2026-05-09：无命令行输出路径覆盖的 `pgDeepBase.groupproj` Win32 + Win64 Build 均通过，修复 IDE/dcc64 构建 `DeepBaseVCL` 时找不到 `DeepBaseFeatures.dcp` 的问题。
 - [x] 1.6 确认 Search Path 中无硬编码 `23.0` 或 `BDS\23.0` 残留
   - 2026-05-09：已扫描 `.bat` / `.ps1` / `.cmd` / `.dproj` / `.dpk` / `.groupproj`，未发现 `Studio\23.0` / `BDS\23.0` 硬编码残留。历史文档中的 23.0 示例未作为构建配置处理。
 
@@ -115,6 +117,7 @@
 - [x] 3.5.1 Clean + Build `DeepBaseVCL.dpk`
 - [x] 3.5.2 修复编译错误
   - 2026-05-09：13.1 编译通过；为避免设计时包重复单元，已显式声明 `vclimg`、`vclFireDAC`、`VclSmp` 运行时依赖。
+  - 2026-05-09：修复 IDE/dcc64 单独或 group 构建时 `DeepBaseVCL.dpk(15): Required package 'DeepBaseFeatures' not found`；根因是 `.dproj` 未持久化本地 DCP 输出/搜索路径。
 - [ ] 3.5.3 确认 VCL Styles / Win11 新样式兼容
 
 ### 3.6 DeepBaseFMX.dpk
