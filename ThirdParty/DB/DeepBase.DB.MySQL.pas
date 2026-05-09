@@ -15,7 +15,7 @@ unit DeepBase.DB.MySQL;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections,
+  System.SysUtils, System.Classes, System.Generics.Collections, System.Rtti,
   FireDAC.Comp.Client, FireDAC.Phys.MySQL, FireDAC.Stan.Def,
   FireDAC.Stan.Async, FireDAC.Stan.Pool,
   DeepBase.DB.DoQry;
@@ -375,8 +375,8 @@ var
 begin
   Qry := Query(ASQL);
   try
-    if not Qry.IsEmpty then
-      Result := Qry.Fields[0].Value
+    if not Qry.IsEmpty and not Qry.Fields[0].IsNull then
+      Result := TValue.FromVariant(Qry.Fields[0].Value).AsType<T>
     else
       Result := Default(T);
   finally

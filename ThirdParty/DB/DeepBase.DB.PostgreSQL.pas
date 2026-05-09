@@ -98,7 +98,6 @@ type
     FListenChannels: TList<string>;
     
     procedure SetupConnection;
-    procedure HandleNotify(AMessage: TFDPhysPgEventMessage);
   public
     constructor Create(const AParams: TPgConnectionParams); overload;
     constructor Create(const AHost, ADatabase, AUsername, APassword: string); overload;
@@ -389,12 +388,6 @@ begin
   end;
 end;
 
-procedure TPostgreSQLDriver.HandleNotify(AMessage: TFDPhysPgEventMessage);
-begin
-  if Assigned(FOnNotify) then
-    FOnNotify(Self, AMessage.Name, AMessage.Data);
-end;
-
 procedure TPostgreSQLDriver.Connect;
 begin
   if not FConnection.Connected then
@@ -431,8 +424,8 @@ var
 begin
   Qry := Query(ASQL);
   try
-    if not Qry.IsEmpty then
-      Result := Qry.Fields[0].Value
+    if not Qry.IsEmpty and not Qry.Fields[0].IsNull then
+      Result := TValue.FromVariant(Qry.Fields[0].Value).AsType<T>
     else
       Result := Default(T);
   finally

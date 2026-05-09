@@ -110,3 +110,20 @@
   - Streaming
   - Image generation
 - Console checkmark glyphs displayed incorrectly under the current code page, but the process returned exit code `0`.
+
+## 2026-05-09 Stage 2 ThirdParty Compatibility
+
+- Ran Delphi 13.1 `dcc64` over every `.pas` unit under `ThirdParty/`.
+- Initial failures:
+  - `ThirdParty/DB/DeepBase.DB.MySQL.pas`: generic scalar result assigned directly from `Variant`.
+  - `ThirdParty/DB/DeepBase.DB.PostgreSQL.pas`: same generic scalar issue plus obsolete/unavailable `TFDPhysPgEventMessage` reference.
+  - `ThirdParty/Payment/DeepBase.Payment.Core.pas`: legacy provider factory mixed incompatible payment type systems, used unavailable `TMultipartFormData`, and called 13.1 `THTTPClient.Delete` with an obsolete signature.
+- Fixes:
+  - Converted MySQL/PostgreSQL `ExecuteScalar<T>` to `TValue.FromVariant(...).AsType<T>` with null fallback.
+  - Removed the unused PostgreSQL notify message handler that referenced `TFDPhysPgEventMessage`.
+  - Changed `DeepBase.Payment.Core` provider factory to fail fast instead of returning incompatible provider clients.
+  - Replaced legacy multipart form POST with URL-encoded `TStringStream` form POST and updated `Delete` to the 13.1 signature.
+- Validation:
+  - All `ThirdParty/` units compile with BDS 37.0.
+  - `Scripts/build_packages_win64.ps1 -Profile All` passed.
+  - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` passed: Unit `3240/3243 passed, 3 ignored`; Integration `10/10 passed`.

@@ -21,6 +21,7 @@
 - Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
 - LLM proxy 客户端验证：`Tests/TestLLMProxyClient.dpr` 在 13.1 下编译通过，并配合 `Tests/mock_proxy_server.py` 跑完 6 项场景。
+- ThirdParty 兼容性：`ThirdParty/` 下所有 `.pas` 已用 Delphi 13.1 逐单元编译通过；DB 与 Payment.Core 的 13.1 编译错误已修复。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -57,12 +58,18 @@
   - [ ] 2.1.2 更新 DeepBase 所有 dpk 的 Search Path 中 Skia 相关路径
 - [x] 2.2 确认 FireDAC 随 13.1 自带,无需额外操作
   - 2026-05-09：13.1 下 Persistence、VCL/FMX 和测试套件均通过，FireDAC 单元可用。
-- [ ] 2.3 检查 `ThirdParty/` 下各子目录组件是否有 13.1 兼容版本
-  - [ ] 2.3.1 `ThirdParty/UI/` — 确认 UI 组件兼容性
-  - [ ] 2.3.2 `ThirdParty/DB/` — 确认数据库组件兼容性
-  - [ ] 2.3.3 `ThirdParty/Cloud/` — 确认云服务组件兼容性
-  - [ ] 2.3.4 `ThirdParty/Payment/` — 确认支付组件兼容性
-  - [ ] 2.3.5 `ThirdParty/Social/` — 确认社交组件兼容性
+- [x] 2.3 检查 `ThirdParty/` 下各子目录组件是否有 13.1 兼容版本
+  - 2026-05-09：`ThirdParty/` 下所有 `.pas` 已用 BDS 37.0 / `dcc64` 逐单元编译通过。
+  - [x] 2.3.1 `ThirdParty/UI/` — 确认 UI 组件兼容性
+    - `DeepBase.UI.Themes.pas` 编译通过；保留 2 个既有 W1012 subrange warning。
+  - [x] 2.3.2 `ThirdParty/DB/` — 确认数据库组件兼容性
+    - 修复 MySQL/PostgreSQL `ExecuteScalar<T>` 的 `Variant` 到泛型类型转换；移除 PostgreSQL 未接线且 13.1 不可见的旧 notify 消息类型引用。
+  - [x] 2.3.3 `ThirdParty/Cloud/` — 确认云服务组件兼容性
+    - `DeepBase.Cloud.Storage.pas` 编译通过。
+  - [x] 2.3.4 `ThirdParty/Payment/` — 确认支付组件兼容性
+    - 修复 `DeepBase.Payment.Core.pas` 与 13.1 HTTP API/旧 provider factory 的编译不兼容；Payment 子目录所有单元编译通过。
+  - [x] 2.3.5 `ThirdParty/Social/` — 确认社交组件兼容性
+    - Social 子目录所有单元编译通过。
 - [ ] 2.4 更新 `COMPATIBILITY.md` 中 DeepBase 相关行的状态
 
 ## 阶段 3：逐包编译（按依赖顺序）

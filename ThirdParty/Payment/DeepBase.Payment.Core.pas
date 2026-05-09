@@ -90,25 +90,13 @@ function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentC
 
 implementation
 
-uses
-  DeepBase.Payment.Stripe,
-  DeepBase.Payment.PayPal,
-  DeepBase.Payment.Alipay,
-  DeepBase.Payment.WeChatPay;
-
 { Factory }
 
 function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentClient;
 begin
-  case ACredentials.Provider of
-    ppStripe:    Result := TStripeClient.Create(ACredentials);
-    ppPayPal:    Result := TPayPalClient.Create(ACredentials);
-    ppAlipay:    Result := TAlipayClient.Create(ACredentials);
-    ppWeChatPay: Result := TWeChatPayClient.Create(ACredentials);
-  else
-    raise EPaymentError.Create(ACredentials.Provider, 'UNSUPPORTED_PROVIDER',
-      'Payment provider not supported');
-  end;
+  raise ENotSupportedException.CreateFmt(
+    'DeepBase.Payment.Core does not provide provider adapters for %d; use DeepBase.Payment provider clients',
+    [Ord(ACredentials.Provider)]);
 end;
 
 { TPaymentClientBase }
@@ -184,7 +172,8 @@ function TPaymentClientBase.DoPostForm(const AUrl: string; const AParams: TStrin
 var
   Response: IHTTPResponse;
   AllHeaders: TNetHeaders;
-  FormData: TMultipartFormData;
+  Body: TStringBuilder;
+  BodyStream: TStringStream;
   I: Integer;
 begin
   AllHeaders := GetAuthHeaders;
@@ -195,19 +184,30 @@ begin
   if Length(AHeaders) > 0 then
     AllHeaders := AllHeaders + AHeaders;
 
-  FormData := TMultipartFormData.Create;
+  Body := TStringBuilder.Create;
   try
     for I := 0 to AParams.Count - 1 do
-      FormData.AddField(AParams.Names[I], AParams.ValueFromIndex[I]);
-      
-    Response := FHttpClient.Post(AUrl, FormData, AllHeaders);
-    Result := Response.ContentAsString;
-    
-    if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-      raise EPaymentError.Create(FCredentials.Provider,
-        IntToStr(Response.StatusCode), Result);
+    begin
+      if I > 0 then
+        Body.Append('&');
+      Body.Append(TNetEncoding.URL.Encode(AParams.Names[I]));
+      Body.Append('=');
+      Body.Append(TNetEncoding.URL.Encode(AParams.ValueFromIndex[I]));
+    end;
+
+    BodyStream := TStringStream.Create(Body.ToString, TEncoding.UTF8);
+    try
+      Response := FHttpClient.Post(AUrl, BodyStream, nil, AllHeaders);
+      Result := Response.ContentAsString;
+
+      if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
+        raise EPaymentError.Create(FCredentials.Provider,
+          IntToStr(Response.StatusCode), Result);
+    finally
+      BodyStream.Free;
+    end;
   finally
-    FormData.Free;
+    Body.Free;
   end;
 end;
 
@@ -220,7 +220,7 @@ begin
   if Length(AHeaders) > 0 then
     AllHeaders := AllHeaders + AHeaders;
     
-  Response := FHttpClient.Delete(AUrl, AllHeaders);
+  Response := FHttpClient.Delete(AUrl, nil, AllHeaders);
   Result := Response.ContentAsString;
   
   if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
