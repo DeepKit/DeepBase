@@ -17,6 +17,7 @@
 - 13.1 测试：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`，Integration `10/10 passed`。
 - 13.1 架构检查：`Scripts/run_architecture_checks.ps1` 通过；`18/18 passed`。
 - 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
+- UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -117,11 +118,16 @@
 
 > 发现 `DeepBase/VCL/` 下仍有 33 个 `UniBase.VCL.*` 旧文件与新版并存
 
-- [ ] 4.1 确认所有 `UniBase.VCL.*.pas` 已有对应的 `DeepBase.VCL.*.pas` 替代
-- [ ] 4.2 全局搜索确认无任何 dpk / dproj / 下游项目仍引用 `UniBase.VCL.*`
-- [ ] 4.3 删除 `DeepBase/VCL/UniBase.VCL.*.pas` 和对应 `.dfm` 文件（约 33 个）
-- [ ] 4.4 全局搜索 `DeepBase/Core/`、`DeepBase/Persistence/`、`DeepBase/Features/` 确认无 `UniBase.` 残留
-- [ ] 4.5 重新 Build 所有 6 个 dpk 确认删除后无断链
+- [x] 4.1 确认所有 `UniBase.VCL.*.pas` 已有对应的 `DeepBase.VCL.*.pas` 替代
+  - 2026-05-09：已确认 34 个 `UniBase.VCL.*` 残留文件均有 `DeepBase.VCL.*` 替代文件。
+- [x] 4.2 全局搜索确认无任何 dpk / dproj / 下游项目仍引用 `UniBase.VCL.*`
+  - 2026-05-09：`rg` 扫描 `.pas` / `.dpk` / `.dproj` / `.groupproj` 未发现 `UniBase.VCL` 引用。
+- [x] 4.3 删除 `DeepBase/VCL/UniBase.VCL.*.pas` 和对应 `.dfm` 文件（约 33 个）
+  - 2026-05-09：已删除 34 个 `VCL/UniBase.VCL.*` 旧文件，其中包含 `.pas` 与 `.dfm`。
+- [x] 4.4 全局搜索 `DeepBase/Core/`、`DeepBase/Persistence/`、`DeepBase/Features/` 确认无 `UniBase.` 残留
+  - 2026-05-09：`Core/`、`Persistence/`、`Features/`、`VCL/`、`FMX/` 扫描未发现 `UniBase.` 残留。
+- [x] 4.5 重新 Build 所有 6 个 dpk 确认删除后无断链
+  - 2026-05-09：删除后 `Scripts/build_packages_win64.ps1 -Profile All` 通过。
 
 ## 阶段 5：DFM 96 DPI 转换
 
@@ -201,7 +207,7 @@
 - [ ] 6 个运行时 dpk + 3 个设计时 dpk 全部 Clean + Build 成功
 - [ ] 所有编译脚本已切到 `delphi-13.1.bat`
 - [ ] Skia4Delphi 7.1.0 已安装并集成
-- [ ] `UniBase.VCL.*` 残留文件已清除
+- [x] `UniBase.VCL.*` 残留文件已清除
 - [ ] DFM 96 DPI 转换完成
 - [ ] Warning ≤ 基线
 - [ ] 测试全绿

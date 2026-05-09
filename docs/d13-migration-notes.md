@@ -61,3 +61,11 @@
   - `dclDeepBaseVCL.dpk`
   - `dclDeepBaseFMX.dpk`
 - IDE Install and component palette verification remain manual/IDE steps.
+
+## 2026-05-09 Stage 4 UniBase VCL Cleanup
+
+- Confirmed every tracked `VCL/UniBase.VCL.*` legacy unit/form had an existing `VCL/DeepBase.VCL.*` replacement.
+- Removed 34 tracked legacy files matching `VCL/UniBase.VCL.*`, including `.pas` units and `.dfm` resources.
+- Scanned `.pas`, `.dpk`, `.dproj`, and `.groupproj` files for `UniBase.VCL` and `UniBase.`; no active references remain in the repository.
+- Post-cleanup runtime package command: `Scripts/build_packages_win64.ps1 -Profile All`
+- Post-cleanup runtime package result: passed for all 6 runtime packages with BDS 37.0.
