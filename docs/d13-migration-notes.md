@@ -97,3 +97,16 @@
 - Validation:
   - `Scripts/build_packages_win64.ps1 -Profile All` passed.
   - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` passed: Unit `3240/3243 passed, 3 ignored`; Integration `10/10 passed`.
+
+## 2026-05-09 Stage 8 LLM Proxy Verification
+
+- Started `Tests/mock_proxy_server.py` on `127.0.0.1:8089`.
+- Compiled `Tests/TestLLMProxyClient.dpr` with BDS 37.0 / `dcc64`.
+- Ran all 6 proxy client scenarios successfully:
+  - Probe
+  - Unreachable port
+  - Chat
+  - Chat with system prompt
+  - Streaming
+  - Image generation
+- Console checkmark glyphs displayed incorrectly under the current code page, but the process returned exit code `0`.

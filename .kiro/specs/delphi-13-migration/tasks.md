@@ -20,6 +20,7 @@
 - UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
 - Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
+- LLM proxy 客户端验证：`Tests/TestLLMProxyClient.dpr` 在 13.1 下编译通过，并配合 `Tests/mock_proxy_server.py` 跑完 6 项场景。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -189,9 +190,12 @@
 
 - [x] 8.1 运行 `DeepBase/Tests/` 下所有现有测试,确认全绿
   - 2026-05-09：13.1 下 `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`；Integration `10/10 passed`。
-- [ ] 8.2 运行 `TestLLMProxyClient.dpr` 确认 LLM 模块在 13.1 编译后功能正常
-- [ ] 8.3 用 `mock_proxy_server.py` 跑 6 项集成测试场景
-- [ ] 8.4 如有失败,修复并记录原因到 `docs/d13-migration-notes.md`
+- [x] 8.2 运行 `TestLLMProxyClient.dpr` 确认 LLM 模块在 13.1 编译后功能正常
+  - 2026-05-09：`dcc64` 使用 BDS 37.0 编译通过。
+- [x] 8.3 用 `mock_proxy_server.py` 跑 6 项集成测试场景
+  - 2026-05-09：Probe、不可达端口、Chat、System Prompt、Streaming、Image generation 6 项均通过。
+- [x] 8.4 如有失败,修复并记录原因到 `docs/d13-migration-notes.md`
+  - 2026-05-09：本轮无失败；控制台勾号乱码为 code page 显示问题，不影响返回码。
 
 ## 阶段 9：下游兼容验证
 
@@ -221,7 +225,7 @@
 - [x] `UniBase.VCL.*` 残留文件已清除
 - [ ] DFM 96 DPI 转换完成
 - [ ] Warning ≤ 基线
-- [ ] 测试全绿
+- [x] 测试全绿
 - [x] 至少 5 个样板文件已用 13.1 新语法
 - [x] Steering 四件套到位
 - [ ] 至少 3 个下游项目可引用新 BPL 编译通过
