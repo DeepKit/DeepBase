@@ -127,9 +127,17 @@
   - All `ThirdParty/` units compile with BDS 37.0.
   - `Scripts/build_packages_win64.ps1 -Profile All` passed.
   - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` passed: Unit `3240/3243 passed, 3 ignored`; Integration `10/10 passed`.
+- Updated the global compatibility matrix at `D:\_Progs\02Business\docs\delphi-13-migration\COMPATIBILITY.md` for DeepBase-related FireDAC/System.Net status. Skia remains marked as pending because IDE installation still requires manual confirmation.
+
+## 2026-05-09 Stage 9 Downstream Verification
+
+- DeepLLM build verification was attempted with Delphi 13.1. The build currently fails inside the downstream repository at `D:\_Progs\02Business\DeepLLM\src\core\proxy\ProxyConfig.pas`, around line 217, with parser/scope errors such as `E2023 Function needs result type` and undeclared `AEndIdx` / `AStartIdx` / `ALines` / `ABaseIndent`. This is a downstream source issue, not a DeepBase export/API break.
+- DeepDev FMX build verification was attempted with Delphi 13.1. The build fails at `DeepDev.vrc(63,15): unable to open file 'Progee.ico': FileNotFound`. This is a downstream resource file issue, not a DeepBase break.
+- DeepStory VCL build verification was attempted with Delphi 13.1. The build reaches DeepBase dependency compilation, then fails in downstream third-party SynEdit at `D:\ProgramData\delphi\SynEdit-master\Source\SynUnicode.pas(36): error F2613: Unit 'Windows' not found`. This is a SynEdit/downstream compatibility issue, not a DeepBase export/API break.
+- No Stage 9 failure currently requires returning to DeepBase Stage 3. The DoD item requiring 3 downstream projects to compile remains open until those downstream blockers are fixed.
 
 ## 2026-05-09 Stage 10 Partial Closeout
 
 - Updated `CHANGELOG.md` with Delphi 13.1 migration entries.
-- Confirmed migration notes now cover baseline, build/test gates, design-time package command-line fixes, UniBase cleanup, steering, syntax samples, LLM proxy verification, and ThirdParty compatibility.
+- Confirmed migration notes now cover baseline, build/test gates, design-time package command-line fixes, UniBase cleanup, steering, syntax samples, LLM proxy verification, ThirdParty compatibility, and downstream verification blockers.
 - Remaining closeout steps depend on human/IDE/downstream validation: branch merge, final tag, and downstream group notification.

@@ -22,6 +22,7 @@
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
 - LLM proxy 客户端验证：`Tests/TestLLMProxyClient.dpr` 在 13.1 下编译通过，并配合 `Tests/mock_proxy_server.py` 跑完 6 项场景。
 - ThirdParty 兼容性：`ThirdParty/` 下所有 `.pas` 已用 Delphi 13.1 逐单元编译通过；DB 与 Payment.Core 的 13.1 编译错误已修复。
+- 下游兼容验证：已尝试 DeepLLM、DeepDev、DeepStory。三者当前阻塞均在下游仓库/第三方组件自身，未发现 DeepBase 导出接口断链；阶段 9 仍未达成 3 个下游项目全部通过。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -70,7 +71,8 @@
     - 修复 `DeepBase.Payment.Core.pas` 与 13.1 HTTP API/旧 provider factory 的编译不兼容；Payment 子目录所有单元编译通过。
   - [x] 2.3.5 `ThirdParty/Social/` — 确认社交组件兼容性
     - Social 子目录所有单元编译通过。
-- [ ] 2.4 更新 `COMPATIBILITY.md` 中 DeepBase 相关行的状态
+- [x] 2.4 更新 `COMPATIBILITY.md` 中 DeepBase 相关行的状态
+  - 2026-05-09：已同步总纲兼容矩阵；DeepBase 侧 FireDAC/System.Net 已通过，Skia IDE 安装仍需人工完成。
 
 ## 阶段 3：逐包编译（按依赖顺序）
 
@@ -209,9 +211,13 @@
 > DeepBase 完成后,必须验证下游能引用新 BPL
 
 - [ ] 9.1 选 DeepLLM 作为验证项目,仅做 Build（不做完整迁移）
+  - 2026-05-09：已尝试构建；失败点在下游 `D:\_Progs\02Business\DeepLLM\src\core\proxy\ProxyConfig.pas`，从约 line 217 起出现函数声明/局部变量结构错误（如 `E2023 Function needs result type`、`AEndIdx/AStartIdx/ALines/ABaseIndent undeclared`）。该失败不是 DeepBase BPL/API 断链，需先修 DeepLLM 自身语法结构。
 - [ ] 9.2 选一个 FMX 项目（如 DeepDev 或 DeepInsight）做 Build 验证
+  - 2026-05-09：已尝试 DeepDev；失败点为 `DeepDev.vrc(63,15): unable to open file 'Progee.ico': FileNotFound`。该失败是下游资源文件缺失/命名不一致，不是 DeepBase 断链。
 - [ ] 9.3 选一个 VCL 项目（如 DeepStory 或 DeepConfig）做 Build 验证
-- [ ] 9.4 如有断链,回到阶段 3 修复 DeepBase 的导出接口
+  - 2026-05-09：已尝试 DeepStory；可进入 DeepBase 依赖编译，但最终失败于下游第三方 `D:\ProgramData\delphi\SynEdit-master\Source\SynUnicode.pas(36): error F2613: Unit 'Windows' not found`。该失败是 SynEdit/下游 Delphi 13.1 兼容问题，不是 DeepBase 断链。
+- [x] 9.4 如有断链,回到阶段 3 修复 DeepBase 的导出接口
+  - 2026-05-09：本轮三个下游失败点均定位在下游仓库/第三方组件自身，未发现需要回到 DeepBase 阶段 3 修复的导出接口断链。
 
 ## 阶段 10：收尾
 
