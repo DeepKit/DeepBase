@@ -95,6 +95,7 @@
 - [x] 3.3.1 Clean + Build `DeepBaseFeatures.dpk`
 - [x] 3.3.2 修复编译错误
   - 2026-05-09：13.1 编译通过，无 Features 编译错误。
+  - 2026-05-09：补入 `DeepBase.LLM.Proxy` 到 `DeepBaseFeatures.dpk`，修复 Win32/IDE 构建 `DeepBase.LLM.Service.pas` 时找不到 `DeepBase.LLM.Proxy` 的问题；随后 `DeepBaseVCL` 可解析 `DeepBaseFeatures`。
 - [x] 3.3.3 重点关注 `DeepBase.LLM.*.pas` 中 `System.Net.HttpClient` 的 SSE 新 API 兼容性
   - 2026-05-09：13.1 兼容编译已通过；阶段 6 已评估，当前 Features 层 SSE 仍通过 transport 缓冲响应解析，原生 SSE 替换需先确认 13.1 IDE API 与 fake transport 回归测试。
 - [x] 3.3.4 重点关注 `DeepBase.Net.Transport.*.pas` 网络层变化

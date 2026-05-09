@@ -1,7 +1,9 @@
 ﻿unit DeepBase.LLM.Service;
 
-{ DeepBase LLM Service �� ILLMClient + ILLMAdmin ʵ�� + LLM() ȫ�ֺ���
-  ���ѳ��� uses �˵�Ԫ��ֱ�ӵ��� LLM.Chat('smart', 'question') }
+/// <summary>
+/// DeepBase LLM Service - ILLMClient + ILLMAdmin 实现 + LLM() 全局函数
+/// 消费程序 uses 此单元后直接调用 LLM.Chat('smart', 'question')
+/// </summary>
 
 interface
 
@@ -14,8 +16,8 @@ function LLMAdmin: ILLMAdmin;
 implementation
 
 uses
-  System.SysUtils, System.Generics.Collections,
-  DeepBase.LLM.HTTP, DeepBase.LLM.Config;
+  System.SysUtils, System.Generics.Collections, System.DateUtils,
+  DeepBase.LLM.HTTP, DeepBase.LLM.Config, DeepBase.LLM.Proxy;
 
 type
   TLLMService = class(TInterfacedObject, ILLMClient, ILLMAdmin)
@@ -74,9 +76,81 @@ type
 
 var
   GLLMService: TLLMService = nil;
+  GProxyClient: ILLMClient = nil;
+  GProxyChecked: Boolean = False;
+  GProxyAvailable: Boolean = False;
+  GProxyCheckTime: TDateTime = 0;
+
+const
+  CProxyCacheSec = 60;  // 探测结果缓存 60 秒
+  CProxyDefaultHost = '127.0.0.1';
+  CProxyDefaultPort = 8089;
+  CProxyProbeTimeoutMs = 200;
+
+function GetProxyHost: string;
+begin
+  Result := Trim(GetEnvironmentVariable('DEEP_LLM_PROXY_HOST'));
+  if Result = '' then
+    Result := CProxyDefaultHost;
+end;
+
+function GetProxyPort: Word;
+var
+  S: string;
+begin
+  S := Trim(GetEnvironmentVariable('DEEP_LLM_PROXY_PORT'));
+  Result := StrToIntDef(S, CProxyDefaultPort);
+end;
+
+function IsForceDirectMode: Boolean;
+begin
+  Result := SameText(Trim(GetEnvironmentVariable('DEEP_LLM_MODE')), 'direct');
+end;
+
+function TryGetProxyClient: ILLMClient;
+var
+  Config: TProxyConfig;
+begin
+  Result := nil;
+
+  // 强制直连模式
+  if IsForceDirectMode then
+    Exit;
+
+  // 缓存检查
+  if GProxyChecked and (SecondsBetween(Now, GProxyCheckTime) < CProxyCacheSec) then
+  begin
+    if GProxyAvailable then
+      Result := GProxyClient;
+    Exit;
+  end;
+
+  // 探测 proxy
+  Config.Init;
+  Config.Host := GetProxyHost;
+  Config.Port := GetProxyPort;
+  Config.ClientToken := Trim(GetEnvironmentVariable('DEEP_LLM_CLIENT_TOKEN'));
+
+  GProxyAvailable := TProxyLLMClient.Probe(Config.Host, Config.Port, CProxyProbeTimeoutMs);
+  GProxyChecked := True;
+  GProxyCheckTime := Now;
+
+  if GProxyAvailable then
+  begin
+    if GProxyClient = nil then
+      GProxyClient := TProxyLLMClient.Create(Config);
+    Result := GProxyClient;
+  end;
+end;
 
 function LLM: ILLMClient;
 begin
+  // 优先尝试 proxy 模式
+  Result := TryGetProxyClient;
+  if Result <> nil then
+    Exit;
+
+  // 回退到直连模式
   if GLLMService = nil then
     GLLMService := TLLMService.Create;
   Result := GLLMService;
@@ -613,5 +687,6 @@ finalization
     GLLMService.Free;
     GLLMService := nil;
   end;
+  GProxyClient := nil;
 
 end.

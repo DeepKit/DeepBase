@@ -51,6 +51,15 @@
 - Architecture check command: `Scripts/run_architecture_checks.ps1`
 - Architecture check result: `18/18 passed`.
 
+## 2026-05-09 Win32/IDE Package Fix
+
+- Fixed a package membership omission: `Features\DeepBase.LLM.Proxy.pas` is used by `DeepBase.LLM.Service` but was not listed in `DeepBaseFeatures.dpk`.
+- Added `DeepBase.LLM.Proxy` to `DeepBaseFeatures.dpk` so Win32/IDE builds no longer fail with `F2613 Unit 'DeepBase.LLM.Proxy' not found`.
+- Verification:
+  - `msbuild DeepBaseFeatures.dproj /t:Build /p:Config=Debug /p:Platform=Win32` passed with local package outputs.
+  - `msbuild DeepBaseVCL.dproj /t:Build /p:Config=Debug /p:Platform=Win32` passed with local package outputs and `TestResults\dcp32` on the unit/package search path.
+  - `Scripts/build_packages_win64.ps1 -Profile All` passed.
+
 ## 2026-05-09 Design-Time Package Build Fixes
 
 - `dclDeepBaseCore.dpk`: removed the invalid empty `contains` section. Delphi 13.1 command-line package build reported `E2029 Identifier expected but ';' found`.

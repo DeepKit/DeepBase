@@ -23,6 +23,7 @@ contains
   DeepBase.LLM.Client in 'Features\DeepBase.LLM.Client.pas',
   DeepBase.LLM.HTTP in 'Features\DeepBase.LLM.HTTP.pas',
   DeepBase.LLM.Config in 'Features\DeepBase.LLM.Config.pas',
+  DeepBase.LLM.Proxy in 'Features\DeepBase.LLM.Proxy.pas',
   DeepBase.LLM.Service in 'Features\DeepBase.LLM.Service.pas',
   DeepBase.LLM.Manager in 'Core\DeepBase.LLM.Manager.pas',
   DeepBase.LLM.BillingClient in 'Core\DeepBase.LLM.BillingClient.pas',
