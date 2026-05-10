@@ -72,11 +72,13 @@
   - Win64 / Win64x: `TestResults\dcu64`, `TestResults\bpl64`, `TestResults\dcp64`
 - Added the platform-matched `TestResults\dcp*` directory to `DCC_UnitSearchPath` in every package project so IDE/MSBuild package builds can resolve project-local runtime dependencies such as `DeepBaseFeatures.dcp`.
 - Fix target: Delphi IDE / dcc64 error `DeepBaseVCL.dpk(15): E2202 Required package 'DeepBaseFeatures' not found`.
+- Follow-up fix: also persisted the IDE-facing uppercase property aliases `DCC_DCUOutput`, `DCC_BPLOutput`, and `DCC_DCPOutput` beside the MSBuild-facing `DCC_DcuOutput`, `DCC_BplOutput`, and `DCC_DcpOutput`. This prevents the IDE from falling back to `C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl` and failing with `F2039 Could not create output file '...\DeepBaseCore.bpl'`.
 - Verification:
   - `msbuild DeepBaseFeatures.dproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
   - `msbuild DeepBaseVCL.dproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
   - `msbuild pgDeepBase.groupproj /t:Build /p:Config=Debug /p:Platform=Win64` passed without output-path overrides.
   - `msbuild pgDeepBase.groupproj /t:Build /p:Config=Debug /p:Platform=Win32` passed without output-path overrides.
+  - `msbuild DeepBaseCore.dproj /t:Build /p:Config=Debug /p:Platform=Win64` writes `TestResults\bpl64\DeepBaseCore.bpl`.
 
 ## 2026-05-09 Design-Time Package Build Fixes
 

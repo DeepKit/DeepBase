@@ -17,7 +17,7 @@
 - 13.1 测试：`Scripts/run_tests.ps1 -Type All -Platform Win64 -CI` 通过；Unit `3240/3243 passed, 3 ignored`，Integration `10/10 passed`。
 - 13.1 架构检查：`Scripts/run_architecture_checks.ps1` 通过；`18/18 passed`。
 - 13.1 设计时包命令行 Build：`dclDeepBaseCore.dpk`、`dclDeepBaseVCL.dpk`、`dclDeepBaseFMX.dpk` 通过；IDE Install 和组件面板确认仍需人工执行。
-- IDE/MSBuild 本地 package 输出：9 个 `.dproj` 已显式写入 Win32/Win64 的 `TestResults\dcu*`、`TestResults\bpl*`、`TestResults\dcp*`，并把平台对应 `dcp` 目录加入包搜索路径；已修复 `DeepBaseVCL.dpk(15): Required package 'DeepBaseFeatures' not found`。
+- IDE/MSBuild 本地 package 输出：9 个 `.dproj` 已显式写入 Win32/Win64 的 `TestResults\dcu*`、`TestResults\bpl*`、`TestResults\dcp*`，并把平台对应 `dcp` 目录加入包搜索路径；已修复 `DeepBaseVCL.dpk(15): Required package 'DeepBaseFeatures' not found`，并补充 IDE 识别的大写 `DCC_DCUOutput` / `DCC_BPLOutput` / `DCC_DCPOutput`，避免回落到全局 `C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl`。
 - UniBase VCL 旧单元清理：已删除 34 个 `VCL/UniBase.VCL.*` 残留文件；源码/包/工程中未发现 `UniBase.VCL` / `UniBase.` 引用；删除后 13.1 运行时包编译通过。
 - Steering 四件套：`.kiro/steering/delphi-13-global.md`、`delphi-13-syntax.md`、`skia-7.1-conventions.md`、`sse-streaming-pattern.md` 已创建。
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
@@ -54,6 +54,7 @@
 - [x] 1.5 检查所有 `.dproj` 中 `<DCC_BPLOutput>` / `<DCC_DCPOutput>` / `<DCC_DCUOutput>` 路径是否正确
   - 2026-05-09：9 个 package `.dproj` 已显式设置本地输出：Win32 使用 `TestResults\bpl32/dcp32/dcu32`，Win64/Win64x 使用 `TestResults\bpl64/dcp64/dcu64`；同时将平台对应 `dcp` 目录加入 `DCC_UnitSearchPath`。
   - 2026-05-09：无命令行输出路径覆盖的 `pgDeepBase.groupproj` Win32 + Win64 Build 均通过，修复 IDE/dcc64 构建 `DeepBaseVCL` 时找不到 `DeepBaseFeatures.dcp` 的问题。
+  - 2026-05-09：追加 IDE 识别的大写输出属性别名，修复 IDE/dcc64 仍尝试写入全局 BPL 目录导致 `F2039 Could not create output file ...DeepBaseCore.bpl` 的问题；`DeepBaseCore.dproj` Win64 单包 Build 和 `pgDeepBase.groupproj` Win32/Win64 Build 均通过。
 - [x] 1.6 确认 Search Path 中无硬编码 `23.0` 或 `BDS\23.0` 残留
   - 2026-05-09：已扫描 `.bat` / `.ps1` / `.cmd` / `.dproj` / `.dpk` / `.groupproj`，未发现 `Studio\23.0` / `BDS\23.0` 硬编码残留。历史文档中的 23.0 示例未作为构建配置处理。
 
