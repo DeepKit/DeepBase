@@ -74,3 +74,7 @@ logs/
 
 # 备份目录
 backup/
+
+# Development machine-specific root.txt (points to project root path)
+root.txt
+**/root.txt

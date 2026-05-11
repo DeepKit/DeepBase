@@ -22,13 +22,15 @@ implementation
 
 uses
   System.SysUtils,
+  Data.DB,
   DeepBase.Persistence.Config.FireDAC,
   DeepBase.Persistence.I18n.FireDAC,
   DeepBase.Persistence.Theme.FireDAC,
   DeepBase.Persistence.Security.FireDAC,
   DeepBase.Persistence.FormState.FireDAC,
   DeepBase.Persistence.MRU.FireDAC,
-  DeepBase.Persistence.Hotkeys.FireDAC;
+  DeepBase.Persistence.Hotkeys.FireDAC,
+  DeepBase.DB.Guardian;
 
 type
   TFireDACManagerStorage = class(TInterfacedObject, IManagerStorage)
@@ -369,6 +371,8 @@ begin
 end;
 
 function CreateManagerConnection(const DBPath: string): TFDConnection;
+var
+  GuardResult: TGuardianResult;
 begin
   Result := TFDConnection.Create(nil);
   try
@@ -379,7 +383,17 @@ begin
     Result.Params.Values['Synchronous'] := 'Normal';
     Result.Params.Values['JournalMode'] := 'WAL';
     Result.Params.Values['OpenMode'] := 'CreateUTF8';
-    Result.Open;
+
+    // Guardian: open, apply pragmas, check integrity, auto-recover if corrupted
+    if not TDBGuardian.ProtectConnection(Result, GuardResult) then
+    begin
+      // If still not usable, raise with diagnostic info
+      raise EDatabaseError.CreateFmt(
+        'DB protection failed for %s: %s%s',
+        [DBPath, GuardResult.Message,
+         sLineBreak + 'Corrupted file preserved at: ' +
+         GuardResult.QuarantinePath]);
+    end;
   except
     Result.Free;
     raise;

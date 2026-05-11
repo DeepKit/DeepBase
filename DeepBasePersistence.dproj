@@ -178,6 +178,7 @@
         <DCCReference Include="Persistence\DeepBase.DB.ConnectionPool.pas"/>
         <DCCReference Include="Persistence\DeepBase.SQLLogger.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.DoQry.pas"/>
+        <DCCReference Include="Persistence\DeepBase.DB.Guardian.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.AutoRefreshConfig.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.Factory.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.JobQueue.pas"/>
