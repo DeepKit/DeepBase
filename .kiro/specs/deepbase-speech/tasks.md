@@ -304,11 +304,21 @@
 
 | ID | 问题 | 状态 | 决策 |
 |---|---|---|---|
-| D1 | Phase 1 开工时机 | ⏳ 待决策 | — |
+| D1 | Phase 1 开工时机 | ✅ 已决策 | 立刻（M0 Spike 前置） |
 | D2 | DeepInput 迁移策略 | ✅ 已决策 | **完全重构（Strategy A）**：DeepInput 拆掉自有语音代码，直接调用 DeepBase.Speech |
-| D3 | 声纹 v2 时机 | ⏳ 待决策 | 建议 Phase 4 |
-| D4 | Whisper.cpp 优先级 | ⏳ 待决策 | 建议 Phase 4 后 |
-| D5 | TTS SSML 支持 | ⏳ 待决策 | 建议暂不支持 |
-| D6 | 用户自定义唤醒词 | ⏳ 待决策 | 建议支持（Req 15） |
-| D7 | 意图解析复用 DeepLLM | ⏳ 待决策 | 建议复用 |
-| D8 | Azure ASR 预留 | ⏳ 待决策 | 建议保留枚举，不实现 |
+| D3 | 声纹 v2 时机 | ✅ 已决策 | 推迟到 M7（v1 不做 Voiceprint） |
+| D4 | Whisper.cpp 优先级 | ✅ 已决策 | M8 后 |
+| D5 | TTS SSML 支持 | ✅ 已决策 | 暂不支持 |
+| D6 | 用户自定义唤醒词 | ✅ 已决策 | 支持（词长 ≥ 2） |
+| D7 | 意图解析复用 DeepLLM | ✅ 已决策 | 复用 |
+| D8 | Azure ASR 预留 | ✅ 已决策 | 保留枚举，不实现 |
+| D6-new | Commerce vs Governance | ✅ 已决策 | 共存但分层（Speech.Policy 统一封装） |
+| A4 | 声纹 HMAC | ✅ 已决策 | 降为 P2（ConfigDB SQLite 加密为主防线，独立任务） |
+| E4 | 热键 | ✅ 已决策 | F2 保留单键，备用组合键可选 |
+| E1 | 屏幕阅读器 | ✅ 已决策 | TTS 默认让位 |
+| E3 | Voice Access | ✅ 已决策 | WakeWord 默认让位 |
+| B2 | Stop 时限 | ✅ 已决策 | best-effort + hard-limit 双轨 |
+| C3 | 语言键 | ✅ 已决策 | 拆为 speech.asr.language + speech.tts.language |
+| D1-dpk | dpk 切分 | ✅ 已决策 | 切分 5 个包 |
+| D2-abi | 接口 GUID | ✅ 已决策 | 所有 Speech interface 强制 GUID + API level |
+| DB加密 | ConfigDB 加密 | ✅ 已决策 | 只加密 ConfigDB，独立基础设施任务 |

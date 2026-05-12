@@ -311,36 +311,69 @@ LStream.SetOnFinal(
 
 | ID | 问题 | 决策 |
 |---|---|---|
-| D1 | Phase 1 开工时机 | ✅ 立刻开工 |
-| D2 | DeepInput 迁移策略 | ✅ **完全重构（Strategy A）** |
-| D3 | 声纹 v2 时机 | Phase 4（基础设施一次性建好） |
-| D4 | Whisper.cpp 优先级 | Phase 4 后（SAPI 准确率不够再加） |
+| D1 | Phase 1 开工时机 | ✅ 立刻开工（M0 Spike 前置） |
+| D2 | DeepInput 迁移策略 | ✅ **完全重构（Strategy A）**（未发布，无回归压力） |
+| D3 | 声纹 v2 时机 | ✅ 推迟到 M7（v1 不做 Voiceprint） |
+| D4 | Whisper.cpp 优先级 | M8 后（SAPI 准确率不够再加） |
 | D5 | TTS SSML 支持 | 暂不支持 |
-| D6 | 用户自定义唤醒词 | 支持（词长 ≥ 2） |
+| D6-orig | 用户自定义唤醒词 | 支持（词长 ≥ 2） |
 | D7 | 意图解析复用 DeepLLM | 复用 DeepBase.LLM.Client |
-| D8 | Azure ASR 预留 | 保留枚举，Phase 4 后再实现 |
+| D8 | Azure ASR 预留 | 保留枚举，不实现 |
+| D6-new | Commerce.Permissions vs Governance | ✅ **共存但分层**（Speech.Policy 统一封装） |
+| A4 | 声纹 HMAC 防篡改 | ✅ **降为 P2**（ConfigDB SQLite 加密为主防线） |
+| E4 | DeepLaunch 热键 | ✅ F2 保留单键，备用组合键可选 |
+| E1 | TTS 让位屏幕阅读器 | ✅ `speech.tts.defer_to_screen_reader=1` |
+| E3 | Voice Access 冲突 | ✅ `speech.wake_word.defer_to_voice_access=1` |
+| B2 | Stop 时限 | ✅ best-effort + hard-limit 双轨 |
+| C3 | 语言键拆分 | ✅ `speech.asr.language` + `speech.tts.language` |
+| D1-dpk | dpk 切分 | ✅ 切分为 5 个包 |
+| D2-abi | 接口 GUID + API level | ✅ 所有 Speech interface 强制 GUID |
+| DB加密 | ConfigDB SQLite 加密 | ✅ 只加密 ConfigDB，独立基础设施任务 |
 
 ---
 
-## 十一、实施路径
+## 十一、实施路径（M0–M8 里程碑）
 
-| Phase | 内容 | 工时 |
+| 里程碑 | 内容 | 发布目标 |
 |---|---|---|
-| Phase 0 | 接口摸底 + SAPI COM 确认 | 0.5 周 |
-| Phase 1 | SAPI ASR + TTS + 门面扩展 + Schema | 2 周 |
-| Phase 2 | WakeWord | 1 周 |
-| Phase 3 | DeepInput 完全重构 + DeepLaunch 接入 | 2 周 |
-| Phase 4 | 声纹 MFCC + DTW + Voiceprint | 3 周 |
-| Phase 5 | IntentParser（可选） | 1 周 |
-| Phase 6 | 合规文档 + 测试补全 | 1 周 |
-| **合计** | | **~10 周** |
-
-发布节奏：
-- Phase 1-2 → **DeepBase.Speech v2.0**（SAPI + TTS + WakeWord）
-- Phase 3 → **DeepInput 重构版**
-- Phase 3-4 → **DeepLaunch 语音版 v1.0**
-- Phase 4-5 → **DeepLaunch 语音版 v2.0**（含声纹 + 意图解析）
+| M0 | Spike：SAPI COM、语言包矩阵、WinMM 低延迟、麦克风并发、WakeWord confidence、TTS async/stop、屏幕阅读器检测、Voice Access 检测 | 不发布 |
+| M1 | Runtime 骨架：Registry/Config/Policy/Runtime + SAPI batch ASR + SAPI TTS + Schema + Governance + 默认配置 | DeepBase.Speech v2.0-alpha |
+| M2 | 流式 ASR：低延迟 capture、AudioSession 仲裁、可观测性、SAPI live streaming | DeepBase.Speech v2.0-beta |
+| M3 | DeepInput 完全重构：拆掉自有语音代码，直接调用 DeepBase.Speech | DeepInput 重构版 |
+| M4 | DeepLaunch F2/PTT MVP：本地 ASR + TTS + 设置页 + 麦克风授权 | DeepLaunch 语音版 v1.0 |
+| M5 | WakeWord Beta：默认关闭、独立授权、常驻状态提示、资源占用基准 | DeepLaunch 语音唤醒 Beta |
+| M6 | 稳定化 + 合规文档 | — |
+| M7 | Voiceprint speaker check：本地防误触、MFCC+DTW、删除/撤回/跨应用授权 | DeepLaunch 语音版 v2.0 |
+| M8 | IntentParser / WinRT / Whisper / 云扩展 | 可选增强 |
 
 ---
 
-> 详细 Spec（requirements / design / tasks）：`DeepBase/.kiro/specs/deepbase-speech/`
+## 十二、二轮评审新增要点
+
+### 架构补充
+- **Registry/Config/Policy/Runtime/Schema 五拆**（不再全塞 Schema.pas）
+- **AudioSession 仲裁状态机**：Idle → WakeListening → PushToTalk → DictationStreaming → TTSPlaying
+- **一 process 一 SAPI worker thread**，所有 SAPI 调用串行化
+- **Backend 自注册**（initialization 段），下游只做覆盖/禁用/测试替身
+
+### 安全
+- **Threat Model（STRIDE）** 写入 design.md
+- **ConfigDB SQLite 加密**为主防线（独立基础设施任务）
+- **HMAC 降为 P2 可选**（M7 时根据加密状态再定）
+- **Trace 禁止 PCM payload**，`speech.trace.audio_payload_enabled=0`
+
+### 可访问性
+- **TTS 让位屏幕阅读器**：`speech.tts.defer_to_screen_reader=1`
+- **WakeWord 让位 Voice Access**：`speech.wake_word.defer_to_voice_access=1`
+
+### i18n
+- **拆语言键**：`speech.asr.language` + `speech.tts.language`
+- **BCP-47 归一化 + Fallback 策略**
+- **zh-CN recognizer token 矩阵**（M0 Spike 验证）
+
+### 发布工程
+- **dpk 切分 5 个包**
+- **所有 interface 强制 GUID + `SPEECH_API_LEVEL` 常量**
+- **Stop 时限 best-effort + hard-limit 双轨**
+
+---
