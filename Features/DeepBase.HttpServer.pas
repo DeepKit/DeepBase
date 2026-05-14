@@ -254,7 +254,7 @@ type
     FAllowCredentials: Boolean;
     FMaxAge: Integer;
   public
-    constructor Create(const AAllowOrigin: string = '*');
+    constructor Create(const AAllowOrigin: string = '');
     
     function AllowMethods(const Value: string): TCorsMiddleware;
     function AllowHeaders(const Value: string): TCorsMiddleware;
@@ -861,14 +861,17 @@ end;
 
 procedure TCorsMiddleware.Execute(const Ctx: THttpContext; Next: TProc);
 begin
-  Ctx.Response.Header('Access-Control-Allow-Origin', FAllowOrigin);
-  Ctx.Response.Header('Access-Control-Allow-Methods', FAllowMethods);
-  Ctx.Response.Header('Access-Control-Allow-Headers', FAllowHeaders);
-  
-  if FAllowCredentials then
-    Ctx.Response.Header('Access-Control-Allow-Credentials', 'true');
-  
-  Ctx.Response.Header('Access-Control-Max-Age', IntToStr(FMaxAge));
+  if FAllowOrigin <> '' then
+  begin
+    Ctx.Response.Header('Access-Control-Allow-Origin', FAllowOrigin);
+    Ctx.Response.Header('Access-Control-Allow-Methods', FAllowMethods);
+    Ctx.Response.Header('Access-Control-Allow-Headers', FAllowHeaders);
+
+    if FAllowCredentials then
+      Ctx.Response.Header('Access-Control-Allow-Credentials', 'true');
+
+    Ctx.Response.Header('Access-Control-Max-Age', IntToStr(FMaxAge));
+  end;
   
   // Handle preflight
   if Ctx.Request.Method = hmOptions then
@@ -1275,7 +1278,7 @@ begin
               if Assigned(FErrorHandler) then
                 FErrorHandler(Ctx, E)
               else
-                Ctx.Response.InternalError(E.Message);
+                Ctx.Response.InternalError;
             end;
           end;
         end);

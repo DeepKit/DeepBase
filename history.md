@@ -3,6 +3,98 @@
 
 ---
 
+## 2026-05-14 IntentClarification Phase 2 编译接入修复
+
+### IC-P0-2026-05-14A: 编译链、IoC 和最小集成测试恢复
+- **完成日期**: 2026-05-14
+- **内容摘要**:
+  - IntentClarification Phase 2 单元已进入 `DeepBaseFeatures.dpk/.dproj` 和 `Tests/DeepBaseTests.dpr/.dproj` 主编译链。
+  - 核心类型契约和 `DeepBase.IntentClarification.Registration.pas` 首轮补齐，解决 Phase 2 单元无法进入包/测试工程的问题。
+  - IoC provider 注册改为显式 interface instance，避免 `TL1SlotProvider(AClarifier)` optional constructor 被 RTTI 容器误解析。
+  - L2-L4 provider 已进入 IoC named registration；Engine 未配置 LLM 时跳过 LLM provider，保证最小下游接入路径不产生 `PROVIDER_ERROR`。
+  - `HandleExit` 增加异常兜底和 session 写回锁，输入 `0` 的最小退出路径通过集成测试。
+  - 为主测试编译链顺带修复 Browser CDP/Vision/ScriptStore 编译阻塞，详见 `bugfix.md` 的 BUG-164、BUG-165。
+- **验证**:
+  - `cmd /c compile_test.bat`：`compile_output.txt` 为 `Exit code: 0`。
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.IntentClarification,TICIntegrationTest,TICResilienceIntegrationTest,TICSessionFSMTest`：20 tests passed，0 failed，0 errored，0 leaked。
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.Browser.ScriptStore.TJSTemplateTests,Test.DeepBase.Browser.ScriptStore.TBuiltinDefaultsTests`：20 tests passed，0 failed，0 errored，0 leaked。
+  - 完整 `Tests\DeepBaseTests.exe` 当前为 3372 found，3351 passed，3 ignored，6 failed，12 errored；失败集中在 Browser Registry/WindowPool/Automation、FeatureFlags rollout、License legacy signing、DB.DoQry DDL gate 和 Performance benchmark，未在本轮收敛。
+- **遗留**:
+  - 公开 `DeepBase.IntentClarification.pas` 里的 `IClarificationEngine` facade 仍为空，`CreateEngine/CreateEngineWithPreset` 仍未对齐真实 `Interfaces/Engine`。
+  - `IDomainAdapter.GetPresetSlots` 尚未接入 Engine/L1；Engine session 并发、Provider session-scoped state、Router 边界、LLMResilience timeout/ErrorMessage、L4 全失败语义继续保留在 `tasks.md`。
+
+---
+
+## 2026-05-14 DeepShell VCL 桌面壳骨架完成
+
+### DESKTOP-2026-05-14: DeepShell 第一版 15 单元 + Demo 项目
+- **完成日期**: 2026-05-14
+- **目标**: 按 docs/70-78 号 DeepShell 设计契约落地可继承的 VCL 桌面壳骨架。下游 VCL 桌面工具从 `TDeepMainForm` 起步，不再每个软件重复搭工具栏、日志、设置、MRU、布局。
+- **产出**:
+  - 15 个核心单元（runtime 全部进 `DeepBaseVCL.dpk`）：
+    - `VCL/DeepBase.VCL.DeepShell.Types.pas`：record / 枚举 / helpers，纯 RTL 依赖。
+    - `VCL/DeepBase.VCL.DeepShell.Intf.pas`：所有接口契约 + capability/command 字符串常量。
+    - `VCL/DeepBase.VCL.DeepShell.Events.pas`：UI-safe EventBus（主线程同步分发，后台线程 `TThread.Queue` 投递）。
+    - `VCL/DeepBase.VCL.DeepShell.Services.pas`：`TShellServiceRegistry`。
+    - `VCL/DeepBase.VCL.DeepShell.Context.pas`：`TShellContextManager`，按变更递增 Revision。
+    - `VCL/DeepBase.VCL.DeepShell.Commands.pas`：`TShellCommandManager` + 流式 `ShellCommand(...)` builder + `class operator Implicit`。
+    - `VCL/DeepBase.VCL.DeepShell.Recent.pas`：`TShellInMemoryRecentService`（按 ItemKey upsert，按时间排序）。
+    - `VCL/DeepBase.VCL.DeepShell.Layout.pas`：内存 + Settings-store backed layout service（JSON 持久化）。
+    - `VCL/DeepBase.VCL.DeepShell.Theme.pas`：默认 Theme service（仅状态跟踪，不直绑 Vcl.Themes）。
+    - `VCL/DeepBase.VCL.DeepShell.Localization.pas`：默认 i18n service（locale → key → text 字典，TObjectDictionary 自释放）。
+    - `VCL/DeepBase.VCL.DeepShell.Settings.pas`：`TShellInMemorySettingsStore` + `TDeepShellSettingsForm`（OK/Apply/Cancel/Restore Defaults，Provider 异常隔离）。
+    - `VCL/DeepBase.VCL.DeepShell.Panels.pas`：`TShellAreaController` 三段折叠控制 + `TShellStatusManager`。
+    - `VCL/DeepBase.VCL.DeepShell.ToolWindow.pas`：原生 TForm 实现的左右悬浮工具窗，不引入 Docking 框架。
+    - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`：`TDeepMainForm`，10 个虚生命周期方法 + 内置命令 + 主视图 dispatch。
+    - `VCL/DeepBase.VCL.DeepShell.pas`：facade 单元，下游一行 uses 即可。
+  - Demo 项目 `Examples/VCLDeepShellDemo/`：`VCLDeepShellDemo.dpr` + `Demo.MainForm.pas` + `Demo.Services.pas` + `Demo.Commands.pas` + `Demo.Providers.pas` + README。Demo 不依赖 DB1/doQry/LLM/WebView2/Governance，全用 fake provider/service。
+  - `DeepBaseVCL.dpk` contains 列表追加全部 15 个新单元。
+- **关键设计决策**:
+  - Shell 核心不持有业务 `TObject`，统一用 `TShellObjectRef = record { Id, Kind, ProviderId, DisplayName }` 引用；下游 Provider 按 (ProviderId, Id) 找业务对象。
+  - Command 以 record + `Handler: TProc` 存储；fluent builder 通过 `class operator Implicit` 直接转 record，下游可写 `RegisterCommand(ShellCommand('id', 'Caption').Category('File').OnExecute(...))`。
+  - EventBus 线程模型：主线程 publish 同步分发；后台线程 publish 通过 `TThread.Queue` 投递到主线程，handler 异常被 catch 不影响其他订阅者。
+  - 治理：Command 字段预留 `GateKey/RiskLevel/PurposeKey/RequiresEvidence`，`IShellCommandManager.SetGovernance` 在 MVP 默认接 `NullGovernanceService`，第二阶段切 OCGS adapter。
+  - 渲染边界：`svkHtml/svkMarkdown` 必须由下游 provider 通过 `CreateViewControl` 自带控件渲染，Shell 核心不依赖 WebView2/CEF/Markdown 库。
+  - 多实例：每个主窗体实例生成 `InstanceId(GUID)`，layout 写入带 `WriterInstanceId`，全局 layout 用 last-write-wins。
+- **验证**:
+  - 独立 `dcc32 _tmp_deepshell_compile.dpr` 编译：4452 行，0.39 秒，0 errors，0 warnings。
+  - `DeepBaseVCL.dproj` Win64 编译：DeepShell 全部 15 单元干净通过。整包剩余 fail 来自仓库已有的 `Features\DeepBase.IntentClarification.SignalDetector.pas` (BUG-143)，与本工作无关。
+  - `Examples/VCLDeepShellDemo/` 全部单元独立编译通过。
+- **遗留**:
+  - 整包 `DeepBaseVCL.dpk` 完整构建依赖 `IntentClarification` Phase 2 的修复，跟踪在 `IC-P0-2026-05-14`。
+  - 第一版完成后五专家审阅发现的剩余 P1/P2 改进项见 `tasks.md` 的 `DESKTOP-P1-2026-05-14`。
+- **归档**:
+  - 第一版骨架与 6 个实现期 bug 修复（BUG-144 ~ BUG-149）和 5 个审阅 P0 修复（BUG-150 ~ BUG-154）已记录到 `bugfix.md`。
+
+---
+
+## 2026-05-14 IntentClarification 审阅与任务归档
+
+### IC-AUDIT-2026-05-14: IntentClarification Phase 2 五专家审阅
+- **完成日期**: 2026-05-14
+- **内容摘要**:
+  - 完成 `DeepBase.IntentClarification` 下游接入指南和 Phase 2 实码审阅。
+  - 从 5 个视角完成只读审阅：接口契约/API、Engine/Session 并发、Provider/LLM 行为、IoC/配置/持久化/指标、测试/构建/包集成。
+  - 确认当前模块主要风险不是单点逻辑缺陷，而是新单元未纳入包/主测试、公开 facade 仍为空、类型契约不一致、Registration 半截实现、Provider 状态跨会话和 Engine 并发写回等 P0 阻塞。
+  - 已将后续修复整理为 `tasks.md` 的 `IC-P0-2026-05-14`。
+  - 已将本轮发现缺陷登记到 `bugfix.md` 的 BUG-134 ~ BUG-143，状态均为待修复。
+- **验证**:
+  - `cmd /c compile_test.bat` 当前仍可通过，但只覆盖旧 facade，不覆盖 Phase 2 新单元；此结论已写入后续 QA 任务。
+
+### ARCH-P0-001: deepBase 改名收尾与包编译门禁
+- **完成日期**: 2026-05-13
+- **内容摘要**:
+  - 修复 `Scripts/build_packages_win64.ps1` 和 `Scripts/compile_packages_win64.ps1`，改为构建 `DeepBase*.dpk`。
+  - 修复 `DeepBase*.dpk` 内部 package 名、requires 和 contains 的命名残留。
+  - 发布门禁在 `VCL/` 源码目录缺失时排除 VCL 包和 VCL 必需示例，后续已恢复 VCL 源码目录并补齐 `DeepBase.VCL.*.dfm` 资源。
+  - `Minimal`、`Runtime`、`All` Win64 package gate 已通过。
+  - 修复 `Scripts/compile_packages_win64.ps1` 误报逻辑，改为基于退出码和真实 `Error:/Fatal:` 行判定。
+  - 新增 `Scripts/check_rename_residue.ps1` 并接入包门禁，真实旧名残留命中即失败。
+- **归档说明**:
+  - 该项已从 `tasks.md` 的 P0 当前开发中移除；后续包门禁可信化继续由 `QA-P0-001` 和 `IC-P0-2026-05-14` 跟踪。
+
+---
+
 ## 2026-05-07 Speech/ASR 基础模块归档 �?
 ### SPEECH-001: DeepInput 语音识别链路抽取�?DeepBase 基础模块 �?- **完成日期**: 2026-05-07
 - **内容摘要**:

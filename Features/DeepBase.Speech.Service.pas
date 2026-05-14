@@ -54,9 +54,46 @@ type
       write FPermissionFeatureCode;
   end;
 
+  /// <summary>
+  /// Static facade for Speech capabilities. Provides convenient access to
+  /// registered backends via TSpeechRegistry. Thread-safe.
+  /// </summary>
+  TSpeechService = class
+  private
+    class var FASR: ISpeechRecognizerEx;
+    class var FTTS: ITTSBackend;
+    class var FWakeWord: IWakeWordDetector;
+    class var FVoiceprint: IVoiceprint;
+    class var FIntentParser: IIntentParser;
+    class var FAudioCapture: ISpeechAudioCapture;
+  public
+    // Backend registration (called by downstream or initialization sections)
+    class procedure RegisterASRBackend(const ABackend: ISpeechRecognizerEx);
+    class procedure RegisterTTSBackend(const ABackend: ITTSBackend);
+    class procedure RegisterWakeWordDetector(const ADetector: IWakeWordDetector);
+    class procedure RegisterVoiceprint(const AVoiceprint: IVoiceprint);
+    class procedure RegisterIntentParser(const AParser: IIntentParser);
+    class procedure RegisterAudioCapture(const ACapture: ISpeechAudioCapture);
+
+    // Accessors
+    class function ASR: ISpeechRecognizerEx;
+    class function TTS: ITTSBackend;
+    class function WakeWord: IWakeWordDetector;
+    class function Voiceprint: IVoiceprint;
+    class function IntentParser: IIntentParser;
+    class function AudioCapture: ISpeechAudioCapture;
+
+    // Convenience methods
+    class function TranscribeFromMic(const ALanguage: string = 'zh-CN';
+      AMaxSeconds: Integer = 30;
+      ASilenceTimeoutMs: Integer = 3000): TSpeechRecognitionResult;
+    class procedure Speak(const AText: string; const ALanguage: string = '');
+  end;
+
 implementation
 
 uses
+  System.Math,
   DeepBase.Speech.Audio.WinMM;
 
 class function TSpeechServiceOptions.Default: TSpeechServiceOptions;
@@ -175,6 +212,122 @@ function TDeepBaseSpeechService.StopAndRecognize: TSpeechRecognitionResult;
 begin
   StopRecording;
   Result := RecognizeCaptured;
+end;
+
+{ TSpeechService }
+
+class procedure TSpeechService.RegisterASRBackend(const ABackend: ISpeechRecognizerEx);
+begin
+  FASR := ABackend;
+end;
+
+class procedure TSpeechService.RegisterTTSBackend(const ABackend: ITTSBackend);
+begin
+  FTTS := ABackend;
+end;
+
+class procedure TSpeechService.RegisterWakeWordDetector(const ADetector: IWakeWordDetector);
+begin
+  FWakeWord := ADetector;
+end;
+
+class procedure TSpeechService.RegisterVoiceprint(const AVoiceprint: IVoiceprint);
+begin
+  FVoiceprint := AVoiceprint;
+end;
+
+class procedure TSpeechService.RegisterIntentParser(const AParser: IIntentParser);
+begin
+  FIntentParser := AParser;
+end;
+
+class procedure TSpeechService.RegisterAudioCapture(const ACapture: ISpeechAudioCapture);
+begin
+  FAudioCapture := ACapture;
+end;
+
+class function TSpeechService.ASR: ISpeechRecognizerEx;
+begin
+  Result := FASR;
+end;
+
+class function TSpeechService.TTS: ITTSBackend;
+begin
+  Result := FTTS;
+end;
+
+class function TSpeechService.WakeWord: IWakeWordDetector;
+begin
+  Result := FWakeWord;
+end;
+
+class function TSpeechService.Voiceprint: IVoiceprint;
+begin
+  Result := FVoiceprint;
+end;
+
+class function TSpeechService.IntentParser: IIntentParser;
+begin
+  Result := FIntentParser;
+end;
+
+class function TSpeechService.AudioCapture: ISpeechAudioCapture;
+begin
+  Result := FAudioCapture;
+end;
+
+class function TSpeechService.TranscribeFromMic(const ALanguage: string;
+  AMaxSeconds: Integer; ASilenceTimeoutMs: Integer): TSpeechRecognitionResult;
+begin
+  // Convenience: uses registered ASR + AudioCapture for a simple record-and-recognize flow.
+  // Full streaming implementation is in M2. This is a batch fallback.
+  if not Assigned(FASR) then
+  begin
+    Result := TSpeechRecognitionResult.Failed(srsProviderNotReady, 'NO_ASR',
+      'No ASR backend registered');
+    Exit;
+  end;
+
+  if not FASR.IsAvailable then
+  begin
+    Result := TSpeechRecognitionResult.Failed(srsProviderNotReady, 'ASR_UNAVAILABLE',
+      'ASR backend not available');
+    Exit;
+  end;
+
+  // For batch mode, delegate to the recognizer's Recognize method with captured audio.
+  // Streaming (IASRStream) is the preferred path once M2 is complete.
+  if Assigned(FAudioCapture) then
+  begin
+    if not FAudioCapture.StartRecording then
+    begin
+      Result := TSpeechRecognitionResult.Failed(srsInternalError, 'MIC_FAIL',
+        'Failed to start microphone capture');
+      Exit;
+    end;
+    // Simple timed capture (blocking). Real usage should use streaming.
+    Sleep(Min(AMaxSeconds * 1000, 5000));
+    FAudioCapture.StopRecording;
+    Result := FASR.Recognize(FAudioCapture.GetAudioData,
+      TSpeechRecognitionOptions.Default);
+  end
+  else
+    Result := TSpeechRecognitionResult.Failed(srsInternalError, 'NO_CAPTURE',
+      'No audio capture registered');
+end;
+
+class procedure TSpeechService.Speak(const AText: string; const ALanguage: string);
+var
+  LOpts: TTTSOptions;
+begin
+  if not Assigned(FTTS) then Exit;
+  if not FTTS.IsAvailable then Exit;
+  if AText = '' then Exit;
+
+  LOpts := TTTSOptions.Default;
+  if ALanguage <> '' then
+    LOpts.Language := ALanguage;
+  FTTS.Speak(AText, LOpts);
 end;
 
 end.

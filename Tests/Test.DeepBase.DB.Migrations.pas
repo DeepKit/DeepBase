@@ -36,6 +36,15 @@ type
 
     [Test]
     procedure Test_Run_SQLite_FailedScriptRollsBackAndIsNotRecorded;
+
+    [Test]
+    procedure Test_Run_SQLite_TriggerBodyIsNotSplit;
+
+    [Test]
+    procedure Test_Run_SQLite_TransactionControlFails;
+
+    [Test]
+    procedure Test_Run_SQLite_WriteLockHeldFailsBeforeApplying;
   end;
 
 implementation
@@ -178,6 +187,7 @@ begin
 
   Assert.IsFalse(Result.Success);
   Assert.Contains(Result.LastError, 'checksum mismatch');
+  Assert.AreEqual('001_create_widgets.up.sqlite.sql', Result.FailedScript);
   Assert.AreEqual(0, Result.AppliedCount);
 end;
 
@@ -196,6 +206,80 @@ begin
   Assert.AreEqual(0,
     ScalarInt('SELECT COUNT(*) FROM DeepBase_schema_migrations'));
   Assert.IsFalse(TableExists('failed_table'));
+end;
+
+procedure TTestDBMigrations.Test_Run_SQLite_TriggerBodyIsNotSplit;
+var
+  Result: TMigrationResult;
+begin
+  WriteMigration('001_trigger.up.sqlite.sql',
+    'CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT);' + sLineBreak +
+    'CREATE TABLE widget_audit (id INTEGER);' + sLineBreak +
+    'CREATE TRIGGER trg_widgets_ai AFTER INSERT ON widgets' + sLineBreak +
+    'BEGIN' + sLineBreak +
+    '  INSERT INTO widget_audit (id) VALUES (new.id);' + sLineBreak +
+    'END;' + sLineBreak +
+    'INSERT INTO widgets (id, name) VALUES (1, ''alpha'');');
+
+  Result := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+
+  Assert.IsTrue(Result.Success, Result.LastError);
+  Assert.AreEqual(1, ScalarInt('SELECT COUNT(*) FROM widget_audit'));
+end;
+
+procedure TTestDBMigrations.Test_Run_SQLite_TransactionControlFails;
+var
+  Result: TMigrationResult;
+begin
+  WriteMigration('001_tx_control.up.sqlite.sql',
+    'BEGIN;' + sLineBreak +
+    'CREATE TABLE tx_test (id INTEGER PRIMARY KEY);' + sLineBreak +
+    'COMMIT;');
+
+  Result := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+
+  Assert.IsFalse(Result.Success);
+  Assert.AreEqual('001_tx_control.up.sqlite.sql', Result.FailedScript);
+  Assert.Contains(Result.LastError,
+    'Migration scripts must not contain transaction control statements');
+  Assert.AreEqual(0,
+    ScalarInt('SELECT COUNT(*) FROM DeepBase_schema_migrations'));
+  Assert.IsFalse(TableExists('tx_test'));
+end;
+
+procedure TTestDBMigrations.Test_Run_SQLite_WriteLockHeldFailsBeforeApplying;
+var
+  SeedResult: TMigrationResult;
+  Result: TMigrationResult;
+  LockConnection: TFDConnection;
+  RunConnection: TFDConnection;
+begin
+  SeedResult := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+  Assert.IsTrue(SeedResult.Success, SeedResult.LastError);
+
+  WriteMigration('001_locked.up.sqlite.sql',
+    'CREATE TABLE locked_test (id INTEGER PRIMARY KEY);');
+
+  LockConnection := CreateConnection;
+  RunConnection := CreateConnection;
+  try
+    RunConnection.ExecSQL('PRAGMA busy_timeout=100');
+    LockConnection.ExecSQL('BEGIN IMMEDIATE');
+    try
+      Result := TMigrationEngine.Run(RunConnection, dbSQLite, FMigrationsDir);
+
+      Assert.IsFalse(Result.Success);
+      Assert.AreEqual('001_locked.up.sqlite.sql', Result.FailedScript);
+      Assert.IsTrue(Result.LastError <> '', 'Lock failure must be reported');
+    finally
+      LockConnection.ExecSQL('ROLLBACK');
+    end;
+  finally
+    RunConnection.Free;
+    LockConnection.Free;
+  end;
+
+  Assert.IsFalse(TableExists('locked_test'));
 end;
 
 initialization

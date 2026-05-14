@@ -28,9 +28,9 @@ if (Test-Path $ToolsPath) {
 $Targets = $Targets | Sort-Object -Property FullName -Unique
 $Targets = $Targets | Where-Object { $_.FullName -ne $PSCommandPath }
 
-Write-Host "Checking rename residue in $($Targets.Count) files ..."
+Write-Host "Checking legacy rename residue in $($Targets.Count) files ..."
 
-$ViolationPattern = '\bDeepBase\b'
+$ViolationPattern = '\b(UniBase|UniFlow)\b'
 $Violations = New-Object System.Collections.Generic.List[string]
 
 foreach ($file in $Targets) {
@@ -43,12 +43,12 @@ foreach ($file in $Targets) {
 
 if ($Violations.Count -gt 0) {
     Write-Host ""
-    Write-Host "Rename residue detected (DeepBase keyword):" -ForegroundColor Red
+    Write-Host "Legacy rename residue detected (UniBase/UniFlow keyword):" -ForegroundColor Red
     foreach ($line in $Violations) {
         Write-Host "  $line" -ForegroundColor Red
     }
     exit 1
 }
 
-Write-Host "No DeepBase rename residue found in guarded files." -ForegroundColor Green
+Write-Host "No legacy rename residue found in guarded files." -ForegroundColor Green
 exit 0

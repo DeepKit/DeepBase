@@ -35,7 +35,7 @@
         <DCC_K>false</DCC_K>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
-        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\VCL;..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>DeepBaseTests</SanitizedProjectName>
         <VerInfo_Locale>2052</VerInfo_Locale>
@@ -92,6 +92,39 @@
         <DCCReference Include="..\Features\DeepBase.Speech.ASR.Baidu.pas"/>
         <DCCReference Include="..\Features\DeepBase.Speech.Service.pas"/>
         <DCCReference Include="Test.DeepBase.Speech.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Logging.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Types.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Interfaces.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Engine.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.IoC.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Provider.L0.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Provider.L1.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Provider.L2.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Provider.L3.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Provider.L4.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Session.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.SessionFSM.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Router.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.SignalDetector.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Budget.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Exit.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.OptionFrame.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Storage.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Metrics.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.FeatureConfig.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Templates.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Validation.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.LLMResilience.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Anticipation.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Degradation.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Moments.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Rapport.pas"/>
+        <DCCReference Include="..\Features\DeepBase.IntentClarification.Registration.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.Integration.pas"/>
+        <DCCReference Include="..\Features\DeepBase.BrowserAutomation.pas"/>
+        <DCCReference Include="Test.DeepBase.BrowserAutomation.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

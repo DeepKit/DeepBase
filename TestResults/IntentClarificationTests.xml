@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="20" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-05-14" time="08:48:22">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="08:48:22" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.322" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="IntentClarification" executed="true" result="Success" success="True" time="0.322" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="Integration" executed="true" result="Success" success="True" time="0.307" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TICIntegrationTest" executed="True" result="Success" success="True" time="0.001" >
+                            <results>
+                              <test-case name="Test_IoC_CreatesEngine" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FullSessionLifecycle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SessionStateTransitions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MultipleSubmits" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CancelSession" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MetricsRecorded" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FeatureConfig_DisablesLevels" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_TemplateValidation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TICResilienceIntegrationTest" executed="True" result="Success" success="True" time="0.306" >
+                            <results>
+                              <test-case name="Test_RetryOnFailure" executed="True" result="Success" success="True" time="0.305" asserts="0" />
+                              <test-case name="Test_CircuitBreakerOpens" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CircuitBreakerRecovery" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TICSessionFSMTest" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ValidTransitions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InvalidTransition" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SubmitIsInternal" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TimeoutSuspends" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TIntentClarificationTests" executed="True" result="Success" success="True" time="0.015" >
+                      <results>
+                        <test-case name="Test_Rule_MissingRequiredSlot_AsksQuestionWithOptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Rule_AllRequiredSlotsFilled_IsReady" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ApplyOptionAnswer_FillsSlotValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_LLM_JsonClarification_IsParsed" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                        <test-case name="Test_LLM_BadJson_FallsBackToRules" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

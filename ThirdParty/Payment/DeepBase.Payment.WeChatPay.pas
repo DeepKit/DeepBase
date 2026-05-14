@@ -5,10 +5,10 @@ unit DeepBase.Payment.WeChatPay;
 
   Supports:
     - Native支付 (扫码支付)
-    - JSAPI支付 (公众�?小程�?
+    - JSAPI支付 (公众�?小程�?
     - H5支付 (手机网页)
     - APP支付
-    - 退�?
+    - 退�?
 
   Official Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/
   API Version: V3
@@ -31,14 +31,14 @@ type
   /// <summary>WeChat Pay configuration</summary>
   TWeChatPayConfig = class(TPaymentConfig)
   private
-    FAppId: string;           // 公众�?小程�?AppID
-    FMchId: string;           // 商户�?
+    FAppId: string;           // 公众�?小程�?AppID
+    FMchId: string;           // 商户�?
     FApiKeyV3: string;        // APIv3 密钥
-    FSerialNo: string;        // 商户证书序列�?
+    FSerialNo: string;        // 商户证书序列�?
     FPrivateKey: string;      // 商户私钥 (PEM)
     FCertPath: string;        // 证书路径 (退款用)
-    FSubAppId: string;        // 子商�?AppID (服务商模�?
-    FSubMchId: string;        // 子商户号 (服务商模�?
+    FSubAppId: string;        // 子商�?AppID (服务商模�?
+    FSubMchId: string;        // 子商户号 (服务商模�?
     FWeChatPublicKey: string; // BUG-014 FIX: 微信平台公钥 (用于验签)
   public
     constructor Create; reintroduce;
@@ -1139,79 +1139,73 @@ begin
   ANotification.Provider := ppWeChatPay;
   ANotification.RawData := ARawData;
 
-  // BUG-100 FIX: 实现微信支付V3 Webhook通知解密
-  // 微信支付V3的通知是加密的，需要使用AES-256-GCM解密
-  
   Cfg := TWeChatPayConfig(FConfig);
+  JsonObj := nil;
+  DecryptedObj := nil;
 
   try
     JsonObj := TJSONObject.ParseJSONValue(ARawData) as TJSONObject;
     if not Assigned(JsonObj) then
       Exit;
 
-    try
-      EventType := JsonObj.GetValue<string>('event_type', '');
+    EventType := JsonObj.GetValue<string>('event_type', '');
+    ResourceObj := JsonObj.GetValue<TJSONObject>('resource');
+    if not Assigned(ResourceObj) then
+      Exit;
 
-      // 获取加密的resource字段
-      ResourceObj := JsonObj.GetValue<TJSONObject>('resource');
-      if not Assigned(ResourceObj) then
-        Exit;
-        
-      // BUG-100 FIX: 解密resource字段
-      // 获取解密所需的参�?
-      Ciphertext := ResourceObj.GetValue<string>('ciphertext', '');
-      Nonce := ResourceObj.GetValue<string>('nonce', '');
-      AssociatedData := ResourceObj.GetValue<string>('associated_data', '');
-      
-      if (Ciphertext <> '') and (Cfg.ApiKeyV3 <> '') then
-      begin
-        // 当前单元不直接绑定底�?AES-GCM 实现，解密失败按 fail-closed 处理
-        DecryptedData := '';
-        
-        if DecryptedData <> '' then
-        begin
-          DecryptedObj := TJSONObject.ParseJSONValue(DecryptedData) as TJSONObject;
-          if Assigned(DecryptedObj) then
-          begin
-            ResourceObj.Free;
-            ResourceObj := DecryptedObj;
-          end;
-        end;
-      end;
+    Ciphertext := ResourceObj.GetValue<string>('ciphertext', '');
+    Nonce := ResourceObj.GetValue<string>('nonce', '');
+    AssociatedData := ResourceObj.GetValue<string>('associated_data', '');
 
-      if EventType = 'TRANSACTION.SUCCESS' then
-      begin
-        ANotification.OrderNo := ResourceObj.GetValue<string>('out_trade_no', '');
-        ANotification.TradeNo := ResourceObj.GetValue<string>('transaction_id', '');
-        ANotification.Status := psSuccess;
+    if Ciphertext = '' then
+      Exit;
+    if (Cfg.ApiKeyV3 = '') or (Nonce = '') then
+      Exit;
 
-        AmountObj := ResourceObj.GetValue<TJSONObject>('amount');
-        if Assigned(AmountObj) then
-          ANotification.Amount := AmountObj.GetValue<Int64>('total', 0) / 100;
+    DecryptedData := TPaymentHelper.AES256GCMDecrypt(
+      Ciphertext, Cfg.ApiKeyV3, Nonce, AssociatedData);
+    if DecryptedData = '' then
+      Exit;
 
-        Result := True;
-      end
-      else if EventType = 'REFUND.SUCCESS' then
-      begin
-        ANotification.OrderNo := ResourceObj.GetValue<string>('out_trade_no', '');
-        ANotification.RefundNo := ResourceObj.GetValue<string>('out_refund_no', '');
-        ANotification.RefundTradeNo := ResourceObj.GetValue<string>('refund_id', '');
-        ANotification.RefundStatus := psRefunded;
+    DecryptedObj := TJSONObject.ParseJSONValue(DecryptedData) as TJSONObject;
+    if not Assigned(DecryptedObj) then
+      Exit;
+    ResourceObj := DecryptedObj;
 
-        AmountObj := ResourceObj.GetValue<TJSONObject>('amount');
-        if Assigned(AmountObj) then
-          ANotification.RefundAmount := AmountObj.GetValue<Int64>('refund', 0) / 100;
+    if EventType = 'TRANSACTION.SUCCESS' then
+    begin
+      ANotification.OrderNo := ResourceObj.GetValue<string>('out_trade_no', '');
+      ANotification.TradeNo := ResourceObj.GetValue<string>('transaction_id', '');
+      ANotification.Status := psSuccess;
 
-        Result := True;
-      end;
-    finally
-      JsonObj.Free;
+      AmountObj := ResourceObj.GetValue<TJSONObject>('amount');
+      if Assigned(AmountObj) then
+        ANotification.Amount := AmountObj.GetValue<Int64>('total', 0) / 100;
+
+      Result := (ANotification.OrderNo <> '') and
+        (ANotification.TradeNo <> '');
+    end
+    else if EventType = 'REFUND.SUCCESS' then
+    begin
+      ANotification.OrderNo := ResourceObj.GetValue<string>('out_trade_no', '');
+      ANotification.RefundNo := ResourceObj.GetValue<string>('out_refund_no', '');
+      ANotification.RefundTradeNo := ResourceObj.GetValue<string>('refund_id', '');
+      ANotification.RefundStatus := psRefunded;
+
+      AmountObj := ResourceObj.GetValue<TJSONObject>('amount');
+      if Assigned(AmountObj) then
+        ANotification.RefundAmount := AmountObj.GetValue<Int64>('refund', 0) / 100;
+
+      Result := (ANotification.OrderNo <> '') and
+        (ANotification.RefundNo <> '');
     end;
   except
     Result := False;
   end;
-end;
 
+  DecryptedObj.Free;
+  JsonObj.Free;
+end;
 function TWeChatPayClient.GetNotificationResponse(ASuccess: Boolean): string;
 var
   Resp: TJSONObject;

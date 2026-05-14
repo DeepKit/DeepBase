@@ -308,6 +308,26 @@ implementation
 uses
   System.DateUtils, System.Diagnostics;
 
+function BuildSafeZipExtractPath(const ARootDir, AEntryName: string): string;
+var
+  RootDir: string;
+  EntryName: string;
+begin
+  EntryName := StringReplace(AEntryName, '/', PathDelim, [rfReplaceAll]);
+  EntryName := StringReplace(EntryName, '\', PathDelim, [rfReplaceAll]);
+
+  if (EntryName = '') or (ExtractFileDrive(EntryName) <> '') or
+     EntryName.StartsWith(PathDelim) or EntryName.StartsWith('/') or
+     EntryName.StartsWith('\') then
+    raise ECompressionException.CreateFmt('Unsafe ZIP entry path: %s', [AEntryName]);
+
+  RootDir := IncludeTrailingPathDelimiter(TPath.GetFullPath(ARootDir));
+  Result := TPath.GetFullPath(TPath.Combine(RootDir, EntryName));
+
+  if not SameText(Copy(Result, 1, Length(RootDir)), RootDir) then
+    raise ECompressionException.CreateFmt('ZIP entry escapes destination directory: %s', [AEntryName]);
+end;
+
 { TCompressionStats }
 
 function TCompressionStats.ToString: string;
@@ -435,20 +455,26 @@ var
   I: Integer;
   LEntry: TZipEntryInfo;
   LDestPath: string;
+  LStream: TFileStream;
   LCancel: Boolean;
 begin
   LCancel := False;
   for I := 0 to FEntries.Count - 1 do
   begin
     LEntry := FEntries[I];
-    LDestPath := TPath.Combine(ADestDir, LEntry.FileName.Replace('/', PathDelim));
+    LDestPath := BuildSafeZipExtractPath(ADestDir, LEntry.FileName);
     
     if LEntry.IsDirectory then
       ForceDirectories(LDestPath)
     else
     begin
       ForceDirectories(ExtractFilePath(LDestPath));
-      FZipFile.Extract(I, ADestDir);
+      LStream := TFileStream.Create(LDestPath, fmCreate);
+      try
+        ExtractToStream(I, LStream);
+      finally
+        LStream.Free;
+      end;
     end;
     
     if Assigned(AProgress) then

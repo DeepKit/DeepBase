@@ -191,6 +191,9 @@ implementation
 
 uses
   System.DateUtils, System.IOUtils,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   FireDAC.Comp.Client;
 
 { TSQLLogger }
@@ -481,19 +484,19 @@ begin
     try
       Query.Connection := Conn;
       Query.SQL.Text := 
-        'INSERT INTO Logs (Level, Source, Message, Timestamp, SessionId, MachineName, Extra) ' +
-        'VALUES (:Level, :Source, :Message, :Timestamp, :SessionId, :MachineName, :Extra)';
+        'INSERT INTO Logs (LogLevel, Source, Message, LogTime, SessionId, MachineName, Extra) ' +
+        'VALUES (:LogLevel, :Source, :Message, :LogTime, :SessionId, :MachineName, :Extra)';
       
       case AEntry.LogLevel of
-        sllDebug: Query.ParamByName('Level').AsString := 'DEBUG';
-        sllInfo:  Query.ParamByName('Level').AsString := 'INFO';
-        sllWarn:  Query.ParamByName('Level').AsString := 'WARN';
-        sllError: Query.ParamByName('Level').AsString := 'ERROR';
+        sllDebug: Query.ParamByName('LogLevel').AsString := 'DEBUG';
+        sllInfo:  Query.ParamByName('LogLevel').AsString := 'INFO';
+        sllWarn:  Query.ParamByName('LogLevel').AsString := 'WARN';
+        sllError: Query.ParamByName('LogLevel').AsString := 'ERROR';
       end;
       
       Query.ParamByName('Source').AsString := 'SQL';
       Query.ParamByName('Message').AsString := Copy(AEntry.SQL, 1, 500);
-      Query.ParamByName('Timestamp').AsDateTime := AEntry.Timestamp;
+      Query.ParamByName('LogTime').AsDateTime := AEntry.Timestamp;
       Query.ParamByName('SessionId').AsString := AEntry.SessionId;
       Query.ParamByName('MachineName').AsString := '';
       
@@ -508,7 +511,12 @@ begin
       
       Query.ExecSQL;
     except
-      // Ignore database write errors to prevent recursion
+      on E: Exception do
+      begin
+        {$IFDEF MSWINDOWS}
+        OutputDebugString(PChar('DeepBase.SQLLogger database write failed: ' + E.Message));
+        {$ENDIF}
+      end;
     end;
   finally
     Query.Free;

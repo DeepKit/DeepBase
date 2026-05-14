@@ -574,7 +574,7 @@ var
   Conn: TFDConnection;
   DBType: TUniDBType;
   Ctx: TUniQueryContext;
-  Data: TClientDataSet;
+  Data: TFDMemTable;
   RowCount: Integer;
   I, Col: Integer;
   Line: string;
@@ -615,7 +615,7 @@ begin
 
     if AIsSelect then
     begin
-      Data := TClientDataSet.Create(nil);
+      Data := TFDMemTable.Create(nil);
       RowCount := UniDbSelect(ProcName, ParamsJson, Data, Ctx);
       mmoDQResult.Lines.Add(Format('Rows: %d', [RowCount]));
       mmoDQResult.Lines.Add('');

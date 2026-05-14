@@ -1,0 +1,43 @@
+package DeepBaseSpeechCore;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Speech Core - Registry, Config, Policy, Runtime, Schema'}
+{$RUNONLY}
+
+requires
+  rtl,
+  DeepBaseCore;
+
+contains
+  DeepBase.Speech.Registry in 'Features\DeepBase.Speech.Registry.pas',
+  DeepBase.Speech.Config in 'Features\DeepBase.Speech.Config.pas',
+  DeepBase.Speech.Policy in 'Features\DeepBase.Speech.Policy.pas',
+  DeepBase.Speech.Runtime in 'Features\DeepBase.Speech.Runtime.pas',
+  DeepBase.Speech.Schema in 'Features\DeepBase.Speech.Schema.pas',
+  DeepBase.Speech.Intent in 'Features\DeepBase.Speech.Intent.pas';
+
+end.

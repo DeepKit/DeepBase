@@ -78,3 +78,7 @@ backup/
 # Development machine-specific root.txt (points to project root path)
 root.txt
 **/root.txt
+
+# Local secrets and deployment credentials
+.env
+**/.env

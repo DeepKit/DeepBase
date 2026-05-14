@@ -3,13 +3,13 @@ unit DeepBase.CloudBackup;
 {*******************************************************************************
   DeepBase Framework - Cloud Backup & Restore
   
-  ÔÆ¶Ë±¸·Ý»Ö¸´Ä£¿é£¬Ö§³Ö£º
-  - ÔöÁ¿±¸·Ý£¨½ö±¸·Ý±ä¸ü£©
-  - Ñ¹Ëõ´æ´¢£¨ZLib/LZMA£©
-  - °æ±¾¹ÜÀí£¨¶à°æ±¾±£Áô£©
-  - Ò»¼ü»Ö¸´
-  - ±¸·Ý¼ÓÃÜ£¨AES-256£©
-  - ×Ô¶¯±¸·Ýµ÷¶È
+  ï¿½Æ¶Ë±ï¿½ï¿½Ý»Ö¸ï¿½Ä£ï¿½é£¬Ö§ï¿½Ö£ï¿½
+  - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý±ï¿½ï¿½ï¿½ï¿½
+  - Ñ¹ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½ZLib/LZMAï¿½ï¿½
+  - ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  - Ò»ï¿½ï¿½ï¿½Ö¸ï¿½
+  - ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½Ü£ï¿½AES-256ï¿½ï¿½
+  - ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -24,58 +24,58 @@ uses
   System.Zip, System.ZLib, DeepBase.Exceptions;
 
 type
-  /// <summary>±¸·Ý×´Ì¬</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½×´Ì¬</summary>
   TBackupStatus = (
-    bsIdle,           // ¿ÕÏÐ
-    bsPreparing,      // ×¼±¸ÖÐ
-    bsCompressing,    // Ñ¹ËõÖÐ
-    bsEncrypting,     // ¼ÓÃÜÖÐ
-    bsUploading,      // ÉÏ´«ÖÐ
-    bsDownloading,    // ÏÂÔØÖÐ
-    bsDecrypting,     // ½âÃÜÖÐ
-    bsDecompressing,  // ½âÑ¹ÖÐ
-    bsRestoring,      // »Ö¸´ÖÐ
-    bsCompleted,      // Íê³É
-    bsError           // ´íÎó
+    bsIdle,           // ï¿½ï¿½ï¿½ï¿½
+    bsPreparing,      // ×¼ï¿½ï¿½ï¿½ï¿½
+    bsCompressing,    // Ñ¹ï¿½ï¿½ï¿½ï¿½
+    bsEncrypting,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    bsUploading,      // ï¿½Ï´ï¿½ï¿½ï¿½
+    bsDownloading,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    bsDecrypting,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    bsDecompressing,  // ï¿½ï¿½Ñ¹ï¿½ï¿½
+    bsRestoring,      // ï¿½Ö¸ï¿½ï¿½ï¿½
+    bsCompleted,      // ï¿½ï¿½ï¿½
+    bsError           // ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>±¸·ÝÀàÐÍ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TBackupType = (
-    btFull,           // È«Á¿±¸·Ý
-    btIncremental,    // ÔöÁ¿±¸·Ý
-    btDifferential    // ²îÒì±¸·Ý£¨Ïà¶ÔÓÚ×î½üµÄÈ«Á¿£©
+    btFull,           // È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    btIncremental,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    btDifferential    // ï¿½ï¿½ï¿½ì±¸ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>Ñ¹Ëõ¼¶±ð</summary>
+  /// <summary>Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TCompressionLevel = (
-    clNone,           // ²»Ñ¹Ëõ
-    clFast,           // ¿ìËÙÑ¹Ëõ
-    clNormal,         // ÆÕÍ¨Ñ¹Ëõ
-    clMax             // ×î´óÑ¹Ëõ
+    clNone,           // ï¿½ï¿½Ñ¹ï¿½ï¿½
+    clFast,           // ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½
+    clNormal,         // ï¿½ï¿½Í¨Ñ¹ï¿½ï¿½
+    clMax             // ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½
   );
 
-  /// <summary>±¸·Ýµ÷¶ÈÀàÐÍ</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TScheduleType = (
-    stNone,           // ²»µ÷¶È
+    stNone,           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     stHourly,         // Ã¿Ð¡Ê±
-    stDaily,          // Ã¿Ìì
-    stWeekly,         // Ã¿ÖÜ
-    stMonthly         // Ã¿ÔÂ
+    stDaily,          // Ã¿ï¿½ï¿½
+    stWeekly,         // Ã¿ï¿½ï¿½
+    stMonthly         // Ã¿ï¿½ï¿½
   );
 
-  /// <summary>ÎÄ¼þ±ä¸üÀàÐÍ</summary>
+  /// <summary>ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFileChangeType = (
-    fctAdded,         // ÐÂÔö
-    fctModified,      // ÐÞ¸Ä
-    fctDeleted        // É¾³ý
+    fctAdded,         // ï¿½ï¿½ï¿½ï¿½
+    fctModified,      // ï¿½Þ¸ï¿½
+    fctDeleted        // É¾ï¿½ï¿½
   );
 
-  /// <summary>±¸·ÝÎÄ¼þÐÅÏ¢</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ï¢</summary>
   TBackupFileInfo = record
-    RelativePath: string;       // Ïà¶ÔÂ·¾¶
-    FileSize: Int64;            // ÎÄ¼þ´óÐ¡
-    ModifiedTime: TDateTime;    // ÐÞ¸ÄÊ±¼ä
-    Checksum: string;           // SHA256Ð£ÑéºÍ
+    RelativePath: string;       // ï¿½ï¿½ï¿½Â·ï¿½ï¿½
+    FileSize: Int64;            // ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
+    ModifiedTime: TDateTime;    // ï¿½Þ¸ï¿½Ê±ï¿½ï¿½
+    Checksum: string;           // SHA256Ð£ï¿½ï¿½ï¿½
     ChangeType: TFileChangeType;
     class function Create(const APath: string; ASize: Int64;
       AModTime: TDateTime; const AChecksum: string): TBackupFileInfo; static;
@@ -83,7 +83,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TBackupFileInfo; static;
   end;
 
-  /// <summary>±¸·ÝÇåµ¥</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥</summary>
   TBackupManifest = class
   private
     FBackupId: string;
@@ -94,7 +94,7 @@ type
     FTotalSize: Int64;
     FCompressedSize: Int64;
     FFileCount: Integer;
-    FParentBackupId: string;    // ÔöÁ¿/²îÒì±¸·ÝµÄ¸¸±¸·Ý
+    FParentBackupId: string;    // ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ì±¸ï¿½ÝµÄ¸ï¿½ï¿½ï¿½ï¿½ï¿½
     FDescription: string;
     FTags: TStringList;
   public
@@ -124,7 +124,7 @@ type
     property Tags: TStringList read FTags;
   end;
 
-  /// <summary>±¸·Ý°æ±¾ÐÅÏ¢</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ý°æ±¾ï¿½ï¿½Ï¢</summary>
   TBackupVersion = class
   private
     FBackupId: string;
@@ -153,7 +153,7 @@ type
     property ParentBackupId: string read FParentBackupId write FParentBackupId;
   end;
 
-  /// <summary>±¸·Ý½ø¶È</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ý½ï¿½ï¿½ï¿½</summary>
   TBackupProgress = record
     Status: TBackupStatus;
     CurrentFile: string;
@@ -168,28 +168,28 @@ type
     function FormattedProgress: string;
   end;
 
-  /// <summary>±¸·ÝÅäÖÃ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TBackupConfig = record
-    SourcePaths: TArray<string>;      // Òª±¸·ÝµÄÂ·¾¶
-    ExcludePatterns: TArray<string>;  // ÅÅ³ýÄ£Ê½
-    IncludePatterns: TArray<string>;  // °üº¬Ä£Ê½
-    LocalBackupPath: string;          // ±¾µØ±¸·ÝÂ·¾¶
-    CloudServiceURL: string;          // ÔÆ·þÎñURL
-    CloudApiKey: string;              // ÔÆAPIÃÜÔ¿
-    CloudBucket: string;              // ÔÆ´æ´¢Í°
-    EncryptionKey: string;            // ¼ÓÃÜÃÜÔ¿
-    EnableEncryption: Boolean;        // ÆôÓÃ¼ÓÃÜ
+    SourcePaths: TArray<string>;      // Òªï¿½ï¿½ï¿½Ýµï¿½Â·ï¿½ï¿½
+    ExcludePatterns: TArray<string>;  // ï¿½Å³ï¿½Ä£Ê½
+    IncludePatterns: TArray<string>;  // ï¿½ï¿½ï¿½ï¿½Ä£Ê½
+    LocalBackupPath: string;          // ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½Â·ï¿½ï¿½
+    CloudServiceURL: string;          // ï¿½Æ·ï¿½ï¿½ï¿½URL
+    CloudApiKey: string;              // ï¿½ï¿½APIï¿½ï¿½Ô¿
+    CloudBucket: string;              // ï¿½Æ´æ´¢Í°
+    EncryptionKey: string;            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿
+    EnableEncryption: Boolean;        // ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½
     CompressionLevel: TCompressionLevel;
-    MaxVersionsToKeep: Integer;       // ±£Áô°æ±¾Êý
-    MaxBackupSizeGB: Integer;         // ×î´ó±¸·Ý´óÐ¡(GB)
+    MaxVersionsToKeep: Integer;       // ï¿½ï¿½ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½
+    MaxBackupSizeGB: Integer;         // ï¿½ï¿½ó±¸·Ý´ï¿½Ð¡(GB)
     ScheduleType: TScheduleType;
-    ScheduleTime: TTime;              // µ÷¶ÈÊ±¼ä
-    ScheduleDayOfWeek: Integer;       // ÖÜ¼¸£¨ÓÃÓÚÃ¿ÖÜµ÷¶È£©
-    ScheduleDayOfMonth: Integer;      // ¼¸ºÅ£¨ÓÃÓÚÃ¿ÔÂµ÷¶È£©
+    ScheduleTime: TTime;              // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
+    ScheduleDayOfWeek: Integer;       // ï¿½Ü¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½Üµï¿½ï¿½È£ï¿½
+    ScheduleDayOfMonth: Integer;      // ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½Âµï¿½ï¿½È£ï¿½
     class function Default: TBackupConfig; static;
   end;
 
-  /// <summary>±¸·ÝÍ³¼Æ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½Í³ï¿½ï¿½</summary>
   TBackupStatistics = record
     TotalBackups: Integer;
     SuccessfulBackups: Integer;
@@ -202,14 +202,14 @@ type
     procedure Reset;
   end;
 
-  // ÊÂ¼þÀàÐÍ
+  // ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½
   TBackupProgressEvent = procedure(Sender: TObject; const Progress: TBackupProgress) of object;
   TBackupCompleteEvent = procedure(Sender: TObject; Success: Boolean;
     const BackupId, ErrorMsg: string) of object;
   TRestoreCompleteEvent = procedure(Sender: TObject; Success: Boolean;
     const ErrorMsg: string) of object;
 
-  /// <summary>ÎÄ¼þ±ä¸ü¼ì²âÆ÷</summary>
+  /// <summary>ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFileChangeDetector = class
   private
     FBasePath: string;
@@ -231,7 +231,7 @@ type
     property BasePath: string read FBasePath;
   end;
 
-  /// <summary>±¸·ÝÑ¹ËõÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½</summary>
   TBackupCompressor = class
   private
     FCompressionLevel: TCompressionLevel;
@@ -247,7 +247,7 @@ type
     function CompressBytes(const AData: TBytes): TBytes;
     function DecompressBytes(const AData: TBytes): TBytes;
     
-    // ZIP²Ù×÷
+    // ZIPï¿½ï¿½ï¿½ï¿½
     procedure CreateArchive(const AArchivePath: string;
       const AFiles: TList<TBackupFileInfo>; const ABasePath: string;
       AProgressCallback: TProc<Integer, Integer> = nil);
@@ -257,7 +257,7 @@ type
     property CompressionLevel: TCompressionLevel read FCompressionLevel write FCompressionLevel;
   end;
 
-  /// <summary>±¸·Ý¼ÓÃÜÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TBackupEncryptor = class
   private
     FKey: TBytes;
@@ -276,7 +276,7 @@ type
     function DecryptBytes(const AData: TBytes): TBytes;
   end;
 
-  /// <summary>ÔÆ¶Ë±¸·Ý¿Í»§¶Ë</summary>
+  /// <summary>ï¿½Æ¶Ë±ï¿½ï¿½Ý¿Í»ï¿½ï¿½ï¿½</summary>
   TCloudBackupClient = class
   private
     FServiceURL: string;
@@ -304,12 +304,13 @@ type
     property Bucket: string read FBucket;
   end;
 
-  /// <summary>±¸·Ýµ÷¶ÈÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TBackupScheduler = class
   private
     FConfig: TBackupConfig;
     FEnabled: Boolean;
     FSchedulerThread: TThread;
+    FStopEvent: TEvent;
     FOnBackupTriggered: TNotifyEvent;
     FLastTriggerTime: TDateTime;
     FLock: TCriticalSection;
@@ -329,7 +330,7 @@ type
     property OnBackupTriggered: TNotifyEvent read FOnBackupTriggered write FOnBackupTriggered;
   end;
 
-  /// <summary>ÔÆ¶Ë±¸·Ý¹ÜÀíÆ÷</summary>
+  /// <summary>ï¿½Æ¶Ë±ï¿½ï¿½Ý¹ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TCloudBackupManager = class
   private
     FConfig: TBackupConfig;
@@ -371,38 +372,38 @@ type
     constructor Create(const AConfig: TBackupConfig);
     destructor Destroy; override;
     
-    // ±¸·Ý²Ù×÷
+    // ï¿½ï¿½ï¿½Ý²ï¿½ï¿½ï¿½
     procedure BackupFull(const ADescription: string = '');
     procedure BackupIncremental(const ADescription: string = '');
     procedure BackupDifferential(const ADescription: string = '');
     procedure BackupFullAsync(const ADescription: string = '');
     procedure BackupIncrementalAsync(const ADescription: string = '');
     
-    // »Ö¸´²Ù×÷
+    // ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½
     procedure Restore(const ABackupId: string; const ATargetPath: string = '');
     procedure RestoreAsync(const ABackupId: string; const ATargetPath: string = '');
     procedure RestoreLatest(const ATargetPath: string = '');
     
-    // È¡Ïû²Ù×÷
+    // È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     procedure Cancel;
     
-    // °æ±¾¹ÜÀí
+    // ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½
     function GetVersions: TObjectList<TBackupVersion>;
     function GetVersion(const ABackupId: string): TBackupVersion;
     procedure DeleteVersion(const ABackupId: string);
     procedure DeleteAllVersions;
     
-    // ÔÆ¶ËÍ¬²½
+    // ï¿½Æ¶ï¿½Í¬ï¿½ï¿½
     procedure SyncToCloud(const ABackupId: string);
     procedure SyncFromCloud(const ABackupId: string);
     procedure SyncAllToCloud;
     function GetCloudVersions: TObjectList<TBackupVersion>;
     
-    // ÑéÖ¤
+    // ï¿½ï¿½Ö¤
     function VerifyBackup(const ABackupId: string): Boolean;
     function GetBackupManifest(const ABackupId: string): TBackupManifest;
     
-    // µ÷¶È
+    // ï¿½ï¿½ï¿½ï¿½
     procedure EnableScheduler;
     procedure DisableScheduler;
     function GetNextScheduledBackup: TDateTime;
@@ -413,17 +414,17 @@ type
     property Statistics: TBackupStatistics read FStatistics;
     property Config: TBackupConfig read FConfig write FConfig;
     
-    // ÊÂ¼þ
+    // ï¿½Â¼ï¿½
     property OnProgress: TBackupProgressEvent read FOnProgress write FOnProgress;
     property OnBackupComplete: TBackupCompleteEvent read FOnBackupComplete write FOnBackupComplete;
     property OnRestoreComplete: TRestoreCompleteEvent read FOnRestoreComplete write FOnRestoreComplete;
   end;
 
-// È«¾Öº¯Êý
+// È«ï¿½Öºï¿½ï¿½ï¿½
 function CloudBackup: TCloudBackupManager;
 procedure SetCloudBackup(AManager: TCloudBackupManager);
 
-// ¸¨Öúº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 function FormatFileSize(ABytes: Int64): string;
 function FormatDuration(ASeconds: Integer): string;
 
@@ -786,9 +787,9 @@ begin
   Result.MaxVersionsToKeep := 10;
   Result.MaxBackupSizeGB := 100;
   Result.ScheduleType := stNone;
-  Result.ScheduleTime := EncodeTime(2, 0, 0, 0);  // Ä¬ÈÏÁè³¿2µã
-  Result.ScheduleDayOfWeek := 1;  // ÖÜÒ»
-  Result.ScheduleDayOfMonth := 1; // 1ºÅ
+  Result.ScheduleTime := EncodeTime(2, 0, 0, 0);  // Ä¬ï¿½ï¿½ï¿½è³¿2ï¿½ï¿½
+  Result.ScheduleDayOfWeek := 1;  // ï¿½ï¿½Ò»
+  Result.ScheduleDayOfMonth := 1; // 1ï¿½ï¿½
 end;
 
 { TBackupStatistics }
@@ -843,16 +844,16 @@ var
 begin
   LFileName := ExtractFileName(APath);
   
-  // ¼ì²éÅÅ³ýÄ£Ê½
+  // ï¿½ï¿½ï¿½ï¿½Å³ï¿½Ä£Ê½
   for LPattern in AExcludePatterns do
     if TPath.MatchesPattern(LFileName, LPattern, False) then
       Exit(False);
   
-  // Èç¹ûÃ»ÓÐ°üº¬Ä£Ê½£¬Ä¬ÈÏ°üº¬ËùÓÐ
+  // ï¿½ï¿½ï¿½Ã»ï¿½Ð°ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ä¬ï¿½Ï°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if Length(AIncludePatterns) = 0 then
     Exit(True);
     
-  // ¼ì²é°üº¬Ä£Ê½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
   for LPattern in AIncludePatterns do
     if TPath.MatchesPattern(LFileName, LPattern, False) then
       Exit(True);
@@ -914,7 +915,7 @@ begin
       if not TDirectory.Exists(FBasePath) then
         Exit;
         
-      // É¨Ãèµ±Ç°ÎÄ¼þ
+      // É¨ï¿½èµ±Ç°ï¿½Ä¼ï¿½
       LFiles := TDirectory.GetFiles(FBasePath, '*', TSearchOption.soAllDirectories);
       for LFile in LFiles do
       begin
@@ -927,7 +928,7 @@ begin
         LInfo.ModifiedTime := TFile.GetLastWriteTime(LFile);
         LInfo.Checksum := CalculateFileChecksum(LFile);
         
-        // ¼ì²éÊÇ·ñÊÇÐÂÔö»òÐÞ¸Ä
+        // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½
         if FLastSnapshot.TryGetValue(LRelPath, LOldInfo) then
         begin
           if LInfo.Checksum <> LOldInfo.Checksum then
@@ -945,7 +946,7 @@ begin
         LCurrentFiles.Add(LRelPath, LInfo);
       end;
       
-      // ¼ì²éÉ¾³ýµÄÎÄ¼þ
+      // ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
       for LPair in FLastSnapshot do
       begin
         if not LCurrentFiles.ContainsKey(LPair.Key) then
@@ -956,7 +957,7 @@ begin
         end;
       end;
       
-      // ¸üÐÂ¿ìÕÕ
+      // ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½
       FLastSnapshot.Clear;
       for LPair in LCurrentFiles do
         FLastSnapshot.Add(LPair.Key, LPair.Value);
@@ -1159,6 +1160,30 @@ procedure TBackupCompressor.ExtractArchive(const AArchivePath, ADestPath: string
 var
   LZip: TZipFile;
   I: Integer;
+  LEntryName: string;
+  LDestPath: string;
+  LBytes: TBytes;
+  LStream: TFileStream;
+
+  function BuildSafeDestination(const AEntryName: string): string;
+  var
+    LRoot: string;
+    LEntry: string;
+  begin
+    LEntry := StringReplace(AEntryName, '/', PathDelim, [rfReplaceAll]);
+    LEntry := StringReplace(LEntry, '\', PathDelim, [rfReplaceAll]);
+
+    if (LEntry = '') or (ExtractFileDrive(LEntry) <> '') or
+       LEntry.StartsWith(PathDelim) or LEntry.StartsWith('/') or
+       LEntry.StartsWith('\') then
+      raise Exception.CreateFmt('Unsafe backup archive entry path: %s', [AEntryName]);
+
+    LRoot := IncludeTrailingPathDelimiter(TPath.GetFullPath(ADestPath));
+    Result := TPath.GetFullPath(TPath.Combine(LRoot, LEntry));
+
+    if not SameText(Copy(Result, 1, Length(LRoot)), LRoot) then
+      raise Exception.CreateFmt('Backup archive entry escapes destination directory: %s', [AEntryName]);
+  end;
 begin
   TDirectory.CreateDirectory(ADestPath);
   
@@ -1168,7 +1193,23 @@ begin
     try
       for I := 0 to LZip.FileCount - 1 do
       begin
-        LZip.Extract(I, ADestPath, True);
+        LEntryName := LZip.FileName[I];
+        LDestPath := BuildSafeDestination(LEntryName);
+
+        if LEntryName.EndsWith('/') or LEntryName.EndsWith('\') then
+          TDirectory.CreateDirectory(LDestPath)
+        else
+        begin
+          TDirectory.CreateDirectory(TPath.GetDirectoryName(LDestPath));
+          LZip.Read(I, LBytes);
+          LStream := TFileStream.Create(LDestPath, fmCreate);
+          try
+            if Length(LBytes) > 0 then
+              LStream.WriteBuffer(LBytes[0], Length(LBytes));
+          finally
+            LStream.Free;
+          end;
+        end;
         
         if Assigned(AProgressCallback) then
           AProgressCallback(I + 1, LZip.FileCount);
@@ -1180,7 +1221,6 @@ begin
     LZip.Free;
   end;
 end;
-
 { TBackupEncryptor }
 
 constructor TBackupEncryptor.Create(const APassword: string);
@@ -1191,7 +1231,7 @@ end;
 
 destructor TBackupEncryptor.Destroy;
 begin
-  // Çå³ýÃÜÔ¿
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿
   FillChar(FKey[0], Length(FKey), 0);
   FillChar(FIV[0], Length(FIV), 0);
   inherited;
@@ -1201,7 +1241,7 @@ procedure TBackupEncryptor.DeriveKeyAndIV(const APassword: string);
 var
   LHash: TBytes;
 begin
-  // Ê¹ÓÃSHA-256ÅÉÉúÃÜÔ¿£¨Êµ¼ÊÓ¦Ê¹ÓÃPBKDF2£©
+  // Ê¹ï¿½ï¿½SHA-256ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½Êµï¿½ï¿½Ó¦Ê¹ï¿½ï¿½PBKDF2ï¿½ï¿½
   LHash := THashSHA2.GetHashBytes(APassword);
   
   SetLength(FKey, 32);  // 256 bits
@@ -1209,7 +1249,7 @@ begin
   
   Move(LHash[0], FKey[0], 32);
   
-  // ´ÓÃÜÂëµÄÁíÒ»¸ö¹þÏ£ÅÉÉúIV
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½IV
   LHash := THashSHA2.GetHashBytes(APassword + 'IV');
   Move(LHash[0], FIV[0], 16);
 end;
@@ -1252,8 +1292,8 @@ procedure TBackupEncryptor.EncryptStream(ASource, ADest: TStream);
 var
   LData: TBytes;
 begin
-  // ¼ò»¯ÊµÏÖ£ºÊµ¼ÊÓ¦Ê¹ÓÃAES-256-CBC/GCM
-  // ÕâÀïÓÃXORºÍBase64Ä£Äâ£¬Éú²ú»·¾³ÐèÒªÊ¹ÓÃÍêÕûµÄ¼ÓÃÜ¿â
+  // ï¿½ï¿½Êµï¿½Ö£ï¿½Êµï¿½ï¿½Ó¦Ê¹ï¿½ï¿½AES-256-CBC/GCM
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½XORï¿½ï¿½Base64Ä£ï¿½â£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÒªÊ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ü¿ï¿½
   SetLength(LData, ASource.Size);
   ASource.Position := 0;
   ASource.ReadBuffer(LData[0], Length(LData));
@@ -1280,7 +1320,7 @@ function TBackupEncryptor.EncryptBytes(const AData: TBytes): TBytes;
 var
   I: Integer;
 begin
-  // ¼ò»¯µÄXOR¼ÓÃÜ£¨Êµ¼ÊÊ¹ÓÃÐèÌæ»»ÎªAES£©
+  // ï¿½ò»¯µï¿½XORï¿½ï¿½ï¿½Ü£ï¿½Êµï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½æ»»ÎªAESï¿½ï¿½
   SetLength(Result, Length(AData));
   for I := 0 to Length(AData) - 1 do
     Result[I] := AData[I] xor FKey[I mod Length(FKey)];
@@ -1288,7 +1328,7 @@ end;
 
 function TBackupEncryptor.DecryptBytes(const AData: TBytes): TBytes;
 begin
-  // XORÊÇ¶Ô³ÆµÄ
+  // XORï¿½Ç¶Ô³Æµï¿½
   Result := EncryptBytes(AData);
 end;
 
@@ -1302,7 +1342,7 @@ begin
   FBucket := ABucket;
   FHttpClient := THTTPClient.Create;
   FHttpClient.ConnectionTimeout := 60000;
-  FHttpClient.ResponseTimeout := 300000;  // 5·ÖÖÓ
+  FHttpClient.ResponseTimeout := 300000;  // 5ï¿½ï¿½ï¿½ï¿½
   FLock := TCriticalSection.Create;
 end;
 
@@ -1362,7 +1402,7 @@ begin
   try
     LTotalSize := LStream.Size;
     
-    // ¼ò»¯ÊµÏÖ£ºÊµ¼ÊÓ¦·Ö¿éÉÏ´«²¢Ö§³Ö½ø¶È»Øµ÷
+    // ï¿½ï¿½Êµï¿½Ö£ï¿½Êµï¿½ï¿½Ó¦ï¿½Ö¿ï¿½ï¿½Ï´ï¿½ï¿½ï¿½Ö§ï¿½Ö½ï¿½ï¿½È»Øµï¿½
     LResponse := DoRequest('PUT', '/backup/' + TNetEncoding.URL.Encode(ARemoteKey), LStream);
     
     if Assigned(AProgressCallback) then
@@ -1476,11 +1516,13 @@ begin
   FEnabled := False;
   FLastTriggerTime := 0;
   FLock := TCriticalSection.Create;
+  FStopEvent := TEvent.Create(nil, True, False, '');
 end;
 
 destructor TBackupScheduler.Destroy;
 begin
   Stop;
+  FreeAndNil(FStopEvent);
   FreeAndNil(FLock);
   inherited;
 end;
@@ -1498,7 +1540,7 @@ begin
   LNow := Now;
   LNextTime := GetNextScheduledTime;
   
-  // ¼ì²éÊÇ·ñµ½´ïµ÷¶ÈÊ±¼ä
+  // ï¿½ï¿½ï¿½ï¿½Ç·ñµ½´ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
   if (LNextTime <= LNow) and
      ((FLastTriggerTime = 0) or (MinutesBetween(LNow, FLastTriggerTime) > 1)) then
   begin
@@ -1511,11 +1553,12 @@ procedure TBackupScheduler.SchedulerLoop;
 begin
   while not TThread.CurrentThread.CheckTerminated and FEnabled do
   begin
-    Sleep(60000);  // Ã¿·ÖÖÓ¼ì²éÒ»´Î
-    
+    if Assigned(FStopEvent) and (FStopEvent.WaitFor(60000) <> wrTimeout) then
+      Break;
+
     if TThread.CurrentThread.CheckTerminated or not FEnabled then
       Break;
-      
+
     if ShouldTrigger then
     begin
       if Assigned(FOnBackupTriggered) then
@@ -1528,20 +1571,30 @@ procedure TBackupScheduler.Start;
 begin
   if FEnabled then
     Exit;
-    
+
   FEnabled := True;
+  if Assigned(FStopEvent) then
+    FStopEvent.ResetEvent;
   FSchedulerThread := TThread.CreateAnonymousThread(SchedulerLoop);
-  FSchedulerThread.FreeOnTerminate := True;
+  FSchedulerThread.FreeOnTerminate := False;
   FSchedulerThread.Start;
 end;
 
 procedure TBackupScheduler.Stop;
+var
+  LThread: TThread;
 begin
   FEnabled := False;
-  if Assigned(FSchedulerThread) then
+  if Assigned(FStopEvent) then
+    FStopEvent.SetEvent;
+
+  LThread := FSchedulerThread;
+  FSchedulerThread := nil;
+  if Assigned(LThread) then
   begin
-    FSchedulerThread.Terminate;
-    FSchedulerThread := nil;
+    LThread.Terminate;
+    LThread.WaitFor;
+    LThread.Free;
   end;
 end;
 
@@ -1603,7 +1656,7 @@ begin
   else
     FCloudClient := nil;
     
-  FChangeDetector := nil;  // °´Ðè´´½¨
+  FChangeDetector := nil;  // ï¿½ï¿½ï¿½è´´ï¿½ï¿½
   FCompressor := TBackupCompressor.Create(FConfig.CompressionLevel);
   
   if FConfig.EnableEncryption and (FConfig.EncryptionKey <> '') then
@@ -1620,7 +1673,7 @@ begin
   FCancelled := False;
   FStatistics.Reset;
   
-  // È·±£±¸·ÝÄ¿Â¼´æÔÚ
+  // È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½
   if FConfig.LocalBackupPath <> '' then
     TDirectory.CreateDirectory(FConfig.LocalBackupPath);
     
@@ -1699,7 +1752,7 @@ begin
   DoProgress;
   
   try
-    // ´´½¨Çåµ¥
+    // ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥
     LManifest := TBackupManifest.Create;
     try
       LManifest.BackupId := LBackupId;
@@ -1707,15 +1760,15 @@ begin
       LManifest.CreatedAt := Now;
       LManifest.Description := ADescription;
       
-      // »ñÈ¡Òª±¸·ÝµÄÎÄ¼þ
+      // ï¿½ï¿½È¡Òªï¿½ï¿½ï¿½Ýµï¿½ï¿½Ä¼ï¿½
       if Length(FConfig.SourcePaths) > 0 then
         LManifest.BasePath := FConfig.SourcePaths[0];
         
-      // ³õÊ¼»¯±ä¸ü¼ì²âÆ÷
+      // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
       if not Assigned(FChangeDetector) and (LManifest.BasePath <> '') then
         FChangeDetector := TFileChangeDetector.Create(LManifest.BasePath);
         
-      // ¸ù¾Ý±¸·ÝÀàÐÍ»ñÈ¡ÎÄ¼þÁÐ±í
+      // ï¿½ï¿½ï¿½Ý±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½È¡ï¿½Ä¼ï¿½ï¿½Ð±ï¿½
       case ABackupType of
         btFull:
           begin
@@ -1730,7 +1783,7 @@ begin
           begin
             if Assigned(FChangeDetector) then
             begin
-              // ¼ÓÔØÉÏÒ»´ÎµÄ¿ìÕÕ
+              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ÎµÄ¿ï¿½ï¿½ï¿½
               if FVersions.Count > 0 then
               begin
                 var LLastManifest := TBackupManifest.LoadFromFile(
@@ -1743,7 +1796,7 @@ begin
                 end;
               end;
               
-              // ¼ì²â±ä¸ü
+              // ï¿½ï¿½ï¿½ï¿½ï¿½
               LFiles := FChangeDetector.DetectChanges(
                 FConfig.IncludePatterns, FConfig.ExcludePatterns);
               try
@@ -1762,7 +1815,7 @@ begin
       FProgress.TotalFiles := LManifest.FileCount;
       FProgress.TotalBytes := LManifest.TotalSize;
       
-      // Ñ¹Ëõ
+      // Ñ¹ï¿½ï¿½
       FStatus := bsCompressing;
       FProgress.Status := bsCompressing;
       DoProgress;
@@ -1783,7 +1836,7 @@ begin
       
       LArchivePath := GetBackupArchivePath(LBackupId);
       
-      // ¼ÓÃÜ£¨Èç¹ûÆôÓÃ£©
+      // ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½
       if Assigned(FEncryptor) then
       begin
         FStatus := bsEncrypting;
@@ -1799,13 +1852,13 @@ begin
         TFile.Move(LTempPath, LArchivePath);
       end;
       
-      // ¸üÐÂÇåµ¥ÖÐµÄÑ¹Ëõ´óÐ¡
+      // ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥ï¿½Ðµï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½Ð¡
       LManifest.CompressedSize := TFile.GetSize(LArchivePath);
       
-      // ±£´æÇåµ¥
+      // ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥
       LManifest.SaveToFile(GetManifestPath(LBackupId));
       
-      // ´´½¨°æ±¾¼ÇÂ¼
+      // ï¿½ï¿½ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½Â¼
       LVersion := TBackupVersion.Create;
       LVersion.BackupId := LBackupId;
       LVersion.BackupType := ABackupType;
@@ -1821,10 +1874,10 @@ begin
       FVersions.Add(LVersion);
       SaveVersions;
       
-      // ÇåÀí¾É°æ±¾
+      // ï¿½ï¿½ï¿½ï¿½ï¿½É°æ±¾
       CleanupOldVersions;
       
-      // ¸üÐÂÍ³¼Æ
+      // ï¿½ï¿½ï¿½ï¿½Í³ï¿½ï¿½
       Inc(FStatistics.TotalBackups);
       Inc(FStatistics.SuccessfulBackups);
       FStatistics.TotalBytesBackedUp := FStatistics.TotalBytesBackedUp + LManifest.TotalSize;
@@ -1882,13 +1935,13 @@ begin
     if not TFile.Exists(LArchivePath) then
       raise EBackupFileNotFoundException.CreateFmt('Backup file not found: %s', [LArchivePath]);
       
-    // ¼ÓÔØÇåµ¥
+    // ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
     try
       FProgress.TotalFiles := LManifest.FileCount;
       FProgress.TotalBytes := LManifest.TotalSize;
       
-      // È·¶¨Ä¿±êÂ·¾¶
+      // È·ï¿½ï¿½Ä¿ï¿½ï¿½Â·ï¿½ï¿½
       if ATargetPath <> '' then
         LDestPath := ATargetPath
       else
@@ -1896,7 +1949,7 @@ begin
         
       TDirectory.CreateDirectory(LDestPath);
       
-      // ½âÃÜ£¨Èç¹ûÐèÒª£©
+      // ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½
       if Assigned(FEncryptor) and LArchivePath.EndsWith('.enc') then
       begin
         FStatus := bsDecrypting;
@@ -1916,7 +1969,7 @@ begin
         raise EBackupCancelledException.Create('Restore cancelled');
       end;
       
-      // ½âÑ¹
+      // ï¿½ï¿½Ñ¹
       FStatus := bsDecompressing;
       FProgress.Status := bsDecompressing;
       DoProgress;
@@ -1932,11 +1985,11 @@ begin
           DoProgress;
         end);
         
-      // ÇåÀíÁÙÊ±ÎÄ¼þ
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ä¼ï¿½
       if LTempPath <> LArchivePath then
         TFile.Delete(LTempPath);
         
-      // ¸üÐÂÍ³¼Æ
+      // ï¿½ï¿½ï¿½ï¿½Í³ï¿½ï¿½
       FStatistics.TotalBytesRestored := FStatistics.TotalBytesRestored + LManifest.TotalSize;
       FStatistics.LastRestoreTime := Now;
       
@@ -2008,12 +2061,12 @@ var
   I: Integer;
   LVersion: TBackupVersion;
 begin
-  // ±£ÁôÖ¸¶¨ÊýÁ¿µÄ°æ±¾
+  // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä°æ±¾
   while FVersions.Count > FConfig.MaxVersionsToKeep do
   begin
     LVersion := FVersions[0];
     
-    // É¾³ý±¸·ÝÎÄ¼þ
+    // É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
     if TFile.Exists(GetBackupArchivePath(LVersion.BackupId)) then
       TFile.Delete(GetBackupArchivePath(LVersion.BackupId));
     if TFile.Exists(GetManifestPath(LVersion.BackupId)) then
@@ -2027,7 +2080,7 @@ end;
 
 procedure TCloudBackupManager.SchedulerBackupTriggered(Sender: TObject);
 begin
-  // µ÷¶ÈÆ÷´¥·¢µÄ±¸·ÝÊ¹ÓÃÔöÁ¿±¸·Ý
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if FVersions.Count = 0 then
     BackupFullAsync('Scheduled full backup')
   else
@@ -2052,7 +2105,7 @@ begin
   if FStatus <> bsIdle then
     raise EBackupInProgressException.Create('Backup operation in progress');
     
-  // Èç¹ûÃ»ÓÐÖ®Ç°µÄ±¸·Ý£¬Ö´ÐÐÈ«Á¿±¸·Ý
+  // ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ö®Ç°ï¿½Ä±ï¿½ï¿½Ý£ï¿½Ö´ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if FVersions.Count = 0 then
   begin
     BackupFull(ADescription);
@@ -2101,7 +2154,7 @@ begin
         FLock.Leave;
       end;
     end);
-  FBackupThread.FreeOnTerminate := True;
+  FBackupThread.FreeOnTerminate := False;
   FBackupThread.Start;
 end;
 
@@ -2126,7 +2179,7 @@ begin
         FLock.Leave;
       end;
     end);
-  FBackupThread.FreeOnTerminate := True;
+  FBackupThread.FreeOnTerminate := False;
   FBackupThread.Start;
 end;
 
@@ -2160,7 +2213,7 @@ begin
         FLock.Leave;
       end;
     end);
-  FRestoreThread.FreeOnTerminate := True;
+  FRestoreThread.FreeOnTerminate := False;
   FRestoreThread.Start;
 end;
 
@@ -2173,19 +2226,28 @@ begin
 end;
 
 procedure TCloudBackupManager.Cancel;
+var
+  LBackupThread: TThread;
+  LRestoreThread: TThread;
 begin
   FCancelled := True;
-  
-  if Assigned(FBackupThread) then
+
+  LBackupThread := FBackupThread;
+  FBackupThread := nil;
+  if Assigned(LBackupThread) then
   begin
-    FBackupThread.Terminate;
-    FBackupThread := nil;
+    LBackupThread.Terminate;
+    LBackupThread.WaitFor;
+    LBackupThread.Free;
   end;
-  
-  if Assigned(FRestoreThread) then
+
+  LRestoreThread := FRestoreThread;
+  FRestoreThread := nil;
+  if Assigned(LRestoreThread) then
   begin
-    FRestoreThread.Terminate;
-    FRestoreThread := nil;
+    LRestoreThread.Terminate;
+    LRestoreThread.WaitFor;
+    LRestoreThread.Free;
   end;
 end;
 
@@ -2212,7 +2274,7 @@ begin
   begin
     if FVersions[I].BackupId = ABackupId then
     begin
-      // É¾³ýÎÄ¼þ
+      // É¾ï¿½ï¿½ï¿½Ä¼ï¿½
       if TFile.Exists(GetBackupArchivePath(ABackupId)) then
         TFile.Delete(GetBackupArchivePath(ABackupId));
       if TFile.Exists(GetManifestPath(ABackupId)) then
@@ -2303,7 +2365,7 @@ begin
         DoProgress;
       end) then
     begin
-      // ¸üÐÂ»ò´´½¨°æ±¾¼ÇÂ¼
+      // ï¿½ï¿½ï¿½Â»ò´´½ï¿½ï¿½æ±¾ï¿½ï¿½Â¼
       LVersion := GetVersion(ABackupId);
       if not Assigned(LVersion) then
       begin
@@ -2356,14 +2418,14 @@ begin
   if not TFile.Exists(LArchivePath) then
     Exit;
     
-  // ÑéÖ¤Çåµ¥
+  // ï¿½ï¿½Ö¤ï¿½åµ¥
   if not TFile.Exists(GetManifestPath(ABackupId)) then
     Exit;
     
   try
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
     try
-      // ÑéÖ¤ZIPÍêÕûÐÔ
+      // ï¿½ï¿½Ö¤ZIPï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
       LZip := TZipFile.Create;
       try
         LZip.Open(LArchivePath, zmRead);

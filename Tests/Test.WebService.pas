@@ -2,8 +2,8 @@
   Test.WebService - WebService 工具单元测试
 
   测试覆盖:
-    - DeepBase.WebAPI.Core: 核心路由和请求处�?
-    - DeepBase.WebAPI.Auth: 认证中间�?
+    - DeepBase.WebAPI.Core: 核心路由和请求处�?
+    - DeepBase.WebAPI.Auth: 认证中间�?
     - DeepBase.WebAPI.OpenAPI: OpenAPI 文档生成
     - DeepBase.WebAPI.WebSocket: WebSocket 支持
   ============================================================================ }
@@ -154,6 +154,15 @@ type
 
     [Test]
     procedure Test_ApiKey_Middleware_Example_AllowsValidKey;
+  
+    [Test]
+    procedure Test_ApiKey_QueryParam_DisabledByDefault_Denies;
+
+    [Test]
+    procedure Test_JWT_Manager_RejectsWeakSecret;
+
+    [Test]
+    procedure Test_JWT_TamperedSignature_Denies;
   end;
 
   // ============================================================================
@@ -174,6 +183,9 @@ type
 
     [Test]
     procedure Test_WebSocketRoom_Create;
+  
+    [Test]
+    procedure Test_WebSocketConfig_DefaultRejectsBrowserOrigin;
   end;
 
   // ============================================================================
@@ -601,7 +613,7 @@ begin
   try
     AuthMiddleware.JWTManager := JwtManager;
     AuthMiddleware.RequireAuth := True;
-    Middleware := AuthMiddleware.GetMiddleware;
+    Middleware := AuthMiddleware.GetMiddleware();
 
     NextCalled := False;
     Middleware(Context,
@@ -645,7 +657,7 @@ begin
 
     AuthMiddleware.ApiKeyManager := ApiKeyManager;
     AuthMiddleware.RequireAuth := True;
-    Middleware := AuthMiddleware.GetMiddleware;
+    Middleware := AuthMiddleware.GetMiddleware();
 
     Context.Request.Headers.AddOrSetValue('x-api-key', ApiKey);
     NextCalled := False;
@@ -667,6 +679,92 @@ begin
   end;
 end;
 
+procedure TAuthMiddlewareExampleTests.Test_ApiKey_QueryParam_DisabledByDefault_Denies;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  Store: IApiKeyStore;
+  ApiKeyManager: TApiKeyManager;
+  AuthMiddleware: TAuthMiddleware;
+  Middleware: TMiddlewareFunc;
+  KeyInfo: TApiKeyInfo;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  Store := TMemoryApiKeyStore.Create;
+  ApiKeyManager := TApiKeyManager.Create(Store);
+  AuthMiddleware := TAuthMiddleware.Create;
+  KeyInfo := nil;
+  try
+    KeyInfo := ApiKeyManager.CreateKey('svc-test', 'user-1', ['admin']);
+
+    AuthMiddleware.ApiKeyManager := ApiKeyManager;
+    AuthMiddleware.RequireAuth := True;
+    Middleware := AuthMiddleware.GetMiddleware();
+
+    Context.Request.QueryParams.AddOrSetValue('api_key', KeyInfo.Key);
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsFalse(NextCalled, 'URL query API key should be disabled by default');
+    Assert.IsTrue(Context.Aborted, 'Context should be aborted when only query API key is present');
+    Assert.AreEqual(THttpStatus.Unauthorized, Context.Response.StatusCode);
+  finally
+    KeyInfo.Free;
+    AuthMiddleware.Free;
+    ApiKeyManager.Free;
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
+procedure TAuthMiddlewareExampleTests.Test_JWT_Manager_RejectsWeakSecret;
+var
+  Raised: Boolean;
+  Manager: TJWTManager;
+begin
+  Raised := False;
+  Manager := nil;
+  try
+    Manager := TJWTManager.Create('');
+  except
+    on E: EArgumentException do
+      Raised := True;
+  end;
+  Manager.Free;
+
+  Assert.IsTrue(Raised, 'Weak JWT secret should be rejected');
+end;
+
+procedure TAuthMiddlewareExampleTests.Test_JWT_TamperedSignature_Denies;
+var
+  JwtManager: TJWTManager;
+  Token: string;
+  TamperedToken: string;
+  Result: TJWTValidationResult;
+begin
+  JwtManager := TJWTManager.Create('unit-test-secret');
+  try
+    Token := JwtManager.GenerateToken('user123', ['admin']);
+    TamperedToken := Copy(Token, 1, Length(Token) - 1);
+    if Token[Length(Token)] = 'A' then
+      TamperedToken := TamperedToken + 'B'
+    else
+      TamperedToken := TamperedToken + 'A';
+
+    Result := JwtManager.ValidateToken(TamperedToken);
+
+    Assert.IsFalse(Result.Valid, 'Tampered JWT signature should be rejected');
+    Assert.AreEqual('Invalid signature', Result.Error);
+  finally
+    JwtManager.Free;
+  end;
+end;
 { TWebSocketTests }
 
 procedure TWebSocketTests.Test_WebSocketOpcode_Values;
@@ -716,6 +814,20 @@ begin
   end;
 end;
 
+procedure TWebSocketTests.Test_WebSocketConfig_DefaultRejectsBrowserOrigin;
+var
+  Config: TWebSocketConfig;
+begin
+  Config := TWebSocketConfig.Create;
+  try
+    Assert.IsFalse(Config.IsOriginAllowed('https://evil.example'),
+      'Browser WebSocket origins should be denied unless explicitly configured');
+    Assert.IsTrue(Config.IsOriginAllowed(''),
+      'Non-browser clients without Origin remain allowed');
+  finally
+    Config.Free;
+  end;
+end;
 { TOpenAPITests }
 
 procedure TOpenAPITests.Test_OpenAPIInfo_Create;

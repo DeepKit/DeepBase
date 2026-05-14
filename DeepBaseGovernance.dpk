@@ -1,0 +1,78 @@
+package DeepBaseGovernance;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Governance (OCGS) Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  DeepBaseCore,
+  DeepBasePersistence;
+
+contains
+  DeepBase.Governance.Types in 'Governance\DeepBase.Governance.Types.pas',
+  DeepBase.Governance.Interfaces in 'Governance\DeepBase.Governance.Interfaces.pas',
+  DeepBase.Governance.Model in 'Governance\DeepBase.Governance.Model.pas',
+  DeepBase.Governance.KeyResolver in 'Governance\DeepBase.Governance.KeyResolver.pas',
+  DeepBase.Governance.ActionGrid in 'Governance\DeepBase.Governance.ActionGrid.pas',
+  DeepBase.Governance.GateResolver in 'Governance\DeepBase.Governance.GateResolver.pas',
+  DeepBase.Governance.JsonLogic in 'Governance\DeepBase.Governance.JsonLogic.pas',
+  DeepBase.Governance.RouteResolver in 'Governance\DeepBase.Governance.RouteResolver.pas',
+  DeepBase.Governance.DueChecker in 'Governance\DeepBase.Governance.DueChecker.pas',
+  DeepBase.Governance.ActionExecutor in 'Governance\DeepBase.Governance.ActionExecutor.pas',
+  DeepBase.Governance.EvidenceRecorder in 'Governance\DeepBase.Governance.EvidenceRecorder.pas',
+  DeepBase.Governance.EvidenceStore.SQLite in 'Governance\DeepBase.Governance.EvidenceStore.SQLite.pas',
+  DeepBase.Governance.RouteStore.SQLite in 'Governance\DeepBase.Governance.RouteStore.SQLite.pas',
+  DeepBase.Governance.ProjectionResolver in 'Governance\DeepBase.Governance.ProjectionResolver.pas',
+  DeepBase.Governance.FeedbackResolver in 'Governance\DeepBase.Governance.FeedbackResolver.pas',
+  DeepBase.Governance.Runtime in 'Governance\DeepBase.Governance.Runtime.pas',
+  DeepBase.Governance.Validation in 'Governance\DeepBase.Governance.Validation.pas',
+  DeepBase.Governance.NativeRegistry in 'Governance\DeepBase.Governance.NativeRegistry.pas',
+  DeepBase.Governance.EventBridge in 'Governance\DeepBase.Governance.EventBridge.pas',
+  DeepBase.Governance.ActionBinding in 'Governance\DeepBase.Governance.ActionBinding.pas',
+  DeepBase.Governance.LegacyWrap in 'Governance\DeepBase.Governance.LegacyWrap.pas',
+  DeepBase.Governance.Purpose in 'Governance\DeepBase.Governance.Purpose.pas',
+  DeepBase.Governance.Actor in 'Governance\DeepBase.Governance.Actor.pas',
+  DeepBase.Governance.AbilityRegistry in 'Governance\DeepBase.Governance.AbilityRegistry.pas',
+  DeepBase.Governance.Output in 'Governance\DeepBase.Governance.Output.pas',
+  DeepBase.Governance.ConfigLoader in 'Governance\DeepBase.Governance.ConfigLoader.pas',
+  DeepBase.Governance.Run in 'Governance\DeepBase.Governance.Run.pas',
+  DeepBase.Governance.Seal in 'Governance\DeepBase.Governance.Seal.pas',
+  DeepBase.Governance.ComponentAdapter in 'Governance\DeepBase.Governance.ComponentAdapter.pas',
+  DeepBase.Governance.Accountability in 'Governance\DeepBase.Governance.Accountability.pas',
+  DeepBase.Governance.ModelVersion in 'Governance\DeepBase.Governance.ModelVersion.pas',
+  DeepBase.Governance.Explain in 'Governance\DeepBase.Governance.Explain.pas',
+  DeepBase.Governance.AI.SteeringExporter in 'Governance\DeepBase.Governance.AI.SteeringExporter.pas',
+  DeepBase.Governance.AI.ViewScopeEnforcer in 'Governance\DeepBase.Governance.AI.ViewScopeEnforcer.pas',
+  DeepBase.Governance.AI.ProposalQueue in 'Governance\DeepBase.Governance.AI.ProposalQueue.pas',
+  DeepBase.Governance.ObserveGateResolver in 'Governance\DeepBase.Governance.ObserveGateResolver.pas',
+  DeepBase.Governance.ConfigRegistrar in 'Governance\DeepBase.Governance.ConfigRegistrar.pas',
+  DeepBase.Governance.Lifecycle in 'Governance\DeepBase.Governance.Lifecycle.pas',
+  DeepBase.Governance.Registration in 'Governance\DeepBase.Governance.Registration.pas';
+
+end.

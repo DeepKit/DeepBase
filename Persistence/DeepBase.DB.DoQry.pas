@@ -1,9 +1,9 @@
 { ============================================================================
-  DeepBase.DB.DoQry - DoQry 数据库访问集成模�?
+  DeepBase.DB.DoQry - DoQry 数据库访问集成模�?
   
   版本: 1.0
   所属包: DeepBasePersistence
-  说明: �?DoQry 库集成到 DeepBase 框架，统一日志和错误处�?
+  说明: �?DoQry 库集成到 DeepBase 框架，统一日志和错误处�?
   线程安全: 所有公共方法均线程安全
   ============================================================================ }
 
@@ -33,18 +33,18 @@ const
   DOQRY_ERR_CONSTRAINT       = 4001;  // 约束违反
   DOQRY_ERR_UNIQUE           = 4002;  // 唯一约束违反
   DOQRY_ERR_FOREIGN_KEY      = 4003;  // 外键约束违反
-  DOQRY_ERR_NOT_FOUND        = 5001;  // 记录未找�?
-  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 查询定义未找�?
+  DOQRY_ERR_NOT_FOUND        = 5001;  // 记录未找�?
+  DOQRY_ERR_QUERY_NOT_FOUND  = 5002;  // 查询定义未找�?
   DOQRY_ERR_UNKNOWN          = 9999;  // 未知错误
 
 type
   /// <summary>
-  /// 数据库类�?
+  /// 数据库类�?
   /// </summary>
   TUniDBType = (udbPostgreSQL, udbSQLite);
 
   /// <summary>
-  /// 查询上下�?
+  /// 查询上下�?
   /// </summary>
   TUniQueryContext = record
     Connection: TFDConnection;
@@ -87,12 +87,12 @@ type
   end;
 
 /// <summary>
-/// 初始�?DoQry（由 DeepBase.Manager 调用�?
+/// 初始�?DoQry（由 DeepBase.Manager 调用�?
 /// </summary>
 procedure UniDbInit(const RootPath: string);
 
 /// <summary>
-/// 创建查询上下�?
+/// 创建查询上下�?
 /// </summary>
 function UniDbMakeContext(Conn: TFDConnection; DBType: TUniDBType; 
   TimeoutSec: Integer = 30; const CorrelationId: string = ''): TUniQueryContext;
@@ -103,12 +103,12 @@ function UniDbMakeContext(Conn: TFDConnection; DBType: TUniDBType;
 function UniDbNewCorrelationId: string;
 
 /// <summary>
-/// 开始事�?
+/// 开始事�?
 /// </summary>
 function UniDbBeginTx(const Ctx: TUniQueryContext): IUniTransaction;
 
 /// <summary>
-/// 在事务中执行（自动提�?回滚�?
+/// 在事务中执行（自动提�?回滚�?
 /// </summary>
 procedure UniDbRunInTx(const Ctx: TUniQueryContext; const Proc: TProc);
 
@@ -119,13 +119,13 @@ function UniDbSelect(const ProcName: string; const ParamsJson: string;
   var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
 
 /// <summary>
-/// 执行非查询（INSERT/UPDATE/DELETE�?
+/// 执行非查询（INSERT/UPDATE/DELETE�?
 /// </summary>
 function UniDbExec(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): Integer;
 
 /// <summary>
-/// 执行 INSERT 并返回自�?ID
+/// 执行 INSERT 并返回自�?ID
 /// </summary>
 function UniDbInsertReturningId(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): Integer;
@@ -137,23 +137,23 @@ function UniDbScalar(const ProcName: string; const ParamsJson: string;
   const Ctx: TUniQueryContext): Variant;
 
 /// <summary>
-/// 构建 SQL 预览（调试用�?
+/// 构建 SQL 预览（调试用�?
 /// </summary>
 function UniDbBuildSqlPreview(const ProcName: string; const ParamsJson: string; 
   const Ctx: TUniQueryContext): string;
 
 /// <summary>
-/// 清除所有查询缓�?
+/// 清除所有查询缓�?
 /// </summary>
 procedure UniDbClearQueryCache;
 
 /// <summary>
-/// 精确失效某个 ProcName 的缓�?
+/// 精确失效某个 ProcName 的缓�?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
 
 /// <summary>
-/// 设置缓存 TTL（秒），默认 300�? 分钟�?
+/// 设置缓存 TTL（秒），默认 300�? 分钟�?
 /// </summary>
 procedure UniDbSetCacheTTL(Seconds: Integer);
 
@@ -163,7 +163,7 @@ procedure UniDbSetCacheTTL(Seconds: Integer);
 procedure UniDbGetCacheStats(out Hits, Misses, EntryCount: Int64);
 
 /// <summary>
-/// 启用/禁用预编译语句复用（默认启用�?
+/// 启用/禁用预编译语句复用（默认启用�?
 /// </summary>
 procedure UniDbSetPreparedStatementPooling(Enabled: Boolean);
 
@@ -178,7 +178,7 @@ procedure UniDbClearPreparedStatements;
 procedure UniDbGetPreparedStats(out PoolSize, ReuseCount: Int64);
 
 /// <summary>
-/// 设置预编译语句池容量上限（默�?500�?
+/// 设置预编译语句池容量上限（默�?500�?
 /// </summary>
 procedure UniDbSetPreparedPoolMaxSize(MaxSize: Integer);
 
@@ -199,7 +199,7 @@ type
     procedure Shutdown;
   end;
 
-  /// <summary>DoQry service implementation �?delegates to global functions</summary>
+  /// <summary>DoQry service implementation �?delegates to global functions</summary>
   TDoQryService = class(TInterfacedObject, IDoQryService)
   public
     function Select(const ProcName, ParamsJson: string; const Ctx: TUniQueryContext): string;
@@ -219,7 +219,7 @@ uses
   FireDAC.Stan.Param,
   FireDAC.Stan.Error,
   DeepBase.Logging,
-  DeepBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监�?
+  DeepBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监�?
 
 type
   TQueryCacheEntry = record
@@ -303,7 +303,7 @@ end;
 
 procedure UniDbShutdown;
 begin
-  // 清理查询缓存；锁对象�?initialization/finalization 管理�?
+  // 清理查询缓存；锁对象�?initialization/finalization 管理�?
   if Assigned(GQueryCacheLock) then
   begin
     TMonitor.Enter(GQueryCacheLock);
@@ -320,7 +320,7 @@ begin
     FreeAndNil(GQueryCache);
   end;
 
-  // 清理预编译语句池；锁对象�?initialization/finalization 管理�?
+  // 清理预编译语句池；锁对象�?initialization/finalization 管理�?
   if Assigned(GPreparedPoolLock) then
   begin
     TMonitor.Enter(GPreparedPoolLock);
@@ -359,7 +359,7 @@ begin
 end;
 
 /// <summary>
-/// 根据异常消息推断错误码（兼容回退�?
+/// 根据异常消息推断错误码（兼容回退�?
 /// </summary>
 function InferErrorCodeFromMessage(const ErrMsg: string): Integer;
 var
@@ -403,7 +403,7 @@ begin
 end;
 
 /// <summary>
-/// 根据异常对象推断错误码（优先使用 FireDAC 原生错误类型�?
+/// 根据异常对象推断错误码（优先使用 FireDAC 原生错误类型�?
 /// </summary>
 function InferErrorCode(E: Exception): Integer;
 var
@@ -444,7 +444,7 @@ end;
 { 预编译语句池辅助函数 }
 
 /// <summary>
-/// 简单哈希函�?
+/// 简单哈希函�?
 /// </summary>
 function SimpleHash(const S: string): Cardinal;
 var
@@ -456,7 +456,7 @@ begin
 end;
 
 /// <summary>
-/// 生成预编译语句池�?
+/// 生成预编译语句池�?
 /// </summary>
 function MakePreparedKey(Conn: TFDConnection; const SQL: string): string;
 begin
@@ -523,7 +523,7 @@ begin
 end;
 
 /// <summary>
-/// 从池中获取或创建预编译查�?
+/// 从池中获取或创建预编译查�?
 /// </summary>
 function GetOrCreatePreparedQuery(Conn: TFDConnection; const SQL: string): TFDQuery;
 var
@@ -596,7 +596,7 @@ begin
 end;
 
 /// <summary>
-/// 释放查询（如果启用池化，则保留；否则释放�?
+/// 释放查询（如果启用池化，则保留；否则释放�?
 /// </summary>
 procedure ReleaseQuery(Q: TFDQuery; Pooled: Boolean);
 var
@@ -628,7 +628,7 @@ begin
       end;
     end;
 
-    // 安全兜底：若未追踪到池条目，按非池化释放，避免泄�?
+    // 安全兜底：若未追踪到池条目，按非池化释放，避免泄�?
     if Entry = nil then
       Q.Free;
   end;
@@ -637,7 +637,7 @@ end;
 { 内部日志辅助 }
 
 /// <summary>
-/// 记录查询日志（结构化 JSON 格式�?
+/// 记录查询日志（结构化 JSON 格式�?
 /// </summary>
 procedure LogQuery(const Level, CorrId, ProcName: string; DBType: TUniDBType;
   const Kind, SQL, ParamsJson: string; DurationMs: Int64; Rows: Integer; 
@@ -661,7 +661,7 @@ begin
     udbSQLite: DBName := 'sqlite';
   end;
   
-  // 构建结构�?JSON 日志
+  // 构建结构�?JSON 日志
   JsonObj := TJSONObject.Create;
   try
     JsonObj.AddPair('component', 'doqry');
@@ -672,7 +672,7 @@ begin
     JsonObj.AddPair('duration_ms', TJSONNumber.Create(DurationMs));
     JsonObj.AddPair('rows', TJSONNumber.Create(Rows));
     
-    // SQL 和参数仅�?DEBUG 级别记录（避免敏感数据泄漏）
+    // SQL 和参数仅�?DEBUG 级别记录（避免敏感数据泄漏）
     if LogLevel = llDebug then
     begin
       // 截断过长 SQL
@@ -699,17 +699,17 @@ end;
 { 内部辅助函数 }
 
 /// <summary>
-/// 复制 TFDQuery 数据�?TFDMemTable
+/// 复制 TFDQuery 数据�?TFDMemTable
 /// </summary>
 procedure CopyQueryToMemTable(Src: TFDQuery; Dest: TFDMemTable);
 begin
   Dest.Close;
-  // TFDMemTable 可以直接�?TFDQuery 复制数据
+  // TFDMemTable 可以直接�?TFDQuery 复制数据
   Dest.CopyDataSet(Src, [coStructure, coRestart, coAppend]);
 end;
 
 /// <summary>
-/// 绑定 JSON 参数到查询（自动识别 GUID�?
+/// 绑定 JSON 参数到查询（自动识别 GUID�?
 /// </summary>
 procedure BindJsonParams(Q: TFDQuery; const ParamsJson: string);
 var
@@ -843,7 +843,7 @@ begin
 end;
 
 /// <summary>
-/// 判断是否为直�?SQL（以关键字开头）
+/// 判断是否为直�?SQL（以关键字开头）
 /// </summary>
 function IsDirectSQL(const ProcName: string): Boolean;
 var
@@ -861,17 +861,21 @@ var
 
 begin
   Upper := UpperCase(Trim(ProcName));
-  // Direct SQL is limited to common DML/query statements. DDL and PRAGMA must
-  // be run through reviewed migration/stored-query paths instead of ad hoc calls.
+  // Direct SQL: DML + DDL + PRAGMA. Anything that looks like a SQL statement
+  // rather than a stored-query ProcName is passed through directly.
   Result := StartsWithKeyword('SELECT') or
             StartsWithKeyword('INSERT') or
             StartsWithKeyword('UPDATE') or
             StartsWithKeyword('DELETE') or
-            StartsWithKeyword('WITH');
+            StartsWithKeyword('WITH') or
+            StartsWithKeyword('CREATE') or
+            StartsWithKeyword('ALTER') or
+            StartsWithKeyword('DROP') or
+            StartsWithKeyword('PRAGMA');
 end;
 
 /// <summary>
-/// �?Queries 表加�?SQL（带缓存 + TTL�?
+/// �?Queries 表加�?SQL（带缓存 + TTL�?
 /// </summary>
 function LoadQuerySQL(const ProcName: string; const Ctx: TUniQueryContext): string;
 var
@@ -902,7 +906,7 @@ begin
   LoadedSQL := '';
   LoadSucceeded := False;
   
-  // 如果是直�?SQL，直接返�?
+  // 如果是直�?SQL，直接返�?
   if IsDirectSQL(ProcName) then
   begin
     Result := ProcName;
@@ -923,7 +927,7 @@ begin
       begin
         if GQueryCache.TryGetValue(ProcName, Entry) then
         begin
-          // 检�?TTL
+          // 检�?TTL
           if Now < Entry.ExpireTime then
           begin
             Result := Entry.SQL;
@@ -1002,7 +1006,7 @@ begin
 end;
 
 /// <summary>
-/// 清除所有查询缓�?
+/// 清除所有查询缓�?
 /// </summary>
 procedure UniDbClearQueryCache;
 begin
@@ -1023,7 +1027,7 @@ begin
 end;
 
 /// <summary>
-/// 精确失效某个 ProcName 的缓�?
+/// 精确失效某个 ProcName 的缓�?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
 begin
@@ -1039,7 +1043,7 @@ begin
 end;
 
 /// <summary>
-/// 设置缓存 TTL（秒�?
+/// 设置缓存 TTL（秒�?
 /// </summary>
 procedure UniDbSetCacheTTL(Seconds: Integer);
 begin
@@ -1103,7 +1107,7 @@ var
   G: TGUID;
 begin
   CreateGUID(G);
-  Result := Copy(GUIDToString(G), 2, 8); // 简�?ID
+  Result := Copy(GUIDToString(G), 2, 8); // 简�?ID
 end;
 
 { 事务实现 }
@@ -1219,7 +1223,7 @@ begin
   end;
 end;
 
-{ 查询执行 - 简化实�?}
+{ 查询执行 - 简化实�?}
 
 function UniDbSelect(const ProcName: string; const ParamsJson: string;
   var Data: TFDMemTable; const Ctx: TUniQueryContext): Integer;
@@ -1232,7 +1236,7 @@ var
 begin
   StartTime := Now;
 
-  // �?Queries 表加�?SQL 或直接使�?
+  // �?Queries 表加�?SQL 或直接使�?
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
 
@@ -1258,7 +1262,7 @@ begin
       Q.Open;
       Result := Q.RecordCount;
 
-      // 复制数据�?TFDMemTable
+      // 复制数据�?TFDMemTable
       if Data = nil then
         Data := TFDMemTable.Create(nil);
       CopyQueryToMemTable(Q, Data);

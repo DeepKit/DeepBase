@@ -914,7 +914,6 @@ begin
   FPongTimeout := 10000;   // 10 秒
   FHandshakeTimeout := 10000;  // 10 秒
   FAllowedOrigins := TStringList.Create;
-  FAllowedOrigins.Add('*');
 end;
 
 destructor TWebSocketConfig.Destroy;
@@ -927,6 +926,9 @@ function TWebSocketConfig.IsOriginAllowed(const AOrigin: string): Boolean;
 var
   LOrigin: string;
 begin
+  if Trim(AOrigin) = '' then
+    Exit(True);
+
   if FAllowedOrigins.IndexOf('*') >= 0 then
     Exit(True);
 

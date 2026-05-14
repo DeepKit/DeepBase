@@ -19,6 +19,7 @@ uses
   System.SysUtils,
   System.DateUtils,
   System.Generics.Collections,
+  DeepBase.Payment,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.Service;
 
@@ -41,12 +42,13 @@ type
   /// </summary>
   TSDKNotificationVerifier = class(TInterfacedObject, ICommerceNotificationVerifier)
   private
-    FClient: IInterface;
+    FClient: IPaymentClient;
+    FClientObject: TObject;
     FProvider: TCommercePaymentProvider;
     FCurrency: string;
   public
     constructor Create(AProvider: TCommercePaymentProvider;
-      const AClient: IInterface; const ACurrency: string = 'CNY');
+      AClient: TObject; const ACurrency: string = 'CNY');
     function VerifyNotification(const ARawBody: string;
       const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification;
   end;
@@ -74,7 +76,6 @@ function CreatePayPalNotificationVerifier(
 implementation
 
 uses
-  DeepBase.Payment,
   DeepBase.Payment.Alipay,
   DeepBase.Payment.WeChatPay,
   DeepBase.Payment.Stripe,
@@ -108,10 +109,12 @@ end;
 { TSDKNotificationVerifier }
 
 constructor TSDKNotificationVerifier.Create(AProvider: TCommercePaymentProvider;
-  const AClient: IInterface; const ACurrency: string);
+  AClient: TObject; const ACurrency: string);
 begin
   inherited Create;
-  FClient := AClient;
+  if not Supports(AClient, IPaymentClient, FClient) then
+    raise EDeepBaseCommerceValidationError.Create('Payment client does not implement IPaymentClient');
+  FClientObject := AClient;
   FProvider := AProvider;
   FCurrency := ACurrency;
 end;
@@ -119,11 +122,41 @@ end;
 function TSDKNotificationVerifier.VerifyNotification(const ARawBody: string;
   const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification;
 var
-  Client: IPaymentClient;
   SDKNotif: TPaymentNotification;
+  HeaderValue: string;
+
+  function GetHeaderValue(const AName: string): string;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    for I := 0 to High(AHeaders) do
+      if SameText(AHeaders[I].Key, AName) then
+        Exit(AHeaders[I].Value);
+  end;
 begin
-  Client := FClient as IPaymentClient;
-  if not Client.VerifyNotification(ARawBody, SDKNotif) then
+  if FProvider = cppWeChatPay then
+    raise EDeepBaseCommercePaymentError.Create(
+      'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
+
+  if FClientObject is TStripeClient then
+  begin
+    HeaderValue := GetHeaderValue('Stripe-Signature');
+    if not TStripeClient(FClientObject).VerifyWebhookSignature(ARawBody, HeaderValue) then
+      raise EDeepBaseCommercePaymentError.Create('Stripe notification signature verification failed');
+  end
+  else if FClientObject is TPayPalClient then
+  begin
+    if not TPayPalClient(FClientObject).VerifyWebhookSignature(
+      ARawBody,
+      GetHeaderValue('Paypal-Transmission-Id'),
+      GetHeaderValue('Paypal-Transmission-Time'),
+      GetHeaderValue('Paypal-Transmission-Sig'),
+      '') then
+      raise EDeepBaseCommercePaymentError.Create('PayPal notification signature verification failed');
+  end;
+
+  if not FClient.VerifyNotification(ARawBody, SDKNotif) then
     raise EDeepBaseCommercePaymentError.CreateFmt(
       '%s notification verification failed',
       [CommercePaymentProviderToStr(FProvider)]);

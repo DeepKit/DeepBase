@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- DeepBase Sample Config Database
 -- Version: 1.0.0
 -- Created: 2025-12-05
@@ -101,10 +101,10 @@ CREATE INDEX IF NOT EXISTS idx_languages_enabled ON Languages(IsEnabled);
 -- Default languages
 INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES
   ('en-US', 'English (US)', 'English', 'MM/dd/yyyy', 'h:mm:ss tt', 1, 1, 0),
-  ('zh-CN', 'Chinese (Simplified)', '简体中�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 1),
+  ('zh-CN', 'Chinese (Simplified)', '简体中�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 1),
   ('zh-TW', 'Chinese (Traditional)', '繁體中文', 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 2),
-  ('ja-JP', 'Japanese', '日本�?, 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 3),
-  ('ko-KR', 'Korean', '한국�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 4),
+  ('ja-JP', 'Japanese', '日本�?, 'yyyy/MM/dd', 'HH:mm:ss', 1, 0, 3),
+  ('ko-KR', 'Korean', '한국�?, 'yyyy-MM-dd', 'HH:mm:ss', 1, 0, 4),
   ('de-DE', 'German', 'Deutsch', 'dd.MM.yyyy', 'HH:mm:ss', 1, 0, 5),
   ('fr-FR', 'French', 'Français', 'dd/MM/yyyy', 'HH:mm:ss', 1, 0, 6),
   ('es-ES', 'Spanish', 'Español', 'dd/MM/yyyy', 'HH:mm:ss', 1, 0, 7);
@@ -514,6 +514,37 @@ CREATE TABLE IF NOT EXISTS LLMPrompts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_llmprompts_category ON LLMPrompts(Category);
+
+-- 17b. LLMPromptTemplates - Prompt template CRUD table used by DeepBase.LLM
+CREATE TABLE IF NOT EXISTS LLMPromptTemplates (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Name TEXT NOT NULL UNIQUE,
+  Category TEXT DEFAULT 'General',
+  Description TEXT,
+  SystemPrompt TEXT,
+  UserPromptTemplate TEXT NOT NULL,
+  Variables TEXT,
+  DefaultValues TEXT,
+  ParentTemplate TEXT,
+  IncludeTemplates TEXT,
+  OutputFormat TEXT DEFAULT 'text',
+  ValidationRegex TEXT,
+  Examples TEXT,
+  RecommendedConfig TEXT,
+  RecommendedModel TEXT,
+  MaxTokens INTEGER DEFAULT 0,
+  Temperature REAL DEFAULT 0.7,
+  IsEnabled INTEGER DEFAULT 1,
+  IsBuiltIn INTEGER DEFAULT 0,
+  SortOrder INTEGER DEFAULT 0,
+  CreatedAt TEXT DEFAULT (datetime('now')),
+  UpdatedAt TEXT DEFAULT (datetime('now')),
+  Extra TEXT,
+  Remarks TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_category ON LLMPromptTemplates(Category);
+CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_enabled ON LLMPromptTemplates(IsEnabled);
 
 -- Sample prompts
 INSERT OR IGNORE INTO LLMPrompts (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES

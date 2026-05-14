@@ -77,6 +77,15 @@ implementation
 uses
   DeepBase.Schema;
 
+procedure ClearTemplates(var Templates: TLLMPromptTemplateArray);
+var
+  I: Integer;
+begin
+  for I := 0 to High(Templates) do
+    Templates[I].Clear;
+  SetLength(Templates, 0);
+end;
+
 { TTestLLMPromptTemplate }
 
 procedure TTestLLMPromptTemplate.Setup;
@@ -163,13 +172,19 @@ begin
   
   FLLM.SaveTemplate(T);
   
+  Loaded.Init;
   Loaded := FLLM.GetTemplate('test_insert');
-  Assert.AreEqual('test_insert', Loaded.Name, 'Name should match');
-  Assert.AreEqual('Testing', Loaded.Category, 'Category should match');
-  Assert.AreEqual('Hello {{name}}', Loaded.UserPromptTemplate, 'UserPromptTemplate should match');
-  Assert.AreEqual(1, Length(Loaded.Variables), 'Should have 1 variable');
-  Assert.AreEqual('name', Loaded.Variables[0], 'Variable should be name');
+  try
+    Assert.AreEqual('test_insert', Loaded.Name, 'Name should match');
+    Assert.AreEqual('Testing', Loaded.Category, 'Category should match');
+    Assert.AreEqual('Hello {{name}}', Loaded.UserPromptTemplate, 'UserPromptTemplate should match');
+    Assert.AreEqual<Integer>(1, Length(Loaded.Variables), 'Should have 1 variable');
+    Assert.AreEqual('name', Loaded.Variables[0], 'Variable should be name');
+  finally
+    Loaded.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_SaveTemplate_UpdatesExisting;
 var
@@ -190,10 +205,16 @@ begin
   T.UserPromptTemplate := 'Updated {{text}}';
   FLLM.SaveTemplate(T);
   
+  Loaded.Init;
   Loaded := FLLM.GetTemplate('test_update');
-  Assert.AreEqual('Updated', Loaded.Description, 'Description should be updated');
-  Assert.AreEqual('Updated {{text}}', Loaded.UserPromptTemplate, 'Template should be updated');
+  try
+    Assert.AreEqual('Updated', Loaded.Description, 'Description should be updated');
+    Assert.AreEqual('Updated {{text}}', Loaded.UserPromptTemplate, 'Template should be updated');
+  finally
+    Loaded.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_GetTemplate_ReturnsCorrectData;
 var
@@ -201,29 +222,39 @@ var
   Loaded: TLLMPromptTemplate;
 begin
   T.Init;
-  T.Name := 'test_get';
-  T.Category := 'Code';
-  T.Description := 'Test getting template';
-  T.SystemPrompt := 'You are a test assistant';
-  T.UserPromptTemplate := 'Translate {{text}} to {{lang}}';
-  SetLength(T.Variables, 2);
-  T.Variables[0] := 'text';
-  T.Variables[1] := 'lang';
-  T.DefaultValues := TDictionary<string, string>.Create;
-  T.DefaultValues.Add('lang', 'English');
-  T.Temperature := 0.5;
-  T.RecommendedConfig := 'Translation';
-  
-  FLLM.SaveTemplate(T);
-  
-  Loaded := FLLM.GetTemplate('test_get');
-  Assert.AreEqual('Code', Loaded.Category);
-  Assert.AreEqual('You are a test assistant', Loaded.SystemPrompt);
-  Assert.AreEqual(2, Integer(Length(Loaded.Variables)));
-  Assert.IsNotNull(Loaded.DefaultValues);
-  Assert.AreEqual('English', Loaded.DefaultValues['lang']);
-  Assert.AreEqual(0.5, Loaded.Temperature, 0.001);
+  Loaded.Init;
+  try
+    T.Name := 'test_get';
+    T.Category := 'Code';
+    T.Description := 'Test getting template';
+    T.SystemPrompt := 'You are a test assistant';
+    T.UserPromptTemplate := 'Translate {{text}} to {{lang}}';
+    SetLength(T.Variables, 2);
+    T.Variables[0] := 'text';
+    T.Variables[1] := 'lang';
+    T.DefaultValues := TDictionary<string, string>.Create;
+    T.DefaultValues.Add('lang', 'English');
+    T.Temperature := 0.5;
+    T.RecommendedConfig := 'Translation';
+    
+    FLLM.SaveTemplate(T);
+    
+    Loaded := FLLM.GetTemplate('test_get');
+    try
+      Assert.AreEqual('Code', Loaded.Category);
+      Assert.AreEqual('You are a test assistant', Loaded.SystemPrompt);
+      Assert.AreEqual(2, Integer(Length(Loaded.Variables)));
+      Assert.IsNotNull(Loaded.DefaultValues);
+      Assert.AreEqual('English', Loaded.DefaultValues['lang']);
+      Assert.AreEqual(0.5, Loaded.Temperature, 0.001);
+    finally
+      Loaded.Clear;
+    end;
+  finally
+    T.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_DeleteTemplate_RemovesNonBuiltIn;
 var
@@ -238,9 +269,15 @@ begin
   
   FLLM.DeleteTemplate('test_delete');
   
+  Loaded.Init;
   Loaded := FLLM.GetTemplate('test_delete');
-  Assert.AreEqual('', Loaded.Name, 'Template should be deleted');
+  try
+    Assert.AreEqual('', Loaded.Name, 'Template should be deleted');
+  finally
+    Loaded.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_DeleteTemplate_SkipsBuiltIn;
 var
@@ -261,9 +298,15 @@ begin
   
   FLLM.DeleteTemplate('test_builtin');
   
+  Loaded.Init;
   Loaded := FLLM.GetTemplate('test_builtin');
-  Assert.AreEqual('test_builtin', Loaded.Name, 'Built-in template should NOT be deleted');
+  try
+    Assert.AreEqual('test_builtin', Loaded.Name, 'Built-in template should NOT be deleted');
+  finally
+    Loaded.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_CopyTemplate_CreatesNewTemplate;
 var
@@ -280,12 +323,18 @@ begin
   
   Assert.IsTrue(FLLM.CopyTemplate('source_template', 'copied_template'), 'Copy should succeed');
   
+  Copied.Init;
   Copied := FLLM.GetTemplate('copied_template');
-  Assert.AreEqual('copied_template', Copied.Name);
-  Assert.AreEqual('Original description', Copied.Description);
-  Assert.AreEqual('Hello {{name}}', Copied.UserPromptTemplate);
-  Assert.IsFalse(Copied.IsBuiltIn, 'Copied template should not be built-in');
+  try
+    Assert.AreEqual('copied_template', Copied.Name);
+    Assert.AreEqual('Original description', Copied.Description);
+    Assert.AreEqual('Hello {{name}}', Copied.UserPromptTemplate);
+    Assert.IsFalse(Copied.IsBuiltIn, 'Copied template should not be built-in');
+  finally
+    Copied.Clear;
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_GetTemplatesByCategory_FiltersCorrectly;
 var
@@ -312,11 +361,20 @@ begin
   FLLM.SaveTemplate(T);
   
   Templates := FLLM.GetTemplatesByCategory('Translation');
-  Assert.AreEqual(2, Length(Templates), 'Should return 2 Translation templates');
+  try
+    Assert.AreEqual<Integer>(2, Length(Templates), 'Should return 2 Translation templates');
+  finally
+    ClearTemplates(Templates);
+  end;
   
   Templates := FLLM.GetTemplatesByCategory('Code');
-  Assert.AreEqual(1, Length(Templates), 'Should return 1 Code template');
+  try
+    Assert.AreEqual<Integer>(1, Length(Templates), 'Should return 1 Code template');
+  finally
+    ClearTemplates(Templates);
+  end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_RenderUserPrompt_ReplacesVariables;
 var
@@ -349,24 +407,29 @@ var
   Result: string;
 begin
   T.Init;
-  T.UserPromptTemplate := 'Translate to {{lang}}: {{text}}';
-  SetLength(T.Variables, 2);
-  T.Variables[0] := 'lang';
-  T.Variables[1] := 'text';
-  T.DefaultValues := TDictionary<string, string>.Create;
-  T.DefaultValues.Add('lang', 'Chinese');
-  
-  Vars := TDictionary<string, string>.Create;
   try
-    Vars.Add('text', 'Hello world');
-    // lang not provided, should use default
+    T.UserPromptTemplate := 'Translate to {{lang}}: {{text}}';
+    SetLength(T.Variables, 2);
+    T.Variables[0] := 'lang';
+    T.Variables[1] := 'text';
+    T.DefaultValues := TDictionary<string, string>.Create;
+    T.DefaultValues.Add('lang', 'Chinese');
     
-    Result := T.RenderUserPrompt(Vars);
-    Assert.AreEqual('Translate to Chinese: Hello world', Result);
+    Vars := TDictionary<string, string>.Create;
+    try
+      Vars.Add('text', 'Hello world');
+      // lang not provided, should use default
+      
+      Result := T.RenderUserPrompt(Vars);
+      Assert.AreEqual('Translate to Chinese: Hello world', Result);
+    finally
+      Vars.Free;
+    end;
   finally
-    Vars.Free;
+    T.Clear;
   end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_ValidateTemplate_DetectsEmptyName;
 var
@@ -397,7 +460,7 @@ begin
   V := FLLM.ValidateTemplate(T);
   
   Assert.IsTrue(V.IsValid, 'Should be valid (missing vars is warning)');
-  Assert.AreEqual(1, Length(V.MissingVariables), 'Should detect 1 missing variable');
+  Assert.AreEqual<Integer>(1, Length(V.MissingVariables), 'Should detect 1 missing variable');
   Assert.AreEqual('age', V.MissingVariables[0], 'Missing variable should be age');
 end;
 
@@ -407,38 +470,44 @@ var
   Vars: TDictionary<string, string>;
   Result: string;
 begin
-  // Create parent template
   Parent.Init;
-  Parent.Name := 'parent_tpl';
-  Parent.UserPromptTemplate := 'Parent: {{lang}}';
-  SetLength(Parent.Variables, 1);
-  Parent.Variables[0] := 'lang';
-  Parent.DefaultValues := TDictionary<string, string>.Create;
-  Parent.DefaultValues.Add('lang', 'English');
-  FLLM.SaveTemplate(Parent);
-  
-  // Create child template that inherits from parent
   Child.Init;
-  Child.Name := 'child_tpl';
-  Child.ParentTemplate := 'parent_tpl';
-  Child.UserPromptTemplate := 'Translate {{text}} to {{lang}}';
-  SetLength(Child.Variables, 2);
-  Child.Variables[0] := 'text';
-  Child.Variables[1] := 'lang';
-  // No default for lang - should inherit from parent
-  FLLM.SaveTemplate(Child);
-  
-  Vars := TDictionary<string, string>.Create;
   try
-    Vars.Add('text', 'Hello');
-    // lang not provided, should get from parent's default
+    // Create parent template
+    Parent.Name := 'parent_tpl';
+    Parent.UserPromptTemplate := 'Parent: {{lang}}';
+    SetLength(Parent.Variables, 1);
+    Parent.Variables[0] := 'lang';
+    Parent.DefaultValues := TDictionary<string, string>.Create;
+    Parent.DefaultValues.Add('lang', 'English');
+    FLLM.SaveTemplate(Parent);
     
-    Result := FLLM.RenderWithInheritance('child_tpl', Vars);
-    Assert.AreEqual('Translate Hello to English', Result);
+    // Create child template that inherits from parent
+    Child.Name := 'child_tpl';
+    Child.ParentTemplate := 'parent_tpl';
+    Child.UserPromptTemplate := 'Translate {{text}} to {{lang}}';
+    SetLength(Child.Variables, 2);
+    Child.Variables[0] := 'text';
+    Child.Variables[1] := 'lang';
+    // No default for lang - should inherit from parent
+    FLLM.SaveTemplate(Child);
+    
+    Vars := TDictionary<string, string>.Create;
+    try
+      Vars.Add('text', 'Hello');
+      // lang not provided, should get from parent's default
+      
+      Result := FLLM.RenderWithInheritance('child_tpl', Vars);
+      Assert.AreEqual('Translate Hello to English', Result);
+    finally
+      Vars.Free;
+    end;
   finally
-    Vars.Free;
+    Parent.Clear;
+    Child.Clear;
   end;
 end;
+
 
 procedure TTestLLMPromptTemplate.Test_ExportImport_RoundTrip;
 var
@@ -471,11 +540,17 @@ begin
   Assert.AreEqual(1, Imported, 'Should import 1 template');
   
   // Verify
+  Loaded.Init;
   Loaded := FLLM.GetTemplate('export_test');
-  Assert.AreEqual('export_test', Loaded.Name);
-  Assert.AreEqual('Testing', Loaded.Category);
-  Assert.AreEqual(0.8, Loaded.Temperature, 0.001);
+  try
+    Assert.AreEqual('export_test', Loaded.Name);
+    Assert.AreEqual('Testing', Loaded.Category);
+    Assert.AreEqual(0.8, Loaded.Temperature, 0.001);
+  finally
+    Loaded.Clear;
+  end;
 end;
+
 
 initialization
   TDUnitX.RegisterTestFixture(TTestLLMPromptTemplate);

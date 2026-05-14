@@ -119,7 +119,16 @@ type
     procedure Test_DeepKitSafeClient_ConsumeEntitlement_UsesRequestId_AndParsesResult;
 
     [Test]
+    procedure Test_DeepKitSafeClient_ConsumeEntitlement_MissingOk_FailsClosed;
+
+    [Test]
     procedure Test_PermissionClient_HasFeature_UsesActiveEntitlement;
+
+    [Test]
+    procedure Test_PermissionClient_HasFeature_MissingStatus_Denies;
+
+    [Test]
+    procedure Test_PermissionClient_HasFeature_ExpiredEntitlement_Denies;
 
     [Test]
     procedure Test_PermissionClient_ConsumeQuota_UsesFeatureAndRequestId;
@@ -131,6 +140,9 @@ type
     procedure Test_UpgradeFlow_CheckEntitlement_AndRefreshSnapshot;
 
     [Test]
+    procedure Test_UpgradeFlow_CheckEntitlement_ExpiredEntitlement_ReturnsFalse;
+
+    [Test]
     procedure Test_DesktopLifecycle_LoginConfiguresUpdaterAndPermissions;
 
     [Test]
@@ -138,6 +150,15 @@ type
 
     [Test]
     procedure Test_DeepKitSafeClient_IssueLicenseSnapshot_UsesRoute_AndParsesFields;
+
+    [Test]
+    procedure Test_DeepKitSafeClient_IssueLicenseSnapshot_RequiresVerifier;
+
+    [Test]
+    procedure Test_DeepKitSafeClient_IssueLicenseSnapshot_MissingSignature_Raises;
+
+    [Test]
+    procedure Test_DeepKitSafeClient_RefreshLicenseSnapshot_DeviceMismatch_Raises;
 
     [Test]
     procedure Test_DeepKitSafeClient_GetUpdatesManifest_UsesRoute_AndParsesFields;
@@ -216,6 +237,19 @@ type
     function Send(const ARequest: TDeepBaseHttpTransportRequest):
       TDeepBaseHttpTransportResponse;
   end;
+
+function CreateSnapshotVerifiedConfig(const ABearerToken: string = 'atk_001'):
+  TDeepKitSafeClientConfig;
+begin
+  Result := TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+    ABearerToken);
+  Result.LicenseSnapshotVerifier :=
+    function(const APayload, ASignature, AKeyId, AAppId, ADeviceId: string): Boolean
+    begin
+      Result := (APayload <> '') and (ASignature = 'sig_001') and
+        (AKeyId = 'v1');
+    end;
+end;
 
 function TFakePaymentGateway.CreatePaymentIntent(const AOrder: TCommerceOrderData;
   const APayment: TCommercePaymentData; const APayerOpenId: string): TCommercePaymentIntent;
@@ -878,7 +912,22 @@ procedure TCommerceServiceTests.Test_IcsTransport_NotCompiled_FailsFast;
 var
   Raised: Boolean;
   Transport: IDeepBaseHttpTransport;
+  Config: TDeepBaseIcsTransportConfig;
+  Request: TDeepBaseHttpTransportRequest;
+  Effective: TDeepBaseHttpTransportRequest;
 begin
+  Config := TDeepBaseIcsTransportConfig.CreateSecure(45000,
+    'http://proxy.example.test:8080', itls12);
+  Request := TDeepBaseHttpTransportRequest.Create(dbhmGet,
+    'https://api.example.test/dk/health');
+  Request.TimeoutMs := 0;
+  Request.ProxyUrl := '';
+  Effective := TDeepBaseIcsHttpTransport.EffectiveRequest(Config, Request);
+  Assert.AreEqual<Integer>(45000, Effective.TimeoutMs);
+  Assert.AreEqual('http://proxy.example.test:8080', Effective.ProxyUrl);
+  Assert.IsTrue(Effective.FollowRedirects);
+  Assert.AreEqual<Integer>(5, Effective.MaxRedirects);
+
   if TDeepBaseIcsHttpTransport.IsAvailable then
     Exit;
 
@@ -1211,6 +1260,30 @@ begin
   end;
 end;
 
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_ConsumeEntitlement_MissingOk_FailsClosed;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  ResultData: TDeepKitConsumeEntitlementResult;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"entitlement_code":"ai_quota","remaining_quota":41,"consumed_quantity":1}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  try
+    ResultData := Client.ConsumeEntitlement('deepbase_desktop', 'ai_quota',
+      'llm.chat', 1, 'req_001');
+
+    Assert.IsFalse(ResultData.Ok,
+      'ConsumeEntitlement must require explicit ok/success=true');
+  finally
+    Client.Free;
+  end;
+end;
+
 procedure TCommerceServiceTests.Test_PermissionClient_HasFeature_UsesActiveEntitlement;
 var
   Transport: TFakeCommerceTransport;
@@ -1234,6 +1307,58 @@ begin
     Assert.AreEqual('llm.chat', Check.FeatureCode);
     Assert.AreEqual('pro_full', Check.EntitlementCode);
     Assert.AreEqual<Integer>(-1, Check.RemainingQuota);
+  finally
+    Permissions.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_PermissionClient_HasFeature_MissingStatus_Denies;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Permissions: TDeepKitPermissionClient;
+  Check: TDeepKitPermissionResult;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","remaining_quota":-1}]}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  Permissions := TDeepKitPermissionClient.Create(Client, 'deepbase_desktop',
+    'dev_001', True);
+  try
+    Check := Permissions.HasFeature('llm.chat');
+
+    Assert.IsFalse(Check.Allowed,
+      'Entitlement without explicit active status should be denied');
+  finally
+    Permissions.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_PermissionClient_HasFeature_ExpiredEntitlement_Denies;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Permissions: TDeepKitPermissionClient;
+  Check: TDeepKitPermissionResult;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_until":"2000-01-01T00:00:00Z","remaining_quota":-1}]}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  Permissions := TDeepKitPermissionClient.Create(Client, 'deepbase_desktop',
+    'dev_001', True);
+  try
+    Check := Permissions.HasFeature('llm.chat');
+
+    Assert.IsFalse(Check.Allowed,
+      'Expired entitlement should be denied even when status is active');
   finally
     Permissions.Free;
   end;
@@ -1344,12 +1469,9 @@ begin
   Transport.QueueResponse(200,
     '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","remaining_quota":-1}]}');
   Transport.QueueResponse(200,
-    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2026-05-15T10:00:00Z","payload":{"tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":0}');
+    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2099-05-15T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"dev_001","tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":0}');
 
-  Client := TDeepKitSafeClient.Create(
-    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
-      'atk_001'),
-    Transport);
+  Client := TDeepKitSafeClient.Create(CreateSnapshotVerifiedConfig, Transport);
   Flow := TDeepKitUpgradeFlowClient.Create(Client, 'deepbase_desktop',
     'usr_001', 'dev_001', True);
   try
@@ -1361,6 +1483,31 @@ begin
     Assert.AreEqual<Integer>(2, Transport.RequestCount);
     Assert.AreEqual('https://api.example.test/dk/license/snapshot/refresh',
       Transport.RequestAt(1).Url);
+  finally
+    Flow.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_UpgradeFlow_CheckEntitlement_ExpiredEntitlement_ReturnsFalse;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Flow: TDeepKitUpgradeFlowClient;
+  Entitlement: TCommerceEntitlementData;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_until":"2000-01-01T00:00:00Z","remaining_quota":-1}]}');
+
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  Flow := TDeepKitUpgradeFlowClient.Create(Client, 'deepbase_desktop',
+    'usr_001', 'dev_001', True);
+  try
+    Assert.IsFalse(Flow.CheckEntitlement('pro_full', Entitlement),
+      'Upgrade flow should deny expired entitlements');
   finally
     Flow.Free;
   end;
@@ -1463,11 +1610,8 @@ var
 begin
   Transport := TFakeCommerceTransport.Create;
   Transport.QueueResponse(200,
-    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2026-05-15T10:00:00Z","payload":{"tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":2}');
-  Client := TDeepKitSafeClient.Create(
-    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
-      'atk_001'),
-    Transport);
+    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2099-05-15T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"dev_001","tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":2}');
+  Client := TDeepKitSafeClient.Create(CreateSnapshotVerifiedConfig, Transport);
   try
     Snapshot := Client.IssueLicenseSnapshot('deepbase_desktop', 'dev_001');
 
@@ -1485,6 +1629,86 @@ begin
       Request.Url);
     Assert.IsTrue(Pos('"app_id":"deepbase_desktop"', Request.Body) > 0);
     Assert.IsTrue(Pos('"device_id":"dev_001"', Request.Body) > 0);
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_IssueLicenseSnapshot_RequiresVerifier;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Raised: Boolean;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2099-05-15T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"dev_001","tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":2}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  try
+    Raised := False;
+    try
+      Client.IssueLicenseSnapshot('deepbase_desktop', 'dev_001');
+    except
+      on E: EDeepBaseCommerceValidationError do
+        Raised := True;
+    end;
+
+    Assert.IsTrue(Raised,
+      'License snapshot must fail closed when no verifier/public key is configured');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_IssueLicenseSnapshot_MissingSignature_Raises;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Raised: Boolean;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2099-05-15T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"dev_001","tier":"pro"},"key_id":"v1","schema_version":1,"revocation_version":2}');
+  Client := TDeepKitSafeClient.Create(CreateSnapshotVerifiedConfig, Transport);
+  try
+    Raised := False;
+    try
+      Client.IssueLicenseSnapshot('deepbase_desktop', 'dev_001');
+    except
+      on E: EDeepBaseCommerceValidationError do
+        Raised := True;
+    end;
+
+    Assert.IsTrue(Raised, 'License snapshot without signature must be rejected');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_RefreshLicenseSnapshot_DeviceMismatch_Raises;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Raised: Boolean;
+begin
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(200,
+    '{"snapshot_id":"lic_001","issued_at":"2026-05-08T10:00:00Z","expires_at":"2099-05-15T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"other_device","tier":"pro"},"signature":"sig_001","key_id":"v1","schema_version":1,"revocation_version":2}');
+  Client := TDeepKitSafeClient.Create(CreateSnapshotVerifiedConfig, Transport);
+  try
+    Raised := False;
+    try
+      Client.RefreshLicenseSnapshot('deepbase_desktop', 'dev_001');
+    except
+      on E: EDeepBaseCommerceValidationError do
+        Raised := True;
+    end;
+
+    Assert.IsTrue(Raised,
+      'License snapshot device_id must be bound to the requested device');
   finally
     Client.Free;
   end;

@@ -22,6 +22,7 @@ uses
   System.Variants,
   System.Classes,
   System.Math,
+  System.StrUtils,
   System.Generics.Collections,
   System.JSON,
   Vcl.Graphics,
@@ -179,6 +180,15 @@ implementation
 const
   OUTPUT_FORMATS: array[0..2] of string = ('text', 'json', 'markdown');
 
+procedure ClearPromptTemplates(var Templates: TLLMPromptTemplateArray);
+var
+  I: Integer;
+begin
+  for I := 0 to High(Templates) do
+    Templates[I].Clear;
+  SetLength(Templates, 0);
+end;
+
 { TfraPromptTemplate }
 
 constructor TfraPromptTemplate.Create(AOwner: TComponent);
@@ -194,6 +204,7 @@ end;
 
 destructor TfraPromptTemplate.Destroy;
 begin
+  FCurrentTemplate.Clear;
   FCategories.Free;
   if Assigned(FLLM) then
     FLLM.Free;
@@ -730,8 +741,12 @@ begin
   cboParent.Items.Clear;
   cboParent.Items.Add('(None)');
   var Templates := FLLM.GetAllTemplates;
-  for var T in Templates do
-    cboParent.Items.Add(T.Name);
+  try
+    for var T in Templates do
+      cboParent.Items.Add(T.Name);
+  finally
+    ClearPromptTemplates(Templates);
+  end;
 end;
 
 procedure TfraPromptTemplate.LoadTemplates;
@@ -750,44 +765,48 @@ begin
     FCategories.Clear;
     
     Templates := FLLM.GetAllTemplates;
-    FilterText := LowerCase(Trim(edtFilter.Text));
-    if cboCategory.ItemIndex > 0 then
-      FilterCat := cboCategory.Items[cboCategory.ItemIndex]
-    else
-      FilterCat := '';
-    
-    // Group by category
-    for T in Templates do
-    begin
-      // Apply filter
-      if (FilterText <> '') and (Pos(FilterText, LowerCase(T.Name)) = 0) and
-         (Pos(FilterText, LowerCase(T.Description)) = 0) then
-        Continue;
-      if (FilterCat <> '') and (T.Category <> FilterCat) then
-        Continue;
-        
-      // Find or create category node
-      CatIndex := FCategories.IndexOf(T.Category);
-      if CatIndex < 0 then
-      begin
-        CatNode := tvTemplates.Items.Add(nil, T.Category);
-        CatNode.ImageIndex := 0;
-        FCategories.AddObject(T.Category, CatNode);
-      end
+    try
+      FilterText := LowerCase(Trim(edtFilter.Text));
+      if cboCategory.ItemIndex > 0 then
+        FilterCat := cboCategory.Items[cboCategory.ItemIndex]
       else
-        CatNode := TTreeNode(FCategories.Objects[CatIndex]);
+        FilterCat := '';
       
-      // Add template node
-      TplNode := tvTemplates.Items.AddChild(CatNode, T.Name);
-      TplNode.Data := Pointer(T.Id);
-      if T.IsBuiltIn then
-        TplNode.ImageIndex := 1
-      else
-        TplNode.ImageIndex := 2;
+      // Group by category
+      for T in Templates do
+      begin
+        // Apply filter
+        if (FilterText <> '') and (Pos(FilterText, LowerCase(T.Name)) = 0) and
+           (Pos(FilterText, LowerCase(T.Description)) = 0) then
+          Continue;
+        if (FilterCat <> '') and (T.Category <> FilterCat) then
+          Continue;
+          
+        // Find or create category node
+        CatIndex := FCategories.IndexOf(T.Category);
+        if CatIndex < 0 then
+        begin
+          CatNode := tvTemplates.Items.Add(nil, T.Category);
+          CatNode.ImageIndex := 0;
+          FCategories.AddObject(T.Category, CatNode);
+        end
+        else
+          CatNode := TTreeNode(FCategories.Objects[CatIndex]);
+        
+        // Add template node
+        TplNode := tvTemplates.Items.AddChild(CatNode, T.Name);
+        TplNode.Data := Pointer(T.Id);
+        if T.IsBuiltIn then
+          TplNode.ImageIndex := 1
+        else
+          TplNode.ImageIndex := 2;
+      end;
+      
+      // Expand all
+      tvTemplates.FullExpand;
+    finally
+      ClearPromptTemplates(Templates);
     end;
-    
-    // Expand all
-    tvTemplates.FullExpand;
   finally
     tvTemplates.Items.EndUpdate;
   end;
@@ -799,6 +818,7 @@ var
 begin
   if not Assigned(FLLM) then Exit;
   
+  FCurrentTemplate.Clear;
   FCurrentTemplate := FLLM.GetTemplate(Name);
   if FCurrentTemplate.Name = '' then Exit;
   
@@ -892,69 +912,75 @@ begin
   if not Assigned(FLLM) then Exit;
   
   T.Init;
-  T.Id := FCurrentTemplate.Id;
-  T.Name := Trim(edtName.Text);
-  T.Category := Trim(cboCategoryEdit.Text);
-  T.Description := Trim(edtDescription.Text);
-  T.SystemPrompt := mmoSystemPrompt.Text;
-  T.UserPromptTemplate := mmoUserPrompt.Text;
-  
-  // Collect variables from grid
-  VarCount := 0;
-  for I := 1 to sgVariables.RowCount - 1 do
-  begin
-    VarName := Trim(sgVariables.Cells[0, I]);
-    if VarName <> '' then
-      Inc(VarCount);
-  end;
-  
-  SetLength(T.Variables, VarCount);
-  T.DefaultValues := TDictionary<string, string>.Create;
-  
-  VarCount := 0;
-  for I := 1 to sgVariables.RowCount - 1 do
-  begin
-    VarName := Trim(sgVariables.Cells[0, I]);
-    if VarName <> '' then
-    begin
-      T.Variables[VarCount] := VarName;
-      DefVal := sgVariables.Cells[1, I];
-      if DefVal <> '' then
-        T.DefaultValues.Add(VarName, DefVal);
-      Inc(VarCount);
-    end;
-  end;
-  
-  // Advanced settings
-  if cboParent.ItemIndex > 0 then
-    T.ParentTemplate := cboParent.Items[cboParent.ItemIndex]
-  else
-    T.ParentTemplate := '';
-  T.OutputFormat := cboOutputFormat.Text;
-  T.Temperature := StrToFloatDef(edtTemperature.Text, 0.7);
-  T.MaxTokens := StrToIntDef(edtMaxTokens.Text, 0);
-  T.ValidationRegex := edtValidationRegex.Text;
-  T.RecommendedConfig := cboRecommendedConfig.Text;
-  T.IsEnabled := chkIsEnabled.Checked;
-  T.IsBuiltIn := FCurrentTemplate.IsBuiltIn;
-  
-  // Validate
-  var Validation := FLLM.ValidateTemplate(T);
-  if not Validation.IsValid then
-  begin
-    SetStatus('Validation error: ' + String.Join(', ', Validation.Errors), True);
-    Exit;
-  end;
-  
   try
-    FLLM.SaveTemplate(T);
-    FCurrentTemplate := T;
-    SetStatus('Template saved successfully', False);
-    SetModified(False);
-    LoadTemplates;
-  except
-    on E: Exception do
-      SetStatus('Error: ' + E.Message, True);
+    T.Id := FCurrentTemplate.Id;
+    T.Name := Trim(edtName.Text);
+    T.Category := Trim(cboCategoryEdit.Text);
+    T.Description := Trim(edtDescription.Text);
+    T.SystemPrompt := mmoSystemPrompt.Text;
+    T.UserPromptTemplate := mmoUserPrompt.Text;
+    
+    // Collect variables from grid
+    VarCount := 0;
+    for I := 1 to sgVariables.RowCount - 1 do
+    begin
+      VarName := Trim(sgVariables.Cells[0, I]);
+      if VarName <> '' then
+        Inc(VarCount);
+    end;
+    
+    SetLength(T.Variables, VarCount);
+    T.DefaultValues := TDictionary<string, string>.Create;
+    
+    VarCount := 0;
+    for I := 1 to sgVariables.RowCount - 1 do
+    begin
+      VarName := Trim(sgVariables.Cells[0, I]);
+      if VarName <> '' then
+      begin
+        T.Variables[VarCount] := VarName;
+        DefVal := sgVariables.Cells[1, I];
+        if DefVal <> '' then
+          T.DefaultValues.Add(VarName, DefVal);
+        Inc(VarCount);
+      end;
+    end;
+    
+    // Advanced settings
+    if cboParent.ItemIndex > 0 then
+      T.ParentTemplate := cboParent.Items[cboParent.ItemIndex]
+    else
+      T.ParentTemplate := '';
+    T.OutputFormat := cboOutputFormat.Text;
+    T.Temperature := StrToFloatDef(edtTemperature.Text, 0.7);
+    T.MaxTokens := StrToIntDef(edtMaxTokens.Text, 0);
+    T.ValidationRegex := edtValidationRegex.Text;
+    T.RecommendedConfig := cboRecommendedConfig.Text;
+    T.IsEnabled := chkIsEnabled.Checked;
+    T.IsBuiltIn := FCurrentTemplate.IsBuiltIn;
+    
+    // Validate
+    var Validation := FLLM.ValidateTemplate(T);
+    if not Validation.IsValid then
+    begin
+      SetStatus('Validation error: ' + String.Join(', ', Validation.Errors), True);
+      Exit;
+    end;
+    
+    try
+      FLLM.SaveTemplate(T);
+      FCurrentTemplate.Clear;
+      FCurrentTemplate := T;
+      T.DefaultValues := nil;
+      SetStatus('Template saved successfully', False);
+      SetModified(False);
+      LoadTemplates;
+    except
+      on E: Exception do
+        SetStatus('Error: ' + E.Message, True);
+    end;
+  finally
+    T.Clear;
   end;
 end;
 
@@ -977,7 +1003,7 @@ begin
   chkIsEnabled.Checked := True;
   mmoRendered.Clear;
   mmoResponse.Clear;
-  FCurrentTemplate.Init;
+  FCurrentTemplate.Clear;
   SetModified(False);
 end;
 
@@ -996,12 +1022,16 @@ begin
   if not Assigned(FLLM) then Exit;
   
   Templates := FLLM.GetAllTemplates;
-  for T in Templates do
-  begin
-    if cboCategory.Items.IndexOf(T.Category) < 0 then
-      cboCategory.Items.Add(T.Category);
-    if cboCategoryEdit.Items.IndexOf(T.Category) < 0 then
-      cboCategoryEdit.Items.Add(T.Category);
+  try
+    for T in Templates do
+    begin
+      if cboCategory.Items.IndexOf(T.Category) < 0 then
+        cboCategory.Items.Add(T.Category);
+      if cboCategoryEdit.Items.IndexOf(T.Category) < 0 then
+        cboCategoryEdit.Items.Add(T.Category);
+    end;
+  finally
+    ClearPromptTemplates(Templates);
   end;
   
   // Add common categories
@@ -1036,6 +1066,8 @@ end;
 { Event Handlers }
 
 procedure TfraPromptTemplate.tvTemplatesChange(Sender: TObject; Node: TTreeNode);
+var
+  DialogResult: TModalResult;
 begin
   if (Node = nil) or (Node.Parent = nil) then
   begin
@@ -1046,9 +1078,10 @@ begin
   
   if FIsModified then
   begin
-    if MessageDlg('Save changes to current template?', mtConfirmation, [mbYes, mbNo, mbCancel], 0) = mrYes then
+    DialogResult := MessageDlg('Save changes to current template?', mtConfirmation, [mbYes, mbNo, mbCancel], 0);
+    if DialogResult = mrYes then
       SaveTemplate
-    else if ModalResult = mrCancel then
+    else if DialogResult = mrCancel then
     begin
       // Restore selection
       Exit;

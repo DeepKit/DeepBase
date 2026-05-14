@@ -34,6 +34,7 @@ type
       Checksum: string): Boolean; static;
     class procedure RecordApplied(Connection: TFDConnection; const Version,
       ScriptName, Checksum: string); static;
+    class function IsTransactionControlStatement(const SQL: string): Boolean; static;
     class function SplitSQLStatements(const SQLText: string): TArray<string>; static;
     class procedure ExecuteScript(Connection: TFDConnection;
       const ScriptPath: string); static;
@@ -85,6 +86,7 @@ var
   Version: string;
   Checksum: string;
   OwnTransaction: Boolean;
+  SQLiteImmediate: Boolean;
   PgLockHeld: Boolean;
 begin
   Result.Success := False;
@@ -118,6 +120,7 @@ begin
     begin
       Version := ExtractVersion(DatabaseType, FilePath);
       Checksum := CalculateChecksum(FilePath);
+      Result.FailedScript := ExtractFileName(FilePath);
 
       if AlreadyApplied(Connection, Version, Checksum) then
       begin
@@ -128,19 +131,50 @@ begin
       if IsSQLite(DatabaseType) and (Result.BackupPath = '') then
         Result.BackupPath := BackupSQLiteDatabase(Connection);
 
-      Result.FailedScript := ExtractFileName(FilePath);
       OwnTransaction := not Connection.InTransaction;
+      SQLiteImmediate := False;
       if OwnTransaction then
-        Connection.StartTransaction;
+      begin
+        if IsSQLite(DatabaseType) then
+        begin
+          Connection.ExecSQL('BEGIN IMMEDIATE');
+          SQLiteImmediate := True;
+        end
+        else
+          Connection.StartTransaction;
+      end;
       try
+        if AlreadyApplied(Connection, Version, Checksum) then
+        begin
+          if OwnTransaction then
+          begin
+            if SQLiteImmediate then
+              Connection.ExecSQL('COMMIT')
+            else
+              Connection.Commit;
+          end;
+          Inc(Result.SkippedCount);
+          Continue;
+        end;
+
         ExecuteScript(Connection, FilePath);
         RecordApplied(Connection, Version, ExtractFileName(FilePath), Checksum);
         if OwnTransaction then
-          Connection.Commit;
+        begin
+          if SQLiteImmediate then
+            Connection.ExecSQL('COMMIT')
+          else
+            Connection.Commit;
+        end;
         Inc(Result.AppliedCount);
       except
-        if OwnTransaction and Connection.InTransaction then
-          Connection.Rollback;
+        if OwnTransaction then
+        begin
+          if SQLiteImmediate then
+            Connection.ExecSQL('ROLLBACK')
+          else if Connection.InTransaction then
+            Connection.Rollback;
+        end;
         raise;
       end;
     end;
@@ -331,6 +365,21 @@ begin
   end;
 end;
 
+class function TMigrationEngine.IsTransactionControlStatement(
+  const SQL: string): Boolean;
+var
+  S: string;
+begin
+  S := UpperCase(Trim(SQL));
+  Result :=
+    (S = 'BEGIN') or StartsText('BEGIN ', S) or
+    (S = 'COMMIT') or StartsText('COMMIT ', S) or
+    (S = 'END TRANSACTION') or StartsText('END TRANSACTION ', S) or
+    (S = 'ROLLBACK') or StartsText('ROLLBACK ', S) or
+    (S = 'SAVEPOINT') or StartsText('SAVEPOINT ', S) or
+    (S = 'RELEASE') or StartsText('RELEASE ', S);
+end;
+
 class function TMigrationEngine.SplitSQLStatements(
   const SQLText: string): TArray<string>;
 var
@@ -348,6 +397,22 @@ var
   function IsTagChar(C: Char): Boolean;
   begin
     Result := CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9', '_']);
+  end;
+
+  function StartsWithCreateTrigger(const S: string): Boolean;
+  var
+    U: string;
+  begin
+    U := UpperCase(Trim(S));
+    Result :=
+      StartsText('CREATE TRIGGER ', U) or
+      StartsText('CREATE TEMP TRIGGER ', U) or
+      StartsText('CREATE TEMPORARY TRIGGER ', U);
+  end;
+
+  function EndsWithTriggerEnd(const S: string): Boolean;
+  begin
+    Result := EndsText('END', UpperCase(Trim(S)));
   end;
 
 begin
@@ -464,6 +529,14 @@ begin
       if Ch = ';' then
       begin
         Statement := Trim(Builder.ToString);
+        if StartsWithCreateTrigger(Statement) and
+           not EndsWithTriggerEnd(Statement) then
+        begin
+          Builder.Append(Ch);
+          Inc(I);
+          Continue;
+        end;
+
         if Statement <> '' then
           Statements.Add(Statement);
         Builder.Clear;
@@ -496,7 +569,12 @@ begin
   SQLText := TFile.ReadAllText(ScriptPath, TEncoding.UTF8);
   Statements := SplitSQLStatements(SQLText);
   for Statement in Statements do
+  begin
+    if IsTransactionControlStatement(Statement) then
+      raise EDatabaseException.Create(
+        'Migration scripts must not contain transaction control statements');
     Connection.ExecSQL(Statement);
+  end;
 end;
 
 class function TMigrationEngine.BackupSQLiteDatabase(

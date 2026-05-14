@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\_Progs\02Business\DeepBase\Tests\Architecture\DeepBaseArchitectureTests.exe" total="18" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-05-08" time="0.236">
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\Architecture\DeepBaseArchitectureTests.exe" total="18" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-05-10" time="10:20:25">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="DeepBaseArchitectureTests.exe" executed="true" result="Success" success="True" time="0.236" asserts="0">
+  <test-suite type="Assembly" name="DeepBaseArchitectureTests.exe" executed="true" result="Success" success="True" time="10:20:25" asserts="0">
     <results>
-        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.236" asserts="0" >
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.262" asserts="0" >
           <results>
-              <test-suite type="Fixture" name="TPackageBoundaryTests" executed="True" result="Success" success="True" time="0.236" >
+              <test-suite type="Fixture" name="TPackageBoundaryTests" executed="True" result="Success" success="True" time="0.262" >
                 <categories>
                   <category name="Architecture" />
                 </categories>
                 <results>
-                  <test-case name="CorePackage_DoesNotRequireUiOrDesignPackages" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                  <test-case name="CorePackage_DoesNotRequireUiOrDesignPackages" executed="True" result="Success" success="True" time="0.001" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
@@ -35,7 +35,7 @@
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures" executed="True" result="Success" success="True" time="0.002" asserts="0" >
+                  <test-case name="FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures" executed="True" result="Success" success="True" time="0.001" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
@@ -45,12 +45,12 @@
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="PersistenceSource_DatabaseImplementationsLiveUnderPersistence" executed="True" result="Success" success="True" time="0.002" asserts="0" >
+                  <test-case name="PersistenceSource_DatabaseImplementationsLiveUnderPersistence" executed="True" result="Success" success="True" time="0.004" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="TestRunner_UsesWin64CompilerOnly" executed="True" result="Success" success="True" time="0.001" asserts="0" >
+                  <test-case name="TestRunner_UsesWin64CompilerOnly" executed="True" result="Success" success="True" time="0.002" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
@@ -60,12 +60,12 @@
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="CoreSource_UiDependenciesAreExplicitlyAllowlisted" executed="True" result="Success" success="True" time="0.064" asserts="0" >
+                  <test-case name="CoreSource_UiDependenciesAreExplicitlyAllowlisted" executed="True" result="Success" success="True" time="0.086" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="CoreSource_DbRuntimeDependenciesAreExplicitlyAllowlisted" executed="True" result="Success" success="True" time="0.048" asserts="0" >
+                  <test-case name="CoreSource_DbRuntimeDependenciesAreExplicitlyAllowlisted" executed="True" result="Success" success="True" time="0.051" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
@@ -75,7 +75,7 @@
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="ServicesRegistration_DoesNotStartBackgroundServices" executed="True" result="Success" success="True" time="0.002" asserts="0" >
+                  <test-case name="ServicesRegistration_DoesNotStartBackgroundServices" executed="True" result="Success" success="True" time="0.001" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
@@ -85,17 +85,17 @@
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="UiAdapters_DoNotDependOnManagerConfigDB" executed="True" result="Success" success="True" time="0.042" asserts="0" >
+                  <test-case name="UiAdapters_DoNotDependOnManagerConfigDB" executed="True" result="Success" success="True" time="0.041" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="UiLogListView_UsesLoggerQueryPortOnly" executed="True" result="Success" success="True" time="0.003" asserts="0" >
+                  <test-case name="UiLogListView_UsesLoggerQueryPortOnly" executed="True" result="Success" success="True" time="0.002" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>
                   </test-case>
-                  <test-case name="DesignPackages_RegisterControlsOnly_NoRuntimeBootstrap" executed="True" result="Success" success="True" time="0.003" asserts="0" >
+                  <test-case name="DesignPackages_RegisterControlsOnly_NoRuntimeBootstrap" executed="True" result="Success" success="True" time="0.005" asserts="0" >
                     <categories>
                       <category name="Architecture" />
                     </categories>

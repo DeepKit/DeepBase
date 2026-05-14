@@ -107,6 +107,22 @@ begin
   Result := SameText(Trim(GetEnvironmentVariable('DEEP_LLM_MODE')), 'direct');
 end;
 
+function ProviderCanRunWithoutKey(const AProvider: TProviderConfig): Boolean;
+var
+  LName: string;
+  LFormat: string;
+  LEndpoint: string;
+begin
+  LName := LowerCase(Trim(AProvider.Name));
+  LFormat := LowerCase(Trim(AProvider.ApiFormat));
+  LEndpoint := LowerCase(Trim(AProvider.Endpoint));
+
+  Result := (LName = 'ollama') or (LFormat = 'ollama') or
+    (Pos('localhost', LEndpoint) > 0) or
+    (Pos('127.0.0.1', LEndpoint) > 0) or
+    (Pos('[::1]', LEndpoint) > 0);
+end;
+
 function TryGetProxyClient: ILLMClient;
 var
   Config: TProxyConfig;
@@ -194,27 +210,35 @@ end;
 
 function TLLMService.FindProviderForModel(const AModelId: string;
   out AEndpoint, AApiKey, AApiFormat: string): Boolean;
+var
+  P: TProviderConfig;
+  Key: string;
 begin
-  // Search across all providers �� the model might be on any provider
-  for var P in FConfig.GetAllProviders do
-  begin
-    AEndpoint := P.Endpoint;
-    AApiKey := FConfig.GetApiKey(P.Name);
-    AApiFormat := P.ApiFormat;
-    Exit(True);
-  end;
+  AEndpoint := '';
+  AApiKey := '';
+  AApiFormat := '';
 
-  // Fallback: use first provider with API key
-  for var P in FConfig.GetAllProviders do
+  for P in FConfig.GetAllProviders do
   begin
-    var Key := FConfig.GetApiKey(P.Name);
-    if Key <> '' then
+    Key := FConfig.GetApiKey(P.Name);
+    if (Trim(P.Endpoint) <> '') and (Key <> '') then
     begin
       AEndpoint := P.Endpoint;
       AApiKey := Key;
       AApiFormat := P.ApiFormat;
       Exit(True);
     end;
+  end;
+
+  // Local providers such as Ollama may not require an API key.
+  for P in FConfig.GetAllProviders do
+  begin
+    if (Trim(P.Endpoint) = '') or not ProviderCanRunWithoutKey(P) then
+      Continue;
+    AEndpoint := P.Endpoint;
+    AApiKey := FConfig.GetApiKey(P.Name);
+    AApiFormat := P.ApiFormat;
+    Exit(True);
   end;
 
   Result := False;

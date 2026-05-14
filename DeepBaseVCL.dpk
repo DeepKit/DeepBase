@@ -49,6 +49,22 @@ contains
   DeepBase.TestHelper in 'Core\DeepBase.TestHelper.pas',
   DeepBase.VCL.TrayIcon in 'VCL\DeepBase.VCL.TrayIcon.pas',
   DeepBase.VCL.Hotkeys in 'VCL\DeepBase.VCL.Hotkeys.pas',
-  DeepBase.VCL.DesktopLifecycle in 'VCL\DeepBase.VCL.DesktopLifecycle.pas';
+  DeepBase.VCL.DesktopLifecycle in 'VCL\DeepBase.VCL.DesktopLifecycle.pas',
+  DeepBase.VCL.DeepShell.Types in 'VCL\DeepBase.VCL.DeepShell.Types.pas',
+  DeepBase.VCL.DeepShell.Intf in 'VCL\DeepBase.VCL.DeepShell.Intf.pas',
+  DeepBase.VCL.DeepShell.Events in 'VCL\DeepBase.VCL.DeepShell.Events.pas',
+  DeepBase.VCL.DeepShell.Services in 'VCL\DeepBase.VCL.DeepShell.Services.pas',
+  DeepBase.VCL.DeepShell.Context in 'VCL\DeepBase.VCL.DeepShell.Context.pas',
+  DeepBase.VCL.DeepShell.Commands in 'VCL\DeepBase.VCL.DeepShell.Commands.pas',
+  DeepBase.VCL.DeepShell.Recent in 'VCL\DeepBase.VCL.DeepShell.Recent.pas',
+  DeepBase.VCL.DeepShell.Layout in 'VCL\DeepBase.VCL.DeepShell.Layout.pas',
+  DeepBase.VCL.DeepShell.Theme in 'VCL\DeepBase.VCL.DeepShell.Theme.pas',
+  DeepBase.VCL.DeepShell.Localization in 'VCL\DeepBase.VCL.DeepShell.Localization.pas',
+  DeepBase.VCL.DeepShell.Settings in 'VCL\DeepBase.VCL.DeepShell.Settings.pas',
+  DeepBase.VCL.DeepShell.Panels in 'VCL\DeepBase.VCL.DeepShell.Panels.pas',
+  DeepBase.VCL.DeepShell.ToolWindow in 'VCL\DeepBase.VCL.DeepShell.ToolWindow.pas',
+  DeepBase.VCL.DeepShell.Governance in 'VCL\DeepBase.VCL.DeepShell.Governance.pas',
+  DeepBase.VCL.DeepShell.MainForm in 'VCL\DeepBase.VCL.DeepShell.MainForm.pas',
+  DeepBase.VCL.DeepShell in 'VCL\DeepBase.VCL.DeepShell.pas';
 
 end.

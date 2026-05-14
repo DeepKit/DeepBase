@@ -280,7 +280,7 @@ var
 begin
   Url := Format('https://%s/%s', [FCredentials.Endpoint, ABucketName]);
   Headers := SignRequest('PUT', '/' + ABucketName, nil);
-  Response := FHttpClient.Put(Url, nil, nil, Headers);
+  Response := FHttpClient.Put(Url, TStream(nil), TStream(nil), Headers);
   Result := Response.StatusCode in [200, 201, 204];
 end;
 
@@ -799,7 +799,7 @@ begin
   Url := Format('https://%s.blob.core.windows.net/%s?restype=container',
     [Credentials.AccountName, ABucketName]);
   Headers := SignRequest('PUT', '/' + ABucketName + #10 + 'restype:container', nil);
-  Response := FHttpClient.Put(Url, nil, nil, Headers);
+  Response := FHttpClient.Put(Url, TStream(nil), TStream(nil), Headers);
   Result := Response.StatusCode in [200, 201];
 end;
 
@@ -989,13 +989,43 @@ var
   ListResult: TListObjectsResult;
   Obj: TCloudObject;
   LocalPath: string;
+  RelativeKey: string;
+
+  function BuildSafeLocalPath(const AObjectKey: string): string;
+  var
+    RootDir: string;
+    EntryName: string;
+  begin
+    EntryName := StringReplace(AObjectKey, '/', PathDelim, [rfReplaceAll]);
+    EntryName := StringReplace(EntryName, '\', PathDelim, [rfReplaceAll]);
+
+    if (EntryName = '') or (ExtractFileDrive(EntryName) <> '') or
+       EntryName.StartsWith(PathDelim) or EntryName.StartsWith('/') or
+       EntryName.StartsWith('\') then
+      raise Exception.CreateFmt('Unsafe cloud object key path: %s', [AObjectKey]);
+
+    RootDir := IncludeTrailingPathDelimiter(TPath.GetFullPath(ALocalDir));
+    Result := TPath.GetFullPath(TPath.Combine(RootDir, EntryName));
+
+    if not SameText(Copy(Result, 1, Length(RootDir)), RootDir) then
+      raise Exception.CreateFmt('Cloud object key escapes local directory: %s', [AObjectKey]);
+  end;
 begin
   Result := 0;
   ListResult := AClient.ListObjects(ABucketName, APrefix, '', 1000);
   
   for Obj in ListResult.Objects do
   begin
-    LocalPath := TPath.Combine(ALocalDir, Obj.Key.Replace(APrefix, '').Replace('/', '\'));
+    if (APrefix <> '') and Obj.Key.StartsWith(APrefix) then
+      RelativeKey := Copy(Obj.Key, Length(APrefix) + 1, MaxInt)
+    else
+      RelativeKey := Obj.Key;
+
+    if (APrefix <> '') and (RelativeKey <> '') and
+       ((RelativeKey[1] = '/') or (RelativeKey[1] = '\')) then
+      Delete(RelativeKey, 1, 1);
+
+    LocalPath := BuildSafeLocalPath(RelativeKey);
     TDirectory.CreateDirectory(TPath.GetDirectoryName(LocalPath));
     if DownloadFile(AClient, ABucketName, Obj.Key, LocalPath) then
       Inc(Result);

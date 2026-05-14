@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    UniFlow 低熵检查主入口脚本
+    DeepBase 低熵检查主入口脚本
 .DESCRIPTION
     ENTROPY-015: 低熵 CI 检查脚本
     执行所有低熵检查并生成报告
@@ -21,7 +21,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  UniFlow Low-Entropy Check Suite" -ForegroundColor Cyan
+Write-Host "  DeepBase Low-Entropy Check Suite" -ForegroundColor Cyan
 Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 
@@ -52,7 +52,7 @@ $ProhibitedTerms = @{
     "Task" = "FlowInstance (in workflow context)"
 }
 
-$SourcePath = Join-Path $ProjectRoot "docs\uniFlow\Source"
+$SourcePath = Join-Path $ProjectRoot "docs\deepBase\Source"
 if (Test-Path $SourcePath) {
     Get-ChildItem -Path $SourcePath -Filter "*.pas" -Recurse | ForEach-Object {
         $Content = Get-Content $_.FullName -Raw
@@ -95,7 +95,7 @@ if ($GlossaryViolations.Count -gt 0) {
 Write-Host "`n[2/4] Checking error code format..." -ForegroundColor Yellow
 
 $ErrorCodeViolations = @()
-$ValidPattern = "^(UniFlow|Skill|External)/[A-Za-z]+/[A-Za-z]+$"
+$ValidPattern = "^(DeepBase|Skill|External)/[A-Za-z]+/[A-Za-z]+$"
 
 if (Test-Path $SourcePath) {
     Get-ChildItem -Path $SourcePath -Filter "*.pas" -Recurse | ForEach-Object {

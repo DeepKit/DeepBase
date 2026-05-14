@@ -57,6 +57,9 @@
 
 - [60 Commerce 后端契约](./60.backend.Commerce后端契约-commerce-backend-spec.md)
 - [61 DB4 后端交接说明](./61.backend.DB4后端交接说明-db4-backend-handoff.md)
+- [62 DeepKit.top DB4 商用验收](./62.backend.DeepKitTop-DB4商用验收与支付接入.md)
+- [63 DB4 支付渠道接入配置](./63.backend.DB4支付渠道接入配置.md)
+- [64 DB3/DB4 下游产品数据库矩阵](./64.backend.DB3-DB4下游产品数据库矩阵.md)
 
 ### integrations · 下游项目接入
 
@@ -122,7 +125,8 @@
 
 1. [61 DB4 后端交接说明](./61.backend.DB4后端交接说明-db4-backend-handoff.md)
 2. [60 Commerce 后端契约](./60.backend.Commerce后端契约-commerce-backend-spec.md)
-3. [30 数据库 Schema 说明](./30.data.数据库Schema说明-database-schema.md)
+3. [64 DB3/DB4 下游产品数据库矩阵](./64.backend.DB3-DB4下游产品数据库矩阵.md)
+4. [30 数据库 Schema 说明](./30.data.数据库Schema说明-database-schema.md)
 
 ### 运维 / 工具使用者
 

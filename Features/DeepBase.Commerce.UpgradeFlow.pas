@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.SafeClient;
 
@@ -46,6 +47,22 @@ type
   end;
 
 implementation
+
+function IsUpgradeEntitlementUsable(
+  const AEntitlement: TCommerceEntitlementData): Boolean;
+var
+  ValidUntil: TDateTime;
+begin
+  if AEntitlement.Status <> cesActive then
+    Exit(False);
+  if AEntitlement.RemainingQuota = 0 then
+    Exit(False);
+  if AEntitlement.ValidUntilISO = '' then
+    Exit(True);
+  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+    Exit(False);
+  Result := ValidUntil > Now;
+end;
 
 constructor TDeepKitUpgradeFlowClient.Create(AClient: TDeepKitSafeClient;
   const AAppId, AUserId, ADeviceId: string; AOwnsClient: Boolean);
@@ -117,8 +134,7 @@ begin
 
   for Item in FClient.ListEntitlements(FAppId) do
     if SameText(Item.Code, AEntitlementCode) and
-       (Item.Status = cesActive) and
-       (Item.RemainingQuota <> 0) then
+       IsUpgradeEntitlementUsable(Item) then
     begin
       AEntitlement := Item;
       Exit(True);

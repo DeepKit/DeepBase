@@ -371,6 +371,7 @@ begin
 
   AddColumnIfMissing('Hotkeys', 'Description', 'TEXT');
   AddColumnIfMissing('Hotkeys', 'Category', 'TEXT');
+  AddColumnIfMissing('Hotkeys', 'IsCustomized', 'INTEGER DEFAULT 0');
 
   AddColumnIfMissing('Themes', 'DisplayName', 'TEXT');
   AddColumnIfMissing('Themes', 'StyleFile', 'TEXT');

@@ -5,9 +5,9 @@
     - TApiServer/TApiRouter 基本路由 & 中间件链
     - HTTP 请求解析: 路径参数 / 查询参数 / JSON Body
     - CORS 预检 OPTIONS 请求
-    - JWT Bearer 认证中间�?(TAuthMiddleware + TJWTManager)
-    - OpenAPI 文档生成�?(TOpenApiGenerator)
-    - WebSocket 消息路由�?(TWebSocketMessageRouter)
+    - JWT Bearer 认证中间�?(TAuthMiddleware + TJWTManager)
+    - OpenAPI 文档生成�?(TOpenApiGenerator)
+    - WebSocket 消息路由�?(TWebSocketMessageRouter)
   ============================================================================ }
 
 unit Test.Integration.WebAPI;
@@ -31,7 +31,7 @@ type
   { ============================================================================
     TWebApiIntegrationTest
     - 针对 HTTP/WebAPI Core + Auth + OpenAPI 的端到端测试
-    - 通过实际启动 TApiServer 并使�?DeepBase.Net HTTP 客户端发起请�?
+    - 通过实际启动 TApiServer 并使�?DeepBase.Net HTTP 客户端发起请�?
     ============================================================================ }
 
   [TestFixture]
@@ -79,7 +79,7 @@ type
   { ============================================================================
     TWebSocketRouterIntegrationTest
     - 重点验证 WebSocket 消息路由器的事件分发逻辑
-    - 不进行真实网络握�? 仅在内存中构�?TWebSocketMessage
+    - 不进行真实网络握�? 仅在内存中构�?TWebSocketMessage
     ============================================================================ }
 
   [TestFixture]
@@ -102,7 +102,7 @@ var
 begin
   inherited;
 
-  // 启动独立�?WebAPI 服务�?(监听 127.0.0.1:18080)
+  // 启动独立�?WebAPI 服务�?(监听 127.0.0.1:18080)
   FServer := TApiServer.Create;
   FServer.Config.Host := '127.0.0.1';
   FServer.Config.Port := 18080;
@@ -153,8 +153,8 @@ begin
     end
   );
 
-  // JWT 管理�?& 认证中间�?(仅对 /secure/* 路由生效)
-  FJWTManager := TJWTManager.Create('test_secret');
+  // JWT 管理�?& 认证中间�?(仅对 /secure/* 路由生效)
+  FJWTManager := TJWTManager.Create('integration-test-secret');
 
   FAuthMiddleware := TAuthMiddleware.Create;
   FAuthMiddleware.JWTManager := FJWTManager;
@@ -184,7 +184,7 @@ begin
     end
   );
 
-  // 启动服务�?
+  // 启动服务�?
   FServer.Start;
 
   FBaseUrl := Format('http://%s:%d', [FServer.Config.Host, FServer.Config.Port]);
@@ -220,7 +220,7 @@ end;
 
 procedure TWebApiIntegrationTest.CleanupTestData;
 begin
-  // 同上, 无需清理数据库数�?
+  // 同上, 无需清理数据库数�?
   inherited;
 end;
 
@@ -266,7 +266,7 @@ begin
 
     LReq := FClient.Request('/api/echo').JsonBody(LJson);
   finally
-    LJson.Free; // JsonBody 已经序列化为字符�? 不再需要原对象
+    LJson.Free; // JsonBody 已经序列化为字符�? 不再需要原对象
   end;
 
   LResp := LReq.Post;
@@ -356,7 +356,7 @@ begin
     LJson := GetJsonObject(LResp);
     try
       Assert.AreEqual('user123', LJson.GetValue<string>('userId'));
-      // username 默认�?subject �?username 声明, 这里只验证存在即�?
+      // username 默认�?subject �?username 声明, 这里只验证存在即�?
       Assert.IsTrue(LJson.GetValue<string>('username') <> '', 'username should not be empty');
     finally
       LJson.Free;
@@ -372,7 +372,7 @@ var
   LResp: THttpResponse;
   LJson: TJSONObject;
 begin
-  // 未携带任何认证信息访�?/secure/profile
+  // 未携带任何认证信息访�?/secure/profile
   LResp := FClient.Get('/secure/profile');
   try
     Assert.AreEqual(401, LResp.StatusCode, 'Missing token should return 401');
@@ -413,13 +413,13 @@ begin
       LPaths := LRoot.GetValue('paths') as TJSONObject;
       Assert.IsNotNull(LPaths, 'paths section should exist');
 
-      // /api/ping 路由存在且包�?GET 操作
+      // /api/ping 路由存在且包�?GET 操作
       Assert.IsTrue(LPaths.TryGetValue('/api/ping', LValue), 'paths should contain /api/ping');
       LPathObj := LValue as TJSONObject;
       Assert.IsNotNull(LPathObj.GetValue('get') as TJSONObject,
         'GET operation for /api/ping should exist');
 
-      // /api/users/{id} 路由存在且包含路径参�?id
+      // /api/users/{id} 路由存在且包含路径参�?id
       Assert.IsTrue(LPaths.TryGetValue('/api/users/{id}', LValue),
         'paths should contain /api/users/{id}');
       LPathObj := LValue as TJSONObject;
@@ -467,7 +467,7 @@ begin
       end
     );
 
-    // 发送具�?event = chat.message �?JSON 文本消息
+    // 发送具�?event = chat.message �?JSON 文本消息
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;
@@ -503,7 +503,7 @@ begin
       end
     );
 
-    // �?JSON 文本消息
+    // �?JSON 文本消息
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;
@@ -513,7 +513,7 @@ begin
       LMsg.Free;
     end;
 
-    // JSON 但没�?event 字段
+    // JSON 但没�?event 字段
     LMsg := TWebSocketMessage.Create;
     try
       LMsg.Opcode := TWebSocketOpcode.wocText;
@@ -529,5 +529,9 @@ begin
     LRouter.Free;
   end;
 end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TWebApiIntegrationTest);
+  TDUnitX.RegisterTestFixture(TWebSocketRouterIntegrationTest);
 
 end.

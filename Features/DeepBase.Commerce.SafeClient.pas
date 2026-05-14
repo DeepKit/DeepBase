@@ -52,12 +52,22 @@ const
   SDeepKitFieldServerTime = 'server_time';
 
 type
+  TDeepKitLicenseSnapshotVerifier = reference to function(
+    const APayload, ASignature, AKeyId, AAppId, ADeviceId: string): Boolean;
+
+  TDeepKitLicenseSnapshotPublicKey = record
+    KeyId: string;
+    PublicKeyPEM: string;
+  end;
+
   TDeepKitSafeClientConfig = record
     BaseUrl: string;
     RoutePrefix: string;
     BearerToken: string;
     ApiKey: string;
     TimeoutMs: Integer;
+    LicenseSnapshotVerifier: TDeepKitLicenseSnapshotVerifier;
+    LicenseSnapshotPublicKeys: TArray<TDeepKitLicenseSnapshotPublicKey>;
     class function Create(const ABaseUrl: string;
       const ABearerToken: string = ''; const AApiKey: string = '';
       ATimeoutMs: Integer = 30000;
@@ -144,6 +154,8 @@ type
       const AResponse: TCommerceBackendHttpResponse);
     function ParseObjectResponse(const AMethod, APath: string;
       const AResponse: TCommerceBackendHttpResponse): TJSONObject;
+    procedure ValidateLicenseSnapshot(const ASnapshot: TDeepKitLicenseSnapshot;
+      const AAppId, ADeviceId: string);
   public
     constructor Create(const AConfig: TDeepKitSafeClientConfig;
       const ATransport: ICommerceBackendHttpTransport = nil);
@@ -182,7 +194,9 @@ type
 implementation
 
 uses
-  System.NetEncoding;
+  System.DateUtils,
+  System.NetEncoding,
+  DeepBase.Crypto;
 
 const
   SHttpGet = 'GET';
@@ -373,7 +387,7 @@ begin
   Result.ProductId := JsonValueAsString(AJson, SCommerceFieldProductId, '');
   Result.Code := JsonValueAsString(AJson, SCommerceFieldCode, '');
   Result.Status := EntitlementStatusFromString(JsonValueAsString(
-    AJson, SCommerceFieldStatus, 'active'));
+    AJson, SCommerceFieldStatus, ''));
   Result.ValidFromISO := JsonValueAsString(AJson, SCommerceFieldValidFrom, '');
   Result.ValidUntilISO := JsonValueAsString(AJson, SCommerceFieldValidUntil, '');
   Result.RemainingQuota := JsonValueAsInt(AJson, SCommerceFieldRemainingQuota, -1);
@@ -465,6 +479,27 @@ begin
   Result.ErrorMessage := JsonValueAsString(AJson, SCommerceFieldErrorMessage, '');
 end;
 
+function SnapshotJsonField(const APayload, AFieldName: string): string;
+var
+  JsonValue: TJSONValue;
+  JsonObject: TJSONObject;
+begin
+  Result := '';
+  if Trim(APayload) = '' then
+    Exit;
+
+  JsonValue := TJSONObject.ParseJSONValue(APayload);
+  try
+    if JsonValue is TJSONObject then
+    begin
+      JsonObject := TJSONObject(JsonValue);
+      Result := JsonValueAsString(JsonObject, AFieldName, '');
+    end;
+  finally
+    JsonValue.Free;
+  end;
+end;
+
 { TDeepKitSafeClientConfig }
 
 class function TDeepKitSafeClientConfig.Create(const ABaseUrl, ABearerToken,
@@ -476,6 +511,8 @@ begin
   Result.BearerToken := ABearerToken;
   Result.ApiKey := AApiKey;
   Result.TimeoutMs := ATimeoutMs;
+  Result.LicenseSnapshotVerifier := nil;
+  Result.LicenseSnapshotPublicKeys := nil;
 end;
 
 class function TDeepKitSafeClientConfig.CreateDeepKit(const ABaseUrl,
@@ -603,6 +640,84 @@ function TDeepKitSafeClient.ParseObjectResponse(const AMethod,
 begin
   EnsureSuccess(AMethod, APath, AResponse);
   Result := ParseJsonObject(AResponse.Body);
+end;
+
+procedure TDeepKitSafeClient.ValidateLicenseSnapshot(
+  const ASnapshot: TDeepKitLicenseSnapshot; const AAppId, ADeviceId: string);
+var
+  ExpiresAt: TDateTime;
+  PayloadAppId: string;
+  PayloadDeviceId: string;
+  Verified: Boolean;
+  I: Integer;
+{$IFDEF MSWINDOWS}
+  RsaVerifier: TRSAVerifier;
+{$ENDIF}
+begin
+  if ASnapshot.SnapshotId = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing snapshot_id');
+  if ASnapshot.IssuedAtISO = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing issued_at');
+  if ASnapshot.ExpiresAtISO = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing expires_at');
+  if ASnapshot.Payload = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing payload');
+  if ASnapshot.Signature = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing signature');
+  if ASnapshot.KeyId = '' then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot is missing key_id');
+  if ASnapshot.SchemaVersion <= 0 then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot has invalid schema_version');
+
+  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot expires_at is invalid');
+  if ExpiresAt <= Now then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot has expired');
+
+  PayloadAppId := SnapshotJsonField(ASnapshot.Payload, SCommerceFieldAppId);
+  if (PayloadAppId <> '') and (PayloadAppId <> AAppId) then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot app_id mismatch');
+
+  PayloadDeviceId := SnapshotJsonField(ASnapshot.Payload, SDeepKitFieldDeviceId);
+  if (PayloadDeviceId <> '') and (PayloadDeviceId <> ADeviceId) then
+    raise EDeepBaseCommerceValidationError.Create('License snapshot device_id mismatch');
+
+  if Assigned(FConfig.LicenseSnapshotVerifier) then
+  begin
+    if not FConfig.LicenseSnapshotVerifier(ASnapshot.Payload,
+      ASnapshot.Signature, ASnapshot.KeyId, AAppId, ADeviceId) then
+      raise EDeepBaseCommerceValidationError.Create('License snapshot signature verification failed');
+    Exit;
+  end;
+
+  Verified := False;
+  for I := 0 to Length(FConfig.LicenseSnapshotPublicKeys) - 1 do
+  begin
+    if not SameText(FConfig.LicenseSnapshotPublicKeys[I].KeyId, ASnapshot.KeyId) then
+      Continue;
+
+{$IFDEF MSWINDOWS}
+    RsaVerifier := TRSAVerifier.Create;
+    try
+      if not RsaVerifier.LoadPublicKeyPEM(
+        FConfig.LicenseSnapshotPublicKeys[I].PublicKeyPEM) then
+        raise EDeepBaseCommerceValidationError.Create(
+          'License snapshot public key is invalid');
+      Verified := RsaVerifier.VerifySignature(ASnapshot.Payload,
+        ASnapshot.Signature);
+    finally
+      RsaVerifier.Free;
+    end;
+{$ELSE}
+    raise EDeepBaseCommerceValidationError.Create(
+      'License snapshot public-key verification is unavailable on this platform');
+{$ENDIF}
+    Break;
+  end;
+
+  if not Verified then
+    raise EDeepBaseCommerceValidationError.Create(
+      'License snapshot signature verification failed');
 end;
 
 function TDeepKitSafeClient.AuthLoginDeviceAnonymous(const AAppId,
@@ -869,7 +984,7 @@ begin
         IdempotencyKey));
     try
       Result.Ok := JsonValueAsBool(Json, 'ok',
-        JsonValueAsBool(Json, SCommerceFieldSuccess, True));
+        JsonValueAsBool(Json, SCommerceFieldSuccess, False));
       Result.EntitlementCode := JsonValueAsString(Json, SCommerceFieldEntitlementCode, '');
       Result.RemainingQuota := JsonValueAsInt(Json, SCommerceFieldRemainingQuota, -1);
       Result.ConsumedQuantity := JsonValueAsInt(Json, SDeepKitFieldConsumedQuantity, AQuantity);
@@ -897,6 +1012,7 @@ begin
       SendJson(SHttpPost, SDeepKitRouteLicenseSnapshotIssue, Body));
     try
       Result := LicenseSnapshotFromJson(Json);
+      ValidateLicenseSnapshot(Result, AAppId, ADeviceId);
     finally
       Json.Free;
     end;
@@ -922,6 +1038,7 @@ begin
       SendJson(SHttpPost, SDeepKitRouteLicenseSnapshotRefresh, Body));
     try
       Result := LicenseSnapshotFromJson(Json);
+      ValidateLicenseSnapshot(Result, AAppId, ADeviceId);
     finally
       Json.Free;
     end;

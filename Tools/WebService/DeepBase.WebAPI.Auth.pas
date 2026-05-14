@@ -697,6 +697,8 @@ end;
 constructor TJWTManager.Create(const ASecret: string);
 begin
   inherited Create;
+  if Length(ASecret) < 16 then
+    raise EArgumentException.Create('JWT secret must be at least 16 characters');
   FSecret := ASecret;
   FAlgorithm := 'HS256';
   FAccessTokenExpiry := 3600;      // 1小时
@@ -755,8 +757,32 @@ begin
 end;
 
 function TJWTManager.Verify(const AData, ASignature: string): Boolean;
+var
+  LExpected: string;
+  LMaxLen: Integer;
+  I: Integer;
+  LDiff: Integer;
+  LExpectedChar: Char;
+  LSignatureChar: Char;
 begin
-  Result := Sign(AData) = ASignature;
+  LExpected := Sign(AData);
+  LMaxLen := Length(LExpected);
+  if Length(ASignature) > LMaxLen then
+    LMaxLen := Length(ASignature);
+
+  LDiff := Length(LExpected) xor Length(ASignature);
+  for I := 1 to LMaxLen do
+  begin
+    LExpectedChar := #0;
+    LSignatureChar := #0;
+    if I <= Length(LExpected) then
+      LExpectedChar := LExpected[I];
+    if I <= Length(ASignature) then
+      LSignatureChar := ASignature[I];
+    LDiff := LDiff or (Ord(LExpectedChar) xor Ord(LSignatureChar));
+  end;
+
+  Result := LDiff = 0;
 end;
 
 function TJWTManager.GenerateToken(const ASubject: string;
@@ -1453,7 +1479,7 @@ constructor TAuthMiddleware.Create;
 begin
   inherited;
   FApiKeyHeaderName := 'X-API-Key';
-  FApiKeyQueryParam := 'api_key';
+  FApiKeyQueryParam := '';
   FRequireAuth := True;
 end;
 
@@ -1515,8 +1541,8 @@ function TAuthMiddleware.ExtractApiKey(AContext: TApiContext): string;
 begin
   // 先从头部获取
   Result := AContext.Request.GetHeader(FApiKeyHeaderName);
-  // 再从查询参数获取
-  if Result = '' then
+  // URL query API keys are unsafe by default; enable only by explicit opt-in.
+  if (Result = '') and (FApiKeyQueryParam <> '') then
     Result := AContext.Request.GetQueryParam(FApiKeyQueryParam);
 end;
 

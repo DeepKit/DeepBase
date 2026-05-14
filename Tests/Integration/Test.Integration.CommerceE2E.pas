@@ -96,6 +96,7 @@ procedure TCommerceDesktopE2ETests.Test_FreeUser_UpgradeToPro_UnlocksFeatureAndP
 var
   Transport: TE2EFakeTransport;
   Client: TDeepKitSafeClient;
+  SafeConfig: TDeepKitSafeClientConfig;
   Lifecycle: TDeepBaseDesktopLifecycle;
   Config: TDeepBaseDesktopLifecycleConfig;
   Upgrade: TDeepKitUpgradeStartResult;
@@ -116,13 +117,20 @@ begin
   Transport.QueueResponse(200,
     '{"items":[{"entitlement_id":"ent_e2e","user_id":"usr_e2e","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","remaining_quota":-1}]}');
   Transport.QueueResponse(200,
-    '{"snapshot_id":"snap_e2e","issued_at":"2026-05-08T10:00:00Z","expires_at":"2026-06-08T10:00:00Z","payload":{"tier":"pro","features":["pro_full"]},"signature":"sig_e2e","key_id":"v1","schema_version":1,"revocation_version":0}');
+    '{"snapshot_id":"snap_e2e","issued_at":"2026-05-08T10:00:00Z","expires_at":"2026-06-08T10:00:00Z","payload":{"app_id":"deepbase_desktop","device_id":"dev_e2e","tier":"pro","features":["pro_full"]},"signature":"sig_e2e","key_id":"v1","schema_version":1,"revocation_version":0}');
   Transport.QueueResponse(200,
     '{"app_id":"deepbase_desktop","current_version":"1.0.0","channel":"stable-pro","latest_version":"1.1.0","min_version":"1.0.0","manifest_url":"https://cdn.example.test/deepbase/pro/stable/version.json","package_url":"https://cdn.example.test/deepbase/pro/stable/deepbase-1.1.0.zip","package_hash":"sha256:e2e","signature":"sig_manifest","force_update":false,"release_notes":"Pro update"}');
 
-  Client := TDeepKitSafeClient.Create(
-    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test'),
-    Transport);
+  SafeConfig := TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test');
+  SafeConfig.LicenseSnapshotVerifier :=
+    function(const APayload, ASignature, AKeyId, AAppId,
+      ADeviceId: string): Boolean
+    begin
+      Result := (APayload <> '') and (ASignature = 'sig_e2e') and
+        (AKeyId = 'v1') and (AAppId = 'deepbase_desktop') and
+        (ADeviceId = 'dev_e2e');
+    end;
+  Client := TDeepKitSafeClient.Create(SafeConfig, Transport);
   Config := TDeepBaseDesktopLifecycleConfig.Create('deepbase_desktop',
     'dev_e2e', '1.0.0', 'https://api.example.test/dk', 'stable');
   Lifecycle := TDeepBaseDesktopLifecycle.Create(Config, Client, True);

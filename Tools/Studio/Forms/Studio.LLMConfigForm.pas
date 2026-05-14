@@ -22,6 +22,7 @@ uses
   System.Variants,
   System.Classes,
   System.Generics.Collections,
+  System.Math,
   Vcl.Graphics,
   Vcl.Controls,
   Vcl.Forms,
@@ -735,7 +736,7 @@ begin
     FConfigGrid.Cells[GRID_COL_COST, I + 1] := FormatFloat('$0.0000', TotalCost);
     
     if Configs[I].IsDefault then
-      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := 'â˜?
+      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := '*'
     else
       FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := '';
   end;
@@ -978,14 +979,13 @@ begin
   end
   else if (ARow > 0) and (ACol = GRID_COL_DEFAULT) then
   begin
-    // Draw star for default
     S := Grid.Cells[ACol, ARow];
     Grid.Canvas.FillRect(Rect);
-    if S = 'â˜? then
+    if S = '*' then
     begin
-      Grid.Canvas.Font.Color := clYellow;
+      Grid.Canvas.Font.Color := clOlive;
       Grid.Canvas.Font.Size := 14;
-      Grid.Canvas.TextRect(Rect, Rect.Left + 20, Rect.Top + 2, 'â˜?);
+      Grid.Canvas.TextRect(Rect, Rect.Left + 20, Rect.Top + 2, '*');
       Grid.Canvas.Font.Size := 8;
     end;
   end;

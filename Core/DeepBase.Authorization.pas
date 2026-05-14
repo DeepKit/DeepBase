@@ -854,6 +854,9 @@ var
   Visited: TList<string>;
 begin
   Result := TList<string>.Create;
+  if (User = nil) or (not User.IsActive) then
+    Exit;
+
   Visited := TList<string>.Create;
   try
     for RoleName in User.Roles do
@@ -886,7 +889,7 @@ begin
     
   Visited.Add(RoleName);
   
-  if not FRoles.TryGetValue(RoleName, Role) then
+  if (not FRoles.TryGetValue(RoleName, Role)) or (not Role.IsActive) then
     Exit;
   
   // Add direct permissions
@@ -1255,6 +1258,23 @@ function TAuthorizationManager.HasPermission(const Username, PermissionName: str
 var
   User: TUser;
   Permissions: TList<string>;
+  Perm: string;
+
+  function MatchesGrantedPermission(const Granted, Requested: string): Boolean;
+  var
+    Prefix: string;
+  begin
+    if SameText(Granted, Requested) or (Granted = '*') then
+      Exit(True);
+
+    if (Length(Granted) > 2) and (Copy(Granted, Length(Granted) - 1, 2) = '.*') then
+    begin
+      Prefix := Copy(Granted, 1, Length(Granted) - 2);
+      Exit(SameText(Copy(Requested, 1, Length(Prefix) + 1), Prefix + '.'));
+    end;
+
+    Result := False;
+  end;
 begin
   FLock.Enter;
   try
@@ -1263,13 +1283,19 @@ begin
       Result := False;
       Exit;
     end;
+
+    if not User.IsActive then
+    begin
+      Result := False;
+      Exit;
+    end;
     
     Permissions := GetEffectivePermissions(User);
     try
-      // Check for exact match or wildcard
-      Result := Permissions.Contains(PermissionName) or
-                Permissions.Contains('*') or
-                Permissions.Contains(User.GetMetadata('resource', '') + '.*');
+      Result := False;
+      for Perm in Permissions do
+        if MatchesGrantedPermission(Perm, PermissionName) then
+          Exit(True);
     finally
       Permissions.Free;
     end;

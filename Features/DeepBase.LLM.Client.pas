@@ -1,7 +1,9 @@
 ﻿unit DeepBase.LLM.Client;
 
-{ DeepBase LLM Client Interfaces
-  消费程序 uses 此单元即可使用全�?LLM 能力 }
+/// <summary>
+/// DeepBase LLM Client Interfaces
+/// 消费程序 uses 此单元即可使用全部 LLM 能力
+/// </summary>
 
 interface
 

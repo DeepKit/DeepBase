@@ -1637,7 +1637,7 @@ begin
       if Assigned(FExceptionHandler) then
         FExceptionHandler(AContext, E)
       else
-        AContext.Response.InternalError(E.Message);
+        AContext.Response.InternalError;
     end;
   end;
 end;

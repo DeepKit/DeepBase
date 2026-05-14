@@ -1,6 +1,8 @@
 unit DeepBase.LLM.Config;
 
-{ DeepBase LLM Config �� DeepBase.Config ���� + API Key ��ȫ�洢 }
+/// <summary>
+/// DeepBase LLM Config - DeepBase.Config 集成 + API Key 安全存储
+/// </summary>
 
 interface
 
@@ -193,20 +195,43 @@ begin
   end;
 end;
 
+function ProviderCanRunWithoutKey(const AProvider: TProviderConfig): Boolean;
+var
+  LName: string;
+  LFormat: string;
+  LEndpoint: string;
+begin
+  LName := LowerCase(Trim(AProvider.Name));
+  LFormat := LowerCase(Trim(AProvider.ApiFormat));
+  LEndpoint := LowerCase(Trim(AProvider.Endpoint));
+
+  Result := (LName = 'ollama') or (LFormat = 'ollama') or
+    (Pos('localhost', LEndpoint) > 0) or
+    (Pos('127.0.0.1', LEndpoint) > 0) or
+    (Pos('[::1]', LEndpoint) > 0);
+end;
+
 function TLLMConfigStore.IsConfigured: Boolean;
+var
+  HasCallableProvider: Boolean;
 begin
   Result := False;
 
-  // At least one provider with API key is required
-  if FProviders.Count = 0 then Exit;
-  var HasKey := False;
+  // At least one callable provider is required. Local providers such as
+  // Ollama may intentionally run without an API key.
+  if FProviders.Count = 0 then
+    Exit;
+
+  HasCallableProvider := False;
   for var P in FProviders do
-    if GetApiKey(P.Name) <> '' then
+    if (Trim(P.Endpoint) <> '') and
+       ((GetApiKey(P.Name) <> '') or ProviderCanRunWithoutKey(P)) then
     begin
-      HasKey := True;
+      HasCallableProvider := True;
       Break;
     end;
-  if not HasKey then Exit;
+  if not HasCallableProvider then
+    Exit;
 
   // Text tiers (smart, balanced, fast) are mandatory
   for var Tier in ['smart', 'balanced', 'fast'] do
@@ -249,9 +274,13 @@ begin
     end;
     JSON.AddPair('providers', ProvArr);
     SetConfig('LLM.Providers', JSON.ToJSON);
+  finally
+    JSON.Free;
+  end;
 
-    // Save tier models as JSON
-    JSON := TJSONObject.Create;
+  // Save tier models as JSON
+  JSON := TJSONObject.Create;
+  try
     for var Pair in FTierModels do
     begin
       ModelsArr := TJSONArray.Create;
@@ -260,9 +289,13 @@ begin
       JSON.AddPair(Pair.Key, ModelsArr);
     end;
     SetConfig('LLM.Tiers', JSON.ToJSON);
+  finally
+    JSON.Free;
+  end;
 
-    // Save API keys encrypted
-    JSON := TJSONObject.Create;
+  // Save API keys encrypted
+  JSON := TJSONObject.Create;
+  try
     for var Pair in FKeys do
       JSON.AddPair(Pair.Key, Pair.Value);
     SetConfig('LLM.Keys', JSON.ToJSON);

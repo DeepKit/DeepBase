@@ -24,6 +24,7 @@ uses
   System.Variants,
   System.Classes,
   System.Generics.Collections,
+  System.Math,
   System.JSON,
   Vcl.Graphics,
   Vcl.Controls,
@@ -34,6 +35,7 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   Vcl.Menus,
+  Vcl.CheckLst,
   FireDAC.Comp.Client,
   DeepBase.LLM,
   DeepBase.LLM.Manager;
@@ -939,12 +941,10 @@ end;
 procedure TPromptDebugForm.VarGridDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
 var
   Grid: TStringGrid;
-  S: string;
-  TypeStr: string;
+  S, TypeStr: string;
 begin
   Grid := TStringGrid(Sender);
   
-  // Custom draw for Type column and Required column
   if (ARow > 0) and (ACol = VAR_COL_TYPE) then
   begin
     // Draw type with color coding
@@ -961,13 +961,12 @@ begin
   end
   else if (ARow > 0) and (ACol = VAR_COL_REQUIRED) then
   begin
-    // Draw checkbox style
     Grid.Canvas.FillRect(Rect);
     S := Grid.Cells[ACol, ARow];
     if (S = '1') or (S = 'Y') or (S = 'Yes') or (S = 'true') then
-      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'âœ?)
+      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'Y')
     else
-      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'â—?);
+      Grid.Canvas.TextRect(Rect, Rect.Left + 10, Rect.Top + 2, 'N');
   end;
 end;
 

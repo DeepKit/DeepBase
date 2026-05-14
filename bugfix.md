@@ -3,6 +3,638 @@
 > 本文档记录所有发现和修复�?Bug、Issue 及改�?
 ---
 
+## 2026-05-14 Bug 登记（IntentClarification）
+
+> 本节记录 2026-05-14 五专家审阅确认的缺陷。编译接入、类型契约和 Registration 已完成首轮修复；公开 facade、DomainAdapter slots、Engine 并发、Provider session state、Router 和 LLM/L4 降级语义继续跟踪。
+
+### BUG-143: IntentClarification Phase 2 单元未纳入包和主测试
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `DeepBaseFeatures.dpk`, `DeepBaseFeatures.dproj`, `Tests/DeepBaseTests.dpr`, `Tests/DeepBaseTests.dproj`
+- 问题:
+  - `DeepBaseFeatures` 只包含旧 `Features/DeepBase.IntentClarification.pas`，未包含 `Types/Interfaces/Engine/IoC/Provider.L0-L4/SessionFSM/...`。
+  - `Test.DeepBase.IntentClarification.Integration.pas` 存在但未被活跃测试入口引用。
+  - 当前 `compile_test.bat` 成功只说明旧 facade 可编译，不能证明 Phase 2 新模块可编译。
+- 修复计划:
+  - 将所有 IntentClarification Phase 2 单元纳入包和测试工程。
+  - 包边界测试增加 `DeepBase.IntentClarification.*` 必需单元检查。
+- 修复:
+  - Phase 2 IC 单元已加入 `DeepBaseFeatures.dpk/.dproj` 和 `Tests/DeepBaseTests.dpr/.dproj`。
+  - `Test.DeepBase.IntentClarification.Integration` 已进入活跃测试入口。
+- 验证:
+  - `cmd /c compile_test.bat`: `compile_output.txt` 为 `Exit code: 0`。
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.IntentClarification,TICIntegrationTest,TICResilienceIntegrationTest,TICSessionFSMTest`: 20/20 passed。
+- 状态: ✅ 已修复
+
+### BUG-142: 公开工厂返回空 facade，不是真正的澄清引擎
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.IntentClarification.pas`, `Features/DeepBase.IntentClarification.Interfaces.pas`, `Features/DeepBase.IntentClarification.Engine.pas`
+- 问题:
+  - `DeepBase.IntentClarification.pas` 内定义了空 `IClarificationEngine` 和空 `TClarificationEngineFacade`。
+  - `TIntentClarifier.CreateEngine/CreateEngineWithPreset` 返回空 facade，而真正可用接口和实现位于 `Interfaces.pas` 与 `Engine.pas`。
+  - 下游照文档调用 `StartSession/SubmitInput/SetDomainAdapter` 会遇到接口不匹配或方法不存在。
+- 修复计划:
+  - 删除或改名空 facade，统一 `IClarificationEngine` 定义。
+  - `CreateEngineWithPreset` 必须返回真正 `TClarificationEngine`，或文档统一改为 IoC 创建路径。
+- 状态: 待修复
+
+### BUG-141: IntentClarification 核心类型契约与实现不一致
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.IntentClarification.Types.pas`, `Provider.L0-L4.pas`, `OptionFrame.pas`, `Budget.pas`, `Storage.pas`, `Rapport.pas`
+- 问题:
+  - `TOptionItem` 只有 `Code/Text/Value`，但 Provider/OptionFrame 使用 `Number/IsRecommended`。
+  - `THypothesis` 没有 `Denied/Text`，但 L2 Provider 使用这些字段。
+  - `TBudgetConfig/TBudgetStatus` 没有 `MaxTokens/TokensUsed/TokensRemaining`，但 Budget/FeatureConfig 使用。
+  - `TRapportProfile` 没有 `CommunicationStyle`，但 Rapport/Storage 使用。
+  - `TSessionCheckpoint`、`TPresetTemplate` 在多个单元被使用，但当前类型集中未形成稳定定义。
+- 修复计划:
+  - 先统一 `Types.pas`，再接入包编译暴露剩余错误。
+- 修复:
+  - `TOptionItem`、`THypothesis`、`TBudgetConfig/TBudgetStatus`、`TRapportProfile`、`TSessionCheckpoint`、`TPresetTemplate` 已补齐到当前实现可编译契约。
+- 验证:
+  - `cmd /c compile_test.bat`: `Exit code: 0`。
+- 状态: ✅ 已修复
+
+### BUG-140: Registration 门面文件半截实现
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.IntentClarification.Registration.pas`
+- 问题:
+  - 文件只声明 `TClarificationRegistration.RegisterAll`，缺少 `implementation/end.` 和实际方法实现。
+  - 文档使用的 `RegisterDomainAdapter/RegisterPersonaRegistry` 不存在。
+- 修复计划:
+  - 补齐 `RegisterAll`、`RegisterDomainAdapter`、`RegisterPresenter`、`RegisterPersonaRegistry`、`RegisterLLM`、`ApplyPreset`。
+- 修复:
+  - `DeepBase.IntentClarification.Registration.pas` 已补齐 implementation，并提供 `RegisterAll`、`RegisterDomainAdapter`、`RegisterPresenter`、`RegisterPersonaRegistry`、`RegisterLLM`、`ApplyPreset`。
+- 验证:
+  - `cmd /c compile_test.bat`: `Exit code: 0`。
+- 状态: ✅ 已修复
+
+### BUG-139: Engine session 并发写回会覆盖挂起/取消状态
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.IntentClarification.Engine.pas`
+- 问题:
+  - `SubmitInput` 只在读取 session 时加锁，后续无锁处理并保留旧 `LState`，最后再写回。
+  - 并发 `SuspendSession/CancelSession` 可能被旧 active 状态覆盖，session 被“写活”。
+  - 并发两次 `SubmitInput` 可能产生重复 turn 或 lost update。
+- 修复计划:
+  - 对同一 session 建立串行化处理或乐观版本检查。
+  - `FHistory/FTokenUsage/FSessions` 读写统一锁策略。
+- 状态: 待修复
+
+### BUG-138: Engine 历史、token、预算耗尽路径状态不一致
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.IntentClarification.Engine.pas`
+- 问题:
+  - `FHistory/FTokenUsage` 为普通集合，但读写没有统一加锁。
+  - 预算耗尽路径直接完成 session 并退出，跳过本轮 history 记录。
+  - `GetSessionState` 返回的 `TSessionState.History` 不同步独立 `FHistory`。
+  - `MakeErrorResult` 固定返回 `ssActive`，可能误导调用方。
+- 修复计划:
+  - 合并或同步 session history，预算耗尽也记录 turn。
+  - 错误结果应携带真实 session 状态和 turn。
+- 状态: 待修复
+
+### BUG-137: L1 Provider 没有接入 IDomainAdapter.GetPresetSlots
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.IntentClarification.Engine.pas`, `Features/DeepBase.IntentClarification.Provider.L1.pas`
+- 问题:
+  - `IDomainAdapter.GetPresetSlots` 是文档要求下游实现的关键接口，但 Engine 构建上下文时没有调用。
+  - `TL1SlotProvider.BuildRequest` 最终给 `TIntentClarifier` 的 slots 为空，可能直接返回 `icsReady`，跳过澄清。
+- 修复计划:
+  - `TProcessingContext` 增加 preset slots 或 resolved slots 字段。
+  - Engine 调用 `GetPresetSlots(AState.IntentName)` 并传给 L1 request。
+- 状态: 待修复
+
+### BUG-136: Provider 状态跨 session 串话
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.IntentClarification.Provider.L2.pas`, `Features/DeepBase.IntentClarification.Provider.L3.pas`
+- 问题:
+  - L2 `FDeniedHypotheses` 是 provider 实例字段，未按 `SessionId` 分桶。
+  - L3 `FCurrentExpert/FExpertSelected` 是 provider 实例字段，后续 session 会复用前一个 session 的专家。
+- 修复计划:
+  - Provider 尽量无状态；必须保留的状态放入 session state 或按 `SessionId` 建立状态表。
+  - session 完成/取消时清理 provider session 状态。
+- 状态: 待修复
+
+### BUG-135: Router MaxLevel 边界和深度增长策略会误升层级
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.IntentClarification.Router.pas`
+- 问题:
+  - `ClampDepth` 只在 `ADepth > LMaxDepth` 时钳制；当深度刚好等于边界时，`DepthToLevel` 会进入下一层。
+  - `ComputeDepth` 从当前深度开始，再加 `TurnCount * 0.02`，会造成无信号场景随轮次累计升到 L3/L4。
+- 修复计划:
+  - 边界钳制改为按目标 level 映射，避免等值越级。
+  - 深度增长改为有上限的单轮增量，并由信号/用户行为驱动。
+- 状态: 待修复
+
+### BUG-134: LLM resilience 和 L4 降级语义不可靠
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.IntentClarification.LLMResilience.pas`, `Features/DeepBase.IntentClarification.Provider.L4.pas`
+- 问题:
+  - `TimeoutMs` 只在同步 LLM 调用完成后记录慢调用，不会中断卡死请求。
+  - `MakeCircuitOpenResult/MakeFailureResult` 没有写 `ErrorMessage`，Provider 降级信息可能为空。
+  - L4 专家和综合调用即使全部失败，最终仍可能 `Success=True`。
+- 修复计划:
+  - 将 timeout 下沉到 HTTP/transport 层或使用可取消任务。
+  - 失败结果必须填充 `ErrorMessage`。
+  - L4 所有专家或综合失败时返回 degraded failure。
+- 状态: 待修复
+
+---
+
+## 2026-05-14 Bug 修复（IntentClarification / Browser 测试编译）
+
+### BUG-163: IntentClarification IoC provider 构造和无 LLM 默认路径失败
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.IntentClarification.IoC.pas`, `Features/DeepBase.IntentClarification.Engine.pas`
+- 描述:
+  - IoC 通过 RTTI 构造 `TL1SlotProvider` 时尝试解析 optional 参数 `AClarifier`，导致 `Cannot resolve constructor parameter: AClarifier`。
+  - 补入 L2-L4 后，未配置 LLM 的最小 engine 会路由到 LLM provider 并返回 `PROVIDER_ERROR`，破坏基础集成测试。
+  - 输入 `0` 的退出路径缺少异常隔离，退出摘要失败时会被外层捕获成 active error result。
+- 修复:
+  - IoC 改为显式注册 provider interface 实例，避免 optional constructor 被容器误解析。
+  - IoC 默认注册 L0-L4 named providers；Engine 未配置 LLM 时跳过 `RequiresLLM=True` 的 provider，走普通澄清兜底。
+  - `HandleExit` 增加摘要生成异常兜底，并在写回 session 时加锁。
+- 验证:
+  - `cmd /c compile_test.bat`: `Exit code: 0`。
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.IntentClarification,TICIntegrationTest,TICResilienceIntegrationTest,TICSessionFSMTest`: 20/20 passed。
+- 状态: ✅ 已修复
+
+### BUG-164: Browser CDP/Vision 编译阻塞
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.Browser.CDP.pas`, `Features/DeepBase.Browser.Vision.pas`, `Tests/Test.DeepBase.Browser.Vision.pas`
+- 描述:
+  - `Vision` 暴露 `TRect` 但 interface uses 缺少 `System.Types`。
+  - `TCDPStrategy.SendCommandSync` 声明为 `procedure ...): Boolean`，签名非法。
+  - `WaitForSelector` 使用 `MilliSecondsBetween` 但缺少 `System.DateUtils`，并在 queued anonymous proc 中捕获本地嵌套过程，Delphi 编译报错。
+  - Vision 测试缺少 `System.Types/System.TypInfo`，且把表达式传给 `out` 参数。
+- 修复:
+  - 补齐 uses，修正 `SendCommandSync` 为 function。
+  - 将 `WaitForSelector` 改为后台轮询线程，并只把最终 callback queue 回主线程。
+  - Vision 测试改用显式 `TRect` 变量和 `GetTypeData(TypeInfo(...))^.Guid`。
+- 验证:
+  - `cmd /c compile_test.bat`: `Exit code: 0`。
+- 状态: ✅ 已修复
+
+### BUG-165: Browser ScriptStore 测试契约缺失和 Unicode 字面量编码不稳定
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.Browser.ScriptStore.pas`, `Tests/Test.DeepBase.Browser.ScriptStore.pas`
+- 描述:
+  - 测试期望 `EBrowserScriptStore`、`TJSScriptArray`、`TJSScriptStoreSqlite.GetBuiltinDefaults`，但轻量 in-memory 实现未提供兼容契约。
+  - 模板 render 奇数 name/value 参数未抛异常。
+  - 测试里的中文/emoji 字面量受源码编码影响，运行时断言不稳定。
+- 修复:
+  - 增加 `EBrowserScriptStore`、`TJSScriptDefinition/TJSScriptArray` 和 `TJSScriptStoreSqlite.GetBuiltinDefaults` 兼容 facade。
+  - `TMemoryJSScriptStore` 初始化时加载 7 个内置脚本。
+  - `TJSTemplate.Render` 对奇数参数抛 `EBrowserScriptStore`。
+  - 测试改为用 Unicode code point 构造字符串，避免源码编码依赖；长度断言使用显式泛型。
+- 验证:
+  - `cmd /c compile_test.bat`: `Exit code: 0`。
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.Browser.ScriptStore.TJSTemplateTests,Test.DeepBase.Browser.ScriptStore.TBuiltinDefaultsTests`: 20/20 passed。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-05-14 Bug 修复（DeepShell VCL 桌面壳骨架）
+
+### BUG-144: IShellCommandManager 引用 IGovernanceService 但前向声明缺失
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.Intf.pas`
+- 描述:
+  - `IShellCommandManager.SetGovernance` 引用 `IGovernanceService`，但 `IGovernanceService` 在同一单元后面声明，编译报 `E2003 Undeclared identifier: 'IGovernanceService'`，再到声明处 `E2004 Identifier redeclared`。
+- 修复:
+  - 在类型节顶部加 `IGovernanceService = interface;` 前向声明，让前置接口可以引用后置接口。
+- 验证:
+  - `dcc32 _tmp_deepshell_compile.dpr`: 通过。
+- 状态: ✅ 已修复
+
+### BUG-145: TShellEventBus 重复 uses System.Classes
+- 发现日期: 2026-05-14
+- 严重性: 🟡 Low
+- 文件: `VCL/DeepBase.VCL.DeepShell.Events.pas`
+- 描述:
+  - implementation uses 段重复 `System.Classes`，编译报 `E2004 Identifier redeclared: 'System.Classes'`。
+- 修复:
+  - 删除 implementation 段的重复 uses。
+- 状态: ✅ 已修复
+
+### BUG-146: TThread.Queue 重载在内联匿名 proc 上歧义
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Events.pas`
+- 描述:
+  - 后台线程 Publish 时直接把内联匿名 procedure 传给 `TThread.Queue(nil, ...)`，编译报 `E2250 There is no overloaded version of 'Queue' that can be called with these arguments`。
+- 修复:
+  - 显式声明 `LProc: TThreadProcedure := procedure begin ... end;`，再传给 `TThread.Queue`。
+- 状态: ✅ 已修复
+
+### BUG-147: TDictionary 不接受 [doOwnsValues] ownership 选项
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Localization.pas`
+- 描述:
+  - `Localization` 用 `TDictionary<string, TDictionary<string, string>>.Create([doOwnsValues])` 想自动释放内层字典，编译报 `E2250 There is no overloaded version of 'Create'`。`TDictionary` 不支持 ownership，只有 `TObjectDictionary` 才有。
+- 修复:
+  - 改为 `TObjectDictionary<string, TDictionary<string, string>>.Create([doOwnsValues])`。
+- 状态: ✅ 已修复
+
+### BUG-148: TDeepShellToolWindow 上下面板创建顺序导致 splitter 错位
+- 发现日期: 2026-05-14
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.ToolWindow.pas`
+- 描述:
+  - `FUpper(alClient)` 后先创建 `FSplitter(alBottom)` 再创建 `FLower(alBottom)`，VCL alBottom 按创建顺序自底向上堆叠，FSplitter 落到最底、FLower 反而在 splitter 之上。视觉上 splitter 不是分界线。
+- 修复:
+  - 先创建 FLower(alBottom) 再创建 FSplitter(alBottom)，splitter 自然落在 FLower 之上。
+- 状态: ✅ 已修复
+
+### BUG-149: TDeepMainForm 关闭路径下 EventBus 订阅未撤销
+- 发现日期: 2026-05-14
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 关闭流程中先把 `FShellInitialised := False`，进入 `Destroy` 时 `if FShellInitialised then` 块被跳过，连带 `UnhookEventBus` 也不再调用。EventBus 仍然持有 `TDeepMainForm` 的 handler 闭包，后续 publish 落到已释放对象上引发 UAF。
+- 修复:
+  - `Destroy` 中把 `UnhookEventBus` 移出 `if FShellInitialised` 块，无论关闭路径如何都能撤销订阅。
+- 状态: ✅ 已修复
+
+### BUG-150: TShellEventBus 后台线程闭包持有裸 Self 存在 UAF
+- 发现日期: 2026-05-14（五专家审阅 P0-A）
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.Events.pas`
+- 描述:
+  - 后台线程 `Publish` 时构造的匿名 proc 隐式捕获 `Self`（`TShellEventBus` 类引用，不走 IInterface 引用计数）。如果在主线程消费 queue 之前持有方释放了 bus，`DispatchInline` 会落到已释放对象上。
+- 修复:
+  - 在闭包内捕获 `LSelfRef: IShellEventBus := Self`，让闭包持有的接口引用计数延长 bus 生命周期，确保 queue 消费完成前 bus 不被释放。
+- 验证:
+  - `dcc32 _tmp_deepshell_compile.dpr`: 通过。
+- 状态: ✅ 已修复
+
+### BUG-151: TDeepMainForm OnShow/OnClose 事件钩子可被下游覆盖
+- 发现日期: 2026-05-14（五专家审阅 P0-B）
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 通过 `OnShow := DoFormShow / OnClose := DoFormClose / OnDestroy := DoFormDestroy` 占用事件属性。下游若在 DFM 中或代码中 `OnShow := MyHandler`，Shell 的 `LoadShellState`、`AfterShellShown`、`SaveShellState` 全部失效。
+- 修复:
+  - 改为 override `TCustomForm.DoShow` 与 `TCustomForm.DoClose` 虚方法，事件属性留给下游使用。
+  - 删除 `DoFormShow/DoFormClose/DoFormDestroy` 私有方法和 OnShow/OnClose/OnDestroy 赋值。
+- 状态: ✅ 已修复
+
+### BUG-152: RefreshBottomLog 每次事件全量重建 Memo 丢失滚动和选中
+- 发现日期: 2026-05-14（五专家审阅 P0-C）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 每条 `Status.Info` → publish → `RefreshBottomLog` → 清空 Memo + 重新追加全部条目。N 条日志后第 N+1 条触发 O(N) 重建，1000 条上限触发后变 O(1000)；用户的滚动位置和选中文本每次都丢，错误信息无法被复制。
+- 修复:
+  - 引入 `FLastLogEntryCount` 字段，正常路径只追加新增条目；StatusManager 触发 trim 导致条目数变小时才回退到全量重建。
+  - `CMD_LOG_CLEAR` handler 同步清零 `FLastLogEntryCount`，避免清屏后又把已清除的条目当成历史保留。
+- 状态: ✅ 已修复
+
+### BUG-153: svkHtml/svkMarkdown 把源码当文本塞进 Memo，违反契约
+- 发现日期: 2026-05-14（五专家审阅 P0-D）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 70/72 号文档明确说 HTML/Markdown 渲染由下游 provider 负责（WebView2/CEF 或自渲染控件），Shell 核心不依赖渲染库。但实现里 `svkHtml/svkMarkdown` 走的是和 `svkText` 相同的 Memo 分支，结果用户看到的是 `<html>...</html>` 字面源码，不是渲染结果。
+- 修复:
+  - 把 `svkHtml/svkMarkdown` 与 `svkControl/svkFrame` 一并路由到 `IShellMainViewProvider.CreateViewControl`，由 provider 决定渲染控件。
+  - Provider 返回 nil 时通过 `IShellStatusManager.Warning` 记录可见诊断，不再静默失效。
+  - `OpenView` 找不到 provider 时也写一行 warning，不再静默 Exit。
+- 状态: ✅ 已修复
+
+### BUG-154: SaveShellState 在 wsMinimized 时保存了不可恢复的坐标
+- 发现日期: 2026-05-14（五专家审阅 P0-E）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 最小化窗口的 `Left/Top` 是 `-32000` 之类的隐藏 sentinel 坐标。直接保存到 layout 后，下次启动若不是 maximized，会把窗口"恢复"到屏幕外，用户看不到。
+- 修复:
+  - `SaveShellState` 检测 `WindowState = wsMinimized`，调用 Win32 `GetWindowPlacement` 取 `rcNormalPosition` 作为保存坐标；非最小化路径走 `Left/Top/Width/Height`。
+  - `DoClose` 用 `try/except` 包住 `SaveShellState/ShutdownShell`，避免保存失败把关闭路径阻塞掉。
+- 状态: ✅ 已修复
+
+### BUG-155: IShellStatusManager 缺乏 sanitizer 钩子，下游 token/Authorization 可能误入日志
+- 发现日期: 2026-05-14（五专家审阅 P1-Security）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Intf.pas`, `VCL/DeepBase.VCL.DeepShell.Panels.pas`
+- 描述:
+  - 78 号文档要求"密码、Token、私钥不进入日志"，但 Shell 没有任何机制强制。下游不小心写 `Status.Info('http', 'Authorization: Bearer eyJhb...')`，token 直接进 entries / 底部 Memo / 后续持久化层。
+- 修复:
+  - 新增 `TShellStatusSanitizer = reference to function(const ASource, AMessage: string): string`。
+  - `IShellStatusManager.SetSanitizer` 允许下游注入正则替换器。
+  - `TShellStatusManager.AddEntry` 在写入 entries 和发布 EventBus 之前对 message 应用 sanitizer；sanitizer 自身抛异常时回退到原 message，不阻断日志。
+- 状态: ✅ 已修复
+
+### BUG-156: TShellCommandManager.BuildContextJson 默认携带 project_path 泄漏 PII
+- 发现日期: 2026-05-14（五专家审阅 P1-Privacy）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Commands.pas`
+- 描述:
+  - `BuildContextJson` 把 `LCtx.ProjectPath` 无条件写入 governance evidence。本地路径常含用户名（`C:\Users\Alice\my-project`），落到 evidence 库后审计员能看到所有用户的本地目录结构，违反 GDPR / 公司隐私策略。
+- 修复:
+  - 默认不发 `project_path` 字段；只有命令显式声明 `RequiresEvidence=True` 时才把 path 写入 evidence。
+  - 文档化：希望发送的下游产品需要在命令注册时调 `.RequiresEvidence(True)`，并由 governance 层负责持久化前的二次脱敏。
+- 状态: ✅ 已修复
+
+### BUG-157: TDeepShellToolWindow 默认尺寸未做 DPI 缩放
+- 发现日期: 2026-05-14（五专家审阅 P1-UX）
+- 严重性: 🟡 Medium
+- 文件: `VCL/DeepBase.VCL.DeepShell.ToolWindow.pas`
+- 描述:
+  - 工具窗硬编 `Width := 320; Height := 480; FLower.Height := 140`。在 4K 屏 200% DPI 下，肉眼上是 160×240×70，几乎不可用。
+- 修复:
+  - 默认尺寸按 `Screen.PixelsPerInch / 96` 用 `MulDiv` 缩放；fallback 到 96 DPI 默认值。
+  - 实际值在 `CreateForShell` 计算后赋给 `Width/Height/FLower.Height`，不影响布局保存（`SetState` 会用持久化的 layout 尺寸覆盖）。
+- 状态: ✅ 已修复
+
+### BUG-158: TShellAreaController.SetCollapsed 中区死代码导致行为含糊
+- 发现日期: 2026-05-14（五专家审阅 P1-Code）
+- 严重性: 🟡 Low
+- 文件: `VCL/DeepBase.VCL.DeepShell.Panels.pas`
+- 描述:
+  - 中区 `FMiddlePanel` 是 alClient，`Height` 没有意义。但 `UpdateVisuals` 折叠分支里写 `FPanel.Height := MIN_MIDDLE_HEIGHT_COLLAPSED`，`SetCollapsed` 也会按 BOTTOM 默认值处理 middle 的 `LastExpandedSize`。逻辑没崩，但代码读起来误导后人。
+- 修复:
+  - `UpdateVisuals` 中区只切 host 与 summary 的可见性，不再设置 alClient 面板的 Height。
+  - `SetCollapsed` 不为 middle 维护 `LastExpandedSize`。
+- 状态: ✅ 已修复
+
+### BUG-159: CommandIds / ServiceIds 顺序不可预期
+- 发现日期: 2026-05-14（五专家审阅 P1-API）
+- 严重性: 🟡 Medium
+- 文件: `VCL/DeepBase.VCL.DeepShell.Commands.pas`, `VCL/DeepBase.VCL.DeepShell.Services.pas`
+- 描述:
+  - `TDictionary<string, T>.Keys.ToArray` 不保证顺序，与插入顺序也无关。下游"按注册顺序展示菜单"的期望落空。
+- 修复:
+  - `TShellCommandManager` 与 `TShellServiceRegistry` 在 dict 之外维护一个 `TList<string>` 记录插入顺序；`CommandIds` / `ServiceIds` 返回有序列表的 `ToArray`。
+  - 同时修一个相关问题：`UnregisterCommand` 之前用 `if FCommands.Remove(...)` 当 Boolean 用，但 `TDictionary.Remove` 返回 void，编译报 E2012；改为 `ContainsKey` 后再 `Remove`。
+- 状态: ✅ 已修复
+
+### BUG-160: NullGovernanceService 既不拦也不记录，gmObserve 阶段没有审计痕迹
+- 发现日期: 2026-05-14（五专家审阅 P1-Audit）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Governance.pas`（新增）, `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 文档默认 `NullGovernanceService` 总是允许，但既不拦也不记录。下游接 OCGS 之前的整个 gmObserve 期 L2/L3 命令都没有审计痕迹，违背了"先观察后阻断"的设计意图。
+- 修复:
+  - 新增 `TShellAuditOnlyGovernanceService`：`IsEnabled = True`，`EnterGate` 总是允许但解析 context JSON 拿到 `risk_level`，对 `>= rlMedium` 的命令通过 `IShellStatusManager.Diagnostic` 写一行 evidence。
+  - 同时提供 `TShellAllowAllGovernanceService` 给测试场景使用（`IsEnabled = False` 直接走早出路径，不构建 JSON）。
+  - `TDeepMainForm` 默认接 `TShellAuditOnlyGovernanceService(FStatus)`；下游可 `SetGovernance(nil)` 或 `SetGovernance(allowAll)` 显式退出审计。
+- 状态: ✅ 已修复
+
+### BUG-161: IShellStatusManager.ShellError 命名含糊
+- 发现日期: 2026-05-14（五专家审阅 P1-Naming）
+- 严重性: 🟢 Trivial
+- 文件: `VCL/DeepBase.VCL.DeepShell.Intf.pas`, `VCL/DeepBase.VCL.DeepShell.Panels.pas`
+- 描述:
+  - `ShellError` 名字带 `Shell` 前缀语义重复，不符合接口的简洁命名习惯。
+- 修复:
+  - 接口和实现都加 `LogError(const ASource, AMessage, ADetail: string)` 作为推荐名。
+  - `ShellError` 保留为兼容别名，行为一致。
+- 状态: ✅ 已修复
+
+### BUG-162: SaveShellState 只写全局 layout，多项目工作流互相覆盖
+- 发现日期: 2026-05-14（五专家审阅 P1-Multi-project）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - `IShellLayoutService` 已经定义了 `SaveProjectLayout/TryLoadProjectLayout`，但 `TDeepMainForm.SaveShellState` 只调 `SaveGlobalLayout`，从不调 project 路径。多项目工作流会互相覆盖 layout。
+- 修复:
+  - 抽出 `CaptureLayoutState` / `ApplyLayoutState` 私有 helper 复用 layout 序列化与还原逻辑。
+  - 新增 `OpenProject(AProjectId, APath)` / `CloseProject` 方法：切换前持久化旧项目 layout，切换后加载新项目 layout，并把项目登记到 RecentService。
+  - `SaveShellState` 同时写全局 layout 和（若 `FActiveProjectIdForLayout` 非空）项目 layout。
+  - `LoadShellState` 改用 `ApplyLayoutState`，与 `OpenProject` 走同一恢复路径。
+- 状态: ✅ 已修复
+
+### BUG-163: VCLDeepShellDemo Demo.Providers/Demo.Commands 缺 uses 致 enum/常量未声明
+- 发现日期: 2026-05-14（dproj 实建后第一轮编译）
+- 严重性: 🟠 High
+- 文件: `Examples/VCLDeepShellDemo/Demo.Providers.pas`, `Examples/VCLDeepShellDemo/Demo.Commands.pas`
+- 描述:
+  - 单独靠 `uses DeepBase.VCL.DeepShell;` 引用 facade，编译报 `E2003 Undeclared identifier: 'svkText'`、`E2003 Undeclared identifier: 'mrYes'`。Delphi 类型别名不会把枚举值带进来；MessageDlg 常量也需要显式 uses。
+  - facade 的实例只 alias 了 `TShellViewKind` 的类型，未把每个 ordinal 值注入到调用方作用域。
+- 修复:
+  - `Demo.Providers.pas`: 增加 `uses DeepBase.VCL.DeepShell.Types`，让 `svkText`、`svkControl` 等枚举值可见。
+  - `Demo.Commands.pas`: 增加 `uses Vcl.Controls`、`System.UITypes`，让 `mrYes`、`mtConfirmation`、`MessageDlg` 都可见。
+- 验证:
+  - `msbuild Examples/VCLDeepShellDemo/VCLDeepShellDemo.dproj /p:Config=Debug /p:Platform=Win64`: 编译通过，17593 lines，0 errors，输出 6.0 MB Win64 exe。
+- 状态: ✅ 已修复
+
+### BUG-164: compile_test.bat 外层吞掉 msbuild 失败
+- 发现日期: 2026-05-14（构建门禁审阅）
+- 严重性: 🔴 Critical
+- 文件: `compile_test.bat`
+- 描述:
+  - msbuild 失败（exit code 1）会被 `>>compile_output.txt` 后的 `echo` 覆盖，外层 `%ERRORLEVEL%` 变成 0。脚本本身缺 `exit /b %ERRORLEVEL%`。CI 误判通过。
+- 修复:
+  - `set BUILD_EC=%ERRORLEVEL%` 立即捕获 msbuild 退出码，写入 `compile_output.txt` 并 `exit /b %BUILD_EC%`。
+- 验证:
+  - 当前 Tests\DeepBaseTests.dproj 因 IntentClarification.SignalDetector 错误返回 1，外层脚本 ERRORLEVEL = 1。
+- 状态: ✅ 已修复
+
+### BUG-165: DeepBaseFeatures.dpk 缺 requires DeepBasePersistence
+- 发现日期: 2026-05-14（构建门禁审阅）
+- 严重性: 🟠 High
+- 文件: `DeepBaseFeatures.dpk`
+- 描述:
+  - `Features\DeepBase.IntentClarification.Storage.pas` 在 uses 段引用 `DeepBase.DB.Factory` / `DeepBase.DB.Guardian`，这两个单元位于 `DeepBasePersistence.dpk` 的 contains 列表，但 Features 包没有 `requires DeepBasePersistence`，导致整个 Features 包解析时找不到这两个单元。
+  - 与 docs/全局规则要求的运行时包顺序 `Core → Services → Persistence → Features → FMX → VCL` 一致：Features 完全可以依赖 Persistence。
+- 修复:
+  - 在 `DeepBaseFeatures.dpk` 的 requires 段加入 `DeepBasePersistence`。
+- 状态: ✅ 已修复
+
+### BUG-166: 服务"可替换"设计实际未生效——私有字段旁路 registry
+- 发现日期: 2026-05-14（构建门禁审阅 P0-3）
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 构造期把 `FRecent/FSettings/FLayout/FTheme/FLocalization` 创建为内存默认实现，再通过 `RegisterServices` 写入 `IShellServiceRegistry`。但 `LoadShellState/SaveShellState/OpenProject/CloseProject` 等代码全部直接读 `FRecent`/`FLayout` 等私有字段。下游 `inherited; Services.RegisterService(CAP_SHELL_RECENT, MyDB1Recent)` 把 registry 替换掉之后，主窗体仍然用旧的内存对象 → 实际上替换无效。
+- 修复:
+  - 新增 `ResolveServicesFromRegistry` 私有方法：从 registry 按 capability id 查回最新注册的实现，重新绑定 `FRecent/FLayout/FSettings/FTheme/FLocalization`。
+  - `AfterConstruction` 在 `RegisterServices` 之后立即调用 `ResolveServicesFromRegistry`，让"先 inherited 注册默认 + 后用 RegisterService 覆盖"这条标准下游 pattern 真正生效。
+  - `Bus / Context / Commands / Status` 仍由构造期固化（构成 shell identity），不参与重绑。
+- 状态: ✅ 已修复
+
+### BUG-167: TShellEventBus + 主窗体闭包 UAF（已排队闭包仍捕获 Self）
+- 发现日期: 2026-05-14（构建门禁审阅 P0-4）
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`, `VCL/DeepBase.VCL.DeepShell.Events.pas`
+- 描述:
+  - `TShellEventBus.Publish` 在后台线程时通过 `TThread.Queue` 投递主线程闭包，`LSelfRef: IShellEventBus := Self` 已经把 bus 自身的生命周期延长到 queue 消费完。但是：主窗体的 `HookEventBus` 订阅 handler 是匿名 procedure，它捕获 `Self`（裸 `TDeepMainForm` 类引用，不增引用计数）。形式上 EventBus 拿着这个匿名方法的 closure，里面引用了已释放的 form。即使关闭路径调了 `UnsubscribeAll`，已经入队的 queue 项还在，下一次 `CheckSynchronize` 跑回 `UpdateStatusBarFromContext` 就 UAF。
+- 修复:
+  - 引入 `IShellMainFormBridge` 接口和 `TShellMainFormBridge` 实现类（接口在 interface 段以便 form class 字段引用，实现类在 implementation 段以便持有原生 `TDeepMainForm*`）。
+  - 主窗体构造期创建 `FBridge: IShellMainFormBridge := TShellMainFormBridge.Create(Self)`。
+  - `HookEventBus` 把 bridge 取入 `LBridge: IShellMainFormBridge` 局部变量，闭包只捕获该接口（不捕获 Self）。
+  - `Destroy` 中调用 `FBridge.Detach` 把 bridge 内部的 `FOwner := nil`，再 `FBridge := nil`。Bridge 在 queue 项内部仍然存活（接口引用计数），但 `Dispatch` 看到 `FOwner = nil` 直接返回 → 不再访问已释放 form。
+- 状态: ✅ 已修复
+
+### BUG-168: Governance 双轨结果只检查 Boolean，AllowResult 被忽略可能误放行
+- 发现日期: 2026-05-14（构建门禁审阅 P0-5）
+- 严重性: 🔴 Critical
+- 文件: `VCL/DeepBase.VCL.DeepShell.Commands.pas`, `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - `IGovernanceService.EnterGate` 返回 `Boolean` 同时 `out TShellGateResult`。`TShellCommandManager.Execute` 只判 `Boolean`：`if not LGov.EnterGate(...) then PublishRejected; Exit;`。如果 adapter 把 Boolean 当 "function call success" 而把 `LResult.Outcome := sgoDeniedHard` 放在 result 里，命令仍会执行。
+  - 拒绝事件通过 `sekCommandRejected` 发出，但主窗体没有任何 handler，用户视觉上完全静默。
+- 修复:
+  - `Execute` 改为 fail-closed：`Allowed := EnterGate 返回 True 且 LResult.Allowed`，否则一律 `PublishRejected` + `Exit`。
+  - adapter 抛异常时 catch 并视为 soft denial，不把异常向上抛。
+  - 主窗体 `HandleCommandRejected` 处理 `sekCommandRejected`：状态栏写明 "Command was not allowed"，底部日志写一条 warning，把 `Source / GateKey / 拒绝消息` 全部记录。Bridge 调用此方法。
+- 状态: ✅ 已修复
+
+### BUG-169: TDeepMainForm.Create 在构造期调用虚方法，descendant 字段尚未初始化
+- 发现日期: 2026-05-14（构建门禁审阅 P0-6）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 构造期顺序调用 `InitializeShell / RegisterServices / RegisterCommands / RegisterProviders / BuildShellUI`。这些都是虚方法，按 Delphi 规则会派发到最派生的覆盖。但此时 descendant 自己的构造体（`begin ... end;`）还没运行，descendant 的 `private FSomething: TSomething;` 字段全部为零值。任何在 descendant `RegisterServices` 里访问自身字段的代码都会 nil 引用。
+- 修复:
+  - 重构生命周期：`Create` 只做字段分配 + 核心服务实例化，不调任何虚方法。
+  - 新增 `AfterConstruction override`：执行 `InitializeShell → RegisterServices → ResolveServicesFromRegistry → RegisterCommands → RegisterProviders → BuildShellUI → HookEventBus`，并设置 `FShellInitialised := True`。
+  - `AfterConstruction` 由 `TObject.NewInstance` 在最派生构造器返回之后调用，descendant 字段已完成初始化。
+- 状态: ✅ 已修复
+
+### BUG-170: OpenView 不优先 ProviderId 匹配 + 把 Title 当 ViewType
+- 发现日期: 2026-05-14（构建门禁审阅，重要问题 1+2）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - 多个 provider 支持同一 Kind 时（例如两个不同 ProviderId 都能开 'doc'），`OpenView` 仅按"第一个 CanOpen 命中"派发，可能打开错对象。
+  - 设置 context 时把 `LInfo.Title`（描述性 UI 文本）当成 `ViewType` 写进 `IShellContextManager.SetView(ViewId, ViewType)`。Inspector / governance 依赖的 ViewType 拿到的是任意 caption 字符串。
+- 修复:
+  - 两遍扫描：先按 `ARef.ProviderId` 严格匹配，再退回任意 `CanOpen`。
+  - `SetView(ViewId, ViewType)` 改为传 `GetEnumName(TypeInfo(TShellViewKind), Ord(LInfo.ViewKind))`，也就是 `svkText/svkHtml/...` 这类稳定枚举名，不再写 caption。
+- 状态: ✅ 已修复
+
+### BUG-171: Layout 持久化在 wsMaximized 也写错坐标 + 无工作区裁剪
+- 发现日期: 2026-05-14（构建门禁审阅，重要问题 3）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 描述:
+  - `CaptureLayoutState` 仅对 `wsMinimized` 走 `GetWindowPlacement.rcNormalPosition`。最大化时 `Left/Top/Width/Height` 等于最大化矩形（覆盖整屏），保存后下次 restore 看似还原成"最大化前"，实际是把最大化前的 normal 矩形丢了。
+  - `ApplyLayoutState` 直接套用保存的坐标，没有按当前显示器工作区裁剪。把窗口拉到第二显示器做 layout、再断开第二显示器后启动，会落到不可见区域。
+- 修复:
+  - 两种状态都走 `GetWindowPlacement.rcNormalPosition`：`wsMinimized in [wsMinimized, wsMaximized]` 时使用 placement 矩形。
+  - `ApplyLayoutState` 用 `Screen.MonitorFromPoint(矩形中心)` 找当前可用 monitor 的 work area，对 width/height/left/top 逐项夹回；缺省退化到 `Screen.PrimaryMonitor`。
+- 状态: ✅ 已修复
+
+### BUG-172: StatusManager Detail 字段未脱敏
+- 发现日期: 2026-05-14（构建门禁审阅，重要问题 6）
+- 严重性: 🟠 High
+- 文件: `VCL/DeepBase.VCL.DeepShell.Panels.pas`
+- 描述:
+  - 之前 BUG-155 给 `IShellStatusManager` 加了 sanitizer hook，但 `AddEntry` 只对 `MessageText` 走 sanitizer，`Detail` 字段（异常 stack trace、HTTP response body 等更可能含 token 的位置）原样保存。
+- 修复:
+  - `AddEntry` 对 `ADetail` 也调 `ApplySanitizer`，与 message 同口径。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-05-09 Bug 修复
+
+### BUG-133: Studio 工程编译链断裂
+- 发现日期: 2026-05-09
+- 严重性: 🟠 High
+- 描述:
+  - `Tools\Studio\Studio.dproj` Win64 编译被多个 Studio 单元阻断：`Studio.SQLFrame` 仍用 `TClientDataSet` 调用已改为 `TFDMemTable` 的 `UniDbSelect`；`Studio.LLMConfigForm` 和 `Studio.PromptDebugForm` 存在损坏的非 ASCII 状态/星标字符串并缺少必要 uses；`Studio.LLMFrame` 的高级工具按钮事件未在类声明中注册；`Studio.QueriesFrame` 有 `{$R *.dfm}` 但缺失 DFM。
+- 修复:
+  - `Studio.SQLFrame`: DoQry select 结果改用 `TFDMemTable`，匹配 `DeepBase.DB.DoQry.UniDbSelect` 的 `var` 参数类型。
+  - `Studio.LLMConfigForm`: 补 `System.Math`，将默认配置星标改为 ASCII `*`，修复损坏字符串。
+  - `Studio.PromptDebugForm`: 补 `System.Math` 和 `Vcl.CheckLst`，将变量 required 列绘制改为 ASCII `Y/N`，修复损坏字符串。
+  - `Studio.LLMFrame`: 补齐 `btnOpenConfigManagerClick`、`btnOpenPromptDebugClick` 声明和析构事件清理。
+  - `Studio.QueriesFrame`: 新增最小 `Studio.QueriesFrame.dfm`，匹配运行时创建控件的 frame 模式。
+- 验证:
+  - `msbuild Tools\Studio\Studio.dproj /t:Build /p:Config=Debug /p:Platform=Win64 ...`: 编译通过。
+- 状态: ✅ 已修复
+
+### BUG-132: LLM PromptTemplate schema/生命周期漂移与 SimpleCrypto 未认证密文
+- 发现日期: 2026-05-09
+- 严重性: 🔴 Critical
+- 描述:
+  - `Core/DeepBase.LLM.pas` 的 prompt template CRUD 使用 `LLMPromptTemplates`，但 schema 常量和 sample DB 只创建 `LLMPrompts`，新库会在模板读写时缺表。
+  - `Test.DeepBase.LLM.PromptTemplate` 因缺少 schema 常量长期未接入 `DeepBaseTests.dpr`，重新注册后又暴露 DUnitX `Length(...)` 断言泛型推断失败。
+  - `TLLMPromptTemplate` 是持有 `TDictionary<string,string>` 的 record，但没有统一释放协议；`GetTemplate/GetAllTemplates/GetTemplatesByCategory/Clone/Import` 返回或创建的 `DefaultValues` 会在调用方和内部临时对象路径上残留，PromptTemplate 单测退出时触发 FastMM 小块泄漏告警。
+  - `TSimpleCrypto` 仅使用 AES-CBC `IV||Ciphertext`，没有认证标签；错密码时可能解出随机字节，并在 UTF-8 转换阶段抛出编码异常而不是稳定 fail-closed。
+- 修复:
+  - 新增 `SQL_TIER2_LLM_PROMPT_TEMPLATES`，在 `GetTier2SchemaSQL` 和 `data/create_sample_db.sql` 中创建 `LLMPromptTemplates` 及索引，保留旧 `LLMPrompts` 兼容表。
+  - `Test.DeepBase.LLM.PromptTemplate` 接入主 Unit runner，并将 `Length(...)` 断言显式标注为 `Integer` 泛型重载。
+  - 新增 `TLLMPromptTemplate.Clear` 显式释放协议，框架内部在 `ExecuteTemplate/CopyTemplate/ValidateTemplate/RenderWithInheritance/ExportTemplates/ImportTemplates` 中释放临时模板；Studio 模板界面和 PromptTemplate 单测同步释放返回数组和模板记录，避免 record 浅拷贝导致的字典残留。
+  - 修复 `Studio.PromptTemplateFrame` 单元可编译性：补齐 `System.StrUtils`，并将模板切换确认框结果保存到局部 `DialogResult`，不再误读不存在的 `ModalResult`。
+  - `TSimpleCrypto` 新密文改为 `DBSC` 版本头 + IV + Ciphertext + HMAC-SHA256 认证封包，解密前常量时间验签；旧 `IV||Ciphertext` 格式保留兼容读取。
+  - `TAESCrypto.UnpadData` 完整校验 PKCS#7 padding 字节；字符串解密中的 UTF-8 解码错误统一转换为 `ECryptoException`。
+  - 清理测试编译落入 `Features` 源目录的 `.dcu` 产物，源码目录 `.dcu` 数量恢复为 0。
+- 验证:
+  - `Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.LLM.PromptTemplate -CI -AllowFilteredCI`: 14 tests passed，0 leaked，退出无 FastMM unexpected memory leak。
+  - `Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.Schema -CI -AllowFilteredCI`: 36 tests passed。
+  - `Scripts/run_tests.ps1 -Type Unit -Module LLM -CI -AllowFilteredCI`: 76 tests passed。
+  - `Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.Crypto -CI -AllowFilteredCI`: 111 tests passed。
+  - `Scripts/run_tests.ps1 -Type Unit -CI`: 3243 tests，3240 passed，3 ignored，0 failed，0 errored，0 leaked。
+  - `Scripts/run_tests.ps1 -Type Integration -CI`: 10 tests passed。
+  - `Scripts/run_architecture_checks.ps1`: 18 tests passed。
+  - `Scripts/check_rename_residue.ps1`: passed。
+  - `dcc64 ... Tools\Studio\Frames\Studio.PromptTemplateFrame.pas`: 编译通过；`Tools\Studio\Studio.dproj` 整体仍被既有 `Studio.SQLFrame.pas(619)` 类型不匹配阻断。
+- 状态: ✅ 已修复
+
+### BUG-131: 五专家审阅第二轮 P0 修复与门禁回归
+- 发现日期: 2026-05-09
+- 严重性: 🔴 Critical
+- 描述:
+  - 迁移脚本解析会把 SQLite trigger body 内部 `;` 错拆；脚本内事务控制可能破坏迁移引擎统一事务；checksum mismatch 诊断不足；SQLite 并发迁移存在重复执行窗口。
+  - CloudBackup scheduler/backup/restore 线程使用 `FreeOnTerminate=True` 后丢引用，停止和析构无法可靠等待后台任务退出。
+  - Web/API 默认值过宽：WebSocket 默认 `*` origin、query `api_key`、弱 JWT secret、非 constant-time compare、500 回显异常和默认 CORS header 都会扩大攻击面。
+  - `Test.WebService` 未接入主 Unit runner，CI 过滤运行和 `-SkipCompile` 仍有绕过风险。
+  - Commerce license snapshot 改为 fail-closed 后，E2E fake 客户端未配置验签器，Integration 会在刷新许可证快照时报验签失败。
+- 修复:
+  - `DeepBase.DB.Migrations` 修复 trigger/multi-statement 切分，禁止迁移脚本内事务控制，并在 checksum mismatch 时记录 `FailedScript`。
+  - SQLite 迁移执行前使用 `BEGIN IMMEDIATE` 拿写锁，并在锁内二次检查版本/checksum，避免两个进程同时看到未应用后重复执行。
+  - `DeepBase.CloudBackup` 改为显式 signal + `WaitFor` + 释放，后台线程生命周期由 `Stop/Cancel/Destroy` 收口。
+  - Web/API 默认安全收紧：WebSocket 不默认放行 `*`，query `api_key` 默认关闭，JWT secret 长度不足直接拒绝，JWT verify 常量时间比较，默认 500 不回显内部异常，HTTP CORS middleware 默认不写 CORS 头。
+  - `Test.WebService` 接入 `DeepBaseTests.dpr`，`NET` module alias 只运行已注册 fixture；`run_tests.ps1 -CI -SkipCompile` 禁止，CI 过滤运行必须显式 `-AllowFilteredCI`。
+  - `TDeepKitSafeClient` 要求 license snapshot 必需字段、过期/app-device mismatch/无 verifier 或 public key/验签失败均 fail-closed；Windows 下支持 RSA-SHA256 PEM 公钥验签。
+  - Commerce E2E fake snapshot payload 绑定 `app_id/device_id`，并显式配置测试 verifier，保持 fail-closed 语义不被测试绕过。
+- 验证:
+  - `Scripts/run_tests.ps1 -Type Unit -CI`: 3229 tests，3226 passed，3 ignored，0 failed，0 errored，0 leaked。
+  - `Scripts/run_tests.ps1 -Type Integration -CI`: 10 tests passed。
+  - `Scripts/run_architecture_checks.ps1`: 18 tests passed。
+  - `Scripts/check_rename_residue.ps1`: passed。
+  - 定向回归：`DeepBase.DB.Migrations` 7 tests、`DeepBase.CloudBackup` 35 tests、`NET` module 44 tests、`DeepBase.Commerce` 49 tests 均通过。
+- 状态: ✅ 已修复
+
+### BUG-130: 五专家审阅 P0 门禁和安全缺陷收敛
+- 发现日期: 2026-05-09
+- 严重性: 🔴 Critical
+- 描述:
+  - 完整 Unit 存在 `TrayIcon` 5 个失败和 `PluginManager` 1 个权限错误。
+  - Integration runner 因 WebAPI fixture 未注册只跑 1 个测试，CI rename gate 把合法 `DeepBase` 当残留。
+  - SQLLogger 写入 `Logs` 的列名与 schema 漂移，压缩/备份/云下载存在路径穿越风险。
+  - 插件启停配置命名空间、RBAC wildcard、支付回调 fail-closed、legacy 许可证签发默认值均存在上线风险。
+- 修复:
+  - `TrayIcon` 增加可注入 `Shell_NotifyIcon`，测试脱离真实通知区；插件测试改用临时目录。
+  - `run_tests.ps1` 增加最低测试数检查，WebAPI integration fixture 注册，rename gate 改为只查真实旧名残留。
+  - SQLLogger 改写 `LogLevel/LogTime`，Zip/Backup/CloudStorage 写文件前校验 canonical path。
+  - 插件启停改为 `Plugin.*` 配置并在加载时拦截 disabled；RBAC wildcard 只匹配授权前缀，禁用用户/角色默认拒绝。
+  - PaymentBridge 对 Stripe/PayPal 用 raw body + headers 验签；WeChat V3 未完成解密前 fail-closed；legacy 本地许可证签发默认关闭。
+- 验证:
+  - `Scripts/run_tests.ps1 -Type Unit -CI`: 3229 tests，3226 passed，3 ignored，0 failed，0 errored，0 leaked。
+  - `Scripts/run_tests.ps1 -Type Integration -CI`: 10 tests passed。
+  - `Scripts/run_architecture_checks.ps1`: 18 tests passed。
+  - `Scripts/check_rename_residue.ps1`: passed。
+  - `dcc64 ThirdParty\Cloud\DeepBase.Cloud.Storage.pas`: compiled。
+- 状态: ✅ 已修复
+
 ## 2026-05-08 Bug 修复
 
 ### BUG-129: CloudSync JSONMergeArrays 移除旧数组元素未释放

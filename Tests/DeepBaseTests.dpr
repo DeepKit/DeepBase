@@ -1,4 +1,4 @@
-program DeepBaseTests;
+﻿program DeepBaseTests;
 
 {$IFNDEF TESTDeepInsight}
 {$APPTYPE CONSOLE}
@@ -41,6 +41,22 @@ uses
   Test.DeepBase.Crypto in 'Test.DeepBase.Crypto.pas',
   Test.DeepBase.LLM in 'Test.DeepBase.LLM.pas',
   Test.DeepBase.LLM.Manager in 'Test.DeepBase.LLM.Manager.pas',
+  Test.DeepBase.IntentClarification in 'Test.DeepBase.IntentClarification.pas',
+  Test.DeepBase.IntentClarification.Integration in 'Test.DeepBase.IntentClarification.Integration.pas',
+  Test.DeepBase.BrowserAutomation in 'Test.DeepBase.BrowserAutomation.pas',
+  Test.DeepBase.Browser.Types in 'Test.DeepBase.Browser.Types.pas',
+  Test.DeepBase.Browser.Registry in 'Test.DeepBase.Browser.Registry.pas',
+  Test.DeepBase.Browser.Recovery in 'Test.DeepBase.Browser.Recovery.pas',
+  Test.DeepBase.Browser.ResponseWaiter in 'Test.DeepBase.Browser.ResponseWaiter.pas',
+  Test.DeepBase.Browser.Session in 'Test.DeepBase.Browser.Session.pas',
+  Test.DeepBase.Browser.Events in 'Test.DeepBase.Browser.Events.pas',
+  Test.DeepBase.Browser.Selectors in 'Test.DeepBase.Browser.Selectors.pas',
+  Test.DeepBase.Browser.Async in 'Test.DeepBase.Browser.Async.pas',
+  Test.DeepBase.Browser.WindowPool in 'Test.DeepBase.Browser.WindowPool.pas',
+  Test.DeepBase.Browser.Vision in 'Test.DeepBase.Browser.Vision.pas',
+  Test.DeepBase.Browser.ScriptStore in 'Test.DeepBase.Browser.ScriptStore.pas',
+  Test.DeepBase.Browser.CDP in 'Test.DeepBase.Browser.CDP.pas',
+  Test.DeepBase.Browser.Service in 'Test.DeepBase.Browser.Service.pas',
   Test.DeepBase.Crypto.OpenSSL in 'Test.DeepBase.Crypto.OpenSSL.pas',
   // Payment & Social tests
   Test.DeepBase.Payment in 'Test.DeepBase.Payment.pas',
@@ -105,7 +121,7 @@ uses
   Test.DeepBase.KeyManager in 'Test.DeepBase.KeyManager.pas',
   Test.DeepBase.LLM.BillingClient in 'Test.DeepBase.LLM.BillingClient.pas',
   Test.DeepBase.LLM.ImportExport in 'Test.DeepBase.LLM.ImportExport.pas',
-  { Test.DeepBase.LLM.PromptTemplate excluded: FireDAC integration test, SQL_TIER2 constant missing }
+  Test.DeepBase.LLM.PromptTemplate in 'Test.DeepBase.LLM.PromptTemplate.pas',
   Test.DeepBase.LogAggregator in 'Test.DeepBase.LogAggregator.pas',
   Test.DeepBase.MVVM in 'Test.DeepBase.MVVM.pas',
   Test.DeepBase.Net in 'Test.DeepBase.Net.pas',
@@ -129,6 +145,8 @@ uses
   Test.DeepBase.VirtualScroll in 'Test.DeepBase.VirtualScroll.pas',
   Test.DeepBase.WorkerQueue in 'Test.DeepBase.WorkerQueue.pas',
   Test.DeepBase.TrayIcon in 'Test.DeepBase.TrayIcon.pas',
+  Test.DeepBase.VCL.DeepShell in 'Test.DeepBase.VCL.DeepShell.pas',
+  Test.WebService in 'Test.WebService.pas',
   // Core units
   DeepBase.Types in '..\Core\DeepBase.Types.pas',
   DeepBase.Manager in '..\Core\DeepBase.Manager.pas',
@@ -143,7 +161,7 @@ uses
   DeepBase.License in '..\Core\DeepBase.License.pas',
   DeepBase.RateLimiter in '..\Core\DeepBase.RateLimiter.pas',
   DeepBase.FeatureFlags in '..\Core\DeepBase.FeatureFlags.pas',
-  // DoQry 集成模块（Persistence 包的唯一实现�?
+  // DoQry 集成模块（Persistence 包的唯一实现）
   DeepBase.DB.DoQry in '..\Persistence\DeepBase.DB.DoQry.pas',
   DeepBase.Persistence.Manager.FireDAC in '..\Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
   DeepBase.Persistence.License.FireDAC in '..\Persistence\DeepBase.Persistence.License.FireDAC.pas',
@@ -155,6 +173,49 @@ uses
   // LLM unit for LLM tests
   DeepBase.LLM in '..\Core\DeepBase.LLM.pas',
   DeepBase.LLM.Manager in '..\Core\DeepBase.LLM.Manager.pas',
+  DeepBase.IntentClarification in '..\Features\DeepBase.IntentClarification.pas',
+  DeepBase.IntentClarification.Logging in '..\Features\DeepBase.IntentClarification.Logging.pas',
+  DeepBase.IntentClarification.Types in '..\Features\DeepBase.IntentClarification.Types.pas',
+  DeepBase.IntentClarification.Interfaces in '..\Features\DeepBase.IntentClarification.Interfaces.pas',
+  DeepBase.IntentClarification.Engine in '..\Features\DeepBase.IntentClarification.Engine.pas',
+  DeepBase.IntentClarification.IoC in '..\Features\DeepBase.IntentClarification.IoC.pas',
+  DeepBase.IntentClarification.Provider.L0 in '..\Features\DeepBase.IntentClarification.Provider.L0.pas',
+  DeepBase.IntentClarification.Provider.L1 in '..\Features\DeepBase.IntentClarification.Provider.L1.pas',
+  DeepBase.IntentClarification.Provider.L2 in '..\Features\DeepBase.IntentClarification.Provider.L2.pas',
+  DeepBase.IntentClarification.Provider.L3 in '..\Features\DeepBase.IntentClarification.Provider.L3.pas',
+  DeepBase.IntentClarification.Provider.L4 in '..\Features\DeepBase.IntentClarification.Provider.L4.pas',
+  DeepBase.IntentClarification.Session in '..\Features\DeepBase.IntentClarification.Session.pas',
+  DeepBase.IntentClarification.SessionFSM in '..\Features\DeepBase.IntentClarification.SessionFSM.pas',
+  DeepBase.IntentClarification.Router in '..\Features\DeepBase.IntentClarification.Router.pas',
+  DeepBase.IntentClarification.SignalDetector in '..\Features\DeepBase.IntentClarification.SignalDetector.pas',
+  DeepBase.IntentClarification.Budget in '..\Features\DeepBase.IntentClarification.Budget.pas',
+  DeepBase.IntentClarification.Exit in '..\Features\DeepBase.IntentClarification.Exit.pas',
+  DeepBase.IntentClarification.OptionFrame in '..\Features\DeepBase.IntentClarification.OptionFrame.pas',
+  DeepBase.IntentClarification.Storage in '..\Features\DeepBase.IntentClarification.Storage.pas',
+  DeepBase.IntentClarification.Metrics in '..\Features\DeepBase.IntentClarification.Metrics.pas',
+  DeepBase.IntentClarification.FeatureConfig in '..\Features\DeepBase.IntentClarification.FeatureConfig.pas',
+  DeepBase.IntentClarification.Templates in '..\Features\DeepBase.IntentClarification.Templates.pas',
+  DeepBase.IntentClarification.Validation in '..\Features\DeepBase.IntentClarification.Validation.pas',
+  DeepBase.IntentClarification.LLMResilience in '..\Features\DeepBase.IntentClarification.LLMResilience.pas',
+  DeepBase.IntentClarification.Anticipation in '..\Features\DeepBase.IntentClarification.Anticipation.pas',
+  DeepBase.IntentClarification.Degradation in '..\Features\DeepBase.IntentClarification.Degradation.pas',
+  DeepBase.IntentClarification.Moments in '..\Features\DeepBase.IntentClarification.Moments.pas',
+  DeepBase.IntentClarification.Rapport in '..\Features\DeepBase.IntentClarification.Rapport.pas',
+  DeepBase.IntentClarification.Registration in '..\Features\DeepBase.IntentClarification.Registration.pas',
+  DeepBase.BrowserAutomation in '..\Features\DeepBase.BrowserAutomation.pas',
+  DeepBase.Browser.Types in '..\Features\DeepBase.Browser.Types.pas',
+  DeepBase.Browser.Registry in '..\Features\DeepBase.Browser.Registry.pas',
+  DeepBase.Browser.Recovery in '..\Features\DeepBase.Browser.Recovery.pas',
+  DeepBase.Browser.ResponseWaiter in '..\Features\DeepBase.Browser.ResponseWaiter.pas',
+  DeepBase.Browser.Session in '..\Features\DeepBase.Browser.Session.pas',
+  DeepBase.Browser.CDP in '..\Features\DeepBase.Browser.CDP.pas',
+  DeepBase.Browser.Service in '..\Features\DeepBase.Browser.Service.pas',
+  DeepBase.Browser.Events in '..\Features\DeepBase.Browser.Events.pas',
+  DeepBase.Browser.Selectors in '..\Features\DeepBase.Browser.Selectors.pas',
+  DeepBase.Browser.WindowPool in '..\Features\DeepBase.Browser.WindowPool.pas',
+  DeepBase.Browser.Vision in '..\Features\DeepBase.Browser.Vision.pas',
+  DeepBase.Browser.ScriptStore in '..\Features\DeepBase.Browser.ScriptStore.pas',
+  DeepBase.Browser.IoC in '..\Features\DeepBase.Browser.IoC.pas',
   // Payment & Social integration units
   DeepBase.Authorization in '..\Core\DeepBase.Authorization.pas',
   DeepBase.Interfaces in '..\Core\DeepBase.Interfaces.pas',
@@ -192,7 +253,12 @@ uses
   DeepBase.ObjectPool in '..\Core\DeepBase.ObjectPool.pas',
   DeepBase.Memory in '..\Core\DeepBase.Memory.pas',
   // TrayIcon unit for TrayIcon tests
-  DeepBase.TrayIcon in '..\Core\DeepBase.TrayIcon.pas';
+  DeepBase.TrayIcon in '..\Core\DeepBase.TrayIcon.pas',
+  // WebService units
+  DeepBase.WebAPI.Core in '..\Tools\WebService\DeepBase.WebAPI.Core.pas',
+  DeepBase.WebAPI.Auth in '..\Tools\WebService\DeepBase.WebAPI.Auth.pas',
+  DeepBase.WebAPI.WebSocket in '..\Tools\WebService\DeepBase.WebAPI.WebSocket.pas',
+  DeepBase.WebAPI.OpenAPI in '..\Tools\WebService\DeepBase.WebAPI.OpenAPI.pas';
 
 {$IFNDEF TESTDeepInsight}
 var
@@ -209,10 +275,10 @@ begin
   TestDeepInsight.DUnitX.RunRegisteredTests;
   {$ELSE}
   try
-    // 检查是否有命令行参�?
+    // 检查是否有命令行参数
     TDUnitX.CheckCommandLine;
 
-    // 创建测试运行�?
+    // 创建测试运行器
     Runner := TDUnitX.CreateRunner;
     Runner.UseRTTI := True;
     Runner.FailsOnNoAsserts := False;
@@ -221,7 +287,7 @@ begin
     Logger := TDUnitXConsoleLogger.Create(True);
     Runner.AddLogger(Logger);
 
-    // 添加 NUnit XML 日志记录器（用于 CI�?
+    // 添加 NUnit XML 日志记录器（用于 CI）
     if TDUnitX.Options.XMLOutputFile <> '' then
     begin
       NUnitLogger := TDUnitXXMLNUnitFileLogger.Create(TDUnitX.Options.XMLOutputFile);
@@ -231,11 +297,11 @@ begin
     // 运行测试
     Results := Runner.Execute;
 
-    // 如果不是�?IDE 运行，等待用户输�?
+    // 如果不是从 IDE 运行，等待用户输入
     {$IFNDEF CI}
     if TDUnitX.Options.ExitBehavior <> TDUnitXExitBehavior.Continue then
     begin
-      System.Write('按回车键退�?..');
+      System.Write('按回车键退出..');
       System.Readln;
     end;
     {$ENDIF}

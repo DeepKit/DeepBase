@@ -43,6 +43,7 @@ type
   TBalloonIconType = (bitNone, bitInfo, bitWarning, bitError);
 
   TTrayMouseEvent = reference to procedure(Button: Integer; X, Y: Integer);
+  TTrayNotifyIconProc = function(dwMessage: DWORD; lpData: PNotifyIconDataW): BOOL; stdcall;
 
   IPopupMenuAdapter = interface
     ['{D4F7A231-8B6C-4E9A-B3D2-5C1E0F9A4D78}']
@@ -61,12 +62,15 @@ type
     FOnDoubleClick: TThreadProcedure;
     FOnBalloonClick: TThreadProcedure;
     FOnMouseDown: TTrayMouseEvent;
+    FNotifyIconProc: TTrayNotifyIconProc;
 
     class procedure CreateMsgWindow;
     class procedure DestroyMsgWindow;
+    class function NotifyIcon(dwMessage: DWORD; lpData: PNotifyIconDataW): BOOL; static;
     class function WndProc(hWnd: HWND; Msg: UINT;
       wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall; static;
   public
+    class procedure SetNotifyIconProc(AProc: TTrayNotifyIconProc);
     class procedure Show(const AToolTip: string; AIcon: HICON = 0);
     class procedure Hide;
     class procedure UpdateIcon(AIcon: HICON);
@@ -119,6 +123,14 @@ begin
     DestroyWindow(FMessageWindow);
     FMessageWindow := 0;
   end;
+end;
+
+class function TTrayIcon.NotifyIcon(dwMessage: DWORD; lpData: PNotifyIconDataW): BOOL;
+begin
+  if Assigned(FNotifyIconProc) then
+    Result := FNotifyIconProc(dwMessage, lpData)
+  else
+    Result := Shell_NotifyIconW(dwMessage, lpData);
 end;
 
 class function TTrayIcon.WndProc(hWnd: HWND; Msg: UINT;
@@ -197,15 +209,14 @@ begin
   FData.hIcon := FIconHandle;
   StrPLCopy(FData.szTip, AToolTip, Length(FData.szTip) - 1);
 
-  FActive := Shell_NotifyIconW(NIM_ADD, @FData);
+  FActive := NotifyIcon(NIM_ADD, @FData);
 end;
 
 class procedure TTrayIcon.Hide;
 begin
-  if not FActive then
-    Exit;
+  if FActive then
+    NotifyIcon(NIM_DELETE, @FData);
 
-  Shell_NotifyIconW(NIM_DELETE, @FData);
   FActive := False;
   FPopupMenuAdapter := nil;
   FOnDoubleClick := nil;
@@ -223,7 +234,7 @@ begin
   FIconHandle := AIcon;
   FData.hIcon := AIcon;
   FData.uFlags := NIF_ICON;
-  Shell_NotifyIconW(NIM_MODIFY, @FData);
+  NotifyIcon(NIM_MODIFY, @FData);
 end;
 
 class procedure TTrayIcon.UpdateToolTip(const AToolTip: string);
@@ -234,7 +245,7 @@ begin
   FToolTip := AToolTip;
   StrPLCopy(FData.szTip, AToolTip, Length(FData.szTip) - 1);
   FData.uFlags := NIF_TIP;
-  Shell_NotifyIconW(NIM_MODIFY, @FData);
+  NotifyIcon(NIM_MODIFY, @FData);
 end;
 
 class procedure TTrayIcon.ShowBalloon(const ATitle, AText: string;
@@ -250,7 +261,7 @@ begin
   StrPLCopy(FData.szInfoTitle, ATitle, Length(FData.szInfoTitle) - 1);
   FData.uTimeout := ATimeoutMs;
   FData.dwInfoFlags := BalloonIcons[AIconType];
-  Shell_NotifyIconW(NIM_MODIFY, @FData);
+  NotifyIcon(NIM_MODIFY, @FData);
 end;
 
 class procedure TTrayIcon.HideBalloon;
@@ -260,7 +271,16 @@ begin
 
   FData.uFlags := NIF_INFO;
   FData.szInfo[0] := #0;
-  Shell_NotifyIconW(NIM_MODIFY, @FData);
+  NotifyIcon(NIM_MODIFY, @FData);
+end;
+
+class procedure TTrayIcon.SetNotifyIconProc(AProc: TTrayNotifyIconProc);
+begin
+  Hide;
+  if Assigned(AProc) then
+    FNotifyIconProc := AProc
+  else
+    FNotifyIconProc := Shell_NotifyIconW;
 end;
 
 class procedure TTrayIcon.SetPopupMenuAdapter(const AAdapter: IPopupMenuAdapter);
@@ -277,9 +297,9 @@ initialization
   TTrayIcon.FOnDoubleClick := nil;
   TTrayIcon.FOnBalloonClick := nil;
   TTrayIcon.FOnMouseDown := nil;
+  TTrayIcon.FNotifyIconProc := Shell_NotifyIconW;
 
 finalization
-  if TTrayIcon.FActive then
-    TTrayIcon.Hide;
+  TTrayIcon.Hide;
 
 end.

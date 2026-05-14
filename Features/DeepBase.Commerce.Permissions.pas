@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.SafeClient;
 
@@ -50,6 +51,22 @@ type
   end;
 
 implementation
+
+function IsEntitlementCurrentlyUsable(
+  const AEntitlement: TCommerceEntitlementData): Boolean;
+var
+  ValidUntil: TDateTime;
+begin
+  if AEntitlement.Status <> cesActive then
+    Exit(False);
+  if AEntitlement.RemainingQuota = 0 then
+    Exit(False);
+  if AEntitlement.ValidUntilISO = '' then
+    Exit(True);
+  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+    Exit(False);
+  Result := ValidUntil > Now;
+end;
 
 class function TDeepKitPermissionResult.Denied(const AFeatureCode,
   AReason: string): TDeepKitPermissionResult;
@@ -109,9 +126,7 @@ begin
   Items := FClient.ListEntitlements(FAppId);
   for Entitlement in Items do
   begin
-    if Entitlement.Status <> cesActive then
-      Continue;
-    if Entitlement.RemainingQuota = 0 then
+    if not IsEntitlementCurrentlyUsable(Entitlement) then
       Continue;
     if not EntitlementMatchesFeature(Entitlement, AFeatureCode) then
       Continue;

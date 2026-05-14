@@ -337,7 +337,8 @@ function TLLMHttpClient.BuildHeaders(const AApiKey, AApiFormat: string;
 
 begin
   SetLength(Result, 0);
-  AddHeader('Authorization', 'Bearer ' + AApiKey);
+  if Trim(AApiKey) <> '' then
+    AddHeader('Authorization', 'Bearer ' + AApiKey);
   AddHeader('Content-Type', 'application/json');
   if AStreaming then
     AddHeader('Accept', 'text/event-stream');

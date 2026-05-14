@@ -452,6 +452,50 @@ uses
   , DeepBase.Crypto.OpenSSL
   {$ENDIF};
 
+const
+  SIMPLE_CRYPTO_MAGIC_0 = $44; // D
+  SIMPLE_CRYPTO_MAGIC_1 = $42; // B
+  SIMPLE_CRYPTO_MAGIC_2 = $53; // S
+  SIMPLE_CRYPTO_MAGIC_3 = $43; // C
+  SIMPLE_CRYPTO_VERSION = 1;
+  SIMPLE_CRYPTO_HEADER_SIZE = 5;
+  SIMPLE_CRYPTO_AES_BLOCK_SIZE = 16;
+  SIMPLE_CRYPTO_MAC_SIZE = 32; // SHA-256
+  SIMPLE_CRYPTO_MAC_CONTEXT = 'DeepBase.SimpleCrypto.MAC.v1';
+
+function BytesEqualConstantTime(const ALeft, ARight: TBytes): Boolean;
+var
+  I: Integer;
+  Diff: Integer;
+begin
+  if Length(ALeft) <> Length(ARight) then
+    Exit(False);
+
+  Diff := 0;
+  for I := 0 to High(ALeft) do
+    Diff := Diff or (ALeft[I] xor ARight[I]);
+
+  Result := Diff = 0;
+end;
+
+function SimpleCryptoHasHeader(const AData: TBytes): Boolean;
+begin
+  Result :=
+    (Length(AData) >= SIMPLE_CRYPTO_HEADER_SIZE) and
+    (AData[0] = SIMPLE_CRYPTO_MAGIC_0) and
+    (AData[1] = SIMPLE_CRYPTO_MAGIC_1) and
+    (AData[2] = SIMPLE_CRYPTO_MAGIC_2) and
+    (AData[3] = SIMPLE_CRYPTO_MAGIC_3);
+end;
+
+function SimpleCryptoMacKey(const APassword: string): TBytes;
+begin
+  Result := THashUtils.HMAC(
+    TEncoding.UTF8.GetBytes(APassword),
+    TEncoding.UTF8.GetBytes(SIMPLE_CRYPTO_MAC_CONTEXT),
+    haSHA256);
+end;
+
 { THashUtils }
 
 class function THashUtils.HashBytes(const AData: TBytes; AAlgorithm: THashAlgorithm): TBytes;
@@ -1201,13 +1245,18 @@ end;
 function TAESCrypto.UnpadData(const AData: TBytes): TBytes;
 var
   LPadLen: Integer;
+  I: Integer;
 begin
   if Length(AData) = 0 then
     Exit(nil);
     
   LPadLen := AData[High(AData)];
-  if (LPadLen < 1) or (LPadLen > GetBlockSize) then
+  if (LPadLen < 1) or (LPadLen > GetBlockSize) or (LPadLen > Length(AData)) then
     raise ECryptoException.Create('Invalid padding');
+
+  for I := Length(AData) - LPadLen to High(AData) do
+    if AData[I] <> LPadLen then
+      raise ECryptoException.Create('Invalid padding');
     
   SetLength(Result, Length(AData) - LPadLen);
   if Length(Result) > 0 then
@@ -1480,17 +1529,23 @@ class function TSimpleCrypto.Decrypt(const AData, APassword: string): string;
 var
   Enc, Plain: TBytes;
 begin
-  // Decode Base64 then decrypt (expects (IV || Ciphertext))
+  // Decode Base64 then decrypt the authenticated envelope.
   Enc := TEncodingUtils.Base64Decode(AData);
   Plain := DecryptBytes(Enc, APassword);
-  Result := TEncoding.UTF8.GetString(Plain);
+  try
+    Result := TEncoding.UTF8.GetString(Plain);
+  except
+    on Exception do
+      raise ECryptoException.Create('Invalid encrypted data or password');
+  end;
 end;
 
 class function TSimpleCrypto.EncryptBytes(const AData: TBytes; const APassword: string): TBytes;
 var
   LAES: TAESCrypto;
-  Cipher, IV: TBytes;
+  Cipher, IV, MacKey, MacInput, Mac: TBytes;
   BlockSize: Integer;
+  PayloadLen: Integer;
 begin
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
@@ -1499,35 +1554,78 @@ begin
     IV := LAES.IV;
     BlockSize := Length(IV);
 
-    SetLength(Result, BlockSize + Length(Cipher));
+    PayloadLen := SIMPLE_CRYPTO_HEADER_SIZE + BlockSize + Length(Cipher);
+    SetLength(MacInput, PayloadLen);
+    MacInput[0] := SIMPLE_CRYPTO_MAGIC_0;
+    MacInput[1] := SIMPLE_CRYPTO_MAGIC_1;
+    MacInput[2] := SIMPLE_CRYPTO_MAGIC_2;
+    MacInput[3] := SIMPLE_CRYPTO_MAGIC_3;
+    MacInput[4] := SIMPLE_CRYPTO_VERSION;
     if BlockSize > 0 then
-      Move(IV[0], Result[0], BlockSize);
+      Move(IV[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE], BlockSize);
     if Length(Cipher) > 0 then
-      Move(Cipher[0], Result[BlockSize], Length(Cipher));
+      Move(Cipher[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE + BlockSize], Length(Cipher));
+
+    MacKey := SimpleCryptoMacKey(APassword);
+    Mac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
+
+    SetLength(Result, PayloadLen + Length(Mac));
+    Move(MacInput[0], Result[0], PayloadLen);
+    Move(Mac[0], Result[PayloadLen], Length(Mac));
   finally
     LAES.Free;
   end;
 end;
 
 class function TSimpleCrypto.DecryptBytes(const AData: TBytes; const APassword: string): TBytes;
-const
-  AES_BLOCK_SIZE = 16; // bytes
 var
   LAES: TAESCrypto;
-  IV, Cipher: TBytes;
+  IV, Cipher, MacKey, MacInput, ExpectedMac, ActualMac: TBytes;
+  MacInputLen, CipherLen: Integer;
 begin
   if Length(AData) = 0 then
     Exit(nil);
 
-  if Length(AData) < AES_BLOCK_SIZE then
-    raise ECryptoException.Create('Invalid encrypted data (too short)');
+  if SimpleCryptoHasHeader(AData) then
+  begin
+    if AData[4] <> SIMPLE_CRYPTO_VERSION then
+      raise ECryptoException.Create('Unsupported encrypted data version');
 
-  SetLength(IV, AES_BLOCK_SIZE);
-  Move(AData[0], IV[0], AES_BLOCK_SIZE);
+    if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
+      raise ECryptoException.Create('Invalid encrypted data (too short)');
 
-  SetLength(Cipher, Length(AData) - AES_BLOCK_SIZE);
-  if Length(Cipher) > 0 then
-    Move(AData[AES_BLOCK_SIZE], Cipher[0], Length(Cipher));
+    MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
+    SetLength(MacInput, MacInputLen);
+    Move(AData[0], MacInput[0], MacInputLen);
+
+    SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
+    Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
+
+    MacKey := SimpleCryptoMacKey(APassword);
+    ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
+    if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
+      raise ECryptoException.Create('Invalid encrypted data or password');
+
+    SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+    Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+
+    CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
+    SetLength(Cipher, CipherLen);
+    if CipherLen > 0 then
+      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
+  end
+  else
+  begin
+    if Length(AData) < SIMPLE_CRYPTO_AES_BLOCK_SIZE then
+      raise ECryptoException.Create('Invalid encrypted data (too short)');
+
+    SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+    Move(AData[0], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+
+    SetLength(Cipher, Length(AData) - SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+    if Length(Cipher) > 0 then
+      Move(AData[SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], Length(Cipher));
+  end;
 
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try

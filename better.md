@@ -1,130 +1,399 @@
-﻿# DeepBase 文档区优化计划（Draft�?
-> 更新日期�?026-05-05  
-> 目标：把 `docs/` 全部文档“可用、可维护、可对外复用”，并保证你发给其它 AI 接入 DeepBase 时只需要发 **1 个文�?*�? 
-> 关键约束：工具类软件的付费必须经过你�?**平台网站跳转**（统一入口），客户端不直连支付渠道，不保存支付密钥；认�?支付数据统一归于 DB4（后端）�?
+# DeepBase 架构质量校准与优化总控计划
+
+> 更新日期: 2026-05-14  
+> 用途: 作为 DeepBase 架构库后续质量评估、优化、修复和验收的推进总表。  
+> 当前原则: 先建立可信基线，再做全局架构评估，再按板块逐项校准；DeepShell、浏览器自动化、意图识别三个仍在优化中的板块放到最后处理。
+
 ---
 
-## 1. 核心交付与入口收�?
-### 1.1 唯一对外接入文件（给其它 AI/下游用）
+## 0. 工作原则
 
-- 新增并维护：`docs/DeepBase-Integration-OneFile.md`
-- 该文件作为“对外唯一入口”，必须包含�?  - `root.txt` + DB1/DB2/DB3/DB4 的职责边界（必须写清楚）
-  - DeepBase **全部模块能力清单**（不遗漏：自动升级、主题模板、LLM、Commerce、云同步、工�?管理软件常用模块等）
-  - 适配点清单（下游要实�?配置什么，如何选包�?  - “工具类/管理类软件”的推荐接入项（给出明确推荐组合�?  - 商业化流程：**统一平台网站跳转**、后端确认支付、权益查询与发放（禁止客户端改订�?权益�?  - 最小端到端流程要点（要点式，不写长篇叙述）
+### 0.1 不直接跳入大改
 
-### 1.2 docs 入口统一
+- 先评估，再修复；先恢复编译和门禁，再做架构拆分。
+- 每个修复必须能回答三个问题：
+  - 修了什么风险。
+  - 用什么测试或脚本验证。
+  - 是否改变公开 API、包边界或下游接入方式。
+- 已有未提交修改较多，任何修复都必须避免覆盖不相关改动。
 
-- `docs/README.md`：只保留“文档总览 + 指向 `docs/DeepBase-Integration-OneFile.md` 的首要入口”，避免下游/AI 误入旧文档�?- `docs/00.00.DeepBase-文档索引-v1.0.md`：首行明确“对外唯一入口�?`docs/DeepBase-Integration-OneFile.md`”，其余文档为内部深挖参考�?- `ARCH-QUICKSTART.md`：保留为仓库级架构入口（人读），但在对外接入时不作为必须材料�?
-验收标准�?- 你发给其�?AI 的材料：只发 `docs/DeepBase-Integration-OneFile.md`�? 文件即可完成接入方案输出）�?
+### 0.2 当前暂缓到最后的板块
+
+以下三个板块不作为前期质量收敛主线，除非它们阻塞全库编译：
+
+1. `DeepShell` / VCL 统一桌面壳。
+2. `BrowserAutomation` / 浏览器自动化。
+3. `IntentClarification` / 意图识别与澄清。
+
+处理顺序上，它们排在全局架构、基础核心、DB/安全/商业化、通用功能、UI 适配、工具示例之后。
+
+### 0.3 每轮优化闭环
+
+每个板块按同一闭环推进：
+
+1. 读取设计文档、包文件、源码、测试和最近结果。
+2. 给出板块评分与风险清单。
+3. 修复 P0/P1 问题。
+4. 补最小回归测试或架构检查。
+5. 重跑对应门禁。
+6. 更新 `better.md` 状态。
+
 ---
 
-## 2. DB1~DB4 规范（必须统一口径�?
-把所有现有文档里的“DB 说法”统一为以下模型，并在对外接入文件中作为强约束�?
-### DB1：配置库（SQLite，本地，DeepBase 框架库）
+## 1. 全部架构评估
 
-- 文件：`{AppName}Config.db`
-- 存放内容：DeepBase 框架表与本地状态（Config/Logs/i18n/FormState/MRU/Hotkeys/Theme/AboutFrame 等）
-- 禁止存放：生产用户、订单、支付流水、权益（这些都属�?DB4�?
-### DB2：本地业务库（SQLite，本地，业务自定义）
+目标是先判断 DeepBase 作为公共架构库是否稳定、分层清晰、可发布、可被下游安全接入。
 
-- 存放内容：工具自身业务数据（单机/离线优先�?- DeepBase 提供：DoQry/DB 工具、连接与迁移能力（不强制 schema�?
-### DB3：高级业务库（网�?DB：PG/MySQL/…）
+### 1.1 基线确认
 
-- 存放内容：需要多端共�?协作的业务数据（项目/任务/资产等）
-- DeepBase 提供：DB.Factory、连接池、迁移、可选驱动适配
+- [ ] 记录当前工作区状态：`git status --short`。
+- [ ] 确认当前可用 Delphi 环境、Win64 编译器和脚本入口。
+- [ ] 不信任旧测试 XML，重跑当前门禁。
+- [ ] 整理当前失败矩阵：编译失败、测试失败、架构失败、示例失败、文档/编码问题。
 
-### DB4：认证与支付库（生产后端 DB�?
-- 存放内容：users/identities/orders/payments/entitlements/payment_notifications（含支付通知原文与审计字段）
-- 客户端原则：
-  - 只通过后端 HTTP API 访问 DB4（不直连 DB，不保存支付密钥�?  - 支付确认以可信后端通知为准（验签、查单、金�?币种/订单号校验）
-- DeepBase 客户端侧推荐实现�?  - `TCommerceHttpStorage`（存储走后端�?  - `TCommerceHttpPaymentGateway`（支付意图走后端�?
-验收标准�?- docs 中不再出现“把订单/支付/权益放本�?config.db”这类冲突说法�?- 对外接入文件明确：DB4 永远是后端可信域�?
+建议基线命令：
+
+```powershell
+cmd /c compile_test.bat
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Scripts\run_tests.ps1 -Type Unit -CI
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Scripts\run_tests.ps1 -Type Integration -CI
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Scripts\run_architecture_checks.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Scripts\build_examples_win64.ps1
+```
+
+### 1.2 全局评估维度
+
+| 维度 | 检查内容 | 输出 |
+|------|----------|------|
+| 包边界 | `Core -> Services -> {Persistence, Features} -> {VCL, FMX}` 是否成立 | 违规依赖清单 |
+| 编译健康 | 主包、测试、示例是否可编译 | 编译阻塞清单 |
+| 测试可信度 | 是否存在 0 tests、过滤误报、旧 XML 误判 | 门禁可信度结论 |
+| API 稳定性 | facade、接口、deprecated、异常语义是否一致 | 破坏性变更风险 |
+| 生命周期 | Manager/EventBus/Scheduler/WorkerQueue/FileWatcher/Updater 是否统一 start/stop/drain | 并发释放风险 |
+| DB/schema | SQLite/PG schema、迁移脚本、测试库是否漂移 | 漂移矩阵 |
+| 安全 | 密钥、许可证、支付、插件、路径、日志、序列化是否 fail-closed | 安全缺陷清单 |
+| 可维护性 | 大文件、重复类型、命名、编码、W1057、未用代码 | 整理任务清单 |
+| 下游体验 | 文档、示例、快速接入、模板工程是否可靠 | 接入缺口清单 |
+
+### 1.3 全局评分模板
+
+每轮总评输出如下格式：
+
+| 维度 | 分数 | 状态 | 主要问题 |
+|------|------|------|----------|
+| 架构分层 | /10 | 待评估 | |
+| 编译与测试 | /10 | 待评估 | |
+| 安全边界 | /10 | 待评估 | |
+| 并发与生命周期 | /10 | 待评估 | |
+| DB 与迁移 | /10 | 待评估 | |
+| API 与下游体验 | /10 | 待评估 | |
+| 文档与示例 | /10 | 待评估 | |
+| 综合 | /10 | 待评估 | |
+
+### 1.4 全局 P0 判断标准
+
+出现以下任一项，先停下做 P0 修复：
+
+- 主测试工程或主包无法编译。
+- Unit/Integration/Architecture 门禁不能可信运行。
+- Core 直接依赖 UI、FireDAC、Features 或不该依赖的 Manager。
+- 支付、许可证、密钥、插件、路径处理存在 fail-open 行为。
+- 后台线程或异步回调在 shutdown 后仍可能访问已释放对象。
+- DB/schema 漂移导致已有数据或测试库不可迁移。
+- 示例和文档引导下游走错误接入路径。
+
 ---
 
-## 3. 模块全量清单（避免重复造轮子）
+## 2. 分板块评估
 
-对外接入文件必须列“模块清单表”，按以下维度写清楚�?
-- 模块名（Core/Services/Persistence/Features/VCL/FMX/ThirdParty�?- 解决的问题（下游为什么用它）
-- 典型使用场景（工具类/管理类分别怎么用）
-- 依赖与边界（是否需�?DB、是否需要网络、是否需要后端）
-- 关键配置�?环境变量（在哪里配、谁负责�?- 适配点（是否需要实现某接口、是否只需配置�?
-必须覆盖（不遗漏）：
-- 自动升级：`Updater/AutoUpdate`（更新源、签名校验、回滚策略、离线策略）
-- 主题与模板：Theme 模块 + UI Themes 扩展（VCL/FMX 的使用差异、主题存储位置、默认主题策略）
-- i18n：翻译表、缺失翻译策略、导入导�?扫描工具（若有）
-- 日志：本�?文件/DB、脱敏原则、保留期
-- FormState：多屏恢复规则（已修复的边界明确�?- MRU/Hotkeys：适用工具类软�?- 安全与密钥：DPAPI/CredMan、敏感信息存放策�?- Authorization：令牌保�?刷新（管理类软件常用�?- Commerce：统一用户/订单/支付/权益（只走后端可信域�?- LLM：Provider/密钥存储、调用记录、导入导�?- CloudSync/CloudBackup：使用边界与安全说明
-- HttpServer（若用于内嵌服务/回调）：CORS/鉴权策略
-- DoQry/DB.Factory/连接�?迁移：DB2/DB3 的推荐接�?- 事件总线/调度/Resilience/RateLimiter/Metrics/Compression/ObjectPool 等通用基础设施
-- VCL/FMX 组件：AboutFrame、控件包、平台差异与接入�?
-验收标准�?- 下游不需要再自建“日�?配置/i18n/窗体状�?重试/限流/对象�?升级”等重复实现�?
+分板块评估的目标是把库拆成可治理的工作单元。每个板块都输出评分、风险、修复任务、验证命令。
+
+### 2.1 板块顺序
+
+| 顺序 | 板块 | 范围 | 当前策略 |
+|------|------|------|----------|
+| 1 | Core 基础内核 | Manager、IoC、EventBus、Config、i18n、Logging、RuntimeContext、Exception、StateMachine、Template、Expression 等 | 最先评估和修复 |
+| 2 | Services 与运行期注册 | `DeepBase.Services.*`、Runtime components、HealthCheck、Protection facade | 跟随 Core |
+| 3 | Persistence / DB | DB.Factory、ConnectionPool、Pool、Migrations、DoQry、SQLLogger、FireDAC adapters | 优先修 schema 和迁移漂移 |
+| 4 | Security / Auth / License | Security、DPAPI、KeyManager、Authorization、License、AntiTamper、Protection | 优先保证 fail-closed |
+| 5 | Commerce / DB4 客户端 | SafeClient、PaymentBridge、Permissions、UpgradeFlow、Backend contract | 聚焦后端边界和许可证快照 |
+| 6 | LLM | LLM facade、Client、Config、HTTP、Service、PromptTemplate、Billing | 保证五槽位和下游可用 |
+| 7 | 通用 Features | Updater、AutoUpdate、CloudBackup、CloudSync、HttpServer、Net.Transport、Graph、Compression 等 | 按门禁失败排序 |
+| 8 | Speech | Speech Core/ASR/TTS/Wake/Voice/Runtime/Policy | 在通用 Features 后评估 |
+| 9 | UI 适配 | VCL、FMX、控件包、设计时包、主题、窗体状态、热键、托盘普通能力 | DeepShell 之外先做 |
+| 10 | Tools / Examples / Docs | Studio、Tray、CLI、WebService、示例工程、对外文档 | 用作下游体验验收 |
+| 11 | Governance | Governance runtime、route/evidence store、AI steering、ActionGrid | 在主体稳定后评估 |
+| 12 | DeepShell | `VCL\DeepBase.VCL.DeepShell.*`、Demo、桌面壳文档 | 放最后 |
+| 13 | BrowserAutomation | `Features\DeepBase.Browser*`、browser tests、CDP/WebView2 | 放最后 |
+| 14 | IntentClarification | `Features\DeepBase.IntentClarification*`、IC tests、IC docs | 放最后 |
+
+### 2.2 每个板块统一评估模板
+
+```text
+板块:
+范围:
+当前状态:
+评分:
+P0:
+P1:
+P2:
+公开 API 风险:
+包边界风险:
+并发/生命周期风险:
+安全风险:
+DB/schema 风险:
+测试覆盖:
+验证命令:
+下一步:
+```
+
+### 2.3 板块验收定义
+
+一个板块只有同时满足以下条件，才标记为“已校准”：
+
+- 包文件包含正确单元，且不混入测试、设计时或不该进入运行时的单元。
+- 对应测试能被主 runner 引用，不是孤立测试文件。
+- 至少有 targeted regression，可在 1 到 5 分钟内重跑。
+- 公开 API 文档或示例不误导下游。
+- P0/P1 风险清零或有明确延期理由。
+- 修复后全局门禁没有退化。
+
 ---
 
-## 4. 工具�?vs 管理类：推荐接入组合（必须给结论�?
-�?`docs/DeepBase-Integration-OneFile.md` 里给两套“推荐组合”，每套写：
-- 必选模�?- 常见可选模�?- 不推荐模块（或慎用条件）
-- 推荐数据库组合（DB1/DB2/DB3/DB4 取舍�?
-### 4.1 工具类软件（桌面单机/弱后端）
+## 3. 第一轮执行计划
 
-推荐�?- DB1 + DB2 为主；如涉及账号/付费/权益则接 DB4（后端）
-- 必选：Manager/Config/Logging/i18n/FormState/MRU/Hotkeys/Theme
-- 可选：Updater/AutoUpdate、AboutFrame/AntiTamper、LLM（若需要）
-- 付费统一：必须走平台网站跳转 + 后端确认（见�?5 节）
+### M0: 建立真实基线
 
-### 4.2 管理类软件（多用�?强后�?审计风控�?
-推荐�?- DB1（本地状态）+ DB3（业务数据）+ DB4（认证支付）
-- 必选：Authorization（token 管理）、Logging（审计策略）、Resilience（重�?熔断）、Commerce（权益）
-- 可选：Metrics、RateLimiter、Cloud*（按业务�?
+- [ ] 保存当前失败日志。
+- [ ] 重跑编译、Unit、Integration、Architecture、Examples。
+- [ ] 对比 `tasks.md`、`bugfix.md`、`TestResults/*.xml`，标记哪些结果已过期。
+- [ ] 建立 `P0-Failures` 清单。
+
+产出：
+
+- 当前质量总览。
+- 当前阻塞清单。
+- 可以立刻修复的问题排序。
+
+### M1: 恢复编译与测试可信度
+
+- [ ] 修复主测试工程编译阻塞。
+- [ ] 修复 0 tests、过滤误报、旧 XML 误导问题。
+- [ ] 确认 `-CI` 模式不能跳过编译。
+- [ ] 清理或标记未接入 runner 的测试单元。
+
+产出：
+
+- Unit/Integration/Architecture 可以真实失败或真实通过。
+- 门禁失败原因可定位。
+
+### M2: 全局架构评估报告
+
+- [ ] 包边界扫描。
+- [ ] Core 依赖扫描。
+- [ ] 生命周期扫描。
+- [ ] schema/migration 漂移扫描。
+- [ ] 安全 fail-closed 扫描。
+- [ ] 编译警告与编码问题扫描。
+
+产出：
+
+- 全局评分。
+- P0/P1/P2 优化任务。
+- 建议进入长期治理的架构项。
+
+### M3: 基础核心板块修复
+
+优先级：
+
+1. Core 基础内核。
+2. Services 与 RuntimeContext。
+3. Persistence / DB。
+4. Security / Auth / License。
+5. Commerce / DB4 客户端。
+
+产出：
+
+- 关键公共能力稳定。
+- 下游接入不被基础层问题拖累。
+
+### M4: 通用能力与 UI 普通适配
+
+优先级：
+
+1. LLM。
+2. Updater / Cloud / HttpServer / Net / Graph。
+3. Speech。
+4. VCL/FMX 普通控件与适配层。
+5. Tools / Examples / Docs。
+6. Governance。
+
+产出：
+
+- 常用功能可以作为公共库交付。
+- 示例和文档可作为验收材料。
+
+### M5: 最后三个优化中板块
+
+按以下顺序处理：
+
+1. DeepShell。
+2. BrowserAutomation。
+3. IntentClarification。
+
+原因：
+
+- 三者仍在持续优化，早期评估容易和正在进行的重构互相干扰。
+- 它们依赖 Core、Runtime、VCL/Features 的稳定边界。
+- 放到最后可以用已经校准好的基础设施反向约束它们。
+
+产出：
+
+- 三个板块独立质量报告。
+- 独立 targeted tests。
+- 是否纳入默认发布包的结论。
+
 ---
 
-## 5. 平台网站跳转（商业化流程统一规范�?
-统一规定：所有工具的“购�?续费/升级”必须通过你的平台网站跳转，客户端不直接展示支付二维码/不直连微信支�?SDK�?
-### 5.1 推荐流程（要点）
+## 4. 质量任务池
 
-1. 工具端触发“购�?升级�?�?打开平台网站 URL（带 app_id、device/user identity、return_url 等参数）
-2. 网站侧完成登录、下单、支�?3. 后端接收支付通知 �?验签/查单/校验 �?幂等确认支付 �?发放 entitlement（DB4�?4. 工具端回到应用后�?   - 调后端查�?entitlement（或轮询/推送）刷新本地 UI
-   - 不允许工具端自行把订单置为已支付
+### 4.1 P0 阻塞
 
-### 5.2 DeepBase 客户端侧对接建议
+- [ ] 恢复当前主编译链。
+- [ ] 恢复完整 Unit 可信运行。
+- [ ] 恢复 Integration 可信运行。
+- [ ] 恢复 Architecture checks 可信运行。
+- [ ] 阻止旧 XML 被误用为当前结论。
 
-- 存储：`TCommerceHttpStorage`
-- 支付意图：`TCommerceHttpPaymentGateway`（调�?`/commerce/payments/intents`�?- 工具端“跳�?URL”来源：
-  - 平台网站统一的购买入口（推荐由后端返�?`pay_url` 或统一�?platform url�?  - 工具端只负责打开链接 + 之后查权�?
-验收标准�?- 任何工具项目中不出现“客户端保存微信支付密钥/客户端验�?客户端确认支付”的生产路径�?
+### 4.2 P1 架构治理
+
+- [ ] 校准包 DAG，避免运行时包混入设计时、测试、可选实验模块。
+- [ ] 统一 RuntimeContext 生命周期协议。
+- [ ] 审计 Manager 是否继续过重，决定是否进一步拆分。
+- [ ] 审计 Services 注册是否保持 side-effect free。
+- [ ] 审计 Core facade 与 Features 实现的边界。
+
+### 4.3 P1 安全治理
+
+- [ ] License 客户端只验证可信快照，不承担生产签发职责。
+- [ ] PaymentBridge 继续保持未验签不成功。
+- [ ] 插件路径、配置命名空间和 sandbox 行为 fail-closed。
+- [ ] Secret、KeyManager、DPAPI、UBS2 格式保持可迁移诊断。
+- [ ] 日志输出默认脱敏，避免 token、key、path PII 泄漏。
+
+### 4.4 P1 DB/schema 治理
+
+- [ ] 对齐 `Core/DeepBase.Schema.pas`、`data/create_sample_db.sql`、`sql/*.sql`。
+- [ ] 迁移脚本 parser 不误拆 trigger/procedure。
+- [ ] migration checksum mismatch 有明确诊断。
+- [ ] DB3/DB4 边界继续保持：客户端不直连 DB4。
+
+### 4.5 P1 测试治理
+
+- [ ] 每个活跃模块至少有 targeted regression。
+- [ ] 清理未注册 fixture 和未被 DPR 引用的测试。
+- [ ] 对安全、并发、迁移类 bug 保留 regression。
+- [ ] 性能和压力测试不阻塞普通 CI，但要有独立入口。
+
+### 4.6 P2 可维护性治理
+
+- [ ] 清理 W1057 隐式字符串转换。
+- [ ] 对 Delphi `.pas/.dfm/.fmx/.dpr` 源码做 UTF-8 BOM 审计，必要时用 DeepCharset 转换。
+- [ ] 清理未使用变量、无效占位代码、重复类型。
+- [ ] 对过大单元做风险评估，避免无收益拆分。
+- [ ] 文档入口统一，避免下游 AI 读到过期接入方案。
+
 ---
 
-## 6. docs 全区整理/合并/纠错/删除计划
+## 5. 记录格式
 
-### 6.1 文档分级与生命周�?
-- **L0 对外入口（只 1 个）**：`docs/DeepBase-Integration-OneFile.md`
-- **L1 下游工程参�?*：API 参考、DB 指南、ThirdParty 指南、集成检查清�?- **L2 内部实现细节**：架构设计、迁移记录、历史与 BugFix
-- **L3 归档/历史**：统一�?`docs/99.*`，并明确“非入口、仅追溯�?
-### 6.2 必做清单（执行顺序）
+后续每次完成一个板块，在本文件追加如下记录：
 
-1. 新增 `docs/DeepBase-Integration-OneFile.md`（对外唯一入口�?2. 对齐并纠错：
-   - 所有涉�?DB 的文档：统一 DB1~DB4 口径
-   - Commerce/支付文档：统一“平台网站跳�?+ 后端确认 + entitlement�?   - 自动升级/主题模板：补齐边界、配置与推荐组合
-3. 合并重复入口�?   - `docs/README.md`、`docs/00.00...索引` 只保留必要入口指�?   - 其它文档保留但降级为“内部参考”，避免误导 AI
-4. 删除无价�?重复/过期文档�?   - 标准：与现行封板架构冲突、内容过时、与新入口重复、或长期无人维护
-   - 删除后必须修正剩余文档引用，确保 `Scripts/check_doc_links.ps1` 全绿
+```text
+## YYYY-MM-DD 板块名 校准记录
 
-### 6.3 “不留历史”要求（需要你决策�?
-你之前要求“删除多余文档且不要留在历史里”。Git 默认无法做到“删除即不留历史”。这里给两种方案�?
-- 方案 A（默认、安全）：仅从工作树删除文件，Git 历史保留（推荐，风险低）
-- 方案 B（彻底抹除历史）：使�?`git filter-repo` 重写历史并强制推送（风险高，需要你明确批准并安排协作窗口）
+范围:
+发现:
+修复:
+测试:
+残留风险:
+状态:
+```
 
-�?`docs/DeepBase-Integration-OneFile.md` 完成并稳定后，再决定是否执行方案 B�?
 ---
 
-## 7. 自动化门禁与维护规则
+## 6. 当前执行状态
 
-- 文档链接门禁：所�?L0/L1 文档必须通过 `Scripts/check_doc_links.ps1`
-- 入口门禁：对外入口只允许 `docs/DeepBase-Integration-OneFile.md`（其他入口在标题处标记“内部参考”）
-- 更新规则�?  - 每次框架能力变更：必须同步更�?L0（单文件）中的“模块清单表”和“推荐接入组合�?  - 每次支付/认证流程变更：必须同步更�?DB4 与平台跳转流程章�?
+| 项目 | 状态 | 备注 |
+|------|------|------|
+| 总控计划 | 已建立 | 本文件 |
+| 真实基线 | 待执行 | 需要重跑门禁 |
+| 全部架构评估 | 待执行 | 基线后开始 |
+| 分板块评估 | 待执行 | 从 Core 开始 |
+| DeepShell | 延后 | 最后三板块之一 |
+| BrowserAutomation | 延后 | 最后三板块之一 |
+| IntentClarification | 延后 | 最后三板块之一 |
+
 ---
 
-## 8. 执行里程碑（供你审）
+## 7. 2026-05-14 第一次框架评审确认
 
-- M1：新�?`docs/DeepBase-Integration-OneFile.md`（包�?DB1~DB4 + 全模块清�?+ 两类推荐组合 + 平台跳转流程�?- M2：对�?`docs/README.md` �?`docs/00.00...索引`，收敛入�?- M3：全量纠错与合并（DB/Commerce/Updater/Theme 等口径一致）
-- M4：删除过�?重复文档 + 链接门禁全绿
-- M5（可选）：若你坚持“不留历史”，执行 git 历史重写方案（需你批准）
+来源：外部第一次综合评审。以下为源码核验后的确认状态，后续修复按 P0 -> P1 -> P2 和板块顺序推进。
+
+### 7.1 评审结论接收口径
+
+- 总体判断“架构成熟、分层较清晰、测试和安全意识较强”基本成立。
+- 数字口径需要以当前仓库为准：当前根目录 `.dpk` 为 15 个；统计到 Core/Persistence/Features/VCL/FMX/ThirdParty/Governance/Tools/Tests/DeepFlow 的 `.pas` 为 587 个；`Tests` 下 `.pas` 为 170 个。
+- “DeepShell、BrowserAutomation、IntentClarification”继续按本计划放最后，除非阻塞主编译链。
+
+### 7.2 P0 已确认问题
+
+| 编号 | 问题 | 确认状态 | 证据 | 后续处理板块 |
+|------|------|----------|------|--------------|
+| FR-001 | 版本号混乱 | Confirmed | `Core/DeepBase.Manager.pas` 与 `Core/DeepBase.PluginManager.pas` 为 `0.3`；`Core/DeepBase.Consts.pas` 为 `1.0.2`；`Core/DeepBase.Schema.pas` 为 `1.0.0` | Core |
+| FR-002 | CloudBackup/CloudSync/LLM.Config 弱加密或硬编码 key | Confirmed | `Features/DeepBase.CloudBackup.pas` 使用 XOR；`Features/DeepBase.CloudSync.pas` 用 Base64 模拟加密；`Features/DeepBase.LLM.Config.pas` 使用 `@DeepBase.LLM.Key` | Security + Features + LLM |
+| FR-003 | `Authorization.FireDAC.ReplaceRolePermissions` 无事务 | Confirmed | `Persistence/DeepBase.Persistence.Authorization.FireDAC.pas` 先 DELETE 后循环 INSERT，无 `StartTransaction/Commit/Rollback` | Persistence + Auth |
+| FR-004 | `Logging.FireDAC` lazy init 线程不安全 | Confirmed | `EnsureConnection/EnsureInsertQuery/EnsureLegacyInsertQuery` 直接 `if Assigned then Exit`，无锁保护 | Persistence + Logging |
+
+### 7.3 P1 已确认或部分确认问题
+
+| 编号 | 问题 | 确认状态 | 证据/说明 | 后续处理板块 |
+|------|------|----------|-----------|--------------|
+| FR-005 | `DeepBaseFeatures.dpk` 过大 | Confirmed | 当前包含 78 个 source entries，混有 LLM、IC、Browser、Commerce、Speech、Cloud、Graph、HttpServer | Package DAG |
+| FR-006 | `TDBConnectionFactory` connection-per-call | Confirmed | `CreateConnectionFromProfile` 临时创建 `TUniConnectionPool`，只调用 `CreateUnopenedConnection` 后释放 pool | Persistence / DB |
+| FR-007 | UPSERT 写法不统一 | Confirmed | `INSERT OR REPLACE`、`ON CONFLICT`、手写 UPDATE/INSERT 分散在 Core/Persistence/Features | Persistence / DB |
+| FR-008 | DoQry 预编译池原始连接指针 key 风险 | Partial | 当前确实用 `NativeInt(Conn)` 作为 key；源码已加入 stale entry 清理注释和判断，但仍依赖指针身份，需要专项压力测试验证 | Persistence / DoQry |
+| FR-009 | LLM 流式传输不是真流式 | Confirmed | `Features/DeepBase.LLM.HTTP.pas` 注释明确 transport 返回完整 body 后再解析 SSE lines | LLM |
+
+### 7.4 P2 已确认问题
+
+| 编号 | 问题 | 确认状态 | 证据/说明 | 后续处理板块 |
+|------|------|----------|-----------|--------------|
+| FR-010 | MFCC 使用 O(N^2) DFT | Confirmed | `Features/DeepBase.Speech.MFCC.pas` 注释为 simplified DFT，production would use radix-2 FFT | Speech |
+| FR-011 | 注释编码损坏 | Confirmed | 多个 `.pas/.md` 中出现 `锟斤拷`、乱码中文注释；按 `charset` 流程先审计再转换 | Cross-cutting |
+| FR-012 | deprecated config encrypted 接口仍在接口内 | Confirmed | `Core/DeepBase.Interfaces.pas` 和 `Core/DeepBase.Config.pas` 中仍声明，运行时抛 `ENotSupportedException` | Core API |
+| FR-013 | `CompareVersions` 重复实现 | Confirmed | `Core/DeepBase.Types.pas`、`Core/DeepBase.Plugin.pas`、`Core/DeepBase.LLM.Manager.pas` 均有版本比较逻辑 | Core |
+| FR-014 | 日志 sanitizer 破坏合法内容 | Confirmed | `Core/DeepBase.Logging.pas` 将 `\` 替换为 `/`，`< >` 替换为 `?`，`&` 替换为 `and` | Core Logging |
+| FR-015 | DoQry 全局可变状态 | Confirmed | `GQueryCache/GPreparedPool/GPreparedPoolLock/GPreparedPoolEnabled` 等均为单元全局变量 | Persistence / DoQry |
+| FR-016 | DeepFlow Pause/Resume 空桩，优先队列插入排序 | Confirmed | `DeepFlow.Engine.Pause/Resume` 为空实现；`InsertSorted` 线性扫描插入 | DeepFlow |
+| FR-017 | `.editorconfig` 标题仍是 UniBase | Confirmed | 第一行 `# UniBase Delphi Framework EditorConfig` | Repo hygiene |
+
+### 7.5 需要专项复核的问题
+
+| 问题 | 当前判断 | 复核方式 |
+|------|----------|----------|
+| “17 个包” | 当前根目录 `.dpk` 统计为 15 个，评审数字可能包含历史/设计外工程 | 后续以包 DAG 清单重新建账 |
+| “Features 93 个单元无对应测试” | `Features` 当前为 92 个 `.pas`；测试覆盖映射需要按 unit -> active DPR fixture 专项生成 | 建立 Features 测试覆盖矩阵 |
+| “Core 完全不依赖 FireDAC/VCL/FMX” | 旧架构测试曾通过，但当前工作区变化较多，不能沿用旧 XML | 重跑 `Scripts/run_architecture_checks.ps1` |
+
+### 7.6 后续执行顺序调整
+
+第一次评审确认后，前两轮修复顺序调整为：
+
+1. Core P0：统一版本源，修复 logger sanitizer 策略，整理 CompareVersions 归属。
+2. Security/Features P0：替换 CloudBackup、CloudSync、LLM.Config 弱加密路径。
+3. Persistence P0：为 Authorization role permission replacement 加事务；为 Logging.FireDAC lazy init 加锁。
+4. Persistence P1：评估 DB factory 与 pool 的真实契约，补 DoQry prepared pool 压力测试。
+5. LLM P1：拆出真 SSE streaming transport 或明确 API 命名为 buffered stream。
+6. 其余 P2：编码、deprecated、DeepFlow、editorconfig、MFCC FFT。
+

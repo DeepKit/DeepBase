@@ -488,9 +488,9 @@ function TDeepBasePluginManager.GetPluginEnabledSetting(const PluginID: TGUID): 
 var
   Key, Value: string;
 begin
-  Key := GUIDToShortString(PluginID) + '.Enabled';
+  Key := PLUGIN_CONFIG_PREFIX + GUIDToShortString(PluginID) + '.Enabled';
   if Assigned(FContext) then
-    Value := FContext.GetConfig(PLUGIN_CATEGORY + '.' + Key, '1')
+    Value := FContext.GetConfig(Key, '1')
   else
     Value := '1';
   Result := (Value = '1') or (Value.ToLower = 'true');
@@ -500,7 +500,7 @@ procedure TDeepBasePluginManager.SetPluginEnabledSetting(const PluginID: TGUID; 
 var
   Key: string;
 begin
-  Key := PLUGIN_CATEGORY + '.' + GUIDToShortString(PluginID) + '.Enabled';
+  Key := PLUGIN_CONFIG_PREFIX + GUIDToShortString(PluginID) + '.Enabled';
   if Assigned(FContext) then
   begin
     if Enabled then
@@ -524,7 +524,7 @@ begin
   
   TMonitor.Enter(FLock);
   try
-    // 1. ÑéÖ¤²å¼þÎÄ¼þÂ·¾¶°²È«ÐÔ
+    // 1. ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½
     if not IsValidPluginPath(BPLPath) then
     begin
       ErrorMsg := 'Invalid plugin path (potential path traversal): ' + BPLPath;
@@ -532,7 +532,7 @@ begin
       Exit;
     end;
     
-    // 2. ÑéÖ¤²å¼þÊý×ÖÇ©Ãû
+    // 2. ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½
     if not VerifyPluginSignature(BPLPath) then
     begin
       ErrorMsg := 'Plugin signature verification failed: ' + BPLPath;
@@ -582,6 +582,14 @@ begin
     
     // 4. Get plugin info
     Info := Plugin.GetPluginInfo;
+
+    if not GetPluginEnabledSetting(Info.ID) then
+    begin
+      ErrorMsg := 'Plugin disabled by configuration: ' + Info.Name;
+      UnloadBPL(Handle);
+      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      Exit;
+    end;
     
     // Check if already loaded
     if FPlugins.ContainsKey(Info.ID) then
@@ -876,15 +884,15 @@ begin
   Result := False;
   
   try
-    // »ñÈ¡¹æ·¶»¯Â·¾¶
+    // ï¿½ï¿½È¡ï¿½æ·¶ï¿½ï¿½Â·ï¿½ï¿½
     CanonicalPath := TPath.GetFullPath(Path);
     PluginsCanonical := TPath.GetFullPath(FPluginsDir);
     
-    // ¼ì²éÂ·¾¶ÊÇ·ñÔÚ²å¼þÄ¿Â¼ÄÚ
+    // ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ú²ï¿½ï¿½Ä¿Â¼ï¿½ï¿½
     Result := CanonicalPath.StartsWith(PluginsCanonical + TPath.DirectorySeparatorChar) or
               (CanonicalPath = PluginsCanonical);
               
-    // ¼ì²éÎÄ¼þÀ©Õ¹Ãû
+    // ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Õ¹ï¿½ï¿½
     if Result then
       Result := SameText(TPath.GetExtension(Path), '.bpl');
       

@@ -156,9 +156,19 @@ uses
   System.IOUtils;
 
 const
-  LICENSE_SECRET = 'DeepBase-License-2024';
+  LICENSE_LEGACY_SECRET_ENV = 'DEEPBASE_LEGACY_LICENSE_SIGNING_KEY';
+  LICENSE_CI_SECRET = 'DeepBase-License-CI-Only';
   LICENSE_TABLE = 'LicenseInfo';
   LICENSE_VERSION = '1.0';
+
+function ResolveLegacyLicenseSecret: string;
+begin
+  Result := GetEnvironmentVariable(LICENSE_LEGACY_SECRET_ENV);
+  {$IFDEF CI}
+  if Result = '' then
+    Result := LICENSE_CI_SECRET;
+  {$ENDIF}
+end;
 
 { TLicenseInfo }
 
@@ -224,7 +234,7 @@ constructor TDeepBaseLicense.Create(const AStorage: ILicenseStorage);
 begin
   inherited Create;
   FStorage := AStorage;
-  FSecretKey := LICENSE_SECRET;
+  FSecretKey := ResolveLegacyLicenseSecret;
   FCachedDeviceId := '';
   FCurrentLicense := TLicenseInfo.Empty;
 
@@ -354,14 +364,34 @@ function TDeepBaseLicense.SignData(const Data: string): string;
 var
   Combined: string;
 begin
+  if FSecretKey = '' then
+    raise EInvalidOp.Create(
+      'Legacy local license signing is disabled. Sign licenses on the server and set ' +
+      LICENSE_LEGACY_SECRET_ENV + ' only for migration tooling.');
+
   Combined := Data + FSecretKey;
   Result := THashSHA2.GetHashString(Combined, THashSHA2.TSHA2Version.SHA256);
   Result := Copy(Result, 1, 16); // Short signature
 end;
 
 function TDeepBaseLicense.VerifySignature(const Data, Signature: string): Boolean;
+var
+  Expected: string;
+  I, Diff: Integer;
 begin
-  Result := SameText(SignData(Data), Signature);
+  Result := False;
+  if FSecretKey = '' then
+    Exit;
+
+  Expected := SignData(Data);
+  if Length(Expected) <> Length(Signature) then
+    Exit;
+
+  Diff := 0;
+  for I := 1 to Length(Expected) do
+    Diff := Diff or (Ord(UpCase(Expected[I])) xor Ord(UpCase(Signature[I])));
+
+  Result := Diff = 0;
 end;
 
 class function TDeepBaseLicense.GenerateLicenseKey(

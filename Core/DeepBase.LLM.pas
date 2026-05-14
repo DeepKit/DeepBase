@@ -191,6 +191,7 @@ type
     SortOrder: Integer;
     
     procedure Init;
+    procedure Clear;
     function RenderUserPrompt(const Values: TDictionary<string, string>): string;
     function Clone: TLLMPromptTemplate;
   end;
@@ -885,6 +886,13 @@ begin
   IsEnabled := True;
   IsBuiltIn := False;
   SortOrder := 0;
+end;
+
+procedure TLLMPromptTemplate.Clear;
+begin
+  if Assigned(DefaultValues) then
+    FreeAndNil(DefaultValues);
+  Init;
 end;
 
 function TLLMPromptTemplate.RenderUserPrompt(const Values: TDictionary<string, string>): string;
@@ -1719,48 +1727,57 @@ begin
   Template.SortOrder := Query.FieldByName('SortOrder').AsInteger;
   
   // Parse Variables JSON array
+  VarJson := nil;
   try
-    VarJson := TJSONObject.ParseJSONValue(Query.FieldByName('Variables').AsString);
-    if Assigned(VarJson) and (VarJson is TJSONArray) then
     try
-      SetLength(Template.Variables, TJSONArray(VarJson).Count);
-      for I := 0 to TJSONArray(VarJson).Count - 1 do
-        Template.Variables[I] := TJSONArray(VarJson).Items[I].Value;
-    finally
-      VarJson.Free;
+      VarJson := TJSONObject.ParseJSONValue(Query.FieldByName('Variables').AsString);
+      if VarJson is TJSONArray then
+      begin
+        SetLength(Template.Variables, TJSONArray(VarJson).Count);
+        for I := 0 to TJSONArray(VarJson).Count - 1 do
+          Template.Variables[I] := TJSONArray(VarJson).Items[I].Value;
+      end;
+    except
+      SetLength(Template.Variables, 0);
     end;
-  except
-    SetLength(Template.Variables, 0);
+  finally
+    VarJson.Free;
   end;
   
   // Parse DefaultValues JSON object
+  DefJson := nil;
   try
-    DefJson := TJSONObject.ParseJSONValue(Query.FieldByName('DefaultValues').AsString);
-    if Assigned(DefJson) and (DefJson is TJSONObject) then
     try
-      Template.DefaultValues := TDictionary<string, string>.Create;
-      for Pair in TJSONObject(DefJson) do
-        Template.DefaultValues.Add(Pair.JsonString.Value, Pair.JsonValue.Value);
-    finally
-      DefJson.Free;
+      DefJson := TJSONObject.ParseJSONValue(Query.FieldByName('DefaultValues').AsString);
+      if DefJson is TJSONObject then
+      begin
+        Template.DefaultValues := TDictionary<string, string>.Create;
+        for Pair in TJSONObject(DefJson) do
+          Template.DefaultValues.Add(Pair.JsonString.Value, Pair.JsonValue.Value);
+      end;
+    except
+      FreeAndNil(Template.DefaultValues);
     end;
-  except
-    Template.DefaultValues := nil;
+  finally
+    DefJson.Free;
   end;
   
   // Parse IncludeTemplates JSON array
+  IncJson := nil;
   try
-    IncJson := TJSONObject.ParseJSONValue(Query.FieldByName('IncludeTemplates').AsString);
-    if Assigned(IncJson) and (IncJson is TJSONArray) then
     try
-      SetLength(Template.IncludeTemplates, TJSONArray(IncJson).Count);
-      for I := 0 to TJSONArray(IncJson).Count - 1 do
-        Template.IncludeTemplates[I] := TJSONArray(IncJson).Items[I].Value;
-    finally
-      IncJson.Free;
+      IncJson := TJSONObject.ParseJSONValue(Query.FieldByName('IncludeTemplates').AsString);
+      if IncJson is TJSONArray then
+      begin
+        SetLength(Template.IncludeTemplates, TJSONArray(IncJson).Count);
+        for I := 0 to TJSONArray(IncJson).Count - 1 do
+          Template.IncludeTemplates[I] := TJSONArray(IncJson).Items[I].Value;
+      end;
+    except
+      SetLength(Template.IncludeTemplates, 0);
     end;
-  except
-    SetLength(Template.IncludeTemplates, 0);
+  finally
+    IncJson.Free;
   end;
 end;
 
@@ -1867,30 +1884,34 @@ begin
   Response := '';
   
   Template := GetTemplate(TemplateName);
-  if Template.Name = '' then
-  begin
-    Response := 'Template not found: ' + TemplateName;
-    Exit(False);
+  try
+    if Template.Name = '' then
+    begin
+      Response := 'Template not found: ' + TemplateName;
+      Exit(False);
+    end;
+    
+    // Render prompt
+    Prompt := Template.RenderUserPrompt(Variables);
+    
+    // Get config (use recommended or default)
+    if Template.RecommendedConfig <> '' then
+      Config := GetConfig(Template.RecommendedConfig)
+    else
+      Config := GetConfig('Default');
+    
+    // Override system prompt and temperature from template
+    if Template.SystemPrompt <> '' then
+      Config.SystemPrompt := Template.SystemPrompt;
+    if Template.Temperature > 0 then
+      Config.Temperature := Template.Temperature;
+    
+    // Execute chat
+    Result := Chat(Prompt, ChatResponse, Config.Name);
+    Response := ChatResponse.Content;
+  finally
+    Template.Clear;
   end;
-  
-  // Render prompt
-  Prompt := Template.RenderUserPrompt(Variables);
-  
-  // Get config (use recommended or default)
-  if Template.RecommendedConfig <> '' then
-    Config := GetConfig(Template.RecommendedConfig)
-  else
-    Config := GetConfig('Default');
-  
-  // Override system prompt and temperature from template
-  if Template.SystemPrompt <> '' then
-    Config.SystemPrompt := Template.SystemPrompt;
-  if Template.Temperature > 0 then
-    Config.Temperature := Template.Temperature;
-  
-  // Execute chat
-  Result := Chat(Prompt, ChatResponse, Config.Name);
-  Response := ChatResponse.Content;
 end;
 
 function TDeepBaseLLM.GetCallHistory(ALimit: Integer; const ConfigName: string): TLLMCallRecordArray;
@@ -2151,18 +2172,26 @@ begin
   Result := False;
   
   Source := GetTemplate(SourceName);
-  if Source.Name = '' then
-    Exit;
-    
-  NewTemplate := Source.Clone;
-  NewTemplate.Name := NewName;
-  NewTemplate.IsBuiltIn := False;
-  
   try
-    SaveTemplate(NewTemplate);
-    Result := True;
-  except
-    Result := False;
+    if Source.Name = '' then
+      Exit;
+      
+    NewTemplate := Source.Clone;
+    try
+      NewTemplate.Name := NewName;
+      NewTemplate.IsBuiltIn := False;
+      
+      try
+        SaveTemplate(NewTemplate);
+        Result := True;
+      except
+        Result := False;
+      end;
+    finally
+      NewTemplate.Clear;
+    end;
+  finally
+    Source.Clear;
   end;
 end;
 
@@ -2175,6 +2204,7 @@ var
   I: Integer;
   Depth: Integer;
   Parent: TLLMPromptTemplate;
+  ParentName: string;
 begin
   Result.IsValid := True;
   SetLength(Result.Errors, 0);
@@ -2225,17 +2255,25 @@ begin
     if Template.ParentTemplate <> '' then
     begin
       Depth := 0;
-      Parent := GetTemplate(Template.ParentTemplate);
-      while (Parent.Name <> '') and (Depth < 5) do
+      ParentName := Template.ParentTemplate;
+      while (ParentName <> '') and (Depth < 5) do
       begin
-        if Parent.Name = Template.Name then
-        begin
-          Result.IsValid := False;
-          SetLength(Result.Errors, Length(Result.Errors) + 1);
-          Result.Errors[High(Result.Errors)] := 'Circular inheritance detected: ' + Template.Name;
-          Break;
+        Parent.Init;
+        try
+          Parent := GetTemplate(ParentName);
+          if Parent.Name = '' then
+            Break;
+          if Parent.Name = Template.Name then
+          begin
+            Result.IsValid := False;
+            SetLength(Result.Errors, Length(Result.Errors) + 1);
+            Result.Errors[High(Result.Errors)] := 'Circular inheritance detected: ' + Template.Name;
+            Break;
+          end;
+          ParentName := Parent.ParentTemplate;
+        finally
+          Parent.Clear;
         end;
-        Parent := GetTemplate(Parent.ParentTemplate);
         Inc(Depth);
       end;
       
@@ -2260,68 +2298,102 @@ var
   Key, Val: string;
   IncludeName, IncludeContent: string;
   IncTemplate: TLLMPromptTemplate;
+  ParentName: string;
   I: Integer;
 begin
   Result := '';
   
   Template := GetTemplate(TemplateName);
-  if Template.Name = '' then
-    Exit;
-  
-  // Merge variables with defaults from inheritance chain
-  MergedVars := TDictionary<string, string>.Create;
   try
-    // Start with provided variables
-    for Key in Variables.Keys do
-      MergedVars.AddOrSetValue(Key, Variables[Key]);
+    if Template.Name = '' then
+      Exit;
     
-    // Walk up inheritance chain and add missing defaults
-    Depth := 0;
-    Parent := Template;
-    while (Parent.Name <> '') and (Depth < 5) do
-    begin
-      // Add defaults from this level (don't overwrite)
-      if Assigned(Parent.DefaultValues) then
+    // Merge variables with defaults from inheritance chain
+    MergedVars := TDictionary<string, string>.Create;
+    try
+      // Start with provided variables
+      if Assigned(Variables) then
+        for Key in Variables.Keys do
+          MergedVars.AddOrSetValue(Key, Variables[Key]);
+      
+      // Add defaults from this template (don't overwrite)
+      if Assigned(Template.DefaultValues) then
       begin
-        for Key in Parent.DefaultValues.Keys do
+        for Key in Template.DefaultValues.Keys do
         begin
           if not MergedVars.ContainsKey(Key) then
-            MergedVars.Add(Key, Parent.DefaultValues[Key]);
+            MergedVars.Add(Key, Template.DefaultValues[Key]);
         end;
       end;
-      
-      // Move to parent
-      if Parent.ParentTemplate <> '' then
-        Parent := GetTemplate(Parent.ParentTemplate)
-      else
-        Break;
-      Inc(Depth);
-    end;
-    
-    // Render template
-    Result := Template.UserPromptTemplate;
-    
-    // Replace variables
-    for Key in MergedVars.Keys do
-    begin
-      if MergedVars.TryGetValue(Key, Val) then
-        Result := StringReplace(Result, '{{' + Key + '}}', Val, [rfReplaceAll]);
-    end;
-    
-    // Process includes {{include:template_name}}
-    for I := 0 to High(Template.IncludeTemplates) do
-    begin
-      IncludeName := Template.IncludeTemplates[I];
-      IncTemplate := GetTemplate(IncludeName);
-      if IncTemplate.Name <> '' then
+
+      // Walk up inheritance chain and add missing defaults
+      Depth := 0;
+      ParentName := Template.ParentTemplate;
+      while (ParentName <> '') and (Depth < 5) do
       begin
-        IncludeContent := RenderWithInheritance(IncludeName, MergedVars);
-        Result := StringReplace(Result, '{{include:' + IncludeName + '}}', IncludeContent, [rfReplaceAll]);
+        Parent.Init;
+        try
+          Parent := GetTemplate(ParentName);
+          if Parent.Name = '' then
+            Break;
+
+          if Assigned(Parent.DefaultValues) then
+          begin
+            for Key in Parent.DefaultValues.Keys do
+            begin
+              if not MergedVars.ContainsKey(Key) then
+                MergedVars.Add(Key, Parent.DefaultValues[Key]);
+            end;
+          end;
+
+          ParentName := Parent.ParentTemplate;
+        finally
+          Parent.Clear;
+        end;
+        Inc(Depth);
       end;
+      
+      // Render template
+      Result := Template.UserPromptTemplate;
+      
+      // Replace variables
+      for Key in MergedVars.Keys do
+      begin
+        if MergedVars.TryGetValue(Key, Val) then
+          Result := StringReplace(Result, '{{' + Key + '}}', Val, [rfReplaceAll]);
+      end;
+      
+      // Process includes {{include:template_name}}
+      for I := 0 to High(Template.IncludeTemplates) do
+      begin
+        IncludeName := Template.IncludeTemplates[I];
+        IncTemplate.Init;
+        try
+          IncTemplate := GetTemplate(IncludeName);
+          if IncTemplate.Name <> '' then
+          begin
+            IncludeContent := RenderWithInheritance(IncludeName, MergedVars);
+            Result := StringReplace(Result, '{{include:' + IncludeName + '}}', IncludeContent, [rfReplaceAll]);
+          end;
+        finally
+          IncTemplate.Clear;
+        end;
+      end;
+    finally
+      MergedVars.Free;
     end;
   finally
-    MergedVars.Free;
+    Template.Clear;
   end;
+end;
+
+procedure ClearPromptTemplates(var Templates: TLLMPromptTemplateArray);
+var
+  I: Integer;
+begin
+  for I := 0 to High(Templates) do
+    Templates[I].Clear;
+  SetLength(Templates, 0);
 end;
 
 function TDeepBaseLLM.ExportTemplates: string;
@@ -2336,54 +2408,57 @@ var
   Key: string;
 begin
   Templates := GetAllTemplates;
-  
-  JsonArr := TJSONArray.Create;
   try
-    for T in Templates do
-    begin
-      JsonObj := TJSONObject.Create;
-      JsonObj.AddPair('name', T.Name);
-      JsonObj.AddPair('category', T.Category);
-      JsonObj.AddPair('description', T.Description);
-      JsonObj.AddPair('systemPrompt', T.SystemPrompt);
-      JsonObj.AddPair('userPromptTemplate', T.UserPromptTemplate);
-      JsonObj.AddPair('parentTemplate', T.ParentTemplate);
-      JsonObj.AddPair('outputFormat', T.OutputFormat);
-      JsonObj.AddPair('validationRegex', T.ValidationRegex);
-      JsonObj.AddPair('examples', T.Examples);
-      JsonObj.AddPair('recommendedConfig', T.RecommendedConfig);
-      JsonObj.AddPair('recommendedModel', T.RecommendedModel);
-      JsonObj.AddPair('maxTokens', TJSONNumber.Create(T.MaxTokens));
-      JsonObj.AddPair('temperature', TJSONNumber.Create(T.Temperature));
-      JsonObj.AddPair('isEnabled', TJSONBool.Create(T.IsEnabled));
-      JsonObj.AddPair('isBuiltIn', TJSONBool.Create(T.IsBuiltIn));
-      JsonObj.AddPair('sortOrder', TJSONNumber.Create(T.SortOrder));
+    JsonArr := TJSONArray.Create;
+    try
+      for T in Templates do
+      begin
+        JsonObj := TJSONObject.Create;
+        JsonObj.AddPair('name', T.Name);
+        JsonObj.AddPair('category', T.Category);
+        JsonObj.AddPair('description', T.Description);
+        JsonObj.AddPair('systemPrompt', T.SystemPrompt);
+        JsonObj.AddPair('userPromptTemplate', T.UserPromptTemplate);
+        JsonObj.AddPair('parentTemplate', T.ParentTemplate);
+        JsonObj.AddPair('outputFormat', T.OutputFormat);
+        JsonObj.AddPair('validationRegex', T.ValidationRegex);
+        JsonObj.AddPair('examples', T.Examples);
+        JsonObj.AddPair('recommendedConfig', T.RecommendedConfig);
+        JsonObj.AddPair('recommendedModel', T.RecommendedModel);
+        JsonObj.AddPair('maxTokens', TJSONNumber.Create(T.MaxTokens));
+        JsonObj.AddPair('temperature', TJSONNumber.Create(T.Temperature));
+        JsonObj.AddPair('isEnabled', TJSONBool.Create(T.IsEnabled));
+        JsonObj.AddPair('isBuiltIn', TJSONBool.Create(T.IsBuiltIn));
+        JsonObj.AddPair('sortOrder', TJSONNumber.Create(T.SortOrder));
+        
+        // Variables array
+        VarsArr := TJSONArray.Create;
+        for I := 0 to High(T.Variables) do
+          VarsArr.Add(T.Variables[I]);
+        JsonObj.AddPair('variables', VarsArr);
+        
+        // Include templates array
+        IncArr := TJSONArray.Create;
+        for I := 0 to High(T.IncludeTemplates) do
+          IncArr.Add(T.IncludeTemplates[I]);
+        JsonObj.AddPair('includeTemplates', IncArr);
+        
+        // Default values object
+        DefsObj := TJSONObject.Create;
+        if Assigned(T.DefaultValues) then
+          for Key in T.DefaultValues.Keys do
+            DefsObj.AddPair(Key, T.DefaultValues[Key]);
+        JsonObj.AddPair('defaultValues', DefsObj);
+        
+        JsonArr.Add(JsonObj);
+      end;
       
-      // Variables array
-      VarsArr := TJSONArray.Create;
-      for I := 0 to High(T.Variables) do
-        VarsArr.Add(T.Variables[I]);
-      JsonObj.AddPair('variables', VarsArr);
-      
-      // Include templates array
-      IncArr := TJSONArray.Create;
-      for I := 0 to High(T.IncludeTemplates) do
-        IncArr.Add(T.IncludeTemplates[I]);
-      JsonObj.AddPair('includeTemplates', IncArr);
-      
-      // Default values object
-      DefsObj := TJSONObject.Create;
-      if Assigned(T.DefaultValues) then
-        for Key in T.DefaultValues.Keys do
-          DefsObj.AddPair(Key, T.DefaultValues[Key]);
-      JsonObj.AddPair('defaultValues', DefsObj);
-      
-      JsonArr.Add(JsonObj);
+      Result := JsonArr.Format(2);
+    finally
+      JsonArr.Free;
     end;
-    
-    Result := JsonArr.Format(2);
   finally
-    JsonArr.Free;
+    ClearPromptTemplates(Templates);
   end;
 end;
 
@@ -2410,66 +2485,75 @@ begin
       JsonObj := JsonArr.Items[I] as TJSONObject;
       
       Template.Init;
-      Template.Name := JsonObj.GetValue<string>('name', '');
-      if Template.Name = '' then
-        Continue;
-      
-      // Check if exists
-      if not OverwriteExisting then
-      begin
-        Existing := GetTemplate(Template.Name);
-        if Existing.Name <> '' then
-          Continue;
-      end;
-      
-      Template.Category := JsonObj.GetValue<string>('category', 'General');
-      Template.Description := JsonObj.GetValue<string>('description', '');
-      Template.SystemPrompt := JsonObj.GetValue<string>('systemPrompt', '');
-      Template.UserPromptTemplate := JsonObj.GetValue<string>('userPromptTemplate', '');
-      Template.ParentTemplate := JsonObj.GetValue<string>('parentTemplate', '');
-      Template.OutputFormat := JsonObj.GetValue<string>('outputFormat', 'text');
-      Template.ValidationRegex := JsonObj.GetValue<string>('validationRegex', '');
-      Template.Examples := JsonObj.GetValue<string>('examples', '');
-      Template.RecommendedConfig := JsonObj.GetValue<string>('recommendedConfig', '');
-      Template.RecommendedModel := JsonObj.GetValue<string>('recommendedModel', '');
-      Template.MaxTokens := JsonObj.GetValue<Integer>('maxTokens', 0);
-      Template.Temperature := JsonObj.GetValue<Double>('temperature', 0.7);
-      Template.IsEnabled := JsonObj.GetValue<Boolean>('isEnabled', True);
-      Template.IsBuiltIn := False; // Imported templates are never built-in
-      Template.SortOrder := JsonObj.GetValue<Integer>('sortOrder', 0);
-      
-      // Variables array
-      VarsArr := JsonObj.GetValue<TJSONArray>('variables');
-      if Assigned(VarsArr) then
-      begin
-        SetLength(Template.Variables, VarsArr.Count);
-        for J := 0 to VarsArr.Count - 1 do
-          Template.Variables[J] := VarsArr.Items[J].Value;
-      end;
-      
-      // Include templates array
-      IncArr := JsonObj.GetValue<TJSONArray>('includeTemplates');
-      if Assigned(IncArr) then
-      begin
-        SetLength(Template.IncludeTemplates, IncArr.Count);
-        for J := 0 to IncArr.Count - 1 do
-          Template.IncludeTemplates[J] := IncArr.Items[J].Value;
-      end;
-      
-      // Default values object
-      DefsObj := JsonObj.GetValue<TJSONObject>('defaultValues');
-      if Assigned(DefsObj) then
-      begin
-        Template.DefaultValues := TDictionary<string, string>.Create;
-        for Pair in DefsObj do
-          Template.DefaultValues.Add(Pair.JsonString.Value, Pair.JsonValue.Value);
-      end;
-      
       try
-        SaveTemplate(Template);
-        Inc(Result);
-      except
-        // Skip failed imports
+        Template.Name := JsonObj.GetValue<string>('name', '');
+        if Template.Name = '' then
+          Continue;
+        
+        // Check if exists
+        if not OverwriteExisting then
+        begin
+          Existing.Init;
+          try
+            Existing := GetTemplate(Template.Name);
+            if Existing.Name <> '' then
+              Continue;
+          finally
+            Existing.Clear;
+          end;
+        end;
+        
+        Template.Category := JsonObj.GetValue<string>('category', 'General');
+        Template.Description := JsonObj.GetValue<string>('description', '');
+        Template.SystemPrompt := JsonObj.GetValue<string>('systemPrompt', '');
+        Template.UserPromptTemplate := JsonObj.GetValue<string>('userPromptTemplate', '');
+        Template.ParentTemplate := JsonObj.GetValue<string>('parentTemplate', '');
+        Template.OutputFormat := JsonObj.GetValue<string>('outputFormat', 'text');
+        Template.ValidationRegex := JsonObj.GetValue<string>('validationRegex', '');
+        Template.Examples := JsonObj.GetValue<string>('examples', '');
+        Template.RecommendedConfig := JsonObj.GetValue<string>('recommendedConfig', '');
+        Template.RecommendedModel := JsonObj.GetValue<string>('recommendedModel', '');
+        Template.MaxTokens := JsonObj.GetValue<Integer>('maxTokens', 0);
+        Template.Temperature := JsonObj.GetValue<Double>('temperature', 0.7);
+        Template.IsEnabled := JsonObj.GetValue<Boolean>('isEnabled', True);
+        Template.IsBuiltIn := False; // Imported templates are never built-in
+        Template.SortOrder := JsonObj.GetValue<Integer>('sortOrder', 0);
+        
+        // Variables array
+        VarsArr := JsonObj.GetValue<TJSONArray>('variables');
+        if Assigned(VarsArr) then
+        begin
+          SetLength(Template.Variables, VarsArr.Count);
+          for J := 0 to VarsArr.Count - 1 do
+            Template.Variables[J] := VarsArr.Items[J].Value;
+        end;
+        
+        // Include templates array
+        IncArr := JsonObj.GetValue<TJSONArray>('includeTemplates');
+        if Assigned(IncArr) then
+        begin
+          SetLength(Template.IncludeTemplates, IncArr.Count);
+          for J := 0 to IncArr.Count - 1 do
+            Template.IncludeTemplates[J] := IncArr.Items[J].Value;
+        end;
+        
+        // Default values object
+        DefsObj := JsonObj.GetValue<TJSONObject>('defaultValues');
+        if Assigned(DefsObj) then
+        begin
+          Template.DefaultValues := TDictionary<string, string>.Create;
+          for Pair in DefsObj do
+            Template.DefaultValues.Add(Pair.JsonString.Value, Pair.JsonValue.Value);
+        end;
+        
+        try
+          SaveTemplate(Template);
+          Inc(Result);
+        except
+          // Skip failed imports
+        end;
+      finally
+        Template.Clear;
       end;
     end;
   finally

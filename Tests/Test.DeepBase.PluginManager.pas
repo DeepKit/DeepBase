@@ -15,6 +15,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.Generics.Collections,
   DeepBase.Plugin,
   DeepBase.PluginManager;
@@ -26,6 +27,7 @@ type
     FContext: TPluginContext;
     FConfigValues: TDictionary<string, string>;
     FLogMessages: TStringList;
+    FRootPath: string;
     function GetConfig(const Key, Default: string): string;
     procedure SetConfig(const Key, Value: string);
     function Translate(const Text: string): string;
@@ -62,6 +64,8 @@ type
     FPluginLoadedCount: Integer;
     FPluginUnloadedCount: Integer;
     FLastError: string;
+    FRootPath: string;
+    FPluginsDir: string;
     procedure OnPluginLoaded(Sender: TObject; const Info: TPluginInfo);
     procedure OnPluginUnloaded(Sender: TObject; const PluginID: TGUID);
     procedure OnPluginError(Sender: TObject; const Args: TPluginErrorEventArgs);
@@ -115,6 +119,12 @@ type
   end;
 
 implementation
+
+function CreateTempTestPath(const APrefix: string): string;
+begin
+  Result := TPath.Combine(TPath.GetTempPath, APrefix + '_' + GUIDToShortString(TGUID.NewGuid));
+  TDirectory.CreateDirectory(Result);
+end;
 
 { Mock Plugin Context }
 
@@ -175,7 +185,10 @@ end;
 
 function TMockPluginContext.GetPluginDataPath(const PluginID: TGUID): string;
 begin
-  Result := FRootPath + '\PluginData\' + GUIDToShortString(PluginID);
+  Result := TPath.Combine(FRootPath, 'PluginData');
+  Result := TPath.Combine(Result, GUIDToShortString(PluginID));
+  if not TDirectory.Exists(Result) then
+    TDirectory.CreateDirectory(Result);
 end;
 
 { TTestPluginContext }
@@ -186,13 +199,14 @@ begin
   FConfigValues.Add('key1', 'value1');
   FConfigValues.Add('key2', 'value2');
   FLogMessages := TStringList.Create;
+  FRootPath := CreateTempTestPath('DeepBasePluginContext');
   
   FContext := TPluginContext.Create(
     GetConfig,
     SetConfig,
     Translate,
     LogProc,
-    'C:\TestRoot');
+    FRootPath);
 end;
 
 procedure TTestPluginContext.TearDown;
@@ -200,6 +214,8 @@ begin
   FContext.Free;
   FConfigValues.Free;
   FLogMessages.Free;
+  if (FRootPath <> '') and TDirectory.Exists(FRootPath) then
+    TDirectory.Delete(FRootPath, True);
 end;
 
 function TTestPluginContext.GetConfig(const Key, Default: string): string;
@@ -267,7 +283,7 @@ end;
 
 procedure TTestPluginContext.Test_GetRootPath;
 begin
-  Assert.AreEqual('C:\TestRoot', FContext.GetRootPath);
+  Assert.AreEqual(FRootPath, FContext.GetRootPath);
 end;
 
 procedure TTestPluginContext.Test_GetPluginDataPath;
@@ -277,16 +293,20 @@ var
 begin
   PluginID := TGUID.NewGuid;
   DataPath := FContext.GetPluginDataPath(PluginID);
-  Assert.IsTrue(DataPath.Contains('C:\TestRoot'));
+  Assert.IsTrue(DataPath.StartsWith(FRootPath));
   Assert.IsTrue(DataPath.Contains(GUIDToShortString(PluginID)));
+  Assert.IsTrue(TDirectory.Exists(DataPath));
 end;
 
 { TTestPluginManager }
 
 procedure TTestPluginManager.Setup;
 begin
+  FRootPath := CreateTempTestPath('DeepBasePluginManagerRoot');
+  FPluginsDir := TPath.Combine(FRootPath, 'Plugins');
+  TDirectory.CreateDirectory(FPluginsDir);
   FContext := CreateMockContext;
-  FManager := TDeepBasePluginManager.Create('C:\TestPlugins', FContext);
+  FManager := TDeepBasePluginManager.Create(FPluginsDir, FContext);
   FPluginLoadedCount := 0;
   FPluginUnloadedCount := 0;
   FLastError := '';
@@ -295,11 +315,16 @@ end;
 procedure TTestPluginManager.TearDown;
 begin
   FManager.Free;
+  FContext := nil;
+  if (FRootPath <> '') and TDirectory.Exists(FRootPath) then
+    TDirectory.Delete(FRootPath, True);
 end;
 
 function TTestPluginManager.CreateMockContext: IDeepBasePluginContext;
 begin
-  Result := TMockPluginContext.Create('C:\TestRoot');
+  if FRootPath = '' then
+    FRootPath := CreateTempTestPath('DeepBasePluginManagerRoot');
+  Result := TMockPluginContext.Create(FRootPath);
 end;
 
 procedure TTestPluginManager.OnPluginLoaded(Sender: TObject; const Info: TPluginInfo);
@@ -324,7 +349,7 @@ end;
 
 procedure TTestPluginManager.Test_PluginsDir;
 begin
-  Assert.AreEqual('C:\TestPlugins', FManager.PluginsDir);
+  Assert.AreEqual(FPluginsDir, FManager.PluginsDir);
 end;
 
 procedure TTestPluginManager.Test_PluginCount_Initial;

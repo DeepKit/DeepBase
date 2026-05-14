@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    UniFlow 分层架构边界检查脚本
+    DeepBase 分层架构边界检查脚本
 .DESCRIPTION
     检测核心层与外壳层之间的违规依赖：
     - 循环依赖
@@ -13,7 +13,7 @@
 #>
 
 param(
-    [string]$SourcePath = "$PSScriptRoot\..\docs\uniFlow\Source",
+    [string]$SourcePath = "$PSScriptRoot\..\docs\deepBase\Source",
     [switch]$Verbose,
     [switch]$FailOnViolation
 )
@@ -44,24 +44,24 @@ $ShellModules = @(
 
 # 核心层文件模式
 $CoreFilePatterns = @(
-    "UniFlow.EventSourcing.*",
-    "UniFlow.Workflow.*",
-    "UniFlow.Core.*",
-    "UniFlow.Types.*",
-    "UniFlow.DI.*"
+    "DeepBase.EventSourcing.*",
+    "DeepBase.Workflow.*",
+    "DeepBase.Core.*",
+    "DeepBase.Types.*",
+    "DeepBase.DI.*"
 )
 
 # 外壳层文件模式
 $ShellFilePatterns = @(
-    "UniFlow.AI.*",
-    "UniFlow.Skill.*",
-    "UniFlow.Plugin.*",
-    "UniFlow.Analytics.*",
-    "UniFlow.Tenant.*",
-    "UniFlow.MCP.*",
-    "UniFlow.Queue.*",
-    "UniFlow.Realtime.*",
-    "UniFlow.Session.*"
+    "DeepBase.AI.*",
+    "DeepBase.Skill.*",
+    "DeepBase.Plugin.*",
+    "DeepBase.Analytics.*",
+    "DeepBase.Tenant.*",
+    "DeepBase.MCP.*",
+    "DeepBase.Queue.*",
+    "DeepBase.Realtime.*",
+    "DeepBase.Session.*"
 )
 
 # ============================================================================
@@ -157,7 +157,7 @@ $Stats = @{
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " UniFlow 分层架构边界检查" -ForegroundColor Cyan
+Write-Host " DeepBase 分层架构边界检查" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "源码路径: $SourcePath"

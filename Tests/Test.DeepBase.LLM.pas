@@ -39,6 +39,9 @@ type
 
     [Test]
     procedure Test_IsConfigured_TextOnly_And_IsFullyConfigured_AllFiveSlots;
+
+    [Test]
+    procedure Test_IsConfigured_AllowsLocalProviderWithoutApiKey;
   end;
 
   /// <summary>
@@ -109,6 +112,9 @@ type
   public
     [Test]
     procedure Test_Send_Uses_Injected_Transport;
+
+    [Test]
+    procedure Test_Send_WithoutApiKey_OmitsAuthorizationHeader;
 
     [Test]
     procedure Test_GenerateImage_Uses_Injected_Transport;
@@ -379,6 +385,29 @@ begin
     Store.SetTierModels(string(TierImageFallback), ['fallback-model']);
 
     Assert.IsTrue(Store.IsFullyConfigured);
+  finally
+    Store.Free;
+  end;
+end;
+
+procedure TLLMConfigStoreTests.Test_IsConfigured_AllowsLocalProviderWithoutApiKey;
+var
+  Store: TLLMConfigStore;
+  Provider: TProviderConfig;
+begin
+  Store := TLLMConfigStore.Create;
+  try
+    Provider.Name := 'Ollama';
+    Provider.Endpoint := 'http://localhost:11434/v1';
+    Provider.ApiFormat := 'openai';
+    Provider.Priority := 0;
+    Store.AddProvider(Provider, '');
+
+    Store.SetTierModels(string(TierSmart), ['llama3.1']);
+    Store.SetTierModels(string(TierBalanced), ['llama3.1']);
+    Store.SetTierModels(string(TierFast), ['llama3.1']);
+
+    Assert.IsTrue(Store.IsConfigured);
   finally
     Store.Free;
   end;
@@ -688,6 +717,41 @@ begin
          (Fake.LastRequest.Headers[I].Value = 'Bearer sk_test') then
         FoundAuth := True;
     Assert.IsTrue(FoundAuth);
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TLLMHttpClientTransportTests.Test_Send_WithoutApiKey_OmitsAuthorizationHeader;
+var
+  Client: TLLMHttpClient;
+  Fake: TFakeLLMTransport;
+  Transport: IDeepBaseHttpTransport;
+  Messages: TArray<DeepBase.LLM.Types.TChatMessage>;
+  ChatResult: TChatResult;
+  I: Integer;
+  FoundAuth: Boolean;
+begin
+  Fake := TFakeLLMTransport.Create;
+  Transport := Fake as IDeepBaseHttpTransport;
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200,
+    '{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":2,"completion_tokens":1,"total_tokens":3}}');
+
+  Client := TLLMHttpClient.Create(5);
+  try
+    Client.HttpTransport := Transport;
+    SetLength(Messages, 1);
+    Messages[0] := DeepBase.LLM.Types.TChatMessage.User('hello');
+
+    Assert.IsTrue(Client.Send('http://localhost:11434/v1', '',
+      'openai', 'llama3.1', Messages, 32, 0.2, ChatResult));
+
+    FoundAuth := False;
+    for I := 0 to High(Fake.LastRequest.Headers) do
+      if SameText(Fake.LastRequest.Headers[I].Name, 'Authorization') then
+        FoundAuth := True;
+    Assert.IsFalse(FoundAuth, 'Empty API key should not send Authorization');
+    Assert.AreEqual('ok', ChatResult.Content);
   finally
     Client.Free;
   end;

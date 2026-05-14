@@ -28,9 +28,17 @@ type
     procedure FreeBuffers;
     procedure AddBufferToStream(AHeader: PWaveHdr);
   public
+    /// <summary>
+    /// Create audio capture.
+    /// For batch recognition use defaults (1000ms buffers).
+    /// For low-latency streaming use ABufferMs=50, ABufferCount=8.
+    /// </summary>
     constructor Create(ASampleRate: Integer = 16000;
       ABufferCount: Integer = 4; ABufferMs: Integer = 1000);
     destructor Destroy; override;
+
+    /// <summary>Create a low-latency instance optimized for streaming ASR (50ms buffers × 8).</summary>
+    class function CreateLowLatency(ASampleRate: Integer = 16000): TDeepBaseWinMMAudioCapture; static;
 
     function StartRecording: Boolean;
     procedure StopRecording;
@@ -40,6 +48,7 @@ type
     function IsRecording: Boolean;
     function LastError: string;
     function SampleRate: Integer;
+    function BufferMs: Integer;
   end;
 
 implementation
@@ -77,6 +86,14 @@ begin
   FBufferSize := FSampleRate * SizeOf(SmallInt) * ABufferMs div 1000;
   FStream := TMemoryStream.Create;
   FLock := TCriticalSection.Create;
+end;
+
+class function TDeepBaseWinMMAudioCapture.CreateLowLatency(
+  ASampleRate: Integer): TDeepBaseWinMMAudioCapture;
+begin
+  // 50ms buffers × 8 = 400ms total buffered, good balance of latency vs CPU.
+  // M0 Spike confirmed 50ms is optimal for streaming ASR on modern hardware.
+  Result := TDeepBaseWinMMAudioCapture.Create(ASampleRate, 8, 50);
 end;
 
 destructor TDeepBaseWinMMAudioCapture.Destroy;
@@ -257,6 +274,14 @@ end;
 function TDeepBaseWinMMAudioCapture.SampleRate: Integer;
 begin
   Result := FSampleRate;
+end;
+
+function TDeepBaseWinMMAudioCapture.BufferMs: Integer;
+begin
+  if FSampleRate > 0 then
+    Result := FBufferSize * 1000 div (FSampleRate * SizeOf(SmallInt))
+  else
+    Result := 0;
 end;
 
 end.

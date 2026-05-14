@@ -95,6 +95,8 @@ type
     procedure btnRefreshHistoryClick(Sender: TObject);
     procedure btnClearHistoryClick(Sender: TObject);
     procedure mmoInputKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure btnOpenConfigManagerClick(Sender: TObject);
+    procedure btnOpenPromptDebugClick(Sender: TObject);
     
   private
     FConnection: TFDConnection;
@@ -174,6 +176,8 @@ begin
   if Assigned(btnClear) then btnClear.OnClick := nil;
   if Assigned(btnRefreshHistory) then btnRefreshHistory.OnClick := nil;
   if Assigned(btnClearHistory) then btnClearHistory.OnClick := nil;
+  if Assigned(btnOpenConfigManager) then btnOpenConfigManager.OnClick := nil;
+  if Assigned(btnOpenPromptDebug) then btnOpenPromptDebug.OnClick := nil;
   if Assigned(mmoInput) then mmoInput.OnKeyDown := nil;
   
   // Safely release LLM manager

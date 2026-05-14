@@ -1,13 +1,38 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\_Progs\02Business\DeepBase\Tests\Integration\DeepBaseIntegrationTests.exe" total="1" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-05-09" time="00:03:34">
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\Integration\DeepBaseIntegrationTests.exe" total="10" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-05-10" time="10:20:09">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="DeepBaseIntegrationTests.exe" executed="true" result="Success" success="True" time="00:03:34" asserts="0">
+  <test-suite type="Assembly" name="DeepBaseIntegrationTests.exe" executed="true" result="Success" success="True" time="10:20:09" asserts="0">
     <results>
-        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.000" asserts="0" >
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.047" asserts="0" >
           <results>
-              <test-suite type="Fixture" name="TCommerceDesktopE2ETests" executed="True" result="Success" success="True" time="0.000" >
+              <test-suite type="Namespace" name="Integration" executed="true" result="Success" success="True" time="0.047" asserts="0" >
                 <results>
-                  <test-case name="Test_FreeUser_UpgradeToPro_UnlocksFeatureAndPaidUpdateChannel" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                    <test-suite type="Fixture" name="TCommerceDesktopE2ETests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_FreeUser_UpgradeToPro_UnlocksFeatureAndPaidUpdateChannel" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="WebAPI" executed="true" result="Success" success="True" time="0.046" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TWebApiIntegrationTest" executed="True" result="Success" success="True" time="0.046" >
+                            <results>
+                              <test-case name="Test_BasicGetRoute_ReturnsJson" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                              <test-case name="Test_PostJson_EchoesRequestBody" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_RouteParams_And_QueryParams_Parsed" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_CORS_Preflight_Options_ReturnsHeaders" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Auth_JwtBearer_Succeeds" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Auth_MissingToken_Returns401" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_OpenApiGenerator_Includes_RegisteredRoutes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TWebSocketRouterIntegrationTest" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_MessageRouter_RoutesByEventName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MessageRouter_UsesDefaultHandler_ForNonJsonOrUnknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
                 </results>
               </test-suite>
           </results>

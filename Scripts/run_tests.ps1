@@ -1,5 +1,5 @@
 # DeepBase Test Runner Script
-# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit DeepBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules] [-CoverageThreshold 70] [-CoverageFailOnLow]
+# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-AllowFilteredCI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit DeepBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules] [-CoverageThreshold 70] [-CoverageFailOnLow]
 
 param(
     [ValidateSet('Unit', 'Integration', 'All')]
@@ -9,6 +9,8 @@ param(
     [string]$Platform = 'Win64',
     
     [switch]$CI,
+
+    [switch]$AllowFilteredCI,
     
     [switch]$Report,
     
@@ -49,6 +51,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ($CI -and $SkipCompile) {
+    throw "-SkipCompile is not allowed with -CI because it can run a stale test executable."
+}
+
 # Configuration
 $BaseDir = Split-Path -Parent $PSScriptRoot
 $TestsDir = Join-Path $BaseDir "Tests"
@@ -74,7 +80,7 @@ $ModuleRunMap = [ordered]@{
     "LOGGING"    = "Test.DeepBase.Logging,Test.DeepBase.LogAggregator"
     "MANAGER"    = "Test.DeepBase.Manager,Test.DeepBase.Persistence.RuntimeRegistration"
     "SERVICES"   = "Test.DeepBase.Services.HealthCheck,Test.DeepBase.Services.Protection,Test.DeepBase.Services.Registration"
-    "NET"        = "Test.DeepBase.Net,Test.DeepBase.HttpServer,Test.WebService"
+    "NET"        = "Test.WebService"
     "RESILIENCE" = "Test.DeepBase.Resilience,Test.DeepBase.RateLimiter"
     "PERF"       = "Test.DeepBase.Benchmark,Test.DeepBase.Performance,Test.DeepBase.PerformanceSuite,Test.DeepBase.LockContention"
 }
@@ -416,6 +422,15 @@ if ($FromGitChanged) {
     }
 }
 
+$hasFilteredRun = -not [string]::IsNullOrWhiteSpace($Run) -or
+                  -not [string]::IsNullOrWhiteSpace($RunList) -or
+                  ($IncludeCategory -and $IncludeCategory.Length -gt 0) -or
+                  ($ExcludeCategory -and $ExcludeCategory.Length -gt 0)
+
+if ($CI -and $hasFilteredRun -and -not $AllowFilteredCI) {
+    throw "CI full gate does not allow filtered test runs. Use -AllowFilteredCI only for explicit targeted CI jobs."
+}
+
 if ($Platform -eq 'Win64') {
     $DelphiCompiler = $Dcc64
 } else {
@@ -515,12 +530,17 @@ $UnitPaths = @(
 )
 $SearchPath = $UnitPaths -join ";"
 
-# Unit directories for code coverage (只统计 DeepBase 自身及测试代码)
+# Unit directories for code coverage (只统计 DeepBase 源码，不用测试代码稀释覆盖率)
 $CoverageUnitDirs = @(
     "$BaseDir\Core",
+    "$BaseDir\Features",
+    "$BaseDir\Persistence",
     "$BaseDir\VCL",
     "$BaseDir\FMX",
-    "$TestsDir"
+    "$BaseDir\ThirdParty\Payment",
+    "$BaseDir\ThirdParty\Social",
+    "$BaseDir\Tools\CLI",
+    "$BaseDir\Tools\WebService"
 )
 $CoverageUnitParam = $CoverageUnitDirs -join ";"
 
@@ -572,6 +592,7 @@ function Run-TestProject {
         [string]$ExePath,
         [string]$TestName,
         [string]$XmlOutput,
+        [int]$MinimumTests = 1,
         [string[]]$ExtraArgs = @()
     )
     
@@ -596,8 +617,8 @@ function Run-TestProject {
     Write-Host ""
     
     if ($process.ExitCode -eq 0) {
-        if ($XmlOutput -and -not (Test-XmlHasExecutedTests -Path $XmlOutput)) {
-            Write-Host "FAILED: $TestName produced no executed tests in $XmlOutput" -ForegroundColor Red
+        if ($XmlOutput -and -not (Test-XmlHasExecutedTests -Path $XmlOutput -MinimumTests $MinimumTests)) {
+            Write-Host "FAILED: $TestName produced fewer than $MinimumTests executed tests in $XmlOutput" -ForegroundColor Red
             return $false
         }
 
@@ -674,7 +695,8 @@ function Get-PeMachine {
 
 function Test-XmlHasExecutedTests {
     param(
-        [string]$Path
+        [string]$Path,
+        [int]$MinimumTests = 1
     )
 
     if (-not (Test-Path $Path)) {
@@ -686,14 +708,29 @@ function Test-XmlHasExecutedTests {
         [xml]$xml = Get-Content -Path $Path -Raw
         $totalAttr = $xml.DocumentElement.GetAttribute('total')
         if (-not [string]::IsNullOrWhiteSpace($totalAttr)) {
-            return ([int]$totalAttr -gt 0)
+            $total = [int]$totalAttr
+            if ($total -lt $MinimumTests) {
+                Write-Host "ERROR: Test XML reports only $total executed tests; minimum is $MinimumTests." -ForegroundColor Red
+                return $false
+            }
+            return $true
         }
 
-        return (@($xml.SelectNodes('//test-case')).Count -gt 0)
+        $caseCount = @($xml.SelectNodes('//test-case')).Count
+        if ($caseCount -lt $MinimumTests) {
+            Write-Host "ERROR: Test XML contains only $caseCount test-case nodes; minimum is $MinimumTests." -ForegroundColor Red
+            return $false
+        }
+        return $true
     } catch {
         Write-Host "ERROR: Failed to parse test XML $Path : $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
+}
+
+function Test-HasRunFilter {
+    return -not [string]::IsNullOrWhiteSpace($Run) -or
+           -not [string]::IsNullOrWhiteSpace($RunList)
 }
 
 function Test-BitnessMatch {
@@ -776,7 +813,11 @@ if ($Type -eq 'Unit' -or $Type -eq 'All') {
             $sqliteCopied = Ensure-SqliteDll -TargetDir $TestsDir
             $sqliteInTests = Join-Path $TestsDir "sqlite3.dll"
             try {
-                $Results.UnitTests = Run-TestProject -ExePath $unitExe -TestName "Unit Tests" -XmlOutput $unitXml
+                $unitMinimumTests = 3000
+                if (Test-HasRunFilter) {
+                    $unitMinimumTests = 1
+                }
+                $Results.UnitTests = Run-TestProject -ExePath $unitExe -TestName "Unit Tests" -XmlOutput $unitXml -MinimumTests $unitMinimumTests
             } finally {
                 if ($sqliteCopied -and (Test-Path $sqliteInTests)) {
                     Remove-Item -Path $sqliteInTests -Force -ErrorAction SilentlyContinue
@@ -827,7 +868,11 @@ if ($Type -eq 'Integration' -or $Type -eq 'All') {
             $oldAllowLocalhost = $env:DEEPBASE_ALLOW_LOCALHOST_HTTP
             $env:DEEPBASE_ALLOW_LOCALHOST_HTTP = '1'
             try {
-                $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -ExtraArgs $extraArgs
+                $integrationMinimumTests = 5
+                if (Test-HasRunFilter) {
+                    $integrationMinimumTests = 1
+                }
+                $Results.IntegrationTests = Run-TestProject -ExePath $intExe -TestName "Integration Tests" -XmlOutput $intXml -MinimumTests $integrationMinimumTests -ExtraArgs $extraArgs
             } finally {
                 if ($null -eq $oldAllowLocalhost) {
                     Remove-Item Env:\DEEPBASE_ALLOW_LOCALHOST_HTTP -ErrorAction SilentlyContinue

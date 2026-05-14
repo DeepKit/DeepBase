@@ -10,6 +10,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   Winapi.Windows,
+  Winapi.ShellAPI,
   DeepBase.TrayIcon;
 
 type
@@ -34,6 +35,8 @@ type
   [TestFixture]
   TTestTrayIconShowHide = class
   public
+    [Setup]
+    procedure Setup;
     [TearDown]
     procedure TearDown;
 
@@ -81,10 +84,16 @@ type
 
 implementation
 
+function FakeShellNotifyIcon(dwMessage: DWORD; lpData: PNotifyIconDataW): BOOL; stdcall;
+begin
+  Result := True;
+end;
+
 { TTestTrayIconProperties }
 
 procedure TTestTrayIconProperties.Setup;
 begin
+  TTrayIcon.SetNotifyIconProc(FakeShellNotifyIcon);
   if TTrayIcon.Active then
     TTrayIcon.Hide;
 end;
@@ -93,6 +102,7 @@ procedure TTestTrayIconProperties.TearDown;
 begin
   if TTrayIcon.Active then
     TTrayIcon.Hide;
+  TTrayIcon.SetNotifyIconProc(nil);
 end;
 
 procedure TTestTrayIconProperties.Test_Active_Default_False;
@@ -121,10 +131,18 @@ end;
 
 { TTestTrayIconShowHide }
 
+procedure TTestTrayIconShowHide.Setup;
+begin
+  TTrayIcon.SetNotifyIconProc(FakeShellNotifyIcon);
+  if TTrayIcon.Active then
+    TTrayIcon.Hide;
+end;
+
 procedure TTestTrayIconShowHide.TearDown;
 begin
   if TTrayIcon.Active then
     TTrayIcon.Hide;
+  TTrayIcon.SetNotifyIconProc(nil);
 end;
 
 procedure TTestTrayIconShowHide.Test_Show_Sets_Active;
@@ -196,6 +214,7 @@ procedure TTestTrayIconCallbacks.Setup;
 begin
   FDoubleClickFired := False;
   FMouseDownFired := False;
+  TTrayIcon.SetNotifyIconProc(FakeShellNotifyIcon);
   if TTrayIcon.Active then
     TTrayIcon.Hide;
 end;
@@ -206,6 +225,7 @@ begin
   TTrayIcon.OnMouseDown := nil;
   if TTrayIcon.Active then
     TTrayIcon.Hide;
+  TTrayIcon.SetNotifyIconProc(nil);
 end;
 
 procedure TTestTrayIconCallbacks.Test_OnDoubleClick_CanBeAssigned;
