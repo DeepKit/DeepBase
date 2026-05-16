@@ -73,22 +73,22 @@ const
     'CREATE INDEX IF NOT EXISTS idx_settings_category ON Settings(Category);';
   
   SQL_TIER0_SETTINGS_DATA =
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''App.Language'', ''en-US'', ''String'', ''General'', ''Application language'', ''en-US'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''App.Theme'', ''Windows11'', ''String'', ''UI'', ''Application theme'', ''Windows11'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''App.LogLevel'', ''INFO'', ''String'', ''General'', ''Logging level'', ''INFO'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode'', ''False'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''LLM.DefaultProvider'', ''openai'', ''String'', ''LLM'', ''Default LLM provider'', ''openai'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''LLM.DefaultModel'', ''gpt-4o-mini'', ''String'', ''LLM'', ''Default LLM model'', ''gpt-4o-mini'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''DeepBase.AutoDiagnose'', ''True'', ''Boolean'', ''DeepBase'', ''Auto diagnose on startup'', ''True'');' + #13#10 +
-    'INSERT OR IGNORE INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''DeepBase.AutoFix'', ''False'', ''Boolean'', ''DeepBase'', ''Auto fix issues'', ''False'');';
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''App.Language'', ''en-US'', ''String'', ''General'', ''Application language'', ''en-US'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''App.Theme'', ''Windows11'', ''String'', ''UI'', ''Application theme'', ''Windows11'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''App.LogLevel'', ''INFO'', ''String'', ''General'', ''Logging level'', ''INFO'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode'', ''False'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''LLM.DefaultProvider'', ''openai'', ''String'', ''LLM'', ''Default LLM provider'', ''openai'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''LLM.DefaultModel'', ''gpt-4o-mini'', ''String'', ''LLM'', ''Default LLM model'', ''gpt-4o-mini'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''DeepBase.AutoDiagnose'', ''True'', ''Boolean'', ''DeepBase'', ''Auto diagnose on startup'', ''True'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
+    '  (''DeepBase.AutoFix'', ''False'', ''Boolean'', ''DeepBase'', ''Auto fix issues'', ''False'') ON CONFLICT (Key) DO NOTHING;';
   
   // 3. FormStates - Window position and state persistence
   SQL_TIER0_FORM_STATES =
@@ -132,19 +132,19 @@ const
     'CREATE INDEX IF NOT EXISTS idx_languages_enabled ON Languages(IsEnabled);';
   
   SQL_TIER0_LANGUAGES_DATA =
-    'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''en-US'', ''English (US)'', ''English'', ''MM/dd/yyyy'', ''h:mm:ss tt'', 1, 1, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''zh-CN'', ''Chinese (Simplified)'', ''��������'', ''yyyy-MM-dd'', ''HH:mm:ss'', 1, 0, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''zh-TW'', ''Chinese (Traditional)'', ''���w����'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 2);' + #13#10 +
-    'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''ja-JP'', ''Japanese'', ''�ձ��Z'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 3);';
+    'INSERT INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
+    '  (''en-US'', ''English (US)'', ''English'', ''MM/dd/yyyy'', ''h:mm:ss tt'', 1, 1, 0) ON CONFLICT (LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
+    '  (''zh-CN'', ''Chinese (Simplified)'', ''��������'', ''yyyy-MM-dd'', ''HH:mm:ss'', 1, 0, 1) ON CONFLICT (LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
+    '  (''zh-TW'', ''Chinese (Traditional)'', ''���w����'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 2) ON CONFLICT (LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
+    '  (''ja-JP'', ''Japanese'', ''�ձ��Z'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 3) ON CONFLICT (LangCode) DO NOTHING;';
   
   // 5. I18nTexts - Translation texts
   SQL_TIER0_I18N_TEXTS =
     'CREATE TABLE IF NOT EXISTS I18nTexts (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  SourceText TEXT NOT NULL,' +
     '  LangCode TEXT NOT NULL,' +
     '  TranslatedText TEXT,' +
@@ -162,14 +162,14 @@ const
     'CREATE INDEX IF NOT EXISTS idx_i18n_module ON I18nTexts(Module);';
   
   SQL_TIER0_I18N_TEXTS_DATA =
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''OK'', ''zh-CN'', ''ȷ��'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Cancel'', ''zh-CN'', ''ȡ��'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Save'', ''zh-CN'', ''����'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Close'', ''zh-CN'', ''�ر�'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Error'', ''zh-CN'', ''����'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Warning'', ''zh-CN'', ''����'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Information'', ''zh-CN'', ''��Ϣ'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Confirm'', ''zh-CN'', ''ȷ��'', 1);';
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''OK'', ''zh-CN'', ''ȷ��'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Cancel'', ''zh-CN'', ''ȡ��'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Save'', ''zh-CN'', ''����'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Close'', ''zh-CN'', ''�ر�'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Error'', ''zh-CN'', ''����'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Warning'', ''zh-CN'', ''����'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Information'', ''zh-CN'', ''��Ϣ'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;' + #13#10 +
+    'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Confirm'', ''zh-CN'', ''ȷ��'', 1) ON CONFLICT (SourceText, LangCode) DO NOTHING;';
 
   // ============================================================================
   // Tier 1: Recommended Tables (7 tables)
@@ -179,7 +179,7 @@ const
   // 6. Logs - Application logging
   SQL_TIER1_LOGS =
     'CREATE TABLE IF NOT EXISTS Logs (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  LogTime TEXT NOT NULL,' +
     '  LogLevel TEXT NOT NULL,' +
     '  Source TEXT,' +
@@ -201,7 +201,7 @@ const
   // 7. MRU - Most Recently Used items
   SQL_TIER1_MRU =
     'CREATE TABLE IF NOT EXISTS MRU (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Category TEXT NOT NULL DEFAULT ''File'',' +
     '  ItemKey TEXT NOT NULL,' +
     '  DisplayName TEXT,' +
@@ -220,7 +220,7 @@ const
   // 8. Hotkeys - Keyboard shortcuts
   SQL_TIER1_HOTKEYS =
     'CREATE TABLE IF NOT EXISTS Hotkeys (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ActionName TEXT NOT NULL UNIQUE,' +
     '  Shortcut TEXT,' +
     '  DefaultShortcut TEXT,' +
@@ -236,27 +236,27 @@ const
     'CREATE INDEX IF NOT EXISTS idx_hotkeys_category ON Hotkeys(Category);';
   
   SQL_TIER1_HOTKEYS_DATA =
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''File.New'', ''Ctrl+N'', ''Ctrl+N'', ''File'', ''Create new file'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''File.Open'', ''Ctrl+O'', ''Ctrl+O'', ''File'', ''Open file'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''File.Save'', ''Ctrl+S'', ''Ctrl+S'', ''File'', ''Save file'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''Edit.Undo'', ''Ctrl+Z'', ''Ctrl+Z'', ''Edit'', ''Undo'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''Edit.Redo'', ''Ctrl+Y'', ''Ctrl+Y'', ''Edit'', ''Redo'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''Edit.Copy'', ''Ctrl+C'', ''Ctrl+C'', ''Edit'', ''Copy'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''Edit.Paste'', ''Ctrl+V'', ''Ctrl+V'', ''Edit'', ''Paste'');' + #13#10 +
-    'INSERT OR IGNORE INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
-    '  (''Edit.Find'', ''Ctrl+F'', ''Ctrl+F'', ''Edit'', ''Find'');';
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''File.New'', ''Ctrl+N'', ''Ctrl+N'', ''File'', ''Create new file'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''File.Open'', ''Ctrl+O'', ''Ctrl+O'', ''File'', ''Open file'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''File.Save'', ''Ctrl+S'', ''Ctrl+S'', ''File'', ''Save file'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''Edit.Undo'', ''Ctrl+Z'', ''Ctrl+Z'', ''Edit'', ''Undo'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''Edit.Redo'', ''Ctrl+Y'', ''Ctrl+Y'', ''Edit'', ''Redo'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''Edit.Copy'', ''Ctrl+C'', ''Ctrl+C'', ''Edit'', ''Copy'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''Edit.Paste'', ''Ctrl+V'', ''Ctrl+V'', ''Edit'', ''Paste'') ON CONFLICT (ActionName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Hotkeys (ActionName, Shortcut, DefaultShortcut, Category, Description) VALUES ' +
+    '  (''Edit.Find'', ''Ctrl+F'', ''Ctrl+F'', ''Edit'', ''Find'') ON CONFLICT (ActionName) DO NOTHING;';
   
   // 9. Queries - Predefined SQL queries (for doQry)
   SQL_TIER1_QUERIES =
     'CREATE TABLE IF NOT EXISTS Queries (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  Category TEXT DEFAULT ''General'',' +
     '  Description TEXT,' +
@@ -299,21 +299,21 @@ const
     ');';
   
   SQL_TIER1_THEMES_DATA =
-    'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
-    '  (''Windows'', ''Windows Classic'', 0, 1, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
-    '  (''Windows11'', ''Windows 11'', 0, 1, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
-    '  (''Windows11Dark'', ''Windows 11 Dark'', 1, 1, 2);' + #13#10 +
-    'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
-    '  (''Carbon'', ''Carbon'', 1, 1, 3);' + #13#10 +
-    'INSERT OR IGNORE INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
-    '  (''Aqua'', ''Aqua Light Slate'', 0, 1, 4);';
+    'INSERT INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
+    '  (''Windows'', ''Windows Classic'', 0, 1, 0) ON CONFLICT (ThemeName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
+    '  (''Windows11'', ''Windows 11'', 0, 1, 1) ON CONFLICT (ThemeName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
+    '  (''Windows11Dark'', ''Windows 11 Dark'', 1, 1, 2) ON CONFLICT (ThemeName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
+    '  (''Carbon'', ''Carbon'', 1, 1, 3) ON CONFLICT (ThemeName) DO NOTHING;' + #13#10 +
+    'INSERT INTO Themes (ThemeName, DisplayName, IsDark, IsBuiltIn, SortOrder) VALUES ' +
+    '  (''Aqua'', ''Aqua Light Slate'', 0, 1, 4) ON CONFLICT (ThemeName) DO NOTHING;';
   
   // 11. Categories - Universal category/enum storage
   SQL_TIER1_CATEGORIES =
     'CREATE TABLE IF NOT EXISTS Categories (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  GroupName TEXT NOT NULL,' +
     '  Code TEXT NOT NULL,' +
     '  Name TEXT NOT NULL,' +
@@ -333,27 +333,27 @@ const
     'CREATE INDEX IF NOT EXISTS idx_categories_parent ON Categories(ParentCode);';
   
   SQL_TIER1_CATEGORIES_DATA =
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Priority'', ''low'', ''Low'', ''Low priority'', 0, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Priority'', ''normal'', ''Normal'', ''Normal priority'', 1, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Priority'', ''high'', ''High'', ''High priority'', 2, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Priority'', ''urgent'', ''Urgent'', ''Urgent priority'', 3, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Status'', ''draft'', ''Draft'', ''Draft status'', 0, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Status'', ''active'', ''Active'', ''Active status'', 1, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Status'', ''completed'', ''Completed'', ''Completed status'', 2, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
-    '  (''Status'', ''archived'', ''Archived'', ''Archived status'', 3, 0);';
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Priority'', ''low'', ''Low'', ''Low priority'', 0, 0) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Priority'', ''normal'', ''Normal'', ''Normal priority'', 1, 1) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Priority'', ''high'', ''High'', ''High priority'', 2, 0) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Priority'', ''urgent'', ''Urgent'', ''Urgent priority'', 3, 0) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Status'', ''draft'', ''Draft'', ''Draft status'', 0, 1) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Status'', ''active'', ''Active'', ''Active status'', 1, 0) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Status'', ''completed'', ''Completed'', ''Completed status'', 2, 0) ON CONFLICT (GroupName, Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Categories (GroupName, Code, Name, Description, SortOrder, IsDefault) VALUES ' +
+    '  (''Status'', ''archived'', ''Archived'', ''Archived status'', 3, 0) ON CONFLICT (GroupName, Code) DO NOTHING;';
   
   // 12. Tags - Tag system
   SQL_TIER1_TAGS =
     'CREATE TABLE IF NOT EXISTS Tags (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  GroupName TEXT DEFAULT ''Default'',' +
     '  Name TEXT NOT NULL,' +
     '  Description TEXT,' +
@@ -381,7 +381,7 @@ const
   // 13. Providers - LLM service providers
   SQL_TIER2_PROVIDERS =
     'CREATE TABLE IF NOT EXISTS Providers (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Code TEXT NOT NULL UNIQUE,' +
     '  Name TEXT NOT NULL,' +
     '  Description TEXT,' +
@@ -407,19 +407,19 @@ const
     ');';
   
   SQL_TIER2_PROVIDERS_DATA =
-    'INSERT OR IGNORE INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
-    '  (''openai'', ''OpenAI'', ''OpenAI GPT models'', ''https://api.openai.com/v1'', ''gpt-4o-mini'', 1, 1, 1, ''https://openai.com'', 10);' + #13#10 +
-    'INSERT OR IGNORE INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
-    '  (''anthropic'', ''Anthropic'', ''Claude AI models'', ''https://api.anthropic.com/v1'', ''claude-3-5-sonnet-latest'', 1, 1, 1, ''https://anthropic.com'', 20);' + #13#10 +
-    'INSERT OR IGNORE INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
-    '  (''ollama'', ''Ollama'', ''Run LLMs locally'', ''http://localhost:11434'', ''llama3.1'', 1, 0, 0, ''https://ollama.ai'', 40);' + #13#10 +
-    'INSERT OR IGNORE INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
-    '  (''deepseek'', ''DeepSeek'', ''DeepSeek AI models'', ''https://api.deepseek.com/v1'', ''deepseek-chat'', 1, 0, 0, ''https://deepseek.com'', 50);';
+    'INSERT INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
+    '  (''openai'', ''OpenAI'', ''OpenAI GPT models'', ''https://api.openai.com/v1'', ''gpt-4o-mini'', 1, 1, 1, ''https://openai.com'', 10) ON CONFLICT (Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
+    '  (''anthropic'', ''Anthropic'', ''Claude AI models'', ''https://api.anthropic.com/v1'', ''claude-3-5-sonnet-latest'', 1, 1, 1, ''https://anthropic.com'', 20) ON CONFLICT (Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
+    '  (''ollama'', ''Ollama'', ''Run LLMs locally'', ''http://localhost:11434'', ''llama3.1'', 1, 0, 0, ''https://ollama.ai'', 40) ON CONFLICT (Code) DO NOTHING;' + #13#10 +
+    'INSERT INTO Providers (Code, Name, Description, BaseUrl, DefaultModel, SupportsStreaming, SupportsVision, SupportsTools, Website, SortOrder) VALUES ' +
+    '  (''deepseek'', ''DeepSeek'', ''DeepSeek AI models'', ''https://api.deepseek.com/v1'', ''deepseek-chat'', 1, 0, 0, ''https://deepseek.com'', 50) ON CONFLICT (Code) DO NOTHING;';
   
   // 14. Models - LLM models metadata
   SQL_TIER2_MODELS =
     'CREATE TABLE IF NOT EXISTS Models (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ProviderCode TEXT NOT NULL,' +
     '  ModelId TEXT NOT NULL,' +
     '  DisplayName TEXT,' +
@@ -449,19 +449,19 @@ const
     'CREATE INDEX IF NOT EXISTS idx_models_family ON Models(ModelFamily);';
   
   SQL_TIER2_MODELS_DATA =
-    'INSERT OR IGNORE INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
-    '  (''openai'', ''gpt-4o'', ''GPT-4o'', ''gpt-4o'', 128000, 16384, 2.5, 10.0, 1, 1, 10);' + #13#10 +
-    'INSERT OR IGNORE INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
-    '  (''openai'', ''gpt-4o-mini'', ''GPT-4o Mini'', ''gpt-4o'', 128000, 16384, 0.15, 0.6, 1, 1, 11);' + #13#10 +
-    'INSERT OR IGNORE INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
-    '  (''anthropic'', ''claude-3-5-sonnet-latest'', ''Claude 3.5 Sonnet'', ''claude-3.5'', 200000, 8192, 3.0, 15.0, 1, 1, 10);' + #13#10 +
-    'INSERT OR IGNORE INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
-    '  (''deepseek'', ''deepseek-chat'', ''DeepSeek Chat'', ''deepseek'', 64000, 8192, 0.14, 0.28, 0, 0, 10);';
+    'INSERT INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
+    '  (''openai'', ''gpt-4o'', ''GPT-4o'', ''gpt-4o'', 128000, 16384, 2.5, 10.0, 1, 1, 10) ON CONFLICT (ProviderCode, ModelId) DO NOTHING;' + #13#10 +
+    'INSERT INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
+    '  (''openai'', ''gpt-4o-mini'', ''GPT-4o Mini'', ''gpt-4o'', 128000, 16384, 0.15, 0.6, 1, 1, 11) ON CONFLICT (ProviderCode, ModelId) DO NOTHING;' + #13#10 +
+    'INSERT INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
+    '  (''anthropic'', ''claude-3-5-sonnet-latest'', ''Claude 3.5 Sonnet'', ''claude-3.5'', 200000, 8192, 3.0, 15.0, 1, 1, 10) ON CONFLICT (ProviderCode, ModelId) DO NOTHING;' + #13#10 +
+    'INSERT INTO Models (ProviderCode, ModelId, DisplayName, ModelFamily, ContextWindow, MaxOutputTokens, InputPricePer1M, OutputPricePer1M, SupportsVision, SupportsTools, SortOrder) VALUES ' +
+    '  (''deepseek'', ''deepseek-chat'', ''DeepSeek Chat'', ''deepseek'', 64000, 8192, 0.14, 0.28, 0, 0, 10) ON CONFLICT (ProviderCode, ModelId) DO NOTHING;';
   
   // 15. LLMConfig - LLM configurations
   SQL_TIER2_LLM_CONFIG =
     'CREATE TABLE IF NOT EXISTS LLMConfig (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  Description TEXT,' +
     '  ProviderCode TEXT NOT NULL,' +
@@ -488,17 +488,17 @@ const
     'CREATE INDEX IF NOT EXISTS idx_llmconfig_provider ON LLMConfig(ProviderCode);';
   
   SQL_TIER2_LLM_CONFIG_DATA =
-    'INSERT OR IGNORE INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
-    '  (''Default'', ''Default configuration'', ''openai'', ''gpt-4o-mini'', 0.7, 1, 10);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
-    '  (''Creative'', ''Creative writing'', ''openai'', ''gpt-4o'', 0.9, 0, 20);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
-    '  (''Precise'', ''Precise/coding tasks'', ''openai'', ''gpt-4o'', 0.2, 0, 30);';
+    'INSERT INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
+    '  (''Default'', ''Default configuration'', ''openai'', ''gpt-4o-mini'', 0.7, 1, 10) ON CONFLICT (Name) DO NOTHING;' + #13#10 +
+    'INSERT INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
+    '  (''Creative'', ''Creative writing'', ''openai'', ''gpt-4o'', 0.9, 0, 20) ON CONFLICT (Name) DO NOTHING;' + #13#10 +
+    'INSERT INTO LLMConfig (Name, Description, ProviderCode, ModelId, Temperature, IsDefault, SortOrder) VALUES ' +
+    '  (''Precise'', ''Precise/coding tasks'', ''openai'', ''gpt-4o'', 0.2, 0, 30) ON CONFLICT (Name) DO NOTHING;';
   
   // 16. LLMCalls - LLM API call hiDeepStory
   SQL_TIER2_LLM_CALLS =
     'CREATE TABLE IF NOT EXISTS LLMCalls (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ConfigName TEXT,' +
     '  ProviderCode TEXT NOT NULL,' +
     '  ModelId TEXT NOT NULL,' +
@@ -530,7 +530,7 @@ const
   // 17. LLMPromptTemplates - Prompt templates
   SQL_TIER2_LLM_PROMPTS =
     'CREATE TABLE IF NOT EXISTS LLMPromptTemplates (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  Category TEXT DEFAULT ''General'',' +
     '  Description TEXT,' +
@@ -559,26 +559,26 @@ const
     'CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_category ON LLMPromptTemplates(Category);';
   
   SQL_TIER2_LLM_PROMPTS_DATA =
-    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    'INSERT INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''translate_text'', ''Translation'', ''Translate text between languages'', ' +
     '   ''You are a professional translator. Translate accurately while preserving meaning and tone.'', ' +
     '   ''Translate the following text from {{source_lang}} to {{target_lang}}:'' || char(10) || char(10) || ''{{text}}'', ' +
-    '   ''["source_lang", "target_lang", "text"]'', 0.3, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    '   ''["source_lang", "target_lang", "text"]'', 0.3, 1) ON CONFLICT (Name) DO NOTHING;' + #13#10 +
+    'INSERT INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''summarize'', ''Writing'', ''Summarize text'', ' +
     '   ''You are a helpful assistant that summarizes text concisely.'', ' +
     '   ''Summarize the following text in {{length}} sentences:'' || char(10) || char(10) || ''{{text}}'', ' +
-    '   ''["length", "text"]'', 0.5, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    '   ''["length", "text"]'', 0.5, 1) ON CONFLICT (Name) DO NOTHING;' + #13#10 +
+    'INSERT INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''explain_code'', ''Code'', ''Explain code'', ' +
     '   ''You are an expert programmer. Explain code clearly.'', ' +
     '   ''Explain the following {{language}} code:'' || char(10) || char(10) || ''```{{language}}'' || char(10) || ''{{code}}'' || char(10) || ''```'', ' +
-    '   ''["language", "code"]'', 0.3, 1);';
+    '   ''["language", "code"]'', 0.3, 1) ON CONFLICT (Name) DO NOTHING;';
   
   // 18. LLMApiKeys - API key storage (encrypted)
   SQL_TIER2_LLM_API_KEYS =
     'CREATE TABLE IF NOT EXISTS LLMApiKeys (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  ProviderCode TEXT NOT NULL,' +
     '  ApiKey TEXT NOT NULL,' +
@@ -605,7 +605,7 @@ const
   // 19. PromptCategories - Prompt category hierarchy (4 levels)
   SQL_TIER2_PROMPT_CATEGORIES =
     'CREATE TABLE IF NOT EXISTS PromptCategories (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ParentId INTEGER REFERENCES PromptCategories(Id) ON DELETE CASCADE,' +
     '  Level INTEGER NOT NULL CHECK (Level BETWEEN 1 AND 4),' +
     '  Code TEXT NOT NULL,' +
@@ -621,19 +621,19 @@ const
     'CREATE INDEX IF NOT EXISTS idx_promptcategories_level ON PromptCategories(Level);';
 
   SQL_TIER2_PROMPT_CATEGORIES_DATA =
-    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
-    '  (1, NULL, 1, ''01'', ''System Prompts'', ''Framework built-in system prompts'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
-    '  (2, NULL, 1, ''02'', ''Business Prompts'', ''Business function prompts'', 2);' + #13#10 +
-    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
-    '  (3, NULL, 1, ''03'', ''Report Prompts'', ''Data analysis and report generation'', 3);' + #13#10 +
-    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
-    '  (4, NULL, 1, ''04'', ''Tool Prompts'', ''General utility prompts'', 4);';
+    'INSERT INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (1, NULL, 1, ''01'', ''System Prompts'', ''Framework built-in system prompts'', 1) ON CONFLICT (Id) DO NOTHING;' + #13#10 +
+    'INSERT INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (2, NULL, 1, ''02'', ''Business Prompts'', ''Business function prompts'', 2) ON CONFLICT (Id) DO NOTHING;' + #13#10 +
+    'INSERT INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (3, NULL, 1, ''03'', ''Report Prompts'', ''Data analysis and report generation'', 3) ON CONFLICT (Id) DO NOTHING;' + #13#10 +
+    'INSERT INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (4, NULL, 1, ''04'', ''Tool Prompts'', ''General utility prompts'', 4) ON CONFLICT (Id) DO NOTHING;';
 
   // 20. Prompts - Prompt definitions
   SQL_TIER2_PROMPTS =
     'CREATE TABLE IF NOT EXISTS Prompts (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  CategoryId INTEGER REFERENCES PromptCategories(Id) ON DELETE SET NULL,' +
     '  InternalCode TEXT NOT NULL UNIQUE,' +
     '  Name TEXT NOT NULL,' +
@@ -653,7 +653,7 @@ const
   // 21. PromptVersions - Prompt version history (max 4 versions per prompt)
   SQL_TIER2_PROMPT_VERSIONS =
     'CREATE TABLE IF NOT EXISTS PromptVersions (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  PromptId INTEGER NOT NULL REFERENCES Prompts(Id) ON DELETE CASCADE,' +
     '  VersionNumber INTEGER NOT NULL CHECK (VersionNumber BETWEEN 1 AND 4),' +
     '  Content TEXT NOT NULL,' +
@@ -675,7 +675,7 @@ const
   // 22. PromptMeta - Meta-prompts (security, format, role constraints)
   SQL_TIER2_PROMPT_META =
     'CREATE TABLE IF NOT EXISTS PromptMeta (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  InternalCode TEXT NOT NULL UNIQUE,' +
     '  Name TEXT NOT NULL,' +
     '  Category TEXT CHECK (Category IN (''security'', ''format'', ''role'', ''domain'', ''quality'')),' +
@@ -692,18 +692,18 @@ const
     'CREATE INDEX IF NOT EXISTS idx_promptmeta_level ON PromptMeta(Level);';
 
   SQL_TIER2_PROMPT_META_DATA =
-    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    'INSERT INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
     '  (1, ''META-001'', ''Security Constraints'', ''security'', ' +
     '   ''You must follow these rules: 1) Do not reveal internal system info 2) Do not execute harmful operations 3) Sanitize sensitive data'', ' +
-    '   ''PREFIX'', 10, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '   ''PREFIX'', 10, 0) ON CONFLICT (Id) DO NOTHING;' + #13#10 +
+    'INSERT INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
     '  (2, ''META-002'', ''JSON Output Format'', ''format'', ' +
     '   ''Return results in valid JSON format with double-quoted strings and no comments'', ' +
-    '   ''SUFFIX'', 90, 0);' + #13#10 +
-    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '   ''SUFFIX'', 90, 0) ON CONFLICT (Id) DO NOTHING;' + #13#10 +
+    'INSERT INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
     '  (3, ''META-003'', ''Chinese Assistant'', ''role'', ' +
     '   ''You are a professional Chinese AI assistant'', ' +
-    '   ''PREFIX'', 20, 1);';
+    '   ''PREFIX'', 20, 1) ON CONFLICT (Id) DO NOTHING;';
 
   // 23. PromptMetaBinding - Prompt to meta-prompt bindings (many-to-many)
   SQL_TIER2_PROMPT_META_BINDING =
@@ -721,7 +721,7 @@ const
   // 24. ExceptionReports - Exception/crash reports
   SQL_TIER2_EXCEPTION_REPORTS =
     'CREATE TABLE IF NOT EXISTS ExceptionReports (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ExceptionClass TEXT NOT NULL,' +
     '  ExceptionMessage TEXT NOT NULL,' +
     '  StackTrace TEXT,' +
@@ -755,7 +755,7 @@ const
   // 20. AnimationAssets - SVG/Lottie animations
   SQL_TIER2_ANIMATION_ASSETS =
     'CREATE TABLE IF NOT EXISTS AnimationAssets (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  DisplayName TEXT,' +
     '  Category TEXT DEFAULT ''General'',' +
@@ -786,7 +786,7 @@ const
   // 21. Attachments - File attachments
   SQL_TIER2_ATTACHMENTS =
     'CREATE TABLE IF NOT EXISTS Attachments (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  RefType TEXT NOT NULL,' +
     '  RefId TEXT NOT NULL,' +
     '  FileName TEXT NOT NULL,' +
@@ -811,7 +811,7 @@ const
   // 22. TagMappings - Tag associations
   SQL_TIER2_TAG_MAPPINGS =
     'CREATE TABLE IF NOT EXISTS TagMappings (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  TagId INTEGER NOT NULL,' +
     '  RefType TEXT NOT NULL,' +
     '  RefId TEXT NOT NULL,' +
@@ -828,7 +828,7 @@ const
   // 23. Notifications - User notifications
   SQL_TIER2_NOTIFICATIONS =
     'CREATE TABLE IF NOT EXISTS Notifications (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  Type TEXT DEFAULT ''Info'',' +
     '  Title TEXT NOT NULL,' +
     '  Content TEXT,' +
@@ -855,7 +855,7 @@ const
   // 24. aboutMeImages - About/Donation/Official QR images (DB1 optional)
   SQL_TIER2_ABOUTME_IMAGES =
     'CREATE TABLE IF NOT EXISTS aboutMeImages (' +
-    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  Id INTEGER PRIMARY KEY,' +
     '  ImageKey TEXT NOT NULL UNIQUE,' +
     '  ImageData BLOB NOT NULL,' +
     '  AddressText TEXT,' +
