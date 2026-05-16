@@ -26,8 +26,17 @@ type
     class var FAutoEnsureSchema: Boolean;
     class var FSchemaEnsured: Boolean;
     class var FLock: TCriticalSection;
+    // Task 22.5: cache a single TFDConnection at the JobQueue layer instead
+    // of creating a fresh one (and a fresh TUniConnectionPool) per call via
+    // TDBConnectionFactory.GetShared. Acquire/Release serializes access via
+    // FConnLock so the underlying connection is used by one JobQueue
+    // operation at a time, which matches both SQLite and PostgreSQL safety.
+    class var FCachedConnection: TFDConnection;
+    class var FConnLock: TCriticalSection;
 
     class function AcquireConnection: TFDConnection; static;
+    class procedure ReleaseConnection(AConnection: TFDConnection); static;
+    class procedure ResetCachedConnection; static;
     class function CreateTaskID: string; static;
     class function IsPostgreSQL(Connection: TFDConnection): Boolean; static;
     class function IsSQLite(Connection: TFDConnection): Boolean; static;
@@ -93,18 +102,25 @@ end;
 class constructor TJobQueue.Create;
 begin
   FLock := TCriticalSection.Create;
+  FConnLock := TCriticalSection.Create;
   FAutoEnsureSchema := True;
   FSchemaEnsured := False;
+  FCachedConnection := nil;
 end;
 
 class destructor TJobQueue.Destroy;
 begin
+  ResetCachedConnection;
+  FreeAndNil(FConnLock);
   FreeAndNil(FLock);
 end;
 
 class procedure TJobQueue.SetConnectionProvider(
   const Provider: TFunc<TFDConnection>);
 begin
+  // Provider change invalidates the cached connection; drop it under the
+  // connection lock to avoid racing an in-flight DB op.
+  ResetCachedConnection;
   FLock.Enter;
   try
     FConnectionProvider := Provider;
@@ -116,6 +132,7 @@ end;
 
 class procedure TJobQueue.Clear;
 begin
+  ResetCachedConnection;
   FLock.Enter;
   try
     FConnectionProvider := nil;
@@ -142,20 +159,66 @@ class function TJobQueue.AcquireConnection: TFDConnection;
 var
   Provider: TFunc<TFDConnection>;
 begin
-  FLock.Enter;
+  // Task 22.5: take the connection lock and lazily create+cache a single
+  // TFDConnection. Caller must call ReleaseConnection in a finally block
+  // to release the lock. The cached connection is reused across calls
+  // until Clear/SetConnectionProvider invalidates it.
+  FConnLock.Enter;
   try
-    Provider := FConnectionProvider;
-  finally
-    FLock.Leave;
+    if Assigned(FCachedConnection) then
+    begin
+      // Sanity check: a connection that lost its session (e.g. server
+      // restarted) is dropped so we recreate cleanly below.
+      if not FCachedConnection.Connected then
+      try
+        FCachedConnection.Open;
+      except
+        FreeAndNil(FCachedConnection);
+      end;
+    end;
+
+    if not Assigned(FCachedConnection) then
+    begin
+      FLock.Enter;
+      try
+        Provider := FConnectionProvider;
+      finally
+        FLock.Leave;
+      end;
+
+      if Assigned(Provider) then
+        FCachedConnection := Provider()
+      else
+        FCachedConnection := TDBConnectionFactory.GetShared;
+
+      if not Assigned(FCachedConnection) then
+        raise EDatabaseException.Create('Job queue connection provider returned nil');
+    end;
+
+    Result := FCachedConnection;
+  except
+    // On any failure during acquisition we must release the lock so we
+    // don't leave it stuck for the next caller.
+    FConnLock.Leave;
+    raise;
   end;
+end;
 
-  if Assigned(Provider) then
-    Result := Provider()
-  else
-    Result := TDBConnectionFactory.GetShared;
+class procedure TJobQueue.ReleaseConnection(AConnection: TFDConnection);
+begin
+  // Connection is owned by the cache; do not free here. Just release the
+  // serializing lock taken by AcquireConnection.
+  FConnLock.Leave;
+end;
 
-  if not Assigned(Result) then
-    raise EDatabaseException.Create('Job queue connection provider returned nil');
+class procedure TJobQueue.ResetCachedConnection;
+begin
+  FConnLock.Enter;
+  try
+    FreeAndNil(FCachedConnection);
+  finally
+    FConnLock.Leave;
+  end;
 end;
 
 class function TJobQueue.CreateTaskID: string;
@@ -248,7 +311,7 @@ begin
   try
     EnsureSchemaOnConnection(Connection);
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 
   FLock.Enter;
@@ -343,7 +406,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 
@@ -491,7 +554,7 @@ begin
     else
       raise EDatabaseException.Create('Job queue supports SQLite and PostgreSQL only');
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 
@@ -518,7 +581,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 
@@ -561,7 +624,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 
@@ -589,7 +652,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 
@@ -627,7 +690,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    ReleaseConnection(Connection);
   end;
 end;
 

@@ -29,6 +29,11 @@ type
     FRecordingStartTime: TDateTime;
     FPermissionClient: TDeepKitPermissionClient;
     FPermissionFeatureCode: string;
+    // Task 22.2: cursor into the capture buffer marking how much has
+    // already been fed through the VAD. ShouldAutoStop only re-runs VAD
+    // over [FAutoStopCursor..current], so polling cost is O(delta) per
+    // call instead of O(audio_length).
+    FAutoStopCursor: Integer;
     procedure SetOptions(const AOptions: TSpeechServiceOptions);
   public
     constructor Create(const ARecognizer: ISpeechRecognizer;
@@ -129,6 +134,7 @@ begin
     FVAD := TDeepBaseSpeechVAD.Create(FOptions.SilenceThresholdDb, 100,
       FCapture.SampleRate, FOptions.SilenceSeconds);
   FRecordingStartTime := 0;
+  FAutoStopCursor := 0;
 end;
 
 destructor TDeepBaseSpeechService.Destroy;
@@ -147,6 +153,7 @@ begin
     FVAD := TDeepBaseSpeechVAD.Create(FOptions.SilenceThresholdDb, 100,
       FCapture.SampleRate, FOptions.SilenceSeconds);
   end;
+  FAutoStopCursor := 0;
 end;
 
 class function TDeepBaseSpeechService.CreateBaidu(
@@ -164,6 +171,7 @@ end;
 function TDeepBaseSpeechService.StartRecording: Boolean;
 begin
   FVAD.Reset;
+  FAutoStopCursor := 0;
   FRecordingStartTime := Now;
   Result := FCapture.StartRecording;
   if not Result then
@@ -180,6 +188,7 @@ function TDeepBaseSpeechService.ShouldAutoStop: Boolean;
 var
   ElapsedSeconds: Double;
   Samples: TArray<Single>;
+  TotalCount, ChunkSize, Offset: Integer;
 begin
   Result := False;
   if not FCapture.IsRecording then
@@ -194,9 +203,32 @@ begin
 
   if FOptions.AutoStopSilence then
   begin
+    // Task 22.2: incremental VAD. Feed only NEW samples (since the last
+    // poll) through ProcessFrame so per-call cost is O(delta) instead of
+    // ProcessAll's O(audio_length). VAD state (FTriggered/FSilenceFrames)
+    // accumulates across calls so silence is detected exactly once.
     Samples := FCapture.GetFloatSamples;
-    if Length(Samples) >= FVAD.FrameSize then
-      Result := FVAD.ProcessAll(@Samples[0], Length(Samples));
+    TotalCount := Length(Samples);
+    if TotalCount <= FAutoStopCursor then
+      Exit;
+
+    Offset := FAutoStopCursor;
+    while Offset < TotalCount do
+    begin
+      ChunkSize := Min(FVAD.FrameSize, TotalCount - Offset);
+      // Wait until a full VAD frame is available before consuming the
+      // tail of the buffer. Partial frames stay queued for the next poll.
+      if ChunkSize < FVAD.FrameSize then
+        Break;
+
+      if FVAD.ProcessFrame(@Samples[Offset], ChunkSize) then
+      begin
+        FAutoStopCursor := Offset + ChunkSize;
+        Exit(True);
+      end;
+      Inc(Offset, ChunkSize);
+    end;
+    FAutoStopCursor := Offset;
   end;
 end;
 

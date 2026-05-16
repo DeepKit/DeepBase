@@ -72,6 +72,12 @@ type
     function MakeCircuitOpenResult: TChatResult;
     function MakeFailureResult(const AError: string): TChatResult;
     function ExecuteWithResilience(ACall: TFunc<TChatResult>): TChatResult;
+
+    // Image generation parallel resilience harness (Task 19.10)
+    function MakeCircuitOpenImageResult: TImageGenerationResult;
+    function MakeFailureImageResult(const AError: string): TImageGenerationResult;
+    function ExecuteWithResilienceImage(
+      ACall: TFunc<TImageGenerationResult>): TImageGenerationResult;
   public
     constructor Create(const AInner: ILLMClient); overload;
     constructor Create(const AInner: ILLMClient;
@@ -348,6 +354,127 @@ begin
   Log(ltError, Format('IC.Resilience: All attempts exhausted: %s', [LLastError]));
 end;
 
+// === Image Generation Resilience Harness (Task 19.10) ===
+// Mirrors ExecuteWithResilience but operates on TImageGenerationResult.
+// Kept as a duplicate harness rather than a generic helper to keep the
+// success/error field handling explicit per result type.
+
+function TResilientLLMWrapper.MakeCircuitOpenImageResult: TImageGenerationResult;
+begin
+  Result := Default(TImageGenerationResult);
+  Result.Success := False;
+  Result.ErrorCode := 'circuit_open';
+  Result.ErrorMessage := 'Circuit breaker is OPEN';
+end;
+
+function TResilientLLMWrapper.MakeFailureImageResult(
+  const AError: string): TImageGenerationResult;
+begin
+  Result := Default(TImageGenerationResult);
+  Result.Success := False;
+  Result.ErrorCode := 'resilience_failure';
+  Result.ErrorMessage := AError;
+end;
+
+function TResilientLLMWrapper.ExecuteWithResilienceImage(
+  ACall: TFunc<TImageGenerationResult>): TImageGenerationResult;
+var
+  LAttempt: Integer;
+  LLastError: string;
+  LSW: TStopwatch;
+  LTask: ITask;
+  LTaskResult: TImageGenerationResult;
+  LTaskError: string;
+  LTimedOut: Boolean;
+begin
+  // Circuit breaker check
+  if IsCircuitOpen then
+  begin
+    if not ShouldAttemptHalfOpen then
+    begin
+      Log(ltWarning, 'IC.Resilience: Image request rejected (circuit open)');
+      Result := MakeCircuitOpenImageResult;
+      Exit;
+    end;
+  end;
+
+  LLastError := '';
+  for LAttempt := 0 to FConfig.MaxRetries do
+  begin
+    try
+      LSW := TStopwatch.StartNew;
+
+      LTaskResult := Default(TImageGenerationResult);
+      LTaskError := '';
+      LTask := TTask.Run(
+        procedure
+        begin
+          try
+            LTaskResult := ACall();
+          except
+            on E: Exception do
+              LTaskError := E.ClassName + ': ' + E.Message;
+          end;
+        end);
+
+      LTimedOut := not LTask.Wait(FConfig.TimeoutMs);
+      LSW.Stop;
+
+      if LTimedOut then
+      begin
+        Result := Default(TImageGenerationResult);
+        Result.Success := False;
+        LLastError := Format('Image call timed out after %dms', [FConfig.TimeoutMs]);
+        Result.ErrorCode := 'timeout';
+        Result.ErrorMessage := LLastError;
+        Log(ltWarning, Format('IC.Resilience: Image timeout (attempt %d/%d): %s',
+          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+      end
+      else if LTaskError <> '' then
+      begin
+        LLastError := LTaskError;
+        Log(ltWarning, Format('IC.Resilience: Image exception (attempt %d/%d): %s',
+          [LAttempt + 1, FConfig.MaxRetries + 1, LTaskError]));
+        Result := Default(TImageGenerationResult);
+        Result.Success := False;
+        Result.ErrorCode := 'exception';
+        Result.ErrorMessage := LTaskError;
+      end
+      else
+      begin
+        Result := LTaskResult;
+        if Result.Success then
+        begin
+          RecordSuccess;
+          Exit;
+        end
+        else
+        begin
+          var LErr := if Result.ErrorMessage <> '' then Result.ErrorMessage
+                      else Result.ErrorCode;
+          LLastError := LErr;
+          Log(ltWarning, Format('IC.Resilience: Image returned error (attempt %d/%d): %s',
+            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        LLastError := E.Message;
+        Log(ltWarning, Format('IC.Resilience: Image harness exception (attempt %d/%d): %s',
+          [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));
+      end;
+    end;
+
+    if LAttempt < FConfig.MaxRetries then
+      Sleep(100 * (LAttempt + 1));
+  end;
+
+  RecordFailure;
+  Result := MakeFailureImageResult(LLastError);
+  Log(ltError, Format('IC.Resilience: Image attempts exhausted: %s', [LLastError]));
+end;
+
 // === ILLMClient Implementation ===
 
 function TResilientLLMWrapper.Chat(const ATier: TModelTier;
@@ -423,8 +550,14 @@ end;
 function TResilientLLMWrapper.GenerateImage(const APrompt: string;
   const ASize: string): TImageGenerationResult;
 begin
-  // Image generation passed through (different result type)
-  Result := FInner.GenerateImage(APrompt, ASize);
+  // IC-010 / Task 19.10: image generation now goes through the resilience
+  // harness (circuit-breaker + retry + timeout). The harness mirrors the
+  // TChatResult version but operates on TImageGenerationResult fields.
+  Result := ExecuteWithResilienceImage(
+    function: TImageGenerationResult
+    begin
+      Result := FInner.GenerateImage(APrompt, ASize);
+    end);
 end;
 
 procedure TResilientLLMWrapper.ChatVisionStream(const ATier: TModelTier;

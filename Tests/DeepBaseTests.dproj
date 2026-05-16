@@ -99,7 +99,9 @@
         <DCCReference Include="..\Features\DeepBase.Speech.Audio.WinMM.pas"/>
         <DCCReference Include="..\Features\DeepBase.Speech.ASR.Baidu.pas"/>
         <DCCReference Include="..\Features\DeepBase.Speech.Service.pas"/>
+        <DCCReference Include="..\Features\DeepBase.Speech.MFCC.pas"/>
         <DCCReference Include="Test.DeepBase.Speech.pas"/>
+        <DCCReference Include="Test.DeepBase.Speech.MFCC.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Logging.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Types.pas"/>

@@ -25,6 +25,7 @@ type
     FSampleRate: Integer;
     FFrameSize: Integer;   // samples per frame (25ms @ 16kHz = 400)
     FHopSize: Integer;     // samples per hop (10ms @ 16kHz = 160)
+    FFFTSize: Integer;     // next power of 2 >= FFrameSize (e.g. 512)
     FNumFilters: Integer;  // 40 Mel filters
     FNumCoeffs: Integer;   // 13 MFCC coefficients
     FHammingWindow: TArray<Single>;
@@ -38,6 +39,16 @@ type
     function ApplyMelFilters(const APowerSpectrum: TArray<Single>): TArray<Single>;
     function ApplyDCT(const ALogMelEnergies: TArray<Single>): TMFCCFrame;
   public
+    /// <summary>
+    /// In-place iterative radix-2 Cooley-Tukey FFT. Both arrays must have
+    /// the same power-of-2 length. Exposed as public for testing and for
+    /// callers that need a frequency transform without the full MFCC
+    /// pipeline.
+    /// </summary>
+    class procedure RadixFFT(var ARealPart, AImagPart: TArray<Single>); static;
+
+    /// <summary>Smallest power of 2 >= AValue (returns 1 for AValue <= 1).</summary>
+    class function NextPow2(AValue: Integer): Integer; static;
     constructor Create(ASampleRate: Integer = 16000);
 
     /// <summary>
@@ -55,6 +66,7 @@ type
     property SampleRate: Integer read FSampleRate;
     property FrameSize: Integer read FFrameSize;
     property HopSize: Integer read FHopSize;
+    property FFTSize: Integer read FFFTSize;
   end;
 
 implementation
@@ -65,6 +77,7 @@ begin
   FSampleRate := ASampleRate;
   FFrameSize := Round(0.025 * ASampleRate);  // 25ms
   FHopSize := Round(0.010 * ASampleRate);    // 10ms
+  FFFTSize := NextPow2(FFrameSize);          // pad up to next power of 2
   FNumFilters := 40;
   FNumCoeffs := 13;
   InitHammingWindow;
@@ -98,7 +111,10 @@ var
   LFFTSize, I, J, K: Integer;
   LFreqRes: Single;
 begin
-  LFFTSize := FFrameSize; // simplified: FFT size = frame size
+  // FFT size is power-of-2 padded frame size; bin spacing must match the
+  // padded transform so that ComputeFFT output indexes line up with the
+  // triangular filter bank.
+  LFFTSize := FFFTSize;
   LMelLow := HzToMel(0);
   LMelHigh := HzToMel(FSampleRate / 2.0);
 
@@ -152,28 +168,101 @@ end;
 
 function TMFCCExtractor.ComputeFFT(const AFrame: TArray<Single>): TArray<Single>;
 var
+  LReal, LImag: TArray<Single>;
   I, N, Half: Integer;
-  LReal, LImag: Single;
-  K: Integer;
-  LAngle: Single;
 begin
-  // Simplified DFT (not FFT) for correctness. Production would use radix-2 FFT.
-  N := Length(AFrame);
+  // Iterative radix-2 Cooley-Tukey FFT. Input frame is zero-padded up to
+  // FFFTSize (next power of 2 >= FFrameSize). Output is the power spectrum
+  // normalized by N to match the previous DFT scaling.
+  N := FFFTSize;
   Half := N div 2 + 1;
-  SetLength(Result, Half);
 
-  for K := 0 to Half - 1 do
+  SetLength(LReal, N);
+  SetLength(LImag, N);
+  var LCount := Min(Length(AFrame), N);
+  for I := 0 to LCount - 1 do
+    LReal[I] := AFrame[I];
+  // remaining indices already zero-initialized by SetLength
+
+  RadixFFT(LReal, LImag);
+
+  SetLength(Result, Half);
+  for I := 0 to Half - 1 do
+    Result[I] := (LReal[I] * LReal[I] + LImag[I] * LImag[I]) / N;
+end;
+
+class function TMFCCExtractor.NextPow2(AValue: Integer): Integer;
+begin
+  Result := 1;
+  while Result < AValue do
+    Result := Result shl 1;
+end;
+
+class procedure TMFCCExtractor.RadixFFT(var ARealPart, AImagPart: TArray<Single>);
+var
+  N, I, J, K, M, MHalf: Integer;
+  LTmpReal, LTmpImag: Single;
+  LWReal, LWImag, LWmReal, LWmImag: Double;
+  LTReal, LTImag, LUReal, LUImag, LNewWReal: Double;
+begin
+  N := Length(ARealPart);
+  if (N <= 1) or (Length(AImagPart) <> N) then
+    Exit;
+
+  // Bit-reversal permutation
+  J := 0;
+  for I := 1 to N - 1 do
   begin
-    LReal := 0;
-    LImag := 0;
-    for I := 0 to N - 1 do
+    K := N shr 1;
+    while (K > 0) and (J >= K) do
     begin
-      LAngle := -2.0 * Pi * K * I / N;
-      LReal := LReal + AFrame[I] * Cos(LAngle);
-      LImag := LImag + AFrame[I] * Sin(LAngle);
+      J := J - K;
+      K := K shr 1;
     end;
-    // Power spectrum
-    Result[K] := (LReal * LReal + LImag * LImag) / N;
+    J := J + K;
+    if I < J then
+    begin
+      LTmpReal := ARealPart[I];
+      ARealPart[I] := ARealPart[J];
+      ARealPart[J] := LTmpReal;
+      LTmpImag := AImagPart[I];
+      AImagPart[I] := AImagPart[J];
+      AImagPart[J] := LTmpImag;
+    end;
+  end;
+
+  // Butterflies; outer loop doubles the stage size each iteration
+  M := 1;
+  while M < N do
+  begin
+    MHalf := M;
+    M := M shl 1;
+    LWmReal := Cos(-2.0 * Pi / M);
+    LWmImag := Sin(-2.0 * Pi / M);
+    K := 0;
+    while K < N do
+    begin
+      LWReal := 1.0;
+      LWImag := 0.0;
+      for J := 0 to MHalf - 1 do
+      begin
+        LTReal := LWReal * ARealPart[K + J + MHalf]
+                - LWImag * AImagPart[K + J + MHalf];
+        LTImag := LWReal * AImagPart[K + J + MHalf]
+                + LWImag * ARealPart[K + J + MHalf];
+        LUReal := ARealPart[K + J];
+        LUImag := AImagPart[K + J];
+        ARealPart[K + J] := LUReal + LTReal;
+        AImagPart[K + J] := LUImag + LTImag;
+        ARealPart[K + J + MHalf] := LUReal - LTReal;
+        AImagPart[K + J + MHalf] := LUImag - LTImag;
+        // advance twiddle factor: W := W * Wm
+        LNewWReal := LWReal * LWmReal - LWImag * LWmImag;
+        LWImag    := LWReal * LWmImag + LWImag * LWmReal;
+        LWReal    := LNewWReal;
+      end;
+      Inc(K, M);
+    end;
   end;
 end;
 

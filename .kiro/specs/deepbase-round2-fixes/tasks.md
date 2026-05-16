@@ -290,7 +290,7 @@
   - 运行 `cmd /c compile_test.bat`，确保 Tasks 12-17 通过编译门禁
   - 如有问题请询问用户
 
-- [ ] 19. P2: IntentClarification 并发与正确性修复
+- [x] 19. P2: IntentClarification 并发与正确性修复
   - [x] 19.1 HandleRegenerate/HandleExit 加 FLock 保护 FSessions 写入
     - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
     - _Requirements: 12.1, 12.2_
@@ -318,7 +318,7 @@
   - [x] 19.9 MakeFailureResult 填充 ErrorMessage 字段
     - 修改 `Features/DeepBase.IntentClarification.LLMResilience.pas`
     - _Requirements: 12.11_
-  - [ ] 19.10 GenerateImage 应用 retry + circuit-breaker 包装
+  - [x] 19.10 GenerateImage 应用 retry + circuit-breaker 包装
     - 修改 `Features/DeepBase.IntentClarification.LLMResilience.pas`
     - _Requirements: 12.12_
   - [x] 19.11 Storage.JsonToRapport nil 检查所有 JSON 字段
@@ -347,7 +347,7 @@
     - **Property 30: IC Turn 记录完整性**
     - **Validates: Requirements 12.5, 12.7, 12.8, 12.9, 12.16, 12.17, 12.21**
 
-- [ ] 20. P2: Governance 运行时修复
+- [x] 20. P2: Governance 运行时修复
   - [x] 20.1 RouteResolver.ReloadRules 同时清除 FFallbacks
     - 修改 `Features/DeepBase.Governance.RouteResolver.pas`
     - _Requirements: 13.1_
@@ -378,7 +378,7 @@
     - **Property 35: Governance ValidationEngine 缓存一致性**
     - **Validates: Requirements 13.1, 13.3, 13.5**
 
-- [ ] 21. P2: Inference 模块修复
+- [x] 21. P2: Inference 模块修复
   - [x] 21.1 Shutdown 释放 session options + env，重置状态
     - 修改 `Features/DeepBase.Inference.Runtime.pas`
     - _Requirements: 14.1_
@@ -410,11 +410,11 @@
     - **Property 39: InferenceService.IsReady 完整检查**
     - **Validates: Requirements 14.1, 14.2, 14.4, 14.5, 14.8**
 
-- [ ] 22. P2: 性能优化
-  - [ ] 22.1 MFCC 使用 FFT 替代 DFT
+- [x] 22. P2: 性能优化
+  - [x] 22.1 MFCC 使用 FFT 替代 DFT
     - 修改 `Features/DeepBase.Speech.MFCC.pas`
     - _Requirements: 15.5_
-  - [ ] 22.2 SpeechService.ShouldAutoStop 增量处理新样本
+  - [x] 22.2 SpeechService.ShouldAutoStop 增量处理新样本
     - 修改 `Features/DeepBase.Speech.Service.pas`
     - _Requirements: 15.6_
   - [x] 22.3 SignalDetector.CountToken 使用 PosEx 替代 Copy
@@ -423,7 +423,7 @@
   - [x] 22.4 Migrations 文件校验使用 fmShareDenyWrite
     - 修改 `Persistence/DeepBase.DB.Migrations.pas`
     - _Requirements: 15.1_
-  - [ ] 22.5 JobQueue 使用池化连接
+  - [x] 22.5 JobQueue 使用池化连接
     - 修改 `Persistence/DeepBase.JobQueue.pas`
     - _Requirements: 15.2_
   - [x] 22.6 Protection.FireDAC 缓存连接
