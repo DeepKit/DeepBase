@@ -19,6 +19,7 @@ uses
   Vcl.Forms,
   MainForm in 'MainForm.pas' {frmMain},
   DeepBase.Manager in '..\..\Core\DeepBase.Manager.pas',
+  DeepBase.Persistence.Manager.FireDAC in '..\..\Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
   DeepBase.Types in '..\..\Core\DeepBase.Types.pas',
   DeepBase.Config in '..\..\Core\DeepBase.Config.pas',
   DeepBase.Logging in '..\..\Core\DeepBase.Logging.pas',

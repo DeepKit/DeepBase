@@ -1,4 +1,4 @@
-﻿unit UniPublisher.MainForm;
+﻿unit DeepPublisher.MainForm;
 
 interface
 

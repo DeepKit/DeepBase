@@ -15,6 +15,8 @@ requires
   DeepBaseFeatures;
 
 contains
+  DeepBase.Feedback in 'Core\DeepBase.Feedback.pas',
+  DeepBase.SingleInstance in 'Core\DeepBase.SingleInstance.pas',
   DeepBase.VCL.ThemeAdapter in 'VCL\DeepBase.VCL.ThemeAdapter.pas',
   DeepBase.VCL.ExceptionAdapter in 'VCL\DeepBase.VCL.ExceptionAdapter.pas',
   DeepBase.VCL.ConfigControls in 'VCL\DeepBase.VCL.ConfigControls.pas',
@@ -65,6 +67,7 @@ contains
   DeepBase.VCL.DeepShell.ToolWindow in 'VCL\DeepBase.VCL.DeepShell.ToolWindow.pas',
   DeepBase.VCL.DeepShell.Governance in 'VCL\DeepBase.VCL.DeepShell.Governance.pas',
   DeepBase.VCL.DeepShell.MainForm in 'VCL\DeepBase.VCL.DeepShell.MainForm.pas',
-  DeepBase.VCL.DeepShell in 'VCL\DeepBase.VCL.DeepShell.pas';
+  DeepBase.VCL.DeepShell in 'VCL\DeepBase.VCL.DeepShell.pas',
+  DeepBase.AutoFix.ErrorRecorder.VCL in 'VCL\DeepBase.AutoFix.ErrorRecorder.VCL.pas';
 
 end.

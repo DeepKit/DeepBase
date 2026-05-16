@@ -6,6 +6,8 @@ uses
   System.SysUtils,
   System.Math,
   System.DateUtils,
+  System.Classes,
+  System.SyncObjs,
   System.Generics.Collections,
   DeepBase.IntentClarification.Types,
   DeepBase.IntentClarification.Interfaces;
@@ -27,6 +29,7 @@ type
       end;
     var
       FFeedback: TList<TFeedbackRecord>;
+      FFeedbackLock: TCriticalSection;
       FPredictionCounter: Integer;
 
     function GeneratePredictionId: string;
@@ -57,19 +60,22 @@ constructor TAnticipationEngine.Create;
 begin
   inherited Create;
   FFeedback := TList<TFeedbackRecord>.Create;
+  FFeedbackLock := TCriticalSection.Create;
   FPredictionCounter := 0;
 end;
 
 destructor TAnticipationEngine.Destroy;
 begin
   FFeedback.Free;
+  FFeedbackLock.Free;
   inherited;
 end;
 
 function TAnticipationEngine.GeneratePredictionId: string;
 begin
-  Inc(FPredictionCounter);
-  Result := Format('pred_%d_%s', [FPredictionCounter,
+  // IC-017: Atomic increment so concurrent Predict calls cannot collide.
+  var LValue := TInterlocked.Increment(FPredictionCounter);
+  Result := Format('pred_%d_%s', [LValue,
     FormatDateTime('hhnnsszzz', Now)]);
 end;
 
@@ -241,7 +247,12 @@ var
 begin
   LRecord.PredictionId := APredictionId;
   LRecord.Positive := True;
-  FFeedback.Add(LRecord);
+  FFeedbackLock.Enter;
+  try
+    FFeedback.Add(LRecord);
+  finally
+    FFeedbackLock.Leave;
+  end;
 end;
 
 procedure TAnticipationEngine.FeedbackNegative(const APredictionId: string);
@@ -250,7 +261,12 @@ var
 begin
   LRecord.PredictionId := APredictionId;
   LRecord.Positive := False;
-  FFeedback.Add(LRecord);
+  FFeedbackLock.Enter;
+  try
+    FFeedback.Add(LRecord);
+  finally
+    FFeedbackLock.Leave;
+  end;
 end;
 
 end.

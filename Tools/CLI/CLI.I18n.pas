@@ -1,5 +1,5 @@
 ﻿{ ============================================================================
-  CLI.I18n - 国际化管理命�?
+  CLI.I18n - // TODO: restore original comment (encoding corruption)
   
   版本: 1.0
   说明: 实现 i18n scan/sync/translate/export/import 命令

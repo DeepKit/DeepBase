@@ -7,10 +7,10 @@ unit DeepBase.DB.Pool;
   所属包: DeepBasePersistence
   功能:
   - 官方 profile 路径支持 SQLite + PostgreSQL 双数据库并存
-  - 保留�?DatabaseType/ConnectionString 兼容入口
-  - 连接健康检�?
+  - 保留�?DatabaseType/ConnectionString 兼容入口
+  - 连接健康检�?
   - 空闲连接回收
-  - 连接泄漏检�?
+  - 连接泄漏检�?
   - 详细统计监控
   - 连接预热
   - 自动重连
@@ -18,7 +18,7 @@ unit DeepBase.DB.Pool;
   线程安全: 所有公共方法都是线程安全的
 
   用法:
-    // 创建连接�?
+    // 创建连接�?
     Pool := TUniConnectionPool.Create;
     Pool.DatabaseType := dbSQLite;
     Pool.ConnectionString := 'path/to/db.sqlite';
@@ -32,7 +32,7 @@ unit DeepBase.DB.Pool;
       // 使用 Connection
       Connection.ExecSQL('INSERT INTO Log(Msg) VALUES(:Msg)', ['test']);
     finally
-      Release; // 或自动释�?
+      Release; // 或自动释�?
     end;
 
     // 或使用作用域连接
@@ -93,7 +93,7 @@ type
     function SameConnectionAs(const Other: TDBConnectionProfile): Boolean;
   end;
 
-  /// <summary>连接状�?/summary>
+  /// <summary>连接状�?/summary>
   TConnectionState = (
     csIdle,       // 空闲可用
     csInUse,      // 正在使用
@@ -101,7 +101,7 @@ type
     csValidating  // 正在验证
   );
 
-  /// <summary>连接池事件类�?/summary>
+  /// <summary>连接池事件类�?/summary>
   TPoolEventType = (
     peConnectionCreated,
     peConnectionDestroyed,
@@ -113,11 +113,11 @@ type
     pePoolExhausted
   );
 
-  /// <summary>连接池事�?/summary>
+  /// <summary>连接池事�?/summary>
   TPoolEvent = procedure(Sender: TObject; EventType: TPoolEventType;
     const Message: string) of object;
 
-  /// <summary>连接池统计信�?/summary>
+  /// <summary>连接池统计信�?/summary>
   TPoolStatistics = record
     TotalConnections: Integer;
     ActiveConnections: Integer;
@@ -139,7 +139,7 @@ type
 
   TUniConnectionPool = class;
 
-  /// <summary>池化连接包装�?/summary>
+  /// <summary>池化连接包装�?/summary>
   TPooledConnection = class
   private
     FPool: TUniConnectionPool;
@@ -162,10 +162,10 @@ type
     /// <summary>释放回连接池</summary>
     procedure Release;
 
-    /// <summary>标记为无�?/summary>
+    /// <summary>标记为无�?/summary>
     procedure Invalidate;
 
-    /// <summary>验证连接有效�?/summary>
+    /// <summary>验证连接有效�?/summary>
     function Validate: Boolean;
 
     property Connection: TFDConnection read FConnection;
@@ -178,7 +178,7 @@ type
     property AcquireCount: Int64 read FAcquireCount;
   end;
 
-  /// <summary>连接池配�?/summary>
+  /// <summary>连接池配�?/summary>
   TPoolConfig = record
     MinSize: Integer;
     MaxSize: Integer;
@@ -224,6 +224,7 @@ type
     procedure ConfigureConnectionFromProfile(Conn: TFDConnection);
     procedure ApplyExtraParams(Conn: TFDConnection; const ExtraParams: string);
     procedure DoPoolEvent(EventType: TPoolEventType; const Msg: string);
+    procedure DoWarmup(Count: Integer);
     procedure MaintenanceLoop;
     procedure PerformMaintenance;
     procedure ValidateIdleConnections;
@@ -244,28 +245,28 @@ type
     /// <summary>Configure pool from explicit profile. Must be called before Initialize.</summary>
     procedure Configure(const AProfile: TDBConnectionProfile);
 
-    /// <summary>关闭连接�?/summary>
+    /// <summary>关闭连接�?/summary>
     procedure Shutdown;
 
-    /// <summary>获取一个连�?/summary>
+    /// <summary>获取一个连�?/summary>
     function GetConnection: TPooledConnection;
 
     /// <summary>Create a configured FireDAC connection without opening it.</summary>
     function CreateUnopenedConnection: TFDConnection;
 
-    /// <summary>获取连接（带超时�?/summary>
+    /// <summary>获取连接（带超时�?/summary>
     function TryGetConnection(TimeoutMs: Cardinal; out Conn: TPooledConnection): Boolean;
 
-    /// <summary>执行操作（自动获取和释放连接�?/summary>
+    /// <summary>执行操作（自动获取和释放连接�?/summary>
     procedure Execute(Proc: TProc<TFDConnection>);
 
-    /// <summary>执行查询（自动获取和释放连接�?/summary>
+    /// <summary>执行查询（自动获取和释放连接�?/summary>
     function Query<T>(Func: TFunc<TFDConnection, T>): T;
 
-    /// <summary>清空所有空闲连�?/summary>
+    /// <summary>清空所有空闲连�?/summary>
     procedure ClearIdleConnections;
 
-    /// <summary>强制回收所有连�?/summary>
+    /// <summary>强制回收所有连�?/summary>
     procedure RecycleAllConnections;
 
     /// <summary>获取统计信息</summary>
@@ -274,10 +275,10 @@ type
     /// <summary>重置统计信息</summary>
     procedure ResetStatistics;
 
-    /// <summary>预热连接�?/summary>
+    /// <summary>预热连接�?/summary>
     procedure Warmup(Count: Integer = 0);
 
-    // 属�?
+    // 属�?
     property DatabaseType: TDatabaseType read FDatabaseType write SetDatabaseType;
     property ConnectionString: string read FConnectionString write SetConnectionString;
     property Profile: TDBConnectionProfile read FProfile;
@@ -285,7 +286,7 @@ type
     property Config: TPoolConfig read FConfig write FConfig;
     property Initialized: Boolean read FInitialized;
 
-    // 快捷属�?
+    // 快捷属�?
     property MinSize: Integer read FConfig.MinSize write FConfig.MinSize;
     property MaxSize: Integer read FConfig.MaxSize write FConfig.MaxSize;
     property AcquireTimeoutMs: Cardinal read FConfig.AcquireTimeoutMs write FConfig.AcquireTimeoutMs;
@@ -324,10 +325,10 @@ type
       const Profile: TDBConnectionProfile; const Config: TPoolConfig;
       AutoInitialize: Boolean = False): TUniConnectionPool; overload;
 
-    /// <summary>注册连接�?/summary>
+    /// <summary>注册连接�?/summary>
     class procedure RegisterPool(const Name: string; Pool: TUniConnectionPool);
 
-    /// <summary>移除连接�?/summary>
+    /// <summary>移除连接�?/summary>
     class procedure RemovePool(const Name: string);
 
     /// <summary>获取所有池名称</summary>
@@ -357,10 +358,10 @@ type
     procedure ShutdownAll;
   end;
 
-/// <summary>获取默认连接�?/summary>
+/// <summary>获取默认连接�?/summary>
 function DefaultPool: TUniConnectionPool;
 
-/// <summary>设置默认连接�?/summary>
+/// <summary>设置默认连接�?/summary>
 procedure SetDefaultPool(Pool: TUniConnectionPool);
 
 /// <summary>Get the default DB pool provider facade.</summary>
@@ -384,7 +385,8 @@ uses
   Winapi.Windows,
   {$ENDIF}
   FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
-  FireDAC.Phys.PG, FireDAC.Phys.PGDef;
+  FireDAC.Phys.PG, FireDAC.Phys.PGDef,
+  DeepBase.DB.DoQry;
 
 var
   GDefaultPool: TUniConnectionPool = nil;
@@ -419,12 +421,13 @@ type
 
 function DefaultPool: TUniConnectionPool;
 begin
-  Result := GDefaultPool;
+  // Use atomic read via CompareExchange(current, nil, nil) for memory visibility
+  Result := TUniConnectionPool(TInterlocked.CompareExchange(Pointer(GDefaultPool), nil, nil));
 end;
 
 procedure SetDefaultPool(Pool: TUniConnectionPool);
 begin
-  GDefaultPool := Pool;
+  TInterlocked.Exchange(Pointer(GDefaultPool), Pointer(Pool));
 end;
 
 function DBPoolProvider: IDBPoolProvider;
@@ -675,7 +678,7 @@ class function TPoolConfig.Default: TPoolConfig;
 begin
   Result.MinSize := 2;
   Result.MaxSize := 10;
-  Result.AcquireTimeoutMs := 30000;  // 30�?
+  Result.AcquireTimeoutMs := 30000;  // 30�?
   Result.IdleTimeoutSec := 300;      // 5分钟
   Result.MaxLifetimeSec := 3600;     // 1小时
   Result.ValidationIntervalSec := 60; // 1分钟
@@ -704,6 +707,18 @@ destructor TPooledConnection.Destroy;
 begin
   if Assigned(FConnection) then
   begin
+    // BASIC-014/FR-008: sweep DoQry prepared-statement cache so that
+    // address reuse on the next TFDConnection allocation cannot return
+    // stale prepared queries pointing at the freed connection.
+    try
+      UniDbSweepConnectionFromPool(FConnection);
+    except
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('DeepBase.DB.Pool: prepared sweep failed: ' + E.Message));
+        {$ENDIF}
+    end;
+
     try
       if FConnection.Connected then
         FConnection.Close;
@@ -722,12 +737,25 @@ procedure TPooledConnection.Release;
 begin
   if Assigned(FPool) then
   begin
-    FState := csIdle;
-    FLastUsedAt := Now;
-    FOwnerThreadId := 0;
-    FLeakWarned := False;
+    var LUseTime := UseTime;
+    FPool.FLock.Enter;
+    try
+      FState := csIdle;
+      FLastUsedAt := Now;
+      FOwnerThreadId := 0;
+      FLeakWarned := False;
+    finally
+      FPool.FLock.Leave;
+    end;
+    FPool.FAvailableEvent.SetEvent;
     FPool.DoPoolEvent(peConnectionReleased, Format('Connection released, use time: %.2f sec',
-      [UseTime.TotalSeconds]));
+      [LUseTime.TotalSeconds]));
+    FPool.FStatsLock.Enter;
+    try
+      Inc(FPool.FStatistics.TotalReleases);
+    finally
+      FPool.FStatsLock.Leave;
+    end;
   end;
 end;
 procedure TPooledConnection.Invalidate;
@@ -742,9 +770,16 @@ var
 begin
   Result := False;
   if not Assigned(FConnection) or not FConnection.Connected then
+  begin
+    FState := csInvalid;
     Exit;
+  end;
 
-  FState := csValidating;
+  // State should already be csValidating when called from maintenance.
+  // If called directly, set it now.
+  if FState <> csValidating then
+    FState := csValidating;
+
   try
     Query := TFDQuery.Create(nil);
     try
@@ -757,8 +792,13 @@ begin
       FState := csIdle;
       if Assigned(FPool) then
       begin
-        FPool.DoPoolEvent(peConnectionValidated, '连接验证成功');
-        Inc(FPool.FStatistics.TotalValidations);
+        FPool.DoPoolEvent(peConnectionValidated, 'Connection validated');
+        FPool.FStatsLock.Enter;
+        try
+          Inc(FPool.FStatistics.TotalValidations);
+        finally
+          FPool.FStatsLock.Leave;
+        end;
       end;
     finally
       Query.Free;
@@ -768,7 +808,7 @@ begin
     begin
       FState := csInvalid;
       if Assigned(FPool) then
-        FPool.DoPoolEvent(peConnectionInvalidated, '连接验证失败: ' + E.Message);
+        FPool.DoPoolEvent(peConnectionInvalidated, 'Connection validation failed: ' + E.Message);
     end;
   end;
 end;
@@ -887,7 +927,7 @@ begin
     end;
 
     // 预热最小连接数
-    Warmup(FConfig.MinSize);
+    DoWarmup(FConfig.MinSize);
 
     FInitialized := True;
     FStartTime := Now;
@@ -904,13 +944,17 @@ begin
 end;
 
 procedure TUniConnectionPool.Shutdown;
+var
+  I: Integer;
+  DrainStart: TDateTime;
+  HasActive: Boolean;
 begin
   if not FInitialized then
     Exit;
 
   FShutdown := True;
 
-  // 停止维护线程
+  // Stop maintenance thread
   if Assigned(FMaintenanceThread) then
   begin
     FMaintenanceThread.Terminate;
@@ -918,17 +962,37 @@ begin
     FreeAndNil(FMaintenanceThread);
   end;
 
+  // Drain: wait up to AcquireTimeoutMs for active connections to be released.
+  DrainStart := Now;
+  repeat
+    HasActive := False;
+    FLock.Enter;
+    try
+      for I := 0 to FPool.Count - 1 do
+        if FPool[I].State = csInUse then
+        begin
+          HasActive := True;
+          Break;
+        end;
+    finally
+      FLock.Leave;
+    end;
+
+    if HasActive then
+      Sleep(50);
+  until (not HasActive) or
+        (MilliSecondsBetween(Now, DrainStart) >= FConfig.AcquireTimeoutMs);
+
+  // Now clear all connections under lock.
   FLock.Enter;
   try
     FInitialized := False;
+    FPool.Clear;
   finally
     FLock.Leave;
   end;
 
-  // Close connections outside lock to avoid blocking I/O
-  FPool.Clear;
-
-  DoPoolEvent(peConnectionDestroyed, 'Connection destroyed');
+  DoPoolEvent(peConnectionDestroyed, 'Connection pool shut down');
 end;
 
 function TUniConnectionPool.GetDriverName: string;
@@ -979,7 +1043,12 @@ begin
   try
     ConfigureConnection(Result);
     Result.Open;
-    Inc(FStatistics.TotalCreates);
+    FStatsLock.Enter;
+    try
+      Inc(FStatistics.TotalCreates);
+    finally
+      FStatsLock.Leave;
+    end;
     DoPoolEvent(peConnectionCreated, 'Created new connection');
   except
     on E: Exception do
@@ -1228,7 +1297,7 @@ begin
       end
       else
       begin
-        // 无效连接，标记移�?
+        // 无效连接，标记移�?
         Pooled.Invalidate;
       end;
     end;
@@ -1239,7 +1308,12 @@ function TUniConnectionPool.GetConnection: TPooledConnection;
 begin
   if not TryGetConnection(FConfig.AcquireTimeoutMs, Result) then
   begin
-    Inc(FStatistics.TotalTimeouts);
+    FStatsLock.Enter;
+    try
+      Inc(FStatistics.TotalTimeouts);
+    finally
+      FStatsLock.Leave;
+    end;
     DoPoolEvent(pePoolExhausted, 'Connection pool exhausted; acquisition timed out');
     raise EConnectionTimeoutException.Create('Database connection acquisition timeout');
   end;
@@ -1295,7 +1369,7 @@ begin
         Exit;
       end;
 
-      // 无可用连接，尝试创建新连�?
+      // 无可用连接，尝试创建新连�?
       if FPool.Count < FConfig.MaxSize then
       begin
         try
@@ -1329,7 +1403,7 @@ begin
       FLock.Leave;
     end;
 
-    // 检查超�?
+    // 检查超�?
     ElapsedMs := Stopwatch.ElapsedMilliseconds;
     if ElapsedMs >= TimeoutMs then
       Exit(False);
@@ -1348,13 +1422,6 @@ begin
     Proc(Conn.Connection);
   finally
     Conn.Release;
-    FAvailableEvent.SetEvent;
-    FStatsLock.Enter;
-    try
-      Inc(FStatistics.TotalReleases);
-    finally
-      FStatsLock.Leave;
-    end;
   end;
 end;
 
@@ -1367,13 +1434,6 @@ begin
     Result := Func(Conn.Connection);
   finally
     Conn.Release;
-    FAvailableEvent.SetEvent;
-    FStatsLock.Enter;
-    try
-      Inc(FStatistics.TotalReleases);
-    finally
-      FStatsLock.Leave;
-    end;
   end;
 end;
 
@@ -1387,7 +1447,12 @@ begin
     begin
       if FPool[I].State = csIdle then
       begin
-        Inc(FStatistics.TotalDestroys);
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalDestroys);
+        finally
+          FStatsLock.Leave;
+        end;
         DoPoolEvent(peConnectionDestroyed, 'Connection destroyed');
         FPool.Delete(I);
       end;
@@ -1403,17 +1468,28 @@ var
 begin
   FLock.Enter;
   try
+    // Only recycle idle and validating connections.
+    // In-use connections remain until released by their owning thread.
     for I := FPool.Count - 1 downto 0 do
     begin
-      Inc(FStatistics.TotalDestroys);
-      FPool.Delete(I);
+      if FPool[I].State in [csIdle, csValidating, csInvalid] then
+      begin
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalDestroys);
+        finally
+          FStatsLock.Leave;
+        end;
+        FPool.Delete(I);
+      end;
     end;
-    DoPoolEvent(peConnectionDestroyed, 'Connection destroyed');
   finally
     FLock.Leave;
   end;
 
-  // 重新预热
+  DoPoolEvent(peConnectionDestroyed, 'Idle connections recycled');
+
+  // Replenish minimum connections
   Warmup(FConfig.MinSize);
 end;
 
@@ -1455,7 +1531,7 @@ begin
   end;
 end;
 
-procedure TUniConnectionPool.Warmup(Count: Integer);
+procedure TUniConnectionPool.DoWarmup(Count: Integer);
 var
   I, Target: Integer;
   Pooled: TPooledConnection;
@@ -1484,15 +1560,20 @@ begin
     end;
   end;
 
-  // Add to pool under lock (fast, no I/O)
+  // Add to pool (caller already holds FLock)
+  for I := 0 to High(NewConns) do
+    if NewConns[I] <> nil then
+    begin
+      Pooled := TPooledConnection.Create(Self, NewConns[I]);
+      FPool.Add(Pooled);
+    end;
+end;
+
+procedure TUniConnectionPool.Warmup(Count: Integer);
+begin
   FLock.Enter;
   try
-    for I := 0 to High(NewConns) do
-      if NewConns[I] <> nil then
-      begin
-        Pooled := TPooledConnection.Create(Self, NewConns[I]);
-        FPool.Add(Pooled);
-      end;
+    DoWarmup(Count);
   finally
     FLock.Leave;
   end;
@@ -1518,7 +1599,7 @@ procedure TUniConnectionPool.MaintenanceLoop;
 begin
   while not FShutdown and not TThread.Current.CheckTerminated do
   begin
-    Sleep(10000); // �?0秒执行一次维�?
+    Sleep(10000); // �?0秒执行一次维�?
     if not FShutdown then
       PerformMaintenance;
   end;
@@ -1547,18 +1628,34 @@ begin
         Pooled := FPool[I];
         if Pooled.State = csIdle then
         begin
-          // 检查是否需要验�?
           if SecondsBetween(Now, Pooled.FLastValidatedAt) >= FConfig.ValidationIntervalSec then
+          begin
+            // Transition to csValidating under lock so no other thread can
+            // acquire this connection while we validate it outside the lock.
+            Pooled.FState := csValidating;
             ToValidate.Add(Pooled);
+          end;
         end;
       end;
     finally
       FLock.Leave;
     end;
 
+    // Validate outside lock (may involve network I/O).
     for Pooled in ToValidate do
+    begin
       if not Pooled.Validate then
-        Inc(FStatistics.TotalInvalidations);
+      begin
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalInvalidations);
+        finally
+          FStatsLock.Leave;
+        end;
+        // State already set to csInvalid by Validate on failure.
+      end;
+      // On success, Validate sets state back to csIdle.
+    end;
   finally
     ToValidate.Free;
   end;
@@ -1578,7 +1675,12 @@ begin
       // 移除无效连接
       if Pooled.State = csInvalid then
       begin
-        Inc(FStatistics.TotalDestroys);
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalDestroys);
+        finally
+          FStatsLock.Leave;
+        end;
         FPool.Delete(I);
         Continue;
       end;
@@ -1587,18 +1689,28 @@ begin
       if (Pooled.State = csIdle) and
          (SecondsBetween(Now, Pooled.CreatedAt) >= FConfig.MaxLifetimeSec) then
       begin
-        Inc(FStatistics.TotalDestroys);
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalDestroys);
+        finally
+          FStatsLock.Leave;
+        end;
         DoPoolEvent(peConnectionDestroyed, 'Connection destroyed');
         FPool.Delete(I);
         Continue;
       end;
 
-      // 移除空闲超时的连接（保持最小连接数�?
+      // 移除空闲超时的连接（保持最小连接数）
       if (FPool.Count > FConfig.MinSize) and
          (Pooled.State = csIdle) and
          (SecondsBetween(Now, Pooled.LastUsedAt) >= FConfig.IdleTimeoutSec) then
       begin
-        Inc(FStatistics.TotalDestroys);
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.TotalDestroys);
+        finally
+          FStatsLock.Leave;
+        end;
         DoPoolEvent(peConnectionDestroyed, 'Connection destroyed');
         FPool.Delete(I);
       end;
@@ -1623,7 +1735,12 @@ begin
          (SecondsBetween(Now, Pooled.FAcquiredAt) >= FConfig.LeakDetectionThresholdSec) then
       begin
         Pooled.FLeakWarned := True;
-        Inc(FStatistics.LeaksDetected);
+        FStatsLock.Enter;
+        try
+          Inc(FStatistics.LeaksDetected);
+        finally
+          FStatsLock.Leave;
+        end;
         DoPoolEvent(peConnectionLeakDetected,
           Format('Possible connection leak detected. Thread: %d, held for: %d sec',
             [Pooled.FOwnerThreadId, SecondsBetween(Now, Pooled.FAcquiredAt)]));
@@ -1797,7 +1914,7 @@ begin
     if FPools.TryGetValue(Name, Pool) then
     begin
       if GDefaultPool = Pool then
-        GDefaultPool := nil;
+        TInterlocked.Exchange(Pointer(GDefaultPool), nil);
       FPools.Remove(Name);
     end;
   finally
@@ -1824,7 +1941,7 @@ begin
     for Pool in FPools.Values do
       Pool.Shutdown;
     FPools.Clear;
-    GDefaultPool := nil;
+    TInterlocked.Exchange(Pointer(GDefaultPool), nil);
   finally
     FLock.Leave;
   end;

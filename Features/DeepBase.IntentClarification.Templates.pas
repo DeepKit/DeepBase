@@ -104,6 +104,8 @@ end;
 
 function TPresetTemplateManager.ApplyOverride(const ATemplate: TPresetTemplate;
   const AField, AValue: string): TPresetTemplate;
+var
+  LIntVal: Integer;
 begin
   // Start with a copy - all non-overridden fields are preserved (Property 38)
   Result := ATemplate;
@@ -115,9 +117,27 @@ begin
   else if SameText(AField, 'PersonaPack') then
     Result.PersonaPack := AValue
   else if SameText(AField, 'MaxLevel') then
-    Result.MaxLevel := TClarificationLevel(StrToIntDef(AValue, Ord(ATemplate.MaxLevel)))
+  begin
+    // IC-015: Validate enum range before casting.
+    LIntVal := StrToIntDef(AValue, Ord(ATemplate.MaxLevel));
+    if (LIntVal < Ord(Low(TClarificationLevel))) or
+       (LIntVal > Ord(High(TClarificationLevel))) then
+      raise EArgumentException.CreateFmt(
+        'MaxLevel out of range: %d (allowed %d..%d)',
+        [LIntVal, Ord(Low(TClarificationLevel)), Ord(High(TClarificationLevel))]);
+    Result.MaxLevel := TClarificationLevel(LIntVal);
+  end
   else if SameText(AField, 'DefaultPosture') then
-    Result.DefaultPosture := TPosture(StrToIntDef(AValue, Ord(ATemplate.DefaultPosture)))
+  begin
+    // IC-015: Validate enum range before casting.
+    LIntVal := StrToIntDef(AValue, Ord(ATemplate.DefaultPosture));
+    if (LIntVal < Ord(Low(TPosture))) or
+       (LIntVal > Ord(High(TPosture))) then
+      raise EArgumentException.CreateFmt(
+        'DefaultPosture out of range: %d (allowed %d..%d)',
+        [LIntVal, Ord(Low(TPosture)), Ord(High(TPosture))]);
+    Result.DefaultPosture := TPosture(LIntVal);
+  end
   else if SameText(AField, 'EnableAnticipation') then
     Result.EnableAnticipation := SameText(AValue, 'true') or (AValue = '1')
   else if SameText(AField, 'EnablePersonas') then
@@ -129,7 +149,11 @@ begin
   else if SameText(AField, 'BudgetConfig.MaxCognitiveLoad') then
     Result.BudgetConfig.MaxCognitiveLoad := StrToIntDef(AValue, ATemplate.BudgetConfig.MaxCognitiveLoad)
   else if SameText(AField, 'BudgetConfig.UserPatienceThreshold') then
-    Result.BudgetConfig.UserPatienceThreshold := StrToFloatDef(AValue, ATemplate.BudgetConfig.UserPatienceThreshold);
+    Result.BudgetConfig.UserPatienceThreshold := StrToFloatDef(AValue, ATemplate.BudgetConfig.UserPatienceThreshold)
+  else
+    // IC-016: Unknown field names are now flagged rather than silently ignored.
+    raise EArgumentException.CreateFmt(
+      'Unknown template override field: %s', [AField]);
 end;
 
 end.

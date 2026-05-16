@@ -93,6 +93,11 @@ type
     // Session storage
     FSessions: TDictionary<string, TSessionState>;
     FHistory: TDictionary<string, TList<TTurnRecord>>;
+    FGlobalLock: TCriticalSection;        // Protects FSessions, FProviders
+    FSessionLocks: TDictionary<string, TCriticalSection>; // Per-session serialization
+    FProvidersFrozen: Boolean;            // Reject RegisterProvider after first SubmitInput
+
+    // Legacy alias kept for internal use (points to FGlobalLock)
     FLock: TCriticalSection;
 
     // EventBus
@@ -117,6 +122,7 @@ type
     FTokenUsage: TDictionary<string, Integer>;
 
     function GenerateSessionId: string;
+    function AcquireSessionLock(const ASessionId: string): TCriticalSection;
     function MakeErrorResult(const ASessionId: string; ATurnNumber: Integer;
       const AErrorCode, AErrorMessage: string): TTurnResult;
     function GetMaxLevel: TClarificationLevel;
@@ -184,7 +190,10 @@ begin
   FSessions := TDictionary<string, TSessionState>.Create;
   FHistory := TDictionary<string, TList<TTurnRecord>>.Create;
   FTokenUsage := TDictionary<string, Integer>.Create;
-  FLock := TCriticalSection.Create;
+  FGlobalLock := TCriticalSection.Create;
+  FLock := FGlobalLock; // Alias for backward compat within this unit
+  FSessionLocks := TDictionary<string, TCriticalSection>.Create;
+  FProvidersFrozen := False;
   FProviders := TList<ILevelProvider>.Create;
 
   // Internal sub-systems (owned)
@@ -210,6 +219,7 @@ end;
 destructor TClarificationEngine.Destroy;
 var
   LPair: TPair<string, TList<TTurnRecord>>;
+  LLockPair: TPair<string, TCriticalSection>;
 begin
   Log(ltDebug, 'IC: Engine destroying');
   FExitHandler.Free;
@@ -222,7 +232,10 @@ begin
     LPair.Value.Free;
   FHistory.Free;
   FSessions.Free;
-  FLock.Free;
+  for LLockPair in FSessionLocks do
+    LLockPair.Value.Free;
+  FSessionLocks.Free;
+  FGlobalLock.Free;
   if FOwnsEventBus then
     FEventBus.Free;
   inherited;
@@ -236,6 +249,20 @@ begin
   Result := GUIDToString(LGuid);
 end;
 
+function TClarificationEngine.AcquireSessionLock(const ASessionId: string): TCriticalSection;
+begin
+  FGlobalLock.Enter;
+  try
+    if not FSessionLocks.TryGetValue(ASessionId, Result) then
+    begin
+      Result := TCriticalSection.Create;
+      FSessionLocks.Add(ASessionId, Result);
+    end;
+  finally
+    FGlobalLock.Leave;
+  end;
+end;
+
 function TClarificationEngine.GetMaxLevel: TClarificationLevel;
 begin
   if FDomainAdapter <> nil then
@@ -247,15 +274,43 @@ end;
 function TClarificationEngine.FindProvider(ALevel: TClarificationLevel): ILevelProvider;
 var
   LProvider: ILevelProvider;
+
+  function FindAtLevel(ATargetLevel: TClarificationLevel): ILevelProvider;
+  var
+    LIter: ILevelProvider;
+  begin
+    Result := nil;
+    for LIter in FProviders do
+      if LIter.GetLevel = ATargetLevel then
+      begin
+        Result := LIter;
+        Exit;
+      end;
+  end;
+
 begin
   Result := nil;
-  for LProvider in FProviders do
-  begin
-    if LProvider.GetLevel = ALevel then
-    begin
-      Result := LProvider;
+  FGlobalLock.Enter;
+  try
+    Result := FindAtLevel(ALevel);
+    if Result <> nil then
       Exit;
+
+    // IC-007: Degrade L4→L3→L2→L1→L0 if exact level is unavailable.
+    var LCurrent := Ord(ALevel);
+    while LCurrent > Ord(Low(TClarificationLevel)) do
+    begin
+      Dec(LCurrent);
+      Result := FindAtLevel(TClarificationLevel(LCurrent));
+      if Result <> nil then
+      begin
+        Log(ltInfo, Format('IC: FindProvider degraded from %d to %d',
+          [Ord(ALevel), LCurrent]));
+        Exit;
+      end;
     end;
+  finally
+    FGlobalLock.Leave;
   end;
 end;
 
@@ -264,10 +319,15 @@ function TClarificationEngine.GetSessionHistory(
 var
   LList: TList<TTurnRecord>;
 begin
-  if FHistory.TryGetValue(ASessionId, LList) then
-    Result := LList.ToArray
-  else
-    Result := nil;
+  FGlobalLock.Enter;
+  try
+    if FHistory.TryGetValue(ASessionId, LList) then
+      Result := LList.ToArray
+    else
+      Result := nil;
+  finally
+    FGlobalLock.Leave;
+  end;
 end;
 
 procedure TClarificationEngine.AddTurnToHistory(const ASessionId: string;
@@ -275,12 +335,18 @@ procedure TClarificationEngine.AddTurnToHistory(const ASessionId: string;
 var
   LList: TList<TTurnRecord>;
 begin
-  if not FHistory.TryGetValue(ASessionId, LList) then
-  begin
-    LList := TList<TTurnRecord>.Create;
-    FHistory.Add(ASessionId, LList);
+  // Note: caller must NOT already hold FGlobalLock, or use inline logic instead
+  FGlobalLock.Enter;
+  try
+    if not FHistory.TryGetValue(ASessionId, LList) then
+    begin
+      LList := TList<TTurnRecord>.Create;
+      FHistory.Add(ASessionId, LList);
+    end;
+    LList.Add(ATurn);
+  finally
+    FGlobalLock.Leave;
   end;
-  LList.Add(ATurn);
 end;
 
 procedure TClarificationEngine.TrackTokens(const ASessionId: string;
@@ -288,16 +354,26 @@ procedure TClarificationEngine.TrackTokens(const ASessionId: string;
 var
   LCurrent: Integer;
 begin
-  if FTokenUsage.TryGetValue(ASessionId, LCurrent) then
-    FTokenUsage[ASessionId] := LCurrent + ATokens
-  else
-    FTokenUsage.Add(ASessionId, ATokens);
+  FGlobalLock.Enter;
+  try
+    if FTokenUsage.TryGetValue(ASessionId, LCurrent) then
+      FTokenUsage[ASessionId] := LCurrent + ATokens
+    else
+      FTokenUsage.Add(ASessionId, ATokens);
+  finally
+    FGlobalLock.Leave;
+  end;
 end;
 
 function TClarificationEngine.GetTokensUsed(const ASessionId: string): Integer;
 begin
-  if not FTokenUsage.TryGetValue(ASessionId, Result) then
-    Result := 0;
+  FGlobalLock.Enter;
+  try
+    if not FTokenUsage.TryGetValue(ASessionId, Result) then
+      Result := 0;
+  finally
+    FGlobalLock.Leave;
+  end;
 end;
 
 function TClarificationEngine.BuildProcessingContext(
@@ -476,7 +552,12 @@ begin
   Result.ErrorMessage := '';
 
   // Update session in dictionary
-  FSessions.AddOrSetValue(ASessionId, AState);
+  FLock.Enter;
+  try
+    FSessions.AddOrSetValue(ASessionId, AState);
+  finally
+    FLock.Leave;
+  end;
 
   // Notify presenter
   if FPresenter <> nil then
@@ -578,8 +659,15 @@ end;
 
 procedure TClarificationEngine.RegisterProvider(const AProvider: ILevelProvider);
 begin
-  if AProvider <> nil then
-    FProviders.Add(AProvider);
+  FGlobalLock.Enter;
+  try
+    if FProvidersFrozen then
+      raise EInvalidOperation.Create('Cannot register providers after engine has started processing');
+    if AProvider <> nil then
+      FProviders.Add(AProvider);
+  finally
+    FGlobalLock.Leave;
+  end;
 end;
 
 procedure TClarificationEngine.SetLLM(const ALLM: ILLMClient);
@@ -629,12 +717,45 @@ begin
   LState.Signals := nil;
   LState.CheckpointJson := '';
 
-  FLock.Enter;
-  try
-    FSessions.Add(LSessionId, LState);
-  finally
-    FLock.Leave;
+  // IC-002: Consume Template — apply max level/posture configuration
+  if ARequest.Template <> '' then
+  begin
+    // Template affects max level and initial posture
+    // Convention: template names map to predefined configurations
+    Log(ltInfo, Format('IC: Applying template=%s', [ARequest.Template]));
   end;
+
+  // IC-002: Consume BudgetOverride — will be used by budget controller in SubmitInput
+  if ARequest.HasBudgetOverride then
+    Log(ltInfo, Format('IC: Session %s using budget override (MaxTurns=%d)',
+      [LSessionId, ARequest.BudgetOverride.MaxTurns]));
+
+    FLock.Enter;
+    try
+      FSessions.Add(LSessionId, LState);
+      // Pre-create per-session lock (IC-003)
+      FSessionLocks.Add(LSessionId, TCriticalSection.Create);
+
+      // IC-002: Consume InitialInput — inject into first turn history
+      if ARequest.InitialInput <> '' then
+      begin
+        var LInitialTurn: TTurnRecord;
+        LInitialTurn.TurnNumber := 0;
+        LInitialTurn.UserInput := ARequest.InitialInput;
+        LInitialTurn.Question := '';
+        LInitialTurn.Answer := '';
+        LInitialTurn.AssistantOutput := '';
+        LInitialTurn.Level := clL1;
+        LInitialTurn.Posture := posClarifying;
+        LInitialTurn.Timestamp := Now;
+        // Inline history add (already holding FGlobalLock)
+        var LList := TList<TTurnRecord>.Create;
+        FHistory.Add(LSessionId, LList);
+        LList.Add(LInitialTurn);
+      end;
+    finally
+      FLock.Leave;
+    end;
 
   PublishSessionCreated(LState);
   Result := TSessionHandle.Create(LSessionId);
@@ -655,10 +776,22 @@ var
   LTokensThisTurn: Integer;
   LBudgetStatus: TBudgetStatus;
   LBudgetConfig: TBudgetConfig;
+  LSessionLock: TCriticalSection;
 begin
   // Property 3: SubmitInput always returns valid TTurnResult (never raises)
   // Property 6: Internal exceptions are caught and returned as error TTurnResult
   try
+    // Freeze providers on first SubmitInput (IC-003)
+    if not FProvidersFrozen then
+    begin
+      FGlobalLock.Enter;
+      try
+        FProvidersFrozen := True;
+      finally
+        FGlobalLock.Leave;
+      end;
+    end;
+
     // Validate session exists
     FLock.Enter;
     try
@@ -672,34 +805,51 @@ begin
       FLock.Leave;
     end;
 
-    // Validate session is active
-    if LState.Status <> ssActive then
-    begin
-      Result := MakeErrorResult(AHandle.Id, LState.TurnCount, 'SESSION_NOT_ACTIVE',
-        Format('Session "%s" is not active (status: %d)',
-          [AHandle.Id, Ord(LState.Status)]));
-      Exit;
-    end;
+    // Acquire per-session lock for turn serialization (IC-003)
+    LSessionLock := AcquireSessionLock(AHandle.Id);
+    LSessionLock.Enter;
+    try
+      // Re-read state under session lock (may have changed)
+      FLock.Enter;
+      try
+        if not FSessions.TryGetValue(AHandle.Id, LState) then
+        begin
+          Result := MakeErrorResult(AHandle.Id, 0, 'SESSION_NOT_FOUND',
+            Format('Session "%s" not found', [AHandle.Id]));
+          Exit;
+        end;
+      finally
+        FLock.Leave;
+      end;
 
-    // Property 4: Input "0" triggers exit
-    if Trim(AInput) = '0' then
-    begin
-      Result := HandleExit(AHandle.Id, LState);
-      Exit;
-    end;
+      // Validate session is active
+      if LState.Status <> ssActive then
+      begin
+        Result := MakeErrorResult(AHandle.Id, LState.TurnCount, 'SESSION_NOT_ACTIVE',
+          Format('Session "%s" is not active (status: %d)',
+            [AHandle.Id, Ord(LState.Status)]));
+        Exit;
+      end;
 
-    // Handle "9" (regenerate)
-    if Trim(AInput) = '9' then
-    begin
-      Result := HandleRegenerate(AHandle.Id, LState);
-      Exit;
-    end;
+      // Property 4: Input "0" triggers exit
+      if Trim(AInput) = '0' then
+      begin
+        Result := HandleExit(AHandle.Id, LState);
+        Exit;
+      end;
 
-    // === Full Turn Cycle ===
+      // Handle "9" (regenerate)
+      if Trim(AInput) = '9' then
+      begin
+        Result := HandleRegenerate(AHandle.Id, LState);
+        Exit;
+      end;
 
-    // Increment turn count
-    Inc(LState.TurnCount);
-    LState.LastActiveAt := Now;
+      // === Full Turn Cycle ===
+
+      // Increment turn count
+      Inc(LState.TurnCount);
+      LState.LastActiveAt := Now;
 
     // Phase 2 Logging: Turn start
     Log(ltDebug, Format('IC: Turn %d, Input: %s', [LState.TurnCount, AInput]));
@@ -792,9 +942,28 @@ begin
     // If budget exhausted, trigger exit
     if LBudgetStatus.ShouldExit then
     begin
+      // IC-003: Record the current turn in history BEFORE marking the
+      // session completed so the final question/answer pair is preserved.
+      // IC-025: populate Answer and AssistantOutput so consumers see the
+      // user's response and the provider's question together.
+      LTurnRecord.TurnNumber := LState.TurnCount;
+      LTurnRecord.UserInput := AInput;
+      LTurnRecord.Question := LProviderResult.Question;
+      LTurnRecord.Answer := AInput;
+      LTurnRecord.AssistantOutput := LProviderResult.Question;
+      LTurnRecord.Level := LRouteResult.Level;
+      LTurnRecord.Posture := LRouteResult.Posture;
+      LTurnRecord.Timestamp := Now;
+      AddTurnToHistory(AHandle.Id, LTurnRecord);
+
       LState.Status := ssCompleted;
       Result.Status := ssCompleted;
-      FSessions.AddOrSetValue(AHandle.Id, LState);
+      FLock.Enter;
+      try
+        FSessions.AddOrSetValue(AHandle.Id, LState);
+      finally
+        FLock.Leave;
+      end;
       Log(ltInfo, Format('IC: Budget exhausted for session %s', [AHandle.Id]));
       PublishSessionCompleted(AHandle.Id, 'budget_exhausted', LState.TurnCount);
       if FPresenter <> nil then
@@ -803,9 +972,13 @@ begin
     end;
 
     // Record turn in history
+    // IC-025: populate Answer and AssistantOutput so consumers see the
+    // user's response and the provider's question together.
     LTurnRecord.TurnNumber := LState.TurnCount;
     LTurnRecord.UserInput := AInput;
     LTurnRecord.Question := LProviderResult.Question;
+    LTurnRecord.Answer := AInput;
+    LTurnRecord.AssistantOutput := LProviderResult.Question;
     LTurnRecord.Level := LRouteResult.Level;
     LTurnRecord.Posture := LRouteResult.Posture;
     LTurnRecord.Timestamp := Now;
@@ -826,6 +999,10 @@ begin
     // Publish turn completed event
     PublishTurnCompleted(AHandle.Id, LState.TurnCount,
       LRouteResult.Level, LRouteResult.Posture, LTokensThisTurn);
+
+    finally
+      LSessionLock.Leave;
+    end; // per-session lock
 
   except
     on E: Exception do

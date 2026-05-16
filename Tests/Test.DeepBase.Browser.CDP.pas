@@ -209,7 +209,7 @@ begin
       end;
     LCDP.GetDocument(LCallback);
 
-    Assert.AreEqual(1, LFake.Calls.Count);
+    Assert.AreEqual<Integer>(1, LFake.Calls.Count);
     Assert.AreEqual<string>('DOM.getDocument', LFake.Calls[0].Method);
     Assert.IsTrue(LCalled, 'Callback should have fired');
   finally
@@ -227,7 +227,7 @@ begin
   try
     LCDP.TypeText('hello world', nil);
 
-    Assert.AreEqual(1, LFake.Calls.Count);
+    Assert.AreEqual<Integer>(1, LFake.Calls.Count);
     Assert.AreEqual<string>('Input.insertText', LFake.Calls[0].Method);
     Assert.IsTrue(Pos('"text":"hello world"', LFake.Calls[0].Params) > 0,
       'Params should carry the text payload: ' + LFake.Calls[0].Params);

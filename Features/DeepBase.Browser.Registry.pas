@@ -206,24 +206,32 @@ class function TBrowserRegistry.Discover(
   AOnlyAvailable: Boolean): TArray<TBrowserBackendInfo>;
 var
   LResult: TList<TBrowserBackendInfo>;
+  LSnapshot: TArray<TBrowserBackendInfo>;
   LInfo: TBrowserBackendInfo;
+  I: Integer;
 begin
   EnsureInit;
+  // Copy snapshot inside lock
+  TMonitor.Enter(FLock);
+  try
+    LSnapshot := FBackends.ToArray;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+
+  // Execute availability checks OUTSIDE the lock to prevent deadlock
+  // if IsAvailableFunc re-enters the registry.
   LResult := TList<TBrowserBackendInfo>.Create;
   try
-    TMonitor.Enter(FLock);
-    try
-      for LInfo in FBackends do
-      begin
-        if not LInfo.Enabled then
-          Continue;
-        if AOnlyAvailable and Assigned(LInfo.IsAvailableFunc) and
-          not LInfo.IsAvailableFunc() then
-          Continue;
-        LResult.Add(LInfo);
-      end;
-    finally
-      TMonitor.Exit(FLock);
+    for I := 0 to High(LSnapshot) do
+    begin
+      LInfo := LSnapshot[I];
+      if not LInfo.Enabled then
+        Continue;
+      if AOnlyAvailable and Assigned(LInfo.IsAvailableFunc) and
+        not LInfo.IsAvailableFunc() then
+        Continue;
+      LResult.Add(LInfo);
     end;
     LResult.Sort(TComparer<TBrowserBackendInfo>.Construct(
       function(const L, R: TBrowserBackendInfo): Integer
@@ -284,12 +292,14 @@ class function TBrowserRegistry.CreateSession(
   const ABackendName: string): IBrowserSession;
 var
   LInfo: TBrowserBackendInfo;
+  LFactory: TFunc<IBrowserSession>;
   LAll: TArray<TBrowserBackendInfo>;
 begin
   Result := nil;
 
   if ABackendName <> '' then
   begin
+    LFactory := nil;
     TMonitor.Enter(FLock);
     try
       for LInfo in FBackends do
@@ -298,14 +308,18 @@ begin
           if not Assigned(LInfo.FactoryFunc) then
             raise EBrowserError.CreateFmt(
               'Backend "%s" has no factory function', [ABackendName]);
-          Result := LInfo.FactoryFunc();
-          Exit;
+          LFactory := LInfo.FactoryFunc;
+          Break;
         end;
     finally
       TMonitor.Exit(FLock);
     end;
-    raise EBrowserError.CreateFmt(
-      'Backend "%s" not found or not enabled', [ABackendName]);
+    if not Assigned(LFactory) then
+      raise EBrowserError.CreateFmt(
+        'Backend "%s" not found or not enabled', [ABackendName]);
+    // Call factory OUTSIDE the lock to prevent deadlock on re-entry
+    Result := LFactory();
+    Exit;
   end;
 
   LAll := Discover(True);
@@ -317,6 +331,7 @@ begin
     raise EBrowserError.CreateFmt(
       'Backend "%s" has no factory function', [LInfo.Name]);
 
+  // Factory call is already outside the lock (Discover released it)
   Result := LInfo.FactoryFunc();
 end;
 

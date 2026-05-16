@@ -68,9 +68,9 @@ type
     FScreenMargin: Integer;
     FSessionFactory: TSessionFactoryFunc;
     FDefaultConfig: TBrowserWindowConfig;
+    FIsShutdown: Boolean;
 
     function GetWorkArea: TRect;
-    function InternalAcquire: TPoolEntry;
   public
     constructor Create(
       ASessionFactory: TSessionFactoryFunc;
@@ -110,7 +110,6 @@ implementation
 
 uses
   System.Math,
-  Vcl.Forms,
   DeepBase.Browser.Events,
   DeepBase.Logging;
 
@@ -239,45 +238,14 @@ end;
 
 function TBrowserWindowPool.GetWorkArea: TRect;
 begin
-  Result := Screen.WorkAreaRect;
+  if not SystemParametersInfo(SPI_GETWORKAREA, 0, @Result, 0) then
+    Result := Rect(0, 0, GetSystemMetrics(SM_CXSCREEN),
+      GetSystemMetrics(SM_CYSCREEN));
+
   Result.Left := Result.Left + FScreenMargin;
   Result.Top := Result.Top + FScreenMargin;
   Result.Right := Result.Right - FScreenMargin;
   Result.Bottom := Result.Bottom - FScreenMargin;
-end;
-
-function TBrowserWindowPool.InternalAcquire: TPoolEntry;
-var
-  LEntry: TPoolEntry;
-begin
-  // Try to find an existing idle entry
-  for LEntry in FEntries do
-    if not LEntry.InUse then
-    begin
-      LEntry.InUse := True;
-      Exit(LEntry);
-    end;
-
-  // Create a new entry if under pool limit
-  if FEntries.Count < FMaxPoolSize then
-  begin
-    LEntry := TPoolEntry.Create;
-    LEntry.Config := FDefaultConfig;
-    LEntry.Session := FSessionFactory(FDefaultConfig);
-    LEntry.SessionId := LEntry.Session.GetSessionId;
-    LEntry.InUse := True;
-    FEntries.Add(LEntry);
-    FById.AddOrSetValue(LEntry.SessionId, LEntry);
-
-    TBrowserEvents.Publish(betWindowOpened,
-      LEntry.SessionId,
-      '{"width":' + IntToStr(FDefaultConfig.Width) +
-      ',"height":' + IntToStr(FDefaultConfig.Height) + '}');
-
-    Exit(LEntry);
-  end;
-
-  Result := nil;
 end;
 
 function TBrowserWindowPool.Acquire(
@@ -285,20 +253,110 @@ function TBrowserWindowPool.Acquire(
   out ASession: IBrowserSession): Boolean;
 var
   LEntry: TPoolEntry;
+  LNewSession: IBrowserSession;
+  LCfg: TBrowserWindowConfig;
+  LCanGrow: Boolean;
+  LReused: Boolean;
 begin
   ASessionId := '';
   ASession := nil;
+  LReused := False;
+
+  if FIsShutdown then
+    Exit(False);
+
+  // H11 fix: factory must NOT be called inside FLock. Three phases:
+  //   1) Locked: try to find an idle entry; otherwise note we may grow.
+  //   2) Unlocked: create the new session via factory (slow / may block).
+  //   3) Locked: register the entry.
+  FLock.Enter;
+  try
+    for LEntry in FEntries do
+      if not LEntry.InUse then
+      begin
+        LEntry.InUse := True;
+        ASessionId := LEntry.SessionId;
+        ASession := LEntry.Session;
+        LReused := True;
+        Result := True;
+        Break;
+      end;
+    if not LReused then
+    begin
+      LCanGrow := FEntries.Count < FMaxPoolSize;
+      LCfg := FDefaultConfig;
+    end;
+  finally
+    FLock.Leave;
+  end;
+
+  // BROWSER-003: Reused entries publish betWindowAcquired outside the lock.
+  if LReused then
+  begin
+    TBrowserEvents.Publish(betWindowAcquired, ASessionId, '');
+    Exit;
+  end;
+
+  if not LCanGrow then
+    Exit(False);
+
+  // Slow path: factory call outside the lock
+  LNewSession := FSessionFactory(LCfg);
+  if LNewSession = nil then
+    Exit(False);
 
   FLock.Enter;
   try
-    LEntry := InternalAcquire;
-    if LEntry = nil then
-      Exit(False);
-    ASessionId := LEntry.SessionId;
-    ASession := LEntry.Session;
-    Result := True;
+    // Re-check capacity in case other threads grew the pool concurrently
+    if FEntries.Count >= FMaxPoolSize then
+    begin
+      // Try once more for an idle entry (someone may have released)
+      for LEntry in FEntries do
+        if not LEntry.InUse then
+        begin
+          LEntry.InUse := True;
+          ASessionId := LEntry.SessionId;
+          ASession := LEntry.Session;
+          // Discard our new session; explicit release if we have a way
+          LNewSession := nil;
+          LReused := True;
+          Result := True;
+          Break;
+        end;
+      if not LReused then
+      begin
+        // Nobody released; we lost the race
+        LNewSession := nil;
+        Exit(False);
+      end;
+    end
+    else
+    begin
+      LEntry := TPoolEntry.Create;
+      LEntry.Config := LCfg;
+      LEntry.Session := LNewSession;
+      LEntry.SessionId := LNewSession.GetSessionId;
+      LEntry.InUse := True;
+      FEntries.Add(LEntry);
+      FById.AddOrSetValue(LEntry.SessionId, LEntry);
+
+      ASessionId := LEntry.SessionId;
+      ASession := LEntry.Session;
+      Result := True;
+    end;
   finally
     FLock.Leave;
+  end;
+
+  // Publish event outside the lock
+  if Result then
+  begin
+    if LReused then
+      TBrowserEvents.Publish(betWindowAcquired, ASessionId, '')
+    else
+      TBrowserEvents.Publish(betWindowOpened, ASessionId,
+        '{"width":' + IntToStr(LCfg.Width) +
+        ',"height":' + IntToStr(LCfg.Height) + '}');
   end;
 end;
 
@@ -341,6 +399,7 @@ var
   I: Integer;
 begin
   // BUG-BA-015 fix: snapshot inside lock, release/dispose outside
+  // BROWSER-007: restore OwnsObjects within the same lock acquisition.
   FLock.Enter;
   try
     LIds := FById.Keys.ToArray;
@@ -350,6 +409,8 @@ begin
     FEntries.OwnsObjects := False;  // we'll free them ourselves
     FEntries.Clear;
     FById.Clear;
+    FEntries.OwnsObjects := True;   // restore for any future use
+    FIsShutdown := True;
   finally
     FLock.Leave;
   end;
@@ -361,14 +422,6 @@ begin
 
   for LEntry in LEntries do
     LEntry.Free;
-
-  // Restore ownership for future entries
-  FLock.Enter;
-  try
-    FEntries.OwnsObjects := True;
-  finally
-    FLock.Leave;
-  end;
 end;
 
 function TBrowserWindowPool.GetSession(

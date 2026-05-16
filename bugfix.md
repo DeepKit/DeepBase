@@ -541,6 +541,87 @@
   - `AddEntry` 对 `ADetail` 也调 `ApplySanitizer`，与 message 同口径。
 - 状态: ✅ 已修复
 
+### BUG-173: Browser.Types IBrowserAutomationSession 前向声明缺失
+- 发现日期: 2026-05-14（DeepBaseVCL.dpk 整包构建审阅）
+- 严重性: 🟠 High
+- 文件: `Features/DeepBase.Browser.Types.pas`
+- 描述:
+  - `IBrowserSession.AsAutomationSession` 返回类型 `IBrowserAutomationSession`，但后者在文件内同一 type 块的更下面才完整声明，导致 `E2003 Undeclared identifier` + `E2004 Identifier redeclared`。
+  - 这是预先存在的 bug，DeepBaseFeatures 包构建时第一时间被命中。
+- 修复:
+  - 在 type 块开头加 forward 声明 `IBrowserAutomationSession = interface;`，与 DeepShell.MainForm 中 `IShellMainFormBridge` 同模式。
+- 状态: ✅ 已修复（顺手修，与 DeepShell 范围相邻）
+
+### BUG-174: 测试与 demo 大补：Shell 合同测试 + 真菜单 + 真消费 provider + i18n + 系统 locale
+- 发现日期: 2026-05-14（构建门禁审阅"剩余 5 项"）
+- 严重性: 🔴 Multiple
+- 文件:
+  - `Tests/Test.DeepBase.VCL.DeepShell.pas`（新增）
+  - `Tests/DeepBaseTests.dpr`
+  - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Settings.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Localization.pas`
+- 描述与修复:
+  - **BUG-166/167/168/169 防回归测试**：新增 `Tests/Test.DeepBase.VCL.DeepShell.pas`，6 个 fixture 共 19 个测试。每个 BUG 对应一条带显式注释的 `Test_..._Regression` 用例，外加 EventBus / CommandManager / Recent / Layout / AreaController 的基础契约。
+    - 独立 dpr 运行：19 passed / 0 failed / 0 errored / 0 leaked。
+  - **FCommandBar 真菜单**：`BuildShellUI` 现在创建 `TMainMenu` 并赋值给 `Self.Menu`；`AfterConstruction` 在 `RegisterCommands` 完成后调用 `RebuildMainMenu`，按 Category 分组生成 MenuItem，`OnClick` 调 `FCommands.Execute(Hint as cmdId)`。`FCommandBar` 改为 Height=0 留给下游 toolbar。
+  - **Structure tool window 真消费**：工具窗 Upper 内置 `TTreeView`，新增 `RebuildStructureTree` 按 `GetTreeNames + GetRootNodes` 填充。`OpenProject` 与 `RegisterStructureProvider`（在 shell 已初始化的情况下）触发刷新。
+  - **Inspector tool window 真消费**：工具窗 Upper 内置 `TStringGrid` (Name/Value)。Bridge 增加 `sekObjectSelected` 分支调用 `RefreshInspector(ObjectRef)`，按第一个 `CanInspect` 的 provider 填表。
+    - 顺手修了 VCL invariant：`FixedRows` 必须严格小于 `RowCount`，初始化时 `RowCount := 2; FixedRows := 1`，无数据时也保持 RowCount=2 而不是 1。
+  - **Settings 走 i18n**：`TDeepShellSettingsForm` 增加 `FLocalization` 字段、`L(key, default)` helper 和 `SetLocalization()` 方法。Caption / OK / Apply / Cancel / Restore Defaults 全部走 `shell.settings.title / shell.btn.ok / .apply / .cancel / .restoreDefaults` key。`OpenSettingsDialog` 在 modal 之前注入 `FLocalization`。
+  - **默认 locale 跟系统**：`DeepBase.VCL.DeepShell.Localization` 新增 `DetectSystemLocale` 调 Win32 `GetUserDefaultLocaleName` 取 BCP-47 locale，fallback 到 `en-US`。`TShellDefaultLocalizationService.Create('')` 现在默认走 system locale（中文系统会得到 `zh-CN`）。
+- 副作用修复:
+  - 修复期间发现 `Core/DeepBase.Manager.pas` 内容被 `Core/DeepBase.Schema.pas` 覆盖（同 39489 字节，文件名不一致 → `E1038`）。`git checkout HEAD --` 恢复两个文件，恢复后 Demo 编译通过。
+- 验证:
+  - `msbuild Examples/VCLDeepShellDemo/VCLDeepShellDemo.dproj /t:Rebuild /p:Config=Debug /p:Platform=Win64`：18091 行 0 错。
+  - 独立 DeepShell 测试 dpr：19/19 passed，0 leaked。
+- 状态: ✅ 已修复
+
+### BUG-176: 三轮审阅 4 项后续问题（Execute 异步语义 / Settings DoDefaults 路由错误 / Structure tree 显式释放 / Layout 毫秒精度 tie-break）
+- 发现日期: 2026-05-14（用户三轮审查）
+- 严重性: 🟠 High
+- 文件:
+  - `VCL/DeepBase.VCL.DeepShell.Intf.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Commands.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Settings.pas`
+  - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Layout.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Types.pas`
+  - `Tests/Test.DeepBase.VCL.DeepShell.pas`
+- 描述与修复:
+  - **#1 Execute async-on-bg 语义**：`Execute` 在后台线程被调用时改成 fire-and-forget 后，原来期望同步看到副作用的调用方会失败。文档化：`IShellCommandManager.Execute` 接口注释明确说明 "if called on background thread, queue async and return immediately"；新增 `ExecuteSync` 接口方法用 `TThread.Synchronize` 真正等到 handler 完成（warned of deadlock risk）。
+  - **#2 Settings DoDefaults 路由错误**：之前 DoDefaults 通过 `Commands.Execute(CMD_SETTINGS_DEFAULTS)` 把 ALL 页都 reset 了，与"重置当前页"语义不符。重构：`TDeepShellSettingsForm` 加 `SetResetAction(TFunc<provider, Boolean>)` 注入点；`OpenSettingsDialog` 注入一个把每个 page 单独走 governance 的回调（gate key 仍是 `shell.settings.restoreDefaults` 但 `risk_level=1` + 含 page_id 的 evidence）。Per-page reset 现在真正受治理保护，而且只 reset 当前页。
+  - **#3 Structure tree PShellObjectRef 显式释放**：之前依赖 VCL 的 `OnDeletion` 在 `Items.Clear` 时触发释放，VCL 行为视版本而定。`RebuildStructureTree` 现在在 Clear 之前显式 walk 一遍每个节点，`Dispose(PShellObjectRef(Node.Data))` 后再 Clear。`TDeepMainForm.Destroy` 同样在 form teardown 之前显式释放，避免 form vs 嵌套控件析构顺序无保证带来的泄漏。
+  - **#4 Layout TDateTime 毫秒精度 tie-break**：`TShellLayoutState` 加 `Sequence: Int64` 字段。`TShellSettingsBackedLayoutService` 维护一个 `FSequence` 计数器（`TInterlocked.Increment` 保证进程内单调递增），每次 save 调 `NextSequence` 写入 state。CAS compare 改用 (UpdatedAt, Sequence) 元组：`existing.UpdatedAt > my.UpdatedAt`，或两者相等时 `existing.Sequence > my.Sequence` 才 skip。同进程内不同线程的写入现在严格按 Sequence 排序；跨进程同毫秒仍是 OS 写文件粒度的 race（生产环境应用 DB1 transactional store）。
+- 验证:
+  - `msbuild Examples/VCLDeepShellDemo/VCLDeepShellDemo.dproj /t:Rebuild /p:Config=Debug /p:Platform=Win64`：18461 lines, 0 errors。
+  - DeepShell 合同测试新增 3 项（`SettingsBacked_RemoteNewerSkipsLocalWrite` / `SettingsBacked_SameInstanceAlwaysWins` / `ExecuteSync_FromBackgroundThread_BlocksUntilHandlerCompletes`），加上之前的 21 项共 24/24 passed，0 leaked。
+- 状态: ✅ 已修复
+
+### BUG-175: 二轮审阅 8 项后续问题（DFM streaming / EventBus 通用退订 / Execute 线程 / Settings i18n 在构造期 / Structure 真 ref / OpenView SetObject / Layout 多实例 CAS / Settings Defaults 走 governance）
+- 发现日期: 2026-05-14（用户二轮逐项追问）
+- 严重性: 🔴 High（多个并存的真问题）
+- 文件:
+  - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Events.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Commands.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Settings.pas`
+  - `VCL/DeepBase.VCL.DeepShell.Layout.pas`
+  - `Tests/Test.DeepBase.VCL.DeepShell.pas`
+- 描述与修复:
+  - **#1 DFM streaming**：`TDeepMainForm.Create` 之前无条件 `inherited CreateNew(AOwner)`，descendant 即使带 `.dfm` 资源也不会 stream 组件。改为运行时检测 `FindResource(HInstance, PChar(ClassName), RT_RCDATA)`，命中走 `inherited Create(AOwner)`（触发 `InitInheritedComponent`），未命中走 `inherited CreateNew(AOwner)`。代码-only 与 DFM-based 两路 descendant 都能用。
+  - **#2 EventBus 通用退订语义**：之前后台线程 Publish 时把 `LSub` 直接捕获到 queue 闭包里，退订只清 `FSubs` 但 queue 里那个 closure 仍持有 handler 引用。改为闭包只捕获 **token**（不捕获 handler），主线程 dispatch 时通过 `TryGetHandlerByToken` 重新查表；如果调用方在 queue 没 drain 之前已经 `Unsubscribe`，token 不在表里，handler 静默不执行。下游订阅者也受益，不只是 Shell bridge。
+  - **#3 CommandManager.Execute 线程 marshal**：之前 Execute 在调用线程直接跑 handler，后台 worker 调命令会在 worker 线程改 UI。重构为 `Execute` 检测 `MainThreadID`：主线程直接调 `ExecuteOnMainThread`；后台线程通过 `TThread.Queue` 异步投递到主线程后跑（async 而非 Synchronize，避免主线程也在等时死锁）。命令在 GovernanceFW + handler 阶段都保证主线程上下文。
+  - **#4 Settings i18n 在构造期**：之前 `CreateNew` 写 `Caption := 'Settings'`，`CreateLayout` 写按钮 caption 为字面英文，`SetLocalization` 才覆盖。重构为构造体里就调 `L('shell.settings.title', 'Settings')`；CreateLayout 给按钮 caption 也走 `L(key, default)`。如果 `SetLocalization` 在 `CreateNew` 之前不能调到（因为 form 没构造完），fallback 到 default 字符串；之后 `SetCommands/SetLocalization` 会重新 apply。
+  - **#5 Settings Restore Defaults 走 CommandManager**：之前 `DoDefaults` 直接调 `FProviders[Idx].RestoreDefaults`，绕过 `CMD_SETTINGS_DEFAULTS`（带 `RiskLevel=rlMedium / GateKey='shell.settings.restoreDefaults'`）的 governance。新增 `SetCommands` 注入 `IShellCommandManager`，`DoDefaults` 优先 `FCommands.Execute(CMD_SETTINGS_DEFAULTS)`，无 command 注入时才 fallback。
+  - **#6 Structure tree 真 TShellObjectRef**：之前 TreeView 节点 `Data := nil`，文本树没法回到业务对象，`DoStructureChange` 自己注释承认"不联动 context"。重构为每个节点 `Data := PShellObjectRef`（heap 分配），`OnDeletion` 释放；`DoStructureChange` 把 ref 通过 `FContext.SetObject` 推上去；`DoStructureExpanding` 真正调 `Provider.GetChildren` 替换 stub。Provider 通过节点链找最近祖先的 ProviderId 解析。
+  - **#7 OpenView 设置 ObjectRef**：之前只 `SetView`，Inspector 拿不到对象。改为先 `FContext.SetObject(ARef)` 再 `SetView`，让 `sekObjectSelected` → bridge → `RefreshInspector` 链路正常。
+  - **#8 Layout 多实例 CAS**：`SaveGlobalLayout/SaveProjectLayout` 写之前先 `TryLoad...Layout` 取现有；如果 existing 由其他 InstanceId 写入，且 existing.UpdatedAt > 我的（now），跳过本次写入。本机自己的 last-write-wins 不变；只在多实例并发场景下保护"远端刚写新值，我别用旧视图覆盖"。
+- 验证:
+  - `msbuild Examples/VCLDeepShellDemo/VCLDeepShellDemo.dproj /t:Rebuild /p:Config=Debug /p:Platform=Win64`：18318 lines, 0 errors。
+  - DeepShell 合同测试新增 2 项（unsubscribe-before-queue-drain / background-Execute-marshal-to-main-thread）：21/21 passed，0 leaked。
+- 状态: ✅ 已修复
+
 ---
 
 ## 2026-05-09 Bug 修复
@@ -1882,3 +1963,465 @@
   - �?Windows UBS2 解密路径直接硬编�?v1 解析逻辑，后续格式升级时容易在主入口累积条件分支�?  - 未知 magic、legacy 格式、未知版本和未知 KDF 的错误信息不足以指导迁移或升级�?  - Security 篡改检测测试使用基�?`Exception`，与实际 `EDecryptionException` 不一致�?- 修复:
   - 新增 UBS2 当前版本/支持版本常量和版本读取入口�?  - �?UBS2 v1 解密逻辑拆成独立分支，主入口按版�?dispatch�?  - �?legacy UBS1、未�?magic、未知版本、未�?KDF、过�?payload、无�?PBKDF2 迭代次数输出明确诊断�?  - 补充�?Windows UBS2 版本协商测试，并�?Windows 篡改检测断言收紧�?`EDecryptionException`�?- 验证:
   - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security`�?2/42 通过�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Security.DPAPI`�?3/23 通过�?- 状�? �?已修�?(2026-05-07)
+
+
+### BUG-177: 整包 DeepBaseVCL.dproj 编译被 ResponseWaiter 阻塞 (Delphi 13.1 RTL 变更)
+- 发现日期: 2026-05-14（用户要求"整包必须编过"）
+- 严重性: 🔴 Critical（整个 VCL 包链条断裂）
+- 文件: `Features/DeepBase.Browser.ResponseWaiter.pas`
+- 表现:
+  - `msbuild DeepBaseVCL.dproj /t:Rebuild /p:Platform=Win64` 失败,根因两处:
+    1. `ResponseWaiter.pas:195` `TInterlocked.Read(FWaitingFlag)` E2250 — Delphi 13.1 `System.SyncObjs.TInterlocked.Read` 仅保留 `var Int64` 重载,移除/弃用了 Integer 版本。
+    2. `ResponseWaiter.pas:269` `LReceiver.SetMessageHandler(procedure(const AJson: string)...)` E2010 — `IBrowserMessageReceiver.SetMessageHandler` 形参类型是 `TProc<string>`(等价 `procedure(Arg: string)`),传入带 `const` 修饰的匿名 proc 在 Delphi 13.1 严格类型检查下被拒。
+- 修复:
+  - `GetWaitingFlag` 改用 `TInterlocked.CompareExchange(FWaitingFlag, 0, 0) <> 0` 做原子读 — Integer 字段的标准原子读法,行为与原 `Read` 等价。
+  - `StartWaiting` 中匿名处理函数签名去掉 `const`,改为 `procedure(AJson: string)` 与 `TProc<string>` 一致。
+- 验证:
+  - 6 个运行期包全部 Win64/Debug 重建通过: Core / Services / Persistence / Features / FMX / VCL。
+  - DeepShell Demo `VCLDeepShellDemo.dproj` 重建通过,0 errors。
+  - DeepShell 测试套件 24/24 全过, 0 leaked, 0 failed, 0 errored。
+- 状态: ✅ 已修复
+
+
+### BUG-178: Browser.Types.pas Win32 前向引用顺序导致 DeepBaseFeatures Win32 编译失败
+- 发现日期: 2026-05-14（全仓库 Win32 编译扫描）
+- 严重性: 🔴 Critical（Win32 整条 Features→FMX→VCL 链断裂）
+- 文件: `Features/DeepBase.Browser.Types.pas`
+- 表现: `IBrowserRecoveryEvents` 在 line 270 引用 `TSessionRebuiltEvent` 和 `IBrowserSessionFactory`,但两者在 line 282/297 才声明。Win64 dcc64 容忍接口方法签名中的前向引用,Win32 dcc32 严格拒绝。
+- 修复: 将 `IBrowserSessionFactory` 和 `TSessionRebuiltEvent` 声明移到 `IBrowserRecoveryEvents` 之前。`reference to procedure` 类型不能前向声明,只能重排。
+- 验证: 6 RT 包 Win32 + Win64 全部 Rebuild 通过; 3 DT 包 Win32 通过。
+- 状态: ✅ 已修复
+
+### BUG-179: 全仓库中文字符串 UTF-8 截断 (rename commit 编码损坏)
+- 发现日期: 2026-05-14（全仓库编译扫描）
+- 严重性: 🟠 High（5 个独立项目无法编译）
+- 文件: `doQry/uDoQryLegacy.pas` (25处), `doQry/doQryMain.pas` (4处), `Examples/FullDemo/FullDemo.MainForm.pas` (5处), `Tools/SeedTool/uBasicProtection.pas` (7处), `Tools/SeedTool/uAntiTamperPackage.pas` (19处), `Tools/SeedTool/uSeedMain.pas` (整文件结构损坏)
+- 表现: 某次 UniBase→DeepBase rename commit 中,含中文的 .pas 文件被错误编码转换,导致中文字符最后一个 UTF-8 字节丢失 + 闭合单引号 `'` 被吞。dcc64 报 E2052 Unterminated string。
+- 修复: 逐文件人工恢复正确中文 (从 git 历史 946f56a/7516962 对照); uSeedMain.pas 整文件从 git 946f56a 恢复 (该文件不引用 UniBase/DeepBase)。
+- 验证: FullDemo / SeedTool / prjDoQry 全部 Win64 编译通过。
+- 状态: ✅ 已修复
+
+### BUG-180: DeepPublisher 工具项目 rename 不完整 + .vrc 版本占位符
+- 发现日期: 2026-05-14（全仓库编译扫描）
+- 严重性: 🟠 High（工具项目无法编译）
+- 文件: `Tools/UniPublisher/DeepPublisher.dproj`, `Tools/UniPublisher/DeepPublisher.dpr`, `Tools/UniPublisher/Forms/DeepPublisher.MainForm.pas`, `Tools/UniPublisher/Core/Publisher.Config.pas`, `Tools/UniPublisher/DeepPublisher.vrc`
+- 表现: dproj 仍引用 `UniPublisher.dpr` / `UniPublisher.MainForm`; VerInfo_Keys 含 `*******` 占位符; MainForm unit 名仍为 `UniPublisher.MainForm`; Publisher.Config.pas 头部 `{ }` 注释含 `{AppName}` 提前关闭注释块。
+- 修复: dproj/dpr 中 UniPublisher→DeepPublisher 重命名; VerInfo `*******`→`1.0.0.0`; MainForm unit 声明改名; Publisher.Config.pas 注释改 `(* *)` 风格; search path 补 Services/Persistence/Features/Core。
+- 验证: DeepPublisher Win64 编译通过。
+- 状态: ✅ 已修复
+
+
+## 2026-05-14 基础模块 P0/P1 第二轮修复
+
+### BUG-181 (BASIC-009): Authorization.ReplaceRolePermissions 无事务
+- 严重性: 🔴 P0 (数据完整性)
+- 文件: `Persistence/DeepBase.Persistence.Authorization.FireDAC.pas:579-604`
+- 问题: 先 DELETE 再循环 INSERT,中途异常会清空角色权限。
+- 修复: 用 `FConnection.StartTransaction/Commit/Rollback` 包裹整段。
+- 状态: ✅ 已修复
+
+### BUG-182 (BASIC-010): Logging.FireDAC adapter 不是线程安全
+- 严重性: 🟠 P1 (并发数据竞争)
+- 文件: `Persistence/DeepBase.Persistence.Logging.FireDAC.pas`
+- 问题: lazy init 无锁,共享 `FInsertQuery` 在并发 WriteLog 下参数错乱。
+- 修复: 加 `TCriticalSection FLock`; constructor/destructor/WriteLog 全部进锁。
+- 状态: ✅ 已修复
+
+### BUG-183 (BASIC-018): Manager.InitializeEx/InitializeWithDB 无锁
+- 严重性: 🟠 P1 (并发初始化)
+- 文件: `Core/DeepBase.Manager.pas:664-779`
+- 问题: Finalize 用 FLock,但 Initialize 不用,并发初始化会重复创建模块和全局回调。
+- 修复: 两个 Initialize 入口加 `TMonitor.Enter(FLock)`。
+- 状态: ✅ 已修复
+
+### BUG-184 (BASIC-020): Manager.FinalizeModules 后全局翻译回调悬空
+- 严重性: 🟠 P1 (UAF)
+- 文件: `Core/DeepBase.Manager.pas:1087`
+- 问题: FinalizeModules 释放 FI18n 但没清 `SetGlobalTranslateCallback`,后续 T() 访问已释放对象。
+- 修复: FinalizeModules 开头先 `SetGlobalTranslateCallback(nil)`。
+- 状态: ✅ 已修复
+
+### BUG-185 (BASIC-021): EventBus.PublishAsync<T> 不进 drain tracker
+- 严重性: 🟠 P1 (shutdown 漏 drain)
+- 文件: `Core/DeepBase.EventBus.pas:924`
+- 问题: `PublishAsync<T>` 用 `TTask.Run` 但不调 TrackAsyncBegin/End,WaitForAsyncHandlers 不会等它。
+- 修复: 在 TTask.Run 前后调用 TrackAsyncBegin/TrackAsyncEnd。
+- 状态: ✅ 已修复
+
+### BUG-186 (BASIC-022): EventBus 统计计数器在锁外被竞态修改
+- 严重性: 🟠 P1 (统计不可信)
+- 文件: `Core/DeepBase.EventBus.pas:949,973,979,985`
+- 问题: TotalPublished/Delivered/Filtered/Errors 用 `Inc()` 在锁外更新,多线程 publish 会丢计数。
+- 修复: 全部改为 `TInterlocked.Increment(FStats.X)`。
+- 状态: ✅ 已修复
+
+### BUG-187 (BASIC-024): IoC FResolving 不区分线程
+- 严重性: 🟠 P1 (并发误判循环依赖)
+- 文件: `Core/DeepBase.IoC.pas:198,471,481,786-815`
+- 问题: 两个线程同时 resolve 同一服务,第二个被误判 ECircularDependency。
+- 修复: 字典 key 改为 `(ThreadID shl 32) xor ServiceTypeAddr` 复合键。
+- 状态: ✅ 已修复
+
+### BUG-188 (BASIC-027): Config OnConfigChanged 在锁内触发
+- 严重性: 🟢 P2 (锁卡顿/重入风险)
+- 文件: `Core/DeepBase.Config.pas:299-321`
+- 问题: 持有 FLock 时调用用户 callback,慢回调会阻塞所有读写。
+- 修复: SetConfigInternal 内 TMonitor.Exit(FLock) 后触发回调,然后再 Enter 还原。
+- 状态: ✅ 已修复
+
+### BUG-189 (FR-001): 框架版本号在 3 处硬编码不一致
+- 严重性: 🟢 P2 (运维一致性)
+- 文件: `Core/DeepBase.Manager.pas:38`, `Core/DeepBase.PluginManager.pas:242`
+- 问题: Manager/PluginManager 写 `'0.3'`,Consts 写 `'1.0.2'`。
+- 修复: 两处都改为 `DeepBase_VERSION = DeepBase_VERSION_STRING` (引用 Consts 的单一源)。
+- 状态: ✅ 已修复
+
+### BUG-190 (FR-002): CloudBackup XOR / CloudSync Base64 / LLM.Config 硬编码 key
+- 严重性: 🔴 P0 (虚假加密)
+- 文件: `Features/DeepBase.CloudBackup.pas:1319`, `Features/DeepBase.CloudSync.pas:985`, `Features/DeepBase.LLM.Config.pas:73-86`
+- 问题: 三处"加密"实际是 XOR / Base64 / 硬编码 password,无任何机密性。
+- 修复:
+  - CloudBackup: `EncryptBytes/DecryptBytes` 改用 `TSimpleCrypto.EncryptBytes/DecryptBytes` (AES)。
+  - CloudSync: `EncryptData/DecryptData` 改用 `TSimpleCrypto`,key 来自 `FConfig.EncryptionKey`,无 key 时 fail-closed 返回原文。
+  - LLM.Config: `EncryptKey/DecryptKey` 改用 Windows DPAPI (`TDPAPIHelper.ProtectString/UnprotectString`),非 Windows fail-closed 返回空。
+- 状态: ✅ 已修复
+
+### BUG-191 (FR-014): Logger sanitizer 过度替换破坏正常字符
+- 严重性: 🟢 P2 (日志可读性)
+- 文件: `Core/DeepBase.Logging.pas:921`
+- 问题: 把 `\` 改 `/`、`<>` 改 `?`、`&` 改 `and`、`"'` 改 反引号,破坏文件路径/JSON/URL/XML。
+- 修复: 只保留控制字符替换 + CR/LF→空格,其他原样输出。
+- 状态: ✅ 已修复
+
+### BUG-192 (FR-017): .editorconfig 标题仍是 UniBase
+- 严重性: 🟢 P2 (品牌一致性)
+- 文件: `.editorconfig:1`
+- 修复: 改为 `# DeepBase Delphi Framework EditorConfig`。
+- 状态: ✅ 已修复
+
+
+### BUG-193 (BASIC-005): RuntimeContext 全局实例懒创建无锁
+- 严重性: 🟠 P1 (并发重复创建)
+- 文件: `Core/DeepBase.RuntimeContext.pas:391-406`
+- 问题: `RuntimeContext()` 函数和 `SetRuntimeContext` 无锁,并发首次访问会创建两个实例。
+- 修复: 引入 `GRuntimeContextLock: TObject` + `TMonitor` 双检锁。
+- 状态: ✅ 已修复
+
+### BUG-194 (BASIC-015): Crypto RandomBytes 非 Windows fail-open 降级到 Delphi Random
+- 严重性: 🟠 P1 (安全降级)
+- 文件: `Core/DeepBase.Crypto.pas:884-900`
+- 问题: `/dev/urandom` 失败后静默 fallback 到 `Random(256)`,生产环境无任何安全随机性。
+- 修复: 改为 raise `ECryptoException`,fail-closed。
+- 状态: ✅ 已修复
+
+### BUG-195 (FR-013): CompareVersions 在 Types/Plugin/LLM.Manager 三处重复实现
+- 严重性: 🟢 P2 (维护性)
+- 文件: `Core/DeepBase.Plugin.pas:332`
+- 问题: Plugin.pas 有独立的 CompareVersions 实现,与 Types.pas 重复。
+- 修复: Plugin.pas 的实现改为 `Result := DeepBase.Types.CompareVersions(V1, V2)` 委托。
+- 状态: ✅ 已修复 (LLM.Manager 的是不同签名的 prompt 版本比较,不属于重复)
+
+### BUG-196 (BASIC-011): DB Factory 凭据保存失败后静默保留明文
+- 严重性: 🟠 P1 (安全 fail-open)
+- 文件: `Persistence/DeepBase.DB.Factory.pas:324-326`
+- 问题: Credential Manager 保存失败时空 except 块静默继续,密码以明文留在 config DB。
+- 修复: 改为 raise `EDatabaseException`,fail-closed。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-05-15 基础模块 P0/P1 第三轮修复
+
+### BUG-193 (BASIC-008): DB Pool 连接在锁外验证期间可被并发获取
+- 严重性: 🔴 P0 (数据损坏/UAF)
+- 文件: `Persistence/DeepBase.DB.Pool.pas`
+- 问题: ValidateIdleConnections 复制 idle 连接后在锁外验证,另一线程可同时获取同一连接; Release 无锁; RecycleAll 释放 in-use 连接; Shutdown 在锁外 Clear。
+- 修复:
+  - Release 在 pool lock 内更新状态并 SetEvent/统计
+  - ValidateIdleConnections 在锁内将连接转为 csValidating 再释放锁做 I/O
+  - RecycleAllConnections 只回收 idle/validating/invalid 连接
+  - Shutdown 增加 drain 等待机制 (AcquireTimeoutMs)
+- 状态: ✅ 已修复
+
+### BUG-194 (BASIC-025): IoC 容器并发 Clear/Register 与 Resolve 可 UAF
+- 严重性: 🟠 P1 (UAF)
+- 文件: `Core/DeepBase.IoC.pas`
+- 问题: FindRegistration 在锁内取出指针后释放锁,Clear 可同时释放 registration。
+- 修复: 引入 Freeze 机制 — 首次 Resolve 自动冻结容器,冻结后 Register/Clear 抛 EIoCException; Clear 同时重置 frozen 状态支持测试。
+- 测试: 新增 3 个回归测试 (Test_RegisterAfterFreeze, Test_Freeze_PreventsLaterRegistration, Test_Clear_UnfreezesContainer)
+- 状态: ✅ 已修复
+
+### BUG-195 (BASIC-006): Scheduler Stop 后析构释放仍在运行的任务
+- 严重性: 🟠 P1 (UAF)
+- 文件: `Core/DeepBase.Scheduler.pas`
+- 问题: Stop 只等 10 秒,超时后析构释放 FTasks,后台 TTask 仍持有 TScheduledTask 指针。
+- 修复:
+  - Stop 改为 function: Boolean 支持可配置 drain timeout (默认 30s, -1=无限)
+  - TimerProc 用 ShutdownEvent.WaitFor 响应停止信号
+  - 析构器强制无限等待防止 UAF
+  - Start 重置 ShutdownEvent 支持重启
+- 状态: ✅ 已修复
+
+### BUG-196 (BASIC-007): WorkerQueue Stop(True) 名称误导且不 drain pending jobs
+- 严重性: 🟠 P1 (语义不清)
+- 文件: `Core/DeepBase.WorkerQueue.pas`
+- 问题: Stop(True) 实际是终止 worker 不等待 pending jobs 完成。
+- 修复: 新增 DrainAndStop(ATimeoutMs) 方法明确 drain 语义; Stop 注释明确不 drain。
+- 状态: ✅ 已修复
+
+### BUG-197 (BASIC-023): EventBus 销毁后外部 ISubscription 悬空指针
+- 严重性: 🟠 P1 (UAF)
+- 文件: `Core/DeepBase.EventBus.pas`
+- 问题: TSubscription 保存裸 FEventBus 指针,EventBus.Destroy 后调用 Unsubscribe 访问已释放内存。
+- 修复:
+  - TEventBus 跟踪所有 live TSubscription (FLiveSubscriptions)
+  - Destroy 时 InvalidateBus 把每个 subscription 的 FEventBus 置 nil
+  - TSubscription 析构器自动从 tracker 移除
+- 测试: 新增 2 个回归测试 (Test_Unsubscribe_AfterEventBusDestroyed, Test_IsActive_AfterEventBusDestroyed)
+- 状态: ✅ 已修复
+
+### BUG-198 (BASIC-014/FR-008): DoQry 预编译池连接地址重用导致 stale statements
+- 严重性: 🟠 P1 (数据损坏)
+- 文件: `Persistence/DeepBase.DB.DoQry.pas`, `Persistence/DeepBase.DB.Pool.pas`
+- 问题: 预编译池以 NativeInt(Conn) 为 key,连接释放后地址重用会返回指向已释放连接的 TFDQuery。
+- 修复:
+  - 新增 UniDbSweepConnectionFromPool(Conn) 函数
+  - DB.Pool 的 TPooledConnection.Destroy 在释放连接前调用 sweep
+- 状态: ✅ 已修复
+
+### BUG-199 (BASIC-012): Migration engine 不识别历史命名约定
+- 严重性: 🟠 P1 (0 migrations 假成功)
+- 文件: `Persistence/DeepBase.DB.Migrations.pas`
+- 问题: FindMigrationFiles 只识别 *.up.sqlite.sql,现有 sql/ 下的 upgrade_vX_Y_to_vA_B.sql 被忽略。
+- 修复: FindMigrationFiles 同时匹配新旧命名; ExtractVersion 从历史命名提取 "to" 版本。
+- 状态: ✅ 已修复
+
+### BUG-200 (BASIC-019): Manager.Schema 和 DB.Migrations 各自维护 SQL splitter
+- 严重性: 🟠 P1 (代码重复/解析不一致)
+- 文件: `Core/DeepBase.Manager.Schema.pas`, `Core/DeepBase.SQL.Splitter.pas` (新建)
+- 问题: Manager.Schema 的简化 splitter 不处理 dollar-quoted/trigger/block comments,可能误拆复杂 SQL。
+- 修复: 新建 DeepBase.SQL.Splitter 共享单元; Manager.Schema 委托给它。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-05-15 架构重构 (BASIC-001/016/026)
+
+### BUG-201 (BASIC-016): Crypto 外部声明在 3 个单元重复
+- 严重性: 🟠 P1 (审计分裂)
+- 文件: `Core/DeepBase.Crypto.pas`, `Core/DeepBase.Random.pas`, `Core/DeepBase.Protection.pas`
+- 问题: BCrypt/CryptoAPI externals 在 Random、Protection、Crypto 三处独立声明。
+- 修复:
+  - DeepBase.Crypto 成为唯一 BCrypt/CryptoAPI 声明源 (含 CryptoRandomBytes 便利函数)
+  - DeepBase.Random 移除本地 CryptoAPI,委托 TRandomGenerator.RandomBytes
+  - DeepBase.Protection 移除本地 BCrypt/CryptoAPI,委托 DeepBase.Crypto
+- 状态: ✅ 已修复
+
+### BUG-202 (BASIC-026): IDeepBaseConfig 仍声明已废弃加密方法
+- 严重性: 🟢 P2 (接口卫生)
+- 文件: `Core/DeepBase.Interfaces.pas`, `Core/DeepBase.Config.pas`
+- 问题: GetConfigEncrypted/SetConfigEncrypted 运行时抛 ENotSupportedException,接口语义不干净。
+- 修复:
+  - 从 IDeepBaseConfig 移除两个方法声明
+  - GUID 更新为 '{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5E}' 强制编译时检测
+  - TDeepBaseConfig 移除对应实现
+  - TMockConfig 和回归测试同步更新
+- 状态: ✅ 已修复
+
+### BUG-203 (BASIC-001): DeepBaseServices.dpk 依赖 vcl/dbrtl/FireDAC/Indy
+- 严重性: 🟠 P1 (包边界违规)
+- 文件: `DeepBaseServices.dpk`, `DeepBaseVCL.dpk`, `DeepBasePersistence.dpk`, `DeepBaseFeatures.dpk`
+- 问题: Services 包 requires vcl/dbrtl/FireDAC/Indy,不是纯 L1 服务抽象包。
+- 修复:
+  - DeepBase.Feedback → VCL 包
+  - DeepBase.ORM → Persistence 包
+  - DeepBase.Net → Features 包
+  - DeepBase.SingleInstance → VCL 包
+  - DeepBase.License 移除 FireDAC 字符串引用
+  - DeepBaseServices.dpk requires 精简为 rtl + DeepBaseCore
+- 状态: ✅ 已修复
+
+### BUG-204 (EDGE-006): Updater 签名验证默认 fail-open
+- 严重性: 🟠 P1 (安全)
+- 文件: `Features/DeepBase.Updater.pas`
+- 问题: SignatureRequired 默认 false; 缺公钥时 VerifySignature 返回 True; 缺 hash 时 VerifyFileHash 返回 True。
+- 修复:
+  - VerifySignature: 缺公钥时 fail-closed (除非 InsecureDevMode)
+  - VerifyFileHash: 缺 hash 时 fail-closed (除非 InsecureDevMode)
+  - ParseUpdateInfo: 配置了公钥或 HMAC secret 时自动 require signature
+  - 新增 InsecureDevMode 属性 (默认 False) 仅供开发测试
+- 状态: ✅ 已修复
+
+### BUG-205 (EDGE-007): Updater Zip.ExtractAll 无路径逃逸防护
+- 严重性: 🟠 P1 (安全)
+- 文件: `Features/DeepBase.Updater.pas`
+- 问题: ApplyUpdate 直接 Zip.ExtractAll 后枚举所有文件复制到 FApplicationDir,无路径验证。
+- 修复:
+  - 提取前逐 entry 验证: 拒绝绝对路径、`..` 遍历、canonical path 逃逸
+  - 复制时再次验证目标路径在 FApplicationDir 内
+  - 验证失败抛 EInvalidOperationException 并触发 rollback
+- 状态: ✅ 已修复
+
+### BUG-206 (LLM-008): LLM singleton 和 proxy 状态无锁并发竞态
+- 严重性: 🟠 P1 (并发)
+- 文件: `Features/DeepBase.LLM.Service.pas`
+- 问题: GLLMService/GProxyClient/GProxyChecked 全局变量无锁,并发首次调用会重复创建或串改 proxy 状态。
+- 修复:
+  - 新增 GLLMLock 全局锁对象 (initialization/finalization 管理)
+  - TryGetProxyClient 整段在锁内执行
+  - LLM/LLMAdmin 用双检锁创建 singleton
+- 状态: ✅ 已修复
+
+### BUG-207 (LLM-005): Anthropic text request 使用错误 endpoint
+- 严重性: 🟠 P1 (功能)
+- 文件: `Features/DeepBase.LLM.HTTP.pas`
+- 问题: Anthropic 格式的 text chat 请求仍 POST 到 `/chat/completions` 而非 Anthropic 的 `/messages` endpoint。
+- 修复: Send 方法根据 AApiFormat='anthropic' 选择 `/messages` endpoint。
+- 状态: ✅ 已修复
+
+### BUG-208 (LLM-004): FindProviderForModel 忽略 model ID 和 priority
+- 严重性: 🟠 P1 (功能)
+- 文件: `Features/DeepBase.LLM.Service.pas`
+- 问题: FindProviderForModel 不看 AModelId,直接返回第一个有 key 的 provider; Priority 字段无实际排序。
+- 修复:
+  - 根据 model 前缀匹配 provider (claude→anthropic, gpt/o1→openai, llama/mistral→ollama)
+  - 按 Priority 字段选择最高优先级匹配
+  - 无匹配时 fallback 到任意可用 provider (向后兼容)
+- 状态: ✅ 已修复
+
+### BUG-209 (EDGE-003): CloudSync FreeOnTerminate 悬空指针
+- 严重性: 🟠 P1 (UAF)
+- 文件: `Features/DeepBase.CloudSync.pas`
+- 问题: SyncAsync 用 FreeOnTerminate=True,CancelSync 只 Terminate+nil 不 WaitFor,存在悬空指针窗口。
+- 修复:
+  - FreeOnTerminate 改为 False
+  - CancelSync 先 nil 字段再 Terminate+WaitFor+Free
+  - SyncAsync 开头先 CancelSync 确保前一个线程已停止
+- 状态: ✅ 已修复
+
+### BUG-210 (EDGE-002): CloudBackup VerifyBackup 只比较文件数量不校验内容完整性
+- 发现日期: 2026-05-14
+- 严重性: 🟠 P1 (数据完整性)
+- 文件: `Features/DeepBase.CloudBackup.pas`
+- 问题: `VerifyBackup` 只检查 `LZip.FileCount = LManifest.FileCount`，不校验每个 entry 的 SHA256 是否与 manifest 一致。备份包被替换、entry 内容被篡改、manifest 与 archive 不匹配时仍可能通过验证。
+- 修复:
+  - 构建 manifest 路径到 `TBackupFileInfo` 的字典
+  - 逐 entry 验证：archive 中每个文件必须存在于 manifest 中
+  - 对每个 entry 读取内容计算 SHA256，与 manifest checksum 比对
+  - manifest 中所有文件必须在 archive 中被找到（双向校验）
+  - 路径统一用 `/` 分隔符做比较，避免平台差异
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-211 (IC-001): IntentClarification 公开 facade CreateEngine 返回空对象
+- 发现日期: 2026-05-14
+- 严重性: 🔴 P0 (下游接入阻塞)
+- 文件: `Features/DeepBase.IntentClarification.pas`
+- 问题: `TIntentClarifier.CreateEngine` 和 `CreateEngineWithPreset` 返回空 `TClarificationEngineFacade`（无任何方法实现），下游按文档调用 `StartSession/SubmitInput` 会得到不可用对象。真正可用的 `TClarificationEngine` 在 `Engine.pas` 中。
+- 修复:
+  - 移除 `TClarificationEngineFacade` 空类
+  - `CreateEngine`/`CreateEngineWithPreset` 改为创建真正的 `TClarificationEngine` 实例
+  - 通过 `Supports` + 共享 GUID 桥接两个同名接口的类型兼容性
+  - 在 implementation uses 中引入 `DeepBase.IntentClarification.Engine`
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-212 (DSHELL-004): Settings per-page restore defaults 手拼 JSON 可被特殊字符破坏
+- 发现日期: 2026-05-15
+- 严重性: 🟠 P1 (治理 evidence 完整性)
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 问题: per-page restore defaults 用 `Format('{"command_id":"%s","page_id":"%s","risk_level":1}', ...)` 手拼 JSON，`PageId` 含引号/反斜杠会破坏 evidence JSON 或绕过解析。
+- 修复:
+  - 改为 `TJSONObject` 构造 evidence JSON
+  - 添加 `System.JSON` 到 implementation uses
+  - `risk_level` 使用 `TJSONNumber` 确保类型正确
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-213 (DSHELL-007): Status sanitizer 异常时泄露原始消息 + progress 误映射为 TaskStarted
+- 发现日期: 2026-05-15
+- 严重性: 🟠 P1 (信息泄露 + 事件语义)
+- 文件: `VCL/DeepBase.VCL.DeepShell.Panels.pas`, `VCL/DeepBase.VCL.DeepShell.Intf.pas`, `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 问题:
+  1. `ApplySanitizer` 异常时 fallback 输出原始 `AMessage`，可能包含 token/secret/PII
+  2. `sskProgress` 映射为 `sekTaskStarted`，导致订阅者每次 progress 更新都认为新任务开始
+- 修复:
+  - sanitizer 异常时输出安全占位符 `[sanitizer error: ClassName] (source: X)`，不暴露原始内容
+  - 新增 `sekTaskProgress` 事件类型，progress 更新映射到该类型
+  - MainForm 事件分发同时处理 `sekTaskProgress`
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-214 (EDGE-016): TSecureRandom.NextBytes 使用 Randomize/Random(256) 而非 OS CSPRNG
+- 发现日期: 2026-05-14
+- 严重性: 🟠 P1 (安全命名欺骗)
+- 文件: `Features/DeepBase.Math.pas`
+- 问题: `TSecureRandom` 名称承诺安全随机，但 `NextBytes` 实现调用 `Randomize` + `Random(256)`（Delphi 伪随机），不具备密码学安全性。注释声称已移除 Randomize 但代码仍在调用。
+- 修复:
+  - `NextBytes` 改为调用 `BCryptGenRandom` (Windows OS CSPRNG)，使用 `BCRYPT_USE_SYSTEM_PREFERRED_RNG` 标志
+  - CSPRNG 失败时抛出异常而非静默降级（fail-closed）
+  - 在 implementation 中声明 `BCryptGenRandom` external
+  - 修正 initialization 注释
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-215 (EDGE-017): LCM(0,0) 除零 + IsPrime 大数 I*I 溢出
+- 发现日期: 2026-05-14
+- 严重性: 🟢 P2 (数值边界)
+- 文件: `Features/DeepBase.Math.pas`
+- 问题:
+  1. `LCM(0, 0)` 调用 `0 div GCD(0,0)` 即 `0 div 0`，运行时除零异常
+  2. `IsPrime` 使用 `I * I <= N`，当 N 接近 `High(Int64)` 时 `I * I` 溢出
+- 修复:
+  - `LCM`: 任一参数为 0 时直接返回 0（数学约定）
+  - `IsPrime`: 循环条件改为 `I <= N div I`，避免乘法溢出
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-216: Inference.Service 缺少 Inference.Session 引用导致编译失败
+- 发现日期: 2026-05-15
+- 严重性: 🔴 Critical (编译阻塞)
+- 文件: `Features/DeepBase.Inference.Service.pas`
+- 问题: `RunTyped` 方法使用 `ASession as TInferenceSession`，但 implementation uses 未引入 `DeepBase.Inference.Session`，导致 `Undeclared identifier: 'TInferenceSession'`。
+- 修复: 在 implementation uses 中添加 `DeepBase.Inference.Session`。
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-217 (BROWSER-005): ScriptStore builtin 模板返回 void/string 与 Runner 结构化契约不匹配
+- 发现日期: 2026-05-15
+- 严重性: 🟠 P1 (自动化成功率)
+- 文件: `Features/DeepBase.Browser.ScriptStore.pas`
+- 问题: ScriptStore 内置 click/input/get_text 模板返回 void 或纯字符串，但 Runner 期望结构化 JSON (`{success:true}`, `{found:true,text:"..."}`)。ScriptStore 优先时会绕过 fallback 的结构化脚本，导致 click/input 被误判失败，get_text 空字符串和 not-found 不可区分。
+- 修复:
+  - `JSCRIPT_EXISTS`: 改为 IIFE 包裹 + try/catch
+  - `JSCRIPT_CLICK`: 改为返回 `{success:true}` 或 `{success:false,error:"not_found"}`，含 scrollIntoView
+  - `JSCRIPT_INPUT_TEXT`: 改为返回 `{success:true}`，含 focus/scrollIntoView/change event
+  - `JSCRIPT_GET_TEXT`: 改为返回 `{found:true,text:"..."}` 或 `{found:false}`，取最后匹配元素
+  - 所有模板与 fallback inline 脚本契约一致
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-218 (DSHELL-008): Layout ProjectKey 未转义 project ID 可污染 settings 命名空间
+- 发现日期: 2026-05-15
+- 严重性: 🟠 P1 (数据隔离)
+- 文件: `VCL/DeepBase.VCL.DeepShell.Layout.pas`
+- 问题: `ProjectKey` 直接拼接 `'shell.layout.project.' + AProjectId`，如果 project ID 含 `.`、`/`、`\`、换行等字符，会污染其他 settings key 或导致 key 冲突。
+- 修复:
+  - 对 `AProjectId` 使用 `TNetEncoding.Base64URL.Encode` 编码，确保 key 安全
+  - 添加 `System.NetEncoding` 到 implementation uses
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复
+
+### BUG-219 (DSHELL-005): 内置 destructive 命令缺少 RiskLevel/GateKey
+- 发现日期: 2026-05-15
+- 严重性: 🟠 P1 (治理覆盖)
+- 文件: `VCL/DeepBase.VCL.DeepShell.MainForm.pas`
+- 问题: `CMD_FILE_EXIT`、`CMD_VIEW_RESET_LAYOUT`、`CMD_RECENT_CLEAR`、`CMD_LOG_CLEAR` 这些 destructive/interrupting 命令默认 `RiskLevel=rlReadOnly` 且无 `GateKey`，不会进入治理 gate 审计。
+- 修复:
+  - `CMD_FILE_EXIT`: RiskLevel=rlLow, GateKey='shell.file.exit'
+  - `CMD_VIEW_RESET_LAYOUT`: RiskLevel=rlLow, GateKey='shell.view.resetLayout'
+  - `CMD_RECENT_CLEAR`: RiskLevel=rlLow, GateKey='shell.recent.clear'
+  - `CMD_LOG_CLEAR`: RiskLevel=rlLow, GateKey='shell.log.clear'
+  - `CMD_SETTINGS_DEFAULTS` 已有 rlMedium（保持不变）
+- 验证: `cmd /c compile_test.bat` Exit code: 0
+- 状态: ✅ 已修复

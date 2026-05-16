@@ -13,7 +13,7 @@ unit DeepBase.Speech.Registry;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections,
+  System.SysUtils, System.Classes, System.SyncObjs, System.Generics.Collections,
   System.Generics.Defaults;
 
 type
@@ -53,10 +53,24 @@ implementation
 
 class procedure TSpeechRegistry.EnsureInit;
 begin
+  // Atomic lazy initialization of FLock via CompareExchange
   if FLock = nil then
-    FLock := TObject.Create;
+  begin
+    var LNewLock := TObject.Create;
+    if TInterlocked.CompareExchange(Pointer(FLock), Pointer(LNewLock), nil) <> nil then
+      LNewLock.Free;
+  end;
+  // FBackends initialized under FLock once FLock is guaranteed non-nil
   if FBackends = nil then
-    FBackends := TList<TSpeechBackendInfo>.Create;
+  begin
+    TMonitor.Enter(FLock);
+    try
+      if FBackends = nil then
+        FBackends := TList<TSpeechBackendInfo>.Create;
+    finally
+      TMonitor.Exit(FLock);
+    end;
+  end;
 end;
 
 class procedure TSpeechRegistry.Register(const AInfo: TSpeechBackendInfo);

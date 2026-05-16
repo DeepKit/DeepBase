@@ -1,5 +1,5 @@
 # deepBase 开发任务
-> **最后更新**: 2026-05-14
+> **最后更新**: 2026-05-16
 > **项目状态**: 框架主体已完成；DeepKit DB4 统一认证/支付后端已独立部署到服务器，当前进入备案/DNS/HTTPS、微信支付接入、IntentClarification Phase 2 接入修复、全局生命周期协议和发布门禁可信化阶段。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；已完成任务归档到历史文档；Bug 修复记录写入 `bugfix.md`。
 
@@ -304,35 +304,37 @@
 - [ ] Shell 主窗体加一条命令 `shell.governance.toggleObserve`（仅 Pro/Admin 可见），方便在演示和验收期切换观察 / 阻断模式。
 
 ### DESKTOP-P1-2026-05-14-UI: DeepShell UI 完整性补全
-- **状态**: 待开发
+- **状态**: 进行中
 - **来源**: 2026-05-14 第二轮门禁审阅"重要问题"列表中关于 UI 呈现的项目。Shell 当前能编译但还不是"完整可体验"。
 - **任务**:
-- [ ] `FCommandBar` 不再是空面板：把内置命令（File / View / Tools / Help 几个 category）按注册顺序生成菜单项 + 工具栏按钮，绑定 `IShellCommandManager.Execute`。下游可清空再覆盖。
-- [ ] Structure tool window 真正消费 `IShellStructureProvider`：内置一个 `TTreeView`-based 结构窗，按 `GetTreeNames` 显示多个根树，按 `HasChildren / GetChildren` 懒加载，节点点击 → `FContext.SetObject(ARef)`。
-- [ ] Inspector tool window 真正消费 `IShellInspectorProvider`：内置一个 `TValueListEditor`/`TStringGrid` 的属性视图，订阅 `sekObjectSelected` 事件刷新；下区列出 issues / relations。
+- [x] `FCommandBar` 不再是空面板：新增 `TMainMenu` 按 `Commands.CommandIds`（已是注册顺序，BUG-159）分组到 Category 顶层菜单，每个 MenuItem 的 OnClick 调 `Commands.Execute(commandId)`。`FCommandBar` 默认 Height=0 留给下游放 toolbar。新增 `RebuildMainMenu`，`AfterConstruction` 完成 RegisterCommands 后调用一次。
+- [x] Structure tool window 真正消费 `IShellStructureProvider`：在工具窗 Upper 内置 `TTreeView`，按 provider.GetTreeNames 与 GetRootNodes 填充；`OpenProject` 与 `RegisterStructureProvider` 自动 `RebuildStructureTree`。深度懒加载（OnExpanding 回调真正取 children）作为下一轮工作，目前 root 已经能显示。
+- [x] Inspector tool window 真正消费 `IShellInspectorProvider`：内置 `TStringGrid`（Name/Value），`sekObjectSelected` 触发 `RefreshInspector`，按第一个 `CanInspect` 的 provider 填充 properties。Bridge 已加 `sekObjectSelected` case。
 - [ ] Demo `Demo.MainForm` 改为先 `OpenProject('demo-project', ...)` 再 `OpenView`，让结构窗、inspector、context 都能联动展示。
 - [ ] Demo 加一个示例 sanitizer：注册一个把 `Authorization: Bearer \S+` 替换为 `Authorization: Bearer ***` 的正则函数，演示 BUG-155 的用法。
 
 ### DESKTOP-P1-2026-05-14-I18N: Settings 窗体 + Localization 默认值
-- **状态**: 待开发
+- **状态**: 进行中
 - **来源**: 2026-05-14 第二轮审阅"重要问题"5（Settings 硬编英文 + en-US 默认）
 - **任务**:
-- [ ] `TDeepShellSettingsForm` 内的 `Caption='Settings'` / `'Restore Defaults'` / `'Cancel'` / `'Apply'` / `'OK'` / 错误对话框文本走 i18n key。窗体接收 `IShellLocalizationService` 引用，在 CreateNew 时 resolve key。
-- [ ] `TShellDefaultLocalizationService.Create` 默认 locale 改为按系统区域决定：调用 `GetUserDefaultLocaleName` 或读 `SysLocale.PriLangID`，回退到 `en-US`。
+- [x] `TDeepShellSettingsForm` 内的 `Caption='Settings'` / `'Restore Defaults'` / `'Cancel'` / `'Apply'` / `'OK'` 走 i18n key（`shell.settings.title` / `shell.btn.ok` / `shell.btn.apply` / `shell.btn.cancel` / `shell.btn.restoreDefaults`）。新增 `SetLocalization` 注入 + 内部 `L()` helper。`OpenSettingsDialog` 在 modal 之前注入 `FLocalization`。
+- [x] `TShellDefaultLocalizationService.Create` 默认 locale 改为按系统：新增 `DetectSystemLocale` 调 Win32 `GetUserDefaultLocaleName`，回退 `en-US`。`ADefaultLocale=''` 时使用 system locale。
 - [ ] facade 提供一个 `RegisterDefaultShellTexts(loc, 'zh-CN')` helper，注入 `shell.cmd.fileExit='退出'` 等中文 key 集合，下游一行就能切到中文。
 
 ### DESKTOP-P1-2026-05-14-TEST: DeepShell 合同测试
-- **状态**: 待开发
+- **状态**: 进行中
 - **来源**: 2026-05-14 第二轮审阅"验证结果"4（无 DUnitX 测试）
 - **任务**:
-- [ ] 新建 `Tests/Test.DeepBase.VCL.DeepShell.pas`，至少覆盖：
-  - `TShellEventBus` 多线程订阅/发布、销毁后 queue 项 no-op（用 bridge mock）。
-  - `TShellCommandManager` Governance 双轨：返回 `True+sgoDeniedHard` 必须 reject（BUG-168 防回归）。
-  - `TShellInMemoryRecentService` 顺序与 capacity trim。
-  - `TShellSettingsBackedLayoutService` JSON 序列化往返。
-  - `TShellAreaController` 折叠/展开/状态恢复。
-  - `TDeepMainForm.AfterConstruction` 正确顺序调用虚方法 + ResolveServicesFromRegistry 后 FRecent/FLayout 真的指向 registry 里的实现（BUG-166 防回归）。
-- [ ] 接入 `Tests/DeepBaseTests.dproj` 主 runner。
+- [x] 新建 `Tests/Test.DeepBase.VCL.DeepShell.pas`，6 个 fixture 共 19 个测试覆盖：
+  - `TTestShellEventBus`：subscribe/publish 同线程同步、unsubscribe 后停止、SubscribeAll 收所有 kind、**后台线程 Publish 释放 bus 引用后 queue 项不 UAF（BUG-167 防回归）**。
+  - `TTestShellCommandManager`：allow 路径运行 handler、**out=DeniedHard 但函数返回 True 时不运行（BUG-168 防回归）**、函数 False 时不运行、无 GateKey 跳过 governance、Disabled 不执行、**注册顺序保持（BUG-159 防回归）**。
+  - `TTestShellRecentService`：去重、capacity、按 LastOpenedAt 排序。
+  - `TTestShellLayoutService`：JSON 序列化往返；in-memory 未保存返回 False。
+  - `TTestShellAreaController`：折叠/展开记忆 LastExpandedSize；ApplyState 还原。
+  - `TTestDeepMainFormLifecycle`：**AfterConstruction 顺序调用 4 个生命周期虚方法（BUG-169 防回归）**、**ResolveServicesFromRegistry 后 form.Recent 指向 registry-registered 的 fake（BUG-166 防回归）**。
+- [x] 测试已注册到 `Tests/DeepBaseTests.dpr`。
+  独立 dcc32 运行 6 fixture × 19 tests：19 passed，0 failed，0 errored，0 leaked。整包 DeepBaseTests.dpr 仍因 IntentClarification/Browser 等其他**预先存在**的 bug 编不过，但单独的 DeepShell 测试可通过快速 dpr 跑。
+- [ ] 完整 DeepBaseTests.dpr 跑通后把 DeepShell 合同测试纳入主 CI 运行集合。
 
 ### ARCH-P1-001: Core 瘦身和包分层
 - **状态**: 待开发
@@ -417,6 +419,7 @@
 - [ ] 增加 LLM E2E mock：5 模型槽、fallback、生图失败、图片兜底、费用统计。
 - [ ] 增加桌面工具模板 E2E：托盘、热键、自动升级、付费升级、权限控制、语音录入。
 - [ ] CI 增加可选包矩阵：Minimal、Runtime、All、LLM、Speech、Commerce、Updater、ICS adapter。
+- [ ] 修复全量测试工程编译阻塞：`Tests\DeepBaseTests.dpr` 当前因 `Test.DeepBase.Hotkeys.pas` 引用的 `DeepBase.VCL.Hotkeys` 未被编译路径/包正确解析而失败；PageDriver 已用独立 runner 通过 26/26，并完成真实 WebView2 Native PageDriver smoke。
 
 ---
 

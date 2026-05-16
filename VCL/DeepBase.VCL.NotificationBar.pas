@@ -542,7 +542,9 @@ end;
 
 function TNotificationBar.CheckCancelled: Boolean;
 begin
-  Application.ProcessMessages;
+  // VCL-007: ProcessMessages here pumps the message loop and can re-enter the
+  // notification handler, leading to nested cancellation states. Just report
+  // the current flag; callers that need fresh UI state should pump elsewhere.
   Result := FCancelled;
 end;
 

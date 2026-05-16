@@ -145,6 +145,35 @@ begin
 end;
 
 function TDBInitWizard.ValidateStep: Boolean;
+
+  function IsPathWritable(const APath: string): Boolean;
+  var
+    LTestFile: string;
+    LStream: TFileStream;
+  begin
+    // GOV-027: probe write access by creating a temporary file in the
+    // candidate directory.
+    Result := False;
+    if not DirectoryExists(APath) then
+      Exit;
+    LTestFile := IncludeTrailingPathDelimiter(APath) +
+      '.dbinit_write_check_' + FormatDateTime('hhnnsszzz', Now) + '.tmp';
+    try
+      LStream := TFileStream.Create(LTestFile, fmCreate);
+      try
+        Result := True;
+      finally
+        LStream.Free;
+      end;
+    except
+      Result := False;
+    end;
+    if Result and FileExists(LTestFile) then
+      DeleteFile(LTestFile);
+  end;
+
+var
+  LCandidate: string;
 begin
   Result := True;
   if pcWizard.ActivePage = tsPath then
@@ -169,6 +198,18 @@ begin
         else
           Exit(False);
       end;
+      LCandidate := edtPath.Text;
+    end
+    else
+      LCandidate := GetDefaultPath;
+
+    // GOV-027: ensure the chosen path is writable for both default and
+    // custom selections so first-run failures surface here.
+    if not IsPathWritable(LCandidate) then
+    begin
+      MessageDlg(Format('Path "%s" is not writable.', [LCandidate]),
+        mtError, [mbOK], 0);
+      Exit(False);
     end;
   end;
 end;

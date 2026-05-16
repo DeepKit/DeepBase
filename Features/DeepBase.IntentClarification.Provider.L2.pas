@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.SyncObjs,
   System.Generics.Collections,
   DeepBase.IntentClarification.Types,
   DeepBase.IntentClarification.Interfaces,
@@ -16,21 +17,24 @@ type
   /// 生成假设（Scaffold）供用户确认/否认，维护否认约束列表。
   /// Property 15: 始终产生至少 1 个 scaffold。
   /// Requirements: 5.1-5.5
+  /// IC-008: per-session state + lock to prevent cross-session interference.
   /// </summary>
   TL2ProblemProvider = class(TInterfacedObject, ILevelProvider)
   private
     const
       CDepthLow = 0.4;
       CDepthHigh = 0.6;
+      CMaxDeniedPerSession = 64; // Bound growth per IC-008
     var
       FLLM: ILLMClient;
       FModelTier: TModelTier;
-      FDeniedHypotheses: TList<string>;
+      FSessionDenied: TDictionary<string, TList<string>>; // Per-session denied hypotheses
+      FLock: TCriticalSection; // IC-008: protect FSessionDenied
 
     function BuildSystemPrompt: string;
     function BuildUserPrompt(const AContext: TProcessingContext): string;
     function ParseScaffolds(const AContent: string): TArray<string>;
-    function BuildConstraintsText: string;
+    function BuildConstraintsText(const ASessionId: string): string;
     function ProcessWithLLM(const AContext: TProcessingContext): TProviderResult;
     function BuildDegradedResult(const AContext: TProcessingContext;
       const AErrorMsg: string): TProviderResult;
@@ -45,10 +49,10 @@ type
     function Process(const AContext: TProcessingContext): TProviderResult;
     function RequiresLLM: Boolean;
 
-    /// <summary>Records a denied hypothesis as a constraint for future analysis.</summary>
-    procedure DenyHypothesis(const AHypothesisText: string);
-    /// <summary>Returns the current list of denied hypotheses.</summary>
-    function GetDeniedHypotheses: TArray<string>;
+    /// <summary>Records a denied hypothesis as a constraint for a specific session.</summary>
+    procedure DenyHypothesis(const ASessionId, AHypothesisText: string);
+    /// <summary>Returns the denied hypotheses for a specific session.</summary>
+    function GetDeniedHypotheses(const ASessionId: string): TArray<string>;
   end;
 
 implementation
@@ -68,12 +72,23 @@ begin
   inherited Create;
   FLLM := ALLM;
   FModelTier := ATier;
-  FDeniedHypotheses := TList<string>.Create;
+  FSessionDenied := TDictionary<string, TList<string>>.Create;
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TL2ProblemProvider.Destroy;
+var
+  LPair: TPair<string, TList<string>>;
 begin
-  FDeniedHypotheses.Free;
+  FLock.Enter;
+  try
+    for LPair in FSessionDenied do
+      LPair.Value.Free;
+    FSessionDenied.Free;
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
   inherited;
 end;
 
@@ -117,8 +132,8 @@ begin
       Result := Result + '- ' + AContext.History[I].UserInput + sLineBreak;
   end;
 
-  // Add denied hypotheses as constraints
-  LConstraints := BuildConstraintsText;
+  // Add denied hypotheses as constraints (per-session)
+  LConstraints := BuildConstraintsText(AContext.SessionId);
   if LConstraints <> '' then
     Result := Result + sLineBreak + 'Constraints (already denied): ' + LConstraints;
 
@@ -126,16 +141,24 @@ begin
     'Generate hypotheses about the real problem and ask a clarifying question.';
 end;
 
-function TL2ProblemProvider.BuildConstraintsText: string;
+function TL2ProblemProvider.BuildConstraintsText(const ASessionId: string): string;
 var
+  LList: TList<string>;
   I: Integer;
 begin
   Result := '';
-  for I := 0 to FDeniedHypotheses.Count - 1 do
-  begin
-    if I > 0 then
-      Result := Result + '; ';
-    Result := Result + FDeniedHypotheses[I];
+  FLock.Enter;
+  try
+    if not FSessionDenied.TryGetValue(ASessionId, LList) then
+      Exit;
+    for I := 0 to LList.Count - 1 do
+    begin
+      if I > 0 then
+        Result := Result + '; ';
+      Result := Result + LList[I];
+    end;
+  finally
+    FLock.Leave;
   end;
 end;
 
@@ -259,30 +282,66 @@ begin
     Exit;
   end;
 
-  // Sync denied hypotheses from context
-  // (Context hypotheses marked as Denied are added to our constraint list)
+  // Sync denied hypotheses from context into per-session state (IC-008: locked)
   if Length(AContext.Hypotheses) > 0 then
   begin
-    var LHyp: THypothesis;
-    for LHyp in AContext.Hypotheses do
-    begin
-      if LHyp.Denied and (not FDeniedHypotheses.Contains(LHyp.Text)) then
-        FDeniedHypotheses.Add(LHyp.Text);
+    FLock.Enter;
+    try
+      var LList: TList<string>;
+      if not FSessionDenied.TryGetValue(AContext.SessionId, LList) then
+        LList := nil;
+      for var LHyp in AContext.Hypotheses do
+      begin
+        if LHyp.Denied then
+        begin
+          if LList = nil then
+          begin
+            LList := TList<string>.Create;
+            FSessionDenied.Add(AContext.SessionId, LList);
+          end;
+          if not LList.Contains(LHyp.Text) and (LList.Count < CMaxDeniedPerSession) then
+            LList.Add(LHyp.Text);
+        end;
+      end;
+    finally
+      FLock.Leave;
     end;
   end;
 
   Result := ProcessWithLLM(AContext);
 end;
 
-procedure TL2ProblemProvider.DenyHypothesis(const AHypothesisText: string);
+procedure TL2ProblemProvider.DenyHypothesis(const ASessionId, AHypothesisText: string);
+var
+  LList: TList<string>;
 begin
-  if not FDeniedHypotheses.Contains(AHypothesisText) then
-    FDeniedHypotheses.Add(AHypothesisText);
+  FLock.Enter;
+  try
+    if not FSessionDenied.TryGetValue(ASessionId, LList) then
+    begin
+      LList := TList<string>.Create;
+      FSessionDenied.Add(ASessionId, LList);
+    end;
+    if not LList.Contains(AHypothesisText) and (LList.Count < CMaxDeniedPerSession) then
+      LList.Add(AHypothesisText);
+  finally
+    FLock.Leave;
+  end;
 end;
 
-function TL2ProblemProvider.GetDeniedHypotheses: TArray<string>;
+function TL2ProblemProvider.GetDeniedHypotheses(const ASessionId: string): TArray<string>;
+var
+  LList: TList<string>;
 begin
-  Result := FDeniedHypotheses.ToArray;
+  FLock.Enter;
+  try
+    if FSessionDenied.TryGetValue(ASessionId, LList) then
+      Result := LList.ToArray
+    else
+      Result := [];
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

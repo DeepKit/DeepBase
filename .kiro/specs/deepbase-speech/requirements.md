@@ -6,7 +6,7 @@
 
 ## Introduction
 
-DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR.Baidu`），走"门面 + 插件式 Backend"架构。本次扩展在不破坏现有接口前提下，补齐 **ASR 多后端（SAPI / Whisper.cpp 本地） + TTS + WakeWord + Voiceprint + IntentParser** 五项能力，并与 DeepBase.Governance（门禁）+ DeepBase.Security.DPAPI（密钥/声纹加密）+ ConfigDB（配置/档案存储）完成集成。
+DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR.Baidu`），走"门面 + 插件式 Backend"架构。本次扩展在不破坏现有接口前提下，补齐 **ASR 多后端（SenseVoice / SAPI / Whisper.cpp 本地） + TTS + WakeWord + Voiceprint + IntentParser** 五项能力，并与 DeepBase.Governance（门禁）+ DeepBase.Security.DPAPI（密钥/声纹加密）+ ConfigDB（配置/档案存储）完成集成。
 
 扩展的首要消费方：
 
@@ -34,7 +34,7 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 - **SpeechConfig**：`DeepBase.Speech.Config.pas`，ConfigDB 键定义、默认值、读写、值校验。
 - **SpeechPolicy**：`DeepBase.Speech.Policy.pas`，Governance + Commerce.Permissions 的统一策略入口。
 - **SpeechRuntime**：`DeepBase.Speech.Runtime.pas`，默认 Backend 选择、降级链、Trace、AudioSession 资源仲裁。
-- **ASRBackend**：实现 `ISpeechRecognizerEx`（流式版本为 `IASRStream`）的语音识别后端；现有 `Baidu`，新增 `SAPI`、`WhisperLocal`。
+- **ASRBackend**：实现 `ISpeechRecognizerEx`（流式版本为 `IASRStream`）的语音识别后端；现有 `Baidu`，新增 `SenseVoice`、`SAPI`、`WhisperLocal`。
 - **TTSBackend**：实现 `ITTSBackend` 的语音合成后端；默认 `SAPI`，可选云 Backend。
 - **WakeWordDetector**：实现 `IWakeWordDetector`，基于 SAPI Grammar 的长时监听器。
 - **VoiceprintService**：实现 `IVoiceprint`，负责 MFCC 特征提取、档案登记、DTW 验证。定位为**本地声纹相似度检查**，用于降低误触发，不用于身份认证或安全授权。
@@ -62,7 +62,7 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 1. THE SpeechFacade SHALL 暴露 `ASR`、`TTS`、`WakeWord`、`Voiceprint`、`IntentParser`、`AudioCapture`、`VAD` 七个能力入口。
 2. WHEN 调用方请求某个能力但该能力没有可用 Backend，THE SpeechFacade SHALL 返回可判定的"不可用"标识（接口 `IsAvailable = False` 或抛出 `EDeepBaseSpeechProviderError`）而不返回 `nil`。
 3. THE SpeechRegistry SHALL 支持 Backend 自注册（通过单元 `initialization` 段），下游仅允许覆盖、禁用或注入测试替身。
-4. WHERE 调用方未指定 Backend，THE SpeechRuntime SHALL 按"用户在 ConfigDB 指定 → 可用 Backend 降级链（WinRT / SAPI / WhisperLocal / Baidu） → 全部不可用则返回不可用标识"的顺序决定默认 Backend。
+4. WHERE 调用方未指定 Backend，THE SpeechRuntime SHALL 按"用户在 ConfigDB 指定 → 可用 Backend 降级链（SenseVoice / WinRT / SAPI / WhisperLocal / Baidu） → 全部不可用则返回不可用标识"的顺序决定默认 Backend。
 5. THE SpeechFacade SHALL 保留现有 `TDeepBaseSpeechService.CreateBaidu` 等构造器签名，确保现有 Baidu 使用方无需改动源码即可升级。
 6. THE SpeechRegistry SHALL 为每个注册的 Backend 维护元数据：`Kind`、`Name`、`Local/Cloud`、`RequiresMic`、`SupportsBatch`、`SupportsStreaming`、`SupportsGrammar`。
 7. THE DeepBaseSpeech SHALL 为所有 Speech interface 声明 GUID，并暴露 `SPEECH_API_LEVEL` 常量供下游检查二进制兼容性。
@@ -73,7 +73,7 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 
 #### Acceptance Criteria
 
-1. THE ASRBackend SHALL 通过 `TASRBackendKind` 枚举区分 `abkBaidu / abkSAPI / abkWhisperLocal / abkWinRT / abkAzure`（Azure 预留枚举，不实现）。
+1. THE ASRBackend SHALL 通过 `TASRBackendKind` 枚举区分 `abkSenseVoice / abkBaidu / abkSAPI / abkWhisperLocal / abkWinRT / abkAzure`（Azure 预留枚举，不实现）。
 2. THE ASRBackend SHALL 暴露 `Kind`、`IsAvailable`、`SupportsStreaming` 三个自描述方法。
 3. WHERE Backend 的 `SupportsStreaming` 返回 True，THE ASRBackend SHALL 提供 `StartStreaming(AOptions): IASRStream` 方法，返回的流对象 SHALL 支持 `FeedAudio / SetOnPartial / SetOnFinal / Stop`。
 4. WHERE Backend 支持 Grammar 模式（SAPI），THE ASRBackend SHALL 提供 `LoadGrammar(AWords: TArray<string>)` 方法，加载成功后后续识别仅匹配词表。
@@ -152,7 +152,7 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 #### Acceptance Criteria
 
 1. THE DeepBaseSpeech SHALL 不读取任何 `.json / .ini / .yaml` 配置文件，所有运行期配置仅从 ConfigDB 的 `settings` 表读取。
-2. THE SpeechConfig SHALL 在首次启动时把以下默认键写入 ConfigDB：`speech.default.asr_backend=auto`、`speech.default.tts_backend=sapi`、`speech.asr.language=zh-CN`、`speech.tts.language=zh-CN`、`speech.wake_word.enabled=0`、`speech.wake_word.threshold=0.7`、`speech.voiceprint.enabled=0`、`speech.intent.llm_enabled=0`、`speech.intent.llm_timeout_ms=3000`、`speech.tts.defer_to_screen_reader=1`、`speech.wake_word.defer_to_voice_access=1`。
+2. THE SpeechConfig SHALL 在首次启动时把以下默认键写入 ConfigDB：`speech.default.asr_backend=sensevoice`、`speech.default.tts_backend=sapi`、`speech.asr.language=zh-CN`、`speech.tts.language=zh-CN`、`speech.wake_word.enabled=0`、`speech.wake_word.threshold=0.7`、`speech.voiceprint.enabled=0`、`speech.intent.llm_enabled=0`、`speech.intent.llm_timeout_ms=3000`、`speech.tts.defer_to_screen_reader=1`、`speech.wake_word.defer_to_voice_access=1`、`speech.sensevoice.model_dir=`（空 = 自动发现）、`speech.sensevoice.language=auto`、`speech.sensevoice.use_itn=1`、`speech.sensevoice.partial_interval_ms=500`。
 3. THE DeepBaseSpeech SHALL 把所有云 Backend 的 API Key / Secret（如 `speech.baidu.app_key`、`speech.baidu.secret_key`）通过 DPAPI 加密后存入 ConfigDB，且读取路径 SHALL 经过 `TDPAPIHelper.UnprotectString`。
 4. IF Backend 需要的密钥缺失或解密失败，THEN THE ASRBackend / TTSBackend SHALL `IsAvailable = False` 并在 `CheckStatus` 返回明确错误文本（不得透露密钥内容）。
 5. THE DeepBaseSpeech SHALL 通过 `voice_profiles` 表存储声纹档案，schema 变更 SHALL 通过 `DeepBase.Manager.Schema` 注册，遵循现有迁移机制。
@@ -306,9 +306,10 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 | D2 | DeepInput 迁移策略 | ✅ **完全重构（Strategy A）**（未发布，无回归压力） |
 | D3 | 声纹 v2 时机 | ✅ 推迟到 M7（v1 不做 Voiceprint） |
 | D4 | Whisper.cpp 优先级 | ✅ M8 后 |
+| D9 | SenseVoice 默认 ASR | ✅ M2.5 实现，替代 Whisper 为默认本地 ASR（通过 DeepBase.Inference 加载 ONNX 模型） |
 | D5 | TTS SSML 支持 | ✅ 暂不支持 |
 | D6-orig | 用户自定义唤醒词 | ✅ 支持（词长 ≥ 2） |
-| D7 | 意图解析复用 DeepLLM | ✅ 复用 DeepBase.LLM.Client |
+| D7 | 意图解析复用 Assayer | ✅ 复用 DeepBase.LLM.Client |
 | D8 | Azure ASR 预留 | ✅ 保留枚举，不实现 |
 | D6-new | Commerce.Permissions vs Governance | ✅ **共存但分层**（Speech.Policy 统一封装） |
 | A4 | 声纹 HMAC 防篡改 | ✅ **降为 P2**（ConfigDB SQLite 加密为主防线） |
@@ -327,4 +328,4 @@ DeepBase 已有 5 个 Speech 单元（`Types / Service / Audio.WinMM / VAD / ASR
 - Requirement 15 / 16 的 round-trip / parser 类条款专门为 property-based testing 铺路。
 - 所有 "best-effort / hard-limit" 的性能上限均视作可观测指标，具体基线由 design.md 的 Testing Strategy 制定。
 - Voiceprint（Req 5）推迟到 M7，IntentParser（Req 6）推迟到 M8，v1 不包含。
-- 里程碑路径：M0 Spike → M1 Runtime 骨架 → M2 流式 ASR → M3 DeepInput 重构 → M4 DeepLaunch F2/PTT MVP → M5 WakeWord Beta → M6 稳定化 → M7 Voiceprint → M8 IntentParser/WinRT/Whisper/云扩展。
+- 里程碑路径：M0 Spike → M1 Runtime 骨架 → M2 流式 ASR → M2.5 SenseVoice → M3 DeepInput 重构 → M4 DeepLaunch F2/PTT MVP → M5 WakeWord Beta → M6 稳定化 → M7 Voiceprint → M8 IntentParser/WinRT/Whisper/云扩展。

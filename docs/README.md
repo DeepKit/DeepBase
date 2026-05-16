@@ -52,6 +52,7 @@
 - [50 ThirdParty 扩展开发指南](./50.extend.ThirdParty扩展开发指南-thirdparty-extension.md)
 - [51 Governance 治理扩展](./51.extend.Governance治理扩展-governance-integration.md)
 - [52 Governance 代码注册示例](./52.extend.Governance代码注册示例-governance-setup-via-code.md)
+- [52 BrowserAutomation 接入指南](./52.extend.BrowserAutomation接入指南.md)
 
 ### backend · 生产后端对接
 

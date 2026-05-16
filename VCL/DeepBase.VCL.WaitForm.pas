@@ -49,6 +49,7 @@ type
     FCanCancel: Boolean;
     FCancelled: Boolean;
     FShowProgress: Boolean;
+    FControlsCreated: Boolean;
     FOnCancel: TWaitCancelEvent;
     FOnMinimize: TNotifyEvent;
     
@@ -223,6 +224,11 @@ end;
 
 procedure TWaitForm.CreateControls;
 begin
+  // VCL-006: Guard against double-invocation when both Create and CreateNew
+  // paths run during construction.
+  if FControlsCreated then
+    Exit;
+  FControlsCreated := True;
   // 动画面板
   FAnimationPanel := TPaintBox.Create(Self);
   FAnimationPanel.Parent := Self;

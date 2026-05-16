@@ -93,57 +93,29 @@ end;
 procedure TFireDACSecuritySecretStorage.UpsertSecret(const AName,
   ACipherBlobBase64, ADescription, AUpdatedAtIso8601: string);
 var
-  UpdateQuery: TFDQuery;
-  ExistsQuery: TFDQuery;
-  InsertQuery: TFDQuery;
+  Query: TFDQuery;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  UpdateQuery := TFDQuery.Create(nil);
-  ExistsQuery := TFDQuery.Create(nil);
-  InsertQuery := TFDQuery.Create(nil);
+  Query := TFDQuery.Create(nil);
   try
-    UpdateQuery.Connection := FConnection;
-    UpdateQuery.SQL.Text :=
-      'UPDATE ' + STableSecrets + ' ' +
-      'SET CipherBlob = :CipherBlob, Description = :Description, UpdatedAt = :UpdatedAt ' +
-      'WHERE Name = :Name';
-    UpdateQuery.ParamByName('Name').AsString := AName;
-    UpdateQuery.ParamByName('CipherBlob').AsString := ACipherBlobBase64;
-    UpdateQuery.ParamByName('Description').AsString := ADescription;
-    UpdateQuery.ParamByName('UpdatedAt').AsString := AUpdatedAtIso8601;
-    UpdateQuery.ExecSQL;
-
-    if UpdateQuery.RowsAffected = 0 then
-    begin
-      ExistsQuery.Connection := FConnection;
-      ExistsQuery.SQL.Text := 'SELECT 1 FROM ' + STableSecrets + ' WHERE Name = :Name';
-      ExistsQuery.ParamByName('Name').AsString := AName;
-      ExistsQuery.Open;
-      try
-        if ExistsQuery.Eof then
-        begin
-          InsertQuery.Connection := FConnection;
-          InsertQuery.SQL.Text :=
-            'INSERT INTO ' + STableSecrets +
-            ' (Name, CipherBlob, Description, CreatedAt, UpdatedAt) ' +
-            'VALUES (:Name, :CipherBlob, :Description, :CreatedAt, :UpdatedAt)';
-          InsertQuery.ParamByName('Name').AsString := AName;
-          InsertQuery.ParamByName('CipherBlob').AsString := ACipherBlobBase64;
-          InsertQuery.ParamByName('Description').AsString := ADescription;
-          InsertQuery.ParamByName('CreatedAt').AsString := AUpdatedAtIso8601;
-          InsertQuery.ParamByName('UpdatedAt').AsString := AUpdatedAtIso8601;
-          InsertQuery.ExecSQL;
-        end;
-      finally
-        ExistsQuery.Close;
-      end;
-    end;
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'INSERT OR REPLACE INTO ' + STableSecrets +
+      ' (Name, CipherBlob, Description, CreatedAt, UpdatedAt) ' +
+      'VALUES (:Name, :CipherBlob, :Description, ' +
+      'COALESCE((SELECT CreatedAt FROM ' + STableSecrets + ' WHERE Name = :Name2), :CreatedAt), ' +
+      ':UpdatedAt)';
+    Query.ParamByName('Name').AsString := AName;
+    Query.ParamByName('Name2').AsString := AName;
+    Query.ParamByName('CipherBlob').AsString := ACipherBlobBase64;
+    Query.ParamByName('Description').AsString := ADescription;
+    Query.ParamByName('CreatedAt').AsString := AUpdatedAtIso8601;
+    Query.ParamByName('UpdatedAt').AsString := AUpdatedAtIso8601;
+    Query.ExecSQL;
   finally
-    UpdateQuery.Free;
-    ExistsQuery.Free;
-    InsertQuery.Free;
+    Query.Free;
   end;
 end;
 

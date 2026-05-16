@@ -91,6 +91,7 @@ implementation
 uses
   System.IOUtils,
   DeepBase.Manager,
+  DeepBase.Persistence.Manager.FireDAC,
   DeepBase.Logging;
 
 { TDataMod }

@@ -146,6 +146,14 @@ end;
 
 destructor TEvidenceRecorder.Destroy;
 begin
+  // GOV-020: Flush pending entries before tearing down the worker so queued
+  // evidence is not silently lost.
+  if FRunning then
+  try
+    Flush;
+  except
+    // Swallow flush errors — destructor must still complete teardown.
+  end;
   FRunning := False;
   if FWorkerThread <> nil then
   begin

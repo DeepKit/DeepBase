@@ -124,12 +124,14 @@ type
     procedure AppendLogEntry(const AEntry: TShellStatusEntry);
     procedure ResolveServicesFromRegistry;
     procedure RebuildMainMenu;
-    procedure RebuildStructureTree;
     procedure RefreshInspector(const ARef: TShellObjectRef);
     procedure DoCommandMenuClick(Sender: TObject);
     procedure DoStructureChange(Sender: TObject; Node: TTreeNode);
     procedure DoStructureExpanding(Sender: TObject; Node: TTreeNode; var AllowExpansion: Boolean);
+    procedure DoStructureDeletion(Sender: TObject; Node: TTreeNode);
     procedure ExpandStructureNode(ANode: TTreeNode);
+    function StructureNodeRef(ANode: TTreeNode): TShellObjectRef;
+    function StructureNodeProvider(ANode: TTreeNode): IShellStructureProvider;
   protected
     // Lifecycle - override in descendants.
     procedure InitializeShell; virtual;
@@ -152,6 +154,7 @@ type
     procedure UpdateStatusBarFromContext(const AContext: TShellContext);
     procedure RefreshBottomLog;
     procedure HandleCommandRejected(const AEvent: TDeepShellEvent); virtual;
+    procedure HandleCommandStateChanged(const AEvent: TDeepShellEvent); virtual;
 
     // Helpers exposed to descendants
     procedure RegisterStructureProvider(const AProvider: IShellStructureProvider);
@@ -212,6 +215,8 @@ type
     property StructureWindow: TDeepShellToolWindow read FStructureWindow;
     property InspectorWindow: TDeepShellToolWindow read FInspectorWindow;
 
+    procedure RebuildStructureTree;
+
     // Main view dispatch
     procedure OpenView(const ARef: TShellObjectRef);
     procedure ClearMainView;
@@ -228,12 +233,13 @@ uses
   Winapi.Windows,
   System.Types,
   System.TypInfo,
+  System.JSON,
   Vcl.Dialogs,
   Vcl.Graphics;
 
 type
-  // Concrete bridge implementation. Lives in implementation so it can hold
-  // a raw TDeepMainForm pointer (set/cleared from the form's lifecycle).
+  PShellObjectRef = ^TShellObjectRef;
+
   TShellMainFormBridge = class(TInterfacedObject, IShellMainFormBridge)
   private
     FOwner: TDeepMainForm;
@@ -267,12 +273,14 @@ begin
   case AEvent.Kind of
     sekContextChanged, sekProjectOpened, sekProjectClosed:
       FOwner.UpdateStatusBarFromContext(AEvent.Context);
-    sekLogAdded, sekTaskStarted, sekTaskFinished:
+    sekLogAdded, sekTaskStarted, sekTaskProgress, sekTaskFinished:
       FOwner.RefreshBottomLog;
     sekObjectSelected:
       FOwner.RefreshInspector(AEvent.ObjectRef);
     sekCommandRejected:
       FOwner.HandleCommandRejected(AEvent);
+    sekCommandStateChanged:
+      FOwner.HandleCommandStateChanged(AEvent);
   end;
 end;
 
@@ -284,7 +292,15 @@ constructor TDeepMainForm.Create(AOwner: TComponent);
 var
   LGuid: TGUID;
 begin
-  inherited CreateNew(AOwner);
+  // DFM streaming: if a descendant ships a .dfm resource matching its
+  // class name, route through TForm.Create which calls
+  // InitInheritedComponent and streams components. If there is no DFM
+  // resource for the actual class (our base, or a code-only descendant),
+  // fall back to CreateNew to avoid "Resource <ClassName> not found".
+  if FindResource(HInstance, PChar(ClassName), RT_RCDATA) <> 0 then
+    inherited Create(AOwner)
+  else
+    inherited CreateNew(AOwner);
 
   CreateGUID(LGuid);
   FInstanceId := GUIDToString(LGuid);
@@ -405,6 +421,24 @@ begin
   begin
     FBridge.Detach;
     FBridge := nil;
+  end;
+
+  // Free PShellObjectRef payloads on every structure tree node before VCL
+  // tears down the tree. OnDeletion would normally do this but the order
+  // of TForm.Destroy vs nested control destruction is not guaranteed.
+  if FStructureTree <> nil then
+  begin
+    var I: Integer;
+    var LNode: TTreeNode;
+    for I := 0 to FStructureTree.Items.Count - 1 do
+    begin
+      LNode := FStructureTree.Items[I];
+      if (LNode <> nil) and (LNode.Data <> nil) then
+      begin
+        Dispose(PShellObjectRef(LNode.Data));
+        LNode.Data := nil;
+      end;
+    end;
   end;
 
   FreeAndNil(FTopController);
@@ -610,6 +644,9 @@ begin
   FStructureTree.HideSelection := False;
   FStructureTree.OnChange := DoStructureChange;
   FStructureTree.OnExpanding := DoStructureExpanding;
+  // Free PShellObjectRef payloads when nodes go away (during clear/rebuild
+  // and when the form is destroyed).
+  FStructureTree.OnDeletion := DoStructureDeletion;
 
   FInspectorWindow := TDeepShellToolWindow.CreateForShell(Self,
     TOOLWIN_INSPECTOR, ShellText('shell.toolwin.inspector', 'Inspector'));
@@ -639,7 +676,20 @@ end;
 
 procedure TDeepMainForm.AfterShellShown;
 begin
-  // Default no-op.
+  // Default: position tool windows docked to main form edges if they have
+  // no saved layout (Left=0, Top=0 means never positioned).
+  if (FStructureWindow <> nil) and (FStructureWindow.Left = 0) and (FStructureWindow.Top = 0) then
+  begin
+    FStructureWindow.Left := Self.Left - FStructureWindow.Width - 4;
+    FStructureWindow.Top := Self.Top;
+    FStructureWindow.Height := Self.Height;
+  end;
+  if (FInspectorWindow <> nil) and (FInspectorWindow.Left = 0) and (FInspectorWindow.Top = 0) then
+  begin
+    FInspectorWindow.Left := Self.Left + Self.Width + 4;
+    FInspectorWindow.Top := Self.Top;
+    FInspectorWindow.Height := Self.Height;
+  end;
 end;
 
 procedure TDeepMainForm.BeforeShellClose;
@@ -935,6 +985,23 @@ begin
     FStatusBar.SimpleText := Format('Command "%s" was not allowed.', [LCommandId]);
 end;
 
+procedure TDeepMainForm.HandleCommandStateChanged(const AEvent: TDeepShellEvent);
+var
+  LMenuItem: TMenuItem;
+  LCmd: TShellCommand;
+begin
+  // Incremental menu refresh: update only the affected menu item
+  if FCommandMenuItems = nil then
+    Exit;
+  if not FCommandMenuItems.TryGetValue(AEvent.Data, LMenuItem) then
+    Exit;
+  if (FCommands <> nil) and FCommands.TryGetCommand(AEvent.Data, LCmd) then
+  begin
+    LMenuItem.Enabled := LCmd.Enabled;
+    LMenuItem.Visible := LCmd.Visible;
+  end;
+end;
+
 // ---------------------------------------------------------------------------
 // Built-in commands
 // ---------------------------------------------------------------------------
@@ -945,6 +1012,8 @@ begin
     ShellCommand(CMD_FILE_EXIT, ShellText('shell.cmd.fileExit', 'Exit'))
       .Category(ShellText('shell.cat.file', 'File'))
       .Shortcut('Alt+F4')
+      .RiskLevel(rlLow)
+      .GateKey('shell.file.exit')
       .OnExecute(procedure begin Close; end));
 
   FCommands.RegisterCommand(
@@ -990,6 +1059,8 @@ begin
   FCommands.RegisterCommand(
     ShellCommand(CMD_VIEW_RESET_LAYOUT, ShellText('shell.cmd.view.resetLayout', 'Reset Layout'))
       .Category(ShellText('shell.cat.view', 'View'))
+      .RiskLevel(rlLow)
+      .GateKey('shell.view.resetLayout')
       .OnExecute(procedure
         begin
           if FLayout <> nil then FLayout.ResetGlobalLayout;
@@ -1001,6 +1072,8 @@ begin
   FCommands.RegisterCommand(
     ShellCommand(CMD_RECENT_CLEAR, ShellText('shell.cmd.recent.clear', 'Clear Recent'))
       .Category(ShellText('shell.cat.file', 'File'))
+      .RiskLevel(rlLow)
+      .GateKey('shell.recent.clear')
       .OnExecute(procedure
         begin
           if FRecent <> nil then FRecent.Clear;
@@ -1009,6 +1082,8 @@ begin
   FCommands.RegisterCommand(
     ShellCommand(CMD_LOG_CLEAR, ShellText('shell.cmd.log.clear', 'Clear Log'))
       .Category(ShellText('shell.cat.log', 'Log'))
+      .RiskLevel(rlLow)
+      .GateKey('shell.log.clear')
       .OnExecute(procedure
         begin
           if FStatus <> nil then FStatus.ClearEntries;
@@ -1184,12 +1259,16 @@ begin
       end;
   end;
 
-  // Update context: the ContextManager's ViewType field is meant to carry
-  // the kind of view (svkText / svkHtml / ...), not its title. Title is
-  // descriptive UI text and is not part of governance / inspector context.
+  // Update context: SetObject first so Inspector / governance reflect the
+  // newly-opened object before SetView lands. ContextManager's ViewType
+  // field is meant to carry the kind of view (svkText / svkHtml / ...),
+  // not its title - title is descriptive UI text.
   if FContext <> nil then
+  begin
+    FContext.SetObject(ARef);
     FContext.SetView(LInfo.ViewId,
       GetEnumName(TypeInfo(TShellViewKind), Ord(LInfo.ViewKind)));
+  end;
 end;
 
 // ---------------------------------------------------------------------------
@@ -1271,40 +1350,61 @@ var
   LProvider: IShellStructureProvider;
   LTreeNames: TArray<string>;
   LRoots: TArray<TShellObjectRef>;
-  LTreeNode, LRootNode: TTreeNode;
-  LRefHolder: TShellObjectRef;
-  P, T, R: Integer;
+  LTreeNode, LRootNode, LStub: TTreeNode;
+  LProviderRef: PShellObjectRef;
+  LRootRef: PShellObjectRef;
+  P, T, R, I: Integer;
+  LNode: TTreeNode;
 begin
   if (FStructureTree = nil) or (FStructureProviders = nil) then
     Exit;
 
   FStructureTree.Items.BeginUpdate;
   try
+    // Belt-and-braces cleanup: walk every node and free its
+    // PShellObjectRef payload before Clear. VCL's TTreeView.Items.Clear
+    // generally fires OnDeletion per node, but the spec is fuzzy across
+    // versions; explicit walk guarantees no leak.
+    for I := 0 to FStructureTree.Items.Count - 1 do
+    begin
+      LNode := FStructureTree.Items[I];
+      if (LNode <> nil) and (LNode.Data <> nil) then
+      begin
+        Dispose(PShellObjectRef(LNode.Data));
+        LNode.Data := nil;
+      end;
+    end;
     FStructureTree.Items.Clear;
+
     for P := 0 to FStructureProviders.Count - 1 do
     begin
       LProvider := FStructureProviders[P];
       LTreeNames := LProvider.GetTreeNames;
       for T := 0 to High(LTreeNames) do
       begin
-        // Tree-name nodes carry no ref. Use a placeholder ref so clicking
-        // the tree-name bucket doesn't crash on cast.
-        LTreeNode := FStructureTree.Items.Add(nil, LTreeNames[T]);
+        // Provider/tree-name root: synthetic node without a business ref.
+        // We tag it with a TShellObjectRef whose ProviderId matches the
+        // provider so child loading later can resolve the right provider
+        // by walking up the parent chain.
+        New(LProviderRef);
+        LProviderRef^ := TShellObjectRef.Make('', '__tree__',
+          LProvider.ProviderId, LTreeNames[T]);
+        LTreeNode := FStructureTree.Items.AddChild(nil, LTreeNames[T]);
+        LTreeNode.Data := LProviderRef;
+
         LRoots := LProvider.GetRootNodes(LTreeNames[T]);
         for R := 0 to High(LRoots) do
         begin
-          LRefHolder := LRoots[R];
-          // Nodes hold a heap-allocated PShellObjectRef inside Data so the
-          // ref survives across child-loading callbacks. Freed in DoChange's
-          // node lifecycle... actually TTreeView does not call OnDeletion
-          // for Data we set; we instead free Data ourselves via a tag walk
-          // when rebuilding. To keep memory bookkeeping simple, store the
-          // ref on the node Text only; Data stays nil. The Text alone is
-          // enough to look up a ref via the tree path during click.
-          LRootNode := FStructureTree.Items.AddChild(LTreeNode, LRefHolder.DisplayName);
-          // Mark expandable so the TreeView shows the [+] glyph.
-          if LProvider.HasChildren(LRefHolder) then
-            FStructureTree.Items.AddChild(LRootNode, '');
+          New(LRootRef);
+          LRootRef^ := LRoots[R];
+          LRootNode := FStructureTree.Items.AddChild(LTreeNode,
+            LProvider.GetDisplayText(LRoots[R]));
+          LRootNode.Data := LRootRef;
+          if LProvider.HasChildren(LRoots[R]) then
+          begin
+            LStub := FStructureTree.Items.AddChild(LRootNode, '...');
+            LStub.Data := nil;  // sentinel - DoStructureExpanding deletes it
+          end;
         end;
       end;
     end;
@@ -1313,24 +1413,103 @@ begin
   end;
 end;
 
-procedure TDeepMainForm.ExpandStructureNode(ANode: TTreeNode);
+function TDeepMainForm.StructureNodeRef(ANode: TTreeNode): TShellObjectRef;
 begin
-  // Lazy children loading is provider-specific and the placeholder text-
-  // only design above does not retain enough info to refetch reliably.
-  // Demos / downstream that need full lazy expansion should override
-  // RebuildStructureTree to use a custom node payload (e.g. a hashmap
-  // index -> TShellObjectRef stored on the form).
-  if ANode = nil then
+  if (ANode <> nil) and (ANode.Data <> nil) then
+    Result := PShellObjectRef(ANode.Data)^
+  else
+    Result := TShellObjectRef.Empty;
+end;
+
+function TDeepMainForm.StructureNodeProvider(ANode: TTreeNode): IShellStructureProvider;
+var
+  LRef: TShellObjectRef;
+  I: Integer;
+begin
+  Result := nil;
+  while ANode <> nil do
+  begin
+    LRef := StructureNodeRef(ANode);
+    if LRef.ProviderId <> '' then
+    begin
+      for I := 0 to FStructureProviders.Count - 1 do
+        if SameText(FStructureProviders[I].ProviderId, LRef.ProviderId) then
+        begin
+          Result := FStructureProviders[I];
+          Exit;
+        end;
+    end;
+    ANode := ANode.Parent;
+  end;
+end;
+
+procedure TDeepMainForm.ExpandStructureNode(ANode: TTreeNode);
+var
+  LProvider: IShellStructureProvider;
+  LRef: TShellObjectRef;
+  LChildren: TArray<TShellObjectRef>;
+  LChild: TTreeNode;
+  LChildRef: PShellObjectRef;
+  LStub: TTreeNode;
+  I: Integer;
+begin
+  if (ANode = nil) or (ANode.HasChildren = False) then
     Exit;
+
+  // If the only child is the placeholder stub (Data = nil), replace it
+  // with real provider-loaded children. Already-expanded nodes don't have
+  // a stub anymore, so this is idempotent.
+  LStub := nil;
+  if (ANode.Count = 1) and (ANode.Item[0].Data = nil) then
+    LStub := ANode.Item[0];
+  if LStub = nil then
+    Exit;
+
+  LRef := StructureNodeRef(ANode);
+  if LRef.IsEmpty or (LRef.Kind = '__tree__') then
+  begin
+    LStub.Delete;
+    Exit;
+  end;
+
+  LProvider := StructureNodeProvider(ANode);
+  if LProvider = nil then
+  begin
+    LStub.Delete;
+    Exit;
+  end;
+
+  FStructureTree.Items.BeginUpdate;
+  try
+    LStub.Delete;
+    LChildren := LProvider.GetChildren(LRef);
+    for I := 0 to High(LChildren) do
+    begin
+      New(LChildRef);
+      LChildRef^ := LChildren[I];
+      LChild := FStructureTree.Items.AddChild(ANode,
+        LProvider.GetDisplayText(LChildren[I]));
+      LChild.Data := LChildRef;
+      if LProvider.HasChildren(LChildren[I]) then
+        FStructureTree.Items.AddChild(LChild, '...');
+    end;
+  finally
+    FStructureTree.Items.EndUpdate;
+  end;
 end;
 
 procedure TDeepMainForm.DoStructureChange(Sender: TObject; Node: TTreeNode);
+var
+  LRef: TShellObjectRef;
 begin
-  // Selection changes do not yet emit a true ObjectRef because the simple
-  // tree implementation here uses text-only nodes. Downstream that needs
-  // structure -> context wiring should override RebuildStructureTree to
-  // store a real TShellObjectRef per node and emit
-  // FContext.SetObject(ARef) here.
+  if Node = nil then
+    Exit;
+  LRef := StructureNodeRef(Node);
+  // Skip synthetic provider/tree-name nodes - they have no business ref.
+  if LRef.IsEmpty or (LRef.Kind = '__tree__') then
+    Exit;
+  if FContext <> nil then
+    FContext.SetObject(LRef);
 end;
 
 procedure TDeepMainForm.DoStructureExpanding(Sender: TObject;
@@ -1338,6 +1517,15 @@ procedure TDeepMainForm.DoStructureExpanding(Sender: TObject;
 begin
   AllowExpansion := True;
   ExpandStructureNode(Node);
+end;
+
+procedure TDeepMainForm.DoStructureDeletion(Sender: TObject; Node: TTreeNode);
+begin
+  if (Node <> nil) and (Node.Data <> nil) then
+  begin
+    Dispose(PShellObjectRef(Node.Data));
+    Node.Data := nil;
+  end;
 end;
 
 procedure TDeepMainForm.RefreshInspector(const ARef: TShellObjectRef);
@@ -1394,10 +1582,53 @@ end;
 procedure TDeepMainForm.OpenSettingsDialog;
 var
   LForm: TDeepShellSettingsForm;
+  LSelfRef: TDeepMainForm;
 begin
   LForm := TDeepShellSettingsForm.CreateNew(Self);
+  LSelfRef := Self;
   try
     LForm.SetLocalization(FLocalization);
+    LForm.SetCommands(FCommands);
+    // Per-page reset goes through governance with page-id specific
+    // evidence. Reuses the same GateKey as the global "reset all" command
+    // (CMD_SETTINGS_DEFAULTS) but at L1 risk because only one page is
+    // affected. Returns False if governance denies; the dialog will not
+    // call provider.RestoreDefaults in that case.
+    LForm.SetResetAction(
+      function(AProvider: ISettingsPageProvider): Boolean
+      var
+        LGov: IGovernanceService;
+        LResult: TShellGateResult;
+        LCtxJson: string;
+        LJsonObj: TJSONObject;
+      begin
+        Result := False;
+        if AProvider = nil then Exit;
+        LGov := LSelfRef.FGovernance;
+        if (LGov <> nil) and LGov.IsEnabled then
+        begin
+          LJsonObj := TJSONObject.Create;
+          try
+            LJsonObj.AddPair('command_id', CMD_SETTINGS_DEFAULTS);
+            LJsonObj.AddPair('page_id', AProvider.PageId);
+            LJsonObj.AddPair('risk_level', TJSONNumber.Create(1));
+            LCtxJson := LJsonObj.ToJSON;
+          finally
+            LJsonObj.Free;
+          end;
+          if not LGov.EnterGate('shell.settings.restoreDefaults', LCtxJson, LResult)
+             or not LResult.Allowed then
+          begin
+            if LSelfRef.FStatus <> nil then
+              LSelfRef.FStatus.Warning('shell.settings',
+                Format('Restore defaults denied for page "%s": %s',
+                  [AProvider.PageId, LResult.MessageText]));
+            Exit;
+          end;
+        end;
+        AProvider.RestoreDefaults;
+        Result := True;
+      end);
     LForm.SetProviders(FSettingsPages.ToArray);
     LForm.Run;
   finally

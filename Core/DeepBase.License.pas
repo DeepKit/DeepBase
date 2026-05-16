@@ -262,7 +262,7 @@ begin
   if (Result = nil) and Assigned(AConnection) then
     raise EInvalidOp.Create(
       'No license storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.License.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+      'Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).');
 end;
 
 procedure TDeepBaseLicense.SetConnection(const Value: TObject);

@@ -14,6 +14,14 @@
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)'=='Win32'">
+        <DCC_DCUOutput>..\TestResults\dcu32</DCC_DCUOutput>
+        <DCC_DcuOutput>..\TestResults\dcu32</DCC_DcuOutput>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)'=='Win64' or '$(Platform)'=='Win64x'">
+        <DCC_DCUOutput>..\TestResults\dcu64</DCC_DCUOutput>
+        <DCC_DcuOutput>..\TestResults\dcu64</DCC_DcuOutput>
+    </PropertyGroup>
     <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
         <Base_Win32>true</Base_Win32>
         <CfgParent>Base</CfgParent>
@@ -124,7 +132,10 @@
         <DCCReference Include="Test.DeepBase.IntentClarification.pas"/>
         <DCCReference Include="Test.DeepBase.IntentClarification.Integration.pas"/>
         <DCCReference Include="..\Features\DeepBase.BrowserAutomation.pas"/>
+        <DCCReference Include="..\Features\DeepBase.Browser.PageDriver.pas"/>
         <DCCReference Include="Test.DeepBase.BrowserAutomation.pas"/>
+        <DCCReference Include="Test.DeepBase.Browser.PageDriver.pas"/>
+        <DCCReference Include="Architecture\Test.Arch.PackageBoundaries.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

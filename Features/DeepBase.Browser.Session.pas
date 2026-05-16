@@ -185,10 +185,25 @@ begin
       procedure(const AFrom, ATo: TBrowserSessionState;
         const ATrigger: TBrowserSessionTrigger;
         const AContext: TObject)
+      var
+        LRecovery: IBrowserRecovery;
+        LSessionId: TBrowserSessionId;
       begin
         PublishStateChange(AFrom, ATo, ATrigger);
-        if FRecovery <> nil then
-          FRecovery.TriggerRecovery(FSession.GetSessionId, brsReload);
+        // H10 fix: TriggerRecovery -> DoRecovery contains Sleep(RetryDelayMs)
+        // and may invoke user callbacks. Running it inside Session.FLock
+        // (held by Fire) blocks all other state transitions. Dispatch to a
+        // worker thread so the lock is released first.
+        LRecovery := FRecovery;
+        if LRecovery = nil then Exit;
+        LSessionId := FSession.GetSessionId;
+        var LThread := TThread.CreateAnonymousThread(
+          procedure
+          begin
+            LRecovery.TriggerRecovery(LSessionId, brsReload);
+          end);
+        LThread.FreeOnTerminate := True;
+        LThread.Start;
       end);
 
   // bssRecovering
@@ -357,19 +372,34 @@ end;
 function TBrowserSessionManager.GetCurrentState:
   TBrowserSessionState;
 begin
-  Result := FStateMachine.CurrentState;
+  FLock.Enter;
+  try
+    Result := FStateMachine.CurrentState;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TBrowserSessionManager.CanFire(
   ATrigger: TBrowserSessionTrigger): Boolean;
 begin
-  Result := FStateMachine.CanFire(ATrigger);
+  FLock.Enter;
+  try
+    Result := FStateMachine.CanFire(ATrigger);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TBrowserSessionManager.GetPermittedTriggers:
   TArray<TBrowserSessionTrigger>;
 begin
-  Result := FStateMachine.GetPermittedTriggers;
+  FLock.Enter;
+  try
+    Result := FStateMachine.GetPermittedTriggers;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

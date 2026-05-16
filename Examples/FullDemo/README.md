@@ -42,6 +42,7 @@
 
 - Delphi 10.3+ (推荐 Delphi 12)
 - �?DeepBase 源码路径添加到搜索路�?
+- 初始化 `DeepBase.Manager` 的最终程序必须链接 `DeepBase.Persistence.Manager.FireDAC`。若启动时报 `No DB connection adapter registered`，先检查 `FullDemo.dpr` / 启动单元是否 `uses DeepBase.Persistence.Manager.FireDAC`。
 
 ## 使用方法
 

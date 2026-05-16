@@ -2,13 +2,14 @@
   DeepBase Studio - 配置管理工具
   
   版本: 1.0
-  说明: DeepBase 框架的可视化配置和管理工�?
+  说明: DeepBase 框架的可视化配置和管理工�?
   ============================================================================ }
 
 program DeepBaseStudio;
 
 uses
   Vcl.Forms,
+  FireDAC.VCLUI.Wait,
   Vcl.Themes,
   Vcl.Styles,
   FireDAC.Phys.SQLite,

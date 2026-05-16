@@ -19,6 +19,7 @@ implementation
 uses
   System.SysUtils,
   System.Classes,
+  System.SyncObjs,
   Data.DB,
   FireDAC.Comp.Client,
   DeepBase.Services.Protection;
@@ -26,15 +27,47 @@ uses
 type
   TFireDACAntiTamperStorage = class(TInterfacedObject, IAntiTamperStorage)
   private
+    // PERSIST-017: cache the FireDAC connection per DatabasePath. Without
+    // caching, every SaveSecureImage / TryLoadSecureImage / SetupDatabase
+    // call paid for a full TFDConnection.Open + close, which on SQLite means
+    // re-opening the file, re-applying PRAGMAs, and (on first use) running
+    // the journal startup. The cache is keyed by DatabasePath so callers
+    // that legitimately address multiple stores still work.
+    FLock: TCriticalSection;
+    FCachedConnection: TFDConnection;
+    FCachedDatabasePath: string;
+
+    function AcquireConnection(const ADatabasePath: string): TFDConnection;
     procedure ConfigureConnection(AConnection: TFDConnection;
       const ADatabasePath: string);
   public
+    constructor Create;
+    destructor Destroy; override;
+
     procedure SetupDatabase(const DatabasePath: string);
     procedure SaveSecureImage(const DatabasePath, KeyName: string;
       const EncryptedImageData: TBytes; const Hash, CreatedAt: string);
     function TryLoadSecureImage(const DatabasePath, KeyName: string;
       out EncryptedImageData: TBytes; out Hash: string): Boolean;
   end;
+
+constructor TFireDACAntiTamperStorage.Create;
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TFireDACAntiTamperStorage.Destroy;
+begin
+  FLock.Enter;
+  try
+    FreeAndNil(FCachedConnection);
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
+  inherited;
+end;
 
 procedure TFireDACAntiTamperStorage.ConfigureConnection(
   AConnection: TFDConnection; const ADatabasePath: string);
@@ -48,13 +81,44 @@ begin
   AConnection.Connected := True;
 end;
 
+function TFireDACAntiTamperStorage.AcquireConnection(
+  const ADatabasePath: string): TFDConnection;
+begin
+  FLock.Enter;
+  try
+    // Reuse existing cached connection if still pointing at the same DB
+    // and still actually open. SQLite locking will serialize access between
+    // our own callers; FLock keeps the hand-off race-free.
+    if (FCachedConnection <> nil) and
+       SameText(FCachedDatabasePath, ADatabasePath) and
+       FCachedConnection.Connected then
+      Exit(FCachedConnection);
+
+    // DB path changed (or stale) -- drop the old one before configuring fresh.
+    FreeAndNil(FCachedConnection);
+    FCachedDatabasePath := '';
+
+    FCachedConnection := TFDConnection.Create(nil);
+    try
+      ConfigureConnection(FCachedConnection, ADatabasePath);
+      FCachedDatabasePath := ADatabasePath;
+      Result := FCachedConnection;
+    except
+      FreeAndNil(FCachedConnection);
+      raise;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TFireDACAntiTamperStorage.SetupDatabase(const DatabasePath: string);
 var
   Connection: TFDConnection;
 begin
-  Connection := TFDConnection.Create(nil);
+  FLock.Enter;
   try
-    ConfigureConnection(Connection, DatabasePath);
+    Connection := AcquireConnection(DatabasePath);
     Connection.ExecSQL(
       'CREATE TABLE IF NOT EXISTS SecureImages (' +
       '  KeyName TEXT PRIMARY KEY, ' +
@@ -64,7 +128,7 @@ begin
       '  Enabled INTEGER DEFAULT 1' +
       ')');
   finally
-    Connection.Free;
+    FLock.Leave;
   end;
 end;
 
@@ -76,9 +140,9 @@ var
   Query: TFDQuery;
   Stream: TBytesStream;
 begin
-  Connection := TFDConnection.Create(nil);
+  FLock.Enter;
   try
-    ConfigureConnection(Connection, DatabasePath);
+    Connection := AcquireConnection(DatabasePath);
 
     Query := TFDQuery.Create(nil);
     try
@@ -100,7 +164,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    FLock.Leave;
   end;
 end;
 
@@ -114,9 +178,9 @@ begin
   SetLength(EncryptedImageData, 0);
   Hash := '';
 
-  Connection := TFDConnection.Create(nil);
+  FLock.Enter;
   try
-    ConfigureConnection(Connection, DatabasePath);
+    Connection := AcquireConnection(DatabasePath);
 
     Query := TFDQuery.Create(nil);
     try
@@ -136,7 +200,7 @@ begin
       Query.Free;
     end;
   finally
-    Connection.Free;
+    FLock.Leave;
   end;
 end;
 

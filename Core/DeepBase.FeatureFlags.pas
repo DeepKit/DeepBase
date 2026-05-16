@@ -582,7 +582,10 @@ begin
       Result := Copy(LAttrStr, 1, Length(LStrValue)) = LStrValue;
       
     toEndsWith:
-      Result := Copy(LAttrStr, Length(LAttrStr) - Length(LStrValue) + 1, Length(LStrValue)) = LStrValue;
+      if Length(LStrValue) > Length(LAttrStr) then
+        Result := False
+      else
+        Result := Copy(LAttrStr, Length(LAttrStr) - Length(LStrValue) + 1, Length(LStrValue)) = LStrValue;
       
     toIn:
       begin
@@ -895,7 +898,7 @@ end;
 
 function TFeatureFlag.EvaluateRollout(const AContext: TFlagContext): Boolean;
 var
-  LHash: Cardinal;
+  LHash: Int64;
   LBucket: Integer;
   LKey: string;
 begin
@@ -906,14 +909,17 @@ begin
     LKey := FKey;
     
   LHash := THashBobJenkins.GetHashValue(LKey);
-  LBucket := LHash mod 100;
+  if LHash < 0 then
+    Inc(LHash, Int64(High(Cardinal)) + 1);
+  LBucket := Integer(LHash mod Int64(100));
   
   Result := LBucket < FRolloutPercentage;
 end;
 
 function TFeatureFlag.SelectVariant(const AContext: TFlagContext): TFlagVariant;
 var
-  LTotalWeight, LHash, LBucket, LRunning: Integer;
+  LTotalWeight, LBucket, LRunning: Integer;
+  LHash: Int64;
   LKey: string;
   LVariant: TFlagVariant;
 begin
@@ -937,7 +943,9 @@ begin
     LKey := FKey + ':variant';
     
   LHash := THashBobJenkins.GetHashValue(LKey);
-  LBucket := LHash mod LTotalWeight;
+  if LHash < 0 then
+    Inc(LHash, Int64(High(Cardinal)) + 1);
+  LBucket := Integer(LHash mod Int64(LTotalWeight));
   
   // Select variant based on weight
   LRunning := 0;

@@ -25,7 +25,7 @@ package DeepBaseSpeechASR;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
-{$DESCRIPTION 'DeepBase Speech ASR - SAPI + Baidu backends'}
+{$DESCRIPTION 'DeepBase Speech ASR - SenseVoice + SAPI + Baidu backends'}
 {$RUNONLY}
 
 requires
@@ -36,6 +36,8 @@ requires
 contains
   DeepBase.Speech.SAPI.Decl in 'Features\DeepBase.Speech.SAPI.Decl.pas',
   DeepBase.Speech.ASR.SAPI in 'Features\DeepBase.Speech.ASR.SAPI.pas',
-  DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas';
+  DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
+  DeepBase.Speech.FBank in 'Features\DeepBase.Speech.FBank.pas',
+  DeepBase.Speech.ASR.SenseVoice in 'Features\DeepBase.Speech.ASR.SenseVoice.pas';
 
 end.

@@ -74,8 +74,8 @@ end;
 
 destructor TBrowserSelectorManager.Destroy;
 begin
-  FLock.Free;
   FCache.Free;
+  FLock.Free;
   inherited;
 end;
 
@@ -103,6 +103,7 @@ function TBrowserSelectorManager.ResolveSelector(
   const AName: string): string;
 var
   LInfo: TBrowserSelectorInfo;
+  LCurrent: TBrowserSelectorInfo;
   LNewSelector: string;
 begin
   Result := '';
@@ -119,9 +120,14 @@ begin
   begin
     FLock.Enter;
     try
-      LInfo.IsValid := True;
-      LInfo.LastValidatedAt := Now;
-      FCache[AName] := LInfo;
+      // Only update if selector hasn't been changed by concurrent registration
+      if FCache.TryGetValue(AName, LCurrent) and
+        (LCurrent.Selector = LInfo.Selector) then
+      begin
+        LInfo.IsValid := True;
+        LInfo.LastValidatedAt := Now;
+        FCache[AName] := LInfo;
+      end;
     finally
       FLock.Leave;
     end;
@@ -135,9 +141,13 @@ begin
     begin
       FLock.Enter;
       try
-        LInfo.IsValid := True;
-        LInfo.LastValidatedAt := Now;
-        FCache[AName] := LInfo;
+        if FCache.TryGetValue(AName, LCurrent) and
+          (LCurrent.Selector = LInfo.Selector) then
+        begin
+          LInfo.IsValid := True;
+          LInfo.LastValidatedAt := Now;
+          FCache[AName] := LInfo;
+        end;
       finally
         FLock.Leave;
       end;
@@ -164,9 +174,17 @@ begin
 
   // Publish failure event
   if FSession <> nil then
-    TBrowserEvents.Publish(betScriptFailed,
-      FSession.GetSessionId,
-      '{"selector":"' + AName + '","error":"not_found"}');
+  begin
+    var LPayload := TJSONObject.Create;
+    try
+      LPayload.AddPair('selector', AName);
+      LPayload.AddPair('error', 'not_found');
+      TBrowserEvents.Publish(betScriptFailed,
+        FSession.GetSessionId, LPayload.ToJSON);
+    finally
+      LPayload.Free;
+    end;
+  end;
 
   Logger.WarnFmt('Selector unresolved: %s (%s)',
     [AName, LInfo.Selector],
@@ -215,12 +233,20 @@ begin
     LJS := LStore.Render(JSCRIPT_SELECTOR_HEAL, [])
   else
     LJS :=
-      '(function(){var c=document.querySelectorAll(' +
-      '"[data-testid],[aria-label],[name]");var r=[];' +
+      '(function(){try{' +
+      'var c=document.querySelectorAll(' +
+      '"[data-testid],[aria-label],[name],[placeholder]");var r=[];' +
+      'var esc=function(s){return String(s).replace(/(["\\])/g,"\\$1");};' +
       'for(var i=0;i<c.length;i++){var el=c[i];' +
-      'var t=el.getAttribute("data-testid");' +
-      'if(t)r.push("[data-testid=\""+t+"\"]");}' +
-      'return JSON.stringify(r);})();';
+      'var tid=el.getAttribute("data-testid");' +
+      'var lbl=el.getAttribute("aria-label");' +
+      'var nm=el.getAttribute("name");' +
+      'var ph=el.getAttribute("placeholder");' +
+      'if(tid)r.push("[data-testid=\""+esc(tid)+"\"]");' +
+      'else if(lbl)r.push("[aria-label=\""+esc(lbl)+"\"]");' +
+      'else if(nm)r.push("[name=\""+esc(nm)+"\"]");' +
+      'else if(ph)r.push("[placeholder=\""+esc(ph)+"\"]");}' +
+      'return JSON.stringify(r);}catch(e){return "[]";}})();';
 
   LResult := '';
   if not FSession.EvaluateScript(LJS, 5000, LResult, LError) then

@@ -5,10 +5,10 @@ unit DeepBase.Payment.WeChatPay;
 
   Supports:
     - Native支付 (扫码支付)
-    - JSAPI支付 (公众�?小程�?
+    - JSAPI支付 // TODO: restore original comment (encoding corruption)
     - H5支付 (手机网页)
     - APP支付
-    - 退�?
+    - // TODO: restore original comment (encoding corruption)
 
   Official Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/
   API Version: V3
@@ -31,14 +31,14 @@ type
   /// <summary>WeChat Pay configuration</summary>
   TWeChatPayConfig = class(TPaymentConfig)
   private
-    FAppId: string;           // 公众�?小程�?AppID
-    FMchId: string;           // 商户�?
+    FAppId: string;           // TODO: restore original comment (encoding corruption)
+    FMchId: string;           // TODO: restore original comment (encoding corruption)
     FApiKeyV3: string;        // APIv3 密钥
-    FSerialNo: string;        // 商户证书序列�?
+    FSerialNo: string;        // TODO: restore original comment (encoding corruption)
     FPrivateKey: string;      // 商户私钥 (PEM)
     FCertPath: string;        // 证书路径 (退款用)
-    FSubAppId: string;        // 子商�?AppID (服务商模�?
-    FSubMchId: string;        // 子商户号 (服务商模�?
+    FSubAppId: string;        // TODO: restore original comment (encoding corruption)
+    FSubMchId: string;        // TODO: restore original comment (encoding corruption)
     FWeChatPublicKey: string; // BUG-014 FIX: 微信平台公钥 (用于验签)
   public
     constructor Create; reintroduce;

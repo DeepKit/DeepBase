@@ -16,11 +16,13 @@ unit DeepBase.Browser.Engine.WebView2;
 interface
 
 uses
+  Winapi.ActiveX,
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
   System.Threading,
   System.JSON,
+  System.Generics.Collections,
   Vcl.Controls,
   Vcl.Forms,
   Vcl.ExtCtrls,
@@ -69,8 +71,7 @@ type
     // Wired by ResponseWaiter et al. to receive JS-side notifications.
     FOnWebMessage: TProc<string>;
 
-    procedure BrowserAfterCreated(Sender: TObject;
-      AWebView: ICoreWebView2);
+    procedure BrowserAfterCreated(Sender: TObject);
     procedure BrowserNavigationCompleted(Sender: TObject;
       const AWebView: ICoreWebView2;
       const AArgs: ICoreWebView2NavigationCompletedEventArgs);
@@ -139,29 +140,9 @@ type
     property OnWebMessage: TProc<string> read FOnWebMessage write FOnWebMessage;
   end;
 
-  TBrowserAutomationSessionAdapter = class(TInterfacedObject,
-    IBrowserAutomationSession)
-  private
-    FSession: IBrowserSession;
-  public
-    constructor Create(ASession: IBrowserSession);
-    function IsReady: Boolean;
-    function GetCurrentUrl: string;
-    function GetLastError: string;
-    function Navigate(const AUrl: string; ATimeoutMs: Integer;
-      out AError: string): Boolean;
-    function ExecuteScript(const AScript: string;
-      out AError: string): Boolean;
-    function EvaluateScript(const AScript: string;
-      ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
-    function CallDevToolsProtocol(const AMethod, AParams: string;
-      ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
-    function CaptureScreenshot(out AImage: TBytes;
-      out AError: string): Boolean;
-  end;
-
 procedure InitializeWebView2(
-  const AUserDataFolder: string = '');
+  const AUserDataFolder: string = '';
+  AEnableExtensions: Boolean = False);
 
 // C5 fix: register a function that yields the TWinControl host owner.
 // Called by the registry-driven factory at session-creation time.
@@ -170,8 +151,9 @@ procedure SetWebView2OwnerProvider(AProvider: TFunc<TWinControl>);
 implementation
 
 uses
-  System.Generics.Collections,
+  System.Diagnostics,
   DeepBase.Browser.Registry,
+  DeepBase.Browser.AutomationAdapter,
   DeepBase.Logging;
 
 type
@@ -201,12 +183,25 @@ var
   GWebView2Initialized: Boolean = False;
   GWebView2OwnerProvider: TFunc<TWinControl> = nil;
 
+procedure ApplyWebView2LoaderConfig;
+var
+  LLoaderDll: string;
+begin
+  if GlobalWebView2Loader = nil then
+    Exit;
+
+  LLoaderDll := GetEnvironmentVariable('WEBVIEW2_LOADER_DLL');
+  if LLoaderDll <> '' then
+    GlobalWebView2Loader.LoaderDllPath := LLoaderDll;
+end;
+
 procedure SetWebView2OwnerProvider(AProvider: TFunc<TWinControl>);
 begin
   GWebView2OwnerProvider := AProvider;
 end;
 
-procedure InitializeWebView2(const AUserDataFolder: string);
+procedure InitializeWebView2(const AUserDataFolder: string;
+  AEnableExtensions: Boolean);
 var
   LFolder: string;
 begin
@@ -222,75 +217,25 @@ begin
 
     GlobalWebView2Loader := TWVLoader.Create(nil);
     GlobalWebView2Loader.UserDataFolder := LFolder;
+    GlobalWebView2Loader.ShowMessageDlg := False;
+    GlobalWebView2Loader.AreBrowserExtensionsEnabled := AEnableExtensions;
+    ApplyWebView2LoaderConfig;
   end;
 
-  GWebView2Initialized := True;
-end;
+  if not GlobalWebView2Loader.Initialized then
+  begin
+    GlobalWebView2Loader.ShowMessageDlg := False;
+    GlobalWebView2Loader.AreBrowserExtensionsEnabled := AEnableExtensions;
+    ApplyWebView2LoaderConfig;
+  end;
 
-{ TBrowserAutomationSessionAdapter }
+  if not GlobalWebView2Loader.Initialized then
+    GlobalWebView2Loader.StartWebView2;
 
-constructor TBrowserAutomationSessionAdapter.Create(
-  ASession: IBrowserSession);
-begin
-  inherited Create;
-  FSession := ASession;
-end;
-
-function TBrowserAutomationSessionAdapter.IsReady: Boolean;
-begin
-  Result := (FSession <> nil) and
-    (FSession.GetState in [bssReady, bssBusy]);
-end;
-
-function TBrowserAutomationSessionAdapter.GetCurrentUrl: string;
-begin
-  if FSession <> nil then
-    Result := FSession.GetCurrentUrl
-  else
-    Result := '';
-end;
-
-function TBrowserAutomationSessionAdapter.GetLastError: string;
-begin
-  if FSession <> nil then
-    Result := FSession.GetLastError
-  else
-    Result := 'No session';
-end;
-
-function TBrowserAutomationSessionAdapter.Navigate(
-  const AUrl: string; ATimeoutMs: Integer;
-  out AError: string): Boolean;
-begin
-  Result := FSession.Navigate(AUrl, ATimeoutMs, AError);
-end;
-
-function TBrowserAutomationSessionAdapter.ExecuteScript(
-  const AScript: string; out AError: string): Boolean;
-begin
-  Result := FSession.ExecuteScript(AScript, AError);
-end;
-
-function TBrowserAutomationSessionAdapter.EvaluateScript(
-  const AScript: string; ATimeoutMs: Integer;
-  out AJsonResult, AError: string): Boolean;
-begin
-  Result := FSession.EvaluateScript(AScript, ATimeoutMs,
-    AJsonResult, AError);
-end;
-
-function TBrowserAutomationSessionAdapter.CallDevToolsProtocol(
-  const AMethod, AParams: string; ATimeoutMs: Integer;
-  out AJsonResult, AError: string): Boolean;
-begin
-  Result := FSession.CallDevToolsProtocol(AMethod, AParams,
-    ATimeoutMs, AJsonResult, AError);
-end;
-
-function TBrowserAutomationSessionAdapter.CaptureScreenshot(
-  out AImage: TBytes; out AError: string): Boolean;
-begin
-  Result := FSession.CaptureScreenshot(AImage, AError);
+  // B-002: Only flag initialized when loader is actually ready.
+  // StartWebView2 is async — the flag must not be set until
+  // GlobalWebView2Loader.Initialized reflects true.
+  GWebView2Initialized := GlobalWebView2Loader.Initialized;
 end;
 
 { TWebView2BrowserSession }
@@ -321,7 +266,6 @@ begin
     FWindowParent.Parent := AOwner;
 
   FBrowser := TWVBrowser.Create(AOwner);
-  FBrowser.WindowParent := FWindowParent;
   FBrowser.OnAfterCreated := BrowserAfterCreated;
   FBrowser.OnNavigationCompleted := BrowserNavigationCompleted;
   FBrowser.OnInitializationError := BrowserInitializationError;
@@ -334,7 +278,7 @@ begin
 
   InitializeWebView2;
   if GlobalWebView2Loader.Initialized then
-    FBrowser.CreateBrowser(AOwner.Handle)
+    FBrowser.CreateBrowser(FWindowParent.Handle)
   else
     Logger.Warn('WebView2 loader not yet initialized',
       'TWebView2BrowserSession');
@@ -344,6 +288,19 @@ destructor TWebView2BrowserSession.Destroy;
 var
   LObj: TObject;
 begin
+  // B-035: Drain CDP calls and free lock BEFORE stopping browser.
+  // FBrowser.Stop can trigger callbacks that access FCDPCallsLock.
+  FCDPCallsLock.Enter;
+  try
+    for LObj in FCDPCalls.Values do
+      LObj.Free;
+    FCDPCalls.Clear;
+  finally
+    FCDPCallsLock.Leave;
+  end;
+  FCDPCalls.Free;
+  FCDPCallsLock.Free;
+
   FBrowser.Stop;
   FBrowser.Free;
   FWindowParent.Free;
@@ -353,22 +310,18 @@ begin
   FNavigateMutex.Free;
   FScreenshotMutex.Free;
 
-  // BUG-BA-014 fix: drain any leftover CDP entries
-  for LObj in FCDPCalls.Values do
-    LObj.Free;
-  FCDPCalls.Free;
-  FCDPCallsLock.Free;
-
   inherited;
 end;
 
-procedure TWebView2BrowserSession.BrowserAfterCreated(
-  Sender: TObject; AWebView: ICoreWebView2);
+procedure TWebView2BrowserSession.BrowserAfterCreated(Sender: TObject);
 begin
   FReady := True;
-  FBrowser.DefaultWebViewSettings.IsScriptEnabled := True;
-  FBrowser.DefaultWebViewSettings.AreDefaultScriptDialogsEnabled :=
-    True;
+  FWindowParent.UpdateSize;
+  if FBrowser.CoreWebView2Settings <> nil then
+  begin
+    FBrowser.CoreWebView2Settings.IsScriptEnabled := True;
+    FBrowser.CoreWebView2Settings.AreDefaultScriptDialogsEnabled := True;
+  end;
   Logger.InfoFmt('WebView2 session created: %s',
     [FSessionId], 'TWebView2BrowserSession');
 end;
@@ -441,11 +394,18 @@ procedure TWebView2BrowserSession.BrowserWebMessageReceived(
   const AArgs: ICoreWebView2WebMessageReceivedEventArgs);
 var
   LJson: wvstring;
+  LRaw: PWideChar;
   LHandler: TProc<string>;
 begin
   // C6 fix: dispatch JS postMessage payloads to a registered handler.
   // The handler runs on the main (UI) thread, same as this event.
-  if AArgs.Get_WebMessageAsJson(LJson) <> S_OK then Exit;
+  LRaw := nil;
+  if AArgs.Get_WebMessageAsJson(LRaw) <> S_OK then Exit;
+  try
+    LJson := LRaw;
+  finally
+    CoTaskMemFree(LRaw);
+  end;
   LHandler := FOnWebMessage;
   if Assigned(LHandler) then
   try
@@ -559,13 +519,17 @@ function TWebView2BrowserSession.WaitForReady(
 var
   LTimer: TStopwatch;
 begin
+  // H3 fix: only pump messages on the main thread. From a worker thread,
+  // ProcessMessages is unsafe (it can dispatch UI events to background
+  // contexts that expect the main thread).
   LTimer := TStopwatch.StartNew;
   while not FReady do
   begin
     if LTimer.ElapsedMilliseconds >= ATimeoutMs then
       Exit(False);
     Sleep(50);
-    Application.ProcessMessages;
+    if MainThreadID = TThread.CurrentThread.ThreadID then
+      Application.ProcessMessages;
   end;
   Result := True;
 end;
@@ -665,8 +629,56 @@ end;
 function TWebView2BrowserSession.EvaluateScript(
   const AScript: string; ATimeoutMs: Integer;
   out AJsonResult, AError: string): Boolean;
+
+  // H6 fix: Runtime.evaluate returns
+  //   {"result":{"type":"...", "value":<actual>, ...}, "exceptionDetails":...}
+  // Unwrap so callers (TryJsonBool, BrowserAutomation.Runner) see the
+  // actual return value rather than the CDP envelope.
+  function UnwrapCdpResult(const ARaw: string;
+    out AUnwrapped, AException: string): Boolean;
+  var
+    LRoot: TJSONValue;
+    LObj: TJSONObject;
+    LExceptionDetails: TJSONValue;
+    LResultObj: TJSONValue;
+    LValue: TJSONValue;
+  begin
+    Result := False;
+    AUnwrapped := ARaw;
+    AException := '';
+    LRoot := TJSONObject.ParseJSONValue(ARaw);
+    if LRoot = nil then Exit;
+    try
+      if not (LRoot is TJSONObject) then Exit;
+      LObj := LRoot as TJSONObject;
+
+      // Surface JS exceptions
+      LExceptionDetails := LObj.GetValue('exceptionDetails');
+      if LExceptionDetails <> nil then
+      begin
+        AException := LExceptionDetails.ToJSON;
+        AUnwrapped := '';
+        Exit(True);
+      end;
+
+      LResultObj := LObj.GetValue('result');
+      if (LResultObj = nil) or not (LResultObj is TJSONObject) then Exit;
+      LValue := (LResultObj as TJSONObject).GetValue('value');
+      if LValue = nil then
+      begin
+        // Could be undefined or unserializable
+        AUnwrapped := 'null';
+        Exit(True);
+      end;
+      AUnwrapped := LValue.ToJSON;
+      Result := True;
+    finally
+      LRoot.Free;
+    end;
+  end;
+
 var
-  LResult: string;
+  LResult, LUnwrapped, LException: string;
 begin
   AError := '';
   AJsonResult := '';
@@ -678,7 +690,7 @@ begin
 
   LResult := CallCDPSync('Runtime.evaluate',
     '{"expression":' + JsStringLiteral(AScript) +
-    ',"returnByValue":true}',
+    ',"returnByValue":true,"awaitPromise":true}',
     ATimeoutMs);
 
   if LResult = '' then
@@ -687,8 +699,22 @@ begin
     Exit(False);
   end;
 
-  AJsonResult := LResult;
-  Result := True;
+  if UnwrapCdpResult(LResult, LUnwrapped, LException) then
+  begin
+    if LException <> '' then
+    begin
+      AError := 'JS exception: ' + LException;
+      Exit(False);
+    end;
+    AJsonResult := LUnwrapped;
+    Result := True;
+  end
+  else
+  begin
+    // Couldn't parse - hand the raw envelope back so caller can salvage
+    AJsonResult := LResult;
+    Result := True;
+  end;
 end;
 
 function TWebView2BrowserSession.CallDevToolsProtocol(
@@ -720,6 +746,7 @@ end;
 function TWebView2BrowserSession.CaptureScreenshot(
   out AImage: TBytes; out AError: string): Boolean;
 var
+  LStream: IStream;
   LWaitResult: TWaitResult;
 begin
   AError := '';
@@ -735,13 +762,14 @@ begin
     FScreenshotReady := False;
     FScreenshotStream.Clear;
     FScreenshotEvent.ResetEvent;
+    LStream := TStreamAdapter.Create(FScreenshotStream, soReference) as IStream;
 
     // C7 fix: COM call on main thread
     OnMainThread(procedure
     begin
       FBrowser.CapturePreview(
         COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
-        FScreenshotStream);
+        LStream);
     end);
 
     LWaitResult := WaitForEventSafe(FScreenshotEvent, 5000);
@@ -772,7 +800,8 @@ end;
 
 function TWebView2BrowserSession.AsAutomationSession: IBrowserAutomationSession;
 begin
-  Result := TBrowserAutomationSessionAdapter.Create(Self);
+  // M1 fix: delegate to shared engine-agnostic adapter
+  Result := TBrowserSession2AutomationAdapter.Create(Self);
 end;
 
 { IBrowserMessageReceiver }
@@ -796,48 +825,48 @@ end;
 function TWebView2BrowserSession.NavigateAsync(
   const AUrl: string; ATimeoutMs: Integer;
   ACallback: TProc<Boolean, string>): ITask;
+var
+  LProc: TProc;
 begin
-  Result := TTask.Run(
+  LProc :=
     procedure
     var
       LError: string;
       LSuccess: Boolean;
     begin
       LSuccess := Navigate(AUrl, ATimeoutMs, LError);
-      TThread.Queue(nil,
-        procedure
-        begin
-          if Assigned(ACallback) then
-            ACallback(LSuccess, LError);
-        end);
-    end);
+      if Assigned(ACallback) then
+        ACallback(LSuccess, LError);
+    end;
+  Result := TTask.Run(LProc);
 end;
 
 function TWebView2BrowserSession.ExecuteScriptAsync(
   const AScript: string;
   ACallback: TProc<Boolean, string>): ITask;
+var
+  LProc: TProc;
 begin
-  Result := TTask.Run(
+  LProc :=
     procedure
     var
       LError: string;
       LSuccess: Boolean;
     begin
       LSuccess := ExecuteScript(AScript, LError);
-      TThread.Queue(nil,
-        procedure
-        begin
-          if Assigned(ACallback) then
-            ACallback(LSuccess, LError);
-        end);
-    end);
+      if Assigned(ACallback) then
+        ACallback(LSuccess, LError);
+    end;
+  Result := TTask.Run(LProc);
 end;
 
 function TWebView2BrowserSession.EvaluateScriptAsync(
   const AScript: string; ATimeoutMs: Integer;
   ACallback: TProc<Boolean, string, string>): ITask;
+var
+  LProc: TProc;
 begin
-  Result := TTask.Run(
+  LProc :=
     procedure
     var
       LResult, LError: string;
@@ -845,19 +874,18 @@ begin
     begin
       LSuccess := EvaluateScript(AScript, ATimeoutMs,
         LResult, LError);
-      TThread.Queue(nil,
-        procedure
-        begin
-          if Assigned(ACallback) then
-            ACallback(LSuccess, LResult, LError);
-        end);
-    end);
+      if Assigned(ACallback) then
+        ACallback(LSuccess, LResult, LError);
+    end;
+  Result := TTask.Run(LProc);
 end;
 
 function TWebView2BrowserSession.CaptureScreenshotAsync(
   ACallback: TProc<Boolean, TBytes, string>): ITask;
+var
+  LProc: TProc;
 begin
-  Result := TTask.Run(
+  LProc :=
     procedure
     var
       LImage: TBytes;
@@ -865,13 +893,10 @@ begin
       LSuccess: Boolean;
     begin
       LSuccess := CaptureScreenshot(LImage, LError);
-      TThread.Queue(nil,
-        procedure
-        begin
-          if Assigned(ACallback) then
-            ACallback(LSuccess, LImage, LError);
-        end);
-    end);
+      if Assigned(ACallback) then
+        ACallback(LSuccess, LImage, LError);
+    end;
+  Result := TTask.Run(LProc);
 end;
 
 { Self-registration }

@@ -185,16 +185,16 @@ begin
       newCount := qryCount.Fields[0].AsInteger;
 
       if newCount > oldCount then
-        ShowMessage('插入成功，新增记录数�? + IntToStr(newCount - oldCount))
+        ShowMessage('插入成功，新增记录数: ' + IntToStr(newCount - oldCount))
       else
         ShowMessage('警告：没有新增记录！' + #13#10 +
-                   '执行前记录数�? + IntToStr(oldCount) + #13#10 +
-                   '执行后记录数�? + IntToStr(newCount) + #13#10 +
+                   '执行前记录数: ' + IntToStr(oldCount) + #13#10 +
+                   '执行后记录数: ' + IntToStr(newCount) + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
     except
       on E: Exception do
       begin
-        ShowMessage('执行出错�? + E.Message + #13#10 +
+        ShowMessage('执行出错: ' + E.Message + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
       end;
     end;

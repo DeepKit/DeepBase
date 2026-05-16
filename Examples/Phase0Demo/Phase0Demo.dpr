@@ -6,6 +6,7 @@ uses
   FireDAC.VCLUI.Wait,
   FireDAC.Comp.UI,
   DeepBase.Manager,
+  DeepBase.Persistence.Manager.FireDAC,
   MainForm in 'MainForm.pas' {frmMain};
 
 {$R *.res}

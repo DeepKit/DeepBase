@@ -56,6 +56,7 @@ type
     ICommerceBackendHttpTransport)
   private
     FHttpClient: THTTPClient;
+    FLock: TObject;
   public
     constructor Create(ATimeoutMs: Integer = 30000);
     destructor Destroy; override;
@@ -648,11 +649,13 @@ begin
   FHttpClient.ConnectionTimeout := ATimeoutMs;
   FHttpClient.ResponseTimeout := ATimeoutMs;
   FHttpClient.ContentType := 'application/json';
+  FLock := TObject.Create;
 end;
 
 destructor TCommerceBackendHttpClientTransport.Destroy;
 begin
   FreeAndNil(FHttpClient);
+  FreeAndNil(FLock);
   inherited;
 end;
 
@@ -662,34 +665,42 @@ var
   Response: IHTTPResponse;
   Stream: TStringStream;
 begin
-  if SameText(AMethod, SHttpGet) then
-    Response := FHttpClient.Get(AUrl, nil, AHeaders)
-  else if SameText(AMethod, SHttpPost) then
-  begin
-    Stream := TStringStream.Create(ABody, TEncoding.UTF8);
-    try
-      Response := FHttpClient.Post(AUrl, Stream, nil, AHeaders);
-    finally
-      Stream.Free;
-    end;
-  end
-  else if SameText(AMethod, SHttpPut) then
-  begin
-    Stream := TStringStream.Create(ABody, TEncoding.UTF8);
-    try
-      Response := FHttpClient.Put(AUrl, Stream, nil, AHeaders);
-    finally
-      Stream.Free;
-    end;
-  end
-  else if SameText(AMethod, SHttpDelete) then
-    Response := FHttpClient.Delete(AUrl, nil, AHeaders)
-  else
-    raise EDeepBaseCommerceError.CreateFmt('Unsupported HTTP method: %s',
-      [AMethod]);
+  // FEAT-014: THTTPClient is not thread-safe — serialize all calls on the
+  // shared instance so concurrent Send invocations cannot corrupt internal
+  // request/response state.
+  TMonitor.Enter(FLock);
+  try
+    if SameText(AMethod, SHttpGet) then
+      Response := FHttpClient.Get(AUrl, nil, AHeaders)
+    else if SameText(AMethod, SHttpPost) then
+    begin
+      Stream := TStringStream.Create(ABody, TEncoding.UTF8);
+      try
+        Response := FHttpClient.Post(AUrl, Stream, nil, AHeaders);
+      finally
+        Stream.Free;
+      end;
+    end
+    else if SameText(AMethod, SHttpPut) then
+    begin
+      Stream := TStringStream.Create(ABody, TEncoding.UTF8);
+      try
+        Response := FHttpClient.Put(AUrl, Stream, nil, AHeaders);
+      finally
+        Stream.Free;
+      end;
+    end
+    else if SameText(AMethod, SHttpDelete) then
+      Response := FHttpClient.Delete(AUrl, nil, AHeaders)
+    else
+      raise EDeepBaseCommerceError.CreateFmt('Unsupported HTTP method: %s',
+        [AMethod]);
 
-  Result.StatusCode := Response.StatusCode;
-  Result.Body := Response.ContentAsString(TEncoding.UTF8);
+    Result.StatusCode := Response.StatusCode;
+    Result.Body := Response.ContentAsString(TEncoding.UTF8);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 { TCommerceBackendUnifiedTransport }

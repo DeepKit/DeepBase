@@ -127,7 +127,7 @@
   - 删除未使用的 AiPEX/AipexBase、旧后端认证/计费客户端、旧认证/计费 UI 组件和演示工程�?  - 删除过期 API/集成文档，不再保留误�?AI 的历史入口�?  - `ThirdParty/Payment` 明确定位为渠�?SDK 能力；统一用户、订单、支付、权益流程由 `Features/DeepBase.Commerce.*` 承接�?  - `docs/integrations` 已扁平化�?`docs/`，空目录删除，相关链接修正�?  - 新增 `docs/DeepBase-Downstream-Integration.md` 作为下游最干净的集成入口�?
 ### LLM-001 ~ LLM-004: Delphi LLM 客户端、安全存储与聊天组件 �?- **完成日期**: 2025-12-14
 - **内容摘要**:
-  - `Core/DeepBase.LLM.BillingClient.pas` 提供轻量 LLM 代理客户端，支持流式/非流式、重试、取消、异步调用和对话历史�?  - `Core/DeepBase.Security.DPAPI.pas` 提供 DPAPI、Credential Manager �?`TSecureString`�?  - `VCL/DeepBase.VCL.LLMChatFrame.pas`、`FMX/DeepBase.FMX.LLMChatFrame.pas` 提供可复用聊�?Frame�?  - `Tests/Test.DeepBase.LLM.BillingClient.pas` �?`Tests/Test.DeepBase.Security.DPAPI.pas` 覆盖核心行为�?
+  - `Core/DeepBase.LLM.BillingClient.pas` 提供轻量 AI 质价管家客户端，支持流式/非流式、重试、取消、异步调用和对话历史�?  - `Core/DeepBase.Security.DPAPI.pas` 提供 DPAPI、Credential Manager �?`TSecureString`�?  - `VCL/DeepBase.VCL.LLMChatFrame.pas`、`FMX/DeepBase.FMX.LLMChatFrame.pas` 提供可复用聊�?Frame�?  - `Tests/Test.DeepBase.LLM.BillingClient.pas` �?`Tests/Test.DeepBase.Security.DPAPI.pas` 覆盖核心行为�?
 ### BUG-098: FormState 多显示器坐标恢复修复 �?- **完成日期**: 2026-05-05
 - **内容摘要**:
   - `Core/DeepBase.FormState.pas` 恢复窗口时按当前显示器工作区夹回坐标，避免旧多屏坐标导致窗口不可见�?  - `VCL/DeepBase.VCL.FormStateHelper.pas` 保存路径补齐 `GetWindowPlacement` 工作区坐标到屏幕坐标转换�?  - 详细修复记录�?`bugfix.md`�?- **验证**:
@@ -1219,3 +1219,70 @@ var HTML := Exporter.ToHTML;
 - **内容摘要**:
   - �?Windows `ProtectStringDpapi` 继续写出 UBS2 v1，明�?`UBS2_VERSION_CURRENT` 和支持版本列表�?  - �?Windows `UnprotectStringDpapi` 改为先读�?UBS2 magic/version，再按版本分发到 v1 解密器�?  - UBS2 v1 解密器独立处�?KDF、迭代次数、salt、IV、ciphertext、tag，后续可添加 v2/v3 分支而不改主入口�?  - �?UBS1 legacy magic、未�?magic、未知版本、未�?KDF、过�?payload 和无效迭代次数给出可迁移的错误信息�?  - `Tests/Test.DeepBase.Security.pas` 补充�?Windows UBS2 版本头、未知版本、未�?KDF、legacy magic 覆盖，并收紧 Windows 篡改检测为 `EDecryptionException`�?- **验证**:
   - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security`�?2/42 通过�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Security.DPAPI`�?3/23 通过�?  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/build_examples_win64.ps1`�? 个必选示例全部通过�?
+
+
+---
+
+## 2026-05-14 全仓库编译修复 (18/18 构建目标)
+
+### BUILD-FIX-2026-05-14: 从 DeepBaseVCL 整包到全部 dproj 编译通过
+- **完成日期**: 2026-05-14
+- **目标**: 用户要求"整包必须编过",从 DeepBaseVCL.dpk 开始,逐步扩展到全仓库 18 个构建目标 (6 RT + 3 DT + 5 Examples/Tools + DeepBaseRun + prjDoQry + DeepBaseTests + DeepPublisher) 全部 Win64/Debug 0 errors。
+- **产出**:
+  - BUG-177: `Features/DeepBase.Browser.ResponseWaiter.pas` Delphi 13.1 RTL 不兼容修复 (TInterlocked.Read Integer 移除 + TProc<string> const 不匹配)
+  - BUG-178: `Features/DeepBase.Browser.Types.pas` Win32 前向引用顺序修复 (IBrowserSessionFactory/TSessionRebuiltEvent 必须在 IBrowserRecoveryEvents 之前)
+  - BUG-179: 全仓库中文字符串 UTF-8 截断修复 (60+ 处,跨 6 个文件)
+  - BUG-180: DeepPublisher 工具项目 rename 不完整修复 (dproj/dpr/unit name/vrc/search path)
+  - 搜索路径补齐: Phase0Demo / FullDemo / Studio / SeedTool / prjDoQry / DeepPublisher 的 dproj
+  - DeepBaseTests: IntentClarification + LLM.PromptTemplate 恢复编译 (根因是 BUG-178 级联)
+- **验证**:
+  - 18/18 构建目标 Win64/Debug 全部 exit=0
+  - DeepShell 测试 24/24 通过, 0 leaked
+  - Win32 偶发 BPL 文件锁 race 重试即过 (非代码问题)
+- **遗留**:
+  - ~100 处注释含截断中文 (不影响编译,影响可读性)
+  - DeepShell Demo 4 个 pending feature (tasks.md 队列)
+  - Layout 跨进程需要 DB1 store (架构设计决策)
+
+
+---
+
+## 2026-05-14 基础模块 P0/P1/P2 第二轮修复 (BUG-181~196)
+
+### BASIC-FIX-2026-05-14: 16 个基础层安全/并发/一致性问题修复
+- **完成日期**: 2026-05-14
+- **目标**: 按 better.md §8 评审清单,修复所有不需要架构重构即可解决的 P0/P1/P2 问题。
+- **产出** (16 项):
+  - P0: Authorization 事务 (BASIC-009); CloudBackup XOR→AES / CloudSync Base64→AES / LLM.Config 硬编码key→DPAPI (FR-002)
+  - P1: Logging.FireDAC 加锁 (BASIC-010); Manager Initialize 加锁 (BASIC-018); Manager FinalizeModules 清回调 (BASIC-020); EventBus PublishAsync drain (BASIC-021); EventBus 统计原子 (BASIC-022); IoC FResolving 线程隔离 (BASIC-024); RuntimeContext 双检锁 (BASIC-005); Crypto Random fail-closed (BASIC-015); DB Factory 凭据 fail-closed (BASIC-011)
+  - P2: Config 回调出锁 (BASIC-027); 版本号统一 (FR-001); CompareVersions 去重 (FR-013); Logger sanitizer 收敛 (FR-014); .editorconfig 品牌 (FR-017)
+- **验证**:
+  - 6 RT 包 Win64 编译通过
+  - DeepShell 测试 24/24 通过, 0 leaked
+- **遗留** (需架构重构,下一 sprint):
+  - BASIC-001/004: Services 包 DAG 拆分
+  - BASIC-006/007: Scheduler/WorkerQueue 生命周期 API 重设计
+  - BASIC-008: DB Pool 连接 lease/refcount 重构
+  - BASIC-019: 迁移引擎统一
+  - LLM-001~009: LLM schema/provider/streaming 统一
+
+---
+
+## 2026-05-15 基础层 P0/P1 第三轮修复 + 架构重构 (BUG-193~203)
+
+### BASIC-FIX-2026-05-15: 11 个基础层修复 + 3 个架构重构
+- **完成日期**: 2026-05-15
+- **目标**: 完成 better.md §8.6 遗留的所有 P0/P1 基础层问题,包括需要架构重构的三大项。
+- **产出** (11 项修复 + 3 项重构):
+  - P0: DB Pool 线程安全 (BASIC-008) — Release 加锁、ValidateIdleConnections csValidating、RecycleAll 只回收 idle、Shutdown drain 等待
+  - P1: 架构测试加强 (BASIC-004); Scheduler 生命周期 (BASIC-006); WorkerQueue DrainAndStop (BASIC-007); Migration 命名兼容 (BASIC-012); DoQry 连接 sweep (BASIC-014); SQL Splitter 共享 (BASIC-019 部分); EventBus subscription lifetime (BASIC-023); IoC Freeze (BASIC-025)
+  - P2: KeyManager 文档诚实化 (BASIC-017)
+  - 架构重构: Services 包拆分 (BASIC-001) — requires 精简为 rtl+DeepBaseCore; Crypto 统一 (BASIC-016) — 唯一 BCrypt/CryptoAPI 声明源; Config 接口清理 (BASIC-026) — 移除 deprecated 方法
+- **新增文件**: `Core/DeepBase.SQL.Splitter.pas`
+- **新增测试**: IoC Freeze 3 个 + EventBus subscription lifetime 2 个
+- **修改文件**: ~25 个 (含 5 个 .dpk, 4 个测试文件)
+- **验证**: 所有修改文件 0 诊断错误; 编译输出仅有预先存在的 onnxruntime 第三方依赖问题
+- **遗留** (下一阶段):
+  - 周边模块 P0/P1: LLM-001/002 (schema/secrets), EDGE-002/003/006/007 (Cloud/Updater 安全)
+  - P2 可维护性: FR-011 编码损坏, FR-016 DeepFlow, Speech/Governance 板块
+  - 功能评审: DeepShell pending features, BrowserAutomation, IntentClarification BUG-134~142

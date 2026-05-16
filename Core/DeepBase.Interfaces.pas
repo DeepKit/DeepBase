@@ -41,7 +41,7 @@ type
   /// Provides type-safe config read/write with caching.
   /// </summary>
   IDeepBaseConfig = interface
-    ['{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}']
+    ['{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5E}']
     
     // String config
     function GetConfig(const Key: string; const Default: string = ''): string;
@@ -58,12 +58,6 @@ type
     // Float config
     function GetConfigFloat(const Key: string; Default: Double = 0): Double;
     procedure SetConfigFloat(const Key: string; Value: Double; const Category: string = 'General');
-    
-    // Encrypted config - DEPRECATED for security reasons
-    function GetConfigEncrypted(const Key: string; const Default: string = ''): string;
-      deprecated 'Use DeepBase.Security.LoadSecret() for secure DPAPI encryption';
-    procedure SetConfigEncrypted(const Key, Value: string; const Category: string = 'General');
-      deprecated 'Use DeepBase.Security.SaveSecret() for secure DPAPI encryption';
     
     // Utility
     procedure DeleteConfig(const Key: string);

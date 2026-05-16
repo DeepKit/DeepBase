@@ -93,9 +93,13 @@ type
   public
     constructor Create(AEventBus: TObject; const AEventType: string;
       const ASubscriptionId: TGUID);
+    destructor Destroy; override;
     procedure Unsubscribe;
     function IsActive: Boolean;
     function GetEventType: string;
+    /// <summary>Internal: called by EventBus on destruction to invalidate
+    /// the subscription token so later Unsubscribe calls become no-ops.</summary>
+    procedure InvalidateBus;
     property SubscriptionId: TGUID read FSubscriptionId;
   end;
 
@@ -173,7 +177,14 @@ type
     FKeepHistory: Boolean;
     FAsyncCount: Integer;
     FAsyncDrained: TEvent;
-    
+    // BASIC-023: track live TSubscription instances to invalidate them
+    // when EventBus is destroyed, preventing dangling-pointer Unsubscribe.
+    FLiveSubscriptions: TList<TObject>;
+
+    procedure RegisterLiveSubscription(ASub: TObject);
+    procedure UnregisterLiveSubscription(ASub: TObject);
+    procedure InvalidateAllLiveSubscriptions;
+
     function GetEventTypeName<T>: string;
     function GetSubscriptionList(const EventType: string): TList<TSubscriptionInfo>;
     function SubscribeInternal<T>(Handler: TEventHandler<T>;
@@ -356,13 +367,9 @@ function EventBus: TEventBus;
 begin
   if GEventBus = nil then
   begin
-    GEventBusLock.Enter;
-    try
-      if GEventBus = nil then
-        GEventBus := TEventBus.Create;
-    finally
-      GEventBusLock.Leave;
-    end;
+    var LNew := TEventBus.Create;
+    if TInterlocked.CompareExchange(Pointer(GEventBus), Pointer(LNew), nil) <> nil then
+      LNew.Free;  // Another thread created it first
   end;
   Result := GEventBus;
 end;
@@ -415,6 +422,22 @@ begin
   FEventType := AEventType;
   FSubscriptionId := ASubscriptionId;
   FActive := True;
+  if FEventBus <> nil then
+    TEventBus(FEventBus).RegisterLiveSubscription(Self);
+end;
+
+destructor TSubscription.Destroy;
+begin
+  if FEventBus <> nil then
+    TEventBus(FEventBus).UnregisterLiveSubscription(Self);
+  inherited;
+end;
+
+procedure TSubscription.InvalidateBus;
+begin
+  // Called by EventBus.Destroy under FLock; safe to mutate without lock here.
+  FEventBus := nil;
+  FActive := False;
 end;
 
 procedure TSubscription.Unsubscribe;
@@ -473,6 +496,7 @@ begin
   inherited Create;
   FSubscriptions := TDictionary<string, TList<TSubscriptionInfo>>.Create;
   FOwnerLinks := TList<TWeakSubscriptionLink>.Create;
+  FLiveSubscriptions := TList<TObject>.Create;
   FLock := TCriticalSection.Create;
   FEventHistory := TList<TPair<string, TValue>>.Create;
   FAsyncDrained := TEvent.Create(nil, True, True, '');
@@ -491,6 +515,11 @@ begin
 
   FLock.Enter;
   try
+    // BASIC-023: invalidate all live TSubscription tokens so external
+    // ISubscription holders cannot dereference us after Destroy.
+    InvalidateAllLiveSubscriptions;
+    FreeAndNil(FLiveSubscriptions);
+
     DetachWeakSubscriptionLinks;
     FreeAndNil(FOwnerLinks);
     for List in FSubscriptions.Values do
@@ -756,6 +785,46 @@ begin
   FOwnerLinks.Clear;
 end;
 
+procedure TEventBus.RegisterLiveSubscription(ASub: TObject);
+begin
+  FLock.Enter;
+  try
+    if (FLiveSubscriptions <> nil) and (FLiveSubscriptions.IndexOf(ASub) < 0) then
+      FLiveSubscriptions.Add(ASub);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TEventBus.UnregisterLiveSubscription(ASub: TObject);
+begin
+  // Tolerant: lock may be nil if EventBus.Destroy already cleared it
+  // before TSubscription.Destroy ran (rare but possible during shutdown).
+  if FLock = nil then
+    Exit;
+  FLock.Enter;
+  try
+    if FLiveSubscriptions <> nil then
+      FLiveSubscriptions.Remove(ASub);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TEventBus.InvalidateAllLiveSubscriptions;
+var
+  Sub: TObject;
+begin
+  // Caller already holds FLock. Iterate over a copy because InvalidateBus
+  // sets FEventBus := nil so the subscription will not call back.
+  if FLiveSubscriptions = nil then
+    Exit;
+  for Sub in FLiveSubscriptions do
+    if Sub <> nil then
+      TSubscription(Sub).InvalidateBus;
+  FLiveSubscriptions.Clear;
+end;
+
 procedure TEventBus.TrackAsyncBegin;
 begin
   FLock.Enter;
@@ -927,11 +996,21 @@ var
   LSelf: TEventBus;
   LProc: TProc;
 begin
+  // BASIC-021 fix: register this async dispatch with the bus's drain
+  // tracker so WaitForAsyncHandlers actually waits for it. Previously
+  // PublishAsync<T> went out via TTask.Run without touching FAsyncCount,
+  // so a Runtime shutdown could believe the bus was idle while a
+  // generic-typed publish was still running.
   EventCopy := Event;
   LSelf := Self;
+  TrackAsyncBegin;
   LProc := procedure
     begin
-      LSelf.Publish<T>(EventCopy);
+      try
+        LSelf.Publish<T>(EventCopy);
+      finally
+        LSelf.TrackAsyncEnd;
+      end;
     end;
   Result := TTask.Run(LProc);
 end;
@@ -946,7 +1025,10 @@ begin
   if not FEnabled then
     Exit;
   
-  Inc(FStats.TotalPublished);
+  // BASIC-022 fix: stats counters are read by Stats property without
+  // holding FLock; use atomic increments so multi-threaded Publish does
+  // not corrupt the running totals.
+  TInterlocked.Increment(FStats.TotalPublished);
   Delivered := False;
   
   FLock.Enter;
@@ -970,19 +1052,19 @@ begin
       begin
         if not Info.Filter(Event) then
         begin
-          Inc(FStats.TotalFiltered);
+          TInterlocked.Increment(FStats.TotalFiltered);
           Continue;
         end;
       end;
       
       InvokeHandler(Info, Event);
-      Inc(FStats.TotalDelivered);
+      TInterlocked.Increment(FStats.TotalDelivered);
       Delivered := True;
       
     except
       on E: Exception do
       begin
-        Inc(FStats.TotalErrors);
+        TInterlocked.Increment(FStats.TotalErrors);
         if Assigned(FOnError) then
           FOnError(EventType, Event, E);
       end;

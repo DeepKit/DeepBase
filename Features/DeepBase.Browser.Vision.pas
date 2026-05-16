@@ -18,6 +18,7 @@ uses
   System.SyncObjs,
   System.Types,
   System.Generics.Collections,
+  Winapi.Windows,
   DeepBase.Browser.Types;
 
 type
@@ -46,11 +47,14 @@ type
     FSession: IBrowserSession;
     FProvider: IVisionProvider;
     FEnabled: Boolean;
+    FLock: TCriticalSection;
 
     function TakeScreenshot: TBytes;
+    function GetDpiScale: Double;
   public
     constructor Create(ASession: IBrowserSession;
       AProvider: IVisionProvider = nil);
+    destructor Destroy; override;
 
     function TryVisionClick(
       const ADescription: string): Boolean;
@@ -60,10 +64,15 @@ type
       out ABounds: TRect): Boolean;
     function DetectAllElements: TDetectedElementArray;
 
+    function GetEnabled: Boolean;
+    procedure SetEnabled(AValue: Boolean);
+    function GetProvider: IVisionProvider;
+    procedure SetProvider(AValue: IVisionProvider);
+
     property Provider: IVisionProvider
-      read FProvider write FProvider;
+      read GetProvider write SetProvider;
     property Enabled: Boolean
-      read FEnabled write FEnabled;
+      read GetEnabled write SetEnabled;
   end;
 
   TVisionCache = class
@@ -101,6 +110,67 @@ begin
   FSession := ASession;
   FProvider := AProvider;
   FEnabled := AProvider <> nil;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TBrowserVisionFallback.Destroy;
+begin
+  FLock.Free;
+  inherited;
+end;
+
+function TBrowserVisionFallback.GetDpiScale: Double;
+var
+  LDc: HDC;
+begin
+  LDc := GetDC(0);
+  try
+    Result := GetDeviceCaps(LDc, LOGPIXELSX) / 96;
+  finally
+    ReleaseDC(0, LDc);
+  end;
+  if Result < 0.5 then
+    Result := 1.0;
+end;
+
+function TBrowserVisionFallback.GetEnabled: Boolean;
+begin
+  FLock.Enter;
+  try
+    Result := FEnabled;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TBrowserVisionFallback.SetEnabled(AValue: Boolean);
+begin
+  FLock.Enter;
+  try
+    FEnabled := AValue;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TBrowserVisionFallback.GetProvider: IVisionProvider;
+begin
+  FLock.Enter;
+  try
+    Result := FProvider;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TBrowserVisionFallback.SetProvider(AValue: IVisionProvider);
+begin
+  FLock.Enter;
+  try
+    FProvider := AValue;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TBrowserVisionFallback.TakeScreenshot: TBytes;
@@ -120,18 +190,25 @@ function TBrowserVisionFallback.TryVisionClick(
 var
   LElement: TDetectedElement;
   LImage: TBytes;
-  LCenterX, LCenterY: Double;
+  LCenterX, LCenterY, LDpiScale: Double;
   LResult, LError: string;
+  LProvider: IVisionProvider;
 begin
   Result := False;
-  if not FEnabled or (FProvider = nil) then
-    Exit;
+  FLock.Enter;
+  try
+    if not FEnabled then Exit;
+    LProvider := FProvider;
+  finally
+    FLock.Leave;
+  end;
+  if LProvider = nil then Exit;
 
   LImage := TakeScreenshot;
   if Length(LImage) = 0 then
     Exit;
 
-  if not FProvider.FindElement(ADescription, LImage,
+  if not LProvider.FindElement(ADescription, LImage,
     LElement) then
   begin
     Logger.InfoFmt('Vision element not found: %s',
@@ -141,6 +218,16 @@ begin
 
   LCenterX := (LElement.Bounds.Left + LElement.Bounds.Right) / 2;
   LCenterY := (LElement.Bounds.Top + LElement.Bounds.Bottom) / 2;
+
+  // M6 fix: vision provider returns device-pixel coordinates (from
+  // CapturePreview), but CDP Input.dispatchMouseEvent expects CSS pixels.
+  // Divide by DPI scale to convert.
+  LDpiScale := GetDpiScale;
+  if LDpiScale <> 1.0 then
+  begin
+    LCenterX := LCenterX / LDpiScale;
+    LCenterY := LCenterY / LDpiScale;
+  end;
 
   // BUG-BA-019 fix: distinct out variables for AJsonResult vs AError.
   // H7 fix: use JsFloat for locale-independent numeric formatting.
@@ -173,24 +260,39 @@ function TBrowserVisionFallback.TryVisionInput(
 var
   LElement: TDetectedElement;
   LImage: TBytes;
-  LCenterX, LCenterY: Double;
+  LCenterX, LCenterY, LDpiScale: Double;
   LError, LResult: string;
+  LProvider: IVisionProvider;
 begin
   Result := False;
-  if not FEnabled or (FProvider = nil) then
-    Exit;
+  FLock.Enter;
+  try
+    if not FEnabled then Exit;
+    LProvider := FProvider;
+  finally
+    FLock.Leave;
+  end;
+  if LProvider = nil then Exit;
 
   LImage := TakeScreenshot;
   if Length(LImage) = 0 then
     Exit;
 
-  if not FProvider.FindElement(ADescription, LImage,
+  if not LProvider.FindElement(ADescription, LImage,
     LElement) then
     Exit;
 
   // Click to focus
   LCenterX := (LElement.Bounds.Left + LElement.Bounds.Right) / 2;
   LCenterY := (LElement.Bounds.Top + LElement.Bounds.Bottom) / 2;
+
+  // M6 fix: convert device-pixel coords to CSS pixels (divide by DPI scale)
+  LDpiScale := GetDpiScale;
+  if LDpiScale <> 1.0 then
+  begin
+    LCenterX := LCenterX / LDpiScale;
+    LCenterY := LCenterY / LDpiScale;
+  end;
 
   // BUG-BA-019 fix: check return values; abort early on CDP failure.
   // H7 fix: locale-safe float formatting.
@@ -222,17 +324,24 @@ function TBrowserVisionFallback.TryVisionFind(
 var
   LElement: TDetectedElement;
   LImage: TBytes;
+  LProvider: IVisionProvider;
 begin
   Result := False;
   ABounds := Rect(0, 0, 0, 0);
-  if not FEnabled or (FProvider = nil) then
-    Exit;
+  FLock.Enter;
+  try
+    if not FEnabled then Exit;
+    LProvider := FProvider;
+  finally
+    FLock.Leave;
+  end;
+  if LProvider = nil then Exit;
 
   LImage := TakeScreenshot;
   if Length(LImage) = 0 then
     Exit;
 
-  Result := FProvider.FindElement(ADescription, LImage,
+  Result := LProvider.FindElement(ADescription, LImage,
     LElement);
   if Result then
     ABounds := LElement.Bounds;
@@ -242,16 +351,23 @@ function TBrowserVisionFallback.DetectAllElements:
   TDetectedElementArray;
 var
   LImage: TBytes;
+  LProvider: IVisionProvider;
 begin
   Result := nil;
-  if not FEnabled or (FProvider = nil) then
-    Exit;
+  FLock.Enter;
+  try
+    if not FEnabled then Exit;
+    LProvider := FProvider;
+  finally
+    FLock.Leave;
+  end;
+  if LProvider = nil then Exit;
 
   LImage := TakeScreenshot;
   if Length(LImage) = 0 then
     Exit;
 
-  Result := FProvider.DetectElements(LImage);
+  Result := LProvider.DetectElements(LImage);
 end;
 
 { TVisionCache }
@@ -267,9 +383,9 @@ end;
 
 destructor TVisionCache.Destroy;
 begin
-  FLock.Free;
   FTimestamps.Free;
   FCache.Free;
+  FLock.Free;
   inherited;
 end;
 

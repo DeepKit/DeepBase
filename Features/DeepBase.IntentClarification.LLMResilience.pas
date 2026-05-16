@@ -22,6 +22,7 @@ uses
   System.SyncObjs,
   System.DateUtils,
   System.Diagnostics,
+  System.Threading,
   DeepBase.LLM.Client,
   DeepBase.LLM.Types,
   DeepBase.Logging,
@@ -236,6 +237,8 @@ begin
   Result := Default(TChatResult);
   Result.Success := False;
   Result.Content := '';
+  Result.ErrorMessage := AError;
+  Result.ErrorCode := 'resilience_failure';
   Result.FinishReason := 'resilience_failure';
 end;
 
@@ -245,6 +248,10 @@ var
   LAttempt: Integer;
   LLastError: string;
   LSW: TStopwatch;
+  LTask: ITask;
+  LTaskResult: TChatResult;
+  LTaskError: string;
+  LTimedOut: Boolean;
 begin
   // Circuit breaker check
   if IsCircuitOpen then
@@ -263,30 +270,69 @@ begin
   begin
     try
       LSW := TStopwatch.StartNew;
-      Result := ACall();
+
+      // IC-010: Run inner call inside a TTask and wait with timeout so a
+      // hung LLM call cannot block the whole engine. Note that Wait()
+      // returning False does not synchronously kill the inner call --
+      // ONNX/HTTP libraries do not support cancellation tokens here, so the
+      // background task may still complete eventually, but we no longer
+      // block the caller and we treat it as a failure.
+      LTaskResult := Default(TChatResult);
+      LTaskError := '';
+      LTask := TTask.Run(
+        procedure
+        begin
+          try
+            LTaskResult := ACall();
+          except
+            on E: Exception do
+              LTaskError := E.ClassName + ': ' + E.Message;
+          end;
+        end);
+
+      LTimedOut := not LTask.Wait(FConfig.TimeoutMs);
       LSW.Stop;
 
-      // Check for slow response
-      if LSW.ElapsedMilliseconds > FConfig.TimeoutMs then
-        Log(ltWarning, Format('IC.Resilience: LLM call slow (%dms > %dms timeout)',
-          [LSW.ElapsedMilliseconds, FConfig.TimeoutMs]));
-
-      if Result.Success then
+      if LTimedOut then
       begin
-        RecordSuccess;
-        Exit;
+        Result := Default(TChatResult);
+        Result.Success := False;
+        LLastError := Format('LLM call timed out after %dms', [FConfig.TimeoutMs]);
+        Result.FinishReason := 'timeout';
+        Result.ErrorMessage := LLastError;
+        Result.ErrorCode := 'timeout';
+        Log(ltWarning, Format('IC.Resilience: LLM timeout (attempt %d/%d): %s',
+          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+      end
+      else if LTaskError <> '' then
+      begin
+        LLastError := LTaskError;
+        Log(ltWarning, Format('IC.Resilience: LLM exception (attempt %d/%d): %s',
+          [LAttempt + 1, FConfig.MaxRetries + 1, LTaskError]));
+        Result := Default(TChatResult);
+        Result.Success := False;
+        Result.FinishReason := 'exception';
       end
       else
       begin
-        LLastError := Result.FinishReason;
-        Log(ltWarning, Format('IC.Resilience: LLM returned error (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+        Result := LTaskResult;
+        if Result.Success then
+        begin
+          RecordSuccess;
+          Exit;
+        end
+        else
+        begin
+          LLastError := Result.FinishReason;
+          Log(ltWarning, Format('IC.Resilience: LLM returned error (attempt %d/%d): %s',
+            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+        end;
       end;
     except
       on E: Exception do
       begin
         LLastError := E.Message;
-        Log(ltWarning, Format('IC.Resilience: LLM exception (attempt %d/%d): %s',
+        Log(ltWarning, Format('IC.Resilience: Resilience harness exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));
       end;
     end;

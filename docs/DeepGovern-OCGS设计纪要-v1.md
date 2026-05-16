@@ -168,7 +168,7 @@ CREATE TABLE governance_change_sessions (
         └─ [RegionGate] ChangeWorkbench 区（Output 2 生产地）
             ├─ [CommandGate] 新建 ChangeSession
             │   └─ [DialogGate] 输入 intent → state: intent → drafting
-            ├─ [AIGate] 调 DeepLLM 生成草案（仅黄色协议能力）
+            ├─ [AIGate] 调 Assayer 生成草案（仅黄色协议能力）
             │   └─ state: drafting → draft_ready
             ├─ [ControlGate] 手编辑器
             ├─ [CommandGate] 触发 DryRun

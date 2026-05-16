@@ -392,13 +392,15 @@ procedure TLLMConfigPanel.SetLLM(ALLM: TDeepBaseLLM);
 begin
   if FOwnsLLM and Assigned(FLLM) then
   begin
-    FLLM.Free;
+    // GOV-024: FreeAndNil to prevent dangling pointer access if a later
+    // code path checks Assigned(FLLM) before reassignment completes.
+    FreeAndNil(FLLM);
     FOwnsLLM := False;
   end;
-  
+
   FLLM := ALLM;
   FOwnsLLM := False;
-  
+
   if Assigned(FLLM) then
     LoadConfig;
 end;

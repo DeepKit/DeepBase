@@ -23,7 +23,7 @@
 - 13.1 语法样板：已在 Core / Persistence / Features / VCL / FMX 各落地 1 个样板文件；包编译和完整测试通过。
 - LLM proxy 客户端验证：`Tests/TestLLMProxyClient.dpr` 在 13.1 下编译通过，并配合 `Tests/mock_proxy_server.py` 跑完 6 项场景。
 - ThirdParty 兼容性：`ThirdParty/` 下所有 `.pas` 已用 Delphi 13.1 逐单元编译通过；DB 与 Payment.Core 的 13.1 编译错误已修复。
-- 下游兼容验证：已尝试 DeepLLM、DeepDev、DeepStory。三者当前阻塞均在下游仓库/第三方组件自身，未发现 DeepBase 导出接口断链；阶段 9 仍未达成 3 个下游项目全部通过。
+- 下游兼容验证：已尝试 Assayer、DeepDev、DeepStory。三者当前阻塞均在下游仓库/第三方组件自身，未发现 DeepBase 导出接口断链；阶段 9 仍未达成 3 个下游项目全部通过。
 - `.dproj` / `.dpk` / `.groupproj` 已生成 `.12.bak` 本地备份；这些文件受 `.gitignore` 的 `*.bak` 规则忽略，不纳入常规提交。
 - 需要 IDE/人工参与的步骤：`.dproj` 格式自动升级、DFM/FMX 96 DPI 保存、设计时包 Install、IDE 组件面板确认。
 
@@ -221,8 +221,8 @@
 
 > DeepBase 完成后,必须验证下游能引用新 BPL
 
-- [ ] 9.1 选 DeepLLM 作为验证项目,仅做 Build（不做完整迁移）
-  - 2026-05-09：已尝试构建；失败点在下游 `D:\_Progs\02Business\DeepLLM\src\core\proxy\ProxyConfig.pas`，从约 line 217 起出现函数声明/局部变量结构错误（如 `E2023 Function needs result type`、`AEndIdx/AStartIdx/ALines/ABaseIndent undeclared`）。该失败不是 DeepBase BPL/API 断链，需先修 DeepLLM 自身语法结构。
+- [ ] 9.1 选 Assayer 作为验证项目,仅做 Build（不做完整迁移）
+  - 2026-05-09：已尝试构建；失败点在下游 `D:\_Progs\02Business\Assayer\src\core\proxy\ProxyConfig.pas`，从约 line 217 起出现函数声明/局部变量结构错误（如 `E2023 Function needs result type`、`AEndIdx/AStartIdx/ALines/ABaseIndent undeclared`）。该失败不是 DeepBase BPL/API 断链，需先修 Assayer 自身语法结构。
 - [ ] 9.2 选一个 FMX 项目（如 DeepDev 或 DeepInsight）做 Build 验证
   - 2026-05-09：已尝试 DeepDev；失败点为 `DeepDev.vrc(63,15): unable to open file 'Progee.ico': FileNotFound`。该失败是下游资源文件缺失/命名不一致，不是 DeepBase 断链。
 - [ ] 9.3 选一个 VCL 项目（如 DeepStory 或 DeepConfig）做 Build 验证

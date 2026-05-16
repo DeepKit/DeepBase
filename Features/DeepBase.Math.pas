@@ -19,7 +19,7 @@ uses
   System.SysUtils, System.Math, System.SyncObjs, System.Generics.Collections,
   System.Generics.Defaults, Winapi.Windows, DeepBase.Exceptions;
 
-// Ìí¼ÓÊýÖµÎÈ¶¨ÐÔ¼ì²éº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¶ï¿½ï¿½Ô¼ï¿½éº¯ï¿½ï¿½
 function IsFinite(const Value: Double): Boolean; inline;
 
 type
@@ -474,6 +474,13 @@ type
 
 implementation
 
+const
+  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
+
+function BCryptGenRandom(hAlgorithm: THandle; pbBuffer: PByte;
+  cbBuffer: Cardinal; dwFlags: Cardinal): Integer; stdcall;
+  external 'bcrypt.dll';
+
 function IsFinite(const Value: Double): Boolean;
 begin
   Result := not (IsNaN(Value) or IsInfinite(Value));
@@ -612,7 +619,7 @@ end;
 
 class operator TVector2.Divide(const A: TVector2; B: Double): TVector2;
 begin
-  // BUG-026 FIX: Ìí¼Ó³ýÁã¼ì²é
+  // BUG-026 FIX: ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½
   if TMathUtils.IsZero(B) then
     raise EMathException.Create('Division by zero in TVector2.Divide');
   Result := TVector2.Create(A.X / B, A.Y / B);
@@ -760,7 +767,7 @@ end;
 
 class operator TVector3.Divide(const A: TVector3; B: Double): TVector3;
 begin
-  // BUG-026 FIX: Ìí¼Ó³ýÁã¼ì²é
+  // BUG-026 FIX: ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½
   if TMathUtils.IsZero(B) then
     raise EMathException.Create('Division by zero in TVector3.Divide');
   Result := TVector3.Create(A.X / B, A.Y / B, A.Z / B);
@@ -805,15 +812,15 @@ function TMatrix2.Inverse: TMatrix2;
 var
   LDet: Double;
 const
-  MIN_DETERMINANT = 1e-15; // ×îÐ¡ÐÐÁÐÊ½Öµ£¬·ÀÖ¹ÊýÖµ²»ÎÈ¶¨
+  MIN_DETERMINANT = 1e-15; // ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ê½Öµï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½Öµï¿½ï¿½ï¿½È¶ï¿½
 begin
   LDet := Determinant;
   
-  // ¸Ä½øµÄÆæÒìÐÔ¼ì²é£¬Ê¹ÓÃ¸üÑÏ¸ñµÄãÐÖµ
+  // ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½é£¬Ê¹ï¿½Ã¸ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Öµ
   if Abs(LDet) < MIN_DETERMINANT then
     raise EMathException.CreateFmt('Matrix is singular or near-singular (det=%.2e)', [LDet]);
     
-  // ¼ì²éÊýÖµÎÈ¶¨ÐÔ
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¶ï¿½ï¿½ï¿½
   var InvDet := 1.0 / LDet;
   if not IsFinite(InvDet) then
     raise EMathException.Create('Matrix inversion resulted in infinite values');
@@ -825,7 +832,7 @@ begin
     M[0, 0] * InvDet
   );
   
-  // ÑéÖ¤½á¹ûµÄÊýÖµÎÈ¶¨ÐÔ
+  // ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¶ï¿½ï¿½ï¿½
   if not (IsFinite(Result.M[0,0]) and IsFinite(Result.M[0,1]) and 
           IsFinite(Result.M[1,0]) and IsFinite(Result.M[1,1])) then
     raise EMathException.Create('Matrix inversion produced invalid results');
@@ -936,15 +943,15 @@ var
   LDet, InvDet: Double;
   I, J: Integer;
 const
-  MIN_DETERMINANT = 1e-15; // BUG-026 FIX: ×îÐ¡ÐÐÁÐÊ½Öµ£¬·ÀÖ¹ÊýÖµ²»ÎÈ¶¨
+  MIN_DETERMINANT = 1e-15; // BUG-026 FIX: ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ê½Öµï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½Öµï¿½ï¿½ï¿½È¶ï¿½
 begin
   LDet := Determinant;
 
-  // BUG-026 FIX: ¸Ä½øµÄÆæÒìÐÔ¼ì²é£¬Ê¹ÓÃ¸üÑÏ¸ñµÄãÐÖµ
+  // BUG-026 FIX: ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½é£¬Ê¹ï¿½Ã¸ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Öµ
   if Abs(LDet) < MIN_DETERMINANT then
     raise EMathException.CreateFmt('Matrix is singular or near-singular (det=%.2e)', [LDet]);
 
-  // ¼ì²éÊýÖµÎÈ¶¨ÐÔ
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¶ï¿½ï¿½ï¿½
   InvDet := 1.0 / LDet;
   if not IsFinite(InvDet) then
     raise EMathException.Create('Matrix inversion resulted in infinite values');
@@ -959,7 +966,7 @@ begin
   Result.M[2, 1] := (M[0, 1] * M[2, 0] - M[0, 0] * M[2, 1]) * InvDet;
   Result.M[2, 2] := (M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]) * InvDet;
 
-  // BUG-026 FIX: ÑéÖ¤½á¹ûµÄÊýÖµÎÈ¶¨ÐÔ
+  // BUG-026 FIX: ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¶ï¿½ï¿½ï¿½
   for I := 0 to 2 do
     for J := 0 to 2 do
       if not IsFinite(Result.M[I, J]) then
@@ -1260,7 +1267,7 @@ begin
   LMean := Mean(AValues);
   LStdDev := StdDev(AValues);
 
-  // BUG-026 FIX: ¼ì²é±ê×¼²îÊÇ·ñÎªÁã£¨ËùÓÐÊý¾ÝÏàÍ¬Ê±£©
+  // BUG-026 FIX: ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ç·ï¿½Îªï¿½ã£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½
   if TMathUtils.IsZero(LStdDev) then
     raise EMathException.Create('Cannot compute skewness: standard deviation is zero');
 
@@ -1285,7 +1292,7 @@ begin
   LMean := Mean(AValues);
   LStdDev := StdDev(AValues);
 
-  // BUG-026 FIX: ¼ì²é±ê×¼²îÊÇ·ñÎªÁã£¨ËùÓÐÊý¾ÝÏàÍ¬Ê±£©
+  // BUG-026 FIX: ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ç·ï¿½Îªï¿½ã£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½
   if TMathUtils.IsZero(LStdDev) then
     raise EMathException.Create('Cannot compute kurtosis: standard deviation is zero');
 
@@ -2131,7 +2138,7 @@ begin
   if Length(AWeights) = 0 then
     raise EMathException.Create('Weights array cannot be empty');
     
-  // ¼ÓÇ¿±ß½çÌõ¼þ¼ì²é
+  // ï¿½ï¿½Ç¿ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   for I := 0 to High(AWeights) do
   begin
     if (AWeights[I] < 0) or IsNaN(AWeights[I]) or IsInfinite(AWeights[I]) then
@@ -2395,6 +2402,8 @@ end;
 
 class function TMathUtils.LCM(A, B: Int64): Int64;
 begin
+  if (A = 0) or (B = 0) then
+    Exit(0);
   Result := (System.Abs(A) div GCD(A, B)) * System.Abs(B);
 end;
 
@@ -2437,9 +2446,9 @@ begin
     Exit(True);
   if N mod 2 = 0 then
     Exit(False);
-    
+
   I := 3;
-  while I * I <= N do
+  while I <= N div I do
   begin
     if N mod I = 0 then
       Exit(False);
@@ -2555,15 +2564,13 @@ begin
 end;
 
 function TSecureRandom.NextBytes(const ALength: Integer): TBytes;
-var
-  I: Integer;
 begin
   if ALength <= 0 then
     raise EArgumentException.Create('Length must be positive');
   SetLength(Result, ALength);
-  Randomize;
-  for I := 0 to ALength - 1 do
-    Result[I] := Byte(Random(256));
+  if BCryptGenRandom(0, @Result[0], Cardinal(ALength),
+       BCRYPT_USE_SYSTEM_PREFERRED_RNG) <> 0 then
+    raise EDeepBaseException.Create('BCryptGenRandom failed â€” OS CSPRNG unavailable');
 end;
 
 function TSecureRandom.NextInt(const AMax: Integer): Integer;
@@ -2608,7 +2615,7 @@ begin
 end;
 
 initialization
-  // ÒÆ³ý²»°²È«µÄRandomizeµ÷ÓÃ
-  // Randomize; // ÒÑÒÆ³ý - Ê¹ÓÃ°²È«Ëæ»úÊýÉú³ÉÆ÷
+  // TSecureRandom now uses BCryptGenRandom (OS CSPRNG).
+  // No global Randomize needed.
 
 end.

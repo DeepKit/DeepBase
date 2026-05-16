@@ -257,6 +257,7 @@ class function TMigrationEngine.FindMigrationFiles(DatabaseType: TDatabaseType;
 var
   Files: TStringList;
   FilePath: string;
+  FileName: string;
   Suffix: string;
   I: Integer;
 begin
@@ -269,7 +270,12 @@ begin
   try
     for FilePath in TDirectory.GetFiles(MigrationsDir, '*.sql') do
     begin
-      if EndsText(Suffix, ExtractFileName(FilePath)) then
+      FileName := ExtractFileName(FilePath);
+      // BASIC-012: accept both new convention (*.up.{sqlite|pg}.sql) and
+      // the legacy convention (upgrade_vX_Y_to_vA_B.sql) so existing
+      // repos do not silently produce "0 migrations" runs.
+      if EndsText(Suffix, FileName) or
+         StartsText('upgrade_v', FileName) then
         Files.Add(FilePath);
     end;
     Files.Sort;
@@ -287,12 +293,31 @@ class function TMigrationEngine.ExtractVersion(DatabaseType: TDatabaseType;
 var
   FileName: string;
   Suffix: string;
+  ToPos: Integer;
 begin
   FileName := ExtractFileName(FilePath);
   if IsSQLite(DatabaseType) then
     Suffix := '.up.sqlite.sql'
   else
     Suffix := '.up.pg.sql';
+
+  // BASIC-012: legacy upgrade_vX_Y_to_vA_B.sql -> version "A.B"
+  if StartsText('upgrade_v', FileName) then
+  begin
+    ToPos := Pos('_to_v', FileName);
+    if ToPos > 0 then
+    begin
+      Result := Copy(FileName, ToPos + Length('_to_v'),
+        Length(FileName) - ToPos - Length('_to_v') - Length('.sql') + 1);
+      Result := StringReplace(Result, '_', '.', [rfReplaceAll]);
+      Result := Trim(Result);
+      if Result <> '' then
+        Exit;
+    end;
+    // No "_to_v" segment: use the whole base filename as version key.
+    Result := ChangeFileExt(FileName, '');
+    Exit;
+  end;
 
   if not EndsText(Suffix, FileName) then
     raise EInvalidOperationException.CreateFmt(
@@ -308,7 +333,9 @@ class function TMigrationEngine.CalculateChecksum(const FilePath: string): strin
 var
   Stream: TFileStream;
 begin
-  Stream := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyNone);
+  // PERSIST-006: Use fmShareDenyWrite so the script cannot be modified
+  // mid-checksum, while still allowing concurrent readers.
+  Stream := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyWrite);
   try
     Result := THashSHA2.GetHashString(Stream, THashSHA2.TSHA2Version.SHA256);
   finally

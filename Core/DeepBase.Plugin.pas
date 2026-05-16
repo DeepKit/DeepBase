@@ -285,6 +285,7 @@ function PluginStateToStr(State: TPluginState): string;
 
 /// <summary>
 /// Helper: Compare version strings (returns -1, 0, or 1)
+/// FR-013: redirects to the canonical implementation in DeepBase.Types.
 /// </summary>
 function CompareVersions(const V1, V2: string): Integer;
 
@@ -294,6 +295,9 @@ function CompareVersions(const V1, V2: string): Integer;
 function GUIDToShortString(const G: TGUID): string;
 
 implementation
+
+uses
+  DeepBase.Types;
 
 { Helper Functions }
 
@@ -330,34 +334,9 @@ begin
 end;
 
 function CompareVersions(const V1, V2: string): Integer;
-var
-  Parts1, Parts2: TArray<string>;
-  I, N1, N2, MaxLen: Integer;
 begin
-  Parts1 := V1.Split(['.']);
-  Parts2 := V2.Split(['.']);
-  Result := 0;
-  
-  if Length(Parts1) > Length(Parts2) then
-    MaxLen := Length(Parts1)
-  else
-    MaxLen := Length(Parts2);
-  
-  for I := 0 to MaxLen - 1 do
-  begin
-    if I < Length(Parts1) then
-      N1 := StrToIntDef(Parts1[I], 0)
-    else
-      N1 := 0;
-      
-    if I < Length(Parts2) then
-      N2 := StrToIntDef(Parts2[I], 0)
-    else
-      N2 := 0;
-    
-    if N1 < N2 then Exit(-1);
-    if N1 > N2 then Exit(1);
-  end;
+  // FR-013: delegate to canonical implementation in DeepBase.Types
+  Result := DeepBase.Types.CompareVersions(V1, V2);
 end;
 
 function GUIDToShortString(const G: TGUID): string;

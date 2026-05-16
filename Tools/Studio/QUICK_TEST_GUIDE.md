@@ -9,6 +9,7 @@
 - Windows System Language: Chinese (Simplified) - 中文(简�?
 - SQLite database with Settings table
 - Studio.exe compiled and ready
+- `Studio.dpr` links `DeepBase.Persistence.Manager.FireDAC`; otherwise startup can fail with `No DB connection adapter registered`.
 
 ---
 

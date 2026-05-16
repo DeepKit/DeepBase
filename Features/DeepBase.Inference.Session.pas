@@ -49,6 +49,8 @@ type
     function Run(const AInputNames: TArray<string>;
       const AInputValues: TArray<TBytes>;
       const AInputShapes: TArray<TArray<Int64>>): TInferenceOutput;
+    function RunTyped(const AInputs: TArray<TInferenceInput>): TInferenceOutput;
+    function GetCustomMetadata(const AKey: string): string;
     procedure Dispose;
   end;
 
@@ -56,12 +58,16 @@ implementation
 
 uses
   System.Diagnostics,
+  {$IFDEF HAS_ONNX}
   onnxruntime,
   onnxruntime_pas_api,
+  {$ENDIF}
   DeepBase.Logging;
 
+{$IFDEF HAS_ONNX}
 type
   TORTSessionPtr = ^TORTSession;
+{$ENDIF}
 
 var
   GSessionCounter: Integer = 0;
@@ -98,8 +104,10 @@ end;
 
 constructor TInferenceSession.CreateFromPath(
   const ARuntime: IInferenceRuntime; const AModelPath: string);
+{$IFDEF HAS_ONNX}
 var
   LSession: TORTSession;
+{$ENDIF}
 begin
   inherited Create;
   if ARuntime = nil then
@@ -112,6 +120,7 @@ begin
   FState := issUninitialized;
   FOrtSession := nil;
 
+  {$IFDEF HAS_ONNX}
   try
     LSession := TORTSession.Create(AModelPath);
     New(FOrtSession);
@@ -127,17 +136,27 @@ begin
   except
     on E: Exception do
     begin
+      // INFER-008: free any partially allocated ONNX resources before
+      // re-raising. Without this, ExtractModelInfo failing after FOrtSession
+      // has been allocated leaks the underlying TORTSession (and its model
+      // weights) until process exit.
+      ReleaseOrtSession;
       FState := issUninitialized;
       raise EInferenceModelError.CreateFmt(
         'Failed to load model from file: %s (%s)', [AModelPath, E.Message]);
     end;
   end;
+  {$ELSE}
+  raise EInferenceModelError.Create('ONNX runtime not available');
+  {$ENDIF}
 end;
 
 constructor TInferenceSession.CreateFromBytes(
   const ARuntime: IInferenceRuntime; const AModelData: TBytes);
+{$IFDEF HAS_ONNX}
 var
   LSession: TORTSession;
+{$ENDIF}
 begin
   inherited Create;
   if ARuntime = nil then
@@ -150,6 +169,7 @@ begin
   FState := issUninitialized;
   FOrtSession := nil;
 
+  {$IFDEF HAS_ONNX}
   try
     LSession := TORTSession.Create(
       DefaultEnv, @AModelData[0], Length(AModelData), DefaultSessionOptions);
@@ -166,11 +186,18 @@ begin
   except
     on E: Exception do
     begin
+      // INFER-008: see CreateFromPath -- release any partially allocated
+      // ONNX resources before re-raising so the failed-construct path does
+      // not leak model weights into the process.
+      ReleaseOrtSession;
       FState := issUninitialized;
       raise EInferenceModelError.CreateFmt(
         'Failed to load model from memory: %s', [E.Message]);
     end;
   end;
+  {$ELSE}
+  raise EInferenceModelError.Create('ONNX runtime not available');
+  {$ENDIF}
 end;
 
 destructor TInferenceSession.Destroy;
@@ -181,14 +208,20 @@ begin
 end;
 
 procedure TInferenceSession.ReleaseOrtSession;
+{$IFDEF HAS_ONNX}
+var
+  P: TORTSessionPtr;
+{$ENDIF}
 begin
   if FOrtSession <> nil then
   begin
-    var P: TORTSessionPtr := TORTSessionPtr(FOrtSession);
+    {$IFDEF HAS_ONNX}
+    P := TORTSessionPtr(FOrtSession);
     // TORTSession is a managed record. Finalize it before freeing memory
     // so the smart-pointer housekeeper decrements the ORT refcount.
     Finalize(P^);
     System.Dispose(P);
+    {$ENDIF}
     FOrtSession := nil;
   end;
 end;
@@ -209,11 +242,15 @@ begin
 end;
 
 procedure TInferenceSession.ExtractModelInfo;
+{$IFDEF HAS_ONNX}
 var
   LMeta: TORTModelMetadata;
+  LP: Pointer;
+{$ENDIF}
 begin
   FModelInfo := TInferenceModelInfo.Empty;
 
+  {$IFDEF HAS_ONNX}
   FModelInfo.InputCount :=
     Integer(TORTSessionPtr(FOrtSession)^.GetInputCount);
   FModelInfo.OutputCount :=
@@ -221,24 +258,31 @@ begin
 
   LMeta := TORTSessionPtr(FOrtSession)^.GetModelMetadata;
   try
-    FModelInfo.ProducerName := string(AnsiString(
-      LMeta.GetProducerNameAllocated(DefaultAllocator).Instance));
-    FModelInfo.GraphName := string(AnsiString(
-      LMeta.GetGraphNameAllocated(DefaultAllocator).Instance));
-    FModelInfo.Description := string(AnsiString(
-      LMeta.GetDescriptionAllocated(DefaultAllocator).Instance));
+    // INFER-005: Use UTF-8 conversion to preserve non-ASCII characters in
+    // metadata strings. AnsiString cast loses CJK/emoji content depending on
+    // the Windows ANSI codepage.
+    LP := LMeta.GetProducerNameAllocated(DefaultAllocator).Instance;
+    if LP <> nil then FModelInfo.ProducerName := UTF8ToString(PAnsiChar(LP));
+    LP := LMeta.GetGraphNameAllocated(DefaultAllocator).Instance;
+    if LP <> nil then FModelInfo.GraphName := UTF8ToString(PAnsiChar(LP));
+    LP := LMeta.GetDescriptionAllocated(DefaultAllocator).Instance;
+    if LP <> nil then FModelInfo.Description := UTF8ToString(PAnsiChar(LP));
   except
     // metadata extraction is non-critical
   end;
+  {$ENDIF}
 end;
 
 function TInferenceSession.Run(const AInputNames: TArray<string>;
   const AInputValues: TArray<TBytes>;
   const AInputShapes: TArray<TArray<Int64>>): TInferenceOutput;
+{$IFDEF HAS_ONNX}
 var
   LInputs, LOutputs: TORTNameValueList;
   LSW: TStopwatch;
   LNames: TArray<string>;
+  LData: TArray<TBytes>;
+  LShapes: TArray<TArray<Int64>>;
   i: Integer;
   LFloatData: TArray<Single>;
   LShape: TArray<Int64>;
@@ -246,6 +290,11 @@ var
   LValue: TORTValue;
   LElementCount: size_t;
   j: Integer;
+  LOutValue: TORTValue;
+  LOutShape: TArray<Int64>;
+  LByteCount: NativeUInt;
+  LRawPtr: Pointer;
+{$ENDIF}
 begin
   if FState <> issReady then
     Exit(TInferenceOutput.Failed('Session is not ready'));
@@ -255,6 +304,7 @@ begin
   if Length(AInputNames) <> Length(AInputShapes) then
     Exit(TInferenceOutput.Failed('InputNames and InputShapes length mismatch'));
 
+  {$IFDEF HAS_ONNX}
   try
     LInputs := Default(TORTNameValueList);
 
@@ -268,6 +318,24 @@ begin
 
       // Convert raw bytes to TArray<Single> for CreateTensor<T>
       LElementCount := Length(AInputValues[i]) div SizeOf(Single);
+
+      // INFER-006: Validate that the declared shape's product matches the
+      // element count before calling into ONNX, otherwise the runtime can
+      // read past buffer boundaries.
+      var LExpectedElements: Int64 := 1;
+      for var LDimIdx := 0 to High(LShape) do
+      begin
+        if LShape[LDimIdx] <= 0 then
+          raise EInferenceSessionError.CreateFmt(
+            'Input "%s" has non-positive dimension %d at index %d',
+            [AInputNames[i], LShape[LDimIdx], LDimIdx]);
+        LExpectedElements := LExpectedElements * LShape[LDimIdx];
+      end;
+      if LExpectedElements <> Int64(LElementCount) then
+        raise EInferenceSessionError.CreateFmt(
+          'Input "%s" shape product (%d) does not match element count (%d)',
+          [AInputNames[i], LExpectedElements, LElementCount]);
+
       SetLength(LFloatData, LElementCount);
       Move(AInputValues[i][0], LFloatData[0], LElementCount * SizeOf(Single));
 
@@ -295,11 +363,28 @@ begin
     LSW.Stop;
 
     SetLength(LNames, LOutputs.Count);
+    SetLength(LData, LOutputs.Count);
+    SetLength(LShapes, LOutputs.Count);
     for i := 0 to LOutputs.Count - 1 do
+    begin
       LNames[i] := string(AnsiString(LOutputs.Keys[i]));
+      LOutValue := LOutputs.Values[i];
+      LOutShape := LOutValue.GetTensorShape;
+      LShapes[i] := LOutShape;
+
+      LByteCount := 1;
+      for j := 0 to High(LOutShape) do
+        LByteCount := LByteCount * NativeUInt(LOutShape[j]);
+      LByteCount := LByteCount * SizeOf(Single);
+
+      SetLength(LData[i], LByteCount);
+      LRawPtr := LOutValue.GetTensorMutableData<Single>;
+      if (LByteCount > 0) and (LRawPtr <> nil) then
+        Move(LRawPtr^, LData[i][0], LByteCount);
+    end;
 
     Result := TInferenceOutput.Succeeded(
-      LSW.Elapsed.TotalMilliseconds, LNames);
+      LSW.Elapsed.TotalMilliseconds, LNames, LData, LShapes);
 
     Logger.DebugFmt(
       'Inference.Session: Run completed in %.1fms (%d outputs)',
@@ -312,6 +397,154 @@ begin
         [E.Message], 'Inference');
     end;
   end;
+  {$ELSE}
+  Result := TInferenceOutput.Failed('ONNX runtime not available');
+  {$ENDIF}
+end;
+
+function TInferenceSession.RunTyped(
+  const AInputs: TArray<TInferenceInput>): TInferenceOutput;
+{$IFDEF HAS_ONNX}
+var
+  LInputs, LOutputs: TORTNameValueList;
+  LSW: TStopwatch;
+  LNames: TArray<string>;
+  LData: TArray<TBytes>;
+  LShapes: TArray<TArray<Int64>>;
+  i, j: Integer;
+  LRevShape: TArray<Int64>;
+  LFloatData: TArray<Single>;
+  LIntData: TArray<Integer>;
+  LValue: TORTValue;
+  LElementCount: size_t;
+  LOutValue: TORTValue;
+  LOutShape: TArray<Int64>;
+  LByteCount: NativeUInt;
+  LRawPtr: Pointer;
+{$ENDIF}
+begin
+  if FState <> issReady then
+    Exit(TInferenceOutput.Failed('Session is not ready'));
+
+  {$IFDEF HAS_ONNX}
+  try
+    LInputs := Default(TORTNameValueList);
+
+    for i := 0 to High(AInputs) do
+    begin
+      if Length(AInputs[i].Data) = 0 then
+        raise EInferenceSessionError.CreateFmt(
+          'Empty input data for "%s"', [AInputs[i].Name]);
+
+      LRevShape := Copy(AInputs[i].Shape);
+      for j := 0 to High(LRevShape) div 2 do
+      begin
+        var LTemp: Int64 := LRevShape[j];
+        LRevShape[j] := LRevShape[High(LRevShape) - j];
+        LRevShape[High(LRevShape) - j] := LTemp;
+      end;
+
+      case AInputs[i].ElementType of
+        ietFloat32:
+        begin
+          LElementCount := Length(AInputs[i].Data) div SizeOf(Single);
+          SetLength(LFloatData, LElementCount);
+          Move(AInputs[i].Data[0], LFloatData[0], LElementCount * SizeOf(Single));
+          LValue := TORTValue.CreateTensor<Single>(
+            DefaultAllocator.GetInfo,
+            LFloatData[0],
+            LElementCount,
+            @LRevShape[0],
+            Length(LRevShape));
+        end;
+        ietInt32:
+        begin
+          LElementCount := Length(AInputs[i].Data) div SizeOf(Integer);
+          SetLength(LIntData, LElementCount);
+          Move(AInputs[i].Data[0], LIntData[0], LElementCount * SizeOf(Integer));
+          LValue := TORTValue.CreateTensor<Integer>(
+            DefaultAllocator.GetInfo,
+            LIntData[0],
+            LElementCount,
+            @LRevShape[0],
+            Length(LRevShape));
+        end;
+      else
+        raise EInferenceSessionError.CreateFmt(
+          'Unsupported element type for input "%s"', [AInputs[i].Name]);
+      end;
+
+      LInputs.AddOrSetValue(AnsiString(AInputs[i].Name), LValue);
+    end;
+
+    LSW := TStopwatch.StartNew;
+    LOutputs := TORTSessionPtr(FOrtSession)^.Run(LInputs);
+    LSW.Stop;
+
+    SetLength(LNames, LOutputs.Count);
+    SetLength(LData, LOutputs.Count);
+    SetLength(LShapes, LOutputs.Count);
+    for i := 0 to LOutputs.Count - 1 do
+    begin
+      LNames[i] := string(AnsiString(LOutputs.Keys[i]));
+      LOutValue := LOutputs.Values[i];
+      LOutShape := LOutValue.GetTensorShape;
+      LShapes[i] := LOutShape;
+
+      LByteCount := 1;
+      for j := 0 to High(LOutShape) do
+        LByteCount := LByteCount * NativeUInt(LOutShape[j]);
+      LByteCount := LByteCount * SizeOf(Single);
+
+      SetLength(LData[i], LByteCount);
+      LRawPtr := LOutValue.GetTensorMutableData<Single>;
+      if (LByteCount > 0) and (LRawPtr <> nil) then
+        Move(LRawPtr^, LData[i][0], LByteCount);
+    end;
+
+    Result := TInferenceOutput.Succeeded(
+      LSW.Elapsed.TotalMilliseconds, LNames, LData, LShapes);
+
+    Logger.DebugFmt(
+      'Inference.Session: RunTyped completed in %.1fms (%d inputs, %d outputs)',
+      [LSW.Elapsed.TotalMilliseconds, Length(AInputs), LOutputs.Count],
+      'Inference');
+  except
+    on E: Exception do
+    begin
+      Result := TInferenceOutput.Failed(E.Message);
+      Logger.ErrorFmt('Inference.Session: RunTyped failed: %s',
+        [E.Message], 'Inference');
+    end;
+  end;
+  {$ELSE}
+  Result := TInferenceOutput.Failed('ONNX runtime not available');
+  {$ENDIF}
+end;
+
+function TInferenceSession.GetCustomMetadata(const AKey: string): string;
+{$IFDEF HAS_ONNX}
+var
+  LMeta: TORTModelMetadata;
+  LAllocd: AllocatedStringPtr;
+  LP: Pointer;
+{$ENDIF}
+begin
+  Result := '';
+  {$IFDEF HAS_ONNX}
+  if FOrtSession = nil then
+    Exit;
+  try
+    LMeta := TORTSessionPtr(FOrtSession)^.GetModelMetadata;
+    LAllocd := LMeta.LookupCustomMetadataMapAllocated(
+      PAnsiChar(AnsiString(AKey)), DefaultAllocator);
+    LP := LAllocd.Instance;
+    if LP <> nil then
+      Result := string(AnsiString(PAnsiChar(LP)));
+  except
+    // metadata lookup failure is non-critical
+  end;
+  {$ENDIF}
 end;
 
 procedure TInferenceSession.Dispose;

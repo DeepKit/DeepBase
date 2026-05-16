@@ -195,7 +195,13 @@ begin
   if Response.StatusCode >= 300 then
     raise EDeepBaseCommerceError.CreateFmt('Firestore GET %s: %d',
       [AUrl, Response.StatusCode]);
-  Result := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+  var LValue := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8));
+  if not (LValue is TJSONObject) then
+  begin
+    LValue.Free;
+    Exit(nil);
+  end;
+  Result := TJSONObject(LValue);
 end;
 
 function TFirebaseCommerceStorage.FirestorePatch(const AUrl: string;
@@ -213,7 +219,13 @@ begin
   end;
   if Response.StatusCode >= 300 then
     raise EDeepBaseCommerceError.CreateFmt('Firestore PATCH: %d', [Response.StatusCode]);
-  Result := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+  var LValue := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8));
+  if not (LValue is TJSONObject) then
+  begin
+    LValue.Free;
+    Exit(nil);
+  end;
+  Result := TJSONObject(LValue);
 end;
 
 function TFirebaseCommerceStorage.FirestorePost(const AUrl: string;
@@ -224,14 +236,19 @@ begin
   Response := FClient.Post(AUrl, ABody.ToJSON, nil, AuthHeaders);
   if Response.StatusCode >= 300 then
     raise EDeepBaseCommerceError.CreateFmt('Firestore POST: %d', [Response.StatusCode]);
-  Result := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+  var LValue := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8));
+  if not (LValue is TJSONObject) then
+  begin
+    LValue.Free;
+    Exit(nil);
+  end;
+  Result := TJSONObject(LValue);
 end;
 
 function TFirebaseCommerceStorage.FirestoreQuery(const ACollection: string;
   AQuery: TJSONObject): TJSONArray;
 var
   Response: IHTTPResponse;
-  Parsed: TJSONArray;
   Wrapper: TJSONObject;
 begin
   Wrapper := TJSONObject.Create;
@@ -241,8 +258,13 @@ begin
   finally
     Wrapper.Free;
   end;
-  Parsed := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8)) as TJSONArray;
-  Result := Parsed;
+  var LValue := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8));
+  if not (LValue is TJSONArray) then
+  begin
+    LValue.Free;
+    Exit(nil);
+  end;
+  Result := TJSONArray(LValue);
 end;
 
 function TFirebaseCommerceStorage.ExtractFields(Obj: TJSONObject): TJSONObject;

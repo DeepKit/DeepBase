@@ -114,12 +114,20 @@ begin
     FLock.Leave;
   end;
 
+  var LIsMain := TThread.CurrentThread.ThreadID = MainThreadID;
   for I := 0 to High(LSnapshot) do
-    try
-      LSnapshot[I].Handler(AThemeId);
-    except
-      // Subscribers must not break the dispatch loop.
-    end;
+  begin
+    var LHandler := LSnapshot[I].Handler;
+    var LId := AThemeId;
+    if LIsMain then
+      try LHandler(LId) except end
+    else
+      TThread.Queue(nil,
+        procedure
+        begin
+          try LHandler(LId) except end;
+        end);
+  end;
 end;
 
 function TShellDefaultThemeService.GetThemes: TArray<string>;

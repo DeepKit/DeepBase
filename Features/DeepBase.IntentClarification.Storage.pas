@@ -318,6 +318,7 @@ function TClarificationStorage.JsonToRapport(const AJson: string): TRapportProfi
 var
   LValue: TJSONValue;
   LObj: TJSONObject;
+  LJsonVal: TJSONValue;
   LArr: TJSONArray;
   I: Integer;
 begin
@@ -334,20 +335,47 @@ begin
 
   LObj := LValue as TJSONObject;
   try
-    Result.UserId := LObj.GetValue('userId').Value;
-    Result.TrustLevel := StrToFloatDef(LObj.GetValue('trustLevel').Value, 0.5);
-    Result.Familiarity := StrToFloatDef(LObj.GetValue('familiarity').Value, 0.0);
-    Result.PreferredDepth := StrToFloatDef(LObj.GetValue('preferredDepth').Value, 0.5);
-    Result.CommunicationStyle := LObj.GetValue('communicationStyle').Value;
-    Result.LastUpdated := ISO8601ToDate(LObj.GetValue('lastUpdated').Value, False);
+    LJsonVal := LObj.GetValue('userId');
+    if LJsonVal <> nil then
+      Result.UserId := LJsonVal.Value
+    else
+      Result.UserId := '';
+    LJsonVal := LObj.GetValue('trustLevel');
+    if LJsonVal <> nil then
+      Result.TrustLevel := StrToFloatDef(LJsonVal.Value, 0.5)
+    else
+      Result.TrustLevel := 0.5;
+    LJsonVal := LObj.GetValue('familiarity');
+    if LJsonVal <> nil then
+      Result.Familiarity := StrToFloatDef(LJsonVal.Value, 0.0)
+    else
+      Result.Familiarity := 0.0;
+    LJsonVal := LObj.GetValue('preferredDepth');
+    if LJsonVal <> nil then
+      Result.PreferredDepth := StrToFloatDef(LJsonVal.Value, 0.5)
+    else
+      Result.PreferredDepth := 0.5;
+    LJsonVal := LObj.GetValue('communicationStyle');
+    if LJsonVal <> nil then
+      Result.CommunicationStyle := LJsonVal.Value
+    else
+      Result.CommunicationStyle := 'direct';
+    LJsonVal := LObj.GetValue('lastUpdated');
+    if LJsonVal <> nil then
+      Result.LastUpdated := ISO8601ToDate(LJsonVal.Value, False)
+    else
+      Result.LastUpdated := Now;
 
-    LArr := LObj.GetValue('boundaries') as TJSONArray;
-    if LArr <> nil then
+    LJsonVal := LObj.GetValue('boundaries');
+    if (LJsonVal <> nil) and (LJsonVal is TJSONArray) then
     begin
+      LArr := LJsonVal as TJSONArray;
       SetLength(Result.Boundaries, LArr.Count);
       for I := 0 to LArr.Count - 1 do
         Result.Boundaries[I] := LArr.Items[I].Value;
-    end;
+    end
+    else
+      Result.Boundaries := nil;
   finally
     LObj.Free;
   end;

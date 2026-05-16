@@ -46,6 +46,10 @@ type
     procedure ServicesPackage_DoesNotRequireUiOrDesignPackages;
 
     [Test]
+    [Category('Architecture.KnownDebt')]
+    procedure ServicesPackage_TracksKnownBoundaryViolations;
+
+    [Test]
     procedure FeaturesPackage_ContainsOptionalFeatureUnits;
 
     [Test]
@@ -402,6 +406,29 @@ begin
     'DeepBaseServices.dpk must include Services.Registration');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Services.Crypto'),
     'DeepBaseServices.dpk must include Services.Crypto');
+end;
+
+procedure TPackageBoundaryTests.ServicesPackage_TracksKnownBoundaryViolations;
+// BASIC-001/004: Services package previously violated L1 purity by requiring
+// UI and database runtime packages. Keep this regression guard so those
+// dependencies do not silently return.
+var
+  DpkText: string;
+begin
+  DpkText := ReadRepoFile('DeepBaseServices.dpk').ToLowerInvariant;
+
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'vcl'),
+    'DeepBaseServices.dpk must not regress to requiring VCL.');
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'dbrtl'),
+    'DeepBaseServices.dpk must not regress to requiring DBRTL.');
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'firedac'),
+    'DeepBaseServices.dpk must not regress to requiring FireDAC.');
+
+  // These MUST remain forbidden even with current debt:
+  AssertTextDoesNotContainAny(DpkText, 'DeepBaseServices.dpk contains section',
+    ['features\deepbase.llm.', 'features\deepbase.updater',
+     'features\deepbase.browser', 'features\deepbase.intent',
+     'features\deepbase.commerce', 'features\deepbase.speech']);
 end;
 
 procedure TPackageBoundaryTests.FeaturesPackage_ContainsOptionalFeatureUnits;

@@ -403,9 +403,14 @@ var
   LElapsedSeconds: Int64;
   LState: TSessionState;
   LSuspended: TList<string>;
+  LKeys: TList<string>;
+  LKey: string;
 begin
   LSuspended := TList<string>.Create;
+  LKeys := TList<string>.Create;
   try
+    // IC-004: Collect candidate keys under the lock without mutating the
+    // dictionary inside the iterator, then update each key in a separate pass.
     FLock.Enter;
     try
       for LPair in FSessions do
@@ -414,17 +419,27 @@ begin
         begin
           LElapsedSeconds := SecondsBetween(Now, LPair.Value.LastActiveAt);
           if LElapsedSeconds >= FIdleTimeoutSeconds then
-          begin
-            LState := LPair.Value;
-            LState.Status := ssSuspended;
-            LState.LastActiveAt := Now;
-            FSessions.AddOrSetValue(LPair.Key, LState);
-            LSuspended.Add(LPair.Key);
-          end;
+            LKeys.Add(LPair.Key);
         end;
       end;
     finally
       FLock.Leave;
+    end;
+
+    for LKey in LKeys do
+    begin
+      FLock.Enter;
+      try
+        if FSessions.TryGetValue(LKey, LState) and (LState.Status = ssActive) then
+        begin
+          LState.Status := ssSuspended;
+          LState.LastActiveAt := Now;
+          FSessions.AddOrSetValue(LKey, LState);
+          LSuspended.Add(LKey);
+        end;
+      finally
+        FLock.Leave;
+      end;
     end;
 
     if LSuspended.Count > 0 then
@@ -433,6 +448,7 @@ begin
     Result := LSuspended.ToArray;
   finally
     LSuspended.Free;
+    LKeys.Free;
   end;
 end;
 

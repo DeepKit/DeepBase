@@ -288,7 +288,7 @@ begin
     Exit;
 
   case AKind of
-    sskProgress: LEventKind := sekTaskStarted;
+    sskProgress: LEventKind := sekTaskProgress;
   else
     LEventKind := sekLogAdded;
   end;
@@ -315,9 +315,12 @@ begin
   try
     Result := LSanitizer(ASource, AMessage);
   except
-    // Defensive: if sanitizer throws, fall back to raw message rather
-    // than block logging entirely.
-    Result := AMessage;
+    on E: Exception do
+    begin
+      // Sanitizer failed — output safe placeholder to avoid leaking
+      // potentially sensitive content from the original message.
+      Result := Format('[sanitizer error: %s] (source: %s)', [E.ClassName, ASource]);
+    end;
   end;
 end;
 

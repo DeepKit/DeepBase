@@ -585,23 +585,32 @@ begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  Query := TFDQuery.Create(nil);
+  // BASIC-009 fix: wrap DELETE + INSERT loop in an explicit transaction so
+  // a mid-loop failure does not leave the role with zero permissions.
+  FConnection.StartTransaction;
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM auth_role_permissions WHERE role_id = :role_id';
-    Query.ParamByName('role_id').AsInteger := RoleId;
-    Query.ExecSQL;
-
-    Query.SQL.Text :=
-      'INSERT INTO auth_role_permissions (role_id, permission) VALUES (:role_id, :permission)';
-    for Permission in Permissions do
-    begin
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'DELETE FROM auth_role_permissions WHERE role_id = :role_id';
       Query.ParamByName('role_id').AsInteger := RoleId;
-      Query.ParamByName('permission').AsString := Permission;
       Query.ExecSQL;
+
+      Query.SQL.Text :=
+        'INSERT INTO auth_role_permissions (role_id, permission) VALUES (:role_id, :permission)';
+      for Permission in Permissions do
+      begin
+        Query.ParamByName('role_id').AsInteger := RoleId;
+        Query.ParamByName('permission').AsString := Permission;
+        Query.ExecSQL;
+      end;
+    finally
+      Query.Free;
     end;
-  finally
-    Query.Free;
+    FConnection.Commit;
+  except
+    FConnection.Rollback;
+    raise;
   end;
 end;
 

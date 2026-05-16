@@ -80,7 +80,7 @@ begin
 
   Position := poDesigned;
   BorderStyle := bsSizeToolWin;
-  PopupMode := pmAuto;
+  PopupMode := pmExplicit;
   DefaultMonitor := dmDesktop;
   OnClose := DoFormClose;
 

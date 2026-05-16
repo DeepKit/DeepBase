@@ -43,6 +43,7 @@ requires
   RESTComponents;
 
 contains
+  DeepBase.Net in 'Core\DeepBase.Net.pas',
   DeepBase.Net.Transport in 'Features\DeepBase.Net.Transport.pas',
   DeepBase.Net.Transport.ICS in 'Features\DeepBase.Net.Transport.ICS.pas',
   DeepBase.LLM in 'Core\DeepBase.LLM.pas',
@@ -95,6 +96,7 @@ contains
   DeepBase.Browser.Vision in 'Features\DeepBase.Browser.Vision.pas',
   DeepBase.Browser.ScriptStore in 'Features\DeepBase.Browser.ScriptStore.pas',
   DeepBase.Browser.AutomationAdapter in 'Features\DeepBase.Browser.AutomationAdapter.pas',
+  DeepBase.Browser.PageDriver in 'Features\DeepBase.Browser.PageDriver.pas',
   DeepBase.Browser.IoC in 'Features\DeepBase.Browser.IoC.pas',
   DeepBase.Inference.Types in 'Features\DeepBase.Inference.Types.pas',
   DeepBase.Inference.Runtime in 'Features\DeepBase.Inference.Runtime.pas',

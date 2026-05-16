@@ -33,6 +33,9 @@ type
   TDeepShellSettingsForm = class(TForm)
   private
     FProviders: TList<ISettingsPageProvider>;
+    FLocalization: IShellLocalizationService;
+    FCommands: IShellCommandManager;
+    FResetAction: TFunc<ISettingsPageProvider, Boolean>;
     FList: TListBox;
     FHost: TPanel;
     FButtons: TPanel;
@@ -42,6 +45,7 @@ type
     FBtnDefaults: TButton;
     FPages: TDictionary<string, TControl>;
     FCurrent: TControl;
+    function L(const AKey, ADefault: string): string;
     procedure CreateLayout;
     procedure RebuildList;
     procedure ShowProvider(AIndex: Integer);
@@ -54,6 +58,9 @@ type
     constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
     destructor Destroy; override;
     procedure SetProviders(const AProviders: TArray<ISettingsPageProvider>);
+    procedure SetLocalization(const ALocalization: IShellLocalizationService);
+    procedure SetCommands(const ACommands: IShellCommandManager);
+    procedure SetResetAction(const AAction: TFunc<ISettingsPageProvider, Boolean>);
     function Run: Boolean;
   end;
 
@@ -140,7 +147,8 @@ end;
 constructor TDeepShellSettingsForm.CreateNew(AOwner: TComponent; Dummy: Integer);
 begin
   inherited CreateNew(AOwner, Dummy);
-  Caption := 'Settings';
+  // Caption assigned in SetLocalization; falls back to default via L() if no service.
+  Caption := L('shell.settings.title', 'Settings');
   Width := 720;
   Height := 480;
   Position := poOwnerFormCenter;
@@ -153,9 +161,40 @@ end;
 destructor TDeepShellSettingsForm.Destroy;
 begin
   FCurrent := nil;
+  FLocalization := nil;
+  FCommands := nil;
+  FResetAction := nil;
   FreeAndNil(FPages);
   FreeAndNil(FProviders);
   inherited;
+end;
+
+function TDeepShellSettingsForm.L(const AKey, ADefault: string): string;
+begin
+  if FLocalization <> nil then
+    Result := FLocalization.Text(AKey, ADefault)
+  else
+    Result := ADefault;
+end;
+
+procedure TDeepShellSettingsForm.SetLocalization(const ALocalization: IShellLocalizationService);
+begin
+  FLocalization := ALocalization;
+  Caption := L('shell.settings.title', 'Settings');
+  if FBtnOK <> nil then FBtnOK.Caption := L('shell.btn.ok', 'OK');
+  if FBtnApply <> nil then FBtnApply.Caption := L('shell.btn.apply', 'Apply');
+  if FBtnCancel <> nil then FBtnCancel.Caption := L('shell.btn.cancel', 'Cancel');
+  if FBtnDefaults <> nil then FBtnDefaults.Caption := L('shell.btn.restoreDefaults', 'Restore Defaults');
+end;
+
+procedure TDeepShellSettingsForm.SetCommands(const ACommands: IShellCommandManager);
+begin
+  FCommands := ACommands;
+end;
+
+procedure TDeepShellSettingsForm.SetResetAction(const AAction: TFunc<ISettingsPageProvider, Boolean>);
+begin
+  FResetAction := AAction;
 end;
 
 procedure TDeepShellSettingsForm.CreateLayout;
@@ -175,14 +214,14 @@ begin
 
   FBtnDefaults := TButton.Create(Self);
   FBtnDefaults.Parent := FButtons;
-  FBtnDefaults.Caption := 'Restore Defaults';
+  FBtnDefaults.Caption := L('shell.btn.restoreDefaults', 'Restore Defaults');
   FBtnDefaults.Width := 120;
   FBtnDefaults.Align := alLeft;
   FBtnDefaults.OnClick := DoDefaults;
 
   FBtnCancel := TButton.Create(Self);
   FBtnCancel.Parent := FButtons;
-  FBtnCancel.Caption := 'Cancel';
+  FBtnCancel.Caption := L('shell.btn.cancel', 'Cancel');
   FBtnCancel.Width := 88;
   FBtnCancel.Align := alRight;
   FBtnCancel.OnClick := DoCancel;
@@ -190,14 +229,14 @@ begin
 
   FBtnApply := TButton.Create(Self);
   FBtnApply.Parent := FButtons;
-  FBtnApply.Caption := 'Apply';
+  FBtnApply.Caption := L('shell.btn.apply', 'Apply');
   FBtnApply.Width := 88;
   FBtnApply.Align := alRight;
   FBtnApply.OnClick := DoApply;
 
   FBtnOK := TButton.Create(Self);
   FBtnOK.Parent := FButtons;
-  FBtnOK.Caption := 'OK';
+  FBtnOK.Caption := L('shell.btn.ok', 'OK');
   FBtnOK.Width := 88;
   FBtnOK.Align := alRight;
   FBtnOK.OnClick := DoOK;
@@ -327,15 +366,33 @@ end;
 procedure TDeepShellSettingsForm.DoDefaults(Sender: TObject);
 var
   LIdx: Integer;
+  LProvider: ISettingsPageProvider;
 begin
   LIdx := FList.ItemIndex;
   if (LIdx < 0) or (LIdx >= FProviders.Count) then Exit;
+  LProvider := FProviders[LIdx];
+  // The dialog's Restore Defaults button is per-page (resets only the
+  // currently visible settings page). Route through FResetAction so
+  // TDeepMainForm can wrap the per-page reset in a governance check (with
+  // page-specific evidence) before calling provider.RestoreDefaults.
+  // Falls back to direct dispatch when no action is injected (unit tests
+  // or non-shell hosts).
+  if Assigned(FResetAction) then
+  begin
+    try
+      FResetAction(LProvider);
+      Exit;
+    except
+      on E: Exception do
+        ShowMessage(Format('RestoreDefaults via reset action failed: %s', [E.Message]));
+    end;
+  end;
   try
-    FProviders[LIdx].RestoreDefaults;
+    LProvider.RestoreDefaults;
   except
     on E: Exception do
       ShowMessage(Format('RestoreDefaults failed for "%s": %s',
-        [FProviders[LIdx].Caption, E.Message]));
+        [LProvider.Caption, E.Message]));
   end;
 end;
 

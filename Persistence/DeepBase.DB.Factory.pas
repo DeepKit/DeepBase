@@ -245,19 +245,11 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Connection;
-    Query.SQL.Text := 'UPDATE Settings SET Value = :Value WHERE Key = :Key';
-    Query.ParamByName('Value').AsString := Value;
+    Query.SQL.Text :=
+      'INSERT OR REPLACE INTO Settings (Key, Value) VALUES (:Key, :Value)';
     Query.ParamByName('Key').AsString := Key;
+    Query.ParamByName('Value').AsString := Value;
     Query.ExecSQL;
-
-    if Query.RowsAffected = 0 then
-    begin
-      Query.SQL.Text :=
-        'INSERT INTO Settings (Key, Value) VALUES (:Key, :Value)';
-      Query.ParamByName('Key').AsString := Key;
-      Query.ParamByName('Value').AsString := Value;
-      Query.ExecSQL;
-    end;
   finally
     Query.Free;
   end;
@@ -321,7 +313,16 @@ begin
     TCredentialManager.SaveCredential(TargetName, '', PlainPassword);
     WriteSetting(Connection, 'DB3.Password', BuildCredentialRef(TargetName));
   except
-    // Keep backward-compatible plaintext fallback when Credential Manager fails.
+    on E: Exception do
+    begin
+      // BASIC-011 fix: fail-closed. If Credential Manager cannot store
+      // the password, do NOT silently keep it in plaintext in the config
+      // DB. Log the failure and raise so the caller knows the credential
+      // was not securely persisted.
+      raise EDatabaseException.CreateFmt(
+        'Cannot save DB3 password to Credential Manager: %s. ' +
+        'Plaintext fallback is disabled for security.', [E.Message]);
+    end;
   end;
   Result := PlainPassword;
   {$ENDIF}

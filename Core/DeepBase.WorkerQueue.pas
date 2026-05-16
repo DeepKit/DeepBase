@@ -294,11 +294,11 @@ type
   private
     FDirectory: string;
     FLock: TCriticalSection;
-    FLockFilePath: string;  // BUG-117 FIX: ½ø³Ì¼äÎÄ¼þËøÂ·¾¶
+    FLockFilePath: string;  // BUG-117 FIX: ï¿½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Â·ï¿½ï¿½
 
     function GetJobPath(const AJobId: TJobId): string;
-    function AcquireFileLock: THandle;  // BUG-117 FIX: »ñÈ¡½ø³Ì¼äÎÄ¼þËø
-    procedure ReleaseFileLock(AHandle: THandle);  // BUG-117 FIX: ÊÍ·Å½ø³Ì¼äÎÄ¼þËø
+    function AcquireFileLock: THandle;  // BUG-117 FIX: ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
+    procedure ReleaseFileLock(AHandle: THandle);  // BUG-117 FIX: ï¿½Í·Å½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
   public
     constructor Create(const ADirectory: string);
     destructor Destroy; override;
@@ -330,7 +330,7 @@ type
     FJobAvailable: TEvent;
     FShutdownEvent: TEvent;
     FMaxWorkers: Integer;
-    FMinWorkers: Integer;  // BUG-056 FIX: ×îÐ¡¹¤×÷Ïß³ÌÊý
+    FMinWorkers: Integer;  // BUG-056 FIX: ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½ï¿½ï¿½
     FMaxPendingJobs: Integer;
     FDefaultRetryPolicy: TRetryPolicy;
     FDefaultTimeout: Integer;
@@ -340,12 +340,12 @@ type
     FTotalProcessed: Int64;
     FTotalErrors: Int64;
     FTotalProcessingTime: Int64;
-    // BUG-056 FIX: ¶¯Ì¬Ïß³Ì³Øµ÷ÕûÏà¹Ø×Ö¶Î
+    // BUG-056 FIX: ï¿½ï¿½Ì¬ï¿½ß³Ì³Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
     FAutoScale: Boolean;
-    FScaleUpThreshold: Double;    // ¶ÓÁÐ±¥ºÍ¶È³¬¹ý´ËÖµÊ±Ôö¼ÓÏß³Ì
-    FScaleDownThreshold: Double;  // ¿ÕÏÐÂÊ³¬¹ý´ËÖµÊ±¼õÉÙÏß³Ì
+    FScaleUpThreshold: Double;    // ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Í¶È³ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
+    FScaleDownThreshold: Double;  // ï¿½ï¿½ï¿½ï¿½ï¿½Ê³ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
     FLastScaleTime: TDateTime;
-    FScaleCooldownMs: Integer;    // µ÷ÕûÀäÈ´Ê±¼ä(ºÁÃë)
+    FScaleCooldownMs: Integer;    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È´Ê±ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½)
     
     FOnJobQueued: TQueueEvent;
     FOnJobStarted: TQueueEvent;
@@ -359,7 +359,7 @@ type
     procedure MoveToDeadLetter(AJob: TJob);
     function AreDependenciesMet(const AJob: TJob): Boolean;
     procedure SortPendingQueue;
-    procedure CheckAutoScale;  // BUG-056 FIX: ¼ì²é²¢Ö´ÐÐ×Ô¶¯µ÷Õû
+    procedure CheckAutoScale;  // BUG-056 FIX: ï¿½ï¿½é²¢Ö´ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
 
     function GetStats: TQueueStats;
     function GetActiveWorkerCount: Integer;
@@ -415,8 +415,17 @@ type
     /// <summary>Start processing</summary>
     procedure Start;
     
-    /// <summary>Stop processing</summary>
+    /// <summary>Stop processing.
+    /// AWaitForCompletion=True waits for worker threads to exit (default).
+    /// Note: this terminates workers immediately and DOES NOT drain pending jobs.
+    /// To drain pending jobs first, call DrainAndStop instead.</summary>
     procedure Stop(AWaitForCompletion: Boolean = True);
+
+    /// <summary>Drain pending jobs then stop. Waits for queued jobs to be
+    /// processed (up to ATimeoutMs), then stops worker threads.
+    /// Returns True if all jobs drained, False if timed out.
+    /// ATimeoutMs = -1 means wait indefinitely.</summary>
+    function DrainAndStop(ATimeoutMs: Integer = 30000): Boolean;
     
     /// <summary>Pause processing</summary>
     procedure Pause;
@@ -447,7 +456,7 @@ type
     property IsShuttingDown: Boolean read FShuttingDown;
     property Stats: TQueueStats read GetStats;
     property ActiveWorkerCount: Integer read GetActiveWorkerCount;
-    // BUG-056 FIX: ¶¯Ì¬Ïß³Ì³Øµ÷ÕûÊôÐÔ
+    // BUG-056 FIX: ï¿½ï¿½Ì¬ï¿½ß³Ì³Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     property AutoScale: Boolean read FAutoScale write FAutoScale;
     property ScaleUpThreshold: Double read FScaleUpThreshold write FScaleUpThreshold;
     property ScaleDownThreshold: Double read FScaleDownThreshold write FScaleDownThreshold;
@@ -829,22 +838,22 @@ var
   LMetadata: TJSONObject;
   LPair: TJSONPair;
 begin
-  // BUG-107 FIX: Ìí¼ÓÊäÈëÑéÖ¤
+  // BUG-107 FIX: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤
   if AJSON = nil then
     raise EWorkerQueueException.Create('Invalid JSON: nil object');
   
-  // ÑéÖ¤±ØÒª×Ö¶Î
+  // ï¿½ï¿½Ö¤ï¿½ï¿½Òªï¿½Ö¶ï¿½
   LJobType := AJSON.GetValue<string>('jobType', '');
   if LJobType = '' then
     raise EWorkerQueueException.Create('Invalid JSON: missing jobType');
   
-  // ÑéÖ¤jobType³¤¶È£¬·ÀÖ¹¹ý³¤µÄÊäÈë
+  // ï¿½ï¿½Ö¤jobTypeï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if Length(LJobType) > 256 then
     raise EWorkerQueueException.Create('Invalid JSON: jobType too long');
   
   Result := TJob.Create(LJobType);
   
-  // ÑéÖ¤²¢ÉèÖÃID
+  // ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ID
   LJobId := AJSON.GetValue<string>('id', Result.FId);
   if Length(LJobId) > 256 then
   begin
@@ -1132,7 +1141,7 @@ begin
   if not TDirectory.Exists(FDirectory) then
     TDirectory.CreateDirectory(FDirectory);
 
-  // BUG-117 FIX: ³õÊ¼»¯½ø³Ì¼äËøÎÄ¼þÂ·¾¶
+  // BUG-117 FIX: ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ì¼ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½
   FLockFilePath := TPath.Combine(FDirectory, '.lock');
 end;
 
@@ -1147,7 +1156,7 @@ begin
   Result := TPath.Combine(FDirectory, AJobId + '.json');
 end;
 
-// BUG-117 FIX: ÊµÏÖ½ø³Ì¼äÎÄ¼þËø
+// BUG-117 FIX: Êµï¿½Ö½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
 function TFileJobStorage.AcquireFileLock: THandle;
 {$IFDEF MSWINDOWS}
 var
@@ -1156,13 +1165,13 @@ begin
   Result := INVALID_HANDLE_VALUE;
   LRetries := 0;
 
-  // ³¢ÊÔ»ñÈ¡ÎÄ¼þËø£¬×î¶àÖØÊÔ50´Î£¨5Ãë£©
+  // ï¿½ï¿½ï¿½Ô»ï¿½È¡ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½50ï¿½Î£ï¿½5ï¿½ë£©
   while LRetries < 50 do
   begin
     Result := CreateFile(
       PChar(FLockFilePath),
       GENERIC_READ or GENERIC_WRITE,
-      0,  // ²»¹²Ïí£¬¶ÀÕ¼·ÃÎÊ
+      0,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½
       nil,
       CREATE_ALWAYS,
       FILE_ATTRIBUTE_HIDDEN or FILE_FLAG_DELETE_ON_CLOSE,
@@ -1173,15 +1182,15 @@ begin
       Exit;
 
     Inc(LRetries);
-    Sleep(100);  // µÈ´ý100msºóÖØÊÔ
+    Sleep(100);  // ï¿½È´ï¿½100msï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   end;
 
-  // ³¬Ê±ºóÈÔÎÞ·¨»ñÈ¡Ëø£¬¼ÇÂ¼¾¯¸æµ«¼ÌÐøÖ´ÐÐ
-  // ÔÚµ¥½ø³Ì»·¾³ÏÂÕâ²»»á³ÉÎªÎÊÌâ
+  // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½æµ«ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
+  // ï¿½Úµï¿½ï¿½ï¿½ï¿½Ì»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â²»ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½
 end;
 {$ELSE}
 begin
-  // ·ÇWindowsÆ½Ì¨ÔÝ²»Ö§³Ö½ø³Ì¼äËø
+  // ï¿½ï¿½WindowsÆ½Ì¨ï¿½Ý²ï¿½Ö§ï¿½Ö½ï¿½ï¿½Ì¼ï¿½ï¿½ï¿½
   Result := 0;
 end;
 {$ENDIF}
@@ -1200,7 +1209,7 @@ var
   LJSON: TJSONObject;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1225,7 +1234,7 @@ var
   LPath: string;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1248,7 +1257,7 @@ var
   LFileLock: THandle;
 begin
   Result := nil;
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1284,7 +1293,7 @@ var
   LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1327,7 +1336,7 @@ var
   LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1367,7 +1376,7 @@ var
   LFile: string;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: Ê¹ÓÃ½ø³Ì¼äÎÄ¼þËø±£»¤
+  // BUG-117 FIX: Ê¹ï¿½Ã½ï¿½ï¿½Ì¼ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1393,7 +1402,7 @@ begin
   inherited Create;
   FName := AName;
   FMaxWorkers := AMaxWorkers;
-  FMinWorkers := 1;  // BUG-056 FIX: Ä¬ÈÏ×îÐ¡1¸ö¹¤×÷Ïß³Ì
+  FMinWorkers := 1;  // BUG-056 FIX: Ä¬ï¿½ï¿½ï¿½ï¿½Ð¡1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
   FMaxPendingJobs := 10000;
   FDefaultTimeout := 300000; // 5 minutes
   FHandlers := TDictionary<string, TJobHandler>.Create;
@@ -1401,19 +1410,19 @@ begin
   FPendingQueue := TList<TJob>.Create;
   FWorkers := TObjectList<TWorkerThread>.Create(True);
   FLock := TCriticalSection.Create;
-  // BUG-055 FIX: ¸ÄÎªÊÖ¶¯ÖØÖÃÊÂ¼þ£¬·ÀÖ¹¶àÏß³Ì³¡¾°ÏÂÐÅºÅ¶ªÊ§
-  // ×Ô¶¯ÖØÖÃÊÂ¼þ(ManualReset=False)Ö»»½ÐÑÒ»¸öÏß³Ìºó¾ÍÖØÖÃ£¬
-  // µ¼ÖÂ¶ÓÁÐÖÐÓÐ¶à¸ö×÷ÒµÊ±ÆäËû×÷ÒµÎÞ·¨±»¼°Ê±´¦Àí
+  // BUG-055 FIX: ï¿½ï¿½Îªï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ß³Ì³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ¶ï¿½Ê§
+  // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½(ManualReset=False)Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ß³Ìºï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½
+  // ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ÒµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
   FJobAvailable := TEvent.Create(nil, True, False, '');
   FShutdownEvent := TEvent.Create(nil, True, False, '');
   FDefaultRetryPolicy := TRetryPolicy.Exponential(3, 1000, 60000);
   FStorage := TMemoryJobStorage.Create;
-  // BUG-056 FIX: ³õÊ¼»¯¶¯Ì¬Ïß³Ì³Øµ÷ÕûÏà¹Ø×Ö¶Î
-  FAutoScale := False;  // Ä¬ÈÏ¹Ø±Õ×Ô¶¯µ÷Õû
-  FScaleUpThreshold := 0.8;    // ¶ÓÁÐ±¥ºÍ¶È³¬¹ý80%Ê±Ôö¼ÓÏß³Ì
-  FScaleDownThreshold := 0.2;  // ¿ÕÏÐÂÊ³¬¹ý80%(¼´ÀûÓÃÂÊµÍÓÚ20%)Ê±¼õÉÙÏß³Ì
+  // BUG-056 FIX: ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ì¬ï¿½ß³Ì³Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
+  FAutoScale := False;  // Ä¬ï¿½Ï¹Ø±ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
+  FScaleUpThreshold := 0.8;    // ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Í¶È³ï¿½ï¿½ï¿½80%Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
+  FScaleDownThreshold := 0.2;  // ï¿½ï¿½ï¿½ï¿½ï¿½Ê³ï¿½ï¿½ï¿½80%(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½20%)Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
   FLastScaleTime := 0;
-  FScaleCooldownMs := 5000;    // 5ÃëÀäÈ´Ê±¼ä
+  FScaleCooldownMs := 5000;    // 5ï¿½ï¿½ï¿½ï¿½È´Ê±ï¿½ï¿½
 end;
 
 destructor TWorkerQueue.Destroy;
@@ -1737,8 +1746,8 @@ begin
       end;
     end;
 
-    // BUG-055 FIX: ÊÖ¶¯ÖØÖÃÊÂ¼þ¹ÜÀí¡£
-    // É¾³ýµ±Ç° job ºóÖØÐÂ¼ì²éÊ£Óà¶ÓÁÐ£¬±ÜÃâÉ¾³ýÆÚ¼äÔ½½ç¶ÁÈ¡¡£
+    // BUG-055 FIX: ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // É¾ï¿½ï¿½ï¿½ï¿½Ç° job ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½Ú¼ï¿½Ô½ï¿½ï¿½ï¿½È¡ï¿½ï¿½
     if LHasAvailableJobs then
       FJobAvailable.SetEvent
     else
@@ -1898,7 +1907,7 @@ begin
     FLock.Leave;
   end;
 
-  // BUG-056 FIX: ×÷Òµ´¦ÀíÍê³Éºó¼ì²éÊÇ·ñÐèÒª¶¯Ì¬µ÷ÕûÏß³Ì³Ø
+  // BUG-056 FIX: ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éºï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Òªï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì³ï¿½
   CheckAutoScale;
 end;
 
@@ -1968,6 +1977,38 @@ begin
   end;
 end;
 
+function TWorkerQueue.DrainAndStop(ATimeoutMs: Integer): Boolean;
+var
+  LStartTime: TDateTime;
+  LStats: TQueueStats;
+begin
+  // BASIC-007: drain semantics â€” wait for pending+running jobs to clear,
+  // then stop workers. Different from Stop(True) which terminates immediately.
+  Result := True;
+  if FShuttingDown then
+    Exit;
+
+  LStartTime := Now;
+  while not FShuttingDown do
+  begin
+    LStats := GetStats;
+    if (LStats.PendingJobs = 0) and (LStats.RunningJobs = 0) then
+      Break;
+
+    if (ATimeoutMs >= 0) and
+       (MilliSecondsBetween(Now, LStartTime) >= ATimeoutMs) then
+    begin
+      Result := False;
+      Break;
+    end;
+
+    Sleep(50);
+  end;
+
+  // Stop workers regardless of drain result.
+  Stop(True);
+end;
+
 procedure TWorkerQueue.Pause;
 begin
   FPaused := True;
@@ -1986,19 +2027,19 @@ var
 begin
   LStartTime := Now;
   
-  // µÈ´ýËùÓÐ¹ÒÆðºÍÔËÐÐÖÐµÄ×÷ÒµÍê³É
+  // ï¿½È´ï¿½ï¿½ï¿½ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½
   repeat
     LStats := GetStats;
     if (LStats.PendingJobs = 0) and (LStats.RunningJobs = 0) then
       Break;
       
-    Sleep(50); // ¼õÉÙÂÖÑ¯¼ä¸ô£¬Ìá¸ßÏìÓ¦ÐÔ
+    Sleep(50); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½
     if (ATimeoutMs >= 0) and (MilliSecondsBetween(Now, LStartTime) > ATimeoutMs) then
       raise EWorkerQueueException.Create('Timeout waiting for job completion');
   until False;
 end;
 
-// BUG-056 FIX: ÊµÏÖÏß³Ì³Ø¶¯Ì¬µ÷Õû
+// BUG-056 FIX: Êµï¿½ï¿½ï¿½ß³Ì³Ø¶ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½
 procedure TWorkerQueue.CheckAutoScale;
 var
   LStats: TQueueStats;
@@ -2007,15 +2048,15 @@ var
   LNewCount: Integer;
   LElapsedMs: Int64;
 begin
-  // ¼ì²éÊÇ·ñÆôÓÃ×Ô¶¯µ÷Õû
+  // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
   if not FAutoScale then
     Exit;
 
-  // ¼ì²éÊÇ·ñÕýÔÚ¹Ø±Õ
+  // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ú¹Ø±ï¿½
   if FShuttingDown or FPaused then
     Exit;
 
-  // ¼ì²éÀäÈ´Ê±¼ä
+  // ï¿½ï¿½ï¿½ï¿½ï¿½È´Ê±ï¿½ï¿½
   if FLastScaleTime > 0 then
   begin
     LElapsedMs := MilliSecondsBetween(Now, FLastScaleTime);
@@ -2023,43 +2064,43 @@ begin
       Exit;
   end;
 
-  // »ñÈ¡µ±Ç°Í³¼ÆÐÅÏ¢£¨²»¼ÓËø£¬ÒòÎªGetStatsÄÚ²¿»á¼ÓËø£©
+  // ï¿½ï¿½È¡ï¿½ï¿½Ç°Í³ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªGetStatsï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   LStats := GetStats;
 
-  // Èç¹ûÃ»ÓÐ¹¤×÷Ïß³Ì£¬²»½øÐÐµ÷Õû
+  // ï¿½ï¿½ï¿½Ã»ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ß³Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½
   if LStats.ActiveWorkers + LStats.IdleWorkers = 0 then
     Exit;
 
   LNewCount := FWorkers.Count;
 
-  // ¼ÆËã¶ÓÁÐ±¥ºÍ¶È = ´ý´¦Àí×÷ÒµÊý / ×î´ó´ý´¦ÀíÊý
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Í¶ï¿½ = ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ / ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if FMaxPendingJobs > 0 then
     LSaturation := LStats.PendingJobs / FMaxPendingJobs
   else
     LSaturation := 0;
 
-  // ¼ÆËã¿ÕÏÐÂÊ = ¿ÕÏÐÏß³ÌÊý / ×ÜÏß³ÌÊý
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ = ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½ï¿½ï¿½ / ï¿½ï¿½ï¿½ß³ï¿½ï¿½ï¿½
   if LStats.ActiveWorkers + LStats.IdleWorkers > 0 then
     LIdleRate := LStats.IdleWorkers / (LStats.ActiveWorkers + LStats.IdleWorkers)
   else
     LIdleRate := 1;
 
-  // ÅÐ¶ÏÊÇ·ñÐèÒªÀ©ÈÝ
-  // Ìõ¼þ£º¶ÓÁÐ±¥ºÍ¶È³¬¹ýãÐÖµ ÇÒ µ±Ç°Ïß³ÌÊýÎ´´ïÉÏÏÞ
+  // ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Í¶È³ï¿½ï¿½ï¿½ï¿½ï¿½Öµ ï¿½ï¿½ ï¿½ï¿½Ç°ï¿½ß³ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if (LSaturation > FScaleUpThreshold) and (LNewCount < FMaxWorkers) then
   begin
-    // À©ÈÝ£ºÔö¼Ó 1 ¸öÏß³Ì£¬»òÕß¸ù¾Ý±¥ºÍ¶ÈÔö¼Ó¸ü¶à
+    // ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ï¿½ß³Ì£ï¿½ï¿½ï¿½ï¿½ß¸ï¿½ï¿½Ý±ï¿½ï¿½Í¶ï¿½ï¿½ï¿½ï¿½Ó¸ï¿½ï¿½ï¿½
     LNewCount := Min(LNewCount + Max(1, Round((LSaturation - FScaleUpThreshold) * 5)), FMaxWorkers);
   end
-  // ÅÐ¶ÏÊÇ·ñÐèÒªËõÈÝ
-  // Ìõ¼þ£º¿ÕÏÐÂÊ³¬¹ýãÐÖµ£¨¼´ÀûÓÃÂÊµÍ£©ÇÒ µ±Ç°Ïß³ÌÊý³¬¹ý×îÐ¡Öµ
+  // ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê³ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÊµÍ£ï¿½ï¿½ï¿½ ï¿½ï¿½Ç°ï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡Öµ
   else if (LIdleRate > (1 - FScaleDownThreshold)) and (LNewCount > FMinWorkers) then
   begin
-    // ËõÈÝ£º¼õÉÙ 1 ¸öÏß³Ì
+    // ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ï¿½ß³ï¿½
     LNewCount := Max(LNewCount - 1, FMinWorkers);
   end;
 
-  // Èç¹ûÐèÒªµ÷Õû£¬Ö´ÐÐµ÷Õû
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ðµï¿½ï¿½ï¿½
   if LNewCount <> FWorkers.Count then
   begin
     FLastScaleTime := Now;

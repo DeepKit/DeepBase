@@ -127,7 +127,7 @@ var
 
 function CircuitBreakers: TCircuitBreakerRegistry;
 begin
-  // BUG-111 FIX: 确保锁已初始化后再使�?
+  // BUG-111 FIX: 确保锁已初始化后再使�?
   if not Assigned(_RegistryLock) then
     raise ECircuitBreakerNotInitializedException.Create('CircuitBreakers registry lock not initialized');
     
@@ -171,9 +171,9 @@ begin
   FOpenDurationMs := DEFAULT_KEEP_ALIVE_TIMEOUT_MS;
   FLastStateChange := Now;
   FLock := TCriticalSection.Create;
-  // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?
+  // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?
   FHalfOpenActiveCount := 0;
-  FMaxHalfOpenRequests := 1;  // 默认只允�?个探测请�?
+  FMaxHalfOpenRequests := 1;  // 默认只允�?个探测请�?
 end;
 
 destructor TCircuitBreaker.Destroy;
@@ -271,7 +271,7 @@ begin
       csHalfOpen:
       begin
         // BUG-119 FIX: 限制HalfOpen状态下的并发请求数
-        // 只允许有限数量的探测请求通过，防止高并发场景下状态混�?
+        // 只允许有限数量的探测请求通过，防止高并发场景下状态混�?
         if FHalfOpenActiveCount < FMaxHalfOpenRequests then
         begin
           Inc(FHalfOpenActiveCount);
@@ -334,7 +334,7 @@ begin
       end;
       csHalfOpen:
       begin
-        // BUG-119 FIX: 减少活跃请求计数并立即打开断路�?
+        // BUG-119 FIX: 减少活跃请求计数并立即打开断路�?
         if FHalfOpenActiveCount > 0 then
           Dec(FHalfOpenActiveCount);
 
@@ -364,9 +364,31 @@ end;
 
 procedure TCircuitBreaker.Execute(Proc: TProc);
 begin
-  if not AllowRequest then
-    raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
-  
+  FLock.Enter;
+  try
+    CheckHalfOpenTransition;
+    case FState of
+      csOpen:
+      begin
+        if Assigned(FOnRejected) then
+          FOnRejected(FName);
+        raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
+      end;
+      csHalfOpen:
+      begin
+        if FHalfOpenActiveCount >= FMaxHalfOpenRequests then
+        begin
+          if Assigned(FOnRejected) then
+            FOnRejected(FName);
+          raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
+        end;
+        Inc(FHalfOpenActiveCount);
+      end;
+    end;
+  finally
+    FLock.Leave;
+  end;
+
   try
     Proc;
     RecordSuccess;
@@ -394,9 +416,31 @@ end;
 
 function TCircuitBreaker.Execute<T>(Func: TFunc<T>): T;
 begin
-  if not AllowRequest then
-    raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
-  
+  FLock.Enter;
+  try
+    CheckHalfOpenTransition;
+    case FState of
+      csOpen:
+      begin
+        if Assigned(FOnRejected) then
+          FOnRejected(FName);
+        raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
+      end;
+      csHalfOpen:
+      begin
+        if FHalfOpenActiveCount >= FMaxHalfOpenRequests then
+        begin
+          if Assigned(FOnRejected) then
+            FOnRejected(FName);
+          raise ECircuitBreakerException.CreateFmt('Circuit breaker "%s" is open', [FName]);
+        end;
+        Inc(FHalfOpenActiveCount);
+      end;
+    end;
+  finally
+    FLock.Leave;
+  end;
+
   try
     Result := Func;
     RecordSuccess;

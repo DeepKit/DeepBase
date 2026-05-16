@@ -73,23 +73,22 @@ DeepBase 是一�?**Delphi 企业级应用开发基础框架**，提供现代�
 
 运行时包边界：`DeepBaseCore.dpk` 不直接依�?VCL/FMX/FireDAC；主题切换、全局异常展示�?UI 行为�?`DeepBaseVCL.dpk` / `DeepBaseFMX.dpk` 适配层承接。`DeepBaseFeatures.dpk` 依赖 `DeepBaseServices.dpk`，避免底层服务单元被重复打包�?
 
+数据库接入前置条件：`DeepBase.Manager` 与 FireDAC 持久化适配器已经解耦。任何调用 `DeepBase.Initialize*` / `InitializeWithDB*` 的最终程序，都必须链接 `DeepBase.Persistence.Manager.FireDAC`，否则会报 `No DB connection adapter registered`。
+
 ### 2. 初始�?DeepBase
 
 ```delphi
 program MyApp;
 
 uses
-  DeepBase.Manager;
+  DeepBase.Manager,
+  DeepBase.Persistence.Manager.FireDAC; // registers Manager DB adapter
 
 begin
   Application.Initialize;
   
   // 初始�?DeepBase
-  if not DeepBase.Initialize then
-  begin
-    ShowMessage('Failed to initialize DeepBase');
-    Exit;
-  end;
+  DeepBase.InitializeOrRaise;
   
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;

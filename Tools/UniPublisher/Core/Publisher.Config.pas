@@ -1,18 +1,18 @@
-{ ============================================================================
+(* ============================================================================
   Publisher.Config - UniPublisher Configuration Model
-  
+
   Version: 1.0
   Description:
     Defines the configuration model for UniPublisher, supporting the standard
-    `.publish.json` format as specified in docs/tools/UniPublisher-Spec.md.
-    
-    Each application maintains a `{AppName}.publish.json` file containing:
+    .publish.json format as specified in docs/tools/UniPublisher-Spec.md.
+
+    Each application maintains a {AppName}.publish.json file containing:
     - Application identity (appId, appName, displayName)
     - Build paths (dproj, outputDir)
     - Package layout rules (include/exclude patterns)
     - Publish targets (HTTP, GitHub, Gitee)
     - Metadata (website, support email, etc.)
-  ============================================================================ }
+  ============================================================================ *)
 
 unit Publisher.Config;
 

@@ -4,6 +4,8 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
   System.Math,
   System.Generics.Collections,
   DeepBase.IntentClarification.Types,
@@ -25,6 +27,7 @@ type
       CDefaultDepth = 0.5;
     var
       FProfiles: TDictionary<string, TRapportProfile>;
+      FLock: TCriticalSection;
 
     function ClampDouble(AValue: Double): Double;
     function IsValidStyle(const AStyle: string): Boolean;
@@ -64,11 +67,13 @@ constructor TRapportLayer.Create;
 begin
   inherited Create;
   FProfiles := TDictionary<string, TRapportProfile>.Create;
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TRapportLayer.Destroy;
 begin
   FProfiles.Free;
+  FLock.Free;
   inherited;
 end;
 
@@ -104,8 +109,14 @@ end;
 
 function TRapportLayer.LoadProfile(const AUserId: string): TRapportProfile;
 begin
-  if FProfiles.TryGetValue(AUserId, Result) then
-    Exit;
+  // IC-022: protect FProfiles with FLock for concurrent access.
+  FLock.Enter;
+  try
+    if FProfiles.TryGetValue(AUserId, Result) then
+      Exit;
+  finally
+    FLock.Leave;
+  end;
 
   // Return default profile for unknown users
   Result := Default(TRapportProfile);
@@ -122,7 +133,12 @@ var
   LSanitized: TRapportProfile;
 begin
   LSanitized := SanitizeProfile(AProfile);
-  FProfiles.AddOrSetValue(LSanitized.UserId, LSanitized);
+  FLock.Enter;
+  try
+    FProfiles.AddOrSetValue(LSanitized.UserId, LSanitized);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TRapportLayer.UpdateAfterSession(const AUserId: string;
@@ -163,7 +179,12 @@ end;
 
 function TRapportLayer.HasProfile(const AUserId: string): Boolean;
 begin
-  Result := FProfiles.ContainsKey(AUserId);
+  FLock.Enter;
+  try
+    Result := FProfiles.ContainsKey(AUserId);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

@@ -430,6 +430,9 @@ function FormatDuration(ASeconds: Integer): string;
 
 implementation
 
+uses
+  DeepBase.Crypto;
+
 var
   GCloudBackup: TCloudBackupManager = nil;
 
@@ -1317,19 +1320,24 @@ begin
 end;
 
 function TBackupEncryptor.EncryptBytes(const AData: TBytes): TBytes;
-var
-  I: Integer;
 begin
-  // �򻯵�XOR���ܣ�ʵ��ʹ�����滻ΪAES��
-  SetLength(Result, Length(AData));
-  for I := 0 to Length(AData) - 1 do
-    Result[I] := AData[I] xor FKey[I mod Length(FKey)];
+  // FR-002 fix: replace previous XOR with AES (TSimpleCrypto).
+  if (Length(AData) = 0) or (Length(FKey) = 0) then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+  Result := TSimpleCrypto.EncryptBytes(AData, TEncoding.UTF8.GetString(FKey));
 end;
 
 function TBackupEncryptor.DecryptBytes(const AData: TBytes): TBytes;
 begin
-  // XOR�ǶԳƵ�
-  Result := EncryptBytes(AData);
+  if (Length(AData) = 0) or (Length(FKey) = 0) then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+  Result := TSimpleCrypto.DecryptBytes(AData, TEncoding.UTF8.GetString(FKey));
 end;
 
 { TCloudBackupClient }
@@ -2411,26 +2419,75 @@ var
   LArchivePath: string;
   LManifest: TBackupManifest;
   LZip: TZipFile;
+  LManifestPaths: TDictionary<string, TBackupFileInfo>;
+  LFileInfo: TBackupFileInfo;
+  LStream: TStream;
+  LLocalHeader: TZipHeader;
+  LEntryHash: string;
+  I: Integer;
+  LEntryName: string;
+  LVerifiedCount: Integer;
 begin
   Result := False;
-  
+
   LArchivePath := GetBackupArchivePath(ABackupId);
   if not TFile.Exists(LArchivePath) then
     Exit;
-    
-  // ��֤�嵥
+
   if not TFile.Exists(GetManifestPath(ABackupId)) then
     Exit;
-    
+
   try
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
     try
-      // ��֤ZIP������
       LZip := TZipFile.Create;
       try
         LZip.Open(LArchivePath, zmRead);
         try
-          Result := LZip.FileCount = LManifest.FileCount;
+          // File count must match manifest
+          if LZip.FileCount <> LManifest.FileCount then
+            Exit;
+
+          // Build lookup from manifest relative paths to file info
+          LManifestPaths := TDictionary<string, TBackupFileInfo>.Create(LManifest.Files.Count);
+          try
+            for LFileInfo in LManifest.Files do
+              LManifestPaths.Add(LFileInfo.RelativePath.Replace('\', '/'), LFileInfo);
+
+            LVerifiedCount := 0;
+
+            // Verify each zip entry against manifest checksum
+            for I := 0 to LZip.FileCount - 1 do
+            begin
+              LEntryName := LZip.FileName[I].Replace('\', '/');
+
+              // Every archive entry must exist in manifest
+              if not LManifestPaths.TryGetValue(LEntryName, LFileInfo) then
+                Exit;
+
+              // Verify SHA256 of entry content
+              if LFileInfo.Checksum <> '' then
+              begin
+                LZip.Read(I, LStream, LLocalHeader);
+                try
+                  LStream.Position := 0;
+                  LEntryHash := THashSHA2.GetHashString(LStream);
+                finally
+                  LStream.Free;
+                end;
+
+                if not SameText(LEntryHash, LFileInfo.Checksum) then
+                  Exit;
+              end;
+
+              Inc(LVerifiedCount);
+            end;
+
+            // All manifest entries must have been found in archive
+            Result := LVerifiedCount = LManifestPaths.Count;
+          finally
+            LManifestPaths.Free;
+          end;
         finally
           LZip.Close;
         end;

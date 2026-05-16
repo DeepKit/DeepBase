@@ -124,7 +124,7 @@ class procedure TAntiTamperPackage.Initialize(const AConfig: TAntiTamperConfig);
 begin
   FConfig := AConfig;
   FInitialized := True;
-  WriteLog('防篡改包初始化完�?);
+    WriteLog('防篡改包初始化完成');
 end;
 
 class procedure TAntiTamperPackage.WriteLog(const AMessage: string);
@@ -264,13 +264,13 @@ begin
     etAES256:
       Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   else
-    raise EAntiTamperException.Create('未知的加密类�?);
+      raise EAntiTamperException.Create('未知的加密类型');
   end;
   
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256加密，数据长�? %d bytes', [Length(Result)]))
+      WriteLog(Format('使用AES-256加密，数据长度: %d bytes', [Length(Result)]))
   else
-    WriteLog(Format('使用XOR加密，数据长�? %d bytes', [Length(Result)]));
+      WriteLog(Format('使用XOR加密，数据长度: %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
@@ -285,13 +285,13 @@ begin
     etAES256:
       Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   else
-    raise EAntiTamperException.Create('未知的加密类�?);
+      raise EAntiTamperException.Create('未知的加密类型');
   end;
   
   if FConfig.EncryptionType = etAES256 then
-    WriteLog(Format('使用AES-256解密，数据长�? %d bytes', [Length(Result)]))
+      WriteLog(Format('使用AES-256解密，数据长度: %d bytes', [Length(Result)]))
   else
-    WriteLog(Format('使用XOR解密，数据长�? %d bytes', [Length(Result)]));
+      WriteLog(Format('使用XOR解密，数据长度: %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
@@ -349,7 +349,7 @@ begin
         WriteLog('防篡改数据表已存在，检查并升级字段');
         if not UpgradeDatabase(AConnection) then
         begin
-          WriteLog('升级数据表失�?);
+            WriteLog('升级数据表失败');
           Exit;
         end;
       end;
@@ -384,7 +384,7 @@ begin
         Query.ExecSQL;
         WriteLog('sha256_hash字段添加成功');
       except
-        WriteLog('sha256_hash字段可能已存�?);
+          WriteLog('sha256_hash字段可能已存在');
       end;
       // 为现有表添加hmac_sha256字段
       try
@@ -392,7 +392,7 @@ begin
         Query.ExecSQL;
         WriteLog('hmac_sha256字段添加成功');
       except
-        WriteLog('hmac_sha256字段可能已存�?);
+          WriteLog('hmac_sha256字段可能已存在');
       end;
       // 为现有表添加enabled字段
       try
@@ -400,7 +400,7 @@ begin
         Query.ExecSQL;
         WriteLog('enabled字段添加成功');
       except
-        WriteLog('enabled字段可能已存�?);
+          WriteLog('enabled字段可能已存在');
       end;
       // 为现有表添加md5_hash字段（兼容旧实现�?
       try
@@ -408,7 +408,7 @@ begin
         Query.ExecSQL;
         WriteLog('md5_hash字段添加成功');
       except
-        WriteLog('md5_hash字段可能已存�?);
+          WriteLog('md5_hash字段可能已存在');
       end;
       
       Result := True;
@@ -562,7 +562,7 @@ begin
           // SHA-256完整性校验（严格：字段必须存在）
           if not Assigned(SHAField) or SHAField.IsNull then
           begin
-            HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为�?);
+              HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为空');
             Exit;
           end;
           ExpectedMD5 := SHAField.AsString;
@@ -575,7 +575,7 @@ begin
           // HMAC 校验（严格：字段必须存在且匹配）
           if not Assigned(HMACField) or HMACField.IsNull then
           begin
-            HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为�?);
+              HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为空');
             Exit;
           end;
           if FConfig.EnableHMAC then
@@ -639,9 +639,9 @@ begin
   ErrorMsg := Format('安全检查失败！'#13#10#13#10 +
     '图像: %s'#13#10 +
     '原因: %s'#13#10#13#10 +
-    '检测到程序文件可能被篡改，为了您的安全，程序将退出�?#13#10 +
-    '请从官方网站下载最新版本�?#13#10#13#10 +
-    '是否现在访问官方下载页面�?, [ImageKey, Reason]);
+      '检测到程序文件可能被篡改，为了您的安全，程序将退出。'#13#10 +
+      '请从官方网站下载最新版本。'#13#10#13#10 +
+      '是否现在访问官方下载页面？', [ImageKey, Reason]);
     
   Response := MessageBox(0, PChar(ErrorMsg), '安全警告', MB_YESNO or MB_ICONERROR or MB_TOPMOST);
   
@@ -652,7 +652,7 @@ begin
   end;
   
   // 强制退出程�?
-  WriteLog('程序因安全违规退�?);
+    WriteLog('程序因安全违规退出');
   ExitProcess(1);
 end;
 
@@ -667,7 +667,7 @@ begin
     Q.Connection := AConnection;
     Q.SQL.Text := 'DELETE FROM ' + FConfig.TableName;
     Q.ExecSQL;
-    WriteLog('已清空防篡改数据�?);
+      WriteLog('已清空防篡改数据表');
   finally
     Q.Free;
   end;

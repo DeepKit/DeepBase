@@ -117,8 +117,8 @@
 
 ## 李冰代码 Review（盘古，2026-05-11）
 
-- [x] DeepLLM.Governance.Registration.pas — 4 gate + 4 action + 3 purpose，observe 模式正常
-- [x] DeepLLM.Governance.Bridges.pas — DoEnterGate 逻辑正确，observe 模式 always returns True
+- [x] Assayer.Governance.Registration.pas — 4 gate + 4 action + 3 purpose，observe 模式正常
+- [x] Assayer.Governance.Bridges.pas — DoEnterGate 逻辑正确，observe 模式 always returns True
 - [x] DeepShine.Governance.Registration.pas — gckState evaluator 注册（CB 联动），3 gate + 3 action + 1 purpose
 - [x] 共同 gap：缺 ActionGrid 双注册 + DueRule + gate→actionKeys（observe 可用，enforce 需后续补齐）
 

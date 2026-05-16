@@ -53,10 +53,13 @@ type
   private
     FStore: IShellSettingsStore;
     FInstanceId: string;
+    FSequence: Int64;
+    function NextSequence: Int64;
     function GlobalKey: string;
     function ProjectKey(const AProjectId: string): string;
     function StateToJson(const AState: TShellLayoutState): string;
     function TryParseState(const AJson: string; out AState: TShellLayoutState): Boolean;
+    function RemoteIsNewer(const AExisting, AMine: TShellLayoutState): Boolean;
   public
     constructor Create(const AStore: IShellSettingsStore; const AInstanceId: string);
     destructor Destroy; override;
@@ -71,7 +74,8 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  System.NetEncoding;
 
 // ---------------------------------------------------------------------------
 // TShellInMemoryLayoutService
@@ -250,9 +254,37 @@ begin
   Result := 'shell.layout.global';
 end;
 
+function TShellSettingsBackedLayoutService.NextSequence: Int64;
+begin
+  Result := TInterlocked.Increment(FSequence);
+end;
+
+function TShellSettingsBackedLayoutService.RemoteIsNewer(
+  const AExisting, AMine: TShellLayoutState): Boolean;
+begin
+  // Skip our save only when an OTHER instance's record is materially
+  // newer. Same-instance writes always win for ourselves (last-write-wins
+  // within a process). For DIFFERENT instances we treat it as newer when
+  // the existing record's UpdatedAt is strictly later than ours; if dates
+  // round to the same TDateTime tick we use the per-process Sequence as a
+  // tie-breaker (higher = newer write). Cross-instance ties are still
+  // racy at the OS-level write-string boundary; production deployments
+  // should back the layout store with a transactional store (DB1).
+  Result := False;
+  if (AExisting.WriterInstanceId = '')
+     or SameText(AExisting.WriterInstanceId, AMine.WriterInstanceId) then
+    Exit;
+  if AExisting.UpdatedAt > AMine.UpdatedAt then
+    Exit(True);
+  if (AExisting.UpdatedAt = AMine.UpdatedAt)
+     and (AExisting.Sequence > AMine.Sequence) then
+    Exit(True);
+end;
+
 function TShellSettingsBackedLayoutService.ProjectKey(const AProjectId: string): string;
 begin
-  Result := 'shell.layout.project.' + AProjectId;
+  // Encode project ID to prevent namespace pollution from dots/slashes/special chars
+  Result := 'shell.layout.project.' + TNetEncoding.Base64URL.Encode(AProjectId);
 end;
 
 function TShellSettingsBackedLayoutService.StateToJson(
@@ -264,6 +296,7 @@ begin
   try
     LRoot.AddPair('layoutKey', AState.LayoutKey);
     LRoot.AddPair('updatedAt', DateToISO8601(AState.UpdatedAt, False));
+    LRoot.AddPair('sequence', TJSONNumber.Create(AState.Sequence));
     LRoot.AddPair('writerInstanceId', AState.WriterInstanceId);
     LRoot.AddPair('mainLeft', TJSONNumber.Create(AState.MainLeft));
     LRoot.AddPair('mainTop', TJSONNumber.Create(AState.MainTop));
@@ -316,6 +349,7 @@ begin
       AState.UpdatedAt := 0;
     end;
     AState.WriterInstanceId := LRoot.GetValue<string>('writerInstanceId', '');
+    AState.Sequence := LRoot.GetValue<Int64>('sequence', 0);
     AState.MainLeft := LRoot.GetValue<Integer>('mainLeft', 0);
     AState.MainTop := LRoot.GetValue<Integer>('mainTop', 0);
     AState.MainWidth := LRoot.GetValue<Integer>('mainWidth', 0);
@@ -344,12 +378,17 @@ end;
 procedure TShellSettingsBackedLayoutService.SaveGlobalLayout(
   const AState: TShellLayoutState);
 var
-  LState: TShellLayoutState;
+  LState, LExisting: TShellLayoutState;
 begin
   LState := AState;
   LState.UpdatedAt := Now;
+  LState.Sequence := NextSequence;
   if LState.WriterInstanceId = '' then
     LState.WriterInstanceId := FInstanceId;
+
+  if TryLoadGlobalLayout(LExisting) and RemoteIsNewer(LExisting, LState) then
+    Exit;
+
   FStore.WriteString(GlobalKey, StateToJson(LState));
 end;
 
@@ -372,14 +411,19 @@ end;
 procedure TShellSettingsBackedLayoutService.SaveProjectLayout(
   const AProjectId: string; const AState: TShellLayoutState);
 var
-  LState: TShellLayoutState;
+  LState, LExisting: TShellLayoutState;
 begin
   if AProjectId = '' then
     Exit;
   LState := AState;
   LState.UpdatedAt := Now;
+  LState.Sequence := NextSequence;
   if LState.WriterInstanceId = '' then
     LState.WriterInstanceId := FInstanceId;
+
+  if TryLoadProjectLayout(AProjectId, LExisting) and RemoteIsNewer(LExisting, LState) then
+    Exit;
+
   FStore.WriteString(ProjectKey(AProjectId), StateToJson(LState));
 end;
 

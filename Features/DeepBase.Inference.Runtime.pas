@@ -41,9 +41,11 @@ type
 implementation
 
 uses
+  {$IFDEF HAS_ONNX}
   onnxruntime,
   onnxruntime_pas_api,
   onnxruntime.dml,
+  {$ENDIF}
   DeepBase.Logging;
 
 { --- TInferenceRuntime --------------------------------------------------- }
@@ -66,12 +68,22 @@ end;
 
 function TInferenceRuntime.GetProvider: TInferenceProvider;
 begin
-  Result := FProvider;
+  FLock.Enter;
+  try
+    Result := FProvider;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TInferenceRuntime.IsInitialized: Boolean;
 begin
-  Result := FInitialized;
+  FLock.Enter;
+  try
+    Result := FInitialized;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TInferenceRuntime.Initialize(const AConfig: TInferenceConfig);
@@ -86,6 +98,14 @@ begin
     end;
 
     FProvider := AConfig.Provider;
+
+    {$IFDEF HAS_ONNX}
+    // INFER-002 / INFER-003: onnxruntime-pas exposes a process-global
+    // DefaultSessionOptions singleton; the underlying ONNX C API does not
+    // offer a public reset for already-attached execution providers. We
+    // therefore (re)apply the explicit knobs on every Initialize so a
+    // re-Initialize after Shutdown lands on the configuration the caller
+    // asked for, instead of inheriting whatever was last set.
 
     // Configure thread counts on global DefaultSessionOptions
     if AConfig.IntraOpThreads > 0 then
@@ -107,6 +127,15 @@ begin
         'Unsupported execution provider: %s',
         [InferenceProviderToString(AConfig.Provider)]);
     end;
+    {$ELSE}
+    case AConfig.Provider of
+      ipCPU: AttachProviderCPU;
+    else
+      raise EInferenceProviderError.CreateFmt(
+        'ONNX runtime not available. Provider %s not supported.',
+        [InferenceProviderToString(AConfig.Provider)]);
+    end;
+    {$ENDIF}
 
     FOptionsBuilt := True;
     FInitialized := True;
@@ -132,8 +161,19 @@ procedure TInferenceRuntime.ShutdownInternal;
 begin
   if not FInitialized then
     Exit;
-  FInitialized := False;
+
+  // INFER-001: Reset wrapper state so re-Initialize works cleanly.
+  // The onnxruntime-pas library exposes a process-global DefaultSessionOptions
+  // singleton; the underlying ONNX C API does not offer a public way to
+  // detach an already-attached execution provider. Instead of dangerous
+  // hand-rolled releases of someone else's globals, we reset our own state
+  // and ensure that any later Initialize re-applies the knobs we care about
+  // (thread counts, optimisation level, provider). Existing sessions hold
+  // their own internal options copy, so they are unaffected by this reset.
+  FProvider := ipCPU;
   FOptionsBuilt := False;
+  FInitialized := False;
+
   Logger.Info('Inference.Runtime: shutdown complete', 'Inference');
 end;
 
@@ -146,9 +186,12 @@ begin
 end;
 
 procedure TInferenceRuntime.AttachProviderDML(ADeviceId: Integer);
+{$IFDEF HAS_ONNX}
 var
   LDMLProv: POrtDmlApi;
+{$ENDIF}
 begin
+  {$IFDEF HAS_ONNX}
   // DML requires sequential execution and disabled memory patterns
   DefaultSessionOptions.DisableMemPattern;
   DefaultSessionOptions.SetExecutionMode(ORT_SEQUENTIAL);
@@ -168,12 +211,18 @@ begin
 
   Logger.InfoFmt('Inference.Runtime: DirectML attached (device %d)',
     [ADeviceId], 'Inference');
+  {$ELSE}
+  raise EInferenceProviderError.Create('DirectML provider requires ONNX runtime');
+  {$ENDIF}
 end;
 
 procedure TInferenceRuntime.AttachProviderCUDA;
+{$IFDEF HAS_ONNX}
 var
   LCUDAOpts: OrtCUDAProviderOptionsV2;
+{$ENDIF}
 begin
+  {$IFDEF HAS_ONNX}
   FillChar(LCUDAOpts, SizeOf(LCUDAOpts), 0);
   ThrowOnError(GetApi.CreateCUDAProviderOptions(@LCUDAOpts));
   try
@@ -185,6 +234,9 @@ begin
   end;
 
   Logger.Info('Inference.Runtime: CUDA provider attached', 'Inference');
+  {$ELSE}
+  raise EInferenceProviderError.Create('CUDA provider requires ONNX runtime');
+  {$ENDIF}
 end;
 
 end.

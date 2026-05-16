@@ -33,8 +33,18 @@ type
     FLock: TCriticalSection;
     FSubs: TList<TSubscription>;
     FNextToken: Int64;
+    FShutdown: Boolean;
+    FOnDispatchError: TProc<Exception, string>;
     function NewToken: string;
     procedure DispatchInline(const ASub: TSubscription; const AEvent: TDeepShellEvent);
+    /// <summary>
+    /// Look up a still-subscribed handler by token. Returns False if the
+    /// caller already unsubscribed since the queued dispatch was posted.
+    /// Used by the background-publish path so unsubscribe is honoured even
+    /// for queue items already in flight.
+    /// </summary>
+    function TryGetHandlerByToken(const AToken: string;
+      out AHandler: TShellEventHandler): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -43,9 +53,14 @@ type
     function SubscribeAll(AHandler: TShellEventHandler): string;
     procedure Unsubscribe(const AToken: string);
     procedure Publish(const AEvent: TDeepShellEvent);
+    procedure Shutdown;
+    procedure SetOnDispatchError(AHandler: TProc<Exception, string>);
   end;
 
 implementation
+
+uses
+  Vcl.Forms;
 
 { TShellEventBus }
 
@@ -55,6 +70,8 @@ begin
   FLock := TCriticalSection.Create;
   FSubs := TList<TSubscription>.Create;
   FNextToken := 0;
+  FShutdown := False;
+  FOnDispatchError := nil;
 end;
 
 destructor TShellEventBus.Destroy;
@@ -138,8 +155,32 @@ begin
   try
     ASub.Handler(AEvent);
   except
-    // Intentionally swallow. Surfacing UI errors here would bypass StatusManager
-    // which the caller may not have constructed yet.
+    on E: Exception do
+      if Assigned(FOnDispatchError) then
+        FOnDispatchError(E, ASub.Token);
+  end;
+end;
+
+function TShellEventBus.TryGetHandlerByToken(const AToken: string;
+  out AHandler: TShellEventHandler): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  AHandler := nil;
+  if AToken = '' then
+    Exit;
+  FLock.Enter;
+  try
+    for I := 0 to FSubs.Count - 1 do
+      if FSubs[I].Token = AToken then
+      begin
+        AHandler := FSubs[I].Handler;
+        Result := True;
+        Exit;
+      end;
+  finally
+    FLock.Leave;
   end;
 end;
 
@@ -149,6 +190,9 @@ var
   LIsMain: Boolean;
   I: Integer;
 begin
+  if FShutdown then
+    raise EInvalidOperation.Create('EventBus has been shut down');
+
   // Snapshot under lock so unsubscribe during dispatch is safe.
   FLock.Enter;
   try
@@ -172,22 +216,48 @@ begin
       DispatchInline(LSub, AEvent)
     else
     begin
-      // Capture by value into the queued closure.
-      // LSelfRef extends the bus lifetime via interface refcount so the
-      // queued main-thread dispatch cannot UAF the bus instance.
-      var LCapturedSub := LSub;
+      // Background path: capture the bus interface ref (extends bus
+      // lifetime) and the SUBSCRIPTION TOKEN (not the handler closure).
+      // When the queued proc runs we re-lookup the handler by token; if
+      // the caller has already Unsubscribed, the token is gone and we
+      // silently no-op. This makes general-purpose Unsubscribe correct
+      // even for items already in the main-thread queue.
+      var LCapturedToken := LSub.Token;
       var LCapturedEvent := AEvent;
       var LSelfRef: IShellEventBus := Self;
       var LProc: TThreadProcedure :=
         procedure
+        var
+          LCurrent: TShellEventHandler;
         begin
-          // Touch LSelfRef so the closure keeps its reference until done.
-          if LSelfRef <> nil then
-            DispatchInline(LCapturedSub, LCapturedEvent);
+          if (LSelfRef <> nil)
+             and (LSelfRef as TShellEventBus).TryGetHandlerByToken(LCapturedToken, LCurrent) then
+          begin
+            try
+              LCurrent(LCapturedEvent);
+            except
+              on E: Exception do
+                if Assigned((LSelfRef as TShellEventBus).FOnDispatchError) then
+                  (LSelfRef as TShellEventBus).FOnDispatchError(E, LCapturedToken);
+            end;
+          end;
         end;
       TThread.Queue(nil, LProc);
     end;
   end;
+end;
+
+procedure TShellEventBus.Shutdown;
+begin
+  FShutdown := True;
+  // Process any remaining queued handlers on the main thread
+  if TThread.CurrentThread.ThreadID = MainThreadID then
+    Vcl.Forms.Application.ProcessMessages;
+end;
+
+procedure TShellEventBus.SetOnDispatchError(AHandler: TProc<Exception, string>);
+begin
+  FOnDispatchError := AHandler;
 end;
 
 end.

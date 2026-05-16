@@ -87,10 +87,12 @@ type
     procedure RegisterCommand(const ACommand: TShellCommand);
     procedure UnregisterCommand(const ACommandId: string);
     procedure Execute(const ACommandId: string);
+    procedure ExecuteSync(const ACommandId: string);
     procedure UpdateCommandState(const ACommandId: string; AEnabled, AVisible: Boolean);
     procedure UpdateCommandChecked(const ACommandId: string; AChecked: Boolean);
     function TryGetCommand(const ACommandId: string; out ACommand: TShellCommand): Boolean;
     function CommandIds: TArray<string>;
+    procedure ExecuteOnMainThread(const ACommandId: string);
   end;
 
 implementation
@@ -262,6 +264,7 @@ procedure TShellCommandManager.UpdateCommandState(const ACommandId: string;
   AEnabled, AVisible: Boolean);
 var
   LCmd: TShellCommand;
+  LEvent: TDeepShellEvent;
 begin
   FLock.Enter;
   try
@@ -273,6 +276,14 @@ begin
     end;
   finally
     FLock.Leave;
+  end;
+  // Publish state-changed event so UI can update incrementally
+  if FBus <> nil then
+  begin
+    LEvent := Default(TDeepShellEvent);
+    LEvent.Kind := sekCommandStateChanged;
+    LEvent.Data := ACommandId;
+    FBus.Publish(LEvent);
   end;
 end;
 
@@ -380,6 +391,49 @@ begin
 end;
 
 procedure TShellCommandManager.Execute(const ACommandId: string);
+begin
+  // Commands frequently touch UI (menus / status bar / dialogs). Force
+  // execution to the main thread so background-thread callers cannot
+  // accidentally drive UI from a worker. Using TThread.Queue (async)
+  // rather than Synchronize avoids deadlock if the main thread is itself
+  // waiting on something. Use ExecuteSync if you need to block until the
+  // handler has finished.
+  if TThread.CurrentThread.ThreadID = MainThreadID then
+    ExecuteOnMainThread(ACommandId)
+  else
+  begin
+    var LCapturedId := ACommandId;
+    var LSelfRef: IShellCommandManager := Self;
+    TThread.Queue(nil,
+      procedure
+      begin
+        if LSelfRef <> nil then
+          (LSelfRef as TShellCommandManager).ExecuteOnMainThread(LCapturedId);
+      end);
+  end;
+end;
+
+procedure TShellCommandManager.ExecuteSync(const ACommandId: string);
+begin
+  // Synchronous variant: always blocks until the handler finished on the
+  // main thread. Caller is responsible for avoiding deadlock (don't call
+  // from main thread while holding a lock that the handler also takes).
+  if TThread.CurrentThread.ThreadID = MainThreadID then
+    ExecuteOnMainThread(ACommandId)
+  else
+  begin
+    var LCapturedId := ACommandId;
+    var LSelfRef: IShellCommandManager := Self;
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        if LSelfRef <> nil then
+          (LSelfRef as TShellCommandManager).ExecuteOnMainThread(LCapturedId);
+      end);
+  end;
+end;
+
+procedure TShellCommandManager.ExecuteOnMainThread(const ACommandId: string);
 var
   LCmd: TShellCommand;
   LGov: IGovernanceService;

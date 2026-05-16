@@ -37,24 +37,24 @@ type
   /// Variable type for prompt variables
   /// </summary>
   TPromptVariableType = (
-    pvtString,    // ×Ö·û´®
-    pvtNumber,    // ÊýÖµ
-    pvtBoolean,   // ²¼¶û
-    pvtDate,      // ÈÕÆÚ
-    pvtDateTime,  // ÈÕÆÚÊ±¼ä
-    pvtList,      // ÁÐ±í/Êý×é
-    pvtJson       // JSON¶ÔÏó
+    pvtString,    // ï¿½Ö·ï¿½ï¿½ï¿½
+    pvtNumber,    // ï¿½ï¿½Öµ
+    pvtBoolean,   // ï¿½ï¿½ï¿½ï¿½
+    pvtDate,      // ï¿½ï¿½ï¿½ï¿½
+    pvtDateTime,  // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
+    pvtList,      // ï¿½Ð±ï¿½/ï¿½ï¿½ï¿½ï¿½
+    pvtJson       // JSONï¿½ï¿½ï¿½ï¿½
   );
   
   /// <summary>
   /// Prompt variable definition
   /// </summary>
   TPromptVariable = record
-    Name: string;              // ±äÁ¿Ãû
-    VarType: TPromptVariableType;  // ±äÁ¿ÀàÐÍ
-    DefaultValue: Variant;     // Ä¬ÈÏÖµ
-    Description: string;       // ËµÃ÷
-    Required: Boolean;         // ÊÇ·ñ±ØÌî
+    Name: string;              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    VarType: TPromptVariableType;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    DefaultValue: Variant;     // Ä¬ï¿½ï¿½Öµ
+    Description: string;       // Ëµï¿½ï¿½
+    Required: Boolean;         // ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
     
     function TypeToStr: string;
     class function StrToType(const S: string): TPromptVariableType; static;
@@ -65,20 +65,20 @@ type
   /// Meta-prompt merge mode
   /// </summary>
   TMetaMergeMode = (
-    mmPrefix,     // Ç°×ºÄ£Ê½£ºÔªÌáÊ¾´Ê + ÌáÊ¾´Ê
-    mmSuffix,     // ºó×ºÄ£Ê½£ºÌáÊ¾´Ê + ÔªÌáÊ¾´Ê
-    mmWrap        // °ü¹üÄ£Ê½£ºÔªÌáÊ¾´ÊÇ°°ë + ÌáÊ¾´Ê + ÔªÌáÊ¾´Êºó°ë
+    mmPrefix,     // Ç°×ºÄ£Ê½ï¿½ï¿½Ôªï¿½ï¿½Ê¾ï¿½ï¿½ + ï¿½ï¿½Ê¾ï¿½ï¿½
+    mmSuffix,     // ï¿½ï¿½×ºÄ£Ê½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ + Ôªï¿½ï¿½Ê¾ï¿½ï¿½
+    mmWrap        // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ôªï¿½ï¿½Ê¾ï¿½ï¿½Ç°ï¿½ï¿½ + ï¿½ï¿½Ê¾ï¿½ï¿½ + Ôªï¿½ï¿½Ê¾ï¿½Êºï¿½ï¿½
   );
   
   /// <summary>
   /// Meta-prompt category
   /// </summary>
   TMetaCategory = (
-    mcSecurity,   // °²È«Ô¼Êø
-    mcFormat,     // Êä³ö¸ñÊ½
-    mcRole,       // ½ÇÉ«Éè¶¨
-    mcDomain,     // ÁìÓòÖªÊ¶
-    mcQuality     // ÖÊÁ¿ÒªÇó
+    mcSecurity,   // ï¿½ï¿½È«Ô¼ï¿½ï¿½
+    mcFormat,     // ï¿½ï¿½ï¿½ï¿½ï¿½Ê½
+    mcRole,       // ï¿½ï¿½É«ï¿½è¶¨
+    mcDomain,     // ï¿½ï¿½ï¿½ï¿½ÖªÊ¶
+    mcQuality     // ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½
   );
   
   /// <summary>
@@ -88,7 +88,7 @@ type
     Id: Integer;
     ParentId: Integer;
     Level: Integer;           // 1-4
-    Code: string;             // Èç '01', '02'
+    Code: string;             // ï¿½ï¿½ '01', '02'
     Name: string;
     Description: string;
     SortOrder: Integer;
@@ -105,13 +105,13 @@ type
     Id: Integer;
     PromptId: Integer;
     VersionNumber: Integer;   // 1-4
-    Content: string;          // ÌáÊ¾´ÊÄÚÈÝ
-    IsProduction: Boolean;    // ÊÇ·ñÎªÉú²ú°æ±¾
+    Content: string;          // ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    IsProduction: Boolean;    // ï¿½Ç·ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½æ±¾
     TestCount: Integer;
     SuccessCount: Integer;
     TotalTokens: Integer;
     TotalCost: Double;
-    AvgDuration: Double;      // Æ½¾ùºÄÊ±(ms)
+    AvgDuration: Double;      // Æ½ï¿½ï¿½ï¿½ï¿½Ê±(ms)
     LastTestedAt: TDateTime;
     LastResponse: string;
     CreatedAt: TDateTime;
@@ -126,13 +126,13 @@ type
   /// </summary>
   TMetaPrompt = record
     Id: Integer;
-    InternalCode: string;     // Èç 'META-001'
+    InternalCode: string;     // ï¿½ï¿½ 'META-001'
     Name: string;
     Category: TMetaCategory;
     Content: string;
     MergeMode: TMetaMergeMode;
-    Priority: Integer;        // ºÏ²¢ÓÅÏÈ¼¶ (Êý×ÖÐ¡µÄÏÈºÏ²¢)
-    Level: Integer;           // 0=¿ò¼Ü¼¶, 1=ÏîÄ¿¼¶
+    Priority: Integer;        // ï¿½Ï²ï¿½ï¿½ï¿½ï¿½È¼ï¿½ (ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ÈºÏ²ï¿½)
+    Level: Integer;           // 0=ï¿½ï¿½Ü¼ï¿½, 1=ï¿½ï¿½Ä¿ï¿½ï¿½
     IsActive: Boolean;
     
     function CategoryToStr: string;
@@ -148,10 +148,10 @@ type
   TPrompt = record
     Id: Integer;
     CategoryId: Integer;
-    InternalCode: string;     // Èç '01-01-001'
+    InternalCode: string;     // ï¿½ï¿½ '01-01-001'
     Name: string;
     Description: string;
-    BoundQueryName: string;   // °ó¶¨µÄ DoQry ²éÑ¯Ãû
+    BoundQueryName: string;   // ï¿½ó¶¨µï¿½ DoQry ï¿½ï¿½Ñ¯ï¿½ï¿½
     Variables: TPromptVariableArray;
     IsActive: Boolean;
     CreatedAt: TDateTime;
@@ -160,7 +160,7 @@ type
     // Populated on load
     Versions: TPromptVersionArray;
     MetaPrompts: TMetaPromptArray;
-    CategoryPath: string;     // Èç 'ÏµÍ³ÌáÊ¾´Ê/·­Òë/Í¨ÓÃ'
+    CategoryPath: string;     // ï¿½ï¿½ 'ÏµÍ³ï¿½ï¿½Ê¾ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½/Í¨ï¿½ï¿½'
     
     function GetProductionVersion: Integer;
     function GetVersion(AVersionNum: Integer): TPromptVersion;
@@ -233,6 +233,7 @@ type
     function GetStorage: ILLMStorage;
     function HasActiveConnection: Boolean;
     function IsPG: Boolean;
+    procedure EnsurePromptSchema;
 
   public
     constructor Create(AConnection: TObject; AOwnsConnection: Boolean = False); overload;
@@ -390,7 +391,9 @@ implementation
 uses
   Data.DB,
   System.Variants,
-  System.StrUtils;
+  System.StrUtils,
+  DeepBase.Schema,
+  DeepBase.SQL.Splitter;
 
 { Helper Functions }
 
@@ -721,7 +724,25 @@ end;
 
 procedure TLLMManager.Initialize;
 begin
+  EnsurePromptSchema;
   RefreshCache;
+end;
+
+procedure TLLMManager.EnsurePromptSchema;
+begin
+  if not HasActiveConnection then
+    Exit;
+  // Only create if the key table is missing â€” idempotent via CREATE IF NOT EXISTS
+  if not FStorage.TableExists('PromptCategories') then
+  begin
+    var LStatements := TDeepBaseSQLSplitter.Split(GetLLMPromptSchemaSQL);
+    for var LSQL in LStatements do
+    begin
+      var LTrimmed := LSQL.Trim;
+      if LTrimmed <> '' then
+        FStorage.Execute(LTrimmed, []);
+    end;
+  end;
 end;
 
 procedure TLLMManager.RefreshCache;

@@ -121,7 +121,8 @@ const
     '      this.observer.observe(document.body, {' +
     '        childList: true,' +
     '        subtree: true,' +
-    '        characterData: true' +
+    '        characterData: true,' +
+    '        attributes: true' +
     '      });' +
     '      var initial = this.getLatestResponse();' +
     '      if (initial) {' +
@@ -183,16 +184,24 @@ begin
 end;
 
 destructor TBrowserResponseWaiter.Destroy;
+var
+  LWasWaiting: Boolean;
 begin
-  if GetWaitingFlag then
+  LWasWaiting := GetWaitingFlag;
+  // Prevent CancelWaiting from calling into a possibly-destroyed session
+  FSession := nil;
+  if LWasWaiting then
     CancelWaiting;
   inherited;
 end;
 
 function TBrowserResponseWaiter.GetWaitingFlag: Boolean;
 begin
-  // M9 fix: atomic read across threads
-  Result := TInterlocked.Read(FWaitingFlag) <> 0;
+  // M9 fix: atomic read across threads.
+  // Delphi 13.1 System.SyncObjs only exposes TInterlocked.Read(var Int64);
+  // CompareExchange(target, 0, 0) is the canonical atomic read for an
+  // Integer field and returns the original value untouched.
+  Result := TInterlocked.CompareExchange(FWaitingFlag, 0, 0) <> 0;
 end;
 
 procedure TBrowserResponseWaiter.SetWaitingFlag(AValue: Boolean);
@@ -216,16 +225,26 @@ procedure TBrowserResponseWaiter.DispatchPostMessage(const AJson: string);
 var
   LValue: TJSONValue;
   LObj: TJSONObject;
+  LInner: TJSONValue;
   LType, LResult, LResponse: string;
   LDurationMs: Int64;
   LDurNum: TJSONNumber;
+  LDurValue: TJSONValue;
 begin
-  // C6 fix: parse the JS-side payload and route to HandleWaitResult.
-  // Shape: {"type":"db_response_waiter","result":"success",
-  //         "response":"...","durationMs":1234}
+  // BUG-BA-027: WebView2 Get_WebMessageAsJson returns a JSON string literal
+  // when JS calls postMessage with a string value. We must unwrap it first.
   LValue := TJSONObject.ParseJSONValue(AJson);
   if LValue = nil then Exit;
   try
+    // If the top-level value is a JSON string, unwrap and re-parse
+    if LValue is TJSONString then
+    begin
+      LInner := TJSONObject.ParseJSONValue(TJSONString(LValue).Value);
+      if LInner = nil then Exit;
+      LValue.Free;
+      LValue := LInner;
+    end;
+
     if not (LValue is TJSONObject) then Exit;
     LObj := LValue as TJSONObject;
     LType := LObj.GetValue<string>('type', '');
@@ -233,7 +252,13 @@ begin
 
     LResult := LObj.GetValue<string>('result', '');
     LResponse := LObj.GetValue<string>('response', '');
-    LDurNum := LObj.GetValue('durationMs') as TJSONNumber;
+    // BROWSER-004: Validate the JSON value is actually a TJSONNumber before
+    // casting; the field may be missing, null, or a non-numeric type.
+    LDurValue := LObj.GetValue('durationMs');
+    if LDurValue is TJSONNumber then
+      LDurNum := TJSONNumber(LDurValue)
+    else
+      LDurNum := nil;
     if LDurNum <> nil then
       LDurationMs := LDurNum.AsInt64
     else
@@ -260,7 +285,7 @@ begin
   // waiter, so we don't miss an early "success" event.
   if Supports(FSession, IBrowserMessageReceiver, LReceiver) then
     LReceiver.SetMessageHandler(
-      procedure(const AJson: string)
+      procedure(AJson: string)
       begin
         DispatchPostMessage(AJson);
       end);
@@ -278,9 +303,12 @@ begin
     LJS := BuildWaiterJS(AResponseSelector, ALoadingSelector,
       FTimeoutMs, FStableMs);
 
+  // BUG-BA-101 fix: set waiting flag BEFORE ExecuteScript to avoid missing
+  // fast callbacks that arrive before the flag is set.
+  SetWaitingFlag(True);
   Result := FSession.ExecuteScript(LJS, LError);
-  if Result then
-    SetWaitingFlag(True);
+  if not Result then
+    SetWaitingFlag(False);  // Rollback on failure
 end;
 
 procedure TBrowserResponseWaiter.CancelWaiting;
@@ -329,6 +357,7 @@ procedure TBrowserResponseWaiter.HandleWaitResult(const AResult: string;
   const AResponse: string; ADurationMs: Int64);
 var
   LResult: TBrowserWaitResult;
+  LOnResult: TResponseWaiterEvent;
 begin
   SetWaitingFlag(False);
 
@@ -341,8 +370,11 @@ begin
   else
     LResult := bwrError;
 
-  if Assigned(FOnResult) then
-    FOnResult(LResult, AResponse, ADurationMs);
+  // Snapshot FOnResult to local so concurrent OnResult := nil won't free
+  // the callback while we're invoking it
+  LOnResult := FOnResult;
+  if Assigned(LOnResult) then
+    LOnResult(LResult, AResponse, ADurationMs);
 end;
 
 function TBrowserResponseWaiter.GetWaiting: Boolean;

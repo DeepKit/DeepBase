@@ -42,6 +42,9 @@ type
 
 implementation
 
+uses
+  System.StrUtils;
+
 function CountToken(const AText, AToken: string): Integer;
 var
   LPos: Integer;
@@ -51,13 +54,14 @@ begin
   if (AText = '') or (AToken = '') then
     Exit;
 
+  // IC-019: Use PosEx with a start index to avoid O(n^2) Copy allocations.
   LStart := 1;
   repeat
-    LPos := Pos(AToken, Copy(AText, LStart, MaxInt));
+    LPos := PosEx(AToken, AText, LStart);
     if LPos <= 0 then
       Break;
     Inc(Result);
-    Inc(LStart, LPos + Length(AToken) - 1);
+    LStart := LPos + Length(AToken);
   until LStart > Length(AText);
 end;
 

@@ -1,0 +1,453 @@
+# Implementation Plan: DeepBase Round 2 Fixes
+
+## Overview
+
+按优先级实施 better2.md 中 139 项修复。P0（死锁/UAF/崩溃）优先，P1（SQL注入/安全）次之，P2（优化/代码质量）最后。每个任务修改最小代码块，通过 `compile_test.bat` 编译门禁验证。
+
+## Tasks
+
+- [x] 1. P0: StateMachine 死锁与循环修复
+  - [x] 1.1 将 StateMachine FLock 从 TCriticalSection 改为 TMonitor (TObject)，使 FireIfInState 可重入
+    - 修改 `Core/DeepBase.StateMachine.pas`
+    - 替换 FLock 声明、Enter/Leave 为 TMonitor.Enter/Exit
+    - _Requirements: 1.1_
+  - [x] 1.2 在 IsInState 中添加深度计数器（CMaxHierarchyDepth = 64），超限返回 False
+    - 修改 `Core/DeepBase.StateMachine.pas`
+    - _Requirements: 1.5_
+  - [ ]* 1.3 编写属性测试：StateMachine 可重入不死锁 + 循环检测终止
+    - **Property 1: StateMachine 可重入锁不死锁**
+    - **Property 2: StateMachine 循环检测终止**
+    - **Validates: Requirements 1.1, 1.5**
+
+- [x] 2. P0: Timeout 竞态与资源泄漏修复
+  - [x] 2.1 为 Timeout 结果变量添加 TMonitor 保护，Execute 超时后调用 FTask.Cancel
+    - 修改 `Core/DeepBase.Resilience.Timeout.pas`
+    - _Requirements: 1.2, 1.6_
+  - [ ]* 2.2 编写属性测试：Timeout 结果一致性 + 后台任务取消
+    - **Property 5: Timeout 结果一致性**
+    - **Property 6: Timeout 后台任务取消**
+    - **Validates: Requirements 1.2, 1.6**
+
+- [x] 3. P0: CircuitBreaker 原子状态转换
+  - [x] 3.1 重构 Execute 使 AllowRequest + RecordSuccess/Failure 在同一锁内完成
+    - 修改 `Core/DeepBase.Resilience.CircuitBreaker.pas`
+    - _Requirements: 1.3_
+  - [ ]* 3.2 编写属性测试：CircuitBreaker 状态转换有效性
+    - **Property 3: CircuitBreaker 状态转换有效性**
+    - **Validates: Requirements 1.3**
+
+- [x] 4. P0: UniPool 死锁修复
+  - [x] 4.1 提取 DoWarmup 内部方法，Initialize 和 Warmup 公开方法各自加锁后调用 DoWarmup
+    - 修改 `Persistence/DeepBase.DB.Pool.pas`
+    - _Requirements: 5.1_
+  - [ ]* 4.2 编写属性测试：UniPool Initialize 不死锁
+    - **Property 14: UniPool Initialize 不死锁**
+    - **Validates: Requirements 5.1**
+
+- [x] 5. P0: SupabaseAdapter UAF + FirebaseAdapter nil AV
+  - [x] 5.1 SupabaseAdapter.SingleOrNull 使用 Clone 取出对象后再释放数组
+    - 修改 `Features/DeepBase.Commerce.Adapter.Supabase.pas`
+    - _Requirements: 8.1_
+  - [x] 5.2 FirebaseAdapter.ParseResponse 先检查 nil 和类型再 cast
+    - 修改 `Features/DeepBase.Commerce.Adapter.Firebase.pas`
+    - _Requirements: 8.2_
+  - [ ]* 5.3 编写属性测试：Adapter JSON nil 安全
+    - **Property 21: Adapter JSON nil 安全**
+    - **Validates: Requirements 8.1, 8.2**
+
+- [x] 6. P0 Checkpoint - 编译验证
+  - 运行 `cmd /c compile_test.bat`，确保所有 P0 修复通过编译门禁
+  - 如有问题请询问用户
+
+- [x] 7. P1: SQL 注入防护
+  - [x] 7.1 创建 TSQLUtils.IsValidIdentifier/ValidateIdentifier 共享验证函数
+    - 新增或追加到 `Core/DeepBase.SQL.Utils.pas`
+    - _Requirements: 6.2, 6.3_
+  - [x] 7.2 Guardian.Checkpoint 添加白名单验证
+    - 修改 `Persistence/DeepBase.DB.Guardian.pas`
+    - _Requirements: 6.1_
+  - [x] 7.3 Diagnose.FireDAC 和 Manager.FireDAC 调用 ValidateIdentifier
+    - 修改 `Persistence/DeepBase.DB.Diagnose.pas`, `Persistence/DeepBase.Manager.FireDAC.pas`
+    - _Requirements: 6.2, 6.3_
+  - [x] 7.4 SQLLogger.FormatExtra 使用 TJSONObject 构造 JSON
+    - 修改 `Persistence/DeepBase.SQLLogger.pas`
+    - _Requirements: 6.4_
+  - [ ]* 7.5 编写属性测试：SQL 标识符验证 + Checkpoint 白名单 + SQLLogger JSON
+    - **Property 17: SQL 标识符验证**
+    - **Property 18: SQLLogger JSON 有效性**
+    - **Property 19: Guardian Checkpoint 白名单**
+    - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
+
+- [x] 8. P1: Crypto 安全修复
+  - [x] 8.1 EncryptBytes 改为生成密码学随机盐并前置到密文
+    - 修改 `Core/DeepBase.Crypto.pas`
+    - _Requirements: 2.1_
+  - [x] 8.2 SetKeyFromPassword PBKDF2 迭代数改为 100000
+    - 修改 `Core/DeepBase.Crypto.pas`
+    - _Requirements: 2.2_
+  - [x] 8.3 RandomInt 实现拒绝采样消除模偏差
+    - 修改 `Core/DeepBase.Crypto.pas`
+    - _Requirements: 2.3_
+  - [x] 8.4 ParseDERPublicKey 添加长度字段验证
+    - 修改 `Core/DeepBase.Crypto.pas`
+    - _Requirements: 2.5_
+  - [x] 8.5 VerifyPassword 在比较前验证 hash 格式
+    - 修改 `Core/DeepBase.Crypto.pas`
+    - _Requirements: 2.4_
+  - [ ]* 8.6 编写属性测试：加密非确定性 + Round-Trip + 无模偏差 + DER 安全 + 格式验证
+    - **Property 7: Crypto 加密非确定性**
+    - **Property 8: Crypto 加密解密 Round-Trip**
+    - **Property 9: RandomInt 无模偏差**
+    - **Property 10: DER 解析长度安全**
+    - **Property 11: VerifyPassword 格式验证**
+    - **Validates: Requirements 2.1, 2.3, 2.4, 2.5, 2.6**
+
+- [x] 9. P1: Commerce 状态校验与原子扣减
+  - [x] 9.1 BeginPayment 拒绝终态订单 (cosPaid, cosFailed, cosClosed, cosRefunded)
+    - 修改 `Features/DeepBase.Commerce.Service.pas`
+    - _Requirements: 8.5_
+  - [x] 9.2 ConsumeEntitlement 使用原子 UPDATE WHERE remaining_quota >= N
+    - 修改 `Features/DeepBase.Commerce.Service.pas`
+    - _Requirements: 8.6_
+  - [ ]* 9.3 编写属性测试：终态拒绝 + 原子扣减不超卖
+    - **Property 23: Commerce 终态拒绝**
+    - **Property 24: Entitlement 原子扣减不超卖**
+    - **Validates: Requirements 8.5, 8.6**
+
+- [x] 10. P1: Config 不缓存默认值 + Logging 修复
+  - [x] 10.1 Config.GetConfig 只缓存从存储读取的值，不缓存 ADefault
+    - 修改 `Core/DeepBase.Config.pas`
+    - _Requirements: 3.1_
+  - [x] 10.2 Logging JSON 格式跳过 EscapeLogContent
+    - 修改 `Core/DeepBase.Logging.pas`
+    - _Requirements: 3.2_
+  - [x] 10.3 NextRotatedFileName 添加最大索引限制 999
+    - 修改 `Core/DeepBase.Logging.pas`
+    - _Requirements: 3.3_
+  - [x] 10.4 Config.FOnConfigChanged 在锁外触发回调
+    - 修改 `Core/DeepBase.Config.pas`
+    - _Requirements: 3.5_
+  - [ ]* 10.5 编写属性测试：Config 不缓存默认值 + Logging JSON 无双重转义
+    - **Property 12: Config 不缓存默认值**
+    - **Property 13: Logging JSON 无双重转义**
+    - **Validates: Requirements 3.1, 3.2**
+
+- [x] 11. P1 Checkpoint - 编译验证
+  - 运行 `cmd /c compile_test.bat`，确保所有 P1 修复通过编译门禁
+  - 如有问题请询问用户
+
+- [x] 12. P2: ConnectionPool 信号与遍历修复
+  - [x] 12.1 ReleaseConnection 中 ResetEvent+SetEvent 在同一锁内
+    - 修改 `Persistence/DeepBase.DB.ConnectionPool.pas`
+    - _Requirements: 5.2_
+  - [x] 12.2 FindAvailableConnection 改为 downto 反向遍历
+    - 修改 `Persistence/DeepBase.DB.ConnectionPool.pas`
+    - _Requirements: 5.3_
+  - [x] 12.3 UniPool 统计计数器全部在 FStatsLock 内修改
+    - 修改 `Persistence/DeepBase.DB.Pool.pas`
+    - _Requirements: 5.4_
+  - [x] 12.4 GDefaultPool 使用 TInterlocked 同步
+    - 修改 `Persistence/DeepBase.DB.Pool.pas`
+    - _Requirements: 5.5_
+  - [x] 12.5 GetActiveCount/GetAvailableCount 内部加锁
+    - 修改 `Persistence/DeepBase.DB.ConnectionPool.pas`
+    - _Requirements: 5.6_
+  - [ ]* 12.6 编写属性测试：无 Lost Wakeup + 反向遍历正确性
+    - **Property 15: ConnectionPool 无 Lost Wakeup**
+    - **Property 16: ConnectionPool 反向遍历正确性**
+    - **Validates: Requirements 5.2, 5.3**
+
+- [x] 13. P2: Persistence 原子性与 I/O 修复
+  - [x] 13.1 License/Security/Manager/Factory UPSERT 改为 INSERT OR REPLACE
+    - 修改相关 Persistence 单元
+    - _Requirements: 7.1_
+  - [x] 13.2 Manager.FireDAC.UpdateSchemaInfo 包裹事务
+    - 修改 `Persistence/DeepBase.Manager.FireDAC.pas`
+    - _Requirements: 7.2_
+  - [x] 13.3 AutoRefreshConfig.EnsureCacheFresh 锁外执行 I/O
+    - 修改相关 Persistence 单元
+    - _Requirements: 7.3_
+  - [x] 13.4 SQLLogger 改为 producer-consumer 模式，锁外写 I/O
+    - 修改 `Persistence/DeepBase.SQLLogger.pas`
+    - _Requirements: 7.4_
+  - [x] 13.5 Logging.FireDAC 公开方法加 FLock
+    - 修改 `Persistence/DeepBase.Logging.FireDAC.pas`
+    - _Requirements: 7.5_
+  - [x] 13.6 Guardian.BackupTo 写临时文件后 rename
+    - 修改 `Persistence/DeepBase.DB.Guardian.pas`
+    - _Requirements: 7.6_
+  - [ ]* 13.7 编写属性测试：UPSERT 原子性
+    - **Property 20: UPSERT 原子性**
+    - **Validates: Requirements 7.1**
+
+- [x] 14. P2: EventBus + ObjectPool + Scheduler + Cache 并发修复
+  - [x] 14.1 EventBus 全局实例使用 TInterlocked.CompareExchange
+    - 修改 `Core/DeepBase.EventBus.pas`
+    - _Requirements: 1.4_
+  - [x] 14.2 ObjectPool FShutdown 使用 TInterlocked
+    - 修改 `Core/DeepBase.ObjectPool.pas`
+    - _Requirements: 1.7_
+  - [x] 14.3 Scheduler.Stop 确保 task 引用有效直到 TTask 完成
+    - 修改 `Core/DeepBase.Scheduler.pas`
+    - _Requirements: 1.8_
+  - [x] 14.4 Scheduler FOnFailed 在锁外调用
+    - 修改 `Core/DeepBase.Scheduler.pas`
+    - _Requirements: 1.9_
+  - [x] 14.5 Cache.Put 对已存在 key 不追加 FIFO
+    - 修改 `Core/DeepBase.Cache.pas`
+    - _Requirements: 4.1_
+  - [ ]* 14.6 编写属性测试：全局单例安全初始化 + Cache FIFO 无重复
+    - **Property 4: 全局单例安全初始化**
+    - **Property 25: Cache FIFO 无重复**
+    - **Validates: Requirements 1.4, 4.1**
+
+- [x] 15. P2: Features 语音线程安全修复
+  - [x] 15.1 SpeechService 类变量注册加锁
+    - 修改 `Features/DeepBase.Speech.Service.pas`
+    - _Requirements: 9.1_
+  - [x] 15.2 全局 speech 单例使用 TInterlocked.CompareExchange
+    - 修改 `Features/DeepBase.Speech.Service.pas`
+    - _Requirements: 9.3_
+  - [x] 15.3 WinMM FIsRecording 使用 TInterlocked
+    - 修改 `Features/DeepBase.Speech.Audio.WinMM.pas`
+    - _Requirements: 9.5_
+  - [x] 15.4 WinMM StopRecording 加 FLock 确保 callback 不在执行中
+    - 修改 `Features/DeepBase.Speech.Audio.WinMM.pas`
+    - _Requirements: 9.6_
+  - [x] 15.5 SpeechRegistry.EnsureInit 原子初始化
+    - 修改 `Features/DeepBase.Speech.Registry.pas`
+    - _Requirements: 9.7_
+  - [x] 15.6 CommerceBackendHttpTransport.Send 同步或 per-request client
+    - 修改 `Features/DeepBase.Commerce.Transport.pas`
+    - _Requirements: 8.7_
+  - [x] 15.7 SupabaseAdapter enum 序列化使用字符串表示
+    - 修改 `Features/DeepBase.Commerce.Adapter.Supabase.pas`
+    - _Requirements: 8.3_
+  - [x] 15.8 SDKGateway.Order.Metadata 使用 FreeAndNil + nil 检查
+    - 修改 `Features/DeepBase.Commerce.SDKGateway.pas`
+    - _Requirements: 8.4_
+  - [ ]* 15.9 编写属性测试：Enum 序列化 Round-Trip
+    - **Property 22: Enum 序列化 Round-Trip**
+    - **Validates: Requirements 8.3**
+
+- [x] 16. P2: VCL/FMX 线程安全修复
+  - [x] 16.1 LLMChatFrame 捕获接口引用而非 Self，赋值 FCurrentTask
+    - 修改 `VCL/DeepBase.VCL.LLMChatFrame.pas`
+    - _Requirements: 10.1_
+  - [x] 16.2 LLMChatFrame FHistory 访问加锁或预捕获数据
+    - 修改 `VCL/DeepBase.VCL.LLMChatFrame.pas`
+    - _Requirements: 10.2_
+  - [x] 16.3 LLMSettingsFrame 线程创建前捕获控件值到局部变量
+    - 修改 `VCL/DeepBase.VCL.LLMSettingsFrame.pas`
+    - _Requirements: 10.3_
+  - [x] 16.4 RefreshTierList 按实际 model 匹配而非选第一个
+    - 修改 `VCL/DeepBase.VCL.LLMSettingsFrame.pas`
+    - _Requirements: 10.4_
+  - [x] 16.5 SwapTierItems 后调用 LLMAdmin.SetTierModels 持久化
+    - 修改 `VCL/DeepBase.VCL.LLMSettingsFrame.pas`
+    - _Requirements: 10.5_
+  - [x] 16.6 WaitForm 确保 CreateControls 只调用一次
+    - 修改相关 VCL 单元
+    - _Requirements: 10.6_
+  - [x] 16.7 NotificationBar.CheckCancelled 只返回 FCancelled，移除 ProcessMessages
+    - 修改 FMX/VCL NotificationBar 单元
+    - _Requirements: 10.7_
+
+- [x] 17. P2: Browser 契约与安全修复
+  - [x] 17.1 ScriptStore get_text 模板返回 {found, text, error} JSON
+    - 修改 `Features/DeepBase.Browser.ScriptStore.pas`
+    - _Requirements: 11.1_
+  - [x] 17.2 ScriptStore click/input_text 模板返回 {success, error} JSON
+    - 修改 `Features/DeepBase.Browser.ScriptStore.pas`
+    - _Requirements: 11.2_
+  - [x] 17.3 WindowPool.Acquire 发布正确事件类型 (Acquired vs Opened)
+    - 修改 `Features/DeepBase.Browser.WindowPool.pas`
+    - _Requirements: 11.3_
+  - [x] 17.4 ResponseWaiter durationMs 字段 nil 检查
+    - 修改 `Features/DeepBase.Browser.ResponseWaiter.pas`
+    - _Requirements: 11.4_
+  - [x] 17.5 移除 Engine.WebView2 中死代码 TBrowserAutomationSessionAdapter
+    - 修改 `Features/DeepBase.Browser.Engine.WebView2.pas`
+    - _Requirements: 11.6_
+  - [x] 17.6 WindowPool.ShutdownAll 在同一锁内恢复 OwnsObjects
+    - 修改 `Features/DeepBase.Browser.WindowPool.pas`
+    - _Requirements: 11.7_
+  - [x] 17.7 Browser Session FStateMachine 读取加 FLock
+    - 修改 `Features/DeepBase.Browser.Session.pas`
+    - _Requirements: 11.8_
+  - [x] 17.8 Selectors 使用 TJSONObject 构造事件 JSON
+    - 修改 `Features/DeepBase.Browser.Selectors.pas`
+    - _Requirements: 11.9_
+  - [x] 17.9 CDP.WaitForSelector 设置 FreeOnTerminate := True
+    - 修改 `Features/DeepBase.Browser.CDP.pas`
+    - _Requirements: 11.10_
+  - [ ]* 17.10 编写属性测试：ScriptStore 返回结构 + Selectors JSON 安全
+    - **Property 31: ScriptStore 返回结构契约**
+    - **Property 32: Browser Selectors JSON 安全构造**
+    - **Validates: Requirements 11.1, 11.2, 11.9**
+
+- [x] 18. P2 Checkpoint - 编译验证
+  - 运行 `cmd /c compile_test.bat`，确保 Tasks 12-17 通过编译门禁
+  - 如有问题请询问用户
+
+- [ ] 19. P2: IntentClarification 并发与正确性修复
+  - [x] 19.1 HandleRegenerate/HandleExit 加 FLock 保护 FSessions 写入
+    - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
+    - _Requirements: 12.1, 12.2_
+  - [x] 19.2 Budget 耗尽时先记录当前 turn 到 history 再标记 completed
+    - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
+    - _Requirements: 12.3_
+  - [x] 19.3 SuspendIdleSessions 先收集 keys 再锁外修改
+    - 修改 `Features/DeepBase.IntentClarification.Session.pas`
+    - _Requirements: 12.4_
+  - [x] 19.4 Types.FromJson 返回 error result 而非抛异常，nil 检查 sessionState
+    - 修改 `Features/DeepBase.IntentClarification.Types.pas`
+    - _Requirements: 12.5, 12.6_
+  - [x] 19.5 FindProvider 实现降级链 L4→L3→L2→L1→L0
+    - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
+    - _Requirements: 12.7_
+  - [x] 19.6 Provider L2 FDeniedHypotheses 改为 per-session state + 加锁
+    - 修改 `Features/DeepBase.IntentClarification.Provider.L2.pas`
+    - _Requirements: 12.8_
+  - [x] 19.7 Provider L3 FCurrentExpert/FExpertSelected 改为 per-session state
+    - 修改 `Features/DeepBase.IntentClarification.Provider.L3.pas`
+    - _Requirements: 12.9_
+  - [x] 19.8 LLMResilience timeout 实际中止内部调用
+    - 修改 `Features/DeepBase.IntentClarification.LLMResilience.pas`
+    - _Requirements: 12.10_
+  - [x] 19.9 MakeFailureResult 填充 ErrorMessage 字段
+    - 修改 `Features/DeepBase.IntentClarification.LLMResilience.pas`
+    - _Requirements: 12.11_
+  - [ ] 19.10 GenerateImage 应用 retry + circuit-breaker 包装
+    - 修改 `Features/DeepBase.IntentClarification.LLMResilience.pas`
+    - _Requirements: 12.12_
+  - [x] 19.11 Storage.JsonToRapport nil 检查所有 JSON 字段
+    - 修改 `Features/DeepBase.IntentClarification.Storage.pas`
+    - _Requirements: 12.13_
+  - [x] 19.12 Templates.ApplyOverride 验证 enum 范围 + 未知字段报错
+    - 修改 `Features/DeepBase.IntentClarification.Templates.pas`
+    - _Requirements: 12.14, 12.15_
+  - [x] 19.13 Anticipation FPredictionCounter 使用 TInterlocked.Increment
+    - 修改 `Features/DeepBase.IntentClarification.Anticipation.pas`
+    - _Requirements: 12.16_
+  - [x] 19.14 Metrics 计数器使用 TInterlocked.Increment
+    - 修改 `Features/DeepBase.IntentClarification.Metrics.pas`
+    - _Requirements: 12.17_
+  - [x] 19.15 Rapport FProfiles 加 TCriticalSection 保护
+    - 修改 `Features/DeepBase.IntentClarification.Rapport.pas`
+    - _Requirements: 12.19_
+  - [x] 19.16 ICEngine 记录 turn 时填充 Answer + AssistantOutput
+    - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
+    - _Requirements: 12.21_
+  - [ ]* 19.17 编写属性测试：IC 并发 + FromJson + FindProvider 降级 + 原子计数器 + Turn 完整性
+    - **Property 26: IC Provider 会话状态隔离**
+    - **Property 27: IC Types.FromJson 错误处理**
+    - **Property 28: IC FindProvider 降级**
+    - **Property 29: IC 原子计数器**
+    - **Property 30: IC Turn 记录完整性**
+    - **Validates: Requirements 12.5, 12.7, 12.8, 12.9, 12.16, 12.17, 12.21**
+
+- [ ] 20. P2: Governance 运行时修复
+  - [x] 20.1 RouteResolver.ReloadRules 同时清除 FFallbacks
+    - 修改 `Features/DeepBase.Governance.RouteResolver.pas`
+    - _Requirements: 13.1_
+  - [x] 20.2 EvidenceRecorder 析构时 flush 队列
+    - 修改 `Features/DeepBase.Governance.EvidenceRecorder.pas`
+    - _Requirements: 13.2_
+  - [x] 20.3 ActionGrid 无 bridge 时返回 noop 而非 Success
+    - 修改 `Features/DeepBase.Governance.ActionGrid.pas`
+    - _Requirements: 13.3_
+  - [x] 20.4 ConfigRegistrar 注册失败时释放已创建对象
+    - 修改 `Features/DeepBase.Governance.ConfigRegistrar.pas`
+    - _Requirements: 13.4_
+  - [x] 20.5 ValidationEngine 缓存 Validate 结果
+    - 修改 `Features/DeepBase.Governance.ValidationEngine.pas`
+    - _Requirements: 13.5_
+  - [x] 20.6 LLMConfigPanel.SetLLM 使用 FreeAndNil
+    - 修改 `VCL/DeepBase.VCL.LLMConfigPanel.pas`
+    - _Requirements: 13.6_
+  - [x] 20.7 ActionGrid 字典操作加 TCriticalSection
+    - 修改 `Features/DeepBase.Governance.ActionGrid.pas`
+    - _Requirements: 13.7_
+  - [x] 20.8 DBInitWizard.ValidateStep 验证路径可写
+    - 修改 `VCL/DeepBase.VCL.DBInitWizard.pas`
+    - _Requirements: 13.8_
+  - [ ]* 20.9 编写属性测试：RouteResolver 无 Stale Fallback + ActionGrid Noop + ValidationEngine 缓存
+    - **Property 33: Governance RouteResolver 无 Stale Fallback**
+    - **Property 34: Governance ActionGrid Noop Without Bridge**
+    - **Property 35: Governance ValidationEngine 缓存一致性**
+    - **Validates: Requirements 13.1, 13.3, 13.5**
+
+- [ ] 21. P2: Inference 模块修复
+  - [x] 21.1 Shutdown 释放 session options + env，重置状态
+    - 修改 `Features/DeepBase.Inference.Runtime.pas`
+    - _Requirements: 14.1_
+  - [x] 21.2 Initialize 创建全新 session options
+    - 修改 `Features/DeepBase.Inference.Runtime.pas`
+    - _Requirements: 14.2_
+  - [x] 21.3 GetProvider/IsInitialized 加锁同步
+    - 修改 `Features/DeepBase.Inference.Runtime.pas`
+    - _Requirements: 14.3_
+  - [x] 21.4 Session metadata 使用 UTF8ToString 替代 AnsiString
+    - 修改 `Features/DeepBase.Inference.Session.pas`
+    - _Requirements: 14.4_
+  - [x] 21.5 Session.Run 验证 shape 维度积 = 元素数
+    - 修改 `Features/DeepBase.Inference.Session.pas`
+    - _Requirements: 14.5_
+  - [x] 21.6 Session 构造失败时释放已分配 ONNX 资源
+    - 修改 `Features/DeepBase.Inference.Session.pas`
+    - _Requirements: 14.6_
+  - [x] 21.7 InferenceService.IsReady 同时检查 FRuntime.IsInitialized
+    - 修改 `Features/DeepBase.Inference.Service.pas`
+    - _Requirements: 14.8_
+  - [x] 21.8 IoC.RegisterAll 异常时调用 LRuntime.Shutdown
+    - 修改 `Features/DeepBase.Inference.IoC.pas`
+    - _Requirements: 14.9_
+  - [ ]* 21.9 编写属性测试：Runtime 重初始化 + Shape 验证 + UTF-8 保真 + IsReady
+    - **Property 36: Inference Runtime 重初始化 Round-Trip**
+    - **Property 37: Inference Session Shape 验证**
+    - **Property 38: Inference Metadata UTF-8 保真**
+    - **Property 39: InferenceService.IsReady 完整检查**
+    - **Validates: Requirements 14.1, 14.2, 14.4, 14.5, 14.8**
+
+- [ ] 22. P2: 性能优化
+  - [ ] 22.1 MFCC 使用 FFT 替代 DFT
+    - 修改 `Features/DeepBase.Speech.MFCC.pas`
+    - _Requirements: 15.5_
+  - [ ] 22.2 SpeechService.ShouldAutoStop 增量处理新样本
+    - 修改 `Features/DeepBase.Speech.Service.pas`
+    - _Requirements: 15.6_
+  - [x] 22.3 SignalDetector.CountToken 使用 PosEx 替代 Copy
+    - 修改 `Features/DeepBase.IntentClarification.SignalDetector.pas`
+    - _Requirements: 15.7_
+  - [x] 22.4 Migrations 文件校验使用 fmShareDenyWrite
+    - 修改 `Persistence/DeepBase.DB.Migrations.pas`
+    - _Requirements: 15.1_
+  - [ ] 22.5 JobQueue 使用池化连接
+    - 修改 `Persistence/DeepBase.JobQueue.pas`
+    - _Requirements: 15.2_
+  - [x] 22.6 Protection.FireDAC 缓存连接
+    - 修改 `Persistence/DeepBase.Protection.FireDAC.pas`
+    - _Requirements: 15.3_
+  - [x] 22.7 DoQry.UniDbInsertReturningId 使用 prepared statement pool
+    - 修改 `Persistence/DeepBase.DoQry.pas`
+    - _Requirements: 15.4_
+  - [ ]* 22.8 编写属性测试：FFT 等价性 + 增量处理等价性 + PosEx 等价性
+    - **Property 40: MFCC FFT 等价性**
+    - **Property 41: SpeechService 增量处理等价性**
+    - **Property 42: SignalDetector PosEx 等价性**
+    - **Validates: Requirements 15.5, 15.6, 15.7**
+
+- [x] 23. Final Checkpoint - 全量编译验证
+  - 运行 `cmd /c compile_test.bat`，确保所有修复通过编译门禁
+  - 如有问题请询问用户
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- P0 tasks (1-6) 必须最先完成，阻塞后续工作
+- P1 tasks (7-11) 为安全修复，应在 P0 后立即处理
+- P2 tasks (12-22) 可按模块独立推进
+- 每个 checkpoint 确保增量验证，避免积累编译错误
+- 所有代码使用 Delphi 13.1 语法：inline var、条件表达式、TMonitor
+- 不引入 `with` 语句，不使用 VER340 风格条件编译

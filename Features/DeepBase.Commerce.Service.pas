@@ -191,8 +191,10 @@ var
 begin
   if not FStorage.FindOrderById(AOrderId, Order) then
     raise EDeepBaseCommerceNotFoundError.CreateFmt('Order not found: %s', [AOrderId]);
-  if Order.Status = cosPaid then
-    raise EDeepBaseCommerceValidationError.CreateFmt('Order already paid: %s', [AOrderId]);
+  if Order.Status in [cosPaid, cosFailed, cosClosed, cosRefunded] then
+    raise EDeepBaseCommerceValidationError.CreateFmt(
+      'Order is in terminal state (%s): %s',
+      [CommerceOrderStatusToStr(Order.Status), AOrderId]);
   if not FGateways.TryGetValue(GatewayKey(AProvider), Gateway) then
     raise EDeepBaseCommercePaymentError.CreateFmt(
       'Payment gateway is not registered: %s', [CommercePaymentProviderToStr(AProvider)]);

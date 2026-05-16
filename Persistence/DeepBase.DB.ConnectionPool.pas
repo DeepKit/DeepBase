@@ -192,7 +192,7 @@ begin
     except
       on E: Exception do
       begin
-        // R-006: ³õÊ¼³Ø´´½¨Ê§°ÜÊ±Êä³öµ÷ÊÔÐÅÏ¢
+        // R-006: ï¿½ï¿½Ê¼ï¿½Ø´ï¿½ï¿½ï¿½Ê§ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
         {$IF DEFINED(DEBUG) AND DEFINED(MSWINDOWS)}
         OutputDebugString(PChar('DeepBase.ConnectionPool pre-create failed: ' + E.Message));
         {$ENDIF}
@@ -244,7 +244,8 @@ var
 begin
   Result := nil;
   
-  for i := 0 to FPool.Count - 1 do
+  // Reverse iteration to avoid skipping entries when Delete shifts indices
+  for i := FPool.Count - 1 downto 0 do
   begin
     Pooled := FPool[i];
     if not Pooled.InUse then
@@ -265,11 +266,11 @@ begin
         except
           on E: Exception do
           begin
-            // BUG-076+079 FIX: Logger.Warning ¡ú Warn; FPool.Delete (OwnsObjects=True) auto-frees
+            // BUG-076+079 FIX: Logger.Warning â†’ Warn; FPool.Delete (OwnsObjects=True) auto-frees
             if DeepBase.Logging.Logger <> nil then
               DeepBase.Logging.Logger.Warn('Connection pool reconnect failed: ' + E.Message);
             FPool.Delete(i);
-            Exit;
+            // Continue checking remaining connections after deletion
           end;
         end;
       end;
@@ -320,7 +321,7 @@ begin
         except
           on E: Exception do
           begin
-            // ÐÂÁ¬½Ó´´½¨Ê§°Ü£¬¼ÇÂ¼ÈÕÖ¾
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ó´ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ö¾
             if DeepBase.Logging.Logger <> nil then
               DeepBase.Logging.Logger.Error('Connection pool new connection failed: ' + E.Message);
           end;
@@ -360,13 +361,15 @@ begin
       begin
         Pooled.InUse := False;
         Pooled.LastUsed := Now;
-        FAvailableEvent.SetEvent; // Signal that a connection is available
+        // ResetEvent + SetEvent in same lock to prevent lost wakeups
+        FAvailableEvent.ResetEvent;
+        FAvailableEvent.SetEvent;
         Exit;
       end;
     end;
     
     // Connection not found in pool - might be externally created
-    // BUG-076 FIX: Logger.Warning ¡ú Warn
+    // BUG-076 FIX: Logger.Warning ï¿½ï¿½ Warn
     if DeepBase.Logging.Logger <> nil then
       DeepBase.Logging.Logger.Warn('Attempting to release connection not in pool - possible connection leak');
   finally
@@ -390,20 +393,34 @@ var
   i: Integer;
 begin
   Result := 0;
-  // Assumes caller has lock or is in GetPoolStats
-  for i := 0 to FPool.Count - 1 do
-    if FPool[i].InUse then
-      Inc(Result);
+  FLock.Enter;
+  try
+    for i := 0 to FPool.Count - 1 do
+      if FPool[i].InUse then
+        Inc(Result);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TDBConnectionPool.GetAvailableCount: Integer;
 begin
-  Result := FPool.Count - GetActiveCount;
+  FLock.Enter;
+  try
+    Result := FPool.Count - GetActiveCount;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TDBConnectionPool.GetTotalCount: Integer;
 begin
-  Result := FPool.Count;
+  FLock.Enter;
+  try
+    Result := FPool.Count;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

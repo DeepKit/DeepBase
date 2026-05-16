@@ -90,25 +90,25 @@ Smoke test 暴露 Bootstrap 缺的 3 件事：
 
 ### Phase 2 / 3 跟进 — 李冰进度
 
-- [x] Q2 DeepLLM 接入 **已完成** — 编译通过 + CLI smoke 全绿 + DUnitX 回归 184/186 pass
+- [x] Q2 Assayer 接入 **已完成** — 编译通过 + CLI smoke 全绿 + DUnitX 回归 184/186 pass
 - [x] Q3 DeepShine 接入 **已完成** — 编译通过 + CLI smoke 全绿（含 CB 联动 Property 7）
 - [x] Q2/Q3 盘古 Review 完成（2026-05-11）
-  - DeepLLM: 4 gate 无条件，observe 模式正常；缺 ActionGrid 双注册 + DueRule + gate→actionKeys（enforce 模式下会 "No action resolved"，后续补齐）
+  - Assayer: 4 gate 无条件，observe 模式正常；缺 ActionGrid 双注册 + DueRule + gate→actionKeys（enforce 模式下会 "No action resolved"，后续补齐）
   - DeepShine: gckState evaluator 已注册（CB 联动）；同样缺 ActionGrid + DueRule + gate→actionKeys
   - 结论：observe 模式可用，enforce 切换需后续补齐（不阻塞本轮交付，DeepClip 已验证 enforce 全流程）
 
 ---
 
-## Phase 2：DeepLLM Governance 试点（李冰）✅ 已完成
+## Phase 2：Assayer Governance 试点（李冰）✅ 已完成
 
-- [x] 2.1 在 DeepLLM 项目搜索路径中添加 `DeepBase\Governance`
-- [x] 2.2 ~~`DeepLLM/config/governance/` 目录~~ **已废弃**（违反铁律），改走代码注册
+- [x] 2.1 在 Assayer 项目搜索路径中添加 `DeepBase\Governance`
+- [x] 2.2 ~~`Assayer/config/governance/` 目录~~ **已废弃**（违反铁律），改走代码注册
 - [x] 2.3 Gate 设计（代码注册）— `deepllm.switch_model` L2, `deepllm.update_apikey` L3, `deepllm.delete_history` L3, `deepllm.generate_image` L2
 - [x] 2.4 Action 设计（代码注册）— `deepllm.action.*` 一对一绑定
 - [x] 2.5 DPR 入口调用 `RegisterGovernance(gmObserve, ConfigDB, callback)`
 - [x] 2.6 `GovernanceEnterApiKeyUpdate` / `GovernanceEnterDeleteHistory` 桥接（EnterGate-first 模式）
 - [x] 2.7 observe 模式运行 + 验证 Evidence 写 DB1 — CLI smoke Stage 5 验证
-- [x] 2.8 CLI smoke harness 替代 DUnitX（`DeepLLM/tests/build_gov_smoke.bat`）
+- [x] 2.8 CLI smoke harness 替代 DUnitX（`Assayer/tests/build_gov_smoke.bat`）
 - [x] 2.9 enforce 回归 — 通过 DeepShine smoke 验证共享 ObserveGateResolver 逻辑
 - [x] 2.10 `.kiro/steering/governance-model.md` 自动导出 — CLI smoke Stage 4 验证
 
@@ -197,11 +197,11 @@ Governance 板块"可交付"的充分条件：
   - L3 `clip.delete_gate` + record_id='rec123' → `Resolve.State = gsOpen`
 - [x] 6.1.5 Evidence 写盘断言：enforce + permission fail → `governance_evidence.result='blocked'` 且 `blocked_reason` 非空
 
-### Phase 6.2：DeepLLM BehaviorMock（李冰）
+### Phase 6.2：Assayer BehaviorMock（李冰）
 
-`DeepLLM/tests/BehaviorMock/DeepLLMBehavior.dpr`
+`Assayer/tests/BehaviorMock/AssayerBehavior.dpr`
 
-- [x] 6.2.1 DeepLLM 当前 4 个 gate 都没条件 → observe 和 enforce 下都应 `gsOpen`
+- [x] 6.2.1 Assayer 当前 4 个 gate 都没条件 → observe 和 enforce 下都应 `gsOpen`
 - [x] 6.2.2 注入一个带 `gckAccountability` 条件的测试 gate，验证 fail-closed 默认行为
 - [x] 6.2.3 注册 `gckAccountability` evaluator（要求 context.actor_key 非空），验证 evaluator 接入生效
 - [x] 6.2.4 `EvidenceRecorder` 白名单脱敏（已经在 smoke 里测过，这里 re-assert）
@@ -257,7 +257,7 @@ Governance 板块"可交付"的充分条件：
 | 项目 | Harness 路径 | Checks | Exit |
 |---|---|---|---|
 | DeepClip    | `DeepClip/Tests/BehaviorMock/build.bat`    | 12 | 0 |
-| DeepLLM     | `DeepLLM/tests/BehaviorMock/build.bat`     | 13 | 0 |
+| Assayer     | `Assayer/tests/BehaviorMock/build.bat`     | 13 | 0 |
 | DeepShine   | `DeepShine/Tests/BehaviorMock/build.bat`   | 11 | 0 |
 | DeepInsight | `DeepInsight/tests/BehaviorMock/build.bat` | 6  | 0 |
 | DeepStory   | `DeepStory/Tests/BehaviorMock/build.bat`   | 10 | 0 |

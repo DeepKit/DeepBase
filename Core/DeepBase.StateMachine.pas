@@ -173,7 +173,7 @@ type
     FStates: TObjectDictionary<TState, TStateConfiguration<TState, TTrigger>>;
     FContext: TObject;
     FOwnsContext: Boolean;
-    FLock: TCriticalSection;
+    FLock: TObject;
     FHistory: TList<TStateHistoryEntry<TState, TTrigger>>;
     FMaxHistorySize: Integer;
     FOnStateChanged: TStateChangedEvent<TState, TTrigger>;
@@ -192,52 +192,56 @@ type
     function GetCurrentConfig: TStateConfiguration<TState, TTrigger>;
     function StateToString(const AState: TState): string;
     function TriggerToString(const ATrigger: TTrigger): string;
+  private
+    /// <summary>Internal fire implementation (caller must hold FLock)</summary>
+    function FireInternal(const ATrigger: TTrigger): TTransitionResult<TState, TTrigger>;
+
   public
     constructor Create(const AInitialState: TState);
     destructor Destroy; override;
-    
+
     /// <summary>Configure a state</summary>
     function Configure(const AState: TState): TStateConfiguration<TState, TTrigger>;
-    
+
     /// <summary>Start the state machine (executes initial state entry actions)</summary>
     procedure Start;
-    
+
     /// <summary>Fire a trigger to potentially transition states</summary>
     function Fire(const ATrigger: TTrigger): TTransitionResult<TState, TTrigger>;
-    
+
     /// <summary>Fire trigger if in specific state</summary>
     function FireIfInState(const ATrigger: TTrigger; const ARequiredState: TState): TTransitionResult<TState, TTrigger>;
-    
+
     /// <summary>Check if trigger can be fired in current state</summary>
     function CanFire(const ATrigger: TTrigger): Boolean;
-    
+
     /// <summary>Get all permitted triggers for current state</summary>
     function GetPermittedTriggers: TArray<TTrigger>;
-    
+
     /// <summary>Check if currently in a state (including substates)</summary>
     function IsIn(const AState: TState): Boolean;
-    
+
     /// <summary>Reset to initial state</summary>
     procedure Reset;
-    
-    /// <summary>Get state hiDeepStory</summary>
+
+    /// <summary>Get state history</summary>
     function GetHistory: TArray<TStateHistoryEntry<TState, TTrigger>>;
-    
-    /// <summary>Clear state hiDeepStory</summary>
+
+    /// <summary>Clear state history</summary>
     procedure ClearHistory;
-    
+
     /// <summary>Export state machine as DOT graph</summary>
     function ToDotGraph: string;
-    
+
     /// <summary>Export current state configuration as JSON</summary>
     function ToJSON: string;
-    
+
     /// <summary>Restore state from JSON</summary>
     procedure FromJSON(const AJSON: string);
-    
+
     /// <summary>Validate if state is valid</summary>
     function IsValidState(const AState: TState): Boolean;
-    
+
     property CurrentState: TState read FCurrentState;
     property InitialState: TState read FInitialState;
     property Context: TObject read FContext write FContext;
@@ -245,7 +249,7 @@ type
     property MaxHistorySize: Integer read FMaxHistorySize write FMaxHistorySize;
     property ThrowOnUnhandledTrigger: Boolean read FThrowOnUnhandledTrigger write FThrowOnUnhandledTrigger;
     property IsStarted: Boolean read FIsStarted;
-    
+
     property OnStateChanged: TStateChangedEvent<TState, TTrigger> read FOnStateChanged write FOnStateChanged;
     property OnTransitionFailed: TTransitionFailedEvent<TState, TTrigger> read FOnTransitionFailed write FOnTransitionFailed;
     property OnUnhandledTrigger: TTransitionFailedEvent<TState, TTrigger> read FOnUnhandledTrigger write FOnUnhandledTrigger;
@@ -541,7 +545,7 @@ begin
   FInitialState := AInitialState;
   FCurrentState := AInitialState;
   FStates := TObjectDictionary<TState, TStateConfiguration<TState, TTrigger>>.Create([doOwnsValues]);
-  FLock := TCriticalSection.Create;
+  FLock := TObject.Create;
   FHistory := TList<TStateHistoryEntry<TState, TTrigger>>.Create;
   FMaxHistorySize := 100;
   FThrowOnUnhandledTrigger := True;
@@ -583,7 +587,7 @@ end;
 
 procedure TStateMachine<TState, TTrigger>.Start;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     if FIsStarted then
       Exit;
@@ -599,7 +603,7 @@ begin
       ExecuteEntryActions(FCurrentState);
     end;
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -651,107 +655,113 @@ begin
   end;
 end;
 
-function TStateMachine<TState, TTrigger>.Fire(
+function TStateMachine<TState, TTrigger>.FireInternal(
   const ATrigger: TTrigger): TTransitionResult<TState, TTrigger>;
 var
   LTransition: TTransition<TState, TTrigger>;
   LOldState: TState;
   LConfig: TStateConfiguration<TState, TTrigger>;
 begin
-  FLock.Enter;
-  try
-    // Check if trigger is ignored
-    LConfig := GetCurrentConfig;
-    if Assigned(LConfig) and LConfig.IgnoredTriggers.Contains(ATrigger) then
-    begin
-      Result := TTransitionResult<TState, TTrigger>.CreateIgnored(FCurrentState, ATrigger);
-      Exit;
-    end;
-    
-    // Find valid transition
-    LTransition := FindTransition(ATrigger);
-    
-    if not Assigned(LTransition) then
-    begin
-      // ��ǿ�Ƿ�״̬ת�����
-      if Assigned(FOnUnhandledTrigger) then
-        FOnUnhandledTrigger(Self, FCurrentState, ATrigger, 'No valid transition found');
-        
-      if FThrowOnUnhandledTrigger then
-        raise EInvalidTransitionException.CreateFmt(
-          'Invalid transition from state %s with trigger %s', 
-          [TValue.From<TState>(FCurrentState).ToString, TValue.From<TTrigger>(ATrigger).ToString]);
-          
-      Result := TTransitionResult<TState, TTrigger>.CreateFailure(
-        FCurrentState, ATrigger, 'No valid transition found');
-      
-      if Assigned(FOnTransitionFailed) then
-        FOnTransitionFailed(Self, FCurrentState, ATrigger, Result.ErrorMessage);
-      Exit;
-    end;
-    
-    // ��֤Ŀ��״̬�Ƿ���Ч
-    if not IsValidState(LTransition.TargetState) then
-    begin
-      Result := TTransitionResult<TState, TTrigger>.CreateFailure(
-        FCurrentState, ATrigger, 'Invalid destination state');
-      Exit;
-    end;
-    
-    LOldState := FCurrentState;
-    
-    // Internal transition - no state change
-    if LTransition.IsInternal then
-    begin
-      if Assigned(LTransition.Action) then
-        LTransition.Action(LOldState, LOldState, ATrigger, FContext);
-        
-      Result := TTransitionResult<TState, TTrigger>.CreateSuccess(
-        LOldState, LOldState, ATrigger);
-      Exit;
-    end;
-    
-    // Execute exit actions
-    if not LTransition.IsReentry or (LTransition.IsReentry and not LTransition.IsInternal) then
-      ExecuteExitActions(FCurrentState);
-    
-    // Execute transition action
+  // Caller must hold FLock
+
+  // Check if trigger is ignored
+  LConfig := GetCurrentConfig;
+  if Assigned(LConfig) and LConfig.IgnoredTriggers.Contains(ATrigger) then
+  begin
+    Result := TTransitionResult<TState, TTrigger>.CreateIgnored(FCurrentState, ATrigger);
+    Exit;
+  end;
+
+  // Find valid transition
+  LTransition := FindTransition(ATrigger);
+
+  if not Assigned(LTransition) then
+  begin
+    if Assigned(FOnUnhandledTrigger) then
+      FOnUnhandledTrigger(Self, FCurrentState, ATrigger, 'No valid transition found');
+
+    if FThrowOnUnhandledTrigger then
+      raise EInvalidTransitionException.CreateFmt(
+        'Invalid transition from state %s with trigger %s',
+        [TValue.From<TState>(FCurrentState).ToString, TValue.From<TTrigger>(ATrigger).ToString]);
+
+    Result := TTransitionResult<TState, TTrigger>.CreateFailure(
+      FCurrentState, ATrigger, 'No valid transition found');
+
+    if Assigned(FOnTransitionFailed) then
+      FOnTransitionFailed(Self, FCurrentState, ATrigger, Result.ErrorMessage);
+    Exit;
+  end;
+
+  if not IsValidState(LTransition.TargetState) then
+  begin
+    Result := TTransitionResult<TState, TTrigger>.CreateFailure(
+      FCurrentState, ATrigger, 'Invalid destination state');
+    Exit;
+  end;
+
+  LOldState := FCurrentState;
+
+  // Internal transition - no state change
+  if LTransition.IsInternal then
+  begin
     if Assigned(LTransition.Action) then
-      LTransition.Action(LOldState, LTransition.TargetState, ATrigger, FContext);
-    
-    // Update state
-    FCurrentState := LTransition.TargetState;
-    
-    // Add to hiDeepStory
-    AddToHistory(FCurrentState, ATrigger);
-    
-    // Execute entry actions
-    if not LTransition.IsReentry or (LTransition.IsReentry and not LTransition.IsInternal) then
-      ExecuteEntryActions(FCurrentState);
-    
-    // Check for initial substate
-    LConfig := GetState(FCurrentState);
-    if Assigned(LConfig) and LConfig.HasInitialSubstate then
-    begin
-      FCurrentState := LConfig.InitialSubstate;
-      ExecuteEntryActions(FCurrentState);
-    end;
-    
-    // Fire event
-    if Assigned(FOnStateChanged) then
-      FOnStateChanged(Self, LOldState, FCurrentState, ATrigger);
-    
+      LTransition.Action(LOldState, LOldState, ATrigger, FContext);
+
     Result := TTransitionResult<TState, TTrigger>.CreateSuccess(
-      LOldState, FCurrentState, ATrigger);
+      LOldState, LOldState, ATrigger);
+    Exit;
+  end;
+
+  // Execute exit actions
+  if not LTransition.IsReentry or (LTransition.IsReentry and not LTransition.IsInternal) then
+    ExecuteExitActions(FCurrentState);
+
+  // Execute transition action
+  if Assigned(LTransition.Action) then
+    LTransition.Action(LOldState, LTransition.TargetState, ATrigger, FContext);
+
+  // Update state
+  FCurrentState := LTransition.TargetState;
+
+  // Add to hiDeepStory
+  AddToHistory(FCurrentState, ATrigger);
+
+  // Execute entry actions
+  if not LTransition.IsReentry or (LTransition.IsReentry and not LTransition.IsInternal) then
+    ExecuteEntryActions(FCurrentState);
+
+  // Check for initial substate
+  LConfig := GetState(FCurrentState);
+  if Assigned(LConfig) and LConfig.HasInitialSubstate then
+  begin
+    FCurrentState := LConfig.InitialSubstate;
+    ExecuteEntryActions(FCurrentState);
+  end;
+
+  // Fire event
+  if Assigned(FOnStateChanged) then
+    FOnStateChanged(Self, LOldState, FCurrentState, ATrigger);
+
+  Result := TTransitionResult<TState, TTrigger>.CreateSuccess(
+    LOldState, FCurrentState, ATrigger);
+end;
+
+function TStateMachine<TState, TTrigger>.Fire(
+  const ATrigger: TTrigger): TTransitionResult<TState, TTrigger>;
+begin
+  TMonitor.Enter(FLock);
+  try
+    Result := FireInternal(ATrigger);
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
 function TStateMachine<TState, TTrigger>.FireIfInState(const ATrigger: TTrigger;
   const ARequiredState: TState): TTransitionResult<TState, TTrigger>;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     if not IsIn(ARequiredState) then
     begin
@@ -759,9 +769,9 @@ begin
         FCurrentState, ATrigger, 'Not in required state');
       Exit;
     end;
-    Result := Fire(ATrigger);
+    Result := FireInternal(ATrigger);
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -770,7 +780,7 @@ var
   LTransition: TTransition<TState, TTrigger>;
   LConfig: TStateConfiguration<TState, TTrigger>;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     // Check if ignored
     LConfig := GetCurrentConfig;
@@ -780,7 +790,7 @@ begin
     LTransition := FindTransition(ATrigger);
     Result := Assigned(LTransition);
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -792,7 +802,7 @@ var
 begin
   LTriggers := TList<TTrigger>.Create;
   try
-    FLock.Enter;
+    TMonitor.Enter(FLock);
     try
       LConfig := GetCurrentConfig;
       if Assigned(LConfig) then
@@ -807,7 +817,7 @@ begin
         end;
       end;
     finally
-      FLock.Leave;
+      TMonitor.Exit(FLock);
     end;
     Result := LTriggers.ToArray;
   finally
@@ -817,36 +827,45 @@ end;
 
 function TStateMachine<TState, TTrigger>.IsIn(const AState: TState): Boolean;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     Result := IsInState(FCurrentState, AState);
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
 function TStateMachine<TState, TTrigger>.IsInState(const AState: TState;
   const ATargetState: TState): Boolean;
+const
+  CMaxHierarchyDepth = 64;
 var
   LConfig: TStateConfiguration<TState, TTrigger>;
   LCheckState: TState;
+  LDepth: Integer;
 begin
   // Direct match
   if TEqualityComparer<TState>.Default.Equals(AState, ATargetState) then
     Exit(True);
-    
+
   // Check if AState is a substate of ATargetState
   LCheckState := AState;
+  LDepth := 0;
   while True do
   begin
+    Inc(LDepth);
+    if LDepth > CMaxHierarchyDepth then
+      Exit(False);  // Cycle or excessive depth detected
+
     LConfig := GetState(LCheckState);
     if not Assigned(LConfig) or not LConfig.HasParent then
       Exit(False);
-      
+
     LCheckState := LConfig.ParentState;
     if TEqualityComparer<TState>.Default.Equals(LCheckState, ATargetState) then
       Exit(True);
   end;
+  Result := False;
 end;
 
 function TStateMachine<TState, TTrigger>.GetSuperstate(const AState: TState): TState;
@@ -905,34 +924,34 @@ end;
 
 procedure TStateMachine<TState, TTrigger>.Reset;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     ExecuteExitActions(FCurrentState);
     FCurrentState := FInitialState;
     FIsStarted := False;
     ClearHistory;
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
 function TStateMachine<TState, TTrigger>.GetHistory: TArray<TStateHistoryEntry<TState, TTrigger>>;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     Result := FHistory.ToArray;
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TStateMachine<TState, TTrigger>.ClearHistory;
 begin
-  FLock.Enter;
+  TMonitor.Enter(FLock);
   try
     FHistory.Clear;
   finally
-    FLock.Leave;
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -1070,7 +1089,7 @@ begin
     Exit;
     
   try
-    FLock.Enter;
+    TMonitor.Enter(FLock);
     try
       LTypeInfo := TypeInfo(TState);
       
@@ -1094,7 +1113,7 @@ begin
       
       LJSON.TryGetValue<Boolean>('isStarted', FIsStarted);
     finally
-      FLock.Leave;
+      TMonitor.Exit(FLock);
     end;
   finally
     LJSON.Free;

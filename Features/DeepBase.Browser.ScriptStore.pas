@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Browser.ScriptStore
   ---------------------------------------------------------------------------
   Version     : 1.0
@@ -69,7 +69,8 @@ implementation
 uses
   System.Classes,
   System.SyncObjs,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  DeepBase.Browser.Types;
 
 type
   TJSScriptEntry = record
@@ -131,18 +132,6 @@ begin
   end;
 end;
 
-function JsonStringLiteral(const AValue: string): string;
-var
-  LJson: TJSONString;
-begin
-  LJson := TJSONString.Create(AValue);
-  try
-    Result := LJson.ToJSON;
-  finally
-    LJson.Free;
-  end;
-end;
-
 function VarRecToJsonLiteral(const AValue: TVarRec): string;
 var
   LFormat: TFormatSettings;
@@ -163,7 +152,7 @@ begin
         Result := FloatToStr(AValue.VExtended^, LFormat);
       end;
   else
-    Result := JsonStringLiteral(VarRecToString(AValue));
+    Result := JsStringLiteral(VarRecToString(AValue));
   end;
 end;
 
@@ -183,30 +172,143 @@ class function TJSScriptStoreSqlite.GetBuiltinDefaults: TJSScriptArray;
 begin
   SetLength(Result, 7);
   Result[0] := CreateScriptDefinition(JSCRIPT_EXISTS,
-    'return document.querySelector({{selector}}) !== null;',
+    '(function(){try{return document.querySelector({{selector}})!==null;}catch(e){return false;}})();',
     'Checks whether a selector exists.');
   Result[1] := CreateScriptDefinition(JSCRIPT_CLICK,
-    'document.querySelector({{selector}}).click();',
-    'Clicks the first matching element.');
+    '(function(){try{' +
+    'var el=document.querySelector({{selector}});' +
+    'if(!el)return {success:false,error:"not_found"};' +
+    'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
+    'el.click();' +
+    'return {success:true,error:""};' +
+    '}catch(e){return {success:false,error:String(e)}}})();',
+    'Clicks the first matching element. Returns {success,error}.');
   Result[2] := CreateScriptDefinition(JSCRIPT_INPUT_TEXT,
-    'var el = document.querySelector({{selector}});' +
-    'el.value = {{text}};' +
-    'el.dispatchEvent(new Event("input", { bubbles: true }));',
-    'Sets text on the first matching input.');
+    '(function(){try{' +
+    'var el=document.querySelector({{selector}});' +
+    'if(!el)return {success:false,error:"not_found"};' +
+    'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
+    'if(el.focus)el.focus();' +
+    'if("value" in el){el.value={{text}};}else{el.textContent={{text}};}' +
+    'el.dispatchEvent(new Event("input",{bubbles:true}));' +
+    'el.dispatchEvent(new Event("change",{bubbles:true}));' +
+    'return {success:true,error:""};' +
+    '}catch(e){return {success:false,error:String(e)}}})();',
+    'Sets text on the first matching input. Returns {success,error}.');
   Result[3] := CreateScriptDefinition(JSCRIPT_GET_TEXT,
-    'var el = document.querySelector({{selector}});' +
-    'return el ? el.textContent : "";',
-    'Returns visible text for the first matching element.');
+    '(function(){try{' +
+    'var list=document.querySelectorAll({{selector}});' +
+    'if(!list||list.length===0)return {found:false,text:"",error:"not_found"};' +
+    'var el=list[list.length-1];' +
+    'return {found:true,text:(el.innerText||el.textContent||""),error:""};' +
+    '}catch(e){return {found:false,text:"",error:String(e)}}})();',
+    'Returns visible text for the last matching element. Returns {found,text,error}.');
+  // H1 fix: real MutationObserver-based waiter; placeholders match
+  // ResponseWaiter callsite (response_selector / loading_selector /
+  // timeout_ms / stable_ms). Previously this was a stub calling a
+  // non-existent window.__deepBaseWaitForResponse function.
   Result[4] := CreateScriptDefinition(JSCRIPT_RESPONSE_WAITER,
-    'window.__deepBaseWaitForResponse({{urlPattern}}, {{method}}, ' +
-    '{{timeoutMs}}, {{bodyContains}});',
-    'Waits for a matching network response.');
+    '(function(){' +
+    '  if (window.__dbWaiter) window.__dbWaiter.cancel();' +
+    '  var responseSel = {{response_selector}};' +
+    '  var loadingSel = {{loading_selector}};' +
+    '  var timeoutMs = {{timeout_ms}};' +
+    '  var stableMs = {{stable_ms}};' +
+    '  window.__dbWaiter = {' +
+    '    observer:null, timeoutTimer:null, stableTimer:null,' +
+    '    startTime:Date.now(), lastContent:"", cancelled:false,' +
+    '    start: function() {' +
+    '      var self = this;' +
+    '      this.timeoutTimer = setTimeout(function() {' +
+    '        self.finish("timeout", self.getLatestResponse());' +
+    '      }, timeoutMs);' +
+    '      this.observer = new MutationObserver(function() {' +
+    '        if (self.cancelled) return;' +
+    '        if (loadingSel) {' +
+    '          var loading = document.querySelector(loadingSel);' +
+    '          if (loading) { clearTimeout(self.stableTimer); return; }' +
+    '        }' +
+    '        var content = self.getLatestResponse();' +
+    '        if (content !== self.lastContent) {' +
+    '          self.lastContent = content;' +
+    '          clearTimeout(self.stableTimer);' +
+    '          self.stableTimer = setTimeout(function() {' +
+    '            self.finish("success", content);' +
+    '          }, stableMs);' +
+    '        }' +
+    '      });' +
+    '      this.observer.observe(document.body, ' +
+    '        {childList:true, subtree:true, characterData:true, attributes:true});' +
+    '      var initial = this.getLatestResponse();' +
+    '      if (initial) {' +
+    '        this.lastContent = initial;' +
+    '        this.stableTimer = setTimeout(function() {' +
+    '          self.finish("success", initial);' +
+    '        }, stableMs);' +
+    '      }' +
+    '    },' +
+    '    getLatestResponse: function() {' +
+    '      if (!responseSel) return "";' +
+    '      var els = document.querySelectorAll(responseSel);' +
+    '      if (els.length === 0) return "";' +
+    '      var last = els[els.length - 1];' +
+    '      return last.innerText || last.textContent || "";' +
+    '    },' +
+    '    finish: function(result, response) {' +
+    '      if (this.cancelled) return;' +
+    '      this.cancel();' +
+    '      var msg = JSON.stringify({' +
+    '        type:"db_response_waiter", result:result,' +
+    '        response:response, durationMs:(Date.now() - this.startTime)' +
+    '      });' +
+    '      if (window.chrome && window.chrome.webview)' +
+    '        window.chrome.webview.postMessage(msg);' +
+    '    },' +
+    '    cancel: function() {' +
+    '      this.cancelled = true;' +
+    '      if (this.observer) { this.observer.disconnect(); this.observer = null; }' +
+    '      clearTimeout(this.timeoutTimer);' +
+    '      clearTimeout(this.stableTimer);' +
+    '    }' +
+    '  };' +
+    '  window.__dbWaiter.start();' +
+    '})();',
+    'MutationObserver-based response stability detector.');
+  // H1 fix: real cancel logic; previously called non-existent
+  // window.__deepBaseCancelResponseWaiter.
   Result[5] := CreateScriptDefinition(JSCRIPT_WAITER_CANCEL,
-    'window.__deepBaseCancelResponseWaiter({{waiterId}});',
+    'if (window.__dbWaiter) {' +
+    '  window.__dbWaiter.cancel();' +
+    '  delete window.__dbWaiter;' +
+    '}',
     'Cancels an active response waiter.');
+  // H2 fix: zero-placeholder template (callers pass []).
+  // Returns JSON array of stable selectors discovered via attributes.
   Result[6] := CreateScriptDefinition(JSCRIPT_SELECTOR_HEAL,
-    'window.__deepBaseDiscoverSelector({{selector}}, {{textHint}});',
-    'Discovers alternate selectors for a target element.');
+    '(function(){' +
+    '  try {' +
+    '    var candidates = document.querySelectorAll(' +
+    '      "[data-testid], [aria-label], [name], [placeholder]");' +
+    '    var result = [];' +
+    '    var esc = (window.CSS && window.CSS.escape) ? window.CSS.escape :' +
+    '              function(s){ return String(s).replace(/(["\\])/g, ''\\$1''); };' +
+    '    for (var i = 0; i < candidates.length; i++) {' +
+    '      var el = candidates[i];' +
+    '      var sel = "";' +
+    '      var tid = el.getAttribute("data-testid");' +
+    '      var lbl = el.getAttribute("aria-label");' +
+    '      var nm  = el.getAttribute("name");' +
+    '      var ph  = el.getAttribute("placeholder");' +
+    '      if (tid) sel = "[data-testid=\"" + esc(tid) + "\"]";' +
+    '      else if (lbl) sel = "[aria-label=\"" + esc(lbl) + "\"]";' +
+    '      else if (nm)  sel = "[name=\"" + esc(nm) + "\"]";' +
+    '      else if (ph)  sel = "[placeholder=\"" + esc(ph) + "\"]";' +
+    '      if (sel) result.push(sel);' +
+    '    }' +
+    '    return JSON.stringify(result);' +
+    '  } catch(e) { return "[]"; }' +
+    '})();',
+    'Discovers alternate selectors via data-testid / aria-label / name / placeholder.');
 end;
 
 { TJSTemplate }

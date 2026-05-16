@@ -79,6 +79,7 @@ type
     function Run(const AInputNames: TArray<string>;
       const AInputValues: TArray<TBytes>;
       const AInputShapes: TArray<TArray<Int64>>): TInferenceOutput;
+    function GetCustomMetadata(const AKey: string): string;
     procedure Dispose;
   end;
 
@@ -133,6 +134,11 @@ end;
 function TFakeSession.GetModelInfo: TInferenceModelInfo;
 begin
   Result := TInferenceModelInfo.Empty;
+end;
+
+function TFakeSession.GetCustomMetadata(const AKey: string): string;
+begin
+  Result := '';
 end;
 
 function TFakeSession.Run(const AInputNames: TArray<string>;

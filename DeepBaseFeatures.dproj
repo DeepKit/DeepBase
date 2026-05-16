@@ -198,6 +198,7 @@
         <DCCReference Include="Features\DeepBase.IntentClarification.Rapport.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.Registration.pas"/>
         <DCCReference Include="Features\DeepBase.BrowserAutomation.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.PageDriver.pas"/>
         <DCCReference Include="Core\DeepBase.LLM.Manager.pas"/>
         <DCCReference Include="Persistence\DeepBase.Persistence.LLM.FireDAC.pas"/>
         <DCCReference Include="Core\DeepBase.LLM.BillingClient.pas"/>

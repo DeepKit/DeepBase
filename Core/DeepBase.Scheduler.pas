@@ -68,7 +68,7 @@ type
   TTaskPriority = (tpLow, tpNormal, tpHigh, tpCritical);
 
   /// <summary>
-  /// Persisted task metadata (no proc reference ¡ª callers re-register on restart).
+  /// Persisted task metadata (no proc reference ï¿½ï¿½ callers re-register on restart).
   /// </summary>
   TTaskMeta = record
     Id: string;
@@ -192,6 +192,9 @@ type
     FOnCompleted: TTaskCompletedEvent;
     FOnFailed: TTaskFailedEvent;
     
+    // Running task reference - keeps ITask alive until completion
+    FRunningITask: ITask;
+    
     // Dependencies
     FDependsOn: TArray<string>;
     FTags: TArray<string>;
@@ -264,6 +267,7 @@ type
     FRunningCount: Integer;
     FJobStore: IJobStore;
     FShutdownEvent: TEvent;
+    FStopDrainTimeoutMs: Integer;
 
     procedure TimerProc;
     procedure ExecuteTask(Task: TScheduledTask);
@@ -277,8 +281,9 @@ type
     /// <summary>Start scheduler</summary>
     procedure Start;
 
-    /// <summary>Stop scheduler (waits for running tasks)</summary>
-    procedure Stop;
+    /// <summary>Stop scheduler. Waits up to StopDrainTimeoutMs for running tasks
+    /// to finish. Returns True if all tasks drained, False if timed out.</summary>
+    function Stop: Boolean;
 
     /// <summary>Set job store for persistence</summary>
     procedure SetJobStore(const AStore: IJobStore);
@@ -317,6 +322,9 @@ type
     property Stats: TSchedulerStats read FStats;
     property CheckIntervalMs: Integer read FCheckIntervalMs write FCheckIntervalMs;
     property MaxConcurrentTasks: Integer read FMaxConcurrentTasks write FMaxConcurrentTasks;
+    /// <summary>Maximum time to wait for running tasks during Stop, in ms.
+    /// Default 30 seconds. Set to -1 for indefinite wait.</summary>
+    property StopDrainTimeoutMs: Integer read FStopDrainTimeoutMs write FStopDrainTimeoutMs;
   end;
   
   // ============================================================================
@@ -330,6 +338,9 @@ function Scheduler: TTaskScheduler;
 procedure SetScheduler(AScheduler: TTaskScheduler);
 
 implementation
+
+uses
+  System.Diagnostics;
 
 var
   GScheduler: TTaskScheduler = nil;
@@ -773,12 +784,24 @@ begin
   FMaxConcurrentTasks := 4;
   FRunningCount := 0;
   FJobStore := nil;
+  FStopDrainTimeoutMs := 30000; // 30 seconds default; -1 = indefinite
   FStats.Reset;
 end;
 
 destructor TTaskScheduler.Destroy;
+var
+  PrevTimeout: Integer;
 begin
-  Stop;
+  // BASIC-006: For destruction, force indefinite wait so we never free
+  // FTasks while a background TTask still holds a TScheduledTask pointer.
+  PrevTimeout := FStopDrainTimeoutMs;
+  FStopDrainTimeoutMs := -1;
+  try
+    Stop;
+  finally
+    FStopDrainTimeoutMs := PrevTimeout;
+  end;
+
   FreeAndNil(FTasks);
   FreeAndNil(FLock);
   FreeAndNil(FShutdownEvent);
@@ -853,19 +876,24 @@ procedure TTaskScheduler.Start;
 begin
   if FRunning then
     Exit;
-  
+
+  // Reset shutdown event so it can be re-armed by Stop.
+  if FShutdownEvent <> nil then
+    FShutdownEvent.ResetEvent;
+
   FRunning := True;
   FTimerThread := TThread.CreateAnonymousThread(TimerProc);
   FTimerThread.FreeOnTerminate := False;
   FTimerThread.Start;
 end;
 
-procedure TTaskScheduler.Stop;
+function TTaskScheduler.Stop: Boolean;
 var
-  WaitCount: Integer;
+  Stopwatch: TStopwatch;
+  TimeoutMs: Int64;
 begin
   if not FRunning then
-    Exit;
+    Exit(True);
 
   FRunning := False;
 
@@ -879,13 +907,18 @@ begin
     FreeAndNil(FTimerThread);
   end;
 
-  // Wait for running tasks to finish (up to 10 seconds)
-  WaitCount := 0;
-  while (FRunningCount > 0) and (WaitCount < 100) do
+  // Wait for running tasks to finish.
+  // FStopDrainTimeoutMs = -1 means wait indefinitely.
+  Stopwatch := TStopwatch.StartNew;
+  TimeoutMs := FStopDrainTimeoutMs;
+  while FRunningCount > 0 do
   begin
-    Sleep(100);
-    Inc(WaitCount);
+    Sleep(50);
+    if (TimeoutMs >= 0) and (Stopwatch.ElapsedMilliseconds >= TimeoutMs) then
+      Exit(False);
   end;
+
+  Result := True;
 end;
 
 procedure TTaskScheduler.TimerProc;
@@ -893,7 +926,9 @@ begin
   while FRunning do
   begin
     ProcessPendingTasks;
-    Sleep(FCheckIntervalMs);
+    // Wait responsively so Stop can interrupt the loop.
+    if FShutdownEvent.WaitFor(FCheckIntervalMs) = wrSignaled then
+      Break;
   end;
 end;
 
@@ -997,80 +1032,89 @@ begin
     begin
       StartTime := Now;
       try
-        Task.FProc();
+        TaskRef.FProc();
         
         FLock.Enter;
         try
-          Task.FLastRunAt := Now;
-          Task.FLastDuration := MilliSecondsBetween(Now, StartTime);
-          Inc(Task.FRunCount);
-          Task.FCurrentRetry := 0;
-          Task.FLastError := '';
+          TaskRef.FLastRunAt := Now;
+          TaskRef.FLastDuration := MilliSecondsBetween(Now, StartTime);
+          Inc(TaskRef.FRunCount);
+          TaskRef.FCurrentRetry := 0;
+          TaskRef.FLastError := '';
           Inc(FStats.TotalExecutions);
           
           // Check if should reschedule
-          if Task.FUseCron or (Task.FIntervalMs > 0) then
+          if TaskRef.FUseCron or (TaskRef.FIntervalMs > 0) then
           begin
-            if (Task.FMaxRuns = 0) or (Task.FRunCount < Task.FMaxRuns) then
+            if (TaskRef.FMaxRuns = 0) or (TaskRef.FRunCount < TaskRef.FMaxRuns) then
             begin
-              Task.CalculateNextRun;
-              Task.FState := tsPending;
+              TaskRef.CalculateNextRun;
+              TaskRef.FState := tsPending;
               Inc(FStats.PendingTasks);
             end
             else
             begin
-              Task.FState := tsCompleted;
+              TaskRef.FState := tsCompleted;
               Inc(FStats.CompletedTasks);
             end;
           end
           else
           begin
-            Task.FState := tsCompleted;
+            TaskRef.FState := tsCompleted;
             Inc(FStats.CompletedTasks);
           end;
           
+          TaskRef.FRunningITask := nil;  // Release ITask reference
           Dec(FRunningCount);
           Dec(FStats.RunningTasks);
         finally
           FLock.Leave;
         end;
         
-        if Assigned(Task.FOnCompleted) then
-          Task.FOnCompleted(Task);
+        if Assigned(TaskRef.FOnCompleted) then
+          TaskRef.FOnCompleted(TaskRef);
           
       except
         on E: Exception do
         begin
+          var LOnFailed: TTaskFailedEvent := nil;
           FLock.Enter;
           try
-            Task.FLastError := E.Message;
-            Inc(Task.FCurrentRetry);
-            
+            TaskRef.FLastError := E.Message;
+            Inc(TaskRef.FCurrentRetry);
+
             // Check retry
-            if Task.FCurrentRetry <= Task.FRetryPolicy.MaxRetries then
+            if TaskRef.FCurrentRetry <= TaskRef.FRetryPolicy.MaxRetries then
             begin
-              Task.FNextRunAt := IncMilliSecond(Now,
-                Task.FRetryPolicy.GetDelay(Task.FCurrentRetry));
-              Task.FState := tsPending;
+              TaskRef.FNextRunAt := IncMilliSecond(Now,
+                TaskRef.FRetryPolicy.GetDelay(TaskRef.FCurrentRetry));
+              TaskRef.FState := tsPending;
               Inc(FStats.PendingTasks);
             end
             else
             begin
-              Task.FState := tsFailed;
+              TaskRef.FState := tsFailed;
               Inc(FStats.FailedTasks);
-              
-              if Assigned(Task.FOnFailed) then
-                Task.FOnFailed(Task, E);
+
+              // Capture callback to invoke outside lock
+              LOnFailed := TaskRef.FOnFailed;
             end;
-            
+
+            TaskRef.FRunningITask := nil;  // Release ITask reference
             Dec(FRunningCount);
             Dec(FStats.RunningTasks);
           finally
             FLock.Leave;
           end;
+
+          // Invoke callback outside lock to prevent potential deadlock
+          if Assigned(LOnFailed) then
+            LOnFailed(TaskRef, E);
         end;
       end;
     end);
+  // Store ITask reference on the scheduled task to keep it alive
+  Task.FRunningITask := RunTask;
   RunTask.Start;
 end;
 

@@ -60,6 +60,8 @@ type
     // 消息处理线程
     FWorkerThread: TThread;
     FStopFlag: Boolean;
+    FPaused: Boolean;
+    FPauseEvent: TEvent;
     
     // 指标
     FMessagesProcessed: Int64;
@@ -154,6 +156,7 @@ begin
   FOwnsConfig := True;
   FState := esUninitialized;
   FStopFlag := False;
+  FPaused := False;
   FMessagesProcessed := 0;
   FMessagesDropped := 0;
   
@@ -161,6 +164,7 @@ begin
   FRoleLock := TCriticalSection.Create;
   FQueueLock := TCriticalSection.Create;
   FQueueEvent := TEvent.Create(nil, False, False, '');
+  FPauseEvent := TEvent.Create(nil, True, True, '');  // Manual reset, initially signaled
   
   // 初始化集合
   FRoles := TDictionary<string, IDeepFlowRole>.Create;
@@ -186,6 +190,7 @@ begin
   
   FMessageQueue.Free;
   FRoles.Free;
+  FPauseEvent.Free;
   FQueueEvent.Free;
   FQueueLock.Free;
   FRoleLock.Free;
@@ -290,12 +295,20 @@ end;
 
 procedure TDeepFlowEngine.Pause;
 begin
-  // Engine 暂停逻辑
+  // Suspend execution: running tasks complete but no new tasks start
+  if FState <> esRunning then
+    Exit;
+  FPaused := True;
+  FPauseEvent.ResetEvent;
 end;
 
 procedure TDeepFlowEngine.Resume;
 begin
-  // Engine 恢复逻辑
+  // Resume execution: wake scheduler to continue processing
+  if not FPaused then
+    Exit;
+  FPaused := False;
+  FPauseEvent.SetEvent;
 end;
 
 procedure TDeepFlowEngine.RegisterRole(const ARole: IDeepFlowRole);
@@ -509,6 +522,13 @@ var
 begin
   while not FStopFlag do
   begin
+    // Wait for pause to be lifted before processing
+    if FPaused then
+      FPauseEvent.WaitFor(INFINITE);
+
+    if FStopFlag then
+      Break;
+
     // 等待消息或停止信号
     FQueueEvent.WaitFor(100);
     
@@ -518,6 +538,10 @@ begin
     // 处理队列中的消息
     while True do
     begin
+      // Check pause state before each message
+      if FPaused then
+        Break;
+
       Msg := nil;
       
       FQueueLock.Enter;
@@ -618,18 +642,20 @@ end;
 
 procedure TDeepFlowEngine.InsertSorted(const AMessage: TDeepFlowMessage);
 var
-  I: Integer;
+  LLow, LHigh, LMid: Integer;
 begin
-  // 简单插入排序（对于小队列效率足够）
-  for I := 0 to FMessageQueue.Count - 1 do
+  // Binary search insertion (O(log N)) maintaining priority order
+  LLow := 0;
+  LHigh := FMessageQueue.Count - 1;
+  while LLow <= LHigh do
   begin
-    if CompareMessages(AMessage, FMessageQueue[I]) < 0 then
-    begin
-      FMessageQueue.Insert(I, AMessage);
-      Exit;
-    end;
+    LMid := (LLow + LHigh) div 2;
+    if CompareMessages(AMessage, FMessageQueue[LMid]) >= 0 then
+      LLow := LMid + 1
+    else
+      LHigh := LMid - 1;
   end;
-  FMessageQueue.Add(AMessage);
+  FMessageQueue.Insert(LLow, AMessage);
 end;
 
 initialization

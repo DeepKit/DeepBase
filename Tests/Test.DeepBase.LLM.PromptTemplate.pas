@@ -90,7 +90,7 @@ end;
 
 procedure TTestLLMPromptTemplate.Setup;
 begin
-  // 使用内存数据�?
+  // 使用内存数据�?
   FConnection := TFDConnection.Create(nil);
   FConnection.DriverName := 'SQLite';
   FConnection.Params.Database := ':memory:';
@@ -115,8 +115,8 @@ begin
   Q := TFDQuery.Create(nil);
   try
     Q.Connection := FConnection;
-    // 创建 LLMPromptTemplates �?
-    Q.SQL.Text := SQL_TIER2_LLM_PROMPT_TEMPLATES;
+    // 创建 LLMPromptTemplates �?
+    Q.SQL.Text := SQL_TIER2_LLM_PROMPTS;
     Q.ExecSQL;
     // 创建 LLMConfiguration 表（FLLM 构造函数需要）
     Q.SQL.Text := SQL_TIER2_LLM_CONFIG;
@@ -135,7 +135,7 @@ begin
     Q.Connection := FConnection;
     Q.SQL.Text := 'DROP TABLE IF EXISTS LLMPromptTemplates';
     Q.ExecSQL;
-    Q.SQL.Text := 'DROP TABLE IF EXISTS LLMConfiguration';
+    Q.SQL.Text := 'DROP TABLE IF EXISTS LLMConfig';
     Q.ExecSQL;
   finally
     Q.Free;

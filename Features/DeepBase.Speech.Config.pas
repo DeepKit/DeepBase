@@ -15,10 +15,16 @@ uses
 
 const
   // ASR
-  SPEECH_CFG_ASR_BACKEND       = 'speech.asr.backend';        // auto|sapi|winrt|baidu
+  SPEECH_CFG_ASR_BACKEND       = 'speech.asr.backend';        // sensevoice|auto|sapi|winrt|baidu
   SPEECH_CFG_ASR_LANGUAGE      = 'speech.asr.language';       // BCP-47: zh-CN, en-US
   SPEECH_CFG_ASR_MAX_SECONDS   = 'speech.asr.max_seconds';    // 30
   SPEECH_CFG_ASR_SILENCE_MS    = 'speech.asr.silence_timeout_ms'; // 3000
+
+  // SenseVoice
+  SPEECH_CFG_SV_MODEL_DIR      = 'speech.sensevoice.model_dir';
+  SPEECH_CFG_SV_LANGUAGE       = 'speech.sensevoice.language'; // auto|zh|en|yue|ko
+  SPEECH_CFG_SV_USE_ITN        = 'speech.sensevoice.use_itn';  // 0|1
+  SPEECH_CFG_SV_PARTIAL_MS     = 'speech.sensevoice.partial_interval_ms';
 
   // TTS
   SPEECH_CFG_TTS_BACKEND       = 'speech.tts.backend';        // sapi|azure
@@ -44,7 +50,11 @@ const
   SPEECH_CFG_TRACE_AUDIO       = 'speech.trace.audio_payload_enabled'; // 0
 
   // Defaults
-  SPEECH_DEFAULT_ASR_BACKEND   = 'auto';
+  SPEECH_DEFAULT_ASR_BACKEND   = 'sensevoice';
+  SPEECH_DEFAULT_SV_MODEL_DIR  = '';
+  SPEECH_DEFAULT_SV_LANGUAGE   = 'auto';
+  SPEECH_DEFAULT_SV_USE_ITN    = '1';
+  SPEECH_DEFAULT_SV_PARTIAL_MS = 500;
   SPEECH_DEFAULT_ASR_LANGUAGE  = 'zh-CN';
   SPEECH_DEFAULT_ASR_MAX_SEC   = 30;
   SPEECH_DEFAULT_ASR_SILENCE   = 3000;

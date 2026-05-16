@@ -436,7 +436,9 @@ end;
 
 function TFMXNotificationBar.CheckCancelled: Boolean;
 begin
-  Application.ProcessMessages;
+  // FMX-001: ProcessMessages here pumps the message loop and can re-enter the
+  // notification handler, leading to nested cancellation states. Just report
+  // the current flag.
   Result := FCancelled;
 end;
 

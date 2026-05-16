@@ -47,7 +47,7 @@ uses
   DeepBase.Constants;
 
 type
-  /// <summary>»º´æÏà¹ØÒì³£</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì³£</summary>
   ECacheException = class(Exception);
   
   // ============================================================================
@@ -334,7 +334,7 @@ end;
 
 destructor TCache<K, V>.Destroy;
 begin
-  // BUG-047 FIX: ÇåÀí»Øµ÷ÒýÓÃ£¬·ÀÖ¹Ñ­»·ÒýÓÃµ¼ÖÂÄÚ´æÐ¹Â©
+  // BUG-047 FIX: ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½Ö¹Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ð¹Â©
   FOnEvict := nil;
   FOnExpire := nil;
   FOnLoad := nil;
@@ -385,7 +385,7 @@ var
 begin
   FLock.Enter;
   try
-    // ¼ì²éµ¥¸öÏîÄ¿´óÐ¡ÏÞÖÆ£¨·ÀÖ¹µ¥¸ö´ó¶ÔÏóÕ¼ÓÃ¹ý¶àÄÚ´æ£©
+    // ï¿½ï¿½éµ¥ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½Ú´æ£©
     if (FMaxSizeBytes > 0) and (SizeBytes > FMaxSizeBytes div 10) then
       raise ECacheException.CreateFmt('Single item too large: %d bytes (max: %d)', 
         [SizeBytes, FMaxSizeBytes div 10]);
@@ -395,18 +395,20 @@ begin
     begin
       // Update size tracking
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - OldEntry.SizeBytes;
-      
+
       // Free old value if owned
       if FOwnValues then
         FreeValueIfOwned(OldEntry.Value);
+
+      // Key already in FIFO queue - do NOT re-enqueue to prevent duplicates
     end
     else
     begin
       // New item - check limits
       if (FMaxItems > 0) and (FEntries.Count >= FMaxItems) then
         Evict(1);
-      
-      // Add to insert order for FIFO
+
+      // Add to insert order for FIFO (only for new keys)
       FInsertOrder.Enqueue(Key);
     end;
     
@@ -415,7 +417,7 @@ begin
     begin
       // Try to free space by evicting more aggressively
       while (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) and (FEntries.Count > 0) do
-        Evict(Max(1, FEntries.Count div 10)); // Ã¿´ÎÇåÀí10%µÄÌõÄ¿
+        Evict(Max(1, FEntries.Count div 10)); // Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½10%ï¿½ï¿½ï¿½ï¿½Ä¿
       
       // If still over limit, reject
       if FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes then

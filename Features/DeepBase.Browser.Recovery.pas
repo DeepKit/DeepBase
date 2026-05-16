@@ -21,7 +21,8 @@ uses
   DeepBase.Browser.Types;
 
 type
-  TBrowserRecoveryManager = class(TInterfacedObject, IBrowserRecovery)
+  TBrowserRecoveryManager = class(TInterfacedObject,
+    IBrowserRecovery, IBrowserRecoveryEvents)
   private
     FConfig: TBrowserRecoveryConfig;
     FSnapshots: TDictionary<TBrowserSessionId, TBrowserSnapshot>;
@@ -78,8 +79,17 @@ type
     procedure StartHealthMonitor;
     procedure StopHealthMonitor;
 
+    // M4 fix: IBrowserRecoveryEvents getters/setters
+    function GetOnSessionRebuilt: TSessionRebuiltEvent;
+    procedure SetOnSessionRebuilt(const AValue: TSessionRebuiltEvent);
+    function GetSessionFactory: IBrowserSessionFactory;
+    procedure SetSessionFactory(const AValue: IBrowserSessionFactory);
+
+    function GetOnRecovery: TRecoveryEvent;
+    procedure SetOnRecovery(const AValue: TRecoveryEvent);
+
     property OnRecovery: TRecoveryEvent
-      read FOnRecovery write FOnRecovery;
+      read GetOnRecovery write SetOnRecovery;
     property OnSessionRebuilt: TSessionRebuiltEvent
       read FOnSessionRebuilt write FOnSessionRebuilt;
     property SessionFactory: IBrowserSessionFactory
@@ -327,6 +337,71 @@ begin
     Result := bhsHealthy;
 end;
 
+{ M4 fix: IBrowserRecoveryEvents implementation }
+
+function TBrowserRecoveryManager.GetOnRecovery: TRecoveryEvent;
+begin
+  FLock.Enter;
+  try
+    Result := FOnRecovery;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TBrowserRecoveryManager.SetOnRecovery(
+  const AValue: TRecoveryEvent);
+begin
+  FLock.Enter;
+  try
+    FOnRecovery := AValue;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TBrowserRecoveryManager.GetOnSessionRebuilt: TSessionRebuiltEvent;
+begin
+  FLock.Enter;
+  try
+    Result := FOnSessionRebuilt;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TBrowserRecoveryManager.SetOnSessionRebuilt(
+  const AValue: TSessionRebuiltEvent);
+begin
+  FLock.Enter;
+  try
+    FOnSessionRebuilt := AValue;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TBrowserRecoveryManager.GetSessionFactory: IBrowserSessionFactory;
+begin
+  FLock.Enter;
+  try
+    Result := FSessionFactory;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TBrowserRecoveryManager.SetSessionFactory(
+  const AValue: IBrowserSessionFactory);
+begin
+  FLock.Enter;
+  try
+    FSessionFactory := AValue;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TBrowserRecoveryManager.StartHealthMonitor;
 begin
   FLock.Enter;
@@ -400,6 +475,10 @@ begin
 
   for SessionId in Sessions do
   begin
+    // Skip sessions already in recovery to avoid double-triggering
+    if GetHealthStatus(SessionId) = bhsRecovering then
+      Continue;
+
     if IsUnresponsive(SessionId) then
     begin
       Logger.WarnFmt('Unresponsive detected: %s',
@@ -452,17 +531,25 @@ var
   LCallbackOk: Boolean;
   LFinalSuccess: Boolean;
   LNewSession: IBrowserSession;
+  LSessionFactory: IBrowserSessionFactory;
+  LOnSessionRebuilt: TSessionRebuiltEvent;
+  LOnRecovery: TRecoveryEvent;
 begin
   if AStrategy = brsNone then
     Exit;
 
   // C2 fix: increment retry counter and pre-set status under lock; everything
   // else (Sleep, factory, callback) runs lock-free.
+  // H2 fix: snapshot delegate fields under lock so concurrent Set* calls
+  // don't cause reads of half-written references.
   FLock.Enter;
   try
     LRetryCount := InternalGetRetryCount(ASessionId) + 1;
     FRetryCount.AddOrSetValue(ASessionId, LRetryCount);
     FHealthStatus.AddOrSetValue(ASessionId, bhsRecovering);
+    LSessionFactory := FSessionFactory;
+    LOnSessionRebuilt := FOnSessionRebuilt;
+    LOnRecovery := FOnRecovery;
   finally
     FLock.Leave;
   end;
@@ -481,14 +568,14 @@ begin
   LNewSession := nil;
 
   // BUG-BA-025 + H1 fix: brsRecreate path; track factory outcome explicitly.
-  if (AStrategy = brsRecreate) and (FSessionFactory <> nil) then
+  if (AStrategy = brsRecreate) and (LSessionFactory <> nil) then
   begin
     LFactoryAttempted := True;
     try
-      LNewSession := FSessionFactory.CreateSession(ASessionId);
+      LNewSession := LSessionFactory.CreateSession(ASessionId);
       LFactorySuccess := LNewSession <> nil;
-      if LFactorySuccess and Assigned(FOnSessionRebuilt) then
-        FOnSessionRebuilt(ASessionId, LNewSession);
+      if LFactorySuccess and Assigned(LOnSessionRebuilt) then
+        LOnSessionRebuilt(ASessionId, LNewSession);
     except
       on E: Exception do
       begin
@@ -501,12 +588,12 @@ begin
 
   // H1 fix: do NOT mask callback failures. Only assume "user handled it"
   // when the callback both ran AND completed without raising.
-  if Assigned(FOnRecovery) then
+  if Assigned(LOnRecovery) then
   begin
     LCallbackOk := False;
     try
       // Pass the actual factory outcome (or False if factory wasn't invoked)
-      FOnRecovery(ASessionId, AStrategy, LRetryCount,
+      LOnRecovery(ASessionId, AStrategy, LRetryCount,
         LFactoryAttempted and LFactorySuccess);
       LCallbackOk := True;
     except
@@ -516,13 +603,30 @@ begin
     end;
   end;
 
+  // H7 fix: previously, brsReload / brsRestart with no OnRecovery callback
+  // assigned would always count as failure. That's wrong - those strategies
+  // are "advisory" by design (the underlying engine might auto-recover).
+  //
   // Final success rule:
   //   - If factory was attempted: success iff factory created a session
-  //   - Else: success iff a callback ran without raising
+  //   - Else if callback was assigned: success iff it ran without raising
+  //   - Else (no factory, no callback): the strategy is best-effort; mark
+  //     success so retry counter resets and health returns to healthy.
+  //     A warning is logged so misconfigured deployments are noticed.
   if LFactoryAttempted then
     LFinalSuccess := LFactorySuccess
+  else if Assigned(LOnRecovery) then
+    LFinalSuccess := LCallbackOk
   else
-    LFinalSuccess := LCallbackOk and Assigned(FOnRecovery);
+  begin
+    LFinalSuccess := True;
+    Logger.WarnFmt(
+      'Recovery (%s) had no SessionFactory and no OnRecovery callback; ' +
+      'treating as best-effort success. Configure at least one for ' +
+      'reliable recovery.',
+      [BrowserRecoveryStrategyToString(AStrategy)],
+      'TBrowserRecoveryManager');
+  end;
 
   FLock.Enter;
   try

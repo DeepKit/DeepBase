@@ -21,7 +21,8 @@ implementation
 uses
   System.SysUtils,
   System.Generics.Collections,
-  DeepBase.Schema;
+  DeepBase.Schema,
+  DeepBase.SQL.Utils;
 
 type
   TColumnDef = record
@@ -188,6 +189,7 @@ var
   Query: TFDQuery;
 begin
   Result := False;
+  TSQLUtils.ValidateIdentifier(ATableName, 'Diagnose.ColumnExists.TableName');
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
@@ -425,6 +427,11 @@ begin
       if not ColumnExists(FK.TableName, FK.ColumnName) then
         Continue;
 
+      TSQLUtils.ValidateIdentifier(FK.TableName, 'Diagnose.CheckFK.TableName');
+      TSQLUtils.ValidateIdentifier(FK.ColumnName, 'Diagnose.CheckFK.ColumnName');
+      TSQLUtils.ValidateIdentifier(FK.RefTable, 'Diagnose.CheckFK.RefTable');
+      TSQLUtils.ValidateIdentifier(FK.RefColumn, 'Diagnose.CheckFK.RefColumn');
+
       Query.Close;
       Query.SQL.Text := Format(
         'SELECT COUNT(*) AS OrphanCount FROM %s t ' +
@@ -483,6 +490,9 @@ begin
       if not ColumnExists(RF.TableName, RF.ColumnName) then
         Continue;
 
+      TSQLUtils.ValidateIdentifier(RF.TableName, 'Diagnose.CheckRequired.TableName');
+      TSQLUtils.ValidateIdentifier(RF.ColumnName, 'Diagnose.CheckRequired.ColumnName');
+
       Query.Close;
       Query.SQL.Text := Format(
         'SELECT COUNT(*) AS NullCount FROM %s WHERE %s IS NULL OR %s = ''''',
@@ -538,6 +548,9 @@ begin
         Continue;
       if not ColumnExists(EF.TableName, EF.ColumnName) then
         Continue;
+
+      TSQLUtils.ValidateIdentifier(EF.TableName, 'Diagnose.CheckEnum.TableName');
+      TSQLUtils.ValidateIdentifier(EF.ColumnName, 'Diagnose.CheckEnum.ColumnName');
 
       ValidList := '''' + StringReplace(EF.ValidValues, ',', ''',''', [rfReplaceAll]) + '''';
 
@@ -633,6 +646,8 @@ function TFireDACDiagnoseStorage.AddColumnIfNotExists(const ATableName,
   AColumnName, AColumnDef: string): Boolean;
 begin
   Result := False;
+  TSQLUtils.ValidateIdentifier(ATableName, 'Diagnose.AddColumn.TableName');
+  TSQLUtils.ValidateIdentifier(AColumnName, 'Diagnose.AddColumn.ColumnName');
   if ColumnExists(ATableName, AColumnName) then
     Exit;
   try

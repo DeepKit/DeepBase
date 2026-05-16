@@ -131,7 +131,10 @@ begin
   try
     PayResult := FClient.CreateOrder(Order);
   finally
-    Order.Metadata.Free;
+    // FEAT-004: Use FreeAndNil with nil check to prevent freeing
+    // an uninitialized or already-freed pointer.
+    if Assigned(Order.Metadata) then
+      FreeAndNil(Order.Metadata);
   end;
 
   // Map SDK result to commerce payment intent

@@ -80,6 +80,7 @@ var
   GProxyChecked: Boolean = False;
   GProxyAvailable: Boolean = False;
   GProxyCheckTime: TDateTime = 0;
+  GLLMLock: TObject = nil;  // LLM-008: protects singleton creation and proxy state
 
 const
   CProxyCacheSec = 60;  // 探测结果缓存 60 秒
@@ -133,29 +134,35 @@ begin
   if IsForceDirectMode then
     Exit;
 
-  // 缓存检查
-  if GProxyChecked and (SecondsBetween(Now, GProxyCheckTime) < CProxyCacheSec) then
-  begin
+  // LLM-008: protect proxy state with lock to prevent concurrent probe/create
+  TMonitor.Enter(GLLMLock);
+  try
+    // 缓存检查
+    if GProxyChecked and (SecondsBetween(Now, GProxyCheckTime) < CProxyCacheSec) then
+    begin
+      if GProxyAvailable then
+        Result := GProxyClient;
+      Exit;
+    end;
+
+    // 探测 proxy
+    Config.Init;
+    Config.Host := GetProxyHost;
+    Config.Port := GetProxyPort;
+    Config.ClientToken := Trim(GetEnvironmentVariable('DEEP_LLM_CLIENT_TOKEN'));
+
+    GProxyAvailable := TProxyLLMClient.Probe(Config.Host, Config.Port, CProxyProbeTimeoutMs);
+    GProxyChecked := True;
+    GProxyCheckTime := Now;
+
     if GProxyAvailable then
+    begin
+      if GProxyClient = nil then
+        GProxyClient := TProxyLLMClient.Create(Config);
       Result := GProxyClient;
-    Exit;
-  end;
-
-  // 探测 proxy
-  Config.Init;
-  Config.Host := GetProxyHost;
-  Config.Port := GetProxyPort;
-  Config.ClientToken := Trim(GetEnvironmentVariable('DEEP_LLM_CLIENT_TOKEN'));
-
-  GProxyAvailable := TProxyLLMClient.Probe(Config.Host, Config.Port, CProxyProbeTimeoutMs);
-  GProxyChecked := True;
-  GProxyCheckTime := Now;
-
-  if GProxyAvailable then
-  begin
-    if GProxyClient = nil then
-      GProxyClient := TProxyLLMClient.Create(Config);
-    Result := GProxyClient;
+    end;
+  finally
+    TMonitor.Exit(GLLMLock);
   end;
 end;
 
@@ -166,16 +173,32 @@ begin
   if Result <> nil then
     Exit;
 
-  // 回退到直连模式
+  // LLM-008: double-checked locking for singleton creation
   if GLLMService = nil then
-    GLLMService := TLLMService.Create;
+  begin
+    TMonitor.Enter(GLLMLock);
+    try
+      if GLLMService = nil then
+        GLLMService := TLLMService.Create;
+    finally
+      TMonitor.Exit(GLLMLock);
+    end;
+  end;
   Result := GLLMService;
 end;
 
 function LLMAdmin: ILLMAdmin;
 begin
   if GLLMService = nil then
-    GLLMService := TLLMService.Create;
+  begin
+    TMonitor.Enter(GLLMLock);
+    try
+      if GLLMService = nil then
+        GLLMService := TLLMService.Create;
+    finally
+      TMonitor.Exit(GLLMLock);
+    end;
+  end;
   Result := GLLMService;
 end;
 
@@ -213,32 +236,83 @@ function TLLMService.FindProviderForModel(const AModelId: string;
 var
   P: TProviderConfig;
   Key: string;
+  LModel: string;
+  BestProvider: TProviderConfig;
+  BestKey: string;
+  BestPriority: Integer;
+  Found: Boolean;
+
+  function ModelMatchesProvider(const Model: string; const Provider: TProviderConfig): Boolean;
+  var
+    LName, LFormat: string;
+  begin
+    // LLM-004 fix: route models to appropriate providers based on naming conventions.
+    LName := LowerCase(Trim(Provider.Name));
+    LFormat := LowerCase(Trim(Provider.ApiFormat));
+
+    if (LName = 'anthropic') or (LFormat = 'anthropic') then
+      Result := Model.StartsWith('claude')
+    else if (LName = 'ollama') or (LFormat = 'ollama') then
+      Result := Model.StartsWith('llama') or Model.StartsWith('mistral') or
+                Model.StartsWith('codellama') or Model.StartsWith('phi') or
+                Model.StartsWith('gemma') or Model.StartsWith('qwen') or
+                (Pos('localhost', LowerCase(Provider.Endpoint)) > 0) or
+                (Pos('127.0.0.1', LowerCase(Provider.Endpoint)) > 0)
+    else
+      // OpenAI-compatible: gpt-*, o1-*, or any unrecognized model
+      Result := Model.StartsWith('gpt') or Model.StartsWith('o1') or
+                Model.StartsWith('o3') or Model.StartsWith('chatgpt') or
+                (not Model.StartsWith('claude'));
+  end;
+
 begin
   AEndpoint := '';
   AApiKey := '';
   AApiFormat := '';
+  LModel := LowerCase(Trim(AModelId));
+  Found := False;
+  BestPriority := -1;
 
+  // First pass: find a provider that matches the model AND has credentials.
   for P in FConfig.GetAllProviders do
   begin
     Key := FConfig.GetApiKey(P.Name);
-    if (Trim(P.Endpoint) <> '') and (Key <> '') then
+    if Trim(P.Endpoint) = '' then
+      Continue;
+    if (Key = '') and not ProviderCanRunWithoutKey(P) then
+      Continue;
+    if (LModel <> '') and not ModelMatchesProvider(LModel, P) then
+      Continue;
+
+    if P.Priority > BestPriority then
+    begin
+      BestProvider := P;
+      BestKey := Key;
+      BestPriority := P.Priority;
+      Found := True;
+    end;
+  end;
+
+  if Found then
+  begin
+    AEndpoint := BestProvider.Endpoint;
+    AApiKey := BestKey;
+    AApiFormat := BestProvider.ApiFormat;
+    Exit(True);
+  end;
+
+  // Fallback: if no model-specific match, return any provider with credentials
+  // (preserves backward compatibility for callers passing empty model ID).
+  for P in FConfig.GetAllProviders do
+  begin
+    Key := FConfig.GetApiKey(P.Name);
+    if (Trim(P.Endpoint) <> '') and ((Key <> '') or ProviderCanRunWithoutKey(P)) then
     begin
       AEndpoint := P.Endpoint;
       AApiKey := Key;
       AApiFormat := P.ApiFormat;
       Exit(True);
     end;
-  end;
-
-  // Local providers such as Ollama may not require an API key.
-  for P in FConfig.GetAllProviders do
-  begin
-    if (Trim(P.Endpoint) = '') or not ProviderCanRunWithoutKey(P) then
-      Continue;
-    AEndpoint := P.Endpoint;
-    AApiKey := FConfig.GetApiKey(P.Name);
-    AApiFormat := P.ApiFormat;
-    Exit(True);
   end;
 
   Result := False;
@@ -704,6 +778,7 @@ begin
 end;
 
 initialization
+  GLLMLock := TObject.Create;
 
 finalization
   if GLLMService <> nil then
@@ -712,5 +787,6 @@ finalization
     GLLMService := nil;
   end;
   GProxyClient := nil;
+  FreeAndNil(GLLMLock);
 
 end.

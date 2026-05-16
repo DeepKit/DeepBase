@@ -19,6 +19,8 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
   System.Diagnostics,
   DeepBase.IntentClarification.Types,
   DeepBase.Logging,
@@ -94,12 +96,19 @@ end;
 procedure TICMetrics.RecordTurn(ALatencyMs: Int64; ALevel: TClarificationLevel;
   APosture: TPosture; ATokensUsed: Integer);
 begin
-  Inc(FTurnCount);
-  Inc(FTotalLatencyMs, ALatencyMs);
-  Inc(FTotalTokensUsed, ATokensUsed);
+  // IC-018: Use TInterlocked for thread-safe counter increments.
+  TInterlocked.Increment(FTurnCount);
+  TInterlocked.Add(FTotalLatencyMs, ALatencyMs);
+  TInterlocked.Add(FTotalTokensUsed, ATokensUsed);
 
-  if ALatencyMs > FMaxLatencyMs then
-    FMaxLatencyMs := ALatencyMs;
+  // FMaxLatencyMs requires CAS for safe max-update across threads
+  var LCurrentMax := TInterlocked.Read(FMaxLatencyMs);
+  while ALatencyMs > LCurrentMax do
+  begin
+    if TInterlocked.CompareExchange(FMaxLatencyMs, ALatencyMs, LCurrentMax) = LCurrentMax then
+      Break;
+    LCurrentMax := TInterlocked.Read(FMaxLatencyMs);
+  end;
 
   // In full integration, would call:
   //   Metrics.Counter('ic_turn_count').Inc;
@@ -114,7 +123,7 @@ end;
 
 procedure TICMetrics.RecordSessionCompleted(const AReason: string);
 begin
-  Inc(FSessionsCompleted);
+  TInterlocked.Increment(FSessionsCompleted);
 
   // In full integration:
   //   Metrics.Counter('ic_session_completed', ['reason', AReason]).Inc;
@@ -125,7 +134,7 @@ end;
 
 procedure TICMetrics.RecordTokens(ATokens: Integer);
 begin
-  Inc(FTotalTokensUsed, ATokens);
+  TInterlocked.Add(FTotalTokensUsed, ATokens);
 end;
 
 function TICMetrics.AverageLatencyMs: Double;

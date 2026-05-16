@@ -39,8 +39,6 @@ type
     procedure SetConfigBool(const Key: string; Value: Boolean; const Category: string = 'General');
     function GetConfigFloat(const Key: string; Default: Double = 0): Double;
     procedure SetConfigFloat(const Key: string; Value: Double; const Category: string = 'General');
-    function GetConfigEncrypted(const Key: string; const Default: string = ''): string;
-    procedure SetConfigEncrypted(const Key, Value: string; const Category: string = 'General');
     procedure DeleteConfig(const Key: string);
     function ConfigExists(const Key: string): Boolean;
     procedure ClearCache;
@@ -200,16 +198,6 @@ end;
 procedure TMockConfig.SetConfigFloat(const Key: string; Value: Double; const Category: string);
 begin
   SetConfig(Key, FloatToStr(Value), Category);
-end;
-
-function TMockConfig.GetConfigEncrypted(const Key, Default: string): string;
-begin
-  Result := GetConfig(Key, Default);
-end;
-
-procedure TMockConfig.SetConfigEncrypted(const Key, Value, Category: string);
-begin
-  SetConfig(Key, Value, Category);
 end;
 
 procedure TMockConfig.DeleteConfig(const Key: string);

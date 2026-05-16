@@ -71,7 +71,7 @@ type
       const ValueType: string; const Description: string);
     class function CreateStorageFromConnection(AConnection: TObject): IConfigStorage; static;
     
-    // R-002: ¹«¹²ÉèÖÃÂß¼­£¨Ïû³ý SetConfig* ÖØ¸´´úÂë£©
+    // R-002: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SetConfig* ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ë£©
     procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string);
     
   public
@@ -128,28 +128,6 @@ type
     
     /// <summary>Check if config exists</summary>
     function ConfigExists(const Key: string): Boolean;
-    
-    // ========================================
-    // Encrypted Config (DEPRECATED)
-    // WARNING: Uses XOR obfuscation, NOT secure encryption!
-    // For secure storage of passwords/API keys, use DeepBase.Security module instead:
-    //   DeepBase.Security.SaveSecret('key', 'value');
-    //   Value := DeepBase.Security.LoadSecret('key');
-    // ========================================
-    
-    /// <summary>
-    /// Get encrypted config value (auto-decrypts).
-    /// DEPRECATED: Use DeepBase.Security.LoadSecret() instead for secure storage.
-    /// </summary>
-    function GetConfigEncrypted(const Key: string; const Default: string = ''): string;
-      deprecated 'Use DeepBase.Security.LoadSecret() for secure DPAPI encryption';
-    
-    /// <summary>
-    /// Set config with XOR obfuscation.
-    /// DEPRECATED: Use DeepBase.Security.SaveSecret() instead for secure storage.
-    /// </summary>
-    procedure SetConfigEncrypted(const Key, Value: string; const Category: string = SConfigCategoryGeneral);
-      deprecated 'Use DeepBase.Security.SaveSecret() for secure DPAPI encryption';
     
     // ========================================
     // Properties
@@ -259,38 +237,32 @@ begin
 end;
 
 
-function TDeepBaseConfig.GetConfigEncrypted(const Key: string; const Default: string): string;
-begin
-  // ÍêÈ«ÒÆ³ýXORÊµÏÖ£¬Ç¿ÖÆÊ¹ÓÃDPAPI°²È«´æ´¢
-  raise ENotSupportedException.Create(
-    'GetConfigEncrypted is deprecated and removed for security reasons. ' +
-    'Use DeepBase.Security.LoadSecret() for secure DPAPI encryption instead.'
-  );
-end;
-
-procedure TDeepBaseConfig.SetConfigEncrypted(const Key, Value: string; const Category: string);
-begin
-  // ÍêÈ«ÒÆ³ýXORÊµÏÖ£¬Ç¿ÖÆÊ¹ÓÃDPAPI°²È«´æ´¢
-  raise ENotSupportedException.Create(
-    'SetConfigEncrypted is deprecated and removed for security reasons. ' +
-    'Use DeepBase.Security.SaveSecret() for secure DPAPI encryption instead.'
-  );
-end;
-
 function TDeepBaseConfig.GetConfig(const Key: string; const Default: string): string;
+const
+  CSentinel = #1'__DEEPBASE_CONFIG_NOT_FOUND__'#1;
+var
+  LFromStorage: string;
 begin
   TMonitor.Enter(FLock);
   try
     // Check cache first
     if FCacheEnabled and FCache.TryGetValue(Key, Result) then
       Exit;
-      
-    // Query database
-    Result := ReadFromDB(Key, Default);
-    
-    // Write to cache
-    if FCacheEnabled and (Result <> Default) then
-      FCache.AddOrSetValue(Key, Result);
+
+    // Query database with sentinel to detect missing keys
+    LFromStorage := ReadFromDB(Key, CSentinel);
+    if LFromStorage = CSentinel then
+    begin
+      // Key not in storage â€” return default but do NOT cache it
+      Result := Default;
+    end
+    else
+    begin
+      // Key found in storage â€” cache the actual value
+      Result := LFromStorage;
+      if FCacheEnabled then
+        FCache.AddOrSetValue(Key, Result);
+    end;
   finally
     TMonitor.Exit(FLock);
   end;
@@ -299,24 +271,38 @@ end;
 procedure TDeepBaseConfig.SetConfigInternal(const Key, NewValue, Category, ValueType: string);
 var
   OldValue: string;
+  Changed: Boolean;
+  CallbackRef: TConfigChangedEvent;
 begin
-  // ×¢Òâ£ºµ÷ÓÃÕßÐèÈ·±£ÒÑ»ñÈ¡Ëø
-  // »ñÈ¡¾ÉÖµ
+  // BASIC-027 fix: copy callback ref + change indicator inside the lock,
+  // release the lock, then fire the callback outside. Previously the
+  // callback ran while still holding FLock, so a slow or re-entrant
+  // OnConfigChanged handler blocked all other config readers/writers.
   if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
-    // From cache
+    // OldValue from cache
   else
     OldValue := ReadFromDB(Key, '');
-  
-  // Ð´ÈëÊý¾Ý¿â
+
   WriteToDB(Key, NewValue, Category, ValueType, '');
-  
-  // ¸üÐÂ»º´æ
+
   if FCacheEnabled then
     FCache.AddOrSetValue(Key, NewValue);
-    
-  // ´¥·¢ÊÂ¼þ
-  if (OldValue <> NewValue) and Assigned(FOnConfigChanged) then
-    FOnConfigChanged(Self, Key, OldValue, NewValue);
+
+  Changed := (OldValue <> NewValue);
+  CallbackRef := FOnConfigChanged;
+
+  // Release the caller's lock before firing the callback. Caller wraps
+  // this method with TMonitor.Enter/Exit; we exit briefly here and
+  // re-enter so the public API still leaves the lock held on return.
+  if Changed and Assigned(CallbackRef) then
+  begin
+    TMonitor.Exit(FLock);
+    try
+      CallbackRef(Self, Key, OldValue, NewValue);
+    finally
+      TMonitor.Enter(FLock);
+    end;
+  end;
 end;
 
 procedure TDeepBaseConfig.SetConfig(const Key, Value: string; const Category: string);

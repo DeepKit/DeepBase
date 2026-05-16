@@ -183,6 +183,15 @@ procedure UniDbGetPreparedStats(out PoolSize, ReuseCount: Int64);
 procedure UniDbSetPreparedPoolMaxSize(MaxSize: Integer);
 
 /// <summary>
+/// BASIC-014/FR-008: Sweep all prepared-statement pool entries that reference
+/// the given connection. Call this BEFORE destroying a TFDConnection to
+/// prevent stale entries (whose pointer key would become invalid as soon as
+/// the address is reused). Connection pools should call this on connection
+/// release/recycle/destroy.
+/// </summary>
+procedure UniDbSweepConnectionFromPool(Conn: TFDConnection);
+
+/// <summary>
 /// 释放全局缓存与预编译语句池（用于测试或程序退出）
 /// </summary>
 procedure UniDbShutdown;
@@ -861,16 +870,13 @@ var
 
 begin
   Upper := UpperCase(Trim(ProcName));
-  // Direct SQL: DML + DDL + PRAGMA. Anything that looks like a SQL statement
-  // rather than a stored-query ProcName is passed through directly.
+  // Direct SQL: DML + PRAGMA only. DDL (CREATE/ALTER/DROP) must go through
+  // the Queries table so it is explicitly whitelisted by the DBA.
   Result := StartsWithKeyword('SELECT') or
             StartsWithKeyword('INSERT') or
             StartsWithKeyword('UPDATE') or
             StartsWithKeyword('DELETE') or
             StartsWithKeyword('WITH') or
-            StartsWithKeyword('CREATE') or
-            StartsWithKeyword('ALTER') or
-            StartsWithKeyword('DROP') or
             StartsWithKeyword('PRAGMA');
 end;
 
@@ -1357,9 +1363,11 @@ function UniDbInsertReturningId(const ProcName: string; const ParamsJson: string
   const Ctx: TUniQueryContext): Integer;
 var
   Q: TFDQuery;
+  IdQuery: TFDQuery;
   StartTime: TDateTime;
   DurationMs: Int64;
   SQL: string;
+  Pooled: Boolean;
 
   function TrimStatementTerminator(const RawSQL: string): string;
   begin
@@ -1396,16 +1404,38 @@ begin
 
   SQL := LoadQuerySQL(ProcName, Ctx);
 
-  Q := TFDQuery.Create(nil);
+  // PERSIST-020: rewrite SQL up-front so the pool key matches the actual
+  // statement we are going to execute. Without this, the pool would key on
+  // the un-rewritten SQL and we would re-prepare on every call.
+  case Ctx.DBType of
+    udbPostgreSQL: SQL := EnsureReturningId(SQL);
+    udbSQLite:     SQL := StripReturningClause(SQL);
+  end;
+
+  // PERSIST-020: use the same prepared-statement pool that
+  // UniDbSelect/UniDbExec/UniDbScalar already use. This keeps INSERT plans
+  // hot across repeated calls (especially relevant for tight commerce /
+  // logging insert loops).
+  Pooled := GPreparedPoolEnabled;
+
+  if Pooled then
+    Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
+  else
+  begin
+    Q := TFDQuery.Create(nil);
+    Q.Connection := Ctx.Connection;
+    Q.SQL.Text := SQL;
+  end;
+
   try
     try
-      Q.Connection := Ctx.Connection;
+      if Q.Prepared then
+        Q.Unprepare;
+      Q.Params.ClearValues;
 
       case Ctx.DBType of
         udbPostgreSQL:
         begin
-          SQL := EnsureReturningId(SQL);
-          Q.SQL.Text := SQL;
           BindJsonParams(Q, ParamsJson);
           Q.Open;
           if not Q.Eof then
@@ -1414,16 +1444,22 @@ begin
 
         udbSQLite:
         begin
-          SQL := StripReturningClause(SQL);
-          Q.SQL.Text := SQL;
           BindJsonParams(Q, ParamsJson);
           Q.ExecSQL;
 
-          Q.Close;
-          Q.SQL.Text := 'SELECT last_insert_rowid()';
-          Q.Open;
-          if not Q.Eof then
-            Result := Q.Fields[0].AsInteger;
+          // SQLite returns the inserted rowid on a separate query. Use a
+          // disposable, non-pooled TFDQuery so we never rewrite the SQL on
+          // the pooled INSERT statement (which would defeat the pool).
+          IdQuery := TFDQuery.Create(nil);
+          try
+            IdQuery.Connection := Ctx.Connection;
+            IdQuery.SQL.Text := 'SELECT last_insert_rowid()';
+            IdQuery.Open;
+            if not IdQuery.Eof then
+              Result := IdQuery.Fields[0].AsInteger;
+          finally
+            IdQuery.Free;
+          end;
         end;
       end;
 
@@ -1447,7 +1483,7 @@ begin
       end;
     end;
   finally
-    Q.Free;
+    ReleaseQuery(Q, Pooled);
   end;
 end;
 
@@ -1574,6 +1610,44 @@ begin
   begin
     PoolSize := 0;
     ReuseCount := 0;
+  end;
+end;
+
+procedure UniDbSweepConnectionFromPool(Conn: TFDConnection);
+var
+  Pair: TPair<string, TPreparedEntry>;
+  KeysToRemove: TList<string>;
+  Key: string;
+  Entry: TPreparedEntry;
+begin
+  if (Conn = nil) or not Assigned(GPreparedPoolLock) then
+    Exit;
+
+  TMonitor.Enter(GPreparedPoolLock);
+  try
+    if (GPreparedPool = nil) or (GPreparedPool.Count = 0) then
+      Exit;
+
+    KeysToRemove := TList<string>.Create;
+    try
+      for Pair in GPreparedPool do
+        if Assigned(Pair.Value) and (Pair.Value.Connection = Conn) then
+          KeysToRemove.Add(Pair.Key);
+
+      for Key in KeysToRemove do
+      begin
+        if GPreparedPool.TryGetValue(Key, Entry) and Assigned(Entry) then
+        begin
+          if Assigned(GPreparedQueryIndex) and Assigned(Entry.Query) then
+            GPreparedQueryIndex.Remove(Entry.Query);
+        end;
+        GPreparedPool.Remove(Key);
+      end;
+    finally
+      KeysToRemove.Free;
+    end;
+  finally
+    TMonitor.Exit(GPreparedPoolLock);
   end;
 end;
 

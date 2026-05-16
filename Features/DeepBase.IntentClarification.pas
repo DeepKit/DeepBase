@@ -151,11 +151,8 @@ uses
   System.JSON,
   System.Math,
   System.StrUtils,
-  System.Generics.Collections;
-
-type
-  TClarificationEngineFacade = class(TInterfacedObject, IClarificationEngine)
-  end;
+  System.Generics.Collections,
+  DeepBase.IntentClarification.Engine;
 
 function NormalizeJsonObjectText(const AText: string): string;
 var
@@ -811,18 +808,24 @@ begin
 end;
 
 class function TIntentClarifier.CreateEngine: IClarificationEngine;
+var
+  LEngine: TInterfacedObject;
 begin
-  Result := TClarificationEngineFacade.Create;
+  LEngine := TClarificationEngine.Create;
+  if not Supports(LEngine, IClarificationEngine, Result) then
+    raise EIntentClarification.Create('Failed to create clarification engine');
 end;
 
 class function TIntentClarifier.CreateEngineWithPreset(
   const APresetName: string): IClarificationEngine;
+var
+  LEngine: TInterfacedObject;
 begin
-  // Creates engine with default configuration.
-  // Preset application is handled via Registration unit at a higher level.
-  // The engine itself is created with defaults; callers use
-  // TClarificationRegistration.ApplyPreset to configure it further.
-  Result := TClarificationEngineFacade.Create;
+  // Creates a real engine instance. Preset application is handled via
+  // TClarificationRegistration.ApplyPreset after creation.
+  LEngine := TClarificationEngine.Create;
+  if not Supports(LEngine, IClarificationEngine, Result) then
+    raise EIntentClarification.Create('Failed to create clarification engine');
 end;
 
 end.

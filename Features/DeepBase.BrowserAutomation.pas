@@ -17,7 +17,8 @@ type
   TBrowserAutomationStrategy = (
     dbasAuto,
     dbasDom,
-    dbasCdp
+    dbasCdp,
+    dbasPageDriver
   );
 
   TBrowserAutomationActionType = (
@@ -30,7 +31,8 @@ type
     baatEvaluateScript,
     baatCallDevToolsProtocol,
     baatDelay,
-    baatCaptureScreenshot
+    baatCaptureScreenshot,
+    baatDriveInstruction
   );
 
   TBrowserAutomationSelectors = record
@@ -99,6 +101,8 @@ type
       TBrowserAutomationAction; static;
     class function CaptureScreenshot(const AName: string = ''):
       TBrowserAutomationAction; static;
+    class function DriveInstruction(const AInstruction: string;
+      const AName: string = ''): TBrowserAutomationAction; static;
   end;
 
   TBrowserAutomationResult = record
@@ -125,6 +129,9 @@ type
 
   IBrowserAutomationSession = DeepBase.Browser.Types.IBrowserAutomationSession;
 
+  TDriveCallback = reference to function(const AInstruction: string;
+    out AValue: string; out AError: string): Boolean;
+
   TBrowserAutomationScripts = class
   public
     class function JavaScriptString(const AValue: string): string; static;
@@ -139,6 +146,7 @@ type
   private
     FSession: IBrowserAutomationSession;
     FPolicy: TBrowserAutomationPolicy;
+    FDriveCallback: TDriveCallback;
 
     function EffectiveTimeout(const AAction: TBrowserAutomationAction): Integer;
     function RunAction(const AAction: TBrowserAutomationAction;
@@ -155,6 +163,8 @@ type
 
     property Session: IBrowserAutomationSession read FSession write FSession;
     property Policy: TBrowserAutomationPolicy read FPolicy write FPolicy;
+    property DriveCallback: TDriveCallback
+      read FDriveCallback write FDriveCallback;
   end;
 
 function BrowserAutomationActionTypeToString(
@@ -169,7 +179,8 @@ implementation
 uses
   System.JSON,
   System.Math,
-  System.Diagnostics;
+  System.Diagnostics,
+  DeepBase.Browser.ScriptStore;
 
 // BUG-BA-006 fix: unified bool literal recognition.
 // Both JsonValueAsBool and TryJsonBool accept the same set of literals:
@@ -395,6 +406,7 @@ begin
     baatCallDevToolsProtocol: Result := 'call_devtools_protocol';
     baatDelay: Result := 'delay';
     baatCaptureScreenshot: Result := 'capture_screenshot';
+    baatDriveInstruction: Result := 'drive_instruction';
   else
     Result := 'unknown';
   end;
@@ -574,6 +586,14 @@ begin
   Result.Name := AName;
 end;
 
+class function TBrowserAutomationAction.DriveInstruction(
+  const AInstruction, AName: string): TBrowserAutomationAction;
+begin
+  Result.Init(baatDriveInstruction);
+  Result.Text := AInstruction;
+  Result.Name := AName;
+end;
+
 { TBrowserAutomationResult }
 
 class function TBrowserAutomationResult.Ok(AIndex: Integer;
@@ -623,6 +643,11 @@ end;
 class function TBrowserAutomationScripts.BuildExistsScript(
   const ASelector: string): string;
 begin
+  // M6 fix: prefer ScriptStore template (database-backed, hot-replaceable);
+  // fall back to inline JS only if the named template was deactivated.
+  Result := ScriptStore.Render(JSCRIPT_EXISTS, ['selector', ASelector]);
+  if Result <> '' then
+    Exit;
   Result :=
     '(function(){' +
     'try{' +
@@ -635,6 +660,10 @@ end;
 class function TBrowserAutomationScripts.BuildClickScript(
   const ASelector: string): string;
 begin
+  // M6 fix: ScriptStore-first.
+  Result := ScriptStore.Render(JSCRIPT_CLICK, ['selector', ASelector]);
+  if Result <> '' then
+    Exit;
   Result :=
     '(function(){' +
     'try{' +
@@ -650,6 +679,11 @@ end;
 class function TBrowserAutomationScripts.BuildInputTextScript(
   const ASelector, AText: string): string;
 begin
+  // M6 fix: ScriptStore-first.
+  Result := ScriptStore.Render(JSCRIPT_INPUT_TEXT,
+    ['selector', ASelector, 'text', AText]);
+  if Result <> '' then
+    Exit;
   Result :=
     '(function(){' +
     'try{' +
@@ -669,10 +703,14 @@ end;
 class function TBrowserAutomationScripts.BuildGetTextScript(
   const ASelector: string): string;
 begin
+  // M6 fix: ScriptStore-first.
   // BUG-BA-003 fix: distinguish 3 cases via {found, text, error}
   //   Element not found     -> {"found":false}
   //   Empty text (real)     -> {"found":true,"text":""}
   //   Exception             -> {"found":false,"error":"<msg>"}
+  Result := ScriptStore.Render(JSCRIPT_GET_TEXT, ['selector', ASelector]);
+  if Result <> '' then
+    Exit;
   Result :=
     '(function(){' +
     'try{' +
@@ -938,6 +976,19 @@ begin
         else
           Result := TBrowserAutomationResult.Fail(AIndex, AAction,
             'screenshot_failed', LError, '', LTimer.ElapsedMilliseconds);
+      end;
+
+    baatDriveInstruction:
+      begin
+        if not Assigned(FDriveCallback) then
+          Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+            'no_driver', 'DriveCallback not assigned')
+        else if FDriveCallback(AAction.Text, LRaw, LError) then
+          Result := TBrowserAutomationResult.Ok(AIndex, AAction,
+            LRaw, LRaw, LTimer.ElapsedMilliseconds)
+        else
+          Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+            'drive_failed', LError, LRaw, LTimer.ElapsedMilliseconds);
       end;
   else
     Result := TBrowserAutomationResult.Fail(AIndex, AAction,

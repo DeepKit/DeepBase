@@ -1,4 +1,4 @@
-unit Test.DeepBase.License;
+﻿unit Test.DeepBase.License;
 
 {*******************************************************************************
   DeepBase License 模块单元测试
@@ -6,14 +6,15 @@ unit Test.DeepBase.License;
   测试内容:
   - License Key 验证
   - 设备指纹
-  - 许可证类�?
-  - 激�?停用
+  - 许可证类�?
+  - 激�?停用
 *******************************************************************************}
 
 interface
 
 uses
   DUnitX.TestFramework,
+  Winapi.Windows,
   System.SysUtils, System.Classes, System.DateUtils,
   DeepBase.Types, DeepBase.Manager, DeepBase.License, DeepBase.Storage.Interfaces;
 
@@ -22,6 +23,7 @@ type
   TTestDeepBaseLicense = class
   private
     FLicense: TDeepBaseLicense;
+    FPreviousSigningKey: string;
   public
     [Setup]
     procedure Setup;
@@ -79,6 +81,10 @@ type
 
 implementation
 
+const
+  TEST_LICENSE_SECRET_ENV = 'DEEPBASE_LEGACY_LICENSE_SIGNING_KEY';
+  TEST_LICENSE_SECRET = 'DeepBase-License-CI-Only';
+
 type
   TInMemoryLicenseStorage = class(TInterfacedObject, ILicenseStorage)
   private
@@ -116,6 +122,10 @@ procedure TTestDeepBaseLicense.Setup;
 var
   Manager: TDeepBaseManager;
 begin
+  FPreviousSigningKey := GetEnvironmentVariable(TEST_LICENSE_SECRET_ENV);
+  Winapi.Windows.SetEnvironmentVariable(PChar(TEST_LICENSE_SECRET_ENV),
+    PChar(TEST_LICENSE_SECRET));
+
   Manager := DeepBase.Manager.DeepBase;
   if not Manager.IsInitialized then
     Manager.InitializeWithDB(':memory:');
@@ -125,6 +135,11 @@ end;
 procedure TTestDeepBaseLicense.TearDown;
 begin
   FreeAndNil(FLicense);
+  if FPreviousSigningKey = '' then
+    Winapi.Windows.SetEnvironmentVariable(PChar(TEST_LICENSE_SECRET_ENV), nil)
+  else
+    Winapi.Windows.SetEnvironmentVariable(PChar(TEST_LICENSE_SECRET_ENV),
+      PChar(FPreviousSigningKey));
 end;
 
 procedure TTestDeepBaseLicense.Test_GetDeviceId_NotEmpty;
@@ -143,7 +158,7 @@ begin
   Id1 := FLicense.GetDeviceId;
   Id2 := FLicense.GetDeviceId;
   
-  Assert.AreEqual(Id1, Id2, '多次调用应该返回相同的设�?ID');
+  Assert.AreEqual(Id1, Id2, '多次调用应该返回相同的设�?ID');
 end;
 
 procedure TTestDeepBaseLicense.Test_ValidateLicense_EmptyKey_Invalid;
@@ -152,7 +167,7 @@ var
 begin
   Info := FLicense.ValidateLicense('');
   
-  Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '�?Key 应该无效');
+  Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '�?Key 应该无效');
 end;
 
 procedure TTestDeepBaseLicense.Test_ValidateLicense_InvalidFormat;
@@ -195,7 +210,7 @@ begin
   
   Info := FLicense.ValidateLicense(Key);
   
-  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '生成�?Key 应该可以验证通过');
+  Assert.AreEqual(Ord(lsValid), Ord(Info.Status), '生成�?Key 应该可以验证通过');
   Assert.AreEqual(Ord(ltStandard), Ord(Info.LicenseType), 'license type should be correct');
   Assert.AreEqual('Test User', Info.IssuedTo, 'IssuedTo 应该正确');
 end;
@@ -206,7 +221,7 @@ var
 begin
   Info := Default(TLicenseInfo);
   
-  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '默认类型应该�?None');
+  Assert.AreEqual(Ord(ltNone), Ord(Info.LicenseType), '默认类型应该�?None');
   Assert.AreEqual(Ord(lsInvalid), Ord(Info.Status), '默认状态应该是 Invalid');
 end;
 
@@ -335,7 +350,7 @@ begin
   
   // 停用后应该没有有效许可证
   Assert.AreEqual(Ord(ltNone), Ord(FLicense.CurrentLicenseInfo.LicenseType), 
-    '停用后许可证类型应该�?None');
+    '停用后许可证类型应该�?None');
 end;
 
 procedure TTestDeepBaseLicense.Test_CurrentLicenseInfo;

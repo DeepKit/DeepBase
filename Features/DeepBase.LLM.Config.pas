@@ -49,7 +49,8 @@ type
 implementation
 
 uses
-  DeepBase.Config, DeepBase.Crypto;
+  DeepBase.Config, DeepBase.Crypto
+  {$IFDEF MSWINDOWS}, DeepBase.Security.DPAPI{$ENDIF};
 
 { TLLMConfigStore }
 
@@ -71,9 +72,19 @@ end;
 
 function TLLMConfigStore.DecryptKey(const AEncrypted: string): string;
 begin
+  // FR-002 fix: previously decrypted with a hardcoded password
+  // ('@DeepBase.LLM.Key'), which gave anyone with the binary the ability
+  // to recover stored API keys. Now use Windows DPAPI (per-user scope) on
+  // Windows; on non-Windows return empty so callers explicitly fall back
+  // to a runtime-provided key. Fail-closed: a corrupted ciphertext or
+  // missing DPAPI returns '' rather than logging spurious "decrypt ok".
   if AEncrypted = '' then Exit('');
   try
-    Result := TSimpleCrypto.Decrypt(AEncrypted, '@DeepBase.LLM.Key');
+    {$IFDEF MSWINDOWS}
+    Result := TDPAPIHelper.UnprotectString(AEncrypted);
+    {$ELSE}
+    Result := '';
+    {$ENDIF}
   except
     Result := '';
   end;
@@ -82,7 +93,12 @@ end;
 function TLLMConfigStore.EncryptKey(const APlain: string): string;
 begin
   if APlain = '' then Exit('');
-  Result := TSimpleCrypto.Encrypt(APlain, '@DeepBase.LLM.Key');
+  {$IFDEF MSWINDOWS}
+  Result := TDPAPIHelper.ProtectString(APlain);
+  {$ELSE}
+  // Non-Windows: callers must supply their own secret store; fail-closed.
+  Result := '';
+  {$ENDIF}
 end;
 
 class function TLLMConfigStore.BuiltInTiers: TArray<TModelTier>;

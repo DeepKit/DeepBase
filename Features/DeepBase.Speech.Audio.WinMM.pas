@@ -14,7 +14,7 @@ type
   TDeepBaseWinMMAudioCapture = class(TInterfacedObject, ISpeechAudioCapture)
   private
     FWaveIn: HWAVEIN;
-    FIsRecording: Boolean;
+    FIsRecording: Int64; // 0=False, 1=True; accessed via TInterlocked
     FLastError: string;
     FSampleRate: Integer;
     FBufferSize: Integer;
@@ -27,6 +27,8 @@ type
     procedure PrepareBuffers;
     procedure FreeBuffers;
     procedure AddBufferToStream(AHeader: PWaveHdr);
+    function GetIsRecording: Boolean; inline;
+    procedure SetIsRecording(AValue: Boolean); inline;
   public
     /// <summary>
     /// Create audio capture.
@@ -66,10 +68,10 @@ begin
 
   Capture := TDeepBaseWinMMAudioCapture(AInstance);
   Header := PWaveHdr(AParam1);
-  if Assigned(Capture) and Assigned(Header) and Capture.IsRecording then
+  if Assigned(Capture) and Assigned(Header) and Capture.GetIsRecording then
   begin
     Capture.AddBufferToStream(Header);
-    if Capture.IsRecording then
+    if Capture.GetIsRecording then
       waveInAddBuffer(AWaveIn, Header, SizeOf(TWaveHdr));
   end;
 end;
@@ -79,7 +81,7 @@ constructor TDeepBaseWinMMAudioCapture.Create(ASampleRate, ABufferCount,
 begin
   inherited Create;
   FWaveIn := 0;
-  FIsRecording := False;
+  FIsRecording := 0;
   FLastError := '';
   FSampleRate := ASampleRate;
   FBufferCount := ABufferCount;
@@ -98,7 +100,7 @@ end;
 
 destructor TDeepBaseWinMMAudioCapture.Destroy;
 begin
-  if FIsRecording then
+  if GetIsRecording then
     StopRecording;
   FLock.Free;
   FStream.Free;
@@ -161,6 +163,16 @@ begin
   end;
 end;
 
+function TDeepBaseWinMMAudioCapture.GetIsRecording: Boolean;
+begin
+  Result := TInterlocked.Read(FIsRecording) <> 0;
+end;
+
+procedure TDeepBaseWinMMAudioCapture.SetIsRecording(AValue: Boolean);
+begin
+  TInterlocked.Exchange(FIsRecording, Ord(AValue));
+end;
+
 function TDeepBaseWinMMAudioCapture.StartRecording: Boolean;
 var
   Format: TWaveFormatEx;
@@ -207,11 +219,11 @@ begin
     end;
   end;
 
-  FIsRecording := True;
+  SetIsRecording(True);
   Res := waveInStart(FWaveIn);
   if Res <> MMSYSERR_NOERROR then
   begin
-    FIsRecording := False;
+    SetIsRecording(False);
     waveInGetErrorText(Res, @ErrorText[0], Length(ErrorText));
     FLastError := Trim(string(ErrorText));
     FreeBuffers;
@@ -225,15 +237,23 @@ end;
 
 procedure TDeepBaseWinMMAudioCapture.StopRecording;
 begin
-  if not FIsRecording then
+  if not GetIsRecording then
     Exit;
 
-  FIsRecording := False;
-  waveInStop(FWaveIn);
-  waveInReset(FWaveIn);
-  FreeBuffers;
-  waveInClose(FWaveIn);
-  FWaveIn := 0;
+  // Signal callback to stop processing
+  SetIsRecording(False);
+
+  // Acquire lock to ensure WaveInProc callback is not mid-execution
+  FLock.Enter;
+  try
+    waveInStop(FWaveIn);
+    waveInReset(FWaveIn);
+    FreeBuffers;
+    waveInClose(FWaveIn);
+    FWaveIn := 0;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TDeepBaseWinMMAudioCapture.GetAudioData: TSpeechAudioData;
@@ -263,7 +283,7 @@ end;
 
 function TDeepBaseWinMMAudioCapture.IsRecording: Boolean;
 begin
-  Result := FIsRecording;
+  Result := GetIsRecording;
 end;
 
 function TDeepBaseWinMMAudioCapture.LastError: string;

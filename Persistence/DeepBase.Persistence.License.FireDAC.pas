@@ -62,47 +62,21 @@ end;
 
 procedure TFireDACLicenseStorage.WriteLicenseKey(const LicenseKey: string);
 var
-  UpdateQuery: TFDQuery;
-  ExistsQuery: TFDQuery;
-  InsertQuery: TFDQuery;
+  Query: TFDQuery;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  UpdateQuery := TFDQuery.Create(nil);
-  ExistsQuery := TFDQuery.Create(nil);
-  InsertQuery := TFDQuery.Create(nil);
+  Query := TFDQuery.Create(nil);
   try
-    UpdateQuery.Connection := FConnection;
-    UpdateQuery.SQL.Text :=
-      'UPDATE Settings SET Value = :Value, Category = ''License'', ' +
-      'Description = ''License activation key'' WHERE Key = ''license_key''';
-    UpdateQuery.ParamByName('Value').AsString := LicenseKey;
-    UpdateQuery.ExecSQL;
-
-    if UpdateQuery.RowsAffected = 0 then
-    begin
-      ExistsQuery.Connection := FConnection;
-      ExistsQuery.SQL.Text := 'SELECT 1 FROM Settings WHERE Key = ''license_key''';
-      ExistsQuery.Open;
-      try
-        if ExistsQuery.Eof then
-        begin
-          InsertQuery.Connection := FConnection;
-          InsertQuery.SQL.Text :=
-            'INSERT INTO Settings (Key, Value, Category, Description) ' +
-            'VALUES (''license_key'', :Value, ''License'', ''License activation key'')';
-          InsertQuery.ParamByName('Value').AsString := LicenseKey;
-          InsertQuery.ExecSQL;
-        end;
-      finally
-        ExistsQuery.Close;
-      end;
-    end;
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'INSERT OR REPLACE INTO Settings (Key, Value, Category, Description) ' +
+      'VALUES (''license_key'', :Value, ''License'', ''License activation key'')';
+    Query.ParamByName('Value').AsString := LicenseKey;
+    Query.ExecSQL;
   finally
-    UpdateQuery.Free;
-    ExistsQuery.Free;
-    InsertQuery.Free;
+    Query.Free;
   end;
 end;
 

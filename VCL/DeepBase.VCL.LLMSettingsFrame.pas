@@ -259,9 +259,12 @@ begin
   BtnFetchModels.Caption := 'Loading...';
   LbProviderModels.Items.Clear;
   Application.ProcessMessages;
+  // VCL-003: Capture VCL control value before spawning the worker; control
+  // members must not be touched off the UI thread.
+  var LProviderName := LbProviders.Items[LbProviders.ItemIndex];
   TThread.CreateAnonymousThread(procedure
   begin
-    DoFetchModels(LbProviders.Items[LbProviders.ItemIndex]);
+    DoFetchModels(LProviderName);
     TThread.Queue(nil, procedure
     begin
       BtnFetchModels.Enabled := True;
@@ -343,12 +346,27 @@ begin
   var Models := LLMAdmin.GetTierModels(TModelTier(ATier));
   for var I := 0 to High(Models) do
   begin
+    // VCL-004: Match the provider that actually owns the model rather than
+    // selecting the first provider unconditionally.
     var ProvName := '';
     for var P in FProviders do
-      if True then begin ProvName := P.Name; Break; end;
-    var Tag := '';
-    if I = 0 then Tag := ' [首用]'
-    else Tag := ' [兜底]';
+    begin
+      var Found := False;
+      var ProviderModels: TArray<string>;
+      if FProviderModels.TryGetValue(P.Name, ProviderModels) then
+        for var PM in ProviderModels do
+          if SameText(PM, Models[I]) then
+          begin
+            Found := True;
+            Break;
+          end;
+      if Found then
+      begin
+        ProvName := P.Name;
+        Break;
+      end;
+    end;
+    var Tag := if I = 0 then ' [首用]' else ' [兜底]';
     AListBox.Items.Add(GetFullModelKey(Models[I], ProvName) + Tag);
   end;
 end;
@@ -408,6 +426,25 @@ procedure TLLMSettingsFrame.SwapTierItems(AListBox: TListBox; AIdx1, AIdx2: Inte
 begin
   if (AIdx1 < 0) or (AIdx2 < 0) or (AIdx1 >= AListBox.Items.Count) or (AIdx2 >= AListBox.Items.Count) then Exit;
   AListBox.Items.Exchange(AIdx1, AIdx2);
+  // VCL-005: Persist the new ordering so the in-memory swap is reflected in
+  // LLMAdmin tier configuration.
+  var LTier: string;
+  if AListBox = LbSmart then
+    LTier := 'smart'
+  else if AListBox = LbBalanced then
+    LTier := 'balanced'
+  else if AListBox = LbFast then
+    LTier := 'fast'
+  else
+    Exit;
+  var LModels := LLMAdmin.GetTierModels(TModelTier(LTier));
+  if (AIdx1 < Length(LModels)) and (AIdx2 < Length(LModels)) then
+  begin
+    var LTmp := LModels[AIdx1];
+    LModels[AIdx1] := LModels[AIdx2];
+    LModels[AIdx2] := LTmp;
+    LLMAdmin.SetTierModels(TModelTier(LTier), LModels);
+  end;
 end;
 
 procedure TLLMSettingsFrame.BtnSmartUpClick(Sender: TObject); begin SwapTierItems(LbSmart, LbSmart.ItemIndex, LbSmart.ItemIndex-1); end;

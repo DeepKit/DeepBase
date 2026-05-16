@@ -192,11 +192,21 @@ begin
   finally
     FLock.Leave;
   end;
+
+  var LIsMain := TThread.CurrentThread.ThreadID = MainThreadID;
   for I := 0 to High(LSnapshot) do
-    try
-      LSnapshot[I].Handler(ALocale);
-    except
-    end;
+  begin
+    var LHandler := LSnapshot[I].Handler;
+    var LLocaleId := ALocale;
+    if LIsMain then
+      try LHandler(LLocaleId) except end
+    else
+      TThread.Queue(nil,
+        procedure
+        begin
+          try LHandler(LLocaleId) except end;
+        end);
+  end;
 end;
 
 function TShellDefaultLocalizationService.GetLocales: TArray<string>;

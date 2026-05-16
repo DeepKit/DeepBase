@@ -25,6 +25,7 @@ uses
 
 type
   EGraphException = class(Exception);
+  EGraphNegativeWeight = class(EGraphException);
 
   /// <summary>Graph traversal visitor</summary>
   TGraphVisitor<T> = reference to procedure(const ANode: T; var AContinue: Boolean);
@@ -885,6 +886,8 @@ var
   LNeighbors: TNodeList;
   LNewDist, LEdgeWeight: Double;
   LPath: TList<T>;
+  LPair: TPair<T, TDictionary<T, Double>>;
+  LWeightPair: TPair<T, Double>;
 begin
   Result.Nodes := nil;
   Result.TotalWeight := 0;
@@ -892,6 +895,18 @@ begin
   
   if not HasNode(AStart) or not HasNode(AEnd) then
     Exit;
+
+  // Reject negative edge weights - Dijkstra produces incorrect results with them
+  FLock.Enter;
+  try
+    for LPair in FWeights do
+      for LWeightPair in LPair.Value do
+        if LWeightPair.Value < 0 then
+          raise EGraphNegativeWeight.Create(
+            'Dijkstra does not support negative edge weights. Use BellmanFord instead.');
+  finally
+    FLock.Leave;
+  end;
     
   LDist := TDictionary<T, Double>.Create(FComparer);
   LParent := TDictionary<T, T>.Create(FComparer);

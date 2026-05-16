@@ -2,10 +2,10 @@
   DeepBase.KeyManager - Advanced Key Management System
   
   Version: 1.0
-  Description: Secure key management with hardware binding and key rotation
+  Description: Secure key management with machine-binding affinity and key rotation.
   
   Features:
-    - Hardware-bound key generation using machine fingerprint
+    - Machine-affinity key derivation (computer name, user, env)
     - Master key derivation with PBKDF2
     - Data encryption keys (DEK) management
     - Key rotation support
@@ -15,10 +15,19 @@
   Thread Safety: All public methods are thread-safe.
   
   Security Model:
-    - Master Key: Derived from user password + hardware fingerprint
+    - Master Key: Derived from user password + machine affinity fingerprint
     - Key Encryption Key (KEK): Encrypts other keys
     - Data Encryption Key (DEK): Encrypts actual data
     - Keys are never stored in plain text
+  
+  Important note (BASIC-017):
+    The "fingerprint" used here is currently a MACHINE-AFFINITY fingerprint
+    derived from environment variables and computer name. It is NOT a true
+    hardware identifier (it does not query BIOS serial, MAC, disk UUID).
+    Treat it as user-portable convenience, not a tamper-resistant binding.
+    Production hardware binding requires platform adapters (WMI / IOKit /
+    udev) that are not implemented yet. Migration paths must remain available
+    when the fingerprint changes (re-prompt for password etc.).
   ============================================================================ }
 
 unit DeepBase.KeyManager;
@@ -309,7 +318,12 @@ var
 {$ENDIF}
 begin
   Result := Default(THardwareFingerprint);
-  
+
+  // BASIC-017: This is a machine-affinity fingerprint derived from
+  // environment variables and computer name. It is NOT a true hardware
+  // identifier. Production hardware binding (BIOS serial, MAC, disk UUID)
+  // requires platform-specific adapters not implemented in this unit.
+
   {$IFDEF MSWINDOWS}
   // Computer name
   Size := MAX_COMPUTERNAME_LENGTH + 1;
@@ -320,8 +334,9 @@ begin
   Result.MachineId := GetEnvironmentVariable('COMPUTERNAME') + '-' + 
                       GetEnvironmentVariable('USERNAME');
   
-  // For production: Add WMI queries for BIOS serial, processor ID, etc.
-  // Simplified version using available data
+  // For production hardware ID: add platform adapter that queries WMI
+  // (Win32_BIOS.SerialNumber, Win32_Processor.ProcessorId, Win32_DiskDrive.SerialNumber).
+  // Until then, the values below are placeholders derived from ComputerName.
   Result.ProcessorId := GetEnvironmentVariable('PROCESSOR_IDENTIFIER');
   Result.BiosSerial := 'BIOS-' + Result.ComputerName;
   Result.DiskSerial := 'DISK-' + Result.ComputerName;

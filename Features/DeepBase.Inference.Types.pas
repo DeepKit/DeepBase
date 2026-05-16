@@ -34,6 +34,28 @@ type
     ipCUDA
   );
 
+  { --- Tensor element types ------------------------------------------------ }
+
+  TInferenceElementType = (
+    ietFloat32,
+    ietInt32
+  );
+
+  /// <summary>
+  /// A single named tensor input for RunTyped inference calls.
+  /// Use the Float/Int32 class functions for construction.
+  /// </summary>
+  TInferenceInput = record
+    Name: string;
+    Data: TBytes;
+    Shape: TArray<Int64>;
+    ElementType: TInferenceElementType;
+    class function Float(const AName: string; const AData: TArray<Single>;
+      const AShape: TArray<Int64>): TInferenceInput; static;
+    class function Int32(const AName: string; AValue: Integer;
+      const AShape: TArray<Int64>): TInferenceInput; static;
+  end;
+
   { --- Session lifecycle --------------------------------------------------- }
 
   TInferenceSessionState = (
@@ -72,9 +94,15 @@ type
     ErrorMessage: string;
     DurationMs: Double;
     OutputNames: TArray<string>;
+    OutputData: TArray<TBytes>;
+    OutputShapes: TArray<TArray<Int64>>;
     class function Failed(const AError: string): TInferenceOutput; static;
     class function Succeeded(ADurationMs: Double;
-      const ANames: TArray<string>): TInferenceOutput; static;
+      const ANames: TArray<string>): TInferenceOutput; overload; static;
+    class function Succeeded(ADurationMs: Double;
+      const ANames: TArray<string>;
+      const AData: TArray<TBytes>;
+      const AShapes: TArray<TArray<Int64>>): TInferenceOutput; overload; static;
   end;
 
   { --- Interfaces ---------------------------------------------------------- }
@@ -96,6 +124,7 @@ type
     function Run(const AInputNames: TArray<string>;
       const AInputValues: TArray<TBytes>;
       const AInputShapes: TArray<TArray<Int64>>): TInferenceOutput;
+    function GetCustomMetadata(const AKey: string): string;
     procedure Dispose;
     property SessionId: string read GetSessionId;
     property State: TInferenceSessionState read GetState;
@@ -147,6 +176,29 @@ begin
   Result.GraphOptLevel := GetConfigInt('Inference.GraphOptLevel', 99);
 end;
 
+{ --- TInferenceInput ----------------------------------------------------- }
+
+class function TInferenceInput.Float(const AName: string;
+  const AData: TArray<Single>; const AShape: TArray<Int64>): TInferenceInput;
+begin
+  Result.Name := AName;
+  Result.ElementType := ietFloat32;
+  Result.Shape := Copy(AShape);
+  SetLength(Result.Data, Length(AData) * SizeOf(Single));
+  if Length(AData) > 0 then
+    Move(AData[0], Result.Data[0], Length(Result.Data));
+end;
+
+class function TInferenceInput.Int32(const AName: string;
+  AValue: Integer; const AShape: TArray<Int64>): TInferenceInput;
+begin
+  Result.Name := AName;
+  Result.ElementType := ietInt32;
+  Result.Shape := Copy(AShape);
+  SetLength(Result.Data, SizeOf(Integer));
+  Move(AValue, Result.Data[0], SizeOf(Integer));
+end;
+
 { --- TInferenceModelInfo ------------------------------------------------- }
 
 class function TInferenceModelInfo.Empty: TInferenceModelInfo;
@@ -167,15 +219,27 @@ begin
   Result.ErrorMessage := AError;
   Result.DurationMs := 0;
   Result.OutputNames := nil;
+  Result.OutputData := nil;
+  Result.OutputShapes := nil;
 end;
 
 class function TInferenceOutput.Succeeded(ADurationMs: Double;
   const ANames: TArray<string>): TInferenceOutput;
 begin
+  Result := Succeeded(ADurationMs, ANames, nil, nil);
+end;
+
+class function TInferenceOutput.Succeeded(ADurationMs: Double;
+  const ANames: TArray<string>;
+  const AData: TArray<TBytes>;
+  const AShapes: TArray<TArray<Int64>>): TInferenceOutput;
+begin
   Result.Success := True;
   Result.ErrorMessage := '';
   Result.DurationMs := ADurationMs;
   Result.OutputNames := ANames;
+  Result.OutputData := AData;
+  Result.OutputShapes := AShapes;
 end;
 
 { --- Helper functions ---------------------------------------------------- }

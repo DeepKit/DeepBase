@@ -161,7 +161,7 @@ begin
   DBPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'demo.db');
   if not DeepBase.Manager.DeepBase.InitializeWithDB(DBPath) then
   begin
-    ShowMessage('DeepBase 初始化失�? ' + DeepBase.Manager.DeepBase.LastError);
+    ShowMessage('DeepBase 初始化失败: ' + DeepBase.Manager.DeepBase.LastError);
   end;
   
   // 创建界面
@@ -170,7 +170,7 @@ begin
   // 恢复窗体状�?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
   // 记录启动日志
-  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启�?, 'App');
+  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启动', 'App');
   
   UpdateStatusBar;
 end;
@@ -324,7 +324,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabI18n;
-  LblDemo.Caption := '国际化演�?- 切换语言后控件文本自动更�?;
+  LblDemo.Caption := '国际化演示 - 切换语言后控件文本自动更新';
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 400, 20);
   Inc(Y, 40);
@@ -537,7 +537,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabLicense;
-  LblDemo.Caption := '许可证管理演�?;
+  LblDemo.Caption := '许可证管理演示';
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -573,7 +573,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabWait;
-  LblDemo.Caption := '等待窗口和进度演�?;
+  LblDemo.Caption := '等待窗口和进度演示';
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);

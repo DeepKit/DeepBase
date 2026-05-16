@@ -382,8 +382,13 @@ begin
     Body := BuildOpenAIRequest(AModelId, AMessages, AMaxTokens, ATemperature);
 
   try
-    Response := PostJson(AEndpoint + '/chat/completions', Body,
-      BuildHeaders(AApiKey, AApiFormat));
+    // LLM-005 fix: Anthropic uses /messages endpoint, not /chat/completions
+    if SameText(AApiFormat, 'anthropic') then
+      Response := PostJson(AEndpoint + '/messages', Body,
+        BuildHeaders(AApiKey, AApiFormat))
+    else
+      Response := PostJson(AEndpoint + '/chat/completions', Body,
+        BuildHeaders(AApiKey, AApiFormat));
 
     if Response.StatusCode = 200 then
     begin

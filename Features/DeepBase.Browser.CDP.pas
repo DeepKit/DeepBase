@@ -96,10 +96,12 @@ type
   private
     FCDP: TCDPStrategy;
     FRootNodeId: Integer;
+    FDetached: Boolean;
   public
     constructor Create(ACDP: TCDPStrategy);
     destructor Destroy; override;
 
+    procedure Detach;
     procedure InitDOM(ACallback: TCDPCallback);
     procedure InputText(const ASelector, AText: string;
       ACallback: TCDPCallback);
@@ -119,6 +121,55 @@ implementation
 
 uses
   System.DateUtils;
+
+function KeyCodeFor(const AKey: string): string;
+begin
+  if (Length(AKey) = 1) and (CharInSet(AKey[1], ['A'..'Z'])) then
+    Result := 'Key' + AKey
+  else if (Length(AKey) = 1) and (CharInSet(AKey[1], ['a'..'z'])) then
+    Result := 'Key' + UpperCase(AKey)
+  else if (Length(AKey) = 1) and (CharInSet(AKey[1], ['0'..'9'])) then
+    Result := 'Digit' + AKey
+  else if AKey = 'Enter' then Result := 'Enter'
+  else if AKey = 'Tab' then Result := 'Tab'
+  else if AKey = 'Escape' then Result := 'Escape'
+  else if AKey = 'Backspace' then Result := 'Backspace'
+  else if AKey = 'Delete' then Result := 'Delete'
+  else if AKey = 'ArrowUp' then Result := 'ArrowUp'
+  else if AKey = 'ArrowDown' then Result := 'ArrowDown'
+  else if AKey = 'ArrowLeft' then Result := 'ArrowLeft'
+  else if AKey = 'ArrowRight' then Result := 'ArrowRight'
+  else if AKey = 'Home' then Result := 'Home'
+  else if AKey = 'End' then Result := 'End'
+  else if AKey = 'PageUp' then Result := 'PageUp'
+  else if AKey = 'PageDown' then Result := 'PageDown'
+  else if AKey = ' ' then Result := 'Space'
+  else Result := AKey;
+end;
+
+function VkCodeFor(const AKey: string): Integer;
+begin
+  if AKey = 'Enter' then Result := 13
+  else if AKey = 'Tab' then Result := 9
+  else if AKey = 'Escape' then Result := 27
+  else if AKey = 'Backspace' then Result := 8
+  else if AKey = 'Delete' then Result := 46
+  else if AKey = 'ArrowUp' then Result := 38
+  else if AKey = 'ArrowDown' then Result := 40
+  else if AKey = 'ArrowLeft' then Result := 37
+  else if AKey = 'ArrowRight' then Result := 39
+  else if AKey = 'Home' then Result := 36
+  else if AKey = 'End' then Result := 35
+  else if AKey = 'PageUp' then Result := 33
+  else if AKey = 'PageDown' then Result := 34
+  else if AKey = ' ' then Result := 32
+  else if (Length(AKey) = 1) and (CharInSet(AKey[1], ['A'..'Z', 'a'..'z'])) then
+    Result := Ord(UpperCase(AKey)[1])
+  else if (Length(AKey) = 1) and (CharInSet(AKey[1], ['0'..'9'])) then
+    Result := Ord(AKey[1])
+  else
+    Result := 0;
+end;
 
 { TCDPStrategy }
 
@@ -195,7 +246,8 @@ begin
     LResult, LError) then
     Result := LResult
   else
-    Result := '{"error":"' + LError.Replace('"', '\"') + '"}';
+    // H9 fix: use JsStringLiteral to properly escape backslash and other JSON-special chars
+    Result := '{"error":' + JsStringLiteral(LError) + '}';
 end;
 
 procedure TCDPStrategy.SendCommand(const AMethod: string;
@@ -241,7 +293,8 @@ begin
     10000, LResult, LError);
 
   if not LSuccess then
-    LResult := '{"error":"' + LError.Replace('"', '\"') + '"}';
+    // H9 fix: full JSON escape via JsStringLiteral
+    LResult := '{"error":' + JsStringLiteral(LError) + '}';
 
   HandleDevToolsMethodResult(LId, LSuccess, LResult);
 end;
@@ -275,7 +328,8 @@ begin
   Result := LSession.CallDevToolsProtocol(AMethod, LParamsStr,
     10000, AResult, LError);
   if not Result then
-    AResult := '{"error":"' + LError.Replace('"', '\"') + '"}';
+    // H9 fix: full JSON escape via JsStringLiteral
+    AResult := '{"error":' + JsStringLiteral(LError) + '}';
 end;
 
 procedure TCDPStrategy.Subscribe(const AEventName: string;
@@ -433,12 +487,21 @@ procedure TCDPStrategy.PressKey(const AKey: string;
   AModifiers: Integer; ACallback: TCDPCallback);
 var
   LParams: TJSONObject;
+  LCode: string;
+  LVk: Integer;
 begin
+  LCode := KeyCodeFor(AKey);
+  LVk := VkCodeFor(AKey);
+
   LParams := TJSONObject.Create;
   try
     LParams.AddPair('type', 'keyDown');
     LParams.AddPair('key', AKey);
+    LParams.AddPair('code', LCode);
     LParams.AddPair('modifiers', TJSONNumber.Create(AModifiers));
+    if LVk <> 0 then
+      LParams.AddPair('windowsVirtualKeyCode',
+        TJSONNumber.Create(LVk));
     SendCommand('Input.dispatchKeyEvent', LParams,
       procedure(ASuccess: Boolean; const AResult: string)
       var
@@ -450,8 +513,12 @@ begin
           try
             LUpParams.AddPair('type', 'keyUp');
             LUpParams.AddPair('key', AKey);
+            LUpParams.AddPair('code', LCode);
             LUpParams.AddPair('modifiers',
               TJSONNumber.Create(AModifiers));
+            if LVk <> 0 then
+              LUpParams.AddPair('windowsVirtualKeyCode',
+                TJSONNumber.Create(LVk));
             SendCommand('Input.dispatchKeyEvent', LUpParams,
               ACallback);
           finally
@@ -533,6 +600,8 @@ begin
   LParams := TJSONObject.Create;
   try
     LParams.AddPair('type', 'mouseWheel');
+    LParams.AddPair('x', TJSONNumber.Create(0));
+    LParams.AddPair('y', TJSONNumber.Create(0));
     LParams.AddPair('deltaX', TJSONNumber.Create(ADeltaX));
     LParams.AddPair('deltaY', TJSONNumber.Create(ADeltaY));
     SendCommand('Input.dispatchMouseEvent', LParams, ACallback);
@@ -577,15 +646,30 @@ begin
   inherited Create;
   FCDP := ACDP;
   FRootNodeId := 0;
+  FDetached := False;
 end;
 
 destructor TAutomationCDP.Destroy;
 begin
+  Detach;
   inherited;
+end;
+
+procedure TAutomationCDP.Detach;
+begin
+  FDetached := True;
+  FCDP := nil;
 end;
 
 procedure TAutomationCDP.InitDOM(ACallback: TCDPCallback);
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
   FCDP.GetDocument(
     procedure(ASuccess: Boolean; const AResult: string)
     var
@@ -615,6 +699,13 @@ end;
 procedure TAutomationCDP.InputText(const ASelector, AText: string;
   ACallback: TCDPCallback);
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
   if FRootNodeId = 0 then
   begin
     if Assigned(ACallback) then
@@ -669,6 +760,13 @@ end;
 procedure TAutomationCDP.ClickElement(const ASelector: string;
   ACallback: TCDPCallback);
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
   if FRootNodeId = 0 then
   begin
     if Assigned(ACallback) then
@@ -756,7 +854,15 @@ procedure TAutomationCDP.WaitForSelector(const ASelector: string;
   ATimeoutMs: Integer; ACallback: TCDPCallback);
 var
   LRootNodeId: Integer;
+  LCDP: TCDPStrategy;
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
   if FRootNodeId = 0 then
   begin
     if Assigned(ACallback) then
@@ -765,10 +871,9 @@ begin
   end;
 
   LRootNodeId := FRootNodeId;
-  TThread.CreateAnonymousThread(
+  LCDP := FCDP;
+  var LThread := TThread.CreateAnonymousThread(
     procedure
-    const
-      PollIntervalMs = 100;
     var
       LStartTime: TDateTime;
       LElapsed: Int64;
@@ -776,53 +881,86 @@ begin
       LResult: string;
       LJson: TJSONValue;
       LNodeId: Integer;
+      LCallbackRef: TCDPCallback;
     begin
-      LStartTime := Now;
-      repeat
-        LParams := TJSONObject.Create;
-        try
-          LParams.AddPair('nodeId',
-            TJSONNumber.Create(LRootNodeId));
-          LParams.AddPair('selector', ASelector);
-          if FCDP.SendCommandSync('DOM.querySelector',
-            LParams, LResult) then
+      // H12 fix: capture callback locally + wrap in try/except so any
+      // exception in the polling loop surfaces back to the caller as an
+      // error instead of silently terminating the worker thread.
+      LCallbackRef := ACallback;
+      try
+        LStartTime := Now;
+        repeat
+          if LCDP = nil then
           begin
-            LJson := TJSONObject.ParseJSONValue(LResult);
-            try
-              LNodeId := 0;
-              if LJson <> nil then
-                LNodeId := LJson.GetValue<Integer>(
-                  'nodeId', 0);
-            finally
-              LJson.Free;
-            end;
-
-            if LNodeId > 0 then
-            begin
-              if Assigned(ACallback) then
-                TThread.Queue(nil, TThreadProcedure(
-                  procedure
-                  begin
-                    ACallback(True, LResult);
-                  end));
-              Exit;
-            end;
+            if Assigned(LCallbackRef) then
+              TThread.Queue(nil,
+                procedure
+                begin
+                  LCallbackRef(False, '{"error":"detached"}');
+                end);
+            Exit;
           end;
-        finally
-          LParams.Free;
-        end;
 
-        TThread.Sleep(PollIntervalMs);
-        LElapsed := MilliSecondsBetween(Now, LStartTime);
-      until LElapsed >= ATimeoutMs;
+          LParams := TJSONObject.Create;
+          try
+            LParams.AddPair('nodeId',
+              TJSONNumber.Create(LRootNodeId));
+            LParams.AddPair('selector', ASelector);
+            if LCDP.SendCommandSync('DOM.querySelector',
+              LParams, LResult) then
+            begin
+              LJson := TJSONObject.ParseJSONValue(LResult);
+              try
+                LNodeId := 0;
+                if LJson <> nil then
+                  LNodeId := LJson.GetValue<Integer>(
+                    'nodeId', 0);
+              finally
+                LJson.Free;
+              end;
 
-      if Assigned(ACallback) then
-        TThread.Queue(nil, TThreadProcedure(
-          procedure
+              if LNodeId > 0 then
+              begin
+                if Assigned(LCallbackRef) then
+                  TThread.Queue(nil,
+                    procedure
+                    begin
+                      LCallbackRef(True, LResult);
+                    end);
+                Exit;
+              end;
+            end;
+          finally
+            LParams.Free;
+          end;
+
+          TThread.Sleep(100);  // PollIntervalMs
+          LElapsed := MilliSecondsBetween(Now, LStartTime);
+        until LElapsed >= ATimeoutMs;
+
+        if Assigned(LCallbackRef) then
+          TThread.Queue(nil,
+            procedure
+            begin
+              LCallbackRef(False, '{"error":"timeout"}');
+            end);
+      except
+        on E: Exception do
+          if Assigned(LCallbackRef) then
           begin
-            ACallback(False, '{"error":"timeout"}');
-          end));
-    end).Start;
+            // Capture message so the closure below sees the right text
+            var LMsg := E.Message;
+            TThread.Queue(nil,
+              procedure
+              begin
+                LCallbackRef(False, '{"error":' +
+                  JsStringLiteral(LMsg) + '}');
+              end);
+          end;
+      end;
+    end);
+  LThread.FreeOnTerminate := True;
+  LThread.Start;
 end;
 
 procedure TAutomationCDP.GetElementText(
@@ -830,8 +968,16 @@ procedure TAutomationCDP.GetElementText(
 var
   LExpr: string;
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
+  // H4 fix: use JsStringLiteral so selectors with quotes / Unicode survive
   LExpr :=
-    'document.querySelector(' + QuotedStr(ASelector) +
+    'document.querySelector(' + JsStringLiteral(ASelector) +
     ')?.textContent || ""';
   FCDP.Evaluate(LExpr, ACallback);
 end;
@@ -841,9 +987,17 @@ procedure TAutomationCDP.ScrollToElement(
 var
   LExpr: string;
 begin
+  if FDetached or (FCDP = nil) then
+  begin
+    if Assigned(ACallback) then
+      ACallback(False, '{"error":"detached"}');
+    Exit;
+  end;
+
+  // H4 fix: use JsStringLiteral so selectors with quotes / Unicode survive
   LExpr :=
     '(function(){var el=document.querySelector(' +
-    QuotedStr(ASelector) +
+    JsStringLiteral(ASelector) +
     ');if(el&&el.scrollIntoView)el.scrollIntoView(' +
     '{block:"center"});return !!el;})()';
   FCDP.Evaluate(LExpr, ACallback);

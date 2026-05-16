@@ -195,8 +195,14 @@ type
     FInterceptors: TList<IServiceInterceptor>;
     FLock: TCriticalSection;
     FRttiContext: TRttiContext;
-    FResolving: TDictionary<PTypeInfo, Integer>;
+    // BASIC-024 fix: use a (ThreadID, ServiceType) key so concurrent
+    // resolves of the same service from two different threads do not
+    // falsely trip the circular-dependency guard. Circular dependency
+    // is a property of one resolution chain, not of the container.
+    FResolving: TDictionary<UInt64, Integer>;
+    FFrozen: Boolean;
     
+    procedure CheckNotFrozen(const Operation: string);
     function GetRegistrationKey(ServiceType: PTypeInfo): string;
     function GetNamedKey(ServiceType: PTypeInfo; const Name: string): string;
     function FindRegistration(ServiceType: PTypeInfo; const Name: string = ''): TServiceRegistration;
@@ -294,6 +300,14 @@ type
     
     /// <summary>Clear all registrations</summary>
     procedure Clear;
+    
+    /// <summary>Freeze the container, preventing further mutations.
+    /// Resolving automatically freezes the container on first call.
+    /// Call explicitly after bootstrap to get early failure on accidental mutation.</summary>
+    procedure Freeze;
+    
+    /// <summary>Whether the container is frozen (no more registrations allowed)</summary>
+    property IsFrozen: Boolean read FFrozen;
     
     /// <summary>Get count of registrations</summary>
     function RegistrationCount: Integer;
@@ -468,7 +482,8 @@ begin
   FInterceptors := TList<IServiceInterceptor>.Create;
   FLock := TCriticalSection.Create;
   FRttiContext := TRttiContext.Create;
-  FResolving := TDictionary<PTypeInfo, Integer>.Create;
+  FResolving := TDictionary<UInt64, Integer>.Create;
+  FFrozen := False;
 end;
 
 destructor TIoCContainer.Destroy;
@@ -597,7 +612,17 @@ var
 begin
   Result := nil;
 
-  // 检测循环依赖：同一 ServiceType 在当前解析栈中再次出现
+  // BASIC-025: freeze on first resolve to prevent concurrent mutation.
+  if not FFrozen then
+  begin
+    FLock.Enter;
+    try
+      FFrozen := True;
+    finally
+      FLock.Leave;
+    end;
+  end;
+
   EnterResolving(ServiceType, AlreadyResolving);
   if AlreadyResolving then
   begin
@@ -688,6 +713,17 @@ var
   end;
 begin
   Result := nil;
+
+  // BASIC-025: freeze on first resolve.
+  if not FFrozen then
+  begin
+    FLock.Enter;
+    try
+      FFrozen := True;
+    finally
+      FLock.Leave;
+    end;
+  end;
 
   Reg := FindRegistration(ServiceType, Name);
   if Reg = nil then
@@ -781,14 +817,18 @@ end;
 procedure TIoCContainer.EnterResolving(ServiceType: PTypeInfo; out AlreadyResolving: Boolean);
 var
   Count: Integer;
+  Key: UInt64;
 begin
+  // BASIC-024: composite key combining ThreadID and ServiceType pointer
+  // so resolution chains stay isolated per thread.
+  Key := (UInt64(TThread.CurrentThread.ThreadID) shl 32) xor UInt64(NativeUInt(ServiceType));
   FLock.Enter;
   try
-    if not FResolving.TryGetValue(ServiceType, Count) then
+    if not FResolving.TryGetValue(Key, Count) then
       Count := 0;
     AlreadyResolving := Count > 0;
     Inc(Count);
-    FResolving.AddOrSetValue(ServiceType, Count);
+    FResolving.AddOrSetValue(Key, Count);
   finally
     FLock.Leave;
   end;
@@ -797,16 +837,18 @@ end;
 procedure TIoCContainer.LeaveResolving(ServiceType: PTypeInfo);
 var
   Count: Integer;
+  Key: UInt64;
 begin
+  Key := (UInt64(TThread.CurrentThread.ThreadID) shl 32) xor UInt64(NativeUInt(ServiceType));
   FLock.Enter;
   try
-    if FResolving.TryGetValue(ServiceType, Count) then
+    if FResolving.TryGetValue(Key, Count) then
     begin
       Dec(Count);
       if Count <= 0 then
-        FResolving.Remove(ServiceType)
+        FResolving.Remove(Key)
       else
-        FResolving.AddOrSetValue(ServiceType, Count);
+        FResolving.AddOrSetValue(Key, Count);
     end;
   finally
     FLock.Leave;
@@ -834,6 +876,7 @@ var
   Reg: TServiceRegistration;
   Key: string;
 begin
+  CheckNotFrozen('register');
   Reg := TServiceRegistration.Create(TypeInfo(TService), TypeInfo(TImplementation), Lifetime);
   Reg.Name := Name;
   
@@ -870,9 +913,10 @@ var
   Reg: TServiceRegistration;
   Key: string;
 begin
+  CheckNotFrozen('register singleton');
   Reg := TServiceRegistration.Create(TypeInfo(TService), nil, slSingleton);
   Reg.Name := Name;
-  Reg.OwnsInstance := False; // Keep the interface reference; do not free the object directly.
+  Reg.OwnsInstance := False;
   Reg.SingletonInterface := Instance;
   Reg.HasSingletonInterface := True;
   
@@ -914,6 +958,7 @@ var
   Reg: TServiceRegistration;
   Key: string;
 begin
+  CheckNotFrozen('register factory');
   Reg := TServiceRegistration.Create(TypeInfo(TService), nil, Lifetime);
   Reg.InterfaceFactory := function(Container: TIoCContainer): IInterface
     var Service: TService;
@@ -937,6 +982,7 @@ var
   Reg: TServiceRegistration;
   Key: string;
 begin
+  CheckNotFrozen('register factory');
   Reg := TServiceRegistration.Create(TypeInfo(TService), nil, Lifetime);
   Reg.InterfaceFactory := function(Container: TIoCContainer): IInterface
     var Service: TService;
@@ -964,6 +1010,7 @@ var
   Reg: TServiceRegistration;
   Key: string;
 begin
+  CheckNotFrozen('register class');
   Reg := TServiceRegistration.Create(TypeInfo(T), TypeInfo(T), Lifetime);
   
   FLock.Enter;
@@ -1209,6 +1256,24 @@ end;
 // Utility Methods
 // ============================================================================
 
+procedure TIoCContainer.CheckNotFrozen(const Operation: string);
+begin
+  if FFrozen then
+    raise EIoCException.CreateFmt(
+      'IoC container is frozen. Cannot %s after first resolve. ' +
+      'Complete all registrations before resolving services.', [Operation]);
+end;
+
+procedure TIoCContainer.Freeze;
+begin
+  FLock.Enter;
+  try
+    FFrozen := True;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TIoCContainer.Clear;
 begin
   FLock.Enter;
@@ -1216,6 +1281,7 @@ begin
     FRegistrations.Clear;
     FNamedRegistrations.Clear;
     FInterceptors.Clear;
+    FFrozen := False;
   finally
     FLock.Leave;
   end;

@@ -23,6 +23,7 @@ implementation
 uses
   System.SysUtils,
   Data.DB,
+  DeepBase.SQL.Utils,
   DeepBase.Persistence.Config.FireDAC,
   DeepBase.Persistence.I18n.FireDAC,
   DeepBase.Persistence.Theme.FireDAC,
@@ -189,9 +190,13 @@ begin
       Query.ParamByName('ColumnName').AsString := ColumnName;
     end
     else
+    begin
+      TSQLUtils.ValidateIdentifier(TableName, 'Manager.ColumnExists.TableName');
+      TSQLUtils.ValidateIdentifier(ColumnName, 'Manager.ColumnExists.ColumnName');
       Query.SQL.Text := Format(
         'SELECT COUNT(*) FROM pragma_table_info(''%s'') WHERE name = ''%s''',
         [TableName, ColumnName]);
+    end;
 
     Query.Open;
     Result := Query.Fields[0].AsInteger > 0;
@@ -207,6 +212,9 @@ var
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
+
+  TSQLUtils.ValidateIdentifier(TableName, 'Manager.AddColumn.TableName');
+  TSQLUtils.ValidateIdentifier(ColumnName, 'Manager.AddColumn.ColumnName');
 
   Query := TFDQuery.Create(nil);
   try
@@ -250,13 +258,21 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
-    Query.ParamByName('Ver').AsString := SchemaVersion;
-    Query.ExecSQL;
+    FConnection.StartTransaction;
+    try
+      Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
+      Query.ParamByName('Ver').AsString := SchemaVersion;
+      Query.ExecSQL;
 
-    Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
-    Query.ParamByName('NowTime').AsString := LastUpgradeIso8601;
-    Query.ExecSQL;
+      Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
+      Query.ParamByName('NowTime').AsString := LastUpgradeIso8601;
+      Query.ExecSQL;
+
+      FConnection.Commit;
+    except
+      FConnection.Rollback;
+      raise;
+    end;
   finally
     Query.Free;
   end;
@@ -285,48 +301,21 @@ end;
 
 procedure TFireDACManagerStorage.UpsertProjectInfo(const Key, Value: string);
 var
-  UpdateQuery: TFDQuery;
-  ExistsQuery: TFDQuery;
-  InsertQuery: TFDQuery;
+  Query: TFDQuery;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  UpdateQuery := TFDQuery.Create(nil);
-  ExistsQuery := TFDQuery.Create(nil);
-  InsertQuery := TFDQuery.Create(nil);
+  Query := TFDQuery.Create(nil);
   try
-    UpdateQuery.Connection := FConnection;
-    UpdateQuery.SQL.Text :=
-      'UPDATE ProjectInfo SET Value = :Value WHERE Key = :Key';
-    UpdateQuery.ParamByName('Key').AsString := Key;
-    UpdateQuery.ParamByName('Value').AsString := Value;
-    UpdateQuery.ExecSQL;
-
-    if UpdateQuery.RowsAffected = 0 then
-    begin
-      ExistsQuery.Connection := FConnection;
-      ExistsQuery.SQL.Text := 'SELECT 1 FROM ProjectInfo WHERE Key = :Key';
-      ExistsQuery.ParamByName('Key').AsString := Key;
-      ExistsQuery.Open;
-      try
-        if ExistsQuery.Eof then
-        begin
-          InsertQuery.Connection := FConnection;
-          InsertQuery.SQL.Text :=
-            'INSERT INTO ProjectInfo (Key, Value) VALUES (:Key, :Value)';
-          InsertQuery.ParamByName('Key').AsString := Key;
-          InsertQuery.ParamByName('Value').AsString := Value;
-          InsertQuery.ExecSQL;
-        end;
-      finally
-        ExistsQuery.Close;
-      end;
-    end;
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'INSERT OR REPLACE INTO ProjectInfo (Key, Value) VALUES (:Key, :Value)';
+    Query.ParamByName('Key').AsString := Key;
+    Query.ParamByName('Value').AsString := Value;
+    Query.ExecSQL;
   finally
-    UpdateQuery.Free;
-    ExistsQuery.Free;
-    InsertQuery.Free;
+    Query.Free;
   end;
 end;
 

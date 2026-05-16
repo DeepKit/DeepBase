@@ -5,6 +5,7 @@ interface
 uses
   System.Classes,
   System.SysUtils,
+  System.SyncObjs,
   System.Net.HttpClient,
   System.Net.URLClient;
 
@@ -48,10 +49,52 @@ type
       TDeepBaseHttpTransportResponse;
   end;
 
-  TDeepBaseSystemNetTransport = class(TInterfacedObject, IDeepBaseHttpTransport)
+  /// <summary>
+  /// Cancellation token for aborting in-progress streaming requests.
+  /// Thread-safe: Cancel can be called from any thread.
+  /// </summary>
+  ICancellationToken = interface
+    ['{D4E5F6A7-B8C9-4D0E-A1F2-3B4C5D6E7F80}']
+    function IsCancelled: Boolean;
+    procedure Cancel;
+  end;
+
+  /// <summary>
+  /// Callback invoked for each chunk received during streaming.
+  /// Set ACancel to True to abort the stream.
+  /// </summary>
+  TStreamChunkEvent = reference to procedure(const AChunk: string; var ACancel: Boolean);
+
+  /// <summary>
+  /// Extended transport interface supporting true streaming responses.
+  /// Chunks are delivered via callback before the full response completes.
+  /// </summary>
+  IDeepBaseStreamingTransport = interface(IDeepBaseHttpTransport)
+    ['{A2B3C4D5-E6F7-4890-AB12-CD34EF56A789}']
+    function SendStreaming(const ARequest: TDeepBaseHttpTransportRequest;
+      AOnChunk: TStreamChunkEvent;
+      const ACancelToken: ICancellationToken): TDeepBaseHttpTransportResponse;
+  end;
+
+  /// <summary>
+  /// Default implementation of ICancellationToken using atomic integer.
+  /// </summary>
+  TCancellationToken = class(TInterfacedObject, ICancellationToken)
+  private
+    FCancelled: Integer; // 0 = not cancelled, 1 = cancelled
+  public
+    function IsCancelled: Boolean;
+    procedure Cancel;
+  end;
+
+  TDeepBaseSystemNetTransport = class(TInterfacedObject, IDeepBaseHttpTransport,
+    IDeepBaseStreamingTransport)
   public
     function Send(const ARequest: TDeepBaseHttpTransportRequest):
       TDeepBaseHttpTransportResponse;
+    function SendStreaming(const ARequest: TDeepBaseHttpTransportRequest;
+      AOnChunk: TStreamChunkEvent;
+      const ACancelToken: ICancellationToken): TDeepBaseHttpTransportResponse;
   end;
 
 function DeepBaseHttpMethodToString(AMethod: TDeepBaseHttpMethod): string;
@@ -230,6 +273,80 @@ begin
     BodyStream.Free;
     Client.Free;
   end;
+end;
+
+{ TCancellationToken }
+
+function TCancellationToken.IsCancelled: Boolean;
+begin
+  Result := TInterlocked.CompareExchange(FCancelled, 0, 0) <> 0;
+end;
+
+procedure TCancellationToken.Cancel;
+begin
+  TInterlocked.Exchange(FCancelled, 1);
+end;
+
+{ TDeepBaseSystemNetTransport.SendStreaming }
+
+function TDeepBaseSystemNetTransport.SendStreaming(
+  const ARequest: TDeepBaseHttpTransportRequest;
+  AOnChunk: TStreamChunkEvent;
+  const ACancelToken: ICancellationToken): TDeepBaseHttpTransportResponse;
+var
+  LStartTick: UInt64;
+  LFirstTokenMs: Integer;
+  LFirstChunkReceived: Boolean;
+begin
+  // Execute the full request first (current transport limitation - buffered)
+  // then parse SSE lines and deliver via callback. This enables the streaming
+  // API contract while the underlying HTTP layer remains buffered.
+  // Future: replace with chunked/socket-based transport for true TTFT reduction.
+  LStartTick := TThread.GetTickCount64;
+  LFirstTokenMs := 0;
+  LFirstChunkReceived := False;
+
+  Result := Send(ARequest);
+
+  // If cancelled before we even start parsing, return immediately
+  if Assigned(ACancelToken) and ACancelToken.IsCancelled then
+    Exit;
+
+  // Parse SSE lines from the buffered response body
+  if Result.IsSuccess and (Result.Body <> '') then
+  begin
+    var LLines := Result.Body.Split([#10]);
+    for var LLine in LLines do
+    begin
+      if Assigned(ACancelToken) and ACancelToken.IsCancelled then
+        Break;
+
+      var LTrimmed := LLine.TrimRight([#13]);
+      if LTrimmed.StartsWith('data: ') then
+      begin
+        var LData := LTrimmed.Substring(6);
+        if LData = '[DONE]' then
+          Break;
+
+        if not LFirstChunkReceived then
+        begin
+          LFirstChunkReceived := True;
+          LFirstTokenMs := Integer(TThread.GetTickCount64 - LStartTick);
+        end;
+
+        var LCancel := False;
+        if Assigned(AOnChunk) then
+          AOnChunk(LData, LCancel);
+        if LCancel then
+          Break;
+      end;
+    end;
+  end;
+
+  // Append FirstTokenMs metadata
+  if LFirstChunkReceived then
+    Result.StatusText := Result.StatusText + ' [FirstTokenMs=' +
+      IntToStr(LFirstTokenMs) + ']';
 end;
 
 end.

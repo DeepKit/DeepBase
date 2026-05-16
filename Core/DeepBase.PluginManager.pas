@@ -239,7 +239,8 @@ function WinVerifyTrust(hwnd: THandle; pgActionID: PGUID; pWVTData: Pointer): Lo
 {$ENDIF}
 
 const
-  DeepBase_VERSION = '0.3';
+  // FR-001 fix: use canonical DeepBase_VERSION_STRING from DeepBase.Consts.
+  DeepBase_VERSION = DeepBase_VERSION_STRING;
   PLUGIN_CATEGORY = 'Plugins';
   PLUGIN_CONFIG_PREFIX = 'Plugin.';
 

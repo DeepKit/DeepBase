@@ -190,6 +190,17 @@ type
   end;
   
   [TestFixture]
+  TTestEventBusSubscriptionLifetime = class
+  public
+    /// <summary>BASIC-023: ISubscription must remain safe to call after EventBus.Destroy</summary>
+    [Test]
+    procedure Test_Unsubscribe_AfterEventBusDestroyed_DoesNotCrash;
+
+    [Test]
+    procedure Test_IsActive_AfterEventBusDestroyed_ReturnsFalse;
+  end;
+
+  [TestFixture]
   TTestGlobalEventBus = class
   public
     [Test]
@@ -1184,9 +1195,55 @@ begin
   SetEventBus(nil);
 end;
 
+{ TTestEventBusSubscriptionLifetime }
+
+procedure TTestEventBusSubscriptionLifetime.Test_Unsubscribe_AfterEventBusDestroyed_DoesNotCrash;
+var
+  Bus: TEventBus;
+  Sub: ISubscription;
+begin
+  Bus := TEventBus.Create;
+  Sub := Bus.Subscribe<TTestEvent>(
+    procedure(const Event: TTestEvent)
+    begin
+    end);
+
+  Assert.IsTrue(Sub.IsActive, 'Subscription should be active before destroy');
+
+  // Destroy the bus while a strong ISubscription is still held.
+  Bus.Free;
+
+  // BASIC-023: this must not access freed memory.
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Sub.Unsubscribe;
+    end,
+    'Unsubscribe after EventBus destroy should be a safe no-op');
+end;
+
+procedure TTestEventBusSubscriptionLifetime.Test_IsActive_AfterEventBusDestroyed_ReturnsFalse;
+var
+  Bus: TEventBus;
+  Sub: ISubscription;
+begin
+  Bus := TEventBus.Create;
+  Sub := Bus.Subscribe<TTestEvent>(
+    procedure(const Event: TTestEvent)
+    begin
+    end);
+
+  Bus.Free;
+
+  // After EventBus.Destroy, InvalidateBus sets FActive := False.
+  Assert.IsFalse(Sub.IsActive,
+    'IsActive must return False after EventBus has been destroyed');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseEventBus);
   TDUnitX.RegisterTestFixture(TTestEventBusStats);
+  TDUnitX.RegisterTestFixture(TTestEventBusSubscriptionLifetime);
   TDUnitX.RegisterTestFixture(TTestGlobalEventBus);
 
 end.

@@ -111,6 +111,18 @@ type
     
     [Test]
     procedure Test_IsRegistered_WithName;
+
+    /// <summary>BASIC-025: register after first Resolve must fail-fast</summary>
+    [Test]
+    procedure Test_RegisterAfterFreeze_RaisesException;
+
+    /// <summary>BASIC-025: explicit Freeze locks the container</summary>
+    [Test]
+    procedure Test_Freeze_PreventsLaterRegistration;
+
+    /// <summary>BASIC-025: Clear unfreezes the container for tests</summary>
+    [Test]
+    procedure Test_Clear_UnfreezesContainer;
   end;
   
   // Test Interceptor
@@ -448,6 +460,59 @@ begin
   
   Assert.IsTrue(FContainer.IsRegistered<ITestService>('NamedA'), 'Named registration should be found');
   Assert.IsFalse(FContainer.IsRegistered<ITestService>('NonExistent'), 'Non-existent name should not be found');
+end;
+
+procedure TIoCContainerTests.Test_RegisterAfterFreeze_RaisesException;
+var
+  Svc: ITestService;
+begin
+  FContainer.RegisterType<ITestService, TTestServiceA>(slSingleton);
+  Svc := FContainer.Resolve<ITestService>;
+  Assert.IsNotNull(Svc, 'First Resolve should succeed');
+
+  // BASIC-025: container is now frozen; further registrations must fail.
+  Assert.WillRaise(
+    procedure
+    begin
+      FContainer.RegisterType<ITestService, TTestServiceB>(slTransient);
+    end,
+    EIoCException,
+    'RegisterType after first Resolve must fail-fast');
+
+  Assert.IsTrue(FContainer.IsFrozen, 'Container must report IsFrozen = True');
+end;
+
+procedure TIoCContainerTests.Test_Freeze_PreventsLaterRegistration;
+begin
+  FContainer.RegisterType<ITestService, TTestServiceA>(slTransient);
+  FContainer.Freeze;
+
+  Assert.IsTrue(FContainer.IsFrozen, 'Freeze must mark the container as frozen');
+
+  Assert.WillRaise(
+    procedure
+    begin
+      FContainer.RegisterSingleton<ITestService, TTestServiceA>;
+    end,
+    EIoCException,
+    'RegisterSingleton must be rejected after explicit Freeze');
+end;
+
+procedure TIoCContainerTests.Test_Clear_UnfreezesContainer;
+var
+  Svc: ITestService;
+begin
+  FContainer.RegisterType<ITestService, TTestServiceA>(slSingleton);
+  Svc := FContainer.Resolve<ITestService>;
+  Assert.IsTrue(FContainer.IsFrozen, 'Resolve should freeze the container');
+
+  FContainer.Clear;
+  Assert.IsFalse(FContainer.IsFrozen, 'Clear must reset the frozen state');
+
+  // Should accept new registrations after Clear.
+  FContainer.RegisterType<ITestService, TTestServiceB>(slTransient);
+  Svc := FContainer.Resolve<ITestService>;
+  Assert.IsNotNull(Svc, 'Re-registration after Clear should succeed');
 end;
 
 { TTestInterceptor }

@@ -263,7 +263,12 @@ type
   end;
 
   // BUG-BA-025 fix: factory abstraction so Recovery can actually rebuild
-  // sessions, not just notify.
+  // sessions, not just notify. Declared BEFORE IBrowserRecoveryEvents so
+  // the latter can reference IBrowserSessionFactory and TSessionRebuiltEvent
+  // by name. Win32 dcc32 (and strict interface-type checks in Delphi 13.1
+  // generally) reject forward references through method signatures of
+  // anonymous-procedure types — `reference to procedure` cannot be
+  // forward-declared, only reordered.
   IBrowserSessionFactory = interface
     ['{1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}']
     /// <summary>Create a fresh session, optionally inheriting AHintId.
@@ -282,6 +287,21 @@ type
   TSessionRebuiltEvent = reference to procedure(
     const AOldSessionId: TBrowserSessionId;
     const ANewSession: IBrowserSession);
+
+  // M4 fix: capability interface so IoC.WireServiceToRecovery can wire the
+  // OnSessionRebuilt callback without hard-casting to TBrowserRecoveryManager.
+  // Implementations that support session rebuilds also implement this.
+  IBrowserRecoveryEvents = interface
+    ['{2D8C3F94-7B5A-4E61-8C2D-9F3A4B5C6D7E}']
+    function GetOnSessionRebuilt: TSessionRebuiltEvent;
+    procedure SetOnSessionRebuilt(const AValue: TSessionRebuiltEvent);
+    function GetSessionFactory: IBrowserSessionFactory;
+    procedure SetSessionFactory(const AValue: IBrowserSessionFactory);
+    property OnSessionRebuilt: TSessionRebuiltEvent
+      read GetOnSessionRebuilt write SetOnSessionRebuilt;
+    property SessionFactory: IBrowserSessionFactory
+      read GetSessionFactory write SetSessionFactory;
+  end;
 
   IResponseWaiter = interface
     ['{F7B5A4D3-6E8C-7D0B-1F2A-3B4C5D6E7F80}']

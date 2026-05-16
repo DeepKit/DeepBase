@@ -107,7 +107,7 @@ begin
     CryptReleaseContext(hProv, 0);
   end
   else
-    raise EProtectionException.Create('获取加密上下文失�?);
+    raise EProtectionException.Create('获取加密上下文失败');
 end;
 
 // 数据填充（PKCS7�?
@@ -145,7 +145,7 @@ begin
   for I := Length(AData) - PadLength to High(AData) do
   begin
     if AData[I] <> PadLength then
-      raise EProtectionException.Create('无效的数据填�?);
+      raise EProtectionException.Create('无效的数据填充');
   end;
   
   SetLength(Result, Length(AData) - PadLength);
@@ -176,7 +176,7 @@ begin
   
   // 获取AES加密上下�?
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EProtectionException.Create('获取AES加密上下文失�?);
+    raise EProtectionException.Create('获取AES加密上下文失败');
   
   try
     // 创建哈希对象用于密钥派生
@@ -259,7 +259,7 @@ begin
   
   // 获取AES解密上下�?
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EProtectionException.Create('获取AES解密上下文失�?);
+    raise EProtectionException.Create('获取AES解密上下文失败');
   
   try
     // 创建哈希对象用于密钥派生
@@ -329,7 +329,7 @@ begin
   IV := GenerateRandomIV;
   
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EProtectionException.Create('获取AES加密上下文失�?);
+    raise EProtectionException.Create('获取AES加密上下文失败');
   
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
@@ -445,7 +445,7 @@ var
   HashBytes: TBytes;
 begin
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EProtectionException.Create('获取SHA256哈希上下文失�?);
+    raise EProtectionException.Create('获取SHA256哈希上下文失败');
   try
     if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
       raise EProtectionException.Create('创建SHA256哈希对象失败');
@@ -476,7 +476,7 @@ var
   FileStream: TFileStream;
 begin
   if not TFile.Exists(AFileName) then
-    raise EProtectionException.Create('文件不存�? ' + AFileName);
+    raise EProtectionException.Create('文件不存在: ' + AFileName);
 
   FileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try

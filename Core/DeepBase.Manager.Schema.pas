@@ -53,7 +53,8 @@ uses
   System.Classes,
   System.IOUtils,
   System.Generics.Collections,
-  DeepBase.Schema;
+  DeepBase.Schema,
+  DeepBase.SQL.Splitter;
 
 const
   ecSchemaVersionMismatch = TInitErrorCode(10);
@@ -62,39 +63,11 @@ const
 
 class function TDeepBaseManagerSchema.SplitSQLStatements(
   const SQL: string): TArray<string>;
-var
-  Current: string;
-  List: TList<string>;
-  InString: Boolean;
-  C: Char;
-  J: Integer;
 begin
-  List := TList<string>.Create;
-  try
-    Current := '';
-    InString := False;
-    for J := 1 to Length(SQL) do
-    begin
-      C := SQL[J];
-      if C = '''' then
-        InString := not InString;
-      if (C = ';') and not InString then
-      begin
-        Current := Trim(Current);
-        if Current <> '' then
-          List.Add(Current);
-        Current := '';
-      end
-      else
-        Current := Current + C;
-    end;
-    Current := Trim(Current);
-    if Current <> '' then
-      List.Add(Current);
-    Result := List.ToArray;
-  finally
-    List.Free;
-  end;
+  // BASIC-019: delegate to the shared canonical SQL splitter so that
+  // Manager.Schema and DB.Migrations parse the same way (handles dollar
+  // quotes, line/block comments, and CREATE TRIGGER..END bodies).
+  Result := TDeepBaseSQLSplitter.Split(SQL);
 end;
 
 class function TDeepBaseManagerSchema.GetSchemaVersion(
@@ -407,11 +380,8 @@ class function TDeepBaseManagerSchema.RunMigrationScript(
   const AStorage: IManagerStorage; const ScriptPath: string;
   out ALastError: string): Boolean;
 var
-  ScriptSQL, Stmt, Current: string;
-  Statements: TList<string>;
-  InString: Boolean;
-  C: Char;
-  J: Integer;
+  ScriptSQL, Stmt: string;
+  Statements: TArray<string>;
 begin
   Result := False;
   ALastError := '';
@@ -425,44 +395,22 @@ begin
   try
     ScriptSQL := TFile.ReadAllText(ScriptPath, TEncoding.UTF8);
 
-    Statements := TList<string>.Create;
-    try
-      Current := '';
-      InString := False;
-      for J := 1 to Length(ScriptSQL) do
-      begin
-        C := ScriptSQL[J];
-        if C = '''' then
-          InString := not InString;
-        if (C = ';') and not InString then
-        begin
-          Current := Trim(Current);
-          if (Current <> '') and not Current.StartsWith('--') then
-            Statements.Add(Current);
-          Current := '';
-        end
-        else
-          Current := Current + C;
-      end;
-      Current := Trim(Current);
-      if (Current <> '') and not Current.StartsWith('--') then
-        Statements.Add(Current);
+    // BASIC-019: shared canonical splitter handles dollar quotes,
+    // line/block comments, escaped quotes, and trigger bodies.
+    Statements := TDeepBaseSQLSplitter.Split(ScriptSQL);
 
-      if not Assigned(AStorage) then
-      begin
-        ALastError := 'Migration requires manager storage registration.';
-        Exit(False);
-      end;
-
-      for Stmt in Statements do
-      begin
-        if Trim(Stmt) <> '' then
-          AStorage.ExecuteStatement(Stmt);
-      end;
-      Result := True;
-    finally
-      Statements.Free;
+    if not Assigned(AStorage) then
+    begin
+      ALastError := 'Migration requires manager storage registration.';
+      Exit(False);
     end;
+
+    for Stmt in Statements do
+    begin
+      if Trim(Stmt) <> '' then
+        AStorage.ExecuteStatement(Stmt);
+    end;
+    Result := True;
   except
     on E: Exception do
       ALastError := 'Migration script error: ' + E.Message;

@@ -86,7 +86,7 @@ uses
   DeepBase.Exceptions;
 
 const
-  // Windows Crypto API ³£Á¿
+  // Windows Crypto API ï¿½ï¿½ï¿½ï¿½
   PROV_RSA_AES = 24;
   CRYPT_VERIFYCONTEXT = $F0000000;
   CRYPT_EXPORTABLE = $00000001;
@@ -103,7 +103,7 @@ type
   HCRYPTKEY = THandle;
   HCRYPTHASH = THandle;
 
-// Windows Crypto API º¯ÊýÉùÃ÷
+// Windows Crypto API ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 function CryptAcquireContextA(var phProv: HCRYPTPROV; pszContainer: PAnsiChar;
   pszProvider: PAnsiChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall; external 'advapi32.dll';
 
@@ -543,7 +543,7 @@ begin
   if FStorage = nil then
     raise EInvalidOperation.Create(
       'Anti-tamper storage factory is not registered. ' +
-      'Include DeepBase.Persistence.Protection.FireDAC or DeepBasePersistence package.');
+      'Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).');
 
   Result := FStorage;
 end;

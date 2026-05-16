@@ -167,6 +167,12 @@ type
     OpenQuestions: TArray<string>;
     ResumeHint: string;
     SerializedAt: TDateTime;
+    /// <summary>
+    /// IC-005: When FromJson cannot parse the input, this field carries
+    /// a descriptive error message. Callers should check Error = '' to
+    /// determine whether the checkpoint is valid.
+    /// </summary>
+    Error: string;
 
     function ToJson: string;
     class function FromJson(const AJson: string): TSessionCheckpoint; static;
@@ -326,6 +332,7 @@ class function TSessionCheckpoint.FromJson(const AJson: string): TSessionCheckpo
 var
   LValue: TJSONValue;
   LRoot: TJSONObject;
+  LStateValue: TJSONValue;
   LState: TJSONObject;
   LStatus: Integer;
   LLevel: Integer;
@@ -333,15 +340,23 @@ var
 begin
   Result := Default(TSessionCheckpoint);
   if Trim(AJson) = '' then
+  begin
+    Result.Error := 'Empty JSON input';
     Exit;
+  end;
 
   LValue := TJSONObject.ParseJSONValue(AJson);
   if LValue = nil then
-    raise EArgumentException.Create('Invalid session checkpoint JSON');
+  begin
+    // IC-005: Return descriptive error rather than raising.
+    Result.Error := 'Invalid session checkpoint JSON';
+    Exit;
+  end;
   if not (LValue is TJSONObject) then
   begin
     LValue.Free;
-    raise EArgumentException.Create('Session checkpoint JSON root is not an object');
+    Result.Error := 'Session checkpoint JSON root is not an object';
+    Exit;
   end;
 
   LRoot := LValue as TJSONObject;
@@ -351,7 +366,19 @@ begin
     Result.SerializedAt := ISO8601ToDate(JsonString(LRoot, 'serializedAt',
       DateToISO8601(Now, False)), False);
 
-    LState := LRoot.GetValue('sessionState') as TJSONObject;
+    // IC-006: Validate sessionState is present and an object before casting.
+    LStateValue := LRoot.GetValue('sessionState');
+    if LStateValue = nil then
+    begin
+      Result.Error := 'Missing required field: sessionState';
+      Exit;
+    end;
+    if not (LStateValue is TJSONObject) then
+    begin
+      Result.Error := 'sessionState is not a JSON object';
+      Exit;
+    end;
+    LState := LStateValue as TJSONObject;
     if LState <> nil then
     begin
       Result.SessionState.SessionId := JsonString(LState, 'sessionId', '');

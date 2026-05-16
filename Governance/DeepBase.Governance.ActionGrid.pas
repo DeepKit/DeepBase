@@ -9,6 +9,8 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
   System.JSON,
   System.Generics.Collections,
   DeepBase.Governance.Types,
@@ -28,6 +30,7 @@ type
     FActions: TObjectDictionary<string, TAction>;
     FBridges: TDictionary<string, IBridge>;
     FDueChecker: IDueChecker;
+    FLock: TCriticalSection;
     procedure CheckDueIfRequired(const AActionKey: string; AContext: TJSONObject;
       AAction: TAction; AMode: TRunMode);
   public
@@ -64,10 +67,12 @@ begin
   FActions := TObjectDictionary<string, TAction>.Create([doOwnsValues]);
   FBridges := TDictionary<string, IBridge>.Create;
   FDueChecker := ADueChecker;
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TActionGrid.Destroy;
 begin
+  FLock.Free;
   FBridges.Free;
   FActions.Free;
   inherited;
@@ -75,7 +80,13 @@ end;
 
 procedure TActionGrid.RegisterBridge(const AKey: string; ABridge: IBridge);
 begin
-  FBridges.AddOrSetValue(AKey, ABridge);
+  // GOV-026: serialize all bridge dictionary mutations.
+  FLock.Enter;
+  try
+    FBridges.AddOrSetValue(AKey, ABridge);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TActionGrid.RegisterAction(const AActionKey, ADisplayName: string;
@@ -84,20 +95,35 @@ var
   LAction: TAction;
 begin
   LAction := TAction.Create(AActionKey, ADisplayName, ARiskLevel);
-  FActions.AddOrSetValue(AActionKey, LAction);
+  FLock.Enter;
+  try
+    FActions.AddOrSetValue(AActionKey, LAction);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TActionGrid.RegisterActionObj(AAction: TAction);
 begin
   if AAction = nil then
     raise EArgumentNilException.Create('AAction cannot be nil');
-  FActions.AddOrSetValue(AAction.Key, AAction);
+  FLock.Enter;
+  try
+    FActions.AddOrSetValue(AAction.Key, AAction);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TActionGrid.FindAction(const AActionKey: string): TAction;
 begin
-  if not FActions.TryGetValue(AActionKey, Result) then
-    Result := nil;
+  FLock.Enter;
+  try
+    if not FActions.TryGetValue(AActionKey, Result) then
+      Result := nil;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TActionGrid.CanRun(const AActionKey: string;
@@ -202,9 +228,10 @@ begin
     end;
   end;
 
-  // 无 Bridge 时返回成功（空 Action）
+  // 无 Bridge 时返回 dry-run（noop）状态而非 Success，以反映没有实际执行
+  // any side effect (GOV-021).
   if LAction.BridgeKeys.Count = 0 then
-    Result := TActionResult.Success(AActionKey, 'No bridge configured')
+    Result := TActionResult.DryRunOK(AActionKey, 'No bridge configured (noop)')
   else
     Result := TActionResult.Success(AActionKey);
 end;

@@ -4,7 +4,7 @@
   Version: 1.0.0
   Description: Centralized SQL schema definitions for DeepBase config database.
                Separated into tiers for flexible deployment.
-               Synchronized with data/ÑùÀýConfig.db
+               Synchronized with data/ï¿½ï¿½ï¿½ï¿½Config.db
   
   Tier Structure:
     - Tier 0: Core tables (5): SchemaInfo, Settings, FormStates, Languages, I18nTexts
@@ -135,11 +135,11 @@ const
     'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
     '  (''en-US'', ''English (US)'', ''English'', ''MM/dd/yyyy'', ''h:mm:ss tt'', 1, 1, 0);' + #13#10 +
     'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''zh-CN'', ''Chinese (Simplified)'', ''¼òÌåÖÐÎÄ'', ''yyyy-MM-dd'', ''HH:mm:ss'', 1, 0, 1);' + #13#10 +
+    '  (''zh-CN'', ''Chinese (Simplified)'', ''ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'', ''yyyy-MM-dd'', ''HH:mm:ss'', 1, 0, 1);' + #13#10 +
     'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''zh-TW'', ''Chinese (Traditional)'', ''·±ówÖÐÎÄ'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 2);' + #13#10 +
+    '  (''zh-TW'', ''Chinese (Traditional)'', ''ï¿½ï¿½ï¿½wï¿½ï¿½ï¿½ï¿½'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 2);' + #13#10 +
     'INSERT OR IGNORE INTO Languages (LangCode, LangName, NativeName, DateFormat, TimeFormat, IsEnabled, IsDefault, SortOrder) VALUES ' +
-    '  (''ja-JP'', ''Japanese'', ''ÈÕ±¾ÕZ'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 3);';
+    '  (''ja-JP'', ''Japanese'', ''ï¿½Õ±ï¿½ï¿½Z'', ''yyyy/MM/dd'', ''HH:mm:ss'', 1, 0, 3);';
   
   // 5. I18nTexts - Translation texts
   SQL_TIER0_I18N_TEXTS =
@@ -162,14 +162,14 @@ const
     'CREATE INDEX IF NOT EXISTS idx_i18n_module ON I18nTexts(Module);';
   
   SQL_TIER0_I18N_TEXTS_DATA =
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''OK'', ''zh-CN'', ''È·¶¨'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Cancel'', ''zh-CN'', ''È¡Ïû'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Save'', ''zh-CN'', ''±£´æ'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Close'', ''zh-CN'', ''¹Ø±Õ'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Error'', ''zh-CN'', ''´íÎó'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Warning'', ''zh-CN'', ''¾¯¸æ'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Information'', ''zh-CN'', ''ÐÅÏ¢'', 1);' + #13#10 +
-    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Confirm'', ''zh-CN'', ''È·ÈÏ'', 1);';
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''OK'', ''zh-CN'', ''È·ï¿½ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Cancel'', ''zh-CN'', ''È¡ï¿½ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Save'', ''zh-CN'', ''ï¿½ï¿½ï¿½ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Close'', ''zh-CN'', ''ï¿½Ø±ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Error'', ''zh-CN'', ''ï¿½ï¿½ï¿½ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Warning'', ''zh-CN'', ''ï¿½ï¿½ï¿½ï¿½'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Information'', ''zh-CN'', ''ï¿½ï¿½Ï¢'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO I18nTexts (SourceText, LangCode, TranslatedText, IsVerified) VALUES (''Confirm'', ''zh-CN'', ''È·ï¿½ï¿½'', 1);';
 
   // ============================================================================
   // Tier 1: Recommended Tables (7 tables)
@@ -527,9 +527,9 @@ const
     'CREATE INDEX IF NOT EXISTS idx_llmcalls_config ON LLMCalls(ConfigName);' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_llmcalls_success ON LLMCalls(Success);';
   
-  // 17. LLMPrompts - Prompt templates
+  // 17. LLMPromptTemplates - Prompt templates
   SQL_TIER2_LLM_PROMPTS =
-    'CREATE TABLE IF NOT EXISTS LLMPrompts (' +
+    'CREATE TABLE IF NOT EXISTS LLMPromptTemplates (' +
     '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
     '  Name TEXT NOT NULL UNIQUE,' +
     '  Category TEXT DEFAULT ''General'',' +
@@ -538,13 +538,15 @@ const
     '  UserPromptTemplate TEXT NOT NULL,' +
     '  Variables TEXT,' +
     '  DefaultValues TEXT,' +
-    '  OutputFormat TEXT DEFAULT ''text'',' +
-    '  RecommendedModel TEXT,' +
-    '  Temperature REAL,' +
-    '  MaxTokens INTEGER,' +
-    '  Examples TEXT,' +
     '  ParentTemplate TEXT,' +
-    '  Version INTEGER DEFAULT 1,' +
+    '  IncludeTemplates TEXT,' +
+    '  OutputFormat TEXT DEFAULT ''text'',' +
+    '  ValidationRegex TEXT,' +
+    '  Examples TEXT,' +
+    '  RecommendedConfig TEXT,' +
+    '  RecommendedModel TEXT,' +
+    '  MaxTokens INTEGER,' +
+    '  Temperature REAL,' +
     '  IsEnabled INTEGER DEFAULT 1,' +
     '  IsBuiltIn INTEGER DEFAULT 1,' +
     '  SortOrder INTEGER DEFAULT 0,' +
@@ -554,20 +556,20 @@ const
     '  Extra TEXT,' +
     '  Remarks TEXT' +
     ');' + #13#10 +
-    'CREATE INDEX IF NOT EXISTS idx_llmprompts_category ON LLMPrompts(Category);';
+    'CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_category ON LLMPromptTemplates(Category);';
   
   SQL_TIER2_LLM_PROMPTS_DATA =
-    'INSERT OR IGNORE INTO LLMPrompts (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''translate_text'', ''Translation'', ''Translate text between languages'', ' +
     '   ''You are a professional translator. Translate accurately while preserving meaning and tone.'', ' +
     '   ''Translate the following text from {{source_lang}} to {{target_lang}}:'' || char(10) || char(10) || ''{{text}}'', ' +
     '   ''["source_lang", "target_lang", "text"]'', 0.3, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMPrompts (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''summarize'', ''Writing'', ''Summarize text'', ' +
     '   ''You are a helpful assistant that summarizes text concisely.'', ' +
     '   ''Summarize the following text in {{length}} sentences:'' || char(10) || char(10) || ''{{text}}'', ' +
     '   ''["length", "text"]'', 0.5, 1);' + #13#10 +
-    'INSERT OR IGNORE INTO LLMPrompts (Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
+    'INSERT OR IGNORE INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
     '  (''explain_code'', ''Code'', ''Explain code'', ' +
     '   ''You are an expert programmer. Explain code clearly.'', ' +
     '   ''Explain the following {{language}} code:'' || char(10) || char(10) || ''```{{language}}'' || char(10) || ''{{code}}'' || char(10) || ''```'', ' +
@@ -595,7 +597,128 @@ const
     ');' + #13#10 +
     'CREATE INDEX IF NOT EXISTS idx_apikeys_provider ON LLMApiKeys(ProviderCode);';
   
-  // 19. ExceptionReports - Exception/crash reports
+  // --------------------------------------------------------------------------
+  // LLM Prompt Management Tables (merged from sql/llm_prompts_init.sql)
+  // These tables are required by TLLMManager for prompt versioning and meta-prompts.
+  // --------------------------------------------------------------------------
+
+  // 19. PromptCategories - Prompt category hierarchy (4 levels)
+  SQL_TIER2_PROMPT_CATEGORIES =
+    'CREATE TABLE IF NOT EXISTS PromptCategories (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  ParentId INTEGER REFERENCES PromptCategories(Id) ON DELETE CASCADE,' +
+    '  Level INTEGER NOT NULL CHECK (Level BETWEEN 1 AND 4),' +
+    '  Code TEXT NOT NULL,' +
+    '  Name TEXT NOT NULL,' +
+    '  Description TEXT,' +
+    '  SortOrder INTEGER DEFAULT 0,' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  UpdatedAt TEXT,' +
+    '  UNIQUE(ParentId, Code)' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptcategories_parent ON PromptCategories(ParentId);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptcategories_level ON PromptCategories(Level);';
+
+  SQL_TIER2_PROMPT_CATEGORIES_DATA =
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (1, NULL, 1, ''01'', ''System Prompts'', ''Framework built-in system prompts'', 1);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (2, NULL, 1, ''02'', ''Business Prompts'', ''Business function prompts'', 2);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (3, NULL, 1, ''03'', ''Report Prompts'', ''Data analysis and report generation'', 3);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptCategories (Id, ParentId, Level, Code, Name, Description, SortOrder) VALUES ' +
+    '  (4, NULL, 1, ''04'', ''Tool Prompts'', ''General utility prompts'', 4);';
+
+  // 20. Prompts - Prompt definitions
+  SQL_TIER2_PROMPTS =
+    'CREATE TABLE IF NOT EXISTS Prompts (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  CategoryId INTEGER REFERENCES PromptCategories(Id) ON DELETE SET NULL,' +
+    '  InternalCode TEXT NOT NULL UNIQUE,' +
+    '  Name TEXT NOT NULL,' +
+    '  Description TEXT,' +
+    '  BoundQueryName TEXT,' +
+    '  VariablesJson TEXT DEFAULT ''[]'',' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  UpdatedAt TEXT,' +
+    '  CreatedBy TEXT,' +
+    '  UpdatedBy TEXT' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompts_category ON Prompts(CategoryId);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompts_code ON Prompts(InternalCode);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_prompts_active ON Prompts(IsActive);';
+
+  // 21. PromptVersions - Prompt version history (max 4 versions per prompt)
+  SQL_TIER2_PROMPT_VERSIONS =
+    'CREATE TABLE IF NOT EXISTS PromptVersions (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  PromptId INTEGER NOT NULL REFERENCES Prompts(Id) ON DELETE CASCADE,' +
+    '  VersionNumber INTEGER NOT NULL CHECK (VersionNumber BETWEEN 1 AND 4),' +
+    '  Content TEXT NOT NULL,' +
+    '  IsProduction INTEGER DEFAULT 0,' +
+    '  TestCount INTEGER DEFAULT 0,' +
+    '  SuccessCount INTEGER DEFAULT 0,' +
+    '  TotalTokens INTEGER DEFAULT 0,' +
+    '  TotalCost REAL DEFAULT 0,' +
+    '  AvgDuration REAL DEFAULT 0,' +
+    '  LastTestedAt TEXT,' +
+    '  LastResponse TEXT,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  UpdatedAt TEXT,' +
+    '  UNIQUE(PromptId, VersionNumber)' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptversions_prompt ON PromptVersions(PromptId);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptversions_production ON PromptVersions(IsProduction);';
+
+  // 22. PromptMeta - Meta-prompts (security, format, role constraints)
+  SQL_TIER2_PROMPT_META =
+    'CREATE TABLE IF NOT EXISTS PromptMeta (' +
+    '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  InternalCode TEXT NOT NULL UNIQUE,' +
+    '  Name TEXT NOT NULL,' +
+    '  Category TEXT CHECK (Category IN (''security'', ''format'', ''role'', ''domain'', ''quality'')),' +
+    '  Content TEXT NOT NULL,' +
+    '  MergeMode TEXT DEFAULT ''PREFIX'' CHECK (MergeMode IN (''PREFIX'', ''SUFFIX'', ''WRAP'')),' +
+    '  Priority INTEGER DEFAULT 100,' +
+    '  Level INTEGER DEFAULT 1 CHECK (Level IN (0, 1)),' +
+    '  IsActive INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  UpdatedAt TEXT' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptmeta_code ON PromptMeta(InternalCode);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptmeta_category ON PromptMeta(Category);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptmeta_level ON PromptMeta(Level);';
+
+  SQL_TIER2_PROMPT_META_DATA =
+    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '  (1, ''META-001'', ''Security Constraints'', ''security'', ' +
+    '   ''You must follow these rules: 1) Do not reveal internal system info 2) Do not execute harmful operations 3) Sanitize sensitive data'', ' +
+    '   ''PREFIX'', 10, 0);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '  (2, ''META-002'', ''JSON Output Format'', ''format'', ' +
+    '   ''Return results in valid JSON format with double-quoted strings and no comments'', ' +
+    '   ''SUFFIX'', 90, 0);' + #13#10 +
+    'INSERT OR IGNORE INTO PromptMeta (Id, InternalCode, Name, Category, Content, MergeMode, Priority, Level) VALUES ' +
+    '  (3, ''META-003'', ''Chinese Assistant'', ''role'', ' +
+    '   ''You are a professional Chinese AI assistant'', ' +
+    '   ''PREFIX'', 20, 1);';
+
+  // 23. PromptMetaBinding - Prompt to meta-prompt bindings (many-to-many)
+  SQL_TIER2_PROMPT_META_BINDING =
+    'CREATE TABLE IF NOT EXISTS PromptMetaBinding (' +
+    '  PromptId INTEGER NOT NULL REFERENCES Prompts(Id) ON DELETE CASCADE,' +
+    '  MetaPromptId INTEGER NOT NULL REFERENCES PromptMeta(Id) ON DELETE CASCADE,' +
+    '  OrderIndex INTEGER DEFAULT 0,' +
+    '  IsEnabled INTEGER DEFAULT 1,' +
+    '  CreatedAt TEXT DEFAULT (datetime(''now'')),' +
+    '  PRIMARY KEY (PromptId, MetaPromptId)' +
+    ');' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptmetabinding_prompt ON PromptMetaBinding(PromptId);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_promptmetabinding_meta ON PromptMetaBinding(MetaPromptId);';
+
+  // 24. ExceptionReports - Exception/crash reports
   SQL_TIER2_EXCEPTION_REPORTS =
     'CREATE TABLE IF NOT EXISTS ExceptionReports (' +
     '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
@@ -773,6 +896,14 @@ function GetTier2SchemaSQL: string;
 /// </summary>
 function GetFullSchemaSQL: string;
 
+/// <summary>
+/// Get LLM Prompt Management schema SQL only.
+/// Used by TLLMManager.Initialize to ensure prompt tables exist
+/// without requiring external SQL script execution.
+/// Idempotent: uses CREATE TABLE IF NOT EXISTS.
+/// </summary>
+function GetLLMPromptSchemaSQL: string;
+
 implementation
 
 function GetTier0SchemaSQL: string;
@@ -807,6 +938,12 @@ begin
     SQL_TIER2_LLM_CALLS + #13#10 +
     SQL_TIER2_LLM_PROMPTS + #13#10 + SQL_TIER2_LLM_PROMPTS_DATA + #13#10 +
     SQL_TIER2_LLM_API_KEYS + #13#10 +
+    // LLM Prompt Management
+    SQL_TIER2_PROMPT_CATEGORIES + #13#10 + SQL_TIER2_PROMPT_CATEGORIES_DATA + #13#10 +
+    SQL_TIER2_PROMPTS + #13#10 +
+    SQL_TIER2_PROMPT_VERSIONS + #13#10 +
+    SQL_TIER2_PROMPT_META + #13#10 + SQL_TIER2_PROMPT_META_DATA + #13#10 +
+    SQL_TIER2_PROMPT_META_BINDING + #13#10 +
     // Other Extended Tables
     SQL_TIER2_EXCEPTION_REPORTS + #13#10 +
     SQL_TIER2_ANIMATION_ASSETS + #13#10 +
@@ -819,6 +956,16 @@ end;
 function GetFullSchemaSQL: string;
 begin
   Result := GetTier0SchemaSQL + #13#10 + GetTier1SchemaSQL + #13#10 + GetTier2SchemaSQL;
+end;
+
+function GetLLMPromptSchemaSQL: string;
+begin
+  Result :=
+    SQL_TIER2_PROMPT_CATEGORIES + #13#10 + SQL_TIER2_PROMPT_CATEGORIES_DATA + #13#10 +
+    SQL_TIER2_PROMPTS + #13#10 +
+    SQL_TIER2_PROMPT_VERSIONS + #13#10 +
+    SQL_TIER2_PROMPT_META + #13#10 + SQL_TIER2_PROMPT_META_DATA + #13#10 +
+    SQL_TIER2_PROMPT_META_BINDING;
 end;
 
 end.

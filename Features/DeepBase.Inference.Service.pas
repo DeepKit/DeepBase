@@ -43,12 +43,16 @@ type
       const AInputNames: TArray<string>;
       const AInputValues: TArray<TBytes>;
       const AInputShapes: TArray<TArray<Int64>>): TInferenceOutput;
+
+    class function RunTyped(ASession: IInferenceSession;
+      const AInputs: TArray<TInferenceInput>): TInferenceOutput;
   end;
 
 implementation
 
 uses
-  DeepBase.Logging;
+  DeepBase.Logging,
+  DeepBase.Inference.Session;
 
 { --- TInferenceService -------------------------------------------------- }
 
@@ -120,7 +124,10 @@ class function TInferenceService.IsReady: Boolean;
 begin
   FLock.Enter;
   try
-    Result := (FSessionFactory <> nil);
+    // INFER-010: also confirm the runtime is initialized so callers do not
+    // mistake a registered factory for a usable runtime.
+    Result := (FSessionFactory <> nil) and
+      (FRuntime <> nil) and FRuntime.IsInitialized;
   finally
     FLock.Leave;
   end;
@@ -162,6 +169,14 @@ begin
   if ASession = nil then
     Exit(TInferenceOutput.Failed('Session is nil'));
   Result := ASession.Run(AInputNames, AInputValues, AInputShapes);
+end;
+
+class function TInferenceService.RunTyped(ASession: IInferenceSession;
+  const AInputs: TArray<TInferenceInput>): TInferenceOutput;
+begin
+  if ASession = nil then
+    Exit(TInferenceOutput.Failed('Session is nil'));
+  Result := (ASession as TInferenceSession).RunTyped(AInputs);
 end;
 
 end.

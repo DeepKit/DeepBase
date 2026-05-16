@@ -186,8 +186,11 @@ uses
   System.DateUtils,
   System.IOUtils,
   System.JSON,
-  System.NetEncoding,
-  Winapi.Windows;
+  System.NetEncoding
+  {$IFDEF MSWINDOWS}
+  , Winapi.Windows
+  {$ENDIF}
+  ;
 
 var
   GLogger: TDeepBaseLogger = nil;
@@ -198,17 +201,17 @@ function Logger: TDeepBaseLogger;
 var
   NewLock: TObject;
 begin
-  // µ¥ÀýÄ£Ê½£¬°´Ðè´´½¨
-  // ×¢Òâ£ºÓ¦ÓÉ Manager µ÷ÓÃ SetGlobalLogger ³õÊ¼»¯
-  // Èç¹ûÎ´³õÊ¼»¯£¬´´½¨Ò»¸ö½öÖ§³ÖÎÄ¼þÈÕÖ¾µÄÊµÀý£¨È·±£ÈÕÖ¾²»»áÊ§°Ü£©
+  // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½è´´ï¿½ï¿½
+  // ×¢ï¿½â£ºÓ¦ï¿½ï¿½ Manager ï¿½ï¿½ï¿½ï¿½ SetGlobalLogger ï¿½ï¿½Ê¼ï¿½ï¿½
+  // ï¿½ï¿½ï¿½Î´ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½
 
-  // ·ÀÓùÐÔ¼ì²é£ºÈç¹û GLoggerLock »¹Î´´´½¨£¨µ¥Ôª initialization Î´Ö´ÐÐ£©£¬ÏÈ´´½¨Ëü
-  // Ê¹ÓÃÔ­×Ó²Ù×÷±ÜÃâ¾ºÌ¬Ìõ¼þ
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½é£ºï¿½ï¿½ï¿½ GLoggerLock ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôª initialization Î´Ö´ï¿½Ð£ï¿½ï¿½ï¿½ï¿½È´ï¿½ï¿½ï¿½ï¿½ï¿½
+  // Ê¹ï¿½ï¿½Ô­ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¾ºÌ¬ï¿½ï¿½ï¿½ï¿½
   if GLoggerLock = nil then
   begin
     NewLock := TObject.Create;
     if TInterlocked.CompareExchange(Pointer(GLoggerLock), Pointer(NewLock), nil) <> nil then
-      NewLock.Free;  // ÁíÒ»¸öÏß³ÌÏÈ´´½¨ÁË£¬ÊÍ·ÅÎÒÃÇ´´½¨µÄ
+      NewLock.Free;  // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ß³ï¿½ï¿½È´ï¿½ï¿½ï¿½ï¿½Ë£ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ï¿½ï¿½ï¿½ï¿½
   end;
 
   if GLogger = nil then
@@ -217,9 +220,9 @@ begin
     try
       if GLogger = nil then
       begin
-        // ´´½¨ÁÙÊ±µÄÎÄ¼þÈÕÖ¾ÊµÀý
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ö¾Êµï¿½ï¿½
         GLogger := TDeepBaseLogger.Create('');
-        GLogger.StorageMode := lsmFile;  // Ç¿ÖÆÎÄ¼þÄ£Ê½£¬ÒòÎªÃ»ÓÐ DB
+        GLogger.StorageMode := lsmFile;  // Ç¿ï¿½ï¿½ï¿½Ä¼ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ÎªÃ»ï¿½ï¿½ DB
         GLoggerInitializedByManager := False;
         {$IFDEF DEBUG}
         OutputDebugString('DeepBase.Logger: Created fallback file-only logger. Call SetGlobalLogger for database logging.');
@@ -236,7 +239,7 @@ procedure SetGlobalLogger(ALogger: TDeepBaseLogger);
 var
   NewLock: TObject;
 begin
-  // ·ÀÓùÐÔ¼ì²é - Ê¹ÓÃÔ­×Ó²Ù×÷±ÜÃâ¾ºÌ¬Ìõ¼þ
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ - Ê¹ï¿½ï¿½Ô­ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¾ºÌ¬ï¿½ï¿½ï¿½ï¿½
   if GLoggerLock = nil then
   begin
     NewLock := TObject.Create;
@@ -246,12 +249,12 @@ begin
 
   TMonitor.Enter(GLoggerLock);
   try
-    // ÊÍ·Å¾ÉµÄÁÙÊ± Logger£¨Èç¹ûÓÐ£©£¬µ«²»ÊÍ·ÅÓÉ Manager ¹ÜÀíµÄÊµÀý
+    // ï¿½Í·Å¾Éµï¿½ï¿½ï¿½Ê± Loggerï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ Manager ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
     if Assigned(GLogger) and (GLogger <> ALogger) and (not GLoggerInitializedByManager) then
       FreeAndNil(GLogger);
 
     GLogger := ALogger;
-    // ½öµ±ÓÉÍâ²¿ÏÔÊ½´«ÈëÊµÀýÊ±²Å±ê¼ÇÎª Manager ³õÊ¼»¯
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â²¿ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½Ê±ï¿½Å±ï¿½ï¿½Îª Manager ï¿½ï¿½Ê¼ï¿½ï¿½
     GLoggerInitializedByManager := Assigned(ALogger);
   finally
     TMonitor.Exit(GLoggerLock);
@@ -296,7 +299,7 @@ begin
   inherited Create;
   FDBPath := DBPath;
   FStorage := CreateStorage(DBPath);
-  FStorageMode := lsmDatabase; // Ä¬ÈÏ
+  FStorageMode := lsmDatabase; // Ä¬ï¿½ï¿½
   FMinLevel := llDebug;
   FLogFileDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs');
   
@@ -316,7 +319,7 @@ begin
   FStopEvent := TEvent.Create;
   FLogEvent := TEvent.Create;
   
-  // Æô¶¯Ð´ÈëÏß³Ì
+  // ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ß³ï¿½
   FWriteThread := TThread.CreateAnonymousThread(WriteLogThread);
   FWriteThread.FreeOnTerminate := False;
   FWriteThread.Start;
@@ -360,7 +363,7 @@ begin
     // Reset event BEFORE processing to avoid race condition
     FLogEvent.ResetEvent;
     
-    // R-003: µ¥´ÎËø¶¨¼´Íê³ÉÅúÁ¿ÌáÈ¡ºÍÊ£Óà¼ÆÊý
+    // R-003: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½
     RemainingCount := 0;
     SetLength(LocalBatch, 0);
     List := FLogQueue.LockList;
@@ -379,7 +382,7 @@ begin
         // Remove processed entries from queue
         List.DeleteRange(0, BatchCount);
         
-        // ¼ÆËãÊ£ÓàÌõÄ¿Êý£¨ÔÚÍ¬Ò»´ÎËø¶¨ÖÐ£©
+        // ï¿½ï¿½ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
         RemainingCount := List.Count;
       end;
     finally
@@ -403,7 +406,7 @@ begin
     end;
     
     // If there are more entries in queue, signal ourselves to continue
-    // ×¢Òâ£ºÊ¹ÓÃÏÈÇ°¼ÇÂ¼µÄ RemainingCount£¬±ÜÃâÔÙ´Î¼ÓËø
+    // ×¢ï¿½â£ºÊ¹ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Â¼ï¿½ï¿½ RemainingCountï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù´Î¼ï¿½ï¿½ï¿½
     if RemainingCount > 0 then
       FLogEvent.SetEvent;
   end;
@@ -515,8 +518,9 @@ begin
     NewBytes := TEncoding.UTF8.GetByteCount(Line + sLineBreak);
     TargetFile := PickLogFileForWrite(BaseFile, NewBytes);
       
-    // ¶ÔÈÕÖ¾ÄÚÈÝ½øÐÐ×ªÒå£¬·ÀÖ¹ÈÕÖ¾×¢Èë¹¥»÷
-    Line := EscapeLogContent(Line);
+    // Escape log content to prevent log injection (skip for JSON â€” TJSONObject handles escaping)
+    if FLogFormat <> lfJson then
+      Line := EscapeLogContent(Line);
     TFile.AppendAllText(TargetFile, Line + sLineBreak, TEncoding.UTF8);
   except
     on E: Exception do
@@ -630,15 +634,19 @@ function TDeepBaseLogger.NextRotatedFileName(const BaseFile: string): string;
 var
   idx: Integer;
   Candidate: string;
+const
+  CMaxRotationIndex = 999;
 begin
   idx := 1;
-  while True do
+  while idx <= CMaxRotationIndex do
   begin
     Candidate := ChangeFileExt(BaseFile, Format('.%d%s', [idx, ExtractFileExt(BaseFile)]));
     if not TFile.Exists(Candidate) then
       Exit(Candidate);
     Inc(idx);
   end;
+  // Max index reached â€” overwrite the last one
+  Result := ChangeFileExt(BaseFile, Format('.%d%s', [CMaxRotationIndex, ExtractFileExt(BaseFile)]));
 end;
 
 function TDeepBaseLogger.PickLogFileForWrite(const BaseFile: string; NewBytes: Integer): string;
@@ -679,7 +687,7 @@ var
 begin
   if Level < FMinLevel then Exit;
   
-  // ·ÀÖ¹ÈÕÖ¾×¢Èë¹¥»÷ - ÇåÀíÏûÏ¢ÄÚÈÝ
+  // ï¿½ï¿½Ö¹ï¿½ï¿½Ö¾×¢ï¿½ë¹¥ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½
   SafeMsg := SanitizeLogMessage(Msg);
   
   Entry.Level := Level;
@@ -715,7 +723,7 @@ begin
   
   Entry.Level := Level;
   
-  // ¹¹½¨ÍêÕûÏûÏ¢
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
   if Msg <> '' then
     FinalMsg := Msg + ' - [' + E.ClassName + '] ' + E.Message
   else
@@ -725,7 +733,7 @@ begin
   Entry.Source := 'Exception';
   Entry.Timestamp := Now;
   Entry.ThreadId := TThread.CurrentThread.ThreadID;
-  Entry.StackTrace := E.StackTrace; // »ñÈ¡¶ÑÕ»£¨Èç¹û¿ÉÓÃ£©
+  Entry.StackTrace := E.StackTrace; // ï¿½ï¿½È¡ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½
   Entry.Extra := '';
   
   List := FLogQueue.LockList;
@@ -796,7 +804,7 @@ var
   FileDate: TDateTime;
   FileName: string;
 begin
-  // ÇåÀíÊý¾Ý¿âÈÕÖ¾
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½Ö¾
   if Assigned(FStorage) then
   begin
     CutoffDate := DateToISO8601(IncDay(Now, -DaysToKeep));
@@ -808,16 +816,16 @@ begin
     end;
   end;
   
-  // ÇåÀí¾ÉÈÕÖ¾ÎÄ¼þ (.txt ºÍ .jsonl)
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ä¼ï¿½ (.txt ï¿½ï¿½ .jsonl)
   if DirectoryExists(FLogFileDir) then
   begin
-    // ÇåÀí .txt ÈÕÖ¾ÎÄ¼þ
+    // ï¿½ï¿½ï¿½ï¿½ .txt ï¿½ï¿½Ö¾ï¿½Ä¼ï¿½
     try
       LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.txt');
       for LogFile in LogFiles do
       begin
         FileName := ExtractFileName(LogFile);
-        // ½âÎöÈÕÆÚ: Log_yyyy-MM-dd.txt
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: Log_yyyy-MM-dd.txt
         if Length(FileName) >= 14 then
         begin
           try
@@ -829,7 +837,7 @@ begin
             if FileDate < IncDay(Now, -DaysToKeep) then
               TFile.Delete(LogFile);
           except
-            // Ìø¹ý½âÎöÊ§°ÜµÄÎÄ¼þ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Üµï¿½ï¿½Ä¼ï¿½
           end;
         end;
       end;
@@ -837,13 +845,13 @@ begin
       // ignore
     end;
     
-    // ÇåÀí .jsonl ÈÕÖ¾ÎÄ¼þ
+    // ï¿½ï¿½ï¿½ï¿½ .jsonl ï¿½ï¿½Ö¾ï¿½Ä¼ï¿½
     try
       LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.jsonl');
       for LogFile in LogFiles do
       begin
         FileName := ExtractFileName(LogFile);
-        // ½âÎöÈÕÆÚ: Log_yyyy-MM-dd.jsonl
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: Log_yyyy-MM-dd.jsonl
         if Length(FileName) >= 16 then
         begin
           try
@@ -855,7 +863,7 @@ begin
             if FileDate < IncDay(Now, -DaysToKeep) then
               TFile.Delete(LogFile);
           except
-            // Ìø¹ý½âÎöÊ§°ÜµÄÎÄ¼þ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Üµï¿½ï¿½Ä¼ï¿½
           end;
         end;
       end;
@@ -923,40 +931,32 @@ var
   I: Integer;
   C: Char;
 begin
+  // FR-014 fix: previously replaced \ -> /, < -> ?, > -> ?, & -> and,
+  // " ' -> `, which corrupted file paths, XML, JSON and URLs in log
+  // messages without any real security benefit (logs are plain text,
+  // not HTML). Now only neutralize true log-injection vectors: control
+  // chars and CR/LF. All other printable characters pass through.
   Result := '';
-  
-  // ÏÞÖÆÏûÏ¢³¤¶È£¬·ÀÖ¹¹ý³¤µÄÈÕÖ¾ÏûÏ¢
-  var MaxLength := 4096; // 4KBÏÞÖÆ
+
+  var MaxLength := 4096;
   var SafeMessage := AMessage;
   if Length(SafeMessage) > MaxLength then
     SafeMessage := Copy(SafeMessage, 1, MaxLength) + '...[truncated]';
-  
-  // ÒÆ³ý»ò×ªÒåÎ£ÏÕ×Ö·û£¬·ÀÖ¹ÈÕÖ¾×¢Èë
+
   for I := 1 to Length(SafeMessage) do
   begin
     C := SafeMessage[I];
     case C of
-      #0..#8, #11, #12, #14..#31: // ¿ØÖÆ×Ö·û
-        Result := Result + '?'; // Ìæ»»Îª°²È«×Ö·û
-      #13, #10: // CR/LF - ¿ÉÄÜÓÃÓÚÈÕÖ¾×¢Èë
-        Result := Result + ' '; // Ìæ»»Îª¿Õ¸ñ
-      '\': // ·´Ð±¸Ü×ªÒå
-        Result := Result + '/';
-      '<', '>': // HTML±êÇ©×Ö·û
-        Result := Result + '?';
-      '&': // HTMLÊµÌå×Ö·û
-        Result := Result + 'and';
-      '"', '''': // ÒýºÅ×Ö·û
-        Result := Result + '`';
+      #0..#8, #11, #12, #14..#31:
+        Result := Result + '?';   // unprintable control chars
+      #13, #10:
+        Result := Result + ' ';   // prevent fake-line injection
       else
         Result := Result + C;
     end;
   end;
-  
-  // ÒÆ³ýÊ×Î²¿Õ°××Ö·û
+
   Result := Trim(Result);
-  
-  // È·±£²»Îª¿Õ
   if Result.IsEmpty then
     Result := '[empty message]';
 end;
@@ -965,7 +965,7 @@ initialization
   GLoggerLock := TObject.Create;
 
 finalization
-  // ½öÊÍ·ÅÄÚ²¿´´½¨µÄÁÙÊ± Logger£¬Manager ×¢ÈëµÄÊµÀýÓÉ Manager ×Ô¼ºÊÍ·Å
+  // ï¿½ï¿½ï¿½Í·ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê± Loggerï¿½ï¿½Manager ×¢ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ Manager ï¿½Ô¼ï¿½ï¿½Í·ï¿½
   if Assigned(GLogger) then
   begin
     if not GLoggerInitializedByManager then

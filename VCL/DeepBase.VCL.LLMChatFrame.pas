@@ -468,25 +468,30 @@ begin
   FRichEditChat.SelAttributes.Color := clBlack;
   
   // Run async
-  TThread.CreateAnonymousThread(
+  // VCL-001/002: Capture state into locals before spawning the worker so the
+  // background thread does not dereference frame fields while the frame may be
+  // freed. FHistory access is restricted to the synchronized callbacks (which
+  // run on the UI thread).
+  var LClient := FClient;
+  var LEnableStreaming := FEnableStreaming;
+  var LMessages := FHistory.GetMessages;
+  var LLastUserMessage := FHistory.GetLastUserMessage;
+  FCurrentTask := TTask.Run(
     procedure
     var
-      Messages: TChatMessages;
       Response: TChatResponse;
       LocalStreamBuffer: string;
-      LocalChunk: string;
       LocalContent: string;
       LocalErrorMsg: string;
       LocalTokenCount: Integer;
     begin
-      Messages := FHistory.GetMessages;
       LocalStreamBuffer := '';
-      
+
       try
-        if FEnableStreaming then
+        if LEnableStreaming then
         begin
           // Streaming mode - use simple Chat for now since stream callback is complex
-          if FClient.Chat(FHistory.GetLastUserMessage, Response) then
+          if LClient.Chat(LLastUserMessage, Response) then
           begin
             LocalContent := Response.Content;
             LocalTokenCount := Response.Usage.TotalTokens;
@@ -545,7 +550,7 @@ begin
         else
         begin
           // Non-streaming mode
-          Response := FClient.ChatWithHistory(Messages);
+          Response := LClient.ChatWithHistory(LMessages);
           LocalContent := Response.Content;
           LocalTokenCount := Response.Usage.TotalTokens;
           LocalErrorMsg := Response.ErrorMessage;
@@ -615,7 +620,7 @@ begin
             end);
         end;
       end;
-    end).Start;
+    end);
 end;
 
 procedure TLLMChatFrame.DoCancel;

@@ -9,7 +9,7 @@
 ## 身份与团队
 
 盘古（Kiro）— 系统架构师，负责 Governance 框架层 + DeepClip 试点。
-李冰 — 测试工程师，负责 DeepLLM + DeepShine。
+李冰 — 测试工程师，负责 Assayer + DeepShine。
 仙儿 — 安全专家，负责 DeepInsight + DeepStory（已标记完成）。
 
 ---
@@ -52,12 +52,12 @@
 
 实现方式：在 Bootstrap 的 setup proc 里根据 `GovernanceLifecycle.Mode` 判断注册哪套 DueRule。
 
-### 3. 李冰代码 Review（DeepLLM + DeepShine）
+### 3. 李冰代码 Review（Assayer + DeepShine）
 
 已知文件：
-- `02Business/DeepLLM/src/DeepLLM.Governance.Bridges.pas`（有 `DoEnterGate` 函数）
+- `02Business/Assayer/src/Assayer.Governance.Bridges.pas`（有 `DoEnterGate` 函数）
 - `02Business/DeepShine/Common/Core/DeepShine.Governance.Registration.pas`（有 RegisterEvaluator 调用）
-- `02Business/DeepLLM/tests/Win64/.kiro/steering/governance-model.md`（steering 已导出）
+- `02Business/Assayer/tests/Win64/.kiro/steering/governance-model.md`（steering 已导出）
 - `02Business/DeepShine/Tests/GovernanceSmoke/Win64/.kiro/steering/governance-model.md`（steering 已导出）
 
 Review 要点：
@@ -92,7 +92,7 @@ Review 要点：
 | DeepClip 编译脚本 | `02Business/DeepClip/compile.bat` |
 | Smoke 测试（legacy） | `02Business/DeepClip/tests/GovernanceSmoke/DeepClipGovernanceSmoke.dpr` |
 | Smoke 测试（ConfigDB） | `02Business/DeepClip/tests/GovernanceSmoke/DeepClipGovernanceSmokeCfg.dpr` |
-| 李冰 DeepLLM Governance | `02Business/DeepLLM/src/DeepLLM.Governance.Bridges.pas` |
+| 李冰 Assayer Governance | `02Business/Assayer/src/Assayer.Governance.Bridges.pas` |
 | 李冰 DeepShine Governance | `02Business/DeepShine/Common/Core/DeepShine.Governance.Registration.pas` |
 | 代码注册示例文档 | `02Business/DeepBase/docs/52.extend.Governance代码注册示例-governance-setup-via-code.md` |
 

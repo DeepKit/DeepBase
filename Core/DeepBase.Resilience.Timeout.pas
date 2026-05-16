@@ -86,34 +86,51 @@ var
   Completed: Boolean;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
+  ResultLock: TObject;
 begin
   ErrorClass := nil;
   ErrorMsg := '';
-  TaskProc := Proc;
-  Task := TTask.Run(
-    procedure
-    begin
-      try
-        TaskProc();
-      except
-        on E: Exception do
-        begin
-          ErrorClass := ExceptClass(E.ClassType);
-          ErrorMsg := E.Message;
+  ResultLock := TObject.Create;
+  try
+    TaskProc := Proc;
+    Task := TTask.Run(
+      procedure
+      begin
+        try
+          TaskProc();
+        except
+          on E: Exception do
+          begin
+            TMonitor.Enter(ResultLock);
+            try
+              ErrorClass := ExceptClass(E.ClassType);
+              ErrorMsg := E.Message;
+            finally
+              TMonitor.Exit(ResultLock);
+            end;
+          end;
         end;
-      end;
-    end);
-  Completed := Task.Wait(FTimeoutMs);
+      end);
+    Completed := Task.Wait(FTimeoutMs);
 
-  if not Completed then
-  begin
-    if Assigned(FOnTimeout) then
-      FOnTimeout(FTimeoutMs);
-    raise ETimeoutException.Create(FTimeoutMs);
+    if not Completed then
+    begin
+      Task.Cancel;  // Cancel background task to prevent resource leaks
+      if Assigned(FOnTimeout) then
+        FOnTimeout(FTimeoutMs);
+      raise ETimeoutException.Create(FTimeoutMs);
+    end;
+
+    TMonitor.Enter(ResultLock);
+    try
+      if Assigned(ErrorClass) then
+        raise ErrorClass.Create(ErrorMsg);
+    finally
+      TMonitor.Exit(ResultLock);
+    end;
+  finally
+    ResultLock.Free;
   end;
-
-  if Assigned(ErrorClass) then
-    raise ErrorClass.Create(ErrorMsg);
 end;
 
 function TTimeoutPolicy.Execute<T>(Func: TFunc<T>): T;
@@ -124,36 +141,58 @@ var
   Completed: Boolean;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
+  ResultLock: TObject;
 begin
   ErrorClass := nil;
   ErrorMsg := '';
-  TaskFunc := Func;
-  Task := TTask.Run(
-    procedure
-    begin
-      try
-        TaskResult := TaskFunc();
-      except
-        on E: Exception do
-        begin
-          ErrorClass := ExceptClass(E.ClassType);
-          ErrorMsg := E.Message;
+  ResultLock := TObject.Create;
+  try
+    TaskFunc := Func;
+    Task := TTask.Run(
+      procedure
+      begin
+        try
+          var LResult := TaskFunc();
+          TMonitor.Enter(ResultLock);
+          try
+            TaskResult := LResult;
+          finally
+            TMonitor.Exit(ResultLock);
+          end;
+        except
+          on E: Exception do
+          begin
+            TMonitor.Enter(ResultLock);
+            try
+              ErrorClass := ExceptClass(E.ClassType);
+              ErrorMsg := E.Message;
+            finally
+              TMonitor.Exit(ResultLock);
+            end;
+          end;
         end;
-      end;
-    end);
-  Completed := Task.Wait(FTimeoutMs);
+      end);
+    Completed := Task.Wait(FTimeoutMs);
 
-  if not Completed then
-  begin
-    if Assigned(FOnTimeout) then
-      FOnTimeout(FTimeoutMs);
-    raise ETimeoutException.Create(FTimeoutMs);
+    if not Completed then
+    begin
+      Task.Cancel;  // Cancel background task to prevent resource leaks
+      if Assigned(FOnTimeout) then
+        FOnTimeout(FTimeoutMs);
+      raise ETimeoutException.Create(FTimeoutMs);
+    end;
+
+    TMonitor.Enter(ResultLock);
+    try
+      if Assigned(ErrorClass) then
+        raise ErrorClass.Create(ErrorMsg);
+      Result := TaskResult;
+    finally
+      TMonitor.Exit(ResultLock);
+    end;
+  finally
+    ResultLock.Free;
   end;
-
-  if Assigned(ErrorClass) then
-    raise ErrorClass.Create(ErrorMsg);
-
-  Result := TaskResult;
 end;
 
 end.

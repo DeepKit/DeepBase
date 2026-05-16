@@ -131,7 +131,7 @@ type
     FAvailable: TEvent;
     FShutdownEvent: TEvent;
     FStats: TPoolStats;
-    FShutdown: Boolean;
+    FShutdown: Integer;  // 0=running, 1=shutdown; accessed via TInterlocked
     FCleanupTask: ITask;
     
     FOnObjectCreated: TPoolEvent<T>;
@@ -471,14 +471,14 @@ begin
   FAvailable := TEvent.Create(nil, True, False, '');
   FShutdownEvent := TEvent.Create(nil, True, False, '');
   FStats.Reset;
-  FShutdown := False;
+  FShutdown := 0;
   
   Initialize;
 end;
 
 destructor TObjectPool<T>.Destroy;
 begin
-  FShutdown := True;
+  TInterlocked.Exchange(FShutdown, 1);
   if Assigned(FShutdownEvent) then
     FShutdownEvent.SetEvent;
   
@@ -516,10 +516,10 @@ begin
       var
         LWaitResult: TWaitResult;
       begin
-        while not FShutdown do
+        while TInterlocked.CompareExchange(FShutdown, 0, 0) = 0 do
         begin
           LWaitResult := FShutdownEvent.WaitFor(FConfig.CleanupIntervalSec * 1000);
-          if (LWaitResult = wrTimeout) and not FShutdown then
+          if (LWaitResult = wrTimeout) and (TInterlocked.CompareExchange(FShutdown, 0, 0) = 0) then
             CleanupIdleObjects;
         end;
       end

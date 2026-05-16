@@ -15,6 +15,7 @@ uses
   FireDAC.VCLUI.Wait,
   FireDAC.Comp.UI,
   DeepBase.Manager,
+  DeepBase.Persistence.Manager.FireDAC,
   Demo.MainForm in 'Demo.MainForm.pas',
   Demo.Services in 'Demo.Services.pas',
   Demo.Commands in 'Demo.Commands.pas',

@@ -122,7 +122,7 @@ begin
           Parameters.ParamByName('TableName').Value := TableName;
         end;
     else
-      raise EDatabaseException.Create('不支持的数据库类�?);
+      raise EDatabaseException.Create('不支持的数据库类型');
     end;
 
     // ִвѯ
@@ -136,7 +136,7 @@ begin
   end;
 
   if Result = '' then
-    raise EDatabaseException.Create('无法获取�?' + TableName + ' 的主键字段名');
+    raise EDatabaseException.Create('无法获取表 ' + TableName + ' 的主键字段名');
 end;
 
 function GetDatabaseType(Conn: TAdoConnection): TDatabaseType;
@@ -607,7 +607,7 @@ begin
     // 查找第一个冒号（支持中文和英文冒号）
     colonPos := Pos(':', pair);
     if colonPos = 0 then
-      colonPos := Pos('�?, pair);
+      colonPos := Pos('：', pair);
       
     if colonPos > 0 then
     begin
@@ -616,7 +616,7 @@ begin
       value := Copy(pair, colonPos + 1, Length(pair));
       
       // 如果是中文冒号，需要多偏移一个字�?
-      if pair[colonPos] = '�? then
+      if pair[colonPos] = '：' then
         value := Copy(pair, colonPos + 2, Length(pair));
         
       // 只有key不为空时才添�?
@@ -678,7 +678,7 @@ begin
     SQL := SQL + ')';
   
   if hasUnbalancedQuotes then
-    OutputDebugString(PChar('SQL语句引号不平衡，已自动修�? ' + SQL));
+    OutputDebugString(PChar('SQL语句引号不平衡，已自动修复: ' + SQL));
 end;
 
 
@@ -734,7 +734,7 @@ begin
         rtInsert:
           begin
             if TableName = '' then
-              raise EDatabaseException.Create('插入操作需要指定表�?);
+              raise EDatabaseException.Create('插入操作需要指定表名');
 
             // 执行INSERT
             ExecSQL;
@@ -749,7 +749,7 @@ begin
               raise EDatabaseException.Create('无法获取新插入记录的ID');
           end;
         rtCall:
-          raise EDatabaseException.Create('存储过程调用未实�?);
+          raise EDatabaseException.Create('存储过程调用未实现');
       end;
     except
       on E: Exception do
@@ -775,7 +775,7 @@ begin
     except
       on E: Exception do
       begin
-        raise EDatabaseException.Create('doQry Error::SQL执行错误�? + E.Message + #13#10 + 'SQL:' + SQL);
+        raise EDatabaseException.Create('doQry Error::SQL执行错误: ' + E.Message + #13#10 + 'SQL:' + SQL);
       end;
     end;
   finally
@@ -884,7 +884,7 @@ begin
       
       if FindField('run_type') = nil then
       begin
-        msg := Format('字段 run_type 不存�?#13#10'SQL: %s',
+        msg := Format('字段 run_type 不存在'#13#10'SQL: %s',
           [SQL.Text]);
         raise EDatabaseException.Create(msg);
       end;
@@ -903,7 +903,7 @@ begin
 
     // 在执行SQL前调用此函数
     if not ValidateSQLQuotes(sSQL) then
-      raise EDatabaseException.Create('SQL语句中的引号不匹配，请检查参数�?);
+      raise EDatabaseException.Create('SQL语句中的引号不匹配，请检查参数值');
 
     Result := ExecuteAndGetResult(sSQL, aQry, RunType, TableName);
     
@@ -924,10 +924,10 @@ begin
             else
               operationType := '删除';
               
-            msg := Format('没有记录�?s。可能原因：'#13#10 + 
+            msg := Format('没有记录被%s。可能原因：'#13#10 +
                         '1. 找不到匹配的记录'#13#10 + 
-                        '2. 更新的值与原值相�?#13#10 + 
-                        '3. WHERE条件不匹�?#13#10 + 
+                        '2. 更新的值与原值相同'#13#10 +
+                        '3. WHERE条件不匹配'#13#10 +
                         'SQL: %s', 
                         [operationType, sSQL]);
           end
@@ -939,7 +939,7 @@ begin
             else
               operationType := '删除';
               
-            msg := Format('成功%s�?%d 条记�?#13#10'SQL: %s', 
+            msg := Format('成功%s了%d 条记录'#13#10'SQL: %s',
                         [operationType, Result, sSQL]);
           end;
         end;
@@ -947,11 +947,11 @@ begin
         begin
           if Result <= 0 then
           begin
-            msg := Format('查询未返回数�?#13#10'SQL: %s', [sSQL]);
+            msg := Format('查询未返回数据'#13#10'SQL: %s', [sSQL]);
             raise EDatabaseException.Create(msg);
           end
           else
-            msg := Format('查询返回 %d 条记�?#13#10'SQL: %s', [Result, sSQL]);
+            msg := Format('查询返回 %d 条记录'#13#10'SQL: %s', [Result, sSQL]);
         end;
       rtInsert:
         begin
@@ -965,7 +965,7 @@ begin
         end;
       rtCall:
         begin
-          msg := Format('存储过程调用未实�?#13#10'SQL: %s', [sSQL]);
+          msg := Format('存储过程调用未实现'#13#10'SQL: %s', [sSQL]);
           raise EDatabaseException.Create(msg);
         end;
     end;
@@ -993,7 +993,7 @@ begin
   // 查找第一个冒号（支持中英文冒号）
   var colonPos := Pos(':', paramStr);
   if colonPos = 0 then
-    colonPos := Pos('�?, paramStr);
+    colonPos := Pos('：', paramStr);
     
   if colonPos > 0 then
   begin
@@ -1052,7 +1052,7 @@ begin
   try
     // 检查输入字符串是否为空
     if ParamString.Trim = '' then
-      raise EDatabaseException.Create('参数字符串不能为�?);
+      raise EDatabaseException.Create('参数字符串不能为空');
 
     // 使用分割方法
     splitArray := ParamString.Split(['|||']);
@@ -1065,7 +1065,7 @@ begin
     
     // 检查是否成功分�?
     if Result.Count = 0 then
-      raise EDatabaseException.CreateFmt('无法分割参数字符�? "%s"', [ParamString]);
+      raise EDatabaseException.CreateFmt('无法分割参数字符串: "%s"', [ParamString]);
 
     // 移除空项
     for var i := Result.Count - 1 downto 0 do
@@ -1074,12 +1074,12 @@ begin
 
     // 如果分割后仍为空，抛出异�?
     if Result.Count = 0 then
-      raise EDatabaseException.CreateFmt('分割后没有有效参�? "%s"', [ParamString]);
+      raise EDatabaseException.CreateFmt('分割后没有有效参数: "%s"', [ParamString]);
   except
     on E: Exception do
     begin
       Result.Free;
-      raise EDatabaseException.Create('分割参数字符串失�? ' + E.Message);
+      raise EDatabaseException.Create('分割参数字符串失败: ' + E.Message);
     end;
   end;
 end;
@@ -1160,8 +1160,8 @@ begin
   
   // 替换所有中文括号为英文括号
   tempValue := Value;
-  tempValue := StringReplace(tempValue, '�?, '(', [rfReplaceAll]);
-  tempValue := StringReplace(tempValue, '�?, ')', [rfReplaceAll]);
+  tempValue := StringReplace(tempValue, '（', '(', [rfReplaceAll]);
+  tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
   
   // 处理单引�?(在SQL中单引号需要用两个单引号表�?
   tempValue := StringReplace(tempValue, '''', '''''', [rfReplaceAll]);
@@ -1284,7 +1284,7 @@ begin
     qry.Open;
     
     if qry.IsEmpty then
-      raise EDatabaseException.Create('未找到查询定�? ' + ProcName);
+      raise EDatabaseException.Create('未找到查询定义: ' + ProcName);
       
     Result := qry;
   except

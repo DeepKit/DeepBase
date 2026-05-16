@@ -2,7 +2,18 @@
 
 All notable changes to DeepBase are documented in this file.
 
-## [Unreleased] - 2026-05-09
+## [Unreleased] - 2026-05-15
+
+### Added
+- **DeepBase.Speech.ASR.SenseVoice** — SenseVoice offline ASR backend (default local ASR). Loads SenseVoice ONNX model via DeepBase.Inference, performs FBank 80-dim feature extraction, LFR stacking, CMVN normalization, and CTC greedy decoding. Supports batch recognition and simulated streaming (partial decode every 500ms). Self-registers in TSpeechRegistry at Priority 5.
+- **DeepBase.Speech.FBank** — 80-dim FBank feature extraction with Radix-2 FFT (padded to 512), 80 Mel filters, Hamming window. No external DLL dependencies.
+- **DeepBase.Inference.Types** — `TInferenceElementType` (float32/int32) and `TInferenceInput` record for mixed-type tensor inputs.
+- **DeepBase.Inference.Session** — `RunTyped` method supporting mixed float32/int32 tensor creation per input.
+- `abkSenseVoice` added to `TASRBackendKind` enum. SenseVoice config keys: `speech.sensevoice.model_dir`, `speech.sensevoice.language`, `speech.sensevoice.use_itn`, `speech.sensevoice.partial_interval_ms`. Default ASR backend changed from `auto` to `sensevoice`.
+- **DeepBase.Browser.PageDriver** — Natural language browser automation via Alibaba page-agent. Adds `dbasPageDriver` strategy and `baatDriveInstruction` action type to the existing BrowserAutomation framework, enabling NL→DOM→Action without screenshots or multi-modal LLMs.
+- `TDriveCallback` — Delegate type for Runner→PageDriver bridge, allowing deterministic actions and NL instructions to be mixed in a single action sequence.
+- IoC overload: `TBrowserIoCRegistration.RegisterAll(Container, Config)` accepts custom `TPageDriverConfig`.
+- 24 DUnitX tests for PageDriver (config, JS generation, result parsing, executor state, runner integration).
 
 ### Changed
 - Migrated command-line build and test gates to Delphi 13.1 Florence / BDS 37.0.

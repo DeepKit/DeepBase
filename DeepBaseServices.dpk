@@ -6,14 +6,6 @@ package DeepBaseServices;
 
 requires
   rtl,
-  vcl,
-  IndySystem,
-  IndyCore,
-  IndyProtocols,
-  dbrtl,
-  FireDAC,
-  FireDACCommonDriver,
-  FireDACSqliteDriver,
   DeepBaseCore;
 
 contains
@@ -33,9 +25,9 @@ contains
   DeepBase.Crypto.OpenSSL in 'Core\DeepBase.Crypto.OpenSSL.pas',
   DeepBase.Crypto.PBKDF2 in 'Core\DeepBase.Crypto.PBKDF2.pas',
   DeepBase.Security.DPAPI in 'Core\DeepBase.Security.DPAPI.pas',
+  DeepBase.Security.SecretStore in 'Core\DeepBase.Security.SecretStore.pas',
   DeepBase.KeyManager in 'Core\DeepBase.KeyManager.pas',
   DeepBase.FileWatcher in 'Core\DeepBase.FileWatcher.pas',
-  DeepBase.SingleInstance in 'Core\DeepBase.SingleInstance.pas',
   DeepBase.AppLifecycle in 'Core\DeepBase.AppLifecycle.pas',
   DeepBase.RateLimiter in 'Core\DeepBase.RateLimiter.pas',
   DeepBase.Resilience.CircuitBreaker in 'Core\DeepBase.Resilience.CircuitBreaker.pas',
@@ -50,11 +42,8 @@ contains
   DeepBase.LogQuery in 'Core\DeepBase.LogQuery.pas',
   DeepBase.LogAlert in 'Core\DeepBase.LogAlert.pas',
   DeepBase.LogDashboard in 'Core\DeepBase.LogDashboard.pas',
-  DeepBase.Feedback in 'Core\DeepBase.Feedback.pas',
   DeepBase.License in 'Core\DeepBase.License.pas',
-  DeepBase.Net in 'Core\DeepBase.Net.pas',
-  DeepBase.Compression in 'Core\DeepBase.Compression.pas',
-  DeepBase.ORM in 'Core\DeepBase.ORM.pas';
+  DeepBase.Compression in 'Core\DeepBase.Compression.pas';
 
 end.
 

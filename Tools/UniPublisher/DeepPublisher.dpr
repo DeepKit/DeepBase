@@ -4,7 +4,7 @@ program UniPublisher;
 
 uses
   Vcl.Forms,
-  UniPublisher.MainForm in 'Forms\UniPublisher.MainForm.pas';
+  DeepPublisher.MainForm in 'Forms\DeepPublisher.MainForm.pas';
 
 {$R *.res}
 

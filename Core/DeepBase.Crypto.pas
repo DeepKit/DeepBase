@@ -25,9 +25,11 @@ uses
 
 {$IFDEF MSWINDOWS}
 const
+  // ---- BCrypt DLL and algorithm identifiers ----
   BCRYPT_DLL = 'bcrypt.dll';
   BCRYPT_AES_ALGORITHM = 'AES';
   BCRYPT_CHAIN_MODE_CBC = 'ChainingModeCBC';
+  BCRYPT_CHAIN_MODE_GCM = 'ChainingModeGCM';
   BCRYPT_CHAINING_MODE = 'ChainingMode';
   BCRYPT_OBJECT_LENGTH = 'ObjectLength';
   BCRYPT_BLOCK_LENGTH = 'BlockLength';
@@ -77,7 +79,14 @@ const
   BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
   BCRYPT_BLOCK_PADDING = $00000001;
   STATUS_SUCCESS = 0;
-  
+
+  // GCM authenticated encryption constants
+  BCRYPT_AUTH_MODE_CHAIN_CALLS_FLAG = $00000001;
+  BCRYPT_AUTH_MODE_IN_PROGRESS_FLAG = $00000002;
+  BCRYPT_INIT_AUTH_MODE_INFO_VERSION = 1;
+  BCRYPT_GCM_NONCE_SIZE = 12;
+  BCRYPT_GCM_TAG_SIZE = 16;
+
   // RSA algorithm identifiers
   BCRYPT_RSA_ALGORITHM = 'RSA';
   BCRYPT_SHA256_ALGORITHM = 'SHA256';
@@ -109,6 +118,24 @@ type
   end;
   PBCRYPT_PKCS1_PADDING_INFO = ^BCRYPT_PKCS1_PADDING_INFO;
 
+  // Authenticated cipher mode info (used for AES-GCM)
+  BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO = record
+    cbSize: ULONG;
+    dwInfoVersion: ULONG;
+    pbNonce: PByte;
+    cbNonce: ULONG;
+    pbAuthData: PByte;
+    cbAuthData: ULONG;
+    pbTag: PByte;
+    cbTag: ULONG;
+    pbMacContext: PByte;
+    cbMacContext: ULONG;
+    cbAAD: ULONG;
+    cbData: UInt64;
+    dwFlags: ULONG;
+  end;
+  PBCRYPT_AUTHENTICATED_CIPHER_MODE_INFO = ^BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
+
 function BCryptImportKeyPair(hAlgorithm: BCRYPT_ALG_HANDLE; hImportKey: BCRYPT_KEY_HANDLE;
   pszBlobType: PWideChar; out phKey: BCRYPT_KEY_HANDLE; pbInput: PByte; cbInput: ULONG;
   dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
@@ -120,7 +147,71 @@ function BCryptVerifySignature(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
 function BCryptHash(hAlgorithm: BCRYPT_ALG_HANDLE; pbSecret: PByte; cbSecret: ULONG;
   pbInput: PByte; cbInput: ULONG; pbOutput: PByte; cbOutput: ULONG): NTSTATUS; stdcall;
   external BCRYPT_DLL;
+
+const
+  // ---- Legacy CryptoAPI (advapi32) constants ----
+  CRYPTOAPI_DLL = 'advapi32.dll';
+  PROV_RSA_FULL = 1;
+  PROV_RSA_AES = 24;
+  CRYPT_VERIFYCONTEXT = $F0000000;
+  CRYPT_EXPORTABLE = $00000001;
+  CALG_SHA_256 = $0000800C;
+  CALG_AES_256 = $00006610;
+  KP_MODE = 4;
+  KP_IV = 1;
+  CRYPT_MODE_CBC = 1;
+  HP_HASHVAL = 2;
+  MS_ENH_RSA_AES_PROV = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
+
+type
+  HCRYPTPROV = THandle;
+  HCRYPTKEY = THandle;
+  HCRYPTHASH = THandle;
+
+function CryptAcquireContext(var phProv: HCRYPTPROV; pszContainer: PAnsiChar;
+  pszProvider: PAnsiChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall;
+  external CRYPTOAPI_DLL name 'CryptAcquireContextA';
+
+function CryptReleaseContext(hProv: HCRYPTPROV; dwFlags: DWORD): BOOL; stdcall;
+  external CRYPTOAPI_DLL;
+
+function CryptGenRandom(hProv: HCRYPTPROV; dwLen: DWORD; pbBuffer: PByte): BOOL; stdcall;
+  external CRYPTOAPI_DLL;
+
+function CryptCreateHash(hProv: HCRYPTPROV; Algid: DWORD; hKey: HCRYPTKEY;
+  dwFlags: DWORD; var phHash: HCRYPTHASH): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptHashData(hHash: HCRYPTHASH; pbData: PByte; dwDataLen: DWORD;
+  dwFlags: DWORD): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptDeriveKey(hProv: HCRYPTPROV; Algid: DWORD; hBaseData: HCRYPTHASH;
+  dwFlags: DWORD; var phKey: HCRYPTKEY): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptSetKeyParam(hKey: HCRYPTKEY; dwParam: DWORD; pbData: PByte;
+  dwFlags: DWORD): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptEncrypt(hKey: HCRYPTKEY; hHash: HCRYPTHASH; Final: BOOL;
+  dwFlags: DWORD; pbData: PByte; var pdwDataLen: DWORD; dwBufLen: DWORD): BOOL; stdcall;
+  external CRYPTOAPI_DLL;
+
+function CryptDecrypt(hKey: HCRYPTKEY; hHash: HCRYPTHASH; Final: BOOL;
+  dwFlags: DWORD; pbData: PByte; var pdwDataLen: DWORD): BOOL; stdcall;
+  external CRYPTOAPI_DLL;
+
+function CryptDestroyKey(hKey: HCRYPTKEY): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptDestroyHash(hHash: HCRYPTHASH): BOOL; stdcall; external CRYPTOAPI_DLL;
+
+function CryptGetHashParam(hHash: HCRYPTHASH; dwParam: DWORD; pbData: PByte;
+  var pdwDataLen: DWORD; dwFlags: DWORD): BOOL; stdcall; external CRYPTOAPI_DLL;
 {$ENDIF}
+
+/// <summary>
+/// Standalone convenience function returning cryptographically secure random bytes.
+/// Delegates to TRandomGenerator.RandomBytes — use this when a class reference is
+/// inconvenient (e.g. from other units that only need random bytes).
+/// </summary>
+function CryptoRandomBytes(ALength: Integer): TBytes;
 
 type
   ECryptoException = class(Exception);
@@ -457,9 +548,11 @@ const
   SIMPLE_CRYPTO_MAGIC_1 = $42; // B
   SIMPLE_CRYPTO_MAGIC_2 = $53; // S
   SIMPLE_CRYPTO_MAGIC_3 = $43; // C
-  SIMPLE_CRYPTO_VERSION = 1;
+  SIMPLE_CRYPTO_VERSION = 2;
+  SIMPLE_CRYPTO_VERSION_V1 = 1;
   SIMPLE_CRYPTO_HEADER_SIZE = 5;
   SIMPLE_CRYPTO_AES_BLOCK_SIZE = 16;
+  SIMPLE_CRYPTO_SALT_SIZE = 16;
   SIMPLE_CRYPTO_MAC_SIZE = 32; // SHA-256
   SIMPLE_CRYPTO_MAC_CONTEXT = 'DeepBase.SimpleCrypto.MAC.v1';
 
@@ -494,6 +587,13 @@ begin
     TEncoding.UTF8.GetBytes(APassword),
     TEncoding.UTF8.GetBytes(SIMPLE_CRYPTO_MAC_CONTEXT),
     haSHA256);
+end;
+
+{ CryptoRandomBytes }
+
+function CryptoRandomBytes(ALength: Integer): TBytes;
+begin
+  Result := TRandomGenerator.RandomBytes(ALength);
 end;
 
 { THashUtils }
@@ -890,12 +990,12 @@ begin
   except
     on E: Exception do
     begin
-      // Fallback to Delphi Random (NOT cryptographically secure - log warning)
-      {$IFDEF DEBUG}
-      OutputDebugString('WARNING: Using non-cryptographic random number generator');
-      {$ENDIF}
-      for I := 0 to ALength - 1 do
-        Result[I] := Random(256);
+      // BASIC-015 fix: fail-closed. A security-critical random generator
+      // must NOT silently degrade to Delphi's non-cryptographic Random().
+      // If /dev/urandom is unavailable, raise so the caller knows the
+      // output is not safe for keys, tokens, or nonces.
+      raise ECryptoException.Create(
+        'Cryptographic random unavailable: /dev/urandom failed (' + E.Message + ')');
     end;
   end;
   {$ENDIF}
@@ -932,12 +1032,17 @@ end;
 class function TRandomGenerator.RandomInt(AMin, AMax: Integer): Integer;
 var
   LBytes: TBytes;
-  LRange: Cardinal;
+  LRange, LThreshold, LVal: Cardinal;
 begin
-  // BUG-035 FIX: Use cryptographically secure random bytes
   LRange := Cardinal(AMax - AMin + 1);
-  LBytes := RandomBytes(4);
-  Result := AMin + Integer(PCardinal(@LBytes[0])^ mod LRange);
+  // Rejection sampling to eliminate modulo bias
+  // Reject values >= largest multiple of LRange that fits in 32 bits
+  LThreshold := (Cardinal($FFFFFFFF) - LRange + 1) mod LRange;
+  repeat
+    LBytes := RandomBytes(4);
+    LVal := PCardinal(@LBytes[0])^;
+  until LVal >= LThreshold;
+  Result := AMin + Integer(LVal mod LRange);
 end;
 
 class function TRandomGenerator.NewGuid: string;
@@ -1015,19 +1120,41 @@ var
   LSalt, LStoredHash, LComputedHash: TBytes;
 begin
   Result := False;
-  
+
+  // Validate hash format before any comparison
+  if AHash = '' then
+    Exit;
   if not AHash.StartsWith('$pbkdf2$') then
     Exit;
-    
+
   LParts := AHash.Split(['$']);
   if Length(LParts) < 6 then
     Exit;
-    
+
+  // Validate iterations field is a positive integer
+  if not TryStrToInt(LParts[2], LIterations) then
+    Exit;
+  if LIterations <= 0 then
+    Exit;
+
+  // Validate algorithm field is in valid enum range
+  var LAlgOrd: Integer;
+  if not TryStrToInt(LParts[3], LAlgOrd) then
+    Exit;
+  if (LAlgOrd < Ord(Low(THashAlgorithm))) or (LAlgOrd > Ord(High(THashAlgorithm))) then
+    Exit;
+  LAlgorithm := THashAlgorithm(LAlgOrd);
+
+  // Validate salt and hash are non-empty
+  if (LParts[4] = '') or (LParts[5] = '') then
+    Exit;
+
   try
-    LIterations := StrToInt(LParts[2]);
-    LAlgorithm := THashAlgorithm(StrToInt(LParts[3]));
     LSalt := TEncodingUtils.Base64Decode(LParts[4]);
     LStoredHash := TEncodingUtils.Base64Decode(LParts[5]);
+
+    if (Length(LSalt) = 0) or (Length(LStoredHash) = 0) then
+      Exit;
     
     LComputedHash := PBKDF2(APassword, LSalt, LIterations, Length(LStoredHash), LAlgorithm);
     
@@ -1205,7 +1332,7 @@ begin
   if Length(ASalt) = 0 then
     raise ECryptoException.Create('Salt is required for key derivation. Pass a cryptographically random salt.');
 
-  FKey := TPasswordUtils.PBKDF2(APassword, ASalt, 10000, GetKeyLength, haSHA256);
+  FKey := TPasswordUtils.PBKDF2(APassword, ASalt, 100000, GetKeyLength, haSHA256);
 end;
 
 class function TSimpleCrypto.DeriveSalt(const APassword: string): TBytes;
@@ -1543,28 +1670,33 @@ end;
 class function TSimpleCrypto.EncryptBytes(const AData: TBytes; const APassword: string): TBytes;
 var
   LAES: TAESCrypto;
-  Cipher, IV, MacKey, MacInput, Mac: TBytes;
+  LSalt, Cipher, IV, MacKey, MacInput, Mac: TBytes;
   BlockSize: Integer;
   PayloadLen: Integer;
 begin
+  // Generate cryptographically random salt
+  LSalt := TRandomGenerator.RandomBytes(SIMPLE_CRYPTO_SALT_SIZE);
+
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
-    LAES.SetKeyFromPassword(APassword, DeriveSalt(APassword));
+    LAES.SetKeyFromPassword(APassword, LSalt);
     Cipher := LAES.Encrypt(AData);
     IV := LAES.IV;
     BlockSize := Length(IV);
 
-    PayloadLen := SIMPLE_CRYPTO_HEADER_SIZE + BlockSize + Length(Cipher);
+    // v2 format: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
+    PayloadLen := SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + BlockSize + Length(Cipher);
     SetLength(MacInput, PayloadLen);
     MacInput[0] := SIMPLE_CRYPTO_MAGIC_0;
     MacInput[1] := SIMPLE_CRYPTO_MAGIC_1;
     MacInput[2] := SIMPLE_CRYPTO_MAGIC_2;
     MacInput[3] := SIMPLE_CRYPTO_MAGIC_3;
     MacInput[4] := SIMPLE_CRYPTO_VERSION;
+    Move(LSalt[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE], SIMPLE_CRYPTO_SALT_SIZE);
     if BlockSize > 0 then
-      Move(IV[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE], BlockSize);
+      Move(IV[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE], BlockSize);
     if Length(Cipher) > 0 then
-      Move(Cipher[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE + BlockSize], Length(Cipher));
+      Move(Cipher[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + BlockSize], Length(Cipher));
 
     MacKey := SimpleCryptoMacKey(APassword);
     Mac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
@@ -1580,44 +1712,84 @@ end;
 class function TSimpleCrypto.DecryptBytes(const AData: TBytes; const APassword: string): TBytes;
 var
   LAES: TAESCrypto;
-  IV, Cipher, MacKey, MacInput, ExpectedMac, ActualMac: TBytes;
+  LSalt, IV, Cipher, MacKey, MacInput, ExpectedMac, ActualMac: TBytes;
   MacInputLen, CipherLen: Integer;
+  LVersion: Byte;
 begin
   if Length(AData) = 0 then
     Exit(nil);
 
   if SimpleCryptoHasHeader(AData) then
   begin
-    if AData[4] <> SIMPLE_CRYPTO_VERSION then
+    LVersion := AData[4];
+    if (LVersion <> SIMPLE_CRYPTO_VERSION) and (LVersion <> SIMPLE_CRYPTO_VERSION_V1) then
       raise ECryptoException.Create('Unsupported encrypted data version');
 
-    if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
-      raise ECryptoException.Create('Invalid encrypted data (too short)');
+    if LVersion = SIMPLE_CRYPTO_VERSION then
+    begin
+      // v2 format: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
+      if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
+        raise ECryptoException.Create('Invalid encrypted data (too short)');
 
-    MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
-    SetLength(MacInput, MacInputLen);
-    Move(AData[0], MacInput[0], MacInputLen);
+      MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
+      SetLength(MacInput, MacInputLen);
+      Move(AData[0], MacInput[0], MacInputLen);
 
-    SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
-    Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
+      SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
+      Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
 
-    MacKey := SimpleCryptoMacKey(APassword);
-    ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
-    if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
-      raise ECryptoException.Create('Invalid encrypted data or password');
+      MacKey := SimpleCryptoMacKey(APassword);
+      ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
+      if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
+        raise ECryptoException.Create('Invalid encrypted data or password');
 
-    SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
-    Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+      SetLength(LSalt, SIMPLE_CRYPTO_SALT_SIZE);
+      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], LSalt[0], SIMPLE_CRYPTO_SALT_SIZE);
 
-    CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
-    SetLength(Cipher, CipherLen);
-    if CipherLen > 0 then
-      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
+      SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+
+      CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_SALT_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
+      SetLength(Cipher, CipherLen);
+      if CipherLen > 0 then
+        Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
+    end
+    else
+    begin
+      // v1 format (backward compat): Header(5) + IV(16) + Cipher + MAC(32)
+      if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
+        raise ECryptoException.Create('Invalid encrypted data (too short)');
+
+      MacInputLen := Length(AData) - SIMPLE_CRYPTO_MAC_SIZE;
+      SetLength(MacInput, MacInputLen);
+      Move(AData[0], MacInput[0], MacInputLen);
+
+      SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
+      Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
+
+      MacKey := SimpleCryptoMacKey(APassword);
+      ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
+      if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
+        raise ECryptoException.Create('Invalid encrypted data or password');
+
+      LSalt := DeriveSalt(APassword);
+
+      SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
+
+      CipherLen := MacInputLen - SIMPLE_CRYPTO_HEADER_SIZE - SIMPLE_CRYPTO_AES_BLOCK_SIZE;
+      SetLength(Cipher, CipherLen);
+      if CipherLen > 0 then
+        Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], CipherLen);
+    end;
   end
   else
   begin
+    // Legacy format (no header): IV(16) + Cipher
     if Length(AData) < SIMPLE_CRYPTO_AES_BLOCK_SIZE then
       raise ECryptoException.Create('Invalid encrypted data (too short)');
+
+    LSalt := DeriveSalt(APassword);
 
     SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
     Move(AData[0], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
@@ -1629,7 +1801,7 @@ begin
 
   LAES := TAESCrypto.Create(aes256, aesCBC);
   try
-    LAES.SetKeyFromPassword(APassword, DeriveSalt(APassword));
+    LAES.SetKeyFromPassword(APassword, LSalt);
     LAES.SetIV(IV);
     Result := LAES.Decrypt(Cipher);
   finally
@@ -1797,6 +1969,8 @@ var
     else
     begin
       LNumBytes := LFirst and $7F;
+      if LNumBytes > 4 then
+        raise ECryptoException.Create('Invalid DER: length field too large');
       Result := 0;
       for I := 1 to LNumBytes do
       begin
@@ -1806,6 +1980,13 @@ var
         Inc(APos);
       end;
     end;
+    // Validate that declared length does not exceed remaining data
+    if Result < 0 then
+      raise ECryptoException.Create('Invalid DER: negative length');
+    if APos + Result > Length(ADER) then
+      raise ECryptoException.CreateFmt(
+        'Invalid DER: length %d exceeds remaining data (%d bytes)',
+        [Result, Length(ADER) - APos]);
   end;
   
   procedure SkipTag(AExpectedTag: Byte; var APos: Integer);

@@ -66,6 +66,9 @@ type
     class var FVoiceprint: IVoiceprint;
     class var FIntentParser: IIntentParser;
     class var FAudioCapture: ISpeechAudioCapture;
+    class var FLock: TObject;
+    class constructor Create;
+    class destructor Destroy;
   public
     // Backend registration (called by downstream or initialization sections)
     class procedure RegisterASRBackend(const ABackend: ISpeechRecognizerEx);
@@ -216,64 +219,134 @@ end;
 
 { TSpeechService }
 
+class constructor TSpeechService.Create;
+begin
+  FLock := TObject.Create;
+end;
+
+class destructor TSpeechService.Destroy;
+begin
+  FreeAndNil(FLock);
+end;
+
 class procedure TSpeechService.RegisterASRBackend(const ABackend: ISpeechRecognizerEx);
 begin
-  FASR := ABackend;
+  TMonitor.Enter(FLock);
+  try
+    FASR := ABackend;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TSpeechService.RegisterTTSBackend(const ABackend: ITTSBackend);
 begin
-  FTTS := ABackend;
+  TMonitor.Enter(FLock);
+  try
+    FTTS := ABackend;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TSpeechService.RegisterWakeWordDetector(const ADetector: IWakeWordDetector);
 begin
-  FWakeWord := ADetector;
+  TMonitor.Enter(FLock);
+  try
+    FWakeWord := ADetector;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TSpeechService.RegisterVoiceprint(const AVoiceprint: IVoiceprint);
 begin
-  FVoiceprint := AVoiceprint;
+  TMonitor.Enter(FLock);
+  try
+    FVoiceprint := AVoiceprint;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TSpeechService.RegisterIntentParser(const AParser: IIntentParser);
 begin
-  FIntentParser := AParser;
+  TMonitor.Enter(FLock);
+  try
+    FIntentParser := AParser;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TSpeechService.RegisterAudioCapture(const ACapture: ISpeechAudioCapture);
 begin
-  FAudioCapture := ACapture;
+  TMonitor.Enter(FLock);
+  try
+    FAudioCapture := ACapture;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.ASR: ISpeechRecognizerEx;
 begin
-  Result := FASR;
+  TMonitor.Enter(FLock);
+  try
+    Result := FASR;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.TTS: ITTSBackend;
 begin
-  Result := FTTS;
+  TMonitor.Enter(FLock);
+  try
+    Result := FTTS;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.WakeWord: IWakeWordDetector;
 begin
-  Result := FWakeWord;
+  TMonitor.Enter(FLock);
+  try
+    Result := FWakeWord;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.Voiceprint: IVoiceprint;
 begin
-  Result := FVoiceprint;
+  TMonitor.Enter(FLock);
+  try
+    Result := FVoiceprint;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.IntentParser: IIntentParser;
 begin
-  Result := FIntentParser;
+  TMonitor.Enter(FLock);
+  try
+    Result := FIntentParser;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.AudioCapture: ISpeechAudioCapture;
 begin
-  Result := FAudioCapture;
+  TMonitor.Enter(FLock);
+  try
+    Result := FAudioCapture;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TSpeechService.TranscribeFromMic(const ALanguage: string;

@@ -41,6 +41,7 @@ contains
   DeepBase.DB.JobQueue in 'Persistence\DeepBase.DB.JobQueue.pas',
   DeepBase.DB.Migrations in 'Persistence\DeepBase.DB.Migrations.pas',
   DeepBase.DB.StatusMachine in 'Persistence\DeepBase.DB.StatusMachine.pas',
-  DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas';
+  DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas',
+  DeepBase.ORM in 'Core\DeepBase.ORM.pas';
 
 end.

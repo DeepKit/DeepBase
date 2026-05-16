@@ -49,10 +49,12 @@ type
     sekLogAdded,
     sekIssueAdded,
     sekTaskStarted,
+    sekTaskProgress,
     sekTaskFinished,
     sekServiceStatusChanged,
     sekCommandExecuted,
-    sekCommandRejected
+    sekCommandRejected,
+    sekCommandStateChanged
   );
 
   TDeepShellEvent = record
@@ -71,6 +73,8 @@ type
     function SubscribeAll(AHandler: TShellEventHandler): string;
     procedure Unsubscribe(const AToken: string);
     procedure Publish(const AEvent: TDeepShellEvent);
+    procedure Shutdown;
+    procedure SetOnDispatchError(AHandler: TProc<Exception, string>);
   end;
 
   // ---------------------------------------------------------------------------
@@ -94,11 +98,31 @@ type
     ['{2B1E2C04-9C1F-4F0F-9F5C-1C77F9D1A004}']
     procedure RegisterCommand(const ACommand: TShellCommand);
     procedure UnregisterCommand(const ACommandId: string);
+    /// <summary>
+    /// Execute a command. THREADING:
+    ///   - If called on the main thread, the handler runs synchronously
+    ///     before Execute returns.
+    ///   - If called on a background thread, the handler is marshalled
+    ///     onto the main thread via TThread.Queue and Execute returns
+    ///     IMMEDIATELY (fire-and-forget). Any side effects of the handler
+    ///     (Context updates, status messages, etc.) are NOT visible by
+    ///     the time Execute returns on the background thread.
+    /// Use ExecuteSync if a background-thread caller needs to block until
+    /// the command's handler has actually completed.
+    /// </summary>
     procedure Execute(const ACommandId: string);
+    /// <summary>
+    /// Like Execute, but blocks the calling thread until the handler has
+    /// finished on the main thread (TThread.Synchronize). Use only when
+    /// the caller can tolerate blocking; can deadlock if the main thread
+    /// is itself waiting on the calling thread.
+    /// </summary>
+    procedure ExecuteSync(const ACommandId: string);
     procedure UpdateCommandState(const ACommandId: string; AEnabled, AVisible: Boolean);
     procedure UpdateCommandChecked(const ACommandId: string; AChecked: Boolean);
     function TryGetCommand(const ACommandId: string; out ACommand: TShellCommand): Boolean;
     function CommandIds: TArray<string>;
+    procedure ExecuteOnMainThread(const ACommandId: string);
     /// <summary>
     /// Wire up an optional governance service. Pass nil to clear.
     /// In MVP the default is a NullGovernanceService that allows everything.
@@ -202,6 +226,17 @@ type
     function GetLocales: TArray<string>;
     function OnLocaleChanged(AHandler: TShellLocaleChangedHandler): string;
     procedure RemoveLocaleChanged(const AToken: string);
+  end;
+
+  // ---------------------------------------------------------------------------
+  // User notification abstraction (replaces direct ShowMessage calls)
+  // ---------------------------------------------------------------------------
+
+  IShellNotification = interface
+    ['{2B1E2C04-9C1F-4F0F-9F5C-1C77F9D1A014}']
+    procedure ShowInfo(const AMessage: string);
+    procedure ShowError(const AMessage: string);
+    function Confirm(const AMessage: string): Boolean;
   end;
 
   // ---------------------------------------------------------------------------

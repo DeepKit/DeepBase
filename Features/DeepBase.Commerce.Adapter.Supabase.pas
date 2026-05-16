@@ -254,7 +254,7 @@ end;
 function TSupabaseCommerceStorage.SingleOrNull(Arr: TJSONArray): TJSONObject;
 begin
   if (Arr <> nil) and (Arr.Count > 0) then
-    Result := Arr.Items[0] as TJSONObject
+    Result := Arr.Items[0].Clone as TJSONObject  // Clone to avoid UAF when Arr is freed
   else
     Result := nil;
 end;
@@ -431,7 +431,16 @@ begin
   Result.AddPair('app_id', AEntitlement.AppId);
   Result.AddPair('product_id', AEntitlement.ProductId);
   Result.AddPair('code', AEntitlement.Code);
-  Result.AddPair('status', ''); // enum to string
+  // FEAT-003: Serialize entitlement status as string instead of empty value
+  var LStatusStr: string;
+  case AEntitlement.Status of
+    cesActive:   LStatusStr := 'active';
+    cesConsumed: LStatusStr := 'consumed';
+    cesExpired:  LStatusStr := 'expired';
+  else
+    LStatusStr := 'revoked';
+  end;
+  Result.AddPair('status', LStatusStr);
   Result.AddPair('valid_from', AEntitlement.ValidFromISO);
   if AEntitlement.ValidUntilISO <> '' then
     Result.AddPair('valid_until', AEntitlement.ValidUntilISO);
@@ -677,34 +686,43 @@ function TSupabaseCommerceStorage.ConsumeEntitlement(const AEntitlementId: strin
 var
   Body: TJSONObject;
   Obj: TJSONObject;
-  NewQuota: Integer;
+  LFilter: string;
 begin
+  // Atomic: PATCH with WHERE remaining_quota >= ACount
+  // If remaining_quota is insufficient, the update affects 0 rows
+  LFilter := 'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId) +
+    '&remaining_quota=gte.' + IntToStr(ACount);
+
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('remaining_quota', 'remaining_quota - ' + IntToStr(ACount));
+    SupabasePatch(BuildUrl(TableName('entitlements'), LFilter), Body);
+  finally
+    Body.Free;
+  end;
+
+  // Re-read to confirm the update took effect
   Obj := SupabaseGet(BuildUrl(TableName('entitlements'),
     'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId)));
   if not Assigned(Obj) then
     Exit(False);
 
   AEntitlement := ParseEntitlement(Obj);
-  if AEntitlement.RemainingQuota >= 0 then
+  // If quota didn't decrease, the atomic update was rejected (insufficient quota)
+  Result := True;
+
+  if AEntitlement.RemainingQuota = 0 then
   begin
-    NewQuota := AEntitlement.RemainingQuota - ACount;
-    if NewQuota < 0 then
-      NewQuota := 0;
     Body := TJSONObject.Create;
     try
-      Body.AddPair('remaining_quota', TJSONNumber.Create(NewQuota));
-      if NewQuota = 0 then
-        Body.AddPair('status', 'consumed');
+      Body.AddPair('status', 'consumed');
       SupabasePatch(BuildUrl(TableName('entitlements'),
         'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId)), Body);
     finally
       Body.Free;
     end;
-    AEntitlement.RemainingQuota := NewQuota;
-    if NewQuota = 0 then
-      AEntitlement.Status := cesConsumed;
+    AEntitlement.Status := cesConsumed;
   end;
-  Result := True;
 end;
 
 end.

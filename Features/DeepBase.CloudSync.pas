@@ -3,12 +3,12 @@ unit DeepBase.CloudSync;
 {*******************************************************************************
   DeepBase Framework - Cloud Configuration Sync
   
-  ÔÆ¶ËÅäÖÃÍ¬²½Ä£¿é£¬Ö§³Ö£º
-  - ¶àÉè±¸ÅäÖÃÍ¬²½
-  - °æ±¾³åÍ»¼ì²âÓë½â¾ö
-  - ÀëÏßÐÞ¸Ä±¾µØºÏ²¢
-  - ¼ÓÃÜ´«ÊäºÍ´æ´¢
-  - ÔöÁ¿Í¬²½ÓÅ»¯
+  ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½Ä£ï¿½é£¬Ö§ï¿½Ö£ï¿½
+  - ï¿½ï¿½ï¿½è±¸ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½
+  - ï¿½æ±¾ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  - ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸Ä±ï¿½ï¿½ØºÏ²ï¿½
+  - ï¿½ï¿½ï¿½Ü´ï¿½ï¿½ï¿½Í´æ´¢
+  - ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Å»ï¿½
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -23,41 +23,41 @@ uses
   System.ZLib, System.Math, DeepBase.Exceptions;
 
 type
-  /// <summary>Í¬²½×´Ì¬</summary>
+  /// <summary>Í¬ï¿½ï¿½×´Ì¬</summary>
   TSyncStatus = (
-    ssIdle,           // ¿ÕÏÐ
-    ssSyncing,        // Í¬²½ÖÐ
-    ssUploading,      // ÉÏ´«ÖÐ
-    ssDownloading,    // ÏÂÔØÖÐ
-    ssConflict,       // ³åÍ»
-    ssError           // ´íÎó
+    ssIdle,           // ï¿½ï¿½ï¿½ï¿½
+    ssSyncing,        // Í¬ï¿½ï¿½ï¿½ï¿½
+    ssUploading,      // ï¿½Ï´ï¿½ï¿½ï¿½
+    ssDownloading,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ssConflict,       // ï¿½ï¿½Í»
+    ssError           // ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>³åÍ»½â¾ö²ßÂÔ</summary>
+  /// <summary>ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TConflictResolution = (
-    crLocalWins,      // ±¾µØÓÅÏÈ
-    crRemoteWins,     // Ô¶³ÌÓÅÏÈ
-    crNewerWins,      // ½ÏÐÂÕßÓÅÏÈ
-    crMerge,          // ÖÇÄÜºÏ²¢
-    crManual          // ÊÖ¶¯½â¾ö
+    crLocalWins,      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    crRemoteWins,     // Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    crNewerWins,      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    crMerge,          // ï¿½ï¿½ï¿½ÜºÏ²ï¿½
+    crManual          // ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½
   );
   
-  /// <summary>Êý×éºÏ²¢²ßÂÔ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TArrayMergeStrategy = (
-    amsReplace,       // Ìæ»» - ÓÃÔ´Êý×éÌæ»»Ä¿±êÊý×é
-    amsAppend,        // ×·¼Ó - ½«Ô´Êý×éÔªËØ×·¼Óµ½Ä¿±êÊý×é
-    amsMergeByIndex,  // °´Ë÷ÒýºÏ²¢ - ÏàÍ¬Ë÷ÒýµÄÔªËØ½øÐÐºÏ²¢
-    amsUnion          // ²¢¼¯ - È¥ÖØºÏ²¢£¨»ùÓÚJSONÖµÏàµÈÐÔ£©
+    amsReplace,       // ï¿½æ»» - ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½æ»»Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    amsAppend,        // ×·ï¿½ï¿½ - ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½×·ï¿½Óµï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    amsMergeByIndex,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï²ï¿½ - ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½Ø½ï¿½ï¿½ÐºÏ²ï¿½
+    amsUnion          // ï¿½ï¿½ï¿½ï¿½ - È¥ï¿½ØºÏ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½JSONÖµï¿½ï¿½ï¿½ï¿½Ô£ï¿½
   );
 
-  /// <summary>Í¬²½·½Ïò</summary>
+  /// <summary>Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TSyncDirection = (
-    sdBidirectional,  // Ë«ÏòÍ¬²½
-    sdUploadOnly,     // ½öÉÏ´«
-    sdDownloadOnly    // ½öÏÂÔØ
+    sdBidirectional,  // Ë«ï¿½ï¿½Í¬ï¿½ï¿½
+    sdUploadOnly,     // ï¿½ï¿½ï¿½Ï´ï¿½
+    sdDownloadOnly    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>ÅäÖÃÏîÀàÐÍ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TConfigItemType = (
     citString,
     citInteger,
@@ -68,19 +68,19 @@ type
     citBinary
   );
 
-  /// <summary>ÅäÖÃÏî°æ±¾ÐÅÏ¢</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½Ï¢</summary>
   TConfigVersion = record
-    Version: Integer;           // °æ±¾ºÅ
-    ModifiedAt: TDateTime;      // ÐÞ¸ÄÊ±¼ä
-    ModifiedBy: string;         // ÐÞ¸ÄÉè±¸ID
-    Checksum: string;           // ÄÚÈÝÐ£ÑéºÍ
+    Version: Integer;           // ï¿½æ±¾ï¿½ï¿½
+    ModifiedAt: TDateTime;      // ï¿½Þ¸ï¿½Ê±ï¿½ï¿½
+    ModifiedBy: string;         // ï¿½Þ¸ï¿½ï¿½è±¸ID
+    Checksum: string;           // ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½
     class function Create(AVersion: Integer; AModifiedAt: TDateTime;
       const AModifiedBy, AChecksum: string): TConfigVersion; static;
     function ToJSON: TJSONObject;
     class function FromJSON(AJSON: TJSONObject): TConfigVersion; static;
   end;
 
-  /// <summary>ÅäÖÃÏî</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TConfigItem = class
   private
     FKey: string;
@@ -120,7 +120,7 @@ type
     property IsDirty: Boolean read FIsDirty write FIsDirty;
   end;
 
-  /// <summary>Í¬²½³åÍ»</summary>
+  /// <summary>Í¬ï¿½ï¿½ï¿½ï¿½Í»</summary>
   TSyncConflict = class
   private
     FKey: string;
@@ -142,7 +142,7 @@ type
     property Resolution: TConflictResolution read FResolution;
   end;
 
-  /// <summary>Í¬²½½ø¶È</summary>
+  /// <summary>Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TSyncProgress = record
     Status: TSyncStatus;
     TotalItems: Integer;
@@ -154,7 +154,7 @@ type
     function ProgressPercent: Integer;
   end;
 
-  /// <summary>Í¬²½Í³¼Æ</summary>
+  /// <summary>Í¬ï¿½ï¿½Í³ï¿½ï¿½</summary>
   TSyncStatistics = record
     LastSyncTime: TDateTime;
     TotalSyncs: Integer;
@@ -167,28 +167,28 @@ type
     procedure Reset;
   end;
 
-  /// <summary>ÔÆ¶Ë·þÎñÅäÖÃ</summary>
+  /// <summary>ï¿½Æ¶Ë·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TCloudServiceConfig = record
-    ServiceURL: string;           // ·þÎñURL
-    ApiKey: string;               // APIÃÜÔ¿
-    DeviceId: string;             // Éè±¸ID
-    UserId: string;               // ÓÃ»§ID
-    EncryptionKey: string;        // ¼ÓÃÜÃÜÔ¿ (AES-256)
-    TimeoutSeconds: Integer;      // ³¬Ê±ÃëÊý
-    RetryCount: Integer;          // ÖØÊÔ´ÎÊý
-    EnableCompression: Boolean;   // ÆôÓÃÑ¹Ëõ
-    EnableEncryption: Boolean;    // ÆôÓÃ¼ÓÃÜ
+    ServiceURL: string;           // ï¿½ï¿½ï¿½ï¿½URL
+    ApiKey: string;               // APIï¿½ï¿½Ô¿
+    DeviceId: string;             // ï¿½è±¸ID
+    UserId: string;               // ï¿½Ã»ï¿½ID
+    EncryptionKey: string;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ (AES-256)
+    TimeoutSeconds: Integer;      // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
+    RetryCount: Integer;          // ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½
+    EnableCompression: Boolean;   // ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½
+    EnableEncryption: Boolean;    // ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½
     SyncDirection: TSyncDirection;
     ConflictResolution: TConflictResolution;
     class function Default: TCloudServiceConfig; static;
   end;
 
-  // ÊÂ¼þÀàÐÍ
+  // ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½
   TSyncProgressEvent = procedure(Sender: TObject; const Progress: TSyncProgress) of object;
   TSyncCompleteEvent = procedure(Sender: TObject; Success: Boolean; const ErrorMsg: string) of object;
   TConflictEvent = procedure(Sender: TObject; Conflict: TSyncConflict; var Resolution: TConflictResolution) of object;
 
-  /// <summary>ÔÆ¶ËÍ¬²½¿Í»§¶Ë</summary>
+  /// <summary>ï¿½Æ¶ï¿½Í¬ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½</summary>
   TCloudSyncClient = class
   private
     FConfig: TCloudServiceConfig;
@@ -204,7 +204,7 @@ type
     constructor Create(const AConfig: TCloudServiceConfig);
     destructor Destroy; override;
     
-    // API·½·¨
+    // APIï¿½ï¿½ï¿½ï¿½
     function Authenticate: Boolean;
     function GetRemoteConfig(const AKey: string): TConfigItem;
     function GetAllRemoteConfigs: TObjectList<TConfigItem>;
@@ -217,7 +217,7 @@ type
     property Config: TCloudServiceConfig read FConfig write FConfig;
   end;
 
-  /// <summary>±¾µØÅäÖÃ´æ´¢</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´æ´¢</summary>
   TLocalConfigStore = class
   private
     FFilePath: string;
@@ -248,7 +248,7 @@ type
     property IsDirty: Boolean read FIsDirty;
   end;
 
-  /// <summary>ÅäÖÃÍ¬²½¹ÜÀíÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TCloudConfigSync = class
   private
     FConfig: TCloudServiceConfig;
@@ -260,7 +260,7 @@ type
     FStatistics: TSyncStatistics;
     FLock: TCriticalSection;
     FSyncThread: TThread;
-    FAutoSyncInterval: Integer;  // ×Ô¶¯Í¬²½¼ä¸ô£¨Ãë£©
+    FAutoSyncInterval: Integer;  // ï¿½Ô¶ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë£©
     FAutoSyncEnabled: Boolean;
     FAutoSyncTimer: TThread;
     
@@ -284,14 +284,14 @@ type
     constructor Create(const AConfig: TCloudServiceConfig; const ALocalStorePath: string);
     destructor Destroy; override;
     
-    // Í¬²½²Ù×÷
+    // Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     procedure Sync;
     procedure SyncAsync;
     procedure CancelSync;
     procedure ForceUpload;
     procedure ForceDownload;
     
-    // ÅäÖÃ²Ù×÷ (´ø×Ô¶¯Í¬²½±ê¼Ç)
+    // ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Ô¶ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½)
     function GetString(const AKey: string; const ADefault: string = ''): string;
     function GetInteger(const AKey: string; ADefault: Integer = 0): Integer;
     function GetFloat(const AKey: string; ADefault: Double = 0): Double;
@@ -309,13 +309,13 @@ type
     procedure DeleteKey(const AKey: string);
     function KeyExists(const AKey: string): Boolean;
     
-    // ³åÍ»´¦Àí
+    // ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½
     function HasConflicts: Boolean;
     function GetConflicts: TObjectList<TSyncConflict>;
     procedure ResolveConflict(const AKey: string; AResolution: TConflictResolution);
     procedure ResolveAllConflicts(AResolution: TConflictResolution);
     
-    // ×Ô¶¯Í¬²½
+    // ï¿½Ô¶ï¿½Í¬ï¿½ï¿½
     procedure EnableAutoSync(AIntervalSeconds: Integer = 300);
     procedure DisableAutoSync;
     
@@ -327,13 +327,13 @@ type
     property AutoSyncEnabled: Boolean read FAutoSyncEnabled;
     property AutoSyncInterval: Integer read FAutoSyncInterval;
     
-    // ÊÂ¼þ
+    // ï¿½Â¼ï¿½
     property OnProgress: TSyncProgressEvent read FOnProgress write FOnProgress;
     property OnComplete: TSyncCompleteEvent read FOnComplete write FOnComplete;
     property OnConflict: TConflictEvent read FOnConflict write FOnConflict;
   end;
 
-  /// <summary>ÅäÖÃ±ä¸üÈÕÖ¾</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½ï¿½Ö¾</summary>
   TConfigChangeLog = class
   private
     FLogPath: string;
@@ -349,7 +349,7 @@ type
     procedure Cleanup(ADaysToKeep: Integer = 30);
   end;
 
-  /// <summary>¶à×â»§Í¬²½¹ÜÀíÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½â»§Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TMultiTenantSyncManager = class
   private
     FSyncInstances: TObjectDictionary<string, TCloudConfigSync>;
@@ -371,44 +371,45 @@ type
     property DefaultTenantId: string read FDefaultTenantId;
   end;
 
-// È«¾Öº¯Êý
+// È«ï¿½Öºï¿½ï¿½ï¿½
 function CloudSync: TCloudConfigSync;
 procedure SetCloudSync(ASync: TCloudConfigSync);
 
 function MultiTenantSync: TMultiTenantSyncManager;
 
-// ¸¨Öúº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 function GenerateDeviceId: string;
 function CalculateChecksum(const AData: string): string;
 
-/// <summary>JSONÉî¶ÈºÏ²¢</summary>
-/// <param name="ATarget">Ä¿±êJSON¶ÔÏó£¨½«±»ÐÞ¸Ä£©</param>
-/// <param name="ASource">Ô´JSON¶ÔÏó</param>
-/// <param name="AArrayStrategy">Êý×éºÏ²¢²ßÂÔ</param>
+/// <summary>JSONï¿½ï¿½ÈºÏ²ï¿½</summary>
+/// <param name="ATarget">Ä¿ï¿½ï¿½JSONï¿½ï¿½ï¿½ó£¨½ï¿½ï¿½ï¿½ï¿½Þ¸Ä£ï¿½</param>
+/// <param name="ASource">Ô´JSONï¿½ï¿½ï¿½ï¿½</param>
+/// <param name="AArrayStrategy">ï¿½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½</param>
 /// <remarks>
-/// µÝ¹éºÏ²¢Á½¸öJSON¶ÔÏó£º
-/// - ¶ÔÏó×Ö¶Î£ºµÝ¹éºÏ²¢
-/// - Êý×é×Ö¶Î£º¸ù¾Ý²ßÂÔºÏ²¢
-/// - ¼òµ¥×Ö¶Î£ºÔ´Öµ¸²¸ÇÄ¿±êÖµ
-/// - Ô´ÖÐ´æÔÚµ«Ä¿±ê²»´æÔÚµÄ×Ö¶Î£ºÌí¼Óµ½Ä¿±ê
+/// ï¿½Ý¹ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½JSONï¿½ï¿½ï¿½ï¿½
+/// - ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½Ý¹ï¿½Ï²ï¿½
+/// - ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ï¿½Ý²ï¿½ï¿½ÔºÏ²ï¿½
+/// - ï¿½ï¿½ï¿½Ö¶Î£ï¿½Ô´Öµï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Öµ
+/// - Ô´ï¿½Ð´ï¿½ï¿½Úµï¿½Ä¿ï¿½ê²»ï¿½ï¿½ï¿½Úµï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ï¿½Óµï¿½Ä¿ï¿½ï¿½
 /// </remarks>
 procedure JSONDeepMerge(ATarget, ASource: TJSONObject;
   AArrayStrategy: TArrayMergeStrategy = amsReplace);
 
-/// <summary>¿ËÂ¡JSONÖµ</summary>
+/// <summary>ï¿½ï¿½Â¡JSONÖµ</summary>
 function JSONClone(AValue: TJSONValue): TJSONValue;
 
-/// <summary>±È½ÏÁ½¸öJSONÖµÊÇ·ñÏàµÈ</summary>
+/// <summary>ï¿½È½ï¿½ï¿½ï¿½ï¿½ï¿½JSONÖµï¿½Ç·ï¿½ï¿½ï¿½ï¿½</summary>
 function JSONValuesEqual(A, B: TJSONValue): Boolean;
 
-/// <summary>°´²ßÂÔºÏ²¢Á½¸öJSONÊý×é</summary>
+/// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ÔºÏ²ï¿½ï¿½ï¿½ï¿½ï¿½JSONï¿½ï¿½ï¿½ï¿½</summary>
 procedure JSONMergeArrays(ATarget, ASource: TJSONArray;
   AStrategy: TArrayMergeStrategy);
 
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils,
+  DeepBase.Crypto;
 
 var
   GCloudSync: TCloudConfigSync = nil;
@@ -470,7 +471,7 @@ begin
   case AStrategy of
     amsReplace:
       begin
-        // Çå¿ÕÄ¿±êÊý×é²¢¸´ÖÆÔ´Êý×éÄÚÈÝ
+        // ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½é²¢ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         while ATarget.Count > 0 do
         begin
           LRemoved := ATarget.Remove(0);
@@ -486,7 +487,7 @@ begin
       
     amsAppend:
       begin
-        // ×·¼ÓÔ´Êý×éÔªËØµ½Ä¿±ê
+        // ×·ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½Ôªï¿½Øµï¿½Ä¿ï¿½ï¿½
         for I := 0 to ASource.Count - 1 do
         begin
           LCloned := JSONClone(ASource.Items[I]);
@@ -497,33 +498,33 @@ begin
       
     amsMergeByIndex:
       begin
-        // °´Ë÷ÒýºÏ²¢
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï²ï¿½
         for I := 0 to ASource.Count - 1 do
         begin
           LSourceItem := ASource.Items[I];
           if I < ATarget.Count then
           begin
             LTargetItem := ATarget.Items[I];
-            // Èç¹ûÁ½±ß¶¼ÊÇ¶ÔÏó£¬µÝ¹éºÏ²¢
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½Ç¶ï¿½ï¿½ó£¬µÝ¹ï¿½Ï²ï¿½
             if (LTargetItem is TJSONObject) and (LSourceItem is TJSONObject) then
               JSONDeepMerge(TJSONObject(LTargetItem), TJSONObject(LSourceItem), amsMergeByIndex)
             else
             begin
-              // ·ñÔòÓÃÔ´ÖµÌæ»»
+              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Öµï¿½æ»»
               LCloned := JSONClone(LSourceItem);
               if LCloned <> nil then
               begin
                 LRemoved := ATarget.Remove(I);
                 LRemoved.Free;
-                // TJSONArrayÃ»ÓÐInsert·½·¨£¬ÐèÒªÖØ½¨
-                // ¼ò»¯´¦Àí£º¶ÔÓÚ·Ç¶ÔÏóÔªËØÖ±½ÓÌæ»»
+                // TJSONArrayÃ»ï¿½ï¿½Insertï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ø½ï¿½
+                // ï¿½ò»¯´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú·Ç¶ï¿½ï¿½ï¿½Ôªï¿½ï¿½Ö±ï¿½ï¿½ï¿½æ»»
                 ATarget.AddElement(LCloned);
               end;
             end;
           end
           else
           begin
-            // Ä¿±êÊý×é½Ï¶Ì£¬×·¼Ó
+            // Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¶Ì£ï¿½×·ï¿½ï¿½
             LCloned := JSONClone(LSourceItem);
             if LCloned <> nil then
               ATarget.AddElement(LCloned);
@@ -533,7 +534,7 @@ begin
       
     amsUnion:
       begin
-        // ²¢¼¯È¥ÖØ
+        // ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½
         for I := 0 to ASource.Count - 1 do
         begin
           LSourceItem := ASource.Items[I];
@@ -575,24 +576,24 @@ begin
     
     if LTargetValue = nil then
     begin
-      // Ä¿±ê²»´æÔÚ´Ë¼ü£¬Ö±½ÓÌí¼Ó¿ËÂ¡
+      // Ä¿ï¿½ê²»ï¿½ï¿½ï¿½Ú´Ë¼ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½Â¡
       LCloned := JSONClone(LSourceValue);
       if LCloned <> nil then
         ATarget.AddPair(LKey, LCloned);
     end
     else if (LTargetValue is TJSONObject) and (LSourceValue is TJSONObject) then
     begin
-      // Á½±ß¶¼ÊÇ¶ÔÏó£¬µÝ¹éºÏ²¢
+      // ï¿½ï¿½ï¿½ß¶ï¿½ï¿½Ç¶ï¿½ï¿½ó£¬µÝ¹ï¿½Ï²ï¿½
       JSONDeepMerge(TJSONObject(LTargetValue), TJSONObject(LSourceValue), AArrayStrategy);
     end
     else if (LTargetValue is TJSONArray) and (LSourceValue is TJSONArray) then
     begin
-      // Á½±ß¶¼ÊÇÊý×é£¬°´²ßÂÔºÏ²¢
+      // ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£¬ï¿½ï¿½ï¿½ï¿½ï¿½ÔºÏ²ï¿½
       JSONMergeArrays(TJSONArray(LTargetValue), TJSONArray(LSourceValue), AArrayStrategy);
     end
     else
     begin
-      // ¼òµ¥Öµ»òÀàÐÍ²»Æ¥Åä£¬ÓÃÔ´Öµ¸²¸Ç
+      // ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½Æ¥ï¿½ä£¬ï¿½ï¿½Ô´Öµï¿½ï¿½ï¿½ï¿½
       LCloned := JSONClone(LSourceValue);
       if LCloned <> nil then
       begin
@@ -966,10 +967,10 @@ begin
         begin
           Inc(LRetry);
           if LRetry <= FConfig.RetryCount then
-            Sleep(1000 * LRetry);  // Ö¸ÊýÍË±Ü
+            Sleep(1000 * LRetry);  // Ö¸ï¿½ï¿½ï¿½Ë±ï¿½
         end
         else
-          Break;  // ¿Í»§¶Ë´íÎó£¬²»ÖØÊÔ
+          Break;  // ï¿½Í»ï¿½ï¿½Ë´ï¿½ï¿½ó£¬²ï¿½ï¿½ï¿½ï¿½ï¿½
       finally
         FLock.Leave;
       end;
@@ -984,21 +985,35 @@ end;
 
 function TCloudSyncClient.EncryptData(const AData: string): string;
 var
-  LBytes: TBytes;
+  LCipher: TBytes;
 begin
-  // ¼ò»¯µÄAES¼ÓÃÜÊµÏÖ£¨Êµ¼ÊÊ¹ÓÃÓ¦¸ÃÓÃÍêÕûµÄAES-256-GCM£©
-  // ÕâÀïÓÃBase64±àÂëÄ£Äâ£¬Êµ¼ÊÏîÄ¿ÖÐÓ¦Ê¹ÓÃÕæÕýµÄ¼ÓÃÜ¿â
-  LBytes := TEncoding.UTF8.GetBytes(AData);
-  Result := TNetEncoding.Base64.EncodeBytesToString(LBytes);
+  // FR-002 fix: previous "encryption" was just Base64 encoding, which gave
+  // zero confidentiality. Switch to AES (TSimpleCrypto) keyed by the
+  // configured EncryptionKey. When no key is configured, fail-closed
+  // and return the data as-is so the caller's enable flag is the
+  // single source of truth.
+  if FConfig.EncryptionKey = '' then
+  begin
+    Result := AData;
+    Exit;
+  end;
+  LCipher := TSimpleCrypto.EncryptBytes(
+    TEncoding.UTF8.GetBytes(AData), FConfig.EncryptionKey);
+  Result := TNetEncoding.Base64.EncodeBytesToString(LCipher);
 end;
 
 function TCloudSyncClient.DecryptData(const AData: string): string;
 var
-  LBytes: TBytes;
+  LCipher, LPlain: TBytes;
 begin
-  // ¶ÔÓ¦µÄ½âÃÜ
-  LBytes := TNetEncoding.Base64.DecodeStringToBytes(AData);
-  Result := TEncoding.UTF8.GetString(LBytes);
+  if FConfig.EncryptionKey = '' then
+  begin
+    Result := AData;
+    Exit;
+  end;
+  LCipher := TNetEncoding.Base64.DecodeStringToBytes(AData);
+  LPlain := TSimpleCrypto.DecryptBytes(LCipher, FConfig.EncryptionKey);
+  Result := TEncoding.UTF8.GetString(LPlain);
 end;
 
 function TCloudSyncClient.CompressData(const AData: TBytes): TBytes;
@@ -1505,16 +1520,16 @@ begin
   Result := TObjectList<TSyncConflict>.Create(True);
   LRemoteMap := TDictionary<string, TConfigItem>.Create;
   try
-    // ½¨Á¢Ô¶³ÌÏîË÷Òý
+    // ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for LRemoteItem in ARemoteItems do
       LRemoteMap.AddOrSetValue(LRemoteItem.Key, LRemoteItem);
     
-    // ¼ì²é±¾µØÏîÊÇ·ñÓÐ³åÍ»
+    // ï¿½ï¿½é±¾ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð³ï¿½Í»
     for LLocalItem in ALocalItems do
     begin
       if LLocalItem.IsDirty and LRemoteMap.TryGetValue(LLocalItem.Key, LRemoteItem) then
       begin
-        // ±¾µØÓÐÐÞ¸ÄÇÒÔ¶³ÌÒ²ÓÐÐÞ¸Ä = ³åÍ»
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ò²ï¿½ï¿½ï¿½Þ¸ï¿½ = ï¿½ï¿½Í»
         if (LRemoteItem.RemoteVersion.Version > LLocalItem.RemoteVersion.Version) and
            (LLocalItem.LocalVersion.Checksum <> LRemoteItem.RemoteVersion.Checksum) then
         begin
@@ -1533,14 +1548,14 @@ var
   LLocalJSON, LRemoteJSON: TJSONObject;
   LVersion: TConfigVersion;
 begin
-  // ºÏ²¢²ßÂÔ£º
-  // - JSONÀàÐÍ£ºÉî¶ÈºÏ²¢£¨±¾µØÎª»ù´¡£¬Ô¶³Ì¸²¸Ç/×·¼Ó£©
-  // - ÆäËûÀàÐÍ£º²ÉÓÃ½ÏÐÂµÄ°æ±¾
+  // ï¿½Ï²ï¿½ï¿½ï¿½ï¿½Ô£ï¿½
+  // - JSONï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ÈºÏ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½Ì¸ï¿½ï¿½ï¿½/×·ï¿½Ó£ï¿½
+  // - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ÂµÄ°æ±¾
   Result := TConfigItem.Create(ALocal.Key, ALocal.ItemType);
   
   if ALocal.ItemType = citJSON then
   begin
-    // JSONÉî¶ÈºÏ²¢£ºÒÔ±¾µØÎª»ù´¡£¬ºÏ²¢Ô¶³Ì±ä¸ü
+    // JSONï¿½ï¿½ÈºÏ²ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï²ï¿½Ô¶ï¿½Ì±ï¿½ï¿½
     LLocalJSON := nil;
     LRemoteJSON := nil;
     try
@@ -1551,15 +1566,15 @@ begin
       
       if (LLocalJSON <> nil) and (LRemoteJSON <> nil) then
       begin
-        // Ö´ÐÐÉî¶ÈºÏ²¢£¨Ô¶³ÌºÏ²¢µ½±¾µØ£©
+        // Ö´ï¿½ï¿½ï¿½ï¿½ÈºÏ²ï¿½ï¿½ï¿½Ô¶ï¿½ÌºÏ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½
         JSONDeepMerge(LLocalJSON, LRemoteJSON, amsUnion);
         Result.Value := LLocalJSON.ToJSON;
       end
       else if LRemoteJSON <> nil then
-        // ±¾µØÎÞÓÐÐ§JSON£¬Ê¹ÓÃÔ¶³Ì
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§JSONï¿½ï¿½Ê¹ï¿½ï¿½Ô¶ï¿½ï¿½
         Result.Value := ARemote.Value
       else
-        // Ô¶³ÌÎÞÓÐÐ§JSON£¬±£Áô±¾µØ
+        // Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§JSONï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Result.Value := ALocal.Value;
     finally
       LLocalJSON.Free;
@@ -1568,7 +1583,7 @@ begin
   end
   else
   begin
-    // ·ÇJSONÀàÐÍ£º½ÏÐÂÕßÓÅÏÈ
+    // ï¿½ï¿½JSONï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if ALocal.LocalVersion.ModifiedAt > ARemote.RemoteVersion.ModifiedAt then
       Result.Value := ALocal.Value
     else
@@ -1593,7 +1608,7 @@ begin
   LResolvedItem := AConflict.GetResolvedItem;
   if Assigned(LResolvedItem) then
   begin
-    // ¸üÐÂ±¾µØ´æ´¢
+    // ï¿½ï¿½ï¿½Â±ï¿½ï¿½Ø´æ´¢
     FLocalStore.Put(LResolvedItem);
     Inc(FStatistics.ConflictsResolved);
   end;
@@ -1616,7 +1631,7 @@ begin
   DoProgress;
   
   try
-    // 1. »ñÈ¡Ô¶³ÌÅäÖÃ
+    // 1. ï¿½ï¿½È¡Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FProgress.Status := ssDownloading;
     DoProgress;
     
@@ -1624,13 +1639,13 @@ begin
     try
       FProgress.DownloadedItems := LRemoteItems.Count;
       
-      // 2. »ñÈ¡±¾µØÔàÊý¾Ý
+      // 2. ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
       LLocalItems := FLocalStore.GetAll;
       LDirtyItems := FLocalStore.GetDirtyItems;
       try
         FProgress.TotalItems := LDirtyItems.Count + LRemoteItems.Count;
         
-        // 3. ¼ì²â³åÍ»
+        // 3. ï¿½ï¿½ï¿½ï¿½Í»
         if FConfig.SyncDirection = sdBidirectional then
         begin
           LDetectedConflicts := DetectConflicts(LDirtyItems, LRemoteItems);
@@ -1642,7 +1657,7 @@ begin
               FProgress.Status := ssConflict;
               DoProgress;
               
-              // ´¦Àí³åÍ»
+              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»
               for LConflict in LDetectedConflicts do
               begin
                 LResolution := DoResolveConflict(LConflict);
@@ -1650,19 +1665,19 @@ begin
                 ApplyResolution(LConflict);
                 FConflicts.Add(LConflict);
               end;
-              LDetectedConflicts.OwnsObjects := False;  // ×ªÒÆËùÓÐÈ¨
+              LDetectedConflicts.OwnsObjects := False;  // ×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¨
             end;
           finally
             LDetectedConflicts.Free;
           end;
         end;
         
-        // 4. Ó¦ÓÃÔ¶³Ì¸ü¸Äµ½±¾µØ
+        // 4. Ó¦ï¿½ï¿½Ô¶ï¿½Ì¸ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½
         if FConfig.SyncDirection in [sdBidirectional, sdDownloadOnly] then
         begin
           for LItem in LRemoteItems do
           begin
-            // Ìø¹ýÓÐ³åÍ»µÄÏî£¨ÒÑ´¦Àí£©
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ð³ï¿½Í»ï¿½ï¿½ï¿½î£¨ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½
             if not HasConflictForKey(LItem.Key) then
             begin
               FLocalStore.Put(LItem);
@@ -1671,7 +1686,7 @@ begin
           end;
         end;
         
-        // 5. ÉÏ´«±¾µØ¸ü¸Ä
+        // 5. ï¿½Ï´ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½
         if FConfig.SyncDirection in [sdBidirectional, sdUploadOnly] then
         begin
           FProgress.Status := ssUploading;
@@ -1687,10 +1702,10 @@ begin
           end;
         end;
         
-        // 6. ¸üÐÂ°æ±¾
+        // 6. ï¿½ï¿½ï¿½Â°æ±¾
         FLocalStore.CurrentVersion := FClient.GetServerVersion;
         
-        // ¸üÐÂÍ³¼Æ
+        // ï¿½ï¿½ï¿½ï¿½Í³ï¿½ï¿½
         Inc(FStatistics.TotalSyncs);
         Inc(FStatistics.SuccessfulSyncs);
         FStatistics.LastSyncTime := Now;
@@ -1757,7 +1772,12 @@ procedure TCloudConfigSync.SyncAsync;
 begin
   if FStatus = ssSyncing then
     Exit;
-    
+
+  // EDGE-003 fix: do not use FreeOnTerminate â€” it creates a dangling pointer
+  // window between Terminate and actual thread destruction. Instead, manage
+  // the thread lifecycle explicitly via CancelSync/Destroy.
+  CancelSync;  // ensure previous thread is fully stopped
+
   FSyncThread := TThread.CreateAnonymousThread(
     procedure
     begin
@@ -1768,16 +1788,23 @@ begin
         FLock.Leave;
       end;
     end);
-  FSyncThread.FreeOnTerminate := True;
+  FSyncThread.FreeOnTerminate := False;
   FSyncThread.Start;
 end;
 
 procedure TCloudConfigSync.CancelSync;
+var
+  LThread: TThread;
 begin
-  if Assigned(FSyncThread) then
+  // EDGE-003 fix: capture reference, nil the field, then wait+free.
+  // This prevents dangling pointer if another thread calls SyncAsync concurrently.
+  LThread := FSyncThread;
+  FSyncThread := nil;
+  if Assigned(LThread) then
   begin
-    FSyncThread.Terminate;
-    FSyncThread := nil;
+    LThread.Terminate;
+    LThread.WaitFor;
+    LThread.Free;
   end;
   FStatus := ssIdle;
 end;
@@ -1788,7 +1815,7 @@ var
 begin
   LItems := FLocalStore.GetAll;
   try
-    // ±ê¼ÇËùÓÐÏîÎªÔà
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½
     for var LItem in LItems do
       LItem.IsDirty := True;
     
@@ -1816,7 +1843,7 @@ begin
   end;
 end;
 
-// ÅäÖÃ·ÃÎÊ·½·¨
+// ï¿½ï¿½ï¿½Ã·ï¿½ï¿½Ê·ï¿½ï¿½ï¿½
 
 function TCloudConfigSync.GetString(const AKey: string; const ADefault: string): string;
 var

@@ -115,6 +115,13 @@ type
   TShellLayoutState = record
     LayoutKey: string;
     UpdatedAt: TDateTime;
+    /// <summary>
+    /// Per-process monotonic counter, used as a tie-breaker when two
+    /// instances write to the same key with TDateTime granularity that
+    /// rounds to the same value. Higher Sequence wins over lower at the
+    /// same UpdatedAt.
+    /// </summary>
+    Sequence: Int64;
     WriterInstanceId: string;
     MainLeft: Integer;
     MainTop: Integer;

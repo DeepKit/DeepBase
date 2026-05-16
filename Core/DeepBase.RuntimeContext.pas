@@ -116,6 +116,7 @@ implementation
 
 var
   GRuntimeContext: TDeepBaseRuntimeContext;
+  GRuntimeContextLock: TObject;
 
 { TDeepBaseRuntimeComponent }
 
@@ -390,23 +391,39 @@ end;
 
 function RuntimeContext: TDeepBaseRuntimeContext;
 begin
+  // BASIC-005 fix: double-checked lock so concurrent first-access from
+  // multiple threads does not create two instances.
   if GRuntimeContext = nil then
-    GRuntimeContext := TDeepBaseRuntimeContext.Create;
+  begin
+    TMonitor.Enter(GRuntimeContextLock);
+    try
+      if GRuntimeContext = nil then
+        GRuntimeContext := TDeepBaseRuntimeContext.Create;
+    finally
+      TMonitor.Exit(GRuntimeContextLock);
+    end;
+  end;
   Result := GRuntimeContext;
 end;
 
 procedure SetRuntimeContext(AContext: TDeepBaseRuntimeContext);
 begin
-  if GRuntimeContext = AContext then
-    Exit;
-
-  FreeAndNil(GRuntimeContext);
-  GRuntimeContext := AContext;
+  TMonitor.Enter(GRuntimeContextLock);
+  try
+    if GRuntimeContext = AContext then
+      Exit;
+    FreeAndNil(GRuntimeContext);
+    GRuntimeContext := AContext;
+  finally
+    TMonitor.Exit(GRuntimeContextLock);
+  end;
 end;
 
 initialization
+  GRuntimeContextLock := TObject.Create;
 
 finalization
   FreeAndNil(GRuntimeContext);
+  FreeAndNil(GRuntimeContextLock);
 
 end.

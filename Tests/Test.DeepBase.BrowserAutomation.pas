@@ -120,7 +120,9 @@ begin
   end;
 
   if Pos('querySelectorAll', AScript) > 0 then
-    AJsonResult := '"latest answer"'
+    AJsonResult := '{"found":true,"text":"latest answer"}'
+  else if (Pos('textContent', AScript) > 0) or (Pos('innerText', AScript) > 0) then
+    AJsonResult := '{"found":true,"text":"latest answer"}'
   else if EvaluateFalseCount > 0 then
   begin
     Dec(EvaluateFalseCount);
@@ -186,7 +188,7 @@ begin
 
   Selectors.LoadFromJson('[]');
 
-  Assert.AreEqual('', Selectors.Input);
+  Assert.AreEqual('textarea', Selectors.Input);
 end;
 
 procedure TBrowserAutomationTests.Test_Scripts_EscapeSelectorAndText;

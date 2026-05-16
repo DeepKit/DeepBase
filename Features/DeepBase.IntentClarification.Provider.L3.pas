@@ -4,6 +4,8 @@ interface
 
 uses
   System.SysUtils,
+  System.SyncObjs,
+  System.Generics.Collections,
   DeepBase.IntentClarification.Types,
   DeepBase.IntentClarification.Interfaces,
   DeepBase.LLM.Client,
@@ -16,6 +18,7 @@ type
   /// 维持角色一致性直到用户请求切换或会话结束。
   /// Property 18: 同一专家跨连续轮次保持一致（除非请求切换）。
   /// Requirements: 6.1-6.4
+  /// IC-009: per-session state + lock to prevent cross-session interference.
   /// </summary>
   TL3ExpertProvider = class(TInterfacedObject, ILevelProvider)
   private
@@ -26,8 +29,8 @@ type
       FLLM: ILLMClient;
       FModelTier: TModelTier;
       FPersonaRegistry: IPersonaRegistry;
-      FCurrentExpert: TPersonaProfile;
-      FExpertSelected: Boolean;
+      FSessionExperts: TDictionary<string, TPersonaProfile>;  // Per-session expert selection
+      FLock: TCriticalSection; // IC-009: protect FSessionExperts
 
     function SelectExpert(const AContext: TProcessingContext): TPersonaProfile;
     function BuildSystemPrompt(const AExpert: TPersonaProfile): string;
@@ -43,6 +46,7 @@ type
     constructor Create(const ALLM: ILLMClient;
       const APersonaRegistry: IPersonaRegistry;
       ATier: TModelTier); overload;
+    destructor Destroy; override;
 
     { ILevelProvider }
     function GetLevel: TClarificationLevel;
@@ -50,19 +54,18 @@ type
     function Process(const AContext: TProcessingContext): TProviderResult;
     function RequiresLLM: Boolean;
 
-    /// <summary>Returns the currently selected expert persona.</summary>
-    function GetCurrentExpert: TPersonaProfile;
-    /// <summary>Forces a switch to a different expert.</summary>
-    procedure SwitchExpert(const ANewExpert: TPersonaProfile);
-    /// <summary>Resets expert selection so next Process call picks a new one.</summary>
-    procedure ResetExpert;
+    /// <summary>Returns the currently selected expert persona for a session.</summary>
+    function GetCurrentExpert(const ASessionId: string): TPersonaProfile;
+    /// <summary>Forces a switch to a different expert for a session.</summary>
+    procedure SwitchExpert(const ASessionId: string; const ANewExpert: TPersonaProfile);
+    /// <summary>Resets expert selection for a session so next Process call picks a new one.</summary>
+    procedure ResetExpert(const ASessionId: string);
   end;
 
 implementation
 
 uses
-  System.Math,
-  System.Generics.Collections;
+  System.Math;
 
 { TL3ExpertProvider }
 
@@ -79,8 +82,15 @@ begin
   FLLM := ALLM;
   FModelTier := ATier;
   FPersonaRegistry := APersonaRegistry;
-  FExpertSelected := False;
-  FCurrentExpert := Default(TPersonaProfile);
+  FSessionExperts := TDictionary<string, TPersonaProfile>.Create;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TL3ExpertProvider.Destroy;
+begin
+  FSessionExperts.Free;
+  FLock.Free;
+  inherited;
 end;
 
 function TL3ExpertProvider.GetLevel: TClarificationLevel;
@@ -113,12 +123,25 @@ end;
 
 function TL3ExpertProvider.SelectExpert(
   const AContext: TProcessingContext): TPersonaProfile;
+var
+  LExisting: TPersonaProfile;
+  LHaveExisting: Boolean;
 begin
-  // Property 18: maintain same expert across consecutive turns
-  if FExpertSelected and (not IsExpertSwitchRequested(AContext.UserInput)) then
+  // Property 18: maintain same expert across consecutive turns per session
+  FLock.Enter;
+  try
+    LHaveExisting := FSessionExperts.TryGetValue(AContext.SessionId, LExisting);
+  finally
+    FLock.Leave;
+  end;
+
+  if LHaveExisting then
   begin
-    Result := FCurrentExpert;
-    Exit;
+    if not IsExpertSwitchRequested(AContext.UserInput) then
+    begin
+      Result := LExisting;
+      Exit;
+    end;
   end;
 
   // Select a new expert from the registry
@@ -135,8 +158,12 @@ begin
     Result.Description := '提供专业分析和建议的通用顾问';
   end;
 
-  FCurrentExpert := Result;
-  FExpertSelected := True;
+  FLock.Enter;
+  try
+    FSessionExperts.AddOrSetValue(AContext.SessionId, Result);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TL3ExpertProvider.BuildSystemPrompt(const AExpert: TPersonaProfile): string;
@@ -265,28 +292,48 @@ begin
     Exit;
   end;
 
-  // Check if user wants to switch expert
-  if FExpertSelected and IsExpertSwitchRequested(AContext.UserInput) then
-    FExpertSelected := False;
+  // Check if user wants to switch expert (per-session, locked)
+  FLock.Enter;
+  try
+    if FSessionExperts.ContainsKey(AContext.SessionId) and
+       IsExpertSwitchRequested(AContext.UserInput) then
+      FSessionExperts.Remove(AContext.SessionId);
+  finally
+    FLock.Leave;
+  end;
 
   Result := ProcessWithLLM(AContext);
 end;
 
-function TL3ExpertProvider.GetCurrentExpert: TPersonaProfile;
+function TL3ExpertProvider.GetCurrentExpert(const ASessionId: string): TPersonaProfile;
 begin
-  Result := FCurrentExpert;
+  FLock.Enter;
+  try
+    if not FSessionExperts.TryGetValue(ASessionId, Result) then
+      Result := Default(TPersonaProfile);
+  finally
+    FLock.Leave;
+  end;
 end;
 
-procedure TL3ExpertProvider.SwitchExpert(const ANewExpert: TPersonaProfile);
+procedure TL3ExpertProvider.SwitchExpert(const ASessionId: string; const ANewExpert: TPersonaProfile);
 begin
-  FCurrentExpert := ANewExpert;
-  FExpertSelected := True;
+  FLock.Enter;
+  try
+    FSessionExperts.AddOrSetValue(ASessionId, ANewExpert);
+  finally
+    FLock.Leave;
+  end;
 end;
 
-procedure TL3ExpertProvider.ResetExpert;
+procedure TL3ExpertProvider.ResetExpert(const ASessionId: string);
 begin
-  FExpertSelected := False;
-  FCurrentExpert := Default(TPersonaProfile);
+  FLock.Enter;
+  try
+    FSessionExperts.Remove(ASessionId);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

@@ -9,8 +9,8 @@
   Usage (downstream):
     var Container := TIoCContainer.Create;
     TBrowserIoCRegistration.RegisterAll(Container);
-    // Container now resolves IJSScriptStore, IBrowserRecovery and
-    // TBrowserService is wired with the same recovery instance.
+    // Container now resolves IJSScriptStore, IBrowserRecovery, IPageDriver
+    // and TBrowserService is wired with the same recovery instance.
 
   BUG-BA-028 fix: align Browser DX with IntentClarification.
   ============================================================================ }
@@ -22,26 +22,16 @@ interface
 uses
   System.SysUtils,
   DeepBase.IoC,
-  DeepBase.Browser.Types;
+  DeepBase.Browser.Types,
+  DeepBase.Browser.PageDriver;
 
 type
   TBrowserIoCRegistration = class
   public
-    /// <summary>
-    /// Register Browser singletons into the supplied container.
-    /// Registers:
-    ///   IJSScriptStore   -> ScriptStore singleton
-    ///   IBrowserRecovery -> BrowserRecovery singleton
-    /// Also propagates the recovery instance to TBrowserService so the
-    /// static facade and the IoC graph see the same object.
-    /// </summary>
-    class procedure RegisterAll(AContainer: TIoCContainer); static;
+    class procedure RegisterAll(AContainer: TIoCContainer); overload; static;
+    class procedure RegisterAll(AContainer: TIoCContainer;
+      const APageDriverConfig: TPageDriverConfig); overload; static;
 
-    /// <summary>
-    /// Wire the recovery manager's session-rebuilt callback to
-    /// TBrowserService.SetDefaultSession so Service.Session() always
-    /// returns the most recently rebuilt session.
-    /// </summary>
     class procedure WireServiceToRecovery(
       ARecovery: IBrowserRecovery); static;
   end;
@@ -59,46 +49,52 @@ uses
 
 class procedure TBrowserIoCRegistration.RegisterAll(
   AContainer: TIoCContainer);
+begin
+  RegisterAll(AContainer, TPageDriverConfig.Default);
+end;
+
+class procedure TBrowserIoCRegistration.RegisterAll(
+  AContainer: TIoCContainer;
+  const APageDriverConfig: TPageDriverConfig);
 var
   LStore: IJSScriptStore;
   LRecovery: IBrowserRecovery;
+  LDriver: IPageDriver;
 begin
   if AContainer = nil then
     raise EArgumentNilException.Create('AContainer cannot be nil');
 
-  // ScriptStore singleton (DB-backed JS template store)
+  // ScriptStore singleton
   LStore := ScriptStore;
   AContainer.RegisterSingleton<IJSScriptStore>(LStore);
 
-  // Recovery singleton (heartbeat / health / rebuild loop)
+  // Recovery singleton
   LRecovery := BrowserRecovery;
   AContainer.RegisterSingleton<IBrowserRecovery>(LRecovery);
 
-  // Make the static service facade observe the same recovery instance
+  // PageDriver singleton
+  LDriver := TPageDriver.Create(APageDriverConfig);
+  AContainer.RegisterSingleton<IPageDriver>(LDriver);
+
   TBrowserService.SetRecovery(LRecovery);
 
-  // Wire OnSessionRebuilt -> Service so downstream code that calls
-  // TBrowserService.Session always sees the latest rebuilt session.
   WireServiceToRecovery(LRecovery);
 
-  Logger.Info('Browser.IoC: ScriptStore + Recovery registered',
+  Logger.Info('Browser.IoC: ScriptStore + Recovery + PageDriver registered',
     'TBrowserIoCRegistration');
 end;
 
 class procedure TBrowserIoCRegistration.WireServiceToRecovery(
   ARecovery: IBrowserRecovery);
 var
-  LMgr: TBrowserRecoveryManager;
+  LEvents: IBrowserRecoveryEvents;
 begin
   if ARecovery = nil then
     Exit;
-  // Only the concrete manager exposes OnSessionRebuilt; the interface
-  // intentionally stays minimal.
-  if not (ARecovery is TBrowserRecoveryManager) then
+  if not Supports(ARecovery, IBrowserRecoveryEvents, LEvents) then
     Exit;
 
-  LMgr := TBrowserRecoveryManager(ARecovery);
-  LMgr.OnSessionRebuilt :=
+  LEvents.OnSessionRebuilt :=
     procedure(const AOldSessionId: TBrowserSessionId;
       const ANewSession: IBrowserSession)
     begin

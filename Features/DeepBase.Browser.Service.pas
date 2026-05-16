@@ -25,6 +25,11 @@ type
     class var FRecovery: IBrowserRecovery;
     class var FLock: TCriticalSection;
   public
+    // H8 fix: class constructor / destructor are single-threaded by the
+    // Delphi RTL, removing the FLock <> nil race in finalization.
+    class constructor Create;
+    class destructor Destroy;
+
     class procedure SetDefaultSession(
       const ASession: IBrowserSession);
     class procedure SetRecovery(
@@ -43,6 +48,18 @@ uses
 
 { TBrowserService }
 // BUG-BA-026 fix: actually use FLock for all field access.
+// H8 fix: lifecycle managed by class constructor/destructor.
+
+class constructor TBrowserService.Create;
+begin
+  FLock := TCriticalSection.Create;
+end;
+
+class destructor TBrowserService.Destroy;
+begin
+  Shutdown;
+  FreeAndNil(FLock);
+end;
 
 class procedure TBrowserService.SetDefaultSession(
   const ASession: IBrowserSession);
@@ -68,15 +85,14 @@ end;
 
 class procedure TBrowserService.Shutdown;
 begin
-  // FLock may be nil during finalization race; guard accordingly.
-  if FLock <> nil then
-    FLock.Enter;
+  // H8 fix: FLock guaranteed valid (created in class constructor, freed
+  // in class destructor). No nil check needed.
+  FLock.Enter;
   try
     FDefaultSession := nil;
     FRecovery := nil;
   finally
-    if FLock <> nil then
-      FLock.Leave;
+    FLock.Leave;
   end;
 end;
 
@@ -111,12 +127,5 @@ begin
     FLock.Leave;
   end;
 end;
-
-initialization
-  TBrowserService.FLock := TCriticalSection.Create;
-
-finalization
-  TBrowserService.Shutdown;
-  FreeAndNil(TBrowserService.FLock);
 
 end.

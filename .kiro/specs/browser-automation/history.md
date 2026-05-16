@@ -392,3 +392,158 @@ ResponseWaiter 已完成切换：`StartWaiting` 优先走 ScriptStore，回退�
 
 - 16 个 Browser .pas 文件 + 6 个测试文件，getDiagnostics 全模块零错误
 - ScriptStore + IoC + 接入指南示例全部维持可用
+
+
+---
+
+## Phase 5 — 第三轮评审收口
+
+第三轮专家评审找出 11 个 High 问题，全部修复。其中 H1/H2 是最严重的——之前的 ScriptStore 模板使用了占位符名（urlPattern / method / timeoutMs / bodyContains）和不存在的 JS 入口（`window.__deepBaseWaitForResponse`），跟 ResponseWaiter / Selectors 实际传的占位符（response_selector / loading_selector / timeout_ms / stable_ms）完全错配，导致 ScriptStore 被使用时整个响应等待和选择器自愈静默失效。
+
+### 关键修复
+
+- **ScriptStore 模板还原**（H1/H2）：重写 `GetBuiltinDefaults`，7 个内置脚本现在是真实可执行的 JS（MutationObserver 响应等待 / CSS.escape 选择器自愈 / try-catch click/input/exists/get_text）。占位符名跟调用方调用时严格一致。
+- **CDP envelope 解包**（H6）：WebView2.EvaluateScript 现在解开 `{"result":{"value":<x>}}` 拿 `<x>` 给上游；exceptionDetails 也会被识别为错误。
+- **JSON 转义**（H4/H9）：CDP 三处错误 JSON 拼接改用 `JsStringLiteral`；GetElementText / ScrollToElement 也改用同一 helper。
+- **跨线程纪律**（H3/H10/H11）：
+  - WaitForReady 仅在主线程调 ProcessMessages
+  - Session.bstRecoverStart 的 OnTransition 把 TriggerRecovery 派发到工作线程（不再在 FLock 内 Sleep）
+  - WindowPool.Acquire 改三段式 snapshot → factory → register，工厂调用永远在锁外
+- **健壮性**（H7/H8/H12）：
+  - DoRecovery 三段式 success rule（factory > callback > best-effort），不再因为缺回调就永远失败
+  - TBrowserService 改 class constructor/destructor，FLock 全程不为 nil
+  - WaitForSelector 匿名线程整体 try/except，异常通过 callback 上报
+
+### 验收
+
+- 18 个 .pas 文件 + 6 个测试文件，全模块零诊断
+- ScriptStore 现在是真正可用的（不再是 stub 模板）
+- 第二轮第三轮共 28 + 11 = 39 个 C/H 问题全部关闭
+
+
+---
+
+## Phase 6 — Medium 收尾（M1/M3/M4/M5/M6/M7/M8/M9/M10/M11 全部关闭）
+
+Phase 4 留尾的 11 项 Medium 中已经关闭 5 项（M3/M5/M7/M8/M9）。Phase 6 把剩下的 6 项也清理完毕。
+
+### M1 — TBrowserAutomationSessionAdapter 提到独立单元
+
+新建 `Features/DeepBase.Browser.AutomationAdapter.pas`，把原本困在 `Browser.Engine.WebView2.pas` 的 `TBrowserSession2AutomationAdapter` 提到独立单元，注册到 `DeepBaseFeatures.dpk` 与 `DeepBaseTests.dpr`。WebView2 引擎的 `AsAutomationSession` 改为复用共享 adapter，未来其他引擎（CEF / Chromium）也可以直接套用。
+
+### M4 — IoC.WireServiceToRecovery 改用接口
+
+在 `Browser.Types.pas` 新增能力接口 `IBrowserRecoveryEvents`，`TBrowserRecoveryManager` 同时实现 `IBrowserRecovery` 与 `IBrowserRecoveryEvents`。`Browser.IoC.pas` 不再硬转换为 `TBrowserRecoveryManager`，改用 `Supports(LRecovery, IBrowserRecoveryEvents, LEvents)` 拿事件订阅入口。第三方实现 `IBrowserRecovery` 的同时只要也实现 `IBrowserRecoveryEvents` 就能直接接入。
+
+### M6 — JS 模板单源化
+
+`TBrowserAutomationScripts.BuildExistsScript / BuildClickScript / BuildInputTextScript / BuildGetTextScript` 改为先调用 `ScriptStore.Render(JSCRIPT_xxx, [...])`；只有当 ScriptStore 中该模板被显式停用（返回空串）时才回退到内联 JS。这样：
+
+- 用户在 SQLite 里热更新 `js_scripts` 表能即时影响 BrowserAutomation
+- ScriptStore 与 BrowserAutomation 不再有"双源漂移"风险（之前两处独立维护，修一处会忘掉另一处）
+- 如果未来切换到 CEF / Chromium，JS 模板还可以重用
+
+### M10 — Selectors 端到端测试
+
+新建 `Tests/Test.DeepBase.Browser.Selectors.Integration.pas`，包含 `TFakeSelectorSession`（IBrowserSession 的可控 fake）+ `TSelectorIntegrationTests` 5 个测试用例：
+
+- `Test_ResolveSelector_PrimaryHits`
+- `Test_ResolveSelector_FallbackUsedWhenPrimaryMisses`
+- `Test_ResolveSelector_HealsToDiscoveredSelector`
+- `Test_ValidateSelector_HappyPath`
+- `Test_ValidateSelector_MissingReturnsFalse`
+
+之前所有 Selectors 测试都传 `nil` session，validate / fallback / heal 路径完全没跑过；现在这三条路径都有覆盖。
+
+### M11 — Recovery 真实路径测试
+
+新建 `Tests/Test.DeepBase.Browser.Recovery.Integration.pas`，包含 `TFakeRecoverySession` + `TFakeSessionFactory` + `TRecoveryCallbackHolder` + 7 个测试用例：
+
+- `Test_DoRecovery_FactoryAttempted_Success` — 验证 H1 三段式 final-success 规则中的 factory-success 路径
+- `Test_DoRecovery_FactoryAttempted_Failure` — factory 返回 nil 时不应误判成功
+- `Test_DoRecovery_OnRecoveryCallback_Success`
+- `Test_DoRecovery_OnRecoveryCallback_Failure` — 回调抛异常时 H1 fix：必须不能掩盖失败
+- `Test_DoRecovery_NoFactoryNoCallback_BestEffort` — H7 best-effort 路径
+- `Test_TriggerRecovery_IncrementsRetryCount` — retry 计数递增
+- `Test_StartStopHealthMonitor_NoLeak`
+
+之前 `Recovery.pas` 的 `DoRecovery` / `TriggerRecovery` / `StartHealthMonitor` 共 200+ 行执行逻辑零覆盖；现在三段式分支全部跑过。
+
+### 损坏修复（M10 中途）
+
+M10 写到一半把 Integration 单元误追加到 `Test.DeepBase.Browser.Selectors.pas` 文件末尾，后续被磁盘写入又意外清空。最终通过 `git show 663970b:Tests/Test.DeepBase.Browser.Selectors.pas` 从基线恢复，再单独建 Integration 文件。教训：fsAppend 配合磁盘缓存交互时一定要先 `getDiagnostics` 验证。
+
+### 不做项
+
+- **M2 IBrowserSession ↔ IBrowserAutomationSession 90% 重复** — 结构性合并，会牵动所有引擎实现，留 P5。两个接口语义略有不同（IBrowserSession 是基础会话，IBrowserAutomationSession 加了自动化语义如 ID/State），合并需要一次性改 16+ 文件。当前两接口经过 BUG-BA-024 修复后已经是子集关系，不再有重复实现风险。
+- **H5 CDP.WaitForSelector 取消 token** — 留 P5。当前 try/except + COM 主线程化已经避免崩溃，缺取消 token 不影响功能正确性。
+
+### 验收
+
+- 16 个 Browser .pas + 1 个独立 Adapter = 17 个特性单元
+- 8 个测试单元（新增 2 个 Integration 测试）
+- 全模块 `getDiagnostics` 零错误
+- ScriptStore 是 BrowserAutomation 内置脚本的唯一权威来源
+- 所有路径都有真实测试覆盖（不再依赖 nil session 的 placeholder 测试）
+
+
+---
+
+## Phase 7 — PageDriver 自然语言驱动（2026-05-15）
+
+### 背景
+
+Alibaba 开源 [page-agent](https://github.com/alibaba/page-agent)（17.8k stars, MIT），是一个 JavaScript 页面内 GUI Agent，通过文本 LLM 解析 DOM 树，实现 NL→DOM→Action。DeepBase 此前的浏览器自动化框架缺少"自然语言→操作"这一层：
+
+- 确定性场景（已知 selector）用 `dbasDom` / `dbasCdp`
+- 模糊/自然语言场景无对应策略
+- `IVisionProvider` 接口已定义但未实现（截图+视觉模型方案，成本高）
+
+PageDriver 用 text-based DOM 方案补上这一缺口，不需要截图和多模态 LLM。
+
+### 交付组件
+
+| 单元 | 作用 |
+|---|---|
+| `DeepBase.Browser.PageDriver.pas` | PageDriver 核心：`TPageDriver`（状态机封装）、`TPageDriverJS`（JS 脚本构建）、`IPageDriver` 接口、`TPageDriverConfig` 配置 |
+| `DeepBase.BrowserAutomation.pas` | 新增 `dbasPageDriver` 策略枚举、`baatDriveInstruction` 动作类型、`TDriveCallback` 回调类型、`DriveInstruction()` 工厂方法、`DriveCallback` Runner 属性 |
+| `DeepBase.Browser.IoC.pas` | `RegisterAll` 重载接受 `TPageDriverConfig`，自动注册 `IPageDriver` 单例 |
+
+### 架构设计
+
+```
+自然语言指令
+     ↓
+TBrowserAutomationRunner (baatDriveInstruction)
+     ↓  FDriveCallback
+TPageDriver (IPageDriver)
+     ↓  EvaluateScript → JS bridge
+page-agent JS (页面内运行)
+     ↓  LLM 调用 → DOM 定位 → Action
+WebView2 页面
+```
+
+关键设计决策：
+
+1. **回调桥接**：Runner 通过 `TDriveCallback` 回调与 PageDriver 解耦，避免 BrowserAutomation 直接依赖 PageDriver 单元
+2. **JS 变量命名**：`window.__dbPageDriver` / `__dbPageDriverStatus` / `__dbPageDriverError`，避免与页面其他全局变量冲突
+3. **懒加载**：PageDriver 不随浏览器初始化加载，需要时显式调用 `Load` 注入 JS
+4. **混编支持**：确定性动作和 NL 指令可在同一个 action 数组中混编
+
+### 测试
+
+`Test.DeepBase.Browser.PageDriver.pas` — 24 个 DUnitX 测试，5 个 fixture：
+
+- `TPageDriverConfigTests`（2）：默认配置值、BundleUrl
+- `TPageDriverJSTests`（10）：Loader/Execute/Status/Unload 脚本生成、ParseResult 成功/失败/无效/空
+- `TPageDriverTests`（6）：创建、自定义配置、状态、IsReady、未就绪执行、Unload 安全
+- `TStrategyEnumTests`（2）：dbasPageDriver、baatDriveInstruction 枚举存在性
+- `TDriveRunnerTests`（2）：无 callback 失败、有 callback 成功
+
+### 接入指南更新
+
+`52.extend.BrowserAutomation接入指南.md` 新增：
+
+- 模块拓扑增加 PageDriver 条目
+- "自然语言驱动（PageDriver）"独立章节：用法示例、IoC 注册、Runner 混编、配置项表
+- 协作矩阵增加 PageDriver 条目

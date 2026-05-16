@@ -348,6 +348,7 @@ var
   MustFree: Boolean;
   ChangeToken: string;
 begin
+  // Acquire connection and read change token outside the lock (I/O)
   Connection := AcquireConnection(MustFree);
   try
     EnsureConnectionOpen(Connection);
@@ -359,7 +360,17 @@ begin
 
     ChangeToken := ReadChangeToken(Connection);
     if (not FLoaded) or (ChangeToken <> FLastChangeToken) then
-      ReloadCache(Connection, ChangeToken);
+    begin
+      // ReloadCache modifies FCache, so protect with FLock
+      FLock.Enter;
+      try
+        // Double-check after acquiring lock
+        if (not FLoaded) or (ChangeToken <> FLastChangeToken) then
+          ReloadCache(Connection, ChangeToken);
+      finally
+        FLock.Leave;
+      end;
+    end;
   finally
     if MustFree then
       Connection.Free;
@@ -372,9 +383,10 @@ var
   Value: string;
 begin
   Result := ADefault;
+  // Perform I/O outside the lock to avoid blocking other threads
+  EnsureCacheFresh;
   FLock.Enter;
   try
-    EnsureCacheFresh;
     if FCache.TryGetValue(MakeCacheKey(ASection, AKey), Value) then
       Result := Value;
   finally

@@ -51,7 +51,12 @@ type
   private
     FKeyResolver: TKeyResolver;
     FRules: TList<TPair<string, TValidationRule>>;
+    // GOV-023: cache Validate results so CountBySeverity / CanRelease /
+    // ValidateSevere don't re-run the full O(rules*items) validation.
+    FCachedResult: TArray<TValidationIssue>;
+    FCacheValid: Boolean;
     procedure RegisterBuiltinRules;
+    procedure InvalidateCache;
 
     // 辅助
     function MakeIssue(const ARuleId: string; ASeverity: TValidationSeverity;
@@ -88,6 +93,9 @@ type
 
     /// PassGate 检查：SEVERE=0 即可封版
     function CanRelease: Boolean;
+
+    /// <summary>Force the next Validate() call to re-run rules from scratch.</summary>
+    procedure ResetCache;
   end;
 
 implementation
@@ -99,6 +107,8 @@ begin
   inherited Create;
   FKeyResolver := AKeyResolver;
   FRules := TList<TPair<string, TValidationRule>>.Create;
+  FCachedResult := nil;
+  FCacheValid := False;
   RegisterBuiltinRules;
 end;
 
@@ -149,6 +159,19 @@ procedure TGateValidationEngine.RegisterRule(const ARuleId: string;
   ARule: TValidationRule);
 begin
   FRules.Add(TPair<string, TValidationRule>.Create(ARuleId, ARule));
+  // New rule may produce new issues -> invalidate cache.
+  InvalidateCache;
+end;
+
+procedure TGateValidationEngine.InvalidateCache;
+begin
+  FCachedResult := nil;
+  FCacheValid := False;
+end;
+
+procedure TGateValidationEngine.ResetCache;
+begin
+  InvalidateCache;
 end;
 
 function TGateValidationEngine.MakeIssue(const ARuleId: string;
@@ -446,6 +469,11 @@ var
   LIssues: TArray<TValidationIssue>;
   LIssue: TValidationIssue;
 begin
+  // GOV-023: return cached result on subsequent calls. Callers that mutate
+  // the underlying KeyResolver should call ResetCache.
+  if FCacheValid then
+    Exit(FCachedResult);
+
   LAllIssues := TList<TValidationIssue>.Create;
   try
     for LPair in FRules do
@@ -458,6 +486,9 @@ begin
   finally
     LAllIssues.Free;
   end;
+
+  FCachedResult := Result;
+  FCacheValid := True;
 end;
 
 function TGateValidationEngine.ValidateSevere: TArray<TValidationIssue>;
@@ -466,7 +497,7 @@ var
   LFiltered: TList<TValidationIssue>;
   LIssue: TValidationIssue;
 begin
-  LAll := Validate;
+  LAll := Validate; // cached after first call
   LFiltered := TList<TValidationIssue>.Create;
   try
     for LIssue in LAll do
@@ -485,7 +516,7 @@ var
   LIssue: TValidationIssue;
 begin
   Result := 0;
-  LAll := Validate;
+  LAll := Validate; // cached after first call
   for LIssue in LAll do
     if LIssue.Severity = ASeverity then
       Inc(Result);

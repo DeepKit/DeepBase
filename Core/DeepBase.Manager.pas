@@ -35,12 +35,14 @@ uses
   DeepBase.Storage.Interfaces;
 
 const
-  DeepBase_VERSION = '0.3';
+  // FR-001 fix: alias to the canonical version constant in DeepBase.Consts
+  // so framework code does not duplicate or drift from the single source.
+  DeepBase_VERSION = DeepBase_VERSION_STRING;
   CONFIG_DB_SUFFIX = 'Config.db';
   DATA_DB_SUFFIX = 'Data.db';
   ROOT_TXT_NAME = 'root.txt';
   
-  // R-004: Schema ÑéÖ¤ËùÐèµÄºËÐÄ±í
+  // R-004: Schema ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½Äºï¿½ï¿½Ä±ï¿½
   REQUIRED_CORE_TABLES: array[0..5] of string = (
     'SchemaInfo', 'ProjectInfo', 'Settings', 'FormStates', 'Languages', 'I18nTexts'
   );
@@ -57,11 +59,11 @@ type
   TManagerConnectionCloser = procedure(AConnection: TObject);
 
   /// <summary>
-  /// DeepBase ºËÐÄ¹ÜÀíÆ÷
+  /// DeepBase ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½
   /// </summary>
   TDeepBaseManager = class(TComponent)
   private
-    // ºËÐÄ×´Ì¬
+    // ï¿½ï¿½ï¿½ï¿½×´Ì¬
     FRootPath: string;
     FConfigDBPath: string;
     FConfigDB: TObject;
@@ -70,23 +72,23 @@ type
     FLastError: string;
     FInitErrorCode: TInitErrorCode;
     
-    // µ±Ç°ÉèÖÃ
+    // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
     FCurrentLanguage: string;
     FCurrentTheme: string;
     
-    // Ïß³ÌÍ¬²½
+    // ï¿½ß³ï¿½Í¬ï¿½ï¿½
     FLock: TObject;
     
-    // ÑÓ³Ù³õÊ¼»¯»Øµ÷
+    // ï¿½Ó³Ù³ï¿½Ê¼ï¿½ï¿½ï¿½Øµï¿½
     FReadyCallbacks: TList<TProc>;
     FReadyFired: Boolean;
     
-    // ÊÂ¼þ
+    // ï¿½Â¼ï¿½
     FOnLanguageChanged: TNotifyEvent;
     FOnThemeChanged: TNotifyEvent;
     FOnConfigChanged: TConfigChangedEvent;
     
-    // ºËÐÄÄ£¿é
+    // ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½
     FConfig: TDeepBaseConfig;
     FI18n: TDeepBaseI18n;
     FTheme: TDeepBaseTheme;
@@ -101,7 +103,7 @@ type
     class var FConnectionIsConnected: TManagerConnectionIsConnected;
     class var FConnectionCloser: TManagerConnectionCloser;
     
-    // ÄÚ²¿·½·¨
+    // ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½
     procedure InitializeModules;
     procedure FinalizeModules;
     function ReadRootTxt(const FilePath: string): string;
@@ -134,7 +136,7 @@ type
     class function IsConnectionAlive(AConnection: TObject): Boolean; static;
     class procedure CloseConnection(var AConnection: TObject); static;
     
-    // InitializeEx ¸¨Öú·½·¨£¨R-001 ÖØ¹¹£©
+    // InitializeEx ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½R-001 ï¿½Ø¹ï¿½ï¿½ï¿½
     function DoFindRootPath(out ErrorMsg: string): Boolean;
     function DoLocateConfigDB(out ErrorMsg: string): Boolean;
     function DoConnectAndValidate(out ErrorMsg: string): Boolean;
@@ -143,12 +145,12 @@ type
     procedure RaiseInitializationError(const Operation,
       ErrorMsg: string);
     
-    // ÊÂ¼þ´¦ÀíÆ÷ (ÓÃÓÚ×ÓÄ£¿é»Øµ÷)
+    // ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Øµï¿½)
     procedure HandleConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
     procedure HandleLanguageChanged(Sender: TObject);
     procedure HandleThemeChanged(Sender: TObject);
     
-    // ÊôÐÔ Setter
+    // ï¿½ï¿½ï¿½ï¿½ Setter
     procedure SetCurrentLanguage(const Value: string);
     procedure SetCurrentTheme(const Value: string);
     
@@ -168,54 +170,54 @@ type
       const ACloser: TManagerConnectionCloser); static;
     
     // ========================================
-    // ³õÊ¼»¯·½·¨
+    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     // ========================================
     
     /// <summary>
-    /// ³õÊ¼»¯ DeepBase£¨Ö÷Ïß³Ìµ÷ÓÃ£©
-    /// Boolean Èë¿Ú£ºÊ§°ÜÊ±·µ»Ø False£¬²¢Í¨¹ý LastError / InitErrorCode ±©Â¶Ô­Òò¡£
+    /// ï¿½ï¿½Ê¼ï¿½ï¿½ DeepBaseï¿½ï¿½ï¿½ï¿½ï¿½ß³Ìµï¿½ï¿½Ã£ï¿½
+    /// Boolean ï¿½ï¿½Ú£ï¿½Ê§ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ Falseï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ LastError / InitErrorCode ï¿½ï¿½Â¶Ô­ï¿½ï¿½
     /// </summary>
     function Initialize: Boolean;
     
     /// <summary>
-    /// ³õÊ¼»¯ DeepBase£¬·µ»ØÏêÏ¸´íÎóÐÅÏ¢
-    /// Boolean Èë¿Ú£ºÊ§°ÜÊ±²»Å×³ö³õÊ¼»¯Òì³££¬µ÷ÓÃ·½Ó¦¼ì²é·µ»ØÖµ¡£
+    /// ï¿½ï¿½Ê¼ï¿½ï¿½ DeepBaseï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+    /// Boolean ï¿½ï¿½Ú£ï¿½Ê§ï¿½ï¿½Ê±ï¿½ï¿½ï¿½×³ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ì³£ï¿½ï¿½ï¿½ï¿½ï¿½Ã·ï¿½Ó¦ï¿½ï¿½é·µï¿½ï¿½Öµï¿½ï¿½
     /// </summary>
     function InitializeEx(out ErrorMsg: string): Boolean;
     
     /// <summary>
-    /// Ê¹ÓÃÖ¸¶¨Êý¾Ý¿âÂ·¾¶³õÊ¼»¯£¨Ö§³Ö :memory: ÓÃÓÚ²âÊÔ£©
-    /// Boolean Èë¿Ú£ºÊ§°ÜÊ±·µ»Ø False£¬²¢Í¨¹ý LastError / InitErrorCode ±©Â¶Ô­Òò¡£
+    /// Ê¹ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ :memory: ï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ô£ï¿½
+    /// Boolean ï¿½ï¿½Ú£ï¿½Ê§ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ Falseï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ LastError / InitErrorCode ï¿½ï¿½Â¶Ô­ï¿½ï¿½
     /// </summary>
     function InitializeWithDB(const DBPath: string): Boolean;
 
     /// <summary>
-    /// Òì³£Èë¿Ú£º³õÊ¼»¯Ê§°ÜÊ±Å×³ö EInitializationException¡£
+    /// ï¿½ì³£ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê§ï¿½ï¿½Ê±ï¿½×³ï¿½ EInitializationExceptionï¿½ï¿½
     /// </summary>
     procedure InitializeOrRaise;
 
     /// <summary>
-    /// Òì³£Èë¿Ú£ºÊ¹ÓÃÖ¸¶¨Êý¾Ý¿âÂ·¾¶³õÊ¼»¯£¬Ê§°ÜÊ±Å×³ö EInitializationException¡£
+    /// ï¿½ì³£ï¿½ï¿½Ú£ï¿½Ê¹ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½Ê±ï¿½×³ï¿½ EInitializationExceptionï¿½ï¿½
     /// </summary>
     procedure InitializeWithDBOrRaise(const DBPath: string);
     
     /// <summary>
-    /// ×¢²á³õÊ¼»¯Íê³ÉºóµÄ»Øµ÷¡£Èç¹ûÒÑ³õÊ¼»¯ÔòÁ¢¼´Ö´ÐÐ¡£
-    /// ÓÃÓÚ½â¾ö´°Ìå FormShow ÖÐ·ÃÎÊ DeepBase ¹¦ÄÜÊ±¶ÔÏóÎ´¾ÍÐ÷µÄÎÊÌâ¡£
+    /// ×¢ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Éºï¿½Ä»Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¡ï¿½
+    /// ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ FormShow ï¿½Ð·ï¿½ï¿½ï¿½ DeepBase ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¡£
     /// </summary>
     /// <example>
     /// procedure TMyForm.FormShow(Sender: TObject);
     /// begin
     ///   DeepBase.WhenReady(procedure
     ///   begin
-    ///     LoadProviders;  // °²È«£º´ËÊ± DeepBase ÒÑÍêÈ«³õÊ¼»¯
+    ///     LoadProviders;  // ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Ê± DeepBase ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½Ê¼ï¿½ï¿½
     ///   end);
     /// end;
     /// </example>
     procedure WhenReady(ACallback: TProc);
     
     /// <summary>
-    /// ´¥·¢ËùÓÐÒÑ×¢²áµÄ Ready »Øµ÷£¨ÓÉ Application.Run Ç°µ÷ÓÃ£©
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ Ready ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ Application.Run Ç°ï¿½ï¿½ï¿½Ã£ï¿½
     /// </summary>
     procedure FireReadyCallbacks;
     
@@ -240,41 +242,41 @@ type
     // ========================================
     
     /// <summary>
-    /// Ö´ÐÐ½¡¿µ¼ì²é
+    /// Ö´ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     function HealthCheck: THealthCheckResult;
     
     // ========================================
-    // ÏîÄ¿ÐÅÏ¢
+    // ï¿½ï¿½Ä¿ï¿½ï¿½Ï¢
     // ========================================
     
     /// <summary>
-    /// »ñÈ¡ÏîÄ¿ÐÅÏ¢
+    /// ï¿½ï¿½È¡ï¿½ï¿½Ä¿ï¿½ï¿½Ï¢
     /// </summary>
     function GetProjectInfo(const Key: string): string;
     
     /// <summary>
-    /// ÉèÖÃÏîÄ¿ÐÅÏ¢
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ï¢
     /// </summary>
     procedure SetProjectInfo(const Key, Value: string);
     
     // ========================================
-    // ×ÊÔ´Â·¾¶
+    // ï¿½ï¿½Ô´Â·ï¿½ï¿½
     // ========================================
     
     /// <summary>
-    /// »ñÈ¡×ÊÔ´ÍêÕûÂ·¾¶
+    /// ï¿½ï¿½È¡ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
     /// </summary>
     function GetAssetPath(const RelativePath: string): string;
     
     // ========================================
-    // ÊôÐÔ
+    // ï¿½ï¿½ï¿½ï¿½
     // ========================================
     
-    /// <summary>Êý¾Ý¿âÁ¬½Ó£¨¹©×ÓÄ£¿éÊ¹ÓÃ£©</summary>
+    /// <summary>ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½Ó£ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Ê¹ï¿½Ã£ï¿½</summary>
     property ConfigDB: TObject read FConfigDB;
     
-    // ×ÓÄ£¿é·ÃÎÊµã
+    // ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Êµï¿½
     property Config: TDeepBaseConfig read FConfig;
     property I18n: TDeepBaseI18n read FI18n;
     property Theme: TDeepBaseTheme read FTheme;
@@ -285,32 +287,32 @@ type
     property MRU: TDeepBaseMRU read FMRU;
     property Hotkeys: TDeepBaseHotkeys read FHotkeys;
     
-    /// <summary>ÏîÄ¿¸ùÄ¿Â¼</summary>
+    /// <summary>ï¿½ï¿½Ä¿ï¿½ï¿½Ä¿Â¼</summary>
     property RootPath: string read FRootPath;
     
-    /// <summary>ÅäÖÃÊý¾Ý¿âÂ·¾¶</summary>
+    /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½Â·ï¿½ï¿½</summary>
     property ConfigDBPath: string read FConfigDBPath;
     
-    /// <summary>ÊÇ·ñÒÑ³õÊ¼»¯</summary>
+    /// <summary>ï¿½Ç·ï¿½ï¿½Ñ³ï¿½Ê¼ï¿½ï¿½</summary>
     property IsInitialized: Boolean read FIsInitialized;
     
-    /// <summary>×îºóÒ»´Î´íÎóÐÅÏ¢</summary>
+    /// <summary>ï¿½ï¿½ï¿½Ò»ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢</summary>
     property LastError: string read FLastError;
     
-    /// <summary>³õÊ¼»¯´íÎóÂë</summary>
+    /// <summary>ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
     property InitErrorCode: TInitErrorCode read FInitErrorCode;
     
-    /// <summary>µ±Ç°ÓïÑÔ</summary>
+    /// <summary>ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½</summary>
     property CurrentLanguage: string read FCurrentLanguage write SetCurrentLanguage;
     
-    /// <summary>µ±Ç°Ö÷Ìâ</summary>
+    /// <summary>ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½</summary>
     property CurrentTheme: string read FCurrentTheme write SetCurrentTheme;
     
-    /// <summary>Í¬²½Ëø¶ÔÏó£¨¹©×ÓÄ£¿éÊ¹ÓÃ£©</summary>
+    /// <summary>Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¨¹ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Ê¹ï¿½Ã£ï¿½</summary>
     property Lock: TObject read FLock;
     
     // ========================================
-    // ÊÂ¼þ
+    // ï¿½Â¼ï¿½
     // ========================================
     
     property OnLanguageChanged: TNotifyEvent read FOnLanguageChanged write FOnLanguageChanged;
@@ -539,12 +541,12 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // ²éÕÒ root.txt
+  // ï¿½ï¿½ï¿½ï¿½ root.txt
   FRootPath := FindRootPath;
   
   if FRootPath = '' then
   begin
-    // ³¢ÊÔ´´½¨ root.txt
+    // ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ root.txt
     if not CreateRootTxt(RootTxtPath) then
     begin
       FInitErrorCode := ecPermissionDenied;
@@ -556,7 +558,7 @@ begin
     FRootPath := ExtractFilePath(RootTxtPath);
   end;
   
-  // ÑéÖ¤¸ùÄ¿Â¼
+  // ï¿½ï¿½Ö¤ï¿½ï¿½Ä¿Â¼
   if not TDirectory.Exists(FRootPath) then
   begin
     FInitErrorCode := ecInvalidPath;
@@ -579,19 +581,23 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // ¼ÆËã ConfigDB ÎÄ¼þÃû£º{AppName}Config.db
+  // ï¿½ï¿½ï¿½ï¿½ ConfigDB ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½{AppName}Config.db
   AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
   if AppName = '' then
-    AppName := 'DeepBase'; // ¶µµ×£¬±ÜÃâ¿ÕÓ¦ÓÃÃû
+    AppName := 'DeepBase'; // ï¿½ï¿½ï¿½×£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½
 
-  ConfigFileName := AppName + CONFIG_DB_SUFFIX;
+  // Avoid doubled "Config" (e.g. DeepShineConfig.exe â†’ DeepShineConfigConfig.db)
+  if AppName.EndsWith('Config', True) then
+    ConfigFileName := AppName + '.db'
+  else
+    ConfigFileName := AppName + CONFIG_DB_SUFFIX;
 
-  // ÓÅÏÈÔÚ RootPath ÏÂ²éÕÒ {AppName}Config.db
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ RootPath ï¿½Â²ï¿½ï¿½ï¿½ {AppName}Config.db
   FConfigDBPath := TPath.Combine(FRootPath, ConfigFileName);
 
   if not TFile.Exists(FConfigDBPath) then
   begin
-    // ±¸ÓÃÎ»ÖÃ£º%APPDATA%/{AppName}/{AppName}Config.db
+    // ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ã£ï¿½%APPDATA%/{AppName}/{AppName}Config.db
     AppDataDir := GetAppDataDir;
     if AppDataDir <> '' then
     begin
@@ -600,10 +606,10 @@ begin
       begin
         FConfigDBPath := FallbackPath;
       end;
-      // Èç¹ûÁ½¸öÎ»ÖÃ¶¼²»´æÔÚ£¬±£³Ö FConfigDBPath Ö¸Ïò RootPath ÏÂµÄÂ·¾¶
-      // ConnectToDatabase »áÊ¹ÓÃ OpenMode=CreateUTF8 ×Ô¶¯´´½¨Êý¾Ý¿âÎÄ¼þ
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ã¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½ï¿½ï¿½ FConfigDBPath Ö¸ï¿½ï¿½ RootPath ï¿½Âµï¿½Â·ï¿½ï¿½
+      // ConnectToDatabase ï¿½ï¿½Ê¹ï¿½ï¿½ OpenMode=CreateUTF8 ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½Ä¼ï¿½
     end;
-    // ²»ÔÙ±¨´í£¬ÈÃ ConnectToDatabase ×Ô¶¯´´½¨Êý¾Ý¿â
+    // ï¿½ï¿½ï¿½Ù±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ConnectToDatabase ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½
   end;
   
   Result := True;
@@ -614,7 +620,7 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // Á¬½ÓÊý¾Ý¿â
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½
   if not ConnectToDatabase(FConfigDBPath) then
   begin
     ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
@@ -622,7 +628,7 @@ begin
     Exit;
   end;
   
-  // ÑéÖ¤/´´½¨ Schema£¨Ê¹ÓÃ IF NOT EXISTS È·±£ËùÓÐ±í´æÔÚ£©
+  // ï¿½ï¿½Ö¤/ï¿½ï¿½ï¿½ï¿½ Schemaï¿½ï¿½Ê¹ï¿½ï¿½ IF NOT EXISTS È·ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½Ú£ï¿½
   if not CreateSchema then
   begin
     ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
@@ -666,46 +672,55 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  if FIsInitialized then
-  begin
-    Result := True;
-    Exit;
-  end;
-  
+  // BASIC-018 fix: protect against concurrent initialization. Finalize
+  // already uses FLock; initialization must use the same lock so a
+  // racing second thread sees FIsInitialized = True after the first
+  // thread completes, rather than duplicating module creation.
+  TMonitor.Enter(FLock);
   try
-    // 1. ²éÕÒ²¢ÑéÖ¤¸ùÄ¿Â¼
-    if not DoFindRootPath(ErrorMsg) then
-      Exit;
-    
-    // 2. ¶¨Î»ÅäÖÃÊý¾Ý¿â
-    if not DoLocateConfigDB(ErrorMsg) then
-      Exit;
-    
-    // 3. Á¬½ÓÊý¾Ý¿â²¢ÑéÖ¤ Schema
-    if not DoConnectAndValidate(ErrorMsg) then
-      Exit;
-    
-    // 4. ³õÊ¼»¯×ÓÄ£¿é
-    InitializeModules;
-
-    // 5. ×¢²áÒì³£´¦ÀíÆ÷»Øµ÷£¨½â³ý Exception?Manager ±àÒëÊ±ÒÀÀµ£©
-    TDeepBaseExceptionHandler.SetManagerCallbacks(
-      function: Boolean begin Result := FIsInitialized end,
-      function: TDeepBaseLogger begin Result := FLogger end,
-      function: TObject begin Result := FConfigDB end);
-
-    FIsInitialized := True;
-    FInitErrorCode := ecSuccess;
-    Result := True;
-
-  except
-    on E: Exception do
+    if FIsInitialized then
     begin
-      FInitErrorCode := ecUnknown;
-      FLastError := E.Message;
-      ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
-        InitErrorCodeToStr(FInitErrorCode), FLastError]);
+      Result := True;
+      Exit;
     end;
+    
+    try
+      // 1. Find and verify root directory
+      if not DoFindRootPath(ErrorMsg) then
+        Exit;
+      
+      // 2. Locate config database
+      if not DoLocateConfigDB(ErrorMsg) then
+        Exit;
+      
+      // 3. Connect and validate schema
+      if not DoConnectAndValidate(ErrorMsg) then
+        Exit;
+      
+      // 4. Initialize modules
+      InitializeModules;
+
+      // 5. Register exception handler callbacks
+      TDeepBaseExceptionHandler.SetManagerCallbacks(
+        function: Boolean begin Result := FIsInitialized end,
+        function: TDeepBaseLogger begin Result := FLogger end,
+        function: TObject begin Result := FConfigDB end);
+
+      FIsInitialized := True;
+      FInitErrorCode := ecSuccess;
+      Result := True;
+
+    except
+      on E: Exception do
+      begin
+        FInitErrorCode := ecUnknown;
+        FLastError := E.Message;
+        ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
+          InitErrorCodeToStr(FInitErrorCode), FLastError]);
+      end;
+    end;
+  finally
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -721,60 +736,64 @@ function TDeepBaseManager.InitializeWithDB(const DBPath: string): Boolean;
 begin
   Result := False;
   
-  if FIsInitialized then
-  begin
-    Result := True;
-    Exit;
-  end;
-  
+  // BASIC-018 fix: same lock as InitializeEx/Finalize.
+  TMonitor.Enter(FLock);
   try
-    // ÄÚ´æÊý¾Ý¿â»òÖ¸¶¨Â·¾¶
-    if DBPath = ':memory:' then
+    if FIsInitialized then
     begin
-      FRootPath := GetExeDir;
-      FConfigDBPath := DBPath;
-    end
-    else
-    begin
-      FRootPath := ExtractFilePath(DBPath);
-      FConfigDBPath := DBPath;
+      Result := True;
+      Exit;
     end;
     
-    if not ConnectToDatabase(DBPath) then
-      Exit;
+    try
+      if DBPath = ':memory:' then
+      begin
+        FRootPath := GetExeDir;
+        FConfigDBPath := DBPath;
+      end
+      else
+      begin
+        FRootPath := ExtractFilePath(DBPath);
+        FConfigDBPath := DBPath;
+      end;
       
-    // ¶ÔÓÚÄÚ´æÊý¾Ý¿â£¬Ê¼ÖÕ´´½¨ Schema
-    if DBPath = ':memory:' then
-    begin
-      if not CreateSchema then
+      if not ConnectToDatabase(DBPath) then
         Exit;
-    end
-    else
-    begin
-      if not ValidateSchema then
+        
+      if DBPath = ':memory:' then
       begin
         if not CreateSchema then
           Exit;
+      end
+      else
+      begin
+        if not ValidateSchema then
+        begin
+          if not CreateSchema then
+            Exit;
+        end;
+      end;
+      
+      InitializeModules;
+
+      TDeepBaseExceptionHandler.SetManagerCallbacks(
+        function: Boolean begin Result := FIsInitialized end,
+        function: TDeepBaseLogger begin Result := FLogger end,
+        function: TObject begin Result := FConfigDB end);
+
+      FIsInitialized := True;
+      FInitErrorCode := ecSuccess;
+      Result := True;
+
+    except
+      on E: Exception do
+      begin
+        FInitErrorCode := ecUnknown;
+        FLastError := E.Message;
       end;
     end;
-    
-    InitializeModules;
-
-    TDeepBaseExceptionHandler.SetManagerCallbacks(
-      function: Boolean begin Result := FIsInitialized end,
-      function: TDeepBaseLogger begin Result := FLogger end,
-      function: TObject begin Result := FConfigDB end);
-
-    FIsInitialized := True;
-    FInitErrorCode := ecSuccess;
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      FInitErrorCode := ecUnknown;
-      FLastError := E.Message;
-    end;
+  finally
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -810,7 +829,7 @@ begin
   if not Assigned(ACallback) then
     Exit;
     
-  // Èç¹ûÒÑ¾­´¥·¢¹ý Ready£¬Ê¹ÓÃÒì²½Ö´ÐÐ±ÜÃâÇ¶Ì×Ëø¶¨µ¼ÖÂËÀËø
+  // ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Readyï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ì²½Ö´ï¿½Ð±ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   // BUG-007 FIX: Use TTask.Run to prevent deadlock when callback calls DeepBase functions
   if FReadyFired then
   begin
@@ -827,7 +846,7 @@ begin
     Exit;
   end;
   
-  // ·ñÔò¼ÓÈë¶ÓÁÐµÈ´ý
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÈ´ï¿½
   TMonitor.Enter(FLock);
   try
     FReadyCallbacks.Add(ACallback);
@@ -898,11 +917,11 @@ begin
     FConfig := TDeepBaseConfig.Create(FConfigDB, FLock);
   FConfig.OnConfigChanged := HandleConfigChanged;
   
-  // PERF-001: Ô¤ÈÈÅäÖÃ»º´æ£¬±ÜÃâÊ×´Î·ÃÎÊÊ±²úÉú¶à´ÎÐ¡²éÑ¯
+  // PERF-001: Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½æ£¬ï¿½ï¿½ï¿½ï¿½ï¿½×´Î·ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½Ñ¯
   try
     FConfig.PreloadCache;
   except
-    // Ô¤ÈÈÊ§°Ü²»Ó°ÏìÕý³£ÔËÐÐ£¬±£³Ö¾²Ä¬»òÔÚ DEBUG ÏÂÊä³ö
+    // Ô¤ï¿½ï¿½Ê§ï¿½Ü²ï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ä¬ï¿½ï¿½ï¿½ï¿½ DEBUG ï¿½ï¿½ï¿½ï¿½ï¿½
     {$IFDEF DEBUG}
     OutputDebugString('DeepBase.Manager: PreloadCache failed');
     {$ENDIF}
@@ -1086,6 +1105,10 @@ end;
 
 procedure TDeepBaseManager.FinalizeModules;
 begin
+  // BASIC-020 fix: clear global translate callback BEFORE releasing FI18n,
+  // so any late T('...') call after finalize does not access freed memory.
+  SetGlobalTranslateCallback(nil);
+
   // Unload plugins first (reverse order of initialization)
   if Assigned(FPluginManager) then FreeAndNil(FPluginManager);
   if Assigned(FHotkeys) then FreeAndNil(FHotkeys);
@@ -1097,7 +1120,6 @@ begin
   if Assigned(FConfig) then FreeAndNil(FConfig);
   if Assigned(FLogger) then
   begin
-    // ÏÈ½â³ýÈ«¾Ö Logger °ó¶¨£¬ÔÙÓÉ Manager ¸ºÔðÊÍ·ÅÊµÀý
     SetGlobalLogger(nil);
     FreeAndNil(FLogger);
   end;
@@ -1110,7 +1132,7 @@ var
 begin
   Result := '';
   
-  // ÓÅÏÈ¼¶ 1: EXE ËùÔÚÄ¿Â¼
+  // ï¿½ï¿½ï¿½È¼ï¿½ 1: EXE ï¿½ï¿½ï¿½ï¿½Ä¿Â¼
   ExeDir := GetExeDir;
   RootTxtPath := TPath.Combine(ExeDir, ROOT_TXT_NAME);
   
@@ -1124,7 +1146,7 @@ begin
     end;
   end;
   
-  // ÓÅÏÈ¼¶ 2: APPDATA Ä¿Â¼
+  // ï¿½ï¿½ï¿½È¼ï¿½ 2: APPDATA Ä¿Â¼
   AppDataDir := GetAppDataDir;
   if AppDataDir <> '' then
   begin
@@ -1151,21 +1173,21 @@ begin
     begin
       Line := Trim(Lines[0]);
       
-      // ¼ì²éÊÇ·ñÊÇ INI ¸ñÊ½À©Õ¹
+      // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ INI ï¿½ï¿½Ê½ï¿½ï¿½Õ¹
       if (Length(Line) > 0) and (Line[1] = '[') then
       begin
-        // INI ¸ñÊ½µÄ [Paths] À©Õ¹Ä¿Ç°²»Ö§³Ö£¬Îª±£³Ö¼æÈÝÖ±½Ó·µ»Ø¿ÕÂ·¾¶
+        // INI ï¿½ï¿½Ê½ï¿½ï¿½ [Paths] ï¿½ï¿½Õ¹Ä¿Ç°ï¿½ï¿½Ö§ï¿½Ö£ï¿½Îªï¿½ï¿½ï¿½Ö¼ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½Ø¿ï¿½Â·ï¿½ï¿½
         Exit;
       end;
       
-      // ¼òµ¥¸ñÊ½£ºµÚÒ»ÐÐÊÇÂ·¾¶
+      // ï¿½òµ¥¸ï¿½Ê½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
       if TDirectory.Exists(Line) then
         Result := Line;
     end;
   except
     on E: Exception do
     begin
-      // ¶ÁÈ¡Ê§°Ü£¬¼ÇÂ¼ÈÕÖ¾ºó·µ»Ø¿Õ
+      // ï¿½ï¿½È¡Ê§ï¿½Ü£ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ö¾ï¿½ó·µ»Ø¿ï¿½
       if Assigned(FLogger) then
         FLogger.Log('ReadRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
     end;
@@ -1181,7 +1203,7 @@ begin
   except
     on E: Exception do
     begin
-      // Ð´ÈëÊ§°Ü£¬¼ÇÂ¼ÈÕÖ¾
+      // Ð´ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ö¾
       if Assigned(FLogger) then
         FLogger.Log('WriteRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
     end;
@@ -1195,7 +1217,7 @@ begin
   Result := False;
   FilePath := '';
   
-  // ÓÅÏÈ³¢ÊÔ EXE Ä¿Â¼
+  // ï¿½ï¿½ï¿½È³ï¿½ï¿½ï¿½ EXE Ä¿Â¼
   ExeDir := GetExeDir;
   if CheckWritePermission(ExeDir) then
   begin
@@ -1205,7 +1227,7 @@ begin
       Exit;
   end;
   
-  // »ØÍËµ½ APPDATA
+  // ï¿½ï¿½ï¿½Ëµï¿½ APPDATA
   AppDataDir := GetAppDataDir;
   if (AppDataDir <> '') and TDirectory.Exists(AppDataDir) then
   begin
@@ -1442,7 +1464,7 @@ var
 begin
   Result := '';
   
-  // Ó¦ÓÃÃûÔ¼¶¨£ºÊ¹ÓÃ EXE ÎÄ¼þÃû£¨²»º¬À©Õ¹£©
+  // Ó¦ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ EXE ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹ï¿½ï¿½
   AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
   if AppName = '' then
     AppName := 'DeepBase';
@@ -1461,7 +1483,7 @@ begin
     end;
   end;
   {$ELSE}
-  // ·Ç Windows Æ½Ì¨£ºÊ¹ÓÃ ~/.{AppName}
+  // ï¿½ï¿½ Windows Æ½Ì¨ï¿½ï¿½Ê¹ï¿½ï¿½ ~/.{AppName}
   Result := TPath.Combine(TPath.GetHomePath, '.' + AppName.ToLower);
   if not TDirectory.Exists(Result) then
   begin
@@ -1489,7 +1511,7 @@ begin
     TFile.Delete(TestFile);
     Result := True;
   except
-    // ÎÞÐ´ÈëÈ¨ÏÞ
+    // ï¿½ï¿½Ð´ï¿½ï¿½È¨ï¿½ï¿½
   end;
 end;
 

@@ -197,6 +197,9 @@ begin
   LAllRules := FRouteStore.LoadAll;
   try
     ClearRules;
+    // GOV-019: clear stale fallbacks so old entries from a previous load do
+    // not survive a rule reload.
+    FFallbacks.Clear;
     for LRule in LAllRules do
     begin
       // 复制规则到本地列表（RouteStore 返回的列表拥有对象所有权）

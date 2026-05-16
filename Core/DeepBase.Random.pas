@@ -3,13 +3,15 @@ unit DeepBase.Random;
 interface
 
 uses
-  System.SysUtils, System.Classes, Winapi.Windows, System.Hash,
+  System.SysUtils, System.Classes,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   DeepBase.Exceptions;
 
 type
   /// <summary>
   /// Cryptographically secure random number generator
-  /// 密码学安全的随机数生成器
   /// </summary>
   TSecureRandom = class
   private
@@ -25,68 +27,55 @@ type
     
     /// <summary>
     /// Generate cryptographically secure random bytes
-    /// 生成密码学安全的随机字节
     /// </summary>
     function NextBytes(const ALength: Integer): TBytes;
     
     /// <summary>
     /// Generate secure random integer in range [0, AMax)
-    /// 生成范围内的安全随机整数
     /// </summary>
     function NextInt(const AMax: Integer): Integer;
     
     /// <summary>
     /// Generate secure random integer in range [AMin, AMax]
-    /// 生成指定范围的安全随机整数
     /// </summary>
     function NextIntRange(const AMin, AMax: Integer): Integer;
     
     /// <summary>
     /// Generate secure random double in range [0.0, 1.0)
-    /// 生成安全随机浮点数
     /// </summary>
     function NextDouble: Double;
     
     /// <summary>
     /// Generate secure random string with specified length and character set
-    /// 生成指定长度和字符集的安全随机字符串
     /// </summary>
     function NextString(const ALength: Integer; const ACharSet: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'): string;
     
     /// <summary>
     /// Generate secure random GUID
-    /// 生成安全随机GUID
     /// </summary>
     function NextGuid: TGUID;
   end;
 
 /// <summary>
 /// Global secure random instance for convenience
-/// 全局安全随机实例
 /// </summary>
 function SecureRandom: TSecureRandom;
 
 implementation
 
-uses
-  DeepBase.Logging;
+{$IFDEF MSWINDOWS}
+const
+  BCRYPT_DLL = 'bcrypt.dll';
+  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
+  STATUS_SUCCESS = 0;
 
 type
-  HCRYPTPROV = THandle;
+  BCRYPT_ALG_HANDLE = THandle;
+  NTSTATUS = LongInt;
 
-const
-  PROV_RSA_FULL = 1;
-  CRYPT_VERIFYCONTEXT = $F0000000;
-
-function CryptAcquireContext(var phProv: HCRYPTPROV; pszContainer: PAnsiChar;
-  pszProvider: PAnsiChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall;
-  external 'advapi32.dll' name 'CryptAcquireContextA';
-
-function CryptReleaseContext(hProv: HCRYPTPROV; dwFlags: DWORD): BOOL; stdcall;
-  external 'advapi32.dll';
-
-function CryptGenRandom(hProv: HCRYPTPROV; dwLen: DWORD; pbBuffer: PByte): BOOL; stdcall;
-  external 'advapi32.dll';
+function BCryptGenRandom(hAlgorithm: BCRYPT_ALG_HANDLE; pbBuffer: PByte;
+  cbBuffer: ULONG; dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+{$ENDIF}
 
 { TSecureRandom }
 
@@ -117,27 +106,43 @@ begin
 end;
 
 function TSecureRandom.NextBytes(const ALength: Integer): TBytes;
+{$IFDEF MSWINDOWS}
 var
-  hProv: HCRYPTPROV;
+  LStatus: NTSTATUS;
+{$ELSE}
+var
+  LRandom: TFileStream;
+{$ENDIF}
 begin
   if ALength <= 0 then
     raise EArgumentException.Create('Length must be positive');
     
   if ALength > 1024 * 1024 then // 1MB limit
     raise EArgumentException.Create('Length too large (max 1MB)');
-    
-  SetLength(Result, ALength);
-  
-  // Use Windows CryptoAPI for cryptographically secure random bytes
-  if not CryptAcquireContext(hProv, nil, nil, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) then
-    raise ERandomException.Create('Failed to acquire crypto context');
 
+  SetLength(Result, ALength);
+
+  {$IFDEF MSWINDOWS}
+  LStatus := BCryptGenRandom(0, @Result[0], ALength, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  if LStatus <> STATUS_SUCCESS then
+    raise ERandomException.CreateFmt('BCryptGenRandom failed with status: %d', [LStatus]);
+  {$ELSE}
   try
-    if not CryptGenRandom(hProv, ALength, @Result[0]) then
-      raise ERandomException.Create('Failed to generate secure random bytes');
-  finally
-    CryptReleaseContext(hProv, 0);
+    LRandom := TFileStream.Create('/dev/urandom', fmOpenRead or fmShareDenyNone);
+    try
+      if LRandom.Read(Result[0], ALength) <> ALength then
+        raise ERandomException.Create('Failed to read from /dev/urandom');
+    finally
+      LRandom.Free;
+    end;
+  except
+    on E: ERandomException do
+      raise;
+    on E: Exception do
+      raise ERandomException.Create(
+        'Cryptographic random unavailable: /dev/urandom failed (' + E.Message + ')');
   end;
+  {$ENDIF}
 end;
 
 function TSecureRandom.NextInt(const AMax: Integer): Integer;

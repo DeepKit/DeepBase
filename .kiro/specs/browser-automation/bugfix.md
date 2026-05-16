@@ -110,3 +110,52 @@
 - High 9 个修复 + 1 个部分修复
 - Medium 5 个修复 + 6 个标注遗留
 - 16 个 .pas 文件 + 6 个测试文件 全模块零诊断
+
+
+---
+
+## Phase 5 评审（11 个 High 全部修复）
+
+| ID | 标题 | 状态 |
+|---|---|---|
+| H1 | ScriptStore 模板占位符不匹配（urlPattern vs response_selector） | ✅ 重写 GetBuiltinDefaults，模板与调用方占位符严格一致 |
+| H2 | SELECTOR_HEAL 模板有占位符但调用方传 [] | ✅ 模板改为零占位符（CSS.escape 在 JS 内做） |
+| H3 | WaitForReady 在工作线程也调 ProcessMessages | ✅ 加 `MainThreadID = TThread.CurrentThread.ThreadID` 守卫 |
+| H4 | CDP.GetElementText / ScrollToElement 用 QuotedStr | ✅ 改用 JsStringLiteral |
+| H5 | 双重恢复触发（误报） | — 经核实 RunHealthCheck 不会双触发 |
+| H6 | EvaluateScript 返回 CDP envelope 而非 .result.value | ✅ 加 UnwrapCdpResult 内嵌函数；处理 exceptionDetails |
+| H7 | DoRecovery 非 recreate 策略无回调时永远失败 | ✅ 三段式：factory > callback > best-effort（带告警日志） |
+| H8 | Service.Shutdown FLock TOCTOU | ✅ class constructor / destructor 替换 initialization 块 |
+| H9 | CDP 错误 JSON 不转义反斜杠 | ✅ 三处全部改用 JsStringLiteral |
+| H10 | Session.OnTransition(bstRecoverStart) 在 FLock 内调 DoRecovery + Sleep | ✅ TThread.CreateAnonymousThread 派发到工作线程 |
+| H11 | WindowPool.InternalAcquire 在 FLock 内调 FSessionFactory | ✅ Acquire 改三段式（snapshot → factory → register） |
+| H12 | WaitForSelector 匿名线程无异常处理 | ✅ 整体 try/except，异常通过 ACallback 上报 |
+
+
+---
+
+## Phase 6 — Medium 收尾（M1/M4/M6/M10/M11 全部关闭，M2 标注不做）
+
+| ID | 严重度 | 标题 | 状态 |
+|---|---|---|---|
+| M1 | 🟢 低 | TBrowserAutomationSessionAdapter 困在 WebView2 单元 | ✅ 提到独立单元 `Features/DeepBase.Browser.AutomationAdapter.pas`，注册到 dpk + dpr |
+| M2 | 🟢 低 | IBrowserSession ↔ IBrowserAutomationSession 90% 重复 | ⏳ 留 P5（结构性合并影响 16+ 文件，BUG-BA-024 修复后已无重复实现风险） |
+| M4 | 🟢 低 | IoC.WireServiceToRecovery 硬转换 | ✅ 加 `IBrowserRecoveryEvents` capability 接口；`Browser.IoC.pas` 改用 `Supports()` |
+| M6 | 🟢 低 | JS 模板在 BrowserAutomation.pas 与 ScriptStore.pas 双源 | ✅ `TBrowserAutomationScripts.BuildXxxScript` ScriptStore-first，模板停用时 fallback 到内联 |
+| M10 | 🟢 低 | Selectors 测试只用 nil session | ✅ 新建 `Test.DeepBase.Browser.Selectors.Integration.pas`（5 个测试用例 + TFakeSelectorSession） |
+| M11 | 🟢 低 | Recovery.DoRecovery 路径未测试 | ✅ 新建 `Test.DeepBase.Browser.Recovery.Integration.pas`（7 个测试用例 + TFakeSessionFactory） |
+
+### 状态总览
+
+- **Phase 2a**：9 个 bug 全部关闭（BUG-BA-001~009）
+- **Phase 3**：19 个 bug 全部关闭（BUG-BA-010~028，含 1 误报）
+- **Phase 4**：28 项发现，关闭 21 项
+- **Phase 5**：11 个 High 全部关闭
+- **Phase 6**：5 个 Medium 全部关闭（M1/M4/M6/M10/M11），1 项标注 P5 不做（M2）
+
+剩下未做项目（P5 / 留尾）：
+
+- **M2** — 接口结构性合并
+- **H5** — CDP.WaitForSelector 取消 token
+
+两项都不影响当前生产部署，留作后续优化。

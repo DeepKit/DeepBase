@@ -41,6 +41,10 @@ DeepBase/Features/
   DeepBase.Speech.ASR.SAPI.pas       ← SAPI 5.4 Dictation + Grammar ASR
   DeepBase.Speech.TTS.SAPI.pas       ← SAPI 5.4 SpVoice TTS
 
+  ── SenseVoice ASR（M2.5）──
+  DeepBase.Speech.FBank.pas          ← 80 维 FBank 特征提取（Radix-2 FFT）
+  DeepBase.Speech.ASR.SenseVoice.pas ← SenseVoice 离线 ASR（ONNX + CTC）
+
   ── Phase 2 新增 ──
   DeepBase.Speech.WakeWord.pas       ← SAPI Grammar 长时监听
 
@@ -81,7 +85,7 @@ Speech.Registry ──── Speech.Runtime ──── Speech.Policy
    │
 ISpeechRecognizerEx  ITTSBackend  IWakeWordDetector  IVoiceprint  IIntentParser
    │                   │               │                │
-SAPI / Baidu /    SAPI / Cloud    SAPI Grammar    MFCC+DTW+ConfigDB
+SenseVoice / SAPI / Baidu /    SAPI / Cloud    SAPI Grammar    MFCC+DTW+ConfigDB
 WhisperLocal
         │
   ISpeechAudioCapture（WinMM）
@@ -143,7 +147,7 @@ const
 type
   // ── ASR 扩展 ──
   TASRMode = (asrDictation, asrGrammar, asrCommand);
-  TASRBackendKind = (abkBaidu, abkSAPI, abkWhisperLocal, abkWinRT, abkAzure);
+  TASRBackendKind = (abkAuto, abkSenseVoice, abkSAPI, abkWinRT, abkBaidu, abkWhisper, abkAzure);
 
   TASROptions = record
     Language: string;
@@ -379,6 +383,10 @@ Backend 自注册在各单元 `initialization` 段完成，下游只做覆盖/�
 | `speech.trace.audio_payload_enabled` | `0` | 禁止 Trace 记录 PCM payload |
 | `speech.baidu.app_key` | `` | DPAPI 加密 |
 | `speech.baidu.secret_key` | `` | DPAPI 加密 |
+| `speech.sensevoice.model_dir` | `''` | 模型目录（空=自动发现） |
+| `speech.sensevoice.language` | `'auto'` | auto/zh/en/yue/ko |
+| `speech.sensevoice.use_itn` | `1` | 逆文本正规化 |
+| `speech.sensevoice.partial_interval_ms` | `500` | 模拟流式 decode 间隔 |
 
 ### 3.2 voice_profiles 表（`DeepBase.Speech.Schema.pas`）
 
@@ -471,11 +479,12 @@ Schema 通过 `DeepBase.Manager.Schema` 迁移机制注册（版本 `speech_v1`�
 
 ```
 ConfigDB speech.default.asr_backend = 'auto' 时：
-  1. WinRT（Win10+，本地）
-  2. SAPI 5.4（Win7+，本地）
-  3. WhisperLocal（需 whisper.dll）
-  4. Baidu（需 speech.asr.cloud_enabled=Enabled + API Key）
-  5. 全部不可用 → EDeepBaseSpeechProviderError
+  1. SenseVoice (local, ONNX model, zh/en/ja/ko/yue)
+  2. WinRT（Win10+，本地）
+  3. SAPI 5.4（Win7+，本地）
+  4. WhisperLocal（需 whisper.dll）
+  5. Baidu（需 speech.asr.cloud_enabled=Enabled + API Key）
+  6. 全部不可用 → EDeepBaseSpeechProviderError
 
 显式指定时：直接尝试，不可用则按上述链回退，记录 Trace 日志。
 云 ASR 必须同时满足：门禁 Enabled + 密钥可用。
@@ -560,7 +569,7 @@ TTS 降级链：
 | dpk | 内容 | 谁用 |
 |---|---|---|
 | `DeepBaseFeatures.dpk` | Core: Types / Service / Registry / Config / Policy / Runtime / AudioCapture / VAD | 所有下游 |
-| `DeepBaseFeaturesASR.dpk` | ASR Backend（SAPI/Baidu/WinRT） | DeepInput / DeepLaunch |
+| `DeepBaseFeaturesASR.dpk` | ASR Backend（SenseVoice/SAPI/Baidu/WinRT） | DeepInput / DeepLaunch |
 | `DeepBaseFeaturesTTS.dpk` | TTS Backend | DeepLaunch |
 | `DeepBaseFeaturesWake.dpk` | WakeWord + AudioSession 仲裁扩展 | DeepLaunch（语音版） |
 | `DeepBaseFeaturesVoice.dpk` | MFCC + DTW + Voiceprint | DeepLaunch v2.0（M7） |

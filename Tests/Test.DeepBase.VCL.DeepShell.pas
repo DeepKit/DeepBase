@@ -117,6 +117,7 @@ type
     [Test] procedure UnsubscribeStopsFutureDispatch;
     [Test] procedure SubscribeAll_GetsEveryKind;
     [Test] procedure BackgroundPublish_DoesNotUAF_AfterBusReleased;
+    [Test] procedure UnsubscribeBeforeQueueDrain_QueuedHandlerDoesNotRun;
   end;
 
   [TestFixture]
@@ -128,6 +129,8 @@ type
     [Test] procedure Execute_NoGateKey_SkipsGovernance;
     [Test] procedure Execute_DisabledCommand_NoOp;
     [Test] procedure Register_PreservesInsertionOrderInCommandIds;
+    [Test] procedure Execute_FromBackgroundThread_RunsOnMainThread;
+    [Test] procedure ExecuteSync_FromBackgroundThread_BlocksUntilHandlerCompletes;
   end;
 
   [TestFixture]
@@ -143,6 +146,8 @@ type
   public
     [Test] procedure SettingsBacked_RoundTripPreservesPanelState;
     [Test] procedure InMemory_TryLoadGlobal_FalseWhenUnset;
+    [Test] procedure SettingsBacked_RemoteNewerSkipsLocalWrite;
+    [Test] procedure SettingsBacked_SameInstanceAlwaysWins;
   end;
 
   [TestFixture]
@@ -163,6 +168,7 @@ implementation
 
 uses
   System.JSON,
+  System.DateUtils,
   DeepBase.VCL.DeepShell.Localization,
   DeepBase.VCL.DeepShell.Theme;
 
@@ -380,6 +386,51 @@ begin
   end;
 end;
 
+procedure TTestShellEventBus.UnsubscribeBeforeQueueDrain_QueuedHandlerDoesNotRun;
+var
+  LBus: IShellEventBus;
+  LCalled: Integer;
+  LToken: string;
+  LSync: TEvent;
+  LEvent: TDeepShellEvent;
+  LTask: ITask;
+begin
+  // BUG: general-purpose Unsubscribe semantics. Background-thread Publish
+  // queues a main-thread dispatch. If the subscriber Unsubscribes before
+  // CheckSynchronize drains the queue, the handler must NOT run. Tests
+  // the token-based re-lookup added on top of the bridge fix.
+  LBus := TShellEventBus.Create;
+  LCalled := 0;
+  LSync := TEvent.Create(nil, True, False, '');
+  try
+    LToken := LBus.Subscribe(sekLogAdded,
+      procedure(const E: TDeepShellEvent)
+      begin
+        Inc(LCalled);
+      end);
+
+    LEvent := Default(TDeepShellEvent);
+    LEvent.Kind := sekLogAdded;
+
+    LTask := TTask.Run(
+      procedure
+      begin
+        LBus.Publish(LEvent);
+        LSync.SetEvent;
+      end);
+    LSync.WaitFor(2000);
+    LTask.Wait;
+
+    // Unsubscribe BEFORE pumping the queued dispatch.
+    LBus.Unsubscribe(LToken);
+    CheckSynchronize(500);
+    Assert.AreEqual(0, LCalled,
+      'Handler unsubscribed before queue drain must not run');
+  finally
+    LSync.Free;
+  end;
+end;
+
 // ---------------------------------------------------------------------------
 // TTestShellCommandManager
 // ---------------------------------------------------------------------------
@@ -522,6 +573,94 @@ begin
   Assert.AreEqual('c', LIds[2]);
 end;
 
+procedure TTestShellCommandManager.Execute_FromBackgroundThread_RunsOnMainThread;
+var
+  LBus: IShellEventBus;
+  LMgr: IShellCommandManager;
+  LHandlerThreadId: TThreadID;
+  LSync: TEvent;
+  LTask: ITask;
+begin
+  // Background-thread Execute must marshal the handler onto the main
+  // thread so UI code in command handlers does not crash. Captured
+  // FHandlerThreadId records where the handler actually ran.
+  LBus := TShellEventBus.Create;
+  LMgr := TShellCommandManager.Create(LBus,
+    function: TShellContext begin Result := TShellContext.Empty; end);
+
+  LHandlerThreadId := 0;
+  LSync := TEvent.Create(nil, True, False, '');
+  try
+    LMgr.RegisterCommand(
+      ShellCommand('t.bgexec', 'BG')
+        .OnExecute(procedure
+          begin
+            LHandlerThreadId := TThread.CurrentThread.ThreadID;
+            LSync.SetEvent;
+          end));
+
+    LTask := TTask.Run(
+      procedure
+      begin
+        LMgr.Execute('t.bgexec');
+      end);
+    LTask.Wait;
+    // Pump main-thread queue so the marshalled handler runs.
+    CheckSynchronize(2000);
+    LSync.WaitFor(500);
+
+    Assert.AreEqual<TThreadID>(MainThreadID, LHandlerThreadId,
+      'Background-thread Execute must marshal the handler onto the main thread');
+  finally
+    LTask := nil;
+    LMgr := nil;
+    LBus := nil;
+    LSync.Free;
+  end;
+end;
+
+procedure TTestShellCommandManager.ExecuteSync_FromBackgroundThread_BlocksUntilHandlerCompletes;
+var
+  LBus: IShellEventBus;
+  LMgr: IShellCommandManager;
+  LCounter: Integer;
+  LObservedAfterSync: Integer;
+  LTask: ITask;
+begin
+  // ExecuteSync from a background thread must block until the handler
+  // has finished running on the main thread. We launch a worker that
+  // calls ExecuteSync; while waiting the main thread pumps Synchronize.
+  LBus := TShellEventBus.Create;
+  LMgr := TShellCommandManager.Create(LBus,
+    function: TShellContext begin Result := TShellContext.Empty; end);
+  LCounter := 0;
+  LObservedAfterSync := -1;
+  LMgr.RegisterCommand(
+    ShellCommand('t.sync', 'Sync')
+      .OnExecute(procedure
+        begin
+          Inc(LCounter);
+        end));
+
+  LTask := TTask.Run(
+    procedure
+    begin
+      LMgr.ExecuteSync('t.sync');
+      // After ExecuteSync returns, handler MUST have run.
+      LObservedAfterSync := LCounter;
+    end);
+
+  // Pump main-thread queue so Synchronize can land.
+  while not LTask.Wait(50) do
+    CheckSynchronize(50);
+
+  Assert.AreEqual<Integer>(1, LObservedAfterSync,
+    'ExecuteSync must block until handler completes on main thread');
+  LTask := nil;
+  LMgr := nil;
+  LBus := nil;
+end;
+
 // ---------------------------------------------------------------------------
 // TTestShellRecentService
 // ---------------------------------------------------------------------------
@@ -610,6 +749,61 @@ begin
   LSvc := TShellInMemoryLayoutService.Create;
   Assert.IsFalse(LSvc.TryLoadGlobalLayout(LState),
     'In-memory layout returns False before any save');
+end;
+
+procedure TTestShellLayoutService.SettingsBacked_RemoteNewerSkipsLocalWrite;
+var
+  LStore: IShellSettingsStore;
+  LSvc: IShellLayoutService;
+  LState, LCheck: TShellLayoutState;
+  LFutureJson: string;
+begin
+  // Multi-instance CAS regression: a remote instance has just written a
+  // state with a UpdatedAt in the FUTURE relative to our wall clock.
+  // When local then SaveGlobalLayout, the CAS guard must skip the write.
+  // We simulate the remote write by injecting JSON directly into the
+  // shared settings store with a far-future timestamp.
+  LStore := TShellInMemorySettingsStore.Create;
+  LSvc := TShellSettingsBackedLayoutService.Create(LStore, 'inst-local');
+
+  LFutureJson := Format(
+    '{"layoutKey":"main","updatedAt":"%s","sequence":1,'
+    + '"writerInstanceId":"inst-remote","mainLeft":0,"mainTop":0,'
+    + '"mainWidth":9999,"mainHeight":0,"maximized":false}',
+    [DateToISO8601(IncDay(Now, 7), False)]);
+  LStore.WriteString('shell.layout.global', LFutureJson);
+
+  LState := TShellLayoutState.Empty;
+  LState.MainWidth := 500;
+  LSvc.SaveGlobalLayout(LState);
+
+  Assert.IsTrue(LSvc.TryLoadGlobalLayout(LCheck));
+  Assert.AreEqual(9999, LCheck.MainWidth,
+    'Local save must NOT overwrite a remote-newer record (CAS skip)');
+end;
+
+procedure TTestShellLayoutService.SettingsBacked_SameInstanceAlwaysWins;
+var
+  LStore: IShellSettingsStore;
+  LSvc: IShellLayoutService;
+  LStateA, LStateB, LCheck: TShellLayoutState;
+begin
+  // Same-instance writes are always last-write-wins; the CAS guard should
+  // never block them.
+  LStore := TShellInMemorySettingsStore.Create;
+  LSvc := TShellSettingsBackedLayoutService.Create(LStore, 'inst-1');
+
+  LStateA := TShellLayoutState.Empty;
+  LStateA.MainWidth := 100;
+  LSvc.SaveGlobalLayout(LStateA);
+
+  LStateB := TShellLayoutState.Empty;
+  LStateB.MainWidth := 200;
+  LSvc.SaveGlobalLayout(LStateB);
+
+  Assert.IsTrue(LSvc.TryLoadGlobalLayout(LCheck));
+  Assert.AreEqual(200, LCheck.MainWidth,
+    'Same-instance second save must win regardless of UpdatedAt rounding');
 end;
 
 // ---------------------------------------------------------------------------

@@ -317,7 +317,7 @@ LStream.SetOnFinal(
 | D4 | Whisper.cpp 优先级 | M8 后（SAPI 准确率不够再加） |
 | D5 | TTS SSML 支持 | 暂不支持 |
 | D6-orig | 用户自定义唤醒词 | 支持（词长 ≥ 2） |
-| D7 | 意图解析复用 DeepLLM | 复用 DeepBase.LLM.Client |
+| D7 | 意图解析复用 Assayer | 复用 DeepBase.LLM.Client |
 | D8 | Azure ASR 预留 | 保留枚举，不实现 |
 | D6-new | Commerce.Permissions vs Governance | ✅ **共存但分层**（Speech.Policy 统一封装） |
 | A4 | 声纹 HMAC 防篡改 | ✅ **降为 P2**（ConfigDB SQLite 加密为主防线） |

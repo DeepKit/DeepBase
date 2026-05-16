@@ -44,6 +44,7 @@ uses
   Test.DeepBase.IntentClarification in 'Test.DeepBase.IntentClarification.pas',
   Test.DeepBase.IntentClarification.Integration in 'Test.DeepBase.IntentClarification.Integration.pas',
   Test.DeepBase.BrowserAutomation in 'Test.DeepBase.BrowserAutomation.pas',
+  Test.DeepBase.Browser.PageDriver in 'Test.DeepBase.Browser.PageDriver.pas',
   Test.DeepBase.Browser.Types in 'Test.DeepBase.Browser.Types.pas',
   Test.DeepBase.Browser.Registry in 'Test.DeepBase.Browser.Registry.pas',
   Test.DeepBase.Browser.Recovery in 'Test.DeepBase.Browser.Recovery.pas',
@@ -153,6 +154,7 @@ uses
   Test.DeepBase.WorkerQueue in 'Test.DeepBase.WorkerQueue.pas',
   Test.DeepBase.TrayIcon in 'Test.DeepBase.TrayIcon.pas',
   Test.DeepBase.VCL.DeepShell in 'Test.DeepBase.VCL.DeepShell.pas',
+  Test.Arch.PackageBoundaries in 'Architecture\Test.Arch.PackageBoundaries.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
   DeepBase.Types in '..\Core\DeepBase.Types.pas',
@@ -224,6 +226,7 @@ uses
   DeepBase.Browser.Vision in '..\Features\DeepBase.Browser.Vision.pas',
   DeepBase.Browser.ScriptStore in '..\Features\DeepBase.Browser.ScriptStore.pas',
   DeepBase.Browser.AutomationAdapter in '..\Features\DeepBase.Browser.AutomationAdapter.pas',
+  DeepBase.Browser.PageDriver in '..\Features\DeepBase.Browser.PageDriver.pas',
   DeepBase.Browser.IoC in '..\Features\DeepBase.Browser.IoC.pas',
   DeepBase.Inference.Types in '..\Features\DeepBase.Inference.Types.pas',
   DeepBase.Inference.Runtime in '..\Features\DeepBase.Inference.Runtime.pas',

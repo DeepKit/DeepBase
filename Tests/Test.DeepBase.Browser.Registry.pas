@@ -143,10 +143,9 @@ procedure TBrowserRegistryTests.Test_FindBest_NoneAvailable_ReturnsEmpty;
 var
   LBest: TBrowserBackendInfo;
 begin
-  // FindBest with no backends that pass filter
   LBest := TBrowserRegistry.FindBest;
-  // May find other registered backends; just verify it doesn't crash
-  Assert.IsTrue(LBest.Name <> '');
+  // With no backends registered in this isolated test, result should be default (empty)
+  Assert.AreEqual('', LBest.Name);
 end;
 
 procedure TBrowserRegistryTests.Test_IsRegistered;

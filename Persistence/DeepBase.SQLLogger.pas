@@ -89,6 +89,12 @@ type
     class function FormatLogEntry(const AEntry: TSQLLogEntry): string;
   public
     /// <summary>
+    /// Format a dictionary of key-value pairs as a JSON string using TJSONObject.
+    /// Prevents JSON injection by proper escaping of all values.
+    /// </summary>
+    class function FormatExtra(const AExtra: TDictionary<string, string>): string;
+
+    /// <summary>
     /// Start timing for a SQL execution
     /// </summary>
     class function StartTiming: TDateTime;
@@ -190,7 +196,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.IOUtils,
+  System.DateUtils, System.IOUtils, System.JSON,
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
@@ -261,9 +267,15 @@ class procedure TSQLLogger.LogSQLEx(const ASQL: string; ADurationMs: Integer;
   ARowsAffected: Integer);
 var
   Entry: TSQLLogEntry;
+  DoFile, DoDatabase, DoCallback, DoSlowAlert: Boolean;
 begin
   if not FEnabled then Exit;
   
+  DoFile := False;
+  DoDatabase := False;
+  DoCallback := False;
+  DoSlowAlert := False;
+
   FLock.Enter;
   try
     // Create log entry
@@ -297,32 +309,31 @@ begin
     if not ASuccess then
       Inc(FErrorCount);
     
-    // Memory log
+    // Memory log (fast, stays under lock)
     if ldMemory in FDestinations then
     begin
       FMemoryLog.Add(Entry);
       TrimMemoryLog;
     end;
     
-    // File log
-    if ldFile in FDestinations then
-      WriteToFile(Entry);
-    
-    // Database log
-    if (ldDatabase in FDestinations) and Assigned(FDBConnection) then
-      WriteToDatabase(Entry);
-    
-    // Callback
-    if (ldCallback in FDestinations) and Assigned(FOnLog) then
-      FOnLog(Entry);
-    
-    // Slow query alert
-    if (ADurationMs >= FSlowQueryThresholdMs) and Assigned(FOnSlowQuery) then
-      FOnSlowQuery(Entry);
-      
+    // Determine which I/O destinations to write (outside lock)
+    DoFile := ldFile in FDestinations;
+    DoDatabase := (ldDatabase in FDestinations) and Assigned(FDBConnection);
+    DoCallback := (ldCallback in FDestinations) and Assigned(FOnLog);
+    DoSlowAlert := (ADurationMs >= FSlowQueryThresholdMs) and Assigned(FOnSlowQuery);
   finally
     FLock.Leave;
   end;
+
+  // Perform I/O outside the lock (producer-consumer pattern)
+  if DoFile then
+    WriteToFile(Entry);
+  if DoDatabase then
+    WriteToDatabase(Entry);
+  if DoCallback then
+    FOnLog(Entry);
+  if DoSlowAlert then
+    FOnSlowQuery(Entry);
 end;
 
 class procedure TSQLLogger.Execute(AQuery: TObject; AProc: TProc;
@@ -441,6 +452,18 @@ begin
     Result := Result + ' | Error: ' + AEntry.ErrorMessage;
 end;
 
+class function TSQLLogger.FormatExtra(const AExtra: TDictionary<string, string>): string;
+begin
+  var LObj := TJSONObject.Create;
+  try
+    for var LPair in AExtra do
+      LObj.AddPair(LPair.Key, LPair.Value);
+    Result := LObj.ToJSON;
+  finally
+    LObj.Free;
+  end;
+end;
+
 class procedure TSQLLogger.WriteToFile(const AEntry: TSQLLogEntry);
 var
   LogLine: string;
@@ -500,14 +523,18 @@ begin
       Query.ParamByName('SessionId').AsString := AEntry.SessionId;
       Query.ParamByName('MachineName').AsString := '';
       
-      // Store extra info as JSON
-      Query.ParamByName('Extra').AsString := Format(
-        '{"duration_ms":%d,"success":%s,"operation":"%s","rows_affected":%d,"error":"%s"}',
-        [AEntry.DurationMs, 
-         IfThen(AEntry.Success, 'true', 'false'),
-         AEntry.Operation,
-         AEntry.RowsAffected,
-         StringReplace(AEntry.ErrorMessage, '"', '\"', [rfReplaceAll])]);
+      // Store extra info as JSON using FormatExtra
+      var LExtraDict := TDictionary<string, string>.Create;
+      try
+        LExtraDict.Add('duration_ms', IntToStr(AEntry.DurationMs));
+        LExtraDict.Add('success', if AEntry.Success then 'true' else 'false');
+        LExtraDict.Add('operation', AEntry.Operation);
+        LExtraDict.Add('rows_affected', IntToStr(AEntry.RowsAffected));
+        LExtraDict.Add('error', AEntry.ErrorMessage);
+        Query.ParamByName('Extra').AsString := FormatExtra(LExtraDict);
+      finally
+        LExtraDict.Free;
+      end;
       
       Query.ExecSQL;
     except

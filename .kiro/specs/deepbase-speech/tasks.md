@@ -247,6 +247,36 @@
   - Trace 覆盖 backend/duration/status/fallback_reason
   - Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 6.5 M2.5 SenseVoice Backend（默认本地 ASR）
+  - [ ] 6.5.1 扩展 `DeepBase.Inference.Types.pas` 新增 `TInferenceElementType` + `TInferenceInput`
+    - 支持混合 float32/int32 张量输入
+    - _Requirements: 2.1_
+  - [ ] 6.5.2 扩展 `DeepBase.Inference.Session.pas` 新增 `RunTyped` 方法
+    - 根据 ElementType 选择 CreateTensor<Single> 或 CreateTensor<Int32>
+    - 现有 Run 方法不改动
+  - [ ] 6.5.3 创建 `DeepBase.Speech.FBank.pas`
+    - 80 维 FBank 特征提取：Radix-2 FFT（补零到 512）+ 80 Mel 滤波器 + Hamming 窗
+    - 输入: 16kHz PCM16 mono，输出: [frames][80] log-Mel energies
+    - _Requirements: 9.1_
+  - [ ] 6.5.4 创建 `DeepBase.Speech.ASR.SenseVoice.pas`
+    - 实现 `TDeepBaseSenseVoiceASR : ISpeechRecognizerEx`
+    - LFR 堆叠（7窗口/6步长 → 560 维）+ CMVN 归一化（模型 metadata）
+    - CTC greedy decode + tokens.txt 查表
+    - 模拟流式：每 500ms decode 产生 OnPartial，Stop 触发 OnFinal
+    - initialization 段自注册到 Registry（Priority=5）
+    - 依赖 DeepBase.Inference 模块加载 ONNX 模型
+    - _Requirements: 2.1, 2.3, 12.1, 12.2_
+  - [ ] 6.5.5 扩展 `DeepBase.Speech.Types.pas` 枚举
+    - `TASRBackendKind` 增加 `abkSenseVoice`
+    - _Requirements: 2.1_
+  - [ ] 6.5.6 扩展 `DeepBase.Speech.Config.pas` 配置键
+    - 新增 SenseVoice 配置键常量
+    - 默认 ASR backend 改为 sensevoice
+    - _Requirements: 7.1, 7.2_
+  - [ ] 6.5.7 更新 `DeepBaseSpeechASR.dpk`
+    - 加入 FBank + SenseVoice 单元
+    - _Requirements: 19.1_
+
 - [ ] 7. M3 DeepInput 完全重构
   - [x] 7.1 评审 DeepInput 现有语音代码
     - 列出 DeepInput 中所有语音相关单元和接口
@@ -481,7 +511,7 @@
     - initialization 段自注册到 Registry
     - _Requirements: 2.1_
 
-  - [ ] 16.6 Whisper.cpp 集成（可选）
+  - [ ] 16.6 Whisper.cpp 集成（可选，SenseVoice 已作为默认本地 ASR）
     - 实现 `TDeepBaseWhisperASRRecognizer : ISpeechRecognizerEx`
     - 依赖 `whisper.dll` 存在
     - 支持 Batch + Streaming

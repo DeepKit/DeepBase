@@ -148,12 +148,23 @@ end;
 
 class procedure TDBGuardian.Checkpoint(AConn: TFDConnection;
   const AMode: string);
+var
+  LMode: string;
 begin
   if (AConn = nil) or (not AConn.Connected) then
     Exit;
+
+  LMode := AMode;
+  if LMode = '' then
+    LMode := 'PASSIVE';
+
+  LMode := LMode.ToUpper;
+  if not ((LMode = 'PASSIVE') or (LMode = 'FULL') or (LMode = 'RESTART') or (LMode = 'TRUNCATE')) then
+    raise EArgumentOutOfRangeException.CreateFmt('Invalid checkpoint mode: %s', [AMode]);
+
   try
     // PASSIVE / FULL / RESTART / TRUNCATE
-    AConn.ExecSQL('PRAGMA wal_checkpoint(' + AMode + ')');
+    AConn.ExecSQL('PRAGMA wal_checkpoint(' + LMode + ')');
   except
     // Checkpoint failure shouldn't break caller
   end;
@@ -163,6 +174,7 @@ class function TDBGuardian.BackupTo(AConn: TFDConnection;
   const ADestPath: string): Boolean;
 var
   DestDir: string;
+  TempPath: string;
 begin
   Result := False;
   if (AConn = nil) or (not AConn.Connected) or (ADestPath = '') then
@@ -172,16 +184,28 @@ begin
   if (DestDir <> '') and (not TDirectory.Exists(DestDir)) then
     TDirectory.CreateDirectory(DestDir);
 
-  // Delete existing target (VACUUM INTO requires target to not exist)
-  if TFile.Exists(ADestPath) then
-    TFile.Delete(ADestPath);
+  // Write to temporary file first, then rename to prevent data loss on crash
+  TempPath := ADestPath + '.tmp';
+
+  // VACUUM INTO requires target to not exist
+  if TFile.Exists(TempPath) then
+    TFile.Delete(TempPath);
 
   try
     // VACUUM INTO produces a compact, consistent copy without locking readers
-    AConn.ExecSQL('VACUUM INTO ' + QuotedStr(ADestPath));
+    AConn.ExecSQL('VACUUM INTO ' + QuotedStr(TempPath));
+    if not TFile.Exists(TempPath) then
+      Exit;
+
+    // Atomic rename: delete old backup then move temp into place
+    if TFile.Exists(ADestPath) then
+      TFile.Delete(ADestPath);
+    TFile.Move(TempPath, ADestPath);
     Result := TFile.Exists(ADestPath);
   except
-    // Backup failure is non-fatal
+    // Backup failure is non-fatal; clean up temp file
+    if TFile.Exists(TempPath) then
+      try TFile.Delete(TempPath); except end;
   end;
 end;
 
@@ -300,6 +324,17 @@ class function TDBGuardian.ProtectConnection(AConn: TFDConnection;
 var
   DBPath: string;
   Recovery: TGuardianResult;
+
+  procedure CleanupSideFiles(const APath: string);
+  var
+    LSide: string;
+  begin
+    // Remove stale WAL/SHM/journal files that can prevent a fresh DB from opening
+    for LSide in [APath + '-wal', APath + '-shm', APath + '-journal'] do
+      if TFile.Exists(LSide) then
+        try TFile.Delete(LSide); except end;
+  end;
+
 begin
   Result := False;
   AResult.Status := isUnknown;
@@ -314,6 +349,10 @@ begin
   end;
 
   DBPath := AConn.Params.Database;
+
+  // If DB file does not exist, clean up any stale side files from previous runs
+  if not TFile.Exists(DBPath) then
+    CleanupSideFiles(DBPath);
 
   // Ensure open
   if not AConn.Connected then
@@ -331,6 +370,16 @@ begin
       AResult.QuarantinePath := Recovery.QuarantinePath;
       AResult.RestoredFromBackup := Recovery.RestoredFromBackup;
 
+      // Reset connection to clear any stale state from the failed open
+      try
+        AConn.Close;
+      except
+        // Ignore close errors
+      end;
+      // Also clean up any side files left behind
+      CleanupSideFiles(DBPath);
+      AConn.Params.Database := DBPath;
+
       // Retry open (will create fresh DB if no backup restored)
       try
         AConn.Open;
@@ -342,7 +391,14 @@ begin
           Exit;
         end;
       end;
-      // Fall through to pragma + integrity check
+
+      // Retry succeeded - apply pragmas and check integrity
+      ApplyRecommendedPragmas(AConn);
+      AResult.Status := CheckIntegrity(AConn, True);
+      // If retry open succeeded and integrity is OK, return success immediately
+      // regardless of the Recovery.Status (which is always isCorrupted when no backup exists)
+      Result := AConn.Connected and (AResult.Status = isOk);
+      Exit;
     end;
   end;
 
@@ -368,6 +424,9 @@ begin
       AResult.Message := Recovery.Message
     else
       AResult.Message := AResult.Message + '; ' + Recovery.Message;
+
+    // Clean side files before reopen
+    CleanupSideFiles(DBPath);
 
     // Reopen (fresh DB if no backup)
     try

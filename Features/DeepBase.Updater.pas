@@ -42,6 +42,7 @@ uses
   System.Zip,
   System.SyncObjs,
   System.Threading,
+  DeepBase.Exceptions,
   DeepBase.Net.Transport
   {$IFDEF MSWINDOWS}
   , DeepBase.Crypto, Winapi.Windows
@@ -217,6 +218,7 @@ type
     FLastError: string;
     FPublicKey: string;  // RSA public key for signature verification
     FSignatureSecret: string;  // Shared secret for HMAC signature verification
+    FInsecureDevMode: Boolean;  // EDGE-006: when True, allows bypass of missing hash/key checks
     FAutoCheck: Boolean;
     FAutoCheckInterval: Integer;  // Hours
     FLastCheckTime: TDateTime;
@@ -271,6 +273,10 @@ type
 
     /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
     procedure SetSignatureSecret(const Secret: string);
+
+    /// <summary>Enable insecure dev mode: allows updates without hash/signature.
+    /// NEVER enable in production builds. Use only for local development testing.</summary>
+    property InsecureDevMode: Boolean read FInsecureDevMode write FInsecureDevMode;
 
     /// <summary>Inject HTTP transport for System.Net/ICS/test implementations.</summary>
     procedure SetHttpTransport(const Transport: IDeepBaseHttpTransport);
@@ -631,6 +637,7 @@ begin
   FSilentInstallTask := nil;
   FSilentInstallLoopActive := False;
   FSignatureSecret := '';
+  FInsecureDevMode := False;
   FLastCheckTime := 0;
   FCancelled := False;
   FTempDir := TPath.Combine(TPath.GetTempPath, 'DeepBase_Update');
@@ -934,9 +941,14 @@ begin
     end;
   end;
 
-  if Result.SignatureRequired = False then
+  // EDGE-006 fix: auto-require signature when trust anchors are configured
+  // or when metadata already contains a signature. This prevents an attacker
+  // from stripping the signature field from metadata to bypass verification.
+  if not Result.SignatureRequired then
     Result.SignatureRequired := (Result.Signature <> '') or
-      (Result.ManifestSignature <> '');
+      (Result.ManifestSignature <> '') or
+      (FPublicKey <> '') or
+      (FSignatureSecret <> '');
   if Result.SignatureAlgorithm = '' then
     Result.SignatureAlgorithm := 'rsa-sha256';
 end;
@@ -1354,8 +1366,18 @@ begin
   end;
 
   // Default: RSA-SHA256
+  // EDGE-006 fix: missing public key must fail-closed in production.
+  // Only allow bypass in explicit dev/insecure mode.
   if FPublicKey = '' then
-    Exit(True);
+  begin
+    if FInsecureDevMode then
+    begin
+      FLastError := 'WARNING: Signature verification skipped (insecure dev mode, no public key)';
+      Exit(True);
+    end;
+    FLastError := 'RSA public key is not configured. Cannot verify update signature.';
+    Exit(False);
+  end;
 
   {$IFDEF MSWINDOWS}
   LVerifier := TRSAVerifier.Create;
@@ -1395,8 +1417,15 @@ begin
   if not FileExists(FilePath) then
     Exit;
   
+  // EDGE-006 fix: empty hash must fail-closed in production.
+  // Only allow bypass in explicit dev/insecure mode.
   if ExpectedHash = '' then
-    Exit(True);  // No hash to verify
+  begin
+    if FInsecureDevMode then
+      Exit(True);
+    FLastError := 'Package hash is missing. Cannot verify update integrity.';
+    Exit(False);
+  end;
   
   FileStream := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyWrite);
   try
@@ -1515,9 +1544,10 @@ function TUpdateManager.ApplyUpdate(const PackagePath: string;
   const Info: TUpdateInfo): Boolean;
 var
   Zip: TZipFile;
-  ExtractPath, FileName, DestPath: string;
+  ExtractPath, FileName, DestPath, CanonicalExtract, CanonicalDest: string;
   I: Integer;
   FileNames: TArray<string>;
+  ZipHeader: TZipHeader;
 begin
   Result := False;
   
@@ -1527,11 +1557,33 @@ begin
     ExtractPath := TPath.Combine(FTempDir, 'extract_' + 
       FormatDateTime('yyyymmdd_hhnnss', Now));
     ForceDirectories(ExtractPath);
+    CanonicalExtract := IncludeTrailingPathDelimiter(
+      TPath.GetFullPath(ExtractPath));
     
-    // Extract update package
+    // EDGE-007 fix: safe extraction — validate each entry before extracting.
+    // Reject absolute paths, parent directory traversal (../), and entries
+    // that would escape the extraction directory.
     Zip := TZipFile.Create;
     try
       Zip.Open(PackagePath, zmRead);
+      for I := 0 to Zip.FileCount - 1 do
+      begin
+        FileName := Zip.FileNames[I];
+        // Reject absolute paths
+        if TPath.IsPathRooted(FileName) then
+          raise EInvalidOperationException.CreateFmt(
+            'Unsafe zip entry (absolute path): %s', [FileName]);
+        // Reject parent directory traversal
+        if Pos('..', FileName) > 0 then
+          raise EInvalidOperationException.CreateFmt(
+            'Unsafe zip entry (path traversal): %s', [FileName]);
+        // Verify canonical path stays within extract directory
+        CanonicalDest := TPath.GetFullPath(TPath.Combine(ExtractPath, FileName));
+        if not CanonicalDest.StartsWith(CanonicalExtract, True) then
+          raise EInvalidOperationException.CreateFmt(
+            'Unsafe zip entry (escapes target): %s', [FileName]);
+      end;
+      // All entries validated — now extract
       Zip.ExtractAll(ExtractPath);
       Zip.Close;
     finally
@@ -1542,7 +1594,7 @@ begin
     FileNames := TDirectory.GetFiles(ExtractPath, '*.*', 
       TSearchOption.soAllDirectories);
     
-    // Copy files to application directory
+    // Copy files to application directory with path validation
     for I := 0 to High(FileNames) do
     begin
       if FCancelled then
@@ -1553,6 +1605,16 @@ begin
       
       FileName := Copy(FileNames[I], Length(ExtractPath) + 2, MaxInt);
       DestPath := TPath.Combine(FApplicationDir, FileName);
+      
+      // EDGE-007: verify destination stays within application directory
+      CanonicalDest := TPath.GetFullPath(DestPath);
+      if not CanonicalDest.StartsWith(
+        IncludeTrailingPathDelimiter(TPath.GetFullPath(FApplicationDir)), True) then
+      begin
+        FLastError := Format('Unsafe file path rejected: %s', [FileName]);
+        RestoreBackup;
+        Exit;
+      end;
       
       ForceDirectories(TPath.GetDirectoryName(DestPath));
       TFile.Copy(FileNames[I], DestPath, True);

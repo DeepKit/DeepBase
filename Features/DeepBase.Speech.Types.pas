@@ -32,7 +32,7 @@ type
 
   TASRMode = (asrDictation, asrGrammar, asrCommand);
 
-  TASRBackendKind = (abkAuto, abkSAPI, abkWinRT, abkBaidu, abkWhisper, abkAzure);
+  TASRBackendKind = (abkAuto, abkSenseVoice, abkSAPI, abkWinRT, abkBaidu, abkWhisper, abkAzure);
 
   TASROptions = record
     Language: string;
