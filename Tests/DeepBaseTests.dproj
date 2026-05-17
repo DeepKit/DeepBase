@@ -169,6 +169,12 @@
         <DCCReference Include="Test.DeepBase.Browser.Contract.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.IntentClarification.SignalDetector.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.Speech.Performance.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Resilience.Timeout.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DB.Pool.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Commerce.Service.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Config.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DB.ConnectionPool.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DB.Upsert.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

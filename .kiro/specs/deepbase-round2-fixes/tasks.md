@@ -23,7 +23,7 @@
   - [x] 2.1 为 Timeout 结果变量添加 TMonitor 保护，Execute 超时后调用 FTask.Cancel
     - 修改 `Core/DeepBase.Resilience.Timeout.pas`
     - _Requirements: 1.2, 1.6_
-  - [ ]* 2.2 编写属性测试：Timeout 结果一致性 + 后台任务取消
+  - [x]* 2.2 编写属性测试：Timeout 结果一致性 + 后台任务取消
     - **Property 5: Timeout 结果一致性**
     - **Property 6: Timeout 后台任务取消**
     - **Validates: Requirements 1.2, 1.6**
@@ -40,7 +40,7 @@
   - [x] 4.1 提取 DoWarmup 内部方法，Initialize 和 Warmup 公开方法各自加锁后调用 DoWarmup
     - 修改 `Persistence/DeepBase.DB.Pool.pas`
     - _Requirements: 5.1_
-  - [ ]* 4.2 编写属性测试：UniPool Initialize 不死锁
+  - [x]* 4.2 编写属性测试：UniPool Initialize 不死锁
     - **Property 14: UniPool Initialize 不死锁**
     - **Validates: Requirements 5.1**
 
@@ -109,7 +109,7 @@
   - [x] 9.2 ConsumeEntitlement 使用原子 UPDATE WHERE remaining_quota >= N
     - 修改 `Features/DeepBase.Commerce.Service.pas`
     - _Requirements: 8.6_
-  - [ ]* 9.3 编写属性测试：终态拒绝 + 原子扣减不超卖
+  - [x]* 9.3 编写属性测试：终态拒绝 + 原子扣减不超卖
     - **Property 23: Commerce 终态拒绝**
     - **Property 24: Entitlement 原子扣减不超卖**
     - **Validates: Requirements 8.5, 8.6**
@@ -127,7 +127,7 @@
   - [x] 10.4 Config.FOnConfigChanged 在锁外触发回调
     - 修改 `Core/DeepBase.Config.pas`
     - _Requirements: 3.5_
-  - [ ]* 10.5 编写属性测试：Config 不缓存默认值 + Logging JSON 无双重转义
+  - [x]* 10.5 编写属性测试：Config 不缓存默认值 + Logging JSON 无双重转义
     - **Property 12: Config 不缓存默认值**
     - **Property 13: Logging JSON 无双重转义**
     - **Validates: Requirements 3.1, 3.2**
@@ -152,7 +152,7 @@
   - [x] 12.5 GetActiveCount/GetAvailableCount 内部加锁
     - 修改 `Persistence/DeepBase.DB.ConnectionPool.pas`
     - _Requirements: 5.6_
-  - [ ]* 12.6 编写属性测试：无 Lost Wakeup + 反向遍历正确性
+  - [x]* 12.6 编写属性测试：无 Lost Wakeup + 反向遍历正确性
     - **Property 15: ConnectionPool 无 Lost Wakeup**
     - **Property 16: ConnectionPool 反向遍历正确性**
     - **Validates: Requirements 5.2, 5.3**
@@ -176,7 +176,7 @@
   - [x] 13.6 Guardian.BackupTo 写临时文件后 rename
     - 修改 `Persistence/DeepBase.DB.Guardian.pas`
     - _Requirements: 7.6_
-  - [ ]* 13.7 编写属性测试：UPSERT 原子性
+  - [x]* 13.7 编写属性测试：UPSERT 原子性
     - **Property 20: UPSERT 原子性**
     - **Validates: Requirements 7.1**
 

@@ -189,6 +189,13 @@ uses
   Test.DeepBase.Browser.Contract.PBT in 'Test.DeepBase.Browser.Contract.PBT.pas',
   Test.DeepBase.IntentClarification.SignalDetector.PBT in 'Test.DeepBase.IntentClarification.SignalDetector.PBT.pas',
   Test.DeepBase.Speech.Performance.PBT in 'Test.DeepBase.Speech.Performance.PBT.pas',
+  // Round-2 heavy-fixture PBT batch (deepbase-round2-fixes)
+  Test.DeepBase.Resilience.Timeout.PBT in 'Test.DeepBase.Resilience.Timeout.PBT.pas',
+  Test.DeepBase.DB.Pool.PBT in 'Test.DeepBase.DB.Pool.PBT.pas',
+  Test.DeepBase.Commerce.Service.PBT in 'Test.DeepBase.Commerce.Service.PBT.pas',
+  Test.DeepBase.Config.PBT in 'Test.DeepBase.Config.PBT.pas',
+  Test.DeepBase.DB.ConnectionPool.PBT in 'Test.DeepBase.DB.ConnectionPool.PBT.pas',
+  Test.DeepBase.DB.Upsert.PBT in 'Test.DeepBase.DB.Upsert.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
