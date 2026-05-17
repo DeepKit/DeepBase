@@ -58,8 +58,17 @@
   - [x] 4.1 `cmd /c compile_test.bat` ⇒ Exit code 0
     - _Requirements: 全部_
 
-- [ ]* 5. 编写属性测试（可选 PBT）
-  - [ ]* 5.1 Property 1：Bootstrap.Install 幂等
+- [x] 5. Examples Demo
+  - [x] 5.1 创建 `Examples/AIErrorHandlerDemo/` 项目
+    - 4 个文件：dpr / Demo.MainForm.pas / dproj / build.bat / README.md
+    - VCL 程序化 form，4 按钮触发 4 个分级路径（elIgnore / elAutoFix / elAIAnalyze / elFatal）
+    - 状态条显示当前 mode + DEEP_AIEH_MODE 环境变量
+    - README 描述 production / test 两种运行模式 + 切换方式
+    - `Examples\AIErrorHandlerDemo\build.bat` ⇒ Exit code 0，输出 ~5.7MB AIErrorHandlerDemo.exe
+    - _Requirements: 4.1, 4.4_
+
+- [ ]* 6. 编写属性测试（可选 PBT）
+  - [ ]* 6.1 Property 1：Bootstrap.Install 幂等
     - **Property 1: Bootstrap Install 幂等**
     - **Validates: Requirements 4.6**
     - 100 次随机 mode 序列 → 仅首次返回 True
