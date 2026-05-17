@@ -51,7 +51,7 @@
   - [x] 5.2 FirebaseAdapter.ParseResponse 先检查 nil 和类型再 cast
     - 修改 `Features/DeepBase.Commerce.Adapter.Firebase.pas`
     - _Requirements: 8.2_
-  - [ ]* 5.3 编写属性测试：Adapter JSON nil 安全
+  - [x]* 5.3 编写属性测试：Adapter JSON nil 安全
     - **Property 21: Adapter JSON nil 安全**
     - **Validates: Requirements 8.1, 8.2**
 
@@ -72,7 +72,7 @@
   - [x] 7.4 SQLLogger.FormatExtra 使用 TJSONObject 构造 JSON
     - 修改 `Persistence/DeepBase.SQLLogger.pas`
     - _Requirements: 6.4_
-  - [ ]* 7.5 编写属性测试：SQL 标识符验证 + Checkpoint 白名单 + SQLLogger JSON
+  - [x]* 7.5 编写属性测试：SQL 标识符验证 + Checkpoint 白名单 + SQLLogger JSON
     - **Property 17: SQL 标识符验证**
     - **Property 18: SQLLogger JSON 有效性**
     - **Property 19: Guardian Checkpoint 白名单**
@@ -94,7 +94,7 @@
   - [x] 8.5 VerifyPassword 在比较前验证 hash 格式
     - 修改 `Core/DeepBase.Crypto.pas`
     - _Requirements: 2.4_
-  - [ ]* 8.6 编写属性测试：加密非确定性 + Round-Trip + 无模偏差 + DER 安全 + 格式验证
+  - [x]* 8.6 编写属性测试：加密非确定性 + Round-Trip + 无模偏差 + DER 安全 + 格式验证
     - **Property 7: Crypto 加密非确定性**
     - **Property 8: Crypto 加密解密 Round-Trip**
     - **Property 9: RandomInt 无模偏差**

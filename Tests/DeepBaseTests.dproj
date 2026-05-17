@@ -156,6 +156,11 @@
         <DCCReference Include="Test.DeepBase.Encoding.Fix.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.VCL.DeepShell.Settings.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.VCL.DeepShell.Commands.PBT.pas"/>
+        <DCCReference Include="..\Core\DeepBase.SQL.Utils.pas"/>
+        <DCCReference Include="..\Persistence\DeepBase.DB.Guardian.pas"/>
+        <DCCReference Include="Test.DeepBase.Crypto.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.SQL.Security.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Commerce.Adapter.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

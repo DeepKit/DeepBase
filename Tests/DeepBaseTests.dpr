@@ -174,6 +174,12 @@ uses
   Test.DeepBase.Encoding.Fix.PBT in 'Test.DeepBase.Encoding.Fix.PBT.pas',
   Test.DeepBase.VCL.DeepShell.Settings.PBT in 'Test.DeepBase.VCL.DeepShell.Settings.PBT.pas',
   Test.DeepBase.VCL.DeepShell.Commands.PBT in 'Test.DeepBase.VCL.DeepShell.Commands.PBT.pas',
+  // Round-2 security PBT (deepbase-round2-fixes)
+  DeepBase.SQL.Utils in '..\Core\DeepBase.SQL.Utils.pas',
+  DeepBase.DB.Guardian in '..\Persistence\DeepBase.DB.Guardian.pas',
+  Test.DeepBase.Crypto.PBT in 'Test.DeepBase.Crypto.PBT.pas',
+  Test.DeepBase.SQL.Security.PBT in 'Test.DeepBase.SQL.Security.PBT.pas',
+  Test.DeepBase.Commerce.Adapter.PBT in 'Test.DeepBase.Commerce.Adapter.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
