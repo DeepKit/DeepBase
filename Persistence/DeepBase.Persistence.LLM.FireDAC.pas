@@ -97,6 +97,11 @@ begin
         Param.DataType := ftInteger;
         Param.AsInteger := Integer(V);
       end
+      else if VarIsType(V, varInt64) or VarIsType(V, varWord) or VarIsType(V, varLongWord) then
+      begin
+        Param.DataType := ftLargeint;
+        Param.AsLargeInt := V;
+      end
       else if VarIsType(V, varDouble) or VarIsType(V, varSingle) then
       begin
         Param.DataType := ftFloat;
