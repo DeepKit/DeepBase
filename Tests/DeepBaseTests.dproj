@@ -148,6 +148,14 @@
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.StackWalker.pas"/>
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas"/>
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas"/>
+        <DCCReference Include="..\Core\DeepBase.Security.SecretStore.pas"/>
+        <DCCReference Include="Test.DeepBase.LLM.Schema.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Security.SecretStore.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Graph.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Encoding.Fix.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.VCL.DeepShell.Settings.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.VCL.DeepShell.Commands.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -17,7 +17,7 @@
     - 统一 LLMCalls 字段写入为 canonical 字段集 (model, provider, prompt_id, input_tokens, output_tokens, duration_ms, status, error, created_at)
     - 移除旧版字段写入路径
     - _Requirements: 1.1, 1.3, 1.4_
-  - [ ]* 1.3 Write property tests for LLM Schema
+  - [x]* 1.3 Write property tests for LLM Schema
     - **Property 1: LLM Schema Initialization Completeness**
     - **Property 2: LLMCalls Canonical Field Set**
     - **Validates: Requirements 1.1, 1.4**
@@ -39,7 +39,7 @@
     - Replace with `ISecretStore.Put`/`TryGet` calls
     - Remove hardcoded encryption key constant
     - _Requirements: 2.1_
-  - [ ]* 2.4 Write unit tests for SecretStore
+  - [x]* 2.4 Write unit tests for SecretStore
     - Test Windows Credential Manager round-trip (Put then TryGet)
     - Test fail-closed behavior when no backend available
     - Test dev mode explicit opt-in
@@ -78,7 +78,7 @@
     - Apply Template max level, posture, and configuration to session
     - Use BudgetOverride when HasBudgetOverride is true, else use defaults
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
-  - [ ]* 5.2 Write property test for StartSession field consumption
+  - [x]* 5.2 Write property test for StartSession field consumption
     - **Property 6: StartSession Field Consumption**
     - **Validates: Requirements 4.1, 4.2, 4.3**
 
@@ -102,7 +102,7 @@
     - Remove `FCurrentExpert` and `FExpertSelected` instance fields
     - Read/write expert state from session context keyed by session ID
     - _Requirements: 6.2_
-  - [ ]* 7.3 Write property test for provider session isolation
+  - [x]* 7.3 Write property test for provider session isolation
     - **Property 8: IC Provider Session State Isolation**
     - **Validates: Requirements 6.1, 6.2**
 
@@ -171,7 +171,7 @@
     - Return `TArray<T>` via `.ToArray` instead of internal list reference
     - Wrap access in lock for thread safety
     - _Requirements: 11.2_
-  - [ ]* 14.3 Write property tests for Graph correctness
+  - [x]* 14.3 Write property tests for Graph correctness
     - **Property 15: Dijkstra Rejects Negative Weights**
     - **Property 16: GetNeighbors Returns Independent Snapshot**
     - **Validates: Requirements 11.1, 11.2**
@@ -183,7 +183,7 @@
     - Replace unrecoverable text with `// TODO: restore original comment`
     - Save as UTF-8 with BOM (for .pas) or UTF-8 (for .md)
     - _Requirements: 12.1, 12.2, 12.3_
-  - [ ]* 15.2 Write property test for encoding fix
+  - [x]* 15.2 Write property test for encoding fix
     - **Property 17: Encoding Fix Produces Valid UTF-8**
     - **Validates: Requirements 12.2**
 
@@ -211,7 +211,7 @@
     - Replace all `ShowMessage` calls with notification interface calls
     - Fall back to EventBus status event when no notification interface injected
     - _Requirements: 14.1, 14.2, 14.3_
-  - [ ]* 17.3 Write property test for settings error routing
+  - [x]* 17.3 Write property test for settings error routing
     - **Property 20: Settings Error Routing**
     - **Validates: Requirements 14.2**
 
@@ -226,7 +226,7 @@
     - Subscribe to `sekCommandStateChanged`
     - Find menu item by command ID and update Enabled/Visible properties
     - _Requirements: 15.2_
-  - [ ]* 18.4 Write property tests for menu state refresh
+  - [x]* 18.4 Write property tests for menu state refresh
     - **Property 21: Command State Change Event**
     - **Property 22: Menu Item Reflects State**
     - **Validates: Requirements 15.1, 15.2**
