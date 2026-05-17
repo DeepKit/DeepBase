@@ -1,0 +1,30 @@
+// Minimal resource file for DeepBase CLI tool.
+// Provides only version metadata; no MAINICON (CLI uses console).
+
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK 0x3FL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "DeepBase"
+            VALUE "FileDescription", "DeepBase CLI"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "DeepBase"
+            VALUE "OriginalFilename", "DeepBase.exe"
+            VALUE "ProductName", "DeepBase"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1252
+    END
+END
