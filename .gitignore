@@ -37,6 +37,18 @@ coverage/
 *.log
 *.bak
 *.orig
+_tmp_*
+**/_tmp_*
+
+# AutoFix / 编译 / 测试运行产物（手工排查时会写入仓库根，但永远不应入库）
+compile_output.txt
+build_output.txt
+compile_log.txt
+TestResults/*.xml
+TestResults/*.txt
+TestResults/_*/
+TestResults/autofix-*/
+Tests/test_results.xml
 
 # 操作系统文件
 .DS_Store
