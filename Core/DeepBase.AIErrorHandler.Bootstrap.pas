@@ -14,8 +14,10 @@
     - No MessageDlg (won't block test runners / CI)
     - Fatal exceptions cause ExitCode := 1; Halt(1)
 
-  Coexists with TAutoFixErrorRecorderVCL.HookApplication: TAIErrorHandler.Install
-  saves the previous Application.OnException and chains to it after handling.
+  Coexists with TAutoFixVclHook.Install (VCL/DeepBase.AutoFix.VclHook.pas):
+  TAIErrorHandler.Install saves the previous Application.OnException and
+  chains to it after handling, so the AutoFix hook still receives the
+  exception when both are installed.
   ============================================================================ }
 
 unit DeepBase.AIErrorHandler.Bootstrap;

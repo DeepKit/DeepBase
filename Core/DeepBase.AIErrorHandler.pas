@@ -288,7 +288,7 @@ begin
   try
     Handle(E);
   finally
-    // Chain to any pre-existing handler (e.g. TAutoFixErrorRecorderVCL)
+    // Chain to any pre-existing handler (e.g. TAutoFixVclHook)
     // so other consumers still receive the exception.
     if Assigned(FOldAppException) then
     begin
