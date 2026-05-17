@@ -196,6 +196,10 @@ uses
   Test.DeepBase.Config.PBT in 'Test.DeepBase.Config.PBT.pas',
   Test.DeepBase.DB.ConnectionPool.PBT in 'Test.DeepBase.DB.ConnectionPool.PBT.pas',
   Test.DeepBase.DB.Upsert.PBT in 'Test.DeepBase.DB.Upsert.PBT.pas',
+  // P0/P1/P2 PBT additions (deepbase-bug-fixes-p0p1p2)
+  Test.DeepBase.Net.Streaming.PBT in 'Test.DeepBase.Net.Streaming.PBT.pas',
+  Test.DeepBase.Browser.ResponseWaiter.PBT in 'Test.DeepBase.Browser.ResponseWaiter.PBT.pas',
+  Test.DeepBase.DeepFlow.PBT in 'Test.DeepBase.DeepFlow.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units

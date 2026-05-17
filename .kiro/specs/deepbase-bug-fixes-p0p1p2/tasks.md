@@ -66,7 +66,7 @@
     - Parse each SSE `data:` line as it arrives via callback
     - Rename old buffered method to `SendBuffered` with `deprecated` directive
     - _Requirements: 3.2, 3.6_
-  - [ ]* 4.4 Write property tests for streaming transport
+  - [x]* 4.4 Write property tests for streaming transport
     - **Property 3: Streaming Chunk Delivery**
     - **Property 4: Streaming Cancellation**
     - **Property 5: Streaming FirstTokenMs**
@@ -118,7 +118,7 @@
     - Add waiter ID field to postMessage payload for multiplexing
     - Dispatch messages to correct waiter by ID
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
-  - [ ]* 9.2 Write property tests for ResponseWaiter
+  - [x]* 9.2 Write property tests for ResponseWaiter
     - **Property 9: ResponseWaiter Message Parsing**
     - **Property 10: ResponseWaiter Multi-Waiter Isolation**
     - **Validates: Requirements 7.1, 7.2, 7.4**
@@ -198,7 +198,7 @@
     - Use binary search to find insertion point (O(log N))
     - Maintain descending priority order
     - _Requirements: 13.3_
-  - [ ]* 16.3 Write property tests for DeepFlow
+  - [x]* 16.3 Write property tests for DeepFlow
     - **Property 18: DeepFlow Pause/Resume Round-Trip**
     - **Property 19: DeepFlow Priority Queue Sort Invariant**
     - **Validates: Requirements 13.1, 13.2, 13.3**

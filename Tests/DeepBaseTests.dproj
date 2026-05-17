@@ -175,6 +175,9 @@
         <DCCReference Include="Test.DeepBase.Config.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.DB.ConnectionPool.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.DB.Upsert.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Net.Streaming.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Browser.ResponseWaiter.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DeepFlow.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
