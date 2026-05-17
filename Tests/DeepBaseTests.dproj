@@ -148,6 +148,7 @@
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.StackWalker.pas"/>
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas"/>
         <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas"/>
+        <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.ExitCodes.pas"/>
         <DCCReference Include="..\Core\DeepBase.Security.SecretStore.pas"/>
         <DCCReference Include="Test.DeepBase.LLM.Schema.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.Security.SecretStore.pas"/>

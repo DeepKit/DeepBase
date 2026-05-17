@@ -166,6 +166,7 @@ uses
   Test.DeepBase.AutoFix.StackWalker in 'AutoFix\Test.DeepBase.AutoFix.StackWalker.pas',
   Test.DeepBase.AutoFix.HealthSignal in 'AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas',
   Test.DeepBase.AutoFix.ScenarioRunner in 'AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas',
+  Test.DeepBase.AutoFix.ExitCodes in 'AutoFix\Test.DeepBase.AutoFix.ExitCodes.pas',
   // P0/P1/P2 bug-fix property tests (deepbase-bug-fixes-p0p1p2)
   Test.DeepBase.LLM.Schema.PBT in 'Test.DeepBase.LLM.Schema.PBT.pas',
   Test.DeepBase.Security.SecretStore in 'Test.DeepBase.Security.SecretStore.pas',

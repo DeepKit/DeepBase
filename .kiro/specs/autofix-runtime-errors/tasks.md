@@ -330,14 +330,14 @@
     - 编译门禁：`cmd /c compile_test.bat` 与 `cmd /c rebuild_test.bat`（如存在）均返回 0
     - _Requirements: 14.4_
 
-  - [ ]* 7.3 写跨模块属性测试 - 退出码与错误状态一致性
+  - [x]* 7.3 写跨模块属性测试 - 退出码与错误状态一致性
     - 创建 `Tests/AutoFix/Test.DeepBase.AutoFix.ExitCodes.pas`
     - **Property 5: 退出码与错误状态一致性**
     - 这个属性需要 spawn 真实子进程；在测试中调用 `CreateProcess` 启动测试用 EXE（用 `Tests/AutoFix/Fixtures/AutoFixHarness.dpr` 编译而成），传不同 scenario 触发 0/1/2 三种路径，断言 ExitCode 符合预期
     - ≥ 100 次随机组合（场景列表、是否触发 fatal、TotalErrors）
     - **Validates: Requirements 2.3, 4.3, 11.2**
 
-  - [ ]* 7.4 写跨模块属性测试 - fatal 路径完整性
+  - [x]* 7.4 写跨模块属性测试 - fatal 路径完整性
     - 同测试单元
     - **Property 6: Fatal 路径完整性**
     - ≥ 100 次：fixture EXE 中触发不同 fatal 异常类，子进程退出后解析 exit-reason.json 断言 10 个字段齐全
