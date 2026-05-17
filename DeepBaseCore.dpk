@@ -86,9 +86,11 @@ contains
   DeepBase.TrayIcon in 'Core\DeepBase.TrayIcon.pas',
   DeepBase.Export.PDF in 'Core\DeepBase.Export.PDF.pas',
   DeepBase.Export.DOCX in 'Core\DeepBase.Export.DOCX.pas',
+  DeepBase.AutoFix.StackWalker in 'Core\DeepBase.AutoFix.StackWalker.pas',
   DeepBase.AutoFix.ErrorRecorder in 'Core\DeepBase.AutoFix.ErrorRecorder.pas',
   DeepBase.AutoFix.ScenarioRunner in 'Core\DeepBase.AutoFix.ScenarioRunner.pas',
   DeepBase.AutoFix.SelfTerminator in 'Core\DeepBase.AutoFix.SelfTerminator.pas',
-  DeepBase.AutoFix.HealthSignal in 'Core\DeepBase.AutoFix.HealthSignal.pas';
+  DeepBase.AutoFix.HealthSignal in 'Core\DeepBase.AutoFix.HealthSignal.pas',
+  DeepBase.AutoFix in 'Core\DeepBase.AutoFix.pas';
 
 end.

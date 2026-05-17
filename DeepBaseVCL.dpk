@@ -68,6 +68,6 @@ contains
   DeepBase.VCL.DeepShell.Governance in 'VCL\DeepBase.VCL.DeepShell.Governance.pas',
   DeepBase.VCL.DeepShell.MainForm in 'VCL\DeepBase.VCL.DeepShell.MainForm.pas',
   DeepBase.VCL.DeepShell in 'VCL\DeepBase.VCL.DeepShell.pas',
-  DeepBase.AutoFix.ErrorRecorder.VCL in 'VCL\DeepBase.AutoFix.ErrorRecorder.VCL.pas';
+  DeepBase.AutoFix.VclHook in 'VCL\DeepBase.AutoFix.VclHook.pas';
 
 end.

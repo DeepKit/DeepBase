@@ -5,16 +5,16 @@
   Only active when --autofix-mode is on the command line.
 
   Captures:
-    L1: Application.OnException (VCL main thread)
+    L1: Application.OnException (VCL main thread)  -- via DeepBase.AutoFix.VclHook
     L2: System.ExceptProc (global unhandled, all threads)
-    L3: SafeRun wrapper (DeepBase managed threads)
+    L3: SafeRun wrapper (DeepBase managed threads) -- via RecordFromSafeRun
 
   All handlers chain-call the previous handler after recording.
 
   Usage:
-    TAutoFixErrorRecorder.Install;  // one line in .dpr
+    TAutoFixErrorRecorder.Install;  // one line in .dpr (or AutoFix.Install facade)
 
-  See: docs/DeepBase.AutoFix-AI自动修复运行时错误方案.md
+  See: design v2.0 §3.1 / §4.2
   ============================================================================ }
 
 unit DeepBase.AutoFix.ErrorRecorder;
@@ -25,11 +25,11 @@ uses
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
-  Winapi.Windows;
+  Winapi.Windows,
+  DeepBase.AutoFix.StackWalker;
 
 type
   TExceptProcType = procedure(ExceptObject: TObject; ExceptAddr: Pointer);
-  TAppExceptionEvent = procedure(Sender: TObject; E: Exception) of object;
 
   TAutoFixErrorRecorder = class
   private class var
@@ -38,6 +38,8 @@ type
     FRunId: string;
     FIteration: Integer;
     FOutputDir: string;
+    FCurrentScenario: string;
+    FTotalErrors: Integer;
     FLock: TCriticalSection;
     FFileStream: TStreamWriter;
     FOldExceptProc: TExceptProcType;
@@ -45,48 +47,53 @@ type
     class procedure ParseCommandLine;
     class procedure OpenLogFile;
     class procedure CloseLogFile;
-    class function BuildDedupKey(const AClass, AContext, AModule: string;
-      ARva: NativeUInt): string;
+    class function BuildDedupKey(const AClass, AModuleName: string;
+      ARva: NativeUInt; const AScenario: string): string;
     class function EscapeJson(const S: string): string;
+    class function FormatHex(AValue: NativeUInt): string;
+    class function NewRunId: string;
+    class function StackToJson(const AStack: TArray<TStackFrame>): string;
   public
     /// <summary>Install AutoFix error recording (core, cross-platform).
     /// Works for both VCL and FMX projects.
-    /// VCL projects can additionally call HookVclApplication for L1 capture.</summary>
+    /// VCL projects can additionally call TAutoFixVclHook.Install for L1 capture.</summary>
     class procedure Install;
     /// <summary>Record an exception. Public for adapters (VCL hook, SafeRun, etc).</summary>
     class procedure WriteRecord(E: Exception; AExceptAddr: Pointer;
-      const AContext, AThread: string);
+      const AContext, AThread: string;
+      const AParams: string = ''; const AState: string = '');
     /// <summary>Record an exception from SafeRun or thread wrapper.</summary>
     class procedure RecordFromSafeRun(E: Exception; const AContext: string);
-    /// <summary>Resolve an address to module name + RVA.</summary>
+    /// <summary>Resolve an address to module name + base + RVA.</summary>
     class function ResolveModule(AAddr: Pointer; out AModuleName: string;
-      out ARva: NativeUInt): Boolean;
+      out AModuleBase: NativeUInt; out ARva: NativeUInt): Boolean;
+    /// <summary>Internal hook used by AutoFixGlobalExceptHandler. Public so
+    /// the handler procedure (file scope) can chain the previous handler.</summary>
+    class property OldExceptProc: TExceptProcType read FOldExceptProc;
     /// <summary>True if autofix mode is active.</summary>
     class property Active: Boolean read FActive;
-    /// <summary>Current run ID.</summary>
+    /// <summary>Current run ID (UUID v4 string, lower-case, no braces).</summary>
     class property RunId: string read FRunId;
     /// <summary>Current iteration number.</summary>
     class property Iteration: Integer read FIteration;
     /// <summary>Output directory for JSONL files.</summary>
     class property OutputDir: string read FOutputDir;
+    /// <summary>Total number of errors recorded since Install (thread-safe).</summary>
+    class property TotalErrors: Integer read FTotalErrors;
+    /// <summary>Name of the currently executing scenario. Written by
+    /// ScenarioRunner; read into every error record.</summary>
+    class property CurrentScenario: string read FCurrentScenario write FCurrentScenario;
   end;
 
 implementation
 
 uses
-  System.IOUtils;
-
-const
-  GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = $00000004;
-  GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT = $00000002;
-
-function GetModuleHandleEx(dwFlags: DWORD; lpModuleName: LPCWSTR;
-  out phModule: HMODULE): BOOL; stdcall; external kernel32 name 'GetModuleHandleExW';
+  System.IOUtils, System.StrUtils;
 
 threadvar
   GInHandler: Boolean;
 
-{ Global ExceptProc handler — must be a standalone procedure }
+{ Global ExceptProc handler -- must be a standalone procedure }
 procedure AutoFixGlobalExceptHandler(ExceptObject: TObject; ExceptAddr: Pointer);
 begin
   if TAutoFixErrorRecorder.Active and (ExceptObject is Exception) then
@@ -95,8 +102,8 @@ begin
       'thread-' + TThread.Current.ThreadID.ToString);
 
   // Chain old handler
-  if Assigned(TAutoFixErrorRecorder.FOldExceptProc) then
-    TAutoFixErrorRecorder.FOldExceptProc(ExceptObject, ExceptAddr);
+  if Assigned(TAutoFixErrorRecorder.OldExceptProc) then
+    TAutoFixErrorRecorder.OldExceptProc(ExceptObject, ExceptAddr);
 end;
 
 { TAutoFixErrorRecorder }
@@ -109,10 +116,13 @@ begin
   ParseCommandLine;
   if not FActive then Exit;
 
+  if FRunId = '' then
+    FRunId := NewRunId;
+
   FLock := TCriticalSection.Create;
   OpenLogFile;
 
-  // L2: System.ExceptProc (chain old) — works for both VCL and FMX
+  // L2: System.ExceptProc (chain old) -- works for both VCL and FMX
   @FOldExceptProc := System.ExceptProc;
   System.ExceptProc := @AutoFixGlobalExceptHandler;
 end;
@@ -156,36 +166,32 @@ begin
   FreeAndNil(FFileStream);
 end;
 
-class function TAutoFixErrorRecorder.ResolveModule(AAddr: Pointer;
-  out AModuleName: string; out ARva: NativeUInt): Boolean;
+class function TAutoFixErrorRecorder.NewRunId: string;
 var
-  LModule: HMODULE;
-  LBuf: array[0..MAX_PATH] of Char;
+  LGuid: TGUID;
 begin
-  Result := False;
-  AModuleName := '<unknown>';
-  ARva := 0;
-
-  if AAddr = nil then Exit;
-
-  LModule := 0;
-  if not GetModuleHandleEx(
-    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS or
-    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-    LPCWSTR(AAddr), LModule) then Exit;
-
-  if LModule = 0 then Exit;
-
-  GetModuleFileName(LModule, LBuf, MAX_PATH);
-  AModuleName := ExtractFileName(LBuf);
-  ARva := NativeUInt(AAddr) - NativeUInt(LModule);
-  Result := True;
+  if CreateGUID(LGuid) <> S_OK then
+    Exit('00000000-0000-4000-8000-000000000000');
+  Result := GUIDToString(LGuid).Trim(['{', '}']).ToLower;
 end;
 
-class function TAutoFixErrorRecorder.BuildDedupKey(const AClass, AContext,
-  AModule: string; ARva: NativeUInt): string;
+class function TAutoFixErrorRecorder.FormatHex(AValue: NativeUInt): string;
 begin
-  Result := AClass + '|' + AContext + '|' + AModule + ':$' + IntToHex(ARva);
+  Result := '$' + IntToHex(AValue, SizeOf(NativeUInt) * 2);
+end;
+
+class function TAutoFixErrorRecorder.ResolveModule(AAddr: Pointer;
+  out AModuleName: string; out AModuleBase: NativeUInt;
+  out ARva: NativeUInt): Boolean;
+begin
+  Result := DeepBase.AutoFix.StackWalker.ResolveAddr(
+    AAddr, AModuleName, AModuleBase, ARva);
+end;
+
+class function TAutoFixErrorRecorder.BuildDedupKey(const AClass,
+  AModuleName: string; ARva: NativeUInt; const AScenario: string): string;
+begin
+  Result := AClass + '|' + AModuleName + ':' + FormatHex(ARva) + '|' + AScenario;
 end;
 
 class function TAutoFixErrorRecorder.EscapeJson(const S: string): string;
@@ -198,47 +204,100 @@ begin
   Result := Result.Replace(#9, '\t');
 end;
 
+class function TAutoFixErrorRecorder.StackToJson(
+  const AStack: TArray<TStackFrame>): string;
+begin
+  if Length(AStack) = 0 then Exit('[]');
+
+  var LBuilder := TStringBuilder.Create;
+  try
+    LBuilder.Append('[');
+    for var I := 0 to High(AStack) do
+    begin
+      if I > 0 then LBuilder.Append(',');
+      LBuilder
+        .Append('{"module_name":"').Append(EscapeJson(AStack[I].ModuleName))
+        .Append('","module_base":"').Append(FormatHex(AStack[I].ModuleBase))
+        .Append('","rva":"').Append(FormatHex(AStack[I].Rva))
+        .Append('"}');
+    end;
+    LBuilder.Append(']');
+    Result := LBuilder.ToString;
+  finally
+    LBuilder.Free;
+  end;
+end;
+
 class procedure TAutoFixErrorRecorder.WriteRecord(E: Exception;
-  AExceptAddr: Pointer; const AContext, AThread: string);
+  AExceptAddr: Pointer; const AContext, AThread: string;
+  const AParams: string; const AState: string);
 var
-  LModule: string;
-  LRva: NativeUInt;
-  LLevel, LDedupKey, LTs, LJson: string;
+  LModuleName: string;
+  LModuleBase, LRva: NativeUInt;
+  LStack: TArray<TStackFrame>;
+  LStackTruncated: Boolean;
 begin
   if GInHandler then Exit;
   GInHandler := True;
   try
     try
-      ResolveModule(AExceptAddr, LModule, LRva);
+      ResolveModule(AExceptAddr, LModuleName, LModuleBase, LRva);
 
-      if (E is EAccessViolation) or (E is EOutOfMemory) or (E is EExternalException) then
-        LLevel := 'fatal'
-      else
-        LLevel := 'error';
-
-      LDedupKey := BuildDedupKey(E.ClassName, AContext, LModule, LRva);
-      LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
-
-      LJson :=
-        '{"run_id":"' + EscapeJson(FRunId) + '"' +
-        ',"ts":"' + LTs + '"' +
-        ',"iteration":' + IntToStr(FIteration) +
-        ',"level":"' + LLevel + '"' +
-        ',"class":"' + EscapeJson(E.ClassName) + '"' +
-        ',"msg":"' + EscapeJson(Copy(E.Message, 1, 500)) + '"' +
-        ',"module":"' + EscapeJson(LModule) + '"' +
-        ',"rva":"$' + IntToHex(LRva) + '"' +
-        ',"context":"' + EscapeJson(AContext) + '"' +
-        ',"thread":"' + EscapeJson(AThread) + '"' +
-        ',"dedup_key":"' + EscapeJson(LDedupKey) + '"' +
-        '}';
-
-      FLock.Enter;
+      LStackTruncated := False;
+      LStack := nil;
       try
-        if FFileStream <> nil then
-          FFileStream.WriteLine(LJson);
+        // Skip 2: the handler proc + this method itself.
+        LStack := DeepBase.AutoFix.StackWalker.CaptureStack(2, 20, LStackTruncated);
+      except
+        LStack := nil;
+        LStackTruncated := False;
+      end;
+
+      var LLevel: string :=
+        if (E is EAccessViolation) or (E is EOutOfMemory) or
+           (E is EStackOverflow) or (E is EExternalException)
+        then 'fatal' else 'error';
+
+      var LScenario := FCurrentScenario;
+      var LDedupKey := BuildDedupKey(E.ClassName, LModuleName, LRva, LScenario);
+      var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
+
+      var LBuilder := TStringBuilder.Create;
+      try
+        LBuilder
+          .Append('{"run_id":"').Append(EscapeJson(FRunId)).Append('"')
+          .Append(',"iteration":').Append(FIteration)
+          .Append(',"ts":"').Append(LTs).Append('"')
+          .Append(',"level":"').Append(LLevel).Append('"')
+          .Append(',"class":"').Append(EscapeJson(E.ClassName)).Append('"')
+          .Append(',"msg":"').Append(EscapeJson(Copy(E.Message, 1, 500))).Append('"')
+          .Append(',"module_name":"').Append(EscapeJson(LModuleName)).Append('"')
+          .Append(',"module_base":"').Append(FormatHex(LModuleBase)).Append('"')
+          .Append(',"rva":"').Append(FormatHex(LRva)).Append('"')
+          .Append(',"stack":').Append(StackToJson(LStack))
+          .Append(',"stack_truncated":')
+            .Append(IfThen(LStackTruncated, 'true', 'false'))
+          .Append(',"context":"').Append(EscapeJson(AContext)).Append('"')
+          .Append(',"params":"').Append(EscapeJson(AParams)).Append('"')
+          .Append(',"state":"').Append(EscapeJson(AState)).Append('"')
+          .Append(',"thread":"').Append(EscapeJson(AThread)).Append('"')
+          .Append(',"scenario":"').Append(EscapeJson(LScenario)).Append('"')
+          .Append(',"dedup_key":"').Append(EscapeJson(LDedupKey)).Append('"')
+          .Append('}');
+
+        var LJson := LBuilder.ToString;
+
+        FLock.Enter;
+        try
+          if FFileStream <> nil then
+            FFileStream.WriteLine(LJson);
+        finally
+          FLock.Leave;
+        end;
+
+        TInterlocked.Increment(FTotalErrors);
       finally
-        FLock.Leave;
+        LBuilder.Free;
       end;
     except
       OutputDebugString(PChar('AutoFix.ErrorRecorder: write failed'));
