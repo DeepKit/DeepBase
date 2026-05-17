@@ -52,6 +52,12 @@ type
     ShowTechnicalDetails: Boolean;
     /// <summary>Log file path for auto-fix entries (empty = use DeepBase.Logging)</summary>
     LogPath: string;
+    /// <summary>
+    /// Silent mode for tests / non-interactive runs (default False).
+    /// When True: no MessageDlg is shown for elAIAnalyze and elFatal levels;
+    /// elFatal uses ExitCode := 1; Halt(1) instead of Application.Terminate.
+    /// </summary>
+    SilentMode: Boolean;
     class function Default: TAIErrorConfig; static;
   end;
 
@@ -68,6 +74,7 @@ type
     class var FCache: TDictionary<string, string>;
     class var FInstalled: Boolean;
     class var FAICallback: TAIAnalysisCallback;
+    class var FOldAppException: TExceptionEvent;
     class function ClassifyError(E: Exception): TErrorLevel;
     class function BuildPrompt(E: Exception; const AContext, AStack: string): string;
     class function CallAI(const APrompt: string): string;
@@ -98,6 +105,7 @@ implementation
 uses
   System.IOUtils,
   System.DateUtils,
+  System.UITypes,
   Vcl.Dialogs,
   DeepBase.Logging;
 
@@ -110,6 +118,7 @@ begin
   Result.AITimeoutMs := 8000;
   Result.ShowTechnicalDetails := False;
   Result.LogPath := '';
+  Result.SilentMode := False;
 end;
 
 { TAIErrorHandler }
@@ -210,7 +219,7 @@ begin
     elAutoFix:
     begin
       // Log silently, don't bother user
-      DeepBase.Logging.Log(ltWarning,
+      Logger.Warn(
         Format('AutoFix [%s] %s: %s', [AContext, E.ClassName, E.Message]),
         'AIErrorHandler');
     end;
@@ -241,11 +250,12 @@ begin
         LUserMsg := LUserMsg + sLineBreak + sLineBreak +
           '[' + E.ClassName + ' at ' + LStack + ']';
 
-      // Show to user
-      MessageDlg(LUserMsg, mtWarning, [mbOK], 0);
+      // Show to user (suppressed in SilentMode for tests / non-interactive runs)
+      if not FConfig.SilentMode then
+        MessageDlg(LUserMsg, mtWarning, [mbOK], 0);
 
       // Log
-      DeepBase.Logging.Log(ltError,
+      Logger.Error(
         Format('[%s] %s: %s | AI: %s', [AContext, E.ClassName, E.Message,
           Copy(LAIResponse, 1, 200)]),
         'AIErrorHandler');
@@ -253,19 +263,42 @@ begin
 
     elFatal:
     begin
-      DeepBase.Logging.Log(ltError,
+      Logger.Fatal(
         Format('FATAL [%s] %s: %s', [AContext, E.ClassName, E.Message]),
         'AIErrorHandler');
-      MessageDlg('程序遇到严重错误，即将关闭。' + sLineBreak +
-        E.Message, mtError, [mbOK], 0);
-      Application.Terminate;
+      if FConfig.SilentMode then
+      begin
+        // Non-interactive path (e.g. test runners): no dialog,
+        // exit with non-zero code so CI / test harness can detect failure.
+        ExitCode := 1;
+        Halt(1);
+      end
+      else
+      begin
+        MessageDlg('程序遇到严重错误，即将关闭。' + sLineBreak +
+          E.Message, mtError, [mbOK], 0);
+        Application.Terminate;
+      end;
     end;
   end;
 end;
 
 class procedure TAIErrorHandler.DoApplicationException(Sender: TObject; E: Exception);
 begin
-  Handle(E);
+  try
+    Handle(E);
+  finally
+    // Chain to any pre-existing handler (e.g. TAutoFixErrorRecorderVCL)
+    // so other consumers still receive the exception.
+    if Assigned(FOldAppException) then
+    begin
+      try
+        FOldAppException(Sender, E);
+      except
+        // Never let chained handler crash AIErrorHandler itself.
+      end;
+    end;
+  end;
 end;
 
 class procedure TAIErrorHandler.Install;
@@ -279,6 +312,8 @@ begin
   FConfig := AConfig;
   if FCache = nil then
     FCache := TDictionary<string, string>.Create;
+  // Save existing handler so we can chain (do not overwrite peers like AutoFix).
+  FOldAppException := Application.OnException;
   Application.OnException := DoApplicationException;
   FInstalled := True;
 end;
@@ -310,6 +345,7 @@ initialization
   TAIErrorHandler.FCache := nil;
   TAIErrorHandler.FInstalled := False;
   TAIErrorHandler.FAICallback := nil;
+  TAIErrorHandler.FOldAppException := nil;
 
 finalization
   FreeAndNil(TAIErrorHandler.FCache);

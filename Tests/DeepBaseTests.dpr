@@ -167,6 +167,10 @@ uses
   Test.DeepBase.AutoFix.HealthSignal in 'AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas',
   Test.DeepBase.AutoFix.ScenarioRunner in 'AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas',
   Test.DeepBase.AutoFix.ExitCodes in 'AutoFix\Test.DeepBase.AutoFix.ExitCodes.pas',
+  // AIErrorHandler rollout (aierrorhandler-rollout)
+  DeepBase.AIErrorHandler in '..\Core\DeepBase.AIErrorHandler.pas',
+  DeepBase.AIErrorHandler.LLMBridge in '..\Core\DeepBase.AIErrorHandler.LLMBridge.pas',
+  DeepBase.AIErrorHandler.Bootstrap in '..\Core\DeepBase.AIErrorHandler.Bootstrap.pas',
   // P0/P1/P2 bug-fix property tests (deepbase-bug-fixes-p0p1p2)
   Test.DeepBase.LLM.Schema.PBT in 'Test.DeepBase.LLM.Schema.PBT.pas',
   Test.DeepBase.Security.SecretStore in 'Test.DeepBase.Security.SecretStore.pas',
