@@ -204,6 +204,18 @@ uses
   Test.DeepBase.IntentClarification.Concurrent.PBT in 'Test.DeepBase.IntentClarification.Concurrent.PBT.pas',
   Test.DeepBase.DeepShell.EventBus.PBT in 'Test.DeepBase.DeepShell.EventBus.PBT.pas',
   Test.DeepBase.DeepShell.ThemeDispatch.PBT in 'Test.DeepBase.DeepShell.ThemeDispatch.PBT.pas',
+  // Round-2 last 3 PBT batches (deepbase-round2-fixes - 19.17 / 20.9 / 21.9)
+  DeepBase.Governance.Types in '..\Governance\DeepBase.Governance.Types.pas',
+  DeepBase.Governance.Interfaces in '..\Governance\DeepBase.Governance.Interfaces.pas',
+  DeepBase.Governance.Model in '..\Governance\DeepBase.Governance.Model.pas',
+  DeepBase.Governance.JsonLogic in '..\Governance\DeepBase.Governance.JsonLogic.pas',
+  DeepBase.Governance.KeyResolver in '..\Governance\DeepBase.Governance.KeyResolver.pas',
+  DeepBase.Governance.RouteResolver in '..\Governance\DeepBase.Governance.RouteResolver.pas',
+  DeepBase.Governance.ActionGrid in '..\Governance\DeepBase.Governance.ActionGrid.pas',
+  DeepBase.Governance.Validation in '..\Governance\DeepBase.Governance.Validation.pas',
+  Test.DeepBase.IntentClarification.Round2.PBT in 'Test.DeepBase.IntentClarification.Round2.PBT.pas',
+  Test.DeepBase.Governance.PBT in 'Test.DeepBase.Governance.PBT.pas',
+  Test.DeepBase.Inference.PBT in 'Test.DeepBase.Inference.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units

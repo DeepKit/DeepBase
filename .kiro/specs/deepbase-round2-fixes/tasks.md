@@ -339,7 +339,7 @@
   - [x] 19.16 ICEngine 记录 turn 时填充 Answer + AssistantOutput
     - 修改 `Features/DeepBase.IntentClarification.Engine.pas`
     - _Requirements: 12.21_
-  - [ ]* 19.17 编写属性测试：IC 并发 + FromJson + FindProvider 降级 + 原子计数器 + Turn 完整性
+  - [x]* 19.17 编写属性测试：IC 并发 + FromJson + FindProvider 降级 + 原子计数器 + Turn 完整性
     - **Property 26: IC Provider 会话状态隔离**
     - **Property 27: IC Types.FromJson 错误处理**
     - **Property 28: IC FindProvider 降级**
@@ -372,7 +372,7 @@
   - [x] 20.8 DBInitWizard.ValidateStep 验证路径可写
     - 修改 `VCL/DeepBase.VCL.DBInitWizard.pas`
     - _Requirements: 13.8_
-  - [ ]* 20.9 编写属性测试：RouteResolver 无 Stale Fallback + ActionGrid Noop + ValidationEngine 缓存
+  - [x]* 20.9 编写属性测试：RouteResolver 无 Stale Fallback + ActionGrid Noop + ValidationEngine 缓存
     - **Property 33: Governance RouteResolver 无 Stale Fallback**
     - **Property 34: Governance ActionGrid Noop Without Bridge**
     - **Property 35: Governance ValidationEngine 缓存一致性**
@@ -403,7 +403,7 @@
   - [x] 21.8 IoC.RegisterAll 异常时调用 LRuntime.Shutdown
     - 修改 `Features/DeepBase.Inference.IoC.pas`
     - _Requirements: 14.9_
-  - [ ]* 21.9 编写属性测试：Runtime 重初始化 + Shape 验证 + UTF-8 保真 + IsReady
+  - [x]* 21.9 编写属性测试：Runtime 重初始化 + Shape 验证 + UTF-8 保真 + IsReady
     - **Property 36: Inference Runtime 重初始化 Round-Trip**
     - **Property 37: Inference Session Shape 验证**
     - **Property 38: Inference Metadata UTF-8 保真**

@@ -181,6 +181,17 @@
         <DCCReference Include="Test.DeepBase.IntentClarification.Concurrent.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.DeepShell.EventBus.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.DeepShell.ThemeDispatch.PBT.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.Types.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.Interfaces.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.Model.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.JsonLogic.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.KeyResolver.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.RouteResolver.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.ActionGrid.pas"/>
+        <DCCReference Include="..\Governance\DeepBase.Governance.Validation.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.Round2.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Governance.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Inference.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
