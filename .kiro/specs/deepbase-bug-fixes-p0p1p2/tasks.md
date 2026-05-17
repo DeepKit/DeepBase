@@ -89,7 +89,7 @@
     - Wrap FHistory and FTokenUsage access with lock
     - Add `FProvidersFrozen: Boolean` - reject RegisterProvider after first SubmitInput
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
-  - [ ]* 6.2 Write property test for concurrent turn serialization
+  - [x]* 6.2 Write property test for concurrent turn serialization
     - **Property 7: IC Engine Concurrent Turn Serialization**
     - **Validates: Requirements 5.1, 5.2, 5.3**
 
@@ -139,7 +139,7 @@
     - Modify `DispatchInline` to call FOnDispatchError on handler exception instead of swallowing
     - Update `IShellEventBus` interface in `VCL/DeepBase.VCL.DeepShell.Intf.pas`
     - _Requirements: 9.1, 9.2, 9.3_
-  - [ ]* 11.2 Write property tests for EventBus lifecycle
+  - [x]* 11.2 Write property tests for EventBus lifecycle
     - **Property 11: EventBus Shutdown Drains Queue**
     - **Property 12: EventBus Rejects After Shutdown**
     - **Property 13: EventBus Error Callback**
@@ -154,7 +154,7 @@
   - [x] 12.2 Apply same pattern to `VCL/DeepBase.VCL.DeepShell.Localization.pas` SetLocale
     - Same thread-check and dispatch logic as Theme
     - _Requirements: 10.1, 10.2_
-  - [ ]* 12.3 Write property test for thread-correct dispatch
+  - [x]* 12.3 Write property test for thread-correct dispatch
     - **Property 14: Theme/Locale Thread-Correct Dispatch**
     - **Validates: Requirements 10.1, 10.2**
 

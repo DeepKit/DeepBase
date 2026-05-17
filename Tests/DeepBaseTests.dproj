@@ -178,6 +178,9 @@
         <DCCReference Include="Test.DeepBase.Net.Streaming.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.Browser.ResponseWaiter.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.DeepFlow.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.Concurrent.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DeepShell.EventBus.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.DeepShell.ThemeDispatch.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

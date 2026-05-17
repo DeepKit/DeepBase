@@ -200,6 +200,10 @@ uses
   Test.DeepBase.Net.Streaming.PBT in 'Test.DeepBase.Net.Streaming.PBT.pas',
   Test.DeepBase.Browser.ResponseWaiter.PBT in 'Test.DeepBase.Browser.ResponseWaiter.PBT.pas',
   Test.DeepBase.DeepFlow.PBT in 'Test.DeepBase.DeepFlow.PBT.pas',
+  // P0/P1/P2 PBT - last 3 sub-tasks (deepbase-bug-fixes-p0p1p2 - 6.2/11.2/12.3)
+  Test.DeepBase.IntentClarification.Concurrent.PBT in 'Test.DeepBase.IntentClarification.Concurrent.PBT.pas',
+  Test.DeepBase.DeepShell.EventBus.PBT in 'Test.DeepBase.DeepShell.EventBus.PBT.pas',
+  Test.DeepBase.DeepShell.ThemeDispatch.PBT in 'Test.DeepBase.DeepShell.ThemeDispatch.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
