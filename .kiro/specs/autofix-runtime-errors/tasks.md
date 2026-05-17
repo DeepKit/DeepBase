@@ -142,7 +142,7 @@
     - 多帧入口：`-Frames` 时输入数组，输出同长度结果数组
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ]* 3.3 写 PowerShell 属性测试 - .map 解析正确性
+  - [x]* 3.3 写 PowerShell 属性测试 - .map 解析正确性
     - 创建 `Tests/AutoFix/map-parser.Tests.ps1` (Pester 5)
     - **Property 10: .map 解析正确性 + 回退 + RVA 输入不变性**
     - 标记：`# Feature: autofix-runtime-errors, Property 10: .map 解析正确性`
@@ -157,7 +157,7 @@
     - 排序：level 优先级 → stack_depth → count（design §3.8.8）
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ]* 3.5 写 PowerShell 属性测试 - dedup 分组完整性
+  - [x]* 3.5 写 PowerShell 属性测试 - dedup 分组完整性
     - 创建 `Tests/AutoFix/dedup.Tests.ps1`
     - **Property 9: dedup 分组完整性与排序**
     - ≥ 100 次随机错误列表，断言 `Σ count == |E|`、key 唯一、排序不变量、first/last_ts 正确
@@ -173,7 +173,7 @@
     - 退出码：编译成功 0，编译失败 1，环境失败 102
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ]* 3.7 写 PowerShell 属性测试 - 编译错误解析
+  - [x]* 3.7 写 PowerShell 属性测试 - 编译错误解析
     - 创建 `Tests/AutoFix/compiler.Tests.ps1`
     - **Property 13: 编译错误解析结构化**
     - ≥ 100 次随机生成的错误行（合法格式 + 噪音行），断言解析仅提取合法行，字段类型/取值正确
@@ -200,7 +200,7 @@
     - 默认 BlockedPaths 内置（design §3.8.6）
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ]* 3.10 写 PowerShell 属性测试 - diff-guard 边界
+  - [x]* 3.10 写 PowerShell 属性测试 - diff-guard 边界
     - 创建 `Tests/AutoFix/diff-guard.Tests.ps1`
     - **Property 11: diff-guard 边界守卫**
     - ≥ 100 次随机生成的 diff（随机文件路径 + 随机行数）+ 随机 allowed/blocked 配置，断言通过/拒绝判定与定义一致；拒绝时无副作用
@@ -216,7 +216,7 @@
     - `clear`：删除整个 .fix-cache/ 目录
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-  - [ ]* 3.12 写 PowerShell 属性测试 - Fix_Cache 失败即作废
+  - [x]* 3.12 写 PowerShell 属性测试 - Fix_Cache 失败即作废
     - 创建 `Tests/AutoFix/fix-cache.Tests.ps1`
     - **Property 12: Fix_Cache 失败即作废**
     - ≥ 100 次：随机 store + 随机修改其中一个 preimage 文件 → 断言 lookup miss + 条目消失；伪造 created 8 天前 → 断言 miss
@@ -284,19 +284,19 @@
     - 退出码按 design §4.8 错误码表
     - _Requirements: 5.1, 5.2, 6.1, 7.2, 7.3, 7.4, 8.3, 9.1, 10.4, 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [ ]* 5.5 写 PowerShell 属性测试 - max-iter 与振荡终止
+  - [x]* 5.5 写 PowerShell 属性测试 - max-iter 与振荡终止
     - 创建 `Tests/AutoFix/autofix-loop.Tests.ps1`
     - **Property 14: max-iter 不变量与振荡终止**
     - mock runner / ai-call / compiler 为可控函数；≥ 100 次：随机 max_iter ∈ [1, 30] + 随机 dedup_key 出现模式 → 断言迭代不超额；强制让某 key 反复 ≥ 3 次 → 断言被标记 unfixable
     - **Validates: Requirements 11.3, 11.4**
 
-  - [ ]* 5.6 写 PowerShell 属性测试 - iteration-summary 完整性
+  - [x]* 5.6 写 PowerShell 属性测试 - iteration-summary 完整性
     - 同测试文件
     - **Property 15: iteration-summary 完整性**
     - ≥ 100 次随机循环结果，断言 jsonl 行数 == 已完成迭代次数；每行字段齐全；iteration 单调递增无缺号
     - **Validates: Requirements 11.5**
 
-  - [ ]* 5.7 写 PowerShell 属性测试 - 严格模式失败传播
+  - [x]* 5.7 写 PowerShell 属性测试 - 严格模式失败传播
     - 创建 `Tests/AutoFix/strict-mode.Tests.ps1`
     - **Property 16: PowerShell 严格模式失败传播**
     - ≥ 100 次：在每个 ps1 内插入一条故意失败的命令，断言脚本退出码非零
@@ -355,7 +355,7 @@
     - ≥ 100 次随机注册 + 命令行序列 + 抛/不抛异常的 callback；断言执行顺序与终态记录一致
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
-  - [ ]* 7.7 写属性测试 - WER 保底
+  - [x]* 7.7 写属性测试 - WER 保底
     - 创建 `Tests/AutoFix/wer-collector.Tests.ps1`
     - **Property 17: WER/合成记录保底**
     - mock CrashDumps 目录与 cdb.exe；≥ 100 次：随机有/无 dmp + 随机 exit_code → 断言 jsonl 至少一条合成记录且字段正确
