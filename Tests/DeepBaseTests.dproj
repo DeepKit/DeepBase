@@ -161,6 +161,14 @@
         <DCCReference Include="Test.DeepBase.Crypto.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.SQL.Security.PBT.pas"/>
         <DCCReference Include="Test.DeepBase.Commerce.Adapter.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.StateMachine.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Resilience.CircuitBreaker.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.EventBus.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Cache.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Commerce.Enum.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Browser.Contract.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.IntentClarification.SignalDetector.PBT.pas"/>
+        <DCCReference Include="Test.DeepBase.Speech.Performance.PBT.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

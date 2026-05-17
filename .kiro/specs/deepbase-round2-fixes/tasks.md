@@ -14,7 +14,7 @@
   - [x] 1.2 在 IsInState 中添加深度计数器（CMaxHierarchyDepth = 64），超限返回 False
     - 修改 `Core/DeepBase.StateMachine.pas`
     - _Requirements: 1.5_
-  - [ ]* 1.3 编写属性测试：StateMachine 可重入不死锁 + 循环检测终止
+  - [x]* 1.3 编写属性测试：StateMachine 可重入不死锁 + 循环检测终止
     - **Property 1: StateMachine 可重入锁不死锁**
     - **Property 2: StateMachine 循环检测终止**
     - **Validates: Requirements 1.1, 1.5**
@@ -32,7 +32,7 @@
   - [x] 3.1 重构 Execute 使 AllowRequest + RecordSuccess/Failure 在同一锁内完成
     - 修改 `Core/DeepBase.Resilience.CircuitBreaker.pas`
     - _Requirements: 1.3_
-  - [ ]* 3.2 编写属性测试：CircuitBreaker 状态转换有效性
+  - [x]* 3.2 编写属性测试：CircuitBreaker 状态转换有效性
     - **Property 3: CircuitBreaker 状态转换有效性**
     - **Validates: Requirements 1.3**
 
@@ -196,7 +196,7 @@
   - [x] 14.5 Cache.Put 对已存在 key 不追加 FIFO
     - 修改 `Core/DeepBase.Cache.pas`
     - _Requirements: 4.1_
-  - [ ]* 14.6 编写属性测试：全局单例安全初始化 + Cache FIFO 无重复
+  - [x]* 14.6 编写属性测试：全局单例安全初始化 + Cache FIFO 无重复
     - **Property 4: 全局单例安全初始化**
     - **Property 25: Cache FIFO 无重复**
     - **Validates: Requirements 1.4, 4.1**
@@ -226,7 +226,7 @@
   - [x] 15.8 SDKGateway.Order.Metadata 使用 FreeAndNil + nil 检查
     - 修改 `Features/DeepBase.Commerce.SDKGateway.pas`
     - _Requirements: 8.4_
-  - [ ]* 15.9 编写属性测试：Enum 序列化 Round-Trip
+  - [x]* 15.9 编写属性测试：Enum 序列化 Round-Trip
     - **Property 22: Enum 序列化 Round-Trip**
     - **Validates: Requirements 8.3**
 
@@ -281,7 +281,7 @@
   - [x] 17.9 CDP.WaitForSelector 设置 FreeOnTerminate := True
     - 修改 `Features/DeepBase.Browser.CDP.pas`
     - _Requirements: 11.10_
-  - [ ]* 17.10 编写属性测试：ScriptStore 返回结构 + Selectors JSON 安全
+  - [x]* 17.10 编写属性测试：ScriptStore 返回结构 + Selectors JSON 安全
     - **Property 31: ScriptStore 返回结构契约**
     - **Property 32: Browser Selectors JSON 安全构造**
     - **Validates: Requirements 11.1, 11.2, 11.9**
@@ -432,7 +432,7 @@
   - [x] 22.7 DoQry.UniDbInsertReturningId 使用 prepared statement pool
     - 修改 `Persistence/DeepBase.DoQry.pas`
     - _Requirements: 15.4_
-  - [ ]* 22.8 编写属性测试：FFT 等价性 + 增量处理等价性 + PosEx 等价性
+  - [x]* 22.8 编写属性测试：FFT 等价性 + 增量处理等价性 + PosEx 等价性
     - **Property 40: MFCC FFT 等价性**
     - **Property 41: SpeechService 增量处理等价性**
     - **Property 42: SignalDetector PosEx 等价性**

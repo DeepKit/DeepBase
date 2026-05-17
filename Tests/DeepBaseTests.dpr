@@ -180,6 +180,15 @@ uses
   Test.DeepBase.Crypto.PBT in 'Test.DeepBase.Crypto.PBT.pas',
   Test.DeepBase.SQL.Security.PBT in 'Test.DeepBase.SQL.Security.PBT.pas',
   Test.DeepBase.Commerce.Adapter.PBT in 'Test.DeepBase.Commerce.Adapter.PBT.pas',
+  // Round-2 mid/low-difficulty PBT batch (deepbase-round2-fixes)
+  Test.DeepBase.StateMachine.PBT in 'Test.DeepBase.StateMachine.PBT.pas',
+  Test.DeepBase.Resilience.CircuitBreaker.PBT in 'Test.DeepBase.Resilience.CircuitBreaker.PBT.pas',
+  Test.DeepBase.EventBus.PBT in 'Test.DeepBase.EventBus.PBT.pas',
+  Test.DeepBase.Cache.PBT in 'Test.DeepBase.Cache.PBT.pas',
+  Test.DeepBase.Commerce.Enum.PBT in 'Test.DeepBase.Commerce.Enum.PBT.pas',
+  Test.DeepBase.Browser.Contract.PBT in 'Test.DeepBase.Browser.Contract.PBT.pas',
+  Test.DeepBase.IntentClarification.SignalDetector.PBT in 'Test.DeepBase.IntentClarification.SignalDetector.PBT.pas',
+  Test.DeepBase.Speech.Performance.PBT in 'Test.DeepBase.Speech.Performance.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
