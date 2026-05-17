@@ -92,21 +92,21 @@
     - 编译门禁：`cmd /c compile_test.bat` 返回 0
     - _Requirements: 14.1, 14.2_
 
-  - [ ]* 1.8 写 Pascal 属性测试 - ErrorRecorder JSONL 字段完整性
+  - [x]* 1.8 写 Pascal 属性测试 - ErrorRecorder JSONL 字段完整性
     - 创建 `Tests/AutoFix/Test.DeepBase.AutoFix.ErrorRecorder.pas`（DUnitX）
     - **Property 1: ErrorRecorder JSONL 字段完整性**
     - 标记：`// Feature: autofix-runtime-errors, Property 1: ErrorRecorder JSONL 字段完整性`
     - ≥ 100 次随机异常类（含派生）+ 随机消息（含特殊字符）+ 随机 context，触发 `WriteRecord`，解析最后一行 JSON 断言全部字段存在且类型/取值正确
     - **Validates: Requirements 1.1, 1.2, 1.6**
 
-  - [ ]* 1.9 写 Pascal 属性测试 - run_id UUID 与跨文件一致
+  - [x]* 1.9 写 Pascal 属性测试 - run_id UUID 与跨文件一致
     - 同测试单元
     - **Property 2: run_id UUID v4 + 跨文件一致**
     - ≥ 100 次模拟启动（清空 + 重新 Install），断言 RunId 是合法 UUID v4 形（`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`），且互不相同
     - 触发一条 WriteRecord、一次 Emit、一次 ScenarioRunner WriteStatus，解析所有文件 run_id 字段一致
     - **Validates: Requirements 1.3, 3.1, 3.2**
 
-  - [ ]* 1.10 写 Pascal 属性测试 - 栈 RVA 与截断
+  - [x]* 1.10 写 Pascal 属性测试 - 栈 RVA 与截断
     - 创建 `Tests/AutoFix/Test.DeepBase.AutoFix.StackWalker.pas`
     - **Property 3 + Property 4: 栈帧 RVA 正确 + 截断标志**
     - ≥ 100 次随机递归深度 D ∈ [1, 50]，触发异常并 capture，断言 `forall frame: GetModuleHandleEx(addr) == frame.module_name` 且 `len(stack) == min(D, 20)`，`truncated == (D > 20)`
@@ -343,13 +343,13 @@
     - ≥ 100 次：fixture EXE 中触发不同 fatal 异常类，子进程退出后解析 exit-reason.json 断言 10 个字段齐全
     - **Validates: Requirements 2.1, 2.2**
 
-  - [ ]* 7.5 写属性测试 - HealthSignal 字段与一致性
+  - [x]* 7.5 写属性测试 - HealthSignal 字段与一致性
     - 创建 `Tests/AutoFix/Test.DeepBase.AutoFix.HealthSignal.pas`
     - **Property 7: HealthSignal 字段与 RunId 一致性**
     - ≥ 100 次模拟 Emit，断言字段齐全 + run_id == ErrorRecorder.RunId
     - **Validates: Requirements 3.1**
 
-  - [ ]* 7.6 写属性测试 - ScenarioRunner 顺序与结果
+  - [x]* 7.6 写属性测试 - ScenarioRunner 顺序与结果
     - 创建 `Tests/AutoFix/Test.DeepBase.AutoFix.ScenarioRunner.pas`
     - **Property 8: ScenarioRunner 顺序与结果记录**
     - ≥ 100 次随机注册 + 命令行序列 + 抛/不抛异常的 callback；断言执行顺序与终态记录一致
@@ -361,7 +361,7 @@
     - mock CrashDumps 目录与 cdb.exe；≥ 100 次：随机有/无 dmp + 随机 exit_code → 断言 jsonl 至少一条合成记录且字段正确
     - **Validates: Requirements 13.1, 13.3**
 
-  - [ ]* 7.8 写属性测试 - Install 幂等与零开销
+  - [x]* 7.8 写属性测试 - Install 幂等与零开销
     - 在 `Test.DeepBase.AutoFix.ErrorRecorder.pas` 增加
     - **Property 18 + Property 19**
     - 18: ≥ 100 次重复 Install + RegisterScenario，断言 ExceptProc 仅替换一次 + 同名 scenario 仅最后一次有效

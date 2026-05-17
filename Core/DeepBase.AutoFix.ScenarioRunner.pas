@@ -48,6 +48,14 @@ type
     class procedure MarkCurrentFatal(const AClass: string);
     /// <summary>Name of the currently executing scenario (empty if none).</summary>
     class property CurrentScenario: string read FCurrentScenario;
+    /// <summary>Test scaffold: clears registered scenarios, sets the requested
+    /// list, and rebinds output dir / run_id from ErrorRecorder. Pair with
+    /// RunForTest in property tests.</summary>
+    class procedure ResetForTest(const ARequestedScenarios: TArray<string>);
+    /// <summary>Test scaffold: same iteration semantics as Run but never calls
+    /// Halt, so test runners survive. Returns the array of scenario names that
+    /// were actually invoked, in order.</summary>
+    class function RunForTest: TArray<string>;
   end;
 
 /// <summary>Shortcut to register a scenario.</summary>
@@ -218,6 +226,59 @@ end;
 procedure AutoFixRegisterScenario(const AName: string; AProc: TScenarioProc);
 begin
   TAutoFixScenarioRunner.RegisterScenario(AName, AProc);
+end;
+
+class procedure TAutoFixScenarioRunner.ResetForTest(
+  const ARequestedScenarios: TArray<string>);
+begin
+  if FScenarios = nil then
+    FScenarios := TDictionary<string, TScenarioProc>.Create
+  else
+    FScenarios.Clear;
+  FRequestedScenarios := ARequestedScenarios;
+  FCurrentScenario := '';
+  FOutputDir := TAutoFixErrorRecorder.OutputDir;
+  FRunId := TAutoFixErrorRecorder.RunId;
+  FInitialized := True;
+end;
+
+class function TAutoFixScenarioRunner.RunForTest: TArray<string>;
+begin
+  Result := nil;
+  if not TAutoFixErrorRecorder.Active then Exit;
+
+  for var LName in FRequestedScenarios do
+  begin
+    SetCurrentScenario(LName);
+    Result := Result + [LName];
+
+    if not FScenarios.ContainsKey(LName) then
+    begin
+      WriteStatus(LName, 'fail', 0, ',"error_class":"NotRegistered"' +
+        ',"error_msg":"scenario not registered"');
+      Continue;
+    end;
+
+    WriteStatus(LName, 'running');
+
+    var LSw := TStopwatch.StartNew;
+    try
+      FScenarios[LName]();
+      LSw.Stop;
+      WriteStatus(LName, 'pass', LSw.ElapsedMilliseconds);
+    except
+      on E: Exception do
+      begin
+        LSw.Stop;
+        var LExtra :=
+          ',"error_class":"' + EscapeJson(E.ClassName) + '"' +
+          ',"error_msg":"' + EscapeJson(Copy(E.Message, 1, 200)) + '"';
+        WriteStatus(LName, 'fail', LSw.ElapsedMilliseconds, LExtra);
+      end;
+    end;
+
+    SetCurrentScenario('');
+  end;
 end;
 
 initialization

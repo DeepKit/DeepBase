@@ -155,6 +155,17 @@ uses
   Test.DeepBase.TrayIcon in 'Test.DeepBase.TrayIcon.pas',
   Test.DeepBase.VCL.DeepShell in 'Test.DeepBase.VCL.DeepShell.pas',
   Test.Arch.PackageBoundaries in 'Architecture\Test.Arch.PackageBoundaries.pas',
+  // AutoFix tests + their dependencies (must come before DCCReference order)
+  DeepBase.AutoFix.StackWalker in '..\Core\DeepBase.AutoFix.StackWalker.pas',
+  DeepBase.AutoFix.ErrorRecorder in '..\Core\DeepBase.AutoFix.ErrorRecorder.pas',
+  DeepBase.AutoFix.HealthSignal in '..\Core\DeepBase.AutoFix.HealthSignal.pas',
+  DeepBase.AutoFix.ScenarioRunner in '..\Core\DeepBase.AutoFix.ScenarioRunner.pas',
+  DeepBase.AutoFix.SelfTerminator in '..\Core\DeepBase.AutoFix.SelfTerminator.pas',
+  DeepBase.AutoFix in '..\Core\DeepBase.AutoFix.pas',
+  Test.DeepBase.AutoFix.ErrorRecorder in 'AutoFix\Test.DeepBase.AutoFix.ErrorRecorder.pas',
+  Test.DeepBase.AutoFix.StackWalker in 'AutoFix\Test.DeepBase.AutoFix.StackWalker.pas',
+  Test.DeepBase.AutoFix.HealthSignal in 'AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas',
+  Test.DeepBase.AutoFix.ScenarioRunner in 'AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas',
   Test.WebService in 'Test.WebService.pas',
   // Core units
   DeepBase.Types in '..\Core\DeepBase.Types.pas',

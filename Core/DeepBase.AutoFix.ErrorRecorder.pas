@@ -83,6 +83,16 @@ type
     /// <summary>Name of the currently executing scenario. Written by
     /// ScenarioRunner; read into every error record.</summary>
     class property CurrentScenario: string read FCurrentScenario write FCurrentScenario;
+    /// <summary>Test scaffold: forces autofix mode active with the supplied
+    /// run_id / output dir / iteration, opens runtime-errors.jsonl, but does
+    /// NOT replace System.ExceptProc. Pair with ResetForTest in TearDown.
+    /// Production callers must use Install instead.</summary>
+    class procedure ActivateForTest(const ARunId, AOutputDir: string;
+      AIteration: Integer = 1);
+    /// <summary>Test scaffold: closes the log file and resets every class-
+    /// level field touched by ActivateForTest / Install. Safe to call when
+    /// nothing was activated.</summary>
+    class procedure ResetForTest;
   end;
 
 implementation
@@ -312,6 +322,46 @@ class procedure TAutoFixErrorRecorder.RecordFromSafeRun(E: Exception;
 begin
   if FActive then
     WriteRecord(E, ExceptAddr, AContext, 'main');
+end;
+
+class procedure TAutoFixErrorRecorder.ActivateForTest(const ARunId,
+  AOutputDir: string; AIteration: Integer);
+begin
+  // Tear down any prior test or production state first so the file lock
+  // is released and the log handle is rebound to AOutputDir.
+  ResetForTest;
+
+  FInstalled := True;
+  FActive := True;
+  FRunId := if ARunId = '' then NewRunId else ARunId;
+  FOutputDir := AOutputDir;
+  FIteration := AIteration;
+  FCurrentScenario := '';
+  FTotalErrors := 0;
+
+  if FLock = nil then
+    FLock := TCriticalSection.Create;
+
+  if FOutputDir <> '' then
+  begin
+    ForceDirectories(FOutputDir);
+    OpenLogFile;
+  end;
+end;
+
+class procedure TAutoFixErrorRecorder.ResetForTest;
+begin
+  CloseLogFile;
+  FInstalled := False;
+  FActive := False;
+  FRunId := '';
+  FOutputDir := '';
+  FIteration := 1;
+  FCurrentScenario := '';
+  FTotalErrors := 0;
+  // Note: System.ExceptProc is intentionally not restored here. Tests that
+  // exercise Install do so against a fresh class state and the global hook
+  // is re-chained idempotently via FInstalled.
 end;
 
 initialization

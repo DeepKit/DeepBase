@@ -138,6 +138,16 @@
         <DCCReference Include="Test.DeepBase.BrowserAutomation.pas"/>
         <DCCReference Include="Test.DeepBase.Browser.PageDriver.pas"/>
         <DCCReference Include="Architecture\Test.Arch.PackageBoundaries.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.StackWalker.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.ErrorRecorder.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.HealthSignal.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.ScenarioRunner.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.SelfTerminator.pas"/>
+        <DCCReference Include="..\Core\DeepBase.AutoFix.pas"/>
+        <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.ErrorRecorder.pas"/>
+        <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.StackWalker.pas"/>
+        <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.HealthSignal.pas"/>
+        <DCCReference Include="AutoFix\Test.DeepBase.AutoFix.ScenarioRunner.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
