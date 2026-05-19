@@ -123,7 +123,7 @@ begin
   {$IFDEF HAS_ONNX}
   try
     LSession := TORTSession.Create(AModelPath);
-    New(FOrtSession);
+    GetMem(FOrtSession, SizeOf(TORTSession));
     TORTSessionPtr(FOrtSession)^ := LSession;
 
     ExtractModelInfo;
@@ -173,7 +173,7 @@ begin
   try
     LSession := TORTSession.Create(
       DefaultEnv, @AModelData[0], Length(AModelData), DefaultSessionOptions);
-    New(FOrtSession);
+    GetMem(FOrtSession, SizeOf(TORTSession));
     TORTSessionPtr(FOrtSession)^ := LSession;
 
     ExtractModelInfo;
@@ -220,7 +220,7 @@ begin
     // TORTSession is a managed record. Finalize it before freeing memory
     // so the smart-pointer housekeeper decrements the ORT refcount.
     Finalize(P^);
-    System.Dispose(P);
+    FreeMem(P);
     {$ENDIF}
     FOrtSession := nil;
   end;
