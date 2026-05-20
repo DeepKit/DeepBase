@@ -41,6 +41,7 @@ type
 
   TInMemoryCommerceStorage = class(TInterfacedObject, ICommerceStorage)
   private
+    FLock: TObject;
     FUsers: TDictionary<string, TCommerceUserData>;
     FIdentityToUser: TDictionary<string, string>;
     FProducts: TDictionary<string, TCommerceProductData>;
@@ -92,6 +93,7 @@ implementation
 constructor TInMemoryCommerceStorage.Create;
 begin
   inherited Create;
+  FLock := TObject.Create;
   FUsers := TDictionary<string, TCommerceUserData>.Create;
   FIdentityToUser := TDictionary<string, string>.Create;
   FProducts := TDictionary<string, TCommerceProductData>.Create;
@@ -112,13 +114,21 @@ begin
   FreeAndNil(FProducts);
   FreeAndNil(FIdentityToUser);
   FreeAndNil(FUsers);
+  FreeAndNil(FLock);
   inherited;
 end;
 
 function TInMemoryCommerceStorage.IdentityKey(AProvider: TCommerceAuthProvider;
   const AProviderUserId, AAppId: string): string;
+var
+  NormalizedId: string;
 begin
-  Result := IntToStr(Ord(AProvider)) + '|' + LowerCase(AAppId) + '|' + AProviderUserId;
+  case AProvider of
+    capEmail, capPhone: NormalizedId := LowerCase(AProviderUserId);
+  else
+    NormalizedId := AProviderUserId;
+  end;
+  Result := IntToStr(Ord(AProvider)) + '|' + LowerCase(AAppId) + '|' + NormalizedId;
 end;
 
 function TInMemoryCommerceStorage.ProductKey(const AAppId,
@@ -146,15 +156,25 @@ end;
 
 procedure TInMemoryCommerceStorage.UpsertUser(const AUser: TCommerceUserData);
 begin
-  FUsers.AddOrSetValue(AUser.UserId, AUser);
+  TMonitor.Enter(FLock);
+  try
+    FUsers.AddOrSetValue(AUser.UserId, AUser);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.LinkIdentity(
   const AIdentity: TCommerceIdentityData);
 begin
-  FIdentityToUser.AddOrSetValue(
-    IdentityKey(AIdentity.Provider, AIdentity.ProviderUserId, AIdentity.AppId),
-    AIdentity.UserId);
+  TMonitor.Enter(FLock);
+  try
+    FIdentityToUser.AddOrSetValue(
+      IdentityKey(AIdentity.Provider, AIdentity.ProviderUserId, AIdentity.AppId),
+      AIdentity.UserId);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.FindProduct(const AAppId,
@@ -166,13 +186,23 @@ end;
 procedure TInMemoryCommerceStorage.UpsertProduct(
   const AProduct: TCommerceProductData);
 begin
-  FProducts.AddOrSetValue(ProductKey(AProduct.AppId, AProduct.ProductId), AProduct);
+  TMonitor.Enter(FLock);
+  try
+    FProducts.AddOrSetValue(ProductKey(AProduct.AppId, AProduct.ProductId), AProduct);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.CreateOrder(const AOrder: TCommerceOrderData);
 begin
-  FOrders.Add(AOrder.OrderId, AOrder);
-  FOutTradeNoToOrder.Add(AOrder.OutTradeNo, AOrder.OrderId);
+  TMonitor.Enter(FLock);
+  try
+    FOrders.Add(AOrder.OrderId, AOrder);
+    FOutTradeNoToOrder.Add(AOrder.OutTradeNo, AOrder.OrderId);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.FindOrderById(const AOrderId: string;
@@ -192,15 +222,25 @@ end;
 
 procedure TInMemoryCommerceStorage.UpdateOrder(const AOrder: TCommerceOrderData);
 begin
-  FOrders.AddOrSetValue(AOrder.OrderId, AOrder);
-  FOutTradeNoToOrder.AddOrSetValue(AOrder.OutTradeNo, AOrder.OrderId);
+  TMonitor.Enter(FLock);
+  try
+    FOrders.AddOrSetValue(AOrder.OrderId, AOrder);
+    FOutTradeNoToOrder.AddOrSetValue(AOrder.OutTradeNo, AOrder.OrderId);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.CreatePayment(
   const APayment: TCommercePaymentData);
 begin
-  FPayments.Add(APayment.PaymentId, APayment);
-  FOrderToPayment.AddOrSetValue(APayment.OrderId, APayment.PaymentId);
+  TMonitor.Enter(FLock);
+  try
+    FPayments.Add(APayment.PaymentId, APayment);
+    FOrderToPayment.AddOrSetValue(APayment.OrderId, APayment.PaymentId);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.FindPaymentByOrderId(
@@ -215,14 +255,24 @@ end;
 procedure TInMemoryCommerceStorage.UpdatePayment(
   const APayment: TCommercePaymentData);
 begin
-  FPayments.AddOrSetValue(APayment.PaymentId, APayment);
-  FOrderToPayment.AddOrSetValue(APayment.OrderId, APayment.PaymentId);
+  TMonitor.Enter(FLock);
+  try
+    FPayments.AddOrSetValue(APayment.PaymentId, APayment);
+    FOrderToPayment.AddOrSetValue(APayment.OrderId, APayment.PaymentId);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.UpsertEntitlement(
   const AEntitlement: TCommerceEntitlementData);
 begin
-  FEntitlements.AddOrSetValue(AEntitlement.EntitlementId, AEntitlement);
+  TMonitor.Enter(FLock);
+  try
+    FEntitlements.AddOrSetValue(AEntitlement.EntitlementId, AEntitlement);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.ListEntitlements(const AUserId,
@@ -233,9 +283,14 @@ var
 begin
   Items := TList<TCommerceEntitlementData>.Create;
   try
-    for Pair in FEntitlements do
-      if SameText(Pair.Value.UserId, AUserId) and SameText(Pair.Value.AppId, AAppId) then
-        Items.Add(Pair.Value);
+    TMonitor.Enter(FLock);
+    try
+      for Pair in FEntitlements do
+        if SameText(Pair.Value.UserId, AUserId) and SameText(Pair.Value.AppId, AAppId) then
+          Items.Add(Pair.Value);
+    finally
+      TMonitor.Exit(FLock);
+    end;
     Result := Items.ToArray;
   finally
     Items.Free;
@@ -248,15 +303,20 @@ var
   Pair: TPair<string, TCommerceEntitlementData>;
 begin
   Result := False;
-  for Pair in FEntitlements do
-  begin
-    if SameText(Pair.Value.UserId, AUserId) and
-       SameText(Pair.Value.AppId, AAppId) and
-       SameText(Pair.Value.Code, ACode) then
+  TMonitor.Enter(FLock);
+  try
+    for Pair in FEntitlements do
     begin
-      AEntitlement := Pair.Value;
-      Exit(True);
+      if SameText(Pair.Value.UserId, AUserId) and
+         SameText(Pair.Value.AppId, AAppId) and
+         SameText(Pair.Value.Code, ACode) then
+      begin
+        AEntitlement := Pair.Value;
+        Exit(True);
+      end;
     end;
+  finally
+    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -267,23 +327,29 @@ begin
   Result := False;
   if ACount <= 0 then
     Exit;
-  if not FEntitlements.TryGetValue(AEntitlementId, AEntitlement) then
-    Exit;
-  if AEntitlement.Status <> cesActive then
-    Exit;
-  if (AEntitlement.RemainingQuota >= 0) and
-     (AEntitlement.RemainingQuota < ACount) then
-    Exit;
+  TMonitor.Enter(FLock);
+  try
+    if not FEntitlements.TryGetValue(AEntitlementId, AEntitlement) then
+      Exit;
+    if AEntitlement.Status <> cesActive then
+      Exit;
+    if (AEntitlement.RemainingQuota >= 0) and
+       (AEntitlement.RemainingQuota < ACount) then
+      Exit;
 
-  if AEntitlement.RemainingQuota >= 0 then
-  begin
-    Dec(AEntitlement.RemainingQuota, ACount);
-    if AEntitlement.RemainingQuota = 0 then
-      AEntitlement.Status := cesConsumed;
+    if AEntitlement.RemainingQuota >= 0 then
+    begin
+      Dec(AEntitlement.RemainingQuota, ACount);
+      if AEntitlement.RemainingQuota = 0 then
+        AEntitlement.Status := cesConsumed;
+    end;
+    // RemainingQuota = -1 means unlimited quota: no decrement needed
+
+    FEntitlements.AddOrSetValue(AEntitlement.EntitlementId, AEntitlement);
+    Result := True;
+  finally
+    TMonitor.Exit(FLock);
   end;
-
-  FEntitlements.AddOrSetValue(AEntitlement.EntitlementId, AEntitlement);
-  Result := True;
 end;
 
 end.

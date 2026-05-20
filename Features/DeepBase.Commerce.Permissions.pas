@@ -5,6 +5,7 @@ interface
 uses
   System.SysUtils,
   System.DateUtils,
+  System.Generics.Collections,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.SafeClient;
 
@@ -28,6 +29,7 @@ type
     FAppId: string;
     FDeviceId: string;
     FDefaultEntitlementCode: string;
+    FWildcardCodes: TList<string>;
     FLastSnapshot: TDeepKitLicenseSnapshot;
 
     function EntitlementMatchesFeature(const AEntitlement: TCommerceEntitlementData;
@@ -47,6 +49,7 @@ type
     property DeviceId: string read FDeviceId write FDeviceId;
     property DefaultEntitlementCode: string read FDefaultEntitlementCode
       write FDefaultEntitlementCode;
+    property WildcardCodes: TList<string> read FWildcardCodes;
     property LastSnapshot: TDeepKitLicenseSnapshot read FLastSnapshot;
   end;
 
@@ -65,7 +68,7 @@ begin
     Exit(True);
   if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
     Exit(False);
-  Result := ValidUntil > Now;
+  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
 end;
 
 class function TDeepKitPermissionResult.Denied(const AFeatureCode,
@@ -92,10 +95,13 @@ begin
   FAppId := AAppId;
   FDeviceId := ADeviceId;
   FDefaultEntitlementCode := '';
+  FWildcardCodes := TList<string>.Create;
+  FWildcardCodes.AddRange(['all', 'pro_full', 'enterprise_full']);
 end;
 
 destructor TDeepKitPermissionClient.Destroy;
 begin
+  FWildcardCodes.Free;
   if FOwnsClient then
     FClient.Free;
   inherited;
@@ -104,14 +110,18 @@ end;
 function TDeepKitPermissionClient.EntitlementMatchesFeature(
   const AEntitlement: TCommerceEntitlementData;
   const AFeatureCode: string): Boolean;
+var
+  Wildcard: string;
 begin
-  Result :=
-    SameText(AEntitlement.Code, AFeatureCode) or
-    SameText(AEntitlement.Code, 'all') or
-    SameText(AEntitlement.Code, 'pro_full') or
-    SameText(AEntitlement.Code, 'enterprise_full') or
-    ((FDefaultEntitlementCode <> '') and
-     SameText(AEntitlement.Code, FDefaultEntitlementCode));
+  if SameText(AEntitlement.Code, AFeatureCode) then
+    Exit(True);
+  for Wildcard in FWildcardCodes do
+    if SameText(AEntitlement.Code, Wildcard) then
+      Exit(True);
+  if (FDefaultEntitlementCode <> '') and
+     SameText(AEntitlement.Code, FDefaultEntitlementCode) then
+    Exit(True);
+  Result := False;
 end;
 
 function TDeepKitPermissionClient.HasFeature(

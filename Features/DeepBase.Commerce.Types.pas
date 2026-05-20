@@ -183,8 +183,11 @@ function CommercePaymentStatusToStr(AStatus: TCommercePaymentStatus): string;
 implementation
 
 function CommerceNowISO: string;
+var
+  UTCNow: TDateTime;
 begin
-  Result := DateToISO8601(Now, False);
+  UTCNow := TTimeZone.Local.ToUniversalTime(Now);
+  Result := DateToISO8601(UTCNow, False);
 end;
 
 function NormalizeGuidText(const AText: string): string;
@@ -316,10 +319,14 @@ class function TCommerceIds.NewOutTradeNo(const APrefix: string): string;
 var
   Guid: TGUID;
   Tail: string;
+  N: TDateTime;
+  Y, M, D, H, Mi, S, MS: Word;
 begin
   CreateGUID(Guid);
   Tail := Copy(NormalizeGuidText(GUIDToString(Guid)), 1, 12);
-  Result := APrefix + FormatDateTime('yyyymmddhhnnsszzz', Now) + Tail;
+  N := Now;
+  DecodeDateTime(N, Y, M, D, H, Mi, S, MS);
+  Result := APrefix + Format('%.4d%.2d%.2d%.2d%.2d%.2d%.3d', [Y, M, D, H, Mi, S, MS]) + Tail;
 end;
 
 end.

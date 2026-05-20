@@ -27,6 +27,8 @@ type
     FStorage: ICommerceStorage;
     FGateways: TDictionary<Integer, ICommercePaymentGateway>;
     FVerifiers: TDictionary<Integer, ICommerceNotificationVerifier>;
+    FConfirmLock: TObject;
+    FIdentityLock: TObject;
     function GatewayKey(AProvider: TCommercePaymentProvider): Integer;
     function RequireProduct(const AAppId, AProductId: string): TCommerceProductData;
     function IsEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
@@ -71,10 +73,14 @@ begin
   FStorage := AStorage;
   FGateways := TDictionary<Integer, ICommercePaymentGateway>.Create;
   FVerifiers := TDictionary<Integer, ICommerceNotificationVerifier>.Create;
+  FConfirmLock := TObject.Create;
+  FIdentityLock := TObject.Create;
 end;
 
 destructor TDeepBaseCommerceService.Destroy;
 begin
+  FreeAndNil(FIdentityLock);
+  FreeAndNil(FConfirmLock);
   FreeAndNil(FVerifiers);
   FreeAndNil(FGateways);
   inherited;
@@ -139,19 +145,24 @@ begin
   if AAppId = '' then
     raise EDeepBaseCommerceValidationError.Create('AppId is required');
 
-  if FStorage.FindUserByIdentity(AProvider, AProviderUserId, AAppId, Result) then
-    Exit;
+  TMonitor.Enter(FIdentityLock);
+  try
+    if FStorage.FindUserByIdentity(AProvider, AProviderUserId, AAppId, Result) then
+      Exit;
 
-  Result := TCommerceUserData.CreateNew(TCommerceIds.NewId('usr'));
-  FStorage.UpsertUser(Result);
+    Result := TCommerceUserData.CreateNew(TCommerceIds.NewId('usr'));
+    FStorage.UpsertUser(Result);
 
-  Identity.UserId := Result.UserId;
-  Identity.Provider := AProvider;
-  Identity.ProviderUserId := AProviderUserId;
-  Identity.AppId := AAppId;
-  Identity.UnionId := AUnionId;
-  Identity.CreatedAtISO := CommerceNowISO;
-  FStorage.LinkIdentity(Identity);
+    Identity.UserId := Result.UserId;
+    Identity.Provider := AProvider;
+    Identity.ProviderUserId := AProviderUserId;
+    Identity.AppId := AAppId;
+    Identity.UnionId := AUnionId;
+    Identity.CreatedAtISO := CommerceNowISO;
+    FStorage.LinkIdentity(Identity);
+  finally
+    TMonitor.Exit(FIdentityLock);
+  end;
 end;
 
 function TDeepBaseCommerceService.CreateOrder(const AUserId, AAppId,
@@ -238,57 +249,63 @@ var
 begin
   if ANotification.OutTradeNo = '' then
     raise EDeepBaseCommerceValidationError.Create('Payment notification missing out_trade_no');
-  if not FStorage.FindOrderByOutTradeNo(ANotification.OutTradeNo, Result) then
-    raise EDeepBaseCommerceNotFoundError.CreateFmt(
-      'Order not found by out_trade_no: %s', [ANotification.OutTradeNo]);
 
-  if (Result.AmountMinor <> ANotification.AmountMinor) or
-     not SameText(Result.Currency, ANotification.Currency) then
-    raise EDeepBaseCommercePaymentError.CreateFmt(
-      'Payment amount mismatch for order %s', [Result.OrderId]);
+  TMonitor.Enter(FConfirmLock);
+  try
+    if not FStorage.FindOrderByOutTradeNo(ANotification.OutTradeNo, Result) then
+      raise EDeepBaseCommerceNotFoundError.CreateFmt(
+        'Order not found by out_trade_no: %s', [ANotification.OutTradeNo]);
 
-  if not FStorage.FindPaymentByOrderId(Result.OrderId, Payment) then
-  begin
-    Payment.PaymentId := TCommerceIds.NewId('pay');
-    Payment.OrderId := Result.OrderId;
+    if (Result.AmountMinor <> ANotification.AmountMinor) or
+       not SameText(Result.Currency, ANotification.Currency) then
+      raise EDeepBaseCommercePaymentError.CreateFmt(
+        'Payment amount mismatch for order %s', [Result.OrderId]);
+
+    if not FStorage.FindPaymentByOrderId(Result.OrderId, Payment) then
+    begin
+      Payment.PaymentId := TCommerceIds.NewId('pay');
+      Payment.OrderId := Result.OrderId;
+      Payment.Provider := ANotification.Provider;
+      Payment.Channel := cpcManual;
+      Payment.ProviderTradeNo := '';
+      Payment.PrepayId := '';
+      Payment.Status := cpsCreated;
+      Payment.RawPayload := '';
+      Payment.CreatedAtISO := CommerceNowISO;
+      Payment.PaidAtISO := '';
+      FStorage.CreatePayment(Payment);
+    end;
+
+    if Result.Status = cosPaid then
+      Exit;
+
     Payment.Provider := ANotification.Provider;
-    Payment.Channel := cpcManual;
-    Payment.ProviderTradeNo := '';
-    Payment.PrepayId := '';
-    Payment.Status := cpsCreated;
-    Payment.RawPayload := '';
-    Payment.CreatedAtISO := CommerceNowISO;
-    Payment.PaidAtISO := '';
-    FStorage.CreatePayment(Payment);
-  end;
+    Payment.ProviderTradeNo := ANotification.ProviderTradeNo;
+    Payment.RawPayload := ANotification.RawPayload;
 
-  if Result.Status = cosPaid then
-    Exit;
+    if ANotification.Success then
+    begin
+      Payment.Status := cpsPaid;
+      Payment.PaidAtISO := ANotification.PaidAtISO;
+      if Payment.PaidAtISO = '' then
+        Payment.PaidAtISO := CommerceNowISO;
+      FStorage.UpdatePayment(Payment);
 
-  Payment.Provider := ANotification.Provider;
-  Payment.ProviderTradeNo := ANotification.ProviderTradeNo;
-  Payment.RawPayload := ANotification.RawPayload;
+      Result.Status := cosPaid;
+      Result.PaidAtISO := Payment.PaidAtISO;
+      FStorage.UpdateOrder(Result);
 
-  if ANotification.Success then
-  begin
-    Payment.Status := cpsPaid;
-    Payment.PaidAtISO := ANotification.PaidAtISO;
-    if Payment.PaidAtISO = '' then
-      Payment.PaidAtISO := CommerceNowISO;
-    FStorage.UpdatePayment(Payment);
-
-    Result.Status := cosPaid;
-    Result.PaidAtISO := Payment.PaidAtISO;
-    FStorage.UpdateOrder(Result);
-
-    GrantEntitlementForOrder(Result);
-  end
-  else
-  begin
-    Payment.Status := cpsFailed;
-    FStorage.UpdatePayment(Payment);
-    Result.Status := cosFailed;
-    FStorage.UpdateOrder(Result);
+      GrantEntitlementForOrder(Result);
+    end
+    else
+    begin
+      Payment.Status := cpsFailed;
+      FStorage.UpdatePayment(Payment);
+      Result.Status := cosFailed;
+      FStorage.UpdateOrder(Result);
+    end;
+  finally
+    TMonitor.Exit(FConfirmLock);
   end;
 end;
 
@@ -322,7 +339,7 @@ begin
     if SameText(Entitlements[I].SourceOrderId, AOrder.OrderId) then
       Exit;
 
-  ValidFrom := Now;
+  ValidFrom := TTimeZone.Local.ToUniversalTime(Now);
   Entitlement.EntitlementId := TCommerceIds.NewId('ent');
   Entitlement.UserId := AOrder.UserId;
   Entitlement.AppId := AOrder.AppId;
@@ -360,7 +377,7 @@ begin
   begin
     try
       ExpiresAt := ISO8601ToDate(AEntitlement.ValidUntilISO, False);
-      Result := ExpiresAt > Now;
+      Result := ExpiresAt > TTimeZone.Local.ToUniversalTime(Now);
     except
       Result := False;
     end;

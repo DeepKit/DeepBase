@@ -200,7 +200,8 @@ function CredEnumerateW(Filter: LPCWSTR; Flags: DWORD; out Count: DWORD;
 implementation
 
 uses
-  System.NetEncoding;
+  System.NetEncoding,
+  DeepBase.Security;
 
 {$IFDEF MSWINDOWS}
 
@@ -537,7 +538,7 @@ procedure TSecureString.Clear;
 begin
   if System.Length(FData) > 0 then
   begin
-    FillChar(FData[0], System.Length(FData), 0);
+    SecureZeroMemory(FData);
     SetLength(FData, 0);
   end;
   FDataLength := 0;

@@ -198,16 +198,10 @@ end;
 function CreateWeChatPayNotificationVerifier(
   const AAppId, AMchId, AApiV3Key: string;
   const ACurrency: string): ICommerceNotificationVerifier;
-var
-  Config: TWeChatPayConfig;
 begin
   EnsurePaymentBridgeServerOnly;
-  Config := TWeChatPayConfig.Create;
-  Config.AppId := AAppId;
-  Config.MchId := AMchId;
-  Config.ApiKeyV3 := AApiV3Key;
-  Result := TSDKNotificationVerifier.Create(cppWeChatPay,
-    TWeChatPayClient.Create(Config), ACurrency);
+  raise EDeepBaseCommercePaymentError.Create(
+    'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
 end;
 
 function CreateStripeNotificationVerifier(
