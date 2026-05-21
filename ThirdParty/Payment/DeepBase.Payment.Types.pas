@@ -2,8 +2,12 @@ unit DeepBase.Payment.Types;
 
 {*******************************************************************************
   DeepBase Payment Types
-  
-  Common types and records for payment gateway integration.
+
+  WARNING: This unit defines its own TPaymentProvider, TPaymentStatus,
+  TPaymentResult, and EPaymentError types which ARE NOT the same as those in
+  DeepBase.Payment.pas. The two type systems are structally different.
+  Keep enum values and ordering in sync manually.
+
   Supports: Stripe, PayPal, Alipay, WeChat Pay
 *******************************************************************************}
 
@@ -14,6 +18,7 @@ uses
 
 type
   /// <summary>Supported payment providers</summary>
+  // WARNING: Duplicates DeepBase.Payment.pas TPaymentProvider. Keep in sync.
   TPaymentProvider = (
     ppStripe,      // Stripe (International)
     ppPayPal,      // PayPal (International)
@@ -28,6 +33,7 @@ type
   );
 
   /// <summary>Payment status</summary>
+  // WARNING: Duplicates DeepBase.Payment.pas TPaymentStatus. Keep in sync.
   TPaymentStatus = (
     psUnknown,
     psPending,       // Payment initiated, awaiting completion
@@ -57,26 +63,26 @@ type
   TPaymentCredentials = record
     Provider: TPaymentProvider;
     Environment: TPaymentEnvironment;
-    
+
     // Common
     ApiKey: string;          // Public/Publishable key
     SecretKey: string;       // Secret/Private key
     WebhookSecret: string;   // Webhook signing secret
-    
+
     // Alipay specific
     AppId: string;           // Alipay App ID
     PrivateKey: string;      // RSA Private Key
     AlipayPublicKey: string; // Alipay Public Key
-    
+
     // WeChat Pay specific
     MchId: string;           // Merchant ID
     ApiV3Key: string;        // API v3 Key
     CertSerialNo: string;    // Certificate serial number
-    
+
     // Custom endpoint (for testing)
     CustomEndpoint: string;
-    
-    class function ForStripe(const ASecretKey: string; 
+
+    class function ForStripe(const ASecretKey: string;
       AEnv: TPaymentEnvironment = peSandbox): TPaymentCredentials; static;
     class function ForPayPal(const AClientId, AClientSecret: string;
       AEnv: TPaymentEnvironment = peSandbox): TPaymentCredentials; static;
@@ -90,7 +96,7 @@ type
   TMoney = record
     Amount: Currency;      // Decimal amount (e.g., 99.99)
     CurrencyCode: TCurrencyCode;
-    
+
     constructor Create(AAmount: Currency; const ACurrency: TCurrencyCode);
     function ToMinorUnits: Int64;  // Convert to cents/fen
     function ToString: string;
@@ -103,7 +109,7 @@ type
     Email: string;
     Phone: string;
     Name: string;
-    
+
     // Address
     AddressLine1: string;
     AddressLine2: string;
@@ -111,7 +117,7 @@ type
     State: string;
     PostalCode: string;
     Country: string;       // ISO 3166-1 alpha-2
-    
+
     // Provider customer IDs
     StripeCustomerId: string;
     PayPalPayerId: string;
@@ -125,7 +131,7 @@ type
     Description: string;
     Quantity: Integer;
     UnitPrice: TMoney;
-    
+
     function TotalPrice: TMoney;
   end;
 
@@ -134,69 +140,71 @@ type
     // Identification
     OrderId: string;           // Your order ID
     IdempotencyKey: string;    // Prevent duplicate charges
-    
+
     // Amount
     Amount: TMoney;
-    
+
     // Customer
     Customer: TPaymentCustomer;
-    
+
     // Items (optional)
     LineItems: TArray<TPaymentLineItem>;
-    
+
     // Description
     Description: string;
     StatementDescriptor: string;  // Appears on bank statement
-    
+
     // Metadata
     Metadata: TDictionary<string, string>;
-    
+
     // Callbacks
     ReturnUrl: string;         // Success redirect URL
-    CancelUrl: string;         // Cancel redirect URL
+    CancelUrl: string;         // Cancel redirect
     NotifyUrl: string;         // Webhook notification URL
-    
+
     // Options
     CaptureMethod: (cmAutomatic, cmManual);  // Authorize now, capture later
     ExpiresAt: TDateTime;      // Payment link expiration
-    
+
     constructor Create(const AOrderId: string; AAmount: TMoney);
     procedure AddLineItem(const AItem: TPaymentLineItem);
     procedure SetMetadata(const AKey, AValue: string);
+    procedure Cleanup;
   end;
 
   /// <summary>Payment result</summary>
+  // WARNING: Structure differs from DeepBase.Payment.pas TPaymentResult.
   TPaymentResult = record
     Success: Boolean;
-    
+
     // Transaction info
     TransactionId: string;     // Provider's transaction ID
     Status: TPaymentStatus;
-    
+
     // Amounts
     AmountReceived: TMoney;
     AmountRefunded: TMoney;
     Fee: TMoney;               // Provider fee
     Net: TMoney;               // Net amount after fees
-    
+
     // Redirect (for hosted checkout)
     RedirectUrl: string;       // URL to redirect customer
     QRCodeUrl: string;         // QR code image URL (Alipay/WeChat)
     QRCodeData: string;        // Raw QR code data
-    
+
     // Error info
     ErrorCode: string;
     ErrorMessage: string;
     DeclineCode: string;       // Card decline reason
-    
+
     // Raw response
     RawResponse: string;       // JSON response from provider
-    
+
     // Timestamps
     CreatedAt: TDateTime;
     UpdatedAt: TDateTime;
-    
-    class function Succeeded(const ATransactionId: string; 
+
+    class function Succeeded(const ATransactionId: string;
       AAmount: TMoney): TPaymentResult; static;
     class function Failed(const AErrorCode, AErrorMessage: string): TPaymentResult; static;
     class function Pending(const ATransactionId, ARedirectUrl: string): TPaymentResult; static;
@@ -235,6 +243,7 @@ type
   end;
 
   /// <summary>Payment error exception</summary>
+  // WARNING: Different class from DeepBase.Payment.pas EPaymentError.
   EPaymentError = class(Exception)
   private
     FErrorCode: string;
@@ -360,6 +369,11 @@ begin
   Metadata.AddOrSetValue(AKey, AValue);
 end;
 
+procedure TPaymentRequest.Cleanup;
+begin
+  FreeAndNil(Metadata);
+end;
+
 { TPaymentResult }
 
 class function TPaymentResult.Succeeded(const ATransactionId: string;
@@ -437,7 +451,7 @@ function StrToPaymentStatus(const AStr: string): TPaymentStatus;
 begin
   if SameText(AStr, 'pending') then Result := psPending
   else if SameText(AStr, 'processing') then Result := psProcessing
-  else if SameText(AStr, 'succeeded') or SameText(AStr, 'success') or SameText(AStr, 'paid') then 
+  else if SameText(AStr, 'succeeded') or SameText(AStr, 'success') or SameText(AStr, 'paid') then
     Result := psSucceeded
   else if SameText(AStr, 'failed') or SameText(AStr, 'failure') then Result := psFailed
   else if SameText(AStr, 'canceled') or SameText(AStr, 'cancelled') then Result := psCanceled

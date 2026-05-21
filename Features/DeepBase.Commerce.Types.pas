@@ -325,7 +325,7 @@ var
 begin
   CreateGUID(Guid);
   Tail := Copy(NormalizeGuidText(GUIDToString(Guid)), 1, 12);
-  N := Now;
+  N := TTimeZone.Local.ToUniversalTime(Now);
   DecodeDateTime(N, Y, M, D, H, Mi, S, MS);
   Result := APrefix + Format('%.4d%.2d%.2d%.2d%.2d%.2d%.3d', [Y, M, D, H, Mi, S, MS]) + Tail;
 end;

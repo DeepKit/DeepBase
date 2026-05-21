@@ -97,7 +97,12 @@ procedure TDeepBaseCommerceService.RegisterPaymentGateway(
 begin
   if not Assigned(AGateway) then
     raise EDeepBaseCommerceValidationError.Create('Payment gateway is required');
-  FGateways.AddOrSetValue(GatewayKey(AProvider), AGateway);
+  TMonitor.Enter(FConfirmLock);
+  try
+    FGateways.AddOrSetValue(GatewayKey(AProvider), AGateway);
+  finally
+    TMonitor.Exit(FConfirmLock);
+  end;
 end;
 
 procedure TDeepBaseCommerceService.RegisterNotificationVerifier(
@@ -106,7 +111,12 @@ procedure TDeepBaseCommerceService.RegisterNotificationVerifier(
 begin
   if not Assigned(AVerifier) then
     raise EDeepBaseCommerceValidationError.Create('Notification verifier is required');
-  FVerifiers.AddOrSetValue(GatewayKey(AProvider), AVerifier);
+  TMonitor.Enter(FConfirmLock);
+  try
+    FVerifiers.AddOrSetValue(GatewayKey(AProvider), AVerifier);
+  finally
+    TMonitor.Exit(FConfirmLock);
+  end;
 end;
 
 procedure TDeepBaseCommerceService.RegisterProduct(
@@ -206,9 +216,14 @@ begin
     raise EDeepBaseCommerceValidationError.CreateFmt(
       'Order is in terminal state (%s): %s',
       [CommerceOrderStatusToStr(Order.Status), AOrderId]);
-  if not FGateways.TryGetValue(GatewayKey(AProvider), Gateway) then
-    raise EDeepBaseCommercePaymentError.CreateFmt(
-      'Payment gateway is not registered: %s', [CommercePaymentProviderToStr(AProvider)]);
+  TMonitor.Enter(FConfirmLock);
+  try
+    if not FGateways.TryGetValue(GatewayKey(AProvider), Gateway) then
+      raise EDeepBaseCommercePaymentError.CreateFmt(
+        'Payment gateway is not registered: %s', [CommercePaymentProviderToStr(AProvider)]);
+  finally
+    TMonitor.Exit(FConfirmLock);
+  end;
 
   if not FStorage.FindPaymentByOrderId(AOrderId, Payment) then
   begin
@@ -316,10 +331,15 @@ var
   Verifier: ICommerceNotificationVerifier;
   Notification: TCommercePaymentNotification;
 begin
-  if not FVerifiers.TryGetValue(GatewayKey(AProvider), Verifier) then
-    raise EDeepBaseCommercePaymentError.CreateFmt(
-      'Notification verifier not registered for provider: %s',
-      [CommercePaymentProviderToStr(AProvider)]);
+  TMonitor.Enter(FConfirmLock);
+  try
+    if not FVerifiers.TryGetValue(GatewayKey(AProvider), Verifier) then
+      raise EDeepBaseCommercePaymentError.CreateFmt(
+        'Notification verifier not registered for provider: %s',
+        [CommercePaymentProviderToStr(AProvider)]);
+  finally
+    TMonitor.Exit(FConfirmLock);
+  end;
   Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
   Result := ConfirmPayment(Notification);
 end;

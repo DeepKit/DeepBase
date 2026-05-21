@@ -140,7 +140,12 @@ end;
 function TInMemoryCommerceStorage.FindUserById(const AUserId: string;
   out AUser: TCommerceUserData): Boolean;
 begin
-  Result := FUsers.TryGetValue(AUserId, AUser);
+  TMonitor.Enter(FLock);
+  try
+    Result := FUsers.TryGetValue(AUserId, AUser);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.FindUserByIdentity(
@@ -149,9 +154,14 @@ function TInMemoryCommerceStorage.FindUserByIdentity(
 var
   UserId: string;
 begin
-  Result := FIdentityToUser.TryGetValue(
-    IdentityKey(AProvider, AProviderUserId, AAppId), UserId) and
-    FUsers.TryGetValue(UserId, AUser);
+  TMonitor.Enter(FLock);
+  try
+    Result := FIdentityToUser.TryGetValue(
+      IdentityKey(AProvider, AProviderUserId, AAppId), UserId) and
+      FUsers.TryGetValue(UserId, AUser);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.UpsertUser(const AUser: TCommerceUserData);
@@ -180,7 +190,12 @@ end;
 function TInMemoryCommerceStorage.FindProduct(const AAppId,
   AProductId: string; out AProduct: TCommerceProductData): Boolean;
 begin
-  Result := FProducts.TryGetValue(ProductKey(AAppId, AProductId), AProduct);
+  TMonitor.Enter(FLock);
+  try
+    Result := FProducts.TryGetValue(ProductKey(AAppId, AProductId), AProduct);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.UpsertProduct(
@@ -208,7 +223,12 @@ end;
 function TInMemoryCommerceStorage.FindOrderById(const AOrderId: string;
   out AOrder: TCommerceOrderData): Boolean;
 begin
-  Result := FOrders.TryGetValue(AOrderId, AOrder);
+  TMonitor.Enter(FLock);
+  try
+    Result := FOrders.TryGetValue(AOrderId, AOrder);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 function TInMemoryCommerceStorage.FindOrderByOutTradeNo(
@@ -216,8 +236,13 @@ function TInMemoryCommerceStorage.FindOrderByOutTradeNo(
 var
   OrderId: string;
 begin
-  Result := FOutTradeNoToOrder.TryGetValue(AOutTradeNo, OrderId) and
-    FOrders.TryGetValue(OrderId, AOrder);
+  TMonitor.Enter(FLock);
+  try
+    Result := FOutTradeNoToOrder.TryGetValue(AOutTradeNo, OrderId) and
+      FOrders.TryGetValue(OrderId, AOrder);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.UpdateOrder(const AOrder: TCommerceOrderData);
@@ -248,8 +273,13 @@ function TInMemoryCommerceStorage.FindPaymentByOrderId(
 var
   PaymentId: string;
 begin
-  Result := FOrderToPayment.TryGetValue(AOrderId, PaymentId) and
-    FPayments.TryGetValue(PaymentId, APayment);
+  TMonitor.Enter(FLock);
+  try
+    Result := FOrderToPayment.TryGetValue(AOrderId, PaymentId) and
+      FPayments.TryGetValue(PaymentId, APayment);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 procedure TInMemoryCommerceStorage.UpdatePayment(

@@ -121,8 +121,14 @@ begin
     raise EDeepBaseCommercePaymentError.CreateFmt(
       'Order %s was created in %s state, cannot proceed with payment',
       [Result.Order.OrderId, CommerceOrderStatusToStr(Result.Order.Status)]);
-  Result.PaymentIntent := FClient.CreatePaymentIntent(Result.Order.OrderId,
-    AProvider, AChannel, APayerOpenId, AIdempotencyKey);
+  try
+    Result.PaymentIntent := FClient.CreatePaymentIntent(Result.Order.OrderId,
+      AProvider, AChannel, APayerOpenId, AIdempotencyKey);
+  except
+    on E: Exception do
+      raise EDeepBaseCommercePaymentError.CreateFmt(
+        'Payment intent failed for order %s: %s', [Result.Order.OrderId, E.Message]);
+  end;
 end;
 
 function TDeepKitUpgradeFlowClient.CheckEntitlement(

@@ -144,6 +144,7 @@ type
     FTransport: ICommerceBackendHttpTransport;
     FRefreshToken: string;
     FRefreshing: Boolean;
+    FTokenLock: TObject;
 
     function ApplyRoutePrefix(const APath: string): string;
     function BuildUrl(const APath: string): string;
@@ -166,6 +167,7 @@ type
   public
     constructor Create(const AConfig: TDeepKitSafeClientConfig;
       const ATransport: ICommerceBackendHttpTransport = nil);
+    destructor Destroy; override;
 
     procedure SetAccessToken(const AAccessToken: string);
     function GetAccessToken: string;
@@ -337,21 +339,43 @@ begin
     FTransport := TCommerceBackendHttpClientTransport.Create(AConfig.TimeoutMs);
   FRefreshToken := '';
   FRefreshing := False;
+  FTokenLock := TObject.Create;
+end;
+
+destructor TDeepKitSafeClient.Destroy;
+begin
+  FreeAndNil(FTokenLock);
+  inherited;
 end;
 
 procedure TDeepKitSafeClient.SetAccessToken(const AAccessToken: string);
 begin
-  FConfig.BearerToken := AAccessToken;
+  TMonitor.Enter(FTokenLock);
+  try
+    FConfig.BearerToken := AAccessToken;
+  finally
+    TMonitor.Exit(FTokenLock);
+  end;
 end;
 
 function TDeepKitSafeClient.GetAccessToken: string;
 begin
-  Result := FConfig.BearerToken;
+  TMonitor.Enter(FTokenLock);
+  try
+    Result := FConfig.BearerToken;
+  finally
+    TMonitor.Exit(FTokenLock);
+  end;
 end;
 
 procedure TDeepKitSafeClient.SetRefreshToken(const AToken: string);
 begin
-  FRefreshToken := AToken;
+  TMonitor.Enter(FTokenLock);
+  try
+    FRefreshToken := AToken;
+  finally
+    TMonitor.Exit(FTokenLock);
+  end;
 end;
 
 function TDeepKitSafeClient.GetRefreshToken: string;
@@ -444,10 +468,23 @@ function TDeepKitSafeClient.SendJson(const AMethod, APath: string;
   AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
 begin
   Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
-  if AIncludeAuth and (Result.StatusCode = 401) and (FRefreshToken <> '') and not FRefreshing then
+  if AIncludeAuth and (Result.StatusCode = 401) then
   begin
-    if TryRefreshToken then
-      Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+    TMonitor.Enter(FTokenLock);
+    try
+      if (FRefreshToken <> '') and not FRefreshing then
+      begin
+        FRefreshing := True;
+        try
+          if TryRefreshToken then
+            Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+        finally
+          FRefreshing := False;
+        end;
+      end;
+    finally
+      TMonitor.Exit(FTokenLock);
+    end;
   end;
 end;
 
@@ -462,36 +499,31 @@ begin
   if FRefreshToken = '' then
     Exit;
 
-  FRefreshing := True;
+  Body := TJSONObject.Create;
   try
-    Body := TJSONObject.Create;
-    try
-      Body.AddPair(SDeepKitFieldRefreshToken, FRefreshToken);
-      Response := SendJsonInternal(SHttpPost, SDeepKitRouteAuthRefresh, Body, '', False);
-    finally
-      Body.Free;
-    end;
+    Body.AddPair(SDeepKitFieldRefreshToken, FRefreshToken);
+    Response := SendJsonInternal(SHttpPost, SDeepKitRouteAuthRefresh, Body, '', False);
+  finally
+    Body.Free;
+  end;
 
-    if Response.StatusCode <> 200 then
-      Exit;
+  if Response.StatusCode <> 200 then
+    Exit;
 
-    Json := ParseJsonObject(Response.Body);
-    if not Assigned(Json) then
-      Exit;
-    try
-      Session := AuthSessionFromJson(Json);
-      if Session.AccessToken <> '' then
-      begin
-        SetAccessToken(Session.AccessToken);
-        if Session.RefreshToken <> '' then
-          FRefreshToken := Session.RefreshToken;
-        Result := True;
-      end;
-    finally
-      Json.Free;
+  Json := ParseJsonObject(Response.Body);
+  if not Assigned(Json) then
+    Exit;
+  try
+    Session := AuthSessionFromJson(Json);
+    if Session.AccessToken <> '' then
+    begin
+      FConfig.BearerToken := Session.AccessToken;
+      if Session.RefreshToken <> '' then
+        FRefreshToken := Session.RefreshToken;
+      Result := True;
     end;
   finally
-    FRefreshing := False;
+    Json.Free;
   end;
 end;
 
