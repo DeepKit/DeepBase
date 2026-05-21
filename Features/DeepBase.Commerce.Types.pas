@@ -174,6 +174,7 @@ type
     class function NewOutTradeNo(const APrefix: string = 'UB'): string; static;
   end;
 
+  // All ISO timestamps (CreatedAtISO, PaidAtISO, etc.) are UTC. Use CommerceNowISO to generate.
 function CommerceNowISO: string;
 function CommerceAuthProviderToStr(AProvider: TCommerceAuthProvider): string;
 function CommercePaymentProviderToStr(AProvider: TCommercePaymentProvider): string;

@@ -236,6 +236,24 @@
 - [ ] 本地许可证缓存必须包含签名、公钥版本、撤销版本、签发时间和过期时间，超过宽限期必须回连服务器。
 - [ ] 所有付费功能入口必须通过权限 API 检查，不能只判断本地 UI 状态或配置开关。
 
+### AUDIT-P0-2026-05-19: Commerce 客户端 SDK 代码审计修复
+- **状态**: 已完成
+- **来源**: 2026-05-19 对 Commerce 客户端全部模块的代码审计
+- **目标**: 修复审计发现的内存泄漏、Token 刷新、命名混淆和平台限制等问题
+- **任务**:
+- [x] P0-1: SDKGateway 四个工厂函数 Config 内存泄漏 — Adapter 新增 FConfig 字段和 Destroy 释放
+- [x] P0-2: PaymentBridge 三个验证器工厂 Config 内存泄漏 — Verifier 新增 FConfig 字段和 Destroy 释放
+- [x] P1-1: SafeClient 缺少自动 Token 刷新机制 — SendJson 检测 401 后自动 TryRefreshToken + 重试
+- [x] P1-2: SafeClient.AuthLogout 空 body 语义 — 改为始终创建 Body，优先使用存储的 FRefreshToken
+- [x] P1-3: License Snapshot 验证非 Windows 平台 — 补充注释说明需提供自定义 LicenseSnapshotVerifier
+- [x] P1-4: WeChat Pay 验证 fail-closed — 接口文档注释标注未实现，推荐 TCallbackNotificationVerifier
+- [x] P2-1: OrderFromJson 重名 — 已改为 DeepKitOrderFromJson
+- [ ] P2-2: Types.pas 字段常量导出过于宽泛 — SCommerceFieldXxx 应考虑移入 JsonUtil（暂不处理）
+- [x] P2-3: UpgradeFlow.StartPaidUpgrade — 补充订单状态验证，closed/failed/refunded 时抛异常
+- [x] P2-4: Permissions RemainingQuota -1=unlimited — 已有注释确认
+- [x] P2-5: Backend.Http TLS — 确认使用平台默认证书校验，补充注释
+
+
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中
 - **目标**: 软件上线后支持免费版到收费版的安全升级，并支持网站上的免费/付费版本更新。

@@ -28,11 +28,14 @@ type
   TSDKPaymentGatewayAdapter = class(TInterfacedObject, ICommercePaymentGateway)
   private
     FClient: IPaymentClient;
+    FConfig: TPaymentConfig;
     FNotifyUrl: string;
     function MapChannel(AChannel: TCommercePaymentChannel): TPaymentMethod;
   public
     constructor Create(const AClient: IPaymentClient;
-      const ANotifyUrl: string = '');
+      const ANotifyUrl: string = '';
+      AConfig: TPaymentConfig = nil);
+    destructor Destroy; override;
 
     function CreatePaymentIntent(const AOrder: TCommerceOrderData;
       const APayment: TCommercePaymentData;
@@ -78,13 +81,20 @@ end;
 { TSDKPaymentGatewayAdapter }
 
 constructor TSDKPaymentGatewayAdapter.Create(const AClient: IPaymentClient;
-  const ANotifyUrl: string);
+  const ANotifyUrl: string; AConfig: TPaymentConfig);
 begin
   inherited Create;
   if not Assigned(AClient) then
     raise EArgumentNilException.Create('AClient must not be nil');
   FClient := AClient;
+  FConfig := AConfig;
   FNotifyUrl := ANotifyUrl;
+end;
+
+destructor TSDKPaymentGatewayAdapter.Destroy;
+begin
+  FConfig.Free;
+  inherited;
 end;
 
 function TSDKPaymentGatewayAdapter.MapChannel(
@@ -169,7 +179,7 @@ begin
   Config.MchId := AMchId;
   Config.ApiKeyV3 := AApiKeyV3;
   Client := TWeChatPayClient.Create(Config);
-  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl);
+  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl, Config);
 end;
 
 function CreateAlipayGateway(const AAppId, APrivateKey,
@@ -184,7 +194,7 @@ begin
   Config.AlipayPublicKey := AAlipayPublicKey;
   Config.SignType := 'RSA2';
   Client := TAlipayClient.Create(Config);
-  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl);
+  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl, Config);
 end;
 
 function CreateStripeGateway(const ASecretKey,
@@ -196,7 +206,7 @@ begin
   Config := TStripeConfig.Create;
   Config.SecretKey := ASecretKey;
   Client := TStripeClient.Create(Config);
-  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl);
+  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl, Config);
 end;
 
 function CreatePayPalGateway(const AClientId, AClientSecret,
@@ -209,7 +219,7 @@ begin
   Config.ClientID := AClientId;
   Config.ClientSecret := AClientSecret;
   Client := TPayPalClient.Create(Config);
-  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl);
+  Result := TSDKPaymentGatewayAdapter.Create(Client, ANotifyUrl, Config);
 end;
 
 end.

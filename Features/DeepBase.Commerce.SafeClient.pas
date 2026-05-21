@@ -8,7 +8,8 @@ uses
   System.Net.URLClient,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.Backend.Http,
-  DeepBase.Commerce.Backend.Contract;
+  DeepBase.Commerce.Backend.Contract,
+  DeepBase.Commerce.JsonUtil;
 
 const
   SDeepKitRouteAuthLogin = '/auth/login';
@@ -141,6 +142,8 @@ type
   private
     FConfig: TDeepKitSafeClientConfig;
     FTransport: ICommerceBackendHttpTransport;
+    FRefreshToken: string;
+    FRefreshing: Boolean;
 
     function ApplyRoutePrefix(const APath: string): string;
     function BuildUrl(const APath: string): string;
@@ -150,18 +153,24 @@ type
     function SendJson(const AMethod, APath: string; ABody: TJSONObject = nil;
       const AIdempotencyKey: string = '';
       AIncludeAuth: Boolean = True): TCommerceBackendHttpResponse;
+    function SendJsonInternal(const AMethod, APath: string;
+      ABody: TJSONObject; const AIdempotencyKey: string;
+      AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
     procedure EnsureSuccess(const AMethod, APath: string;
       const AResponse: TCommerceBackendHttpResponse);
     function ParseObjectResponse(const AMethod, APath: string;
       const AResponse: TCommerceBackendHttpResponse): TJSONObject;
     procedure ValidateLicenseSnapshot(const ASnapshot: TDeepKitLicenseSnapshot;
       const AAppId, ADeviceId: string);
+    function TryRefreshToken: Boolean;
   public
     constructor Create(const AConfig: TDeepKitSafeClientConfig;
       const ATransport: ICommerceBackendHttpTransport = nil);
 
     procedure SetAccessToken(const AAccessToken: string);
     function GetAccessToken: string;
+    procedure SetRefreshToken(const AToken: string);
+    function GetRefreshToken: string;
 
     function AuthLoginDeviceAnonymous(const AAppId, ADeviceId: string;
       const ADeviceFingerprint: string = ''): TDeepKitAuthSession;
@@ -202,199 +211,7 @@ const
   SHttpGet = 'GET';
   SHttpPost = 'POST';
 
-function IsHttpSuccess(AStatusCode: Integer): Boolean;
-begin
-  Result := (AStatusCode >= 200) and (AStatusCode < 300);
-end;
-
-function NormalizeRoutePrefix(const APrefix: string): string;
-begin
-  Result := APrefix.Trim;
-  if Result = '' then
-    Exit('');
-
-  if not Result.StartsWith('/') then
-    Result := '/' + Result;
-
-  while Result.EndsWith('/') and (Length(Result) > 1) do
-    Delete(Result, Length(Result), 1);
-end;
-
-function RouteStartsWithPrefix(const APath, APrefix: string): Boolean;
-begin
-  if APrefix = '' then
-    Exit(True);
-  if Length(APath) < Length(APrefix) then
-    Exit(False);
-  if not SameText(Copy(APath, 1, Length(APrefix)), APrefix) then
-    Exit(False);
-  if Length(APath) = Length(APrefix) then
-    Exit(True);
-  Result := APath[Length(APrefix) + 1] = '/';
-end;
-
-procedure AddHeader(var AHeaders: TNetHeaders; const AName, AValue: string);
-begin
-  if AValue = '' then
-    Exit;
-  SetLength(AHeaders, Length(AHeaders) + 1);
-  AHeaders[High(AHeaders)] := TNameValuePair.Create(AName, AValue);
-end;
-
-function ParseJsonObject(const ABody: string): TJSONObject;
-var
-  Value: TJSONValue;
-begin
-  if ABody = '' then
-    Exit(TJSONObject.Create);
-
-  Value := TJSONObject.ParseJSONValue(ABody);
-  if not (Value is TJSONObject) then
-  begin
-    Value.Free;
-    raise EDeepBaseCommerceError.Create('DeepKit backend returned invalid JSON object');
-  end;
-  Result := TJSONObject(Value);
-end;
-
-function JsonValueAsString(AJson: TJSONObject; const AName,
-  ADefault: string): string;
-var
-  Value: TJSONValue;
-begin
-  Result := ADefault;
-  if not Assigned(AJson) then
-    Exit;
-  Value := AJson.FindValue(AName);
-  if Assigned(Value) and not (Value is TJSONNull) then
-    Result := Value.Value;
-end;
-
-function JsonValueAsInt(AJson: TJSONObject; const AName: string;
-  ADefault: Integer): Integer;
-var
-  Value: TJSONValue;
-begin
-  Result := ADefault;
-  if not Assigned(AJson) then
-    Exit;
-  Value := AJson.FindValue(AName);
-  if Value is TJSONNumber then
-    Result := TJSONNumber(Value).AsInt
-  else if Assigned(Value) and not (Value is TJSONNull) then
-    Result := StrToIntDef(Value.Value, ADefault);
-end;
-
-function JsonValueAsInt64(AJson: TJSONObject; const AName: string;
-  ADefault: Int64): Int64;
-var
-  Value: TJSONValue;
-begin
-  Result := ADefault;
-  if not Assigned(AJson) then
-    Exit;
-  Value := AJson.FindValue(AName);
-  if Value is TJSONNumber then
-    Result := TJSONNumber(Value).AsInt64
-  else if Assigned(Value) and not (Value is TJSONNull) then
-    Result := StrToInt64Def(Value.Value, ADefault);
-end;
-
-function JsonValueAsBool(AJson: TJSONObject; const AName: string;
-  ADefault: Boolean): Boolean;
-var
-  Value: TJSONValue;
-  Text: string;
-begin
-  Result := ADefault;
-  if not Assigned(AJson) then
-    Exit;
-  Value := AJson.FindValue(AName);
-  if Value is TJSONBool then
-    Result := TJSONBool(Value).AsBoolean
-  else if Assigned(Value) and not (Value is TJSONNull) then
-  begin
-    Text := LowerCase(Value.Value);
-    if (Text = 'true') or (Text = '1') then
-      Result := True
-    else if (Text = 'false') or (Text = '0') then
-      Result := False;
-  end;
-end;
-
-function ChannelToString(AChannel: TCommercePaymentChannel): string;
-begin
-  case AChannel of
-    cpcNative: Result := 'native';
-    cpcJSAPI: Result := 'jsapi';
-    cpcMiniProgram: Result := 'mini_program';
-    cpcH5: Result := 'h5';
-    cpcApp: Result := 'app';
-    cpcWeb: Result := 'web';
-  else
-    Result := 'manual';
-  end;
-end;
-
-function OrderStatusFromString(const AValue: string): TCommerceOrderStatus;
-begin
-  if SameText(AValue, 'created') then
-    Result := cosCreated
-  else if SameText(AValue, 'paying') then
-    Result := cosPaying
-  else if SameText(AValue, 'paid') then
-    Result := cosPaid
-  else if SameText(AValue, 'closed') then
-    Result := cosClosed
-  else if SameText(AValue, 'failed') then
-    Result := cosFailed
-  else
-    Result := cosRefunded;
-end;
-
-function EntitlementStatusFromString(const AValue: string): TCommerceEntitlementStatus;
-begin
-  if SameText(AValue, 'active') then
-    Result := cesActive
-  else if SameText(AValue, 'consumed') then
-    Result := cesConsumed
-  else if SameText(AValue, 'expired') then
-    Result := cesExpired
-  else
-    Result := cesRevoked;
-end;
-
-function ProductFromJson(AJson: TJSONObject): TCommerceProductData;
-begin
-  Result.ProductId := JsonValueAsString(AJson, SCommerceFieldProductId, '');
-  Result.AppId := JsonValueAsString(AJson, SCommerceFieldAppId, '');
-  Result.Name := JsonValueAsString(AJson, SCommerceFieldName, '');
-  Result.Description := JsonValueAsString(AJson, SCommerceFieldDescription, '');
-  Result.AmountMinor := JsonValueAsInt64(AJson, SCommerceFieldAmountMinor, 0);
-  Result.Currency := JsonValueAsString(AJson, SCommerceFieldCurrency, '');
-  Result.EntitlementCode := JsonValueAsString(AJson, SCommerceFieldEntitlementCode, '');
-  Result.EntitlementDurationDays := JsonValueAsInt(AJson,
-    SCommerceFieldEntitlementDurationDays, 0);
-  Result.InitialQuota := JsonValueAsInt(AJson, SCommerceFieldInitialQuota, -1);
-  Result.IsActive := JsonValueAsBool(AJson, SCommerceFieldIsActive, True);
-end;
-
-function EntitlementFromJson(AJson: TJSONObject): TCommerceEntitlementData;
-begin
-  Result.EntitlementId := JsonValueAsString(AJson, SCommerceFieldEntitlementId, '');
-  Result.UserId := JsonValueAsString(AJson, SCommerceFieldUserId, '');
-  Result.AppId := JsonValueAsString(AJson, SCommerceFieldAppId, '');
-  Result.ProductId := JsonValueAsString(AJson, SCommerceFieldProductId, '');
-  Result.Code := JsonValueAsString(AJson, SCommerceFieldCode, '');
-  Result.Status := EntitlementStatusFromString(JsonValueAsString(
-    AJson, SCommerceFieldStatus, ''));
-  Result.ValidFromISO := JsonValueAsString(AJson, SCommerceFieldValidFrom, '');
-  Result.ValidUntilISO := JsonValueAsString(AJson, SCommerceFieldValidUntil, '');
-  Result.RemainingQuota := JsonValueAsInt(AJson, SCommerceFieldRemainingQuota, -1);
-  Result.SourceOrderId := JsonValueAsString(AJson, SCommerceFieldSourceOrderId, '');
-end;
-
-function OrderFromJson(AJson: TJSONObject): TDeepKitOrder;
+function DeepKitOrderFromJson(AJson: TJSONObject): TDeepKitOrder;
 begin
   Result.OrderId := JsonValueAsString(AJson, SCommerceFieldOrderId, '');
   Result.OutTradeNo := JsonValueAsString(AJson, SCommerceFieldOutTradeNo, '');
@@ -463,22 +280,6 @@ begin
   Result.ReleaseNotes := JsonValueAsString(AJson, SDeepKitFieldReleaseNotes, '');
 end;
 
-function PaymentIntentFromJson(AJson: TJSONObject;
-  const ARawResponse: string): TCommercePaymentIntent;
-begin
-  Result.Success := JsonValueAsBool(AJson, SCommerceFieldSuccess, True);
-  Result.PaymentId := JsonValueAsString(AJson, SCommerceFieldPaymentId, '');
-  Result.OutTradeNo := JsonValueAsString(AJson, SCommerceFieldOutTradeNo, '');
-  Result.PrepayId := JsonValueAsString(AJson, SCommerceFieldPrepayId, '');
-  Result.PayUrl := JsonValueAsString(AJson, SCommerceFieldPayUrl, '');
-  Result.QRCodeData := JsonValueAsString(AJson, SCommerceFieldQrCodeData, '');
-  Result.ClientParamsJson := JsonValueAsString(AJson,
-    SCommerceFieldClientParamsJson, '');
-  Result.RawResponse := ARawResponse;
-  Result.ErrorCode := JsonValueAsString(AJson, SCommerceFieldErrorCode, '');
-  Result.ErrorMessage := JsonValueAsString(AJson, SCommerceFieldErrorMessage, '');
-end;
-
 function SnapshotJsonField(const APayload, AFieldName: string): string;
 var
   JsonValue: TJSONValue;
@@ -534,6 +335,8 @@ begin
   FTransport := ATransport;
   if not Assigned(FTransport) then
     FTransport := TCommerceBackendHttpClientTransport.Create(AConfig.TimeoutMs);
+  FRefreshToken := '';
+  FRefreshing := False;
 end;
 
 procedure TDeepKitSafeClient.SetAccessToken(const AAccessToken: string);
@@ -544,6 +347,16 @@ end;
 function TDeepKitSafeClient.GetAccessToken: string;
 begin
   Result := FConfig.BearerToken;
+end;
+
+procedure TDeepKitSafeClient.SetRefreshToken(const AToken: string);
+begin
+  FRefreshToken := AToken;
+end;
+
+function TDeepKitSafeClient.GetRefreshToken: string;
+begin
+  Result := FRefreshToken;
 end;
 
 function TDeepKitSafeClient.ApplyRoutePrefix(const APath: string): string;
@@ -612,7 +425,7 @@ begin
     AddHeader(Result, 'Idempotency-Key', AIdempotencyKey);
 end;
 
-function TDeepKitSafeClient.SendJson(const AMethod, APath: string;
+function TDeepKitSafeClient.SendJsonInternal(const AMethod, APath: string;
   ABody: TJSONObject; const AIdempotencyKey: string;
   AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
 var
@@ -624,6 +437,62 @@ begin
     BodyText := '';
   Result := FTransport.Send(AMethod, BuildUrl(APath), BodyText,
     BuildHeaders(AIdempotencyKey, AIncludeAuth));
+end;
+
+function TDeepKitSafeClient.SendJson(const AMethod, APath: string;
+  ABody: TJSONObject; const AIdempotencyKey: string;
+  AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
+begin
+  Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+  if AIncludeAuth and (Result.StatusCode = 401) and (FRefreshToken <> '') and not FRefreshing then
+  begin
+    if TryRefreshToken then
+      Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+  end;
+end;
+
+function TDeepKitSafeClient.TryRefreshToken: Boolean;
+var
+  Body: TJSONObject;
+  Response: TCommerceBackendHttpResponse;
+  Json: TJSONObject;
+  Session: TDeepKitAuthSession;
+begin
+  Result := False;
+  if FRefreshToken = '' then
+    Exit;
+
+  FRefreshing := True;
+  try
+    Body := TJSONObject.Create;
+    try
+      Body.AddPair(SDeepKitFieldRefreshToken, FRefreshToken);
+      Response := SendJsonInternal(SHttpPost, SDeepKitRouteAuthRefresh, Body, '', False);
+    finally
+      Body.Free;
+    end;
+
+    if Response.StatusCode <> 200 then
+      Exit;
+
+    Json := ParseJsonObject(Response.Body);
+    if not Assigned(Json) then
+      Exit;
+    try
+      Session := AuthSessionFromJson(Json);
+      if Session.AccessToken <> '' then
+      begin
+        SetAccessToken(Session.AccessToken);
+        if Session.RefreshToken <> '' then
+          FRefreshToken := Session.RefreshToken;
+        Result := True;
+      end;
+    finally
+      Json.Free;
+    end;
+  finally
+    FRefreshing := False;
+  end;
 end;
 
 procedure TDeepKitSafeClient.EnsureSuccess(const AMethod, APath: string;
@@ -709,6 +578,9 @@ begin
       RsaVerifier.Free;
     end;
 {$ELSE}
+    // License snapshot RSA-SHA256 verification currently requires Windows CryptoAPI.
+    // On non-Windows platforms, provide a custom LicenseSnapshotVerifier callback
+    // in TDeepKitSafeClientConfig to handle verification (e.g. via OpenSSL).
     raise EDeepBaseCommerceValidationError.Create(
       'License snapshot public-key verification is unavailable on this platform');
 {$ENDIF}
@@ -744,6 +616,8 @@ begin
     Result := AuthSessionFromJson(Json);
     if Result.AccessToken <> '' then
       SetAccessToken(Result.AccessToken);
+    if Result.RefreshToken <> '' then
+      FRefreshToken := Result.RefreshToken;
   finally
     Json.Free;
   end;
@@ -769,6 +643,8 @@ begin
     Result := AuthSessionFromJson(Json);
     if Result.AccessToken <> '' then
       SetAccessToken(Result.AccessToken);
+    if Result.RefreshToken <> '' then
+      FRefreshToken := Result.RefreshToken;
   finally
     Json.Free;
   end;
@@ -776,21 +652,23 @@ end;
 
 procedure TDeepKitSafeClient.AuthLogout(const ARefreshToken: string);
 var
+  Token: string;
   Body: TJSONObject;
   Json: TJSONObject;
 begin
-  Body := nil;
-  if ARefreshToken <> '' then
-  begin
-    Body := TJSONObject.Create;
-    Body.AddPair(SDeepKitFieldRefreshToken, ARefreshToken);
-  end;
+  Token := ARefreshToken;
+  if Token = '' then
+    Token := FRefreshToken;
 
+  Body := TJSONObject.Create;
   try
+    if Token <> '' then
+      Body.AddPair(SDeepKitFieldRefreshToken, Token);
     Json := ParseObjectResponse(SHttpPost, SDeepKitRouteAuthLogout,
       SendJson(SHttpPost, SDeepKitRouteAuthLogout, Body));
     try
       SetAccessToken('');
+      FRefreshToken := '';
     finally
       Json.Free;
     end;
@@ -853,7 +731,7 @@ begin
     Json := ParseObjectResponse(SHttpPost, SCommerceRouteOrders,
       SendJson(SHttpPost, SCommerceRouteOrders, Body));
     try
-      Result := OrderFromJson(Json);
+      Result := DeepKitOrderFromJson(Json);
     finally
       Json.Free;
     end;
@@ -870,7 +748,7 @@ begin
   Path := TCommerceBackendRoutes.OrderById(AOrderId);
   Json := ParseObjectResponse(SHttpGet, Path, SendJson(SHttpGet, Path));
   try
-    Result := OrderFromJson(Json);
+    Result := DeepKitOrderFromJson(Json);
   finally
     Json.Free;
   end;

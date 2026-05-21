@@ -117,6 +117,10 @@ begin
 
   Result.Product := FindProductOrRaise(AProductId);
   Result.Order := FClient.CreateOrder(FUserId, FAppId, Result.Product.ProductId);
+  if Result.Order.Status in [cosClosed, cosFailed, cosRefunded] then
+    raise EDeepBaseCommercePaymentError.CreateFmt(
+      'Order %s was created in %s state, cannot proceed with payment',
+      [Result.Order.OrderId, CommerceOrderStatusToStr(Result.Order.Status)]);
   Result.PaymentIntent := FClient.CreatePaymentIntent(Result.Order.OrderId,
     AProvider, AChannel, APayerOpenId, AIdempotencyKey);
 end;

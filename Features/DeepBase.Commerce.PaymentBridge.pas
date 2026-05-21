@@ -44,11 +44,14 @@ type
   private
     FClient: IPaymentClient;
     FClientObject: TObject;
+    FConfig: TPaymentConfig;
     FProvider: TCommercePaymentProvider;
     FCurrency: string;
   public
     constructor Create(AProvider: TCommercePaymentProvider;
-      AClient: TObject; const ACurrency: string = 'CNY');
+      AClient: TObject; const ACurrency: string = 'CNY';
+      AConfig: TPaymentConfig = nil);
+    destructor Destroy; override;
     function VerifyNotification(const ARawBody: string;
       const AHeaders: TArray<TPair<string, string>>): TCommercePaymentNotification;
   end;
@@ -58,7 +61,11 @@ function CreateAlipayNotificationVerifier(
   const AAppId, APrivateKey, AAlipayPublicKey: string;
   const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
 
-/// <summary>Create WeChat Pay notification verifier</summary>
+/// <summary>Create WeChat Pay notification verifier.
+/// NOTE: WeChat Pay V3 callback verification is not yet implemented.
+/// This function always raises an exception at runtime (fails closed).
+/// Use a TCallbackNotificationVerifier with your own verification logic instead.
+/// </summary>
 function CreateWeChatPayNotificationVerifier(
   const AAppId, AMchId, AApiV3Key: string;
   const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
@@ -109,14 +116,21 @@ end;
 { TSDKNotificationVerifier }
 
 constructor TSDKNotificationVerifier.Create(AProvider: TCommercePaymentProvider;
-  AClient: TObject; const ACurrency: string);
+  AClient: TObject; const ACurrency: string; AConfig: TPaymentConfig);
 begin
   inherited Create;
   if not Supports(AClient, IPaymentClient, FClient) then
     raise EDeepBaseCommerceValidationError.Create('Payment client does not implement IPaymentClient');
   FClientObject := AClient;
+  FConfig := AConfig;
   FProvider := AProvider;
   FCurrency := ACurrency;
+end;
+
+destructor TSDKNotificationVerifier.Destroy;
+begin
+  FConfig.Free;
+  inherited;
 end;
 
 function TSDKNotificationVerifier.VerifyNotification(const ARawBody: string;
@@ -177,7 +191,7 @@ begin
   Result.RawPayload := SDKNotif.RawData;
 end;
 
-{ Factory functions - client owns the config }
+{ Factory functions - TSDKNotificationVerifier owns and frees the Config }
 
 function CreateAlipayNotificationVerifier(
   const AAppId, APrivateKey, AAlipayPublicKey: string;
@@ -192,7 +206,7 @@ begin
   Config.AlipayPublicKey := AAlipayPublicKey;
   Config.SignType := 'RSA2';
   Result := TSDKNotificationVerifier.Create(cppAlipay,
-    TAlipayClient.Create(Config), ACurrency);
+    TAlipayClient.Create(Config), ACurrency, Config);
 end;
 
 function CreateWeChatPayNotificationVerifier(
@@ -215,7 +229,7 @@ begin
   Config.SecretKey := ASecretKey;
   Config.WebhookSecret := AWebhookSecret;
   Result := TSDKNotificationVerifier.Create(cppStripe,
-    TStripeClient.Create(Config), ACurrency);
+    TStripeClient.Create(Config), ACurrency, Config);
 end;
 
 function CreatePayPalNotificationVerifier(
@@ -229,7 +243,7 @@ begin
   Config.ClientID := AClientId;
   Config.ClientSecret := AClientSecret;
   Result := TSDKNotificationVerifier.Create(cppPayPal,
-    TPayPalClient.Create(Config), ACurrency);
+    TPayPalClient.Create(Config), ACurrency, Config);
 end;
 
 end.

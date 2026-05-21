@@ -93,6 +93,28 @@
 
 ---
 
+## BUG-005 两套支付类型系统同名不同构（P1 — 设计债）
+
+- **严重度**：中（未来集成支付网关时易引发序列化/反序列化不一致）
+- **发现路径**：DeepBase 认证+支付模块审查
+- **现象**：
+  - `DeepBase.Payment.pas` 定义了 `TPaymentProvider`、`TPaymentStatus`、`TPaymentResult`、`EPaymentError` 等类型
+  - `DeepBase.Payment.Types.pas` 定义了**同名但结构不同**的 `TPaymentProvider`、`TPaymentStatus`、`TPaymentResult`、`EPaymentError`
+  - 两套枚举值**值域不完全一致**（Payment.pas 有 `ppNone`、`psIdle` 等，Types.pas 没有）
+  - 如果某单元同时 `uses` 两个文件，最后一个 `uses` 的会遮盖前一个（Delphi 名称解析规则）
+- **根因**：Types.pas + Core.pas 是早期设计草图，未被任何 `.dpr` 或 `.pas` 引用（死代码），未与 Payment.pas 统一
+- **影响范围**：当前无实际影响（死代码），但未来激活 Payment 网关时如果引用了错误的类型，会导致 subtle bug
+- **修复策略**（P1 — 不阻塞交付）：
+  - 在 `DeepBase.Payment.Types.pas` 头部加了 WARNING 注释，标注所有重复类型及与 `DeepBase.Payment.pas` 的差异
+  - 在 `DeepBase.Payment.Core.pas` 头部加了 WARNING 注释，说明使用前需先统一类型系统
+  - 不做破坏性重构（避免引入新的编译错误）
+- **后续建议**：
+  - 激活 Payment 网关前，决定保留哪套类型作为唯一源，删除另一套
+  - 或将 Types.pas 的类型改为 `TXxx`（加前缀）避免命名冲突
+- **状态**：WARNING 注释已加，设计债已记录，待后续 Payment 激活时处理
+
+---
+
 ## Phase 1.8/1.10 运行时验证（DeepClip 纯 Governance 层）
 
 通过 `tests/GovernanceSmoke/DeepClipGovernanceSmoke.dpr`（控制台最小 harness）验证：

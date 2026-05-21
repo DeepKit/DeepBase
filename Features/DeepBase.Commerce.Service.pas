@@ -324,6 +324,7 @@ begin
   Result := ConfirmPayment(Notification);
 end;
 
+// ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
 procedure TDeepBaseCommerceService.GrantEntitlementForOrder(
   const AOrder: TCommerceOrderData);
 var
