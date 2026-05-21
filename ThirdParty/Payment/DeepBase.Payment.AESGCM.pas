@@ -48,6 +48,7 @@ var
   Status: NTSTATUS;
   KeyObjSize: ULONG;
   KeyObjBuf: TBytes;
+  BytesCopied: ULONG;
   ResultLen: ULONG;
   AuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
 begin
@@ -73,7 +74,7 @@ begin
 
     // Get key object size
     Status := BCryptGetProperty(hAlg, BCRYPT_OBJECT_LENGTH,
-      @KeyObjSize, SizeOf(KeyObjSize), KeyObjSize, 0);
+      @KeyObjSize, SizeOf(KeyObjSize), BytesCopied, 0);
     if Status <> STATUS_SUCCESS then
       Exit;
 

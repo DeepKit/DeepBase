@@ -174,7 +174,7 @@ begin
       'Feature "%s" is not allowed: %s', [AFeatureCode, Check.Reason]);
 
   EntitlementCode := Check.EntitlementCode;
-  if FDefaultEntitlementCode <> '' then
+  if (EntitlementCode = '') and (FDefaultEntitlementCode <> '') then
     EntitlementCode := FDefaultEntitlementCode;
 
   Result := FClient.ConsumeEntitlement(FAppId, EntitlementCode,

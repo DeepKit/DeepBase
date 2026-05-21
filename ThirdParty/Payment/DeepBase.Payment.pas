@@ -4,7 +4,7 @@ unit DeepBase.Payment;
   DeepBase Payment Integration
 
   Unified interface for payment providers:
-    - Alipay (支付�?
+    - Alipay (支付�?
     - WeChat Pay (微信支付)
     - Stripe
     - PayPal
@@ -210,7 +210,7 @@ type
     property Timeout: Integer read FTimeout write FTimeout;
     property NotifyUrl: string read FNotifyUrl write FNotifyUrl;
     property ReturnUrl: string read FReturnUrl write FReturnUrl;
-    // BUG-019 FIX: 密钥安全存储属�?
+    // BUG-019 FIX: 密钥安全存储属�?
     property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
   end;
@@ -296,7 +296,8 @@ implementation
 
 uses
   DeepBase.Security.DPAPI,  // BUG-019 FIX: 安全密钥存储支持
-  DeepBase.Random;
+  DeepBase.Random,
+  DeepBase.Payment.AESGCM;
 
 { EPaymentError }
 
@@ -445,7 +446,7 @@ begin
   FProvider := AProvider;
   FIsSandbox := False;
   FTimeout := 30000;
-  // BUG-019 FIX: 初始化安全存储设�?
+  // BUG-019 FIX: 初始化安全存储设�?
   FKeyStorageMode := ksmDPAPI;  // 默认使用 DPAPI（推荐）
   FCredentialTarget := 'DeepBase.Payment.' + TPaymentHelper.ProviderToString(AProvider);
 end;
@@ -461,10 +462,10 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.ProtectString(APlainKey);
     ksmCredential:
-      // Credential Manager 模式下不需要额外加�?
+      // Credential Manager 模式下不需要额外加�?
       Result := APlainKey;
   else
-    // ksmPlainText - 不推荐，但保持兼容�?
+    // ksmPlainText - 不推荐，但保持兼容�?
     Result := APlainKey;
   end;
 end;
@@ -478,7 +479,7 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
     ksmCredential:
-      // Credential Manager 模式下数据已经安全存�?
+      // Credential Manager 模式下数据已经安全存�?
       Result := AEncryptedKey;
   else
     // ksmPlainText
@@ -556,6 +557,11 @@ begin
     Response := FHttpClient.Post(AUrl, Content);
     Result := Response.ContentAsString(TEncoding.UTF8);
 
+    if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then
+      raise EPaymentNetworkError.Create(
+        Format('HTTP Redirect %d not followed: %s', [Response.StatusCode, AUrl]),
+        IntToStr(Response.StatusCode), FConfig.Provider);
+
     if Response.StatusCode >= 400 then
       raise EPaymentNetworkError.Create(
         Format('HTTP Error %d: %s', [Response.StatusCode, Result]),
@@ -571,6 +577,11 @@ var
 begin
   Response := FHttpClient.Get(AUrl);
   Result := Response.ContentAsString(TEncoding.UTF8);
+
+  if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then
+    raise EPaymentNetworkError.Create(
+      Format('HTTP Redirect %d not followed: %s', [Response.StatusCode, AUrl]),
+      IntToStr(Response.StatusCode), FConfig.Provider);
 
   if Response.StatusCode >= 400 then
     raise EPaymentNetworkError.Create(
@@ -650,9 +661,12 @@ end;
 class function TPaymentHelper.FormatAmount(AAmount: Currency;
   const ACurrency: string): string;
 begin
-  // Most providers use cents/fen as integer
-  if SameText(ACurrency, 'CNY') or SameText(ACurrency, 'JPY') then
-    Result := IntToStr(Round(AAmount * 100))  // Fen
+  // Zero-decimal currencies (JPY, KRW): amount is already in minor units
+  if SameText(ACurrency, 'JPY') or SameText(ACurrency, 'KRW') then
+    Result := IntToStr(Round(AAmount))
+  // Two-decimal currencies (CNY, USD, EUR, etc.): convert to cents/fen
+  else if SameText(ACurrency, 'CNY') then
+    Result := IntToStr(Round(AAmount * 100))
   else
     Result := FormatFloat('0.00', AAmount);
 end;
@@ -660,8 +674,10 @@ end;
 class function TPaymentHelper.ParseAmount(const AAmountStr: string;
   const ACurrency: string): Currency;
 begin
-  if SameText(ACurrency, 'CNY') or SameText(ACurrency, 'JPY') then
-    Result := StrToIntDef(AAmountStr, 0) / 100  // From fen
+  if SameText(ACurrency, 'JPY') or SameText(ACurrency, 'KRW') then
+    Result := StrToIntDef(AAmountStr, 0)           // Zero-decimal: 1:1
+  else if SameText(ACurrency, 'CNY') then
+    Result := StrToIntDef(AAmountStr, 0) / 100     // From fen
   else
     Result := StrToCurrDef(AAmountStr, 0);
 end;
@@ -774,8 +790,43 @@ end;
 
 class function TPaymentHelper.AES256GCMDecrypt(const ACiphertext, AKey, ANonce,
   AAssociatedData: string): string;
+var
+  Key, IV, CipherBytes, AAD, Tag: TBytes;
+  CipherLen: Integer;
+  PlainBytes: TBytes;
 begin
-  // 当前支付基础单元不引�?OpenSSL/CNG 依赖，调用方可在上层替换为真实实现�?  // fail-closed: 解密失败返回空字符串，由调用方按失败处理�?  Result := '';
+  Result := '';
+  if (ACiphertext = '') or (AKey = '') or (ANonce = '') then
+    Exit;
+
+  // Decode Base64 inputs
+  CipherBytes := TNetEncoding.Base64.DecodeStringToBytes(ACiphertext);
+  IV := TNetEncoding.Base64.DecodeStringToBytes(ANonce);
+  AAD := TNetEncoding.Base64.DecodeStringToBytes(AAssociatedData);
+
+  // Key: try Base64 decode first, fall back to UTF-8 bytes
+  Key := TNetEncoding.Base64.DecodeStringToBytes(AKey);
+  if Length(Key) <> 32 then
+    Key := TEncoding.UTF8.GetBytes(AKey);
+
+  // AES-256 requires 32-byte key, GCM nonce is 12 bytes
+  if (Length(IV) <> 12) or (Length(Key) <> 32) then
+    Exit;
+
+  CipherLen := Length(CipherBytes);
+  if CipherLen <= 16 then
+    Exit;
+
+  // WeChat Pay AEAD_AES_256_GCM: last 16 bytes = GCM authentication tag
+  Tag := Copy(CipherBytes, CipherLen - 16, 16);
+  SetLength(CipherBytes, CipherLen - 16);
+
+  // Decrypt using cross-platform AES-256-GCM
+  PlainBytes := Payment_AES256GCM_Decrypt(Key, IV, CipherBytes, AAD, Tag);
+  if Length(PlainBytes) = 0 then
+    Exit;
+
+  Result := TEncoding.UTF8.GetString(PlainBytes);
 end;
 
 end.

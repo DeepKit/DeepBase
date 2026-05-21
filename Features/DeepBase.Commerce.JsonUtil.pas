@@ -165,7 +165,7 @@ begin
     Exit(True);
   if Length(APath) < Length(APrefix) then
     Exit(False);
-  if not SameText(Copy(APath, 1, Length(APrefix)), APrefix) then
+  if not AnsiSameStr(Copy(APath, 1, Length(APrefix)), APrefix) then
     Exit(False);
   if Length(APath) = Length(APrefix) then
     Exit(True);
