@@ -43,7 +43,8 @@ type
   TSDKNotificationVerifier = class(TInterfacedObject, ICommerceNotificationVerifier)
   private
     FClient: IPaymentClient;
-    FClientObject: TObject;
+    FStripeClient: TStripeClient;
+    FPayPalClient: TPayPalClient;
     FConfig: TPaymentConfig;
     FProvider: TCommercePaymentProvider;
     FCurrency: string;
@@ -88,6 +89,12 @@ uses
   DeepBase.Payment.Stripe,
   DeepBase.Payment.PayPal;
 
+/// <summary>
+/// Development-only guard. Any process can set DEEPBASE_ALLOW_PROTOTYPE_COMMERCE_ADAPTERS=1
+/// to bypass this check. This is NOT a security boundary — it exists solely to prevent
+/// accidental use of server-side payment verification keys in desktop client builds.
+/// Production deployments must never rely on this guard for actual secret protection.
+/// </summary>
 procedure EnsurePaymentBridgeServerOnly;
 begin
   if SameText(GetEnvironmentVariable(
@@ -121,7 +128,12 @@ begin
   inherited Create;
   if not Supports(AClient, IPaymentClient, FClient) then
     raise EDeepBaseCommerceValidationError.Create('Payment client does not implement IPaymentClient');
-  FClientObject := AClient;
+  FStripeClient := nil;
+  FPayPalClient := nil;
+  if AClient is TStripeClient then
+    FStripeClient := TStripeClient(AClient)
+  else if AClient is TPayPalClient then
+    FPayPalClient := TPayPalClient(AClient);
   FConfig := AConfig;
   FProvider := AProvider;
   FCurrency := ACurrency;
@@ -153,15 +165,16 @@ begin
     raise EDeepBaseCommercePaymentError.Create(
       'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
 
-  if FClientObject is TStripeClient then
+  // Alipay: FClient.VerifyNotification handles RSA2 signature verification internally
+  if FProvider = cppStripe then
   begin
     HeaderValue := GetHeaderValue('Stripe-Signature');
-    if not TStripeClient(FClientObject).VerifyWebhookSignature(ARawBody, HeaderValue) then
+    if not FStripeClient.VerifyWebhookSignature(ARawBody, HeaderValue) then
       raise EDeepBaseCommercePaymentError.Create('Stripe notification signature verification failed');
   end
-  else if FClientObject is TPayPalClient then
+  else if FProvider = cppPayPal then
   begin
-    if not TPayPalClient(FClientObject).VerifyWebhookSignature(
+    if not FPayPalClient.VerifyWebhookSignature(
       ARawBody,
       GetHeaderValue('Paypal-Transmission-Id'),
       GetHeaderValue('Paypal-Transmission-Time'),
