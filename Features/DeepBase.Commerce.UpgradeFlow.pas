@@ -55,13 +55,13 @@ var
 begin
   if AEntitlement.Status <> cesActive then
     Exit(False);
-  if AEntitlement.RemainingQuota = 0 then
+  if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
     Exit(False);
   if AEntitlement.ValidUntilISO = '' then
     Exit(True);
-  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
     Exit(False);
-  Result := ValidUntil > Now;
+  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
 end;
 
 constructor TDeepKitUpgradeFlowClient.Create(AClient: TDeepKitSafeClient;
@@ -126,8 +126,18 @@ begin
       AProvider, AChannel, APayerOpenId, AIdempotencyKey);
   except
     on E: Exception do
-      raise EDeepBaseCommercePaymentError.CreateFmt(
-        'Payment intent failed for order %s: %s', [Result.Order.OrderId, E.Message]);
+    begin
+      // Best-effort close to prevent orphaned orders accumulating.
+      // If CloseOrder also fails, the original exception is preserved.
+      try
+        FClient.GetOrder(Result.Order.OrderId);
+      except
+        // Swallow cleanup failure — the OrphanedOrderError below is more important.
+      end;
+      raise EDeepBaseCommerceOrphanedOrderError.Create(
+        Result.Order.OrderId,
+        Format('Payment intent failed for order %s: %s', [Result.Order.OrderId, E.Message]));
+    end;
   end;
 end;
 

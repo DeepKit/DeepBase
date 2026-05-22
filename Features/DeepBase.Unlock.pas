@@ -66,6 +66,7 @@ type
     Month: Integer;       // 1..12
     Status: TUnlockValidationStatus;
     ErrorMessage: string;
+    WasUpgraded: Boolean; // True when ApplyCode actually raised the stored level
 
     /// <summary>True if Status = uvsOk.</summary>
     function IsValid: Boolean;
@@ -290,7 +291,7 @@ begin
   if Month < 1 then
     Month := 1
   else if Month > 12 then
-    Month := Month mod 12;
+    Month := ((Month - 1) mod 12) + 1;
 
   Seed := NormalizeProductCode(AProductCode) +
           Format('%.2d%.2d', [Year2, Month]) +
@@ -326,7 +327,7 @@ begin
   if Month < 1 then
     Month := 1
   else if Month > 12 then
-    Month := Month mod 12;
+    Month := ((Month - 1) mod 12) + 1;
 
   Seed := NormalizeProductCode(AProductCode) +
           Format('%.2d%.2d', [Year2, Month]) +
@@ -510,6 +511,7 @@ var
   Current: TUnlockLevel;
 begin
   Status := ValidateCode(Code, Info);
+  Info.WasUpgraded := False;
   Result := Status = uvsOk;
   if not Result then
     Exit;
@@ -519,6 +521,7 @@ begin
   begin
     SetStoredLevel(Info.Level);
     SetStoredCode(Info.Code);
+    Info.WasUpgraded := True;
   end;
 end;
 

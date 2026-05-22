@@ -40,8 +40,8 @@ begin
   // Prepare key
   if Length(AKey) > BLOCK_SIZE then
   begin
-    // Key is longer than block size, hash it
-    Key := THashSHA2.GetHashBytes(string(TEncoding.UTF8.GetString(AKey)));
+    // Key is longer than block size, hash it (raw bytes, no UTF-8 round-trip)
+    Key := THashSHA2.Create.Update(AKey).HashAsBytes;
   end
   else
   begin

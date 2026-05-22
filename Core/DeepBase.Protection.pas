@@ -151,7 +151,7 @@ type
     class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string): string; static;
     class function EncryptBinaryData(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
-    // 完整性校�?
+    // 完整性校�?
     class function CalculateHMAC(const AData: string; const APassword: string): string; static;
     class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string): Boolean; static;
     class function CalculateFileHash(const AFileName: string): string; static;
@@ -160,12 +160,12 @@ type
 
 implementation
 
-// 以下实现直接来自�?uBasicProtection.pas，保持语义不�?
+// 以下实现直接来自�?uBasicProtection.pas，保持语义不�?
 
 class function TBasicProtection.GetDynamicKey: string;
 begin
   // 移除动态密钥生成，返回空字符串
-  // 这个方法已被弃用，建议使用更安全的密钥管理方�?
+  // 这个方法已被弃用，建议使用更安全的密钥管理方�?
   Result := '';
   
   // 记录警告日志
@@ -662,11 +662,8 @@ begin
 end;
 
 class function TBasicProtection.CalculateDataHash(const AData: TBytes): string;
-var
-  DataString: string;
 begin
-  DataString := TEncoding.UTF8.GetString(AData);
-  Result := THashSHA2.GetHashString(DataString);
+  Result := THashSHA2.Create.Update(AData).HashAsString;
 end;
 
 class function TBasicProtection.BytesToHex(const ABytes: TBytes): string;

@@ -96,9 +96,13 @@ const
   
   // Key blob types
   BCRYPT_RSAPUBLIC_BLOB = 'RSAPUBLICBLOB';
-  
+  BCRYPT_RSAPRIVATE_BLOB = 'RSAPRIVATEBLOB';
+  BCRYPT_RSAFULLPRIVATE_BLOB = 'RSAFULLPRIVATEBLOB';
+
   // RSAPUBKEY structure magic
-  BCRYPT_RSAPUBLIC_MAGIC = $31415352; // 'RSA1'
+  BCRYPT_RSAPUBLIC_MAGIC = $31415352;   // 'RSA1'
+  BCRYPT_RSAPRIVATE_MAGIC = $32415352;  // 'RSA2'
+  BCRYPT_RSAFULLPRIVATE_MAGIC = $33415352; // 'RSA3'
 
 type
   // BCrypt RSA public key blob header
@@ -143,6 +147,10 @@ function BCryptImportKeyPair(hAlgorithm: BCRYPT_ALG_HANDLE; hImportKey: BCRYPT_K
 function BCryptVerifySignature(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
   pbHash: PByte; cbHash: ULONG; pbSignature: PByte; cbSignature: ULONG;
   dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
+
+function BCryptSignHash(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
+  pbHash: PByte; cbHash: ULONG; pbSignature: PByte; cbSignature: ULONG;
+  out pcbResult: ULONG; dwFlags: ULONG): NTSTATUS; stdcall; external BCRYPT_DLL;
 
 function BCryptHash(hAlgorithm: BCRYPT_ALG_HANDLE; pbSecret: PByte; cbSecret: ULONG;
   pbInput: PByte; cbInput: ULONG; pbOutput: PByte; cbOutput: ULONG): NTSTATUS; stdcall;
@@ -502,6 +510,26 @@ type
     function VerifySignature(const AData, ASignatureBase64: string): Boolean; overload;
     
     property IsKeyLoaded: Boolean read FPublicKeyLoaded;
+    property LastError: string read FLastError;
+  end;
+
+  /// <summary>
+  /// RSA-SHA256 signing using Windows CNG (BCrypt).
+  /// Loads a PEM private key (PKCS#1 or PKCS#8) and signs data.
+  /// </summary>
+  TRSASigner = class
+  private
+    FPrivateKeyBlob: TBytes;
+    FKeyLoaded: Boolean;
+    FLastError: string;
+    function ParsePEMPrivateKey(const APEM: string): TBytes;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function LoadPrivateKeyPEM(const APEM: string): Boolean;
+    function Sign(const AData: TBytes): TBytes; overload;
+    function Sign(const AData: string): string; overload;
+    property IsKeyLoaded: Boolean read FKeyLoaded;
     property LastError: string read FLastError;
   end;
 {$ENDIF}
@@ -2275,6 +2303,284 @@ end;
 function TRSAVerifier.VerifySignature(const AData, ASignatureBase64: string): Boolean;
 begin
   Result := VerifySignature(TEncoding.UTF8.GetBytes(AData), ASignatureBase64);
+end;
+{$ENDIF}
+
+{$IFDEF MSWINDOWS}
+{ TRSASigner }
+
+destructor TRSASigner.Destroy;
+begin
+  if Length(FPrivateKeyBlob) > 0 then
+  begin
+    FillChar(FPrivateKeyBlob[0], Length(FPrivateKeyBlob), 0);
+    FPrivateKeyBlob := nil;
+  end;
+  inherited Destroy;
+end;
+
+constructor TRSASigner.Create;
+begin
+  inherited Create;
+  FKeyLoaded := False;
+  FLastError := '';
+end;
+
+function TRSASigner.ParsePEMPrivateKey(const APEM: string): TBytes;
+var
+  LLines: TArray<string>;
+  LBase64: string;
+  LLine: string;
+  LInKey: Boolean;
+begin
+  Result := nil;
+  LBase64 := '';
+  LInKey := False;
+  LLines := APEM.Split([#10, #13], TStringSplitOptions.ExcludeEmpty);
+  for LLine in LLines do
+  begin
+    if LLine.Contains('-----BEGIN') and
+       (LLine.Contains('PRIVATE KEY') or LLine.Contains('RSA PRIVATE KEY')) then
+    begin
+      LInKey := True;
+      Continue;
+    end;
+    if LLine.Contains('-----END') then
+      Break;
+    if LInKey then
+      LBase64 := LBase64 + LLine.Trim;
+  end;
+  if LBase64 = '' then
+  begin
+    FLastError := 'Invalid PEM: no private key found';
+    Exit;
+  end;
+  try
+    Result := TEncodingUtils.Base64Decode(LBase64);
+  except
+    on E: Exception do
+    begin
+      FLastError := 'Base64 decode failed: ' + E.Message;
+      Result := nil;
+    end;
+  end;
+end;
+
+function TRSASigner.LoadPrivateKeyPEM(const APEM: string): Boolean;
+var
+  LDER: TBytes;
+  LAlgHandle: BCRYPT_ALG_HANDLE;
+  LKeyHandle: BCRYPT_KEY_HANDLE;
+  LImportBlob: TBytes;
+  LStatus: NTSTATUS;
+  LPos, LSeqLen: Integer;
+  LModulus, LExponent, LPrivateExponent: TBytes;
+  LPrime1, LPrime2, LExponent1, LExponent2, LCoefficient: TBytes;
+  LKeyBlob: PBCRYPT_RSAKEY_BLOB;
+
+  function ReadASN1Length(const ABuf: TBytes; var APos: Integer): Integer;
+  var
+    B: Byte;
+    I, N: Integer;
+  begin
+    if APos >= Length(ABuf) then
+      raise ECryptoException.Create('Invalid DER: unexpected end in length');
+    B := ABuf[APos]; Inc(APos);
+    if B < $80 then
+      Exit(B);
+    N := B and $7F;
+    Result := 0;
+    for I := 1 to N do
+    begin
+      if APos >= Length(ABuf) then
+        raise ECryptoException.Create('Invalid DER: unexpected end in length bytes');
+      Result := (Result shl 8) or ABuf[APos]; Inc(APos);
+    end;
+  end;
+
+  function ReadASN1Integer(const ABuf: TBytes; var APos: Integer): TBytes;
+  var
+    LLen: Integer;
+    LStart: Integer;
+  begin
+    if APos >= Length(ABuf) then begin Result := nil; Exit; end;
+    if ABuf[APos] <> $02 then begin Result := nil; Exit; end;
+    Inc(APos);
+    LLen := ReadASN1Length(ABuf, APos);
+    if APos + LLen > Length(ABuf) then begin Result := nil; Exit; end;
+    if (ABuf[APos] = 0) and (LLen > 1) then
+    begin
+      Inc(APos); Dec(LLen);
+    end;
+    LStart := APos;
+    Inc(APos, LLen);
+    Result := Copy(ABuf, LStart, LLen);
+  end;
+begin
+  FLastError := '';
+  FKeyLoaded := False;
+  FPrivateKeyBlob := nil;
+
+  LDER := ParsePEMPrivateKey(APEM);
+  if LDER = nil then
+    Exit(False);
+
+  // PKCS#1 RSAPrivateKey DER: SEQUENCE { version, n, e, d, p, q, dp, dq, qInv }
+  LPos := 0;
+  if LDER[LPos] <> $30 then begin FLastError := 'Not a SEQUENCE'; Exit(False); end;
+  Inc(LPos);
+  LSeqLen := ReadASN1Length(LDER, LPos);
+  ReadASN1Integer(LDER, LPos);  // version
+  LModulus := ReadASN1Integer(LDER, LPos);          // n
+  LExponent := ReadASN1Integer(LDER, LPos);          // e
+  LPrivateExponent := ReadASN1Integer(LDER, LPos);   // d
+  LPrime1 := ReadASN1Integer(LDER, LPos);            // p
+  LPrime2 := ReadASN1Integer(LDER, LPos);            // q
+  LExponent1 := ReadASN1Integer(LDER, LPos);         // dp
+  LExponent2 := ReadASN1Integer(LDER, LPos);         // dq
+  LCoefficient := ReadASN1Integer(LDER, LPos);        // qInv
+
+  if (LModulus = nil) or (LExponent = nil) or (LPrivateExponent = nil) or
+     (LPrime1 = nil) or (LPrime2 = nil) then
+  begin
+    FLastError := 'Failed to parse RSA private key fields (need full PKCS#1 with primes)';
+    Exit(False);
+  end;
+
+  // BCRYPT_RSAFULLPRIVATE_BLOB layout:
+  //   header | exp | mod | prime1 | prime2 | exp1 | exp2 | coeff | privateExp
+  SetLength(LImportBlob, SizeOf(BCRYPT_RSAKEY_BLOB) +
+    Length(LExponent) + Length(LModulus) +
+    Length(LPrime1) + Length(LPrime2) +
+    Length(LExponent1) + Length(LExponent2) +
+    Length(LCoefficient) + Length(LPrivateExponent));
+
+  LKeyBlob := @LImportBlob[0];
+  LKeyBlob.Magic := BCRYPT_RSAFULLPRIVATE_MAGIC;
+  LKeyBlob.BitLength := Length(LModulus) * 8;
+  LKeyBlob.cbPublicExp := Length(LExponent);
+  LKeyBlob.cbModulus := Length(LModulus);
+  LKeyBlob.cbPrime1 := Length(LPrime1);
+  LKeyBlob.cbPrime2 := Length(LPrime2);
+
+  LPos := SizeOf(BCRYPT_RSAKEY_BLOB);
+  Move(LExponent[0], LImportBlob[LPos], Length(LExponent)); Inc(LPos, Length(LExponent));
+  Move(LModulus[0], LImportBlob[LPos], Length(LModulus)); Inc(LPos, Length(LModulus));
+  Move(LPrime1[0], LImportBlob[LPos], Length(LPrime1)); Inc(LPos, Length(LPrime1));
+  Move(LPrime2[0], LImportBlob[LPos], Length(LPrime2)); Inc(LPos, Length(LPrime2));
+  Move(LExponent1[0], LImportBlob[LPos], Length(LExponent1)); Inc(LPos, Length(LExponent1));
+  Move(LExponent2[0], LImportBlob[LPos], Length(LExponent2)); Inc(LPos, Length(LExponent2));
+  Move(LCoefficient[0], LImportBlob[LPos], Length(LCoefficient)); Inc(LPos, Length(LCoefficient));
+  Move(LPrivateExponent[0], LImportBlob[LPos], Length(LPrivateExponent));
+
+  LAlgHandle := 0;
+  LKeyHandle := 0;
+  try
+    LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_RSA_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptOpenAlgorithmProvider failed: $%x', [LStatus]);
+      Exit(False);
+    end;
+    LStatus := BCryptImportKeyPair(LAlgHandle, 0, BCRYPT_RSAFULLPRIVATE_BLOB,
+      LKeyHandle, @LImportBlob[0], Length(LImportBlob), 0);
+    if LStatus <> STATUS_SUCCESS then
+    begin
+      FLastError := Format('BCryptImportKeyPair failed: $%x', [LStatus]);
+      Exit(False);
+    end;
+    FKeyLoaded := True;
+    FPrivateKeyBlob := Copy(LImportBlob);
+    Result := True;
+  finally
+    if LKeyHandle <> 0 then BCryptDestroyKey(LKeyHandle);
+    if LAlgHandle <> 0 then BCryptCloseAlgorithmProvider(LAlgHandle, 0);
+  end;
+end;
+
+function TRSASigner.Sign(const AData: TBytes): TBytes;
+var
+  LAlgHandle, LHashAlgHandle: BCRYPT_ALG_HANDLE;
+  LKeyHandle: BCRYPT_KEY_HANDLE;
+  LHash: TBytes;
+  LPaddingInfo: BCRYPT_PKCS1_PADDING_INFO;
+  LStatus: NTSTATUS;
+  LAlgId: WideString;
+  LSigLen: ULONG;
+begin
+  Result := nil;
+  if not FKeyLoaded then
+  begin
+    FLastError := 'Private key not loaded';
+    Exit;
+  end;
+
+  LAlgHandle := 0;
+  LHashAlgHandle := 0;
+  LKeyHandle := 0;
+  try
+    LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_RSA_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptOpenAlgorithmProvider(RSA) failed: $%x', [LStatus]);
+      Exit;
+    end;
+
+    LStatus := BCryptImportKeyPair(LAlgHandle, 0, BCRYPT_RSAFULLPRIVATE_BLOB,
+      LKeyHandle, @FPrivateKeyBlob[0], Length(FPrivateKeyBlob), 0);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptImportKeyPair failed: $%x', [LStatus]);
+      Exit;
+    end;
+
+    LStatus := BCryptOpenAlgorithmProvider(LHashAlgHandle, BCRYPT_SHA256_ALGORITHM, nil, 0);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptOpenAlgorithmProvider(SHA256) failed: $%x', [LStatus]);
+      Exit;
+    end;
+
+    SetLength(LHash, 32);
+    if Length(AData) > 0 then
+      LStatus := BCryptHash(LHashAlgHandle, nil, 0, @AData[0], Length(AData), @LHash[0], 32)
+    else
+      LStatus := BCryptHash(LHashAlgHandle, nil, 0, nil, 0, @LHash[0], 32);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptHash failed: $%x', [LStatus]);
+      Exit;
+    end;
+
+    LAlgId := BCRYPT_SHA256_ALGORITHM;
+    LPaddingInfo.pszAlgId := PWideChar(LAlgId);
+
+    LStatus := BCryptSignHash(LKeyHandle, @LPaddingInfo,
+      @LHash[0], 32, nil, 0, LSigLen, BCRYPT_PAD_PKCS1);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptSignHash(size query) failed: $%x', [LStatus]);
+      Exit;
+    end;
+
+    SetLength(Result, LSigLen);
+    LStatus := BCryptSignHash(LKeyHandle, @LPaddingInfo,
+      @LHash[0], 32, @Result[0], LSigLen, LSigLen, BCRYPT_PAD_PKCS1);
+    if LStatus <> STATUS_SUCCESS then begin
+      FLastError := Format('BCryptSignHash failed: $%x', [LStatus]);
+      Result := nil;
+    end;
+  finally
+    if LKeyHandle <> 0 then BCryptDestroyKey(LKeyHandle);
+    if LHashAlgHandle <> 0 then BCryptCloseAlgorithmProvider(LHashAlgHandle, 0);
+    if LAlgHandle <> 0 then BCryptCloseAlgorithmProvider(LAlgHandle, 0);
+  end;
+end;
+
+function TRSASigner.Sign(const AData: string): string;
+var
+  LSignature: TBytes;
+begin
+  LSignature := Sign(TEncoding.UTF8.GetBytes(AData));
+  if LSignature <> nil then
+    Result := TEncodingUtils.Base64Encode(LSignature)
+  else
+    Result := '';
 end;
 {$ENDIF}
 

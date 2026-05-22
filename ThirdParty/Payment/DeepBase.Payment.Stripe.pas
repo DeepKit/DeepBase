@@ -45,9 +45,9 @@ type
     /// <summary>获取Webhook密钥（自动解密）</summary>
     function GetWebhookSecretSecure: string;
 
-    property SecretKey: string read FSecretKey write FSecretKey;
+    property SecretKey: string read GetSecretKeySecure write SetSecretKeySecure;
     property PublishableKey: string read FPublishableKey write FPublishableKey;
-    property WebhookSecret: string read FWebhookSecret write FWebhookSecret;
+    property WebhookSecret: string read GetWebhookSecretSecure write SetWebhookSecretSecure;
     property ApiVersion: string read FApiVersion write FApiVersion;
   end;
 
@@ -56,7 +56,8 @@ type
   private
     function GetApiUrl: string;
     function DoStripePost(const AEndpoint: string;
-      const AParams: TDictionary<string, string>): TJSONObject;
+      const AParams: TDictionary<string, string>;
+      const AIdempotencyKey: string = ''): TJSONObject;
     function DoStripeGet(const AEndpoint: string): TJSONObject;
     function ParseStripeStatus(const AStatus: string): TPaymentStatus;
   protected
@@ -113,8 +114,8 @@ procedure TStripeConfig.LoadKeysFromCredentialManager;
 begin
   if KeyStorageMode = ksmCredential then
   begin
-    FSecretKey := GetCredentialKey('SecretKey');
-    FWebhookSecret := GetCredentialKey('WebhookSecret');
+    SecretKey := GetCredentialKey('SecretKey');
+    WebhookSecret := GetCredentialKey('WebhookSecret');
   end;
 end;
 
@@ -173,7 +174,8 @@ begin
 end;
 
 function TStripeClient.DoStripePost(const AEndpoint: string;
-  const AParams: TDictionary<string, string>): TJSONObject;
+  const AParams: TDictionary<string, string>;
+  const AIdempotencyKey: string): TJSONObject;
 var
   Cfg: TStripeConfig;
   PostData, Response: string;
@@ -186,6 +188,8 @@ begin
   AuthStr := TNetEncoding.Base64.Encode(Cfg.SecretKey + ':');
   FHttpClient.CustomHeaders['Authorization'] := 'Basic ' + AuthStr;
   FHttpClient.CustomHeaders['Stripe-Version'] := Cfg.ApiVersion;
+  if AIdempotencyKey <> '' then
+    FHttpClient.CustomHeaders['Idempotency-Key'] := AIdempotencyKey;
 
   PostData := TPaymentHelper.BuildQueryString(AParams, True);
   Response := DoPost(GetApiUrl + AEndpoint, PostData);
@@ -299,7 +303,8 @@ begin
       Params.Add('expires_at', IntToStr(DateTimeToUnix(Now + AOrder.ExpireMinutes / 1440)));
 
     try
-      RespObj := DoStripePost('/checkout/sessions', Params);
+      RespObj := DoStripePost('/checkout/sessions', Params,
+        'cs_' + AOrder.OrderNo + '_' + IntToStr(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False)));
       try
         Result.Success := True;
         Result.OrderNo := AOrder.OrderNo;
@@ -339,7 +344,8 @@ begin
     Params.Add('automatic_payment_methods[enabled]', 'true');
 
     try
-      RespObj := DoStripePost('/payment_intents', Params);
+      RespObj := DoStripePost('/payment_intents', Params,
+        'pi_' + AOrder.OrderNo + '_' + IntToStr(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False)));
       try
         Result.Success := True;
         Result.OrderNo := AOrder.OrderNo;
@@ -449,6 +455,8 @@ begin
     if ARequest.RefundAmount > 0 then
       Params.Add('amount', IntToStr(AmountCents));
     if ARequest.Reason <> '' then
+      Params.Add('reason', ARequest.Reason)
+    else
       Params.Add('reason', 'requested_by_customer');
     Params.Add('metadata[refund_no]', ARequest.RefundNo);
 
@@ -607,8 +615,8 @@ var
   TimestampInt, CurrentTime: Int64;
   I, Diff: Integer;
 const
-  // BUG-109 FIX: 将时间戳容差�?00秒降低到120秒以减少重放攻击风险
-  // 原来�?分钟，现在改�?分钟，在保证正常请求通过的同时减少攻击窗�?
+  // BUG-109 FIX: 将时间戳容差�?00秒降低到120秒以减少重放攻击风险
+  // 原来�?分钟，现在改�?分钟，在保证正常请求通过的同时减少攻击窗�?
   TOLERANCE_SECONDS = 120; // 2 minutes tolerance (reduced from 5 minutes)
 begin
   Result := False;

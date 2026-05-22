@@ -446,7 +446,11 @@ begin
     Exit;
 
   if TJSONArray(CapturesArr).Count > 0 then
-    Result := TJSONArray(CapturesArr).Items[0].FindValue('id').Value;
+  begin
+    var IdVal := TJSONArray(CapturesArr).Items[0].FindValue('id');
+    if Assigned(IdVal) then
+      Result := IdVal.Value;
+  end;
 end;
 
 // ---------------------------------------------------------------------------
@@ -615,14 +619,14 @@ begin
   // a PayPal Order ID or a capture ID. Try to look up the order first.
   CaptureId := ARequest.OrderNo;
 
-  // If it looks like a PayPal Order ID (starts with prefix), query to find capture
-  if not SameText(Copy(ARequest.OrderNo, 1, 4), '') then
+  // If it looks like a PayPal Order ID (alphanumeric, not a pure capture ID),
+  // query to find the capture_id. Capture IDs typically start with a specific prefix.
+  if Length(ARequest.OrderNo) > 10 then
   begin
     try
       QueryResult := QueryOrder(ARequest.OrderNo);
       if QueryResult.Success then
       begin
-        // Parse capture_id from the raw response
         var OrderObj := TJSONObject.ParseJSONValue(QueryResult.RawResponse) as TJSONObject;
         if Assigned(OrderObj) then
         begin
@@ -636,7 +640,13 @@ begin
         end;
       end;
     except
-      // If query fails, assume OrderNo is already a capture ID
+      on E: Exception do
+      begin
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('PayPal refund capture lookup failed: ' + E.Message));
+        {$ENDIF}
+        // If query fails, assume OrderNo is already a capture ID
+      end;
     end;
   end;
 
@@ -645,9 +655,8 @@ begin
     // Build amount object for partial refund
     AmountObj := TJSONObject.Create;
     AmountObj.AddPair('value', FormatFloat('0.00', ARequest.RefundAmount));
-    if ARequest.TotalAmount > 0 then
-      AmountObj.AddPair('currency_code',
-        IfThen(ARequest.TotalAmount > 0, 'USD', 'USD'))  // Default, caller should set
+    if ARequest.Currency <> '' then
+      AmountObj.AddPair('currency_code', ARequest.Currency.ToUpper)
     else
       AmountObj.AddPair('currency_code', 'USD');
     Body.AddPair('amount', AmountObj);
@@ -755,7 +764,8 @@ begin
 
   // BUG-015 FIX: Webhook verification should be done via VerifyWebhookSignature
   // before calling this method. This method parses the payload after verification.
-  // 安全收敛：当前接口无传输头，生产环境无法独立完成签名校验，默认拒绝�?  if not Cfg.IsSandbox then
+  // 安全收敛：当前接口无传输头，生产环境无法独立完成签名校验，默认拒绝
+  if not Cfg.IsSandbox then
     Exit(False);
 
   if Cfg.WebhookId = '' then
@@ -900,7 +910,6 @@ begin
     Body.AddPair('transmission_id', ATransmissionId);
     Body.AddPair('transmission_time', ATimestamp);
     Body.AddPair('webhook_id', Cfg.WebhookId);
-    Body.AddPair('webhook_signature', AWebhookSignature);
     Body.AddPair('transmission_sig', AWebhookSignature);
 
     // The actual_body is the CRC32 of the payload concatenated with the payload

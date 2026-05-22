@@ -194,6 +194,8 @@ begin
     Client.MaxRedirects := ARequest.MaxRedirects;
     if ARequest.ContentType <> '' then
       Client.ContentType := ARequest.ContentType;
+    if ARequest.ProxyUrl <> '' then
+      Client.ProxySettings := TProxySettings.Create(ARequest.ProxyUrl);
 
     case ARequest.Method of
       dbhmGet:

@@ -62,7 +62,8 @@ var
 begin
   if AEntitlement.Status <> cesActive then
     Exit(False);
-  if AEntitlement.RemainingQuota = 0 then
+  // -1 = unlimited quota, 0 = exhausted, < -1 = invalid
+  if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
     Exit(False);
   if AEntitlement.ValidUntilISO = '' then
     Exit(True);
@@ -174,8 +175,14 @@ begin
       'Feature "%s" is not allowed: %s', [AFeatureCode, Check.Reason]);
 
   EntitlementCode := Check.EntitlementCode;
-  if (EntitlementCode = '') and (FDefaultEntitlementCode <> '') then
-    EntitlementCode := FDefaultEntitlementCode;
+  if EntitlementCode = '' then
+  begin
+    if FDefaultEntitlementCode <> '' then
+      EntitlementCode := FDefaultEntitlementCode
+    else
+      raise EDeepBaseCommerceError.CreateFmt(
+        'HasFeature returned allowed=True for "%s" but no entitlement code was matched', [AFeatureCode]);
+  end;
 
   Result := FClient.ConsumeEntitlement(FAppId, EntitlementCode,
     AFeatureCode, AQuantity, ARequestId);

@@ -284,9 +284,7 @@ var
   LData: TArray<TBytes>;
   LShapes: TArray<TArray<Int64>>;
   i: Integer;
-  LFloatData: TArray<Single>;
   LShape: TArray<Int64>;
-  LRevShape: TArray<Int64>;
   LValue: TORTValue;
   LElementCount: size_t;
   j: Integer;
@@ -336,25 +334,16 @@ begin
           'Input "%s" shape product (%d) does not match element count (%d)',
           [AInputNames[i], LExpectedElements, LElementCount]);
 
-      SetLength(LFloatData, LElementCount);
-      Move(AInputValues[i][0], LFloatData[0], LElementCount * SizeOf(Single));
-
-      // TORTValue.CreateTensor<T> expects shape in reverse (row-major) order
-      // matching the TOrtTensor<T>.ToValue pattern
-      LRevShape := Copy(LShape);
-      for j := 0 to High(LRevShape) div 2 do
-      begin
-        var LTemp: Int64 := LRevShape[j];
-        LRevShape[j] := LRevShape[High(LRevShape) - j];
-        LRevShape[High(LRevShape) - j] := LTemp;
-      end;
-
-      LValue := TORTValue.CreateTensor<Single>(
+      // Use AInputValues[i] directly — CreateTensorWithDataAsOrtValue does NOT
+      // copy the buffer; using a shared LFloatData variable would cause earlier
+      // tensors to reference freed/reused memory.
+      LValue := TORTValue.CreateTensor(
         DefaultAllocator.GetInfo,
-        LFloatData[0],
-        LElementCount,
-        @LRevShape[0],
-        Length(LRevShape));
+        @AInputValues[i][0],
+        LElementCount * SizeOf(Single),
+        @LShape[0],
+        Length(LShape),
+        ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT);
       LInputs.AddOrSetValue(AnsiString(AInputNames[i]), LValue);
     end;
 
@@ -412,9 +401,6 @@ var
   LData: TArray<TBytes>;
   LShapes: TArray<TArray<Int64>>;
   i, j: Integer;
-  LRevShape: TArray<Int64>;
-  LFloatData: TArray<Single>;
-  LIntData: TArray<Integer>;
   LValue: TORTValue;
   LElementCount: size_t;
   LOutValue: TORTValue;
@@ -436,38 +422,31 @@ begin
         raise EInferenceSessionError.CreateFmt(
           'Empty input data for "%s"', [AInputs[i].Name]);
 
-      LRevShape := Copy(AInputs[i].Shape);
-      for j := 0 to High(LRevShape) div 2 do
-      begin
-        var LTemp: Int64 := LRevShape[j];
-        LRevShape[j] := LRevShape[High(LRevShape) - j];
-        LRevShape[High(LRevShape) - j] := LTemp;
-      end;
-
       case AInputs[i].ElementType of
         ietFloat32:
         begin
           LElementCount := Length(AInputs[i].Data) div SizeOf(Single);
-          SetLength(LFloatData, LElementCount);
-          Move(AInputs[i].Data[0], LFloatData[0], LElementCount * SizeOf(Single));
-          LValue := TORTValue.CreateTensor<Single>(
+          // Use AInputs[i].Data directly — CreateTensorWithDataAsOrtValue does NOT
+          // copy the buffer; it references it. Using a shared LFloatData variable
+          // would cause earlier tensors to reference freed/reused memory.
+          LValue := TORTValue.CreateTensor(
             DefaultAllocator.GetInfo,
-            LFloatData[0],
-            LElementCount,
-            @LRevShape[0],
-            Length(LRevShape));
+            @AInputs[i].Data[0],
+            Length(AInputs[i].Data),
+            @AInputs[i].Shape[0],
+            Length(AInputs[i].Shape),
+            ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT);
         end;
         ietInt32:
         begin
           LElementCount := Length(AInputs[i].Data) div SizeOf(Integer);
-          SetLength(LIntData, LElementCount);
-          Move(AInputs[i].Data[0], LIntData[0], LElementCount * SizeOf(Integer));
-          LValue := TORTValue.CreateTensor<Integer>(
+          LValue := TORTValue.CreateTensor(
             DefaultAllocator.GetInfo,
-            LIntData[0],
-            LElementCount,
-            @LRevShape[0],
-            Length(LRevShape));
+            @AInputs[i].Data[0],
+            Length(AInputs[i].Data),
+            @AInputs[i].Shape[0],
+            Length(AInputs[i].Shape),
+            ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32);
         end;
       else
         raise EInferenceSessionError.CreateFmt(

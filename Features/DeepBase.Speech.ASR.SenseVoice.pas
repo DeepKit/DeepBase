@@ -206,7 +206,20 @@ begin
       and (Length(FNegMean) = SENSEVOICE_FEATURE_DIM);
 
     if FAvailable then
-      FStatusError := ''
+    begin
+      FStatusError := '';
+      // Smoke test: run inference on 0.5s silence to verify the full pipeline
+      try
+        var LSilence: TBytes;
+        SetLength(LSilence, 16000); // 0.5s of 16kHz PCM16 silence
+        FillChar(LSilence[0], 16000, 0);
+        var LResult := RecognizeInternal(LSilence);
+        Logger.InfoFmt('SenseVoice: smoke test OK (result="%s")', [LResult], 'Speech');
+      except
+        on E: Exception do
+          Logger.WarnFmt('SenseVoice: smoke test failed: %s', [E.Message], 'Speech');
+      end;
+    end
     else
       FStatusError := 'SenseVoice initialization incomplete';
   except
@@ -242,7 +255,8 @@ procedure TDeepBaseSenseVoiceASR.LoadTokens;
 var
   LTokenPath: string;
   LLines: TStringList;
-  I: Integer;
+  I, LPos: Integer;
+  LLine: string;
 begin
   LTokenPath := IncludeTrailingPathDelimiter(FModelDir) + 'tokens.txt';
   if not FileExists(LTokenPath) then
@@ -256,7 +270,15 @@ begin
     LLines.LoadFromFile(LTokenPath, TEncoding.UTF8);
     SetLength(FTokens, LLines.Count);
     for I := 0 to LLines.Count - 1 do
-      FTokens[I] := LLines[I];
+    begin
+      LLine := LLines[I];
+      // tokens.txt format: "token index" — take only the part before the space
+      LPos := Pos(' ', LLine);
+      if LPos > 0 then
+        FTokens[I] := Copy(LLine, 1, LPos - 1)
+      else
+        FTokens[I] := LLine;
+    end;
   finally
     LLines.Free;
   end;
@@ -508,7 +530,7 @@ begin
     end;
   end;
 
-  // Build string, skipping blank token
+  // Build string, skipping blank and special tokens
   LSB := TStringBuilder.Create;
   try
     for T := 0 to LCount - 1 do
@@ -516,13 +538,18 @@ begin
       if (LValid[T] >= 0) and (LValid[T] < Length(FTokens)) then
       begin
         LToken := FTokens[LValid[T]];
+        // Skip CTC blank, BOS/EOS, unknown, and all SenseVoice special tokens
         if (LToken <> BLANK_TOKEN) and
            (LToken <> '<s>') and (LToken <> '</s>') and
-           (LToken <> '<unk>') then
+           (LToken <> '<unk>') and
+           not LToken.StartsWith('<|') then
           LSB.Append(LToken);
       end;
     end;
     Result := LSB.ToString;
+    // Replace SentencePiece space marker (U+2581) with actual space
+    Result := Result.Replace(#$2581, ' ');
+    Result := Result.TrimLeft;
   finally
     LSB.Free;
   end;

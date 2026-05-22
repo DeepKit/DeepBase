@@ -251,6 +251,8 @@ begin
 
   EnsurePasswordConfigured;
   KeyBytes := TEncoding.UTF8.GetBytes(FDefaultPassword);
+  if Length(KeyBytes) = 0 then
+    raise EEncryptionException.Create('Password derived key is empty');
   DataBytes := TEncoding.UTF8.GetBytes(Data);
   IV := GenerateRandomIV;
 
@@ -322,6 +324,8 @@ begin
   IV := HexToBytes(Parts[0]);
   EncryptedBytes := HexToBytes(Parts[1]);
   KeyBytes := TEncoding.UTF8.GetBytes(FDefaultPassword);
+  if Length(KeyBytes) = 0 then
+    raise EDecryptionException.Create('Password derived key is empty');
 
   if not CryptAcquireContextA(hProv, nil, PAnsiChar(AnsiString(MS_ENH_RSA_AES_PROV)),
        PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
@@ -384,6 +388,8 @@ begin
 
   EnsurePasswordConfigured;
   KeyBytes := TEncoding.UTF8.GetBytes(FDefaultPassword);
+  if Length(KeyBytes) = 0 then
+    raise EEncryptionException.Create('Password derived key is empty');
   IV := GenerateRandomIV;
 
   if not CryptAcquireContextA(hProv, nil, PAnsiChar(AnsiString(MS_ENH_RSA_AES_PROV)),
@@ -403,8 +409,10 @@ begin
 
       try
         Mode := CRYPT_MODE_CBC;
-        CryptSetKeyParam(hKey, KP_MODE, @Mode, 0);
-        CryptSetKeyParam(hKey, KP_IV, @IV[0], 0);
+        if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
+          raise EEncryptionException.Create('Failed to set mode');
+        if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
+          raise EEncryptionException.Create('Failed to set IV');
 
         PaddedData := PadData(Data, 16);
         DataLen := Length(PaddedData);
@@ -451,6 +459,8 @@ begin
   Move(EncryptedData[16], EncryptedBytes[0], Length(EncryptedBytes));
 
   KeyBytes := TEncoding.UTF8.GetBytes(FDefaultPassword);
+  if Length(KeyBytes) = 0 then
+    raise EDecryptionException.Create('Password derived key is empty');
 
   if not CryptAcquireContextA(hProv, nil, PAnsiChar(AnsiString(MS_ENH_RSA_AES_PROV)),
        PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
@@ -469,8 +479,10 @@ begin
 
       try
         Mode := CRYPT_MODE_CBC;
-        CryptSetKeyParam(hKey, KP_MODE, @Mode, 0);
-        CryptSetKeyParam(hKey, KP_IV, @IV[0], 0);
+        if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
+          raise EDecryptionException.Create('Failed to set mode');
+        if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
+          raise EDecryptionException.Create('Failed to set IV');
 
         DecryptedData := Copy(EncryptedBytes);
         DataLen := Length(DecryptedData);
@@ -499,8 +511,17 @@ begin
 end;
 
 function TBasicProtectionServiceImpl.VerifyDataIntegrity(const Data, ExpectedHMAC: string): Boolean;
+var
+  Actual: string;
+  I, Diff: Integer;
 begin
-  Result := SameText(CalculateHMAC(Data), ExpectedHMAC);
+  Actual := CalculateHMAC(Data);
+  if Length(Actual) <> Length(ExpectedHMAC) then
+    Exit(False);
+  Diff := 0;
+  for I := 1 to Length(Actual) do
+    Diff := Diff or (Ord(Actual[I]) xor Ord(ExpectedHMAC[I]));
+  Result := Diff = 0;
 end;
 
 function TBasicProtectionServiceImpl.CalculateFileHash(const FileName: string): string;
@@ -583,7 +604,7 @@ end;
 
 function TAntiTamperServiceImpl.CalculateSHA256(const Data: TBytes): string;
 begin
-  Result := THashSHA2.GetHashString(TEncoding.UTF8.GetString(Data));
+  Result := THashSHA2.Create.Update(Data).HashAsString;
 end;
 
 function TAntiTamperServiceImpl.EncryptImageData(const ImageData: TBytes): TBytes;

@@ -93,7 +93,11 @@ end;
 
 destructor TSDKPaymentGatewayAdapter.Destroy;
 begin
-  FConfig.Free;
+  // Release the client first — it may reference FConfig internally.
+  // Without this, FConfig.Free runs before the client's destructor,
+  // causing a use-after-free when the client tries to clean up.
+  FClient := nil;
+  FreeAndNil(FConfig);
   inherited;
 end;
 

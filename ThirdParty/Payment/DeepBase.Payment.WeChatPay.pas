@@ -57,9 +57,9 @@ type
 
     property AppId: string read FAppId write FAppId;
     property MchId: string read FMchId write FMchId;
-    property ApiKeyV3: string read FApiKeyV3 write FApiKeyV3;
+    property ApiKeyV3: string read GetApiKeyV3Secure write SetApiKeyV3Secure;
     property SerialNo: string read FSerialNo write FSerialNo;
-    property PrivateKey: string read FPrivateKey write FPrivateKey;
+    property PrivateKey: string read GetPrivateKeySecure write SetPrivateKeySecure;
     property CertPath: string read FCertPath write FCertPath;
     property SubAppId: string read FSubAppId write FSubAppId;
     property SubMchId: string read FSubMchId write FSubMchId;
@@ -91,6 +91,10 @@ type
     function QueryRefund(const ARefundNo: string): TRefundResult; override;
     function VerifyNotification(const ARawData: string;
       out ANotification: TPaymentNotification): Boolean; override;
+    /// <summary>Verify notification with HTTP-level signature check</summary>
+    function VerifyNotificationWithSignature(const ARawData, ATimestamp,
+      ANonce, ASignature: string;
+      out ANotification: TPaymentNotification): Boolean;
     function GetNotificationResponse(ASuccess: Boolean): string; override;
 
     // WeChat specific
@@ -113,7 +117,9 @@ const
 {$IFDEF MSWINDOWS}
 const
   BCRYPT_RSAPRIVATE_BLOB = 'RSAPRIVATEBLOB';
-  BCRYPT_RSAPRIVATE_MAGIC = $32415352; // 'RSA2'
+  BCRYPT_RSAFULLPRIVATE_BLOB = 'RSAFULLPRIVATEBLOB';
+  BCRYPT_RSAPRIVATE_MAGIC = $32415352;   // 'RSA2'
+  BCRYPT_RSAFULLPRIVATE_MAGIC = $33415352; // 'RSA3'
 
 function BCryptSignHash(hKey: BCRYPT_KEY_HANDLE; pPaddingInfo: Pointer;
   pbInput: PByte; cbInput: ULONG; pbOutput: PByte; cbOutput: ULONG;
@@ -123,8 +129,12 @@ type
   TRSAPrivateKeyParts = record
     Modulus: TBytes;
     PublicExponent: TBytes;
+    PrivateExponent: TBytes;
     Prime1: TBytes;
     Prime2: TBytes;
+    Exponent1: TBytes;   // dp = d mod (p-1)
+    Exponent2: TBytes;   // dq = d mod (q-1)
+    Coefficient: TBytes; // qInv = q^-1 mod p
   end;
 
 function TrimIntegerBytes(const AValue: TBytes): TBytes;
@@ -291,14 +301,15 @@ begin
   if Pos + Len > Length(APkcs1Der) then
     raise EPaymentSignError.Create('Invalid PKCS#1 sequence length', 'INVALID_PRIVATE_KEY', ppWeChatPay);
 
-  // version
-  ReadDerInteger(APkcs1Der, Pos);
-  Result.Modulus := ReadDerInteger(APkcs1Der, Pos);
-  Result.PublicExponent := ReadDerInteger(APkcs1Der, Pos);
-  // privateExponent (skip)
-  ReadDerInteger(APkcs1Der, Pos);
-  Result.Prime1 := ReadDerInteger(APkcs1Der, Pos);
-  Result.Prime2 := ReadDerInteger(APkcs1Der, Pos);
+  ReadDerInteger(APkcs1Der, Pos);             // version
+  Result.Modulus := ReadDerInteger(APkcs1Der, Pos);           // n
+  Result.PublicExponent := ReadDerInteger(APkcs1Der, Pos);    // e
+  Result.PrivateExponent := ReadDerInteger(APkcs1Der, Pos);   // d
+  Result.Prime1 := ReadDerInteger(APkcs1Der, Pos);            // p
+  Result.Prime2 := ReadDerInteger(APkcs1Der, Pos);            // q
+  Result.Exponent1 := ReadDerInteger(APkcs1Der, Pos);         // dp
+  Result.Exponent2 := ReadDerInteger(APkcs1Der, Pos);         // dq
+  Result.Coefficient := ReadDerInteger(APkcs1Der, Pos);       // qInv
 end;
 
 function BuildRsaPrivateBlob(const AParts: TRSAPrivateKeyParts): TBytes;
@@ -309,19 +320,23 @@ var
 begin
   if (Length(AParts.Modulus) = 0) or
      (Length(AParts.PublicExponent) = 0) or
+     (Length(AParts.PrivateExponent) = 0) or
      (Length(AParts.Prime1) = 0) or
      (Length(AParts.Prime2) = 0) then
     raise EPaymentSignError.Create('Incomplete RSA private key', 'INVALID_PRIVATE_KEY', ppWeChatPay);
 
-  Header.Magic := BCRYPT_RSAPRIVATE_MAGIC;
+  Header.Magic := BCRYPT_RSAFULLPRIVATE_MAGIC;
   Header.BitLength := Length(AParts.Modulus) * 8;
   Header.cbPublicExp := Length(AParts.PublicExponent);
   Header.cbModulus := Length(AParts.Modulus);
   Header.cbPrime1 := Length(AParts.Prime1);
   Header.cbPrime2 := Length(AParts.Prime2);
 
+  // Layout: header | exp | mod | prime1 | prime2 | exp1 | exp2 | coeff | privateExp
   BlobSize := SizeOf(BCRYPT_RSAKEY_BLOB) + Header.cbPublicExp + Header.cbModulus +
-    Header.cbPrime1 + Header.cbPrime2;
+    Header.cbPrime1 + Header.cbPrime2 +
+    Length(AParts.Exponent1) + Length(AParts.Exponent2) +
+    Length(AParts.Coefficient) + Length(AParts.PrivateExponent);
 
   SetLength(Result, BlobSize);
   Pos := 0;
@@ -336,6 +351,14 @@ begin
   Move(AParts.Prime1[0], Result[Pos], Header.cbPrime1);
   Inc(Pos, Header.cbPrime1);
   Move(AParts.Prime2[0], Result[Pos], Header.cbPrime2);
+  Inc(Pos, Header.cbPrime2);
+  Move(AParts.Exponent1[0], Result[Pos], Length(AParts.Exponent1));
+  Inc(Pos, Length(AParts.Exponent1));
+  Move(AParts.Exponent2[0], Result[Pos], Length(AParts.Exponent2));
+  Inc(Pos, Length(AParts.Exponent2));
+  Move(AParts.Coefficient[0], Result[Pos], Length(AParts.Coefficient));
+  Inc(Pos, Length(AParts.Coefficient));
+  Move(AParts.PrivateExponent[0], Result[Pos], Length(AParts.PrivateExponent));
 end;
 
 function SignWithPrivateKeyPem(const AData, APrivateKeyPem: string): string;
@@ -367,7 +390,7 @@ begin
       [Status]), 'SIGN_INIT_FAILED', ppWeChatPay);
 
   try
-    Status := BCryptImportKeyPair(AlgHandle, 0, BCRYPT_RSAPRIVATE_BLOB,
+    Status := BCryptImportKeyPair(AlgHandle, 0, BCRYPT_RSAFULLPRIVATE_BLOB,
       KeyHandle, @PrivateBlob[0], Length(PrivateBlob), 0);
     if Status <> STATUS_SUCCESS then
       raise EPaymentSignError.Create(Format('BCryptImportKeyPair(private) failed: $%x',
@@ -431,8 +454,8 @@ procedure TWeChatPayConfig.LoadKeysFromCredentialManager;
 begin
   if KeyStorageMode = ksmCredential then
   begin
-    FApiKeyV3 := GetCredentialKey('ApiKeyV3');
-    FPrivateKey := GetCredentialKey('PrivateKey');
+    ApiKeyV3 := GetCredentialKey('ApiKeyV3');
+    PrivateKey := GetCredentialKey('PrivateKey');
     FWeChatPublicKey := GetCredentialKey('WeChatPublicKey');
   end;
 end;
@@ -1011,6 +1034,7 @@ function TWeChatPayClient.CloseOrder(const AOrderNo: string): Boolean;
 var
   Cfg: TWeChatPayConfig;
   ReqBody: TJSONObject;
+  AuthHeader, BodyStr, Response: string;
 begin
   Result := False;
   Cfg := TWeChatPayConfig(FConfig);
@@ -1018,10 +1042,18 @@ begin
   ReqBody := TJSONObject.Create;
   try
     ReqBody.AddPair('mchid', Cfg.MchId);
+    BodyStr := ReqBody.ToString;
+
+    AuthHeader := BuildAuthorizationHeader('POST',
+      '/v3/pay/transactions/out-trade-no/' + AOrderNo + '/close', BodyStr);
+    FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
+    FHttpClient.CustomHeaders['Accept'] := 'application/json';
+    FHttpClient.CustomHeaders['Content-Type'] := 'application/json';
 
     try
-      // Close order returns 204 No Content on success
-      DoWeChatPost('/v3/pay/transactions/out-trade-no/' + AOrderNo + '/close', ReqBody);
+      Response := DoPost(GetApiUrl + '/v3/pay/transactions/out-trade-no/' +
+        AOrderNo + '/close', BodyStr, 'application/json');
+      // WeChat close-order returns 204 No Content on success — empty body is OK.
       Result := True;
     except
       on E: EPaymentError do
@@ -1129,10 +1161,22 @@ end;
 
 function TWeChatPayClient.VerifyNotification(const ARawData: string;
   out ANotification: TPaymentNotification): Boolean;
+begin
+  Result := VerifyNotificationWithSignature(ARawData, '', '', '', ANotification);
+end;
+
+function TWeChatPayClient.VerifyNotificationWithSignature(const ARawData, ATimestamp,
+  ANonce, ASignature: string;
+  out ANotification: TPaymentNotification): Boolean;
 var
   JsonObj, ResourceObj, AmountObj, DecryptedObj: TJSONObject;
   EventType, Ciphertext, Nonce, AssociatedData, DecryptedData: string;
   Cfg: TWeChatPayConfig;
+{$IFDEF MSWINDOWS}
+  SignContent: string;
+  Verifier: TRSAVerifier;
+  NormalizedKey: string;
+{$ENDIF}
 begin
   Result := False;
   ANotification.Clear;
@@ -1140,6 +1184,33 @@ begin
   ANotification.RawData := ARawData;
 
   Cfg := TWeChatPayConfig(FConfig);
+
+  // Verify HTTP-level signature when headers are provided
+  {$IFDEF MSWINDOWS}
+  if (ATimestamp <> '') and (ANonce <> '') and (ASignature <> '') then
+  begin
+    if Cfg.WeChatPublicKey = '' then
+      Exit;
+    NormalizedKey := Cfg.WeChatPublicKey;
+    if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
+      NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+        NormalizedKey + sLineBreak +
+        '-----END PUBLIC KEY-----';
+    SignContent := ATimestamp + #10 + ANonce + #10 + ARawData + #10;
+    Verifier := TRSAVerifier.Create;
+    try
+      if not Verifier.LoadPublicKeyPEM(NormalizedKey) then
+        Exit;
+      if not Verifier.VerifySignature(SignContent, ASignature) then
+        Exit;
+    finally
+      Verifier.Free;
+    end;
+  end;
+  {$ELSE}
+  if (ATimestamp <> '') and (ANonce <> '') and (ASignature <> '') then
+    Exit; // Cannot verify RSA signature on non-Windows; reject
+  {$ENDIF}
   JsonObj := nil;
   DecryptedObj := nil;
 

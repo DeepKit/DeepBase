@@ -132,6 +132,7 @@ type
     RefundNo: string;          // Refund order number (unique)
     RefundAmount: Currency;    // Refund amount
     TotalAmount: Currency;     // Original order amount (some providers need this)
+    Currency: string;          // ISO 4217 currency code (e.g. 'USD', 'EUR')
     Reason: string;            // Refund reason
     NotifyUrl: string;         // Refund notification URL
 
@@ -553,8 +554,13 @@ var
 begin
   Content := TStringStream.Create(AData, TEncoding.UTF8);
   try
-    FHttpClient.CustomHeaders['Content-Type'] := AContentType;
-    Response := FHttpClient.Post(AUrl, Content);
+    TMonitor.Enter(FHttpClient);
+    try
+      FHttpClient.CustomHeaders['Content-Type'] := AContentType;
+      Response := FHttpClient.Post(AUrl, Content);
+    finally
+      TMonitor.Exit(FHttpClient);
+    end;
     Result := Response.ContentAsString(TEncoding.UTF8);
 
     if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then
@@ -575,7 +581,12 @@ function TPaymentClient.DoGet(const AUrl: string): string;
 var
   Response: IHTTPResponse;
 begin
-  Response := FHttpClient.Get(AUrl);
+  TMonitor.Enter(FHttpClient);
+  try
+    Response := FHttpClient.Get(AUrl);
+  finally
+    TMonitor.Exit(FHttpClient);
+  end;
   Result := Response.ContentAsString(TEncoding.UTF8);
 
   if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then

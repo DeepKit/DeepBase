@@ -380,7 +380,12 @@ end;
 
 function TDeepKitSafeClient.GetRefreshToken: string;
 begin
-  Result := FRefreshToken;
+  TMonitor.Enter(FTokenLock);
+  try
+    Result := FRefreshToken;
+  finally
+    TMonitor.Exit(FTokenLock);
+  end;
 end;
 
 function TDeepKitSafeClient.ApplyRoutePrefix(const APath: string): string;
@@ -418,6 +423,8 @@ function TDeepKitSafeClient.BuildQuery(const APairs: array of string): string;
 var
   I: Integer;
 begin
+  Assert(not Odd(Length(APairs)),
+    'BuildQuery requires an even-length array of key-value pairs');
   Result := '';
   I := 0;
   while I < Length(APairs) - 1 do
@@ -437,14 +444,24 @@ end;
 
 function TDeepKitSafeClient.BuildHeaders(const AIdempotencyKey: string;
   AIncludeAuth: Boolean): TNetHeaders;
+var
+  LToken, LApiKey: string;
 begin
+  TMonitor.Enter(FTokenLock);
+  try
+    LToken := FConfig.BearerToken;
+    LApiKey := FConfig.ApiKey;
+  finally
+    TMonitor.Exit(FTokenLock);
+  end;
+
   SetLength(Result, 0);
   AddHeader(Result, 'Accept', 'application/json');
   AddHeader(Result, 'Content-Type', 'application/json');
-  if AIncludeAuth and (FConfig.BearerToken <> '') then
-    AddHeader(Result, 'Authorization', 'Bearer ' + FConfig.BearerToken);
-  if FConfig.ApiKey <> '' then
-    AddHeader(Result, 'X-API-Key', FConfig.ApiKey);
+  if AIncludeAuth and (LToken <> '') then
+    AddHeader(Result, 'Authorization', 'Bearer ' + LToken);
+  if LApiKey <> '' then
+    AddHeader(Result, 'X-API-Key', LApiKey);
   if AIdempotencyKey <> '' then
     AddHeader(Result, 'Idempotency-Key', AIdempotencyKey);
 end;
@@ -470,20 +487,26 @@ begin
   Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
   if AIncludeAuth and (Result.StatusCode = 401) then
   begin
-    TMonitor.Enter(FTokenLock);
-    try
-      if (FRefreshToken <> '') and not FRefreshing then
-      begin
-        FRefreshing := True;
-        try
-          if TryRefreshToken then
-            Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
-        finally
-          FRefreshing := False;
+    // Only retry on idempotent methods (GET/HEAD) or when an idempotency key
+    // is provided. Retrying POST without an idempotency key could duplicate
+    // non-idempotent operations like order creation.
+    if (AIdempotencyKey <> '') or SameText(AMethod, 'GET') or SameText(AMethod, 'HEAD') then
+    begin
+      TMonitor.Enter(FTokenLock);
+      try
+        if (FRefreshToken <> '') and not FRefreshing then
+        begin
+          FRefreshing := True;
+          try
+            if TryRefreshToken then
+              Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+          finally
+            FRefreshing := False;
+          end;
         end;
+      finally
+        TMonitor.Exit(FTokenLock);
       end;
-    finally
-      TMonitor.Exit(FTokenLock);
     end;
   end;
 end;
@@ -517,9 +540,9 @@ begin
     Session := AuthSessionFromJson(Json);
     if Session.AccessToken <> '' then
     begin
-      FConfig.BearerToken := Session.AccessToken;
+      SetAccessToken(Session.AccessToken);
       if Session.RefreshToken <> '' then
-        FRefreshToken := Session.RefreshToken;
+          SetRefreshToken(Session.RefreshToken);
       Result := True;
     end;
   finally
@@ -570,9 +593,9 @@ begin
   if ASnapshot.SchemaVersion <= 0 then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has invalid schema_version');
 
-  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
+  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, True) then
     raise EDeepBaseCommerceValidationError.Create('License snapshot expires_at is invalid');
-  if ExpiresAt <= Now then
+  if ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now) then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has expired');
 
   PayloadAppId := SnapshotJsonField(ASnapshot.Payload, SCommerceFieldAppId);
@@ -649,7 +672,7 @@ begin
     if Result.AccessToken <> '' then
       SetAccessToken(Result.AccessToken);
     if Result.RefreshToken <> '' then
-      FRefreshToken := Result.RefreshToken;
+      SetRefreshToken(Result.RefreshToken);
   finally
     Json.Free;
   end;
@@ -676,7 +699,7 @@ begin
     if Result.AccessToken <> '' then
       SetAccessToken(Result.AccessToken);
     if Result.RefreshToken <> '' then
-      FRefreshToken := Result.RefreshToken;
+      SetRefreshToken(Result.RefreshToken);
   finally
     Json.Free;
   end;
@@ -690,7 +713,10 @@ var
 begin
   Token := ARefreshToken;
   if Token = '' then
-    Token := FRefreshToken;
+    Token := GetRefreshToken;
+
+  if Token = '' then
+    Exit;
 
   Body := TJSONObject.Create;
   try
@@ -700,7 +726,7 @@ begin
       SendJson(SHttpPost, SDeepKitRouteAuthLogout, Body));
     try
       SetAccessToken('');
-      FRefreshToken := '';
+      SetRefreshToken('');
     finally
       Json.Free;
     end;

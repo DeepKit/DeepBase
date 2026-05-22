@@ -143,6 +143,7 @@ type
     function BuildHeaders(const AIdempotencyKey: string): TNetHeaders;
     function SendJson(const AMethod, APath: string; ABody: TJSONObject;
       const AIdempotencyKey: string = ''): TCommerceBackendHttpResponse;
+    procedure RequireServerWrites(const AOperation: string);
   public
     constructor Create(const AConfig: TCommerceBackendHttpConfig;
       const ATransport: ICommerceBackendHttpTransport = nil);
@@ -241,34 +242,42 @@ begin
   // request/response state.
   TMonitor.Enter(FLock);
   try
-    if SameText(AMethod, SHttpGet) then
-      Response := FHttpClient.Get(AUrl, nil, AHeaders)
-    else if SameText(AMethod, SHttpPost) then
-    begin
-      Stream := TStringStream.Create(ABody, TEncoding.UTF8);
-      try
-        Response := FHttpClient.Post(AUrl, Stream, nil, AHeaders);
-      finally
-        Stream.Free;
-      end;
-    end
-    else if SameText(AMethod, SHttpPut) then
-    begin
-      Stream := TStringStream.Create(ABody, TEncoding.UTF8);
-      try
-        Response := FHttpClient.Put(AUrl, Stream, nil, AHeaders);
-      finally
-        Stream.Free;
-      end;
-    end
-    else if SameText(AMethod, SHttpDelete) then
-      Response := FHttpClient.Delete(AUrl, nil, AHeaders)
-    else
-      raise EDeepBaseCommerceError.CreateFmt('Unsupported HTTP method: %s',
-        [AMethod]);
+    try
+      if SameText(AMethod, SHttpGet) then
+        Response := FHttpClient.Get(AUrl, nil, AHeaders)
+      else if SameText(AMethod, SHttpPost) then
+      begin
+        Stream := TStringStream.Create(ABody, TEncoding.UTF8);
+        try
+          Response := FHttpClient.Post(AUrl, Stream, nil, AHeaders);
+        finally
+          Stream.Free;
+        end;
+      end
+      else if SameText(AMethod, SHttpPut) then
+      begin
+        Stream := TStringStream.Create(ABody, TEncoding.UTF8);
+        try
+          Response := FHttpClient.Put(AUrl, Stream, nil, AHeaders);
+        finally
+          Stream.Free;
+        end;
+      end
+      else if SameText(AMethod, SHttpDelete) then
+        Response := FHttpClient.Delete(AUrl, nil, AHeaders)
+      else
+        raise EDeepBaseCommerceError.CreateFmt('Unsupported HTTP method: %s',
+          [AMethod]);
 
-    Result.StatusCode := Response.StatusCode;
-    Result.Body := Response.ContentAsString(TEncoding.UTF8);
+      Result.StatusCode := Response.StatusCode;
+      Result.Body := Response.ContentAsString(TEncoding.UTF8);
+    except
+      on E: EDeepBaseCommerceError do
+        raise;
+      on E: Exception do
+        raise EDeepBaseCommerceError.CreateFmt(
+          'Commerce HTTP transport error for %s %s: %s', [AMethod, AUrl, E.Message]);
+    end;
   finally
     TMonitor.Exit(FLock);
   end;
@@ -907,6 +916,14 @@ begin
     BuildHeaders(AIdempotencyKey));
 end;
 
+procedure TCommerceHttpPaymentGateway.RequireServerWrites(
+  const AOperation: string);
+begin
+  if not FConfig.AllowServerWrites then
+    raise EDeepBaseCommerceValidationError.CreateFmt(
+      '%s requires server-admin Commerce HTTP config.', [AOperation]);
+end;
+
 function TCommerceHttpPaymentGateway.CreatePaymentIntent(
   const AOrder: TCommerceOrderData; const APayment: TCommercePaymentData;
   const APayerOpenId: string): TCommercePaymentIntent;
@@ -917,6 +934,7 @@ var
 begin
   Body := TJSONObject.Create;
   try
+    RequireServerWrites('CreatePaymentIntent');
     Body.AddPair(SCommerceFieldOrderId, AOrder.OrderId);
     Body.AddPair(SCommerceFieldPaymentId, APayment.PaymentId);
     Body.AddPair(SCommerceFieldOutTradeNo, AOrder.OutTradeNo);

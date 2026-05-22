@@ -65,6 +65,11 @@ type
   EDeepBaseCommerceValidationError = class(EDeepBaseCommerceError);
   EDeepBaseCommerceNotFoundError = class(EDeepBaseCommerceError);
   EDeepBaseCommercePaymentError = class(EDeepBaseCommerceError);
+  EDeepBaseCommerceOrphanedOrderError = class(EDeepBaseCommercePaymentError)
+  public
+    OrderId: string;
+    constructor Create(const AOrderId, AMessage: string);
+  end;
 
   TCommerceUserData = record
     UserId: string;
@@ -182,6 +187,14 @@ function CommerceOrderStatusToStr(AStatus: TCommerceOrderStatus): string;
 function CommercePaymentStatusToStr(AStatus: TCommercePaymentStatus): string;
 
 implementation
+
+{ EDeepBaseCommerceOrphanedOrderError }
+
+constructor EDeepBaseCommerceOrphanedOrderError.Create(const AOrderId, AMessage: string);
+begin
+  inherited Create(AMessage);
+  OrderId := AOrderId;
+end;
 
 function CommerceNowISO: string;
 var

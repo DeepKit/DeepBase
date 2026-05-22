@@ -1,15 +1,15 @@
 unit DeepBase.Payment.Alipay;
 
 {*******************************************************************************
-  DeepBase Alipay (支付�? Payment Integration
+  DeepBase Alipay (支付�? Payment Integration
 
   Supports:
     - 电脑网站支付 (alipay.trade.page.pay)
     - 手机网站支付 (alipay.trade.wap.pay)
-    - 当面�?扫码支付 (alipay.trade.precreate)
+    - 当面�?扫码支付 (alipay.trade.precreate)
     - APP支付 (alipay.trade.app.pay)
     - 统一收单交易查询 (alipay.trade.query)
-    - 统一收单交易退�?(alipay.trade.refund)
+    - 统一收单交易退�?(alipay.trade.refund)
     - 统一收单交易关闭 (alipay.trade.close)
 
   Official Docs: https://opendocs.alipay.com/open/
@@ -49,7 +49,7 @@ type
     function GetPrivateKeySecure: string;
 
     property AppId: string read FAppId write FAppId;
-    property PrivateKey: string read FPrivateKey write FPrivateKey;
+    property PrivateKey: string read GetPrivateKeySecure write SetPrivateKeySecure;
     property AlipayPublicKey: string read FAlipayPublicKey write FAlipayPublicKey;
     property SignType: string read FSignType write FSignType;
     property Charset: string read FCharset write FCharset;
@@ -114,7 +114,7 @@ procedure TAlipayConfig.LoadKeysFromCredentialManager;
 begin
   if KeyStorageMode = ksmCredential then
   begin
-    FPrivateKey := GetCredentialKey('PrivateKey');
+    PrivateKey := GetCredentialKey('PrivateKey');
     FAlipayPublicKey := GetCredentialKey('AlipayPublicKey');
   end;
 end;
@@ -164,7 +164,8 @@ begin
   Result.Add('format', 'JSON');
   Result.Add('charset', Cfg.Charset);
   Result.Add('sign_type', Cfg.SignType);
-  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
+  Result.Add('timestamp', FormatDateTime('yyyy-mm-dd hh:nn:ss',
+    IncHour(TTimeZone.Local.ToUniversalTime(Now), 8)));
   Result.Add('version', '1.0');
 end;
 
@@ -194,11 +195,43 @@ begin
 end;
 
 function TAlipayClient.RSA2Sign(const AContent: string): string;
+{$IFDEF MSWINDOWS}
+var
+  Signer: TRSASigner;
+  PrivateKey: string;
+  NormalizedKey: string;
+begin
+  PrivateKey := Trim(TAlipayConfig(FConfig).PrivateKey);
+  if PrivateKey = '' then
+    raise EPaymentSignError.Create('Alipay private key is not configured',
+      'MISSING_PRIVATE_KEY', ppAlipay);
+
+  NormalizedKey := PrivateKey;
+  if Pos('BEGIN', UpperCase(NormalizedKey)) = 0 then
+    NormalizedKey := '-----BEGIN RSA PRIVATE KEY-----' + sLineBreak +
+      NormalizedKey + sLineBreak +
+      '-----END RSA PRIVATE KEY-----';
+
+  Signer := TRSASigner.Create;
+  try
+    if not Signer.LoadPrivateKeyPEM(NormalizedKey) then
+      raise EPaymentSignError.Create('Failed to load RSA private key: ' + Signer.LastError,
+        'INVALID_PRIVATE_KEY', ppAlipay);
+    Result := Signer.Sign(AContent);
+    if Result = '' then
+      raise EPaymentSignError.Create('RSA2 signing failed: ' + Signer.LastError,
+        'SIGN_FAILED', ppAlipay);
+  finally
+    Signer.Free;
+  end;
+end;
+{$ELSE}
 begin
   raise EPaymentSignError.Create(
-    'RSA2 signing is unavailable in this build. Use provider SDK signing flow.',
+    'RSA2 signing requires Windows CNG. Use a TCallbackNotificationVerifier on this platform.',
     'SIGN_NOT_IMPLEMENTED', ppAlipay);
 end;
+{$ENDIF}
 
 function TAlipayClient.RSA2Verify(const AContent, ASign: string): Boolean;
 var
@@ -213,7 +246,7 @@ begin
     Exit(False);
 
   {$IFDEF MSWINDOWS}
-  // 兼容仅传�?Base64 主体的公钥配�?  NormalizedKey := PublicKey;
+  // 兼容仅传�?Base64 主体的公钥配�?  NormalizedKey := PublicKey;
   if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
     NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
       NormalizedKey + sLineBreak +
@@ -278,6 +311,11 @@ begin
       end;
 
       Result := TJSONObject(RespNode.Clone);
+    end
+    else
+    begin
+      JsonResp.Free;
+      raise EPaymentBusinessError.Create('Unexpected response format', 'INVALID_RESPONSE', ppAlipay);
     end;
 
     JsonResp.Free;
