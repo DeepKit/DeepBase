@@ -473,7 +473,7 @@ end;
 function PaymentIntentFromJson(AJson: TJSONObject;
   const ARawResponse: string): TCommercePaymentIntent;
 begin
-  Result.Success := JsonValueAsBool(AJson, SCommerceFieldSuccess, True);
+  Result.Success := JsonValueAsBool(AJson, SCommerceFieldSuccess, False);
   Result.PaymentId := JsonValueAsString(AJson, SCommerceFieldPaymentId, '');
   Result.OutTradeNo := JsonValueAsString(AJson, SCommerceFieldOutTradeNo, '');
   Result.PrepayId := JsonValueAsString(AJson, SCommerceFieldPrepayId, '');

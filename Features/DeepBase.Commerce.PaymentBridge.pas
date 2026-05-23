@@ -90,20 +90,46 @@ uses
   DeepBase.Payment.PayPal;
 
 /// <summary>
-/// Development-only guard. Any process can set DEEPBASE_ALLOW_PROTOTYPE_COMMERCE_ADAPTERS=1
-/// to bypass this check. This is NOT a security boundary — it exists solely to prevent
-/// accidental use of server-side payment verification keys in desktop client builds.
-/// Production deployments must never rely on this guard for actual secret protection.
+/// Hard guard preventing PaymentBridge from being used outside server-side contexts.
+/// This unit contains payment verification keys and must NEVER be linked into
+/// desktop/mobile client builds. Use TDeepKitSafeClient for client-side commerce.
+///
+/// On DESKTOP builds the factory functions are compiled out entirely.
+/// On server builds they are available normally.
 /// </summary>
-procedure EnsurePaymentBridgeServerOnly;
+{$IFDEF DESKTOP}
+function CreateAlipayNotificationVerifier(
+  const AAppId, APrivateKey, AAlipayPublicKey: string;
+  const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
 begin
-  if SameText(GetEnvironmentVariable(
-    'DEEPBASE_ALLOW_PROTOTYPE_COMMERCE_ADAPTERS'), '1') then
-    Exit;
-
   raise EDeepBaseCommerceValidationError.Create(
-    'DeepBase.Commerce.PaymentBridge verifiers are server-side callback components. Desktop production clients must not hold payment verification keys.');
+    'PaymentBridge is not available in desktop builds. Use TDeepKitSafeClient.');
 end;
+
+function CreateWeChatPayNotificationVerifier(
+  const AAppId, AMchId, AApiV3Key: string;
+  const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
+begin
+  raise EDeepBaseCommerceValidationError.Create(
+    'PaymentBridge is not available in desktop builds. Use TDeepKitSafeClient.');
+end;
+
+function CreateStripeNotificationVerifier(
+  const ASecretKey, AWebhookSecret: string;
+  const ACurrency: string = 'USD'): ICommerceNotificationVerifier;
+begin
+  raise EDeepBaseCommerceValidationError.Create(
+    'PaymentBridge is not available in desktop builds. Use TDeepKitSafeClient.');
+end;
+
+function CreatePayPalNotificationVerifier(
+  const AClientId, AClientSecret: string;
+  const ACurrency: string = 'USD'): ICommerceNotificationVerifier;
+begin
+  raise EDeepBaseCommerceValidationError.Create(
+    'PaymentBridge is not available in desktop builds. Use TDeepKitSafeClient.');
+end;
+{$ELSE}
 
 { TCallbackNotificationVerifier }
 
@@ -212,7 +238,6 @@ function CreateAlipayNotificationVerifier(
 var
   Config: TAlipayConfig;
 begin
-  EnsurePaymentBridgeServerOnly;
   Config := TAlipayConfig.Create;
   Config.AppId := AAppId;
   Config.PrivateKey := APrivateKey;
@@ -226,7 +251,6 @@ function CreateWeChatPayNotificationVerifier(
   const AAppId, AMchId, AApiV3Key: string;
   const ACurrency: string): ICommerceNotificationVerifier;
 begin
-  EnsurePaymentBridgeServerOnly;
   raise EDeepBaseCommercePaymentError.Create(
     'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
 end;
@@ -237,7 +261,6 @@ function CreateStripeNotificationVerifier(
 var
   Config: TStripeConfig;
 begin
-  EnsurePaymentBridgeServerOnly;
   Config := TStripeConfig.Create;
   Config.SecretKey := ASecretKey;
   Config.WebhookSecret := AWebhookSecret;
@@ -251,12 +274,12 @@ function CreatePayPalNotificationVerifier(
 var
   Config: TPayPalConfig;
 begin
-  EnsurePaymentBridgeServerOnly;
   Config := TPayPalConfig.Create;
   Config.ClientID := AClientId;
   Config.ClientSecret := AClientSecret;
   Result := TSDKNotificationVerifier.Create(cppPayPal,
     TPayPalClient.Create(Config), ACurrency, Config);
 end;
+{$ENDIF}
 
 end.

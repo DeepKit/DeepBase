@@ -329,6 +329,9 @@ begin
   Result.ProviderTradeNo := Str(Obj, 'provider_trade_no');
   Result.PrepayId := Str(Obj, 'prepay_id');
   Result.RawPayload := Str(Obj, 'raw_payload');
+  Result.Provider := StrToCommercePaymentProvider(Str(Obj, 'provider'));
+  Result.Channel := StrToCommercePaymentChannel(Str(Obj, 'channel'));
+  Result.Status := StrToCommercePaymentStatus(Str(Obj, 'status'));
   Result.CreatedAtISO := Str(Obj, 'created_at');
   Result.PaidAtISO := Str(Obj, 'paid_at');
 end;
@@ -354,6 +357,7 @@ begin
   Result.AppId := Str(Obj, 'app_id');
   Result.ProductId := Str(Obj, 'product_id');
   Result.Code := Str(Obj, 'code');
+  Result.Status := StrToCommerceEntitlementStatus(Str(Obj, 'status'));
   Result.ValidFromISO := Str(Obj, 'valid_from');
   Result.ValidUntilISO := Str(Obj, 'valid_until');
   Result.RemainingQuota := IntVal(Obj, 'remaining_quota');
@@ -397,7 +401,7 @@ begin
   Result.AddPair('payment_id', APayment.PaymentId);
   Result.AddPair('order_id', APayment.OrderId);
   Result.AddPair('provider', CommercePaymentProviderToStr(APayment.Provider));
-  Result.AddPair('channel', ''); // enum to string if needed
+  Result.AddPair('channel', CommercePaymentChannelToStr(APayment.Channel));
   Result.AddPair('provider_trade_no', APayment.ProviderTradeNo);
   Result.AddPair('prepay_id', APayment.PrepayId);
   Result.AddPair('status', CommercePaymentStatusToStr(APayment.Status));
@@ -471,7 +475,11 @@ begin
     'user_id=eq.' + TNetEncoding.URL.Encode(AUserid)));
   Result := Assigned(Obj);
   if Result then
+  try
     AUser := ParseUser(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 function TSupabaseCommerceStorage.FindUserByIdentity(AProvider: TCommerceAuthProvider;
@@ -488,7 +496,11 @@ begin
   Obj := SupabaseGet(BuildUrl(TableName('identities'), Params));
   Result := Assigned(Obj);
   if Result then
+  try
     AUser := ParseUser(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 procedure TSupabaseCommerceStorage.UpsertUser(const AUser: TCommerceUserData);
@@ -526,7 +538,11 @@ begin
   Obj := SupabaseGet(BuildUrl(TableName('products'), Params));
   Result := Assigned(Obj);
   if Result then
+  try
     AProduct := ParseProduct(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 procedure TSupabaseCommerceStorage.UpsertProduct(const AProduct: TCommerceProductData);
@@ -562,7 +578,11 @@ begin
     'order_id=eq.' + TNetEncoding.URL.Encode(AOrderId)));
   Result := Assigned(Obj);
   if Result then
+  try
     AOrder := ParseOrder(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 function TSupabaseCommerceStorage.FindOrderByOutTradeNo(const AOutTradeNo: string;
@@ -574,7 +594,11 @@ begin
     'out_trade_no=eq.' + TNetEncoding.URL.Encode(AOutTradeNo)));
   Result := Assigned(Obj);
   if Result then
+  try
     AOrder := ParseOrder(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 procedure TSupabaseCommerceStorage.UpdateOrder(const AOrder: TCommerceOrderData);
@@ -611,7 +635,11 @@ begin
     'order_id=eq.' + TNetEncoding.URL.Encode(AOrderId)));
   Result := Assigned(Obj);
   if Result then
+  try
     APayment := ParsePayment(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 procedure TSupabaseCommerceStorage.UpdatePayment(const APayment: TCommercePaymentData);
@@ -678,7 +706,11 @@ begin
   Obj := SupabaseGet(BuildUrl(TableName('entitlements'), Params));
   Result := Assigned(Obj);
   if Result then
+  try
     AEntitlement := ParseEntitlement(Obj);
+  finally
+    Obj.Free;
+  end;
 end;
 
 function TSupabaseCommerceStorage.ConsumeEntitlement(const AEntitlementId: string;
@@ -687,15 +719,36 @@ var
   Body: TJSONObject;
   Obj: TJSONObject;
   LFilter: string;
+  NewQuota: Integer;
 begin
-  // Atomic: PATCH with WHERE remaining_quota >= ACount
-  // If remaining_quota is insufficient, the update affects 0 rows
+  // Read current entitlement
+  Obj := SupabaseGet(BuildUrl(TableName('entitlements'),
+    'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId)));
+  if not Assigned(Obj) then
+    Exit(False);
+  try
+    AEntitlement := ParseEntitlement(Obj);
+    if AEntitlement.Status <> cesActive then
+      Exit(False);
+
+    // Unlimited quota (-1): skip deduction, always succeed
+    if AEntitlement.RemainingQuota < 0 then
+      Exit(True);
+
+    if AEntitlement.RemainingQuota < ACount then
+      Exit(False);
+  finally
+    Obj.Free;
+  end;
+
+  // Compute new quota and PATCH with atomic filter to prevent over-consumption
+  NewQuota := AEntitlement.RemainingQuota - ACount;
   LFilter := 'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId) +
-    '&remaining_quota=gte.' + IntToStr(ACount);
+    '&remaining_quota=eq.' + IntToStr(AEntitlement.RemainingQuota);
 
   Body := TJSONObject.Create;
   try
-    Body.AddPair('remaining_quota', 'remaining_quota - ' + IntToStr(ACount));
+    Body.AddPair('remaining_quota', TJSONNumber.Create(NewQuota));
     SupabasePatch(BuildUrl(TableName('entitlements'), LFilter), Body);
   finally
     Body.Free;
@@ -704,11 +757,12 @@ begin
   // Re-read to confirm the update took effect
   Obj := SupabaseGet(BuildUrl(TableName('entitlements'),
     'entitlement_id=eq.' + TNetEncoding.URL.Encode(AEntitlementId)));
-  if not Assigned(Obj) then
-    Exit(False);
-
-  AEntitlement := ParseEntitlement(Obj);
-  // If quota didn't decrease, the atomic update was rejected (insufficient quota)
+  if Assigned(Obj) then
+  try
+    AEntitlement := ParseEntitlement(Obj);
+  finally
+    Obj.Free;
+  end;
   Result := True;
 
   if AEntitlement.RemainingQuota = 0 then

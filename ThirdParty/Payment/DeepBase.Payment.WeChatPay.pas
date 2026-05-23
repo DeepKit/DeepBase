@@ -723,10 +723,11 @@ begin
   AmountFen := Round(AOrder.Amount * 100);
 
   ReqBody := TJSONObject.Create;
-  AmountObj := TJSONObject.Create;
   try
+    AmountObj := TJSONObject.Create;
     AmountObj.AddPair('total', TJSONNumber.Create(AmountFen));
     AmountObj.AddPair('currency', IfThen(AOrder.Currency <> '', AOrder.Currency, 'CNY'));
+    ReqBody.AddPair('amount', AmountObj);
 
     ReqBody.AddPair('appid', Cfg.AppId);
     ReqBody.AddPair('mchid', Cfg.MchId);
@@ -737,8 +738,6 @@ begin
       ReqBody.AddPair('notify_url', AOrder.NotifyUrl)
     else if FConfig.NotifyUrl <> '' then
       ReqBody.AddPair('notify_url', FConfig.NotifyUrl);
-
-    ReqBody.AddPair('amount', AmountObj);
 
     if AOrder.ExpireMinutes > 0 then
       ReqBody.AddPair('time_expire', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"+08:00"',
@@ -783,12 +782,15 @@ begin
   AmountFen := Round(AOrder.Amount * 100);
 
   ReqBody := TJSONObject.Create;
-  AmountObj := TJSONObject.Create;
-  PayerObj := TJSONObject.Create;
   try
+    AmountObj := TJSONObject.Create;
     AmountObj.AddPair('total', TJSONNumber.Create(AmountFen));
     AmountObj.AddPair('currency', IfThen(AOrder.Currency <> '', AOrder.Currency, 'CNY'));
+    ReqBody.AddPair('amount', AmountObj);
+
+    PayerObj := TJSONObject.Create;
     PayerObj.AddPair('openid', AOpenId);
+    ReqBody.AddPair('payer', PayerObj);
 
     ReqBody.AddPair('appid', Cfg.AppId);
     ReqBody.AddPair('mchid', Cfg.MchId);
@@ -799,9 +801,6 @@ begin
       ReqBody.AddPair('notify_url', AOrder.NotifyUrl)
     else if FConfig.NotifyUrl <> '' then
       ReqBody.AddPair('notify_url', FConfig.NotifyUrl);
-
-    ReqBody.AddPair('amount', AmountObj);
-    ReqBody.AddPair('payer', PayerObj);
 
     try
       RespObj := DoWeChatPost('/v3/pay/transactions/jsapi', ReqBody);
@@ -836,16 +835,18 @@ begin
   AmountFen := Round(AOrder.Amount * 100);
 
   ReqBody := TJSONObject.Create;
-  AmountObj := TJSONObject.Create;
-  SceneInfoObj := TJSONObject.Create;
-  H5InfoObj := TJSONObject.Create;
   try
+    AmountObj := TJSONObject.Create;
     AmountObj.AddPair('total', TJSONNumber.Create(AmountFen));
     AmountObj.AddPair('currency', IfThen(AOrder.Currency <> '', AOrder.Currency, 'CNY'));
+    ReqBody.AddPair('amount', AmountObj);
 
+    SceneInfoObj := TJSONObject.Create;
+    H5InfoObj := TJSONObject.Create;
     H5InfoObj.AddPair('type', 'Wap');
     SceneInfoObj.AddPair('payer_client_ip', IfThen(AOrder.ClientIP <> '', AOrder.ClientIP, '127.0.0.1'));
     SceneInfoObj.AddPair('h5_info', H5InfoObj);
+    ReqBody.AddPair('scene_info', SceneInfoObj);
 
     ReqBody.AddPair('appid', Cfg.AppId);
     ReqBody.AddPair('mchid', Cfg.MchId);
@@ -856,9 +857,6 @@ begin
       ReqBody.AddPair('notify_url', AOrder.NotifyUrl)
     else if FConfig.NotifyUrl <> '' then
       ReqBody.AddPair('notify_url', FConfig.NotifyUrl);
-
-    ReqBody.AddPair('amount', AmountObj);
-    ReqBody.AddPair('scene_info', SceneInfoObj);
 
     try
       RespObj := DoWeChatPost('/v3/pay/transactions/h5', ReqBody);
@@ -892,10 +890,11 @@ begin
   AmountFen := Round(AOrder.Amount * 100);
 
   ReqBody := TJSONObject.Create;
-  AmountObj := TJSONObject.Create;
   try
+    AmountObj := TJSONObject.Create;
     AmountObj.AddPair('total', TJSONNumber.Create(AmountFen));
     AmountObj.AddPair('currency', IfThen(AOrder.Currency <> '', AOrder.Currency, 'CNY'));
+    ReqBody.AddPair('amount', AmountObj);
 
     ReqBody.AddPair('appid', Cfg.AppId);
     ReqBody.AddPair('mchid', Cfg.MchId);
@@ -906,8 +905,6 @@ begin
       ReqBody.AddPair('notify_url', AOrder.NotifyUrl)
     else if FConfig.NotifyUrl <> '' then
       ReqBody.AddPair('notify_url', FConfig.NotifyUrl);
-
-    ReqBody.AddPair('amount', AmountObj);
 
     try
       RespObj := DoWeChatPost('/v3/pay/transactions/app', ReqBody);
@@ -1002,8 +999,8 @@ begin
   Cfg := TWeChatPayConfig(FConfig);
 
   try
-    RespObj := DoWeChatGet('/v3/pay/transactions/out-trade-no/' + AOrderNo +
-      '?mchid=' + Cfg.MchId);
+    RespObj := DoWeChatGet('/v3/pay/transactions/out-trade-no/' +
+      TNetEncoding.URL.Encode(AOrderNo) + '?mchid=' + Cfg.MchId);
     try
       Result.Success := True;
       Result.OrderNo := RespObj.GetValue<string>('out_trade_no', '');

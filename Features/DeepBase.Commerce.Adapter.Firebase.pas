@@ -402,6 +402,9 @@ begin
   Result.ProviderTradeNo := StrField(Fields, 'provider_trade_no');
   Result.PrepayId := StrField(Fields, 'prepay_id');
   Result.RawPayload := StrField(Fields, 'raw_payload');
+  Result.Provider := StrToCommercePaymentProvider(StrField(Fields, 'provider'));
+  Result.Channel := StrToCommercePaymentChannel(StrField(Fields, 'channel'));
+  Result.Status := StrToCommercePaymentStatus(StrField(Fields, 'status'));
   Result.CreatedAtISO := StrField(Fields, 'created_at');
   Result.PaidAtISO := StrField(Fields, 'paid_at');
 end;
@@ -427,6 +430,7 @@ begin
   Result.AppId := StrField(Fields, 'app_id');
   Result.ProductId := StrField(Fields, 'product_id');
   Result.Code := StrField(Fields, 'code');
+  Result.Status := StrToCommerceEntitlementStatus(StrField(Fields, 'status'));
   Result.ValidFromISO := StrField(Fields, 'valid_from');
   Result.ValidUntilISO := StrField(Fields, 'valid_until');
   Result.RemainingQuota := IntField(Fields, 'remaining_quota');
@@ -470,6 +474,7 @@ begin
   Result.AddPair('payment_id', WrapValue(APayment.PaymentId));
   Result.AddPair('order_id', WrapValue(APayment.OrderId));
   Result.AddPair('provider', WrapValue(CommercePaymentProviderToStr(APayment.Provider)));
+  Result.AddPair('channel', WrapValue(CommercePaymentChannelToStr(APayment.Channel)));
   Result.AddPair('provider_trade_no', WrapValue(APayment.ProviderTradeNo));
   Result.AddPair('prepay_id', WrapValue(APayment.PrepayId));
   Result.AddPair('status', WrapValue(CommercePaymentStatusToStr(APayment.Status)));
@@ -503,6 +508,7 @@ begin
   Result.AddPair('app_id', WrapValue(AEntitlement.AppId));
   Result.AddPair('product_id', WrapValue(AEntitlement.ProductId));
   Result.AddPair('code', WrapValue(AEntitlement.Code));
+  Result.AddPair('status', WrapValue(CommerceEntitlementStatusToStr(AEntitlement.Status)));
   Result.AddPair('valid_from', WrapValue(AEntitlement.ValidFromISO));
   Result.AddPair('valid_until', WrapValue(AEntitlement.ValidUntilISO));
   Result.AddPair('remaining_quota', WrapValue(AEntitlement.RemainingQuota));
@@ -520,10 +526,12 @@ begin
   Doc := FirestoreGet(DocUrl('users', AUserId));
   Result := Assigned(Doc);
   if Result then
-  begin
+  try
     Fields := ExtractFields(Doc);
     if Assigned(Fields) then
       AUser := ParseUser(Fields);
+  finally
+    Doc.Free;
   end;
 end;
 
@@ -562,7 +570,6 @@ begin
       if Assigned(Fields) then
       begin
         AUser.UserId := StrField(Fields, 'user_id');
-        FreeAndNil(Results);
         Exit(FindUserById(AUser.UserId, AUser));
       end;
     end;
@@ -616,10 +623,12 @@ begin
   Doc := FirestoreGet(DocUrl('products', AAppId + '_' + AProductId));
   Result := Assigned(Doc);
   if Result then
-  begin
+  try
     Fields := ExtractFields(Doc);
     if Assigned(Fields) then
       AProduct := ParseProduct(Fields);
+  finally
+    Doc.Free;
   end;
 end;
 
@@ -658,10 +667,12 @@ begin
   Doc := FirestoreGet(DocUrl('orders', AOrderId));
   Result := Assigned(Doc);
   if Result then
-  begin
+  try
     Fields := ExtractFields(Doc);
     if Assigned(Fields) then
       AOrder := ParseOrder(Fields);
+  finally
+    Doc.Free;
   end;
 end;
 
@@ -880,32 +891,54 @@ var
   NewQuota: Integer;
   Body: TJSONObject;
 begin
+  // NOTE: Firestore REST API does not support atomic read-modify-write transactions.
+  // For production, use the backend HTTP adapter (TDeepKitSafeClient) which can run
+  // Firestore transactions server-side. This implementation is safe for single-instance
+  // deployments but may race under concurrent consumers.
   Doc := FirestoreGet(DocUrl('entitlements', AEntitlementId));
   if not Assigned(Doc) then
     Exit(False);
+  try
+    Fields := ExtractFields(Doc);
+    if not Assigned(Fields) then
+      Exit(False);
 
-  Fields := ExtractFields(Doc);
-  if not Assigned(Fields) then
-    Exit(False);
+    AEntitlement := ParseEntitlement(Fields);
+    if AEntitlement.Status <> cesActive then
+      Exit(False);
 
-  AEntitlement := ParseEntitlement(Fields);
-  if AEntitlement.RemainingQuota >= 0 then
+    // Unlimited quota (-1): skip deduction, always succeed
+    if AEntitlement.RemainingQuota < 0 then
+      Exit(True);
+
+    if AEntitlement.RemainingQuota < ACount then
+      Exit(False);
+  finally
+    Doc.Free;
+  end;
+
+  NewQuota := AEntitlement.RemainingQuota - ACount;
+
+  Body := TJSONObject.Create;
+  Body.AddPair('fields', TJSONObject.Create
+    .AddPair('remaining_quota', WrapValue(NewQuota)));
+  try
+    FirestorePatch(DocUrl('entitlements', AEntitlementId), Body);
+  finally
+    Body.Free;
+  end;
+  AEntitlement.RemainingQuota := NewQuota;
+  if NewQuota = 0 then
   begin
-    NewQuota := AEntitlement.RemainingQuota - ACount;
-    if NewQuota < 0 then
-      NewQuota := 0;
-
+    AEntitlement.Status := cesConsumed;
     Body := TJSONObject.Create;
     Body.AddPair('fields', TJSONObject.Create
-      .AddPair('remaining_quota', WrapValue(NewQuota)));
+      .AddPair('status', WrapValue('consumed')));
     try
       FirestorePatch(DocUrl('entitlements', AEntitlementId), Body);
     finally
       Body.Free;
     end;
-    AEntitlement.RemainingQuota := NewQuota;
-    if NewQuota = 0 then
-      AEntitlement.Status := cesConsumed;
   end;
   Result := True;
 end;

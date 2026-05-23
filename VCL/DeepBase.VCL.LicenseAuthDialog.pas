@@ -222,30 +222,36 @@ var
   Key: string;
 begin
   Key := Trim(FEdtKey.Text);
-  
+
   if Key = '' then
   begin
     UpdateStatus('Please enter a license key', True);
     Exit;
   end;
-  
-  UpdateStatus('Validating license...', False);
-  Application.ProcessMessages;
-  
-  // 尝试激活
-  FActivationResult := FLicense.ValidateLicense(Key);
 
-  if FActivationResult.IsValid then
-  begin
-    FLicense.ActivateLicense(Key);
-    UpdateStatus('License activated successfully!', False);
-    FLblStatus.Font.Color := clGreen;
-    ModalResult := mrOk;
-  end
-  else
-  begin
-    UpdateStatus('Activation failed: ' +
-      TDeepBaseLicense.LicenseStatusToStr(FActivationResult.Status), True);
+  // Prevent reentrancy during validation
+  FBtnActivate.Enabled := False;
+  try
+    UpdateStatus('Validating license...', False);
+    Application.ProcessMessages;
+
+    FActivationResult := FLicense.ValidateLicense(Key);
+
+    if FActivationResult.IsValid then
+    begin
+      FLicense.ActivateLicense(Key);
+      UpdateStatus('License activated successfully!', False);
+      FLblStatus.Font.Color := clGreen;
+      ModalResult := mrOk;
+    end
+    else
+    begin
+      // Generic message to avoid leaking status details to UI
+      UpdateStatus('Activation failed. Please check your license key and try again.', True);
+    end;
+  finally
+    if FBtnActivate <> nil then
+      FBtnActivate.Enabled := True;
   end;
 end;
 

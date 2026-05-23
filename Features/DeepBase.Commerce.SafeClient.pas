@@ -423,8 +423,8 @@ function TDeepKitSafeClient.BuildQuery(const APairs: array of string): string;
 var
   I: Integer;
 begin
-  Assert(not Odd(Length(APairs)),
-    'BuildQuery requires an even-length array of key-value pairs');
+  if Odd(Length(APairs)) then
+    raise EArgumentNilException.Create('BuildQuery requires an even-length array of key-value pairs');
   Result := '';
   I := 0;
   while I < Length(APairs) - 1 do
@@ -494,7 +494,17 @@ begin
     begin
       TMonitor.Enter(FTokenLock);
       try
-        if (FRefreshToken <> '') and not FRefreshing then
+        if FRefreshToken = '' then
+          Exit;
+
+        if FRefreshing then
+        begin
+          // Another thread is refreshing — wait for it to finish, then retry.
+          while FRefreshing do
+            TMonitor.Wait(FTokenLock, 5000);
+          Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+        end
+        else
         begin
           FRefreshing := True;
           try
@@ -502,6 +512,7 @@ begin
               Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
           finally
             FRefreshing := False;
+            TMonitor.PulseAll(FTokenLock);
           end;
         end;
       finally
@@ -552,11 +563,19 @@ end;
 
 procedure TDeepKitSafeClient.EnsureSuccess(const AMethod, APath: string;
   const AResponse: TCommerceBackendHttpResponse);
+var
+  SafeBody: string;
 begin
   if not IsHttpSuccess(AResponse.StatusCode) then
+  begin
+    if Length(AResponse.Body) > 100 then
+      SafeBody := Copy(AResponse.Body, 1, 100) + '[...]'
+    else
+      SafeBody := AResponse.Body;
     raise EDeepBaseCommerceError.CreateFmt(
       'DeepKit HTTP %d for %s %s: %s',
-      [AResponse.StatusCode, AMethod, APath, Copy(AResponse.Body, 1, 300)]);
+      [AResponse.StatusCode, AMethod, APath, SafeBody]);
+  end;
 end;
 
 function TDeepKitSafeClient.ParseObjectResponse(const AMethod,
@@ -593,7 +612,7 @@ begin
   if ASnapshot.SchemaVersion <= 0 then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has invalid schema_version');
 
-  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, True) then
+  if not TryISO8601ToDate(ASnapshot.ExpiresAtISO, ExpiresAt, False) then
     raise EDeepBaseCommerceValidationError.Create('License snapshot expires_at is invalid');
   if ExpiresAt <= TTimeZone.Local.ToUniversalTime(Now) then
     raise EDeepBaseCommerceValidationError.Create('License snapshot has expired');

@@ -57,19 +57,8 @@ implementation
 
 function IsEntitlementCurrentlyUsable(
   const AEntitlement: TCommerceEntitlementData): Boolean;
-var
-  ValidUntil: TDateTime;
 begin
-  if AEntitlement.Status <> cesActive then
-    Exit(False);
-  // -1 = unlimited quota, 0 = exhausted, < -1 = invalid
-  if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
-    Exit(False);
-  if AEntitlement.ValidUntilISO = '' then
-    Exit(True);
-  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
-    Exit(False);
-  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
+  Result := IsCommerceEntitlementUsable(AEntitlement);
 end;
 
 class function TDeepKitPermissionResult.Denied(const AFeatureCode,

@@ -395,8 +395,11 @@ type
     function GetBlockSize: Integer;
     function PadData(const AData: TBytes): TBytes;
     function UnpadData(const AData: TBytes): TBytes;
+    function GetKey: TBytes;
+    function GetIV: TBytes;
   public
     constructor Create(AKeySize: TAESKeySize = aes256; AMode: TAESMode = aesCBC);
+    destructor Destroy; override;
     
     /// <summary>Set key from bytes</summary>
     procedure SetKey(const AKey: TBytes);
@@ -437,8 +440,8 @@ type
     /// <summary>Decrypt file</summary>
     procedure DecryptFile(const ASourceFile, ADestFile: string);
     
-    property Key: TBytes read FKey;
-    property IV: TBytes read FIV;
+    property Key: TBytes read GetKey;
+    property IV: TBytes read GetIV;
     property Mode: TAESMode read FMode write FMode;
     property KeySize: TAESKeySize read FKeySize write FKeySize;
   end;
@@ -1330,6 +1333,27 @@ begin
   FMode := AMode;
   GenerateKey;
   GenerateIV;
+end;
+
+destructor TAESCrypto.Destroy;
+begin
+  if Length(FKey) > 0 then
+    FillChar(FKey[0], Length(FKey), 0);
+  FKey := nil;
+  if Length(FIV) > 0 then
+    FillChar(FIV[0], Length(FIV), 0);
+  FIV := nil;
+  inherited;
+end;
+
+function TAESCrypto.GetKey: TBytes;
+begin
+  Result := Copy(FKey);
+end;
+
+function TAESCrypto.GetIV: TBytes;
+begin
+  Result := Copy(FIV);
 end;
 
 function TAESCrypto.GetKeyLength: Integer;

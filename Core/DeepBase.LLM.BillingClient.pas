@@ -609,7 +609,7 @@ var
   StartTime: TDateTime;
 begin
   Result.Init;
-  FCancelled := False;
+  ResetCancel;
   StartTime := Now;
   
   RequestBody := BuildRequestBody(AMessages, False);
@@ -647,8 +647,8 @@ var
   Done: Boolean;
 begin
   Result := False;
-  FCancelled := False;
-  
+  ResetCancel;
+
   RequestBody := BuildRequestBody(AMessages, True);
   RequestStream := TStringStream.Create(RequestBody, TEncoding.UTF8);
   try
@@ -669,7 +669,7 @@ begin
     
     for I := 0 to High(Lines) do
     begin
-      if FCancelled then
+      if IsCancelled then
         Exit(False);
         
       Line := Lines[I];
@@ -688,7 +688,7 @@ begin
           begin
             if not AOnChunk(Content, False) then
             begin
-              FCancelled := True;
+              Cancel;
               Exit(False);
             end;
           end;

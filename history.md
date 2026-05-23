@@ -3,6 +3,54 @@
 
 ---
 
+## 2026-05-23 Commerce 客户端 SDK 安全审计修复
+
+### AUDIT-P0-2026-05-19: Commerce 客户端 SDK 代码审计修复
+- **完成日期**: 2026-05-19
+- **来源**: 2026-05-19 对 Commerce 客户端全部模块的代码审计
+- **目标**: 修复审计发现的内存泄漏、Token 刷新、命名混淆和平台限制等问题
+- **内容摘要**:
+  - P0-1: SDKGateway 四个工厂函数 Config 内存泄漏
+  - P0-2: PaymentBridge 三个验证器工厂 Config 内存泄漏
+  - P1-1: SafeClient 缺少自动 Token 刷新机制
+  - P1-2: SafeClient.AuthLogout 空 body 语义
+  - P1-3: License Snapshot 验证非 Windows ��台
+  - P1-4: WeChat Pay 验证 fail-closed
+  - P2-1: OrderFromJson 重名
+  - P2-3: UpgradeFlow.StartPaidUpgrade 订单状态验证
+  - P2-4: Permissions RemainingQuota -1=unlimited
+  - P2-5: Backend.Http TLS 证书校验
+- **遗留**: P2-2 Types.pas 字段常量导出过于宽泛（暂不处理）
+
+### AUDIT-P0-2026-05-23: Commerce 客户端安全深度审计修复
+- **完成日期**: 2026-05-23
+- **来源**: 2026-05-23 对 Commerce/License/Authorization/Persistence 全部认证与付费模块的安全审计
+- **目标**: 修复 5 Critical + 6 High + 5 Medium 共 16 个安全问题
+- **内容摘要**:
+  - C1: License 签名 SHA256->HMAC-SHA256 (DeepBase.License.pas)
+  - C2: Authorization FCurrentUser 竞态 (DeepBase.Authorization.pas)
+  - C5: Firebase 权益消费竞态 (Commerce.Adapter.Firebase.pas)
+  - C6: Supabase 权益消费损坏 (Commerce.Adapter.Supabase.pas)
+  - C7: PaymentBridge env-var 绕过 (Commerce.PaymentBridge.pas)
+  - C8: 许可证明文存储->DPAPI (Persistence.License.FireDAC.pas)
+  - H5: 非活动用户绕过 (DeepBase.Authorization.pas)
+  - H6: 删角色后权限孤立 (DeepBase.Authorization.pas)
+  - H7: 分配非活动角色 (DeepBase.Authorization.pas)
+  - H8: 支付确认竞态 (Commerce.Service.pas)
+  - H9: BeginPayment 竞态 (Commerce.Service.pas)
+  - H12: 许可证存储线程安全 (Persistence.License.FireDAC.pas)
+  - M5: HTTP 错误体泄露 (Commerce.SafeClient.pas)
+  - M6: 适配器缺失字段 (Firebase + Supabase)
+  - M8: Assert 生产环境 (Commerce.SafeClient.pas)
+  - M10: 状态信息泄露 (VCL.LicenseAuthDialog.pas)
+  - M11: 对话框重入 (VCL.LicenseAuthDialog.pas)
+  - 新增辅助函数: StrToCommercePaymentProvider 等 (Commerce.Types.pas)
+  - TOCTOU 修复: AssignUserRole 事务级一致性 (Persistence.Authorization.FireDAC.pas)
+- **验证**: 修改文件编译通过
+- **归档**: BUG-220 ~ BUG-235 已记录到 bugfix.md
+
+---
+
 ## 2026-05-14 IntentClarification Phase 2 编译接入修复
 
 ### IC-P0-2026-05-14A: 编译链、IoC 和最小集成测试恢复

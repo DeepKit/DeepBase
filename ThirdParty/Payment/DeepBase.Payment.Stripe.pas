@@ -676,7 +676,8 @@ begin
   Result := nil;
 
   try
-    RespObj := DoStripeGet('/payment_methods?customer=' + ACustomerId + '&type=card');
+    RespObj := DoStripeGet('/payment_methods?customer=' +
+      TNetEncoding.URL.Encode(ACustomerId) + '&type=card');
     try
       if RespObj.GetValue('data') is TJSONArray then
         Result := TJSONArray(RespObj.GetValue('data').Clone);

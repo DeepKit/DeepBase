@@ -551,6 +551,7 @@ function TPaymentClient.DoPost(const AUrl: string; const AData: string;
 var
   Response: IHTTPResponse;
   Content: TStringStream;
+  StatusCode: Integer;
 begin
   Content := TStringStream.Create(AData, TEncoding.UTF8);
   try
@@ -558,20 +559,21 @@ begin
     try
       FHttpClient.CustomHeaders['Content-Type'] := AContentType;
       Response := FHttpClient.Post(AUrl, Content);
+      Result := Response.ContentAsString(TEncoding.UTF8);
+      StatusCode := Response.StatusCode;
     finally
       TMonitor.Exit(FHttpClient);
     end;
-    Result := Response.ContentAsString(TEncoding.UTF8);
 
-    if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then
+    if (StatusCode >= 300) and (StatusCode < 400) then
       raise EPaymentNetworkError.Create(
-        Format('HTTP Redirect %d not followed: %s', [Response.StatusCode, AUrl]),
-        IntToStr(Response.StatusCode), FConfig.Provider);
+        Format('HTTP Redirect %d not followed: %s', [StatusCode, AUrl]),
+        IntToStr(StatusCode), FConfig.Provider);
 
-    if Response.StatusCode >= 400 then
+    if StatusCode >= 400 then
       raise EPaymentNetworkError.Create(
-        Format('HTTP Error %d: %s', [Response.StatusCode, Result]),
-        IntToStr(Response.StatusCode), FConfig.Provider);
+        Format('HTTP Error %d: %s', [StatusCode, Result]),
+        IntToStr(StatusCode), FConfig.Provider);
   finally
     Content.Free;
   end;
@@ -580,24 +582,26 @@ end;
 function TPaymentClient.DoGet(const AUrl: string): string;
 var
   Response: IHTTPResponse;
+  StatusCode: Integer;
 begin
   TMonitor.Enter(FHttpClient);
   try
     Response := FHttpClient.Get(AUrl);
+    Result := Response.ContentAsString(TEncoding.UTF8);
+    StatusCode := Response.StatusCode;
   finally
     TMonitor.Exit(FHttpClient);
   end;
-  Result := Response.ContentAsString(TEncoding.UTF8);
 
-  if (Response.StatusCode >= 300) and (Response.StatusCode < 400) then
+  if (StatusCode >= 300) and (StatusCode < 400) then
     raise EPaymentNetworkError.Create(
-      Format('HTTP Redirect %d not followed: %s', [Response.StatusCode, AUrl]),
-      IntToStr(Response.StatusCode), FConfig.Provider);
+      Format('HTTP Redirect %d not followed: %s', [StatusCode, AUrl]),
+      IntToStr(StatusCode), FConfig.Provider);
 
-  if Response.StatusCode >= 400 then
+  if StatusCode >= 400 then
     raise EPaymentNetworkError.Create(
-      Format('HTTP Error %d: %s', [Response.StatusCode, Result]),
-      IntToStr(Response.StatusCode), FConfig.Provider);
+      Format('HTTP Error %d: %s', [StatusCode, Result]),
+      IntToStr(StatusCode), FConfig.Provider);
 end;
 
 { TPaymentHelper }
@@ -719,7 +723,7 @@ begin
       SB.Append(Key);
       SB.Append('=');
       if AUrlEncode then
-        SB.Append(TNetEncoding.URL.Encode(AParams[Key]))
+        SB.Append(TNetEncoding.URL.Encode(AParams[Key]).Replace('+', '%20'))
       else
         SB.Append(AParams[Key]);
     end;

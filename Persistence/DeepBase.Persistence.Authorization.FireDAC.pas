@@ -634,37 +634,22 @@ end;
 
 procedure TFireDACAuthorizationStorage.AssignUserRole(UserId, RoleId: Integer);
 var
-  ExistsQuery: TFDQuery;
-  InsertQuery: TFDQuery;
+  Query: TFDQuery;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  ExistsQuery := TFDQuery.Create(nil);
-  InsertQuery := TFDQuery.Create(nil);
+  // INSERT OR IGNORE eliminates the TOCTOU race between SELECT and INSERT
+  Query := TFDQuery.Create(nil);
   try
-    ExistsQuery.Connection := FConnection;
-    ExistsQuery.SQL.Text :=
-      'SELECT 1 FROM auth_user_roles WHERE user_id = :user_id AND role_id = :role_id';
-    ExistsQuery.ParamByName('user_id').AsInteger := UserId;
-    ExistsQuery.ParamByName('role_id').AsInteger := RoleId;
-    ExistsQuery.Open;
-    try
-      if not ExistsQuery.Eof then
-        Exit;
-    finally
-      ExistsQuery.Close;
-    end;
-
-    InsertQuery.Connection := FConnection;
-    InsertQuery.SQL.Text :=
-      'INSERT INTO auth_user_roles (user_id, role_id) VALUES (:user_id, :role_id)';
-    InsertQuery.ParamByName('user_id').AsInteger := UserId;
-    InsertQuery.ParamByName('role_id').AsInteger := RoleId;
-    InsertQuery.ExecSQL;
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'INSERT OR IGNORE INTO auth_user_roles (user_id, role_id) VALUES (:user_id, :role_id)';
+    Query.ParamByName('user_id').AsInteger := UserId;
+    Query.ParamByName('role_id').AsInteger := RoleId;
+    Query.ExecSQL;
   finally
-    ExistsQuery.Free;
-    InsertQuery.Free;
+    Query.Free;
   end;
 end;
 

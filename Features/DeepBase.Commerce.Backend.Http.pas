@@ -758,7 +758,7 @@ begin
   Json := JsonFromResponse(SHttpPost, SCommerceRouteEntitlementsConsume,
     Response);
   try
-    if not JsonValueAsBool(Json, SCommerceFieldSuccess, True) then
+    if not JsonValueAsBool(Json, SCommerceFieldSuccess, False) then
       Exit(False);
     AEntitlement := EntitlementFromJson(Json);
     Result := AEntitlement.EntitlementId <> '';

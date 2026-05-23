@@ -164,6 +164,9 @@ begin
   Result.Add('format', 'JSON');
   Result.Add('charset', Cfg.Charset);
   Result.Add('sign_type', Cfg.SignType);
+  // Alipay requires Beijing time (UTC+8, no DST). Convert any local time
+  // to UTC first, then add 8 hours to get consistent Beijing time regardless
+  // of the system's local timezone.
   Result.Add('timestamp', FormatDateTime('yyyy-mm-dd hh:nn:ss',
     IncHour(TTimeZone.Local.ToUniversalTime(Now), 8)));
   Result.Add('version', '1.0');

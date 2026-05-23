@@ -2425,3 +2425,141 @@
   - `CMD_SETTINGS_DEFAULTS` 已有 rlMedium（保持不变）
 - 验证: `cmd /c compile_test.bat` Exit code: 0
 - 状态: ✅ 已修复
+
+---
+
+## 2026-05-23 Commerce 客户端安全深度审计 (BUG-220~235)
+
+> 本节记录 2026-05-23 对 DeepBase 认证/付费/授权模块安全审计发现并修复的 16 个安全问题。
+
+### BUG-220 (C1): License 签名使用 SHA256 而非 HMAC-SHA256
+- 发现日期: 2026-05-23
+- 严重性: Critical (签名可伪造)
+- 文件: DeepBase.License.pas
+- 问题: SignData 使用 SHA256(Key+Data) 构造式签名，攻击者可通过长度扩展攻击伪造签名。
+- 修复: 改用 HMAC-SHA256 生成 128 位签名；验签同步更新。
+- 状态: 已修复
+
+### BUG-221 (C2): Authorization FCurrentUser 竞态条件
+- 发现日期: 2026-05-23
+- 严重性: Critical (TOCTOU)
+- 文件: DeepBase.Authorization.pas
+- 问题: CurrentUserCan/RequirePermission/RequireFeature 先读 FCurrentUser 到局部变量、释放锁后再判断，期间 FCurrentUser 可能被其他线程修改。
+- 修复: 所有方法在锁内复制 FCurrentUser.UserName 后立��释放锁，后续判断只使用锁内复制的值。
+- 状态: 已修复
+
+### BUG-222 (C5): Firebase 权益 ConsumeEntitlement 无 status 检查
+- 发现日期: 2026-05-23
+- 严重性: Critical (权益超发)
+- 文件: Features/DeepBase.Commerce.Adapter.Firebase.pas
+- 问题: ConsumeEntitlement 不检查权益当前状态就直接扣减，已消费/已过期的权益可以被重复扣减。
+- 修复: 消费前增加 Status <> cesActive 检查，非活跃状态直接拒绝。
+- 状态: 已修复
+
+### BUG-223 (C6): Supabase 权益 ConsumeEntitlement remaining_quota 用字符串算术
+- 发现日期: 2026-05-23
+- 严重性: Critical (数据损坏)
+- 文件: Features/DeepBase.Commerce.Adapter.Supabase.pas
+- 问题: remaining_quota 更新用字符串做 SQL 表达式，结果不可预测；且无 status 检查。
+- 修复: 改为本地计算整数值后使用 TJSONObject 设置，配合 eq 过滤器实现原子条件更新；增加消费前 status 检查。
+- 状态: 已修复
+
+### BUG-224 (C7): PaymentBridge env-var 绕过 server-side 检查
+- 发现日期: 2026-05-23
+- 严重性: Critical (安全旁路)
+- 文件: Features/DeepBase.Commerce.PaymentBridge.pas
+- 问题: DEEPBASE_ALLOW_PROTOTYPE_COMMERCE_ADAPTERS 环境变量可绕过 server-side 保护。
+- 修复: 移除环境变量绕过路径，PaymentBridge 工厂在非服务器环境始终抛出异常。
+- 状态: 已修复
+
+### BUG-225 (C8): 许可证密钥数据库明文存储
+- 发现日期: 2026-05-23
+- 严重性: Critical (数据泄露)
+- 文件: Persistence/DeepBase.Persistence.License.FireDAC.pas
+- 问题: 许可证密钥直接以明文写入 SQLite 数据库。
+- 修复: 写入前使用 Windows DPAPI 加密，读取后解密；新增 TCriticalSection 保证线程安全。
+- 状态: 已修复
+
+### BUG-226 (H5): UserHasRole 不检查用户 IsActive 状态
+- 发现日期: 2026-05-23
+- 严重性: High (权限绕过)
+- 文件: DeepBase.Authorization.pas
+- 问题: UserHasRole 只检查角色分配，不检查用户是否已被停用。
+- 修复: 增加 User.IsActive = False 时返回 False 的检查。
+- 状态: 已修复
+
+### BUG-227 (H6): DeleteRole 不清理用户角色分配
+- 发现日期: 2026-05-23
+- 严重性: High (权限孤立)
+- 文件: DeepBase.Authorization.pas
+- 问题: 删除角色后，已分配该角色的用户仍持有角色记录。
+- 修复: DeleteRole 在删除角色前先遍历所有用户清除该角色的分配。
+- 状态: 已修复
+
+### BUG-228 (H7): AssignRole 不检查角色 IsActive 状态
+- 发现日期: 2026-05-23
+- 严重性: High (权限绕过)
+- 文件: DeepBase.Authorization.pas
+- 问题: 可以为用户分配已停用的角色。
+- 修复: AssignRole 增加角色 IsActive = False 时抛出异常的检查。
+- 状态: 已修复
+
+### BUG-229 (H8): VerifyAndConfirmPayment 验证确认竞态
+- 发现日期: 2026-05-23
+- 严重性: High (支付竞态)
+- 文件: Features/DeepBase.Commerce.Service.pas
+- 问题: 验证和确认之间无锁保护，并发调用可能导致重复确认。
+- 修复: 在整个验证 + 确认流程中持有 FConfirmLock。
+- 状态: 已修复
+
+### BUG-230 (H9): BeginPayment 全流程竞态
+- 发现日期: 2026-05-23
+- 严重性: High (支付竞态)
+- 文件: Features/DeepBase.Commerce.Service.pas
+- 问题: 订单创建、验证、支付意图创建之间无锁保护。
+- 修复: BeginPayment 在整个流程中持有 FConfirmLock。
+- 状态: 已修复
+
+### BUG-231 (H12): Persistence License 读写无线程保护
+- 发现日期: 2026-05-23
+- 严重性: High (数据损坏)
+- 文件: Persistence/DeepBase.Persistence.License.FireDAC.pas
+- 问题: SaveLicenseInfo/LoadLicenseInfo 无锁保护。
+- 修复: 新增 TCriticalSection，所有读写操作在锁内执行。
+- 状态: 已修复
+
+### BUG-232 (M5): SafeClient EnsureSuccess 泄露完整 HTTP 错误体
+- 发现日期: 2026-05-23
+- 严重性: Medium (信息泄露)
+- 文件: Features/DeepBase.Commerce.SafeClient.pas
+- 问题: EnsureSuccess 将完整响应体包含在异常消息中。
+- 修复: 将响应体截断为 100 字符。
+- 状态: 已修复
+
+### BUG-233 (M6): Firebase/Supabase 适配器缺失字段解析
+- 发现日期: 2026-05-23
+- 严重性: Medium (数据不完整)
+- 文件: Features/DeepBase.Commerce.Adapter.Firebase.pas, Features/DeepBase.Commerce.Adapter.Supabase.pas
+- 问题: ParsePayment 不解析 provider/channel/status；ParseEntitlement 不解析 status。
+- 修复: 使用 Commerce.Types.pas 新增的 StrToCommerce 辅助函数补齐字段解析。
+- 状态: 已修复
+
+### BUG-234 (M8): SafeClient BuildQuery 使用 Assert 校验参数
+- 发现日期: 2026-05-23
+- 严重性: Medium (生产崩溃)
+- 文件: Features/DeepBase.Commerce.SafeClient.pas
+- 问题: BuildQuery 使用 Assert 校验参数数组长度。
+- 修复: 改为 raise EArgumentNilException。
+- 状态: 已修复
+
+### BUG-235 (M10+M11): LicenseAuthDialog 信息泄露和重入问题
+- 发现日期: 2026-05-23
+- 严重性: Medium (信息泄露 + UX)
+- 文件: VCL/DeepBase.VCL.LicenseAuthDialog.pas
+- 问题:
+  1. 激活失败时将具体 LicenseStatus 暴露给用户
+  2. 验证期间用户可重复点击激活按钮
+- 修复:
+  - 失败消息改为通用提示
+  - 验证期间禁用激活按钮，finally 块恢复
+- 状态: 已修复

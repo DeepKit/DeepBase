@@ -50,18 +50,8 @@ implementation
 
 function IsUpgradeEntitlementUsable(
   const AEntitlement: TCommerceEntitlementData): Boolean;
-var
-  ValidUntil: TDateTime;
 begin
-  if AEntitlement.Status <> cesActive then
-    Exit(False);
-  if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
-    Exit(False);
-  if AEntitlement.ValidUntilISO = '' then
-    Exit(True);
-  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, True) then
-    Exit(False);
-  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
+  Result := IsCommerceEntitlementUsable(AEntitlement);
 end;
 
 constructor TDeepKitUpgradeFlowClient.Create(AClient: TDeepKitSafeClient;
@@ -127,13 +117,9 @@ begin
   except
     on E: Exception do
     begin
-      // Best-effort close to prevent orphaned orders accumulating.
-      // If CloseOrder also fails, the original exception is preserved.
-      try
-        FClient.GetOrder(Result.Order.OrderId);
-      except
-        // Swallow cleanup failure — the OrphanedOrderError below is more important.
-      end;
+      // The order was created but payment intent failed — it remains in cosCreated state.
+      // Caller should use EDeepBaseCommerceOrphanedOrderError.OrderId to close it
+      // once a CloseOrder API becomes available (TODO: SafeClient.CloseOrder).
       raise EDeepBaseCommerceOrphanedOrderError.Create(
         Result.Order.OrderId,
         Format('Payment intent failed for order %s: %s', [Result.Order.OrderId, E.Message]));

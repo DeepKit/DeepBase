@@ -185,6 +185,13 @@ function CommerceAuthProviderToStr(AProvider: TCommerceAuthProvider): string;
 function CommercePaymentProviderToStr(AProvider: TCommercePaymentProvider): string;
 function CommerceOrderStatusToStr(AStatus: TCommerceOrderStatus): string;
 function CommercePaymentStatusToStr(AStatus: TCommercePaymentStatus): string;
+function CommercePaymentChannelToStr(AChannel: TCommercePaymentChannel): string;
+function CommerceEntitlementStatusToStr(AStatus: TCommerceEntitlementStatus): string;
+function IsCommerceEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
+function StrToCommercePaymentProvider(const S: string): TCommercePaymentProvider;
+function StrToCommercePaymentChannel(const S: string): TCommercePaymentChannel;
+function StrToCommercePaymentStatus(const S: string): TCommercePaymentStatus;
+function StrToCommerceEntitlementStatus(const S: string): TCommerceEntitlementStatus;
 
 implementation
 
@@ -265,6 +272,74 @@ begin
   end;
 end;
 
+function CommerceEntitlementStatusToStr(AStatus: TCommerceEntitlementStatus): string;
+begin
+  case AStatus of
+    cesActive: Result := 'active';
+    cesConsumed: Result := 'consumed';
+    cesExpired: Result := 'expired';
+    cesRevoked: Result := 'revoked';
+  else
+    Result := 'active';
+  end;
+end;
+
+function CommercePaymentChannelToStr(AChannel: TCommercePaymentChannel): string;
+begin
+  case AChannel of
+    cpcNative: Result := 'native';
+    cpcJSAPI: Result := 'jsapi';
+    cpcMiniProgram: Result := 'mini_program';
+    cpcH5: Result := 'h5';
+    cpcApp: Result := 'app';
+    cpcWeb: Result := 'web';
+    cpcManual: Result := 'manual';
+  else
+    Result := 'native';
+  end;
+end;
+
+function StrToCommercePaymentProvider(const S: string): TCommercePaymentProvider;
+begin
+  if SameText(S, 'wechat_pay') then Exit(cppWeChatPay);
+  if SameText(S, 'alipay') then Exit(cppAlipay);
+  if SameText(S, 'stripe') then Exit(cppStripe);
+  if SameText(S, 'paypal') then Exit(cppPayPal);
+  if SameText(S, 'manual') then Exit(cppManual);
+  Result := cppExternal;
+end;
+
+function StrToCommercePaymentChannel(const S: string): TCommercePaymentChannel;
+begin
+  if SameText(S, 'native') then Exit(cpcNative);
+  if SameText(S, 'jsapi') then Exit(cpcJSAPI);
+  if SameText(S, 'mini_program') then Exit(cpcMiniProgram);
+  if SameText(S, 'h5') then Exit(cpcH5);
+  if SameText(S, 'app') then Exit(cpcApp);
+  if SameText(S, 'web') then Exit(cpcWeb);
+  if SameText(S, 'manual') then Exit(cpcManual);
+  Result := cpcNative;
+end;
+
+function StrToCommercePaymentStatus(const S: string): TCommercePaymentStatus;
+begin
+  if SameText(S, 'created') then Exit(cpsCreated);
+  if SameText(S, 'pending') then Exit(cpsPending);
+  if SameText(S, 'paid') then Exit(cpsPaid);
+  if SameText(S, 'failed') then Exit(cpsFailed);
+  if SameText(S, 'refunded') then Exit(cpsRefunded);
+  Result := cpsCreated;
+end;
+
+function StrToCommerceEntitlementStatus(const S: string): TCommerceEntitlementStatus;
+begin
+  if SameText(S, 'active') then Exit(cesActive);
+  if SameText(S, 'consumed') then Exit(cesConsumed);
+  if SameText(S, 'expired') then Exit(cesExpired);
+  if SameText(S, 'revoked') then Exit(cesRevoked);
+  Result := cesActive;
+end;
+
 { TCommerceUserData }
 
 class function TCommerceUserData.CreateNew(
@@ -341,6 +416,22 @@ begin
   N := TTimeZone.Local.ToUniversalTime(Now);
   DecodeDateTime(N, Y, M, D, H, Mi, S, MS);
   Result := APrefix + Format('%.4d%.2d%.2d%.2d%.2d%.2d%.3d', [Y, M, D, H, Mi, S, MS]) + Tail;
+end;
+
+function IsCommerceEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
+var
+  ValidUntil: TDateTime;
+begin
+  if AEntitlement.Status <> cesActive then
+    Exit(False);
+  // -1 = unlimited, 0 = exhausted, < -1 = invalid
+  if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
+    Exit(False);
+  if AEntitlement.ValidUntilISO = '' then
+    Exit(True);
+  if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
+    Exit(False);
+  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
 end;
 
 end.

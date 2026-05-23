@@ -378,11 +378,19 @@ begin
 end;
 
 function TDBConnectionPool.GetPoolStats: string;
+var
+  LActive, LTotal: Integer;
+  i: Integer;
 begin
   FLock.Enter;
   try
+    LTotal := FPool.Count;
+    LActive := 0;
+    for i := 0 to LTotal - 1 do
+      if FPool[i].InUse then
+        Inc(LActive);
     Result := Format('Pool: %d total, %d active, %d available, max %d',
-      [GetTotalCount, GetActiveCount, GetAvailableCount, FMaxPoolSize]);
+      [LTotal, LActive, LTotal - LActive, FMaxPoolSize]);
   finally
     FLock.Leave;
   end;
@@ -404,10 +412,15 @@ begin
 end;
 
 function TDBConnectionPool.GetAvailableCount: Integer;
+var
+  i: Integer;
 begin
+  Result := 0;
   FLock.Enter;
   try
-    Result := FPool.Count - GetActiveCount;
+    for i := 0 to FPool.Count - 1 do
+      if not FPool[i].InUse then
+        Inc(Result);
   finally
     FLock.Leave;
   end;

@@ -203,6 +203,8 @@ begin
   if Trim(APassword) = '' then
     raise EMissingConfigurationException.Create('Password is required');
 
+  // Legacy key derivation: single SHA-256. Used only for decrypting old CBC-format
+  // data. New encryption uses GCM via EncryptBinaryData which uses CryptDeriveKey.
   Result := THashSHA2.GetHashBytes(APassword);
   if Length(Result) <> 32 then
     raise EHashException.Create('Failed to derive AES-256 key');
@@ -455,6 +457,17 @@ begin
     Payload := HexToBytes(Copy(AEncryptedData, Length(BASIC_PROTECTION_GCM_TEXT_PREFIX) + 1, MaxInt));
     Result := TEncoding.UTF8.GetString(DecryptBinaryData(Payload, APassword));
     Exit;
+  end;
+
+  // Legacy CBC path: no authentication. Reject if the data looks like a
+  // truncated GCM payload (starts with GCM magic bytes in hex) to prevent
+  // downgrade attacks where an attacker strips the UBG1| prefix.
+  if Length(AEncryptedData) >= Length(BASIC_PROTECTION_GCM_MAGIC) * 2 then
+  begin
+    var HexPrefix := LowerCase(Copy(AEncryptedData, 1, Length(BASIC_PROTECTION_GCM_MAGIC) * 2));
+    var MagicHex := LowerCase(BytesToHex(BASIC_PROTECTION_GCM_MAGIC));
+    if HexPrefix = MagicHex then
+      raise EDecryptionException.Create('Refusing legacy CBC decrypt of GCM-formatted data (possible downgrade)');
   end;
 
   Parts := AEncryptedData.Split(['|']);

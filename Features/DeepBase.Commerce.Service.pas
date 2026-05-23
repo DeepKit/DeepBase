@@ -221,40 +221,40 @@ begin
     if not FGateways.TryGetValue(GatewayKey(AProvider), Gateway) then
       raise EDeepBaseCommercePaymentError.CreateFmt(
         'Payment gateway is not registered: %s', [CommercePaymentProviderToStr(AProvider)]);
+
+    if not FStorage.FindPaymentByOrderId(AOrderId, Payment) then
+    begin
+      Payment.PaymentId := TCommerceIds.NewId('pay');
+      Payment.OrderId := AOrderId;
+      Payment.Provider := AProvider;
+      Payment.Channel := AChannel;
+      Payment.ProviderTradeNo := '';
+      Payment.PrepayId := '';
+      Payment.Status := cpsCreated;
+      Payment.RawPayload := '';
+      Payment.CreatedAtISO := CommerceNowISO;
+      Payment.PaidAtISO := '';
+      FStorage.CreatePayment(Payment);
+    end;
+
+    Result := Gateway.CreatePaymentIntent(Order, Payment, APayerOpenId);
+    if not Result.Success then
+      raise EDeepBaseCommercePaymentError.CreateFmt('%s: %s',
+        [Result.ErrorCode, Result.ErrorMessage]);
+
+    Payment.PrepayId := Result.PrepayId;
+    Payment.RawPayload := Result.RawResponse;
+    Payment.Status := cpsPending;
+    FStorage.UpdatePayment(Payment);
+
+    Order.Status := cosPaying;
+    FStorage.UpdateOrder(Order);
+
+    Result.PaymentId := Payment.PaymentId;
+    Result.OutTradeNo := Order.OutTradeNo;
   finally
     TMonitor.Exit(FConfirmLock);
   end;
-
-  if not FStorage.FindPaymentByOrderId(AOrderId, Payment) then
-  begin
-    Payment.PaymentId := TCommerceIds.NewId('pay');
-    Payment.OrderId := AOrderId;
-    Payment.Provider := AProvider;
-    Payment.Channel := AChannel;
-    Payment.ProviderTradeNo := '';
-    Payment.PrepayId := '';
-    Payment.Status := cpsCreated;
-    Payment.RawPayload := '';
-    Payment.CreatedAtISO := CommerceNowISO;
-    Payment.PaidAtISO := '';
-    FStorage.CreatePayment(Payment);
-  end;
-
-  Result := Gateway.CreatePaymentIntent(Order, Payment, APayerOpenId);
-  if not Result.Success then
-    raise EDeepBaseCommercePaymentError.CreateFmt('%s: %s',
-      [Result.ErrorCode, Result.ErrorMessage]);
-
-  Payment.PrepayId := Result.PrepayId;
-  Payment.RawPayload := Result.RawResponse;
-  Payment.Status := cpsPending;
-  FStorage.UpdatePayment(Payment);
-
-  Order.Status := cosPaying;
-  FStorage.UpdateOrder(Order);
-
-  Result.PaymentId := Payment.PaymentId;
-  Result.OutTradeNo := Order.OutTradeNo;
 end;
 
 function TDeepBaseCommerceService.ConfirmPayment(
@@ -337,11 +337,11 @@ begin
       raise EDeepBaseCommercePaymentError.CreateFmt(
         'Notification verifier not registered for provider: %s',
         [CommercePaymentProviderToStr(AProvider)]);
+    Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
+    Result := ConfirmPayment(Notification);
   finally
     TMonitor.Exit(FConfirmLock);
   end;
-  Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
-  Result := ConfirmPayment(Notification);
 end;
 
 // ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
@@ -386,23 +386,8 @@ end;
 
 function TDeepBaseCommerceService.IsEntitlementUsable(
   const AEntitlement: TCommerceEntitlementData): Boolean;
-var
-  ExpiresAt: TDateTime;
 begin
-  Result := AEntitlement.Status = cesActive;
-  if not Result then
-    Exit;
-  if (AEntitlement.RemainingQuota = 0) then
-    Exit(False);
-  if AEntitlement.ValidUntilISO <> '' then
-  begin
-    try
-      ExpiresAt := ISO8601ToDate(AEntitlement.ValidUntilISO, False);
-      Result := ExpiresAt > TTimeZone.Local.ToUniversalTime(Now);
-    except
-      Result := False;
-    end;
-  end;
+  Result := IsCommerceEntitlementUsable(AEntitlement);
 end;
 
 function TDeepBaseCommerceService.HasEntitlement(const AUserId, AAppId,

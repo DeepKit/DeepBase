@@ -362,16 +362,17 @@ end;
 
 function TDeepBaseLicense.SignData(const Data: string): string;
 var
-  Combined: string;
+  KeyBytes, DataBytes: TBytes;
 begin
   if FSecretKey = '' then
     raise EInvalidOp.Create(
       'Legacy local license signing is disabled. Sign licenses on the server and set ' +
       LICENSE_LEGACY_SECRET_ENV + ' only for migration tooling.');
 
-  Combined := Data + FSecretKey;
-  Result := THashSHA2.GetHashString(Combined, THashSHA2.TSHA2Version.SHA256);
-  Result := Copy(Result, 1, 16); // Short signature
+  KeyBytes := TEncoding.UTF8.GetBytes(FSecretKey);
+  DataBytes := TEncoding.UTF8.GetBytes(Data);
+  Result := THashSHA2.GetHMACString(DataBytes, KeyBytes, THashSHA2.TSHA2Version.SHA256);
+  Result := Copy(Result, 1, 32); // 128-bit signature
 end;
 
 function TDeepBaseLicense.VerifySignature(const Data, Signature: string): Boolean;
@@ -387,6 +388,7 @@ begin
   if Length(Expected) <> Length(Signature) then
     Exit;
 
+  // Constant-time comparison to prevent timing attacks
   Diff := 0;
   for I := 1 to Length(Expected) do
     Diff := Diff or (Ord(UpCase(Expected[I])) xor Ord(UpCase(Signature[I])));

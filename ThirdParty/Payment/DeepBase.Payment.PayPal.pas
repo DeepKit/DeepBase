@@ -230,61 +230,69 @@ var
 begin
   FTokenLock.Acquire;
   try
-    // Return cached token if still valid (with buffer)
+    // Fast path: return cached token if still valid (with buffer)
     if (FAccessToken <> '') and (FTokenExpiry > Now + TOKEN_BUFFER_SECONDS / 86400) then
       Exit(FAccessToken);
-
-    Cfg := TPayPalConfig(FConfig);
-    if (Cfg.ClientID = '') or (Cfg.ClientSecret = '') then
-      raise EPaymentConfigError.Create('PayPal ClientID and ClientSecret are required',
-        'MISSING_CREDENTIALS', ppPayPal);
-
-    // Build Basic Auth header from client_id:client_secret
-    AuthHeader := TNetEncoding.Base64.Encode(Cfg.ClientID + ':' + Cfg.GetSecretKeySecure);
-
-    Params := TDictionary<string, string>.Create;
-    try
-      Params.Add('grant_type', 'client_credentials');
-
-      // Temporarily set auth for the token request
-      FHttpClient.CustomHeaders['Authorization'] := 'Basic ' + AuthHeader;
-
-      var Response := DoPost(GetBaseUrl + '/v1/oauth2/token',
-        TPaymentHelper.BuildQueryString(Params, True),
-        'application/x-www-form-urlencoded');
-
-      RespObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-      if not Assigned(RespObj) then
-        raise EPaymentNetworkError.Create('Invalid OAuth2 token response',
-          'INVALID_TOKEN_RESPONSE', ppPayPal);
-
-      try
-        if RespObj.GetValue('error') <> nil then
-        begin
-          var ErrDesc := RespObj.GetValue<string>('error_description', '');
-          FreeAndNil(RespObj);
-          raise EPaymentBusinessError.Create('OAuth2 token request failed: ' + ErrDesc,
-            'TOKEN_ERROR', ppPayPal);
-        end;
-
-        FAccessToken := RespObj.GetValue<string>('access_token', '');
-        ExpiresIn := RespObj.GetValue<Int64>('expires_in', 0);
-
-        if FAccessToken = '' then
-          raise EPaymentBusinessError.Create('Empty access token received',
-            'EMPTY_TOKEN', ppPayPal);
-
-        // Calculate expiry time
-        FTokenExpiry := Now + ExpiresIn / 86400;
-        Result := FAccessToken;
-      finally
-        FreeAndNil(RespObj);
-      end;
-    finally
-      FreeAndNil(Params);
-    end;
   finally
     FTokenLock.Release;
+  end;
+
+  // Slow path: acquire credentials without holding the lock,
+  // then re-check and store under the lock.
+  Cfg := TPayPalConfig(FConfig);
+  if (Cfg.ClientID = '') or (Cfg.ClientSecret = '') then
+    raise EPaymentConfigError.Create('PayPal ClientID and ClientSecret are required',
+      'MISSING_CREDENTIALS', ppPayPal);
+
+  // Build Basic Auth header from client_id:client_secret
+  AuthHeader := TNetEncoding.Base64.Encode(Cfg.ClientID + ':' + Cfg.GetSecretKeySecure);
+
+  Params := TDictionary<string, string>.Create;
+  try
+    Params.Add('grant_type', 'client_credentials');
+
+    // Temporarily set auth for the token request
+    FHttpClient.CustomHeaders['Authorization'] := 'Basic ' + AuthHeader;
+
+    var Response := DoPost(GetBaseUrl + '/v1/oauth2/token',
+      TPaymentHelper.BuildQueryString(Params, True),
+      'application/x-www-form-urlencoded');
+
+    RespObj := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+    if not Assigned(RespObj) then
+      raise EPaymentNetworkError.Create('Invalid OAuth2 token response',
+        'INVALID_TOKEN_RESPONSE', ppPayPal);
+
+    try
+      if RespObj.GetValue('error') <> nil then
+      begin
+        var ErrDesc := RespObj.GetValue<string>('error_description', '');
+        FreeAndNil(RespObj);
+        raise EPaymentBusinessError.Create('OAuth2 token request failed: ' + ErrDesc,
+          'TOKEN_ERROR', ppPayPal);
+      end;
+
+      var NewToken := RespObj.GetValue<string>('access_token', '');
+      ExpiresIn := RespObj.GetValue<Int64>('expires_in', 0);
+
+      if NewToken = '' then
+        raise EPaymentBusinessError.Create('Empty access token received',
+          'EMPTY_TOKEN', ppPayPal);
+
+      // Store new token under lock
+      FTokenLock.Acquire;
+      try
+        FAccessToken := NewToken;
+        FTokenExpiry := IncSecond(Now, ExpiresIn);
+        Result := FAccessToken;
+      finally
+        FTokenLock.Release;
+      end;
+    finally
+      FreeAndNil(RespObj);
+    end;
+  finally
+    FreeAndNil(Params);
   end;
 end;
 

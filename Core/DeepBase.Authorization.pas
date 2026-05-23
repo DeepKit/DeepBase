@@ -1051,15 +1051,21 @@ begin
 end;
 
 procedure TAuthorizationManager.DeleteRole(const RoleName: string);
+var
+  User: TUser;
 begin
   FLock.Enter;
   try
     if not FRoles.ContainsKey(RoleName) then
       raise ERoleNotFoundException.CreateFmt('Role not found: %s', [RoleName]);
-    
+
+    // Remove role from all users before deleting the role itself
+    for User in FUsers.Values do
+      User.RemoveRole(RoleName);
+
     DeleteRoleFromDatabase(RoleName);
     FRoles.Remove(RoleName);
-    
+
     LogAudit('', aaRoleDeleted, 'role',
       Format('Deleted role: %s', [RoleName]), True);
   finally
@@ -1191,10 +1197,13 @@ begin
   try
     if not FUsers.TryGetValue(Username, User) then
       raise EUserNotFoundException.CreateFmt('User not found: %s', [Username]);
-    
+
     if not FRoles.TryGetValue(RoleName, Role) then
       raise ERoleNotFoundException.CreateFmt('Role not found: %s', [RoleName]);
-    
+
+    if not Role.IsActive then
+      raise ERoleNotFoundException.CreateFmt('Role is inactive: %s', [RoleName]);
+
     if not User.HasRole(RoleName) then
     begin
       User.AddRole(RoleName);
@@ -1334,6 +1343,8 @@ begin
   try
     if not FUsers.TryGetValue(Username, User) then
       Exit(False);
+    if not User.IsActive then
+      Exit(False);
     Result := User.HasRole(RoleName);
   finally
     FLock.Leave;
@@ -1399,23 +1410,42 @@ begin
 end;
 
 function TAuthorizationManager.CurrentUserCan(const PermissionName: string): Boolean;
+var
+  Username: string;
 begin
-  if FCurrentUser = nil then
-    Exit(False);
-  Result := HasPermission(FCurrentUser.Username, PermissionName);
+  FLock.Enter;
+  try
+    if FCurrentUser = nil then
+      Exit(False);
+    Username := FCurrentUser.Username;
+  finally
+    FLock.Leave;
+  end;
+  Result := HasPermission(Username, PermissionName);
 end;
 
 procedure TAuthorizationManager.RequirePermission(const PermissionName: string);
 var
   Username: string;
+  NoContext: Boolean;
 begin
-  if FCurrentUser = nil then
+  NoContext := False;
+  FLock.Enter;
+  try
+    if FCurrentUser = nil then
+      NoContext := True
+    else
+      Username := FCurrentUser.Username;
+  finally
+    FLock.Leave;
+  end;
+
+  if NoContext then
   begin
     LogAudit('', aaPermissionDenied, PermissionName, 'No user context', False);
     raise EPermissionDeniedException.Create('No user context');
   end;
-  
-  Username := FCurrentUser.Username;
+
   if not HasPermission(Username, PermissionName) then
   begin
     LogAudit(Username, aaPermissionDenied, PermissionName,
@@ -1428,11 +1458,22 @@ end;
 procedure TAuthorizationManager.RequireAnyPermission(const Permissions: array of string);
 var
   Username: string;
+  NoContext: Boolean;
 begin
-  if FCurrentUser = nil then
+  NoContext := False;
+  FLock.Enter;
+  try
+    if FCurrentUser = nil then
+      NoContext := True
+    else
+      Username := FCurrentUser.Username;
+  finally
+    FLock.Leave;
+  end;
+
+  if NoContext then
     raise EPermissionDeniedException.Create('No user context');
-  
-  Username := FCurrentUser.Username;
+
   if not HasAnyPermission(Username, Permissions) then
   begin
     LogAudit(Username, aaPermissionDenied, string.Join(',', Permissions),
@@ -1444,11 +1485,22 @@ end;
 procedure TAuthorizationManager.RequireAllPermissions(const Permissions: array of string);
 var
   Username: string;
+  NoContext: Boolean;
 begin
-  if FCurrentUser = nil then
+  NoContext := False;
+  FLock.Enter;
+  try
+    if FCurrentUser = nil then
+      NoContext := True
+    else
+      Username := FCurrentUser.Username;
+  finally
+    FLock.Leave;
+  end;
+
+  if NoContext then
     raise EPermissionDeniedException.Create('No user context');
-  
-  Username := FCurrentUser.Username;
+
   if not HasAllPermissions(Username, Permissions) then
   begin
     LogAudit(Username, aaPermissionDenied, string.Join(',', Permissions),
