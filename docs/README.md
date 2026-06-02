@@ -1,7 +1,7 @@
 ﻿# DeepBase 文档索引
 
-> 更新：2026-05-12 · 对接基线：RC 候选
-> 常驻文档平铺，命名格式 `序号.分类.中文-english.md`；专项工作文档保留可读标题并集中列在 active 区。
+> 更新：2026-06-02 · 对接基线：RC 候选
+> 常驻文档平铺，命名格式 `序号.分类.中文-english.md`。
 
 ---
 
@@ -11,7 +11,7 @@
 
 ## 给下游 / 第三方的唯一入口
 
-**[01.quickstart.对外集成入口-integration-onefile.md](./01.quickstart.对外集成入口-integration-onefile.md)** — 只发一份文档时发这份。
+**[02.quickstart.下游接入流程-downstream-integration.md](./02.quickstart.下游接入流程-downstream-integration.md)** — 如果只能给下游发一份文档，发这份。
 
 ---
 
@@ -20,7 +20,6 @@
 ### quickstart · 快速入门
 
 - [00 AI 集成总览](./00.quickstart.AI集成总览-ai-one-file.md)
-- [01 对外集成入口](./01.quickstart.对外集成入口-integration-onefile.md)
 - [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
 - [03 AI 深挖集成指南](./03.quickstart.AI深挖集成指南-ai-deep-integration.md)
 - [04 AboutFrame 接入](./04.quickstart.AboutFrame接入-aboutframe-guide.md)
@@ -51,16 +50,29 @@
 
 - [50 ThirdParty 扩展开发指南](./50.extend.ThirdParty扩展开发指南-thirdparty-extension.md)
 - [51 Governance 治理扩展](./51.extend.Governance治理扩展-governance-integration.md)
-- [52 Governance 代码注册示例](./52.extend.Governance代码注册示例-governance-setup-via-code.md)
+- [54 Governance 代码注册示例](./54.extend.Governance代码注册示例-governance-setup-via-code.md)
 - [52 BrowserAutomation 接入指南](./52.extend.BrowserAutomation接入指南.md)
+- [53 IntentClarification 接入指南](./53.extend.IntentClarification接入指南.md)
+
+### vcl · DeepShell 桌面壳
+
+- [55 DeepShell 总览与 AI 入口](./55.vcl.DeepShell-总览与AI入口.md)
+- [56 DeepShell 结构规范](./56.vcl.DeepShell-结构规范.md)
+- [57 DeepShell 核心接口与服务契约](./57.vcl.DeepShell-核心接口与服务契约.md)
+- [58 DeepShell 生命周期与启动顺序](./58.vcl.DeepShell-生命周期与启动顺序.md)
+- [59 DeepShell MRU/Layout/Settings 设计](./59.vcl.DeepShell-MRU-Layout-Settings设计.md)
+- [60 DeepShell Command/Governance 集成](./60.vcl.DeepShell-Command-Governance集成.md)
+- [61 DeepShell 新 VCL 程序接入指南](./61.vcl.DeepShell-新VCL程序接入指南.md)
+- [62 DeepShell 旧 VCL 程序改造指南](./62.vcl.DeepShell-旧VCL程序改造指南.md)
+- [63 DeepShell 验收清单](./63.vcl.DeepShell-验收清单.md)
 
 ### backend · 生产后端对接
 
-- [60 Commerce 后端契约](./60.backend.Commerce后端契约-commerce-backend-spec.md)
-- [61 DB4 后端交接说明](./61.backend.DB4后端交接说明-db4-backend-handoff.md)
-- [62 DeepKit.top DB4 商用验收](./62.backend.DeepKitTop-DB4商用验收与支付接入.md)
-- [63 DB4 支付渠道接入配置](./63.backend.DB4支付渠道接入配置.md)
-- [64 DB3/DB4 下游产品数据库矩阵](./64.backend.DB3-DB4下游产品数据库矩阵.md)
+- [65 Commerce 后端契约](./65.backend.Commerce后端契约-commerce-backend-spec.md)
+- [66 DB4 后端交接说明](./66.backend.DB4后端交接说明-db4-backend-handoff.md)
+- [67 DeepKit.top DB4 商用验收](./67.backend.DeepKitTop-DB4商用验收与支付接入.md)
+- [68 DB4 支付渠道接入配置](./68.backend.DB4支付渠道接入配置.md)
+- [69 DB3/DB4 下游产品数据库矩阵](./69.backend.DB3-DB4下游产品数据库矩阵.md)
 
 ### integrations · 下游项目接入
 
@@ -88,28 +100,15 @@
 - [92 任务清单](./92.history.任务清单-task-list.md)
 - [93 D13.1 迁移说明](./93.history.D13.1迁移说明-d13-migration-notes.md)
 
-### active · 专项工作文档
-
-- [DeepBase.Speech 扩展方案](./DeepBase.Speech扩展方案.md)
-- [DeepBase.Speech 开发规范](./DeepBase.Speech开发规范.md)
-- [DeepBase.Speech 专家评审优化方案](./DeepBase.Speech专家评审优化方案.md)
-- [DeepBase.Speech 二轮专家评审](./DeepBase.Speech二轮专家评审.md)
-- [DeepGovern OCGS 设计纪要](./DeepGovern-OCGS设计纪要-v1.md)
-- [Governance Round 2 交接](./handoff-governance-round2.md)
-- [Governance 接入轮任务清单](./tasks.md)
-- [Governance 接入轮完成历史](./history.md)
-- [Governance 接入轮 Bug 修复记录](./bugfix.md)
-
 ---
 
 ## 按受众推荐阅读顺序
 
 ### 下游开发负责人
 
-1. [01 对外集成入口](./01.quickstart.对外集成入口-integration-onefile.md)
+1. [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
 2. [10 项目定位与边界](./10.product.项目定位与边界-scope-and-boundary.md)
-3. [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
-4. [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
+3. [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
 
 ### 架构师
 
@@ -124,9 +123,9 @@
 
 ### 服务器后端开发
 
-1. [61 DB4 后端交接说明](./61.backend.DB4后端交接说明-db4-backend-handoff.md)
-2. [60 Commerce 后端契约](./60.backend.Commerce后端契约-commerce-backend-spec.md)
-3. [64 DB3/DB4 下游产品数据库矩阵](./64.backend.DB3-DB4下游产品数据库矩阵.md)
+1. [66 DB4 后端交接说明](./66.backend.DB4后端交接说明-db4-backend-handoff.md)
+2. [65 Commerce 后端契约](./65.backend.Commerce后端契约-commerce-backend-spec.md)
+3. [69 DB3/DB4 下游产品数据库矩阵](./69.backend.DB3-DB4下游产品数据库矩阵.md)
 4. [30 数据库 Schema 说明](./30.data.数据库Schema说明-database-schema.md)
 
 ### 运维 / 工具使用者
@@ -138,7 +137,6 @@
 
 ## 子目录说明
 
-- `api/` — 由工具生成的 API 文档（自动）
 - `ui/` — UI 控件 / Frame 设计稿
 
 姊妹目录：`../DeepFlow/`（移出到 `02Business/DeepFlow/`，AI 开发方法归档，不属于 DeepBase 框架范畴）。
@@ -157,11 +155,12 @@
   20-29  architecture（架构 / 设计 / ADR）
   30-39  data（数据库 / 模型）
   40-49  api（接口 / SDK）
-  50-59  extend（扩展 / 第三方 / 治理）
-  60-69  backend（生产后端 / 契约）
+  50-54  extend（扩展 / 第三方 / 治理 / 浏览器自动化 / 意图澄清）
+  55-63  vcl（DeepShell 桌面壳）
+  65-69  backend（生产后端 / 契约）
   70-79  integrations（下游项目接入）
   80-89  ops（运维 / 手册 / FAQ / 安全测试）
   90-99  history（变更 / 任务 / 迁移）
 ```
 
-旧的双轨 `4AI` / `4H` 命名已废弃。营销 / 产品类（10、80-82）按"给人看"定位撰写；其余技术类文档统一按"AI 可读"深度编写（AI 能读的人类也能读）。进行中的专项评审、交接、任务和 Bug 记录放在 active 区，稳定后再并入编号体系。
+旧的双轨 `4AI` / `4H` 命名已废弃。营销 / 产品类（10、80-82）按"给人看"定位撰写；其余技术类文档统一按"AI 可读"深度编写（AI 能读的人类也能读）。
