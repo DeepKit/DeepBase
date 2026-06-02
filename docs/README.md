@@ -30,6 +30,7 @@
 - [11 术语表](./11.product.术语表-glossary.md)
 
 ### architecture · 架构与设计
+n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 - [20 技术规范](./20.architecture.技术规范-tech-spec.md)
 - [21 LLM 架构设计](./21.architecture.LLM架构设计-llm-architecture.md)
@@ -53,6 +54,10 @@
 - [54 Governance 代码注册示例](./54.extend.Governance代码注册示例-governance-setup-via-code.md)
 - [52 BrowserAutomation 接入指南](./52.extend.BrowserAutomation接入指南.md)
 - [53 IntentClarification 接入指南](./53.extend.IntentClarification接入指南.md)
+
+### ui
+
+- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 ### vcl · DeepShell 桌面壳
 
@@ -156,6 +161,7 @@
   30-39  data（数据库 / 模型）
   40-49  api（接口 / SDK）
   50-54  extend（扩展 / 第三方 / 治理 / 浏览器自动化 / 意图澄清）
+  25    ui（UI 控件规范）
   55-63  vcl（DeepShell 桌面壳）
   65-69  backend（生产后端 / 契约）
   70-79  integrations（下游项目接入）
