@@ -174,7 +174,7 @@ for file in *.md; do mmdc -i "$file" -o "${file%.md}.png"; done
 
 - 文档索引：`../00.00.DeepBase-文档索引-v1.0.md`
 - 技术规范：`../03.03.DeepBase-4H-技术规�?v1.0.md`
-- AI集成指南：`../01.01.DeepBase-4AI-集成指南-v1.0.md`
+- AI集成指南：`../02.quickstart.下游接入流程-downstream-integration.md`
 
 ---
 

@@ -7,15 +7,11 @@
 
 ## 架构全景
 
-**[00.overview.DeepBase架构全景.md](./00.overview.DeepBase架构全景.md)** — 一份文档讲清楚 DeepBase 是什么、怎么组织的、怎么用。
+**[05.overview.DeepBase架构全景.md](./05.overview.DeepBase架构全景.md)** — 一份文档讲清楚 DeepBase 是什么、怎么组织的、怎么用。
 
 ## 给 AI 的唯一入口
 
 **[00.quickstart.AI集成总览-ai-one-file.md](./00.quickstart.AI集成总览-ai-one-file.md)** — AI 先读这一份，再按需取其它细节文件。
-
-## 架构全景（一份文档讲清楚）
-
-**[00.overview.DeepBase架构全景.md](./docs/00.overview.DeepBase架构全景.md)** — 一份文档讲清楚 DeepBase 是什么、怎么组织的、怎么用。
 
 ## 给下游 / 第三方的唯一入口
 
@@ -29,8 +25,9 @@
 
 - [00 AI 集成总览](./00.quickstart.AI集成总览-ai-one-file.md)
 - [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
-- [03 AI 深挖集成指南](./03.quickstart.AI深挖集成指南-ai-deep-integration.md)
+- [03 AI 高级开发指南](./03.quickstart.AI深挖集成指南-ai-deep-integration.md)
 - [04 AboutFrame 接入](./04.quickstart.AboutFrame接入-aboutframe-guide.md)
+- [05 架构全景](./05.overview.DeepBase架构全景.md)
 
 ### product · 产品定位
 
@@ -38,11 +35,14 @@
 - [11 术语表](./11.product.术语表-glossary.md)
 
 ### architecture · 架构与设计
-n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 - [20 技术规范](./20.architecture.技术规范-tech-spec.md)
 - [21 LLM 架构设计](./21.architecture.LLM架构设计-llm-architecture.md)
 - [22 公共库架构审阅报告](./22.architecture.公共库架构审阅报告-library-review.md)
+
+### ui · 控件规范
+
+- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 ### data · 数据与模型
 
@@ -59,13 +59,9 @@ n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 - [50 ThirdParty 扩展开发指南](./50.extend.ThirdParty扩展开发指南-thirdparty-extension.md)
 - [51 Governance 治理扩展](./51.extend.Governance治理扩展-governance-integration.md)
-- [54 Governance 代码注册示例](./54.extend.Governance代码注册示例-governance-setup-via-code.md)
 - [52 BrowserAutomation 接入指南](./52.extend.BrowserAutomation接入指南.md)
 - [53 IntentClarification 接入指南](./53.extend.IntentClarification接入指南.md)
-
-### ui
-
-- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
+- [54 Governance 代码注册示例](./54.extend.Governance代码注册示例-governance-setup-via-code.md)
 
 ### vcl · DeepShell 桌面壳
 
@@ -105,9 +101,6 @@ n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 - [83 FAQ 与错误速查](./83.ops.FAQ与错误速查-faq-troubleshooting.md)
 - [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
 - [85 安全与测试](./85.ops.安全与测试-security-and-testing.md)
-
-### ops · 运维与手册
-
 - [86 AutoFix 自动修复指南](./86.ops.AutoFix自动修复指南.md)
 
 ### history · 历史与变更
@@ -123,13 +116,14 @@ n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 ### 下游开发负责人
 
-1. [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
-2. [10 项目定位与边界](./10.product.项目定位与边界-scope-and-boundary.md)
-3. [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
+1. [05 架构全景](./05.overview.DeepBase架构全景.md)
+2. [02 下游接入流程](./02.quickstart.下游接入流程-downstream-integration.md)
+3. [10 项目定位与边界](./10.product.项目定位与边界-scope-and-boundary.md)
+4. [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
 
 ### 架构师
 
-1. [10 项目定位与边界](./10.product.项目定位与边界-scope-and-boundary.md)
+1. [05 架构全景](./05.overview.DeepBase架构全景.md)
 2. [20 技术规范](./20.architecture.技术规范-tech-spec.md)
 3. [22 公共库架构审阅报告](./22.architecture.公共库架构审阅报告-library-review.md)
 4. [85 安全与测试](./85.ops.安全与测试-security-and-testing.md)
@@ -167,17 +161,17 @@ n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 
 序号段分配：
   00     AI 总入口
-  01-09  quickstart（快速入门 / 集成入口）
+  01-09  quickstart（快速入门 / 集成入口 / 架构全景）
   10-19  product（产品定位 / 术语）
-  20-29  architecture（架构 / 设计 / ADR）
+  20-24  architecture（架构 / 设计 / ADR）
+  25-29  ui（UI 控件规范）
   30-39  data（数据库 / 模型）
   40-49  api（接口 / SDK）
   50-54  extend（扩展 / 第三方 / 治理 / 浏览器自动化 / 意图澄清）
-  25    ui（UI 控件规范）
   55-63  vcl（DeepShell 桌面壳）
   65-69  backend（生产后端 / 契约）
   70-79  integrations（下游项目接入）
-  80-89  ops（运维 / 手册 / FAQ / 安全测试）
+  80-89  ops（运维 / 手册 / FAQ / 安全测试 / AutoFix）
   90-99  history（变更 / 任务 / 迁移）
 ```
 
