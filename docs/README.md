@@ -106,6 +106,10 @@ n- [25 UI 控件规范](./25.ui.VCL-FMX控件规范.md)
 - [84 集成检查清单](./84.ops.集成检查清单-integration-checklist.md)
 - [85 安全与测试](./85.ops.安全与测试-security-and-testing.md)
 
+### ops · 运维与手册
+
+- [86 AutoFix 自动修复指南](./86.ops.AutoFix自动修复指南.md)
+
 ### history · 历史与变更
 
 - [90 BugFix 记录](./90.history.BugFix记录-bugfix-log.md)
