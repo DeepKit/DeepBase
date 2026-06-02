@@ -452,22 +452,16 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TWeChatPayConfig.LoadKeysFromCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    ApiKeyV3 := GetCredentialKey('ApiKeyV3');
-    PrivateKey := GetCredentialKey('PrivateKey');
-    FWeChatPublicKey := GetCredentialKey('WeChatPublicKey');
-  end;
+  ApiKeyV3 := GetCredentialKey('ApiKeyV3');
+  PrivateKey := GetCredentialKey('PrivateKey');
+  FWeChatPublicKey := GetCredentialKey('WeChatPublicKey');
 end;
 
 procedure TWeChatPayConfig.SaveKeysToCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    SetCredentialKey('ApiKeyV3', FApiKeyV3);
-    SetCredentialKey('PrivateKey', FPrivateKey);
-    SetCredentialKey('WeChatPublicKey', FWeChatPublicKey);
-  end;
+  SetCredentialKey('ApiKeyV3', FApiKeyV3);
+  SetCredentialKey('PrivateKey', FPrivateKey);
+  SetCredentialKey('WeChatPublicKey', FWeChatPublicKey);
 end;
 
 procedure TWeChatPayConfig.SetApiKeyV3Secure(const AKey: string);
@@ -1187,7 +1181,10 @@ begin
   if (ATimestamp <> '') and (ANonce <> '') and (ASignature <> '') then
   begin
     if Cfg.WeChatPublicKey = '' then
-      Exit;
+      raise EPaymentSignError.Create(
+        'WeChatPay platform public key not configured — cannot verify notification signature',
+        'MISSING_PUBLIC_KEY',
+        ppWeChatPay);
     NormalizedKey := Cfg.WeChatPublicKey;
     if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
       NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
@@ -1197,9 +1194,12 @@ begin
     Verifier := TRSAVerifier.Create;
     try
       if not Verifier.LoadPublicKeyPEM(NormalizedKey) then
-        Exit;
+        raise EPaymentSignError.Create(
+          'Failed to load WeChatPay platform public key',
+          'INVALID_PUBLIC_KEY',
+          ppWeChatPay);
       if not Verifier.VerifySignature(SignContent, ASignature) then
-        Exit;
+        Exit; // Signature mismatch — not a fatal error, just return False
     finally
       Verifier.Free;
     end;

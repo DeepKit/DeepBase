@@ -1,7 +1,8 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{0510587D-6005-4B6E-9017-7857710746B0}</ProjectGuid>
         <MainSource>SeedTool.dpr</MainSource>
+        <Icon_MainIcon>SeedTool.ico</Icon_MainIcon>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">SeedTool</ProjectName>

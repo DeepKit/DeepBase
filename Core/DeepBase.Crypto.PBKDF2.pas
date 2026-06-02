@@ -41,7 +41,9 @@ begin
   if Length(AKey) > BLOCK_SIZE then
   begin
     // Key is longer than block size, hash it (raw bytes, no UTF-8 round-trip)
-    Key := THashSHA2.Create.Update(AKey).HashAsBytes;
+    InnerHash := THashSHA2.Create;
+    InnerHash.Update(AKey);
+    Key := InnerHash.HashAsBytes;
   end
   else
   begin

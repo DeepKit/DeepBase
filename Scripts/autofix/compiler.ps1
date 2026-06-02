@@ -37,9 +37,13 @@
     Optional path to dump the raw msbuild output. Default: alongside OutputJson.
 
 .PARAMETER EnvBat
-    Path to the BDS environment batch file. Defaults to
-    D:\_Progs\02Business\scripts\env\delphi-13.1.bat (the shared entry point).
-    Can be overridden via the AUTOFIX_DELPHI_ENV_BAT environment variable.
+    Path to the BDS environment batch file. When omitted, auto-detection
+    (M14) scans the Windows registry for the newest installed Delphi version.
+    Can also be set via the AUTOFIX_DELPHI_ENV_BAT environment variable.
+
+.PARAMETER DelphiVersion
+    Explicit Delphi version selector (e.g. "37", "13.1", "florence").
+    Only used when -EnvBat is not provided. Triggers registry-based lookup.
 
 .PARAMETER MSBuildArgs
     Extra arguments passed verbatim to msbuild.
@@ -71,6 +75,8 @@ param(
 
     [string]$EnvBat,
 
+    [string]$DelphiVersion,
+
     [string[]]$MSBuildArgs = @()
 )
 
@@ -79,14 +85,6 @@ param(
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
-function Resolve-EnvBat {
-    [CmdletBinding()]
-    param([string]$Override)
-    if ($Override) { return $Override }
-    if ($env:AUTOFIX_DELPHI_ENV_BAT) { return $env:AUTOFIX_DELPHI_ENV_BAT }
-    return 'D:\_Progs\02Business\scripts\env\delphi-13.1.bat'
-}
-
 function Parse-CompileLine {
     <#
     .SYNOPSIS
@@ -101,7 +99,7 @@ function Parse-CompileLine {
     #   <file>(<line>,<col>) <Severity> <Code>: <message>
     # Severity in: Error|Fatal|Warning|Hint
     # Code in   : ^[EFWH]\d+
-    $pattern = '^(.+?)\((\d+),(\d+)\)\s+(Error|Fatal|Warning|Hint)\s+([EFWH]\d+):\s+(.+?)\s*$'
+    $pattern = '^(.+)\((\d+),(\d+)\)\s+(Error|Fatal|Warning|Hint)\s+([EFWH]\d+):\s+(.+?)\s*$'
     $m = [regex]::Match($Line, $pattern)
     if (-not $m.Success) { return $null }
 
@@ -137,7 +135,7 @@ try {
         exit $Script:AutoFixExit_BadParams
     }
 
-    $bat = Resolve-EnvBat -Override $EnvBat
+    $bat = Resolve-DelphiEnvBat -Override $EnvBat -DelphiVersion $DelphiVersion
     if (-not (Test-Path -LiteralPath $bat -PathType Leaf)) {
         Write-AutoFixLog -Level error -Msg 'BDS environment batch missing' -Ctx @{ env_bat = $bat }
         Write-JsonFile -Path $OutputJson -Object ([pscustomobject]@{
@@ -147,15 +145,75 @@ try {
         exit $Script:AutoFixExit_BdsFailed
     }
 
-    # Build cmd.exe command: load env then invoke msbuild
+    # Write a temporary .cmd that loads env then invokes msbuild.
+    # This avoids string interpolation into cmd.exe /c (shell injection).
+    $tmpCmd = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.cmd'
     $extra = if ($MSBuildArgs) { ' ' + ($MSBuildArgs -join ' ') } else { '' }
-    $cmdLine = ('"{0}" && msbuild "{1}" /t:Build /p:Config={2} /p:Platform={3} /v:normal{4}' -f `
-        $bat, $Project, $Config, $Platform, $extra)
+    $cmdContent = @"
+@echo off
+call "$bat"
+if errorlevel 1 exit /b 102
+msbuild "$Project" /t:Build /p:Config=$Config /p:Platform=$Platform /v:normal$extra
+"@
+    [System.IO.File]::WriteAllText($tmpCmd, $cmdContent, [System.Text.Encoding]::new($false))
 
     Write-AutoFixLog -Level info -Msg 'invoking msbuild' -Ctx @{ project = $Project; config = $Config; platform = $Platform }
 
-    $rawOutput = & cmd.exe /c $cmdLine 2>&1
-    $msbuildExit = $LASTEXITCODE
+    # Use Start-Process with timeout so a hanging compiler cannot stall
+    # the autofix loop indefinitely.
+    $tmpOut  = [System.IO.Path]::GetTempFileName()
+    $tmpErr  = [System.IO.Path]::GetTempFileName()
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName               = 'cmd.exe'
+        $psi.Arguments              = "/c `"$tmpCmd`""
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $psi.UseShellExecute        = $false
+        $psi.CreateNoWindow         = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $psi.StandardErrorEncoding  = [System.Text.Encoding]::UTF8
+
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+        $stderrTask = $proc.StandardError.ReadToEndAsync()
+
+        $timeoutMs = 300000  # 5 minutes
+        if (-not $proc.WaitForExit($timeoutMs)) {
+            try { $proc.Kill($true) } catch { try { $proc.Kill() } catch {} }
+            try { [void]$proc.WaitForExit(5000) } catch {}
+            Write-AutoFixLog -Level error -Msg 'msbuild timed out' -Ctx @{ timeout_ms = $timeoutMs }
+            $msbuildExit = 99
+        } else {
+            $msbuildExit = $proc.ExitCode
+        }
+
+        $outStd = ''
+        $outErr = ''
+        try {
+            if (-not $stdoutTask.Wait(5000)) { Write-AutoFixLog -Level warn -Msg 'stdout read timed out after msbuild exit' -Ctx @{} }
+            elseif ($stdoutTask.IsCompletedSuccessfully) { $outStd = $stdoutTask.Result }
+        } catch {
+            Write-AutoFixLog -Level warn -Msg 'stdout read failed' -Ctx @{ error = $_.Exception.Message }
+        }
+        try {
+            if (-not $stderrTask.Wait(5000)) { Write-AutoFixLog -Level warn -Msg 'stderr read timed out after msbuild exit' -Ctx @{} }
+            elseif ($stderrTask.IsCompletedSuccessfully) { $outErr = $stderrTask.Result }
+        } catch {
+            Write-AutoFixLog -Level warn -Msg 'stderr read failed' -Ctx @{ error = $_.Exception.Message }
+        }
+
+        [System.IO.File]::WriteAllText($tmpOut, $outStd, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText($tmpErr, $outErr, [System.Text.Encoding]::UTF8)
+        $rawOutput = $outStd -split "`r?`n"
+        if ($outErr.Trim() -ne '') {
+            $rawOutput = @($rawOutput) + @($outErr -split "`r?`n")
+        }
+    } finally {
+        Remove-Item $tmpOut -Force -ErrorAction SilentlyContinue
+        Remove-Item $tmpErr -Force -ErrorAction SilentlyContinue
+        Remove-Item $tmpCmd -Force -ErrorAction SilentlyContinue
+    }
     $duration = [int]((Get-Date) - $started).TotalSeconds
 
     # Persist raw log

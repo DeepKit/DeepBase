@@ -1,3 +1,5 @@
+#requires -Version 7.0
+
 # =============================================================================
 # DeepBase AutoFix - Common Helpers
 # =============================================================================
@@ -261,14 +263,22 @@ function ConvertTo-NormalizedPath {
     [CmdletBinding()]
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Path)
     if ([string]::IsNullOrEmpty($Path)) { return '' }
-    return $Path.Replace('\', '/').TrimStart('./')
+    $p = $Path.Replace('\', '/')
+    if ($p.StartsWith('./')) { $p = $p.Substring(2) }
+    return $p
 }
 
 function ConvertTo-RegexFromGlob {
     <#
     .SYNOPSIS
         Translate a forward-slash glob into a .NET regex pattern.
-        Supports ** (any segments), * (any chars except /), ? (one char except /).
+        Supports ** (any path segments), * (any chars except /), ? (one char except /).
+    .NOTES
+        ** semantics (gitignore-style):
+          - '**/' at start  → zero or more leading directories: (.+/)?
+          - '/**/' in middle → zero or more middle directories: /(.+/)?
+          - '/**' at end     → any subtree under the prefix:     /.*
+          - standalone '**'  → match anything:                  .*
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Glob)
@@ -279,17 +289,42 @@ function ConvertTo-RegexFromGlob {
     $i = 0
     while ($i -lt $g.Length) {
         $c = $g[$i]
-        if ($c -eq '*') {
-            if ($i + 1 -lt $g.Length -and $g[$i + 1] -eq '*') {
-                # ** matches across path separators
-                [void]$sb.Append('.*')
-                $i += 2
-                # consume optional trailing /
-                if ($i -lt $g.Length -and $g[$i] -eq '/') { $i++ }
-            } else {
-                [void]$sb.Append('[^/]*')
-                $i++
+
+        if ($c -eq '*' -and $i + 1 -lt $g.Length -and $g[$i + 1] -eq '*') {
+            $afterStar = $i + 2
+            $atStart   = ($i -eq 0)
+            $atEnd     = ($afterStar -ge $g.Length)
+            $hasSlashAft = (-not $atEnd -and $g[$afterStar] -eq '/')
+            $hasSlashBef = (-not $atStart -and $g[$i - 1] -eq '/')
+
+            if ($atStart -and $hasSlashAft) {
+                # **/ at start → zero or more leading dir segments
+                [void]$sb.Append('(.+/)?')
+                $i = $afterStar + 1
             }
+            elseif ($hasSlashBef -and $hasSlashAft) {
+                # /**/ in middle → replace the already-emitted \/ with a
+                # segment-flexible pattern that allows zero or more middle dirs.
+                if ($sb.Length -ge 2 -and $sb.ToString($sb.Length - 2, 2) -eq '\/') {
+                    $sb.Length -= 2
+                }
+                [void]$sb.Append('(.+/)?')
+                $i = $afterStar + 1
+            }
+            elseif ($hasSlashBef -and $atEnd) {
+                # /** at end → keep the already-emitted / then match anything
+                [void]$sb.Append('.*')
+                $i = $afterStar
+            }
+            else {
+                # standalone ** (no surrounding /)
+                [void]$sb.Append('.*')
+                $i = $afterStar
+            }
+        }
+        elseif ($c -eq '*') {
+            [void]$sb.Append('[^/]*')
+            $i++
         }
         elseif ($c -eq '?') {
             [void]$sb.Append('[^/]')
@@ -352,4 +387,40 @@ function Get-AutoFixDefaultBlockedPaths {
     # Comma-wrap so that a single-element list is not auto-unwrapped to a
     # scalar by PowerShell's function-output pipeline.
     return ,@($Script:AutoFixDefaultBlockedPaths)
+}
+
+# -----------------------------------------------------------------------------
+# Environment resolution (design §3.8.1 / M14 auto-detection)
+# -----------------------------------------------------------------------------
+# Dot-source the Delphi environment auto-detection module.
+. "$PSScriptRoot/delphi-env.ps1"
+
+function Resolve-DelphiEnvBat {
+    <#
+    .SYNOPSIS
+        Resolve the path to the Delphi environment batch file.
+        Now uses auto-detection (M14) instead of a hardcoded path.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$Override,
+        [string]$DelphiVersion,
+        [switch]$ForceDetect
+    )
+    $env = Find-DelphiEnvironment -Override $Override -DelphiVersion $DelphiVersion -Force:$ForceDetect
+    return $env.EnvBatPath
+}
+
+function Resolve-Pwsh {
+    <#
+    .SYNOPSIS
+        Resolve the path to PowerShell 7 (pwsh). Throws if not found.
+    #>
+    [CmdletBinding()]
+    param()
+    $cmd = Get-Command -Name 'pwsh' -ErrorAction SilentlyContinue
+    if ($null -eq $cmd) {
+        throw 'pwsh (PowerShell 7) not found on PATH. Install PowerShell 7 or add it to PATH.'
+    }
+    return $cmd.Source
 }

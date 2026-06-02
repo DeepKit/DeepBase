@@ -118,7 +118,7 @@ begin
       if Status = STATUS_SUCCESS then
         SetLength(Result, ResultLen)
       else
-        Result := nil;
+        raise Exception.CreateFmt('AES-256-GCM decryption failed (BCryptDecrypt: $%x)', [Status]);
     finally
       BCryptDestroyKey(hKey);
     end;

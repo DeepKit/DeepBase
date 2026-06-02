@@ -342,25 +342,52 @@ var
   LPanel: TArray<TPersonaProfile>;
   LViewpoints: TArray<TExpertViewpoint>;
   LSynthesis: string;
+  LSynthesisFailed: Boolean;
+  LAllViewpointsFailed: Boolean;
+  I: Integer;
+  LFailedCount: Integer;
+  LChatResult: TChatResult;
 begin
-  // If LLM is nil, return degraded result
   if FLLM = nil then
   begin
     Result := BuildDegradedResult(AContext, 'LLM client not available');
     Exit;
   end;
 
-  // Select expert panel (Property 19: 2-4 experts)
   LPanel := SelectPanel(AContext);
-
-  // Generate viewpoints from each expert
   LViewpoints := GenerateViewpoints(LPanel, AContext);
 
-  // Synthesize consensus/disagreements
-  LSynthesis := SynthesizeConsensus(LViewpoints, AContext);
+  LFailedCount := 0;
+  for I := 0 to High(LViewpoints) do
+    if LViewpoints[I].Content = '（该专家暂时无法提供观点）' then
+      Inc(LFailedCount);
+  LAllViewpointsFailed := (Length(LViewpoints) > 0) and (LFailedCount = Length(LViewpoints));
 
-  // Build final result
+  LSynthesis := '';
+  LSynthesisFailed := False;
+  if not LAllViewpointsFailed then
+  begin
+    LSynthesis := SynthesizeConsensus(LViewpoints, AContext);
+    LSynthesisFailed := (LSynthesis = '综合分析暂时不可用，请参考各专家的独立观点。');
+  end
+  else
+  begin
+    LChatResult := FLLM.Chat(FSynthesisTier,
+      '你是一位圆桌讨论主持人，负责综合多位专家的观点。',
+      '所有专家均无法提供观点，请给出降级建议。');
+    LSynthesisFailed := not LChatResult.Success;
+  end;
+
+  if LAllViewpointsFailed and LSynthesisFailed then
+  begin
+    Result := BuildDegradedResult(AContext,
+      'L4 roundtable: all ' + IntToStr(Length(LPanel)) + ' expert calls and synthesis failed');
+    Exit;
+  end;
+
   Result := BuildResultFromViewpoints(LViewpoints, LSynthesis);
+  if LSynthesisFailed then
+    Result.ErrorMessage := 'Synthesis unavailable, individual viewpoints shown';
 end;
 
 end.

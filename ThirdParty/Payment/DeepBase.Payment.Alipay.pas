@@ -112,20 +112,14 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TAlipayConfig.LoadKeysFromCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    PrivateKey := GetCredentialKey('PrivateKey');
-    FAlipayPublicKey := GetCredentialKey('AlipayPublicKey');
-  end;
+  PrivateKey := GetCredentialKey('PrivateKey');
+  FAlipayPublicKey := GetCredentialKey('AlipayPublicKey');
 end;
 
 procedure TAlipayConfig.SaveKeysToCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    SetCredentialKey('PrivateKey', FPrivateKey);
-    SetCredentialKey('AlipayPublicKey', FAlipayPublicKey);
-  end;
+  SetCredentialKey('PrivateKey', FPrivateKey);
+  SetCredentialKey('AlipayPublicKey', FAlipayPublicKey);
 end;
 
 procedure TAlipayConfig.SetPrivateKeySecure(const AKey: string);
@@ -211,9 +205,36 @@ begin
 
   NormalizedKey := PrivateKey;
   if Pos('BEGIN', UpperCase(NormalizedKey)) = 0 then
-    NormalizedKey := '-----BEGIN RSA PRIVATE KEY-----' + sLineBreak +
-      NormalizedKey + sLineBreak +
-      '-----END RSA PRIVATE KEY-----';
+  begin
+    // Bare Base64: try PKCS#8 first (Alipay default), fallback to PKCS#1
+    Signer := TRSASigner.Create;
+    try
+      NormalizedKey := '-----BEGIN PRIVATE KEY-----' + sLineBreak +
+        PrivateKey + sLineBreak +
+        '-----END PRIVATE KEY-----';
+      if Signer.LoadPrivateKeyPEM(NormalizedKey) then
+      begin
+        Result := Signer.Sign(AContent);
+        if Result <> '' then
+          Exit;
+      end;
+
+      // PKCS#8 failed, try PKCS#1
+      NormalizedKey := '-----BEGIN RSA PRIVATE KEY-----' + sLineBreak +
+        PrivateKey + sLineBreak +
+        '-----END RSA PRIVATE KEY-----';
+      if not Signer.LoadPrivateKeyPEM(NormalizedKey) then
+        raise EPaymentSignError.Create('Failed to load RSA private key (tried PKCS#8 and PKCS#1): ' + Signer.LastError,
+          'INVALID_PRIVATE_KEY', ppAlipay);
+      Result := Signer.Sign(AContent);
+      if Result = '' then
+        raise EPaymentSignError.Create('RSA2 signing failed: ' + Signer.LastError,
+          'SIGN_FAILED', ppAlipay);
+    finally
+      Signer.Free;
+    end;
+    Exit;
+  end;
 
   Signer := TRSASigner.Create;
   try

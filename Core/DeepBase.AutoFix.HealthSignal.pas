@@ -154,7 +154,11 @@ begin
       .Append('}');
 
     var LPath := TPath.Combine(TAutoFixErrorRecorder.OutputDir, 'health-signal.json');
-    TFile.WriteAllText(LPath, LBuilder.ToString, TEncoding.UTF8);
+    var LTmpPath := LPath + '.tmp';
+    TFile.WriteAllText(LTmpPath, LBuilder.ToString, TEncoding.UTF8);
+    if TFile.Exists(LPath) then
+      TFile.Delete(LPath);
+    TFile.Move(LTmpPath, LPath);
   finally
     LBuilder.Free;
   end;

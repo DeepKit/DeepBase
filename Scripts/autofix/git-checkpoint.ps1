@@ -40,7 +40,9 @@ param(
 
     [string]$Message,
 
-    [string]$BaseRef = 'HEAD'
+    [string]$BaseRef = 'HEAD',
+
+    [switch]$KeepBranch
 )
 
 . "$PSScriptRoot/_common.ps1"
@@ -127,7 +129,16 @@ function Invoke-CommitAction {
         throw "worktree path not found: $WorktreePath"
     }
     Write-AutoFixLog -Level info -Msg 'committing in worktree' -Ctx @{ path = $WorktreePath }
-    [void](Invoke-Git -Arguments @('add', '-A') -WorkDir $WorktreePath)
+    # Stage only tracked files with modifications — avoids committing
+    # unrelated untracked files that may exist in the worktree.
+    [void](Invoke-Git -Arguments @('add', '--update') -WorkDir $WorktreePath)
+    # Also stage newly-created files (from AI patches) that are untracked.
+    $others = Invoke-Git -Arguments @('ls-files', '--others', '--exclude-standard') -WorkDir $WorktreePath
+    if ($others) {
+        foreach ($f in ($others -split "`r?`n" | Where-Object { $_ -ne '' })) {
+            [void](Invoke-Git -Arguments @('add', '--', $f) -WorkDir $WorktreePath)
+        }
+    }
     # Allow empty? No — bail loudly so caller can branch on this.
     [void](Invoke-Git -Arguments @('commit', '-m', $Message) -WorkDir $WorktreePath)
     [Console]::Out.WriteLine('committed')
@@ -165,8 +176,16 @@ function Invoke-CleanupAction {
         # Worktree dir already gone — prune metadata so git stays consistent
         [void](Invoke-Git -Arguments @('worktree', 'prune'))
     }
-    # Use -D so cleanup succeeds even if branch was not merged back
-    [void](Invoke-Git -Arguments @('branch', '-D', $Branch))
+    if ($KeepBranch) {
+        Write-AutoFixLog -Level info -Msg 'keeping branch after worktree removal' -Ctx @{ branch = $Branch }
+    } else {
+        $merged = Invoke-Git -Arguments @('branch', '--merged', 'HEAD')
+        $isMerged = @($merged -split "`r?`n" | ForEach-Object { $_.Trim().TrimStart('*').Trim() }) -contains $Branch
+        if (-not $isMerged) {
+            throw "refusing to delete unmerged branch: $Branch"
+        }
+        [void](Invoke-Git -Arguments @('branch', '-d', $Branch))
+    }
     [Console]::Out.WriteLine('cleaned')
 }
 

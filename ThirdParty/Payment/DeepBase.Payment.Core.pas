@@ -139,8 +139,8 @@ begin
   Result := Response.ContentAsString;
   
   if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-    raise EPaymentError.Create(FCredentials.Provider, 
-      IntToStr(Response.StatusCode), Result);
+    raise EPaymentError.Create(Result,
+      IntToStr(Response.StatusCode), FCredentials.Provider);
 end;
 
 function TPaymentClientBase.DoPost(const AUrl: string; const ABody: string;
@@ -160,8 +160,8 @@ begin
     Result := Response.ContentAsString;
     
     if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-      raise EPaymentError.Create(FCredentials.Provider,
-        IntToStr(Response.StatusCode), Result);
+      raise EPaymentError.Create(Result,
+        IntToStr(Response.StatusCode), FCredentials.Provider);
   finally
     BodyStream.Free;
   end;
@@ -201,8 +201,8 @@ begin
       Result := Response.ContentAsString;
 
       if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-        raise EPaymentError.Create(FCredentials.Provider,
-          IntToStr(Response.StatusCode), Result);
+        raise EPaymentError.Create(Result,
+          IntToStr(Response.StatusCode), FCredentials.Provider);
     finally
       BodyStream.Free;
     end;
@@ -224,16 +224,16 @@ begin
   Result := Response.ContentAsString;
   
   if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-    raise EPaymentError.Create(FCredentials.Provider,
-      IntToStr(Response.StatusCode), Result);
+    raise EPaymentError.Create(Result,
+      IntToStr(Response.StatusCode), FCredentials.Provider);
 end;
 
 function TPaymentClientBase.ParseJSON(const AJson: string): TJSONObject;
 begin
   Result := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Result = nil then
-    raise EPaymentError.Create(FCredentials.Provider, 'INVALID_JSON', 
-      'Failed to parse JSON response');
+    raise EPaymentError.Create('Failed to parse JSON response',
+      'INVALID_JSON', FCredentials.Provider);
 end;
 
 function TPaymentClientBase.GetJSONString(AObj: TJSONObject; const APath: string;

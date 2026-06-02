@@ -227,11 +227,13 @@ function TOAuthClient.ExchangeCode(const ACode: string): TSocialToken;
 var
   Params: TDictionary<string, string>;
   PostData, Response: string;
+  NeedAcceptHeader: Boolean;
 begin
   Result.Clear;
 
   PostData := '';
   Response := '';
+  NeedAcceptHeader := OAuthConfig.OAuthProvider = opGitHub;
   Params := TDictionary<string, string>.Create;
   try
     Params.Add('client_id', FConfig.AppId);
@@ -243,11 +245,19 @@ begin
 
     PostData := TSocialHelper.BuildQueryString(Params);
 
-    // GitHub needs Accept header for JSON response
-    if OAuthConfig.OAuthProvider = opGitHub then
-      FHttpClient.CustomHeaders['Accept'] := 'application/json';
+    TMonitor.Enter(FHttpClient);
+    try
+      // GitHub needs Accept header for JSON response
+      if NeedAcceptHeader then
+        FHttpClient.CustomHeaders['Accept'] := 'application/json';
 
-    Response := DoPost(OAuthConfig.TokenEndpoint, PostData);
+      Response := DoPost(OAuthConfig.TokenEndpoint, PostData);
+    finally
+      if NeedAcceptHeader then
+        FHttpClient.CustomHeaders['Accept'] := '';
+      TMonitor.Exit(FHttpClient);
+    end;
+
     Result := ParseTokenResponse(Response);
   finally
     if PostData <> '' then
@@ -492,10 +502,11 @@ var
   AuthHeader: string;
   Response: string;
   JsonArr: TJSONArray;
-  I: Integer;
+  I, PrimaryIdx: Integer;
   Email: TJSONObject;
   EmailStr: string;
   IsPrimary: Boolean;
+  Emails: TArray<string>;
 begin
   SetLength(Result, 0);
 
@@ -512,21 +523,34 @@ begin
       if not Assigned(JsonArr) then Exit;
 
       try
-        SetLength(Result, JsonArr.Count);
+        SetLength(Emails, JsonArr.Count);
+        PrimaryIdx := -1;
         for I := 0 to JsonArr.Count - 1 do
         begin
           Email := JsonArr.Items[I] as TJSONObject;
           Email.TryGetValue<string>('email', EmailStr);
           Email.TryGetValue<Boolean>('primary', IsPrimary);
-
+          Emails[I] := EmailStr;
           if IsPrimary then
-          begin
-            // Put primary email first
-            Result[0] := EmailStr;
-          end
-          else
-            Result[I] := EmailStr;
+            PrimaryIdx := I;
         end;
+
+        // Build result: primary first, then the rest in order
+        SetLength(Result, Length(Emails));
+        if PrimaryIdx >= 0 then
+        begin
+          Result[0] := Emails[PrimaryIdx];
+          I := 1;
+          for var J := 0 to High(Emails) do
+            if J <> PrimaryIdx then
+            begin
+              Result[I] := Emails[J];
+              Inc(I);
+            end;
+        end
+        else
+          for I := 0 to High(Emails) do
+            Result[I] := Emails[I];
       finally
         JsonArr.Free;
       end;

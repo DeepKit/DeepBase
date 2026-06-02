@@ -445,7 +445,7 @@ object frmSeedMain: TfrmSeedMain
             Font.Style = []
             ParentFont = False
             TabOrder = 0
-            TextHint = #22914': bc1qxxx... '#25110' www.goodmem.cn'
+            TextHint = #22914': bc1qxxx... '#25110' www.heyue.fyi'
             OnChange = edtAddressTextChange
           end
           object memoDescription: TMemo

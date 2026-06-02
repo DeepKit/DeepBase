@@ -143,8 +143,16 @@ function Test-PreimageHashes {
         if ($null -eq $f) { continue }
         $rel = [string]$f.path
         $stored = [string]$f.preimage_hash
+        $kind = if ($f.PSObject.Properties['kind']) { [string]$f.kind } else { 'existing' }
         if ([string]::IsNullOrWhiteSpace($rel) -or [string]::IsNullOrWhiteSpace($stored)) { return $false }
         $abs = if ($Root) { Join-Path $Root $rel } else { $rel }
+        if ($kind -eq 'new_file') {
+            if (Test-Path -LiteralPath $abs -PathType Leaf) {
+                Write-AutoFixLog -Level debug -Msg 'new-file preimage now exists' -Ctx @{ path = $abs }
+                return $false
+            }
+            continue
+        }
         if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) {
             Write-AutoFixLog -Level debug -Msg 'preimage missing' -Ctx @{ path = $abs }
             return $false
@@ -204,10 +212,16 @@ function Invoke-StoreAction {
     foreach ($rel in $rawList) {
         $abs = if ([System.IO.Path]::IsPathRooted($rel)) { $rel } else { Join-Path $resolvedRoot $rel }
         if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) {
-            throw "preimage file not found: $abs"
+            $preimage.Add([pscustomobject]@{
+                path          = $rel
+                kind          = 'new_file'
+                preimage_hash = 'absent'
+            }) | Out-Null
+            continue
         }
         $preimage.Add([pscustomobject]@{
             path          = $rel
+            kind          = 'existing'
             preimage_hash = 'sha256:' + (Get-Sha256File -Path $abs)
         }) | Out-Null
     }

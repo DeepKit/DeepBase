@@ -76,10 +76,12 @@ end;
 
 class function TAutoFixSelfTerminator.IsFatal(E: Exception): Boolean;
 begin
+  {$WARN SYMBOL_DEPRECATED OFF}
   Result := (E is EAccessViolation) or
             (E is EOutOfMemory) or
             (E is EStackOverflow) or
             (E is EExternalException);
+  {$WARN SYMBOL_DEPRECATED DEFAULT}
 end;
 
 class procedure TAutoFixSelfTerminator.HandleFatal(E: Exception;
@@ -89,13 +91,19 @@ var
   LModuleBase, LRva: NativeUInt;
   LStack: TArray<TStackFrame>;
   LStackTruncated: Boolean;
-  LMsg, LJson, LPath: string;
+  LClassName, LMsg, LScenario, LStackJson, LJson, LPath: string;
 begin
   if not TAutoFixErrorRecorder.Active then Exit;
 
+  try
+    LClassName := E.ClassName;
+  except
+    LClassName := '<unavailable>';
+  end;
+
   // Mark current scenario as fatal first (cheap, in-memory only)
   try
-    TAutoFixScenarioRunner.MarkCurrentFatal(E.ClassName);
+    TAutoFixScenarioRunner.MarkCurrentFatal(LClassName);
   except
     OutputDebugString(PChar('AutoFix.SelfTerminator: mark scenario failed'));
   end;
@@ -121,7 +129,23 @@ begin
     LStackTruncated := False;
   end;
 
-  LMsg := EscapeJson(Copy(E.Message, 1, 200));
+  try
+    LMsg := EscapeJson(Copy(E.Message, 1, 200));
+  except
+    LMsg := '<unavailable>';
+  end;
+
+  try
+    LScenario := TAutoFixScenarioRunner.CurrentScenario;
+  except
+    LScenario := '<unavailable>';
+  end;
+
+  try
+    LStackJson := StackToJson(LStack);
+  except
+    LStackJson := '[]';
+  end;
 
   // Build JSON payload (single shot write)
   var LBuilder := TStringBuilder.Create;
@@ -130,17 +154,17 @@ begin
       .Append('{"run_id":"').Append(EscapeJson(TAutoFixErrorRecorder.RunId)).Append('"')
       .Append(',"exit_code":2')
       .Append(',"reason":"fatal_exception"')
-      .Append(',"fatal_class":"').Append(EscapeJson(E.ClassName)).Append('"')
+      .Append(',"fatal_class":"').Append(EscapeJson(LClassName)).Append('"')
       .Append(',"fatal_msg":"').Append(LMsg).Append('"')
       .Append(',"module_name":"').Append(EscapeJson(LModuleName)).Append('"')
       .Append(',"module_base":"').Append(FormatHex(LModuleBase)).Append('"')
       .Append(',"rva":"').Append(FormatHex(LRva)).Append('"')
-      .Append(',"stack":').Append(StackToJson(LStack))
+      .Append(',"stack":').Append(LStackJson)
       .Append(',"stack_truncated":')
         .Append(IfThen(LStackTruncated, 'true', 'false'))
       .Append(',"total_errors":').Append(TAutoFixErrorRecorder.TotalErrors)
       .Append(',"scenario":"')
-        .Append(EscapeJson(TAutoFixScenarioRunner.CurrentScenario)).Append('"')
+        .Append(EscapeJson(LScenario)).Append('"')
       .Append(',"timestamp":"')
         .Append(FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now)).Append('"')
       .Append('}');

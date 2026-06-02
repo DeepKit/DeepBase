@@ -50,6 +50,7 @@ param(
 )
 
 . "$PSScriptRoot/../../scripts/autofix/_common.ps1"
+Import-Module (Join-Path $PSScriptRoot 'schemas\SchemaHelper.psm1') -Force
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -192,7 +193,7 @@ function Test-ScenarioOutputs {
         if ($null -eq $health) {
             Add-Check 'health-signal.json parses' $false 'failed to parse health-signal.json'
         } else {
-            $missing = Test-RecordSchema -Record $health -Fields @('run_id','ready','pid','timestamp','version','autofix_mode','scenarios')
+            $missing = Test-RecordSchema -Record $health -Fields (Get-SchemaFields -Name 'health-signal')
             Add-Check 'health-signal: schema fields present' ($missing.Count -eq 0) ("missing=" + ($missing -join ','))
             Add-Check 'health-signal: run_id matches'        ([string]$health.run_id -eq $expectedRunId) "got=$($health.run_id) expected=$expectedRunId"
             Add-Check 'health-signal: ready=true'            ([bool]$health.ready)                       ''
@@ -226,10 +227,7 @@ function Test-ScenarioOutputs {
         Add-Check 'runtime-errors.jsonl has >= 1 row' ($errs.Count -ge 1) "row_count=$($errs.Count)"
         if ($errs.Count -ge 1) {
             $first = $errs[0]
-            $missing = Test-RecordSchema -Record $first -Fields @(
-                'run_id','iteration','ts','level','class','msg','module_name',
-                'module_base','rva','stack','stack_truncated','context','thread',
-                'scenario','dedup_key')
+            $missing = Test-RecordSchema -Record $first -Fields (Get-SchemaFields -Name 'runtime-errors')
             Add-Check 'runtime-errors[0]: schema fields present' ($missing.Count -eq 0) ("missing=" + ($missing -join ','))
             Add-Check 'runtime-errors[0]: run_id matches' ([string]$first.run_id -eq $expectedRunId) "got=$($first.run_id)"
             Add-Check 'runtime-errors[0]: scenario matches' ([string]$first.scenario -eq $ExpectedScenario) "got=$($first.scenario)"
@@ -250,10 +248,7 @@ function Test-ScenarioOutputs {
             if ($null -eq $reason) {
                 Add-Check 'exit-reason.json parses' $false 'parse failure'
             } else {
-                $missing = Test-RecordSchema -Record $reason -Fields @(
-                    'run_id','exit_code','reason','fatal_class','fatal_msg',
-                    'module_name','module_base','rva','stack','stack_truncated',
-                    'total_errors','scenario','timestamp')
+                $missing = Test-RecordSchema -Record $reason -Fields (Get-SchemaFields -Name 'exit-reason')
                 Add-Check 'exit-reason: schema fields present' ($missing.Count -eq 0) ("missing=" + ($missing -join ','))
                 Add-Check 'exit-reason: run_id matches' ([string]$reason.run_id -eq $expectedRunId) "got=$($reason.run_id)"
                 Add-Check 'exit-reason: exit_code == 2' ([int]$reason.exit_code -eq 2) "got=$($reason.exit_code)"

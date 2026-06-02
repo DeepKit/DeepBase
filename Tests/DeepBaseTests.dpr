@@ -68,6 +68,7 @@ uses
   Test.DeepBase.Crypto.OpenSSL in 'Test.DeepBase.Crypto.OpenSSL.pas',
   // Payment & Social tests
   Test.DeepBase.Payment in 'Test.DeepBase.Payment.pas',
+  Test.DeepBase.Payment.Integration in 'Test.DeepBase.Payment.Integration.pas',
   Test.DeepBase.Commerce in 'Test.DeepBase.Commerce.pas',
   Test.DeepBase.Speech in 'Test.DeepBase.Speech.pas',
   Test.DeepBase.Social in 'Test.DeepBase.Social.pas',

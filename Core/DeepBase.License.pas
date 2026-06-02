@@ -369,9 +369,7 @@ begin
       'Legacy local license signing is disabled. Sign licenses on the server and set ' +
       LICENSE_LEGACY_SECRET_ENV + ' only for migration tooling.');
 
-  KeyBytes := TEncoding.UTF8.GetBytes(FSecretKey);
-  DataBytes := TEncoding.UTF8.GetBytes(Data);
-  Result := THashSHA2.GetHMACString(DataBytes, KeyBytes, THashSHA2.TSHA2Version.SHA256);
+  Result := THashSHA2.GetHMAC(Data, FSecretKey, THashSHA2.TSHA2Version.SHA256);
   Result := Copy(Result, 1, 32); // 128-bit signature
 end;
 

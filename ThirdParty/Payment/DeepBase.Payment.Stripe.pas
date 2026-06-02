@@ -75,6 +75,8 @@ type
     function QueryRefund(const ARefundNo: string): TRefundResult; override;
     function VerifyNotification(const ARawData: string;
       out ANotification: TPaymentNotification): Boolean; override;
+    function VerifyNotification(const ARawData, ASignatureHeader: string;
+      out ANotification: TPaymentNotification): Boolean; overload;
     function GetNotificationResponse(ASuccess: Boolean): string; override;
 
     // Stripe specific
@@ -112,20 +114,14 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TStripeConfig.LoadKeysFromCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    SecretKey := GetCredentialKey('SecretKey');
-    WebhookSecret := GetCredentialKey('WebhookSecret');
-  end;
+  SecretKey := GetCredentialKey('SecretKey');
+  WebhookSecret := GetCredentialKey('WebhookSecret');
 end;
 
 procedure TStripeConfig.SaveKeysToCredentialManager;
 begin
-  if KeyStorageMode = ksmCredential then
-  begin
-    SetCredentialKey('SecretKey', FSecretKey);
-    SetCredentialKey('WebhookSecret', FWebhookSecret);
-  end;
+  SetCredentialKey('SecretKey', FSecretKey);
+  SetCredentialKey('WebhookSecret', FWebhookSecret);
 end;
 
 procedure TStripeConfig.SetSecretKeySecure(const AKey: string);
@@ -274,7 +270,7 @@ begin
   AOrder.Validate;
 
   // Stripe uses cents
-  AmountCents := Round(AOrder.Amount * 100);
+  AmountCents := Round(Currency(AOrder.Amount) * 100);
 
   Params := TDictionary<string, string>.Create;
   try
@@ -331,7 +327,7 @@ begin
   Result.Clear;
   AOrder.Validate;
 
-  AmountCents := Round(AOrder.Amount * 100);
+  AmountCents := Round(Currency(AOrder.Amount) * 100);
 
   Params := TDictionary<string, string>.Create;
   try
@@ -447,7 +443,7 @@ begin
   Result.Clear;
   ARequest.Validate;
 
-  AmountCents := Round(ARequest.RefundAmount * 100);
+  AmountCents := Round(Currency(ARequest.RefundAmount) * 100);
 
   Params := TDictionary<string, string>.Create;
   try
@@ -517,6 +513,23 @@ function TStripeClient.VerifyNotification(const ARawData: string;
   out ANotification: TPaymentNotification): Boolean;
 var
   Cfg: TStripeConfig;
+begin
+  // Without a signature header we cannot verify authenticity.
+  // In production this is fatal; in sandbox we allow it with a warning.
+  Cfg := TStripeConfig(FConfig);
+  if Cfg.WebhookSecret <> '' then
+    raise EPaymentSignError.Create(
+      'Stripe VerifyNotification called without signature header. Use the overloaded VerifyNotification(RawData, SignatureHeader, Notification) instead.',
+      'MISSING_SIGNATURE_HEADER', ppStripe);
+
+  // Sandbox fallback: parse without verification (dev only)
+  Result := VerifyNotification(ARawData, '', ANotification);
+end;
+
+function TStripeClient.VerifyNotification(const ARawData, ASignatureHeader: string;
+  out ANotification: TPaymentNotification): Boolean;
+var
+  Cfg: TStripeConfig;
   JsonObj, DataObj, ObjData: TJSONObject;
   EventType, ObjType: string;
 begin
@@ -527,17 +540,18 @@ begin
 
   Cfg := TStripeConfig(FConfig);
 
-  // BUG-015 FIX: Webhook signature verification is now required
-  // Note: The signature header must be passed separately via VerifyWebhookSignature
-  // This method only parses the payload after signature is verified
-  if Cfg.WebhookSecret = '' then
+  // Verify webhook signature when header is provided
+  if ASignatureHeader <> '' then
   begin
-    {$IF DEFINED(DEBUG) AND DEFINED(MSWINDOWS)}
-    OutputDebugString('WARNING: Stripe webhook secret not configured');
-    {$ENDIF}
-    // In production, we should fail if webhook secret is not configured
-    if not Cfg.IsSandbox then
+    if not VerifyWebhookSignature(ARawData, ASignatureHeader) then
       Exit;
+  end
+  else if not Cfg.IsSandbox then
+  begin
+    // Production mode requires signature verification
+    raise EPaymentSignError.Create(
+      'Stripe webhook signature verification required in production',
+      'SIGNATURE_REQUIRED', ppStripe);
   end;
 
   try
@@ -659,13 +673,21 @@ begin
   ExpectedSig := LowerCase(ExpectedSig);
   
   // Constant-time comparison to prevent timing attacks
-  if Length(ExpectedSig) <> Length(Signature) then
-    Exit;
-  
+  // Pad shorter string to avoid leaking length information
   Diff := 0;
+  if Length(ExpectedSig) <> Length(Signature) then
+  begin
+    // XOR a nonzero value so Diff != 0, but still loop to avoid timing leak
+    Diff := Diff or 1;
+    if Length(ExpectedSig) > Length(Signature) then
+      Signature := Signature + StringOfChar(#0, Length(ExpectedSig) - Length(Signature))
+    else
+      ExpectedSig := ExpectedSig + StringOfChar(#0, Length(Signature) - Length(ExpectedSig));
+  end;
+
   for I := 1 to Length(ExpectedSig) do
     Diff := Diff or (Ord(ExpectedSig[I]) xor Ord(LowerCase(Signature)[I]));
-  
+
   Result := Diff = 0;
 end;
 

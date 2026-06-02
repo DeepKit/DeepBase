@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Validate a unified diff against allowed/blocked path globs and a line budget.
+    Validate a unified diff against allowed/blocked path globs and change budgets.
 
 .DESCRIPTION
     Inspects a candidate unified diff before it is applied. Rejects the diff
@@ -9,7 +9,8 @@
       1. A touched file matches any glob in BlockedPaths
       2. A touched file does NOT match any glob in AllowedPaths
       3. The total +/- line count exceeds MaxDiffLines
-      4. A new binary file is being introduced
+      4. The touched file count exceeds MaxChangedFiles
+      5. A new binary file is being introduced
 
     Touched files are extracted from '+++ b/<path>' headers (additions and
     edits) and '--- a/<path>' headers when the new side is /dev/null
@@ -39,6 +40,9 @@
 .PARAMETER MaxDiffLines
     Total +/- line cap. Default 200.
 
+.PARAMETER MaxChangedFiles
+    Touched file count cap. Default 0 means no file-count cap.
+
 .PARAMETER OutputDir
     Output directory for the violations log. Default 'autofix-output'.
 
@@ -60,6 +64,8 @@ param(
     [string]$BlockedPaths,
 
     [int]$MaxDiffLines = 200,
+
+    [int]$MaxChangedFiles = 0,
 
     [string]$OutputDir = 'autofix-output',
 
@@ -163,7 +169,6 @@ function Read-DiffSummary {
         }
 
         if ($inHunk) {
-            if ($raw.StartsWith('+++') -or $raw.StartsWith('---')) { continue }
             if ($raw.Length -ge 1) {
                 $c = $raw[0]
                 if ($c -eq '+') { $plus++ }
@@ -241,6 +246,12 @@ try {
         exit $Script:AutoFixExit_Generic
     }
 
+    if ($MaxChangedFiles -gt 0 -and $summary.Files.Count -gt $MaxChangedFiles) {
+        Write-Violation -Reason 'max_changed_files_exceeded' -Files $summary.Files -Lines $totalLines `
+            -Detail "files=$($summary.Files.Count), cap=$MaxChangedFiles"
+        exit $Script:AutoFixExit_Generic
+    }
+
     $blockedHits = New-Object System.Collections.Generic.List[string]
     $notAllowed  = New-Object System.Collections.Generic.List[string]
     foreach ($f in $summary.Files) {
@@ -268,6 +279,7 @@ try {
 
     Write-AutoFixLog -Level info -Msg 'diff accepted' -Ctx @{
         files = $summary.Files
+        file_count = $summary.Files.Count
         plus  = $summary.Plus
         minus = $summary.Minus
     }

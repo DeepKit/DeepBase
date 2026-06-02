@@ -2,6 +2,7 @@
   <PropertyGroup>
     <ProjectGuid>{B3F9D4E2-5F71-4E4E-9D9F-6F5A8B3A9C11}</ProjectGuid>
     <MainSource>DeepPublisher.dpr</MainSource>
+    <Icon_MainIcon>DeepPublisher.ico</Icon_MainIcon>
     <Base>True</Base>
     <Config Condition="'$(Config)'==''">Debug</Config>
     <ProjectName Condition="'$(ProjectName)'==''">UniPublisher</ProjectName>

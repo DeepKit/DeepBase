@@ -74,7 +74,11 @@ param(
 
     [string]$AllowedPaths = '',
 
+    [string]$BlockedPaths = '',
+
     [string]$OutputDir = 'autofix-output',
+
+    [switch]$AllowExternalAi,
 
     [int]$MaxTokens = 8192
 )
@@ -203,6 +207,12 @@ function Split-Csv {
 # Main
 # -----------------------------------------------------------------------------
 try {
+    $externalAiAllowed = $AllowExternalAi -or ($env:AUTOFIX_ALLOW_EXTERNAL_AI -eq 'true')
+    if ($Backend -in @('cli', 'claude', 'openai') -and -not $externalAiAllowed) {
+        Write-AutoFixLog -Level error -Msg 'external AI backend requires explicit opt-in' -Ctx @{ backend = $Backend; hint = 'pass --allow-external-ai or set AUTOFIX_ALLOW_EXTERNAL_AI=true' }
+        exit $Script:AutoFixExit_AiFailed
+    }
+
     if (-not (Test-Path -LiteralPath $ErrorJson -PathType Leaf)) {
         Write-AutoFixLog -Level error -Msg 'ErrorJson not found' -Ctx @{ path = $ErrorJson }
         exit $Script:AutoFixExit_AiFailed
@@ -226,7 +236,7 @@ try {
     }
 
     $allowed = Split-Csv -Csv $AllowedPaths
-    $blocked = @(Get-AutoFixDefaultBlockedPaths)
+    $blocked = @(Get-AutoFixDefaultBlockedPaths) + @(Split-Csv -Csv $BlockedPaths)
 
     $prompts = Build-Prompts -ErrorObj $errorObj -AllowedGlobs $allowed `
         -BlockedGlobs $blocked -ContextRoot $ContextDir

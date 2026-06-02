@@ -4,10 +4,10 @@ unit DeepBase.Social.WeChat;
   DeepBase WeChat (微信) Social Integration
 
   Supports:
-    - 微信开放平台登�?(网站应用)
-    - 微信公众号登�?(网页授权)
+    - 微信开放平台登�?(网站应用)
+    - 微信公众号登�?(网页授权)
     - 获取用户信息
-    - 分享到微�?
+    - 分享到微�?
   Official Docs: https://developers.weixin.qq.com/doc/oplatform/
 *******************************************************************************}
 
@@ -21,8 +21,8 @@ uses
 type
   /// <summary>WeChat login type</summary>
   TWeChatLoginType = (
-    wltOpen,      // 开放平�?(网站/APP)
-    wltMP         // 公众号网页授�?
+    wltOpen,      // 开放平�?(网站/APP)
+    wltMP         // 公众号网页授�?
   );
 
   /// <summary>WeChat configuration</summary>
@@ -68,11 +68,11 @@ uses
   System.Hash;
 
 const
-  // WeChat Open Platform (开放平�?
+  // WeChat Open Platform (开放平�?
   WECHAT_OPEN_AUTH_URL = 'https://open.weixin.qq.com/connect/qrconnect';
   WECHAT_OPEN_API_URL = 'https://api.weixin.qq.com/sns';
 
-  // WeChat MP (公众�?
+  // WeChat MP (公众�?
   WECHAT_MP_AUTH_URL = 'https://open.weixin.qq.com/connect/oauth2/authorize';
   WECHAT_MP_API_URL = 'https://api.weixin.qq.com/sns';
 
@@ -344,7 +344,7 @@ end;
 
 function TWeChatClient.CanShare: Boolean;
 begin
-  Result := True;  // WeChat supports sharing
+  Result := False;  // Sharing requires native SDK, not available in web integration
 end;
 
 function TWeChatClient.GetJsApiTicket(const AAccessToken: string): string;

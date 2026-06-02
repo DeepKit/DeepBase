@@ -21,24 +21,11 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.Net.HttpClient, System.Net.URLClient, System.JSON,
-  System.DateUtils, System.Hash, System.NetEncoding;
+  System.DateUtils, System.Hash, System.NetEncoding,
+  DeepBase.Payment.Types,
+  DeepBase.Security.SecretStore;
 
 type
-  /// <summary>Payment provider type</summary>
-  TPaymentProvider = (ppAlipay, ppWeChatPay, ppStripe, ppPayPal);
-
-  /// <summary>Payment status</summary>
-  TPaymentStatus = (
-    psUnknown,      // Unknown
-    psPending,      // Waiting for payment
-    psSuccess,      // Payment successful
-    psFailed,       // Payment failed
-    psClosed,       // Order closed/cancelled
-    psRefunding,    // Refund in progress
-    psRefunded,     // Refund completed
-    psPartialRefund // Partial refund
-  );
-
   /// <summary>Payment method type</summary>
   TPaymentMethod = (
     pmDefault,      // Provider default
@@ -49,14 +36,6 @@ type
     pmMiniProgram,  // Mini program
     pmCard          // Credit/Debit card
   );
-
-  EPaymentError = class(Exception)
-  public
-    ErrorCode: string;
-    Provider: TPaymentProvider;
-    constructor Create(const AMessage: string; const AErrorCode: string = '';
-      AProvider: TPaymentProvider = ppAlipay); reintroduce;
-  end;
 
   EPaymentConfigError = class(EPaymentError);
   EPaymentSignError = class(EPaymentError);
@@ -175,13 +154,6 @@ type
     procedure Clear;
   end;
 
-  /// <summary>Key storage mode for sensitive data</summary>
-  TKeyStorageMode = (
-    ksmPlainText,      // Not recommended: store as plain text (legacy)
-    ksmDPAPI,          // Windows DPAPI encryption (recommended)
-    ksmCredential      // Windows Credential Manager
-  );
-
   /// <summary>Base payment configuration</summary>
   TPaymentConfig = class
   private
@@ -190,10 +162,9 @@ type
     FTimeout: Integer;
     FNotifyUrl: string;
     FReturnUrl: string;
-    FKeyStorageMode: TKeyStorageMode;  // BUG-019 FIX: 密钥存储模式
-    FCredentialTarget: string;          // BUG-019 FIX: Credential Manager 目标名称前缀
+    FSecretStore: ISecretStore;
+    FCredentialTarget: string;
   protected
-    // BUG-019 FIX: 安全存储/读取密钥
     function ProtectKey(const APlainKey: string): string;
     function UnprotectKey(const AEncryptedKey: string): string;
     function GetCredentialKey(const AKeyName: string): string;
@@ -212,7 +183,7 @@ type
     property NotifyUrl: string read FNotifyUrl write FNotifyUrl;
     property ReturnUrl: string read FReturnUrl write FReturnUrl;
     // BUG-019 FIX: 密钥安全存储属�?
-    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    property SecretStore: ISecretStore read FSecretStore write FSecretStore;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
   end;
 
@@ -283,6 +254,7 @@ type
     class function BuildQueryString(const AParams: TDictionary<string, string>;
       AUrlEncode: Boolean = True): string;
     class function ParseQueryString(const AQueryStr: string): TDictionary<string, string>;
+    // Legacy: MD5 is insecure for signing. Use HMACSHA256 for new integrations.
     class function MD5(const AData: string): string;
     class function SHA256(const AData: string): string;
     class function HMACSHA256(const AData, AKey: string): string;
@@ -296,19 +268,10 @@ type
 implementation
 
 uses
-  DeepBase.Security.DPAPI,  // BUG-019 FIX: 安全密钥存储支持
   DeepBase.Random,
   DeepBase.Payment.AESGCM;
 
 { EPaymentError }
-
-constructor EPaymentError.Create(const AMessage: string; const AErrorCode: string;
-  AProvider: TPaymentProvider);
-begin
-  inherited Create(AMessage);
-  ErrorCode := AErrorCode;
-  Provider := AProvider;
-end;
 
 { TPaymentOrder }
 
@@ -326,7 +289,9 @@ begin
   ExpireMinutes := 30;
   PaymentMethod := pmDefault;
   if Assigned(Metadata) then
-    FreeAndNil(Metadata);
+    Metadata.Clear
+  else
+    Metadata := TDictionary<string, string>.Create;
   ClientIP := '';
 end;
 
@@ -447,45 +412,45 @@ begin
   FProvider := AProvider;
   FIsSandbox := False;
   FTimeout := 30000;
-  // BUG-019 FIX: 初始化安全存储设�?
-  FKeyStorageMode := ksmDPAPI;  // 默认使用 DPAPI（推荐）
+  FSecretStore := TSecretStoreFactory.CreatePlatformStore;
   FCredentialTarget := 'DeepBase.Payment.' + TPaymentHelper.ProviderToString(AProvider);
 end;
 
 { BUG-019 FIX: TPaymentConfig 安全存储方法实现 }
 
 function TPaymentConfig.ProtectKey(const APlainKey: string): string;
+var
+  KeyId: string;
 begin
   if APlainKey = '' then
     Exit('');
 
-  case FKeyStorageMode of
-    ksmDPAPI:
-      Result := TDPAPIHelper.ProtectString(APlainKey);
-    ksmCredential:
-      // Credential Manager 模式下不需要额外加�?
-      Result := APlainKey;
+  if Assigned(FSecretStore) and FSecretStore.IsAvailable then
+  begin
+    KeyId := FCredentialTarget + '.' + IntToStr(TObject(Self).HashCode);
+    FSecretStore.Put(KeyId, APlainKey);
+    Result := KeyId;
+  end
   else
-    // ksmPlainText - 不推荐，但保持兼容�?
     Result := APlainKey;
-  end;
 end;
 
 function TPaymentConfig.UnprotectKey(const AEncryptedKey: string): string;
+var
+  Value: string;
 begin
   if AEncryptedKey = '' then
     Exit('');
 
-  case FKeyStorageMode of
-    ksmDPAPI:
-      Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
-    ksmCredential:
-      // Credential Manager 模式下数据已经安全存�?
+  if Assigned(FSecretStore) and FSecretStore.IsAvailable then
+  begin
+    if FSecretStore.TryGet(AEncryptedKey, Value) then
+      Result := Value
+    else
       Result := AEncryptedKey;
+  end
   else
-    // ksmPlainText
     Result := AEncryptedKey;
-  end;
 end;
 
 function TPaymentConfig.GetCredentialKey(const AKeyName: string): string;
@@ -493,25 +458,23 @@ var
   TargetName: string;
 begin
   Result := '';
-  if FKeyStorageMode <> ksmCredential then
-    Exit;
-
   TargetName := FCredentialTarget + '.' + AKeyName;
-  Result := TCredentialManager.GetCredential(TargetName, '');
+  if Assigned(FSecretStore) then
+    FSecretStore.TryGet(TargetName, Result);
 end;
 
 procedure TPaymentConfig.SetCredentialKey(const AKeyName, AValue: string);
 var
   TargetName: string;
 begin
-  if FKeyStorageMode <> ksmCredential then
-    Exit;
-
   TargetName := FCredentialTarget + '.' + AKeyName;
-  if AValue <> '' then
-    TCredentialManager.SaveCredential(TargetName, '', AValue)
-  else
-    TCredentialManager.DeleteCredential(TargetName);
+  if Assigned(FSecretStore) then
+  begin
+    if AValue <> '' then
+      FSecretStore.Put(TargetName, AValue)
+    else
+      FSecretStore.Delete(TargetName);
+  end;
 end;
 
 procedure TPaymentConfig.LoadKeysFromCredentialManager;
@@ -552,13 +515,19 @@ var
   Response: IHTTPResponse;
   Content: TStringStream;
   StatusCode: Integer;
+  Headers: TNetHeaders;
 begin
+  // Create stream outside monitor so exception won't leave lock held (P1 fix)
   Content := TStringStream.Create(AData, TEncoding.UTF8);
   try
+    // Build per-request headers instead of mutating shared CustomHeaders (P2 fix)
+    SetLength(Headers, 1);
+    Headers[0].Name := 'Content-Type';
+    Headers[0].Value := AContentType;
+
     TMonitor.Enter(FHttpClient);
     try
-      FHttpClient.CustomHeaders['Content-Type'] := AContentType;
-      Response := FHttpClient.Post(AUrl, Content);
+      Response := FHttpClient.Post(AUrl, Content, nil, Headers);
       Result := Response.ContentAsString(TEncoding.UTF8);
       StatusCode := Response.StatusCode;
     finally
@@ -658,9 +627,9 @@ end;
 
 class function TPaymentHelper.GenerateOrderNo(const APrefix: string): string;
 begin
-  // Format: PREFIX + YYYYMMDDHHNNSS + 6 secure random digits
+  // Format: PREFIX + YYYYMMDDHHNNSS + 12-char alphanumeric (72-bit entropy, avoids collision)
   Result := APrefix + FormatDateTime('yyyymmddhhnnss', Now) +
-    Format('%.6d', [SecureRandom.NextInt(1000000)]);
+    SecureRandom.NextString(12, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
 end;
 
 class function TPaymentHelper.GenerateNonceStr(ALength: Integer): string;

@@ -25,13 +25,6 @@ uses
   DeepBase.Social;
 
 type
-  /// <summary>Key storage mode for sensitive data</summary>
-  TKeyStorageMode = (
-    ksmPlainText,      // Not recommended: store as plain text (legacy)
-    ksmDPAPI,          // Windows DPAPI encryption (recommended)
-    ksmCredential      // Windows Credential Manager
-  );
-
   /// <summary>QQ configuration</summary>
   TQQConfig = class(TSocialConfig)
   private
@@ -51,7 +44,7 @@ type
     /// <summary>Save keys to secure storage (Credential Manager)</summary>
     procedure SaveKeysToCredentialManager; virtual;
 
-    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
 
     /// <summary>QQ AppId (oauth_consumer_key in API calls)</summary>
@@ -104,7 +97,7 @@ constructor TQQConfig.Create;
 begin
   inherited Create(spQQ);
   FScope := 'get_user_info';
-  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.QQ';
 end;
 
@@ -203,7 +196,7 @@ end;
 function TQQClient.ParseCallbackJson(const ARawResponse: string): TJSONObject;
 var
   JsonStr: string;
-  StartPos, EndPos: Integer;
+  StartPos, EndPos, Depth, I: Integer;
 begin
   Result := nil;
 
@@ -224,8 +217,24 @@ begin
   if StartPos = 0 then
     Exit;
 
-  // Find the matching closing brace before "});"
-  EndPos := LastDelimiter('}', ARawResponse);
+  // Find the matching closing brace by bracket counting (handles nested JSON)
+  Depth := 0;
+  EndPos := 0;
+  for I := StartPos to Length(ARawResponse) do
+  begin
+    if ARawResponse[I] = '{' then
+      Inc(Depth)
+    else if ARawResponse[I] = '}' then
+    begin
+      Dec(Depth);
+      if Depth = 0 then
+      begin
+        EndPos := I;
+        Break;
+      end;
+    end;
+  end;
+
   if EndPos <= StartPos then
     Exit;
 
@@ -332,6 +341,9 @@ var
 begin
   Result := '';
 
+  // QQ OpenID API requires access_token as a query parameter per their spec.
+  // This exposes the token to server-side logs; acceptable because QQ has no
+  // header-based alternative and the token scope is limited to OpenID retrieval.
   Url := Format('%s?access_token=%s', [QQ_OPENID_URL,
     TSocialHelper.UrlEncode(AAccessToken)]);
 

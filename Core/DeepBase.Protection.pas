@@ -465,7 +465,10 @@ begin
   if Length(AEncryptedData) >= Length(BASIC_PROTECTION_GCM_MAGIC) * 2 then
   begin
     var HexPrefix := LowerCase(Copy(AEncryptedData, 1, Length(BASIC_PROTECTION_GCM_MAGIC) * 2));
-    var MagicHex := LowerCase(BytesToHex(BASIC_PROTECTION_GCM_MAGIC));
+    var MagicHex: string;
+    for var I := 0 to High(BASIC_PROTECTION_GCM_MAGIC) do
+      MagicHex := MagicHex + IntToHex(BASIC_PROTECTION_GCM_MAGIC[I], 2);
+    MagicHex := LowerCase(MagicHex);
     if HexPrefix = MagicHex then
       raise EDecryptionException.Create('Refusing legacy CBC decrypt of GCM-formatted data (possible downgrade)');
   end;
@@ -675,8 +678,12 @@ begin
 end;
 
 class function TBasicProtection.CalculateDataHash(const AData: TBytes): string;
+var
+  LHash: THashSHA2;
 begin
-  Result := THashSHA2.Create.Update(AData).HashAsString;
+  LHash := THashSHA2.Create;
+  LHash.Update(AData, Length(AData));
+  Result := LHash.HashAsString;
 end;
 
 class function TBasicProtection.BytesToHex(const ABytes: TBytes): string;

@@ -435,32 +435,60 @@ end;
 
 function TPostgreSQLDriver.JsonbSet(const ATable, AColumn, APath, AValue: string; AId: Integer): Boolean;
 var
-  SQL: string;
+  Qry: TFDQuery;
 begin
-  SQL := Format('UPDATE %s SET %s = jsonb_set(%s, %s, %s) WHERE id = %d',
-    [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn),
-     PgQuoteLiteral(APath), PgQuoteLiteral(AValue), AId]);
-  Result := Execute(SQL) > 0;
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text := Format(
+      'UPDATE %s SET %s = jsonb_set(%s, :path, :value::jsonb) WHERE id = :id',
+      [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn)]);
+    Qry.ParamByName('path').AsString := APath;
+    Qry.ParamByName('value').AsString := AValue;
+    Qry.ParamByName('id').AsInteger := AId;
+    Qry.ExecSQL;
+    Result := Qry.RowsAffected > 0;
+  finally
+    Qry.Free;
+  end;
 end;
 
 function TPostgreSQLDriver.JsonbRemove(const ATable, AColumn, APath: string; AId: Integer): Boolean;
 var
-  SQL: string;
+  Qry: TFDQuery;
 begin
-  SQL := Format('UPDATE %s SET %s = %s #- %s WHERE id = %d',
-    [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn),
-     PgQuoteLiteral(APath), AId]);
-  Result := Execute(SQL) > 0;
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text := Format(
+      'UPDATE %s SET %s = %s #- :path WHERE id = :id',
+      [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn)]);
+    Qry.ParamByName('path').AsString := APath;
+    Qry.ParamByName('id').AsInteger := AId;
+    Qry.ExecSQL;
+    Result := Qry.RowsAffected > 0;
+  finally
+    Qry.Free;
+  end;
 end;
 
 function TPostgreSQLDriver.JsonbConcat(const ATable, AColumn, AJson: string; AId: Integer): Boolean;
 var
-  SQL: string;
+  Qry: TFDQuery;
 begin
-  SQL := Format('UPDATE %s SET %s = %s || %s::jsonb WHERE id = %d',
-    [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn),
-     PgQuoteLiteral(AJson), AId]);
-  Result := Execute(SQL) > 0;
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text := Format(
+      'UPDATE %s SET %s = %s || :json::jsonb WHERE id = :id',
+      [PgQuoteIdent(ATable), PgQuoteIdent(AColumn), PgQuoteIdent(AColumn)]);
+    Qry.ParamByName('json').AsString := AJson;
+    Qry.ParamByName('id').AsInteger := AId;
+    Qry.ExecSQL;
+    Result := Qry.RowsAffected > 0;
+  finally
+    Qry.Free;
+  end;
 end;
 
 function TPostgreSQLDriver.ArrayAppend<T>(const ATable, AColumn: string; AValue: T; AId: Integer): Boolean;
@@ -480,27 +508,35 @@ end;
 
 function TPostgreSQLDriver.FullTextSearch(const ATable, AColumn, AQuery: string;
   const AConfig: string): TFDQuery;
-var
-  SQL: string;
 begin
-  SQL := Format(
-    'SELECT * FROM %s WHERE to_tsvector(''%s'', %s) @@ plainto_tsquery(''%s'', %s)',
-    [PgQuoteIdent(ATable), AConfig, PgQuoteIdent(AColumn), AConfig, PgQuoteLiteral(AQuery)]);
-  Result := Query(SQL);
+  Result := TFDQuery.Create(nil);
+  Result.Connection := FConnection;
+  Result.SQL.Text := Format(
+    'SELECT * FROM %s WHERE to_tsvector(:cfg, %s) @@ plainto_tsquery(:cfg2, :q)',
+    [PgQuoteIdent(ATable), PgQuoteIdent(AColumn)]);
+  Result.ParamByName('cfg').AsString := AConfig;
+  Result.ParamByName('cfg2').AsString := AConfig;
+  Result.ParamByName('q').AsString := AQuery;
+  Result.Open;
 end;
 
 function TPostgreSQLDriver.FullTextRank(const ATable, AColumn, AQuery: string;
   const AConfig: string): TFDQuery;
-var
-  SQL: string;
 begin
-  SQL := Format(
-    'SELECT *, ts_rank(to_tsvector(''%s'', %s), plainto_tsquery(''%s'', %s)) AS rank ' +
-    'FROM %s WHERE to_tsvector(''%s'', %s) @@ plainto_tsquery(''%s'', %s) ' +
+  Result := TFDQuery.Create(nil);
+  Result.Connection := FConnection;
+  Result.SQL.Text := Format(
+    'SELECT *, ts_rank(to_tsvector(:cfg1, %s), plainto_tsquery(:cfg2, :q1)) AS rank ' +
+    'FROM %s WHERE to_tsvector(:cfg3, %s) @@ plainto_tsquery(:cfg4, :q2) ' +
     'ORDER BY rank DESC',
-    [AConfig, PgQuoteIdent(AColumn), AConfig, PgQuoteLiteral(AQuery),
-     PgQuoteIdent(ATable), AConfig, PgQuoteIdent(AColumn), AConfig, PgQuoteLiteral(AQuery)]);
-  Result := Query(SQL);
+    [PgQuoteIdent(AColumn), PgQuoteIdent(ATable), PgQuoteIdent(AColumn)]);
+  Result.ParamByName('cfg1').AsString := AConfig;
+  Result.ParamByName('cfg2').AsString := AConfig;
+  Result.ParamByName('cfg3').AsString := AConfig;
+  Result.ParamByName('cfg4').AsString := AConfig;
+  Result.ParamByName('q1').AsString := AQuery;
+  Result.ParamByName('q2').AsString := AQuery;
+  Result.Open;
 end;
 
 procedure TPostgreSQLDriver.Listen(const AChannel: string);
@@ -549,15 +585,41 @@ begin
 end;
 
 function TPostgreSQLDriver.GetDatabaseSize: Int64;
+var
+  Qry: TFDQuery;
 begin
-  Result := ExecuteScalar<Int64>(
-    Format('SELECT pg_database_size(%s)', [PgQuoteLiteral(FParams.Database)]));
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text := 'SELECT pg_database_size(:name)';
+    Qry.ParamByName('name').AsString := FParams.Database;
+    Qry.Open;
+    if not Qry.IsEmpty and not Qry.Fields[0].IsNull then
+      Result := Qry.Fields[0].AsLargeInt
+    else
+      Result := 0;
+  finally
+    Qry.Free;
+  end;
 end;
 
 function TPostgreSQLDriver.GetTableSize(const ATable: string): Int64;
+var
+  Qry: TFDQuery;
 begin
-  Result := ExecuteScalar<Int64>(
-    Format('SELECT pg_total_relation_size(%s)', [PgQuoteLiteral(ATable)]));
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text := 'SELECT pg_total_relation_size(:name)';
+    Qry.ParamByName('name').AsString := ATable;
+    Qry.Open;
+    if not Qry.IsEmpty and not Qry.Fields[0].IsNull then
+      Result := Qry.Fields[0].AsLargeInt
+    else
+      Result := 0;
+  finally
+    Qry.Free;
+  end;
 end;
 
 function TPostgreSQLDriver.VacuumAnalyze(const ATable: string): Boolean;
@@ -615,8 +677,27 @@ begin
 end;
 
 function PgQuoteLiteral(const AValue: string): string;
+var
+  I: Integer;
 begin
-  Result := '''' + StringReplace(AValue, '''', '''''', [rfReplaceAll]) + '''';
+  // PostgreSQL E'...' escape string handles backslashes and special chars
+  if (Pos('\', AValue) > 0) or (Pos(#0, AValue) > 0) then
+  begin
+    Result := 'E' + '''';
+    for I := 1 to Length(AValue) do
+    begin
+      case AValue[I] of
+        #0: Result := Result + '\0';
+        '''': Result := Result + '''''';
+        '\': Result := Result + '\\';
+      else
+        Result := Result + AValue[I];
+      end;
+    end;
+    Result := Result + '''';
+  end
+  else
+    Result := '''' + StringReplace(AValue, '''', '''''', [rfReplaceAll]) + '''';
 end;
 
 function PgQuoteIdent(const AIdent: string): string;

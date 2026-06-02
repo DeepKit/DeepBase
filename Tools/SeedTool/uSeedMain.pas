@@ -522,7 +522,7 @@ begin
     // 使用界面输入的参数初始化防篡改包
     Config := TAntiTamperPackage.GetDefaultConfig;
     Config.EncryptionKey := edtEncKey.Text;
-    Config.DownloadURL := 'https://www.goodmem.cn';
+    Config.DownloadURL := 'https://www.heyue.fyi';
     Config.EnableLogging := True;
     Config.EncryptionType := etAES256;
     Config.Salt := Trim(edtSalt.Text);

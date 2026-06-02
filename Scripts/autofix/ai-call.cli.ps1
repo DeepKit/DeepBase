@@ -117,19 +117,39 @@ function Invoke-AutoFixAiBackend {
         if (Test-Path -LiteralPath $ContextDir) {
             Set-Location -LiteralPath $ContextDir
         }
-        $stdout = & $tool @resolvedArgs 2>&1
-        $rc = $LASTEXITCODE
-        $text = ($stdout | Out-String)
+        $tmpStdout = [System.IO.Path]::GetTempFileName()
+        $tmpStderr = [System.IO.Path]::GetTempFileName()
+        try {
+            $aiTimeoutMs = 300000  # 5 minutes — prevents a hanging AI CLI from stalling the loop
+            $proc = Start-Process -FilePath $tool -ArgumentList @($resolvedArgs.ToArray()) `
+                -NoNewWindow -PassThru -RedirectStandardOutput $tmpStdout -RedirectStandardError $tmpStderr
+            $exited = $proc.WaitForExit($aiTimeoutMs)
+            if (-not $exited) {
+                try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+                try { $null = $proc.WaitForExit(5000) } catch {}
+                throw "AI CLI '$tool' timed out after $($aiTimeoutMs / 1000)s"
+            }
+            $rc = $proc.ExitCode
+            $text = [System.IO.File]::ReadAllText($tmpStdout, [System.Text.Encoding]::UTF8)
+            $stderr = [System.IO.File]::ReadAllText($tmpStderr, [System.Text.Encoding]::UTF8)
+        } finally {
+            Remove-Item $tmpStdout -Force -ErrorAction SilentlyContinue
+            Remove-Item $tmpStderr -Force -ErrorAction SilentlyContinue
+        }
+        if ($stderr.Trim() -ne '') {
+            Write-AutoFixLog -Level warn -Msg 'AI CLI stderr' -Ctx @{ tool = $tool; stderr_head = $stderr.Substring(0, [Math]::Min(500, $stderr.Length)) }
+        }
         if ($rc -ne 0) {
-            throw "AI CLI '$tool' exited $rc; output head: $($text.Substring(0, [Math]::Min(200, $text.Length)))"
+            $head = ($text + "`n" + $stderr).Trim()
+            throw "AI CLI '$tool' exited $rc; output head: $($head.Substring(0, [Math]::Min(200, $head.Length)))"
         }
         if ([string]::IsNullOrWhiteSpace($text)) {
-            throw "AI CLI '$tool' produced empty output"
+            throw "AI CLI '$tool' produced empty stdout"
         }
 
-        # Many CLIs wrap diffs in markdown fences. Strip them.
+        # Many CLIs wrap diffs in markdown fences, sometimes with prose around them.
         $cleaned = $text
-        $fenceRe = [regex]'(?ms)^```(?:diff|patch)?\s*\r?\n(.+?)\r?\n```\s*$'
+        $fenceRe = [regex]'(?ms)```(?:diff|patch)?\s*\r?\n(.+?)\r?\n```'
         $m = $fenceRe.Match($cleaned)
         if ($m.Success) {
             $cleaned = $m.Groups[1].Value

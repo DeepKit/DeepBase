@@ -1,7 +1,8 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E0524A2D-BB72-4A5B-96F5-FEEB717506D3}</ProjectGuid>
         <MainSource>Studio.dpr</MainSource>
+        <Icon_MainIcon>DeepStudio.ico</Icon_MainIcon>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Studio</ProjectName>

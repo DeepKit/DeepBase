@@ -40,6 +40,8 @@ type
     FOutputDir: string;
     FCurrentScenario: string;
     FTotalErrors: Integer;
+    FActiveWriters: Integer;
+    FShuttingDown: Boolean;
     FLock: TCriticalSection;
     FFileStream: TStreamWriter;
     FOldExceptProc: TExceptProcType;
@@ -51,6 +53,7 @@ type
       ARva: NativeUInt; const AScenario: string): string;
     class function EscapeJson(const S: string): string;
     class function FormatHex(AValue: NativeUInt): string;
+    class function GetCurrentScenarioSafe: string; static;
     class function NewRunId: string;
     class function StackToJson(const AStack: TArray<TStackFrame>): string;
   public
@@ -80,9 +83,10 @@ type
     class property OutputDir: string read FOutputDir;
     /// <summary>Total number of errors recorded since Install (thread-safe).</summary>
     class property TotalErrors: Integer read FTotalErrors;
-    /// <summary>Name of the currently executing scenario. Written by
-    /// ScenarioRunner; read into every error record.</summary>
-    class property CurrentScenario: string read FCurrentScenario write FCurrentScenario;
+    /// <summary>Set the currently executing scenario under the recorder lock.</summary>
+    class procedure SetCurrentScenario(const AName: string);
+    /// <summary>Name of the currently executing scenario. Thread-safe snapshot.</summary>
+    class property CurrentScenario: string read GetCurrentScenarioSafe;
     /// <summary>Test scaffold: forces autofix mode active with the supplied
     /// run_id / output dir / iteration, opens runtime-errors.jsonl, but does
     /// NOT replace System.ExceptProc. Pair with ResetForTest in TearDown.
@@ -98,20 +102,33 @@ type
 implementation
 
 uses
-  System.IOUtils, System.StrUtils;
+  System.IOUtils, System.StrUtils,
+  DeepBase.AutoFix.SelfTerminator;
 
 threadvar
   GInHandler: Boolean;
 
 { Global ExceptProc handler -- must be a standalone procedure }
 procedure AutoFixGlobalExceptHandler(ExceptObject: TObject; ExceptAddr: Pointer);
+var
+  LThread: string;
 begin
   if TAutoFixErrorRecorder.Active and (ExceptObject is Exception) then
-    TAutoFixErrorRecorder.WriteRecord(
-      Exception(ExceptObject), ExceptAddr, '',
-      'thread-' + TThread.Current.ThreadID.ToString);
+  begin
+    if (TThread.CurrentThread = nil) or
+       (TThread.CurrentThread.ThreadID = MainThreadID) then
+      LThread := 'main'
+    else
+      LThread := 'thread-' + TThread.CurrentThread.ThreadID.ToString;
 
-  // Chain old handler
+    TAutoFixErrorRecorder.WriteRecord(
+      Exception(ExceptObject), ExceptAddr, '', LThread);
+
+    if TAutoFixSelfTerminator.IsFatal(Exception(ExceptObject)) then
+      TAutoFixSelfTerminator.HandleFatal(Exception(ExceptObject), ExceptAddr);
+  end;
+
+  // Chain old handler (only reached for non-fatal; HandleFatal calls Halt(2))
   if Assigned(TAutoFixErrorRecorder.OldExceptProc) then
     TAutoFixErrorRecorder.OldExceptProc(ExceptObject, ExceptAddr);
 end;
@@ -129,6 +146,8 @@ begin
   if FRunId = '' then
     FRunId := NewRunId;
 
+  FShuttingDown := False;
+  FActiveWriters := 0;
   FLock := TCriticalSection.Create;
   OpenLogFile;
 
@@ -173,7 +192,18 @@ end;
 
 class procedure TAutoFixErrorRecorder.CloseLogFile;
 begin
-  FreeAndNil(FFileStream);
+  FShuttingDown := True;
+  for var I := 1 to 50 do
+  begin
+    if FActiveWriters <= 0 then Break;
+    Sleep(10);
+  end;
+  if FLock <> nil then FLock.Enter;
+  try
+    FreeAndNil(FFileStream);
+  finally
+    if FLock <> nil then FLock.Leave;
+  end;
 end;
 
 class function TAutoFixErrorRecorder.NewRunId: string;
@@ -188,6 +218,26 @@ end;
 class function TAutoFixErrorRecorder.FormatHex(AValue: NativeUInt): string;
 begin
   Result := '$' + IntToHex(AValue, SizeOf(NativeUInt) * 2);
+end;
+
+class function TAutoFixErrorRecorder.GetCurrentScenarioSafe: string;
+begin
+  if FLock <> nil then FLock.Enter;
+  try
+    Result := FCurrentScenario;
+  finally
+    if FLock <> nil then FLock.Leave;
+  end;
+end;
+
+class procedure TAutoFixErrorRecorder.SetCurrentScenario(const AName: string);
+begin
+  if FLock <> nil then FLock.Enter;
+  try
+    FCurrentScenario := AName;
+  finally
+    if FLock <> nil then FLock.Leave;
+  end;
 end;
 
 class function TAutoFixErrorRecorder.ResolveModule(AAddr: Pointer;
@@ -247,7 +297,8 @@ var
   LStack: TArray<TStackFrame>;
   LStackTruncated: Boolean;
 begin
-  if GInHandler then Exit;
+  if GInHandler or FShuttingDown then Exit;
+  TInterlocked.Increment(FActiveWriters);
   GInHandler := True;
   try
     try
@@ -264,11 +315,14 @@ begin
       end;
 
       var LLevel: string :=
+        {$WARN SYMBOL_DEPRECATED OFF}
         if (E is EAccessViolation) or (E is EOutOfMemory) or
            (E is EStackOverflow) or (E is EExternalException)
         then 'fatal' else 'error';
+        {$WARN SYMBOL_DEPRECATED DEFAULT}
 
-      var LScenario := FCurrentScenario;
+      var LScenario: string;
+      LScenario := GetCurrentScenarioSafe;
       var LDedupKey := BuildDedupKey(E.ClassName, LModuleName, LRva, LScenario);
       var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
 
@@ -314,14 +368,22 @@ begin
     end;
   finally
     GInHandler := False;
+    TInterlocked.Decrement(FActiveWriters);
   end;
 end;
 
 class procedure TAutoFixErrorRecorder.RecordFromSafeRun(E: Exception;
   const AContext: string);
+var
+  LThread: string;
 begin
-  if FActive then
-    WriteRecord(E, ExceptAddr, AContext, 'main');
+  if not FActive then Exit;
+  if (TThread.CurrentThread = nil) or
+     (TThread.CurrentThread.ThreadID = MainThreadID) then
+    LThread := 'main'
+  else
+    LThread := 'thread-' + TThread.CurrentThread.ThreadID.ToString;
+  WriteRecord(E, ExceptAddr, AContext, LThread);
 end;
 
 class procedure TAutoFixErrorRecorder.ActivateForTest(const ARunId,
@@ -338,6 +400,8 @@ begin
   FIteration := AIteration;
   FCurrentScenario := '';
   FTotalErrors := 0;
+  FActiveWriters := 0;
+  FShuttingDown := False;
 
   if FLock = nil then
     FLock := TCriticalSection.Create;
@@ -359,6 +423,8 @@ begin
   FIteration := 1;
   FCurrentScenario := '';
   FTotalErrors := 0;
+  FActiveWriters := 0;
+  FShuttingDown := False;
   // Note: System.ExceptProc is intentionally not restored here. Tests that
   // exercise Install do so against a fresh class state and the global hook
   // is re-chained idempotently via FInstalled.

@@ -16,16 +16,9 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.JSON, System.DateUtils, System.NetEncoding,
-  DeepBase.Social;
+  DeepBase.Social, DeepBase.Security;
 
 type
-  /// <summary>Key storage mode for sensitive data</summary>
-  TKeyStorageMode = (
-    ksmPlainText,      // Not recommended: store as plain text (legacy)
-    ksmDPAPI,          // Windows DPAPI encryption (recommended)
-    ksmCredential      // Windows Credential Manager
-  );
-
   /// <summary>Weibo configuration</summary>
   TWeiboConfig = class(TSocialConfig)
   private
@@ -45,7 +38,7 @@ type
     /// <summary>Save keys to secure storage (Credential Manager)</summary>
     procedure SaveKeysToCredentialManager; virtual;
 
-    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
 
     /// <summary>Weibo AppKey (same as AppId for OAuth)</summary>
@@ -90,7 +83,7 @@ constructor TWeiboConfig.Create;
 begin
   inherited Create(spWeibo);
   FScope := 'all';
-  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.Weibo';
 end;
 
@@ -105,9 +98,9 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.ProtectString(APlainKey);
     ksmCredential:
-      // Credential Manager 模式下不需要额外加�?      Result := APlainKey;
+      // Credential Manager 模式下不需要额外加�?      Result := APlainKey;
   else
-    // ksmPlainText - 不推荐，但保持兼容�?    Result := APlainKey;
+    // ksmPlainText - 不推荐，但保持兼容�?    Result := APlainKey;
   end;
 end;
 
@@ -120,7 +113,7 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
     ksmCredential:
-      // Credential Manager 模式下数据已经安全存�?      Result := AEncryptedKey;
+      // Credential Manager 模式下数据已经安全存�?      Result := AEncryptedKey;
   else
     // ksmPlainText
     Result := AEncryptedKey;
@@ -262,6 +255,10 @@ begin
       JsonObj.Free;
     end;
   finally
+    if PostData <> '' then
+      DeepBase.Security.SecureZeroMemory(PostData);
+    if Response <> '' then
+      DeepBase.Security.SecureZeroMemory(Response);
     FreeAndNil(Params);
   end;
 end;
@@ -313,6 +310,10 @@ begin
       JsonObj.Free;
     end;
   finally
+    if PostData <> '' then
+      DeepBase.Security.SecureZeroMemory(PostData);
+    if Response <> '' then
+      DeepBase.Security.SecureZeroMemory(Response);
     FreeAndNil(Params);
   end;
 end;

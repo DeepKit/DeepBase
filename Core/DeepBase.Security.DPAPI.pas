@@ -41,16 +41,32 @@ uses
 
 {$IFDEF MSWINDOWS}
 
+// Forward-declare constants needed by class declarations
+const
+  CRYPTPROTECT_UI_FORBIDDEN = $1;
+  CRYPTPROTECT_LOCAL_MACHINE = $4;
+  CRED_TYPE_GENERIC = 1;
+  CRED_PERSIST_LOCAL_MACHINE = 2;
+  CRED_PERSIST_ENTERPRISE = 3;
+  ERROR_NOT_FOUND = DWORD($00000490);
+
 type
   EDPAPIError = class(Exception);
   ECredentialError = class(Exception);
-  
+
   /// <summary>Protection scope</summary>
   TProtectionScope = (
     psCurrentUser,    // Encrypt for current user only (default)
     psLocalMachine    // Encrypt for any user on this machine
   );
-  
+
+  /// <summary>Key storage mode for sensitive data</summary>
+  TKeyStorageMode = (
+    ksmPlainText,      // Not recommended: store as plain text (legacy)
+    ksmDPAPI,          // Windows DPAPI encryption (recommended)
+    ksmCredential      // Windows Credential Manager
+  );
+
   /// <summary>
   /// Windows DPAPI Helper Class
   /// </summary>
@@ -93,7 +109,10 @@ type
   TCredentialManager = class
   public
     /// <summary>Save credential to Windows Credential Manager</summary>
-    class procedure SaveCredential(const ATargetName, AUserName, APassword: string); static;
+    /// <param name="APersist">Persistence level: CRED_PERSIST_ENTERPRISE (default, domain-managed)
+    /// or CRED_PERSIST_LOCAL_MACHINE (any local user can read)</param>
+    class procedure SaveCredential(const ATargetName, AUserName, APassword: string;
+      APersist: DWORD = CRED_PERSIST_ENTERPRISE); static;
     
     /// <summary>Get password from Windows Credential Manager</summary>
     class function GetCredential(const ATargetName: string; out AUserName, APassword: string): Boolean; overload; static;
@@ -143,15 +162,6 @@ type
     szPrompt: PWideChar;
   end;
   PCRYPTPROTECT_PROMPTSTRUCT = ^CRYPTPROTECT_PROMPTSTRUCT;
-
-const
-  CRYPTPROTECT_UI_FORBIDDEN = $1;
-  CRYPTPROTECT_LOCAL_MACHINE = $4;
-  
-  // Credential Manager constants
-  CRED_TYPE_GENERIC = 1;
-  CRED_PERSIST_LOCAL_MACHINE = 2;
-  CRED_PERSIST_ENTERPRISE = 3;
 
 type
   PCREDENTIALW = ^CREDENTIALW;
@@ -393,7 +403,8 @@ end;
 
 { TCredentialManager }
 
-class procedure TCredentialManager.SaveCredential(const ATargetName, AUserName, APassword: string);
+class procedure TCredentialManager.SaveCredential(const ATargetName, AUserName, APassword: string;
+  APersist: DWORD);
 var
   Cred: CREDENTIALW;
   PasswordBytes: TBytes;
@@ -406,7 +417,7 @@ begin
   Cred.UserName := PWideChar(AUserName);
   Cred.CredentialBlobSize := Length(PasswordBytes);
   Cred.CredentialBlob := @PasswordBytes[0];
-  Cred.Persist := CRED_PERSIST_LOCAL_MACHINE;
+  Cred.Persist := APersist;
   
   if not CredWriteW(@Cred, 0) then
     raise ECredentialError.Create('保存凭据失败: ' + SysErrorMessage(GetLastError));
@@ -489,13 +500,14 @@ begin
       SetLength(Result, Count);
       for I := 0 to Count - 1 do
       begin
-        // Access via pointer arithmetic
         Result[I] := PPCREDENTIALW(PByte(Credentials) + I * SizeOf(PCREDENTIALW))^.TargetName;
       end;
     finally
       CredFree(Credentials);
     end;
-  end;
+  end
+  else if GetLastError <> ERROR_NOT_FOUND then
+    raise ECredentialError.Create('Failed to enumerate credentials: ' + SysErrorMessage(GetLastError));
 end;
 
 { TSecureString }

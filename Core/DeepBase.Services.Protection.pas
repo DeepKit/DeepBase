@@ -604,7 +604,7 @@ end;
 
 function TAntiTamperServiceImpl.CalculateSHA256(const Data: TBytes): string;
 begin
-  Result := THashSHA2.Create.Update(Data).HashAsString;
+  Result := THashSHA2.GetHashString(TEncoding.UTF8.GetString(Data));
 end;
 
 function TAntiTamperServiceImpl.EncryptImageData(const ImageData: TBytes): TBytes;

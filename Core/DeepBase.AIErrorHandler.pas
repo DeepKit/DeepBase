@@ -79,7 +79,6 @@ type
     class function BuildPrompt(E: Exception; const AContext, AStack: string): string;
     class function CallAI(const APrompt: string): string;
     class function GetExceptionLocation(AExceptAddr: Pointer): string;
-    class function GetCacheKey(E: Exception): string;
     class procedure DoApplicationException(Sender: TObject; E: Exception);
   public
     /// <summary>Install as global Application.OnException handler.</summary>
@@ -134,18 +133,14 @@ begin
     Exit(elAutoFix);
 
   // Fatal: unrecoverable system errors
+  {$WARN SYMBOL_DEPRECATED OFF}
   if (E is EStackOverflow) or (E is EOutOfMemory) or
      (E is EAccessViolation) then
     Exit(elFatal);
+  {$WARN SYMBOL_DEPRECATED DEFAULT}
 
   // Everything else: AI analyzes and explains to user
   Result := elAIAnalyze;
-end;
-
-class function TAIErrorHandler.GetCacheKey(E: Exception): string;
-begin
-  // Use class name + first 80 chars of message as cache key
-  Result := E.ClassName + '|' + Copy(E.Message, 1, 80);
 end;
 
 class function TAIErrorHandler.GetExceptionLocation(AExceptAddr: Pointer): string;

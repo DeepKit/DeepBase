@@ -34,11 +34,8 @@ BeforeAll {
     $script:TmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("autofix-loop-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
     New-Item -ItemType Directory -Path $script:TmpRoot -Force | Out-Null
 
-    # Iteration-summary required fields per design §4.5 / Property 15.
-    $script:RequiredSummaryFields = @(
-        'iteration', 'errors_found', 'errors_fixed', 'compile_success',
-        'duration_sec', 'ai_calls', 'rollback', 'result'
-    )
+    Import-Module (Join-Path $PSScriptRoot 'schemas\SchemaHelper.psm1') -Force
+    $script:RequiredSummaryFields = Get-SchemaFields -Name 'iteration-summary'
 
     function script:New-IterationSummaryRow {
         <#

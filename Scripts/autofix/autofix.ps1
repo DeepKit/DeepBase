@@ -86,6 +86,9 @@ param(
     [string]$BlockedPaths = '',
     [string]$BlockedPathsFile = '',
 
+    [int]$MaxDiffLines = 200,
+    [int]$MaxChangedFiles = 0,
+
     [ValidateSet('claude', 'openai', 'cli')]
     [string]$AiBackend = 'cli',
 
@@ -97,6 +100,8 @@ param(
 
     [int]$OscillationWindow = 5,
     [int]$OscillationThreshold = 3,
+
+    [switch]$AllowExternalAi,
 
     [switch]$SkipLint
 )
@@ -111,13 +116,28 @@ function Invoke-ChildScript {
     .SYNOPSIS
         Run a sibling .ps1 with -ArgumentList semantics. Captures stdout
         and the script's exit code; never throws on non-zero (caller decides).
+
+    .NOTES
+        Stub hook: when $env:AUTOFIX_STUB_DIR is set, a sibling file with
+        the same name is looked up in that directory first.  If found it
+        replaces the real script.  This enables E2E integration tests to
+        inject deterministic stubs without modifying any child script.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Script,
         [Parameter(Mandatory)][string[]]$ChildArgs
     )
-    $path = Join-Path $PSScriptRoot $Script
+    $path = $null
+    if ($env:AUTOFIX_STUB_DIR) {
+        $stubPath = Join-Path $env:AUTOFIX_STUB_DIR $Script
+        if (Test-Path -LiteralPath $stubPath -PathType Leaf) {
+            $path = $stubPath
+        }
+    }
+    if (-not $path) {
+        $path = Join-Path $PSScriptRoot $Script
+    }
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "child script not found: $path"
     }
@@ -236,16 +256,16 @@ function Get-DedupGroups {
     $r = Invoke-ChildScript -Script 'dedup.ps1' -ChildArgs @(
         '-ErrorsFile', $ErrorsFile, '-RunIdFilter', $RunIdValue)
     if ($r.ExitCode -ne 0) {
-        Write-AutoFixLog -Level warn -Msg 'dedup.ps1 failed' -Ctx @{ exit = $r.ExitCode }
-        return @()
+        Write-AutoFixLog -Level error -Msg 'dedup.ps1 failed' -Ctx @{ exit = $r.ExitCode }
+        throw "dedup.ps1 failed with exit $($r.ExitCode)"
     }
     if ([string]::IsNullOrWhiteSpace($r.Stdout)) { return @() }
     try {
         $arr = $r.Stdout | ConvertFrom-Json -Depth 32 -DateKind String
         return @($arr)
     } catch {
-        Write-AutoFixLog -Level warn -Msg 'dedup output not JSON' -Ctx @{ stdout_head = $r.Stdout.Substring(0, [Math]::Min(200, $r.Stdout.Length)) }
-        return @()
+        Write-AutoFixLog -Level error -Msg 'dedup output not JSON' -Ctx @{ stdout_head = $r.Stdout.Substring(0, [Math]::Min(200, $r.Stdout.Length)) }
+        throw 'dedup output not JSON'
     }
 }
 
@@ -299,6 +319,28 @@ function Save-ErrorJsonForAi {
     return $path
 }
 
+function New-DiffGuardArgs {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$DiffFile)
+
+    $guardArgs = New-Object System.Collections.Generic.List[string]
+    $guardArgs.AddRange(@('-DiffFile', $DiffFile, '-OutputDir', $outDir, '-MaxDiffLines', [string]$MaxDiffLines))
+    if ($MaxChangedFiles -gt 0) { $guardArgs.AddRange(@('-MaxChangedFiles', [string]$MaxChangedFiles)) }
+    if ($AllowedPathsFile) { $guardArgs.AddRange(@('-AllowedPathsFile', $AllowedPathsFile)) }
+    if ($AllowedPaths)     { $guardArgs.AddRange(@('-AllowedPaths', $AllowedPaths)) }
+    if ($BlockedPathsFile) { $guardArgs.AddRange(@('-BlockedPathsFile', $BlockedPathsFile)) }
+    if ($BlockedPaths)     { $guardArgs.AddRange(@('-BlockedPaths', $BlockedPaths)) }
+    return ,@($guardArgs.ToArray())
+}
+
+function Test-DiffGuard {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$DiffFile)
+
+    $guard = Invoke-ChildScript -Script 'diff-guard.ps1' -ChildArgs (New-DiffGuardArgs -DiffFile $DiffFile)
+    return $guard.ExitCode -eq 0
+}
+
 function Apply-DiffInWorktree {
     [CmdletBinding()]
     param(
@@ -326,14 +368,143 @@ function Apply-DiffInWorktree {
     }
 }
 
+function Test-StaleAutoFixLock {
+    <#
+    .SYNOPSIS
+        Detect whether a lock file is stale (owning process is dead).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$LockPath)
+
+    $existing = $null
+    try { $existing = Read-JsonFile -Path $LockPath } catch { return $true }
+
+    # If lock has no pid field, treat as stale
+    if (-not $existing -or -not $existing.PSObject.Properties['pid']) { return $true }
+
+    $ownerPid = [int]$existing.pid
+    $ownerHost = if ($existing.PSObject.Properties['host']) { [string]$existing.host } else { '' }
+
+    # Cross-machine lock (different hostname) — never steal it
+    if ($ownerHost -and $ownerHost -ne [System.Net.Dns]::GetHostName()) { return $false }
+
+    # Same machine — check if the process is still alive
+    try {
+        $proc = Get-Process -Id $ownerPid -ErrorAction SilentlyContinue
+        if ($null -eq $proc) { return $true }  # Process gone => stale
+        # Optional: check that it is actually pwsh (not a reused PID)
+        # This is best-effort; PID reuse is rare on Windows for short-lived processes.
+        return $false
+    } catch {
+        # Get-Process threw (access denied, etc.) — assume still alive
+        return $false
+    }
+}
+
+function Acquire-AutoFixRunLock {
+    <#
+    .SYNOPSIS
+        Acquire an exclusive lock for the autofix output directory.
+        Handles stale locks (dead owner) and supports a wait timeout.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$OutDir,
+        [int]$WaitTimeoutSec = 0
+    )
+
+    $lockPath = Join-Path $OutDir '.repo-lock'
+    $payload = [pscustomobject]@{
+        pid     = $PID
+        host    = [System.Net.Dns]::GetHostName()
+        started = Get-AutoFixTimestamp
+        nonce   = [guid]::NewGuid().ToString('N')
+    }
+
+    $deadline = if ($WaitTimeoutSec -gt 0) { (Get-Date).AddSeconds($WaitTimeoutSec) } else { [datetime]::MaxValue }
+
+    while ($true) {
+        # Attempt 1: CreateNew (atomic on all platforms — fails if file exists)
+        try {
+            $json = $payload | ConvertTo-Json -Depth 4 -Compress
+            $bytes = [System.Text.UTF8Encoding]::new($false).GetBytes($json)
+            $fs = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+            try { $fs.Write($bytes, 0, $bytes.Length) } finally { $fs.Dispose() }
+            return $lockPath
+        } catch [System.IO.IOException] {
+            # File exists — check if stale
+        }
+
+        # Attempt 2: Stale-lock recovery
+        if (Test-StaleAutoFixLock -LockPath $lockPath) {
+            Write-AutoFixLog -Level warn -Msg 'stale autofix lock detected; reclaiming' -Ctx @{ lock = $lockPath }
+            try {
+                Remove-Item -LiteralPath $lockPath -Force -ErrorAction Stop
+                # Loop back to retry CreateNew immediately
+                continue
+            } catch {
+                # Race: another process removed it between our check and our remove — retry
+                continue
+            }
+        }
+
+        # Lock is held by a live process — wait or give up
+        if ((Get-Date) -ge $deadline) {
+            $existing = $null
+            try { $existing = Read-JsonFile -Path $lockPath } catch {}
+            Write-AutoFixLog -Level error -Msg 'autofix lock held by live process; giving up' -Ctx @{ lock = $lockPath; existing = $existing }
+            throw "autofix lock held by live process (pid $($existing.pid)): $lockPath"
+        }
+        Start-Sleep -Milliseconds 500
+    }
+}
+
+function Release-AutoFixRunLock {
+    <#
+    .SYNOPSIS
+        Release the autofix lock. Only removes the file if its nonce matches
+        this process's lock (prevents removing a lock placed by another process
+        after ours exited).
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$LockPath,
+        [string]$Nonce
+    )
+    if (-not $LockPath -or -not (Test-Path -LiteralPath $LockPath -PathType Leaf)) { return }
+
+    # Guard against removing someone else's lock
+    if ($Nonce) {
+        try {
+            $current = Read-JsonFile -Path $LockPath
+            if ($current -and $current.PSObject.Properties['nonce'] -and [string]$current.nonce -ne $Nonce) {
+                Write-AutoFixLog -Level warn -Msg 'lock nonce mismatch; not removing (another process owns it)' -Ctx @{ lock = $LockPath }
+                return
+            }
+        } catch { }
+    }
+
+    Remove-Item -LiteralPath $LockPath -Force -ErrorAction SilentlyContinue
+}
+
 function Get-DiffPreimagePaths {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$DiffFile)
     if (-not (Test-Path -LiteralPath $DiffFile -PathType Leaf)) { return @() }
     $lines = [System.IO.File]::ReadAllLines($DiffFile, [System.Text.UTF8Encoding]::new($false))
     $set = New-Object System.Collections.Generic.HashSet[string]
+    $oldPath = $null
     foreach ($raw in $lines) {
         if ($raw.StartsWith('--- ')) {
+            $oldPath = $raw.Substring(4).Trim()
+            if ($oldPath -ne '/dev/null') {
+                $p = $oldPath
+                if ($p.StartsWith('a/') -or $p.StartsWith('b/')) { $p = $p.Substring(2) }
+                [void]$set.Add($p)
+            }
+            continue
+        }
+        if ($raw.StartsWith('+++ ') -and $oldPath -eq '/dev/null') {
             $p = $raw.Substring(4).Trim()
             if ($p -eq '/dev/null') { continue }
             if ($p.StartsWith('a/') -or $p.StartsWith('b/')) { $p = $p.Substring(2) }
@@ -347,24 +518,35 @@ function Get-DiffPreimagePaths {
 # Main
 # =============================================================================
 $started = Get-Date
-$repoRoot = (Resolve-Path -LiteralPath '.').Path
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $outDir   = Resolve-OutputDir -Path $OutputDir
 $summaryFile = Join-Path $outDir 'iteration-summary.jsonl'
 
 # Worktree branch + path
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$branch = "autofix/$stamp"
+$runSlug = [guid]::NewGuid().ToString('N').Substring(0,8)
+$branch = "autofix/$stamp-$runSlug"
 $wt = if ($WorktreePath) { $WorktreePath } else {
-    Join-Path ([System.IO.Path]::GetTempPath()) ("autofix-wt-$stamp-" + [guid]::NewGuid().ToString('N').Substring(0,8))
+    Join-Path ([System.IO.Path]::GetTempPath()) "autofix-wt-$stamp-$runSlug"
 }
 
 $exitCode = $Script:AutoFixExit_Generic
+$runLockPath = ''
+$runLockNonce = ''
 $worktreeCreated = $false
+$fixBranchHasCommit = $false
 $historyByKey = @{}        # dedup_key -> count of unfixed appearances
 $ranIterations = 0
 $lastResult = 'aborted'
 
 try {
+    $runLockPath = Acquire-AutoFixRunLock -OutDir $outDir
+    # Read back our own nonce so we can verify ownership on release
+    try {
+        $lockContent = Read-JsonFile -Path $runLockPath
+        if ($lockContent -and $lockContent.PSObject.Properties['nonce']) { $runLockNonce = [string]$lockContent.nonce }
+    } catch {}
+
     # ---- Pre-flight: lint gate ----
     if (-not $SkipLint) {
         Write-AutoFixLog -Level info -Msg 'running pre-flight lint gate' -Ctx @{ root = $repoRoot }
@@ -457,7 +639,8 @@ try {
         $runnerStatus = $null
         try { $runnerStatus = $rr.Stdout | ConvertFrom-Json -Depth 8 -DateKind String } catch { $runnerStatus = $null }
         $exeExit = if ($runnerStatus -and $runnerStatus.PSObject.Properties['exit_code']) { [int]$runnerStatus.exit_code } else { -1 }
-        Write-AutoFixLog -Level info -Msg 'runner returned' -Ctx @{ exit = $rr.ExitCode; exe_exit = $exeExit; status = (if ($runnerStatus) { $runnerStatus.status } else { 'unknown' }) }
+        $runnerStatusStr = if ($runnerStatus) { $runnerStatus.status } else { 'unknown' }
+        Write-AutoFixLog -Level info -Msg 'runner returned' -Ctx @{ exit = $rr.ExitCode; exe_exit = $exeExit; status = $runnerStatusStr }
 
         # 2. Read errors filtered by run_id
         $errorsFile = Join-Path $outDir 'runtime-errors.jsonl'
@@ -486,6 +669,21 @@ try {
             $errorRecords = @(Read-Jsonl -Path $errorsFile | Where-Object {
                 $_ -and $_.PSObject.Properties['run_id'] -and ([string]$_.run_id) -eq $runId
             })
+        }
+
+        if ($errorRecords.Count -eq 0 -and $exeExit -ne 0) {
+            Write-AutoFixLog -Level error -Msg 'runner exited non-zero without diagnostics' -Ctx @{ iter = $iter; exit = $exeExit }
+            Write-Jsonl -Path $summaryFile -Object (
+                New-IterationSummary -Iteration $iter -RunIdValue $runId `
+                    -TsStart $iterStartTs -TsEnd (Get-AutoFixTimestamp) `
+                    -ExitCodeValue $exeExit -ErrorsFound 0 -ErrorsUnique 0 `
+                    -ErrorsFixed 0 -ErrorsRemaining 0 -CompileSuccess $false `
+                    -AiCalls 0 -CacheHits 0 -Rollback $false `
+                    -OscillationKeys @() -Result 'no_diagnostics'
+            ) -Append
+            $lastResult = 'no_diagnostics'
+            $exitCode = $Script:AutoFixExit_Generic
+            return
         }
 
         # 4. Success branch
@@ -557,6 +755,10 @@ try {
             $cacheStdout = $cl.Stdout.Trim()
             if ($cl.ExitCode -eq 0 -and $cacheStdout -and $cacheStdout -ne 'miss' -and (Test-Path -LiteralPath $cacheStdout -PathType Leaf)) {
                 Write-AutoFixLog -Level info -Msg 'fix-cache hit' -Ctx @{ key = $key; patch = $cacheStdout }
+                if (-not (Test-DiffGuard -DiffFile $cacheStdout)) {
+                    Write-AutoFixLog -Level warn -Msg 'diff-guard rejected cached diff' -Ctx @{ key = $key; patch = $cacheStdout }
+                    continue
+                }
                 if (Apply-DiffInWorktree -DiffFile $cacheStdout -Worktree $wt) {
                     $cacheHits++
                     $errorsFixed++
@@ -567,12 +769,15 @@ try {
 
             # Cache miss → AI
             $aiCalls++
-            $aiRes = Invoke-ChildScript -Script 'ai-call.ps1' -ChildArgs @(
+            $aiArgs = @(
                 '-Backend', $AiBackend,
                 '-ErrorJson', $errFile,
                 '-ContextDir', $wt,
                 '-AllowedPaths', $AllowedPaths,
+                '-BlockedPaths', $BlockedPaths,
                 '-OutputDir', $outDir)
+            if ($AllowExternalAi) { $aiArgs += '-AllowExternalAi' }
+            $aiRes = Invoke-ChildScript -Script 'ai-call.ps1' -ChildArgs $aiArgs
             if ($aiRes.ExitCode -ne 0) {
                 Write-AutoFixLog -Level warn -Msg 'ai-call failed for group; skipping' -Ctx @{ key = $key; exit = $aiRes.ExitCode }
                 continue
@@ -584,18 +789,8 @@ try {
             }
 
             # Diff guard
-            $guardArgs = New-Object System.Collections.Generic.List[string]
-            $guardArgs.Add('-DiffFile') | Out-Null
-            $guardArgs.Add($diffPath) | Out-Null
-            $guardArgs.Add('-OutputDir') | Out-Null
-            $guardArgs.Add($outDir) | Out-Null
-            if ($AllowedPathsFile) { $guardArgs.Add('-AllowedPathsFile') | Out-Null; $guardArgs.Add($AllowedPathsFile) | Out-Null }
-            if ($AllowedPaths)     { $guardArgs.Add('-AllowedPaths')     | Out-Null; $guardArgs.Add($AllowedPaths)     | Out-Null }
-            if ($BlockedPathsFile) { $guardArgs.Add('-BlockedPathsFile') | Out-Null; $guardArgs.Add($BlockedPathsFile) | Out-Null }
-            if ($BlockedPaths)     { $guardArgs.Add('-BlockedPaths')     | Out-Null; $guardArgs.Add($BlockedPaths)     | Out-Null }
-            $guard = Invoke-ChildScript -Script 'diff-guard.ps1' -ChildArgs @($guardArgs.ToArray())
-            if ($guard.ExitCode -ne 0) {
-                Write-AutoFixLog -Level warn -Msg 'diff-guard rejected diff' -Ctx @{ key = $key; exit = $guard.ExitCode }
+            if (-not (Test-DiffGuard -DiffFile $diffPath)) {
+                Write-AutoFixLog -Level warn -Msg 'diff-guard rejected diff' -Ctx @{ key = $key; diff = $diffPath }
                 continue
             }
 
@@ -623,22 +818,18 @@ try {
         if (-not $compileSuccess -and $appliedDiffs.Count -gt 0) {
             Write-AutoFixLog -Level warn -Msg 'compile failed; asking AI for one repair' -Ctx @{ iter = $iter }
             $aiCalls++
-            $repair = Invoke-ChildScript -Script 'ai-call.ps1' -ChildArgs @(
+            $repairArgs = @(
                 '-Backend', $AiBackend,
                 '-ErrorJson', $compileResultPath,
                 '-ContextDir', $wt,
                 '-AllowedPaths', $AllowedPaths,
+                '-BlockedPaths', $BlockedPaths,
                 '-OutputDir', $outDir)
+            if ($AllowExternalAi) { $repairArgs += '-AllowExternalAi' }
+            $repair = Invoke-ChildScript -Script 'ai-call.ps1' -ChildArgs $repairArgs
             if ($repair.ExitCode -eq 0 -and (Test-Path -LiteralPath ($repair.Stdout.Trim()) -PathType Leaf)) {
                 $repairDiff = $repair.Stdout.Trim()
-                $guardArgs = New-Object System.Collections.Generic.List[string]
-                $guardArgs.AddRange(@('-DiffFile', $repairDiff, '-OutputDir', $outDir))
-                if ($AllowedPathsFile) { $guardArgs.AddRange(@('-AllowedPathsFile', $AllowedPathsFile)) }
-                if ($AllowedPaths)     { $guardArgs.AddRange(@('-AllowedPaths', $AllowedPaths)) }
-                if ($BlockedPathsFile) { $guardArgs.AddRange(@('-BlockedPathsFile', $BlockedPathsFile)) }
-                if ($BlockedPaths)     { $guardArgs.AddRange(@('-BlockedPaths', $BlockedPaths)) }
-                $guard2 = Invoke-ChildScript -Script 'diff-guard.ps1' -ChildArgs @($guardArgs.ToArray())
-                if ($guard2.ExitCode -eq 0 -and (Apply-DiffInWorktree -DiffFile $repairDiff -Worktree $wt)) {
+                if ((Test-DiffGuard -DiffFile $repairDiff) -and (Apply-DiffInWorktree -DiffFile $repairDiff -Worktree $wt)) {
                     $compile2 = Invoke-ChildScript -Script 'compiler.ps1' -ChildArgs @(
                         '-Project', $projectInWt,
                         '-OutputJson', $compileResultPath,
@@ -658,6 +849,8 @@ try {
             if ($cm.ExitCode -ne 0) {
                 Write-AutoFixLog -Level warn -Msg 'commit failed in worktree' -Ctx @{ exit = $cm.ExitCode }
             } else {
+                $fixBranchHasCommit = $true
+                Write-AutoFixLog -Level info -Msg 'fix committed; branch will be preserved for merge/review' -Ctx @{ branch = $branch; worktree = $wt }
                 # Cache successful fixes
                 foreach ($ad in $appliedDiffs) {
                     if ($ad.FromCache) { continue }   # already cached
@@ -706,7 +899,7 @@ try {
     $exitCode = $Script:AutoFixExit_MaxIter
 }
 catch {
-    Write-AutoFixLog -Level error -Msg $_.Exception.Message -Ctx @{ script = 'autofix.ps1' }
+    Write-AutoFixLog -Level error -Msg $_.Exception.Message -Ctx @{ script = 'autofix.ps1'; line = $_.InvocationInfo.ScriptLineNumber; pos = $_.InvocationInfo.OffsetInLine }
     if ($lastResult -eq 'aborted') {
         $now = Get-AutoFixTimestamp
         Write-Jsonl -Path $summaryFile -Object (
@@ -721,17 +914,21 @@ catch {
 }
 finally {
     if ($worktreeCreated) {
-        Write-AutoFixLog -Level info -Msg 'cleaning up worktree' -Ctx @{ path = $wt; branch = $branch }
-        $cl = Invoke-ChildScript -Script 'git-checkpoint.ps1' -ChildArgs @(
-            '-Action', 'cleanup', '-WorktreePath', $wt, '-Branch', $branch)
-        if ($cl.ExitCode -ne 0) {
-            Write-AutoFixLog -Level warn -Msg 'worktree cleanup non-zero' -Ctx @{ exit = $cl.ExitCode }
+        if ($fixBranchHasCommit) {
+            Write-AutoFixLog -Level info -Msg 'preserving autofix branch with committed fixes' -Ctx @{ branch = $branch; worktree = $wt; merge = "git merge --ff-only $branch" }
+        } else {
+            Write-AutoFixLog -Level info -Msg 'cleaning up worktree' -Ctx @{ path = $wt; branch = $branch }
+            $cl = Invoke-ChildScript -Script 'git-checkpoint.ps1' -ChildArgs @(
+                '-Action', 'cleanup', '-WorktreePath', $wt, '-Branch', $branch)
+            if ($cl.ExitCode -ne 0) {
+                Write-AutoFixLog -Level warn -Msg 'worktree cleanup non-zero' -Ctx @{ exit = $cl.ExitCode }
+            }
         }
     }
+    Release-AutoFixRunLock -LockPath $runLockPath -Nonce $runLockNonce
     $duration = [int]((Get-Date) - $started).TotalSeconds
     Write-AutoFixLog -Level info -Msg 'autofix.ps1 done' -Ctx @{
         iterations = $ranIterations; result = $lastResult; exit = $exitCode; duration_sec = $duration
     }
+    exit $exitCode
 }
-
-exit $exitCode

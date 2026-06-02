@@ -11,8 +11,8 @@
     ...
 
   Coexistence with TAIErrorHandler (DeepBase.AIErrorHandler):
-    - When AutoFix mode is active, this hook records and suppresses the
-      Application.OnException chain (no dialog is shown).
+    - When AutoFix mode is active, this hook records before chaining to the
+      previous Application.OnException handler.
     - When AutoFix mode is inactive, Install is a no-op so AIErrorHandler
       keeps full control.
 
@@ -71,14 +71,8 @@ class procedure TAutoFixVclHook.HandleAppException(Sender: TObject;
   E: Exception);
 begin
   if TAutoFixErrorRecorder.Active then
-  begin
-    // Record then swallow the exception: the AutoFix loop reads the JSONL
-    // file, no dialog needed. This intentionally bypasses TAIErrorHandler.
     TAutoFixErrorRecorder.WriteRecord(E, ExceptAddr, '<vcl-onexception>', 'main');
-    Exit;
-  end;
 
-  // Defensive: AutoFix toggled off mid-run; chain to the original handler.
   if Assigned(FOldOnException) then
     FOldOnException(Sender, E);
 end;

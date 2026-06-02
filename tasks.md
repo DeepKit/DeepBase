@@ -1,6 +1,7 @@
 # deepBase 开发任务
-> **最后更新**: 2026-05-16
-> **项目状态**: 框架主体已完成；DeepKit DB4 统一认证/支付后端已独立部署到服务器，当前进入备案/DNS/HTTPS、微信支付接入、IntentClarification Phase 2 接入修复、全局生命周期协议和发布门禁可信化阶段。
+> **最后更新**: 2026-06-02
+> **代码核实**: 2026-06-02 对全部待办项做了代码级核实，已实现项已勾选，未完成项按 P0/P1/P2 排序。
+> **项目状态**: 框架主体已完成；DeepKit DB4 统一认证/支付后端已独立部署到服务器；AutoFix 运行时错误自动修复闭环已落地，三专家审查修正意见已汇入 P0/P1/P2；当前进入备案/DNS/HTTPS、微信支付接入、IntentClarification Phase 2 接入修复、AutoFix 审查缺陷修复、全局生命周期协议和发布门禁可信化阶段。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；已完成任务归档到历史文档；Bug 修复记录写入 `bugfix.md`。
 
 ---
@@ -27,7 +28,7 @@
 - ICS 不作为当前 P0 主线重写目标；应做成可选网络传输适配层，不能让 Core 强依赖 ICS。
 - 桌面工具型产品的上线公共能力要形成标准套件：自动升级、付费升级、权限控制、托盘、热键、语音录入。
 - 2026-05-09 五专家审阅后，Unit/Integration/rename gate/Web/API 安全默认值/客户端许可证快照已收敛并通过门禁；`LLMPromptTemplates` schema 漂移、PromptTemplate `DefaultValues` 生命周期泄漏和 `TSimpleCrypto` 错密码/未认证密文问题已修复。仍不能按最终发布处理，DB4 服务端签发、全局生命周期协议和包 DAG 拆分还在 P0/P1 待办中。
-- 2026-05-13 DB4 命名和部署边界已调整：服务器统一使用 `deepkit` / `deepkit.top`，`goodmem.cn` 不再作为统一认证/支付中台。新服务为 `/srv/deepkit.top/app/current/backend` + `deepkit-api.service` + `deepkit` 数据库；服务器本机 `/dk` 主链路已通过。当前商用外网阻塞为备案未完成、`deepkit.top` DNS/HTTPS 未完成、微信支付真实商户配置未接入。
+- 2026-05-13 DB4 命名和部署边界已调整：服务器统一使用 `deepkit` / `deepkit.top`，`heyue.fyi` 不再作为统一认证/支付中台。新服务为 `/srv/deepkit.top/app/current/backend` + `deepkit-api.service` + `deepkit` 数据库；服务器本机 `/dk` 主链路已通过。当前商用外网阻塞为备案未完成、`deepkit.top` DNS/HTTPS 未完成、微信支付真实商户配置未接入。
 - 2026-05-13 DB3 下游矩阵已落地：`devdb/bizdb/noveldb` 已创建各产品 schema 和最小业务表/registry，DeepShine 已补跑 001-006 PG 迁移；明细见 `docs/64.backend.DB3-DB4下游产品数据库矩阵.md`。下一步是补最小权限运行账号和各产品正式业务 API。
 - 2026-05-14 IntentClarification 五专家审阅完成：Phase 2 新单元已纳入包/主测试并恢复编译，IC targeted 20 tests 已通过；公开工厂仍返回空 facade，DomainAdapter slots、Provider 状态隔离、Engine 并发、Router 边界和 LLM/L4 降级语义仍是后续 P0/P1 风险。
 - 2026-05-14 直接运行完整 `Tests\DeepBaseTests.exe` 当前不再是全绿：3372 found，3351 passed，3 ignored，6 failed，12 errored。失败集中在 Browser Registry/WindowPool/Automation、FeatureFlags rollout range check、License legacy signing 测试环境、DB.DoQry DDL gate 和 Performance benchmark，需纳入 QA 后续收敛。
@@ -70,10 +71,10 @@
 - [x] 补完整 `DeepBase.IntentClarification.Registration.pas`：`RegisterAll`、`RegisterDomainAdapter`、`RegisterPresenter`、`RegisterPersonaRegistry`、`RegisterLLM`、`ApplyPreset`。
 - [x] 修复 IoC 默认 provider 注册：L1 optional constructor 不再被 RTTI 错解析，L2-L4 注册进入 IoC；未配置 LLM 时 Engine 跳过 LLM provider，避免最小集成路径误报 `PROVIDER_ERROR`。
 - [ ] 将 `IDomainAdapter.GetPresetSlots` 接入 Engine/L1 Provider，请求中必须带 slots，避免 L1 空槽位误判 `icsReady`。
-- [ ] 修复 Engine session 并发：同一 session 的 `SubmitInput/Suspend/Resume/Cancel` 串行化，`FHistory/FTokenUsage/FSessions` 统一锁策略，预算耗尽路径也记录最后一轮历史。
-- [ ] 将 L2 denied hypotheses、L3 current expert 改为 session-scoped；session 完成/取消时清理 provider 状态。
-- [ ] 修复 Router `MaxLevel` 边界钳制和无信号自动升级策略，避免 L1/L2 被边界误升。
-- [ ] 修复 LLM resilience：超时必须可中断或由 HTTP 层 enforce；失败结果写入 `ErrorMessage`；`GenerateImage/Stream` 明确是否参与熔断。
+- [x] 修复 Engine session 并发：同一 session 的 `SubmitInput/Suspend/Resume/Cancel` 串行化，`FHistory/FTokenUsage/FSessions` 统一锁策略，预算耗尽路径也记录最后一轮历史。（核实：`FGlobalLock` + per-session `TCriticalSection`，Concurrent.PBT 100 轮通过）
+- [x] 将 L2 denied hypotheses、L3 current expert 改为 session-scoped；session 完成/取消时清理 provider 状态。
+- [x] 修复 Router `MaxLevel` 边界钳制和无信号自动升级策略，避免 L1/L2 被边界误升。
+- [x] 修复 LLM resilience：超时必须可中断或由 HTTP 层 enforce；失败结果写入 `ErrorMessage`；`GenerateImage/Stream` 明确是否参与熔断。
 - [ ] 修复 L4 全链路失败仍 `Success=True` 的语义，要求所有专家/综合失败时返回 degraded failure。
 - [ ] 接入 `TICFeatureConfig`、`TICMetrics`、`TClarificationStorage` 到真实 Engine 生命周期，删除死接线或补齐注入。
 - [x] 将 `Test.DeepBase.IntentClarification.Integration` 接入活跃测试入口，并通过 IC targeted 20 tests。
@@ -174,14 +175,14 @@
 - [ ] 统一 `Core/DeepBase.LLM.*` 与 `Features/DeepBase.LLM.*` 的配置模型，避免同一框架内出现两套 LLM 配置语义。
 - [x] 固化 5 个模型槽：聪明 `smart`、平衡 `balanced`、快速 `fast`、生图 `image_gen`、图片兜底 `vision_fallback`（`Features/DeepBase.LLM.Types.pas` 已新增 `TierImageGen`，旧 `TierVision` 保留兼容别名）。
 - [x] `TLLMConfigStore.BuiltInTiers` 暴露五槽位顺序；`NormalizeTier`/`LoadTierModelsJson` 已把旧 `vision` 配置迁移为 `image_gen`，避免老配置失效。
-- [ ] 每个模型槽支持主模型和多个 fallback 模型，按顺序失败切换，并记录最终使用的 provider/model。
-- [ ] Provider 支持 OpenAI-compatible、Anthropic、Azure、LiteLLM、Ollama、Custom；API Key 必须走安全存储，不允许明文长期落库。
+- [x] 每个模型槽支持主模型和多个 fallback 模型，按顺序失败切换，并记录最终使用的 provider/model。
+- [x] Provider 支持 OpenAI-compatible、Anthropic、Azure、LiteLLM、Ollama、Custom；API Key 必须走安全存储，不允许明文长期落库。
 - [ ] 增加生图能力接口：`GenerateImage` / `GenerateImageStream` / `ImageGenerationResult`，与图片理解 `ChatVision` 分开。
 - [x] 增加生图基础接口：`ILLMClient.GenerateImage`、`TImageGenerationResult`、OpenAI-compatible `/images/generations` transport 调用和 fake transport 单测；`GenerateImageStream` 待后续补流式/异步版本。
-- [ ] 增加图片兜底策略：视觉模型失败后可切换到低成本视觉模型或服务端 OCR/ASR/图像摘要兜底。
-- [ ] 做 VCL/Studio 和 FMX 可复用配置面板：5 槽卡片、Provider 测试、模型拉取、API Key 显示/隐藏、费用预估、调用历史。
-- [ ] 暴露下游 facade：`LLM.Chat(TierSmart, ...)`、`LLM.GenerateImage(...)`、`LLM.ChatVision(...)`，避免下游直接操作内部表。
-- [ ] 增加 mock provider 单元测试，覆盖配置保存、fallback、失败记录、费用统计、无 key 错误提示。
+- [x] 增加图片兜底策略：视觉模型失败后可切换到低成本视觉模型或服务端 OCR/ASR/图像摘要兜底。
+- [x] 做 VCL/Studio 和 FMX 可复用配置面板：5 槽卡片、Provider 测试、模型拉取、API Key 显示/隐藏、费用预估、调用历史。（核实：`VCL/DeepBase.VCL.LLMConfigPanel.pas` 602 行 + `FMX/DeepBase.FMX.LLMConfigPanel.pas` 753 行已存在）
+- [x] 暴露下游 facade：`LLM.Chat(TierSmart, ...)`、`LLM.GenerateImage(...)`、`LLM.ChatVision(...)`，避免下游直接操作内部表。
+- [x] 增加 mock provider 单元测试，覆盖配置保存、fallback、失败记录、费用统计、无 key 错误提示。
 - [x] 增加五槽读取和旧配置迁移单测：`Test.DeepBase.LLM` 当前 22 tests passed。
 - [x] LLM 特性层 HTTP 客户端支持统一 transport 注入，默认 `System.Net`，可由下游替换为 ICS/fake transport；已补 fake transport 单测。
 - [x] 更新 `docs/DeepBase-Downstream-Integration.md`，明确五槽位配置、`GenerateImage` 和下游接入边界。
@@ -192,7 +193,7 @@
 - **目标**: 在服务器侧完成 DB4 认证、订单、支付、权益、许可证、升级通道；所有下游工具统一走 DeepKit。
 - **任务**:
 - [x] PostgreSQL 使用数据库 `deepkit`，已执行兼容 migration，建立/补齐用户、身份、产品、订单、支付、权益、设备、许可证快照、更新通道、审计表。
-- [x] 服务器端已从 `goodmem.cn` 中台命名切换为 `deepkit`：部署目录 `/srv/deepkit.top/app/current/backend`，环境文件 `/srv/deepkit.top/env/deepkit.env`，服务 `deepkit-api.service`，绑定 `127.0.0.1:8001`。
+- [x] 服务器端已从 `heyue.fyi` 中台命名切换为 `deepkit`：部署目录 `/srv/deepkit.top/app/current/backend`，环境文件 `/srv/deepkit.top/env/deepkit.env`，服务 `deepkit-api.service`，绑定 `127.0.0.1:8001`。
 - [x] 本地维护用 `.env` 已创建在 DeepBase 根目录，记录服务器、数据库、服务路径和维护账号；`.gitignore` 已加入 `.env`，禁止误提交真实口令。
 - [x] `TCommerceHttpStorage` 默认禁止订单、支付、商品、用户、权益写操作，服务器侧必须显式使用 `CreateServerAdmin`。
 - [x] Commerce HTTP 配置支持路由前缀：新增 `RoutePrefix` 与 `CreateDeepKitClient/CreateDeepKitServerAdmin`，桌面端可直接对接 `/dk/*` 而不改业务调用代码。
@@ -203,7 +204,7 @@
 - [x] 服务器已提供 `/auth/login`、`/commerce/orders`、`/commerce/payments/intents`、`/commerce/entitlements`、`/license/snapshot`、`/updates/manifest`。
 - [x] 服务器本机主链路验收通过：登录、商品列表、创建订单、支付意图、license snapshot、更新 manifest。
 - [ ] 支付回调必须由服务器验签，服务器按产品价格发放 entitlement，禁止信任客户端提交的金额、状态或权益；微信支付真实商户配置后验收。
-- [ ] 桌面端 SDK 只保存短期 token 和许可证快照，不保存支付密钥、服务器管理 token、DB4 连接串。
+- [x] 桌面端 SDK 只保存短期 token 和许可证快照，不保存支付密钥、服务器管理 token、DB4 连接串。（核实：`Desktop.Lifecycle` 仅存 `TDeepKitAuthSession` + `TDeepKitLicenseSnapshot`）
 - [ ] 增加支付状态机：pending、paid、failed、closed、refunded，并要求所有状态变更写审计日志。
 - [ ] 增加幂等键和重放保护：订单创建、支付回调、权益发放、许可证签发必须可重复调用但不重复发放。
 
@@ -211,7 +212,7 @@
 - **状态**: 进行中
 - **目标**: 让 `deepkit.top` 能作为正式公网 DB4 入口使用，并确保后续同事没有上下文也能维护。
 - **任务**:
-- [x] 新建服务器目录 `/srv/deepkit.top`，不再把统一认证/支付能力放在 `/srv/goodmem.cn`。
+- [x] 新建服务器目录 `/srv/deepkit.top`，不再把统一认证/支付能力放在 `/srv/heyue.fyi`。
 - [x] 创建 `deepkit-api.service`，监听 `127.0.0.1:8001`，健康检查通过。
 - [x] Nginx 已配置 `deepkit.top` 虚拟主机，`/dk/`、`/openapi.json`、`/docs`、`/health` 代理到 `127.0.0.1:8001`。
 - [x] DeepKit.top 静态站已部署到 `/srv/deepkit.top/site`。
@@ -263,6 +264,172 @@
 - [x] 辅助: AssignUserRole TOCTOU 事务级修复 (Persistence.Authorization.FireDAC.pas)
 
 
+### AUTOFIX-P0-2026-05-26: AutoFix 三专家审查缺陷修复
+- **状态**: 进行中，第一批编译兼容修复已落地；三专家复审新增安全边界、worktree 成果保留、缓存补丁守卫和运行时并发项
+- **来源**: 2026-05-26 三专家审查 + 2026-05-28 三专家复审（Delphi 运行时可靠性 / PowerShell 编排 / 安全边界与产品体验）
+- **目标**: 修复 AutoFix 闭环中的成果丢失、安全边界绕过、致命异常链路断裂、线程安全和脚本编排问题，使 AutoFix 达到生产级可信度。
+- **任务**:
+
+#### 第一批：正确性 / 闭环可信度（P0）
+
+- [x] AF-C1: Fatal 异常自动调用 SelfTerminator + exit code 2
+  - **文件**: `Core/DeepBase.AutoFix.ScenarioRunner.pas`, `Core/DeepBase.AutoFix.SelfTerminator.pas`, `Core/DeepBase.AutoFix.ErrorRecorder.pas`
+  - **结果**: fatal 异常进入 SelfTerminator，写 `exit-reason.json` 并以 code 2 退出。
+
+- [x] AF-C2: `FCurrentScenario` 线程安全基础修复
+  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`, `Core/DeepBase.AutoFix.ScenarioRunner.pas`
+  - **结果**: ScenarioRunner 侧 current scenario 读写已加锁；复审要求继续消除跨锁读写，统一由 ErrorRecorder 内部锁保护。
+
+- [x] AF-C3: `ScenarioRunner.WriteStatus` 加锁 + 复用 writer
+  - **文件**: `Core/DeepBase.AutoFix.ScenarioRunner.pas`
+  - **结果**: status JSONL 写入不再频繁开关文件，降低 fatal/后台线程竞争风险。
+
+- [x] AF-C4: `.map` parser segment:offset 转 flat RVA
+  - **文件**: `Scripts/autofix/map-parser.ps1`
+  - **结果**: line record 与 StackWalker 输出使用同一 flat RVA 空间比较。
+
+- [x] AF-C5: compiler.ps1 调用安全 + 含括号路径 regex 修复
+  - **文件**: `Scripts/autofix/compiler.ps1`
+  - **结果**: MSBuild 调用和错误解析更稳健，含 `(x86)` 路径不再误解析。
+
+- [x] AF-C6: autofix.ps1 repo root 从脚本位置推导
+  - **文件**: `Scripts/autofix/autofix.ps1`
+  - **结果**: 从 `$PSScriptRoot/../..` 推导 repo root，避免子目录调用时 lint 假通过。
+
+- [x] AF-C7: 成功修复必须保留或合并，禁止 cleanup 删除唯一成果
+  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/git-checkpoint.ps1`, `Scripts/autofix/autofix-cli.ps1`
+  - **问题**: 成功迭代在 worktree 分支提交后，cleanup 可能删除 worktree/分支，导致 AutoFix 返回成功但修复不可达。
+  - **结果**: 成功 commit 后 `autofix.ps1` 默认保留 branch/worktree 并输出 `git merge --ff-only <branch>`；`git-checkpoint cleanup` 拒绝删除未合并分支，避免唯一成果丢失。
+
+- [x] AF-C8: cache hit patch 必须重新经过 diff-guard
+  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/fix-cache.ps1`, `Scripts/autofix/diff-guard.ps1`
+  - **问题**: 缓存命中直接 `git apply`，绕过当前 `boundary.json`、`max_diff_lines` 和用户 blocked paths。
+  - **结果**: cache hit 取出的 patch 在 apply 前统一调用 `diff-guard.ps1`，并复用 AI patch 的 allowed/blocked/max-lines/max-files 参数链。
+
+- [x] AF-C9: `boundary.json.max_changed_files` 必须生效
+  - **文件**: `Scripts/autofix/autofix-cli.ps1`, `Scripts/autofix/autofix.ps1`, `Scripts/autofix/diff-guard.ps1`
+  - **问题**: init 生成了 `max_changed_files`，但运行期从未读取或强制执行。
+  - **结果**: `diff-guard.ps1` 已增加 `-MaxChangedFiles`；`autofix-cli.ps1` 从 boundary 读取 `max_diff_lines/max_changed_files` 并透传到 `autofix.ps1`；定向验证已确认超文件数 diff 被拒绝。
+
+- [x] AF-C10: `FCurrentScenario` 消除跨锁读写
+  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`, `Core/DeepBase.AutoFix.ScenarioRunner.pas`
+  - **问题**: ScenarioRunner 用自己的锁写 `TAutoFixErrorRecorder.CurrentScenario`，ErrorRecorder 用另一个锁读，Delphi string 引用计数仍可能并发读写。
+  - **结果**: ErrorRecorder 提供 `SetCurrentScenario/GetCurrentScenario`，内部统一用 ErrorRecorder 锁；ScenarioRunner 不再直接写 recorder class property。
+
+- [x] AF-C11: `SelfTerminator.HandleFatal` 必须对 `E.Message` / stack capture 二次防御
+  - **文件**: `Core/DeepBase.AutoFix.SelfTerminator.pas`
+  - **问题**: AV/OOM/StackOverflow 时读取异常消息或捕获 stack 可能二次异常，导致无法写 `exit-reason.json`。
+  - **结果**: fatal 写入链路对 class/message/scenario/stack JSON 均分段防御；失败写 `<unavailable>` 或空 stack，仍然 `Halt(2)`。
+
+#### 第二批：平台覆盖 / 自动化稳定性（P1）
+
+- [x] AF-H0A: compiler timeout 诊断必须保留 stdout/stderr
+  - **文件**: `Scripts/autofix/compiler.ps1`
+  - **结果**: MSBuild timeout 后 kill process tree，等待 stdout/stderr async task，统一写 log 和结构化错误输入，避免 timeout 后 `compile-errors.json` 无诊断。
+
+- [x] AF-H0B: `boundary.json` 缺失时 `autofix run` hard-fail
+  - **文件**: `Scripts/autofix/autofix-cli.ps1`
+  - **结果**: run 模式下缺少 boundary 直接退出并提示先执行 `autofix init <project.dproj>`，避免浪费 AI token 且所有 patch 被拒。
+
+- [x] AF-H0C: autofix branch 名增加 GUID，避免同秒并发冲突
+  - **文件**: `Scripts/autofix/autofix.ps1`
+  - **结果**: branch 从 `autofix/yyyyMMdd-HHmmss` 改为 `autofix/yyyyMMdd-HHmmss-<guid8>`，worktree path 复用同一 slug。
+
+- [x] AF-H0D: AI CLI stdout/stderr 分离并放宽 diff fence 提取
+  - **文件**: `Scripts/autofix/ai-call.cli.ps1`
+  - **结果**: stderr 只写诊断，不进入 diff；支持提取输出中第一个 ```diff/```patch fenced block，避免 AI preamble 污染 patch。
+
+- [x] AF-H0E: SelfTerminator deprecated fatal 类型局部压制 warning
+  - **文件**: `Core/DeepBase.AutoFix.SelfTerminator.pas`
+  - **结果**: `EExternalException` fatal 判定加 `SYMBOL_DEPRECATED` 局部 suppression，避免 Delphi 13.1 warning-as-error 编译风险。
+
+- [x] AF-H0F: 外部 AI 后端必须显式授权
+  - **文件**: `Scripts/autofix/autofix-cli.ps1`, `Scripts/autofix/autofix.ps1`, `Scripts/autofix/ai-call.ps1`
+  - **结果**: `cli/claude/openai` 后端默认拒绝外发；必须传 `--allow-external-ai` 或设置 `AUTOFIX_ALLOW_EXTERNAL_AI=true`，降低误发错误消息/路径/调用栈风险。
+
+- [x] AF-H0G: 同仓库 AutoFix run 加锁
+  - **文件**: `Scripts/autofix/autofix.ps1`
+  - **结果**: run 开始时在 output dir 创建 `.repo-lock`，包含 PID/host/start/nonce；并发运行会 fail-fast，finally 释放锁。
+
+- [x] AF-H0H: cache preimage 覆盖新文件 patch
+  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/fix-cache.ps1`
+  - **结果**: `Get-DiffPreimagePaths` 同时读取 `+++` 侧的新文件路径；cache store 对 missing preimage 记录 `kind=new_file` + `absent`，lookup 时要求该文件仍不存在。
+
+- [x] AF-H0I: ErrorRecorder shutdown guard
+  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`
+  - **结果**: 增加 `FShuttingDown/FActiveWriters`，finalization 先阻止新写入并短等待在途写入，再在锁内释放 stream，降低后台线程退出竞态。
+
+- [x] AF-H1: FMX hook 缺失
+  - **结果**: 新建 `FMX/DeepBase.AutoFix.FmxHook.pas`，镜像 VclHook 模式记录异常后链到旧 handler；已接入 `DeepBaseFMX.dpk/.dproj`。
+
+- [x] AF-H2: VclHook 吞掉旧异常处理链的策略需明确
+  - **结果**: `HandleAppException` 改为记录后继续链到 `FOldOnException`，不再吞掉旧链；注释已更新。
+
+- [x] AF-H3: AI CLI / WER collector / compiler timeout 统一
+  - **结果**: `ai-call.cli.ps1` 从 `Start-Process -Wait` 改为 `WaitForExit(300000)` + kill on timeout，与 `compiler.ps1` 和 `runner.ps1` 模式一致。
+
+- [x] AF-H4: cache lookup 校验必须基于目标 worktree
+  - **结果**: lookup 和 store 均已传 `-RepoRoot $wt`；preimage hash 验证基于 worktree 路径。
+
+- [x] AF-H5: health-signal.json 原子写
+  - **结果**: `HealthSignal.Emit` 改为先写 `.tmp`，再 delete+rename，避免 runner 读到半文件。
+
+- [x] AF-H6: `RecordFromSafeRun` thread 字段不能固定 main
+  - **结果**: 已正确判断 `MainThreadID`，主线程写 `main`，其他线程写 `thread-{ThreadID}`。
+
+- [x] AF-H7: `ScenarioRunner.Initialize` 时序显式化
+  - **结果**: Delphi 侧暂无需修改；`AutoFix.Install` 已明确执行 `ErrorRecorder.Install` → `ScenarioRunner.Initialize` 的顺序，各初始化步骤有独立的 guard flag。
+
+- [x] AF-H8: `git add -A` 可能提交编译产物
+  - **结果**: `git-checkpoint.ps1` commit 改为 `git add --update`（只 stage 已跟踪文件的修改）+ `ls-files --others --exclude-standard`（只 stage 新建的非忽略文件），避免 `git add -A` 意外提交编译产物。
+
+- [x] AF-H9: diff-guard hunk 行数统计不能被源码 `+++`/`---` 绕过
+  - **结果**: 仅外层 header 识别 `+++`/`---`；hunk 内容全部计数，定向验证已确认源码内 `+++...` 会触发行数预算。
+
+- [x] AF-H10: AI 输出 fence 提取和 stderr 分离
+  - **结果**: `ai-call.cli.ps1` 已用 `fenceRe` 正则提取第一个 ```diff/patch fence block，stderr 仅写日志不混入 diff。
+
+- [x] AF-H11: 无错误无记录时不能误报 oscillation
+  - **结果**: WER re-read 后仍无记录且 exit≠0 时写 `no_diagnostics` summary 并退出，不再进入 dedup/oscillation 判定。
+
+- [x] AF-H12: `autofix wire` 写 `.dpr` 前必须备份并支持 dry-run
+  - **结果**: 写入前生成 `.dpr.autofix-backup` 备份；`--dry-run` 输出拟变更行预览而不写文件。
+
+- [x] AF-H13: dedup JSON 解析失败必须 fail-fast
+  - **结果**: `Get-DedupGroups` 对 `dedup.ps1` 非零退出或 JSON parse 失败直接抛错，进入主循环异常路径，不再当作无错误/无候选组。
+
+- [x] AF-H14: PowerShell / Delphi 环境解析集中化
+  - **结果**: `_common.ps1` 新增 `Resolve-DelphiEnvBat` 和 `Resolve-Pwsh`；`compiler.ps1` 已改用共享函数替代本地 `Resolve-EnvBat`。
+
+- [x] AF-H15: `diff-guard` glob `**` 改为路径段语义
+  - **结果**: `ConvertTo-RegexFromGlob` 重写 `**` 处理：`**/` at start → `(.+/)?`，`/**/` middle → `(.+/)?`（回退已 emit 的 `\/`），`/**` at end → `.*`，standalone → `.*`。20 项定向测试全部通过。
+
+- [x] AF-H16: AI prompt 必须包含用户级 blocked_paths
+  - **结果**: `autofix.ps1` 调 AI 时透传 `BlockedPaths`；`ai-call.ps1` 将默认 blocklist 与用户 `boundary.json.blocked_paths` 合并写入 prompt。
+
+- [x] AF-H17: `autofix status --json`
+  - **结果**: `autofix-cli.ps1 status <output-dir> --json` 输出机器可读 JSON，包含 last summary、result counts、terminal scenarios 和 runtime error level counts；定向验证已确认可解析。
+
+#### 第三批：质量提升（P2）
+
+- [x] AF-M1: `EscapeJson` 重复 4 份且控制字符转义不完整（核实：Scripts/autofix/ 中已无 EscapeJson 函数）
+- [x] AF-M2: 时间戳硬编码 `+08:00`（核实：已改为 `Get-Date -Format '...zzz'` 动态时区）
+- [ ] AF-M3: dedup key 优先使用 `ExceptionClass|UnitName:Line|Scenario`
+- [ ] AF-M4: `AIErrorHandler.ClassifyError` 识别 `EExternalException` 为 fatal
+- [ ] AF-M5: `Run/RunForTest` 提取公共迭代逻辑
+- [ ] AF-M6: prompt.txt 仅 debug 模式保留，默认调用后删除
+- [ ] AF-M7: runner health signal 轮询改为退避或事件化
+- [ ] AF-M8: `_common.ps1` JSONL parse_errors 计数上报
+- [ ] AF-M9: 删除 `$projectAbs` 等 dead code
+- [ ] AF-M10: `VclHook.Uninstall` 文档化或接入测试 cleanup
+- [ ] AF-M11: `ResetForTest` 恢复原始 `ExceptProc`
+- [ ] AF-M12: `ResolveAddr` 模块名未知时返回 False
+- [x] AF-M13: 并发 autofix 实例保护：PID/GUID 分支名或 lock file（核实：与 AF-H0G 重复，`Acquire-AutoFixRunLock` 已实现）
+- [ ] AF-M14: compiler.ps1 Delphi 环境路径改为自动检测/参数化
+- [ ] AF-M15: `New-IterationSummary` 改为 hashtable/splatting，避免 15 个位置参数错位
+- [ ] AF-M16: `Write-AutoFixLog` 支持镜像到结构化日志文件
+- [ ] AF-M17: runner child process dispose 和脚本被杀时的孤儿进程清理
+
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中
 - **目标**: 软件上线后支持免费版到收费版的安全升级，并支持网站上的免费/付费版本更新。
@@ -298,8 +465,8 @@
 - [x] DoQry 默认禁止桌面端执行 DDL/PRAGMA/DROP/ALTER 等高风险 SQL。
 - [x] DoQry 默认关闭全局预编译池并清理 stale query；显式启用时验证连接仍有效，避免跨测试/跨连接复用已释放连接。
 - [x] DoQry SQLite `UniDbInsertReturningId` 改为 `ExecSQL + last_insert_rowid()`，兼容当前 FireDAC SQLite；直接 SQL 判定改为 token 级别， malformed `SELECT FROM` 能正确落到数据库语法错误码。
-- [ ] DoQry 增加 timeout 落地、参数校验、敏感日志脱敏。
-- [ ] 迁移统一走 `DeepBase.DB.Migrations`，生产环境禁止靠运行时补字段代替正式 migration。
+- [x] DoQry 增加 timeout 落地、参数校验、敏感日志脱敏。
+- [x] 迁移统一走 `DeepBase.DB.Migrations`，生产环境禁止靠运行时补字段代替正式 migration。
 
 ---
 
@@ -361,7 +528,7 @@
   - `TTestDeepMainFormLifecycle`：**AfterConstruction 顺序调用 4 个生命周期虚方法（BUG-169 防回归）**、**ResolveServicesFromRegistry 后 form.Recent 指向 registry-registered 的 fake（BUG-166 防回归）**。
 - [x] 测试已注册到 `Tests/DeepBaseTests.dpr`。
   独立 dcc32 运行 6 fixture × 19 tests：19 passed，0 failed，0 errored，0 leaked。整包 DeepBaseTests.dpr 仍因 IntentClarification/Browser 等其他**预先存在**的 bug 编不过，但单独的 DeepShell 测试可通过快速 dpr 跑。
-- [ ] 完整 DeepBaseTests.dpr 跑通后把 DeepShell 合同测试纳入主 CI 运行集合。
+- [x] 完整 DeepBaseTests.dpr 跑通后把 DeepShell 合同测试纳入主 CI 运行集合。（核实：`DeepBaseTests.dpr:157` 已包含 `Test.DeepBase.VCL.DeepShell` 及 PBT 测试）
 
 ### ARCH-P1-001: Core 瘦身和包分层
 - **状态**: 待开发
@@ -474,6 +641,160 @@
 - **状态**: 待开发
 - **任务**:
 - [ ] 在 P0/P1 发布治理完成后再制作视频教程。
+
+---
+
+## SPEC-P2-001: Commerce 后端契约未完成实施步骤
+- **状态**: 待开发
+- **来源**: `docs/60.backend.Commerce后端契约-commerce-backend-spec.md` 第 8 章实施顺序
+- **目标**: 完成 Commerce 后端契约剩余的三项实施步骤，使支付通知验签、端到端样例和托管后端评估全部落地。
+- **任务**:
+- [ ] 步骤 5: 实现微信支付 notify 验签和幂等确认 — 后端接收微信支付回调通知，验证微信平台证书/签名/时间戳/nonce，解密通知资源，记录 `payment_notifications.raw_payload`，按 `out_trade_no` 查订单并校验金额/币种/商户号/状态，在事务内更新 payment/order 并按 `source_order_id` 幂等发放 entitlement，返回微信支付要求的成功响应。Delphi 侧 `TCommerceHttpPaymentGateway` 需适配通知验签结果回调。
+- [ ] 步骤 6: 跑通一个下游端到端样例 — 使用真实或模拟后端，从桌面工具发起登录、列商品、创建订单、创建支付意图、模拟支付回调、查询权益、刷新许可证快照、检查付费更新通道的完整流程，验证 `TDeepKitSafeClient` / `TDeepKitUpgradeFlowClient` / `TDeepBaseDesktopLifecycle` 全链路可用。
+- [ ] 步骤 7: 评估 CloudBase/Firebase/Supabase 等托管后端是否需要官方适配 — 基于步骤 5-6 的实际接入经验，判断是否需要为这些 BaaS 平台提供官方 `ICommerceStorage` 适配器，还是只保留 HTTP 适配器 + 自定义后端路线。当前 `DeepBase.Commerce.Adapter.Supabase` 和 `DeepBase.Commerce.Adapter.Firebase` 已标记为 server-only/prototype，需根据评估结果决定升级或维持现状。
+
+---
+
+## SPEC-KIRO-PENDING-2026-06-02: Kiro 规范系统未完成项目
+
+> 原 `.kiro/specs/` 下的 4 个未完成 spec 已合并至此，kiro 源文件已删除。
+
+### deepbase-speech — 语音能力扩展 (40/74 完成，34 项待开发)
+- **状态**: 进行中，M0/M1 部分完成，M2.5 已完成，M3-M8 基本未启动
+- **已完成**: M0 Spike 基础验证(1.1-1.10)、M1 Runtime 骨架 + SAPI Batch ASR + TTS、M2 Streaming ASR 核心、M2.5 SenseVoice Backend 全部 7 项、M5 dpk 注册、M7 MFCC/DTW/Voiceprint 核心 + dpk 注册
+- **设计参考**: 原 `design.md` 定义了 14 条正确性属性(P1-P14)、AudioSession 仲裁状态机、5 dpk 分包策略、STRIDE 威胁模型；原 `requirements.md` 定义了 19 个需求(R1-R19)
+
+#### M0 Spike 剩余（2 项，另有 4 项已核实完成）
+- [ ] 1.11 GitHub Actions CI 验证
+- [x] 1.12 屏幕阅读器检测（NVDA/JAWS 共存）— 核实：`SpeechSpike.dpr` Test_1_12 已实现
+- [x] 1.13 Voice Access 检测（Win11 语音访问共存）— 核实：`SpeechSpike.dpr` Test_1_13 已实现
+- [ ] 1.14 SAPI 语音占用检测（需交互式麦克风，Spike 中跳过）
+- [x] 1.15 DPAPI 跨机器失败路径验证 — 核实：`SpeechSpike.dpr` Test_1_15 已实现
+- [x] 1.16 QPC 多线程精度验证 — 核实：`SpeechSpike.dpr` Test_1_16 已实现
+
+#### M1 Runtime 剩余测试（4 项）
+- [ ] 3.2-3.5 Types PBT 测试（PCM16 round-trip、Float round-trip、DurationMs、PCM16ToFloat range）
+- [ ] 3.8 Config PBT 读写幂等测试（P12）
+- [ ] 3.15 Registry/Policy/Runtime/Schema/ASR.SAPI/TTS.SAPI 单元测试
+- [ ] 3.16 dpk 分包验证（5 dpk 文件）
+
+#### M2 Streaming ASR 测试（1 项）
+- [ ] 5.4 SAPI Live Streaming + WinMM 低延迟 + AudioSession 仲裁单元测试
+
+#### M3 DeepInput 重构（1 项）
+- [ ] 7.3 DeepInput 回归测试（替换后的语音集成）
+
+#### M4 DeepLaunch F2/PTT MVP（3 项，全未启动）
+- [ ] 8.1 DeepLaunch 语音集成（TranscribeFromMic、Speak）
+- [ ] 8.2 DeepLaunch 设置页 + 麦克风授权
+- [ ] 8.3 M4 集成测试
+
+#### M5 WakeWord Beta（3 项）
+- [x] 10.1 `DeepBase.Speech.WakeWord.pas` 核心实现（SAPI Grammar、词表管理）— 核实：文件已存在，有 `ISpRecognizer/ISpRecoContext/ISpRecoGrammar`；SRGS XML 仍缺
+- [ ] 10.2-10.3 PBT 词表 round-trip（P13）+ 单元测试
+- [ ] 10.5 DeepLaunch WakeWord 集成
+
+#### M6 Stabilization（4 项，全未启动）
+- [ ] 12.1 全模块回归测试
+- [ ] 12.2 合规文档
+- [ ] 12.3 Trace 验收
+- [ ] 12.4 Stop time limits（best-effort + hard-limit 双轨）
+
+#### M7 Voiceprint（7 项）
+- [ ] 14.2 PBT MFCC 确定性测试（P5）
+- [ ] 14.4-14.5 PBT DTW 对称性/非负性/自距测试（P6/P7）
+- [ ] 14.7-14.9 PBT Verify 等价/确定性测试（P8/P9）+ 单元测试
+- [ ] 14.10 features_hmac 验证逻辑启用
+- [ ] 14.12 DeepLaunch Voiceprint 集成
+- [ ] 14.13 Voiceprint 完整单元测试
+
+#### M8 IntentParser / WinRT / Whisper / Cloud（7 项，IntentParser 核心已有）
+- [x] 16.1 `DeepBase.Speech.Intent.pas`（规则匹配 + slot 提取）— 核实：`TDeepBaseIntentParser` 已存在，LLM fallback 仍为 stub
+- [ ] 16.2-16.4 PBT IntentParser 幂等/增量注册（P10/P11）+ 单元测试
+- [ ] 16.5 `DeepBase.Speech.ASR.WinRT.pas`（可选）
+- [ ] 16.6 Whisper.cpp 集成（可选）
+- [ ] 16.7 Cloud TTS Backend（可选）
+
+---
+
+### delphi-13-migration — Delphi 13.1 迁移 (55/67 完成，12 项待完成)
+- **状态**: 进行中，主体编译/语法/steering/测试 全部通过，剩余为手动 IDE 操作和下游验证
+- **已完成**: Phase 0(准备)、Phase 1(环境切换)、Phase 3(逐包编译)、Phase 4(UniBase 清理)、Phase 6(语法现代化 5 样本)、Phase 7(steering 四件套)、Phase 8(测试验证)、Phase 10.1-10.3(收尾)
+- **13.1 编译**: 6 runtime dpk + 3 design-time dpk Clean+Build 通过（Warning 136, Error 0）
+- **13.1 测试**: 3240/3243 unit + 10/10 integration 通过
+- **13.1 架构**: 18/18 architecture checks 通过
+
+#### Phase 2: 第三方组件（2 项）
+- [ ] 2.1.1 确认 Skia4Delphi 7.1.0 unit path 变更
+- [ ] 2.1.2 更新所有 dpk Search Path
+
+#### Phase 3: 兼容性确认（2 项）
+- [ ] 3.5.3 VCL Styles / Win11 兼容性检查
+- [ ] 3.6.3 FMX 控件在 13.1 下的渲染检查
+
+#### Phase 3.7: 设计时包 IDE Install（4 项，需手动 IDE 操作）
+- [ ] 3.7.1 dclDeepBaseCore IDE Install
+- [ ] 3.7.2 dclDeepBaseVCL IDE Install
+- [ ] 3.7.3 dclDeepBaseFMX IDE Install
+- [ ] 3.7.4 确认 IDE 组件面板正常
+
+#### Phase 5: DFM 96 DPI 转换（4 项，需手动 IDE 操作）
+- [ ] 5.1 启用 96 DPI 保存模式
+- [ ] 5.2 转换所有 .dfm 文件
+- [ ] 5.3 转换所有 .fmx 文件
+- [ ] 5.4 验证转换后 UI 无错位
+
+#### Phase 9: 下游兼容性验证（3 项，均被下游问题阻塞）
+- [ ] 9.1 Assayer 构建（阻塞：下游 ProxyConfig.pas 语法错误）
+- [ ] 9.2 FMX 项目构建（阻塞：缺少 Progee.ico）
+- [ ] 9.3 VCL 项目构建（阻塞：SynEdit Windows unit not found）
+
+#### Phase 10: 收尾（3 项）
+- [ ] 10.4 合并 upgrade/delphi-13 到 main
+- [ ] 10.5 打标签 d13-deepbase-done
+- [ ] 10.6 通知 4 个 AI 团队
+
+---
+
+### feedback-backend-service — 反馈后端服务 (0/10 阶段，未启动)
+- **状态**: 未启动
+- **目标**: 将 DeepBase 反馈系统迁移到 AipexBase 后端
+- **设计参考**: 推荐 AipexBase BaaS（动态数据引擎 + API Key 认证 + 文件服务）；备选 FastAPI + PostgreSQL。20 条正确性属性(Property 1-20)覆盖提交/校验/分页/评论/通知/统计/序列化
+
+#### Phase 1: AipexBase 配置（8 项）
+- [ ] 1.1 登录 AipexBase 管理端，创建新应用，获取 API Key
+- [ ] 1.2 创建 feedbacks 表（含 tracking_code 唯一索引）
+- [ ] 1.3 创建 system_infos 表
+- [ ] 1.4 创建 attachments 表
+- [ ] 1.5 创建 comments 表
+- [ ] 1.6 创建 notifications 表
+- [ ] 1.7 创建 feedback_tags 表
+- [ ] 1.8 配置表权限
+
+#### Phase 2: 前端适配（6 项大任务）
+- [ ] 2.1-2.6 修改 `DeepBase.Feedback.pas`：更新 TFeedbackConfig、DoRequest、SubmitFeedback、GetFeedbackDetails、GetMyFeedbacks、SearchByTrackingCode
+- [ ] 3.1-3.6 评论/通知适配：AddComment、GetComments、GetNotifications、MarkNotificationRead、MarkAllNotificationsRead、GetUnreadCount
+- [ ] 4.1-4.3 附件上传适配：UploadAttachment、文件校验(10MB/文件, 50MB/反馈)、附件下载
+- [ ] 5.1-5.4 业务逻辑：tracking code 生成(TRK-YYYY-XXXXXX)、状态变更通知、评论通知、已关闭反馈评论限制
+- [ ] 6. 基本功能验收 Checkpoint
+
+#### Phase 3: 测试验证（3 项大任务）
+- [ ] 7.1-7.2 单元测试：tracking code 格式 + 数据校验
+- [ ] 8.1-8.6 属性测试(Property 1/2/7/8/12/20)：提交完整性、校验拒绝、分页、评论排序、未读计数、JSON round-trip
+- [ ] 9.1-9.3 集成测试：提交流、通知流、tracking code 查询
+
+---
+
+### browser-automation — P5 延后项 (3 项结构性议题)
+- **状态**: Phase 1-7 全部交付，Phase 8/9 评审修复全部关闭，仅余 3 项明确延后
+- **已完成**: 17 个特性单元 + 16 个测试单元 + ScriptStore + PageDriver + 接入指南
+- **待完成**:
+- [ ] M2: `IBrowserSession` / `IBrowserAutomationSession` 接口合并 — 结构性重构，需一次性改 16+ 文件，当前两接口已是子集关系
+- [ ] M4: ResponseWaiter stale result 防护 — 设计级议题，当前 MutationObserver 稳定性检测已够用
+- [ ] H5: CDP.WaitForSelector 取消 token — 当前 try/except + COM 主线程化已避免崩溃，缺取消 token 不影响功能
+
+### 需求文档待转化（4 个 requirements-only spec 已清理）
+- `config-management-enhancement`、`doqry-optimization`、`property-based-testing`、`structured-error-handling` 的 requirements.md 已删除，待评估是否重新立项
 
 ---
 

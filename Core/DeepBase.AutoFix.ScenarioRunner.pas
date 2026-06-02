@@ -18,6 +18,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.SyncObjs,
   System.Generics.Collections;
 
 type
@@ -31,23 +32,27 @@ type
     FOutputDir: string;
     FRunId: string;
     FCurrentScenario: string;
+    FLock: TCriticalSection;
+    FStatusWriter: TStreamWriter;
   private
     class procedure ParseCommandLine;
     class procedure WriteStatus(const AName, AStatus: string;
       ADurationMs: Int64 = 0; const AExtra: string = '');
     class function EscapeJson(const S: string): string;
     class procedure SetCurrentScenario(const AName: string);
+    class function GetCurrentScenarioSafe: string; static;
   public
     class procedure Initialize;
     /// <summary>Register a named scenario.</summary>
     class procedure RegisterScenario(const AName: string; AProc: TScenarioProc);
-    /// <summary>Execute all requested scenarios. Halts with code 0 (no errors)
-    /// or 1 (non-fatal errors recorded) when finished.</summary>
+    /// <summary>Execute all requested scenarios. Halts with code 0 (no errors),
+    /// 1 (non-fatal errors), or 2 (fatal -- via SelfTerminator).</summary>
     class procedure Run;
     /// <summary>Mark current scenario as fatal (called by SelfTerminator).</summary>
     class procedure MarkCurrentFatal(const AClass: string);
-    /// <summary>Name of the currently executing scenario (empty if none).</summary>
-    class property CurrentScenario: string read FCurrentScenario;
+    /// <summary>Name of the currently executing scenario (empty if none).
+    /// Thread-safe: returns a snapshot under lock.</summary>
+    class property CurrentScenario: string read GetCurrentScenarioSafe;
     /// <summary>Test scaffold: clears registered scenarios, sets the requested
     /// list, and rebinds output dir / run_id from ErrorRecorder. Pair with
     /// RunForTest in property tests.</summary>
@@ -66,7 +71,8 @@ implementation
 uses
   System.IOUtils,
   System.Diagnostics,
-  DeepBase.AutoFix.ErrorRecorder;
+  DeepBase.AutoFix.ErrorRecorder,
+  DeepBase.AutoFix.SelfTerminator;
 
 { TAutoFixScenarioRunner }
 
@@ -76,6 +82,8 @@ begin
   FInitialized := True;
   if FScenarios = nil then
     FScenarios := TDictionary<string, TScenarioProc>.Create;
+  if FLock = nil then
+    FLock := TCriticalSection.Create;
   ParseCommandLine;
 end;
 
@@ -105,8 +113,23 @@ end;
 
 class procedure TAutoFixScenarioRunner.SetCurrentScenario(const AName: string);
 begin
-  FCurrentScenario := AName;
-  TAutoFixErrorRecorder.CurrentScenario := AName;
+  if FLock <> nil then FLock.Enter;
+  try
+    FCurrentScenario := AName;
+    TAutoFixErrorRecorder.SetCurrentScenario(AName);
+  finally
+    if FLock <> nil then FLock.Leave;
+  end;
+end;
+
+class function TAutoFixScenarioRunner.GetCurrentScenarioSafe: string;
+begin
+  if FLock <> nil then FLock.Enter;
+  try
+    Result := FCurrentScenario;
+  finally
+    if FLock <> nil then FLock.Leave;
+  end;
 end;
 
 class procedure TAutoFixScenarioRunner.Run;
@@ -129,7 +152,6 @@ begin
       WriteStatus(LName, 'running');
 
       var LSw := TStopwatch.StartNew;
-      var LFatal := False;
       try
         FScenarios[LName]();
         LSw.Stop;
@@ -138,29 +160,26 @@ begin
         on E: Exception do
         begin
           LSw.Stop;
-          // ErrorRecorder already captured it via L1/L2 hooks; mark scenario
           var LExtra :=
             ',"error_class":"' + EscapeJson(E.ClassName) + '"' +
             ',"error_msg":"' + EscapeJson(Copy(E.Message, 1, 200)) + '"';
           WriteStatus(LName, 'fail', LSw.ElapsedMilliseconds, LExtra);
 
-          // Don't re-raise; continue to next scenario unless fatal
-          if (E is EAccessViolation) or (E is EOutOfMemory) or
-             (E is EStackOverflow) or (E is EExternalException) then
+          if TAutoFixSelfTerminator.IsFatal(E) then
           begin
-            LFatal := True;
-            // SelfTerminator will halt(2). If it doesn't (e.g. not installed),
-            // we still bail out of the loop here.
+            // HandleFatal writes exit-reason.json and calls Halt(2).
+            // If it returns (e.g. not active), bail out of the loop.
+            TAutoFixSelfTerminator.HandleFatal(E, ExceptAddr);
+            Break;
           end;
         end;
       end;
 
       SetCurrentScenario('');
-      if LFatal then Break;
     end;
   end;
 
-  // All requested scenarios done -- exit with 0 (clean) or 1 (errors recorded)
+  // All scenarios done: exit with 0 (clean) or 1 (errors recorded)
   if TAutoFixErrorRecorder.Active then
   begin
     var LCode :=
@@ -170,9 +189,12 @@ begin
 end;
 
 class procedure TAutoFixScenarioRunner.MarkCurrentFatal(const AClass: string);
+var
+  LName: string;
 begin
-  if FCurrentScenario <> '' then
-    WriteStatus(FCurrentScenario, 'fatal', 0,
+  LName := GetCurrentScenarioSafe;
+  if LName <> '' then
+    WriteStatus(LName, 'fatal', 0,
       ',"fatal_class":"' + EscapeJson(AClass) + '"');
 end;
 
@@ -184,6 +206,9 @@ begin
   if FRunId = '' then
     FRunId := TAutoFixErrorRecorder.RunId;
   if FOutputDir = '' then Exit;
+
+  if FLock = nil then
+    FLock := TCriticalSection.Create;
 
   var LTs := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"+08:00"', Now);
   var LBuilder := TStringBuilder.Create;
@@ -200,13 +225,19 @@ begin
     LBuilder.Append(AExtra).Append('}');
 
     var LJson := LBuilder.ToString;
-    var LPath := TPath.Combine(FOutputDir, 'scenario-results.jsonl');
-    var LFile := TStreamWriter.Create(LPath, True, TEncoding.UTF8);
+
+    FLock.Enter;
     try
-      LFile.WriteLine(LJson);
-      LFile.Flush;
+      if FStatusWriter = nil then
+      begin
+        var LPath := TPath.Combine(FOutputDir, 'scenario-results.jsonl');
+        ForceDirectories(FOutputDir);
+        FStatusWriter := TStreamWriter.Create(LPath, True, TEncoding.UTF8);
+        FStatusWriter.AutoFlush := True;
+      end;
+      FStatusWriter.WriteLine(LJson);
     finally
-      LFile.Free;
+      FLock.Leave;
     end;
   finally
     LBuilder.Free;
@@ -231,12 +262,30 @@ end;
 class procedure TAutoFixScenarioRunner.ResetForTest(
   const ARequestedScenarios: TArray<string>);
 begin
+  if FLock = nil then
+    FLock := TCriticalSection.Create;
+
+  FLock.Enter;
+  try
+    FreeAndNil(FStatusWriter);
+  finally
+    FLock.Leave;
+  end;
+
   if FScenarios = nil then
     FScenarios := TDictionary<string, TScenarioProc>.Create
   else
     FScenarios.Clear;
+
   FRequestedScenarios := ARequestedScenarios;
-  FCurrentScenario := '';
+
+  FLock.Enter;
+  try
+    FCurrentScenario := '';
+  finally
+    FLock.Leave;
+  end;
+
   FOutputDir := TAutoFixErrorRecorder.OutputDir;
   FRunId := TAutoFixErrorRecorder.RunId;
   FInitialized := True;
@@ -282,9 +331,10 @@ begin
 end;
 
 initialization
-  TAutoFixScenarioRunner.Initialize;
 
 finalization
+  FreeAndNil(TAutoFixScenarioRunner.FStatusWriter);
+  FreeAndNil(TAutoFixScenarioRunner.FLock);
   FreeAndNil(TAutoFixScenarioRunner.FScenarios);
 
 end.

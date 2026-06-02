@@ -184,17 +184,27 @@ type
   TControlAccess = class(TWinControl);
 
 const
-  // Material Design Colors
-  clMaterialBlue = $D32F2F;      // #2196F3
-  clMaterialRed = $3F51F4;       // #F44336
-  clMaterialGreen = $4CAF50;
-  clMaterialOrange = $FF9800;
-  clMaterialPurple = $9C27B0;
-  clMaterialPink = $E91E63;
-  clMaterialTeal = $009688;
-  clMaterialCyan = $00BCD4;
-  clMaterialAmber = $FFC107;
-  clMaterialIndigo = $3F51B5;
+  // Material Design Colors (VCL TColor = $00BBGGRR)
+  // #2196F3 → BGR bytes: $F39621
+  clMaterialBlue = $F39621;
+  // #F44336 → BGR bytes: $3643F4
+  clMaterialRed = $3643F4;
+  // #4CAF50 → BGR bytes: $50AF4C
+  clMaterialGreen = $50AF4C;
+  // #FF9800 → BGR bytes: $0098FF
+  clMaterialOrange = $0098FF;
+  // #9C27B0 → BGR bytes: $B0279C
+  clMaterialPurple = $B0279C;
+  // #E91E63 → BGR bytes: $631EE9
+  clMaterialPink = $631EE9;
+  // #009688 → BGR bytes: $889600
+  clMaterialTeal = $889600;
+  // #00BCD4 → BGR bytes: $D4BC00
+  clMaterialCyan = $D4BC00;
+  // #FFC107 → BGR bytes: $07C1FF
+  clMaterialAmber = $07C1FF;
+  // #3F51B5 → BGR bytes: $B5513F
+  clMaterialIndigo = $B5513F;
 
 { TThemeColors }
 

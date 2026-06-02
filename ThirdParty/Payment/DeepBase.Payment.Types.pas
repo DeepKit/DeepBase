@@ -3,12 +3,8 @@ unit DeepBase.Payment.Types;
 {*******************************************************************************
   DeepBase Payment Types
 
-  WARNING: This unit defines its own TPaymentProvider, TPaymentStatus,
-  TPaymentResult, and EPaymentError types which ARE NOT the same as those in
-  DeepBase.Payment.pas. The two type systems are structally different.
-  Keep enum values and ordering in sync manually.
-
-  Supports: Stripe, PayPal, Alipay, WeChat Pay
+  Canonical type definitions shared by DeepBase.Payment and DeepBase.Payment.Core.
+  Supports: Alipay, WeChat Pay, Stripe, PayPal
 *******************************************************************************}
 
 interface
@@ -18,12 +14,11 @@ uses
 
 type
   /// <summary>Supported payment providers</summary>
-  // WARNING: Duplicates DeepBase.Payment.pas TPaymentProvider. Keep in sync.
   TPaymentProvider = (
-    ppStripe,      // Stripe (International)
-    ppPayPal,      // PayPal (International)
     ppAlipay,      // Alipay (China)
-    ppWeChatPay    // WeChat Pay (China)
+    ppWeChatPay,   // WeChat Pay (China)
+    ppStripe,      // Stripe (International)
+    ppPayPal       // PayPal (International)
   );
 
   /// <summary>Payment environment</summary>
@@ -33,18 +28,15 @@ type
   );
 
   /// <summary>Payment status</summary>
-  // WARNING: Duplicates DeepBase.Payment.pas TPaymentStatus. Keep in sync.
   TPaymentStatus = (
-    psUnknown,
+    psUnknown,       // Unknown
     psPending,       // Payment initiated, awaiting completion
-    psProcessing,    // Being processed by provider
-    psSucceeded,     // Payment completed successfully
+    psSuccess,       // Payment completed successfully
     psFailed,        // Payment failed
-    psCanceled,      // Canceled by user or system
+    psClosed,        // Order closed/cancelled
+    psRefunding,     // Refund in progress
     psRefunded,      // Fully refunded
-    psPartialRefund, // Partially refunded
-    psDisputed,      // Chargeback/Dispute initiated
-    psExpired        // Payment link/session expired
+    psPartialRefund  // Partially refunded
   );
 
   /// <summary>Payment method type</summary>
@@ -173,7 +165,6 @@ type
   end;
 
   /// <summary>Payment result</summary>
-  // WARNING: Structure differs from DeepBase.Payment.pas TPaymentResult.
   TPaymentResult = record
     Success: Boolean;
 
@@ -243,15 +234,12 @@ type
   end;
 
   /// <summary>Payment error exception</summary>
-  // WARNING: Different class from DeepBase.Payment.pas EPaymentError.
   EPaymentError = class(Exception)
-  private
-    FErrorCode: string;
-    FProvider: TPaymentProvider;
   public
-    constructor Create(AProvider: TPaymentProvider; const ACode, AMessage: string);
-    property ErrorCode: string read FErrorCode;
-    property Provider: TPaymentProvider read FProvider;
+    ErrorCode: string;
+    Provider: TPaymentProvider;
+    constructor Create(const AMessage: string; const AErrorCode: string = '';
+      AProvider: TPaymentProvider = ppAlipay); reintroduce;
   end;
 
 // Helper functions
@@ -382,7 +370,7 @@ begin
   Result := Default(TPaymentResult);
   Result.Success := True;
   Result.TransactionId := ATransactionId;
-  Result.Status := psSucceeded;
+  Result.Status := psSuccess;
   Result.AmountReceived := AAmount;
   Result.CreatedAt := Now;
   Result.UpdatedAt := Now;
@@ -412,36 +400,37 @@ end;
 
 { EPaymentError }
 
-constructor EPaymentError.Create(AProvider: TPaymentProvider; const ACode, AMessage: string);
+constructor EPaymentError.Create(const AMessage: string; const AErrorCode: string;
+  AProvider: TPaymentProvider);
 begin
-  inherited CreateFmt('[%s] %s: %s', [PaymentProviderToStr(AProvider), ACode, AMessage]);
-  FErrorCode := ACode;
-  FProvider := AProvider;
+  inherited Create(AMessage);
+  ErrorCode := AErrorCode;
+  Provider := AProvider;
 end;
 
 { Helper functions }
 
 function PaymentProviderToStr(AProvider: TPaymentProvider): string;
 const
-  Names: array[TPaymentProvider] of string = ('Stripe', 'PayPal', 'Alipay', 'WeChatPay');
+  Names: array[TPaymentProvider] of string = ('Alipay', 'WeChatPay', 'Stripe', 'PayPal');
 begin
   Result := Names[AProvider];
 end;
 
 function StrToPaymentProvider(const AStr: string): TPaymentProvider;
 begin
-  if SameText(AStr, 'Stripe') then Result := ppStripe
-  else if SameText(AStr, 'PayPal') then Result := ppPayPal
-  else if SameText(AStr, 'Alipay') then Result := ppAlipay
+  if SameText(AStr, 'Alipay') then Result := ppAlipay
   else if SameText(AStr, 'WeChatPay') or SameText(AStr, 'WeChat') then Result := ppWeChatPay
-  else raise EPaymentError.Create(ppStripe, 'INVALID_PROVIDER', 'Unknown provider: ' + AStr);
+  else if SameText(AStr, 'Stripe') then Result := ppStripe
+  else if SameText(AStr, 'PayPal') then Result := ppPayPal
+  else raise EPaymentError.Create('Unknown provider: ' + AStr, 'INVALID_PROVIDER', ppAlipay);
 end;
 
 function PaymentStatusToStr(AStatus: TPaymentStatus): string;
 const
   Names: array[TPaymentStatus] of string = (
-    'unknown', 'pending', 'processing', 'succeeded', 'failed',
-    'canceled', 'refunded', 'partial_refund', 'disputed', 'expired'
+    'unknown', 'pending', 'success', 'failed',
+    'closed', 'refunding', 'refunded', 'partial_refund'
   );
 begin
   Result := Names[AStatus];
@@ -450,15 +439,13 @@ end;
 function StrToPaymentStatus(const AStr: string): TPaymentStatus;
 begin
   if SameText(AStr, 'pending') then Result := psPending
-  else if SameText(AStr, 'processing') then Result := psProcessing
-  else if SameText(AStr, 'succeeded') or SameText(AStr, 'success') or SameText(AStr, 'paid') then
-    Result := psSucceeded
+  else if SameText(AStr, 'success') or SameText(AStr, 'succeeded') or SameText(AStr, 'paid') then
+    Result := psSuccess
   else if SameText(AStr, 'failed') or SameText(AStr, 'failure') then Result := psFailed
-  else if SameText(AStr, 'canceled') or SameText(AStr, 'cancelled') then Result := psCanceled
+  else if SameText(AStr, 'closed') or SameText(AStr, 'canceled') or SameText(AStr, 'cancelled') then Result := psClosed
+  else if SameText(AStr, 'refunding') then Result := psRefunding
   else if SameText(AStr, 'refunded') then Result := psRefunded
   else if SameText(AStr, 'partial_refund') then Result := psPartialRefund
-  else if SameText(AStr, 'disputed') or SameText(AStr, 'dispute') then Result := psDisputed
-  else if SameText(AStr, 'expired') then Result := psExpired
   else Result := psUnknown;
 end;
 

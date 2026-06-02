@@ -187,6 +187,31 @@ function Read-MapModel {
         }
     }
 
+    # Build segment base lookup: section_number -> base offset.
+    # Line and symbol offsets in Delphi .map files are section-relative.
+    # Convert to flat (module-relative) RVA by adding the segment base.
+    # Heuristic: if offset >= base for its section the offset is already
+    # a flat RVA (single-section EXE case); leave it unchanged.
+    $segBase = @{}
+    foreach ($seg in $segments) {
+        $sec = [int]$seg.Section
+        if (-not $segBase.ContainsKey($sec)) {
+            $segBase[$sec] = [uint64]$seg.Offset
+        }
+    }
+    foreach ($sym in $symbols) {
+        $sec  = [int]$sym.Section
+        $off  = [uint64]$sym.Offset
+        $base = if ($segBase.ContainsKey($sec)) { $segBase[$sec] } else { [uint64]0 }
+        if ($off -lt $base) { $sym.Rva = $base + $off }
+    }
+    foreach ($line in $lineRecs) {
+        $sec  = [int]$line.Section
+        $off  = [uint64]$line.Offset
+        $base = if ($segBase.ContainsKey($sec)) { $segBase[$sec] } else { [uint64]0 }
+        if ($off -lt $base) { $line.Rva = $base + $off }
+    }
+
     # Sort by Rva for fast nearest-lookup
     $sortedSyms  = @($symbols  | Sort-Object Rva)
     $sortedLines = @($lineRecs | Sort-Object Rva)

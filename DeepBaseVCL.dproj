@@ -194,6 +194,7 @@
         <DCCReference Include="VCL\DeepBase.VCL.TrayIcon.pas"/>
         <DCCReference Include="VCL\DeepBase.VCL.Hotkeys.pas"/>
         <DCCReference Include="VCL\DeepBase.VCL.DesktopLifecycle.pas"/>
+        <DCCReference Include="VCL\DeepBase.AutoFix.VclHook.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

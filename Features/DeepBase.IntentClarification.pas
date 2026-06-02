@@ -88,10 +88,11 @@ type
     class function Default: TIntentClarificationPolicy; static;
   end;
 
-  // Forward interface - matches IClarificationEngine in Interfaces unit
-  IClarificationEngine = interface
-    ['{E1A2B3C4-D5E6-7890-ABCD-111111111111}']
-  end;
+  // NOTE: IClarificationEngine is defined in DeepBase.IntentClarification.Interfaces.
+  // The base unit cannot import Interfaces due to circular dependency.
+  // Recommended creation path: TICIoCRegistration.CreateEngineFromContainer (see IoC.pas).
+  // CreateEngine/CreateEngineWithPreset below return IInterface; cast to
+  // IClarificationEngine via Supports() or use the IoC path directly.
 
   TIntentClarifier = class
   private
@@ -129,17 +130,18 @@ type
 
     /// <summary>
     /// Creates a TClarificationEngine with default configuration.
-    /// Requirements: 12.1-12.5
+    /// Returns IInterface; use Supports(Result, IClarificationEngine) to cast.
+    /// Recommended: use TICIoCRegistration.CreateEngineFromContainer instead.
     /// </summary>
-    class function CreateEngine: IClarificationEngine; static;
+    class function CreateEngine: IInterface; static;
 
     /// <summary>
     /// Creates a TClarificationEngine configured with the named preset template.
-    /// Supported presets: 'tool-command', 'creative-assistant', 'decision-advisor'.
-    /// Requirements: 12.1-12.5, 13.1-13.5
+    /// Returns IInterface; use Supports(Result, IClarificationEngine) to cast.
+    /// Recommended: use TICIoCRegistration.CreateEngineFromContainer instead.
     /// </summary>
     class function CreateEngineWithPreset(
-      const APresetName: string): IClarificationEngine; static;
+      const APresetName: string): IInterface; static;
 
     property LLM: ILLMClient read FLLM write FLLM;
     property Policy: TIntentClarificationPolicy read FPolicy write FPolicy;
@@ -807,25 +809,15 @@ begin
     Result := csmFreeText;
 end;
 
-class function TIntentClarifier.CreateEngine: IClarificationEngine;
-var
-  LEngine: TInterfacedObject;
+class function TIntentClarifier.CreateEngine: IInterface;
 begin
-  LEngine := TClarificationEngine.Create;
-  if not Supports(LEngine, IClarificationEngine, Result) then
-    raise EIntentClarification.Create('Failed to create clarification engine');
+  Result := TClarificationEngine.Create;
 end;
 
 class function TIntentClarifier.CreateEngineWithPreset(
-  const APresetName: string): IClarificationEngine;
-var
-  LEngine: TInterfacedObject;
+  const APresetName: string): IInterface;
 begin
-  // Creates a real engine instance. Preset application is handled via
-  // TClarificationRegistration.ApplyPreset after creation.
-  LEngine := TClarificationEngine.Create;
-  if not Supports(LEngine, IClarificationEngine, Result) then
-    raise EIntentClarification.Create('Failed to create clarification engine');
+  Result := TClarificationEngine.Create;
 end;
 
 end.

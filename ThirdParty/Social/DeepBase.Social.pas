@@ -42,7 +42,7 @@ type
   TSocialShareTarget = (
     stDefault,    // Platform default
     stSession,    // WeChat: 好友
-    stTimeline,   // WeChat: 朋友�?
+    stTimeline,   // WeChat: 朋友�?
     stFavorite    // WeChat: 收藏
   );
 
@@ -297,7 +297,7 @@ end;
 function TSocialToken.IsExpired: Boolean;
 begin
   if ExpiresAt = 0 then
-    Result := False  // No expiration info
+    Result := True   // No expiration info — treat as expired (conservative)
   else
     Result := Now > ExpiresAt;
 end;
@@ -405,7 +405,7 @@ begin
 
   if Response.StatusCode >= 400 then
     raise ESocialNetworkError.Create(
-      Format('HTTP Error %d: %s', [Response.StatusCode, Result]),
+      Format('HTTP Error %d', [Response.StatusCode]),
       IntToStr(Response.StatusCode), FConfig.Provider);
 end;
 
@@ -423,7 +423,7 @@ begin
 
     if Response.StatusCode >= 400 then
       raise ESocialNetworkError.Create(
-        Format('HTTP Error %d: %s', [Response.StatusCode, Result]),
+        Format('HTTP Error %d', [Response.StatusCode]),
         IntToStr(Response.StatusCode), FConfig.Provider);
   finally
     Content.Free;
@@ -445,7 +445,12 @@ begin
   Result := AState;
   if Result = '' then
     Result := GenerateState;
-  FLastState := Result;
+  TMonitor.Enter(Self);
+  try
+    FLastState := Result;
+  finally
+    TMonitor.Exit(Self);
+  end;
 end;
 
 procedure TSocialClient.AddPKCEAuthParams(AParams: TDictionary<string, string>);
@@ -455,8 +460,13 @@ begin
   if (AParams = nil) or (FConfig = nil) or not FConfig.EnablePKCE then
     Exit;
 
-  FLastCodeVerifier := TSocialHelper.GenerateCodeVerifier;
-  Challenge := TSocialHelper.GenerateCodeChallengeS256(FLastCodeVerifier);
+  TMonitor.Enter(Self);
+  try
+    FLastCodeVerifier := TSocialHelper.GenerateCodeVerifier;
+    Challenge := TSocialHelper.GenerateCodeChallengeS256(FLastCodeVerifier);
+  finally
+    TMonitor.Exit(Self);
+  end;
   AParams.AddOrSetValue('code_challenge', Challenge);
   AParams.AddOrSetValue('code_challenge_method', 'S256');
 end;
@@ -465,15 +475,25 @@ procedure TSocialClient.AddPKCETokenParams(AParams: TDictionary<string, string>)
 begin
   if (AParams = nil) or (FConfig = nil) or not FConfig.EnablePKCE then
     Exit;
-  if FLastCodeVerifier = '' then
-    Exit;
 
-  AParams.AddOrSetValue('code_verifier', FLastCodeVerifier);
+  TMonitor.Enter(Self);
+  try
+    if FLastCodeVerifier = '' then
+      Exit;
+    AParams.AddOrSetValue('code_verifier', FLastCodeVerifier);
+  finally
+    TMonitor.Exit(Self);
+  end;
 end;
 
 function TSocialClient.ValidateState(const AState: string): Boolean;
 begin
-  Result := (FLastState <> '') and TSocialHelper.ConstantTimeEquals(FLastState, AState);
+  TMonitor.Enter(Self);
+  try
+    Result := (FLastState <> '') and TSocialHelper.ConstantTimeEquals(FLastState, AState);
+  finally
+    TMonitor.Exit(Self);
+  end;
 end;
 
 procedure TSocialClient.RequireValidState(const AState: string);
@@ -481,7 +501,12 @@ begin
   if not ValidateState(AState) then
     raise ESocialAuthError.Create('Invalid OAuth state', 'INVALID_STATE', FConfig.Provider);
 
-  FLastState := '';
+  TMonitor.Enter(Self);
+  try
+    FLastState := '';
+  finally
+    TMonitor.Exit(Self);
+  end;
 end;
 
 function TSocialClient.ExchangeCode(const ACode, AState: string): TSocialToken;
@@ -547,7 +572,7 @@ begin
   else if S = 'facebook' then Result := spFacebook
   else if S = 'microsoft' then Result := spMicrosoft
   else if S = 'apple' then Result := spApple
-  else Result := spWeChat;
+  else raise ESocialConfigError.Create('Unknown social provider: ' + AStr, 'UNKNOWN_PROVIDER');
 end;
 
 class function TSocialHelper.GenderToString(AGender: TSocialGender): string;

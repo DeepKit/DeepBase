@@ -26,6 +26,8 @@ BeforeAll {
     $script:TmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("autofix-wer-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
     New-Item -ItemType Directory -Path $script:TmpRoot -Force | Out-Null
 
+    Import-Module (Join-Path $PSScriptRoot 'schemas\SchemaHelper.psm1') -Force
+
     function script:New-FakeCdb {
         <#
         .SYNOPSIS
@@ -153,8 +155,8 @@ Describe 'wer-collector.ps1 — synthetic record fallback' {
                 [string]$rec.run_id  | Should -Be $runId
                 # scenario propagated
                 [string]$rec.scenario | Should -Be $scenarioName
-                # required fields present
-                foreach ($f in @('ts','level','class','msg','module_name','module_base','rva','stack','dedup_key','exit_code','run_id','scenario')) {
+                # required fields present (subset of runtime-errors schema)
+                foreach ($f in (Get-SchemaFields -Name 'runtime-errors')) {
                     $rec.PSObject.Properties[$f] | Should -Not -BeNullOrEmpty
                 }
             }

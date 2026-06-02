@@ -179,6 +179,7 @@
         <DCCReference Include="FMX\DeepBase.FMX.HotkeyEditor.pas"/>
         <DCCReference Include="FMX\DeepBase.FMX.Hotkeys.pas"/>
         <DCCReference Include="FMX\DeepBase.FMX.DesktopLifecycle.pas"/>
+        <DCCReference Include="FMX\DeepBase.AutoFix.FmxHook.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

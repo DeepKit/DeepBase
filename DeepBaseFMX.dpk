@@ -59,6 +59,7 @@ contains
   DeepBase.FMX.FormStateHelper in 'FMX\DeepBase.FMX.FormStateHelper.pas',
   DeepBase.FMX.HotkeyEditor in 'FMX\DeepBase.FMX.HotkeyEditor.pas',
   DeepBase.FMX.Hotkeys in 'FMX\DeepBase.FMX.Hotkeys.pas',
-  DeepBase.FMX.DesktopLifecycle in 'FMX\DeepBase.FMX.DesktopLifecycle.pas';
+  DeepBase.FMX.DesktopLifecycle in 'FMX\DeepBase.FMX.DesktopLifecycle.pas',
+  DeepBase.AutoFix.FmxHook in 'FMX\DeepBase.AutoFix.FmxHook.pas';
 
 end.

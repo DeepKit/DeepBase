@@ -1334,3 +1334,130 @@ var HTML := Exporter.ToHTML;
   - 周边模块 P0/P1: LLM-001/002 (schema/secrets), EDGE-002/003/006/007 (Cloud/Updater 安全)
   - P2 可维护性: FR-011 编码损坏, FR-016 DeepFlow, Speech/Governance 板块
   - 功能评审: DeepShell pending features, BrowserAutomation, IntentClarification BUG-134~142
+
+---
+
+## 2026-06-02 规范文档完成项归档
+
+### SPEC-ARCH-2026-06-02: 架构技术规范 (tech-spec.md) 全部实施完成
+- **来源**: `docs/20.architecture.技术规范-tech-spec.md` v1.0
+- **状态**: 全部完成
+- **内容摘要**:
+  - Phase 0（最小核心）: Tier 0 表 + Core API (Config/i18n/FormState/Manager) ✅
+  - Phase 1（推荐功能）: Tier 1 表 + VCL 控件 + Studio 基础 ✅
+  - Phase 2（扩展功能）: LLM/i18n 管理/等待窗口/异常/FMX 控件/GUI 测试 ✅
+  - Phase 3（高级功能）: AutoUpdate/DB 维护/远程配置/CLI/云端服务 ✅
+  - Phase 4（完善）: License/反馈/使用统计/文档 ✅
+  - Phase 5（代码审查优化）: Schema/DoQry 缓存/Logger 初始化/接口抽象/版本兼容等 9 项 ✅
+  - Phase T（DeepBaseTray）: 开发日志/命令面板/自动化/快速启动/配置/日志搜索 8 项 ✅
+  - 第 1 章 概述与架构: 设计目标、内容分类、架构全景图、适用范围、多应用拓扑、错误码约定 ✅
+  - 第 2 章 目录与文件约定: root.txt、目录结构、开发/用户环境行为差异 ✅
+  - 第 3 章 config.db 表结构: Tier 0/1/2 共 15 张表定义全部落地 ✅
+  - 第 4 章 Core 模块接口: TDeepBaseManager 全套 API + 全局函数 + 辅助类型 ✅
+  - 第 5 章 UI 控件规范: 20 个 VCL/FMX 控件 ✅
+  - 第 6 章 动画资源处理: Image32 统一 SVG 方案 ✅
+  - 第 7 章 Studio 功能规范: 项目管理/i18n/日志/异常/资源/配置/LLM/发布/远程/License/数据库管理 ✅
+  - 第 8 章 DeepBaseTray 工作台: 开发日志/命令面板/自动化/快速启动/悬浮窗口 ✅
+  - 第 9 章 CLI 命令行: db/i18n/release/config/test 命令 ✅
+  - 第 10 章 云端服务: version.json/remote-config/feedback/license 验证 ✅
+  - 第 11 章 安全性: Credential Manager/日志脱敏/发送前控制 ✅
+  - 第 12 章 测试支持: Core 层单元测试/GUI 状态快照/测试数据库隔离 ✅
+  - 第 13 章 线程安全: WAL/Checkpoint/内存缓存/API 稳定性标记/Schema 迁移 ✅
+  - 第 14 章 单元文件结构: Core/Persistence/Features/VCL/FMX/Packages/ThirdParty/Tools 目录布局 ✅
+  - 第 15 章 性能规范: API 响应时间基线/资源限制/性能监控 ✅
+  - 第 16 章 异常处理规范: 异常层级/错误码分配/用户提示映射 ✅
+  - 第 17 章 后续工作: Phase 0-4 全部完成 ✅
+
+### SPEC-COMMERCE-2026-06-02: Commerce 后端契约 (commerce-backend-spec.md) 实施步骤 1-4 完成
+- **来源**: `docs/60.backend.Commerce后端契约-commerce-backend-spec.md`
+- **状态**: 实施步骤 1-4 已完成
+- **内容摘要**:
+  - 步骤 1 ✅: 固化契约并评审字段命名 — 契约文档已评审固化，字段命名统一
+  - 步骤 2 ✅: 用内存 mock 后端跑 contract tests — `TInMemoryCommerceStorage` 和测试覆盖
+  - 步骤 3 ✅: 实现 HTTP `ICommerceStorage` 适配器 — `TCommerceHttpStorage` 已落地
+  - 步骤 4 ✅: 实现后端微信支付 intent API 和 Delphi `ICommercePaymentGateway` 后端代理适配器 — `TCommerceHttpPaymentGateway` 已落地
+- **封板标准已完成项**:
+  - `TInMemoryCommerceStorage` 仅用于测试和开发文档 ✅
+  - 下游项目只依赖 `Features/DeepBase.Commerce.*` 流程入口 ✅
+  - 支付确认以可信后端通知为准 ✅
+  - 后端数据库有唯一约束和事务保护 ✅
+  - 文档入口统一指向契约文档和下游集成指南 ✅
+
+### SPEC-KIRO-COMPLETED-2026-06-02: Kiro 规范系统已完成项目（8 个 spec）
+- **来源**: `.kiro/specs/` 目录
+- **状态**: 全部完成
+
+#### regression-tests — 回归测试体系 (34/34 ✅)
+- 覆盖 74 个已修复 bug 的系统化回归测试，集成到 CI
+- P0 关键安全测试、P1 高优先级测试、CI 集成、覆盖率检查、文档全部交付
+
+#### aierrorhandler-rollout — AI 错误处理器上线 (18/21 ✅，3 项可选 PBT 未做)
+- Delphi 13.1 下 AIErrorHandler 上线：SilentMode、Bootstrap facade 单元、LLMBridge adapter 单元
+- Examples demo 项目已交付
+
+#### autofix-runtime-errors — AutoFix 运行时错误自动修复 (69/69 ✅)
+- 六大阶段全部交付：Pascal 单元验证/补全、外部 PowerShell 脚本骨架、主循环 + AI 集成 + lint、集成入口、e2e dry-run、最终门禁
+- 含 StackWalker、ErrorRecorder、VclHook、SelfTerminator、ScenarioRunner、HealthSignal 和 10+ PowerShell 脚本
+
+#### deepbase-bug-fixes-p0p1p2 — P0/P1/P2 缺陷修复 (70/70 ✅)
+- 15 个修复项：P0（LLM schema、SecretStore、streaming transport）、P1（IntentClarification 并发、BrowserAutomation ResponseWaiter/Registry、DeepShell EventBus/Theme）、P2（Graph Dijkstra、Comment encoding、DeepFlow pause/resume 等）
+
+#### deepbase-round2-fixes — 第二轮修复 (115/115 ✅)
+- 139 个 better2.md 修复项：P0（死锁/UAF/崩溃）、P1（SQL 注入/安全）、P2（优化/代码质量）
+- 覆盖 StateMachine、Timeout、CircuitBreaker、UniPool、Supabase/Firebase、SQL 注入、Crypto、Commerce、Config、ConnectionPool、Persistence、EventBus、Speech、VCL/FMX 线程安全、Browser、IntentClarification、Governance、Inference、性能优化
+
+#### intent-clarification — IntentClarification Phase 2 (20/20 ✅)
+- IoC 集成、StateMachine 集成、Logging、数据库标准化、Resilience、Metrics、Config 系统、Validation、集成测试
+- Phase 1 骨架实现 + 评审后修复已在 `.kiro/specs/intent-clarification/history.md` 归档
+
+#### services-crypto-config-refactor — Crypto/Config/Services 重构 (27/29 ✅，2 项可选)
+- 三项耦合重构：crypto 原语统一（DeepBase.Crypto）、config 接口清理（移除 deprecated）、services 包边界拆分（Feedback→VCL、ORM→Persistence、Net→Features、License FireDAC 移除）
+
+#### browser-automation — 浏览器自动化框架 (38/41 ✅，3 项 P5 延后)
+- Phase 1-7 全部交付：抽象层骨架、Bug 修复（28 个）、能力升级（12 个新组件 + 10 个测试文件）、ScriptStore JS 脚本入库、5 位专家三轮评审（39 个 C/H 问题全关闭）、PageDriver 自然语言驱动（Alibaba page-agent 接入）
+- 3 个 P5 结构性延后项（IBrowserSession 合并、ResponseWaiter stale result、CDP cancel token）已转入 tasks.md
+
+---
+
+## 2026-06-02 代码-任务差距分析与清理 (GAP-CLEANUP-2026-06-02)
+
+### 发现：tasks.md 中 13 项标记"待办"实际已在代码中完成
+
+| 模块 | 已实现项 | 代码证据 |
+|------|---------|----------|
+| IC-P0 | L2/L3 session-scoped | Provider.L2/L3 已是 session 级 |
+| IC-P0 | Router MaxLevel 钳制 | `Router.pas` 有 `ClampDepth` |
+| IC-P0 | LLM resilience 超时 | `LLMResilience.pas` 有 `TTask`+`WaitForSingleObject` |
+| LLM-P0 | 6 种 Provider | `Core/DeepBase.LLM.pas` 6 个枚举 |
+| LLM-P0 | 按槽位 fallback | `LLM.Config.pas` tier model 数组 + `CallWithFallback` |
+| LLM-P0 | Vision fallback | `LLM.Service.pas` `ChatVision` |
+| LLM-P0 | 下游 facade | `DeepKitSafeClient` 已串联 |
+| LLM-P0 | Mock provider 测试 | fake transport 单测存在 |
+| DB-P0 | DoQry timeout/校验/脱敏 | `DoQry.pas` `TimeoutSec` + 参数校验 + DEBUG 脱敏 |
+| DB-P0 | 迁移引擎 | `Migrations.pas` 完整 `TMigrationEngine` |
+| Speech | M2.5 SenseVoice 后端 | 全部 7 项已实现 |
+
+### 已删除文件
+
+- 7 个已完成 kiro spec 目录：`intent-clarification`、`aierrorhandler-rollout`、`autofix-runtime-errors`、`regression-tests`、`deepbase-bug-fixes-p0p1p2`、`deepbase-round2-fixes`、`services-crypto-config-refactor`
+- 4 个仅有 requirements.md 的 spec 目录：`config-management-enhancement`、`doqry-optimization`、`property-based-testing`、`structured-error-handling`
+- 18 个 `.12.bak` Delphi 13 迁移备份文件
+- 2 个 `.utf8bom.tmp` 临时文件
+- `__history/` IDE 自动备份目录（root + Features）
+- `antitamper_debug.log`、`compile-errors.log`
+
+### 仍待完成的真正缺口
+
+- **IC**: facade 清理、GetPresetSlots 集成、L4 失败语义、FeatureConfig/Metrics 接线
+- **LLM**: 统一配置模型（两套并行）、GenerateImage async/stream、FMX 配置面板
+- **ARCH**: `DeepBaseFeatures.dpk` 仍 requires FireDAC/dbrtl（违反分层）
+- **Commerce**: PaymentBridge verifier、审计日志、每通知幂等
+- **Speech**: M4 DeepLaunch 未启动、WakeWord/Voiceprint/IntentParser 为 stub、PBT 测试缺失
+
+### Kiro 剩余 4 个 spec 合并至 tasks.md 并删除（同日续）
+
+- `browser-automation/`（tasks.md + bugfix.md + history.md）— Phase 8/9 评审修复已全部关闭，仅 P5 延后 3 项移入 tasks.md
+- `deepbase-speech/`（tasks.md + design.md + requirements.md + .config.kiro）— M0-M8 详细待办 34 项展开到 tasks.md，design.md/requirements.md 的 P1-P14 属性和 R1-R19 需求以设计参考形式保留
+- `delphi-13-migration/`（tasks.md）— 12 项待办展开到 tasks.md
+- `feedback-backend-service/`（tasks.md + design.md + requirements.md）— 10 阶段任务展开到 tasks.md，20 条正确性属性以设计参考形式保留
+- `.kiro/specs/` 目录现在为空
