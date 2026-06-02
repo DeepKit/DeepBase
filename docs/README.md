@@ -169,6 +169,7 @@
   40-49  api（接口 / SDK）
   50-54  extend（扩展 / 第三方 / 治理 / 浏览器自动化 / 意图澄清）
   55-63  vcl（DeepShell 桌面壳）
+  64     speech（语音识别/合成/声纹/唤醒词）
   65-69  backend（生产后端 / 契约）
   70-79  integrations（下游项目接入）
   80-89  ops（运维 / 手册 / FAQ / 安全测试 / AutoFix）
