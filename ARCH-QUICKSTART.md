@@ -464,9 +464,9 @@ end;
 在成功集成并跑通一个最�?Demo 之后，可按需阅读�?
 
 - 架构与规范：`docs/01.03.DeepBase-4H-项目定位与边�?v1.0.md`, `docs/03.03.DeepBase-4H-技术规�?v1.0.md`
-- 最佳实践：`docs/DeepBase-Downstream-Integration.md`
-- 数据库与 DoQry：`docs/04.03.DeepBase-4AI-数据库指�?v1.0.md`, `docs/05.03.DeepBase-4AI-DoQry指南-v1.0.md`
-- LLM 设计：`docs/05.05.DeepBase-4AI-LLM集成指南-v1.0.md`, `docs/ui/06-LLM-UI-Detailed-Design.md`
+- 最佳实践：`docs/02.quickstart.下游接入流程-downstream-integration.md`
+- 数据库与 DoQry：`docs/04.03.DeepBase-4AI-数据库指�?v1.0.md`, `docs/41.api.DoQry指南-doqry-guide.md`
+- LLM 设计：`docs/42.api.LLM集成指南-llm-integration.md`, `docs/ui/06-LLM-UI-Detailed-Design.md`
 
 ---
 
@@ -507,10 +507,10 @@ DeepBase/
 
 �?AI 最重要的文档：
 
-- `docs/01.03.DeepBase-4H-项目定位与边�?v1.0.md` �?项目定位与边�?- `docs/03.03.DeepBase-4H-技术规�?v1.0.md` �?命名、分层、交叉访问矩�?- `docs/DeepBase-Downstream-Integration.md` �?下游工程标准接入流程
-- `docs/01.01.DeepBase-4AI-集成指南-v1.0.md` �?AI 集成约束和初始化流程
-- `docs/07.03.DeepBase-4H-安全与测�?v1.0.md` �?DUnitX/构建/CI/测试 GUI/静态规范检�?- `docs/07.01.DeepBase-4AI-集成检查清�?v1.0.md` �?发布前集成检查清�?- `docs/03.01.DeepBase-4AI-FAQ与错误速查-v1.0.md` �?常见问题、陷阱与排查
-- `docs/00.00.DeepBase-文档索引-v1.0.md` �?全文档导航和目录�?
+- `docs/01.03.DeepBase-4H-项目定位与边�?v1.0.md` �?项目定位与边�?- `docs/03.03.DeepBase-4H-技术规�?v1.0.md` �?命名、分层、交叉访问矩�?- `docs/02.quickstart.下游接入流程-downstream-integration.md` �?下游工程标准接入流程
+- `docs/03.quickstart.AI深挖集成指南-ai-deep-integration.md` �?AI 集成约束和初始化流程
+- `docs/07.03.DeepBase-4H-安全与测�?v1.0.md` �?DUnitX/构建/CI/测试 GUI/静态规范检�?- `docs/84.ops.集成检查清单-integration-checklist�?v1.0.md` �?发布前集成检查清�?- `docs/83.ops.FAQ与错误速查-faq-troubleshooting.md` �?常见问题、陷阱与排查
+- `docs/README.md` �?全文档导航和目录�?
 在回答用户问题或修改代码前，AI 应优先从以上文件搜索相关信息�?
 
 ---
@@ -678,18 +678,18 @@ AI 必须�?
 ## 8. 推荐阅读顺序（AI & 新开发者）
 
 1. 本文�?`ARCH-QUICKSTART.md`
-2. `docs/00.00.DeepBase-文档索引-v1.0.md`（总览与角色导读）
+2. `docs/README.md`（总览与角色导读）
 3. `docs/01.03.DeepBase-4H-项目定位与边�?v1.0.md`
 4. `docs/03.03.DeepBase-4H-技术规�?v1.0.md`
-5. `docs/DeepBase-Downstream-Integration.md`
+5. `docs/02.quickstart.下游接入流程-downstream-integration.md`
 6. `docs/07.03.DeepBase-4H-安全与测�?v1.0.md`
-7. `docs/07.01.DeepBase-4AI-集成检查清�?v1.0.md`
-8. `docs/03.01.DeepBase-4AI-FAQ与错误速查-v1.0.md`
+7. `docs/84.ops.集成检查清单-integration-checklist�?v1.0.md`
+8. `docs/83.ops.FAQ与错误速查-faq-troubleshooting.md`
 
 之后再根据需要查阅：
 
 - API 细节：`docs/05.01.DeepBase-4AI-API参�?v1.0.md`
-- 数据库：`docs/04.03.DeepBase-4AI-数据库指�?v1.0.md`, `docs/05.03.DeepBase-4AI-DoQry指南-v1.0.md`
+- 数据库：`docs/04.03.DeepBase-4AI-数据库指�?v1.0.md`, `docs/41.api.DoQry指南-doqry-guide.md`
 - UI 设计：`docs/ui/*`
 
 ---
