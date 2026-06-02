@@ -5,9 +5,17 @@
 
 ---
 
+## 架构全景
+
+**[00.overview.DeepBase架构全景.md](./00.overview.DeepBase架构全景.md)** — 一份文档讲清楚 DeepBase 是什么、怎么组织的、怎么用。
+
 ## 给 AI 的唯一入口
 
 **[00.quickstart.AI集成总览-ai-one-file.md](./00.quickstart.AI集成总览-ai-one-file.md)** — AI 先读这一份，再按需取其它细节文件。
+
+## 架构全景（一份文档讲清楚）
+
+**[00.overview.DeepBase架构全景.md](./docs/00.overview.DeepBase架构全景.md)** — 一份文档讲清楚 DeepBase 是什么、怎么组织的、怎么用。
 
 ## 给下游 / 第三方的唯一入口
 
