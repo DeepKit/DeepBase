@@ -652,7 +652,15 @@ try {
             '-OutputDir', $outDir)
 
         $runnerStatus = $null
-        try { $runnerStatus = $rr.Stdout | ConvertFrom-Json -Depth 8 -DateKind String } catch { $runnerStatus = $null }
+        try {
+            # runner.ps1 logs to stderr-style log lines and emits JSON as last stdout line.
+            # Extract the last non-empty line for JSON parsing.
+            $lines = $rr.Stdout -split "`r?`n" | Where-Object { $_ -and $_.Trim() -ne '' }
+            $jsonLine = $lines[-1]
+            if ($jsonLine -and $jsonLine.Trim().StartsWith('{')) {
+                $runnerStatus = $jsonLine | ConvertFrom-Json -Depth 8 -DateKind String
+            }
+        } catch { $runnerStatus = $null }
         $exeExit = if ($runnerStatus -and $runnerStatus.PSObject.Properties['exit_code']) { [int]$runnerStatus.exit_code } else { -1 }
         $runnerStatusStr = if ($runnerStatus) { $runnerStatus.status } else { 'unknown' }
         Write-AutoFixLog -Level info -Msg 'runner returned' -Ctx @{ exit = $rr.ExitCode; exe_exit = $exeExit; status = $runnerStatusStr }
