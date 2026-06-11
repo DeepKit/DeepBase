@@ -184,7 +184,7 @@ function Emit-Status {
         pid         = $ProcId
         ready       = $Ready
     }
-    [Console]::Out.WriteLine(($obj | ConvertTo-Json -Depth 6 -Compress))
+    Write-Output ($obj | ConvertTo-Json -Depth 6 -Compress)
 }
 
 # -----------------------------------------------------------------------------
@@ -356,4 +356,9 @@ catch {
         -StoppedAt $stoppedTs -DurationMs $duration `
         -ProcId 0 -Ready $false
     exit $Script:AutoFixExit_Generic
+}
+finally {
+    if ($null -ne $proc) {
+        try { $proc.Dispose() } catch {}
+    }
 }
