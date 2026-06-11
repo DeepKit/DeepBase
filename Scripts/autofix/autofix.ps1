@@ -203,7 +203,7 @@ function ConvertTo-AbsoluteIfPossible {
 }
 
 function New-IterationSummary {
-    [CmdletBinding()]
+    [CmdletBinding(PositionalBinding=$false)]
     param(
         [int]$Iteration,
         [string]$RunIdValue,
@@ -566,9 +566,6 @@ try {
         Write-AutoFixLog -Level warn -Msg 'pre-flight lint gate skipped (-SkipLint)' -Ctx @{}
     }
 
-    # ---- Resolve project / exe / map paths against repo root first ----
-    $projectAbs = ConvertTo-AbsoluteIfPossible -Path $Project -BaseDir $repoRoot
-
     # ---- Create worktree ----
     Write-AutoFixLog -Level info -Msg 'creating isolated worktree' -Ctx @{ branch = $branch; path = $wt }
     $r = Invoke-ChildScript -Script 'git-checkpoint.ps1' -ChildArgs @('-Action', 'create', '-Branch', $branch, '-WorktreePath', $wt)
@@ -581,6 +578,24 @@ try {
     # The script printed the worktree absolute path on stdout; trust it.
     $wtAbs = $r.Stdout.Trim()
     if ($wtAbs -and (Test-Path -LiteralPath $wtAbs -PathType Container)) { $wt = $wtAbs }
+
+    # Bootstrap worktree with runtime files the EXE needs at startup
+    # (root.txt, ConfigDB, etc.). DeepBase apps read root.txt to locate
+    # the data directory and ConfigDB; without these the EXE crashes
+    # before writing a health signal.
+    try {
+        foreach ($fn in @('root.txt')) {
+            $srcBoot = Join-Path $repoRoot $fn
+            $dstBoot = Join-Path $wt $fn
+            if ((Test-Path -LiteralPath $srcBoot -PathType Leaf) -and
+                -not (Test-Path -LiteralPath $dstBoot -PathType Leaf)) {
+                Copy-Item -LiteralPath $srcBoot -Destination $dstBoot -Force
+                Write-AutoFixLog -Level info -Msg 'bootstrapped worktree file' -Ctx @{ file = $fn }
+            }
+        }
+    } catch {
+        Write-AutoFixLog -Level warn -Msg 'worktree bootstrap failed' -Ctx @{ error = $_.Exception.Message }
+    }
 
     # Recompute project paths against the worktree (the .dproj lives there too).
     $projectInWt = ConvertTo-AbsoluteIfPossible -Path $Project -BaseDir $wt
@@ -651,7 +666,7 @@ try {
         # 3. WER fallback if exit non-zero and no records yet
         if ($errorRecords.Count -eq 0 -and $exeExit -ne 0) {
             $procPid = if ($runnerStatus -and $runnerStatus.PSObject.Properties['pid']) { [int]$runnerStatus.pid } else { 0 }
-            $startedAt = if ($runnerStatus -and $runnerStatus.PSObject.Properties['started_at']) { [string]$runnerStatus.started_at } else { '' }
+            $startedAt = if ($runnerStatus -and $runnerStatus.PSObject.Properties['started_at'] -and -not [string]::IsNullOrWhiteSpace([string]$runnerStatus.started_at)) { [string]$runnerStatus.started_at } else { '0001-01-01T00:00:00.000Z' }
             $exeName = [System.IO.Path]::GetFileName($exeInWt)
             Write-AutoFixLog -Level info -Msg 'invoking wer-collector for hard-crash fallback' -Ctx @{ pid = $procPid; exit = $exeExit }
             $wer = Invoke-ChildScript -Script 'wer-collector.ps1' -ChildArgs @(

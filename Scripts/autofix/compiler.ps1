@@ -155,7 +155,7 @@ call "$bat"
 if errorlevel 1 exit /b 102
 msbuild "$Project" /t:Build /p:Config=$Config /p:Platform=$Platform /v:normal$extra
 "@
-    [System.IO.File]::WriteAllText($tmpCmd, $cmdContent, [System.Text.Encoding]::new($false))
+    [System.IO.File]::WriteAllText($tmpCmd, $cmdContent, [System.Text.UTF8Encoding]::new($false))
 
     Write-AutoFixLog -Level info -Msg 'invoking msbuild' -Ctx @{ project = $Project; config = $Config; platform = $Platform }
 
@@ -210,6 +210,7 @@ msbuild "$Project" /t:Build /p:Config=$Config /p:Platform=$Platform /v:normal$ex
             $rawOutput = @($rawOutput) + @($outErr -split "`r?`n")
         }
     } finally {
+        if ($null -ne $proc) { try { $proc.Dispose() } catch {} }
         Remove-Item $tmpOut -Force -ErrorAction SilentlyContinue
         Remove-Item $tmpErr -Force -ErrorAction SilentlyContinue
         Remove-Item $tmpCmd -Force -ErrorAction SilentlyContinue

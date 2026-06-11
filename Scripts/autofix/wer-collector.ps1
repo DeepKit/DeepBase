@@ -185,7 +185,12 @@ function Get-DurationMs {
     if ([string]::IsNullOrWhiteSpace($Started)) { return 0 }
     [datetime]$dt = [datetime]::MinValue
     if (-not [datetime]::TryParse($Started, [ref]$dt)) { return 0 }
-    return [int]((Get-Date) - $dt).TotalMilliseconds
+    $span = (Get-Date) - $dt
+    $ms = $span.TotalMilliseconds
+    # Clamp to Int32 range to avoid overflow from ancient sentinel dates
+    if ($ms -gt [int]::MaxValue) { return [int]::MaxValue }
+    if ($ms -lt [int]::MinValue) { return [int]::MinValue }
+    return [int]$ms
 }
 
 # -----------------------------------------------------------------------------
