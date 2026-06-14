@@ -48,6 +48,14 @@
 
 - [30 数据库 Schema 说明](./30.data.数据库Schema说明-database-schema.md)
 - [31 数据库指南](./31.data.数据库指南-database-guide.md)
+- [32 SQLCipher 外部数据库读取](./32.data.SQLCipher外部数据库读取-开发规格.md)
+- [33 SchemaAdapter 通用适配器](./33.data.SchemaAdapter通用适配器-开发规格.md)
+- [34 UIA 自动化引擎](./34.data.UIA自动化引擎-开发规格.md)
+- [35 剪贴板保护与窗口监控](./35.data.剪贴板保护与窗口监控-开发规格.md)
+- [35a R1综合评估](./35a.synthesis.32-35修复后综合评估.md)
+- [35b R2综合评估](./35b.synthesis.10专家综合评估.md)
+- [35c R3综合评估](./35c.synthesis.14专家最终报告.md)
+- [36 Bootstrap与CompositionRoot](./36.data.Bootstrap与CompositionRoot-开发规格.md)
 
 ### api · 接口与 API
 

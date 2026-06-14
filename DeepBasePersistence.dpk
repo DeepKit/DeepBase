@@ -31,6 +31,7 @@ contains
   DeepBase.Persistence.Diagnose.FireDAC in 'Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas',
   DeepBase.Persistence.ORM.FireDAC in 'Persistence\DeepBase.Persistence.ORM.FireDAC.pas',
   DeepBase.Persistence.Manager.FireDAC in 'Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
+  DeepBase.Speech.Schema in 'Persistence\DeepBase.Speech.Schema.pas',
   DeepBase.Persistence.RuntimeRegistration in 'Persistence\DeepBase.Persistence.RuntimeRegistration.pas',
   DeepBase.DB.ConnectionPool in 'Persistence\DeepBase.DB.ConnectionPool.pas',
   DeepBase.SQLLogger in 'Persistence\DeepBase.SQLLogger.pas',
@@ -42,6 +43,6 @@ contains
   DeepBase.DB.Migrations in 'Persistence\DeepBase.DB.Migrations.pas',
   DeepBase.DB.StatusMachine in 'Persistence\DeepBase.DB.StatusMachine.pas',
   DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas',
-  DeepBase.ORM in 'Core\DeepBase.ORM.pas';
+  DeepBase.External.SQLiteReader in 'Persistence\DeepBase.External.SQLiteReader.pas';
 
 end.

@@ -31,22 +31,17 @@ package DeepBaseFeatures;
 
 requires
   rtl,
-  dbrtl,
-  FireDAC,
-  FireDACCommonDriver,
   IndySystem,
   IndyCore,
   IndyProtocols,
   DeepBaseCore,
   DeepBaseServices,
-  DeepBasePersistence,
   RESTComponents;
 
 contains
-  DeepBase.Net in 'Core\DeepBase.Net.pas',
+  DeepBase.Net in 'Features\DeepBase.Net.pas',
   DeepBase.Net.Transport in 'Features\DeepBase.Net.Transport.pas',
   DeepBase.Net.Transport.ICS in 'Features\DeepBase.Net.Transport.ICS.pas',
-  DeepBase.LLM in 'Core\DeepBase.LLM.pas',
   DeepBase.LLM.Types in 'Features\DeepBase.LLM.Types.pas',
   DeepBase.LLM.Client in 'Features\DeepBase.LLM.Client.pas',
   DeepBase.LLM.HTTP in 'Features\DeepBase.LLM.HTTP.pas',
@@ -71,7 +66,6 @@ contains
   DeepBase.IntentClarification.Budget in 'Features\DeepBase.IntentClarification.Budget.pas',
   DeepBase.IntentClarification.Exit in 'Features\DeepBase.IntentClarification.Exit.pas',
   DeepBase.IntentClarification.OptionFrame in 'Features\DeepBase.IntentClarification.OptionFrame.pas',
-  DeepBase.IntentClarification.Storage in 'Features\DeepBase.IntentClarification.Storage.pas',
   DeepBase.IntentClarification.Metrics in 'Features\DeepBase.IntentClarification.Metrics.pas',
   DeepBase.IntentClarification.FeatureConfig in 'Features\DeepBase.IntentClarification.FeatureConfig.pas',
   DeepBase.IntentClarification.Templates in 'Features\DeepBase.IntentClarification.Templates.pas',
@@ -103,11 +97,9 @@ contains
   DeepBase.Inference.Session in 'Features\DeepBase.Inference.Session.pas',
   DeepBase.Inference.Service in 'Features\DeepBase.Inference.Service.pas',
   DeepBase.Inference.IoC in 'Features\DeepBase.Inference.IoC.pas',
-  DeepBase.LLM.Manager in 'Core\DeepBase.LLM.Manager.pas',
-  DeepBase.Persistence.LLM.FireDAC in 'Persistence\DeepBase.Persistence.LLM.FireDAC.pas',
-  DeepBase.LLM.BillingClient in 'Core\DeepBase.LLM.BillingClient.pas',
-  DeepBase.LLM.ImportExport in 'Core\DeepBase.LLM.ImportExport.pas',
   DeepBase.Commerce.Types in 'Features\DeepBase.Commerce.Types.pas',
+  DeepBase.Commerce.JsonUtil in 'Features\DeepBase.Commerce.JsonUtil.pas',
+  DeepBase.Commerce.Idempotency in 'Features\DeepBase.Commerce.Idempotency.pas',
   DeepBase.Commerce.Storage in 'Features\DeepBase.Commerce.Storage.pas',
   DeepBase.Commerce.Service in 'Features\DeepBase.Commerce.Service.pas',
   DeepBase.Commerce.Backend.Contract in 'Features\DeepBase.Commerce.Backend.Contract.pas',
@@ -128,6 +120,11 @@ contains
   DeepBase.CloudSync in 'Features\DeepBase.CloudSync.pas',
   DeepBase.CloudBackup in 'Features\DeepBase.CloudBackup.pas',
   DeepBase.Graph in 'Features\DeepBase.Graph.pas',
-  DeepBase.HttpServer in 'Features\DeepBase.HttpServer.pas';
+  DeepBase.HttpServer in 'Features\DeepBase.HttpServer.pas',
+  DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
+  DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
+  DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',
+  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas',
+  DeepBase.DataPlatform.Bootstrap in 'Features\DeepBase.DataPlatform.Bootstrap.pas';
 
 end.
