@@ -43,6 +43,7 @@ contains
   DeepBase.DB.Migrations in 'Persistence\DeepBase.DB.Migrations.pas',
   DeepBase.DB.StatusMachine in 'Persistence\DeepBase.DB.StatusMachine.pas',
   DeepBase.DB.Pool in 'Persistence\DeepBase.DB.Pool.pas',
-  DeepBase.External.SQLiteReader in 'Persistence\DeepBase.External.SQLiteReader.pas';
+  DeepBase.External.SQLiteReader in 'Persistence\DeepBase.External.SQLiteReader.pas',
+  DeepBase.External.BCryptDecrypt in 'Persistence\DeepBase.External.BCryptDecrypt.pas';
 
 end.
