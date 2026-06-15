@@ -14,6 +14,7 @@ uses
   FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
   DeepBase.Types, DeepBase.Exceptions, DeepBase.Logging,
   DeepBase.External.Types, DeepBase.External.Auditor,
+  DeepBase.External.BCryptDecrypt,
   DeepBase.SchemaAdapter.Registry;
 
 type
@@ -46,11 +47,13 @@ type
     FAdapterRegistry: ISchemaAdapterRegistry;
     FIsOpen: Boolean;
     FDbPath: string;
+    FBCryptReader: TBCryptSQLiteReader;          // v0.7: BCrypt direct decryption backend
     function LoadSQLCipherLibrary: Boolean;
     procedure ApplyReadOnlySafeguards;
     function GetRawSQLiteHandle: Pointer;
     function TryResolveAdapter(const Fingerprint: string): Boolean;
     procedure ApplyFireDACConnection(const DbPath: string; const KeyBytes: TBytes);
+    procedure ApplyBCryptConnection(const DbPath: string; const KeyBytes: TBytes);
   public
     constructor Create(const AConfig: TSQLCipherCompatibilityConfig;
       const AAuditor: IBodyZeroAuditor);
@@ -100,6 +103,7 @@ end;
 destructor TExternalSQLiteReader.Destroy;
 begin
   Close;
+  FBCryptReader.Free;
   inherited;
 end;
 
@@ -165,11 +169,72 @@ begin
   FDbPath := DbPath;
 end;
 
-// ===== Backend: BCryptDirect stub =====
+// ===== Backend: BCryptDirect (from WxDecryptProbe verified implementation) =====
 
-procedure TExternalSQLiteReader.ApplyReadOnlySafeguards;
+procedure TExternalSQLiteReader.ApplyBCryptConnection(const DbPath: string;
+  const KeyBytes: TBytes);
 begin
-  FConnection.ExecSQL('PRAGMA busy_timeout = 5000;');
+  // Read salt from DB file (first 16 bytes)
+  var Salt: TBytes;
+  SetLength(Salt, 16);
+  var FS := TFileStream.Create(DbPath, fmOpenRead or fmShareDenyNone);
+  try
+    FS.Read(Salt[0], 16);
+  finally
+    FS.Free;
+  end;
+
+  // Derive keys via BCrypt PBKDF2-HMAC-SHA1
+  FBCryptReader := TBCryptSQLiteReader.Create(KeyBytes, Salt);
+  try
+    if not FBCryptReader.OpenDatabase(DbPath) then
+    begin
+      FreeAndNil(FBCryptReader);
+      raise EExternalDBError.Create('BCrypt decryption failed: HMAC verification mismatch');
+    end;
+
+    // Connect FireDAC to the decrypted copy
+    FConnection := TFDConnection.Create(nil);
+    FConnection.Params.Values['Database'] := FBCryptReader.DecryptedPath;
+    FConnection.Params.Values['OpenMode'] := 'ReadOnly';
+    FConnection.Open;
+
+    try
+      FConnection.ExecSQL('SELECT count(*) FROM sqlite_master');
+    except
+      on E: Exception do
+      begin
+        FConnection.Free;
+        FConnection := nil;
+        raise EExternalDBError.CreateFmt('Decrypted DB verification failed: %s', [E.Message]);
+      end;
+    end;
+
+    FSchemaVersionAtOpen := QueryPragmaInt('schema_version');
+    FIsOpen := True;
+    FDbPath := DbPath;
+  except
+    on E: Exception do
+    begin
+      FreeAndNil(FBCryptReader);
+      raise;
+    end;
+  end;
+end;
+
+function TExternalSQLiteReader.OpenReadOnly(const DbPath: string;
+  const KeyBytes: TBytes): IExternalDBReader;
+begin
+  if FBackend = beBCryptDirect then
+    ApplyBCryptConnection(DbPath, KeyBytes)
+  else
+  begin
+    if not LoadSQLCipherLibrary then
+      raise EExternalDBError.Create('Cannot load SQLCipher library');
+    ApplyFireDACConnection(DbPath, KeyBytes);
+  end;
+  Result := Self;
+end;
 end;
 
 function TExternalSQLiteReader.GetRawSQLiteHandle: Pointer;
@@ -177,21 +242,8 @@ begin
   Result := nil;
 end;
 
-// ===== IExternalDBReader =====
-
-function TExternalSQLiteReader.OpenReadOnly(const DbPath: string;
-  const KeyBytes: TBytes): IExternalDBReader;
-begin
-  if FBackend = beFireDAC then
-  begin
-    if not LoadSQLCipherLibrary then
-      raise EExternalDBError.Create('Cannot load SQLCipher library');
-    ApplyFireDACConnection(DbPath, KeyBytes);
-  end
-  else
-    ApplyFireDACConnection(DbPath, KeyBytes);
-  Result := Self;
-end;
+// ===== IExternalDBReader core — see OpenReadOnly above in BCrypt section =====
+// OpenWithKeyCallback is unchanged from previous implementation
 
 function TExternalSQLiteReader.OpenWithKeyCallback(const DbPath: string;
   const KeyCallback: TFunc<string, TBytes>): IExternalDBReader;

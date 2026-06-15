@@ -230,6 +230,12 @@ begin
     if Length(Prefix) < 10 then
       raise ESchemaAdapterValidationError.Create(
         'Fingerprint prefix must be at least 10 hex characters');
+
+  for var I := 0 to High(FFieldMappings) do
+    if FFieldMappings[I].ColumnIndex <> I then
+      raise ESchemaAdapterValidationError.CreateFmt(
+        'ColumnIndex mismatch at position %d: expected %d, got %d',
+        [I, I, FFieldMappings[I].ColumnIndex]);
 end;
 
 end.
