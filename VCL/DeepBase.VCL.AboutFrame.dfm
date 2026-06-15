@@ -346,25 +346,4 @@ object UniAboutFrame: TUniAboutFrame
       end
     end
   end
-  object FDConnection1: TFDConnection
-    Params.Strings = (
-      'DriverID=SQLite')
-    Connected = False
-    LoginPrompt = False
-    Left = 272
-    Top = 115
-  end
-  object FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink
-    Left = 368
-    Top = 115
-  end
-  object FDTable1: TFDTable
-    Active = False
-    IndexFieldNames = 'id'
-    Connection = FDConnection1
-    ResourceOptions.AssignedValues = [rvEscapeExpand]
-    TableName = 'images'
-    Left = 264
-    Top = 219
-  end
 end

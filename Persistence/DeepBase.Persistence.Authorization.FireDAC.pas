@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Authorization.FireDAC - FireDAC adapter for Authorization
   ============================================================================
   Moves Authorization SQL/FireDAC persistence out of Core\DeepBase.Authorization.

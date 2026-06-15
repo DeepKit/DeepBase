@@ -271,6 +271,18 @@ begin
         for var Target in Targets do
         begin
           var Running := IsProcessRunning(Target);
+          // Notify via callbacks if process state changed
+          var Snapshot: TArray<TProcessStateCallback>;
+          FCallbackLock.Enter;
+          try
+            Snapshot := FProcessCallbacks.Values.ToArray;
+          finally
+            FCallbackLock.Leave;
+          end;
+          var State: TProcessState;
+          if Running then State := psStarted else State := psStopped;
+          for var CB in Snapshot do
+            CB(Target, State);
         end;
       finally
         FWatchTargets.UnlockList;
@@ -280,6 +292,7 @@ begin
         Logger.ErrorFmt('PollThreadProc exception: %s', [E.Message], 'WindowMonitor');
     end;
   end;
+end;
 end;
 
 procedure TWindowMonitor.CheckHookHealth;

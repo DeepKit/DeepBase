@@ -1,4 +1,4 @@
-unit DeepBase.Reflection;
+﻿unit DeepBase.Reflection;
 
 {*******************************************************************************
   DeepBase Reflection/RTTI Utilities

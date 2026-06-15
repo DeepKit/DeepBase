@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="29" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-11" time="09:55:29">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:55:29" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="53.420" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="53.420" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TResponseWaiterPropertyTests" executed="True" result="Success" success="True" time="0.011" >
+                      <results>
+                        <test-case name="Property9_StringWrappedAndObjectPayloadsParseEqually" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Property10_MessagesRouteToMatchingWaiterIdOnly" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TDeepFlowPropertyTests" executed="True" result="Success" success="True" time="43.268" >
+                      <results>
+                        <test-case name="Property18_PauseResumeDrainsAllTasks" executed="True" result="Success" success="True" time="12.497" asserts="0" />
+                        <test-case name="Property19_PriorityQueueMaintainsDescendingOrder" executed="True" result="Success" success="True" time="30.772" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="DeepShell" executed="true" result="Success" success="True" time="7.772" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TShellEventBusLifecyclePropertyTests" executed="True" result="Success" success="True" time="3.120" >
+                            <results>
+                              <test-case name="Property11_ShutdownDrainsQueuedHandlers" executed="True" result="Success" success="True" time="3.118" asserts="0" />
+                              <test-case name="Property12_PublishAfterShutdownRaises" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Property13_HandlerExceptionInvokesDispatchError" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TThemeLocaleDispatchPropertyTests" executed="True" result="Success" success="True" time="4.652" >
+                            <results>
+                              <test-case name="Property14_ApplyTheme_DispatchesOnMainThread" executed="True" result="Success" success="True" time="1.557" asserts="0" />
+                              <test-case name="Property14_SetLocale_DispatchesOnMainThread" executed="True" result="Success" success="True" time="1.552" asserts="0" />
+                              <test-case name="Property14_HelperMirror_QueueRunsOnMainThread" executed="True" result="Success" success="True" time="1.543" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TGovernanceRound2PropertyTests" executed="True" result="Success" success="True" time="0.018" >
+                      <results>
+                        <test-case name="Property33_RouteResolver_NoStaleFallbackAfterReload" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Property34_ActionGrid_NoopWithoutBridge" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Property35_ValidationEngine_CacheConsistency" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TInferenceRound2PropertyTests" executed="True" result="Success" success="True" time="0.076" >
+                      <results>
+                        <test-case name="Property36_RuntimeReinitRoundTrip" executed="True" result="Success" success="True" time="0.076" asserts="0" />
+                        <test-case name="Property37_HelperMirror_SessionShapeValidation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Property38_HelperMirror_MetadataUtf8Fidelity" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Property39_InferenceServiceIsReadyFullCheck" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="IntentClarification" executed="true" result="Success" success="True" time="0.713" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TICEngineConcurrentPropertyTests" executed="True" result="Success" success="True" time="0.272" >
+                            <results>
+                              <test-case name="Property7_ConcurrentSubmitInputSerializesTurns" executed="True" result="Success" success="True" time="0.112" asserts="0" />
+                              <test-case name="Property7_HelperMirror_LockSerializationCount" executed="True" result="Success" success="True" time="0.161" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TICRound2PropertyTests" executed="True" result="Success" success="True" time="0.441" >
+                            <results>
+                              <test-case name="Property26_L2_DenyHypothesisIsolation" executed="True" result="Success" success="True" time="0.092" asserts="0" />
+                              <test-case name="Property26_L3_ExpertSelectionIsolation" executed="True" result="Success" success="True" time="0.061" asserts="0" />
+                              <test-case name="Property27_FromJsonMalformedReturnsErrorResult" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Property28_HelperMirror_FindProviderDegradationChain" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Property29_AnticipationCounterAtomic" executed="True" result="Success" success="True" time="0.092" asserts="0" />
+                              <test-case name="Property29_MetricsCounterAtomic" executed="True" result="Success" success="True" time="0.194" asserts="0" />
+                              <test-case name="Property30_HelperMirror_TurnRecordCompleteness" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TStreamingTransportPropertyTests" executed="True" result="Success" success="True" time="1.561" >
+                      <results>
+                        <test-case name="Property3_ChunkCallbackInvokedExactlyNTimes" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Property4_CancellationStopsFurtherCallbacks" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Property5_FirstTokenMsBoundedByTotalDuration" executed="True" result="Success" success="True" time="1.560" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

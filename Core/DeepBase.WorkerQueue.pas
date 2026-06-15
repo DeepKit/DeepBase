@@ -1,4 +1,4 @@
-unit DeepBase.WorkerQueue;
+﻿unit DeepBase.WorkerQueue;
 
 {*******************************************************************************
   DeepBase Worker Queue

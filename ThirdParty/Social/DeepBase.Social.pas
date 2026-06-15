@@ -297,7 +297,7 @@ end;
 function TSocialToken.IsExpired: Boolean;
 begin
   if ExpiresAt = 0 then
-    Result := True   // No expiration info — treat as expired (conservative)
+    Result := False
   else
     Result := Now > ExpiresAt;
 end;

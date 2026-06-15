@@ -6,13 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.ExtCtrls, System.NetEncoding, System.Hash, Vcl.Imaging.pngimage,
-  Vcl.Clipbrd, System.IOUtils, FireDAC.Stan.Intf,
-  FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
-  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys,
-  FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs,
-  FireDAC.VCLUI.Wait, FireDAC.Phys.SQLiteWrapper.Stat, Data.DB,
-  FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf,
-  FireDAC.DApt, FireDAC.Comp.DataSet, DeepBase.AntiTamper, DeepBase.Protection,
+  Vcl.Clipbrd, System.IOUtils, DeepBase.AntiTamper,
   DeepBase.Exceptions;
 
 type
@@ -68,9 +62,6 @@ type
     lblAboutMeTip: TLabel;
     lblMachineCode: TLabel;
     lblMachineCodeValue: TLabel;
-    FDConnection1: TFDConnection;
-    FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink;
-    FDTable1: TFDTable;
     
     procedure btnCopyBTCClick(Sender: TObject);
     procedure btnCopyUSDTClick(Sender: TObject);
@@ -83,6 +74,8 @@ type
     FInitTimer: TTimer;
     FImageMappings: array[0..5] of TImageMapping;  // 6 个图像: official_gzh, wechat, alipay, btc, usdt, aboutme
     FDatabasePath: string;
+    FBTCAddress: string;
+    FUSDTAddress: string;
 
     // 日志与内部方法
     procedure Log(const Msg: string);
@@ -202,7 +195,6 @@ end;
 
 procedure TUniAboutFrame.InitializeDataManager;
 var
-  LogFile: TextFile;
   LogFileName: string;
   DatabasePath: string;
 begin
@@ -224,6 +216,7 @@ begin
       DatabasePath := FDatabasePath
     else
       DatabasePath := GetProjectRootPath + 'MoveCConfig.db';
+    FDatabasePath := DatabasePath;
     Log('Setting database path: ' + DatabasePath);
 
     // 检查数据库文件是否存在
@@ -231,54 +224,6 @@ begin
     begin
       Log('Database file does not exist: ' + DatabasePath);
       raise EFileNotFoundExceptionEx.Create('Database file not found');
-    end;
-
-    // 设置数据库连接字符串
-    Log('Setting up database connection');
-    FDConnection1.Params.Values['Database'] := DatabasePath;
-    // Note: Password is not set here as encryption is handled at application level
-
-    // 绑定表到 aboutMeImages（防止设计时指向错误的表）
-    FDTable1.Connection := FDConnection1;
-    FDTable1.TableName := 'aboutMeImages';
-
-    // 检查设计时数据库组件状态
-    Log('Checking design-time database components:');
-    Log('  FDConnection1.Connected: ' + BoolToStr(FDConnection1.Connected, True));
-    Log('  FDTable1.Active: ' + BoolToStr(FDTable1.Active, True));
-    Log('  Database path: ' + FDConnection1.Params.Values['Database']);
-    Log('  FDTable1.TableName: ' + FDTable1.TableName);
-
-    // 如果连接未激活，尝试激活
-    if not FDConnection1.Connected then
-    begin
-      Log('Attempting to activate database connection');
-      try
-        FDConnection1.Connected := True;
-        Log('Database connection activated successfully');
-      except
-        on E: Exception do
-        begin
-          Log('Database connection activation failed: ' + E.Message);
-          raise;
-        end;
-      end;
-    end;
-
-    // 如果表未激活，尝试激活
-    if not FDTable1.Active then
-    begin
-      Log('Attempting to activate data table');
-      try
-        FDTable1.Active := True;
-        Log('Data table activated successfully');
-      except
-        on E: Exception do
-        begin
-          Log('Data table activation failed: ' + E.Message);
-          raise;
-        end;
-      end;
     end;
 
     // 在加载图像前执行一次性迁移（将旧加密改为“仅固定口令”方案）
@@ -402,18 +347,20 @@ var
   Stream: TBytesStream;
 begin
   Log('开始加载和显示图像');
+  FBTCAddress := '';
+  FUSDTAddress := '';
 
   try
     for I := 0 to High(FImageMappings) do
     begin
       Log(Format('处理图像 %d: %s', [I, FImageMappings[I].Key]));
 
-      if FDTable1.Active and Assigned(FImageMappings[I].Image) then
+      if Assigned(FImageMappings[I].Image) then
       begin
         try
           // 统一处理解密和校验：AES-256 解密、SHA-256 校验和 HMAC 校验
-          if TAntiTamperPackage.LoadSecureImageBytes(
-               FDTable1,
+          if TAntiTamperPackage.LoadSecureImageBytesFromDatabase(
+               FDatabasePath,
                FImageMappings[I].Key,
                ImageBytes,
                AddressText) then
@@ -427,6 +374,11 @@ begin
             end;
 
             Log(Format('图像加载成功: %s', [FImageMappings[I].Key]));
+
+            if SameText(FImageMappings[I].Key, 'btc') then
+              FBTCAddress := AddressText
+            else if SameText(FImageMappings[I].Key, 'usdt') then
+              FUSDTAddress := AddressText;
 
             // 设置地址标签
             if Assigned(FImageMappings[I].AddressLabel) then
@@ -448,7 +400,7 @@ begin
       end
       else
       begin
-        Log(Format('数据表未激活或Image控件未分配: %s', [FImageMappings[I].Key]));
+        Log(Format('Image控件未分配: %s', [FImageMappings[I].Key]));
       end;
     end;
   except
@@ -468,49 +420,23 @@ end;
 procedure TUniAboutFrame.btnCopyBTCClick(Sender: TObject);
 var
   BTCAddress: string;
-  AddressField: TField;
 begin
-  if FDTable1.Active then
-  begin
-    if FDTable1.Locate('image_key', 'btc', []) then
-    begin
-      AddressField := FDTable1.FieldByName('address_text');
-      if not AddressField.IsNull and (AddressField.AsString <> '') then
-        BTCAddress := AddressField.AsString
-      else
-        BTCAddress := 'BTC地址未配置';
-    end
-    else
-      BTCAddress := 'BTC记录未找到';
+  BTCAddress := FBTCAddress;
+  if BTCAddress = '' then
+    BTCAddress := 'BTC地址未配置';
 
-    CopyAddressToClipboard(BTCAddress, 'BTC地址');
-  end
-  else
-    CopyAddressToClipboard('数据库未连接', 'BTC地址');
+  CopyAddressToClipboard(BTCAddress, 'BTC地址');
 end;
 
 procedure TUniAboutFrame.btnCopyUSDTClick(Sender: TObject);
 var
   USDTAddress: string;
-  AddressField: TField;
 begin
-  if FDTable1.Active then
-  begin
-    if FDTable1.Locate('image_key', 'usdt', []) then
-    begin
-      AddressField := FDTable1.FieldByName('address_text');
-      if not AddressField.IsNull and (AddressField.AsString <> '') then
-        USDTAddress := AddressField.AsString
-      else
-        USDTAddress := 'USDT地址未配置';
-    end
-    else
-      USDTAddress := 'USDT记录未找到';
+  USDTAddress := FUSDTAddress;
+  if USDTAddress = '' then
+    USDTAddress := 'USDT地址未配置';
 
-    CopyAddressToClipboard(USDTAddress, 'USDT地址');
-  end
-  else
-    CopyAddressToClipboard('数据库未连接', 'USDT地址');
+  CopyAddressToClipboard(USDTAddress, 'USDT地址');
 end;
 
 procedure TUniAboutFrame.CopyAddressToClipboard(const Address: string; const AddressName: string);

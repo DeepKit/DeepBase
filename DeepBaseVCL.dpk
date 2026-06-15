@@ -48,7 +48,6 @@ contains
   DeepBase.VCL.Export.Image in 'VCL\DeepBase.VCL.Export.Image.pas',
   DeepBase.SplashScreen in 'Core\DeepBase.SplashScreen.pas',
   DeepBase.VirtualScroll in 'Core\DeepBase.VirtualScroll.pas',
-  DeepBase.TestHelper in 'Core\DeepBase.TestHelper.pas',
   DeepBase.VCL.TrayIcon in 'VCL\DeepBase.VCL.TrayIcon.pas',
   DeepBase.VCL.Hotkeys in 'VCL\DeepBase.VCL.Hotkeys.pas',
   DeepBase.VCL.DesktopLifecycle in 'VCL\DeepBase.VCL.DesktopLifecycle.pas',

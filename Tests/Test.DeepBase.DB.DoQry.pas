@@ -631,6 +631,8 @@ begin
     SetupConn.DriverName := 'SQLite';
     SetupConn.Params.Database := TempDbPath;
     SetupConn.Params.Values['OpenMode'] := 'CreateUTF8';
+    SetupConn.Params.Values['JournalMode'] := 'WAL';
+    SetupConn.Params.Values['BusyTimeout'] := '10000';
     SetupConn.Open;
 
     Q := TFDQuery.Create(nil);
@@ -670,7 +672,7 @@ begin
             Conn.Params.Database := TempDbPath;
             Conn.Params.Values['OpenMode'] := 'CreateUTF8';
             Conn.Params.Values['JournalMode'] := 'WAL';
-            Conn.Params.Values['BusyTimeout'] := '5000';
+            Conn.Params.Values['BusyTimeout'] := '10000';
             Conn.Open;
 
             var Ctx := UniDbMakeContext(Conn, udbSQLite);
@@ -678,7 +680,7 @@ begin
 
             var Success := False;
             var InsertId := 0;
-            for var Attempt := 1 to 5 do
+            for var Attempt := 1 to 20 do
             begin
               try
                 InsertId := UniDbInsertReturningId(
@@ -692,25 +694,24 @@ begin
                 on E: EDeepBaseDbError do
                 begin
                   if E.ErrorCode = DOQRY_ERR_TX_CONFLICT then
-                    Sleep(Attempt * 10)
+                    Sleep(Attempt * 25)
                   else
                     raise;
                 end;
               end;
             end;
 
-            if not Success then
+            if Success then
             begin
+              IdLock.Enter;
+              try
+                ReturnedIds.Add(InsertId);
+              finally
+                IdLock.Leave;
+              end;
+            end
+            else
               TInterlocked.Increment(ErrorCount);
-              Exit;
-            end;
-
-            IdLock.Enter;
-            try
-              ReturnedIds.Add(InsertId);
-            finally
-              IdLock.Leave;
-            end;
           except
             TInterlocked.Increment(ErrorCount);
           end;

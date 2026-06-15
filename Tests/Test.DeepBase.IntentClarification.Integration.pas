@@ -63,6 +63,11 @@ type
       const AUserPrompt: string; const ASystemPrompt: string = ''): TChatResult;
     function GenerateImage(const APrompt: string;
       const ASize: string = '1024x1024'): TImageGenerationResult;
+    procedure GenerateImageStream(const APrompt: string;
+      const AOnProgress: TImageProgressCallback;
+      const AOnResult: TProc<TImageGenerationResult>;
+      const AOnError: TProc<string>;
+      const ASize: string = '1024x1024');
     procedure ChatVisionStream(const ATier: TModelTier;
       const AImageBase64: string; const AImageMimeType: string;
       const AUserPrompt: string; const ASystemPrompt: string;
@@ -112,6 +117,12 @@ type
 
     [Test]
     procedure Test_TemplateValidation;
+
+    [Test]
+    procedure Test_DomainAdapterPresetSlotsReachL1Provider;
+
+    [Test]
+    procedure Test_L4_AllFailures_ReturnsDegradedFailure;
   end;
 
   [TestFixture]
@@ -152,6 +163,115 @@ type
   end;
 
 implementation
+
+uses
+  DeepBase.IntentClarification,
+  DeepBase.IntentClarification.Provider.L4;
+
+type
+  TSlotDomainAdapter = class(TInterfacedObject, IDomainAdapter)
+  public
+    function GetDomainName: string;
+    function GetMaxLevel: TClarificationLevel;
+    function GetContextForSession(const ASessionId: string): TDomainContext;
+    function GetDomainKnowledge(const ATopic: string): string;
+    function GetPresetSlots(const AIntentName: string): TArray<TIntentClarificationSlot>;
+  end;
+
+  TSlotSpyProvider = class(TInterfacedObject, ILevelProvider)
+  private
+    FCapturedSlotCount: Integer;
+    FCapturedSlotName: string;
+    FCapturedSlotDisplayName: string;
+    FCapturedSlotQuestion: string;
+    FCapturedSlotRequired: Boolean;
+  public
+    function GetLevel: TClarificationLevel;
+    function CanHandle(const AContext: TProcessingContext): Boolean;
+    function Process(const AContext: TProcessingContext): TProviderResult;
+    function RequiresLLM: Boolean;
+
+    property CapturedSlotCount: Integer read FCapturedSlotCount;
+    property CapturedSlotName: string read FCapturedSlotName;
+    property CapturedSlotDisplayName: string read FCapturedSlotDisplayName;
+    property CapturedSlotQuestion: string read FCapturedSlotQuestion;
+    property CapturedSlotRequired: Boolean read FCapturedSlotRequired;
+  end;
+
+{ TSlotDomainAdapter }
+
+function TSlotDomainAdapter.GetDomainName: string;
+begin
+  Result := 'slot-test-domain';
+end;
+
+function TSlotDomainAdapter.GetMaxLevel: TClarificationLevel;
+begin
+  Result := clL1;
+end;
+
+function TSlotDomainAdapter.GetContextForSession(
+  const ASessionId: string): TDomainContext;
+begin
+  Result := Default(TDomainContext);
+  Result.DomainName := GetDomainName;
+  Result.SessionId := ASessionId;
+  Result.ActiveIntent := 'launch-report';
+  Result.ContextSummary := 'Slot injection regression context';
+end;
+
+function TSlotDomainAdapter.GetDomainKnowledge(const ATopic: string): string;
+begin
+  Result := '';
+end;
+
+function TSlotDomainAdapter.GetPresetSlots(
+  const AIntentName: string): TArray<TIntentClarificationSlot>;
+begin
+  if AIntentName <> 'launch-report' then
+    Exit(nil);
+
+  SetLength(Result, 1);
+  Result[0].Init;
+  Result[0].Name := 'target';
+  Result[0].DisplayName := 'Target';
+  Result[0].Required := True;
+  Result[0].Question := 'Which report target should be used?';
+end;
+
+{ TSlotSpyProvider }
+
+function TSlotSpyProvider.GetLevel: TClarificationLevel;
+begin
+  Result := clL1;
+end;
+
+function TSlotSpyProvider.CanHandle(const AContext: TProcessingContext): Boolean;
+begin
+  Result := True;
+end;
+
+function TSlotSpyProvider.Process(const AContext: TProcessingContext): TProviderResult;
+begin
+  FCapturedSlotCount := Length(AContext.PresetSlots);
+  if FCapturedSlotCount > 0 then
+  begin
+    FCapturedSlotName := AContext.PresetSlots[0].Name;
+    FCapturedSlotDisplayName := AContext.PresetSlots[0].DisplayName;
+    FCapturedSlotQuestion := AContext.PresetSlots[0].Question;
+    FCapturedSlotRequired := AContext.PresetSlots[0].Required;
+  end;
+
+  Result := Default(TProviderResult);
+  Result.Success := True;
+  Result.Question := 'slot spy handled';
+  Result.Source := 'rule';
+end;
+
+function TSlotSpyProvider.RequiresLLM: Boolean;
+begin
+  Result := False;
+end;
 
 { TMockLLMClient }
 
@@ -233,6 +353,31 @@ function TMockLLMClient.GenerateImage(const APrompt: string;
 begin
   Result := Default(TImageGenerationResult);
   Result.Success := not FShouldFail;
+end;
+
+procedure TMockLLMClient.GenerateImageStream(const APrompt: string;
+  const AOnProgress: TImageProgressCallback;
+  const AOnResult: TProc<TImageGenerationResult>;
+  const AOnError: TProc<string>;
+  const ASize: string);
+var
+  LResult: TImageGenerationResult;
+begin
+  Inc(FCallCount);
+  if FShouldFail then
+  begin
+    if Assigned(AOnError) then
+      AOnError('Mock image generation failure');
+    Exit;
+  end;
+
+  if Assigned(AOnProgress) then
+    AOnProgress(1.0, 'complete', True);
+
+  LResult := Default(TImageGenerationResult);
+  LResult.Success := True;
+  if Assigned(AOnResult) then
+    AOnResult(LResult);
 end;
 
 procedure TMockLLMClient.ChatVisionStream(const ATier: TModelTier;
@@ -481,6 +626,73 @@ begin
   finally
     LValidator.Free;
   end;
+end;
+
+procedure TICIntegrationTest.Test_DomainAdapterPresetSlotsReachL1Provider;
+var
+  LEngine: IClarificationEngine;
+  LAdapter: IDomainAdapter;
+  LProvider: ILevelProvider;
+  LSpy: TSlotSpyProvider;
+  LRequest: TClarificationStartRequest;
+  LHandle: TSessionHandle;
+  LTurn: TTurnResult;
+begin
+  LEngine := TClarificationEngine.Create;
+  LAdapter := TSlotDomainAdapter.Create;
+  LSpy := TSlotSpyProvider.Create;
+  LProvider := LSpy;
+
+  LEngine.SetDomainAdapter(LAdapter);
+  LEngine.RegisterProvider(LProvider);
+
+  LRequest := Default(TClarificationStartRequest);
+  LRequest.UserId := 'slot-user';
+  LRequest.DomainName := 'slot-test-domain';
+  LRequest.IntentName := 'launch-report';
+
+  LHandle := LEngine.StartSession(LRequest);
+  LTurn := LEngine.SubmitInput(LHandle, 'please build the report');
+
+  Assert.AreEqual('', LTurn.ErrorCode);
+  Assert.AreEqual(1, LTurn.TurnNumber);
+  Assert.AreEqual(1, LSpy.CapturedSlotCount);
+  Assert.AreEqual('target', LSpy.CapturedSlotName);
+  Assert.AreEqual('Target', LSpy.CapturedSlotDisplayName);
+  Assert.AreEqual('Which report target should be used?', LSpy.CapturedSlotQuestion);
+  Assert.IsTrue(LSpy.CapturedSlotRequired);
+end;
+
+procedure TICIntegrationTest.Test_L4_AllFailures_ReturnsDegradedFailure;
+var
+  LMockLLM: TMockLLMClient;
+  LLLM: ILLMClient;
+  LProvider: ILevelProvider;
+  LContext: TProcessingContext;
+  LResult: TProviderResult;
+begin
+  LMockLLM := TMockLLMClient.Create;
+  LMockLLM.ShouldFail := True;
+  LLLM := LMockLLM;
+  LProvider := TL4RoundtableProvider.Create(LLLM, nil);
+
+  LContext := Default(TProcessingContext);
+  LContext.SessionId := 'l4-fail-session';
+  LContext.UserInput := 'Compare the execution risks for this decision.';
+  LContext.Level := clL4;
+  LContext.Posture := posAdvisory;
+  LContext.Depth := 0.9;
+  LContext.DomainContext.DomainName := 'decision';
+  LContext.DomainContext.ActiveIntent := 'roundtable';
+
+  LResult := LProvider.Process(LContext);
+
+  Assert.IsFalse(LResult.Success);
+  Assert.IsTrue(LResult.ErrorMessage <> '');
+  Assert.IsTrue(Pos('all ', LResult.ErrorMessage) > 0);
+  Assert.IsTrue(LResult.Question <> '');
+  Assert.AreEqual<Integer>(1, Length(LResult.Options));
+  Assert.AreEqual<Integer>(1, LResult.RecommendedOption);
 end;
 
 { TICResilienceIntegrationTest }

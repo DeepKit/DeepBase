@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Types - Common Type Definitions
   
   Version: 0.3
@@ -44,7 +44,7 @@ type
   TLanguageInfo = record
     LangCode: string;    // e.g. zh-CN, en-US
     LangName: string;    // e.g. Chinese (Simplified), English
-    NativeName: string;  // e.g. 简体中�? English
+    NativeName: string;  // e.g. ç®€ä½“ä¸­æ–? English
     FlagIcon: string;    // Flag icon filename
     IsEnabled: Boolean;
     IsDefault: Boolean;
@@ -263,7 +263,7 @@ begin
   else if Upper = 'WARNING' then Result := llWarn
   else if Upper = 'ERROR' then Result := llError
   else if Upper = 'FATAL' then Result := llFatal
-  else Result := llInfo; // 默认
+  else Result := llInfo; // é»˜è®¤
 end;
 
 function CompareVersions(const V1, V2: string): Integer;

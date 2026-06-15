@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Diagnose.FireDAC - FireDAC adapter for diagnose storage
   ============================================================================
   Implements Core\DeepBase.Diagnose IDiagnoseStorage using FireDAC.

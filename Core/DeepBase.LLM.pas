@@ -68,6 +68,15 @@ type
   TLLMConfigArray = TArray<TLLMConfig>;
 
   /// <summary>
+  /// Callback for HTTP POST requests. Injected to replace the built-in
+  /// TNetHTTPClient with a custom transport (e.g. IDeepBaseHttpTransport).
+  /// AHeaders are name=value pairs. Returns True on HTTP 2xx.
+  /// </summary>
+  TLLMHttpPostProc = reference to function(const AUrl, ABody: string;
+    const AHeaders: TArray<TPair<string, string>>;
+    out AResponse: string; ATimeoutMs: Integer): Boolean;
+
+  /// <summary>
   /// LLM Call record for hiDeepStory
   /// </summary>
   TLLMCallRecord = record
@@ -252,6 +261,7 @@ type
     FConfigCache: TDictionary<string, TLLMConfig>;
     FCacheLock: TCriticalSection;
     FHttpClient: TNetHTTPClient;
+    FHttpTransport: TLLMHttpPostProc;
     FDefaultTimeout: Integer;
     class var FConnectionStorageFactory: TFunc<TObject, ILLMStorage>;
 
@@ -274,6 +284,10 @@ type
 
     class procedure SetStorageFactory(
       const AFactory: TFunc<TObject, ILLMStorage>); static;
+
+    /// <summary>Inject custom HTTP transport. When set, DoHttpRequest uses this
+    /// instead of the built-in TNetHTTPClient.</summary>
+    procedure SetHttpTransport(const ATransport: TLLMHttpPostProc);
     
     // ========================================================================
     // Configuration Management
@@ -978,6 +992,11 @@ begin
   FConnectionStorageFactory := AFactory;
 end;
 
+procedure TDeepBaseLLM.SetHttpTransport(const ATransport: TLLMHttpPostProc);
+begin
+  FHttpTransport := ATransport;
+end;
+
 class function TDeepBaseLLM.CreateStorageFromConnection(
   AConnection: TObject): ILLMStorage;
 begin
@@ -1358,32 +1377,64 @@ var
   RequestContent: TStringStream;
   StartTime: TDateTime;
   Headers: TArray<TNameValuePair>;
+  PairHeaders: TArray<TPair<string, string>>;
 begin
   Result := False;
   Response := '';
   StartTime := Now;
-  
-  RequestContent := TStringStream.Create(Body, TEncoding.UTF8);
-  try
-    // Set headers based on provider
-    case Config.Provider of
-      lpAnthropic:
+
+  // Build headers based on provider
+  case Config.Provider of
+    lpAnthropic:
+      begin
         Headers := [
           TNameValuePair.Create('Content-Type', 'application/json'),
           TNameValuePair.Create('x-api-key', Config.ApiKey),
           TNameValuePair.Create('anthropic-version', '2023-06-01')
         ];
-    else
+        PairHeaders := [
+          TPair<string, string>.Create('Content-Type', 'application/json'),
+          TPair<string, string>.Create('x-api-key', Config.ApiKey),
+          TPair<string, string>.Create('anthropic-version', '2023-06-01')
+        ];
+      end;
+  else
+    begin
       Headers := [
         TNameValuePair.Create('Content-Type', 'application/json'),
         TNameValuePair.Create('Authorization', 'Bearer ' + Config.ApiKey)
       ];
+      PairHeaders := [
+        TPair<string, string>.Create('Content-Type', 'application/json'),
+        TPair<string, string>.Create('Authorization', 'Bearer ' + Config.ApiKey)
+      ];
     end;
-    
+  end;
+
+  // Use injected transport when available
+  if Assigned(FHttpTransport) then
+  begin
+    try
+      Result := FHttpTransport(Url, Body, PairHeaders, Response, FDefaultTimeout);
+      DurationMs := MilliSecondsBetween(Now, StartTime);
+    except
+      on E: Exception do
+      begin
+        DurationMs := MilliSecondsBetween(Now, StartTime);
+        Response := '{"error": {"message": "' + StringReplace(E.Message, '"', '\"', [rfReplaceAll]) + '"}}';
+        Result := False;
+      end;
+    end;
+    Exit;
+  end;
+
+  // Fallback: built-in TNetHTTPClient
+  RequestContent := TStringStream.Create(Body, TEncoding.UTF8);
+  try
     try
       HttpResponse := FHttpClient.Post(Url, RequestContent, nil, Headers);
       DurationMs := MilliSecondsBetween(Now, StartTime);
-      
+
       Response := HttpResponse.ContentAsString(TEncoding.UTF8);
       Result := (HttpResponse.StatusCode >= 200) and (HttpResponse.StatusCode < 300);
     except

@@ -1,4 +1,4 @@
-unit DeepBase.DB.Pool;
+﻿unit DeepBase.DB.Pool;
 
 {*******************************************************************************
   DeepBase.DB.Pool - 高级数据库连接池
@@ -206,6 +206,7 @@ type
     FLock: TCriticalSection;
     FAvailableEvent: TEvent;
     FMaintenanceThread: TThread;
+    FMaintenanceWakeEvent: TEvent;
     FShutdown: Boolean;
 
     FStatistics: TPoolStatistics;
@@ -852,6 +853,7 @@ begin
   FLock := TCriticalSection.Create;
   FStatsLock := TCriticalSection.Create;
   FAvailableEvent := TEvent.Create(nil, True, True, '');
+  FMaintenanceWakeEvent := TEvent.Create(nil, True, False, '');
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
 end;
@@ -864,6 +866,7 @@ begin
   FreeAndNil(FLock);
   FreeAndNil(FStatsLock);
   FreeAndNil(FAvailableEvent);
+  FreeAndNil(FMaintenanceWakeEvent);
 
   if Assigned(FFDDriverLink) then
     FreeAndNil(FFDDriverLink);
@@ -911,6 +914,13 @@ begin
 
   FLock.Enter;
   try
+    if FInitialized then
+      Exit;
+
+    FShutdown := False;
+    if Assigned(FMaintenanceWakeEvent) then
+      FMaintenanceWakeEvent.ResetEvent;
+
     // Use FireDAC global manager.
     // Creating a dedicated TFDManager alongside existing app-level FireDAC components
     // can cause unstable manager state in multi-module apps.
@@ -958,6 +968,8 @@ begin
   if Assigned(FMaintenanceThread) then
   begin
     FMaintenanceThread.Terminate;
+    if Assigned(FMaintenanceWakeEvent) then
+      FMaintenanceWakeEvent.SetEvent;
     FMaintenanceThread.WaitFor;
     FreeAndNil(FMaintenanceThread);
   end;
@@ -1599,9 +1611,15 @@ procedure TUniConnectionPool.MaintenanceLoop;
 begin
   while not FShutdown and not TThread.Current.CheckTerminated do
   begin
-    Sleep(10000); // �?0秒执行一次维�?
-    if not FShutdown then
-      PerformMaintenance;
+    if Assigned(FMaintenanceWakeEvent) then
+      FMaintenanceWakeEvent.WaitFor(10000)
+    else
+      Sleep(10000); // fallback if construction failed before the event was created
+
+    if FShutdown or TThread.Current.CheckTerminated then
+      Break;
+
+    PerformMaintenance;
   end;
 end;
 

@@ -16,7 +16,8 @@ function LLMAdmin: ILLMAdmin;
 implementation
 
 uses
-  System.SysUtils, System.Generics.Collections, System.DateUtils,
+  System.SysUtils, System.Classes, System.Threading,
+  System.Generics.Collections, System.DateUtils,
   DeepBase.LLM.HTTP, DeepBase.LLM.Config, DeepBase.LLM.Proxy;
 
 type
@@ -47,6 +48,11 @@ type
       const AUserPrompt: string; const ASystemPrompt: string = ''): TChatResult;
     function GenerateImage(const APrompt: string;
       const ASize: string = '1024x1024'): TImageGenerationResult;
+    procedure GenerateImageStream(const APrompt: string;
+      const AOnProgress: TImageProgressCallback;
+      const AOnResult: TProc<TImageGenerationResult>;
+      const AOnError: TProc<string>;
+      const ASize: string = '1024x1024');
     procedure ChatVisionStream(const ATier: TModelTier;
       const AImageBase64: string; const AImageMimeType: string;
       const AUserPrompt: string; const ASystemPrompt: string;
@@ -427,13 +433,23 @@ function TLLMService.ChatWithHistory(const ATier: TModelTier;
 begin
   EnsureLoaded;
   if AMaxTokens <= 0 then
-    AMaxTokens := if ATier = TierFast then 2048
-      else if ATier = TierBalanced then 4096
-      else 4000;
-  if ATemperature < 0 then
-    ATemperature := if ATier = TierFast then 0.0
-      else if ATier = TierBalanced then 0.1
-      else 0.2;
+  begin
+    if ATier = TierFast then
+      AMaxTokens := 2048
+    else if ATier = TierBalanced then
+      AMaxTokens := 4096
+    else
+      AMaxTokens := 4000;
+  end;
+if ATemperature < 0 then
+  begin
+    if ATier = TierFast then
+      ATemperature := 0.0
+    else if ATier = TierBalanced then
+      ATemperature := 0.1
+    else
+      ATemperature := 0.2;
+  end;
   Result := CallWithFallback(ATier, AMessages, AMaxTokens, ATemperature);
 end;
 
@@ -583,6 +599,56 @@ begin
     if Result.ErrorMessage = '' then
       Result.ErrorMessage := 'All image generation models failed';
   end;
+end;
+
+procedure TLLMService.GenerateImageStream(const APrompt: string;
+  const AOnProgress: TImageProgressCallback;
+  const AOnResult: TProc<TImageGenerationResult>;
+  const AOnError: TProc<string>;
+  const ASize: string);
+begin
+  TTask.Run(
+    procedure
+    var
+      LResult: TImageGenerationResult;
+    begin
+      try
+        if Assigned(AOnProgress) then
+          AOnProgress(0.0, 'Starting image generation...', False);
+
+        LResult := GenerateImage(APrompt, ASize);
+
+        if Assigned(AOnProgress) then
+          AOnProgress(1.0, 'Complete', True);
+
+        if LResult.Success then
+        begin
+          if Assigned(AOnResult) then
+            TThread.ForceQueue(nil,
+              procedure
+              begin
+                AOnResult(LResult);
+              end);
+        end
+        else
+        begin
+          if Assigned(AOnError) then
+            TThread.ForceQueue(nil,
+              procedure
+              begin
+                AOnError(LResult.ErrorMessage);
+              end);
+        end;
+      except
+        on E: Exception do
+          if Assigned(AOnError) then
+            TThread.ForceQueue(nil,
+              procedure
+              begin
+                AOnError(E.Message);
+              end);
+      end;
+    end);
 end;
 
 procedure TLLMService.ChatVisionStream(const ATier: TModelTier;

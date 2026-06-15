@@ -1461,3 +1461,115 @@ var HTML := Exporter.ToHTML;
 - `delphi-13-migration/`（tasks.md）— 12 项待办展开到 tasks.md
 - `feedback-backend-service/`（tasks.md + design.md + requirements.md）— 10 阶段任务展开到 tasks.md，20 条正确性属性以设计参考形式保留
 - `.kiro/specs/` 目录现在为空
+
+---
+
+## 2026-06-09 任务清单对齐与 IntentClarification 包边界门禁
+
+### QA-P0-IC-PACKAGE-2026-06-09: Phase 2 必需单元回归检查
+- **完成日期**: 2026-06-09
+- **来源**: `tasks.md` 中“包边界测试补 `DeepBase.IntentClarification.*` 必需单元检查”待办项。
+- **内容摘要**:
+  - `Tests/Architecture/Test.Arch.PackageBoundaries.pas` 新增 `FeaturesPackage_ContainsIntentClarificationPhase2Units`。
+  - 回归检查逐项覆盖 `DeepBase.IntentClarification` Phase 2 必需单元在 `DeepBaseFeatures.dpk` 与 `DeepBaseFeatures.dproj` 中的 contains/reference。
+  - 明确禁止 `Features\DeepBase.IntentClarification.Storage.pas` 回流到 Features 包；该 FireDAC storage 必须保留在 Persistence 边界内。
+  - `tasks.md` 已移除该已完成待办，剩余 IC 队列继续跟踪 slot 注入、并发和降级语义回归用例。
+- **验证**:
+  - `Scripts\run_architecture_checks.ps1`: Architecture tests 25/25 passed。
+  - Layer violation checks: Errors=0，Warnings=23。
+  - Security pattern checks: Errors=0，Warnings=22。
+- **归档**:
+  - 缺陷/防回归记录见 `bugfix.md` 的 BUG-236。
+
+---
+
+## 2026-06-09 IntentClarification 语义回归用例补齐
+
+### QA-P0-IC-SEMANTICS-2026-06-09: slot 注入与 L4 降级防回归
+- **完成日期**: 2026-06-09
+- **来源**: `tasks.md` 中“补 IntentClarification slot 注入、并发和降级语义回归用例”待办项。
+- **内容摘要**:
+  - `Tests/Test.DeepBase.IntentClarification.Integration.pas` 新增 `Test_DomainAdapterPresetSlotsReachL1Provider`，覆盖 Engine 构建上下文时从 `IDomainAdapter.GetPresetSlots(IntentName)` 取 slot，并传到 L1 provider 的真实调度路径。
+  - 新增 `Test_L4_AllFailures_ReturnsDegradedFailure`，覆盖 L4 专家观点和综合调用全部失败时必须返回 degraded failure。
+  - 补齐 `TMockLLMClient.GenerateImageStream`，并同步 `Tests/Test.DeepBase.IntentClarification.pas` 中的 `TFakeClarificationLLM.GenerateImageStream`，解决 `ILLMClient` 接口漂移造成的编译阻塞。
+  - 并发语义已由既有 `Test.DeepBase.IntentClarification.Concurrent.PBT` 和 `Round2.PBT` 覆盖，本轮不重复造同类用例。
+- **验证**:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI`：17 tests passed，0 failed，0 errored，0 leaked。
+  - 同一 runner 已完成 `Tests\DeepBaseTests.dpr` 编译和过滤执行，确认新增 slot 注入与 L4 降级回归实际运行。
+- **归档**:
+  - 已从 `tasks.md` 当前 IC 待办中移除。
+  - 相关缺陷记录见 `bugfix.md` 的 BUG-237、BUG-238。
+
+### QA-P0-TEST-RUNNER-2026-06-09: IC 过滤 runner 编译阻塞收敛
+- **完成日期**: 2026-06-09
+- **内容摘要**:
+  - `Scripts/run_tests.ps1` 编译 DPR 时改用项目目录作为工作目录，修复 `Architecture\Test.Arch.PackageBoundaries.pas` 相对路径解析失败。
+  - `ThirdParty/Payment/DeepBase.Payment.pas` 修复 Delphi 13.1 下 `HashCode` 未声明，并补齐 Payment facade 类型/枚举别名。
+  - `ThirdParty/Payment/DeepBase.Payment.Stripe.pas` 和 `Tests/Test.DeepBase.Payment.Integration.pas` 同步修复重载声明、uses、编码和泛型断言编译兼容问题。
+  - `ThirdParty/Social/DeepBase.Social.Weibo.pas`、`DeepBase.Social.QQ.pas` 将 `DeepBase.Security.DPAPI` 提到 interface uses，修复公开 `TKeyStorageMode` 类型不可见。
+- **验证**:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI`：17/17 passed。
+- **归档**:
+  - 编译阻塞记录见 `bugfix.md` 的 BUG-238、BUG-239、BUG-240。
+
+---
+
+## 2026-06-10 QA-P0 Unit runner 继续收敛
+
+### QA-P0-UNIT-2026-06-10: DoQry / BrowserAutomation 失败簇修复与超时清理
+- **完成日期**: 2026-06-10
+- **内容摘要**:
+  - `Persistence/DeepBase.DB.DoQry.pas` 将 SQLite `database is locked` / busy / locked 文本回退映射为 `DOQRY_ERR_TX_CONFLICT`，让并发 InsertReturningId 测试的既有重试逻辑生效。
+  - `Tests/Test.DeepBase.BrowserAutomation.pas` 的 fake session 对齐 ScriptStore click/input `{success:true}` 返回契约，避免 DOM plan 被误判为第 2 步失败。
+  - `Scripts/run_tests.ps1` 为测试 exe 增加 `DEEPBASE_TEST_RUN_TIMEOUT_MS` 超时控制，超时后会 kill 子进程并返回失败，避免 `DeepBaseTests.exe` 残留占用 XML。
+  - 历史列出的 Browser Registry、Browser WindowPool、FeatureFlags、License、Performance 过滤测试本轮均已单独通过。
+- **验证**:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -AllowFilteredCI`：32/32 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.BrowserAutomation -AllowFilteredCI`：8/8 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Browser.Registry -AllowFilteredCI`：7/7 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Browser.WindowPool -AllowFilteredCI`：11/11 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.FeatureFlags -AllowFilteredCI`：69/69 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.License -AllowFilteredCI`：16/16 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Performance -AllowFilteredCI`：16/16 passed。
+  - 临时 `DEEPBASE_TEST_RUN_TIMEOUT_MS=60000` 完整 Unit skip-compile 能自行超时失败并清理残留进程。
+- **遗留**:
+  - 完整 Unit 仍未全绿：60 秒超时试跑已出现若干 F/E，但未跑到 DUnitX 失败摘要；下一步继续按单元/模块分组隔离剩余失败。
+- **归档**:
+  - 相关缺陷记录见 `bugfix.md` 的 BUG-241、BUG-242、BUG-243。
+
+---
+
+## 2026-06-11 QA-P0 Unit 全量收敛
+
+### QA-P0-UNIT-2026-06-11: 最后失败簇修复与完整 Unit 通过
+- **完成日期**: 2026-06-11
+- **内容摘要**:
+  - `Tests/Test.DeepBase.DBException.pas` 将中文预期字符串改为 UTF-16 code point 构造，避免源文件编码被 Delphi 编译器按错误代码页解释后产生 mojibake 断言。
+  - `Tests/Test.DeepBase.Unlock.pas` 使用不在校验字母表内的 `@` 构造坏校验码，避免测试突变字符偶然命中新/旧兼容校验字符。
+  - `Tests/Test.DeepBase.DB.DoQry.pas` 为并发 InsertReturningId 测试启用 WAL、扩大 BusyTimeout、增加重试窗口，并修复失败路径提前 `Exit` 导致连接未释放的问题。
+  - 完整 Unit 已从“超时/剩余 F/E”收敛到 DUnitX 摘要全绿。
+- **验证**:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DBException,DeepBase.Unlock -OutputDir TestResults\UnitGroup_FinalTwo -AllowFilteredCI`：12/12 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -OutputDir TestResults\UnitGroup_DoQryAfterRetry -AllowFilteredCI`：32/32 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -OutputDir TestResults\UnitFull_AfterDoQryRetry -AllowFilteredCI`：3661 found，3658 passed，3 ignored，0 failed，0 errored。
+- **遗留**:
+  - 完整 Unit 功能摘要已通过，但进程退出仍打印 System.JSON/FastMM unexpected memory leak，下一步作为独立质量债定位。
+- **归档**:
+  - 相关缺陷记录见 `bugfix.md` 的 BUG-244、BUG-245、BUG-246。
+
+---
+
+## 2026-06-15 任务清单对齐与 DeepLaunch 缺陷登记
+
+### TASK-AUDIT-2026-06-15: tasks/history/bugfix 三文档对齐
+- **完成日期**: 2026-06-15
+- **来源**: 用户要求“对齐 tasks.md 文件，把已经完成的任务移入 history.md，记录 bug 到 bugfix.md，把需要完成的任务更新到 tasks.md，然后做一个版本提交”。
+- **内容摘要**:
+  - `tasks.md` 重写为当前待办清单，只保留未完成任务和下一步任务。
+  - 已完成的 QA-P0、IntentClarification、DeepShell、架构检查、LLM/transport 等内容继续保留在本历史文档中，不再在 `tasks.md` 主体重复列出 `[x]` 项。
+  - 新增 `DL-P0-2026-06-15`，集中跟踪 DeepLaunch Grid 右键编辑崩溃、工作流区 i18n、主题同步和 10 格绘制高度问题。
+  - `bugfix.md` 新增 BUG-248 ~ BUG-251，分别记录 DeepLaunch 4 个待修复缺陷。
+- **边界**:
+  - 当前 DeepBase 仓库未找到 `DeepLaunch.exe` 对应主程序源码；本轮先完成任务和缺陷登记，后续需要定位 DeepLaunch 下游源码后实施代码修复。
+- **验证**:
+  - 文档结构检查：`tasks.md` 当前只保留未完成队列；DeepLaunch 4 项用户反馈均有任务和 bug 编号。

@@ -1,4 +1,4 @@
-unit DeepBase.DB.StatusMachine;
+﻿unit DeepBase.DB.StatusMachine;
 
 interface
 

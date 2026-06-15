@@ -186,12 +186,14 @@ end;
 
 procedure TTestInferenceService.Test_IsReady_AfterSetup_ReturnsTrue;
 begin
+  TInferenceService.SetRuntime(TFakeRuntime.Create);
   TInferenceService.SetSessionFactory(TFakeSessionFactory.Create);
   Assert.IsTrue(TInferenceService.IsReady);
 end;
 
 procedure TTestInferenceService.Test_IsReady_AfterShutdown_ReturnsFalse;
 begin
+  TInferenceService.SetRuntime(TFakeRuntime.Create);
   TInferenceService.SetSessionFactory(TFakeSessionFactory.Create);
   TInferenceService.Shutdown;
   Assert.IsFalse(TInferenceService.IsReady);

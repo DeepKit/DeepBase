@@ -1,0 +1,18 @@
+{
+    "$comment": "Required fields for exit-reason.json written by Delphi EXE on fatal exit, read by autofix.ps1.",
+    "fields": [
+        "run_id",
+        "exit_code",
+        "reason",
+        "fatal_class",
+        "fatal_msg",
+        "module_name",
+        "module_base",
+        "rva",
+        "stack",
+        "stack_truncated",
+        "total_errors",
+        "scenario",
+        "timestamp"
+    ]
+}

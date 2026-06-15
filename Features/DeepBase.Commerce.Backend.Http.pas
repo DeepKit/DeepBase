@@ -934,7 +934,6 @@ var
 begin
   Body := TJSONObject.Create;
   try
-    RequireServerWrites('CreatePaymentIntent');
     Body.AddPair(SCommerceFieldOrderId, AOrder.OrderId);
     Body.AddPair(SCommerceFieldPaymentId, APayment.PaymentId);
     Body.AddPair(SCommerceFieldOutTradeNo, AOrder.OutTradeNo);

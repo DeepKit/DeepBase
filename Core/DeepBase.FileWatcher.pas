@@ -1,4 +1,4 @@
-unit DeepBase.FileWatcher;
+ï»¿unit DeepBase.FileWatcher;
 
 (*******************************************************************************
   DeepBase File Watcher
@@ -866,7 +866,7 @@ function TFileWatcherManager.Watch(const ADirectory: string;
 var
   LNormalized: string;
 begin
-  // ÑéÖ¤Â·¾¶°²È«ĞÔ£¬·ÀÖ¹Â·¾¶±éÀú¹¥»÷
+  // éªŒè¯è·¯å¾„å®‰å…¨æ€§ï¼Œé˜²æ­¢è·¯å¾„éå†æ”»å‡»
   if not IsValidWatchPath(ADirectory) then
     raise EArgumentException.CreateFmt('Invalid or unsafe watch path: %s', [ADirectory]);
     
@@ -891,7 +891,7 @@ var
   LNormalized: string;
   LWatcher: TFileWatcher;
 begin
-  // ÑéÖ¤Â·¾¶°²È«ĞÔ
+  // éªŒè¯è·¯å¾„å®‰å…¨æ€§
   if not IsValidWatchPath(ADirectory) then
     raise EArgumentException.CreateFmt('Invalid or unsafe watch path: %s', [ADirectory]);
     
@@ -1194,17 +1194,17 @@ begin
   Result := False;
   
   try
-    // »ñÈ¡¹æ·¶»¯Â·¾¶
+    // è·å–è§„èŒƒåŒ–è·¯å¾„
     CanonicalPath := TPath.GetFullPath(APath);
     
-    // ¶¨ÒåÔÊĞí¼à¿ØµÄÂ·¾¶Ç°×º
+    // å®šä¹‰å…è®¸ç›‘æ§çš„è·¯å¾„å‰ç¼€
     AllowedPaths := TArray<string>.Create(
       TPath.GetFullPath(TPath.GetDocumentsPath),
       TPath.GetFullPath(TPath.GetTempPath),
-      TPath.GetFullPath(ExtractFilePath(ParamStr(0)))  // Ó¦ÓÃ³ÌĞòÄ¿Â¼
+      TPath.GetFullPath(ExtractFilePath(ParamStr(0)))  // åº”ç”¨ç¨‹åºç›®å½•
     );
     
-    // ¼ì²éÂ·¾¶ÊÇ·ñÔÚÔÊĞíµÄÄ¿Â¼ÄÚ
+    // æ£€æŸ¥è·¯å¾„æ˜¯å¦åœ¨å…è®¸çš„ç›®å½•å†…
     for I := Low(AllowedPaths) to High(AllowedPaths) do
     begin
       if CanonicalPath.StartsWith(AllowedPaths[I]) then
@@ -1214,7 +1214,7 @@ begin
       end;
     end;
     
-    // ½ûÖ¹¼à¿ØÏµÍ³¹Ø¼üÄ¿Â¼
+    // ç¦æ­¢ç›‘æ§ç³»ç»Ÿå…³é”®ç›®å½•
     if CanonicalPath.StartsWith('C:\Windows\') or
        CanonicalPath.StartsWith('C:\System32\') or
        CanonicalPath.Contains('..') then
@@ -1235,25 +1235,25 @@ begin
   Result := False;
   
   try
-    // ¼ì²é»ù±¾ÒªÇó
-    if APath.IsEmpty or (Length(APath) > 260) then // WindowsÂ·¾¶³¤¶ÈÏŞÖÆ
+    // æ£€æŸ¥åŸºæœ¬è¦æ±‚
+    if APath.IsEmpty or (Length(APath) > 260) then // Windowsè·¯å¾„é•¿åº¦é™åˆ¶
       Exit;
       
-    // »ñÈ¡¹æ·¶»¯Â·¾¶
+    // è·å–è§„èŒƒåŒ–è·¯å¾„
     CanonicalPath := TPath.GetFullPath(APath).ToUpper;
     
-    // ¼ì²éÂ·¾¶±éÀú¹¥»÷
+    // æ£€æŸ¥è·¯å¾„éå†æ”»å‡»
     if CanonicalPath.Contains('..') or CanonicalPath.Contains('~') then
       Exit;
       
-    // ¶¨ÒåÔÊĞíµÄ¸ùÄ¿Â¼
+    // å®šä¹‰å…è®¸çš„æ ¹ç›®å½•
     AllowedPaths := TArray<string>.Create(
       TPath.GetFullPath(TPath.GetDocumentsPath).ToUpper,
       TPath.GetFullPath(TPath.GetTempPath).ToUpper,
-      TPath.GetFullPath(ExtractFilePath(ParamStr(0))).ToUpper  // Ó¦ÓÃ³ÌĞòÄ¿Â¼
+      TPath.GetFullPath(ExtractFilePath(ParamStr(0))).ToUpper  // åº”ç”¨ç¨‹åºç›®å½•
     );
     
-    // ¼ì²éÂ·¾¶ÊÇ·ñÔÚÔÊĞíµÄÄ¿Â¼ÄÚ
+    // æ£€æŸ¥è·¯å¾„æ˜¯å¦åœ¨å…è®¸çš„ç›®å½•å†…
     for I := Low(AllowedPaths) to High(AllowedPaths) do
     begin
       if CanonicalPath.StartsWith(AllowedPaths[I]) then
@@ -1263,7 +1263,7 @@ begin
       end;
     end;
     
-    // ½ûÖ¹¼à¿ØÏµÍ³¹Ø¼üÄ¿Â¼
+    // ç¦æ­¢ç›‘æ§ç³»ç»Ÿå…³é”®ç›®å½•
     if CanonicalPath.StartsWith('C:\WINDOWS\') or
        CanonicalPath.StartsWith('C:\SYSTEM32\') or
        CanonicalPath.StartsWith('C:\PROGRAM FILES\') or

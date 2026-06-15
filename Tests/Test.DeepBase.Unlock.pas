@@ -130,11 +130,8 @@ begin
   Code := TDeepBaseUnlock.GenerateCode('TK', Date, ulShare);
   BadCode := Code;
 
-  // Flip last character to something else to break checksum
-  if BadCode[Length(BadCode)] <> 'X' then
-    BadCode[Length(BadCode)] := 'X'
-  else
-    BadCode[Length(BadCode)] := 'Z';
+  // Use a character outside CHECK_ALPHABET so it cannot match current or legacy checksums.
+  BadCode[Length(BadCode)] := '@';
 
   Status := FUnlock.ValidateCode(BadCode, Info);
 

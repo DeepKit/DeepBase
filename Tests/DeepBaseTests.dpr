@@ -269,7 +269,7 @@ uses
   DeepBase.IntentClarification.Budget in '..\Features\DeepBase.IntentClarification.Budget.pas',
   DeepBase.IntentClarification.Exit in '..\Features\DeepBase.IntentClarification.Exit.pas',
   DeepBase.IntentClarification.OptionFrame in '..\Features\DeepBase.IntentClarification.OptionFrame.pas',
-  DeepBase.IntentClarification.Storage in '..\Features\DeepBase.IntentClarification.Storage.pas',
+  DeepBase.IntentClarification.Storage in '..\Persistence\DeepBase.IntentClarification.Storage.pas',
   DeepBase.IntentClarification.Metrics in '..\Features\DeepBase.IntentClarification.Metrics.pas',
   DeepBase.IntentClarification.FeatureConfig in '..\Features\DeepBase.IntentClarification.FeatureConfig.pas',
   DeepBase.IntentClarification.Templates in '..\Features\DeepBase.IntentClarification.Templates.pas',

@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.FormState - Form State Management Module
   
   Version: 1.0
@@ -257,7 +257,7 @@ end;
 // ============================================================================
 
 type
-  // Ê¹ÓÃ¼ÇÂ¼·ÃÎÊ TForm µÄÊôĞÔ£¬±ÜÃâÖ±½ÓÒÀÀµ Vcl.Forms
+  // ä½¿ç”¨è®°å½•è®¿é—® TForm çš„å±æ€§ï¼Œé¿å…ç›´æ¥ä¾èµ– Vcl.Forms
   TFormAccessor = class
   private
     class var FCtx: System.Rtti.TRttiContext;
@@ -291,7 +291,7 @@ begin
   Result := '';
   if AForm = nil then Exit;
   
-  // Ê¹ÓÃ RTTI »ñÈ¡ Name ÊôĞÔ
+  // ä½¿ç”¨ RTTI è·å– Name å±æ€§
   if AForm.ClassName.Contains('Form') then
   begin
     Ctx := GetRttiContext;
@@ -513,7 +513,7 @@ begin
   
   Data.Init;
   
-  // Ê¹ÓÃ GetWindowPlacement »ñÈ¡Õı³£×´Ì¬ÏÂµÄ´°¿Ú±ß½ç
+  // ä½¿ç”¨ GetWindowPlacement è·å–æ­£å¸¸çŠ¶æ€ä¸‹çš„çª—å£è¾¹ç•Œ
   Handle := TFormAccessor.GetFormHandle(AForm);
   if Handle <> 0 then
   begin
@@ -578,14 +578,14 @@ begin
     // Clamp stale multi-monitor coordinates to the nearest current work area.
     EnsureFormStateVisible(Data);
     
-    // ÏÈÉèÖÃÎªÕı³£×´Ì¬ÒÔ±ãÉèÖÃÎ»ÖÃ
+    // å…ˆè®¾ç½®ä¸ºæ­£å¸¸çŠ¶æ€ä»¥ä¾¿è®¾ç½®ä½ç½®
     TFormAccessor.SetFormWindowState(AForm, 0); // wsNormal
     
-    // Ó¦ÓÃÎ»ÖÃºÍ´óĞ¡
+    // åº”ç”¨ä½ç½®å’Œå¤§å°
     TFormAccessor.SetFormBounds(AForm, TRect.Create(Data.Left, Data.Top, 
       Data.Left + Data.Width, Data.Top + Data.Height));
     
-    // »Ö¸´´°¿Ú×´Ì¬ (²»»Ö¸´×îĞ¡»¯×´Ì¬)
+    // æ¢å¤çª—å£çŠ¶æ€ (ä¸æ¢å¤æœ€å°åŒ–çŠ¶æ€)
     if Data.WindowState = 2 then // wsMaximized
       TFormAccessor.SetFormWindowState(AForm, 2);
   end;

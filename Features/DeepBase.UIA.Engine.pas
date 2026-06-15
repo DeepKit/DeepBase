@@ -25,7 +25,7 @@ const
   UIA_ClassNamePropertyId    = 30012;
   UIA_NamePropertyId         = 30005;
   UIA_ControlTypePropertyId  = 30003;
-  UIA_ProcessIdPropertyId    = 30005 + 4000; // 近似值 — 实际为 30010
+  UIA_ProcessIdPropertyId    = 30010;
 
   // UIA Pattern IDs
   UIA_ValuePatternId   = 10002;
@@ -163,14 +163,39 @@ function TUIAElementAdapter.GetNativeWindowHandle: HWND;
 var
   Val: Variant;
 begin
-  Val := FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId);
-  // Return the current focus window as a proxy for element window
-  Result := GetForegroundWindow;
+  // UIA_NativeWindowHandlePropertyId = 30020 (Microsoft docs)
+  Val := FRaw.GetCurrentPropertyValue(30020);
+  if VarIsNull(Val) or VarIsEmpty(Val) then
+    Result := 0
+  else
+    Result := HWND(Val);
 end;
 
 function TUIAElementAdapter.GetCurrentProcessName: string;
+var
+  PID: Variant;
+  hProcess: THandle;
 begin
-  Result := FLocator.TargetProcessName;
+  PID := FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId);
+  if VarIsNull(PID) or VarIsEmpty(PID) then
+    Exit(FLocator.TargetProcessName);  // fallback to locator hint
+
+  hProcess := OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, PID.AsInteger);
+  if hProcess = 0 then Exit('');
+
+  try
+    SetLength(Result, MAX_PATH);
+    var Len: DWORD := MAX_PATH;
+    if QueryFullProcessImageName(hProcess, 0, PChar(Result), Len) then
+    begin
+      SetLength(Result, Len);
+      Result := ExtractFileName(Result);
+    end
+    else
+      Result := '';
+  finally
+    CloseHandle(hProcess);
+  end;
 end;
 
 function TUIAElementAdapter.GetLocator: TUIAElementLocator;

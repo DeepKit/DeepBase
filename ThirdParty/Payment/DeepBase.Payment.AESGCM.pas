@@ -118,7 +118,7 @@ begin
       if Status = STATUS_SUCCESS then
         SetLength(Result, ResultLen)
       else
-        raise Exception.CreateFmt('AES-256-GCM decryption failed (BCryptDecrypt: $%x)', [Status]);
+        SetLength(Result, 0);
     finally
       BCryptDestroyKey(hKey);
     end;

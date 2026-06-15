@@ -225,23 +225,27 @@ begin
 end;
 
 // Feature: deepbase-round2-fixes, Property 9: TRandomGenerator.RandomInt
-// uses rejection sampling to remove modulo bias. For ranges where 2^32
-// is not divisible by the range size (e.g., 17, 100, 1000), the empirical
-// bucket distribution over 10000 samples should be within +/-25% of the
-// expected uniform count for every bucket.
+// uses rejection sampling to remove modulo bias. Small sample random tests
+// cannot prove the tiny 32-bit modulo-bias bound, but they can detect gross
+// mistakes such as using a single random byte or a biased modulo source.
 //
-// We use 10000 samples and a generous 25% tolerance to keep flake rate low
-// while still detecting gross modulo bias (which would push some buckets
-// well above 2x the expected count for small primes that don't divide 2^32).
+// The old per-bucket +/-25% assertion was statistically flaky for 100/1000
+// buckets. This uses a chi-square smoke threshold plus coverage checks, which
+// stays stable under real RNG variance while still failing visibly biased
+// implementations.
 procedure TCryptoPropertyTests.Property9_RandomIntNoModuloBias;
 const
   CSamples = 10000;
-  CTolerancePct = 0.25;
 
   procedure TestRange(AMax: Integer);
+  var
+    LBuckets: TArray<Integer>;
+    LExpected: Double;
+    LChiSquare: Double;
+    LChiSquareLimit: Double;
+    LSeen: Integer;
   begin
     // RandomInt(AMin=0, AMax=AMax-1) draws from {0..AMax-1}
-    var LBuckets: TArray<Integer>;
     SetLength(LBuckets, AMax);
     for var I := 0 to CSamples - 1 do
     begin
@@ -251,16 +255,25 @@ const
           [AMax, LVal]));
       Inc(LBuckets[LVal]);
     end;
-    var LExpected := CSamples / AMax;
-    var LMaxDeviation := LExpected * CTolerancePct;
+
+    LExpected := CSamples / AMax;
+    LChiSquare := 0;
+    LSeen := 0;
     for var B := 0 to AMax - 1 do
     begin
-      var LDev := Abs(LBuckets[B] - LExpected);
-      Assert.IsTrue(LDev <= LMaxDeviation,
-        Format('Range %d bucket %d count=%d expected~%.1f deviation=%.1f ' +
-               'exceeds tolerance %.1f (modulo bias?)',
-          [AMax, B, LBuckets[B], LExpected, LDev, LMaxDeviation]));
+      if LBuckets[B] > 0 then
+        Inc(LSeen);
+      LChiSquare := LChiSquare + Sqr(LBuckets[B] - LExpected) / LExpected;
     end;
+
+    LChiSquareLimit := (AMax - 1) + 6 * Sqrt(2 * (AMax - 1));
+    Assert.IsTrue(LChiSquare <= LChiSquareLimit,
+      Format('Range %d chi-square %.1f exceeds smoke threshold %.1f',
+        [AMax, LChiSquare, LChiSquareLimit]));
+
+    if AMax >= 100 then
+      Assert.IsTrue(LSeen >= Round(AMax * 0.90),
+        Format('Range %d covered only %d/%d buckets', [AMax, LSeen, AMax]));
   end;
 
 begin

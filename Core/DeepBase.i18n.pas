@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.i18n - Internationalization Module
   
   Version: 0.3
@@ -471,7 +471,7 @@ begin
   except
     on E: Exception do
     begin
-      // ¼ÇÂ¼È±Ê§·­ÒëÊ§°Ü£¨·Ç¹Ø¼ü²Ù×÷£©£¬Ê¹ÓÃOutputDebugString±ÜÃâÑ­»·ÒÀÀµ
+      // ï¿½ï¿½Â¼È±Ê§ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½Ç¹Ø¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½OutputDebugStringï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
       {$IFDEF DEBUG}
       OutputDebugString(PChar('DeepBase.i18n RecordMissingTranslation failed: ' + E.Message));
       {$ENDIF}
@@ -502,7 +502,7 @@ begin
   CacheHit := False;
   NeedRecord := False;
   
-  // ¼õÉÙËøµÄ³ÖÓÐÊ±¼ä - ÏÈ¼ì²é»º´æ
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ - ï¿½È¼ï¿½é»ºï¿½ï¿½
   TMonitor.Enter(FLock);
   try
     if FCache.TryGetValue(CacheKey, Item) then
@@ -521,32 +521,36 @@ begin
     TMonitor.Exit(FLock);
   end;
   
-  // »º´æÃüÖÐ£¬Ö±½Ó·µ»Ø
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½
   if CacheHit then
     Exit;
   
-  // »º´æÎ´ÃüÖÐ£¬²éÑ¯Êý¾Ý¿â£¨ÔÚËøÍâ½øÐÐ£©
+  // ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½Ñ¯ï¿½ï¿½ï¿½Ý¿â£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
   Result := ReadFromDB(Text, LangCode);
   
-  // ¸üÐÂ»º´æ£¨ÖØÐÂ»ñÈ¡Ëø£¬µ«³ÖÓÐÊ±¼ä¸ü¶Ì£©
-  TMonitor.Enter(FLock);
-  try
-    EvictOldestIfNeeded;
-    Item.Value := Result;
-    Item.LastAccess := Now;
-    FCache.AddOrSetValue(CacheKey, Item);
-    
-    // If no translation found, return original and record
-    if Result = '' then
-    begin
-      Result := Text;
-      NeedRecord := True;
+  // ï¿½ï¿½ï¿½Â»ï¿½ï¿½æ£¨ï¿½ï¿½ï¿½Â»ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ì£ï¿½
+  // Â»æ£¨Â»È¡Ê±Ì£
+  // IMPORTANT: do NOT cache empty results so that the next call
+  // re-queries the DB (which may have become available later).
+  if Result <> '' then
+  begin
+    TMonitor.Enter(FLock);
+    try
+      EvictOldestIfNeeded;
+      Item.Value := Result;
+      Item.LastAccess := Now;
+      FCache.AddOrSetValue(CacheKey, Item);
+    finally
+      TMonitor.Exit(FLock);
     end;
-  finally
-    TMonitor.Exit(FLock);
+  end
+  else
+  begin
+    Result := Text;
+    NeedRecord := True;
   end;
   
-  // ÔÚËøÍâ¼ÇÂ¼È±Ê§·­Òë
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼È±Ê§ï¿½ï¿½ï¿½ï¿½
   if NeedRecord then
     RecordMissingTranslation(Text, LangCode);
 end;
@@ -634,7 +638,7 @@ begin
   end;
 end;
 
-// BUG-003 FIX: ÇåÀíÈ«¾Ö»Øµ÷ÒýÓÃ£¬·ÀÖ¹Ñ­»·ÒýÓÃµ¼ÖÂÄÚ´æÐ¹Â©
+// BUG-003 FIX: ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö»Øµï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½Ö¹Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ð¹Â©
 initialization
 
 finalization

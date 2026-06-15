@@ -50,6 +50,15 @@ type
 
 implementation
 
+function Utf16String(const ACodePoints: array of Word): string;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ACodePoints));
+  for I := 0 to High(ACodePoints) do
+    Result[I + 1] := Char(ACodePoints[I]);
+end;
+
 { TTestDeepBaseDBException }
 
 procedure TTestDeepBaseDBException.Setup;
@@ -72,9 +81,15 @@ end;
 
 procedure TTestDeepBaseDBException.GetErrorMessage_ReturnsKnownMessages;
 begin
-  Assert.AreEqual('无法连接到数据库', GetErrorMessage(ERR_DB_CONNECTION_FAILED));
-  Assert.AreEqual('数据已存在，不能重复添加', GetErrorMessage(ERR_DB_UNIQUE_VIOLATION));
-  Assert.AreEqual('数据库结构版本不匹配', GetErrorMessage(ERR_DB_SCHEMA_MISMATCH));
+  Assert.AreEqual(
+    Utf16String([$65E0, $6CD5, $8FDE, $63A5, $5230, $6570, $636E, $5E93]),
+    GetErrorMessage(ERR_DB_CONNECTION_FAILED));
+  Assert.AreEqual(
+    Utf16String([$6570, $636E, $5DF2, $5B58, $5728, $FF0C, $4E0D, $80FD, $91CD, $590D, $6DFB, $52A0]),
+    GetErrorMessage(ERR_DB_UNIQUE_VIOLATION));
+  Assert.AreEqual(
+    Utf16String([$6570, $636E, $5E93, $7ED3, $6784, $7248, $672C, $4E0D, $5339, $914D]),
+    GetErrorMessage(ERR_DB_SCHEMA_MISMATCH));
 end;
 
 procedure TTestDeepBaseDBException.GetErrorSuggestion_UnknownCodeContainsCode;
@@ -143,7 +158,7 @@ procedure TTestDeepBaseDBException.FromCode_UsesErrorCodeAndDetail;
 var
   E: EDeepBaseDB;
 begin
-  E := EDeepBaseDB.FromCode(ERR_DB_CONNECTION_FAILED, '数据库文�? test.db');
+  E := EDeepBaseDB.FromCode(ERR_DB_CONNECTION_FAILED, 'database file test.db');
   try
     Assert.AreEqual(ERR_DB_CONNECTION_FAILED, E.ErrorCode);
     Assert.IsTrue(ContainsText(E.Message, GetErrorMessage(ERR_DB_CONNECTION_FAILED)));

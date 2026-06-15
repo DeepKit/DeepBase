@@ -2,9 +2,8 @@
   DeepBase.Speech.Schema
   ---------------------------------------------------------------------------
   Version     : 1.0
-  Description : DDL for speech-related tables in ConfigDB.
-                Tables: voice_profiles (声纹档案)
-                Called during DeepBase.Manager initialization.
+  Description : FireDAC DDL helper for speech-related tables in ConfigDB.
+                Tables: voice_profiles, speech_config.
   ============================================================================ }
 
 unit DeepBase.Speech.Schema;
@@ -53,7 +52,9 @@ const
 
 procedure EnsureSpeechSchema(AConn: TFDConnection);
 begin
-  if AConn = nil then Exit;
+  if AConn = nil then
+    Exit;
+
   AConn.ExecSQL(SQL_CREATE_VOICE_PROFILES);
   AConn.ExecSQL(SQL_IDX_VOICE_PROFILES_APP);
   AConn.ExecSQL(SQL_IDX_VOICE_PROFILES_PURPOSE);

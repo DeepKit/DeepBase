@@ -34,7 +34,7 @@ type
     procedure RestoreInternal;
     function PreCheckMemory: Boolean;
     procedure SaveBackupToTemp;
-    procedure SaveBackupToPath(const APath: string);
+    function SaveBackupToPath(const APath: string): Boolean;
   protected
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -285,16 +285,18 @@ end;
 
 procedure TClipboardGuard.SaveBackupToTemp;
 begin
-  var TempPath := GetEnvironmentVariable('TEMP') + '\DeepBase\';
+  var TempPath := TPath.Combine(GetEnvironmentVariable('TEMP'), 'DeepBase');
   ForceDirectories(TempPath);
-  SaveBackupToPath(TempPath);
+  if not SaveBackupToPath(TempPath) then
+    Logger.Error('ClipboardGuard: backup to TEMP failed', 'Clipboard');
 end;
 
-procedure TClipboardGuard.SaveBackupToPath(const APath: string);
+function TClipboardGuard.SaveBackupToPath(const APath: string): Boolean;
 begin
+  Result := False;
   try
-    var FilePath := APath + Format('clipboard_backup_%s.bin',
-      [FormatDateTime('yyyymmdd_hhnnss', Now)]);
+    var FilePath := TPath.Combine(APath, Format('clipboard_backup_%s.bin',
+      [FormatDateTime('yyyymmdd_hhnnss', Now)]));
     var Stream := TFileStream.Create(FilePath, fmCreate);
     try
       var FmtCount := Length(FOriginalFormats);
@@ -319,6 +321,7 @@ begin
     finally
       Stream.Free;
     end;
+    Result := True;
     Logger.InfoFmt('ClipboardGuard: backup saved to %s', [FilePath], 'Clipboard');
   except
     on E: Exception do

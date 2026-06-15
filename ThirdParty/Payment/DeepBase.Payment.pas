@@ -26,6 +26,12 @@ uses
   DeepBase.Security.SecretStore;
 
 type
+  // Compatibility aliases exported by the facade unit. Provider units and
+  // downstream code historically used DeepBase.Payment only.
+  TPaymentProvider = DeepBase.Payment.Types.TPaymentProvider;
+  TPaymentStatus = DeepBase.Payment.Types.TPaymentStatus;
+  EPaymentError = DeepBase.Payment.Types.EPaymentError;
+
   /// <summary>Payment method type</summary>
   TPaymentMethod = (
     pmDefault,      // Provider default
@@ -37,6 +43,22 @@ type
     pmCard          // Credit/Debit card
   );
 
+const
+  ppAlipay = DeepBase.Payment.Types.ppAlipay;
+  ppWeChatPay = DeepBase.Payment.Types.ppWeChatPay;
+  ppStripe = DeepBase.Payment.Types.ppStripe;
+  ppPayPal = DeepBase.Payment.Types.ppPayPal;
+
+  psUnknown = DeepBase.Payment.Types.psUnknown;
+  psPending = DeepBase.Payment.Types.psPending;
+  psSuccess = DeepBase.Payment.Types.psSuccess;
+  psFailed = DeepBase.Payment.Types.psFailed;
+  psClosed = DeepBase.Payment.Types.psClosed;
+  psRefunding = DeepBase.Payment.Types.psRefunding;
+  psRefunded = DeepBase.Payment.Types.psRefunded;
+  psPartialRefund = DeepBase.Payment.Types.psPartialRefund;
+
+type
   EPaymentConfigError = class(EPaymentError);
   EPaymentSignError = class(EPaymentError);
   EPaymentNetworkError = class(EPaymentError);
@@ -60,6 +82,7 @@ type
     ClientIP: string;          // Payer IP address
 
     procedure Clear;
+    procedure Release;
     procedure Validate;
   end;
 
@@ -295,6 +318,11 @@ begin
   ClientIP := '';
 end;
 
+procedure TPaymentOrder.Release;
+begin
+  FreeAndNil(Metadata);
+end;
+
 procedure TPaymentOrder.Validate;
 begin
   if OrderNo = '' then
@@ -427,7 +455,7 @@ begin
 
   if Assigned(FSecretStore) and FSecretStore.IsAvailable then
   begin
-    KeyId := FCredentialTarget + '.' + IntToStr(TObject(Self).HashCode);
+    KeyId := FCredentialTarget + '.' + IntToHex(NativeUInt(Self), SizeOf(Pointer) * 2);
     FSecretStore.Put(KeyId, APlainKey);
     Result := KeyId;
   end

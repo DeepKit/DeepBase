@@ -1,5 +1,5 @@
 { ============================================================================
-  DeepBase.FMX.LogListView - FMX ¸ßÐÔÄÜÈÕÖ¾ÁÐ±í¿Ø¼þ
+  DeepBase.FMX.LogListView - FMX ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ð±ï¿½ï¿½Ø¼ï¿½
   
   Version: 1.0
   Description: FMX cross-platform log viewer with virtual scrolling
@@ -29,21 +29,11 @@ uses
   FMX.Objects,
   FMX.Menus,
   FMX.Forms,
-  Data.DB,
-  FireDAC.Comp.Client,
-  DeepBase.Manager,
+  DeepBase.Logging,
+  DeepBase.Storage.Interfaces,
   DeepBase.Types;
 
 type
-  TLogEntry = record
-    LogTime: string;
-    Level: TLogLevel;
-    LevelStr: string;
-    Source: string;
-    Message: string;
-    ThreadId: Integer;
-  end;
-
   TFMXLogListView = class(TLayout)
   private
     FListBox: TListBox;
@@ -51,9 +41,7 @@ type
     FRefreshTimer: TTimer;
     FPopupMenu: TPopupMenu;
     
-    FConnection: TFDConnection;
-    FQuery: TFDQuery;
-    FLogCache: TList<TLogEntry>;
+    FLogCache: TList<TLogViewData>;
     
     FAutoRefresh: Boolean;
     FRefreshInterval: Integer;
@@ -100,7 +88,7 @@ constructor TFMXLogListView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   
-  FLogCache := TList<TLogEntry>.Create;
+  FLogCache := TList<TLogViewData>.Create;
   FAutoRefresh := True;
   FRefreshInterval := 2000;
   FMaxItems := 1000;
@@ -119,8 +107,6 @@ destructor TFMXLogListView.Destroy;
 begin
   FRefreshTimer.Enabled := False;
   FreeAndNil(FLogCache);
-  if Assigned(FQuery) then FQuery.Free;
-  if Assigned(FConnection) then FConnection.Free;
   inherited;
 end;
 
@@ -229,81 +215,30 @@ begin
 end;
 
 procedure TFMXLogListView.Clear;
-var
-  Cmd: TFDCommand;
 begin
-  if Assigned(FConnection) and FConnection.Connected then
-  begin
-    Cmd := TFDCommand.Create(nil);
-    try
-      Cmd.Connection := FConnection;
-      Cmd.CommandText.Text := 'DELETE FROM Logs';
-      Cmd.Execute;
-      RefreshLogs;
-    finally
-      Cmd.Free;
-    end;
-  end;
+  Logger.ClearLogs;
+  RefreshLogs;
 end;
 
 procedure TFMXLogListView.RefreshLogs;
 var
-  Entry: TLogEntry;
+  Rows: TLogViewDataArray;
+  Entry: TLogViewData;
 begin
-  if not DeepBase.Manager.DeepBase.IsInitialized then Exit;
-  
-  if FConnection = nil then
-  begin
-    FConnection := TFDConnection.Create(nil);
-    FConnection.DriverName := 'SQLite';
-    FConnection.Params.Database := DeepBase.Manager.DeepBase.ConfigDBPath;
-    FConnection.Params.Values['LockingMode'] := 'Normal';
-    FConnection.Params.Values['JournalMode'] := 'WAL';
-    FConnection.LoginPrompt := False;
-    try
-      FConnection.Connected := True;
-    except
-      Exit;
-    end;
-  end;
-  
-  if FQuery = nil then
-  begin
-    FQuery := TFDQuery.Create(nil);
-    FQuery.Connection := FConnection;
-  end;
-  
   try
-    FQuery.SQL.Text :=
-      'SELECT LogTime, Level, Source, Message, ThreadId ' +
-      'FROM Logs ' +
-      'WHERE Level >= :MinLevel ' +
-      'ORDER BY Id DESC LIMIT :Max';
-    FQuery.ParamByName('MinLevel').AsInteger := Ord(FMinLevel);
-    FQuery.ParamByName('Max').AsInteger := FMaxItems;
-    FQuery.Open;
-    
+    Rows := Logger.ReadRecentLogs(FMinLevel, FMaxItems);
+
     FLogCache.Clear;
-    while not FQuery.Eof do
-    begin
-      Entry.LogTime := FQuery.FieldByName('LogTime').AsString;
-      Entry.Level := TLogLevel(FQuery.FieldByName('Level').AsInteger);
-      Entry.LevelStr := LogLevelToStr(Entry.Level);
-      Entry.Source := FQuery.FieldByName('Source').AsString;
-      Entry.Message := FQuery.FieldByName('Message').AsString;
-      Entry.ThreadId := FQuery.FieldByName('ThreadId').AsInteger;
+    for Entry in Rows do
       FLogCache.Add(Entry);
-      FQuery.Next;
-    end;
-    FQuery.Close;
-    
+
     PopulateListBox;
   except
     on E: Exception do
     begin
       {$IF DEFINED(DEBUG) AND DEFINED(MSWINDOWS)}
       OutputDebugString(PChar('FMX.LogListView: RefreshLogs error: ' + E.Message));
-      {$ENDIF}
+      {}
     end;
   end;
 end;
@@ -312,7 +247,7 @@ procedure TFMXLogListView.PopulateListBox;
 var
   I: Integer;
   Item: TListBoxItem;
-  Entry: TLogEntry;
+  Entry: TLogViewData;
   LblTime, LblLevel, LblSource, LblMsg: TLabel;
 begin
   FListBox.BeginUpdate;
@@ -331,7 +266,7 @@ begin
       
       LblTime := TLabel.Create(Item);
       LblTime.Parent := Item;
-      LblTime.Text := Entry.LogTime;
+      LblTime.Text := Entry.TimestampISO;
       LblTime.Position.X := 4;
       LblTime.Position.Y := 2;
       LblTime.Width := 130;
@@ -339,7 +274,7 @@ begin
       
       LblLevel := TLabel.Create(Item);
       LblLevel.Parent := Item;
-      LblLevel.Text := Entry.LevelStr;
+      LblLevel.Text := Entry.LevelText;
       LblLevel.Position.X := 140;
       LblLevel.Position.Y := 2;
       LblLevel.Width := 60;
@@ -362,7 +297,7 @@ begin
       
       LblMsg := TLabel.Create(Item);
       LblMsg.Parent := Item;
-      LblMsg.Text := Entry.Message;
+      LblMsg.Text := Entry.MessageText;
       LblMsg.Position.X := 315;
       LblMsg.Position.Y := 2;
       LblMsg.Width := 500;
@@ -429,13 +364,14 @@ end;
 procedure TFMXLogListView.OnCopyClick(Sender: TObject);
 var
   Svc: IFMXClipboardService;
-  Entry: TLogEntry;
+  Entry: TLogViewData;
   S: string;
 begin
   if (FListBox.ItemIndex >= 0) and (FListBox.ItemIndex < FLogCache.Count) then
   begin
     Entry := FLogCache[FListBox.ItemIndex];
-    S := Format('%s [%s] %s: %s', [Entry.LogTime, Entry.LevelStr, Entry.Source, Entry.Message]);
+    S := Format('%s [%s] %s: %s',
+      [Entry.TimestampISO, Entry.LevelText, Entry.Source, Entry.MessageText]);
     
     if TPlatformServices.Current.SupportsPlatformService(IFMXClipboardService, Svc) then
       Svc.SetClipboard(S);

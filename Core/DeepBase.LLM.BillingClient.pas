@@ -36,7 +36,8 @@ interface
 uses
   System.SysUtils, System.Classes, System.JSON, System.Threading,
   System.Net.HttpClient, System.Net.HttpClientComponent, System.Net.URLClient,
-  System.Generics.Collections, System.SyncObjs;
+  System.Generics.Collections, System.SyncObjs,
+  DeepBase.LLM;
 
 type
   /// <summary>Billing API Exception base class</summary>
@@ -151,6 +152,7 @@ type
     FApiKey: string;
     FTenantId: string;
     FHttpClient: THTTPClient;
+    FHttpTransport: TLLMHttpPostProc;
     FTimeout: Integer;
     FMaxRetries: Integer;
     FModel: string;
@@ -170,6 +172,10 @@ type
   public
     constructor Create(const ABaseURL, AApiKey, ATenantId: string);
     destructor Destroy; override;
+
+    /// <summary>Inject custom HTTP transport. When set, DoRequest uses this
+    /// instead of the built-in THTTPClient for synchronous chat calls.</summary>
+    procedure SetHttpTransport(const ATransport: TLLMHttpPostProc);
     
     /// <summary>Simple chat - single prompt</summary>
     function Chat(const APrompt: string): string; overload;
@@ -434,6 +440,11 @@ begin
   inherited;
 end;
 
+procedure TBillingClient.SetHttpTransport(const ATransport: TLLMHttpPostProc);
+begin
+  FHttpTransport := ATransport;
+end;
+
 procedure TBillingClient.SetupHeaders;
 begin
   FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + FApiKey;
@@ -604,26 +615,59 @@ end;
 function TBillingClient.DoRequest(const AMessages: TChatMessages): TChatResponse;
 var
   RequestBody: string;
+  Url: string;
   RequestStream: TStringStream;
   Response: IHTTPResponse;
+  ResponseStr: string;
   StartTime: TDateTime;
+  LHeaders: TArray<TPair<string, string>>;
+  LSuccess: Boolean;
 begin
   Result.Init;
   ResetCancel;
   StartTime := Now;
   
   RequestBody := BuildRequestBody(AMessages, False);
+
+  // Build URL
+  if FBaseURL.EndsWith('/v1') or FBaseURL.EndsWith('/v1/') then
+    Url := FBaseURL.TrimRight(['/']) + '/chat/completions'
+  else
+    Url := FBaseURL + '/v1/chat/completions';
+
+  // Use injected transport when available
+  if Assigned(FHttpTransport) then
+  begin
+    LHeaders := [
+      TPair<string, string>.Create('Content-Type', 'application/json'),
+      TPair<string, string>.Create('Authorization', 'Bearer ' + FApiKey),
+      TPair<string, string>.Create('X-Tenant-Id', FTenantId)
+    ];
+    try
+      LSuccess := FHttpTransport(Url, RequestBody, LHeaders, ResponseStr, FTimeout);
+      Result.DurationMs := MilliSecondsBetween(Now, StartTime);
+      if LSuccess then
+        Result := ParseResponse(ResponseStr)
+      else
+        HandleHttpError(500, ResponseStr);
+      Result.DurationMs := MilliSecondsBetween(Now, StartTime);
+    except
+      on E: Exception do
+      begin
+        Result.DurationMs := MilliSecondsBetween(Now, StartTime);
+        Result.ErrorMessage := E.Message;
+      end;
+    end;
+    Exit;
+  end;
+
+  // Fallback: built-in THTTPClient
   RequestStream := TStringStream.Create(RequestBody, TEncoding.UTF8);
   try
     SetupHeaders;
-    // ע��: ��� BaseURL �Ѱ��� /v1����ֱ���� /chat/completions
-    // ��� BaseURL �Ǹ�·�������� /v1/chat/completions
-    if FBaseURL.EndsWith('/v1') or FBaseURL.EndsWith('/v1/') then
-      Response := FHttpClient.Post(FBaseURL.TrimRight(['/']) + '/chat/completions', RequestStream)
-    else
-      Response := FHttpClient.Post(FBaseURL + '/v1/chat/completions', RequestStream);
+    Response := FHttpClient.Post(Url, RequestStream);
     Result.DurationMs := MilliSecondsBetween(Now, StartTime);
-    
+
     if (Response.StatusCode >= 200) and (Response.StatusCode < 300) then
       Result := ParseResponse(Response.ContentAsString(TEncoding.UTF8))
     else
@@ -767,7 +811,7 @@ begin
   Callback := AOnComplete;
   Client := Self;
   
-  Result := TTask.Run(
+  Result := TTask.Run(TProc(
     procedure
     var
       Response: TChatResponse;
@@ -788,13 +832,13 @@ begin
       if Assigned(Callback) then
       begin
         RespCopy := Response;
-        TThread.Queue(nil,
+        TThread.Queue(nil, TThreadProcedure(
           procedure
           begin
             Callback(RespCopy);
-          end);
+          end));
       end;
-    end);
+    end));
 end;
 
 function TBillingClient.ChatWithRetry(const AMessages: TChatMessages; 

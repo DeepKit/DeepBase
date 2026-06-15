@@ -1,4 +1,4 @@
-unit DeepBase.LogAggregator;
+﻿unit DeepBase.LogAggregator;
 
 {*******************************************************************************
   DeepBase Log Aggregator

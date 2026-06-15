@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Security.FireDAC - FireDAC adapter for security secrets
   ============================================================================
   Moves Secrets SQL/FireDAC persistence out of Core\DeepBase.Security.

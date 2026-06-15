@@ -150,18 +150,15 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="dbrtl.dcp"/>
-        <DCCReference Include="FireDAC.dcp"/>
-        <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="DeepBaseCore.dcp"/>
         <DCCReference Include="DeepBaseServices.dcp"/>
         <DCCReference Include="RESTComponents.dcp"/>
+        <DCCReference Include="Features\DeepBase.Net.pas"/>
         <DCCReference Include="Features\DeepBase.Net.Transport.pas"/>
         <DCCReference Include="Features\DeepBase.Net.Transport.ICS.pas"/>
-        <DCCReference Include="Core\DeepBase.LLM.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.Types.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.Client.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.HTTP.pas"/>
@@ -186,7 +183,6 @@
         <DCCReference Include="Features\DeepBase.IntentClarification.Budget.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.Exit.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.OptionFrame.pas"/>
-        <DCCReference Include="Features\DeepBase.IntentClarification.Storage.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.Metrics.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.FeatureConfig.pas"/>
         <DCCReference Include="Features\DeepBase.IntentClarification.Templates.pas"/>
@@ -199,11 +195,9 @@
         <DCCReference Include="Features\DeepBase.IntentClarification.Registration.pas"/>
         <DCCReference Include="Features\DeepBase.BrowserAutomation.pas"/>
         <DCCReference Include="Features\DeepBase.Browser.PageDriver.pas"/>
-        <DCCReference Include="Core\DeepBase.LLM.Manager.pas"/>
-        <DCCReference Include="Persistence\DeepBase.Persistence.LLM.FireDAC.pas"/>
-        <DCCReference Include="Core\DeepBase.LLM.BillingClient.pas"/>
-        <DCCReference Include="Core\DeepBase.LLM.ImportExport.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.Types.pas"/>
+        <DCCReference Include="Features\DeepBase.Commerce.JsonUtil.pas"/>
+        <DCCReference Include="Features\DeepBase.Commerce.Idempotency.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.Storage.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.Service.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.Backend.Contract.pas"/>

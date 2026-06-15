@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.Crypto.OpenSSL - OpenSSL libcrypto Backend for Cross-Platform Encryption
 
   Version: 1.0
@@ -71,12 +71,12 @@ type
     const AAAD, ATag: TBytes): TBytes;
 
   /// <summary>
-  /// AES-256-CBC encryption. Returns ciphertext (no padding â€?caller must pre-pad).
+  /// AES-256-CBC encryption. Returns ciphertext (no padding éˆ¥?caller must pre-pad).
   /// </summary>
   function OpenSSL_AES256CBC_Encrypt(const AKey, AIV, APlaintext: TBytes): TBytes;
 
   /// <summary>
-  /// AES-256-CBC decryption. Returns plaintext (no unpadding â€?caller must post-unpad).
+  /// AES-256-CBC decryption. Returns plaintext (no unpadding éˆ¥?caller must post-unpad).
   /// </summary>
   function OpenSSL_AES256CBC_Decrypt(const AKey, AIV, ACiphertext: TBytes): TBytes;
 
@@ -630,7 +630,7 @@ begin
   try
     if _EVP_EncryptInit_ex(Ctx, _EVP_aes_256_cbc(), nil, @AKey[0], @AIV[0]) <> 1 then
       raise EOpenSSLError.Create('EVP_EncryptInit_ex (CBC) failed');
-    // Disable padding â€?caller provides pre-padded data
+    // Disable padding éˆ¥?caller provides pre-padded data
     _EVP_CIPHER_CTX_ctrl(Ctx, 1, 0, nil);
     SetLength(Result, Length(APlaintext) + AES_BLOCK_SIZE);
     if _EVP_EncryptUpdate(Ctx, @Result[0], OutLen, @APlaintext[0],

@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.Benchmark - Performance Benchmark Framework
   
   A lightweight benchmarking framework for measuring execution time,
@@ -730,7 +730,7 @@ begin
     // Results table
     SB.AppendLine('## Results');
     SB.AppendLine;
-    SB.AppendLine('| Benchmark | Iterations | Mean (¦Ìs) | StdDev (¦Ìs) | P95 (¦Ìs) | Throughput |');
+    SB.AppendLine('| Benchmark | Iterations | Mean (Î¼s) | StdDev (Î¼s) | P95 (Î¼s) | Throughput |');
     SB.AppendLine('|-----------|------------|-----------|-------------|----------|------------|');
     
     for R in FResults do
@@ -755,14 +755,14 @@ begin
       SB.AppendLine('|--------|-------|');
       SB.AppendFormat('| Iterations | %d |', [R.Iterations]).AppendLine;
       SB.AppendFormat('| Warmup | %d |', [R.WarmupIterations]).AppendLine;
-      SB.AppendFormat('| Min | %.3f ¦Ìs |', [R.TimingStats.Min]).AppendLine;
-      SB.AppendFormat('| Max | %.3f ¦Ìs |', [R.TimingStats.Max]).AppendLine;
-      SB.AppendFormat('| Mean | %.3f ¦Ìs |', [R.TimingStats.Mean]).AppendLine;
-      SB.AppendFormat('| StdDev | %.3f ¦Ìs |', [R.TimingStats.StdDev]).AppendLine;
-      SB.AppendFormat('| Median | %.3f ¦Ìs |', [R.TimingStats.Median]).AppendLine;
-      SB.AppendFormat('| P90 | %.3f ¦Ìs |', [R.TimingStats.P90]).AppendLine;
-      SB.AppendFormat('| P95 | %.3f ¦Ìs |', [R.TimingStats.P95]).AppendLine;
-      SB.AppendFormat('| P99 | %.3f ¦Ìs |', [R.TimingStats.P99]).AppendLine;
+      SB.AppendFormat('| Min | %.3f Î¼s |', [R.TimingStats.Min]).AppendLine;
+      SB.AppendFormat('| Max | %.3f Î¼s |', [R.TimingStats.Max]).AppendLine;
+      SB.AppendFormat('| Mean | %.3f Î¼s |', [R.TimingStats.Mean]).AppendLine;
+      SB.AppendFormat('| StdDev | %.3f Î¼s |', [R.TimingStats.StdDev]).AppendLine;
+      SB.AppendFormat('| Median | %.3f Î¼s |', [R.TimingStats.Median]).AppendLine;
+      SB.AppendFormat('| P90 | %.3f Î¼s |', [R.TimingStats.P90]).AppendLine;
+      SB.AppendFormat('| P95 | %.3f Î¼s |', [R.TimingStats.P95]).AppendLine;
+      SB.AppendFormat('| P99 | %.3f Î¼s |', [R.TimingStats.P99]).AppendLine;
       SB.AppendFormat('| Throughput | %.2f ops/s |', [R.ThroughputPerSecond]).AppendLine;
       SB.AppendLine;
     end;
@@ -812,7 +812,7 @@ begin
     // Results table
     SB.AppendLine('<h2>Results Summary</h2>');
     SB.AppendLine('<table>');
-    SB.AppendLine('<tr><th>Benchmark</th><th>Iterations</th><th>Mean (¦Ìs)</th><th>StdDev (¦Ìs)</th><th>P95 (¦Ìs)</th><th>Throughput</th></tr>');
+    SB.AppendLine('<tr><th>Benchmark</th><th>Iterations</th><th>Mean (Î¼s)</th><th>StdDev (Î¼s)</th><th>P95 (Î¼s)</th><th>Throughput</th></tr>');
     
     for R in FResults do
     begin

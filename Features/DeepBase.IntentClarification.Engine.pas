@@ -34,6 +34,8 @@ uses
   DeepBase.IntentClarification.Budget,
   DeepBase.IntentClarification.Exit,
   DeepBase.IntentClarification.OptionFrame,
+  DeepBase.IntentClarification.FeatureConfig,
+  DeepBase.IntentClarification.Metrics,
   DeepBase.LLM.Client,
   DeepBase.LLM.Types,
   DeepBase.EventBus,
@@ -121,6 +123,11 @@ type
     // Token tracking per session
     FTokenUsage: TDictionary<string, Integer>;
 
+    // Optional sub-systems (injected, not owned)
+    FFeatureConfig: TICFeatureConfig;
+    FMetrics: TICMetrics;
+    FStorage: IClarificationStorage;
+
     function GenerateSessionId: string;
     function AcquireSessionLock(const ASessionId: string): TCriticalSection;
     function MakeErrorResult(const ASessionId: string; ATurnNumber: Integer;
@@ -170,12 +177,18 @@ type
     procedure SetLLM(const ALLM: ILLMClient);
     procedure SetPersonaRegistry(const ARegistry: IPersonaRegistry);
     procedure SetAnticipationEngine(const AAnticipation: IAnticipationEngine);
+    procedure SetFeatureConfig(const AConfig: TICFeatureConfig);
+    procedure SetMetrics(const AMetrics: TICMetrics);
+    procedure SetStorage(const AStorage: IClarificationStorage);
 
     /// <summary>Number of active sessions (for diagnostics)</summary>
     function SessionCount: Integer;
   end;
 
 implementation
+
+uses
+  System.Diagnostics;
 
 { TClarificationEngine }
 
@@ -265,7 +278,9 @@ end;
 
 function TClarificationEngine.GetMaxLevel: TClarificationLevel;
 begin
-  if FDomainAdapter <> nil then
+  if FFeatureConfig <> nil then
+    Result := FFeatureConfig.GetEffectiveMaxLevel
+  else if FDomainAdapter <> nil then
     Result := FDomainAdapter.GetMaxLevel
   else
     Result := clL4;
@@ -394,9 +409,11 @@ begin
   Result.Hypotheses := AState.Hypotheses;
   Result.History := GetSessionHistory(ASessionId);
 
-  // Get domain context if adapter is registered
   if FDomainAdapter <> nil then
-    Result.DomainContext := FDomainAdapter.GetContextForSession(ASessionId)
+  begin
+    Result.DomainContext := FDomainAdapter.GetContextForSession(ASessionId);
+    Result.PresetSlots := FDomainAdapter.GetPresetSlots(AState.IntentName);
+  end
   else
   begin
     LDomainCtx := Default(TDomainContext);
@@ -404,6 +421,7 @@ begin
     LDomainCtx.SessionId := ASessionId;
     LDomainCtx.ActiveIntent := AState.IntentName;
     Result.DomainContext := LDomainCtx;
+    Result.PresetSlots := nil;
   end;
 end;
 
@@ -488,6 +506,23 @@ begin
     FSessions.AddOrSetValue(ASessionId, AState);
   finally
     FLock.Leave;
+  end;
+
+  // Record metrics and persist checkpoint
+  if FMetrics <> nil then
+    FMetrics.RecordSessionCompleted('user_cancel');
+  if FStorage <> nil then
+  try
+    var LCheckpoint: TSessionCheckpoint;
+    LCheckpoint := Default(TSessionCheckpoint);
+    LCheckpoint.Version := 1;
+    LCheckpoint.SessionState := AState;
+    LCheckpoint.TurnHistory := GetSessionHistory(ASessionId);
+    LCheckpoint.SerializedAt := Now;
+    FStorage.SaveCheckpoint(LCheckpoint);
+  except
+    on E: Exception do
+      Log(ltWarning, Format('IC: Checkpoint save failed on exit: %s', [E.Message]));
   end;
 
   // Notify presenter
@@ -686,6 +721,21 @@ begin
   FAnticipationEngine := AAnticipation;
 end;
 
+procedure TClarificationEngine.SetFeatureConfig(const AConfig: TICFeatureConfig);
+begin
+  FFeatureConfig := AConfig;
+end;
+
+procedure TClarificationEngine.SetMetrics(const AMetrics: TICMetrics);
+begin
+  FMetrics := AMetrics;
+end;
+
+procedure TClarificationEngine.SetStorage(const AStorage: IClarificationStorage);
+begin
+  FStorage := AStorage;
+end;
+
 // === IClarificationEngine - Session Lifecycle ===
 
 function TClarificationEngine.StartSession(
@@ -777,6 +827,7 @@ var
   LBudgetStatus: TBudgetStatus;
   LBudgetConfig: TBudgetConfig;
   LSessionLock: TCriticalSection;
+  LStopwatch: TStopwatch;
 begin
   // Property 3: SubmitInput always returns valid TTurnResult (never raises)
   // Property 6: Internal exceptions are caught and returned as error TTurnResult
@@ -875,6 +926,16 @@ begin
     LProvider := FindProvider(LRouteResult.Level);
     if (LProvider <> nil) and LProvider.RequiresLLM and (FLLM = nil) then
       LProvider := nil;
+    // Gate provider dispatch on feature flags when FeatureConfig is wired
+    if (LProvider <> nil) and (FFeatureConfig <> nil) and
+       not FFeatureConfig.IsLevelEnabled(LRouteResult.Level) then
+    begin
+      Log(ltInfo, Format('IC: Level %d disabled by feature flag, degrading',
+        [Ord(LRouteResult.Level)]));
+      LProvider := nil;
+    end;
+
+    LStopwatch := TStopwatch.StartNew;
     if LProvider <> nil then
     begin
       LContext := BuildProcessingContext(AHandle.Id, AInput, LState,
@@ -883,14 +944,13 @@ begin
     end
     else
     begin
-      // Fallback: no provider registered for this level
       LProviderResult := Default(TProviderResult);
       LProviderResult.Success := True;
       LProviderResult.Question := Format('Please clarify your intent: "%s"', [AInput]);
       LProviderResult.Source := 'rule';
     end;
+    LStopwatch.Stop;
 
-    // Phase 2 Logging: Provider result
     Log(ltInfo, Format('IC: Provider result: %s', [LProviderResult.Source]));
 
     // Step 4: Validate options through OptionFrameBuilder
@@ -900,11 +960,22 @@ begin
     // Step 5: Track token usage (estimate from LLM if provider used LLM)
     LTokensThisTurn := 0;
     if (LProvider <> nil) and LProvider.RequiresLLM then
-      LTokensThisTurn := Length(LProviderResult.Question) div 4; // rough estimate
+      LTokensThisTurn := Length(LProviderResult.Question) div 4;
     TrackTokens(AHandle.Id, LTokensThisTurn);
 
-    // Step 6: Check budget
-    LBudgetConfig := TBudgetConfig.Default;
+    // Step 5a: Record metrics
+    if FMetrics <> nil then
+    begin
+      FMetrics.RecordTurn(LStopwatch.ElapsedMilliseconds, LRouteResult.Level,
+        LRouteResult.Posture, LTokensThisTurn);
+      FMetrics.RecordTokens(LTokensThisTurn);
+    end;
+
+    // Step 6: Check budget — use FeatureConfig if available, else default
+    if FFeatureConfig <> nil then
+      LBudgetConfig := FFeatureConfig.GetBudgetConfig
+    else
+      LBudgetConfig := TBudgetConfig.Default;
     LBudgetStatus := FBudgetController.Check(LBudgetConfig,
       LState.TurnCount, GetTokensUsed(AHandle.Id), LState.CreatedAt);
 
@@ -965,6 +1036,21 @@ begin
         FLock.Leave;
       end;
       Log(ltInfo, Format('IC: Budget exhausted for session %s', [AHandle.Id]));
+      if FMetrics <> nil then
+        FMetrics.RecordSessionCompleted('budget_exhausted');
+      if FStorage <> nil then
+      try
+        var LCheckpoint: TSessionCheckpoint;
+        LCheckpoint := Default(TSessionCheckpoint);
+        LCheckpoint.Version := 1;
+        LCheckpoint.SessionState := LState;
+        LCheckpoint.TurnHistory := GetSessionHistory(AHandle.Id);
+        LCheckpoint.SerializedAt := Now;
+        FStorage.SaveCheckpoint(LCheckpoint);
+      except
+        on E: Exception do
+          Log(ltWarning, Format('IC: Checkpoint save failed (budget_exhausted): %s', [E.Message]));
+      end;
       PublishSessionCompleted(AHandle.Id, 'budget_exhausted', LState.TurnCount);
       if FPresenter <> nil then
         FPresenter.PresentExit(FExitHandler.HandleExit(LState, 'budget_exhausted'));
@@ -1048,9 +1134,24 @@ begin
     end;
 
     Result.Success := True;
-    Result.CheckpointSaved := True;
+    Result.CheckpointSaved := False;
     Result.ResumeHint := Format('Session suspended at turn %d. Resume to continue.',
       [LState.TurnCount]);
+
+    if FStorage <> nil then
+    try
+      var LCheckpoint: TSessionCheckpoint;
+      LCheckpoint := Default(TSessionCheckpoint);
+      LCheckpoint.Version := 1;
+      LCheckpoint.SessionState := LState;
+      LCheckpoint.TurnHistory := GetSessionHistory(AHandle.Id);
+      LCheckpoint.SerializedAt := Now;
+      FStorage.SaveCheckpoint(LCheckpoint);
+      Result.CheckpointSaved := True;
+    except
+      on E: Exception do
+        Log(ltWarning, Format('IC: Checkpoint save failed on suspend: %s', [E.Message]));
+    end;
 
     Log(ltInfo, Format('IC: Session %s suspended at turn %d',
       [AHandle.Id, LState.TurnCount]));
@@ -1143,6 +1244,21 @@ begin
 
     Log(ltInfo, Format('IC: Session %s cancelled after %d turns',
       [AHandle.Id, LState.TurnCount]));
+    if FMetrics <> nil then
+      FMetrics.RecordSessionCompleted('cancelled');
+    if FStorage <> nil then
+    try
+      var LCheckpoint: TSessionCheckpoint;
+      LCheckpoint := Default(TSessionCheckpoint);
+      LCheckpoint.Version := 1;
+      LCheckpoint.SessionState := LState;
+      LCheckpoint.TurnHistory := GetSessionHistory(AHandle.Id);
+      LCheckpoint.SerializedAt := Now;
+      FStorage.SaveCheckpoint(LCheckpoint);
+    except
+      on E: Exception do
+        Log(ltWarning, Format('IC: Checkpoint save failed on cancel: %s', [E.Message]));
+    end;
     PublishSessionCompleted(AHandle.Id, 'cancelled', LState.TurnCount);
   except
     on E: Exception do

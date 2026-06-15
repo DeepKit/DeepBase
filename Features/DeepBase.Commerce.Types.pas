@@ -170,6 +170,10 @@ type
     ValidUntilISO: string; // empty means permanent
     RemainingQuota: Integer; // -1 means unlimited
     SourceOrderId: string;
+    Tier: string;              // 'free', 'standard', 'pro', 'enterprise'
+    MaxDevices: Integer;       // -1 = unlimited, 0 = no limit set
+    OfflineGraceDays: Integer; // 0 = no offline grace
+    LastValidatedISO: string;  // last server validation timestamp (UTC)
   end;
 
   TCommerceEntitlementArray = TArray<TCommerceEntitlementData>;
@@ -337,7 +341,7 @@ begin
   if SameText(S, 'consumed') then Exit(cesConsumed);
   if SameText(S, 'expired') then Exit(cesExpired);
   if SameText(S, 'revoked') then Exit(cesRevoked);
-  Result := cesActive;
+  Result := cesRevoked;
 end;
 
 { TCommerceUserData }
@@ -420,18 +424,27 @@ end;
 
 function IsCommerceEntitlementUsable(const AEntitlement: TCommerceEntitlementData): Boolean;
 var
-  ValidUntil: TDateTime;
+  ValidUntil, LastValidated, GraceExpiry: TDateTime;
 begin
   if AEntitlement.Status <> cesActive then
     Exit(False);
-  // -1 = unlimited, 0 = exhausted, < -1 = invalid
   if (AEntitlement.RemainingQuota = 0) or (AEntitlement.RemainingQuota < -1) then
     Exit(False);
   if AEntitlement.ValidUntilISO = '' then
     Exit(True);
   if not TryISO8601ToDate(AEntitlement.ValidUntilISO, ValidUntil, False) then
     Exit(False);
-  Result := ValidUntil > TTimeZone.Local.ToUniversalTime(Now);
+  if ValidUntil > TTimeZone.Local.ToUniversalTime(Now) then
+    Exit(True);
+  if (AEntitlement.OfflineGraceDays > 0) and
+     (AEntitlement.LastValidatedISO <> '') and
+     TryISO8601ToDate(AEntitlement.LastValidatedISO, LastValidated, False) then
+  begin
+    GraceExpiry := LastValidated + AEntitlement.OfflineGraceDays;
+    Result := GraceExpiry > TTimeZone.Local.ToUniversalTime(Now);
+  end
+  else
+    Result := False;
 end;
 
 end.

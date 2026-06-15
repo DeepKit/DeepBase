@@ -1,0 +1,523 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="290" errors="0" failures="0" ignored="3" inconclusive="0" not-run="3" skipped="0" invalid="0" date="2026-06-10" time="12:44:51">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="12:44:51" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.378" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="0.378" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TCommerceServiceTests" executed="True" result="Success" success="True" time="0.007" >
+                      <results>
+                        <test-case name="Test_EnsureUserForIdentity_IsIdempotent" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_CreateOrder_UsesProductPriceAndGeneratesOutTradeNo" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BeginPayment_RequiresRegisteredGateway" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BeginPayment_CreatesPendingPaymentIntent" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ConfirmPayment_GrantsEntitlementIdempotently" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ConfirmPayment_RejectsAmountMismatch" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ConsumeEntitlement_DecrementsQuota" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BackendContract_RoutesMatchSpec" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BackendContract_JsonFieldsUseSnakeCase" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_FindUserByIdentity_UsesContractRouteAndParsesUser" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_CreateDeepKitClient_PrefixesRoute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_CreateOrder_SendsSnakeCaseJsonAndAuthHeader" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_DefaultMode_BlocksServerWrites" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpPaymentGateway_CreatePaymentIntent_SendsBackendRequestAndParsesResponse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpPaymentGateway_CreateDeepKitClient_PrefixesRoute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NetTransport_MethodMapping_AndResponseSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CommerceUnifiedTransport_BridgesRequestAndResponse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IcsTransport_NotCompiled_FailsFast" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BeginPayment_WithHttpPaymentGateway_UsesBackendProxy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_VerifyAndConfirmPayment_RequiresRegisteredVerifier" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_VerifyAndConfirmPayment_VerifiesAndConfirms" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_AuthLogin_UsesDeepKitRoute_AndStoresToken" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_CreateOrder_UsesAuthorizationHeader_AndDeepKitRoute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_CreatePaymentIntent_UsesIdempotencyKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_ListProducts_UsesAppIdQuery_AndParsesItems" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_ListEntitlements_UsesAppIdQuery_AndParsesItems" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_ConsumeEntitlement_UsesRequestId_AndParsesResult" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_ConsumeEntitlement_MissingOk_FailsClosed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PermissionClient_HasFeature_UsesActiveEntitlement" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PermissionClient_HasFeature_MissingStatus_Denies" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PermissionClient_HasFeature_ExpiredEntitlement_Denies" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_PermissionClient_ConsumeQuota_UsesFeatureAndRequestId" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UpgradeFlow_StartPaidUpgrade_ListsProductCreatesOrderAndPayment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UpgradeFlow_CheckEntitlement_AndRefreshSnapshot" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UpgradeFlow_CheckEntitlement_ExpiredEntitlement_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DesktopLifecycle_LoginConfiguresUpdaterAndPermissions" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_DesktopLifecycle_StartPaidUpgrade_UsesUserContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_IssueLicenseSnapshot_UsesRoute_AndParsesFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_IssueLicenseSnapshot_RequiresVerifier" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_IssueLicenseSnapshot_MissingSignature_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_RefreshLicenseSnapshot_DeviceMismatch_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeepKitSafeClient_GetUpdatesManifest_UsesRoute_AndParsesFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_RefundOrder_ServerAdmin_UsesRouteAndPayload" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_RevokeEntitlement_ServerAdmin_UsesRouteAndPayload" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HttpStorage_RevokeLicenseSnapshot_ServerAdmin_UsesDeepKitRoute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SupabaseAdapter_DefaultConfig_BlockedAsServerOnlyPrototype" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SupabaseAdapter_CreateServerOnly_AllowsConstruction" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                        <test-case name="Test_FirebaseAdapter_DefaultConfig_BlockedAsServerOnlyPrototype" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FirebaseAdapter_CreateServerOnly_AllowsConstruction" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Inference" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestInferenceIoC" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_RegisterAll_NilContainer_RaisesArgNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManualRegister_Runtime_Singleton" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManualRegister_Factory_Singleton" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManualRegister_ResolveFactory" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManualRegister_ResolveRuntime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Service_SetRuntime_WiresCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Service_SetFactory_WiresCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Config_Default_ProviderIsCPU" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestInferenceRuntime" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_DefaultProviderIsCPU" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_NotInitialized" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_CPU_SetsInitialized" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_CPU_SetsProvider" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_CPU_WithCustomThreads" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_CPU_WithGraphOpt" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Shutdown_ClearsInitialized" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Shutdown_WhenNotInitialized_DoesNotRaise" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ReInitialize_Succeeds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetProvider_ReturnsConfiguredProvider" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_UnsupportedProvider_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestInferenceService" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_IsReady_WhenNotInitialized_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsReady_AfterSetup_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsReady_AfterShutdown_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetRuntime_AccessibleViaRuntime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Runtime_WhenNil_ReturnsNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetSessionFactory_AccessibleViaSessionFactory" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Shutdown_ClearsRuntime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Shutdown_ClearsSessionFactory" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CreateSession_WhenNotReady_Raises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Run_NilSession_ReturnsFailed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Run_DelegatesToSession" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Namespace" name="Session" executed="true" result="Success" success="True" time="0.000" asserts="0" >
+                            <results>
+                                <test-suite type="Fixture" name="TTestInferenceSessionFactory" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Create_NilRuntime_RaisesArgNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Create_ValidRuntime_Succeeds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_CreateSession_NonExistentFile_RaisesModelError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_CreateSession_EmptyData_RaisesModelError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestInferenceSessionState" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Output_Failed_IsNotSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Output_Succeeded_IsSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Output_Succeeded_TracksDuration" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Output_Succeeded_TracksNames" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ModelInfo_Empty_HasZeroCounts" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ModelInfo_Empty_HasBlankStrings" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_Default_MatchesExpected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_RecordAssignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestInferenceTypes" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Config_Default_ProviderIsCPU" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Config_Default_DeviceIdIsZero" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Config_Default_ThreadsAreZero" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Config_Default_GraphOptIsAll" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ModelInfo_Empty_AllZeroOrBlank" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Output_Failed_SetsFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Output_Succeeded_SetsFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Output_Failed_HasNoOutputNames" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProviderToString_CPU" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProviderToString_DML" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProviderToString_CUDA" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProviderToString_Unknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SessionStateToString_Uninitialized" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SessionStateToString_Ready" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SessionStateToString_Disposed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SessionStateToString_Unknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EInferenceError_InheritsException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EInferenceSessionError_InheritsInferenceError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EInferenceProviderError_InheritsInferenceError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EInferenceModelError_InheritsInferenceError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ApiLevel_IsOne" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Interface_IInferenceRuntime_HasGUID" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Interface_IInferenceSession_HasGUID" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Interface_IInferenceSessionFactory_HasGUID" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Payment" executed="true" result="Success" success="True" time="0.368" asserts="0" >
+                      <results>
+                          <test-suite type="Namespace" name="Integration" executed="true" result="Success" success="True" time="0.367" asserts="0" >
+                            <results>
+                                <test-suite type="Fixture" name="TAlipayNotificationTests" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_VerifyNotification_NoSign_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_VerifyNotification_InvalidSign_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TPaymentAESGCMTests" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Decrypt_KnownVector" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Decrypt_EmptyInput_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Decrypt_InvalidKeyLength_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Decrypt_InvalidIVLength_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Decrypt_CorruptedTag_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TPaymentSecretStoreTests" executed="True" result="Success" success="True" time="0.096" >
+                                  <results>
+                                    <test-case name="Test_Config_HasDefaultSecretStore" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_ProtectKeyRoundTrip" executed="True" result="Success" success="True" time="0.037" asserts="0" />
+                                    <test-case name="Test_Config_CredentialKeyRoundTrip" executed="True" result="Success" success="True" time="0.060" asserts="0" />
+                                    <test-case name="Test_Config_ProtectKey_EmptyInput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TStripeWebhookTests" executed="True" result="Success" success="True" time="0.132" >
+                                  <results>
+                                    <test-case name="Test_VerifySignature_MalformedHeader_ReturnsFalse" executed="True" result="Success" success="True" time="0.033" asserts="0" />
+                                    <test-case name="Test_VerifySignature_MissingTimestamp_ReturnsFalse" executed="True" result="Success" success="True" time="0.032" asserts="0" />
+                                    <test-case name="Test_VerifySignature_ValidHMAC_Passes" executed="True" result="Success" success="True" time="0.034" asserts="0" />
+                                    <test-case name="Test_VerifySignature_ExpiredTimestamp_ReturnsFalse" executed="True" result="Success" success="True" time="0.033" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TWeChatPayNotificationTests" executed="True" result="Success" success="True" time="0.138" >
+                                  <results>
+                                    <test-case name="Test_VerifyNotification_InvalidJSON_ReturnsFalse" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                                    <test-case name="Test_VerifyNotification_MissingResource_ReturnsFalse" executed="True" result="Success" success="True" time="0.032" asserts="0" />
+                                    <test-case name="Test_VerifyNotification_EmptyCiphertext_ReturnsFalse" executed="True" result="Success" success="True" time="0.034" asserts="0" />
+                                    <test-case name="Test_VerifyNotification_ValidDecryption_ParsesFields" executed="True" result="Success" success="True" time="0.066" asserts="0" />
+                                  </results>
+                                </test-suite>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TPaymentHelperTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_StatusToString_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProviderToString_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateOrderNo_UniqueFormat" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateNonceStr_CorrectLength" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MD5_Hash" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SHA256_Hash" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TPaymentOrderTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_ThrowsOnMissingOrderNo" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_ThrowsOnInvalidAmount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_ThrowsOnMissingSubject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_PassesWithValidData" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TPaymentResultTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Fail_SetsErrorFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Status_Enum_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TPaymentSignatureSecurityTests" executed="True" result="Success" success="True" time="0.001" >
+                            <results>
+                              <test-case name="Test_Alipay_VerifySignature_DoesNotBypassInSandboxWithoutPublicKey" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_WeChat_VerifySignature_WithoutPublicKey_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PayPal_VerifySignature_RequiresTransmissionHeaders" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PayPal_VerifyNotification_RejectsProductionWithoutHeaderContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TRefundRequestTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_ThrowsOnMissingFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Validate_ThrowsOnInvalidAmount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Serialization" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TBinarySerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_SerializeToBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DeserializeFromBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_SerializeToStream" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Compact" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TJsonSerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Serialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_Integer" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_Boolean" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_Float" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_Array" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_DateTime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_Enum" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_IgnoreAttribute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_CustomName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_PrettyPrint" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deserialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deserialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deserialize_Array" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSerializationContextTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PushPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PopPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EnterLeaveObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsVisited" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddConverter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSerializationOptionsTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Default_DateFormat" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Default_MaxDepth" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSerializerBuilderTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_JSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_XML" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithPrettyPrint" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithIndentSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithCamelCase" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithDateFormat" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithEnumAsString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Build" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Fluent" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSerializerHelperTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ToJson" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJson" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToXml" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromXml" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                                <reason>
+                                  <message>
+                                    <![CDATA[ XML deserialization not implemented ]]>
+                                  </message>
+                                </reason>
+                              </test-case>
+                              <test-case name="Test_ToBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clone" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTypeRegistryTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Register" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetTypeName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetClass" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryGetClass_Found" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryGetClass_NotFound" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TXmlSerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Serialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_ContainsXmlTags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_EscapesSpecialChars" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Serialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deserialize_SimpleObject" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                                <reason>
+                                  <message>
+                                    <![CDATA[ XML deserialization not implemented ]]>
+                                  </message>
+                                </reason>
+                              </test-case>
+                              <test-case name="Test_RoundTrip" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                                <reason>
+                                  <message>
+                                    <![CDATA[ XML deserialization not implemented ]]>
+                                  </message>
+                                </reason>
+                              </test-case>
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Social" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TOAuthClientPKCETests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_GetAuthUrl_StoresStateAndAddsPKCE" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_ValidateState_ReturnsExpectedResult" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExchangeCode_WithInvalidState_RaisesBeforeNetwork" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MicrosoftPreset_UsesMicrosoftProvider" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialConfigTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_SetsProvider" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_SetsDefaultTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Properties_ReadWrite" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialHelperTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ProviderToString_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StringToProvider_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StringToProvider_CaseInsensitive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenderToString_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IntToGender_AllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateState_CorrectLength" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateState_Unique" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateCodeVerifier_UsesPKCECharset" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateCodeChallengeS256_RFC7636Vector" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UrlEncode_SpecialChars" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UrlDecode_EncodedChars" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_BuildQueryString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseQueryString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialShareResultTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Fail_SetsErrorFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialShareTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialTokenTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsExpired_ReturnsFalseWhenNoExpiration" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsExpired_ReturnsTrueWhenPastExpiration" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsExpired_ReturnsFalseWhenNotExpired" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TSocialUserInfoTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Clear_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Fail_SetsErrorFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSpeechTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_PCM16ToFloat_AndDuration" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_VAD_StopsAfterSpeechThenSilence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BaiduRecognizer_RequestsTokenAndParsesResult" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_BaiduRecognizer_ReturnsServiceError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_UnifiedTransport_BridgesSpeechRequestAndResponse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Service_StopAndRecognize_UsesCaptureAndRecognizer" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Service_WithPermissionClient_ChecksAndConsumesQuota" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Types" executed="true" result="Success" success="True" time="0.000" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TAnimationAssetDataTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="THealthCheckResultTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Init_DefaultValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Init_EmptyMessages" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddMessage_Single" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddMessage_Multiple" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddMessage_GrowsArray" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MessageCount_AfterAdd" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TrimMessages_ReducesLength" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TrimMessages_WhenAlreadyTrimmed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="THotkeyDefaultTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TInitErrorCodeTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_InitErrorCodeToStr_Success" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_ConfigDBNotFound" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_ConfigDBCorrupted" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_PermissionDenied" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_InvalidPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_MissingAssets" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InitErrorCodeToStr_Unknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TLanguageInfoTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Array_Type" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TLogLevelTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_LogLevelToStr_Debug" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LogLevelToStr_Info" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LogLevelToStr_Warn" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LogLevelToStr_Error" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LogLevelToStr_Fatal" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Debug" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Info" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Warn" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Warning" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Error" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Fatal" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_CaseInsensitive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StrToLogLevel_Unknown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TMRUItemTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Array_Type" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TThemeInfoTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Array_Type" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TUpdateInfoTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Record_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Record_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ForceUpdate_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

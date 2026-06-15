@@ -88,4 +88,30 @@ if (-not (Test-XmlHasExecutedTests -Path $XmlFile)) {
 }
 
 Write-Host 'Architecture checks passed.' -ForegroundColor Green
+
+$LayerScript = Join-Path $RepoRoot 'Scripts\check-layer-violations.ps1'
+$LayerReport = Join-Path $ResultDir 'architecture-layer-report.json'
+if (-not (Test-Path $LayerScript)) {
+    throw "Layer violation script not found: $LayerScript"
+}
+
+Write-Host 'Running layer violation checks...'
+& $LayerScript -SourcePath $RepoRoot -ReportPath $LayerReport -FailOnViolation -IncludeKnownDebt
+if ($LASTEXITCODE -ne 0) {
+    throw "Layer violation checks failed with exit code $LASTEXITCODE"
+}
+
+$SecurityScript = Join-Path $RepoRoot 'Scripts\check-security-patterns.ps1'
+$SecurityReport = Join-Path $ResultDir 'security-pattern-report.json'
+if (-not (Test-Path $SecurityScript)) {
+    throw "Security pattern script not found: $SecurityScript"
+}
+
+Write-Host 'Running security pattern checks...'
+& $SecurityScript -SourcePath $RepoRoot -ReportPath $SecurityReport -FailOnViolation -IncludeKnownDebt
+if ($LASTEXITCODE -ne 0) {
+    throw "Security pattern checks failed with exit code $LASTEXITCODE"
+}
+
+Write-Host 'Architecture gate passed.' -ForegroundColor Green
 exit 0

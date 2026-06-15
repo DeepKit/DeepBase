@@ -1,4 +1,4 @@
-unit DeepBase.LogQuery;
+﻿unit DeepBase.LogQuery;
 
 {*******************************************************************************
   DeepBase Log Query and Analysis

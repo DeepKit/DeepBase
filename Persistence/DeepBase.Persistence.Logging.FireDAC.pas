@@ -1,7 +1,7 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Logging.FireDAC - FireDAC adapter for logger storage
   ============================================================================
-  Provides FireDAC-backed ILogStorage/ILogQueryStorage and registers the
+  Provides FireDAC-backed ILogStorage/ILogQueryStorage/ILogViewStorage and registers the
   factory into TDeepBaseLogger.
   ============================================================================ }
 
@@ -24,10 +24,13 @@ uses
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
   FireDAC.Phys.SQLite,
+  System.Generics.Collections,
+  DeepBase.Types,
   DeepBase.Logging;
 
 type
-  TFireDACLogStorage = class(TInterfacedObject, ILogStorage, ILogQueryStorage)
+  TFireDACLogStorage = class(TInterfacedObject, ILogStorage, ILogQueryStorage,
+    ILogViewStorage)
   private
     FDBPath: string;
     FConnection: TFDConnection;
@@ -37,6 +40,8 @@ type
     procedure EnsureConnection;
     procedure EnsureInsertQuery;
     procedure EnsureLegacyInsertQuery;
+    function ColumnExists(const TableName, ColumnName: string): Boolean;
+    function LogLevelCaseExpression(const ColumnName: string): string;
   public
     constructor Create(const ADBPath: string);
     destructor Destroy; override;
@@ -44,6 +49,8 @@ type
     procedure PurgeOlderThan(const CutoffISO: string);
     function CountByLevel(const LevelText: string): Int64;
     function CountAll: Int64;
+    function ReadRecent(MinLevel: TLogLevel; MaxItems: Integer): TLogViewDataArray;
+    procedure ClearAll;
   end;
 
 constructor TFireDACLogStorage.Create(const ADBPath: string);
@@ -133,6 +140,49 @@ begin
   FLegacyInsertQuery.ParamByName('Stack').DataType := ftString;
   FLegacyInsertQuery.ParamByName('TID').DataType := ftInteger;
   FLegacyInsertQuery.Prepare;
+end;
+
+function TFireDACLogStorage.ColumnExists(const TableName,
+  ColumnName: string): Boolean;
+var
+  Query: TFDQuery;
+begin
+  Result := False;
+  EnsureConnection;
+  if not Assigned(FConnection) or not FConnection.Connected then
+    Exit;
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    if not SameText(TableName, 'Logs') then
+      Exit;
+
+    Query.SQL.Text := 'PRAGMA table_info(Logs)';
+    Query.Open;
+    while not Query.Eof do
+    begin
+      if SameText(Query.FieldByName('name').AsString, ColumnName) then
+        Exit(True);
+      Query.Next;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TFireDACLogStorage.LogLevelCaseExpression(
+  const ColumnName: string): string;
+begin
+  Result :=
+    'CASE UPPER(' + ColumnName + ') ' +
+    'WHEN ''DEBUG'' THEN 0 ' +
+    'WHEN ''INFO'' THEN 1 ' +
+    'WHEN ''WARN'' THEN 2 ' +
+    'WHEN ''WARNING'' THEN 2 ' +
+    'WHEN ''ERROR'' THEN 3 ' +
+    'WHEN ''FATAL'' THEN 4 ' +
+    'ELSE 1 END';
 end;
 
 procedure TFireDACLogStorage.WriteLog(const Data: TLogStorageData);
@@ -244,6 +294,116 @@ begin
       Query.SQL.Text := 'SELECT COUNT(*) FROM Logs';
       Query.Open;
       Result := Query.Fields[0].AsLargeInt;
+    finally
+      Query.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TFireDACLogStorage.ReadRecent(MinLevel: TLogLevel;
+  MaxItems: Integer): TLogViewDataArray;
+var
+  Query: TFDQuery;
+  Items: TList<TLogViewData>;
+  Item: TLogViewData;
+  HasIntegerLevel: Boolean;
+  HasLogLevel: Boolean;
+  HasId: Boolean;
+  OrderBy: string;
+  LevelExpr: string;
+  LimitValue: Integer;
+begin
+  SetLength(Result, 0);
+  LimitValue := MaxItems;
+  if LimitValue <= 0 then
+    LimitValue := 1000;
+
+  FLock.Enter;
+  try
+    EnsureConnection;
+    if not Assigned(FConnection) or not FConnection.Connected then
+      Exit;
+
+    HasIntegerLevel := ColumnExists('Logs', 'Level');
+    HasLogLevel := ColumnExists('Logs', 'LogLevel');
+    HasId := ColumnExists('Logs', 'Id');
+    if not HasIntegerLevel and not HasLogLevel then
+      Exit;
+
+    if HasId then
+      OrderBy := 'Id DESC'
+    else
+      OrderBy := 'LogTime DESC';
+
+    Query := TFDQuery.Create(nil);
+    Items := TList<TLogViewData>.Create;
+    try
+      Query.Connection := FConnection;
+      if HasIntegerLevel then
+      begin
+        Query.SQL.Text :=
+          'SELECT LogTime, Level, Source, Message, ThreadId FROM Logs ' +
+          'WHERE Level >= :MinLevel ORDER BY ' + OrderBy + ' LIMIT :Max';
+      end
+      else
+      begin
+        LevelExpr := LogLevelCaseExpression('LogLevel');
+        Query.SQL.Text :=
+          'SELECT LogTime, LogLevel, Source, Message, ThreadId FROM Logs ' +
+          'WHERE ' + LevelExpr + ' >= :MinLevel ORDER BY ' + OrderBy + ' LIMIT :Max';
+      end;
+
+      Query.ParamByName('MinLevel').AsInteger := Ord(MinLevel);
+      Query.ParamByName('Max').AsInteger := LimitValue;
+      Query.Open;
+
+      while not Query.Eof do
+      begin
+        Item.TimestampISO := Query.FieldByName('LogTime').AsString;
+        Item.Source := Query.FieldByName('Source').AsString;
+        Item.MessageText := Query.FieldByName('Message').AsString;
+        Item.ThreadId := Query.FieldByName('ThreadId').AsInteger;
+        if HasIntegerLevel then
+        begin
+          Item.Level := TLogLevel(Query.FieldByName('Level').AsInteger);
+          Item.LevelText := LogLevelToStr(Item.Level);
+        end
+        else
+        begin
+          Item.LevelText := Query.FieldByName('LogLevel').AsString;
+          Item.Level := StrToLogLevel(Item.LevelText);
+        end;
+        Items.Add(Item);
+        Query.Next;
+      end;
+
+      Result := Items.ToArray;
+    finally
+      Items.Free;
+      Query.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TFireDACLogStorage.ClearAll;
+var
+  Query: TFDQuery;
+begin
+  FLock.Enter;
+  try
+    EnsureConnection;
+    if not Assigned(FConnection) or not FConnection.Connected then
+      Exit;
+
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'DELETE FROM Logs WHERE 1 = 1';
+      Query.ExecSQL;
     finally
       Query.Free;
     end;

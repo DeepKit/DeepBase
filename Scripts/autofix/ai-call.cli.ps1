@@ -133,6 +133,7 @@ function Invoke-AutoFixAiBackend {
             $text = [System.IO.File]::ReadAllText($tmpStdout, [System.Text.Encoding]::UTF8)
             $stderr = [System.IO.File]::ReadAllText($tmpStderr, [System.Text.Encoding]::UTF8)
         } finally {
+            if ($null -ne $proc) { try { $proc.Dispose() } catch {} }
             Remove-Item $tmpStdout -Force -ErrorAction SilentlyContinue
             Remove-Item $tmpStderr -Force -ErrorAction SilentlyContinue
         }
@@ -164,5 +165,8 @@ function Invoke-AutoFixAiBackend {
     }
     finally {
         Set-Location -LiteralPath $oldLoc
+        if (-not $env:AUTOFIX_KEEP_PROMPT) {
+            Remove-Item $promptFile -Force -ErrorAction SilentlyContinue
+        }
     }
 }

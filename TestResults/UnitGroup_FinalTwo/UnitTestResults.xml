@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="12" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-11" time="11:32:04">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="11:32:04" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.046" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="0.046" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestDeepBaseDBException" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="GetErrorMessage_ReturnsKnownMessages" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="GetErrorSuggestion_UnknownCodeContainsCode" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="AnalyzeException_MapsCommonPatterns" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Wrap_PopulatesFieldsAndUserMessage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="FromCode_UsesErrorCodeAndDetail" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="SessionIdProvider_IsUsedForNewExceptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="OnException_CallbackIsInvoked" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestDeepBaseUnlock" executed="True" result="Success" success="True" time="0.046" >
+                      <results>
+                        <test-case name="Test_GenerateAndValidate_AllLevels" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ExpiredCode_Detected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ProductMismatch_Detected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_InvalidChecksum_Detected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ApplyCode_PersistsLevelAndCode" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

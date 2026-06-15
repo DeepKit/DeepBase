@@ -125,6 +125,19 @@ end;
 
 // Feature: autofix-runtime-errors, Property 8: ScenarioRunner 顺序与结果记录
 procedure TAutoFixScenarioRunnerPropertyTests.Property8_ScenarioOrderAndStatus;
+
+  procedure RegisterScenarioForTest(const AName: string; AShouldThrow: Boolean;
+    ACallOrder: TList<string>);
+  begin
+    TAutoFixScenarioRunner.RegisterScenario(AName,
+      procedure
+      begin
+        ACallOrder.Add(AName);
+        if AShouldThrow then
+          raise EConvertError.CreateFmt('boom in %s', [AName]);
+      end);
+  end;
+
 begin
   for var I := 1 to 100 do
   begin
@@ -141,17 +154,7 @@ begin
       try
         // Snapshot throw flags into local closures.
         for var J := 0 to High(LPlan) do
-        begin
-          var LName := LPlan[J];
-          var LShouldThrow := LThrowFlags[J];
-          TAutoFixScenarioRunner.RegisterScenario(LName,
-            procedure
-            begin
-              LCallOrder.Add(LName);
-              if LShouldThrow then
-                raise EConvertError.CreateFmt('boom in %s', [LName]);
-            end);
-        end;
+          RegisterScenarioForTest(LPlan[J], LThrowFlags[J], LCallOrder);
 
         var LExecuted := TAutoFixScenarioRunner.RunForTest;
 

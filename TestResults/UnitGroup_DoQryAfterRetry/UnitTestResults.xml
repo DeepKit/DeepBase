@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="32" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-11" time="12:03:07">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="12:03:07" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="1.828" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TTestDeepBaseDoQry" executed="True" result="Success" success="True" time="1.828" >
+                <results>
+                  <test-case name="Test_MakeContext_CreatesValidContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_NewCorrelationId_ReturnsUniqueId" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_ExecInsert_InsertsRow" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_Select_ReturnsData" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_Scalar_ReturnsValue" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_Transaction_CommitPersists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_Transaction_RollbackReverts" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_RunInTx_AutoCommit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_RunInTx_AutoRollbackOnException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_RunInTx_NestedSavepoint_CommitWorks" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_RunInTx_NestedSavepoint_InnerRollbackKeepsOuter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_InvalidSQL_RaisesEDeepBaseDbError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_QueryTable_NameSqlText_LoadsSql" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_MissingProcName_DoesNotFallbackToSQL" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_DirectDDL_IsBlockedUnlessStoredInQueries" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_InsertReturningId_BindsJsonParams" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                  <test-case name="Test_InsertReturningId_WithTrigger_ReturnsTargetTableId" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds" executed="True" result="Success" success="True" time="0.120" asserts="0" />
+                  <test-case name="Test_CacheTTL_Expiry" executed="True" result="Success" success="True" time="1.507" asserts="0" />
+                  <test-case name="Test_CacheInvalidate_RemovesEntry" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_CacheStats_Accuracy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_CacheConcurrentLoad_SingleMissAndStableResult" executed="True" result="Success" success="True" time="0.106" asserts="0" />
+                  <test-case name="Test_MultiTypeFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_NullFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_DateTimeFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_ErrorCode_SqlSyntax" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_ErrorCode_UniqueConstraint" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_ErrorCode_HasCorrectValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_PreparedPool_EnabledCreatesPooledQuery" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_PreparedPool_StatsTracksReuse" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_PreparedPool_ClearRemovesAll" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_PreparedPool_MaxSizeEnforcesLRUEviction" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

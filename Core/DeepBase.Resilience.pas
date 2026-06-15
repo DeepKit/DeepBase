@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Resilience - compatibility facade for resilience policies
 
   Implementations are split by strategy type:

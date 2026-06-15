@@ -37,7 +37,6 @@ contains
   DeepBase.Speech.Config in 'Features\DeepBase.Speech.Config.pas',
   DeepBase.Speech.Policy in 'Features\DeepBase.Speech.Policy.pas',
   DeepBase.Speech.Runtime in 'Features\DeepBase.Speech.Runtime.pas',
-  DeepBase.Speech.Schema in 'Features\DeepBase.Speech.Schema.pas',
   DeepBase.Speech.Intent in 'Features\DeepBase.Speech.Intent.pas';
 
 end.

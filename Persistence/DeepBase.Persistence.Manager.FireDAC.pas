@@ -1,4 +1,4 @@
-{******************************************************************************
+﻿{******************************************************************************
   DeepBase.Persistence.Manager.FireDAC - FireDAC adapter for manager storage
   ============================================================================
   Moves Manager schema/project metadata SQL out of Core\DeepBase.Manager.

@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.ORM - Object-Relational Mapping Core
   
   Version: 0.3
@@ -1264,7 +1264,7 @@ begin
         case Col.ColumnType of
           ctString, ctText, ctGuid:
             begin
-              // Èç¹ûµ÷ÓÃ·½ÒÑÏÔÊ½´«Èë´øÒıºÅµÄ SQL Æ¬¶Î£¬ÔòÖ±½ÓÊ¹ÓÃ
+              // å¦‚æœè°ƒç”¨æ–¹å·²æ˜¾å¼ä¼ å…¥å¸¦å¼•å·çš„ SQL ç‰‡æ®µï¼Œåˆ™ç›´æ¥ä½¿ç”¨
               if (Length(Col.DefaultValue) >= 2) and
                  (Col.DefaultValue[1] = '''') and
                  (Col.DefaultValue[Length(Col.DefaultValue)] = '''') then
@@ -1280,7 +1280,7 @@ begin
                 SQL.Append(' DEFAULT 0');
             end;
         else
-          // ÊıÖµ/ÈÕÆÚµÈÀàĞÍÄ¬ÈÏ°´Ô­ÑùÆ´½Ó£¬ÓÉµ÷ÓÃ·½±£Ö¤ºÏ·¨ĞÔ
+          // æ•°å€¼/æ—¥æœŸç­‰ç±»å‹é»˜è®¤æŒ‰åŸæ ·æ‹¼æ¥ï¼Œç”±è°ƒç”¨æ–¹ä¿è¯åˆæ³•æ€§
           SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
         end;
       end;

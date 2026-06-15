@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Resilience.Retry - Retry resilience policy
   Split from DeepBase.Resilience; use DeepBase.Resilience for compatibility.
   ============================================================================ }
@@ -220,12 +220,12 @@ begin
     Delay := FBaseDelayMs;
   end;
   
-  // Apply jitter - BUG-106 FIX: 使用更安全的随机数生�?
-  // 注意：对于安全敏感场景，应使用TRandomGenerator.RandomBytes
+  // Apply jitter - BUG-106 FIX: ä½¿ç¨æ´å®å¨çéæºæ°çæ?
+  // æ³¨æï¼å¯¹äºå®å¨ææåºæ¯ï¼åºä½¿ç¨TRandomGenerator.RandomBytes
   if FJitterFactor > 0 then
   begin
     JitterRange := Delay * FJitterFactor;
-    // Random() 对于重试延迟的抖动是可接受的，因为这不是安全敏感场景
+    // Random() å¯¹äºéè¯å»¶è¿çæå¨æ¯å¯æ¥åçï¼å ä¸ºè¿ä¸æ¯å®å¨ææåºæ¯
     Delay := Delay + (Random * 2 - 1) * JitterRange;
   end;
   

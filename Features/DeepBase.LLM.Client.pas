@@ -12,6 +12,13 @@ uses
   DeepBase.LLM.Types;
 
 type
+  /// <summary>
+  /// Callback for image generation progress. Called with:
+  ///   AProgress (0.0..1.0), AStatusText (human-readable), AIsComplete (final call).
+  /// </summary>
+  TImageProgressCallback = reference to procedure(
+    AProgress: Double; const AStatusText: string; AIsComplete: Boolean);
+
   /// 消费程序接口 �?极简调用
   ILLMClient = interface
     ['{F2A1B3C4-D5E6-7890-ABCD-EF1234567890}']
@@ -34,6 +41,16 @@ type
 
     function GenerateImage(const APrompt: string;
       const ASize: string = '1024x1024'): TImageGenerationResult;
+
+    /// <summary>
+    /// Asynchronous image generation with progress and result callbacks.
+    /// Returns immediately; AOnResult fires with the final result.
+    /// </summary>
+    procedure GenerateImageStream(const APrompt: string;
+      const AOnProgress: TImageProgressCallback;
+      const AOnResult: TProc<TImageGenerationResult>;
+      const AOnError: TProc<string>;
+      const ASize: string = '1024x1024');
 
     procedure ChatVisionStream(const ATier: TModelTier;
       const AImageBase64: string; const AImageMimeType: string;

@@ -1,4 +1,4 @@
-unit DeepBase.Serialization;
+ï»¿unit DeepBase.Serialization;
 
 (*******************************************************************************
   DeepBase Serialization Framework
@@ -542,7 +542,7 @@ end;
 
 procedure TSerializationContext.CheckDepth;
 begin
-  // ½µµÍ×î´óÉî¶ÈÏŞÖÆ£¬·ÀÖ¹Éî¶ÈÇ¶Ì×¹¥»÷
+  // é™ä½æœ€å¤§æ·±åº¦é™åˆ¶ï¼Œé˜²æ­¢æ·±åº¦åµŒå¥—æ”»å‡»
   if FDepth >= Min(FOptions.MaxDepth, 8) then
     raise ESerializationException.CreateFmt('Maximum serialization depth exceeded at: %s', [GetPath]);
 end;
@@ -588,7 +588,7 @@ end;
 
 function TSerializationContext.IsAllowedType(AClass: TClass): Boolean;
 const
-  // ÀàĞÍ°×Ãûµ¥ - Ö»ÔÊĞí°²È«µÄ»ù´¡ÀàĞÍ
+  // ç±»å‹ç™½åå• - åªå…è®¸å®‰å…¨çš„åŸºç¡€ç±»å‹
   ALLOWED_TYPES: array[0..9] of string = (
     'TObject', 'TStringList', 'TList', 'TDictionary', 'TArray',
     'TDateTime', 'TDate', 'TTime', 'TGUID', 'TBytes'
@@ -600,7 +600,7 @@ begin
   Result := False;
   ClassName := AClass.ClassName;
   
-  // ¼ì²éÊÇ·ñÔÚ°×Ãûµ¥ÖĞ
+  // æ£€æŸ¥æ˜¯å¦åœ¨ç™½åå•ä¸­
   for I := Low(ALLOWED_TYPES) to High(ALLOWED_TYPES) do
   begin
     if SameText(ClassName, ALLOWED_TYPES[I]) or 
@@ -611,7 +611,7 @@ begin
     end;
   end;
   
-  // ÔÊĞí±ê¼ÇÁËSerializableAttributeµÄÀà
+  // å…è®¸æ ‡è®°äº†SerializableAttributeçš„ç±»
   var LRttiCtx := TRttiContext.Create;
   try
     var LRttiType := LRttiCtx.GetType(AClass);
@@ -1048,7 +1048,7 @@ begin
   if not Assigned(AJson) then
     Exit(nil);
     
-  // Ìí¼ÓÀàĞÍ°×Ãûµ¥ÑéÖ¤
+  // æ·»åŠ ç±»å‹ç™½åå•éªŒè¯
   if not AContext.IsAllowedType(AClass) then
     raise ESerializationException.CreateFmt('Unauthorized type for deserialization: %s', [AClass.ClassName]);
   
@@ -2102,7 +2102,7 @@ begin
   Result := LSer;
 end;
 
-// °²È«Ïà¹ØµÄ¸¨Öúº¯ÊıÊµÏÖ
+// å®‰å…¨ç›¸å…³çš„è¾…åŠ©å‡½æ•°å®ç°
 function TSerializationContext.IsClassAllowed(const AClassName: string; const AAllowedClasses: TArray<string>): Boolean;
 var
   AllowedClass: string;
@@ -2120,7 +2120,7 @@ end;
 
 function TSerializationContext.GetAllowedClasses: TArray<string>;
 begin
-  // ¶¨ÒåÔÊĞí·´ĞòÁĞ»¯µÄ°²È«ÀàÁĞ±í
+  // å®šä¹‰å…è®¸ååºåˆ—åŒ–çš„å®‰å…¨ç±»åˆ—è¡¨
   Result := [
     'TObject',
     'TStringList',
@@ -2134,7 +2134,7 @@ begin
     'TPoint',
     'TRect',
     'TSize',
-    // Ìí¼ÓÏîÄ¿ÌØ¶¨µÄ°²È«Àà
+    // æ·»åŠ é¡¹ç›®ç‰¹å®šçš„å®‰å…¨ç±»
     'TDeepBaseConfig',
     'TConfigItem',
     'TLogEntry',
@@ -2143,8 +2143,8 @@ begin
     'TSessionInfo'
   ];
   
-  // »¹¿ÉÒÔ´ÓÅäÖÃÎÄ¼ş»ò×¢²á±íÖĞ¶ÁÈ¡¶îÍâµÄÔÊĞíÀàÁĞ±í
-  // µ«Ä¬ÈÏÓ¦¸ÃÊÇ×îĞ¡È¨ÏŞÔ­Ôò
+  // è¿˜å¯ä»¥ä»é…ç½®æ–‡ä»¶æˆ–æ³¨å†Œè¡¨ä¸­è¯»å–é¢å¤–çš„å…è®¸ç±»åˆ—è¡¨
+  // ä½†é»˜è®¤åº”è¯¥æ˜¯æœ€å°æƒé™åŸåˆ™
 end;
 
 end.

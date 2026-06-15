@@ -1,0 +1,12 @@
+{
+    "$comment": "Required fields for health-signal.json written by Delphi EXE, read by autofix.ps1 runner.",
+    "fields": [
+        "run_id",
+        "ready",
+        "pid",
+        "timestamp",
+        "version",
+        "autofix_mode",
+        "scenarios"
+    ]
+}

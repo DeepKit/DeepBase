@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.ORM.FireDAC - FireDAC adapter for DeepBase.ORM
   ============================================================================
   Implements IORMStorage/IORMTransaction for Core\DeepBase.ORM.

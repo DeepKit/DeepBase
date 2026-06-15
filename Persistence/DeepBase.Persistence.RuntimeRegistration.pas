@@ -1,4 +1,4 @@
-unit DeepBase.Persistence.RuntimeRegistration;
+﻿unit DeepBase.Persistence.RuntimeRegistration;
 
 interface
 

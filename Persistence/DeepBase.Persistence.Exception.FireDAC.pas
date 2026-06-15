@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Exception.FireDAC - FireDAC adapter for exception reports
   ============================================================================
   Moves ExceptionReports SQL/FireDAC persistence out of Core\DeepBase.Exception.

@@ -120,6 +120,22 @@ var
   LExpectedA: TList<string>;
   LDenialsA: TArray<string>;
   LDenialsB: TArray<string>;
+
+  function CreateWriter(AWriterIdx, AIter: Integer): TThread;
+  begin
+    Result := TThread.CreateAnonymousThread(
+      procedure
+      var
+        J: Integer;
+      begin
+        LStart.WaitFor(INFINITE);
+        for J := 0 to CDenialsPerWriter - 1 do
+          LProvider.DenyHypothesis(LSessionA,
+            Format('hyp-%d-%d',
+              [AIter, AWriterIdx * CDenialsPerWriter + J]));
+      end);
+    Result.FreeOnTerminate := False;
+  end;
 begin
   for Iter := 1 to CIterations do
   begin
@@ -136,21 +152,7 @@ begin
 
       SetLength(LWriters, CWritersPerIter);
       for I := 0 to CWritersPerIter - 1 do
-      begin
-        var LWriterIdx := I;
-        LWriters[I] := TThread.CreateAnonymousThread(
-          procedure
-          var
-            J: Integer;
-          begin
-            LStart.WaitFor(INFINITE);
-            for J := 0 to CDenialsPerWriter - 1 do
-              LProvider.DenyHypothesis(LSessionA,
-                Format('hyp-%d-%d',
-                  [Iter, LWriterIdx * CDenialsPerWriter + J]));
-          end);
-        LWriters[I].FreeOnTerminate := False;
-      end;
+        LWriters[I] := CreateWriter(I, Iter);
 
       for I := 0 to CWritersPerIter - 1 do
         LWriters[I].Start;
@@ -549,6 +551,30 @@ var
   LSeen: TDictionary<Integer, Boolean>;
   LParts: TArray<string>;
   LCnt: Integer;
+
+  function CreatePredictor(AIdx: Integer): TThread;
+  begin
+    Result := TThread.CreateAnonymousThread(
+      procedure
+      var
+        LCtx: TAnticipationContext;
+        LRes: TAnticipationResult;
+      begin
+        LStart.WaitFor(INFINITE);
+        LCtx := Default(TAnticipationContext);
+        LCtx.UserId := 'u';
+        LCtx.SessionId := 's';
+        LCtx.CurrentInput := 'x';
+        LRes := LEngine.Predict(LCtx);
+        LIdLock.Enter;
+        try
+          LIds[AIdx] := LRes.PredictionId;
+        finally
+          LIdLock.Leave;
+        end;
+      end);
+    Result.FreeOnTerminate := False;
+  end;
 begin
   for Iter := 1 to CIterations do
   begin
@@ -563,29 +589,7 @@ begin
       SetLength(LIds, N);
 
       for I := 0 to N - 1 do
-      begin
-        var LIdx := I;
-        LThreads[I] := TThread.CreateAnonymousThread(
-          procedure
-          var
-            LCtx: TAnticipationContext;
-            LRes: TAnticipationResult;
-          begin
-            LStart.WaitFor(INFINITE);
-            LCtx := Default(TAnticipationContext);
-            LCtx.UserId := 'u';
-            LCtx.SessionId := 's';
-            LCtx.CurrentInput := 'x';
-            LRes := LEngine.Predict(LCtx);
-            LIdLock.Enter;
-            try
-              LIds[LIdx] := LRes.PredictionId;
-            finally
-              LIdLock.Leave;
-            end;
-          end);
-        LThreads[I].FreeOnTerminate := False;
-      end;
+        LThreads[I] := CreatePredictor(I);
 
       for I := 0 to N - 1 do
         LThreads[I].Start;

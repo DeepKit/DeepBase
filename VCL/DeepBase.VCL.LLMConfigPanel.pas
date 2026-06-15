@@ -26,7 +26,6 @@ uses
   Vcl.Graphics,
   Vcl.Forms,
   Vcl.Grids,
-  FireDAC.Comp.Client,
   DeepBase.Types,
   DeepBase.LLM;
 
@@ -66,7 +65,7 @@ type
     
     // 内部状态
     FConfigName: string;
-    FConnection: TFDConnection;
+    FConnection: TComponent;
     FLLM: TDeepBaseLLM;
     FOwnsLLM: Boolean;
     FOnConfigChanged: TNotifyEvent;
@@ -85,7 +84,7 @@ type
     procedure SetStatus(const AText: string; IsError: Boolean = False);
     
     procedure SetConfigName(const Value: string);
-    procedure SetConnection(Value: TFDConnection);
+    procedure SetConnection(Value: TComponent);
     
   protected
     procedure Resize; override;
@@ -119,7 +118,7 @@ type
     /// <summary>
     /// 数据库连接
     /// </summary>
-    property Connection: TFDConnection read FConnection write SetConnection;
+    property Connection: TComponent read FConnection write SetConnection;
     
     /// <summary>
     /// 配置变更事件
@@ -364,7 +363,7 @@ begin
   end;
 end;
 
-procedure TLLMConfigPanel.SetConnection(Value: TFDConnection);
+procedure TLLMConfigPanel.SetConnection(Value: TComponent);
 begin
   if FConnection <> Value then
   begin
@@ -379,7 +378,7 @@ begin
     end;
     
     // 创建新的 LLM 管理器
-    if Assigned(FConnection) and FConnection.Connected then
+    if Assigned(FConnection) then
     begin
       FLLM := TDeepBaseLLM.Create(FConnection);
       FOwnsLLM := True;

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.i18n.Plural - CLDR Plural Rules Implementation
   
   Version: 0.3
@@ -14,7 +14,7 @@
   Usage:
     var PluralForm := GetPluralForm('en', 5);  // Returns 'other'
     var Translated := PluralSelect('ru', Count, 
-      ['��ҧݧ�ܧ�', '��ҧݧ�ܧ�', '��ҧݧ��']);  // Russian plurals
+      ['яблоко', 'яблока', 'яблок']);  // Russian plurals
   
   Reference: https://cldr.unicode.org/index/cldr-spec/plural-rules
   ============================================================================ }

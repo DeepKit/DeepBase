@@ -399,6 +399,11 @@ begin
     Exit(DOQRY_ERR_TX_DEADLOCK);
   if (Pos('LOCK', UpperMsg) > 0) and (Pos('CONFLICT', UpperMsg) > 0) then
     Exit(DOQRY_ERR_TX_CONFLICT);
+  if (Pos('DATABASE IS LOCKED', UpperMsg) > 0) or
+     (Pos('SQLITE_BUSY', UpperMsg) > 0) or
+     (Pos('BUSY', UpperMsg) > 0) or
+     (Pos('LOCKED', UpperMsg) > 0) then
+    Exit(DOQRY_ERR_TX_CONFLICT);
   
   // 约束错误
   if (Pos('UNIQUE', UpperMsg) > 0) or (Pos('DUPLICATE', UpperMsg) > 0) then
@@ -798,11 +803,22 @@ begin
           P.AsString := S
         else
         begin
-          if Length(S) > 4000 then
-            P.DataType := ftWideMemo
+          // UUID auto-detection: 36-char hex string with 4 dashes at correct positions.
+          // Binds as ftGuid instead of ftWideString to avoid PG "uuid = character varying" errors.
+          if (Length(S) = 36) and
+             (S[9] = '-') and (S[14] = '-') and (S[19] = '-') and (S[24] = '-') then
+          begin
+            P.DataType := ftGuid;
+            P.AsGuid := StringToGUID('{' + S + '}');
+          end
           else
-            P.DataType := ftWideString;
-          P.AsWideString := S;
+          begin
+            if Length(S) > 4000 then
+              P.DataType := ftWideMemo
+            else
+              P.DataType := ftWideString;
+            P.AsWideString := S;
+          end;
         end;
       end;
     end;
@@ -877,7 +893,8 @@ begin
             StartsWithKeyword('UPDATE') or
             StartsWithKeyword('DELETE') or
             StartsWithKeyword('WITH') or
-            StartsWithKeyword('PRAGMA');
+            StartsWithKeyword('PRAGMA') or
+            StartsWithKeyword('REPLACE');
 end;
 
 /// <summary>

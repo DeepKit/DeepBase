@@ -34,7 +34,6 @@ uses
   FMX.ScrollBox,
   FMX.Graphics,
   FMX.Forms,
-  FireDAC.Comp.Client,
   DeepBase.Types,
   DeepBase.LLM;
 
@@ -88,7 +87,7 @@ type
     
     // �ڲ�״̬
     FConfigName: string;
-    FConnection: TFDConnection;
+    FConnection: TComponent;
     FLLM: TDeepBaseLLM;
     FOwnsLLM: Boolean;
     FOnConfigChanged: TNotifyEvent;
@@ -107,7 +106,7 @@ type
     procedure SetStatus(const AText: string; IsError: Boolean = False);
     
     procedure SetConfigName(const Value: string);
-    procedure SetConnection(Value: TFDConnection);
+    procedure SetConnection(Value: TComponent);
     
     function GetColumnValue(const ACol: Integer; const ARow: Integer): string;
     procedure SetColumnValue(const ACol, ARow: Integer; const Value: string);
@@ -144,7 +143,7 @@ type
     /// <summary>
     /// ���ݿ�����
     /// </summary>
-    property Connection: TFDConnection read FConnection write SetConnection;
+    property Connection: TComponent read FConnection write SetConnection;
     
     /// <summary>
     /// ���ñ���¼�
@@ -494,7 +493,7 @@ begin
   end;
 end;
 
-procedure TFMXLLMConfigPanel.SetConnection(Value: TFDConnection);
+procedure TFMXLLMConfigPanel.SetConnection(Value: TComponent);
 begin
   if FConnection <> Value then
   begin
@@ -509,7 +508,7 @@ begin
     end;
     
     // �����µ� LLM ������
-    if Assigned(FConnection) and FConnection.Connected then
+    if Assigned(FConnection) then
     begin
       FLLM := TDeepBaseLLM.Create(FConnection);
       FOwnsLLM := True;

@@ -62,7 +62,8 @@ uses
   System.Hash,
   System.DateUtils,
   System.Threading,
-  DeepBase.Updater;
+  DeepBase.Updater,
+  DeepBase.Commerce.Permissions;
 
 type
   /// <summary>
@@ -105,6 +106,8 @@ type
     FUpdateUrl: string;
     FChannel: TUpdateChannel;
     FCurrentVersion: string;
+    FPermissionClient: TDeepKitPermissionClient;
+    FLastError: string;
 
     function GetChannel: TUpdateChannel;
     procedure SetChannel(const Value: TUpdateChannel);
@@ -158,6 +161,17 @@ type
     /// </summary>
     function DownloadUpdate(const Info: TUpdateInfo; const DestFile: string;
       const OnProgress: TUpdateProgressCallback = nil): Boolean;
+
+    /// <summary>
+    /// Optional permission client for gating update downloads.
+    /// When set, DownloadUpdate requires 'updates' feature entitlement.
+    /// When nil, no permission check is performed (default).
+    /// </summary>
+    property PermissionClient: TDeepKitPermissionClient
+      read FPermissionClient write FPermissionClient;
+
+    /// <summary>Last error message (set when CheckForUpdate or DownloadUpdate fails).</summary>
+    property LastError: string read FLastError;
   end;
 
 implementation
@@ -679,8 +693,20 @@ var
   Response: IHTTPResponse;
   FS: TFileStream;
   Hash: string;
+  PermCheck: TDeepKitPermissionResult;
 begin
   Result := False;
+  FLastError := '';
+
+  if FPermissionClient <> nil then
+  begin
+    PermCheck := FPermissionClient.HasFeature('updates');
+    if not PermCheck.Allowed then
+    begin
+      FLastError := 'Update download denied: ' + PermCheck.Reason;
+      Exit;
+    end;
+  end;
 
   if Info.DownloadUrl = '' then
     Exit;

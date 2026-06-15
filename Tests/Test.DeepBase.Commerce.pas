@@ -1194,7 +1194,7 @@ var
 begin
   Transport := TFakeCommerceTransport.Create;
   Transport.QueueResponse(200,
-    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-06-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-07-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
   Client := TDeepKitSafeClient.Create(
     TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
       'atk_001'),
@@ -1293,7 +1293,7 @@ var
 begin
   Transport := TFakeCommerceTransport.Create;
   Transport.QueueResponse(200,
-    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-06-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-07-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
   Client := TDeepKitSafeClient.Create(
     TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
       'atk_001'),

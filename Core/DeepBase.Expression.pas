@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Expression - Expression Parser and Evaluator
   
   A mathematical and logical expression parser with variable support.

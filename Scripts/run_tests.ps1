@@ -65,6 +65,7 @@ $DcuOutputDir = Join-Path $BuildOutputDir "dcu\$Platform"
 $BdsRoot = if ($env:BDS) { $env:BDS } else { "D:\Program Files (x86)\Embarcadero\Studio\37.0" }
 $Dcc32 = Join-Path $BdsRoot "bin\dcc32.exe"
 $Dcc64 = Join-Path $BdsRoot "bin\dcc64.exe"
+$TestRunTimeoutMs = if ($env:DEEPBASE_TEST_RUN_TIMEOUT_MS) { [int]$env:DEEPBASE_TEST_RUN_TIMEOUT_MS } else { 300000 }
 
 # Module aliases for fast targeted regression
 $ModuleRunMap = [ordered]@{
@@ -575,8 +576,10 @@ function Compile-TestProject {
 
     $args += $BuildFlags
     $args += $ProjectFile
+
+    $projectDir = Split-Path -Parent $ProjectFile
     
-    $process = Start-Process -FilePath $DelphiCompiler -ArgumentList $args -Wait -PassThru -NoNewWindow
+    $process = Start-Process -FilePath $DelphiCompiler -ArgumentList $args -Wait -PassThru -NoNewWindow -WorkingDirectory $projectDir
     
     if ($process.ExitCode -ne 0) {
         Write-Host "ERROR: Failed to compile $ProjectName" -ForegroundColor Red
@@ -612,11 +615,23 @@ function Run-TestProject {
         $args += $ExtraArgs
     }
     
-    $process = Start-Process -FilePath $ExePath -ArgumentList $args -Wait -PassThru -NoNewWindow
+    $process = Start-Process -FilePath $ExePath -ArgumentList $args -PassThru -NoNewWindow
+    if (-not $process.WaitForExit($TestRunTimeoutMs)) {
+        Write-Host ""
+        Write-Host "FAILED: $TestName timed out after $TestRunTimeoutMs ms" -ForegroundColor Red
+        try {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        } finally {
+            $process.Dispose()
+        }
+        return $false
+    }
+    $exitCode = $process.ExitCode
+    $process.Dispose()
     
     Write-Host ""
     
-    if ($process.ExitCode -eq 0) {
+    if ($exitCode -eq 0) {
         if ($XmlOutput -and -not (Test-XmlHasExecutedTests -Path $XmlOutput -MinimumTests $MinimumTests)) {
             Write-Host "FAILED: $TestName produced fewer than $MinimumTests executed tests in $XmlOutput" -ForegroundColor Red
             return $false
@@ -630,7 +645,7 @@ function Run-TestProject {
 
         return $true
     } else {
-        Write-Host "FAILED: Some $TestName tests failed (Exit code: $($process.ExitCode))" -ForegroundColor Red
+        Write-Host "FAILED: Some $TestName tests failed (Exit code: $exitCode)" -ForegroundColor Red
         return $false
     }
 }

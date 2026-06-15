@@ -94,8 +94,6 @@ function TL1SlotProvider.BuildRequest(
   const AContext: TProcessingContext): TIntentClarificationRequest;
 var
   I: Integer;
-  LSlot: TIntentClarificationSlot;
-  LSlots: TArray<TIntentClarificationSlot>;
 begin
   Result.Init;
   Result.SessionId := AContext.SessionId;
@@ -104,14 +102,12 @@ begin
   Result.Domain := AContext.DomainContext.DomainName;
   Result.ContextSummary := AContext.DomainContext.ContextSummary;
 
-  // Convert history to recent turns
   SetLength(Result.RecentTurns, Length(AContext.History));
   for I := 0 to High(AContext.History) do
     Result.RecentTurns[I] := AContext.History[I].UserInput;
 
-  // Use domain context slots if available via metadata
-  // (The actual slots come from the DomainAdapter's GetPresetSlots in the engine)
-  // For now, pass empty slots - the engine layer populates them before calling Process
+  if Length(AContext.PresetSlots) > 0 then
+    Result.Slots := Copy(AContext.PresetSlots, 0, Length(AContext.PresetSlots));
 end;
 
 function TL1SlotProvider.ConvertResult(

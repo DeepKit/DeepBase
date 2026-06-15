@@ -1,4 +1,4 @@
-unit DeepBase.Crypto;
+﻿unit DeepBase.Crypto;
 
 {*******************************************************************************
   DeepBase Cryptography Utilities
@@ -1063,17 +1063,22 @@ end;
 class function TRandomGenerator.RandomInt(AMin, AMax: Integer): Integer;
 var
   LBytes: TBytes;
-  LRange, LThreshold, LVal: Cardinal;
+  LRaw: Cardinal;
+  LRange, LThreshold, LVal: UInt64;
 begin
-  LRange := Cardinal(AMax - AMin + 1);
+  if AMax < AMin then
+    raise ECryptoException.CreateFmt('Invalid random range: %d..%d', [AMin, AMax]);
+
+  LRange := UInt64(Int64(AMax) - Int64(AMin)) + 1;
   // Rejection sampling to eliminate modulo bias
   // Reject values >= largest multiple of LRange that fits in 32 bits
-  LThreshold := (Cardinal($FFFFFFFF) - LRange + 1) mod LRange;
+  LThreshold := (UInt64(Cardinal($FFFFFFFF)) + 1) mod LRange;
   repeat
     LBytes := RandomBytes(4);
-    LVal := PCardinal(@LBytes[0])^;
+    Move(LBytes[0], LRaw, SizeOf(LRaw));
+    LVal := UInt64(LRaw);
   until LVal >= LThreshold;
-  Result := AMin + Integer(LVal mod LRange);
+  Result := Integer(Int64(AMin) + Int64(LVal mod LRange));
 end;
 
 class function TRandomGenerator.NewGuid: string;

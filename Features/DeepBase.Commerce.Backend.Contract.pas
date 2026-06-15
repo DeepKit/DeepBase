@@ -71,6 +71,10 @@ const
   SCommerceFieldSuccess = 'success';
   SCommerceFieldErrorCode = 'error_code';
   SCommerceFieldErrorMessage = 'error_message';
+  SCommerceFieldTier = 'tier';
+  SCommerceFieldMaxDevices = 'max_devices';
+  SCommerceFieldOfflineGraceDays = 'offline_grace_days';
+  SCommerceFieldLastValidated = 'last_validated';
 
 type
   TCommerceBackendRoutes = record

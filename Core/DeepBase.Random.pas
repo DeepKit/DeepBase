@@ -1,4 +1,4 @@
-unit DeepBase.Random;
+﻿unit DeepBase.Random;
 
 interface
 

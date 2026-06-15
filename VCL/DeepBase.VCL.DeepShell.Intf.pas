@@ -275,8 +275,16 @@ type
     function GetViewForObject(const ARef: TShellObjectRef): TShellViewInfo;
     /// <summary>
     /// For svkControl / svkFrame the Shell calls back to materialise a control.
-    /// AOwner is the host panel; the returned control is owned by AOwner.
-    /// May return nil for non-control view kinds.
+    /// <para>AOwner — the host panel that will parent the returned control;
+    /// the control is owned by AOwner and freed when the host is destroyed.</para>
+    /// <para>ARef — the object identity (Id, Kind, ProviderId) being viewed.
+    /// Use ARef.Id to load the correct data into the control.</para>
+    /// <para>AInfo — the view metadata returned by GetViewForObject.
+    /// AInfo.ViewId is a view-specific key (e.g. 'view.doc-1'); it is
+    /// derived from ARef.Id but may differ when a single object supports
+    /// multiple view modes. For the common case, ViewId = 'view.' + ARef.Id.</para>
+    /// <para>May return nil for non-control view kinds (svkText, svkHtml, etc.)
+    /// where the Shell renders content from AInfo.Content directly.</para>
     /// </summary>
     function CreateViewControl(AOwner: TComponent;
       const ARef: TShellObjectRef; const AInfo: TShellViewInfo): TControl;

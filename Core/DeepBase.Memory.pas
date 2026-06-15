@@ -1,33 +1,33 @@
-unit DeepBase.Memory;
+ï»¿unit DeepBase.Memory;
 
 {*******************************************************************************
-  DeepBase.Memory - ¸ß¼¶ÄÚ´æ¹ÜÀí
+  DeepBase.Memory - é«˜çº§å†…å­˜ç®¡ç†
 
-  °æ±¾: 1.0
-  ¹¦ÄÜ:
-  - ¶ÔÏó³Ø (Object Pool) - ¼õÉÙÆµ·±´´½¨/Ïú»Ù¿ªÏú
-  - ÄÚ´æ³Ø (Memory Pool) - ¹Ì¶¨´óĞ¡¿é·ÖÅä
-  - ÖÇÄÜ»º´æ (Smart Cache) - ´ø LRU/LFU/TTL ÌÔÌ­²ßÂÔ
-  - ÄÚ´æĞ¹Â©¼ì²â
-  - ÄÚ´æÊ¹ÓÃÍ³¼Æ
-  - ÈõÒıÓÃÖ§³Ö
+  ç‰ˆæœ¬: 1.0
+  åŠŸèƒ½:
+  - å¯¹è±¡æ±  (Object Pool) - å‡å°‘é¢‘ç¹åˆ›å»º/é”€æ¯å¼€é”€
+  - å†…å­˜æ±  (Memory Pool) - å›ºå®šå¤§å°å—åˆ†é…
+  - æ™ºèƒ½ç¼“å­˜ (Smart Cache) - å¸¦ LRU/LFU/TTL æ·˜æ±°ç­–ç•¥
+  - å†…å­˜æ³„æ¼æ£€æµ‹
+  - å†…å­˜ä½¿ç”¨ç»Ÿè®¡
+  - å¼±å¼•ç”¨æ”¯æŒ
 
-  Ïß³Ì°²È«: ËùÓĞ¹«¹²·½·¨¶¼ÊÇÏß³Ì°²È«µÄ
+  çº¿ç¨‹å®‰å…¨: æ‰€æœ‰å…¬å…±æ–¹æ³•éƒ½æ˜¯çº¿ç¨‹å®‰å…¨çš„
 
-  ÓÃ·¨:
-    // ¶ÔÏó³Ø
+  ç”¨æ³•:
+    // å¯¹è±¡æ± 
     Pool := TObjectPool<TMyObject>.Create(
       function: TMyObject begin Result := TMyObject.Create; end,
       10, 100
     );
     Obj := Pool.Acquire;
     try
-      // Ê¹ÓÃ¶ÔÏó
+      // ä½¿ç”¨å¯¹è±¡
     finally
       Pool.Release(Obj);
     end;
 
-    // ÖÇÄÜ»º´æ
+    // æ™ºèƒ½ç¼“å­˜
     Cache := TSmartCache<string, TMyData>.Create;
     Cache.EvictionPolicy := epLRU;
     Cache.MaxSize := 1000;
@@ -44,26 +44,26 @@ uses
   DeepBase.Cache;
 
 type
-  /// <summary>ÄÚ´æÏà¹ØÒì³£»ùÀà</summary>
+  /// <summary>å†…å­˜ç›¸å…³å¼‚å¸¸åŸºç±»</summary>
   EMemoryException = class(Exception);
 
-  /// <summary>¶ÔÏó³ØºÄ¾¡»òÅäÖÃ´íÎóÊ±Å×³öµÄÒì³£</summary>
+  /// <summary>å¯¹è±¡æ± è€—å°½æˆ–é…ç½®é”™è¯¯æ—¶æŠ›å‡ºçš„å¼‚å¸¸</summary>
   EMemoryPoolException = class(EMemoryException);
 
-  /// <summary>ÖÇÄÜ»º´æÏà¹ØÒì³£</summary>
+  /// <summary>æ™ºèƒ½ç¼“å­˜ç›¸å…³å¼‚å¸¸</summary>
   EMemoryCacheException = class(EMemoryException);
 
-  /// <summary>»º´æÌÔÌ­²ßÂÔ</summary>
+  /// <summary>ç¼“å­˜æ·˜æ±°ç­–ç•¥</summary>
   TEvictionPolicy = (
-    epNone,     // ²»ÌÔÌ­£¬ÂúÊ±Å×Òì³£
+    epNone,     // ä¸æ·˜æ±°ï¼Œæ»¡æ—¶æŠ›å¼‚å¸¸
     epLRU,      // Least Recently Used
     epLFU,      // Least Frequently Used
     epFIFO,     // First In First Out
     epTTL,      // Time To Live
-    epRandom    // Ëæ»úÌÔÌ­
+    epRandom    // éšæœºæ·˜æ±°
   );
 
-  /// <summary>ÄÚ´æÍ³¼ÆĞÅÏ¢</summary>
+  /// <summary>å†…å­˜ç»Ÿè®¡ä¿¡æ¯</summary>
   TMemoryStats = record
     TotalAllocated: Int64;
     TotalFreed: Int64;
@@ -78,14 +78,14 @@ type
     function ToString: string;
   end;
 
-  /// <summary>¶ÔÏóÖØÖÃ½Ó¿Ú</summary>
+  /// <summary>å¯¹è±¡é‡ç½®æ¥å£</summary>
   IPoolable = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
     procedure Reset;
   end;
 
   /// <summary>
-  /// ·ºĞÍ¶ÔÏó³Ø
+  /// æ³›å‹å¯¹è±¡æ± 
   /// </summary>
   TObjectPool<T: class> = class
   public type
@@ -119,34 +119,34 @@ type
       MaxSize: Integer = 100; GrowBy: Integer = 5);
     destructor Destroy; override;
 
-    /// <summary>»ñÈ¡¶ÔÏó</summary>
+    /// <summary>è·å–å¯¹è±¡</summary>
     function Acquire: T;
 
-    /// <summary>³¢ÊÔ»ñÈ¡¶ÔÏó</summary>
+    /// <summary>å°è¯•è·å–å¯¹è±¡</summary>
     function TryAcquire(out Obj: T): Boolean;
 
-    /// <summary>ÊÍ·Å¶ÔÏó»Ø³Ø</summary>
+    /// <summary>é‡Šæ”¾å¯¹è±¡å›æ± </summary>
     procedure Release(Obj: T);
 
-    /// <summary>Çå¿Õ³Ø</summary>
+    /// <summary>æ¸…ç©ºæ± </summary>
     procedure Clear;
 
-    /// <summary>Ô¤ÈÈ</summary>
+    /// <summary>é¢„çƒ­</summary>
     procedure Warmup(Count: Integer);
 
-    /// <summary>ÊÕËõµ½×îĞ¡´óĞ¡</summary>
+    /// <summary>æ”¶ç¼©åˆ°æœ€å°å¤§å°</summary>
     procedure Compact;
 
-    /// <summary>ÉèÖÃÖØÖÃ»Øµ÷</summary>
+    /// <summary>è®¾ç½®é‡ç½®å›è°ƒ</summary>
     procedure SetResetProc(Proc: TObjectReset);
 
-    /// <summary>³ØÖĞ¿ÉÓÃ¶ÔÏóÊı</summary>
+    /// <summary>æ± ä¸­å¯ç”¨å¯¹è±¡æ•°</summary>
     function AvailableCount: Integer;
 
-    /// <summary>ÕıÔÚÊ¹ÓÃµÄ¶ÔÏóÊı</summary>
+    /// <summary>æ­£åœ¨ä½¿ç”¨çš„å¯¹è±¡æ•°</summary>
     function InUseCount: Integer;
 
-    /// <summary>»ñÈ¡Í³¼Æ</summary>
+    /// <summary>è·å–ç»Ÿè®¡</summary>
     function GetStats: TMemoryStats;
 
     property MinSize: Integer read FMinSize write SetMinSize;
@@ -154,7 +154,7 @@ type
   end;
 
   /// <summary>
-  /// ¹Ì¶¨´óĞ¡ÄÚ´æ¿é³Ø
+  /// å›ºå®šå¤§å°å†…å­˜å—æ± 
   /// </summary>
   TMemoryBlockPool = class
   private type
@@ -179,13 +179,13 @@ type
       GrowBy: Integer = 16);
     destructor Destroy; override;
 
-    /// <summary>·ÖÅäÄÚ´æ¿é</summary>
+    /// <summary>åˆ†é…å†…å­˜å—</summary>
     function Allocate: Pointer;
 
-    /// <summary>ÊÍ·ÅÄÚ´æ¿é</summary>
+    /// <summary>é‡Šæ”¾å†…å­˜å—</summary>
     procedure Deallocate(P: Pointer);
 
-    /// <summary>Çå¿Õ³Ø</summary>
+    /// <summary>æ¸…ç©ºæ± </summary>
     procedure Clear;
 
     property BlockSize: Integer read FUserBlockSize;
@@ -194,7 +194,7 @@ type
   end;
 
   /// <summary>
-  /// »º´æÌõÄ¿
+  /// ç¼“å­˜æ¡ç›®
   /// </summary>
   TCacheEntry<V> = record
     Value: V;
@@ -203,11 +203,11 @@ type
     AccessCount: Int64;
     TTLSeconds: Integer;
     Size: Integer;
-    CreatedTicks: Int64;  // BUG-120 FIX: Ê¹ÓÃµ¥µ÷Ê±ÖÓÊ±¼ä´Á£¬²»ÊÜÏµÍ³Ê±¼äµ÷ÕûÓ°Ïì
+    CreatedTicks: Int64;  // BUG-120 FIX: ä½¿ç”¨å•è°ƒæ—¶é’Ÿæ—¶é—´æˆ³ï¼Œä¸å—ç³»ç»Ÿæ—¶é—´è°ƒæ•´å½±å“
   end;
 
   /// <summary>
-  /// ÖÇÄÜ»º´æ
+  /// æ™ºèƒ½ç¼“å­˜
   /// </summary>
   TSmartCache<K, V> = class
   private type
@@ -244,34 +244,34 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>Ìí¼Ó»ò¸üĞÂ»º´æÏî</summary>
+    /// <summary>æ·»åŠ æˆ–æ›´æ–°ç¼“å­˜é¡¹</summary>
     procedure Put(const Key: K; const Value: V; TTLSeconds: Integer = -1);
 
-    /// <summary>»ñÈ¡»º´æÏî</summary>
+    /// <summary>è·å–ç¼“å­˜é¡¹</summary>
     function Get(const Key: K): V;
 
-    /// <summary>³¢ÊÔ»ñÈ¡»º´æÏî</summary>
+    /// <summary>å°è¯•è·å–ç¼“å­˜é¡¹</summary>
     function TryGet(const Key: K; out Value: V): Boolean;
 
-    /// <summary>¼ì²éÊÇ·ñ´æÔÚ</summary>
+    /// <summary>æ£€æŸ¥æ˜¯å¦å­˜åœ¨</summary>
     function Contains(const Key: K): Boolean;
 
-    /// <summary>ÒÆ³ı»º´æÏî</summary>
+    /// <summary>ç§»é™¤ç¼“å­˜é¡¹</summary>
     function Remove(const Key: K): Boolean;
 
-    /// <summary>Çå¿Õ»º´æ</summary>
+    /// <summary>æ¸…ç©ºç¼“å­˜</summary>
     procedure Clear;
 
-    /// <summary>»ñÈ¡»òÌí¼Ó</summary>
+    /// <summary>è·å–æˆ–æ·»åŠ </summary>
     function GetOrAdd(const Key: K; Factory: TFunc<V>): V;
 
-    /// <summary>»ñÈ¡ËùÓĞ¼ü</summary>
+    /// <summary>è·å–æ‰€æœ‰é”®</summary>
     function GetKeys: TArray<K>;
 
-    /// <summary>»ñÈ¡Í³¼Æ</summary>
+    /// <summary>è·å–ç»Ÿè®¡</summary>
     function GetStats: TMemoryStats;
 
-    /// <summary>ÖØÖÃÍ³¼Æ</summary>
+    /// <summary>é‡ç½®ç»Ÿè®¡</summary>
     procedure ResetStats;
 
     property Count: Integer read GetCount;
@@ -283,7 +283,7 @@ type
   end;
 
   /// <summary>
-  /// ÄÚ´æĞ¹Â©¸ú×ÙÆ÷
+  /// å†…å­˜æ³„æ¼è·Ÿè¸ªå™¨
   /// </summary>
   TMemoryTracker = class
   private type
@@ -311,22 +311,22 @@ type
     class function Instance: TMemoryTracker;
     class procedure FreeInstance;
 
-    /// <summary>¸ú×Ù·ÖÅä</summary>
+    /// <summary>è·Ÿè¸ªåˆ†é…</summary>
     procedure TrackAllocation(P: Pointer; Size: Integer; const ClassName: string = '');
 
-    /// <summary>¸ú×ÙÊÍ·Å</summary>
+    /// <summary>è·Ÿè¸ªé‡Šæ”¾</summary>
     procedure TrackDeallocation(P: Pointer);
 
-    /// <summary>»ñÈ¡Ğ¹Â©±¨¸æ</summary>
+    /// <summary>è·å–æ³„æ¼æŠ¥å‘Š</summary>
     function GetLeakReport: string;
 
-    /// <summary>»ñÈ¡µ±Ç°·ÖÅäÊı</summary>
+    /// <summary>è·å–å½“å‰åˆ†é…æ•°</summary>
     function GetAllocationCount: Integer;
 
-    /// <summary>»ñÈ¡µ±Ç°·ÖÅäÄÚ´æ</summary>
+    /// <summary>è·å–å½“å‰åˆ†é…å†…å­˜</summary>
     function GetAllocatedMemory: Int64;
 
-    /// <summary>Çå³ı¸ú×ÙÊı¾İ</summary>
+    /// <summary>æ¸…é™¤è·Ÿè¸ªæ•°æ®</summary>
     procedure ClearTracking;
 
     property Enabled: Boolean read FEnabled write FEnabled;
@@ -334,7 +334,7 @@ type
   end;
 
   /// <summary>
-  /// ÈõÒıÓÃ°ü×°Æ÷
+  /// å¼±å¼•ç”¨åŒ…è£…å™¨
   /// </summary>
   TWeakRef<T: class> = record
   private
@@ -349,7 +349,7 @@ type
   end;
 
   /// <summary>
-  /// »·ĞÎ»º³åÇø
+  /// ç¯å½¢ç¼“å†²åŒº
   /// </summary>
   TRingBuffer<T> = class
   private
@@ -363,22 +363,22 @@ type
     constructor Create(Capacity: Integer);
     destructor Destroy; override;
 
-    /// <summary>Ğ´ÈëÊı¾İ</summary>
+    /// <summary>å†™å…¥æ•°æ®</summary>
     function Write(const Item: T): Boolean;
 
-    /// <summary>ÅúÁ¿Ğ´Èë</summary>
+    /// <summary>æ‰¹é‡å†™å…¥</summary>
     function WriteMany(const Items: TArray<T>): Integer;
 
-    /// <summary>¶ÁÈ¡Êı¾İ</summary>
+    /// <summary>è¯»å–æ•°æ®</summary>
     function Read(out Item: T): Boolean;
 
-    /// <summary>ÅúÁ¿¶ÁÈ¡</summary>
+    /// <summary>æ‰¹é‡è¯»å–</summary>
     function ReadMany(Count: Integer): TArray<T>;
 
-    /// <summary>²é¿´µ«²»ÒÆ³ı</summary>
+    /// <summary>æŸ¥çœ‹ä½†ä¸ç§»é™¤</summary>
     function Peek(out Item: T): Boolean;
 
-    /// <summary>Çå¿Õ</summary>
+    /// <summary>æ¸…ç©º</summary>
     procedure Clear;
 
     property Count: Integer read FCount;
@@ -388,7 +388,7 @@ type
   end;
 
   /// <summary>
-  /// ÄÚ´æÓ³Éä´óÎÄ¼ş¶ÁÈ¡Æ÷
+  /// å†…å­˜æ˜ å°„å¤§æ–‡ä»¶è¯»å–å™¨
   /// </summary>
   TMemoryMappedFile = class
   private
@@ -404,16 +404,16 @@ type
     constructor Create(const FileName: string);
     destructor Destroy; override;
 
-    /// <summary>Ó³ÉäÎÄ¼ş</summary>
+    /// <summary>æ˜ å°„æ–‡ä»¶</summary>
     function Map: Boolean;
 
-    /// <summary>È¡ÏûÓ³Éä</summary>
+    /// <summary>å–æ¶ˆæ˜ å°„</summary>
     procedure Unmap;
 
-    /// <summary>»ñÈ¡Ó³ÉäÖ¸Õë</summary>
+    /// <summary>è·å–æ˜ å°„æŒ‡é’ˆ</summary>
     function GetData: Pointer;
 
-    /// <summary>¶ÁÈ¡Ö¸¶¨Î»ÖÃÊı¾İ</summary>
+    /// <summary>è¯»å–æŒ‡å®šä½ç½®æ•°æ®</summary>
     function ReadAt(Offset: Int64; Buffer: Pointer; Size: Integer): Integer;
 
     property FileName: string read FFileName;
@@ -421,13 +421,13 @@ type
     property IsMapped: Boolean read FMapped;
   end;
 
-/// <summary>»ñÈ¡½ø³ÌÄÚ´æÊ¹ÓÃ</summary>
+/// <summary>è·å–è¿›ç¨‹å†…å­˜ä½¿ç”¨</summary>
 function GetProcessMemoryUsage: Int64;
 
-/// <summary>»ñÈ¡ÏµÍ³ÄÚ´æĞÅÏ¢</summary>
+/// <summary>è·å–ç³»ç»Ÿå†…å­˜ä¿¡æ¯</summary>
 procedure GetSystemMemoryInfo(out TotalPhys, AvailPhys, TotalVirtual, AvailVirtual: Int64);
 
-/// <summary>»ñÈ¡ÄÚ´æ¸ú×ÙÆ÷</summary>
+/// <summary>è·å–å†…å­˜è·Ÿè¸ªå™¨</summary>
 function MemTracker: TMemoryTracker;
 
 implementation
@@ -449,7 +449,7 @@ end;
 function TObjectPool<T>.TFactoryAdapter.CreateObject: T;
 begin
   if not Assigned(FOwner.FFactory) then
-    raise EMemoryPoolException.Create('¶ÔÏó³Ø¹¤³§Î´ÉèÖÃ');
+    raise EMemoryPoolException.Create('å¯¹è±¡æ± å·¥å‚æœªè®¾ç½®');
 
   Result := FOwner.FFactory();
 end;
@@ -474,17 +474,17 @@ end;
 function TMemoryStats.ToString: string;
 begin
   Result := Format(
-    'ÄÚ´æÍ³¼Æ:' + sLineBreak +
-    '  ×Ü·ÖÅä: %d ×Ö½Ú' + sLineBreak +
-    '  ×ÜÊÍ·Å: %d ×Ö½Ú' + sLineBreak +
-    '  µ±Ç°Ê¹ÓÃ: %d ×Ö½Ú' + sLineBreak +
-    '  ·åÖµÊ¹ÓÃ: %d ×Ö½Ú' + sLineBreak +
-    '  ·ÖÅä´ÎÊı: %d' + sLineBreak +
-    '  ÊÍ·Å´ÎÊı: %d' + sLineBreak +
-    '  ³ØÃüÖĞ: %d' + sLineBreak +
-    '  ³ØÎ´ÃüÖĞ: %d' + sLineBreak +
-    '  »º´æÃüÖĞ: %d' + sLineBreak +
-    '  »º´æÎ´ÃüÖĞ: %d',
+    'å†…å­˜ç»Ÿè®¡:' + sLineBreak +
+    '  æ€»åˆ†é…: %d å­—èŠ‚' + sLineBreak +
+    '  æ€»é‡Šæ”¾: %d å­—èŠ‚' + sLineBreak +
+    '  å½“å‰ä½¿ç”¨: %d å­—èŠ‚' + sLineBreak +
+    '  å³°å€¼ä½¿ç”¨: %d å­—èŠ‚' + sLineBreak +
+    '  åˆ†é…æ¬¡æ•°: %d' + sLineBreak +
+    '  é‡Šæ”¾æ¬¡æ•°: %d' + sLineBreak +
+    '  æ± å‘½ä¸­: %d' + sLineBreak +
+    '  æ± æœªå‘½ä¸­: %d' + sLineBreak +
+    '  ç¼“å­˜å‘½ä¸­: %d' + sLineBreak +
+    '  ç¼“å­˜æœªå‘½ä¸­: %d',
     [TotalAllocated, TotalFreed, CurrentUsage, PeakUsage,
      AllocationCount, FreeCount, PoolHits, PoolMisses,
      CacheHits, CacheMisses]);
@@ -555,11 +555,11 @@ begin
     Result := FInner.Acquire;
   except
     on E: EObjectPoolException do
-      raise EMemoryPoolException.Create('¶ÔÏó³ØÒÑºÄ¾¡');
+      raise EMemoryPoolException.Create('å¯¹è±¡æ± å·²è€—å°½');
   end;
 
   if Result = nil then
-    raise EMemoryPoolException.Create('¶ÔÏó³ØÒÑºÄ¾¡');
+    raise EMemoryPoolException.Create('å¯¹è±¡æ± å·²è€—å°½');
 end;
 
 function TObjectPool<T>.TryAcquire(out Obj: T): Boolean;
@@ -675,7 +675,7 @@ begin
   FAllocatedCount := 0;
   FFreeCount := 0;
 
-  // ³õÊ¼·ÖÅä
+  // åˆå§‹åˆ†é…
   while FAllBlocks.Count < InitialCount do
     GrowPool;
 end;
@@ -730,7 +730,7 @@ begin
     Dec(FFreeCount);
     Inc(FAllocatedCount);
 
-    // ·µ»ØÓÃ»§Êı¾İÇøÓò£¨Ìø¹ıÍ·²¿£©
+    // è¿”å›ç”¨æˆ·æ•°æ®åŒºåŸŸï¼ˆè·³è¿‡å¤´éƒ¨ï¼‰
     Result := Pointer(NativeUInt(Block) + SizeOf(TBlockHeader));
   finally
     FLock.Leave;
@@ -746,7 +746,7 @@ begin
 
   FLock.Enter;
   try
-    // »ñÈ¡¿éÍ·
+    // è·å–å—å¤´
     Block := PBlockHeader(NativeUInt(P) - SizeOf(TBlockHeader));
     if Block^.InUse then
     begin
@@ -787,7 +787,7 @@ begin
   FMaxSize := 1000;
   FMaxMemory := 100 * 1024 * 1024; // 100MB
   FEvictionPolicy := epLRU;
-  FDefaultTTL := 0; // ²»¹ıÆÚ
+  FDefaultTTL := 0; // ä¸è¿‡æœŸ
   FPutCount := 0;
   SyncLimitsToInner;
   SyncPolicyToInner;
@@ -926,13 +926,13 @@ begin
     begin
       if (FMaxSize > 0) and (not FInnerCache.Contains(Key)) and
          (FInnerCache.Count >= FMaxSize) then
-        raise EMemoryCacheException.Create('»º´æÒÑÂú');
+        raise EMemoryCacheException.Create('ç¼“å­˜å·²æ»¡');
       if FMaxMemory > 0 then
       begin
         Stats := FInnerCache.Stats;
         if (Stats.TotalSizeBytes + ItemSize > FMaxMemory) and
            (not FInnerCache.Contains(Key)) then
-          raise EMemoryCacheException.Create('»º´æÒÑÂú');
+          raise EMemoryCacheException.Create('ç¼“å­˜å·²æ»¡');
       end;
     end;
 
@@ -976,7 +976,7 @@ end;
 function TSmartCache<K, V>.Get(const Key: K): V;
 begin
   if not TryGet(Key, Result) then
-    raise EMemoryCacheException.Create('»º´æ¼ü²»´æÔÚ');
+    raise EMemoryCacheException.Create('ç¼“å­˜é”®ä¸å­˜åœ¨');
 end;
 
 function TSmartCache<K, V>.TryGet(const Key: K; out Value: V): Boolean;
@@ -1059,16 +1059,16 @@ class function TMemoryTracker.Instance: TMemoryTracker;
 var
   NewLock: TCriticalSection;
 begin
-  // BUG-108 FIX: ĞŞ¸´µ¥Àı³õÊ¼»¯¾ºÌ¬Ìõ¼ş
-  // Ê¹ÓÃË«ÖØ¼ì²éËø¶¨Ä£Ê½£¬µ«ĞèÒªÈ·±£ËøµÄ´´½¨ÊÇÏß³Ì°²È«µÄ
+  // BUG-108 FIX: ä¿®å¤å•ä¾‹åˆå§‹åŒ–ç«æ€æ¡ä»¶
+  // ä½¿ç”¨åŒé‡æ£€æŸ¥é”å®šæ¨¡å¼ï¼Œä½†éœ€è¦ç¡®ä¿é”çš„åˆ›å»ºæ˜¯çº¿ç¨‹å®‰å…¨çš„
   if FInstance = nil then
   begin
-    // Ê¹ÓÃÔ­×Ó²Ù×÷È·±£ËøÖ»±»´´½¨Ò»´Î
+    // ä½¿ç”¨åŸå­æ“ä½œç¡®ä¿é”åªè¢«åˆ›å»ºä¸€æ¬¡
     if FLock = nil then
     begin
       NewLock := TCriticalSection.Create;
       if TInterlocked.CompareExchange(Pointer(FLock), Pointer(NewLock), nil) <> nil then
-        NewLock.Free; // ÁíÒ»¸öÏß³ÌÒÑ¾­´´½¨ÁËËø
+        NewLock.Free; // å¦ä¸€ä¸ªçº¿ç¨‹å·²ç»åˆ›å»ºäº†é”
     end;
 
     FLock.Enter;
@@ -1098,10 +1098,10 @@ end;
 
 function TMemoryTracker.GetCurrentStackTrace: string;
 begin
-  // ¼ò»¯ÊµÏÖ£¬Êµ¼ÊÓ¦Ê¹ÓÃ JclDebug »ò madExcept
+  // ç®€åŒ–å®ç°ï¼Œå®é™…åº”ä½¿ç”¨ JclDebug æˆ– madExcept
   Result := '';
   {$IFDEF DEBUG}
-  // ¿ÉÒÔÌí¼Ó¶ÑÕ»¸ú×Ù
+  // å¯ä»¥æ·»åŠ å †æ ˆè·Ÿè¸ª
   {$ENDIF}
 end;
 
@@ -1155,33 +1155,33 @@ begin
 
     FAllocLock.Enter;
     try
-      SB.AppendLine('=== ÄÚ´æĞ¹Â©±¨¸æ ===');
-      SB.AppendLine(Format('¼ì²âµ½ %d ´¦Ğ¹Â©:', [FAllocations.Count]));
+      SB.AppendLine('=== å†…å­˜æ³„æ¼æŠ¥å‘Š ===');
+      SB.AppendLine(Format('æ£€æµ‹åˆ° %d å¤„æ³„æ¼:', [FAllocations.Count]));
       SB.AppendLine;
 
       for Pair in FAllocations do
       begin
-        SB.AppendFormat('  µØÖ·: %p', [Pair.Value.Address]);
+        SB.AppendFormat('  åœ°å€: %p', [Pair.Value.Address]);
         SB.AppendLine;
-        SB.AppendFormat('  ´óĞ¡: %d ×Ö½Ú', [Pair.Value.Size]);
+        SB.AppendFormat('  å¤§å°: %d å­—èŠ‚', [Pair.Value.Size]);
         SB.AppendLine;
         if Pair.Value.ClassName <> '' then
         begin
-          SB.AppendFormat('  ÀàÃû: %s', [Pair.Value.ClassName]);
+          SB.AppendFormat('  ç±»å: %s', [Pair.Value.ClassName]);
           SB.AppendLine;
         end;
-        SB.AppendFormat('  ·ÖÅäÊ±¼ä: %s', [DateTimeToStr(Pair.Value.AllocatedAt)]);
+        SB.AppendFormat('  åˆ†é…æ—¶é—´: %s', [DateTimeToStr(Pair.Value.AllocatedAt)]);
         SB.AppendLine;
         if Pair.Value.StackTrace <> '' then
         begin
-          SB.AppendLine('  ¶ÑÕ»:');
+          SB.AppendLine('  å †æ ˆ:');
           SB.AppendLine(Pair.Value.StackTrace);
         end;
         SB.AppendLine;
         Inc(TotalSize, Pair.Value.Size);
       end;
 
-      SB.AppendFormat('×ÜĞ¹Â©: %d ×Ö½Ú', [TotalSize]);
+      SB.AppendFormat('æ€»æ³„æ¼: %d å­—èŠ‚', [TotalSize]);
     finally
       FAllocLock.Leave;
     end;
@@ -1235,8 +1235,8 @@ end;
 
 function TWeakRef<T>.GetTarget: T;
 begin
-  // BUG-102 FIX: ¸Ä½øÈõÒıÓÃÊµÏÖ - Ìí¼ÓÓĞĞ§ĞÔ¼ì²éºÍ¸üÇåÎúµÄ´íÎó´¦Àí
-  // ×¢Òâ£ºÕâÊÇÒ»¸ö¼ò»¯µÄÈõÒıÓÃÊµÏÖ£¬ÕæÕıµÄÈõÒıÓÃĞèÒªÓë¶ÔÏóÉúÃüÖÜÆÚ¹ÜÀí¼¯³É
+  // BUG-102 FIX: æ”¹è¿›å¼±å¼•ç”¨å®ç° - æ·»åŠ æœ‰æ•ˆæ€§æ£€æŸ¥å’Œæ›´æ¸…æ™°çš„é”™è¯¯å¤„ç†
+  // æ³¨æ„ï¼šè¿™æ˜¯ä¸€ä¸ªç®€åŒ–çš„å¼±å¼•ç”¨å®ç°ï¼ŒçœŸæ­£çš„å¼±å¼•ç”¨éœ€è¦ä¸å¯¹è±¡ç”Ÿå‘½å‘¨æœŸç®¡ç†é›†æˆ
   if FRef = nil then
     raise EMemoryException.Create('Weak reference target is no longer alive');
   Result := T(FRef);
@@ -1244,18 +1244,18 @@ end;
 
 function TWeakRef<T>.GetIsAlive: Boolean;
 begin
-  // BUG-102 FIX: ¸Ä½øÈõÒıÓÃÓĞĞ§ĞÔ¼ì²é
-  // ¼òµ¥µÄnil¼ì²é£¬Êµ¼ÊÊµÏÖĞèÒª¸ü¸´ÔÓµÄÉúÃüÖÜÆÚ¸ú×Ù
+  // BUG-102 FIX: æ”¹è¿›å¼±å¼•ç”¨æœ‰æ•ˆæ€§æ£€æŸ¥
+  // ç®€å•çš„nilæ£€æŸ¥ï¼Œå®é™…å®ç°éœ€è¦æ›´å¤æ‚çš„ç”Ÿå‘½å‘¨æœŸè·Ÿè¸ª
   Result := FRef <> nil;
   
-  // ¾¯¸æ£ºÕâÊÇÒ»¸ö¼ò»¯ÊµÏÖ£¬´æÔÚÒÔÏÂÏŞÖÆ£º
-  // 1. ÎŞ·¨¼ì²âÄ¿±ê¶ÔÏóÊÇ·ñÒÑ±»ÊÍ·Å£¨Ğü¿ÕÖ¸Õë·çÏÕ£©
-  // 2. ĞèÒªÓë¶ÔÏóµÄÉúÃüÖÜÆÚ¹ÜÀí¼¯³É²ÅÄÜÊµÏÖÕæÕıµÄÈõÒıÓÃ
-  // 3. ½¨ÒéÊ¹ÓÃDelphiÄÚÖÃµÄ[weak]ÊôĞÔ£¨Èç¹ûÖ§³Ö£©»òÊµÏÖÍ¨ÖªÄ£Ê½
+  // è­¦å‘Šï¼šè¿™æ˜¯ä¸€ä¸ªç®€åŒ–å®ç°ï¼Œå­˜åœ¨ä»¥ä¸‹é™åˆ¶ï¼š
+  // 1. æ— æ³•æ£€æµ‹ç›®æ ‡å¯¹è±¡æ˜¯å¦å·²è¢«é‡Šæ”¾ï¼ˆæ‚¬ç©ºæŒ‡é’ˆé£é™©ï¼‰
+  // 2. éœ€è¦ä¸å¯¹è±¡çš„ç”Ÿå‘½å‘¨æœŸç®¡ç†é›†æˆæ‰èƒ½å®ç°çœŸæ­£çš„å¼±å¼•ç”¨
+  // 3. å»ºè®®ä½¿ç”¨Delphiå†…ç½®çš„[weak]å±æ€§ï¼ˆå¦‚æœæ”¯æŒï¼‰æˆ–å®ç°é€šçŸ¥æ¨¡å¼
   // 
-  // Ê¹ÓÃ½¨Òé£º
-  // - ÔÚÊ¹ÓÃTargetÖ®Ç°Ê¼ÖÕµ÷ÓÃTryGetTarget
-  // - È·±£ÔÚ¶ÔÏóÊÍ·ÅÊ±ÊÖ¶¯ÇåÀíÈõÒıÓÃ
+  // ä½¿ç”¨å»ºè®®ï¼š
+  // - åœ¨ä½¿ç”¨Targetä¹‹å‰å§‹ç»ˆè°ƒç”¨TryGetTarget
+  // - ç¡®ä¿åœ¨å¯¹è±¡é‡Šæ”¾æ—¶æ‰‹åŠ¨æ¸…ç†å¼±å¼•ç”¨
 end;
 
 function TWeakRef<T>.TryGetTarget(out Target: T): Boolean;
@@ -1291,11 +1291,11 @@ begin
   Result := False;
   FLock.Enter;
   try
-    // BUG-049 FIX: ¼ÓÇ¿±ß½ç¼ì²é£¬·ÀÖ¹Ë÷ÒıÔ½½ç
+    // BUG-049 FIX: åŠ å¼ºè¾¹ç•Œæ£€æŸ¥ï¼Œé˜²æ­¢ç´¢å¼•è¶Šç•Œ
     if (FCount >= FCapacity) or (FCapacity <= 0) then
       Exit;
 
-    // È·±£ FTail ÔÚÓĞĞ§·¶Î§ÄÚ
+    // ç¡®ä¿ FTail åœ¨æœ‰æ•ˆèŒƒå›´å†…
     if (FTail < 0) or (FTail >= FCapacity) then
       FTail := 0;
       
@@ -1335,11 +1335,11 @@ begin
   Result := False;
   FLock.Enter;
   try
-    // BUG-049 FIX: ¼ÓÇ¿±ß½ç¼ì²é
+    // BUG-049 FIX: åŠ å¼ºè¾¹ç•Œæ£€æŸ¥
     if (FCount = 0) or (FCapacity <= 0) then
       Exit;
 
-    // È·±£ FHead ÔÚÓĞĞ§·¶Î§ÄÚ
+    // ç¡®ä¿ FHead åœ¨æœ‰æ•ˆèŒƒå›´å†…
     if (FHead < 0) or (FHead >= FCapacity) then
       FHead := 0;
       
@@ -1452,7 +1452,7 @@ begin
   if FMapped then
     Exit(True);
 
-  // ´ò¿ªÎÄ¼ş
+  // æ‰“å¼€æ–‡ä»¶
   FFileHandle := CreateFile(
     PChar(FFileName),
     GENERIC_READ,
@@ -1465,11 +1465,11 @@ begin
   if FFileHandle = INVALID_HANDLE_VALUE then
     Exit;
 
-  // »ñÈ¡ÎÄ¼ş´óĞ¡
+  // è·å–æ–‡ä»¶å¤§å°
   FFileSize := GetFileSize(FFileHandle, @FileSizeHigh);
   FFileSize := FFileSize or (Int64(FileSizeHigh) shl 32);
   
-  // ·ÀÖ¹Ó³Éä¹ı´óµÄÎÄ¼ş£¨ÏŞÖÆÎª1GB£©
+  // é˜²æ­¢æ˜ å°„è¿‡å¤§çš„æ–‡ä»¶ï¼ˆé™åˆ¶ä¸º1GBï¼‰
   if FFileSize > 1024 * 1024 * 1024 then
   begin
     CloseHandle(FFileHandle);
@@ -1477,7 +1477,7 @@ begin
     raise EMemoryException.Create('File too large for memory mapping (max 1GB)');
   end;
 
-  // ´´½¨ÎÄ¼şÓ³Éä
+  // åˆ›å»ºæ–‡ä»¶æ˜ å°„
   FMappingHandle := CreateFileMapping(
     FFileHandle,
     nil,
@@ -1493,7 +1493,7 @@ begin
     Exit;
   end;
 
-  // Ó³ÉäÊÓÍ¼
+  // æ˜ å°„è§†å›¾
   FMapView := MapViewOfFile(
     FMappingHandle,
     FILE_MAP_READ,

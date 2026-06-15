@@ -1,20 +1,20 @@
-unit DeepBase.VirtualScroll;
+ï»¿unit DeepBase.VirtualScroll;
 
 {*******************************************************************************
-  DeepBase.VirtualScroll - ĞéÄâ¹ö¶¯ºÍ UI äÖÈ¾ÓÅ»¯
+  DeepBase.VirtualScroll - è™šæ‹Ÿæ»šåŠ¨å’Œ UI æ¸²æŸ“ä¼˜åŒ–
 
-  °æ±¾: 1.0
-  ¹¦ÄÜ:
-  - ĞéÄâ¹ö¶¯ (Virtual Scrolling) - Ö§³Ö°ÙÍò¼¶ÁĞ±í
-  - ÖÇÄÜäÖÈ¾ (Smart Rendering) - Ö»äÖÈ¾¿É¼ûÇøÓò
-  - Ö¡ÂÊ¿ØÖÆ (Frame Rate Control)
-  - äÖÈ¾¶ÓÁĞ (Render Queue)
-  - ÑÓ³Ù¼ÓÔØ (Lazy Loading)
+  ç‰ˆæœ¬: 1.0
+  åŠŸèƒ½:
+  - è™šæ‹Ÿæ»šåŠ¨ (Virtual Scrolling) - æ”¯æŒç™¾ä¸‡çº§åˆ—è¡¨
+  - æ™ºèƒ½æ¸²æŸ“ (Smart Rendering) - åªæ¸²æŸ“å¯è§åŒºåŸŸ
+  - å¸§ç‡æ§åˆ¶ (Frame Rate Control)
+  - æ¸²æŸ“é˜Ÿåˆ— (Render Queue)
+  - å»¶è¿ŸåŠ è½½ (Lazy Loading)
 
-  ÊÊÓÃÓÚ:
-  - VCL TListView/TListBox ÔöÇ¿
-  - FMX ÁĞ±í¿Ø¼ş
-  - ×Ô¶¨Òå»æÖÆ¿Ø¼ş
+  é€‚ç”¨äº:
+  - VCL TListView/TListBox å¢å¼º
+  - FMX åˆ—è¡¨æ§ä»¶
+  - è‡ªå®šä¹‰ç»˜åˆ¶æ§ä»¶
 *******************************************************************************}
 
 interface
@@ -28,7 +28,7 @@ uses
   Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.Graphics, Vcl.ExtCtrls, Vcl.Forms;
 
 type
-  /// <summary>ĞéÄâÁĞ±íÏî</summary>
+  /// <summary>è™šæ‹Ÿåˆ—è¡¨é¡¹</summary>
   TVirtualItem = record
     Index: Integer;
     Data: Pointer;
@@ -38,7 +38,7 @@ type
     Selected: Boolean;
   end;
 
-  /// <summary>äÖÈ¾Í³¼Æ</summary>
+  /// <summary>æ¸²æŸ“ç»Ÿè®¡</summary>
   TRenderStats = record
     TotalItems: Integer;
     VisibleItems: Integer;
@@ -51,19 +51,19 @@ type
     function ToString: string;
   end;
 
-  /// <summary>Ïî»æÖÆÊÂ¼ş</summary>
+  /// <summary>é¡¹ç»˜åˆ¶äº‹ä»¶</summary>
   TDrawItemEvent = procedure(Sender: TObject; Canvas: TCanvas;
     const Item: TVirtualItem; const Rect: TRect; var Handled: Boolean) of object;
 
-  /// <summary>Ïî¸ß¶ÈÊÂ¼ş</summary>
+  /// <summary>é¡¹é«˜åº¦äº‹ä»¶</summary>
   TItemHeightEvent = procedure(Sender: TObject; Index: Integer;
     var Height: Integer) of object;
 
-  /// <summary>Êı¾İÇëÇóÊÂ¼ş</summary>
+  /// <summary>æ•°æ®è¯·æ±‚äº‹ä»¶</summary>
   TDataRequestEvent = procedure(Sender: TObject; StartIndex, Count: Integer) of object;
 
   /// <summary>
-  /// ĞéÄâ¹ö¶¯Êı¾İÔ´
+  /// è™šæ‹Ÿæ»šåŠ¨æ•°æ®æº
   /// </summary>
   TVirtualDataSource = class
   private
@@ -77,25 +77,25 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>ÉèÖÃÏîÄ¿×ÜÊı</summary>
+    /// <summary>è®¾ç½®é¡¹ç›®æ€»æ•°</summary>
     procedure SetItemCount(Count: Integer);
 
-    /// <summary>»ñÈ¡ÏîÄ¿¸ß¶È</summary>
+    /// <summary>è·å–é¡¹ç›®é«˜åº¦</summary>
     function GetItemHeight(Index: Integer): Integer;
 
-    /// <summary>ÉèÖÃÌØ¶¨ÏîÄ¿¸ß¶È</summary>
+    /// <summary>è®¾ç½®ç‰¹å®šé¡¹ç›®é«˜åº¦</summary>
     procedure SetItemHeight(Index: Integer; Height: Integer);
 
-    /// <summary>Çå³ı¸ß¶È»º´æ</summary>
+    /// <summary>æ¸…é™¤é«˜åº¦ç¼“å­˜</summary>
     procedure ClearHeightCache;
 
-    /// <summary>»ñÈ¡ÀÛ¼Æ¸ß¶Èµ½Ö¸¶¨Ë÷Òı</summary>
+    /// <summary>è·å–ç´¯è®¡é«˜åº¦åˆ°æŒ‡å®šç´¢å¼•</summary>
     function GetOffsetToIndex(Index: Integer): Integer;
 
-    /// <summary>¸ù¾İÆ«ÒÆÁ¿»ñÈ¡Ë÷Òı</summary>
+    /// <summary>æ ¹æ®åç§»é‡è·å–ç´¢å¼•</summary>
     function GetIndexAtOffset(Offset: Integer): Integer;
 
-    /// <summary>»ñÈ¡×ÜÄÚÈİ¸ß¶È</summary>
+    /// <summary>è·å–æ€»å†…å®¹é«˜åº¦</summary>
     function GetTotalHeight: Integer;
 
     property ItemCount: Integer read FItemCount;
@@ -105,7 +105,7 @@ type
   end;
 
   /// <summary>
-  /// ĞéÄâ¹ö¶¯¿ØÖÆÆ÷
+  /// è™šæ‹Ÿæ»šåŠ¨æ§åˆ¶å™¨
   /// </summary>
   TVirtualScrollController = class
   private
@@ -113,7 +113,7 @@ type
     FViewportHeight: Integer;
     FScrollOffset: Integer;
     FVisibleItems: TList<TVirtualItem>;
-    FOverscan: Integer;  // Ô¤äÖÈ¾µÄ¶îÍâĞĞÊı
+    FOverscan: Integer;  // é¢„æ¸²æŸ“çš„é¢å¤–è¡Œæ•°
     FStats: TRenderStats;
     FLastRenderTime: TDateTime;
     FOnVisibleRangeChanged: TNotifyEvent;
@@ -125,28 +125,28 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>ÉèÖÃÊı¾İÔ´</summary>
+    /// <summary>è®¾ç½®æ•°æ®æº</summary>
     procedure SetDataSource(Source: TVirtualDataSource);
 
-    /// <summary>ÉèÖÃÊÓ¿Ú¸ß¶È</summary>
+    /// <summary>è®¾ç½®è§†å£é«˜åº¦</summary>
     procedure SetViewportHeight(Height: Integer);
 
-    /// <summary>ÉèÖÃ¹ö¶¯Æ«ÒÆ</summary>
+    /// <summary>è®¾ç½®æ»šåŠ¨åç§»</summary>
     procedure SetScrollOffset(Offset: Integer);
 
-    /// <summary>¹ö¶¯Ö¸¶¨Á¿</summary>
+    /// <summary>æ»šåŠ¨æŒ‡å®šé‡</summary>
     procedure ScrollBy(Delta: Integer);
 
-    /// <summary>¹ö¶¯µ½Ö¸¶¨Ïî</summary>
+    /// <summary>æ»šåŠ¨åˆ°æŒ‡å®šé¡¹</summary>
     procedure ScrollToIndex(Index: Integer; Center: Boolean = False);
 
-    /// <summary>È·±£Ïî¿É¼û</summary>
+    /// <summary>ç¡®ä¿é¡¹å¯è§</summary>
     procedure EnsureVisible(Index: Integer);
 
-    /// <summary>»ñÈ¡¿É¼ûÏîÁĞ±í</summary>
+    /// <summary>è·å–å¯è§é¡¹åˆ—è¡¨</summary>
     function GetVisibleItems: TArray<TVirtualItem>;
 
-    /// <summary>»ñÈ¡äÖÈ¾Í³¼Æ</summary>
+    /// <summary>è·å–æ¸²æŸ“ç»Ÿè®¡</summary>
     function GetStats: TRenderStats;
 
     property DataSource: TVirtualDataSource read FDataSource;
@@ -160,7 +160,7 @@ type
   end;
 
   /// <summary>
-  /// Ö¡ÂÊ¿ØÖÆÆ÷
+  /// å¸§ç‡æ§åˆ¶å™¨
   /// </summary>
   TFrameRateController = class
   private
@@ -179,16 +179,16 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>¿ªÊ¼Ö¡¿ØÖÆ</summary>
+    /// <summary>å¼€å§‹å¸§æ§åˆ¶</summary>
     procedure Start;
 
-    /// <summary>Í£Ö¹Ö¡¿ØÖÆ</summary>
+    /// <summary>åœæ­¢å¸§æ§åˆ¶</summary>
     procedure Stop;
 
-    /// <summary>ÇëÇóÏÂÒ»Ö¡</summary>
+    /// <summary>è¯·æ±‚ä¸‹ä¸€å¸§</summary>
     procedure RequestFrame;
 
-    /// <summary>¼ì²éÊÇ·ñÓ¦¸ÃäÖÈ¾</summary>
+    /// <summary>æ£€æŸ¥æ˜¯å¦åº”è¯¥æ¸²æŸ“</summary>
     function ShouldRender: Boolean;
 
     property TargetFPS: Integer read FTargetFPS write FTargetFPS;
@@ -198,7 +198,7 @@ type
   end;
 
   /// <summary>
-  /// äÖÈ¾¶ÓÁĞÏî
+  /// æ¸²æŸ“é˜Ÿåˆ—é¡¹
   /// </summary>
   TRenderQueueItem = record
     Priority: Integer;
@@ -207,7 +207,7 @@ type
   end;
 
   /// <summary>
-  /// äÖÈ¾¶ÓÁĞ¹ÜÀíÆ÷
+  /// æ¸²æŸ“é˜Ÿåˆ—ç®¡ç†å™¨
   /// </summary>
   TRenderQueue = class
   private
@@ -219,23 +219,23 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>Ìí¼ÓäÖÈ¾ÈÎÎñ</summary>
+    /// <summary>æ·»åŠ æ¸²æŸ“ä»»åŠ¡</summary>
     procedure Enqueue(Index: Integer; Callback: TProc; Priority: Integer = 0);
 
-    /// <summary>´¦Àí¶ÓÁĞ</summary>
+    /// <summary>å¤„ç†é˜Ÿåˆ—</summary>
     procedure ProcessQueue;
 
-    /// <summary>Çå¿Õ¶ÓÁĞ</summary>
+    /// <summary>æ¸…ç©ºé˜Ÿåˆ—</summary>
     procedure Clear;
 
-    /// <summary>»ñÈ¡¶ÓÁĞ³¤¶È</summary>
+    /// <summary>è·å–é˜Ÿåˆ—é•¿åº¦</summary>
     function Count: Integer;
 
     property MaxItemsPerFrame: Integer read FMaxItemsPerFrame write FMaxItemsPerFrame;
   end;
 
   /// <summary>
-  /// Ë«»º³å»æÖÆÆ÷
+  /// åŒç¼“å†²ç»˜åˆ¶å™¨
   /// </summary>
   TDoubleBufferPainter = class
   private
@@ -247,19 +247,19 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>ÉèÖÃ»º³åÇø´óĞ¡</summary>
+    /// <summary>è®¾ç½®ç¼“å†²åŒºå¤§å°</summary>
     procedure SetSize(AWidth, AHeight: Integer);
 
-    /// <summary>»ñÈ¡»º³åÇø»­²¼</summary>
+    /// <summary>è·å–ç¼“å†²åŒºç”»å¸ƒ</summary>
     function GetCanvas: TCanvas;
 
-    /// <summary>»æÖÆµ½Ä¿±ê</summary>
+    /// <summary>ç»˜åˆ¶åˆ°ç›®æ ‡</summary>
     procedure PaintTo(Target: TCanvas; X, Y: Integer);
 
-    /// <summary>±ê¼ÇÎªÔàĞèÖØ»æ</summary>
+    /// <summary>æ ‡è®°ä¸ºè„éœ€é‡ç»˜</summary>
     procedure Invalidate;
 
-    /// <summary>Çå³ı»º³åÇø</summary>
+    /// <summary>æ¸…é™¤ç¼“å†²åŒº</summary>
     procedure Clear(Color: TColor = clWhite);
 
     property Width: Integer read FWidth;
@@ -268,7 +268,7 @@ type
   end;
 
   /// <summary>
-  /// ÔöÇ¿ĞéÄâ ListBox
+  /// å¢å¼ºè™šæ‹Ÿ ListBox
   /// </summary>
   TUniVirtualListBox = class(TCustomControl)
   private
@@ -310,16 +310,16 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    /// <summary>ÉèÖÃÏîÄ¿ÊıÁ¿</summary>
+    /// <summary>è®¾ç½®é¡¹ç›®æ•°é‡</summary>
     procedure SetItemCount(Count: Integer);
 
-    /// <summary>Ë¢ĞÂÏÔÊ¾</summary>
+    /// <summary>åˆ·æ–°æ˜¾ç¤º</summary>
     procedure RefreshDisplay;
 
-    /// <summary>¹ö¶¯µ½Ö¸¶¨Ïî</summary>
+    /// <summary>æ»šåŠ¨åˆ°æŒ‡å®šé¡¹</summary>
     procedure ScrollToItem(Index: Integer);
 
-    /// <summary>»ñÈ¡äÖÈ¾Í³¼Æ</summary>
+    /// <summary>è·å–æ¸²æŸ“ç»Ÿè®¡</summary>
     function GetRenderStats: TRenderStats;
 
     property DataSource: TVirtualDataSource read FDataSource;
@@ -332,7 +332,7 @@ type
   end;
 
   /// <summary>
-  /// ÑÓ³Ù¼ÓÔØ¹ÜÀíÆ÷
+  /// å»¶è¿ŸåŠ è½½ç®¡ç†å™¨
   /// </summary>
   TLazyLoadManager = class
   private
@@ -347,13 +347,13 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>È·±£Êı¾İÒÑ¼ÓÔØ</summary>
+    /// <summary>ç¡®ä¿æ•°æ®å·²åŠ è½½</summary>
     procedure EnsureLoaded(StartIndex, EndIndex: Integer);
 
-    /// <summary>Çå³ı¼ÓÔØ×´Ì¬</summary>
+    /// <summary>æ¸…é™¤åŠ è½½çŠ¶æ€</summary>
     procedure ClearLoadState;
 
-    /// <summary>Ô¤¼ÓÔØ</summary>
+    /// <summary>é¢„åŠ è½½</summary>
     procedure Preload(AroundIndex: Integer; Range: Integer = 100);
 
     property PageSize: Integer read FPageSize write FPageSize;
@@ -372,14 +372,14 @@ end;
 function TRenderStats.ToString: string;
 begin
   Result := Format(
-    'äÖÈ¾Í³¼Æ:' + sLineBreak +
-    '  ×ÜÏîÊı: %d' + sLineBreak +
-    '  ¿É¼ûÏî: %d' + sLineBreak +
-    '  ÒÑäÖÈ¾: %d' + sLineBreak +
-    '  Ö¡Ê±¼ä: %.2f ms' + sLineBreak +
+    'æ¸²æŸ“ç»Ÿè®¡:' + sLineBreak +
+    '  æ€»é¡¹æ•°: %d' + sLineBreak +
+    '  å¯è§é¡¹: %d' + sLineBreak +
+    '  å·²æ¸²æŸ“: %d' + sLineBreak +
+    '  å¸§æ—¶é—´: %.2f ms' + sLineBreak +
     '  FPS: %.1f' + sLineBreak +
-    '  ¹ö¶¯Æ«ÒÆ: %d' + sLineBreak +
-    '  ÊÓ¿Ú¸ß¶È: %d',
+    '  æ»šåŠ¨åç§»: %d' + sLineBreak +
+    '  è§†å£é«˜åº¦: %d',
     [TotalItems, VisibleItems, RenderedItems, FrameTime,
      FPS, ScrollOffset, ViewportHeight]);
 end;
@@ -543,7 +543,7 @@ begin
   if FDataSource = nil then
     Exit;
 
-  // ¼ÓÇ¿±ß½ç¼ì²é
+  // åŠ å¼ºè¾¹ç•Œæ£€æŸ¥
   if (Index < 0) or (FDataSource.ItemCount = 0) then
     Exit;
   Index := EnsureRange(Index, 0, FDataSource.ItemCount - 1);
@@ -585,26 +585,26 @@ begin
   StartWatch := TStopwatch.StartNew;
   FVisibleItems.Clear;
 
-  // ¼ÆËãµÚÒ»¸ö¿É¼ûÏî£¬¼ÓÇ¿±ß½ç¼ì²é
+  // è®¡ç®—ç¬¬ä¸€ä¸ªå¯è§é¡¹ï¼ŒåŠ å¼ºè¾¹ç•Œæ£€æŸ¥
   FirstIndex := FDataSource.GetIndexAtOffset(FScrollOffset);
   FirstIndex := Max(0, FirstIndex - FOverscan);
   FirstIndex := Min(FirstIndex, FDataSource.ItemCount - 1);
 
-  // ¼ÆËã×îºóÒ»¸ö¿É¼ûÏî£¬¼ÓÇ¿±ß½ç¼ì²é
+  // è®¡ç®—æœ€åä¸€ä¸ªå¯è§é¡¹ï¼ŒåŠ å¼ºè¾¹ç•Œæ£€æŸ¥
   LastIndex := FDataSource.GetIndexAtOffset(FScrollOffset + FViewportHeight);
   LastIndex := Min(FDataSource.ItemCount - 1, LastIndex + FOverscan);
-  LastIndex := Max(FirstIndex, LastIndex); // È·±£LastIndex >= FirstIndex
+  LastIndex := Max(FirstIndex, LastIndex); // ç¡®ä¿LastIndex >= FirstIndex
 
-  // ÇëÇóÊı¾İ¼ÓÔØ
+  // è¯·æ±‚æ•°æ®åŠ è½½
   if Assigned(FDataSource.OnDataRequest) then
     FDataSource.OnDataRequest(Self, FirstIndex, LastIndex - FirstIndex + 1);
 
-  // ¹¹½¨¿É¼ûÏîÁĞ±í
+  // æ„å»ºå¯è§é¡¹åˆ—è¡¨
   CurrentTop := FDataSource.GetOffsetToIndex(FirstIndex) - FScrollOffset;
 
   for I := FirstIndex to LastIndex do
   begin
-    // ·ÀÖ¹ÎŞÏŞÑ­»· - ¼ì²éË÷ÒıÓĞĞ§ĞÔ
+    // é˜²æ­¢æ— é™å¾ªç¯ - æ£€æŸ¥ç´¢å¼•æœ‰æ•ˆæ€§
     if (I < 0) or (I >= FDataSource.ItemCount) then
       Break;
       
@@ -612,10 +612,10 @@ begin
     Item.Data := nil;
     Item.Height := FDataSource.GetItemHeight(I);
     
-    // ·ÀÖ¹¸º¸ß¶È»ò¹ı´ó¸ß¶È
+    // é˜²æ­¢è´Ÿé«˜åº¦æˆ–è¿‡å¤§é«˜åº¦
     if Item.Height <= 0 then
       Item.Height := FDataSource.DefaultItemHeight;
-    if Item.Height > 10000 then // ÏŞÖÆ×î´ó¸ß¶È
+    if Item.Height > 10000 then // é™åˆ¶æœ€å¤§é«˜åº¦
       Item.Height := 10000;
       
     Item.Top := CurrentTop;
@@ -624,12 +624,12 @@ begin
     FVisibleItems.Add(Item);
     Inc(CurrentTop, Item.Height);
     
-    // ·ÀÖ¹ÕûÊıÒç³ö
+    // é˜²æ­¢æ•´æ•°æº¢å‡º
     if CurrentTop > MaxInt - Item.Height then
       Break;
   end;
 
-  // ¸üĞÂÍ³¼Æ
+  // æ›´æ–°ç»Ÿè®¡
   FStats.TotalItems := FDataSource.ItemCount;
   FStats.VisibleItems := FVisibleItems.Count;
   FStats.ScrollOffset := FScrollOffset;
@@ -769,7 +769,7 @@ begin
 
   FLock.Enter;
   try
-    // °´ÓÅÏÈ¼¶²åÈë
+    // æŒ‰ä¼˜å…ˆçº§æ’å…¥
     for I := 0 to FQueue.Count - 1 do
     begin
       if FQueue[I].Priority < Priority then
@@ -802,14 +802,14 @@ begin
         Item := FQueue[0];
         FQueue.Delete(0);
 
-        // Ö´ĞĞ»Øµ÷
+        // æ‰§è¡Œå›è°ƒ
         if Assigned(Item.Callback) then
         begin
           try
             Item.Callback();
           except
             on E: Exception do
-              // ºöÂÔäÖÈ¾´íÎó£¬µ«¼ÇÂ¼µ÷ÊÔĞÅÏ¢
+              // å¿½ç•¥æ¸²æŸ“é”™è¯¯ï¼Œä½†è®°å½•è°ƒè¯•ä¿¡æ¯
               {$IFDEF DEBUG}
               OutputDebugString(PChar('DeepBase.VirtualScroll: Render callback error: ' + E.Message));
               {$ENDIF}
@@ -1013,7 +1013,7 @@ begin
   begin
     ItemRect := Rect(0, Items[I].Top, FBufferPainter.Width, Items[I].Top + Items[I].Height);
 
-    // Ö»»æÖÆ¿É¼ûÇøÓò
+    // åªç»˜åˆ¶å¯è§åŒºåŸŸ
     if (ItemRect.Bottom > 0) and (ItemRect.Top < FBufferPainter.Height) then
       DrawItem(Items[I].Index, ItemRect);
   end;
@@ -1032,7 +1032,7 @@ begin
   Item.Top := ItemRect.Top;
   Item.Selected := Index = FSelectedIndex;
 
-  // »æÖÆ±³¾°
+  // ç»˜åˆ¶èƒŒæ™¯
   if Item.Selected then
     BufferCanvas.Brush.Color := clHighlight
   else if Index = FHoverIndex then
@@ -1042,14 +1042,14 @@ begin
 
   BufferCanvas.FillRect(ItemRect);
 
-  // ×Ô¶¨Òå»æÖÆ
+  // è‡ªå®šä¹‰ç»˜åˆ¶
   Handled := False;
   if Assigned(FOnDrawItem) then
     FOnDrawItem(Self, BufferCanvas, Item, ItemRect, Handled);
 
   if not Handled then
   begin
-    // Ä¬ÈÏ»æÖÆ
+    // é»˜è®¤ç»˜åˆ¶
     if Item.Selected then
       BufferCanvas.Font.Color := clHighlightText
     else
@@ -1249,7 +1249,7 @@ var
 begin
   FLock.Enter;
   try
-    // ¼òµ¥ÊµÏÖ£ºÖ±½ÓÌí¼Ó·¶Î§£¬Êµ¼ÊÓ¦¸ÃºÏ²¢ÖØµş·¶Î§
+    // ç®€å•å®ç°ï¼šç›´æ¥æ·»åŠ èŒƒå›´ï¼Œå®é™…åº”è¯¥åˆå¹¶é‡å èŒƒå›´
     Range := TPair<Integer, Integer>.Create(StartIndex, EndIndex);
     FLoadedRanges.Add(Range);
   finally
@@ -1261,11 +1261,11 @@ procedure TLazyLoadManager.EnsureLoaded(StartIndex, EndIndex: Integer);
 var
   PageStart, PageEnd: Integer;
 begin
-  // ¼ÆËãĞèÒª¼ÓÔØµÄÒ³
+  // è®¡ç®—éœ€è¦åŠ è½½çš„é¡µ
   PageStart := (StartIndex div FPageSize) * FPageSize;
   PageEnd := ((EndIndex div FPageSize) + 1) * FPageSize - 1;
 
-  // ¼ì²éÊÇ·ñÒÑ¼ÓÔØ
+  // æ£€æŸ¥æ˜¯å¦å·²åŠ è½½
   if not IsLoaded(StartIndex) or not IsLoaded(EndIndex) then
   begin
     if Assigned(FOnLoadPage) then

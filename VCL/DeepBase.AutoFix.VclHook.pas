@@ -39,7 +39,9 @@ type
     /// <summary>Hook Application.OnException. No-op when AutoFix mode is
     /// inactive. Safe to call multiple times (idempotent).</summary>
     class procedure Install;
-    /// <summary>Restore the previous Application.OnException handler.</summary>
+    /// <summary>Restore the previous Application.OnException handler.
+    /// Call in test teardown (paired with Install) or in .dpr finalization
+    /// before Application.Terminate to avoid dangling references.</summary>
     class procedure Uninstall;
   end;
 

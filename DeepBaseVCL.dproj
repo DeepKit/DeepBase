@@ -190,7 +190,6 @@
         <DCCReference Include="VCL\DeepBase.VCL.Export.Image.pas"/>
         <DCCReference Include="Core\DeepBase.SplashScreen.pas"/>
         <DCCReference Include="Core\DeepBase.VirtualScroll.pas"/>
-        <DCCReference Include="Core\DeepBase.TestHelper.pas"/>
         <DCCReference Include="VCL\DeepBase.VCL.TrayIcon.pas"/>
         <DCCReference Include="VCL\DeepBase.VCL.Hotkeys.pas"/>
         <DCCReference Include="VCL\DeepBase.VCL.DesktopLifecycle.pas"/>

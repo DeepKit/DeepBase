@@ -190,6 +190,186 @@ DeepBase/
 - [项目边界](docs/01.03.DeepBase-4H-项目定位与边�?v1.0.md) - 什么能�?不能�?
 - [扩展开发](docs/06.01.DeepBase-4H-ThirdParty扩展开发指�?v1.1.md) - 开发第三方集成
 
+## 🔗 下游集成 DeepFlow（工作流引擎）
+
+> DeepFlow 是 DeepBase 生态的工作流引擎。如果你要在产品里编排 AI 任务、管理多轮对话、调用外部 Skill，**不要自己造轮子——直接用 DeepFlow**。
+
+### DeepFlow 是什么
+
+| 概念 | 说明 |
+|------|------|
+| **Workflow** | JSON 定义步骤顺序，可视化编排任务流 |
+| **Agent** | 执行工作流的实体，11 个角色类构成 OS 内核 |
+| **Skill** | 跨语言工具插件（Delphi / Python / Node.js） |
+| **Guard** | 熔断器 + 降级，AI 出错自动保护业务 |
+| **Session** | 多轮对话上下文管理，保持记忆 |
+
+### 当前状态
+
+- v1.0 完成，112K LOC，M1-M6 全通过
+- 5 条链路 E2E 验证通过（DocumentChain / AgentChain / AudioChain / VideoChain / PackageChain）
+- 基于 DeepBase 构建，复用其 LLM / EventBus / StateMachine / Validation / Logging 模块
+
+### 哪些产品应该用 DeepFlow
+
+| 产品 | 怎么用 DeepFlow |
+|------|-----------------|
+| **DeepForge** | AI 代码生成 → 契约验证 → 测试 → 封存（Workflow + Guard） |
+| **DeepShine** | 收集内容 → AI 改写 → 审核 → 多平台发布（Workflow + Skill） |
+| **DeepInsight** | 五段决策流程 → 多 NPC 碰撞 → 输出胶片（Session + Workflow） |
+| **ArtifactOS** | 选题 → 生产 → 验证 → 发布全链路（Workflow + EventBus） |
+| **DeepAssist** | 员工操作 → 红绿灯协议 → 受控执行（Guard + Workflow） |
+
+### DeepFlow 复用了 DeepBase 哪些模块
+
+| DeepBase 模块 | DeepFlow 用途 |
+|---------------|--------------|
+| `DeepBase.LLM` + `DeepBase.LLM.Manager` | 统一 LLM 调用（OpenAI / Anthropic / Azure / LiteLLM / Ollama） |
+| `DeepBase.EventBus` | 工作流状态变更通知、步骤事件广播、跨工作流通信 |
+| `DeepBase.StateMachine` | 工作流实例状态管理（Created → Running → Paused → Completed） |
+| `DeepBase.Validation` | 工作流输入参数验证、步骤输出校验、LLM 响应格式验证 |
+| `DeepBase.Logging` | 结构化日志、异步写入、日志轮转 |
+| `DeepBase.Config` | 工作流配置读取（超时、重试、默认 LLM 提供商等） |
+| `DeepBase.Scheduler` | 定时触发工作流、延迟步骤执行 |
+| `DeepBase.Types` | 共享类型定义（日志级别、事件类型） |
+
+### 快速上手
+
+1. 把 DeepFlow `Source/` 目录加入你的 Delphi 项目
+2. 在工作流 JSON 里定义步骤顺序
+3. 3 行代码执行：
+
+```delphi
+uses UniFlow.Workflow.Definition, UniFlow.Workflow.Executor, UniFlow.Workflow.Context;
+
+var
+  Executor: TWorkflowExecutor;
+  Context: TWorkflowContext;
+begin
+  Executor := TWorkflowExecutor.Create(TWorkflowDefinition.FromFile('workflow.json'));
+  Context := TWorkflowContext.Create;
+  Context.SetVariable('user_input', '你好');
+  Executor.Execute(Context);
+end;
+```
+
+### 详细文档
+
+- [DeepFlow 复用 DeepBase 模块策略](../DeepFlow/docs/DeepBase-reuse-strategy.md) — 每个模块的复用价值、集成代码示例、待删除重复文件清单
+- [DeepFlow 快速入门（中文）](../DeepFlow/docs/zh/quick-start.md)
+- [DeepFlow Quick Start（EN）](../DeepFlow/docs/en/quick-start.md)
+- [DeepFlow 工作流定义](../DeepFlow/docs/zh/workflow-definition.md)
+- [DeepFlow Skill 开发](../DeepFlow/docs/zh/skills-development.md)
+
+---
+
+## 🔧 乱码修复（fix-code 技能）
+
+> 当你在 Delphi / C++ / Python / Web 项目中遇到中文乱码、注释变方块、.dfm 属性乱码、Git 合并后编码错乱时，**不要手动逐文件改——用 `fix-code` 技能系统性修复**。
+
+### 技能说明
+
+| 属性 | 值 |
+|------|-----|
+| 名称 | `fix-code` |
+| 路径 | `D:\_Progs\00Common\skills\fix-code\SKILL.md` |
+| 版本 | 1.0.0 |
+| 作者 | 付乙 (ODDFounder) |
+| 作用 | 诊断和修复源代码文件中的字符编码问题（GBK/Big5/UTF-8/Shift-JIS/EUC-KR 互转） |
+
+### 什么时候使用
+
+- Delphi 项目升级后 `.pas` / `.dfm` 中文注释乱码
+- 跨平台迁移：Windows GBK → Linux/macOS UTF-8
+- Git 合并后部分文件出现乱码
+- 第三方库源码包含日文/韩文注释导致编译警告
+- `.properties` / CSV / 日志文件编码不一致
+- Web 前端 `<meta charset>` 与实际文件编码不符
+
+### 乱码根源速查
+
+| 症状 | 原因 |
+|------|------|
+| `ÄãºÃ`（拉丁扩展字符） | GBK 字节被当 Latin-1 解码 |
+| `ä½ å¥½`（带变音符号） | GBK 字节被当 UTF-8 解码 |
+| `???`（全问号） | 源编码字符在当前编码中不存在 |
+| `□`（方块） | 字体不支持或编码完全错误 |
+
+### 核心修复工具：DeepCharset
+
+DeepCharset 是 fix-code 技能的首选执行工具：
+
+```
+工具路径: D:\_Progs\02Business\DeepCharset\DeepCharset.exe
+CLI 路径: D:\_Progs\02Business\DeepCharset\bin\DeepCharset.exe
+```
+
+**常用命令：**
+
+```bash
+# 单个文件 GBK → UTF-8（最常用）
+DeepCharset.exe -s GBK -t UTF-8 文件.pas
+
+# 自动检测 → UTF-8
+DeepCharset.exe -s auto -t UTF-8 文件.txt
+
+# 递归处理整个项目目录
+DeepCharset.exe -s auto -t UTF-8 -r C:\项目目录\
+
+# 繁体 Big5 → UTF-8
+DeepCharset.exe -s Big5 -t UTF-8 文件.pas
+
+# 日文 Shift-JIS → UTF-8
+DeepCharset.exe -s Shift-JIS -t UTF-8 文件.cpp
+
+# 韩文 EUC-KR → UTF-8
+DeepCharset.exe -s EUC-KR -t UTF-8 文件.java
+
+# 添加 UTF-8 BOM（Delphi IDE 偏好）
+DeepCharset.exe -s UTF-8 -t UTF-8 --add-bom 文件.pas
+
+# 移除 UTF-8 BOM（某些编译器不认）
+DeepCharset.exe -s UTF-8 -t UTF-8 --remove-bom 文件.h
+```
+
+### Delphi 专项处理
+
+**老项目升级（Delphi 2007 GBK → Delphi 12+ UTF-8）：**
+
+```bash
+# 1. 关闭 Delphi IDE
+# 2. 备份整个项目
+xcopy /E /I C:\OldProject C:\OldProject_backup
+
+# 3. 递归转换所有 .pas 和 .dfm
+DeepCharset.exe -s GBK -t UTF-8 -r C:\OldProject\ --verbose
+
+# 4. 添加 UTF-8 BOM（Delphi IDE 需要）
+DeepCharset.exe -s UTF-8 -t UTF-8 --add-bom -r C:\OldProject\
+
+# 5. 在 Delphi IDE 中重新打开项目
+```
+
+**.dfm 文件注意事项：**
+- .dfm 可能包含二进制格式编码信息，转换后需检查窗体 Caption/Hint/Text
+- 如有问题，在 IDE 中重新输入中文属性值
+
+### 修复原则
+
+1. **先备份，再动手** — DeepCharset 默认创建 `.bak`，不要关闭
+2. **先诊断，再转码** — 用 `--detect` 确认源编码，不要猜
+3. **小步验证** — 先转一个文件确认结果正确，再批量
+4. **关闭 IDE** — Delphi/C++Builder 在 IDE 打开时转码可能冲突
+5. **记录改动** — 批量转码后提交 Git，方便回溯
+
+### 详细文档
+
+完整修复指南（含诊断流程、编码速查表、常见误区、Git 编码配置等）：
+
+📄 [`D:\_Progs\00Common\skills\fix-code\SKILL.md`](../../../../00Common/skills/fix-code/SKILL.md)
+
+---
+
 ## 🧪 运行测试
 
 推荐使用一键脚本（会自动编�?+ 运行，并输出 NUnit XML �?`TestResults/`）：

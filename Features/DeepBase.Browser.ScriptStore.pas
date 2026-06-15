@@ -172,7 +172,7 @@ class function TJSScriptStoreSqlite.GetBuiltinDefaults: TJSScriptArray;
 begin
   SetLength(Result, 7);
   Result[0] := CreateScriptDefinition(JSCRIPT_EXISTS,
-    '(function(){try{return document.querySelector({{selector}})!==null;}catch(e){return false;}})();',
+    '(function(){try{return document.querySelector({{selector}})!== null;}catch(e){return false;}})();',
     'Checks whether a selector exists.');
   Result[1] := CreateScriptDefinition(JSCRIPT_CLICK,
     '(function(){try{' +

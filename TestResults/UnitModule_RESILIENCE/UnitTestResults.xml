@@ -1,0 +1,275 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="179" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:32:17">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:32:17" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="2.377" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="2.377" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="RateLimiter" executed="true" result="Success" success="True" time="0.663" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestFixedWindowLimiter" executed="True" result="Success" success="True" time="0.165" >
+                            <results>
+                              <test-case name="Test_WithinLimit_AllowsRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExceedLimit_DeniesRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WindowReset_AllowsNewRequests" executed="True" result="Success" success="True" time="0.164" asserts="0" />
+                              <test-case name="Test_Reset_ClearsCounter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetStats_ReturnsRemaining" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_KeyBased_IndependentWindows" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Acquire_ReturnsResetTime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestRateLimitConfig" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_RequestsPerSecond" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RequestsPerMinute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RequestsPerHour" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RequestsPerDay" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CustomWindow" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Algorithm_TokenBucket" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Algorithm_FixedWindow" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Algorithm_SlidingWindow" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_BurstSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Build_CreatesLimiter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestRateLimitDecorator" executed="True" result="Success" success="True" time="0.108" >
+                            <results>
+                              <test-case name="Test_Execute_WithinLimit_Executes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_ExceedLimit_NotExecuted" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExecuteFunc_ReturnsValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnExceeded_CalledWhenDenied" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExecuteOrWait_WaitsForToken" executed="True" result="Success" success="True" time="0.108" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestRateLimitManager" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_AddLimit_WithConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddLimit_WithLimiter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RemoveLimit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Check_ExistingLimit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Check_NonExistentLimit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CheckAll_AllPass" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CheckAll_OneFails" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Acquire_ReturnsResult" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ResetLimit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ResetAll" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_HasLimit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetLimiter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestRateLimitResult" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Allow_SetsAllowedTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deny_SetsAllowedFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Allow_SetsRemaining" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Deny_SetsRetryAfter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestRateLimiterThreadSafety" executed="True" result="Success" success="True" time="0.016" >
+                            <results>
+                              <test-case name="Test_TokenBucket_ConcurrentAccess" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_FixedWindow_ConcurrentAccess" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_SlidingWindow_ConcurrentAccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Manager_ConcurrentAccess" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestSlidingWindowCounterLimiter" executed="True" result="Success" success="True" time="0.062" >
+                            <results>
+                              <test-case name="Test_WithinLimit_AllowsRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExceedLimit_DeniesRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WindowTransition_WeightedCount" executed="True" result="Success" success="True" time="0.062" asserts="0" />
+                              <test-case name="Test_Reset_ClearsCounters" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_KeyBased_IndependentCounters" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestSlidingWindowLimiter" executed="True" result="Success" success="True" time="0.155" >
+                            <results>
+                              <test-case name="Test_WithinLimit_AllowsRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExceedLimit_DeniesRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OldRequestsExpire_AllowsNewRequests" executed="True" result="Success" success="True" time="0.154" asserts="0" />
+                              <test-case name="Test_Reset_ClearsLog" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetStats_ReturnsAccurateRemaining" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_KeyBased_IndependentLogs" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestTokenBucketLimiter" executed="True" result="Success" success="True" time="0.157" >
+                            <results>
+                              <test-case name="Test_InitialCapacity_AllowsRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExceedCapacity_DeniesRequests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RefillRate_AddsTokensOverTime" executed="True" result="Success" success="True" time="0.157" asserts="0" />
+                              <test-case name="Test_TryAcquireN_ConsumesMultipleTokens" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Reset_RestoresCapacity" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetStats_ReturnsRemainingTokens" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_KeyBased_IndependentBuckets" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Acquire_ReturnsResult" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Resilience" executed="true" result="Success" success="True" time="1.714" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TBulkheadPolicyTests" executed="True" result="Success" success="True" time="0.591" >
+                            <results>
+                              <test-case name="Test_Create_InitialValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MaxQueue_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_QueueTimeout_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_Success" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Func_Success" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_RejectsBeyondMax" executed="True" result="Success" success="True" time="0.109" asserts="0" />
+                              <test-case name="Test_Execute_QueuesWhenFull" executed="True" result="Success" success="True" time="0.124" asserts="0" />
+                              <test-case name="Test_Execute_RejectsWhenQueueFull" executed="True" result="Success" success="True" time="0.108" asserts="0" />
+                              <test-case name="Test_TryExecute_ReturnsTrueOnSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryExecute_ReturnsFalseOnRejection" executed="True" result="Success" success="True" time="0.202" asserts="0" />
+                              <test-case name="Test_CurrentCount_TracksActive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_QueueCount_TracksQueued" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ThreadSafety_ConcurrentExecute" executed="True" result="Success" success="True" time="0.048" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TBulkheadRejectedExceptionTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_StoresMaxConcurrency" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_FormatsMessage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TCircuitBreakerRegistryTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetOrCreate_CreatesNew" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetOrCreate_ReturnsSame" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryGet_ReturnsTrueIfExists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryGet_ReturnsFalseIfNotExists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Remove_RemovesBreaker" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Remove_DoesNothingIfNotExists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clear_RemovesAllBreakers" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Instance_ReturnsSingleton" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CircuitBreakers_GlobalFunction" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ThreadSafety_ConcurrentGetOrCreate" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TCircuitBreakerTests" executed="True" result="Success" success="True" time="0.529" >
+                            <results>
+                              <test-case name="Test_Create_InitialStateClosed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_DefaultThresholds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FailureThreshold_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SuccessThreshold_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OpenDuration_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StateTransition_ClosedToOpen_OnFailureThreshold" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_StateTransition_OpenToHalfOpen_AfterDuration" executed="True" result="Success" success="True" time="0.107" asserts="0" />
+                              <test-case name="Test_StateTransition_HalfOpenToClosed_OnSuccessThreshold" executed="True" result="Success" success="True" time="0.110" asserts="0" />
+                              <test-case name="Test_StateTransition_HalfOpenToOpen_OnFailure" executed="True" result="Success" success="True" time="0.109" asserts="0" />
+                              <test-case name="Test_Execute_Proc_Success" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_Failure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Func_Success" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Func_Failure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_RejectedWhenOpen" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_Timeout_RecordsFailure" executed="True" result="Success" success="True" time="0.047" asserts="0" />
+                              <test-case name="Test_Execute_Func_Timeout_RecordsFailure" executed="True" result="Success" success="True" time="0.031" asserts="0" />
+                              <test-case name="Test_AllowRequest_TrueWhenClosed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AllowRequest_FalseWhenOpen" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AllowRequest_TrueWhenHalfOpen" executed="True" result="Success" success="True" time="0.109" asserts="0" />
+                              <test-case name="Test_RecordSuccess_ResetsFailureCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RecordFailure_IncrementsCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Reset_RestoresClosedState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnStateChanged_Fires" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnRejected_Fires" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CircuitState_ToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ThreadSafety_ConcurrentExecute" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TFallbackPolicyTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Value_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ValueFunc_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Handle_SpecificException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_HandleAll" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_ReturnsResultOnSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_ReturnsFallbackOnException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_ReturnsFallbackFunc" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_RaisesUnhandledException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_IntegerFallback" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TResiliencePolicyTests" executed="True" result="Success" success="True" time="0.078" >
+                            <results>
+                              <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithRetry_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithTimeout_Policy_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithTimeout_Ms_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithCircuitBreaker_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithBulkhead_Policy_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithBulkhead_Int_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_WithAllPolicies" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Func_WithAllPolicies" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_NoPolicy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_RetryOnly" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_Execute_TimeoutOnly" executed="True" result="Success" success="True" time="0.063" asserts="0" />
+                              <test-case name="Test_PolicyOwnership_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PolicyOwnership_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TRetryPolicyTests" executed="True" result="Success" success="True" time="0.295" >
+                            <results>
+                              <test-case name="Test_Create_DefaultValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MaxRetries_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FixedDelay_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LinearBackoff_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExponentialBackoff_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_WithJitter_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Handle_SpecificException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_HandleAll_AllExceptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_NoRetryOnSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Func_NoRetryOnSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_RetriesOnFailure" executed="True" result="Success" success="True" time="0.047" asserts="0" />
+                              <test-case name="Test_Execute_Func_RetriesOnFailure" executed="True" result="Success" success="True" time="0.032" asserts="0" />
+                              <test-case name="Test_Execute_SucceedsAfterRetries" executed="True" result="Success" success="True" time="0.031" asserts="0" />
+                              <test-case name="Test_Execute_RaisesAfterMaxRetries" executed="True" result="Success" success="True" time="0.030" asserts="0" />
+                              <test-case name="Test_Execute_RetriesHandledException" executed="True" result="Success" success="True" time="0.031" asserts="0" />
+                              <test-case name="Test_Execute_DoesNotRetryUnhandledException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CalculateDelay_FixedStrategy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CalculateDelay_LinearStrategy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CalculateDelay_ExponentialStrategy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CalculateDelay_WithJitter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CalculateDelay_CappedAtMax" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnRetry_Fires" executed="True" result="Success" success="True" time="0.031" asserts="0" />
+                              <test-case name="Test_OnRetry_CanCancelRetry" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_OnWait_Fires" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_MainThreadWaitMode_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnMainThreadWait_Fires" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_MainThreadWait_Raise_PreventsBlocking" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExecuteAsync_RunsRetryOffMainThread" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_ExecuteAsync_Func_ReturnsValue" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_TryExecute_ReturnsTrueOnSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TryExecute_ReturnsFalseOnFailure" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTimeoutExceptionTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_StoresTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_FormatsMessage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTimeoutPolicyTests" executed="True" result="Success" success="True" time="0.220" >
+                            <results>
+                              <test-case name="Test_Create_StoresTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Timeout_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnTimeoutEvent_FluentConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Execute_Proc_CompletesBeforeTimeout" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_Execute_Proc_RaisesOnTimeout" executed="True" result="Success" success="True" time="0.063" asserts="0" />
+                              <test-case name="Test_Execute_Func_CompletesBeforeTimeout" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_Execute_Func_RaisesOnTimeout" executed="True" result="Success" success="True" time="0.062" asserts="0" />
+                              <test-case name="Test_Execute_PropagatesException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_OnTimeout_Fires" executed="True" result="Success" success="True" time="0.063" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

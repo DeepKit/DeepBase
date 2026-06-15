@@ -1,14 +1,14 @@
-{ ============================================================================
-  DeepBase.TestHelper - GUI 测试辅助模块
+﻿{ ============================================================================
+  DeepBase.TestHelper - GUI æµè¯è¾å©æ¨¡å
   
-  版本: 1.0
-  说明: 提供 GUI 测试的辅助功�?
-  功能:
-    - 窗体状态捕�?
-    - 快照保存和验�?
-    - 模拟用户交互（点击、输入、选择�?
-    - 控件状态比�?
-  平台: Windows (VCL only)
+  çæ¬: 1.0
+  è¯´æ: æä¾ GUI æµè¯çè¾å©åè?
+  åè½:
+    - çªä½ç¶ææè?
+    - å¿«ç§ä¿å­åéªè¯?
+    - æ¨¡æç¨æ·äº¤äºï¼ç¹å»ãè¾å¥ãéæ©ï¼?
+    - æ§ä»¶ç¶ææ¯å¯?
+  å¹³å°: Windows (VCL only)
   ============================================================================ }
 
 unit DeepBase.TestHelper;
@@ -40,12 +40,12 @@ uses
 
 type
   /// <summary>
-  /// 快照比较结果
+  /// å¿«ç§æ¯è¾ç»æ
   /// </summary>
   TSnapshotDiff = record
-    PropertyPath: string;    // 属性路�?(e.g., "btnOK.Caption")
-    ExpectedValue: string;   // 预期�?
-    ActualValue: string;     // 实际�?
+    PropertyPath: string;    // å±æ§è·¯å¾?(e.g., "btnOK.Caption")
+    ExpectedValue: string;   // é¢æå?
+    ActualValue: string;     // å®éå?
     
     procedure Clear;
   end;
@@ -53,7 +53,7 @@ type
   TSnapshotDiffArray = TArray<TSnapshotDiff>;
   
   /// <summary>
-  /// 快照验证结果
+  /// å¿«ç§éªè¯ç»æ
   /// </summary>
   TSnapshotVerifyResult = record
     Success: Boolean;
@@ -73,7 +73,7 @@ type
   end;
   
   /// <summary>
-  /// GUI 测试辅助�?
+  /// GUI æµè¯è¾å©ç±?
   /// </summary>
   TDeepBaseTestHelper = class
   private
@@ -89,139 +89,139 @@ type
     
   public
     /// <summary>
-    /// 初始化测试辅助模�?    /// </summary>
+    /// åå§åæµè¯è¾å©æ¨¡å?    /// </summary>
     class procedure Initialize(AConnection: TObject; const ASnapshotPath: string = '');
     class procedure SetSnapshotStorageFactory(
       const AFactory: TFunc<TObject, ITestSnapshotStorage>);
     
     /// <summary>
-    /// 捕获窗体状态为 JSON
+    /// æè·çªä½ç¶æä¸º JSON
     /// </summary>
     class function CaptureFormState(AForm: TForm): string;
     
     /// <summary>
-    /// 保存快照到数据库或文�?
+    /// ä¿å­å¿«ç§å°æ°æ®åºææä»?
     /// </summary>
     class procedure SaveSnapshot(const TestName: string; AForm: TForm; 
       SaveScreenshot: Boolean = False);
     
     /// <summary>
-    /// 验证快照
+    /// éªè¯å¿«ç§
     /// </summary>
     class function VerifySnapshot(const TestName: string; AForm: TForm): TSnapshotVerifyResult;
     
     /// <summary>
-    /// 获取已保存的快照
+    /// è·åå·²ä¿å­çå¿«ç§
     /// </summary>
     class function GetSnapshot(const TestName: string): string;
     
     /// <summary>
-    /// 删除快照
+    /// å é¤å¿«ç§
     /// </summary>
     class procedure DeleteSnapshot(const TestName: string);
     
     /// <summary>
-    /// 列出所有快�?
+    /// ååºææå¿«ç?
     /// </summary>
     class function ListSnapshots: TArray<string>;
     
-    // ========== 模拟用户交互 ==========
+    // ========== æ¨¡æç¨æ·äº¤äº ==========
     
     /// <summary>
-    /// 模拟点击控件
+    /// æ¨¡æç¹å»æ§ä»¶
     /// </summary>
     class procedure SimulateClick(AControl: TControl);
     
     /// <summary>
-    /// 模拟双击控件
+    /// æ¨¡æåå»æ§ä»¶
     /// </summary>
     class procedure SimulateDoubleClick(AControl: TControl);
     
     /// <summary>
-    /// 模拟输入文本
+    /// æ¨¡æè¾å¥ææ¬
     /// </summary>
     class procedure SimulateInput(AControl: TControl; const Text: string);
     
     /// <summary>
-    /// 模拟选择（ComboBox、ListBox 等）
+    /// æ¨¡æéæ©ï¼ComboBoxãListBox ç­ï¼
     /// </summary>
     class procedure SimulateSelect(AControl: TControl; Index: Integer); overload;
     class procedure SimulateSelect(AControl: TControl; const Text: string); overload;
     
     /// <summary>
-    /// 模拟勾选（CheckBox�?
+    /// æ¨¡æå¾éï¼CheckBoxï¼?
     /// </summary>
     class procedure SimulateCheck(AControl: TControl; Checked: Boolean);
     
     /// <summary>
-    /// 模拟按键
+    /// æ¨¡ææé®
     /// </summary>
     class procedure SimulateKeyPress(AControl: TControl; Key: Word; Shift: TShiftState = []);
     
     /// <summary>
-    /// 模拟鼠标移动
+    /// æ¨¡æé¼ æ ç§»å¨
     /// </summary>
     class procedure SimulateMouseMove(AControl: TControl; X, Y: Integer);
     
-    // ========== 控件查找 ==========
+    // ========== æ§ä»¶æ¥æ¾ ==========
     
     /// <summary>
-    /// 按名称查找控�?
+    /// æåç§°æ¥æ¾æ§ä»?
     /// </summary>
     class function FindControl(AForm: TForm; const Name: string): TControl;
     
     /// <summary>
-    /// 按类型查找控�?
+    /// æç±»åæ¥æ¾æ§ä»?
     /// </summary>
     class function FindControlByClass<T: TControl>(AForm: TForm): T;
     
     /// <summary>
-    /// 查找所有匹配类型的控件
+    /// æ¥æ¾ææå¹éç±»åçæ§ä»¶
     /// </summary>
     class function FindAllControlsByClass<T: TControl>(AForm: TForm): TArray<T>;
     
-    // ========== 断言辅助 ==========
+    // ========== æ­è¨è¾å© ==========
     
     /// <summary>
-    /// 断言控件可见
+    /// æ­è¨æ§ä»¶å¯è§
     /// </summary>
     class procedure AssertVisible(AControl: TControl; const Msg: string = '');
     
     /// <summary>
-    /// 断言控件启用
+    /// æ­è¨æ§ä»¶å¯ç¨
     /// </summary>
     class procedure AssertEnabled(AControl: TControl; const Msg: string = '');
     
     /// <summary>
-    /// 断言控件文本
+    /// æ­è¨æ§ä»¶ææ¬
     /// </summary>
     class procedure AssertText(AControl: TControl; const Expected: string; const Msg: string = '');
     
     /// <summary>
-    /// 断言控件�?
+    /// æ­è¨æ§ä»¶å?
     /// </summary>
     class procedure AssertValue(AControl: TControl; const Expected: string; const Msg: string = '');
     
-    // ========== 截图 ==========
+    // ========== æªå¾ ==========
     
     /// <summary>
-    /// 截取窗体截图
+    /// æªåçªä½æªå¾
     /// </summary>
     class function CaptureScreenshot(AForm: TForm): TBitmap;
     
     /// <summary>
-    /// 保存截图到文�?
+    /// ä¿å­æªå¾å°æä»?
     /// </summary>
     class procedure SaveScreenshotToFile(AForm: TForm; const FileName: string);
     
     /// <summary>
-    /// 快照存储路径
+    /// å¿«ç§å­å¨è·¯å¾
     /// </summary>
     class property SnapshotPath: string read FSnapshotPath write FSnapshotPath;
   end;
 
   /// <summary>
-  /// 测试断言异常
+  /// æµè¯æ­è¨å¼å¸¸
   /// </summary>
   ETestAssertionFailed = class(Exception);
 
@@ -267,7 +267,7 @@ begin
   else
     FSnapshotPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'Snapshots');
     
-  // 确保目录存在
+  // ç¡®ä¿ç®å½å­å¨
   if not TDirectory.Exists(FSnapshotPath) then
     TDirectory.CreateDirectory(FSnapshotPath);
 end;
@@ -292,7 +292,7 @@ begin
   if ControlName = '' then
     ControlName := AControl.ClassName + '_' + IntToStr(AControl.Tag);
   
-  // 基本属�?
+  // åºæ¬å±æ?
   Result.AddPair('class', AControl.ClassName);
   Result.AddPair('name', ControlName);
   Result.AddPair('visible', TJSONBool.Create(AControl.Visible));
@@ -302,7 +302,7 @@ begin
   Result.AddPair('width', TJSONNumber.Create(AControl.Width));
   Result.AddPair('height', TJSONNumber.Create(AControl.Height));
   
-  // 控件特定属�?
+  // æ§ä»¶ç¹å®å±æ?
   if AControl is TCustomEdit then
     Result.AddPair('text', TCustomEdit(AControl).Text)
   else if AControl is TButton then
@@ -337,7 +337,7 @@ begin
   else if AControl is TProgressBar then
     Result.AddPair('position', TJSONNumber.Create(TProgressBar(AControl).Position));
   
-  // 递归处理子控�?
+  // éå½å¤çå­æ§ä»?
   if AControl is TWinControl then
   begin
     WinControl := TWinControl(AControl);
@@ -360,7 +360,7 @@ var
 begin
   JSON := TJSONObject.Create;
   try
-    // 窗体属�?
+    // çªä½å±æ?
     JSON.AddPair('formClass', AForm.ClassName);
     JSON.AddPair('formName', AForm.Name);
     JSON.AddPair('caption', AForm.Caption);
@@ -368,7 +368,7 @@ begin
     JSON.AddPair('height', TJSONNumber.Create(AForm.Height));
     JSON.AddPair('visible', TJSONBool.Create(AForm.Visible));
     
-    // 子控�?
+    // å­æ§ä»?
     for I := 0 to AForm.ControlCount - 1 do
     begin
       ChildJSON := CaptureControlState(AForm.Controls[I]);
@@ -420,7 +420,7 @@ begin
   Result := '';
   Storage := CreateSnapshotStorage;
   
-  // 优先从已注册存储读取
+  // ä¼åä»å·²æ³¨åå­å¨è¯»å
   if Assigned(Storage) and Storage.TryReadSnapshot(TestName, Result) then
     Exit;
     // Fall back to file storage.
@@ -438,7 +438,7 @@ begin
   if Assigned(Storage) then
     Storage.DeleteSnapshot(TestName);
   
-  // 删除文件
+  // å é¤æä»¶
   FileName := TPath.Combine(FSnapshotPath, TestName + '.json');
   if TFile.Exists(FileName) then
     TFile.Delete(FileName);
@@ -468,7 +468,7 @@ begin
       end;
     end;
 
-    // 从文件系统补�?    if TDirectory.Exists(FSnapshotPath) then
+    // ä»æä»¶ç³»ç»è¡¥å?    if TDirectory.Exists(FSnapshotPath) then
     begin
       Files := TDirectory.GetFiles(FSnapshotPath, '*.json');
       for FileName in Files do
@@ -507,7 +507,7 @@ begin
     
     if ActualValue = nil then
     begin
-      // 属性缺�?
+      // å±æ§ç¼ºå¤?
       Diff.Clear;
       Diff.PropertyPath := ChildPath;
       Diff.ExpectedValue := ExpectedValue.ToString;
@@ -517,7 +517,7 @@ begin
     end
     else if ExpectedValue is TJSONObject then
     begin
-      // 递归比较对象
+      // éå½æ¯è¾å¯¹è±¡
       if ActualValue is TJSONObject then
       begin
         if not CompareJSON(TJSONObject(ExpectedValue), TJSONObject(ActualValue), ChildPath, Diffs) then
@@ -535,7 +535,7 @@ begin
     end
     else if ExpectedValue.ToString <> ActualValue.ToString then
     begin
-      // 值不匹配
+      // å¼ä¸å¹é
       Diff.Clear;
       Diff.PropertyPath := ChildPath;
       Diff.ExpectedValue := ExpectedValue.ToString;
@@ -618,7 +618,7 @@ begin
     Result := IntToStr(TProgressBar(AControl).Position);
 end;
 
-// ========== 模拟用户交互 ==========
+// ========== æ¨¡æç¨æ·äº¤äº ==========
 
 class procedure TDeepBaseTestHelper.SimulateClick(AControl: TControl);
 var
@@ -627,10 +627,10 @@ begin
   if not AControl.Visible or not AControl.Enabled then
     Exit;
     
-  // 获取控件中心�?
+  // è·åæ§ä»¶ä¸­å¿ç?
   P := AControl.ClientToScreen(Point(AControl.Width div 2, AControl.Height div 2));
   
-  // 模拟鼠标点击
+  // æ¨¡æé¼ æ ç¹å»
   SetCursorPos(P.X, P.Y);
   mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
   mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
@@ -655,18 +655,18 @@ begin
   TWinControl(AControl).SetFocus;
   Application.ProcessMessages;
   
-  // 清除现有文本
+  // æ¸é¤ç°æææ¬
   if AControl is TCustomEdit then
     TCustomEdit(AControl).Text := '';
     
-  // 模拟输入
+  // æ¨¡æè¾å¥
   for I := 1 to Length(Text) do
   begin
     keybd_event(0, MapVirtualKey(Ord(Text[I]), 0), 0, 0);
     keybd_event(0, MapVirtualKey(Ord(Text[I]), 0), KEYEVENTF_KEYUP, 0);
   end;
   
-  // 直接设置文本（更可靠�?
+  // ç´æ¥è®¾ç½®ææ¬ï¼æ´å¯é ï¼?
   if AControl is TCustomEdit then
     TCustomEdit(AControl).Text := Text
   else if AControl is TCustomMemo then
@@ -721,7 +721,7 @@ begin
   if AControl is TWinControl then
     TWinControl(AControl).SetFocus;
     
-  // 按下修饰�?
+  // æä¸ä¿®é¥°é?
   if ssShift in Shift then
     keybd_event(VK_SHIFT, 0, 0, 0);
   if ssCtrl in Shift then
@@ -729,11 +729,11 @@ begin
   if ssAlt in Shift then
     keybd_event(VK_MENU, 0, 0, 0);
     
-  // 按键
+  // æé®
   keybd_event(Key, 0, 0, 0);
   keybd_event(Key, 0, KEYEVENTF_KEYUP, 0);
   
-  // 释放修饰�?
+  // éæ¾ä¿®é¥°é?
   if ssAlt in Shift then
     keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
   if ssCtrl in Shift then
@@ -753,7 +753,7 @@ begin
   Application.ProcessMessages;
 end;
 
-// ========== 控件查找 ==========
+// ========== æ§ä»¶æ¥æ¾ ==========
 
 class function TDeepBaseTestHelper.FindControl(AForm: TForm; const Name: string): TControl;
 
@@ -854,7 +854,7 @@ begin
   end;
 end;
 
-// ========== 断言辅助 ==========
+// ========== æ­è¨è¾å© ==========
 
 class procedure TDeepBaseTestHelper.AssertVisible(AControl: TControl; const Msg: string);
 begin
@@ -925,7 +925,7 @@ begin
   end;
 end;
 
-// ========== 截图 ==========
+// ========== æªå¾ ==========
 
 class function TDeepBaseTestHelper.CaptureScreenshot(AForm: TForm): TBitmap;
 var

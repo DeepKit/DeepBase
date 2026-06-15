@@ -444,13 +444,19 @@ begin
   Result.ProductId := JsonValueAsString(AJson, SCommerceFieldProductId, '');
   Result.Code := JsonValueAsString(AJson, SCommerceFieldCode, '');
   Result.Status := EntitlementStatusFromString(JsonValueAsString(AJson,
-    SCommerceFieldStatus, 'active'));
+    SCommerceFieldStatus, ''));
   Result.ValidFromISO := JsonValueAsString(AJson, SCommerceFieldValidFrom, '');
   Result.ValidUntilISO := JsonValueAsString(AJson, SCommerceFieldValidUntil, '');
   Result.RemainingQuota := JsonValueAsInt(AJson,
     SCommerceFieldRemainingQuota, -1);
   Result.SourceOrderId := JsonValueAsString(AJson,
     SCommerceFieldSourceOrderId, '');
+  Result.Tier := JsonValueAsString(AJson, SCommerceFieldTier, 'free');
+  Result.MaxDevices := JsonValueAsInt(AJson, SCommerceFieldMaxDevices, 0);
+  Result.OfflineGraceDays := JsonValueAsInt(AJson,
+    SCommerceFieldOfflineGraceDays, 0);
+  Result.LastValidatedISO := JsonValueAsString(AJson,
+    SCommerceFieldLastValidated, '');
 end;
 
 function EntitlementToJson(const AEntitlement: TCommerceEntitlementData): TJSONObject;
@@ -468,6 +474,12 @@ begin
   Result.AddPair(SCommerceFieldRemainingQuota,
     TJSONNumber.Create(AEntitlement.RemainingQuota));
   Result.AddPair(SCommerceFieldSourceOrderId, AEntitlement.SourceOrderId);
+  Result.AddPair(SCommerceFieldTier, AEntitlement.Tier);
+  Result.AddPair(SCommerceFieldMaxDevices,
+    TJSONNumber.Create(AEntitlement.MaxDevices));
+  Result.AddPair(SCommerceFieldOfflineGraceDays,
+    TJSONNumber.Create(AEntitlement.OfflineGraceDays));
+  Result.AddPair(SCommerceFieldLastValidated, AEntitlement.LastValidatedISO);
 end;
 
 function PaymentIntentFromJson(AJson: TJSONObject;

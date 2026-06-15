@@ -201,6 +201,7 @@
         <DCCReference Include="Core\DeepBase.Cache.pas"/>
         <DCCReference Include="Core\DeepBase.Memory.pas"/>
         <DCCReference Include="Core\DeepBase.Security.pas"/>
+        <DCCReference Include="Core\DeepBase.Math.pas"/>
         <DCCReference Include="Core\DeepBase.TrayIcon.pas"/>
         <DCCReference Include="Core\DeepBase.Export.PDF.pas"/>
         <DCCReference Include="Core\DeepBase.Export.DOCX.pas"/>

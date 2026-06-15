@@ -1,4 +1,4 @@
-unit DeepBase.Diff;
+﻿unit DeepBase.Diff;
 
 (*******************************************************************************
   DeepBase Text Diff

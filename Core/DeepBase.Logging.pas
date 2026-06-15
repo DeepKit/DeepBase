@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Logging - Logging Module
   
   Version: 1.1
@@ -129,6 +129,8 @@ type
     /// <summary>Get log count</summary>
     function GetLogCount(Level: TLogLevel): Int64;
     function GetTotalLogCount: Int64;
+    function ReadRecentLogs(MinLevel: TLogLevel; MaxItems: Integer): TLogViewDataArray;
+    procedure ClearLogs;
     
     /// <summary>Enable/Disable log aggregator integration</summary>
     procedure SetAggregatorEnabled(AEnabled: Boolean);
@@ -898,6 +900,36 @@ begin
 
   try
     Result := QueryStorage.CountAll;
+  except
+    // ignore
+  end;
+end;
+
+function TDeepBaseLogger.ReadRecentLogs(MinLevel: TLogLevel;
+  MaxItems: Integer): TLogViewDataArray;
+var
+  ViewStorage: ILogViewStorage;
+begin
+  SetLength(Result, 0);
+  if not Supports(FStorage, ILogViewStorage, ViewStorage) then
+    Exit;
+
+  try
+    Result := ViewStorage.ReadRecent(MinLevel, MaxItems);
+  except
+    SetLength(Result, 0);
+  end;
+end;
+
+procedure TDeepBaseLogger.ClearLogs;
+var
+  ViewStorage: ILogViewStorage;
+begin
+  if not Supports(FStorage, ILogViewStorage, ViewStorage) then
+    Exit;
+
+  try
+    ViewStorage.ClearAll;
   except
     // ignore
   end;

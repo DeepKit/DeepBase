@@ -50,7 +50,13 @@ type
     procedure ServicesPackage_TracksKnownBoundaryViolations;
 
     [Test]
+    procedure ServicesProject_DoesNotReferenceUiOrDbRuntime;
+
+    [Test]
     procedure FeaturesPackage_ContainsOptionalFeatureUnits;
+
+    [Test]
+    procedure FeaturesPackage_ContainsIntentClarificationPhase2Units;
 
     [Test]
     procedure FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures;
@@ -62,7 +68,13 @@ type
     procedure PersistenceSource_DatabaseImplementationsLiveUnderPersistence;
 
     [Test]
+    procedure LayerScript_TracksFireDacOutsidePersistenceDebt;
+
+    [Test]
     procedure TestRunner_UsesWin64CompilerOnly;
+
+    [Test]
+    procedure RuntimePackages_DoNotContainTestHelperUnits;
 
     [Test]
     procedure SourceDirectories_DoNotContainDcuArtifacts;
@@ -87,6 +99,15 @@ type
 
     [Test]
     procedure UiLogListView_UsesLoggerQueryPortOnly;
+
+    [Test]
+    procedure UiHotkeyEditor_UsesHotkeyStorageFactoryOnly;
+
+    [Test]
+    procedure UiLLMConfigPanels_UseLLMStorageFactoryOnly;
+
+    [Test]
+    procedure UiAboutFrames_UseAntiTamperDatabasePortOnly;
 
     [Test]
     procedure DesignPackages_RegisterControlsOnly_NoRuntimeBootstrap;
@@ -426,23 +447,67 @@ begin
 
   // These MUST remain forbidden even with current debt:
   AssertTextDoesNotContainAny(DpkText, 'DeepBaseServices.dpk contains section',
-    ['features\deepbase.llm.', 'features\deepbase.updater',
-     'features\deepbase.browser', 'features\deepbase.intent',
-     'features\deepbase.commerce', 'features\deepbase.speech']);
+    ['features\']);
+end;
+
+procedure TPackageBoundaryTests.ServicesProject_DoesNotReferenceUiOrDbRuntime;
+var
+  DprojText: string;
+begin
+  DprojText := ReadRepoFile('DeepBaseServices.dproj').ToLowerInvariant;
+
+  AssertTextDoesNotContainAny(DprojText, 'DeepBaseServices.dproj',
+    ['<frameworktype>vcl</frameworktype>',
+     '<dccreference include="vcl.dcp"',
+     '<dccreference include="dbrtl.dcp"',
+     '<dccreference include="firedac.dcp"',
+     '<dccreference include="firedaccommondriver.dcp"',
+     '<dccreference include="firedacsqlitedriver.dcp"',
+     '<dccreference include="firedacpgdriver.dcp"',
+     'core\deepbase.singleinstance.pas',
+     'core\deepbase.feedback.pas',
+     'core\deepbase.net.pas',
+     'core\deepbase.orm.pas']);
+
+  Assert.IsTrue(TextContainsInsensitive(DprojText,
+    'Core\DeepBase.Security.SecretStore.pas'),
+    'DeepBaseServices.dproj must stay aligned with DeepBaseServices.dpk');
 end;
 
 procedure TPackageBoundaryTests.FeaturesPackage_ContainsOptionalFeatureUnits;
 var
   DpkText: string;
+  DprojText: string;
 begin
   DpkText := ReadRepoFile('DeepBaseFeatures.dpk').ToLowerInvariant;
+  DprojText := ReadRepoFile('DeepBaseFeatures.dproj').ToLowerInvariant;
 
   AssertTextDoesNotContainAny(DpkText, 'DeepBaseFeatures.dpk requires section',
     [' vcl,', ' vcl;', ' fmx,', ' fmx;', ' designide,', ' designide;']);
+  AssertTextDoesNotContainAny(DpkText, 'DeepBaseFeatures.dpk package boundary',
+    [' dbrtl,', ' dbrtl;', 'firedac', 'firedaccommondriver',
+     'deepbasepersistence', 'persistence\',
+     'core\deepbase.llm.pas', 'core\deepbase.llm.manager.pas',
+     'core\deepbase.llm.billingclient.pas',
+     'core\deepbase.llm.importexport.pas',
+     'features\deepbase.llm.configbridge.pas']);
+  AssertTextDoesNotContainAny(DprojText, 'DeepBaseFeatures.dproj package boundary',
+    ['dbrtl.dcp', 'firedac.dcp', 'firedaccommondriver.dcp',
+     'deepbasepersistence.dcp', 'persistence\',
+     'core\deepbase.llm.pas', 'core\deepbase.llm.manager.pas',
+     'core\deepbase.llm.billingclient.pas',
+     'core\deepbase.llm.importexport.pas',
+     'features\deepbase.llm.configbridge.pas']);
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseCore'),
     'DeepBaseFeatures.dpk must require DeepBaseCore');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseServices'),
     'DeepBaseFeatures.dpk must require DeepBaseServices to avoid duplicate service primitives');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Net'),
+    'DeepBaseFeatures.dpk must contain legacy network utilities');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.Net.pas'),
+    'DeepBaseFeatures.dpk must source legacy network utilities from Features');
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.Net.pas'),
+    'DeepBaseFeatures.dpk must not source legacy network utilities from Core');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.LLM.Types'),
     'DeepBaseFeatures.dpk must contain LLM types');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.LLM.Types.pas'),
@@ -483,9 +548,73 @@ begin
     'DeepBaseFeatures.dpk must not source unlock feature from Core');
 end;
 
+procedure TPackageBoundaryTests.FeaturesPackage_ContainsIntentClarificationPhase2Units;
+const
+  REQUIRED_IC_UNITS: array[0..26] of string = (
+    'DeepBase.IntentClarification.pas',
+    'DeepBase.IntentClarification.Logging.pas',
+    'DeepBase.IntentClarification.Types.pas',
+    'DeepBase.IntentClarification.Interfaces.pas',
+    'DeepBase.IntentClarification.Engine.pas',
+    'DeepBase.IntentClarification.IoC.pas',
+    'DeepBase.IntentClarification.Provider.L0.pas',
+    'DeepBase.IntentClarification.Provider.L1.pas',
+    'DeepBase.IntentClarification.Provider.L2.pas',
+    'DeepBase.IntentClarification.Provider.L3.pas',
+    'DeepBase.IntentClarification.Provider.L4.pas',
+    'DeepBase.IntentClarification.Session.pas',
+    'DeepBase.IntentClarification.SessionFSM.pas',
+    'DeepBase.IntentClarification.Router.pas',
+    'DeepBase.IntentClarification.SignalDetector.pas',
+    'DeepBase.IntentClarification.Budget.pas',
+    'DeepBase.IntentClarification.Exit.pas',
+    'DeepBase.IntentClarification.OptionFrame.pas',
+    'DeepBase.IntentClarification.Metrics.pas',
+    'DeepBase.IntentClarification.FeatureConfig.pas',
+    'DeepBase.IntentClarification.Templates.pas',
+    'DeepBase.IntentClarification.Validation.pas',
+    'DeepBase.IntentClarification.LLMResilience.pas',
+    'DeepBase.IntentClarification.Anticipation.pas',
+    'DeepBase.IntentClarification.Degradation.pas',
+    'DeepBase.IntentClarification.Moments.pas',
+    'DeepBase.IntentClarification.Rapport.pas'
+  );
+var
+  DpkText: string;
+  DprojText: string;
+  UnitFile: string;
+  FeaturePath: string;
+begin
+  DpkText := ReadRepoFile('DeepBaseFeatures.dpk').ToLowerInvariant;
+  DprojText := ReadRepoFile('DeepBaseFeatures.dproj').ToLowerInvariant;
+
+  for UnitFile in REQUIRED_IC_UNITS do
+  begin
+    FeaturePath := 'Features\' + UnitFile;
+    Assert.IsTrue(TextContainsInsensitive(DpkText, FeaturePath),
+      'DeepBaseFeatures.dpk must contain IntentClarification unit: ' + FeaturePath);
+    Assert.IsTrue(TextContainsInsensitive(DprojText, FeaturePath),
+      'DeepBaseFeatures.dproj must reference IntentClarification unit: ' + FeaturePath);
+  end;
+
+  Assert.IsTrue(TextContainsInsensitive(DpkText,
+    'Features\DeepBase.IntentClarification.Registration.pas'),
+    'DeepBaseFeatures.dpk must expose IntentClarification registration facade.');
+  Assert.IsTrue(TextContainsInsensitive(DprojText,
+    'Features\DeepBase.IntentClarification.Registration.pas'),
+    'DeepBaseFeatures.dproj must expose IntentClarification registration facade.');
+  Assert.IsFalse(TextContainsInsensitive(DpkText,
+    'Features\DeepBase.IntentClarification.Storage.pas'),
+    'IntentClarification FireDAC storage must stay in Persistence, not Features.');
+  Assert.IsFalse(TextContainsInsensitive(DprojText,
+    'Features\DeepBase.IntentClarification.Storage.pas'),
+    'IntentClarification FireDAC storage must stay in Persistence, not Features.');
+end;
+
 procedure TPackageBoundaryTests.FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures;
 const
-  MOVED_FEATURE_UNITS: array[0..8] of string = (
+  MOVED_FEATURE_UNITS: array[0..9] of string = (
+    'DeepBase.Net.pas',
     'DeepBase.LLM.Types.pas',
     'DeepBase.LLM.Client.pas',
     'DeepBase.LLM.HTTP.pas',
@@ -603,6 +732,12 @@ begin
     'DeepBasePersistence.dpk must source runtime registration helper from Persistence');
   Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.Persistence.RuntimeRegistration.pas'),
     'DeepBasePersistence.dpk must not source runtime registration helper from Core');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Speech.Schema'),
+    'DeepBasePersistence.dpk must contain Speech schema FireDAC helper');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Persistence\DeepBase.Speech.Schema.pas'),
+    'DeepBasePersistence.dpk must source Speech schema helper from Persistence');
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Features\DeepBase.Speech.Schema.pas'),
+    'DeepBasePersistence.dpk must not source Speech schema helper from Features');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.DB.Factory'),
     'DeepBasePersistence.dpk must contain DeepBase.DB.Factory');
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.DB.JobQueue'),
@@ -615,7 +750,7 @@ end;
 
 procedure TPackageBoundaryTests.PersistenceSource_DatabaseImplementationsLiveUnderPersistence;
 const
-  MOVED_DATABASE_UNITS: array[0..12] of string = (
+  MOVED_DATABASE_UNITS: array[0..14] of string = (
     'DeepBase.DB.ConnectionPool.pas',
     'DeepBase.DB.Pool.pas',
     'DeepBase.DB.DoQry.pas',
@@ -628,7 +763,9 @@ const
     'DeepBase.Persistence.Logging.FireDAC.pas',
     'DeepBase.Persistence.Protection.FireDAC.pas',
     'DeepBase.Persistence.Theme.FireDAC.pas',
-    'DeepBase.Persistence.RuntimeRegistration.pas'
+    'DeepBase.Persistence.RuntimeRegistration.pas',
+    'DeepBase.IntentClarification.Storage.pas',
+    'DeepBase.Speech.Schema.pas'
   );
 var
   Root: string;
@@ -640,9 +777,45 @@ begin
   begin
     Assert.IsFalse(TFile.Exists(TPath.Combine(TPath.Combine(Root, 'Core'), UnitFile)),
       UnitFile + ' must not remain under Core');
+    Assert.IsFalse(TFile.Exists(TPath.Combine(TPath.Combine(Root, 'Features'), UnitFile)),
+      UnitFile + ' must not remain under Features');
     Assert.IsTrue(TFile.Exists(TPath.Combine(TPath.Combine(Root, 'Persistence'), UnitFile)),
       UnitFile + ' must live under Persistence');
   end;
+end;
+
+procedure TPackageBoundaryTests.LayerScript_TracksFireDacOutsidePersistenceDebt;
+var
+  ScriptText: string;
+begin
+  ScriptText := ReadRepoFile('Scripts\check-layer-violations.ps1').ToLowerInvariant;
+
+  Assert.IsTrue(TextContainsInsensitive(ScriptText, 'FireDacOutsidePersistence'),
+    'Layer check must keep the FireDAC-outside-Persistence gate.');
+  Assert.IsTrue(TextContainsInsensitive(ScriptText, 'KnownFireDacOutsidePersistence'),
+    'Layer check must track existing FireDAC adapter debt explicitly.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'Features\DeepBase.AntiTamper.pas'),
+    'AntiTamper storage moved behind Persistence adapter and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText,
+    'Features\DeepBase.IntentClarification.Storage.pas'),
+    'IntentClarification storage moved to Persistence and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText,
+    'Features\DeepBase.Speech.Schema.pas'),
+    'Speech schema moved to Persistence and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'VCL\DeepBase.VCL.LogListView.pas'),
+    'VCL log viewer must use the logger view port and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'FMX\DeepBase.FMX.LogListView.pas'),
+    'FMX log viewer must use the logger view port and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'FMX\DeepBase.FMX.HotkeyEditor.pas'),
+    'FMX hotkey editor must use the hotkey storage factory and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'VCL\DeepBase.VCL.LLMConfigPanel.pas'),
+    'VCL LLM config panel must use the LLM storage factory and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'FMX\DeepBase.FMX.LLMConfigPanel.pas'),
+    'FMX LLM config panel must use the LLM storage factory and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'VCL\DeepBase.VCL.AboutFrame.pas'),
+    'VCL about frame must use the anti-tamper database port and must not remain known FireDAC debt.');
+  Assert.IsFalse(TextContainsInsensitive(ScriptText, 'FMX\DeepBase.FMX.AboutFrame.pas'),
+    'FMX about frame must use the anti-tamper database port and must not remain known FireDAC debt.');
 end;
 
 procedure TPackageBoundaryTests.TestRunner_UsesWin64CompilerOnly;
@@ -659,6 +832,41 @@ begin
     'Scripts\run_tests.ps1 must write DCUs into a Win64-specific directory');
   Assert.IsTrue(TextContainsInsensitive(ScriptText, 'if ($platform -eq ''win64'')'),
     'Scripts\run_tests.ps1 must explicitly route Win64 builds to dcc64');
+end;
+
+procedure TPackageBoundaryTests.RuntimePackages_DoNotContainTestHelperUnits;
+const
+  RUNTIME_PACKAGES: array[0..5] of string = (
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBasePersistence.dpk',
+    'DeepBaseFeatures.dpk',
+    'DeepBaseVCL.dpk',
+    'DeepBaseFMX.dpk'
+  );
+var
+  PackagePath: string;
+  SourceFile: string;
+  FileNameOnly: string;
+  Violations: TStringList;
+begin
+  Violations := TStringList.Create;
+  try
+    for PackagePath in RUNTIME_PACKAGES do
+      for SourceFile in PackageContainsSourceFiles(PackagePath) do
+      begin
+        FileNameOnly := ExtractFileName(SourceFile);
+        if FileNameOnly.StartsWith('Test.', True) or
+           FileNameOnly.Contains('TestHelper') then
+          Violations.Add(PackagePath + ': ' + SourceFile);
+      end;
+
+    Assert.IsTrue(Violations.Count = 0,
+      'Runtime packages must not contain test helper units:' + sLineBreak +
+      Violations.Text);
+  finally
+    Violations.Free;
+  end;
 end;
 
 procedure TPackageBoundaryTests.SourceDirectories_DoNotContainDcuArtifacts;
@@ -918,10 +1126,69 @@ begin
   begin
     SourceText := StripPascalComments(ReadRepoFile(RelativePath)).ToLowerInvariant;
 
-    Assert.IsTrue(SourceText.Contains('logtime') and SourceText.Contains('message'),
+    Assert.IsTrue(SourceText.Contains('readrecentlogs') and
+                  SourceText.Contains('clearlogs') and
+                  SourceText.Contains('message'),
       RelativePath + ' must keep stable projection for log viewer columns');
-    Assert.IsTrue(SourceText.Contains('delete from logs'),
-      RelativePath + ' must provide clear-log capability');
+    AssertTextDoesNotContainAny(SourceText, RelativePath,
+      ['firedac.', 'tfDconnection', 'tfDquery', 'tfDcommand', 'data.db',
+       'deepbase.manager.deepbase.configdb', 'delete from logs']);
+  end;
+end;
+
+procedure TPackageBoundaryTests.UiHotkeyEditor_UsesHotkeyStorageFactoryOnly;
+var
+  SourceText: string;
+begin
+  SourceText := StripPascalComments(
+    ReadRepoFile('FMX\DeepBase.FMX.HotkeyEditor.pas')).ToLowerInvariant;
+
+  Assert.IsTrue(SourceText.Contains('tdeepbasehotkeys.create(fconnection)'),
+    'FMX hotkey editor must keep using the Core hotkey storage factory bridge.');
+  AssertTextDoesNotContainAny(SourceText, 'FMX\DeepBase.FMX.HotkeyEditor.pas',
+    ['firedac.', 'tfdconnection', 'tfdquery', 'tfdcommand', 'data.db']);
+end;
+
+procedure TPackageBoundaryTests.UiLLMConfigPanels_UseLLMStorageFactoryOnly;
+const
+  FILES: array[0..1] of string = (
+    'VCL\DeepBase.VCL.LLMConfigPanel.pas',
+    'FMX\DeepBase.FMX.LLMConfigPanel.pas'
+  );
+var
+  RelativePath: string;
+  SourceText: string;
+begin
+  for RelativePath in FILES do
+  begin
+    SourceText := StripPascalComments(ReadRepoFile(RelativePath)).ToLowerInvariant;
+
+    Assert.IsTrue(SourceText.Contains('tdeepbasellm.create(fconnection)'),
+      RelativePath + ' must keep using the Core LLM storage factory bridge.');
+    AssertTextDoesNotContainAny(SourceText, RelativePath,
+      ['firedac.', 'tfdconnection', 'tfdquery', 'tfdcommand', 'data.db']);
+  end;
+end;
+
+procedure TPackageBoundaryTests.UiAboutFrames_UseAntiTamperDatabasePortOnly;
+const
+  FILES: array[0..1] of string = (
+    'VCL\DeepBase.VCL.AboutFrame.pas',
+    'FMX\DeepBase.FMX.AboutFrame.pas'
+  );
+var
+  RelativePath: string;
+  SourceText: string;
+begin
+  for RelativePath in FILES do
+  begin
+    SourceText := StripPascalComments(ReadRepoFile(RelativePath)).ToLowerInvariant;
+
+    Assert.IsTrue(SourceText.Contains('loadsecureimagebytesfromdatabase'),
+      RelativePath + ' must delegate secure image loading behind AntiTamper.');
+    AssertTextDoesNotContainAny(SourceText, RelativePath,
+      ['firedac.', 'tfdconnection', 'tfdquery', 'tfdtable',
+       'tfdcommand', 'data.db']);
   end;
 end;
 

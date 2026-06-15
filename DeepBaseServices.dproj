@@ -7,7 +7,7 @@
         <ProjectName Condition="'$(ProjectName)'==''">DeepBaseServices</ProjectName>
         <TargetedPlatforms>1741953</TargetedPlatforms>
         <AppType>Package</AppType>
-        <FrameworkType>VCL</FrameworkType>
+        <FrameworkType>None</FrameworkType>
         <ProjectVersion>20.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
@@ -98,7 +98,7 @@
         <SanitizedProjectName>DeepBaseServices</SanitizedProjectName>
         <DCC_Description>DeepBase Services Runtime Package</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-        <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;DUnitX.Loggers.GUI;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_Namespace>System;Xml;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>2052</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
     </PropertyGroup>
@@ -152,17 +152,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="vcl.dcp"/>
-        <DCCReference Include="IndySystem.dcp"/>
-        <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="IndyProtocols.dcp"/>
-        <DCCReference Include="dbrtl.dcp"/>
-        <DCCReference Include="FireDAC.dcp"/>
-        <DCCReference Include="FireDACCommonDriver.dcp"/>
-        <DCCReference Include="FireDACSqliteDriver.dcp"/>
         <DCCReference Include="DeepBaseCore.dcp"/>
         <DCCReference Include="Core\DeepBase.IoC.pas"/>
-        <DCCReference Include="Features\DeepBase.Math.pas"/>
         <DCCReference Include="Core\DeepBase.Serialization.pas"/>
         <DCCReference Include="Core\DeepBase.EventBus.pas"/>
         <DCCReference Include="Core\DeepBase.Scheduler.pas"/>
@@ -177,9 +168,9 @@
         <DCCReference Include="Core\DeepBase.Crypto.OpenSSL.pas"/>
         <DCCReference Include="Core\DeepBase.Crypto.PBKDF2.pas"/>
         <DCCReference Include="Core\DeepBase.Security.DPAPI.pas"/>
+        <DCCReference Include="Core\DeepBase.Security.SecretStore.pas"/>
         <DCCReference Include="Core\DeepBase.KeyManager.pas"/>
         <DCCReference Include="Core\DeepBase.FileWatcher.pas"/>
-        <DCCReference Include="Core\DeepBase.SingleInstance.pas"/>
         <DCCReference Include="Core\DeepBase.AppLifecycle.pas"/>
         <DCCReference Include="Core\DeepBase.RateLimiter.pas"/>
         <DCCReference Include="Core\DeepBase.Resilience.CircuitBreaker.pas"/>
@@ -194,11 +185,8 @@
         <DCCReference Include="Core\DeepBase.LogQuery.pas"/>
         <DCCReference Include="Core\DeepBase.LogAlert.pas"/>
         <DCCReference Include="Core\DeepBase.LogDashboard.pas"/>
-        <DCCReference Include="Core\DeepBase.Feedback.pas"/>
         <DCCReference Include="Core\DeepBase.License.pas"/>
-        <DCCReference Include="Core\DeepBase.Net.pas"/>
         <DCCReference Include="Core\DeepBase.Compression.pas"/>
-        <DCCReference Include="Core\DeepBase.ORM.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

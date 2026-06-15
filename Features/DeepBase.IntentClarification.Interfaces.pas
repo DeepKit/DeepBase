@@ -93,6 +93,7 @@ type
     Signals: TArray<TDetectedSignal>;
     Hypotheses: TArray<THypothesis>;
     History: TArray<TTurnRecord>;
+    PresetSlots: TArray<TIntentClarificationSlot>;
   end;
 
   /// <summary>级别处理器的处理结果</summary>
@@ -166,6 +167,7 @@ type
   IDomainAdapter = interface;
   IPresenter = interface;
   ILevelProvider = interface;
+  IClarificationStorage = interface;
   IPersonaRegistry = interface;
   IAnticipationEngine = interface;
 
@@ -190,6 +192,19 @@ type
     procedure SetLLM(const ALLM: ILLMClient);
     procedure SetPersonaRegistry(const ARegistry: IPersonaRegistry);
     procedure SetAnticipationEngine(const AAnticipation: IAnticipationEngine);
+    procedure SetStorage(const AStorage: IClarificationStorage);
+  end;
+
+  /// <summary>
+  /// Optional persistence port for session checkpoints and rapport profiles.
+  /// Concrete database implementations live in Persistence packages.
+  /// </summary>
+  IClarificationStorage = interface
+    ['{E1A2B3C4-D5E6-7890-ABCD-999999999999}']
+    procedure SaveCheckpoint(const ACheckpoint: TSessionCheckpoint);
+    function LoadCheckpoint(const ASessionId: string): TSessionCheckpoint;
+    procedure SaveRapport(const AProfile: TRapportProfile);
+    function LoadRapport(const AUserId: string): TRapportProfile;
   end;
 
   /// <summary>

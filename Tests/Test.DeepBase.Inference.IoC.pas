@@ -233,7 +233,9 @@ end;
 
 procedure TTestInferenceIoC.Test_Service_SetFactory_WiresCorrectly;
 begin
+  var LRuntime: IInferenceRuntime := TFakeRuntime.Create;
   var LFactory: IInferenceSessionFactory := TFakeSessionFactory.Create;
+  TInferenceService.SetRuntime(LRuntime);
   TInferenceService.SetSessionFactory(LFactory);
   Assert.IsTrue(TInferenceService.IsReady);
 end;

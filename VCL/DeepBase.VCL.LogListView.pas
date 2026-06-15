@@ -2,7 +2,7 @@
   DeepBase.VCL.LogListView - 高性能日志列表控件
   
   版本: 1.0
-  说明: 使用 OwnerData 模式的 TListView，直接绑定 Log 数据库
+  说明: 使用 OwnerData 模式的 TListView，通过日志查询 port 读取数据
   性能: 10000 条日志渲染流畅
   ============================================================================ }
 
@@ -13,6 +13,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Generics.Collections,
   System.UITypes,
   Vcl.Controls,
   Vcl.ComCtrls,
@@ -20,9 +21,8 @@ uses
   Vcl.Graphics,
   Vcl.Forms,
   Vcl.Menus,
-  Data.DB,
-  FireDAC.Comp.Client,
-  DeepBase.Manager,
+  DeepBase.Logging,
+  DeepBase.Storage.Interfaces,
   DeepBase.Types;
 
 type
@@ -31,15 +31,11 @@ type
   /// </summary>
   TLogListView = class(TListView)
   private
-    FConnection: TFDConnection;
-    FQuery: TFDQuery;
     FAutoRefresh: Boolean;
     FRefreshTimer: TTimer;
     FMaxItems: Integer;
     FMinLevel: TLogLevel;
-    FCache: TStringList; // 简单缓存用于 OwnerData
-    // 注意：为了真正的 OwnerData 数据库分页，我们需要 Limit/Offset
-    // 这里简化：读取最近 N 条到内存缓存
+    FCache: TList<TLogViewData>; // OwnerData cache
     
     FPopup: TPopupMenu;
     
@@ -84,7 +80,7 @@ begin
   FMinLevel := llDebug;
   FAutoRefresh := True;
   
-  FCache := TStringList.Create;
+  FCache := TList<TLogViewData>.Create;
   
   FRefreshTimer := TTimer.Create(Self);
   FRefreshTimer.Interval := 2000; // 2s
@@ -100,8 +96,6 @@ end;
 destructor TLogListView.Destroy;
 begin
   FreeAndNil(FCache);
-  if Assigned(FQuery) then FQuery.Free;
-  if Assigned(FConnection) then FConnection.Free; // 如果我们拥有它
   inherited;
 end;
 
@@ -180,69 +174,22 @@ end;
 
 procedure TLogListView.RefreshLogs;
 var
-  Q: TFDQuery;
-  S: string;
+  Rows: TLogViewDataArray;
+  Row: TLogViewData;
 begin
-  if not DeepBase.Manager.DeepBase.IsInitialized then Exit;
-  
-  // 使用新的 Connection 以免干扰主线程
-  // 注意：频繁创建销毁 Connection 性能不好，建议复用或使用 Manager 的连接池（如果有）
-  // 这里简化：复用内部连接
-  if FConnection = nil then
-  begin
-    FConnection := TFDConnection.Create(nil);
-    FConnection.DriverName := 'SQLite';
-    FConnection.Params.Database := DeepBase.Manager.DeepBase.ConfigDBPath;
-    FConnection.Params.Values['LockingMode'] := 'Normal';
-    FConnection.Params.Values['JournalMode'] := 'WAL';
-    FConnection.LoginPrompt := False;
-    try
-      FConnection.Connected := True;
-    except
-      Exit;
-    end;
-  end;
-  
-  if FQuery = nil then
-  begin
-    FQuery := TFDQuery.Create(nil);
-    FQuery.Connection := FConnection;
-  end;
-  
   try
-    // 适配新的 Tier 1 schema: Level 是 INTEGER (0-4)
-    FQuery.SQL.Text := 
-      'SELECT LogTime, Level, Source, Message, ThreadId, StackTrace ' +
-      'FROM Logs ' +
-      'WHERE Level >= :MinLevel ' +
-      'ORDER BY Id DESC LIMIT :Max';
-    FQuery.ParamByName('MinLevel').AsInteger := Ord(FMinLevel);
-    FQuery.ParamByName('Max').AsInteger := FMaxItems;
-    FQuery.Open;
-    
+    Rows := Logger.ReadRecentLogs(FMinLevel, FMaxItems);
+
     Items.BeginUpdate;
     try
       FCache.Clear;
-      while not FQuery.Eof do
-      begin
-        // 将一行数据打包成 CSV 格式存入 StringList
-        // 格式: Time|LevelInt|Source|Msg|Thread
-        S := Format('%s|%d|%s|%s|%d', [
-          FQuery.FieldByName('LogTime').AsString,
-          FQuery.FieldByName('Level').AsInteger,
-          FQuery.FieldByName('Source').AsString,
-          FQuery.FieldByName('Message').AsString,
-          FQuery.FieldByName('ThreadId').AsInteger
-        ]);
-        FCache.Add(S);
-        FQuery.Next;
-      end;
-      
+      for Row in Rows do
+        FCache.Add(Row);
+
       Items.Count := FCache.Count;
     finally
       Items.EndUpdate;
     end;
-    FQuery.Close;
   except
     // ignore
   end;
@@ -250,28 +197,17 @@ end;
 
 procedure TLogListView.HandleData(Sender: TObject; Item: TListItem);
 var
-  Parts: TArray<string>;
-  DataStr: string;
-  LevelInt: Integer;
+  Entry: TLogViewData;
 begin
   if (Item.Index < 0) or (Item.Index >= FCache.Count) then Exit;
-  
-  DataStr := FCache[Item.Index];
-  Parts := DataStr.Split(['|']);
-  
-  if Length(Parts) >= 5 then
-  begin
-    Item.Caption := Parts[0]; // Time
-    Item.SubItems.Clear;
-    
-    // 将数字级别转换为字符串
-    LevelInt := StrToIntDef(Parts[1], 1);
-    Item.SubItems.Add(LogLevelToStr(TLogLevel(LevelInt))); // Level
-    
-    Item.SubItems.Add(Parts[2]); // Source
-    Item.SubItems.Add(Parts[3]); // Message
-    Item.SubItems.Add(Parts[4]); // Thread
-  end;
+
+  Entry := FCache[Item.Index];
+  Item.Caption := Entry.TimestampISO;
+  Item.SubItems.Clear;
+  Item.SubItems.Add(Entry.LevelText);
+  Item.SubItems.Add(Entry.Source);
+  Item.SubItems.Add(Entry.MessageText);
+  Item.SubItems.Add(IntToStr(Entry.ThreadId));
 end;
 
 procedure TLogListView.HandleCustomDrawItem(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
@@ -300,21 +236,9 @@ begin
 end;
 
 procedure TLogListView.OnClearClick(Sender: TObject);
-var
-  Cmd: TFDCommand;
 begin
-  if FConnection <> nil then
-  begin
-    Cmd := TFDCommand.Create(nil);
-    try
-      Cmd.Connection := FConnection;
-      Cmd.CommandText.Text := 'DELETE FROM Logs';
-      Cmd.Execute;
-      RefreshLogs;
-    finally
-      Cmd.Free;
-    end;
-  end;
+  Logger.ClearLogs;
+  RefreshLogs;
 end;
 
 end.

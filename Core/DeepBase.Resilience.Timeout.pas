@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Resilience.Timeout - Timeout resilience policy
   Split from DeepBase.Resilience; use DeepBase.Resilience for compatibility.
   ============================================================================ }

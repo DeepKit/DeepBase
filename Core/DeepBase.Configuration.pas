@@ -1,4 +1,4 @@
-unit DeepBase.Configuration;
+ï»¿unit DeepBase.Configuration;
 
 {*******************************************************************************
   DeepBase Configuration Management
@@ -844,7 +844,7 @@ var
 begin
   LPos := FPath.LastIndexOf(FConfig.KeyDelimiter);
   if LPos >= 0 then
-    // LastIndexOf ·µ»Ø 0-based Ë÷Òı£¬ÕâÀïĞèÒª»»Ëã³É 1-based ²¢Ìø¹ıÍêÕû·Ö¸ô·û
+    // LastIndexOf è¿”å› 0-based ç´¢å¼•ï¼Œè¿™é‡Œéœ€è¦æ¢ç®—æˆ 1-based å¹¶è·³è¿‡å®Œæ•´åˆ†éš”ç¬¦
     Result := Copy(FPath, LPos + Length(FConfig.KeyDelimiter) + 1, MaxInt)
   else
     Result := FPath;
@@ -1042,7 +1042,7 @@ var
   LCallback: TConfigChangeCallback;
   LCallbacks: TArray<TConfigChangeCallback>;
 begin
-  // ¿½±´Ò»·İ»Øµ÷¿ìÕÕ£¬±ÜÃâÔÚ»Øµ÷¹ı³ÌÖĞĞŞ¸ÄÁĞ±íµ¼ÖÂ²¢·¢ÎÊÌâ
+  // æ‹·è´ä¸€ä»½å›è°ƒå¿«ç…§ï¼Œé¿å…åœ¨å›è°ƒè¿‡ç¨‹ä¸­ä¿®æ”¹åˆ—è¡¨å¯¼è‡´å¹¶å‘é—®é¢˜
   FCallbacksLock.Enter;
   try
     LCallbacks := FChangeCallbacks.ToArray;
@@ -1334,7 +1334,7 @@ begin
   if FWatching then
     Exit;
 
-  // ·ÀÖ¹¹ıÓÚÆµ·±µØÂÖÑ¯ÅäÖÃÎÄ¼ş£¬ÉèÖÃÒ»¸öºÏÀíÏÂÏŞ
+  // é˜²æ­¢è¿‡äºé¢‘ç¹åœ°è½®è¯¢é…ç½®æ–‡ä»¶ï¼Œè®¾ç½®ä¸€ä¸ªåˆç†ä¸‹é™
   if AIntervalMs < 100 then
     FWatchIntervalMs := 100
   else

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Cache - Generic Caching System
   
   A flexible caching system with multiple eviction strategies.

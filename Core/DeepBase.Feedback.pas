@@ -1,15 +1,15 @@
-unit DeepBase.Feedback;
+ï»¿unit DeepBase.Feedback;
 
 {*******************************************************************************
   DeepBase Framework - User Feedback System
   
-  ÓÃ»§·´À¡ÊÕ¼¯ÏµÍ³£¬Ö§³Ö£º
-  - ·´À¡Ìá½»£¨Bug/¹¦ÄÜ½¨Òé/ÎÊÌâ£©
-  - ¸½¼þºÍÈÕÖ¾×Ô¶¯ÊÕ¼¯
-  - ÏµÍ³ÐÅÏ¢²É¼¯
-  - ·´À¡×·×ÙºÍ×´Ì¬¸üÐÂ
-  - ÓÃ»§Í¨ÖªÖÐÐÄ
-  - ÀëÏß·´À¡¶ÓÁÐ
+  ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ÏµÍ³ï¿½ï¿½Ö§ï¿½Ö£ï¿½
+  - ï¿½ï¿½ï¿½ï¿½ï¿½á½»ï¿½ï¿½Bug/ï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½â£©
+  - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ô¶ï¿½ï¿½Õ¼ï¿½
+  - ÏµÍ³ï¿½ï¿½Ï¢ï¿½É¼ï¿½
+  - ï¿½ï¿½ï¿½ï¿½×·ï¿½Ùºï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½
+  - ï¿½Ã»ï¿½Í¨Öªï¿½ï¿½ï¿½ï¿½
+  - ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -24,46 +24,46 @@ uses
   System.Zip;
 
 type
-  /// <summary>·´À¡ÀàÐÍ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFeedbackType = (
-    ftBug,            // Bug±¨¸æ
-    ftFeature,        // ¹¦ÄÜ½¨Òé
-    ftQuestion,       // ÎÊÌâ×ÉÑ¯
-    ftImprovement,    // ¸Ä½ø½¨Òé
-    ftCrash,          // ±ÀÀ£±¨¸æ
-    ftPerformance,    // ÐÔÄÜÎÊÌâ
-    ftOther           // ÆäËû
+    ftBug,            // Bugï¿½ï¿½ï¿½ï¿½
+    ftFeature,        // ï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½
+    ftQuestion,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¯
+    ftImprovement,    // ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ftCrash,          // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ftPerformance,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ftOther           // ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>·´À¡ÓÅÏÈ¼¶</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½</summary>
   TFeedbackPriority = (
-    fpLow,            // µÍ
-    fpNormal,         // ÆÕÍ¨
-    fpHigh,           // ¸ß
-    fpCritical        // ½ô¼±
+    fpLow,            // ï¿½ï¿½
+    fpNormal,         // ï¿½ï¿½Í¨
+    fpHigh,           // ï¿½ï¿½
+    fpCritical        // ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>·´À¡×´Ì¬</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½×´Ì¬</summary>
   TFeedbackStatus = (
-    fsNew,            // ÐÂ½¨
-    fsPending,        // ´ý´¦Àí
-    fsInProgress,     // ´¦ÀíÖÐ
-    fsResolved,       // ÒÑ½â¾ö
-    fsClosed,         // ÒÑ¹Ø±Õ
-    fsRejected        // ÒÑ¾Ü¾ø
+    fsNew,            // ï¿½Â½ï¿½
+    fsPending,        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    fsInProgress,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    fsResolved,       // ï¿½Ñ½ï¿½ï¿½
+    fsClosed,         // ï¿½Ñ¹Ø±ï¿½
+    fsRejected        // ï¿½Ñ¾Ü¾ï¿½
   );
 
-  /// <summary>Í¨ÖªÀàÐÍ</summary>
+  /// <summary>Í¨Öªï¿½ï¿½ï¿½ï¿½</summary>
   TNotificationType = (
-    ntStatusChange,   // ×´Ì¬±ä¸ü
-    ntComment,        // ÐÂÆÀÂÛ
-    ntAssignment,     // ±»Ö¸ÅÉ
-    ntResolution,     // ÒÑ½â¾ö
-    ntAnnouncement,   // ¹«¸æ
-    ntReminder        // ÌáÐÑ
+    ntStatusChange,   // ×´Ì¬ï¿½ï¿½ï¿½
+    ntComment,        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ntAssignment,     // ï¿½ï¿½Ö¸ï¿½ï¿½
+    ntResolution,     // ï¿½Ñ½ï¿½ï¿½
+    ntAnnouncement,   // ï¿½ï¿½ï¿½ï¿½
+    ntReminder        // ï¿½ï¿½ï¿½ï¿½
   );
 
-  /// <summary>¸½¼þÐÅÏ¢</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢</summary>
   TAttachmentInfo = record
     Id: string;
     FileName: string;
@@ -77,7 +77,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TAttachmentInfo; static;
   end;
 
-  /// <summary>ÏµÍ³ÐÅÏ¢</summary>
+  /// <summary>ÏµÍ³ï¿½ï¿½Ï¢</summary>
   TSystemInfo = record
     OSName: string;
     OSVersion: string;
@@ -99,7 +99,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TSystemInfo; static;
   end;
 
-  /// <summary>·´À¡ÌõÄ¿</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿</summary>
   TFeedbackItem = class
   private
     FId: string;
@@ -133,7 +133,7 @@ type
     function ToJSON: TJSONObject;
     class function FromJSON(AJSON: TJSONObject): TFeedbackItem;
     
-    function Validate: TArray<string>;  // ·µ»ØÑéÖ¤´íÎó
+    function Validate: TArray<string>;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½
     
     property Id: string read FId write FId;
     property FeedbackType: TFeedbackType read FFeedbackType write FFeedbackType;
@@ -157,7 +157,7 @@ type
     property TrackingCode: string read FTrackingCode write FTrackingCode;
   end;
 
-  /// <summary>·´À¡ÆÀÂÛ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFeedbackComment = class
   private
     FId: string;
@@ -180,7 +180,7 @@ type
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
   end;
 
-  /// <summary>ÓÃ»§Í¨Öª</summary>
+  /// <summary>ï¿½Ã»ï¿½Í¨Öª</summary>
   TUserNotification = class
   private
     FId: string;
@@ -205,7 +205,7 @@ type
     property ReadAt: TDateTime read FReadAt write FReadAt;
   end;
 
-  /// <summary>Ìá½»½ø¶È</summary>
+  /// <summary>ï¿½á½»ï¿½ï¿½ï¿½ï¿½</summary>
   TSubmitProgress = record
     CurrentFile: string;
     TotalFiles: Integer;
@@ -215,7 +215,7 @@ type
     function ProgressPercent: Integer;
   end;
 
-  /// <summary>·´À¡·þÎñÅäÖÃ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFeedbackConfig = record
     ServiceURL: string;
     ApiKey: string;
@@ -232,13 +232,13 @@ type
     class function Default: TFeedbackConfig; static;
   end;
 
-  // ÊÂ¼þÀàÐÍ
+  // ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½
   TFeedbackSubmitEvent = procedure(Sender: TObject; AFeedback: TFeedbackItem;
     Success: Boolean; const AErrorMsg: string) of object;
   TSubmitProgressEvent = procedure(Sender: TObject; const Progress: TSubmitProgress) of object;
   TNotificationEvent = procedure(Sender: TObject; ANotification: TUserNotification) of object;
 
-  /// <summary>ÏµÍ³ÐÅÏ¢ÊÕ¼¯Æ÷</summary>
+  /// <summary>ÏµÍ³ï¿½ï¿½Ï¢ï¿½Õ¼ï¿½ï¿½ï¿½</summary>
   TSystemInfoCollector = class
   private
     class function GetOSInfo: string;
@@ -251,7 +251,7 @@ type
     class function Collect: TSystemInfo;
   end;
 
-  /// <summary>ÈÕÖ¾ÊÕ¼¯Æ÷</summary>
+  /// <summary>ï¿½ï¿½Ö¾ï¿½Õ¼ï¿½ï¿½ï¿½</summary>
   TLogCollector = class
   private
     FLogPaths: TStringList;
@@ -273,16 +273,22 @@ type
     property MaxSizeMB: Integer read FMaxSizeMB write FMaxSizeMB;
   end;
 
-  /// <summary>½ØÍ¼²¶»ñÆ÷</summary>
+  /// <summary>ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
+  TScreenCaptureProc = reference to function(ALeft, ATop, AWidth, AHeight: Integer;
+    const AOutputPath: string): Boolean;
+
   TScreenshotCapture = class
+  private
+    class var FCaptureProc: TScreenCaptureProc;
   public
+    class procedure SetCaptureProc(AProc: TScreenCaptureProc);
     class function CaptureScreen(const AOutputPath: string): Boolean;
     class function CaptureActiveWindow(const AOutputPath: string): Boolean;
     class function CaptureRegion(ALeft, ATop, AWidth, AHeight: Integer;
       const AOutputPath: string): Boolean;
   end;
 
-  /// <summary>·´À¡·þÎñ¿Í»§¶Ë</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½</summary>
   TFeedbackServiceClient = class
   private
     FConfig: TFeedbackConfig;
@@ -313,7 +319,7 @@ type
     property Config: TFeedbackConfig read FConfig write FConfig;
   end;
 
-  /// <summary>ÀëÏß·´À¡¶ÓÁÐ</summary>
+  /// <summary>ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TOfflineFeedbackQueue = class
   private
     FQueuePath: string;
@@ -336,7 +342,7 @@ type
     function GetAll: TObjectList<TFeedbackItem>;
   end;
 
-  /// <summary>·´À¡¹ÜÀíÆ÷</summary>
+  /// <summary>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TFeedbackManager = class
   private
     FConfig: TFeedbackConfig;
@@ -370,30 +376,30 @@ type
     constructor Create(const AConfig: TFeedbackConfig);
     destructor Destroy; override;
     
-    // ´´½¨·´À¡
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     function CreateFeedback(AType: TFeedbackType): TFeedbackItem;
     function CreateBugReport(const ATitle, ADescription: string): TFeedbackItem;
     function CreateFeatureRequest(const ATitle, ADescription: string): TFeedbackItem;
     function CreateCrashReport(const AException: Exception): TFeedbackItem;
     
-    // Ìá½»·´À¡
+    // ï¿½á½»ï¿½ï¿½ï¿½ï¿½
     function Submit(AFeedback: TFeedbackItem): Boolean;
     procedure SubmitAsync(AFeedback: TFeedbackItem);
     function SubmitQuickFeedback(const ATitle, ADescription: string;
-      AType: TFeedbackType = ftOther): string;  // ·µ»Ø×·×ÙÂë
+      AType: TFeedbackType = ftOther): string;  // ï¿½ï¿½ï¿½ï¿½×·ï¿½ï¿½ï¿½ï¿½
     
-    // ¸½¼þ¹ÜÀí
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     function AddScreenshot(AFeedback: TFeedbackItem): Boolean;
     function AddLogFiles(AFeedback: TFeedbackItem): Boolean;
     function AddFile(AFeedback: TFeedbackItem; const AFilePath: string): Boolean;
     
-    // ·´À¡²éÑ¯
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¯
     function GetFeedback(const AFeedbackId: string): TFeedbackItem;
     function GetMyFeedbacks: TObjectList<TFeedbackItem>;
     function SearchByTrackingCode(const ACode: string): TFeedbackItem;
     function GetFeedbackStatus(const AFeedbackId: string): TFeedbackStatus;
     
-    // ÆÀÂÛ
+    // ï¿½ï¿½ï¿½ï¿½
     function GetComments(const AFeedbackId: string): TObjectList<TFeedbackComment>;
     function AddComment(const AFeedbackId, AContent: string): Boolean;
     
@@ -403,31 +409,31 @@ type
     procedure MarkNotificationRead(const ANotificationId: string);
     procedure MarkAllNotificationsRead;
     
-    // Í¨ÖªÂÖÑ¯
+    // Í¨Öªï¿½ï¿½Ñ¯
     procedure StartNotificationPolling(AIntervalSeconds: Integer = 300);
     procedure StopNotificationPolling;
     
-    // ÀëÏß¶ÓÁÐ
+    // ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½
     procedure ProcessOfflineQueueAsync;
     function GetOfflineQueueCount: Integer;
     
-    // ÏµÍ³ÐÅÏ¢
+    // ÏµÍ³ï¿½ï¿½Ï¢
     function GetSystemInfo: TSystemInfo;
     
-    // ÈÕÖ¾ÊÕ¼¯
+    // ï¿½ï¿½Ö¾ï¿½Õ¼ï¿½
     procedure AddLogPath(const APath: string);
     function CollectLogs(const AOutputPath: string): Boolean;
     
-    // ÅäÖÃ
+    // ï¿½ï¿½ï¿½ï¿½
     property Config: TFeedbackConfig read FConfig write FConfig;
     
-    // ÊÂ¼þ
+    // ï¿½Â¼ï¿½
     property OnFeedbackSubmit: TFeedbackSubmitEvent read FOnFeedbackSubmit write FOnFeedbackSubmit;
     property OnSubmitProgress: TSubmitProgressEvent read FOnSubmitProgress write FOnSubmitProgress;
     property OnNotification: TNotificationEvent read FOnNotification write FOnNotification;
   end;
 
-  /// <summary>¿ìËÙ·´À¡¶Ô»°¿ò¸¨Öú</summary>
+  /// <summary>ï¿½ï¿½ï¿½Ù·ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½</summary>
   TQuickFeedbackHelper = class
   public
     class function ShowBugReport(AManager: TFeedbackManager;
@@ -438,11 +444,11 @@ type
       AType: TFeedbackType = ftOther): string;
   end;
 
-// È«¾Öº¯Êý
+// È«ï¿½Öºï¿½ï¿½ï¿½
 function FeedbackManager: TFeedbackManager;
 procedure SetFeedbackManager(AManager: TFeedbackManager);
 
-// ¸¨Öúº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 function FeedbackTypeToString(AType: TFeedbackType): string;
 function StringToFeedbackType(const AValue: string): TFeedbackType;
 function FeedbackStatusToString(AStatus: TFeedbackStatus): string;
@@ -454,7 +460,7 @@ implementation
 
 {$IFDEF MSWINDOWS}
 uses
-  Winapi.Windows, Winapi.ShlObj, Vcl.Graphics, Vcl.Forms;
+  Winapi.Windows, Winapi.ShlObj;
 {$ENDIF}
 
 var
@@ -637,7 +643,7 @@ begin
     Result.FileSize := TFile.GetSize(ALocalPath);
     Result.MimeType := 'application/octet-stream';
     
-    // ¸ù¾ÝÀ©Õ¹ÃûÉèÖÃMIMEÀàÐÍ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½MIMEï¿½ï¿½ï¿½ï¿½
     var LExt := LowerCase(TPath.GetExtension(AFileName));
     if LExt = '.txt' then Result.MimeType := 'text/plain'
     else if LExt = '.log' then Result.MimeType := 'text/plain'
@@ -872,13 +878,13 @@ begin
   LErrors := TList<string>.Create;
   try
     if FTitle.Trim = '' then
-      LErrors.Add('±êÌâ²»ÄÜÎª¿Õ');
+      LErrors.Add('ï¿½ï¿½ï¿½â²»ï¿½ï¿½Îªï¿½ï¿½');
     if Length(FTitle) > 200 then
-      LErrors.Add('±êÌâ²»ÄÜ³¬¹ý200¸ö×Ö·û');
+      LErrors.Add('ï¿½ï¿½ï¿½â²»ï¿½Ü³ï¿½ï¿½ï¿½200ï¿½ï¿½ï¿½Ö·ï¿½');
     if FDescription.Trim = '' then
-      LErrors.Add('ÃèÊö²»ÄÜÎª¿Õ');
+      LErrors.Add('ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½');
     if (FUserEmail <> '') and not FUserEmail.Contains('@') then
-      LErrors.Add('ÓÊÏä¸ñÊ½²»ÕýÈ·');
+      LErrors.Add('ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½È·');
       
     Result := LErrors.ToArray;
   finally
@@ -1243,114 +1249,34 @@ end;
 
 { TScreenshotCapture }
 
-class function TScreenshotCapture.CaptureScreen(const AOutputPath: string): Boolean;
-{$IFDEF MSWINDOWS}
-var
-  LBitmap: Vcl.Graphics.TBitmap;
-  LDC: HDC;
-  LWidth, LHeight: Integer;
-{$ENDIF}
+class procedure TScreenshotCapture.SetCaptureProc(AProc: TScreenCaptureProc);
 begin
-  {$IFDEF MSWINDOWS}
-  Result := False;
-  LWidth := GetSystemMetrics(SM_CXSCREEN);
-  LHeight := GetSystemMetrics(SM_CYSCREEN);
-  
-  LBitmap := Vcl.Graphics.TBitmap.Create;
-  try
-    LBitmap.Width := LWidth;
-    LBitmap.Height := LHeight;
-    
-    LDC := GetDC(0);
-    try
-      BitBlt(LBitmap.Canvas.Handle, 0, 0, LWidth, LHeight, LDC, 0, 0, SRCCOPY);
-    finally
-      ReleaseDC(0, LDC);
-    end;
-    
-    TDirectory.CreateDirectory(TPath.GetDirectoryName(AOutputPath));
-    LBitmap.SaveToFile(AOutputPath);
-    Result := True;
-  finally
-    LBitmap.Free;
-  end;
-  {$ELSE}
-  Result := False;
-  {$ENDIF}
+  FCaptureProc := AProc;
+end;
+
+class function TScreenshotCapture.CaptureScreen(const AOutputPath: string): Boolean;
+begin
+  if Assigned(FCaptureProc) then
+    Result := FCaptureProc(-1, 0, 0, 0, AOutputPath)
+  else
+    Result := False;
 end;
 
 class function TScreenshotCapture.CaptureActiveWindow(const AOutputPath: string): Boolean;
-{$IFDEF MSWINDOWS}
-var
-  LBitmap: Vcl.Graphics.TBitmap;
-  LDC: HDC;
-  LHwnd: HWND;
-  LRect: TRect;
-{$ENDIF}
 begin
-  {$IFDEF MSWINDOWS}
-  Result := False;
-  LHwnd := GetForegroundWindow;
-  if LHwnd = 0 then
-    Exit;
-    
-  GetWindowRect(LHwnd, LRect);
-  
-  LBitmap := Vcl.Graphics.TBitmap.Create;
-  try
-    LBitmap.Width := LRect.Width;
-    LBitmap.Height := LRect.Height;
-    
-    LDC := GetWindowDC(LHwnd);
-    try
-      BitBlt(LBitmap.Canvas.Handle, 0, 0, LRect.Width, LRect.Height, LDC, 0, 0, SRCCOPY);
-    finally
-      ReleaseDC(LHwnd, LDC);
-    end;
-    
-    TDirectory.CreateDirectory(TPath.GetDirectoryName(AOutputPath));
-    LBitmap.SaveToFile(AOutputPath);
-    Result := True;
-  finally
-    LBitmap.Free;
-  end;
-  {$ELSE}
-  Result := False;
-  {$ENDIF}
+  if Assigned(FCaptureProc) then
+    Result := FCaptureProc(-2, 0, 0, 0, AOutputPath)
+  else
+    Result := False;
 end;
 
 class function TScreenshotCapture.CaptureRegion(ALeft, ATop, AWidth, AHeight: Integer;
   const AOutputPath: string): Boolean;
-{$IFDEF MSWINDOWS}
-var
-  LBitmap: Vcl.Graphics.TBitmap;
-  LDC: HDC;
-{$ENDIF}
 begin
-  {$IFDEF MSWINDOWS}
-  Result := False;
-  
-  LBitmap := Vcl.Graphics.TBitmap.Create;
-  try
-    LBitmap.Width := AWidth;
-    LBitmap.Height := AHeight;
-    
-    LDC := GetDC(0);
-    try
-      BitBlt(LBitmap.Canvas.Handle, 0, 0, AWidth, AHeight, LDC, ALeft, ATop, SRCCOPY);
-    finally
-      ReleaseDC(0, LDC);
-    end;
-    
-    TDirectory.CreateDirectory(TPath.GetDirectoryName(AOutputPath));
-    LBitmap.SaveToFile(AOutputPath);
-    Result := True;
-  finally
-    LBitmap.Free;
-  end;
-  {$ELSE}
-  Result := False;
-  {$ENDIF}
+  if Assigned(FCaptureProc) then
+    Result := FCaptureProc(ALeft, ATop, AWidth, AHeight, AOutputPath)
+  else
+    Result := False;
 end;
 
 { TFeedbackServiceClient }
@@ -1807,7 +1733,7 @@ function TOfflineFeedbackQueue.GetAll: TObjectList<TFeedbackItem>;
 var
   I: Integer;
 begin
-  Result := TObjectList<TFeedbackItem>.Create(False);  // ²»ÓµÓÐ¶ÔÏó
+  Result := TObjectList<TFeedbackItem>.Create(False);  // ï¿½ï¿½Óµï¿½Ð¶ï¿½ï¿½ï¿½
   FLock.Enter;
   try
     for I := 0 to FItems.Count - 1 do
@@ -1893,7 +1819,7 @@ end;
 
 function TFeedbackManager.GenerateTrackingCode: string;
 begin
-  // Éú³É6Î»Ò×¶Á×·×ÙÂë
+  // ï¿½ï¿½ï¿½ï¿½6Î»ï¿½×¶ï¿½×·ï¿½ï¿½ï¿½ï¿½
   Result := FormatDateTime('yymmdd', Now) + '-' +
             Copy(THashMD5.GetHashString(FormatDateTime('hhnnsszzz', Now)), 1, 6).ToUpper;
 end;
@@ -1935,21 +1861,21 @@ function TFeedbackManager.InternalSubmit(AFeedback: TFeedbackItem): Boolean;
 begin
   Result := False;
   
-  // ×Ô¶¯ÊÕ¼¯ÏµÍ³ÐÅÏ¢
+  // ï¿½Ô¶ï¿½ï¿½Õ¼ï¿½ÏµÍ³ï¿½ï¿½Ï¢
   if FConfig.EnableAutoSystemInfo then
     AFeedback.SystemInfo := TSystemInfoCollector.Collect;
     
-  // ÉèÖÃÓÃ»§ÐÅÏ¢
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Ï¢
   AFeedback.UserId := FConfig.UserId;
   AFeedback.UserEmail := FConfig.UserEmail;
   AFeedback.UserName := FConfig.UserName;
   
-  // Éú³É×·×ÙÂë
+  // ï¿½ï¿½ï¿½ï¿½×·ï¿½ï¿½ï¿½ï¿½
   if AFeedback.TrackingCode = '' then
     AFeedback.TrackingCode := GenerateTrackingCode;
     
   try
-    // Ìá½»·´À¡
+    // ï¿½á½»ï¿½ï¿½ï¿½ï¿½
     Result := FClient.SubmitFeedback(AFeedback);
     
     if Result then
@@ -1958,7 +1884,7 @@ begin
       AFeedback.SubmittedAt := Now;
     end;
   except
-    // Ìá½»Ê§°Ü£¬¼ÓÈëÀëÏß¶ÓÁÐ
+    // ï¿½á½»Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½
     FOfflineQueue.Enqueue(AFeedback);
     Result := False;
   end;
@@ -1974,7 +1900,7 @@ begin
     if InternalSubmit(LFeedback) then
       FOfflineQueue.Dequeue
     else
-      Break;  // ÈÔÈ»Ê§°Ü£¬Í£Ö¹´¦Àí
+      Break;  // ï¿½ï¿½È»Ê§ï¿½Ü£ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½
   end;
 end;
 
@@ -2041,11 +1967,11 @@ end;
 function TFeedbackManager.CreateCrashReport(const AException: Exception): TFeedbackItem;
 begin
   Result := CreateFeedback(ftCrash);
-  Result.Title := '³ÌÐò±ÀÀ£: ' + AException.ClassName;
+  Result.Title := 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: ' + AException.ClassName;
   Result.Description := AException.Message;
   Result.Priority := fpCritical;
   
-  // ×Ô¶¯Ìí¼ÓÈÕÖ¾
+  // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
   if FConfig.EnableAutoLogCollection then
     AddLogFiles(Result);
 end;
@@ -2278,7 +2204,7 @@ end;
 class function TQuickFeedbackHelper.ShowBugReport(AManager: TFeedbackManager;
   const ATitle: string): string;
 begin
-  // ÕâÀïÓ¦¸ÃÏÔÊ¾Ò»¸ö¶Ô»°¿òÈÃÓÃ»§ÊäÈë£¬¼ò»¯ÊµÏÖÖ±½ÓÌá½»
+  // ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½Ê¾Ò»ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ë£¬ï¿½ï¿½Êµï¿½ï¿½Ö±ï¿½ï¿½ï¿½á½»
   Result := AManager.SubmitQuickFeedback(ATitle, '', ftBug);
 end;
 

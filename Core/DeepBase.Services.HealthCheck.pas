@@ -1,4 +1,4 @@
-unit DeepBase.Services.HealthCheck;
+﻿unit DeepBase.Services.HealthCheck;
 
 interface
 
@@ -6,10 +6,10 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections;
 
 type
-  /// <summary>健康检查状�?/summary>
+  /// <summary>å¥åº·æ£æ¥ç¶æ?/summary>
   THealthStatus = (hsHealthy, hsUnhealthy, hsDegraded, hsUnknown);
 
-  /// <summary>健康检查结�?/summary>
+  /// <summary>å¥åº·æ£æ¥ç»æ?/summary>
   THealthCheckResult = record
     Status: THealthStatus;
     Description: string;
@@ -17,14 +17,14 @@ type
     Duration: Cardinal;
   end;
 
-  /// <summary>健康检查接�?/summary>
+  /// <summary>å¥åº·æ£æ¥æ¥å?/summary>
   IHealthCheck = interface
     ['{A7D4C8B2-3E1F-4A5B-9C6D-2E8F7A1B4C5D}']
     function Check: THealthCheckResult;
     function GetName: string;
   end;
 
-  /// <summary>健康检查服�?/summary>
+  /// <summary>å¥åº·æ£æ¥æå?/summary>
   IHealthCheckService = interface
     ['{C9E5F1A3-6B2D-4E8F-A1C7-5D9B3F7E2A4C}']
     procedure RegisterCheck(const Check: IHealthCheck);
@@ -33,7 +33,7 @@ type
     function GetOverallStatus: THealthStatus;
   end;
 
-  /// <summary>健康检查服务实�?/summary>
+  /// <summary>å¥åº·æ£æ¥æå¡å®ç?/summary>
   THealthCheckService = class(TInterfacedObject, IHealthCheckService)
   private
     FChecks: TDictionary<string, IHealthCheck>;

@@ -1,4 +1,4 @@
-{==============================================================================
+﻿{==============================================================================
   DeepBase.Share - Cross-Platform Content Sharing
 
   Provides a unified API for sharing content (text, images, files) via
@@ -38,8 +38,20 @@ type
     srError
   );
 
+  /// <summary>Callback: copy a bitmap (TObject) to clipboard. Returns True on success.</summary>
+  TCopyImageToClipboardProc = reference to function(ABitmap: TObject): Boolean;
+  /// <summary>Callback: save a bitmap (TObject) as PNG to file. Returns the saved path.</summary>
+  TSaveImagePngProc = reference to function(ABitmap: TObject;
+    const AFilePath: string): string;
+
   TUniShare = class
+  private
+    class var FCopyImageProc: TCopyImageToClipboardProc;
+    class var FSaveImagePngProc: TSaveImagePngProc;
   public
+    /// <summary>Inject platform-specific image handlers (call from VCL-aware bootstrap).</summary>
+    class procedure SetImageProcs(ACopyImage: TCopyImageToClipboardProc;
+      ASaveImagePng: TSaveImagePngProc);
     class function CopyToClipboard(const AText: string): Boolean;
     class function CopyImageToClipboard(ABitmap: TObject): Boolean;
     class function SaveImageToPictures(ABitmap: TObject;
@@ -63,10 +75,15 @@ uses
   Winapi.ShlObj,
   Winapi.ShellAPI,
   Winapi.ActiveX,
-  Vcl.Graphics,
-  Vcl.Imaging.PNGImage,
   {$ENDIF}
   System.IOUtils;
+
+class procedure TUniShare.SetImageProcs(ACopyImage: TCopyImageToClipboardProc;
+  ASaveImagePng: TSaveImagePngProc);
+begin
+  FCopyImageProc := ACopyImage;
+  FSaveImagePngProc := ASaveImagePng;
+end;
 
 {$IFDEF MSWINDOWS}
 class function TUniShare.CopyToClipboard(const AText: string): Boolean;
@@ -100,51 +117,11 @@ begin
 end;
 
 class function TUniShare.CopyImageToClipboard(ABitmap: TObject): Boolean;
-var
-  Bmp: Vcl.Graphics.TBitmap absolute ABitmap;
-  PNG: TPNGImage;
-  MS: TMemoryStream;
-  Format: UINT;
-  Data: THandle;
-  Palette: HPALETTE;
 begin
-  Result := False;
-  if not (ABitmap is Vcl.Graphics.TBitmap) then
-    Exit;
-  if not OpenClipboard(0) then
-    Exit;
-  try
-    EmptyClipboard;
-
-    // Set as BMP (CF_BITMAP)
-    SetClipboardData(CF_BITMAP, Bmp.Handle);
-
-    // Also set as PNG for apps that prefer it
-    PNG := TPNGImage.Create;
-    try
-      PNG.Assign(Bmp);
-      MS := TMemoryStream.Create;
-      try
-        PNG.SaveToStream(MS);
-        MS.Position := 0;
-        Format := RegisterClipboardFormat(PChar('PNG'));
-        Data := GlobalAlloc(GMEM_MOVEABLE, MS.Size);
-        if Data <> 0 then
-        begin
-          Move(MS.Memory^, GlobalLock(Data)^, MS.Size);
-          GlobalUnlock(Data);
-          SetClipboardData(Format, Data);
-        end;
-      finally
-        MS.Free;
-      end;
-    finally
-      PNG.Free;
-    end;
-    Result := True;
-  finally
-    CloseClipboard;
-  end;
+  if Assigned(FCopyImageProc) then
+    Result := FCopyImageProc(ABitmap)
+  else
+    Result := False;
 end;
 {$ELSE}
 class function TUniShare.CopyToClipboard(const AText: string): Boolean;
@@ -161,31 +138,16 @@ end;
 class function TUniShare.SaveImageToPictures(ABitmap: TObject;
   const AFileName: string): string;
 var
-  {$IFDEF MSWINDOWS}
-  Bmp: Vcl.Graphics.TBitmap absolute ABitmap;
-  PNG: TPNGImage;
-  {$ENDIF}
   Dir: string;
 begin
   Result := '';
-  {$IFDEF MSWINDOWS}
-  if not (ABitmap is Vcl.Graphics.TBitmap) then
-    Exit;
-  {$ENDIF}
-
   Dir := GetPicturesFolder;
   ForceDirectories(Dir);
   Result := TPath.Combine(Dir, AFileName);
-
-  {$IFDEF MSWINDOWS}
-  PNG := TPNGImage.Create;
-  try
-    PNG.Assign(Bmp);
-    PNG.SaveToFile(Result);
-  finally
-    PNG.Free;
-  end;
-  {$ENDIF}
+  if Assigned(FSaveImagePngProc) then
+    Result := FSaveImagePngProc(ABitmap, Result)
+  else
+    Result := '';
 end;
 
 class function TUniShare.SaveStreamToPictures(AStream: TStream;

@@ -10,7 +10,6 @@ requires
 
 contains
   DeepBase.IoC in 'Core\DeepBase.IoC.pas',
-  DeepBase.Math in 'Features\DeepBase.Math.pas',
   DeepBase.Serialization in 'Core\DeepBase.Serialization.pas',
   DeepBase.EventBus in 'Core\DeepBase.EventBus.pas',
   DeepBase.Scheduler in 'Core\DeepBase.Scheduler.pas',

@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="2" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-11" time="08:58:21">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="08:58:21" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="18.942" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TTimeoutPolicyPropertyTests" executed="True" result="Success" success="True" time="18.942" >
+                <results>
+                  <test-case name="Property5_ResultIsConsistent" executed="True" result="Success" success="True" time="11.747" asserts="0" />
+                  <test-case name="Property6_TimeoutCancelsBackgroundTask" executed="True" result="Success" success="True" time="7.196" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

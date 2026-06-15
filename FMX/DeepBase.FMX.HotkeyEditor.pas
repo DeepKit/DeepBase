@@ -26,14 +26,13 @@ uses
   FMX.Grid,
   FMX.Grid.Style,
   FMX.Dialogs,
-  FireDAC.Comp.Client,
   DeepBase.Hotkeys,
   DeepBase.Hotkeys.Exchange;
 
 type
   TFMXHotkeyEditor = class(TLayout)
   private
-    FConnection: TFDConnection;
+    FConnection: TComponent;
     FHotkeys: TDeepBaseHotkeys;
     FAllHotkeys: THotkeyInfoArray;
     FFilteredHotkeys: THotkeyInfoArray;
@@ -85,7 +84,7 @@ type
     procedure ExportClick(Sender: TObject);
     procedure ImportClick(Sender: TObject);
 
-    procedure SetConnection(Value: TFDConnection);
+    procedure SetConnection(Value: TComponent);
   protected
     procedure Loaded; override;
     procedure Resize; override;
@@ -95,7 +94,7 @@ type
 
     procedure RefreshData;
   published
-    property Connection: TFDConnection read FConnection write SetConnection;
+    property Connection: TComponent read FConnection write SetConnection;
     property OnHotkeysChanged: TNotifyEvent read FOnHotkeysChanged write FOnHotkeysChanged;
   end;
 
@@ -300,14 +299,14 @@ begin
   FSearchEdit.Width := Max(120, FBtnExport.Position.X - FSearchEdit.Position.X - BTN_GAP);
 end;
 
-procedure TFMXHotkeyEditor.SetConnection(Value: TFDConnection);
+procedure TFMXHotkeyEditor.SetConnection(Value: TComponent);
 begin
   if FConnection = Value then
     Exit;
 
   FConnection := Value;
   FreeAndNil(FHotkeys);
-  if Assigned(FConnection) and FConnection.Connected then
+  if Assigned(FConnection) then
     FHotkeys := TDeepBaseHotkeys.Create(FConnection);
 
   RefreshData;

@@ -36,6 +36,8 @@ requires
   IndyProtocols,
   DeepBaseCore,
   DeepBaseServices,
+  DeepBasePersistence,    // v0.7 fix: Bootstrap -> External.SQLiteReader
+  vcl,                   // v0.7 fix: UIAutomationClient_TLB requires Vcl units
   RESTComponents;
 
 contains
@@ -121,6 +123,7 @@ contains
   DeepBase.CloudBackup in 'Features\DeepBase.CloudBackup.pas',
   DeepBase.Graph in 'Features\DeepBase.Graph.pas',
   DeepBase.HttpServer in 'Features\DeepBase.HttpServer.pas',
+  UIAutomationClient_TLB in 'Features\UIAutomationClient_TLB.pas',
   DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
   DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
   DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',

@@ -52,6 +52,8 @@ type
     FForbiddenFieldsDict: TDictionary<string, Boolean>;
     FForbiddenFieldNames: TArray<string>;
     FSchemaFingerprintPrefixes: TArray<string>;
+    FCachedDirectionMapping: TDirectionMapping;   // v0.7 fix: cache to avoid per-call leak
+    FCachedMessageTypeMapping: TMsgTypeMapping;   // v0.7 fix: cache to avoid per-call leak
     function GetDirection: TDirectionMapping; virtual; abstract;
     function GetMessageType: TMsgTypeMapping; virtual; abstract;
     function GetTimestamp: TTimestampMapping; virtual; abstract;
@@ -168,24 +170,18 @@ end;
 
 function TBaseSchemaAdapter.MapDirection(const RawDirection: Variant): TDirection;
 begin
-  var Mapping := GetDirection;
-  try
-    if not Mapping.TryGetValue(RawDirection, Result) then
-      Result := dUnknown;
-  finally
-    // Mapping is owned by subclass — do not free here
-  end;
+  if FCachedDirectionMapping = nil then
+    FCachedDirectionMapping := GetDirection;
+  if not FCachedDirectionMapping.TryGetValue(RawDirection, Result) then
+    Result := dUnknown;
 end;
 
 function TBaseSchemaAdapter.MapMessageType(const RawType: Variant): TNormalizedMsgType;
 begin
-  var Mapping := GetMessageType;
-  try
-    if not Mapping.TryGetValue(RawType, Result) then
-      Result := mtUnknown;
-  finally
-    // Mapping is owned by subclass — do not free here
-  end;
+  if FCachedMessageTypeMapping = nil then
+    FCachedMessageTypeMapping := GetMessageType;
+  if not FCachedMessageTypeMapping.TryGetValue(RawType, Result) then
+    Result := mtUnknown;
 end;
 
 function TBaseSchemaAdapter.GetMappedFields: TArray<TFieldMapping>;

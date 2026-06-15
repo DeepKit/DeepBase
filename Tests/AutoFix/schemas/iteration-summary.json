@@ -1,0 +1,13 @@
+{
+    "$comment": "Required fields per record in iteration-summary.jsonl. Written by autofix.ps1 after each loop iteration.",
+    "fields": [
+        "iteration",
+        "errors_found",
+        "errors_fixed",
+        "compile_success",
+        "duration_sec",
+        "ai_calls",
+        "rollback",
+        "result"
+    ]
+}

@@ -1,4 +1,4 @@
-{==============================================================================
+﻿{==============================================================================
   DeepBase.Export.PDF - Pure Object Pascal PDF Stream Writer
 
   Generates valid PDF 1.4 documents without third-party dependencies.

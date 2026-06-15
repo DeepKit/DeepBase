@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.Validation - Data Validation Framework
   
   A fluent validation framework for validating data and objects.
@@ -855,7 +855,7 @@ constructor TRegexRule.Create(const APattern: string; ATimeoutMs: Integer = 1000
 begin
   inherited Create;
   FPattern := APattern;
-  FTimeoutMs := Max(ATimeoutMs, 100); // ×îĞ¡100ms³¬Ê±
+  FTimeoutMs := Max(ATimeoutMs, 100); // æœ€å°100msè¶…æ—¶
 end;
 
 function TRegexRule.GetDefaultMessage: string;
@@ -881,7 +881,7 @@ begin
   if S <> '' then
   begin
     try
-      // Ê¹ÓÃÒì²½ÈÎÎñÖ´ĞĞÕıÔò±í´ïÊ½£¬·ÀÖ¹ReDoS¹¥»÷
+      // ä½¿ç”¨å¼‚æ­¥ä»»åŠ¡æ‰§è¡Œæ­£åˆ™è¡¨è¾¾å¼ï¼Œé˜²æ­¢ReDoSæ”»å‡»
       IsMatched := False;
       TaskCompleted := False;
       
@@ -893,20 +893,20 @@ begin
             IsMatched := Regex.IsMatch(S);
             TaskCompleted := True;
           except
-            TaskCompleted := True; // ¼´Ê¹³ö´íÒ²±ê¼ÇÎªÍê³É
+            TaskCompleted := True; // å³ä½¿å‡ºé”™ä¹Ÿæ ‡è®°ä¸ºå®Œæˆ
           end;
         end);
       
-      // µÈ´ıÈÎÎñÍê³É»ò³¬Ê±
+      // ç­‰å¾…ä»»åŠ¡å®Œæˆæˆ–è¶…æ—¶
       StartTime := Now;
       while not TaskCompleted and (MilliSecondsBetween(Now, StartTime) < FTimeoutMs) do
       begin
-        Sleep(10); // ¶ÌÔİĞİÃß±ÜÃâCPUÕ¼ÓÃ¹ı¸ß
+        Sleep(10); // çŸ­æš‚ä¼‘çœ é¿å…CPUå ç”¨è¿‡é«˜
       end;
       
       if not TaskCompleted then
       begin
-        // ³¬Ê±£¬ÈÏÎªÊÇReDoS¹¥»÷
+        // è¶…æ—¶ï¼Œè®¤ä¸ºæ˜¯ReDoSæ”»å‡»
         Result.PropertyName := Context.PropertyName;
         Result.AttemptedValue := Value;
         Result.ErrorCode := 'REGEX_TIMEOUT';

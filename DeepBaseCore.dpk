@@ -83,6 +83,7 @@ contains
   DeepBase.Cache in 'Core\DeepBase.Cache.pas',
   DeepBase.Memory in 'Core\DeepBase.Memory.pas',
   DeepBase.Security in 'Core\DeepBase.Security.pas',
+  DeepBase.Math in 'Core\DeepBase.Math.pas',
   DeepBase.TrayIcon in 'Core\DeepBase.TrayIcon.pas',
   DeepBase.Export.PDF in 'Core\DeepBase.Export.PDF.pas',
   DeepBase.Export.DOCX in 'Core\DeepBase.Export.DOCX.pas',
@@ -91,6 +92,12 @@ contains
   DeepBase.AutoFix.ScenarioRunner in 'Core\DeepBase.AutoFix.ScenarioRunner.pas',
   DeepBase.AutoFix.SelfTerminator in 'Core\DeepBase.AutoFix.SelfTerminator.pas',
   DeepBase.AutoFix.HealthSignal in 'Core\DeepBase.AutoFix.HealthSignal.pas',
-  DeepBase.AutoFix in 'Core\DeepBase.AutoFix.pas';
+  DeepBase.AutoFix in 'Core\DeepBase.AutoFix.pas',
+  DeepBase.External.Types in 'Core\DeepBase.External.Types.pas',
+  DeepBase.External.Auditor in 'Core\DeepBase.External.Auditor.pas',
+  DeepBase.SchemaAdapter.Types in 'Core\DeepBase.SchemaAdapter.Types.pas',
+  DeepBase.SchemaAdapter in 'Core\DeepBase.SchemaAdapter.pas',
+  DeepBase.SchemaAdapter.Registry in 'Core\DeepBase.SchemaAdapter.Registry.pas',
+  DeepBase.SchemaAdapter.WeChat39x in 'Core\DeepBase.SchemaAdapter.WeChat39x.pas';
 
 end.

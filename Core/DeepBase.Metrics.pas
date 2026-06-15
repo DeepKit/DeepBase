@@ -1,4 +1,4 @@
-unit DeepBase.Metrics;
+ï»¿unit DeepBase.Metrics;
 
 {*******************************************************************************
   DeepBase Metrics
@@ -1094,15 +1094,15 @@ begin
     FSum := FSum + AValue;
     System.Inc(FCount);
     
-    // Ìí¼ÓÊý¾ÝµãÊýÁ¿ÏÞÖÆºÍ¶¨ÆÚÇåÀí»úÖÆ
+    // æ·»åŠ æ•°æ®ç‚¹æ•°é‡é™åˆ¶å’Œå®šæœŸæ¸…ç†æœºåˆ¶
     if FValues.Count > FMaxSamples then
     begin
-      // ÇåÀí×î¾ÉµÄÒ»°ëÊý¾Ýµã£¬·ÀÖ¹ÄÚ´æÎÞÏÞÔö³¤
+      // æ¸…ç†æœ€æ—§çš„ä¸€åŠæ•°æ®ç‚¹ï¼Œé˜²æ­¢å†…å­˜æ— é™å¢žé•¿
       while FValues.Count > FMaxSamples div 2 do
         FValues.Delete(0);
     end;
     
-    // ¶¨ÆÚÇåÀí£ºÃ¿1000´Î¹Û²âÇåÀíÒ»´Î¾ÉÊý¾Ý
+    // å®šæœŸæ¸…ç†ï¼šæ¯1000æ¬¡è§‚æµ‹æ¸…ç†ä¸€æ¬¡æ—§æ•°æ®
     if FCount mod 1000 = 0 then
     begin
       while FValues.Count > FMaxSamples div 2 do

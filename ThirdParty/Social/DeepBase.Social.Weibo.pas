@@ -16,7 +16,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.JSON, System.DateUtils, System.NetEncoding,
-  DeepBase.Social, DeepBase.Security;
+  DeepBase.Social, DeepBase.Security, DeepBase.Security.DPAPI;
 
 type
   /// <summary>Weibo configuration</summary>
@@ -67,9 +67,6 @@ type
   end;
 
 implementation
-
-uses
-  DeepBase.Security.DPAPI;  // BUG-019 FIX: 安全密钥存储支持
 
 const
   // Weibo OAuth2 endpoints

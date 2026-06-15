@@ -74,7 +74,7 @@ type
     function Refund(const ARequest: TRefundRequest): TRefundResult; override;
     function QueryRefund(const ARefundNo: string): TRefundResult; override;
     function VerifyNotification(const ARawData: string;
-      out ANotification: TPaymentNotification): Boolean; override;
+      out ANotification: TPaymentNotification): Boolean; overload; override;
     function VerifyNotification(const ARawData, ASignatureHeader: string;
       out ANotification: TPaymentNotification): Boolean; overload;
     function GetNotificationResponse(ASuccess: Boolean): string; override;

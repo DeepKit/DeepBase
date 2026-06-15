@@ -1,0 +1,8 @@
+{
+    "$comment": "Required fields per record in scenario-results.jsonl. Written by Delphi EXE during scenario execution.",
+    "fields": [
+        "run_id",
+        "name",
+        "status"
+    ]
+}

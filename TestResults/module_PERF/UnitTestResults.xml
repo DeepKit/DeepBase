@@ -1,0 +1,183 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="95" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:23:24">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:23:24" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="77.420" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="77.420" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="Benchmark" executed="true" result="Success" success="True" time="0.442" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestBenchmark" executed="True" result="Success" success="True" time="0.225" >
+                            <results>
+                              <test-case name="Test_Create_WithName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DefaultIterations" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Run_ExecutesProc" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_Run_CollectsTimings" executed="True" result="Success" success="True" time="0.069" asserts="0" />
+                              <test-case name="Test_Run_WithWarmup" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Run_WithSetupTeardown" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddTag_StoresTag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TrackMemory_CapturesSnapshots" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Result_ThroughputCalculation" executed="True" result="Success" success="True" time="0.155" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBenchmarkFunctions" executed="True" result="Success" success="True" time="0.062" >
+                            <results>
+                              <test-case name="Test_MeasureTime_ReturnsElapsed" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_MeasureTimeAvg_ReturnsAverage" executed="True" result="Success" success="True" time="0.047" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBenchmarkReport" executed="True" result="Success" success="True" time="0.003" >
+                            <results>
+                              <test-case name="Test_Create_WithTitle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddResult_IncreasesCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clear_RemovesResults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateText_ContainsTitle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateJSON_ValidJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateCSV_HasHeaders" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GenerateMarkdown_HasTable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CollectEnvironmentInfo_HasOSInfo" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SaveToFile_CreatesFile" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBenchmarkStats" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Calculate_EmptyArray" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_SingleValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_MinMax" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_Mean" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_Median_Odd" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_Median_Even" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_StdDev" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Calculate_Percentiles" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_FormatsCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestHiResStopwatch" executed="True" result="Success" success="True" time="0.152" >
+                            <results>
+                              <test-case name="Test_Create_InitialState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Start_SetsRunning" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Stop_ClearsRunning" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ElapsedMilliseconds_AfterSleep" executed="True" result="Success" success="True" time="0.058" asserts="0" />
+                              <test-case name="Test_ElapsedMicroseconds_Precision" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_Reset_ClearsElapsed" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_MultipleStartStop_Accumulates" executed="True" result="Success" success="True" time="0.063" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestMemorySnapshot" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Capture_ReturnsValidSnapshot" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Capture_WorkingSetPositive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Subtract_CalculatesDelta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_FormatsCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLockContentionBenchmark" executed="True" result="Success" success="True" time="11.923" >
+                      <results>
+                        <test-case name="Test_CriticalSection_ReadHeavy" executed="True" result="Success" success="True" time="0.246" asserts="0" />
+                        <test-case name="Test_MREW_ReadHeavy" executed="True" result="Success" success="True" time="1.316" asserts="0" />
+                        <test-case name="Test_CriticalSection_WriteHeavy" executed="True" result="Success" success="True" time="0.254" asserts="0" />
+                        <test-case name="Test_MREW_WriteHeavy" executed="True" result="Success" success="True" time="2.201" asserts="0" />
+                        <test-case name="Test_CriticalSection_HighConcurrency" executed="True" result="Success" success="True" time="0.576" asserts="0" />
+                        <test-case name="Test_MREW_HighConcurrency" executed="True" result="Success" success="True" time="2.488" asserts="0" />
+                        <test-case name="Test_Scalability_2_4_8_16_Threads" executed="True" result="Success" success="True" time="4.841" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Performance" executed="true" result="Success" success="True" time="62.739" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestCachePerformance" executed="True" result="Success" success="True" time="32.560" >
+                            <results>
+                              <test-case name="Benchmark_CacheGet_Hit" executed="True" result="Success" success="True" time="0.757" asserts="0" />
+                              <test-case name="Benchmark_CacheGet_Miss" executed="True" result="Success" success="True" time="0.108" asserts="0" />
+                              <test-case name="Benchmark_CacheSet" executed="True" result="Success" success="True" time="1.436" asserts="0" />
+                              <test-case name="Benchmark_CacheGetOrAdd" executed="True" result="Success" success="True" time="1.341" asserts="0" />
+                              <test-case name="Benchmark_CacheConcurrent" executed="True" result="Success" success="True" time="28.905" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestConfigPerformance" executed="True" result="Success" success="True" time="5.753" >
+                            <results>
+                              <test-case name="Benchmark_ConfigRead_Cached" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                              <test-case name="Benchmark_ConfigRead_Uncached" executed="True" result="Success" success="True" time="1.528" asserts="0" />
+                              <test-case name="Benchmark_ConfigWrite" executed="True" result="Success" success="True" time="1.817" asserts="0" />
+                              <test-case name="Benchmark_ConfigWrite_Batch" executed="True" result="Success" success="True" time="1.908" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDoQryPerformance" executed="True" result="Success" success="True" time="1.675" >
+                            <results>
+                              <test-case name="Benchmark_SimpleSelect" executed="True" result="Success" success="True" time="0.608" asserts="0" />
+                              <test-case name="Benchmark_ParameterizedSelect" executed="True" result="Success" success="True" time="0.624" asserts="0" />
+                              <test-case name="Benchmark_Insert" executed="True" result="Success" success="True" time="0.177" asserts="0" />
+                              <test-case name="Benchmark_Update" executed="True" result="Success" success="True" time="0.109" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestLoggingPerformance" executed="True" result="Success" success="True" time="22.751" >
+                            <results>
+                              <test-case name="Benchmark_LogWrite_Info" executed="True" result="Success" success="True" time="0.124" asserts="0" />
+                              <test-case name="Benchmark_LogWrite_WithFormat" executed="True" result="Success" success="True" time="0.311" asserts="0" />
+                              <test-case name="Benchmark_LogWrite_Concurrent" executed="True" result="Success" success="True" time="21.636" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="PerformanceSuite" executed="true" result="Success" success="True" time="2.316" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TConcurrencyBenchmarkTests" executed="True" result="Success" success="True" time="0.548" >
+                            <results>
+                              <test-case name="Test_ThreadCreation_4" executed="True" result="Success" success="True" time="0.021" asserts="0" />
+                              <test-case name="Test_ThreadCreation_8" executed="True" result="Success" success="True" time="0.035" asserts="0" />
+                              <test-case name="Test_CriticalSectionLocking" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_ReadWriteLock" executed="True" result="Success" success="True" time="0.042" asserts="0" />
+                              <test-case name="Test_AtomicIncrement" executed="True" result="Success" success="True" time="0.042" asserts="0" />
+                              <test-case name="Test_ThreadPoolTasks" executed="True" result="Success" success="True" time="0.032" asserts="0" />
+                              <test-case name="Test_EventSignaling" executed="True" result="Success" success="True" time="0.342" asserts="0" />
+                              <test-case name="Test_MonitorLocking" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TCoreBenchmarkTests" executed="True" result="Success" success="True" time="0.036" >
+                            <results>
+                              <test-case name="Test_CachePut" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_CacheGetHit" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_CacheGetMiss" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CacheEviction_LRU" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                              <test-case name="Test_JSONParsing" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_JSONGeneration" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_DateTimeFormatting" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_GUIDGeneration" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TDiskIOBenchmarkTests" executed="True" result="Success" success="True" time="1.588" >
+                            <results>
+                              <test-case name="Test_SequentialWrite_1KB" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                              <test-case name="Test_SequentialWrite_100KB" executed="True" result="Success" success="True" time="0.037" asserts="0" />
+                              <test-case name="Test_SequentialWrite_1MB" executed="True" result="Success" success="True" time="0.036" asserts="0" />
+                              <test-case name="Test_SequentialRead_1KB" executed="True" result="Success" success="True" time="0.020" asserts="0" />
+                              <test-case name="Test_SequentialRead_100KB" executed="True" result="Success" success="True" time="0.023" asserts="0" />
+                              <test-case name="Test_SequentialRead_1MB" executed="True" result="Success" success="True" time="0.022" asserts="0" />
+                              <test-case name="Test_RandomAccess" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                              <test-case name="Test_FileCreateDelete" executed="True" result="Success" success="True" time="1.386" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TMemoryBenchmarkTests" executed="True" result="Success" success="True" time="0.144" >
+                            <results>
+                              <test-case name="Test_SmallObjectAllocation_1000" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_SmallObjectAllocation_10000" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                              <test-case name="Test_LargeBufferAllocation" executed="True" result="Success" success="True" time="0.033" asserts="0" />
+                              <test-case name="Test_StringConcatenation" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_StringBuilderPerformance" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_DictionaryAddLookup" executed="True" result="Success" success="True" time="0.028" asserts="0" />
+                              <test-case name="Test_ListAddSort" executed="True" result="Success" success="True" time="0.060" asserts="0" />
+                              <test-case name="Test_MemoryPoolPattern" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

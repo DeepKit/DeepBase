@@ -55,6 +55,11 @@ type
       const AUserPrompt: string; const ASystemPrompt: string = ''): TChatResult;
     function GenerateImage(const APrompt: string;
       const ASize: string = '1024x1024'): TImageGenerationResult;
+    procedure GenerateImageStream(const APrompt: string;
+      const AOnProgress: TImageProgressCallback;
+      const AOnResult: TProc<TImageGenerationResult>;
+      const AOnError: TProc<string>;
+      const ASize: string = '1024x1024');
     procedure ChatVisionStream(const ATier: TModelTier;
       const AImageBase64: string; const AImageMimeType: string;
       const AUserPrompt: string; const ASystemPrompt: string;
@@ -136,6 +141,23 @@ function TFakeClarificationLLM.GenerateImage(const APrompt,
   ASize: string): TImageGenerationResult;
 begin
   Result := Default(TImageGenerationResult);
+end;
+
+procedure TFakeClarificationLLM.GenerateImageStream(const APrompt: string;
+  const AOnProgress: TImageProgressCallback;
+  const AOnResult: TProc<TImageGenerationResult>;
+  const AOnError: TProc<string>;
+  const ASize: string);
+var
+  LResult: TImageGenerationResult;
+begin
+  Inc(Calls);
+  if Assigned(AOnProgress) then
+    AOnProgress(1.0, 'complete', True);
+
+  LResult := GenerateImage(APrompt, ASize);
+  if Assigned(AOnResult) then
+    AOnResult(LResult);
 end;
 
 procedure TFakeClarificationLLM.ChatVisionStream(const ATier: TModelTier;

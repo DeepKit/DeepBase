@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.RateLimiter - Rate Limiting Module
   
   A comprehensive rate limiting implementation for API throttling.

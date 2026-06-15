@@ -1,4 +1,4 @@
-unit DeepBase.Compression;
+﻿unit DeepBase.Compression;
 
 {*******************************************************************************
   DeepBase Compression Utilities

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SingleInstance - Single Instance Application Support
   
   Version: 1.0
@@ -26,6 +26,12 @@ type
   TCommandLineReceivedEvent = procedure(const CommandLine: string) of object;
 
   /// <summary>
+  /// Callback for activating the main application window.
+  /// Injected by VCL-aware bootstrap code to restore and bring to front.
+  /// </summary>
+  TActivateWindowProc = reference to procedure;
+
+  /// <summary>
   /// Single instance application helper
   /// </summary>
   TAppInstance = class
@@ -36,6 +42,7 @@ type
     FMessageWindowHandle: HWND;
     FOnCommandLineReceived: TCommandLineReceivedEvent;
     FAllowMultipleInstances: Boolean;
+    FActivateWindowProc: TActivateWindowProc;
     
     class procedure CreateMessageWindow;
     class procedure DestroyMessageWindow;
@@ -88,6 +95,13 @@ type
     /// </summary>
     class property AllowMultipleInstances: Boolean 
       read FAllowMultipleInstances write FAllowMultipleInstances;
+
+    /// <summary>
+    /// Set the callback that activates the main window. Called from the
+    /// message-window handler when another instance sends WM_DeepBase_ACTIVATE.
+    /// Inject from VCL bootstrap code that has access to Application.MainForm.
+    /// </summary>
+    class procedure SetActivateWindowProc(AProc: TActivateWindowProc);
   end;
 
 const
@@ -98,9 +112,6 @@ const
   WM_DeepBase_ACTIVATE = WM_USER + $1B02;
 
 implementation
-
-uses
-  Vcl.Forms;
 
 const
   MESSAGE_WINDOW_CLASS = 'DeepBase_SingleInstance_MessageWindow';
@@ -286,15 +297,9 @@ begin
       
     WM_DeepBase_ACTIVATE:
       begin
-        // Activate the main form
-        if Assigned(Application) and Assigned(Application.MainForm) then
-        begin
-          if Application.MainForm.WindowState = wsMinimized then
-            Application.MainForm.WindowState := wsNormal;
-            
-          SetForegroundWindow(Application.MainForm.Handle);
-          Application.BringToFront;
-        end;
+        // Activate the main form via injected callback (VCL-free)
+        if Assigned(FActivateWindowProc) then
+          FActivateWindowProc;
         Result := 1;
       end;
       
@@ -317,11 +322,17 @@ begin
   FIsFirstInstance := False;
 end;
 
+class procedure TAppInstance.SetActivateWindowProc(AProc: TActivateWindowProc);
+begin
+  FActivateWindowProc := AProc;
+end;
+
 initialization
   TAppInstance.FMutexHandle := 0;
   TAppInstance.FIsFirstInstance := False;
   TAppInstance.FAllowMultipleInstances := False;
   TAppInstance.FMessageWindowHandle := 0;
+  TAppInstance.FActivateWindowProc := nil;
 
 finalization
   TAppInstance.Release;

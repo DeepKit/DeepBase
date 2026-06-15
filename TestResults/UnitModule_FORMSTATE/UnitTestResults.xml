@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="13" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:32:09">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:32:09" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.137" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TTestDeepBaseFormState" executed="True" result="Success" success="True" time="0.137" >
+                <results>
+                  <test-case name="Test_SaveFormState_Basic" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_RestoreFormState_Basic" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_SaveRestore_Position" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                  <test-case name="Test_SaveRestore_Size" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                  <test-case name="Test_SaveRestore_WindowState_Normal" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_SaveRestore_WindowState_Maximized" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_RestoreFormState_BoundaryCheck" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                  <test-case name="Test_RestoreFormState_ClampsStaleMultiMonitorBounds" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                  <test-case name="Test_SaveRestore_Extra_JSON" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_DeleteFormState" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_FormStateExists" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                  <test-case name="Test_MultipleFormsIsolated" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                  <test-case name="Test_StorageInjection_SaveRestoreState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

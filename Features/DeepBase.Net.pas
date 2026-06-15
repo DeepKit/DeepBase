@@ -1,4 +1,4 @@
-unit DeepBase.Net;
+ï»¿unit DeepBase.Net;
 
 (*******************************************************************************
   DeepBase Network Utilities
@@ -575,7 +575,7 @@ begin
     // Set headers with validation
     for LPair in FHeaders do
     begin
-      // ÑéÖ¤HTTPÍ·²¿£¬·ÀÖ¹Í·²¿×¢Èë¹¥»÷
+      // éªŒè¯HTTPå¤´éƒ¨ï¼Œé˜²æ­¢å¤´éƒ¨æ³¨å…¥æ”»å‡»
       if TNetworkUtils.IsValidHttpHeader(LPair.Key, LPair.Value) then
         LClient.CustomHeaders[LPair.Key] := LPair.Value
       else
@@ -595,10 +595,10 @@ begin
     
     LStartTime := Now;
     
-    // ÑéÖ¤URL°²È«ĞÔ£¬·ÀÖ¹SSRF¹¥»÷
+    // éªŒè¯URLå®‰å…¨æ€§ï¼Œé˜²æ­¢SSRFæ”»å‡»
     if not TNetworkUtils.IsSafeUrl(LUrl) then
       raise ENetException.CreateFmt('Unsafe URL detected: %s', [LUrl]);
-    // ÔÚ·¢ÆğÁ¬½ÓÇ°ÔÙ´Î½âÎö²¢Ğ£ÑéÄ¿±êIP£¬½µµÍDNS rebinding·çÏÕ
+    // åœ¨å‘èµ·è¿æ¥å‰å†æ¬¡è§£æå¹¶æ ¡éªŒç›®æ ‡IPï¼Œé™ä½DNS rebindingé£é™©
     TNetworkUtils.ValidateResolvedUrlForHttp(LUrl);
     
     try
@@ -1970,11 +1970,11 @@ class function TNetworkUtils.IsValidHttpHeader(const AName, AValue: string): Boo
 begin
   Result := False;
   
-  // ¼ì²éÍ·²¿Ãû³Æ
+  // æ£€æŸ¥å¤´éƒ¨åç§°
   if AName.IsEmpty or (Length(AName) > 255) then
     Exit;
     
-  // Í·²¿Ãû³ÆÖ»ÄÜ°üº¬¿É¼ûASCII×Ö·û£¬²»ÄÜ°üº¬·Ö¸ô·û
+  // å¤´éƒ¨åç§°åªèƒ½åŒ…å«å¯è§ASCIIå­—ç¬¦ï¼Œä¸èƒ½åŒ…å«åˆ†éš”ç¬¦
   for var C in AName do
   begin
     if (Ord(C) < 33) or (Ord(C) > 126) or 
@@ -1982,11 +1982,11 @@ begin
       Exit;
   end;
   
-  // ¼ì²éÍ·²¿Öµ
-  if Length(AValue) > 8192 then // ÏŞÖÆÍ·²¿Öµ³¤¶È
+  // æ£€æŸ¥å¤´éƒ¨å€¼
+  if Length(AValue) > 8192 then // é™åˆ¶å¤´éƒ¨å€¼é•¿åº¦
     Exit;
     
-  // Í·²¿Öµ²»ÄÜ°üº¬¿ØÖÆ×Ö·û£¨³ıÁËTAB£©
+  // å¤´éƒ¨å€¼ä¸èƒ½åŒ…å«æ§åˆ¶å­—ç¬¦ï¼ˆé™¤äº†TABï¼‰
   for var C in AValue do
   begin
     if (Ord(C) < 32) and (C <> #9) then
@@ -1995,7 +1995,7 @@ begin
       Exit;
   end;
   
-  // ¼ì²éÊÇ·ñ°üº¬CRLF×¢Èë
+  // æ£€æŸ¥æ˜¯å¦åŒ…å«CRLFæ³¨å…¥
   if AValue.Contains(#13) or AValue.Contains(#10) then
     Exit;
     
@@ -2139,7 +2139,7 @@ begin
   try
     URI := TURI.Create(AUrl);
     
-    // Ö»ÔÊĞíHTTPºÍHTTPSĞ­Òé
+    // åªå…è®¸HTTPå’ŒHTTPSåè®®
     if not SameText(URI.Scheme, 'http') and not SameText(URI.Scheme, 'https') then
       Exit;
       
@@ -2150,16 +2150,16 @@ begin
     AllowPrivateNet := SameText(GetEnvironmentVariable('DeepBase_ALLOW_PRIVATE_NET_HTTP'), '1');
     AllowLocalHost := SameText(GetEnvironmentVariable('DeepBase_ALLOW_LOCALHOST_HTTP'), '1');
     
-    // ·ÀÖ¹SSRF¹¥»÷ - Ä¬ÈÏ½ûÖ¹ÄÚÍøµØÖ·£¨¿ÉÍ¨¹ı»·¾³±äÁ¿ÏÔÊ½·Å¿ª£©
+    // é˜²æ­¢SSRFæ”»å‡» - é»˜è®¤ç¦æ­¢å†…ç½‘åœ°å€ï¼ˆå¯é€šè¿‡ç¯å¢ƒå˜é‡æ˜¾å¼æ”¾å¼€ï¼‰
     if (TIPUtils.IsPrivateIP(Host) or TIPUtils.IsLinkLocalIP(Host)) and (not AllowPrivateNet) then
       Exit;
 
-    // Ä¬ÈÏ½ûÖ¹»Ø»·µØÖ·£¨¿ÉÍ¨¹ı»·¾³±äÁ¿ÏÔÊ½·Å¿ª£¬ÓÃÓÚ±¾µØ¼¯³É²âÊÔ/¿ª·¢£©
+    // é»˜è®¤ç¦æ­¢å›ç¯åœ°å€ï¼ˆå¯é€šè¿‡ç¯å¢ƒå˜é‡æ˜¾å¼æ”¾å¼€ï¼Œç”¨äºæœ¬åœ°é›†æˆæµ‹è¯•/å¼€å‘ï¼‰
     if (TIPUtils.IsLoopbackIP(Host) or Host.Contains('localhost') or Host.Contains('127.') or Host.Contains('::1')) and
        (not AllowLocalHost) then
       Exit;
       
-    // ½ûÖ¹·ÃÎÊÔªÊı¾İ·şÎñ
+    // ç¦æ­¢è®¿é—®å…ƒæ•°æ®æœåŠ¡
     if Host.Contains('169.254.169.254') or Host.Contains('metadata') then
       Exit;
       

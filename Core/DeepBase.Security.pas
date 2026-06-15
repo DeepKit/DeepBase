@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Security - Cross-Platform Security Module
   
   Version: 1.0
@@ -729,7 +729,7 @@ var
   CipherBase64: string;
   NowStr: string;
 begin
-  // 验证密钥名称，防止SQL注入和路径遍�?
+  // éªè¯å¯é¥åç§°ï¼é²æ­¢SQLæ³¨å¥åè·¯å¾éå?
   if not IsValidSecretName(AName) then
     raise EArgumentException.Create('Invalid secret name format');
     
@@ -809,33 +809,33 @@ var
 begin
   Result := False;
   
-  // 检查基本要�?
+  // æ£æ¥åºæ¬è¦æ±?
   if AName.IsEmpty or (Length(AName) > 255) then
     Exit;
     
-  // 不能以点开头（防止隐藏文件�?
+  // ä¸è½ä»¥ç¹å¼å¤´ï¼é²æ­¢éèæä»¶ï¼?
   if AName.StartsWith('.') then
     Exit;
     
-  // 检查每个字�?
+  // æ£æ¥æ¯ä¸ªå­ç¬?
   for I := 1 to Length(AName) do
   begin
     C := AName[I];
     
-    // 只允许字母、数字、下划线、连字符和点
+    // åªåè®¸å­æ¯ãæ°å­ãä¸åçº¿ãè¿å­ç¬¦åç¹
     if not (CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '_', '-', '.'])) then
       Exit;
       
-    // 不允许连续的点（防止路径遍历�?
+    // ä¸åè®¸è¿ç»­çç¹ï¼é²æ­¢è·¯å¾éåï¼?
     if (C = '.') and (I > 1) and (AName[I-1] = '.') then
       Exit;
   end;
   
-  // 不能以点结尾
+  // ä¸è½ä»¥ç¹ç»å°¾
   if AName.EndsWith('.') then
     Exit;
     
-  // 检查保留名�?
+  // æ£æ¥ä¿çåç§?
   var LowerName := AName.ToLower;
   if (LowerName = 'con') or (LowerName = 'prn') or (LowerName = 'aux') or 
      (LowerName = 'nul') or LowerName.StartsWith('com') or LowerName.StartsWith('lpt') then

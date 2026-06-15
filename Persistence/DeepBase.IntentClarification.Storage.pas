@@ -25,6 +25,7 @@ uses
   System.DateUtils,
   FireDAC.Comp.Client,
   DeepBase.IntentClarification.Types,
+  DeepBase.IntentClarification.Interfaces,
   DeepBase.DB.Factory,
   DeepBase.DB.Guardian,
   DeepBase.Logging,
@@ -37,7 +38,7 @@ type
   /// Integrity verified via TDBGuardian.ProtectConnection on first use.
   /// Property 43: save then load produces equivalent object.
   /// </summary>
-  TClarificationStorage = class
+  TClarificationStorage = class(TInterfacedObject, IClarificationStorage)
   private
     FConnection: TFDConnection;
     FInitialized: Boolean;

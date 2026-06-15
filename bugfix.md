@@ -3,6 +3,262 @@
 > 本文档记录所有发现和修复�?Bug、Issue 及改�?
 ---
 
+## 2026-06-15 Bug 登记（DeepLaunch Grid / Workflow UI）
+
+### BUG-248: DeepLaunch Grid 右键“编辑工作流”空指针崩溃
+- 发现日期: 2026-06-15
+- 严重性: 🔴 Critical
+- 文件: 待定位（当前 DeepBase 仓库未找到 `DeepLaunch.exe` 对应主程序源码）
+- 问题:
+  - 在 Grid 中右键打开“编辑工作流”后，程序报 Access violation。
+  - 报错信息：`Access violation at address 00007FF617E4EC3C in module 'DeepLaunch.exe' (offset A8EC3C). Read of address 0000000000000000.`
+  - 从现象判断，右键菜单命令可能在没有有效 workflow 对象、当前行、绑定数据或编辑器实例时直接解引用。
+- 修复计划:
+  - 定位 DeepLaunch workflow grid 源码。
+  - 右键命中测试、当前行解析、workflow 对象解析和编辑窗体创建前全部做 nil/空数据保护。
+  - 空 Grid、空行、已删除 workflow、不可编辑 workflow 状态下禁用“Edit Workflow”命令。
+  - 增加右键编辑回归测试或最小 UI smoke。
+- 验证:
+  - 待补。
+- 状态: ⏳ 待修复
+
+### BUG-249: DeepLaunch 工作流区和相关窗体缺少 i18n
+- 发现日期: 2026-06-15
+- 严重性: 🟠 High
+- 文件: 待定位（DeepLaunch workflow UI / settings / dialogs）
+- 问题:
+  - 工作流区和其它窗体仍有硬编码中文或未接入语言服务的界面文本。
+  - 用户要求先把所有界面默认文案改成英文，再实现 i18n；程序启动后根据操作系统语言自动切换，中文系统应切到中文。
+- 修复计划:
+  - 默认 UI 文案统一为英文 key/default。
+  - 接入语言检测：Windows `GetUserDefaultLocaleName` 或 DeepShell `DetectSystemLocale`，中文系统映射到 `zh-CN`。
+  - 右键菜单、Grid 表头、工作流格子、编辑窗体、设置页、提示信息全部走 i18n key。
+  - 增加 `en-US` / `zh-CN` 文案注册与启动回归验证。
+- 验证:
+  - 待补。
+- 状态: ⏳ 待修复
+
+### BUG-250: DeepLaunch 主题切换未覆盖 Grid 和工作流区
+- 发现日期: 2026-06-15
+- 严重性: 🟠 High
+- 文件: 待定位（DeepLaunch Grid / workflow canvas）
+- 问题:
+  - 主题切换后，Grid 和工作流区没有匹配当前主题。
+  - 可能缺少主题事件订阅，或自绘颜色仍使用固定值。
+- 修复计划:
+  - Grid、工作流画布、单元格、连线、选中态、hover、空状态、右键菜单和编辑窗体统一从主题服务读取颜色。
+  - 订阅主题变更事件并触发 Grid/画布重绘。
+  - 禁止在自绘路径使用硬编码亮色/暗色常量，改为集中 palette。
+- 验证:
+  - 待补。
+- 状态: ⏳ 待修复
+
+### BUG-251: DeepLaunch 工作流区高度不足导致单元格裁剪且只绘制 5/10 格
+- 发现日期: 2026-06-15
+- 严重性: 🟠 High
+- 文件: 待定位（DeepLaunch workflow canvas / grid layout）
+- 问题:
+  - 工作流区高度不够，绘出的单元格只显示上半部分。
+  - 计划绘制 10 个工作流格子，现在只绘制了 5 个。
+  - 可能是容器高度、行高、滚动区域、DPI 缩放或行列布局计算错误。
+- 修复计划:
+  - 按容器 `ClientHeight/ClientWidth`、目标格子数、行列数、间距和 DPI 重新计算布局。
+  - 目标 10 格必须全部进入可见区域或可滚动区域，不能被父容器裁剪。
+  - 增加 10 格绘制 smoke：验证最后一个格子完整可见或可滚动访问。
+- 验证:
+  - 待补。
+- 状态: ⏳ 待修复
+
+---
+
+## 2026-06-11 Bug 修复（QA-P0 Unit 全量收敛）
+
+### BUG-244: DBException 中文预期字符串源码编码导致断言 mojibake
+- 发现日期: 2026-06-11
+- 严重性: 🟠 High
+- 文件: `Tests/Test.DeepBase.DBException.pas`
+- 问题:
+  - `GetErrorMessage_ReturnsKnownMessages` 视觉上写的是中文预期，但测试执行时 expected 变成 `鏃犳硶...` 这类 mojibake。
+  - 生产实现返回正确中文，失败根因是测试源文件编码/编译器代码页解释不一致。
+- 修复:
+  - 新增 `Utf16String` helper，用 UTF-16 code point 构造中文预期，避免源码编码影响断言。
+  - `FromCode_UsesErrorCodeAndDetail` 中非关键中文 detail 改为 ASCII 文本，只保留 `test.db` 断言。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DBException,DeepBase.Unlock -OutputDir TestResults\UnitGroup_FinalTwo -AllowFilteredCI`：12/12 passed。
+- 状态: ✅ 已修复
+
+### BUG-245: Unlock invalid checksum 测试突变字符可命中兼容校验码
+- 发现日期: 2026-06-11
+- 严重性: 🟡 Medium
+- 文件: `Tests/Test.DeepBase.Unlock.pas`
+- 问题:
+  - `Test_InvalidChecksum_Detected` 将最后一位改成 `X`/`Z`，但 `ValidateCode` 会同时检查当前算法和 legacy 算法的所有等级。
+  - 突变字符可能刚好是同一产品月份下某个支持等级的有效校验字符，导致状态返回 `uvsOk` 而非 `uvsInvalidChecksum`。
+- 修复:
+  - 改用不在 `CHECK_ALPHABET` 内的 `@` 作为坏校验字符，确保不会命中当前或 legacy 校验码。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DBException,DeepBase.Unlock -OutputDir TestResults\UnitGroup_FinalTwo -AllowFilteredCI`：12/12 passed。
+- 状态: ✅ 已修复
+
+### BUG-246: DoQry 并发 InsertReturningId 在完整 Unit 压力下仍可能耗尽短重试窗口
+- 发现日期: 2026-06-11
+- 严重性: 🟠 High
+- 文件: `Tests/Test.DeepBase.DB.DoQry.pas`
+- 问题:
+  - 单跑 `DB.DoQry` 32/32 通过，但完整 Unit 同进程压力下 `Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds` 偶发 `ErrorCount=1`。
+  - 测试只重试 5 次且 BusyTimeout 为 5000ms，SQLite 多 writer 场景在全量运行压力下仍可能耗尽窗口。
+  - 失败路径使用 `Exit` 会跳过后续 `Conn.Free`，导致连接清理不完整。
+- 修复:
+  - 初始化连接和 worker 连接均启用 WAL，并将 BusyTimeout 调整为 10000ms。
+  - 将事务冲突重试从 5 次扩到 20 次，退避从 `Attempt * 10ms` 调整到 `Attempt * 25ms`。
+  - 失败路径不再提前 `Exit`，确保 worker 连接释放。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -OutputDir TestResults\UnitGroup_DoQryAfterRetry -AllowFilteredCI`：32/32 passed。
+  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -OutputDir TestResults\UnitFull_AfterDoQryRetry -AllowFilteredCI`：3661 found，3658 passed，3 ignored，0 failed，0 errored。
+- 状态: ✅ 已修复
+
+### BUG-247: 完整 Unit 退出阶段仍报告 System.JSON/FastMM unexpected memory leak
+- 发现日期: 2026-06-11
+- 严重性: 🟡 Medium
+- 文件: 待定位
+- 问题:
+  - 完整 Unit DUnitX 摘要已全绿，但进程退出后仍打印 unexpected memory leak。
+  - 当前泄漏摘要包含 `TJSONObject x2`、`TJSONPair x5`、`TJSONString x9`、`TList<System.JSON.TJSONPair> x2` 及少量 `UnicodeString/Unknown`。
+- 修复计划:
+  - 后续按测试分组缩小泄漏来源，优先检查 Payment/Commerce/JSON 解析路径中 `TJSONObject.ParseJSONValue` 所有权释放。
+- 验证:
+  - 待补。
+- 状态: ⏳ 待修复
+
+---
+
+## 2026-06-10 Bug 修复（QA-P0 Unit runner 收敛）
+
+### BUG-241: DoQry SQLite locked/busy 未映射为事务冲突导致并发 InsertReturningId 偶发失败
+- 发现日期: 2026-06-10
+- 严重性: 🟠 High
+- 文件: `Persistence/DeepBase.DB.DoQry.pas`
+- 问题:
+  - `Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds` 在并发 SQLite 写入时偶发 `ErrorCount=1`。
+  - 测试已有 `DOQRY_ERR_TX_CONFLICT` 重试逻辑，但 `InferErrorCodeFromMessage` 只识别 `LOCK + CONFLICT`，未覆盖 SQLite/FireDAC 常见的 `database is locked`、`busy`、`locked` 文本回退。
+- 修复:
+  - 将 `DATABASE IS LOCKED`、`SQLITE_BUSY`、`BUSY`、`LOCKED` 消息统一映射为 `DOQRY_ERR_TX_CONFLICT`，让既有重试路径生效。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -AllowFilteredCI`：32/32 passed。
+- 状态: ✅ 已修复
+
+### BUG-242: BrowserAutomation 测试 fake 未跟随 ScriptStore success 契约
+- 发现日期: 2026-06-10
+- 严重性: 🟡 Medium
+- 文件: `Tests/Test.DeepBase.BrowserAutomation.pas`
+- 问题:
+  - BrowserAutomation runner 已优先使用 ScriptStore 模板，click/input 脚本返回 `{success:true,error:""}`。
+  - 测试 fake 看到脚本包含 `textContent` 就返回 `{found:true,text:"latest answer"}`，导致 input/click 被 `TryJsonBool` 判为失败，DOM plan 只执行 2 步。
+- 修复:
+  - fake `EvaluateScript` 优先识别 `success:true` 契约并返回 `{success:true,exists:true,value:true}`，再处理 get_text 的 `{found,text}` 契约。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.BrowserAutomation -AllowFilteredCI`：8/8 passed。
+- 状态: ✅ 已修复
+
+### BUG-243: run_tests.ps1 测试进程超时后残留 DeepBaseTests.exe
+- 发现日期: 2026-06-10
+- 严重性: 🟠 High
+- 文件: `Scripts/run_tests.ps1`
+- 问题:
+  - 完整 Unit 长时间运行时，外层命令超时会留下 `DeepBaseTests.exe` 子进程继续占用 `TestResults\UnitTestResults.xml`。
+  - 后续过滤测试可能因 XML 文件被占用报 `EFCreateError`，且门禁没有明确的超时失败摘要。
+- 修复:
+  - 新增 `DEEPBASE_TEST_RUN_TIMEOUT_MS` 可配置测试执行超时，默认 300000ms。
+  - `Run-TestProject` 改为 `WaitForExit(timeout)`；超时后输出失败信息、`Stop-Process` 终止子进程并释放 process handle。
+- 验证:
+  - 使用 `DEEPBASE_TEST_RUN_TIMEOUT_MS=60000` 跑完整 `-SkipCompile` Unit，脚本在 60 秒自行返回失败并清理 `DeepBaseTests.exe`，无残留进程。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-06-09 Bug 修复（IntentClarification 回归测试）
+
+### BUG-237: ILLMClient 新增 GenerateImageStream 后测试 mock 未同步
+- 发现日期: 2026-06-09
+- 严重性: 🟠 High
+- 文件: `Tests/Test.DeepBase.IntentClarification.pas`, `Tests/Test.DeepBase.IntentClarification.Integration.pas`
+- 问题:
+  - `ILLMClient` 已要求 `GenerateImageStream`，但 IntentClarification 基础测试和集成测试里的 mock client 仍只实现旧接口。
+  - 过滤编译 `Test.DeepBase.IntentClarification.Integration` 时先被 `Missing implementation of interface method DeepBase.LLM.Client.ILLMClient.GenerateImageStream` 阻塞。
+- 修复:
+  - `TFakeClarificationLLM` 新增 `GenerateImageStream` 最小回调实现。
+  - `TMockLLMClient` 新增 `GenerateImageStream` 成功/失败回调实现，并保持 mock 调用计数。
+  - 集成测试新增 Engine->DomainAdapter->L1 provider slot 注入回归和 L4 全失败 degraded failure 回归。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI`：17/17 passed。
+- 状态: ✅ 已修复
+
+### BUG-238: Payment 模块 HashCode 未声明阻塞 DeepBaseTests 编译
+- 发现日期: 2026-06-09
+- 严重性: 🔴 Critical
+- 文件: `ThirdParty/Payment/DeepBase.Payment.pas`
+- 问题:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI` 编译 `Tests\DeepBaseTests.dpr` 时在 `DeepBase.Payment.pas(430)` 报 `Undeclared identifier: 'HashCode'`。
+  - 该错误位于 Payment 模块，阻塞过滤测试进入执行阶段，也会影响当前 Unit runner 可信度。
+- 修复:
+  - 将 `TObject(Self).HashCode` 替换为基于 `NativeUInt(Self)` 的 Delphi 13.1 兼容内部订单号后缀。
+  - 在 `DeepBase.Payment` facade 中补齐 `TPaymentProvider`、`TPaymentStatus`、`EPaymentError` 及 `pp*/ps*` 兼容别名，避免 provider 单元只 uses facade 时类型不可见。
+  - 修复 Stripe `VerifyNotification` 重载声明，并补齐 Payment Integration 测试的 `System.DateUtils`、ASCII bytes 和泛型断言兼容问题。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI` 已越过 Payment 编译，并最终 17/17 passed。
+- 状态: ✅ 已修复
+
+### BUG-239: run_tests.ps1 从仓库根目录编译 DPR 导致子目录测试引用找不到
+- 发现日期: 2026-06-09
+- 严重性: 🟠 High
+- 文件: `Scripts/run_tests.ps1`
+- 问题:
+  - `run_tests.ps1` 以绝对路径传入 `Tests\DeepBaseTests.dpr`，但未设置编译工作目录。
+  - Delphi 编译器解析 `DeepBaseTests.dpr` 中的 `in 'Architecture\Test.Arch.PackageBoundaries.pas'` 时按当前目录而非 DPR 所在目录查找，报 `File not found: 'Architecture\Test.Arch.PackageBoundaries.pas'`。
+- 修复:
+  - `Compile-TestProject` 计算 `$projectDir = Split-Path -Parent $ProjectFile`。
+  - `Start-Process` 调用 dcc 时增加 `-WorkingDirectory $projectDir`，让 Unit/Integration DPR 的相对引用按项目目录解析。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI` 已越过 Architecture 引用，并最终 17/17 passed。
+- 状态: ✅ 已修复
+
+### BUG-240: Social Weibo/QQ 在 interface 暴露 TKeyStorageMode 但未引入 DPAPI 单元
+- 发现日期: 2026-06-09
+- 严重性: 🟠 High
+- 文件: `ThirdParty/Social/DeepBase.Social.Weibo.pas`, `ThirdParty/Social/DeepBase.Social.QQ.pas`
+- 问题:
+  - `TWeiboConfig` 和 `TQQConfig` 的公开属性使用 `TKeyStorageMode`，但 `DeepBase.Security.DPAPI` 只在 implementation uses 中引入。
+  - 编译 interface 时类型不可见，导致 `Undeclared identifier: 'TKeyStorageMode'`，阻塞 `DeepBaseTests.dpr` 编译。
+- 修复:
+  - 将 `DeepBase.Security.DPAPI` 移到 Weibo/QQ 的 interface uses，移除 implementation uses 中的重复引用。
+- 验证:
+  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI` 已越过 Social 编译，并最终 17/17 passed。
+- 状态: ✅ 已修复
+
+---
+
+## 2026-06-09 Bug 修复（IntentClarification 包边界门禁）
+
+### BUG-236: IntentClarification Phase 2 缺少必需单元包边界防回归检查
+- 发现日期: 2026-06-09
+- 严重性: 🟠 High
+- 文件: `Tests/Architecture/Test.Arch.PackageBoundaries.pas`, `DeepBaseFeatures.dpk`, `DeepBaseFeatures.dproj`
+- 问题:
+  - `tasks.md` 已要求补 `DeepBase.IntentClarification.*` 必需单元检查，但架构测试此前只做了泛化的 Features 包检查。
+  - 如果后续误删 `DeepBaseFeatures.dpk/.dproj` 中的 Phase 2 单元引用，可能再次出现“旧 facade 可编译、真实 Phase 2 单元漏编译”的假绿。
+  - `IntentClarification.Storage` 已迁入 Persistence 边界，仍需要显式防止旧 `Features\DeepBase.IntentClarification.Storage.pas` 回流。
+- 修复:
+  - 新增 `FeaturesPackage_ContainsIntentClarificationPhase2Units` 架构测试。
+  - 对 `DeepBaseFeatures.dpk` 和 `DeepBaseFeatures.dproj` 同时断言 Phase 2 必需单元引用。
+  - 明确断言 `Features\DeepBase.IntentClarification.Storage.pas` 不得出现在 Features 包/工程中。
+- 验证:
+  - `Scripts\run_architecture_checks.ps1`: 25/25 architecture tests passed。
+  - Layer checks: Errors=0。
+  - Security pattern checks: Errors=0。
+- 状态: ✅ 已修复
+
+---
+
 ## 2026-05-14 Bug 登记（IntentClarification）
 
 > 本节记录 2026-05-14 五专家审阅确认的缺陷。编译接入、类型契约和 Registration 已完成首轮修复；公开 facade、DomainAdapter slots、Engine 并发、Provider session state、Router 和 LLM/L4 降级语义继续跟踪。
@@ -37,7 +293,11 @@
 - 修复计划:
   - 删除或改名空 facade，统一 `IClarificationEngine` 定义。
   - `CreateEngineWithPreset` 必须返回真正 `TClarificationEngine`，或文档统一改为 IoC 创建路径。
-- 状态: 待修复
+- 修复:
+  - 公开工厂已移除空 facade 路径，`CreateEngine/CreateEngineWithPreset` 不再返回不可用对象，并引导到真实 Engine/IoC 创建路径。
+- 验证:
+  - IntentClarification targeted tests 已通过；2026-06-09 architecture gate 继续覆盖包边界。
+- 状态: ✅ 已修复
 
 ### BUG-141: IntentClarification 核心类型契约与实现不一致
 - 发现日期: 2026-05-14
@@ -83,7 +343,11 @@
 - 修复计划:
   - 对同一 session 建立串行化处理或乐观版本检查。
   - `FHistory/FTokenUsage/FSessions` 读写统一锁策略。
-- 状态: 待修复
+- 修复:
+  - Engine 对同一 session 的 `SubmitInput/Suspend/Resume/Cancel` 串行化，`FHistory/FTokenUsage/FSessions` 统一锁策略。
+- 验证:
+  - Concurrent.PBT 100 轮通过；IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ### BUG-138: Engine 历史、token、预算耗尽路径状态不一致
 - 发现日期: 2026-05-14
@@ -97,7 +361,11 @@
 - 修复计划:
   - 合并或同步 session history，预算耗尽也记录 turn。
   - 错误结果应携带真实 session 状态和 turn。
-- 状态: 待修复
+- 修复:
+  - 预算耗尽路径也记录最后一轮历史，错误结果携带真实 session 状态和 turn。
+- 验证:
+  - IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ### BUG-137: L1 Provider 没有接入 IDomainAdapter.GetPresetSlots
 - 发现日期: 2026-05-14
@@ -109,7 +377,11 @@
 - 修复计划:
   - `TProcessingContext` 增加 preset slots 或 resolved slots 字段。
   - Engine 调用 `GetPresetSlots(AState.IntentName)` 并传给 L1 request。
-- 状态: 待修复
+- 修复:
+  - `TProcessingContext` 新增 PresetSlots，Engine 调用 `IDomainAdapter.GetPresetSlots`，L1 request 消费 slots。
+- 验证:
+  - IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ### BUG-136: Provider 状态跨 session 串话
 - 发现日期: 2026-05-14
@@ -121,7 +393,11 @@
 - 修复计划:
   - Provider 尽量无状态；必须保留的状态放入 session state 或按 `SessionId` 建立状态表。
   - session 完成/取消时清理 provider session 状态。
-- 状态: 待修复
+- 修复:
+  - L2 denied hypotheses、L3 current expert 改为 session-scoped，并在 session 完成/取消时清理 provider 状态。
+- 验证:
+  - IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ### BUG-135: Router MaxLevel 边界和深度增长策略会误升层级
 - 发现日期: 2026-05-14
@@ -133,7 +409,11 @@
 - 修复计划:
   - 边界钳制改为按目标 level 映射，避免等值越级。
   - 深度增长改为有上限的单轮增量，并由信号/用户行为驱动。
-- 状态: 待修复
+- 修复:
+  - Router `MaxLevel` 边界钳制和无信号自动升级策略已收敛，避免 L1/L2 被边界误升。
+- 验证:
+  - IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ### BUG-134: LLM resilience 和 L4 降级语义不可靠
 - 发现日期: 2026-05-14
@@ -147,7 +427,11 @@
   - 将 timeout 下沉到 HTTP/transport 层或使用可取消任务。
   - 失败结果必须填充 `ErrorMessage`。
   - L4 所有专家或综合失败时返回 degraded failure。
-- 状态: 待修复
+- 修复:
+  - LLM resilience 失败结果写入 `ErrorMessage`；L4 全链路失败时返回 degraded failure。
+- 验证:
+  - IntentClarification targeted tests 已通过。
+- 状态: ✅ 已修复
 
 ---
 

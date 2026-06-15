@@ -120,7 +120,7 @@
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Budget.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Exit.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.OptionFrame.pas"/>
-        <DCCReference Include="..\Features\DeepBase.IntentClarification.Storage.pas"/>
+        <DCCReference Include="..\Persistence\DeepBase.IntentClarification.Storage.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Metrics.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.FeatureConfig.pas"/>
         <DCCReference Include="..\Features\DeepBase.IntentClarification.Templates.pas"/>

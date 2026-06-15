@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.FormState.FireDAC - FireDAC adapter for form state
   ============================================================================
   Moves SQL/FireDAC details out of Core. Core keeps only repository contracts.

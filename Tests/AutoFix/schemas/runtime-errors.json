@@ -1,0 +1,20 @@
+{
+    "$comment": "Required fields per record in runtime-errors.jsonl. Written by Delphi EXE, consumed by autofix.ps1.",
+    "fields": [
+        "run_id",
+        "iteration",
+        "ts",
+        "level",
+        "class",
+        "msg",
+        "module_name",
+        "module_base",
+        "rva",
+        "stack",
+        "stack_truncated",
+        "context",
+        "thread",
+        "scenario",
+        "dedup_key"
+    ]
+}

@@ -13,8 +13,8 @@ unit DeepBase.LLM.Proxy;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.JSON, System.Net.HttpClient,
-  System.Net.URLClient, System.Diagnostics,
+  System.SysUtils, System.Classes, System.Threading, System.JSON,
+  System.Net.HttpClient, System.Net.URLClient, System.Diagnostics,
   DeepBase.LLM.Client, DeepBase.LLM.Types;
 
 type
@@ -64,6 +64,11 @@ type
       const AUserPrompt: string; const ASystemPrompt: string = ''): TChatResult;
     function GenerateImage(const APrompt: string;
       const ASize: string = '1024x1024'): TImageGenerationResult;
+    procedure GenerateImageStream(const APrompt: string;
+      const AOnProgress: TImageProgressCallback;
+      const AOnResult: TProc<TImageGenerationResult>;
+      const AOnError: TProc<string>;
+      const ASize: string = '1024x1024');
     procedure ChatVisionStream(const ATier: TModelTier;
       const AImageBase64: string; const AImageMimeType: string;
       const AUserPrompt: string; const ASystemPrompt: string;
@@ -526,6 +531,38 @@ begin
     Body.Free;
   end;
   Inc(FCallCount);
+end;
+
+procedure TProxyLLMClient.GenerateImageStream(const APrompt: string;
+  const AOnProgress: TImageProgressCallback;
+  const AOnResult: TProc<TImageGenerationResult>;
+  const AOnError: TProc<string>;
+  const ASize: string);
+begin
+  TTask.Run(
+    procedure
+    var
+      LResult: TImageGenerationResult;
+    begin
+      try
+        if Assigned(AOnProgress) then
+          AOnProgress(0.0, 'Starting image generation...', False);
+
+        LResult := GenerateImage(APrompt, ASize);
+
+        if Assigned(AOnProgress) then
+          AOnProgress(1.0, 'Complete', True);
+
+        if LResult.Success and Assigned(AOnResult) then
+          TThread.Queue(nil, procedure begin AOnResult(LResult); end)
+        else if not LResult.Success and Assigned(AOnError) then
+          TThread.Queue(nil, procedure begin AOnError(LResult.ErrorMessage); end);
+      except
+        on E: Exception do
+          if Assigned(AOnError) then
+            TThread.Queue(nil, procedure begin AOnError(E.Message); end);
+      end;
+    end);
 end;
 
 procedure TProxyLLMClient.ChatVisionStream(const ATier: TModelTier;

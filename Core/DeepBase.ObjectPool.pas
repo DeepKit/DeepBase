@@ -1,4 +1,4 @@
-unit DeepBase.ObjectPool;
+﻿unit DeepBase.ObjectPool;
 
 {*******************************************************************************
   DeepBase Object Pool

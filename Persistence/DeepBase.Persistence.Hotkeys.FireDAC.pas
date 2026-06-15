@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Hotkeys.FireDAC - FireDAC adapter for hotkeys storage
   ============================================================================
   Registers FireDAC implementation for IHotkeyStorage.

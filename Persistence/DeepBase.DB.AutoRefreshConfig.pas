@@ -1,4 +1,4 @@
-unit DeepBase.DB.AutoRefreshConfig;
+﻿unit DeepBase.DB.AutoRefreshConfig;
 
 interface
 

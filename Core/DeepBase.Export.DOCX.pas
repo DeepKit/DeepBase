@@ -1,4 +1,4 @@
-{==============================================================================
+﻿{==============================================================================
   DeepBase.Export.DOCX - OOXML Document Generator
 
   Generates valid DOCX (Office Open XML) files using System.Zip and

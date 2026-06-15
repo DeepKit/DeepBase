@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Resilience.Policy - Combined resilience policy
   Split from DeepBase.Resilience; use DeepBase.Resilience for compatibility.
   ============================================================================ }

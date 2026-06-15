@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Scheduler - Task Scheduler
   
   A flexible task scheduling system for background job execution.

@@ -1,4 +1,4 @@
-unit DeepBase.DB.JobQueue;
+﻿unit DeepBase.DB.JobQueue;
 
 interface
 

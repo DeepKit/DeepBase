@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="19" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="11:08:36">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="11:08:36" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.282" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Integration" executed="true" result="Success" success="True" time="0.282" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TAlipayNotificationTests" executed="True" result="Success" success="True" time="0.005" >
+                      <results>
+                        <test-case name="Test_VerifyNotification_NoSign_ReturnsFalse" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                        <test-case name="Test_VerifyNotification_InvalidSign_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TPaymentAESGCMTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Decrypt_KnownVector" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_EmptyInput_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_InvalidKeyLength_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_InvalidIVLength_ReturnsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Decrypt_CorruptedTag_ReturnsEmpty" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TPaymentSecretStoreTests" executed="True" result="Success" success="True" time="0.071" >
+                      <results>
+                        <test-case name="Test_Config_HasDefaultSecretStore" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Config_ProtectKeyRoundTrip" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                        <test-case name="Test_Config_CredentialKeyRoundTrip" executed="True" result="Success" success="True" time="0.046" asserts="0" />
+                        <test-case name="Test_Config_ProtectKey_EmptyInput" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TStripeWebhookTests" executed="True" result="Success" success="True" time="0.098" >
+                      <results>
+                        <test-case name="Test_VerifySignature_MalformedHeader_ReturnsFalse" executed="True" result="Success" success="True" time="0.022" asserts="0" />
+                        <test-case name="Test_VerifySignature_MissingTimestamp_ReturnsFalse" executed="True" result="Success" success="True" time="0.026" asserts="0" />
+                        <test-case name="Test_VerifySignature_ValidHMAC_Passes" executed="True" result="Success" success="True" time="0.024" asserts="0" />
+                        <test-case name="Test_VerifySignature_ExpiredTimestamp_ReturnsFalse" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TWeChatPayNotificationTests" executed="True" result="Success" success="True" time="0.108" >
+                      <results>
+                        <test-case name="Test_VerifyNotification_InvalidJSON_ReturnsFalse" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                        <test-case name="Test_VerifyNotification_MissingResource_ReturnsFalse" executed="True" result="Success" success="True" time="0.035" asserts="0" />
+                        <test-case name="Test_VerifyNotification_EmptyCiphertext_ReturnsFalse" executed="True" result="Success" success="True" time="0.025" asserts="0" />
+                        <test-case name="Test_VerifyNotification_ValidDecryption_ParsesFields" executed="True" result="Success" success="True" time="0.043" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

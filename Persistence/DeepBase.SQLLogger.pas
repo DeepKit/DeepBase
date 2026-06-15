@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SQLLogger - SQL Execution Logging
   
   Version: 1.0.0
@@ -527,7 +527,7 @@ begin
       var LExtraDict := TDictionary<string, string>.Create;
       try
         LExtraDict.Add('duration_ms', IntToStr(AEntry.DurationMs));
-        LExtraDict.Add('success', if AEntry.Success then 'true' else 'false');
+        LExtraDict.Add('success', AEntry.Success.ToString(TUseBoolStrs.True));
         LExtraDict.Add('operation', AEntry.Operation);
         LExtraDict.Add('rows_affected', IntToStr(AEntry.RowsAffected));
         LExtraDict.Add('error', AEntry.ErrorMessage);

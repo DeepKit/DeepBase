@@ -1,4 +1,4 @@
-unit DeepBase.Services.Init;
+﻿unit DeepBase.Services.Init;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Classes;
 
 type
-  /// <summary>初始化服务接�?/summary>
+  /// <summary>åå§åæå¡æ¥å?/summary>
   IInitializationService = interface
     ['{B8F5E2A1-4C3D-4E2F-9A1B-8D7C6E5F4A3B}']
     function Initialize: Boolean;
@@ -15,7 +15,7 @@ type
     function GetLastError: string;
   end;
 
-  /// <summary>初始化服务实�?/summary>
+  /// <summary>åå§åæå¡å®ç?/summary>
   TInitializationService = class(TInterfacedObject, IInitializationService)
   private
     FIsInitialized: Boolean;

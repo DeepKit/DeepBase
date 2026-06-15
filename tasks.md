@@ -1,8 +1,8 @@
 # deepBase 开发任务
-> **最后更新**: 2026-06-02
-> **代码核实**: 2026-06-02 对全部待办项做了代码级核实，已实现项已勾选，未完成项按 P0/P1/P2 排序。
-> **项目状态**: 框架主体已完成；DeepKit DB4 统一认证/支付后端已独立部署到服务器；AutoFix 运行时错误自动修复闭环已落地，三专家审查修正意见已汇入 P0/P1/P2；当前进入备案/DNS/HTTPS、微信支付接入、IntentClarification Phase 2 接入修复、AutoFix 审查缺陷修复、全局生命周期协议和发布门禁可信化阶段。
-> **维护规则**: `tasks.md` 只保留当前待办和下一步任务；已完成任务归档到历史文档；Bug 修复记录写入 `bugfix.md`。
+> **最后更新**: 2026-06-15
+> **代码核实**: 2026-06-11 QA-P0 Unit 已跑到 DUnitX 摘要并通过：3661 found，3658 passed，3 ignored，0 failed，0 errored。已知残留：退出阶段仍打印 System.JSON/FastMM unexpected memory leak。
+> **项目状态**: 框架主体已完成，当前任务只保留未完成项；已完成内容已归档到 `history.md`，缺陷记录写入 `bugfix.md`。
+> **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
 
 ---
 
@@ -11,609 +11,146 @@
 | 文档 | 说明 |
 |------|------|
 | [README.md](README.md) | 项目说明 |
-| [docs/DeepBase-Integration-OneFile.md](docs/DeepBase-Integration-OneFile.md) | 对外唯一集成入口 |
-| [docs/DeepBase-Downstream-Integration.md](docs/DeepBase-Downstream-Integration.md) | 下游项目接入说明 |
-| [docs/DeepBase-DB4-后端开发交接-王维.md](docs/DeepBase-DB4-后端开发交接-王维.md) | DB4、收费、授权、升级后端交接文档 |
-| [bugfix.md](bugfix.md) | Bug 修复记录 |
+| [docs/00.quickstart.AI集成总览-ai-one-file.md](docs/00.quickstart.AI集成总览-ai-one-file.md) | 对外集成入口 |
+| [docs/02.quickstart.下游接入流程-downstream-integration.md](docs/02.quickstart.下游接入流程-downstream-integration.md) | 下游项目接入说明 |
+| [history.md](history.md) | 已完成任务归档 |
+| [bugfix.md](bugfix.md) | Bug 修复和待修复缺陷记录 |
 
 ---
 
 ## 当前判断
 
-- deepBase 已具备桌面公共库雏形，但不能再标记为“P0/P1/P2 清空”。
-- 当前上线风险和交付缺口集中在 6 个方面：DB4 收费后端实部署、许可证/支付回调安全边界、包分层失真、迁移/schema 漂移、并发生命周期、发布门禁可信化。
-- DB4 生产链路必须放在服务器侧实现，桌面端只能调用安全 HTTP API，不能直接写订单、支付、权益表。
-- 免费版升级收费版的生命周期应由服务器完成：登录、创建订单、支付回调、发放权益、签发许可证快照、开放付费更新通道。
-- LLM 已具备五模型槽配置契约和基础调用能力；下游可以先按 facade/API 集成，UI 配置面板和更完整 fallback 仍需继续强化。
-- ICS 不作为当前 P0 主线重写目标；应做成可选网络传输适配层，不能让 Core 强依赖 ICS。
-- 桌面工具型产品的上线公共能力要形成标准套件：自动升级、付费升级、权限控制、托盘、热键、语音录入。
-- 2026-05-09 五专家审阅后，Unit/Integration/rename gate/Web/API 安全默认值/客户端许可证快照已收敛并通过门禁；`LLMPromptTemplates` schema 漂移、PromptTemplate `DefaultValues` 生命周期泄漏和 `TSimpleCrypto` 错密码/未认证密文问题已修复。仍不能按最终发布处理，DB4 服务端签发、全局生命周期协议和包 DAG 拆分还在 P0/P1 待办中。
-- 2026-05-13 DB4 命名和部署边界已调整：服务器统一使用 `deepkit` / `deepkit.top`，`heyue.fyi` 不再作为统一认证/支付中台。新服务为 `/srv/deepkit.top/app/current/backend` + `deepkit-api.service` + `deepkit` 数据库；服务器本机 `/dk` 主链路已通过。当前商用外网阻塞为备案未完成、`deepkit.top` DNS/HTTPS 未完成、微信支付真实商户配置未接入。
-- 2026-05-13 DB3 下游矩阵已落地：`devdb/bizdb/noveldb` 已创建各产品 schema 和最小业务表/registry，DeepShine 已补跑 001-006 PG 迁移；明细见 `docs/64.backend.DB3-DB4下游产品数据库矩阵.md`。下一步是补最小权限运行账号和各产品正式业务 API。
-- 2026-05-14 IntentClarification 五专家审阅完成：Phase 2 新单元已纳入包/主测试并恢复编译，IC targeted 20 tests 已通过；公开工厂仍返回空 facade，DomainAdapter slots、Provider 状态隔离、Engine 并发、Router 边界和 LLM/L4 降级语义仍是后续 P0/P1 风险。
-- 2026-05-14 直接运行完整 `Tests\DeepBaseTests.exe` 当前不再是全绿：3372 found，3351 passed，3 ignored，6 failed，12 errored。失败集中在 Browser Registry/WindowPool/Automation、FeatureFlags rollout range check、License legacy signing 测试环境、DB.DoQry DDL gate 和 Performance benchmark，需纳入 QA 后续收敛。
-- 2026-05-14 DeepShell VCL 桌面壳第一版骨架已落地：15 个核心单元 + Demo 项目独立编译通过，runtime 包已纳入 `DeepBaseVCL.dpk`；五专家审阅 P0 缺陷（EventBus UAF、OnShow/OnClose 钩子可被覆盖、RefreshBottomLog O(N²)、svkHtml/svkMarkdown 渲染源码、wsMinimized 坐标）已修复，剩余 P1 项（i18n caption、StatusManager redaction、ProjectPath PII、设置页 GroupName、DPI 缩放）汇入 `DESKTOP-P1-2026-05-14`。下游 VCL 桌面工具应从 `TDeepMainForm` 起步。
-
----
-
-## 需求追踪矩阵
-
-| 用户要求 | 落地任务 | 当前状态 |
-|----------|----------|----------|
-| 整个体系已改名为 deep，框架名为 deepBase | `ARCH-P0-001` | 已完成，改名残留检查已并入包门禁（CI 串联仍在 `QA-P0-001`） |
-| 桌面软件上线后需要收费、认证和授权系统 | `COM-P0-001`、`SEC-P0-001`、`APP-P0-001` | 进行中，桌面端安全 SDK/权限 facade/付费升级 facade 已完成，服务器实部署仍待王维完成 |
-| 收费后端应在服务器开发，不能让桌面端直连收费数据库 | `COM-P0-001`、`COM-P1-001` | 进行中，桌面端只走 `/dk` 安全 API，server-admin adapter 默认受保护 |
-| DB4 使用腾讯云数据库，服务器侧还要创建 PostgreSQL 数据库 `deepKit` | `COM-P0-001`、`OPS-P2-001` | 已调整为数据库 `deepkit`；服务器已部署 `deepkit-api.service`，备案/DNS/HTTPS 仍待完成 |
-| 免费版升级到收费版，需要支付、权益、许可证和付费更新通道 | `COM-P0-001`、`SEC-P0-001`、`UPD-P0-001` | 进行中，客户端流程 facade 已完成；DeepKit 服务器认证/订单/权益/license snapshot 已部署，真实微信支付和公网 HTTPS 待接入 |
-| 网站上支持免费更新和付费升级 | `UPD-P0-001`、`PRODUCT-P2-001` | 待开发 |
-| LLM 能交给下游使用，并提供 5 模型配置面板：聪明、平衡、快速、生图、图片兜底 | `LLM-P0-001` | 进行中，五槽位契约/生图基础调用/配置读取测试已完成，UI 面板仍待强化 |
-| ICS 是否全力接入 | `NET-P1-001` | 已按可选 adapter 处理，不进入 P0 主线、不污染 Core；仓库不内置 Overbyte ICS 源码 |
-| 桌面工具型产品需要自动升级、付费升级、权限控制、托盘、热键等常用功能 | `APP-P0-001`、`UPD-P0-001`、`SEC-P0-001`、`TRAY-P1-001`、`HOTKEY-P1-001` | 进行中，托盘/热键/权限 facade/付费升级 facade/桌面生命周期 facade/VCL-FMX helper/E2E 已完成，完整模板仍待补齐 |
-| 支持语音录入，用于 LLM 输入、表单输入和命令触发 | `SPEECH-P1-001` | 进行中，录音/VAD/Baidu ASR/权限配额接入已完成，VCL/FMX 输入控件仍待补齐 |
-| deepBase 库需要持续维护和架构优化 | `ARCH-P1-001`、`QA-P1-001`、`DB-P0-001` | 待开发 |
-| 5 位架构专家建议要转化为可执行治理项 | `AUDIT-P0-2026-05-09`、`ARCH-P1-001`、`QA-P1-001`、`COM-P1-001`、`NET-P1-001` | 当前可复现 P0 已收敛并通过门禁，剩余为服务端实部署和较大架构治理项 |
-| 下游项目需要明确哪些用 DB3/DB4，并把 PG 数据库建好 | `DB3-P0-2026-05-13`、`COM-P0-001` | 已完成首轮矩阵和 DB3 schema/table 初始化；DB4 待补 GuidedUse/DeepGuide/DeepAssist/DeepInsight/DeepRenew/DeepDevLite/DeepUITest SKU |
-| IntentClarification 需要形成可编译、可测试、可接入的下游澄清模块 | `IC-P0-2026-05-14` | 进行中：编译/包/主测试接入和最小 Integration 已恢复；公开 facade 与运行时语义继续修复 |
-| 下游 VCL 桌面工具需要一个统一的母窗体（菜单、托盘、MRU、布局、主题、设置宿主、命令治理） | `DESKTOP-P1-2026-05-14`, `DESKTOP-P1-2026-05-14-AUX` | 第一版骨架已落地（15 单元 + Demo），P0 缺陷已修复；剩余 i18n/redaction/PII/DPI/governance audit 项汇入 P1 |
+- `DeepLaunch.exe` 对应源码未在当前 `D:\_Progs\02Business\DeepBase` 仓库中找到；当前仓库只包含可复用层（DeepShell、DeepFlow、DeepBaseRun、Tools/Tray 等）。DeepLaunch 专属 Grid/Workflow UI 修复需要在下游 DeepLaunch 源码目录继续落地。
+- DeepShell / DeepFlow 可作为 DeepLaunch 工作流区的基础能力，但当前还缺一个下游工作流 UI 适配层：右键编辑、工作流格子绘制、主题同步、i18n 文本绑定都需要在 DeepLaunch 主程序或其 workflow grid 组件中实现。
+- QA-P0 Unit 功能摘要已通过，但退出阶段 System.JSON/FastMM leak 仍是当前质量债。
+- 商业化上线阻塞仍集中在 DB4 服务端签发、微信支付真实回调、备案/DNS/HTTPS、包 DAG 拆分和发布门禁可信化。
 
 ---
 
 ## P0 当前开发（Blocking）
 
-### IC-P0-2026-05-14: IntentClarification Phase 2 接入和缺陷收敛
-- **状态**: 进行中，编译接入已恢复
-- **目标**: 让 `DeepBase.IntentClarification.*` 从草案代码变成可编译、可测试、文档可照抄的下游接入模块。
-- **来源**: 2026-05-14 五专家审阅；缺陷登记见 `bugfix.md` 的 BUG-134 ~ BUG-143。
+### DL-P0-2026-06-15: DeepLaunch Grid / Workflow UI 缺陷修复
+- **状态**: 待开发
+- **来源**: 2026-06-15 用户反馈；缺陷登记见 `bugfix.md` 的 BUG-248 ~ BUG-251。
+- **目标**: 修复 DeepLaunch 工作流区可用性、i18n 和主题同步问题。
 - **任务**:
-- [x] 将 `DeepBase.IntentClarification.Types/Interfaces/Engine/IoC/Provider.L0-L4/Session/SessionFSM/Router/SignalDetector/Budget/Exit/OptionFrame/Storage/Metrics/FeatureConfig/Templates/Validation/LLMResilience` 纳入 `DeepBaseFeatures.dpk/.dproj` 和主测试编译链。
-- [x] 统一核心类型契约：`TOptionItem`、`THypothesis`、`TBudgetConfig/TBudgetStatus`、`TRapportProfile`、`TSessionCheckpoint`、`TPresetTemplate`，先消除编译阻塞。
-- [ ] 合并或删除空的 `IClarificationEngine` facade，确保 `CreateEngine/CreateEngineWithPreset` 返回真正的 `TClarificationEngine` 或明确引导到 IoC 创建路径。
-- [x] 补完整 `DeepBase.IntentClarification.Registration.pas`：`RegisterAll`、`RegisterDomainAdapter`、`RegisterPresenter`、`RegisterPersonaRegistry`、`RegisterLLM`、`ApplyPreset`。
-- [x] 修复 IoC 默认 provider 注册：L1 optional constructor 不再被 RTTI 错解析，L2-L4 注册进入 IoC；未配置 LLM 时 Engine 跳过 LLM provider，避免最小集成路径误报 `PROVIDER_ERROR`。
-- [ ] 将 `IDomainAdapter.GetPresetSlots` 接入 Engine/L1 Provider，请求中必须带 slots，避免 L1 空槽位误判 `icsReady`。
-- [x] 修复 Engine session 并发：同一 session 的 `SubmitInput/Suspend/Resume/Cancel` 串行化，`FHistory/FTokenUsage/FSessions` 统一锁策略，预算耗尽路径也记录最后一轮历史。（核实：`FGlobalLock` + per-session `TCriticalSection`，Concurrent.PBT 100 轮通过）
-- [x] 将 L2 denied hypotheses、L3 current expert 改为 session-scoped；session 完成/取消时清理 provider 状态。
-- [x] 修复 Router `MaxLevel` 边界钳制和无信号自动升级策略，避免 L1/L2 被边界误升。
-- [x] 修复 LLM resilience：超时必须可中断或由 HTTP 层 enforce；失败结果写入 `ErrorMessage`；`GenerateImage/Stream` 明确是否参与熔断。
-- [ ] 修复 L4 全链路失败仍 `Success=True` 的语义，要求所有专家/综合失败时返回 degraded failure。
-- [ ] 接入 `TICFeatureConfig`、`TICMetrics`、`TClarificationStorage` 到真实 Engine 生命周期，删除死接线或补齐注入。
-- [x] 将 `Test.DeepBase.IntentClarification.Integration` 接入活跃测试入口，并通过 IC targeted 20 tests。
-- [ ] 补 IntentClarification 包边界、slot 注入、并发和降级语义回归用例。
-
-### DB3-P0-2026-05-13: 下游产品 DB3/DB4 矩阵与服务器初始化
-- **状态**: 已完成首轮，进入产品 API/SKU 细化
-- **产物**:
-- [x] 阅读下游文档并形成 DB3/DB4 判断矩阵：`docs/64.backend.DB3-DB4下游产品数据库矩阵.md`。
-- [x] 服务器只读审计：确认现有数据库为 `deepkit/devdb/bizdb/noveldb/configdb/goodmem/postgres`，DB4 `deepkit.products` 已有首批 SKU。
-- [x] `devdb` 已建：`progee_core/progee_app_common/progee_app_self/deepdevlite/deeprenew/deepllm/deepcompare/deepuitest`。
-- [x] `bizdb` 已建：`deepshine/guideduse/deepclip/deepinsight/common/senate_app/litellm/deepguide/deepassist`。
-- [x] `noveldb.deepstory` 已做预留 registry；DeepStory 当前仍按 SQLite 2+X，不迁公网 PG。
-- [x] DeepShine 已跑 `Migrations/pg/001-006`，当前 `bizdb.deepshine` 37 张表。
-- [x] `.env` 已补 DB3 schema 映射；明文密码仍只维护在既有 `PG_*_PASSWORD` 项中。
-- [ ] 为 DB3 各 schema 创建最小权限 runtime role，避免后端长期使用 admin 账号。
-- [ ] 冻结并写入待补 DB4 SKU：`guideduse/deepguide/deepassist/deepinsight/deeprenew/deepdevlite/deepuitest`。
-- [ ] 为 GuidedUse、DeepGuide、DeepAssist、DeepInsight、DeepRenew 补业务 API 文档和迁移脚本。
-
-### AUDIT-P0-2026-05-09: 五专家审阅缺陷修复
-- **状态**: 进行中
-- **目标**: 将 2026-05-09 架构、并发、持久化、安全、测试发布审阅中发现的问题收敛为可验证修复。
-- **任务**:
-- [x] 当前 Unit 门禁必须恢复通过：`Test.DeepBase.TrayIcon` 5 个失败和 `Test.DeepBase.PluginManager.Test_GetPluginDataPath` 权限错误已修复；2026-05-09 完整 Unit 为 3243 tests，3240 passed，3 ignored，0 failed，0 errored，0 leaked。
-- [x] 修复 CI rename gate 误杀：`Scripts/check_rename_residue.ps1` 不再把合法 `DeepBase` 当残留，只检查真实旧名 `UniBase/UniFlow`，并已清理 guarded scripts 中的旧名残留。
-- [x] 修复 Integration 漏跑：`Test.Integration.WebAPI` fixture 已注册，`run_tests.ps1` 已支持最低测试数检查；Integration 当前 10 tests passed。
-- [x] 修复 SQLLogger schema 漂移：写入 `Logs` 时使用 `LogLevel/LogTime`，数据库写入失败会输出 debug 降级错误。
-- [x] 修复压缩/备份/云下载 Zip Slip 和对象 key 路径穿越：解压/下载写文件已 canonicalize 并确认位于目标根目录下。
-- [x] 修复插件配置命名空间：插件启停配置使用 `Plugin.` 约定，加载阶段会拦截 disabled 插件。
-- [x] 修复 RBAC wildcard 越权：`orders.*` 只匹配 `orders.` 前缀的请求权限，inactive user/role 默认拒绝。
-- [x] 支付回调必须 fail-closed：Commerce PaymentBridge 对 Stripe/PayPal 使用 raw body + headers 验签；微信 V3 在未完成头验签/AES-GCM 解密前不会返回成功。
-- [x] 客户端许可证快照必须 fail-closed：`TDeepKitSafeClient` 已要求 `snapshot_id/issued_at/expires_at/payload/signature/key_id/schema_version`，过期、app/device mismatch、缺 verifier/public key、验签失败均拒绝；Windows 下支持 RSA-SHA256 PEM 公钥验签。
-- [ ] 服务端许可证机制必须替换：DB4 服务端私钥签发、撤销版本同步、公钥轮换和离线宽限策略仍需实部署。
-- [x] 许可证 legacy 本地签发默认关闭：客户端不再内置生产共享签名密钥，旧 HMAC 许可证只允许通过 `DEEPBASE_LEGACY_LICENSE_SIGNING_KEY` 显式迁移或 CI 测试通道使用；服务端私钥签发和撤销策略仍在 `SEC-P0-001`。
-- [x] 迁移引擎脚本解析、诊断和并发锁收敛：SQLite trigger body 不再被 `;` 错拆；迁移脚本内 `BEGIN/COMMIT/ROLLBACK/SAVEPOINT` 等事务控制 fail-fast；checksum mismatch 会记录 `FailedScript`；SQLite 执行迁移前使用 `BEGIN IMMEDIATE` 写锁并在锁内二次检查版本。
-- [x] 修复 LLM prompt template schema 漂移：`Core/DeepBase.LLM.pas` 使用的 `LLMPromptTemplates` 已加入 `Core/DeepBase.Schema.pas` 和 `data/create_sample_db.sql`，`Test.DeepBase.LLM.PromptTemplate` 已重新接入 Unit runner 并通过 14 个测试。
-- [x] 收敛 LLM PromptTemplate `DefaultValues` 生命周期泄漏：新增 `TLLMPromptTemplate.Clear` 显式释放协议，框架内部、Studio 模板界面和 PromptTemplate 单测已对 `GetTemplate/GetAllTemplates/GetTemplatesByCategory/Clone/Import` 返回或创建的字典补齐释放；`DeepBase.LLM.PromptTemplate` 14 tests passed，0 leaked，退出无 FastMM unexpected memory leak。
-- [x] 恢复 Studio Win64 工程编译：修复 DoQry 数据集类型漂移、LLM 配置/Prompt Debug 表单损坏字符串与缺失 uses、LLMFrame 事件声明缺失、QueriesFrame 缺失最小 DFM；`Tools\Studio\Studio.dproj` Debug Win64 编译通过。
-- [ ] 迁移/schema 剩余治理：继续审计现有脚本与 `Core/DeepBase.Schema.pas` 的剩余表结构漂移。
-- [x] CloudBackup 生命周期收敛：scheduler/backup/restore 线程不再 `FreeOnTerminate=True` 后丢引用；`Stop/Cancel/Destroy` 会 signal 并 `WaitFor` 后释放。
-- [ ] 全局生命周期协议仍需统一：连接池/WorkerQueue/Scheduler/FileWatcher/Updater/EventBus 必须阻止新任务、取消/等待后台任务、归还或转移借出资源后再释放内部结构。
-- [ ] 包 DAG 必须重切：`Core -> Services -> {Persistence, Features} -> {VCL, FMX}`，Services 禁止 `vcl/FireDAC/dbrtl`，运行时包不得包含测试辅助单元。
-- [x] 清理重复 unit：已删除 34 个 `VCL/UniBase.VCL.*` 旧文件；源码/包/工程中不再引用 `UniBase.VCL`。
-- [x] Regression runner 和过滤门禁必须可信：`Test.WebService` 已接入 `DeepBaseTests.dpr`，`NET` module alias 只运行已注册 fixture；`-CI -SkipCompile` 禁止，CI 过滤运行必须显式 `-AllowFilteredCI`。
-- [x] Web/API 安全默认值 fail-fast：WebSocket 默认不再放行 `*` origin；query `api_key` 默认关闭；弱 JWT secret 拒绝；JWT verify 使用常量时间比较；默认 500 不回显 `E.Message`；HTTP CORS middleware 默认不写 CORS 头。
-- [x] `TSimpleCrypto` 错密码和密文篡改 fail-closed：新密文使用版本头 + HMAC-SHA256 认证封包，解密前常量时间验签；旧 `IV||Ciphertext` 格式保留兼容读取，PKCS#7 padding 完整校验，UTF-8 解码错误统一转换为 `ECryptoException`。
-
-### QA-P0-001: 测试和 CI 门禁可信化
-- **状态**: 进行中
-- **目标**: 不能再出现“测试项目不存在但脚本仍返回成功”的情况。
-- **任务**:
-- [x] 修复 `Scripts/run_tests.ps1`，改为编译运行 `DeepBaseTests.dpr` 和 `DeepBaseIntegrationTests.dpr`。
-- [x] 缺少必需测试项目、测试 exe 或 0 测试结果时必须失败。
-- [x] 修复 `-Module` / `-FromUnit` 过滤：从 `TDUnitX.RegisterTestFixture(...)` 解析精确 fixture，避免单元名前缀误匹配和 0 测试假通过。
-- [x] 修复 Unit 测试工程编译阻塞；`DeepBaseTests.dpr` 当前可完整编译。
-- [x] `Test.DeepBase.Commerce` 过滤运行通过：49 tests passed，0 failed（包含 DeepKit SafeClient、license snapshot fail-closed、权限 facade、付费升级 facade、桌面生命周期 facade）。
-- [x] 定位完整 Unit 运行超时用例：`Test.DeepBase.MVVM.TTestAsyncCommand` 因 `TThread.Synchronize` + 主线程 `Wait` 死锁。
-- [x] 修复 `TAsyncCommand.Wait` 主线程等待泵 `CheckSynchronize`；`Test.DeepBase.MVVM` 当前 42 tests passed，0 failed。
-- [x] 完整 Unit 已不再超时：`Scripts/run_tests.ps1 -Type Unit -CI` 当前完整编译运行约 166 秒结束。
-- [x] 收敛 `DeepBase.DB.DoQry` 失败簇：SQLite `InsertReturningId`、预编译池跨连接污染、直接 SQL 语法错误码、LRU 统计均已修复；`Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -CI` 通过，32 tests passed。
-- [x] 收敛 `DeepBase.StateMachine` 失败簇：泛型状态/触发器比较、未配置目标状态跳转语义、Builder 内部状态机泄漏、异常断言均已修复；`Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.StateMachine -CI` 通过，79 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Template` 失败簇：条件分支解析、注释吞吐、严格模式缺失变量、冒号过滤器参数、点号键解析、父子 Context 生命周期均已修复；`Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.Template -CI` 通过，81 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Expression` 失败簇：`Compile` 缓存所有权、`XOR` 解析、Int64 半数舍入、AST 解析异常释放、专用异常断言均已修复；`Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.Expression -CI` 通过，140 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.DataBinding` 失败簇：ObservableList 所有权同步和 OneTime 绑定订阅语义已修复；`Scripts/run_tests.ps1 -Type Unit -FromUnit DeepBase.DataBinding -CI` 通过，22 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Security/KeyManager` 失败簇：KeyManager AES-CBC IV 持久化、KeyStore active key 自动创建、Security secret 长度校验坏行均已修复；`DeepBase.KeyManager` 36 tests、`DeepBase.Security` 19 tests、`DeepBase.Security.DPAPI` 23 tests 均通过，0 leaked。
-- [x] 收敛 `DeepBase.CloudBackup/Feedback` JSON 日期失败簇：兼容 ISO 与 Delphi 浮点日期、修复可选 JSON 对象/数组读取、枚举数字反序列化和异常路径泄漏；`DeepBase.CloudBackup` 35 tests、`DeepBase.Feedback` 31 tests 均通过，0 leaked。
-- [x] 收敛 `DeepBase.Plugin/PluginManager` 配置键失败簇：插件本地配置键统一归一化到 `Plugin.*` 命名空间，安全敏感键检测避免误杀普通键，插件数据路径短 GUID 断言已对齐；`DeepBase.Plugin` 25 tests、`DeepBase.PluginManager` 23 tests 均通过，0 leaked。
-- [x] 收敛 `DeepBase.Unlock` 解锁等级失败簇：校验字符算法改为同一产品月份内按等级固定错位，避免 `Free/Follow/Share` 碰撞导致高等级被识别为低等级，同时保留旧算法兜底；`DeepBase.Unlock` 5 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Validation` Email 空值失败簇：Fluent `Email` 规则和快捷 `TValidate.Email` 统一将空白字符串视为无效邮箱，避免 Email 规则绕过必填语义；`DeepBase.Validation` 72 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.VirtualScroll` 可见索引失败簇：保留 overscan 预渲染列表，但 `FirstVisibleIndex/LastVisibleIndex` 改为返回真实 `Visible=True` 项，避免公开索引被预渲染项污染；`DeepBase.VirtualScroll` 60 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.AntiTamper` 安全默认值测试口径：默认配置继续不提供硬编码密钥，加解密测试改为显式注入测试密钥，保持 BUG-034 安全边界；`DeepBase.AntiTamper` 8 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.DBException` 用户提示口径失败簇：`GetErrorMessage` 默认恢复中文用户提示，与 FAQ 和现有测试一致；`DeepBase.DBException` 7 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Diff` 相似度和 patch 泄漏失败簇：`Similarity` 改为字符级 LCS，`TPatchOperation` 释放持有的 `TDiffHunk`；`DeepBase.Diff` 57 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Exception` VCL 全局异常适配和存储注入失败簇：恢复 VCL `Application.OnException` adapter，Core 仍保持 UI-neutral；存储工厂支持无 DB 连接的测试/内存注入；`DeepBase.Exception` 10 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Export.Gen` PDF 头部失败簇：修复 `TBytes` 写流时写入数组变量而非数组内容的问题，`startxref` 记录 xref 起点；测试改为按字节读取 PDF header；`DeepBase.Export.Gen` 18 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.LLM.BillingClient` 聊天历史和 token 统计失败簇：Clear 后保留 `SystemPrompt` 配置但不把 system message 计入当前消息列表，`TTokenUsage.TotalTokens` 支持按 prompt+completion 自动计算；`DeepBase.LLM.BillingClient` 23 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.LLM` credential storage 失败簇：布尔字段读取增加 SQLite/FireDAC 兼容 helper，配置/模板/调用记录不再直接依赖 `AsBoolean`；`DeepBase.LLM` 当前 22 tests passed，0 leaked（包含五模型槽配置契约、生图调用、旧 `vision` 迁移）。
-- [x] 收敛 `DeepBase.Scheduler` fluent Delay 失败簇：`Delay/Every/Cron` 配置阶段立即刷新 `NextRunAt`，并清理互斥调度策略残留；`DeepBase.Scheduler` 50 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.MVVM` 退出阶段泄漏：`TAsyncCommand.DoExecute` 的取消检查匿名方法在任务结束时释放，避免 actrec 自引用；`DeepBase.MVVM` 42 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.Performance` 并发 benchmark 退出泄漏：`TTask` 数组在 `WaitForAll` 后逐项释放，避免 `TTask`/线程池对象和 benchmark 闭包残留；`DeepBase.Performance` 16 tests passed，0 leaked。
-- [x] 收敛 `DeepBase.CloudSync` JSON 数组替换泄漏：`JSONMergeArrays` 释放 `TJSONArray.Remove` 返回的旧值，清除完整 Unit 中 `TJSONNumber x5` 泄漏；`DeepBase.CloudSync` 56 tests passed，0 leaked。
-- [x] 完整 Unit 发布门禁恢复通过：2026-05-09 当前 `Scripts/run_tests.ps1 -Type Unit -CI` 为 3243 tests，3240 passed，3 ignored，0 failed，0 errored，0 leaked。
-- [x] GUI 测试窗体位置统一固定为 `Left=100, Top=300`（`DeepBase.GUITest`、`GUITest.FormFactory`、`AcceptanceMain`、`Test.DeepBase.TestHelper`），减少测试对其他桌面程序的遮挡干扰。
-- [ ] 清理 0-fixture/未引用测试单元：`Test.DeepBase.Net`、`HttpServer`、`FileWatcher`、`Reflection`、`Math`、`Crypto.OpenSSL`、`i18n.Gender` 当前在默认 CI runner 下无注册 fixture；`Test.WebService` 已接入主 Unit runner。
-- [x] CI 串联 package build、unit tests、integration tests、examples build（`.github/workflows/delphi-ci.yml` 已接入）。
-- [x] CI package gate 恢复可信：`check_rename_residue.ps1` 已改成真实旧名残留检查，且当前 guarded files 检查通过。
-- [x] Integration gate 防假通过：`Test.Integration.WebAPI` fixture 已注册，runner 已支持最低测试数检查；Commerce E2E 已显式配置 license snapshot verifier；当前 Integration 10 tests passed。
-- [x] CI 补 architecture checks 阶段（模块边界/分层约束单独 gate）：新增 `Tests/Architecture/DeepBaseArchitectureTests.dpr`、`Scripts/run_architecture_checks.ps1`，并接入 `.github/workflows/delphi-ci.yml` 的 `architecture-checks` job（当前本地 18/18 通过）。
-- [x] 覆盖率脚本启用失败阈值，不能只生成报告：`run_tests.ps1` 在 `-Coverage` 模式会自动调用 `coverage_check.ps1`，且在 `-CI` 或 `DEEPBASE_COVERAGE_FAIL_ON_LOW=1` 时低覆盖率直接失败。
-- [x] 将 IntentClarification Phase 2 集成测试接入活跃 Unit/Integration runner，防止 `compile_test.bat` 只编旧 facade 后误报成功。
-- [ ] 包边界测试补 `DeepBase.IntentClarification.*` 必需单元检查，防止 `DeepBaseFeatures.dpk/.dproj` 漏单元。
-- [ ] 收敛完整 `DeepBaseTests.exe` 当前剩余失败：Browser Registry/WindowPool/Automation、FeatureFlags rollout、License legacy signing 环境、DB.DoQry DDL gate、Performance benchmark。
-
-### LLM-P0-001: 下游可用的 5 模型 LLM 配置和调用面板
-- **状态**: 进行中
-- **目标**: 让下游桌面软件可以直接接入 LLM，不需要自己重新设计模型配置、API Key、调用、兜底和调试界面。
-- **要求**:
-- [ ] 统一 `Core/DeepBase.LLM.*` 与 `Features/DeepBase.LLM.*` 的配置模型，避免同一框架内出现两套 LLM 配置语义。
-- [x] 固化 5 个模型槽：聪明 `smart`、平衡 `balanced`、快速 `fast`、生图 `image_gen`、图片兜底 `vision_fallback`（`Features/DeepBase.LLM.Types.pas` 已新增 `TierImageGen`，旧 `TierVision` 保留兼容别名）。
-- [x] `TLLMConfigStore.BuiltInTiers` 暴露五槽位顺序；`NormalizeTier`/`LoadTierModelsJson` 已把旧 `vision` 配置迁移为 `image_gen`，避免老配置失效。
-- [x] 每个模型槽支持主模型和多个 fallback 模型，按顺序失败切换，并记录最终使用的 provider/model。
-- [x] Provider 支持 OpenAI-compatible、Anthropic、Azure、LiteLLM、Ollama、Custom；API Key 必须走安全存储，不允许明文长期落库。
-- [ ] 增加生图能力接口：`GenerateImage` / `GenerateImageStream` / `ImageGenerationResult`，与图片理解 `ChatVision` 分开。
-- [x] 增加生图基础接口：`ILLMClient.GenerateImage`、`TImageGenerationResult`、OpenAI-compatible `/images/generations` transport 调用和 fake transport 单测；`GenerateImageStream` 待后续补流式/异步版本。
-- [x] 增加图片兜底策略：视觉模型失败后可切换到低成本视觉模型或服务端 OCR/ASR/图像摘要兜底。
-- [x] 做 VCL/Studio 和 FMX 可复用配置面板：5 槽卡片、Provider 测试、模型拉取、API Key 显示/隐藏、费用预估、调用历史。（核实：`VCL/DeepBase.VCL.LLMConfigPanel.pas` 602 行 + `FMX/DeepBase.FMX.LLMConfigPanel.pas` 753 行已存在）
-- [x] 暴露下游 facade：`LLM.Chat(TierSmart, ...)`、`LLM.GenerateImage(...)`、`LLM.ChatVision(...)`，避免下游直接操作内部表。
-- [x] 增加 mock provider 单元测试，覆盖配置保存、fallback、失败记录、费用统计、无 key 错误提示。
-- [x] 增加五槽读取和旧配置迁移单测：`Test.DeepBase.LLM` 当前 22 tests passed。
-- [x] LLM 特性层 HTTP 客户端支持统一 transport 注入，默认 `System.Net`，可由下游替换为 ICS/fake transport；已补 fake transport 单测。
-- [x] 更新 `docs/DeepBase-Downstream-Integration.md`，明确五槽位配置、`GenerateImage` 和下游接入边界。
+- [ ] 定位 DeepLaunch 源码目录或把 DeepLaunch 工作流 UI 接入当前仓库可维护模块；当前仓库未找到 `DeepLaunch.exe` 对应主程序源码。
+- [ ] 修复 Grid 右键菜单“编辑工作流”空指针崩溃：右键命中测试、选中行/对象绑定、菜单命令执行前必须校验 workflow 对象非空，空数据时禁用编辑命令并给出安全提示。
+- [ ] 先将工作流区和相关窗体的界面文本统一改成英文默认文案，移除硬编码中文 UI 文本。
+- [ ] 接入 i18n：程序启动时检测操作系统语言，中文系统自动切到 `zh-CN`，英文或未知语言回退 `en-US`；运行期刷新工作流区、Grid、右键菜单、设置页和对话框文本。
+- [ ] 接入主题同步：Grid、工作流画布、单元格、选中态、右键菜单、空状态和编辑窗体都应响应当前主题切换。
+- [ ] 修复工作流区高度和绘制布局：目标绘制 10 个工作流格子，当前只显示 5 个且单元格下半部分被裁剪；需要按容器高度、行列数、DPI、滚动区域和单元格间距重新计算。
+- [ ] 增加最小回归验证：空 Grid 右键、有效 workflow 右键编辑、语言启动检测、主题切换、10 格工作流绘制完整显示。
 
 ### COM-P0-001: DB4 收费后端与 deepKit 数据库
 - **状态**: 进行中
-- **负责人**: DeepKit 服务器端负责统一认证/支付；deepBase 负责框架契约和桌面端 SDK 边界。
-- **目标**: 在服务器侧完成 DB4 认证、订单、支付、权益、许可证、升级通道；所有下游工具统一走 DeepKit。
 - **任务**:
-- [x] PostgreSQL 使用数据库 `deepkit`，已执行兼容 migration，建立/补齐用户、身份、产品、订单、支付、权益、设备、许可证快照、更新通道、审计表。
-- [x] 服务器端已从 `heyue.fyi` 中台命名切换为 `deepkit`：部署目录 `/srv/deepkit.top/app/current/backend`，环境文件 `/srv/deepkit.top/env/deepkit.env`，服务 `deepkit-api.service`，绑定 `127.0.0.1:8001`。
-- [x] 本地维护用 `.env` 已创建在 DeepBase 根目录，记录服务器、数据库、服务路径和维护账号；`.gitignore` 已加入 `.env`，禁止误提交真实口令。
-- [x] `TCommerceHttpStorage` 默认禁止订单、支付、商品、用户、权益写操作，服务器侧必须显式使用 `CreateServerAdmin`。
-- [x] Commerce HTTP 配置支持路由前缀：新增 `RoutePrefix` 与 `CreateDeepKitClient/CreateDeepKitServerAdmin`，桌面端可直接对接 `/dk/*` 而不改业务调用代码。
-- [x] 桌面端只允许调用安全 API：登录、创建订单、查询订单、查询权益、获取许可证快照、检查更新（已新增 `Features/DeepBase.Commerce.SafeClient.pas`，默认 `/dk`，并补齐 `Test.DeepBase.Commerce` 中的 DeepKit SafeClient 单测）。
-- [x] 桌面端付费升级流程 facade 已落地：新增 `DeepBase.Commerce.UpgradeFlow`，封装列商品、创建订单、创建支付意图、检查权益、刷新许可证快照、获取更新 manifest。
-- [x] 桌面端上线生命周期 facade 已落地：新增 `DeepBase.Desktop.Lifecycle`，集中封装匿名设备登录、token 注入 updater、权限判断/配额扣减、刷新许可证快照、付费升级、权益检查和 DeepKit 更新 manifest。
-- [x] DB4 腾讯云数据库只作为服务器侧可信数据源，桌面端禁止直连。
-- [x] 服务器已提供 `/auth/login`、`/commerce/orders`、`/commerce/payments/intents`、`/commerce/entitlements`、`/license/snapshot`、`/updates/manifest`。
-- [x] 服务器本机主链路验收通过：登录、商品列表、创建订单、支付意图、license snapshot、更新 manifest。
 - [ ] 支付回调必须由服务器验签，服务器按产品价格发放 entitlement，禁止信任客户端提交的金额、状态或权益；微信支付真实商户配置后验收。
-- [x] 桌面端 SDK 只保存短期 token 和许可证快照，不保存支付密钥、服务器管理 token、DB4 连接串。（核实：`Desktop.Lifecycle` 仅存 `TDeepKitAuthSession` + `TDeepKitLicenseSnapshot`）
 - [ ] 增加支付状态机：pending、paid、failed、closed、refunded，并要求所有状态变更写审计日志。
 - [ ] 增加幂等键和重放保护：订单创建、支付回调、权益发放、许可证签发必须可重复调用但不重复发放。
+- [ ] 服务端许可证机制必须替换：DB4 服务端私钥签发、撤销版本同步、公钥轮换和离线宽限策略仍需实部署。
 
 ### OPS-P0-2026-05-13: DeepKit 备案、DNS、HTTPS 和服务交接
 - **状态**: 进行中
-- **目标**: 让 `deepkit.top` 能作为正式公网 DB4 入口使用，并确保后续同事没有上下文也能维护。
 - **任务**:
-- [x] 新建服务器目录 `/srv/deepkit.top`，不再把统一认证/支付能力放在 `/srv/heyue.fyi`。
-- [x] 创建 `deepkit-api.service`，监听 `127.0.0.1:8001`，健康检查通过。
-- [x] Nginx 已配置 `deepkit.top` 虚拟主机，`/dk/`、`/openapi.json`、`/docs`、`/health` 代理到 `127.0.0.1:8001`。
-- [x] DeepKit.top 静态站已部署到 `/srv/deepkit.top/site`。
-- [x] 服务器本机 `curl -H 'Host: deepkit.top' http://127.0.0.1/health` 返回 `deepkit-db4 production`。
 - [ ] 完成 `deepkit.top` 备案。
 - [ ] 完成 `deepkit.top` DNS 解析到 `124.221.136.137`；当前本机无法解析 `deepkit.top`，公网 IP + Host 访问被腾讯侧 DNSPod webblock 拦截。
 - [ ] 配置 HTTPS 证书，优先使用 Let's Encrypt/certbot；完成后把 `DEEPKIT_PUBLIC_BASE_URL` 固化为 `https://deepkit.top`。
 - [ ] 备案/DNS/HTTPS 完成后，从外网跑 `backend/scripts/acceptance-curl.md` 全链路验收。
 - [ ] 微信支付接入后，补真实预下单、支付回调验签、重复回调幂等、退款撤权和对账验收。
 
-### SEC-P0-001: 许可证签名机制替换
+### SEC-P0-001: 授权、权限和离线许可证安全边界
 - **状态**: 进行中
-- **目标**: 从本地共享密钥许可证切换为服务器私钥签名、客户端公钥验签的许可证快照。
 - **任务**:
-- [x] 定义并校验 license snapshot 必需字段：`snapshot_id`、`issued_at`、`expires_at`、`payload`、`signature`、`key_id`、`schema_version`、`revocation_version`。
-- [x] deepBase 客户端只保存公钥/验签回调，不保存服务器私钥；旧共享签名密钥默认关闭，仅保留显式迁移/CI 通道。
 - [ ] 权益判断以 DB4 entitlement 为真源，本地许可证只作为离线缓存。
 - [ ] 增加撤权、退款、封号、设备解绑后的许可证失效策略。
-- [x] 权益读取和消耗默认 fail-closed：缺失 `status` 不再默认 active；`valid_until` 过期会拒绝；`ConsumeEntitlement` 缺 `ok/success` 不再默认成功。
 - [ ] 建立完整权限模型：feature code、license tier、quota、expires_at、device limit、offline grace days。
-- [x] 提供客户端统一权限 API 初版：新增 `DeepBase.Commerce.Permissions`，封装 `HasFeature`、`RequireFeature`、`ConsumeQuota`、`RefreshLicenseSnapshot`，并接入 `TDeepKitSafeClient`。
 - [ ] 本地许可证缓存必须包含签名、公钥版本、撤销版本、签发时间和过期时间，超过宽限期必须回连服务器。
 - [ ] 所有付费功能入口必须通过权限 API 检查，不能只判断本地 UI 状态或配置开关。
 
-
-### AUDIT-P0-2026-05-23: Commerce 客户端安全深度审计修复
-- **状态**: 已完成
-- **来源**: 2026-05-23 对 DeepBase Commerce/License/Authorization/Persistence 全部认证与付费模块的安全审计
-- **目标**: 修复审计发现的 5 Critical + 6 High + 5 Medium 共 16 个安全问题
+### QA-P0-001: 测试和 CI 门禁可信化
+- **状态**: 进行中
 - **任务**:
-- [x] C1: License 签名 SHA256 改 HMAC-SHA256 (DeepBase.License.pas)
-- [x] C2: Authorization FCurrentUser TOCTOU 竞态修复 (DeepBase.Authorization.pas)
-- [x] C5: Firebase 权益消费前 status 检查 (Commerce.Adapter.Firebase.pas)
-- [x] C6: Supabase 权益消费原子化修复 (Commerce.Adapter.Supabase.pas)
-- [x] C7: PaymentBridge 移除 env-var 绕过 (Commerce.PaymentBridge.pas)
-- [x] C8: 许可证存储 DPAPI 加密 (Persistence.License.FireDAC.pas)
-- [x] H5: UserHasRole 检查 IsActive (DeepBase.Authorization.pas)
-- [x] H6: DeleteRole 清理用户角色 (DeepBase.Authorization.pas)
-- [x] H7: AssignRole 校验 IsActive (DeepBase.Authorization.pas)
-- [x] H8: VerifyAndConfirmPayment 竞态锁 (Commerce.Service.pas)
-- [x] H9: BeginPayment 单一锁范围 (Commerce.Service.pas)
-- [x] H12: License 存储线程安全 (Persistence.License.FireDAC.pas)
-- [x] M5: HTTP 错误体截断 (Commerce.SafeClient.pas)
-- [x] M6: 适配器缺失字段补齐 (Firebase + Supabase)
-- [x] M8: Assert 替换为 EArgumentNilException (Commerce.SafeClient.pas)
-- [x] M10: LicenseAuthDialog 通用错误消息 (VCL.LicenseAuthDialog.pas)
-- [x] M11: LicenseAuthDialog 验证期间禁用按钮 (VCL.LicenseAuthDialog.pas)
-- [x] 辅助: StrToCommercePaymentProvider 等 5 个函数 (Commerce.Types.pas)
-- [x] 辅助: AssignUserRole TOCTOU 事务级修复 (Persistence.Authorization.FireDAC.pas)
+- [ ] 定位完整 Unit 退出阶段 System.JSON/FastMM unexpected memory leak：当前功能摘要已全绿，但退出仍报告 `TJSONObject x2`、`TJSONPair x5`、`TJSONString x9`、`TList<System.JSON.TJSONPair> x2` 等小块泄漏。
+- [ ] 清理 0-fixture/未引用测试单元：`Test.DeepBase.Net`、`HttpServer`、`FileWatcher`、`Reflection`、`Math`、`Crypto.OpenSSL`、`i18n.Gender` 当前在默认 CI runner 下无注册 fixture。
 
-
-### AUTOFIX-P0-2026-05-26: AutoFix 三专家审查缺陷修复
-- **状态**: 进行中，第一批编译兼容修复已落地；三专家复审新增安全边界、worktree 成果保留、缓存补丁守卫和运行时并发项
-- **来源**: 2026-05-26 三专家审查 + 2026-05-28 三专家复审（Delphi 运行时可靠性 / PowerShell 编排 / 安全边界与产品体验）
-- **目标**: 修复 AutoFix 闭环中的成果丢失、安全边界绕过、致命异常链路断裂、线程安全和脚本编排问题，使 AutoFix 达到生产级可信度。
+### DB3-P0-2026-05-13: 下游产品 DB3/DB4 矩阵后续
+- **状态**: 进行中
 - **任务**:
+- [ ] 为 DB3 各 schema 创建最小权限 runtime role，避免后端长期使用 admin 账号。
+- [ ] 冻结并写入待补 DB4 SKU：`guideduse/deepguide/deepassist/deepinsight/deeprenew/deepdevlite/deepuitest`。
+- [ ] 为 GuidedUse、DeepGuide、DeepAssist、DeepInsight、DeepRenew 补业务 API 文档和迁移脚本。
 
-#### 第一批：正确性 / 闭环可信度（P0）
+---
 
-- [x] AF-C1: Fatal 异常自动调用 SelfTerminator + exit code 2
-  - **文件**: `Core/DeepBase.AutoFix.ScenarioRunner.pas`, `Core/DeepBase.AutoFix.SelfTerminator.pas`, `Core/DeepBase.AutoFix.ErrorRecorder.pas`
-  - **结果**: fatal 异常进入 SelfTerminator，写 `exit-reason.json` 并以 code 2 退出。
+## P1 开发
 
-- [x] AF-C2: `FCurrentScenario` 线程安全基础修复
-  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`, `Core/DeepBase.AutoFix.ScenarioRunner.pas`
-  - **结果**: ScenarioRunner 侧 current scenario 读写已加锁；复审要求继续消除跨锁读写，统一由 ErrorRecorder 内部锁保护。
-
-- [x] AF-C3: `ScenarioRunner.WriteStatus` 加锁 + 复用 writer
-  - **文件**: `Core/DeepBase.AutoFix.ScenarioRunner.pas`
-  - **结果**: status JSONL 写入不再频繁开关文件，降低 fatal/后台线程竞争风险。
-
-- [x] AF-C4: `.map` parser segment:offset 转 flat RVA
-  - **文件**: `Scripts/autofix/map-parser.ps1`
-  - **结果**: line record 与 StackWalker 输出使用同一 flat RVA 空间比较。
-
-- [x] AF-C5: compiler.ps1 调用安全 + 含括号路径 regex 修复
-  - **文件**: `Scripts/autofix/compiler.ps1`
-  - **结果**: MSBuild 调用和错误解析更稳健，含 `(x86)` 路径不再误解析。
-
-- [x] AF-C6: autofix.ps1 repo root 从脚本位置推导
-  - **文件**: `Scripts/autofix/autofix.ps1`
-  - **结果**: 从 `$PSScriptRoot/../..` 推导 repo root，避免子目录调用时 lint 假通过。
-
-- [x] AF-C7: 成功修复必须保留或合并，禁止 cleanup 删除唯一成果
-  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/git-checkpoint.ps1`, `Scripts/autofix/autofix-cli.ps1`
-  - **问题**: 成功迭代在 worktree 分支提交后，cleanup 可能删除 worktree/分支，导致 AutoFix 返回成功但修复不可达。
-  - **结果**: 成功 commit 后 `autofix.ps1` 默认保留 branch/worktree 并输出 `git merge --ff-only <branch>`；`git-checkpoint cleanup` 拒绝删除未合并分支，避免唯一成果丢失。
-
-- [x] AF-C8: cache hit patch 必须重新经过 diff-guard
-  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/fix-cache.ps1`, `Scripts/autofix/diff-guard.ps1`
-  - **问题**: 缓存命中直接 `git apply`，绕过当前 `boundary.json`、`max_diff_lines` 和用户 blocked paths。
-  - **结果**: cache hit 取出的 patch 在 apply 前统一调用 `diff-guard.ps1`，并复用 AI patch 的 allowed/blocked/max-lines/max-files 参数链。
-
-- [x] AF-C9: `boundary.json.max_changed_files` 必须生效
-  - **文件**: `Scripts/autofix/autofix-cli.ps1`, `Scripts/autofix/autofix.ps1`, `Scripts/autofix/diff-guard.ps1`
-  - **问题**: init 生成了 `max_changed_files`，但运行期从未读取或强制执行。
-  - **结果**: `diff-guard.ps1` 已增加 `-MaxChangedFiles`；`autofix-cli.ps1` 从 boundary 读取 `max_diff_lines/max_changed_files` 并透传到 `autofix.ps1`；定向验证已确认超文件数 diff 被拒绝。
-
-- [x] AF-C10: `FCurrentScenario` 消除跨锁读写
-  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`, `Core/DeepBase.AutoFix.ScenarioRunner.pas`
-  - **问题**: ScenarioRunner 用自己的锁写 `TAutoFixErrorRecorder.CurrentScenario`，ErrorRecorder 用另一个锁读，Delphi string 引用计数仍可能并发读写。
-  - **结果**: ErrorRecorder 提供 `SetCurrentScenario/GetCurrentScenario`，内部统一用 ErrorRecorder 锁；ScenarioRunner 不再直接写 recorder class property。
-
-- [x] AF-C11: `SelfTerminator.HandleFatal` 必须对 `E.Message` / stack capture 二次防御
-  - **文件**: `Core/DeepBase.AutoFix.SelfTerminator.pas`
-  - **问题**: AV/OOM/StackOverflow 时读取异常消息或捕获 stack 可能二次异常，导致无法写 `exit-reason.json`。
-  - **结果**: fatal 写入链路对 class/message/scenario/stack JSON 均分段防御；失败写 `<unavailable>` 或空 stack，仍然 `Halt(2)`。
-
-#### 第二批：平台覆盖 / 自动化稳定性（P1）
-
-- [x] AF-H0A: compiler timeout 诊断必须保留 stdout/stderr
-  - **文件**: `Scripts/autofix/compiler.ps1`
-  - **结果**: MSBuild timeout 后 kill process tree，等待 stdout/stderr async task，统一写 log 和结构化错误输入，避免 timeout 后 `compile-errors.json` 无诊断。
-
-- [x] AF-H0B: `boundary.json` 缺失时 `autofix run` hard-fail
-  - **文件**: `Scripts/autofix/autofix-cli.ps1`
-  - **结果**: run 模式下缺少 boundary 直接退出并提示先执行 `autofix init <project.dproj>`，避免浪费 AI token 且所有 patch 被拒。
-
-- [x] AF-H0C: autofix branch 名增加 GUID，避免同秒并发冲突
-  - **文件**: `Scripts/autofix/autofix.ps1`
-  - **结果**: branch 从 `autofix/yyyyMMdd-HHmmss` 改为 `autofix/yyyyMMdd-HHmmss-<guid8>`，worktree path 复用同一 slug。
-
-- [x] AF-H0D: AI CLI stdout/stderr 分离并放宽 diff fence 提取
-  - **文件**: `Scripts/autofix/ai-call.cli.ps1`
-  - **结果**: stderr 只写诊断，不进入 diff；支持提取输出中第一个 ```diff/```patch fenced block，避免 AI preamble 污染 patch。
-
-- [x] AF-H0E: SelfTerminator deprecated fatal 类型局部压制 warning
-  - **文件**: `Core/DeepBase.AutoFix.SelfTerminator.pas`
-  - **结果**: `EExternalException` fatal 判定加 `SYMBOL_DEPRECATED` 局部 suppression，避免 Delphi 13.1 warning-as-error 编译风险。
-
-- [x] AF-H0F: 外部 AI 后端必须显式授权
-  - **文件**: `Scripts/autofix/autofix-cli.ps1`, `Scripts/autofix/autofix.ps1`, `Scripts/autofix/ai-call.ps1`
-  - **结果**: `cli/claude/openai` 后端默认拒绝外发；必须传 `--allow-external-ai` 或设置 `AUTOFIX_ALLOW_EXTERNAL_AI=true`，降低误发错误消息/路径/调用栈风险。
-
-- [x] AF-H0G: 同仓库 AutoFix run 加锁
-  - **文件**: `Scripts/autofix/autofix.ps1`
-  - **结果**: run 开始时在 output dir 创建 `.repo-lock`，包含 PID/host/start/nonce；并发运行会 fail-fast，finally 释放锁。
-
-- [x] AF-H0H: cache preimage 覆盖新文件 patch
-  - **文件**: `Scripts/autofix/autofix.ps1`, `Scripts/autofix/fix-cache.ps1`
-  - **结果**: `Get-DiffPreimagePaths` 同时读取 `+++` 侧的新文件路径；cache store 对 missing preimage 记录 `kind=new_file` + `absent`，lookup 时要求该文件仍不存在。
-
-- [x] AF-H0I: ErrorRecorder shutdown guard
-  - **文件**: `Core/DeepBase.AutoFix.ErrorRecorder.pas`
-  - **结果**: 增加 `FShuttingDown/FActiveWriters`，finalization 先阻止新写入并短等待在途写入，再在锁内释放 stream，降低后台线程退出竞态。
-
-- [x] AF-H1: FMX hook 缺失
-  - **结果**: 新建 `FMX/DeepBase.AutoFix.FmxHook.pas`，镜像 VclHook 模式记录异常后链到旧 handler；已接入 `DeepBaseFMX.dpk/.dproj`。
-
-- [x] AF-H2: VclHook 吞掉旧异常处理链的策略需明确
-  - **结果**: `HandleAppException` 改为记录后继续链到 `FOldOnException`，不再吞掉旧链；注释已更新。
-
-- [x] AF-H3: AI CLI / WER collector / compiler timeout 统一
-  - **结果**: `ai-call.cli.ps1` 从 `Start-Process -Wait` 改为 `WaitForExit(300000)` + kill on timeout，与 `compiler.ps1` 和 `runner.ps1` 模式一致。
-
-- [x] AF-H4: cache lookup 校验必须基于目标 worktree
-  - **结果**: lookup 和 store 均已传 `-RepoRoot $wt`；preimage hash 验证基于 worktree 路径。
-
-- [x] AF-H5: health-signal.json 原子写
-  - **结果**: `HealthSignal.Emit` 改为先写 `.tmp`，再 delete+rename，避免 runner 读到半文件。
-
-- [x] AF-H6: `RecordFromSafeRun` thread 字段不能固定 main
-  - **结果**: 已正确判断 `MainThreadID`，主线程写 `main`，其他线程写 `thread-{ThreadID}`。
-
-- [x] AF-H7: `ScenarioRunner.Initialize` 时序显式化
-  - **结果**: Delphi 侧暂无需修改；`AutoFix.Install` 已明确执行 `ErrorRecorder.Install` → `ScenarioRunner.Initialize` 的顺序，各初始化步骤有独立的 guard flag。
-
-- [x] AF-H8: `git add -A` 可能提交编译产物
-  - **结果**: `git-checkpoint.ps1` commit 改为 `git add --update`（只 stage 已跟踪文件的修改）+ `ls-files --others --exclude-standard`（只 stage 新建的非忽略文件），避免 `git add -A` 意外提交编译产物。
-
-- [x] AF-H9: diff-guard hunk 行数统计不能被源码 `+++`/`---` 绕过
-  - **结果**: 仅外层 header 识别 `+++`/`---`；hunk 内容全部计数，定向验证已确认源码内 `+++...` 会触发行数预算。
-
-- [x] AF-H10: AI 输出 fence 提取和 stderr 分离
-  - **结果**: `ai-call.cli.ps1` 已用 `fenceRe` 正则提取第一个 ```diff/patch fence block，stderr 仅写日志不混入 diff。
-
-- [x] AF-H11: 无错误无记录时不能误报 oscillation
-  - **结果**: WER re-read 后仍无记录且 exit≠0 时写 `no_diagnostics` summary 并退出，不再进入 dedup/oscillation 判定。
-
-- [x] AF-H12: `autofix wire` 写 `.dpr` 前必须备份并支持 dry-run
-  - **结果**: 写入前生成 `.dpr.autofix-backup` 备份；`--dry-run` 输出拟变更行预览而不写文件。
-
-- [x] AF-H13: dedup JSON 解析失败必须 fail-fast
-  - **结果**: `Get-DedupGroups` 对 `dedup.ps1` 非零退出或 JSON parse 失败直接抛错，进入主循环异常路径，不再当作无错误/无候选组。
-
-- [x] AF-H14: PowerShell / Delphi 环境解析集中化
-  - **结果**: `_common.ps1` 新增 `Resolve-DelphiEnvBat` 和 `Resolve-Pwsh`；`compiler.ps1` 已改用共享函数替代本地 `Resolve-EnvBat`。
-
-- [x] AF-H15: `diff-guard` glob `**` 改为路径段语义
-  - **结果**: `ConvertTo-RegexFromGlob` 重写 `**` 处理：`**/` at start → `(.+/)?`，`/**/` middle → `(.+/)?`（回退已 emit 的 `\/`），`/**` at end → `.*`，standalone → `.*`。20 项定向测试全部通过。
-
-- [x] AF-H16: AI prompt 必须包含用户级 blocked_paths
-  - **结果**: `autofix.ps1` 调 AI 时透传 `BlockedPaths`；`ai-call.ps1` 将默认 blocklist 与用户 `boundary.json.blocked_paths` 合并写入 prompt。
-
-- [x] AF-H17: `autofix status --json`
-  - **结果**: `autofix-cli.ps1 status <output-dir> --json` 输出机器可读 JSON，包含 last summary、result counts、terminal scenarios 和 runtime error level counts；定向验证已确认可解析。
-
-#### 第三批：质量提升（P2）
-
-- [x] AF-M1: `EscapeJson` 重复 4 份且控制字符转义不完整（核实：Scripts/autofix/ 中已无 EscapeJson 函数）
-- [x] AF-M2: 时间戳硬编码 `+08:00`（核实：已改为 `Get-Date -Format '...zzz'` 动态时区）
-- [ ] AF-M3: dedup key 优先使用 `ExceptionClass|UnitName:Line|Scenario`
-- [ ] AF-M4: `AIErrorHandler.ClassifyError` 识别 `EExternalException` 为 fatal
-- [ ] AF-M5: `Run/RunForTest` 提取公共迭代逻辑
-- [ ] AF-M6: prompt.txt 仅 debug 模式保留，默认调用后删除
-- [ ] AF-M7: runner health signal 轮询改为退避或事件化
-- [ ] AF-M8: `_common.ps1` JSONL parse_errors 计数上报
-- [ ] AF-M9: 删除 `$projectAbs` 等 dead code
-- [ ] AF-M10: `VclHook.Uninstall` 文档化或接入测试 cleanup
-- [ ] AF-M11: `ResetForTest` 恢复原始 `ExceptProc`
-- [ ] AF-M12: `ResolveAddr` 模块名未知时返回 False
-- [x] AF-M13: 并发 autofix 实例保护：PID/GUID 分支名或 lock file（核实：与 AF-H0G 重复，`Acquire-AutoFixRunLock` 已实现）
-- [ ] AF-M14: compiler.ps1 Delphi 环境路径改为自动检测/参数化
-- [ ] AF-M15: `New-IterationSummary` 改为 hashtable/splatting，避免 15 个位置参数错位
-- [ ] AF-M16: `Write-AutoFixLog` 支持镜像到结构化日志文件
-- [ ] AF-M17: runner child process dispose 和脚本被杀时的孤儿进程清理
+### ARCH-P1-001: Core 瘦身和包分层
+- **状态**: 进行中
+- **任务**:
+- [ ] 迁移/schema 剩余治理：继续审计现有脚本与 `Core/DeepBase.Schema.pas` 的剩余表结构漂移。
+- [ ] 全局生命周期协议仍需统一：连接池/WorkerQueue/Scheduler/FileWatcher/Updater/EventBus 必须阻止新任务、取消/等待后台任务、归还或转移借出资源后再释放内部结构。
+- [ ] 包 DAG 必须重切：`Core -> Services -> {Persistence, Features} -> {VCL, FMX}`，Services 禁止 `vcl/FireDAC/dbrtl`，运行时包不得包含测试辅助单元。
+- [ ] `Features` 拆分 Commerce、LLM、Speech、Updater 等可选包，避免下游被迫引入全部重依赖。
+- [ ] 将 LLM、Speech、Updater、Commerce、ICS adapter 作为可选包，不让最小桌面工具强制引入重依赖。
 
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中
-- **目标**: 软件上线后支持免费版到收费版的安全升级，并支持网站上的免费/付费版本更新。
 - **任务**:
-- [x] 更新检查 API 必须携带 app_id、version、platform、channel、device_id 和用户 token（`DeepBase.Updater` 已增加 `UpdateAppId/UpdateDeviceId/UpdateAccessToken/UpdateApiKey` 与 `UpdateCheckRouteMode`，并在检查请求中同时发送 `version/current_version` + `platform/channel`）。
 - [ ] 服务器根据 entitlement 返回可见版本、下载地址、强制更新策略和签名 manifest。
 - [ ] 更新包必须校验 hash 和签名，防止篡改、路径穿越和降级攻击。
 - [ ] 未付费用户只能看到免费通道，付费用户才能看到 Pro/商业通道。
 - [ ] 更新检查必须接入权限系统：免费版、试用版、Pro 版、企业版看到不同 release channel。
 - [ ] 更新 manifest 必须包含 app_id、version、channel、min_version、package_hash、signature、download_url、release_notes。
-- [x] 客户端必须区分“免费更新”和“付费升级”：免费更新直接走 updater，付费升级通过 `TDeepKitUpgradeFlowClient` 先走订单/支付/权益，再刷新 license snapshot。
 - [ ] 增加更新失败回滚、断点/失败重试、强制更新、稍后安装、退出安装、静默下载策略。
 - [ ] 增加 Updater 安全测试：签名错误、hash 错误、Zip Slip、降级攻击、断网、服务器返回越权通道。
 
 ### APP-P0-001: 桌面工具型产品上线公共能力套件
 - **状态**: 进行中
-- **目标**: 将 deepBase 打包成桌面工具型产品上线时可直接复用的公共能力组合。
 - **任务**:
 - [ ] 提供标准启动流程：初始化 DB1、本地配置、日志、异常、许可证、更新检查、托盘、热键。
 - [ ] 提供标准用户入口：登录、查看当前版本、查看授权状态、升级到收费版、检查更新、反馈问题。
-- [x] 提供标准付费入口 facade：选择商品、创建订单、拉起支付、查询权益、刷新授权快照（`DeepBase.Commerce.UpgradeFlow`）。
-- [x] 提供标准权限入口 facade：`DeepBase.Commerce.Permissions` 支持 `HasFeature/RequireFeature/ConsumeQuota/RefreshLicenseSnapshot`；UI 灰显和升级提示仍由 VCL/FMX 示例补齐。
-- [x] 提供标准桌面生命周期 facade：`DeepBase.Desktop.Lifecycle` 支持登录、授权、付费升级、更新检查和 manifest 获取。
-- [x] 提供 VCL/FMX 生命周期 UI helper：`DeepBase.VCL.DesktopLifecycle`、`DeepBase.FMX.DesktopLifecycle` 支持授权标签刷新、功能灰显、付费升级打开浏览器、检查更新和 GUI 测试窗体 `Left=100, Top=300` 定位。
 - [ ] 提供完整标准 UI 模板：VCL 和 FMX 至少各一个桌面工具模板，覆盖升级、授权、托盘、热键、LLM 配置。
-- [x] 增加 E2E 示例或测试：新增 `Test.Integration.CommerceE2E`，覆盖免费用户登录、升级 Pro、付费功能可见、刷新许可证快照、付费更新通道可见。
-
-### DB-P0-001: 数据库边界和 DoQry 安全
-- **状态**: 待开发
-- **目标**: DB1/DB2/DB3/DB4 边界明确，桌面端查询工具不能绕过安全边界。
-- **任务**:
 - [ ] 明确 DB1 本地配置、DB2 本地业务、DB3 团队/共享业务、DB4 服务器收费授权的职责边界。
-- [x] DoQry 默认禁止桌面端执行 DDL/PRAGMA/DROP/ALTER 等高风险 SQL。
-- [x] DoQry 默认关闭全局预编译池并清理 stale query；显式启用时验证连接仍有效，避免跨测试/跨连接复用已释放连接。
-- [x] DoQry SQLite `UniDbInsertReturningId` 改为 `ExecSQL + last_insert_rowid()`，兼容当前 FireDAC SQLite；直接 SQL 判定改为 token 级别， malformed `SELECT FROM` 能正确落到数据库语法错误码。
-- [x] DoQry 增加 timeout 落地、参数校验、敏感日志脱敏。
-- [x] 迁移统一走 `DeepBase.DB.Migrations`，生产环境禁止靠运行时补字段代替正式 migration。
-
----
-
-## P1 架构治理（Important）
-
-### DESKTOP-P1-2026-05-14: DeepShell VCL 桌面壳 P1 收敛与扩展
-- **状态**: 进行中
-- **来源**: 2026-05-14 五专家审阅；P0 阻塞已收敛（BUG-150 ~ BUG-154 已修复），剩余为体验、安全、性能与契约完善项。
-- **目标**: 让 `TDeepMainForm` 在多产品上线时不再因为缺 i18n、缺 redaction、缺 DPI、缺 governance evidence 而重复打补丁。
-- **任务**:
-- [x] Shell 内置 caption / StatusBar / About 文本走 `IShellLocalizationService.Text(key, default)`：`TDeepMainForm.ShellText` helper + 内置命令 caption 全部走 i18n。locale 在运行期切换需重启刷新内置 caption（下游已注册的命令可在 `OnLocaleChanged` 内自行 `RegisterCommand` 覆盖）。
-- [x] `IShellStatusManager` 新增可注入 sanitizer 钩子（默认 noop），下游可挂正则把 `Authorization: Bearer ...`、API Key、设备 token 等敏感片段替换为 `***`。Demo 加示例 sanitizer 仍待补。
-- [x] `TShellCommandManager.BuildContextJson` 默认不发 `project_path`；只有命令显式 `RequiresEvidence=True` 时才把 path 写入 governance evidence，避免泄漏用户本地路径 PII。
-- [ ] `ISettingsPageProvider.GroupName` 真接入：`TDeepShellSettingsForm` 按 GroupName 在 ListBox 里加分组分隔，或者从契约删除并文档说明。
-- [x] `IShellLayoutService` 接入 `SaveProjectLayout`：新增 `TDeepMainForm.OpenProject/CloseProject` orchestration，`SaveShellState` 同时写全局和（如有）项目级 layout，`OpenProject` 切换前会先持久化旧项目的 layout 再加载新项目的 layout。
-- [x] `TDeepShellToolWindow` 默认尺寸做 DPI 缩放（`MulDiv(320, Screen.PixelsPerInch, 96)`），在 4K/200% DPI 下不再变成 160×240。
-- [x] `TShellAreaController.SetCollapsed` 中区不再走 BOTTOM 默认值的死代码路径；middle 走 alClient，仅切换 host vs summary 可见性。
-- [x] `Dictionary.Keys.ToArray` 顺序不保证：`TShellCommandManager.CommandIds` 与 `TShellServiceRegistry.ServiceIds` 改为返回内部并行 `TList<string>` 的 `ToArray`，按注册顺序输出。
-- [ ] 把 `IShellMainViewProvider.CreateViewControl` 的 `(AOwner, ARef, AInfo)` 参数语义写入文档；明确 `AInfo.ViewId` 与 `ARef.Id` 的关系，去掉冗余。
-- [x] 把 `IShellStatusManager.ShellError` 改名为 `LogError`，`ShellError` 保留为兼容别名。
-- [x] `Examples/VCLDeepShellDemo/.dproj` 已直接产出（dproj 是 MSBuild XML 文本文件，不必依赖 IDE 生成）。本地用 `msbuild VCLDeepShellDemo.dproj /p:Config=Debug /p:Platform=Win64` 可独立编译，输出 6.0 MB Win64 exe，0 错。
 
 ### DESKTOP-P1-2026-05-14-AUX: DeepShell governance/audit 默认值
 - **状态**: 进行中
-- **目标**: `NullGovernanceService` 不能既不拦也不记录，否则上线前的 `gmObserve` 阶段没有任何审计痕迹。
 - **任务**:
-- [x] 默认 governance 改为 audit-only：新增 `VCL/DeepBase.VCL.DeepShell.Governance.pas`，提供 `TShellAuditOnlyGovernanceService`（L2/L3 命令通过 `IShellStatusManager.Diagnostic` 写一行 evidence）和 `TShellAllowAllGovernanceService`（旧 null 行为）。`TDeepMainForm` 默认接 `TShellAuditOnlyGovernanceService`；下游 `SetGovernance(nil)` 或 `SetGovernance(allowAll)` 可显式退出。
 - [ ] 真实 `DeepShell.GovernanceAdapter`（OCGS 包装）在第二阶段提供，默认 `gmObserve`，稳定后 L2/L3 切 `gmEnforce`。
 - [ ] Shell 主窗体加一条命令 `shell.governance.toggleObserve`（仅 Pro/Admin 可见），方便在演示和验收期切换观察 / 阻断模式。
 
-### DESKTOP-P1-2026-05-14-UI: DeepShell UI 完整性补全
-- **状态**: 进行中
-- **来源**: 2026-05-14 第二轮门禁审阅"重要问题"列表中关于 UI 呈现的项目。Shell 当前能编译但还不是"完整可体验"。
-- **任务**:
-- [x] `FCommandBar` 不再是空面板：新增 `TMainMenu` 按 `Commands.CommandIds`（已是注册顺序，BUG-159）分组到 Category 顶层菜单，每个 MenuItem 的 OnClick 调 `Commands.Execute(commandId)`。`FCommandBar` 默认 Height=0 留给下游放 toolbar。新增 `RebuildMainMenu`，`AfterConstruction` 完成 RegisterCommands 后调用一次。
-- [x] Structure tool window 真正消费 `IShellStructureProvider`：在工具窗 Upper 内置 `TTreeView`，按 provider.GetTreeNames 与 GetRootNodes 填充；`OpenProject` 与 `RegisterStructureProvider` 自动 `RebuildStructureTree`。深度懒加载（OnExpanding 回调真正取 children）作为下一轮工作，目前 root 已经能显示。
-- [x] Inspector tool window 真正消费 `IShellInspectorProvider`：内置 `TStringGrid`（Name/Value），`sekObjectSelected` 触发 `RefreshInspector`，按第一个 `CanInspect` 的 provider 填充 properties。Bridge 已加 `sekObjectSelected` case。
-- [ ] Demo `Demo.MainForm` 改为先 `OpenProject('demo-project', ...)` 再 `OpenView`，让结构窗、inspector、context 都能联动展示。
-- [ ] Demo 加一个示例 sanitizer：注册一个把 `Authorization: Bearer \S+` 替换为 `Authorization: Bearer ***` 的正则函数，演示 BUG-155 的用法。
-
-### DESKTOP-P1-2026-05-14-I18N: Settings 窗体 + Localization 默认值
-- **状态**: 进行中
-- **来源**: 2026-05-14 第二轮审阅"重要问题"5（Settings 硬编英文 + en-US 默认）
-- **任务**:
-- [x] `TDeepShellSettingsForm` 内的 `Caption='Settings'` / `'Restore Defaults'` / `'Cancel'` / `'Apply'` / `'OK'` 走 i18n key（`shell.settings.title` / `shell.btn.ok` / `shell.btn.apply` / `shell.btn.cancel` / `shell.btn.restoreDefaults`）。新增 `SetLocalization` 注入 + 内部 `L()` helper。`OpenSettingsDialog` 在 modal 之前注入 `FLocalization`。
-- [x] `TShellDefaultLocalizationService.Create` 默认 locale 改为按系统：新增 `DetectSystemLocale` 调 Win32 `GetUserDefaultLocaleName`，回退 `en-US`。`ADefaultLocale=''` 时使用 system locale。
-- [ ] facade 提供一个 `RegisterDefaultShellTexts(loc, 'zh-CN')` helper，注入 `shell.cmd.fileExit='退出'` 等中文 key 集合，下游一行就能切到中文。
-
-### DESKTOP-P1-2026-05-14-TEST: DeepShell 合同测试
-- **状态**: 进行中
-- **来源**: 2026-05-14 第二轮审阅"验证结果"4（无 DUnitX 测试）
-- **任务**:
-- [x] 新建 `Tests/Test.DeepBase.VCL.DeepShell.pas`，6 个 fixture 共 19 个测试覆盖：
-  - `TTestShellEventBus`：subscribe/publish 同线程同步、unsubscribe 后停止、SubscribeAll 收所有 kind、**后台线程 Publish 释放 bus 引用后 queue 项不 UAF（BUG-167 防回归）**。
-  - `TTestShellCommandManager`：allow 路径运行 handler、**out=DeniedHard 但函数返回 True 时不运行（BUG-168 防回归）**、函数 False 时不运行、无 GateKey 跳过 governance、Disabled 不执行、**注册顺序保持（BUG-159 防回归）**。
-  - `TTestShellRecentService`：去重、capacity、按 LastOpenedAt 排序。
-  - `TTestShellLayoutService`：JSON 序列化往返；in-memory 未保存返回 False。
-  - `TTestShellAreaController`：折叠/展开记忆 LastExpandedSize；ApplyState 还原。
-  - `TTestDeepMainFormLifecycle`：**AfterConstruction 顺序调用 4 个生命周期虚方法（BUG-169 防回归）**、**ResolveServicesFromRegistry 后 form.Recent 指向 registry-registered 的 fake（BUG-166 防回归）**。
-- [x] 测试已注册到 `Tests/DeepBaseTests.dpr`。
-  独立 dcc32 运行 6 fixture × 19 tests：19 passed，0 failed，0 errored，0 leaked。整包 DeepBaseTests.dpr 仍因 IntentClarification/Browser 等其他**预先存在**的 bug 编不过，但单独的 DeepShell 测试可通过快速 dpr 跑。
-- [x] 完整 DeepBaseTests.dpr 跑通后把 DeepShell 合同测试纳入主 CI 运行集合。（核实：`DeepBaseTests.dpr:157` 已包含 `Test.DeepBase.VCL.DeepShell` 及 PBT 测试）
-
-### ARCH-P1-001: Core 瘦身和包分层
-- **状态**: 待开发
-- **任务**:
-- [ ] `Core` 禁止依赖 VCL/FMX/FireDAC/支付/LLM 具体实现。
-- [ ] `Services` 不直接依赖 UI 和数据库驱动。
-- [ ] `Persistence` 独占 FireDAC 适配。
-- [ ] `Features` 拆分 Commerce、LLM、Speech、Updater 等可选包，避免下游被迫引入全部重依赖。
-- [ ] 将 LLM、Speech、Updater、Commerce、ICS adapter 作为可选包，不让最小桌面工具强制引入重依赖。
-
-### COM-P1-001: Commerce SDK 客户端/服务器拆分
-- **状态**: 进行中
-- **任务**:
-- [x] 桌面端 SDK 只暴露用户安全操作（`TDeepKitSafeClient` 已落地）。
-- [x] 服务器 SDK 才允许订单、支付、权益、退款、撤权等管理写操作（`TCommerceHttpStorage` 已补 `RefundOrder`/`RevokeEntitlement`/`RevokeLicenseSnapshot`，且继续受 `CreateServerAdmin`/`CreateDeepKitServerAdmin` 保护）。
-- [x] Supabase/Firebase/PaymentBridge 标记为 server-only 或 prototype，不能作为桌面生产直连入口（`TSupabaseConfig/TFirebaseConfig` 新增 `CreateServerOnly` 和显式 `AllowServerOnlyPrototype`；默认需显式开启或设置 `DEEPBASE_ALLOW_PROTOTYPE_COMMERCE_ADAPTERS=1`，PaymentBridge 工厂同样加了 server-side 保护）。
-
-### NET-P1-001: ICS 可选网络传输适配层
-- **状态**: 进行中
-- **目标**: 支持需要 ICS 的传统 Delphi 项目，但不把 ICS 变成 deepBase Core 的硬依赖。
-- **任务**:
-- [x] 定义统一网络传输接口：GET、POST、PUT、PATCH、DELETE、HEAD、OPTIONS、headers、timeout、redirect（`DeepBase.Net.Transport`）。
-- [x] 保留 `System.Net.HttpClient` 默认实现（`TDeepBaseSystemNetTransport`）。
-- [x] 新增 `DeepBase.Net.Transport.ICS` 可选 adapter 入口；未编译 ICS 时 fail-fast，避免下游误判为可用。
-- [x] ICS adapter 固化可选适配契约：支持超时、代理、重定向、TLS 最低版本、证书校验策略、证书错误回调、取消回调配置；仓库未内置 Overbyte ICS 源码，未定义 `DEEPBASE_HAS_ICS` 时继续 fail-fast。
-- [x] Commerce 通过统一 transport 注入（`TCommerceBackendUnifiedTransport`）。
-- [x] Speech/Baidu ASR 通过统一 transport 注入（`TSpeechUnifiedHttpTransport`）。
-- [x] Updater 通过统一 transport 注入，更新检查、release notes、history、下载均可替换 transport，fake transport 单测覆盖 `/updates/manifest` 参数和 token header。
-- [x] LLM 特性层 HTTP 客户端通过统一 transport 注入，默认 `System.Net`，fake transport 单测覆盖请求 URL、body、Authorization header 和响应解析。
-- [ ] Core 旧 LLM/BillingClient HTTP 面仍直接使用 `THTTPClient/TNetHTTPClient`，需要后续迁移或标记 legacy，避免形成第二套网络实现。
-- [x] 增加 fake transport 单元测试，网络模块测试默认不依赖外网、不依赖 ICS 安装。
-- [x] 统一 transport 响应增加真实 `BodyBytes` 读取，Updater 下载不再依赖 `IHTTPResponse.ContentStream`。
-- [x] 文档明确：ICS 是兼容传统桌面项目的可选方案，不是当前 P0 主线。
-
 ### HOTKEY-P1-001: 热键模块强化为桌面工具标准能力
 - **状态**: 进行中
-- **目标**: 从“快捷键配置表”强化为可直接用于桌面工具的应用内热键和全局热键体系。
 - **任务**:
 - [ ] 保留现有 `DeepBase.Hotkeys` 配置、默认值、冲突检测能力。
-- [x] 增加 Windows 全局热键注册：`RegisterHotKey`、`UnregisterHotKey`、`WM_HOTKEY` 消息分发。
-- [x] 增加热键作用域：global、application、form、editor，并在冲突检测中区分作用域（Core 基础能力已实现）。
-- [x] 增加应用内快捷键绑定基础：`BindAction/TriggerShortcut`（Core 抽象已实现，便于注入）。
-- [x] 补齐 VCL 适配层：`DeepBase.VCL.Hotkeys` 支持 action/menu/button 绑定与按作用域触发。
-- [x] 补齐 FMX 适配层：`DeepBase.FMX.Hotkeys` 已支持 action name 到 FMX action、menu item、button 的统一映射。
-- [x] 增加 Core 级热键导入导出能力：`DeepBase.Hotkeys.Exchange`（JSON 导出/导入、冲突策略 strict/overwrite/keep）。
-- [x] 增加 VCL 热键编辑器组件 UI：`Studio.HotkeyFrame` 已支持录入快捷键、检测冲突、恢复默认、JSON 导入导出。
-- [x] 补齐 FMX 热键编辑器组件 UI（与 VCL 功能对齐）：`DeepBase.FMX.HotkeyEditor` 已支持搜索、分类、冲突处理、恢复默认、JSON 导入导出。
-- [x] 增加测试：文本转换、冲突检测、全局热键注册失败处理、注销清理、重复注册保护。
-- [x] 增加测试：作用域冲突检测、按作用域触发绑定动作。
 
 ### TRAY-P1-001: 托盘模块强化为桌面工具生命周期组件
 - **状态**: 进行中
-- **目标**: 让下游桌面工具可以直接获得托盘驻留、菜单、通知、最小化到托盘等标准能力。
 - **任务**:
-- [x] 保留 `DeepBase.TrayIcon` 底层 Shell_NotifyIcon 能力。
-- [x] 增加 VCL 托盘组件和示例：`DeepBase.VCL.TrayIcon` + `Tools/Tray` 已支持显示、隐藏、双击恢复、右键菜单、气泡通知。
 - [ ] 增加 FMX Windows 托盘适配；非 Windows 平台明确降级策略。
-- [x] 增加标准菜单项：打开主窗口、检查更新、授权状态、设置、退出（`Tools/Tray` 示例已接入）。
-- [x] 支持最小化到托盘、关闭到托盘、托盘启动恢复主窗口（`TDeepBaseTrayIcon` + `Tools/Tray` 已接入）。
 - [ ] 与 SingleInstance、Updater、License、Hotkeys 联动，避免后台驻留时状态不同步（`Tools/Tray` 已接入 Hotkeys，剩余 SingleInstance/Updater/License 待完成）。
-- [x] 增加测试和示例，覆盖重复 Show/Hide、窗口消息释放、退出时托盘图标清理（`Test.DeepBase.TrayIcon` 已补重复 Show/Hide 与回调清理用例，`Tools/Tray` 已作为示例）。
 
 ### SPEECH-P1-001: 语音录入和 ASR 组件化
 - **状态**: 进行中
-- **目标**: 为桌面工具提供可复用的语音录入能力，支持 LLM 输入、表单输入和命令触发。
 - **任务**:
-- [x] 统一 Speech facade：`TDeepBaseSpeechService` 已编排录音、VAD、ASR、错误和识别结果。
-- [x] 封装当前 WinMM 录音、VAD、Baidu ASR，实现 provider 可替换。
 - [ ] 支持按住说话、热键开始/停止录音、自动断句、录音状态 UI。
-- [x] ASR 调用可接入权限/配额系统：`TDeepBaseSpeechService.PermissionClient` 识别前 `RequireFeature`，识别成功后 `ConsumeQuota`，默认 feature code 为 `speech.asr`。
 - [ ] 支持在线 ASR 和本地/离线兜底接口，具体实现可后续扩展。
 - [ ] 增加 VCL/FMX 语音录入控件，支持把识别文本写入 Edit/Memo 或发送给 LLM。
 - [ ] 增加测试：空音频、超时、取消、配额不足。
-- [x] 增加测试：音频格式、VAD、Baidu ASR 成功/失败、统一 transport、Service 编排、ASR 权限检查和配额扣减；`Test.DeepBase.Speech` 当前 7 tests passed。
 
 ### QA-P1-001: 长期质量体系
-- **状态**: 待开发
+- **状态**: 进行中
 - **任务**:
-- [ ] 增加架构规则检查：Core 禁 UI/DB、包引用方向、危险 SQL、密钥泄漏。
 - [ ] 增加 Updater 安全测试：签名、hash、Zip Slip、回滚、断网、灰度。
-- [x] 增加 Commerce E2E：登录、下单、支付意图、权益生效、许可证快照、付费更新可见（`Test.Integration.CommerceE2E`）。
 - [ ] 增加 LLM E2E mock：5 模型槽、fallback、生图失败、图片兜底、费用统计。
 - [ ] 增加桌面工具模板 E2E：托盘、热键、自动升级、付费升级、权限控制、语音录入。
 - [ ] CI 增加可选包矩阵：Minimal、Runtime、All、LLM、Speech、Commerce、Updater、ICS adapter。
-- [ ] 修复全量测试工程编译阻塞：`Tests\DeepBaseTests.dpr` 当前因 `Test.DeepBase.Hotkeys.pas` 引用的 `DeepBase.VCL.Hotkeys` 未被编译路径/包正确解析而失败；PageDriver 已用独立 runner 通过 26/26，并完成真实 WebView2 Native PageDriver smoke。
+
+### AUTOFIX-P1-2026-06-05: AutoFix 审查剩余项
+- **状态**: 进行中
+- **任务**:
+- [ ] AF-M7: runner health signal 轮询改为退避或事件化。
+- [ ] AF-M14: compiler.ps1 Delphi 环境路径改为自动检测/参数化。
 
 ---
 
@@ -633,9 +170,12 @@
 - [ ] 支持续费、升级、优惠码、发票、退款撤权。
 - [ ] 支持离线宽限期和上线后的许可证重新对账。
 
----
-
-## P3 低优先级
+### SPEC-P2-001: Commerce 后端契约未完成实施步骤
+- **状态**: 待开发
+- **任务**:
+- [ ] 步骤 5: 实现微信支付 notify 验签和幂等确认。
+- [ ] 步骤 6: 跑通一个下游端到端样例。
+- [ ] 步骤 7: 评估 CloudBase/Firebase/Supabase 等托管后端是否需要官方适配。
 
 ### DOC-P3-001: 视频教程
 - **状态**: 待开发
@@ -644,157 +184,42 @@
 
 ---
 
-## SPEC-P2-001: Commerce 后端契约未完成实施步骤
-- **状态**: 待开发
-- **来源**: `docs/60.backend.Commerce后端契约-commerce-backend-spec.md` 第 8 章实施顺序
-- **目标**: 完成 Commerce 后端契约剩余的三项实施步骤，使支付通知验签、端到端样例和托管后端评估全部落地。
-- **任务**:
-- [ ] 步骤 5: 实现微信支付 notify 验签和幂等确认 — 后端接收微信支付回调通知，验证微信平台证书/签名/时间戳/nonce，解密通知资源，记录 `payment_notifications.raw_payload`，按 `out_trade_no` 查订单并校验金额/币种/商户号/状态，在事务内更新 payment/order 并按 `source_order_id` 幂等发放 entitlement，返回微信支付要求的成功响应。Delphi 侧 `TCommerceHttpPaymentGateway` 需适配通知验签结果回调。
-- [ ] 步骤 6: 跑通一个下游端到端样例 — 使用真实或模拟后端，从桌面工具发起登录、列商品、创建订单、创建支付意图、模拟支付回调、查询权益、刷新许可证快照、检查付费更新通道的完整流程，验证 `TDeepKitSafeClient` / `TDeepKitUpgradeFlowClient` / `TDeepBaseDesktopLifecycle` 全链路可用。
-- [ ] 步骤 7: 评估 CloudBase/Firebase/Supabase 等托管后端是否需要官方适配 — 基于步骤 5-6 的实际接入经验，判断是否需要为这些 BaaS 平台提供官方 `ICommerceStorage` 适配器，还是只保留 HTTP 适配器 + 自定义后端路线。当前 `DeepBase.Commerce.Adapter.Supabase` 和 `DeepBase.Commerce.Adapter.Firebase` 已标记为 server-only/prototype，需根据评估结果决定升级或维持现状。
+## 规范系统剩余项目
 
----
+### deepbase-speech
+- [ ] GitHub Actions CI 验证。
+- [ ] SAPI 语音占用检测（需交互式麦克风，Spike 中跳过）。
+- [ ] Types PBT 测试：PCM16 round-trip、Float round-trip、DurationMs、PCM16ToFloat range。
+- [ ] Config PBT 读写幂等测试（P12）。
+- [ ] Registry/Policy/Runtime/Schema/ASR.SAPI/TTS.SAPI 单元测试。
+- [ ] dpk 分包验证（5 dpk 文件）。
+- [ ] SAPI Live Streaming + WinMM 低延迟 + AudioSession 仲裁单元测试。
+- [ ] DeepInput 回归测试（替换后的语音集成）。
+- [ ] DeepLaunch 语音集成（TranscribeFromMic、Speak）、设置页 + 麦克风授权、M4 集成测试。
+- [ ] WakeWord 词表 round-trip PBT、单元测试、DeepLaunch WakeWord 集成。
+- [ ] 全模块回归测试、合规文档、Trace 验收、Stop time limits。
+- [ ] Voiceprint MFCC/DTW/Verify PBT、features_hmac 验证、DeepLaunch Voiceprint 集成、完整单元测试。
+- [ ] IntentParser PBT、WinRT ASR、Whisper.cpp、Cloud TTS Backend。
 
-## SPEC-KIRO-PENDING-2026-06-02: Kiro 规范系统未完成项目
+### delphi-13-migration
+- [ ] 确认 Skia4Delphi 7.1.0 unit path 变更并更新所有 dpk Search Path。
+- [ ] VCL Styles / Win11 兼容性检查；FMX 控件在 13.1 下的渲染检查。
+- [ ] dclDeepBaseCore / dclDeepBaseVCL / dclDeepBaseFMX IDE Install，并确认 IDE 组件面板正常。
+- [ ] 启用 96 DPI 保存模式，转换所有 `.dfm` / `.fmx`，验证 UI 无错位。
+- [ ] 下游兼容性验证：Assayer、FMX 项目、VCL 项目。
+- [ ] 合并 upgrade/delphi-13 到 main，打标签 `d13-deepbase-done`，通知 4 个 AI 团队。
 
-> 原 `.kiro/specs/` 下的 4 个未完成 spec 已合并至此，kiro 源文件已删除。
+### feedback-backend-service
+- [ ] 登录 AipexBase 管理端，创建新应用并获取 API Key。
+- [ ] 创建 feedbacks、system_infos、attachments、comments、notifications、feedback_tags 表并配置权限。
+- [ ] 修改 `DeepBase.Feedback.pas`，适配提交、详情、列表、tracking code 查询、评论、通知和附件。
+- [ ] 实现 tracking code、状态变更通知、评论通知、已关闭反馈评论限制。
+- [ ] 增加单元测试、属性测试和集成测试。
 
-### deepbase-speech — 语音能力扩展 (40/74 完成，34 项待开发)
-- **状态**: 进行中，M0/M1 部分完成，M2.5 已完成，M3-M8 基本未启动
-- **已完成**: M0 Spike 基础验证(1.1-1.10)、M1 Runtime 骨架 + SAPI Batch ASR + TTS、M2 Streaming ASR 核心、M2.5 SenseVoice Backend 全部 7 项、M5 dpk 注册、M7 MFCC/DTW/Voiceprint 核心 + dpk 注册
-- **设计参考**: 原 `design.md` 定义了 14 条正确性属性(P1-P14)、AudioSession 仲裁状态机、5 dpk 分包策略、STRIDE 威胁模型；原 `requirements.md` 定义了 19 个需求(R1-R19)
-
-#### M0 Spike 剩余（2 项，另有 4 项已核实完成）
-- [ ] 1.11 GitHub Actions CI 验证
-- [x] 1.12 屏幕阅读器检测（NVDA/JAWS 共存）— 核实：`SpeechSpike.dpr` Test_1_12 已实现
-- [x] 1.13 Voice Access 检测（Win11 语音访问共存）— 核实：`SpeechSpike.dpr` Test_1_13 已实现
-- [ ] 1.14 SAPI 语音占用检测（需交互式麦克风，Spike 中跳过）
-- [x] 1.15 DPAPI 跨机器失败路径验证 — 核实：`SpeechSpike.dpr` Test_1_15 已实现
-- [x] 1.16 QPC 多线程精度验证 — 核实：`SpeechSpike.dpr` Test_1_16 已实现
-
-#### M1 Runtime 剩余测试（4 项）
-- [ ] 3.2-3.5 Types PBT 测试（PCM16 round-trip、Float round-trip、DurationMs、PCM16ToFloat range）
-- [ ] 3.8 Config PBT 读写幂等测试（P12）
-- [ ] 3.15 Registry/Policy/Runtime/Schema/ASR.SAPI/TTS.SAPI 单元测试
-- [ ] 3.16 dpk 分包验证（5 dpk 文件）
-
-#### M2 Streaming ASR 测试（1 项）
-- [ ] 5.4 SAPI Live Streaming + WinMM 低延迟 + AudioSession 仲裁单元测试
-
-#### M3 DeepInput 重构（1 项）
-- [ ] 7.3 DeepInput 回归测试（替换后的语音集成）
-
-#### M4 DeepLaunch F2/PTT MVP（3 项，全未启动）
-- [ ] 8.1 DeepLaunch 语音集成（TranscribeFromMic、Speak）
-- [ ] 8.2 DeepLaunch 设置页 + 麦克风授权
-- [ ] 8.3 M4 集成测试
-
-#### M5 WakeWord Beta（3 项）
-- [x] 10.1 `DeepBase.Speech.WakeWord.pas` 核心实现（SAPI Grammar、词表管理）— 核实：文件已存在，有 `ISpRecognizer/ISpRecoContext/ISpRecoGrammar`；SRGS XML 仍缺
-- [ ] 10.2-10.3 PBT 词表 round-trip（P13）+ 单元测试
-- [ ] 10.5 DeepLaunch WakeWord 集成
-
-#### M6 Stabilization（4 项，全未启动）
-- [ ] 12.1 全模块回归测试
-- [ ] 12.2 合规文档
-- [ ] 12.3 Trace 验收
-- [ ] 12.4 Stop time limits（best-effort + hard-limit 双轨）
-
-#### M7 Voiceprint（7 项）
-- [ ] 14.2 PBT MFCC 确定性测试（P5）
-- [ ] 14.4-14.5 PBT DTW 对称性/非负性/自距测试（P6/P7）
-- [ ] 14.7-14.9 PBT Verify 等价/确定性测试（P8/P9）+ 单元测试
-- [ ] 14.10 features_hmac 验证逻辑启用
-- [ ] 14.12 DeepLaunch Voiceprint 集成
-- [ ] 14.13 Voiceprint 完整单元测试
-
-#### M8 IntentParser / WinRT / Whisper / Cloud（7 项，IntentParser 核心已有）
-- [x] 16.1 `DeepBase.Speech.Intent.pas`（规则匹配 + slot 提取）— 核实：`TDeepBaseIntentParser` 已存在，LLM fallback 仍为 stub
-- [ ] 16.2-16.4 PBT IntentParser 幂等/增量注册（P10/P11）+ 单元测试
-- [ ] 16.5 `DeepBase.Speech.ASR.WinRT.pas`（可选）
-- [ ] 16.6 Whisper.cpp 集成（可选）
-- [ ] 16.7 Cloud TTS Backend（可选）
-
----
-
-### delphi-13-migration — Delphi 13.1 迁移 (55/67 完成，12 项待完成)
-- **状态**: 进行中，主体编译/语法/steering/测试 全部通过，剩余为手动 IDE 操作和下游验证
-- **已完成**: Phase 0(准备)、Phase 1(环境切换)、Phase 3(逐包编译)、Phase 4(UniBase 清理)、Phase 6(语法现代化 5 样本)、Phase 7(steering 四件套)、Phase 8(测试验证)、Phase 10.1-10.3(收尾)
-- **13.1 编译**: 6 runtime dpk + 3 design-time dpk Clean+Build 通过（Warning 136, Error 0）
-- **13.1 测试**: 3240/3243 unit + 10/10 integration 通过
-- **13.1 架构**: 18/18 architecture checks 通过
-
-#### Phase 2: 第三方组件（2 项）
-- [ ] 2.1.1 确认 Skia4Delphi 7.1.0 unit path 变更
-- [ ] 2.1.2 更新所有 dpk Search Path
-
-#### Phase 3: 兼容性确认（2 项）
-- [ ] 3.5.3 VCL Styles / Win11 兼容性检查
-- [ ] 3.6.3 FMX 控件在 13.1 下的渲染检查
-
-#### Phase 3.7: 设计时包 IDE Install（4 项，需手动 IDE 操作）
-- [ ] 3.7.1 dclDeepBaseCore IDE Install
-- [ ] 3.7.2 dclDeepBaseVCL IDE Install
-- [ ] 3.7.3 dclDeepBaseFMX IDE Install
-- [ ] 3.7.4 确认 IDE 组件面板正常
-
-#### Phase 5: DFM 96 DPI 转换（4 项，需手动 IDE 操作）
-- [ ] 5.1 启用 96 DPI 保存模式
-- [ ] 5.2 转换所有 .dfm 文件
-- [ ] 5.3 转换所有 .fmx 文件
-- [ ] 5.4 验证转换后 UI 无错位
-
-#### Phase 9: 下游兼容性验证（3 项，均被下游问题阻塞）
-- [ ] 9.1 Assayer 构建（阻塞：下游 ProxyConfig.pas 语法错误）
-- [ ] 9.2 FMX 项目构建（阻塞：缺少 Progee.ico）
-- [ ] 9.3 VCL 项目构建（阻塞：SynEdit Windows unit not found）
-
-#### Phase 10: 收尾（3 项）
-- [ ] 10.4 合并 upgrade/delphi-13 到 main
-- [ ] 10.5 打标签 d13-deepbase-done
-- [ ] 10.6 通知 4 个 AI 团队
-
----
-
-### feedback-backend-service — 反馈后端服务 (0/10 阶段，未启动)
-- **状态**: 未启动
-- **目标**: 将 DeepBase 反馈系统迁移到 AipexBase 后端
-- **设计参考**: 推荐 AipexBase BaaS（动态数据引擎 + API Key 认证 + 文件服务）；备选 FastAPI + PostgreSQL。20 条正确性属性(Property 1-20)覆盖提交/校验/分页/评论/通知/统计/序列化
-
-#### Phase 1: AipexBase 配置（8 项）
-- [ ] 1.1 登录 AipexBase 管理端，创建新应用，获取 API Key
-- [ ] 1.2 创建 feedbacks 表（含 tracking_code 唯一索引）
-- [ ] 1.3 创建 system_infos 表
-- [ ] 1.4 创建 attachments 表
-- [ ] 1.5 创建 comments 表
-- [ ] 1.6 创建 notifications 表
-- [ ] 1.7 创建 feedback_tags 表
-- [ ] 1.8 配置表权限
-
-#### Phase 2: 前端适配（6 项大任务）
-- [ ] 2.1-2.6 修改 `DeepBase.Feedback.pas`：更新 TFeedbackConfig、DoRequest、SubmitFeedback、GetFeedbackDetails、GetMyFeedbacks、SearchByTrackingCode
-- [ ] 3.1-3.6 评论/通知适配：AddComment、GetComments、GetNotifications、MarkNotificationRead、MarkAllNotificationsRead、GetUnreadCount
-- [ ] 4.1-4.3 附件上传适配：UploadAttachment、文件校验(10MB/文件, 50MB/反馈)、附件下载
-- [ ] 5.1-5.4 业务逻辑：tracking code 生成(TRK-YYYY-XXXXXX)、状态变更通知、评论通知、已关闭反馈评论限制
-- [ ] 6. 基本功能验收 Checkpoint
-
-#### Phase 3: 测试验证（3 项大任务）
-- [ ] 7.1-7.2 单元测试：tracking code 格式 + 数据校验
-- [ ] 8.1-8.6 属性测试(Property 1/2/7/8/12/20)：提交完整性、校验拒绝、分页、评论排序、未读计数、JSON round-trip
-- [ ] 9.1-9.3 集成测试：提交流、通知流、tracking code 查询
-
----
-
-### browser-automation — P5 延后项 (3 项结构性议题)
-- **状态**: Phase 1-7 全部交付，Phase 8/9 评审修复全部关闭，仅余 3 项明确延后
-- **已完成**: 17 个特性单元 + 16 个测试单元 + ScriptStore + PageDriver + 接入指南
-- **待完成**:
-- [ ] M2: `IBrowserSession` / `IBrowserAutomationSession` 接口合并 — 结构性重构，需一次性改 16+ 文件，当前两接口已是子集关系
-- [ ] M4: ResponseWaiter stale result 防护 — 设计级议题，当前 MutationObserver 稳定性检测已够用
-- [ ] H5: CDP.WaitForSelector 取消 token — 当前 try/except + COM 主线程化已避免崩溃，缺取消 token 不影响功能
-
-### 需求文档待转化（4 个 requirements-only spec 已清理）
-- `config-management-enhancement`、`doqry-optimization`、`property-based-testing`、`structured-error-handling` 的 requirements.md 已删除，待评估是否重新立项
+### browser-automation
+- [ ] `IBrowserSession` / `IBrowserAutomationSession` 接口合并。
+- [ ] ResponseWaiter stale result 防护。
+- [ ] CDP.WaitForSelector 取消 token。
 
 ---
 

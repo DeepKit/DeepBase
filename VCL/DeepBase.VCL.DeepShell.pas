@@ -77,6 +77,8 @@ type
   TDeepMainForm           = DeepBase.VCL.DeepShell.MainForm.TDeepMainForm;
   TDeepShellToolWindow    = DeepBase.VCL.DeepShell.ToolWindow.TDeepShellToolWindow;
   TDeepShellSettingsForm  = DeepBase.VCL.DeepShell.Settings.TDeepShellSettingsForm;
+  TShellDefaultLocalizationService =
+    DeepBase.VCL.DeepShell.Localization.TShellDefaultLocalizationService;
   TShellAuditOnlyGovernanceService =
     DeepBase.VCL.DeepShell.Governance.TShellAuditOnlyGovernanceService;
   TShellAllowAllGovernanceService =
@@ -108,11 +110,59 @@ const
 
 function ShellCommand(const AId, ACaption: string): TShellCommandBuilder;
 
+procedure RegisterDefaultShellTexts(ALoc: TShellDefaultLocalizationService;
+  const ALocale: string);
+
 implementation
+
+uses
+  System.SysUtils;
 
 function ShellCommand(const AId, ACaption: string): TShellCommandBuilder;
 begin
   Result := DeepBase.VCL.DeepShell.Commands.ShellCommand(AId, ACaption);
+end;
+
+procedure RegisterDefaultShellTexts(ALoc: TShellDefaultLocalizationService;
+  const ALocale: string);
+begin
+  if ALoc = nil then Exit;
+  if SameText(ALocale, 'zh-CN') or SameText(ALocale, 'zh-TW') then
+  begin
+    ALoc.RegisterText(ALocale, 'shell.cmd.fileExit',
+      {$IFDEF ZH_TW}'結束'{$ELSE}'退出'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.toggleTop',
+      {$IFDEF ZH_TW}'切換上方窗格'{$ELSE}'切换上方窗格'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.toggleMiddle',
+      {$IFDEF ZH_TW}'切換中間窗格'{$ELSE}'切换中间窗格'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.toggleBottom',
+      {$IFDEF ZH_TW}'切換下方窗格'{$ELSE}'切换下方窗格'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.structure',
+      {$IFDEF ZH_TW}'結構視窗'{$ELSE}'结构窗口'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.inspector',
+      {$IFDEF ZH_TW}'檢查器視窗'{$ELSE}'检查器窗口'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.view.resetLayout',
+      {$IFDEF ZH_TW}'重設佈局'{$ELSE}'重置布局'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.recent.clear',
+      {$IFDEF ZH_TW}'清除最近使用'{$ELSE}'清除最近使用'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.log.clear',
+      {$IFDEF ZH_TW}'清除日誌'{$ELSE}'清除日志'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.settings.open',
+      {$IFDEF ZH_TW}'設定...'{$ELSE}'设置...'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.settings.restoreDefaults',
+      {$IFDEF ZH_TW}'恢復預設值'{$ELSE}'恢复默认值'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cmd.help.about',
+      {$IFDEF ZH_TW}'關於...'{$ELSE}'关于...'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.settings.title',
+      {$IFDEF ZH_TW}'設定'{$ELSE}'设置'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.btn.ok', 'OK');
+    ALoc.RegisterText(ALocale, 'shell.btn.apply',
+      {$IFDEF ZH_TW}'套用'{$ELSE}'应用'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.btn.cancel',
+      {$IFDEF ZH_TW}'取消'{$ELSE}'取消'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.btn.restoreDefaults',
+      {$IFDEF ZH_TW}'恢復預設值'{$ELSE}'恢复默认值'{$ENDIF});
+  end;
 end;
 
 end.

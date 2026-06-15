@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="20" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:32:16">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:32:16" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.590" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="0.590" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestDeepBaseManager" executed="True" result="Success" success="True" time="0.590" >
+                      <results>
+                        <test-case name="Test_Initialize_WithMemoryDB" executed="True" result="Success" success="True" time="0.039" asserts="0" />
+                        <test-case name="Test_Initialize_WithFilePath" executed="True" result="Success" success="True" time="0.065" asserts="0" />
+                        <test-case name="Test_Initialize_DoubleInit_ShouldSucceed" executed="True" result="Success" success="True" time="0.038" asserts="0" />
+                        <test-case name="Test_Finalize_WithoutInit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_InitializeEx_ReturnsErrorMsg" executed="True" result="Success" success="True" time="0.035" asserts="0" />
+                        <test-case name="Test_HealthCheck_AfterInit" executed="True" result="Success" success="True" time="0.035" asserts="0" />
+                        <test-case name="Test_HealthCheck_BeforeInit_ShouldFail" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ErrorCode_Success_AfterSuccessfulInit" executed="True" result="Success" success="True" time="0.039" asserts="0" />
+                        <test-case name="Test_Singleton_ReturnsSameInstance" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Properties_AfterInit" executed="True" result="Success" success="True" time="0.038" asserts="0" />
+                        <test-case name="Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_InitializeWithDBOrRaise_WithoutConnectionAdapter_ShouldRaiseInitializationException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_InitializeWithDBOrRaise_WithMemoryDB_ShouldSucceed" executed="True" result="Success" success="True" time="0.038" asserts="0" />
+                        <test-case name="Test_InitializeWithDB_WithoutStorageFactory_ShouldFailClearly" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase" executed="True" result="Success" success="True" time="0.072" asserts="0" />
+                        <test-case name="Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables" executed="True" result="Success" success="True" time="0.114" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestPersistenceRuntimeRegistration" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="RegisterPersistenceRuntimeComponents_IsSideEffectFree" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="RegisterPersistenceRuntimeComponents_RegistersDBPoolManager" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="RegisterPersistenceRuntimeComponents_RejectsNilContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="CombinedRegistration_PersistenceFirst_RegistersDBPoolBeforeCoreComponents" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

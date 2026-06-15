@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.MRU - Most Recently Used Module
 
   Version: 1.0
@@ -48,42 +48,42 @@ type
     // ========================================
 
     /// <summary>
-    /// Ìí¼Ó»ò¸üĞÂ MRU Ïî
+    /// æ·»åŠ æˆ–æ›´æ–° MRU é¡¹
     /// </summary>
-    /// <param name="Category">Àà±ğ£ºFile, Project, Command, Search µÈ</param>
-    /// <param name="ItemKey">Î¨Ò»¼ü£¨ÈçÎÄ¼şÂ·¾¶£©</param>
-    /// <param name="DisplayName">ÏÔÊ¾Ãû³Æ£¨¿ÉÑ¡£¬²»Ìá¹©ÔòÊ¹ÓÃ ItemKey£©</param>
-    /// <param name="IconIndex">Í¼±êË÷Òı£¨¿ÉÑ¡£©</param>
+    /// <param name="Category">ç±»åˆ«ï¼šFile, Project, Command, Search ç­‰</param>
+    /// <param name="ItemKey">å”¯ä¸€é”®ï¼ˆå¦‚æ–‡ä»¶è·¯å¾„ï¼‰</param>
+    /// <param name="DisplayName">æ˜¾ç¤ºåç§°ï¼ˆå¯é€‰ï¼Œä¸æä¾›åˆ™ä½¿ç”¨ ItemKeyï¼‰</param>
+    /// <param name="IconIndex">å›¾æ ‡ç´¢å¼•ï¼ˆå¯é€‰ï¼‰</param>
     procedure AddMRU(const Category, ItemKey: string;
       const DisplayName: string = ''; IconIndex: Integer = 0);
 
     /// <summary>
-    /// »ñÈ¡ MRU ÁĞ±í (½ö·µ»Ø ItemKey)
+    /// è·å– MRU åˆ—è¡¨ (ä»…è¿”å› ItemKey)
     /// </summary>
     function GetMRUList(const Category: string;
       MaxItems: Integer = 10): TArray<string>;
 
     /// <summary>
-    /// »ñÈ¡ MRU ÍêÕûÏîÁĞ±í
+    /// è·å– MRU å®Œæ•´é¡¹åˆ—è¡¨
     /// </summary>
     function GetMRUItems(const Category: string;
       MaxItems: Integer = 10): TMRUItemArray;
 
     /// <summary>
-    /// Çå¿ÕÖ¸¶¨Àà±ğµÄ MRU
+    /// æ¸…ç©ºæŒ‡å®šç±»åˆ«çš„ MRU
     /// </summary>
     procedure ClearMRU(const Category: string);
 
     /// <summary>
-    /// ÒÆ³ıµ¥¸ö MRU Ïî
+    /// ç§»é™¤å•ä¸ª MRU é¡¹
     /// </summary>
     procedure RemoveMRU(const Category, ItemKey: string);
 
     /// <summary>
-    /// ÒÆ³ı²»´æÔÚµÄÎÄ¼şÂ·¾¶ MRU Ïî
+    /// ç§»é™¤ä¸å­˜åœ¨çš„æ–‡ä»¶è·¯å¾„ MRU é¡¹
     /// </summary>
-    /// <param name="Category">Àà±ğ£¨Áô¿ÕÔò¼ì²éËùÓĞÎÄ¼şÏà¹ØÀà±ğ£©</param>
-    /// <returns>ÒÆ³ıµÄÏîÊı</returns>
+    /// <param name="Category">ç±»åˆ«ï¼ˆç•™ç©ºåˆ™æ£€æŸ¥æ‰€æœ‰æ–‡ä»¶ç›¸å…³ç±»åˆ«ï¼‰</param>
+    /// <returns>ç§»é™¤çš„é¡¹æ•°</returns>
     function RemoveInvalidMRU(const Category: string = ''): Integer;
 
     // ========================================
@@ -91,12 +91,12 @@ type
     // ========================================
 
     /// <summary>
-    /// ÖÃ¶¥/È¡ÏûÖÃ¶¥ MRU Ïî
+    /// ç½®é¡¶/å–æ¶ˆç½®é¡¶ MRU é¡¹
     /// </summary>
     procedure SetPinned(const Category, ItemKey: string; IsPinned: Boolean);
 
     /// <summary>
-    /// ¼ì²éÊÇ·ñÖÃ¶¥
+    /// æ£€æŸ¥æ˜¯å¦ç½®é¡¶
     /// </summary>
     function IsPinned(const Category, ItemKey: string): Boolean;
 
@@ -105,12 +105,12 @@ type
     // ========================================
 
     /// <summary>
-    /// »ñÈ¡ MRU ÏîÊıÁ¿
+    /// è·å– MRU é¡¹æ•°é‡
     /// </summary>
     function GetMRUCount(const Category: string): Integer;
 
     /// <summary>
-    /// »ñÈ¡·ÃÎÊ´ÎÊı
+    /// è·å–è®¿é—®æ¬¡æ•°
     /// </summary>
     function GetAccessCount(const Category, ItemKey: string): Integer;
 

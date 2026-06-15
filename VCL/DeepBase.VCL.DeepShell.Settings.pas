@@ -7,6 +7,7 @@ uses
   System.Classes,
   System.SyncObjs,
   System.Generics.Collections,
+  System.Generics.Defaults,
   Vcl.Controls,
   Vcl.Forms,
   Vcl.StdCtrls,
@@ -45,6 +46,7 @@ type
     FBtnDefaults: TButton;
     FPages: TDictionary<string, TControl>;
     FCurrent: TControl;
+    FHeaderIndices: TList<Integer>;
     function L(const AKey, ADefault: string): string;
     procedure CreateLayout;
     procedure RebuildList;
@@ -155,6 +157,7 @@ begin
   BorderStyle := bsSizeable;
   FProviders := TList<ISettingsPageProvider>.Create;
   FPages := TDictionary<string, TControl>.Create;
+  FHeaderIndices := TList<Integer>.Create;
   CreateLayout;
 end;
 
@@ -166,6 +169,7 @@ begin
   FResetAction := nil;
   FreeAndNil(FPages);
   FreeAndNil(FProviders);
+  FreeAndNil(FHeaderIndices);
   inherited;
 end;
 
@@ -252,30 +256,72 @@ end;
 procedure TDeepShellSettingsForm.SetProviders(const AProviders: TArray<ISettingsPageProvider>);
 var
   I: Integer;
+  LFirst: Integer;
 begin
   FProviders.Clear;
   for I := 0 to High(AProviders) do
     if AProviders[I] <> nil then
       FProviders.Add(AProviders[I]);
   RebuildList;
-  if FList.Count > 0 then
+  LFirst := -1;
+  for I := 0 to FList.Items.Count - 1 do
+    if Integer(FList.Items.Objects[I]) >= 0 then
+    begin
+      LFirst := I;
+      Break;
+    end;
+  if LFirst >= 0 then
   begin
-    FList.ItemIndex := 0;
-    ShowProvider(0);
+    FList.ItemIndex := LFirst;
+    ShowProvider(Integer(FList.Items.Objects[LFirst]));
   end;
 end;
 
 procedure TDeepShellSettingsForm.RebuildList;
 var
   I: Integer;
+  LGroup, LPrevGroup: string;
+  LSorted: TList<Integer>;
 begin
-  FList.Items.BeginUpdate;
+  FHeaderIndices.Clear;
+
+  LSorted := TList<Integer>.Create;
   try
-    FList.Items.Clear;
     for I := 0 to FProviders.Count - 1 do
-      FList.Items.Add(FProviders[I].Caption);
+      LSorted.Add(I);
+    LSorted.Sort(TComparer<Integer>.Construct(
+      function(const A, B: Integer): Integer
+      var
+        GA, GB: string;
+      begin
+        GA := FProviders[A].GroupName;
+        GB := FProviders[B].GroupName;
+        Result := CompareText(GA, GB);
+        if Result = 0 then
+          Result := CompareText(FProviders[A].Caption, FProviders[B].Caption);
+      end));
+
+    FList.Items.BeginUpdate;
+    try
+      FList.Items.Clear;
+      LPrevGroup := '';
+      for I := 0 to LSorted.Count - 1 do
+      begin
+        LGroup := FProviders[LSorted[I]].GroupName;
+        if (LGroup <> '') and not SameText(LGroup, LPrevGroup) then
+        begin
+          FHeaderIndices.Add(FList.Items.Count);
+          FList.Items.AddObject(Format('--- %s ---', [LGroup]), TObject(-1));
+          LPrevGroup := LGroup;
+        end;
+        FList.Items.AddObject('  ' + FProviders[LSorted[I]].Caption,
+          TObject(LSorted[I]));
+      end;
+    finally
+      FList.Items.EndUpdate;
+    end;
   finally
-    FList.Items.EndUpdate;
+    LSorted.Free;
   end;
 end;
 
@@ -318,8 +364,14 @@ begin
 end;
 
 procedure TDeepShellSettingsForm.DoListClick(Sender: TObject);
+var
+  LIdx, LProvIdx: Integer;
 begin
-  ShowProvider(FList.ItemIndex);
+  LIdx := FList.ItemIndex;
+  if LIdx < 0 then Exit;
+  LProvIdx := Integer(FList.Items.Objects[LIdx]);
+  if LProvIdx < 0 then Exit;
+  ShowProvider(LProvIdx);
 end;
 
 procedure TDeepShellSettingsForm.DoOK(Sender: TObject);

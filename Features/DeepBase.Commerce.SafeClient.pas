@@ -9,7 +9,8 @@ uses
   DeepBase.Commerce.Types,
   DeepBase.Commerce.Backend.Http,
   DeepBase.Commerce.Backend.Contract,
-  DeepBase.Commerce.JsonUtil;
+  DeepBase.Commerce.JsonUtil,
+  DeepBase.Commerce.Idempotency;
 
 const
   SDeepKitRouteAuthLogin = '/auth/login';
@@ -145,6 +146,7 @@ type
     FRefreshToken: string;
     FRefreshing: Boolean;
     FTokenLock: TObject;
+    FIdempotencyTracker: TIdempotencyNonceTracker;
 
     function ApplyRoutePrefix(const APath: string): string;
     function BuildUrl(const APath: string): string;
@@ -340,10 +342,12 @@ begin
   FRefreshToken := '';
   FRefreshing := False;
   FTokenLock := TObject.Create;
+  FIdempotencyTracker := TIdempotencyNonceTracker.Create;
 end;
 
 destructor TDeepKitSafeClient.Destroy;
 begin
+  FreeAndNil(FIdempotencyTracker);
   FreeAndNil(FTokenLock);
   inherited;
 end;
@@ -920,9 +924,38 @@ var
   Body: TJSONObject;
   Json: TJSONObject;
   IdempotencyKey: string;
+  CachedJson: string;
 begin
   if AQuantity <= 0 then
     raise EDeepBaseCommerceValidationError.Create('ConsumeEntitlement quantity must be > 0');
+
+  // Idempotency: use caller-provided key or auto-generate one
+  if ARequestId <> '' then
+    IdempotencyKey := ARequestId
+  else
+    IdempotencyKey := FIdempotencyTracker.NewKey('consume_entitlement');
+
+  // Replay protection: if this key was already completed, return cached result
+  if FIdempotencyTracker.IsAlreadyCompleted(IdempotencyKey) then
+  begin
+    CachedJson := FIdempotencyTracker.GetCachedResponse(IdempotencyKey);
+    if CachedJson <> '' then
+    begin
+      Json := TJSONObject.ParseJSONValue(CachedJson) as TJSONObject;
+      if Json <> nil then
+      try
+        Result.Ok := JsonValueAsBool(Json, 'ok',
+          JsonValueAsBool(Json, SCommerceFieldSuccess, False));
+        Result.EntitlementCode := JsonValueAsString(Json, SCommerceFieldEntitlementCode, '');
+        Result.RemainingQuota := JsonValueAsInt(Json, SCommerceFieldRemainingQuota, -1);
+        Result.ConsumedQuantity := JsonValueAsInt(Json, SDeepKitFieldConsumedQuantity, AQuantity);
+        Result.ServerTimeISO := JsonValueAsString(Json, SDeepKitFieldServerTime, '');
+        Exit;
+      finally
+        Json.Free;
+      end;
+    end;
+  end;
 
   Body := TJSONObject.Create;
   try
@@ -933,7 +966,6 @@ begin
     if ARequestId <> '' then
       Body.AddPair(SDeepKitFieldRequestId, ARequestId);
 
-    IdempotencyKey := ARequestId;
     Json := ParseObjectResponse(SHttpPost, SCommerceRouteEntitlementsConsume,
       SendJson(SHttpPost, SCommerceRouteEntitlementsConsume, Body,
         IdempotencyKey));
@@ -944,6 +976,12 @@ begin
       Result.RemainingQuota := JsonValueAsInt(Json, SCommerceFieldRemainingQuota, -1);
       Result.ConsumedQuantity := JsonValueAsInt(Json, SDeepKitFieldConsumedQuantity, AQuantity);
       Result.ServerTimeISO := JsonValueAsString(Json, SDeepKitFieldServerTime, '');
+
+      // Cache the successful response for replay protection
+      if Result.Ok then
+        FIdempotencyTracker.RecordSuccess(IdempotencyKey, Json.ToJSON)
+      else
+        FIdempotencyTracker.RecordFailure(IdempotencyKey);
     finally
       Json.Free;
     end;

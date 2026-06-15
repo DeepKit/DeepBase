@@ -23,7 +23,6 @@ uses
   DeepBase.IoC,
   DeepBase.IntentClarification.Interfaces,
   DeepBase.IntentClarification.Engine,
-  DeepBase.IntentClarification.Storage,
   DeepBase.IntentClarification.Router,
   DeepBase.IntentClarification.SignalDetector,
   DeepBase.IntentClarification.Budget,
@@ -49,7 +48,6 @@ type
     ///
     /// Singletons:
     ///   IClarificationEngine -> TClarificationEngine
-    ///   TClarificationStorage
     ///   TSignalDetector
     ///   TBudgetController
     ///   TGracefulExitHandler
@@ -83,9 +81,6 @@ begin
 
   // Core engine (Singleton - one engine instance per application)
   AContainer.RegisterSingleton<IClarificationEngine, TClarificationEngine>;
-
-  // Storage (Singleton - shared DB connection via DB.Factory)
-  AContainer.RegisterClass<TClarificationStorage>(slSingleton);
 
   // Internal sub-systems (Singleton - stateless/shared services)
   AContainer.RegisterClass<TSignalDetector>(slSingleton);

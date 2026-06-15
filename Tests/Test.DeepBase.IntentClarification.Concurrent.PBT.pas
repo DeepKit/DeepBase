@@ -209,6 +209,53 @@ var
   LN, I, Iter: Integer;
   LSessionKey: string;
   LPair: TPair<string, TCriticalSection>;
+  LCapGlobal: TCriticalSection;
+  LCapLocks: TDictionary<string, TCriticalSection>;
+  LCapKey: string;
+  LCapRecorded: TList<Integer>;
+  LCapRecLock: TCriticalSection;
+  LCapStart: TEvent;
+
+  function CreateWorker(AMyId: Integer): TThread;
+  begin
+    Result := TThread.CreateAnonymousThread(
+      procedure
+      var
+        LSessLock: TCriticalSection;
+      begin
+        LCapStart.WaitFor(INFINITE);
+
+        // Inline mirror of TClarificationEngine.AcquireSessionLock:
+        // brief global lock to look up / create the per-session lock.
+        LCapGlobal.Enter;
+        try
+          if not LCapLocks.TryGetValue(LCapKey, LSessLock) then
+          begin
+            LSessLock := TCriticalSection.Create;
+            LCapLocks.Add(LCapKey, LSessLock);
+          end;
+        finally
+          LCapGlobal.Leave;
+        end;
+
+        LSessLock.Enter;
+        try
+          // Critical section that mirrors the engine's per-session
+          // turn body: read-modify-write a shared counter and record
+          // the worker id. With correct locking these are serialized.
+          Inc(LCounter);
+          LCapRecLock.Enter;
+          try
+            LCapRecorded.Add(AMyId);
+          finally
+            LCapRecLock.Leave;
+          end;
+        finally
+          LSessLock.Leave;
+        end;
+      end);
+    Result.FreeOnTerminate := False;
+  end;
 begin
   for Iter := 1 to CIterations do
   begin
@@ -226,54 +273,15 @@ begin
       // Capture lock fixtures into local refs so the anonymous methods
       // bind to them by closure (Delphi cannot capture nested
       // procedures, so the per-session-lock acquisition is inlined).
-      var LCapGlobal := LGlobalLock;
-      var LCapLocks := LSessionLocks;
-      var LCapKey := LSessionKey;
-      var LCapRecorded := LRecorded;
-      var LCapRecLock := LRecordLock;
-      var LCapStart := LStart;
+      LCapGlobal := LGlobalLock;
+      LCapLocks := LSessionLocks;
+      LCapKey := LSessionKey;
+      LCapRecorded := LRecorded;
+      LCapRecLock := LRecordLock;
+      LCapStart := LStart;
 
       for I := 0 to LN - 1 do
-      begin
-        var LMyId := I;
-        LThreads[I] := TThread.CreateAnonymousThread(
-          procedure
-          var
-            LSessLock: TCriticalSection;
-          begin
-            LCapStart.WaitFor(INFINITE);
-
-            // Inline mirror of TClarificationEngine.AcquireSessionLock:
-            // brief global lock to look up / create the per-session lock.
-            LCapGlobal.Enter;
-            try
-              if not LCapLocks.TryGetValue(LCapKey, LSessLock) then
-              begin
-                LSessLock := TCriticalSection.Create;
-                LCapLocks.Add(LCapKey, LSessLock);
-              end;
-            finally
-              LCapGlobal.Leave;
-            end;
-
-            LSessLock.Enter;
-            try
-              // Critical section that mirrors the engine's per-session
-              // turn body: read-modify-write a shared counter and record
-              // the worker id. With correct locking these are serialized.
-              Inc(LCounter);
-              LCapRecLock.Enter;
-              try
-                LCapRecorded.Add(LMyId);
-              finally
-                LCapRecLock.Leave;
-              end;
-            finally
-              LSessLock.Leave;
-            end;
-          end);
-        LThreads[I].FreeOnTerminate := False;
-      end;
+        LThreads[I] := CreateWorker(I);
 
       for I := 0 to LN - 1 do
         LThreads[I].Start;

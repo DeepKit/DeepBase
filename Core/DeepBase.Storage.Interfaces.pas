@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Storage.Interfaces - Storage abstraction contracts
 
   Version: 0.3
@@ -11,6 +11,7 @@ unit DeepBase.Storage.Interfaces;
 interface
 
 uses
+  System.SysUtils,
   System.Generics.Collections,
   DeepBase.Types;
 
@@ -66,6 +67,29 @@ type
     StackTrace: string;
     ThreadId: Integer;
     Extra: string;
+  end;
+  TLogViewData = record
+    TimestampISO: string;
+    Level: TLogLevel;
+    LevelText: string;
+    Source: string;
+    MessageText: string;
+    ThreadId: Integer;
+  end;
+  TLogViewDataArray = TArray<TLogViewData>;
+
+  /// <summary>
+  /// Anti-tamper secure image row shared by Features and Persistence.
+  /// Data remains encrypted while crossing the storage boundary.
+  /// </summary>
+  TAntiTamperImageData = record
+    ImageKey: string;
+    EncryptedImageData: TBytes;
+    AddressText: string;
+    Description: string;
+    Sha256Hash: string;
+    HmacSha256: string;
+    IsEnabled: Boolean;
   end;
 
   /// <summary>
@@ -175,6 +199,19 @@ type
   end;
 
   /// <summary>
+  /// License snapshot storage contract.
+  /// Persists the full TDeepKitLicenseSnapshot as an encrypted JSON blob.
+  /// The SnapshotJson parameter is the serialized snapshot JSON;
+  /// implementations must encrypt before writing and decrypt before reading.
+  /// </summary>
+  ILicenseSnapshotStorage = interface
+    ['{A1B2C3D4-E5F6-7890-ABCD-888888888888}']
+    function ReadSnapshotJson: string;
+    procedure WriteSnapshotJson(const ASnapshotJson: string);
+    procedure DeleteSnapshot;
+  end;
+
+  /// <summary>
   /// Logging storage contract.
   /// </summary>
   ILogStorage = interface
@@ -190,6 +227,34 @@ type
     ['{5C9F9A2A-8E7D-47A5-9A80-7E2232E4A139}']
     function CountByLevel(const LevelText: string): Int64;
     function CountAll: Int64;
+  end;
+
+  /// <summary>
+  /// Optional log viewer contract. UI controls consume this instead of
+  /// opening database connections directly.
+  /// </summary>
+  ILogViewStorage = interface
+    ['{8721B8D0-314A-4F9C-8754-62F9C86600F1}']
+    function ReadRecent(MinLevel: TLogLevel; MaxItems: Integer): TLogViewDataArray;
+    procedure ClearAll;
+  end;
+
+  /// <summary>
+  /// Anti-tamper image storage contract. UI and Features use this port
+  /// instead of referencing FireDAC tables or connections directly.
+  /// </summary>
+  IAntiTamperImageStorage = interface
+    ['{4D5F1793-5946-4B38-A516-87D5885FD3E1}']
+    function SetupDatabase(const TableName: string): Boolean;
+    function UpgradeDatabase(const TableName: string): Boolean;
+    procedure ClearTable(const TableName: string);
+    procedure ReseedMinimal(const TableName: string;
+      const Data: TAntiTamperImageData);
+    procedure SaveSecureImage(const TableName: string;
+      const Data: TAntiTamperImageData);
+    function TryLoadSecureImage(const TableName, ImageKey: string;
+      out Data: TAntiTamperImageData): Boolean;
+    function IsSecureImageEnabled(const TableName, ImageKey: string): Boolean;
   end;
 
   /// <summary>

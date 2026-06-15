@@ -119,7 +119,9 @@ begin
     Exit(False);
   end;
 
-  if Pos('querySelectorAll', AScript) > 0 then
+  if Pos('success:true', AScript) > 0 then
+    AJsonResult := '{"success":true,"exists":true,"value":true}'
+  else if Pos('querySelectorAll', AScript) > 0 then
     AJsonResult := '{"found":true,"text":"latest answer"}'
   else if (Pos('textContent', AScript) > 0) or (Pos('innerText', AScript) > 0) then
     AJsonResult := '{"found":true,"text":"latest answer"}'

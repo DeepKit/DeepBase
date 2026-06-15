@@ -1,0 +1,194 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="78" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:31:58">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:31:58" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.130" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="LLM" executed="true" result="Success" success="True" time="0.130" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="BillingClient" executed="true" result="Success" success="True" time="0.004" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TBillingClientTests" executed="True" result="Success" success="True" time="0.004" >
+                            <results>
+                              <test-case name="Test_Create_Sets_Properties" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_BaseURL_Removes_Trailing_Slash" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_BaseURL_Handles_V1_Suffix" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_Model_Property_Get_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Temperature_Property_Get_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MaxTokens_Property_Get_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SystemPrompt_Property_Get_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Cancel_Sets_Cancelled_Flag" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TChatHistoryTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_With_SystemPrompt_Adds_System_Message" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddUserMessage_Appends_Message" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddAssistantMessage_Appends_Message" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetMessages_Returns_All_Messages" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clear_Removes_All_Messages" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clear_Keeps_System_Message_When_KeepSystem_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MaxHistory_Trims_Old_Messages" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetCount_Returns_Correct_Count" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToJSON_Returns_Valid_JSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TChatMessageTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_CreateSystem_Sets_Role_And_Content" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CreateUser_Sets_Role_And_Content" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CreateAssistant_Sets_Role_And_Content" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RoleToString_Returns_Correct_Strings" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TChatResponseTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Init_Sets_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTokenUsageTests" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_TotalTokens_Calculates_Sum" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestImportResult" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Init_SetsDefaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Summary_Success" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Summary_Failed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Manager" executed="true" result="Success" success="True" time="0.004" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestLLMManagerStorageFactory" executed="True" result="Success" success="True" time="0.004" >
+                            <results>
+                              <test-case name="Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_CreateWithStorageObject_WithoutStorageFactory_ShouldSucceed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CreateWithStorageInterface_ShouldSucceed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestLLMResponse" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Init_SetsDefaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestMetaPromptHelpers" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Category_RoundTrip_AllKinds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MergeMode_RoundTrip_AllKinds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestPromptCategory" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_FullPath_ContainsName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestPromptHelpers" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_GetProductionVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_HasVersion_TrueFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetVersion_ReturnsCorrect" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestPromptVariable" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Type_RoundTrip_AllKinds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Fields_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestPromptVersion" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_SuccessRate_NoTests" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SuccessRate_Partial" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestLLMPromptTemplate" executed="True" result="Success" success="True" time="0.046" >
+                      <results>
+                        <test-case name="Test_TemplateInit_SetsDefaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SaveTemplate_InsertsNew" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_SaveTemplate_UpdatesExisting" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_GetTemplate_ReturnsCorrectData" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_DeleteTemplate_RemovesNonBuiltIn" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_DeleteTemplate_SkipsBuiltIn" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_CopyTemplate_CreatesNewTemplate" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_GetTemplatesByCategory_FiltersCorrectly" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_RenderUserPrompt_ReplacesVariables" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RenderUserPrompt_UsesDefaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ValidateTemplate_DetectsEmptyName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ValidateTemplate_DetectsMissingVariables" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_RenderWithInheritance_MergesDefaults" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_ExportImport_RoundTrip" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMChatResponseTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Init_Sets_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMConfigStoreTests" executed="True" result="Success" success="True" time="0.003" >
+                      <results>
+                        <test-case name="Test_BuiltInTiers_ExposeFiveDesktopSlots" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TierModels_NormalizeLegacyVisionToImageGen" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Load_MigratesLegacyVisionTier" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsConfigured_TextOnly_And_IsFullyConfigured_AllFiveSlots" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                        <test-case name="Test_IsConfigured_AllowsLocalProviderWithoutApiKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMConfigTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Init_Sets_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Provider_String_RoundTrip_All_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMCredentialStorageTests" executed="True" result="Success" success="True" time="0.072" >
+                      <results>
+                        <test-case name="Test_SaveConfig_Stores_Credential_Reference_Not_Plain_Key" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                        <test-case name="Test_GetConfig_Resolves_Legacy_Raw_ApiKeyRef" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                        <test-case name="Test_GetConfig_Resolves_LLMApiKeys_Credential_Reference" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMHttpClientTransportTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Send_Uses_Injected_Transport" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Send_WithoutApiKey_OmitsAuthorizationHeader" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GenerateImage_Uses_Injected_Transport" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMMessageTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_System_User_Assistant_Constructors_Set_Role_And_Content" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TierImageGen_DisplayName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMPromptTemplateTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Init_Sets_Sensible_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RenderUserPrompt_Uses_Values_And_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Clone_Copies_Fields_And_Allocates_New_Dictionaries" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMRequestOptionsTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromConfig_Uses_Config_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TLLMStorageFactoryTests" executed="True" result="Success" success="True" time="0.001" >
+                      <results>
+                        <test-case name="Test_CreateWithConnection_WithoutStorageFactory_ShouldFailClearly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CreateWithStorageObject_WithoutStorageFactory_ShouldSucceed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CreateWithStorageInterface_ShouldSucceed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

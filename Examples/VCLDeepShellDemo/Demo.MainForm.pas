@@ -11,7 +11,7 @@ unit Demo.MainForm;
 interface
 
 uses
-  System.SysUtils,
+  System.SysUtils, System.RegularExpressions,
   System.Classes,
   Vcl.Forms,
   Vcl.Controls,
@@ -66,8 +66,19 @@ procedure TDemoMainForm.AfterShellShown;
 begin
   inherited;
   Caption := 'DeepShell Demo';
+
+  OpenProject('demo-project', ExtractFileDir(ParamStr(0)));
+
+  Status.SetSanitizer(
+    function(const ASource, AMessage: string): string
+    begin
+      Result := TRegEx.Replace(AMessage,
+        '(Authorization:\s*Bearer\s+)\S+', '$1***', [roIgnoreCase]);
+      Result := TRegEx.Replace(Result,
+        '(api[_-]?key[=:]\s*)\S+', '$1***', [roIgnoreCase]);
+    end);
+
   Status.Info('demo.boot', 'Demo main form shown. Try View / Structure window.');
-  // Demo: open a fake document in the middle area.
   OpenView(TShellObjectRef.Make('doc-1', 'doc', 'demo', 'Welcome.md'));
 end;
 

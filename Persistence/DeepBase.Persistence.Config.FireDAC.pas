@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Config.FireDAC - FireDAC adapter for config storage
   ============================================================================
   Registers FireDAC implementation for IConfigStorage.

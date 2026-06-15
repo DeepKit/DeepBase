@@ -1,0 +1,203 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="123" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-10" time="09:32:03">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:32:03" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="3.843" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="3.843" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="DB" executed="true" result="Success" success="True" time="3.839" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestDBAutoRefreshConfig" executed="True" result="Success" success="True" time="0.065" >
+                            <results>
+                              <test-case name="Test_GetValue_LoadsBySectionAndKey" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_GetValue_ReturnsDefaultForMissingKey" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_GetValue_LazilyReloadsWhenUpdatedAtChanges" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_GetInt_GetBool_ParseTypedValues" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                              <test-case name="Test_CustomOptions_SupportsDifferentTableShape" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDBConnectionPool" executed="True" result="Success" success="True" time="0.721" >
+                            <results>
+                              <test-case name="Test_Create_Pool" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Acquire_Returns_Connection" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Release_Makes_Connection_Available" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                              <test-case name="Test_Multiple_Acquire_Release" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Pool_Stats" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Max_Pool_Size_Respected" executed="True" result="Success" success="True" time="0.514" asserts="0" />
+                              <test-case name="Test_AcquireTimeout_Returns_Nil_On_Timeout" executed="True" result="Success" success="True" time="0.120" asserts="0" />
+                              <test-case name="Test_Connection_Is_Valid_After_Acquire" executed="True" result="Success" success="True" time="0.011" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDeepBaseDoQry" executed="True" result="Success" success="True" time="1.763" >
+                            <results>
+                              <test-case name="Test_MakeContext_CreatesValidContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_NewCorrelationId_ReturnsUniqueId" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExecInsert_InsertsRow" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Select_ReturnsData" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Scalar_ReturnsValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Transaction_CommitPersists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Transaction_RollbackReverts" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RunInTx_AutoCommit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RunInTx_AutoRollbackOnException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RunInTx_NestedSavepoint_CommitWorks" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_RunInTx_NestedSavepoint_InnerRollbackKeepsOuter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InvalidSQL_RaisesEDeepBaseDbError" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_QueryTable_NameSqlText_LoadsSql" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MissingProcName_DoesNotFallbackToSQL" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DirectDDL_IsBlockedUnlessStoredInQueries" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_InsertReturningId_BindsJsonParams" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_InsertReturningId_WithTrigger_ReturnsTargetTableId" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds" executed="True" result="Success" success="True" time="0.105" asserts="0" />
+                              <test-case name="Test_CacheTTL_Expiry" executed="True" result="Success" success="True" time="1.503" asserts="0" />
+                              <test-case name="Test_CacheInvalidate_RemovesEntry" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CacheStats_Accuracy" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_CacheConcurrentLoad_SingleMissAndStableResult" executed="True" result="Success" success="True" time="0.087" asserts="0" />
+                              <test-case name="Test_MultiTypeFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_NullFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DateTimeFields_CopyCorrectly" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_ErrorCode_SqlSyntax" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ErrorCode_UniqueConstraint" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_ErrorCode_HasCorrectValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PreparedPool_EnabledCreatesPooledQuery" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PreparedPool_StatsTracksReuse" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_PreparedPool_ClearRemovesAll" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PreparedPool_MaxSizeEnforcesLRUEviction" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDBConnectionFactory" executed="True" result="Success" success="True" time="0.916" >
+                            <results>
+                              <test-case name="Test_GetLocal_OpensConfiguredSQLite" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                              <test-case name="Test_LoadSharedProfile_FromLocalSettings" executed="True" result="Success" success="True" time="0.198" asserts="0" />
+                              <test-case name="Test_CreateSharedUnopenedConnection_FromLocalSettings_NoPGOpen" executed="True" result="Success" success="True" time="0.196" asserts="0" />
+                              <test-case name="Test_CreateSharedUnopenedConnection_FromLocalSettings_SQLite" executed="True" result="Success" success="True" time="0.157" asserts="0" />
+                              <test-case name="Test_VerifyBoth_ReturnsFalseWhenSharedSettingsMissing" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_LoadSharedProfile_MigratesPlainPasswordToCredentialManager" executed="True" result="Success" success="True" time="0.170" asserts="0" />
+                              <test-case name="Test_LoadSharedProfile_ResolvesCredentialReferencePassword" executed="True" result="Success" success="True" time="0.147" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDBJobQueue" executed="True" result="Success" success="True" time="0.151" >
+                            <results>
+                              <test-case name="Test_Enqueue_IsIdempotentByQueueAndLogicalKey" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_Dequeue_ClaimsPendingTaskAndReturnsPayload" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                              <test-case name="Test_Dequeue_DoesNotCrossQueues" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                              <test-case name="Test_Heartbeat_UpdatesRunningTask" executed="True" result="Success" success="True" time="0.020" asserts="0" />
+                              <test-case name="Test_RecycleDeadTasks_RequeuesStaleRunningTask" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                              <test-case name="Test_Complete_MarksRunningTaskDone" executed="True" result="Success" success="True" time="0.020" asserts="0" />
+                              <test-case name="Test_Fail_WithRequeue_MakesTaskPendingAgain" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                              <test-case name="Test_Dequeue_EmptyQueueReturnsFalse" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDBMigrations" executed="True" result="Success" success="True" time="0.135" >
+                            <results>
+                              <test-case name="Test_Run_SQLite_AppliesOnlySQLiteScriptsAndCreatesBackup" executed="True" result="Success" success="True" time="0.018" asserts="0" />
+                              <test-case name="Test_Run_SQLite_IsIdempotentOnSecondRun" executed="True" result="Success" success="True" time="0.012" asserts="0" />
+                              <test-case name="Test_Run_SQLite_ChecksumMismatchFails" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                              <test-case name="Test_Run_SQLite_FailedScriptRollsBackAndIsNotRecorded" executed="True" result="Success" success="True" time="0.011" asserts="0" />
+                              <test-case name="Test_Run_SQLite_TriggerBodyIsNotSplit" executed="True" result="Success" success="True" time="0.011" asserts="0" />
+                              <test-case name="Test_Run_SQLite_TransactionControlFails" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                              <test-case name="Test_Run_SQLite_WriteLockHeldFailsBeforeApplying" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Namespace" name="Pool" executed="true" result="Success" success="True" time="0.000" asserts="0" >
+                            <results>
+                                <test-suite type="Fixture" name="TTestConnectionPoolBasic" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_DatabaseType_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_DatabaseType_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionString_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_MinSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Config_MaxSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_OnPoolEvent_Assignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestConnectionStateEnum" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Idle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_InUse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Invalid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Validating" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_EnumValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestDatabaseTypeEnum" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_SQLite" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_MySQL" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_PostgreSQL" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_SQLServer" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Oracle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Firebird" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_InterBase" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_EnumCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestPoolConfig" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_Default_MinSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_MaxSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_AcquireTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_IdleTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_MaxLifetime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_ValidationInterval" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_LeakDetection" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_Default_AutoCommit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_CustomConfig" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestPoolEventTypeEnum" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_ConnectionCreated" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionDestroyed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionAcquired" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionReleased" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionValidated" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionInvalidated" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ConnectionLeakDetected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_PoolExhausted" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                                <test-suite type="Fixture" name="TTestPoolStatistics" executed="True" result="Success" success="True" time="0.000" >
+                                  <results>
+                                    <test-case name="Test_DefaultValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_ToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_FieldAssignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_TotalConnections" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                    <test-case name="Test_AverageWaitTime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                                  </results>
+                                </test-suite>
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestDBStatusMachine" executed="True" result="Success" success="True" time="0.088" >
+                            <results>
+                              <test-case name="Test_Transit_ValidTransition_UpdatesStatusColumns" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_Transit_RejectsInvalidTransition" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                              <test-case name="Test_Transit_RejectsWhenGuardReturnsFalse" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_Transit_AllowsFailTransition" executed="True" result="Success" success="True" time="0.011" asserts="0" />
+                              <test-case name="Test_Heartbeat_UpdatesHeartbeatColumn" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                              <test-case name="Test_RegisterTable_RejectsUnsafeTableName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestSQLLogger" executed="True" result="Success" success="True" time="0.004" >
+                      <results>
+                        <test-case name="LogSQLEx_WritesToMemoryAndUpdatesStats" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="LogSQLEx_SetsLogLevelSlowAndError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="GetSlowAndFailedQueries_ReturnsExpectedEntries" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ExportToFile_WritesHeaderAndEntries" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                        <test-case name="ExportToFile_UsesEntrySessionIdPerLine" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="NewSession_ChangesSessionId" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ExecuteCustom_LogsAndReraisesExceptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

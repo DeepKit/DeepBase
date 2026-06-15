@@ -159,20 +159,24 @@ begin
   Order.OrderNo := 'TEST';
   Order.Amount := 100;
 
-  Order.Clear;
+  try
+    Order.Clear;
 
-  Assert.AreEqual('', Order.OrderNo);
-  Assert.AreEqual('', Order.Subject);
-  Assert.AreEqual('', Order.Body);
-  Assert.AreEqual<Currency>(0, Order.Amount);
-  Assert.AreEqual('CNY', Order.Currency);
-  Assert.AreEqual(pmDefault, Order.PaymentMethod);
-  Assert.AreEqual('', Order.NotifyUrl);
-  Assert.AreEqual('', Order.ReturnUrl);
-  Assert.AreEqual('', Order.SuccessUrl);
-  Assert.AreEqual('', Order.CancelUrl);
-  Assert.AreEqual(30, Order.ExpireMinutes);
-  Assert.AreEqual('', Order.ClientIP);
+    Assert.AreEqual('', Order.OrderNo);
+    Assert.AreEqual('', Order.Subject);
+    Assert.AreEqual('', Order.Body);
+    Assert.AreEqual<Currency>(0, Order.Amount);
+    Assert.AreEqual('CNY', Order.Currency);
+    Assert.AreEqual(pmDefault, Order.PaymentMethod);
+    Assert.AreEqual('', Order.NotifyUrl);
+    Assert.AreEqual('', Order.ReturnUrl);
+    Assert.AreEqual('', Order.SuccessUrl);
+    Assert.AreEqual('', Order.CancelUrl);
+    Assert.AreEqual(30, Order.ExpireMinutes);
+    Assert.AreEqual('', Order.ClientIP);
+  finally
+    Order.Release;
+  end;
 end;
 
 procedure TPaymentOrderTests.Test_Validate_ThrowsOnMissingOrderNo;
@@ -180,14 +184,18 @@ var
   Order: TPaymentOrder;
 begin
   FillChar(Order, SizeOf(Order), 0);
-  Order.Clear;
-  Order.Amount := 100;
-  Order.Subject := 'Test';
+  try
+    Order.Clear;
+    Order.Amount := 100;
+    Order.Subject := 'Test';
 
-  Assert.WillRaise(
-    procedure begin Order.Validate; end,
-    EPaymentConfigError
-  );
+    Assert.WillRaise(
+      procedure begin Order.Validate; end,
+      EPaymentConfigError
+    );
+  finally
+    Order.Release;
+  end;
 end;
 
 procedure TPaymentOrderTests.Test_Validate_ThrowsOnInvalidAmount;
@@ -195,15 +203,19 @@ var
   Order: TPaymentOrder;
 begin
   FillChar(Order, SizeOf(Order), 0);
-  Order.Clear;
-  Order.OrderNo := 'TEST001';
-  Order.Subject := 'Test';
-  Order.Amount := 0;
+  try
+    Order.Clear;
+    Order.OrderNo := 'TEST001';
+    Order.Subject := 'Test';
+    Order.Amount := 0;
 
-  Assert.WillRaise(
-    procedure begin Order.Validate; end,
-    EPaymentConfigError
-  );
+    Assert.WillRaise(
+      procedure begin Order.Validate; end,
+      EPaymentConfigError
+    );
+  finally
+    Order.Release;
+  end;
 end;
 
 procedure TPaymentOrderTests.Test_Validate_ThrowsOnMissingSubject;
@@ -211,15 +223,19 @@ var
   Order: TPaymentOrder;
 begin
   FillChar(Order, SizeOf(Order), 0);
-  Order.Clear;
-  Order.OrderNo := 'TEST001';
-  Order.Amount := 100;
-  Order.Subject := '';
+  try
+    Order.Clear;
+    Order.OrderNo := 'TEST001';
+    Order.Amount := 100;
+    Order.Subject := '';
 
-  Assert.WillRaise(
-    procedure begin Order.Validate; end,
-    EPaymentConfigError
-  );
+    Assert.WillRaise(
+      procedure begin Order.Validate; end,
+      EPaymentConfigError
+    );
+  finally
+    Order.Release;
+  end;
 end;
 
 procedure TPaymentOrderTests.Test_Validate_PassesWithValidData;
@@ -227,14 +243,18 @@ var
   Order: TPaymentOrder;
 begin
   FillChar(Order, SizeOf(Order), 0);
-  Order.Clear;
-  Order.OrderNo := 'TEST001';
-  Order.Amount := 100;
-  Order.Subject := 'Test Product';
+  try
+    Order.Clear;
+    Order.OrderNo := 'TEST001';
+    Order.Amount := 100;
+    Order.Subject := 'Test Product';
 
-  // Should not raise
-  Order.Validate;
-  Assert.Pass;
+    // Should not raise
+    Order.Validate;
+    Assert.Pass;
+  finally
+    Order.Release;
+  end;
 end;
 
 { TPaymentResultTests }

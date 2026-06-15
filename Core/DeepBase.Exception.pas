@@ -1,10 +1,10 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.Exception - Exception logging and platform exception dispatch
 
   Version: 0.5
   Description: Core exception report logging without a direct VCL/FMX dependency.
                UI packages can register adapters for Application.OnException.
-               No direct dependency on DeepBase.Manager ¡ª uses registered callbacks.
+               No direct dependency on DeepBase.Manager â€” uses registered callbacks.
   ============================================================================ }
 
 unit DeepBase.Exception;

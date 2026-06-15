@@ -1,4 +1,4 @@
-unit DeepBase.LogDashboard;
+﻿unit DeepBase.LogDashboard;
 
 {*******************************************************************************
   DeepBase Log Dashboard Export

@@ -20,6 +20,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
+# Set $Script:AutoFixLogFile = 'path/to/log.jsonl' before calling Write-AutoFixLog
+# to mirror all log entries to a structured JSONL file.
+$Script:AutoFixLogFile = $null
+
 # -----------------------------------------------------------------------------
 # Exit code constants (design §4.8)
 # -----------------------------------------------------------------------------
@@ -149,10 +153,12 @@ function Read-Jsonl {
         [int]$Depth = 32
     )
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        $Script:LastJsonlParseErrors = 0
         return @()
     }
     $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.UTF8Encoding]::new($false))
     $result = New-Object System.Collections.Generic.List[object]
+    $parseErrors = 0
     foreach ($line in $lines) {
         $trim = $line.Trim()
         if ($trim -eq '') { continue }
@@ -160,8 +166,13 @@ function Read-Jsonl {
             $obj = $trim | ConvertFrom-Json -Depth $Depth -DateKind String
             $result.Add($obj) | Out-Null
         } catch {
+            $parseErrors++
             Write-AutoFixLog -Level 'warn' -Msg 'skipping malformed jsonl line' -Ctx @{ path = $Path; line = $trim.Substring(0, [Math]::Min(80, $trim.Length)) }
         }
+    }
+    $Script:LastJsonlParseErrors = $parseErrors
+    if ($parseErrors -gt 0) {
+        Write-AutoFixLog -Level 'warn' -Msg 'jsonl parse summary' -Ctx @{ path = $Path; parsed = $result.Count; errors = $parseErrors }
     }
     return ,$result.ToArray()
 }
@@ -217,6 +228,21 @@ function Write-AutoFixLog {
         'error' { [Console]::Error.WriteLine($line) }
         'warn'  { [Console]::Error.WriteLine($line) }
         default { [Console]::Out.WriteLine($line) }
+    }
+
+    if ($Script:AutoFixLogFile) {
+        try {
+            $rec = [pscustomobject]@{
+                ts    = $ts
+                level = $Level
+                msg   = $Msg
+                ctx   = $Ctx
+            }
+            $jsonLine = ($rec | ConvertTo-Json -Depth 6 -Compress)
+            [System.IO.File]::AppendAllText($Script:AutoFixLogFile,
+                $jsonLine + [Environment]::NewLine,
+                [System.Text.UTF8Encoding]::new($false))
+        } catch {}
     }
 }
 

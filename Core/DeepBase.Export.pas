@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Export - Simple Data Export
   
   Version: 1.0
@@ -156,6 +156,29 @@ type
       const Title: string = ''); overload;
     class procedure ToHTML(Grid: TStringGrid; const FileName: string;
       const Title: string = ''); overload;
+
+    // ========================================
+    // Grid-Agnostic Export (no VCL dependency)
+    // ========================================
+
+    /// <summary>Export grid data (2D array) to CSV. Headers are the first row if IncludeHeader.</summary>
+    class procedure GridDataToCSV(const AData: TArray<TArray<string>>;
+      const AHeaders: TArray<string>; const FileName: string;
+      const Options: TCSVOptions); overload;
+    class procedure GridDataToCSV(const AData: TArray<TArray<string>>;
+      const AHeaders: TArray<string>; const FileName: string); overload;
+
+    /// <summary>Export grid data (2D array) to HTML. AHeaders used for th elements.</summary>
+    class procedure GridDataToHTML(const AData: TArray<TArray<string>>;
+      const AHeaders: TArray<string>; const FileName: string;
+      const Options: THTMLOptions); overload;
+    class procedure GridDataToHTML(const AData: TArray<TArray<string>>;
+      const AHeaders: TArray<string>; const FileName: string;
+      const Title: string = ''); overload;
+
+    /// <summary>Export grid data (2D array) to JSON. AHeaders used as field names.</summary>
+    class function GridDataToJSON(const AData: TArray<TArray<string>>;
+      const AHeaders: TArray<string>): string;
 
     // ========================================
     // JSON Export
@@ -773,6 +796,57 @@ var
 begin
   LStr := DataSetToJSON(DataSet);
   TFile.WriteAllText(FileName, LStr, TEncoding.UTF8);
+end;
+
+// ========================================
+// Grid-Agnostic Export (no VCL dependency)
+// ========================================
+
+class procedure TDataExport.GridDataToCSV(const AData: TArray<TArray<string>>;
+  const AHeaders: TArray<string>; const FileName: string;
+  const Options: TCSVOptions);
+var
+  LFullData: TArray<TArray<string>>;
+  Row: Integer;
+begin
+  if Length(AHeaders) = 0 then
+  begin
+    ArrayToCSV(AData, FileName, Options);
+    Exit;
+  end;
+  SetLength(LFullData, Length(AData) + 1);
+  LFullData[0] := Copy(AHeaders, 0, Length(AHeaders));
+  for Row := 0 to High(AData) do
+    LFullData[Row + 1] := AData[Row];
+  var LOpts := Options;
+  LOpts.IncludeHeader := True;
+  ArrayToCSV(LFullData, FileName, LOpts);
+end;
+
+class procedure TDataExport.GridDataToCSV(const AData: TArray<TArray<string>>;
+  const AHeaders: TArray<string>; const FileName: string);
+begin
+  GridDataToCSV(AData, AHeaders, FileName, TCSVOptions.Default);
+end;
+
+class procedure TDataExport.GridDataToHTML(const AData: TArray<TArray<string>>;
+  const AHeaders: TArray<string>; const FileName: string;
+  const Options: THTMLOptions);
+begin
+  ArrayToHTML(AData, AHeaders, FileName, Options);
+end;
+
+class procedure TDataExport.GridDataToHTML(const AData: TArray<TArray<string>>;
+  const AHeaders: TArray<string>; const FileName: string;
+  const Title: string);
+begin
+  ArrayToHTML(AData, AHeaders, FileName, Title);
+end;
+
+class function TDataExport.GridDataToJSON(const AData: TArray<TArray<string>>;
+  const AHeaders: TArray<string>): string;
+begin
+  Result := ArrayToJSON(AData, AHeaders);
 end;
 
 end.

@@ -1,51 +1,51 @@
-unit DeepBase.Constants;
+﻿unit DeepBase.Constants;
 
 interface
 
 const
-  // 缓存配置常量
+  // ç¼å­éç½®å¸¸é
   DEFAULT_CACHE_MAX_ITEMS = 1000;
   DEFAULT_CACHE_MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
-  DEFAULT_CACHE_TTL_SECONDS = 3600; // 1小时
+  DEFAULT_CACHE_TTL_SECONDS = 3600; // 1å°æ¶
   
-  // 超时配置常量
-  DEFAULT_HTTP_TIMEOUT_MS = 30000; // 30�?
-  DEFAULT_DB_TIMEOUT_MS = 15000;   // 15�?
-  DEFAULT_WORKER_TIMEOUT_MS = 60000; // 60�?
+  // è¶æ¶éç½®å¸¸é
+  DEFAULT_HTTP_TIMEOUT_MS = 30000; // 30ç§?
+  DEFAULT_DB_TIMEOUT_MS = 15000;   // 15ç§?
+  DEFAULT_WORKER_TIMEOUT_MS = 60000; // 60ç§?
   
-  // 线程池配置常�?
+  // çº¿ç¨æ± éç½®å¸¸é?
   DEFAULT_MIN_THREADS = 2;
   DEFAULT_MAX_THREADS = 10;
-  DEFAULT_THREAD_IDLE_TIMEOUT_MS = 30000; // 30�?
+  DEFAULT_THREAD_IDLE_TIMEOUT_MS = 30000; // 30ç§?
   
-  // 重试配置常量
+  // éè¯éç½®å¸¸é
   DEFAULT_MAX_RETRIES = 3;
-  DEFAULT_RETRY_DELAY_MS = 1000; // 1�?
+  DEFAULT_RETRY_DELAY_MS = 1000; // 1ç§?
   DEFAULT_BACKOFF_MULTIPLIER = 2.0;
   
-  // 日志配置常量
+  // æ¥å¿éç½®å¸¸é
   DEFAULT_LOG_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   DEFAULT_LOG_MAX_FILES = 5;
-  DEFAULT_LOG_FLUSH_INTERVAL_MS = 5000; // 5�?
+  DEFAULT_LOG_FLUSH_INTERVAL_MS = 5000; // 5ç§?
   
-  // 网络配置常量
+  // ç½ç»éç½®å¸¸é
   DEFAULT_MAX_CONNECTIONS = 100;
-  DEFAULT_KEEP_ALIVE_TIMEOUT_MS = 30000; // 30�?
+  DEFAULT_KEEP_ALIVE_TIMEOUT_MS = 30000; // 30ç§?
   DEFAULT_REQUEST_BUFFER_SIZE = 8192; // 8KB
   
-  // 安全配置常量
+  // å®å¨éç½®å¸¸é
   DEFAULT_PASSWORD_MIN_LENGTH = 8;
-  DEFAULT_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟
+  DEFAULT_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30åé
   DEFAULT_TOKEN_EXPIRY_HOURS = 24;
   
-  // 性能配置常量
+  // æ§è½éç½®å¸¸é
   DEFAULT_BATCH_SIZE = 100;
   DEFAULT_CHUNK_SIZE = 4096; // 4KB
   DEFAULT_POOL_INITIAL_SIZE = 5;
   
-  // 监控配置常量
-  DEFAULT_METRICS_INTERVAL_MS = 60000; // 1分钟
-  DEFAULT_HEALTH_CHECK_INTERVAL_MS = 30000; // 30�?
+  // çæ§éç½®å¸¸é
+  DEFAULT_METRICS_INTERVAL_MS = 60000; // 1åé
+  DEFAULT_HEALTH_CHECK_INTERVAL_MS = 30000; // 30ç§?
   DEFAULT_ALERT_THRESHOLD = 0.8; // 80%
 
 implementation

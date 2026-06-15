@@ -1,4 +1,4 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   DeepBase.TestCenter - Developer Test Center Core Logic
   
   Version: 1.0
@@ -237,7 +237,7 @@ begin
   FStatus := tsPassed;
   FLastResult := ResultMsg;
   if FLastResult = '' then
-    FLastResult := '²âÊÔÍ¨¹ı';
+    FLastResult := 'æµ‹è¯•é€šè¿‡';
 end;
 
 procedure TTestItem.MarkFailed(const ErrorMsg: string);
@@ -256,13 +256,13 @@ end;
 function TTestItem.StatusText: string;
 begin
   case FStatus of
-    tsNotRun:  Result := 'Î´ÔËĞĞ';
-    tsRunning: Result := 'ÔËĞĞÖĞ';
-    tsPassed:  Result := 'Í¨¹ı';
-    tsFailed:  Result := 'Ê§°Ü';
-    tsSkipped: Result := 'Ìø¹ı';
+    tsNotRun:  Result := 'æœªè¿è¡Œ';
+    tsRunning: Result := 'è¿è¡Œä¸­';
+    tsPassed:  Result := 'é€šè¿‡';
+    tsFailed:  Result := 'å¤±è´¥';
+    tsSkipped: Result := 'è·³è¿‡';
   else
-    Result := 'Î´Öª';
+    Result := 'æœªçŸ¥';
   end;
 end;
 
@@ -409,7 +409,7 @@ begin
   if Test = nil then
     Exit;
   
-  DoLog('ÔËĞĞ²âÊÔ: ' + Test.Name);
+  DoLog('è¿è¡Œæµ‹è¯•: ' + Test.Name);
   
   if Assigned(FRunner) then
   begin
@@ -438,7 +438,7 @@ begin
   end;
   
   DoStatusChange(Test);
-  DoLog(Format('²âÊÔ %s: %s', [Test.Name, Test.StatusText]));
+  DoLog(Format('æµ‹è¯• %s: %s', [Test.Name, Test.StatusText]));
 end;
 
 function TTestCenterManager.RunTestsInCategory(
@@ -450,13 +450,13 @@ begin
   Result := 0;
   Tests := GetTestsByCategory(ACategoryId);
   
-  DoLog('ÔËĞĞ·ÖÀà [' + ACategoryId + '] ÖĞµÄËùÓĞ²âÊÔ...');
+  DoLog('è¿è¡Œåˆ†ç±» [' + ACategoryId + '] ä¸­çš„æ‰€æœ‰æµ‹è¯•...');
   
   for Test in Tests do
     if RunTest(Test.Id) then
       Inc(Result);
       
-  DoLog(Format('·ÖÀà²âÊÔÍê³É: %d/%d Í¨¹ı', [Result, Length(Tests)]));
+  DoLog(Format('åˆ†ç±»æµ‹è¯•å®Œæˆ: %d/%d é€šè¿‡', [Result, Length(Tests)]));
 end;
 
 function TTestCenterManager.RunAllTests: Integer;
@@ -465,7 +465,7 @@ var
 begin
   Result := 0;
   
-  DoLog('ÔËĞĞËùÓĞ²âÊÔ...');
+  DoLog('è¿è¡Œæ‰€æœ‰æµ‹è¯•...');
   
   for Test in FTests do
     if RunTest(Test.Id) then
@@ -483,7 +483,7 @@ begin
     Test.Reset;
     DoStatusChange(Test);
   end;
-  DoLog('ÒÑÖØÖÃËùÓĞ²âÊÔ');
+  DoLog('å·²é‡ç½®æ‰€æœ‰æµ‹è¯•');
 end;
 
 function TTestCenterManager.GetPassedCount: Integer;
@@ -523,7 +523,7 @@ end;
 
 function TTestCenterManager.GetSummary: string;
 begin
-  Result := Format('²âÊÔ½á¹û: Í¨¹ı %d, Ê§°Ü %d, Î´ÔËĞĞ %d, ×Ü¼Æ %d',
+  Result := Format('æµ‹è¯•ç»“æœ: é€šè¿‡ %d, å¤±è´¥ %d, æœªè¿è¡Œ %d, æ€»è®¡ %d',
     [GetPassedCount, GetFailedCount, GetNotRunCount, GetTotalCount]);
 end;
 
@@ -542,7 +542,7 @@ begin
     ForceDirectories(ExtractFilePath(APath));
     TFile.WriteAllText(APath, JsonText, TEncoding.UTF8);
     
-    DoLog('²âÊÔ½á¹ûÒÑ±£´æ: ' + APath);
+    DoLog('æµ‹è¯•ç»“æœå·²ä¿å­˜: ' + APath);
   finally
     Root.Free;
   end;
@@ -579,7 +579,7 @@ begin
       end;
     end;
     
-    DoLog('²âÊÔ½á¹ûÒÑ¼ÓÔØ: ' + APath);
+    DoLog('æµ‹è¯•ç»“æœå·²åŠ è½½: ' + APath);
   finally
     Root.Free;
   end;
@@ -600,7 +600,7 @@ begin
     begin
       ATest.MarkFailed(E.Message);
       if Assigned(FOnLog) then
-        FOnLog('²âÊÔÒì³£: ' + E.Message);
+        FOnLog('æµ‹è¯•å¼‚å¸¸: ' + E.Message);
     end;
   end;
 end;
@@ -610,27 +610,27 @@ begin
   ATest.Status := tsRunning;
   ATest.LastRunTime := Now;
   if Assigned(FOnLog) then
-    FOnLog('¿ªÊ¼²âÊÔ: ' + ATest.Name);
+    FOnLog('å¼€å§‹æµ‹è¯•: ' + ATest.Name);
 end;
 
 procedure TDefaultTestRunner.AfterRun(ATest: TTestItem; Success: Boolean);
 begin
   if Assigned(FOnLog) then
-    FOnLog(Format('²âÊÔÍê³É [%s]: %s', [ATest.Name, ATest.StatusText]));
+    FOnLog(Format('æµ‹è¯•å®Œæˆ [%s]: %s', [ATest.Name, ATest.StatusText]));
 end;
 
 { TStandardCategories }
 
 class procedure TStandardCategories.RegisterAll(AManager: TTestCenterManager);
 begin
-  AManager.AddCategorySimple(CAT_CORE, 'ºËĞÄ¹¦ÄÜ', 0);
-  AManager.AddCategorySimple(CAT_VCL, 'VCL ×é¼ş', 1);
-  AManager.AddCategorySimple(CAT_FMX, 'FMX ×é¼ş', 2);
-  AManager.AddCategorySimple(CAT_NETWORK, 'ÍøÂç¹¦ÄÜ', 3);
-  AManager.AddCategorySimple(CAT_DATABASE, 'Êı¾İ¿â', 4);
-  AManager.AddCategorySimple(CAT_AUTOUPDATE, '×Ô¶¯¸üĞÂ', 5);
-  AManager.AddCategorySimple(CAT_PUBLISHER, '·¢²¼¹¤¾ß', 6);
-  AManager.AddCategorySimple(CAT_TOOLS, '¸¨Öú¹¤¾ß', 7);
+  AManager.AddCategorySimple(CAT_CORE, 'æ ¸å¿ƒåŠŸèƒ½', 0);
+  AManager.AddCategorySimple(CAT_VCL, 'VCL ç»„ä»¶', 1);
+  AManager.AddCategorySimple(CAT_FMX, 'FMX ç»„ä»¶', 2);
+  AManager.AddCategorySimple(CAT_NETWORK, 'ç½‘ç»œåŠŸèƒ½', 3);
+  AManager.AddCategorySimple(CAT_DATABASE, 'æ•°æ®åº“', 4);
+  AManager.AddCategorySimple(CAT_AUTOUPDATE, 'è‡ªåŠ¨æ›´æ–°', 5);
+  AManager.AddCategorySimple(CAT_PUBLISHER, 'å‘å¸ƒå·¥å…·', 6);
+  AManager.AddCategorySimple(CAT_TOOLS, 'è¾…åŠ©å·¥å…·', 7);
 end;
 
 end.

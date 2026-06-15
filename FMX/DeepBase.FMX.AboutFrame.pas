@@ -1,14 +1,14 @@
 unit DeepBase.FMX.AboutFrame;
 
 {
-  DeepBase FMX AboutFrame - FireMonkey 版关�?打赏页面组件
+  DeepBase FMX AboutFrame - FireMonkey 版关�?打赏页面组件
 
   功能:
-  - 6 个标�?Tab �?(公众�?微信/支付�?BTC/USDT/关于�?
-  - �?SQLite 数据库安全加载图�?(HMAC 签名验证)
+  - 6 个标�?Tab �?(公众�?微信/支付�?BTC/USDT/关于�?
+  - �?SQLite 数据库安全加载图�?(HMAC 签名验证)
   - BTC/USDT 地址复制功能
-  - 机器码显�?
-  - 根据 enabled 字段动态显�?隐藏 Tab
+  - 机器码显�?
+  - 根据 enabled 字段动态显�?隐藏 Tab
 
   使用方法:
     var Frame := TFMXAboutFrame.Create(Self);
@@ -25,23 +25,14 @@ uses
   DeepBase.AntiTamper,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.TabControl, FMX.Objects, FMX.StdCtrls, FMX.Controls.Presentation,
-  FMX.Layouts, FMX.Clipboard, FMX.Platform,
-  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
-  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async,
-  FireDAC.DApt, FireDAC.UI.Intf, FireDAC.FMXUI.Wait, FireDAC.Stan.Def,
-  FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
-  FireDAC.Comp.Client, FireDAC.Comp.DataSet, Data.DB;
+  FMX.Layouts, FMX.Clipboard, FMX.Platform;
 
 type
   /// <summary>
-  /// FMX �?AboutFrame - 关于/打赏页面组件
+  /// FMX �?AboutFrame - 关于/打赏页面组件
   /// </summary>
   TFMXAboutFrame = class(TFrame)
   private
-    // 数据�?
-    FConnection: TFDConnection;
-    FQuery: TFDQuery;
-    FTable: TFDTable;
     FDatabasePath: string;
 
     // UI 控件
@@ -105,7 +96,7 @@ type
     /// <summary>初始化组件并加载数据</summary>
     procedure Initialize;
 
-    /// <summary>数据库路�?/summary>
+    /// <summary>数据库路�?/summary>
     property DatabasePath: string read FDatabasePath write FDatabasePath;
   end;
 
@@ -134,31 +125,13 @@ constructor TFMXAboutFrame.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  // 创建数据库连�?
-  FConnection := TFDConnection.Create(Self);
-  FConnection.DriverName := 'SQLite';
-  FConnection.LoginPrompt := False;
-
-  FQuery := TFDQuery.Create(Self);
-  FQuery.Connection := FConnection;
-
-  FTable := TFDTable.Create(Self);
-  FTable.Connection := FConnection;
-  FTable.TableName := 'aboutMeImages';
-
   // 创建 UI 控件
   CreateUIControls;
 end;
-
 destructor TFMXAboutFrame.Destroy;
 begin
-  if Assigned(FTable) and FTable.Active then
-    FTable.Active := False;
-  if FConnection.Connected then
-    FConnection.Connected := False;
   inherited;
 end;
-
 procedure TFMXAboutFrame.CreateUIControls;
 begin
   // 创建 TabControl
@@ -167,7 +140,7 @@ begin
   FTabControl.Align := TAlignLayout.Client;
   FTabControl.TabPosition := TTabPosition.Top;
 
-  // 创建各个 Tab �?
+  // 创建各个 Tab �?
   CreateTabPage(FTabOfficialGzh, FImgOfficialGzh, FLblOfficialGzhTip, 'Official', TIP_OFFICIAL_GZH);
   CreateTabPage(FTabWechat, FImgWechat, FLblWechatTip, '微信', TIP_WECHAT);
   CreateTabPage(FTabAlipay, FImgAlipay, FLblAlipayTip, 'Alipay', TIP_ALIPAY);
@@ -294,21 +267,21 @@ begin
   FLblAboutMeTip.TextSettings.HorzAlign := TTextAlign.Center;
   FLblAboutMeTip.Margins.Top := 10;
 
-  // 底部布局 (机器�?
+  // 底部布局 (机器�?
   BottomLayout := TLayout.Create(Layout);
   BottomLayout.Parent := Layout;
   BottomLayout.Align := TAlignLayout.Bottom;
   BottomLayout.Height := 60;
 
-  // 机器码标�?
+  // 机器码标�?
   FLblMachineCode := TLabel.Create(BottomLayout);
   FLblMachineCode.Parent := BottomLayout;
   FLblMachineCode.Align := TAlignLayout.Top;
   FLblMachineCode.Height := 20;
-  FLblMachineCode.Text := '机器�?';
+  FLblMachineCode.Text := '机器�?';
   FLblMachineCode.TextSettings.HorzAlign := TTextAlign.Center;
 
-  // 机器码�?
+  // 机器码�?
   FLblMachineCodeValue := TLabel.Create(BottomLayout);
   FLblMachineCodeValue.Parent := BottomLayout;
   FLblMachineCodeValue.Align := TAlignLayout.Client;
@@ -345,75 +318,19 @@ begin
   if FDatabasePath = '' then
     FDatabasePath := System.IOUtils.TPath.Combine(
       System.IOUtils.TPath.GetDirectoryName(ParamStr(0)), 'AppConfig.db');
-
-  if not System.IOUtils.TFile.Exists(FDatabasePath) then
-    Exit;
-
-  FConnection.Params.Database := FDatabasePath;
-  FConnection.Connected := True;
-
-  // 确保表存在（�?DeepBase.AntiTamper / SeedTool 协议一致）
-  FQuery.SQL.Text :=
-    'CREATE TABLE IF NOT EXISTS aboutMeImages (' +
-    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
-    '  image_key TEXT NOT NULL UNIQUE,' +
-    '  image_data BLOB NOT NULL,' +
-    '  address_text TEXT,' +
-    '  description TEXT,' +
-    '  enabled INTEGER NOT NULL DEFAULT 1,' +
-    '  sha256_hash TEXT NOT NULL,' +
-    '  hmac_sha256 TEXT NOT NULL,' +
-    '  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,' +
-    '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
-    ')';
-  FQuery.ExecSQL;
-
-  // 兼容旧表：尽力补齐关键字段（忽略重复/失败�?
-  try
-    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN sha256_hash TEXT';
-    FQuery.ExecSQL;
-  except
-  end;
-  try
-    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN hmac_sha256 TEXT';
-    FQuery.ExecSQL;
-  except
-  end;
-  try
-    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1';
-    FQuery.ExecSQL;
-  except
-  end;
-  try
-    FQuery.SQL.Text := 'ALTER TABLE aboutMeImages ADD COLUMN description TEXT';
-    FQuery.ExecSQL;
-  except
-  end;
-
-  // 打开表，�?Locate/读取使用
-  if not FTable.Active then
-    FTable.Active := True;
 end;
-
 procedure TFMXAboutFrame.UpdateTabVisibility;
 
   function IsKeyEnabled(const Key: string): Boolean;
   begin
-    Result := True; // 默认显示
-    if not FConnection.Connected then Exit;
+    Result := True;
+    if (FDatabasePath = '') or not System.IOUtils.TFile.Exists(FDatabasePath) then
+      Exit;
 
     try
-      FQuery.SQL.Text := 'SELECT enabled FROM aboutMeImages WHERE image_key = :key';
-      FQuery.ParamByName('key').AsString := Key;
-      FQuery.Open;
-      try
-        if not FQuery.Eof then
-          Result := FQuery.FieldByName('enabled').AsInteger <> 0;
-      finally
-        FQuery.Close;
-      end;
+      Result := TAntiTamperPackage.IsSecureImageEnabled(FDatabasePath, Key);
     except
-      // 忽略错误，默认显�?
+      // 忽略错误，默认显示
     end;
   end;
 
@@ -425,7 +342,6 @@ begin
   FTabUSDT.Visible := IsKeyEnabled(KEY_USDT);
   FTabAboutMe.Visible := IsKeyEnabled(KEY_ABOUTME);
 end;
-
 procedure TFMXAboutFrame.LoadAllImages;
 begin
   // 清空地址显示
@@ -451,11 +367,13 @@ var
   Stream: TBytesStream;
 begin
   if not Assigned(TargetImage) then Exit;
-  if not Assigned(FTable) or not FTable.Active then Exit;
+  if (FDatabasePath = '') or not System.IOUtils.TFile.Exists(FDatabasePath) then
+    Exit;
 
   try
     AddressText := '';
-    if TAntiTamperPackage.LoadSecureImageBytes(FTable, ImageKey, DecryptedData, AddressText) then
+    if TAntiTamperPackage.LoadSecureImageBytesFromDatabase(
+         FDatabasePath, ImageKey, DecryptedData, AddressText) then
     begin
       // 加载图像（解密后的原始图像字节）
       if Length(DecryptedData) > 0 then
