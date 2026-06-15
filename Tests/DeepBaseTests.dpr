@@ -85,6 +85,8 @@ uses
   Test.DeepBase.RateLimiter in 'Test.DeepBase.RateLimiter.pas',
   Test.DeepBase.FeatureFlags in 'Test.DeepBase.FeatureFlags.pas',
   Test.DeepBase.Metrics in 'Test.DeepBase.Metrics.pas',
+  // Data Platform v0.7 tests
+  Test.DeepBase.DataPlatform in 'Test.DeepBase.DataPlatform.pas',
   Test.DeepBase.i18n.Plural in 'Test.DeepBase.i18n.Plural.pas',
   Test.DeepBase.i18n.Gender in 'Test.DeepBase.i18n.Gender.pas',
   Test.DeepBase.Compression in 'Test.DeepBase.Compression.pas',

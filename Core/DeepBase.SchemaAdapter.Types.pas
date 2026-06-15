@@ -28,10 +28,8 @@ type
 
   TDirectionMapping = TDictionary<Int64, TDirection>;
   TMsgTypeMapping = TDictionary<Int64, TNormalizedMsgType>;
-  TTimestampMapping = TFunc<Variant, TDateTime>;
 
-  TBaseSchemaAdapter = class;
-  TSchemaAdapterClass = class of TBaseSchemaAdapter;
+  TTimestampMapping = TFunc<Variant, TDateTime>;
 
   IMapResult = interface
     ['{D4E8F2A6-1B3C-4D7E-9F2A-6C8B4E1D5A7F}']
