@@ -18,6 +18,16 @@
 - **代码**: 12 新 Pas (~2,700 LOC) + 3 .dpk 修改 + 1 TLB 生成
 - **Bugfix**: BUG-252~263 共 12 项审计修复 (bugfix.md)
 
+### DATA-PLATFORM-2026-06-15-R2: P1 补全 + Core 编译门禁
+- **完成日期**: 2026-06-15
+- **来源**: 5 专家代码审计发现 14 项问题
+- **内容摘要**:
+  - 9 项 Runtime/Semantic 修复：UIA_ProcessIdPropertyId (30010)、GetNativeWindowHandle (30020)、GetCurrentProcessName (QueryFullProcessImageName)、CoInitializeEx lifecycle、GetTimestamp → TDateTime、FSchemaFingerprintPrefixes 赋值、MapDirection/MapMessageType 懒加载缓存、SqlcipherVersion 赋值、PollThreadProc 空闲槽填充回调
+  - 3 项 .dpk 注册修复：DeepBaseCore contains (6 new units)、UIAutomationClient_TLB + requires vcl、Features requires DeepBasePersistence
+  - 7 项缺失实现补全：TUIAMappingRegistry.Add/TryGetValue、GetOriginalContent 去存根、CheckHookHealth 定时器、ParseUIAMappingJSON、Invoke 发送按钮黑名单、LoadMappingsFromConfig 注册映射、SchemaAdapter 类型声明链修正
+  - DeepBaseCore.dpk 0 errors 编译验证通过
+- **文件**: 12 个修改文件 + bugfix.md 更新
+
 ---
 
 ## 2026-05-23 Commerce 客户端 SDK 安全审计修复

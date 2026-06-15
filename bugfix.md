@@ -3,116 +3,78 @@
 > 本文档记录所有发现和修复�?Bug、Issue 及改�?
 ---
 
-## 2026-06-15 Bug 修复（5 专家代码审计修复）
+## 2026-06-15 Bug 修复（5 专家代码审计修复 + v0.7 修正轮）
 
 ### BUG-252: ClipboardGuard SaveBackupToTemp/SaveBackupToPath 返回类型编译错误
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题:  声明为 ， 声明为 ，但调用方检查返回值 — 编译失败。
-- 修复:  改为 ，添加显式 。
-- 验证: 编译语法通过。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.ClipboardGuard.pas
+- 问题: SaveBackupToTemp 和 SaveBackupToPath 声明为 procedure，但调用方 if not SaveBackupToTemp then 检查返回值——编译失败。
+- 修复: SaveBackupToPath 改为 function ...: Boolean，添加 Result := True/False。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-253: TUIAElementAdapter.GetNativeWindowHandle 返回错误数据
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: 实现返回  而非元素实际 HWND，前景窗口验证完全失效。
-- 修复: 改用  查询真实句柄。
-- 验证: 语义修正。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.UIA.Engine.pas
+- 问题: 实现返回 GetForegroundWindow 而非元素实际 HWND，前景窗口验证完全失效。
+- 修复: 改用 UIA_NativeWindowHandlePropertyId (30020) 查询真实窗口句柄。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-254: UIA_ProcessIdPropertyId = 34005 (错误值)
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: 常量定义为 ，Microsoft 文档规定正确值为 。
-- 修复: 改为 。
-- 验证: MSDN 验证。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.UIA.Engine.pas
+- 问题: 常量定义为 30005 + 4000 = 34005，Microsoft 文档规定为 30010。
+- 修复: 改为 30010。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-255: TUIAElementAdapter.GetCurrentProcessName 返回 Locator 提示而非真实值
-- 发现日期: 2026-06-15
-- 严重性: 🟠 High
-- 文件: 
-- 问题: 直接返回 ，VerifyElementOwnership 假阳性。
-- 修复: 从 UIA CurrentProcessId 查询 。
-- 验证: 语义修正。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: High | 文件: Features/DeepBase.UIA.Engine.pas
+- 问题: 直接返回 FLocator.TargetProcessName，若 Locator 配置错误会导致 VerifyElementOwnership 假阳性。
+- 修复: 从 UIA CurrentProcessId 查询 QueryFullProcessImageName 获取真实进程名。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-256: TWeChat39xAdapter.FSchemaFingerprintPrefixes 未赋值
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: 构造函数未设置，TryResolve 永远不匹配任何适配器。
-- 修复: 添加 
-- 验证: 运行时可用。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Core/DeepBase.SchemaAdapter.WeChat39x.pas
+- 问题: 构造函数未设置 FSchemaFingerprintPrefixes，导致 TryResolve 永远不匹配任何适配器。
+- 修复: 添加 FSchemaFingerprintPrefixes := ['e4a7bXXXXX...'];
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-257: MapDirection/MapMessageType 每次调用泄漏 TDictionary
-- 发现日期: 2026-06-15
-- 严重性: 🟠 High
-- 文件: 
-- 问题: GetDirection/GetMessageType 每次调用创建新 TDictionary，调用方不释放。
+- 发现日期: 2026-06-15 | 严重性: High | 文件: Core/DeepBase.SchemaAdapter.pas
+- 问题: GetDirection/GetMessageType 每次调用创建新 TDictionary，调用方不释放，高频调用下严重内存泄漏。
 - 修复: 增加 FCachedDirectionMapping/FCachedMessageTypeMapping 懒加载缓存。
-- 验证: 无泄漏。
-- 状态: ✅ 已修复
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-258: TWindowMonitor.PollThreadProc 计算结果未使用
-- 发现日期: 2026-06-15
-- 严重性: 🟡 Medium
-- 文件: 
-- 问题: IsProcessRunning 结果丢弃，FProcessCallbacks 从未被触发。
-- 修复: 后接 process state change 通知 callback。
-- 验证: 轮询线程可观测。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Medium | 文件: Features/DeepBase.WindowMonitor.pas
+- 问题: IsProcessRunning 结果丢弃，注册的 FProcessCallbacks 从未被触发，轮询线程完全不可观测。
+- 修复: 后接 process state change 通知 callback + 每 60s 触发 CheckHookHealth。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-259: CipherConfig 的 SqlcipherVersion 字段未赋值
-- 发现日期: 2026-06-15
-- 严重性: 🟡 Medium
-- 文件: 
-- 问题: 两个工厂函数未设置 SqlcipherVersion。
-- 修复: 39x→，4x→。
-- 验证: 字段完整。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Medium | 文件: Core/DeepBase.External.Types.pas
+- 问题: 两个工厂函数未设置 SqlcipherVersion 字段，record 中该字段为空字符串。
+- 修复: WeChat39x→'3.4.3', WeChat4x→'4.5.x'。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-260: AllocateHWnd 用 DestroyWindow 而非 DeallocateHWnd
-- 发现日期: 2026-06-15
-- 严重性: 🟡 Low
-- 文件: 
-- 问题: DestroyWindow 不清理 Delphi 内部映射，反复创建/销毁累积僵尸条目。
-- 修复: 暂缓（生产环境通常单例）。
-- 状态: ✅ 已修复（DATA-P1-002）
+- 发现日期: 2026-06-15 | 严重性: Low | 文件: Features/DeepBase.WindowMonitor.pas
+- 问题: DestroyWindow 不清理 Delphi 内部窗口对象映射。生产环境通常单例，影响有限。
+- 状态: ✅ 已修复 (DATA-P1-002)
 
 ### BUG-261: DeepBaseCore.dpk 缺少 6 个新 Core 单元注册
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: 6 个新 Core 单元（External.Types, External.Auditor, SchemaAdapter.Types, SchemaAdapter, SchemaAdapter.Registry, SchemaAdapter.WeChat39x）未注册，编译失败。
-- 修复: 追加到 contains 子句。
-- 验证: 编译通过。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: DeepBaseCore.dpk
+- 问题: External.Types/External.Auditor/SchemaAdapter.Types/SchemaAdapter/SchemaAdapter.Registry/SchemaAdapter.WeChat39x 未在 contains 子句中注册——编译失败。
+- 修复: 追加到 Core.dpk contains 子句。
+- 状态: ✅ 已修复 (DATA-P1-003)
 
 ### BUG-262: UIAutomationClient_TLB 未在任何 .dpk 中注册
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: TLB 单元存在但不在任何包的 contains 中，且依赖 VCL 但无 requires vcl。
-- 修复: 注册到 Features.dpk contains + 添加 requires vcl。
-- 验证: 编译通过。
-- 状态: ✅ 已修复
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: DeepBaseFeatures.dpk
+- 问题: TLB 存在但不属于任何包 contains，且依赖 VCL 但未声明 requires vcl。
+- 修复: 追加到 Features.dpk contains + 添加 requires vcl。
+- 状态: ✅ 已修复 (DATA-P1-003)
 
 ### BUG-263: Bootstrap 跨包依赖 Persistence 但缺少 requires
-- 发现日期: 2026-06-15
-- 严重性: 🔴 Critical
-- 文件: 
-- 问题: DataPlatform.Bootstrap 使用了 Persistence 层的 External.SQLiteReader，但 Features.dpk 未 requires DeepBasePersistence。
-- 修复: 添加 requires DeepBasePersistence。
-- 验证: 编译通过。
-- 状态: ✅ 已修复
-
----
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: DeepBaseFeatures.dpk
+- 问题: DataPlatform.Bootstrap uses Persistence/External.SQLiteReader，Features.dpk 未 requires DeepBasePersistence。
+- 修复: 追加 requires DeepBasePersistence。
+- 状态: ✅ 已修复 (DATA-P1-003)
 
 ## 2026-06-15 Bug 登记（DeepLaunch Grid / Workflow UI）
 
