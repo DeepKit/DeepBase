@@ -33,6 +33,9 @@ type
     procedure Validate;
   end;
 
+  TBaseSchemaAdapter = class; // forward
+  TSchemaAdapterClass = class of TBaseSchemaAdapter;
+
   ISchemaAdapterRegistry = interface
     ['{E2F6A8B4-3C7D-4E1F-8A9D-5B2C7E9F1A6D}']
     procedure Register(const VersionRange: string;
@@ -52,8 +55,8 @@ type
     FForbiddenFieldsDict: TDictionary<string, Boolean>;
     FForbiddenFieldNames: TArray<string>;
     FSchemaFingerprintPrefixes: TArray<string>;
-    FCachedDirectionMapping: TDirectionMapping;   // v0.7 fix: cache to avoid per-call leak
-    FCachedMessageTypeMapping: TMsgTypeMapping;   // v0.7 fix: cache to avoid per-call leak
+    FCachedDirectionMapping: TDirectionMapping;
+    FCachedMessageTypeMapping: TMsgTypeMapping;
     function GetDirection: TDirectionMapping; virtual; abstract;
     function GetMessageType: TMsgTypeMapping; virtual; abstract;
     function GetTimestamp: TTimestampMapping; virtual; abstract;
@@ -75,6 +78,7 @@ type
     function GetCompatibilityReport: string; virtual;
     function GetTimestampRule: TFunc<Variant, TDateTime>;
     procedure Validate; virtual;
+    function TryMatchFingerprint(const Fingerprint: string): Boolean;
   end;
 
 implementation
@@ -211,7 +215,9 @@ end;
 
 function TBaseSchemaAdapter.GetTimestampRule: TFunc<Variant, TDateTime>;
 begin
-  Result := GetTimestamp;
+  // GetTimestamp is virtual;abstract — subclasses return a TFunc<Variant,TDateTime>
+  var BaseFunc := GetTimestamp;
+  Result := BaseFunc;
 end;
 
 procedure TBaseSchemaAdapter.Validate;
@@ -226,6 +232,14 @@ begin
     if Length(Prefix) < 10 then
       raise ESchemaAdapterValidationError.Create(
         'Fingerprint prefix must be at least 10 hex characters');
+end;
+
+function TBaseSchemaAdapter.TryMatchFingerprint(const Fingerprint: string): Boolean;
+begin
+  for var Prefix in FSchemaFingerprintPrefixes do
+    if Fingerprint.StartsWith(Prefix) then
+      Exit(True);
+  Result := False;
 end;
 
 end.

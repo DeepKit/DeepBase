@@ -103,23 +103,6 @@ begin
   Result.HmacSize := 20;
   Result.SaltSize := 16;
   Result.ReserveAlgorithm := 'HMAC_SHA1';
-  Result.SqlcipherVersion := '3.4.3';  // v0.7 fix: assign version
-end;
-
-function WeChat4xCipherConfig: TSQLCipherCompatibilityConfig;
-begin
-  Result.Backend := beBCryptDirect;
-  Result.Cipher := 'aes-256-cbc';
-  Result.KdfIter := 64000;
-  Result.CipherPageSize := 4096;
-  Result.HmacAlgorithm := 'HMAC_SHA1';
-  Result.KdfAlgorithm := 'PBKDF2_HMAC_SHA1';
-  Result.PageSize := 4096;
-  Result.KeySize := 32;
-  Result.IvSize := 16;
-  Result.HmacSize := 20;
-  Result.SaltSize := 16;
-  Result.ReserveAlgorithm := 'HMAC_SHA1';
   Result.SqlcipherVersion := '4.5.x';  // v0.7 fix: assign version
 end;
 

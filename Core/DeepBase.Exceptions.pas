@@ -283,6 +283,7 @@ type
   /// </summary>
   procedure RaiseLastOSError(const AContext: string = '');
 
+type
   //============================================================================
   // External database exceptions (32.data)
   //============================================================================
