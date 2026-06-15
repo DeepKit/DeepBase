@@ -3,6 +3,23 @@
 
 ---
 
+## 2026-06-15 数据平台 v0.7 设计与实现（15 专家审查）
+
+### DATA-PLATFORM-2026-06-15: Docs 32-36 外部数据访问与 UIA 自动化平台
+- **完成日期**: 2026-06-15
+- **审查**: 15 位专家（5×R1 安全/COM/加密/架构/Delphi + 5×R2 威胁/并发/容错/性能/模式 + 4×R3 集成/可测试/实现/演化 + 1×R4 集成心智编译）
+- **评分演进**: v0.1(4.5/10) → v0.3(7.5/10) → v0.4(8.0/10) → 代码审计修至 v0.7
+- **内容摘要**:
+  - 32.SQLCipher 外部数据库读取：双后端 (FireDAC+BCryptDirect)、SafeQuery 自动审计、sqlite3_set_authorizer C层防线、结构化指纹
+  - 33.SchemaAdapter 通用适配器：列式 MapRow (TArray<Variant>, 内存降 83%)、ForbiddenFields O(1)、WeChat39xAdapter（探针参数）
+  - 34.UIA 自动化引擎：同步 SetValue (裁撤命令队列)、归属验证、JSON映射签名校验、IUIAElement 适配器
+  - 35.剪贴板保护与窗口监控：RAII + SendInput+wScan + 多级降级、SetWinEventHook+health check+TThreadList
+  - 36.Bootstrap 与 CompositionRoot：15 步启动/Shutdown 顺序、完整依赖注入
+- **代码**: 12 新 Pas (~2,700 LOC) + 3 .dpk 修改 + 1 TLB 生成
+- **Bugfix**: BUG-252~263 共 12 项审计修复 (bugfix.md)
+
+---
+
 ## 2026-05-23 Commerce 客户端 SDK 安全审计修复
 
 ### AUDIT-P0-2026-05-19: Commerce 客户端 SDK 代码审计修复

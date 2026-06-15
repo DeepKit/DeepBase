@@ -1,5 +1,5 @@
-# deepBase 开发任务
-> **最后更新**: 2026-06-15
+﻿# deepBase 开发任务
+> **最后更新**: 2026-06-15 (data-platform v0.7 added)
 > **代码核实**: 2026-06-11 QA-P0 Unit 已跑到 DUnitX 摘要并通过：3661 found，3658 passed，3 ignored，0 failed，0 errored。已知残留：退出阶段仍打印 System.JSON/FastMM unexpected memory leak。
 > **项目状态**: 框架主体已完成，当前任务只保留未完成项；已完成内容已归档到 `history.md`，缺陷记录写入 `bugfix.md`。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
@@ -153,6 +153,47 @@
 - [ ] AF-M14: compiler.ps1 Delphi 环境路径改为自动检测/参数化。
 
 ---
+
+## 数据平台 v0.7 剩余任务
+
+### DATA-P0-001: 微信运行时密钥偏移确认
+- **状态**: 待开发
+- **任务**:
+- [ ] 在微信 4.1.10.30 运行时执行 WxDecryptProbe.exe 确认密钥偏移值。
+- [ ] 将偏移值回填到 KeyCallback 的 KnownOffsets 列表。
+- [ ] 解密 MicroMsg.db 后导出 MSG 表列名列表，更新 WeChat4xAdapter Schema 指纹。
+
+### DATA-P1-001: BCrypt 直接解密后端实现
+- **状态**: 待开发
+- **任务**:
+- [ ] 实现 TBCryptSQLiteReader 类（基于探针的 DeriveSQLCipherKey + TryDecryptPage 算法）。
+- [ ] 实现 TryProbeCipherParams 枚举探测算法。
+- [ ] 实现 FindWeChatDB 自动路径发现。
+- [ ] 将 beBCryptDirect 后端集成到 TExternalSQLiteReader.BackendOpen。
+
+### DATA-P1-002: 缺失实现补全
+- **状态**: 待开发
+- **任务**:
+- [ ] TUIAMappingRegistry 补全 Add/TryGetValue 方法。
+- [ ] 实现 ParseUIAMappingJSON 解析逻辑。
+- [ ] LoadMappingsFromConfig 中恢复 RegisterMapping 注入调用。
+- [ ] CheckHookHealth 在 WindowMonitor 中注册定时器触发（当前已实现但从未被调用）。
+- [ ] GetOriginalContent 从存根实现为读取 FOriginalData 的 CF_UNICODETEXT 格式。
+
+### DATA-P1-003: 编译验证与 .dpk
+- **状态**: 待开发
+- **任务**:
+- [ ] dcc64 编译全部 12 新单元 + 3 .dpk，验证 package 门禁通过。
+- [ ] 修复 UIAutomationClient_TLB 的 VCL 依赖（可能需要移到 dclDeepBaseVCL 或创建独立 design-time 包）。
+
+### DATA-P2-001: 单元测试与集成测试
+- **状态**: 待开发
+- **任务**:
+- [ ] SchemaAdapter 单元测试（MapRow/MapRows/Validate/ForbiddenFields）。
+- [ ] ClipboardGuard 单元测试（Save/Restore/SetContent/DoPaste/backup）。
+- [ ] WindowMonitor 集成测试（SetWinEventHook/AddWatchTarget/callback）。
+- [ ] TExternalSQLiteReader 集成测试（OpenReadOnly/SafeQuery/SafeQueryAsDict）。
+- [ ] UIA Engine 集成测试（FindElement/SetValue with mock IClipboardGuard）。
 
 ## P2 中期整理
 
