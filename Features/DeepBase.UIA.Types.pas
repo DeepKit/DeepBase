@@ -33,10 +33,12 @@ type
 
   TUIAMappingRegistry = class
   private
-    FItems: TDictionary<string, TObjectDictionary<string, TUIAElementLocator>>;
+    FItems: TObjectDictionary<string, TObjectDictionary<string, TUIAElementLocator>>;
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Add(const AppName, AppVersion: string; const Elements: TObjectDictionary<string, TUIAElementLocator>);
+    function TryGetValue(const AppName, AppVersion: string; out Elements: TObjectDictionary<string, TUIAElementLocator>): Boolean;
     function Count: Integer;
   end;
 
@@ -45,13 +47,29 @@ implementation
 constructor TUIAMappingRegistry.Create;
 begin
   inherited;
-  FItems := TDictionary<string, TObjectDictionary<string, TUIAElementLocator>>.Create;
+  FItems := TObjectDictionary<string, TObjectDictionary<string, TUIAElementLocator>>.Create([doOwnsValues]);
 end;
 
 destructor TUIAMappingRegistry.Destroy;
 begin
   FItems.Free;
   inherited;
+end;
+
+procedure TUIAMappingRegistry.Add(const AppName, AppVersion: string;
+  const Elements: TObjectDictionary<string, TUIAElementLocator>);
+begin
+  if not FItems.ContainsKey(AppName) then
+    FItems.Add(AppName, TObjectDictionary<string, TUIAElementLocator>.Create([doOwnsValues]));
+  FItems[AppName].AddOrSetValue(AppVersion, Elements);
+end;
+
+function TUIAMappingRegistry.TryGetValue(const AppName, AppVersion: string;
+  out Elements: TObjectDictionary<string, TUIAElementLocator>): Boolean;
+begin
+  Elements := nil;
+  if not FItems.ContainsKey(AppName) then Exit(False);
+  Result := FItems[AppName].TryGetValue(AppVersion, Elements);
 end;
 
 function TUIAMappingRegistry.Count: Integer;

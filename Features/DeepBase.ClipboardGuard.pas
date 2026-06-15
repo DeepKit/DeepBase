@@ -331,7 +331,13 @@ end;
 
 function TClipboardGuard.GetOriginalContent: string;
 begin
-  Result := '';
+  var Bytes: TBytes;
+  if FOriginalData.TryGetValue(CF_UNICODETEXT, Bytes) then
+    Result := TEncoding.Unicode.GetString(Bytes)
+  else if FOriginalData.TryGetValue(CF_TEXT, Bytes) then
+    Result := TEncoding.ANSI.GetString(Bytes)
+  else
+    Result := '';
 end;
 
 function TClipboardGuard.IsSaved: Boolean;

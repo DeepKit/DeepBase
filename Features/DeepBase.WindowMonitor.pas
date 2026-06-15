@@ -261,8 +261,11 @@ begin
 end;
 
 procedure TWindowMonitor.PollThreadProc;
+var
+  LastHealthCheck: Int64;
 begin
   NameThreadForDebugging('WindowMonitor');
+  LastHealthCheck := GetTickCount64;
   while FPollEvent.WaitFor(30000) = wrTimeout do
   begin
     try
@@ -286,6 +289,13 @@ begin
         end;
       finally
         FWatchTargets.UnlockList;
+      end;
+
+      // v0.7 fix: hook health check every 60 seconds
+      if GetTickCount64 - LastHealthCheck >= 60000 then
+      begin
+        CheckHookHealth;
+        LastHealthCheck := GetTickCount64;
       end;
     except
       on E: Exception do

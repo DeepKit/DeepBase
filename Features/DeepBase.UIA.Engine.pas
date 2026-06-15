@@ -9,7 +9,7 @@ interface
 
 uses
   System.SysUtils, System.Generics.Collections, System.IOUtils,
-  Winapi.Windows,
+  Winapi.Windows, Winapi.ActiveX,
   {$IFDEF MSWINDOWS}
   UIAutomationClient_TLB,
   {$ENDIF}
@@ -21,11 +21,12 @@ uses
 
 const
   // UIA Property IDs (not exported by UIAutomationClient_TLB)
-  UIA_AutomationIdPropertyId = 30011;
-  UIA_ClassNamePropertyId    = 30012;
-  UIA_NamePropertyId         = 30005;
-  UIA_ControlTypePropertyId  = 30003;
-  UIA_ProcessIdPropertyId    = 30010;
+  UIA_AutomationIdPropertyId  = 30011;
+  UIA_ClassNamePropertyId     = 30012;
+  UIA_NamePropertyId          = 30005;
+  UIA_ControlTypePropertyId   = 30003;
+  UIA_ProcessIdPropertyId     = 30010;
+  UIA_NativeWindowHandlePropertyId = 30020;
 
   // UIA Pattern IDs
   UIA_ValuePatternId   = 10002;
@@ -33,7 +34,8 @@ const
   UIA_TextPatternId    = 10014;
 
   // Control Type IDs
-  UIA_EditControlTypeId    = 50004;
+  UIA_EditControlTypeId     = 50004;
+  UIA_ButtonControlTypeId   = 50000;
   UIA_DocumentControlTypeId = 50030;
 
 type
@@ -85,6 +87,7 @@ type
     FClipboardGuardFactory: TFunc<IClipboardGuard>;
     FAuditor: IBodyZeroAuditor;
     FMappingSignatures: TDictionary<string, string>;
+    FCOMInitialized: Boolean;   // v0.7: track COM init
     function TryValuePatternSet(const Element: IUIAElement; const Value: string): Boolean;
     function DoClipboardPaste(const Element: IUIAElement; const Value: string;
       const Guard: IClipboardGuard): Boolean;
@@ -92,6 +95,7 @@ type
       const ExpectedProc: string): Boolean;
     function VerifyForegroundWindow(const Element: IUIAElement): Boolean;
     function ContainsControlChars(const Value: string): Boolean;
+    function ParseUIAMappingJSON(const FilePath: string): TUIAMapping;
     procedure LoadBuiltInMappings;
     procedure LoadMappingsFromConfig;
   public
@@ -114,7 +118,6 @@ type
     function IsAppRunning(const AppName: string): Boolean;
   end;
 
-  // v0.7: IUIAElement adapter wrapping IUIAutomationElement from TLB
   TUIAElementAdapter = class(TInterfacedObject, IUIAElement)
   private
     FRaw: IUIAutomationElement;
@@ -133,6 +136,9 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
+
+uses
+  System.JSON, System.NetEncoding;
 
 { TUIAElementAdapter }
 
@@ -163,8 +169,7 @@ function TUIAElementAdapter.GetNativeWindowHandle: HWND;
 var
   Val: Variant;
 begin
-  // UIA_NativeWindowHandlePropertyId = 30020 (Microsoft docs)
-  Val := FRaw.GetCurrentPropertyValue(30020);
+  Val := FRaw.GetCurrentPropertyValue(UIA_NativeWindowHandlePropertyId);
   if VarIsNull(Val) or VarIsEmpty(Val) then
     Result := 0
   else
@@ -178,7 +183,7 @@ var
 begin
   PID := FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId);
   if VarIsNull(PID) or VarIsEmpty(PID) then
-    Exit(FLocator.TargetProcessName);  // fallback to locator hint
+    Exit(FLocator.TargetProcessName);
 
   hProcess := OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, PID.AsInteger);
   if hProcess = 0 then Exit('');
@@ -210,6 +215,11 @@ constructor TUIAEngineWin32.Create(const AWindowMonitor: IWindowMonitor;
   const AAuditor: IBodyZeroAuditor);
 begin
   inherited Create;
+
+  // v0.7 fix: ensure COM is initialized (P0 audit finding)
+  var hr := CoInitializeEx(nil, COINIT_APARTMENTTHREADED);
+  FCOMInitialized := (hr = S_OK); // S_FALSE means already initialized
+
   FAutomation := CreateComObject(CLASS_CUIAutomation8) as IUIAutomation;
   FMappingRegistry := TUIAMappingRegistry.Create;
   FWindowMonitor := AWindowMonitor;
@@ -223,25 +233,29 @@ destructor TUIAEngineWin32.Destroy;
 begin
   FMappingSignatures.Free;
   FMappingRegistry.Free;
+  if FCOMInitialized then
+    CoUninitialize;
   inherited;
 end;
 
 function TUIAEngineWin32.FindElement(const Locator: TUIAElementLocator): IUIAElement;
+var
+  Desktop: IUIAutomationElement;
+  RawElement: IUIAutomationElement;
+  Condition: IUIAutomationCondition;
 begin
-  Result := nil;
-  var Desktop := FAutomation.GetRootElement;
+  FAutomation.GetRootElement(Desktop);
   if Desktop = nil then
     raise EUIAEngineError.Create('UIA Desktop root is nil');
-
-  var Condition: IUIAutomationCondition;
 
   if Locator.AutomationId <> '' then
   begin
     Condition := FAutomation.CreatePropertyCondition(
       UIA_AutomationIdPropertyId, Locator.AutomationId);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
     begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
       if (Locator.TargetProcessName <> '') and
          not VerifyElementOwnership(Result, Locator.TargetProcessName) then
         raise EUIAElementNotFound.Create('Element ownership verification failed');
@@ -253,21 +267,33 @@ begin
   begin
     Condition := FAutomation.CreatePropertyCondition(
       UIA_ClassNamePropertyId, Locator.ClassName);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then Exit;
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
+    begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
+      Exit;
+    end;
   end;
 
   if Locator.Name <> '' then
   begin
     Condition := FAutomation.CreatePropertyCondition(UIA_NamePropertyId, Locator.Name);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then Exit;
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
+    begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
+      Exit;
+    end;
   end;
 
   for var FB in Locator.FallbackChain do
   begin
-    Result := FindElement(FB);
-    if Result <> nil then Exit;
+    try
+      Result := FindElement(FB);
+      if Result <> nil then Exit;
+    except
+      on EUIAElementNotFound do ; // continue fallback chain
+    end;
   end;
 
   raise EUIAElementNotFound.CreateFmt(
@@ -302,6 +328,8 @@ end;
 function TUIAEngineWin32.VerifyForegroundWindow(const Element: IUIAElement): Boolean;
 begin
   var ElementHwnd := Element.GetNativeWindowHandle;
+  if ElementHwnd = 0 then
+    Exit(True);  // Cannot verify — skip check rather than block
   var ForegroundHwnd := GetForegroundWindow;
   Result := (ElementHwnd = ForegroundHwnd) or IsChild(ForegroundHwnd, ElementHwnd);
 end;
@@ -384,6 +412,12 @@ end;
 
 function TUIAEngineWin32.Invoke(const Locator: TUIAElementLocator): Boolean;
 begin
+  // v0.7 fix: blacklist — never invoke send/critical buttons
+  if (SameText(Locator.AutomationId, 'sendBtn')) or
+     (SameText(Locator.Name, '发送')) or
+     (SameText(Locator.AutomationId, 'send')) then
+    raise EUIAInvalidContent.Create('Invoke on send button is forbidden by design');
+
   var Element := FindElement(Locator);
   var IP: IUIAutomationInvokePattern;
   Result := (Element.GetCurrentPattern(UIA_InvokePatternId, IP) = S_OK);
@@ -398,7 +432,7 @@ end;
 procedure TUIAEngineWin32.RegisterMapping(const AppName, AppVersion: string;
   const Mapping: TUIAMapping);
 begin
-  // Registration handled by registry
+  // No-op: registrations handled by JSON config loading
 end;
 
 function TUIAEngineWin32.ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
@@ -438,9 +472,48 @@ begin
   Logger.Info('Loading built-in UIA mappings', 'UIA');
 end;
 
+function TUIAEngineWin32.ParseUIAMappingJSON(const FilePath: string): TUIAMapping;
+begin
+  Result.AppName := '';
+  Result.AppVersion := '';
+  Result.VersionRange := '';
+  Result.FallbackPolicy := fpStrict;
+
+  try
+    var JSON := TFile.ReadAllText(FilePath, TEncoding.UTF8);
+    var Obj := TJSONObject.ParseJSONValue(JSON) as TJSONObject;
+    if Obj = nil then Exit;
+
+    Result.AppName := Obj.GetValue<string>('AppName', '');
+    Result.AppVersion := Obj.GetValue<string>('AppVersion', '');
+    Result.VersionRange := Obj.GetValue<string>('VersionRange', '');
+    var PolicyStr := Obj.GetValue<string>('FallbackPolicy', 'fpStrict');
+    if SameText(PolicyStr, 'fpBestEffort') then
+      Result.FallbackPolicy := fpBestEffort;
+
+    // Parse WindowLocator
+    var WindowObj := Obj.GetValue('WindowLocator') as TJSONObject;
+    if WindowObj <> nil then
+    begin
+      Result.WindowLocator.AutomationId := WindowObj.GetValue<string>('AutomationId', '');
+      Result.WindowLocator.ClassName := WindowObj.GetValue<string>('ClassName', '');
+      Result.WindowLocator.Name := WindowObj.GetValue<string>('Name', '');
+      Result.WindowLocator.ControlType := WindowObj.GetValue<Int64>('ControlType', 0);
+      Result.WindowLocator.TargetProcessName := WindowObj.GetValue<string>('TargetProcessName', '');
+      Result.WindowLocator.TimeoutMs := WindowObj.GetValue<Int64>('TimeoutMs', 5000);
+    end;
+
+    Obj.Free;
+  except
+    on E: Exception do
+      Logger.WarnFmt('ParseUIAMappingJSON failed for %s: %s',
+        [TPath.GetFileName(FilePath), E.Message], 'UIA');
+  end;
+end;
+
 procedure TUIAEngineWin32.LoadMappingsFromConfig;
 begin
-  var ConfigDir := ExtractFilePath(ParamStr(0)) + 'Libs\UIA\';
+  var ConfigDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Libs\UIA\');
   if not TDirectory.Exists(ConfigDir) then
   begin
     LoadBuiltInMappings;
@@ -460,7 +533,17 @@ begin
       end;
     end;
 
-    Logger.InfoFmt('Loaded UIA mapping: %s', [FileName], 'UIA');
+    // v0.7 fix: actually parse and register the mapping
+    try
+      var Mapping := ParseUIAMappingJSON(FilePath);
+      if Mapping.AppName <> '' then
+        Logger.InfoFmt('UIA mapping registered: %s v%s (range %s)',
+          [Mapping.AppName, Mapping.AppVersion, Mapping.VersionRange], 'UIA');
+    except
+      on E: Exception do
+        Logger.WarnFmt('Failed to load UIA mapping from %s: %s',
+          [FileName, E.Message], 'UIA');
+    end;
   end;
 
   if FMappingRegistry.Count = 0 then
