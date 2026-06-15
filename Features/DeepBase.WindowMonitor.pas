@@ -101,7 +101,7 @@ destructor TWindowMonitor.Destroy;
 begin
   Stop;
   if FHealthCheckWnd <> 0 then
-    DestroyWindow(FHealthCheckWnd);
+    DeallocateHWnd(FHealthCheckWnd);
   FWatchTargetPaths.Free;
   FWatchTargets.Free;
   FWindowCallbacks.Free;

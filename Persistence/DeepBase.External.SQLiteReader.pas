@@ -449,7 +449,7 @@ begin
     try
       while not Q.Eof do
       begin
-        var RowDict := TDictionary<string, Variant>.Create;
+        var RowDict := TDictionary<string, Variant>.Create(Length(ColumnNames));
         for var ColName in ColumnNames do
           RowDict.Add(ColName, Q.FieldByName(ColName).AsVariant);
         RowList.Add(RowDict);

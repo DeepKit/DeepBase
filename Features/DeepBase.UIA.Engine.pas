@@ -68,6 +68,7 @@ type
     procedure RegisterMapping(const AppName, AppVersion: string;
       const Mapping: TUIAMapping);
     function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
+    function IsMappingIntegrityVerified(const AppName: string): Boolean;
   end;
 
   IUIAutomationEngine = interface(IUIAElementFinder, IUIAValueOperator, IUIAMappingProvider)
@@ -415,7 +416,7 @@ end;
 
 procedure TUIAEngineWin32.LoadMappingsFromConfig;
 begin
-  var ConfigDir := ExtractFilePath(ParamStr(0)) + 'Libs\UIA\';
+  var ConfigDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Libs\UIA\');
   if not TDirectory.Exists(ConfigDir) then
   begin
     LoadBuiltInMappings;

@@ -37,6 +37,8 @@ begin
   inherited;
   FVersion := '3.9.x';
   FVersionRange := '3.9.0-3.9.99';
+  // TODO: replace with real fingerprint from probe-decrypted WeChat 3.9 MicroMsg.db
+  FSchemaFingerprintPrefixes := ['e4a7bXXXXX...'];
 
   FFieldMappings := [
     FieldMap('UserName', 'contact_id'),
