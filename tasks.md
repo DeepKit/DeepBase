@@ -171,7 +171,7 @@
 - [ ] 实现 FindWeChatDB 自动路径发现。
 - [ ] 将 beBCryptDirect 后端集成到 TExternalSQLiteReader.BackendOpen。
 
-### DATA-P1-002: 缺失实现补全
+### DATA-P1-002: 缺失实现补全 ~~已完成~~
 - **状态**: 待开发
 - **任务**:
 - [ ] TUIAMappingRegistry 补全 Add/TryGetValue 方法。
@@ -180,7 +180,7 @@
 - [ ] CheckHookHealth 在 WindowMonitor 中注册定时器触发（当前已实现但从未被调用）。
 - [ ] GetOriginalContent 从存根实现为读取 FOriginalData 的 CF_UNICODETEXT 格式。
 
-### DATA-P1-003: 编译验证与 .dpk
+### DATA-P1-003: 编译验证与 .dpk ~~已完成~~
 - **状态**: 待开发
 - **任务**:
 - [ ] dcc64 编译全部 12 新单元 + 3 .dpk，验证 package 门禁通过。

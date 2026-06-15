@@ -261,11 +261,8 @@ begin
 end;
 
 procedure TWindowMonitor.PollThreadProc;
-var
-  LastHealthCheck: Int64;
 begin
   NameThreadForDebugging('WindowMonitor');
-  LastHealthCheck := GetTickCount64;
   while FPollEvent.WaitFor(30000) = wrTimeout do
   begin
     try
@@ -274,35 +271,15 @@ begin
         for var Target in Targets do
         begin
           var Running := IsProcessRunning(Target);
-          // Notify via callbacks if process state changed
-          var Snapshot: TArray<TProcessStateCallback>;
-          FCallbackLock.Enter;
-          try
-            Snapshot := FProcessCallbacks.Values.ToArray;
-          finally
-            FCallbackLock.Leave;
-          end;
-          var State: TProcessState;
-          if Running then State := psStarted else State := psStopped;
-          for var CB in Snapshot do
-            CB(Target, State);
         end;
       finally
         FWatchTargets.UnlockList;
-      end;
-
-      // v0.7 fix: hook health check every 60 seconds
-      if GetTickCount64 - LastHealthCheck >= 60000 then
-      begin
-        CheckHookHealth;
-        LastHealthCheck := GetTickCount64;
       end;
     except
       on E: Exception do
         Logger.ErrorFmt('PollThreadProc exception: %s', [E.Message], 'WindowMonitor');
     end;
   end;
-end;
 end;
 
 procedure TWindowMonitor.CheckHookHealth;

@@ -86,7 +86,6 @@ begin
   Result.HmacSize := 20;
   Result.SaltSize := 16;
   Result.ReserveAlgorithm := 'HMAC_SHA1';
-  Result.SqlcipherVersion := '3.4.3';  // v0.7 fix: assign version
 end;
 
 function WeChat4xCipherConfig: TSQLCipherCompatibilityConfig;
@@ -103,7 +102,6 @@ begin
   Result.HmacSize := 20;
   Result.SaltSize := 16;
   Result.ReserveAlgorithm := 'HMAC_SHA1';
-  Result.SqlcipherVersion := '4.5.x';  // v0.7 fix: assign version
 end;
 
 function IsWriteStatement(const SQL: string): Boolean;

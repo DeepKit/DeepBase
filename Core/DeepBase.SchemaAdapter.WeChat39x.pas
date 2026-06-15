@@ -24,10 +24,10 @@ type
 
 implementation
 
-function UnixTimestampToDateTime(v: Variant): TDateTime;
+function UnixTimestampToDateTime(v: Variant): Variant;
 begin
   if VarIsNull(v) or VarIsEmpty(v) then
-    Result := 0
+    Result := Null
   else
     Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
 end;
@@ -37,34 +37,27 @@ begin
   inherited;
   FVersion := '3.9.x';
   FVersionRange := '3.9.0-3.9.99';
-  FSchemaFingerprintPrefixes := ['e4a7bXXXXX...'];
 
-  SetLength(FFieldMappings, 10);
-  FFieldMappings[0] := FieldMap('UserName', 'contact_id');
-  FFieldMappings[1] := FieldMap('NickName', 'nickname');
-  FFieldMappings[2] := FieldMap('Remark', 'remark');
-  FFieldMappings[3] := FieldMap('Alias', 'alias');
-  FFieldMappings[4] := FieldMap('LabelIDList', 'label_ids');
-  FFieldMappings[5] := FieldMap('CreateTime', 'sent_at',
-    function(v: Variant): Variant
-    begin
-      if VarIsNull(v) or VarIsEmpty(v) then
-        Result := Null
-      else
-        Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
-    end);
-  FFieldMappings[6] := FieldMap('Type', 'raw_type');
-  FFieldMappings[7] := FieldMap('IsSender', 'raw_direction',
-    function(v: Variant): Variant
-    begin
-      case v.AsInteger of
-        0: Result := 'inbound';
-        1: Result := 'outbound';
-        else Result := 'unknown';
-      end;
-    end);
-  FFieldMappings[8] := FieldMap('TalkerId', 'peer_id');
-  FFieldMappings[9] := FieldMap('LocalID', 'source_row_ref');
+  FFieldMappings := [
+    FieldMap('UserName', 'contact_id'),
+    FieldMap('NickName', 'nickname'),
+    FieldMap('Remark', 'remark'),
+    FieldMap('Alias', 'alias'),
+    FieldMap('LabelIDList', 'label_ids'),
+    FieldMap('CreateTime', 'sent_at', UnixTimestampToDateTime),
+    FieldMap('Type', 'raw_type'),
+    FieldMap('IsSender', 'raw_direction',
+      function(v: Variant): Variant
+      begin
+        case v.AsInteger of
+          0: Result := 'inbound';
+          1: Result := 'outbound';
+          else Result := 'unknown';
+        end;
+      end),
+    FieldMap('TalkerId', 'peer_id'),
+    FieldMap('LocalID', 'source_row_ref'),
+  ];
 
   for var I := 0 to High(FFieldMappings) do
     FFieldMappings[I].ColumnIndex := I;

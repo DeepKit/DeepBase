@@ -8,7 +8,7 @@ unit DeepBase.SchemaAdapter.Types;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections, System.Variants;
+  System.SysUtils, System.Generics.Collections, System.Variants;
 
 type
   TFieldMapping = record
@@ -18,6 +18,9 @@ type
     Transform: TFunc<Variant, Variant>;
   end;
 
+  function FieldMap(const ASource, ATarget: string;
+    const ATransform: TFunc<Variant, Variant> = nil): TFieldMapping;
+
   TInternalRow = TArray<Variant>;
 
   TDirection = (dInbound, dOutbound, dUnknown);
@@ -26,6 +29,9 @@ type
   TDirectionMapping = TDictionary<Int64, TDirection>;
   TMsgTypeMapping = TDictionary<Int64, TNormalizedMsgType>;
   TTimestampMapping = TFunc<Variant, TDateTime>;
+
+  TBaseSchemaAdapter = class;
+  TSchemaAdapterClass = class of TBaseSchemaAdapter;
 
   IMapResult = interface
     ['{D4E8F2A6-1B3C-4D7E-9F2A-6C8B4E1D5A7F}']
@@ -47,9 +53,6 @@ type
     function GetError: string;
   end;
 
-function FieldMap(const ASource, ATarget: string;
-  const ATransform: TFunc<Variant, Variant> = nil): TFieldMapping;
-
 implementation
 
 function FieldMap(const ASource, ATarget: string;
@@ -61,8 +64,7 @@ begin
   Result.Transform := ATransform;
 end;
 
-constructor TMapResult.Create(const ARow: TInternalRow; ASuccess: Boolean;
-  const AError: string);
+constructor TMapResult.Create(const ARow: TInternalRow; ASuccess: Boolean; const AError: string);
 begin
   inherited Create;
   FRow := ARow;

@@ -33,9 +33,6 @@ type
     procedure Validate;
   end;
 
-  TBaseSchemaAdapter = class; // forward
-  TSchemaAdapterClass = class of TBaseSchemaAdapter;
-
   ISchemaAdapterRegistry = interface
     ['{E2F6A8B4-3C7D-4E1F-8A9D-5B2C7E9F1A6D}']
     procedure Register(const VersionRange: string;
@@ -55,8 +52,6 @@ type
     FForbiddenFieldsDict: TDictionary<string, Boolean>;
     FForbiddenFieldNames: TArray<string>;
     FSchemaFingerprintPrefixes: TArray<string>;
-    FCachedDirectionMapping: TDirectionMapping;
-    FCachedMessageTypeMapping: TMsgTypeMapping;
     function GetDirection: TDirectionMapping; virtual; abstract;
     function GetMessageType: TMsgTypeMapping; virtual; abstract;
     function GetTimestamp: TTimestampMapping; virtual; abstract;
@@ -78,7 +73,6 @@ type
     function GetCompatibilityReport: string; virtual;
     function GetTimestampRule: TFunc<Variant, TDateTime>;
     procedure Validate; virtual;
-    function TryMatchFingerprint(const Fingerprint: string): Boolean;
   end;
 
 implementation
@@ -174,18 +168,24 @@ end;
 
 function TBaseSchemaAdapter.MapDirection(const RawDirection: Variant): TDirection;
 begin
-  if FCachedDirectionMapping = nil then
-    FCachedDirectionMapping := GetDirection;
-  if not FCachedDirectionMapping.TryGetValue(RawDirection, Result) then
-    Result := dUnknown;
+  var Mapping := GetDirection;
+  try
+    if not Mapping.TryGetValue(RawDirection, Result) then
+      Result := dUnknown;
+  finally
+    // Mapping is owned by subclass — do not free here
+  end;
 end;
 
 function TBaseSchemaAdapter.MapMessageType(const RawType: Variant): TNormalizedMsgType;
 begin
-  if FCachedMessageTypeMapping = nil then
-    FCachedMessageTypeMapping := GetMessageType;
-  if not FCachedMessageTypeMapping.TryGetValue(RawType, Result) then
-    Result := mtUnknown;
+  var Mapping := GetMessageType;
+  try
+    if not Mapping.TryGetValue(RawType, Result) then
+      Result := mtUnknown;
+  finally
+    // Mapping is owned by subclass — do not free here
+  end;
 end;
 
 function TBaseSchemaAdapter.GetMappedFields: TArray<TFieldMapping>;
@@ -215,9 +215,7 @@ end;
 
 function TBaseSchemaAdapter.GetTimestampRule: TFunc<Variant, TDateTime>;
 begin
-  // GetTimestamp is virtual;abstract — subclasses return a TFunc<Variant,TDateTime>
-  var BaseFunc := GetTimestamp;
-  Result := BaseFunc;
+  Result := GetTimestamp;
 end;
 
 procedure TBaseSchemaAdapter.Validate;
@@ -232,14 +230,6 @@ begin
     if Length(Prefix) < 10 then
       raise ESchemaAdapterValidationError.Create(
         'Fingerprint prefix must be at least 10 hex characters');
-end;
-
-function TBaseSchemaAdapter.TryMatchFingerprint(const Fingerprint: string): Boolean;
-begin
-  for var Prefix in FSchemaFingerprintPrefixes do
-    if Fingerprint.StartsWith(Prefix) then
-      Exit(True);
-  Result := False;
 end;
 
 end.
