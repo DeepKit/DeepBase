@@ -29,6 +29,19 @@ uses
   DeepBase.IntentClarification.Logging;
 
 type
+  /// <summary>Heap-allocated context for async LLM task. Prevents use-after-return
+  /// when the task outlives the calling method (timeout scenario).</summary>
+  TLLMTaskContext = class
+    Result: TChatResult;
+    ErrorMsg: string;
+  end;
+
+  TLLMImageTaskContext = class
+    Result: TImageGenerationResult;
+    ErrorMsg: string;
+  end;
+
+type
   /// <summary>Configuration for the resilient LLM wrapper</summary>
   TLLMResilienceConfig = record
     TimeoutMs: Integer;           // Default: 10000 (10s)
@@ -260,8 +273,7 @@ var
   LLastError: string;
   LSW: TStopwatch;
   LTask: ITask;
-  LTaskResult: TChatResult;
-  LTaskError: string;
+  LCtx: TLLMTaskContext;
   LTimedOut: Boolean;
 begin
   // Circuit breaker check
@@ -283,21 +295,19 @@ begin
       LSW := TStopwatch.StartNew;
 
       // IC-010: Run inner call inside a TTask and wait with timeout so a
-      // hung LLM call cannot block the whole engine. Note that Wait()
-      // returning False does not synchronously kill the inner call --
-      // ONNX/HTTP libraries do not support cancellation tokens here, so the
-      // background task may still complete eventually, but we no longer
-      // block the caller and we treat it as a failure.
-      LTaskResult := Default(TChatResult);
-      LTaskError := '';
+      // hung LLM call cannot block the whole engine. The task context is
+      // heap-allocated (TLLMTaskContext) so that if the task outlives this
+      // method (timeout), it writes to its own memory, not to stack vars
+      // that may have been reused by the next loop iteration.
+      LCtx := TLLMTaskContext.Create;
       LTask := TTask.Run(
         procedure
         begin
           try
-            LTaskResult := ACall();
+            LCtx.Result := ACall();
           except
             on E: Exception do
-              LTaskError := E.ClassName + ': ' + E.Message;
+              LCtx.ErrorMsg := E.ClassName + ': ' + E.Message;
           end;
         end);
 
@@ -306,6 +316,13 @@ begin
 
       if LTimedOut then
       begin
+        // The background task may still be running and captured LCtx.
+        // We must NOT free LCtx here — the anonymous method still holds
+        // a reference and will write to it when ACall() eventually returns.
+        // The LCtx + its captured ref will be cleaned up when LTask is
+        // released (end of iteration) and the task finishes. In the worst
+        // case (task hangs forever), LCtx is a small intentional leak.
+        LCtx := nil;  // transfer ownership to the captured anonymous method
         Result := Default(TChatResult);
         Result.Success := False;
         LLastError := Format('LLM call timed out after %dms', [FConfig.TimeoutMs]);
@@ -315,18 +332,20 @@ begin
         Log(ltWarning, Format('IC.Resilience: LLM timeout (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
       end
-      else if LTaskError <> '' then
+      else if LCtx.ErrorMsg <> '' then
       begin
-        LLastError := LTaskError;
+        LLastError := LCtx.ErrorMsg;
+        LCtx.Free;
         Log(ltWarning, Format('IC.Resilience: LLM exception (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LTaskError]));
+          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
         Result := Default(TChatResult);
         Result.Success := False;
         Result.FinishReason := 'exception';
       end
       else
       begin
-        Result := LTaskResult;
+        Result := LCtx.Result;
+        LCtx.Free;
         if Result.Success then
         begin
           RecordSuccess;
@@ -342,6 +361,7 @@ begin
     except
       on E: Exception do
       begin
+        FreeAndNil(LCtx);  // Clean up if still owned
         LLastError := E.Message;
         Log(ltWarning, Format('IC.Resilience: Resilience harness exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));
@@ -388,8 +408,7 @@ var
   LLastError: string;
   LSW: TStopwatch;
   LTask: ITask;
-  LTaskResult: TImageGenerationResult;
-  LTaskError: string;
+  LCtx: TLLMImageTaskContext;
   LTimedOut: Boolean;
 begin
   // Circuit breaker check
@@ -409,16 +428,15 @@ begin
     try
       LSW := TStopwatch.StartNew;
 
-      LTaskResult := Default(TImageGenerationResult);
-      LTaskError := '';
+      LCtx := TLLMImageTaskContext.Create;
       LTask := TTask.Run(
         procedure
         begin
           try
-            LTaskResult := ACall();
+            LCtx.Result := ACall();
           except
             on E: Exception do
-              LTaskError := E.ClassName + ': ' + E.Message;
+              LCtx.ErrorMsg := E.ClassName + ': ' + E.Message;
           end;
         end);
 
@@ -427,6 +445,7 @@ begin
 
       if LTimedOut then
       begin
+        LCtx := nil;  // transfer ownership to task
         Result := Default(TImageGenerationResult);
         Result.Success := False;
         LLastError := Format('Image call timed out after %dms', [FConfig.TimeoutMs]);
@@ -435,19 +454,21 @@ begin
         Log(ltWarning, Format('IC.Resilience: Image timeout (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
       end
-      else if LTaskError <> '' then
+      else if LCtx.ErrorMsg <> '' then
       begin
-        LLastError := LTaskError;
+        LLastError := LCtx.ErrorMsg;
+        LCtx.Free;
         Log(ltWarning, Format('IC.Resilience: Image exception (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LTaskError]));
+          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
         Result := Default(TImageGenerationResult);
         Result.Success := False;
         Result.ErrorCode := 'exception';
-        Result.ErrorMessage := LTaskError;
+        Result.ErrorMessage := LLastError;
       end
       else
       begin
-        Result := LTaskResult;
+        Result := LCtx.Result;
+        LCtx.Free;
         if Result.Success then
         begin
           RecordSuccess;
@@ -465,6 +486,7 @@ begin
     except
       on E: Exception do
       begin
+        FreeAndNil(LCtx);  // Clean up if still owned
         LLastError := E.Message;
         Log(ltWarning, Format('IC.Resilience: Image harness exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));

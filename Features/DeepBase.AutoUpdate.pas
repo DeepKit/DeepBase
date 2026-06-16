@@ -58,10 +58,12 @@ uses
   System.SysUtils,
   System.Classes,
   System.Net.HttpClient,
+  System.Net.URLClient,
   System.JSON,
   System.Hash,
   System.DateUtils,
   System.Threading,
+  System.Generics.Collections,
   DeepBase.Updater,
   DeepBase.Commerce.Permissions;
 
@@ -98,8 +100,14 @@ type
   /// <summary>Progress callback used during download.</summary>
   TUpdateProgressCallback = reference to procedure(const ReadBytes, TotalBytes: Int64);
 
+  /// <summary>Callback invoked when a TLS certificate is rejected during update checks.</summary>
+  TOnValidateCertificateEvent = reference to procedure(const AHost: string; const AReason: string);
+
   /// <summary>
   /// High-level auto-update helper for static version.json based flow.
+  /// TLS pinning: callers can assign OnValidateCert to a THTTPClient's
+  /// OnValidateServerCertificate event (requires an instance-method wrapper
+  /// since class methods cannot satisfy "of object" event types).
   /// </summary>
   TDeepBaseAutoUpdate = class
   private
@@ -108,6 +116,7 @@ type
     FCurrentVersion: string;
     FPermissionClient: TDeepKitPermissionClient;
     FLastError: string;
+    FOnCertRejected: TOnValidateCertificateEvent;
 
     function GetChannel: TUpdateChannel;
     procedure SetChannel(const Value: TUpdateChannel);
@@ -172,6 +181,16 @@ type
 
     /// <summary>Last error message (set when CheckForUpdate or DownloadUpdate fails).</summary>
     property LastError: string read FLastError;
+
+    /// <summary>
+    /// Optional callback invoked whenever a TLS certificate is rejected during
+    /// an update check or download.  Useful for logging / diagnostics.
+    /// TLS pinning should be applied by callers: assign an instance-method
+    /// wrapper to THTTPClient.OnValidateServerCertificate that checks
+    /// Certificate.Fingerprint against a set of pinned values.
+    /// </summary>
+    property OnCertRejected: TOnValidateCertificateEvent
+      read FOnCertRejected write FOnCertRejected;
   end;
 
 implementation
@@ -669,21 +688,25 @@ end;
 
 function TDeepBaseAutoUpdate.CheckForUpdateAsync(
   const Callback: TUpdateCheckCallback): ITask;
+var
+  LTaskProc: TProc;
 begin
-  Result := TTask.Create(
+  LTaskProc :=
     procedure
     var
       LInfo: TUpdateInfo;
       LSuccess: Boolean;
+      LQ: TThreadProcedure;
     begin
       LSuccess := CheckForUpdate(LInfo);
-      TThread.Synchronize(nil,
-        procedure
-        begin
-          if Assigned(Callback) then
-            Callback(LSuccess, LInfo);
-        end);
-    end);
+      LQ := procedure
+            begin
+              if Assigned(Callback) then
+                Callback(LSuccess, LInfo);
+            end;
+      TThread.ForceQueue(nil, LQ);
+    end;
+  Result := TTask.Create(LTaskProc);
 end;
 
 function TDeepBaseAutoUpdate.DownloadUpdate(const Info: TUpdateInfo; const DestFile: string;

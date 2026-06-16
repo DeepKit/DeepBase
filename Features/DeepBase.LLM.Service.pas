@@ -333,7 +333,7 @@ var
 begin
   if not FindProviderForModel(AModelId, EP, Key, Fmt) then
   begin
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TChatResult);
     Result.ErrorCode := 'NO_PROVIDER';
     Result.ErrorMessage := 'No provider configured for model: ' + AModelId;
     Exit;
@@ -358,7 +358,7 @@ begin
 
   if Length(Models) = 0 then
   begin
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TChatResult);
     Result.ErrorCode := 'NO_MODEL';
     Result.ErrorMessage := Format('No models configured for tier "%s"', [TierStr]);
     Exit;
@@ -521,7 +521,7 @@ begin
 
   if Length(Models) = 0 then
   begin
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TChatResult);
     Result.ErrorCode := 'NO_VISION_MODEL';
     Result.ErrorMessage := Format('No models configured for vision tier "%s"', [TierStr]);
     Exit;

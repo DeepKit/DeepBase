@@ -30,6 +30,8 @@ type
     DefaultLimit: Integer;
     AllowFullScan: Boolean;
     IdField: string; // for insert returning id
+    Version: Integer;
+    UpdatedAt: TDateTime;
   end;
 
 function MakeContext(Conn: TFDConnection; DBType: TDBType; TimeoutSec: Integer; const CorrId: string): TDoQryContext;

@@ -10,7 +10,7 @@ unit DeepBase.External.BCryptDecrypt;
 interface
 
 uses
-  System.SysUtils, System.Classes;
+  System.SysUtils, System.Classes, Winapi.Windows;
 
 type
   BCRYPT_ALG_HANDLE = THandle;
@@ -245,8 +245,8 @@ begin
     FileSize := InStream.Size;
 
     Reserve := IV_SIZE + HMAC_SHA1_SIZE;
-    Reserve := ((Reserve mod AES_BLOCK) = 0) and Reserve
-      or ((Reserve div AES_BLOCK) + 1) * AES_BLOCK;
+    if (Reserve mod AES_BLOCK) <> 0 then
+      Reserve := ((Reserve div AES_BLOCK) + 1) * AES_BLOCK;
 
     NumPages := FileSize div PAGE_SIZE;
     InStream.Position := 0;

@@ -12,6 +12,24 @@
         <Projects Include="DeepBasePersistence.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="DeepBaseLLM.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseIntentClarification.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseBrowser.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseCommerce.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBaseInference.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DeepBasePlatform.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="DeepBaseFeatures.dproj">
             <Dependencies/>
         </Projects>
@@ -83,6 +101,60 @@
     <Target Name="DeepBaseFeatures:Make">
         <MSBuild Projects="DeepBaseFeatures.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DeepBaseLLM">
+        <MSBuild Projects="DeepBaseLLM.dproj"/>
+    </Target>
+    <Target Name="DeepBaseLLM:Clean">
+        <MSBuild Projects="DeepBaseLLM.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseLLM:Make">
+        <MSBuild Projects="DeepBaseLLM.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseIntentClarification">
+        <MSBuild Projects="DeepBaseIntentClarification.dproj"/>
+    </Target>
+    <Target Name="DeepBaseIntentClarification:Clean">
+        <MSBuild Projects="DeepBaseIntentClarification.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseIntentClarification:Make">
+        <MSBuild Projects="DeepBaseIntentClarification.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseBrowser">
+        <MSBuild Projects="DeepBaseBrowser.dproj"/>
+    </Target>
+    <Target Name="DeepBaseBrowser:Clean">
+        <MSBuild Projects="DeepBaseBrowser.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseBrowser:Make">
+        <MSBuild Projects="DeepBaseBrowser.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseCommerce">
+        <MSBuild Projects="DeepBaseCommerce.dproj"/>
+    </Target>
+    <Target Name="DeepBaseCommerce:Clean">
+        <MSBuild Projects="DeepBaseCommerce.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseCommerce:Make">
+        <MSBuild Projects="DeepBaseCommerce.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBaseInference">
+        <MSBuild Projects="DeepBaseInference.dproj"/>
+    </Target>
+    <Target Name="DeepBaseInference:Clean">
+        <MSBuild Projects="DeepBaseInference.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBaseInference:Make">
+        <MSBuild Projects="DeepBaseInference.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DeepBasePlatform">
+        <MSBuild Projects="DeepBasePlatform.dproj"/>
+    </Target>
+    <Target Name="DeepBasePlatform:Clean">
+        <MSBuild Projects="DeepBasePlatform.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DeepBasePlatform:Make">
+        <MSBuild Projects="DeepBasePlatform.dproj" Targets="Make"/>
+    </Target>
     <Target Name="DeepBaseFMX">
         <MSBuild Projects="DeepBaseFMX.dproj"/>
     </Target>
@@ -120,13 +192,13 @@
         <MSBuild Projects="DeepBaseVCL.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="DeepBaseCore;DeepBaseServices;DeepBasePersistence;DeepBaseFeatures;DeepBaseFMX;DeepBaseVCL;dclDeepBaseCore;dclDeepBaseFMX;dclDeepBaseVCL"/>
+        <CallTarget Targets="DeepBaseCore;DeepBaseServices;DeepBasePersistence;DeepBaseLLM;DeepBaseIntentClarification;DeepBaseBrowser;DeepBaseCommerce;DeepBaseInference;DeepBasePlatform;DeepBaseFeatures;DeepBaseFMX;DeepBaseVCL;dclDeepBaseCore;dclDeepBaseFMX;dclDeepBaseVCL"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="dclDeepBaseVCL:Clean;dclDeepBaseFMX:Clean;dclDeepBaseCore:Clean;DeepBaseVCL:Clean;DeepBaseFMX:Clean;DeepBaseFeatures:Clean;DeepBasePersistence:Clean;DeepBaseServices:Clean;DeepBaseCore:Clean"/>
+        <CallTarget Targets="dclDeepBaseVCL:Clean;dclDeepBaseFMX:Clean;dclDeepBaseCore:Clean;DeepBaseVCL:Clean;DeepBaseFMX:Clean;DeepBaseFeatures:Clean;DeepBasePlatform:Clean;DeepBaseInference:Clean;DeepBaseCommerce:Clean;DeepBaseBrowser:Clean;DeepBaseIntentClarification:Clean;DeepBaseLLM:Clean;DeepBasePersistence:Clean;DeepBaseServices:Clean;DeepBaseCore:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="DeepBaseCore:Make;DeepBaseServices:Make;DeepBasePersistence:Make;DeepBaseFeatures:Make;DeepBaseFMX:Make;DeepBaseVCL:Make;dclDeepBaseCore:Make;dclDeepBaseFMX:Make;dclDeepBaseVCL:Make"/>
+        <CallTarget Targets="DeepBaseCore:Make;DeepBaseServices:Make;DeepBasePersistence:Make;DeepBaseLLM:Make;DeepBaseIntentClarification:Make;DeepBaseBrowser:Make;DeepBaseCommerce:Make;DeepBaseInference:Make;DeepBasePlatform:Make;DeepBaseFeatures:Make;DeepBaseFMX:Make;DeepBaseVCL:Make;dclDeepBaseCore:Make;dclDeepBaseFMX:Make;dclDeepBaseVCL:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

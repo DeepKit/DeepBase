@@ -15,7 +15,7 @@ uses
   DeepBase.Types, DeepBase.Exceptions, DeepBase.Logging,
   DeepBase.External.Types, DeepBase.External.Auditor,
   DeepBase.External.BCryptDecrypt,
-  DeepBase.SchemaAdapter.Registry;
+  DeepBase.SchemaAdapter, DeepBase.SchemaAdapter.Registry;
 
 type
   IExternalDBReader = interface
@@ -139,17 +139,15 @@ begin
   FConnection.Params.Values['Database'] := DbPath;
   FConnection.Params.Values['OpenMode'] := 'ReadOnly';
 
-  FConnection.BeforeConnect := procedure(Sender: TObject)
-  begin
-    // Cipher configuration via PRAGMA
-    FConnection.ExecSQL(Format('PRAGMA cipher = ''%s'';',    [FConfig.Cipher]));
-    FConnection.ExecSQL(Format('PRAGMA kdf_iter = %d;',       [FConfig.KdfIter]));
-    FConnection.ExecSQL(Format('PRAGMA cipher_page_size = %d;',[FConfig.CipherPageSize]));
-    FConnection.ExecSQL(Format('PRAGMA cipher_hmac_algorithm = ''%s'';',
-      [FConfig.HmacAlgorithm]));
-    FConnection.ExecSQL(Format('PRAGMA cipher_kdf_algorithm = ''%s'';',
-      [FConfig.KdfAlgorithm]));
-  end;
+  // Convert key to hex string for SQLCipher raw key
+  var HexKey := '';
+  for var B in KeyBytes do
+    HexKey := HexKey + IntToHex(B, 2);
+
+  // Set SQLCipher key / cipher params via FireDAC connection params
+  // (FireDAC passes these to the SQLite driver before reading data)
+  FConnection.Params.Values['Encrypt'] := FConfig.Cipher;
+  FConnection.Params.Values['Password'] := HexKey;
 
   FConnection.Open;
 
@@ -235,6 +233,10 @@ begin
   end;
   Result := Self;
 end;
+
+procedure TExternalSQLiteReader.ApplyReadOnlySafeguards;
+begin
+  // No-op: ReadOnly constraints are enforced via OpenMode='ReadOnly' + IsWriteStatement check
 end;
 
 function TExternalSQLiteReader.GetRawSQLiteHandle: Pointer;

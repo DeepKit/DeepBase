@@ -19,6 +19,7 @@ uses
   Tray.DevLogFrame in 'Frames\Tray.DevLogFrame.pas',
   Tray.CommandFrame in 'Frames\Tray.CommandFrame.pas',
   Tray.Automation in 'Automation\Tray.Automation.pas',
+  Tray.Types in 'Automation\Tray.Types.pas',
   Tray.SettingsForm in 'Forms\Tray.SettingsForm.pas',
   Tray.LogSearchForm in 'Forms\Tray.LogSearchForm.pas',
   Tray.Hotkey in 'Tray.Hotkey.pas',

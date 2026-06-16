@@ -897,58 +897,32 @@ end;
 
 procedure TWebSocketClient.Connect;
 begin
-  FLock.Enter;
-  try
-    if FState <> wssClosed then
-      Exit;
-    FState := wssConnecting;
-  finally
-    FLock.Leave;
-  end;
-  
-  // WebSocket implementation would go here
-  // For now, just simulate connection
-  FState := wssOpen;
-  if Assigned(FOnOpen) then
-    FOnOpen(Self);
+  raise ENetException.Create(
+    'WebSocket support requires DeepBase.Net.WebSocket unit');
 end;
 
 procedure TWebSocketClient.Disconnect(ACode: Integer; const AReason: string);
 begin
-  FLock.Enter;
-  try
-    if FState = wssClosed then
-      Exit;
-    FState := wssClosing;
-  finally
-    FLock.Leave;
-  end;
-  
-  // WebSocket disconnect implementation would go here
-  FState := wssClosed;
-  if Assigned(FOnClose) then
-    FOnClose(Self, ACode, AReason);
+  raise ENetException.Create(
+    'WebSocket support requires DeepBase.Net.WebSocket unit');
 end;
 
 procedure TWebSocketClient.Send(const AMessage: string);
 begin
-  if FState <> wssOpen then
-    raise ENetException.Create('WebSocket is not connected');
-  // Send implementation would go here
+  raise ENetException.Create(
+    'WebSocket support requires DeepBase.Net.WebSocket unit');
 end;
 
 procedure TWebSocketClient.Send(const AData: TBytes);
 begin
-  if FState <> wssOpen then
-    raise ENetException.Create('WebSocket is not connected');
-  // Send implementation would go here
+  raise ENetException.Create(
+    'WebSocket support requires DeepBase.Net.WebSocket unit');
 end;
 
 procedure TWebSocketClient.Ping;
 begin
-  if FState <> wssOpen then
-    Exit;
-  // Ping implementation would go here
+  raise ENetException.Create(
+    'WebSocket support requires DeepBase.Net.WebSocket unit');
 end;
 
 { TDnsRecord }

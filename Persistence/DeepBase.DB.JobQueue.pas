@@ -8,6 +8,9 @@ uses
   System.SyncObjs,
   FireDAC.Comp.Client;
 
+const
+  JOB_QUEUE_POOL_SIZE = 4;
+
 type
   TTaskRec = record
     TaskID: string;
@@ -26,13 +29,15 @@ type
     class var FAutoEnsureSchema: Boolean;
     class var FSchemaEnsured: Boolean;
     class var FLock: TCriticalSection;
-    // Task 22.5: cache a single TFDConnection at the JobQueue layer instead
-    // of creating a fresh one (and a fresh TUniConnectionPool) per call via
-    // TDBConnectionFactory.GetShared. Acquire/Release serializes access via
-    // FConnLock so the underlying connection is used by one JobQueue
-    // operation at a time, which matches both SQLite and PostgreSQL safety.
-    class var FCachedConnection: TFDConnection;
+    // Connection pool: POOL_SIZE TFDConnection slots. Acquire scans for a
+    // free slot, marks it in-use, and returns immediately — the lock is
+    // NOT held during the DB operation, so up to POOL_SIZE operations can
+    // proceed concurrently on separate connections.
+    class var FConnections: array[0..JOB_QUEUE_POOL_SIZE - 1] of TFDConnection;
+    class var FConnInUse: array[0..JOB_QUEUE_POOL_SIZE - 1] of Boolean;
     class var FConnLock: TCriticalSection;
+    class var FConnAvailableEvent: TEvent;
+    class var FResetRequested: Boolean;
 
     class function AcquireConnection: TFDConnection; static;
     class procedure ReleaseConnection(AConnection: TFDConnection); static;
@@ -82,6 +87,8 @@ uses
 
 const
   JOB_QUEUE_TABLE = 'DeepBase_job_queue';
+  CONN_ACQUIRE_TIMEOUT_MS = 30000;
+  CONN_ACQUIRE_MAX_RETRIES = 10;
 
 { TTaskRec }
 
@@ -100,17 +107,26 @@ end;
 { TJobQueue }
 
 class constructor TJobQueue.Create;
+var
+  I: Integer;
 begin
   FLock := TCriticalSection.Create;
   FConnLock := TCriticalSection.Create;
+  FConnAvailableEvent := TEvent.Create(nil, False, False, '');
   FAutoEnsureSchema := True;
   FSchemaEnsured := False;
-  FCachedConnection := nil;
+  FResetRequested := False;
+  for I := 0 to JOB_QUEUE_POOL_SIZE - 1 do
+  begin
+    FConnections[I] := nil;
+    FConnInUse[I] := False;
+  end;
 end;
 
 class destructor TJobQueue.Destroy;
 begin
   ResetCachedConnection;
+  FreeAndNil(FConnAvailableEvent);
   FreeAndNil(FConnLock);
   FreeAndNil(FLock);
 end;
@@ -118,8 +134,8 @@ end;
 class procedure TJobQueue.SetConnectionProvider(
   const Provider: TFunc<TFDConnection>);
 begin
-  // Provider change invalidates the cached connection; drop it under the
-  // connection lock to avoid racing an in-flight DB op.
+  // Provider change invalidates pooled connections; reset the pool so
+  // idle connections are freed and in-use ones are freed on release.
   ResetCachedConnection;
   FLock.Enter;
   try
@@ -158,64 +174,144 @@ end;
 class function TJobQueue.AcquireConnection: TFDConnection;
 var
   Provider: TFunc<TFDConnection>;
+  I: Integer;
+  RetryCount: Integer;
+  Found: Boolean;
 begin
-  // Task 22.5: take the connection lock and lazily create+cache a single
-  // TFDConnection. Caller must call ReleaseConnection in a finally block
-  // to release the lock. The cached connection is reused across calls
-  // until Clear/SetConnectionProvider invalidates it.
-  FConnLock.Enter;
-  try
-    if Assigned(FCachedConnection) then
-    begin
-      // Sanity check: a connection that lost its session (e.g. server
-      // restarted) is dropped so we recreate cleanly below.
-      if not FCachedConnection.Connected then
-      try
-        FCachedConnection.Open;
-      except
-        FreeAndNil(FCachedConnection);
+  // Scan the pool for a free slot. The connection lock is held only while
+  // claiming a slot — the actual DB work happens outside the lock so up
+  // to POOL_SIZE operations can proceed concurrently.
+  RetryCount := 0;
+  while True do
+  begin
+    Found := False;
+    FConnLock.Enter;
+    try
+      for I := 0 to JOB_QUEUE_POOL_SIZE - 1 do
+      begin
+        if not FConnInUse[I] then
+        begin
+          // Found a free slot — ensure the connection is usable.
+          if Assigned(FConnections[I]) then
+          begin
+            // A connection that lost its session (e.g. server restarted)
+            // is dropped so we recreate cleanly below.
+            if not FConnections[I].Connected then
+            try
+              FConnections[I].Open;
+            except
+              FreeAndNil(FConnections[I]);
+            end;
+          end;
+
+          if not Assigned(FConnections[I]) then
+          begin
+            FLock.Enter;
+            try
+              Provider := FConnectionProvider;
+            finally
+              FLock.Leave;
+            end;
+
+            if Assigned(Provider) then
+              FConnections[I] := Provider()
+            else
+              FConnections[I] := TDBConnectionFactory.GetShared;
+
+            if not Assigned(FConnections[I]) then
+              raise EDatabaseException.Create(
+                'Job queue connection provider returned nil');
+          end;
+
+          FConnInUse[I] := True;
+          Result := FConnections[I];
+          Found := True;
+          Break;
+        end;
       end;
+    finally
+      FConnLock.Leave;
     end;
 
-    if not Assigned(FCachedConnection) then
-    begin
-      FLock.Enter;
-      try
-        Provider := FConnectionProvider;
-      finally
-        FLock.Leave;
-      end;
+    if Found then
+      Exit;
 
-      if Assigned(Provider) then
-        FCachedConnection := Provider()
-      else
-        FCachedConnection := TDBConnectionFactory.GetShared;
+    // All slots are in use — wait for a release signal and retry.
+    Inc(RetryCount);
+    if RetryCount > CONN_ACQUIRE_MAX_RETRIES then
+      raise EDatabaseException.Create(
+        'Job queue connection pool exhausted');
 
-      if not Assigned(FCachedConnection) then
-        raise EDatabaseException.Create('Job queue connection provider returned nil');
-    end;
-
-    Result := FCachedConnection;
-  except
-    // On any failure during acquisition we must release the lock so we
-    // don't leave it stuck for the next caller.
-    FConnLock.Leave;
-    raise;
+    FConnAvailableEvent.WaitFor(CONN_ACQUIRE_TIMEOUT_MS);
   end;
 end;
 
 class procedure TJobQueue.ReleaseConnection(AConnection: TFDConnection);
+var
+  I, J: Integer;
+  Found: Boolean;
+  AllNil: Boolean;
 begin
-  // Connection is owned by the cache; do not free here. Just release the
-  // serializing lock taken by AcquireConnection.
-  FConnLock.Leave;
+  // Return the connection to its pool slot. If a pool reset was requested
+  // (SetConnectionProvider / Clear), free the connection instead so the
+  // pool is fully drained once all in-flight operations complete.
+  FConnLock.Enter;
+  try
+    Found := False;
+    for I := 0 to JOB_QUEUE_POOL_SIZE - 1 do
+    begin
+      if FConnections[I] = AConnection then
+      begin
+        FConnInUse[I] := False;
+        if FResetRequested then
+        begin
+          FreeAndNil(FConnections[I]);
+          // When every slot has been drained, clear the reset flag so
+          // subsequent AcquireConnection calls rebuild the pool.
+          AllNil := True;
+          for J := 0 to JOB_QUEUE_POOL_SIZE - 1 do
+          begin
+            if FConnections[J] <> nil then
+            begin
+              AllNil := False;
+              Break;
+            end;
+          end;
+          if AllNil then
+            FResetRequested := False;
+        end;
+        Found := True;
+        Break;
+      end;
+    end;
+    if Found then
+      FConnAvailableEvent.SetEvent;
+  finally
+    FConnLock.Leave;
+  end;
+
+  // Connection not found in the pool — orphan from a provider change.
+  // Free it here to avoid a leak.
+  if (not Found) and Assigned(AConnection) then
+    AConnection.Free;
 end;
 
 class procedure TJobQueue.ResetCachedConnection;
+var
+  I: Integer;
 begin
+  // Free all idle connections immediately. In-use connections will be
+  // freed by ReleaseConnection when the owning operation completes (the
+  // FResetRequested flag tells ReleaseConnection to free rather than
+  // return the slot to the pool).
   FConnLock.Enter;
   try
-    FreeAndNil(FCachedConnection);
+    for I := 0 to JOB_QUEUE_POOL_SIZE - 1 do
+    begin
+      if not FConnInUse[I] then
+        FreeAndNil(FConnections[I]);
+    end;
+    FResetRequested := True;
   finally
     FConnLock.Leave;
   end;

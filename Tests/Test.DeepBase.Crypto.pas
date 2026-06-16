@@ -971,7 +971,7 @@ end;
 
 procedure TAESCryptoTests.Setup;
 begin
-  // Use default constructor parameters (aes256, aesCBC)
+  // Use default constructor parameters (aes256, aesGCM)
   FAES := TAESCrypto.Create;
 end;
 
@@ -983,9 +983,9 @@ end;
 procedure TAESCryptoTests.Test_Create;
 begin
   Assert.IsNotNull(FAES);
-  // Default constructor should use AES-256 CBC
+  // Default constructor should use AES-256 GCM
   Assert.IsTrue(FAES.KeySize = aes256);
-  Assert.IsTrue(FAES.Mode = aesCBC);
+  Assert.IsTrue(FAES.Mode = aesGCM);
 end;
 
 procedure TAESCryptoTests.Test_GenerateKey;

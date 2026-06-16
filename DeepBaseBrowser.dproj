@@ -1,10 +1,10 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{7C08D6C9-07C5-4533-8D0B-290046B3C262}</ProjectGuid>
-        <MainSource>DeepBaseFeatures.dpk</MainSource>
+        <ProjectGuid>{A1B2C3D4-3333-4A33-B333-333333333333}</ProjectGuid>
+        <MainSource>DeepBaseBrowser.dpk</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
-        <ProjectName Condition="'$(ProjectName)'==''">DeepBaseFeatures</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">DeepBaseBrowser</ProjectName>
         <TargetedPlatforms>1741953</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
@@ -62,30 +62,6 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Android64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Android64)'!=''">
-        <Cfg_2_Android64>true</Cfg_2_Android64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='iOSDevice64' and '$(Cfg_2)'=='true') or '$(Cfg_2_iOSDevice64)'!=''">
-        <Cfg_2_iOSDevice64>true</Cfg_2_iOSDevice64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='OSX64' and '$(Cfg_2)'=='true') or '$(Cfg_2_OSX64)'!=''">
-        <Cfg_2_OSX64>true</Cfg_2_OSX64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='OSXARM64' and '$(Cfg_2)'=='true') or '$(Cfg_2_OSXARM64)'!=''">
-        <Cfg_2_OSXARM64>true</Cfg_2_OSXARM64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_E>false</DCC_E>
         <DCC_F>false</DCC_F>
@@ -95,8 +71,8 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <GenDll>true</GenDll>
         <GenPackage>true</GenPackage>
-        <SanitizedProjectName>DeepBaseFeatures</SanitizedProjectName>
-        <DCC_Description>DeepBase Features Meta-Package</DCC_Description>
+        <SanitizedProjectName>DeepBaseBrowser</SanitizedProjectName>
+        <DCC_Description>DeepBase Browser Automation Runtime Package</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <VerInfo_Locale>2052</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
@@ -133,31 +109,29 @@
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_Android64)'!=''">
-        <BT_BuildType>Debug</BT_BuildType>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_iOSDevice64)'!=''">
-        <BT_BuildType>Debug</BT_BuildType>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_OSX64)'!=''">
-        <BT_BuildType>Debug</BT_BuildType>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_OSXARM64)'!=''">
-        <BT_BuildType>Debug</BT_BuildType>
-    </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="DeepBaseCore.dcp"/>
-        <DCCReference Include="DeepBaseLLM.dcp"/>
-        <DCCReference Include="DeepBaseIntentClarification.dcp"/>
-        <DCCReference Include="DeepBaseBrowser.dcp"/>
-        <DCCReference Include="DeepBaseCommerce.dcp"/>
-        <DCCReference Include="DeepBaseInference.dcp"/>
-        <DCCReference Include="DeepBaseSpeechCore.dcp"/>
-        <DCCReference Include="DeepBasePlatform.dcp"/>
+        <DCCReference Include="Features\DeepBase.BrowserAutomation.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Types.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Registry.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Recovery.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.ResponseWaiter.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Session.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.CDP.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Service.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Events.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Selectors.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.WindowPool.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.Vision.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.ScriptStore.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.AutomationAdapter.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.PageDriver.pas"/>
+        <DCCReference Include="Features\DeepBase.Browser.IoC.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -176,7 +150,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">DeepBaseFeatures.dpk</Source>
+                    <Source Name="MainSource">DeepBaseBrowser.dpk</Source>
                 </Source>
             </Delphi.Personality>
             <Platforms>

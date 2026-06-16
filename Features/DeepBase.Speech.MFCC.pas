@@ -7,6 +7,7 @@
                 Input: 16 kHz PCM16 mono audio.
                 Output: 13 MFCC coefficients per frame (+ delta + delta-delta = 39 dim).
   Parameters  : Frame 25ms / Hop 10ms / Hamming window / 40 Mel filters / 13 coeffs
+                Pre-emphasis 0.97 / Sine liftering 22 / Delta N=2
   ============================================================================ }
 
 unit DeepBase.Speech.MFCC;
@@ -17,8 +18,10 @@ uses
   System.SysUtils, System.Math;
 
 type
-  TMFCCFrame = array[0..12] of Single;  // 13 coefficients
+  TMFCCFrame = array[0..12] of Single;  // 13 static coefficients
   TMFCCFeatures = TArray<TMFCCFrame>;
+  TMFCCFullFrame = array[0..38] of Single;  // [static(13) | delta(13) | delta-delta(13)]
+  TMFCCFullFeatures = TArray<TMFCCFullFrame>;
 
   TMFCCExtractor = class
   private
@@ -28,6 +31,8 @@ type
     FFFTSize: Integer;     // next power of 2 >= FFrameSize (e.g. 512)
     FNumFilters: Integer;  // 40 Mel filters
     FNumCoeffs: Integer;   // 13 MFCC coefficients
+    FPreEmphasisCoeff: Single;  // pre-emphasis filter coefficient (default 0.97)
+    FLifterCoeff: Integer;      // sine liftering coefficient (default 22)
     FHammingWindow: TArray<Single>;
     FMelFilterBank: TArray<TArray<Single>>;
     procedure InitHammingWindow;
@@ -38,6 +43,9 @@ type
     function ComputeFFT(const AFrame: TArray<Single>): TArray<Single>;
     function ApplyMelFilters(const APowerSpectrum: TArray<Single>): TArray<Single>;
     function ApplyDCT(const ALogMelEnergies: TArray<Single>): TMFCCFrame;
+    procedure ApplyLiftering(var AFrame: TMFCCFrame);
+    class procedure ComputeDeltas(const AStaticFrames: TArray<TMFCCFrame>;
+      out ADelta, ADeltaDelta: TArray<TMFCCFrame>);
   public
     /// <summary>
     /// In-place iterative radix-2 Cooley-Tukey FFT. Both arrays must have
@@ -54,9 +62,18 @@ type
     /// <summary>
     /// Extract MFCC features from PCM16 audio data.
     /// Input: raw PCM16 bytes (16-bit signed, mono, 16kHz).
-    /// Output: array of 13-dim MFCC frames.
+    /// Output: array of 13-dim MFCC frames (static coefficients only).
+    /// Pipeline: pre-emphasis -> framing -> Hamming -> FFT -> Mel filters -> DCT -> liftering.
     /// </summary>
     function Extract(const APCM16: TBytes): TMFCCFeatures;
+
+    /// <summary>
+    /// Extract full MFCC features: static + delta + delta-delta = 39 dimensions.
+    /// Pipeline: pre-emphasis -> framing -> Hamming -> FFT -> Mel filters -> DCT
+    ///           -> liftering -> delta -> delta-delta.
+    /// Uses regression window N=2 for delta computation.
+    /// </summary>
+    function ExtractFull(const APCM16: TBytes): TMFCCFullFeatures;
 
     /// <summary>
     /// Compute mean vector across all frames (for enrollment).
@@ -67,6 +84,8 @@ type
     property FrameSize: Integer read FFrameSize;
     property HopSize: Integer read FHopSize;
     property FFTSize: Integer read FFFTSize;
+    property PreEmphasisCoeff: Single read FPreEmphasisCoeff write FPreEmphasisCoeff;
+    property LifterCoeff: Integer read FLifterCoeff write FLifterCoeff;
   end;
 
 implementation
@@ -80,6 +99,8 @@ begin
   FFFTSize := NextPow2(FFrameSize);          // pad up to next power of 2
   FNumFilters := 40;
   FNumCoeffs := 13;
+  FPreEmphasisCoeff := 0.97;
+  FLifterCoeff := 22;
   InitHammingWindow;
   InitMelFilterBank;
 end;
@@ -298,6 +319,83 @@ begin
   end;
 end;
 
+procedure TMFCCExtractor.ApplyLiftering(var AFrame: TMFCCFrame);
+var
+  I: Integer;
+  LFactor: Single;
+begin
+  // Sine liftering: c'[n] = c[n] * (1 + (L/2) * sin(pi * n / L))
+  // Improves robustness of cepstral coefficients by de-emphasizing high-order coeffs
+  if FLifterCoeff <= 0 then
+    Exit;
+  for I := 0 to FNumCoeffs - 1 do
+  begin
+    LFactor := 1.0 + (FLifterCoeff / 2.0) * Sin(Pi * I / FLifterCoeff);
+    AFrame[I] := AFrame[I] * LFactor;
+  end;
+end;
+
+class procedure TMFCCExtractor.ComputeDeltas(const AStaticFrames: TArray<TMFCCFrame>;
+  out ADelta, ADeltaDelta: TArray<TMFCCFrame>;
+const
+  N = 2;  // regression window
+var
+  LNumFrames, I, J, K: Integer;
+  LNorm: Single;
+  LIdx: Integer;
+  LVal: Single;
+begin
+  LNumFrames := Length(AStaticFrames);
+  LNorm := 0;
+  for K := 1 to N do
+    LNorm := LNorm + K * K;
+  LNorm := 2.0 * LNorm;  // denominator = 2 * sum(k^2)
+
+  SetLength(ADelta, LNumFrames);
+  SetLength(ADeltaDelta, LNumFrames);
+
+  // Compute delta via linear regression over context window
+  for I := 0 to LNumFrames - 1 do
+  begin
+    for J := 0 to 12 do
+    begin
+      LVal := 0;
+      for K := 1 to N do
+      begin
+        // Clamp indices to frame boundaries (reflect-style padding)
+        LIdx := I + K;
+        if LIdx >= LNumFrames then LIdx := LNumFrames - 1;
+        LVal := LVal + K * AStaticFrames[LIdx][J];
+
+        LIdx := I - K;
+        if LIdx < 0 then LIdx := 0;
+        LVal := LVal - K * AStaticFrames[LIdx][J];
+      end;
+      ADelta[I][J] := LVal / LNorm;
+    end;
+  end;
+
+  // Compute delta-delta from delta coefficients
+  for I := 0 to LNumFrames - 1 do
+  begin
+    for J := 0 to 12 do
+    begin
+      LVal := 0;
+      for K := 1 to N do
+      begin
+        LIdx := I + K;
+        if LIdx >= LNumFrames then LIdx := LNumFrames - 1;
+        LVal := LVal + K * ADelta[LIdx][J];
+
+        LIdx := I - K;
+        if LIdx < 0 then LIdx := 0;
+        LVal := LVal - K * ADelta[LIdx][J];
+      end;
+      ADeltaDelta[I][J] := LVal / LNorm;
+    end;
+  end;
+end;
+
 function TMFCCExtractor.Extract(const APCM16: TBytes): TMFCCFeatures;
 var
   LSamples: TArray<Single>;
@@ -311,6 +409,16 @@ begin
   SetLength(LSamples, LNumSamples);
   for I := 0 to LNumSamples - 1 do
     LSamples[I] := SmallInt(APCM16[I * 2] or (APCM16[I * 2 + 1] shl 8)) / 32768.0;
+
+  // Apply pre-emphasis filter: y[n] = x[n] - coeff * x[n-1]
+  // FIR filter using original x[n-1]; process backwards for in-place correctness
+  // so that x[n-1] is read before it gets overwritten by y[n-1].
+  if FPreEmphasisCoeff <> 0 then
+  begin
+    for I := LNumSamples - 1 downto 1 do
+      LSamples[I] := LSamples[I] - FPreEmphasisCoeff * LSamples[I - 1];
+    LSamples[0] := LSamples[0] * (1.0 - FPreEmphasisCoeff);
+  end;
 
   // Calculate number of frames
   if LNumSamples < FFrameSize then
@@ -333,9 +441,42 @@ begin
     LPower := ComputeFFT(LFrame);
     LMelEnergies := ApplyMelFilters(LPower);
     LFrameList[I] := ApplyDCT(LMelEnergies);
+    ApplyLiftering(LFrameList[I]);
   end;
 
   Result := LFrameList;
+end;
+
+function TMFCCExtractor.ExtractFull(const APCM16: TBytes): TMFCCFullFeatures;
+var
+  LStaticFrames: TMFCCFeatures;
+  LDelta, LDeltaDelta: TArray<TMFCCFrame>;
+  LNumFrames, I, J: Integer;
+begin
+  // Get static coefficients (includes pre-emphasis + liftering)
+  LStaticFrames := Extract(APCM16);
+  LNumFrames := Length(LStaticFrames);
+
+  if LNumFrames = 0 then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+
+  // Compute delta and delta-delta via regression
+  ComputeDeltas(LStaticFrames, LDelta, LDeltaDelta);
+
+  // Concatenate: [static | delta | delta-delta] = 39 dimensions
+  SetLength(Result, LNumFrames);
+  for I := 0 to LNumFrames - 1 do
+  begin
+    for J := 0 to 12 do
+    begin
+      Result[I][J]      := LStaticFrames[I][J];       // static: indices 0..12
+      Result[I][J + 13] := LDelta[I][J];              // delta: indices 13..25
+      Result[I][J + 26] := LDeltaDelta[I][J];         // delta-delta: indices 26..38
+    end;
+  end;
 end;
 
 class function TMFCCExtractor.MeanVector(const AFeatures: TMFCCFeatures): TMFCCFrame;

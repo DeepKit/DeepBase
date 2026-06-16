@@ -39,6 +39,7 @@ type
   private
     FRootPath: string;
     FConfigGroups: TStringList;
+    FConfigValues: TStringList;
     procedure LoadConfigGroups;
   public
     constructor Create;
@@ -65,11 +66,13 @@ constructor TCtrlMain.Create;
 begin
   inherited Create;
   FConfigGroups := TStringList.Create;
+  FConfigValues := TStringList.Create;
   FRootPath := '';
 end;
 
 destructor TCtrlMain.Destroy;
 begin
+  FConfigValues.Free;
   FConfigGroups.Free;
   inherited Destroy;
 end;
@@ -156,8 +159,13 @@ begin
 end;
 
 function TCtrlMain.GetConfigValue(const AKey: string): string;
+var
+  Idx: Integer;
 begin
-  if AKey = 'App.Name' then
+  Idx := FConfigValues.IndexOfName(AKey);
+  if Idx >= 0 then
+    Result := FConfigValues.ValueFromIndex[Idx]
+  else if AKey = 'App.Name' then
     Result := 'DeepBaseRun'
   else if AKey = 'App.Version' then
     Result := '0.1.0-dev'
@@ -174,9 +182,16 @@ begin
 end;
 
 procedure TCtrlMain.SetConfigValue(const AKey, AValue: string);
+var
+  Idx: Integer;
 begin
   if ValidateConfig(AKey, AValue) then
   begin
+    Idx := FConfigValues.IndexOfName(AKey);
+    if Idx >= 0 then
+      FConfigValues.ValueFromIndex[Idx] := AValue
+    else
+      FConfigValues.Values[AKey] := AValue;
   end;
 end;
 

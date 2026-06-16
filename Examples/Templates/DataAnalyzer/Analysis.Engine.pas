@@ -152,7 +152,7 @@ class function TAnalysisEngine.CalculateStats(const Values: TArray<Double>): TSt
 var
   SortedValues: TArray<Double>;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TTrendResult);
   
   if Length(Values) = 0 then
     Exit;
@@ -341,7 +341,7 @@ var
   SSTotal, SSResidual: Double;
   Predicted: Double;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TTrendResult);
   
   N := Length(X);
   if (N < 2) or (N <> Length(Y)) then

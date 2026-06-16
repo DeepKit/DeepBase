@@ -37,6 +37,11 @@ contains
   DeepBase.Speech.Config in 'Features\DeepBase.Speech.Config.pas',
   DeepBase.Speech.Policy in 'Features\DeepBase.Speech.Policy.pas',
   DeepBase.Speech.Runtime in 'Features\DeepBase.Speech.Runtime.pas',
-  DeepBase.Speech.Intent in 'Features\DeepBase.Speech.Intent.pas';
+  DeepBase.Speech.Intent in 'Features\DeepBase.Speech.Intent.pas',
+  DeepBase.Speech.Types in 'Features\DeepBase.Speech.Types.pas',
+  DeepBase.Speech.VAD in 'Features\DeepBase.Speech.VAD.pas',
+  DeepBase.Speech.Audio.WinMM in 'Features\DeepBase.Speech.Audio.WinMM.pas',
+  DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
+  DeepBase.Speech.Service in 'Features\DeepBase.Speech.Service.pas';
 
 end.

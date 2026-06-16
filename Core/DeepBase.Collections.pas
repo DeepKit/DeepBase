@@ -20,7 +20,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.Generics.Defaults, System.SyncObjs;
+  System.Generics.Defaults, System.SyncObjs, System.Math;
 
 type
   ECollectionException = class(Exception);
@@ -1972,23 +1972,46 @@ begin
 end;
 
 function TBlockingQueue<T>.TryDequeue(out AItem: T; ATimeoutMs: Cardinal): Boolean;
+var
+  LDeadline: TDateTime;
+  LRemainingMs: Cardinal;
 begin
-  if ATimeoutMs > 0 then
-    FNotEmpty.WaitFor(ATimeoutMs);
-    
-  FLock.Enter;
-  try
-    Result := FItems.Count > 0;
-    if Result then
-    begin
-      AItem := FItems[0];
-      FItems.Delete(0);
-      
-      if FItems.Count = 0 then
-        FNotEmpty.ResetEvent;
+  LDeadline := 0;
+  if (ATimeoutMs > 0) and (ATimeoutMs <> INFINITE) then
+    LDeadline := Now + (ATimeoutMs / MSecsPerDay);
+
+  while True do
+  begin
+    FLock.Enter;
+    try
+      if FItems.Count > 0 then
+      begin
+        AItem := FItems[0];
+        FItems.Delete(0);
+        if FItems.Count = 0 then
+          FNotEmpty.ResetEvent;
+        Exit(True);
+      end;
+
+      // Queue empty — exit if timeout already elapsed
+      if ATimeoutMs = 0 then
+        Exit(False);
+
+      if ATimeoutMs <> INFINITE then
+      begin
+        LRemainingMs := Max(1, Cardinal(Round((LDeadline - Now) * MSecsPerDay)));
+        if LRemainingMs = 0 then
+          Exit(False);
+      end;
+    finally
+      FLock.Leave;
     end;
-  finally
-    FLock.Leave;
+
+    // Wait outside the lock for producer signal
+    if ATimeoutMs = INFINITE then
+      FNotEmpty.WaitFor(INFINITE)
+    else
+      FNotEmpty.WaitFor(LRemainingMs);
   end;
 end;
 

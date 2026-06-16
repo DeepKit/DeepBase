@@ -1,0 +1,49 @@
+package DeepBaseCommerce;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Commerce Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  DeepBaseCore,
+  DeepBaseServices;
+
+contains
+  DeepBase.Net.Transport in 'Features\DeepBase.Net.Transport.pas',
+  DeepBase.Commerce.Types in 'Features\DeepBase.Commerce.Types.pas',
+  DeepBase.Commerce.JsonUtil in 'Features\DeepBase.Commerce.JsonUtil.pas',
+  DeepBase.Commerce.Idempotency in 'Features\DeepBase.Commerce.Idempotency.pas',
+  DeepBase.Commerce.Storage in 'Features\DeepBase.Commerce.Storage.pas',
+  DeepBase.Commerce.Service in 'Features\DeepBase.Commerce.Service.pas',
+  DeepBase.Commerce.Backend.Contract in 'Features\DeepBase.Commerce.Backend.Contract.pas',
+  DeepBase.Commerce.Backend.Http in 'Features\DeepBase.Commerce.Backend.Http.pas',
+  DeepBase.Commerce.SafeClient in 'Features\DeepBase.Commerce.SafeClient.pas',
+  DeepBase.Commerce.Permissions in 'Features\DeepBase.Commerce.Permissions.pas',
+  DeepBase.Commerce.UpgradeFlow in 'Features\DeepBase.Commerce.UpgradeFlow.pas';
+
+end.

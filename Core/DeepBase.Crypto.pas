@@ -214,6 +214,11 @@ function CryptGetHashParam(hHash: HCRYPTHASH; dwParam: DWORD; pbData: PByte;
   var pdwDataLen: DWORD; dwFlags: DWORD): BOOL; stdcall; external CRYPTOAPI_DLL;
 {$ENDIF}
 
+// Cross-platform GCM parameters (match BCrypt constants on Windows)
+const
+  AES_GCM_NONCE_SIZE = 12;
+  AES_GCM_TAG_SIZE = 16;
+
 /// <summary>
 /// Standalone convenience function returning cryptographically secure random bytes.
 /// Delegates to TRandomGenerator.RandomBytes — use this when a class reference is
@@ -378,7 +383,7 @@ type
   end;
 
   /// <summary>AES encryption mode</summary>
-  TAESMode = (aesECB, aesCBC, aesCFB, aesOFB, aesCTR);
+  TAESMode = (aesECB, aesCBC, aesCFB, aesOFB, aesCTR, aesGCM);
 
   /// <summary>AES key size</summary>
   TAESKeySize = (aes128, aes192, aes256);
@@ -398,7 +403,7 @@ type
     function GetKey: TBytes;
     function GetIV: TBytes;
   public
-    constructor Create(AKeySize: TAESKeySize = aes256; AMode: TAESMode = aesCBC);
+    constructor Create(AKeySize: TAESKeySize = aes256; AMode: TAESMode = aesGCM);
     destructor Destroy; override;
     
     /// <summary>Set key from bytes</summary>
@@ -415,6 +420,9 @@ type
     
     /// <summary>Generate random IV</summary>
     procedure GenerateIV;
+
+    /// <summary>Generate random 12-byte nonce for GCM mode</summary>
+    function GenerateNonce: TBytes;
     
     /// <summary>Encrypt bytes</summary>
     function Encrypt(const AData: TBytes): TBytes;
@@ -1414,6 +1422,11 @@ begin
   FIV := TRandomGenerator.RandomBytes(GetBlockSize);
 end;
 
+function TAESCrypto.GenerateNonce: TBytes;
+begin
+  Result := TRandomGenerator.RandomBytes(AES_GCM_NONCE_SIZE);
+end;
+
 function TAESCrypto.PadData(const AData: TBytes): TBytes;
 var
   LPadLen: Integer;
@@ -1458,63 +1471,111 @@ var
   LPadded: TBytes;
   LStatus: NTSTATUS;
   LChainMode: WideString;
+  LNonce, LTag, LCipher: TBytes;
+  LAuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
 begin
   LAlgHandle := 0;
   LKeyHandle := 0;
-  
+
   try
     // Open AES algorithm provider
     LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
     if LStatus <> STATUS_SUCCESS then
       raise ECryptoException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [LStatus]);
-      
-    // Set CBC chaining mode
-    LChainMode := BCRYPT_CHAIN_MODE_CBC;
-    LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
-      PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
-      
-    // Get key object size
-    LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
-      @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
-      
-    // Allocate key object
-    SetLength(LKeyObject, LKeyObjectSize);
-    
-    // Generate symmetric key
-    LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
-      @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
-      
-    // Pad data manually (PKCS7)
-    LPadded := PadData(AData);
-    
-    // Copy IV (BCrypt modifies it)
-    LIVCopy := Copy(FIV);
-    
-    // Get output size
-    LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
-      nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptEncrypt (size query) failed: %d', [LStatus]);
-      
-    // Allocate output buffer
-    SetLength(Result, LResultSize);
-    
-    // Reset IV copy
-    LIVCopy := Copy(FIV);
-    
-    // Perform encryption
-    LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
-      nil, @LIVCopy[0], Length(LIVCopy), @Result[0], LResultSize, LResultSize, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptEncrypt failed: %d', [LStatus]);
-      
-    SetLength(Result, LResultSize);
+
+    if FMode = aesGCM then
+    begin
+      // --- GCM authenticated encryption ---
+      LChainMode := BCRYPT_CHAIN_MODE_GCM;
+      LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+        PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode GCM) failed: %d', [LStatus]);
+
+      LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+        @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+
+      SetLength(LKeyObject, LKeyObjectSize);
+      LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+        @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+
+      // Generate random 12-byte nonce
+      LNonce := TRandomGenerator.RandomBytes(AES_GCM_NONCE_SIZE);
+
+      // Prepare tag buffer
+      SetLength(LTag, AES_GCM_TAG_SIZE);
+
+      // Initialize authenticated cipher mode info
+      FillChar(LAuthInfo, SizeOf(LAuthInfo), 0);
+      LAuthInfo.cbSize := SizeOf(BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO);
+      LAuthInfo.dwInfoVersion := BCRYPT_INIT_AUTH_MODE_INFO_VERSION;
+      LAuthInfo.pbNonce := @LNonce[0];
+      LAuthInfo.cbNonce := AES_GCM_NONCE_SIZE;
+      LAuthInfo.pbTag := @LTag[0];
+      LAuthInfo.cbTag := AES_GCM_TAG_SIZE;
+
+      // GCM: no padding, output size = input size
+      SetLength(LCipher, Length(AData));
+      if Length(AData) > 0 then
+        LStatus := BCryptEncrypt(LKeyHandle, @AData[0], Length(AData),
+          @LAuthInfo, nil, 0, @LCipher[0], Length(LCipher), LResultSize, 0)
+      else
+        LStatus := BCryptEncrypt(LKeyHandle, nil, 0,
+          @LAuthInfo, nil, 0, nil, 0, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptEncrypt GCM failed: %d', [LStatus]);
+
+      SetLength(LCipher, LResultSize);
+
+      // Output format: Nonce(12) + CipherText + Tag(16)
+      SetLength(Result, AES_GCM_NONCE_SIZE + Length(LCipher) + AES_GCM_TAG_SIZE);
+      Move(LNonce[0], Result[0], AES_GCM_NONCE_SIZE);
+      if Length(LCipher) > 0 then
+        Move(LCipher[0], Result[AES_GCM_NONCE_SIZE], Length(LCipher));
+      Move(LTag[0], Result[AES_GCM_NONCE_SIZE + Length(LCipher)], AES_GCM_TAG_SIZE);
+    end
+    else
+    begin
+      // --- Non-GCM modes (CBC, CFB, etc.) ---
+      LChainMode := BCRYPT_CHAIN_MODE_CBC;
+      LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+        PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
+
+      LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+        @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+
+      SetLength(LKeyObject, LKeyObjectSize);
+      LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+        @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+
+      LPadded := PadData(AData);
+      LIVCopy := Copy(FIV);
+
+      LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
+        nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptEncrypt (size query) failed: %d', [LStatus]);
+
+      SetLength(Result, LResultSize);
+      LIVCopy := Copy(FIV);
+
+      LStatus := BCryptEncrypt(LKeyHandle, @LPadded[0], Length(LPadded),
+        nil, @LIVCopy[0], Length(LIVCopy), @Result[0], LResultSize, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptEncrypt failed: %d', [LStatus]);
+
+      SetLength(Result, LResultSize);
+    end;
   finally
     if LKeyHandle <> 0 then
       BCryptDestroyKey(LKeyHandle);
@@ -1525,9 +1586,26 @@ end;
 {$ELSE}
 var
   LPadded: TBytes;
+  LNonce, LTag, LCipher: TBytes;
 begin
-  LPadded := PadData(AData);
-  Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Encrypt(FKey, FIV, LPadded);
+  if FMode = aesGCM then
+  begin
+    // GCM authenticated encryption via OpenSSL
+    LNonce := TRandomGenerator.RandomBytes(AES_GCM_NONCE_SIZE);
+    LCipher := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Encrypt(FKey, LNonce, AData, nil, LTag);
+
+    // Output format: Nonce(12) + CipherText + Tag(16)
+    SetLength(Result, AES_GCM_NONCE_SIZE + Length(LCipher) + AES_GCM_TAG_SIZE);
+    Move(LNonce[0], Result[0], AES_GCM_NONCE_SIZE);
+    if Length(LCipher) > 0 then
+      Move(LCipher[0], Result[AES_GCM_NONCE_SIZE], Length(LCipher));
+    Move(LTag[0], Result[AES_GCM_NONCE_SIZE + Length(LCipher)], AES_GCM_TAG_SIZE);
+  end
+  else
+  begin
+    LPadded := PadData(AData);
+    Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Encrypt(FKey, FIV, LPadded);
+  end;
 end;
 {$ENDIF}
 
@@ -1542,64 +1620,121 @@ var
   LStatus: NTSTATUS;
   LChainMode: WideString;
   LDecrypted: TBytes;
+  LNonce, LTag, LCipher: TBytes;
+  LAuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
+  LCipherLen: Integer;
 begin
-  if Length(AData) mod 16 <> 0 then
-    raise ECryptoException.Create('Invalid ciphertext length');
-    
   LAlgHandle := 0;
   LKeyHandle := 0;
-  
+
   try
     // Open AES algorithm provider
     LStatus := BCryptOpenAlgorithmProvider(LAlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
     if LStatus <> STATUS_SUCCESS then
       raise ECryptoException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [LStatus]);
-      
-    // Set CBC chaining mode
-    LChainMode := BCRYPT_CHAIN_MODE_CBC;
-    LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
-      PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
-      
-    // Get key object size
-    LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
-      @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
-      
-    // Allocate key object
-    SetLength(LKeyObject, LKeyObjectSize);
-    
-    // Generate symmetric key
-    LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
-      @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
-      
-    // Copy IV (BCrypt modifies it)
-    LIVCopy := Copy(FIV);
-    
-    // Get output size
-    LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
-      nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptDecrypt (size query) failed: %d', [LStatus]);
-      
-    // Allocate output buffer
-    SetLength(LDecrypted, LResultSize);
-    
-    // Reset IV copy
-    LIVCopy := Copy(FIV);
-    
-    // Perform decryption
-    LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
-      nil, @LIVCopy[0], Length(LIVCopy), @LDecrypted[0], LResultSize, LResultSize, 0);
-    if LStatus <> STATUS_SUCCESS then
-      raise ECryptoException.CreateFmt('BCryptDecrypt failed: %d', [LStatus]);
-      
-    SetLength(LDecrypted, LResultSize);
-    Result := UnpadData(LDecrypted);
+
+    if FMode = aesGCM then
+    begin
+      // --- GCM authenticated decryption ---
+      // Input format: Nonce(12) + CipherText + Tag(16)
+      if Length(AData) < AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE then
+        raise ECryptoException.Create('Invalid GCM ciphertext length');
+
+      // Extract nonce from beginning
+      SetLength(LNonce, AES_GCM_NONCE_SIZE);
+      Move(AData[0], LNonce[0], AES_GCM_NONCE_SIZE);
+
+      // Extract tag from end
+      SetLength(LTag, AES_GCM_TAG_SIZE);
+      Move(AData[Length(AData) - AES_GCM_TAG_SIZE], LTag[0], AES_GCM_TAG_SIZE);
+
+      // Extract ciphertext from middle
+      LCipherLen := Length(AData) - AES_GCM_NONCE_SIZE - AES_GCM_TAG_SIZE;
+      SetLength(LCipher, LCipherLen);
+      if LCipherLen > 0 then
+        Move(AData[AES_GCM_NONCE_SIZE], LCipher[0], LCipherLen);
+
+      LChainMode := BCRYPT_CHAIN_MODE_GCM;
+      LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+        PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode GCM) failed: %d', [LStatus]);
+
+      LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+        @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+
+      SetLength(LKeyObject, LKeyObjectSize);
+      LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+        @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+
+      // Initialize authenticated cipher mode info
+      FillChar(LAuthInfo, SizeOf(LAuthInfo), 0);
+      LAuthInfo.cbSize := SizeOf(BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO);
+      LAuthInfo.dwInfoVersion := BCRYPT_INIT_AUTH_MODE_INFO_VERSION;
+      LAuthInfo.pbNonce := @LNonce[0];
+      LAuthInfo.cbNonce := AES_GCM_NONCE_SIZE;
+      LAuthInfo.pbTag := @LTag[0];
+      LAuthInfo.cbTag := AES_GCM_TAG_SIZE;
+
+      // GCM: output size = ciphertext size (no padding)
+      SetLength(LDecrypted, LCipherLen);
+      if LCipherLen > 0 then
+        LStatus := BCryptDecrypt(LKeyHandle, @LCipher[0], LCipherLen,
+          @LAuthInfo, nil, 0, @LDecrypted[0], Length(LDecrypted), LResultSize, 0)
+      else
+        LStatus := BCryptDecrypt(LKeyHandle, nil, 0,
+          @LAuthInfo, nil, 0, nil, 0, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptDecrypt GCM failed (tag mismatch?): %d', [LStatus]);
+
+      SetLength(LDecrypted, LResultSize);
+      Result := LDecrypted;
+    end
+    else
+    begin
+      // --- Non-GCM modes (CBC, etc.) ---
+      if Length(AData) mod 16 <> 0 then
+        raise ECryptoException.Create('Invalid ciphertext length');
+
+      LChainMode := BCRYPT_CHAIN_MODE_CBC;
+      LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
+        PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptSetProperty (ChainMode) failed: %d', [LStatus]);
+
+      LStatus := BCryptGetProperty(LAlgHandle, BCRYPT_OBJECT_LENGTH,
+        @LKeyObjectSize, SizeOf(LKeyObjectSize), LBlockLen, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGetProperty failed: %d', [LStatus]);
+
+      SetLength(LKeyObject, LKeyObjectSize);
+      LStatus := BCryptGenerateSymmetricKey(LAlgHandle, LKeyHandle,
+        @LKeyObject[0], LKeyObjectSize, @FKey[0], Length(FKey), 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
+
+      LIVCopy := Copy(FIV);
+
+      LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
+        nil, @LIVCopy[0], Length(LIVCopy), nil, 0, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptDecrypt (size query) failed: %d', [LStatus]);
+
+      SetLength(LDecrypted, LResultSize);
+      LIVCopy := Copy(FIV);
+
+      LStatus := BCryptDecrypt(LKeyHandle, @AData[0], Length(AData),
+        nil, @LIVCopy[0], Length(LIVCopy), @LDecrypted[0], LResultSize, LResultSize, 0);
+      if LStatus <> STATUS_SUCCESS then
+        raise ECryptoException.CreateFmt('BCryptDecrypt failed: %d', [LStatus]);
+
+      SetLength(LDecrypted, LResultSize);
+      Result := UnpadData(LDecrypted);
+    end;
   finally
     if LKeyHandle <> 0 then
       BCryptDestroyKey(LKeyHandle);
@@ -1610,11 +1745,36 @@ end;
 {$ELSE}
 var
   LDecrypted: TBytes;
+  LNonce, LTag, LCipher: TBytes;
+  LCipherLen: Integer;
 begin
-  if Length(AData) mod 16 <> 0 then
-    raise ECryptoException.Create('Invalid ciphertext length');
-  LDecrypted := DeepBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Decrypt(FKey, FIV, AData);
-  Result := UnpadData(LDecrypted);
+  if FMode = aesGCM then
+  begin
+    // GCM authenticated decryption via OpenSSL
+    // Input format: Nonce(12) + CipherText + Tag(16)
+    if Length(AData) < AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE then
+      raise ECryptoException.Create('Invalid GCM ciphertext length');
+
+    SetLength(LNonce, AES_GCM_NONCE_SIZE);
+    Move(AData[0], LNonce[0], AES_GCM_NONCE_SIZE);
+
+    SetLength(LTag, AES_GCM_TAG_SIZE);
+    Move(AData[Length(AData) - AES_GCM_TAG_SIZE], LTag[0], AES_GCM_TAG_SIZE);
+
+    LCipherLen := Length(AData) - AES_GCM_NONCE_SIZE - AES_GCM_TAG_SIZE;
+    SetLength(LCipher, LCipherLen);
+    if LCipherLen > 0 then
+      Move(AData[AES_GCM_NONCE_SIZE], LCipher[0], LCipherLen);
+
+    Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256GCM_Decrypt(FKey, LNonce, LCipher, nil, LTag);
+  end
+  else
+  begin
+    if Length(AData) mod 16 <> 0 then
+      raise ECryptoException.Create('Invalid ciphertext length');
+    LDecrypted := DeepBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Decrypt(FKey, FIV, AData);
+    Result := UnpadData(LDecrypted);
+  end;
 end;
 {$ENDIF}
 
@@ -1734,7 +1894,7 @@ begin
   // Generate cryptographically random salt
   LSalt := TRandomGenerator.RandomBytes(SIMPLE_CRYPTO_SALT_SIZE);
 
-  LAES := TAESCrypto.Create(aes256, aesCBC);
+  LAES := TAESCrypto.Create(aes256, aesGCM);
   try
     LAES.SetKeyFromPassword(APassword, LSalt);
     Cipher := LAES.Encrypt(AData);
@@ -1856,7 +2016,7 @@ begin
       Move(AData[SIMPLE_CRYPTO_AES_BLOCK_SIZE], Cipher[0], Length(Cipher));
   end;
 
-  LAES := TAESCrypto.Create(aes256, aesCBC);
+  LAES := TAESCrypto.Create(aes256, aesGCM);
   try
     LAES.SetKeyFromPassword(APassword, LSalt);
     LAES.SetIV(IV);

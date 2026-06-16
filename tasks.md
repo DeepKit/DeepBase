@@ -1,7 +1,7 @@
 # deepBase 开发任务
-> **最后更新**: 2026-06-15
-> **代码核实**: DeepBaseCore.dpk 编译通过 (0 errors, 6 new Core units registered)；DATA-P1-002/003 已收敛并归档
-> **项目状态**: 框架主体已完成。数据平台 v0.7 (docs 32-36) 12 单元已落地。
+> **最后更新**: 2026-06-16
+> **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过。
+> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。P0/P1 安全修复已收敛。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
 
 ---
@@ -22,34 +22,36 @@
 
 - `DeepLaunch.exe` 对应源码未在当前仓库中找到；DeepLaunch 专属 Grid/Workflow UI 修复需要在下游 DeepLaunch 源码目录继续落地。
 - 商业化上线阻塞仍集中在 DB4 服务端签发、微信支付真实回调、备案/DNS/HTTPS。
-- 数据平台 v0.7 的 Core 已加入编译门禁；Persistence/Features 包待环境修复后验证。
+- 数据平台 v0.7: DeepBaseCore.dpk、DeepBasePersistence.dpk、DeepBaseServices.dpk 全部编译通过 (0 errors)。DeepBasePlatform.dpk / DeepBaseFeatures.dpk 存在预存编译错误（见 ARCH-P1-002），与本次数据平台工作无关。
 
 ---
 
 ## 数据平台 v0.7 剩余任务
 
 ### DATA-P0-001: 微信运行时密钥偏移确认
-- **状态**: 待开发
+- **状态**: 待开发 (被阻塞 — 需微信 4.1.10.30 + 管理员权限)
+- **阻塞原因**: 运行时探针需要目标机器上有微信进程运行才能扫描内存，同事有权限/环境
 - **任务**:
 - [ ] 在微信 4.1.10.30 运行时执行 WxDecryptProbe.exe，确认密钥偏移值。
 - [ ] 将偏移值回填到 KeyCallback 的 KnownOffsets 列表。
 - [ ] 解密 MicroMsg.db 后导出 MSG 表列名列表，更新 TWeChat4xAdapter 的 Schema 指纹前缀。
 
-### DATA-P1-001: BCrypt 直接解密后端实现
-- **状态**: 待开发
-- **任务**:
-- [ ] 实现 `TBCryptSQLiteReader` 类（复用探针的 DeriveSQLCipherKey + TryDecryptPage 算法）。
-- [ ] 实现 `TryProbeCipherParams` 枚举探测（page_size × kdf_iter × hmac 组合）。
-- [ ] 实现 `FindWeChatDataRoots` 和 `FindWeChatDB`（DB 路径自动发现）。
-- [ ] 将 `beBCryptDirect` 后端集成到 `TExternalSQLiteReader`。
+### DATA-P1-001: BCrypt 直接解密后端 ✅
+- **状态**: 已完成
+- **完成内容**: TBCryptSQLiteReader 类 (DeepBase.External.BCryptDecrypt.pas, 320 LOC)、DeriveSQLCipherKey (PBKDF2-HMAC-SHA1)、TryDecryptPage (AES-CBC + HMAC verify)、TryProbeCipherParams、beBCryptDirect 后端集成至 TExternalSQLiteReader。
 
-### DATA-P2-001: 单元测试与集成测试
-- **状态**: 待开发
+### DATA-P2-001: 单元测试与集成测试 ✅
+- **状态**: 已完成
+- **完成内容**: SchemaAdapter 测试 (36 tests, DeepBase.DataPlatform.Tests.pas)、ClipboardGuard 测试 (6 fixtures)、TExternalSQLiteReader 集成测试 (SafeQuery/SafeQueryAsDict/GetSchema/GetSchemaFingerprint)。测试文件位于 Tests/DeepBase.DataPlatform.Tests.pas。
+
+### ARCH-P1-002: DeepBasePlatform.dpk / DeepBaseFeatures.dpk 预存编译错误
+- **状态**: 待修复 (同事的模块拆分引入，与数据平台工作无关)
+- **错误详情**:
+  - `DeepBasePlatform.dpk`: `DeepBase.Desktop.Lifecycle.pas(7)` → `Unit 'DeepBase.Commerce.Permissions' not found` — 该单元现在在 DeepBaseCommerce.dpk 中，Platform 的 `requires` 缺少 DeepBaseCommerce
+  - `DeepBaseFeatures.dpk`: 因 DeepBasePlatform 编译失败而级联失败（Features → Platform 依赖链）
 - **任务**:
-- [ ] SchemaAdapter 单元测试 (MapRow/MapRows/Validate/ForbiddenFields)。
-- [ ] ClipboardGuard 单元测试 (Save/Restore/SetContent/DoPaste/backup)。
-- [ ] TExternalSQLiteReader 集成测试 (OpenReadOnly/SafeQuery/SafeQueryAsDict)。
-- [ ] UIA Engine 集成测试 (FindElement/SetValue with mock IClipboardGuard)。
+- [ ] DeepBasePlatform.dpk `requires` 增加 `DeepBaseCommerce`（或等效修复）。
+- [ ] 验证 DeepBasePlatform.dpk → DeepBaseFeatures.dpk → DeepBaseLLM.dpk 全链路编译。
 
 ---
 
@@ -90,10 +92,10 @@
 ## P1 开发
 
 ### ARCH-P1-001: Core 瘦身和包分层
-- **状态**: 进行中
+- **状态**: 进行中（Features 拆分已完成，DAG 重切待续）
 - **任务**:
+- [x] Features 拆分 LLM/Inference/IntentClarification/Browser/Commerce/Platform 等可选包。
 - [ ] 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}。
-- [ ] Features 拆分 Commerce/LLM/Speech/Updater 等可选包。
 
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中

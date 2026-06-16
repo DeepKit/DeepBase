@@ -93,7 +93,9 @@ type
     FBuckets: TDictionary<string, TBucket>;
     FLock: TCriticalSection;
     FDefaultKey: string;
-    
+    FCleanupCounter: Integer;
+    const CLEANUP_THRESHOLD = 100;
+    procedure CleanupExpired;
     procedure RefillBucket(var Bucket: TBucket);
     function GetOrCreateBucket(const Key: string): TBucket;
     procedure SaveBucket(const Key: string; const Bucket: TBucket);
@@ -132,7 +134,7 @@ type
     FWindows: TDictionary<string, TWindow>;
     FLock: TCriticalSection;
     FDefaultKey: string;
-    
+    procedure CleanupExpired;
     function GetOrCreateWindow(const Key: string): TWindow;
     procedure SaveWindow(const Key: string; const Window: TWindow);
     function IsWindowExpired(const Window: TWindow): Boolean;
@@ -164,7 +166,9 @@ type
     FRequestLogs: TDictionary<string, TList<TDateTime>>;
     FLock: TCriticalSection;
     FDefaultKey: string;
-    
+    FCleanupCounter: Integer;
+    const CLEANUP_THRESHOLD = 100;
+    procedure CleanupExpired;
     function GetOrCreateLog(const Key: string): TList<TDateTime>;
     procedure CleanupOldRequests(Log: TList<TDateTime>);
   public
@@ -202,7 +206,9 @@ type
     FCounters: TDictionary<string, TWindowCounter>;
     FLock: TCriticalSection;
     FDefaultKey: string;
-    
+    FCleanupCounter: Integer;
+    const CLEANUP_THRESHOLD = 100;
+    procedure CleanupExpired;
     function GetOrCreateCounter(const Key: string): TWindowCounter;
     procedure SaveCounter(const Key: string; const Counter: TWindowCounter);
     function GetWeightedCount(const Counter: TWindowCounter): Double;
@@ -394,6 +400,34 @@ begin
   Bucket.LastRefill := Now;
 end;
 
+procedure TTokenBucketLimiter.CleanupExpired;
+var
+  KeysToRemove: TList<string>;
+  Pair: TPair<string, TBucket>;
+  Now: TDateTime;
+  ElapsedSec: Double;
+begin
+  Inc(FCleanupCounter);
+  if (FCleanupCounter < CLEANUP_THRESHOLD) and (FBuckets.Count <= CLEANUP_THRESHOLD) then
+    Exit;
+  FCleanupCounter := 0;
+
+  KeysToRemove := TList<string>.Create;
+  try
+    Now := System.SysUtils.Now;
+    for Pair in FBuckets do
+    begin
+      ElapsedSec := (Now - Pair.Value.LastRefill) * 24 * 60 * 60;
+      if (ElapsedSec * FRefillRate >= FCapacity) then
+        KeysToRemove.Add(Pair.Key);
+    end;
+    for var K in KeysToRemove do
+      FBuckets.Remove(K);
+  finally
+    KeysToRemove.Free;
+  end;
+end;
+
 function TTokenBucketLimiter.GetOrCreateBucket(const Key: string): TBucket;
 var
   ActualKey: string;
@@ -426,6 +460,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Bucket := GetOrCreateBucket(Key);
     RefillBucket(Bucket);
     
@@ -451,6 +486,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Bucket := GetOrCreateBucket(Key);
     RefillBucket(Bucket);
     
@@ -495,6 +531,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Bucket := GetOrCreateBucket(Key);
     RefillBucket(Bucket);
     Result := TRateLimitResult.Allow(Trunc(Bucket.Tokens),
@@ -523,6 +560,25 @@ begin
   FreeAndNil(FWindows);
   FreeAndNil(FLock);
   inherited;
+end;
+
+procedure TFixedWindowLimiter.CleanupExpired;
+var
+  KeysToRemove: TList<string>;
+  Pair: TPair<string, TWindow>;
+begin
+  KeysToRemove := TList<string>.Create;
+  try
+    for Pair in FWindows do
+    begin
+      if IsWindowExpired(Pair.Value) and (Pair.Value.Count = 0) then
+        KeysToRemove.Add(Pair.Key);
+    end;
+    for var K in KeysToRemove do
+      FWindows.Remove(K);
+  finally
+    KeysToRemove.Free;
+  end;
 end;
 
 function TFixedWindowLimiter.GetOrCreateWindow(const Key: string): TWindow;
@@ -560,9 +616,15 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Window := GetOrCreateWindow(Key);
     
-    if IsWindowExpired(Window) then
+    if IsWindowExpired(Window) and (Window.Count = 0) then
+    begin
+      FWindows.Remove(IfThen(Key = '', FDefaultKey, Key));
+      Window := GetOrCreateWindow(Key);
+    end
+    else if IsWindowExpired(Window) then
     begin
       Window.Count := 0;
       Window.WindowStart := Now;
@@ -589,9 +651,15 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Window := GetOrCreateWindow(Key);
     
-    if IsWindowExpired(Window) then
+    if IsWindowExpired(Window) and (Window.Count = 0) then
+    begin
+      FWindows.Remove(IfThen(Key = '', FDefaultKey, Key));
+      Window := GetOrCreateWindow(Key);
+    end
+    else if IsWindowExpired(Window) then
     begin
       Window.Count := 0;
       Window.WindowStart := Now;
@@ -637,6 +705,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Window := GetOrCreateWindow(Key);
     
     if IsWindowExpired(Window) then
@@ -674,6 +743,34 @@ begin
   inherited;
 end;
 
+procedure TSlidingWindowLimiter.CleanupExpired;
+var
+  KeysToRemove: TList<string>;
+  Pair: TPair<string, TList<TDateTime>>;
+begin
+  Inc(FCleanupCounter);
+  if (FCleanupCounter < CLEANUP_THRESHOLD) and (FRequestLogs.Count <= CLEANUP_THRESHOLD) then
+    Exit;
+  FCleanupCounter := 0;
+
+  KeysToRemove := TList<string>.Create;
+  try
+    for Pair in FRequestLogs do
+    begin
+      CleanupOldRequests(Pair.Value);
+      if Pair.Value.Count = 0 then
+        KeysToRemove.Add(Pair.Key);
+    end;
+    for var K in KeysToRemove do
+    begin
+      FRequestLogs[K].Free;
+      FRequestLogs.Remove(K);
+    end;
+  finally
+    KeysToRemove.Free;
+  end;
+end;
+
 function TSlidingWindowLimiter.GetOrCreateLog(const Key: string): TList<TDateTime>;
 var
   ActualKey: string;
@@ -709,6 +806,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Log := GetOrCreateLog(Key);
     CleanupOldRequests(Log);
     
@@ -732,6 +830,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Log := GetOrCreateLog(Key);
     CleanupOldRequests(Log);
     
@@ -761,6 +860,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Log := GetOrCreateLog(Key);
     Log.Clear;
   finally
@@ -775,6 +875,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Log := GetOrCreateLog(Key);
     CleanupOldRequests(Log);
     
@@ -808,6 +909,34 @@ begin
   FreeAndNil(FCounters);
   FreeAndNil(FLock);
   inherited;
+end;
+
+procedure TSlidingWindowCounterLimiter.CleanupExpired;
+var
+  KeysToRemove: TList<string>;
+  Pair: TPair<string, TWindowCounter>;
+  ElapsedMs: Int64;
+begin
+  Inc(FCleanupCounter);
+  if (FCleanupCounter < CLEANUP_THRESHOLD) and (FCounters.Count <= CLEANUP_THRESHOLD) then
+    Exit;
+  FCleanupCounter := 0;
+
+  KeysToRemove := TList<string>.Create;
+  try
+    for Pair in FCounters do
+    begin
+      ElapsedMs := MilliSecondsBetween(Now, Pair.Value.CurrentWindowStart);
+      if (ElapsedMs >= FWindowSizeMs * 2)
+        and (Pair.Value.CurrentCount = 0)
+        and (Pair.Value.PreviousCount = 0) then
+        KeysToRemove.Add(Pair.Key);
+    end;
+    for var K in KeysToRemove do
+      FCounters.Remove(K);
+  finally
+    KeysToRemove.Free;
+  end;
 end;
 
 function TSlidingWindowCounterLimiter.GetOrCreateCounter(const Key: string): TWindowCounter;
@@ -867,15 +996,24 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Counter := GetOrCreateCounter(Key);
     ElapsedMs := MilliSecondsBetween(Now, Counter.CurrentWindowStart);
     
     // Handle window transitions
     if ElapsedMs >= FWindowSizeMs * 2 then
     begin
-      Counter.PreviousCount := 0;
-      Counter.CurrentCount := 0;
-      Counter.CurrentWindowStart := Now;
+      if (Counter.CurrentCount = 0) and (Counter.PreviousCount = 0) then
+      begin
+        FCounters.Remove(IfThen(Key = '', FDefaultKey, Key));
+        Counter := GetOrCreateCounter(Key);
+      end
+      else
+      begin
+        Counter.PreviousCount := 0;
+        Counter.CurrentCount := 0;
+        Counter.CurrentWindowStart := Now;
+      end;
     end
     else if ElapsedMs >= FWindowSizeMs then
     begin
@@ -909,15 +1047,24 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Counter := GetOrCreateCounter(Key);
     ElapsedMs := MilliSecondsBetween(Now, Counter.CurrentWindowStart);
     
     // Handle window transitions
     if ElapsedMs >= FWindowSizeMs * 2 then
     begin
-      Counter.PreviousCount := 0;
-      Counter.CurrentCount := 0;
-      Counter.CurrentWindowStart := Now;
+      if (Counter.CurrentCount = 0) and (Counter.PreviousCount = 0) then
+      begin
+        FCounters.Remove(IfThen(Key = '', FDefaultKey, Key));
+        Counter := GetOrCreateCounter(Key);
+      end
+      else
+      begin
+        Counter.PreviousCount := 0;
+        Counter.CurrentCount := 0;
+        Counter.CurrentWindowStart := Now;
+      end;
     end
     else if ElapsedMs >= FWindowSizeMs then
     begin
@@ -970,6 +1117,7 @@ var
 begin
   FLock.Enter;
   try
+    CleanupExpired;
     Counter := GetOrCreateCounter(Key);
     WeightedCount := GetWeightedCount(Counter);
     ResetTime := IncMilliSecond(Counter.CurrentWindowStart, FWindowSizeMs);

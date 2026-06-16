@@ -555,15 +555,16 @@ function TLLMHttpClient.SendStream(const AEndpoint, AApiKey, AApiFormat, AModelI
   ATemperature: Double; AOnChunk: TProc<string>; AOnError: TProc<string>;
   out AResult: TChatResult): Boolean;
 var
-  Body, URL, Line, Data: string;
+  Body, URL: string;
+  Req: TDeepBaseHttpTransportRequest;
   Response: TDeepBaseHttpTransportResponse;
-  Lines: TStringList;
-  LineIndex: Integer;
+  StreamingTransport: IDeepBaseStreamingTransport;
   Done: Boolean;
+  LResult: TChatResult;  // local copy — 'out' params cannot be captured by anonymous methods
 begin
   Result := False;
-  FillChar(AResult, SizeOf(AResult), 0);
-  AResult.ModelUsed := AModelId;
+  LResult := Default(TChatResult);
+  LResult.ModelUsed := AModelId;
 
   // Build streaming request (add stream:true)
   if SameText(AApiFormat, 'anthropic') then
@@ -586,59 +587,117 @@ begin
     end;
   end;
 
-  // Build URL
+  // Build URL — Anthropic uses /messages, OpenAI-compatible uses /chat/completions
   URL := AEndpoint;
   if not URL.EndsWith('/') then URL := URL + '/';
-  URL := URL + 'chat/completions';
+  if SameText(AApiFormat, 'anthropic') then
+    URL := URL + 'messages'
+  else
+    URL := URL + 'chat/completions';
 
   try
-    Response := PostJson(URL, Body, BuildHeaders(AApiKey, AApiFormat, True));
+    // Build transport request record
+    Req := TDeepBaseHttpTransportRequest.Create(dbhmPost, URL);
+    Req.Body := Body;
+    Req.ContentType := 'application/json';
+    Req.Headers := BuildHeaders(AApiKey, AApiFormat, True);
+    Req.TimeoutMs := FTimeoutMs;
 
-    if Response.StatusCode <> 200 then
+    // Try streaming transport first (true incremental SSE pipe)
+    if Supports(FTransport, IDeepBaseStreamingTransport, StreamingTransport) then
     begin
-      AResult.ErrorMessage := Format('HTTP %d: %s',
-        [Response.StatusCode, Copy(Response.Body, 1, 200)]);
-      AResult.ErrorCode := MapErrorToCode(Response.StatusCode, Response.Body);
-      if Assigned(AOnError) then AOnError(AResult.ErrorMessage);
-      Exit;
-    end;
-
-    // The transport abstraction returns the body after completion; parse SSE lines
-    // from the buffered response until a real streaming callback is added.
-    Lines := TStringList.Create;
-    try
-      Lines.Text := Response.Body;
-      Data := '';
       Done := False;
-      for LineIndex := 0 to Lines.Count - 1 do
-      begin
-        if Done then
-          Break;
-        Line := Lines[LineIndex];
-        if Line = '' then Continue;
-        if Line.StartsWith('data: ') then
+      Response := StreamingTransport.SendStreaming(Req,
+        procedure(const AChunk: string; var ACancel: Boolean)
         begin
-          Data := Line.Substring(6);
+          if Done then
+          begin
+            ACancel := True;
+            Exit;
+          end;
+          if AChunk = '[DONE]' then
+          begin
+            Done := True;
+            ACancel := True;
+            Exit;
+          end;
+          // Parse chunk JSON — extract delta content token
+          var Chunk := TJSONObject.ParseJSONValue(AChunk) as TJSONObject;
+          if Chunk <> nil then
+          try
+            var Choices := Chunk.GetValue('choices') as TJSONArray;
+            if (Choices <> nil) and (Choices.Count > 0) then
+            begin
+              var Delta := (Choices.Items[0] as TJSONObject).GetValue('delta') as TJSONObject;
+              if Delta <> nil then
+              begin
+                var Token := Delta.GetValue('content', '');
+                if Token <> '' then
+                begin
+                  LResult.Content := LResult.Content + Token;
+                  if Assigned(AOnChunk) then AOnChunk(Token);
+                end;
+              end;
+            end;
+          finally
+            Chunk.Free;
+          end;
+        end, nil);
+
+      if Response.StatusCode <> 200 then
+      begin
+        LResult.ErrorMessage := Format('HTTP %d: %s',
+          [Response.StatusCode, Copy(Response.Body, 1, 200)]);
+        LResult.ErrorCode := MapErrorToCode(Response.StatusCode, Response.Body);
+        if Assigned(AOnError) then AOnError(LResult.ErrorMessage);
+        AResult := LResult;
+        Exit;
+      end;
+    end
+    else
+    begin
+      // Fallback: buffered transport — post and parse SSE from buffered body
+      Response := FTransport.Send(Req);
+
+      if Response.StatusCode <> 200 then
+      begin
+        LResult.ErrorMessage := Format('HTTP %d: %s',
+          [Response.StatusCode, Copy(Response.Body, 1, 200)]);
+        LResult.ErrorCode := MapErrorToCode(Response.StatusCode, Response.Body);
+        if Assigned(AOnError) then AOnError(LResult.ErrorMessage);
+        AResult := LResult;
+        Exit;
+      end;
+
+      // Parse SSE from buffered body using TStreamReader (no TStringList copy)
+      var BodyStream := TStringStream.Create(Response.Body, TEncoding.UTF8);
+      var Reader := TStreamReader.Create(BodyStream, TEncoding.UTF8, True);
+      try
+        Done := False;
+        while not Reader.EndOfStream and not Done do
+        begin
+          var LLine := TrimRight(Reader.ReadLine);
+          if not LLine.StartsWith('data: ') then
+            Continue;
+          var Data := LLine.Substring(6);
           if Data = '[DONE]' then
           begin
             Done := True;
             Break;
           end;
-
-          // Parse chunk JSON
           var Chunk := TJSONObject.ParseJSONValue(Data) as TJSONObject;
           if Chunk <> nil then
           try
             var Choices := Chunk.GetValue('choices') as TJSONArray;
             if (Choices <> nil) and (Choices.Count > 0) then
             begin
-              var Delta := ((Choices.Items[0] as TJSONObject).GetValue('delta') as TJSONObject);
+              var Delta := (Choices.Items[0] as TJSONObject).GetValue('delta') as TJSONObject;
               if Delta <> nil then
               begin
                 var Token := Delta.GetValue('content', '');
                 if Token <> '' then
                 begin
-                  AResult.Content := AResult.Content + Token;
+                  LResult.Content := LResult.Content + Token;
                   if Assigned(AOnChunk) then AOnChunk(Token);
                 end;
               end;
@@ -647,21 +706,22 @@ begin
             Chunk.Free;
           end;
         end;
+      finally
+        Reader.Free;
       end;
-    finally
-      Lines.Free;
     end;
 
-    AResult.Success := True;
+    LResult.Success := True;
     Result := True;
   except
     on E: Exception do
     begin
-      AResult.ErrorMessage := E.Message;
-      AResult.ErrorCode := 'stream_error';
+      LResult.ErrorMessage := E.Message;
+      LResult.ErrorCode := 'stream_error';
       if Assigned(AOnError) then AOnError(E.Message);
     end;
   end;
+  AResult := LResult;
 end;
 
 function TLLMHttpClient.FetchModels(const AEndpoint, AApiKey, AApiFormat: string): TArray<string>;

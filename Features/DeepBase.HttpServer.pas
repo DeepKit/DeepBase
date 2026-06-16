@@ -334,6 +334,7 @@ type
     FPort: Integer;
     FActive: Boolean;
     FLock: TCriticalSection;
+    FMaxRequestBodySize: Int64;
     
     procedure DoCommandGet(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
@@ -373,6 +374,8 @@ type
     property Port: Integer read FPort;
     property Active: Boolean read FActive;
     property Router: TRouter read FRouter;
+    /// <summary>Maximum allowed request body size in bytes (default 10 MB).</summary>
+    property MaxRequestBodySize: Int64 read FMaxRequestBodySize write FMaxRequestBodySize;
   end;
 
 // Helper function to create JSON response
@@ -1108,7 +1111,8 @@ begin
   FRouter := TRouter.Create;
   FMiddlewares := TList<IMiddleware>.Create;
   FLock := TCriticalSection.Create;
-  
+  FMaxRequestBodySize := 10 * 1024 * 1024; // 10 MB default
+
   FIdServer := TIdHTTPServer.Create(nil);
   FIdServer.OnCommandGet := DoCommandGet;
   FIdServer.OnCommandOther := DoCommandGet;
@@ -1248,7 +1252,18 @@ begin
         Ctx.Request.HeadersDict.AddOrSetValue(Key, Value);
       end;
     end;
-    
+
+    // Enforce request body size limit (HTTP 413 Payload Too Large)
+    if (FMaxRequestBodySize > 0) and (ARequestInfo.ContentLength > FMaxRequestBodySize) then
+    begin
+      AResponseInfo.ResponseNo := 413;
+      AResponseInfo.ResponseText := 'Payload Too Large';
+      AResponseInfo.ContentType := 'application/json; charset=utf-8';
+      AResponseInfo.ContentText :=
+        '{"error":"Request body exceeds maximum allowed size"}';
+      Exit;
+    end;
+
     // Read body
     if Assigned(ARequestInfo.PostStream) then
     begin

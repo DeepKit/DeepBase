@@ -78,14 +78,13 @@ begin
   begin
     var Temp := Entry.AdapterClass.Create;
     try
-      for var Prefix in Temp.FSchemaFingerprintPrefixes do
-        if SchemaFingerprint.StartsWith(Prefix) then
-        begin
-          Temp.Validate;
-          Adapter := Temp;
-          Temp := nil;
-          Exit(True);
-        end;
+      if Temp.TryMatchFingerprint(SchemaFingerprint) then
+      begin
+        Temp.Validate;
+        Adapter := Temp;
+        Temp := nil;
+        Exit(True);
+      end;
     finally
       Temp.Free;
     end;

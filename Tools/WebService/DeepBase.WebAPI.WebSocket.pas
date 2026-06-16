@@ -479,7 +479,7 @@ var
   LMaskBytes: TIdBytes;
   I: Integer;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TWebSocketFrame);
 
   // 读取前两个字节
   LFirstByte := FContext.Connection.IOHandler.ReadByte;

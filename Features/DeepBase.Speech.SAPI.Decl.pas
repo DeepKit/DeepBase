@@ -78,6 +78,21 @@ type
   );
 
 // ============================================================================
+// SPEVENT record (for ISpRecoContext.GetEvents polling)
+// ============================================================================
+
+type
+  SPEVENT = record
+    eEventId: Word;
+    elParamType: Word;
+    ulStreamNumber: ULONG;
+    ulStreamNumRunning: ULONG;
+    wParam: WPARAM;
+    lParam: LPARAM;
+    elParam: Pointer;  // ISpRecoResult pointer when eEventId = SPEI_RECOGNITION
+  end;
+
+// ============================================================================
 // Forward declarations
 // ============================================================================
 
@@ -122,9 +137,8 @@ type
 
   ISpRecoGrammar = interface(IUnknown)
     ['{2177DB29-7F45-47D0-8554-067E91C80502}']
-    // Minimal subset for Grammar-based recognition
-    function Placeholder1: HRESULT; stdcall;  // GetGrammarId
-    function Placeholder2: HRESULT; stdcall;  // GetRecoContext
+    function GetGrammarId(out pullGrammarId: UInt64): HRESULT; stdcall;
+    function GetRecoContext(out ppRecoContext: ISpRecoContext): HRESULT; stdcall;
     function LoadCmdFromFile(pszFileName: PWideChar; Options: DWORD): HRESULT; stdcall;
     function LoadCmdFromObject(const rcid: TGUID; pszGrammarName: PWideChar; Options: DWORD): HRESULT; stdcall;
     function LoadCmdFromResource(hModule: HMODULE; pszResourceName, pszResourceType: PWideChar;
@@ -165,7 +179,8 @@ type
     function Placeholder20: HRESULT; stdcall; // SetNotifyCallbackInterface
     function Placeholder21: HRESULT; stdcall; // SetNotifyWin32Event
     function SetInterest(ullEventInterest, ullQueuedInterest: UInt64): HRESULT; stdcall;
-    function Placeholder23: HRESULT; stdcall; // GetEvents
+    function GetEvents(ulCount: ULONG; pEvents: Pointer;
+      pulFetched: PULONG): HRESULT; stdcall;
     function CreateGrammar(ullGrammarId: UInt64; out ppGrammar: ISpRecoGrammar): HRESULT; stdcall;
   end;
 
@@ -237,6 +252,16 @@ const
 const
   SPRS_INACTIVE = 0;
   SPRS_ACTIVE   = 1;
+
+  // Grammar load options
+  SPLO_STATIC  = $00000000;
+  SPLO_DYNAMIC = $00000001;
+
+  // Event interest flags (for ISpRecoContext.SetInterest)
+  SPFEI_FLAGPARAM = $00000001;  // elParam contains an interface pointer
+
+  // SAPI event IDs
+  SPEI_RECOGNITION = 7;
 
 // ============================================================================
 // Helper: CoCreate SAPI objects

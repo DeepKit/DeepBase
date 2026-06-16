@@ -434,7 +434,7 @@ begin
   if (Index >= 0) and (Index < FVariables.Count) then
     Result := FVariables[Index]
   else
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TPromptVariable);
 end;
 
 procedure TPromptVariableGrid.UpdateGridSize;

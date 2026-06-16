@@ -18,7 +18,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.JSON, System.DateUtils, System.NetEncoding,
+  System.JSON, System.DateUtils, System.NetEncoding, System.Net.URLClient,
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
@@ -293,7 +293,7 @@ function ParseRsaPrivateKey(const APkcs1Der: TBytes): TRSAPrivateKeyParts;
 var
   Pos, Len: Integer;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TRSAPrivateKeyParts);
   Pos := 0;
 
   ExpectDerTag(APkcs1Der, Pos, $30); // SEQUENCE
@@ -617,6 +617,7 @@ end;
 function TWeChatPayClient.DoWeChatPost(const AEndpoint: string; ABody: TJSONObject): TJSONObject;
 var
   AuthHeader, BodyStr, Response: string;
+  ExtraHeaders: TNetHeaders;
 begin
   Result := nil;
 
@@ -626,11 +627,15 @@ begin
     BodyStr := '';
 
   AuthHeader := BuildAuthorizationHeader('POST', AEndpoint, BodyStr);
-  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
-  FHttpClient.CustomHeaders['Accept'] := 'application/json';
-  FHttpClient.CustomHeaders['Content-Type'] := 'application/json';
 
-  Response := DoPost(GetApiUrl + AEndpoint, BodyStr, 'application/json');
+  // Per-request headers avoid racing on shared FHttpClient.CustomHeaders (P2 fix)
+  SetLength(ExtraHeaders, 2);
+  ExtraHeaders[0].Name := 'Authorization';
+  ExtraHeaders[0].Value := AuthHeader;
+  ExtraHeaders[1].Name := 'Accept';
+  ExtraHeaders[1].Value := 'application/json';
+
+  Response := DoPost(GetApiUrl + AEndpoint, BodyStr, 'application/json', ExtraHeaders);
 
   Result := TJSONObject.ParseJSONValue(Response) as TJSONObject;
   if not Assigned(Result) then
@@ -649,14 +654,20 @@ end;
 function TWeChatPayClient.DoWeChatGet(const AEndpoint: string): TJSONObject;
 var
   AuthHeader, Response: string;
+  Headers: TNetHeaders;
 begin
   Result := nil;
 
   AuthHeader := BuildAuthorizationHeader('GET', AEndpoint, '');
-  FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
-  FHttpClient.CustomHeaders['Accept'] := 'application/json';
 
-  Response := DoGet(GetApiUrl + AEndpoint);
+  // Per-request headers avoid racing on shared FHttpClient.CustomHeaders (P2 fix)
+  SetLength(Headers, 2);
+  Headers[0].Name := 'Authorization';
+  Headers[0].Value := AuthHeader;
+  Headers[1].Name := 'Accept';
+  Headers[1].Value := 'application/json';
+
+  Response := DoGet(GetApiUrl + AEndpoint, Headers);
 
   Result := TJSONObject.ParseJSONValue(Response) as TJSONObject;
   if not Assigned(Result) then
@@ -1026,6 +1037,7 @@ var
   Cfg: TWeChatPayConfig;
   ReqBody: TJSONObject;
   AuthHeader, BodyStr, Response: string;
+  ExtraHeaders: TNetHeaders;
 begin
   Result := False;
   Cfg := TWeChatPayConfig(FConfig);
@@ -1037,13 +1049,17 @@ begin
 
     AuthHeader := BuildAuthorizationHeader('POST',
       '/v3/pay/transactions/out-trade-no/' + AOrderNo + '/close', BodyStr);
-    FHttpClient.CustomHeaders['Authorization'] := AuthHeader;
-    FHttpClient.CustomHeaders['Accept'] := 'application/json';
-    FHttpClient.CustomHeaders['Content-Type'] := 'application/json';
+
+    // Per-request headers avoid racing on shared FHttpClient.CustomHeaders (P2 fix)
+    SetLength(ExtraHeaders, 2);
+    ExtraHeaders[0].Name := 'Authorization';
+    ExtraHeaders[0].Value := AuthHeader;
+    ExtraHeaders[1].Name := 'Accept';
+    ExtraHeaders[1].Value := 'application/json';
 
     try
       Response := DoPost(GetApiUrl + '/v3/pay/transactions/out-trade-no/' +
-        AOrderNo + '/close', BodyStr, 'application/json');
+        AOrderNo + '/close', BodyStr, 'application/json', ExtraHeaders);
       // WeChat close-order returns 204 No Content on success — empty body is OK.
       Result := True;
     except

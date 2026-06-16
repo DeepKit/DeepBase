@@ -1,0 +1,55 @@
+package DeepBaseBrowser;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Browser Automation Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  DeepBaseCore,
+  DeepBaseServices;
+
+contains
+  DeepBase.BrowserAutomation in 'Features\DeepBase.BrowserAutomation.pas',
+  DeepBase.Browser.Types in 'Features\DeepBase.Browser.Types.pas',
+  DeepBase.Browser.Registry in 'Features\DeepBase.Browser.Registry.pas',
+  DeepBase.Browser.Recovery in 'Features\DeepBase.Browser.Recovery.pas',
+  DeepBase.Browser.ResponseWaiter in 'Features\DeepBase.Browser.ResponseWaiter.pas',
+  DeepBase.Browser.Session in 'Features\DeepBase.Browser.Session.pas',
+  DeepBase.Browser.CDP in 'Features\DeepBase.Browser.CDP.pas',
+  DeepBase.Browser.Service in 'Features\DeepBase.Browser.Service.pas',
+  DeepBase.Browser.Events in 'Features\DeepBase.Browser.Events.pas',
+  DeepBase.Browser.Selectors in 'Features\DeepBase.Browser.Selectors.pas',
+  DeepBase.Browser.WindowPool in 'Features\DeepBase.Browser.WindowPool.pas',
+  DeepBase.Browser.Vision in 'Features\DeepBase.Browser.Vision.pas',
+  DeepBase.Browser.ScriptStore in 'Features\DeepBase.Browser.ScriptStore.pas',
+  DeepBase.Browser.AutomationAdapter in 'Features\DeepBase.Browser.AutomationAdapter.pas',
+  DeepBase.Browser.PageDriver in 'Features\DeepBase.Browser.PageDriver.pas',
+  DeepBase.Browser.IoC in 'Features\DeepBase.Browser.IoC.pas';
+
+end.

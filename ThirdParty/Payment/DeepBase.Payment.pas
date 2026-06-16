@@ -239,8 +239,10 @@ type
     FHttpClient: THTTPClient;
 
     function DoPost(const AUrl: string; const AData: string;
-      const AContentType: string = 'application/x-www-form-urlencoded'): string; virtual;
-    function DoGet(const AUrl: string): string; virtual;
+      const AContentType: string = 'application/x-www-form-urlencoded';
+      const AExtraHeaders: TNetHeaders = nil): string; virtual;
+    function DoGet(const AUrl: string;
+      const AHeaders: TNetHeaders = nil): string; virtual;
 
     // Subclass must implement
     function SignRequest(const AParams: TDictionary<string, string>): string; virtual; abstract;
@@ -538,20 +540,23 @@ begin
 end;
 
 function TPaymentClient.DoPost(const AUrl: string; const AData: string;
-  const AContentType: string): string;
+  const AContentType: string; const AExtraHeaders: TNetHeaders): string;
 var
   Response: IHTTPResponse;
   Content: TStringStream;
   StatusCode: Integer;
   Headers: TNetHeaders;
+  I: Integer;
 begin
   // Create stream outside monitor so exception won't leave lock held (P1 fix)
   Content := TStringStream.Create(AData, TEncoding.UTF8);
   try
     // Build per-request headers instead of mutating shared CustomHeaders (P2 fix)
-    SetLength(Headers, 1);
+    SetLength(Headers, 1 + Length(AExtraHeaders));
     Headers[0].Name := 'Content-Type';
     Headers[0].Value := AContentType;
+    for I := 0 to High(AExtraHeaders) do
+      Headers[1 + I] := AExtraHeaders[I];
 
     TMonitor.Enter(FHttpClient);
     try
@@ -576,14 +581,18 @@ begin
   end;
 end;
 
-function TPaymentClient.DoGet(const AUrl: string): string;
+function TPaymentClient.DoGet(const AUrl: string;
+  const AHeaders: TNetHeaders): string;
 var
   Response: IHTTPResponse;
   StatusCode: Integer;
 begin
   TMonitor.Enter(FHttpClient);
   try
-    Response := FHttpClient.Get(AUrl);
+    if AHeaders <> nil then
+      Response := FHttpClient.Get(AUrl, nil, AHeaders)
+    else
+      Response := FHttpClient.Get(AUrl);
     Result := Response.ContentAsString(TEncoding.UTF8);
     StatusCode := Response.StatusCode;
   finally

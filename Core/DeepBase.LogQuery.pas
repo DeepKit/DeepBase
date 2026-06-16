@@ -866,7 +866,7 @@ begin
     if QueryResult.Items.Count > 0 then
       Result := QueryResult.Items[0]
     else
-      FillChar(Result, SizeOf(Result), 0);
+      Result := Default(TLogQueryItem);
   finally
     QueryResult.Free;
   end;

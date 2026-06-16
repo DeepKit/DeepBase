@@ -382,6 +382,8 @@ procedure TCache<K, V>.Put(const Key: K; const Value: V; TTLSeconds: Integer;
 var
   Entry: TEntry;
   OldEntry: TEntry;
+  NeedsEviction: Boolean;
+  Guard: Integer;
 begin
   FLock.Enter;
   try
@@ -405,8 +407,29 @@ begin
     else
     begin
       // New item - check limits
+      NeedsEviction := (FMaxItems > 0) and (FEntries.Count >= FMaxItems);
+      // Release lock before eviction: callbacks (FOnEvict) fire outside lock
+      // to prevent reentrant deadlock if callback accesses the cache.
+      if NeedsEviction then
+      begin
+        FLock.Leave;
+        try
+          Evict(1);
+        finally
+          FLock.Enter;
+        end;
+      end;
+
+      // Re-check after re-acquiring lock (another thread may have added items)
       if (FMaxItems > 0) and (FEntries.Count >= FMaxItems) then
-        Evict(1);
+      begin
+        FLock.Leave;
+        try
+          Evict(1);
+        finally
+          FLock.Enter;
+        end;
+      end;
 
       // Add to insert order for FIFO (only for new keys)
       FInsertOrder.Enqueue(Key);
@@ -416,8 +439,16 @@ begin
     if (FMaxSizeBytes > 0) and (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) then
     begin
       // Try to free space by evicting more aggressively
-      while (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) and (FEntries.Count > 0) do
-        Evict(Max(1, FEntries.Count div 10)); // ÿ������10%����Ŀ
+      while (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) and (FEntries.Count > 0) and (Guard < 100) do
+      begin
+        Inc(Guard);
+        FLock.Leave;
+        try
+          Evict(Max(1, FEntries.Count div 10));
+        finally
+          FLock.Enter;
+        end;
+      end; // ÿ������10%����Ŀ
       
       // If still over limit, reject
       if FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes then
@@ -463,7 +494,11 @@ end;
 function TCache<K, V>.TryGet(const Key: K; out Value: V): Boolean;
 var
   Entry: TEntry;
+  LExpKey: K;
+  LExpEntry: TEntry;
+  LHasExpired: Boolean;
 begin
+  LHasExpired := False;
   FLock.Enter;
   try
     if FEntries.TryGetValue(Key, Entry) then
@@ -471,25 +506,30 @@ begin
       // Check expiration
       if Entry.IsExpired then
       begin
-        DoExpire(Key, Entry);
+        // Collect for callback OUTSIDE lock
+        LExpKey := Key;
+        LExpEntry := Entry;
+        LHasExpired := True;
         FEntries.Remove(Key);
         Inc(FStats.Misses);
         Inc(FStats.Expirations);
         FStats.CurrentItems := FEntries.Count;
         Result := False;
-        Exit;
+        // Fall through to finally, then fire callback below
+      end
+      else
+      begin
+        // Update access info
+        Entry.LastAccessedAt := Now;
+        Inc(Entry.AccessCount);
+        FEntries[Key] := Entry;
+
+        UpdateAccessOrder(Key);
+
+        Value := Entry.Value;
+        Inc(FStats.Hits);
+        Result := True;
       end;
-      
-      // Update access info
-      Entry.LastAccessedAt := Now;
-      Inc(Entry.AccessCount);
-      FEntries[Key] := Entry;
-      
-      UpdateAccessOrder(Key);
-      
-      Value := Entry.Value;
-      Inc(FStats.Hits);
-      Result := True;
     end
     else
     begin
@@ -499,6 +539,9 @@ begin
   finally
     FLock.Leave;
   end;
+  // Fire expiration callback OUTSIDE lock to prevent reentrant deadlock
+  if LHasExpired then
+    DoExpire(LExpKey, LExpEntry);
 end;
 
 function TCache<K, V>.GetOrLoad(const Key: K): V;
@@ -518,14 +561,20 @@ end;
 function TCache<K, V>.Contains(const Key: K): Boolean;
 var
   Entry: TEntry;
+  LExpKey: K;
+  LExpEntry: TEntry;
+  LHasExpired: Boolean;
 begin
+  LHasExpired := False;
   FLock.Enter;
   try
     if FEntries.TryGetValue(Key, Entry) then
     begin
       if Entry.IsExpired then
       begin
-        DoExpire(Key, Entry);
+        LExpKey := Key;
+        LExpEntry := Entry;
+        LHasExpired := True;
         FEntries.Remove(Key);
         Inc(FStats.Expirations);
         FStats.CurrentItems := FEntries.Count;
@@ -539,6 +588,8 @@ begin
   finally
     FLock.Leave;
   end;
+  if LHasExpired then
+    DoExpire(LExpKey, LExpEntry);
 end;
 
 function TCache<K, V>.Remove(const Key: K): Boolean;

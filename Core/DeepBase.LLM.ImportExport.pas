@@ -628,20 +628,26 @@ begin
         Result.Errors[0] := 'Invalid JSON/YAML format';
         Exit;
       end;
-      
-      // Overwrite mode: clear existing data first
+
+      // Validate all required arrays exist and are parseable BEFORE any deletion.
+      // This prevents data loss in imOverwrite mode when the JSON is malformed.
+      RootObj.TryGetValue<TJSONArray>('categories', CategoriesArray);
+      RootObj.TryGetValue<TJSONArray>('meta_prompts', MetaArray);
+      RootObj.TryGetValue<TJSONArray>('prompts', PromptsArray);
+
+      // Overwrite mode: clear existing data AFTER validation succeeds
       if Mode = imOverwrite then
       begin
         // Delete all prompts (this will cascade to versions and bindings)
         var AllPrompts := FLLMManager.GetAllPrompts;
         for var P in AllPrompts do
           FLLMManager.DeletePrompt(P.InternalCode);
-          
+
         // Delete all meta-prompts
         var AllMetas := FLLMManager.GetMetaPrompts;
         for var M in AllMetas do
           FLLMManager.DeleteMetaPrompt(M.InternalCode);
-          
+
         // Delete all categories
         var AllCats := FLLMManager.GetCategories;
         for var C in AllCats do
@@ -649,7 +655,7 @@ begin
       end;
       
       // Import categories first (to get ID mapping)
-      if RootObj.TryGetValue<TJSONArray>('categories', CategoriesArray) then
+      if CategoriesArray <> nil then
       begin
         for I := 0 to CategoriesArray.Count - 1 do
         begin
@@ -694,7 +700,7 @@ begin
       end;
       
       // Import meta-prompts
-      if RootObj.TryGetValue<TJSONArray>('meta_prompts', MetaArray) then
+      if MetaArray <> nil then
       begin
         for I := 0 to MetaArray.Count - 1 do
         begin
@@ -720,7 +726,7 @@ begin
       end;
       
       // Import prompts
-      if RootObj.TryGetValue<TJSONArray>('prompts', PromptsArray) then
+      if PromptsArray <> nil then
       begin
         for I := 0 to PromptsArray.Count - 1 do
         begin

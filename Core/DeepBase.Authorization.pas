@@ -5,25 +5,27 @@
   Description: Provides role-based access control with users, roles, permissions,
                and audit logging. Supports hierarchical roles and permission inheritance.
   
-  Thread Safety: TAuthorizationManager is thread-safe for read operations.
-                 Write operations (user/role management) should be synchronized.
-  
+  Thread Safety: TAuthorizationManager is thread-safe. Current-user context
+                 is stored per-thread (thread-id keyed dictionary) so multiple
+                 threads can set independent user contexts.
+                 Write operations (user/role management) are synchronized via FLock.
+
   Usage:
     // Setup
     AuthManager.CreateUser('admin', 'Admin User');
     AuthManager.CreateRole('administrators', 'Full access role');
     AuthManager.GrantPermission('administrators', 'users.manage');
     AuthManager.AssignRole('admin', 'administrators');
-    
+
     // Check permissions
     if AuthManager.HasPermission('admin', 'users.manage') then
       // Allow action
-    
-    // Using current user context
-    AuthManager.SetCurrentUser('admin');
-    if AuthManager.CurrentUserCan('users.manage') then
-      // Allow action
-    
+
+    // Using current user context (token-based, thread-safe)
+    if AuthManager.SetCurrentUserWithToken('admin', MyToken) then
+      if AuthManager.CurrentUserCan('users.manage') then
+        // Allow action
+
     // Require permission (raises exception if denied)
     AuthManager.RequirePermission('users.delete');
   ============================================================================ }
@@ -35,6 +37,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Types,
   System.Generics.Collections,
   System.SyncObjs,
   System.DateUtils;
@@ -192,6 +195,12 @@ type
   /// </summary>
   TAuditLogCallback = reference to procedure(const Entry: TAuditLogEntry);
 
+  /// <summary>
+  /// Token verifier callback.
+  /// Returns True if AToken is valid for AUsername.
+  /// </summary>
+  TTokenVerifierFunc = reference to function(const AUsername, AToken: string): Boolean;
+
   TAuthorizationRoleData = record
     Id: Integer;
     Name: string;
@@ -273,12 +282,13 @@ type
     FUsers: TObjectDictionary<string, TUser>;
     FRoles: TObjectDictionary<string, TRole>;
     FPermissions: TObjectDictionary<string, TPermission>;
-    FCurrentUser: TUser;
+    FThreadCurrentUsers: TDictionary<TThreadID, TUser>;  // per-thread current user
     FLock: TCriticalSection;
     FOnAuditLog: TAuditLogCallback;
+    FTokenVerifier: TTokenVerifierFunc;
     FAuditEnabled: Boolean;
     class var FConnectionStorageFactory: TFunc<TObject, IAuthorizationStorage>;
-    
+
     procedure EnsureTablesExist;
     procedure LoadFromDatabase;
     procedure SaveUserToDatabase(User: TUser);
@@ -288,10 +298,13 @@ type
     procedure LogAudit(const Username: string; Action: TAuditAction;
       const Resource, Details: string; Success: Boolean);
     function GetEffectivePermissions(User: TUser): TList<string>;
-    function GetRolePermissionsRecursive(const RoleName: string; 
+    function GetRolePermissionsRecursive(const RoleName: string;
       Visited: TList<string>): TList<string>;
     class function CreateStorageFromConnection(
       AConnection: TObject): IAuthorizationStorage; static;
+    function GetCurrentUserForThread: TUser;
+    procedure SetCurrentUserForThread(AUser: TUser);
+    procedure ClearCurrentUserForThread;
   public
     constructor Create(AConnection: TObject); overload;
     constructor Create(const AStorage: IAuthorizationStorage); overload;
@@ -398,8 +411,11 @@ type
     // Current User Context
     // ========================================================================
     
-    /// <summary>Set current user context</summary>
-    procedure SetCurrentUser(const Username: string);
+    /// <summary>Set current user context (for testing only; no identity verification)</summary>
+    procedure SetCurrentUser(const Username: string); deprecated 'Use SetCurrentUserWithToken for production code';
+
+    /// <summary>Set current user context after verifying token. Returns True on success.</summary>
+    function SetCurrentUserWithToken(const AUsername, AToken: string): Boolean;
     
     /// <summary>Clear current user context</summary>
     procedure ClearCurrentUser;
@@ -432,9 +448,10 @@ type
     // Properties
     // ========================================================================
     
-    property CurrentUser: TUser read FCurrentUser;
+    property CurrentUser: TUser read GetCurrentUserForThread;
     property AuditEnabled: Boolean read FAuditEnabled write FAuditEnabled;
     property OnAuditLog: TAuditLogCallback read FOnAuditLog write FOnAuditLog;
+    property TokenVerifier: TTokenVerifierFunc read FTokenVerifier write FTokenVerifier;
   end;
   
   // ============================================================================
@@ -490,9 +507,13 @@ begin
 end;
 
 function RequirePermissions(const Permissions: array of string): Boolean;
+var
+  LUser: TUser;
 begin
-  Result := AuthManager.HasAllPermissions(
-    AuthManager.CurrentUser.Username, Permissions);
+  LUser := AuthManager.CurrentUser;
+  if LUser = nil then
+    Exit(False);
+  Result := AuthManager.HasAllPermissions(LUser.Username, Permissions);
 end;
 
 // ============================================================================
@@ -645,7 +666,7 @@ begin
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
   FPermissions := TObjectDictionary<string, TPermission>.Create([doOwnsValues]);
-  FCurrentUser := nil;
+  FThreadCurrentUsers := TDictionary<TThreadID, TUser>.Create;
   FLock := TCriticalSection.Create;
   FAuditEnabled := True;
 
@@ -663,7 +684,7 @@ begin
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
   FPermissions := TObjectDictionary<string, TPermission>.Create([doOwnsValues]);
-  FCurrentUser := nil;
+  FThreadCurrentUsers := TDictionary<TThreadID, TUser>.Create;
   FLock := TCriticalSection.Create;
   FAuditEnabled := True;
 
@@ -696,6 +717,7 @@ begin
     FreeAndNil(FPermissions);
     FreeAndNil(FRoles);
     FreeAndNil(FUsers);
+    FreeAndNil(FThreadCurrentUsers);
   finally
     FLock.Leave;
   end;
@@ -1376,107 +1398,159 @@ end;
 // Current User Context
 // ============================================================================
 
-procedure TAuthorizationManager.SetCurrentUser(const Username: string);
+function TAuthorizationManager.GetCurrentUserForThread: TUser;
 begin
   FLock.Enter;
   try
-    if not FUsers.TryGetValue(Username, FCurrentUser) then
-      raise EUserNotFoundException.CreateFmt('User not found: %s', [Username]);
-    
-    // Update last login
-    FCurrentUser.LastLoginAt := Now;
-    
-    LogAudit(Username, aaLogin, 'session', 'User logged in', True);
+    if not FThreadCurrentUsers.TryGetValue(TThread.CurrentThread.ThreadID, Result) then
+      Result := nil;
   finally
     FLock.Leave;
   end;
+end;
+
+procedure TAuthorizationManager.SetCurrentUserForThread(AUser: TUser);
+begin
+  FLock.Enter;
+  try
+    if AUser <> nil then
+      FThreadCurrentUsers.AddOrSetValue(TThread.CurrentThread.ThreadID, AUser)
+    else
+      FThreadCurrentUsers.Remove(TThread.CurrentThread.ThreadID);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TAuthorizationManager.ClearCurrentUserForThread;
+begin
+  FLock.Enter;
+  try
+    FThreadCurrentUsers.Remove(TThread.CurrentThread.ThreadID);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+{ DEPRECATED: No identity verification. Use SetCurrentUserWithToken in production. }
+procedure TAuthorizationManager.SetCurrentUser(const Username: string);
+var
+  LUser: TUser;
+begin
+  LUser := nil;
+  FLock.Enter;
+  try
+    if not FUsers.TryGetValue(Username, LUser) then
+      raise EUserNotFoundException.CreateFmt('User not found: %s', [Username]);
+  finally
+    FLock.Leave;
+  end;
+
+  // Update last login
+  LUser.LastLoginAt := Now;
+  SetCurrentUserForThread(LUser);
+
+  LogAudit(Username, aaLogin, 'session', 'User logged in', True);
+end;
+
+function TAuthorizationManager.SetCurrentUserWithToken(
+  const AUsername, AToken: string): Boolean;
+var
+  LUser: TUser;
+  LStoredToken: string;
+  LVerified: Boolean;
+begin
+  Result := False;
+  LVerified := False;
+
+  { Try external token verifier callback first }
+  if Assigned(FTokenVerifier) then
+    LVerified := FTokenVerifier(AUsername, AToken);
+
+  if not LVerified then
+  begin
+    { Fallback: check token stored in user metadata under key 'token' }
+    LUser := GetUser(AUsername);
+    if LUser = nil then
+      Exit(False);
+    LStoredToken := LUser.GetMetadata('token');
+    if (LStoredToken <> '') and SameText(LStoredToken, AToken) then
+      LVerified := True;
+  end;
+
+  if not LVerified then
+  begin
+    LogAudit(AUsername, aaLoginFailed, 'session',
+      'Token verification failed', False);
+    Exit(False);
+  end;
+
+  { Token valid — set the current user for this thread }
+  LUser := GetUser(AUsername);
+  if LUser = nil then
+    Exit(False);
+
+  LUser.LastLoginAt := Now;
+  SetCurrentUserForThread(LUser);
+  LogAudit(AUsername, aaLogin, 'session', 'User logged in (token)', True);
+  Result := True;
 end;
 
 procedure TAuthorizationManager.ClearCurrentUser;
 var
   Username: string;
+  LUser: TUser;
 begin
-  FLock.Enter;
-  try
-    if FCurrentUser <> nil then
-    begin
-      Username := FCurrentUser.Username;
-      FCurrentUser := nil;
-      LogAudit(Username, aaLogout, 'session', 'User logged out', True);
-    end;
-  finally
-    FLock.Leave;
+  LUser := GetCurrentUserForThread;
+  if LUser <> nil then
+  begin
+    Username := LUser.Username;
+    ClearCurrentUserForThread;
+    LogAudit(Username, aaLogout, 'session', 'User logged out', True);
   end;
 end;
 
 function TAuthorizationManager.CurrentUserCan(const PermissionName: string): Boolean;
 var
-  Username: string;
+  LUser: TUser;
 begin
-  FLock.Enter;
-  try
-    if FCurrentUser = nil then
-      Exit(False);
-    Username := FCurrentUser.Username;
-  finally
-    FLock.Leave;
-  end;
-  Result := HasPermission(Username, PermissionName);
+  LUser := GetCurrentUserForThread;
+  if LUser = nil then
+    Exit(False);
+  Result := HasPermission(LUser.Username, PermissionName);
 end;
 
 procedure TAuthorizationManager.RequirePermission(const PermissionName: string);
 var
-  Username: string;
-  NoContext: Boolean;
+  LUser: TUser;
 begin
-  NoContext := False;
-  FLock.Enter;
-  try
-    if FCurrentUser = nil then
-      NoContext := True
-    else
-      Username := FCurrentUser.Username;
-  finally
-    FLock.Leave;
-  end;
-
-  if NoContext then
+  LUser := GetCurrentUserForThread;
+  if LUser = nil then
   begin
     LogAudit('', aaPermissionDenied, PermissionName, 'No user context', False);
     raise EPermissionDeniedException.Create('No user context');
   end;
 
-  if not HasPermission(Username, PermissionName) then
+  if not HasPermission(LUser.Username, PermissionName) then
   begin
-    LogAudit(Username, aaPermissionDenied, PermissionName,
+    LogAudit(LUser.Username, aaPermissionDenied, PermissionName,
       Format('Permission denied: %s', [PermissionName]), False);
     raise EPermissionDeniedException.CreateFmt(
-      'Permission denied: %s for user %s', [PermissionName, Username]);
+      'Permission denied: %s for user %s', [PermissionName, LUser.Username]);
   end;
 end;
 
 procedure TAuthorizationManager.RequireAnyPermission(const Permissions: array of string);
 var
-  Username: string;
-  NoContext: Boolean;
+  LUser: TUser;
 begin
-  NoContext := False;
-  FLock.Enter;
-  try
-    if FCurrentUser = nil then
-      NoContext := True
-    else
-      Username := FCurrentUser.Username;
-  finally
-    FLock.Leave;
-  end;
-
-  if NoContext then
+  LUser := GetCurrentUserForThread;
+  if LUser = nil then
     raise EPermissionDeniedException.Create('No user context');
 
-  if not HasAnyPermission(Username, Permissions) then
+  if not HasAnyPermission(LUser.Username, Permissions) then
   begin
-    LogAudit(Username, aaPermissionDenied, string.Join(',', Permissions),
+    LogAudit(LUser.Username, aaPermissionDenied, string.Join(',', Permissions),
       'Permission denied: none of required permissions', False);
     raise EPermissionDeniedException.Create('Permission denied');
   end;
@@ -1484,26 +1558,15 @@ end;
 
 procedure TAuthorizationManager.RequireAllPermissions(const Permissions: array of string);
 var
-  Username: string;
-  NoContext: Boolean;
+  LUser: TUser;
 begin
-  NoContext := False;
-  FLock.Enter;
-  try
-    if FCurrentUser = nil then
-      NoContext := True
-    else
-      Username := FCurrentUser.Username;
-  finally
-    FLock.Leave;
-  end;
-
-  if NoContext then
+  LUser := GetCurrentUserForThread;
+  if LUser = nil then
     raise EPermissionDeniedException.Create('No user context');
 
-  if not HasAllPermissions(Username, Permissions) then
+  if not HasAllPermissions(LUser.Username, Permissions) then
   begin
-    LogAudit(Username, aaPermissionDenied, string.Join(',', Permissions),
+    LogAudit(LUser.Username, aaPermissionDenied, string.Join(',', Permissions),
       'Permission denied: missing required permissions', False);
     raise EPermissionDeniedException.Create('Permission denied');
   end;

@@ -1,0 +1,68 @@
+package DeepBaseIntentClarification;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase IntentClarification Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  vcl,
+  DeepBaseCore,
+  DeepBaseLLM,
+  DeepBaseServices;
+
+contains
+  DeepBase.IntentClarification in 'Features\DeepBase.IntentClarification.pas',
+  DeepBase.IntentClarification.Logging in 'Features\DeepBase.IntentClarification.Logging.pas',
+  DeepBase.IntentClarification.Types in 'Features\DeepBase.IntentClarification.Types.pas',
+  DeepBase.IntentClarification.Interfaces in 'Features\DeepBase.IntentClarification.Interfaces.pas',
+  DeepBase.IntentClarification.Engine in 'Features\DeepBase.IntentClarification.Engine.pas',
+  DeepBase.IntentClarification.IoC in 'Features\DeepBase.IntentClarification.IoC.pas',
+  DeepBase.IntentClarification.Provider.L0 in 'Features\DeepBase.IntentClarification.Provider.L0.pas',
+  DeepBase.IntentClarification.Provider.L1 in 'Features\DeepBase.IntentClarification.Provider.L1.pas',
+  DeepBase.IntentClarification.Provider.L2 in 'Features\DeepBase.IntentClarification.Provider.L2.pas',
+  DeepBase.IntentClarification.Provider.L3 in 'Features\DeepBase.IntentClarification.Provider.L3.pas',
+  DeepBase.IntentClarification.Provider.L4 in 'Features\DeepBase.IntentClarification.Provider.L4.pas',
+  DeepBase.IntentClarification.Session in 'Features\DeepBase.IntentClarification.Session.pas',
+  DeepBase.IntentClarification.SessionFSM in 'Features\DeepBase.IntentClarification.SessionFSM.pas',
+  DeepBase.IntentClarification.Router in 'Features\DeepBase.IntentClarification.Router.pas',
+  DeepBase.IntentClarification.SignalDetector in 'Features\DeepBase.IntentClarification.SignalDetector.pas',
+  DeepBase.IntentClarification.Budget in 'Features\DeepBase.IntentClarification.Budget.pas',
+  DeepBase.IntentClarification.Exit in 'Features\DeepBase.IntentClarification.Exit.pas',
+  DeepBase.IntentClarification.OptionFrame in 'Features\DeepBase.IntentClarification.OptionFrame.pas',
+  DeepBase.IntentClarification.Metrics in 'Features\DeepBase.IntentClarification.Metrics.pas',
+  DeepBase.IntentClarification.FeatureConfig in 'Features\DeepBase.IntentClarification.FeatureConfig.pas',
+  DeepBase.IntentClarification.Templates in 'Features\DeepBase.IntentClarification.Templates.pas',
+  DeepBase.IntentClarification.Validation in 'Features\DeepBase.IntentClarification.Validation.pas',
+  DeepBase.IntentClarification.LLMResilience in 'Features\DeepBase.IntentClarification.LLMResilience.pas',
+  DeepBase.IntentClarification.Anticipation in 'Features\DeepBase.IntentClarification.Anticipation.pas',
+  DeepBase.IntentClarification.Degradation in 'Features\DeepBase.IntentClarification.Degradation.pas',
+  DeepBase.IntentClarification.Moments in 'Features\DeepBase.IntentClarification.Moments.pas',
+  DeepBase.IntentClarification.Rapport in 'Features\DeepBase.IntentClarification.Rapport.pas',
+  DeepBase.IntentClarification.Registration in 'Features\DeepBase.IntentClarification.Registration.pas';
+
+end.

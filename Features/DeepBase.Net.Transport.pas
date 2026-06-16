@@ -296,59 +296,136 @@ function TDeepBaseSystemNetTransport.SendStreaming(
   AOnChunk: TStreamChunkEvent;
   const ACancelToken: ICancellationToken): TDeepBaseHttpTransportResponse;
 var
+  Client: THTTPClient;
+  Resp: IHTTPResponse;
+  BodyStream: TStream;
+  Reader: TStreamReader;
+  LLine, LData, LTrimmed: string;
+  LCancel: Boolean;
   LStartTick: UInt64;
   LFirstTokenMs: Integer;
   LFirstChunkReceived: Boolean;
 begin
-  // Execute the full request first (current transport limitation - buffered)
-  // then parse SSE lines and deliver via callback. This enables the streaming
-  // API contract while the underlying HTTP layer remains buffered.
-  // Future: replace with chunked/socket-based transport for true TTFT reduction.
+  // True incremental streaming: THTTPClient.Post returns once HTTP headers arrive;
+  // the body is read line-by-line from IHTTPResponse.ContentStream via TStreamReader.
+  // Each SSE "data: ..." line is delivered via AOnChunk as soon as it is received.
+  //
+  // Note: On some Delphi/platform builds ContentStream may buffer the full body
+  // internally before Post returns. In that case this degenerates to buffered
+  // SSE parsing — still correct, just not reducing TTFT.  A future transport
+  // backed by raw sockets or WinHttpSetStatusCallback can achieve true TTFT.
+
+  if ARequest.Url.Trim = '' then
+    raise EDeepBaseNetTransportError.Create('HTTP transport URL is required');
+
   LStartTick := TThread.GetTickCount64;
   LFirstTokenMs := 0;
   LFirstChunkReceived := False;
 
-  Result := Send(ARequest);
+  BodyStream := nil;
+  Client := THTTPClient.Create;
+  try
+    Client.ConnectionTimeout := ARequest.TimeoutMs;
+    Client.ResponseTimeout := ARequest.TimeoutMs;
+    if ARequest.ContentType <> '' then
+      Client.ContentType := ARequest.ContentType;
+    if ARequest.ProxyUrl <> '' then
+      Client.ProxySettings := TProxySettings.Create(ARequest.ProxyUrl);
 
-  // If cancelled before we even start parsing, return immediately
-  if Assigned(ACancelToken) and ACancelToken.IsCancelled then
-    Exit;
+    // Build body stream
+    if Length(ARequest.BodyBytes) > 0 then
+      BodyStream := TBytesStream.Create(ARequest.BodyBytes)
+    else
+      BodyStream := TStringStream.Create(ARequest.Body, TEncoding.UTF8);
 
-  // Parse SSE lines from the buffered response body
-  if Result.IsSuccess and (Result.Body <> '') then
-  begin
-    var LLines := Result.Body.Split([#10]);
-    for var LLine in LLines do
-    begin
-      if Assigned(ACancelToken) and ACancelToken.IsCancelled then
-        Break;
-
-      var LTrimmed := LLine.TrimRight([#13]);
-      if LTrimmed.StartsWith('data: ') then
+    try
+      Resp := Client.Post(ARequest.Url, BodyStream, nil, ARequest.Headers);
+    except
+      on E: Exception do
       begin
-        var LData := LTrimmed.Substring(6);
-        if LData = '[DONE]' then
-          Break;
-
-        if not LFirstChunkReceived then
-        begin
-          LFirstChunkReceived := True;
-          LFirstTokenMs := Integer(TThread.GetTickCount64 - LStartTick);
-        end;
-
-        var LCancel := False;
-        if Assigned(AOnChunk) then
-          AOnChunk(LData, LCancel);
-        if LCancel then
-          Break;
+        Result := TDeepBaseHttpTransportResponse.Create(0, '', E.Message);
+        Exit;
       end;
     end;
-  end;
 
-  // Append FirstTokenMs metadata
-  if LFirstChunkReceived then
-    Result.StatusText := Result.StatusText + ' [FirstTokenMs=' +
-      IntToStr(LFirstTokenMs) + ']';
+    Result.StatusCode := Resp.StatusCode;
+    Result.StatusText := Resp.StatusText;
+    Result.Headers := Resp.Headers;
+    Result.ContentType := Resp.MimeType;
+    if Resp.ContentLength >= 0 then
+      Result.ContentLength := Resp.ContentLength
+    else
+      Result.ContentLength := -1;
+
+    // If cancelled or non-success, skip body parsing
+    if (Assigned(ACancelToken) and ACancelToken.IsCancelled) or
+       not Result.IsSuccess then
+    begin
+      if (Resp.ContentStream <> nil) and not Result.IsSuccess then
+      begin
+        // Read error body for diagnostics
+        var MemStream := TMemoryStream.Create;
+        try
+          MemStream.CopyFrom(Resp.ContentStream, 0);
+          SetLength(Result.BodyBytes, MemStream.Size);
+          if MemStream.Size > 0 then
+          begin
+            MemStream.Position := 0;
+            MemStream.ReadBuffer(Result.BodyBytes[0], MemStream.Size);
+          end;
+          Result.Body := TEncoding.UTF8.GetString(Result.BodyBytes);
+        finally
+          MemStream.Free;
+        end;
+      end;
+      Exit;
+    end;
+
+    // Read response body incrementally via TStreamReader
+    if Resp.ContentStream <> nil then
+    begin
+      Reader := TStreamReader.Create(Resp.ContentStream, TEncoding.UTF8, True);
+      try
+        while not Reader.EndOfStream do
+        begin
+          if Assigned(ACancelToken) and ACancelToken.IsCancelled then
+            Break;
+
+          LLine := Reader.ReadLine;
+          LTrimmed := TrimRight(LLine);
+
+          if not LTrimmed.StartsWith('data: ') then
+            Continue;
+
+          LData := LTrimmed.Substring(6);
+          if LData = '[DONE]' then
+            Break;
+
+          if not LFirstChunkReceived then
+          begin
+            LFirstChunkReceived := True;
+            LFirstTokenMs := Integer(TThread.GetTickCount64 - LStartTick);
+          end;
+
+          LCancel := False;
+          if Assigned(AOnChunk) then
+            AOnChunk(LData, LCancel);
+          if LCancel then
+            Break;
+        end;
+      finally
+        Reader.Free;
+      end;
+    end;
+
+    // Append FirstTokenMs metadata to StatusText for diagnostics
+    if LFirstChunkReceived then
+      Result.StatusText := Result.StatusText + ' [FirstTokenMs=' +
+        IntToStr(LFirstTokenMs) + ']';
+  finally
+    BodyStream.Free;
+    Client.Free;
+  end;
 end;
 
 end.

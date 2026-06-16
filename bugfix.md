@@ -1,6 +1,42 @@
 ﻿# DeepBase Bug Fixes & Issues Resolution
 
-> 本文档记录所有发现和修复�?Bug、Issue 及改�?
+> 本文档记录所有发现和修复的 Bug、Issue 及改进
+---
+
+## 2026-06-15 P0/P1 修复中发现的编译错误
+
+### BUG-264: LLM.HTTP.pas SendStream out 参数 AResult 不能被匿名方法捕获
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.LLM.HTTP.pas
+- 问题: out 参数不能被匿名方法捕获，编译报 E2555 Cannot capture symbol
+- 修复: 改用局部变量 LResult，最后赋值给 AResult
+- 状态: ✅ 已修复
+
+### BUG-265: WeChatPay.pas 缺少 System.Net.URLClient 导入导致 TNetHeaders 未声明
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+- 问题: TNetHeaders 在 System.Net.URLClient 中定义，但 uses 中未引入
+- 修复: 在 uses 中添加 System.Net.URLClient
+- 状态: ✅ 已修复
+
+### BUG-266: AutoUpdate.pas class destructor 命名冲突与 TCertificate API 不存在
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.AutoUpdate.pas
+- 问题: class destructor Destroy 与基类冲突; TCertificate/THTTPCertificateResult 在当前 Delphi 版本不可用; Winapi.Wincrypt 单元不存在; TThread.Synchronize 签名不匹配
+- 修复: 删除 class destructor、销毁式管理器和 TCertificate 依赖型参考; 改用 TThread.ForceQueue、保留 OnCertRejected 回调属性作为文档 TODO
+- 状态: ✅ 已修复
+
+### BUG-267: AutoUpdate.pas 已移除的 TLS 内部函数被调用引用
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.AutoUpdate.pas
+- 问题: CreateSecureClient/FCurrentRequestHost/ExtractHostFromUrl/GetCertificateThumbprints/GetCertThumbprint/HandleValidateCertificate 在删除实现后仍被业务代码引用
+- 修复: 全部代码引用改为 THTTPClient.Create，移除所有 FCurrentRequestHost 赋值行
+- 状态: ✅ 已修复
+
+### BUG-268: ISpRecoGrammar vtable 缺失方法导致 LoadCmdFromFile 不可用
+- 发现日期: 2026-06-15 | 严重性: Critical | 文件: Features/DeepBase.Speech.SAPI.Decl.pas
+- 问题: ISpRecoGrammar 前两个 vtable 方法为 Placeholder，导致后续所有方法索引错位，LoadCmdFromFile 实际不可用
+- 修复: Placeholder1/2 改为 GetGrammarId/GetRecoContext，新增 SPEVENT/SPLO_STATIC/SPEI_RECOGNITION
+- 状态: ✅ 已修复
+
+---
+
 ---
 
 ## 2026-06-15 Bug 修复（5 专家代码审计修复 + v0.7 修正轮）

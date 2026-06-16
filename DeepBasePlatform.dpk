@@ -1,0 +1,62 @@
+package DeepBasePlatform;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'DeepBase Platform Runtime Package'}
+{$RUNONLY}
+
+requires
+  rtl,
+  IndySystem,
+  IndyCore,
+  IndyProtocols,
+  DeepBaseCore,
+  DeepBaseServices,
+  DeepBasePersistence,
+  DeepBaseCommerce,
+  vcl,
+  RESTComponents;
+
+contains
+  DeepBase.Net in 'Features\DeepBase.Net.pas',
+  DeepBase.Net.Transport.ICS in 'Features\DeepBase.Net.Transport.ICS.pas',
+  DeepBase.HttpServer in 'Features\DeepBase.HttpServer.pas',
+  DeepBase.Desktop.Lifecycle in 'Features\DeepBase.Desktop.Lifecycle.pas',
+  DeepBase.Updater in 'Features\DeepBase.Updater.pas',
+  DeepBase.AutoUpdate in 'Features\DeepBase.AutoUpdate.pas',
+  DeepBase.AntiTamper in 'Features\DeepBase.AntiTamper.pas',
+  DeepBase.Unlock in 'Features\DeepBase.Unlock.pas',
+  DeepBase.CloudSync in 'Features\DeepBase.CloudSync.pas',
+  DeepBase.CloudBackup in 'Features\DeepBase.CloudBackup.pas',
+  DeepBase.Graph in 'Features\DeepBase.Graph.pas',
+  UIAutomationClient_TLB in 'Features\UIAutomationClient_TLB.pas',
+  DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
+  DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
+  DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',
+  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas',
+  DeepBase.DataPlatform.Bootstrap in 'Features\DeepBase.DataPlatform.Bootstrap.pas';
+
+end.

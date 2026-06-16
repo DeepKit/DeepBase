@@ -1080,18 +1080,24 @@ function TDeepBaseLLM.GetConfig(const AConfigName: string): TLLMConfig;
 begin
   Result.Init;
   Result.Name := AConfigName;
-  
+
+  FCacheLock.Enter;
+  try
+    if FConfigCache.TryGetValue(AConfigName, Result) then
+      Exit;
+  finally
+    FCacheLock.Leave;
+  end;
+
+  // Cache miss — reload from DB (RefreshConfigCache acquires FCacheLock internally)
+  RefreshConfigCache;
+
   FCacheLock.Enter;
   try
     if not FConfigCache.TryGetValue(AConfigName, Result) then
     begin
-      // Try to load from DB
-      RefreshConfigCache;
-      if not FConfigCache.TryGetValue(AConfigName, Result) then
-      begin
-        // Return default
-        Result.Name := AConfigName;
-      end;
+      // Return default
+      Result.Name := AConfigName;
     end;
   finally
     FCacheLock.Leave;

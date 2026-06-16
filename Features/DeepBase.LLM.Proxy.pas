@@ -196,7 +196,7 @@ var
   Root, Choice, Msg, Usage: TJSONObject;
   Choices: TJSONArray;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TChatResult);  // Safe: properly initializes managed string fields
   Root := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Root = nil then
   begin
@@ -335,7 +335,7 @@ begin
       Result := ParseChatResponse(Resp)
     else
     begin
-      FillChar(Result, SizeOf(Result), 0);
+      Result := Default(TChatResult);  // Safe: properly initializes managed string fields
       Result.ErrorCode := 'PROXY_UNREACHABLE';
       Result.ErrorMessage := Format('Proxy returned %d: %s', [Code, Resp]);
       Result.DurationMs := FLastDurationMs;
@@ -494,7 +494,7 @@ begin
       Result := ParseChatResponse(Resp)
     else
     begin
-      FillChar(Result, SizeOf(Result), 0);
+      Result := Default(TChatResult);  // Safe: properly initializes managed string fields
       Result.ErrorCode := 'PROXY_UNREACHABLE';
       Result.ErrorMessage := Format('Proxy returned %d: %s', [Code, Resp]);
       Result.DurationMs := FLastDurationMs;
@@ -554,13 +554,13 @@ begin
           AOnProgress(1.0, 'Complete', True);
 
         if LResult.Success and Assigned(AOnResult) then
-          TThread.Queue(nil, procedure begin AOnResult(LResult); end)
+          TThread.ForceQueue(nil, procedure begin AOnResult(LResult); end)
         else if not LResult.Success and Assigned(AOnError) then
-          TThread.Queue(nil, procedure begin AOnError(LResult.ErrorMessage); end);
+          TThread.ForceQueue(nil, procedure begin AOnError(LResult.ErrorMessage); end);
       except
         on E: Exception do
           if Assigned(AOnError) then
-            TThread.Queue(nil, procedure begin AOnError(E.Message); end);
+            TThread.ForceQueue(nil, procedure begin AOnError(E.Message); end);
       end;
     end);
 end;
