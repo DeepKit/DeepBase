@@ -128,6 +128,32 @@
 - [ ] dpk 分包验证 (5 dpk)。
 - [ ] DeepLaunch 语音集成 (TranscribeFromMic/Speak/WakeWord/Voiceprint)。
 
+### speech-tts-migration — TTS 后端迁入 DeepBase + 三层回退 Resolver
+> **来源**: DeepInput/DeepClip 商业化讨论 (2026-06-12)
+> **目标**: 将 DeepInput 中的 Edge TTS / StepFun TTS 下沉到 DeepBase，新增统一 ASR/TTS Resolver（三层回退），使 DeepInput 瘦身 + DeepClip/DeepFlow 零成本接入语音能力。
+> **总工时**: ~5h
+
+#### SPEECH-01: TTS 后端迁入
+- [ ] `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
+- [ ] `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
+- [ ] Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
+
+#### SPEECH-02: 统一 Resolver 工厂
+- [ ] 新增 `DeepBase.Speech.Resolver.pas`
+- [ ] `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
+- [ ] `ResolveTTS(ALicensing)` — 三层回退：Edge(免费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
+- [ ] `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
+
+#### SPEECH-03: DeepInput 瘦身
+- [ ] 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`
+- [ ] `uMain.pas` → 调用 `TSpeechResolver.ResolveASR / ResolveTTS`
+- [ ] `uAudioCapture.pas, uVAD.pas` 评估：替换为 `DeepBase.Speech.Audio.WinMM` + `DeepBase.Speech.VAD`
+
+#### SPEECH-04: DeepClip 零成本接入
+- [ ] `DeepClip/src/AI/DeepClip.AI.pas` 或新 `DeepClip/src/Speech/DeepClip.Speech.pas` 中调用 `TSpeechResolver`
+- [ ] 语音输入集成：录音 → VAD → ASR → 文字注入剪贴板
+- [ ] 确认 `TClipCommerce` 的 `CanUseVoice` 与 License 联动
+
 ### delphi-13-migration
 - [ ] Skia4Delphi 7.1.0 unit path 变更。
 - [ ] VCL/FMX 兼容性检查。IDE 组件面板确认。
