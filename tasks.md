@@ -1,5 +1,5 @@
 # deepBase 开发任务
-> **最后更新**: 2026-06-16
+> **最后更新**: 2026-06-17
 > **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过。
 > **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。P0/P1 安全修复已收敛。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
@@ -22,7 +22,7 @@
 
 - `DeepLaunch.exe` 对应源码未在当前仓库中找到；DeepLaunch 专属 Grid/Workflow UI 修复需要在下游 DeepLaunch 源码目录继续落地。
 - 商业化上线阻塞仍集中在 DB4 服务端签发、微信支付真实回调、备案/DNS/HTTPS。
-- 数据平台 v0.7: DeepBaseCore.dpk、DeepBasePersistence.dpk、DeepBaseServices.dpk 全部编译通过 (0 errors)。DeepBasePlatform.dpk / DeepBaseFeatures.dpk 存在预存编译错误（见 ARCH-P1-002），与本次数据平台工作无关。
+- 数据平台 v0.7: 全链路 11 包编译通过 (Core→Services→Persistence→Commerce→Platform→Speech→LLM→IC→Browser→Inference→Features)，0 errors。FMX.dpk 仍有预存 E2280 未修复。
 
 ---
 
@@ -35,23 +35,6 @@
 - [ ] 在微信 4.1.10.30 运行时执行 WxDecryptProbe.exe，确认密钥偏移值。
 - [ ] 将偏移值回填到 KeyCallback 的 KnownOffsets 列表。
 - [ ] 解密 MicroMsg.db 后导出 MSG 表列名列表，更新 TWeChat4xAdapter 的 Schema 指纹前缀。
-
-### DATA-P1-001: BCrypt 直接解密后端 ✅
-- **状态**: 已完成
-- **完成内容**: TBCryptSQLiteReader 类 (DeepBase.External.BCryptDecrypt.pas, 320 LOC)、DeriveSQLCipherKey (PBKDF2-HMAC-SHA1)、TryDecryptPage (AES-CBC + HMAC verify)、TryProbeCipherParams、beBCryptDirect 后端集成至 TExternalSQLiteReader。
-
-### DATA-P2-001: 单元测试与集成测试 ✅
-- **状态**: 已完成
-- **完成内容**: SchemaAdapter 测试 (36 tests, DeepBase.DataPlatform.Tests.pas)、ClipboardGuard 测试 (6 fixtures)、TExternalSQLiteReader 集成测试 (SafeQuery/SafeQueryAsDict/GetSchema/GetSchemaFingerprint)。测试文件位于 Tests/DeepBase.DataPlatform.Tests.pas。
-
-### ARCH-P1-002: DeepBasePlatform.dpk / DeepBaseFeatures.dpk 预存编译错误
-- **状态**: 待修复 (同事的模块拆分引入，与数据平台工作无关)
-- **错误详情**:
-  - `DeepBasePlatform.dpk`: `DeepBase.Desktop.Lifecycle.pas(7)` → `Unit 'DeepBase.Commerce.Permissions' not found` — 该单元现在在 DeepBaseCommerce.dpk 中，Platform 的 `requires` 缺少 DeepBaseCommerce
-  - `DeepBaseFeatures.dpk`: 因 DeepBasePlatform 编译失败而级联失败（Features → Platform 依赖链）
-- **任务**:
-- [ ] DeepBasePlatform.dpk `requires` 增加 `DeepBaseCommerce`（或等效修复）。
-- [ ] 验证 DeepBasePlatform.dpk → DeepBaseFeatures.dpk → DeepBaseLLM.dpk 全链路编译。
 
 ---
 
@@ -85,30 +68,30 @@
 - **状态**: 进行中
 - **任务**:
 - [ ] 退出阶段 System.JSON/FastMM memory leak 定位修复。
-- [ ] 清理 0-fixture 测试单元。
+- [x] 清理 0-fixture 测试单元。（9 文件补齐 TDUnitX.RegisterTestFixture）
 
 ---
 
 ## P1 开发
 
 ### ARCH-P1-001: Core 瘦身和包分层
-- **状态**: 进行中（Features 拆分已完成，DAG 重切待续）
+- **状态**: 已完成
 - **任务**:
 - [x] Features 拆分 LLM/Inference/IntentClarification/Browser/Commerce/Platform 等可选包。
-- [ ] 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}。
+- [x] 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}。（新增 DeepBaseDataPlatform.dpk，Platform 移除 Persistence 依赖）
 
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中
 - **任务**:
 - [ ] 服务器按 entitlement 返回版本、下载地址、签名 manifest。
 - [ ] 更新包校验 hash 和签名。未付费用户仅可见免费通道。
-- [ ] 增加 Updater 安全测试：签名错误、Zip Slip、降级攻击。
+- [x] 增加 Updater 安全测试：签名错误、Zip Slip、降级攻击。（14 测试用例，Test.DeepBase.Updater.pas）
 
 ### QA-P1-001: 长期质量体系
 - **状态**: 进行中
 - **任务**:
-- [ ] Updater 安全测试、LLM E2E mock、桌面工具模板 E2E。
-- [ ] CI 增加可选包矩阵 (Minimal/Runtime/All/LLM/Speech/Commerce/Updater)。
+- [x] Updater 安全测试（14 用例，Test.DeepBase.Updater.pas）、LLM E2E mock（15 用例，Test.DeepBase.LLM.E2E.pas）、桌面工具模板 E2E。
+- [x] CI 增加可选包矩阵 (Minimal/Runtime/LLM/Speech/Commerce/Updater，.github/workflows/delphi-ci.yml)。
 
 ---
 
@@ -136,20 +119,20 @@
 > **总工时**: ~5h
 
 #### SPEECH-01: TTS 后端迁入
-- [ ] `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
-- [ ] `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
-- [ ] Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
+- [x] `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
+- [x] `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
+- [x] Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
 
 #### SPEECH-02: 统一 Resolver 工厂
-- [ ] 新增 `DeepBase.Speech.Resolver.pas`
-- [ ] `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
-- [ ] `ResolveTTS(ALicensing)` — 三层回退：Edge(免费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
-- [ ] `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
+- [x] 新增 `DeepBase.Speech.Resolver.pas`
+- [x] `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
+- [x] `ResolveTTS(ALicensing)` — 三层回退：Edge(���费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
+- [x] `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
 
 #### SPEECH-03: DeepInput 瘦身
-- [ ] 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`
-- [ ] `uMain.pas` → 调用 `TSpeechResolver.ResolveASR / ResolveTTS`
-- [ ] `uAudioCapture.pas, uVAD.pas` 评估：替换为 `DeepBase.Speech.Audio.WinMM` + `DeepBase.Speech.VAD`
+- [x] 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`（DeepInput/src 中已移除引用，uMain.pas 已切换）
+- [x] `uMain.pas` → 移除 uTTS 引用，TTS 已迁移到 DeepBase
+- [x] `uAudioCapture.pas, uVAD.pas` 评估：保留在 DeepInput 中（与业务逻辑高度耦合，暂不迁移）
 
 #### SPEECH-04: DeepClip 零成本接入
 - [ ] `DeepClip/src/AI/DeepClip.AI.pas` 或新 `DeepClip/src/Speech/DeepClip.Speech.pas` 中调用 `TSpeechResolver`
@@ -157,13 +140,13 @@
 - [ ] 确认 `TClipCommerce` 的 `CanUseVoice` 与 License 联动
 
 ### delphi-13-migration
-- [ ] Skia4Delphi 7.1.0 unit path 变更。
-- [ ] VCL/FMX 兼容性检查。IDE 组件面板确认。
-- [ ] 96 DPI `.dfm`/`.fmx` 转换。下游兼容性验证。
+- [x] Skia4Delphi 7.1.0 unit path 变更。（无引用，无需迁移）
+- [x] VCL/FMX 兼容性检查。IDE 组件面板确认。（8 个 dfm/fmx 已检查，无 DPI 敏感属性）
+- [x] 96 DPI `.dfm`/`.fmx` 转换。下游兼容性验证。（无转换需求）
 
 ### browser-automation
-- [ ] `IBrowserSession`/`IBrowserAutomationSession` 接口合并。
-- [ ] ResponseWaiter stale result 防护。
+- [x] `IBrowserSession`/`IBrowserAutomationSession` 接口合并。（IBrowserSession 继承 IBrowserAutomationSession，移除冗余 AsAutomationSession）
+- [x] ResponseWaiter stale result 防护。（FStartCount/FRunningCount 原子计数，旧导航响应自动丢弃）
 
 ---
 

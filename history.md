@@ -1614,3 +1614,30 @@ var HTML := Exporter.ToHTML;
   - 当前 DeepBase 仓库未找到 `DeepLaunch.exe` 对应主程序源码；本轮先完成任务和缺陷登记，后续需要定位 DeepLaunch 下游源码后实施代码修复。
 - **验证**:
   - 文档结构检查：`tasks.md` 当前只保留未完成队列；DeepLaunch 4 项用户反馈均有任务和 bug 编号。
+
+### DATA-PLATFORM-MIGRATE-2026-06-16: 已完成数据平台任务移入历史
+- **完成日期**: 2026-06-16
+- **来源**: 用户要求"对齐 tasks.md，已完成任务移入 history.md"。
+- **移入项**:
+  - `DATA-P1-001`: BCrypt 直接解密后端 — TBCryptSQLiteReader (320 LOC)、DeriveSQLCipherKey、TryDecryptPage、TryProbeCipherParams、beBCryptDirect 集成。
+  - `DATA-P2-001`: 单元测试与集成测试 — SchemaAdapter 36 cases、ClipboardGuard 6 fixtures、TExternalSQLiteReader 集成测试。
+
+### ARCH-P1-002-2026-06-16: 全链路包编译门禁修复
+- **完成日期**: 2026-06-16
+- **来源**: `tasks.md` ARCH-P1-002，DeepBasePlatform.dpk 缺少依赖 + 多个预存编译错误。
+- **内容摘要**:
+  - **包依赖修复 (4 dpk)**:
+    - `DeepBasePlatform.dpk` requires 新增 `DeepBaseCommerce`，Net.Transport 移至 Commerce contains。
+    - `DeepBaseCommerce.dpk` 显式包含 `DeepBase.Net.Transport`。
+    - `DeepBaseSpeechCore.dpk` requires 新增 `DeepBaseServices` + `DeepBaseCommerce`。
+    - `Scripts/build_packages_win64.ps1` 拆分子包构建顺序（11 包全链路）。
+  - **编译错误修复 (5 单元, ~30 errors → 0)**:
+    - `WindowMonitor.pas`: TThread 前缀、显式 TThreadProcedure、缺失 WinAPI 声明、HWINEVENTHOOK 等 7 处。
+    - `ClipboardGuard.pas`: SaveBackupToTemp/Path 从 procedure 改为 function: Boolean 2 处。
+    - `UIA.Engine.pas`: COM TLB 接口不匹配、多接口继承、GetRaw 桥接、IsMappingIntegrityVerified 等 18 处。
+    - `DataPlatform.Bootstrap.pas`: 缺少 DeepBase.SchemaAdapter uses 1 处。
+    - `DeepBaseSpeechCore.dpk`: requires 缺失导致 E2199 包间冲突 ~25 处。
+  - **归档**: BUG-269 ~ BUG-274 共 6 项 (bugfix.md)。
+- **验证**:
+  - `Scripts/build_packages_win64.ps1 -Profile Runtime`：11 包全链路编译通过，0 errors。
+  - FMX.dpk 仍有预存 E2280（`DeepBase.FMX.LogListView.pas(239) Unterminated conditional directive`），不在本次范围。

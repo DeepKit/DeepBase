@@ -37,6 +37,101 @@
 
 ---
 
+## 2026-06-16 Bug 登记（ARCH-P1-002 包依赖修复中发现的预存错误）
+
+### BUG-269: WindowMonitor.pas 多处编译错误（NameThreadForDebugging/TThread.Queue/WinAPI 常量缺失）
+- 发现日期: 2026-06-16
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.WindowMonitor.pas`
+- 问题:
+  - `NameThreadForDebugging('WindowMonitor')` (L265) 缺少 `TThread.` 类方法限定前缀。
+  - `TThread.Queue(nil, procedure ...)` (L229) 内联匿名 procedure 导致 Delphi 重载歧义。
+  - `WM_NULL`、`InternalGetWindowText`、`PROCESS_QUERY_LIMITED_INFORMATION`、`QueryFullProcessImageName` 等 WinAPI 常量/函数未声明。
+  - `HWINEVENTHOOK`、`SetWinEventHook`、`UnhookWinEvent` 在当前 Delphi 版本未导出。
+  - `FPollThread.WaitFor(5000)` 参数签名不匹配。
+- 修复:
+  - `NameThreadForDebugging` → `TThread.NameThreadForDebugging`。
+  - `TThread.Queue` 匿名方法 → 显式 `TThreadProcedure` 变量。
+  - `InternalGetWindowText` → `GetWindowText`（标准 WinAPI）。
+  - 手动声明 `HWINEVENTHOOK = THandle`、`WINEVENT_OUTOFCONTEXT = 0`、`EVENT_SYSTEM_FOREGROUND = 3`、`SetWinEventHook`、`UnhookWinEvent`、`QueryFullProcessImageName`、`PROCESS_QUERY_LIMITED_INFORMATION = $1000`。
+  - `FPollThread.WaitFor(5000)` → `FPollThread.WaitFor`（无参版本）。
+  - 添加 `Winapi.Messages` to uses。
+- 状态: ✅ 已修复
+
+### BUG-270: ClipboardGuard.pas SaveBackupToTemp/SaveBackupToPath 声明为 procedure 但调用方检查返回值
+- 发现日期: 2026-06-16
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.ClipboardGuard.pas`
+- 问题:
+  - `SaveBackupToTemp`/`SaveBackupToPath` 声明为 `procedure`，但析构函数中 `if not SaveBackupToTemp then` 试图当 Boolean 判断。
+- 修复:
+  - 类声明和实现均改为 `function: Boolean`。
+  - `SaveBackupToPath` 成功路径 `Result := True`，异常路径 `Result := False`。
+  - `SaveBackupToTemp` 返回 `SaveBackupToPath` 的结果。
+- 状态: ✅ 已修复
+
+### BUG-271: UIA.Engine.pas COM 接口与 TLB 不匹配（18 处编译错误）
+- 发现日期: 2026-06-16
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.UIA.Engine.pas`
+- 问题:
+  - `IUIAutomationEngine` 使用多重接口继承 `(IUIAElementFinder, IUIAValueOperator, IUIAMappingProvider)`，当前 Delphi 不支持。
+  - `FAutomation.GetRootElement` → TLB 为 `function GetRootElement(out root: IUIAutomationElement): HResult`。
+  - `FAutomation.CreatePropertyCondition` → TLB 为 `function CreatePropertyCondition(... out newCondition: IUIAutomationCondition): HResult`。
+  - `Desktop.FindFirst` 返回 `IUIAutomationElement`（TLB 类型），非 `IUIAElement`（wrapper）。
+  - `FRaw.GetCurrentPropertyValue` → TLB 需要 `out OleVariant` 参数。
+  - `FRaw.GetCurrentPattern` → TLB 参数类型为 `out IUnknown` 而非 `out IInterface`。
+  - `VP.CurrentValue` → TLB 为 `function Get_CurrentValue(out retVal: WideString): HResult`。
+  - `IsMappingIntegrityVerified` 在 interface 声明了但类未实现。
+  - `CreateComObject` 需要 `System.Win.ComObj`。
+- 修复:
+  - `IUIAutomationEngine` 改为单继承 `IUIAElementFinder`，其他方法平铺。
+  - 所有 COM 调用改为匹配 TLB 签名（out 参数、HResult 返回）。
+  - `FindElement` 中 `IUIAutomationElement` → `IUIAElement` 手动 wrap。
+  - `IUIAElement` 接口新增 `GetRaw: IUnknown` 桥接方法。
+  - `GetCurrentPattern` 参数类型统一为 `IUnknown`。
+  - `GetCurrentPropertyValue` 使用 `OleVariant` 中间变量。
+  - `ValuePattern.Get_CurrentValue` / `InvokePattern.Invoke` 匹配 TLB。
+  - 新增 `IsMappingIntegrityVerified` 实现（返回 True）。
+  - 添加 `System.Win.ComObj` uses。
+- 状态: ✅ 已修复
+
+### BUG-272: DataPlatform.Bootstrap.pas ISchemaAdapterRegistry 未声明
+- 发现日期: 2026-06-16
+- 严重性: 🔴 Critical
+- 文件: `Features/DeepBase.DataPlatform.Bootstrap.pas`
+- 问题: `ISchemaAdapterRegistry` 在 `Core/DeepBase.SchemaAdapter.pas` 中定义，但 uses 只引用了 `DeepBase.SchemaAdapter.Types` 和 `DeepBase.SchemaAdapter.Registry`，缺少 `DeepBase.SchemaAdapter`。
+- 修复: 添加 `DeepBase.SchemaAdapter` to uses。
+- 状态: ✅ 已修复
+
+### BUG-273: DeepBaseSpeechCore.dpk requires 缺少 DeepBaseServices/DeepBaseCommerce
+- 发现日期: 2026-06-16
+- 严重性: 🔴 Critical
+- 文件: `DeepBaseSpeechCore.dpk`
+- 问题:
+  - `DeepBase.Speech.ASR.Baidu.pas` uses `DeepBase.Net.Transport`（在 Commerce 包中）。
+  - `DeepBase.Speech.Service.pas` uses `DeepBase.Commerce.Permissions`（在 Commerce 包中）。
+  - `DeepBase.Speech.*` 单元 uses `DeepBase.Crypto`（在 Services 包中）。
+  - SpeechCore 的 requires 只有 `rtl, DeepBaseCore`，导致编译器通过 `-U` 搜索路径隐式发现这些单元，产生 E2199 包间冲突。
+- 修复: requires 新增 `DeepBaseServices, DeepBaseCommerce`。
+- 状态: ✅ 已修复
+
+### BUG-274: build_packages_win64.ps1 未按依赖顺序编译子包
+- 发现日期: 2026-06-16
+- 严重性: 🟠 High
+- 文件: `Scripts/build_packages_win64.ps1`
+- 问题: Runtime profile 只编译 Core→Services→Persistence→Features，跳过 Commerce/Platform/Speech/LLM/IC/Browser/Inference 等中间包，导致 Features.dpk 编译时找不到子包的 .dcp。
+- 修复: Runtime profile 改为按依赖顺序编译全部 11 个包：Core→Services→Persistence→Commerce→Platform→Speech→LLM→IC→Browser→Inference→Features。
+- 状态: ✅ 已修复
+
+### BUG-275: SchemaAdapter.WeChat4x.pas case-of string 编译错误
+- 发现日期: 2026-06-17
+- 严重性: 🔴 Critical
+- 文件: `Core/DeepBase.SchemaAdapter.WeChat4x.pas`
+- 问题: `case Match.Groups[1].Value of '0': ... '1':` — Delphi 中 `case` 的 selector 不能是 `string` 类型，编译报 `E2001 Ordinal type required`。
+- 修复: 改为 `case Match.Groups[1].Value[1] of`（取第一个字符，`Char` 是 ordinal 类型）。
+- 状态: ✅ 已修复
+
 ---
 
 ## 2026-06-15 Bug 修复（5 专家代码审计修复 + v0.7 修正轮）
