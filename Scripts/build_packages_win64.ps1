@@ -4,7 +4,7 @@
 #   .\build_packages_win64.ps1 -Profile All
 
 param(
-    [ValidateSet('Minimal', 'Runtime', 'All')]
+    [ValidateSet('Minimal', 'Runtime', 'All', 'LLM', 'Speech', 'Commerce', 'Updater')]
     [string]$Profile = 'Runtime',
 
     [switch]$SkipDcuSourceCheck
@@ -69,6 +69,14 @@ $RuntimePackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
     'DeepBasePersistence.dpk',
+    'DeepBaseCommerce.dpk',
+    'DeepBasePlatform.dpk',
+    'DeepBaseDataPlatform.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBaseLLM.dpk',
+    'DeepBaseIntentClarification.dpk',
+    'DeepBaseBrowser.dpk',
+    'DeepBaseInference.dpk',
     'DeepBaseFeatures.dpk'
 )
 
@@ -81,6 +89,45 @@ if (Test-Path (Join-Path $RepoRoot 'VCL')) {
 } else {
     Write-Host "VCL source directory not found; DeepBaseVCL.dpk is excluded from this gate." -ForegroundColor Yellow
 }
+
+$LLMPackages = @(
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBasePersistence.dpk',
+    'DeepBaseCommerce.dpk',
+    'DeepBasePlatform.dpk',
+    'DeepBaseLLM.dpk'
+)
+
+$SpeechPackages = @(
+    'DeepBaseCore.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBaseSpeechASR.dpk',
+    'DeepBaseSpeechTTS.dpk',
+    'DeepBaseSpeechVoice.dpk',
+    'DeepBaseSpeechWake.dpk'
+)
+
+$CommercePackages = @(
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBaseCommerce.dpk'
+)
+
+$UpdaterPackages = @(
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBasePersistence.dpk',
+    'DeepBaseCommerce.dpk',
+    'DeepBasePlatform.dpk',
+    'DeepBaseDataPlatform.dpk',
+    'DeepBaseLLM.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBaseIntentClarification.dpk',
+    'DeepBaseBrowser.dpk',
+    'DeepBaseInference.dpk',
+    'DeepBaseFeatures.dpk'
+)
 
 function Invoke-PackageCompile {
     param(
@@ -139,6 +186,26 @@ switch ($Profile) {
             # Compile UI packages in make mode to avoid rebuilding (and locking)
             # already built runtime dependencies within the same gate run.
             Invoke-PackageCompile -PackagePath (Join-Path $RepoRoot $package)
+        }
+    }
+    'LLM' {
+        foreach ($package in $LLMPackages) {
+            Invoke-PackageCompile -PackagePath (Join-Path $RepoRoot $package) -BuildAll
+        }
+    }
+    'Speech' {
+        foreach ($package in $SpeechPackages) {
+            Invoke-PackageCompile -PackagePath (Join-Path $RepoRoot $package) -BuildAll
+        }
+    }
+    'Commerce' {
+        foreach ($package in $CommercePackages) {
+            Invoke-PackageCompile -PackagePath (Join-Path $RepoRoot $package) -BuildAll
+        }
+    }
+    'Updater' {
+        foreach ($package in $UpdaterPackages) {
+            Invoke-PackageCompile -PackagePath (Join-Path $RepoRoot $package) -BuildAll
         }
     }
 }

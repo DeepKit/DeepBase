@@ -266,7 +266,7 @@ begin
       FGrammar.SetDictationState(SPRS_ACTIVE);
     end;
   finally
-    DeleteFile(LTempFile);
+    System.SysUtils.DeleteFile(LTempFile);
   end;
 end;
 

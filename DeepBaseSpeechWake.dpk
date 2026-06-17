@@ -34,7 +34,6 @@ requires
   DeepBaseSpeechCore;
 
 contains
-  DeepBase.Speech.SAPI.Decl in 'Features\DeepBase.Speech.SAPI.Decl.pas',
   DeepBase.Speech.WakeWord in 'Features\DeepBase.Speech.WakeWord.pas';
 
 end.

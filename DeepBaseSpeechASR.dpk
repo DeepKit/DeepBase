@@ -31,13 +31,15 @@ package DeepBaseSpeechASR;
 requires
   rtl,
   DeepBaseCore,
-  DeepBaseSpeechCore;
+  DeepBaseSpeechCore,
+  DeepBaseCommerce,
+  DeepBaseInference;
 
 contains
-  DeepBase.Speech.SAPI.Decl in 'Features\DeepBase.Speech.SAPI.Decl.pas',
   DeepBase.Speech.ASR.SAPI in 'Features\DeepBase.Speech.ASR.SAPI.pas',
   DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
   DeepBase.Speech.FBank in 'Features\DeepBase.Speech.FBank.pas',
-  DeepBase.Speech.ASR.SenseVoice in 'Features\DeepBase.Speech.ASR.SenseVoice.pas';
+  DeepBase.Speech.ASR.SenseVoice in 'Features\DeepBase.Speech.ASR.SenseVoice.pas',
+  DeepBase.Speech.Service in 'Features\DeepBase.Speech.Service.pas';
 
 end.

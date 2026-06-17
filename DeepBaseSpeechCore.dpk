@@ -30,9 +30,12 @@ package DeepBaseSpeechCore;
 
 requires
   rtl,
-  DeepBaseCore;
+  DeepBaseCore,
+  DeepBaseServices,
+  DeepBaseCommerce;
 
 contains
+  DeepBase.Speech.SAPI.Decl in 'Features\DeepBase.Speech.SAPI.Decl.pas',
   DeepBase.Speech.Registry in 'Features\DeepBase.Speech.Registry.pas',
   DeepBase.Speech.Config in 'Features\DeepBase.Speech.Config.pas',
   DeepBase.Speech.Policy in 'Features\DeepBase.Speech.Policy.pas',
@@ -40,8 +43,8 @@ contains
   DeepBase.Speech.Intent in 'Features\DeepBase.Speech.Intent.pas',
   DeepBase.Speech.Types in 'Features\DeepBase.Speech.Types.pas',
   DeepBase.Speech.VAD in 'Features\DeepBase.Speech.VAD.pas',
+  DeepBase.Speech.Occupancy in 'Features\DeepBase.Speech.Occupancy.pas',
   DeepBase.Speech.Audio.WinMM in 'Features\DeepBase.Speech.Audio.WinMM.pas',
-  DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
-  DeepBase.Speech.Service in 'Features\DeepBase.Speech.Service.pas';
+  DeepBase.Speech.Resolver in 'Features\DeepBase.Speech.Resolver.pas';
 
 end.

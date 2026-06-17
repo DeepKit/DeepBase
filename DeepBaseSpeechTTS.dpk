@@ -34,7 +34,8 @@ requires
   DeepBaseSpeechCore;
 
 contains
-  DeepBase.Speech.SAPI.Decl in 'Features\DeepBase.Speech.SAPI.Decl.pas',
-  DeepBase.Speech.TTS.SAPI in 'Features\DeepBase.Speech.TTS.SAPI.pas';
+  DeepBase.Speech.TTS.SAPI in 'Features\DeepBase.Speech.TTS.SAPI.pas',
+  DeepBase.Speech.TTS.Edge in 'Features\DeepBase.Speech.TTS.Edge.pas',
+  DeepBase.Speech.TTS.StepFun in 'Features\DeepBase.Speech.TTS.StepFun.pas';
 
 end.

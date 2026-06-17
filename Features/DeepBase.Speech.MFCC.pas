@@ -336,14 +336,14 @@ begin
 end;
 
 class procedure TMFCCExtractor.ComputeDeltas(const AStaticFrames: TArray<TMFCCFrame>;
-  out ADelta, ADeltaDelta: TArray<TMFCCFrame>;
-const
-  N = 2;  // regression window
+  out ADelta, ADeltaDelta: TArray<TMFCCFrame>);
 var
   LNumFrames, I, J, K: Integer;
   LNorm: Single;
   LIdx: Integer;
   LVal: Single;
+const
+  N = 2;  // regression window
 begin
   LNumFrames := Length(AStaticFrames);
   LNorm := 0;

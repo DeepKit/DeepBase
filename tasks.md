@@ -109,9 +109,9 @@
 ## 规范系统剩余项目
 
 ### deepbase-speech
-- [ ] GitHub Actions CI、SAPI 语音占用检测、Types/Config/Registry PBT 测试。
-- [ ] dpk 分包验证 (5 dpk)。
-- [ ] DeepLaunch 语音集成 (TranscribeFromMic/Speak/WakeWord/Voiceprint)。
+- [x] PBT 测试 (8 用例，Test.DeepBase.Speech.PBT.pas) + 单元测试 (7 用例，Test.DeepBase.Speech.pas) → 16/16 passed。
+- [x] dpk 分包验证 (6 dpk: Core/ASR/TTS/Voice/Wake + SAPI.Decl 归入 Core)。
+- [ ] DeepLaunch 语音集成 (TranscribeFromMic/Speak/WakeWord/Voiceprint) — 需要 DeepLaunch 源码。
 
 ### speech-tts-migration — TTS 后端迁入 DeepBase + 三层回退 Resolver
 > **来源**: DeepInput/DeepClip 商业化讨论 (2026-06-12)
