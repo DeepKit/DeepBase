@@ -108,6 +108,12 @@ $SpeechPackages = @(
     'DeepBaseSpeechWake.dpk'
 )
 
+$DeepAxisPackages = @(
+    'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepAxis.dpk'
+)
+
 $CommercePackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
