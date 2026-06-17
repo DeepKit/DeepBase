@@ -57,6 +57,7 @@ type
       ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
     function CaptureScreenshot(out AImage: TBytes;
       out AError: string): Boolean;
+    function IsReady: Boolean;
     function AsAutomationSession: IBrowserAutomationSession;
   end;
 
@@ -184,6 +185,11 @@ function TFakeSelectorSession.CaptureScreenshot(out AImage: TBytes;
 begin
   AImage := nil;
   AError := '';
+  Result := True;
+end;
+
+function TFakeSelectorSession.IsReady: Boolean;
+begin
   Result := True;
 end;
 

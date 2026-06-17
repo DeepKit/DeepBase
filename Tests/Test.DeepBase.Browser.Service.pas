@@ -58,6 +58,7 @@ type
       ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
     function CaptureScreenshot(out AImage: TBytes;
       out AError: string): Boolean;
+    function IsReady: Boolean;
     function AsAutomationSession: IBrowserAutomationSession;
   end;
 
@@ -122,6 +123,11 @@ function TFakeServiceSession.CaptureScreenshot(out AImage: TBytes;
 begin
   AImage := nil;
   AError := '';
+  Result := True;
+end;
+
+function TFakeServiceSession.IsReady: Boolean;
+begin
   Result := True;
 end;
 

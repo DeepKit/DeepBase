@@ -12,6 +12,7 @@ requires
   VclSmp,
   DeepBaseCore,
   DeepBaseServices,
+  DeepBaseLLM,
   DeepBaseFeatures;
 
 contains

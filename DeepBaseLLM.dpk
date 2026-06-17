@@ -30,6 +30,7 @@ package DeepBaseLLM;
 
 requires
   rtl,
+  dbrtl,
   IndySystem,
   IndyCore,
   IndyProtocols,
@@ -38,6 +39,10 @@ requires
   DeepBasePlatform;
 
 contains
+  DeepBase.LLM in 'Core\DeepBase.LLM.pas',
+  DeepBase.LLM.BillingClient in 'Core\DeepBase.LLM.BillingClient.pas',
+  DeepBase.LLM.Manager in 'Core\DeepBase.LLM.Manager.pas',
+  DeepBase.LLM.ImportExport in 'Core\DeepBase.LLM.ImportExport.pas',
   DeepBase.LLM.Types in 'Features\DeepBase.LLM.Types.pas',
   DeepBase.LLM.Client in 'Features\DeepBase.LLM.Client.pas',
   DeepBase.LLM.HTTP in 'Features\DeepBase.LLM.HTTP.pas',
