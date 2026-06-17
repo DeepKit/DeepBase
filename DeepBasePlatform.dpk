@@ -35,7 +35,6 @@ requires
   IndyProtocols,
   DeepBaseCore,
   DeepBaseServices,
-  DeepBasePersistence,
   DeepBaseCommerce,
   vcl,
   RESTComponents;
@@ -48,7 +47,7 @@ contains
   DeepBase.Updater in 'Features\DeepBase.Updater.pas',
   DeepBase.AutoUpdate in 'Features\DeepBase.AutoUpdate.pas',
   DeepBase.AntiTamper in 'Features\DeepBase.AntiTamper.pas',
-  DeepBase.Unlock in 'Features\DeepBase.Unlock.pas',
+  // DeepBase.Unlock moved to DeepBaseCommerce.dpk
   DeepBase.CloudSync in 'Features\DeepBase.CloudSync.pas',
   DeepBase.CloudBackup in 'Features\DeepBase.CloudBackup.pas',
   DeepBase.Graph in 'Features\DeepBase.Graph.pas',
@@ -56,7 +55,6 @@ contains
   DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
   DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
   DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',
-  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas',
-  DeepBase.DataPlatform.Bootstrap in 'Features\DeepBase.DataPlatform.Bootstrap.pas';
+  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas';
 
 end.

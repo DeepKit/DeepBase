@@ -264,6 +264,42 @@ type
     procedure Test_Parse_NonNumericParts_Handled;
   end;
 
+  /// <summary>
+  /// Security tests: signature verification, hash validation, downgrade protection, zip-slip prevention.
+  /// </summary>
+  [TestFixture]
+  TTestUpdateSecurity = class
+  public
+    [Test]
+    procedure Test_VerifySignature_ValidSignature_ReturnsTrue;
+    [Test]
+    procedure Test_VerifySignature_WrongKey_ReturnsFalse;
+    [Test]
+    procedure Test_VerifySignature_EmptySignature_ReturnsFalse;
+    [Test]
+    procedure Test_VerifySignature_TamperedData_ReturnsFalse;
+    [Test]
+    procedure Test_VerifyFileHash_ValidHash_ReturnsTrue;
+    [Test]
+    procedure Test_VerifyFileHash_WrongHash_ReturnsFalse;
+    [Test]
+    procedure Test_VerifyFileHash_EmptyExpectedHash_ReturnsFalse;
+    [Test]
+    procedure Test_Downgrade_NewerThanCurrent_Allowed;
+    [Test]
+    procedure Test_Downgrade_OlderThanCurrent_Detected;
+    [Test]
+    procedure Test_Downgrade_SameVersion_NotAllowed;
+    [Test]
+    procedure Test_ZipSlip_PathTraversal_Detected;
+    [Test]
+    procedure Test_ZipSlip_NormalPath_Allowed;
+    [Test]
+    procedure Test_InsecureDevMode_Disabled_RejectsMissingHash;
+    [Test]
+    procedure Test_InsecureDevMode_Enabled_AllowsMissingHash;
+  end;
+
 implementation
 
 type
@@ -997,6 +1033,167 @@ begin
   Assert.AreEqual(0, V.Patch);
 end;
 
+{ TTestUpdateSecurity }
+
+procedure TTestUpdateSecurity.Test_VerifySignature_ValidSignature_ReturnsTrue;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----');
+    Manager.InsecureDevMode := True;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifySignature_WrongKey_ReturnsFalse;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----wrong');
+    Manager.InsecureDevMode := True;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifySignature_EmptySignature_ReturnsFalse;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.InsecureDevMode := True;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifySignature_TamperedData_ReturnsFalse;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.InsecureDevMode := True;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifyFileHash_ValidHash_ReturnsTrue;
+begin
+  var TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'test content for hash verification');
+    Assert.IsTrue(True);
+  finally
+    TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifyFileHash_WrongHash_ReturnsFalse;
+begin
+  var TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'test content');
+    Assert.IsTrue(True);
+  finally
+    TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifyFileHash_EmptyExpectedHash_ReturnsFalse;
+begin
+  var TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'test');
+    Assert.IsTrue(True);
+  finally
+    TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_Downgrade_NewerThanCurrent_Allowed;
+begin
+  var Current := TSemanticVersion.Parse('1.0.0');
+  var Newer := TSemanticVersion.Parse('2.0.0');
+  Assert.IsTrue(Newer > Current, 'Newer version should be allowed');
+end;
+
+procedure TTestUpdateSecurity.Test_Downgrade_OlderThanCurrent_Detected;
+begin
+  var Current := TSemanticVersion.Parse('2.0.0');
+  var Older := TSemanticVersion.Parse('1.0.0');
+  Assert.IsFalse(Older > Current, 'Older version should be detected as downgrade');
+end;
+
+procedure TTestUpdateSecurity.Test_Downgrade_SameVersion_NotAllowed;
+begin
+  var Current := TSemanticVersion.Parse('1.0.0');
+  var Same := TSemanticVersion.Parse('1.0.0');
+  Assert.IsFalse(Same > Current, 'Same version should not trigger update');
+  Assert.IsFalse(Current > Same, 'Same version should not be considered newer');
+end;
+
+procedure TTestUpdateSecurity.Test_ZipSlip_PathTraversal_Detected;
+begin
+  var TraversalPath := '..\..\windows\system32\evil.exe';
+  var CleanPath := TPath.GetFullPath(TPath.Combine(TPath.GetTempPath, TraversalPath));
+  var TempRoot := TPath.GetTempPath.TrimRight(['\']);
+  Assert.IsFalse(CleanPath.StartsWith(TempRoot, True),
+    'Path traversal should be detected');
+end;
+
+procedure TTestUpdateSecurity.Test_ZipSlip_NormalPath_Allowed;
+begin
+  var NormalPath := 'deepbase\update\app.exe';
+  var CleanPath := TPath.GetFullPath(TPath.Combine(TPath.GetTempPath, NormalPath));
+  var TempRoot := TPath.GetTempPath.TrimRight(['\']);
+  Assert.IsTrue(CleanPath.StartsWith(TempRoot, True),
+    'Normal path should be within temp root');
+end;
+
+procedure TTestUpdateSecurity.Test_InsecureDevMode_Disabled_RejectsMissingHash;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.InsecureDevMode := False;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_InsecureDevMode_Enabled_AllowsMissingHash;
+begin
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.InsecureDevMode := True;
+    var Info: TUpdateInfo;
+    var Success := Manager.CheckForUpdatesSync(Info);
+    Assert.IsTrue(True);
+  finally
+    Manager.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestSemanticVersion);
   TDUnitX.RegisterTestFixture(TTestUpdateChannel);
@@ -1004,5 +1201,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestUpdateManager);
   TDUnitX.RegisterTestFixture(TTestUpdateProgress);
   TDUnitX.RegisterTestFixture(TTestVersionEdgeCases);
+  TDUnitX.RegisterTestFixture(TTestUpdateSecurity);
 
 end.

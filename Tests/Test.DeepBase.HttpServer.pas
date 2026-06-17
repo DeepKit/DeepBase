@@ -613,3 +613,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestDeepBaseHttpServer);
+end.

@@ -800,8 +800,7 @@ end;
 
 function TWebView2BrowserSession.AsAutomationSession: IBrowserAutomationSession;
 begin
-  // M1 fix: delegate to shared engine-agnostic adapter
-  Result := TBrowserSession2AutomationAdapter.Create(Self);
+  Result := Self;
 end;
 
 { IBrowserMessageReceiver }

@@ -48,6 +48,7 @@ uses
 type
   TFakeBrowserSession = class(TInterfacedObject, IBrowserSession)
   public
+    function IsReady: Boolean;
     function GetSessionId: TBrowserSessionId;
     function GetState: TBrowserSessionState;
     function GetCurrentUrl: string;
@@ -85,6 +86,11 @@ end;
 function TFakeBrowserSession.GetLastError: string;
 begin
   Result := '';
+end;
+
+function TFakeBrowserSession.IsReady: Boolean;
+begin
+  Result := True;
 end;
 
 function TFakeBrowserSession.Navigate(const AUrl: string;

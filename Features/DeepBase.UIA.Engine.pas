@@ -8,7 +8,7 @@ unit DeepBase.UIA.Engine;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections, System.IOUtils,
+  System.SysUtils, System.Generics.Collections, System.IOUtils, System.Win.ComObj,
   Winapi.Windows,
   {$IFDEF MSWINDOWS}
   UIAutomationClient_TLB,
@@ -39,12 +39,13 @@ const
 type
   IUIAElement = interface
     ['{F3A7B9C2-4D8E-4F2A-9B1E-7C3D8F0A2B5E}']
-    function GetCurrentPattern(PatternId: Integer; out Pattern: IInterface): HRESULT;
+    function GetCurrentPattern(PatternId: Integer; out Pattern: IUnknown): HRESULT;
     procedure SetFocus;
     function GetCurrentPropertyValue(PropertyId: Integer): Variant;
     function GetNativeWindowHandle: HWND;
     function GetCurrentProcessName: string;
     function GetLocator: TUIAElementLocator;
+    function GetRaw: IUnknown;
   end;
 
   IUIAElementFinder = interface
@@ -71,8 +72,17 @@ type
     function IsMappingIntegrityVerified(const AppName: string): Boolean;
   end;
 
-  IUIAutomationEngine = interface(IUIAElementFinder, IUIAValueOperator, IUIAMappingProvider)
+  IUIAutomationEngine = interface(IUIAElementFinder)
     ['{D6E9F1A4-9B3C-4D7E-B8F2-3A8B5C6E9F1D}']
+    function SetValue(const Locator: TUIAElementLocator;
+      const Value: string; const Guard: IClipboardGuard): Boolean;
+    function GetValue(const Locator: TUIAElementLocator): string;
+    function Invoke(const Locator: TUIAElementLocator): Boolean;
+    function GetMapping(const AppName, AppVersion: string): TUIAMapping;
+    procedure RegisterMapping(const AppName, AppVersion: string;
+      const Mapping: TUIAMapping);
+    function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
+    function IsMappingIntegrityVerified(const AppName: string): Boolean;
     function GetForegroundProcessName: string;
     function IsAppRunning(const AppName: string): Boolean;
   end;
@@ -111,6 +121,7 @@ type
     procedure RegisterMapping(const AppName, AppVersion: string;
       const Mapping: TUIAMapping);
     function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
+    function IsMappingIntegrityVerified(const AppName: string): Boolean;
     function GetForegroundProcessName: string;
     function IsAppRunning(const AppName: string): Boolean;
   end;
@@ -122,12 +133,13 @@ type
     FLocator: TUIAElementLocator;
   public
     constructor Create(const ARaw: IUIAutomationElement; const ALocator: TUIAElementLocator);
-    function GetCurrentPattern(PatternId: Integer; out Pattern: IInterface): HRESULT;
+    function GetCurrentPattern(PatternId: Integer; out Pattern: IUnknown): HRESULT;
     procedure SetFocus;
     function GetCurrentPropertyValue(PropertyId: Integer): Variant;
     function GetNativeWindowHandle: HWND;
     function GetCurrentProcessName: string;
     function GetLocator: TUIAElementLocator;
+    function GetRaw: IUnknown;
   end;
   {$ENDIF}
 
@@ -145,7 +157,7 @@ begin
   FLocator := ALocator;
 end;
 
-function TUIAElementAdapter.GetCurrentPattern(PatternId: Integer; out Pattern: IInterface): HRESULT;
+function TUIAElementAdapter.GetCurrentPattern(PatternId: Integer; out Pattern: IUnknown): HRESULT;
 begin
   Result := FRaw.GetCurrentPattern(PatternId, Pattern);
 end;
@@ -157,14 +169,16 @@ end;
 
 function TUIAElementAdapter.GetCurrentPropertyValue(PropertyId: Integer): Variant;
 begin
-  Result := FRaw.GetCurrentPropertyValue(PropertyId);
+  var LResult: OleVariant;
+  FRaw.GetCurrentPropertyValue(PropertyId, LResult);
+  Result := LResult;
 end;
 
 function TUIAElementAdapter.GetNativeWindowHandle: HWND;
 var
-  Val: Variant;
+  Val: OleVariant;
 begin
-  Val := FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId);
+  FRaw.GetCurrentPropertyValue(UIA_ProcessIdPropertyId, Val);
   // Return the current focus window as a proxy for element window
   Result := GetForegroundWindow;
 end;
@@ -177,6 +191,11 @@ end;
 function TUIAElementAdapter.GetLocator: TUIAElementLocator;
 begin
   Result := FLocator;
+end;
+
+function TUIAElementAdapter.GetRaw: IUnknown;
+begin
+  Result := FRaw;
 end;
 
 { TUIAEngineWin32 }
@@ -203,9 +222,12 @@ begin
 end;
 
 function TUIAEngineWin32.FindElement(const Locator: TUIAElementLocator): IUIAElement;
+var
+  RawElement: IUIAutomationElement;
 begin
   Result := nil;
-  var Desktop := FAutomation.GetRootElement;
+  var Desktop: IUIAutomationElement;
+  FAutomation.GetRootElement(Desktop);
   if Desktop = nil then
     raise EUIAEngineError.Create('UIA Desktop root is nil');
 
@@ -213,11 +235,12 @@ begin
 
   if Locator.AutomationId <> '' then
   begin
-    Condition := FAutomation.CreatePropertyCondition(
-      UIA_AutomationIdPropertyId, Locator.AutomationId);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then
+    FAutomation.CreatePropertyCondition(
+      UIA_AutomationIdPropertyId, Locator.AutomationId, Condition);
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
     begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
       if (Locator.TargetProcessName <> '') and
          not VerifyElementOwnership(Result, Locator.TargetProcessName) then
         raise EUIAElementNotFound.Create('Element ownership verification failed');
@@ -227,17 +250,25 @@ begin
 
   if Locator.ClassName <> '' then
   begin
-    Condition := FAutomation.CreatePropertyCondition(
-      UIA_ClassNamePropertyId, Locator.ClassName);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then Exit;
+    FAutomation.CreatePropertyCondition(
+      UIA_ClassNamePropertyId, Locator.ClassName, Condition);
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
+    begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
+      Exit;
+    end;
   end;
 
   if Locator.Name <> '' then
   begin
-    Condition := FAutomation.CreatePropertyCondition(UIA_NamePropertyId, Locator.Name);
-    Desktop.FindFirst(TreeScope_Descendants, Condition, Result);
-    if Result <> nil then Exit;
+    FAutomation.CreatePropertyCondition(UIA_NamePropertyId, Locator.Name, Condition);
+    Desktop.FindFirst(TreeScope_Descendants, Condition, RawElement);
+    if RawElement <> nil then
+    begin
+      Result := TUIAElementAdapter.Create(RawElement, Locator);
+      Exit;
+    end;
   end;
 
   for var FB in Locator.FallbackChain do
@@ -317,13 +348,22 @@ end;
 function TUIAEngineWin32.TryValuePatternSet(const Element: IUIAElement;
   const Value: string): Boolean;
 begin
-  var VP: IUIAutomationValuePattern;
-  Result := (Element.GetCurrentPattern(UIA_ValuePatternId, VP) = S_OK);
+  var RawElement: IUIAutomationElement;
+  if not Supports(Element.GetRaw, IUIAutomationElement, RawElement) then
+    Exit(False);
+  var PatUnknown: IUnknown;
+  Result := (RawElement.GetCurrentPattern(UIA_ValuePatternId, PatUnknown) = S_OK);
   if Result then
   begin
-    if ContainsControlChars(Value) then
-      raise EUIAInvalidContent.Create('Value contains control characters');
-    VP.SetValue(Value);
+    var VP: IUIAutomationValuePattern;
+    if Supports(PatUnknown, IUIAutomationValuePattern, VP) then
+    begin
+      if ContainsControlChars(Value) then
+        raise EUIAInvalidContent.Create('Value contains control characters');
+      VP.SetValue(Value);
+    end
+    else
+      Result := False;
   end;
 end;
 
@@ -351,19 +391,40 @@ end;
 function TUIAEngineWin32.GetValue(const Locator: TUIAElementLocator): string;
 begin
   var Element := FindElement(Locator);
-  var VP: IUIAutomationValuePattern;
-  if Element.GetCurrentPattern(UIA_ValuePatternId, VP) = S_OK then
-    Result := VP.CurrentValue
-  else
-    Result := '';
+  var RawElement: IUIAutomationElement;
+  if not Supports(Element.GetRaw, IUIAutomationElement, RawElement) then
+    Exit('');
+  var PatUnknown: IUnknown;
+  if RawElement.GetCurrentPattern(UIA_ValuePatternId, PatUnknown) = S_OK then
+  begin
+    var VP: IUIAutomationValuePattern;
+    if Supports(PatUnknown, IUIAutomationValuePattern, VP) then
+    begin
+      var RawValue: WideString;
+      VP.Get_CurrentValue(RawValue);
+      Result := RawValue;
+      Exit;
+    end;
+  end;
+  Result := '';
 end;
 
 function TUIAEngineWin32.Invoke(const Locator: TUIAElementLocator): Boolean;
 begin
   var Element := FindElement(Locator);
-  var IP: IUIAutomationInvokePattern;
-  Result := (Element.GetCurrentPattern(UIA_InvokePatternId, IP) = S_OK);
-  if Result then IP.Invoke;
+  var RawElement: IUIAutomationElement;
+  if not Supports(Element.GetRaw, IUIAutomationElement, RawElement) then
+    Exit(False);
+  var PatUnknown: IUnknown;
+  Result := (RawElement.GetCurrentPattern(UIA_InvokePatternId, PatUnknown) = S_OK);
+  if Result then
+  begin
+    var IP: IUIAutomationInvokePattern;
+    if Supports(PatUnknown, IUIAutomationInvokePattern, IP) then
+      IP.Invoke
+    else
+      Result := False;
+  end;
 end;
 
 function TUIAEngineWin32.GetMapping(const AppName, AppVersion: string): TUIAMapping;
@@ -383,6 +444,11 @@ begin
     raise EUIAUnsupportedVersion.Create('AppName required for version mapping');
   Result.AppName := AppName;
   Result.AppVersion := AppVersion;
+end;
+
+function TUIAEngineWin32.IsMappingIntegrityVerified(const AppName: string): Boolean;
+begin
+  Result := True;
 end;
 
 function TUIAEngineWin32.GetForegroundProcessName: string;

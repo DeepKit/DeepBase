@@ -44,6 +44,8 @@ contains
   DeepBase.Commerce.Backend.Http in 'Features\DeepBase.Commerce.Backend.Http.pas',
   DeepBase.Commerce.SafeClient in 'Features\DeepBase.Commerce.SafeClient.pas',
   DeepBase.Commerce.Permissions in 'Features\DeepBase.Commerce.Permissions.pas',
-  DeepBase.Commerce.UpgradeFlow in 'Features\DeepBase.Commerce.UpgradeFlow.pas';
+  DeepBase.Commerce.UpgradeFlow in 'Features\DeepBase.Commerce.UpgradeFlow.pas',
+  DeepBase.Unlock in 'Features\DeepBase.Unlock.pas',
+  DeepBase.Licensing in 'Features\DeepBase.Licensing.pas';
 
 end.

@@ -62,6 +62,7 @@ type
       ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
     function CaptureScreenshot(out AImage: TBytes;
       out AError: string): Boolean;
+    function IsReady: Boolean;
     function AsAutomationSession: IBrowserAutomationSession;
   end;
 
@@ -144,6 +145,11 @@ end;
 function TFakeCDPSession.AsAutomationSession: IBrowserAutomationSession;
 begin
   Result := nil;
+end;
+
+function TFakeCDPSession.IsReady: Boolean;
+begin
+  Result := True;
 end;
 
 { TCDPStrategyTests }

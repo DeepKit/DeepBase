@@ -35,6 +35,8 @@ type
     FTimeoutMs: Integer;
     FStableMs: Integer;
     FOnResult: TResponseWaiterEvent;
+    FStartCount: Integer;   // Incremented on each StartWaiting; prevents stale results
+    FRunningCount: Integer; // The count value active when the current waiter was started
 
     procedure InjectScript(const AScript: string);
     procedure DispatchPostMessage(const AJson: string);
@@ -181,6 +183,8 @@ begin
   FWaitingFlag := 0;
   FTimeoutMs := 120000;
   FStableMs := 3000;
+  FStartCount := 0;
+  FRunningCount := 0;
 end;
 
 destructor TBrowserResponseWaiter.Destroy;
@@ -306,9 +310,14 @@ begin
   // BUG-BA-101 fix: set waiting flag BEFORE ExecuteScript to avoid missing
   // fast callbacks that arrive before the flag is set.
   SetWaitingFlag(True);
+  TInterlocked.Increment(FStartCount);
+  FRunningCount := FStartCount;
   Result := FSession.ExecuteScript(LJS, LError);
   if not Result then
+  begin
     SetWaitingFlag(False);  // Rollback on failure
+    FRunningCount := 0;
+  end;
 end;
 
 procedure TBrowserResponseWaiter.CancelWaiting;
@@ -318,6 +327,7 @@ var
   LReceiver: IBrowserMessageReceiver;
 begin
   SetWaitingFlag(False);
+  FRunningCount := 0;  // Prevent stale results from being delivered
 
   // C6 fix: detach message handler to prevent stale callbacks
   if Supports(FSession, IBrowserMessageReceiver, LReceiver) then
@@ -358,7 +368,15 @@ procedure TBrowserResponseWaiter.HandleWaitResult(const AResult: string;
 var
   LResult: TBrowserWaitResult;
   LOnResult: TResponseWaiterEvent;
+  LMyCount: Integer;
 begin
+  // Stale result guard: only deliver if this is the current waiter instance.
+  // If StartWaiting was called again since this waiter was injected, the
+  // response belongs to an old navigation and must be discarded.
+  LMyCount := TInterlocked.CompareExchange(FRunningCount, 0, 0);
+  if LMyCount <> TInterlocked.CompareExchange(FStartCount, 0, 0) then
+    Exit;
+
   SetWaitingFlag(False);
 
   if AResult = 'success' then

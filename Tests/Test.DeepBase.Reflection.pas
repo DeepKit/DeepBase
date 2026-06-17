@@ -1193,3 +1193,11 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestReflection);
+  TDUnitX.RegisterTestFixture(TTestRecord);
+  TDUnitX.RegisterTestFixture(TTestPerson);
+  TDUnitX.RegisterTestFixture(TTestEmployee);
+  TDUnitX.RegisterTestFixture(TTestColor);
+end.

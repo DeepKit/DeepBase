@@ -32,6 +32,7 @@ type
     constructor Create(const AId: TBrowserSessionId);
     function GetSessionId: TBrowserSessionId;
     function GetState: TBrowserSessionState;
+    function IsReady: Boolean;
     function GetCurrentUrl: string;
     function GetLastError: string;
     function Navigate(const AUrl: string; ATimeoutMs: Integer;
@@ -113,6 +114,11 @@ end;
 function TFakeRecoverySession.GetState: TBrowserSessionState;
 begin
   Result := bssReady;
+end;
+
+function TFakeRecoverySession.IsReady: Boolean;
+begin
+  Result := True;
 end;
 
 function TFakeRecoverySession.GetCurrentUrl: string;

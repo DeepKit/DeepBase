@@ -702,3 +702,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestDeepBaseMath);
+end.

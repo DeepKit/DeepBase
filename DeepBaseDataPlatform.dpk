@@ -1,4 +1,4 @@
-package DeepBaseFeatures;
+package DeepBaseDataPlatform;
 
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
@@ -25,19 +25,17 @@ package DeepBaseFeatures;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
-{$DESCRIPTION 'DeepBase Features Meta-Package'}
+{$DESCRIPTION 'DeepBase Data Platform Runtime Package'}
 {$RUNONLY}
 
 requires
   rtl,
   DeepBaseCore,
-  DeepBaseLLM,
-  DeepBaseIntentClarification,
-  DeepBaseBrowser,
-  DeepBaseCommerce,
-  DeepBaseInference,
-  DeepBaseSpeechCore,
-  DeepBasePlatform,
-  DeepBaseDataPlatform;
+  DeepBaseServices,
+  DeepAxis,
+  DeepBasePlatform;
+
+contains
+  DeepBase.DataPlatform.Bootstrap in 'Features\DeepBase.DataPlatform.Bootstrap.pas';
 
 end.

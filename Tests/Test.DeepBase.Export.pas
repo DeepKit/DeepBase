@@ -571,3 +571,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestExport);
+end.

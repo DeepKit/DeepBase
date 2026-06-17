@@ -13,9 +13,11 @@ uses
   DeepBase.External.Types,
   DeepBase.External.Auditor,
   DeepBase.External.SQLiteReader,
+  DeepBase.SchemaAdapter,
   DeepBase.SchemaAdapter.Types,
   DeepBase.SchemaAdapter.Registry,
   DeepBase.SchemaAdapter.WeChat39x,
+  DeepBase.SchemaAdapter.WeChat4x,
   {$IFDEF MSWINDOWS}
   DeepBase.UIA.Engine,
   {$ENDIF}
@@ -68,6 +70,7 @@ begin
   // Phase 4: SchemaAdapter registry
   Result.SchemaAdapterRegistry := TSchemaAdapterRegistry.Create;
   Result.SchemaAdapterRegistry.Register('3.9.0-3.9.99', TWeChat39xAdapter);
+  Result.SchemaAdapterRegistry.Register('4.0.0-4.99.99', TWeChat4xAdapter);
 
   (Result.ExternalReader as TExternalSQLiteReader).SetAdapterRegistry(
     Result.SchemaAdapterRegistry);

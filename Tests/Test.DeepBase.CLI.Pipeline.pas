@@ -1300,3 +1300,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestCLIPipeline);
+end.

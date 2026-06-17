@@ -35,8 +35,12 @@ env:
 
 jobs:
   package-gate:
-    name: Package Build Gate (Win64)
+    name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]
+    strategy:
+      matrix:
+        profile: [Minimal, Runtime, LLM, Speech, Commerce, Updater]
+      fail-fast: false
 
     defaults:
       run:
@@ -57,7 +61,7 @@ jobs:
 
       - name: Run package build gate
         run: |
-          powershell -ExecutionPolicy Bypass -File .\Scripts\build_packages_win64.ps1 -Profile All
+          powershell -ExecutionPolicy Bypass -File .\Scripts\build_packages_win64.ps1 -Profile ${{ matrix.profile }}
 
   architecture-checks:
     name: Architecture Checks

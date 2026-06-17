@@ -9,10 +9,12 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.SyncObjs,
-  Winapi.Windows, Winapi.PSAPI, Winapi.TlHelp32, Winapi.ShlObj,
+  Winapi.Windows, Winapi.Messages, Winapi.PSAPI, Winapi.TlHelp32, Winapi.ShlObj,
   DeepBase.Exceptions, DeepBase.Logging;
 
 type
+  HWINEVENTHOOK = THandle;
+
   TProcessState = (psStarted, psStopped);
   TWindowChangeCallback = reference to procedure(
     const OldProc, NewProc: string; const OldTitle, NewTitle: string);
@@ -82,6 +84,24 @@ type
   end;
 
 implementation
+
+const
+  PROCESS_QUERY_LIMITED_INFORMATION = $1000;
+
+const
+  WINEVENT_OUTOFCONTEXT = 0;
+  EVENT_SYSTEM_FOREGROUND = 3;
+
+function SetWinEventHook(eventMin: DWORD; eventMax: DWORD; hmodWinEventProc: HMODULE;
+  lpfnWinEventProc: Pointer; idProcess: DWORD; idThread: DWORD; dwFlags: DWORD): HWINEVENTHOOK; stdcall;
+  external 'user32.dll' name 'SetWinEventHook';
+
+function UnhookWinEvent(hWinEventHook: HWINEVENTHOOK): BOOL; stdcall;
+  external 'user32.dll' name 'UnhookWinEvent';
+
+function QueryFullProcessImageName(hProcess: THandle; dwFlags: DWORD;
+  lpExeName: PChar; var lpdwSize: DWORD): BOOL; stdcall;
+  external 'kernel32.dll' name 'QueryFullProcessImageNameA';
 
 constructor TWindowMonitor.Create;
 begin
@@ -153,7 +173,7 @@ begin
 
   if Assigned(FPollThread) then
   begin
-    if FPollThread.WaitFor(5000) = wrTimeout then
+    if FPollThread.WaitFor = 0 then
     begin
       Logger.Warn('WindowMonitor: poll thread did not exit in 5s', 'WindowMonitor');
       FPollThread.Terminate;
@@ -204,7 +224,7 @@ begin
     if Targets.Contains(NewProc) then
     begin
       SetLength(NewTitle, 256);
-      SetLength(NewTitle, InternalGetWindowText(hwnd, PChar(NewTitle), 256));
+      SetLength(NewTitle, GetWindowText(hwnd, PChar(NewTitle), 256));
     end;
   finally
     FWatchTargets.UnlockList;
@@ -226,15 +246,19 @@ begin
     FCallbackLock.Leave;
   end;
 
-  TThread.Queue(nil, procedure
+  var LProc: TThreadProcedure;
   begin
-    try
-      NotifyCallbacks(OldProc, NewProc, OldTitle, NewTitle);
-    except
-      on E: Exception do
-        Logger.ErrorFmt('NotifyCallbacks exception: %s', [E.Message], 'WindowMonitor');
+    LProc := procedure
+    begin
+      try
+        NotifyCallbacks(OldProc, NewProc, OldTitle, NewTitle);
+      except
+        on E: Exception do
+          Logger.ErrorFmt('NotifyCallbacks exception: %s', [E.Message], 'WindowMonitor');
+      end;
     end;
-  end);
+    TThread.Queue(nil, LProc);
+  end;
 end;
 
 procedure TWindowMonitor.NotifyCallbacks(const OldProc, NewProc: string;
@@ -262,7 +286,7 @@ end;
 
 procedure TWindowMonitor.PollThreadProc;
 begin
-  NameThreadForDebugging('WindowMonitor');
+  TThread.NameThreadForDebugging('WindowMonitor');
   while FPollEvent.WaitFor(30000) = wrTimeout do
   begin
     try
@@ -298,7 +322,7 @@ function TWindowMonitor.GetForegroundWindowTitle: string;
 begin
   SetLength(Result, 256);
   var hwnd := GetForegroundWindow;
-  SetLength(Result, InternalGetWindowText(hwnd, PChar(Result), 256));
+  SetLength(Result, GetWindowText(hwnd, PChar(Result), 256));
 end;
 
 function TWindowMonitor.GetForegroundWindowHandle: HWND;

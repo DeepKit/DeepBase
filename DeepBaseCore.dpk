@@ -98,6 +98,7 @@ contains
   DeepBase.SchemaAdapter.Types in 'Core\DeepBase.SchemaAdapter.Types.pas',
   DeepBase.SchemaAdapter in 'Core\DeepBase.SchemaAdapter.pas',
   DeepBase.SchemaAdapter.Registry in 'Core\DeepBase.SchemaAdapter.Registry.pas',
-  DeepBase.SchemaAdapter.WeChat39x in 'Core\DeepBase.SchemaAdapter.WeChat39x.pas';
+  DeepBase.SchemaAdapter.WeChat39x in 'Core\DeepBase.SchemaAdapter.WeChat39x.pas',
+  DeepBase.SchemaAdapter.WeChat4x in 'Core\DeepBase.SchemaAdapter.WeChat4x.pas';
 
 end.

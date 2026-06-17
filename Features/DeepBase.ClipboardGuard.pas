@@ -33,8 +33,8 @@ type
     function TryOpenClipboard: Boolean;
     procedure RestoreInternal;
     function PreCheckMemory: Boolean;
-    procedure SaveBackupToTemp;
-    procedure SaveBackupToPath(const APath: string);
+    function SaveBackupToTemp: Boolean;
+    function SaveBackupToPath(const APath: string): Boolean;
   protected
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -283,15 +283,16 @@ begin
   Result := MemStatus.ullAvailPhys > UInt64(TotalBytes) * 2;
 end;
 
-procedure TClipboardGuard.SaveBackupToTemp;
+function TClipboardGuard.SaveBackupToTemp: Boolean;
 begin
   var TempPath := GetEnvironmentVariable('TEMP') + '\DeepBase\';
   ForceDirectories(TempPath);
-  SaveBackupToPath(TempPath);
+  Result := SaveBackupToPath(TempPath);
 end;
 
-procedure TClipboardGuard.SaveBackupToPath(const APath: string);
+function TClipboardGuard.SaveBackupToPath(const APath: string): Boolean;
 begin
+  Result := False;
   try
     var FilePath := APath + Format('clipboard_backup_%s.bin',
       [FormatDateTime('yyyymmdd_hhnnss', Now)]);
@@ -316,6 +317,7 @@ begin
           Stream.Write(Len, SizeOf(Len));
         end;
       end;
+      Result := True;
     finally
       Stream.Free;
     end;

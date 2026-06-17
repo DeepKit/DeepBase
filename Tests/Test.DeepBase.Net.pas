@@ -652,3 +652,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestDeepBaseNet);
+end.

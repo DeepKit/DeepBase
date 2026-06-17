@@ -27,7 +27,7 @@ type
   EBrowserRecoveryError = class(EBrowserError);
   EBrowserTimeoutError = class(EBrowserSessionError);
 
-  // BUG-173: forward declaration so IBrowserSession.AsAutomationSession can
+  // BUG-173: forward declaration so IBrowserAutomationSession can
   // return IBrowserAutomationSession before the latter is fully declared
   // below. Same Delphi rule as in DeepShell.MainForm: an interface field /
   // method-result type must be visible (forward or full) by the time it is
@@ -174,33 +174,6 @@ type
 
   { --- Interfaces --------------------------------------------------------- }
 
-  IBrowserSession = interface
-    ['{C4E2D1A0-3B5F-4A7E-8C9D-0E1F2A3B4C5D}']
-    function GetSessionId: TBrowserSessionId;
-    function GetState: TBrowserSessionState;
-    function GetCurrentUrl: string;
-    function GetLastError: string;
-
-    function Navigate(const AUrl: string; ATimeoutMs: Integer;
-      out AError: string): Boolean;
-    function ExecuteScript(const AScript: string;
-      out AError: string): Boolean;
-    function EvaluateScript(const AScript: string; ATimeoutMs: Integer;
-      out AJsonResult, AError: string): Boolean;
-    function CallDevToolsProtocol(const AMethod, AParams: string;
-      ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
-    function CaptureScreenshot(out AImage: TBytes;
-      out AError: string): Boolean;
-
-    // BUG-BA-024 fix: returns the typed IBrowserAutomationSession (declared
-    // below in this same unit so we can avoid the old IInterface cast).
-    function AsAutomationSession: IBrowserAutomationSession;
-  end;
-
-  // BUG-BA-024 fix: relocated from DeepBase.BrowserAutomation so IBrowserSession
-  // can return it without a circular dependency. The Phase 1 Runner / Action
-  // / Scripts logic stays in DeepBase.BrowserAutomation; only the interface
-  // declaration moved here.
   IBrowserAutomationSession = interface
     ['{AF65E2C4-7181-42D6-95D9-D52D246C68D2}']
     function IsReady: Boolean;
@@ -217,6 +190,20 @@ type
       ATimeoutMs: Integer; out AJsonResult, AError: string): Boolean;
     function CaptureScreenshot(out AImage: TBytes;
       out AError: string): Boolean;
+  end;
+
+  IBrowserSession = interface(IBrowserAutomationSession)
+    ['{C4E2D1A0-3B5F-4A7E-8C9D-0E1F2A3B4C5D}']
+    function GetSessionId: TBrowserSessionId;
+    function GetState: TBrowserSessionState;
+
+    /// <summary>
+    /// Backward-compatible bridge to IBrowserAutomationSession.
+    /// Since IBrowserSession itself inherits IBrowserAutomationSession,
+    /// this is equivalent to `Self as IBrowserAutomationSession`.
+    /// Deprecated: use direct interface cast instead.
+    /// </summary>
+    function AsAutomationSession: IBrowserAutomationSession;
   end;
 
   IBrowserSessionAsync = interface

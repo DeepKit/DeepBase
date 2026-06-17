@@ -422,3 +422,7 @@ end;
 {$ENDIF}
 
 end.
+
+initialization
+  TDUnitX.RegisterTestFixture(TTestDeepBaseI18nGender);
+end.
