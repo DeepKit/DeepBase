@@ -8,7 +8,7 @@
         <TargetedPlatforms>1741953</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>
-        <ProjectVersion>20.4</ProjectVersion>
+        <ProjectVersion>12.0</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Platform)'=='Win32'">
@@ -125,6 +125,8 @@
         <DCCReference Include="Features\DeepBase.Commerce.SafeClient.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.Permissions.pas"/>
         <DCCReference Include="Features\DeepBase.Commerce.UpgradeFlow.pas"/>
+        <DCCReference Include="Features\DeepBase.Unlock.pas"/>
+        <DCCReference Include="Features\DeepBase.Licensing.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
