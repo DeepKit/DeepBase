@@ -238,7 +238,7 @@ begin
     begin
       {$IF DEFINED(DEBUG) AND DEFINED(MSWINDOWS)}
       OutputDebugString(PChar('FMX.LogListView: RefreshLogs error: ' + E.Message));
-      {}
+      {$ENDIF}
     end;
   end;
 end;
