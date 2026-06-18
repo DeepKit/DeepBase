@@ -71,6 +71,17 @@ if (Test-Path $XmlFile) {
     Remove-Item -Path $XmlFile -Force -ErrorAction SilentlyContinue
 }
 
+# Clean any stale .dcu artifacts from source directories BEFORE running tests
+# (the architecture test itself checks for .dcu leakage).
+$AllSourceRoots = @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'ThirdParty', 'Tools')
+foreach ($root in $AllSourceRoots) {
+    $rootPath = Join-Path $RepoRoot $root
+    if (Test-Path $rootPath) {
+        Get-ChildItem -Path $rootPath -Recurse -Filter *.dcu -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host 'Running architecture checks...'
 $runArgs = @(
     "--xmlfile:$XmlFile",

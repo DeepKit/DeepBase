@@ -53,10 +53,10 @@ type
     procedure ServicesProject_DoesNotReferenceUiOrDbRuntime;
 
     [Test]
-    procedure FeaturesPackage_ContainsOptionalFeatureUnits;
+    procedure FeaturesMetaPackage_RequiresSubPackages;
 
     [Test]
-    procedure FeaturesPackage_ContainsIntentClarificationPhase2Units;
+    procedure FeaturesMetaPackage_ContainsIntentClarificationSubpackage;
 
     [Test]
     procedure FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures;
@@ -474,141 +474,64 @@ begin
     'DeepBaseServices.dproj must stay aligned with DeepBaseServices.dpk');
 end;
 
-procedure TPackageBoundaryTests.FeaturesPackage_ContainsOptionalFeatureUnits;
+procedure TPackageBoundaryTests.FeaturesMetaPackage_RequiresSubPackages;
 var
   DpkText: string;
-  DprojText: string;
 begin
   DpkText := ReadRepoFile('DeepBaseFeatures.dpk').ToLowerInvariant;
-  DprojText := ReadRepoFile('DeepBaseFeatures.dproj').ToLowerInvariant;
-
+  // DeepBaseFeatures is now a meta-package: requires sub-packages, no contains.
   AssertTextDoesNotContainAny(DpkText, 'DeepBaseFeatures.dpk requires section',
     [' vcl,', ' vcl;', ' fmx,', ' fmx;', ' designide,', ' designide;']);
   AssertTextDoesNotContainAny(DpkText, 'DeepBaseFeatures.dpk package boundary',
     [' dbrtl,', ' dbrtl;', 'firedac', 'firedaccommondriver',
-     'deepbasepersistence', 'persistence\',
-     'core\deepbase.llm.pas', 'core\deepbase.llm.manager.pas',
-     'core\deepbase.llm.billingclient.pas',
-     'core\deepbase.llm.importexport.pas',
-     'features\deepbase.llm.configbridge.pas']);
-  AssertTextDoesNotContainAny(DprojText, 'DeepBaseFeatures.dproj package boundary',
-    ['dbrtl.dcp', 'firedac.dcp', 'firedaccommondriver.dcp',
-     'deepbasepersistence.dcp', 'persistence\',
-     'core\deepbase.llm.pas', 'core\deepbase.llm.manager.pas',
-     'core\deepbase.llm.billingclient.pas',
-     'core\deepbase.llm.importexport.pas',
-     'features\deepbase.llm.configbridge.pas']);
+     'deepbasepersistence', 'persistence\']);
   Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseCore'),
     'DeepBaseFeatures.dpk must require DeepBaseCore');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseServices'),
-    'DeepBaseFeatures.dpk must require DeepBaseServices to avoid duplicate service primitives');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Net'),
-    'DeepBaseFeatures.dpk must contain legacy network utilities');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.Net.pas'),
-    'DeepBaseFeatures.dpk must source legacy network utilities from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.Net.pas'),
-    'DeepBaseFeatures.dpk must not source legacy network utilities from Core');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.LLM.Types'),
-    'DeepBaseFeatures.dpk must contain LLM types');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.LLM.Types.pas'),
-    'DeepBaseFeatures.dpk must source LLM types from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.LLM.Types.pas'),
-    'DeepBaseFeatures.dpk must not source LLM types from Core');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.LLM.Service'),
-    'DeepBaseFeatures.dpk must contain LLM service');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.LLM.Service.pas'),
-    'DeepBaseFeatures.dpk must source LLM service from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.LLM.Service.pas'),
-    'DeepBaseFeatures.dpk must not source LLM service from Core');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Updater'),
-    'DeepBaseFeatures.dpk must contain updater feature');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.Updater.pas'),
-    'DeepBaseFeatures.dpk must source updater feature from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.Updater.pas'),
-    'DeepBaseFeatures.dpk must not source updater feature from Core');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.AutoUpdate'),
-    'DeepBaseFeatures.dpk must contain auto-update facade');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.AutoUpdate.pas'),
-    'DeepBaseFeatures.dpk must source auto-update facade from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.AutoUpdate.pas'),
-    'DeepBaseFeatures.dpk must not source auto-update facade from Core');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Features\DeepBase.Protection.pas'),
-    'DeepBaseFeatures.dpk must not carry the removed duplicate Protection implementation');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.AntiTamper'),
-    'DeepBaseFeatures.dpk must contain anti-tamper feature');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.AntiTamper.pas'),
-    'DeepBaseFeatures.dpk must source anti-tamper feature from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.AntiTamper.pas'),
-    'DeepBaseFeatures.dpk must not source anti-tamper feature from Core');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBase.Unlock'),
-    'DeepBaseFeatures.dpk must contain unlock feature');
-  Assert.IsTrue(TextContainsInsensitive(DpkText, 'Features\DeepBase.Unlock.pas'),
-    'DeepBaseFeatures.dpk must source unlock feature from Features');
-  Assert.IsFalse(TextContainsInsensitive(DpkText, 'Core\DeepBase.Unlock.pas'),
-    'DeepBaseFeatures.dpk must not source unlock feature from Core');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseLLM'),
+    'DeepBaseFeatures.dpk must require DeepBaseLLM');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseIntentClarification'),
+    'DeepBaseFeatures.dpk must require DeepBaseIntentClarification');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseBrowser'),
+    'DeepBaseFeatures.dpk must require DeepBaseBrowser');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseCommerce'),
+    'DeepBaseFeatures.dpk must require DeepBaseCommerce');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseInference'),
+    'DeepBaseFeatures.dpk must require DeepBaseInference');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseSpeechCore'),
+    'DeepBaseFeatures.dpk must require DeepBaseSpeechCore');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBasePlatform'),
+    'DeepBaseFeatures.dpk must require DeepBasePlatform');
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseDataPlatform'),
+    'DeepBaseFeatures.dpk must require DeepBaseDataPlatform');
+  // Meta-package should NOT contain any units directly
+  Assert.IsFalse(TextContainsInsensitive(DpkText, 'contains'),
+    'DeepBaseFeatures.dpk meta-package must not contain units directly');
 end;
 
-procedure TPackageBoundaryTests.FeaturesPackage_ContainsIntentClarificationPhase2Units;
-const
-  REQUIRED_IC_UNITS: array[0..26] of string = (
-    'DeepBase.IntentClarification.pas',
-    'DeepBase.IntentClarification.Logging.pas',
-    'DeepBase.IntentClarification.Types.pas',
-    'DeepBase.IntentClarification.Interfaces.pas',
-    'DeepBase.IntentClarification.Engine.pas',
-    'DeepBase.IntentClarification.IoC.pas',
-    'DeepBase.IntentClarification.Provider.L0.pas',
-    'DeepBase.IntentClarification.Provider.L1.pas',
-    'DeepBase.IntentClarification.Provider.L2.pas',
-    'DeepBase.IntentClarification.Provider.L3.pas',
-    'DeepBase.IntentClarification.Provider.L4.pas',
-    'DeepBase.IntentClarification.Session.pas',
-    'DeepBase.IntentClarification.SessionFSM.pas',
-    'DeepBase.IntentClarification.Router.pas',
-    'DeepBase.IntentClarification.SignalDetector.pas',
-    'DeepBase.IntentClarification.Budget.pas',
-    'DeepBase.IntentClarification.Exit.pas',
-    'DeepBase.IntentClarification.OptionFrame.pas',
-    'DeepBase.IntentClarification.Metrics.pas',
-    'DeepBase.IntentClarification.FeatureConfig.pas',
-    'DeepBase.IntentClarification.Templates.pas',
-    'DeepBase.IntentClarification.Validation.pas',
-    'DeepBase.IntentClarification.LLMResilience.pas',
-    'DeepBase.IntentClarification.Anticipation.pas',
-    'DeepBase.IntentClarification.Degradation.pas',
-    'DeepBase.IntentClarification.Moments.pas',
-    'DeepBase.IntentClarification.Rapport.pas'
-  );
+procedure TPackageBoundaryTests.FeaturesMetaPackage_ContainsIntentClarificationSubpackage;
 var
   DpkText: string;
-  DprojText: string;
-  UnitFile: string;
-  FeaturePath: string;
+  IcDpkText: string;
 begin
   DpkText := ReadRepoFile('DeepBaseFeatures.dpk').ToLowerInvariant;
-  DprojText := ReadRepoFile('DeepBaseFeatures.dproj').ToLowerInvariant;
-
-  for UnitFile in REQUIRED_IC_UNITS do
-  begin
-    FeaturePath := 'Features\' + UnitFile;
-    Assert.IsTrue(TextContainsInsensitive(DpkText, FeaturePath),
-      'DeepBaseFeatures.dpk must contain IntentClarification unit: ' + FeaturePath);
-    Assert.IsTrue(TextContainsInsensitive(DprojText, FeaturePath),
-      'DeepBaseFeatures.dproj must reference IntentClarification unit: ' + FeaturePath);
-  end;
-
-  Assert.IsTrue(TextContainsInsensitive(DpkText,
-    'Features\DeepBase.IntentClarification.Registration.pas'),
-    'DeepBaseFeatures.dpk must expose IntentClarification registration facade.');
-  Assert.IsTrue(TextContainsInsensitive(DprojText,
-    'Features\DeepBase.IntentClarification.Registration.pas'),
-    'DeepBaseFeatures.dproj must expose IntentClarification registration facade.');
+  // Features meta-package requires DeepBaseIntentClarification as sub-package
+  Assert.IsTrue(TextContainsInsensitive(DpkText, 'DeepBaseIntentClarification'),
+    'DeepBaseFeatures.dpk must require DeepBaseIntentClarification sub-package');
+  // IC Storage must stay in DeepBaseIntentClarification (or Persistence), not in Features
   Assert.IsFalse(TextContainsInsensitive(DpkText,
     'Features\DeepBase.IntentClarification.Storage.pas'),
-    'IntentClarification FireDAC storage must stay in Persistence, not Features.');
-  Assert.IsFalse(TextContainsInsensitive(DprojText,
-    'Features\DeepBase.IntentClarification.Storage.pas'),
-    'IntentClarification FireDAC storage must stay in Persistence, not Features.');
+    'IntentClarification FireDAC storage must stay in sub-package, not Features.');
+  // Verify DeepBaseIntentClarification.dpk contains Phase 2 units
+  IcDpkText := ReadRepoFile('DeepBaseIntentClarification.dpk').ToLowerInvariant;
+  Assert.IsTrue(TextContainsInsensitive(IcDpkText, 'DeepBase.IntentClarification.Engine'),
+    'DeepBaseIntentClarification.dpk must contain Engine unit');
+  Assert.IsTrue(TextContainsInsensitive(IcDpkText, 'DeepBase.IntentClarification.IoC'),
+    'DeepBaseIntentClarification.dpk must contain IoC unit');
+  Assert.IsTrue(TextContainsInsensitive(IcDpkText, 'DeepBase.IntentClarification.Registration'),
+    'DeepBaseIntentClarification.dpk must contain Registration');
+  Assert.IsFalse(TextContainsInsensitive(IcDpkText,
+    'DeepBase.IntentClarification.Storage.pas'),
+    'IntentClarification FireDAC storage must NOT be in IC sub-package');
 end;
 
 procedure TPackageBoundaryTests.FeaturesSource_OptionalFeatureImplementationsLiveUnderFeatures;
