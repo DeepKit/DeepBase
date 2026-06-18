@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="55" errors="0" failures="0" ignored="3" inconclusive="0" not-run="3" skipped="0" invalid="0" date="2026-06-17" time="21:03:05">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="21:03:05" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Serialization" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TBinarySerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_SerializeToBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeserializeFromBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SerializeToStream" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Compact" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TJsonSerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Serialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_String" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_Integer" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_Boolean" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_Float" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_Array" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_DateTime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_Enum" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_IgnoreAttribute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_CustomName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_PrettyPrint" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Deserialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Deserialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Deserialize_Array" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSerializationContextTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PushPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PopPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetPath" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_EnterLeaveObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsVisited" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AddConverter" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSerializationOptionsTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Default_DateFormat" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Default_MaxDepth" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSerializerBuilderTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_JSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Create_XML" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithPrettyPrint" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithIndentSize" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithCamelCase" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithDateFormat" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithEnumAsString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Build" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Fluent" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TSerializerHelperTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_ToJson" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJson" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToXml" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromXml" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                          <reason>
+                            <message>
+                              <![CDATA[ XML deserialization not implemented ]]>
+                            </message>
+                          </reason>
+                        </test-case>
+                        <test-case name="Test_ToBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromBytes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Clone" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTypeRegistryTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Register" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetTypeName" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetClass" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TryGetClass_Found" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TryGetClass_NotFound" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TXmlSerializerTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Serialize_SimpleObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_ContainsXmlTags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_EscapesSpecialChars" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Serialize_NestedObject" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Deserialize_SimpleObject" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                          <reason>
+                            <message>
+                              <![CDATA[ XML deserialization not implemented ]]>
+                            </message>
+                          </reason>
+                        </test-case>
+                        <test-case name="Test_RoundTrip" executed="False" result="Ignored"  time="0.000" asserts="0" >
+                          <reason>
+                            <message>
+                              <![CDATA[ XML deserialization not implemented ]]>
+                            </message>
+                          </reason>
+                        </test-case>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

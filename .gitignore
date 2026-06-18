@@ -94,3 +94,10 @@ root.txt
 # Local secrets and deployment credentials
 .env
 **/.env
+*.hpp
+*.a
+*.bpi
+*.otares
+*.dcp
+*.dcu
+*.bpl

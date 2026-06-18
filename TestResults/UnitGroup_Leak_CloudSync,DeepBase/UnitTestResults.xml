@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="91" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-17" time="21:01:52">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="21:01:52" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.031" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="0.031" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="CloudBackup" executed="true" result="Success" success="True" time="0.003" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestBackupConfig" executed="True" result="Success" success="True" time="0.002" >
+                            <results>
+                              <test-case name="Test_Default_Values" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Default_CompressionLevel" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Default_MaxVersions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SourcePaths" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ExcludePatterns" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupEnums" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_BackupStatus_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_BackupType_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompressionLevel_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ScheduleType_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FileChangeType_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupFileInfo" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupManifest" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddFile" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AddFile_Multiple" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RemoveFile" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FindFile_Exists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FindFile_NotExists" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Tags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupProgress" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ProgressPercent_Zero" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_Partial" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_Complete" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FormattedProgress" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Status_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupStatistics" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Fields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Default_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestBackupVersion" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_RoundTrip" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="CloudSync" executed="true" result="Success" success="True" time="0.028" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestCloudServiceConfig" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Default_SetsReasonableDefaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestConfigItem" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_SetsKeyAndType" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetStringValue_SetsValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetIntegerValue_ConvertsToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetFloatValue_ConvertsToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetBooleanValue_ConvertsToString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetDateTimeValue_ConvertsToISO8601" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SetJSONValue_Serializes" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetIntegerValue_ParsesString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetFloatValue_ParsesString" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetBooleanValue_ParsesString" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_ToJSON_SerializesAllFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJSON_DeserializesAllFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestConfigVersion" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_InitializesFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToJSON_SerializesCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FromJSON_DeserializesCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestJSONDeepMerge" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_JSONClone_Null_ReturnsNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONClone_SimpleValue_ReturnsClone" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONClone_Object_ReturnsDeepClone" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONClone_Array_ReturnsDeepClone" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_BothNull_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_OneNull_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_SameSimpleValue_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_DifferentValues_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_SameObject_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONValuesEqual_DifferentObjects_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_Replace_ReplacesTarget" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_Append_AppendsElements" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_MergeByIndex_MergesObjects" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_MergeByIndex_AppendsExtraElements" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_Union_DeduplicatesElements" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONMergeArrays_Union_AddsNewElements" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_EmptySource_TargetUnchanged" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_NewKey_AddsToTarget" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_ExistingSimpleKey_OverwritesValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_NestedObjects_RecursiveMerge" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_ArrayFields_UsesStrategy" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_TypeMismatch_SourceOverwrites" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_JSONDeepMerge_ComplexNested_MergesCorrectly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestLocalConfigStore" executed="True" result="Success" success="True" time="0.028" >
+                            <results>
+                              <test-case name="Test_Put_And_Get" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Get_NonExistent_ReturnsNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetOrCreate_ExistingKey_ReturnsExisting" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetOrCreate_NewKey_CreatesItem" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Exists_ExistingKey_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Exists_NonExistent_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Delete_MarksAsDeleted" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Exists_DeletedKey_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetAll_ReturnsNonDeletedItems" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GetDirtyItems_ReturnsDirtyOnly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_MarkAllClean_ClearsDirtyFlags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Clear_RemovesAllItems" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_SaveAndLoad_PersistsData" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_CurrentVersion_Persisted" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestSyncProgress" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ProgressPercent_ZeroTotal_ReturnsZero" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_Calculation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestSyncStatistics" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Reset_ClearsAllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

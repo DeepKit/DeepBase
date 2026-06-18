@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="69" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-17" time="21:01:10">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="21:01:10" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.003" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="FeatureFlags" executed="true" result="Success" success="True" time="0.003" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestFeatureFlag" executed="True" result="Success" success="True" time="0.001" >
+                      <results>
+                        <test-case name="Test_Create_WithKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_EnabledState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_DisabledState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_WithRollout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_WithTargeting" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_WithMultipleRules" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_WithDependency" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AddRule_AddsRule" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AddVariant_AddsVariant" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithRollout_SetsPercentage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithSchedule_SetsSchedule" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DependsOn_AddsDependency" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithTag_AddsTag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetVariant_SelectsVariant" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON_SerializesFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON_DeserializesFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFeatureFlagManager" executed="True" result="Success" success="True" time="0.002" >
+                      <results>
+                        <test-case name="Test_Create_InitializesManager" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RegisterFlag_AddsFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DeleteFlag_RemovesFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetFlag_ReturnsFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetFlag_ReturnsNilForMissing" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsEnabled_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsEnabled_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsEnabled_WithContext" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsEnabled_DefaultForMissing" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetVariant_ReturnsVariant" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetAllFlags_ReturnsList" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetFlagsByTag_FiltersByTag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_EnableFlag_EnablesFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DisableFlag_DisablesFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SetRollout_SetsPercentage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_OnFlagChanged_Event" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_ExportToJSON_SavesFlags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ImportFromJSON_LoadsFlags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GlobalHelper_Manager_IsThreadSafeSingleton" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFlagContext" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_InitializesEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithUserId_SetsUserId" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithGroups_SetsGroupIds" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithEnvironment_SetsEnvironment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithAppVersion_SetsVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_WithAttribute_AddsAttribute" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_GetAttribute_ReturnsValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HasAttribute_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HasAttribute_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FluentChaining" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFlagSchedule" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_DefaultValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsActive_BeforeStart" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsActive_AfterEnd" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsActive_InRange" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_DaysOfWeek_Matching" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HourRange_Matching" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFlagVariant" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_SetsNameWeight" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Value_GetSet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Payload_GetSet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestTargetingRule" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_WithValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Create_WithValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_Equals_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_Equals_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_NotEquals" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_Contains" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_StartsWith" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_EndsWith" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_In" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_NotIn" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_GreaterThan" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_LessThan" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Evaluate_Regex" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON_SerializesRule" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON_DeserializesRule" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

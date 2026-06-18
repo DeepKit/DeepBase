@@ -36,6 +36,7 @@ requires
   DeepBasePlatform;
 
 contains
+  DeepBase.SchemaAdapter.WeChat4x in 'Core\DeepBase.SchemaAdapter.WeChat4x.pas',
   DeepBase.DataPlatform.Bootstrap in 'Features\DeepBase.DataPlatform.Bootstrap.pas';
 
 end.

@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="31" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-06-17" time="21:03:47">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="21:03:47" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Feedback" executed="true" result="Success" success="True" time="0.001" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestAttachmentInfo" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFeedbackComment" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsStaff" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFeedbackEnums" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_FeedbackType_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FeedbackPriority_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FeedbackStatus_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NotificationType_Values" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestFeedbackItem" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Create_Defaults" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Properties_Basic" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Properties_User" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Properties_Timestamps" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AddAttachment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_RemoveAttachment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ClearAttachments" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Tags" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Validate_EmptyTitle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Validate_Valid" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestSystemInfo" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AllProperties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestUserNotification" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_Properties" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ToJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FromJSON" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_IsRead" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>
