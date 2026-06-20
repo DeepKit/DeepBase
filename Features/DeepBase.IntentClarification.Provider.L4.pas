@@ -364,7 +364,6 @@ begin
   LAllViewpointsFailed := (Length(LViewpoints) > 0) and (LFailedCount = Length(LViewpoints));
 
   LSynthesis := '';
-  LSynthesisFailed := False;
   if not LAllViewpointsFailed then
   begin
     LSynthesis := SynthesizeConsensus(LViewpoints, AContext);

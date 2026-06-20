@@ -568,8 +568,6 @@ end;
 
 procedure TWebSocketConnection.HandleClose(const AData: TBytes);
 var
-  LCode: Word;
-  LReason: string;
   LFrame: TWebSocketFrame;
 begin
   if FState = wssClosing then
@@ -579,16 +577,6 @@ begin
   end;
 
   FState := wssClosing;
-
-  // 解析关闭码和原因
-  if Length(AData) >= 2 then
-  begin
-    LCode := (AData[0] shl 8) or AData[1];
-    if Length(AData) > 2 then
-      LReason := TEncoding.UTF8.GetString(AData, 2, Length(AData) - 2);
-  end
-  else
-    LCode := Word(wsccNoStatus);
 
   // 发送关闭回复
   FillChar(LFrame, SizeOf(LFrame), 0);

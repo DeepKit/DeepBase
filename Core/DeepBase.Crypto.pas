@@ -2237,7 +2237,7 @@ begin
     
     // subjectPublicKey BIT STRING
     SkipTag($03, LPos); // BIT STRING
-    LLen := ReadLength(LPos);
+    ReadLength(LPos);
     if LPos >= Length(ADER) then
       raise ECryptoException.Create('Invalid DER: no bit string content');
     Inc(LPos); // Skip unused bits byte (should be 0)

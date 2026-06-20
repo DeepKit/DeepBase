@@ -494,13 +494,11 @@ procedure TTestLoggingPerformance.Benchmark_LogWrite_Concurrent;
 var
   R: TBenchmarkResult;
   Tasks: TArray<ITask>;
-  Counter: Integer;
   Lock: TCriticalSection;
 const
   THREAD_COUNT = 4;
   LOGS_PER_THREAD = 10000;
 begin
-  Counter := 0;
   Lock := TCriticalSection.Create;
   try
     R := FBenchmark.RunBenchmark('Log.Write.Concurrent', 1,
