@@ -31,8 +31,6 @@ type
     FLock: TCriticalSection;
 
     function GetNextCallbackId: Integer;
-    function SendCDPCommand(const AMethod: string;
-      const AParams: string): string;
   public
     constructor Create(ASession: IBrowserSession);
     destructor Destroy; override;
@@ -224,31 +222,6 @@ begin
   end;
 end;
 
-function TCDPStrategy.SendCDPCommand(const AMethod: string;
-  const AParams: string): string;
-var
-  LResult, LError: string;
-  LSession: IBrowserSession;
-begin
-  // H2 fix: snapshot FSession under lock so concurrent Detach can't null it
-  // mid-call. The local interface ref keeps the session alive for the
-  // duration of the call.
-  FLock.Enter;
-  try
-    LSession := FSession;
-  finally
-    FLock.Leave;
-  end;
-
-  if LSession = nil then
-    Exit('{"error":"no_session"}');
-  if LSession.CallDevToolsProtocol(AMethod, AParams, 10000,
-    LResult, LError) then
-    Result := LResult
-  else
-    // H9 fix: use JsStringLiteral to properly escape backslash and other JSON-special chars
-    Result := '{"error":' + JsStringLiteral(LError) + '}';
-end;
 
 procedure TCDPStrategy.SendCommand(const AMethod: string;
   AParams: TJSONObject; ACallback: TCDPCallback);

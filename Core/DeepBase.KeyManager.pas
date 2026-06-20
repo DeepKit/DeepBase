@@ -196,7 +196,6 @@ type
     class var FInstance: TKeyManager;
     class var FInstanceLock: TCriticalSection;
     
-    function GetHardwareFingerprint: THardwareFingerprint;
     
   public
     constructor Create(const AStorePath: string);
@@ -845,10 +844,6 @@ begin
   Result := FMasterKey.IsUnlocked;
 end;
 
-function TKeyManager.GetHardwareFingerprint: THardwareFingerprint;
-begin
-  Result := THardwareFingerprint.Collect;
-end;
 
 function TKeyManager.CreateDataKey(APurpose: TKeyPurpose; AExpiryDays: Integer): string;
 var

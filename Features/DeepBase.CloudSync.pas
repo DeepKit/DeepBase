@@ -20,7 +20,7 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.JSON,
   System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading,
-  System.ZLib, System.Math, DeepBase.Exceptions;
+  System.Math, DeepBase.Exceptions;
 
 type
   /// <summary>ͬ��״̬</summary>
@@ -198,8 +198,6 @@ type
     function DoRequest(const AMethod, AEndpoint: string; ABody: TJSONObject = nil): TJSONObject;
     function EncryptData(const AData: string): string;
     function DecryptData(const AData: string): string;
-    function CompressData(const AData: TBytes): TBytes;
-    function DecompressData(const AData: TBytes): TBytes;
   public
     constructor Create(const AConfig: TCloudServiceConfig);
     destructor Destroy; override;
@@ -273,7 +271,6 @@ type
     function DoResolveConflict(AConflict: TSyncConflict): TConflictResolution;
     
     function DetectConflicts(ALocalItems, ARemoteItems: TObjectList<TConfigItem>): TObjectList<TSyncConflict>;
-    function MergeItems(ALocal, ARemote: TConfigItem): TConfigItem;
     procedure ApplyResolution(AConflict: TSyncConflict);
     
     procedure InternalSync;
@@ -1016,47 +1013,6 @@ begin
   Result := TEncoding.UTF8.GetString(LPlain);
 end;
 
-function TCloudSyncClient.CompressData(const AData: TBytes): TBytes;
-var
-  LOutput: TBytes;
-begin
-  ZCompress(AData, LOutput, zcDefault);
-  Result := LOutput;
-end;
-
-function TCloudSyncClient.DecompressData(const AData: TBytes): TBytes;
-var
-  LDecompressor: TZDecompressionStream;
-  LInput: TBytesStream;
-  LOutput: TBytesStream;
-  LBuffer: TBytes;
-  LBytesRead: Integer;
-begin
-  LInput := TBytesStream.Create(AData);
-  try
-    LDecompressor := TZDecompressionStream.Create(LInput);
-    try
-      LOutput := TBytesStream.Create;
-      try
-        SetLength(LBuffer, 4096);
-        repeat
-          LBytesRead := LDecompressor.Read(LBuffer[0], Length(LBuffer));
-          if LBytesRead > 0 then
-            LOutput.WriteBuffer(LBuffer[0], LBytesRead);
-        until LBytesRead = 0;
-        Result := LOutput.Bytes;
-        SetLength(Result, LOutput.Size);
-      finally
-        LOutput.Free;
-      end;
-    finally
-      LDecompressor.Free;
-    end;
-  finally
-    LInput.Free;
-  end;
-end;
-
 function TCloudSyncClient.Authenticate: Boolean;
 var
   LResponse: TJSONObject;
@@ -1543,60 +1499,6 @@ begin
   end;
 end;
 
-function TCloudConfigSync.MergeItems(ALocal, ARemote: TConfigItem): TConfigItem;
-var
-  LLocalJSON, LRemoteJSON: TJSONObject;
-  LVersion: TConfigVersion;
-begin
-  // �ϲ����ԣ�
-  // - JSON���ͣ���Ⱥϲ�������Ϊ������Զ�̸���/׷�ӣ�
-  // - �������ͣ����ý��µİ汾
-  Result := TConfigItem.Create(ALocal.Key, ALocal.ItemType);
-  
-  if ALocal.ItemType = citJSON then
-  begin
-    // JSON��Ⱥϲ����Ա���Ϊ�������ϲ�Զ�̱��
-    LLocalJSON := nil;
-    LRemoteJSON := nil;
-    try
-      if ALocal.Value <> '' then
-        LLocalJSON := TJSONObject.ParseJSONValue(ALocal.Value) as TJSONObject;
-      if ARemote.Value <> '' then
-        LRemoteJSON := TJSONObject.ParseJSONValue(ARemote.Value) as TJSONObject;
-      
-      if (LLocalJSON <> nil) and (LRemoteJSON <> nil) then
-      begin
-        // ִ����Ⱥϲ���Զ�̺ϲ������أ�
-        JSONDeepMerge(LLocalJSON, LRemoteJSON, amsUnion);
-        Result.Value := LLocalJSON.ToJSON;
-      end
-      else if LRemoteJSON <> nil then
-        // ��������ЧJSON��ʹ��Զ��
-        Result.Value := ARemote.Value
-      else
-        // Զ������ЧJSON����������
-        Result.Value := ALocal.Value;
-    finally
-      LLocalJSON.Free;
-      LRemoteJSON.Free;
-    end;
-  end
-  else
-  begin
-    // ��JSON���ͣ�����������
-    if ALocal.LocalVersion.ModifiedAt > ARemote.RemoteVersion.ModifiedAt then
-      Result.Value := ALocal.Value
-    else
-      Result.Value := ARemote.Value;
-  end;
-  
-  LVersion := ALocal.LocalVersion;
-  LVersion.Version := LVersion.Version + 1;
-  LVersion.ModifiedAt := Now;
-  LVersion.Checksum := CalculateChecksum(Result.Value);
-  Result.LocalVersion := LVersion;
-  Result.IsDirty := True;
-end;
 
 procedure TCloudConfigSync.ApplyResolution(AConflict: TSyncConflict);
 var

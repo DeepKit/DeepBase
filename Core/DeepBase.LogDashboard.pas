@@ -172,7 +172,6 @@ type
     FDashboard: TDashboard;
     
     function WidgetTypeToString(AType: TWidgetType): string;
-    function SeriesDataToJSON(ASeries: TWidgetSeries): TJSONArray;
     function WidgetToGrafanaPanel(AWidget: TDashboardWidget; AIndex: Integer): TJSONObject;
     function GenerateCSVForWidget(AWidget: TDashboardWidget): string;
     function EscapeCSV(const AValue: string): string;
@@ -551,20 +550,6 @@ begin
   end;
 end;
 
-function TDashboardExporter.SeriesDataToJSON(ASeries: TWidgetSeries): TJSONArray;
-var
-  Point: TWidgetDataPoint;
-  PointArr: TJSONArray;
-begin
-  Result := TJSONArray.Create;
-  for Point in ASeries.Data do
-  begin
-    PointArr := TJSONArray.Create;
-    PointArr.AddElement(TJSONNumber.Create(DateTimeToUnix(Point.Timestamp, False) * 1000));
-    PointArr.AddElement(TJSONNumber.Create(Point.Value));
-    Result.AddElement(PointArr);
-  end;
-end;
 
 function TDashboardExporter.ToJSON: TJSONObject;
 var

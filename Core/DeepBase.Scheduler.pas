@@ -273,7 +273,6 @@ type
     procedure ExecuteTask(Task: TScheduledTask);
     procedure ProcessPendingTasks;
     function CanRunTask(Task: TScheduledTask): Boolean;
-    procedure SaveTaskMeta(Task: TScheduledTask);
   public
     constructor Create;
     destructor Destroy; override;
@@ -831,46 +830,6 @@ begin
     Result[I] := Metas[I].Id;
 end;
 
-procedure TTaskScheduler.SaveTaskMeta(Task: TScheduledTask);
-var
-  Meta: TTaskMeta;
-  DepsStr, TagsStr: string;
-  I: Integer;
-begin
-  if FJobStore = nil then
-    Exit;
-  Meta.Id := Task.Id;
-  Meta.Name := Task.Name;
-  Meta.State := Task.State;
-  Meta.Priority := tpNormal;
-  Meta.DelayMs := Task.FDelayMs;
-  Meta.IntervalMs := Task.FIntervalMs;
-  if Task.FUseCron then
-    Meta.CronExpr := Task.FCronExpr.ToString
-  else
-    Meta.CronExpr := '';
-  Meta.UseCron := Task.FUseCron;
-  Meta.RunCount := Task.FRunCount;
-  Meta.MaxRuns := Task.FMaxRuns;
-  Meta.CreatedAt := Task.FCreatedAt;
-  Meta.NextRunAt := Task.FNextRunAt;
-  Meta.LastRunAt := Task.FLastRunAt;
-  DepsStr := '';
-  for I := 0 to High(Task.FDependsOn) do
-  begin
-    if I > 0 then DepsStr := DepsStr + ',';
-    DepsStr := DepsStr + Task.FDependsOn[I];
-  end;
-  Meta.DependsOn := DepsStr;
-  TagsStr := '';
-  for I := 0 to High(Task.FTags) do
-  begin
-    if I > 0 then TagsStr := TagsStr + ',';
-    TagsStr := TagsStr + Task.FTags[I];
-  end;
-  Meta.Tags := TagsStr;
-  FJobStore.SaveTask(Meta);
-end;
 
 procedure TTaskScheduler.Start;
 begin

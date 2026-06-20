@@ -57,8 +57,6 @@ type
     function DoPayPalPost(const AEndpoint: string;
       const ABody: TJSONObject): TJSONObject;
     function DoPayPalGet(const AEndpoint: string): TJSONObject;
-    function DoPayPalPostForm(const AEndpoint: string;
-      const AParams: TDictionary<string, string>): TJSONObject;
     function ParsePayPalStatus(const AStatus: string): TPaymentStatus;
     function ExtractCaptureId(const AOrderJson: TJSONObject): string;
   protected
@@ -368,25 +366,6 @@ begin
   end;
 end;
 
-function TPayPalClient.DoPayPalPostForm(const AEndpoint: string;
-  const AParams: TDictionary<string, string>): TJSONObject;
-var
-  Token, Response: string;
-begin
-  Result := nil;
-  Token := GetAccessToken;
-
-  FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + Token;
-
-  Response := DoPost(GetBaseUrl + AEndpoint,
-    TPaymentHelper.BuildQueryString(AParams, True),
-    'application/x-www-form-urlencoded');
-
-  Result := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-  if not Assigned(Result) then
-    raise EPaymentNetworkError.Create('Invalid JSON response from PayPal',
-      'INVALID_JSON', ppPayPal);
-end;
 
 // ---------------------------------------------------------------------------
 // Status Parsing

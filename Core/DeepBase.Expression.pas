@@ -243,7 +243,6 @@ type
     
     procedure Advance;
     procedure SkipWhitespace;
-    function PeekChar: Char;
     function ReadNumber: TToken;
     function ReadString: TToken;
     function ReadIdentifier: TToken;
@@ -1016,13 +1015,6 @@ begin
     FCurrentChar := #0;
 end;
 
-function TExpressionLexer.PeekChar: Char;
-begin
-  if FPosition + 1 <= Length(FExpression) then
-    Result := FExpression[FPosition + 1]
-  else
-    Result := #0;
-end;
 
 procedure TExpressionLexer.SkipWhitespace;
 begin

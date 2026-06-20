@@ -140,7 +140,6 @@ type
     FExecutedTaskIds: TArray<string>;
     FEvent: TEvent;
     procedure IncrementCounter;
-    procedure RecordTaskId(const TaskId: string);
   public
     [Setup]
     procedure Setup;
@@ -630,11 +629,6 @@ begin
   FEvent.SetEvent;
 end;
 
-procedure TTaskSchedulerExecutionTests.RecordTaskId(const TaskId: string);
-begin
-  SetLength(FExecutedTaskIds, Length(FExecutedTaskIds) + 1);
-  FExecutedTaskIds[High(FExecutedTaskIds)] := TaskId;
-end;
 
 procedure TTaskSchedulerExecutionTests.Test_Run_DelayedTask;
 begin

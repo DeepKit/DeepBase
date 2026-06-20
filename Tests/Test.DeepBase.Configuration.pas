@@ -218,7 +218,6 @@ type
     FConfig: TConfiguration;
     FTempJsonFile: string;
     
-    procedure CreateTempJsonFile(const AContent: string);
   public
     [Setup]
     procedure Setup;
@@ -1065,11 +1064,6 @@ begin
     TFile.Delete(FTempJsonFile);
 end;
 
-procedure TTestConfiguration.CreateTempJsonFile(const AContent: string);
-begin
-  FTempJsonFile := TPath.GetTempFileName;
-  TFile.WriteAllText(FTempJsonFile, AContent);
-end;
 
 procedure TTestConfiguration.Test_GetString_ExistingKey;
 begin

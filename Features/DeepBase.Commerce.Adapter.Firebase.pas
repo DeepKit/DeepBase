@@ -57,7 +57,6 @@ type
     function AuthHeaders: TNetHeaders;
     function FirestoreGet(const AUrl: string): TJSONObject;
     function FirestorePatch(const AUrl: string; ABody: TJSONObject): TJSONObject;
-    function FirestorePost(const AUrl: string; ABody: TJSONObject): TJSONObject;
     function FirestoreQuery(const ACollection: string;
       AQuery: TJSONObject): TJSONArray;
     function ExtractFields(Obj: TJSONObject): TJSONObject;
@@ -228,22 +227,6 @@ begin
   Result := TJSONObject(LValue);
 end;
 
-function TFirebaseCommerceStorage.FirestorePost(const AUrl: string;
-  ABody: TJSONObject): TJSONObject;
-var
-  Response: IHTTPResponse;
-begin
-  Response := FClient.Post(AUrl, ABody.ToJSON, nil, AuthHeaders);
-  if Response.StatusCode >= 300 then
-    raise EDeepBaseCommerceError.CreateFmt('Firestore POST: %d', [Response.StatusCode]);
-  var LValue := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8));
-  if not (LValue is TJSONObject) then
-  begin
-    LValue.Free;
-    Exit(nil);
-  end;
-  Result := TJSONObject(LValue);
-end;
 
 function TFirebaseCommerceStorage.FirestoreQuery(const ACollection: string;
   AQuery: TJSONObject): TJSONArray;

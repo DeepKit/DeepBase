@@ -450,7 +450,6 @@ type
     procedure HandleCORS(AContext: TApiContext);
 
     function ParseHttpMethod(const AMethod: string): THttpMethod;
-    function HttpMethodToString(AMethod: THttpMethod): string;
   public
     constructor Create; overload;
     constructor Create(AConfig: TApiServerConfig); overload;
@@ -1748,10 +1747,6 @@ begin
   Result := StrToHttpMethod(AMethod);
 end;
 
-function TApiServer.HttpMethodToString(AMethod: THttpMethod): string;
-begin
-  Result := HttpMethodToStr(AMethod);
-end;
 
 procedure TApiServer.Start;
 begin

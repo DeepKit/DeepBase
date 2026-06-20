@@ -134,14 +134,12 @@ type
     class function IsGcmPayload(const AData: TBytes): Boolean; static;
     class function EncryptGcmBytes(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptGcmBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
-    class function EncryptCbcBytes(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptCbcBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
     class function BytesToHex(const ABytes: TBytes): string; static;
     class function HexToBytes(const AHex: string): TBytes; static;
     class function PadData(const AData: TBytes; ABlockSize: Integer): TBytes; static;
     class function UnpadData(const AData: TBytes): TBytes; static;
     class function CalculateHMACBinary(const AData: TBytes; const AKey: TBytes): TBytes; static;
-    class function GetHashBytes(hHash: HCRYPTHASH): TBytes; static;
   public
     // 密钥生成（为兼容保留，当前返回空字符串）
     class function GetDynamicKey: string; static; deprecated 'Use DeepBase.Security for key management';
@@ -500,68 +498,6 @@ begin
   Result := EncryptGcmBytes(AData, APassword);
 end;
 
-class function TBasicProtection.EncryptCbcBytes(const AData: TBytes; const APassword: string): TBytes;
-var
-  hProv: HCRYPTPROV;
-  hKey: HCRYPTKEY;
-  hHash: HCRYPTHASH;
-  EncryptedData, IV, PaddedData: TBytes;
-  DataLen: DWORD;
-  KeyBytes: TBytes;
-begin
-  if Length(AData) = 0 then
-  begin
-    SetLength(Result, 0);
-    Exit;
-  end;
-
-  KeyBytes := TEncoding.UTF8.GetBytes(APassword);
-  IV := GenerateRandomIV;
-
-  if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
-    raise EEncryptionException.Create('Failed to acquire AES encryption context');
-
-  try
-    if not CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash) then
-      raise EHashException.Create('Failed to create hash object');
-    try
-      if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
-        raise EHashException.Create('Failed to hash key data');
-
-      if not CryptDeriveKey(hProv, CALG_AES_256, hHash, CRYPT_EXPORTABLE, hKey) then
-        raise EEncryptionException.Create('Failed to derive AES key');
-      try
-        var Mode: DWORD := CRYPT_MODE_CBC;
-        if not CryptSetKeyParam(hKey, KP_MODE, @Mode, 0) then
-          raise EEncryptionException.Create('Failed to set CBC mode');
-
-        if not CryptSetKeyParam(hKey, KP_IV, @IV[0], 0) then
-          raise EEncryptionException.Create('Failed to set IV');
-
-        PaddedData := PadData(AData, 16);
-        DataLen := Length(PaddedData);
-
-        SetLength(EncryptedData, DataLen + 16);
-        Move(PaddedData[0], EncryptedData[0], DataLen);
-
-        if not CryptEncrypt(hKey, 0, True, 0, @EncryptedData[0], DataLen, Length(EncryptedData)) then
-          raise EEncryptionException.Create('AES encryption failed');
-
-        SetLength(EncryptedData, DataLen);
-
-        SetLength(Result, Length(IV) + Length(EncryptedData));
-        Move(IV[0], Result[0], Length(IV));
-        Move(EncryptedData[0], Result[Length(IV)], Length(EncryptedData));
-      finally
-        CryptDestroyKey(hKey);
-      end;
-    finally
-      CryptDestroyHash(hHash);
-    end;
-  finally
-    CryptReleaseContext(hProv, 0);
-  end;
-end;
 
 class function TBasicProtection.DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string): TBytes;
 begin
@@ -704,16 +640,6 @@ begin
     Result[I] := StrToInt('$' + Copy(AHex, I * 2 + 1, 2));
 end;
 
-class function TBasicProtection.GetHashBytes(hHash: HCRYPTHASH): TBytes;
-var
-  HashLen, Len: DWORD;
-begin
-  HashLen := 32; // SHA256
-  Len := HashLen;
-  SetLength(Result, HashLen);
-  if not CryptGetHashParam(hHash, HP_HASHVAL, @Result[0], Len, 0) then
-    raise EHashException.Create('Failed to get hash value');
-end;
 
 class function TBasicProtection.CalculateHMAC(const AData: string; const APassword: string): string;
 var

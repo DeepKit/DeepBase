@@ -85,7 +85,6 @@ type
     function EscapeLogContent(const Content: string): string;
     function GetMaxLogFileSizeMB: Integer;
     procedure SetMaxLogFileSizeMB(const Value: Integer);
-    function NextRotatedFileName(const BaseFile: string): string;
     function PickLogFileForWrite(const BaseFile: string; NewBytes: Integer): string;
     class function CreateStorage(const ADBPath: string): ILogStorage; static;
     
@@ -632,24 +631,6 @@ begin
     FMaxLogFileSizeBytes := Int64(Value) * 1024 * 1024;
 end;
 
-function TDeepBaseLogger.NextRotatedFileName(const BaseFile: string): string;
-var
-  idx: Integer;
-  Candidate: string;
-const
-  CMaxRotationIndex = 999;
-begin
-  idx := 1;
-  while idx <= CMaxRotationIndex do
-  begin
-    Candidate := ChangeFileExt(BaseFile, Format('.%d%s', [idx, ExtractFileExt(BaseFile)]));
-    if not TFile.Exists(Candidate) then
-      Exit(Candidate);
-    Inc(idx);
-  end;
-  // Max index reached — overwrite the last one
-  Result := ChangeFileExt(BaseFile, Format('.%d%s', [CMaxRotationIndex, ExtractFileExt(BaseFile)]));
-end;
 
 function TDeepBaseLogger.PickLogFileForWrite(const BaseFile: string; NewBytes: Integer): string;
 var

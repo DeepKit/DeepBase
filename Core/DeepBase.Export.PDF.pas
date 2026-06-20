@@ -100,9 +100,6 @@ type
     function CharW(C: Char): Double;
     function MeasureText(const AText: string): Double;
     class procedure ParseJPGDim(const AData: TBytes; out AW, AH: Integer); static;
-    procedure WriteObj(ALines: TStrings; ANum: Integer; const ABody: string); overload;
-    procedure WriteStreamObj(ALines: TStrings; ANum: Integer;
-      const AStreamData: string); overload;
   public
     constructor Create;
     destructor Destroy; override;
@@ -888,26 +885,6 @@ end;
 
 { Unused helpers - required by interface declaration }
 
-procedure TPDFDocument.WriteObj(ALines: TStrings; ANum: Integer;
-  const ABody: string);
-begin
-  ALines.Add(Format('%d 0 obj', [ANum]));
-  ALines.Add(ABody);
-  ALines.Add('endobj');
-end;
 
-procedure TPDFDocument.WriteStreamObj(ALines: TStrings; ANum: Integer;
-  const AStreamData: string);
-var
-  Raw: TBytes;
-begin
-  Raw := TEncoding.UTF8.GetBytes(AStreamData);
-  ALines.Add(Format('%d 0 obj', [ANum]));
-  ALines.Add(Format('<< /Length %d >>', [Length(Raw)]));
-  ALines.Add('stream');
-  ALines.Add(AStreamData);
-  ALines.Add('endstream');
-  ALines.Add('endobj');
-end;
 
 end.

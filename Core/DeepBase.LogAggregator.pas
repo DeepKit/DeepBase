@@ -218,7 +218,6 @@ type
   private
     FLabels: TDictionary<string, string>;
     function BuildPushBody(const ALogs: TArray<TAggregatedLog>): string;
-    function LogLevelToLokiLevel(ALevel: TLogLevel): string;
   public
     constructor Create(const AName: string; const AConfig: TBackendConfig);
     destructor Destroy; override;
@@ -1058,18 +1057,6 @@ begin
   inherited;
 end;
 
-function TLokiBackend.LogLevelToLokiLevel(ALevel: TLogLevel): string;
-begin
-  case ALevel of
-    llDebug: Result := 'debug';
-    llInfo: Result := 'info';
-    llWarn: Result := 'warn';
-    llError: Result := 'error';
-    llFatal: Result := 'critical';
-  else
-    Result := 'info';
-  end;
-end;
 
 function TLokiBackend.BuildPushBody(const ALogs: TArray<TAggregatedLog>): string;
 var

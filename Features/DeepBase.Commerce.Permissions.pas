@@ -74,7 +74,6 @@ type
     FKnownRevocationVersion: Integer;
     FOnRevoked: TOnLicenseRevoked;
 
-    function ReasonToString(AReason: TRevocationReason): string;
   public
     constructor Create;
 
@@ -312,17 +311,6 @@ begin
   FOnRevoked := nil;
 end;
 
-function TLicenseRevocationPolicy.ReasonToString(AReason: TRevocationReason): string;
-begin
-  case AReason of
-    rrRefund:        Result := 'refund';
-    rrBan:           Result := 'ban';
-    rrUnbind:        Result := 'unbind';
-    rrAdminOverride: Result := 'admin_override';
-  else
-    Result := 'unknown';
-  end;
-end;
 
 function TLicenseRevocationPolicy.UpdateRevocationVersion(AVersion: Integer): Boolean;
 begin

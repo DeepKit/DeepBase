@@ -33,7 +33,6 @@ type
     FModelInfo: TInferenceModelInfo;
     FRuntime: IInferenceRuntime;
     FOrtSession: Pointer; // heap-allocated ^TORTSession; typed in impl
-    procedure ExtractModelInfo;
     procedure ReleaseOrtSession;
   public
     constructor CreateFromPath(const ARuntime: IInferenceRuntime;
@@ -241,37 +240,6 @@ begin
   Result := FModelInfo;
 end;
 
-procedure TInferenceSession.ExtractModelInfo;
-{$IFDEF HAS_ONNX}
-var
-  LMeta: TORTModelMetadata;
-  LP: Pointer;
-{$ENDIF}
-begin
-  FModelInfo := TInferenceModelInfo.Empty;
-
-  {$IFDEF HAS_ONNX}
-  FModelInfo.InputCount :=
-    Integer(TORTSessionPtr(FOrtSession)^.GetInputCount);
-  FModelInfo.OutputCount :=
-    Integer(TORTSessionPtr(FOrtSession)^.GetOutputCount);
-
-  LMeta := TORTSessionPtr(FOrtSession)^.GetModelMetadata;
-  try
-    // INFER-005: Use UTF-8 conversion to preserve non-ASCII characters in
-    // metadata strings. AnsiString cast loses CJK/emoji content depending on
-    // the Windows ANSI codepage.
-    LP := LMeta.GetProducerNameAllocated(DefaultAllocator).Instance;
-    if LP <> nil then FModelInfo.ProducerName := UTF8ToString(PAnsiChar(LP));
-    LP := LMeta.GetGraphNameAllocated(DefaultAllocator).Instance;
-    if LP <> nil then FModelInfo.GraphName := UTF8ToString(PAnsiChar(LP));
-    LP := LMeta.GetDescriptionAllocated(DefaultAllocator).Instance;
-    if LP <> nil then FModelInfo.Description := UTF8ToString(PAnsiChar(LP));
-  except
-    // metadata extraction is non-critical
-  end;
-  {$ENDIF}
-end;
 
 function TInferenceSession.Run(const AInputNames: TArray<string>;
   const AInputValues: TArray<TBytes>;

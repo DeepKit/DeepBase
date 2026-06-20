@@ -362,7 +362,6 @@ type
     
     procedure DoFeedbackSubmit(AFeedback: TFeedbackItem; Success: Boolean;
       const AErrorMsg: string);
-    procedure DoSubmitProgress(const Progress: TSubmitProgress);
     procedure DoNotification(ANotification: TUserNotification);
     
     function InternalSubmit(AFeedback: TFeedbackItem): Boolean;
@@ -371,7 +370,6 @@ type
     
     function GenerateFeedbackId: string;
     function GenerateTrackingCode: string;
-    function PackageAttachments(AFeedback: TFeedbackItem): string;
   public
     constructor Create(const AConfig: TFeedbackConfig);
     destructor Destroy; override;
@@ -1789,15 +1787,6 @@ begin
       end);
 end;
 
-procedure TFeedbackManager.DoSubmitProgress(const Progress: TSubmitProgress);
-begin
-  if Assigned(FOnSubmitProgress) then
-    TThread.Synchronize(TThread.Current,
-      procedure
-      begin
-        FOnSubmitProgress(Self, Progress);
-      end);
-end;
 
 procedure TFeedbackManager.DoNotification(ANotification: TUserNotification);
 begin
@@ -1824,38 +1813,6 @@ begin
             Copy(THashMD5.GetHashString(FormatDateTime('hhnnsszzz', Now)), 1, 6).ToUpper;
 end;
 
-function TFeedbackManager.PackageAttachments(AFeedback: TFeedbackItem): string;
-var
-  LZip: TZipFile;
-  LOutputPath: string;
-  I: Integer;
-begin
-  Result := '';
-  
-  if AFeedback.Attachments.Count = 0 then
-    Exit;
-    
-  LOutputPath := TPath.Combine(TPath.GetTempPath,
-    'feedback_' + AFeedback.Id + '_attachments.zip');
-    
-  LZip := TZipFile.Create;
-  try
-    LZip.Open(LOutputPath, zmWrite);
-    try
-      for I := 0 to AFeedback.Attachments.Count - 1 do
-      begin
-        if TFile.Exists(AFeedback.Attachments[I].LocalPath) then
-          LZip.Add(AFeedback.Attachments[I].LocalPath,
-                   AFeedback.Attachments[I].FileName);
-      end;
-    finally
-      LZip.Close;
-    end;
-    Result := LOutputPath;
-  finally
-    LZip.Free;
-  end;
-end;
 
 function TFeedbackManager.InternalSubmit(AFeedback: TFeedbackItem): Boolean;
 begin

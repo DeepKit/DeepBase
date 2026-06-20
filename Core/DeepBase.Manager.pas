@@ -111,21 +111,9 @@ type
     function CreateRootTxt(out FilePath: string): Boolean;
     function ConnectToDatabase(const DBPath: string): Boolean;
     function ValidateSchema: Boolean;
-    function ValidateSchemaVersion: Boolean;
     function CreateSchema: Boolean;
     function GetSchemaVersionInternal: string;
-    function MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
-    function RunMigrationScript(const ScriptPath: string): Boolean;
-    procedure EnsureSchemaColumns;
     procedure RunOperationalRetention;
-    function GetRetentionDays(const SettingKey: string;
-      DefaultValue: Integer): Integer;
-    function TableExists(const TableName: string): Boolean;
-    function TableHasColumn(const TableName, ColumnName: string): Boolean;
-    function ResolveTimeColumn(const TableName, Preferred,
-      Fallback: string): string;
-    procedure ArchiveAndTrimTable(const TableName, TimeColumn: string;
-      DaysToKeep: Integer);
     function GetExeDir: string;
     function GetAppDataDir: string;
     function CheckWritePermission(const Path: string): Boolean;
@@ -1317,19 +1305,6 @@ begin
   end;
 end;
 
-function TDeepBaseManager.ValidateSchemaVersion: Boolean;
-var
-  ErrorCode: TInitErrorCode;
-  ErrorMsg: string;
-begin
-  Result := TDeepBaseManagerSchema.ValidateSchemaVersion(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB), ErrorCode, ErrorMsg);
-  if (not Result) and ((ErrorCode <> ecSuccess) or (ErrorMsg <> '')) then
-  begin
-    FInitErrorCode := ErrorCode;
-    FLastError := ErrorMsg;
-  end;
-end;
 
 function TDeepBaseManager.CreateSchema: Boolean;
 var
@@ -1348,47 +1323,11 @@ begin
   end;
 end;
 
-procedure TDeepBaseManager.EnsureSchemaColumns;
-begin
-  TDeepBaseManagerSchema.EnsureSchemaColumns(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB));
-end;
 
-function TDeepBaseManager.GetRetentionDays(const SettingKey: string;
-  DefaultValue: Integer): Integer;
-begin
-  Result := TDeepBaseManagerOperational.GetRetentionDays(FConfig, SettingKey,
-    DefaultValue);
-end;
 
-function TDeepBaseManager.TableExists(const TableName: string): Boolean;
-begin
-  Result := TDeepBaseManagerOperational.TableExists(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB), TableName);
-end;
 
-function TDeepBaseManager.TableHasColumn(const TableName, ColumnName: string): Boolean;
-begin
-  Result := TDeepBaseManagerOperational.TableHasColumn(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB), TableName,
-    ColumnName);
-end;
 
-function TDeepBaseManager.ResolveTimeColumn(const TableName, Preferred,
-  Fallback: string): string;
-begin
-  Result := TDeepBaseManagerOperational.ResolveTimeColumn(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB), TableName,
-    Preferred, Fallback);
-end;
 
-procedure TDeepBaseManager.ArchiveAndTrimTable(const TableName, TimeColumn: string;
-  DaysToKeep: Integer);
-begin
-  TDeepBaseManagerOperational.ArchiveAndTrimTable(FStorage,
-    Assigned(FConfigDB) and IsConnectionAlive(FConfigDB), TableName,
-    TimeColumn, DaysToKeep);
-end;
 
 procedure TDeepBaseManager.RunOperationalRetention;
 begin
@@ -1412,25 +1351,7 @@ begin
   end;
 end;
 
-function TDeepBaseManager.RunMigrationScript(const ScriptPath: string): Boolean;
-var
-  ErrorMsg: string;
-begin
-  Result := TDeepBaseManagerSchema.RunMigrationScript(FStorage, ScriptPath,
-    ErrorMsg);
-  if not Result then
-    FLastError := ErrorMsg;
-end;
 
-function TDeepBaseManager.MigrateSchemaInternal(const FromVersion, ToVersion: string): Boolean;
-var
-  ErrorMsg: string;
-begin
-  Result := TDeepBaseManagerSchema.MigrateSchema(FStorage, FRootPath,
-    FromVersion, ToVersion, ErrorMsg);
-  if not Result then
-    FLastError := ErrorMsg;
-end;
 
 function TDeepBaseManager.CheckAndMigrateSchema(const TargetVersion: string): Boolean;
 var

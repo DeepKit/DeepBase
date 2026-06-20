@@ -22,8 +22,6 @@ type
     FLock: TCriticalSection;
     FOptionsBuilt: Boolean;
     procedure AttachProviderCPU;
-    procedure AttachProviderDML(ADeviceId: Integer);
-    procedure AttachProviderCUDA;
     procedure ShutdownInternal;
   public
     constructor Create;
@@ -185,58 +183,6 @@ begin
   Logger.Info('Inference.Runtime: using CPU provider', 'Inference');
 end;
 
-procedure TInferenceRuntime.AttachProviderDML(ADeviceId: Integer);
-{$IFDEF HAS_ONNX}
-var
-  LDMLProv: POrtDmlApi;
-{$ENDIF}
-begin
-  {$IFDEF HAS_ONNX}
-  // DML requires sequential execution and disabled memory patterns
-  DefaultSessionOptions.DisableMemPattern;
-  DefaultSessionOptions.SetExecutionMode(ORT_SEQUENTIAL);
 
-  // Resolve the DML extension API
-  ThrowOnError(
-    GetApi.GetExecutionProviderApi('DML', ORT_API_VERSION, @LDMLProv));
-
-  if LDMLProv = nil then
-    raise EInferenceProviderError.Create(
-      'Failed to resolve DirectML provider API. ' +
-      'Ensure onnxruntime.dll with DirectML support is available.');
-
-  ThrowOnError(
-    LDMLProv.SessionOptionsAppendExecutionProvider_DML(
-      DefaultSessionOptions.p_, ADeviceId));
-
-  Logger.InfoFmt('Inference.Runtime: DirectML attached (device %d)',
-    [ADeviceId], 'Inference');
-  {$ELSE}
-  raise EInferenceProviderError.Create('DirectML provider requires ONNX runtime');
-  {$ENDIF}
-end;
-
-procedure TInferenceRuntime.AttachProviderCUDA;
-{$IFDEF HAS_ONNX}
-var
-  LCUDAOpts: OrtCUDAProviderOptionsV2;
-{$ENDIF}
-begin
-  {$IFDEF HAS_ONNX}
-  FillChar(LCUDAOpts, SizeOf(LCUDAOpts), 0);
-  ThrowOnError(GetApi.CreateCUDAProviderOptions(@LCUDAOpts));
-  try
-    ThrowOnError(
-      GetApi.SessionOptionsAppendExecutionProvider_CUDA_V2(
-        DefaultSessionOptions.p_, @LCUDAOpts));
-  finally
-    GetApi.ReleaseCUDAProviderOptions(@LCUDAOpts);
-  end;
-
-  Logger.Info('Inference.Runtime: CUDA provider attached', 'Inference');
-  {$ELSE}
-  raise EInferenceProviderError.Create('CUDA provider requires ONNX runtime');
-  {$ENDIF}
-end;
 
 end.

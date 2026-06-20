@@ -187,7 +187,6 @@ type
     procedure ExecuteEntryActions(const AState: TState);
     procedure ExecuteExitActions(const AState: TState);
     procedure AddToHistory(const AState: TState; const ATrigger: TTrigger);
-    function GetSuperstate(const AState: TState): TState;
     function IsInState(const AState: TState; const ATargetState: TState): Boolean;
     function GetCurrentConfig: TStateConfiguration<TState, TTrigger>;
     function StateToString(const AState: TState): string;
@@ -868,16 +867,6 @@ begin
   Result := False;
 end;
 
-function TStateMachine<TState, TTrigger>.GetSuperstate(const AState: TState): TState;
-var
-  LConfig: TStateConfiguration<TState, TTrigger>;
-begin
-  LConfig := GetState(AState);
-  if Assigned(LConfig) and LConfig.HasParent then
-    Result := LConfig.ParentState
-  else
-    Result := AState;
-end;
 
 procedure TStateMachine<TState, TTrigger>.ExecuteEntryActions(const AState: TState);
 var

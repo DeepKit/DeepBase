@@ -106,7 +106,6 @@ type
   TTimeZones = class
   private
     class var FCache: TDictionary<string, TTimeZoneInfo>;
-    class procedure InitCache;
   public
     class constructor Create;
     class destructor Destroy;
@@ -567,10 +566,6 @@ begin
   FreeAndNil(FCache);
 end;
 
-class procedure TTimeZones.InitCache;
-begin
-  // Initialize common time zones
-end;
 
 class function TTimeZones.Local: TTimeZoneInfo;
 var
