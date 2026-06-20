@@ -271,10 +271,6 @@ var
 begin
   if not FEnabled then Exit;
   
-  DoFile := False;
-  DoDatabase := False;
-  DoCallback := False;
-  DoSlowAlert := False;
 
   FLock.Enter;
   try

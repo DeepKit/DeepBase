@@ -709,7 +709,6 @@ end;
 procedure TTestAutoFix.Test_AutoFix_NonFixableIssue;
 var
   Results: TDiagnoseResults;
-  FixedCount: Integer;
 begin
   // Create a non-fixable issue
   ExecuteSQL(FConnection, 
@@ -718,7 +717,7 @@ begin
     'INSERT INTO SchemaInfo (Key, Value) VALUES (''SchemaVersion'', ''0.0.1'')');
   
   Results := CheckSchemaVersion(FConnection);
-  FixedCount := AutoFix(FConnection, Results);
+  AutoFix(FConnection, Results);
   
   // Old version issues may not be auto-fixable
   // Just verify the function doesn't crash

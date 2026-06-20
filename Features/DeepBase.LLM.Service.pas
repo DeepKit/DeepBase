@@ -384,10 +384,8 @@ end;
 function TLLMService.Chat(const ATier: TModelTier; const ASystemPrompt, AUserPrompt: string): TChatResult;
 var
   Messages: TArray<TChatMessage>;
-  Idx: Integer;
 begin
   EnsureLoaded;
-  Idx := 0;
   if ASystemPrompt <> '' then
   begin
     SetLength(Messages, 2);

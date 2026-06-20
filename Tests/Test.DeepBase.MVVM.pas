@@ -858,7 +858,6 @@ var
   Command: TAsyncCommand;
   CanExecuteDuringRun: Boolean;
 begin
-  CanExecuteDuringRun := True;
   
   Command := TAsyncCommand.Create(FViewModel,
     TAsyncExecuteProc(procedure(IsCancelled: TFunc<Boolean>)

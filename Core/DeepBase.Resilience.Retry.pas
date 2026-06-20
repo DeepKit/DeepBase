@@ -288,12 +288,10 @@ end;
 procedure TRetryPolicy.Execute(Proc: TProc);
 var
   RetryCount: Integer;
-  LastException: Exception;
   Delay: Int64;
   ShouldRetry: Boolean;
 begin
   RetryCount := 0;
-  LastException := nil;
   
   while True do
   begin

@@ -1073,7 +1073,6 @@ end;
 
 function TWeChatPayClient.Refund(const ARequest: TRefundRequest): TRefundResult;
 var
-  Cfg: TWeChatPayConfig;
   ReqBody, AmountObj: TJSONObject;
   RespObj: TJSONObject;
   RefundFen, TotalFen: Int64;
@@ -1081,7 +1080,6 @@ begin
   Result.Clear;
   ARequest.Validate;
 
-  Cfg := TWeChatPayConfig(FConfig);
   RefundFen := Round(ARequest.RefundAmount * 100);
   TotalFen := Round(ARequest.TotalAmount * 100);
 

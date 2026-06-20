@@ -92,7 +92,6 @@ begin
   if AMaxFrames <= 0 then Exit;
   if ASkip < 0 then ASkip := 0;
 
-  LCount := 0;
   try
     LCount := RtlCaptureStackBackTrace(ASkip, CAPTURE_BUFFER_FRAMES, @LBuf[0], nil);
   except

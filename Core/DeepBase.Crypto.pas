@@ -2228,7 +2228,7 @@ begin
     
     // SubjectPublicKeyInfo ::= SEQUENCE
     SkipTag($30, LPos); // SEQUENCE
-    LLen := ReadLength(LPos);
+    ReadLength(LPos);
     
     // algorithm AlgorithmIdentifier ::= SEQUENCE
     SkipTag($30, LPos); // SEQUENCE
@@ -2244,7 +2244,7 @@ begin
     
     // The BIT STRING contains RSAPublicKey ::= SEQUENCE
     SkipTag($30, LPos); // SEQUENCE
-    LLen := ReadLength(LPos);
+    ReadLength(LPos);
     
     // modulus INTEGER
     SkipTag($02, LPos); // INTEGER

@@ -1926,9 +1926,7 @@ procedure TCloudBackupManager.InternalRestore(const ABackupId: string;
 var
   LArchivePath, LTempPath, LDestPath: string;
   LManifest: TBackupManifest;
-  LStartTime: TDateTime;
 begin
-  LStartTime := Now;
   FCancelled := False;
   
   FStatus := bsPreparing;

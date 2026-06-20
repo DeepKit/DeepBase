@@ -380,7 +380,7 @@ begin
 
     // 把 Runner/Results 放在局部块里，让它们在 FastMM 的进程退出泄漏
     // 检查运行之前被 finalize，避免框架自身保留的接口引用被误报为泄漏。
-    var AllPassed: Boolean := False;
+    var AllPassed: Boolean;
     begin
       var LRunner: ITestRunner := TDUnitX.CreateRunner;
       LRunner.UseRTTI := True;

@@ -763,14 +763,13 @@ begin
     Result := FBenchmark.Run(
       procedure
       var
-        I, Counter: Integer;
+        I: Integer;
       begin
-        Counter := 0;
         for I := 1 to 10000 do
         begin
           CS.Enter;
           try
-            Inc(Counter);
+            { benchmark-only: exercise lock }
           finally
             CS.Leave;
           end;
@@ -797,7 +796,7 @@ begin
     Result := FBenchmark.Run(
       procedure
       var
-        I, Value, V: Integer;
+        I, Value: Integer;
       begin
         Value := 0;
         // 90% reads, 10% writes
@@ -816,7 +815,7 @@ begin
           begin
             RWLock.BeginRead;
             try
-              V := Value;
+              { benchmark-only: exercise read lock }
             finally
               RWLock.EndRead;
             end;
@@ -844,7 +843,6 @@ begin
     var
       Counter, I: Integer;
     begin
-      Counter := 0;
       for I := 1 to 100000 do
         TInterlocked.Increment(Counter);
     end);

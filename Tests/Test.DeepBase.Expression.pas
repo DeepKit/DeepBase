@@ -1476,8 +1476,6 @@ begin
 end;
 
 procedure TExpressionErrorTests.Test_Error_Position;
-var
-  E: EExpressionError;
 begin
   try
     TExpression.Evaluate('x');
@@ -1485,7 +1483,6 @@ begin
   except
     on Ex: EExpressionError do
     begin
-      E := Ex;
       Assert.IsTrue(True); // Exception caught
     end;
   end;

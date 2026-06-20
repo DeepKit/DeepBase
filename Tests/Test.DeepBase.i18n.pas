@@ -334,10 +334,7 @@ begin
 end;
 
 procedure TTestDeepBaseI18n.Test_OnLanguageChanged_Event;
-var
-  EventFired: Boolean;
 begin
-  EventFired := False;
   
   // 使用 SubscribeLanguageChange 代替直接设置 OnLanguageChanged
   // 因为 OnLanguageChanged �?TNotifyEvent 类型，不支持匿名方法

@@ -607,7 +607,6 @@ end;
 procedure TTestDeepBaseEventBus.Test_DispatchMode_Async_ExecutesInBackground;
 var
   Executed: Boolean;
-  StartTime: TDateTime;
   CompletionEvent: TEvent;  // BUG-027 FIX: 使用事件同步替代固定延时
   WaitResult: TWaitResult;
 begin
@@ -623,7 +622,6 @@ begin
       end, epNormal, edmAsync);
 
     var TestEvent: TTestEvent;
-    StartTime := Now;
     FEventBus.Publish<TTestEvent>(TestEvent);
 
     // Should return quickly (not wait for sleep)

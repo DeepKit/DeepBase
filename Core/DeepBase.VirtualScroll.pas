@@ -1002,9 +1002,7 @@ var
   Items: TArray<TVirtualItem>;
   I: Integer;
   ItemRect: TRect;
-  BufferCanvas: TCanvas;
 begin
-  BufferCanvas := FBufferPainter.GetCanvas;
   FBufferPainter.Clear(Color);
 
   Items := FScrollController.GetVisibleItems;
