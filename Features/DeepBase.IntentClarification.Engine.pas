@@ -287,9 +287,6 @@ begin
 end;
 
 function TClarificationEngine.FindProvider(ALevel: TClarificationLevel): ILevelProvider;
-var
-  LProvider: ILevelProvider;
-
   function FindAtLevel(ATargetLevel: TClarificationLevel): ILevelProvider;
   var
     LIter: ILevelProvider;

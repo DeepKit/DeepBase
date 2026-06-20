@@ -731,7 +731,6 @@ var
   Pair: TJSONPair;
   P: TFDParam;
   S: string;
-  G: TGUID;
 
   // Check if a string contains only hex digits and dashes (GUID characters)
   function IsHexWithDashes(const Value: string; Start, Len: Integer): Boolean;

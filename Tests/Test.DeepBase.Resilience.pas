@@ -1071,7 +1071,6 @@ end;
 
 procedure TRetryPolicyTests.Test_CalculateDelay_FixedStrategy;
 var
-  Delay: Int64;
   Policy: TRetryPolicy;
 begin
   Policy := TRetryPolicy.Create;
@@ -1936,7 +1935,6 @@ var
   Tasks: array[0..1] of ITask;
   RejectedResult: Boolean;
   Lock: TCriticalSection;
-  I: Integer;
   Policy: TBulkheadPolicy;
 begin
   Lock := TCriticalSection.Create;

@@ -829,7 +829,6 @@ end;
 function TFileChangeDetector.CalculateFileChecksum(const APath: string): string;
 var
   LStream: TFileStream;
-  LHash: THashSHA2;
 begin
   LStream := TFileStream.Create(APath, fmOpenRead or fmShareDenyWrite);
   try
@@ -2066,7 +2065,6 @@ end;
 
 procedure TCloudBackupManager.CleanupOldVersions;
 var
-  I: Integer;
   LVersion: TBackupVersion;
 begin
   // ����ָ�������İ汾

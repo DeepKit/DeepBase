@@ -703,7 +703,6 @@ var
   LHeaderEnd: Integer;
   LHeaders: string;
   LContent: string;
-  LDisposition: string;
   LFieldName: string;
   LFileName: string;
   LPartContentType: string;

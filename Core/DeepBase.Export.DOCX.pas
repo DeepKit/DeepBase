@@ -332,7 +332,7 @@ var
   I, J, K: Integer;
   P: TParagraph;
   T: TTable;
-  AlignStr, SpacingAttr: string;
+  AlignStr: string;
   Cols, Rows: Integer;
   PicRelId: string;
 

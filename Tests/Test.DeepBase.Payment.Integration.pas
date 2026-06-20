@@ -188,7 +188,7 @@ end;
 
 procedure TPaymentAESGCMTests.Test_Decrypt_KnownVector;
 var
-  Key, IV, Plain, AAD, Tag, CipherWithTag: TBytes;
+  Key, IV, Plain: TBytes;
   Decrypted: TBytes;
 begin
   // AES-256-GCM test vector from NIST GCM Test Case 3

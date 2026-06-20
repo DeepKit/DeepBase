@@ -247,7 +247,7 @@ end;
 
 function TLLMImportExport.JsonToPrompt(const JsonObj: TJSONObject): TPrompt;
 var
-  VarsArray, VersionsArray, MetaArray: TJSONArray;
+  VarsArray, VersionsArray: TJSONArray;
   I: Integer;
 begin
   Result.Id := 0; // Will be assigned on save
@@ -426,7 +426,6 @@ function TLLMImportExport.ExportSelectedPrompts(const FilePath: string;
 var
   RootObj: TJSONObject;
   PromptsArray, MetaArray, CategoriesArray: TJSONArray;
-  Prompts: TPromptArray;
   MetaPrompts: TMetaPromptArray;
   Categories: TPromptCategoryArray;
   P: TPrompt;
@@ -592,7 +591,7 @@ end;
 function TLLMImportExport.ImportFromString(const Content: string; Mode: TImportMode): TImportResult;
 var
   RootObj: TJSONObject;
-  CategoriesArray, MetaArray, PromptsArray, VersionsArray, MetaCodesArray: TJSONArray;
+  CategoriesArray, MetaArray, PromptsArray, MetaCodesArray: TJSONArray;
   CatObj, PromptObj, MetaObj: TJSONObject;
   I, J: Integer;
   Cat: TPromptCategory;

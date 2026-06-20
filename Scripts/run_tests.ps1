@@ -564,7 +564,19 @@ function Compile-TestProject {
     if (-not (Test-Path $projectDcuDir)) {
         New-Item -ItemType Directory -Path $projectDcuDir -Force | Out-Null
     }
-    
+
+    # BUG-285: dcc64 在解析 .dproj 的 DCC_DcuOutput 时,偶尔会把早期依赖的 DCU 写到源目录。
+    # 构建前清理源目录中的残留 DCU,避免架构测试(源目录不得包含 DCU 产物)误报。
+    if (-not $script:SourceCodeDirs) {
+        $script:SourceCodeDirs = @("$BaseDir\Core", "$BaseDir\Features", "$BaseDir\Persistence", "$BaseDir\VCL", "$BaseDir\FMX")
+    }
+    foreach ($srcDir in $script:SourceCodeDirs) {
+        if (Test-Path $srcDir) {
+            Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -ErrorAction SilentlyContinue |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     $args = @(
         "-U$SearchPath",
         "-N0$projectDcuDir",
@@ -592,7 +604,18 @@ function Compile-TestProject {
         Write-Host "ERROR: Failed to compile $ProjectName" -ForegroundColor Red
         return $false
     }
-    
+
+    # BUG-285: 构建后再次清理源目录残留 DCU(dcc64 即使指定 -N0,也可能将 DCU 落在源目录)。
+    foreach ($srcDir in $script:SourceCodeDirs) {
+        if (Test-Path $srcDir) {
+            $leftover = Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -ErrorAction SilentlyContinue
+            if ($leftover) {
+                Write-Host ("BUG-285: removing {0} stale DCU(s) from {1}" -f $leftover.Count, $srcDir) -ForegroundColor Yellow
+                $leftover | Remove-Item -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
     Write-Host "SUCCESS: $ProjectName compiled" -ForegroundColor Green
     return $true
 }

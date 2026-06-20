@@ -791,7 +791,6 @@ end;
 
 procedure TTestLocalConfigStore.Test_GetAll_ReturnsNonDeletedItems;
 var
-  Item: TConfigItem;
   AllItems: TObjectList<TConfigItem>;
 begin
   FStore.Put(TConfigItem.Create('key1', citString));

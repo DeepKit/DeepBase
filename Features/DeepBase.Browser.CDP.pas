@@ -675,7 +675,6 @@ begin
     var
       LJson: TJSONValue;
       LRoot: TJSONObject;
-      LNodeId: Integer;
     begin
       if ASuccess then
       begin

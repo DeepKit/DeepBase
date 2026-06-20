@@ -414,9 +414,7 @@ end;
 procedure TWebSocketConnection.SendFrame(const AFrame: TWebSocketFrame);
 var
   LHeader: TBytes;
-  LHeaderLen: Integer;
   LFirstByte: Byte;
-  LSecondByte: Byte;
   LPayloadLen: Int64;
 begin
   FLock.Enter;
@@ -1046,7 +1044,6 @@ end;
 
 procedure TWebSocketServer.Stop;
 var
-  LConn: TWebSocketConnection;
   LPair: TPair<string, TWebSocketConnection>;
 begin
   if not FRunning then

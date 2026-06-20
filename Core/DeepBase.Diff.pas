@@ -1149,7 +1149,6 @@ end;
 
 procedure TTextDiff.BuildHunks(AResult: TDiffResult);
 var
-  LItems: TList<TDiffItem>;
   I, J, K: Integer;
   LHunk: TDiffHunk;
   LItem: TDiffItem;
@@ -1335,10 +1334,9 @@ function TTextDiff.Merge3Way(const ABase, AOurs, ATheirs: string): TMergeResult;
 var
   LBaseLines, LOursLines, LTheirsLines: TArray<string>;
   LBaseDiff, LTheirsDiff: TDiffResult;
-  I, J, K: Integer;
-  LBaseItem, LOurItem, LTheirItem: TDiffItem;
+  I, J: Integer;
+  LOurItem, LTheirItem: TDiffItem;
   LConflict: TMergeConflict;
-  LMergeIdx: Integer;
   LBaseIdx, LOurIdx, LTheirIdx: Integer;
   LOurChanges, LTheirChanges: TList<TDiffItem>;
 begin

@@ -1,7 +1,7 @@
 { ============================================================================
   Test.DeepBase.DB.DoQry - DoQry 集成模块测试
   
-  说明: 测试 DeepBase.DB.DoQry 模块的核心功�?
+  说明: 测试 DeepBase.DB.DoQry 模块的核心功�?
   ============================================================================ }
 
 unit Test.DeepBase.DB.DoQry;
@@ -133,7 +133,7 @@ implementation
 
 procedure TTestDeepBaseDoQry.Setup;
 begin
-  // 使用内存数据�?
+  // 使用内存数据�?
   FTestDBPath := ':memory:';
   
   FConnection := TFDConnection.Create(nil);
@@ -141,7 +141,7 @@ begin
   FConnection.Params.Database := FTestDBPath;
   FConnection.Open;
   
-  // 初始�?DoQry
+  // 初始�?DoQry
   UniDbInit(ExtractFilePath(ParamStr(0)));
   
   CreateTestTable;
@@ -262,7 +262,7 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 先插入数�?
+  // 先插入数�?
   UniDbExec(
     'INSERT INTO test_users (name, age) VALUES (:name, :age)',
     '{"name": "Bob", "age": 25}',
@@ -745,16 +745,16 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 设置 TTL �?1 �?
+  // 设置 TTL �?1 �?
   UniDbSetCacheTTL(1);
   UniDbClearQueryCache;
   
-  // 第一次调用，应该未命�?
+  // 第一次调用，应该未命�?
   UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "TTLTest", "age": 20}', Ctx);
   UniDbGetCacheStats(Hits, Misses, EntryCount);
   Assert.AreEqual(Int64(0), Hits, 'First call should be cache miss');
   
-  // 第二次调用（直接 SQL 不缓存，所以仍然是 miss，但这里验证 TTL 逻辑�?
+  // 第二次调用（直接 SQL 不缓存，所以仍然是 miss，但这里验证 TTL 逻辑�?
   // 等待 TTL 过期
   Sleep(1500);
   
@@ -794,7 +794,7 @@ begin
   UniDbExec('INSERT INTO test_users (name, age) VALUES (:name, :age)', '{"name": "Stats2", "age": 40}', Ctx);
   
   UniDbGetCacheStats(Hits, Misses, EntryCount);
-  // 直接 SQL 不经过缓存查找，miss 应该�?0
+  // 直接 SQL 不经过缓存查找，miss 应该�?0
   Assert.AreEqual(Int64(0), Hits, 'Direct SQL should not count as hits');
 end;
 
@@ -940,7 +940,7 @@ var
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
   
-  // 插入�?NULL 字段的数�?
+  // 插入�?NULL 字段的数�?
   UniDbExec(
     'INSERT INTO test_multitype (name, price, quantity) VALUES (:name, :price, :quantity)',
     '{"name": "NullTest", "price": null, "quantity": 50}',
@@ -1035,7 +1035,7 @@ begin
   end;
   
   try
-    // 插入第一�?
+    // 插入第一�?
     UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);
     // 插入重复的，应该触发唯一约束错误
     UniDbExec('INSERT INTO test_unique (code) VALUES (:code)', '{"code": "ABC"}', Ctx);
@@ -1070,7 +1070,7 @@ begin
   except
     on E: EDeepBaseDbError do
     begin
-      // 确保 ErrorCode 字段存在且不�?0
+      // 确保 ErrorCode 字段存在且不�?0
       Assert.IsTrue(E.ErrorCode > 0, 'ErrorCode should be greater than 0');
       Assert.IsNotEmpty(E.Message, 'Message should not be empty');
       Assert.IsNotEmpty(E.CorrelationId, 'CorrelationId should not be empty');
@@ -1114,7 +1114,7 @@ procedure TTestDeepBaseDoQry.Test_PreparedPool_StatsTracksReuse;
 var
   Ctx: TUniQueryContext;
   Data: TFDMemTable;
-  PoolSize, ReuseCount1, ReuseCount2: Int64;
+  PoolSize, ReuseCount1: Int64;
   I: Integer;
 begin
   Ctx := UniDbMakeContext(FConnection, udbSQLite);
@@ -1123,7 +1123,7 @@ begin
   UniDbClearPreparedStatements;
   UniDbSetPreparedStatementPooling(True);
   try
-    // 执行 10 次相同查�?
+    // 执行 10 次相同查�?
     for I := 1 to 10 do
     begin
       Data.Free;
@@ -1153,7 +1153,7 @@ begin
   UniDbClearPreparedStatements;
   UniDbSetPreparedStatementPooling(True);
   try
-    // 创建几个池条�?
+    // 创建几个池条�?
     UniDbSelect('SELECT 1', '', Data, Ctx);
     Data.Free; Data := nil;
     UniDbSelect('SELECT 2', '', Data, Ctx);

@@ -2110,7 +2110,6 @@ end;
 
 procedure TWorkerQueue.SetWorkerCount(ACount: Integer);
 var
-  I: Integer;
   LWorker: TWorkerThread;
 begin
   FLock.Enter;

@@ -742,7 +742,6 @@ var
   Panel: TDashboardPanel;
   Widget: TDashboardWidget;
   Series: TWidgetSeries;
-  Point: TWidgetDataPoint;
   Row: TArray<string>;
   H, S: string;
   Title: string;
@@ -879,7 +878,6 @@ var
   Series: TWidgetSeries;
   Point: TWidgetDataPoint;
   Row: TArray<string>;
-  H: string;
   I: Integer;
 begin
   SB := TStringBuilder.Create;

@@ -507,7 +507,6 @@ end;
 class function TSemanticVersion.Parse(const VersionStr: string): TSemanticVersion;
 var
   Parts: TArray<string>;
-  MainParts: TArray<string>;
   PreReleaseIdx: Integer;
 begin
   Result.Major := 0;
@@ -1547,7 +1546,6 @@ var
   ExtractPath, FileName, DestPath, CanonicalExtract, CanonicalDest: string;
   I: Integer;
   FileNames: TArray<string>;
-  ZipHeader: TZipHeader;
 begin
   Result := False;
   

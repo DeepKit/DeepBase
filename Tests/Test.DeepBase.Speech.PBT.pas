@@ -103,7 +103,6 @@ end;
 procedure TSpeechRegistryPBT.P2_Enable_Disable_Idempotent;
 var
   Info: TSpeechBackendInfo;
-  Discovered: TArray<TSpeechBackendInfo>;
 begin
   // Register
   Info.Kind := sbkASR;

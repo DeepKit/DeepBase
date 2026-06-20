@@ -593,7 +593,6 @@ class function TPluralRules.SelectForm(const LangCode: string; N: Double;
   const Forms: array of string): string;
 var
   Category: TPluralCategory;
-  Idx: Integer;
   Categories: TPluralCategories;
   Cat: TPluralCategory;
   CatIdx: Integer;

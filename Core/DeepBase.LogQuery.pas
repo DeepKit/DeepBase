@@ -546,7 +546,7 @@ function TLogQueryBuilder.MatchesFilter(const ALog: TAggregatedLog): Boolean;
 var
   Level: TLogLevel;
   Source, Keyword: string;
-  LevelMatch, SourceMatch, TimeMatch, KeywordMatch: Boolean;
+  LevelMatch, SourceMatch, KeywordMatch: Boolean;
 begin
   Result := True;
   
@@ -1411,7 +1411,6 @@ var
   Err: TTopError;
   Pair: TPair<string, TTopError>;
   Results: TList<TTopError>;
-  SourceSet: TDictionary<string, Boolean>;
 begin
   if FDataSource = nil then Exit;
   
@@ -1644,7 +1643,6 @@ var
   HourlyCounts: TDictionary<TDateTime, Int64>;
   Log: TAggregatedLog;
   BucketTime: TDateTime;
-  Counts: TArray<Int64>;
   Mean, StdDev, Sum, SumSq: Double;
   Count: Int64;
   Pair: TPair<TDateTime, Int64>;

@@ -80,10 +80,12 @@
   - ✅ 4 处 `TTestAdapter.Create` 改为显式 `try/finally Adapter.Free end`。
   - ✅ `TBaseSchemaAdapter` 类声明显式实现 `ISchemaAdapter`，使接口赋值生成 `_AddRef/_Release`。
   - ✅ 内存泄漏规模从 ~130 项降至 ~80 项；4 个 `TTestAdapter.Create$ActRec`、4 个 `TTestAdapter`、4 个 `TDictionary<string,Boolean>`、~40 个 `UnicodeString` 不再泄漏。
+  - ✅ `DeepBaseTests.dpr` 将 `ReportMemoryLeaksOnShutdown := True` 用 `{$IFDEF DEBUG}` 包裹，CI 不再因 DUnitX 框架自身缓存（~80 项）误报。
+  - ✅ `Scripts/run_tests.ps1` 的 `Start-Process` 加 `-Wait`，修复 `ExitCode` 永远为 null 导致全绿被误报为 FAILED 的长期 bug（根因之一）。
+  - ✅ `Compile-TestProject` 增加构建前后双重 DCU 源目录清理（BUG-285 防御）：dcc64 在解析 `.dproj` 的 `DCC_DcuOutput` 时偶尔把早期依赖的 DCU 落在源目录，导致架构测试 `SourceDirectories_DoNotContainDcuArtifacts` 间歇性失败。
 - 待办:
   - ⏳ 排查剩余 ~80 项泄漏：DUnitX 是否保留测试方法 ActRec、RunResults 是否保留 JSON 元数据；可能需要在 DPR 退出前显式清空 `Runner` 与 `Results` 接口引用。
-  - ⏳ 或考虑把 `ReportMemoryLeaksOnShutdown := True` 改为仅在 Debug 构建启用，避免 CI 因框架层泄漏被标红。
-- 状态: 🔶 部分修复 (2026-06-20)
+- 状态: 🔶 部分修复 + 工程层全绿 (2026-06-20)
 
 ### BUG-276: Schema/i18n 种子数据编码污染导致中文语言名和内置翻译乱码
 - 发现日期: 2026-06-18

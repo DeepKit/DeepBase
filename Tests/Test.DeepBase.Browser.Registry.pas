@@ -99,7 +99,6 @@ end;
 procedure TBrowserRegistryTests.Test_Disable_RemovesFromDiscover;
 var
   LInfo: TBrowserBackendInfo;
-  LAll: TArray<TBrowserBackendInfo>;
   LCountBefore, LCountAfter: Integer;
 begin
   LInfo := Default(TBrowserBackendInfo);

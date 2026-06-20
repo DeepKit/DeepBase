@@ -1233,7 +1233,6 @@ procedure TConfiguration.Reload;
 var
   LOldValues: TDictionary<string, string>;
   LPair: TPair<string, TConfigValue>;
-  LNewValue: TConfigValue;
 begin
   // Save old values for comparison
   LOldValues := TDictionary<string, string>.Create;

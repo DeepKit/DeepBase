@@ -498,7 +498,6 @@ end;
 procedure TTestDeepBaseHotkeys.Test_GetAllHotkeys;
 var
   AllHotkeys: TArray<THotkeyInfo>;
-  I: Integer;
 begin
   FHotkeys.SetHotkey('all.test.action1', TextToShortCut('Ctrl+1'));
   FHotkeys.SetHotkey('all.test.action2', TextToShortCut('Ctrl+2'));

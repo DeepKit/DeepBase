@@ -256,7 +256,6 @@ end;
 procedure TChatHistoryTests.Test_Clear_Keeps_System_Message_When_KeepSystem_True;
 var
   History: TChatHistory;
-  Messages: TChatMessages;
 begin
   History := TChatHistory.Create('System prompt');
   try

@@ -151,9 +151,8 @@ function TLLMHttpClient.BuildOpenAIVisionRequest(const AModelId: string;
   const AImageBase64: string; const AImageMimeType: string;
   const ASystemPrompt, AUserPrompt: string; AMaxTokens, ATemperature: Double): string;
 var
-  Json, ContentArr, TextObj, ImageObj, ImageUrlObj: TJSONObject;
+  Json, TextObj, ImageObj, ImageUrlObj: TJSONObject;
   MessagesArr, MsgContent: TJSONArray;
-  I: Integer;
 begin
   Json := TJSONObject.Create;
   try

@@ -1416,7 +1416,7 @@ class procedure TStatistics.LinearRegression(const AX, AY: array of Double;
   out ASlope, AIntercept, AR2: Double);
 var
   LMeanX, LMeanY: Double;
-  LSumXY, LSumX2, LSumY2: Double;
+  LSumXY, LSumX2: Double;
   I, LN: Integer;
   LPredicted: Double;
   LSSRes, LSSTot: Double;

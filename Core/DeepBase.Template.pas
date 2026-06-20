@@ -1119,7 +1119,6 @@ begin
   RegisterFilter('join', function(const AValue: Variant; const AArgs: array of Variant): Variant
     var
       Delim: string;
-      Arr: Variant;
       I: Integer;
       S: string;
     begin
@@ -1905,7 +1904,6 @@ var
   LCondition: string;
   LParts: TArray<string>;
   LLeft, LRight: Variant;
-  LOp: string;
 begin
   LCondition := Trim(ACondition);
   

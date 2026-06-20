@@ -1357,7 +1357,6 @@ end;
 procedure TFileFlagStorage.SaveFlag(const AFlag: TFeatureFlag);
 var
   LFlags: TObjectList<TFeatureFlag>;
-  LExisting: TFeatureFlag;
   LFound: Boolean;
   I: Integer;
 begin

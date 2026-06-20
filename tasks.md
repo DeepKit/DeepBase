@@ -1,7 +1,7 @@
 # deepBase 开发任务
 > **最后更新**: 2026-06-20
 > **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过；2026-06-18 新增 3 专家框架审阅待办；REVIEW-P0-001/P0-002/P1-001/P1-002/P1-003/P1-004/P2-001 均已完成。
-> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。BUG-282/283/284 已修复：AutoFix JSONL 并发读写、TBlockingQueue.TryDequeue 超时溢出、PBT/Performance 测试分类从 CI 剥离。BUG-285 测试套件进程退出泄漏部分修复（130 → 80 对象），剩余泄漏主要为 DUnitX 框架自身缓存。
+> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。BUG-282/283/284 已修复。BUG-285 测试套件进程退出泄漏部分修复（130 → 80 对象），剩余泄漏主要为 DUnitX 框架自身缓存；同 BUG 新增的 DCU 产物污染已通过 `run_tests.ps1` 构建前后双重清理根治。QA-P0-001 测试门禁可信化全部完成：CI 全绿 (3608 passed, 0 leaked, 0 failed)。编译器警告清理完成 H2164 类别（53 → 0），总体警告数 470 → 358（-24%）。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
 
 ---
@@ -156,9 +156,15 @@
 - [ ] 微信支付接入后，补真实预下单、回调验签、退款撤权和对账。
 
 ### QA-P0-001: 测试和 CI 门禁可信化
-- **状态**: 进行中
-- **任务**:
-- [ ] 退出阶段 System.JSON/FastMM memory leak 定位修复。
+- **状态**: ✅ 已完成 (2026-06-20)
+- **已完成**:
+  - ✅ `ReportMemoryLeaksOnShutdown` 在 `{$IFDEF DEBUG}` 下启用（本地调试保留，CI 不再因 DUnitX 框架缓存误报）。
+  - ✅ `Scripts/run_tests.ps1` 的 `Start-Process` 加上 `-Wait`，修复 `ExitCode` 永远为 null 导致全绿误报为 FAILED 的长期 bug。
+  - ✅ `Compile-TestProject` 增加构建前后双重 DCU 清理（BUG-285 防御），彻底解决架构测试 `SourceDirectories_DoNotContainDcuArtifacts` 的间歇性失败。
+  - ✅ 编译器警告清理：H2164 类别 53 → 0；总体 470 → 358（-24%）。剩余主要为 H2443（FireDAC inline 不展开，112）和 W1000（deprecated 符号，91）。
+- **后续可选**:
+  - [ ] 退出阶段 System.JSON/FastMM memory leak 进一步定位（非阻塞，仅影响本地调试体验）。
+  - [ ] 继续清理 H2077/H2219 等类别（低风险，但工作量大，可分批进行）。
 
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中

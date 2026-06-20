@@ -1337,9 +1337,6 @@ begin
 end;
 
 procedure TTestFeatureFlagManager.Test_OnFlagChanged_Event;
-var
-  Manager: TFeatureFlagManager;
-  Flag: TFeatureFlag;
 begin
   // OnFlagChanged is 'of object' (method pointer) with 4 params:
   //   procedure(Sender: TObject; const AFlagKey: string; const AOldValue, ANewValue: Boolean) of object;

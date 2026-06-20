@@ -147,7 +147,6 @@ var
   LHasFrustration: Boolean;
   LHasBreakthrough: Boolean;
   LHighConfidenceSignal: Boolean;
-  LMaxConf: Double;
   LSig: TDetectedSignal;
 begin
   LInputLen := Length(AInput);

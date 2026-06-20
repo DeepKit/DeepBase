@@ -314,8 +314,6 @@ begin
 end;
 
 procedure TTestDeepBaseCache.Test_LRU_EvictsLeastRecentlyUsed;
-var
-  Value: string;
 begin
   FCache.MaxItems := 3;
   FCache.EvictionPolicy := cepLRU;

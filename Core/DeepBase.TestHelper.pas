@@ -552,7 +552,6 @@ var
   ExpectedJSON, ActualJSON: string;
   Expected, Actual: TJSONObject;
   DiffList: TList<TSnapshotDiff>;
-  I: Integer;
 begin
   Result.Clear;
   
@@ -786,7 +785,7 @@ end;
 
 class function TDeepBaseTestHelper.FindControlByClass<T>(AForm: TForm): T;
 var
-  I, J: Integer;
+  I: Integer;
   Stack: TList<TWinControl>;
   Parent: TWinControl;
   Child: TControl;

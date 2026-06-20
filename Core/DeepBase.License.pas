@@ -279,7 +279,7 @@ var
   {$IFDEF MSWINDOWS}
   Reg: TRegistry;
   {$ENDIF}
-  ComputerName, UserName: string;
+  ComputerName: string;
   RawFingerprint: string;
 begin
   Parts := TStringList.Create;
@@ -361,8 +361,6 @@ begin
 end;
 
 function TDeepBaseLicense.SignData(const Data: string): string;
-var
-  KeyBytes, DataBytes: TBytes;
 begin
   if FSecretKey = '' then
     raise EInvalidOp.Create(

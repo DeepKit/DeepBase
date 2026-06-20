@@ -6,8 +6,8 @@ unit Test.DeepBase.Manager;
   测试内容:
   - Initialize / InitializeEx / InitializeWithDB
   - Finalize
-  - 错误�?
-  - 健康检�?
+  - 错误�?
+  - 健康检�?
 *******************************************************************************}
 
 interface
@@ -96,7 +96,7 @@ begin
   // 获取全局单例引用
   FManager := DeepBase.Manager.DeepBase;
   
-  // 确保全局单例被重�?  if FManager.IsInitialized then
+  // 确保全局单例被重�?  if FManager.IsInitialized then
     FManager.Finalize;
 
   RegisterManagerConnectionAdapter;
@@ -155,23 +155,22 @@ end;
 
 procedure TTestDeepBaseManager.Test_Finalize_WithoutInit;
 begin
-  // 在未初始化的情况下调�?Finalize 不应该崩�?
+  // 在未初始化的情况下调�?Finalize 不应该崩�?
   FManager.Finalize;
   // 如果执行到这里，说明没有崩溃
-  Assert.Pass('未初始化时调�?Finalize 没有抛出异常');
+  Assert.Pass('未初始化时调�?Finalize 没有抛出异常');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeEx_ReturnsErrorMsg;
 var
-  ErrorMsg: string;
   InitResult: Boolean;
 begin
-  // 使用内存数据库测�?InitializeWithDB (InitializeEx 需�?root.txt)
+  // 使用内存数据库测�?InitializeWithDB (InitializeEx 需�?root.txt)
   FManager.Finalize;
   InitResult := FManager.InitializeWithDB(':memory:');
   
   Assert.IsTrue(InitResult, 'InitializeWithDB 应该成功');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
 end;
 
 procedure TTestDeepBaseManager.Test_HealthCheck_AfterInit;
@@ -190,7 +189,7 @@ procedure TTestDeepBaseManager.Test_HealthCheck_BeforeInit_ShouldFail;
 var
   Health: THealthCheckResult;
 begin
-  // 不调�?Initialize
+  // 不调�?Initialize
   Health := FManager.HealthCheck;
   
   Assert.IsFalse(Health.IsHealthy, 'HealthCheck should be unhealthy before initialization');
@@ -220,7 +219,7 @@ begin
   FManager.InitializeWithDB(':memory:');
   
   Assert.AreEqual(DeepBase_VERSION, DeepBase_VERSION, 'Version constant should exist');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly;

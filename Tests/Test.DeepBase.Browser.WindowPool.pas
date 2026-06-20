@@ -212,7 +212,6 @@ var
   LPool: TBrowserWindowPool;
   LId: TBrowserSessionId;
   LS: IBrowserSession;
-  I: Integer;
 begin
   FCreatedCount := 0;
   LPool := TBrowserWindowPool.Create(

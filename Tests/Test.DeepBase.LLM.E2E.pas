@@ -183,8 +183,6 @@ var
   Transport: TMockStreamTransport;
   Client: TLLMHttpClient;
   LResult: TChatResult;
-  LTokens: TArray<string>;
-  I: Integer;
 begin
   Transport := TMockStreamTransport.Create('', 200);
   Transport.SetChunks([
