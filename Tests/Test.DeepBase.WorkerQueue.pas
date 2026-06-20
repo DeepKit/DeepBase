@@ -347,7 +347,7 @@ begin
         AllSame := False;
     
     // Note: With jitter, delays should vary (though not guaranteed)
-    Assert.IsTrue(True); // Jitter adds randomness
+    Assert.IsFalse(AllSame, 'Jitter should produce variation');
   finally
     Policy.Free;
   end;

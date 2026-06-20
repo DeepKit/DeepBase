@@ -1163,11 +1163,10 @@ end;
 procedure TTestFeatureFlagManager.Test_IsEnabled_ReturnsTrue;
 var
   Manager: TFeatureFlagManager;
-  Flag: TFeatureFlag;
 begin
   Manager := TFeatureFlagManager.Create;
   try
-    Flag := Manager.RegisterFlag('enabled-flag', True);
+    Manager.RegisterFlag('enabled-flag', True);
     Assert.IsTrue(Manager.IsEnabled('enabled-flag'));
   finally
     Manager.Free;
@@ -1177,11 +1176,10 @@ end;
 procedure TTestFeatureFlagManager.Test_IsEnabled_ReturnsFalse;
 var
   Manager: TFeatureFlagManager;
-  Flag: TFeatureFlag;
 begin
   Manager := TFeatureFlagManager.Create;
   try
-    Flag := Manager.RegisterFlag('disabled-flag');
+    Manager.RegisterFlag('disabled-flag');
     Assert.IsFalse(Manager.IsEnabled('disabled-flag'));
   finally
     Manager.Free;
@@ -1290,11 +1288,10 @@ end;
 procedure TTestFeatureFlagManager.Test_EnableFlag_EnablesFlag;
 var
   Manager: TFeatureFlagManager;
-  Flag: TFeatureFlag;
 begin
   Manager := TFeatureFlagManager.Create;
   try
-    Flag := Manager.RegisterFlag('toggle');
+    Manager.RegisterFlag('toggle');
 
     Manager.EnableFlag('toggle');
     Assert.AreEqual(fsEnabled, Manager.GetFlag('toggle').State);
@@ -1306,11 +1303,10 @@ end;
 procedure TTestFeatureFlagManager.Test_DisableFlag_DisablesFlag;
 var
   Manager: TFeatureFlagManager;
-  Flag: TFeatureFlag;
 begin
   Manager := TFeatureFlagManager.Create;
   try
-    Flag := Manager.RegisterFlag('toggle', True);
+    Manager.RegisterFlag('toggle', True);
 
     Manager.DisableFlag('toggle');
     Assert.AreEqual(fsDisabled, Manager.GetFlag('toggle').State);

@@ -1043,7 +1043,7 @@ begin
     Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----');
     Manager.InsecureDevMode := True;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
@@ -1058,7 +1058,7 @@ begin
     Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----wrong');
     Manager.InsecureDevMode := True;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
@@ -1072,7 +1072,7 @@ begin
     Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := True;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
@@ -1086,7 +1086,7 @@ begin
     Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := True;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
@@ -1173,7 +1173,7 @@ begin
     Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := False;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
@@ -1187,7 +1187,7 @@ begin
     Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := True;
     var Info: TUpdateInfo;
-    var Success := Manager.CheckForUpdatesSync(Info);
+    Manager.CheckForUpdatesSync(Info);
     Assert.IsTrue(True);
   finally
     Manager.Free;
