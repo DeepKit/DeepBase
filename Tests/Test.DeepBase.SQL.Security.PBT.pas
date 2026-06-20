@@ -39,6 +39,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TSQLSecurityPropertyTests = class
   strict private
     function NewMemoryConnection: TFDConnection;

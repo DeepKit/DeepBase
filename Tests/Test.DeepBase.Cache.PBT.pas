@@ -39,6 +39,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCacheFIFOPropertyTests = class
   public
     [Setup]

@@ -57,6 +57,7 @@ type
   ESyntheticInner = class(Exception);
 
   [TestFixture]
+  [Category('PBT')]
   TTimeoutPolicyPropertyTests = class
   public
     [Setup]

@@ -57,6 +57,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TResponseWaiterPropertyTests = class
   strict private
     function MakeNastyText(AIter: Integer): string;

@@ -37,6 +37,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCommandStatePropertyTests = class
   strict private
     function MakeRandomCommand(out AId: string): TShellCommand;

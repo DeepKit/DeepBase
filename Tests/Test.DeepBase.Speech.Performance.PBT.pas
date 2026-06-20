@@ -72,6 +72,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TSpeechAutoStopPropertyTests = class
   strict private
     function IncrementalPoll(AVAD: TVADStub; var ACursor: Integer;

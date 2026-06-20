@@ -32,6 +32,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TICEnginePropertyTests = class
   strict private
     function MakeRandomRequest(out AHasInput, AHasTemplate,
@@ -47,6 +48,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TICProviderIsolationPropertyTests = class
   public
     [Setup]

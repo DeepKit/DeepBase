@@ -23,6 +23,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TAutoFixStackWalkerPropertyTests = class
   strict private
     function RecurseAndCapture(ADepth, AMaxFrames: Integer;

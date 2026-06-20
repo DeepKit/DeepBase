@@ -40,6 +40,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCircuitBreakerPropertyTests = class
   strict private
     function StateName(AState: TCircuitState): string;

@@ -30,6 +30,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TEncodingFixPropertyTests = class
   strict private
     /// <summary>

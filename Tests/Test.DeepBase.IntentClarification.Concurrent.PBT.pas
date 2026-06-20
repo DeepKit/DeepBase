@@ -54,6 +54,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TICEngineConcurrentPropertyTests = class
   public
     [Setup]

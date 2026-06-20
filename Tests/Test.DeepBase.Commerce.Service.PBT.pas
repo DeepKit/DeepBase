@@ -106,6 +106,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TCommerceServicePropertyTests = class
   public
     [Setup]

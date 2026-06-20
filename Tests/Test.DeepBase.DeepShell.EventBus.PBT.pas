@@ -48,6 +48,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TShellEventBusLifecyclePropertyTests = class
   strict private
     procedure DrainQueueUntil(APredicate: TFunc<Boolean>; ATimeoutMs: Integer);

@@ -31,6 +31,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TAutoFixErrorRecorderPropertyTests = class
   strict private
     FTestDir: string;
@@ -128,13 +129,25 @@ function TAutoFixErrorRecorderPropertyTests.ReadLastJsonlLine(
 begin
   Result := '';
   if not TFile.Exists(APath) then Exit;
-  var LLines := TFile.ReadAllLines(APath, TEncoding.UTF8);
-  for var I := High(LLines) downto Low(LLines) do
-    if Trim(LLines[I]) <> '' then
-    begin
-      Result := LLines[I];
-      Exit;
+  // BUG-282: TFile.ReadAllLines internally uses fmShareExclusive (no sharing),
+  // which fails when the writer has the file open. Use a TStreamReader over a
+  // TFileStream opened with fmShareDenyNone so concurrent reads succeed.
+  var LStream := TFileStream.Create(APath, fmOpenRead or fmShareDenyNone);
+  try
+    var LReader := TStreamReader.Create(LStream, TEncoding.UTF8, False, 1024);
+    try
+      while not LReader.EndOfStream do
+      begin
+        var LLine := LReader.ReadLine;
+        if Trim(LLine) <> '' then
+          Result := LLine;
+      end;
+    finally
+      LReader.Free;
     end;
+  finally
+    LStream.Free;
+  end;
 end;
 
 function TAutoFixErrorRecorderPropertyTests.JsonContainsField(

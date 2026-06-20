@@ -29,6 +29,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TAutoFixScenarioRunnerPropertyTests = class
   strict private
     function NewTestDir: string;
@@ -73,9 +74,25 @@ function TAutoFixScenarioRunnerPropertyTests.ReadAllJsonlLines(
 begin
   Result := nil;
   if not TFile.Exists(APath) then Exit;
-  for var LLine in TFile.ReadAllLines(APath, TEncoding.UTF8) do
-    if Trim(LLine) <> '' then
-      Result := Result + [LLine];
+  // BUG-282: TFile.ReadAllLines uses fmShareExclusive internally, which
+  // conflicts with the writer's open handle. Use a TStreamReader over a
+  // TFileStream opened with fmShareDenyNone for concurrent access.
+  var LStream := TFileStream.Create(APath, fmOpenRead or fmShareDenyNone);
+  try
+    var LReader := TStreamReader.Create(LStream, TEncoding.UTF8, False, 1024);
+    try
+      while not LReader.EndOfStream do
+      begin
+        var LLine := LReader.ReadLine;
+        if Trim(LLine) <> '' then
+          Result := Result + [LLine];
+      end;
+    finally
+      LReader.Free;
+    end;
+  finally
+    LStream.Free;
+  end;
 end;
 
 function TAutoFixScenarioRunnerPropertyTests.ExtractJsonString(

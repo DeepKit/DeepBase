@@ -25,6 +25,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TSpeechRegistryPBT = class
   public
     [Test]
@@ -41,6 +42,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TSpeechTypesPBT = class
   public
     [Test]

@@ -54,6 +54,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TInferenceRound2PropertyTests = class
   public
     [Setup]

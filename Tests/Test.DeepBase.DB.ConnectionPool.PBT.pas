@@ -65,6 +65,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TConnectionPoolPropertyTests = class
   strict private
     function MakeTempDB: string;

@@ -43,6 +43,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCommerceAdapterPropertyTests = class
   strict private
     function MakeMalformedJson(AIter: Integer): string;

@@ -562,7 +562,8 @@ function Compile-TestProject {
     $args = @(
         "-U$SearchPath",
         "-N0$projectDcuDir",
-        "-Q"
+        "-Q",
+        "--codepage:65001"   # Source files are UTF-8; force dcc64 to honor that (BUG-276)
     )
 
     if (-not $NoRebuild) {

@@ -46,9 +46,11 @@ build_output.txt
 compile_log.txt
 TestResults/*.xml
 TestResults/*.txt
+TestResults/*.json
 TestResults/_*/
 TestResults/autofix-*/
 Tests/test_results.xml
+Tests/Logs/
 
 # 操作系统文件
 .DS_Store

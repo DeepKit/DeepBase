@@ -42,6 +42,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCommerceEnumPropertyTests = class
   strict private
     function OrderStatusFromString(

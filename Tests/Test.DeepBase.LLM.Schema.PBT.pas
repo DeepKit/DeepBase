@@ -42,6 +42,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TLLMSchemaPropertyTests = class
   strict private
     function NewMemoryConnection: TFDConnection;

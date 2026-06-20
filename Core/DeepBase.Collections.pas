@@ -1974,7 +1974,7 @@ end;
 function TBlockingQueue<T>.TryDequeue(out AItem: T; ATimeoutMs: Cardinal): Boolean;
 var
   LDeadline: TDateTime;
-  LRemainingMs: Cardinal;
+  LRemainingMs: Double;
 begin
   LDeadline := 0;
   if (ATimeoutMs > 0) and (ATimeoutMs <> INFINITE) then
@@ -1993,14 +1993,20 @@ begin
         Exit(True);
       end;
 
-      // Queue empty — exit if timeout already elapsed
+      // BUG-283: Use a Double for the remaining-ms calculation. The previous
+      // code did `Cardinal(Round((LDeadline - Now) * MSecsPerDay))` which,
+      // when the deadline had just passed, produced a small negative integer
+      // whose cast to Cardinal wrapped to ~4.3e9 — i.e. ~49 days — and
+      // WaitFor(LRemainingMs) hung for effectively infinite time. The old
+      // `if LRemainingMs = 0 then Exit` guard was unreachable because
+      // Max(1, huge) = huge.
       if ATimeoutMs = 0 then
         Exit(False);
 
       if ATimeoutMs <> INFINITE then
       begin
-        LRemainingMs := Max(1, Cardinal(Round((LDeadline - Now) * MSecsPerDay)));
-        if LRemainingMs = 0 then
+        LRemainingMs := (LDeadline - Now) * MSecsPerDay;
+        if LRemainingMs <= 0 then
           Exit(False);
       end;
     finally
@@ -2011,7 +2017,7 @@ begin
     if ATimeoutMs = INFINITE then
       FNotEmpty.WaitFor(INFINITE)
     else
-      FNotEmpty.WaitFor(LRemainingMs);
+      FNotEmpty.WaitFor(Cardinal(Round(LRemainingMs)));
   end;
 end;
 

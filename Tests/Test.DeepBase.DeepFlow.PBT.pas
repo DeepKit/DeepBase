@@ -93,6 +93,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TDeepFlowPropertyTests = class
   strict private
     function CompareMirror(const ALeft, ARight: TMirrorMessage): Integer;

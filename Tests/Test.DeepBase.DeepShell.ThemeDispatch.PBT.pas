@@ -53,6 +53,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TThemeLocaleDispatchPropertyTests = class
   strict private
     procedure DrainUntil(APredicate: TFunc<Boolean>; ATimeoutMs: Integer);

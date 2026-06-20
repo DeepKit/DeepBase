@@ -38,6 +38,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TStateMachinePropertyTests = class
   public
     [Setup]

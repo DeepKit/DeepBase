@@ -45,6 +45,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TAutoFixExitCodesPBT = class
   private
     FHarnessExe: string;

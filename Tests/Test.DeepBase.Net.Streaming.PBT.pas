@@ -67,6 +67,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TStreamingTransportPropertyTests = class
   strict private
     function BuildSSEBody(AChunkCount: Integer; AAppendDone: Boolean;

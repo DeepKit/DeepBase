@@ -83,6 +83,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TConfigAndLoggingPropertyTests = class
   strict private
     function MakeJsonHostileMessage(AIter: Integer): string;

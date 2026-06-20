@@ -39,6 +39,7 @@ type
   // ============================================================================
 
   [TestFixture]
+  [Category('Performance')]
   TMemoryBenchmarkTests = class
   private
     FBenchmark: TBenchmark;
@@ -78,6 +79,7 @@ type
   // ============================================================================
 
   [TestFixture]
+  [Category('Performance')]
   TDiskIOBenchmarkTests = class
   private
     FBenchmark: TBenchmark;
@@ -118,6 +120,7 @@ type
   // ============================================================================
 
   [TestFixture]
+  [Category('Performance')]
   TConcurrencyBenchmarkTests = class
   private
     FBenchmark: TBenchmark;
@@ -157,6 +160,7 @@ type
   // ============================================================================
 
   [TestFixture]
+  [Category('Performance')]
   TCoreBenchmarkTests = class
   private
     FBenchmark: TBenchmark;

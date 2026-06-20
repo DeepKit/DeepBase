@@ -50,6 +50,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TBrowserContractPropertyTests = class
   strict private
     function MakeNastySelector(AIter: Integer): string;

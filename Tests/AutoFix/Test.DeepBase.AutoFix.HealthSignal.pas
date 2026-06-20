@@ -23,6 +23,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TAutoFixHealthSignalPropertyTests = class
   strict private
     function NewTestDir: string;

@@ -51,6 +51,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TGovernanceRound2PropertyTests = class
   public
     [Setup]

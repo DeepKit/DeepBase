@@ -8,6 +8,7 @@
 
 uses
   System.SysUtils,
+  System.IOUtils,
   {$IFDEF TESTDeepInsight}
   TestDeepInsight.DUnitX,
   {$ELSE}
@@ -15,6 +16,7 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF}
   DUnitX.TestFramework,
+  Test.DeepBase.DiagnosticLogger,
   // Test units - Phase 0
   Test.DeepBase.Manager in 'Test.DeepBase.Manager.pas',
   // Test units - Phase 0 (more)
@@ -71,6 +73,8 @@ uses
   Test.DeepBase.Payment.Integration in 'Test.DeepBase.Payment.Integration.pas',
   Test.DeepBase.Commerce in 'Test.DeepBase.Commerce.pas',
   Test.DeepBase.Speech in 'Test.DeepBase.Speech.pas',
+  Test.DeepBase.Speech.Voiceprint in 'Test.DeepBase.Speech.Voiceprint.pas',
+  Test.DeepBase.Speech.Intent in 'Test.DeepBase.Speech.Intent.pas',
   Test.DeepBase.Social in 'Test.DeepBase.Social.pas',
   // Types tests
   Test.DeepBase.Types in 'Test.DeepBase.Types.pas',
@@ -146,6 +150,7 @@ uses
   Test.DeepBase.RuntimeContext in 'Test.DeepBase.RuntimeContext.pas',
   Test.DeepBase.Scheduler in 'Test.DeepBase.Scheduler.pas',
   Test.DeepBase.Schema in 'Test.DeepBase.Schema.pas',
+  Test.DeepBase.Platform.Interfaces in 'Test.DeepBase.Platform.Interfaces.pas',
   Test.DeepBase.Security.DPAPI in 'Test.DeepBase.Security.DPAPI.pas',
   Test.DeepBase.Services.Protection in 'Test.DeepBase.Services.Protection.pas',
   Test.DeepBase.Services.Registration in 'Test.DeepBase.Services.Registration.pas',
@@ -319,6 +324,9 @@ uses
   DeepBase.Speech.Audio.WinMM in '..\Features\DeepBase.Speech.Audio.WinMM.pas',
   DeepBase.Speech.ASR.Baidu in '..\Features\DeepBase.Speech.ASR.Baidu.pas',
   DeepBase.Speech.Service in '..\Features\DeepBase.Speech.Service.pas',
+  DeepBase.Speech.MFCC in '..\Features\DeepBase.Speech.MFCC.pas',
+  DeepBase.Speech.DTW in '..\Features\DeepBase.Speech.DTW.pas',
+  DeepBase.Speech.Voiceprint in '..\Features\DeepBase.Speech.Voiceprint.pas',
   DeepBase.Social in '..\ThirdParty\Social\DeepBase.Social.pas',
   DeepBase.Social.OAuth in '..\ThirdParty\Social\DeepBase.Social.OAuth.pas',
   DeepBase.Social.WeChat in '..\ThirdParty\Social\DeepBase.Social.WeChat.pas',
@@ -355,6 +363,7 @@ var
   Results: IRunResults;
   Logger: ITestLogger;
   NUnitLogger: ITestLogger;
+  DiagLogger: ITestLogger;
 {$ENDIF}
 
 begin
@@ -375,6 +384,14 @@ begin
     // 添加控制台日志记录器
     Logger := TDUnitXConsoleLogger.Create(True);
     Runner.AddLogger(Logger);
+
+    // 添加诊断日志记录器：把每个 fixture/test 事件写到文件，
+    // 用于定位测试套件挂死的位置。
+    DiagLogger := TDunitXDiagnosticLogger.Create(
+      TPath.Combine(
+        TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs'),
+        'test-diagnostic.log'));
+    Runner.AddLogger(DiagLogger);
 
     // 添加 NUnit XML 日志记录器（用于 CI）
     if TDUnitX.Options.XMLOutputFile <> '' then

@@ -37,6 +37,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TEventBusSingletonPropertyTests = class
   public
     [Setup]

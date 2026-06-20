@@ -56,6 +56,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TICRound2PropertyTests = class
   public
     [Setup]

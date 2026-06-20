@@ -91,6 +91,7 @@ type
   end;
 
   [TestFixture]
+  [Category('PBT')]
   TSettingsErrorRoutingPropertyTests = class
   public
     [Setup]

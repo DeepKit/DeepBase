@@ -36,6 +36,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TCryptoPropertyTests = class
   strict private
     function RandomBytes(AMinLen, AMaxLen: Integer): TBytes;

@@ -21,6 +21,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TGraphPropertyTests = class
   strict private
     function MakeRandomGraph(out ANodeCount, AEdgeCount: Integer;

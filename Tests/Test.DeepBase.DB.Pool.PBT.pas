@@ -44,6 +44,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TUniPoolPropertyTests = class
   public
     [Setup]

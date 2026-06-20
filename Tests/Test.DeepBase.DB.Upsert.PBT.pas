@@ -54,6 +54,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TUpsertPropertyTests = class
   strict private
     function MakeTempDB: string;

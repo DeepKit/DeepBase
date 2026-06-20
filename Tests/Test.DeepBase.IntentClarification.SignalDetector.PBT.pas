@@ -37,6 +37,7 @@ uses
 
 type
   [TestFixture]
+  [Category('PBT')]
   TSignalDetectorPropertyTests = class
   strict private
     function CountTokenPosEx(const AText, AToken: string): Integer;

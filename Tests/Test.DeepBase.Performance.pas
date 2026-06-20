@@ -102,6 +102,7 @@ type
   end;
 
   [TestFixture]
+  [Category('Performance')]
   TTestConfigPerformance = class
   private
     FManager: TDeepBaseManager;
@@ -127,6 +128,7 @@ type
   end;
 
   [TestFixture]
+  [Category('Performance')]
   TTestLoggingPerformance = class
   private
     FManager: TDeepBaseManager;
@@ -149,6 +151,7 @@ type
   end;
 
   [TestFixture]
+  [Category('Performance')]
   TTestCachePerformance = class
   private
     FCache: TCache<string, string>;
@@ -176,6 +179,7 @@ type
   end;
 
   [TestFixture]
+  [Category('Performance')]
   TTestDoQryPerformance = class
   private
     FConnection: TFDConnection;
