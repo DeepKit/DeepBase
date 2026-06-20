@@ -418,7 +418,7 @@ begin
   Check(TSpeechPolicy.IsAllowed(SPEECH_GATE_ASR), 'ASR allowed (local)');
   Check(TSpeechPolicy.IsAllowed(SPEECH_GATE_TTS), 'TTS allowed (local)');
   Check(TSpeechPolicy.IsAllowed(SPEECH_GATE_WAKE), 'WakeWord allowed (local)');
-  Check(not TSpeechPolicy.IsAllowed(SPEECH_GATE_INTENT_LLM), 'Intent LLM denied by default');
+  Check(TSpeechPolicy.IsAllowed(SPEECH_GATE_INTENT_LLM), 'Intent LLM allowed by default; governance can opt out');
 end;
 
 // ============================================================================

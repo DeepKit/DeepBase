@@ -112,7 +112,12 @@ $CoreUiAllowlist = @(
     'DeepBase.Export.pas',
     'DeepBase.SingleInstance.pas',
     'DeepBase.SplashScreen.pas',
-    'DeepBase.TestHelper.pas'
+    'DeepBase.TestHelper.pas',
+    # BUG-280 known debt: VCL/FMX units still referenced from Core.
+    # Tracked for eventual move to DeepBaseVCL/DeepBaseFMX.
+    'DeepBase.AIErrorHandler.pas',
+    'DeepBase.UITest.FmxProbe.pas',
+    'DeepBase.VirtualScroll.pas'
 ) | ForEach-Object { $_.ToLowerInvariant() }
 
 $CoreDbAllowlist = @(
@@ -124,7 +129,11 @@ $CoreDbAllowlist = @(
     'DeepBase.Hotkeys.pas',
     'DeepBase.Theme.pas',
     'DeepBase.Diagnose.pas',
-    'DeepBase.Security.pas'
+    'DeepBase.Security.pas',
+    # BUG-280 known debt: Data.DB references in Core surface.
+    'DeepBase.Export.pas',
+    'DeepBase.LLM.pas',
+    'DeepBase.LLM.Manager.pas'
 ) | ForEach-Object { $_.ToLowerInvariant() }
 
 $Violations = New-Object System.Collections.Generic.List[object]
@@ -458,7 +467,7 @@ Test-SourceDependencies 'Core' @(
     '\bFMX\.',
     '\bDesignIntf\b',
     '\bDesignEditors\b'
-) $CoreUiAllowlist 'CoreNoUiSourceDependency' 'Warning'
+) $CoreUiAllowlist 'CoreNoUiSourceDependency' 'Error'
 
 Test-SourceDependencies 'Core' @(
     '\bFireDAC\.',

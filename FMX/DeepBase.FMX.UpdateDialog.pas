@@ -1,10 +1,10 @@
 { ============================================================================
-  DeepBase.FMX.UpdateDialog - FMX 更新对话�?
+  DeepBase.FMX.UpdateDialog - FMX 更新对话�?
   版本: 1.0
-  说明: 跨平台更新提示对话框，支�?Windows/macOS/iOS/Android
+  说明: 跨平台更新提示对话框，支�?Windows/macOS/iOS/Android
 
-  特�?
-    - 自适应布局（手�?平板/桌面�?    - 显示版本信息和更新日�?    - 下载进度显示
+  特�?
+    - 自适应布局（手�?平板/桌面�?    - 显示版本信息和更新日�?    - 下载进度显示
     - 支持强制更新
     - 支持跳转应用商店
   ============================================================================ }
@@ -122,7 +122,7 @@ begin
     Dialog.BtnSkip.Visible := False;
   end;
 
-  // 移动端显�?前往商店"而不�?下载"
+  // 移动端显�?前往商店"而不�?下载"
   if Dialog.IsMobilePlatform then
     Dialog.BtnUpdate.Text := '前往商店';
 
@@ -211,13 +211,13 @@ procedure TFMXUpdateDialog.BtnUpdateClick(Sender: TObject);
 begin
   if FIsMobile then
   begin
-    // 移动端跳转应用商�?    if Assigned(FCallback) then
+    // 移动端跳转应用商�?    if Assigned(FCallback) then
       FCallback(udaOpenStore);
     Close;
   end
   else
   begin
-    // 桌面端下载更�?    if not FIsDownloading then
+    // 桌面端下载更�?    if not FIsDownloading then
       StartDownload;
   end;
 end;
@@ -279,7 +279,7 @@ begin
   // 设置完成回调
   AutoUpdater.OnUpdateComplete := HandleAutoUpdaterComplete;
 
-  // 开始下�?  AutoUpdater.DownloadAndInstall;
+  // 开始下�?  AutoUpdater.DownloadAndInstall;
 end;
 
 procedure TFMXUpdateDialog.UpdateProgress(const Progress: TUpdateProgress);
@@ -290,12 +290,12 @@ begin
     usDownloading:
       begin
         if Progress.TotalBytes > 0 then
-          LblProgressStatus.Text := Format('下载�?.. %d%% (%s / %s)',
+          LblProgressStatus.Text := Format('下载�?.. %d%% (%s / %s)',
             [Progress.ProgressPercent,
              FormatFloat('#,##0', Progress.DownloadedBytes / 1024) + ' KB',
              FormatFloat('#,##0', Progress.TotalBytes / 1024) + ' KB'])
         else
-          LblProgressStatus.Text := Format('下载�?.. %s',
+          LblProgressStatus.Text := Format('下载�?.. %s',
             [FormatFloat('#,##0', Progress.DownloadedBytes / 1024) + ' KB']);
       end;
     usVerifying:
@@ -323,7 +323,7 @@ begin
     if MessageDlg('更新已安装完成。是否立即重启应用？',
       TMsgDlgType.mtInformation, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes then
     begin
-      // TODO: 重启应用
+      // TODO(UPD-P0-001): 重启应用
       // Application.Terminate;
     end;
 

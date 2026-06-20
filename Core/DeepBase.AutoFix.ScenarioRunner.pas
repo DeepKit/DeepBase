@@ -232,7 +232,15 @@ begin
       begin
         var LPath := TPath.Combine(FOutputDir, 'scenario-results.jsonl');
         ForceDirectories(FOutputDir);
-        FStatusWriter := TStreamWriter.Create(LPath, True, TEncoding.UTF8);
+        // BUG-282: Use fmShareDenyNone so the JSONL stays readable while
+        // the writer holds it open. Call OwnStream so the writer frees
+        // the underlying stream (prevents handle leak).
+        if not TFile.Exists(LPath) then
+          TFile.WriteAllText(LPath, '');
+        var LStream := TFileStream.Create(LPath, fmOpenReadWrite or fmShareDenyNone);
+        LStream.Seek(0, soEnd);
+        FStatusWriter := TStreamWriter.Create(LStream, TEncoding.UTF8);
+        FStatusWriter.OwnStream;
         FStatusWriter.AutoFlush := True;
       end;
       FStatusWriter.WriteLine(LJson);

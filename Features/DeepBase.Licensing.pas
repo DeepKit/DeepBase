@@ -670,7 +670,7 @@ begin
   EnsureInitialized;
   Result := '';
 
-  // TODO: When /dk/invite/generate endpoint is available on the server,
+  // TODO(COM-P0-001): When /dk/invite/generate endpoint is available on the server,
   // call it via the SafeClient transport. For now, invite codes are generated
   // server-side on user registration.
   //
@@ -699,7 +699,7 @@ begin
     Exit;
   end;
 
-  // TODO: When /dk/invite/apply endpoint is available on the server,
+  // TODO(COM-P0-001): When /dk/invite/apply endpoint is available on the server,
   // POST { app_id, invite_code } to apply the code.
   // On success, refresh entitlements to pick up the invitee bonus.
   ErrorMsg := 'Invite system is not yet available. Please try again later.';

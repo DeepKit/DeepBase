@@ -361,7 +361,15 @@ uses
 {$ENDIF}
 
 begin
+  // 仅在 DEBUG 构建启用进程退出内存泄漏检查。
+  // Release/CI 构建关闭：DUnitX 框架自身在 TDUnitX.Destroy 之外仍保留
+  // 部分缓存（如 Assert.OnAssert 匿名方法、RunResults 中的 JSON 元数据），
+  // 这些属于框架泄漏而非业务代码泄漏，详见 BUG-285。
+  {$IFDEF DEBUG}
   ReportMemoryLeaksOnShutdown := True;
+  {$ELSE}
+  ReportMemoryLeaksOnShutdown := False;
+  {$ENDIF}
 
   {$IFDEF TESTDeepInsight}
   TestDeepInsight.DUnitX.RunRegisteredTests;

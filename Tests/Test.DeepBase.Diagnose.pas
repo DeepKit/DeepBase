@@ -340,17 +340,11 @@ begin
 end;
 
 procedure ExecuteSQL(AConn: TFDConnection; const SQL: string);
-var
-  Q: TFDQuery;
 begin
-  Q := TFDQuery.Create(nil);
-  try
-    Q.Connection := AConn;
-    Q.SQL.Text := SQL;
-    Q.ExecSQL;
-  finally
-    Q.Free;
-  end;
+  // FireDAC's ExecSQL handles multi-statement SQL with semicolons inside
+  // string literals correctly — the TFDQuery.SQL.Text path splits on ';'
+  // naively and breaks on ';'-bearing values like 'h:mm:ss tt'.
+  AConn.ExecSQL(SQL);
 end;
 
 { TTestDiagnoseHelpers }

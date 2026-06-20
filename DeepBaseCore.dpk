@@ -95,6 +95,7 @@ contains
   DeepBase.AutoFix in 'Core\DeepBase.AutoFix.pas',
   DeepBase.External.Types in 'Core\DeepBase.External.Types.pas',
   DeepBase.External.Auditor in 'Core\DeepBase.External.Auditor.pas',
+  DeepBase.Platform.Interfaces in 'Core\DeepBase.Platform.Interfaces.pas',
   DeepBase.SchemaAdapter.Types in 'Core\DeepBase.SchemaAdapter.Types.pas',
   DeepBase.SchemaAdapter in 'Core\DeepBase.SchemaAdapter.pas',
   DeepBase.SchemaAdapter.Registry in 'Core\DeepBase.SchemaAdapter.Registry.pas',

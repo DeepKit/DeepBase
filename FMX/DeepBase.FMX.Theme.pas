@@ -269,11 +269,11 @@ begin
   {$ENDIF}
 
   {$IFDEF ANDROID}
-  // TODO: Check Android dark mode
+  // TODO(BUG-281): Check Android dark mode
   {$ENDIF}
 
   {$IFDEF IOS}
-  // TODO: Check iOS dark mode via UITraitCollection
+  // TODO(BUG-281): Check iOS dark mode via UITraitCollection
   {$ENDIF}
 end;
 

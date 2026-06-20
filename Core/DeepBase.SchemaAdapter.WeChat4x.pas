@@ -32,7 +32,7 @@ begin
   if VarIsNull(v) or VarIsEmpty(v) then
     Result := 0
   else
-    Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
+    Result := TDateTime(Int64(v) / SecsPerDay + UnixDateDelta);
 end;
 
 class function TWeChat4xAdapter.TryParseDirectionFromSource(
@@ -92,7 +92,7 @@ begin
       if VarIsNull(v) or VarIsEmpty(v) then
         Result := Null
       else
-        Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
+        Result := TDateTime(Int64(v) / SecsPerDay + UnixDateDelta);
     end);
   FFieldMappings[4] := FieldMap('source', 'raw_direction',
     function(v: Variant): Variant

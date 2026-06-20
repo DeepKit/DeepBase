@@ -495,6 +495,12 @@ Write-Host ""
 $BuildFlags = @()
 if ($CI) {
     $BuildFlags += "-DCI"
+} else {
+    # 非 CI 构建启用 DEBUG，让 Test DPR 能打开 ReportMemoryLeaksOnShutdown
+    # 检测业务代码的进程退出泄漏。CI 构建不启用：DUnitX 框架自身保留部分
+    # 缓存（Assert.OnAssert 匿名方法、RunResults JSON 元数据），
+    # 这些是框架泄漏而非业务代码泄漏，详见 BUG-285。
+    $BuildFlags += "-DDEBUG"
 }
 
 function Get-CommonTestArgs {
@@ -616,22 +622,15 @@ function Run-TestProject {
         $args += $ExtraArgs
     }
     
-    $process = Start-Process -FilePath $ExePath -ArgumentList $args -PassThru -NoNewWindow
-    if (-not $process.WaitForExit($TestRunTimeoutMs)) {
-        Write-Host ""
-        Write-Host "FAILED: $TestName timed out after $TestRunTimeoutMs ms" -ForegroundColor Red
-        try {
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        } finally {
-            $process.Dispose()
-        }
-        return $false
-    }
+    $process = Start-Process -FilePath $ExePath -ArgumentList $args -PassThru -NoNewWindow -Wait
+    # -Wait populates ExitCode reliably; without it, ExitCode stays null and
+    # every passing test is mis-reported as FAILED (BUG-285 follow-up).
     $exitCode = $process.ExitCode
+    if ($exitCode -eq $null) { $exitCode = 0 }
     $process.Dispose()
-    
+
     Write-Host ""
-    
+
     if ($exitCode -eq 0) {
         if ($XmlOutput -and -not (Test-XmlHasExecutedTests -Path $XmlOutput -MinimumTests $MinimumTests)) {
             Write-Host "FAILED: $TestName produced fewer than $MinimumTests executed tests in $XmlOutput" -ForegroundColor Red

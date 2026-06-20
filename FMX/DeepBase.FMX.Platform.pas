@@ -21,25 +21,30 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Types, System.IOUtils,
+  DeepBase.Platform.Interfaces,
   FMX.Types, FMX.Platform, FMX.Forms;
 
 type
-  /// <summary>Platform type enumeration</summary>
+  /// <summary>Platform type enumeration.
+  /// IMPORTANT: upUnknown MUST be first (ordinal 0) so the class var default
+  /// (before detection runs) is safe, not silently interpreted as Windows.</summary>
   TUniPlatform = (
+    upUnknown,
     upWindows,
     upMacOS,
     upAndroid,
     upiOS,
-    upLinux,
-    upUnknown
+    upLinux
   );
 
-  /// <summary>Device type enumeration</summary>
+  /// <summary>Device type enumeration.
+  /// IMPORTANT: udtUnknown MUST be first (ordinal 0) so the class var default
+  /// (before detection runs) is safe, not silently interpreted as Desktop.</summary>
   TUniDeviceType = (
+    udtUnknown,
     udtDesktop,
     udtPhone,
-    udtTablet,
-    udtUnknown
+    udtTablet
   );
 
   /// <summary>Screen orientation</summary>
@@ -92,8 +97,17 @@ type
     FDeviceInfo: TUniDeviceInfo;
     FScreenInfo: TUniScreenInfo;
 
+    // Runtime-overridable delegates. nil = use compile-time IFDEF defaults.
+    class var FPermissionCheckOverride: TPermissionCheckFunc;
+    class var FPermissionRequestOverride: TPermissionRequestFunc;
+    class var FShareTextOverride: TShareTextFunc;
+    class var FShareFileOverride: TShareFileFunc;
+
     class procedure DetectPlatform;
     class procedure DetectDeviceType;
+    /// <summary>Internal Android permission check via ContextCompat.checkSelfPermission.
+    /// Returns False on non-Android builds.</summary>
+    class function CheckAndroidPermission(const Permission: string): Boolean;
     procedure UpdateScreenInfo;
     function GetDocumentsPath: string;
     function GetCachePath: string;
@@ -105,6 +119,16 @@ type
 
     class function Instance: TUniPlatformAdapter;
     class procedure FreeInstance;
+
+    /// <summary>Install a test or custom override for the four platform
+    /// delegates. Pass nil to clear a specific override (restores IFDEF
+    /// defaults). Thread-safe.</summary>
+    class procedure RegisterPermissionOverride(
+      const ACheck: TPermissionCheckFunc;
+      const ARequest: TPermissionRequestFunc);
+    class procedure RegisterShareOverride(
+      const AText: TShareTextFunc;
+      const AFile: TShareFileFunc);
 
     // Platform detection
     class function GetPlatform: TUniPlatform;
@@ -148,6 +172,18 @@ type
     class function Vibrate(Duration: Integer = 100): Boolean;
     class function HasPermission(const Permission: string): Boolean;
     class function RequestPermission(const Permission: string): Boolean;
+    /// <summary>Typed permission check via the registered override, or
+    /// the compile-time IFDEF default. Returns prUnsupported when no
+    /// service is registered and the platform is not desktop.</summary>
+    class function CheckPermissionEx(const APermission: string): TPermissionResult;
+    /// <summary>Typed permission request via the registered override, or
+    /// the compile-time IFDEF default.</summary>
+    class function RequestPermissionEx(const APermission: string;
+      const ACallback: TPermissionCallback = nil): TPermissionResult;
+    /// <summary>Typed share via the registered override, or the
+    /// compile-time IFDEF default.</summary>
+    class function ShareTextEx(const AText, ASubject: string): Boolean;
+    class function ShareFileEx(const AFilePath: string): Boolean;
   end;
 
 /// <summary>Global platform adapter accessor</summary>
@@ -240,21 +276,27 @@ end;
 
 class procedure TUniPlatformAdapter.DetectPlatform;
 begin
-  {$IFDEF MSWINDOWS}
-  FPlatform := upWindows;
-  {$ENDIF}
-  {$IFDEF MACOS}
+  // NOTE: FPlatform ordinal 0 is now upUnknown — safe default if no branch fires.
+  {$IFDEF ANDROID}
+  FPlatform := upAndroid;
+  {$ELSE}
     {$IFDEF IOS}
     FPlatform := upiOS;
     {$ELSE}
-    FPlatform := upMacOS;
+      {$IFDEF MSWINDOWS}
+      FPlatform := upWindows;
+      {$ELSE}
+        {$IFDEF MACOS}
+        FPlatform := upMacOS;
+        {$ELSE}
+          {$IFDEF LINUX}
+          FPlatform := upLinux;
+          {$ELSE}
+          FPlatform := upUnknown;
+          {$ENDIF}
+        {$ENDIF}
+      {$ENDIF}
     {$ENDIF}
-  {$ENDIF}
-  {$IFDEF ANDROID}
-  FPlatform := upAndroid;
-  {$ENDIF}
-  {$IFDEF LINUX}
-  FPlatform := upLinux;
   {$ENDIF}
 end;
 
@@ -321,11 +363,11 @@ begin
 
   // Get safe area for notched devices
   {$IFDEF IOS}
-  // TODO: Get safe area from UIWindow.safeAreaInsets
+  // TODO(BUG-281): Get safe area from UIWindow.safeAreaInsets
   {$ENDIF}
 
   {$IFDEF ANDROID}
-  // TODO: Get safe area from WindowInsets (API 28+)
+  // TODO(BUG-281): Get safe area from WindowInsets (API 28+)
   {$ENDIF}
 end;
 
@@ -522,37 +564,12 @@ end;
 
 class function TUniPlatformAdapter.ShareText(const Text: string; const Subject: string): Boolean;
 begin
-  Result := False;
-
-  {$IFDEF ANDROID}
-  try
-    var Intent := TJIntent.JavaClass.init(TJIntent.JavaClass.ACTION_SEND);
-    Intent.setType(StringToJString('text/plain'));
-    Intent.putExtra(TJIntent.JavaClass.EXTRA_TEXT, StringToJString(Text));
-    if Subject <> '' then
-      Intent.putExtra(TJIntent.JavaClass.EXTRA_SUBJECT, StringToJString(Subject));
-    TAndroidHelper.Activity.startActivity(
-      TJIntent.JavaClass.createChooser(Intent, StringToJString('Share')));
-    Result := True;
-  except
-    Result := False;
-  end;
-  {$ENDIF}
-
-  {$IFDEF IOS}
-  // TODO: Implement using UIActivityViewController
-  {$ENDIF}
-
-  {$IFDEF MSWINDOWS}
-  // Desktop: Copy to clipboard as fallback
-  Result := CopyToClipboard(Text);
-  {$ENDIF}
+  Result := ShareTextEx(Text, Subject);
 end;
 
 class function TUniPlatformAdapter.ShareFile(const FilePath: string): Boolean;
 begin
-  Result := False;
-  // TODO: Implement file sharing
+  Result := ShareFileEx(FilePath);
 end;
 
 class function TUniPlatformAdapter.CopyToClipboard(const Text: string): Boolean;
@@ -624,29 +641,171 @@ begin
   {$ENDIF}
 end;
 
-class function TUniPlatformAdapter.HasPermission(const Permission: string): Boolean;
+class function TUniPlatformAdapter.CheckAndroidPermission(const Permission: string): Boolean;
 begin
-  Result := True; // Default for desktop
+  // Default for non-Android builds: nothing to check.
+  Result := False;
 
   {$IFDEF ANDROID}
-  // TODO: Check permission using ContextCompat.checkSelfPermission
-  {$ENDIF}
-
-  {$IFDEF IOS}
-  // TODO: Check permission status
+  try
+    // Use ContextCompat.checkSelfPermission — the canonical safe check.
+    // PERMISSION_GRANTED = 0, PERMISSION_DENIED = -1 (JPackageManager).
+    var LJavaPerm := StringToJString(Permission);
+    var GrantResult := TJContextCompat.JavaClass.checkSelfPermission(
+      TAndroidHelper.Context, LJavaPerm);
+    Result := GrantResult := TJPackageManager.JavaClass.PERMISSION_GRANTED;
+  except
+    // If anything fails (missing class, dead bridge, etc.), deny rather than grant.
+    Result := False;
+  end;
   {$ENDIF}
 end;
 
-class function TUniPlatformAdapter.RequestPermission(const Permission: string): Boolean;
+class procedure TUniPlatformAdapter.RegisterPermissionOverride(
+  const ACheck: TPermissionCheckFunc;
+  const ARequest: TPermissionRequestFunc);
 begin
-  Result := True; // Default for desktop
+  FPermissionCheckOverride := ACheck;
+  FPermissionRequestOverride := ARequest;
+end;
 
-  {$IFDEF ANDROID}
-  // TODO: Request permission using ActivityCompat.requestPermissions
+class procedure TUniPlatformAdapter.RegisterShareOverride(
+  const AText: TShareTextFunc;
+  const AFile: TShareFileFunc);
+begin
+  FShareTextOverride := AText;
+  FShareFileOverride := AFile;
+end;
+
+class function TUniPlatformAdapter.CheckPermissionEx(
+  const APermission: string): TPermissionResult;
+var
+  LDelegate: TPermissionCheckFunc;
+begin
+  // 1) Runtime-registered override (test or custom impl) wins.
+  LDelegate := FPermissionCheckOverride;
+  if Assigned(LDelegate) then
+    Exit(LDelegate(APermission));
+
+  // 2) Global delegate from DeepBase.Platform.Interfaces.
+  LDelegate := GetPermissionCheck();
+  if Assigned(LDelegate) then
+    Exit(LDelegate(APermission));
+
+  // 3) Compile-time IFDEF default.
+  {$IF DEFINED(ANDROID)}
+  if CheckAndroidPermission(APermission) then
+    Result := prGranted
+  else
+    Result := prDenied;
+  {$ELSEIF DEFINED(IOS)}
+  // TODO(BUG-277): Implement iOS permission queries per framework
+  // (AVAuthorizationStatus for microphone/camera, PHAuthorization for photos,
+  // UNAuthorizationStatus for notifications, CNAuthorizationStatus for contacts).
+  Result := prUnsupported;
+  {$ELSE}
+  // Desktop: no runtime permission model; treat as granted.
+  Result := prGranted;
   {$ENDIF}
+end;
 
-  {$IFDEF IOS}
-  // TODO: Request permission
+class function TUniPlatformAdapter.RequestPermissionEx(
+  const APermission: string;
+  const ACallback: TPermissionCallback): TPermissionResult;
+var
+  LDelegate: TPermissionRequestFunc;
+begin
+  LDelegate := FPermissionRequestOverride;
+  if Assigned(LDelegate) then
+    Exit(LDelegate(APermission, ACallback));
+
+  LDelegate := GetPermissionRequest();
+  if Assigned(LDelegate) then
+    Exit(LDelegate(APermission, ACallback));
+
+  // Fallback: synchronous answer from CheckPermissionEx; callback fires now.
+  Result := CheckPermissionEx(APermission);
+  if (Result in [prGranted, prDenied]) and Assigned(ACallback) then
+    ACallback(APermission, Result);
+end;
+
+class function TUniPlatformAdapter.HasPermission(
+  const Permission: string): Boolean;
+begin
+  Result := CheckPermissionEx(Permission) = prGranted;
+end;
+
+class function TUniPlatformAdapter.RequestPermission(
+  const Permission: string): Boolean;
+begin
+  Result := RequestPermissionEx(Permission, nil) = prGranted;
+end;
+
+class function TUniPlatformAdapter.ShareTextEx(const AText,
+  ASubject: string): Boolean;
+var
+  LDelegate: TShareTextFunc;
+begin
+  LDelegate := FShareTextOverride;
+  if Assigned(LDelegate) then
+    Exit(LDelegate(AText, ASubject));
+  LDelegate := GetShareText();
+  if Assigned(LDelegate) then
+    Exit(LDelegate(AText, ASubject));
+  // Default path (compile-time IFDEF) is implemented inline below.
+  {$IF DEFINED(ANDROID)}
+  try
+    var Intent := TJIntent.JavaClass.init(TJIntent.JavaClass.ACTION_SEND);
+    Intent.setType(StringToJString('text/plain'));
+    Intent.putExtra(TJIntent.JavaClass.EXTRA_TEXT, StringToJString(AText));
+    if ASubject <> '' then
+      Intent.putExtra(TJIntent.JavaClass.EXTRA_SUBJECT, StringToJString(ASubject));
+    TAndroidHelper.Activity.startActivity(
+      TJIntent.JavaClass.createChooser(Intent, StringToJString('Share')));
+    Result := True;
+  except
+    Result := False;
+  end;
+  {$ELSEIF DEFINED(MSWINDOWS)}
+  Result := CopyToClipboard(AText);
+  {$ELSE}
+  Result := False;
+  {$ENDIF}
+end;
+
+class function TUniPlatformAdapter.ShareFileEx(
+  const AFilePath: string): Boolean;
+var
+  LDelegate: TShareFileFunc;
+begin
+  LDelegate := FShareFileOverride;
+  if Assigned(LDelegate) then
+    Exit(LDelegate(AFilePath));
+  LDelegate := GetShareFile();
+  if Assigned(LDelegate) then
+    Exit(LDelegate(AFilePath));
+
+  // Default fallback per platform.
+  {$IF DEFINED(ANDROID)}
+  try
+    var LFile := TJFile.JavaClass.init(StringToJString(AFilePath));
+    var LUri := TJUri.JavaClass.fromFile(LFile);
+    var Intent := TJIntent.JavaClass.init(TJIntent.JavaClass.ACTION_SEND);
+    Intent.setType(StringToJString('*/*'));
+    Intent.putExtra(TJIntent.JavaClass.EXTRA_STREAM,
+      TJParcelable.Wrap(JObjectToID(LUri)));
+    TAndroidHelper.Activity.startActivity(
+      TJIntent.JavaClass.createChooser(Intent, StringToJString('Share')));
+    Result := True;
+  except
+    Result := False;
+  end;
+  {$ELSEIF DEFINED(MSWINDOWS)}
+  // Best-effort: copy path to clipboard. Callers wanting a richer picker
+  // should install a ShareFile override.
+  Result := CopyToClipboard(AFilePath);
+  {$ELSE}
+  Result := False;
   {$ENDIF}
 end;
 

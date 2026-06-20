@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#-许可�?
 [![Delphi](https://img.shields.io/badge/Delphi-10.3%2B-red.svg)](https://www.embarcadero.com/products/delphi)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/DeepBase-framework/DeepBase)
+[![Platform](https://img.shields.io/badge/platform-Windows%20(Core)%20%7C%20FMX%20(Extended)-lightgrey.svg)](https://github.com/DeepBase-framework/DeepBase)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/DeepBase-framework/DeepBase/actions)
 
 ## 🎯 项目定位
@@ -57,6 +57,28 @@ DeepBase 是一�?**Delphi 企业级应用开发基础框架**，提供现代�
 - 🎨 UI 主题 - Material/Fluent/macOS 风格
 - 💳 支付集成 - WeChat Pay/Alipay/Stripe/PayPal 直连 SDK，订单与权益流程�?Commerce
 
+## 📊 功能矩阵 / 成熟度边界
+
+> 详细矩阵见 [`docs/80.feature-matrix.md`](docs/80.feature-matrix.md)。下表只列关键边界。
+
+| 类别 | 模块 | 成熟度 | 备注 |
+|------|------|--------|------|
+| 核心基础 | Config / i18n / FormState / Logging / MRU / Cache / ORM / EventBus / IoC / MVVM / Validation / StateMachine | Implemented | 需 `DeepBase.Initialize*` |
+| Windows 桌面能力 | Hotkeys / TrayIcon / Protection / AutoFix / Browser | **Platform-limited (Windows)** | 非 Windows 平台为 stub 或无法使用 |
+| 安全 | Security (DPAPI + AES-GCM) | Implemented | 非 Windows 默认 fail-closed, 需 `DEEPBASE_INSECURE_DEV_MODE` 显式启用开发模式 |
+| 语音 | Speech (ASR/TTS/WakeWord/Voiceprint/Intent) | Implemented (Windows-primary) | 云端 provider (Baidu/StepFun/Edge) 需网络; SenseVoice 需 ONNX 模型目录 |
+| LLM | LLM client (6 providers) | Needs-external-service | 需 HTTP 网络 + provider API key |
+| Commerce | WeChatPay / Alipay / Stripe / PayPal | Needs-external-service | 需支付 SDK + 商户账号 + 回调服务器 |
+| FMX mobile | Platform / Permission / Share / SafeArea | Partial (BUG-277, BUG-281) | 8 处 TODO 已标注任务 ID; 非 Android/iOS 时权限返回 False |
+| DataPlatform | WeChat39x/4x schema 适配器 | Experimental | SQLCipher 适配器未实际编译到 DPK |
+| AutoUpdate | Updater / AutoUpdate | Partial | 远端 version.json 缺失视为 "无更新" (fail-open) |
+
+### 三条高层表述的边界
+
+- **"像 Spring Boot 一样简单"** — 提供模块化包边界 + 依赖注入 + 统一初始化入口。**前提**: 任何调用 `DeepBase.Initialize*` 的最终程序必须链接 `DeepBase.Persistence.Manager.FireDAC`, 否则 `InitializeOrRaise` 抛 "No DB connection adapter registered"。
+- **"所有核心 API 线程安全"** — 范围: Core 模块 (`Cache` / `EventBus` / `IoC` / `Config` / `i18n` / `Logging` / `MRU`) 内部用 `TCriticalSection` / `TMonitor` 保护。**例外**: 纯逻辑 builder 类 (`TValidation` / `TStateMachine` 单实例) 不承诺线程安全, 由调用方同步。验证见 `*.PBT.pas` 并发用例。
+- **"跨平台"** — `DeepBaseCore` 明确为 **Windows 运行时核心** (依赖 Winapi, 含 TrayIcon / Hotkeys / Protection / FormState / AutoFix), 不直接依赖 VCL/FMX/FireDAC。跨平台扩展通过 `DeepBaseFMX` 包实现 (macOS/Linux), 当前 Partial (BUG-277/281 跟踪)。
+
 ## 🚀 快速开�?
 
 ### 安装要求
@@ -71,7 +93,7 @@ DeepBase 是一�?**Delphi 企业级应用开发基础框架**，提供现代�
 2. 服务/数据�?可选能力按需编译：`DeepBaseServices.dpk`、`DeepBasePersistence.dpk`、`DeepBaseFeatures.dpk`
 3. 需�?IDE 拖控件时再安�?VCL/FMX 设计时包：`dclDeepBaseVCL.dpk` / `dclDeepBaseFMX.dpk`
 
-运行时包边界：`DeepBaseCore.dpk` 不直接依�?VCL/FMX/FireDAC；主题切换、全局异常展示�?UI 行为�?`DeepBaseVCL.dpk` / `DeepBaseFMX.dpk` 适配层承接。`DeepBaseFeatures.dpk` 依赖 `DeepBaseServices.dpk`，避免底层服务单元被重复打包�?
+运行时包边界：`DeepBaseCore.dpk` 是 **Windows 运行时核心**（依赖 Winapi / 包含 TrayIcon、Hotkeys、Protection、FormState、AutoFix 等桌面能力），**不直接依赖 VCL/FMX/FireDAC**。UI 框架相关的主题切换、全局异常展示等行为由 `DeepBaseVCL.dpk` / `DeepBaseFMX.dpk` 适配层承接。跨平台（macOS/Linux）扩展通过 FMX 包实现，Core 自身不承诺跨平台主题切换、全局异常展示�?UI 行为�?`DeepBaseVCL.dpk` / `DeepBaseFMX.dpk` 适配层承接。`DeepBaseFeatures.dpk` 依赖 `DeepBaseServices.dpk`，避免底层服务单元被重复打包�?
 
 数据库接入前置条件：`DeepBase.Manager` 与 FireDAC 持久化适配器已经解耦。任何调用 `DeepBase.Initialize*` / `InitializeWithDB*` 的最终程序，都必须链接 `DeepBase.Persistence.Manager.FireDAC`，否则会报 `No DB connection adapter registered`。
 

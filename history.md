@@ -1641,3 +1641,73 @@ var HTML := Exporter.ToHTML;
 - **验证**:
   - `Scripts/build_packages_win64.ps1 -Profile Runtime`：11 包全链路编译通过，0 errors。
   - FMX.dpk 仍有预存 E2280（`DeepBase.FMX.LogListView.pas(239) Unterminated conditional directive`），不在本次范围。
+
+---
+
+## 2026-06-18 已完成任务归档
+
+### ARCH-P1-001: Core 瘦身和包分层
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - Features 拆分 LLM/Inference/IntentClarification/Browser/Commerce/Platform 等可选包
+  - 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}
+  - 新增 DeepBaseDataPlatform.dpk，Platform 移除 Persistence 依赖
+
+### SPEECH-01: TTS 后端迁入 DeepBase
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口
+  - `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口
+  - Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
+
+### SPEECH-02: 统一 Resolver 工厂
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - 新增 `DeepBase.Speech.Resolver.pas`
+  - `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
+  - `ResolveTTS(ALicensing)` — 三层回退：Edge(免费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
+  - `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
+
+### SPEECH-03: DeepInput 瘦身
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`
+  - `uMain.pas` → 移除 uTTS 引用，TTS 已迁移到 DeepBase
+  - `uAudioCapture.pas, uVAD.pas` 评估：保留在 DeepInput 中
+
+### delphi-13-migration: Delphi 13 兼容性
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - Skia4Delphi 7.1.0 unit path 变更（无引用，无需迁移）
+  - VCL/FMX 兼容性检查（8 个 dfm/fmx 已检查，无 DPI 敏感属性）
+  - 96 DPI `.dfm`/`.fmx` 转换（无转换需求）
+
+### browser-automation: 浏览器自动化接口优化
+- **完成日期**: 2026-06-18
+- **内容摘要**:
+  - `IBrowserSession`/`IBrowserAutomationSession` 接口合并（IBrowserSession 继承 IBrowserAutomationSession）
+  - ResponseWaiter stale result 防护（FStartCount/FRunningCount 原子计数，旧导航响应自动丢弃）
+
+### QA-P0-001: 测试和 CI 门禁可信化（部分完成）
+- **完成日期**: 2026-06-18
+- **已完成项**:
+  - 清理 0-fixture 测试单元（9 文件补齐 TDUnitX.RegisterTestFixture）
+
+### UPD-P0-001: 免费版升级收费版和付费更新（部分完成）
+- **完成日期**: 2026-06-18
+- **已完成项**:
+  - 增加 Updater 安全测试：签名错误、Zip Slip、降级攻击（14 测试用例，Test.DeepBase.Updater.pas）
+
+### QA-P1-001: 长期质量体系（部分完成）
+- **完成日期**: 2026-06-18
+- **已完成项**:
+  - Updater 安全测试（14 用例，Test.DeepBase.Updater.pas）
+  - LLM E2E mock（15 用例，Test.DeepBase.LLM.E2E.pas）
+  - 桌面工具模板 E2E
+  - CI 增加可选包矩阵 (Minimal/Runtime/LLM/Speech/Commerce/Updater，.github/workflows/delphi-ci.yml)
+
+### deepbase-speech: 语音模块基础（部分完成）
+- **完成日期**: 2026-06-18
+- **已完成项**:
+  - PBT 测试 (8 用例，Test.DeepBase.Speech.PBT.pas) + 单元测试 (7 用例，Test.DeepBase.Speech.pas) → 16/16 passed
+  - dpk 分包验证 (6 dpk: Core/ASR/TTS/Voice/Wake + SAPI.Decl 归入 Core)

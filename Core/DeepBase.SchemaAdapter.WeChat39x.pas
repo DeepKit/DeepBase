@@ -29,7 +29,7 @@ begin
   if VarIsNull(v) or VarIsEmpty(v) then
     Result := 0
   else
-    Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
+    Result := TDateTime(Int64(v) / SecsPerDay + UnixDateDelta);
 end;
 
 constructor TWeChat39xAdapter.Create;
@@ -51,13 +51,13 @@ begin
       if VarIsNull(v) or VarIsEmpty(v) then
         Result := Null
       else
-        Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
+        Result := TDateTime(Int64(v) / SecsPerDay + UnixDateDelta);
     end);
   FFieldMappings[6] := FieldMap('Type', 'raw_type');
   FFieldMappings[7] := FieldMap('IsSender', 'raw_direction',
     function(v: Variant): Variant
     begin
-      case v.AsInteger of
+      case Integer(v) of
         0: Result := 'inbound';
         1: Result := 'outbound';
         else Result := 'unknown';

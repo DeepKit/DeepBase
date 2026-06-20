@@ -116,6 +116,21 @@ type
     procedure Test_GetFullSchemaSQL_ContainsVersion;
   end;
 
+  [TestFixture]
+  TTestSchemaEncoding = class
+  public
+    [Test]
+    procedure Test_LanguagesData_ContainsCorrectNativeName_zhCN;
+    [Test]
+    procedure Test_LanguagesData_ContainsCorrectNativeName_zhTW;
+    [Test]
+    procedure Test_LanguagesData_ContainsCorrectNativeName_jaJP;
+    [Test]
+    procedure Test_I18nTextsData_NoMojibake;
+    [Test]
+    procedure Test_I18nTextsData_ContainsCorrectChineseTranslations;
+  end;
+
 implementation
 
 { TTestSchemaVersion }
@@ -136,7 +151,7 @@ var
   MajorStr: string;
   MajorVal: Integer;
 begin
-  // SCHEMA_VERSION = '1.0.0' �?extract major part before first dot
+  // SCHEMA_VERSION = '1.0.0' �?extract major part before first dot
   MajorStr := SCHEMA_VERSION.Split(['.'])[0];
   MajorVal := StrToIntDef(MajorStr, 0);
   Assert.IsTrue(MajorVal >= 1, 'Major version should be at least 1');
@@ -147,7 +162,7 @@ var
   Parts: TArray<string>;
   MinorVal: Integer;
 begin
-  // SCHEMA_VERSION = '1.0.0' �?extract minor part (second segment)
+  // SCHEMA_VERSION = '1.0.0' �?extract minor part (second segment)
   Parts := SCHEMA_VERSION.Split(['.']);
   Assert.IsTrue(Length(Parts) >= 2, 'Version should have at least major.minor');
   MinorVal := StrToIntDef(Parts[1], 0);
@@ -409,11 +424,77 @@ begin
   );
 end;
 
+{ TTestSchemaEncoding }
+
+procedure TTestSchemaEncoding.Test_LanguagesData_ContainsCorrectNativeName_zhCN;
+begin
+  // BUG-276: zh-CN NativeName must be 简体中文, not mojibake
+  Assert.IsTrue(
+    SQL_TIER0_LANGUAGES_DATA.Contains('简体中文'),
+    'zh-CN NativeName should be 简体中文, not corrupted'
+  );
+end;
+
+procedure TTestSchemaEncoding.Test_LanguagesData_ContainsCorrectNativeName_zhTW;
+begin
+  // BUG-276: zh-TW NativeName must be 繁體中文, not mojibake
+  Assert.IsTrue(
+    SQL_TIER0_LANGUAGES_DATA.Contains('繁體中文'),
+    'zh-TW NativeName should be 繁體中文, not corrupted'
+  );
+end;
+
+procedure TTestSchemaEncoding.Test_LanguagesData_ContainsCorrectNativeName_jaJP;
+begin
+  // BUG-276: ja-JP NativeName must be 日本語, not mojibake
+  Assert.IsTrue(
+    SQL_TIER0_LANGUAGES_DATA.Contains('日本語'),
+    'ja-JP NativeName should be 日本語, not corrupted'
+  );
+end;
+
+procedure TTestSchemaEncoding.Test_I18nTextsData_NoMojibake;
+var
+  Data: string;
+begin
+  // BUG-276: Ensure no replacement characters or typical mojibake sequences
+  Data := SQL_TIER0_I18N_TEXTS_DATA;
+
+  Assert.IsFalse(
+    Data.Contains(''),
+    'I18nTexts data should not contain Unicode replacement character '
+  );
+
+  // Check for common mojibake patterns (corrupted multi-byte sequences)
+  Assert.IsFalse(
+    Data.Contains('ȷ') or Data.Contains('ȡ') or Data.Contains('ر') or Data.Contains('Ϣ'),
+    'I18nTexts data should not contain mojibake sequences from encoding corruption'
+  );
+end;
+
+procedure TTestSchemaEncoding.Test_I18nTextsData_ContainsCorrectChineseTranslations;
+var
+  Data: string;
+begin
+  // BUG-276: Verify all 8 built-in translations are correct
+  Data := SQL_TIER0_I18N_TEXTS_DATA;
+
+  Assert.IsTrue(Data.Contains('确定'), 'OK should translate to 确定');
+  Assert.IsTrue(Data.Contains('取消'), 'Cancel should translate to 取消');
+  Assert.IsTrue(Data.Contains('保存'), 'Save should translate to 保存');
+  Assert.IsTrue(Data.Contains('关闭'), 'Close should translate to 关闭');
+  Assert.IsTrue(Data.Contains('错误'), 'Error should translate to 错误');
+  Assert.IsTrue(Data.Contains('警告'), 'Warning should translate to 警告');
+  Assert.IsTrue(Data.Contains('信息'), 'Information should translate to 信息');
+  Assert.IsTrue(Data.Contains('确认'), 'Confirm should translate to 确认');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestSchemaVersion);
   TDUnitX.RegisterTestFixture(TTestTier0Schema);
   TDUnitX.RegisterTestFixture(TTestTier1Schema);
   TDUnitX.RegisterTestFixture(TTestTier2Schema);
   TDUnitX.RegisterTestFixture(TTestSchemaHelpers);
+  TDUnitX.RegisterTestFixture(TTestSchemaEncoding);
 
 end.

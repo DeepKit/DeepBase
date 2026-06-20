@@ -55,7 +55,7 @@ begin
     Dlg.FAutoUpdate := AAutoUpdate;
     Dlg.FUpdateInfo := Info;
     
-    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version, '1.0.0']); // TODO: Pass current ver
+    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version, '1.0.0']); // TODO(UPD-P0-001): Pass current ver
     Dlg.mmoChangelog.Lines.Text := Info.Changelog;
     
     if Info.ForceUpdate then

@@ -201,15 +201,29 @@ type
   public
     [Test]
     procedure Test_Platform_IsWindows;
-    
+
     [Test]
     procedure Test_Platform_GetDeviceType;
-    
+
     [Test]
     procedure Test_Platform_DocumentsPath;
-    
+
     [Test]
     procedure Test_Platform_CachePath;
+
+    // BUG-277 regression: enum defaults must be the safe "Unknown" value
+    [Test]
+    procedure Test_Platform_EnumDefault_IsUnknown;
+    [Test]
+    procedure Test_Platform_UnknownOrdinal_IsZero;
+    [Test]
+    procedure Test_Platform_GetPlatform_DetectsBeforeReturn;
+    [Test]
+    procedure Test_Platform_HasPermission_DesktopDefaultsToTrue;
+    [Test]
+    procedure Test_Platform_HasPermission_UnknownPermissionDesktopTrue;
+    [Test]
+    procedure Test_Platform_GetPlatformName_NotEmpty;
   end;
   
   /// <summary>
@@ -748,7 +762,7 @@ end;
 
 procedure TTestFMXPlatform.Test_Platform_GetDeviceType;
 begin
-  Assert.AreEqual(TUniDeviceType.dtDesktop, Platform.GetDeviceType);
+  Assert.AreEqual(TUniDeviceType.udtDesktop, Platform.GetDeviceType);
 end;
 
 procedure TTestFMXPlatform.Test_Platform_DocumentsPath;
@@ -766,6 +780,65 @@ var
 begin
   Path := Platform.CachePath;
   Assert.IsNotEmpty(Path);
+end;
+
+{ BUG-277 regression: enum defaults and permission safety }
+
+procedure TTestFMXPlatform.Test_Platform_EnumDefault_IsUnknown;
+var
+  P: TUniPlatform;
+  D: TUniDeviceType;
+begin
+  // Default (zero-initialized) must be the safe Unknown value, not a real platform.
+  P := Default(TUniPlatform);
+  D := Default(TUniDeviceType);
+  Assert.AreEqual(Ord(upUnknown), Ord(P), 'TUniPlatform default must be upUnknown');
+  Assert.AreEqual(Ord(udtUnknown), Ord(D), 'TUniDeviceType default must be udtUnknown');
+end;
+
+procedure TTestFMXPlatform.Test_Platform_UnknownOrdinal_IsZero;
+begin
+  // Critical invariant: Ord(upUnknown)=0 and Ord(udtUnknown)=0 so that class vars
+  // (zero-initialized before DetectPlatform/DetectDeviceType run) are safe.
+  Assert.AreEqual(0, Ord(upUnknown), 'upUnknown must have ordinal 0');
+  Assert.AreEqual(0, Ord(udtUnknown), 'udtUnknown must have ordinal 0');
+  Assert.AreNotEqual(0, Ord(upWindows), 'upWindows must NOT be ordinal 0');
+  Assert.AreNotEqual(0, Ord(udtDesktop), 'udtDesktop must NOT be ordinal 0');
+end;
+
+procedure TTestFMXPlatform.Test_Platform_GetPlatform_DetectsBeforeReturn;
+begin
+  // Even before Instance is created, GetPlatform must return a known platform
+  // on the current build target (never silently fall through to upUnknown).
+  {$IFDEF MSWINDOWS}
+  Assert.AreEqual(upWindows, TUniPlatformAdapter.GetPlatform);
+  {$ENDIF}
+  Assert.AreNotEqual(upUnknown, TUniPlatformAdapter.GetPlatform,
+    'GetPlatform should detect the current build target');
+end;
+
+procedure TTestFMXPlatform.Test_Platform_HasPermission_DesktopDefaultsToTrue;
+begin
+  // On desktop (no runtime permission model), HasPermission should report granted.
+  {$IF NOT DEFINED(ANDROID) AND NOT DEFINED(IOS)}
+  Assert.IsTrue(TUniPlatformAdapter.HasPermission('android.permission.CAMERA'),
+    'Desktop HasPermission should default to True (no runtime model)');
+  {$ENDIF}
+end;
+
+procedure TTestFMXPlatform.Test_Platform_HasPermission_UnknownPermissionDesktopTrue;
+begin
+  {$IF NOT DEFINED(ANDROID) AND NOT DEFINED(IOS)}
+  Assert.IsTrue(TUniPlatformAdapter.HasPermission('some.unknown.permission'),
+    'Desktop HasPermission should return True even for unknown permission strings');
+  {$ENDIF}
+end;
+
+procedure TTestFMXPlatform.Test_Platform_GetPlatformName_NotEmpty;
+begin
+  Assert.IsNotEmpty(TUniPlatformAdapter.GetPlatformName);
+  Assert.AreNotEqual('Unknown', TUniPlatformAdapter.GetPlatformName,
+    'GetPlatformName on a known target should not return "Unknown"');
 end;
 
 { TTestFMXTheme }

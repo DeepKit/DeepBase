@@ -186,7 +186,19 @@ end;
 class procedure TAutoFixErrorRecorder.OpenLogFile;
 begin
   var LPath := TPath.Combine(FOutputDir, 'runtime-errors.jsonl');
-  FFileStream := TStreamWriter.Create(LPath, True, TEncoding.UTF8);
+  // BUG-282: Two issues with TStreamWriter in Delphi 37:
+  // 1) TStreamWriter.Create(Stream, Encoding) sets FOwnsStream=False, so
+  //    freeing the writer leaks the TFileStream → handle stays open →
+  //    next OpenLogFile fails with ERROR_SHARING_VIOLATION.
+  //    Fix: call OwnStream so the writer frees the stream on Destroy.
+  // 2) TStreamWriter.Create(Path, Append=True) uses fmShareDenyWrite,
+  //    blocking concurrent readers. Use fmShareDenyNone instead.
+  if not TFile.Exists(LPath) then
+    TFile.WriteAllText(LPath, '');
+  var LStream := TFileStream.Create(LPath, fmOpenReadWrite or fmShareDenyNone);
+  LStream.Seek(0, soEnd);
+  FFileStream := TStreamWriter.Create(LStream, TEncoding.UTF8);
+  FFileStream.OwnStream;
   FFileStream.AutoFlush := True;
 end;
 

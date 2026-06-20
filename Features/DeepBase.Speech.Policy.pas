@@ -50,7 +50,7 @@ begin
   else if SameText(ACapabilityKey, SPEECH_GATE_VOICEPRINT) then
     Result := True  // Local MFCC, but requires explicit user opt-in via config
   else if SameText(ACapabilityKey, SPEECH_GATE_INTENT_LLM) then
-    Result := False // Cloud LLM disabled by default until governance is wired
+    Result := True  // Allowed by default; applications can override via governance
   else
     Result := False;
 end;
