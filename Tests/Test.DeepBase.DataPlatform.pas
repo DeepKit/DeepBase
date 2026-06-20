@@ -112,7 +112,7 @@ begin
   FFieldMappings[3] := FieldMap('IsSender', 'raw_direction',
     function(v: Variant): Variant
     begin
-      case v.AsInteger of
+      case Integer(v) of
         0: Result := 'inbound';
         1: Result := 'outbound';
         else Result := 'unknown';
@@ -147,7 +147,7 @@ begin
     if VarIsNull(v) or VarIsEmpty(v) then
       Result := 0
     else
-      Result := TDateTime(Int64(v.AsInt64) / SecsPerDay + UnixDateDelta);
+      Result := TDateTime(Int64(v) / SecsPerDay + UnixDateDelta);
   end;
 end;
 
@@ -249,30 +249,45 @@ begin
 end;
 
 procedure TTestSchemaAdapter.TestValidate_ForbiddenInMappings;
+var Adapter: TTestAdapter;
 begin
-  var Adapter := TTestAdapter.Create;
-  Adapter.FForbiddenFieldNames := ['UserName'];
-  Assert.WillRaise(
-    procedure begin Adapter.Validate; end,
-    ESchemaAdapterValidationError);
+  Adapter := TTestAdapter.Create;
+  try
+    Adapter.FForbiddenFieldNames := ['UserName'];
+    Assert.WillRaise(
+      procedure begin Adapter.Validate; end,
+      ESchemaAdapterValidationError);
+  finally
+    Adapter.Free;
+  end;
 end;
 
 procedure TTestSchemaAdapter.TestValidate_ShortFingerprint;
+var Adapter: TTestAdapter;
 begin
-  var Adapter := TTestAdapter.Create;
-  Adapter.FSchemaFingerprintPrefixes := ['abc'];
-  Assert.WillRaise(
-    procedure begin Adapter.Validate; end,
-    ESchemaAdapterValidationError);
+  Adapter := TTestAdapter.Create;
+  try
+    Adapter.FSchemaFingerprintPrefixes := ['abc'];
+    Assert.WillRaise(
+      procedure begin Adapter.Validate; end,
+      ESchemaAdapterValidationError);
+  finally
+    Adapter.Free;
+  end;
 end;
 
 procedure TTestSchemaAdapter.TestValidate_ColumnIndexMismatch;
+var Adapter: TTestAdapter;
 begin
-  var Adapter := TTestAdapter.Create;
-  Adapter.FFieldMappings[1].ColumnIndex := 99;
-  Assert.WillRaise(
-    procedure begin Adapter.Validate; end,
-    ESchemaAdapterValidationError);
+  Adapter := TTestAdapter.Create;
+  try
+    Adapter.FFieldMappings[1].ColumnIndex := 99;
+    Assert.WillRaise(
+      procedure begin Adapter.Validate; end,
+      ESchemaAdapterValidationError);
+  finally
+    Adapter.Free;
+  end;
 end;
 
 procedure TTestSchemaAdapter.TestGetColumnIndex;
@@ -290,10 +305,15 @@ begin
 end;
 
 procedure TTestSchemaAdapter.TestTryMatchFingerprint;
+var Adapter: TTestAdapter;
 begin
-  var Adapter := TTestAdapter.Create;
-  Assert.IsTrue(Adapter.TryMatchFingerprint('abc1234567def'));
-  Assert.IsFalse(Adapter.TryMatchFingerprint('DEADBEEF12345'));
+  Adapter := TTestAdapter.Create;
+  try
+    Assert.IsTrue(Adapter.TryMatchFingerprint('abc1234567def'));
+    Assert.IsFalse(Adapter.TryMatchFingerprint('DEADBEEF12345'));
+  finally
+    Adapter.Free;
+  end;
 end;
 
 procedure TTestSchemaAdapter.TestForbiddenFieldNames;
@@ -340,9 +360,9 @@ begin
   var m := FieldMap('IsSender', 'direction',
     function(v: Variant): Variant
     begin
-      case v.AsInteger of
-        0: Result := dInbound;
-        1: Result := dOutbound;
+      case Integer(v) of
+        0: Result := Variant(dInbound);
+        1: Result := Variant(dOutbound);
       end;
     end);
   Assert.AreEqual(Integer(dInbound), Integer(m.Transform(0)));

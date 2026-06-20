@@ -62,6 +62,29 @@
   - ✅ `Scripts/run_tests.ps1 -ExcludeCategory Performance,PBT` 可将这类测试从常规 CI 门中剥离；开发者本地仍可运行完整套件。
 - 状态: ✅ 已完成 (2026-06-20)
 
+### BUG-285: 测试套件进程退出内存泄漏 (ReportMemoryLeaksOnShutdown)
+- 发现日期: 2026-06-20
+- 严重性: 🟡 Minor
+- 来源: 修复 BUG-282/283/284 后调查 CI 唯一剩余的 FAILED 根因
+- 现象:
+  - `Tests/DeepBaseTests.dpr` 开启 `ReportMemoryLeaksOnShutdown := True`。
+  - 全部 3611 项测试（3608 通过 + 3 ignored）执行完毕并输出 `allPassed=True`，但进程退出时仍报 `Unexpected Memory Leak`，导致 CI 判定 FAILED。
+- 根因（分层）:
+  1. **已修复**：`Tests/Test.DeepBase.DataPlatform.pas` 中 4 项 `[Test]` 方法（`TestValidate_ForbiddenInMappings`/`_ShortFingerprint`/`_ColumnIndexMismatch`/`TestTryMatchFingerprint`）使用 `var Adapter := TTestAdapter.Create;` 局部类变量，编译器不会为类类型生成 `_AddRef/_Release`，导致 `TTestAdapter` 及其 `FFieldMappings[3].Transform` 匿名方法、`FForbiddenFieldsDict`、`FCachedDirectionMapping`/`FCachedMessageTypeMapping` 全部泄漏。
+  2. **已修复**：`Core/DeepBase.SchemaAdapter.pas` 的 `TBaseSchemaAdapter` 虽实现了 `ISchemaAdapter` 方法，但类声明未列接口，导致接口赋值不会触发引用计数。
+  3. **剩余**（约 80 项小对象）：
+     - `TJSONObject × 2 / TJSONPair × 5 / TJSONString × 9 / TList<TJSONPair> × 2` — 1–2 棵小型 JSON 树，疑似来自 DUnitX 框架自身缓存测试元数据或测试日志 XML 序列化。
+     - `TTestIntentParser.Test_ConcurrentRegisterAndparse$ActRec × 1` — 测试方法的 ActRec 闭包被 DUnitX RTTI/元数据保留。
+     - `TMapResult × 2` / `TDictionary<string,Variant> × 8` / `UnicodeString × ~140`（分布在 9–24、25–40、41–56、57–72、89–104 字节段）。
+- 修复:
+  - ✅ 4 处 `TTestAdapter.Create` 改为显式 `try/finally Adapter.Free end`。
+  - ✅ `TBaseSchemaAdapter` 类声明显式实现 `ISchemaAdapter`，使接口赋值生成 `_AddRef/_Release`。
+  - ✅ 内存泄漏规模从 ~130 项降至 ~80 项；4 个 `TTestAdapter.Create$ActRec`、4 个 `TTestAdapter`、4 个 `TDictionary<string,Boolean>`、~40 个 `UnicodeString` 不再泄漏。
+- 待办:
+  - ⏳ 排查剩余 ~80 项泄漏：DUnitX 是否保留测试方法 ActRec、RunResults 是否保留 JSON 元数据；可能需要在 DPR 退出前显式清空 `Runner` 与 `Results` 接口引用。
+  - ⏳ 或考虑把 `ReportMemoryLeaksOnShutdown := True` 改为仅在 Debug 构建启用，避免 CI 因框架层泄漏被标红。
+- 状态: 🔶 部分修复 (2026-06-20)
+
 ### BUG-276: Schema/i18n 种子数据编码污染导致中文语言名和内置翻译乱码
 - 发现日期: 2026-06-18
 - 严重性: 🔴 Critical
