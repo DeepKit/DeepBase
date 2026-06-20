@@ -6,8 +6,6 @@ unit Test.DeepBase.i18n.Gender;
 *******************************************************************************}
 
 interface
-
-{$IFDEF TESTDeepInsight}
 uses
   DUnitX.TestFramework;
 
@@ -104,13 +102,10 @@ type
     [Test]
     procedure TestGlobalGetCaseName;
   end;
-{$ENDIF}
-
 implementation
-
-{$IFDEF TESTDeepInsight}
 uses
   System.SysUtils,
+  System.Generics.Collections,
   DeepBase.i18n.Gender;
 
 procedure TTestDeepBaseI18nGender.Setup;
@@ -378,8 +373,8 @@ var
   Info: TLanguageGenderInfo;
 begin
   Info := TGenderVariant.GetLanguageInfo('zh');
-  Assert.AreEqual([], Info.Genders);
-  Assert.AreEqual([], Info.Cases);
+  Assert.IsTrue(Info.Genders = []);
+  Assert.IsTrue(Info.Cases = []);
   Assert.AreEqual(tdLeftToRight, Info.Direction);
 end;
 
@@ -418,11 +413,6 @@ begin
   Assert.AreEqual('Genitive', GetCaseName(gcGenitive));
   Assert.AreEqual('Accusative', GetCaseName(gcAccusative));
 end;
-
-{$ENDIF}
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseI18nGender);
 end.

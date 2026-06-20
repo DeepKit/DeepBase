@@ -7,8 +7,6 @@ unit Test.DeepBase.Export;
 *******************************************************************************}
 
 interface
-
-{$IFDEF TESTDeepInsight}
 uses
   DUnitX.TestFramework;
 
@@ -83,11 +81,7 @@ type
     [Test]
     procedure TestArrayToHTMLNoStyle;
   end;
-{$ENDIF}
-
 implementation
-
-{$IFDEF TESTDeepInsight}
 uses
   System.SysUtils, System.Classes, System.IOUtils,
   DeepBase.Export;
@@ -567,11 +561,6 @@ begin
   Content := ReadFileContent(FileName);
   Assert.IsFalse(Content.Contains('<style>'));
 end;
-
-{$ENDIF}
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestExport);
 end.

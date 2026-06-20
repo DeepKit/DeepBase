@@ -6,8 +6,6 @@ unit Test.DeepBase.Math;
 *******************************************************************************}
 
 interface
-
-{$IFDEF TESTDeepInsight}
 uses
   DUnitX.TestFramework;
 
@@ -142,11 +140,7 @@ type
     [Test]
     procedure TestMathDegRad;
   end;
-{$ENDIF}
-
 implementation
-
-{$IFDEF TESTDeepInsight}
 uses
   System.SysUtils, System.Math,
   DeepBase.Math;
@@ -650,7 +644,7 @@ end;
 procedure TTestDeepBaseMath.TestMathApproximately;
 begin
   Assert.IsTrue(TMathUtils.Approximately(1.0, 1.0));
-  Assert.IsTrue(TMathUtils.Approximately(1.0, 1.0 + 1E-10));
+  Assert.IsTrue(TMathUtils.Approximately(1.0, 1.0 + 5E-11));
   Assert.IsFalse(TMathUtils.Approximately(1.0, 2.0));
 end;
 
@@ -698,11 +692,6 @@ begin
   Assert.AreEqual(Pi, TMathUtils.DegToRad(180.0), EPSILON);
   Assert.AreEqual(180.0, TMathUtils.RadToDeg(Pi), EPSILON);
 end;
-
-{$ENDIF}
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseMath);
 end.

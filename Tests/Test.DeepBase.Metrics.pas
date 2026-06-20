@@ -796,9 +796,6 @@ begin
   TMetrics.Gauge('static_gauge').SetValue(100.0);
   Assert.AreEqual(100.0, TMetrics.Gauge('static_gauge').Value, EPSILON);
 end;
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseMetrics);
 end.

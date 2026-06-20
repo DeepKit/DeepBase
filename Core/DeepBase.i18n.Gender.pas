@@ -11,12 +11,9 @@
     - RTL (Right-to-Left) language support
     - Language-specific formatting rules
   
-  Usage:
-    var Text := TGenderSelect.Select('de', gmMasculine, 
-      ['der Mann', 'die Frau', 'das Kind']);
-    
-    var Greeting := TGenderVariant.Format('fr', 'Cher {name}',
-      gmFeminine, [('name', 'Marie')]);  // Returns 'Chere Marie'
+  Usage examples:
+    TGenderSelect.Select with masculine gender for German articles
+    TGenderVariant.Format with French greeting and name placeholder
   
   Reference: https://cldr.unicode.org/index/cldr-spec/grammatical-features
   ============================================================================ }

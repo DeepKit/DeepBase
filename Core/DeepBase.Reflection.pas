@@ -1,4 +1,4 @@
-﻿unit DeepBase.Reflection;
+unit DeepBase.Reflection;
 
 {*******************************************************************************
   DeepBase Reflection/RTTI Utilities
@@ -1083,7 +1083,10 @@ begin
           LInfo.ParameterCount := Length(LParams);
           SetLength(LInfo.Parameters, LInfo.ParameterCount);
           for I := 0 to High(LParams) do
-            LInfo.Parameters[I] := LParams[I].Name + ': ' + LParams[I].ParamType.Name;
+            if LParams[I].ParamType <> nil then
+              LInfo.Parameters[I] := LParams[I].Name + ': ' + LParams[I].ParamType.Name
+            else
+              LInfo.Parameters[I] := LParams[I].Name + ': ?';
             
           LList.Add(LInfo);
         end;

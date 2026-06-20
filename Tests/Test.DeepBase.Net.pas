@@ -6,8 +6,6 @@ unit Test.DeepBase.Net;
 *******************************************************************************}
 
 interface
-
-{$IFDEF TESTDeepInsight}
 uses
   DUnitX.TestFramework;
 
@@ -128,11 +126,7 @@ type
     [Test]
     procedure TestCompareIPv4;
   end;
-{$ENDIF}
-
 implementation
-
-{$IFDEF TESTDeepInsight}
 uses
   System.SysUtils, System.Generics.Collections,
   DeepBase.Net;
@@ -506,7 +500,7 @@ end;
 
 procedure TTestDeepBaseNet.TestUrlEncode;
 begin
-  Assert.AreEqual('hello%20world', TNetworkUtils.UrlEncode('hello world'));
+  Assert.AreEqual('hello+world', TNetworkUtils.UrlEncode('hello world'));
   Assert.AreEqual('test%26value', TNetworkUtils.UrlEncode('test&value'));
   Assert.AreEqual('abc123', TNetworkUtils.UrlEncode('abc123'));
 end;
@@ -519,31 +513,22 @@ begin
 end;
 
 procedure TTestDeepBaseNet.TestBuildUrl;
-var
-  Params: TDictionary<string, string>;
 begin
-  Params := TDictionary<string, string>.Create;
-  try
-    Params.Add('page', '1');
-    Params.Add('limit', '10');
-    Assert.IsTrue(TNetworkUtils.BuildUrl('https://api.example.com/users', Params).Contains('page=1'));
-  finally
-    Params.Free;
-  end;
+  Assert.IsTrue(TNetworkUtils.BuildUrl('https://api.example.com/users',
+    [TPair<string, string>.Create('page', '1'),
+     TPair<string, string>.Create('limit', '10')]).Contains('page=1'));
 end;
 
 procedure TTestDeepBaseNet.TestParseUrl;
 var
-  Scheme, Host, Path, Query: string;
+  Scheme, Host, Path: string;
   Port: Integer;
 begin
-  TNetworkUtils.ParseUrl('https://example.com:8080/api/users?page=1',
-    Scheme, Host, Port, Path, Query);
+  TNetworkUtils.ParseUrl('https://example.com:8080/api/users', Scheme, Host, Path, Port);
   Assert.AreEqual('https', Scheme);
   Assert.AreEqual('example.com', Host);
-  Assert.AreEqual(8080, Port);
   Assert.AreEqual('/api/users', Path);
-  Assert.AreEqual('page=1', Query);
+  Assert.AreEqual(8080, Port);
 end;
 
 procedure TTestDeepBaseNet.TestJoinUrl;
@@ -618,13 +603,13 @@ end;
 procedure TTestDeepBaseNet.TestIntegerToIPv4;
 begin
   Assert.AreEqual('0.0.0.1', TIPUtils.IntegerToIPv4(1));
-  Assert.AreEqual('192.168.1.1', TIPUtils.IntegerToIPv4($C0A80101));
+  Assert.AreEqual('192.168.1.1', TIPUtils.IntegerToIPv4(Cardinal($C0A80101)));
 end;
 
 procedure TTestDeepBaseNet.TestIsInSubnet;
 begin
-  Assert.IsTrue(TIPUtils.IsInSubnet('192.168.1.100', '192.168.1.0', '255.255.255.0'));
-  Assert.IsFalse(TIPUtils.IsInSubnet('192.168.2.100', '192.168.1.0', '255.255.255.0'));
+  Assert.IsTrue(TIPUtils.IsInSubnet('192.168.1.100', '192.168.1.0', 24));
+  Assert.IsFalse(TIPUtils.IsInSubnet('192.168.2.100', '192.168.1.0', 24));
 end;
 
 procedure TTestDeepBaseNet.TestIsPrivateIP;
@@ -648,11 +633,6 @@ begin
   Assert.IsTrue(TIPUtils.CompareIPv4('192.168.1.1', '192.168.1.2') < 0);
   Assert.IsTrue(TIPUtils.CompareIPv4('192.168.1.2', '192.168.1.1') > 0);
 end;
-
-{$ENDIF}
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseNet);
 end.

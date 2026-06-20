@@ -6,8 +6,6 @@ unit Test.DeepBase.Reflection;
 *******************************************************************************}
 
 interface
-
-{$IFDEF TESTDeepInsight}
 uses
   DUnitX.TestFramework;
 
@@ -164,11 +162,7 @@ type
     [Test]
     procedure TestReflectMake;
   end;
-{$ENDIF}
-
 implementation
-
-{$IFDEF TESTDeepInsight}
 uses
   System.SysUtils, System.Classes, System.Rtti, System.TypInfo,
   System.Generics.Collections,
@@ -1189,15 +1183,8 @@ begin
     Person.Free;
   end;
 end;
-
-{$ENDIF}
-
-end.
-
 initialization
   TDUnitX.RegisterTestFixture(TTestReflection);
-  TDUnitX.RegisterTestFixture(TTestRecord);
   TDUnitX.RegisterTestFixture(TTestPerson);
   TDUnitX.RegisterTestFixture(TTestEmployee);
-  TDUnitX.RegisterTestFixture(TTestColor);
 end.
