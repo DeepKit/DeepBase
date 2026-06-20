@@ -358,12 +358,6 @@ uses
   DeepBase.WebAPI.OpenAPI in '..\Tools\WebService\DeepBase.WebAPI.OpenAPI.pas';
 
 {$IFNDEF TESTDeepInsight}
-var
-  Runner: ITestRunner;
-  Results: IRunResults;
-  Logger: ITestLogger;
-  NUnitLogger: ITestLogger;
-  DiagLogger: ITestLogger;
 {$ENDIF}
 
 begin
@@ -376,32 +370,43 @@ begin
     // 检查是否有命令行参数
     TDUnitX.CheckCommandLine;
 
-    // 创建测试运行器
-    Runner := TDUnitX.CreateRunner;
-    Runner.UseRTTI := True;
-    Runner.FailsOnNoAsserts := False;
-
-    // 添加控制台日志记录器
-    Logger := TDUnitXConsoleLogger.Create(True);
-    Runner.AddLogger(Logger);
-
-    // 添加诊断日志记录器：把每个 fixture/test 事件写到文件，
-    // 用于定位测试套件挂死的位置。
-    DiagLogger := TDunitXDiagnosticLogger.Create(
-      TPath.Combine(
-        TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs'),
-        'test-diagnostic.log'));
-    Runner.AddLogger(DiagLogger);
-
-    // 添加 NUnit XML 日志记录器（用于 CI）
-    if TDUnitX.Options.XMLOutputFile <> '' then
+    // 把 Runner/Results 放在局部块里，让它们在 FastMM 的进程退出泄漏
+    // 检查运行之前被 finalize，避免框架自身保留的接口引用被误报为泄漏。
+    var AllPassed: Boolean := False;
     begin
-      NUnitLogger := TDUnitXXMLNUnitFileLogger.Create(TDUnitX.Options.XMLOutputFile);
-      Runner.AddLogger(NUnitLogger);
-    end;
+      var LRunner: ITestRunner := TDUnitX.CreateRunner;
+      LRunner.UseRTTI := True;
+      LRunner.FailsOnNoAsserts := False;
 
-    // 运行测试
-    Results := Runner.Execute;
+      var LConsoleLogger: ITestLogger := TDUnitXConsoleLogger.Create(True);
+      LRunner.AddLogger(LConsoleLogger);
+
+      // 诊断日志记录器：把每个 fixture/test 事件写到文件，
+      // 用于定位测试套件挂死的位置。
+      var LDiagLogger: ITestLogger := TDunitXDiagnosticLogger.Create(
+        TPath.Combine(
+          TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs'),
+          'test-diagnostic.log'));
+      LRunner.AddLogger(LDiagLogger);
+
+      // NUnit XML 日志记录器（用于 CI）
+      var LNUnitLogger: ITestLogger := nil;
+      if TDUnitX.Options.XMLOutputFile <> '' then
+      begin
+        LNUnitLogger := TDUnitXXMLNUnitFileLogger.Create(TDUnitX.Options.XMLOutputFile);
+        LRunner.AddLogger(LNUnitLogger);
+      end;
+
+      var LResults: IRunResults := LRunner.Execute;
+      AllPassed := LResults.AllPassed;
+
+      // 显式置空，确保接口在 FastMM 泄漏检查之前释放
+      LResults := nil;
+      LNUnitLogger := nil;
+      LDiagLogger := nil;
+      LConsoleLogger := nil;
+      LRunner := nil;
+    end;
 
     // 如果不是从 IDE 运行，等待用户输入
     {$IFNDEF CI}
@@ -413,7 +418,7 @@ begin
     {$ENDIF}
 
     // 根据测试结果设置退出码
-    if not Results.AllPassed then
+    if not AllPassed then
       System.ExitCode := 1;
 
   except
