@@ -1,7 +1,7 @@
 # deepBase 开发任务
-> **最后更新**: 2026-06-17
-> **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过。
-> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。P0/P1 安全修复已收敛。
+> **最后更新**: 2026-06-20
+> **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过；2026-06-18 新增 3 专家框架审阅待办；REVIEW-P0-001/P0-002/P1-001/P1-002/P1-003/P1-004/P2-001 均已完成。
+> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。BUG-282/283/284 已修复：AutoFix JSONL 并发读写、TBlockingQueue.TryDequeue 超时溢出、PBT/Performance 测试分类从 CI 剥离。BUG-285 测试套件进程退出泄漏部分修复（130 → 80 对象），剩余泄漏主要为 DUnitX 框架自身缓存。
 > **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
 
 ---
@@ -22,11 +22,102 @@
 
 - `DeepLaunch.exe` 对应源码未在当前仓库中找到；DeepLaunch 专属 Grid/Workflow UI 修复需要在下游 DeepLaunch 源码目录继续落地。
 - 商业化上线阻塞仍集中在 DB4 服务端签发、微信支付真实回调、备案/DNS/HTTPS。
-- 数据平台 v0.7: 全链路 11 包编译通过 (Core→Services→Persistence→Commerce→Platform→Speech→LLM→IC→Browser→Inference→Features)，0 errors。FMX.dpk 仍有预存 E2280 未修复。
+- 数据平台 v0.7: 全链路 11 包编译通过 (Core→Services→Persistence→Commerce→Platform→Speech→LLM→IC→Browser→Inference→Features)，0 errors；DeepBaseFMX.dpk 预存 E2280 已修复（LogListView 条件编译收敛）+ 平台 delegate 串联完成。
+- 3 专家审阅 7 项待办 (REVIEW-P0-001/P0-002/P1-001/P1-002/P1-003/P1-004/P2-001) 全部完成；BUG-277 可替换委托 + 4 路径测试覆盖已补齐（独立驱动 15/15 + DUnitX 10/10）。
 
 ---
 
-## 数据平台 v0.7 剩余任务
+## 2026-06-18 三专家审阅新增待办
+
+> 审阅角色: 架构/API 专家、稳定性/并发专家、数据/安全专家。
+> 范围: `Core/`、`Features/`、`FMX/`、`Persistence/`、包边界和现有测试门禁。
+
+### REVIEW-P0-001: 修复 Schema/i18n 种子数据编码污染 (BUG-276)
+- **状态**: ✅ 完成 (2026-06-18，2026-06-19 修复 dcc64 代码页问题)
+- **专家**: 数据/安全专家
+- **已完成**:
+  - ✅ `zh-CN`、`zh-TW`、`ja-JP` NativeName 和 zh-CN 内置翻译恢复为正确 UTF-8。
+  - ✅ 回归测试 `TTestSchemaEncoding` (5 tests) 加入 `Tests/Test.DeepBase.Schema.pas`，全部通过 (41/41)。
+  - ✅ 2026-06-19：确认 dcc64 默认按 GBK 解析源文件，加 `--codepage:65001` 到 `Scripts/run_tests.ps1` 的 `$args` 数组，UTF-8 源文件（保留 BOM）现可正确编译。
+- **剩余**:
+  - [ ] 增加源码/文档编码扫描门禁，覆盖 `README.md`、`docs/`、`Core/*.pas`、`Features/*.pas`。
+  - [ ] 为已被坏种子数据初始化的旧库提供一次性修复 migration。
+
+### REVIEW-P0-002: FMX 平台检测和移动端权限默认值修复 (BUG-277)
+- **状态**: 🟡 核心已完成 (2026-06-18)
+- **专家**: 稳定性/并发专家
+- **已完成**:
+  - ✅ `TUniPlatform`/`TUniDeviceType` 重排，`upUnknown`/`udtUnknown` 移至 ordinal 0（class var 默认值安全）。
+  - ✅ `DetectPlatform` 改为显式 `{$IF..$ELSE..$ENDIF}` 链，未命中时明确赋 `upUnknown`。
+  - ✅ `HasPermission`/`RequestPermission` 默认在移动端拒绝；Android 已实现 `CheckAndroidPermission`（`ContextCompat.checkSelfPermission`）；桌面保持 True。
+  - ✅ 新增 6 项 FMX 回归测试（ordinal 校验、GetPlatform 先探测、桌面 HasPermission 等）。
+- **剩余**:
+  - [ ] iOS 端权限查询实现（AVFoundation/Photos/UN/Contacts）。
+  - [ ] `ShareFile` 实现 Android FileProvider / iOS UIActivityViewController / Windows Shell 分享。
+  - [x] 抽出权限/分享的可替换委托（`DeepBase.Platform.Interfaces`：`TPermissionCheckFunc`/`TPermissionRequestFunc`/`TShareTextFunc`/`TShareFileFunc` + `Set*/Get*` 注册），FMX 侧 `TUniPlatformAdapter.RegisterPermissionOverride`/`RegisterShareOverride` 串联 override → 全局 delegate → IFDEF 默认。等价于接口抽取，但无需在 Core 引入 interface 单元。
+  - [x] 四种路径覆盖：独立驱动 15/15（`Tests/FMX/TestFMXPlatformStandalone.dpr`）+ DUnitX 10 项（`Tests/Test.DeepBase.Platform.Interfaces.pas`，含 8 线程 ×200 次 Set/Get 并发压力）。
+
+### REVIEW-P1-001: 声纹模块持久化与文档承诺对齐 (BUG-278)
+- **状态**: ✅ 已完成 (2026-06-18)
+- **专家**: 数据/安全专家
+- **已完成**:
+  - ✅ 新增 `IVoiceProfileStorage` 接口（GUID 稳定）+ `TDPAPIFileVoiceProfileStorage` 实现：DPAPI 加密 JSON 文件，MFCC 特征 Base64 编码落盘。
+  - ✅ `EnrollProfile` 最小时长校验改为真实 `MIN_SAMPLE_FRAMES = 45`（≈500ms @16kHz/10ms hop）；错误信息同步更新。
+  - ✅ 公开 `SetStorage`/`LoadFromStorage`/`PersistToStorage`/`RemoveFromStorage`；`EnrollProfile` 与 `DeleteProfile` 同步落库。
+  - ✅ 新增 8 项 DUnitX 回归测试（`Tests/Test.DeepBase.Speech.Voiceprint.pas`）+ 独立驱动 33/33 断言通过验证（内存 mock + DPAPI 文件 round-trip + 实例重建后 List/Verify + OwnerApp 过滤 + 时长边界）。
+  - ✅ DeepBaseSpeechVoice.dpk 编译通过，测试文件编译通过，无新增错误。
+- **后续可选**:
+  - [ ] 迁移到 Persistence 包 `voice_profiles` 表（`DeepBase.Speech.Schema.pas`）；当前 Features 内 DPAPI 文件存储为等价实现。
+  - [ ] 为已有 JSON 文件数据提供一次性 SQL 导入工具。
+
+### REVIEW-P1-002: 语音意图 LLM fallback 从占位变为可用或降级为显式 unsupported (BUG-279)
+- **状态**: ✅ 已完成 (2026-06-18)
+- **专家**: 架构/API 专家
+- **已完成**:
+  - ✅ 定义 `TIntentLLMBackend` 回调（text/locale/timeout/registered-intents → JSON），通过 `RegisterLLMBackend` / `RegisterGlobalLLMBackend` 注入；Features 不直接依赖 LLM 包，保持 DeepBaseSpeechCore 的包边界。
+  - ✅ Source 枚举语义明确化：`'rule'` / `'llm'` / `'llm_unsupported'`（无后端）/ `'llm_unavailable'`（后端抛错或超时）/ `''`（空输入）；新增 `Reason` 字段。
+  - ✅ 后端调用在锁外执行（避免死锁）；入参携带已注册 intent 列表作为 hint；LLM JSON 容错（缺失字段默认 `'unknown'`，confidence 截断至 [0,1]，异常统一捕获为 `llm_unavailable`）。
+  - ✅ `TSpeechPolicy.IsAllowed(SPEECH_GATE_INTENT_LLM)` 默认由 False → True，让 `LLMEnabled` 属性真正生效；治理层可 opt-out。同步更新 `Tests/Speech/TestSpeechHeadless.dpr` 对应断言。
+  - ✅ 新增 `Tests/Test.DeepBase.Speech.Intent.pas` 13 项 DUnitX 测试（规则匹配 / 优先级 / 槽位 / LLM 成功-失败-超时-无效 JSON-置信度截断-全局/实例覆盖/并发）；独立驱动 16/16 断言通过。
+- **后续可选**:
+  - [ ] 提供官方 LLM 后端实现（接入 `DeepBase.LLM.Client`），作为 `DeepBaseFeatures` 或应用层代码；当前 Features 只定义接口。
+  - [ ] 完整 CI 验证并发测试（依赖 `System.Threading.TTask`）。
+
+### REVIEW-P1-003: Core 包边界和跨平台承诺重新校准 (BUG-280)
+- **状态**: ✅ 已完成 (2026-06-18)
+- **专家**: 架构/API 专家
+- **决策**: 接受现实 — `DeepBaseCore` 明确为 Windows runtime core。不物理拆包。
+- **已完成**:
+  - ✅ README 平台徽章改为 `Windows (Core) | FMX (Extended)`，跨平台扩展由 FMX 包承接。
+  - ✅ README 第 74 行运行时包边界段落重写：明确 Core 依赖 Winapi、包含桌面能力（TrayIcon / Hotkeys / Protection / FormState / AutoFix），不直接依赖 VCL/FMX/FireDAC。
+  - ✅ 架构门禁 `CoreNoUiSourceDependency` 从 Warning 升级为 Error（`Scripts/check-layer-violations.ps1`）。
+  - ✅ 已知 6 个 Vcl./FMX./Data.DB 引用登记到 allowlist，带 BUG-280 注释（AIErrorHandler / UITest.FmxProbe / VirtualScroll / Export / LLM / LLM.Manager）。
+- **后续可选**:
+  - [ ] 若未来真要跨平台，再按 `DeepBasePlatform` / `DeepBaseDesktop` 方案拆出 Windows 强相关单元；当前契约已写清，调用方不会误用。
+  - [ ] DB 相关引用（`DeepBase.LLM*` / `DeepBase.Export`）长期看应下沉到 Persistence 适配层。
+
+### REVIEW-P1-004: Runtime TODO/stub API 门禁收敛 (BUG-281)
+- **状态**: ✅ 已完成 (2026-06-18)
+- **专家**: 稳定性/并发专家
+- **已完成**:
+  - ✅ 新增 `Scripts/check-runtime-todos.ps1` 扫描 Core/Features/FMX/VCL/Persistence 下所有 `.pas`，裸 `// TODO` / `// FIXME` / `// STUB` 视为硬错误。
+  - ✅ 已为 12 处裸 TODO 补齐任务 ID (`BUG-281` / `BUG-277` / `UPD-P0-001` / `COM-P0-001`)，15/15 标注完成。
+  - ✅ 脚本修复了 PowerShell 5.1 下 `@([List[object]])` 在哈希表赋值抛 `ArgumentException` 的问题，改用 `[object[]]` 显式转型。
+- **后续可选**:
+  - [ ] 接入 CI 流水线（当前可手动运行）。
+  - [ ] `-IncludeStubApis` 开关启用后，对 `// STUB` 标记做二级门禁。
+  - [ ] 公开 API 未实现时禁止静默成功（已部分通过 BUG-278/BUG-279 完成，其余待逐项梳理）。
+
+### REVIEW-P2-001: 文档与真实功能矩阵对齐
+- **状态**: ✅ 已完成 (2026-06-18)
+- **专家**: 架构/API 专家
+- **已完成**:
+  - ✅ 新增 `docs/80.feature-matrix.md`: 24 个模块逐项标注成熟度 (Implemented / Partial / Experimental / Platform-limited / Needs-external-service), 含包归属、关键依赖、初始化要求、不可用时行为。
+  - ✅ README 插入 "功能矩阵 / 成熟度边界" 章节, 精简 9 行矩阵 + 三条高层表述边界说明 ("像 Spring Boot 一样简单" / "所有核心 API 线程安全" / "跨平台")。
+  - ✅ 明确 Speech / FMX mobile / Commerce / AutoUpdate / DataPlatform 依赖与不可用行为。
+- **后续可选**:
+  - [ ] 随模块演进保持矩阵同步 (每次新增包 / 新增公开 API 时回查)。
+  - [ ] 为每个 Implemented 模块附一行 "验证: 见 Tests/..."。
 
 ### DATA-P0-001: 微信运行时密钥偏移确认
 - **状态**: 待开发 (被阻塞 — 需微信 4.1.10.30 + 管理员权限)
@@ -68,30 +159,21 @@
 - **状态**: 进行中
 - **任务**:
 - [ ] 退出阶段 System.JSON/FastMM memory leak 定位修复。
-- [x] 清理 0-fixture 测试单元。（9 文件补齐 TDUnitX.RegisterTestFixture）
-
----
-
-## P1 开发
-
-### ARCH-P1-001: Core 瘦身和包分层
-- **状态**: 已完成
-- **任务**:
-- [x] Features 拆分 LLM/Inference/IntentClarification/Browser/Commerce/Platform 等可选包。
-- [x] 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}。（新增 DeepBaseDataPlatform.dpk，Platform 移除 Persistence 依赖）
 
 ### UPD-P0-001: 免费版升级收费版和付费更新
 - **状态**: 进行中
 - **任务**:
 - [ ] 服务器按 entitlement 返回版本、下载地址、签名 manifest。
 - [ ] 更新包校验 hash 和签名。未付费用户仅可见免费通道。
-- [x] 增加 Updater 安全测试：签名错误、Zip Slip、降级攻击。（14 测试用例，Test.DeepBase.Updater.pas）
+
+---
+
+## P1 开发
 
 ### QA-P1-001: 长期质量体系
 - **状态**: 进行中
 - **任务**:
-- [x] Updater 安全测试（14 用例，Test.DeepBase.Updater.pas）、LLM E2E mock（15 用例，Test.DeepBase.LLM.E2E.pas）、桌面工具模板 E2E。
-- [x] CI 增加可选包矩阵 (Minimal/Runtime/LLM/Speech/Commerce/Updater，.github/workflows/delphi-ci.yml)。
+- [ ] 继续完善测试覆盖率和 CI 门禁。
 
 ---
 
@@ -109,8 +191,6 @@
 ## 规范系统剩余项目
 
 ### deepbase-speech
-- [x] PBT 测试 (8 用例，Test.DeepBase.Speech.PBT.pas) + 单元测试 (7 用例，Test.DeepBase.Speech.pas) → 16/16 passed。
-- [x] dpk 分包验证 (6 dpk: Core/ASR/TTS/Voice/Wake + SAPI.Decl 归入 Core)。
 - [ ] DeepLaunch 语音集成 (TranscribeFromMic/Speak/WakeWord/Voiceprint) — 需要 DeepLaunch 源码。
 
 ### speech-tts-migration — TTS 后端迁入 DeepBase + 三层回退 Resolver
@@ -118,35 +198,10 @@
 > **目标**: 将 DeepInput 中的 Edge TTS / StepFun TTS 下沉到 DeepBase，新增统一 ASR/TTS Resolver（三层回退），使 DeepInput 瘦身 + DeepClip/DeepFlow 零成本接入语音能力。
 > **总工时**: ~5h
 
-#### SPEECH-01: TTS 后端迁入
-- [x] `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
-- [x] `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口，自注册到 `TSpeechRegistry`
-- [x] Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
-
-#### SPEECH-02: 统一 Resolver 工厂
-- [x] 新增 `DeepBase.Speech.Resolver.pas`
-- [x] `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
-- [x] `ResolveTTS(ALicensing)` — 三层回退：Edge(���费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
-- [x] `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
-
-#### SPEECH-03: DeepInput 瘦身
-- [x] 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`（DeepInput/src 中已移除引用，uMain.pas 已切换）
-- [x] `uMain.pas` → 移除 uTTS 引用，TTS 已迁移到 DeepBase
-- [x] `uAudioCapture.pas, uVAD.pas` 评估：保留在 DeepInput 中（与业务逻辑高度耦合，暂不迁移）
-
 #### SPEECH-04: DeepClip 零成本接入
 - [ ] `DeepClip/src/AI/DeepClip.AI.pas` 或新 `DeepClip/src/Speech/DeepClip.Speech.pas` 中调用 `TSpeechResolver`
 - [ ] 语音输入集成：录音 → VAD → ASR → 文字注入剪贴板
 - [ ] 确认 `TClipCommerce` 的 `CanUseVoice` 与 License 联动
-
-### delphi-13-migration
-- [x] Skia4Delphi 7.1.0 unit path 变更。（无引用，无需迁移）
-- [x] VCL/FMX 兼容性检查。IDE 组件面板确认。（8 个 dfm/fmx 已检查，无 DPI 敏感属性）
-- [x] 96 DPI `.dfm`/`.fmx` 转换。下游兼容性验证。（无转换需求）
-
-### browser-automation
-- [x] `IBrowserSession`/`IBrowserAutomationSession` 接口合并。（IBrowserSession 继承 IBrowserAutomationSession，移除冗余 AsAutomationSession）
-- [x] ResponseWaiter stale result 防护。（FStartCount/FRunningCount 原子计数，旧导航响应自动丢弃）
 
 ---
 
