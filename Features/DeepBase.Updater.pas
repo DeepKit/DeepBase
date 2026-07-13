@@ -45,7 +45,7 @@ uses
   DeepBase.Exceptions,
   DeepBase.Net.Transport
   {$IFDEF MSWINDOWS}
-  , DeepBase.Crypto, Winapi.Windows
+  , DeepBase.Crypto, DeepBase.Crypto.RSA, Winapi.Windows
   {$ENDIF}
   {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
   , DeepBase.Crypto.OpenSSL
@@ -236,10 +236,8 @@ type
     FTransport: IDeepBaseHttpTransport;
     FCancelled: Boolean;
     
-    function DownloadFile(const Url, DestPath: string; 
+    function DownloadFile(const Url, DestPath: string;
       ProgressCallback: TProgressCallback): Boolean;
-    function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
-    function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
     function CreateBackup(const Files: TArray<string>): Boolean;
     function RestoreBackup: Boolean;
     function ApplyUpdate(const PackagePath: string; 
@@ -273,6 +271,12 @@ type
 
     /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
     procedure SetSignatureSecret(const Secret: string);
+
+    /// <summary>Verify an RSA/HMAC signature over Data (for tests/integration).</summary>
+    function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
+
+    /// <summary>Verify a downloaded file's SHA256 hash (for tests/integration).</summary>
+    function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
 
     /// <summary>Enable insecure dev mode: allows updates without hash/signature.
     /// NEVER enable in production builds. Use only for local development testing.</summary>
@@ -408,6 +412,13 @@ function ParseInstallMode(const Name: string): TUpdateInstallMode;
 function InstallModeToString(Mode: TUpdateInstallMode): string;
 
 implementation
+
+const
+  // RSA-2048 公钥，用于验签 update manifest 的 signature / manifest_signature（§16.5 / §16.10）。
+  // 生产公钥由 DB4 签发方（王维）生成并回传后填入此处，必须与 docs/66 §16.12 一致。
+  // 轮换时升 key_id，客户端走多密钥并存（TODO，本轮单公钥）。
+  // 留空时 Initialize 不自动设置——调用方需显式 SetPublicKey，否则验签 fail-closed。
+  DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM = '';
 
 var
   FUpdater: TUpdateManager = nil;
@@ -670,6 +681,10 @@ begin
     FApplicationDir := ApplicationDir
   else
     FApplicationDir := TPath.GetDirectoryName(ParamStr(0));
+  // 默认加载内置 RSA 验签公钥（docs/66 §16.12）。若 const 留空或调用方已显式
+  // SetPublicKey，则跳过——保持显式设置优先，避免覆盖。
+  if (FPublicKey = '') and (DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM <> '') then
+    SetPublicKey(DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM);
 end;
 
 procedure TUpdateManager.SetPublicKey(const PublicKeyPEM: string);

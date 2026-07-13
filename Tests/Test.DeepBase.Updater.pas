@@ -168,6 +168,16 @@ type
     
     [Test]
     procedure Test_IsEmpty_WithDownloadUrl_ReturnsFalse;
+
+    // §16.10 关键点 2 解析侧：ParseUpdateInfoFromJson 契约
+    [Test]
+    procedure Test_Parse_PackageHash_StripsSha256Prefix_AndLowercases;
+    [Test]
+    procedure Test_Parse_SignatureFields_MappedCorrectly;
+    [Test]
+    procedure Test_Parse_InvalidJson_ReturnsFalse;
+    [Test]
+    procedure Test_Parse_EmptyPackageHash_StaysEmpty;
   end;
 
   [TestFixture]
@@ -302,6 +312,10 @@ type
 
 implementation
 
+uses
+  DeepBase.Crypto.RSA,
+  DeepBase.Crypto.Hash;
+
 type
   TFakeUpdaterTransport = class(TInterfacedObject, IDeepBaseHttpTransport)
   public
@@ -319,6 +333,75 @@ begin
   Inc(CallCount);
   LastRequest := ARequest;
   Result := Response;
+end;
+
+const
+  // 测试用 RSA-2048 密钥对（仅测试用，已公开无关安全）。
+  // 用于验证 Updater.VerifySignature 的 RSA-SHA256 链路（§16.10 关键点 2）。
+  // 私钥签 → 公钥验，两端均走 DeepBase.Crypto.RSA 同实现，签名必然互通。
+  // 私钥须为 PKCS#1 (BEGIN RSA PRIVATE KEY) 格式——DeepBase.Crypto.RSA 的
+  // LoadPrivateKeyPEM 只解析 PKCS#1 RSAPrivateKey ASN.1 结构（见 Crypto.RSA L583+），
+  // 不支持 PKCS#8 (BEGIN PRIVATE KEY) 外层 PrivateKeyInfo 包装。
+  TEST_PRIVATE_KEY_PEM =
+    '-----BEGIN RSA PRIVATE KEY-----' + sLineBreak +
+    'MIIEogIBAAKCAQEAuhMNc5e6NGCuObch/OOZnGdcM9Kt1a1DuZrQryKPxl1lbE+0' + sLineBreak +
+    '8cG+o7GcVBWJF5hXY4ApcxkDO6xdEo2RBNp8QJ9cUMQEPxFuavGBGpgrj27l4pd8' + sLineBreak +
+    '9DPrQ44xs+esY8Bp/GQHp+21NXQIQtXnyLpvz8IBcbl4sgvm4PKytQaGOByC1Vnu' + sLineBreak +
+    'ay4aOrOejxypKOW7frXqb+voWAr/h7G0tZE3E2EjlQVRRVm7Khjp3JAo7NiwrlZC' + sLineBreak +
+    '+LCuivrEzxveHUHKXwXf6scOt+w4snCNNT23nEuWIKYKnXxXMb83yq9G6bb1ZVpM' + sLineBreak +
+    'hhJvJPfA4xRkOQyzRukC9jq2PUPpoSBE6QA3PwIDAQABAoIBACL44L7Yhg1BHI3J' + sLineBreak +
+    'bzBmIKFmRcyRrM1rzr5MLCu2fbpFJIJaasJDbU6724tsLsOKBOa1GFVDHrnw9988' + sLineBreak +
+    'T0TPwamtqf6eEMQ/xPaBpIe4kPtY1wki+r+1IGMmjw3mnZ5z9BeVP2EfCr9cqw7Q' + sLineBreak +
+    'wEsYS1qLdpUGzHn+RasCwnbGnqRd2SA3PzVh5h6lwYJYfYAqQOM4CGvRPjsPaWIm' + sLineBreak +
+    'ryEekfJ8Tuh4q/WndFvq/38NIpttP/SZAOeWHdmqeVDOxFJpP+FA6YWduaAeuEQX' + sLineBreak +
+    'XrO3aRqvPJIxmQGZ9uXwu85BWx69XFK2/fXZ1Gk0vtJ6QQUnp5rhXqq8io2L9MuS' + sLineBreak +
+    '3KuO/qUCgYEA7SDFaHDb1ItGgmYYRh/vLF9SDmVb8Ps8G/jQaU4QwEvxauQMf1a+' + sLineBreak +
+    'uuzkW9Gxo1ZtnUYjRPAo83663J1H11sxZ6gfcsX+SJzQyRY9CCZSMJ2MOjSoS+Qv' + sLineBreak +
+    'Ocs36/eMsF01fXll3BO0u0CT+OxTtserzlggD64jl5q6/QYuOdOKzWsCgYEAyOIe' + sLineBreak +
+    'jDh2LPENcMnMPlwCKmAfKthDVjOSI9xb+9bIV5T6s9fLM6t3Y2Odtd911RU7PBqq' + sLineBreak +
+    '3FoVfu0Gs3NonWnbjE1TFjoNDYVgSJKIvHRp4kt2ZLxHgFPrlAN4zhXOFdBye3a1' + sLineBreak +
+    'e4m4eAulfMPHmTOjPXA0NnDqQKp7/WXMiNXuPn0CgYBGBR9Fr825/UZcyvjv/A4L' + sLineBreak +
+    '9Dmuto9noUgmmlowPjUEE2i+P4jRMTQwzjLASjNCIAtOHZ/cg24UOJ/E9Ux5cxwr' + sLineBreak +
+    'l6FxqrVji6q7Ni3fcjFi2aLGrTXk8wRe9HsW2opYqa1Z17cUPV1ozbDkGCTAHEXH' + sLineBreak +
+    'MI6HEsy/v5jnjiOoP6cE8QKBgHAqGaZvrESBv+B3PMyg8TCaBS0WHdsW5oWRd+bR' + sLineBreak +
+    'UYHdlHIwjqxmFD5xk9DGWfPFbBKuTTLGNfRuAmzWhtZGEilvz3G8ricbjtxWvXSE' + sLineBreak +
+    'h86sFgo/OqlDsmkt2xkvAagagKHBcanuBws4bYmRg3ReacpXSUAQoivDRYICgkbx' + sLineBreak +
+    'NJq9AoGAXzVP3gMPyNfhPZp4lWXZagjmfDUWzFPtmpk8h+MIvmOfQRghM1H8Jg7I' + sLineBreak +
+    'ByqYe2qrG3kUTkemquhEh4XgYqglrHSuI7OMgn8CMKLkI0LHrObvwtk8eWSfFgZq' + sLineBreak +
+    'SazofgDvL7U/VNLnCCMpFn6wZMVbpKp/6fDGAb3M9or629btvmI=' + sLineBreak +
+    '-----END RSA PRIVATE KEY-----';
+
+  TEST_PUBLIC_KEY_PEM =
+    '-----BEGIN PUBLIC KEY-----' + sLineBreak +
+    'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuhMNc5e6NGCuObch/OOZ' + sLineBreak +
+    'nGdcM9Kt1a1DuZrQryKPxl1lbE+08cG+o7GcVBWJF5hXY4ApcxkDO6xdEo2RBNp8' + sLineBreak +
+    'QJ9cUMQEPxFuavGBGpgrj27l4pd89DPrQ44xs+esY8Bp/GQHp+21NXQIQtXnyLpv' + sLineBreak +
+    'z8IBcbl4sgvm4PKytQaGOByC1Vnuay4aOrOejxypKOW7frXqb+voWAr/h7G0tZE3' + sLineBreak +
+    'E2EjlQVRRVm7Khjp3JAo7NiwrlZC+LCuivrEzxveHUHKXwXf6scOt+w4snCNNT23' + sLineBreak +
+    'nEuWIKYKnXxXMb83yq9G6bb1ZVpMhhJvJPfA4xRkOQyzRukC9jq2PUPpoSBE6QA3' + sLineBreak +
+    'PwIDAQAB' + sLineBreak +
+    '-----END PUBLIC KEY-----';
+
+// 用测试私钥对 Data 做 RSA-SHA256 签名，返回 base64。
+// 镜像客户端 TRSAVerifier.VerifySignature(data, sigBase64) 的对端。
+// TRSASigner 仅 MSWINDOWS 可用（同 Updater.VerifySignature 的 CNG 路径）。
+function TestRSASign(const AData: string): string;
+{$IFDEF MSWINDOWS}
+var
+  LSigner: TRSASigner;
+{$ENDIF}
+begin
+  Result := '';
+  {$IFDEF MSWINDOWS}
+  LSigner := TRSASigner.Create;
+  try
+    if not LSigner.LoadPrivateKeyPEM(TEST_PRIVATE_KEY_PEM) then
+      Exit('');
+    Result := LSigner.Sign(AData);
+  finally
+    LSigner.Free;
+  end;
+  {$ENDIF}
 end;
 
 { TTestSemanticVersion }
@@ -740,6 +823,78 @@ begin
   Assert.IsFalse(Info.IsEmpty);
 end;
 
+{ TTestUpdateInfo — §16.10 关键点 2 解析侧契约 }
+
+procedure TTestUpdateInfo.Test_Parse_PackageHash_StripsSha256Prefix_AndLowercases;
+const
+  // 服务端下发带 "sha256:" 前缀 + 大写 hex；客户端必须去前缀、转小写
+  Json = '{"version":"1.2.3","download_url":"https://x/p.zip",' +
+    '"package_hash":"sha256:ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789"}';
+var
+  Info: TUpdateInfo;
+  Manager: TUpdateManager;
+begin
+  Manager := TUpdateManager.Create;
+  try
+    Assert.IsTrue(Manager.ParseUpdateInfoFromJson(Json, Info));
+  finally
+    Manager.Free;
+  end;
+  Assert.AreEqual('abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+    Info.PackageHash, 'sha256: prefix must be stripped and hex lowercased');
+end;
+
+procedure TTestUpdateInfo.Test_Parse_SignatureFields_MappedCorrectly;
+const
+  Json = '{"version":"1.2.3","download_url":"https://x/p.zip",' +
+    '"package_hash":"sha256:abc","signature":"SIG_BASE64","signature_algorithm":"rsa-sha256",' +
+    '"manifest_signature":"MANIFEST_SIG_BASE64"}';
+var
+  Info: TUpdateInfo;
+  Manager: TUpdateManager;
+begin
+  Manager := TUpdateManager.Create;
+  try
+    Assert.IsTrue(Manager.ParseUpdateInfoFromJson(Json, Info));
+  finally
+    Manager.Free;
+  end;
+  Assert.AreEqual('SIG_BASE64', Info.Signature, 'signature field must map to Info.Signature');
+  Assert.AreEqual('rsa-sha256', Info.SignatureAlgorithm, 'signature_algorithm must map');
+  Assert.AreEqual('MANIFEST_SIG_BASE64', Info.ManifestSignature, 'manifest_signature must map');
+end;
+
+procedure TTestUpdateInfo.Test_Parse_InvalidJson_ReturnsFalse;
+var
+  Info: TUpdateInfo;
+  Manager: TUpdateManager;
+begin
+  Manager := TUpdateManager.Create;
+  try
+    Assert.IsFalse(Manager.ParseUpdateInfoFromJson('not a json', Info),
+      'Invalid JSON must yield False');
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateInfo.Test_Parse_EmptyPackageHash_StaysEmpty;
+const
+  Json = '{"version":"1.2.3","download_url":"https://x/p.zip"}';
+var
+  Info: TUpdateInfo;
+  Manager: TUpdateManager;
+begin
+  Manager := TUpdateManager.Create;
+  try
+    Assert.IsTrue(Manager.ParseUpdateInfoFromJson(Json, Info),
+      'Valid JSON with version+url must parse even without package_hash');
+  finally
+    Manager.Free;
+  end;
+  Assert.AreEqual('', Info.PackageHash, 'Missing package_hash must stay empty');
+end;
+
 { TTestUpdateManager }
 
 procedure TTestUpdateManager.Setup;
@@ -1036,58 +1191,69 @@ end;
 { TTestUpdateSecurity }
 
 procedure TTestUpdateSecurity.Test_VerifySignature_ValidSignature_ReturnsTrue;
+const
+  // §16.10 关键点 2：data 是去前缀纯 hex 小写串（镜像客户端 Info.PackageHash）。
+  TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
 begin
   var Manager := TUpdateManager.Create;
   try
     Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----');
-    Manager.InsecureDevMode := True;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
+    var Sig := TestRSASign(TestData);
+    var Ok := Manager.VerifySignature(TestData, Sig, 'rsa-sha256');
+    // 用配对私钥签名 → 同公钥验签必然通过
+    Assert.IsTrue(Ok,
+      'Valid signature must verify against matching public key');
   finally
     Manager.Free;
   end;
 end;
 
 procedure TTestUpdateSecurity.Test_VerifySignature_WrongKey_ReturnsFalse;
+const
+  TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
 begin
   var Manager := TUpdateManager.Create;
   try
     Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----wrong');
-    Manager.InsecureDevMode := True;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    // 故意设置一个无效公钥 PEM → LoadPublicKeyPEM 失败 → fail-closed
+    Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----' + sLineBreak +
+      'NOT_A_REAL_KEY' + sLineBreak + '-----END PUBLIC KEY-----');
+    Assert.IsFalse(Manager.VerifySignature(TestData, TestRSASign(TestData), 'rsa-sha256'),
+      'Signature must NOT verify against an invalid/unmatched public key');
   finally
     Manager.Free;
   end;
 end;
 
 procedure TTestUpdateSecurity.Test_VerifySignature_EmptySignature_ReturnsFalse;
+const
+  TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
 begin
   var Manager := TUpdateManager.Create;
   try
     Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.InsecureDevMode := True;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
+    // 空签名 → fail-closed（EDGE-006）
+    Assert.IsFalse(Manager.VerifySignature(TestData, '', 'rsa-sha256'),
+      'Empty signature must be rejected');
   finally
     Manager.Free;
   end;
 end;
 
 procedure TTestUpdateSecurity.Test_VerifySignature_TamperedData_ReturnsFalse;
+const
+  TestData    = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+  TamperedData = 'b1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
 begin
   var Manager := TUpdateManager.Create;
   try
     Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.InsecureDevMode := True;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
+    // 用 TestData 的签名，却拿篡改后的 data 验签 → 必然失败
+    Assert.IsFalse(Manager.VerifySignature(TamperedData, TestRSASign(TestData), 'rsa-sha256'),
+      'Tampered data must fail signature verification');
   finally
     Manager.Free;
   end;
@@ -1098,7 +1264,16 @@ begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test content for hash verification');
-    Assert.IsTrue(True);
+    // §16.10 关键点 1：纯 hex 小写（VerifyFileHash 内部 THashSHA2.GetHashString 对齐）
+    var Expected := THashUtils.SHA256File(TempFile);
+    var Manager := TUpdateManager.Create;
+    try
+      Manager.Initialize('https://example.com/updates', '1.0.0');
+      Assert.IsTrue(Manager.VerifyFileHash(TempFile, Expected),
+        'Correct hash must verify');
+    finally
+      Manager.Free;
+    end;
   finally
     TFile.Delete(TempFile);
   end;
@@ -1109,7 +1284,16 @@ begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test content');
-    Assert.IsTrue(True);
+    // 故意给一个不可能匹配的 hash
+    var WrongHash := StringOfChar('0', 64);
+    var Manager := TUpdateManager.Create;
+    try
+      Manager.Initialize('https://example.com/updates', '1.0.0');
+      Assert.IsFalse(Manager.VerifyFileHash(TempFile, WrongHash),
+        'Wrong hash must be rejected');
+    finally
+      Manager.Free;
+    end;
   finally
     TFile.Delete(TempFile);
   end;
@@ -1120,7 +1304,15 @@ begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test');
-    Assert.IsTrue(True);
+    // 空期望 hash → fail-closed（EDGE-006，生产模式无 InsecureDevMode 时必拒）
+    var Manager := TUpdateManager.Create;
+    try
+      Manager.Initialize('https://example.com/updates', '1.0.0');
+      Assert.IsFalse(Manager.VerifyFileHash(TempFile, ''),
+        'Empty expected hash must be rejected in production mode');
+    finally
+      Manager.Free;
+    end;
   finally
     TFile.Delete(TempFile);
   end;
