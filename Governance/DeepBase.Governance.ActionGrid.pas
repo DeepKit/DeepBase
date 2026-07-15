@@ -62,7 +62,16 @@ implementation
 constructor TActionGrid.Create(ADueChecker: IDueChecker);
 begin
   inherited Create;
-  FActions := TObjectDictionary<string, TAction>.Create([doOwnsValues]);
+  // GOV-027 (BCW-A20260715-011): FActions MUST NOT own its TAction values.
+  // Ownership of every TAction is held uniquely by TKeyResolver (its FActions
+  // dictionary is [doOwnsValues], the authoritative key→object registry).
+  // ActionGrid is only a runtime execution index. With doOwnsValues here too,
+  // the same TAction was owned by two dictionaries — when both got freed
+  // (KeyResolver then ActionGrid, in any teardown path), the second Free hit
+  // an already-freed object → "Invalid pointer operation" / access violation.
+  // This bug was latent in TGovernanceLifecycle (single Init/Shutdown rarely
+  // reentered) and surfaced under the per-test Setup/TearDown of this fixture.
+  FActions := TObjectDictionary<string, TAction>.Create([]);
   FBridges := TDictionary<string, IBridge>.Create;
   FDueChecker := ADueChecker;
   FLock := TCriticalSection.Create;
