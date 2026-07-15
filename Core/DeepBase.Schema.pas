@@ -254,10 +254,10 @@ const
     '  (''Edit.Find'', ''Ctrl+F'', ''Ctrl+F'', ''Edit'', ''Find'') ON CONFLICT (ActionName) DO NOTHING;';
   
   // 9. Queries - Predefined SQL queries (for doQry)
-  SQL_TIER1_QUERIES =
-    'CREATE TABLE IF NOT EXISTS Queries (' +
-    '  Id INTEGER PRIMARY KEY,' +
-    '  Name TEXT NOT NULL UNIQUE,' +
+  SQL_TIER1_QUERIES =
+    'CREATE TABLE IF NOT EXISTS Queries (' +
+    '  Id INTEGER PRIMARY KEY,' +
+    '  Name TEXT NOT NULL UNIQUE,' +
     '  Category TEXT DEFAULT ''General'',' +
     '  Description TEXT,' +
     '  SqlText TEXT NOT NULL,' +
@@ -528,10 +528,10 @@ const
     'CREATE INDEX IF NOT EXISTS idx_llmcalls_success ON LLMCalls(Success);';
   
   // 17. LLMPromptTemplates - Prompt templates
-  SQL_TIER2_LLM_PROMPTS =
-    'CREATE TABLE IF NOT EXISTS LLMPromptTemplates (' +
-    '  Id INTEGER PRIMARY KEY,' +
-    '  Name TEXT NOT NULL UNIQUE,' +
+  SQL_TIER2_LLM_PROMPTS =
+    'CREATE TABLE IF NOT EXISTS LLMPromptTemplates (' +
+    '  Id INTEGER PRIMARY KEY,' +
+    '  Name TEXT NOT NULL,' +
     '  Category TEXT DEFAULT ''General'',' +
     '  Description TEXT,' +
     '  SystemPrompt TEXT,' +
@@ -555,8 +555,9 @@ const
     '  CreatedBy TEXT,' +
     '  Extra TEXT,' +
     '  Remarks TEXT' +
-    ');' + #13#10 +
-    'CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_category ON LLMPromptTemplates(Category);';
+    ');' + #13#10 +
+    'CREATE UNIQUE INDEX IF NOT EXISTS uq_llmprompttemplates_name ON LLMPromptTemplates(Name);' + #13#10 +
+    'CREATE INDEX IF NOT EXISTS idx_llmprompttemplates_category ON LLMPromptTemplates(Category);';
   
   SQL_TIER2_LLM_PROMPTS_DATA =
     'INSERT INTO LLMPromptTemplates(Name, Category, Description, SystemPrompt, UserPromptTemplate, Variables, Temperature, IsBuiltIn) VALUES ' +
