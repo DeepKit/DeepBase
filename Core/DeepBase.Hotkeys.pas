@@ -17,7 +17,8 @@ uses
   Winapi.Windows,
   Winapi.Messages,
   DeepBase.Types,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 function DeepBaseTextToShortCut(const Text: string): TShortCut;
 function DeepBaseShortCutToText(Shortcut: TShortCut): string;
@@ -112,8 +113,7 @@ type
     FScopeCache: TDictionary<string, THotkeyScope>; // ActionName -> Scope
     FActionBindings: TDictionary<string, THotkeyActionProc>; // ActionName -> Handler
     FOnHotkeyChanged: THotkeyChangedProc;
-    class var FConnectionStorageFactory: TFunc<TObject, IHotkeyStorage>;
-    
+
     procedure LoadCache;
     function GetHotkeyScopeNoLock(const ActionName: string): THotkeyScope;
     function TryResolveActionByShortcutNoLock(Shortcut: TShortCut;
@@ -122,9 +122,7 @@ type
     procedure InternalWriteHotkey(const ActionName: string; Shortcut, DefaultShortcut: TShortCut; 
       const Description, Category: string; IsCustomized: Boolean);
     procedure DoHotkeyChanged(const ActionName: string);
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IHotkeyStorage; static;
-    
+
   public
     constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
     constructor Create(const AStorage: IHotkeyStorage;
@@ -503,8 +501,15 @@ end;
 { TDeepBaseHotkeys }
 
 constructor TDeepBaseHotkeys.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: IHotkeyStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<IHotkeyStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No hotkey storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.Hotkeys.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -545,19 +550,7 @@ end;
 class procedure TDeepBaseHotkeys.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, IHotkeyStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseHotkeys.CreateStorageFromConnection(
-  AConnection: TObject): IHotkeyStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No hotkey storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.Hotkeys.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<IHotkeyStorage>.SetFactory(AFactory);
 end;
 
 function TDeepBaseHotkeys.GetHotkeyScopeNoLock(

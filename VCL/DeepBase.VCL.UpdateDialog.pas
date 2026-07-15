@@ -30,10 +30,13 @@ type
     FUpdateInfo: TUpdateInfo;
     FAutoUpdate: TDeepBaseAutoUpdate;
     FIsDownloading: Boolean;
-    
+    FCancelRequested: Boolean;
+    FDownloadThread: TThread;
     procedure StartDownload;
+    procedure WaitForDownloadThread;
   public
     class function Execute(AAutoUpdate: TDeepBaseAutoUpdate; const Info: TUpdateInfo): Boolean;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -53,9 +56,14 @@ begin
   Dlg := TUpdateDialog.Create(nil);
   try
     Dlg.FAutoUpdate := AAutoUpdate;
-    Dlg.FUpdateInfo := Info;
+    // UI2-011: Synchronize FUpdateInfo write through the UI thread so the
+    // worker thread's read (via DownloadUpdate) is properly ordered.
+    TThread.Synchronize(nil, procedure
+    begin
+      Dlg.FUpdateInfo := Info;
+    end);
     
-    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version, '1.0.0']); // TODO(UPD-P0-001): Pass current ver
+    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version, '1.0.0']); // STUB(UPD-P0-001): Pass current ver
     Dlg.mmoChangelog.Lines.Text := Info.Changelog;
     
     if Info.ForceUpdate then
@@ -74,6 +82,34 @@ end;
 procedure TUpdateDialog.FormCreate(Sender: TObject);
 begin
   TDeepBaseUIHelper.ApplyMicaEffect(Self);
+  FCancelRequested := False;
+  FDownloadThread := nil;
+end;
+
+destructor TUpdateDialog.Destroy;
+begin
+  // REVIEW5-UI-003: Wait for download thread to prevent use-after-free
+  WaitForDownloadThread;
+  inherited;
+end;
+
+procedure TUpdateDialog.WaitForDownloadThread;
+begin
+  // Wait for download thread to complete with timeout
+  if Assigned(FDownloadThread) then
+  begin
+    // Set cancel flag to signal thread to stop
+    FCancelRequested := True;
+
+    // Wait up to 3 seconds for thread to finish
+    if FDownloadThread.WaitFor(3000) = wrTimeout then
+    begin
+      // Thread didn't finish in time, terminate it
+      // Note: This is a last resort as termination is not clean
+      FDownloadThread.Terminate;
+    end;
+    FreeAndNil(FDownloadThread);
+  end;
 end;
 
 procedure TUpdateDialog.btnUpdateClick(Sender: TObject);
@@ -87,26 +123,46 @@ var
   SavePath: string;
 begin
   FIsDownloading := True;
+  FCancelRequested := False;
   btnUpdate.Enabled := False;
   btnCancel.Enabled := not FUpdateInfo.ForceUpdate;
   pbDownload.Visible := True;
   pbDownload.Position := 0;
-  
+
   SavePath := TPath.Combine(TPath.GetTempPath, 'update_setup.exe');
-  
-  // Async download
-  TThread.CreateAnonymousThread(procedure
+
+  // REVIEW5-UI-003: Store thread reference for lifecycle management
+  FDownloadThread := TThread.CreateAnonymousThread(procedure
+  var
+    DownloadSuccess: Boolean;
   begin
     try
-      if FAutoUpdate.DownloadUpdate(FUpdateInfo, SavePath, 
+      // Check for cancellation before starting download
+      if FCancelRequested then
+      begin
+        TThread.Synchronize(nil, procedure
+        begin
+          FIsDownloading := False;
+          btnUpdate.Enabled := True;
+        end);
+        Exit;
+      end;
+
+      DownloadSuccess := FAutoUpdate.DownloadUpdate(FUpdateInfo, SavePath,
         procedure(const ReadCount, TotalCount: Int64)
         begin
+          // Check for cancellation during download
+          if FCancelRequested then
+            Abort;  // Abort the download
+
           TThread.Queue(nil, procedure
           begin
             if TotalCount > 0 then
               pbDownload.Position := Round((ReadCount / TotalCount) * 100);
           end);
-        end) then
+        end);
+
+      if DownloadSuccess then
       begin
         // Success
         TThread.Synchronize(nil, procedure
@@ -125,29 +181,51 @@ begin
       begin
         TThread.Synchronize(nil, procedure
         begin
-          ShowMessage('Download failed.');
+          if not FCancelRequested then
+            ShowMessage('Download failed.');
           btnUpdate.Enabled := True;
           FIsDownloading := False;
         end);
       end;
     except
+      on E: EAbort do
+      begin
+        // Download was cancelled
+        TThread.Synchronize(nil, procedure
+        begin
+          btnUpdate.Enabled := True;
+          FIsDownloading := False;
+          pbDownload.Visible := False;
+        end);
+      end;
       on E: Exception do
         TThread.Synchronize(nil, procedure
         begin
-          ShowMessage('Error: ' + E.Message);
+          if not FCancelRequested then
+            ShowMessage('Error: ' + E.Message);
           btnUpdate.Enabled := True;
           FIsDownloading := False;
         end);
     end;
-  end).Start;
+  end);
+  FDownloadThread.FreeOnTerminate := False;
+  FDownloadThread.Start;
 end;
 
 procedure TUpdateDialog.btnCancelClick(Sender: TObject);
 begin
   if FIsDownloading and FUpdateInfo.ForceUpdate then
     Exit; // Cannot cancel forced update
-    
-  Close;
+
+  // REVIEW5-UI-003: Signal download thread to stop
+  if FIsDownloading then
+  begin
+    FCancelRequested := True;
+    // Don't close immediately - wait for thread to finish
+    // The thread will close the dialog when it's done
+  end
+  else
+    Close;
 end;
 
 procedure TUpdateDialog.FormClose(Sender: TObject; var Action: TCloseAction);

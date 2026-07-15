@@ -427,11 +427,24 @@ begin
 end;
 
 class procedure TWaitForm.CloseWait(var AWaitForm: TWaitForm);
+var
+  LForm: TWaitForm;
 begin
   if Assigned(AWaitForm) then
   begin
-    AWaitForm.Close;
-    FreeAndNil(AWaitForm);
+    // UI2-015 fix: capture the form reference and nil the caller's var
+    // *before* Close, so any code re-entering CloseWait during Close sees
+    // a nil reference and skips. The actual Free is deferred via
+    // ForceQueue so it runs after the Close dispatch has completed —
+    // avoiding an AV when an OnClose handler still reads AWaitForm.
+    LForm := AWaitForm;
+    AWaitForm := nil;
+    LForm.Close;
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        LForm.Free;
+      end);
   end;
 end;
 

@@ -46,6 +46,8 @@
 
 unit Test.DeepBase.DB.ConnectionPool.PBT;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses

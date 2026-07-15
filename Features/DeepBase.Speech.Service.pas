@@ -4,8 +4,9 @@ interface
 
 uses
   System.SysUtils,
-  DeepBase.Commerce.Permissions,
+  DeepBase.Permissions.Contract,
   DeepBase.Speech.ASR.Baidu,
+  DeepBase.Speech.Registry,
   DeepBase.Speech.Types,
   DeepBase.Speech.VAD;
 
@@ -27,7 +28,14 @@ type
     FOwnsVAD: Boolean;
     FOptions: TSpeechServiceOptions;
     FRecordingStartTime: TDateTime;
-    FPermissionClient: TDeepKitPermissionClient;
+    // REVIEW5-FEAT-010: Use abstract IPermissionClient instead of concrete
+    // TDeepBasePermissionClient to decouple Speech from Commerce. Held weakly:
+    // the caller owns the client instance (e.g. the app's global permission
+    // client). A strong interface ref here would bump the refcount, so
+    // Service.Free would release the client before the caller's own .Free ran
+    // — a double-free (BUG: Invalid pointer operation in the permission-quota
+    // test). [weak] keeps Service a non-owning consumer of the interface.
+    [weak] FPermissionClient: IPermissionClient;
     FPermissionFeatureCode: string;
     // Task 22.2: cursor into the capture buffer marking how much has
     // already been fed through the VAD. ShouldAutoStop only re-runs VAD
@@ -53,7 +61,7 @@ type
     property Capture: ISpeechAudioCapture read FCapture;
     property Recognizer: ISpeechRecognizer read FRecognizer;
     property Options: TSpeechServiceOptions read FOptions write SetOptions;
-    property PermissionClient: TDeepKitPermissionClient read FPermissionClient
+    property PermissionClient: IPermissionClient read FPermissionClient
       write FPermissionClient;
     property PermissionFeatureCode: string read FPermissionFeatureCode
       write FPermissionFeatureCode;
@@ -83,6 +91,15 @@ type
     class procedure RegisterIntentParser(const AParser: IIntentParser);
     class procedure RegisterAudioCapture(const ACapture: ISpeechAudioCapture);
 
+    // One-call wiring from TSpeechRegistry. For each capability (ASR/TTS/
+    // AudioCapture), discover the best available backend via the registry and
+    // instantiate it through that backend's stored Factory closure (the closure
+    // is created inside the backend's own unit, so this avoids cross-package
+    // uses and the Core→ASR/TTS one-way package dependency stays intact).
+    // Backends whose Factory is nil (e.g. ones needing explicit config like an
+    // API key) are skipped — the consumer must call the matching Register*.
+    // Idempotent: re-running replaces the active backend with the current best.
+    class procedure WireFromRegistry;
     // Accessors
     class function ASR: ISpeechRecognizerEx;
     class function TTS: ITTSBackend;
@@ -101,6 +118,7 @@ type
 implementation
 
 uses
+  System.Classes,
   System.Math,
   DeepBase.Speech.Audio.WinMM;
 
@@ -321,6 +339,69 @@ begin
   end;
 end;
 
+class procedure TSpeechService.WireFromRegistry;
+
+  // Discover returns backends sorted by Priority (lower=better), filtered to
+  // those currently Enabled and (when IsAvailableFunc is set) reporting
+  // available. The first backend whose typed Factory closure is non-nil wins;
+  // the closure runs inside the backend's own unit so no cross-package uses is
+  // needed here. nil factory = backend needs explicit config (e.g. API key) and
+  // is skipped — consumer must call the matching Register* for those.
+
+  function PickASR: ISpeechRecognizerEx;
+  var
+    LAll: TArray<TSpeechBackendInfo>;
+    LInfo: TSpeechBackendInfo;
+  begin
+    Result := nil;
+    LAll := TSpeechRegistry.Discover(sbkASR, True);
+    for LInfo in LAll do
+      if Assigned(LInfo.ASRFactory) then
+        Exit(LInfo.ASRFactory());
+  end;
+
+  function PickTTS: ITTSBackend;
+  var
+    LAll: TArray<TSpeechBackendInfo>;
+    LInfo: TSpeechBackendInfo;
+  begin
+    Result := nil;
+    LAll := TSpeechRegistry.Discover(sbkTTS, True);
+    for LInfo in LAll do
+      if Assigned(LInfo.TTSFactory) then
+        Exit(LInfo.TTSFactory());
+  end;
+
+  function PickAudioCapture: ISpeechAudioCapture;
+  begin
+    Result := nil;
+    // AudioCapture backends do NOT self-register to TSpeechRegistry (only
+    // ASR/TTS/Wake/Voiceprint/Intent kinds do). WinMM is the platform capture
+    // and is the sensible default on Windows, so lazily instantiate it here.
+    // On non-Windows there is no default capture; consumer must register one.
+    {$IFDEF MSWINDOWS}
+    Result := TDeepBaseWinMMAudioCapture.CreateLowLatency;
+    {$ENDIF}
+  end;
+
+var
+  LASR: ISpeechRecognizerEx;
+  LTTS: ITTSBackend;
+  LCap: ISpeechAudioCapture;
+begin
+  LASR := PickASR;
+  LTTS := PickTTS;
+  LCap := PickAudioCapture;
+  TMonitor.Enter(FLock);
+  try
+    if LASR <> nil then FASR := LASR;
+    if LTTS <> nil then FTTS := LTTS;
+    if LCap <> nil then FAudioCapture := LCap;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
 class function TSpeechService.ASR: ISpeechRecognizerEx;
 begin
   TMonitor.Enter(FLock);
@@ -410,9 +491,21 @@ begin
         'Failed to start microphone capture');
       Exit;
     end;
-    // Simple timed capture (blocking). Real usage should use streaming.
-    Sleep(Min(AMaxSeconds * 1000, 5000));
-    FAudioCapture.StopRecording;
+    // BUG EXP-P1-005 FIX: poll in short slices so the capture can be stopped
+    // early by an external `StopRecording` call (e.g. user push-to-talk
+    // release, VAD, UI stop button). Honours the documented AMaxSeconds
+    // (default 30s) instead of the previously hard-capped 5 s. Real usage
+    // should still prefer the streaming IASRStream path once M2 lands.
+    var StopAtMs := Int64(Max(0, AMaxSeconds)) * 1000;
+    var StartedMs := TThread.GetTickCount;
+    while (TThread.GetTickCount - StartedMs) < UInt64(StopAtMs) do
+    begin
+      Sleep(100);
+      if not FAudioCapture.IsRecording then
+        Break;
+    end;
+    if FAudioCapture.IsRecording then
+      FAudioCapture.StopRecording;
     Result := FASR.Recognize(FAudioCapture.GetAudioData,
       TSpeechRecognitionOptions.Default);
   end

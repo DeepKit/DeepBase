@@ -56,6 +56,13 @@ type
     FCDPCallsLock: TCriticalSection;
     FNextCallId: Integer;
 
+    // FEAT-R3-002 (E-002) fix: track in-flight async tasks so Destroy can wait
+    // for them. NavigateAsync/ExecuteScriptAsync/EvaluateScriptAsync/
+    // CaptureScreenshotAsync return TTask.Run(LProc) whose closure captures
+    // Self; Destroy previously freed Self while tasks were still running → UAF.
+    FAsyncTasks: TList<ITask>;
+    FAsyncTasksLock: TCriticalSection;
+
     FNavigationEvent: TEvent;  // BUG-BA-021 fix: real wait for navigation completion
     FNavigationOk: Boolean;
     // H3 fix: serialize concurrent Navigate calls (shared FNavigationEvent).
@@ -97,6 +104,11 @@ type
     function CallCDPSync(const AMethod, AParams: string;
       ATimeoutMs: Integer): string;
     function WaitForReady(ATimeoutMs: Integer): Boolean;
+    // FEAT-R3-002 (E-002): run LProc as a task AND register it for
+    // Destroy-time waiting, so the closure (which captures Self) cannot
+    // outlive the instance.
+    function RunTrackedAsync(const LProc: TProc): ITask;
+    procedure WaitForAsyncTasks;
   public
     constructor Create(AOwner: TWinControl);
     destructor Destroy; override;
@@ -252,6 +264,10 @@ begin
   FCDPCallsLock := TCriticalSection.Create;
   FNextCallId := 0;
 
+  // FEAT-R3-002 (E-002) fix: in-flight async task tracking
+  FAsyncTasks := TList<ITask>.Create;
+  FAsyncTasksLock := TCriticalSection.Create;
+
   // BUG-BA-021 fix: navigation completion event
   FNavigationEvent := TEvent.Create(nil, True, False, '');
   FNavigateMutex := TCriticalSection.Create;       // H3 fix
@@ -288,6 +304,12 @@ destructor TWebView2BrowserSession.Destroy;
 var
   LObj: TObject;
 begin
+  // FEAT-R3-002 (E-002): MUST wait for in-flight async tasks FIRST. Their
+  // closures capture Self and call instance methods (Navigate/ExecuteScript/
+  // EvaluateScript/CaptureScreenshot); freeing Self before they finish → UAF.
+  // Bounded 5s/task so a stuck task cannot deadlock teardown forever.
+  WaitForAsyncTasks;
+
   // B-035: Drain CDP calls and free lock BEFORE stopping browser.
   // FBrowser.Stop can trigger callbacks that access FCDPCallsLock.
   FCDPCallsLock.Enter;
@@ -309,6 +331,11 @@ begin
   FNavigationEvent.Free;
   FNavigateMutex.Free;
   FScreenshotMutex.Free;
+
+  // FEAT-R3-002 (E-002): async task tracking containers (tasks already
+  // released by WaitForAsyncTasks, which drained the list under the lock).
+  FAsyncTasksLock.Free;
+  FAsyncTasks.Free;
 
   inherited;
 end;
@@ -532,6 +559,49 @@ begin
       Application.ProcessMessages;
   end;
   Result := True;
+end;
+
+{ FEAT-R3-002 (E-002): run LProc as a task AND register it so Destroy can wait.
+  Captures Self via FAsyncTasks/FAsyncTasksLock; the returned ITask is also
+  held by the caller, but tracking here ensures Destroy blocks until the
+  closure stops touching Self. }
+function TWebView2BrowserSession.RunTrackedAsync(const LProc: TProc): ITask;
+begin
+  Result := TTask.Run(LProc);
+  FAsyncTasksLock.Enter;
+  try
+    FAsyncTasks.Add(Result);
+  finally
+    FAsyncTasksLock.Leave;
+  end;
+end;
+
+{ FEAT-R3-002 (E-002): wait for every in-flight async task (bounded), so the
+  closure that captured Self can no longer run before Self is freed. Pruned
+  tasks (already-completed) drop out cheaply. }
+procedure TWebView2BrowserSession.WaitForAsyncTasks;
+var
+  LSnap: TArray<ITask>;
+  LTask: ITask;
+begin
+  FAsyncTasksLock.Enter;
+  try
+    LSnap := FAsyncTasks.ToArray;
+    FAsyncTasks.Clear;
+  finally
+    FAsyncTasksLock.Leave;
+  end;
+  for LTask in LSnap do
+  begin
+    try
+      // Bounded wait so a hung task cannot deadlock Destroy forever; the
+      // task object is released (refcount drop) after the loop regardless.
+      LTask.WaitFor(5000);
+    except
+      // Ignore WaitFor failures (timeout/AV) — Self is being torn down; we
+      // cannot salvage a stuck task, and re-raising would mask teardown.
+    end;
+  end;
 end;
 
 { IBrowserSession }
@@ -837,7 +907,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.ExecuteScriptAsync(
@@ -856,7 +926,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.EvaluateScriptAsync(
@@ -876,7 +946,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LResult, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.CaptureScreenshotAsync(
@@ -895,7 +965,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LImage, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 { Self-registration }

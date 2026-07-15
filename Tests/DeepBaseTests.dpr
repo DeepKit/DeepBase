@@ -72,9 +72,12 @@ uses
   Test.DeepBase.Payment in 'Test.DeepBase.Payment.pas',
   Test.DeepBase.Payment.Integration in 'Test.DeepBase.Payment.Integration.pas',
   Test.DeepBase.Commerce in 'Test.DeepBase.Commerce.pas',
+  Test.DeepBase.Commerce.PaymentBridge in 'Test.DeepBase.Commerce.PaymentBridge.pas',
   Test.DeepBase.Speech in 'Test.DeepBase.Speech.pas',
   Test.DeepBase.Speech.Voiceprint in 'Test.DeepBase.Speech.Voiceprint.pas',
   Test.DeepBase.Speech.Intent in 'Test.DeepBase.Speech.Intent.pas',
+  Test.DeepBase.Speech.Intent.LLMBackend in 'Test.DeepBase.Speech.Intent.LLMBackend.pas',
+  Test.DeepBase.Speech.Wiring in 'Test.DeepBase.Speech.Wiring.pas',
   Test.DeepBase.Social in 'Test.DeepBase.Social.pas',
   // Types tests
   Test.DeepBase.Types in 'Test.DeepBase.Types.pas',
@@ -99,6 +102,7 @@ uses
   Test.DeepBase.PerformanceSuite in 'Test.DeepBase.PerformanceSuite.pas',
   Test.DeepBase.Diagnose in 'Test.DeepBase.Diagnose.pas',
   Test.DeepBase.Exception in 'Test.DeepBase.Exception.pas',
+  Test.DeepBase.Exceptions in 'Test.DeepBase.Exceptions.pas',
   Test.DeepBase.Security in 'Test.DeepBase.Security.pas',
   Test.DeepBase.Authorization in 'Test.DeepBase.Authorization.pas',
   Test.DeepBase.Interfaces in 'Test.DeepBase.Interfaces.pas',
@@ -132,6 +136,7 @@ uses
   Test.DeepBase.FileWatcher in 'Test.DeepBase.FileWatcher.pas',
   Test.DeepBase.Graph in 'Test.DeepBase.Graph.pas',
   Test.DeepBase.HttpServer in 'Test.DeepBase.HttpServer.pas',
+  Test.DeepBase.WebAPI.Observability in 'Test.DeepBase.WebAPI.Observability.pas',
   Test.DeepBase.IoC in 'Test.DeepBase.IoC.pas',
   Test.DeepBase.KeyManager in 'Test.DeepBase.KeyManager.pas',
   Test.DeepBase.LLM.BillingClient in 'Test.DeepBase.LLM.BillingClient.pas',
@@ -143,6 +148,7 @@ uses
   Test.DeepBase.Net in 'Test.DeepBase.Net.pas',
   Test.DeepBase.Performance in 'Test.DeepBase.Performance.pas',
   Test.DeepBase.Persistence.RuntimeRegistration in 'Test.DeepBase.Persistence.RuntimeRegistration.pas',
+  Test.DeepBase.Persistence.Speech.Voiceprint.FireDAC in 'Test.DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas',
   Test.DeepBase.Plugin in 'Test.DeepBase.Plugin.pas',
   Test.DeepBase.PluginManager in 'Test.DeepBase.PluginManager.pas',
   { Test.DeepBase.PublishConfig excluded: depends on Tools/UniPublisher unit Publisher.Config }
@@ -233,6 +239,32 @@ uses
   Test.DeepBase.Inference.PBT in 'Test.DeepBase.Inference.PBT.pas',
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
+  // REVIEW5 Regression tests
+  Test.Regression.BUG320_FileWatcherLifecycle in 'Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas',
+  Test.Regression.BUG324_WorkerQueueCallbackSafety in 'Regression\Test.Regression.BUG324_WorkerQueueCallbackSafety.pas',
+  Test.Regression.BUG325_WorkerQueueTimeout in 'Regression\Test.Regression.BUG325_WorkerQueueTimeout.pas',
+  Test.Regression.BUG326_SchedulerCallbackSafety in 'Regression\Test.Regression.BUG326_SchedulerCallbackSafety.pas',
+  Test.Regression.BUG327_KeyManagerAEAD in 'Regression\Test.Regression.BUG327_KeyManagerAEAD.pas',
+  Test.Regression.BUG328_MetricsConcurrentInit in 'Regression\Test.Regression.BUG328_MetricsConcurrentInit.pas',
+  Test.Regression.BUG330_SQLiteReaderSchemaCache in 'Regression\Test.Regression.BUG330_SQLiteReaderSchemaCache.pas',
+  Test.Regression.BUG331_SafeQueryIdentifierValidation in 'Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas',
+  Test.Regression.BUG332_WeChatSchemaRegistryResolve in 'Regression\Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas',
+  Test.Regression.BUG333_RecycleAllConnectionsUAF in 'Regression\Test.Regression.BUG333_RecycleAllConnectionsUAF.pas',
+  // REVIEW5-GOV-007: DeepFlow production source code and tests
+  DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
+  DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',
+  DeepFlow.Config in '..\DeepFlow\Source\Core\DeepFlow.Config.pas',
+  DeepFlow.Engine in '..\DeepFlow\Source\Core\DeepFlow.Engine.pas',
+  DeepFlow.Commander in '..\DeepFlow\Source\Roles\DeepFlow.Commander.pas',
+  DeepFlow.Executor in '..\DeepFlow\Source\Roles\DeepFlow.Executor.pas',
+  DeepFlow.Guard in '..\DeepFlow\Source\Roles\DeepFlow.Guard.pas',
+  DeepFlow.Chronicler in '..\DeepFlow\Source\Roles\DeepFlow.Chronicler.pas',
+  DeepFlow.Workflow.Definition in '..\DeepFlow\Source\Workflow\DeepFlow.Workflow.Definition.pas',
+  DeepFlow.Workflow.Context in '..\DeepFlow\Source\Workflow\DeepFlow.Workflow.Context.pas',
+  DeepFlow.Skill.Client in '..\DeepFlow\Source\AI\DeepFlow.Skill.Client.pas',
+  Test.DeepFlow.Engine in '..\DeepFlow\Tests\Test.DeepFlow.Engine.pas',
+  // REVIEW5-UI-006: Design-time registration architecture tests
+  Test.DeepBase.DesignTime.Registration in 'Test.DeepBase.DesignTime.Registration.pas',
   // Core units
   DeepBase.Types in '..\Core\DeepBase.Types.pas',
   DeepBase.Manager in '..\Core\DeepBase.Manager.pas',
@@ -248,6 +280,12 @@ uses
   DeepBase.License in '..\Core\DeepBase.License.pas',
   DeepBase.RateLimiter in '..\Core\DeepBase.RateLimiter.pas',
   DeepBase.FeatureFlags in '..\Core\DeepBase.FeatureFlags.pas',
+  // SchemaAdapter 单元（REVIEW5-DATA-003）
+  DeepBase.SchemaAdapter.Types in '..\Core\DeepBase.SchemaAdapter.Types.pas',
+  DeepBase.SchemaAdapter in '..\Core\DeepBase.SchemaAdapter.pas',
+  DeepBase.SchemaAdapter.Registry in '..\Core\DeepBase.SchemaAdapter.Registry.pas',
+  DeepBase.SchemaAdapter.WeChat39x in '..\Core\DeepBase.SchemaAdapter.WeChat39x.pas',
+  DeepBase.SchemaAdapter.WeChat4x in '..\Core\DeepBase.SchemaAdapter.WeChat4x.pas',
   // DoQry 集成模块（Persistence 包的唯一实现）
   DeepBase.DB.DoQry in '..\Persistence\DeepBase.DB.DoQry.pas',
   DeepBase.Persistence.Manager.FireDAC in '..\Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
@@ -323,9 +361,15 @@ uses
   DeepBase.Speech.VAD in '..\Features\DeepBase.Speech.VAD.pas',
   DeepBase.Speech.Audio.WinMM in '..\Features\DeepBase.Speech.Audio.WinMM.pas',
   DeepBase.Speech.ASR.Baidu in '..\Features\DeepBase.Speech.ASR.Baidu.pas',
+  DeepBase.Speech.ASR.SAPI in '..\Features\DeepBase.Speech.ASR.SAPI.pas',
+  DeepBase.Speech.ASR.SAPIAdapter in '..\Features\DeepBase.Speech.ASR.SAPIAdapter.pas',
+  DeepBase.Speech.ASR.SenseVoice in '..\Features\DeepBase.Speech.ASR.SenseVoice.pas',
+  DeepBase.Speech.TTS.Edge in '..\Features\DeepBase.Speech.TTS.Edge.pas',
+  DeepBase.Speech.TTS.StepFun in '..\Features\DeepBase.Speech.TTS.StepFun.pas',
   DeepBase.Speech.Service in '..\Features\DeepBase.Speech.Service.pas',
   DeepBase.Speech.MFCC in '..\Features\DeepBase.Speech.MFCC.pas',
   DeepBase.Speech.DTW in '..\Features\DeepBase.Speech.DTW.pas',
+  DeepBase.Speech.Voiceprint.Contracts in '..\Features\DeepBase.Speech.Voiceprint.Contracts.pas',
   DeepBase.Speech.Voiceprint in '..\Features\DeepBase.Speech.Voiceprint.pas',
   DeepBase.Social in '..\ThirdParty\Social\DeepBase.Social.pas',
   DeepBase.Social.OAuth in '..\ThirdParty\Social\DeepBase.Social.OAuth.pas',
@@ -355,7 +399,8 @@ uses
   DeepBase.WebAPI.Core in '..\Tools\WebService\DeepBase.WebAPI.Core.pas',
   DeepBase.WebAPI.Auth in '..\Tools\WebService\DeepBase.WebAPI.Auth.pas',
   DeepBase.WebAPI.WebSocket in '..\Tools\WebService\DeepBase.WebAPI.WebSocket.pas',
-  DeepBase.WebAPI.OpenAPI in '..\Tools\WebService\DeepBase.WebAPI.OpenAPI.pas';
+  DeepBase.WebAPI.OpenAPI in '..\Tools\WebService\DeepBase.WebAPI.OpenAPI.pas',
+  DeepBase.WebAPI.Observability in '..\Tools\WebService\DeepBase.WebAPI.Observability.pas';
 
 {$IFNDEF TESTDeepInsight}
 {$ENDIF}

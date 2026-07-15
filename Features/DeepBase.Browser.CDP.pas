@@ -112,7 +112,9 @@ type
     procedure ScrollToElement(const ASelector: string;
       ACallback: TCDPCallback);
 
-    property RootNodeId: Integer read FRootNodeId;
+    /// <summary>Root node ID for selector queries. Write access is exposed for
+    /// test setup (e.g. TAutomationCDPLifecycleTests).</summary>
+    property RootNodeId: Integer read FRootNodeId write FRootNodeId;
   end;
 
 implementation
@@ -826,7 +828,7 @@ procedure TAutomationCDP.WaitForSelector(const ASelector: string;
   ATimeoutMs: Integer; ACallback: TCDPCallback);
 var
   LRootNodeId: Integer;
-  LCDP: TCDPStrategy;
+  LSelf: TAutomationCDP;
 begin
   if FDetached or (FCDP = nil) then
   begin
@@ -843,7 +845,9 @@ begin
   end;
 
   LRootNodeId := FRootNodeId;
-  LCDP := FCDP;
+  // REVIEW5-FEAT-009: Capture Self instead of FCDP to avoid use-after-free.
+  // Check FDetached on each iteration to detect detach/destroy during polling.
+  LSelf := Self;
   var LThread := TThread.CreateAnonymousThread(
     procedure
     var
@@ -854,6 +858,7 @@ begin
       LJson: TJSONValue;
       LNodeId: Integer;
       LCallbackRef: TCDPCallback;
+      LLiveCDP: TCDPStrategy;
     begin
       // H12 fix: capture callback locally + wrap in try/except so any
       // exception in the polling loop surfaces back to the caller as an
@@ -862,7 +867,23 @@ begin
       try
         LStartTime := Now;
         repeat
-          if LCDP = nil then
+          // REVIEW5-FEAT-009: Check detached flag on each iteration
+          // to avoid accessing destroyed FCDP
+          if LSelf.FDetached then
+          begin
+            if Assigned(LCallbackRef) then
+              TThread.Queue(nil,
+                procedure
+                begin
+                  LCallbackRef(False, '{"error":"detached"}');
+                end);
+            Exit;
+          end;
+
+          // REVIEW5-FEAT-009: Capture FCDP under each iteration to get
+          // the latest value. If it's nil, we've been detached.
+          LLiveCDP := LSelf.FCDP;
+          if LLiveCDP = nil then
           begin
             if Assigned(LCallbackRef) then
               TThread.Queue(nil,
@@ -878,7 +899,7 @@ begin
             LParams.AddPair('nodeId',
               TJSONNumber.Create(LRootNodeId));
             LParams.AddPair('selector', ASelector);
-            if LCDP.SendCommandSync('DOM.querySelector',
+            if LLiveCDP.SendCommandSync('DOM.querySelector',
               LParams, LResult) then
             begin
               LJson := TJSONObject.ParseJSONValue(LResult);

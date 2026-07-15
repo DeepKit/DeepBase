@@ -156,7 +156,7 @@ begin
   Assert.AreEqual(Integer(1), Integer(Length(Items)), 'should have 1 item');
   Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 应该正确');
   Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 应该正确');
-  Assert.IsTrue(Items[0].AccessCount >= 1, 'AccessCount 应该至少�?1');
+  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 应该至少�?1'));
 end;
 
 procedure TTestDeepBaseMRU.Test_GetMRUList_MaxItems;
@@ -298,8 +298,8 @@ begin
   
   Assert.AreEqual(Integer(1), Integer(Length(Items1)), 'Cat1 should have 1 item');
   Assert.AreEqual(Integer(1), Integer(Length(Items2)), 'Cat2 should have 1 item');
-  Assert.AreEqual('key1', string(Items1[0]), 'Cat1 �?key 应该正确');
-  Assert.AreEqual('key2', string(Items2[0]), 'Cat2 �?key 应该正确');
+  Assert.AreEqual('key1', string(Items1[0]), string('Cat1 �?key 应该正确'));
+  Assert.AreEqual('key2', string(Items2[0]), string('Cat2 �?key 应该正确'));
   
   // 清理
   FMRU.ClearMRU(Cat1);

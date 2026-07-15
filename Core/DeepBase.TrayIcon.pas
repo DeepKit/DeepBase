@@ -222,6 +222,17 @@ begin
   FOnDoubleClick := nil;
   FOnBalloonClick := nil;
   FOnMouseDown := nil;
+
+  // UI2-014 fix: destroy the icon handle before zeroing FData. Without this,
+  // the HICON previously installed via Show / UpdateIcon is leaked (neither
+  // the static TTrayIcon nor the VCL wrapper frees it on hide).
+  if FIconHandle <> 0 then
+  begin
+    DestroyIcon(FIconHandle);
+    FIconHandle := 0;
+    FData.hIcon := 0;
+  end;
+
   FillChar(FData, SizeOf(FData), 0);
   DestroyMsgWindow;
 end;

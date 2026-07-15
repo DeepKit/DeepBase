@@ -7,7 +7,8 @@ uses
   System.DateUtils,
   System.Generics.Collections,
   DeepBase.Commerce.Types,
-  DeepBase.Commerce.SafeClient;
+  DeepBase.Commerce.SafeClient,
+  DeepBase.Permissions.Contract;
 
 type
   EDeepKitPermissionDenied = class(EDeepBaseCommerceError);
@@ -22,9 +23,12 @@ type
     Reason: string;
     class function Denied(const AFeatureCode, AReason: string):
       TDeepKitPermissionResult; static;
+
+    // REVIEW5-FEAT-010: Convert to abstract TPermissionResult for decoupling
+    function ToPermissionResult: TPermissionResult;
   end;
 
-  TDeepKitPermissionClient = class
+  TDeepKitPermissionClient = class(TInterfacedObject, IPermissionClient)
   private
     FClient: TDeepKitSafeClient;
     FOwnsClient: Boolean;
@@ -36,6 +40,13 @@ type
 
     function EntitlementMatchesFeature(const AEntitlement: TCommerceEntitlementData;
       const AFeatureCode: string): Boolean;
+
+    // IPermissionClient explicit interface implementations
+    function IPermissionClient.HasFeature = IHasFeature;
+    function IPermissionClient.ConsumeQuota = IConsumeQuota;
+    function IHasFeature(const AFeatureCode: string): TPermissionResult;
+    function IConsumeQuota(const AFeatureCode: string; AQuantity: Integer;
+      const ARequestId: string): Integer;
   public
     constructor Create(AClient: TDeepKitSafeClient; const AAppId: string;
       const ADeviceId: string = ''; AOwnsClient: Boolean = False);
@@ -115,6 +126,15 @@ begin
   Result.EntitlementCode := '';
   Result.RemainingQuota := 0;
   Result.Reason := AReason;
+end;
+
+function TDeepKitPermissionResult.ToPermissionResult: TPermissionResult;
+begin
+  Result.Allowed := Self.Allowed;
+  Result.FeatureCode := Self.FeatureCode;
+  Result.EntitlementCode := Self.EntitlementCode;
+  Result.RemainingQuota := Self.RemainingQuota;
+  Result.Reason := Self.Reason;
 end;
 
 constructor TDeepKitPermissionClient.Create(AClient: TDeepKitSafeClient;
@@ -300,6 +320,22 @@ begin
     end;
   end;
   Result := False;
+end;
+
+{ IPermissionClient interface implementations }
+
+function TDeepKitPermissionClient.IHasFeature(const AFeatureCode: string): TPermissionResult;
+begin
+  Result := HasFeature(AFeatureCode).ToPermissionResult;
+end;
+
+function TDeepKitPermissionClient.IConsumeQuota(const AFeatureCode: string;
+  AQuantity: Integer; const ARequestId: string): Integer;
+var
+  LResult: TDeepKitConsumeEntitlementResult;
+begin
+  LResult := ConsumeQuota(AFeatureCode, AQuantity, ARequestId);
+  Result := LResult.RemainingQuota;
 end;
 
 { TLicenseRevocationPolicy }

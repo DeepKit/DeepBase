@@ -172,6 +172,20 @@ type
     procedure Test_ToSortable;
     [Test]
     procedure Test_ToFileSafe;
+    [Test]
+    procedure Test_FromRFC2822_SameUtcDifferentOffset;
+    [Test]
+    procedure Test_FromRFC2822_TwoDigitYear;
+    [Test]
+    procedure Test_FromRFC2822_CommentsAndWhitespace;
+    [Test]
+    procedure Test_FromRFC2822_RoundTrip_PreservesUtcEquivalent;
+    [Test]
+    procedure Test_FromRFC2822_MilitaryLetterZ;
+    [Test]
+    procedure Test_FromRFC2822_NamedTimezone_EST;
+    [Test]
+    procedure Test_FromRFC2822_NoTimezone_TreatedAsLocal;
   end;
 
   /// <summary>
@@ -227,6 +241,24 @@ type
     [Test]
     procedure Test_DiffSpan;
     [Test]
+    procedure Test_DiffCalendarMonths_SameMonth;
+    [Test]
+    procedure Test_DiffCalendarMonths_WholeMonths;
+    [Test]
+    procedure Test_DiffCalendarMonths_PartialMonth;
+    [Test]
+    procedure Test_DiffCalendarMonths_Jan31_Feb28;
+    [Test]
+    procedure Test_DiffCalendarMonths_Feb28_Mar31;
+    [Test]
+    procedure Test_DiffCalendarMonths_LeapYear;
+    [Test]
+    procedure Test_DiffCalendarMonths_Negative;
+    [Test]
+    procedure Test_DiffCalendarYears_WholeYears;
+    [Test]
+    procedure Test_DiffCalendarYears_PartialYear;
+    [Test]
     procedure Test_StartOfDay;
     [Test]
     procedure Test_EndOfDay;
@@ -281,6 +313,8 @@ type
     procedure Test_IsHoliday;
     [Test]
     procedure Test_AddBusinessDays;
+    [Test]
+    procedure Test_AddBusinessDays_ZeroDays_SnapsToBusinessDay;
     [Test]
     procedure Test_BusinessDaysBetween;
     [Test]
@@ -959,6 +993,105 @@ begin
   Assert.IsFalse(S.Contains('/'));
 end;
 
+procedure TDateTimeFormatTests.Test_FromRFC2822_SameUtcDifferentOffset;
+var
+  Parsed1, Parsed2: TDateTime;
+begin
+  // "Fri, 21 Jun 2024 12:00:00 +0000" and "Fri, 21 Jun 2024 07:00:00 -0500"
+  // represent the same UTC instant (12:00 UTC). Both should yield the same
+  // local TDateTime regardless of the machine's timezone.
+  Parsed1 := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00 +0000');
+  Parsed2 := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 07:00:00 -0500');
+  Assert.AreEqual(0.0, Parsed2 - Parsed1, 1 / 86400,
+    'Same UTC instant via different offsets must map to the same local time');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_TwoDigitYear;
+var
+  Parsed1999, Parsed2001: TDateTime;
+begin
+  // 2-digit year: RFC 2822 §4.3 rule — 00..49 → 2000..2049; 50..99 → 1950..1999.
+  // Compare against explicit 4-digit-year parses to make the test timezone-agnostic.
+  Parsed1999 := TDateTimeFormat.FromRFC2822('21 Jun 99 12:00:00 +0000');
+  Assert.AreEqual(
+    TDateTimeFormat.FromRFC2822('21 Jun 1999 12:00:00 +0000'),
+    Parsed1999, 1 / 86400,
+    'Two-digit year 99 must expand to 1999');
+
+  Parsed2001 := TDateTimeFormat.FromRFC2822('21 Jun 01 12:00:00 +0000');
+  Assert.AreEqual(
+    TDateTimeFormat.FromRFC2822('21 Jun 2001 12:00:00 +0000'),
+    Parsed2001, 1 / 86400,
+    'Two-digit year 01 must expand to 2001');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_CommentsAndWhitespace;
+var
+  WithComment, Without: TDateTime;
+begin
+  // RFC 2822 allows CFWS (comments and folding whitespace) anywhere between tokens.
+  WithComment := TDateTimeFormat.FromRFC2822(
+    'Fri, 21 Jun 2024 12:00:00 +0000 (a comment)');
+  Without    := TDateTimeFormat.FromRFC2822(
+    'Fri, 21 Jun 2024 12:00:00 +0000');
+  Assert.AreEqual(0.0, WithComment - Without, 1 / 86400,
+    'Trailing comment must not change the parsed value');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_RoundTrip_PreservesUtcEquivalent;
+var
+  DT, Parsed: TDateTime;
+  UtcOriginal, UtcParsed: TDateTime;
+begin
+  // Round-trip: ToRFC2822 serializes using the local offset; FromRFC2822 must
+  // recover the same UTC-equivalent instant even though the string is in local time.
+  DT := EncodeDate(2024, 6, 21) + EncodeTime(14, 30, 45, 0);
+  Parsed := TDateTimeFormat.FromRFC2822(TDateTimeFormat.ToRFC2822(DT));
+
+  // Normalize both sides to UTC to remove local-timezone dependence.
+  UtcOriginal := TTimeZones.ToUTC(DT);
+  UtcParsed   := TTimeZones.ToUTC(Parsed);
+  Assert.AreEqual(0.0, UtcParsed - UtcOriginal, 1 / 86400,
+    'Round-trip ToRFC2822 -> FromRFC2822 must preserve the UTC instant');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_MilitaryLetterZ;
+var
+  Zulu, PlusZero: TDateTime;
+begin
+  // Military 'Z' is UTC — must behave identically to "+0000".
+  Zulu    := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00 Z');
+  PlusZero := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00 +0000');
+  Assert.AreEqual(0.0, Zulu - PlusZero, 1 / 86400,
+    'Military letter Z must equal +0000');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_NamedTimezone_EST;
+var
+  Named, Numeric: TDateTime;
+begin
+  // EST = -0500 per RFC 2822 §4.3.
+  Named  := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00 EST');
+  Numeric := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00 -0500');
+  Assert.AreEqual(0.0, Named - Numeric, 1 / 86400,
+    'EST must equal -0500');
+end;
+
+procedure TDateTimeFormatTests.Test_FromRFC2822_NoTimezone_TreatedAsLocal;
+var
+  ParsedNoZone, ParsedLocal: TDateTime;
+  LocalOffsetStr: string;
+begin
+  // When no timezone is present, the parser treats the wall-clock as local.
+  // Compare against an explicit parse using the machine's current offset.
+  ParsedNoZone := TDateTimeFormat.FromRFC2822('Fri, 21 Jun 2024 12:00:00');
+  LocalOffsetStr := TTimeZones.FormatOffset(TTimeZones.CurrentUtcOffset);
+  ParsedLocal  := TDateTimeFormat.FromRFC2822(
+    'Fri, 21 Jun 2024 12:00:00 ' + LocalOffsetStr);
+  Assert.AreEqual(0.0, ParsedNoZone - ParsedLocal, 1 / 86400,
+    'No-timezone input must equal the same time tagged with the local offset');
+end;
+
 // ============================================================================
 // TRelativeTimeTests
 // ============================================================================
@@ -1103,6 +1236,75 @@ var
 begin
   Span := TDateTimeCalc.DiffSpan(EncodeDate(2024, 1, 1), EncodeDate(2024, 1, 6));
   Assert.AreEqual(5, Span.Days);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_SameMonth;
+begin
+  // Same date: 0 months.
+  Assert.AreEqual(0.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 3, 15), EncodeDate(2024, 3, 15)), 0.001);
+  // Same month, earlier -> later: partial fraction within one month.
+  Assert.AreEqual(0.3, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 3, 1), EncodeDate(2024, 3, 10)), 0.05);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_WholeMonths;
+begin
+  // Jan 15 -> Feb 15 is exactly 1 month.
+  Assert.AreEqual(1.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 1, 15), EncodeDate(2024, 2, 15)), 0.001);
+  // Jan 15 2024 -> Apr 15 2024 is 3 months.
+  Assert.AreEqual(3.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 1, 15), EncodeDate(2024, 4, 15)), 0.001);
+  // Cross-year: Nov 2023 -> Feb 2024 = 3 months.
+  Assert.AreEqual(3.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2023, 11, 1), EncodeDate(2024, 2, 1)), 0.001);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_PartialMonth;
+begin
+  // Jan 1 -> Jan 16 = 15/31 ~ 0.484
+  Assert.AreEqual(15 / 31, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 1, 1), EncodeDate(2024, 1, 16)), 0.01);
+  // Jan 31 -> Feb 1 = 1/31 ~ 0.032 (fractional part of one month).
+  Assert.AreEqual(1 / 31, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 1, 31), EncodeDate(2024, 2, 1)), 0.01);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_Jan31_Feb28;
+begin
+  // Jan 31 -> Feb 28: whole=0 (day 28 < 31), fraction = (28-31+31)/31 = 28/31 ~ 0.903.
+  Assert.AreEqual(28 / 31, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 1, 31), EncodeDate(2024, 2, 28)), 0.01);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_Feb28_Mar31;
+begin
+  // Feb 28 -> Mar 31: 1 month + 3/28 = ~1.107 (from-month is Feb, 28 days).
+  Assert.AreEqual(1 + 3 / 28, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 2, 28), EncodeDate(2024, 3, 31)), 0.01);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_LeapYear;
+begin
+  // Feb 28 2024 -> Feb 29 2024 = 1/29 of Feb ~ 0.034 (leap year).
+  Assert.AreEqual(1 / 29, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 2, 28), EncodeDate(2024, 2, 29)), 0.01);
+  // Feb 29 2024 -> Mar 29 2024 = exactly 1 month.
+  Assert.AreEqual(1.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 2, 29), EncodeDate(2024, 3, 29)), 0.001);
+  // Non-leap year: Feb 28 2023 -> Mar 28 2023 = exactly 1 month.
+  Assert.AreEqual(1.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2023, 2, 28), EncodeDate(2023, 3, 28)), 0.001);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarMonths_Negative;
+begin
+  // AFrom > ATo -> negative result.
+  Assert.AreEqual(-1.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 3, 15), EncodeDate(2024, 2, 15)), 0.001);
+  Assert.AreEqual(-3.0, TDateTimeCalc.DiffCalendarMonths(EncodeDate(2024, 4, 15), EncodeDate(2024, 1, 15)), 0.001);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarYears_WholeYears;
+begin
+  // Exactly 2 years.
+  Assert.AreEqual(2.0, TDateTimeCalc.DiffCalendarYears(EncodeDate(2022, 6, 15), EncodeDate(2024, 6, 15)), 0.001);
+end;
+
+procedure TDateTimeCalcTests.Test_DiffCalendarYears_PartialYear;
+begin
+  // Jan 1 2023 -> Jul 1 2024 = 1.5 years (6/12).
+  Assert.AreEqual(1.5, TDateTimeCalc.DiffCalendarYears(EncodeDate(2023, 1, 1), EncodeDate(2024, 7, 1)), 0.05);
+  // Feb 28 2024 -> Feb 28 2025 = 1 year exactly.
+  Assert.AreEqual(1.0, TDateTimeCalc.DiffCalendarYears(EncodeDate(2024, 2, 28), EncodeDate(2025, 2, 28)), 0.01);
 end;
 
 procedure TDateTimeCalcTests.Test_StartOfDay;
@@ -1292,11 +1494,45 @@ end;
 
 procedure TBusinessDaysTests.Test_AddBusinessDays;
 var
-  Start, Result: TDateTime;
+  Start, Expected: TDateTime;
 begin
   Start := EncodeDate(2024, 6, 17); // Monday
-  Result := TBusinessDays.AddBusinessDays(Start, 5);
-  Assert.AreEqual(EncodeDate(2024, 6, 24), Result); // Next Monday
+  Expected := TBusinessDays.AddBusinessDays(Start, 5);
+  Assert.AreEqual(EncodeDate(2024, 6, 24), Expected); // Next Monday
+end;
+
+procedure TBusinessDaysTests.Test_AddBusinessDays_ZeroDays_SnapsToBusinessDay;
+var
+  Sat, Mon, Expected: TDateTime;
+begin
+  // 2024-06-15 is Saturday, 2024-06-16 is Sunday, 2024-06-17 is Monday.
+  Sat := EncodeDate(2024, 6, 15);
+  Expected := TBusinessDays.AddBusinessDays(Sat, 0);
+  Assert.AreEqual(EncodeDate(2024, 6, 17), Expected,
+    'ADays=0 on Saturday must snap to Monday');
+  Assert.IsTrue(TBusinessDays.IsBusinessDay(Expected),
+    'result must itself be a business day');
+
+  // Sunday also snaps to Monday.
+  Expected := TBusinessDays.AddBusinessDays(EncodeDate(2024, 6, 16), 0);
+  Assert.AreEqual(EncodeDate(2024, 6, 17), Expected,
+    'ADays=0 on Sunday must snap to Monday');
+
+  // A weekday with ADays=0 returns the same date.
+  Mon := EncodeDate(2024, 6, 17);
+  Expected := TBusinessDays.AddBusinessDays(Mon, 0);
+  Assert.AreEqual(Mon, Expected,
+    'ADays=0 on Monday must return Monday');
+
+  // With a holiday on Monday, Saturday ADays=0 must skip to Tuesday.
+  TBusinessDays.AddHoliday(EncodeDate(2024, 6, 17));
+  try
+    Expected := TBusinessDays.AddBusinessDays(Sat, 0);
+    Assert.AreEqual(EncodeDate(2024, 6, 18), Expected,
+      'ADays=0 on Saturday with Monday holiday must snap to Tuesday');
+  finally
+    TBusinessDays.ClearHolidays;
+  end;
 end;
 
 procedure TBusinessDaysTests.Test_BusinessDaysBetween;

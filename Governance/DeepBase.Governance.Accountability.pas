@@ -97,6 +97,21 @@ type
 
 implementation
 
+uses
+  System.RegularExpressions;
+
+const
+  /// <summary>
+  /// Valid actor-key pattern: 1-128 chars, alphanumeric plus
+  /// hyphen, underscore, dot, at-sign. Rejects injection attempts.
+  /// </summary>
+  ACTOR_KEY_PATTERN = '^[a-zA-Z0-9._@\-]{1,128}$';
+
+function IsValidActorKey(const AKey: string): Boolean;
+begin
+  Result := (AKey <> '') and TRegEx.IsMatch(AKey, ACTOR_KEY_PATTERN);
+end;
+
 { THumanReviewRequest }
 
 constructor THumanReviewRequest.Create(const AActionKey, AGateKey,
@@ -183,15 +198,27 @@ begin
     Exit(TAccountabilityCheckResult.Pass);
 
   // L2+：必须有 Actor
+  // DATA2-021: Prefer the authenticated session actor over any caller-supplied
+  // user_id. The context-provided value is only used as fallback and must pass
+  // format validation to prevent injection of arbitrary identities.
   LActorKey := '';
-  if AContext <> nil then
-    LActorKey := AContext.GetValue<string>('user_id', '');
+  LActor := FActorRegistry.GetCurrent;
+  if LActor <> nil then
+    LActorKey := LActor.Key;
 
   if LActorKey = '' then
   begin
-    LActor := FActorRegistry.GetCurrent;
-    if LActor <> nil then
-      LActorKey := LActor.Key;
+    if AContext <> nil then
+    begin
+      LActorKey := AContext.GetValue<string>('user_id', '');
+      if not IsValidActorKey(LActorKey) then
+      begin
+        // Reject untrusted / malformed user_id — do not fall through to
+        // Find() with an attacker-controlled string.
+        Exit(TAccountabilityCheckResult.Blocked(
+          'Invalid user_id format in context (rejected for security)'));
+      end;
+    end;
   end;
 
   if LActorKey = '' then

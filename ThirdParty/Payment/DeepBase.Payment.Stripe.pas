@@ -67,6 +67,11 @@ type
   public
     constructor Create(AConfig: TStripeConfig); reintroduce;
 
+    /// <summary>Build a unique idempotency key for a request.
+    /// Format: "<prefix>_<OrderNo>_<GUID>". Exposed for testability
+    /// (BUG EXP-P0-003 regression).</summary>
+    class function BuildIdempotencyKey(const APrefix, AOrderNo: string): string; static;
+
     // IPaymentClient
     function CreateOrder(const AOrder: TPaymentOrder): TPaymentResult; override;
     function QueryOrder(const AOrderNo: string): TPaymentQueryResult; override;
@@ -75,7 +80,7 @@ type
     function QueryRefund(const ARefundNo: string): TRefundResult; override;
     function VerifyNotification(const ARawData: string;
       out ANotification: TPaymentNotification): Boolean; overload; override;
-    function VerifyNotification(const ARawData, ASignatureHeader: string;
+    function VerifyNotificationWithSignature(const ARawData, ASignatureHeader: string;
       out ANotification: TPaymentNotification): Boolean; overload;
     function GetNotificationResponse(ASuccess: Boolean): string; override;
 
@@ -114,8 +119,12 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TStripeConfig.LoadKeysFromCredentialManager;
 begin
-  SecretKey := GetCredentialKey('SecretKey');
-  WebhookSecret := GetCredentialKey('WebhookSecret');
+  // REVIEW5-FEAT-001: assign the stored handle straight to the field. The
+  // stored value is already a ProtectKey key-id (or the plain value when no
+  // secret store is available); routing it back through the Secure setter
+  // would re-run ProtectKey and double-protect it on every load.
+  FSecretKey := GetCredentialKey('SecretKey');
+  FWebhookSecret := GetCredentialKey('WebhookSecret');
 end;
 
 procedure TStripeConfig.SaveKeysToCredentialManager;
@@ -126,7 +135,7 @@ end;
 
 procedure TStripeConfig.SetSecretKeySecure(const AKey: string);
 begin
-  FSecretKey := ProtectKey(AKey);
+  FSecretKey := ProtectKey('SecretKey', AKey);
 end;
 
 function TStripeConfig.GetSecretKeySecure: string;
@@ -136,7 +145,7 @@ end;
 
 procedure TStripeConfig.SetWebhookSecretSecure(const AKey: string);
 begin
-  FWebhookSecret := ProtectKey(AKey);
+  FWebhookSecret := ProtectKey('WebhookSecret', AKey);
 end;
 
 function TStripeConfig.GetWebhookSecretSecure: string;
@@ -149,6 +158,11 @@ end;
 constructor TStripeClient.Create(AConfig: TStripeConfig);
 begin
   inherited Create(AConfig);
+end;
+
+class function TStripeClient.BuildIdempotencyKey(const APrefix, AOrderNo: string): string;
+begin
+  Result := APrefix + AOrderNo + '_' + TGUID.NewGuid.ToString;
 end;
 
 function TStripeClient.GetApiUrl: string;
@@ -300,7 +314,7 @@ begin
 
     try
       RespObj := DoStripePost('/checkout/sessions', Params,
-        'cs_' + AOrder.OrderNo + '_' + IntToStr(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False)));
+        BuildIdempotencyKey('cs_', AOrder.OrderNo));
       try
         Result.Success := True;
         Result.OrderNo := AOrder.OrderNo;
@@ -341,7 +355,7 @@ begin
 
     try
       RespObj := DoStripePost('/payment_intents', Params,
-        'pi_' + AOrder.OrderNo + '_' + IntToStr(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False)));
+        BuildIdempotencyKey('pi_', AOrder.OrderNo));
       try
         Result.Success := True;
         Result.OrderNo := AOrder.OrderNo;
@@ -519,14 +533,14 @@ begin
   Cfg := TStripeConfig(FConfig);
   if Cfg.WebhookSecret <> '' then
     raise EPaymentSignError.Create(
-      'Stripe VerifyNotification called without signature header. Use the overloaded VerifyNotification(RawData, SignatureHeader, Notification) instead.',
+      'Stripe VerifyNotification called without signature header. Use the overloaded VerifyNotificationWithSignature(RawData, SignatureHeader, Notification) instead.',
       'MISSING_SIGNATURE_HEADER', ppStripe);
 
   // Sandbox fallback: parse without verification (dev only)
-  Result := VerifyNotification(ARawData, '', ANotification);
+  Result := VerifyNotificationWithSignature(ARawData, '', ANotification);
 end;
 
-function TStripeClient.VerifyNotification(const ARawData, ASignatureHeader: string;
+function TStripeClient.VerifyNotificationWithSignature(const ARawData, ASignatureHeader: string;
   out ANotification: TPaymentNotification): Boolean;
 var
   Cfg: TStripeConfig;

@@ -1,4 +1,4 @@
-﻿unit DeepBase.DB.AutoRefreshConfig;
+unit DeepBase.DB.AutoRefreshConfig;
 
 interface
 
@@ -22,11 +22,35 @@ type
     procedure Validate;
   end;
 
+  /// <summary>
+  /// 自动刷新配置读取器。从数据库表读取 key/value 配置并缓存，
+  /// 当底层 updated_at 变化时自动重新加载缓存。
+  /// </summary>
+  /// <remarks>
+  /// <para>DATA2-056 修复：FConnection 可能是调用方共享的 TFDConnection 实例，
+  /// TFDConnection 不是线程安全的。因此所有对 FConnection 的访问（包括 Open、
+  /// ExecSQL、Query）都通过 FLock 序列化。对于周期性刷新场景（每 N 秒轮询一次），
+  /// 锁争用可以忽略不计。</para>
+  /// <para>如果 FConnectionProvider 返回每次调用独立的连接（例如连接池），
+  /// 则 FLock 只保护缓存字典；否则 FLock 同时保护连接和缓存。</para>
+  /// </remarks>
   TAutoRefreshConfig = class(TInterfacedObject, IAutoRefreshConfig)
   private
+    /// <summary>
+    /// 共享的数据库连接。当通过 Create(AConnection) 构造时，此字段指向
+    /// 调用方传入的连接，可能被多线程共享。所有访问必须通过 FLock 序列化。
+    /// </summary>
     FConnection: TFDConnection;
+    /// <summary>
+    /// 连接提供者。如果非 nil，每次 AcquireConnection 会调用它获取一个独立连接，
+    /// 调用方负责释放。此时 FLock 不保护连接本身（每次都是新的），只保护缓存。
+    /// </summary>
     FConnectionProvider: TFunc<TFDConnection>;
     FOptions: TAutoRefreshConfigOptions;
+    /// <summary>
+    /// 序列化所有对 FConnection（共享模式）和 FCache/FLoaded/FLastChangeToken 的访问。
+    /// TCriticalSection 是可重入的（同一线程可多次 Enter），因此内部调用可嵌套加锁。
+    /// </summary>
     FLock: TCriticalSection;
     FCache: TDictionary<string, string>;
     FLoaded: Boolean;
@@ -39,12 +63,24 @@ type
     class procedure ValidateQualifiedIdentifier(const Identifier,
       Subject: string); static;
 
+    /// <summary>
+    /// 获取数据库连接。若使用 ConnectionProvider，返回新连接（MustFree=True）；
+    /// 否则返回共享的 FConnection（MustFree=False，不要释放）。
+    /// </summary>
     function AcquireConnection(out MustFree: Boolean): TFDConnection;
+    /// <summary>确保连接已打开。调用方必须持有 FLock。</summary>
     procedure EnsureConnectionOpen(Connection: TFDConnection);
+    /// <summary>确保 schema 存在。调用方必须持有 FLock。</summary>
     procedure EnsureSchema(Connection: TFDConnection);
+    /// <summary>读取变更令牌（MAX(updated_at)）。调用方必须持有 FLock。</summary>
     function ReadChangeToken(Connection: TFDConnection): string;
+    /// <summary>重新加载缓存。调用方必须持有 FLock。</summary>
     procedure ReloadCache(Connection: TFDConnection;
       const ChangeToken: string);
+    /// <summary>
+    /// 确保缓存是最新的。所有 FConnection 访问都在 FLock 内完成。
+    /// 调用方不需要持有 FLock（本方法内部会加锁）。
+    /// </summary>
     procedure EnsureCacheFresh;
   public
     constructor Create(AConnection: TFDConnection); overload;
@@ -129,7 +165,7 @@ constructor TAutoRefreshConfig.Create(
 begin
   inherited Create;
   if not Assigned(ConnectionProvider) then
-    raise EInvalidOperationException.Create('Auto refresh config connection provider cannot be nil');
+    raise EInvalidOperationException.Create('Auto refresh config provider returned nil connection');
 
   FConnectionProvider := ConnectionProvider;
   FOptions := Options;
@@ -248,12 +284,14 @@ begin
     raise EDatabaseException.Create('Auto refresh config provider returned nil connection');
 end;
 
+{ 调用方必须持有 FLock }
 procedure TAutoRefreshConfig.EnsureConnectionOpen(Connection: TFDConnection);
 begin
   if not Connection.Connected then
     Connection.Open;
 end;
 
+{ 调用方必须持有 FLock }
 procedure TAutoRefreshConfig.EnsureSchema(Connection: TFDConnection);
 var
   SQLText: string;
@@ -292,6 +330,7 @@ begin
   Connection.ExecSQL(SQLText);
 end;
 
+{ 调用方必须持有 FLock }
 function TAutoRefreshConfig.ReadChangeToken(
   Connection: TFDConnection): string;
 var
@@ -311,6 +350,7 @@ begin
   end;
 end;
 
+{ 调用方必须持有 FLock }
 procedure TAutoRefreshConfig.ReloadCache(Connection: TFDConnection;
   const ChangeToken: string);
 var
@@ -342,48 +382,46 @@ begin
   FLoaded := True;
 end;
 
+{ DATA2-056: 所有 FConnection 访问都在 FLock 内完成。
+  对于共享连接模式（无 ConnectionProvider），这意味着连接操作被序列化，
+  可能影响性能；但对于配置读取的低频场景（周期性轮询），影响可以忽略。 }
 procedure TAutoRefreshConfig.EnsureCacheFresh;
 var
   Connection: TFDConnection;
   MustFree: Boolean;
   ChangeToken: string;
 begin
-  // Acquire connection and read change token outside the lock (I/O)
-  Connection := AcquireConnection(MustFree);
+  FLock.Enter;
   try
-    EnsureConnectionOpen(Connection);
-    if FOptions.AutoEnsureSchema and not FSchemaEnsured then
-    begin
-      EnsureSchema(Connection);
-      FSchemaEnsured := True;
-    end;
-
-    ChangeToken := ReadChangeToken(Connection);
-    if (not FLoaded) or (ChangeToken <> FLastChangeToken) then
-    begin
-      // ReloadCache modifies FCache, so protect with FLock
-      FLock.Enter;
-      try
-        // Double-check after acquiring lock
-        if (not FLoaded) or (ChangeToken <> FLastChangeToken) then
-          ReloadCache(Connection, ChangeToken);
-      finally
-        FLock.Leave;
+    Connection := AcquireConnection(MustFree);
+    try
+      EnsureConnectionOpen(Connection);
+      if FOptions.AutoEnsureSchema and not FSchemaEnsured then
+      begin
+        EnsureSchema(Connection);
+        FSchemaEnsured := True;
       end;
+
+      ChangeToken := ReadChangeToken(Connection);
+      if (not FLoaded) or (ChangeToken <> FLastChangeToken) then
+        ReloadCache(Connection, ChangeToken);
+    finally
+      if MustFree then
+        Connection.Free;
     end;
   finally
-    if MustFree then
-      Connection.Free;
+    FLock.Leave;
   end;
 end;
 
+{ DATA2-056: GetValue 先在 FLock 下刷新缓存，再在同一个锁持有期内读取值。
+  TCriticalSection 可重入，所以 EnsureCacheFresh 的内层 Enter 是安全的。 }
 function TAutoRefreshConfig.GetValue(const ASection, AKey,
   ADefault: string): string;
 var
   Value: string;
 begin
   Result := ADefault;
-  // Perform I/O outside the lock to avoid blocking other threads
   EnsureCacheFresh;
   FLock.Enter;
   try

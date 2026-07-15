@@ -258,9 +258,11 @@ var
   LCanGrow: Boolean;
   LReused: Boolean;
 begin
+  Result := False;
   ASessionId := '';
   ASession := nil;
   LReused := False;
+  LCanGrow := False;
 
   if FIsShutdown then
     Exit(False);

@@ -71,7 +71,18 @@ type
     function GetRootPath: string;
     function GetPluginDataPath(const PluginID: TGUID): string;
   end;
-  
+
+  /// <summary>
+  /// Immutable snapshot of a loaded plugin used by notification and
+  /// unload-all paths so that callbacks can be invoked outside FLock
+  /// without racing against concurrent mutations (BIZ2-023).
+  /// </summary>
+  TLoadedPluginData = record
+    Info: TPluginInfo;
+    Plugin: IDeepBasePlugin;
+    PackageHandle: HMODULE;
+  end;
+
   /// <summary>
   /// Plugin manager - handles plugin lifecycle
   /// </summary>
@@ -102,6 +113,13 @@ type
     function VerifyPluginSignature(const Path: string): Boolean;
     function GetPluginEnabledSetting(const PluginID: TGUID): Boolean;
     procedure SetPluginEnabledSetting(const PluginID: TGUID; Enabled: Boolean);
+    /// <summary>
+    /// Capture a thread-safe snapshot of currently loaded plugins.
+    /// The returned array holds IDeepBasePlugin references which keep
+    /// plugin objects alive via refcount even if unloaded concurrently.
+    /// BIZ2-023: used to invoke callbacks outside FLock safely.
+    /// </summary>
+    function SnapshotLoadedPlugins: TArray<TLoadedPluginData>;
     
   public
     constructor Create(const APluginsDir: string; AContext: IDeepBasePluginContext);
@@ -185,6 +203,12 @@ type
     property OnPluginError: TPluginErrorEvent read FOnPluginError write FOnPluginError;
   end;
 
+  /// <summary>
+  /// Raised when a plugin cannot be unloaded because one or more other
+  /// loaded plugins declare a dependency on it (BIZ2-024).
+  /// </summary>
+  EPluginInUse = class(Exception);
+
 implementation
 
 uses
@@ -233,6 +257,11 @@ const
   WTD_CHOICE_FILE = 1;
   WTD_STATEACTION_VERIFY = 1;
   WTD_STATEACTION_CLOSE = 2;
+  // BIZ-R3-018: force WinVerifyTrust to only use cached URLs (no live CRL/OCSP
+  // network fetch). With WTD_REVOKE_NONE, revocation checking is already
+  // disabled, so a live network round-trip is unnecessary and would freeze the
+  // calling (often UI/main) thread on slow networks across many plugins.
+  WTD_CACHE_ONLY_URL_RETRIEVAL = $40;
 
 function WinVerifyTrust(hwnd: THandle; pgActionID: PGUID; pWVTData: Pointer): Longint;
   stdcall; external 'wintrust.dll' name 'WinVerifyTrust';
@@ -485,6 +514,27 @@ begin
   end;
 end;
 
+function TDeepBasePluginManager.SnapshotLoadedPlugins: TArray<TLoadedPluginData>;
+var
+  I: Integer;
+  LoadedRec: TLoadedPlugin;
+begin
+  TMonitor.Enter(FLock);
+  try
+    SetLength(Result, FPlugins.Count);
+    I := 0;
+    for LoadedRec in FPlugins.Values do
+    begin
+      Result[I].Info := LoadedRec.Info;
+      Result[I].Plugin := LoadedRec.Plugin;
+      Result[I].PackageHandle := LoadedRec.PackageHandle;
+      Inc(I);
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
 function TDeepBasePluginManager.GetPluginEnabledSetting(const PluginID: TGUID): Boolean;
 var
   Key, Value: string;
@@ -519,108 +569,131 @@ var
   PluginBase: TDeepBasePluginBase;
   Info: TPluginInfo;
   LoadedRec: TLoadedPlugin;
+  // BIZ2-023 fix: error details captured under lock, callback fired outside.
   ErrorMsg: string;
+  ErrorID: TGUID;
+  ErrorName: string;
+  ErrorFatal: Boolean;
 begin
   Result := False;
-  
+  Handle := 0;
+  ErrorMsg := '';
+  ErrorID := TGUID.Empty;
+  ErrorName := '';
+  ErrorFatal := False;
+
   TMonitor.Enter(FLock);
   try
     // 1. ��֤����ļ�·����ȫ��
     if not IsValidPluginPath(BPLPath) then
     begin
       ErrorMsg := 'Invalid plugin path (potential path traversal): ' + BPLPath;
-      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, True);
+      ErrorID := TGUID.Empty;
+      ErrorName := ExtractFileName(BPLPath);
+      ErrorFatal := True;
+      // No BPL loaded yet, nothing to clean up
       Exit;
     end;
-    
-    // 2. ��֤�������ǩ��
+
+    // 2. Validate plugin signature
     if not VerifyPluginSignature(BPLPath) then
     begin
       ErrorMsg := 'Plugin signature verification failed: ' + BPLPath;
-      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, True);
+      ErrorID := TGUID.Empty;
+      ErrorName := ExtractFileName(BPLPath);
+      ErrorFatal := True;
       Exit;
     end;
-    
+
     // 3. Load BPL
     Handle := LoadBPL(BPLPath);
     if Handle = 0 then
     begin
       ErrorMsg := 'Failed to load BPL: ' + BPLPath;
-      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, False);
+      ErrorID := TGUID.Empty;
+      ErrorName := ExtractFileName(BPLPath);
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 2. Get RegisterPlugin function
+
+    // 4. Get RegisterPlugin function
     RegisterFunc := GetRegisterFunc(Handle);
     if not Assigned(RegisterFunc) then
     begin
       ErrorMsg := 'Plugin does not export RegisterPlugin function';
-      UnloadBPL(Handle);
-      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, False);
+      ErrorID := TGUID.Empty;
+      ErrorName := ExtractFileName(BPLPath);
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 3. Call RegisterPlugin to get plugin instance
+
+    // 5. Call RegisterPlugin to get plugin instance
     try
       Plugin := RegisterFunc();
     except
       on E: Exception do
       begin
         ErrorMsg := 'RegisterPlugin failed: ' + E.Message;
-        UnloadBPL(Handle);
-        FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, False);
+        ErrorID := TGUID.Empty;
+        ErrorName := ExtractFileName(BPLPath);
+        ErrorFatal := False;
         Exit;
       end;
     end;
-    
+
     if Plugin = nil then
     begin
       ErrorMsg := 'RegisterPlugin returned nil';
-      UnloadBPL(Handle);
-      FirePluginError(TGUID.Empty, ExtractFileName(BPLPath), ErrorMsg, False);
+      ErrorID := TGUID.Empty;
+      ErrorName := ExtractFileName(BPLPath);
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 4. Get plugin info
+
+    // 6. Get plugin info
     Info := Plugin.GetPluginInfo;
 
     if not GetPluginEnabledSetting(Info.ID) then
     begin
       ErrorMsg := 'Plugin disabled by configuration: ' + Info.Name;
-      UnloadBPL(Handle);
-      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      ErrorID := Info.ID;
+      ErrorName := Info.Name;
+      ErrorFatal := False;
       Exit;
     end;
-    
+
     // Check if already loaded
     if FPlugins.ContainsKey(Info.ID) then
     begin
       ErrorMsg := 'Plugin already loaded: ' + Info.Name;
-      UnloadBPL(Handle);
-      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      ErrorID := Info.ID;
+      ErrorName := Info.Name;
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 5. Check version compatibility
+
+    // 7. Check version compatibility
     if not CheckVersionCompatibility(Info.MinDeepBaseVersion) then
     begin
       ErrorMsg := Format('Plugin requires DeepBase %s, but current version is %s',
         [Info.MinDeepBaseVersion, DeepBase_VERSION]);
-      UnloadBPL(Handle);
-      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      ErrorID := Info.ID;
+      ErrorName := Info.Name;
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 6. Check dependencies
+
+    // 8. Check dependencies
     if not CheckDependencies(Info) then
     begin
       ErrorMsg := 'Required dependencies not loaded';
-      UnloadBPL(Handle);
-      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      ErrorID := Info.ID;
+      ErrorName := Info.Name;
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 7. Set context (if TDeepBasePluginBase)
+
+    // 9. Set context (if TDeepBasePluginBase)
     if Plugin.QueryInterface(IDeepBasePlugin, PluginBase) = S_OK then
     begin
       // Try to get the actual object
@@ -628,75 +701,122 @@ begin
     // Use reflection to call SetContext if available
     if Plugin is TDeepBasePluginBase then
       TDeepBasePluginBase(Plugin).SetContext(FContext);
-    
-    // 8. Initialize plugin
+
+    // 10. Initialize plugin
     if not Plugin.Initialize then
     begin
       ErrorMsg := 'Plugin initialization failed';
       if Plugin.GetLastError <> '' then
         ErrorMsg := ErrorMsg + ': ' + Plugin.GetLastError;
-      UnloadBPL(Handle);
-      FirePluginError(Info.ID, Info.Name, ErrorMsg, False);
+      ErrorID := Info.ID;
+      ErrorName := Info.Name;
+      ErrorFatal := False;
       Exit;
     end;
-    
-    // 9. Add to loaded plugins
+
+    // 11. Add to loaded plugins
     LoadedRec.Plugin := Plugin;
     LoadedRec.Info := Info;
     LoadedRec.BPLPath := BPLPath;
     LoadedRec.PackageHandle := Handle;
     LoadedRec.LoadOrder := FNextLoadOrder;
     Inc(FNextLoadOrder);
-    
+
     FPlugins.Add(Info.ID, LoadedRec);
     FLoadOrder.Add(Info.ID);
-    
-    FirePluginLoaded(Info);
     Result := True;
-    
+
   finally
+    // BIZ2-023 fix: release FLock BEFORE invoking any user callback.
+    // If the callback re-enters the manager (e.g. calls GetPluginState)
+    // it must not deadlock on FLock. Exit from try..finally runs the
+    // finally block first, so all post-lock work goes here.
     TMonitor.Exit(FLock);
+
+    // Post-lock: clean up BPL on failure and fire callbacks lock-free
+    if (not Result) and (Handle <> 0) then
+      UnloadBPL(Handle);
+
+    if (not Result) and (ErrorMsg <> '') then
+      FirePluginError(ErrorID, ErrorName, ErrorMsg, ErrorFatal)
+    else if Result then
+      FirePluginLoaded(Info);
   end;
 end;
 
 function TDeepBasePluginManager.UnloadPlugin(const PluginID: TGUID): Boolean;
 var
   LoadedRec: TLoadedPlugin;
+  OtherRec: TLoadedPlugin;
+  DepID: TGUID;
+  DependentNames: string;
+  PluginInfo: TPluginInfo;
+  PackageHandle: HMODULE;
+  PluginIntf: IDeepBasePlugin;
 begin
   Result := False;
-  
+
   TMonitor.Enter(FLock);
   try
     if not FPlugins.TryGetValue(PluginID, LoadedRec) then
       Exit;
-    
-    // Check if other plugins depend on this one
-    // (In a full implementation, would check reverse dependencies)
-    
+
+    // BIZ2-024 fix: check reverse dependencies before unloading.
+    // If any loaded plugin declares a dependency on this one, refuse
+    // to unload (raises EPluginInUse so the caller can handle it).
+    DependentNames := '';
+    for OtherRec in FPlugins.Values do
+    begin
+      if OtherRec.Info.ID = PluginID then
+        Continue;
+      for DepID in OtherRec.Info.Dependencies do
+      begin
+        if DepID = PluginID then
+        begin
+          if DependentNames <> '' then
+            DependentNames := DependentNames + ', ';
+          DependentNames := DependentNames + OtherRec.Info.Name;
+          Break;
+        end;
+      end;
+    end;
+    if DependentNames <> '' then
+      raise EPluginInUse.CreateFmt(
+        'Cannot unload plugin "%s": the following loaded plugins depend on it: %s',
+        [LoadedRec.Info.Name, DependentNames]);
+
+    // Snapshot data needed for post-lock operations
+    PluginInfo := LoadedRec.Info;
+    PackageHandle := LoadedRec.PackageHandle;
+    PluginIntf := LoadedRec.Plugin;
+
     // Finalize plugin
-    if LoadedRec.Plugin <> nil then
+    if PluginIntf <> nil then
     begin
       try
-        LoadedRec.Plugin.Finalize;
+        PluginIntf.Finalize;
       except
         on E: Exception do
-          FirePluginError(PluginID, LoadedRec.Info.Name, 'Finalize failed: ' + E.Message, False);
+          FirePluginError(PluginID, PluginInfo.Name, 'Finalize failed: ' + E.Message, False);
       end;
-      LoadedRec.Plugin := nil;
     end;
-    
+
     // Unload BPL
-    UnloadBPL(LoadedRec.PackageHandle);
-    
+    UnloadBPL(PackageHandle);
+
     // Remove from collections
     FPlugins.Remove(PluginID);
     FLoadOrder.Remove(PluginID);
-    
-    FirePluginUnloaded(PluginID);
     Result := True;
-    
   finally
+    // BIZ2-023 fix: release FLock BEFORE invoking the Unloaded callback.
     TMonitor.Exit(FLock);
+
+    // Fire callback lock-free. Only fires with Result=True on success;
+    // on the early Exit (plugin not found) Result stays False and the
+    // callback is skipped.
+    if Result then
+      FirePluginUnloaded(PluginID);
   end;
 end;
 
@@ -723,19 +843,49 @@ end;
 
 procedure TDeepBasePluginManager.UnloadAllPlugins;
 var
+  Snapshot: TArray<TLoadedPluginData>;
   I: Integer;
-  PluginID: TGUID;
+  LoadedRec: TLoadedPlugin;
+  UnloadedCallback: TPluginUnloadedEvent;
 begin
+  // BIZ2-023 fix: snapshot plugins and clear collections under lock,
+  // then finalize each plugin and fire callbacks outside the lock.
+  // This prevents deadlock if a callback re-enters the manager.
   TMonitor.Enter(FLock);
   try
-    // Unload in reverse load order
-    for I := FLoadOrder.Count - 1 downto 0 do
+    SetLength(Snapshot, FLoadOrder.Count);
+    for I := 0 to FLoadOrder.Count - 1 do
     begin
-      PluginID := FLoadOrder[I];
-      UnloadPlugin(PluginID);
+      if FPlugins.TryGetValue(FLoadOrder[I], LoadedRec) then
+      begin
+        Snapshot[I].Info := LoadedRec.Info;
+        Snapshot[I].Plugin := LoadedRec.Plugin;
+        Snapshot[I].PackageHandle := LoadedRec.PackageHandle;
+      end;
     end;
+    FPlugins.Clear;
+    FLoadOrder.Clear;
+    UnloadedCallback := FOnPluginUnloaded;
   finally
     TMonitor.Exit(FLock);
+  end;
+
+  // Finalize and unload in reverse load order, lock-free
+  for I := Length(Snapshot) - 1 downto 0 do
+  begin
+    if Snapshot[I].Plugin <> nil then
+    begin
+      try
+        Snapshot[I].Plugin.Finalize;
+      except
+        on E: Exception do
+          FirePluginError(Snapshot[I].Info.ID, Snapshot[I].Info.Name,
+            'Finalize failed: ' + E.Message, False);
+      end;
+    end;
+    UnloadBPL(Snapshot[I].PackageHandle);
+    if Assigned(UnloadedCallback) then
+      UnloadedCallback(Self, Snapshot[I].Info.ID);
   end;
 end;
 
@@ -805,76 +955,73 @@ end;
 
 procedure TDeepBasePluginManager.NotifyLanguageChanged(const NewLanguage: string);
 var
-  LoadedRec: TLoadedPlugin;
+  Snapshot: TArray<TLoadedPluginData>;
+  Item: TLoadedPluginData;
   EventHandler: IDeepBasePluginEvents;
 begin
-  TMonitor.Enter(FLock);
-  try
-    for LoadedRec in FPlugins.Values do
+  // BIZ2-023 fix: snapshot plugins under lock, then invoke callbacks
+  // outside the lock to prevent deadlock if a handler re-enters FLock.
+  Snapshot := SnapshotLoadedPlugins;
+  for Item in Snapshot do
+  begin
+    if Supports(Item.Plugin, IDeepBasePluginEvents, EventHandler) then
     begin
-      if Supports(LoadedRec.Plugin, IDeepBasePluginEvents, EventHandler) then
-      begin
-        try
-          EventHandler.OnLanguageChanged(NewLanguage);
-        except
-          on E: Exception do
-            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
-              'OnLanguageChanged error: ' + E.Message, False);
-        end;
+      try
+        EventHandler.OnLanguageChanged(NewLanguage);
+      except
+        on E: Exception do
+          FirePluginError(Item.Info.ID, Item.Info.Name,
+            'OnLanguageChanged error: ' + E.Message, False);
       end;
     end;
-  finally
-    TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TDeepBasePluginManager.NotifyThemeChanged(const NewTheme: string);
 var
-  LoadedRec: TLoadedPlugin;
+  Snapshot: TArray<TLoadedPluginData>;
+  Item: TLoadedPluginData;
   EventHandler: IDeepBasePluginEvents;
 begin
-  TMonitor.Enter(FLock);
-  try
-    for LoadedRec in FPlugins.Values do
+  // BIZ2-023 fix: snapshot plugins under lock, then invoke callbacks
+  // outside the lock to prevent deadlock if a handler re-enters FLock.
+  Snapshot := SnapshotLoadedPlugins;
+  for Item in Snapshot do
+  begin
+    if Supports(Item.Plugin, IDeepBasePluginEvents, EventHandler) then
     begin
-      if Supports(LoadedRec.Plugin, IDeepBasePluginEvents, EventHandler) then
-      begin
-        try
-          EventHandler.OnThemeChanged(NewTheme);
-        except
-          on E: Exception do
-            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
-              'OnThemeChanged error: ' + E.Message, False);
-        end;
+      try
+        EventHandler.OnThemeChanged(NewTheme);
+      except
+        on E: Exception do
+          FirePluginError(Item.Info.ID, Item.Info.Name,
+            'OnThemeChanged error: ' + E.Message, False);
       end;
     end;
-  finally
-    TMonitor.Exit(FLock);
   end;
 end;
 
 procedure TDeepBasePluginManager.NotifyConfigChanged(const Key, OldValue, NewValue: string);
 var
-  LoadedRec: TLoadedPlugin;
+  Snapshot: TArray<TLoadedPluginData>;
+  Item: TLoadedPluginData;
   EventHandler: IDeepBasePluginEvents;
 begin
-  TMonitor.Enter(FLock);
-  try
-    for LoadedRec in FPlugins.Values do
+  // BIZ2-023 fix: snapshot plugins under lock, then invoke callbacks
+  // outside the lock to prevent deadlock if a handler re-enters FLock.
+  Snapshot := SnapshotLoadedPlugins;
+  for Item in Snapshot do
+  begin
+    if Supports(Item.Plugin, IDeepBasePluginEvents, EventHandler) then
     begin
-      if Supports(LoadedRec.Plugin, IDeepBasePluginEvents, EventHandler) then
-      begin
-        try
-          EventHandler.OnConfigChanged(Key, OldValue, NewValue);
-        except
-          on E: Exception do
-            FirePluginError(LoadedRec.Info.ID, LoadedRec.Info.Name, 
-              'OnConfigChanged error: ' + E.Message, False);
-        end;
+      try
+        EventHandler.OnConfigChanged(Key, OldValue, NewValue);
+      except
+        on E: Exception do
+          FirePluginError(Item.Info.ID, Item.Info.Name,
+            'OnConfigChanged error: ' + E.Message, False);
       end;
     end;
-  finally
-    TMonitor.Exit(FLock);
   end;
 end;
 
@@ -925,6 +1072,8 @@ begin
   TrustData.dwUnionChoice := WTD_CHOICE_FILE;
   TrustData.pFile := @FileInfo;
   TrustData.dwStateAction := WTD_STATEACTION_VERIFY;
+  // BIZ-R3-018: avoid blocking CRL/OCSP network fetches on the calling thread.
+  TrustData.dwProvFlags := WTD_CACHE_ONLY_URL_RETRIEVAL;
 
   ActionId := WINTRUST_ACTION_GENERIC_VERIFY_V2;
   Status := WinVerifyTrust(INVALID_HANDLE_VALUE, @ActionId, @TrustData);

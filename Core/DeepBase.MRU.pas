@@ -15,7 +15,8 @@ uses
   System.Classes,
   System.Generics.Collections,
   DeepBase.Types,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   /// <summary>
@@ -27,13 +28,10 @@ type
     FStorage: IMRUStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
-    class var FConnectionStorageFactory: TFunc<TObject, IMRUStorage>;
 
     procedure WriteMRU(const Category, ItemKey, DisplayName: string;
       IconIndex: Integer);
     procedure InternalRemoveMRU(const Category, ItemKey: string);
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IMRUStorage; static;
 
   public
     constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
@@ -129,8 +127,15 @@ uses
 { TDeepBaseMRU }
 
 constructor TDeepBaseMRU.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: IMRUStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<IMRUStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No MRU storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.MRU.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -160,19 +165,7 @@ end;
 class procedure TDeepBaseMRU.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, IMRUStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseMRU.CreateStorageFromConnection(
-  AConnection: TObject): IMRUStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No MRU storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.MRU.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<IMRUStorage>.SetFactory(AFactory);
 end;
 
 procedure TDeepBaseMRU.WriteMRU(const Category, ItemKey, DisplayName: string;

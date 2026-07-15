@@ -27,7 +27,9 @@ uses
   System.Threading,
   System.DateUtils,
   DeepBase.Types,
-  DeepBase.LLM;
+  DeepBase.LLM,
+  DeepBase.Logging,
+  DeepBase.StorageFactory;
 
 type
   // Forward declarations
@@ -214,8 +216,11 @@ type
     FCacheLock: TCriticalSection;
     FContextBuilder: TContextBuilderFunc;
     FOwnsConnection: Boolean;
-    class var FConnectionStorageFactory: TFunc<TObject, ILLMStorage>;
-    
+    // BIZ2-006 fix: track ExecuteAsync tasks so Destroy can wait for them
+    // before freeing fields the closures still reference.
+    FExecuteTasks: TList<ITask>;
+    FExecuteTasksLock: TCriticalSection;
+
     procedure LoadCategories;
     procedure LoadPrompts;
     procedure LoadMetaPrompts;
@@ -228,8 +233,6 @@ type
     procedure RecordLLMCall(const Prompt: TPrompt; VersionNum: Integer; const ConfigName: string;
       const FinalPrompt: string; const Response: TLLMResponse);
     procedure UpdateVersionStats(PromptId, VersionNum: Integer; const Response: TLLMResponse);
-    class function CreateStorageFromConnection(
-      AConnection: TObject): ILLMStorage; static;
     function GetStorage: ILLMStorage;
     function HasActiveConnection: Boolean;
     function IsPG: Boolean;
@@ -304,6 +307,17 @@ type
     
     /// <summary>Delete version</summary>
     procedure DeleteVersion(const InternalCode: string; VersionNum: Integer);
+
+    /// <summary>Delete multiple versions in a single round-trip.</summary>
+    /// <remarks>
+    ///   BUG-308 (BIZ-013): 批量删除，只触发一次 RefreshCache；底层使用单条
+    ///   DELETE + IN 子句，避免逐版本循环导致的多次 SQL 往返与缓存刷新。
+    /// </remarks>
+    procedure DeleteVersions(const InternalCode: string; const VersionNums: array of Integer);
+
+    /// <summary>Test-only: seed the prompt cache without hitting OpenDataSet.</summary>
+    /// <remarks>仅供单元测试注入缓存数据，生产代码请勿调用。</remarks>
+    procedure TestSeedPrompt(const InternalCode: string; const Prompt: TPrompt);
     
     // ========================================================================
     // Meta-Prompt Management
@@ -648,8 +662,18 @@ end;
 { TLLMManager }
 
 constructor TLLMManager.Create(AConnection: TObject; AOwnsConnection: Boolean);
+var
+  LStorage: ILLMStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection));
+  LStorage := nil;
+  if Supports(AConnection, ILLMStorage, LStorage) then
+  else
+    LStorage := TConnectionStorageFactory<ILLMStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No LLM manager storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.LLM.FireDAC.');
+  Create(LStorage);
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
   FreeAndNil(FLLMClient);
@@ -668,28 +692,15 @@ begin
   FMetaCache := TDictionary<Integer, TMetaPrompt>.Create;
   FCacheLock := TCriticalSection.Create;
   FContextBuilder := nil;
+  // BIZ2-006 fix: initialize execute-task tracking
+  FExecuteTasks := TList<ITask>.Create;
+  FExecuteTasksLock := TCriticalSection.Create;
 end;
 
 class procedure TLLMManager.SetStorageFactory(
   const AFactory: TFunc<TObject, ILLMStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TLLMManager.CreateStorageFromConnection(
-  AConnection: TObject): ILLMStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Supports(AConnection, ILLMStorage, Result) then
-    Exit;
-
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No LLM manager storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.LLM.FireDAC.');
+  TConnectionStorageFactory<ILLMStorage>.SetFactory(AFactory);
 end;
 
 function TLLMManager.GetStorage: ILLMStorage;
@@ -711,7 +722,57 @@ begin
 end;
 
 destructor TLLMManager.Destroy;
+var
+  LLocalTasks: TArray<ITask>;
+  LT: ITask;
+  LWaited: Boolean;
+  LAnyTimeout: Boolean;
 begin
+  // BIZ2-006 fix: wait for pending ExecuteAsync tasks before freeing fields
+  // their closures reference (FLLMClient, FPromptCache, etc.).
+  // BIZ-R3-002 fix: the previous Wait(5000) was far shorter than an in-flight
+  // HTTP call (TLLMClient default timeout is 60s, user-configurable higher),
+  // so a still-running ExecuteAsync task could outlive the wait and keep
+  // calling FLLMClient.Chat after FreeAndNil(FLLMClient) below -> use-after-free.
+  // Now: (1) Cancel each task first so cooperative cleanup paths return early;
+  // (2) wait long enough to cover the HTTP timeout window (2x default = 120s);
+  // (3) if even that expires, do NOT free the objects the task still touches
+  // (FLLMClient, caches, FExecuteTasks/FExecuteTasksLock which the task's
+  // finally block also accesses) — leaking them until process exit is safer
+  // than a guaranteed use-after-free. Log loudly so the leak is never silent.
+  LAnyTimeout := False;
+  if Assigned(FExecuteTasks) then
+  begin
+    FExecuteTasksLock.Enter;
+    try
+      LLocalTasks := FExecuteTasks.ToArray;
+      FExecuteTasks.Clear;
+    finally
+      FExecuteTasksLock.Leave;
+    end;
+    for LT in LLocalTasks do
+    begin
+      if Assigned(LT) then
+      begin
+        LT.Cancel;
+        LWaited := LT.Wait(120000);
+        if not LWaited then
+        begin
+          LAnyTimeout := True;
+          if IsLoggerInitialized then
+            Logger.LogException(nil,
+              Format('TLLMManager.Destroy: ExecuteAsync task %p did not finish ' +
+                'within 120s; leaking owned objects to avoid use-after-free ' +
+                '(task still touches FLLMClient/caches)', [Pointer(LT)]), llError);
+        end;
+      end;
+    end;
+  end;
+  if LAnyTimeout then
+    // Objects above are still referenced by a running task; skip their teardown.
+    Exit;
+  FreeAndNil(FExecuteTasks);
+  FreeAndNil(FExecuteTasksLock);
   FreeAndNil(FCacheLock);
   FreeAndNil(FMetaCache);
   FreeAndNil(FCategoryCache);
@@ -1064,11 +1125,11 @@ begin
   end;
 end;
 
-function TLLMManager.BuildContext(const Prompt: TPrompt; 
+function TLLMManager.BuildContext(const Prompt: TPrompt;
   const Params: TDictionary<string, Variant>): string;
 begin
   Result := '';
-  
+
   // If BoundQuery is set and we have a context builder, execute it
   if (Prompt.BoundQueryName <> '') and Assigned(FContextBuilder) then
   begin
@@ -1076,7 +1137,14 @@ begin
       Result := FContextBuilder(Prompt.BoundQueryName, Params);
     except
       on E: Exception do
-        Result := '{"error": "' + StringReplace(E.Message, '"', '\"', [rfReplaceAll]) + '"}';
+      begin
+        // BUG EXP-P2-002 fix: do not leak internal error details (paths, SQL,
+        // stack traces) into the context payload that is forwarded to the LLM.
+        // Log the full error via the global logger and return a generic message.
+        if IsLoggerInitialized then
+          Logger.LogException(E, 'BuildContext failed for "' + Prompt.BoundQueryName + '"', llError);
+        Result := '{"error": "context builder failed"}';
+      end;
     end;
   end;
 end;
@@ -1448,7 +1516,22 @@ begin
   if not HasActiveConnection then
     Exit;
 
+  // BIZ2-005 fix: cascade-delete child records that reference this prompt.
+  // Without this, deleting a prompt leaves orphaned rows in PromptVersions,
+  // PromptMetaBinding, and LLMCalls referencing a PromptId that no longer
+  // exists, breaking subsequent loads and producing FK violations on DBs
+  // that enforce referential integrity. We resolve the Prompt.Id once via
+  // subquery so all deletes target the same parent.
+  // BIZ-R3-006: Combined into single multi-statement SQL for atomicity.
+  // SQLite and PostgreSQL both support semicolon-separated statements in
+  // one Execute call, ensuring all-or-nothing cascade deletion.
   FStorage.Execute(
+    'DELETE FROM LLMCalls WHERE PromptId = ' +
+    '(SELECT Id FROM Prompts WHERE InternalCode = :InternalCode); ' +
+    'DELETE FROM PromptMetaBinding WHERE PromptId = ' +
+    '(SELECT Id FROM Prompts WHERE InternalCode = :InternalCode); ' +
+    'DELETE FROM PromptVersions WHERE PromptId = ' +
+    '(SELECT Id FROM Prompts WHERE InternalCode = :InternalCode); ' +
     'DELETE FROM Prompts WHERE InternalCode = :InternalCode',
     [LLMParam('InternalCode', InternalCode)]);
 
@@ -1543,33 +1626,34 @@ end;
 procedure TLLMManager.SetProductionVersion(const InternalCode: string; VersionNum: Integer);
 var
   Prompt: TPrompt;
+  ProdTrue, ProdFalse: string;
 begin
   if not HasActiveConnection then
     Exit;
-    
+
   Prompt := GetPrompt(InternalCode);
   if Prompt.Id = 0 then
     Exit;
 
-  // Reset all versions
+  // BUG-308 (BIZ-013): 原子化 —— 将两次 UPDATE 合并为一条 CASE 语句，
+  // 单条 SQL 同时完成"清除旧生产版本 + 设置新生产版本"，避免中间态。
   if IsPG then
-    FStorage.Execute(
-      'UPDATE PromptVersions SET IsProduction = FALSE WHERE PromptId = :PromptId',
-      [LLMParam('PromptId', Prompt.Id)])
+  begin
+    ProdTrue := 'TRUE';
+    ProdFalse := 'FALSE';
+  end
   else
-    FStorage.Execute(
-      'UPDATE PromptVersions SET IsProduction = 0 WHERE PromptId = :PromptId',
-      [LLMParam('PromptId', Prompt.Id)]);
+  begin
+    ProdTrue := '1';
+    ProdFalse := '0';
+  end;
 
-  // Set the specified version as production
-  if IsPG then
-    FStorage.Execute(
-      'UPDATE PromptVersions SET IsProduction = TRUE WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
-      [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)])
-  else
-    FStorage.Execute(
-      'UPDATE PromptVersions SET IsProduction = 1 WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
-      [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
+  FStorage.Execute(
+    'UPDATE PromptVersions SET IsProduction = CASE ' +
+    'WHEN VersionNumber = :VersionNumber THEN ' + ProdTrue + ' ' +
+    'ELSE ' + ProdFalse + ' END ' +
+    'WHERE PromptId = :PromptId',
+    [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
 
   RefreshCache;
 end;
@@ -1580,7 +1664,7 @@ var
 begin
   if not HasActiveConnection then
     Exit;
-    
+
   Prompt := GetPrompt(InternalCode);
   if Prompt.Id = 0 then
     Exit;
@@ -1588,7 +1672,45 @@ begin
   FStorage.Execute(
     'DELETE FROM PromptVersions WHERE PromptId = :PromptId AND VersionNumber = :VersionNumber',
     [LLMParam('PromptId', Prompt.Id), LLMParam('VersionNumber', VersionNum)]);
-  
+
+  RefreshCache;
+end;
+
+procedure TLLMManager.TestSeedPrompt(const InternalCode: string; const Prompt: TPrompt);
+begin
+  FPromptCache.AddOrSetValue(InternalCode, Prompt);
+end;
+
+procedure TLLMManager.DeleteVersions(const InternalCode: string; const VersionNums: array of Integer);
+var
+  Prompt: TPrompt;
+  SQL: string;
+  Params: TArray<TLLMStorageParam>;
+  I: Integer;
+begin
+  if not HasActiveConnection then
+    Exit;
+  if Length(VersionNums) = 0 then
+    Exit;
+
+  Prompt := GetPrompt(InternalCode);
+  if Prompt.Id = 0 then
+    Exit;
+
+  // BUG-308 (BIZ-013): 批量删除 —— 单条 DELETE + IN 子句，只触发一次 RefreshCache。
+  SetLength(Params, Length(VersionNums) + 1);
+  Params[0] := LLMParam('PromptId', Prompt.Id);
+  SQL := 'DELETE FROM PromptVersions WHERE PromptId = :PromptId AND VersionNumber IN (';
+  for I := 0 to High(VersionNums) do
+  begin
+    Params[I + 1] := LLMParam('V' + I.ToString, VersionNums[I]);
+    if I > 0 then
+      SQL := SQL + ',';
+    SQL := SQL + ':V' + I.ToString;
+  end;
+  SQL := SQL + ')';
+
+  FStorage.Execute(SQL, Params);
   RefreshCache;
 end;
 
@@ -1877,6 +1999,7 @@ procedure TLLMManager.ExecuteAsync(const InternalCode: string;
 var
   ParamsCopy: TDictionary<string, Variant>;
   Key: string;
+  LTask: ITask;
 begin
   // Create a copy of params for the async task
   ParamsCopy := nil;
@@ -1886,25 +2009,43 @@ begin
     for Key in Params.Keys do
       ParamsCopy.Add(Key, Params[Key]);
   end;
-  
-  TTask.Run(
+
+  // BIZ2-006 fix: track the ITask so Destroy can wait for it before freeing
+  // fields the closure references (FLLMClient, FPromptCache, etc.).
+  LTask := TTask.Run(
     procedure
     var
       Response: TLLMResponse;
     begin
       try
         Response := Execute(InternalCode, ParamsCopy, VersionNum, ConfigName);
-        
+
         TThread.Queue(nil,
           procedure
           begin
             if Assigned(OnComplete) then
               OnComplete(Response);
-          end);
+          end
+        );
       finally
         ParamsCopy.Free;
+        // Always remove ourselves from the execute-tasks list so Destroy
+        // doesn't wait on a finished task.
+        FExecuteTasksLock.Enter;
+        try
+          FExecuteTasks.Remove(LTask);
+        finally
+          FExecuteTasksLock.Leave;
+        end;
       end;
-    end);
+    end
+  );
+  FExecuteTasksLock.Enter;
+  try
+    FExecuteTasks.Add(LTask);
+  finally
+    FExecuteTasksLock.Leave;
+  end;
 end;
 
 function TLLMManager.BuildFinalPrompt(const InternalCode: string;

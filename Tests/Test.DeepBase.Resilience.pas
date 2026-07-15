@@ -5,6 +5,8 @@
 /// </summary>
 unit Test.DeepBase.Resilience;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses
@@ -202,6 +204,13 @@ type
     procedure Test_TryExecute_ReturnsTrueOnSuccess;
     [Test]
     procedure Test_TryExecute_ReturnsFalseOnFailure;
+    /// <summary>BUG-439: TryExecute 的 out Error 跨 except 块持有 RTL 自动释放的 E
+    /// → 函数返回后 Error 悬挂。修复前读取 Error.Message (或 raise Error) 触发
+    /// use-after-free。现有 Test_TryExecute_ReturnsFalseOnFailure 只断言
+    /// Assert.IsNotNull(Error) (指针非空), 悬挂指针同样非空故通过, 从未解引用
+    /// 内容 → 隐患长期未暴露。本测试强制解引用验证非悬挂。</summary>
+    [Test]
+    procedure Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn;
   end;
 
   /// <summary>
@@ -1373,6 +1382,54 @@ begin
 
   Assert.IsFalse(Success);
   Assert.IsNotNull(Error);
+  // BUG-439: TryExecute 返回克隆的异常对象, 调用方负责释放 (out 参数所有权)。
+  FreeAndNil(Error);
+end;
+
+procedure TRetryPolicyTests.Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn;
+const
+  MARKER_MSG = 'BUG439 dangling marker';
+var
+  Success: Boolean;
+  Error: Exception;
+  Churn: Exception;
+  ChurnIdx: Integer;
+  ReraisedMsg: string;
+begin
+  // BUG-439: except on E: do Error := E 跨块持有, 块结束 RTL Free E → 返回后 Error 悬挂。
+  // 1 次重试后耗尽, 走 except → Error := E → 块 end → E 被 Free → 函数返回悬挂 Error。
+  FRetryPolicy.MaxRetries(1).FixedDelay(1);
+
+  Success := FRetryPolicy.TryExecute(
+    procedure
+    begin
+      raise ETestException.Create(MARKER_MSG);
+    end, Error);
+
+  Assert.IsFalse(Success, 'TryExecute should return False when proc raises');
+  Assert.IsNotNull(Error, 'Error out-param should be assigned');
+
+  // 强制堆扰动: 分配并立即释放一批新异常对象, 促使 MM 复用刚被 RTL Free 的 E 内存块。
+  // 若 Error 悬挂, 其内部 FMessage 字符串引用此刻已被覆盖 → 读 Error.Message 取到垃圾。
+  for ChurnIdx := 1 to 64 do
+  begin
+    Churn := Exception.Create(StringOfChar('Z', 40) + IntToStr(ChurnIdx));
+    Churn.Free;
+  end;
+
+  // 关键解引用点: 读悬挂 Error 的 Message。修复前此处读已释放内存。
+  Assert.AreEqual(MARKER_MSG, Error.Message,
+    'Error.Message must equal original exception message (not dangling/corrupted)');
+
+  // 再强制 raise 链路验证对象仍可用 (镜像 BUG-438 的 raise LHandlerErr 路径)。
+  try
+    raise Error;
+  except
+    on E: Exception do
+      ReraisedMsg := E.Message;
+  end;
+  Assert.AreEqual(MARKER_MSG, ReraisedMsg,
+    'Re-raised Error must carry original message (object still valid, not freed)');
 end;
 
 // ============================================================================

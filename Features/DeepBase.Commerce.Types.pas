@@ -101,10 +101,15 @@ type
     EntitlementCode: string;
     EntitlementDurationDays: Integer; // 0 means permanent
     InitialQuota: Integer;            // -1 means unlimited
+    Tier: string;                     // 'free', 'standard', 'pro', 'enterprise'
+    MaxDevices: Integer;              // -1 = unlimited, 0 = not set, >0 = limit
+    OfflineGraceDays: Integer;        // 0 = no offline grace
     IsActive: Boolean;
     class function Create(const AAppId, AProductId, AName: string;
       AAmountMinor: Int64; const ACurrency, AEntitlementCode: string;
-      AInitialQuota: Integer = -1; ADurationDays: Integer = 0): TCommerceProductData; static;
+      AInitialQuota: Integer = -1; ADurationDays: Integer = 0;
+      const ATier: string = ''; AMaxDevices: Integer = 0;
+      AOfflineGraceDays: Integer = 0): TCommerceProductData; static;
   end;
 
   TCommerceOrderData = record
@@ -177,6 +182,35 @@ type
   end;
 
   TCommerceEntitlementArray = TArray<TCommerceEntitlementData>;
+
+  // ---------------------------------------------------------------------------
+  // Invite / Referral Types
+  // ---------------------------------------------------------------------------
+
+  /// <summary>
+  /// Invite status for the current user.
+  /// Returned by /dk/invite/status.
+  /// </summary>
+  TCommerceInviteStatus = record
+    InviteCode: string;       // the user's personal invite code
+    InviteCount: Integer;     // number of successful invitations
+    TotalRewardDays: Integer; // cumulative reward days earned
+
+    class function Empty: TCommerceInviteStatus; static;
+  end;
+
+  /// <summary>
+  /// Result of applying an invite code.
+  /// Returned by /dk/invite/apply.
+  /// </summary>
+  TCommerceInviteApplyResult = record
+    Success: Boolean;
+    RewardDays: Integer;      // days granted to both parties
+    Message: string;          // human-readable result message
+
+    class function CreateSuccess(ARewardDays: Integer; const AMsg: string): TCommerceInviteApplyResult; static;
+    class function CreateFailed(const AMsg: string): TCommerceInviteApplyResult; static;
+  end;
 
   TCommerceIds = record
     class function NewId(const APrefix: string): string; static;
@@ -362,7 +396,8 @@ end;
 
 class function TCommerceProductData.Create(const AAppId, AProductId,
   AName: string; AAmountMinor: Int64; const ACurrency, AEntitlementCode: string;
-  AInitialQuota, ADurationDays: Integer): TCommerceProductData;
+  AInitialQuota, ADurationDays: Integer; const ATier: string;
+  AMaxDevices, AOfflineGraceDays: Integer): TCommerceProductData;
 begin
   Result.AppId := AAppId;
   Result.ProductId := AProductId;
@@ -373,6 +408,9 @@ begin
   Result.EntitlementCode := AEntitlementCode;
   Result.EntitlementDurationDays := ADurationDays;
   Result.InitialQuota := AInitialQuota;
+  Result.Tier := ATier;
+  Result.MaxDevices := AMaxDevices;
+  Result.OfflineGraceDays := AOfflineGraceDays;
   Result.IsActive := True;
 end;
 
@@ -391,6 +429,32 @@ begin
   Result.RawResponse := '';
   Result.ErrorCode := ACode;
   Result.ErrorMessage := AMessage;
+end;
+
+{ TCommerceInviteStatus }
+
+class function TCommerceInviteStatus.Empty: TCommerceInviteStatus;
+begin
+  Result.InviteCode := '';
+  Result.InviteCount := 0;
+  Result.TotalRewardDays := 0;
+end;
+
+{ TCommerceInviteApplyResult }
+
+class function TCommerceInviteApplyResult.CreateSuccess(ARewardDays: Integer;
+  const AMsg: string): TCommerceInviteApplyResult;
+begin
+  Result.Success := True;
+  Result.RewardDays := ARewardDays;
+  Result.Message := AMsg;
+end;
+
+class function TCommerceInviteApplyResult.CreateFailed(const AMsg: string): TCommerceInviteApplyResult;
+begin
+  Result.Success := False;
+  Result.RewardDays := 0;
+  Result.Message := AMsg;
 end;
 
 { TCommerceIds }

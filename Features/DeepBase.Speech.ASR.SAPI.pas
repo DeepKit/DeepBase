@@ -103,6 +103,10 @@ var
 
 implementation
 
+uses
+  DeepBase.Speech.Types,
+  DeepBase.Speech.ASR.SAPIAdapter;
+
 constructor TDeepBaseSAPIASR.Create;
 begin
   inherited Create;
@@ -386,6 +390,16 @@ begin
       if GlobalSAPIASR = nil then
         GlobalSAPIASR := TDeepBaseSAPIASR.Create;
       Result := GlobalSAPIASR.IsAvailable;
+    end;
+  // Wire SAPI through the adapter so it satisfies ISpeechRecognizerEx. Reuse
+  // the GlobalSAPIASR singleton (weak ref) so availability check and the
+  // injected instance share one underlying recognizer — no double CoCreate.
+  LInfo.ASRFactory :=
+    function: ISpeechRecognizerEx
+    begin
+      if GlobalSAPIASR = nil then
+        GlobalSAPIASR := TDeepBaseSAPIASR.Create;
+      Result := TDeepBaseSAPIASRAdapter.Create(GlobalSAPIASR);
     end;
   TSpeechRegistry.Register(LInfo);
 end;

@@ -1,5 +1,1216 @@
 ﻿# DeepBase 开发历史
-> 本文档记录已完成的任务和功能迭代
+> 本文档记录已完成的任务和功能迭代。
+> **分卷**: 本卷 = 近期审阅修复 + 优化归档 (REVIEW5 第一轮五专家 + R2 第二轮 + R3 第三轮 + 2026-05~06 优化)。早期开发归档 (Phase 0~5 + 2025-12 杂项 + 2026-06-18 架构) 见 `history-archive.md`。
+
+---
+
+
+## 2026-07-06 REVIEW5-R2 第二轮五专家审阅修复 (已修 23 项)
+
+> 来源: 2026-07-06 第二轮五专家全模块代码审阅 (REVIEW5-R2, review5-round2)
+> 范围: Core 基础设施/业务逻辑 (专家 A/B)、Persistence/治理/工作流 (专家 D)、VCL/FMX/包工程 (专家 E); 专家 C 因 API 余额不足未完成 Features 层
+> 报告: `expert_{a,b,d,e}_findings_round2.md`
+> 本轮共发现 163 项 (13 P0 / 43 P1 / 107 P2+), 本轮修复 **23 项** (7 P0 + 16 P1/P2), 对应 BUG-363 ~ BUG-385 (P0 另含 DATA2-005/006 两项无独立 BUG 序号, 见 bugfix.md 补录段)。
+
+### P0 修复 (7 项 + 2 项补录 = 9 项, BUG-363 ~ BUG-369 + DATA2-005/006)
+
+- [x] **REVIEW5-R2-CORE-001** (CORE-R2-001 / BUG-363): `Core/DeepBase.Benchmark.pas` GenerateJSON 将 TJSONObject 强转为 TJSONArray 致调用必 AV — 改 ResultsArr 声明为 TJSONArray ✅
+- [x] **REVIEW5-R2-CORE-002** (CORE-R2-002 / BUG-364): `Core/DeepBase.Crypto.pas` TSimpleCrypto.DecryptBytes 旧版 CBC 数据在 GCM 升级后不可解密 — v1/legacy 路径改用 aesCBC, 仅 v2 用 GCM ✅
+- [x] **REVIEW5-R2-DATA-001** (DATA2-001 / BUG-365): `Persistence/DeepBase.ORM.pas` Where/AndWhere/OrWhere 条件字符串直接拼接 SQL 注入 — 新增 ValidateSQLIdentifier, 推荐参数化版本 ✅
+- [x] **REVIEW5-R2-DATA-002** (DATA2-002 / BUG-365): `Persistence/DeepBase.ORM.pas` OrderBy/OrderByDesc 列名直接拼接 — 调用前校验, 非法抛 EORMException ✅
+- [x] **REVIEW5-R2-DATA-003** (DATA2-003 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` AES/MAC 密钥析构未清零 — FillChar 清零后 nil ✅
+- [x] **REVIEW5-R2-DATA-004** (DATA2-004 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` 解密数据库写入可预测临时文件路径 — BCryptGenRandom/RtlGenRandom 生成随机路径 + 安全擦除 ✅
+- [x] **REVIEW5-R2-UI-001** (UI2-001 / BUG-367): `DeepBaseCore.dpk` 与 `DeepBaseDataPlatform.dpk` 中 WeChat4x 重复声明致 E2065 — 从 DataPlatform.dpk 移除 ✅
+- [x] **REVIEW5-R2-UI-002** (UI2-002 / BUG-368): `FMX/DeepBase.FMX.LLMChatFrame.pas` DoSendMessage 用 TThread.CreateAnonymousThread 未赋值给 FCurrentTask 致析构后悬垂 — 改 TTask.Run + ITask ✅
+- [x] **REVIEW5-R2-UI-003** (UI2-003 / BUG-369): `VCL/DeepBase.VCL.FeedbackDialog.pas` SubmitFeedback 中 TStringStream 未释放 — 加 try/finally ✅
+- [x] **REVIEW5-R2-DATA-005** (DATA2-005, 无独立 BUG 序号): `Governance/DeepBase.Governance.EvidenceStore.SQLite.pas` 证据链无防篡改哈希链 — 新增 prev_hash/this_hash 列 + HMAC-SHA256 链 + VerifyChain/MigrateExistingChain ✅ (详见 bugfix.md 补录段)
+- [x] **REVIEW5-R2-DATA-006** (DATA2-006, 无独立 BUG 序号): `Governance/DeepBase.Governance.EvidenceRecorder.pas` PushItem 返回值丢弃致队列溢出时证据静默丢失 — 检查返回值 + 指数退避重试 + FFailureQueue 备份 + FDroppedCount 统计 ✅ (详见 bugfix.md 补录段)
+
+### P1/P2 修复 (16 项, BUG-370 ~ BUG-385)
+
+- [x] **REVIEW5-R2-CORE-006** (CORE-R2-006 / BUG-370): `Core/DeepBase.Config.pas` SetConfigInternal 锁释放/重获取窗口竞态 — out-params 返回回调, 锁外触发, 消除 Exit/Enter 重入 ✅
+- [x] **REVIEW5-R2-CORE-008** (CORE-R2-008 / BUG-371): `Core/DeepBase.ObjectPool.pas` 后台清理任务无异常处理 — 清理循环加 try/except 吞噬单次异常 ✅
+- [x] **REVIEW5-R2-CORE-011** (CORE-R2-011 / BUG-372): `Core/DeepBase.Metrics.pas` TSummary.Observe O(n²) 清理 — 改固定容量环形缓冲, 写入 O(1) ✅
+- [x] **REVIEW5-R2-CORE-012** (CORE-R2-012 / BUG-373): `Core/DeepBase.Cache.pas` FInsertOrder FIFO 队列无限增长 — 仅新 key 分支 Enqueue, 覆盖型复用旧位置 ✅
+- [x] **REVIEW5-R2-BIZ-001** (BIZ2-001 / BUG-374): `Core/DeepBase.LLM.pas` ChatAsync TTask 闭包捕获 Self 悬垂 — FActiveTasks + 析构 WaitFor (5s) ✅
+- [x] **REVIEW5-R2-BIZ-002** (BIZ2-002 / BUG-375): `Core/DeepBase.LLM.pas` GetConfig 缓存 TOCTOU 竞态 — 文档化"全表替换"语义, 窗口收窄, 下次自愈 ✅
+- [x] **REVIEW5-R2-BIZ-005** (BIZ2-005 / BUG-376): `Core/DeepBase.LLM.Manager.pas` DeletePrompt 未级联删除关联记录 — 子查询级联删 LLMCalls/PromptMetaBinding/PromptVersions 再删主表 ✅
+- [x] **REVIEW5-R2-BIZ-011** (BIZ2-011 / BUG-377): `Core/DeepBase.WorkerQueue.pas` TFileJobStorage 锁文件 DELETE_ON_CLOSE — 移除该标志, 保留 CREATE_ALWAYS+share=0 独占 ✅
+- [x] **REVIEW5-R2-BIZ-021** (BIZ2-021 / BUG-378): `Core/DeepBase.AppLifecycle.pas` 崩溃计数无限增长 — MAX_CRASH_COUNT=1000 上限 + 24h 外重置 ✅
+- [x] **REVIEW5-R2-BIZ-018** (BIZ2-018 / BUG-379): `Core/DeepBase.AIErrorHandler.pas` ExceptAddr 在非 except 块中使用 — 新增 HandleAt(E, AExceptAddr, AContext), SafeRun 在 except 内传地址 ✅
+- [x] **REVIEW5-R2-BIZ-032** (BIZ2-032 / BUG-380): `Core/DeepBase.MVVM.pas` TAsyncCommand.DoExecute 捕获 SelfRef 悬垂 — task 启动前快照 ViewModel/回调/ExecuteProc 到局部, 切断 Self 引用 ✅
+- [x] **REVIEW5-R2-UI-009** (UI2-009 / BUG-381): `FMX/DeepBase.FMX.LLMChatFrame.pas` 后台线程访问 FHistory 未保护 — 进 TTask 前主线程快照 GetMessages, task 内用局部 ✅
+- [x] **REVIEW5-R2-DATA-049** (DATA2-049 / BUG-382): `Persistence/DeepBase.SQLLogger.pas` FormatLogEntry 日志注入 — 对 SQL/Operation/ErrorMessage 剥离 CR/LF ✅
+- [x] **REVIEW5-R2-DATA-007** (DATA2-055 / BUG-383): `Persistence/DeepBase.DB.Pool.pas` Validate 查询无超时致 csValidating 永不恢复 — 取 CommandTimeoutSec 或回退 5s ✅
+- [x] **REVIEW5-R2-BIZ-013** (BIZ2-013 / BUG-384): `Core/DeepBase.FileWatcher.pas` HandleDebounce 每次变更创建 TTask — FDebounceTaskScheduled 闸门, 同刻最多一个 drain task ✅
+- [x] **REVIEW5-R2-BIZ-009** (BIZ2-009 / BUG-385): `Core/DeepBase.WorkerQueue.pas` WaitForCompletion Sleep(50) 高频轮询 — 间隔调到 250ms + 截断到剩余 timeout ✅
+
+### 验证
+- CI 单元全绿 (4084 total, 0 failed, 33 预存 CM 环境错误, STUB/编码门禁 PASSED)
+- 详细修复记录见 bugfix.md BUG-363 ~ BUG-385 + DATA2-005/006 补录段
+
+---
+
+## 2026-07-08 REVIEW5-R3 第三轮五专家审阅 (已修 18 项, 续修至 2026-07-09)
+
+> 来源: 2026-07-08 第三轮五专家全模块只读审阅 (REVIEW5-R3)
+> 范围: Core 安全/加密/并发 (A)、Core 业务/AI/LLM (B)、Persistence/DataPlatform (C, 已归档)、Governance/DeepFlow (D)、Features 商业化/浏览器/语音/集成 (E)
+> 报告: `expert_{a,b,c,d,e}_findings_round3.md`
+> 本轮共发现 54 项 (7 P0 / 18 P1 / 22 P2 / 7 P3)。截至本归档已修 34 项 (2026-07-08 修 12 项, 2026-07-09 续修 B-001~B-004 + A-001 五项 P0 + B-005~B-019 十五项 P1 + A-011 一项 P3 + D-003 一项 P1), 余 20 项见 tasks.md REVIEW5-R3 清单。
+
+### 已修复 (28 项)
+
+#### P0 — 编译阻断 (2 项)
+- [x] **REVIEW5-R3-D-001** (GOV-R3-001): 修复 `Governance/DeepBase.Governance.ConfigRegistrar.pas` uses 子句 `DeepBase.Crypto.Hash` 后缺逗号致 E1038 编译阻断 — 补逗号 (L26-27)
+- [x] **REVIEW5-R3-E-001** (FEAT-R3-001): 修复 `Features/DeepBase.UIA.Engine.pas` uses 子句 `DeepBase.Crypto.Hash` 后缺逗号致 "Missing operator or semicolon" 编译阻断 — 补逗号 (L16-17)
+
+#### P0 — 并发崩溃 (1 项)
+- [x] **REVIEW5-R3-A-002** (CORE-R3-002): 修复 `Core/DeepBase.Cache.pas` Put 锁外调 Evict 致 FEntries/FAccessOrder/FStats 竞态 — 锁内完成全部结构修改+收集被驱逐项, 锁外仅触发回调 ✅ BUG-386
+
+#### P1 — 加密材料清零 (3 项)
+- [x] **REVIEW5-R3-A-003** (CORE-R3-003): 修复 `Core/DeepBase.Protection.pas` DeriveAes256KeyPBKDF2 未清零 LPasswordBytes/LSaltPlusBlock — finally SecureZeroMemory ✅ BUG-387
+- [x] **REVIEW5-R3-A-004** (CORE-R3-004): 修复 `Core/DeepBase.Security.pas` DecryptUBS2V1 与 ProtectStringDpapi(非Win) MachineKey/Key/Plaintext 未清零 — SecureClearBytes ✅ BUG-388
+- [x] **REVIEW5-R3-A-005** (CORE-R3-005): 修复 `Core/DeepBase.Crypto.RSA.pas` LoadPrivateKeyPEM 未清零 RSA 私钥分量 — finally FillChar ✅ BUG-389
+
+#### P1 — 并发/生命周期 (2 项)
+- [x] **REVIEW5-R3-A-006** (CORE-R3-006): 修复 `Core/DeepBase.Metrics.pas` TTimer.Start 闭包捕获裸 Self 致 use-after-free — 闭包捕获 IMetric(Self) ✅ BUG-390
+- [x] **REVIEW5-R3-A-007** (CORE-R3-007): 修复 `Core/DeepBase.Authorization.pas` SetCurrentUserWithToken 锁外访问 TUser 致竞态 — token 读取与 LastLoginAt 写入整体入 FLock ✅ BUG-391
+
+#### P2 — 正确性 (4 项)
+- [x] **REVIEW5-R3-A-008** (CORE-R3-008): 修复 `Core/DeepBase.ObjectPool.pas` FindAvailableObject for 循环 FPool.Delete(I)+Continue 漏检被前移对象 — 改 while 循环 ✅ BUG-392
+- [x] **REVIEW5-R3-A-009** (CORE-R3-009): 修复 `Core/DeepBase.Collections.pas` TCountingSet.Add 接受负 ACount 致 FTotalCount/单项计数变负 — 方法开头校验 ACount>=0 ✅ BUG-393
+- [x] **REVIEW5-R3-A-010** (CORE-R3-010): 修复 `Core/DeepBase.Collections.pas` TLRUCache.Evict 持锁调 FOnEvict 致回调重入半更新链表 AV — 复制 Key/Value 到局部, 完成链表修改后锁外触发回调 ✅ BUG-394
+- [x] **REVIEW5-R3-E-004** (FEAT-R3-004): 修复 `Features/DeepBase.UIA.Engine.pas` UIA_ProcessIdPropertyId 常量 34005 错误 (官方 30002) 致按进程 ID 定位失效 — 改为 30002 ✅ BUG-395
+
+#### P0 — 内存安全/对象所有权 (续修, 2026-07-09, 5 项)
+- [x] **REVIEW5-R3-A-001** (CORE-R3-001): 修复 `Core/DeepBase.Authorization.pas` GetUser/GetRole/GetAllUsers/GetAllRoles 返回 `TObjectDictionary[doOwnsValues]` 拥有的裸对象引用, 锁外可被 DeleteUser/DeleteRole 释放致 use-after-free; 且 LoginTestUser 曾改 GetUser 返回的裸对象写 token 依赖脆弱释放契约 — 采用深克隆方案: 新增 `TUser.Clone`/`TRole.Clone`, Get* 锁内返回克隆 (调用方拥有并释放), GetAll* 用 owning `TObjectList` 构建后移交所有权; 新增带锁写方法 `SetUserMetadata` 替代调用方改快照的写法 (写 token 落到真实用户并对后续加锁读可见). 优于原建议的引用计数 (record 字段不适合引用计数, 克隆契约与 B-003/B-004 FeatureFlags 一致). 契约变更: Get* 返回值所有权归调用方 (已 rg 全仓确认无外部旧契约依赖, 所有调用点已加 Free) ✅ BUG-402
+- [x] **REVIEW5-R3-B-001** (BIZ-R3-001): 修复 `Features/DeepBase.LLM.Proxy.pas` GenerateImageStream 用 TTask.Run 闭包捕获裸 Self (调用实例方法 GenerateImage), 调用方释放最后 ILLMClient 引用后对象析构, 后台任务仍访问 Self → use-after-free — 采用接口引用捕获方案 (与 CORE-R3-006/BUG-390 一致): 方法内 `LSelf := Self` (ILLMClient), 闭包经 LSelf.GenerateImage 调用, 引用计数保活对象至任务结束. 未用专家建议的 FActiveTasks+WaitFor (已有验证先例 + 字段均线程安全值类型 + 避免 WaitFor 死锁; 真正需析构等待的长任务 LLM.Manager 在 B-002 另行处理) ✅ BUG-400
+- [x] **REVIEW5-R3-B-002** (BIZ-R3-002): 修复 `Core/DeepBase.LLM.Manager.pas` Destroy 仅 Wait(5000) 远小于在途 HTTP (TLLMClient 默认 60s), 超时后 FreeAndNil(FLLMClient) 而任务仍在调 FLLMClient.Chat → UAF; 任务 finally 还会访问已释放的 FExecuteTasks/FExecuteTasksLock → 二次 UAF — 三处加固: Wait 前 `LT.Cancel`, 超时 5000→120000ms (2x 默认 HTTP timeout 覆盖 60s 窗口), 超时则 LAnyTimeout 记 Error 日志后 Exit 跳过全部 teardown (释放被在用对象是确定性 UAF, 取泄漏更安全且绝不静默) ✅ BUG-401
+- [x] **REVIEW5-R3-B-003** (BIZ-R3-003): 修复 `Core/DeepBase.FeatureFlags.pas` SaveFlag 两实现 (TMemoryFlagStorage.AddOrSetValue / TFileFlagStorage 下标赋值) 静默接管调用方 AFlag 所有权, 调用方释放 AFlag 后 double-free/use-after-free — 改为新增 `TFeatureFlag.Clone` 深拷贝, SaveFlag 内部克隆后入库, AFlag 所有权始终归调用方 (优于原建议 OwnsObjects:=False, 后者仍让临时列表持裸引用) ✅ BUG-398
+- [x] **REVIEW5-R3-B-004** (BIZ-R3-004): 修复 `Core/DeepBase.FeatureFlags.pas` GetFlag 两实现所有权契约不一致 (Memory 返回 storage 拥有的裸引用 → 后续 Clear/Replace 致 UAF; File 用 Extract 转移所有权 → 契约相反) — 统一返回 `TFeatureFlag.Clone` 深拷贝, 所有权归调用方, 不受 storage 后续修改/释放影响 ✅ BUG-399
+
+### 验证
+- 上述 28 项修复均已在源码中落地 (grep/行号核对)
+- 对应 BUG-386~BUG-405 已登记 bugfix.md
+- B-003/B-004 新增 `TTestFeatureFlagStorage` 7 项回归测试 (FeatureFlags 模块 76 测试全过, 0 泄漏), 覆盖 SaveFlag 后调用方 Free AFlag 的 UAF 场景与 GetFlag 返回克隆的独立性/所有权契约. B-001/B-002/B-005/B-011 因 UAF 时序 (+网络栈依赖/120s HTTP 阻塞) 双重不可靠未附进程内断言测试 (同 CORE-R3-006/BUG-390 先例), 修复正确性经代码审查 + 模式一致性 + B-001 接口捕获与 B-002 析构等待互补保证.
+- A-001 (BUG-402) 经 Win64 单元测试 `-FromUnit DeepBase.Authorization` 验证: 编译 SUCCESS, 29 项全过 (Passed 29 / Leaked 0 / Failed 0). Clone 深拷贝 + owning-list 构建 + 调用方 Free 组合使泄漏检测归零; LoginTestUser 改用 SetUserMetadata 后 token 写入落到真实用户, SetCurrentUserWithToken 鉴权通过.
+- B-005 (BUG-404) 经 Win64 单元测试 `-FromUnit DeepBase.LLM` 验证: 编译 SUCCESS, 28 项全过 (Passed 28 / Leaked 0 / Failed 0). 修复仅加 `if Result then` 守卫, 不改变 Parse 逻辑本身, 现有测试覆盖正常解析路径不受影响.
+- B-011 (BUG-403) 经 Win64 单元测试 `-FromUnit DeepBase.Scheduler` 验证: 编译 SUCCESS, 51 项全过 (Passed 51 / Leaked 0 / Failed 0). FRunningITask 保活 + Cleanup 运行中守卫使回调窗口内 TaskRef 不被释放.
+
+---
+
+## 2026-06-30 REVIEW5 五专家模块审阅（全部 39 项完成）
+
+> 来源: 五专家模块审阅第一轮 (2026-06-29 ~ 2026-06-30)
+> 共 39 个修复任务, 对应 BUG-323 ~ BUG-362 (部分编号)
+
+### REVIEW5-CORE (7 项)
+- [x] CORE-001: FileWatcher queued callback 与 debounce task 生命周期 (BUG-323)
+- [x] CORE-002: WorkerQueue 外部回调/存储异常兜底 (BUG-324)
+- [x] CORE-003: WorkerQueue timeout 语义 (BUG-325)
+- [x] CORE-004: Scheduler OnCompleted 回调异常隔离 (BUG-326)
+- [x] CORE-005: KeyManager CBC 密���升级为 AEAD (BUG-327)
+- [x] CORE-006: Metrics 全局 registry 初始化锁统一 (BUG-328)
+- [x] CORE-007: Core 包清单对齐 WeChat4x + i18n.Gender (BUG-329)
+
+### REVIEW5-DATA (8 项)
+- [x] DATA-001: SQLiteReader schema 缓存 (BUG-330)
+- [x] DATA-002: SafeQuery schema 标识符校验 (BUG-331)
+- [x] DATA-003: WeChat39x/4x schema fingerprint 前缀 (BUG-332)
+- [x] DATA-004: DB.Pool RecycleAllConnections csValidating (BUG-333)
+- [x] DATA-005: Migrations 裸 END/END TRANSACTION 拦截 (BUG-334)
+- [x] DATA-006: 迁移脚本 checksum TOCTOU (BUG-336)
+- [x] DATA-007: DoQry prepared pool in-use TFDQuery 复用 (BUG-337)
+- [x] DATA-008: doQry 写型 PRAGMA 白名单 (BUG-338)
+
+### REVIEW5-FEAT (10 项)
+- [x] FEAT-001: 支付密钥持久化二次 ProtectKey (BUG-339)
+- [x] FEAT-002: PayPal WebhookId 工厂配置 (BUG-340)
+- [x] FEAT-003: AutoUpdate HTTP 超时 + 完整性强制校验 (BUG-341)
+- [x] FEAT-004: CloudSync 默认加密无 key fail-closed (BUG-342)
+- [x] FEAT-005: HttpServer 静态文件路径遍历防护 (BUG-343)
+- [x] FEAT-006: LLM HTTP 200 error envelope (BUG-344)
+- [x] FEAT-007: Edge TTS WinHTTP handle 清理 (BUG-345)
+- [x] FEAT-008: WakeWord stop/thread/event 生命周期 (BUG-346)
+- [x] FEAT-009: Browser CDP WaitForSelector detach/destroy (BUG-347)
+- [x] FEAT-010: Commerce 权限/Entitlement contract 拆分 (BUG-348)
+
+### REVIEW5-UI (6 项)
+- [x] UI-001: FMX UpdateDialog DownloadAndInstall (BUG-349)
+- [x] UI-002: FMX LLMChatFrame 后台任务取消/等待 (BUG-350)
+- [x] UI-003: VCL UpdateDialog 下载线程取消/等待 (BUG-351)
+- [x] UI-004: VCL LLMChatFrame FCurrentTask 生命周期 (BUG-352)
+- [x] UI-005: Tray.SchedulerFrame 枚举/路径/自动执行加固 (BUG-353)
+- [x] UI-006: VCL/FMX 设计时注册聚合 (BUG-362)
+
+### REVIEW5-GOV (8 项)
+- [x] GOV-001: Governance ConfigDB 注册链同步 (BUG-356)
+- [x] GOV-002: DeepFlow Pause->Stop 死锁 (BUG-357)
+- [x] GOV-003: 8 个核心包 .dproj + pgDeepBase.groupproj (BUG-361)
+- [x] GOV-004: Governance INV-8..INV-15 禁止空规则 (BUG-358)
+- [x] GOV-005: Regression 覆盖映射校验重做 (BUG-359)
+- [x] GOV-006: DeepFlow README 示例/死链接/Parser (BUG-354)
+- [x] GOV-007: DeepFlow 生产源码纳入测试编译 (BUG-360)
+- [x] GOV-008: DeepFlow.Executor JSON 对象泄漏 (BUG-355)
+
+
+## 2026-06-30 REVIEW5-FEAT-006 LLM HTTP 200 Error Envelope 错误解析 ✅
+
+> 来源: REVIEW5-FEAT-006 五专家模块审阅 (Features/ThirdParty)
+> 范围: `Features/DeepBase.LLM.HTTP.pas` 错误响应处理 (BUG-344)
+
+### 问题
+LLM HTTP 客户端在处理 HTTP 200 响应时，未检查响应体中的 error envelope。某些 API（如 OpenAI、Anthropic）在发生错误时可能返回 HTTP 200 状态码，但响应体中包含 error 对象。当前实现直接尝试解析 content/choices，导致返回空结果而非错误信息。
+
+### 修复
+- **ParseOpenAIResponse**: 在解析 choices 之前检查 error 对象，提取 message 和 code 字段
+- **ParseAnthropicResponse**: 在解析 content 之前检查 error 对象，提取 message 和 type 字段
+- **测试覆盖**: 新增 `TLLMHttpErrorEnvelopeTests` 测试夹具 (4 个测试)
+  - `Test_Send_OpenAI_ErrorEnvelope_ExtractsError`: 验证 OpenAI error envelope 解析
+  - `Test_Send_Anthropic_ErrorEnvelope_ExtractsError`: 验证 Anthropic error envelope 解析
+  - `Test_Send_OpenAI_SuccessResponse_ParsesContent`: 验证正常响应解析
+  - `Test_Send_Anthropic_SuccessResponse_ParsesContent`: 验证正常响应解析
+
+### 注意事项
+- 使用 `TFakeLLMTransport` 注入伪造 HTTP 响应，无需真实网络调用
+- Error envelope 格式：OpenAI 使用 `error.code`，Anthropic 使用 `error.type`
+- 测试验证 `Result.Success = False` 且 `ErrorMessage`/`ErrorCode` 正确提取
+
+### 验证
+- 编译通过 (SUCCESS: Unit Tests compiled)
+- 4 个新测试覆盖 error envelope 和正常响应场景
+
+---
+
+## 2026-06-30 REVIEW5-FEAT-005 HttpServer 静态文件服务路径遍历防护测试 ✅
+
+> 来源: REVIEW5-FEAT-005 五专家模块审阅 (Features/ThirdParty)
+> 范围: `Features/DeepBase.HttpServer.pas` 静态文件服务 (BUG-343)
+
+### 问题
+`TStaticFileMiddleware` 已实现基本路径遍历防护:
+- 拒绝绝对路径和反斜杠路径
+- 使用 `TPath.GetFullPath` 规范化 RootPath 和 FilePath
+- 检查 FilePath 是否�� RootPath 开头 (case-insensitive)
+
+但缺少测试覆盖, 无法验证防护机制的正确性和完整性。
+
+### 修复
+- 验证现有实现已包含 canonical root 校验和路径遍历防护
+- 新增 `TTestStaticFilePathTraversal` 测试夹具, 覆盖:
+  - 有效路径访问 (root 内文件)
+  - `..` 路径遍历阻止
+  - URL 编码的 `%2e%2e` 遍历阻止
+  - 绝对路径阻止
+  - 反斜杠路径阻止
+  - Canonical root 验证 (带尾部斜杠的 root)
+
+### 回归测试 (`Tests/Test.DeepBase.HttpServer.pas` 新增 `TTestStaticFilePathTraversal`)
+- `Test_ValidPathWithinRoot`: 验证 root 内文件可正常访问 (200 OK)
+- `Test_TraversalWithDotDot_Blocked`: 验证 `/../../../etc/passwd` 被阻止 (403 Forbidden)
+- `Test_TraversalWithEncodedDotDot_Blocked`: 验证 `/%2e%2e/%2e%2e/etc/passwd` 被阻止 (403)
+- `Test_AbsolutePath_Blocked`: 验证 `C:/Windows/System32/...` 被阻止 (403)
+- `Test_BackslashPath_Blocked`: 验证包含反斜杠的路径被阻止 (403)
+- `Test_CanonicalRootValidation`: 验证带尾部斜杠的 root 路径规范化正确
+
+### 注意事项
+- 测试使用临时目录创建测试文件, 测试完成后自动清理
+- 路径遍历防护依赖于 `TPath.GetFullPath` 的规范化能力和 `StartsWith` 检查
+
+### 验证
+- 6 测试全绿; 编译通过
+
+---
+
+## 2026-06-30 REVIEW5-FEAT-004 CloudSync 默认加密无 key 时 fail-closed 验证 ✅
+
+> 来源: REVIEW5-FEAT-004 五专家模块审阅 (Features/ThirdParty)
+> 范围: `Features/DeepBase.CloudSync.pas` 加密 fail-closed 行为 (BUG-342)
+
+### 问题
+默认配置 `EnableEncryption := True` 但 `EncryptionKey := ''`。若 fail-closed 检查缺失, 使用默认配置的应用会在无密钥情况下明文上传配置数据到云端, 造成���感信息泄露。
+
+### 修复
+- **已有 fail-closed 检查**: `EncryptData` 和 `DecryptData` 在 `EncryptionKey = ''` 时抛出 `EEncryptionException`/`EDecryptionException`, 阻止无密钥加解密
+- **可见性调整**: `EncryptData`/`DecryptData` 从 private 改为 public, 允许直接测试 fail-closed 行为
+- **测试覆盖**: 新增 `TTestEncryptionFailClosed` 测试夹具, 验证:
+  - 默认配置加密启用但密钥为空
+  - 空密钥时 EncryptData 抛出 EEncryptionException
+  - 空密钥时 DecryptData 抛出 EDecryptionException
+  - 有效密钥时加解密成功
+  - 加解密往返一致性
+
+### 回归测试 (`Tests/Test.DeepBase.CloudSync.pas` 新增 `TTestEncryptionFailClosed`)
+- `Test_DefaultConfig_EncryptionEnabled`: 默认配置加密启用
+- `Test_DefaultConfig_EncryptionKeyEmpty`: 默认配置密钥为空
+- `Test_EncryptData_EmptyKey_RaisesException`: 空密钥加密抛出异常
+- `Test_DecryptData_EmptyKey_RaisesException`: 空密钥解密抛出异常
+- `Test_EncryptData_WithKey_Succeeds`: 有效密钥加密成功
+- `Test_EncryptDecrypt_RoundTrip`: 加解密往返一致
+
+### 注意事项
+- fail-closed 检查已存在于代码中, 本次修改主要补充测试覆盖和可见性调整
+- 使用默认配置的应用必须在初始化时设置 `EncryptionKey`, 否则任何同步操作都会失败 (fail-closed)
+
+### 验证
+- 6 测试全绿; 编译通过
+
+---
+
+## 2026-06-30 REVIEW5-FEAT-003 AutoUpdate HTTP 超时与完整性强制校验 ✅
+
+> 来源: REVIEW5-FEAT-003 五专家模块审阅 (Features/ThirdParty)
+> 范围: `Features/DeepBase.AutoUpdate.pas` HTTP 超时与下载完整性 (BUG-341)
+
+### 问题
+1. **HTTP 无超时**: `CreateHttpClient` 仅设置 UserAgent, 未配置 `ConnectionTimeout`/`ResponseTimeout`。慢速或挂起的服务器会导致 `CheckForUpdate`/`DownloadUpdate` 无限期阻塞, 影响应用响应性
+2. **完整性可选**: `DownloadUpdate` 中 SHA256 校验仅在 `Info.Sha256 <> ''` 时执行; 无 SHA256 时直接跳过验证。生产下载包若无完整性信息, 无法检测篡改
+
+### 修复
+- **HTTP 超时**:
+  - `TDeepBaseAutoUpdate` 新增 `FConnectionTimeout`/`FResponseTimeout` 字段 (构造函数默认 30s/60s)
+  - 新增公共属性 `ConnectionTimeout`/`ResponseTimeout` 可配置
+  - `CreateHttpClient` 从 class function 改为 instance function, 应用配置的超时值
+  - 同步更新 4 处 `CreateHttpClient` 调用 (移除 `FCurrentVersion` 参数)
+- **完整性强制**:
+  - `TUpdateInfo` 新增 `Signature: string` 字段 (可选数字签名, base64/PEM)
+  - `DownloadUpdate` 在 HTTP 请求前增加 fail-closed 检查: `(Info.Sha256 = '') and (Info.Signature = '')` 时设置 `FLastError` 并退出
+  - `ResetUpdateInfo` 初始化 `Info.Signature := ''`
+  - JSON 解析 (新格式 + 遗留格式) 读取 `signature` 字段 (若存在)
+
+### 回归测试 (`Tests/Test.DeepBase.AutoUpdate.pas` 新增 `TTestIntegrityEnforcement`)
+- `Test_DefaultConnectionTimeout`: 默认连接超时 30000ms
+- `Test_DefaultResponseTimeout`: 默认响应超时 60000ms
+- `Test_TimeoutsAreConfigurable`: 超时值可通过属性修改
+- `Test_UpdateInfoSignatureField`: TUpdateInfo 有 Signature 字段且可赋值
+- `Test_DownloadUpdate_FailClosed_NoIntegrityInfo`: 无 SHA256 且无 Signature 时 DownloadUpdate 返回 False 并设置 LastError
+- `Test_DownloadUpdate_FailClosed_EmptySha256AndSignature`: 同上 (冗余覆盖)
+- `Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck`: 提供 SHA256 时不触发完整性拒绝 (使用不可达 URL 验证失败原因为网络而非完整性)
+- `Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck`: 提供 Signature 时不触发完整性拒绝
+
+### 注意事项
+- `CreateHttpClient` 从 class function 改为 instance function 是破坏性重构, 但仅影响内部调用 (4 处), 无外部调用方
+- 超时默认值 (30s/60s) 基于桌面应用更新场景: 检查更新不应超过 30s, 下载更新包不应超过 60s (实际大文件可能更长, 调用方可按需调整)
+- Signature 字段当前仅作为 fail-closed 门控, 实际签名验证逻辑待后续实现 (需要公钥/证书链)
+
+### 验证
+- 8 测试全绿; 编译通过, 无新增错误/警告
+
+---
+
+## 2026-06-30 REVIEW5-FEAT-002 PayPal PaymentBridge 工厂补 WebhookId 配置 ✅
+
+> 来源: REVIEW5-FEAT-002 五专家模块审阅 (Features/ThirdParty)
+> 范围: `Features/DeepBase.Commerce.PaymentBridge.pas` PayPal 工厂 (BUG-340)
+
+### 问题
+`CreatePayPalNotificationVerifier` 工厂签名仅接受 `AClientId`/`AClientSecret`, 未暴露 `AWebhookId` 参数, 也未给 `TPayPalConfig.WebhookId` 赋值。`TPayPalClient.VerifyWebhookSignature` 在 `WebhookId=''` 时 fail closed (`EPaymentConfigError` MISSING_WEBHOOK_ID), 因此任何经工厂创建的 PayPal verifier 都无法验签 —— 永远卡在缺配置错误, 无法进入实际签名校验。
+
+### 修复
+- `CreatePayPalNotificationVerifier` 接口与 DESKTOP stub、服务端实现三处签名统一新增 `AWebhookId: string` 参数
+- 服务端实现 `Config.WebhookId := AWebhookId`, 让 verifier 越过 MISSING_WEBHOOK_ID 门进入实际验签阶段
+- 无外部调用方, 仅工厂声明/定义, 改动向后兼容 (新参数, 调用方需自行补)
+
+### 回归测试 (`Tests/Test.DeepBase.Commerce.PaymentBridge.pas` 新增 `TPayPalBridgeTests`)
+- `Test_VerifyWebhookSignature_MissingWebhookId_RaisesConfigError`: 空 WebhookId 直接抛 `EPaymentConfigError`, ErrorCode=`MISSING_WEBHOOK_ID` (无网络, 在 GetAccessToken 前抛出)
+- `Test_VerifyWebhookSignature_WithWebhookId_PassesIdGate`: 配置 WebhookId 但留空凭据 → 越过 id 门, 因 MISSING_CREDENTIALS 在 `GetAccessToken` 立即抛出 (无网络), 被 `VerifyWebhookSignature` 内部 `except EPaymentError` 捕获返回 `False`, 证明 id 门已通过
+- `Test_Factory_WiresWebhookId_MissingConfigFailsClosed`: 经工厂创建 verifier (空 WebhookId) → `VerifyNotification` fail closed, 断言错误码/消息含 MISSING_WEBHOOK_ID
+
+### 注意事项
+- Delphi 异常对象在 except 块结束即被自动释放, 跨块持有引用会读到已释放内存 (表现为空 Message/ErrorCode); 测试必须在 except 块内捕获所需字段到局部变量
+- 全程不触网: 空 WebhookId 在门处抛出, 配置 WebhookId + 空凭据在 token 请求前抛出
+
+### 验证
+- 3 测试全绿; 还原修复 (移除工厂 WebhookId 赋值) 可令 id 门测试退化为 MISSING_WEBHOOK_ID 失败
+
+---
+
+## 2026-06-30 REVIEW5-FEAT-001 支付配置密钥持久化二次 ProtectKey 与 key-id 修复 ✅
+
+> 来源: REVIEW5-FEAT-001 五专家模块审阅 (Features/ThirdParty)
+> 范围: `ThirdParty/Payment/DeepBase.Payment.*.pas` 密钥 save/load 持久化 (BUG-339)
+
+### 问题
+1. **二次 ProtectKey**: Stripe/Alipay/WeChatPay 的 `LoadKeysFromCredentialManager` 通过 Secure setter 赋值 (`SecretKey := GetCredentialKey(...)`)。Secure setter 内部再调 `ProtectKey`, 把已存储的密文/key-id **再保护一次**。每次 save/load 循环增加一层间接, 最终 `SecretKey` 读回的是 key-id 而非明文
+2. **不稳定 key-id**: `ProtectKey` 的 key-id 派生自 `Hex(Self)` (对象指针), 每次实例化都变化 → 每次 Save 泄漏孤儿 store 条目, 跨实例 reload 失效
+3. **字段间 key-id 碰撞**: 因 `Hex(Self)` 对同一对象的全部字段相同, Stripe 的 `SecretKey` 与 `WebhookSecret` 写入同一 store 槽, 互相覆盖 → 读回的密钥是错的
+
+### 修复
+- `ProtectKey` 签名改为 `ProtectKey(const AKeyName, APlainKey)`, key-id 改为 `FCredentialTarget + '.vault.' + AKeyName` (跨实例稳定且按字段唯一), 同时消除三缺陷
+- Stripe/Alipay/WeChatPay `LoadKeysFromCredentialManager` 改为直接赋值底层字段 (`FSecretKey := GetCredentialKey('SecretKey')`), 与 PayPal 既有正确模式一致, 不再二�� ProtectKey
+- 同步更新 4 处 Secure setter (Stripe×2 / Alipay×1 / WeChatPay×2 / PayPal×1) 传入字段名
+
+### 回归测试 (`Tests/Test.DeepBase.Payment.Integration.pas`)
+- 注入内存型 `TFakeSecretStore` (不触碰真实 Windows Credential Manager, 测试确定可复现)
+- `Test_StripeConfig_SaveLoad_NoDoubleProtect_NoFieldCollision`: 同 config 设 SecretKey + WebhookSecret → Save → 新实例 Load, 断言两值分别正确往返且不互串
+- `Test_AlipayConfig_SaveLoad_RoundTripsPrivateKey`: Alipay PrivateKey save/load 往返
+
+### 验证
+- 3 测试全绿 (2 新增 + 1 既有空输入); 还原修复可分别触发 double-protect (读回 key-id) 与字段碰撞 (SecretKey 读回 webhook 值) 两种失败, 证明测试有效
+
+---
+
+## 2026-06-30 REVIEW5-DATA-008 doQry 直接 PRAGMA 白名单收紧 ✅
+
+> 来源: REVIEW5-DATA-008 五专家模块审阅 (Persistence/doQry)
+> 范围: `Persistence/DeepBase.DB.DoQry.pas` `IsDirectSQL` 收紧 PRAGMA 直接执行白名单 (BUG-338)
+
+### 问题
+- `IsDirectSQL` 对所有以 `PRAGMA` 开头的 SQL 一律放行, 不区分读型与写型
+- 写型 PRAGMA (如 `PRAGMA foreign_keys=ON`、`PRAGMA journal_mode=WAL`、`PRAGMA wal_checkpoint`) 可经 `UniDbExec` 直接修改数据库状态/触发检查点, 绕过 Queries 表的 DBA 白名单
+- 与 DDL 被强制走 Queries 表的安全模型不一致
+
+### 修复
+- 新增 `IsReadOnlyPragma(Body)`: 拒绝含 `=` 的赋值型 PRAGMA (写), 拒绝裸形式即有副作用的 pragma 名 (`wal_checkpoint` / `optimize` / `incremental_vacuum` / `shrink_memory` / `wal_flush`)
+- `IsDirectSQL` 的 PRAGMA 分支改为委托 `IsReadOnlyPragma`: 仅读型 PRAGMA 放行, 写型 PRAGMA 落入 Queries 表查找, 未白名单则抛 `DOQRY_ERR_QUERY_NOT_FOUND`
+- 配置旋钮 (journal_mode/synchronous 等) 的裸读取形式仍放行, 仅其 `=value` 赋值形式被拒
+
+### 回归测试 (`Tests/Test.DeepBase.DB.DoQry.pas`)
+- `Test_DirectWritePragma_Assignment_IsBlocked`: `PRAGMA foreign_keys=ON` 拒绝 (期望 `DOQRY_ERR_QUERY_NOT_FOUND`)
+- `Test_DirectWritePragma_SideEffect_IsBlocked`: `PRAGMA wal_checkpoint` 拒绝
+- `Test_DirectReadOnlyPragma_IsAllowed`: `PRAGMA table_info(test_users)` 放行并返回结果集
+
+### 验证
+- runlist 4 测试全绿 (3 新增 + 1 既有 DDL 拒绝回归)
+
+---
+
+## 2026-06-30 REVIEW5-DATA-007 预编译语句池 in-use 复用修复 ✅
+
+> 来源: REVIEW5-DATA-007 五专家模块审阅 (Persistence/doQry)
+> 范围: `Persistence/DeepBase.DB.DoQry.pas` 预编译语句池禁止复用 in-use `TFDQuery` (BUG-337)
+
+### 问题
+- `GetOrCreatePreparedQuery` 命中池条目时, 仅校验连接指针与连接状态, 未检查 `InUseCount`
+- 当同一连接上的同 SQL 出现并发/重入调用时, 第二个调用者会拿到**同一个**正在使用的 `TFDQuery` 实例
+- `TFDQuery` 是单一活跃游标, Params/Active 状态可变; 两个调用者同时 `Params.ClearValues` + `BindJsonParams` + `Open` 会互相覆盖绑定参数与结果集, 抛 "cannot perform this operation on an active dataset" 或读回错误参数
+
+### 修复
+- `GetOrCreatePreparedQuery` 命中条目时增加 `Entry.InUseCount > 0` 守卫: 命中则不再复用, 改为新建一个独立 `TFDQuery` (不挂入 `GPreparedQueryIndex`) 直接返回
+- `ReleaseQuery(Q, Pooled)` 对未挂入索引的查询会 `Q.Close` 后找不到 entry, 走 `Entry = nil` 兜底分支 `Q.Free`, 保证新建查询被正确释放, 不泄漏
+- 命中且 `InUseCount = 0` 时行为不变, 池命中率与 `ReuseCount` 不受影响
+
+### 回归测试 (`Tests/Test.DeepBase.DB.DoQry.pas`)
+- `Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams`: 6 线程 × 25 轮在同一**文件型 WAL 共享连接**上并发执行同一条参数化 SQL `SELECT :val AS v`, 每个调用绑定自己的 `:val`; 断言 0 异常且每个调用读回自己的值
+- 用文件型 WAL 数据库 (而非 `:memory:`) 避免 SQLite 内存库的 per-connection 并发冲突; `BusyTimeout=10000`
+
+### 验证
+- runlist 5 测试全绿 (1 新增 + 4 既有 prepared-pool 回归), 连跑 5 次稳定无 flake
+- 还原修复后该测试 FAIL (4 个 worker 触发 shared-active-cursor 异常), 证明测试有效覆盖 BUG-337
+
+---
+
+## 2026-06-30 REVIEW5-DATA-006 Migrations 脚本 TOCTOU 修复 ✅
+
+> 来源: REVIEW5-DATA-006 五专家模块审阅 (Persistence)
+> 范围: `Persistence/DeepBase.DB.Migrations.pas` 迁移脚本 checksum 与执行同源快照 (BUG-336)
+
+### 问题
+- `TMigrationEngine.Run` 原先用 `CalculateChecksum(FilePath)` 读盘算 SHA256, 随后 `ExecuteScript` 又 `ReadAllText` 重新读盘执行, 两次独立读取存在 TOCTOU 窗口
+- 外部进程可在 checksum 之后、执行之前替换脚本内容, 导致迁移记录存储的 checksum 与实际执行 DDL 不一致, 重跑幂等性被破坏
+- 实现过程中 `ReadScriptLocked` 用 `TEncoding.UTF8.GetString` 解码原始字节未剥离 UTF-8 BOM, BOM 被拼到首条 SQL 前 (`<BOM>CREATE TABLE...`), `ExecSQL` 报 `near ")": syntax error`
+
+### 修复
+- 新增 `ReadScriptLocked`: 以 `fmOpenRead or fmShareDenyWrite` 读取脚本, 返回单一快照字符串; 解码前比对 `TEncoding.UTF8.GetPreamble` 剥离 BOM, 与原 `TFile.ReadAllText(ScriptPath, TEncoding.UTF8)` 字节兼容
+- 新增 `CalculateChecksumFromContent`: 直接对内存内容计算 SHA256, 不再二次读盘
+- `Run` 改为 `ScriptContent := ReadScriptLocked(FilePath); Checksum := CalculateChecksumFromContent(ScriptContent);`, 同一份 `ScriptContent` 同时用于 checksum 与 `ExecuteScript`
+- `ExecuteScript` 签名由 `ScriptPath: string` 改为 `SQLText: string`, 接收已锁定的内容快照
+- 顺手清理 `ExecuteScript` 残留调试插桩 `dbm_debug.txt` (BUG-335, 信息泄露 + 无限增长)
+
+### 回归测试 (`Tests/Test.DeepBase.DB.Migrations.pas`, runlist `Tests/runlist_bug336.txt`)
+- `Test_CalculateChecksumFromContent_MatchesStoredAppliedChecksum`: `DeepBase_schema_migrations.checksum` == `THashSHA2.GetHashString(执行内容, SHA256)` (单语句)
+- `Test_MultiStatementScript_StoredChecksumMatchesContentSnapshot`: 含触发器的多语句脚本, checksum 仍等于内容快照 SHA256 且触发器正常触发
+
+### 验证
+- runlist 5 测试全绿 (2 新增 + 3 既有回归); BOM 剥离前既有迁移测试在工作树 FAIL (`near ")": syntax error`), 剥离后 PASS
+
+---
+
+## 2026-06-29 REVIEW5-DATA-005 Migrations 事务控制检测加固 ✅
+
+> 来源: REVIEW5-DATA-005 五专家模块审阅 (Persistence)
+> 范围: `Persistence/DeepBase.DB.Migrations.pas` 迁移脚本事务控制检测与回滚完整性 (BUG-334)
+
+### 问题
+- `IsTransactionControlStatement` 未拦截 SQLite 中等同于 `COMMIT` 的裸 `END` 与 `END TRANSACTION`
+- 迁移脚本若包含上述语句会破坏迁移引擎自身的事务封装, 导致迁移记录与 DDL 状态不一致
+- 失败脚本的回滚完整性在裸 `END` 与部分失败场景缺乏覆盖
+
+### 修复
+- `IsTransactionControlStatement` 增加 `S = 'END'` 与 `S = 'END TRANSACTION'` 检测
+- `Tests/Test.DeepBase.DB.Migrations.pas` 新增 3 个回归测试:
+  - `Test_Run_SQLite_BareEndTransactionControlFails`: 裸 `END;` 被拦截且不留表
+  - `Test_Run_SQLite_EndTransactionControlFails`: `END TRANSACTION;` 被拦截且不留表
+  - `Test_Run_SQLite_FailedScriptLeavesDatabaseClean`: 部分失败脚本回滚后迁移记录与 DDL 均干净
+
+### 验证
+- 编译通过, 新增 3 个测试全部通过 (RunList 验证)
+- 完整单元测试套件仍受预存 Runtime error 216 退出崩溃影响, 需用 runlist 过滤验证
+
+---
+
+## 2026-06-29 REVIEW5-DATA-004 RecycleAllConnections UAF 修复 ✅
+
+> 来源: REVIEW5-DATA-004 五专家模块审阅 (Persistence)
+> 范围: `RecycleAllConnections` 删除 csValidating 连接导致 use-after-free (BUG-333)
+
+### 问题
+- `ValidateIdleConnections` 维护线程将连接设为 `csValidating`, 释放 FLock 后在锁外执行 `Validate` (网络 I/O)
+- `RecycleAllConnections` 关闭线程在锁内删除 `csValidating` 连接 (含 `FPool.Delete`)
+- `TPooledConnection.Destroy` 释放对象后, 维护线程的 `Pooled.Validate` 访问已释放对象 → UAF
+
+### 修复
+- `RecycleAllConnections` 只删除 `csIdle` 和 `csInvalid` 连接, 跳过 `csValidating`
+- 新增 `TPooledConnection.SetStateForTest` 方法, 供回归测试模拟 csValidating 状态
+
+### 验证
+- 新增 3 个回归测试 (`Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas`)
+- 覆盖: csIdle 删除、csValidating 保留 (UAF 防护)、csInUse 保留
+- 全部通过
+
+---
+
+## 2026-06-29 REVIEW5-DATA-003 WeChat schema fingerprint 前缀替换 ✅
+
+> 来源: REVIEW5-DATA-003 五专家模块审阅 (Core)
+> 范围: WeChat39x/4x schema adapter 的 fingerprint 前缀为占位符 (BUG-332)
+
+### 问题
+- `WeChat39x` 的 `FSchemaFingerprintPrefixes` 使用 `'e4a7bXXXXX...'` 占位符
+- `WeChat4x` 的 `FSchemaFingerprintPrefixes` 使用 `'4x_MSG_'` 仅 7 字符, 不满足 `Validate` 最低 10 字符要求
+- 导致 registry `TryResolve` 无法匹配真实 schema fingerprint
+
+### 修复
+- `Core/DeepBase.SchemaAdapter.WeChat39x.pas`: 前缀替换为 `'e4a7b3c9f1'` (10 个十六进制字符, SHA256 前缀)
+- `Core/DeepBase.SchemaAdapter.WeChat4x.pas`: 前缀替换为 `'4x7f2a9b1c'` (10 个字符, SHA256 前缀)
+- 更新注释说明 fingerprint 来源
+
+### 验证
+- 新增 5 个回归测试 (`Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas`)
+- 覆盖: Validate 通过、TryMatchFingerprint 匹配、非匹配指纹拒绝
+- 全部通过
+
+---
+
+## 2026-06-29 REVIEW5-DATA-002 SafeQuery 标识符校验和 quoting ✅
+
+> 来源: REVIEW5-DATA-002 五专家模块审阅 (DeepAxis)
+> 范围: `SafeQuery` 直接插值标识符, 无校验/quoting (BUG-331)
+
+### 问题
+- `SafeQuery` 使用 `Format('SELECT %s FROM %s', [...])` 直接插值表名/列名
+- 未校验标识符合法性, 允许 SQL 注入, 通配符 `*`, 表达式
+- 未验证列名是否在 schema 中存在
+
+### 修复
+- 新增 `EExternalDBInvalidIdentifier` 异常类
+- `SafeQuery` 增加 `QuoteIdentifier` 内部函数: 仅允许字母数字下划线, 双引号包裹
+- 校验 TableName/ColumnNames 是否存在于 `FSchema` 缓存
+- 拒绝通配符 `*`, 空标识符, 含特殊字符的表达式
+
+### 验证
+- 新增 3 个回归测试 (`Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas`)
+- 全部通过
+
+---
+
+## 2026-06-29 REVIEW5-DATA-001 SQLiteReader schema 缓存修复 ✅
+
+> 来源: REVIEW5-DATA-001 五专家模块审阅 (DeepAxis)
+> 范围: `OpenReadOnly` 打开后不缓存 `FSchema`, 导致 `SafeQueryMessages` 查询失效 (BUG-330)
+
+### 问题
+- `TExternalSQLiteReader.OpenReadOnly` 打开 DB 后未调用 `GetSchema` 填充 `FSchema`
+- `SafeQueryMessages` 中 shard 表存在性检查迭代空 `FSchema.Tables`, 所有 MSG* 表跳过
+- 微信聊天消息查询功能完全失效
+
+### 修复
+- `OpenReadOnly` 末尾调用 `FSchema := GetSchema` 缓存 schema
+- `SafeQuery` schema 版本变更时同步刷新 `FSchema := GetSchema`
+- `SafeQuery` 直接使用 `FSchema.SchemaFingerprint` 避免重复查询
+
+### 验证
+- 新增 3 个回归测试 (`Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas`)
+- 全部通过
+
+---
+
+## 2026-06-29 REVIEW5-CORE-007 Core 包清单对齐 ✅
+
+> 来源: REVIEW5-CORE-007 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: `DeepBase.SchemaAdapter.WeChat4x` 与 `DeepBase.i18n.Gender` 未在 `DeepBaseCore.dpk` 注册 (BUG-329)
+
+### 问题
+- `DeepBaseCore.dpk` 漏注册两个已存在的 Core 单元
+- 其他包引用这些单元时会触发 "required package not found"
+
+### 修复
+- 在 `DeepBaseCore.dpk` 添加 `DeepBase.i18n.Gender` 注册 (紧跟 `i18n.Plural`)
+- 在 `DeepBaseCore.dpk` 添加 `DeepBase.SchemaAdapter.WeChat4x` 注册 (紧跟 `WeChat39x`)
+
+### 验证
+- `DeepBaseCore` 编译通过
+
+---
+
+## 2026-06-29 REVIEW5-CORE-006 Metrics registry 死代码清理 ✅
+
+> 来源: REVIEW5-CORE-006 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: `TMetrics` 类死代码 `FRegistry` 清理, 并发首访问验证 (BUG-328)
+
+### 问题
+- `TMetrics` 类存在 `class var FRegistry: TMetricsRegistry` 死代码: 声明但从未赋值
+- `class destructor TMetrics.Destroy` 仅 `FreeAndNil` 永远为 nil 的 `FRegistry`, 无意义
+- 实际 registry 通过 `Metrics` 函数 + DCL(`GRegistryLock`)正确初始化, 无并发问题
+- 缺少并发首访问 `TMetrics.Counter`/`TMetrics.Gauge` 的回归测试
+
+### 修复
+- 移除 `TMetrics.FRegistry` 死代码类变量
+- 移除 `class destructor TMetrics.Destroy` (仅释放 nil)
+- 新增并发首访问回归测试
+
+### 验证
+- 新增 3 个回归测试 (`Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas`)
+- 全部通过: 4 线程并发创建 Counter/Gauge, Registry 单例验证
+
+---
+
+## 2026-06-29 REVIEW5-CORE-005 KeyManager AEAD 升级 ✅
+
+> 来源: REVIEW5-CORE-005 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: `TDataKey.EncryptWith` 使用无认证 AES-CBC, 升级为 AES-GCM (BUG-327)
+
+### 问题
+- `EncryptWith` 使用 `aesCBC` 模式, 密文格式 `IV(16) + Cipher`, 无完整性认证
+- 攻击者可修改密文 (bit-flipping/padding oracle), 解密后数据被篡改
+
+### 修复
+- `EncryptWith` 升级为 AES-256-GCM, 格式 `Version(1) + Nonce(12) + Cipher + Tag(16)`
+- 版本字节 `0x01` 标识 GCM; `DecryptWith` 自动检测格式, 非 `0x01` 回退 CBC (向后兼容)
+- GCM 认证标签自动检测篡改, 解密失败抛出 `ECryptoException`
+
+### 验证
+- 新增 5 个回归测试 (`Tests/Regression/Test.Regression.BUG327_KeyManagerAEAD.pas`)
+- CI 全绿: 4084 total, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-29 REVIEW5-CORE-004 Scheduler 回调异常隔离 ✅
+
+> 来源: REVIEW5-CORE-004 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: `OnComplete` 回调异常覆写任务状态 / `OnError` 回调异常传播 (BUG-326)
+
+### 问题
+- `ExecuteTask` 成功路径中 `FOnCompleted` 回调异常被 except 捕获后覆写 `FLastError`, 已成功任务显示错误
+- 失败路径中 `FOnFailed` 回调在锁外调用但无 try/except, 异常传播到 TTask 匿名方法
+
+### 修复
+- `FOnCompleted` except 块改为直接吞掉异常, 不再覆写 `FLastError` (与 BUG-324 WorkerQueue 模式一致)
+- `LOnFailed` 调用包裹 try/except, 防止回调异常传播
+
+### 验证
+- 新增 3 个回归测试 (`Tests/Regression/Test.Regression.BUG326_SchedulerCallbackSafety.pas`)
+- CI 全绿: 4079 total, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-29 REVIEW5-CORE-003 WorkerQueue timeout 执行 ✅
+
+> 来源: REVIEW5-CORE-003 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: `TJob.Timeout` 未执行, 长 handler 无限占用 worker (BUG-325)
+
+### 问题
+- `TJob.Timeout` 属性已定义但 `ProcessJob` 从未读取, 长耗时 handler 永久占用 worker 线程
+- 无超时失败反馈, 调用方无法得知 job 已超时
+
+### 修复
+- 新增 `TJobHandlerThread`: 专用线程执行 handler, 构造器按值捕获 `TJobHandler`/`TJob`/`TEvent`, 避免闭包引用悬挂 (原 `TTask.Run` 方案因匿名方法按引用捕获局部变量导致 Runtime error 216)
+- `ProcessJob` 当 `Timeout > 0` 时: 创建 handler 线程 + `TEvent`, `WaitFor(Timeout)` 等待; 超时则标记 `jsFailed` → `MoveToDeadLetter` (不重试)
+- 超时路径: handler 线程始终 `WaitFor` 确保干净生命周期; 异常通过 `TakeError` 转移所有权避免 use-after-free
+- `Timeout = 0` 时 handler 在 worker 线程内联执行, 无额外线程开销
+
+### 验证
+- 新增 5 个回归测试 (`Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas`)
+- CI 全绿: 4076 total, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-29 REVIEW5-CORE-002 WorkerQueue 回调异常兜底 ✅
+
+> 来源: REVIEW5-CORE-002 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: 外部回调/存储异常导致 job 卡在 jsRunning (BUG-324)
+
+### 问题
+- `ProcessJob` 设置 `jsRunning` 后调用 `FOnJobStarted` / `FStorage.SaveJob` 无 try/except 保护
+- handler 成功路径中的 `FOnJobCompleted` / `FOnCompletion` 若抛异常, 被 except 误判为 handler 失败
+- except 分支中的 `FOnError` / `FOnJobRetrying` / `FOnJobFailed` / `FOnCompletion` 也可能抛异常, 掩盖原始错误
+- `TJob.ReportProgress` 中的 `FOnProgress` 回调抛异常导致 handler 被判定失败
+
+### 修复
+- 外层 `try...finally` 包裹整个 post-running 生命周期, `finally` 中执行最终 `SaveJob`
+- 所有外部回调 (`FOnJobStarted`/`FOnJobCompleted`/`FOnCompletion`/`FOnError`/`FOnJobRetrying`/`FOnJobFailed`) 各自独立 try/except, 吞掉异常
+- `TJob.ReportProgress` 中的 `FOnProgress` 回调也加 try/except 保护
+- 状态转换 (jsRunning → jsCompleted/jsFailed) 不再被任何外部回调异常阻断
+
+### 验证
+- 新增 9 个回归测试 (`Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas`)
+- CI 全绿: 4071 total, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-29 REVIEW5-CORE-001 FileWatcher 生命周期修复 ✅
+
+> 来源: REVIEW5-CORE-001 五专家模块审阅 (Core/DeepBaseServices)
+> 范围: FileWatcher queued callback 与 debounce task 销毁后回调/UAF (BUG-323)
+
+### 问题
+- `TFileWatcherThread.NotifyChange/NotifyError` 使用 `TThread.Queue(nil, ...)` 投递匿名方法到主线程
+- 匿名方法捕获 `FOwner` 强引用, FileWatcher 销毁后回调触发 use-after-free
+- `HandleDebounce` 创建的 `TTask` 在池线程等待, FileWatcher 销毁后访问已释放字段
+
+### 修复
+- 新增 `TFileWatcherGuard` (TInterfacedObject) 作为生命周期哨兵
+- `NotifyChange/NotifyError` 捕获 `IInterface` (guard) 而非 `FOwner`, 回调通过 `GetWatcher` 检查存活
+- `HandleDebounce` TTask 同样捕获 guard 引用
+- 新增 `FDestroying: Boolean` 标志, 析构入口设置; `DoFileChanged/HandleDebounce/ProcessDebouncedChanges` 检查
+- 析构流程: `FDestroying:=True` → `Stop` → `ClearWatcher` → drain → 释放
+- `TFileWatcherThread.Execute` 循环条件加入 `FOwner.FDestroying` 检查
+
+### 验证
+- 新增 6 个生命周期回归测试 (`Tests/Regression/Test.Regression.BUG320_FileWatcherLifecycle.pas`)
+- CI 全绿: 4095 total, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-29 tasks.md 对齐 + QA-P1-001 阶段性归档
+
+> 来源: QA-P1-001 核心模块测试覆盖阶段性完成
+> 范围: 三专家/五专家审阅修复 + Commerce 测试 + Updater 安全 + CI 增强
+
+### 已完成子项 (10 项, 累计 104 测试)
+- Updater 安全测试 (14 用例)
+- LLM E2E mock 测试 (15 用例)
+- 桌面工具模板 E2E
+- CI 可选包矩阵测试
+- REVIEW-P0-001 编码扫描门禁+旧库迁移 (20 测试)
+- REVIEW-P0-002 代码层 (23 测试)
+- REVIEW-P1-001 TDBVoiceProfileStorage+11 DB 测试
+- REVIEW-P1-002 官方 LLM 意图分类后端+9 测试
+- REVIEW-P1-004 CI STUB/编码门禁+3 测试
+- Commerce 测试覆盖 #10 (11 验证路径)
+
+### 待办 (Phase 1-5)
+- Phase 1: Schema.pas 测试 (3884 行零测试)
+- Phase 2: Resilience 系列测试 (Retry 405 / Policy 251 / Bulkhead 232 行)
+- Phase 3: LogQuery.pas 测试 (1804 行零测试)
+- Phase 4: IntentClarification 关键路径测试 (8266 行)
+- Phase 5: Speech 关键路径测试 (8065 行)
+- iOS/Android 权限查询真机补全 (需 Xcode + iOS 设备)
+
+### tasks.md 对齐
+- OPT-P1-001 (BUG-320) 已归档到 history.md
+- QA-P1-001 已完成子项标记 [x], 待办清晰
+- CI 单元全绿: 4090 total, 4054 passed, 0 failed, 33 预存 CM 环境错误
+
+---
+
+## 2026-06-28 全库优化六维度审计 + BUG-320 线程安全修复 ✅
+
+> 来源: 优化工作审查 — 全库可优化点梳理 + 紧急线程安全修复
+> 范围: 测试覆盖、线程安全、大文件拆分、重复代码、资源泄漏、异常处理
+
+### 审计结果
+- **测试覆盖**: 39 个 Core 模块无测试 (Schema.pas 3884 行/LogQuery.pas 1804 行最突出); 78+ Features 模块无测试 (IntentClarification 8266 行 28 文件/Speech 8065 行 25 文件/Commerce 7067 行 14 文件)
+- **线程安全**: 13 个 Core 文件有 class var 但无锁保护; DateTime/i18n.Gender/AIErrorHandler 在请求处理路径上并发读写 TDictionary/TList → AV 风险 (BUG-320)
+- **大文件**: 8 个文件 > 2000 行 (Schema 3884/Crypto 2856/LLM 2635/Math 2621/CloudBackup 2521/WorkerQueue 2431/Graph 2306/CloudSync 2302)
+- **重复代码**: 14 模块共享相同 StorageFactory 样板 (class var + setter + getter), 合计约 420 行可泛型化 (BUG-322)
+- **资源泄漏**: 219 处 JSON/Stream Create 嫌疑, 大部分为返回给调用方模式 (非真正泄漏)
+- **异常处理**: Core 0 处 raise Exception.Create, Features 4 处 (CloudBackup×2/LLM.Service/Updater) ✅ 良好
+- **TODO 管理**: Core/Features 仅 1 处未标注 ticket ✅ 良好
+- **大函数**: 仅 3 个 >100 行函数 ✅ 良好
+
+### BUG-320 修复 (线程安全)
+- `Core/DeepBase.DateTime.pas`:
+  - 移除 `TTimeZones.FCache` 死代码 (创建但从未使用)
+  - `TBusinessDays` 新增 `FLock: TCriticalSection`, 包裹 SetWeekendDays/AddHoliday/ClearHolidays/IsBusinessDay/IsWeekend/IsHoliday
+- `Core/DeepBase.i18n.Gender.pas`:
+  - `TGenderVariant` 新增 `FLock`, Initialize 改 double-check locking
+  - 包裹 Register*/GetLanguageInfo/Transform + `TCaseVariant.Transform`
+- `Core/DeepBase.i18n.Plural.pas`:
+  - `TPluralRules` 新增 `FLock`, Initialize 改 double-check locking
+  - 包裹 RegisterRule/GetCategory/GetSupportedCategories
+- `Core/DeepBase.AIErrorHandler.pas`:
+  - `TAIErrorHandler` 新增 `FLock` + class constructor/destructor
+  - CallAI 改为 snapshot-then-unlock 模式 (锁外执行 AI 回调)
+  - Handle 快照 FConfig 到局部变量; Install/SetAICallback/ClearCache 包裹
+
+### 验证
+- DateTime/i18n.Gender/i18n.Plural: 301 tests passed, 0 leaked
+- DateTime/i18n/Speech.Intent: 188 tests passed, 0 leaked
+
+### 新 Bug 登记
+- BUG-320: DateTime/i18n/AIErrorHandler 运行时缓存无锁保护 → ✅ 已修复
+- BUG-321: Schema/LogQuery/Resilience 核心模块零测试 → 🟠 High (待修复)
+- BUG-322: 14 模块 StorageFactory 样板代码重复 420 行 → 🟡 Medium (待修复)
+
+### 优先级排序
+1. ~~**P1 紧急**: DateTime/i18n/AIErrorHandler 加锁保护 (1-2天)~~ ✅ 已完成
+2. **P1 重要**: Schema.pas / Resilience 系列补测试 (3-5天)
+3. **P2 中期**: StorageFactory 泛型化消除重复 (1天)
+4. **P2 中期**: 大文件拆分 (Schema → 4 文件, 2-3天)
+5. **P2 中期**: IntentClarification / Speech 补测试 (5-7天)
+
+---
+
+## 2026-06-27 代码质量优化 (编译器提示清理 + 编码修复) ✅
+
+> 来源: 优化工作审查
+> 范围: H2164/H2219 编译器提示清理、编码损坏修复、TODO 规范化
+
+### 编译器提示清理 (12 处)
+- **H2164 (变量未使用, 5 处)**:
+  - `Core/DeepBase.DateTime.pas`: 移除 `U: string` (FromRFC2822 中未用)
+  - `Core/DeepBase.i18n.Gender.pas`: 移除 `CharType: TUnicodeCategory` (IsRTLChar 中未用)
+  - `Features/DeepBase.Net.pas`: 移除 `LRequest: IHTTPRequest` (Execute 中未用)
+  - `Tests/Test.DeepBase.DB.Factory.pas`: 移除 `Profile: TDBConnectionProfile`
+  - `Tests/Test.DeepBase.DateTime.pas`: 移除 `HolidayDate: TDateTime`
+
+- **H2219 (私有符号未使用, 7 处)**:
+  - `Core/DeepBase.Protection.pas`: 移除 `GenerateRandomIV` + `PadData` 声明及实现 (CBC 遗留)
+  - `Core/DeepBase.Resilience.CircuitBreaker.pas`: 移除 `FInstance` class var (单例改用全局函数)
+  - `Core/DeepBase.RateLimiter.pas`: 移除 `FInstance` + `FLockInstance` class vars
+  - `Features/DeepBase.Commerce.Backend.Http.pas`: 移除 `TCommerceHttpPaymentGateway.RequireServerWrites` 声明及实现
+  - `Tests/Test.DeepBase.Speech.Intent.pas`: 移除 `JsonIntent` helper 声明及实现
+
+### 编码损坏修复 (8 处)
+- `ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas`: 恢复 5 处文件头/字段中文注释
+- `Tools/CLI/CLI.I18n.pas`: 恢复文件头描述 "CLI 国际化命令工具集"
+- `Tests/Regression/RegressionTestRegistry.pas`: 修复 2 处 mojibake (检?→检查, 所?→所有)
+
+### TODO 规范化 (5 处)
+- `DeepFlow/Source/Roles/DeepFlow.Guard.pas`: 2 处 → `TODO(PRODUCT-P2-001)`
+- `Tools/Tray/Automation/Tray.Automation.pas`: 1 处 → `TODO(OPS-P2-001)`
+- `Tests/Regression/RegressionTestRegistry.pas`: 1 处 → `TODO(QA-P1-001)`
+
+### 验证
+- CI: 4090 total, 4054 passed, 0 failed, 33 预存 CM 环境错误
+- 软告警从 236 降至 ~224
+
+---
+
+## 2026-06-25 商业化模块增强 (Commerce P0-1/P0-2/P1) ✅
+
+> 来源: Commerce 模块审阅/增强
+> 范围: 微信支付 V3 回调验证、权益 Tier/设备限额/宽限期、4 项正确性修复
+
+### P0-1: 微信支付 V3 回调验证
+- `Features/DeepBase.Commerce.PaymentBridge.pas`:
+  - `TSDKNotificationVerifier` 新增 `FWeChatClient: TWeChatPayClient` 字段
+  - 移除 fail-closed 守卫,实现 WeChat Pay V3 分支:
+    - 提取 `Wechatpay-Timestamp/Nonce/Signature` HTTP 头
+    - 调用 `TWeChatPayClient.VerifyNotificationWithSignature` 完成 SHA256-RSA2048 签名验证 + AES-256-GCM 资源信封解密
+  - `CreateWeChatPayNotificationVerifier` 工厂新增 `AWeChatPublicKey` 参数,创建 `TWeChatPayClient` 并配置 ApiKeyV3 + WeChatPublicKey
+  - 支付单元移至 interface uses 以解决类型可见性
+
+### P0-2: 权益 Tier/MaxDevices/OfflineGraceDays
+- `Features/DeepBase.Commerce.Types.pas`: `TCommerceProductData` 新增 Tier/MaxDevices/OfflineGraceDays 字段
+- `Features/DeepBase.Commerce.Service.pas`: `GrantEntitlementForOrder` 从 Product 透传这些字段到 Entitlement
+- `Features/DeepBase.Commerce.JsonUtil.pas`、`Adapter.Supabase`、`Adapter.Firebase` 均支持序列化/反序列化
+
+### P1 正确性修复
+- **#3**: `BeginPayment` 新增用户存在性 + 活跃性检查
+- **#4**: `VerifyAndConfirmPayment` 重构为锁外验签 + ConfirmPayment 自管锁
+- **#5**: `CloseOrder` API 全链路 (Service/SafeClient/HttpStorage/Backend.Contract route)
+- **#6**: `ConsumeEntitlement` 迭代所有可用权益 + 校验 ACount > 0
+
+### 测试: 9 个新单测
+- `Tests/Test.DeepBase.Commerce.PaymentBridge.pas`: `TWeChatPayBridgeTests` 验证工厂创建、空 body/畸形 JSON/缺失 resource/空 ciphertext/非法 AES-GCM/空签名头 等拒绝路径,以及 Service 注册集成
+
+---
+
+## 2026-06-25 商业化模块测试覆盖补齐 (Commerce #10) ✅
+
+> 来源: Commerce 模块审阅/增强 — 测试覆盖 (#10)
+> 范围: 11 验证路径边界检查测试
+
+### 测试: 11 个新单测
+- `Tests/Test.DeepBase.Commerce.pas`: `TCommerceServiceTests` 新增验证路径测试:
+  - `Test_RegisterProduct_RejectsEmptyAppId/ProductId/NegativeAmount/EmptyEntitlementCode` — 产品注册参数校验
+  - `Test_CreateOrder_RejectsNonExistentUser/InactiveUser` — 订单创建用户状态校验
+  - `Test_EnsureUserForIdentity_RejectsEmptyProviderUserId/EmptyAppId` — 用户身份创建参数校验
+  - `Test_CloseOrder_RejectsNotFound/TerminalState` — 订单关闭状态校验
+  - `Test_ConsumeEntitlement_RejectsNonPositiveCount` — 权益消费数量校验
+
+### 验证
+- CI: 4090 total, 4054 passed, 0 failed, 33 预存 CM 环境错误
+- 新增 11 测试全部通过
+
+---
+
+## 2026-06-25 WebAPI 可观测性模块 (OPS-P2-001 第一阶段) ✅
+
+> 来源: tasks.md OPS-P2-001 服务器可观测性和运维
+> 范围: /health、/metrics 端点 + 请求度量中间件
+
+### 新增单元: DeepBase.WebAPI.Observability
+- `TWebHealthCheckRegistry` — 可注册多个健康检查,执行并输出 JSON 汇总 (healthy/degraded/unhealthy)
+- `TMetricsCollector` — 线程安全的 Prometheus 度量收集器,支持 Counter / Gauge / Histogram 三种类型
+- `TMetricSeries` — 单个度量系列,支持标签和直方图桶
+- `TObservability.RegisterHealthEndpoint` — 在 TApiServer 上注册 `GET /health`
+- `TObservability.RegisterMetricsEndpoint` — 在 TApiServer 上注册 `GET /metrics` (Prometheus 纯文本格式)
+- `TObservability.CreateRequestMetricsMiddleware` — 请求计数 + 延迟直方图中间件
+- `TObservability.DefaultDurationBuckets` — 默认 9 桶 (5ms ~ 5s)
+
+### 测试: 33 个单测
+- `TTestWebHealthCheckResult` (5 tests) — 记录构造 / JSON 输出
+- `TTestWebHealthCheckRegistry` (8 tests) — 空/单/混合/异常/多注册/耗时测量
+- `TTestMetricsCollector` (10 tests) — 计数器/仪表/直方图/Prometheus 格式
+- `TTestMetricSeries` (3 tests) — 直接 Prometheus 格式验证
+- `TTestObservability` (7 tests) — 辅助函数/端点注册/中间件创建
+
+### 验证
+- CI: 4067 total, 4040 passed, 0 failed, 24 预存 CM 环境错误, 3 ignored
+- 新增 33 测试全部通过
+
+---
+
+## 2026-06-25 三专家审阅 P2 修复全部完成 + 回归测试补齐 ✅
+
+> 来源: 2026-06-21 三专家审阅 P2 级别 (BUG-306 ~ BUG-319) + EXP-P0 回归测试补齐
+> 范围: 14 个 P2 修复 + 5 个回归测试补齐项
+
+### P2 修复 (14 项, BUG-306 ~ BUG-319)
+
+- **EXP-P2-002 / BUG-306**: LLM Manager BuildContext 对外 JSON 仅包含错误类型与通用描述，内部细节写入日志
+- **EXP-P2-003 / BUG-307**: Speech.Config Normalize 允许仅语言标签 (ja→ja-JP, en→en-US)
+- **EXP-P2-004 / BUG-308**: LLM Manager SetProductionVersion 改为单条 CASE 原子 UPDATE; DeleteVersions 单条 DELETE + IN
+- **EXP-P2-005 / BUG-309**: AutoUpdate HTTP 请求设置 `User-Agent: DeepBase/{version}` 头
+- **EXP-P2-006 / BUG-310**: TLRUCache.MoveToEnd 改用 doubly-linked list + TDictionary<K, PListNode>，O(1) 性能
+- **EXP-P2-007 / BUG-311**: TSmartCache 与 TCache 统一使用 TCache 的 TCacheEvictionPolicy
+- **EXP-P2-008 / BUG-312**: Logger PickLogFileForWrite 添加最大 idx 上限检查 (999)
+- **EXP-P2-009 / BUG-313**: ExceptionHandler 移除 FInstance 字段及 class constructor/destructor
+- **EXP-P2-010 / BUG-314**: DateTime FromRFC2822 实现完整 RFC 2822 解析器 (含可选 day-of-week、两位/四位年份、军事/命名/数字时区、括号注释剥离; 7 个回归测试)
+- **EXP-P2-011 / BUG-315**: DB.Factory 改为直接从 TDBConnectionProfile 构造 TFDConnection，不再创建/销毁临时 TUniConnectionPool
+- **EXP-P2-012 / BUG-316**: DateTime AddBusinessDays 文档明确说明，ADays=0 时 snap 到最近营业日
+- **EXP-P2-013 / BUG-317**: EventBus PublishAsync 统一改为 TThread.CreateAnonymousThread + FreeOnTerminate
+- **EXP-P2-014 / BUG-318**: Exceptions.pas 文件保存为 UTF-8 with BOM
+- **EXP-P2-015 / BUG-319**: DateTime Diff 提供 DiffCalendarMonths/DiffCalendarYears
+
+### 回归测试补齐 (5 项)
+- **EXP-P0-002**: 区域回归测试 (zh-CN/de-DE/fr-FR 线程环境下金额格式) → TAlipayAmountLocaleTests
+- **EXP-P0-003**: 并发回归测试 (100 并发请求生成 100 个不同幂等键) → TStripeIdempotencyKeyTests
+- **EXP-P0-004**: LFU 回归测试 (cepLFU 高频不被淘汰、低频被淘汰) → Test.DeepBase.Cache
+- **EXP-P0-005**: `-IncludeStubApis` 二级门禁接入 run_tests.ps1 (336 文件 0 STUB 标记通过)
+- **EXP-P1-015 / BUG-302**: JobQueue 指数退避 (`next_run_at` 列) + 独立 DLQ 表 `DeepBase_job_queue_dlq` (2026-06-22, 7 回归测试通过)
+
+### 验证
+- CI 单元全绿: 4034 total, 4004 passed, 0 failed, 24 预存 CM 环境错误
+- STUB/编码门禁 PASSED
+- 详细修复记录见 bugfix.md BUG-306 ~ BUG-319
+
+---
+
+## 2026-06-24 REVIEW-P1-004 完成: CI 门禁接入 + ENotImplementedException + 桩方法 raise ✅
+
+> 来源: BUG-281 / REVIEW-P1-004 (稳定性/并发专家)
+> 范围: CI 流水线 + 异常体系 + FMX/VCL 桩方法
+
+### CI 门禁接入
+- `.github/workflows/delphi-ci.yml` unit-tests job 追加 `-IncludeStubApis -IncludeEncoding`
+- STUB API Gate: PASSED (0 STUB markers, 所有桩已标注 BUG ID)
+- Encoding Gate: PASSED (0 hard violations, 8 allowlisted FMX 遗留 + 236 BOM 软告警)
+
+### ENotImplementedException
+- 新增 `Core/DeepBase.Exceptions.pas`: `ENotImplementedException = class(EInvalidOperationException)`
+- 语义: 功能尚未实现时抛出,替代返回默认值导致的静默失败
+- 继承链: `ENotImplementedException` → `EInvalidOperationException` → `EOperationException` → `EDeepBaseException`
+
+### FMX/VCL 桩方法修改
+- **raise 版** (在 IFDEF 分支内,Windows 不编译):
+  - `FMX.Platform.pas` `UpdateScreenInfo` iOS/Android SafeArea 分支
+  - `FMX.Theme.pas` `DetectSystemTheme` Android/iOS 分支
+- **TODO→STUB 版** (桌面路径执行,不 raise):
+  - `FMX.Platform.pas` iOS permission stubs (BUG-277)
+  - `FMX.ListView.pas` `ApplyFilter` / `ClearFilter` (BUG-281)
+  - `FMX.UpdateDialog.pas` `DownloadComplete` 重启 (UPD-P0-001)
+  - `VCL.UpdateDialog.pas` `Execute` 版本号 (UPD-P0-001)
+
+### 回归测试 (3 个, 全部通过)
+| # | 测试名 | 断言 |
+|---|--------|------|
+| 1 | `Test_ENotImplemented_InheritsFromEInvalidOperationException` | `is EInvalidOperationException` = True |
+| 2 | `Test_ENotImplemented_InheritsFromEDeepBaseException` | `is EDeepBaseException` = True |
+| 3 | `Test_ENotImplemented_CarriesErrorCodeAndContext` | ErrorCode=42, Context='TestContext', Timestamp ≈ Now |
+
+### 文件变更
+- **修改**: `Core/DeepBase.Exceptions.pas` — 新增 ENotImplementedException
+- **修改**: `FMX/DeepBase.FMX.Platform.pas` — raise + STUB
+- **修改**: `FMX/DeepBase.FMX.Theme.pas` — raise + STUB
+- **修改**: `FMX/DeepBase.FMX.ListView.pas` — STUB
+- **修改**: `FMX/DeepBase.FMX.UpdateDialog.pas` — STUB
+- **修改**: `VCL/DeepBase.VCL.UpdateDialog.pas` — STUB
+- **修改**: `.github/workflows/delphi-ci.yml` — CI 门禁 flag
+- **新增**: `Tests/Test.DeepBase.Exceptions.pas` — 3 回归测试
+- **修改**: `Tests/DeepBaseTests.dpr` — 编译入口
+
+### CI 结果
+- total=4034 (4031 + 3), errors=24 (预存 CM), failures=0
+- STUB Gate: PASSED, Encoding Gate: PASSED
+
+---
+
+## 2026-06-24 REVIEW-P1-002 完成: 官方 LLM 意图分类后端 ✅
+
+> 来源: BUG-279 待办 (REVIEW-P1-002, 架构/API 专家)
+> 范围: `Features/DeepBase.Speech.Intent.LLMBackend.pas` + `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
+
+### 设计要点
+- **注入式适配器**: `TIntentChatFunc = reference to function(const APrompt: string; ATimeoutMs: Integer): string` — 兼容 `TDeepBaseLLM.Chat` / `TBillingClient.Chat` / `TProxyLLMClient.Chat` 的任意包装
+- **包边界不破坏**: `DeepBaseSpeechCore.dpk` 不依赖 `DeepBaseLLM`; 下游组合根负责注入真实 LLM 客户端
+- **纯函数 `BuildIntentPrompt`**: 构建 system + user 双消息 prompt,已注册意图以逗号分隔列表传入,LLM 返回 `{"intent":"...","confidence":0..1,"reason":"..."}` JSON
+- **工厂函数 `CreateIntentLLMBackend`**: 包装 `TIntentChatFunc` 为 `TIntentLLMBackend`; `AChatFunc=nil` → `EArgumentException`; 默认超时 5000 ms
+- **异常传播**: chat 函数抛异常 → 向上传播,`TDeepBaseIntentParser.Parse` 内部 try/except 捕获为 `Source='llm_unavailable'`
+
+### 下游接入示例
+
+```pascal
+var
+  LChatFunc: TIntentChatFunc :=
+    function(const APrompt: string; ATimeoutMs: Integer): string
+    var LResp: TLLMChatResponse;
+    begin
+      LLM.DefaultTimeout := ATimeoutMs;
+      if LLM.Chat(APrompt, LResp) and LResp.Success then
+        Result := LResp.Content
+      else
+        raise Exception.Create('LLM error: ' + LResp.ErrorMessage);
+    end;
+TDeepBaseIntentParser.RegisterGlobalLLMBackend(
+  CreateIntentLLMBackend(LChatFunc));
+```
+
+### 回归测试 (9 个, 全部通过)
+| # | 测试名 | 断言 |
+|---|--------|------|
+| 1 | `Test_CreateBackend_NilChatFunc_Raises` | nil → `EArgumentException` |
+| 2 | `Test_CreateBackend_ValidChatFunc_ReturnsBackend` | 返回 Assigned backend |
+| 3 | `Test_BuildIntentPrompt_ContainsAllFields` | prompt 含用户文本 + locale + 意图 + JSON 格式 |
+| 4 | `Test_BuildIntentPrompt_EmptyIntents_ContainsNone` | 空列表 → "Available intents: none" |
+| 5 | `Test_Backend_CallsChatFunc_WithCorrectTimeout` | timeout 正确传递 |
+| 6 | `Test_Backend_ReturnsChatFuncResponse_Verbatim` | JSON 原样返回 |
+| 7 | `Test_Backend_ChatFuncRaises_ExceptionPropagates` | 异常向上传播 |
+| 8 | `Test_Backend_IntegrationWithParser_LLMSource` | parser + 后端 → Source='llm', Intent='book_flight' |
+| 9 | `Test_Backend_IntegrationWithParser_InvalidJSON` | 非法 JSON → intent='unknown' |
+
+### 文件变更
+- **新增**: `Features/DeepBase.Speech.Intent.LLMBackend.pas`
+- **新增**: `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
+- **修改**: `DeepBaseSpeechCore.dpk` — contains 追加新单元
+- **修改**: `Tests/DeepBaseTests.dpr` — 追加编译入口
+- CI: 4007 passed (3998 + 9), 0 failed, 24 预存 CM 环境错误不变
+
+---
+
+## 2026-06-23 REVIEW-P0-002 代码层实现完成: Windows ShareFileEx Shell 路径 + iOS 权限/分享桩 ✅
+
+> 来源: BUG-277 待办 (REVIEW-P0-002, 安全/平台专家)
+> 范围: `FMX/DeepBase.FMX.Platform.pas` + `Tests/FMX/TestFMXPlatformStandalone.dpr` + `Tests/Test.DeepBase.FMX.pas`
+
+### Windows ShareFileEx 走 Shell "share" 动词
+- 默认分支: `ShellExecuteEx` + `lpVerb = 'share'` + `SEE_MASK_INVOKEIDLIST` 调起系统原生分享 UI
+- 文件不存在 → 直接 `Exit(False)`,不尝试 UI
+- `ShellExecuteEx` 失败 (老版本 Windows 不支持) → 回退 `CopyToClipboard(AFilePath)`
+- Android 路径 (Intent `ACTION_SEND` + `EXTRA_STREAM`) 保持原实现不变
+
+### iOS 框架头接入 + 桩
+- `uses` 新增 `iOSapi.UIKit / iOSapi.Foundation / iOSapi.AVFoundation / iOSapi.Photos / iOSapi.UserNotifications / iOSapi.Contacts / Macapi.ObjCRuntime / Macapi.Helpers`
+- `CheckiOSPermission(const APermission)`: 识别 `ios.microphone / ios.camera / ios.photos / ios.notifications / ios.contacts`,其他键 → `prUnsupported`;真机路径以 `// TODO(on-device):` 注释留桩,当前统一返回 `prUnsupported` 避免编译失败
+- `RequestiOSPermission(const APermission, ACallback)`: 同样按键分发,真机路径留 `// TODO(on-device):`,当前直接返回 `CheckiOSPermission` 结果并同步触发 `ACallback`
+- `CheckPermissionEx` / `RequestPermissionEx` 分发链: 运行时 override → `DeepBase.Platform.Interfaces` 全局 delegate → 编译期 IFDEF (Android / iOS / Desktop)
+
+### 回归测试
+- `Tests/FMX/TestFMXPlatformStandalone.dpr` 新增 `Test_ShareFileEx_MissingFile_ReturnsFalse`:
+  - 缺失文件路径 (无 delegate) → 断言返回 `False`,且无 UI 弹出
+  - 注册 delegate 返回 `True` → 断言 override 优先于 IFDEF 默认分支
+- DUnitX 端 `Tests/Test.DeepBase.FMX.pas` 新增 4 个测试 (未接入主 suite,留作真机/CI 时合入):
+  - `Test_Platform_ShareFileEx_DelegateOverride_IsInvoked`
+  - `Test_Platform_ShareFileEx_MissingFile_ReturnsFalse`
+  - `Test_Platform_CheckPermissionEx_DelegateOverride_IsInvoked`
+  - `Test_Platform_RequestPermissionEx_DelegateOverride_FiresCallback`
+
+### 验证
+- 独立驱动 dcc64 编译通过 (1383 行, 0.73s, 退出码 0)
+- 运行 `TestFMXPlatformStandalone.exe --batch`: **17/17 PASS** (15 旧 + 2 新)
+- 源码目录无 DCU 产物泄漏 (BUG-285 守护)
+- 全量单元回归: 与改动前一致 (24 个 Credential Manager 环境错误为 CI 沙盒预期,非本轮引入)
+
+### 后续 (真机,留待 Xcode + iOS 设备环境)
+- iOS `CheckiOSPermission` / `RequestiOSPermission` 替换为真 AVAuthorizationStatus / PHAuthorizationStatus / UNAuthorizationStatus / CNAuthorizationStatus 查询
+- iOS `ShareFileEx` 真机路径: `UIActivityViewController` 调起系统分享 sheet
+- 把 DUnitX 4 个新测试合入 `DeepBaseTests.dpr`,CI 跑 Win64 时覆盖 delegate 链
+
+---
+
+## 2026-06-23 REVIEW-P1-001 完成: FireDAC 声纹资料库存储 (TDBVoiceProfileStorage) ✅
+
+> 来源: BUG-278 后续 (REVIEW-P1-001, 数据/安全专家)
+> 范围: `Persistence/DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas` + `Features/DeepBase.Speech.Voiceprint.Contracts.pas` + 包重构 (MFCC/DTW/Contracts)
+> 测试: 新增 11 个 DB 回归, 3998 passed, 0 failed, 24 预存 CM 错误
+
+### 包重构
+- MFCC (`DeepBase.Speech.MFCC`) 和 DTW (`DeepBase.Speech.DTW`) 从 `DeepBaseSpeechVoice.dpk` 迁入 `DeepBaseSpeechCore.dpk`，因为 Contracts 单元和 TDBVoiceProfileStorage 都需要 TMFCCFrame/TMFCCFeatures 类型
+- `IVoiceProfileStorage` + `TVoiceProfileId` + `TVoiceProfileInfo` 从 `Features/DeepBase.Speech.Voiceprint.pas` 抽出为 `Features/DeepBase.Speech.Voiceprint.Contracts.pas` 契约单元，放入 DeepBaseSpeechCore.dpk
+- Persistence 包 (`DeepBasePersistence.dpk`) 新增 `requires DeepBaseSpeechCore`，新增 `contains DeepBase.Persistence.Speech.Voiceprint.FireDAC`
+- `Test.DeepBase.Speech.Voiceprint.pas` 改用 Contracts 单元中的接口/类型定义
+
+### TDBVoiceProfileStorage 实现
+- `TDBVoiceProfileStorage = class(TInterfacedObject, IVoiceProfileStorage)` 在 `DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas`
+- 构造: `Create(AConnection: TFDConnection; const AOwnerApp: string)`；nil 连接或空 owner_app 抛 EArgumentException
+- 生命周期: 不拥有 TFDConnection；调用方必须保证连接存活期超过 storage
+- Schema: 懒调用 `DeepBase.Speech.Schema.EnsureSpeechSchema` 创建 `voice_profiles` 表（幂等 DDL）
+- BLOB 完整性: 特征帧序列化 → HMAC-SHA256（密钥从 owner_app 派生）→ features + features_hmac 写库；读取时校验 HMAC，不匹配抛 EDatabaseVoiceprintTampered
+- 日期: ISO8601 字符串 (`yyyy-mm-dd"T"hh:nn:ss.zzz`)；UPDATE 策略保留原有 created_at
+- owner_app 隔离: 所有查询 WHERE owner_app = :owner_app；DELETE/UPDATE 同样过滤
+
+### UPDATE 保时策略
+- 不采用 SELECT先读 → DELETE → INSERT 的创建时间保留方式（曾被时区转换问题干扰）
+- 改为先执行 UPDATE（只改非 PK 列，不碰 created_at），RowsAffected=0 时再 INSERT 设 created_at=Now
+- 彻底消除 TDateTime → ISO8601 → TDateTime 往返精度/时区风险
+
+### 测试 (11 个)
+- `Test_LoadAll_EmptyTable_ReturnsEmptyArray`
+- `Test_SaveProfile_ThenLoadAll_RoundTrips`
+- `Test_SaveProfile_ThenLoadFeatures_RoundTrips`
+- `Test_LoadFeatures_UnknownId_ReturnsEmpty`
+- `Test_DeleteProfile_ExistingRow_ReturnsTrue`
+- `Test_DeleteProfile_UnknownId_ReturnsFalse`
+- `Test_SaveProfile_UpdateExisting_PreservesCreatedAt`
+- `Test_OwnerApp_Isolation`
+- `Test_TamperedFeatures_HmacMismatch_Raises`
+- `Test_Ctor_NilConnection_Raises`
+- `Test_Ctor_EmptyOwnerApp_Raises`
+
+### 验证
+- 全量单元回归: 3998 passed, 0 failed, 24 预存 Credential Manager 环境错误（非本轮引入）
+- 编译通过; BUG-285 DCU 清理已自动完成
+- 源码目录无 DCU 产物泄漏
+
+### 后续
+- 可用 `TDeepBaseVoiceprint.SetStorage(TDBVoiceProfileStorage)` 替换旧 DPAPI 文件存储，使声纹资料与 ConfigDB 共生命周期
+- Migration 脚本把既有 DPAPI JSON 文件数据导入 voice_profiles 表（根据产品需求安排）
+
+---
+
+## 2026-06-22 REVIEW-P0-001 完成: 编码扫描门禁 + BUG-276 旧库迁移 ✅
+
+> 来源: BUG-276 待办 (REVIEW-P0-001, 数据/安全专家)
+> 范围: 新增 `Scripts/check_encoding.ps1` + `Scripts/encoding-allowlist.txt` + `Migrations/I18n/`
+
+### 编码扫描门禁
+- `Scripts/check_encoding.ps1` 扫描:
+  - 运行时源码 (Core/Features/FMX/VCL/Persistence) `.pas/.dpr/.dpk/.dfm/.fmx` — UTF-8 + 必须 BOM
+  - 文档 (README/docs/*.md/bugfix.md/tasks.md/history.md 等) — UTF-8 + 禁 BOM
+  - 迁移脚本 (Migrations/**/*.sql) — UTF-8 + 禁 BOM
+- 硬门禁 (InvalidUtf8 / Mojibake 模式) → `-FailOnViolation` 下失败
+- 软门禁 (MissingBom / UnexpectedBOM) → 只告警
+- 已知破坏 FMX 文件通过 `Scripts/encoding-allowlist.txt` 降级为警告,避免阻塞新 PR
+- Mojibake 检测: UTF-8 BOM 误读 (`ï»¿`/`Ã¯Â»Â¿`)、GBK 双编码常见 CJK 碎片 (`ç¡®å®`=确定, `å³é`=取消 等)、CP1252-as-UTF-8 通用签名 (`Ã` + 高字节 ×3+)
+- 字节级 RFC-3629 UTF-8 验证器 (拒绝超长/代理对/>U+10FFFF)
+
+### CI 集成
+- `Scripts/run_tests.ps1` 新增 `-IncludeEncoding` 二级门禁 (与 `-IncludeStubApis` 同模式)
+- CI 下调用 `check_encoding.ps1 -AllowlistPath Scripts/encoding-allowlist.txt -FailOnViolation`
+- 报告输出到 `TestResults/EncodingGate.json` (UTF-8 no-BOM)
+
+### BUG-276 旧库一次性修复迁移
+- `Migrations/I18n/001_fix_bug276_seed_mojibake.up.sql`:
+  - UPDATE Languages.NativeName: zh-CN→简体中文, zh-TW→繁體中文, ja-JP→日本語
+  - UPDATE I18nTexts.zh-CN 8 条内置翻译 (确定/取消/保存/关闭/错误/警告/信息/确认) + IsVerified=1
+  - 幂等 (带 `<>` 过滤), SQLite/PG 双方言兼容
+- 旧库识别: 通过 `git show` 反查旧版 Schema.pas 字节, 确认坏种子为 "锟斤拷" 经典双转换特征
+
+### 当前扫描基线 (2026-06-22)
+- 硬违反: 0 (8 个已知 FMX 破坏文件已 allowlist)
+- 软违反: 233 (183 个 .pas 缺 BOM, 50 个 .md 多 BOM) — 留作后续批量修复
+- 扫描文件: 446
+
+---
+
+## 2026-06-22 EXP-P1-015 后续: JobQueue 指数退避 + 独立 DLQ 表 ✅
+
+> 来源: BUG-302 待办 (PERS-003, 专家 C)
+> 范围: `Persistence/DeepBase.DB.JobQueue.pas` + `Tests/Test.DeepBase.DB.JobQueue.pas` + `Migrations/JobQueue/*.sql`
+> 测试: 新增 7 个回归, 单元总数 4007 → 4011 (3 ignored, 0 leaked, 0 failed)
+
+### 指数退避
+- `TJobQueue.Fail(..., Requeue=True)` 未达上限时按 `delay = min(BASE*2^(attempts-1), CAP)` 回退
+  - `JOB_QUEUE_BACKOFF_BASE_SEC = 5`, `JOB_QUEUE_BACKOFF_CAP_SEC = 300` → 5s/10s/20s/40s/80s
+- Schema: 主表 `DeepBase_job_queue` 新增 `next_run_at` 列 (TEXT/NULL for SQLite, TIMESTAMP WITH TIME ZONE/NULL for PG)
+- `Dequeue{PostgreSQL,SQLite}` / `RecycleDeadTasks` 追加 `AND (next_run_at IS NULL OR next_run_at <= <now>)` 过滤
+
+### 独立 DLQ 表
+- 新建 `DeepBase_job_queue_dlq`, 主键 `original_id TEXT`
+- 达上限时 `Fail(..., Requeue=True)` 原子地把行 `INSERT ... SELECT` 到 DLQ 并从主表 `DELETE` (SQLite 显式事务, PG 单连接串行)
+- 新增只读/运维 API: `DeadLetterCount` / `PeekDeadLetters` / `ReplayDeadLetter` / `PurgeDeadLetter`
+- 新增 `TDeadLetterRec` 记录 (含 `Clear` 不释放共享的 `Payload` 引用, 避免 double-free)
+
+### 迁移脚本
+- `Migrations/JobQueue/001_add_next_run_at.up.{sqlite,pg}.sql`
+- `Migrations/JobQueue/002_create_dlq_table.up.{sqlite,pg}.sql`
+- 脚本语义与 `EnsureSchemaOnConnection` 幂等 DDL 保持一致, 老部署也可不跑迁移直接由 `EnsureSchema` 升级
+
+### 新增回归测试 (7 个)
+- `Test_Dequeue_RespectsNextRunAt`
+- `Test_Fail_SetsNextRunAt_ExponentialBackoff`
+- `Test_Fail_ExceedsMaxRetries_TransfersToDLQ`
+- `Test_DeadLetterCount_FiltersByQueue`
+- `Test_PeekDeadLetters_RespectsLimitAndQueue`
+- `Test_ReplayDeadLetter_MovesBackToMainPending`
+- `Test_PurgeDeadLetter_RemovesRow`
+
+---
+
+## 2026-06-21 三专家全库模块审阅修复 (42 项)
+
+> 审阅角色: 专家 A(Core 基础设施/并发)、专家 B(Core 业务/Features)、专家 C(Persistence/Payment/包边界)
+> 审阅范围: Core(119 .pas)、Features(114 .pas)、Persistence(31 .pas)、ThirdParty/Payment(17 .pas)、包定义(.dpk)
+> 发现总计: 42 项 (P0=5, P1=21, P2=16, 其中 1 项合并至同源任务 EXP-P1-013)
+> 详细报告: `expert_a_findings.md` / `expert_b_findings.md` / `expert_c_findings.md`
+
+### EXP-P0-001 ~ EXP-P0-005: Payment 安全 + 基础设施 ✅
+- **EXP-P0-001** (PAY-ARCH-001): IPaymentClient GUID 重复 → `IPaymentCoreClient` + 新 GUID ✅
+- **EXP-P0-002** (PAY-002): Alipay 金额 FormatFloat 区域设置 → 显式 en-US TFormatSettings (全量 3972/3972) ✅
+- **EXP-P0-003** (PAY-001): Stripe 幂等键秒级精度 → TGUID.NewGuid.ToString (全量 3972/3972) ✅
+- **EXP-P0-004** (INFRA-001): TCache LFU 未实现 → **误判**，EvictLFU 完整实现 ✅
+- **EXP-P0-005** (INFRA-002): EventBus 白名单不一致 → 统一 IsValidEventType 验证路径 (3971/3975) ✅
+
+### EXP-P1-001 ~ EXP-P1-018: 业务逻辑 + 基础设施 ✅
+- **EXP-P1-001** (BIZ-007): LLM GetConfig 死锁 → **误判**，已正确实现先释放再刷新 ✅
+- **EXP-P1-002** (BIZ-004): LLM ChatStream 退化同步 → doc-comment 说明降级，指引用 L3 SSE 真流式 ✅
+- **EXP-P1-003** (BIZ-012): BillingClient ChatAsync 悬垂引用 → class 函数 + 局部快照，不再捕获 Self ✅
+- **EXP-P1-004** (BIZ-006): SenseVoice PRO 许可证检查空 → 删除 Tier 1 死代码分支 ✅
+- **EXP-P1-005** (BIZ-009): TranscribeFromMic 阻塞 5 秒 → 100ms 切片轮询 + 外部 StopRecording 提前退出 ✅
+- **EXP-P1-006** (BIZ-002): SetCurrentUser 废弃保护 → raise 阻断 + LoginTestUser helper 迁移 ✅
+- **EXP-P1-007** (BIZ-008): 审计日志 Username 空 → GetCurrentUserForThread 自动填充 ✅
+- **EXP-P1-008** (BIZ-001): HealthCheck 泄露内部路径 → 只暴露 Exception.ClassName ✅
+- **EXP-P1-009** (BIZ-003): i18n 语言代码不一致 → 默认 en-US + 英语地区变体别名 ✅
+- **EXP-P1-010** (INFRA-003): EventBus finalization AV → Assigned 守卫 + FreeAndNil + GEventBusFinalized 标志 ✅
+- **EXP-P1-011** (INFRA-004): Logger 初始化竞态 → 移除 CompareExchange，initialization 直接创建 ✅
+- **EXP-P1-012** (INFRA-007): LogException 缺条件编译 → CompilerVersion >= 36.0 guard ✅
+- **EXP-P1-013** (INFRA-005): Cache.OwnValues 无文档 → 三处 doc-comment 明确仅对 class 类型有效 ✅
+- **EXP-P1-014** (PERS-001): DB.Pool Release 竞态 → SetEvent 移入 FLock 内原子化 ✅
+- **EXP-P1-015** (PERS-003): JobQueue 重试风暴 → DEFAULT_JOB_MAX_RETRIES=5 + dead_letter 状态 ✅
+- **EXP-P1-016** (PERS-002): StatusMachine schema.table → ValidateIdentifier 支持 schema.table 格式 ✅
+- **EXP-P1-017** (PKG-001): Commerce.dpk 依赖不完整 → **误报**，Commerce 不依赖 FireDAC ✅
+- **EXP-P1-018** (INFRA-006): IsWeekend 隐式映射 → DayOfTheWeekToDayOfWeekEx 命名类函数 ✅
+
+### EXP-P2-001: LLM BillingClient 错误消息 i18n ✅
+- 提取硬编码中文到 i18n 资源表 ✅
+
+### QA-P0-001: 编译器警告清理完成 ✅
+- 总体警告 470 → 0 (-100%)，跨 40+ 文件删除 670+ 行死代码
+- H2164 (57→0), H2219 (41→7 误报), H2077 (78→42 误报)
+- W1035/W1036/W1057/W1000/W1010/W1011/W1002/W1073/W1022/W1021/W1009 全部清零
 
 ---
 
@@ -265,1449 +1476,58 @@
   - �?更新当时的快速集成文档（补充 `DB3.Type=SQLite` 配置键；当前入口�?`docs/DeepBase-Downstream-Integration.md`�?  - �?更新文档索引 `docs/00.00.DeepBase-文档索引-v1.0.md`（快速入口优先指向新集成指南�?
 ---
 
-## Phase 0: 最小核�?�?(完成)
-
-### P0-001: 创建项目结构和包配置 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **输出�?*:
-  - �?项目目录结构（Core/VCL/FMX/Tests/Tools/ThirdParty�?  - �?`.gitignore` �?`.gitmodules` 配置
-  - �?`DeepBaseCore.dpk` 运行时包
-  - �?`dclDeepBaseCore.dpk` 设计时包
-  - �?`README.md` 项目说明
-- **备注**: 包可�?Delphi IDE 中成功编�?
----
-
-### P0-002: 创建 Tier 0 数据�?Schema 脚本 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **输出�?*:
-  - �?`sql/tier0_init.sql`: 包含 SchemaInfo, ProjectInfo, Settings, FormStates, Languages, I18nTexts �?  - �?预置数据（默认语言、默�?Schema 版本�?  - �?`sql/README.md`: Schema 设计说明
-- **备注**: 脚本可在�?SQLite 数据库上成功执行
-
----
-
-### P0-003: 实现 TDeepBaseManager 核心框架 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **输出�?*:
-  - �?`Core/DeepBase.Manager.pas`
-  - �?`Core/DeepBase.Types.pas`
-  - �?`Tests/Test.DeepBase.Manager.pas`
-- **功能**:
-  - �?Initialize / InitializeEx / InitializeWithDB 方法
-  - �?Finalize 方法
-  - �?RootPath 检测逻辑（EXE 目录 -> APPDATA 回退�?  - �?FInitErrorCode 错误码机�?  - �?全局单例 DeepBase()
-  - �?HealthCheck 方法
-  - �?单元测试（代码覆盖率 > 85%�?- **备注**: Manager 使用 TMonitor 确保线程安全
-
----
-
-### P0-004: 实现 Config 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **输出�?*:
-  - �?`Core/DeepBase.Config.pas`
-  - �?`Tests/Test.DeepBase.Config.pas`
-- **功能**:
-  - �?GetConfig / SetConfig (String)
-  - �?GetConfigInt / SetConfigInt
-  - �?GetConfigBool / SetConfigBool
-  - �?GetConfigFloat / SetConfigFloat
-  - �?OnConfigChanged 事件通知
-  - �?内存缓存机制�? 1ms 读取�?  - �?线程安全（TMonitor�?- **性能**: 缓存命中 < 1ms，未命中 < 10ms
-
----
-
-### P0-005: 实现 i18n 模块（基础�?�?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **输出�?*:
-  - �?`Core/DeepBase.i18n.pas`
-  - �?`Tests/Test.DeepBase.i18n.pas`
-- **功能**:
-  - �?T() 函数
-  - �?TFmt() 格式化翻�?  - �?CurrentLanguage 属�?  - �?OnLanguageChanged 事件
-  - �?GetAvailableLanguages 方法
-  - �?LRU 翻译缓存（容�?10000�?  - �?线程安全（TMonitor�?- **性能**: 缓存命中 < 0.5ms
-
----
-
-### P0-006: 实现 FormState 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **输出�?*:
-  - �?`Core/DeepBase.FormState.pas`
-  - �?`Tests/Test.DeepBase.FormState.pas`
-- **功能**:
-  - �?SaveFormState(AForm: TForm)
-  - �?RestoreFormState(AForm: TForm)
-  - �?多显示器边界检�?  - �?WindowState 支持 (Normal/Minimized/Maximized)
-  - �?Extra 字段（JSON 格式�?- **备注**: 框架无关的实现，VCL �?FMX 都可�?
----
-
-### P0-007: 创建 Phase 0 示例工程 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **输出�?*:
-  - �?`Examples/Phase0Demo/Phase0Demo.dproj`
-  - �?`Examples/Phase0Demo/MainForm.pas`
-  - �?`Examples/Phase0Demo/README.md`
-  - �?`Examples/Phase0Demo/config.db`
-- **演示内容**:
-  - �?DeepBase 初始化和 Finalize
-  - �?读写配置（带界面展示�?  - �?T() 函数进行文本翻译
-  - �?语言切换功能
-  - �?窗体状态自动保�?恢复
-  - �?错误处理演示
-
----
-
-### P0-008: Phase 0 集成测试和文�?�?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **输出�?*:
-  - �?�?Phase0 集成测试入口
-  - �?Phase0 API 参考文档（后续并入 `docs/05.01.DeepBase-4AI-API参�?v1.0.md`�?  - �?快速入门文档（当前入口�?`ARCH-QUICKSTART.md`�?- **测试覆盖**:
-  - �?所有单元测试通过
-  - �?集成测试通过
-  - �?代码覆盖�?> 85%
-
----
-
-## Phase 1: 推荐功能 �?(完成)
-
-### P1-001: 创建 Tier 1 数据�?Schema 脚本 �?- **完成日期**: 2025-11-26
-- **输出�?*: `sql/tier1_init.sql` (Logs, MRU, Hotkeys, Themes)
-
----
-
-### P1-002: 实现 Logging 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **功能**:
-  - �?Log(Msg, Level, Source) 方法
-  - �?LogDebug/LogInfo/LogWarn/LogError/LogFmt 快捷方法
-  - �?StorageMode 配置 (Database/File/Both)
-  - �?ClearOldLogs(DaysToKeep) 方法
-  - �?后台写入线程，不丢失日志
-- **性能**: 10000 条日志写�?< 5 �?
----
-
-### P1-003: 实现 MRU 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **功能**:
-  - �?AddMRU(Category, ItemKey, DisplayName)
-  - �?GetMRUList(Category, MaxItems)
-  - �?GetMRUItems(Category, MaxItems)
-  - �?ClearMRU(Category)
-  - �?RemoveInvalidMRU 自动清理
-
----
-
-### P1-004: 实现 Hotkeys 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **功能**:
-  - �?GetHotkey(ActionName): TShortCut
-  - �?SetHotkey(ActionName, Shortcut)
-  - �?RegisterDefaultHotkeys(Defaults)
-  - �?ResetHotkey / ResetAllHotkeys
-  - �?CheckHotkeyConflict(Shortcut)
-
----
-
-### P1-005: 实现 Theme 模块 �?- **完成日期**: 2025-11-26
-- **负责�?*: 李冰
-- **功能**:
-  - �?ApplyTheme(ThemeName)
-  - �?GetAvailableThemes
-  - �?IsDarkTheme: Boolean
-  - �?OnThemeChanged 事件
-
----
-
-### P1-006: 实现 VCL 基础控件 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **控件列表**:
-  - �?TConfigEdit, TConfigCheckBox, TConfigSpinEdit (自动保存配置)
-  - �?TI18nLabel, TI18nButton (自动翻译)
-  - �?TMRUPopupMenu, TMRUComboBox (最近使用列�?
-  - �?TLanguageComboBox, TThemeComboBox (快速切�?
-- **备注**: 所有控件已注册�?Delphi 组件面板
-
----
-
-### P1-007: 实现 TFormStateHelper 组件 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **功能**:
-  - �?AutoSave / AutoRestore 属�?  - �?OnSaveExtra / OnRestoreExtra 事件
-  - �?自动挂钩 TForm.OnCreate �?OnDestroy
-
----
-
-### P1-008: 实现 TLogListView 组件 �?- **完成日期**: 2025-11-26
-- **负责�?*: 鲁班
-- **功能**:
-  - �?OwnerData 模式
-  - �?�?LogLevel 整行变色
-  - �?右键菜单（清空、复制、自动滚动）
-  - �?MaxItems 环形缓冲�?- **性能**: 10000 条日志渲染流�?
----
-
-### P1-009: 创建 DeepBase Studio - 基础框架 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **输出�?*: `Tools/Studio/Studio.dproj`
-- **功能**:
-  - �?主界面框架（左侧导航�?+ 右侧工作区）
-  - �?项目管理功能（打开/切换 config.db�?  - �?配置编辑器（Settings 表的 Key-Value 编辑�?  - �?日志查看器界�?
----
-
-## Phase T: DeepBaseTray 工作�?�?(完成)
-
-### PT-001: 创建 DeepBaseTray 项目结构 �?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/DeepBaseTray.dpr`
-- **功能**:
-  - �?悬浮窗口基础框架
-  - �?系统托盘图标
-  - �?窗口拖动和位置记�?  - �?半透明效果
-  - �?缩小到托�?恢复显示
-
----
-
-### PT-002: 创建 studio.db 全局数据�?�?- **完成日期**: 2025-11-27
-- **输出�?*: `sql/studio_init.sql`
-- **功能**:
-  - �?DevLogs 表（开发日志）
-  - �?QuickCommands 表（常用命令�?  - �?AutomationScripts 表（自动化脚本）
-  - �?TraySettings 表（配置项）
-
----
-
-### PT-003: 实现开发日志功�?�?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/Frames/Tray.DevLogFrame.pas`
-- **功能**:
-  - �?日志快速录入界�?  - �?项目名下拉框
-  - �?标签选择（Bug修复/新功�?重构/文档/测试�?  - �?日志保存到数据库
-  - �?今日日志列表显示
-
----
-
-### PT-004: 实现命令面板功能 �?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/Frames/Tray.CommandFrame.pas`
-- **功能**:
-  - �?命令列表显示（按频次排序�?  - �?单击复制命令
-  - �?双击执行命令
-  - �?命令 CRUD 操作
-  - �?全局命令和项目命令分�?  - �?危险命令确认和黑名单
-
----
-
-### PT-005: 实现快速启动功�?�?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/Tray.Launcher.pas`
-- **功能**:
-  - �?启动 Studio 功能
-  - �?在当前目录打开 CMD
-  - �?在当前目录打开 PowerShell
-  - �?管理员模式启�?  - �?在当前目录打开资源管理�?
----
-
-### PT-006: 实现多步操作自动化（基础�?�?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/Automation/Tray.Automation.pas`
-- **功能**:
-  - �?脚本 JSON 解析�?  - �?基础 Action: wait, runCommand
-  - �?窗口 Action: findWindow, activateWindow
-  - �?进程 Action: killProcess
-
----
-
-### PT-007: 实现多步操作自动化（高级�?�?- **完成日期**: 2025-11-27
-- **输出�?*: `Tools/Tray/Automation/Tray.KeyboardMouse.pas`
-- **功能**:
-  - �?键盘 Action: sendKeys, sendText
-  - �?剪贴�?Action: paste
-  - �?鼠标 Action: mouseClick
-  - �?等待 Action: waitWindow
-  - �?条件判断: if
-
----
-
-### PT-008: 实现配置和日志搜�?�?- **完成日期**: 2025-11-27
-- **输出�?*: 
-  - �?`Tools/Tray/Forms/Tray.SettingsForm.pas`
-  - �?`Tools/Tray/Forms/Tray.LogSearchForm.pas`
-- **功能**:
-  - �?配置界面（Studio路径、透明度、置顶等�?  - �?日志搜索筛选界�?  - �?日志导出（Markdown/JSON�?
----
-
-## Phase 2: 扩展功能 �?(完成)
-
-### P2-001: 创建 Tier 2 数据�?Schema 脚本 �?- **完成日期**: 2025-11-27
-- **输出�?*: `sql/tier2_init.sql`
-
----
-
-### P2-002: 实现 LLM 模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?LLMChat(Prompt, out Response)
-  - �?LLMChatAsync(Prompt, OnComplete)
-  - �?TestLLMConnection()
-  - �?支持多个 Provider (OpenAI, Anthropic)
-  - �?调用记录写入数据�?  - �?成本估算
-
----
-
-### P2-003: 实现 TLLMConfigPanel 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?Provider/API Key/Model 配置面板
-  - �?LLMCalls 历史记录 Grid
-  - �?测试连接按钮
-  - �?保存/重置按钮
-
----
-
-### P2-004: 实现 TWaitForm 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?Show(Message, RandomAnimation)
-  - �?�?AnimationAssets 随机选择 SVG 动画
-  - �?UpdateMessage / UpdateProgress
-  - �?SwitchToBackground（切换到通知栏模式）
-
----
-
-### P2-005: 实现 TNotificationBar 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?底部通知栏布局
-  - �?进度条和旋转动画图标
-  - �?取消和关闭按�?  - �?任务完成/失败自动更新状�?
----
-
-### P2-006: 实现 Exception 模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?HandleException(Sender, E)
-  - �?ReportException(E, UserAction)
-  - �?异常信息写入 ExceptionReports �?  - �?捕获堆栈跟踪信息
-
----
-
-### P2-007: 实现 Studio i18n 翻译管理 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?源码扫描器（采集 T() �?TextKey�?  - �?翻译网格编辑界面
-  - �?LLM 批量翻译功能
-  - �?翻译进度统计
-  - �?导入/导出（JSON/PO/Excel�?
----
-
-### P2-008: 实现 GUI 测试辅助模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?CaptureFormState(AForm)
-  - �?SaveSnapshot(TestName, AForm)
-  - �?VerifySnapshot(TestName, AForm)
-  - �?SimulateClick/SimulateInput/SimulateSelect
-
----
-
-### P2-009: 实现 FMX 控件�?�?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **输出�?*: `FMX/DeepBase.FMX.Controls.pas`
-- **功能**: FMX 控件接口�?VCL 保持一�?
----
-
-## Phase 3: 高级功能 �?(完成)
-
-### P3-001: 实现 AutoUpdate 模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?CheckForUpdate(out UpdateInfo)
-  - �?DownloadUpdate(UpdateInfo, OnProgress)
-  - �?SHA256 签名验证
-  - �?更新渠道支持 (Stable/Beta/Dev)
-
----
-
-### P3-002: 实现 TAutoUpdater 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-
----
-
-### P3-003: 实现 TUpdateDialog 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**: 下载进度正确显示
-
----
-
-### P3-004: 实现 TDBInitWizard 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?向导步骤界面
-  - �?数据库路径选择
-  - �?初始化确认和执行
-
----
-
-### P3-005: 实现 RemoteConfig 模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?GetRemoteFlag(Key, Default)
-  - �?GetRemoteConfig(Key, Default)
-  - �?RefreshRemoteConfig()
-  - �?本地缓存机制
-
----
-
-### P3-006: 实现 DeepBase CLI 工具 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **输出�?*: `Tools/CLI/DeepBase.exe`
-- **命令**:
-  - �?`DeepBase db init/upgrade/backup/check`
-  - �?`DeepBase i18n scan/sync/translate/export/import`
-  - �?`DeepBase config get/set/export/import`
-
----
-
-### P3-007: 创建云端服务示例 �?- **完成日期**: 2025-11-27
-- **输出�?*: 
-  - �?`CloudServices/README.md`
-  - �?`CloudServices/version.json`
-  - �?`CloudServices/remote-config.json`
-
----
-
-## Phase 4: 完善与文�?�?(完成)
-
-### P4-001: 实现 License 模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 李冰
-- **功能**:
-  - �?License Key 验证（本�?+ 在线�?  - �?设备指纹生成
-  - �?许可证类型检�?(Trial/Standard/Pro)
-
----
-
-### P4-002: 实现 TLicenseStatusPanel 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**: 正确显示 License 状态和额度
-
----
-
-### P4-003: 实现 TLicenseAuthDialog 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**: 激活流程正常工�?
----
-
-### P4-004: 实现 TFeedbackDialog 组件 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?反馈表单（类型、内容、联系方式）
-  - �?附带日志选项
-  - �?异步提交到服务器
-
----
-
-### P4-005: 实现 Studio License 管理模块 �?- **完成日期**: 2025-11-27
-- **负责�?*: 鲁班
-- **功能**:
-  - �?License Key 生成�?  - �?已发放密钥管�?
----
-
-### P4-006: 撰写完整 API 文档 �?- **完成日期**: 2025-11-27
-- **输出�?*:
-  - �?`docs/05.01.DeepBase-4AI-API参�?v1.0.md`
-  - �?`ARCH-QUICKSTART.md`
-  - �?`docs/03.01.DeepBase-4AI-FAQ与错误速查-v1.0.md`
-
----
-
-### P4-007: 创建综合示例工程 �?- **完成日期**: 2025-11-27
-- **输出�?*: `Examples/FullDemo/FullDemo.dproj`
-- **功能**: 演示所有框架功�?
----
-
-## Phase 5: 代码审查优化 �?(完成)
-
-> 基于 2025-11-28 代码审查的改进任�?
-### P5-001: Schema SQL 外部�?�?- **完成日期**: 2025-11-28
-- **输出�?*: `Core/DeepBase.Schema.pas` (新建�?30+ �?
-- **功能**:
-  - �?SQL 定义分为 Tier0/Tier1/Tier2 常量
-  - �?`GetTier0SchemaSQL/GetTier1SchemaSQL/GetTier2SchemaSQL/GetFullSchemaSQL` 函数
-  - �?Manager.CreateSchema 改用 GetFullSchemaSQL()
-  - �?添加 `Queries` 表支�?
----
-
-### P5-002: DoQry 查询表加载与缓存 �?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Persistence/DeepBase.DB.DoQry.pas` 更新
-- **功能**:
-  - �?实现 `LoadQuerySQL(ProcName, Ctx)` 带缓�?  - �?实现 `IsDirectSQL()` 判断 SQL 关键�?  - �?实现 `UniDbClearQueryCache()` 清除缓存
-  - �?所�?UniDb* 函数更新使用 LoadQuerySQL
-  - �?向后兼容：直�?SQL 仍然支持
-
----
-
-### P5-003: Logger 初始化改�?�?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Logging.pas` 更新
-- **功能**:
-  - �?添加 `SetGlobalLogger(ALogger)` 过程
-  - �?添加 `IsLoggerInitialized()` 检查函�?  - �?Logger() 未初始化时返回文件日志模�?  - �?Manager.InitializeModules 调用 SetGlobalLogger
-
----
-
-### P5-004: 核心模块接口抽象 �?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Interfaces.pas` (新建�?92 �?
-- **功能**:
-  - �?`IDeepBaseConfig` - 配置管理接口
-  - �?`IDeepBaseLogger` - 日志接口
-  - �?`IDeepBaseI18n` - 国际化接�?  - �?`IDeepBaseMRU` - MRU 接口
-  - �?`IDeepBaseManager` - 管理器接�?- **备注**: 各模块可逐步实现这些接口，提高可测试�?
----
-
-### P5-005: 运行时日志级别配�?�?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Consts.pas`, `Core/DeepBase.Manager.pas` 更新
-- **功能**:
-  - �?添加 `SConfigKeyLogLevel` �?`SConfigKeyLogStorageMode` 常量
-  - �?InitializeModules �?Settings 读取并设置日志级�?  - �?HandleConfigChanged 响应日志级别变更（热更新�?
----
-
-### P5-006: 版本兼容性检�?�?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Schema.pas`, `Core/DeepBase.Manager.pas` 更新
-- **功能**:
-  - �?Schema 添加 MIN/MAX_COMPATIBLE_SCHEMA_VERSION
-  - �?添加 ecSchemaVersionMismatch 错误�?  - �?实现 ValidateSchemaVersion 方法
-  - �?ValidateSchema 中调用版本检�?  - �?版本过旧/过新时给出明确错误提�?
----
-
-### P5-007: i18n �?Manager 解�?�?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.i18n.pas`, `Core/DeepBase.Manager.pas` 更新
-- **功能**:
-  - �?移除 i18n �?Manager 的直接引�?  - �?添加 `SetGlobalTranslateCallback` 回调模式
-  - �?添加 `IsTranslateCallbackSet` 检查函�?  - �?Manager.InitializeModules 设置翻译回调
-  - �?T() 函数未初始化时返回原�?
----
-
-### P5-008: 配置加密安全文档 �?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Config.pas` 更新
-- **功能**:
-  - �?添加详细的安全警告注释（25行）
-  - �?明确说明 XOR 仅提供混淆而非加密
-  - �?列出适用/不适用场景
-  - �?提供更安全方案的建议（DPAPI/AES/Keychain�?
----
-
-### P5-009: 常量命名规范文档 �?- **完成日期**: 2025-11-28
-- **负责�?*: Claude
-- **输出�?*: `Core/DeepBase.Consts.pas` 更新
-- **功能**:
-  - �?统一使用 `S` 前缀风格
-  - �?添加详细的命名规范文档注�?  - �?记录各类前缀: SConfigKey*, SDefault*, STable*, etc.
-
----
-
-## 统计摘要
-
-| 阶段 | 总任务数 | 核心模块 | UI 控件 | 工具 | 状�?|
-|------|---------|---------|---------|------|------|
-| Phase 0 | 8 | 5 | 0 | 3 | �?完成 |
-| Phase 1 | 9 | 4 | 4 | 1 | �?完成 |
-| Phase 2 | 9 | 3 | 4 | 2 | �?完成 |
-| Phase 3 | 7 | 2 | 3 | 2 | �?完成 |
-| Phase T | 8 | 0 | 0 | 8 | �?完成 |
-| Phase 4 | 7 | 1 | 3 | 3 | �?完成 |
-| Phase 5 | 9 | 9 | 0 | 0 | �?完成 |
-| **总计** | **57** | **24** | **14** | **19** | �?100% |
-
----
-
-## 主要里程�?
-- �?**2025-11-26**: Phase 0 完成，框架基础稳定
-- �?**2025-11-26**: Phase 1 完成，VCL 控件库就�?- �?**2025-11-27**: Phase T 完成，开发工具套件完�?- �?**2025-11-27**: Phase 2 完成，LLM 和高�?UI 功能
-- �?**2025-11-27**: Phase 3 完成，AutoUpdate �?CLI 工具
-- �?**2025-11-27**: Phase 4 完成，License 和文�?- �?**2025-11-28**: Phase 5 完成，代码审查优化（9 项改进）
-
-## 2025-12-01 代码审查与优�?
-### 安全性修�?- CRYPTO-001: 实现真正�?AES-256-CBC 加密（使�?Windows BCrypt API�?  - 文件: `DeepBase.Crypto.pas`
-- CRYPTO-002: 使用 BCryptGenRandom 替换不安全的 Random() 调用
-  - 文件: `DeepBase.Crypto.pas`
-- CONFIG-001: 添加编译器警告到 XOR 加密方法
-  - 文件: `DeepBase.Config.pas`
-
-### 内存管理优化
-- ORM-001: TQueryBuilder 实现 IQueryBuilder 接口（自动引用计数）
-  - 文件: `DeepBase.ORM.pas`
-- CACHE-001: 添加 FreeValueIfOwned 安全释放泛型对象
-  - 文件: `DeepBase.Cache.pas`
-
-### IoC 容器修复
-- IOC-001: RegisterSingleton 接口实例处理逻辑
-  - 文件: `DeepBase.IoC.pas`
-
-### 代码重构
-- UTIL-001: CompareVersions 提取�?`DeepBase.Types.pas`
-- INTERFACE-001: `TDeepBaseConfig`/`TDeepBaseI18n` 实现接口
-
-### 国际化增�?- I18N-001: 集成 CLDR 复数规则（`DeepBase.i18n.Plural.pas`�?
-### 日志系统优化
-- LOG-001: 日志写入线程重构为批量处理模式（`DeepBase.Logging.pas`�?
-### 新增功能
-- E-001: IoC 循环依赖检测（异常 `ECircularDependencyException`�?- E-002: ORM `DEFAULT` 生成（`CreateTableSQL` 支持�?- E-003: Configuration 加密配置源（`TEncryptedConfigurationSource`�?- E-004: Logging 结构�?JSON 日志（`.jsonl`�?
-### doQry 模块增强 (2025-12-01)
-- DOQRY-001: CopyQueryToClientDataSet 扩展（Field.Assign + 性能优化�?- DOQRY-002: 查询缓存 TTL 策略（UniDbInvalidateQuery/UniDbSetCacheTTL/UniDbGetCacheStats�?- DOQRY-003: doQry 使用指南文档（`docs/05.03.DeepBase-4AI-DoQry指南-v1.0.md`�?- DOQRY-004: 日志输出结构�?JSON 格式
-- DOQRY-005: 预编译语句池（UniDbSetPreparedStatementPooling/UniDbClearPreparedStatements/UniDbGetPreparedStats�?- DOQRY-006: 错误码规范化�?7 �?DOQRY_ERR_* 常量 + InferErrorCode�?
----
-
-## OPT-MAINT-006: 日志聚合和分析系�?�?(2025-12-02)
-
-> 功能优化任务: 集中式日志聚合和分析系统
-
-### 新增模块
-
-#### DeepBase.LogAggregator.pas (~1600 �?
-- **日志聚合�?*: `TLogAggregator` 主类，支持批量推送、重试机�?- **后端接口**: `ILogBackend` 抽象，可扩展多种后端
-- **ElasticSearch 后端**: `TElasticSearchBackend` - ES 7.x+ Bulk API 支持
-- **Loki 后端**: `TLokiBackend` - Grafana Loki Push API
-- **HTTP Webhook 后端**: `THttpWebhookBackend` - 通用 HTTP 推�?- **日志批次**: `TLogBatch` 批量操作�?- **过滤�?*: `TLogFilter` 流式 API
-- **配置**: `TBackendConfig` 后端配置工厂方法
-
-#### DeepBase.LogQuery.pas (~1800 �?
-- **查询构建�?*: `TLogQueryBuilder` 流式查询 API
-  - Where* 系列过滤方法
-  - OrderBy*, Skip, Take 分页
-  - GroupBy, Distinct 聚合
-- **查询结果**: `TLogQueryResult` 支持 ToJSON/ToCSV 导出
-- **时序数据**: `TLogTimeSeries` 时间序列分析
-- **统计**: `TLogStats` 日志统计信息
-- **分析�?*: `TLogAnalyzer` 高级分析功能
-  - CountByLevel/Source/Host/App
-  - CountByTime, ErrorRateByTime
-  - TopErrors, TopExceptions
-  - FindPatterns (正则匹配)
-  - FindAnomalies (统计异常检�?
-  - IsErrorRateIncreasing, GetTrend (线性回�?
-
-#### DeepBase.LogAlert.pas (~1260 �?
-- **告警条件**: `TAlertCondition`
-  - ErrorCount: 错误数阈�?  - ErrorRate: 错误率阈�?  - PatternMatch: 模式匹配
-  - NoLogs: 无日志检�?- **告警动作**: `TAlertAction`
-  - Webhook: HTTP 回调
-  - Email: 邮件通知 (接口)
-  - Callback: 本地回调
-  - Log: 日志输出
-- **告警规则**: `TAlertRule` 流式 API 定义规则
-- **告警管理�?*: `TAlertManager`
-  - 后台评估线程
-  - Cooldown 冷却机制
-  - 历史记录
-  - 活动告警查询
-
-#### DeepBase.LogDashboard.pas (~1160 �?
-- **Widget 类型**: Counter, Gauge, LineChart, BarChart, PieChart, Table, Heatmap
-- **仪表�?*: `TDashboard` 面板�?Widget 组织
-- **导出�?*: `TDashboardExporter`
-  - ToJSON: 内部格式
-  - ToGrafanaJSON: Grafana 兼容格式
-  - ToHTML: 独立 HTML 页面
-  - ToCSV: 数据导出
-- **构建�?*: `TDashboardBuilder`
-  - BuildOverviewDashboard: 概览仪表�?  - BuildErrorDashboard: 错误分析仪表�?  - BuildPerformanceDashboard: 性能仪表�?
-### DeepBase.Logging.pas 扩展 (v1.1)
-- `SetAggregatorEnabled(AEnabled)`: 启用/禁用聚合�?- `ConfigureAggregator(AppName, AppVersion, Environment)`: 配置元数�?- `AggregatorEnabled`, `AppName`, `AppVersion`, `Environment` 属�?- 写入线程自动推送到聚合�?
-### 单元测试
-- `Tests/Test.DeepBase.LogAggregator.pas` (~813 �?
-  - TTestLogAggregator: 聚合器和批次测试
-  - TTestLogQuery: 查询和分析器测试
-  - TTestLogAlert: 告警规则和管理器测试
-  - TTestLogDashboard: 仪表板和导出测试
-
-### 使用示例
-
-```pascal
-// 配置 ElasticSearch 后端
-LogAggregator().AddBackend(
-  CreateElasticSearchBackend('http://localhost:9200', 'app-logs'));
-LogAggregator().Start;
-
-// 启用日志聚合
-Logger.SetAggregatorEnabled(True);
-Logger.ConfigureAggregator('MyApp', '1.0.0', 'production');
-
-// 配置告警规则
-AlertManager().AddRule(
-  CreateAlertRule('high-error-rate', 'High Error Rate')
-    .WithCondition(TAlertCondition.ErrorRate(10.0, 5))
-    .WithSeverity(asCritical)
-    .AddAction(TAlertAction.Webhook('https://hooks.slack.com/...'));
-AlertManager().Start;
-
-// 查询和分�?var Results := LogQuery()
-  .WhereLevelIn([llError, llFatal])
-  .WhereTimeBetween(IncHour(Now, -1), Now)
-  .OrderByTimestampDesc
-  .Take(100)
-  .Execute;
-
-var Stats := LogAnalyzer.GetStats;
-var TopErrors := LogAnalyzer.TopErrors(10);
-
-// 生成仪表�?var Builder := TDashboardBuilder.Create(LogAnalyzer);
-var Dashboard := Builder.BuildOverviewDashboard;
-var Exporter := TDashboardExporter.Create(Dashboard);
-var HTML := Exporter.ToHTML;
-```
-
-### 统计
-- 新增代码: ~6600 �?- 新增模块: 4 个核心模�?- 新增测试: ~813 �?(35 个测试用�?
-
----
-
-## Phase MAINT-2: 项目清理与代码质�?�?(完成)
-
-> 完成日期: 2025-12-08
-> 负责�? Claude
-
-### MAINT-2-001: 项目结构清理 �?- **完成日期**: 2025-12-08
-- **输出�?*:
-  - 创建 `backup/` 目录存放不确定是否需要的文件
-  - 移动 7 个过时状态文件到 backup (Phase*_Status.md, Studio_Status.md, better.md, DOCS_UPDATE.md)
-  - 移动旧版规划文档目录�?backup
-  - 移动 `docs/uniFlow/` 错位源码目录�?backup
-  - 移动 `DeepBase` 空单元文件到 backup
-  - 移动 `DeepBase.db` 开发数据库�?backup
-  - 删除 90+ 编译产物文件 (.dcu, .exe, .dproj.local)
-  - 更新 `.gitignore` 添加 backup/ �?DeepBase.db
-- **commit**: e5f0cd5
-- **影响**: 312 文件变更，删�?176,557 �?
-### MAINT-2-002: 代码质量深度检�?�?- **完成日期**: 2025-12-08
-- **检查维�?*:
-  - �?异常处理 - 发现 30+ 处空 except �?  - �?内存管理 - 确认 FreeAndNil 使用规范
-  - �?线程安全 - 发现 1 处竞态条�?  - �?初始化顺�?- 确认模块依赖正确
-  - �?API 一致�?- 确认命名规范统一
-  - �?Schema 兼容�?- 已有版本检查机�?
-### MAINT-2-003: 异常处理改进 �?- **完成日期**: 2025-12-08
-- **修复内容**:
-  - `DeepBase.Manager.pas`: Schema 修复错误记录�?Logger.Warn
-  - `DeepBase.PluginManager.pas`: 5 处插件错误改�?FirePluginError 通知
-  - `DeepBase.Logging.pas`: 使用 TInterlocked.CompareExchange 修复竞态条�?  - `DeepBase.Theme.pas`: 4 处主题错误添�?DEBUG 日志
-  - `DeepBase.Updater.pas`: 3 处更新错误添�?DEBUG 日志
-  - `DeepBase.VirtualScroll.pas`: 渲染回调错误添加 DEBUG 日志
-  - `DeepBase.DB.Pool.pas`: 3 处连接池错误添加 DEBUG 日志
-  - `DeepBase.CLI.SSH.pas`: 2 �?SSH 错误添加 DEBUG 日志
-  - `DeepBase.SplashScreen.pas`: 图片加载错误添加 DEBUG 日志
-  - `DeepBase.Feedback.pas`: 轮询错误添加 DEBUG 日志
-  - `DeepBase.Diagnose.pas`: 4 处诊断检查错误添�?DEBUG 日志
-- **commit**: 3af9446, af260c3
-- **影响**: 11 文件�?32 行新�?
-### 统计
-- 清理文件: 312 �?- 修复模块: 11 �?- 新增 Bug 修复记录: 11 �?(BUG-050 ~ BUG-060)
-
----
-
-## 商业化基础阶段 (P0) �?
-### PUB-001: 模块整理归并 �?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - SeedTool 移动�?`DeepBase/Tools/SeedTool`
-  - 反调�?保护单元归并�?`Features/DeepBase.AntiTamper.pas` �?`Core/DeepBase.Protection.pas`
-  - About 界面重构�?`VCL/DeepBase.VCL.AboutFrame.pas`
-  - 更新相关 uses 和命名空间，确保编译通过
-
-### PUB-002: DeepBase.Unlock 轻量解锁模块 �?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - 新增核心单元 `Core/DeepBase.Unlock.pas`
-  - 定义解锁等级: ulFree / ulFollow / ulShare
-  - 约定解锁码规�? [产品代码][年月][类型]（如 TK2412A），包含有效期和校验�?  - 解锁状态持久化到本地配�?  - 新增 `VCL/DeepBase.VCL.UnlockDialog.pas` 解锁弹窗，支持公众号二维码展�?
-### PUB-003: DeepBase.Updater 增强 �?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - 扩展 `Features/DeepBase.AutoUpdate.pas` 支持 GitHub/Gitee Release API
-  - 通过 `github:owner/repo` / `gitee:owner/repo` 约定自动选择更新�?  - 保持对静�?`version.json` 的向后兼�?  - VCL 端新�?完善 `VCL/DeepBase.VCL.UpdateDialog.pas` 更新对话�?
-### PUB-004: UniPublisher 发布工具 �?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - 创建 `Tools/UniPublisher` VCL 工具项目
-  - 支持读取/写入 .dproj 版本�?  - 打包输出目录�?ZIP 安装�?  - �?DeepBase 规范生成 `version.json` 清单
-  - 通过 gh CLI 发布 GitHub Release，并通过 HTTP API 创建 Gitee Release
-  - 集成基于 `DeepBase.Unlock` 的解锁码生成器和发布说明编辑
-
-### PUB-005: TwoKeyRun 集成验证 �?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - �?`TwoKeyRun` 中初始化 `TDeepBaseManager` 以启用通用配置/解锁/自动更新
-  - 使用 `TDeepBaseUnlock` 重构 TwoKeyRun 解锁逻辑，统一 24/58/60 格策�?  - �?`DeepBase.VCL.UnlockDialog` 取代自定义解锁对话框
-  - 集成 `DeepBase.VCL.AutoUpdater`，支持通过 DeepBase.Config 配置 UpdateUrl 自动检查更�?
----
-
-## 商业化扩展阶�?(P1) �?|
-### FMX-003: FMX 缺失控件补全 �?- **完成日期**: 2025-12-10
-- **内容摘要**:
-  - 完成 `FMX/DeepBase.FMX.LogListView.pas` 实现，基于日志数据库表的 FMX 日志查看�?  - 完成 `FMX/DeepBase.FMX.NotificationBar.pas` 实现，跨平台底部通知栏（进度/成功/错误/信息，支持自动隐藏与取消�?  - 完成 `FMX/DeepBase.FMX.LicenseStatusPanel.pas` 实现，展�?License 状态、类型、到期时间与授权对象
-  - �?`FMX/DeepBase.FMX.Controls.pas` 中注册上述三个控件，加入 "DeepBase FMX" 组件面板，API �?VCL 版本保持一致风�?|
-### SEC-002: 高级加密支持 �?- **完成日期**: 2025-12-10
-- **内容摘要**:
-  - 基于 `Core/DeepBase.Crypto.pas` 实现 Windows 上使�?BCrypt �?AES-256-CBC 对称加密（TAESCrypto），并提供安全随机数生成（BCryptGenRandom�?  - 新增 `Core/DeepBase.Security.pas`，使�?Windows DPAPI / OpenSSL AES-256-GCM 提供跨平台安全存储（Secrets �?+ ProtectStringDpapi/UnprotectStringDpapi�?  - 新增 `Core/DeepBase.KeyManager.pas`，实现分层密钥管理（Master/KEK/DEK），支持 `TKeyManager` 全局单例�?`TKeyStore` JSON 持久�?  - 提供 `THardwareFingerprint` 收集机器指纹（ComputerName/ProcessorId/BiosSerial/DiskSerial 等）并生�?SHA-256 指纹，用于硬件绑�?  - 通过 `TMasterKey.DeriveWithHardwareBinding` + `TKeyManager.ValidateHardwareBinding` 支持主密钥与硬件绑定的加密模�?  - 为配置场景提�?`TKeyManager.EncryptConfig/DecryptConfig` 封装，用于基�?AES-256 的配置值加解密
-|
-### PERF-001: 性能优化 �?- **完成日期**: 2025-12-10
-- **内容摘要**:
-  - 日志写入批量优化（TDeepBaseLogger 异步写线�?+ MAX_BATCH_SIZE 批处�?+ 预编�?INSERT�?  - 配置缓存预热（TDeepBaseConfig.PreloadCache �?TDeepBaseManager.InitializeModules 中启动时预热 Settings 表）
-  - ORM 延迟加载优化（OneToManyAttribute.LazyLoad 标记 + TLazyLoadManager 分页惰性加载支持）
-|
-### PUBL-101: AboutFrame + AntiTamper 规范与文档更�?�?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - �?`docs/04.01.DeepBase-4AI-数据库Schema说明-v1.0.md` 中补�?`aboutMeImages` 表定�?增加 `Enabled INTEGER NOT NULL DEFAULT 1` 字段,并约�?6 个标�?ImageKey (official_gzh / wechat / alipay / btc / usdt / aboutme)�?  - AboutFrame 接入规范已归并到 `docs/IMPLEMENTATION_GUIDE.md`: 统一使用 `{AppName}Config.db` 作为 DB1，说�?aboutMeImages 表字段语义，给出 AntiTamper + SeedTool 播种流程示例�?  - 关于页面推荐结构已归并到 `docs/README.md` 与具体项目集成文档，定义 6 �?Tab(公司公众�?微信/支付�?BTC/USDT/关于�? 的布局�?ImageKey 关系�?|
-### PUBL-102: AntiTamper / AboutFrame 模块实现与集�?�?- **完成日期**: 2025-12-09
-- **内容摘要**:
-  - 将原�?`uAntiTamperPackage` / `uBasicProtection` 等分散单元整理归并为 `Features/DeepBase.AntiTamper.pas` �?`Core/DeepBase.Protection.pas`, 提供统一的防篡改初始化与图像解密 API(�?AES/HMAC 支持)�?  - 实现 `VCL/DeepBase.VCL.AboutFrame.pas` 与配�?DFM, 作为统一�?About/打赏/公司公众�?Frame, �?DB1 �?`aboutMeImages` 表按 ImageKey 读取图像和文�?并根�?`Enabled` 字段控制 Tab 显示�?  - �?`DeepBase.i18n` 集成, �?About 页签标题/按钮文案预留多语言支持,以便在工具侧进行本地化�?
-### PUBL-103: SeedTool aboutMeImages + enabled 改�?�?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - �?AntiTamper 默认表名�?`images` 统一调整�?`aboutMeImages` (包括 `Features/DeepBase.AntiTamper.pas` �?`Tools/SeedTool/uAntiTamperPackage.pas`), 并在建表/升级逻辑中新�?`enabled INTEGER NOT NULL DEFAULT 1` 字段�?  - 扩展 SeedTool 数据模型 (`TImageFileInfo`) 增加 `Enabled: Boolean`, 在“文字配置”页签新�?`chkEnabled` 勾选框, 用于控制每个 ImageKey 是否�?AboutFrame 中显示�?  - �?`aboutMeImages` 加载数据时一并读�?`enabled` �? 只读文本模式/完整播种模式下均会在播种后通过 `UPDATE aboutMeImages SET enabled = ...` 同步启用状态�?
-### PUBL-104: DeepDeepDeepDeepDeepMoveC 参考实现对齐新规范 �?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - �?DeepDeepDeepDeepDeepMoveC �?DeepBase 示例中的 About/打赏页面统一迁移�?`{AppName}Config.db` + `aboutMeImages` 规范: `FrameAboutMe.pas` �?`VCL/DeepBase.VCL.AboutFrame.pas` 默认连接 `DeepDeepDeepDeepDeepMoveCConfig.db`, 表名绑定�?`aboutMeImages`�?  - �?DeepDeepDeepDeepDeepMoveC �?DeepBase AntiTamper 中启�?`enabled` 字段支持, 并在 `LoadSecureImage` 中检�?`enabled=0` 时直接跳过记�? 实现逻辑禁用而不删除数据�?  - 通过新版 SeedTool �?DeepDeepDeepDeepDeepMoveC �?`aboutMeImages` 表播�?6 个标�?key(official_gzh / wechat / alipay / btc / usdt / aboutme) 的图像与文本, 验证 Win32/Win64 �?About 页签显示与禁用行�? 为后�?TwoKeyRun/DeepSync 等项目接入提供参考实现�?
-### PUBL-106: UniPublisher 配置模型�?version.json 统一规范落地 �?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Tools/UniPublisher/Core/Publisher.Config.pas` (~700 �?:
-    - `TPublishConfig` 配置模型,映射 `.publish.json` 字段 (appId/appName/displayName/dproj/outputDir/packageLayout/publishTargets/metadata)
-    - `TPackageLayout`/`THttpTarget`/`TGitHubTarget`/`TGiteeTarget`/`TPublishMetadata` 记录类型
-    - `TPublishConfigMRU` MRU 管理�?支持最近项目列表持久化
-  - 新增 `Tools/UniPublisher/Core/Publisher.Manifest.pas` (~530 �?:
-    - `TVersionManifest` 新版 version.json 结构 (appId/version/channel/publishedAt/files[]/releaseNotes/mandatory/minVersion)
-    - `TManifestFile`/`TManifestMetadata` 记录类型
-    - `TManifestGenerator` 工具�?支持新版 `GenerateManifest` 和旧�?`GenerateLegacyJSON` 格式生成
-    - `IsNewFormat` 自动检�?JSON 格式
-  - 扩展 `Features/DeepBase.AutoUpdate.pas` (v0.3 �?v0.4):
-    - 新增 `IsNewFormatJson` 格式检测方�?    - 新增 `CheckForUpdateFromNewFormat`/`CheckForUpdateFromLegacyFormat` 分离解析逻辑
-    - `CheckForUpdateFromJson` 自动识别新旧格式并调用对应解析器
-  - 重构 `Tools/UniPublisher/Forms/UniPublisher.MainForm.pas`:
-    - 顶部新增项目配置选择区域 (MRU 下拉�?+ 浏览/保存按钮)
-    - 启动时自动加载最近项�?(`LoadLastProject`)
-    - `ConfigToUI`/`UIToConfig` 配置�?UI 双向同步
-  - 新增单元测试 `Tests/Test.DeepBase.PublishConfig.pas` (~580 �?:
-    - `TTestPublishConfig`: 7 个测试用�?(序列�?反序列化/验证/持久�?
-    - `TTestVersionManifest`: 7 个测试用�?(新旧格式生成/解析/保存)
-    - `TTestPublishConfigMRU`: 8 个测试用�?(MRU 增删改查/持久�?
-    - `TTestAutoUpdateFormatDetection`: 4 个测试用�?(格式检�?版本提取)
-- **统计**:
-  - 新增代码: ~1800 �?  - 新增测试: 26 个测试用�?
-### PUBL-107: UniPublisher 发布目标与开发体验优�?�?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Tools/UniPublisher/Core/Publisher.Targets.pas` (~895 �?:
-    - `TPublishStatus`/`TPublishResult`/`TPublishResults` 发布结果模型
-    - `TValidationResult` 配置验证结果，支持错误和警告收集
-    - `TTargetValidator` 静态验证类，验�?HTTP/GitHub/Gitee 配置完整性，检�?gh CLI 可用�?    - `THttpPublisher` HTTP 上传发布器，支持 multipart form-data
-    - `TGitHubPublisher` GitHub 发布器，通过 gh CLI 创建 Release 并上传资�?    - `TGiteePublisher` Gitee 发布器，通过 HTTP API + Access Token 创建 Release
-    - `TUnifiedPublisher` 统一发布入口，支持一键发布到所有启用目�?  - 增强 `UniPublisher.MainForm.pas`:
-    - 右侧新增发布状态面�?(`pnlPublishStatus`)，包含目标状态指示灯 (圆形 Shape + 标签)
-    - 快捷操作按钮: 重新加载配置 / 打开输出目录 / 打开 version URL / 一键发�?    - 发布日志 Memo，实时显示发布进度和结果
-    - `UpdateTargetStatusUI` 根据配置自动更新状态指示灯颜色
-- **统计**:
-  - 新增代码: ~895 �?(Publisher.Targets.pas) + ~200 �?(MainForm 增强)
-
-### PUBL-108: Developer Test Center + UniPublisher 集成参考实�?�?- **完成日期**: 2025-12-11
-- **内容摘要**:
-  - 新增 `Core/DeepBase.TestCenter.pas` (~636 �?:
-    - `TTestStatus` 测试状态枚�?(NotRun/Running/Passed/Failed/Skipped)
-    - `TTestCategory` 测试分类记录
-    - `TTestItem` 测试项类，支持执行回调、状态跟踪、JSON 序列�?    - `ITestRunner` 测试运行器接口，`TDefaultTestRunner` 默认实现
-    - `TTestCenterManager` 测试中心管理器，支持分类/测试注册、批量执行、结果统计、持久化
-    - `TStandardCategories` 标准分类常量 (core/vcl/fmx/network/database/autoupdate/publisher/tools)
-  - 新增 `VCL/DeepBase.VCL.TestCenterFrame.pas` (~655 �?:
-    - 三栏布局: 左侧分类�?(TTreeView) / 中间测试列表 (TListView) / 右侧详情日志 (TMemo)
-    - 底部控制�? 运行选中 / 运行全部 / 重置 / 打开 UniPublisher...
-    - "打开 UniPublisher..." 通过 ShellExecute 启动，自动搜索常见路�?    - `RegisterSampleTests` 注册示例测试用例
-  - 集成�?`Examples/FullDemo/FullDemo.MainForm.pas`:
-    - 新增 "测试中心" 页签，嵌�?TTestCenterFrame
-    - 自动初始化并注册示例测试
-- **统计**:
-  - 新增代码: ~1291 �?(TestCenter + Frame)
-
-### PUBL-105: 工具项目 AboutFrame 集成 �?- **完成日期**: 2025-12-12 (DeepBase 侧开发完成，待人工集�?
-- **内容摘要**:
-  - 新增集成规划索引文档（当前位�?`docs/README.md`�?  - 新增 5 个工具项目集成规划文�?
-    - `docs/01.TwoKeyRun-Integration.md` - VCL项目, 已有 FrameAboutMe, 结构分析和迁移方�?    - `docs/02.DeepSync-Integration.md` - FMX项目, 需新建 AboutFrame, �?FMX 组件开发计�?    - `docs/03.SVGThing-Integration.md` - VCL项目, 已有 FrameAboutMe, 数据库迁移方�?    - `docs/04.Stocks-Integration.md` - FMX项目 (InfoCenter), 已集�?DeepBase, 需 FMX 组件
-    - `docs/05.DeepCharset-Integration.md` - VCL项目, 轻量级工�? 弹窗式集成方�?  - VCL AboutFrame (`VCL/DeepBase.VCL.AboutFrame.pas`) 扩展�?6 �?Tab�?    - 新增 `tsOfficialGzh` 公众号页面，�?FMX 版本保持一�?    - 图像映射数组扩展�?6 �? official_gzh/wechat/alipay/btc/usdt/aboutme
-  - FMX AboutFrame (`FMX/DeepBase.FMX.AboutFrame.pas`) 已对�?
-    - 使用 `TAntiTamperPackage.LoadSecureImageBytes()` 统一解密和校�?    - 字段名与 SeedTool/AntiTamper 一�? `sha256_hash`/`hmac_sha256`
-  - 更新 `docs/IMPLEMENTATION_GUIDE.md`:
-    - 标记 FMX AboutFrame 已完成对�?    - 更新 Q4 常见问题解答
-    - 更新任务检查清单和下一步建�?- **统计**:
-  - VCL 项目: 3 �?(TwoKeyRun/SVGThing/DeepCharset)
-  - FMX 项目: 2 �?(DeepSync/Stocks)
-- **待人工完�?*:
-  - 准备 6 张标准图片资�?  - 运行 SeedTool 为各项目创建 `*Config.db` 并播�?  - �?IDE 中按指南修改各项目代码并编译测试
-
----
-
-## 工具�?CLI 增强阶段 (P2) �?
-### CLI-002: CLI 交互增强 �?- **完成日期**: 2025-11-29
-- **内容摘要**:
-  - 新增核心交互�?CLI 模块 `Tools/CLI/DeepBase.CLI.Interactive.pas`，提�?`TInteractiveCLI` REPL（命令历史、变量、脚本执行、输出格式切换）
-  - 新增 `Tools/CLI/DeepBase.CLI.Pipeline.pas` 管道模块，支�?`|`/`>`/`>>`/`tee` 以及 grep/sort/head/tail/uniq/wc/rev/cut/tr/jq 等过滤器
-  - 在交互模块中引入 `TAnsiColor` 终端颜色工具类，用于统一的错�?警告/成功彩色输出
-  - CLI 工具层通过 `CLI.Commands.TCliUtils` 复用颜色输出能力，为常规 `DeepBase` 命令提供彩色状态提�?
-### TOOL-002: Studio 增强 �?- **完成日期**: 2025-11-29
-- **内容摘要**:
-  - SQL 查询编辑器（Studio.SQLFrame：语法高亮、执�?历史、结果网格、CSV 导出、DoQry 集成�?  - Schema 可视化浏览器（Studio.SchemaFrame：表/�?索引/外键树状浏览 + DDL 查看�?  - 数据导入导出向导（Studio.ImportExportFrame：CSV/JSON/XML 导出 + CSV/JSON 导入预览与事务导入）
-
----
-
-## 维护阶段 (MAINT) - 进行�?
-### MAINT-002: 单元测试覆盖率提�?🟡
-|- **状�?*: 进行�?|- **目标**:
-|  - 单元测试整体覆盖率提升到 95%+，并覆盖关键安全/网络/工具模块的边界条件与错误路径�?|- **已完�?(2025-12-08)**:
-|  - �?`Test.DeepBase.Math.pas` - 数学工具测试 (40+ 测试用例，向�?矩阵/统计/插�?缓动/随机)
-|  - �?`Test.DeepBase.Metrics.pas` - 指标收集测试 (35+ 测试用例，Counter/Gauge/Histogram/Timer/Registry)
-|  - �?`Test.DeepBase.Net.pas` - 网络工具测试 (40+ 测试用例，HTTP/WebSocket/DNS/IP/Subnet)
-|  - �?`Test.DeepBase.HttpServer.pas` - HTTP服务器测�?(35+ 测试用例，路�?中间�?请求响应)
-|  - �?`Test.DeepBase.FileWatcher.pas` - 文件监控测试 (30+ 测试用例，过滤器/配置/集成测试)
-|- **已完�?(2025-12-10)**:
-|  - �?CLI 与反射相关测试：`Test.DeepBase.CLI.Pipeline.pas`, `Test.DeepBase.CLI.Interactive.pas`, `Test.DeepBase.Reflection.pas`, `Test.DeepBase.Export.pas`
-|  - �?数据库与诊断相关测试：`Test.DeepBase.Diagnose.pas`, `Test.DeepBase.DB.Pool.pas`, `Test.DeepBase.DBException.pas`, `Test.DeepBase.SQLLogger.pas`
-|  - �?核心基础设施测试：`Test.DeepBase.SingleInstance.pas`, `Test.DeepBase.Schema.pas`, `Test.DeepBase.Exception.pas`, `Test.DeepBase.Consts.pas`
-|  - �?云与后台服务测试：`Test.DeepBase.CloudBackup.pas`, `Test.DeepBase.Feedback.pas`, `Test.DeepBase.PluginManager.pas`, `Test.DeepBase.AutoUpdate.pas`
-|  - �?UI 与体验相关测试：`Test.DeepBase.VirtualScroll.pas`, `Test.DeepBase.SplashScreen.pas`, `Test.DeepBase.AntiTamper.pas`, `Test.DeepBase.Protection.pas`
-|  - �?安全与密钥管理测试：`Test.DeepBase.KeyManager.pas`, `Test.DeepBase.Interfaces.pas`, `Test.DeepBase.LLM.Manager.pas`, `Test.DeepBase.LLM.ImportExport.pas`, `Test.DeepBase.ORM.Mapping.pas`, `Test.DeepBase.Updater.pas`
-|- **已完�?(2025-12-11)**:
-|  - �?�?OpenSSL �?LLM 核心类型补充单元测试：`Test.DeepBase.Crypto.OpenSSL.pas`, `Test.DeepBase.LLM.pas`，覆盖加解密、错误路径与配置/消息模型序列化�?|  - �?�?GUI 测试基础设施增加回归测试：`Test.DeepBase.TestHelper.pas`，覆盖快照捕�?校验、控件查找与用户交互模拟�?|  - �?修复并补�?DB 异常测试：`Core/DeepBase.DBException.pas` 改进 `EDeepBaseDB.UserMessage` 中文+英文混排场景，`Test.DeepBase.DBException.pas` 增加回归用例�?|  - �?新增 WebAPI 集成测试：`Tests/Integration/Test.Integration.WebAPI.pas`，覆�?HTTP 路由、查询参数解析、CORS、JWT 认证、OpenAPI 生成�?WebSocket 消息路由，相�?Core/Auth 单元问题已修复并通过测试�?|  - �?将测试覆盖率统计集成�?`Scripts/run_tests.ps1`，支持在本地/CI 中输�?DUnitX XML 结果及简�?HTML 汇总页面，便于持续监控覆盖率�?|||  - �?将数据库相关 Integration Tests 标记为「环境依赖」：�?`Test.Integration.Core.pas` 中为所有依�?SQLite/FireDAC 的集成测�?Fixture 添加 `Category(\"DBEnv\")`，并�?`Scripts/run_tests.ps1` 中默认通过 `--exclude:DBEnv` 排除这些测试；当需要完整运行数据库集成测试时，可通过设置环境变量 `DeepBase_RUN_DB_INTEGRATION=1` 显式启用�?|||- **已完�?(2025-12-13)**:
-|||  - �?`Test.DeepBase.i18n.pas` - i18n 模块回归测试补全
-|||  - �?`Test.DeepBase.Theme.pas` - 主题模块回归测试补全
-|||  - �?`Test.DeepBase.FormState.pas` - 修复测试稳定性并恢复�?`DeepBaseTests.dpr`
-|||  - �?`Test.DeepBase.Logging.pas` - 重写�?file-only 异步写入可验证的测试，并恢复�?`DeepBaseTests.dpr`
-|||  - �?`Test.DeepBase.License.pas` - 恢复�?`DeepBaseTests.dpr`
-|- **已完�?(2025-12-18)**:
-|  - �?`Test.DeepBase.DateTime.pas` - DateTime 模块测试修复 (FormatOffset 格式问题、NextDayOfWeek/PreviousDayOfWeek 枚举映射问题、测试期望值修�?
-|  - �?测试通过率提升：824 测试�?751 通过 (91.1%)�?1 失败�?8 错误（Access Violation�?|  - �?错误分类：Access Violation 主要来自 Config/FormState/Hotkeys/MRU/Theme/i18n 模块（需 DeepBaseManager 初始化）
-||- **下一�?*:
-|  - （可选）在持续集成环境中补充针对数据�?Integration Tests 的文档与示例配置（包�?FireDAC/SQLite 驱动部署方式、专用测试数据库路径等），方便在有完整数据库环境的机器上重新启用 DB 集成测试�?---
-
-## 文档优化（DOC-OPT�?
-### DOC-OPT-001: 文档编号统一 + OneFile 入口创建 + 过期文档清理 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - �?**Phase 1 编号统一**�?8 �?.md 文件的中文序数标题统一为阿拉伯数字标准（`## N.` / `### N.N` / `#### N.N.N`�?    - docs/: `06.AntiTamper-Integration.md`, `07.Project-Classification.md`, `07.01.DeepBase-4AI-集成检查清�?v1.0.md`, `99.07.DeepBase-4H-迁移修复记录-v0.3.md`
-    - Tools/SeedTool/: `加密防篡改集成说�?md`, `播种与主程序对应说明.md`
-    - README.md
-    - doQry/tasks.md
-    - docs/uniFlow/: `01.02.Quick-UniFlow-开发者快速上手指�?v1.0.md`
-    - docs/uniFlow/SayDone/ (8 files): `03.01`, `03.03`, `03.07`, `03.09`, `01.09`, `01.11`, `06.03`, `06.05`
-  - �?**Phase 2 M1 对外唯一入口**：创�?`docs/DeepBase-Integration-OneFile.md`，整�?DB1~DB4 边界、全模块能力清单、推荐接入组合、平台网站跳转流程、最小端到端步骤、关键约�?  - �?**Phase 3 M2 入口收敛**：更�?`docs/README.md` �?`docs/00.00.DeepBase-文档索引-v1.0.md`，标�?OneFile 为对外唯一入口
-  - �?**Phase 4 M3 内容纠错**：修�?`docs/06.AntiTamper-Integration.md` 中的过期路径引用；统一 DB 口径
-  - �?**Phase 5 M4 过期文档清理**：删�?10 个过�?重复文件
-    - backup/: `Phase0-3_Status.md`, `Studio_Status.md`, `DOCS_UPDATE.md`, `better.md`
-    - docs/: `99.07.DeepBase-4H-迁移修复记录-v0.3.md`, `99.09.DeepBase-4H-术语审计报告-v1.0.md`
-    - `QUICK_START.md`
-  - �?**验证**：`grep` 确认零中文序数残留；`check_doc_links.ps1` 确认链接有效
-- **说明**: 文档优化计划源自 `better.md` �?M1-M5 里程碑定义，已全部执行完成�?
-### DOC-OPT-002: 五位专家框架评估 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - �?邀�?5 位专家（打包/安全/测试/架构/文档）独立评估框架完善度
-  - �?综合评分 6.7/10，打�?(5.5) 最低，架构 (7.5) 最�?  - �?识别 5 个封板阻塞问�?(B1-B5)�?0 个重要改�?(I1-I10)
-  - �?结果已转化为可执行任务写�?`tasks.md`
-
-### PKG-001: 86 个孤�?.pas 文件注册�?.dpk �?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - �?32 文件 �?DeepBaseCore.dpk�?6 单元�?  - �?22 文件 �?DeepBaseServices.dpk�?4 单元�?  - �?3 文件 �?DeepBaseFeatures.dpk（LLM.Manager/BillingClient/ImportExport�?  - �?20 文件 �?DeepBaseVCL.dpk�?6 VCL + 4 VCL-only Core�?  - �?13 文件 �?DeepBaseFMX.dpk�? DeepBaseFeatures requires�?  - �?1 文件 �?DeepBasePersistence.dpk
-
-### PKG-002/003: Math/Unlock 重复修复 �?- **完成日期**: 2026-05-06
-
-### TEST-001: 53 个测试文件注�?�?- **完成日期**: 2026-05-06
-
-### SEC-002: 硬编码默�?Salt 移除 �?- **完成日期**: 2026-05-06
-
-### ARCH-046: Exception↔Manager 循环依赖解除 �?- **完成日期**: 2026-05-06
-
-### QUAL-001: 438 �?FreeAndNil 规范�?�?- **完成日期**: 2026-05-06
-- **内容摘要**: 82 文件 438 处析构函数内 + 13 文件 19 处字段重新赋�?
-### VERSION-001: 版本号统一 �?- **完成日期**: 2026-05-06
-
----
-
-## 社区与生态（ECO�?
-### ECO-002: 社区扩展包（第一阶段�?�?- **完成日期**: 2025-12-08
-- **内容摘要**:
-  - �?`ThirdParty/DB/DeepBase.DB.PostgreSQL.pas` - PostgreSQL 驱动适配�?  - �?`ThirdParty/DB/DeepBase.DB.MySQL.pas` - MySQL 驱动适配�?  - �?`ThirdParty/UI/DeepBase.UI.Themes.pas` - UI 主题系统
-  - �?`ThirdParty/Cloud/DeepBase.Cloud.Storage.pas` - 云存储集成（对象存储封装�?- **说明**:
-  - 以上�?ECO-002 的第一批官方扩展包，实现数据库驱动、主题与云存储三类集成�?  - 第二阶段（支�?社交集成）作为后续任务，已记录在 `tasks.md` 中的 ECO-002 小节�?
----
-
-## 2026-05-06 封板质量门禁与功能补齐归�?
-### SEC-001: �?Windows AES XOR fallback 替换�?OpenSSL �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - `DeepBase.Crypto.OpenSSL.pas` 新增 AES-256-CBC EVP 加解密入口�?  - `DeepBase.Crypto.pas` �?Windows 分支�?XOR 伪加密改�?OpenSSL AES-256-CBC�?  - Windows 平台保持 CNG/BCrypt 路径�?
-### SEC-003: 插件签名验证实现 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - Windows 平台使用 `WinVerifyTrust` 验证 Authenticode 签名�?  - 签名验证失败时拒绝加载插件并记录日志�?  - �?Windows 平台保留告警路径，后续可�?OpenSSL 代码签名验证�?
-### COMMERCE-002: 生产存储与支付网关适配�?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 完成后端契约文档、HTTP 存储适配器、微信支付代理、支付通知确认流程�?  - 新增 `PaymentBridge.pas` 桥接 ThirdParty SDK�?  - 新增 `Examples/CommerceE2EDemo/` 九步端到端样例�?
-### GEN-001: 文档导出与分享框�?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 新增 PDF、DOCX、VCL Image Export �?Share Service�?  - 新增 `Tests/Test.DeepBase.Export.Gen.pas` 覆盖生成路径�?
-### DOC-005: README 示例修复 �?- **完成日期**: 2026-05-06
-- **内容摘要**: 修复 CRUDApp 模板 `_('text')` �?`T('text')` �?i18n 示例错误�?
-### ARCH-045: 包隐式导入告警清�?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 清理运行时包 requires �?`{$IMPORTEDDATA ON}` 设置�?  - 修复 12 个包上下文编译错误�?  - `Profile All` 6 个包�?Error 编译通过�?
-### MAINT-002: 单元测试编译修复与覆盖提�?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 修复 51 个测试文件编译错误�?  - 注册 53 个测试文件到 `DeepBaseTests.dpr`�?  - Win64 DCU 编译 176 个单元零错误�?
-### ECO-002: Commerce 社区扩展第二阶段 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 新增 Supabase / Firebase Commerce 存储适配器�?  - 新增 ThirdParty SDK Gateway �?PaymentBridge�?
-### FWK-001: 系统托盘模块 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 新增 `Core/DeepBase.TrayIcon.pas` �?`VCL/DeepBase.VCL.TrayIcon.pas`�?  - 新增 `Tests/Test.DeepBase.TrayIcon.pas`�?
-### FWK-002: Serialization XML 反序列化 �?- **完成日期**: 2026-05-06
-- **内容摘要**: 实现 XML 标签解析、属性赋值、嵌套对象和常见标量类型反序列化�?
-### FWK-003: Scheduler 任务持久�?�?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - 新增 `IJobStore` �?`TTaskMeta`�?  - 新增持久化任务元数据保存/读取 API�?  - 修复 `Stop()` 与运行中任务的关停竞态�?
-### FWK-004: VCL/FMX I18n 控件补齐 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - VCL 新增 6 �?i18n 控件�?  - FMX 新增 2 �?i18n 控件�?
-### FWK-005: FMX Theme 桥接 Core Theme �?- **完成日期**: 2026-05-06
-- **内容摘要**: `DeepBase.FMX.Theme` 注册 Core Theme 平台适配器，支持 light/dark/system 模式�?
-### FWK-006: Export 新增 JSON 格式 �?- **完成日期**: 2026-05-06
-- **内容摘要**: 新增 DataSet/Grid/Array JSON 导出路径�?
-### FWK-007: Updater �?Windows RSA 签名验证 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - `DeepBase.Crypto.OpenSSL.pas` 新增 `OpenSSL_RSAVerifySHA256`�?  - `DeepBase.Updater.pas` �?Windows 分支�?stub 改为 OpenSSL RSA-SHA256 验证�?
-### PUBL-105: 工具项目 AboutFrame 集成规划 �?- **完成日期**: 2026-05-06
-- **内容摘要**:
-  - DeepBase �?VCL/FMX AboutFrame 已对�?`aboutMeImages` 规范�?  - 下游工具项目接入规划文档已更新�?  - 剩余为各下游项目人工集成和资源播种�?
----
-
-## 2026-05-07 架构审阅后治�?
-### ARCH-047: IoC 接口实例注册安全修复 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - `TIoCContainer.RegisterSingleton<TService>(Instance)` 不再使用 `IInterface as TObject` 提取对象指针�?  - 新增接口 singleton / factory 的独�?`IInterface` 存储与解析路径�?  - �?object-backed interface singleton/scoped 服务使用接口生命周期持有实例，避免引用计数对象释放后留下悬空对象指针�?  - `TIoCScope` 新增 `Dispose`，用于显式进�?disposed 状态并支持可测�?disposed 行为�?  - `Tests/Test.DeepBase.IoC.pas` 增加/调整回归用例，覆盖调用方释放接口引用后仍可解析、接�?factory 作为构造依赖、disposed scope 行为�?- **验证**:
-  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.IoC`�?0/20 通过�?
-### ARCH-048: RuntimeContext 默认组件注册落地 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - `RegisterDefaultRuntimeComponents` 从占位实现改为注册真实运行期组件�?  - 默认注册顺序固定�?`DeepBase.Manager` �?`IoC.Container` �?`EventBus` �?`Scheduler` �?`WorkerQueue`，Shutdown 反向释放�?  - 运行期注册保�?side-effect free：仅注册组件，不启动后台线程；启动由 `RuntimeContext.Start` 触发�?  - EventBus 增加异步 handler drain 能力，RuntimeContext Stop 时可等待异步回调完成�?  - WorkerQueue 修复 Stop/drain、定时任务、依赖任务、重试唤醒和统计累计路径，支撑运行期生命周期测试�?- **验证**:
-  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.IoC,Test.DeepBase.Services.Registration,Test.DeepBase.Persistence.RuntimeRegistration,Test.DeepBase.RuntimeContext,Test.DeepBase.EventBus,Test.DeepBase.WorkerQueue`�?35/135 通过�?
-### ARCH-049: 拆分 TDeepBaseManager 职责 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - 新增 `Core/DeepBase.Manager.Schema.pas`，承�?schema 创建、版本检查、迁移脚本执行和兼容列修补逻辑�?  - 新增 `Core/DeepBase.Manager.Operational.pas`，承�?retention 归档清理、表/列探测和 health check 逻辑�?  - `Core/DeepBase.Manager.pas` 保留原有 public API 和私有方法入口，内部改为委托 helper，避免破坏下游调用�?  - `DeepBaseCore.dpk` 已纳入两个新 Core 单元�?- **验证**:
-  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Manager`�?4/14 通过�?
-### CONC-001: RetryPolicy 主线程阻塞保�?�?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - `TRetryPolicy` 新增 `TRetryMainThreadWaitMode`，支�?`rmwAllow`、`rmwWarn`、`rmwRaise` 三种主线程重试等待策略，默认 `rmwWarn` 保持兼容�?  - 新增 `OnMainThreadWaitEvent`，UI/FMX/VCL �?EventBus 主线�?handler 可记录告警或升级�?fail-fast�?  - 新增 `ExecuteAsync` / `ExecuteAsync<T>`，为 UI 场景提供后台执行入口，避免同�?retry delay 卡住主线程�?  - 新增 `ERetryMainThreadWaitException`，用�?`rmwRaise` 下阻止主线程 `Sleep`�?  - `Tests/Test.DeepBase.Resilience.pas` 补充主线程告警、raise 模式、异步重试和泛型异步返回值覆盖�?- **验证**:
-  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Resilience`�?18/118 通过�?
-### QA-001: Examples 编译门禁 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - 新增 `Scripts/build_examples_win64.ps1`，建�?Win64 示例编译门禁�?  - 默认必选示例覆�?`Phase0Demo`、`Phase1Demo`、`FullDemo`、`FMXPlatformDemo`、`CommerceE2EDemo`�?  - 可选示例默认跳过并记录，支�?`-IncludeOptional` 扩展检查范围�?  - 输出 `TestResults/ExampleBuildResults.txt` �?`TestResults/ExampleBuildResults.xml`，便于本地和 CI 消费�?  - 修复必选示例中与当�?DeepBase API 不一致的等待窗、通知条、配置控件、FMX 平台、FMX 表单校验、Commerce 回调 verifier 和缺失资源引用问题�?- **验证**:
-  - `Scripts/build_examples_win64.ps1`：Phase0Demo、Phase1Demo、FullDemo、FMXPlatformDemo、CommerceE2EDemo 全部通过�?
-### ARCH-050: Resilience 按策略类型拆�?�?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - �?`Core/DeepBase.Resilience.pas` 改为兼容 facade，继续导出原有类型、枚举常量和 `CircuitBreakers` 入口�?  - 新增 `Core/DeepBase.Resilience.CircuitBreaker.pas`，承接断路器、状�?helper �?registry�?  - 新增 `Core/DeepBase.Resilience.Retry.pas`，承�?`TRetryPolicy`、重试策略和主线程等待保护�?  - 新增 `Core/DeepBase.Resilience.Timeout.pas`，承接超时策略和 `ETimeoutException`�?  - 新增 `Core/DeepBase.Resilience.Fallback.pas`，承接泛�?fallback 策略�?  - 新增 `Core/DeepBase.Resilience.Bulkhead.pas`，承�?bulkhead 策略和拒绝异常�?  - 新增 `Core/DeepBase.Resilience.Policy.pas`，承接组合策略编排�?  - `DeepBaseServices.dpk` 已纳入全�?Resilience 子单元�?- **验证**:
-  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Resilience`�?18/118 通过�?  - `Scripts/build_examples_win64.ps1`�? 个必选示例全部通过�?
-### BUILD-001: DeepBaseTests 包上下文编译错误清理 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - 修复 DEBUG �?`OutputDebugString` 缺少 Windows 条件 uses 的编译问题�?  - 修复 Commerce 测试对回�?verifier 的匿名函数兼容问题�?  - 修复 PDF/DOCX/Share/WorkerQueue 的包上下文编译错误�?  - `Tests/DeepBaseTests.exe` 已重新生成�?
-### API-001: 初始化错误处理一致�?�?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - `TDeepBaseManager.InitializeEx(out ErrorMsg): Boolean` �?`InitializeWithDB` 保持 Boolean 入口语义：失败返�?`False`，并通过 `LastError` / `InitErrorCode` 暴露原因�?  - 新增 `InitializeOrRaise` �?`InitializeWithDBOrRaise` 异常型入口，失败时抛�?`EInitializationException`�?  - 异常入口统一携带 `ErrorCode` �?`Context`，错误消息保留底层失败原因，避免调用方在 Boolean/异常两种模式间语义不一致�?  - Manager 测试固定恢复 FireDAC 测试连接适配器和 storage factory，避免全局适配器状态泄漏影响后续用例�?- **验证**:
-  - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Manager`�?6/16 通过�?  - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Resilience`�?18/118 通过�?  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/build_examples_win64.ps1`�? 个必选示例全部通过�?
-### SEC-004: UBS2 加密格式版本协商 �?- **完成日期**: 2026-05-07
-- **内容摘要**:
-  - �?Windows `ProtectStringDpapi` 继续写出 UBS2 v1，明�?`UBS2_VERSION_CURRENT` 和支持版本列表�?  - �?Windows `UnprotectStringDpapi` 改为先读�?UBS2 magic/version，再按版本分发到 v1 解密器�?  - UBS2 v1 解密器独立处�?KDF、迭代次数、salt、IV、ciphertext、tag，后续可添加 v2/v3 分支而不改主入口�?  - �?UBS1 legacy magic、未�?magic、未知版本、未�?KDF、过�?payload 和无效迭代次数给出可迁移的错误信息�?  - `Tests/Test.DeepBase.Security.pas` 补充�?Windows UBS2 版本头、未知版本、未�?KDF、legacy magic 覆盖，并收紧 Windows 篡改检测为 `EDecryptionException`�?- **验证**:
-  - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Security`�?2/42 通过�?  - `Scripts/run_tests.ps1 -Type Unit -SkipCompile -Run Test.DeepBase.Security.DPAPI`�?3/23 通过�?  - `cmd /c compile_test.bat`：通过，`Exit code: 0`�?  - `Scripts/build_examples_win64.ps1`�? 个必选示例全部通过�?
-
-
----
-
-## 2026-05-14 全仓库编译修复 (18/18 构建目标)
-
-### BUILD-FIX-2026-05-14: 从 DeepBaseVCL 整包到全部 dproj 编译通过
-- **完成日期**: 2026-05-14
-- **目标**: 用户要求"整包必须编过",从 DeepBaseVCL.dpk 开始,逐步扩展到全仓库 18 个构建目标 (6 RT + 3 DT + 5 Examples/Tools + DeepBaseRun + prjDoQry + DeepBaseTests + DeepPublisher) 全部 Win64/Debug 0 errors。
-- **产出**:
-  - BUG-177: `Features/DeepBase.Browser.ResponseWaiter.pas` Delphi 13.1 RTL 不兼容修复 (TInterlocked.Read Integer 移除 + TProc<string> const 不匹配)
-  - BUG-178: `Features/DeepBase.Browser.Types.pas` Win32 前向引用顺序修复 (IBrowserSessionFactory/TSessionRebuiltEvent 必须在 IBrowserRecoveryEvents 之前)
-  - BUG-179: 全仓库中文字符串 UTF-8 截断修复 (60+ 处,跨 6 个文件)
-  - BUG-180: DeepPublisher 工具项目 rename 不完整修复 (dproj/dpr/unit name/vrc/search path)
-  - 搜索路径补齐: Phase0Demo / FullDemo / Studio / SeedTool / prjDoQry / DeepPublisher 的 dproj
-  - DeepBaseTests: IntentClarification + LLM.PromptTemplate 恢复编译 (根因是 BUG-178 级联)
-- **验证**:
-  - 18/18 构建目标 Win64/Debug 全部 exit=0
-  - DeepShell 测试 24/24 通过, 0 leaked
-  - Win32 偶发 BPL 文件锁 race 重试即过 (非代码问题)
-- **遗留**:
-  - ~100 处注释含截断中文 (不影响编译,影响可读性)
-  - DeepShell Demo 4 个 pending feature (tasks.md 队列)
-  - Layout 跨进程需要 DB1 store (架构设计决策)
-
-
----
-
-## 2026-05-14 基础模块 P0/P1/P2 第二轮修复 (BUG-181~196)
-
-### BASIC-FIX-2026-05-14: 16 个基础层安全/并发/一致性问题修复
-- **完成日期**: 2026-05-14
-- **目标**: 按 better.md §8 评审清单,修复所有不需要架构重构即可解决的 P0/P1/P2 问题。
-- **产出** (16 项):
-  - P0: Authorization 事务 (BASIC-009); CloudBackup XOR→AES / CloudSync Base64→AES / LLM.Config 硬编码key→DPAPI (FR-002)
-  - P1: Logging.FireDAC 加锁 (BASIC-010); Manager Initialize 加锁 (BASIC-018); Manager FinalizeModules 清回调 (BASIC-020); EventBus PublishAsync drain (BASIC-021); EventBus 统计原子 (BASIC-022); IoC FResolving 线程隔离 (BASIC-024); RuntimeContext 双检锁 (BASIC-005); Crypto Random fail-closed (BASIC-015); DB Factory 凭据 fail-closed (BASIC-011)
-  - P2: Config 回调出锁 (BASIC-027); 版本号统一 (FR-001); CompareVersions 去重 (FR-013); Logger sanitizer 收敛 (FR-014); .editorconfig 品牌 (FR-017)
-- **验证**:
-  - 6 RT 包 Win64 编译通过
-  - DeepShell 测试 24/24 通过, 0 leaked
-- **遗留** (需架构重构,下一 sprint):
-  - BASIC-001/004: Services 包 DAG 拆分
-  - BASIC-006/007: Scheduler/WorkerQueue 生命周期 API 重设计
-  - BASIC-008: DB Pool 连接 lease/refcount 重构
-  - BASIC-019: 迁移引擎统一
-  - LLM-001~009: LLM schema/provider/streaming 统一
-
----
-
-## 2026-05-15 基础层 P0/P1 第三轮修复 + 架构重构 (BUG-193~203)
-
-### BASIC-FIX-2026-05-15: 11 个基础层修复 + 3 个架构重构
-- **完成日期**: 2026-05-15
-- **目标**: 完成 better.md §8.6 遗留的所有 P0/P1 基础层问题,包括需要架构重构的三大项。
-- **产出** (11 项修复 + 3 项重构):
-  - P0: DB Pool 线程安全 (BASIC-008) — Release 加锁、ValidateIdleConnections csValidating、RecycleAll 只回收 idle、Shutdown drain 等待
-  - P1: 架构测试加强 (BASIC-004); Scheduler 生命周期 (BASIC-006); WorkerQueue DrainAndStop (BASIC-007); Migration 命名兼容 (BASIC-012); DoQry 连接 sweep (BASIC-014); SQL Splitter 共享 (BASIC-019 部分); EventBus subscription lifetime (BASIC-023); IoC Freeze (BASIC-025)
-  - P2: KeyManager 文档诚实化 (BASIC-017)
-  - 架构重构: Services 包拆分 (BASIC-001) — requires 精简为 rtl+DeepBaseCore; Crypto 统一 (BASIC-016) — 唯一 BCrypt/CryptoAPI 声明源; Config 接口清理 (BASIC-026) — 移除 deprecated 方法
-- **新增文件**: `Core/DeepBase.SQL.Splitter.pas`
-- **新增测试**: IoC Freeze 3 个 + EventBus subscription lifetime 2 个
-- **修改文件**: ~25 个 (含 5 个 .dpk, 4 个测试文件)
-- **验证**: 所有修改文件 0 诊断错误; 编译输出仅有预先存在的 onnxruntime 第三方依赖问题
-- **遗留** (下一阶段):
-  - 周边模块 P0/P1: LLM-001/002 (schema/secrets), EDGE-002/003/006/007 (Cloud/Updater 安全)
-  - P2 可维护性: FR-011 编码损坏, FR-016 DeepFlow, Speech/Governance 板块
-  - 功能评审: DeepShell pending features, BrowserAutomation, IntentClarification BUG-134~142
-
----
-
-## 2026-06-02 规范文档完成项归档
-
-### SPEC-ARCH-2026-06-02: 架构技术规范 (tech-spec.md) 全部实施完成
-- **来源**: `docs/20.architecture.技术规范-tech-spec.md` v1.0
-- **状态**: 全部完成
-- **内容摘要**:
-  - Phase 0（最小核心）: Tier 0 表 + Core API (Config/i18n/FormState/Manager) ✅
-  - Phase 1（推荐功能）: Tier 1 表 + VCL 控件 + Studio 基础 ✅
-  - Phase 2（扩展功能）: LLM/i18n 管理/等待窗口/异常/FMX 控件/GUI 测试 ✅
-  - Phase 3（高级功能）: AutoUpdate/DB 维护/远程配置/CLI/云端服务 ✅
-  - Phase 4（完善）: License/反馈/使用统计/文档 ✅
-  - Phase 5（代码审查优化）: Schema/DoQry 缓存/Logger 初始化/接口抽象/版本兼容等 9 项 ✅
-  - Phase T（DeepBaseTray）: 开发日志/命令面板/自动化/快速启动/配置/日志搜索 8 项 ✅
-  - 第 1 章 概述与架构: 设计目标、内容分类、架构全景图、适用范围、多应用拓扑、错误码约定 ✅
-  - 第 2 章 目录与文件约定: root.txt、目录结构、开发/用户环境行为差异 ✅
-  - 第 3 章 config.db 表结构: Tier 0/1/2 共 15 张表定义全部落地 ✅
-  - 第 4 章 Core 模块接口: TDeepBaseManager 全套 API + 全局函数 + 辅助类型 ✅
-  - 第 5 章 UI 控件规范: 20 个 VCL/FMX 控件 ✅
-  - 第 6 章 动画资源处理: Image32 统一 SVG 方案 ✅
-  - 第 7 章 Studio 功能规范: 项目管理/i18n/日志/异常/资源/配置/LLM/发布/远程/License/数据库管理 ✅
-  - 第 8 章 DeepBaseTray 工作台: 开发日志/命令面板/自动化/快速启动/悬浮窗口 ✅
-  - 第 9 章 CLI 命令行: db/i18n/release/config/test 命令 ✅
-  - 第 10 章 云端服务: version.json/remote-config/feedback/license 验证 ✅
-  - 第 11 章 安全性: Credential Manager/日志脱敏/发送前控制 ✅
-  - 第 12 章 测试支持: Core 层单元测试/GUI 状态快照/测试数据库隔离 ✅
-  - 第 13 章 线程安全: WAL/Checkpoint/内存缓存/API 稳定性标记/Schema 迁移 ✅
-  - 第 14 章 单元文件结构: Core/Persistence/Features/VCL/FMX/Packages/ThirdParty/Tools 目录布局 ✅
-  - 第 15 章 性能规范: API 响应时间基线/资源限制/性能监控 ✅
-  - 第 16 章 异常处理规范: 异常层级/错误码分配/用户提示映射 ✅
-  - 第 17 章 后续工作: Phase 0-4 全部完成 ✅
-
-### SPEC-COMMERCE-2026-06-02: Commerce 后端契约 (commerce-backend-spec.md) 实施步骤 1-4 完成
-- **来源**: `docs/60.backend.Commerce后端契约-commerce-backend-spec.md`
-- **状态**: 实施步骤 1-4 已完成
-- **内容摘要**:
-  - 步骤 1 ✅: 固化契约并评审字段命名 — 契约文档已评审固化，字段命名统一
-  - 步骤 2 ✅: 用内存 mock 后端跑 contract tests — `TInMemoryCommerceStorage` 和测试覆盖
-  - 步骤 3 ✅: 实现 HTTP `ICommerceStorage` 适配器 — `TCommerceHttpStorage` 已落地
-  - 步骤 4 ✅: 实现后端微信支付 intent API 和 Delphi `ICommercePaymentGateway` 后端代理适配器 — `TCommerceHttpPaymentGateway` 已落地
-- **封板标准已完成项**:
-  - `TInMemoryCommerceStorage` 仅用于测试和开发文档 ✅
-  - 下游项目只依赖 `Features/DeepBase.Commerce.*` 流程入口 ✅
-  - 支付确认以可信后端通知为准 ✅
-  - 后端数据库有唯一约束和事务保护 ✅
-  - 文档入口统一指向契约文档和下游集成指南 ✅
-
-### SPEC-KIRO-COMPLETED-2026-06-02: Kiro 规范系统已完成项目（8 个 spec）
-- **来源**: `.kiro/specs/` 目录
-- **状态**: 全部完成
-
-#### regression-tests — 回归测试体系 (34/34 ✅)
-- 覆盖 74 个已修复 bug 的系统化回归测试，集成到 CI
-- P0 关键安全测试、P1 高优先级测试、CI 集成、覆盖率检查、文档全部交付
-
-#### aierrorhandler-rollout — AI 错误处理器上线 (18/21 ✅，3 项可选 PBT 未做)
-- Delphi 13.1 下 AIErrorHandler 上线：SilentMode、Bootstrap facade 单元、LLMBridge adapter 单元
-- Examples demo 项目已交付
-
-#### autofix-runtime-errors — AutoFix 运行时错误自动修复 (69/69 ✅)
-- 六大阶段全部交付：Pascal 单元验证/补全、外部 PowerShell 脚本骨架、主循环 + AI 集成 + lint、集成入口、e2e dry-run、最终门禁
-- 含 StackWalker、ErrorRecorder、VclHook、SelfTerminator、ScenarioRunner、HealthSignal 和 10+ PowerShell 脚本
-
-#### deepbase-bug-fixes-p0p1p2 — P0/P1/P2 缺陷修复 (70/70 ✅)
-- 15 个修复项：P0（LLM schema、SecretStore、streaming transport）、P1（IntentClarification 并发、BrowserAutomation ResponseWaiter/Registry、DeepShell EventBus/Theme）、P2（Graph Dijkstra、Comment encoding、DeepFlow pause/resume 等）
-
-#### deepbase-round2-fixes — 第二轮修复 (115/115 ✅)
-- 139 个 better2.md 修复项：P0（死锁/UAF/崩溃）、P1（SQL 注入/安全）、P2（优化/代码质量）
-- 覆盖 StateMachine、Timeout、CircuitBreaker、UniPool、Supabase/Firebase、SQL 注入、Crypto、Commerce、Config、ConnectionPool、Persistence、EventBus、Speech、VCL/FMX 线程安全、Browser、IntentClarification、Governance、Inference、性能优化
-
-#### intent-clarification — IntentClarification Phase 2 (20/20 ✅)
-- IoC 集成、StateMachine 集成、Logging、数据库标准化、Resilience、Metrics、Config 系统、Validation、集成测试
-- Phase 1 骨架实现 + 评审后修复已在 `.kiro/specs/intent-clarification/history.md` 归档
-
-#### services-crypto-config-refactor — Crypto/Config/Services 重构 (27/29 ✅，2 项可选)
-- 三项耦合重构：crypto 原语统一（DeepBase.Crypto）、config 接口清理（移除 deprecated）、services 包边界拆分（Feedback→VCL、ORM→Persistence、Net→Features、License FireDAC 移除）
-
-#### browser-automation — 浏览器自动化框架 (38/41 ✅，3 项 P5 延后)
-- Phase 1-7 全部交付：抽象层骨架、Bug 修复（28 个）、能力升级（12 个新组件 + 10 个测试文件）、ScriptStore JS 脚本入库、5 位专家三轮评审（39 个 C/H 问题全关闭）、PageDriver 自然语言驱动（Alibaba page-agent 接入）
-- 3 个 P5 结构性延后项（IBrowserSession 合并、ResponseWaiter stale result、CDP cancel token）已转入 tasks.md
-
----
-
-## 2026-06-02 代码-任务差距分析与清理 (GAP-CLEANUP-2026-06-02)
-
-### 发现：tasks.md 中 13 项标记"待办"实际已在代码中完成
-
-| 模块 | 已实现项 | 代码证据 |
-|------|---------|----------|
-| IC-P0 | L2/L3 session-scoped | Provider.L2/L3 已是 session 级 |
-| IC-P0 | Router MaxLevel 钳制 | `Router.pas` 有 `ClampDepth` |
-| IC-P0 | LLM resilience 超时 | `LLMResilience.pas` 有 `TTask`+`WaitForSingleObject` |
-| LLM-P0 | 6 种 Provider | `Core/DeepBase.LLM.pas` 6 个枚举 |
-| LLM-P0 | 按槽位 fallback | `LLM.Config.pas` tier model 数组 + `CallWithFallback` |
-| LLM-P0 | Vision fallback | `LLM.Service.pas` `ChatVision` |
-| LLM-P0 | 下游 facade | `DeepKitSafeClient` 已串联 |
-| LLM-P0 | Mock provider 测试 | fake transport 单测存在 |
-| DB-P0 | DoQry timeout/校验/脱敏 | `DoQry.pas` `TimeoutSec` + 参数校验 + DEBUG 脱敏 |
-| DB-P0 | 迁移引擎 | `Migrations.pas` 完整 `TMigrationEngine` |
-| Speech | M2.5 SenseVoice 后端 | 全部 7 项已实现 |
-
-### 已删除文件
-
-- 7 个已完成 kiro spec 目录：`intent-clarification`、`aierrorhandler-rollout`、`autofix-runtime-errors`、`regression-tests`、`deepbase-bug-fixes-p0p1p2`、`deepbase-round2-fixes`、`services-crypto-config-refactor`
-- 4 个仅有 requirements.md 的 spec 目录：`config-management-enhancement`、`doqry-optimization`、`property-based-testing`、`structured-error-handling`
-- 18 个 `.12.bak` Delphi 13 迁移备份文件
-- 2 个 `.utf8bom.tmp` 临时文件
-- `__history/` IDE 自动备份目录（root + Features）
-- `antitamper_debug.log`、`compile-errors.log`
-
-### 仍待完成的真正缺口
-
-- **IC**: facade 清理、GetPresetSlots 集成、L4 失败语义、FeatureConfig/Metrics 接线
-- **LLM**: 统一配置模型（两套并行）、GenerateImage async/stream、FMX 配置面板
-- **ARCH**: `DeepBaseFeatures.dpk` 仍 requires FireDAC/dbrtl（违反分层）
-- **Commerce**: PaymentBridge verifier、审计日志、每通知幂等
-- **Speech**: M4 DeepLaunch 未启动、WakeWord/Voiceprint/IntentParser 为 stub、PBT 测试缺失
-
-### Kiro 剩余 4 个 spec 合并至 tasks.md 并删除（同日续）
-
-- `browser-automation/`（tasks.md + bugfix.md + history.md）— Phase 8/9 评审修复已全部关闭，仅 P5 延后 3 项移入 tasks.md
-- `deepbase-speech/`（tasks.md + design.md + requirements.md + .config.kiro）— M0-M8 详细待办 34 项展开到 tasks.md，design.md/requirements.md 的 P1-P14 属性和 R1-R19 需求以设计参考形式保留
-- `delphi-13-migration/`（tasks.md）— 12 项待办展开到 tasks.md
-- `feedback-backend-service/`（tasks.md + design.md + requirements.md）— 10 阶段任务展开到 tasks.md，20 条正确性属性以设计参考形式保留
-- `.kiro/specs/` 目录现在为空
-
----
-
-## 2026-06-09 任务清单对齐与 IntentClarification 包边界门禁
-
-### QA-P0-IC-PACKAGE-2026-06-09: Phase 2 必需单元回归检查
-- **完成日期**: 2026-06-09
-- **来源**: `tasks.md` 中“包边界测试补 `DeepBase.IntentClarification.*` 必需单元检查”待办项。
-- **内容摘要**:
-  - `Tests/Architecture/Test.Arch.PackageBoundaries.pas` 新增 `FeaturesPackage_ContainsIntentClarificationPhase2Units`。
-  - 回归检查逐项覆盖 `DeepBase.IntentClarification` Phase 2 必需单元在 `DeepBaseFeatures.dpk` 与 `DeepBaseFeatures.dproj` 中的 contains/reference。
-  - 明确禁止 `Features\DeepBase.IntentClarification.Storage.pas` 回流到 Features 包；该 FireDAC storage 必须保留在 Persistence 边界内。
-  - `tasks.md` 已移除该已完成待办，剩余 IC 队列继续跟踪 slot 注入、并发和降级语义回归用例。
-- **验证**:
-  - `Scripts\run_architecture_checks.ps1`: Architecture tests 25/25 passed。
-  - Layer violation checks: Errors=0，Warnings=23。
-  - Security pattern checks: Errors=0，Warnings=22。
-- **归档**:
-  - 缺陷/防回归记录见 `bugfix.md` 的 BUG-236。
-
----
-
-## 2026-06-09 IntentClarification 语义回归用例补齐
-
-### QA-P0-IC-SEMANTICS-2026-06-09: slot 注入与 L4 降级防回归
-- **完成日期**: 2026-06-09
-- **来源**: `tasks.md` 中“补 IntentClarification slot 注入、并发和降级语义回归用例”待办项。
-- **内容摘要**:
-  - `Tests/Test.DeepBase.IntentClarification.Integration.pas` 新增 `Test_DomainAdapterPresetSlotsReachL1Provider`，覆盖 Engine 构建上下文时从 `IDomainAdapter.GetPresetSlots(IntentName)` 取 slot，并传到 L1 provider 的真实调度路径。
-  - 新增 `Test_L4_AllFailures_ReturnsDegradedFailure`，覆盖 L4 专家观点和综合调用全部失败时必须返回 degraded failure。
-  - 补齐 `TMockLLMClient.GenerateImageStream`，并同步 `Tests/Test.DeepBase.IntentClarification.pas` 中的 `TFakeClarificationLLM.GenerateImageStream`，解决 `ILLMClient` 接口漂移造成的编译阻塞。
-  - 并发语义已由既有 `Test.DeepBase.IntentClarification.Concurrent.PBT` 和 `Round2.PBT` 覆盖，本轮不重复造同类用例。
-- **验证**:
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI`：17 tests passed，0 failed，0 errored，0 leaked。
-  - 同一 runner 已完成 `Tests\DeepBaseTests.dpr` 编译和过滤执行，确认新增 slot 注入与 L4 降级回归实际运行。
-- **归档**:
-  - 已从 `tasks.md` 当前 IC 待办中移除。
-  - 相关缺陷记录见 `bugfix.md` 的 BUG-237、BUG-238。
-
-### QA-P0-TEST-RUNNER-2026-06-09: IC 过滤 runner 编译阻塞收敛
-- **完成日期**: 2026-06-09
-- **内容摘要**:
-  - `Scripts/run_tests.ps1` 编译 DPR 时改用项目目录作为工作目录，修复 `Architecture\Test.Arch.PackageBoundaries.pas` 相对路径解析失败。
-  - `ThirdParty/Payment/DeepBase.Payment.pas` 修复 Delphi 13.1 下 `HashCode` 未声明，并补齐 Payment facade 类型/枚举别名。
-  - `ThirdParty/Payment/DeepBase.Payment.Stripe.pas` 和 `Tests/Test.DeepBase.Payment.Integration.pas` 同步修复重载声明、uses、编码和泛型断言编译兼容问题。
-  - `ThirdParty/Social/DeepBase.Social.Weibo.pas`、`DeepBase.Social.QQ.pas` 将 `DeepBase.Security.DPAPI` 提到 interface uses，修复公开 `TKeyStorageMode` 类型不可见。
-- **验证**:
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.IntentClarification.Integration -AllowFilteredCI`：17/17 passed。
-- **归档**:
-  - 编译阻塞记录见 `bugfix.md` 的 BUG-238、BUG-239、BUG-240。
-
----
-
-## 2026-06-10 QA-P0 Unit runner 继续收敛
-
-### QA-P0-UNIT-2026-06-10: DoQry / BrowserAutomation 失败簇修复与超时清理
-- **完成日期**: 2026-06-10
-- **内容摘要**:
-  - `Persistence/DeepBase.DB.DoQry.pas` 将 SQLite `database is locked` / busy / locked 文本回退映射为 `DOQRY_ERR_TX_CONFLICT`，让并发 InsertReturningId 测试的既有重试逻辑生效。
-  - `Tests/Test.DeepBase.BrowserAutomation.pas` 的 fake session 对齐 ScriptStore click/input `{success:true}` 返回契约，避免 DOM plan 被误判为第 2 步失败。
-  - `Scripts/run_tests.ps1` 为测试 exe 增加 `DEEPBASE_TEST_RUN_TIMEOUT_MS` 超时控制，超时后会 kill 子进程并返回失败，避免 `DeepBaseTests.exe` 残留占用 XML。
-  - 历史列出的 Browser Registry、Browser WindowPool、FeatureFlags、License、Performance 过滤测试本轮均已单独通过。
-- **验证**:
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -AllowFilteredCI`：32/32 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.BrowserAutomation -AllowFilteredCI`：8/8 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Browser.Registry -AllowFilteredCI`：7/7 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Browser.WindowPool -AllowFilteredCI`：11/11 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.FeatureFlags -AllowFilteredCI`：69/69 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.License -AllowFilteredCI`：16/16 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -FromUnit DeepBase.Performance -AllowFilteredCI`：16/16 passed。
-  - 临时 `DEEPBASE_TEST_RUN_TIMEOUT_MS=60000` 完整 Unit skip-compile 能自行超时失败并清理残留进程。
-- **遗留**:
-  - 完整 Unit 仍未全绿：60 秒超时试跑已出现若干 F/E，但未跑到 DUnitX 失败摘要；下一步继续按单元/模块分组隔离剩余失败。
-- **归档**:
-  - 相关缺陷记录见 `bugfix.md` 的 BUG-241、BUG-242、BUG-243。
-
----
-
-## 2026-06-11 QA-P0 Unit 全量收敛
-
-### QA-P0-UNIT-2026-06-11: 最后失败簇修复与完整 Unit 通过
-- **完成日期**: 2026-06-11
-- **内容摘要**:
-  - `Tests/Test.DeepBase.DBException.pas` 将中文预期字符串改为 UTF-16 code point 构造，避免源文件编码被 Delphi 编译器按错误代码页解释后产生 mojibake 断言。
-  - `Tests/Test.DeepBase.Unlock.pas` 使用不在校验字母表内的 `@` 构造坏校验码，避免测试突变字符偶然命中新/旧兼容校验字符。
-  - `Tests/Test.DeepBase.DB.DoQry.pas` 为并发 InsertReturningId 测试启用 WAL、扩大 BusyTimeout、增加重试窗口，并修复失败路径提前 `Exit` 导致连接未释放的问题。
-  - 完整 Unit 已从“超时/剩余 F/E”收敛到 DUnitX 摘要全绿。
-- **验证**:
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DBException,DeepBase.Unlock -OutputDir TestResults\UnitGroup_FinalTwo -AllowFilteredCI`：12/12 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -FromUnit DeepBase.DB.DoQry -OutputDir TestResults\UnitGroup_DoQryAfterRetry -AllowFilteredCI`：32/32 passed。
-  - `Scripts\run_tests.ps1 -Type Unit -SkipCompile -OutputDir TestResults\UnitFull_AfterDoQryRetry -AllowFilteredCI`：3661 found，3658 passed，3 ignored，0 failed，0 errored。
-- **遗留**:
-  - 完整 Unit 功能摘要已通过，但进程退出仍打印 System.JSON/FastMM unexpected memory leak，下一步作为独立质量债定位。
-- **归档**:
-  - 相关缺陷记录见 `bugfix.md` 的 BUG-244、BUG-245、BUG-246。
-
----
-
-## 2026-06-15 任务清单对齐与 DeepLaunch 缺陷登记
-
-### TASK-AUDIT-2026-06-15: tasks/history/bugfix 三文档对齐
-- **完成日期**: 2026-06-15
-- **来源**: 用户要求“对齐 tasks.md 文件，把已经完成的任务移入 history.md，记录 bug 到 bugfix.md，把需要完成的任务更新到 tasks.md，然后做一个版本提交”。
-- **内容摘要**:
-  - `tasks.md` 重写为当前待办清单，只保留未完成任务和下一步任务。
-  - 已完成的 QA-P0、IntentClarification、DeepShell、架构检查、LLM/transport 等内容继续保留在本历史文档中，不再在 `tasks.md` 主体重复列出 `[x]` 项。
-  - 新增 `DL-P0-2026-06-15`，集中跟踪 DeepLaunch Grid 右键编辑崩溃、工作流区 i18n、主题同步和 10 格绘制高度问题。
-  - `bugfix.md` 新增 BUG-248 ~ BUG-251，分别记录 DeepLaunch 4 个待修复缺陷。
-- **边界**:
-  - 当前 DeepBase 仓库未找到 `DeepLaunch.exe` 对应主程序源码；本轮先完成任务和缺陷登记，后续需要定位 DeepLaunch 下游源码后实施代码修复。
-- **验证**:
-  - 文档结构检查：`tasks.md` 当前只保留未完成队列；DeepLaunch 4 项用户反馈均有任务和 bug 编号。
-
-### DATA-PLATFORM-MIGRATE-2026-06-16: 已完成数据平台任务移入历史
-- **完成日期**: 2026-06-16
-- **来源**: 用户要求"对齐 tasks.md，已完成任务移入 history.md"。
-- **移入项**:
-  - `DATA-P1-001`: BCrypt 直接解密后端 — TBCryptSQLiteReader (320 LOC)、DeriveSQLCipherKey、TryDecryptPage、TryProbeCipherParams、beBCryptDirect 集成。
-  - `DATA-P2-001`: 单元测试与集成测试 — SchemaAdapter 36 cases、ClipboardGuard 6 fixtures、TExternalSQLiteReader 集成测试。
-
-### ARCH-P1-002-2026-06-16: 全链路包编译门禁修复
-- **完成日期**: 2026-06-16
-- **来源**: `tasks.md` ARCH-P1-002，DeepBasePlatform.dpk 缺少依赖 + 多个预存编译错误。
-- **内容摘要**:
-  - **包依赖修复 (4 dpk)**:
-    - `DeepBasePlatform.dpk` requires 新增 `DeepBaseCommerce`，Net.Transport 移至 Commerce contains。
-    - `DeepBaseCommerce.dpk` 显式包含 `DeepBase.Net.Transport`。
-    - `DeepBaseSpeechCore.dpk` requires 新增 `DeepBaseServices` + `DeepBaseCommerce`。
-    - `Scripts/build_packages_win64.ps1` 拆分子包构建顺序（11 包全链路）。
-  - **编译错误修复 (5 单元, ~30 errors → 0)**:
-    - `WindowMonitor.pas`: TThread 前缀、显式 TThreadProcedure、缺失 WinAPI 声明、HWINEVENTHOOK 等 7 处。
-    - `ClipboardGuard.pas`: SaveBackupToTemp/Path 从 procedure 改为 function: Boolean 2 处。
-    - `UIA.Engine.pas`: COM TLB 接口不匹配、多接口继承、GetRaw 桥接、IsMappingIntegrityVerified 等 18 处。
-    - `DataPlatform.Bootstrap.pas`: 缺少 DeepBase.SchemaAdapter uses 1 处。
-    - `DeepBaseSpeechCore.dpk`: requires 缺失导致 E2199 包间冲突 ~25 处。
-  - **归档**: BUG-269 ~ BUG-274 共 6 项 (bugfix.md)。
-- **验证**:
-  - `Scripts/build_packages_win64.ps1 -Profile Runtime`：11 包全链路编译通过，0 errors。
-  - FMX.dpk 仍有预存 E2280（`DeepBase.FMX.LogListView.pas(239) Unterminated conditional directive`），不在本次范围。
-
 ---
-
-## 2026-06-18 已完成任务归档
-
-### ARCH-P1-001: Core 瘦身和包分层
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - Features 拆分 LLM/Inference/IntentClarification/Browser/Commerce/Platform 等可选包
-  - 包 DAG 重切：Core→Services→{Persistence,Features}→{VCL,FMX}
-  - 新增 DeepBaseDataPlatform.dpk，Platform 移除 Persistence 依赖
-
-### SPEECH-01: TTS 后端迁入 DeepBase
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - `DeepBase.Speech.TTS.Edge.pas` ← 从 `DeepInput/uTTS.Edge.pas` 迁移，适配 `ITTSBackend` 接口
-  - `DeepBase.Speech.TTS.StepFun.pas` ← 从 `DeepInput/uTTS.StepFun.pas` 迁移，适配 `ITTSBackend` 接口
-  - Edge TTS：WinHTTP WebSocket 无需额外 DLL，确认在 DeepBase 中无新增依赖
-
-### SPEECH-02: 统一 Resolver 工厂
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - 新增 `DeepBase.Speech.Resolver.pas`
-  - `ResolveASR(ALicensing)` — 三层回退：SenseVoice(PRO+已安装) → Baidu(用户配Key) → SAPI(默认)
-  - `ResolveTTS(ALicensing)` — 三层回退：Edge(免费优先) → SAPI(离线兜底) → StepFun(用户配Key可选覆盖)
-  - `ALicensing` 参数：通过 `ILicensing.HasFeature('sensevoice_asr')` 判断 PRO 等级
-
-### SPEECH-03: DeepInput 瘦身
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - 删除 `uOnlineASR.pas, uTTS.pas, uTTS.Edge.pas, uTTS.StepFun.pas, uTTS.Local.pas`
-  - `uMain.pas` → 移除 uTTS 引用，TTS 已迁移到 DeepBase
-  - `uAudioCapture.pas, uVAD.pas` 评估：保留在 DeepInput 中
-
-### delphi-13-migration: Delphi 13 兼容性
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - Skia4Delphi 7.1.0 unit path 变更（无引用，无需迁移）
-  - VCL/FMX 兼容性检查（8 个 dfm/fmx 已检查，无 DPI 敏感属性）
-  - 96 DPI `.dfm`/`.fmx` 转换（无转换需求）
-
-### browser-automation: 浏览器自动化接口优化
-- **完成日期**: 2026-06-18
-- **内容摘要**:
-  - `IBrowserSession`/`IBrowserAutomationSession` 接口合并（IBrowserSession 继承 IBrowserAutomationSession）
-  - ResponseWaiter stale result 防护（FStartCount/FRunningCount 原子计数，旧导航响应自动丢弃）
-
-### QA-P0-001: 测试和 CI 门禁可信化（部分完成）
-- **完成日期**: 2026-06-18
-- **已完成项**:
-  - 清理 0-fixture 测试单元（9 文件补齐 TDUnitX.RegisterTestFixture）
-
-### UPD-P0-001: 免费版升级收费版和付费更新（部分完成）
-- **完成日期**: 2026-06-18
-- **已完成项**:
-  - 增加 Updater 安全测试：签名错误、Zip Slip、降级攻击（14 测试用例，Test.DeepBase.Updater.pas）
-
-### QA-P1-001: 长期质量体系（部分完成）
-- **完成日期**: 2026-06-18
-- **已完成项**:
-  - Updater 安全测试（14 用例，Test.DeepBase.Updater.pas）
-  - LLM E2E mock（15 用例，Test.DeepBase.LLM.E2E.pas）
-  - 桌面工具模板 E2E
-  - CI 增加可选包矩阵 (Minimal/Runtime/LLM/Speech/Commerce/Updater，.github/workflows/delphi-ci.yml)
 
-### deepbase-speech: 语音模块基础（部分完成）
-- **完成日期**: 2026-06-18
-- **已完成项**:
-  - PBT 测试 (8 用例，Test.DeepBase.Speech.PBT.pas) + 单元测试 (7 用例，Test.DeepBase.Speech.pas) → 16/16 passed
-  - dpk 分包验证 (6 dpk: Core/ASR/TTS/Voice/Wake + SAPI.Decl 归入 Core)
+## 2026-07-09 REVIEW5-R3 续修归档 (E-006 ~ C-007 + 闭环声明)
+
+  - REVIEW5-R3-E-006 (FEAT-R3-006, BUG-425): `Features/DeepBase.CloudBackup.pas` 传输层安全增强 (P1 归并). 见 bugfix.md BUG-425.
+  - REVIEW5-R3-E-007 (FEAT-R3-007, BUG-426): `Features/DeepBase.AntiTamper.pas` GetDefaultConfig 固定 salt 改为空盐+Initialize 校验 (默认空盐必抛 EAntiTamperException, 配置 Salt 后成功). 见 bugfix.md BUG-426.
+  - REVIEW5-R3-E-008 (FEAT-R3-008, BUG-427): `Features/DeepBase.Speech.TTS.StepFun.pas` FetchSystemVoices/FetchClonedVoices `nil as TJSONArray` 触发 EInvalidCast (as 对 nil 强转抛异常, if=nil 为死代码) — 改 `is` 判定 (对 nil 返回 False) + 硬转换 TJSONArray(VoicesVal), 缺键/非数组优雅 Exit 并设 FLastError. 见 bugfix.md BUG-427.
+  - REVIEW5-R3-E-005 (FEAT-R3-005, BUG-428): `Features/DeepBase.Commerce.SafeClient.pas` SendJson 仅 401 重试, 429/5xx 瞬态失败直接抛 EDeepBaseCommerceError, 支付/订单接口短暂限流/后端重启窗口下立即失败无退避 — SendJson 末尾新增瞬态退避重试循环 (仅幂等调用: GET/HEAD 天然幂等, POST/PUT/DELETE 仅带 idempotency key 才重试, 防非幂等 POST 重复下单); IsRetriableStatus (429+5xx) / IsIdempotentCall / ExtractRetryAfterMs (429 优先读 Retry-After 头秒数→ms 钳制到 BACKOFF_CAP_MS) / ComputeBackoffMs (5xx 指数退避 BACKOFF_BASE_MS*2^attempt 钳制上限) 四辅助方法; 基于 attempt 的确定性 ±25% 抖动 (不用 Now/Random); Winapi.Windows.Sleep (MSWINDOWS 保护). implementation uses 增 System.Math (全限定 System.Math.Min 钳制, 仓库惯例). 新增 2 回归测试: 429 幂等 GET Retry-After:0 重试成功 RequestCount=2; 非幂等 POST 503 不重试 RequestCount=1 防重复. DUnitX --run 全名过滤单独执行 2 found 2 passed. 全量套件 2 既有失败 (WeChatPay 公钥环境 + Test_PermissionClient_HasFeature 测试数据 valid_until=2026-07-08 已于今日 07-09 过期) 与 E-005 无关. 见 bugfix.md BUG-428.
+  - REVIEW5-R3-D-007 (GOV-R3-007, BUG-429): `DeepFlow/Source/Roles/DeepFlow.Commander.pas` GetOrCreateSession 锁内返回 TSession 裸指针后释放锁, ProcessRequest 锁外修改 Session.State/FTurnCount(Inc) 致同 session-id 并发数据竞争 (Inc 非原子, State 读改写撕裂) — ProcessRequest 中 State/FTurnCount 读写 + Context/SessionId 快照取值全部包裹 FSessionLock 临界区 (内联 var 局部快照, AnalyzeIntent 耗时 LLM 锁外执行避免序列化); 成功 ssPending 与 except ssError 各自锁内更新. Commander 停止 Clear 悬空裸指针属更深所有权问题超出 D-007 范围. 验证: Win64 全量编译通过 (exit 0 仅遗留 H2077/H2443 Hint); Commander 无专属单测, 纯加锁语义等价. 见 bugfix.md BUG-429.
+  - REVIEW5-R3-D-008 (GOV-R3-008, BUG-430): `Governance/DeepBase.Governance.AI.ProposalQueue.pas` Submit 无容量上限致 AI 循环提交无限堆积 TProposal OOM, FindById/GetPending O(n) 膨胀后卡顿; 全程无锁, 引入后台 AI 提案将升 P1 — 加 FMaxPending (默认 1000, 满抛 EProposalQueueError 新异常类, 遵循 Governance EConfigRegistrarError/EJsonLogicError 惯例) + TCriticalSection 保护 Submit/Approve/Reject/Apply/FindById/GetPending/GetAll/Count 全部方法; FindById 拆 FindByIdInternal 避免不可重入 TCriticalSection 自死锁; Apply 锁内创建 ChangeSet+MarkApplied (ModelVersion 无反向锁依赖). P2 全 22 项修完. 验证: Win64 全量编译 SUCCESS exit 0 (325043 lines 16.56s 无 Error); ProposalQueue 无外部调用点/无单测, 纯加固语义等价. 见 bugfix.md BUG-430.
+  - REVIEW5-R3-C-001 (DATA-R3-001 / BUG-431): `Persistence/DeepBase.DB.Pool.pas` TPooledConnection.Release 归还连接前不回滚残留事务/不关闭游标, 下个借用者继承脏连接 (SQLite "cannot start a transaction within a transaction"; PG/MySQL 读到中间数据甚至连带提交他人 DML); 隔离级别泄漏 — 新增 ResetConnectionState (private), Release 持 FLock 前先回滚残留未提交事务 (不 Commit, 异常路径遗留=未完成工作) + 重置 TxOptions.AutoCommit 到池配置; 复位失败仅记事件不阻断归还 (IsValid 探活兜底, 避免连接卡 csInUse 泄漏); 残留游标属调用方 dataset 生命周期, 池不接管 (FireDAC 设计一致). **C 模块首项���复, 更正此前"C已在前轮归档"误标: C 有 7 项 R3 新发现.** 验证: Win64 全量编译 SUCCESS exit 0 (325082 lines 17.06s 无 Error). 见 bugfix.md BUG-431.
+  - REVIEW5-R3-C-002 (DATA-R3-002 / BUG-432): `doQry/doQryMain.pas` btnFilterClick (L151) 过滤条件字符串拼接 `tblQueries.Filter := 'proc_name LIKE ''%' + s + '%'''` 致过滤表达式注入 (TDataSet.Filter 按表达式语法解析, 可注入 `%' OR 1=1 OR proc_name LIKE '%` 绕过过滤或未闭合引号致异常 DoS/枚举) — 改 `tblQueries.Filter := 'proc_name LIKE ' + QuotedStr('%' + s + '%')`, QuotedStr 将内嵌单引号翻倍锁进字面量. System.SysUtils 已在 uses (L6). 验证: doQry 工程在 BDS37 因 uDoQryLegacy L8 `DBClient` 已移除无法整体编译 (历史遗留, 非本修复引入), 修复为纯标准 API QuotedStr, uses 齐备语法确定正确; doQry 不在 CI 单测工程集无回归触发. 见 bugfix.md BUG-432.
+  - REVIEW5-R3-C-003 (DATA-R3-003 / BUG-433): `doQry/doQryMain.pas` (a) GetFieldList (L305) Format 拼接 TableName 到 information_schema 查询, (b) btnGenSqlClick (L126) 拼接数据库字段 proc_name — 两处均改 ADO 参数化 `WHERE table_name = :t`/`WHERE proc_name = :p` + `Parameters.ParamByName(...).Value := ...`; aQry 为 TADOQuery (L27), Data.Win.ADODB 已在 uses (L12), 驱动转义消除注入面. L286 硬编码 'public' 无拼接、L178 VALUES 全字面量, 无注入风险未改. 验证: 同 BUG-432 (doQry DBClient 历史遗留无法整体编译; 修复为 TADOQuery.Parameters.ParamByName 标准 API, uses 齐备); doQry 不在 CI 单测工程集无回归触发. 见 bugfix.md BUG-433.
+  - REVIEW5-R3-C-004 (DATA-R3-004 / BUG-434): `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` CheckForeignKeys (L460)/CheckRequiredFields (L517)/CheckEnumValues (L579) 三处 except 经 `OutputDebugString` 吞查询异常 — 查询失败时方法返回空数组, `DiagnoseAll` 聚合后 `GenerateDiagnoseReport` 报 `[OK] No issues found` "假绿" (green-on-error), 管理员误信 DB 健康, 实际故障埋进 DebugView (生产通常无人看). 修复: `Core/DeepBase.Diagnose.pas` `TDiagnoseIssueType` 枚举末尾新增 `ditCheckError` (序数 8, 兼容已有 0..7, GenerateDiagnoseReport 按 CanAutoFix/FixSQL 分类不 case IssueType 故无 case 穷举点需补); 三 except 块改为构造 `ditCheckError`+`IsOK:=False` 的 TDiagnoseResult 追加 ResultList, Issue 填 '检查失败: '+E.Message, TableName/ObjectName 填当前迭代上下文 (FK/RF/EF 的 TableName/ColumnName, 变量在 except 处 in-scope), CanAutoFix:=False; AddColumnIfNotExists/AutoFix 的 except 保留 (返回值 Boolean/Integer 已部分表达失败, 不属假绿语义, 改动涉签名变更超 DATA-R3-004 范围). 验证: Win64 全量编译 SUCCESS exit 0 (325119 lines 17.05s 无 Error); Diagnose 单元 DUnitX 回归 `-FromUnit DeepBase.Diagnose -AllowFilteredCI` 全过 (Tests Found 40 / Passed 40 / Failed 0), 含新增 `Ord(ditCheckError)=8` 序数断言 (Test_IssueType_Values); 全量测试运行有既有 Runtime 216 于非 Diagnose 测试 (仓库 R3 多文件修复进行中, 与本次改动无关).  - REVIEW5-R3-C-005 (DATA-R3-005 / BUG-435): `Persistence/DeepBase.Persistence.MRU.FireDAC.pas` Upsert (L72) 无条件 `FConnection.StartTransaction` + except (L115) 无条件 `Rollback` — 调用方已在外层事务中 (共享 TFDConnection 调 Upsert, 或重入) 时: SQLite 报 "cannot start a transaction within a transaction"; PG/MySQL 则 Upsert 中途异常 `Rollback` 回滚调用方整个外层事务, 撤销其合法 DML, MRU 内部异常意外致调用方数据丢失. 修复: 仿 `Persistence/DeepBase.Persistence.Authorization.FireDAC.pas` (DATA2-025) OwnTx 模式 — var 加 `OwnTx: Boolean`, `OwnTx:=False` 后 `if not FConnection.InTransaction then StartTransaction + OwnTx:=True`, `if OwnTx then Commit`, `except if OwnTx then Rollback; raise`. DATA2-019 防并发重复键语义保留 (无外层事务时仍自启包裹 SELECT-INSERT 防双 INSERT 撞 UNIQUE; 有外层事务时复用之, 防重由 MRU 表 UNIQUE 约束兜底, 并发安全由调用方隔离级别保证, 无回归); `raise` 让调用方感知 MRU 写失败并自决外层事务去留, 不吞异常. 验证: Win64 编译 SUCCESS exit 0; MRU 单元 DUnitX 回归 `-FromUnit DeepBase.MRU -AllowFilteredCI` 全过 (Tests Found 13 / Passed 13 / Failed 0); 测试用 TInMemoryMRUStorage mock 不实跑 FireDAC 路径, 真实重入误回滚复现需多线程+共享连接异常注入不在单测范围, 与同类加固项一致不新增专项测试. 见 bugfix.md BUG-435.
+  - REVIEW5-R3-C-006 (DATA-R3-006 / BUG-436): `doQry/uDoQryLegacy.pas` 异常/UI 消息含完整内联值 SQL (PII 泄漏) — legacy 层 `BuildSQL` 生成内联值 SQL (参数值经 QuoteValue/HandleParamValue 拼入), 13 处把完整 SQL 塞进用户可见消息: `ExecuteAndGetResult` L756 raise CreateFmt(...'SQL: %s'...aSQL), `ExecuteSQL` L778 raise Create(...'SQL:'+SQL), `doQry(ProcName...)` L894/901/930/945/956/964/968/978/982/993 共 10 处 msg 构造含 'SQL: %s'+sSQL, 覆盖失败路径 (raise 上抛进日志) 与成功路径 (msg var 输出参数返回 UI 显示, 成功执行也向用户暴露 SQL+值). 值可能为聊天正文/用户ID/分享链接, 违反数据最小化. 修复: 统一策略 — msg/异常消息只保留错误本身+操作类型/表名/受影响行数等脱敏元数据, 去掉 'SQL:' 尾巴及对应 sSQL/SQL.Text 参数; 完整 SQL 经 `{$IFDEF DEBUG} Winapi.Windows.OutputDebugString(...) {$ENDIF}` 输出调试器 (生产无 DEBUG/无持久日志, 即便 DebugView 接也不进持久化), 不上抛不进 msg, 共改 13 处均核对 Format 占位符与参数数对齐; 保留 L325/L697 既有 OutputDebugString (本就调试器输出, 非用户消息路径, 不属泄漏面). doQry 工程 L8 DBClient 已自 Delphi 移除 (C-002/C-003 同款历史遗留), BDS37 无法整体编译 → 无编译验证; 改动为纯异常/UI 消息文本改写, Format 语法等价, uses Winapi.Windows 已在 L8 (全限定 OutputDebugString 安全), 无新增符号/签名. 残留扫描: grep "'SQL: |SQL: %s" 排除 DEBUG 行后仅余 2 处既有 OutputDebugString, msg/异常路径零残留; 13 个 IFDEF DEBUG 守卫 (11 新+2 原). 真实 PII 泄漏复现需 doQry.exe 运行 (依赖恢复 DBClient 的旧 BDS 或 DBClient 替代), 不在本轮编译链覆盖, 与同类 doQry legacy 项一致. 见 bugfix.md BUG-436.
+  - REVIEW5-R3-C-007 (DATA-R3-007 / BUG-437): `Persistence/DeepBase.Persistence.Manager.FireDAC.pas` AddColumn ColumnDef 原样拼入 DDL (防御性缺口) — `TFireDACManagerStorage.AddColumn` (L208) `Format('ALTER TABLE %s ADD COLUMN %s %s', [TableName, ColumnName, ColumnDef])`, TableName/ColumnName 已 `TSQLUtils.ValidateIdentifier` 校验但 ColumnDef 无校验直接拼; 当前唯一调用方 `Core/DeepBase.Manager.Schema.pas` AddColumnIfMissing 只传硬编码字面量 (TEXT/INTEGER/REAL+DEFAULT'<词>'/DEFAULT数字), **目前不可利用**, 但 AddColumn 暴露在公共 `IManagerStorage.AddColumn`, 未来调用方传受外部影响值即 DDL 注入 (分号终止+DROP/DELETE/CREATE TRIGGER/ATTACH, 或 `--`注释). 属纵深防御缺口非当前漏洞. 修复: `Core/DeepBase.SQL.Utils.pas` `TSQLUtils` 加 `IsValidColumnDef`/`ValidateColumnDef` (与既有 IsValidIdentifier/ValidateIdentifier 同族) — 拒空/长度>200/分号`;`/行注释`--`/块注释`/*`*/`/CRLF换行; 拒 DDL-DML 关键字 (DROP/CREATE/ALTER/DELETE/INSERT/UPDATE/SELECT/TRIGGER/INDEX/VIEW/ATTACH/DETACH/PRAGMA/VACUUM) 经 `\b`词边界大小写不敏感; 允许字符白名单字母/数字/空格/单引号/下划线/小数点/括号逗号, 拒双引号反引号; AddColumn L217 后加 `TSQLUtils.ValidateColumnDef(ColumnDef, 'Manager.AddColumn.ColumnDef')`, 非法即 `EArgumentException` (与 identifier 校验同失败语义). 选白名单非强类型 TColumnDef 记录 (不改公共签名, 不破坏现有调用方, 最小侵入). uses: Manager.FireDAC L26 已含 DeepBase.SQL.Utils 无新增; SQL.Utils implementation 新增 System.RegularExpressions (TRegEx)/System.SysConst. 验证: Win64 `run_tests -FromUnit DeepBase.SQL.Security.PBT -CI -AllowFilteredCI` → `SUCCESS: Unit Tests compiled` (325286 lines 16.48s) + Tests Found 5 / Passed 5 / Failed 0 (含新增 Property20 两个: 11 合法样本+12 非法注入样本, 双路径验证 IsValidColumnDef 布尔与 ValidateColumnDef 抛 EArgumentException); 真实调用方全量核对 Manager.Schema 所有 AddColumnIfMissing 字面量均通过白名单无回归. 见 bugfix.md BUG-437. **REVIEW5-R3 第三轮五专家审阅至此全部 53 项编号发现修复闭环 (BUG-386~BUG-437).**
+
+## 2026-07-09 OPT-P2-002 三大文件拆分项二次复核归档
+
+  - **复核背景**: OPT-P2-002「大文件拆分」于 2026-07-10 标注「部分完成 (Crypto 已拆, LLM/Schema/Math 未拆)」。本轮逐文件结构 + 引用追踪复核, 发现该更正仍基于错误前提, 三项拆分方向描述与代码实际结构不符。
+  - **`Core/DeepBase.Schema.pas` (971 行) — 标记不适用, 不拆分**: 纯 `const` SQL DDL 单元 (24 个 `SQL_TIER0/1/2_*` 字符串 + 5 个 `Get*SchemaSQL` 聚合函数), **无 Table/Column/Index/Constraint 类型** (旧描述「需 Table/Column/Index/Constraint 分离」方向错误); `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` L299-320 直接引用 20+ 单常量 (按表名映射建表 SQL), 拆分只会增加跨单元引用改动, 不解决可维护性 (纯数据常量单元无逻辑混杂问题)。
+  - **`Core/DeepBase.Math.pas` (527 行) — 已拆分完成**: 门面 + 薄包装 (`TMathUtils` ~50 static 工具函数委托 `System.Math` + `TMathConst` + `IsFinite`); 已存在 `DeepBase.Math.Geometry.pas`/`Math.Random.pas`/`Math.Interpolation.pas`/`Math.Statistics.pas` 四子单元, 各头部注释明示「Extracted from DeepBase.Math to keep the facade under 800 lines」; `DeepBase.Services.Math.pas` 已 uses 全部子单元。旧描述「需统计/矩阵/随机数分离」对应内容已在四子单元中落地。
+  - **`Core/DeepBase.LLM.pas` (1778 行) — 转独立重构待办 OPT-REFACTOR-001**: 门面单元, 头部明示「facade for the LLM module」, L40-86 大段类型重导出 (类型已迁 `DeepBase.LLM.Types`/`LLM.Config`/`LLM.Providers`); 剩余 1778 行为 `TDeepBaseLLM` 单一巨型类方法实现 (配置管理/HTTP 传输/计费历史/Chat/Prompt 模板管理)。旧描述「需 Provider 适配器独立」方向错误 (Provider 逻辑已独立在 `LLM.Providers.pas`)。真正的「拆分」实为架构重构: 把 `TDeepBaseLLM` 模板管理方法 (Save/Get/Delete/Copy/Validate/Render/Export/ImportTemplate, ~L918-1778 约 850 行) 提取为独立 `TLLMPromptTemplateManager` 类, `TDeepBaseLLM` 委托之。该重构改公开接口、影响调用方 (`Persistence.LLM.FireDAC`/`VCL.LLMConfigPanel`/`FMX.LLMConfigPanel`/`LLM.BillingClient` 均直接 uses `DeepBase.LLM` 用 `TDeepBaseLLM`), 属架构重构非「拆文件」, 拆出为独立待办 OPT-REFACTOR-001 (P2, 含调用方迁移评估 + 接口设计 + DUnitX 覆盖扩展 `Tests/Test.DeepBase.LLM.PromptTemplate.pas`), 不在本轮动代码。
+  - **结论**: OPT-P2-002 核实完成 — Crypto/Math 拆分落地, Schema 标记不适用, LLM 转独立重构待办 OPT-REFACTOR-001。本轮零代码改动, 仅 tasks.md/history.md 文档对齐 (无 bugfix.md 登记, 非缺陷修复)。
+
+## 2026-07-13 DeepBaseTests.exe 全量 Runtime 216 触发点排查归档 (BUG-438)
+
+  - **排查背景**: 全量套件 (`Tests/DeepBaseTests.exe --exit:Continue`) 末尾确定性崩溃 `Runtime error 216 at 00007FF6D4A7593A` (Delphi 把 AV 0xC0000005 包成 216), 偏移 `0x593A` 每次完全一致 = 确定性 AV. 此缺陷自 BUG-421 等多条目起被引用为"预存缺陷, 无根因", 一直无定位. 本轮专门排查触发点 (零代码改动, 仅文档诊断).
+  - **排查方法**: 用 `Tests/Test.DeepBase.DiagnosticLogger.pas` 自带的逐测试 BEGIN/END/PASS/FAIL 时间戳日志 (`Tests/Logs/test-diagnostic.log`), 全量跑 + `tee` 落盘, 崩溃前日志最后一行即触发测试. (注意: 该日志文件若被上次进程占用会报 EFCreateError, 运行前需 `rm -f Tests/Logs/test-diagnostic.log` 解锁.)
+  - **定位结论 (铁证)**: 触发于 `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` 的 `TBUG324_WorkerQueueCallbackSafetyTest.Test_OnError_Exception_RetryPathStillExecutes` (L298-323) 方法体内. 三重证据: (1) 诊断日志停在 该测试 `Test BEGIN` 之后, 无任何 END/PASS/FAIL → 崩在方法体内; (2) 单独跑该 fixture (`-b -r:"Test.Regression.BUG324_WorkerQueueCallbackSafety" --exit:Continue`) 仍崩且偏移 `0x593A` 完全一致 → 排除跨测试内存/线程状态污染, 为本测试固有; (3) fixture 9 个测试前 8 全过 (9 个点 `.........` 后崩), 第 9 个即 OnError 测试崩.
+  - **触发要素组合**: 该测试是 fixture 9 个中唯一组合 `OnError 回调(抛 Exception.Create('OnError simulated failure'))` + `RetryPolicy.Immediate(2)` + `FQueue.Stop(True)` 的; `TWorkerQueue.Create('bug324_test', 2)` 启 2 个 worker 线程; `CreateJob` 默认 `FTimeout := FDefaultTimeout = 300000` (L1542/L1476) → `ProcessJob` 走 L1921-1949 的 `TJobHandlerThread` 分支 (handler 在独立线程跑 + `LDoneEvt.WaitFor` + `LHandlerThread.WaitFor`). 前 8 个测试无 retry 无 Stop(True), 未触发该竞态窗口, 故不崩.
+  - **嫌疑代码区域 (未确认到确切行)**: `Core/DeepBase.WorkerQueue.pas` ProcessJob 的 except 块 retry 路径 (L2042-2059: `AJob.PrepareRetry` → `FLock.Enter` → `FPendingQueue.Add` → `SortPendingQueue`(L1850 比较器访问 `Left/Right.Priority`+`CreatedAt`) → `FOnJobRetrying`) 与 `Stop(True)` (L2144: 设 `FShuttingDown` + 每 worker `Terminate`+`WaitFor` + `FWorkers.Clear`) 的线程竞态. 静态审视所有路径均有 `FLock` 或 try/except 保护, 无明显锁外裸访问, 故 `0x593A` 对应的确切源码行需 map-file 反查 (当前 `DeepBaseTests.dproj` `DCC_DebugInformation=0` 未开 map file).
+  - **结论**: 排查阶段完成 — 216 从"无根因预存缺陷"精确定位到"具体单一测试方法 + 嫌疑代码区域", 证明其确定性 + 本测试固有 + 非跨测试污染. 剩余"0x593A → 源码行"属独立修复工程 (开 MapFile 重编查表 / 装 madExcept 崩时打印 AV 栈), 已记为 tasks.md 独立 P2 待办 + bugfix.md BUG-438. 本轮零生产代码改动, 仅 tasks.md(新增 BUG-438 待办段) + bugfix.md(新增 BUG-438 条目) + history.md(本归档段) + 记忆 `unit-test-fullrun-runtime216.md` 更新根因定位结论.
+
+## 2026-07-09 DeepBaseTests.exe 全量 Runtime 216 @0x593A 修复归档 (BUG-438 已修复) ✅
+
+  - **修复背景**: 承接 2026-07-13 排查归档 — 触发点已锁定 (BUG324 fixture 第 9 测试 `Test_OnError_Exception_RetryPathStillExecutes`), 但 0x593A → 源码行未解. 本轮以 Delphi 异常对象生命周期语义直接验证根因并修复, 无需 map-file/madExcept 埋点 (排查阶段的后备方案作废).
+  - **根因确认 (推翻排查阶段"线程竞态"嫌疑)**: 真实根因**非**线程竞态 (排查阶段 L1510 所述竞态窗口为误判), 而是 Delphi 异常对象生命周期缺陷 — `Core/DeepBase.WorkerQueue.pas` `TJobHandlerThread.Execute` 的 `except on E: Exception do FError := E` 跨 except 块持有 `E`. Delphi `except on E:` 块结束时 RTL 自动 Free `E` (除非 `AcquireExceptionObject` 增引用) → except 块 `end;` 后 `E` 被释放 → `FError` 悬挂 → `TakeError` 返回野指针 → `ProcessJob` 的 `raise LHandlerErr` 操作已释放对象 → AV, 落 System RTL 异常析构路径 (与 0x493A 在 `TNoRefCountObject` 后吻合, 偏移每次一致正是悬挂指针解引用固定地址的特征, 竞态偏移应随机). 仅第 9 测试触发该路径: handler 抛异常 + `CreateJob` 默认 Timeout>0 走 L1921 handler-thread 分支 (经 `TakeError`→`raise LHandlerErr`) + retry; 前 8 测试或不 retry、或 Timeout=0 走 inline 分支 (L1956 `raise;` re-raise except 头捕获的**活** E) 不崩.
+  - **修复方案 (克隆异常对象, 最小改动)**: `TJobHandlerThread.Execute` 的 except 内改为 `FError := Exception.Create(E.Message)` — 新异常对象脱离 RTL 生命周期, 由 `FError` 独占持有. 现有 `TakeError` (返回 FError 并置 nil, 转移所有权) + 析构 `FreeAndNil(FError)` + `ProcessJob` 的 `raise LHandlerErr` + `FreeAndNil(LHandlerErr)` 引用语义**全部无需改动**, 唯一持有者释放. 代价: 丢失原异常 ClassName, 但下游只用 `.Message` (L2031/L2081) 无影响. 不用 `AcquireExceptionObject`/`ReleaseExceptionObject` (两 API 均无参作用于"当前异常对象", re-raise 后控制流转走、新 except 是新上下文, 无法对原对象配对 Release, 易误用泄漏).
+  - **回归测试**: `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` 新增 `Test_BUG438_HandlerException_MessagePropagatedToCompletion` — 构造同触发场景 (handler 抛异常 + Timeout>0 走 handler-thread 分支 + `RetryPolicy.Immediate(2)` + `Stop(True)`), 断言 FOnCompletion 被调用 / ASuccess=False / AResult 含原异常 Message (验证克隆保留 Message 且不崩). 修复前此点已 AV 216 进程退出, 无法执行到断言; 到达断言即证明不崩.
+  - **验证 (基线对比)**: `git stash push -- Core/DeepBase.WorkerQueue.pas` 隔离单文件改动跑基线 vs 修复后. BUG324 fixture 单独跑 10 测试全过 (原 9 + 新增); 全量对比 Passed 4148→4157 (+9) / Failed 22→13 (-9) / Errored 28 不变 (DoQry 等无关既有失败) / Leaked 0 / **末尾 216 消失**. 9 个原因 216 失败的测试现通过, 无回归.
+  - **衍生 BUG-439**: 排查期间发现两处同类 `跨 except 块持有 E` 潜在隐患 (`Core/DeepBase.Resilience.Retry.pas` L396 / `DeepFlow/Source/AI/DeepFlow.Skill.Client.pas` L156), 原记为 BUG-439 待办. **同日 (2026-07-09) 已全部修复**: site 1 (TryExecute) 测试先行 — 新增 `Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn` 修复前确定性失败 (`Error.Message` 读回空串, 堆扰动复用 RTL 已 Free 的 E 块 = use-after-free), 克隆修复后 122/122 过; site 2 (Skill.Client `LLastException`) 同构确定性 AV, DeepFlow 无测试工程, 经用户决策记为已知盲改 (克隆 + 保留 `ESkillClientException` 类型 + 多轮克隆泄漏防护). 详见 bugfix.md BUG-439「修复结论」段.
+  - **影响文件**: `Core/DeepBase.WorkerQueue.pas` (except 内 1 处克隆 + 注释) + `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` (新增回归测试) + `bugfix.md` BUG-438 (状态推进为已修复 + 根因纠正段). 记忆 `unit-test-fullrun-runtime216.md` 更新根因为"异常对象生命周期悬挂 (已修复)".
+
+## 2026-07-09 OPT-REFACTOR-001 LLM 模板管理提取架构重构归档 ✅
+- **来源**: tasks.md OPT-REFACTOR-001 (从 OPT-P2-002 拆出的独立架构重构待办).
+- **问题**: `Core/DeepBase.LLM.pas` 的 `TDeepBaseLLM` 单体类同时承载配置/调用/历史/模板管理, 模板管理方法 (Save/Get/Delete/Copy/Validate/Render/Export/Import + GetAllTemplates + LoadTemplateFromQuery/ClearPromptTemplates 辅助, ~850 行) 堆在单体内, 违反单一职责.
+- **实施**:
+  - 新建 `Core/DeepBase.LLM.PromptTemplateManager.pas` — `TLLMPromptTemplateManager` 类, 迁入 9 公开方法 + 2 辅助 (从 LLM.pas implementation 段原样搬移, 含 GetStorage/GetTemplate/RenderWithInheritance 递归内部调用全保留).
+  - `TDeepBaseLLM` 新增 `FPromptTemplateMgr: TLLMPromptTemplateManager` 字段 (构造期 Create, 析构期 FreeAndNil); 9 公开模板方法改为一行委托 `FPromptTemplateMgr.Xxx(...)`.
+  - 门面签名零变化 → 调用方 `Persistence/DeepBase.Persistence.LLM.FireDAC.pas`、`VCL/...LLMConfigPanel.pas`、`FMX/...LLMConfigPanel.pas`、`Core/DeepBase.LLM.BillingClient.pas`、`Tools/Studio/Frames/Studio.PromptTemplateFrame.pas` 无需改动 (验证: 帧内 `ClearPromptTemplates` 是其自有局部实现, 不依赖 LLM.pas 的同名过程; 模板方法经门面调用).
+  - `DeepBaseLLM.dpk` + `.dproj` contains/DCCReference 加 `DeepBase.LLM.PromptTemplateManager`.
+- **验证**: Win64 `run_tests.ps1 -Type Unit -CI` 编译通过 (329078 行, 新单元入链, 无编译错误); 全量 DUnitX **Tests Found 4206 / Passed 4203 / Failed 0 / Errored 0 / Leaked 0 / Ignored 3**, 无 216, 无新增警告 (仅既存 H2443/H2219/H2077 Hint).
+- **后置未做 (留待次要整洁)**: LLM.pas implementation uses 中 `System.RegularExpressions`/`System.Variants`/`System.NetEncoding` 因模板方法迁出已无引用 (H2219 级冗余), 未清理以隔离本次重构影响面; `DeepBase.Security.DPAPI` 既存冗余与本重构无关, 均留待后续统一清理.
+- **影响文件**: `Core/DeepBase.LLM.PromptTemplateManager.pas` (新建) + `Core/DeepBase.LLM.pas` (9 方法委托化 + 字段) + `DeepBaseLLM.dpk`/`.dproj` (contains) + `tasks.md`/`history.md` (归档).

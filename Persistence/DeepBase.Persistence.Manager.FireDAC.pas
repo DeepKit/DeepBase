@@ -215,6 +215,11 @@ begin
 
   TSQLUtils.ValidateIdentifier(TableName, 'Manager.AddColumn.TableName');
   TSQLUtils.ValidateIdentifier(ColumnName, 'Manager.AddColumn.ColumnName');
+  // DATA-R3-007: ColumnDef is spliced raw into the ALTER TABLE DDL; validate
+  // it is a bare type/default fragment (no statement terminators, comments,
+  // or DDL/DML keywords) so a future caller passing attacker-influenced input
+  // through the public IManagerStorage.AddColumn API cannot inject DDL.
+  TSQLUtils.ValidateColumnDef(ColumnDef, 'Manager.AddColumn.ColumnDef');
 
   Query := TFDQuery.Create(nil);
   try
@@ -251,15 +256,23 @@ procedure TFireDACManagerStorage.UpdateSchemaInfo(
   const SchemaVersion, LastUpgradeIso8601: string);
 var
   Query: TFDQuery;
+  OwnTx: Boolean;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  Query := TFDQuery.Create(nil);
+  // DATA2-025: Only start a transaction if the caller hasn't already started
+  // one. Track ownership so we only commit/rollback what we started.
+  OwnTx := False;
   try
-    Query.Connection := FConnection;
-    FConnection.StartTransaction;
+    if not FConnection.InTransaction then
+    begin
+      FConnection.StartTransaction;
+      OwnTx := True;
+    end;
+    Query := TFDQuery.Create(nil);
     try
+      Query.Connection := FConnection;
       Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :Ver WHERE Key = ''SchemaVersion''';
       Query.ParamByName('Ver').AsString := SchemaVersion;
       Query.ExecSQL;
@@ -267,14 +280,15 @@ begin
       Query.SQL.Text := 'UPDATE SchemaInfo SET Value = :NowTime WHERE Key = ''LastUpgrade''';
       Query.ParamByName('NowTime').AsString := LastUpgradeIso8601;
       Query.ExecSQL;
-
-      FConnection.Commit;
-    except
-      FConnection.Rollback;
-      raise;
+    finally
+      Query.Free;
     end;
-  finally
-    Query.Free;
+    if OwnTx then
+      FConnection.Commit;
+  except
+    if OwnTx then
+      FConnection.Rollback;
+    raise;
   end;
 end;
 

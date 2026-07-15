@@ -29,6 +29,10 @@ type
     class procedure PingConnection(Connection: TFDConnection); static;
     class function CreateConnectionFromProfile(
       const Profile: TDBConnectionProfile; OpenConnection: Boolean): TFDConnection; static;
+    class function BuildConnectionFromProfile(
+      const Profile: TDBConnectionProfile): TFDConnection; static;
+    class procedure ApplyExtraParamsToConnection(Conn: TFDConnection;
+      const ExtraParams: string); static;
   public
     class procedure Configure(const LocalDatabasePath: string;
       const RootPath: string = ''); static;
@@ -176,22 +180,119 @@ end;
 
 class function TDBConnectionFactory.CreateConnectionFromProfile(
   const Profile: TDBConnectionProfile; OpenConnection: Boolean): TFDConnection;
-var
-  Pool: TUniConnectionPool;
 begin
-  Pool := TUniConnectionPool.Create;
+  Result := BuildConnectionFromProfile(Profile);
   try
-    Pool.Configure(Profile);
-    Result := Pool.CreateUnopenedConnection;
-    try
-      if OpenConnection then
-        Result.Open;
-    except
-      Result.Free;
-      raise;
+    if OpenConnection then
+      Result.Open;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+class function TDBConnectionFactory.BuildConnectionFromProfile(
+  const Profile: TDBConnectionProfile): TFDConnection;
+begin
+  Profile.Validate;
+  Result := TFDConnection.Create(nil);
+  try
+    case Profile.DatabaseType of
+      dbSQLite:     Result.DriverName := 'SQLite';
+      dbMySQL:      Result.DriverName := 'MySQL';
+      dbPostgreSQL: Result.DriverName := 'PG';
+      dbSQLServer:  Result.DriverName := 'MSSQL';
+      dbOracle:     Result.DriverName := 'Ora';
+      dbFirebird:   Result.DriverName := 'FB';
+      dbInterBase:  Result.DriverName := 'IB';
+    else
+      Result.DriverName := 'SQLite';
     end;
-  finally
-    Pool.Free;
+
+    case Profile.DatabaseType of
+      dbSQLite:
+        begin
+          Result.Params.Database := Profile.Database;
+          Result.Params.Values['LockingMode'] := Profile.SQLiteLockingMode;
+          Result.Params.Values['Synchronous'] := Profile.SQLiteSynchronous;
+          Result.Params.Values['JournalMode'] := Profile.SQLiteJournalMode;
+          Result.Params.Values['OpenMode'] := Profile.SQLiteOpenMode;
+        end;
+
+      dbPostgreSQL:
+        begin
+          Result.Params.Values['Server'] := Profile.Host;
+          Result.Params.Values['Port'] := IntToStr(Profile.Port);
+          Result.Params.Database := Profile.Database;
+          Result.Params.UserName := Profile.Username;
+          Result.Params.Password := Profile.Password;
+          Result.Params.Values['CharacterSet'] := Profile.CharacterSet;
+          Result.Params.Values['ApplicationName'] := Profile.ApplicationName;
+          if Profile.SSLMode <> '' then
+            Result.Params.Values['PGAdvanced'] := 'sslmode=' + Profile.SSLMode;
+          if Profile.ConnectTimeoutSec > 0 then
+            Result.Params.Values['LoginTimeout'] := IntToStr(Profile.ConnectTimeoutSec);
+          if Profile.VendorLib <> '' then
+            Result.Params.Values['VendorLib'] := Profile.VendorLib;
+          if Profile.Pooled then
+          begin
+            Result.Params.Values['Pooled'] := 'True';
+            if Profile.PoolMaxItems > 0 then
+              Result.Params.Values['POOL_MaximumItems'] := IntToStr(Profile.PoolMaxItems);
+          end;
+        end;
+    else
+      begin
+        Result.Params.Database := Profile.Database;
+        if Profile.Host <> '' then
+          Result.Params.Values['Server'] := Profile.Host;
+        if Profile.Port > 0 then
+          Result.Params.Values['Port'] := IntToStr(Profile.Port);
+        if Profile.Username <> '' then
+          Result.Params.UserName := Profile.Username;
+        if Profile.Password <> '' then
+          Result.Params.Password := Profile.Password;
+      end;
+    end;
+
+    ApplyExtraParamsToConnection(Result, Profile.ExtraParams);
+
+    Result.LoginPrompt := False;
+    Result.ResourceOptions.AutoReconnect := True;
+    Result.ResourceOptions.KeepConnection := True;
+    if Profile.CommandTimeoutSec > 0 then
+      Result.ResourceOptions.CmdExecTimeout := Profile.CommandTimeoutSec * 1000;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+class procedure TDBConnectionFactory.ApplyExtraParamsToConnection(
+  Conn: TFDConnection; const ExtraParams: string);
+var
+  Items: TArray<string>;
+  Item: string;
+  Sep: Integer;
+  Key, Value: string;
+begin
+  if ExtraParams = '' then
+    Exit;
+
+  Items := ExtraParams.Split([';']);
+  for Item in Items do
+  begin
+    if Trim(Item) = '' then
+      Continue;
+
+    Sep := Item.IndexOf('=');
+    if Sep <= 0 then
+      Continue;
+
+    Key := Trim(Item.Substring(0, Sep));
+    Value := Trim(Item.Substring(Sep + 1));
+    if Key <> '' then
+      Conn.Params.Values[Key] := Value;
   end;
 end;
 

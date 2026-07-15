@@ -221,7 +221,16 @@ type
   /// <summary>Summary metric - calculates quantiles</summary>
   TSummary = class(TMetricBase)
   private
-    FValues: TList<Double>;
+    // CORE-R2-011 fix: replaced TList<Double> with a ring buffer of fixed
+    // capacity. The previous implementation used FValues.Delete(0) in a loop
+    // to trim old samples, which is O(n) per Delete (TList shifts the tail)
+    // — i.e. O(n * k) per cleanup. With a 50k default cap and k = n/2 trim,
+    // each cleanup did ~1.25 billion element-moves every 1000 observations.
+    // The ring buffer writes in O(1) and overwrites oldest samples without
+    // any shifting. Capacity = FMaxSamples.
+    FValues: TArray<Double>;
+    FValuesHead: Integer;   // index of oldest sample in FValues
+    FValuesCount: Integer;  // current number of samples (capped at FMaxSamples)
     FMaxSamples: Integer;
     FQuantiles: TArray<Double>;
     FSum: Double;
@@ -364,10 +373,8 @@ type
   /// <summary>Global metrics helper</summary>
   TMetrics = class
   private
-    class var FRegistry: TMetricsRegistry;
     class function GetRegistry: TMetricsRegistry; static;
   public
-    class destructor Destroy;
     
     /// <summary>Get global registry</summary>
     class property Registry: TMetricsRegistry read GetRegistry;
@@ -433,15 +440,16 @@ end;
 
 function Metrics: TMetricsRegistry;
 begin
-  if not Assigned(GMetricsRegistry) then
-  begin
-    GRegistryLock.Enter;
-    try
-      if not Assigned(GMetricsRegistry) then
-        GMetricsRegistry := TMetricsRegistry.Create;
-    finally
-      GRegistryLock.Leave;
-    end;
+  // BIZ2-029 fix: single-checked lock eliminates the double-check locking
+  // pattern that could observe a partially-constructed instance on ARM with
+  // weak memory ordering. The lock cost is trivial for a rarely-called
+  // singleton accessor.
+  GRegistryLock.Enter;
+  try
+    if not Assigned(GMetricsRegistry) then
+      GMetricsRegistry := TMetricsRegistry.Create;
+  finally
+    GRegistryLock.Leave;
   end;
   Result := GMetricsRegistry;
 end;
@@ -968,14 +976,20 @@ var
   LStartTime: TDateTime;
 begin
   LStartTime := Now;
-  
+
   FLock.Enter;
   try
     System.Inc(FActiveTimers);
   finally
     FLock.Leave;
   end;
-  
+
+  // Capture bare Self. The closure records the duration and decrements the
+  // active-timer counter when invoked. Callers MUST invoke the returned stop
+  // closure before the TTimer instance is freed/unregistered (the documented
+  // contract); the previous IMetric-capture variant kept the object alive via
+  // refcounting, which conflicted with explicit TTimer.Free and raised
+  // "Invalid pointer operation" (regression from CORE-R3-006, reverted here).
   Result := procedure
   begin
     Self.RecordDuration(SecondSpan(LStartTime, Now));
@@ -1073,41 +1087,40 @@ constructor TSummary.Create(const AName, ADescription: string; const ALabels: TM
 begin
   inherited Create(AName, ADescription, ALabels);
   FMetricType := mtSummary;
-  FValues := TList<Double>.Create;
-  FQuantiles := Copy(AQuantiles);
+  // CORE-R2-011: enforce sane bounds so the ring buffer is always usable.
+  if AMaxSamples < 8 then AMaxSamples := 8;
   FMaxSamples := AMaxSamples;
+  SetLength(FValues, FMaxSamples);
+  FValuesHead := 0;
+  FValuesCount := 0;
+  FQuantiles := Copy(AQuantiles);
   FSum := 0;
   FCount := 0;
 end;
 
 destructor TSummary.Destroy;
 begin
-  FreeAndNil(FValues);
+  FValues := nil;
   inherited;
 end;
 
 procedure TSummary.Observe(AValue: Double);
+var
+  LWriteIdx: Integer;
 begin
   FLock.Enter;
   try
-    FValues.Add(AValue);
+    // CORE-R2-011 fix: ring-buffer insert. O(1); overwrites the oldest
+    // sample when the buffer is full, without any shifting or per-call
+    // allocation.
+    LWriteIdx := (FValuesHead + FValuesCount) mod FMaxSamples;
+    FValues[LWriteIdx] := AValue;
+    if FValuesCount = FMaxSamples then
+      FValuesHead := (FValuesHead + 1) mod FMaxSamples  // advance head
+    else
+      System.Inc(FValuesCount);
     FSum := FSum + AValue;
     System.Inc(FCount);
-    
-    // 添加数据点数量限制和定期清理机制
-    if FValues.Count > FMaxSamples then
-    begin
-      // 清理最旧的一半数据点，防止内存无限增长
-      while FValues.Count > FMaxSamples div 2 do
-        FValues.Delete(0);
-    end;
-    
-    // 定期清理：每1000次观测清理一次旧数据
-    if FCount mod 1000 = 0 then
-    begin
-      while FValues.Count > FMaxSamples div 2 do
-        FValues.Delete(0);
-    end;
   finally
     FLock.Leave;
   end;
@@ -1120,7 +1133,7 @@ var
 begin
   FLock.Enter;
   try
-    if FValues.Count = 0 then
+    if FValuesCount = 0 then
     begin
       SetLength(Result, Length(FQuantiles));
       for I := 0 to High(FQuantiles) do
@@ -1131,10 +1144,15 @@ begin
       end;
       Exit;
     end;
-    
-    LSorted := FValues.ToArray;
+
+    // CORE-R2-011 fix: extract samples from the ring buffer in chronological
+    // order (oldest first) so the snapshot is consistent regardless of where
+    // the head currently sits.
+    SetLength(LSorted, FValuesCount);
+    for I := 0 to FValuesCount - 1 do
+      LSorted[I] := FValues[(FValuesHead + I) mod FMaxSamples];
     TArray.Sort<Double>(LSorted);
-    
+
     SetLength(Result, Length(FQuantiles));
     for I := 0 to High(FQuantiles) do
     begin
@@ -1172,7 +1190,8 @@ procedure TSummary.Reset;
 begin
   FLock.Enter;
   try
-    FValues.Clear;
+    FValuesHead := 0;
+    FValuesCount := 0;
     FSum := 0;
     FCount := 0;
   finally
@@ -1684,16 +1703,9 @@ end;
 
 { TMetrics }
 
-class destructor TMetrics.Destroy;
-begin
-  FreeAndNil(FRegistry);
-end;
-
 class function TMetrics.GetRegistry: TMetricsRegistry;
 begin
-  if not Assigned(FRegistry) then
-    FRegistry := TMetricsRegistry.Create;
-  Result := FRegistry;
+  Result := Metrics;
 end;
 
 class function TMetrics.Counter(const AName, ADescription: string): TCounter;

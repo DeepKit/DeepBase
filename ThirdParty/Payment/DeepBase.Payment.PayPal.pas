@@ -101,6 +101,19 @@ const
   PAYPAL_PRODUCTION_URL = 'https://api-mvc.paypal.com';
   TOKEN_BUFFER_SECONDS  = 60;  // Refresh token 60s before actual expiry
 
+/// <summary>Format a Currency as a PayPal-compatible amount string.
+/// PayPal API requires US-style decimal separator (period). Using the
+/// thread's default FormatFloat can emit a comma on non-US locales
+/// (zh-CN/de-DE/fr-FR), causing PayPal to reject the amount.</summary>
+function FormatPayPalAmount(AAmount: Currency): string;
+var
+  Fmt: TFormatSettings;
+begin
+  Fmt := TFormatSettings.Create('en-US');
+  Fmt.DecimalSeparator := '.';
+  Result := FormatFloat('0.00', AAmount, Fmt);
+end;
+
 { TPayPalConfig }
 
 constructor TPayPalConfig.Create;
@@ -125,7 +138,7 @@ end;
 
 procedure TPayPalConfig.SetSecretKeySecure(const AKey: string);
 begin
-  FClientSecret := ProtectKey(AKey);
+  FClientSecret := ProtectKey('ClientSecret', AKey);
 end;
 
 function TPayPalConfig.GetSecretKeySecure: string;
@@ -453,7 +466,7 @@ begin
     AmountObj := TJSONObject.Create;
     AmountObj.AddPair('currency_code',
       IfThen(AOrder.Currency <> '', UpperCase(AOrder.Currency), 'USD'));
-    AmountObj.AddPair('value', FormatFloat('0.00', AOrder.Amount));
+    AmountObj.AddPair('value', FormatPayPalAmount(AOrder.Amount));
     PurchaseUnit.AddPair('amount', AmountObj);
 
     if AOrder.Subject <> '' then
@@ -629,7 +642,7 @@ begin
   try
     // Build amount object for partial refund
     AmountObj := TJSONObject.Create;
-    AmountObj.AddPair('value', FormatFloat('0.00', ARequest.RefundAmount));
+    AmountObj.AddPair('value', FormatPayPalAmount(ARequest.RefundAmount));
     if ARequest.Currency <> '' then
       AmountObj.AddPair('currency_code', ARequest.Currency.ToUpper)
     else

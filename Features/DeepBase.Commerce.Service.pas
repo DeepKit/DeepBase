@@ -46,6 +46,7 @@ type
     function EnsureUserForIdentity(AProvider: TCommerceAuthProvider;
       const AProviderUserId, AAppId: string; const AUnionId: string = ''): TCommerceUserData;
     function CreateOrder(const AUserId, AAppId, AProductId: string): TCommerceOrderData;
+    function CloseOrder(const AOrderId: string): TCommerceOrderData;
     function BeginPayment(const AOrderId: string; AProvider: TCommercePaymentProvider;
       AChannel: TCommercePaymentChannel; const APayerOpenId: string = ''): TCommercePaymentIntent;
     function ConfirmPayment(const ANotification: TCommercePaymentNotification): TCommerceOrderData;
@@ -202,11 +203,24 @@ begin
   FStorage.CreateOrder(Result);
 end;
 
+function TDeepBaseCommerceService.CloseOrder(const AOrderId: string): TCommerceOrderData;
+begin
+  if not FStorage.FindOrderById(AOrderId, Result) then
+    raise EDeepBaseCommerceNotFoundError.CreateFmt('Order not found: %s', [AOrderId]);
+  if Result.Status in [cosPaid, cosClosed, cosRefunded] then
+    raise EDeepBaseCommerceValidationError.CreateFmt(
+      'Order cannot be closed in state (%s): %s',
+      [CommerceOrderStatusToStr(Result.Status), AOrderId]);
+  Result.Status := cosClosed;
+  FStorage.UpdateOrder(Result);
+end;
+
 function TDeepBaseCommerceService.BeginPayment(const AOrderId: string;
   AProvider: TCommercePaymentProvider; AChannel: TCommercePaymentChannel;
   const APayerOpenId: string): TCommercePaymentIntent;
 var
   Order: TCommerceOrderData;
+  User: TCommerceUserData;
   Payment: TCommercePaymentData;
   Gateway: ICommercePaymentGateway;
 begin
@@ -216,6 +230,10 @@ begin
     raise EDeepBaseCommerceValidationError.CreateFmt(
       'Order is in terminal state (%s): %s',
       [CommerceOrderStatusToStr(Order.Status), AOrderId]);
+  if not FStorage.FindUserById(Order.UserId, User) then
+    raise EDeepBaseCommerceNotFoundError.CreateFmt('User not found: %s', [Order.UserId]);
+  if not User.IsActive then
+    raise EDeepBaseCommerceValidationError.CreateFmt('User is inactive: %s', [Order.UserId]);
   TMonitor.Enter(FConfirmLock);
   try
     if not FGateways.TryGetValue(GatewayKey(AProvider), Gateway) then
@@ -331,17 +349,19 @@ var
   Verifier: ICommerceNotificationVerifier;
   Notification: TCommercePaymentNotification;
 begin
+  // Verify the notification signature first (CPU-bound, no storage lock needed)
   TMonitor.Enter(FConfirmLock);
   try
     if not FVerifiers.TryGetValue(GatewayKey(AProvider), Verifier) then
       raise EDeepBaseCommercePaymentError.CreateFmt(
         'Notification verifier not registered for provider: %s',
         [CommercePaymentProviderToStr(AProvider)]);
-    Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
-    Result := ConfirmPayment(Notification);
   finally
     TMonitor.Exit(FConfirmLock);
   end;
+  Notification := Verifier.VerifyNotification(ARawBody, AHeaders);
+  // ConfirmPayment manages its own lock scope
+  Result := ConfirmPayment(Notification);
 end;
 
 // ValidFrom/ValidUntil are UTC ISO-8601; comparisons use TTimeZone.Local.ToUniversalTime(Now).
@@ -375,6 +395,10 @@ begin
     Entitlement.ValidUntilISO := '';
   Entitlement.RemainingQuota := Product.InitialQuota;
   Entitlement.SourceOrderId := AOrder.OrderId;
+  Entitlement.Tier := Product.Tier;
+  Entitlement.MaxDevices := Product.MaxDevices;
+  Entitlement.OfflineGraceDays := Product.OfflineGraceDays;
+  Entitlement.LastValidatedISO := DateToISO8601(ValidFrom, False);
   FStorage.UpsertEntitlement(Entitlement);
 end;
 
@@ -411,6 +435,9 @@ var
   Entitlement: TCommerceEntitlementData;
   I: Integer;
 begin
+  if ACount <= 0 then
+    raise EDeepBaseCommerceValidationError.Create(
+      'Consume count must be positive');
   Result := False;
   Entitlements := FStorage.ListEntitlements(AUserId, AAppId);
   for I := 0 to High(Entitlements) do
@@ -418,9 +445,10 @@ begin
     if SameText(Entitlements[I].Code, ACode) and
        IsEntitlementUsable(Entitlements[I]) then
     begin
-      Result := FStorage.ConsumeEntitlement(
-        Entitlements[I].EntitlementId, ACount, Entitlement);
-      Exit;
+      if FStorage.ConsumeEntitlement(
+        Entitlements[I].EntitlementId, ACount, Entitlement) then
+        Exit(True);
+      // Quota insufficient for this entitlement; try next usable one
     end;
   end;
 end;

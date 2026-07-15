@@ -1,15 +1,15 @@
 { ============================================================================
-  RegressionTestRegistry - 回归测试注册�?
+  RegressionTestRegistry - 回归测试注册�?
 
-  此文件列出所有回归测试，用于�?
-  1. 快速查找特�?Bug 的测�?
+  此文件列出所有回归测试，用于�?
+  1. 快速查找特�?Bug 的测�?
   2. 验证所有已修复 Bug 都有对应测试
   3. CI 报告生成
-  4. 测试覆盖率统�?
+  4. 测试覆盖率统�?
 
-  更新说明�?
+  更新说明�?
   - 添加新的回归测试时，请同时更新此文件
-  - 保持 Bug 编号�?docs/bugFixed.md 一�?
+  - 保持 Bug 编号�?docs/bugFixed.md 一�?
   ============================================================================ }
 
 unit RegressionTestRegistry;
@@ -35,7 +35,7 @@ const
   REGRESSION_TEST_COUNT = 72;
 
   // ============================================================================
-  // P0 级别测试 (Critical) - 9 �?  // ============================================================================
+  // P0 级别测试 (Critical) - 9 �?  // ============================================================================
 
   P0_TEST_COUNT = 9;
 
@@ -49,7 +49,7 @@ const
     (BugNumber: 'BUG-062'; Priority: bpP0; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG062_PluginSandbox';
      SourceFile: 'Core/DeepBase.PluginManager.pas';
-     Description: '插件沙箱逃逸风�?;
+     Description: '插件沙箱逃逸风�?;
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-063'; Priority: bpP0; Category: bcSecurity;
@@ -61,7 +61,7 @@ const
     (BugNumber: 'BUG-013'; Priority: bpP0; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG013_RSASignature';
      SourceFile: 'ThirdParty/Payment/DeepBase.Payment.Alipay.pas';
-     Description: '支付模块RSA签名未实�?;
+     Description: '支付模块RSA签名未实�?;
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-035'; Priority: bpP0; Category: bcCrypto;
@@ -85,18 +85,18 @@ const
     (BugNumber: 'BUG-033'; Priority: bpP0; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG033_WeakEncryption';
      SourceFile: 'Features/DeepBase.AntiTamper.pas';
-     Description: '弱加密算法使�?;
+     Description: '弱加密算法使�?;
      FixDate: '2025-12-16'),
 
     (BugNumber: 'BUG-034'; Priority: bpP0; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG034_HardcodedKeys';
      SourceFile: 'Features/DeepBase.Protection.pas';
-     Description: '硬编码密钥漏�?;
+     Description: '硬编码密钥漏�?;
      FixDate: '2025-12-16')
   );
 
   // ============================================================================
-  // P1 级别测试 (High) - 31 个（部分列出�?  // ============================================================================
+  // P1 级别测试 (High) - 31 个（部分列出�?  // ============================================================================
 
   P1_TEST_COUNT = 15;
 
@@ -108,7 +108,7 @@ const
      Description: '动画对象内存泄漏';
      FixDate: '2025-01-27'),
 
-    // 序列化安全相�?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
+    // 序列化安全相�?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG059_JsonDeserializationType';
      SourceFile: 'Core/DeepBase.Serialization.pas';
      Description: 'JSON反序列化类型验证缺失';
@@ -117,7 +117,7 @@ const
     (BugNumber: 'BUG-060'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG060_SerializationDepth';
      SourceFile: 'Core/DeepBase.Serialization.pas';
-     Description: '序列化深度限制过�?;
+     Description: '序列化深度限制过�?;
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-018'; Priority: bpP1; Category: bcSecurity;
@@ -161,10 +161,10 @@ const
     (BugNumber: 'BUG-039'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG039_HTTPHeaderInjection';
      SourceFile: 'Core/DeepBase.Net.pas';
-     Description: 'HTTP请求头注入风�?;
+     Description: 'HTTP请求头注入风�?;
      FixDate: '2025-01-27'),
 
-    // 密码学相�?
+    // 密码学相�?
     (BugNumber: 'BUG-037'; Priority: bpP1; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG037_KeyDerivation';
      SourceFile: 'Features/DeepBase.AntiTamper.pas';
@@ -181,7 +181,7 @@ const
     (BugNumber: 'BUG-010'; Priority: bpP1; Category: bcConcurrency;
      TestUnit: 'Test.Regression.BUG010_WorkerQueueRace';
      SourceFile: 'Core/DeepBase.WorkerQueue.pas';
-     Description: '工作队列状态竞�?;
+     Description: '工作队列状态竞�?;
      FixDate: '2025-12-16'),
 
     (BugNumber: 'BUG-054'; Priority: bpP1; Category: bcConcurrency;
@@ -193,26 +193,28 @@ const
     (BugNumber: 'BUG-009'; Priority: bpP1; Category: bcConcurrency;
      TestUnit: 'Test.Regression.BUG009_LoggingRace';
      SourceFile: 'Core/DeepBase.Logging.pas';
-     Description: '日志系统竞态条�?;
+     Description: '日志系统竞态条�?;
      FixDate: '2025-12-16')
   );
 
-/// <summary>获取所�?P0 测试单元名称</summary>
+/// <summary>获取所�?P0 测试单元名称</summary>
 function GetP0TestUnits: TArray<string>;
 
-/// <summary>获取所�?P1 测试单元名称</summary>
+/// <summary>获取所�?P1 测试单元名称</summary>
 function GetP1TestUnits: TArray<string>;
 
 /// <summary>根据 Bug 编号查找测试信息</summary>
 function FindBugTestInfo(const BugNumber: string): TBugTestInfo;
 
-/// <summary>检查是否所�?Bug 都有对应测试</summary>
+/// <summary>检查是否所�?Bug 都有对应测试</summary>
 function ValidateTestCoverage: Boolean;
 
 implementation
 
 uses
-  System.SysUtils;
+  System.SysUtils,
+  System.IOUtils,
+  System.Generics.Collections;
 
 function GetP0TestUnits: TArray<string>;
 var
@@ -246,16 +248,76 @@ begin
     if SameText(P1_TESTS[I].BugNumber, BugNumber) then
       Exit(P1_TESTS[I]);
 
-  // 未找�?
+  // 未找�?
   Result := Default(TBugTestInfo);
   Result.BugNumber := '';
 end;
 
 function ValidateTestCoverage: Boolean;
+var
+  I: Integer;
+  LActualP0Count: Integer;
+  LActualP1Count: Integer;
+  LMissingFiles: TList<string>;
+  LFilePath: string;
 begin
-  // TODO: 实现完整的覆盖率验证
-  // 检�?docs/bugFixed.md 中的所�?Bug 是否都有对应测试
-  Result := True;
+  // REVIEW5-GOV-005: Validate regression test registry consistency
+  Result := False;
+
+  LMissingFiles := TList<string>.Create;
+  try
+    // Check 1: Verify P0 test count matches actual registrations
+    LActualP0Count := 0;
+    for I := 0 to High(P0_TESTS) do
+      if P0_TESTS[I].BugNumber <> '' then
+        Inc(LActualP0Count);
+
+    if LActualP0Count <> P0_TEST_COUNT then
+      Exit(False); // Count mismatch
+
+    // Check 2: Verify P1 test count matches actual registrations
+    LActualP1Count := 0;
+    for I := 0 to High(P1_TESTS) do
+      if P1_TESTS[I].BugNumber <> '' then
+        Inc(LActualP1Count);
+
+    if LActualP1Count <> P1_TEST_COUNT then
+      Exit(False); // Count mismatch
+
+    // Check 3: Verify total count matches sum of P0 + P1
+    if (P0_TEST_COUNT + P1_TEST_COUNT) <> REGRESSION_TEST_COUNT then
+      Exit(False); // Total mismatch
+
+    // Check 4: Verify all registered test files exist on disk
+    for I := 0 to P0_TEST_COUNT - 1 do
+    begin
+      if P0_TESTS[I].TestFile <> '' then
+      begin
+        LFilePath := 'Tests\Regression\' + P0_TESTS[I].TestFile;
+        if not TFile.Exists(LFilePath) then
+          LMissingFiles.Add(P0_TESTS[I].TestFile);
+      end;
+    end;
+
+    for I := 0 to P1_TEST_COUNT - 1 do
+    begin
+      if P1_TESTS[I].TestFile <> '' then
+      begin
+        LFilePath := 'Tests\Regression\' + P1_TESTS[I].TestFile;
+        if not TFile.Exists(LFilePath) then
+          LMissingFiles.Add(P1_TESTS[I].TestFile);
+      end;
+    end;
+
+    // If any files are missing, validation fails
+    if LMissingFiles.Count > 0 then
+      Exit(False);
+
+    // All checks passed
+    Result := True;
+  finally
+    LMissingFiles.Free;
+  end;
 end;
 
 end.

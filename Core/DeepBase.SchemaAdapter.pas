@@ -79,6 +79,14 @@ type
     function GetTimestampRule: TFunc<Variant, TDateTime>;
     procedure Validate; virtual;
     function TryMatchFingerprint(const Fingerprint: string): Boolean;
+    function GetLongestMatchingPrefixLength(
+      const AFingerprint: string): Integer;
+    class function IsPlaceholderFingerprint(
+      const AFingerprint: string): Boolean;
+    /// <summary>Exposes the schema-fingerprint prefixes this adapter claims,
+    /// so the registry (a different unit) can validate registrations without
+    /// reaching into the protected field directly.</summary>
+    function GetSchemaFingerprintPrefixes: TArray<string>;
   end;
 
 implementation
@@ -241,11 +249,48 @@ begin
 end;
 
 function TBaseSchemaAdapter.TryMatchFingerprint(const Fingerprint: string): Boolean;
+var
+  Prefix: string;
 begin
-  for var Prefix in FSchemaFingerprintPrefixes do
+  Result := False;
+  for Prefix in FSchemaFingerprintPrefixes do
     if Fingerprint.StartsWith(Prefix) then
       Exit(True);
-  Result := False;
+end;
+
+function TBaseSchemaAdapter.GetLongestMatchingPrefixLength(
+  const AFingerprint: string): Integer;
+var
+  Prefix: string;
+  Len: Integer;
+begin
+  Result := 0;
+  for Prefix in FSchemaFingerprintPrefixes do
+    if AFingerprint.StartsWith(Prefix) then
+    begin
+      Len := Length(Prefix);
+      if Len > Result then
+        Result := Len;
+    end;
+end;
+
+function TBaseSchemaAdapter.GetSchemaFingerprintPrefixes: TArray<string>;
+begin
+  Result := FSchemaFingerprintPrefixes;
+end;
+
+class function TBaseSchemaAdapter.IsPlaceholderFingerprint(
+  const AFingerprint: string): Boolean;
+var
+  C: Char;
+begin
+  if AFingerprint = '' then
+    Exit(True);
+  // All-zeros is the canonical placeholder
+  for C in AFingerprint do
+    if C <> '0' then
+      Exit(False);
+  Result := True;
 end;
 
 end.

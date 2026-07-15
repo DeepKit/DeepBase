@@ -122,8 +122,14 @@
         <DCCReference Include="Features\DeepBase.LLM.Client.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.HTTP.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.Config.pas"/>
+        <DCCReference Include="Features\DeepBase.LLM.Providers.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.Proxy.pas"/>
         <DCCReference Include="Features\DeepBase.LLM.Service.pas"/>
+        <DCCReference Include="Core\DeepBase.LLM.pas"/>
+        <DCCReference Include="Core\DeepBase.LLM.PromptTemplateManager.pas"/>
+        <DCCReference Include="Core\DeepBase.LLM.BillingClient.pas"/>
+        <DCCReference Include="Core\DeepBase.LLM.Manager.pas"/>
+        <DCCReference Include="Core\DeepBase.LLM.ImportExport.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

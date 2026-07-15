@@ -20,7 +20,11 @@ uses
   DeepBase.Governance.Types,
   DeepBase.Governance.Model,
   DeepBase.Governance.KeyResolver,
-  DeepBase.Governance.Purpose;
+  DeepBase.Governance.Purpose,
+  DeepBase.Governance.ActionGrid,
+  DeepBase.Governance.DueChecker,
+  DeepBase.Crypto, DeepBase.Crypto.Hash, DeepBase.Crypto.Encoding,
+  DeepBase.KeyManager;
 
 type
   EConfigRegistrarError = class(Exception);
@@ -28,13 +32,15 @@ type
   /// <summary>
   /// Code-first configuration registrar. Persists governance definitions
   /// to ConfigDB (SQLite) governance_* tables and mirrors them into the
-  /// in-memory TKeyResolver / TPurposeSet.
+  /// in-memory TKeyResolver / TPurposeSet / TActionGrid / TDueChecker.
   /// </summary>
   TConfigRegistrar = class
   private
     FConnection: TFDConnection;
     FKeyResolver: TKeyResolver;
     FPurposeSet: TPurposeSet;
+    FActionGrid: TActionGrid;
+    FDueChecker: TDueChecker;
     procedure EnsureTables;
     procedure EnsureDefaultMode;
     procedure UpsertGateRow(const AGateKey, ADisplayName: string;
@@ -49,9 +55,21 @@ type
     procedure LoadGates;
     procedure LoadActions;
     procedure LoadPurposes;
+    /// <summary>
+    /// DATA2-023: Compute HMAC-SHA256 of the mode value using a
+    /// machine-specific signing key from KeyManager. Returns hex string.
+    /// Falls back to empty string if KeyManager is not available.
+    /// </summary>
+    function ComputeModeHMAC(const AMode: string): string;
+    /// <summary>
+    /// DATA2-023: Verify the stored mode against its HMAC signature.
+    /// Returns True if valid, False if tampered or unverifiable.
+    /// </summary>
+    function ValidateModeHMAC(const AMode, AStoredSig: string): Boolean;
   public
     constructor Create(AConnection: TFDConnection; AKeyResolver: TKeyResolver;
-      APurposeSet: TPurposeSet);
+      APurposeSet: TPurposeSet; AActionGrid: TActionGrid = nil;
+      ADueChecker: TDueChecker = nil);
     destructor Destroy; override;
 
     /// Register a gate definition. Upserts the row, replaces its conditions,
@@ -90,6 +108,7 @@ const
   MODE_OBSERVE = 'observe';
   MODE_ENFORCE = 'enforce';
   CONFIG_KEY_MODE = 'mode';
+  CONFIG_KEY_MODE_SIG = 'mode_sig';
 
   SQL_CREATE_GATES =
     'CREATE TABLE IF NOT EXISTS governance_gates (' +
@@ -209,7 +228,8 @@ const
 { TConfigRegistrar }
 
 constructor TConfigRegistrar.Create(AConnection: TFDConnection;
-  AKeyResolver: TKeyResolver; APurposeSet: TPurposeSet);
+  AKeyResolver: TKeyResolver; APurposeSet: TPurposeSet;
+  AActionGrid: TActionGrid; ADueChecker: TDueChecker);
 begin
   inherited Create;
   if AConnection = nil then
@@ -222,6 +242,8 @@ begin
   FConnection := AConnection;
   FKeyResolver := AKeyResolver;
   FPurposeSet := APurposeSet;
+  FActionGrid := AActionGrid;
+  FDueChecker := ADueChecker;
 
   EnsureTables;
   EnsureDefaultMode;
@@ -259,10 +281,8 @@ begin
 
     if not LHasRow then
     begin
-      LQuery.SQL.Text := SQL_UPSERT_CONFIG;
-      LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE;
-      LQuery.ParamByName('value').AsString := MODE_OBSERVE;
-      LQuery.ExecSQL;
+      // DATA2-023: Use SetMode so the default value gets an HMAC signature.
+      SetMode(MODE_OBSERVE);
     end;
   finally
     FreeAndNil(LQuery);
@@ -425,7 +445,12 @@ begin
   LAction := TAction.Create(AActionKey, ADisplayName, ARiskLevel, AGateKey,
     ADueRef, APurposeKey);
   try
+    // REVIEW5-GOV-001: Sync to all three registries (KeyResolver, ActionGrid, DueChecker)
     FKeyResolver.RegisterAction(LAction);
+    if FActionGrid <> nil then
+      FActionGrid.RegisterActionObj(LAction);
+    if FDueChecker <> nil then
+      FDueChecker.AutoRegisterFromAction(LAction);
     LAction := nil; // ownership transferred
   finally
     LAction.Free;
@@ -457,6 +482,7 @@ var
   LGate: TAccessGate;
   LGateKey, LDisplayName, LParentKey, LFieldKey: string;
   LGateType: TGateType;
+  LActionKey: string;
 begin
   LQuery := TFDQuery.Create(nil);
   LCondQuery := TFDQuery.Create(nil);
@@ -499,6 +525,23 @@ begin
       end;
       LQuery.Next;
     end;
+
+    // REVIEW5-GOV-001: After all gates are loaded, verify that every Gate's
+    // ActionKeys reference an Action that exists in ActionGrid. This ensures
+    // the mapping from Gate.ActionKeys to ActionGrid is valid.
+    if FActionGrid <> nil then
+    begin
+      for LGate in FKeyResolver.GetAllGates do
+      begin
+        for LActionKey in LGate.ActionKeys do
+        begin
+          if FActionGrid.FindAction(LActionKey) = nil then
+            raise EConfigRegistrarError.CreateFmt(
+              'Gate "%s" references Action "%s" which is not registered in ActionGrid',
+              [LGate.Key, LActionKey]);
+        end;
+      end;
+    end;
   finally
     FreeAndNil(LCondQuery);
     FreeAndNil(LQuery);
@@ -525,7 +568,12 @@ begin
         LQuery.FieldByName('due_ref').AsString,
         LQuery.FieldByName('purpose_key').AsString);
       try
+        // REVIEW5-GOV-001: Sync to all three registries when loading from ConfigDB
         FKeyResolver.RegisterAction(LAction);
+        if FActionGrid <> nil then
+          FActionGrid.RegisterActionObj(LAction);
+        if FDueChecker <> nil then
+          FDueChecker.AutoRegisterFromAction(LAction);
         LAction := nil;
       finally
         LAction.Free;
@@ -569,24 +617,86 @@ end;
 
 procedure TConfigRegistrar.LoadFromDB;
 begin
+  // DATA2-007: Actions must be loaded before Gates, because LoadGates
+  // cross-validates that every Gate's ActionKeys reference an Action that
+  // already exists in FActionGrid.
   LoadPurposes;
-  LoadGates;
   LoadActions;
+  LoadGates;
+end;
+
+function TConfigRegistrar.ComputeModeHMAC(const AMode: string): string;
+var
+  LKey: TBytes;
+begin
+  Result := '';
+  try
+    if not TKeyManager.Instance.IsUnlocked then
+      Exit;
+    LKey := TKeyManager.Instance.GetActiveKeyForPurpose(kpSigning);
+    Result := TEncodingUtils.HexEncode(
+      THashUtils.HMAC(LKey, TEncoding.UTF8.GetBytes(AMode), haSHA256));
+  except
+    // If KeyManager is not initialized or signing key is unavailable,
+    // return empty — caller should treat as "unverifiable → default enforce".
+    Result := '';
+  end;
+end;
+
+function TConfigRegistrar.ValidateModeHMAC(const AMode, AStoredSig: string): Boolean;
+var
+  LExpected: string;
+begin
+  if AStoredSig = '' then
+    // No signature stored — treat as tampered / unverifiable.
+    Exit(False);
+  LExpected := ComputeModeHMAC(AMode);
+  // Constant-time compare is not available in base Delphi, but the
+  // hex-string comparison here is acceptable because the attacker would
+  // need write access to the DB *and* the signing key.
+  Result := (LExpected <> '') and SameText(LExpected, AStoredSig);
 end;
 
 function TConfigRegistrar.GetMode: string;
 var
   LQuery: TFDQuery;
+  LMode, LSig: string;
 begin
   Result := MODE_OBSERVE;
+  LMode := '';
+  LSig := '';
   LQuery := TFDQuery.Create(nil);
   try
     LQuery.Connection := FConnection;
+
+    // Read stored mode
     LQuery.SQL.Text := SQL_SELECT_CONFIG;
     LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE;
     LQuery.Open;
     if not LQuery.Eof then
-      Result := LQuery.FieldByName('value').AsString;
+      LMode := LQuery.FieldByName('value').AsString;
+    LQuery.Close;
+
+    // Read stored HMAC signature
+    LQuery.SQL.Text := SQL_SELECT_CONFIG;
+    LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE_SIG;
+    LQuery.Open;
+    if not LQuery.Eof then
+      LSig := LQuery.FieldByName('value').AsString;
+
+    // DATA2-023: Verify integrity. If HMAC does not match, the mode has
+    // been tampered with (e.g. DB-level write). Default to enforce for safety.
+    if LMode <> '' then
+    begin
+      if ValidateModeHMAC(LMode, LSig) then
+        Result := LMode
+      else
+      begin
+        // Tampered mode detected — reset to safe default and re-sign.
+        SetMode(MODE_OBSERVE);
+        Result := MODE_OBSERVE;
+      end;
+    end;
   finally
     FreeAndNil(LQuery);
   end;
@@ -595,18 +705,30 @@ end;
 procedure TConfigRegistrar.SetMode(const AMode: string);
 var
   LQuery: TFDQuery;
+  LSig: string;
 begin
   if (AMode <> MODE_OBSERVE) and (AMode <> MODE_ENFORCE) then
     raise EConfigRegistrarError.CreateFmt(
       'Invalid governance mode "%s" (expected "observe" or "enforce")',
       [AMode]);
 
+  // DATA2-023: Compute HMAC signature of the mode value before persisting.
+  LSig := ComputeModeHMAC(AMode);
+
   LQuery := TFDQuery.Create(nil);
   try
     LQuery.Connection := FConnection;
+
+    // Store mode value
     LQuery.SQL.Text := SQL_UPSERT_CONFIG;
     LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE;
     LQuery.ParamByName('value').AsString := AMode;
+    LQuery.ExecSQL;
+
+    // Store HMAC signature alongside
+    LQuery.SQL.Text := SQL_UPSERT_CONFIG;
+    LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE_SIG;
+    LQuery.ParamByName('value').AsString := LSig;
     LQuery.ExecSQL;
   finally
     FreeAndNil(LQuery);

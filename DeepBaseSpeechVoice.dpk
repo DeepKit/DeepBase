@@ -25,7 +25,7 @@ package DeepBaseSpeechVoice;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
-{$DESCRIPTION 'DeepBase Speech Voiceprint - MFCC + DTW + Speaker Check'}
+{$DESCRIPTION 'DeepBase Speech Voiceprint - Speaker Check (MFCC/DTW in DeepBaseSpeechCore)'}
 {$RUNONLY}
 
 requires
@@ -34,8 +34,6 @@ requires
   DeepBaseSpeechCore;
 
 contains
-  DeepBase.Speech.MFCC in 'Features\DeepBase.Speech.MFCC.pas',
-  DeepBase.Speech.DTW in 'Features\DeepBase.Speech.DTW.pas',
   DeepBase.Speech.Voiceprint in 'Features\DeepBase.Speech.Voiceprint.pas';
 
 end.

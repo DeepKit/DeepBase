@@ -132,11 +132,16 @@ end;
 destructor TDeepBaseTrayIcon.Destroy;
 begin
   UninstallHostFormHooks;
-  Visible := False;
+  Visible := False;  // UI2-014 fix: TTrayIcon.Hide now destroys FIconHandle
   if Assigned(FPopupMenu) then
     FPopupMenu.RemoveFreeNotification(Self);
   FPopupMenu := nil;
   FHostForm := nil;
+  // UI2-014 fix: FIcon.Handle 已因 Hide 中 TTrayIcon.Hide 的 DestroyIcon
+  // 而被销毁。把 Handle 置为 0，避免 TIcon.Destroy 再次 ReleaseHandle
+  // 导致 Double-Free。
+  if Assigned(FIcon) then
+    FIcon.Handle := 0;
   FIcon.Free;
   inherited;
 end;
@@ -172,7 +177,13 @@ begin
   if Assigned(Value) then
     FIcon.Assign(Value)
   else
+  begin
+    // UI2-014 fix: explicitly drop the icon handle so that, even when the
+    // tray icon is not currently visible (and therefore IconChange will
+    // not propagate the change), the old HICON is not leaked via the
+    // TIcon.Handle setter's ReleaseHandle path.
     FIcon.Handle := 0;
+  end;
 end;
 
 procedure TDeepBaseTrayIcon.SetPopupMenu(const Value: TPopupMenu);

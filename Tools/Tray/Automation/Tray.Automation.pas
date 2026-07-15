@@ -445,7 +445,7 @@ begin
   try
     if WaitForExit then
     begin
-      // TODO: 实现等待命令完成
+      // TODO(OPS-P2-001): 实现等待命令完成 — 改用 TProcess 或 CreateProcess + WaitForSingleObject
       TTrayLauncher.LaunchProgram('cmd.exe', '/C ' + Command, WorkDir, RunAsAdmin);
     end
     else

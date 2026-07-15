@@ -17,6 +17,9 @@ type
 
 const
   bcrypt = 'bcrypt.dll';
+  advapi32 = 'advapi32.dll';
+
+  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
 
   PAGE_SIZE      = 4096;
   KEY_SIZE       = 32;
@@ -26,6 +29,13 @@ const
   PBKDF2_ITER    = 64000;
 
   SQLITE_HEADER  = 'SQLite format 3'#0;
+
+function BCryptGenRandom(hAlgorithm: BCRYPT_ALG_HANDLE; pbBuffer: PBYTE;
+  cbBuffer: ULONG; dwFlags: DWORD): Cardinal; stdcall; external bcrypt;
+// Fallback for OSes older than Windows 10 1903 — RtlGenRandom is exported
+// from advapi32.dll under the name SystemFunction036.
+function RtlGenRandom(RandomBuffer: Pointer; RandomBufferLength: ULONG): Boolean;
+  stdcall; external advapi32 name 'SystemFunction036';
 
 function BCryptOpenAlgorithmProvider(out hAlg: BCRYPT_ALG_HANDLE;
   const pszAlgId: LPCWSTR; pszImpl: LPCWSTR; dwFlags: DWORD): Cardinal; stdcall; external bcrypt;
@@ -289,16 +299,78 @@ end;
 { TBCryptSQLiteReader }
 
 constructor TBCryptSQLiteReader.Create(const ARawKey, ASalt: TBytes);
+var
+  LRandom: TBytes;
+  I: Integer;
+  LHex: string;
+  LStatus: NTSTATUS;
 begin
   inherited Create;
   DeriveSQLCipherKey(ARawKey, ASalt, FAesKey, FMacKey);
-  FDecryptedPath := TPath.GetTempFileName;
+  // DATA2-004 fix: avoid TPath.GetTempFileName, whose names are predictable
+  // (sequential) and discoverable by other local users. Use a 128-bit
+  // cryptographically random hex name inside the user's temp directory.
+  SetLength(LRandom, 16);
+  // BCryptGenRandom (Windows 10 1903+) uses the OS CSPRNG; fall back to
+  // RtlGenRandom (SystemFunction036) on older OSes.
+  LStatus := BCryptGenRandom(0, @LRandom[0], Length(LRandom),
+    BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  if not IsNTSTATUS_Success(LStatus) then
+  begin
+    // Fallback: RtlGenRandom (exported as SystemFunction036 from advapi32)
+    if not RtlGenRandom(@LRandom[0], Length(LRandom)) then
+      raise Exception.Create('Failed to generate random temp filename');
+  end;
+  LHex := '';
+  for I := 0 to High(LRandom) do
+    LHex := LHex + IntToHex(LRandom[I], 2);
+  FDecryptedPath := TPath.Combine(TPath.GetTempPath, 'dbsr_' + LHex + '.db');
 end;
 
 destructor TBCryptSQLiteReader.Destroy;
 begin
+  // DATA2-003 fix: erase AES/MAC key material from heap before freeing.
+  // Note: on modern filesystems (NTFS + journaling, SSD wear leveling) this
+  // does not guarantee physical erasure of all copies, but it prevents simple
+  // heap-scanning recovery of the plaintext key while the process is alive.
+  if Length(FAesKey) > 0 then
+  begin
+    FillChar(FAesKey[0], Length(FAesKey), 0);
+    FAesKey := nil;
+  end;
+  if Length(FMacKey) > 0 then
+  begin
+    FillChar(FMacKey[0], Length(FMacKey), 0);
+    FMacKey := nil;
+  end;
   if FDecryptedPath <> '' then
-    TFile.Delete(FDecryptedPath);
+  begin
+    // Best-effort content wipe before unlink; ignored if file doesn't exist.
+    try
+      if TFile.Exists(FDecryptedPath) then
+      begin
+        var FS := TFileStream.Create(FDecryptedPath, fmOpenReadWrite);
+        try
+          var Zeros: TBytes;
+          SetLength(Zeros, 4096);
+          FillChar(Zeros[0], 4096, 0);
+          var Remaining := FS.Size;
+          while Remaining > 0 do
+          begin
+            var ToWrite := Remaining;
+            if ToWrite > 4096 then ToWrite := 4096;
+            FS.WriteBuffer(Zeros[0], ToWrite);
+            Dec(Remaining, ToWrite);
+          end;
+        finally
+          FS.Free;
+        end;
+        TFile.Delete(FDecryptedPath);
+      end;
+    except
+      // Swallow cleanup errors; we're in a destructor.
+    end;
+  end;
   inherited;
 end;
 

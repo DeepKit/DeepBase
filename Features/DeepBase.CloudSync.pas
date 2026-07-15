@@ -196,9 +196,10 @@ type
     FLock: TCriticalSection;
     
     function DoRequest(const AMethod, AEndpoint: string; ABody: TJSONObject = nil): TJSONObject;
+  public
+    // REVIEW5-FEAT-004: Made public for testability of fail-closed behavior
     function EncryptData(const AData: string): string;
     function DecryptData(const AData: string): string;
-  public
     constructor Create(const AConfig: TCloudServiceConfig);
     destructor Destroy; override;
     
@@ -406,7 +407,7 @@ implementation
 
 uses
   System.IOUtils,
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES;
 
 var
   GCloudSync: TCloudConfigSync = nil;
@@ -986,14 +987,11 @@ var
 begin
   // FR-002 fix: previous "encryption" was just Base64 encoding, which gave
   // zero confidentiality. Switch to AES (TSimpleCrypto) keyed by the
-  // configured EncryptionKey. When no key is configured, fail-closed
-  // and return the data as-is so the caller's enable flag is the
-  // single source of truth.
+  // configured EncryptionKey. When no key is configured, fail closed so the
+  // caller cannot accidentally upload plaintext under an "encrypted" config.
   if FConfig.EncryptionKey = '' then
-  begin
-    Result := AData;
-    Exit;
-  end;
+    raise EEncryptionException.Create(
+      'CloudSync encryption is enabled but EncryptionKey is empty');
   LCipher := TSimpleCrypto.EncryptBytes(
     TEncoding.UTF8.GetBytes(AData), FConfig.EncryptionKey);
   Result := TNetEncoding.Base64.EncodeBytesToString(LCipher);
@@ -1004,10 +1002,8 @@ var
   LCipher, LPlain: TBytes;
 begin
   if FConfig.EncryptionKey = '' then
-  begin
-    Result := AData;
-    Exit;
-  end;
+    raise EDecryptionException.Create(
+      'CloudSync encryption is enabled but EncryptionKey is empty');
   LCipher := TNetEncoding.Base64.DecodeStringToBytes(AData);
   LPlain := TSimpleCrypto.DecryptBytes(LCipher, FConfig.EncryptionKey);
   Result := TEncoding.UTF8.GetString(LPlain);

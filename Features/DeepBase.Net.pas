@@ -537,7 +537,6 @@ end;
 function THttpRequest.Execute: THttpResponse;
 var
   LClient: THTTPClient;
-  LRequest: IHTTPRequest;
   LResponse: IHTTPResponse;
   LUrl: string;
   LPair: TPair<string, string>;

@@ -1,4 +1,4 @@
-﻿unit DeepBase.DB.JobQueue;
+unit DeepBase.DB.JobQueue;
 
 interface
 
@@ -20,6 +20,22 @@ type
     Status: string;
     Attempts: Integer;
     LastError: string;
+    procedure Clear;
+  end;
+
+  /// <summary>
+  /// Dead-letter record moved out of the hot-path queue after exhausting
+  /// its retry budget. EXP-P1-015.
+  /// </summary>
+  TDeadLetterRec = record
+    OriginalID: string;
+    QueueName: string;
+    LogicalKey: string;
+    Payload: TJSONObject;
+    Attempts: Integer;
+    LastError: string;
+    CreatedAt: TDateTime;
+    MovedAt: TDateTime;
     procedure Clear;
   end;
 
@@ -53,10 +69,13 @@ type
     class procedure EnsureSchemaIfNeeded; static;
     class procedure EnsureSchemaOnConnection(Connection: TFDConnection); static;
     class procedure LoadTaskFromQuery(Query: TFDQuery; out Task: TTaskRec); static;
+    class procedure LoadDeadLetterFromQuery(Query: TFDQuery;
+      out Rec: TDeadLetterRec); static;
     class function DequeuePostgreSQL(Connection: TFDConnection;
       const QueueName: string; out Task: TTaskRec): Boolean; static;
     class function DequeueSQLite(Connection: TFDConnection;
       const QueueName: string; out Task: TTaskRec): Boolean; static;
+    class function ComputeBackoffSeconds(Attempts: Integer): Integer; static;
   public
     class constructor Create;
     class destructor Destroy;
@@ -74,21 +93,65 @@ type
     class function RecycleDeadTasks(const QueueName: string;
       TimeoutSec: Integer): Integer; static;
     class function Complete(const TaskID: string): Boolean; static;
+    /// <summary>
+    /// Mark a running task as failed. When <c>ARequeue = True</c> the task is
+    /// scheduled for retry with exponential backoff (<c>next_run_at</c> set to
+    /// now + min(<c>BASE * 2^(attempts-1)</c>, <c>CAP</c>)); when the number
+    /// of previous attempts reaches <c>AMaxRetries</c> (default
+    /// <c>DEFAULT_JOB_MAX_RETRIES</c> = 5) the row is atomically moved to
+    /// the dedicated dead-letter table <c>DeepBase_job_queue_dlq</c> so the
+    /// hot-path queue stays small.
+    /// </summary>
+    /// <remarks>BUG EXP-P1-015.</remarks>
     class function Fail(const TaskID, ErrorMessage: string;
-      Requeue: Boolean = False): Boolean; static;
+      Requeue: Boolean = False): Boolean; overload; static;
+    class function Fail(const TaskID, ErrorMessage: string;
+      Requeue: Boolean; AMaxRetries: Integer): Boolean; overload; static;
+
+    /// <summary>Count of rows in the dead-letter table; optional queue filter.</summary>
+    class function DeadLetterCount(const QueueName: string = ''): Integer; static;
+    /// <summary>
+    /// Return up to <c>Limit</c> dead-letter records ordered by most recently
+    /// moved first. Empty <c>QueueName</c> means all queues.
+    /// </summary>
+    class function PeekDeadLetters(const QueueName: string;
+      Limit: Integer): TArray<TDeadLetterRec>; static;
+    /// <summary>
+    /// Copy a dead-letter row back into the main queue as <c>pending</c> with
+    /// <c>next_run_at = NULL</c> and <c>attempts = 0</c>; the DLQ row is then
+    /// removed. Returns False if the original ID is not in the DLQ.
+    /// </summary>
+    class function ReplayDeadLetter(const OriginalID: string): Boolean; static;
+    /// <summary>
+    /// Permanently remove a dead-letter row by its original task ID. Returns
+    /// False if no matching DLQ row existed.
+    /// </summary>
+    class function PurgeDeadLetter(const OriginalID: string): Boolean; static;
   end;
 
 implementation
 
 uses
+  System.Generics.Collections,
+  System.TimeSpan,
   FireDAC.Stan.Param,
   DeepBase.DB.Factory,
   DeepBase.Exceptions;
 
 const
   JOB_QUEUE_TABLE = 'DeepBase_job_queue';
+  JOB_QUEUE_DLQ_TABLE = 'DeepBase_job_queue_dlq';
   CONN_ACQUIRE_TIMEOUT_MS = 30000;
   CONN_ACQUIRE_MAX_RETRIES = 10;
+  // BUG EXP-P1-015: max retry attempts before a task is diverted to the DLQ
+  // table by TJobQueue.Fail(..., Requeue=True). Callers can override per call
+  // via the AMaxRetries overload.
+  DEFAULT_JOB_MAX_RETRIES = 5;
+  // EXP-P1-015: exponential backoff parameters. delay(attempts) =
+  // min(BASE * 2^(attempts-1), CAP). With BASE=5, CAP=300, the ladder is
+  // 5s / 10s / 20s / 40s / 80s for attempts 1..5.
+  JOB_QUEUE_BACKOFF_BASE_SEC = 5;
+  JOB_QUEUE_BACKOFF_CAP_SEC = 300;
 
 { TTaskRec }
 
@@ -97,11 +160,27 @@ begin
   TaskID := '';
   QueueName := '';
   LogicalKey := '';
-  Payload.Free;
+  // EXP-P1-015: do NOT free Payload here — records are value types and copies
+  // share the same TJSONObject reference. Callers that need to release the
+  // payload should FreeAndNil the record's Payload field explicitly.
   Payload := nil;
   Status := '';
   Attempts := 0;
   LastError := '';
+end;
+
+procedure TDeadLetterRec.Clear;
+begin
+  OriginalID := '';
+  QueueName := '';
+  LogicalKey := '';
+  // EXP-P1-015: same ownership rule as TTaskRec.Clear — leave the Payload
+  // reference intact so copies don't double-free.
+  Payload := nil;
+  Attempts := 0;
+  LastError := '';
+  CreatedAt := 0;
+  MovedAt := 0;
 end;
 
 { TJobQueue }
@@ -178,6 +257,7 @@ var
   RetryCount: Integer;
   Found: Boolean;
 begin
+  Result := nil;
   // Scan the pool for a free slot. The connection lock is held only while
   // claiming a slot — the actual DB work happens outside the lock so up
   // to POOL_SIZE operations can proceed concurrently.
@@ -419,6 +499,9 @@ begin
 end;
 
 class procedure TJobQueue.EnsureSchemaOnConnection(Connection: TFDConnection);
+var
+  CheckQ: TFDQuery;
+  HasNextRunAt: Boolean;
 begin
   if IsPostgreSQL(Connection) then
   begin
@@ -434,7 +517,23 @@ begin
       'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, ' +
       'updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, ' +
       'dequeued_at TIMESTAMP NULL, ' +
-      'heartbeat_at TIMESTAMP NULL)');
+      'heartbeat_at TIMESTAMP NULL, ' +
+      'next_run_at TIMESTAMP NULL)');
+    // EXP-P1-015: idempotent column upgrade for pre-existing tables.
+    Connection.ExecSQL(
+      'ALTER TABLE ' + JOB_QUEUE_TABLE +
+      ' ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP NULL');
+    // EXP-P1-015: dead-letter table.
+    Connection.ExecSQL(
+      'CREATE TABLE IF NOT EXISTS ' + JOB_QUEUE_DLQ_TABLE + ' (' +
+      'original_id TEXT PRIMARY KEY, ' +
+      'queue_name TEXT NOT NULL, ' +
+      'logical_key TEXT NOT NULL, ' +
+      'payload JSONB NOT NULL DEFAULT CAST(''{}'' AS jsonb), ' +
+      'attempts INTEGER NOT NULL DEFAULT 0, ' +
+      'last_error TEXT, ' +
+      'created_at TIMESTAMP NOT NULL, ' +
+      'moved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)');
   end
   else if IsSQLite(Connection) then
   begin
@@ -450,7 +549,35 @@ begin
       'created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, ' +
       'updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, ' +
       'dequeued_at TEXT, ' +
-      'heartbeat_at TEXT)');
+      'heartbeat_at TEXT, ' +
+      'next_run_at TEXT)');
+    // EXP-P1-015: SQLite lacks "ADD COLUMN IF NOT EXISTS". Probe via
+    // pragma_table_info and only ALTER when the column is absent.
+    CheckQ := TFDQuery.Create(nil);
+    try
+      CheckQ.Connection := Connection;
+      CheckQ.SQL.Text :=
+        'SELECT 1 FROM pragma_table_info(''' + JOB_QUEUE_TABLE +
+        ''') WHERE name = ''next_run_at''';
+      CheckQ.Open;
+      HasNextRunAt := not CheckQ.Eof;
+    finally
+      CheckQ.Free;
+    end;
+    if not HasNextRunAt then
+      Connection.ExecSQL(
+        'ALTER TABLE ' + JOB_QUEUE_TABLE + ' ADD COLUMN next_run_at TEXT');
+    // EXP-P1-015: dead-letter table.
+    Connection.ExecSQL(
+      'CREATE TABLE IF NOT EXISTS ' + JOB_QUEUE_DLQ_TABLE + ' (' +
+      'original_id TEXT PRIMARY KEY, ' +
+      'queue_name TEXT NOT NULL, ' +
+      'logical_key TEXT NOT NULL, ' +
+      'payload TEXT NOT NULL DEFAULT ''{}'', ' +
+      'attempts INTEGER NOT NULL DEFAULT 0, ' +
+      'last_error TEXT, ' +
+      'created_at TEXT NOT NULL, ' +
+      'moved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
   end
   else
     raise EDatabaseException.Create('Job queue supports SQLite and PostgreSQL only');
@@ -460,7 +587,7 @@ begin
     'ON ' + JOB_QUEUE_TABLE + ' (queue_name, logical_key)');
   Connection.ExecSQL(
     'CREATE INDEX IF NOT EXISTS ix_DeepBase_job_queue_pending ' +
-    'ON ' + JOB_QUEUE_TABLE + ' (queue_name, status, created_at)');
+    'ON ' + JOB_QUEUE_TABLE + ' (queue_name, status, next_run_at, created_at)');
 end;
 
 class function TJobQueue.Enqueue(const QueueName, LogicalKey: string;
@@ -531,10 +658,11 @@ begin
       'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
       'status = ''running'', attempts = attempts + 1, last_error = NULL, ' +
       'dequeued_at = CURRENT_TIMESTAMP, heartbeat_at = CURRENT_TIMESTAMP, ' +
-      'updated_at = CURRENT_TIMESTAMP ' +
+      'updated_at = CURRENT_TIMESTAMP, next_run_at = NULL ' +
       'WHERE id = (' +
       '  SELECT id FROM ' + JOB_QUEUE_TABLE + ' ' +
       '  WHERE queue_name = :queue_name AND status = ''pending'' ' +
+      '    AND (next_run_at IS NULL OR next_run_at <= CURRENT_TIMESTAMP) ' +
       '  ORDER BY created_at, id ' +
       '  FOR UPDATE SKIP LOCKED ' +
       '  LIMIT 1' +
@@ -571,6 +699,7 @@ begin
       SelectQuery.SQL.Text :=
         'SELECT id FROM ' + JOB_QUEUE_TABLE + ' ' +
         'WHERE queue_name = :queue_name AND status = ''pending'' ' +
+        '  AND (next_run_at IS NULL OR next_run_at <= datetime(''now'')) ' +
         'ORDER BY created_at, id LIMIT 1';
       SelectQuery.ParamByName('queue_name').AsString := QueueName;
       SelectQuery.Open;
@@ -592,7 +721,7 @@ begin
         'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
         'status = ''running'', attempts = attempts + 1, last_error = NULL, ' +
         'dequeued_at = CURRENT_TIMESTAMP, heartbeat_at = CURRENT_TIMESTAMP, ' +
-        'updated_at = CURRENT_TIMESTAMP ' +
+        'updated_at = CURRENT_TIMESTAMP, next_run_at = NULL ' +
         'WHERE id = :id AND status = ''pending''';
       UpdateQuery.ParamByName('id').AsString := TaskID;
       UpdateQuery.ExecSQL;
@@ -701,14 +830,14 @@ begin
         Query.SQL.Text :=
           'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
           'status = ''pending'', dequeued_at = NULL, heartbeat_at = NULL, ' +
-          'updated_at = CURRENT_TIMESTAMP ' +
+          'next_run_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
           'WHERE queue_name = :queue_name AND status = ''running'' ' +
           'AND heartbeat_at < (CURRENT_TIMESTAMP - (:timeout_sec * INTERVAL ''1 second''))'
       else
         Query.SQL.Text :=
           'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
           'status = ''pending'', dequeued_at = NULL, heartbeat_at = NULL, ' +
-          'updated_at = CURRENT_TIMESTAMP ' +
+          'next_run_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
           'WHERE queue_name = :queue_name AND status = ''running'' ' +
           'AND heartbeat_at < datetime(''now'', ''-'' || :timeout_sec || '' seconds'')';
 
@@ -754,11 +883,251 @@ end;
 
 class function TJobQueue.Fail(const TaskID, ErrorMessage: string;
   Requeue: Boolean): Boolean;
+begin
+  // Default-max-retry overload: delegate to the explicit-max variant using
+  // DEFAULT_JOB_MAX_RETRIES (5).
+  Result := Fail(TaskID, ErrorMessage, Requeue, DEFAULT_JOB_MAX_RETRIES);
+end;
+
+class function TJobQueue.ComputeBackoffSeconds(Attempts: Integer): Integer;
+var
+  Delay: Integer;
+  I: Integer;
+begin
+  // EXP-P1-015: delay = min(BASE * 2^(attempts-1), CAP). Implemented as a
+  // simple loop to avoid floating-point Pow and to keep behavior identical on
+  // all platforms. Attempts <= 0 yields BASE; attempts >= 30 saturates at CAP
+  // without overflow because we short-circuit once Delay reaches CAP.
+  if Attempts <= 0 then
+    Exit(JOB_QUEUE_BACKOFF_BASE_SEC);
+  Delay := JOB_QUEUE_BACKOFF_BASE_SEC;
+  for I := 2 to Attempts do
+  begin
+    if Delay >= JOB_QUEUE_BACKOFF_CAP_SEC then
+    begin
+      Delay := JOB_QUEUE_BACKOFF_CAP_SEC;
+      Break;
+    end;
+    Delay := Delay * 2;
+    if Delay > JOB_QUEUE_BACKOFF_CAP_SEC then
+      Delay := JOB_QUEUE_BACKOFF_CAP_SEC;
+  end;
+  Result := Delay;
+end;
+
+class function TJobQueue.Fail(const TaskID, ErrorMessage: string;
+  Requeue: Boolean; AMaxRetries: Integer): Boolean;
+var
+  Connection: TFDConnection;
+  LookupQuery, UpdateQuery, InsertQuery: TFDQuery;
+  CurrentAttempts: Integer;
+  BackoffSec: Integer;
+  IsPG: Boolean;
+  DLQInsertSQL, DLQDeleteSQL: string;
+  OwnTx: Boolean;
+begin
+  ValidateTaskID(TaskID);
+  EnsureSchemaIfNeeded;
+
+  // EXP-P1-015 rewrite: when Requeue is requested, either schedule the row
+  // back to 'pending' with an exponential-backoff next_run_at (below the max
+  // retry threshold), or atomically move it to the dedicated dead-letter
+  // table (at or above the threshold). This removes the row from the hot
+  // path and stops retry storms against a broken downstream.
+
+  Connection := AcquireConnection;
+  try
+    IsPG := IsPostgreSQL(Connection);
+
+    if Requeue then
+    begin
+      // Read current attempt count + payload snapshot under the same
+      // connection so the decision and the DLQ payload are consistent.
+      LookupQuery := TFDQuery.Create(nil);
+      try
+        LookupQuery.Connection := Connection;
+        LookupQuery.SQL.Text :=
+          'SELECT attempts, payload, queue_name, logical_key, created_at ' +
+          'FROM ' + JOB_QUEUE_TABLE +
+          ' WHERE id = :id AND status = ''running''';
+        LookupQuery.ParamByName('id').AsString := TaskID;
+        LookupQuery.Open;
+        if LookupQuery.Eof then
+        begin
+          Result := False;
+          Exit;
+        end;
+        CurrentAttempts := LookupQuery.FieldByName('attempts').AsInteger;
+
+        if CurrentAttempts >= AMaxRetries then
+        begin
+          // DATA2-046: always wrap the INSERT+DELETE pair in a transaction on
+          // both PG and SQLite. Previously PG ran the two statements without a
+          // transaction, so a DELETE failure left the row in BOTH the main
+          // queue and the DLQ. FireDAC's StartTransaction/Commit/Rollback
+          // works uniformly for both drivers.
+          OwnTx := not Connection.InTransaction;
+
+          DLQInsertSQL :=
+            'INSERT INTO ' + JOB_QUEUE_DLQ_TABLE + ' ' +
+            '(original_id, queue_name, logical_key, payload, attempts, ' +
+            ' last_error, created_at, moved_at) ' +
+            'SELECT id, queue_name, logical_key, payload, attempts, ' +
+            '       :last_error, created_at, CURRENT_TIMESTAMP ' +
+            'FROM ' + JOB_QUEUE_TABLE +
+            ' WHERE id = :id AND status = ''running''';
+          DLQDeleteSQL :=
+            'DELETE FROM ' + JOB_QUEUE_TABLE +
+            ' WHERE id = :id AND status = ''running''';
+
+          if OwnTx then
+            Connection.StartTransaction;
+          try
+            InsertQuery := TFDQuery.Create(nil);
+            try
+              InsertQuery.Connection := Connection;
+              InsertQuery.SQL.Text := DLQInsertSQL;
+              InsertQuery.ParamByName('last_error').AsString := ErrorMessage;
+              InsertQuery.ParamByName('id').AsString := TaskID;
+              InsertQuery.ExecSQL;
+              Result := InsertQuery.RowsAffected > 0;
+            finally
+              InsertQuery.Free;
+            end;
+
+            if Result then
+            begin
+              UpdateQuery := TFDQuery.Create(nil);
+              try
+                UpdateQuery.Connection := Connection;
+                UpdateQuery.SQL.Text := DLQDeleteSQL;
+                UpdateQuery.ParamByName('id').AsString := TaskID;
+                UpdateQuery.ExecSQL;
+              finally
+                UpdateQuery.Free;
+              end;
+            end;
+
+            if OwnTx then
+              Connection.Commit;
+          except
+            if OwnTx and Connection.InTransaction then
+              Connection.Rollback;
+            raise;
+          end;
+          Exit;
+        end;
+      finally
+        LookupQuery.Free;
+      end;
+
+      // Below max retries: schedule back to 'pending' with exponential
+      // backoff. delay = min(BASE * 2^(attempts-1), CAP).
+      BackoffSec := ComputeBackoffSeconds(CurrentAttempts);
+
+      UpdateQuery := TFDQuery.Create(nil);
+      try
+        UpdateQuery.Connection := Connection;
+        if IsPG then
+        begin
+          // DATA2-048: let the server compute next_run_at from
+          // CURRENT_TIMESTAMP so client/server clock drift cannot cause
+          // retries to fire at the wrong time. The previous code passed a
+          // Delphi Now()+backoff TDateTime; the PG driver sent it as a
+          // TIMESTAMP WITH TIME ZONE literal, but if the client clock was
+          // ahead/behind the server the stored instant was wrong.
+          UpdateQuery.SQL.Text :=
+            'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
+            'status = ''pending'', last_error = :last_error, ' +
+            'dequeued_at = NULL, heartbeat_at = NULL, ' +
+            'next_run_at = CURRENT_TIMESTAMP + (:secs * INTERVAL ''1 second''), ' +
+            'updated_at = CURRENT_TIMESTAMP ' +
+            'WHERE id = :id AND status = ''running''';
+          UpdateQuery.ParamByName('secs').AsInteger := BackoffSec;
+        end
+        else
+        begin
+          // SQLite: datetime('now') returns UTC text (yyyy-mm-dd hh:nn:ss).
+          // Compute next_run_at using the same server-side function so the
+          // stored text has identical format to the Dequeue comparison.
+          // This avoids any client/server timezone drift.
+          UpdateQuery.SQL.Text :=
+            'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
+            'status = ''pending'', last_error = :last_error, ' +
+            'dequeued_at = NULL, heartbeat_at = NULL, ' +
+            'next_run_at = datetime(''now'', ''+'' || :secs || '' seconds''), ' +
+            'updated_at = CURRENT_TIMESTAMP ' +
+            'WHERE id = :id AND status = ''running''';
+          UpdateQuery.ParamByName('secs').AsInteger := BackoffSec;
+        end;
+        UpdateQuery.ParamByName('last_error').AsString := ErrorMessage;
+        UpdateQuery.ParamByName('id').AsString := TaskID;
+        UpdateQuery.ExecSQL;
+        Result := UpdateQuery.RowsAffected > 0;
+      finally
+        UpdateQuery.Free;
+      end;
+    end
+    else
+    begin
+      // Not requeueing - mark as permanently failed.
+      UpdateQuery := TFDQuery.Create(nil);
+      try
+        UpdateQuery.Connection := Connection;
+        UpdateQuery.SQL.Text :=
+          'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
+          'status = ''failed'', last_error = :last_error, ' +
+          'updated_at = CURRENT_TIMESTAMP ' +
+          'WHERE id = :id AND status = ''running''';
+        UpdateQuery.ParamByName('id').AsString := TaskID;
+        UpdateQuery.ParamByName('last_error').AsString := ErrorMessage;
+        UpdateQuery.ExecSQL;
+        Result := UpdateQuery.RowsAffected > 0;
+      finally
+        UpdateQuery.Free;
+      end;
+    end;
+  finally
+    ReleaseConnection(Connection);
+  end;
+end;
+
+{ ---- EXP-P1-015: DLQ API ------------------------------------------------- }
+
+class procedure TJobQueue.LoadDeadLetterFromQuery(Query: TFDQuery;
+  out Rec: TDeadLetterRec);
+var
+  CreatedAtText, MovedAtText: string;
+begin
+  Rec.OriginalID := Query.FieldByName('original_id').AsString;
+  Rec.QueueName := Query.FieldByName('queue_name').AsString;
+  Rec.LogicalKey := Query.FieldByName('logical_key').AsString;
+  Rec.Payload := ParsePayload(Query.FieldByName('payload').AsString);
+  Rec.Attempts := Query.FieldByName('attempts').AsInteger;
+  Rec.LastError := Query.FieldByName('last_error').AsString;
+  // EXP-P1-015: SQLite stores timestamps as TEXT, so read them as strings
+  // and convert via StrToDateTime. For PG the column is TIMESTAMP and
+  // AsDateTime works, but using the string path is safe for both dialects
+  // (both formats are ISO-8601-ish and StrToDateTime accepts them).
+  CreatedAtText := Query.FieldByName('created_at').AsString;
+  MovedAtText := Query.FieldByName('moved_at').AsString;
+  try
+    Rec.CreatedAt := StrToDateTime(CreatedAtText);
+  except
+    Rec.CreatedAt := 0;
+  end;
+  try
+    Rec.MovedAt := StrToDateTime(MovedAtText);
+  except
+    Rec.MovedAt := 0;
+  end;
+end;
+
+class function TJobQueue.DeadLetterCount(const QueueName: string): Integer;
 var
   Connection: TFDConnection;
   Query: TFDQuery;
 begin
-  ValidateTaskID(TaskID);
   EnsureSchemaIfNeeded;
 
   Connection := AcquireConnection;
@@ -766,20 +1135,176 @@ begin
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := Connection;
-      if Requeue then
-        Query.SQL.Text :=
-          'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
-          'status = ''pending'', last_error = :last_error, dequeued_at = NULL, ' +
-          'heartbeat_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
-          'WHERE id = :id AND status = ''running'''
+      if QueueName = '' then
+        Query.SQL.Text := 'SELECT COUNT(*) AS cnt FROM ' + JOB_QUEUE_DLQ_TABLE
       else
+      begin
+        ValidateQueueName(QueueName);
         Query.SQL.Text :=
-          'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
-          'status = ''failed'', last_error = :last_error, ' +
-          'updated_at = CURRENT_TIMESTAMP ' +
-          'WHERE id = :id AND status = ''running''';
-      Query.ParamByName('id').AsString := TaskID;
-      Query.ParamByName('last_error').AsString := ErrorMessage;
+          'SELECT COUNT(*) AS cnt FROM ' + JOB_QUEUE_DLQ_TABLE +
+          ' WHERE queue_name = :queue_name';
+        Query.ParamByName('queue_name').AsString := QueueName;
+      end;
+      Query.Open;
+      Result := Query.FieldByName('cnt').AsInteger;
+    finally
+      Query.Free;
+    end;
+  finally
+    ReleaseConnection(Connection);
+  end;
+end;
+
+class function TJobQueue.PeekDeadLetters(const QueueName: string;
+  Limit: Integer): TArray<TDeadLetterRec>;
+var
+  Connection: TFDConnection;
+  Query: TFDQuery;
+  Collected: TList<TDeadLetterRec>;
+  Rec: TDeadLetterRec;
+begin
+  EnsureSchemaIfNeeded;
+  if Limit < 0 then
+    raise EInvalidOperationException.Create('Limit must be >= 0');
+
+  Connection := AcquireConnection;
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      if QueueName = '' then
+        Query.SQL.Text :=
+          'SELECT original_id, queue_name, logical_key, payload, attempts, ' +
+          'last_error, created_at, moved_at FROM ' + JOB_QUEUE_DLQ_TABLE +
+          ' ORDER BY moved_at DESC LIMIT :lim'
+      else
+      begin
+        ValidateQueueName(QueueName);
+        Query.SQL.Text :=
+          'SELECT original_id, queue_name, logical_key, payload, attempts, ' +
+          'last_error, created_at, moved_at FROM ' + JOB_QUEUE_DLQ_TABLE +
+          ' WHERE queue_name = :queue_name ORDER BY moved_at DESC LIMIT :lim';
+        Query.ParamByName('queue_name').AsString := QueueName;
+      end;
+      Query.ParamByName('lim').AsInteger := Limit;
+      Query.Open;
+
+      Collected := TList<TDeadLetterRec>.Create;
+      try
+        while not Query.Eof do
+        begin
+          Rec.Clear;
+          LoadDeadLetterFromQuery(Query, Rec);
+          Collected.Add(Rec);
+          Query.Next;
+        end;
+        Result := Collected.ToArray;
+      finally
+        Collected.Free;
+      end;
+    finally
+      Query.Free;
+    end;
+  finally
+    ReleaseConnection(Connection);
+  end;
+end;
+
+class function TJobQueue.ReplayDeadLetter(const OriginalID: string): Boolean;
+var
+  Connection: TFDConnection;
+  InsertQuery, DeleteQuery: TFDQuery;
+  IsPG: Boolean;
+  OwnTx: Boolean;
+begin
+  ValidateTaskID(OriginalID);
+  EnsureSchemaIfNeeded;
+
+  // Re-enqueue a dead-letter row back into the main queue as 'pending' with
+  // attempts = 0 and no next_run_at, then remove the DLQ row.
+  Connection := AcquireConnection;
+  try
+    IsPG := IsPostgreSQL(Connection);
+    // DATA2-047: always wrap the INSERT+DELETE pair in a transaction on both
+    // PG and SQLite. Previously PG ran without a transaction, so a DELETE
+    // failure left the row in both the main queue and the DLQ.
+    OwnTx := not Connection.InTransaction;
+    if OwnTx then
+      Connection.StartTransaction;
+    try
+      InsertQuery := TFDQuery.Create(nil);
+      try
+        InsertQuery.Connection := Connection;
+        if IsPG then
+          InsertQuery.SQL.Text :=
+            'INSERT INTO ' + JOB_QUEUE_TABLE + ' ' +
+            '(id, queue_name, logical_key, payload, status, attempts, ' +
+            ' last_error, created_at, updated_at, next_run_at) ' +
+            'SELECT original_id, queue_name, logical_key, payload, ' +
+            '       ''pending'', 0, last_error, created_at, ' +
+            '       CURRENT_TIMESTAMP, NULL ' +
+            'FROM ' + JOB_QUEUE_DLQ_TABLE +
+            ' WHERE original_id = :id'
+        else
+          InsertQuery.SQL.Text :=
+            'INSERT INTO ' + JOB_QUEUE_TABLE + ' ' +
+            '(id, queue_name, logical_key, payload, status, attempts, ' +
+            ' last_error, created_at, updated_at, next_run_at) ' +
+            'SELECT original_id, queue_name, logical_key, payload, ' +
+            '       ''pending'', 0, last_error, created_at, ' +
+            '       CURRENT_TIMESTAMP, NULL ' +
+            'FROM ' + JOB_QUEUE_DLQ_TABLE +
+            ' WHERE original_id = :id';
+        InsertQuery.ParamByName('id').AsString := OriginalID;
+        InsertQuery.ExecSQL;
+        Result := InsertQuery.RowsAffected > 0;
+      finally
+        InsertQuery.Free;
+      end;
+
+      if Result then
+      begin
+        DeleteQuery := TFDQuery.Create(nil);
+        try
+          DeleteQuery.Connection := Connection;
+          DeleteQuery.SQL.Text :=
+            'DELETE FROM ' + JOB_QUEUE_DLQ_TABLE +
+            ' WHERE original_id = :id';
+          DeleteQuery.ParamByName('id').AsString := OriginalID;
+          DeleteQuery.ExecSQL;
+        finally
+          DeleteQuery.Free;
+        end;
+      end;
+
+      if OwnTx then
+        Connection.Commit;
+    except
+      if OwnTx and Connection.InTransaction then
+        Connection.Rollback;
+      raise;
+    end;
+  finally
+    ReleaseConnection(Connection);
+  end;
+end;
+
+class function TJobQueue.PurgeDeadLetter(const OriginalID: string): Boolean;
+var
+  Connection: TFDConnection;
+  Query: TFDQuery;
+begin
+  ValidateTaskID(OriginalID);
+  EnsureSchemaIfNeeded;
+
+  Connection := AcquireConnection;
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text :=
+        'DELETE FROM ' + JOB_QUEUE_DLQ_TABLE + ' WHERE original_id = :id';
+      Query.ParamByName('id').AsString := OriginalID;
       Query.ExecSQL;
       Result := Query.RowsAffected > 0;
     finally

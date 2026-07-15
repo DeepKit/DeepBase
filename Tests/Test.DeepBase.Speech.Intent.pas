@@ -18,8 +18,6 @@ type
   TTestIntentParser = class
   private
     FParser: TDeepBaseIntentParser;
-    function JsonIntent(const AIntent: string; AConf: Double = 0.8;
-      const AReason: string = ''): string;
   public
     [Setup]    procedure Setup;
     [TearDown] procedure TearDown;
@@ -68,13 +66,6 @@ procedure TTestIntentParser.TearDown;
 begin
   TDeepBaseIntentParser.RegisterGlobalLLMBackend(nil);
   FreeAndNil(FParser);
-end;
-
-function TTestIntentParser.JsonIntent(const AIntent: string; AConf: Double;
-  const AReason: string): string;
-begin
-  Result := Format('{"intent":"%s","confidence":%s,"reason":"%s"}',
-    [AIntent, FloatToStr(AConf, TFormatSettings.Invariant), AReason]);
 end;
 
 procedure TTestIntentParser.Test_Parse_EmptyReturnsUnknown;

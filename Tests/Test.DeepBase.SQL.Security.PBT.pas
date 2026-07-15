@@ -65,6 +65,12 @@ type
     // Feature: deepbase-round2-fixes, Property 19
     [Test]
     procedure Property19_GuardianCheckpointWhitelist;
+
+    // Feature: review5-r3, DATA-R3-007
+    [Test]
+    procedure Property20_ColumnDefWhitelistAcceptsSafe;
+    [Test]
+    procedure Property20_ColumnDefWhitelistRejectsInjection;
   end;
 
 implementation
@@ -404,6 +410,74 @@ begin
     end;
   finally
     LConn.Free;
+  end;
+end;
+
+procedure TSQLSecurityPropertyTests.Property20_ColumnDefWhitelistAcceptsSafe;
+const
+  // Safe column-definition fragments mirroring real callers in
+  // DeepBase.Manager.Schema (TEXT / INTEGER / REAL / BLOB + optional
+  // DEFAULT '<literal>' or DEFAULT <number>, plus NOT NULL / parens).
+  SAFE: array[0..10] of string = (
+    'TEXT',
+    'INTEGER',
+    'REAL',
+    'BLOB',
+    'TEXT DEFAULT ''String''',
+    'TEXT DEFAULT ''General''',
+    'INTEGER DEFAULT 0',
+    'REAL DEFAULT 0.0',
+    'NUMERIC(10,2)',
+    'TEXT NOT NULL',
+    'VARCHAR(255) DEFAULT ''en'' NOT NULL');
+var
+  Def: string;
+begin
+  for Def in SAFE do
+  begin
+    Assert.IsTrue(TSQLUtils.IsValidColumnDef(Def),
+      Format('Expected safe column def to be accepted: "%s"', [Def]));
+    // ValidateColumnDef must not raise on safe input.
+    TSQLUtils.ValidateColumnDef(Def, 'test-safe');
+  end;
+end;
+
+procedure TSQLSecurityPropertyTests.Property20_ColumnDefWhitelistRejectsInjection;
+const
+  // Injection vectors: statement terminator, SQL comments, line breaks,
+  // smuggled DDL/DML keywords, double-quoted/backtick identifiers, and a
+  // second-statement payload after the legitimate column def.
+  BAD: array[0..11] of string = (
+    '',                                              // empty
+    'TEXT; DROP TABLE Settings; --',                // terminator + comment + DROP
+    'TEXT--comment',                                 // line comment
+    'TEXT /* comment */',                            // block comment
+    'TEXT'#13#10'DROP TABLE Settings',               // CRLF + DROP
+    'TEXT; DELETE FROM Logs',                        // terminator + DELETE
+    'TEXT; INSERT INTO Settings VALUES(1,2,3)',     // terminator + INSERT
+    'TEXT; SELECT * FROM Logs',                     // terminator + SELECT
+    'TEXT; CREATE TRIGGER x',                       // terminator + CREATE
+    'TEXT; ATTACH DATABASE ''evil.db''',            // terminator + ATTACH
+    'TEXT "quoted"',                                 // double quote (not allowed)
+    'TEXT `backtick`');                              // backtick (not allowed)
+var
+  Def: string;
+  LRaised: Boolean;
+begin
+  for Def in BAD do
+  begin
+    Assert.IsFalse(TSQLUtils.IsValidColumnDef(Def),
+      Format('Expected unsafe column def to be rejected: "%s"', [Def]));
+    LRaised := False;
+    try
+      TSQLUtils.ValidateColumnDef(Def, 'test-bad');
+    except
+      on EArgumentException do
+        LRaised := True;
+      // Swallow other exception types to surface a clear assertion failure.
+    end;
+    Assert.IsTrue(LRaised,
+      Format('Expected ValidateColumnDef to raise EArgumentException: "%s"', [Def]));
   end;
 end;
 

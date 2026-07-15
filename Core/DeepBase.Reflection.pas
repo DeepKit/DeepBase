@@ -220,7 +220,7 @@ type
     class function DeepClone<T: class>(ASource: T): T; static;
     
     /// <summary>Compare objects by properties</summary>
-    class function Equals(AObj1, AObj2: TObject; const AExclude: TArray<string> = nil): Boolean; static;
+    class function Equals(AObj1, AObj2: TObject; const AExclude: TArray<string> = nil): Boolean; reintroduce; static;
     
     /// <summary>Get differences between objects</summary>
     class function GetDifferences(AObj1, AObj2: TObject): TArray<string>; static;
@@ -288,7 +288,7 @@ type
     class function ConvertTo(const AValue: TValue; ATargetType: TRttiType): TValue; static;
     
     /// <summary>From/To string</summary>
-    class function ToString(const AValue: TValue): string; static;
+    class function ToString(const AValue: TValue): string; reintroduce; static;
     class function FromString(const AValue: string; ATargetType: TRttiType): TValue; overload; static;
     class function FromString<T>(const AValue: string): T; overload; static;
     

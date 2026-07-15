@@ -48,7 +48,7 @@ type
     FActivated: Boolean;
     FStarted: Boolean;
   public
-    constructor Create(const AName: string; ABus: TObject; AOwnsBus: Boolean);
+    constructor Create(const AName: string; ABus: TObject; AOwnsBus: Boolean); reintroduce;
     destructor Destroy; override;
     procedure Start; override;
     procedure Stop; override;
@@ -66,7 +66,7 @@ type
     FActivated: Boolean;
     FStarted: Boolean;
   public
-    constructor Create(const AName: string; AQueue: TObject);
+    constructor Create(const AName: string; AQueue: TObject); reintroduce;
     procedure Start; override;
     procedure Stop; override;
     procedure Shutdown; override;
@@ -83,7 +83,7 @@ type
     FActivated: Boolean;
     FStarted: Boolean;
   public
-    constructor Create(const AName: string; AScheduler: TObject);
+    constructor Create(const AName: string; AScheduler: TObject); reintroduce;
     procedure Start; override;
     procedure Stop; override;
     procedure Shutdown; override;

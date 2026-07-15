@@ -148,6 +148,15 @@ function UniDbBuildSqlPreview(const ProcName: string; const ParamsJson: string;
 procedure UniDbClearQueryCache;
 
 /// <summary>
+/// DATA2-028: Enable or disable the direct-SQL escape hatch.
+/// When disabled (default), IsDirectSQL always returns False and every
+/// statement must be loaded from the whitelisted Queries table. Only turn
+/// this on for legacy/migration callers that cannot be parameterized yet.
+/// Every direct-SQL execution is audit-logged at WARN level.
+/// </summary>
+procedure UniDbSetDirectSQLAllowed(Enabled: Boolean);
+
+/// <summary>
 /// 精确失效某个 ProcName 的缓�?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
@@ -270,9 +279,15 @@ var
   GCacheTTLSec: Integer = 300;  // 默认 5 分钟
   GCacheHits: Int64 = 0;
   GCacheMisses: Int64 = 0;
+
+  // DATA2-028 FIX: direct-SQL escape hatch is opt-in. When False (default),
+  // IsDirectSQL always returns False so every statement must come from the
+  // whitelisted Queries table. Enable only for legacy/migration callers that
+  // cannot be parameterized yet, and audit-log every execution.
+  GDirectSQLAllowed: Boolean = False;
   
   // 预编译语句池
-  GPreparedPool: TObjectDictionary<string, TPreparedEntry> = nil;  // Key = ConnPtr + SQLHash
+  GPreparedPool: TObjectDictionary<string, TPreparedEntry> = nil;  // Key = SQLLen + SQLHash64 + SQLText
   GPreparedQueryIndex: TDictionary<TFDQuery, TPreparedEntry> = nil; // Query -> Entry
   GPreparedPoolLock: TObject = nil;
   GPreparedPoolEnabled: Boolean = False;
@@ -458,7 +473,7 @@ end;
 { 预编译语句池辅助函数 }
 
 /// <summary>
-/// 简单哈希函�?
+///   32 位哈希（保持向后兼容，仅用于非关键路径）
 /// </summary>
 function SimpleHash(const S: string): Cardinal;
 var
@@ -470,11 +485,31 @@ begin
 end;
 
 /// <summary>
-/// 生成预编译语句池�?
+///   64 位哈希：采用 FNV-1a 变体，碰撞率远低于 SimpleHash。
+/// </summary>
+function SimpleHash64(const S: string): UInt64;
+var
+  I: Integer;
+begin
+  Result := 14695981039346656037; // FNV offset basis
+  for I := 1 to Length(S) do
+  begin
+    Result := Result xor Ord(S[I]);
+    Result := Result * UInt64(1099511628211); // FNV prime
+  end;
+end;
+
+/// <summary>
+///   生成预编译语句池键值。
+///   包含 SQL 长度、64 位哈希以及完整 SQL 文本，消除纯指针 + 弱哈希
+///   带来的碰撞问题。连接身份由 TPreparedEntry.Connection 字段在查询时
+///   单独校验，不再参与键值构成，避免连接对象地址被复用后误命中旧缓存。
 /// </summary>
 function MakePreparedKey(Conn: TFDConnection; const SQL: string): string;
 begin
-  Result := IntToHex(NativeInt(Conn), 16) + '_' + IntToStr(SimpleHash(SQL));
+  Result := IntToStr(Length(SQL)) + '_' +
+            IntToHex(SimpleHash64(SQL), 16) + '_' +
+            SQL;
 end;
 
 procedure EnsurePreparedPoolStructures;
@@ -566,6 +601,20 @@ begin
          (Entry.Connection = Conn) and (Entry.Query.Connection = Conn) and
          Conn.Connected then
       begin
+        // REVIEW5-DATA-007: a pooled TFDQuery is a single live cursor — its
+        // Params/Active state are mutable. Reusing it while another caller is
+        // still mid-execution (InUseCount > 0) would let the two callers clobber
+        // each other's bound parameters and result sets. Hand out a fresh,
+        // untracked query instead; ReleaseQuery frees it because it is absent
+        // from GPreparedQueryIndex.
+        if Entry.InUseCount > 0 then
+        begin
+          Result := TFDQuery.Create(nil);
+          Result.Connection := Conn;
+          Result.SQL.Text := SQL;
+          Exit;
+        end;
+
         Entry.LastUsed := NextPreparedLastUsed;
         Entry.IncrementUse;
         Inc(Entry.FReuseCount);
@@ -869,9 +918,59 @@ end;
 /// <summary>
 /// 判断是否为直�?SQL（以关键字开头）
 /// </summary>
+function IsReadOnlyPragma(const Body: string): Boolean;
+const
+  // Pragmas that perform work / mutate database state even without an explicit
+  // `=value` assignment. Bare `PRAGMA wal_checkpoint;` / `PRAGMA optimize;`
+  // act; they must be whitelisted through the Queries table, not run as
+  // ad-hoc direct SQL. Configuration knobs (journal_mode, synchronous, ...) are
+  // NOT listed here because their bare form is a read; their `=value` form is
+  // already rejected by the `=` check below.
+  SideEffectPragmas: array[0..4] of string = (
+    'WAL_CHECKPOINT', 'OPTIMIZE', 'INCREMENTAL_VACUUM', 'SHRINK_MEMORY',
+    'WAL_FLUSH'
+  );
+var
+  Name: string;
+  I: Integer;
+  P: Integer;
+begin
+  Result := False;
+
+  // Reject any PRAGMA that assigns a value: `PRAGMA journal_mode=WAL`,
+  // `PRAGMA foreign_keys=ON`, `PRAGMA cache_size=-2000`. These always mutate
+  // state and must be whitelisted via the Queries table.
+  if Pos('=', Body) > 0 then
+    Exit;
+
+  // Extract the pragma name token: everything after PRAGMA up to the first
+  // whitespace or `(` (e.g. `table_info(x)` -> `table_info`).
+  Name := Trim(Body);
+  P := Pos('(', Name);
+  if P > 0 then
+    Name := Copy(Name, 1, P - 1);
+  P := Pos(#9, Name);
+  if P > 0 then
+    Name := Copy(Name, 1, P - 1);
+  P := Pos(' ', Name);
+  if P > 0 then
+    Name := Copy(Name, 1, P - 1);
+  Name := UpperCase(Trim(Name));
+  if Name = '' then
+    Exit;
+
+  // Reject pragmas that are inherently side-effecting even when bare.
+  for I := Low(SideEffectPragmas) to High(SideEffectPragmas) do
+    if Name = SideEffectPragmas[I] then
+      Exit;
+
+  Result := True;
+end;
+
 function IsDirectSQL(const ProcName: string): Boolean;
 var
   Upper: string;
+  PragmaBody: string;
 
   function StartsWithKeyword(const Keyword: string): Boolean;
   var
@@ -884,16 +983,49 @@ var
   end;
 
 begin
+  Result := False;
+
+  // DATA2-028 FIX: direct SQL is an opt-in escape hatch. When the global flag
+  // is off (default), every statement must be loaded from the Queries table so
+  // it is DBA-whitelisted and parameterized. Callers that truly need raw SQL
+  // (e.g. migration scripts) must call UniDbSetDirectSQLAllowed(True) first.
+  if not GDirectSQLAllowed then
+    Exit;
+
   Upper := UpperCase(Trim(ProcName));
-  // Direct SQL: DML + PRAGMA only. DDL (CREATE/ALTER/DROP) must go through
-  // the Queries table so it is explicitly whitelisted by the DBA.
+  // Direct SQL: DML + read-only PRAGMA only. DDL (CREATE/ALTER/DROP) and
+  // write-type PRAGMAs must go through the Queries table so they are
+  // explicitly whitelisted by the DBA.
   Result := StartsWithKeyword('SELECT') or
             StartsWithKeyword('INSERT') or
             StartsWithKeyword('UPDATE') or
             StartsWithKeyword('DELETE') or
             StartsWithKeyword('WITH') or
-            StartsWithKeyword('PRAGMA') or
             StartsWithKeyword('REPLACE');
+
+  if Result then
+  begin
+    // DATA2-028 FIX: audit every direct-SQL execution so security reviewers
+    // can detect misuse of the escape hatch.
+    Logger.Log(Format('DoQry direct-SQL allowed (caller opt-in): %s',
+      [Copy(ProcName, 1, 200)]), llWarn, 'DoQry:DirectSQL');
+    Exit;
+  end;
+
+  // REVIEW5-DATA-008: tighten the PRAGMA direct-SQL whitelist. Only read-only
+  // pragmas (no `=value`, no inherently side-effecting name) may run as direct
+  // SQL; write-type pragmas fall through to the Queries table lookup and are
+  // rejected with DOQRY_ERR_QUERY_NOT_FOUND unless whitelisted there.
+  if StartsWithKeyword('PRAGMA') then
+  begin
+    PragmaBody := Trim(Copy(Upper, Length('PRAGMA') + 1, MaxInt));
+    if IsReadOnlyPragma(PragmaBody) then
+    begin
+      Logger.Log(Format('DoQry direct-SQL PRAGMA allowed: %s',
+        [Copy(ProcName, 1, 200)]), llWarn, 'DoQry:DirectSQL');
+      Result := True;
+    end;
+  end;
 end;
 
 /// <summary>
@@ -1025,6 +1157,15 @@ begin
       end;
     end;
   end;
+end;
+
+procedure UniDbSetDirectSQLAllowed(Enabled: Boolean);
+begin
+  // DATA2-028 FIX: opt-in escape hatch for direct SQL. Default is False,
+  // which forces every statement through the Queries table. When enabled,
+  // IsDirectSQL may return True for DML/PRAGMA and each execution is
+  // audit-logged.
+  GDirectSQLAllowed := Enabled;
 end;
 
 /// <summary>

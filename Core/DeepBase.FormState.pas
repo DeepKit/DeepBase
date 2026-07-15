@@ -22,7 +22,8 @@ uses
   Winapi.MultiMon,
   {$ENDIF}
   DeepBase.Types,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   TFormStateData = DeepBase.Storage.Interfaces.TFormStateData;
@@ -36,13 +37,10 @@ type
     FStorage: IFormStateStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
-    class var FConnectionStorageFactory: TFunc<TObject, IFormStateStorage>;
-    
+
     procedure WriteToDB(const FormName: string; const Data: TFormStateData);
     function ReadFromDB(const FormName: string; out Data: TFormStateData): Boolean;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IFormStateStorage; static;
-    
+
   public
     constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
     constructor Create(const AStorage: IFormStateStorage;
@@ -119,8 +117,15 @@ implementation
 { TDeepBaseFormState }
 
 constructor TDeepBaseFormState.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: IFormStateStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<IFormStateStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No form-state storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.FormState.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -151,19 +156,7 @@ end;
 class procedure TDeepBaseFormState.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, IFormStateStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseFormState.CreateStorageFromConnection(
-  AConnection: TObject): IFormStateStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No form-state storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.FormState.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<IFormStateStorage>.SetFactory(AFactory);
 end;
 
 procedure TDeepBaseFormState.SaveState(const FormName: string; const Data: TFormStateData);

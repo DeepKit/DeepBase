@@ -57,12 +57,23 @@ implementation
 
 uses
   System.Classes,
-  System.IOUtils;
+  System.DateUtils,
+  System.IOUtils,
+  DeepBase.Exceptions;
 
 const
   STATE_RUNNING = 'running';
   STATE_CLEAN = 'clean';
   STATE_SECTION = 'Lifecycle';
+  // BIZ2-021 fix: hard cap on the crash counter so it cannot grow without
+  // bound (eventually overflowing Integer). 1000 is well above any sane
+  // "crash-loop" policy threshold while leaving ample headroom below
+  // Integer.MaxValue.
+  MAX_CRASH_COUNT = 1000;
+  // If this much time has passed since the last recorded state change
+  // without a new crash, reset the counter. Prevents a single historical
+  // crash loop from poisoning diagnostics forever.
+  CRASH_COUNTER_RESET_HOURS = 24;
 
 class constructor TAppLifecycle.Create;
 begin
@@ -206,6 +217,15 @@ begin
 
   MutexName := BuildMutexName(LockName, True);
   Handle := CreateMutex(nil, True, PChar(MutexName));
+  // BIZ2-022 fix: when the Global\ mutex creation fails with
+  // ERROR_ACCESS_DENIED (e.g. session-0 service vs. interactive user), fall
+  // back to a Local\ mutex. The ERROR_ALREADY_EXISTS check below applies
+  // equally to the fallback: CreateMutex on a pre-existing local mutex
+  // returns a valid handle AND sets GetLastError to ERROR_ALREADY_EXISTS,
+  // so we correctly detect the collision and refuse to treat a shared
+  // local mutex as exclusive ownership. Windows does not reset
+  // GetLastError on a successful CreateMutex, so the value at this point
+  // always reflects the most recent CreateMutex call.
   if (Handle = 0) and (GetLastError = ERROR_ACCESS_DENIED) then
   begin
     MutexName := BuildMutexName(LockName, False);
@@ -303,13 +323,54 @@ class procedure TAppLifecycle.MarkStarted;
 var
   State: string;
   Count: Integer;
+  Lines: TStringList;
+  UpdatedAt: TDateTime;
 begin
   EnsureConfigured;
   FLock.Enter;
   try
     LoadState(State, Count);
     if SameText(State, STATE_RUNNING) then
-      Inc(Count);
+    begin
+      // BIZ2-021 fix: cap the crash counter and reset it after a long
+      // stable period. Without the cap, repeated crashes drive Count to
+      // arbitrarily large values (eventually overflowing Integer). Without
+      // the time-based reset, a single historical crash loop poisons
+      // diagnostics forever even after the underlying bug is fixed.
+      if Count >= MAX_CRASH_COUNT then
+      begin
+        // BIZ2-021 fix: refuse to start when the crash loop threshold is
+        // exceeded. The counter is preserved on disk so diagnostics / a
+        // manual reset can still inspect it; only the launch is blocked.
+        SaveState(STATE_RUNNING, Count);
+        raise EOperationException.CreateFmt(
+          'Refusing to start: crash count (%d) has reached the maximum ' +
+          'allowed threshold (%d). Clear the lifecycle state file at ' +
+          '"%s" to reset.',
+          [Count, MAX_CRASH_COUNT, StateFilePath]);
+      end
+      else
+      begin
+        // Only apply the time-based reset when we have a parseable timestamp.
+        // If the state file is corrupted, leave Count alone so the next
+        // clean shutdown can reset it.
+        Lines := TStringList.Create;
+        try
+          Lines.NameValueSeparator := '=';
+          if TFile.Exists(StateFilePath) then
+            Lines.LoadFromFile(StateFilePath, TEncoding.UTF8);
+          if TryStrToDateTime(Lines.Values['UpdatedAt'], UpdatedAt)
+            and (UpdatedAt > 0)
+            and (Now - UpdatedAt >= CRASH_COUNTER_RESET_HOURS / HoursPerDay)
+          then
+            Count := 1  // treat this launch as the first crash after the quiet period
+          else
+            Inc(Count);
+        finally
+          Lines.Free;
+        end;
+      end;
+    end;
     SaveState(STATE_RUNNING, Count);
   finally
     FLock.Leave;

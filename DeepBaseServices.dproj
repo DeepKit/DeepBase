@@ -165,6 +165,12 @@
         <DCCReference Include="Core\DeepBase.Services.Protection.pas"/>
         <DCCReference Include="Core\DeepBase.Services.Registration.pas"/>
         <DCCReference Include="Core\DeepBase.Crypto.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.Platform.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.Hash.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.Encoding.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.AES.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.RSA.pas"/>
+        <DCCReference Include="Core\DeepBase.Crypto.Random.pas"/>
         <DCCReference Include="Core\DeepBase.Crypto.OpenSSL.pas"/>
         <DCCReference Include="Core\DeepBase.Crypto.PBKDF2.pas"/>
         <DCCReference Include="Core\DeepBase.Security.DPAPI.pas"/>

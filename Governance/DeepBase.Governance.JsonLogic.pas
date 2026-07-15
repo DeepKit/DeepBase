@@ -18,6 +18,9 @@ type
   /// JsonLogic 求值异常
   EJsonLogicError = class(Exception);
 
+  /// JsonLogic 表达式结构无效（未通过验证）
+  EInvalidJsonLogicExpression = class(EJsonLogicError);
+
   /// JsonLogic 操作符处理器
   TJsonLogicOperator = reference to function(AArgs: TJSONArray;
     AData: TJSONObject): TJSONValue;
@@ -31,9 +34,14 @@ type
   private
     FOperators: TDictionary<string, TJsonLogicOperator>;
     FManagedResults: TObjectList<TJSONValue>;  // P1 修复：统一管理临时对象
+    FMaxContextSize: Integer;  // DATA2-031: 上下文最大字节数（默认 10 MB）
     procedure RegisterBuiltinOperators;
     procedure ClearManaged;
     function Manage(AValue: TJSONValue): TJSONValue;  // 注册到管理列表
+
+    // DATA2-031: 表达式结构验证（求值前检查操作符合法性与参数数量）
+    procedure Validate(ALogic: TJSONValue);
+    function EstimateJsonSize(AValue: TJSONValue): Int64;
 
     // 内置操作符实现
     function OpVar(AArgs: TJSONArray; AData: TJSONObject): TJSONValue;
@@ -88,6 +96,7 @@ begin
   inherited Create;
   FOperators := TDictionary<string, TJsonLogicOperator>.Create;
   FManagedResults := TObjectList<TJSONValue>.Create(True);
+  FMaxContextSize := 10 * 1024 * 1024;  // DATA2-031: 10 MB 上下文上限
   RegisterBuiltinOperators;
 end;
 
@@ -221,6 +230,15 @@ var
   LEvaluatedArgs: TJSONArray;
   I: Integer;
 begin
+  // DATA2-031: 拒绝过大的上下文，避免内存耗尽或敏感数据泄露
+  if AData <> nil then
+  begin
+    if EstimateJsonSize(AData) > FMaxContextSize then
+      raise EJsonLogicError.CreateFmt(
+        'JsonLogic context too large (%d bytes, limit %d)',
+        [EstimateJsonSize(AData), FMaxContextSize]);
+  end;
+
   if not (ALogic is TJSONObject) then
   begin
     if ALogic = nil then
@@ -247,7 +265,51 @@ begin
 
   try
     if not FOperators.TryGetValue(LOpName, LHandler) then
-      raise EJsonLogicError.CreateFmt('Unknown operator: %s', [LOpName]);
+      raise EInvalidJsonLogicExpression.CreateFmt('Unknown operator: %s', [LOpName]);
+
+    // DATA2-031: 参数数量校验，防止错误调用
+    // (Delphi `case` is ordinal-only — use an if/else chain for string
+    // operator dispatch.)
+    if LOpName = '!' then
+    begin
+      if LArgs.Count <> 1 then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "!" expects 1 argument, got %d', [LArgs.Count]);
+    end
+    else if LOpName = 'var' then
+    begin
+      if (LArgs.Count = 0) or (LArgs.Count > 2) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "var" expects 1-2 arguments, got %d', [LArgs.Count]);
+    end
+    else if LOpName = 'if' then
+    begin
+      if LArgs.Count < 1 then
+        raise EInvalidJsonLogicExpression.Create(
+          'Operator "if" expects at least 1 argument');
+    end
+    else if (LOpName = 'and') or (LOpName = 'or') or (LOpName = '+') or
+            (LOpName = '*') or (LOpName = 'cat') or (LOpName = 'missing') then
+    begin
+      if LArgs.Count < 1 then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "%s" expects at least 1 argument', [LOpName]);
+    end
+    else if (LOpName = '==') or (LOpName = '===') or (LOpName = '!=') or
+            (LOpName = '>') or (LOpName = '>=') or (LOpName = '<') or
+            (LOpName = '<=') or (LOpName = 'in') or (LOpName = '-') or
+            (LOpName = '/') then
+    begin
+      if (LArgs.Count < 1) or (LArgs.Count > 2) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "%s" expects 1-2 arguments, got %d', [LOpName, LArgs.Count]);
+    end
+    else if LOpName = 'substr' then
+    begin
+      if (LArgs.Count < 2) or (LArgs.Count > 3) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "substr" expects 2-3 arguments, got %d', [LArgs.Count]);
+    end;
 
     if (LOpName = 'var') or (LOpName = 'if') or (LOpName = 'and') or
        (LOpName = 'or') or (LOpName = 'missing') then
@@ -272,6 +334,8 @@ end;
 function TJsonLogicEngine.ApplyBool(ALogic: TJSONValue;
   AData: TJSONObject): Boolean;
 begin
+  // DATA2-031: 求值前验证表达式结构（操作符合法性与参数数量）
+  Validate(ALogic);
   ClearManaged;  // P1：每次顶层调用前清理上一次的临时对象
   Result := IsTrue(Apply(ALogic, AData));
 end;
@@ -284,8 +348,10 @@ begin
   ClearManaged;  // P1：清理
   LLogic := TJSONObject.ParseJSONValue(ALogicJson);
   if LLogic = nil then
-    raise EJsonLogicError.Create('Invalid JSON logic expression');
+    raise EInvalidJsonLogicExpression.Create('Invalid JSON logic expression');
   Manage(LLogic);  // P1：解析出的 JSON 也纳入管理
+  // DATA2-031: 解析通过后验证表达式结构
+  Validate(LLogic);
   Result := IsTrue(Apply(LLogic, AData));
 end;
 
@@ -302,10 +368,18 @@ begin
   begin
     if AData = nil then
       Exit(Manage(TJSONNull.Create));
-    Exit(Manage(AData.Clone as TJSONValue));
+    // DATA2-031: "var" 无参数等价于空字符串变量名，会泄露整个上下文。
+    // 与下面 LPath='' 的校验统一拒绝。
+    raise EInvalidJsonLogicExpression.Create(
+      'Operator "var" requires a non-empty variable name');
   end;
 
   LPath := ToString(AArgs.Items[0]);
+  // DATA2-031: 空变量名会返回整个上下文对象，可能泄露敏感数据
+  if LPath = '' then
+    raise EInvalidJsonLogicExpression.Create(
+      'Operator "var" requires a non-empty variable name');
+
   LResult := ResolveVar(LPath, AData);
 
   if (LResult is TJSONNull) and (AArgs.Count > 1) then
@@ -556,6 +630,138 @@ begin
       LMissing.Add(LPath);
   end;
   Result := LMissing;
+end;
+
+{ DATA2-031: 表达式验证 —— 在求值前递归检查操作符是否存在、参数数量是否合法 }
+function TJsonLogicEngine.EstimateJsonSize(AValue: TJSONValue): Int64;
+var
+  I: Integer;
+  LObj: TJSONObject;
+  LArr: TJSONArray;
+begin
+  if AValue = nil then Exit(0);
+  if AValue is TJSONNull then Exit(4);
+  if AValue is TJSONBool then Exit(5);
+  if AValue is TJSONNumber then Exit(16);
+  if AValue is TJSONString then Exit(Length(TJSONString(AValue).Value) + 8);
+  if AValue is TJSONObject then
+  begin
+    LObj := TJSONObject(AValue);
+    Result := 2;
+    for I := 0 to LObj.Count - 1 do
+      Result := Result + Length(LObj.Pairs[I].JsonString.Value) + 2
+        + EstimateJsonSize(LObj.Pairs[I].JsonValue);
+    Exit;
+  end;
+  if AValue is TJSONArray then
+  begin
+    LArr := TJSONArray(AValue);
+    Result := 2;
+    for I := 0 to LArr.Count - 1 do
+      Result := Result + EstimateJsonSize(LArr.Items[I]);
+    Exit;
+  end;
+  Result := 16;
+end;
+
+procedure TJsonLogicEngine.Validate(ALogic: TJSONValue);
+var
+  LObj: TJSONObject;
+  LPair: TJSONPair;
+  LOpName: string;
+  LArgs: TJSONArray;
+  LArgsOwned: Boolean;
+  I: Integer;
+begin
+  if ALogic = nil then
+    Exit;
+
+  // 非对象（字面量）合法
+  if not (ALogic is TJSONObject) then
+    Exit;
+
+  LObj := TJSONObject(ALogic);
+  if LObj.Count <> 1 then
+    raise EInvalidJsonLogicExpression.CreateFmt(
+      'Expression object must have exactly 1 key, got %d', [LObj.Count]);
+
+  LPair := LObj.Pairs[0];
+  LOpName := LPair.JsonString.Value;
+
+  if not FOperators.ContainsKey(LOpName) then
+    raise EInvalidJsonLogicExpression.CreateFmt(
+      'Unknown operator: %s', [LOpName]);
+
+  LArgsOwned := False;
+  if LPair.JsonValue is TJSONArray then
+    LArgs := TJSONArray(LPair.JsonValue)
+  else
+  begin
+    LArgs := TJSONArray.Create;
+    LArgsOwned := True;
+    LArgs.AddElement(LPair.JsonValue.Clone as TJSONValue);
+  end;
+
+  try
+    // 参数数量校验（与 Apply 中的运行时校验保持一致）
+    // (Delphi `case` is ordinal-only — use an if/else chain for string
+    // operator dispatch.)
+    if LOpName = '!' then
+    begin
+      if LArgs.Count <> 1 then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "!" expects 1 argument, got %d', [LArgs.Count]);
+    end
+    else if LOpName = 'var' then
+    begin
+      if (LArgs.Count = 0) or (LArgs.Count > 2) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "var" expects 1-2 arguments, got %d', [LArgs.Count]);
+    end
+    else if LOpName = 'if' then
+    begin
+      if LArgs.Count < 1 then
+        raise EInvalidJsonLogicExpression.Create(
+          'Operator "if" expects at least 1 argument');
+    end
+    else if (LOpName = 'and') or (LOpName = 'or') or (LOpName = '+') or
+            (LOpName = '*') or (LOpName = 'cat') or (LOpName = 'missing') then
+    begin
+      if LArgs.Count < 1 then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "%s" expects at least 1 argument', [LOpName]);
+    end
+    else if (LOpName = '==') or (LOpName = '===') or (LOpName = '!=') or
+            (LOpName = '>') or (LOpName = '>=') or (LOpName = '<') or
+            (LOpName = '<=') or (LOpName = 'in') or (LOpName = '-') or
+            (LOpName = '/') then
+    begin
+      if (LArgs.Count < 1) or (LArgs.Count > 2) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "%s" expects 1-2 arguments, got %d', [LOpName, LArgs.Count]);
+    end
+    else if LOpName = 'substr' then
+    begin
+      if (LArgs.Count < 2) or (LArgs.Count > 3) then
+        raise EInvalidJsonLogicExpression.CreateFmt(
+          'Operator "substr" expects 2-3 arguments, got %d', [LArgs.Count]);
+    end;
+
+    // 递归验证子表达式
+    // 短路操作符 (var/and/or/if/missing) 的操作数在未求值状态下就是子表达式
+    if (LOpName = 'var') or (LOpName = 'missing') then
+    begin
+      // var 和 missing 的参数是路径字符串或默认值，不需要递归验证
+    end
+    else
+    begin
+      for I := 0 to LArgs.Count - 1 do
+        Validate(LArgs.Items[I]);
+    end;
+  finally
+    if LArgsOwned then
+      LArgs.Free;
+  end;
 end;
 
 end.

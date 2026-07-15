@@ -253,12 +253,23 @@ function TLLMHttpClient.ParseOpenAIResponse(const AJson: string;
   out AResult: TChatResult): Boolean;
 var
   Obj: TJSONObject;
+  ErrorObj: TJSONObject;
 begin
   Result := False;
   AResult := Default(TChatResult);
   Obj := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Obj = nil then Exit;
   try
+    // REVIEW5-FEAT-006: Check for error envelope in HTTP 200 responses
+    ErrorObj := Obj.GetValue('error') as TJSONObject;
+    if ErrorObj <> nil then
+    begin
+      AResult.ErrorMessage := ErrorObj.GetValue('message', 'Unknown error');
+      AResult.ErrorCode := ErrorObj.GetValue('code', 'api_error');
+      AResult.Success := False;
+      Exit;
+    end;
+
     var Choices := Obj.GetValue('choices') as TJSONArray;
     if (Choices <> nil) and (Choices.Count > 0) then
     begin
@@ -286,12 +297,23 @@ function TLLMHttpClient.ParseAnthropicResponse(const AJson: string;
   out AResult: TChatResult): Boolean;
 var
   Obj: TJSONObject;
+  ErrorObj: TJSONObject;
 begin
   Result := False;
   AResult := Default(TChatResult);
   Obj := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Obj = nil then Exit;
   try
+    // REVIEW5-FEAT-006: Check for error envelope in HTTP 200 responses
+    ErrorObj := Obj.GetValue('error') as TJSONObject;
+    if ErrorObj <> nil then
+    begin
+      AResult.ErrorMessage := ErrorObj.GetValue('message', 'Unknown error');
+      AResult.ErrorCode := ErrorObj.GetValue('type', 'api_error');
+      AResult.Success := False;
+      Exit;
+    end;
+
     var Content := Obj.GetValue('content') as TJSONArray;
     if (Content <> nil) and (Content.Count > 0) then
     begin

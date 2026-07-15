@@ -155,6 +155,8 @@ type
     function GetIsValid: Boolean;
     function GetIdleTime: TTimeSpan;
     function GetUseTime: TTimeSpan;
+    /// <summary>归还前复位脏事务/隔离级别 (DATA-R3-001 / BUG-431)</summary>
+    procedure ResetConnectionState;
   public
     constructor Create(APool: TUniConnectionPool; AConnection: TFDConnection);
     destructor Destroy; override;
@@ -167,6 +169,11 @@ type
 
     /// <summary>验证连接有效�?/summary>
     function Validate: Boolean;
+
+    /// <summary>Set connection state (for unit-test regression scenarios only).</summary>
+    /// <remarks>REVIEW5-DATA-004: Required by BUG-333 regression test to simulate
+    /// csValidating without triggering a real validation query.</remarks>
+    procedure SetStateForTest(AState: TConnectionState);
 
     property Connection: TFDConnection read FConnection;
     property State: TConnectionState read FState;
@@ -207,7 +214,8 @@ type
     FAvailableEvent: TEvent;
     FMaintenanceThread: TThread;
     FMaintenanceWakeEvent: TEvent;
-    FShutdown: Boolean;
+    /// <summary>DATA2-060: Integer flag accessed via TInterlocked for cross-thread visibility.</summary>
+    FShutdown: Integer;
 
     FStatistics: TPoolStatistics;
     FStatsLock: TCriticalSection;
@@ -218,6 +226,9 @@ type
     // FireDAC 组件
     FFDManager: TFDManager;
     FFDDriverLink: TComponent;
+
+    function GetIsShuttingDown: Boolean; inline;
+    procedure SetIsShuttingDown(Value: Boolean); inline;
 
     function CreateConnection: TFDConnection;
     function FindAvailableConnection: TPooledConnection;
@@ -705,14 +716,19 @@ begin
 end;
 
 destructor TPooledConnection.Destroy;
+var
+  Conn: TFDConnection;
 begin
-  if Assigned(FConnection) then
+  // DATA2-062: atomically take ownership of FConnection so that no other
+  // code path (e.g. pool sweep, concurrent invalidation) can free it twice.
+  Conn := TFDConnection(TInterlocked.Exchange(Pointer(FConnection), nil));
+  if Assigned(Conn) then
   begin
     // BASIC-014/FR-008: sweep DoQry prepared-statement cache so that
     // address reuse on the next TFDConnection allocation cannot return
     // stale prepared queries pointing at the freed connection.
     try
-      UniDbSweepConnectionFromPool(FConnection);
+      UniDbSweepConnectionFromPool(Conn);
     except
       on E: Exception do
         {$IFDEF DEBUG}
@@ -721,15 +737,15 @@ begin
     end;
 
     try
-      if FConnection.Connected then
-        FConnection.Close;
+      if Conn.Connected then
+        Conn.Close;
     except
       on E: Exception do
         {$IFDEF DEBUG}
         OutputDebugString(PChar('DeepBase.DB.Pool: Connection close failed: ' + E.Message));
         {$ENDIF}
     end;
-    FreeAndNil(FConnection);
+    Conn.Free;
   end;
   inherited;
 end;
@@ -739,16 +755,29 @@ begin
   if Assigned(FPool) then
   begin
     var LUseTime := UseTime;
+    // DATA-R3-001 (BUG-431): 归还前必须复位连接状态, 否则下个借用者继承脏连接
+    // —— 残留未提交事务 (SQLite: "cannot start a transaction within a transaction";
+    //   PG/MySQL: 可能读到上一调用方未提交的中间数据甚至把别人的 DML 一起提交)
+    //   以及隔离级别泄漏. 必须在持 FPool.FLock 前做事务复位 (复位本身是连接级操作,
+    //   不涉及池状态), 然后再持锁置 csIdle, 保证复位与空闲可见性原子.
+    ResetConnectionState;
     FPool.FLock.Enter;
     try
       FState := csIdle;
       FLastUsedAt := Now;
       FOwnerThreadId := 0;
       FLeakWarned := False;
+      // BUG EXP-P1-014 fix: signal availability WHILE holding the pool lock.
+      // If SetEvent were called outside the lock, a concurrent waiter could
+      // (a) acquire the lock, find this connection csIdle + in-use it, and
+      // then (b) see SetEvent fire afterwards - the signal would be wasted
+      // because no idle connection remains (lost-wakeup / missed-signal).
+      // Holding the lock during SetEvent ensures the waiter that observes
+      // csIdle also observes the corresponding signal, and vice-versa.
+      FPool.FAvailableEvent.SetEvent;
     finally
       FPool.FLock.Leave;
     end;
-    FPool.FAvailableEvent.SetEvent;
     FPool.DoPoolEvent(peConnectionReleased, Format('Connection released, use time: %.2f sec',
       [LUseTime.TotalSeconds]));
     FPool.FStatsLock.Enter;
@@ -764,6 +793,37 @@ begin
   FState := csInvalid;
   if Assigned(FPool) then
     FPool.DoPoolEvent(peConnectionInvalidated, 'Connection marked invalid');
+end;
+
+// DATA-R3-001 (BUG-431): 归还连接前复位脏状态. 回滚调用方残留的未提交事务,
+// 防止下个借用者继承脏事务 (SQLite 报 "cannot start a transaction within a
+// transaction"; PG/MySQL 可能读到中间数据或连带提交他人 DML). 同时重置隔离级别到
+// 连接配置默认值, 防止调用方临时提升隔离级别后泄漏给后续借用者.
+// 异常容忍: 任一步失败不阻断归还 (连接仍置空闲/失效由 IsValid 探活兜底),
+// 仅记录事件, 避免复位失败导致连接泄漏 (卡在 csInUse).
+procedure TPooledConnection.ResetConnectionState;
+begin
+  if not Assigned(FConnection) then
+    Exit;
+  try
+    // 1. 回滚残留事务 —— 最关键. 不 Commit 是因为残留事务几乎都是异常路径
+    //    遗留的未完成工作, 提交会把脏数据落库.
+    if FConnection.InTransaction then
+    begin
+      FConnection.Rollback;
+      if Assigned(FPool) then
+        FPool.DoPoolEvent(peConnectionReleased,
+          'Rolled back leftover transaction on release');
+    end;
+    // 2. 重置事务隔离级别到读取当前配置 (FireDAC 在下次 BeginTransaction 时按
+    //    TxOptions 应用; 此处确保 TxOptions 反映池配置, 调用方临时改隔离级别后复位).
+    FConnection.TxOptions.AutoCommit := FPool.FConfig.AutoCommit;
+  except
+    on E: Exception do
+      if Assigned(FPool) then
+        FPool.DoPoolEvent(peConnectionInvalidated,
+          'ResetConnectionState failed: ' + E.Message);
+  end;
 end;
 function TPooledConnection.Validate: Boolean;
 var
@@ -786,6 +846,18 @@ begin
     try
       Query.Connection := FConnection;
       Query.SQL.Text := FPool.FConfig.ValidationQuery;
+      // DATA2-055 fix: apply a bounded timeout to the validation query.
+      // Without this, a network-partitioned DB or blocked socket keeps
+      // Query.Open waiting indefinitely while FState = csValidating,
+      // permanently shrinking the usable pool and potentially wedging the
+      // maintenance thread. We prefer the profile-level command timeout;
+      // if none is configured we fall back to 5s, which is long enough for
+      // any "SELECT 1"-style probe but short enough that a hung connection
+      // is invalidated promptly.
+      if Assigned(FPool) and (FPool.FProfile.CommandTimeoutSec > 0) then
+        Query.ResourceOptions.CmdExecTimeout := FPool.FProfile.CommandTimeoutSec * 1000
+      else
+        Query.ResourceOptions.CmdExecTimeout := 5000;
       Query.Open;
       Query.Close;
       Result := True;
@@ -812,6 +884,11 @@ begin
         FPool.DoPoolEvent(peConnectionInvalidated, 'Connection validation failed: ' + E.Message);
     end;
   end;
+end;
+
+procedure TPooledConnection.SetStateForTest(AState: TConnectionState);
+begin
+  FState := AState;
 end;
 
 function TPooledConnection.GetIsValid: Boolean;
@@ -846,7 +923,7 @@ begin
   FUseProfile := False;
   FConfig := TPoolConfig.Default;
   FInitialized := False;
-  FShutdown := False;
+  SetIsShuttingDown(False);
   FStartTime := Now;
 
   FPool := TObjectList<TPooledConnection>.Create(True);
@@ -917,7 +994,7 @@ begin
     if FInitialized then
       Exit;
 
-    FShutdown := False;
+    SetIsShuttingDown(False);
     if Assigned(FMaintenanceWakeEvent) then
       FMaintenanceWakeEvent.ResetEvent;
 
@@ -962,7 +1039,7 @@ begin
   if not FInitialized then
     Exit;
 
-  FShutdown := True;
+  SetIsShuttingDown(True);
 
   // Stop maintenance thread
   if Assigned(FMaintenanceThread) then
@@ -970,7 +1047,20 @@ begin
     FMaintenanceThread.Terminate;
     if Assigned(FMaintenanceWakeEvent) then
       FMaintenanceWakeEvent.SetEvent;
+    // DATA2-057: bounded wait so a stuck/suspended maintenance thread
+    // cannot hang Shutdown indefinitely.
+    {$IFDEF MSWINDOWS}
+    if Winapi.Windows.WaitForSingleObject(FMaintenanceThread.Handle, 5000) = WAIT_TIMEOUT then
+    begin
+      {$IFDEF DEBUG}
+      Winapi.Windows.OutputDebugString('DeepBase.DB.Pool: maintenance thread did not exit within 5 s during shutdown');
+      {$ENDIF}
+    end
+    else
+      FMaintenanceThread.WaitFor;
+    {$ELSE}
     FMaintenanceThread.WaitFor;
+    {$ENDIF}
     FreeAndNil(FMaintenanceThread);
   end;
 
@@ -1005,6 +1095,20 @@ begin
   end;
 
   DoPoolEvent(peConnectionDestroyed, 'Connection pool shut down');
+end;
+
+{ TUniConnectionPool }
+
+function TUniConnectionPool.GetIsShuttingDown: Boolean;
+begin
+  // DATA2-060: atomic read with full memory barrier for cross-thread visibility.
+  Result := TInterlocked.CompareExchange(FShutdown, 0, 0) <> 0;
+end;
+
+procedure TUniConnectionPool.SetIsShuttingDown(Value: Boolean);
+begin
+  // DATA2-060: atomic write with full memory barrier.
+  TInterlocked.Exchange(FShutdown, Ord(Value));
 end;
 
 function TUniConnectionPool.GetDriverName: string;
@@ -1346,7 +1450,7 @@ begin
 
   Stopwatch := TStopwatch.StartNew;
 
-  while not FShutdown do
+  while not GetIsShuttingDown do
   begin
     FLock.Enter;
     try
@@ -1480,11 +1584,14 @@ var
 begin
   FLock.Enter;
   try
-    // Only recycle idle and validating connections.
-    // In-use connections remain until released by their owning thread.
+    // Only recycle idle and invalid connections.
+    // csValidating connections are currently being validated by the
+    // maintenance thread outside of FLock (see ValidateIdleConnections);
+    // freeing them here would cause a use-after-free on that thread.
+    // REVIEW5-DATA-004
     for I := FPool.Count - 1 downto 0 do
     begin
-      if FPool[I].State in [csIdle, csValidating, csInvalid] then
+      if FPool[I].State in [csIdle, csInvalid] then
       begin
         FStatsLock.Enter;
         try
@@ -1545,50 +1652,78 @@ end;
 
 procedure TUniConnectionPool.DoWarmup(Count: Integer);
 var
-  I, Target: Integer;
+  I, Target, CurrentCount, ToCreate: Integer;
   Pooled: TPooledConnection;
-  NewConns: TArray<TFDConnection>;
+  NewConns: array of TFDConnection;
 begin
   if Count <= 0 then
     Target := FConfig.MinSize
   else
     Target := Min(Count, FConfig.MaxSize);
 
-  // Create connections outside the lock to avoid blocking I/O
+  // DATA2-058: determine how many connections are needed under lock, then
+  // release it before doing the network I/O of connection setup.
+  FLock.Enter;
   try
-    SetLength(NewConns, Target);
-    for I := 0 to Target - 1 do
+    CurrentCount := FPool.Count;
+    if CurrentCount >= Target then
+      ToCreate := 0
+    else
+      ToCreate := Target - CurrentCount;
+  finally
+    FLock.Leave;
+  end;
+
+  if ToCreate <= 0 then
+    Exit;
+
+  // Create connections outside the lock to avoid blocking pool operations.
+  SetLength(NewConns, ToCreate);
+  for I := 0 to ToCreate - 1 do
+  begin
+    try
       NewConns[I] := CreateConnection;
-  except
-    on E: Exception do
-    begin
-      {$IFDEF DEBUG}
-      OutputDebugString(PChar('DeepBase.DB.Pool: Warmup connection creation failed: ' + E.Message));
-      {$ENDIF}
-      for var J := 0 to High(NewConns) do
-        if NewConns[J] <> nil then
-          FreeAndNil(NewConns[J]);
-      Exit;
+    except
+      on E: Exception do
+      begin
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('DeepBase.DB.Pool: Warmup connection creation failed: ' + E.Message));
+        {$ENDIF}
+        Break;
+      end;
     end;
   end;
 
-  // Add to pool (caller already holds FLock)
-  for I := 0 to High(NewConns) do
-    if NewConns[I] <> nil then
+  // Re-acquire lock to add new connections to the pool.
+  FLock.Enter;
+  try
+    for I := 0 to High(NewConns) do
     begin
+      if NewConns[I] = nil then
+        Continue;
+      if GetIsShuttingDown then
+      begin
+        FreeAndNil(NewConns[I]);
+        Continue;
+      end;
       Pooled := TPooledConnection.Create(Self, NewConns[I]);
       FPool.Add(Pooled);
+      NewConns[I] := nil;
     end;
+  finally
+    FLock.Leave;
+  end;
+
+  // Free any leftover connections that couldn't be added.
+  for I := 0 to High(NewConns) do
+    if NewConns[I] <> nil then
+      NewConns[I].Free;
 end;
 
 procedure TUniConnectionPool.Warmup(Count: Integer);
 begin
-  FLock.Enter;
-  try
-    DoWarmup(Count);
-  finally
-    FLock.Leave;
-  end;
+  // DATA2-058: DoWarmup manages its own locking internally.
+  DoWarmup(Count);
 end;
 
 procedure TUniConnectionPool.DoPoolEvent(EventType: TPoolEventType;
@@ -1609,14 +1744,14 @@ end;
 
 procedure TUniConnectionPool.MaintenanceLoop;
 begin
-  while not FShutdown and not TThread.Current.CheckTerminated do
+  while not GetIsShuttingDown and not TThread.Current.CheckTerminated do
   begin
     if Assigned(FMaintenanceWakeEvent) then
       FMaintenanceWakeEvent.WaitFor(10000)
     else
       Sleep(10000); // fallback if construction failed before the event was created
 
-    if FShutdown or TThread.Current.CheckTerminated then
+    if GetIsShuttingDown or TThread.Current.CheckTerminated then
       Break;
 
     PerformMaintenance;
@@ -1772,7 +1907,7 @@ procedure TUniConnectionPool.EnsureMinConnections;
 var
   NeedCount: Integer;
   I: Integer;
-  NewConnections: TArray<TFDConnection>;
+  NewConnections: array of TFDConnection;
 begin
   NeedCount := 0;
   FLock.Enter;
@@ -1786,13 +1921,22 @@ begin
   if NeedCount <= 0 then
     Exit;
 
+  // DATA2-059: create connections outside the lock, then re-validate pool
+  // state before adding. Between releasing and re-acquiring the lock another
+  // thread may have added connections or shutdown may have started.
   SetLength(NewConnections, NeedCount);
   for I := 0 to NeedCount - 1 do
   begin
     try
       NewConnections[I] := CreateConnection;
     except
-      Break;
+      on E: Exception do
+      begin
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar('DeepBase.DB.Pool: EnsureMin connection creation failed: ' + E.Message));
+        {$ENDIF}
+        Break;
+      end;
     end;
   end;
 
@@ -1803,7 +1947,9 @@ begin
       if NewConnections[I] = nil then
         Continue;
 
-      if FPool.Count < FConfig.MinSize then
+      // DATA2-059 TOCTOU re-check: discard if shutdown started or pool
+      // already at/above minimum.
+      if (not GetIsShuttingDown) and (FPool.Count < FConfig.MinSize) then
         FPool.Add(TPooledConnection.Create(Self, NewConnections[I]))
       else
         NewConnections[I].Free;
@@ -1814,6 +1960,7 @@ begin
     FLock.Leave;
   end;
 
+  // Free any connections that were not adopted (e.g. lock acquisition failed).
   for I := 0 to High(NewConnections) do
     if NewConnections[I] <> nil then
       NewConnections[I].Free;

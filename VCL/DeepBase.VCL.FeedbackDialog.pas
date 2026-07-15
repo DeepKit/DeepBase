@@ -364,9 +364,16 @@ procedure TFeedbackDialog.SubmitFeedback(Callback: TFeedbackSubmitCallback);
 var
   FeedbackType: TFeedbackType;
   Subject, Content, Email, Logs, SystemInfo: string;
+  // UI2-016 fix: main-thread snapshots of fields that the background task
+  // needs. Accessing FFeedbackUrl / FAppName / FAppVersion from a worker
+  // thread while the UI thread could still mutate them is a data race.
+  LFeedbackUrl: string;
+  LAppName: string;
+  LAppVersion: string;
   Client: THTTPClient;
   Response: IHTTPResponse;
   JsonObj: TJSONObject;
+  Body: TStringStream;
   Success: Boolean;
   Msg: string;
 begin
@@ -374,31 +381,37 @@ begin
   Subject := Trim(FEdtSubject.Text);
   Content := Trim(FMmoContent.Text);
   Email := Trim(FEdtEmail.Text);
-  
+
   if FChkIncludeLogs.Checked and Assigned(FLogCollector) then
     Logs := FLogCollector()
   else
     Logs := '';
-  
+
   if FChkIncludeSystemInfo.Checked then
     SystemInfo := CollectSystemInfo
   else
     SystemInfo := '';
-  
+
+  // UI2-016 fix: snapshot the remaining fields on the main thread before
+  // the background task starts.
+  LFeedbackUrl := FFeedbackUrl;
+  LAppName := FAppName;
+  LAppVersion := FAppVersion;
+
   // 显示进度
   FBtnSubmit.Enabled := False;
   FProgressBar.Visible := True;
   FLblStatus.Caption := 'Submitting feedback...';
   FLblStatus.Font.Color := clGray;
-  
+
   // 异步提交
   TThread.CreateAnonymousThread(
     procedure
     begin
       Success := False;
       Msg := '';
-      
-      if FFeedbackUrl = '' then
+
+      if LFeedbackUrl = '' then
       begin
         // 无提交 URL，模拟成功
         Sleep(1000);
@@ -418,16 +431,23 @@ begin
               JsonObj.AddPair('subject', Subject);
               JsonObj.AddPair('content', Content);
               JsonObj.AddPair('email', Email);
-              JsonObj.AddPair('app', FAppName);
-              JsonObj.AddPair('version', FAppVersion);
+              JsonObj.AddPair('app', LAppName);
+              JsonObj.AddPair('version', LAppVersion);
 
               if Logs <> '' then
                 JsonObj.AddPair('logs', Logs);
               if SystemInfo <> '' then
                 JsonObj.AddPair('system_info', SystemInfo);
 
-              Response := Client.Post(FFeedbackUrl,
-                TStringStream.Create(JsonObj.ToString, TEncoding.UTF8));
+              // UI2-003 fix: keep a handle to the body stream so we can free it
+              // in the enclosing finally. THTTPClient.Post does NOT take
+              // ownership of the ASource stream — the caller must free it.
+              Body := TStringStream.Create(JsonObj.ToString, TEncoding.UTF8);
+              try
+                Response := Client.Post(LFeedbackUrl, Body);
+              finally
+                Body.Free;
+              end;
             finally
               JsonObj.Free;
             end;

@@ -124,7 +124,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.StrUtils;
+  System.DateUtils, System.StrUtils, System.Math;
 
 { TChronicler }
 

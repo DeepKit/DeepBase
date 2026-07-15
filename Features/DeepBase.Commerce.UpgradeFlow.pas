@@ -117,9 +117,12 @@ begin
   except
     on E: Exception do
     begin
-      // The order was created but payment intent failed — it remains in cosCreated state.
-      // Caller should use EDeepBaseCommerceOrphanedOrderError.OrderId to close it
-      // once a CloseOrder API becomes available (TODO: SafeClient.CloseOrder).
+      // The order was created but payment intent failed — attempt to close it
+      try
+        FClient.CloseOrder(Result.Order.OrderId);
+      except
+        // Swallow close errors; the original exception is more important
+      end;
       raise EDeepBaseCommerceOrphanedOrderError.Create(
         Result.Order.OrderId,
         Format('Payment intent failed for order %s: %s', [Result.Order.OrderId, E.Message]));

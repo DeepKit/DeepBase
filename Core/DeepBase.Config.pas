@@ -64,15 +64,14 @@ type
     FCache: TDictionary<string, string>;
     FCacheEnabled: Boolean;
     FOnConfigChanged: TConfigChangedEvent;
-    class var FConnectionStorageFactory: TFunc<TObject, IConfigStorage>;
-    
+
     function ReadFromDB(const Key: string; const Default: string = ''): string;
     procedure WriteToDB(const Key, Value: string; const Category: string; 
       const ValueType: string; const Description: string);
-    class function CreateStorageFromConnection(AConnection: TObject): IConfigStorage; static;
-    
+
     // R-002: ���������߼������� SetConfig* �ظ����룩
-    procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string);
+    procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string;
+      out AFireCallback: Boolean; out AOldValue: string);
     
   public
     constructor Create(AConnection: TObject; ALock: TObject); overload;
@@ -145,13 +144,21 @@ implementation
 uses
   System.StrUtils,
   DeepBase.Security,
-  DeepBase.Manager;
+  DeepBase.Manager,
+  DeepBase.StorageFactory;
 
 { TDeepBaseConfig }
 
 constructor TDeepBaseConfig.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: IConfigStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<IConfigStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No config storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.Config.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -184,19 +191,7 @@ end;
 class procedure TDeepBaseConfig.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, IConfigStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseConfig.CreateStorageFromConnection(
-  AConnection: TObject): IConfigStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No config storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.Config.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<IConfigStorage>.SetFactory(AFactory);
 end;
 
 procedure TDeepBaseConfig.ClearCache;
@@ -268,51 +263,42 @@ begin
   end;
 end;
 
-procedure TDeepBaseConfig.SetConfigInternal(const Key, NewValue, Category, ValueType: string);
-var
-  OldValue: string;
-  Changed: Boolean;
-  CallbackRef: TConfigChangedEvent;
+procedure TDeepBaseConfig.SetConfigInternal(const Key, NewValue, Category, ValueType: string;
+  out AFireCallback: Boolean; out AOldValue: string);
 begin
   // BASIC-027 fix: copy callback ref + change indicator inside the lock,
   // release the lock, then fire the callback outside. Previously the
   // callback ran while still holding FLock, so a slow or re-entrant
   // OnConfigChanged handler blocked all other config readers/writers.
-  if FCacheEnabled and FCache.TryGetValue(Key, OldValue) then
+  if FCacheEnabled and FCache.TryGetValue(Key, AOldValue) then
     // OldValue from cache
   else
-    OldValue := ReadFromDB(Key, '');
+    AOldValue := ReadFromDB(Key, '');
 
   WriteToDB(Key, NewValue, Category, ValueType, '');
 
   if FCacheEnabled then
     FCache.AddOrSetValue(Key, NewValue);
 
-  Changed := (OldValue <> NewValue);
-  CallbackRef := FOnConfigChanged;
-
-  // Release the caller's lock before firing the callback. Caller wraps
-  // this method with TMonitor.Enter/Exit; we exit briefly here and
-  // re-enter so the public API still leaves the lock held on return.
-  if Changed and Assigned(CallbackRef) then
-  begin
-    TMonitor.Exit(FLock);
-    try
-      CallbackRef(Self, Key, OldValue, NewValue);
-    finally
-      TMonitor.Enter(FLock);
-    end;
-  end;
+  AFireCallback := (AOldValue <> NewValue) and Assigned(FOnConfigChanged);
 end;
 
 procedure TDeepBaseConfig.SetConfig(const Key, Value: string; const Category: string);
+var
+  FireCallback: Boolean;
+  OldValue: string;
 begin
   TMonitor.Enter(FLock);
   try
-    SetConfigInternal(Key, Value, Category, 'String');
+    SetConfigInternal(Key, Value, Category, 'String', FireCallback, OldValue);
   finally
     TMonitor.Exit(FLock);
   end;
+  // CORE-R2-006 fix: fire callback AFTER releasing the lock so a slow handler
+  // cannot block other readers/writers, and without the previous Exit/Enter
+  // pattern that created a re-entrancy window.
+  if FireCallback and Assigned(FOnConfigChanged) then
+    FOnConfigChanged(Self, Key, OldValue, Value);
 end;
 
 function TDeepBaseConfig.GetConfigInt(const Key: string; Default: Integer): Integer;
@@ -330,13 +316,18 @@ begin
 end;
 
 procedure TDeepBaseConfig.SetConfigInt(const Key: string; Value: Integer; const Category: string);
+var
+  FireCallback: Boolean;
+  OldValue: string;
 begin
   TMonitor.Enter(FLock);
   try
-    SetConfigInternal(Key, IntToStr(Value), Category, 'Integer');
+    SetConfigInternal(Key, IntToStr(Value), Category, 'Integer', FireCallback, OldValue);
   finally
     TMonitor.Exit(FLock);
   end;
+  if FireCallback and Assigned(FOnConfigChanged) then
+    FOnConfigChanged(Self, Key, OldValue, IntToStr(Value));
 end;
 
 function TDeepBaseConfig.GetConfigBool(const Key: string; Default: Boolean): Boolean;
@@ -360,18 +351,22 @@ end;
 procedure TDeepBaseConfig.SetConfigBool(const Key: string; Value: Boolean; const Category: string);
 var
   NewValue: string;
+  FireCallback: Boolean;
+  OldValue: string;
 begin
   if Value then
     NewValue := 'True'
   else
     NewValue := 'False';
-    
+
   TMonitor.Enter(FLock);
   try
-    SetConfigInternal(Key, NewValue, Category, 'Boolean');
+    SetConfigInternal(Key, NewValue, Category, 'Boolean', FireCallback, OldValue);
   finally
     TMonitor.Exit(FLock);
   end;
+  if FireCallback and Assigned(FOnConfigChanged) then
+    FOnConfigChanged(Self, Key, OldValue, NewValue);
 end;
 
 function TDeepBaseConfig.GetConfigFloat(const Key: string; Default: Double): Double;
@@ -389,13 +384,18 @@ begin
 end;
 
 procedure TDeepBaseConfig.SetConfigFloat(const Key: string; Value: Double; const Category: string);
+var
+  FireCallback: Boolean;
+  OldValue: string;
 begin
   TMonitor.Enter(FLock);
   try
-    SetConfigInternal(Key, FloatToStr(Value), Category, 'Float');
+    SetConfigInternal(Key, FloatToStr(Value), Category, 'Float', FireCallback, OldValue);
   finally
     TMonitor.Exit(FLock);
   end;
+  if FireCallback and Assigned(FOnConfigChanged) then
+    FOnConfigChanged(Self, Key, OldValue, FloatToStr(Value));
 end;
 
 function TDeepBaseConfig.GetConfigsByCategory(const Category: string): TDictionary<string, string>;

@@ -763,8 +763,8 @@ end;
 
 {$ENDIF}
 
-end.
-
+{$IFDEF TESTDeepInsight}
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseFileWatcher);
+{$ENDIF}
 end.

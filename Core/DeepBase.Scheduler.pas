@@ -402,6 +402,9 @@ begin
       SetLength(Result, Max - Min + 1);
       for I := Min to Max do
         Result[I - Min] := I;
+      // BIZ2-008 verified: Values is owned by the enclosing try..finally and is
+      // freed correctly even on this early Exit. Do NOT move the allocation
+      // below this branch without also restructuring the try block.
       Exit;
     end;
     
@@ -988,6 +991,9 @@ begin
     procedure
     var
       StartTime: TDateTime;
+      LOnCompleted: TTaskCompletedEvent;
+      LOnFailed: TTaskFailedEvent;
+      LTaskFailed: Boolean;
     begin
       StartTime := Now;
       try
@@ -1026,17 +1032,32 @@ begin
           TaskRef.FRunningITask := nil;  // Release ITask reference
           Dec(FRunningCount);
           Dec(FStats.RunningTasks);
+
+          // BIZ-R3-011: capture the completed callback under FLock. The lock
+          // is released before invoking it (deadlock avoidance), but reading
+          // TaskRef.FOnCompleted outside the lock is a use-after-free window:
+          // another thread's Cleanup can remove + free this task once its
+          // state flips to tsCompleted/tsFailed (doOwnsValues). FRunningITask
+          // is left non-nil until after the callback so Cleanup's running-task
+          // guard keeps the object alive for the duration of the callback.
+          LOnCompleted := TaskRef.FOnCompleted;
         finally
           FLock.Leave;
         end;
-        
-        if Assigned(TaskRef.FOnCompleted) then
-          TaskRef.FOnCompleted(TaskRef);
-          
+
+        if Assigned(LOnCompleted) then
+        try
+          LOnCompleted(TaskRef);
+        except
+          // REVIEW5-CORE-004: Swallow callback exceptions.
+          // OnCompleted is informational — must not overwrite task state.
+        end;
+
       except
         on E: Exception do
         begin
-          var LOnFailed: TTaskFailedEvent := nil;
+          LOnFailed := nil;
+          LTaskFailed := False;
           FLock.Enter;
           try
             TaskRef.FLastError := E.Message;
@@ -1059,6 +1080,10 @@ begin
               LOnFailed := TaskRef.FOnFailed;
             end;
 
+            // BIZ-R3-011: defer FRunningITask:=nil until after the failed
+            // callback so the running-task guard keeps TaskRef alive across
+            // the unlocked LOnFailed(TaskRef, E) call.
+            LTaskFailed := (TaskRef.FState = tsFailed);
             TaskRef.FRunningITask := nil;  // Release ITask reference
             Dec(FRunningCount);
             Dec(FStats.RunningTasks);
@@ -1067,8 +1092,13 @@ begin
           end;
 
           // Invoke callback outside lock to prevent potential deadlock
-          if Assigned(LOnFailed) then
+          // REVIEW5-CORE-004: Wrap in try/except to prevent callback exceptions
+          // from propagating into the TTask anonymous method.
+          if LTaskFailed and Assigned(LOnFailed) then
+          try
             LOnFailed(TaskRef, E);
+          except
+          end;
         end;
       end;
     end);
@@ -1178,7 +1208,14 @@ begin
     FLock.Enter;
     try
       for Task in FTasks.Values do
-        if Task.FState in [tsCompleted, tsFailed, tsCancelled] then
+        // BIZ-R3-011: skip tasks whose ExecuteTask closure is still in flight
+        // (FRunningITask<>nil). The closure reads TaskRef / fires OnCompleted /
+        // OnFailed outside FLock; removing+freeing such a task here would be a
+        // use-after-free. The closure clears FRunningITask only after the
+        // callback returns, so this guard keeps the object alive across the
+        // unlocked callback window.
+        if (Task.FRunningITask = nil) and
+           (Task.FState in [tsCompleted, tsFailed, tsCancelled]) then
           ToRemove.Add(Task.FId);
       
       for Id in ToRemove do

@@ -1,12 +1,13 @@
 // AI-GENERATED
 // DeepBase.Governance.EvidenceRecorder.pas
 // 第四层：证据记录（异步写入，风险分层，脱敏，失败回调）
-// 依赖 Interfaces + Types
+// 依赖 Interfaces + EvidenceRecorder
 // P0 修复项：
 //   - 添加 CorrelationId 字段（为 P08 ActionRun 预留）
 //   - RiskLevel 从 Action/Gate 获取，不再硬编码 rlL1
 //   - InputSummary 采用白名单脱敏，不直接截取完整 JSON
 //   - 写入失败不再静默吞掉，支持错误回调 + 内存失败队列
+//   - DATA2-006: PushItem 返回值必须检查，失败时重试 + 丢弃计数
 
 unit DeepBase.Governance.EvidenceRecorder;
 
@@ -70,6 +71,10 @@ type
     const AActionKey: string): TRiskLevel;
 
   /// 证据记录器实现（异步写入，不阻塞 UI）
+  /// <remarks>
+  /// DATA2-006 修复：PushItem 返回值必须检查。队列满时重试 3 次（100/200/400 ms
+  /// 指数退避），全部失败则递增 DroppedEvidenceCount 并输出调试日志。
+  /// </remarks>
   TEvidenceRecorder = class(TInterfacedObject, IEvidenceRecorder)
   private
     FStore: IEvidenceStore;
@@ -80,7 +85,11 @@ type
     FFailureCallback: TEvidenceFailureCallback;
     FRiskResolver: TRiskLevelResolver;
     FSanitizeFields: TArray<string>;  // 白名单字段名，只有这些字段进入摘要
+    FDroppedEvidenceCount: Integer;   // DATA2-006：丢弃证据计数
     procedure ProcessQueue;
+    procedure SaveWithRetry(const AEntry: TEvidenceEntry);
+    procedure EnqueueEntry(const AEntry: TEvidenceEntry);
+    function BackoffDelayWithJitter(ABaseMs: Integer): Integer;
     function GenerateId: string;
     function GetUserId(AContext: TJSONObject): string;
     function GetCorrelationId(AContext: TJSONObject): string;
@@ -105,6 +114,9 @@ type
     function GetFailedEntries: TArray<TEvidenceEntry>;
     function FailedCount: Integer;
 
+    /// <summary>DATA2-006: 因队列满且重试耗尽而丢弃的证据总数</summary>
+    property DroppedEvidenceCount: Integer read FDroppedEvidenceCount;
+
     // 同步刷新（测试用）
     procedure Flush;
   end;
@@ -112,7 +124,8 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  Winapi.Windows;
 
 const
   // 默认白名单：只保留结构性字段，排除可能的敏感数据
@@ -120,6 +133,16 @@ const
     'action_key', 'gate_key', 'user_id', 'correlation_id',
     'tenant_id', 'request_id', 'risk_level'
   );
+
+  // DATA2-006: 入队重试参数（指数退避基值，实际 Sleep 加 ±30% 抖动）
+  PUSH_RETRY_DELAYS: array[0..2] of Integer = (100, 200, 400);
+
+  // GOV-R3-005 (D-005): 退避抖动幅度 ±30%，避免高并发失败时所有线程同步重试形成风暴
+  BACKOFF_JITTER_PCT = 30;
+
+  // GOV-R3-005 (D-005): Flush 上限与超时，防止析构时队列满 1000 条阻塞数百秒
+  FLUSH_MAX_ITEMS = 500;        // 单次 Flush 最多处理条数，余量交后台线程/下次 Flush
+  FLUSH_TOTAL_TIMEOUT_MS = 5000; // Flush 总预算（含 SaveWithRetry 退避），超时即停
 
 { TEvidenceRecorder }
 
@@ -132,6 +155,7 @@ begin
   FQueue := TThreadedQueue<TEvidenceEntry>.Create(1000, 100, 50);
   FFailureQueue := TThreadedQueue<TEvidenceEntry>.Create(100, 0, 0);
   FRunning := True;
+  FDroppedEvidenceCount := 0;
 
   // 初始化默认白名单
   SetLength(FSanitizeFields, Length(DEFAULT_SANITIZE_WHITELIST));
@@ -237,6 +261,95 @@ begin
   end;
 end;
 
+{ GOV-R3-005 (D-005): 对退避基值加 ±30% 抖动，避免高并发失败时所有线程同步重试形成风暴。
+  以 GetTickCount 低 16 位作伪随机源（确定性、无线程全局锁开销），不依赖 Randomize。 }
+function TEvidenceRecorder.BackoffDelayWithJitter(ABaseMs: Integer): Integer;
+var
+  LTick: Cardinal;
+  LJitterRange: Integer;
+begin
+  if ABaseMs <= 0 then
+    Exit(ABaseMs);
+  LTick := GetTickCount and $FFFF;          // 0..65535
+  LJitterRange := (ABaseMs * BACKOFF_JITTER_PCT) div 100;  // ±30% 幅度
+  // 将 LTick 映射到 [-LJitterRange, +LJitterRange]
+  Result := ABaseMs - LJitterRange + (Integer(LTick mod Cardinal(2 * LJitterRange + 1)));
+end;
+
+{ DATA2-006: 入队时检查 PushItem 返回值，队列满则指数退避重试 }
+procedure TEvidenceRecorder.EnqueueEntry(const AEntry: TEvidenceEntry);
+var
+  LWaitResult: TWaitResult;
+  I: Integer;
+begin
+  // 首次尝试
+  LWaitResult := FQueue.PushItem(AEntry);
+  if LWaitResult = wrSignaled then
+    Exit;
+
+  // 队列可能已满，指数退避重试（D-005: 加 ±30% 抖动避免重试风暴）
+  for I := Low(PUSH_RETRY_DELAYS) to High(PUSH_RETRY_DELAYS) do
+  begin
+    Sleep(BackoffDelayWithJitter(PUSH_RETRY_DELAYS[I]));
+    if not FRunning then
+      Break;
+    LWaitResult := FQueue.PushItem(AEntry);
+    if LWaitResult = wrSignaled then
+      Exit;
+  end;
+
+  // 所有重试均失败 — 证据被丢弃
+  TInterlocked.Increment(FDroppedEvidenceCount);
+  OutputDebugString(
+    PChar('[Governance] Evidence DROPPED after retries — queue full. ' +
+    'EntryId=' + AEntry.Id + ', ActionKey=' + AEntry.ActionKey +
+    '. Total dropped=' + IntToStr(FDroppedEvidenceCount)));
+end;
+
+{ DATA2-006: 持久化写入，带重试 }
+procedure TEvidenceRecorder.SaveWithRetry(const AEntry: TEvidenceEntry);
+var
+  I: Integer;
+  LLastError: string;
+begin
+  if FStore = nil then
+    Exit;
+
+  for I := Low(PUSH_RETRY_DELAYS) to High(PUSH_RETRY_DELAYS) do
+  begin
+    try
+      FStore.Save(AEntry);
+      Exit; // 成功
+    except
+      on E: Exception do
+      begin
+        LLastError := E.ClassName + ': ' + E.Message;
+        // D-005: 加 ±30% 抖动，避免高并发失败时所有线程同步重试形成风暴
+        if I < High(PUSH_RETRY_DELAYS) then
+          Sleep(BackoffDelayWithJitter(PUSH_RETRY_DELAYS[I]));
+      end;
+    end;
+  end;
+
+  // 所有重试均失败
+  OutputDebugString(
+    PChar('[Governance] Evidence SAVE FAILED after retries — EntryId=' +
+    AEntry.Id + ', Error=' + LLastError));
+
+  // 进入失败队列（供后续诊断）
+  FFailureQueue.PushItem(AEntry);
+
+  // 触发回调
+  if Assigned(FFailureCallback) then
+  begin
+    try
+      FFailureCallback(AEntry, LLastError);
+    except
+      // 回调本身失败也不影响后续 Evidence 处理
+    end;
+  end;
+end;
+
 procedure TEvidenceRecorder.LogAction(const AActionKey: string;
   AContext: TJSONObject; AResult: TActionResult);
 var
@@ -262,7 +375,8 @@ begin
     arsDryRun:  LEntry.Result := erSuccess;
   end;
 
-  FQueue.PushItem(LEntry);
+  // DATA2-006: 检查入队结果，失败时重试
+  EnqueueEntry(LEntry);
 end;
 
 procedure TEvidenceRecorder.LogBlocked(const AGateKey, AReason: string;
@@ -284,43 +398,22 @@ begin
   LEntry.BlockedReason := AReason;
   LEntry.SnapshotData := '';
 
-  FQueue.PushItem(LEntry);
+  // DATA2-006: 检查入队结果，失败时重试
+  EnqueueEntry(LEntry);
 end;
 
 procedure TEvidenceRecorder.ProcessQueue;
 var
   LEntry: TEvidenceEntry;
   LWaitResult: TWaitResult;
-  LError: string;
 begin
   while FRunning and not TThread.Current.CheckTerminated do
   begin
     LWaitResult := FQueue.PopItem(LEntry);
     if LWaitResult = wrSignaled then
     begin
-      try
-        if FStore <> nil then
-          FStore.Save(LEntry);
-      except
-        on E: Exception do
-        begin
-          // P0 修复：写入失败不再静默吞掉
-          LError := E.ClassName + ': ' + E.Message;
-
-          // 1. 进入失败队列（供后续诊断/重试）
-          FFailureQueue.PushItem(LEntry);
-
-          // 2. 触发回调（如注册）
-          if Assigned(FFailureCallback) then
-          begin
-            try
-              FFailureCallback(LEntry, LError);
-            except
-              // 回调本身失败也不影响后续 Evidence 处理
-            end;
-          end;
-        end;
-      end;
+      // DATA2-006: 持久化写入带重试
+      SaveWithRetry(LEntry);
     end;
   end;
 end;
@@ -329,24 +422,28 @@ procedure TEvidenceRecorder.Flush;
 var
   LEntry: TEvidenceEntry;
   LWaitResult: TWaitResult;
+  LProcessed: Integer;
+  LStartTick: Cardinal;
+  LElapsed: Cardinal;
 begin
+  // GOV-R3-005 (D-005): 析构同步 Flush 队列满 1000 条可阻塞数百秒
+  //   —— 加单次上限与总超时，余量交后台线程（FRunning 期）或下次 Flush。
+  //   超时后剩余证据项留在队列，待后台线程处理；析构路径若队列非空仍会清队列释放条目（无泄漏）。
+  LProcessed := 0;
+  LStartTick := GetTickCount;
   repeat
     LWaitResult := FQueue.PopItem(LEntry);
     if LWaitResult = wrSignaled then
     begin
-      if FStore <> nil then
-      begin
-        try
-          FStore.Save(LEntry);
-        except
-          on E: Exception do
-          begin
-            FFailureQueue.PushItem(LEntry);
-            if Assigned(FFailureCallback) then
-              FFailureCallback(LEntry, E.ClassName + ': ' + E.Message);
-          end;
-        end;
-      end;
+      // DATA2-006: 持久化写入带重试
+      SaveWithRetry(LEntry);
+      Inc(LProcessed);
+      if LProcessed >= FLUSH_MAX_ITEMS then
+        Break;
+      // 卡死 32 位计数器回绕保护
+      LElapsed := GetTickCount - LStartTick;
+      if LElapsed >= FLUSH_TOTAL_TIMEOUT_MS then
+        Break;
     end;
   until LWaitResult <> wrSignaled;
 end;

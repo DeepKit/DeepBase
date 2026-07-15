@@ -1,11 +1,12 @@
 { ============================================================================
   Test.DeepBase.AutoUpdate - Unit Tests for Auto-Update Module
-  
+
   Test Coverage:
     - TUpdateInfo record operations
     - TDeepBaseAutoUpdate class
     - Update channel handling
     - Version comparison
+    - REVIEW5-FEAT-003: HTTP timeouts and integrity enforcement
   ============================================================================ }
 
 unit Test.DeepBase.AutoUpdate;
@@ -16,6 +17,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   DeepBase.Updater,
   DeepBase.AutoUpdate;
 
@@ -105,7 +107,7 @@ type
     procedure Setup;
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure Test_VersionWithV;
     [Test]
@@ -114,6 +116,42 @@ type
     procedure Test_EmptyVersion;
     [Test]
     procedure Test_TrimmedVersion;
+  end;
+
+  /// <summary>
+  /// REVIEW5-FEAT-003: HTTP timeouts and integrity enforcement tests.
+  /// Verifies that:
+  /// - Default timeouts are configured (30s connection, 60s response)
+  /// - Timeouts are configurable via public properties
+  /// - DownloadUpdate fails closed when neither SHA256 nor Signature is provided
+  /// - TUpdateInfo has a Signature field
+  /// </summary>
+  [TestFixture]
+  TTestIntegrityEnforcement = class
+  private
+    FAutoUpdate: TDeepBaseAutoUpdate;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_DefaultConnectionTimeout;
+    [Test]
+    procedure Test_DefaultResponseTimeout;
+    [Test]
+    procedure Test_TimeoutsAreConfigurable;
+    [Test]
+    procedure Test_UpdateInfoSignatureField;
+    [Test]
+    procedure Test_DownloadUpdate_FailClosed_NoIntegrityInfo;
+    [Test]
+    procedure Test_DownloadUpdate_FailClosed_EmptySha256AndSignature;
+    [Test]
+    procedure Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck;
+    [Test]
+    procedure Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck;
   end;
 
 implementation
@@ -401,10 +439,169 @@ begin
   Assert.IsFalse(FAutoUpdate.CurrentVersion.EndsWith(' '));
 end;
 
+{ TTestIntegrityEnforcement }
+
+procedure TTestIntegrityEnforcement.Setup;
+begin
+  FAutoUpdate := TDeepBaseAutoUpdate.Create;
+end;
+
+procedure TTestIntegrityEnforcement.TearDown;
+begin
+  FAutoUpdate.Free;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DefaultConnectionTimeout;
+begin
+  // REVIEW5-FEAT-003: default connection timeout must be 30000ms
+  Assert.AreEqual(30000, FAutoUpdate.ConnectionTimeout,
+    'Default ConnectionTimeout should be 30000ms (30 seconds)');
+end;
+
+procedure TTestIntegrityEnforcement.Test_DefaultResponseTimeout;
+begin
+  // REVIEW5-FEAT-003: default response timeout must be 60000ms
+  Assert.AreEqual(60000, FAutoUpdate.ResponseTimeout,
+    'Default ResponseTimeout should be 60000ms (60 seconds)');
+end;
+
+procedure TTestIntegrityEnforcement.Test_TimeoutsAreConfigurable;
+begin
+  FAutoUpdate.ConnectionTimeout := 15000;
+  FAutoUpdate.ResponseTimeout := 45000;
+  Assert.AreEqual(15000, FAutoUpdate.ConnectionTimeout);
+  Assert.AreEqual(45000, FAutoUpdate.ResponseTimeout);
+end;
+
+procedure TTestIntegrityEnforcement.Test_UpdateInfoSignatureField;
+var
+  Info: TUpdateInfo;
+begin
+  // REVIEW5-FEAT-003: TUpdateInfo must have a Signature field
+  FillChar(Info, SizeOf(Info), 0);
+  Assert.AreEqual('', Info.Signature);
+
+  Info.Signature := 'MEUCIQDx...base64encoded...sig==';
+  Assert.IsTrue(Info.Signature <> '');
+  Assert.IsTrue(Info.Signature.StartsWith('MEUCIQDx'));
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_NoIntegrityInfo;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+  DownloadResult: Boolean;
+begin
+  // REVIEW5-FEAT-003: When neither SHA256 nor Signature is provided,
+  // DownloadUpdate must fail closed (return False with descriptive error)
+  // BEFORE making any HTTP request.
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'https://example.com/update.exe';
+  Info.Sha256 := '';
+  Info.Signature := '';
+
+  TempFile := TPath.GetTempFileName;
+  try
+    DownloadResult := FAutoUpdate.DownloadUpdate(Info, TempFile);
+    Assert.IsFalse(DownloadResult,
+      'DownloadUpdate must fail closed when neither SHA256 nor Signature is provided');
+    Assert.IsTrue(FAutoUpdate.LastError <> '',
+      'LastError should contain a descriptive message');
+    Assert.IsTrue(
+      FAutoUpdate.LastError.Contains('SHA256') or FAutoUpdate.LastError.Contains('signature'),
+      'LastError should mention SHA256 or signature requirement');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_EmptySha256AndSignature;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+begin
+  // REVIEW5-FEAT-003: Both empty Sha256 and Signature => fail closed
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'https://example.com/update.exe';
+  Info.Sha256 := '';
+  Info.Signature := '';
+
+  TempFile := TPath.GetTempFileName;
+  try
+    Assert.IsFalse(FAutoUpdate.DownloadUpdate(Info, TempFile),
+      'Download must be rejected without any integrity information');
+    Assert.IsTrue(FAutoUpdate.LastError <> '',
+      'LastError must be set');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+begin
+  // REVIEW5-FEAT-003: When SHA256 is provided, the integrity gate must pass
+  // (download may still fail due to network, but not due to integrity check).
+  // We use a non-routable URL to ensure the HTTP call fails for reasons OTHER
+  // than the integrity check.
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'https://192.0.2.1/unreachable'; // RFC 5737 TEST-NET
+  Info.Sha256 := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  Info.Signature := '';
+
+  TempFile := TPath.GetTempFileName;
+  try
+    // This should NOT fail with the integrity error. It will fail due to network,
+    // but that's a different error path.
+    FAutoUpdate.DownloadUpdate(Info, TempFile);
+    // The LastError should NOT contain the integrity rejection message
+    Assert.IsFalse(
+      FAutoUpdate.LastError.Contains('must provide SHA256') or
+      FAutoUpdate.LastError.Contains('must provide digital signature'),
+      'LastError should not contain integrity gate rejection when SHA256 is provided. ' +
+      'Got: ' + FAutoUpdate.LastError);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+begin
+  // REVIEW5-FEAT-003: When Signature is provided (but no SHA256), the integrity
+  // gate must pass.
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'https://192.0.2.1/unreachable'; // RFC 5737 TEST-NET
+  Info.Sha256 := '';
+  Info.Signature := 'MEUCIQDx...base64encoded...sig==';
+
+  TempFile := TPath.GetTempFileName;
+  try
+    FAutoUpdate.DownloadUpdate(Info, TempFile);
+    // The LastError should NOT contain the integrity rejection message
+    Assert.IsFalse(
+      FAutoUpdate.LastError.Contains('must provide SHA256') or
+      FAutoUpdate.LastError.Contains('must provide digital signature'),
+      'LastError should not contain integrity gate rejection when Signature is provided. ' +
+      'Got: ' + FAutoUpdate.LastError);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestUpdateInfo);
   TDUnitX.RegisterTestFixture(TTestAutoUpdateClass);
   TDUnitX.RegisterTestFixture(TTestUpdateChannel);
   TDUnitX.RegisterTestFixture(TTestVersionNormalization);
+  TDUnitX.RegisterTestFixture(TTestIntegrityEnforcement);
 
 end.

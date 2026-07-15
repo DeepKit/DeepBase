@@ -96,7 +96,13 @@ class procedure TFMXUpdateDialog.ShowDialog(AAutoUpdater: TComponent;
   const Info: TUpdateInfo; Callback: TUpdateDialogCallback);
 var
   Dialog: TFMXUpdateDialog;
+  LUpdater: TFMXAutoUpdater;
 begin
+  // UI2-010: Validate type before cast to prevent access violations.
+  if not (AAutoUpdater is TFMXAutoUpdater) then
+    raise EArgumentException.Create('Expected TFMXAutoUpdater');
+  LUpdater := TFMXAutoUpdater(AAutoUpdater);
+
   Dialog := TFMXUpdateDialog.Create(nil);
   Dialog.FAutoUpdater := AAutoUpdater;
   Dialog.FUpdateInfo := Info;
@@ -108,7 +114,7 @@ begin
     Dialog.LblTitle.Text := 'New version available';
 
   Dialog.LblVersion.Text := Format('Version %s -> %s',
-    [TFMXAutoUpdater(AAutoUpdater).CurrentVersion, Info.Version.ToString]);
+    [LUpdater.CurrentVersion, Info.Version.ToString]);
 
   // 设置更新日志
   Dialog.MemoChangelog.Lines.Text := Info.ReleaseNotes;
@@ -279,7 +285,8 @@ begin
   // 设置完成回调
   AutoUpdater.OnUpdateComplete := HandleAutoUpdaterComplete;
 
-  // 开始下�?  AutoUpdater.DownloadAndInstall;
+  // 开始下载
+  AutoUpdater.DownloadAndInstall;
 end;
 
 procedure TFMXUpdateDialog.UpdateProgress(const Progress: TUpdateProgress);
@@ -323,7 +330,7 @@ begin
     if MessageDlg('更新已安装完成。是否立即重启应用？',
       TMsgDlgType.mtInformation, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) = mrYes then
     begin
-      // TODO(UPD-P0-001): 重启应用
+      // STUB(UPD-P0-001): 重启应用
       // Application.Terminate;
     end;
 
@@ -341,6 +348,7 @@ begin
     begin
       // Reset UI and retry.
       LayoutProgress.Visible := False;
+      BtnUpdate.Enabled := True;
       BtnLater.Text := '稍后';
       if not FUpdateInfo.IsMandatory then
         BtnSkip.Visible := True;

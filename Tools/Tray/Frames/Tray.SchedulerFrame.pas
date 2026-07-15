@@ -476,6 +476,7 @@ var
   TaskType: TTaskType;
   ScheduleType: TScheduleType;
   NextRun: TDateTime;
+  TaskTypeIndex, ScheduleTypeIndex: Integer;
 begin
   TaskName := Trim(FEdtName.Text);
   if TaskName = '' then
@@ -484,7 +485,7 @@ begin
     FEdtName.SetFocus;
     Exit;
   end;
-  
+
   Command := Trim(FEdtCommand.Text);
   if Command = '' then
   begin
@@ -492,14 +493,59 @@ begin
     FEdtCommand.SetFocus;
     Exit;
   end;
-  
-  TaskType := TTaskType(FCboTaskType.ItemIndex);
-  ScheduleType := TScheduleType(FCboScheduleType.ItemIndex);
-  
+
+  // REVIEW5-UI-005: Validate enum ranges to prevent invalid type conversion
+  TaskTypeIndex := FCboTaskType.ItemIndex;
+  if (TaskTypeIndex < Ord(Low(TTaskType))) or (TaskTypeIndex > Ord(High(TTaskType))) then
+  begin
+    ShowMessage('无效的任务类型');
+    Exit;
+  end;
+  TaskType := TTaskType(TaskTypeIndex);
+
+  ScheduleTypeIndex := FCboScheduleType.ItemIndex;
+  if (ScheduleTypeIndex < Ord(Low(TScheduleType))) or (ScheduleTypeIndex > Ord(High(TScheduleType))) then
+  begin
+    ShowMessage('无效的定时类型');
+    Exit;
+  end;
+  ScheduleType := TScheduleType(ScheduleTypeIndex);
+
+  // REVIEW5-UI-005: Validate command/path for program and script types
+  if TaskType in [ttProgram, ttScript] then
+  begin
+    // Check for dangerous characters that could be used for command injection
+    if Command.Contains('|') or Command.Contains('&') or Command.Contains('`') then
+    begin
+      ShowMessage('命令/路径包含非法字符');
+      Exit;
+    end;
+
+    // For program type, verify the file exists
+    if TaskType = ttProgram then
+    begin
+      if not FileExists(Command) then
+      begin
+        ShowMessage('程序文件不存在: ' + Command);
+        Exit;
+      end;
+    end;
+
+    // For script type, verify the file exists
+    if TaskType = ttScript then
+    begin
+      if not FileExists(Command) then
+      begin
+        ShowMessage('脚本文件不存在: ' + Command);
+        Exit;
+      end;
+    end;
+  end;
+
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := TrayDB.Connection;
-    
+
     if FEditingId > 0 then
     begin
       Query.SQL.Text :=
@@ -517,7 +563,7 @@ begin
         'VALUES (:TaskName, :TaskType, :Command, :ScheduleType, :ScheduleTime, ' +
         ':ScheduleDate, :IntervalMinutes, :IsEnabled, :NextRunAt)';
     end;
-    
+
     Query.ParamByName('TaskName').AsString := TaskName;
     Query.ParamByName('TaskType').AsInteger := Ord(TaskType);
     Query.ParamByName('Command').AsString := Command;
@@ -526,7 +572,7 @@ begin
     Query.ParamByName('ScheduleDate').AsString := DateToStr(FDtpDate.Date);
     Query.ParamByName('IntervalMinutes').AsInteger := StrToIntDef(FEdtInterval.Text, 30);
     Query.ParamByName('IsEnabled').AsInteger := Ord(FChkEnabled.Checked);
-    
+
     // 计算下次运行时间
     var TempTask: TScheduledTask;
     TempTask.ScheduleType := ScheduleType;
@@ -536,12 +582,12 @@ begin
     TempTask.LastRunAt := 0;
     NextRun := CalculateNextRun(TempTask);
     Query.ParamByName('NextRunAt').AsDateTime := NextRun;
-    
+
     Query.ExecSQL;
   finally
     Query.Free;
   end;
-  
+
   ShowEditPanel(False);
   RefreshData;
 end;
@@ -598,18 +644,42 @@ end;
 procedure TSchedulerFrame.RunTask(const ATask: TScheduledTask);
 var
   ShellParams: string;
+  Query: TFDQuery;
 begin
+  // REVIEW5-UI-005: Additional validation before execution
+  if ATask.Command = '' then
+    Exit;
+
   case ATask.TaskType of
     ttCommand:
       begin
+        // REVIEW5-UI-005: Limit command length to prevent buffer issues
+        if Length(ATask.Command) > 1000 then
+        begin
+          ShowMessage('命令过长');
+          Exit;
+        end;
         ShellExecute(0, 'open', 'cmd.exe', PChar('/c ' + ATask.Command), nil, SW_HIDE);
       end;
     ttProgram:
       begin
+        // REVIEW5-UI-005: Verify file exists before execution
+        if not FileExists(ATask.Command) then
+        begin
+          ShowMessage('程序文件不存在: ' + ATask.Command);
+          Exit;
+        end;
         ShellExecute(0, 'open', PChar(ATask.Command), nil, nil, SW_SHOWNORMAL);
       end;
     ttScript:
       begin
+        // REVIEW5-UI-005: Verify script file exists before execution
+        if not FileExists(ATask.Command) then
+        begin
+          ShowMessage('脚本文件不存在: ' + ATask.Command);
+          Exit;
+        end;
+
         // 根据扩展名判断脚本类型
         if ATask.Command.EndsWith('.ps1', True) then
           ShellParams := '-ExecutionPolicy Bypass -File "' + ATask.Command + '"'
@@ -618,12 +688,18 @@ begin
         ShellExecute(0, 'open', 'powershell.exe', PChar(ShellParams), nil, SW_HIDE);
       end;
   end;
-  
-  // 更新最后运行时间
-  TrayDB.Connection.ExecSQL(
-    'UPDATE ScheduledTasks SET LastRunAt = ''' + 
-    FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now) + ''' WHERE Id = ' +
-    IntToStr(ATask.Id));
+
+  // REVIEW5-UI-005: Use parameterized query to prevent SQL injection
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := TrayDB.Connection;
+    Query.SQL.Text := 'UPDATE ScheduledTasks SET LastRunAt = :LastRunAt WHERE Id = :Id';
+    Query.ParamByName('LastRunAt').AsDateTime := Now;
+    Query.ParamByName('Id').AsInteger := ATask.Id;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
 end;
 
 procedure TSchedulerFrame.CheckAndRunTasks;

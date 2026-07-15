@@ -14,9 +14,13 @@ uses
   DeepBase.Payment.Types;
 
 type
-  /// <summary>Payment client interface - all providers implement this</summary>
-  IPaymentClient = interface
-    ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
+  /// <summary>Legacy Core payment client interface.
+  /// Renamed to avoid GUID collision with DeepBase.Payment.IPaymentClient
+  /// (same GUID, different method signatures). Not included in any active
+  /// package; kept only for source-level backward compatibility.
+  /// New code should use IPaymentClient from DeepBase.Payment.</summary>
+  IPaymentCoreClient = interface
+    ['{B2C3D4E5-F6A7-8901-BCDE-F23456789012}']
     
     // Core operations
     function CreatePayment(const ARequest: TPaymentRequest): TPaymentResult;
@@ -38,7 +42,7 @@ type
   end;
 
   /// <summary>Base payment client with common functionality</summary>
-  TPaymentClientBase = class(TInterfacedObject, IPaymentClient)
+  TPaymentClientBase = class(TInterfacedObject, IPaymentCoreClient)
   protected
     FCredentials: TPaymentCredentials;
     FHttpClient: THTTPClient;
@@ -66,7 +70,7 @@ type
     constructor Create(const ACredentials: TPaymentCredentials);
     destructor Destroy; override;
     
-    // IPaymentClient
+    // IPaymentCoreClient
     function CreatePayment(const ARequest: TPaymentRequest): TPaymentResult; virtual; abstract;
     function GetPaymentStatus(const ATransactionId: string): TPaymentResult; virtual; abstract;
     function CapturePayment(const ATransactionId: string; AAmount: TMoney): TPaymentResult; virtual; abstract;
@@ -86,13 +90,13 @@ type
   end;
 
 /// <summary>Factory function to create payment client</summary>
-function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentClient;
+function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentCoreClient;
 
 implementation
 
 { Factory }
 
-function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentClient;
+function CreatePaymentClient(const ACredentials: TPaymentCredentials): IPaymentCoreClient;
 begin
   raise ENotSupportedException.CreateFmt(
     'DeepBase.Payment.Core does not provide provider adapters for %d; use DeepBase.Payment provider clients',

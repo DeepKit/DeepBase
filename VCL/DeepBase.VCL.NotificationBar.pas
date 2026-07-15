@@ -165,6 +165,11 @@ implementation
 uses
   Winapi.Windows;
 
+// UI2-013 TODO: create NotificationBar.dcr resource file containing a
+// ComponentIcon bitmap (24x24) so the IDE shows a custom icon instead of
+// the default gear. Until then, RegisterComponents uses the fallback glyph.
+// {$R NotificationBar.dcr}
+
 procedure Register;
 begin
   RegisterComponents('DeepBase', [TNotificationBar]);

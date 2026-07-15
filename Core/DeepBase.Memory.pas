@@ -29,7 +29,7 @@
 
     // 智能缓存
     Cache := TSmartCache<string, TMyData>.Create;
-    Cache.EvictionPolicy := epLRU;
+    Cache.EvictionPolicy := cepLRU;
     Cache.MaxSize := 1000;
     Cache.Put('key', Data);
     if Cache.TryGet('key', Data) then ...
@@ -54,14 +54,12 @@ type
   EMemoryCacheException = class(EMemoryException);
 
   /// <summary>缓存淘汰策略</summary>
-  TEvictionPolicy = (
-    epNone,     // 不淘汰，满时抛异常
-    epLRU,      // Least Recently Used
-    epLFU,      // Least Frequently Used
-    epFIFO,     // First In First Out
-    epTTL,      // Time To Live
-    epRandom    // 随机淘汰
-  );
+  /// <remarks>
+  ///   BUG-311 (INFRA-009): 此类型现在仅是 DeepBase.Cache.TCacheEvictionPolicy 的类型别名，
+  ///   以消除 TSmartCache 与 TCache 之间的重复枚举定义。
+  ///   新代码请直接使用 TCacheEvictionPolicy。
+  /// </remarks>
+  TEvictionPolicy = TCacheEvictionPolicy;
 
   /// <summary>内存统计信息</summary>
   TMemoryStats = record
@@ -209,6 +207,11 @@ type
   /// <summary>
   /// 智能缓存
   /// </summary>
+  /// <remarks>
+  ///   BUG-311 (INFRA-009): TSmartCache 是 TCache 的轻量封装，增加内存估算、
+  ///   统计汇总和 cepNone（严格容量）/cepRandom（随机淘汰）语义适配。
+  ///   EvictionPolicy 直接复用 TCache 的 TCacheEvictionPolicy，避免双份枚举。
+  /// </remarks>
   TSmartCache<K, V> = class
   private type
     TEntry = TCacheEntry<V>;
@@ -217,15 +220,12 @@ type
     FInnerCache: DeepBase.Cache.TCache<K, V>;
     FMaxSize: Integer;
     FMaxMemory: Int64;
-    FEvictionPolicy: TEvictionPolicy;
     FDefaultTTL: Integer;
     FOnEvict: TProc<K, V>;
     FStatsBaseline: DeepBase.Cache.TCacheStats;
     FPutCount: Int64;
 
-    class function ToCacheEvictionPolicy(const Value: TEvictionPolicy): DeepBase.Cache.TCacheEvictionPolicy; static;
     procedure SyncLimitsToInner;
-    procedure SyncPolicyToInner;
     procedure HandleInnerEvict(const Key: K; const Value: V);
     function EffectiveTTL(TTLSeconds: Integer): Integer;
     function EstimateSize(const Value: V): Integer;
@@ -235,8 +235,8 @@ type
     procedure SetMaxSize(const Value: Integer);
     function GetMaxMemory: Int64;
     procedure SetMaxMemory(const Value: Int64);
-    function GetEvictionPolicy: TEvictionPolicy;
-    procedure SetEvictionPolicy(const Value: TEvictionPolicy);
+    function GetEvictionPolicy: TCacheEvictionPolicy;
+    procedure SetEvictionPolicy(const Value: TCacheEvictionPolicy);
     function GetDefaultTTL: Integer;
     procedure SetDefaultTTL(const Value: Integer);
     procedure SetOnEvict(const Value: TProc<K, V>);
@@ -277,7 +277,7 @@ type
     property Count: Integer read GetCount;
     property MaxSize: Integer read GetMaxSize write SetMaxSize;
     property MaxMemory: Int64 read GetMaxMemory write SetMaxMemory;
-    property EvictionPolicy: TEvictionPolicy read GetEvictionPolicy write SetEvictionPolicy;
+    property EvictionPolicy: TCacheEvictionPolicy read GetEvictionPolicy write SetEvictionPolicy;
     property DefaultTTL: Integer read GetDefaultTTL write SetDefaultTTL;
     property OnEvict: TProc<K, V> read FOnEvict write SetOnEvict;
   end;
@@ -309,7 +309,7 @@ type
     destructor Destroy; override;
 
     class function Instance: TMemoryTracker;
-    class procedure FreeInstance;
+    class procedure FreeInstance; reintroduce;
 
     /// <summary>跟踪分配</summary>
     procedure TrackAllocation(P: Pointer; Size: Integer; const ClassName: string = '');
@@ -429,6 +429,18 @@ procedure GetSystemMemoryInfo(out TotalPhys, AvailPhys, TotalVirtual, AvailVirtu
 
 /// <summary>获取内存跟踪器</summary>
 function MemTracker: TMemoryTracker;
+
+const
+  // Backward-compatible constant aliases for the former TEvictionPolicy enum values.
+  // BUG-311 (INFRA-009): TEvictionPolicy is now a type alias for TCacheEvictionPolicy.
+  // Old ep* names are preserved as aliases to cep* names so existing callers continue to
+  // compile. New code should use the canonical cep* names directly.
+  epNone   = cepNone;
+  epLRU    = cepLRU;
+  epLFU    = cepLFU;
+  epFIFO   = cepFIFO;
+  epTTL    = cepTTL;
+  epRandom = cepRandom;
 
 implementation
 
@@ -786,11 +798,10 @@ begin
   FInnerCache := DeepBase.Cache.TCache<K, V>.Create;
   FMaxSize := 1000;
   FMaxMemory := 100 * 1024 * 1024; // 100MB
-  FEvictionPolicy := epLRU;
   FDefaultTTL := 0; // 不过期
   FPutCount := 0;
   SyncLimitsToInner;
-  SyncPolicyToInner;
+  FInnerCache.EvictionPolicy := cepLRU;
   FInnerCache.OnEvict := HandleInnerEvict;
   FStatsBaseline := FInnerCache.Stats;
 end;
@@ -801,31 +812,11 @@ begin
   inherited;
 end;
 
-class function TSmartCache<K, V>.ToCacheEvictionPolicy(
-  const Value: TEvictionPolicy): DeepBase.Cache.TCacheEvictionPolicy;
-begin
-  case Value of
-    epNone: Result := cepNone;
-    epLRU: Result := cepLRU;
-    epLFU: Result := cepLFU;
-    epFIFO: Result := cepFIFO;
-    epTTL: Result := cepTTL;
-  else
-    // epRandom does not have a direct equivalent in DeepBase.Cache.
-    Result := cepLRU;
-  end;
-end;
-
 procedure TSmartCache<K, V>.SyncLimitsToInner;
 begin
   FInnerCache.MaxItems := FMaxSize;
   FInnerCache.MaxSizeBytes := FMaxMemory;
   FInnerCache.DefaultTTL := FDefaultTTL;
-end;
-
-procedure TSmartCache<K, V>.SyncPolicyToInner;
-begin
-  FInnerCache.EvictionPolicy := ToCacheEvictionPolicy(FEvictionPolicy);
 end;
 
 procedure TSmartCache<K, V>.HandleInnerEvict(const Key: K; const Value: V);
@@ -882,15 +873,14 @@ begin
   SyncLimitsToInner;
 end;
 
-function TSmartCache<K, V>.GetEvictionPolicy: TEvictionPolicy;
+function TSmartCache<K, V>.GetEvictionPolicy: TCacheEvictionPolicy;
 begin
-  Result := FEvictionPolicy;
+  Result := FInnerCache.EvictionPolicy;
 end;
 
-procedure TSmartCache<K, V>.SetEvictionPolicy(const Value: TEvictionPolicy);
+procedure TSmartCache<K, V>.SetEvictionPolicy(const Value: TCacheEvictionPolicy);
 begin
-  FEvictionPolicy := Value;
-  SyncPolicyToInner;
+  FInnerCache.EvictionPolicy := Value;
 end;
 
 function TSmartCache<K, V>.GetDefaultTTL: Integer;
@@ -915,56 +905,29 @@ end;
 procedure TSmartCache<K, V>.Put(const Key: K; const Value: V; TTLSeconds: Integer);
 var
   ItemSize: Int64;
-  Keys: TArray<K>;
-  Chosen: Integer;
   Stats: DeepBase.Cache.TCacheStats;
+  IsUpdate: Boolean;
 begin
   try
     ItemSize := EstimateSize(Value);
 
-    if FEvictionPolicy = epNone then
+    // cepNone: strict capacity - reject when full (do NOT evict silently).
+    if FInnerCache.EvictionPolicy = cepNone then
     begin
-      if (FMaxSize > 0) and (not FInnerCache.Contains(Key)) and
-         (FInnerCache.Count >= FMaxSize) then
-        raise EMemoryCacheException.Create('缓存已满');
-      if FMaxMemory > 0 then
+      IsUpdate := FInnerCache.Contains(Key);
+      if not IsUpdate then
       begin
-        Stats := FInnerCache.Stats;
-        if (Stats.TotalSizeBytes + ItemSize > FMaxMemory) and
-           (not FInnerCache.Contains(Key)) then
+        if (FMaxSize > 0) and (FInnerCache.Count >= FMaxSize) then
           raise EMemoryCacheException.Create('缓存已满');
-      end;
-    end;
-
-    if FEvictionPolicy = epRandom then
-    begin
-      if (FMaxSize > 0) and (not FInnerCache.Contains(Key)) then
-      begin
-        while FInnerCache.Count >= FMaxSize do
+        if FMaxMemory > 0 then
         begin
-          Keys := FInnerCache.Keys;
-          if Length(Keys) = 0 then
-            Break;
-          Chosen := Random(Length(Keys));
-          FInnerCache.Remove(Keys[Chosen]);
-        end;
-      end;
-
-      if FMaxMemory > 0 then
-      begin
-        Stats := FInnerCache.Stats;
-        while (Stats.TotalSizeBytes + ItemSize > FMaxMemory) and
-              (FInnerCache.Count > 0) do
-        begin
-          Keys := FInnerCache.Keys;
-          if Length(Keys) = 0 then
-            Break;
-          Chosen := Random(Length(Keys));
-          FInnerCache.Remove(Keys[Chosen]);
           Stats := FInnerCache.Stats;
+          if Stats.TotalSizeBytes + ItemSize > FMaxMemory then
+            raise EMemoryCacheException.Create('缓存已满');
         end;
       end;
     end;
+
     FInnerCache.Put(Key, Value, EffectiveTTL(TTLSeconds), ItemSize);
     Inc(FPutCount);
   except
@@ -1560,8 +1523,8 @@ begin
   if Offset >= FFileSize then
     Exit;
 
-  Result := Min(Size, FFileSize - Offset);
-  Move(Pointer(NativeUInt(FMapView) + Offset)^, Buffer^, Result);
+  Result := Min(Size, Integer(FFileSize - Offset));
+  Move(Pointer(NativeUInt(FMapView) + NativeUInt(Offset))^, Buffer^, Result);
   {$ENDIF}
 end;
 

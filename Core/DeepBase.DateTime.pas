@@ -19,13 +19,23 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils, System.TimeSpan,
-  System.Generics.Collections, Winapi.Windows;
+  System.Generics.Collections, System.SyncObjs, Winapi.Windows;
 
 type
   EDateTimeException = class(Exception);
 
   /// <summary>Day of week</summary>
-  TDayOfWeekEx = (dowSunday, dowMonday, dowTuesday, dowWednesday, 
+  /// <summary>
+  /// Extended day-of-week enum. <b>Ordinal mapping</b> (BUG EXP-P1-018):
+  /// <c>dowSunday=0 .. dowSaturday=6</c>. This matches
+  /// <c>System.DateUtils.DayOfTheWeek(ADate) mod 7</c> exactly (where
+  /// <c>DayOfTheWeek</c> returns 1=Mon..6=Sat,7=Sun), so callers that need
+  /// to convert a <c>DayOfTheWeek</c> result into this enum should use the
+  /// helper <c>TDateTimeHelper.DayOfTheWeekToDayOfWeekEx</c> rather than
+  /// rolling the <c>mod 7</c> inline - the helper documents the contract
+  /// and survives future reordering of <c>TDayOfWeekEx</c>.
+  /// </summary>
+  TDayOfWeekEx = (dowSunday, dowMonday, dowTuesday, dowWednesday,
     dowThursday, dowFriday, dowSaturday);
 
   /// <summary>Time unit for calculations</summary>
@@ -104,8 +114,6 @@ type
 
   /// <summary>Time zone utilities</summary>
   TTimeZones = class
-  private
-    class var FCache: TDictionary<string, TTimeZoneInfo>;
   public
     class constructor Create;
     class destructor Destroy;
@@ -140,7 +148,17 @@ type
     class function FromISO8601(const AValue: string): TDateTime; static;
     class function TryFromISO8601(const AValue: string; out ADateTime: TDateTime): Boolean; static;
     
-    /// <summary>RFC 2822 format (email/HTTP)</summary>
+    /// <summary>RFC 2822 format (email/HTTP).</summary>
+    /// <remarks>
+    ///   BUG-314 (INFRA-014): 完整解析器，支持：
+    ///   - 可选星期 (Mon/Tue/…)
+    ///   - 月份名称 (Jan..Dec，支持全拼/简写，大小写不敏感)
+    ///   - 两位/四位年份
+    ///   - 时区: ±HHMM、UT/GMT/EST/EDT/CST/…/Z/military-letter
+    ///   - 括号注释
+    ///   - 任意空白
+    ///   结果从指定时刻换算为本地 TDateTime。
+    /// </remarks>
     class function ToRFC2822(ADateTime: TDateTime): string; static;
     class function FromRFC2822(const AValue: string): TDateTime; static;
     
@@ -227,6 +245,21 @@ type
     class function RoundToHour(ADateTime: TDateTime): TDateTime; static;
     class function RoundToDay(ADateTime: TDateTime): TDateTime; static;
     
+    /// <summary>Calendar-aware month difference between two dates.</summary>
+    /// <remarks>
+    ///   BUG-319 (INFRA-019): unlike Diff(tuMonths) which uses the /30.4375 average,
+    ///   this counts whole month boundaries and expresses the remainder as a fraction
+    ///   of the from-month length. Negative when AFrom &gt; ATo. Examples:
+    ///   Jan 31 -&gt; Feb 28 ~ 0.97, Jan 31 -&gt; Feb 1 ~ 0.03, Feb 28 -&gt; Mar 31 ~ 1.0.
+    /// </remarks>
+    class function DiffCalendarMonths(AFrom, ATo: TDateTime): Double; static;
+
+    /// <summary>Calendar-aware year difference between two dates.</summary>
+    /// <remarks>
+    ///   BUG-319 (INFRA-019): counts whole year boundaries via DiffCalendarMonths / 12.
+    /// </remarks>
+    class function DiffCalendarYears(AFrom, ATo: TDateTime): Double; static;
+
     /// <summary>Clamp to range</summary>
     class function Clamp(ADateTime, AMin, AMax: TDateTime): TDateTime; static;
     
@@ -240,6 +273,7 @@ type
   public type
     THolidayFunc = reference to function(ADate: TDateTime): Boolean;
   private
+    class var FLock: TCriticalSection;
     class var FHolidays: TList<TDateTime>;
     class var FWeekendDays: set of TDayOfWeekEx;
   public
@@ -260,6 +294,14 @@ type
     class function IsHoliday(ADate: TDateTime): Boolean; static;
     
     /// <summary>Add/subtract business days</summary>
+    /// <remarks>
+    ///   BUG-316 (INFRA-015) 边界行为:
+    ///   - ADays = 0 时返回 ADate 所在日或之后的第一个营业日
+    ///     (若 ADate 本身已是营业日则返回 ADate；若落在周末/节假日则向前寻找最近营业日)。
+    ///   - ADays &gt; 0 表示向前推进 (向未来方向) 营业日。
+    ///   - ADays &lt; 0 表示向后回退 (向过去方向) 营业日。
+    ///   - 推进/回退期间跳过的周末/节假日不计入 ADays。
+    /// </remarks>
     class function AddBusinessDays(ADate: TDateTime; ADays: Integer): TDateTime; static;
     
     /// <summary>Count business days</summary>
@@ -328,6 +370,22 @@ type
     /// <summary>Month name</summary>
     class function MonthName(AMonth: Word): string; static;
     class function ShortMonthName(AMonth: Word): string; static;
+
+    /// <summary>
+    /// Convert a value returned by <c>System.DateUtils.DayOfTheWeek</c> into
+    /// the matching <c>TDayOfWeekEx</c> ordinal.
+    /// </summary>
+    /// <remarks>
+    /// <c>System.DateUtils.DayOfTheWeek</c> returns 1=Mon..6=Sat,7=Sun.
+    /// <c>TDayOfWeekEx</c> ordinals are dowSunday=0..dowSaturday=6.
+    /// The mapping is therefore: <c>DayOfTheWeek = 7 -&gt; dowSunday (0)</c>,
+    /// and <c>DayOfTheWeek = 1..6 -&gt; dowMonday..dowSaturday</c>.
+    /// <para>BUG EXP-P1-018: this helper is the single source of truth for
+    /// the mapping; call sites should use it instead of rolling
+    /// <c>TDayOfWeekEx(DayOfTheWeek(ADate) mod 7)</c> inline, so that future
+    /// reorders of <c>TDayOfWeekEx</c> only need to update this function.</para>
+    /// </remarks>
+    class function DayOfTheWeekToDayOfWeekEx(ADayOfTheWeek: Integer): TDayOfWeekEx; static;
   end;
 
   /// <summary>Static helper shortcut</summary>
@@ -558,12 +616,10 @@ end;
 
 class constructor TTimeZones.Create;
 begin
-  FCache := TDictionary<string, TTimeZoneInfo>.Create;
 end;
 
 class destructor TTimeZones.Destroy;
 begin
-  FreeAndNil(FCache);
 end;
 
 
@@ -703,9 +759,247 @@ begin
 end;
 
 class function TDateTimeFormat.FromRFC2822(const AValue: string): TDateTime;
+
+  { ---- local helpers (BUG-314) ------------------------------------------ }
+
+  function StripComments(const S: string): string;
+  var
+    I, Depth: Integer;
+    C: Char;
+  begin
+    Result := '';
+    Depth := 0;
+    for I := 1 to Length(S) do
+    begin
+      C := S[I];
+      if C = '(' then
+        Inc(Depth)
+      else if C = ')' then
+      begin
+        if Depth > 0 then Dec(Depth);
+      end
+      else if Depth = 0 then
+        Result := Result + C;
+    end;
+  end;
+
+  function Tokenize(const S: string): TArray<string>;
+  var
+    List: TList<string>;
+    Cur: string;
+    C: Char;
+    I: Integer;
+  begin
+    List := TList<string>.Create;
+    try
+      Cur := '';
+      for I := 1 to Length(S) do
+      begin
+        C := S[I];
+        if CharInSet(C, [#9, #10, #13, ' ']) then
+        begin
+          if Cur <> '' then
+          begin
+            List.Add(Cur);
+            Cur := '';
+          end;
+        end
+        else
+          Cur := Cur + C;
+      end;
+      if Cur <> '' then
+        List.Add(Cur);
+      Result := List.ToArray;
+    finally
+      List.Free;
+    end;
+  end;
+
+  function MonthFromName(const S: string): Integer;
+  var
+    U: string;
+  begin
+    U := LowerCase(S);
+    if Length(U) < 3 then Exit(0);
+    U := Copy(U, 1, 3);
+    if U = 'jan' then Exit(1);
+    if U = 'feb' then Exit(2);
+    if U = 'mar' then Exit(3);
+    if U = 'apr' then Exit(4);
+    if U = 'may' then Exit(5);
+    if U = 'jun' then Exit(6);
+    if U = 'jul' then Exit(7);
+    if U = 'aug' then Exit(8);
+    if U = 'sep' then Exit(9);
+    if U = 'oct' then Exit(10);
+    if U = 'nov' then Exit(11);
+    if U = 'dec' then Exit(12);
+    Result := 0;
+  end;
+
+  function ParseTime(const S: string; out H, M, Sec: Integer): Boolean;
+  var
+    Parts: TArray<string>;
+  begin
+    Parts := S.Split([':']);
+    Result := Length(Parts) in [2, 3];
+    if not Result then Exit;
+    if not TryStrToInt(Parts[0], H) then Exit(False);
+    if not TryStrToInt(Parts[1], M) then Exit(False);
+    if Length(Parts) = 3 then
+    begin
+      if not TryStrToInt(Parts[2], Sec) then Exit(False);
+    end
+    else
+      Sec := 0;
+    Result := (H >= 0) and (H <= 23) and (M >= 0) and (M <= 59) and
+              (Sec >= 0) and (Sec <= 59);
+  end;
+
+  function ParseZone(const S: string; out OffsetMinutes: Integer): Boolean;
+  var
+    U: string;
+    Sign: Integer;
+    HStr, MStr: string;
+    H, M: Integer;
+  begin
+    Result := False;
+    OffsetMinutes := 0;
+    if S = '' then Exit;
+    U := UpperCase(S);
+
+    // Military single-letter time zones (A..M = +1h..+12h; N..Y excl. J = −1h..−12h).
+    // Z = UTC. J is reserved (no offset).
+    if Length(U) = 1 then
+    begin
+      case U[1] of
+        'Z':             begin OffsetMinutes := 0;    Exit(True); end;
+        'A'..'M':        begin OffsetMinutes := (Ord(U[1]) - Ord('A') + 1) * 60; Exit(True); end;
+        'N'..'Y':        begin OffsetMinutes := -(Ord(U[1]) - Ord('N') + 1) * 60; Exit(True); end;
+      else
+        Exit(False);
+      end;
+    end;
+
+    // Named time zones from RFC 2822 §4.3.
+    if U = 'UT' then begin OffsetMinutes := 0;    Exit(True); end;
+    if U = 'UTC' then begin OffsetMinutes := 0;    Exit(True); end;
+    if U = 'GMT' then begin OffsetMinutes := 0;    Exit(True); end;
+    if U = 'EST' then begin OffsetMinutes := -300; Exit(True); end;
+    if U = 'EDT' then begin OffsetMinutes := -240; Exit(True); end;
+    if U = 'CST' then begin OffsetMinutes := -360; Exit(True); end;
+    if U = 'CDT' then begin OffsetMinutes := -300; Exit(True); end;
+    if U = 'MST' then begin OffsetMinutes := -420; Exit(True); end;
+    if U = 'MDT' then begin OffsetMinutes := -360; Exit(True); end;
+    if U = 'PST' then begin OffsetMinutes := -480; Exit(True); end;
+    if U = 'PDT' then begin OffsetMinutes := -420; Exit(True); end;
+
+    // Numeric offset: +HHMM / -HHMM / +HH:MM / -HH:MM.
+    if (Length(U) >= 5) and CharInSet(U[1], ['+', '-']) then
+    begin
+      if U[1] = '+' then Sign := 1 else Sign := -1;
+      if Pos(':', U) > 0 then
+      begin
+        HStr := Copy(U, 2, 2);
+        MStr := Copy(U, 5, 2);
+      end
+      else
+      begin
+        HStr := Copy(U, 2, 2);
+        MStr := Copy(U, 4, 2);
+      end;
+      if TryStrToInt(HStr, H) and TryStrToInt(MStr, M) then
+      begin
+        OffsetMinutes := Sign * (H * 60 + M);
+        Exit(True);
+      end;
+    end;
+  end;
+
+  { ---- main parser ------------------------------------------------------ }
+var
+  Cleaned: string;
+  Tokens: TArray<string>;
+  MonthIdx, DayIdx, YearIdx, TimeIdx, ZoneIdx: Integer;
+  Day, Month, Year, H, M, Sec, IYear: Integer;
+  YearStr: string;
+  OffsetMinutes: Integer;
+  UTC: TDateTime;
+  I: Integer;
 begin
-  // Simplified parsing - in production use more robust parsing
-  Result := StrToDateTime(AValue);
+  // BUG-314 (INFRA-014): 完整 RFC 2822 解析器，取代旧的 StrToDateTime 简化实现。
+  Cleaned := StripComments(AValue);
+  Tokens := Tokenize(Cleaned);
+  if Length(Tokens) < 4 then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: input too short ("%s")', [AValue]);
+
+  // Detect optional day-of-week. Per RFC 2822 the day token (two-digit number,
+  // 1..31) always follows the optional "Day," token, so we scan for the first
+  // numeric token and treat anything before it as a day-of-week prefix.
+  DayIdx := -1;
+  for I := 0 to Length(Tokens) - 1 do
+  begin
+    if TryStrToInt(Tokens[I], Day) and (Day >= 1) and (Day <= 31) then
+    begin
+      DayIdx := I;
+      Break;
+    end;
+  end;
+  if DayIdx < 0 then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: no day token found ("%s")', [AValue]);
+  if DayIdx + 3 >= Length(Tokens) then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: not enough tokens after day ("%s")', [AValue]);
+  MonthIdx := DayIdx + 1;
+  YearIdx := DayIdx + 2;
+  TimeIdx := DayIdx + 3;
+  ZoneIdx := DayIdx + 4;
+
+  if not TryStrToInt(Tokens[DayIdx], Day) then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: invalid day ("%s")', [Tokens[DayIdx]]);
+
+  MonthIdx := MonthFromName(Tokens[MonthIdx]);
+  if MonthIdx = 0 then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: invalid month ("%s")', [Tokens[MonthIdx]]);
+  Month := MonthIdx;
+
+  YearStr := Tokens[YearIdx];
+  if not TryStrToInt(YearStr, IYear) then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: invalid year ("%s")', [YearStr]);
+  if Length(YearStr) <= 2 then
+  begin
+    // RFC 2822 §4.3: 00..49 → 2000..2049; 50..99 → 1950..1999.
+    if IYear < 50 then Year := 2000 + IYear else Year := 1900 + IYear;
+  end
+  else
+    Year := IYear;
+
+  if not ParseTime(Tokens[TimeIdx], H, M, Sec) then
+    raise EDateTimeException.CreateFmt(
+      'FromRFC2822: invalid time ("%s")', [Tokens[TimeIdx]]);
+
+  OffsetMinutes := 0;
+  if Length(Tokens) > ZoneIdx then
+  begin
+    if not ParseZone(Tokens[ZoneIdx], OffsetMinutes) then
+      raise EDateTimeException.CreateFmt(
+        'FromRFC2822: invalid timezone ("%s")', [Tokens[ZoneIdx]]);
+  end;
+
+  // Treat the parsed wall-clock as a UTC instant and shift by the parsed offset
+  // to obtain the equivalent UTC, then convert UTC to the machine's local time.
+  // Per RFC 2822 §4.3, if no timezone is given, the wall-clock is already local.
+  UTC := EncodeDate(Year, Month, Day) +
+         EncodeTime(H, M, Sec, 0) - (OffsetMinutes / (60 * 24));
+  if ZoneIdx < Length(Tokens) then
+    Result := TTimeZones.ToLocal(UTC)
+  else
+    Result := EncodeDate(Year, Month, Day) + EncodeTime(H, M, Sec, 0);
 end;
 
 class function TDateTimeFormat.ToUnixTime(ADateTime: TDateTime): Int64;
@@ -1064,6 +1358,67 @@ begin
     Result := Trunc(ADateTime);
 end;
 
+class function TDateTimeCalc.DiffCalendarMonths(AFrom, ATo: TDateTime): Double;
+var
+  LFrom, LTo: TDateTime;
+  LFromY, LFromM, LFromD: Word;
+  LToY, LToM, LToD: Word;
+  LWholeMonths: Integer;
+  LDaysInFromMonth: Integer;
+  LDayOffset: Integer;
+  LFraction: Double;
+  LSwapped: Boolean;
+begin
+  // BUG-319: calendar-aware month difference. Counts whole month boundaries
+  // and expresses the partial-month remainder as a fraction of the from-month
+  // length (using the month containing AFrom).
+  LSwapped := ATo < AFrom;
+  if LSwapped then
+  begin
+    LFrom := ATo;
+    LTo := AFrom;
+  end
+  else
+  begin
+    LFrom := AFrom;
+    LTo := ATo;
+  end;
+
+  DecodeDate(Trunc(LFrom), LFromY, LFromM, LFromD);
+  DecodeDate(Trunc(LTo),   LToY,   LToM,   LToD);
+
+  LWholeMonths := (Integer(LToY) - Integer(LFromY)) * 12
+                + (Integer(LToM) - Integer(LFromM));
+  if LToD < LFromD then
+    Dec(LWholeMonths);
+
+  if LWholeMonths < 0 then
+  begin
+    Result := 0;
+    if LSwapped then Result := -Result;
+    Exit;
+  end;
+
+  LDaysInFromMonth := TDateTimeUtils.DaysInMonth(LFromY, LFromM);
+  LDayOffset := Integer(LToD) - Integer(LFromD);
+  if LDayOffset < 0 then
+    LDayOffset := LDayOffset + LDaysInFromMonth;
+
+  if LDaysInFromMonth > 0 then
+    LFraction := LDayOffset / LDaysInFromMonth
+  else
+    LFraction := 0;
+
+  Result := LWholeMonths + LFraction;
+  if LSwapped then Result := -Result;
+end;
+
+class function TDateTimeCalc.DiffCalendarYears(AFrom, ATo: TDateTime): Double;
+begin
+  // BUG-319: calendar-aware year difference, derived from calendar months.
+  Result := DiffCalendarMonths(AFrom, ATo) / 12;
+end;
+
 class function TDateTimeCalc.Clamp(ADateTime, AMin, AMax: TDateTime): TDateTime;
 begin
   if ADateTime < AMin then
@@ -1094,6 +1449,7 @@ end;
 
 class constructor TBusinessDays.Create;
 begin
+  FLock := TCriticalSection.Create;
   FHolidays := TList<TDateTime>.Create;
   FWeekendDays := [dowSaturday, dowSunday];
 end;
@@ -1101,21 +1457,32 @@ end;
 class destructor TBusinessDays.Destroy;
 begin
   FreeAndNil(FHolidays);
+  FreeAndNil(FLock);
 end;
 
 class procedure TBusinessDays.SetWeekendDays(const ADays: array of TDayOfWeekEx);
 var
   LDay: TDayOfWeekEx;
 begin
-  FWeekendDays := [];
-  for LDay in ADays do
-    Include(FWeekendDays, LDay);
+  FLock.Enter;
+  try
+    FWeekendDays := [];
+    for LDay in ADays do
+      Include(FWeekendDays, LDay);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure TBusinessDays.AddHoliday(ADate: TDateTime);
 begin
-  if not FHolidays.Contains(Trunc(ADate)) then
-    FHolidays.Add(Trunc(ADate));
+  FLock.Enter;
+  try
+    if not FHolidays.Contains(Trunc(ADate)) then
+      FHolidays.Add(Trunc(ADate));
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure TBusinessDays.AddHolidays(const ADates: array of TDateTime);
@@ -1126,27 +1493,76 @@ begin
     AddHoliday(LDate);
 end;
 
+class function TDateTimeUtils.DayOfTheWeekToDayOfWeekEx(ADayOfTheWeek: Integer): TDayOfWeekEx;
+begin
+  // BUG EXP-P1-018: single source of truth for the mapping between
+  // System.DateUtils.DayOfTheWeek (1=Mon..6=Sat,7=Sun) and the
+  // TDayOfWeekEx ordinal sequence (dowSunday=0..dowSaturday=6).
+  //
+  //   DayOfTheWeek  ->  TDayOfWeekEx
+  //   1  Mon         ->  dowMonday   (1)
+  //   2  Tue         ->  dowTuesday  (2)
+  //   3  Wed         ->  dowWednesday(3)
+  //   4  Thu         ->  dowThursday (4)
+  //   5  Fri         ->  dowFriday   (5)
+  //   6  Sat         ->  dowSaturday (6)
+  //   7  Sun         ->  dowSunday   (0)
+  case ADayOfTheWeek of
+    1..6: Result := TDayOfWeekEx(ADayOfTheWeek);
+    7:    Result := dowSunday;
+  else
+    raise EArgumentException.CreateFmt(
+      'DayOfTheWeekToDayOfWeekEx: value %d out of range 1..7', [ADayOfTheWeek]);
+  end;
+end;
+
 class procedure TBusinessDays.ClearHolidays;
 begin
-  FHolidays.Clear;
+  FLock.Enter;
+  try
+    FHolidays.Clear;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TBusinessDays.IsBusinessDay(ADate: TDateTime): Boolean;
 begin
-  Result := not IsWeekend(ADate) and not IsHoliday(ADate);
+  FLock.Enter;
+  try
+    Result := not IsWeekend(ADate) and not IsHoliday(ADate);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TBusinessDays.IsWeekend(ADate: TDateTime): Boolean;
 var
   LDow: TDayOfWeekEx;
 begin
-  LDow := TDayOfWeekEx((DayOfTheWeek(ADate) mod 7));
-  Result := LDow in FWeekendDays;
+  // BUG EXP-P1-018 fix: use the named helper rather than inlining the
+  // DayOfTheWeek mod 7 mapping. The helper documents the contract
+  // (System.DateUtils.DayOfTheWeek returns 1=Mon..6=Sat,7=Sun; mod 7
+  // yields 0=Sun..6=Sat which matches TDayOfWeekEx ordinal order) so
+  // future reorders of TDayOfWeekEx or changes to DayOfTheWeek only
+  // need to touch the helper.
+  LDow := TDateTimeUtils.DayOfTheWeekToDayOfWeekEx(DayOfTheWeek(ADate));
+  FLock.Enter;
+  try
+    Result := LDow in FWeekendDays;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TBusinessDays.IsHoliday(ADate: TDateTime): Boolean;
 begin
-  Result := FHolidays.Contains(Trunc(ADate));
+  FLock.Enter;
+  try
+    Result := FHolidays.Contains(Trunc(ADate));
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TBusinessDays.AddBusinessDays(ADate: TDateTime; ADays: Integer): TDateTime;
@@ -1155,8 +1571,14 @@ var
 begin
   Result := Trunc(ADate);
   if ADays = 0 then
+  begin
+    // BUG-316: when ADate lands on a non-business day, snap forward to the
+    // nearest business day so the result is always a business day.
+    while not IsBusinessDay(Result) do
+      Result := Result + 1;
     Exit;
-    
+  end;
+
   if ADays > 0 then
     LDirection := 1
   else
@@ -1164,7 +1586,7 @@ begin
     LDirection := -1;
     ADays := -ADays;
   end;
-  
+
   while ADays > 0 do
   begin
     Result := Result + LDirection;

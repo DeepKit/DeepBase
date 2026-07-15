@@ -65,7 +65,7 @@ type
 implementation
 
 uses
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Random;
 
 { TBug033_WeakEncryptionTest }
 

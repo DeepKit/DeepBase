@@ -36,6 +36,18 @@ const
   BASIC_PROTECTION_GCM_TAG_SIZE = 16;
   BASIC_PROTECTION_GCM_HEADER_SIZE = 4 + BASIC_PROTECTION_GCM_NONCE_SIZE + BASIC_PROTECTION_GCM_TAG_SIZE;
 
+  // PBKDF2-derived GCM payload (CORE-R2-005).
+  // Layout: Magic(4) + Salt(16) + Nonce(12) + Tag(16) + CipherText
+  BASIC_PROTECTION_PBKDF2_MAGIC: array[0..3] of Byte = ($55, $42, $47, $32); // UBG2
+  BASIC_PROTECTION_PBKDF2_SALT_SIZE = 16;
+  BASIC_PROTECTION_PBKDF2_ITERATIONS = 100000;  // NIST SP 800-132 minimum (2023)
+  BASIC_PROTECTION_PBKDF2_NONCE_SIZE = BASIC_PROTECTION_GCM_NONCE_SIZE;
+  BASIC_PROTECTION_PBKDF2_TAG_SIZE = BASIC_PROTECTION_GCM_TAG_SIZE;
+  BASIC_PROTECTION_PBKDF2_HEADER_SIZE = 4 + BASIC_PROTECTION_PBKDF2_SALT_SIZE +
+    BASIC_PROTECTION_PBKDF2_NONCE_SIZE + BASIC_PROTECTION_PBKDF2_TAG_SIZE;
+  // Text prefix for password-based PBKDF2 encryption (EncryptSensitiveData)
+  BASIC_PROTECTION_PBKDF2_TEXT_PREFIX = 'UBP1|';
+
 type
   HCRYPTPROV = THandle;
   HCRYPTKEY = THandle;
@@ -129,17 +141,29 @@ type
   TBasicProtection = class
   private
     class function GenerateRandomBytes(ALength: Integer): TBytes; static;
-    class function GenerateRandomIV: TBytes; static;
-    class function DeriveAes256Key(const APassword: string): TBytes; static;
+    class function DeriveAes256Key(const APassword: string): TBytes; static; deprecated 'Use DeriveAes256KeyPBKDF2 for new code (CORE-R2-005)';
     class function IsGcmPayload(const AData: TBytes): Boolean; static;
-    class function EncryptGcmBytes(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptGcmBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
     class function DecryptCbcBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
     class function BytesToHex(const ABytes: TBytes): string; static;
     class function HexToBytes(const AHex: string): TBytes; static;
-    class function PadData(const AData: TBytes; ABlockSize: Integer): TBytes; static;
     class function UnpadData(const AData: TBytes): TBytes; static;
     class function CalculateHMACBinary(const AData: TBytes; const AKey: TBytes): TBytes; static;
+    /// <summary>
+    ///   PBKDF2-HMAC-SHA256 key derivation (RFC 2898).
+    ///   Use for new encryption code paths. Replaces the deprecated single-SHA-256
+    ///   DeriveAes256Key with an iteration-hardened derivation that resists
+    ///   brute-force and dictionary attacks.
+    /// </summary>
+    /// <param name="APassword">Password string (UTF-8 encoded internally).</param>
+    /// <param name="ASalt">Random salt; 16 bytes recommended. Must be unique per derivation.</param>
+    /// <param name="AIterations">Iteration count. Minimum 100000 (NIST 2023).</param>
+    /// <returns>32-byte (256-bit) derived key suitable for AES-256.</returns>
+    class function DeriveAes256KeyPBKDF2(const APassword: string;
+      const ASalt: TBytes; AIterations: Integer): TBytes; static;
+    class function IsPbkdf2Payload(const AData: TBytes): Boolean; static;
+    class function EncryptGcmPbkdf2Bytes(const AData: TBytes; const APassword: string): TBytes; static;
+    class function DecryptGcmPbkdf2Bytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
   public
     // 密钥生成（为兼容保留，当前返回空字符串）
     class function GetDynamicKey: string; static; deprecated 'Use DeepBase.Security for key management';
@@ -191,18 +215,16 @@ begin
     raise ERandomException.CreateFmt('BCryptGenRandom failed with status: %d', [Status]);
 end;
 
-class function TBasicProtection.GenerateRandomIV: TBytes;
-begin
-  Result := GenerateRandomBytes(16); // AES-CBC legacy IV size
-end;
-
 class function TBasicProtection.DeriveAes256Key(const APassword: string): TBytes;
 begin
   if Trim(APassword) = '' then
     raise EMissingConfigurationException.Create('Password is required');
 
-  // Legacy key derivation: single SHA-256. Used only for decrypting old CBC-format
-  // data. New encryption uses GCM via EncryptBinaryData which uses CryptDeriveKey.
+  // DEPRECATED (CORE-R2-005): single SHA-256 is too fast for password-derived keys;
+  // it offers no resistance to brute-force or dictionary attacks.
+  // Retained ONLY for decrypting data produced by EncryptGcmBytes prior to the
+  // PBKDF2 upgrade (UBG1 payloads). New code paths must use DeriveAes256KeyPBKDF2
+  // together with EncryptGcmPbkdf2Bytes / DecryptGcmPbkdf2Bytes (UBG2 payloads).
   Result := THashSHA2.GetHashBytes(APassword);
   if Length(Result) <> 32 then
     raise EHashException.Create('Failed to derive AES-256 key');
@@ -220,84 +242,6 @@ begin
   begin
     if AData[I] <> BASIC_PROTECTION_GCM_MAGIC[I] then
       Exit(False);
-  end;
-end;
-
-class function TBasicProtection.EncryptGcmBytes(const AData: TBytes; const APassword: string): TBytes;
-var
-  AlgHandle: BCRYPT_ALG_HANDLE;
-  KeyHandle: BCRYPT_KEY_HANDLE;
-  KeyObjectSize, PropSize, ResultSize: ULONG;
-  Status: NTSTATUS;
-  ChainMode: WideString;
-  KeyObject, KeyBytes, Nonce, Tag, Ciphertext: TBytes;
-  AuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
-  Offset: Integer;
-begin
-  AlgHandle := 0;
-  KeyHandle := 0;
-  KeyBytes := DeriveAes256Key(APassword);
-  Nonce := GenerateRandomBytes(BASIC_PROTECTION_GCM_NONCE_SIZE);
-
-  try
-    Status := BCryptOpenAlgorithmProvider(AlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
-    if Status <> STATUS_SUCCESS then
-      raise EEncryptionException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [Status]);
-
-    ChainMode := BCRYPT_CHAIN_MODE_GCM;
-    Status := BCryptSetProperty(AlgHandle, BCRYPT_CHAINING_MODE,
-      PByte(PWideChar(ChainMode)), (Length(ChainMode) + 1) * SizeOf(WideChar), 0);
-    if Status <> STATUS_SUCCESS then
-      raise EEncryptionException.CreateFmt('BCryptSetProperty (GCM) failed: %d', [Status]);
-
-    Status := BCryptGetProperty(AlgHandle, BCRYPT_OBJECT_LENGTH,
-      @KeyObjectSize, SizeOf(KeyObjectSize), PropSize, 0);
-    if Status <> STATUS_SUCCESS then
-      raise EEncryptionException.CreateFmt('BCryptGetProperty failed: %d', [Status]);
-
-    SetLength(KeyObject, KeyObjectSize);
-    Status := BCryptGenerateSymmetricKey(AlgHandle, KeyHandle,
-      @KeyObject[0], KeyObjectSize, @KeyBytes[0], Length(KeyBytes), 0);
-    if Status <> STATUS_SUCCESS then
-      raise EEncryptionException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [Status]);
-
-    SetLength(Tag, BASIC_PROTECTION_GCM_TAG_SIZE);
-    SetLength(Ciphertext, Length(AData));
-
-    FillChar(AuthInfo, SizeOf(AuthInfo), 0);
-    AuthInfo.cbSize := SizeOf(AuthInfo);
-    AuthInfo.dwInfoVersion := 1;
-    AuthInfo.pbNonce := @Nonce[0];
-    AuthInfo.cbNonce := Length(Nonce);
-    AuthInfo.pbTag := @Tag[0];
-    AuthInfo.cbTag := Length(Tag);
-
-    if Length(AData) > 0 then
-      Status := BCryptEncrypt(KeyHandle, @AData[0], Length(AData), @AuthInfo,
-        nil, 0, @Ciphertext[0], Length(Ciphertext), ResultSize, 0)
-    else
-      Status := BCryptEncrypt(KeyHandle, nil, 0, @AuthInfo,
-        nil, 0, nil, 0, ResultSize, 0);
-
-    if Status <> STATUS_SUCCESS then
-      raise EEncryptionException.CreateFmt('AES-GCM encryption failed: %d', [Status]);
-
-    SetLength(Ciphertext, ResultSize);
-    SetLength(Result, BASIC_PROTECTION_GCM_HEADER_SIZE + Length(Ciphertext));
-    Offset := 0;
-    Move(BASIC_PROTECTION_GCM_MAGIC[0], Result[Offset], Length(BASIC_PROTECTION_GCM_MAGIC));
-    Inc(Offset, Length(BASIC_PROTECTION_GCM_MAGIC));
-    Move(Nonce[0], Result[Offset], Length(Nonce));
-    Inc(Offset, Length(Nonce));
-    Move(Tag[0], Result[Offset], Length(Tag));
-    Inc(Offset, Length(Tag));
-    if Length(Ciphertext) > 0 then
-      Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
-  finally
-    if KeyHandle <> 0 then
-      BCryptDestroyKey(KeyHandle);
-    if AlgHandle <> 0 then
-      BCryptCloseAlgorithmProvider(AlgHandle, 0);
   end;
 end;
 
@@ -384,22 +328,6 @@ begin
   end;
 end;
 
-class function TBasicProtection.PadData(const AData: TBytes; ABlockSize: Integer): TBytes;
-var
-  PadLength: Integer;
-  I: Integer;
-begin
-  PadLength := ABlockSize - (Length(AData) mod ABlockSize);
-  if PadLength = 0 then
-    PadLength := ABlockSize;
-
-  SetLength(Result, Length(AData) + PadLength);
-  Move(AData[0], Result[0], Length(AData));
-
-  for I := Length(AData) to High(Result) do
-    Result[I] := PadLength;
-end;
-
 class function TBasicProtection.UnpadData(const AData: TBytes): TBytes;
 var
   PadLength: Integer;
@@ -427,6 +355,192 @@ begin
     Move(AData[0], Result[0], Length(Result));
 end;
 
+class function TBasicProtection.IsPbkdf2Payload(const AData: TBytes): Boolean;
+var
+  I: Integer;
+begin
+  Result := Length(AData) >= BASIC_PROTECTION_PBKDF2_HEADER_SIZE;
+  if not Result then
+    Exit;
+  for I := 0 to High(BASIC_PROTECTION_PBKDF2_MAGIC) do
+    if AData[I] <> BASIC_PROTECTION_PBKDF2_MAGIC[I] then
+      Exit(False);
+end;
+
+class function TBasicProtection.EncryptGcmPbkdf2Bytes(
+  const AData: TBytes; const APassword: string): TBytes;
+var
+  AlgHandle: BCRYPT_ALG_HANDLE;
+  KeyHandle: BCRYPT_KEY_HANDLE;
+  KeyObjectSize, PropSize, ResultSize: ULONG;
+  Status: NTSTATUS;
+  ChainMode: WideString;
+  KeyObject, KeyBytes, Salt, Nonce, Tag, Ciphertext: TBytes;
+  AuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
+  Offset: Integer;
+begin
+  AlgHandle := 0;
+  KeyHandle := 0;
+  Salt := GenerateRandomBytes(BASIC_PROTECTION_PBKDF2_SALT_SIZE);
+  Nonce := GenerateRandomBytes(BASIC_PROTECTION_PBKDF2_NONCE_SIZE);
+  KeyBytes := DeriveAes256KeyPBKDF2(APassword, Salt, BASIC_PROTECTION_PBKDF2_ITERATIONS);
+
+  try
+    Status := BCryptOpenAlgorithmProvider(AlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [Status]);
+
+    ChainMode := BCRYPT_CHAIN_MODE_GCM;
+    Status := BCryptSetProperty(AlgHandle, BCRYPT_CHAINING_MODE,
+      PByte(PWideChar(ChainMode)), (Length(ChainMode) + 1) * SizeOf(WideChar), 0);
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('BCryptSetProperty (GCM) failed: %d', [Status]);
+
+    Status := BCryptGetProperty(AlgHandle, BCRYPT_OBJECT_LENGTH,
+      @KeyObjectSize, SizeOf(KeyObjectSize), PropSize, 0);
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('BCryptGetProperty failed: %d', [Status]);
+
+    SetLength(KeyObject, KeyObjectSize);
+    Status := BCryptGenerateSymmetricKey(AlgHandle, KeyHandle,
+      @KeyObject[0], KeyObjectSize, @KeyBytes[0], Length(KeyBytes), 0);
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [Status]);
+
+    SetLength(Tag, BASIC_PROTECTION_PBKDF2_TAG_SIZE);
+    SetLength(Ciphertext, Length(AData));
+
+    FillChar(AuthInfo, SizeOf(AuthInfo), 0);
+    AuthInfo.cbSize := SizeOf(AuthInfo);
+    AuthInfo.dwInfoVersion := 1;
+    AuthInfo.pbNonce := @Nonce[0];
+    AuthInfo.cbNonce := Length(Nonce);
+    AuthInfo.pbTag := @Tag[0];
+    AuthInfo.cbTag := Length(Tag);
+
+    if Length(AData) > 0 then
+      Status := BCryptEncrypt(KeyHandle, @AData[0], Length(AData), @AuthInfo,
+        nil, 0, @Ciphertext[0], Length(Ciphertext), ResultSize, 0)
+    else
+      Status := BCryptEncrypt(KeyHandle, nil, 0, @AuthInfo,
+        nil, 0, nil, 0, ResultSize, 0);
+
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('AES-GCM encryption failed: %d', [Status]);
+
+    SetLength(Ciphertext, ResultSize);
+
+    // Output: Magic(4) + Salt(16) + Nonce(12) + Tag(16) + CipherText
+    SetLength(Result, BASIC_PROTECTION_PBKDF2_HEADER_SIZE + Length(Ciphertext));
+    Offset := 0;
+    Move(BASIC_PROTECTION_PBKDF2_MAGIC[0], Result[Offset], Length(BASIC_PROTECTION_PBKDF2_MAGIC));
+    Inc(Offset, Length(BASIC_PROTECTION_PBKDF2_MAGIC));
+    Move(Salt[0], Result[Offset], Length(Salt));
+    Inc(Offset, Length(Salt));
+    Move(Nonce[0], Result[Offset], Length(Nonce));
+    Inc(Offset, Length(Nonce));
+    Move(Tag[0], Result[Offset], Length(Tag));
+    Inc(Offset, Length(Tag));
+    if Length(Ciphertext) > 0 then
+      Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
+  finally
+    if KeyHandle <> 0 then
+      BCryptDestroyKey(KeyHandle);
+    if AlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(AlgHandle, 0);
+  end;
+end;
+
+class function TBasicProtection.DecryptGcmPbkdf2Bytes(
+  const AEncryptedData: TBytes; const APassword: string): TBytes;
+var
+  AlgHandle: BCRYPT_ALG_HANDLE;
+  KeyHandle: BCRYPT_KEY_HANDLE;
+  KeyObjectSize, PropSize, ResultSize: ULONG;
+  Status: NTSTATUS;
+  ChainMode: WideString;
+  KeyObject, KeyBytes, Salt, Nonce, Tag, Ciphertext: TBytes;
+  AuthInfo: BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO;
+  Offset, CipherLen: Integer;
+begin
+  if not IsPbkdf2Payload(AEncryptedData) then
+    raise EDecryptionException.Create('Invalid PBKDF2-GCM encrypted data format');
+
+  Offset := Length(BASIC_PROTECTION_PBKDF2_MAGIC);
+
+  SetLength(Salt, BASIC_PROTECTION_PBKDF2_SALT_SIZE);
+  Move(AEncryptedData[Offset], Salt[0], Length(Salt));
+  Inc(Offset, Length(Salt));
+
+  SetLength(Nonce, BASIC_PROTECTION_PBKDF2_NONCE_SIZE);
+  Move(AEncryptedData[Offset], Nonce[0], Length(Nonce));
+  Inc(Offset, Length(Nonce));
+
+  SetLength(Tag, BASIC_PROTECTION_PBKDF2_TAG_SIZE);
+  Move(AEncryptedData[Offset], Tag[0], Length(Tag));
+  Inc(Offset, Length(Tag));
+
+  CipherLen := Length(AEncryptedData) - Offset;
+  SetLength(Ciphertext, CipherLen);
+  if CipherLen > 0 then
+    Move(AEncryptedData[Offset], Ciphertext[0], CipherLen);
+
+  // Derive key using PBKDF2 with the salt embedded in the payload
+  KeyBytes := DeriveAes256KeyPBKDF2(APassword, Salt, BASIC_PROTECTION_PBKDF2_ITERATIONS);
+
+  AlgHandle := 0;
+  KeyHandle := 0;
+
+  try
+    Status := BCryptOpenAlgorithmProvider(AlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
+    if Status <> STATUS_SUCCESS then
+      raise EDecryptionException.CreateFmt('BCryptOpenAlgorithmProvider failed: %d', [Status]);
+
+    ChainMode := BCRYPT_CHAIN_MODE_GCM;
+    Status := BCryptSetProperty(AlgHandle, BCRYPT_CHAINING_MODE,
+      PByte(PWideChar(ChainMode)), (Length(ChainMode) + 1) * SizeOf(WideChar), 0);
+    if Status <> STATUS_SUCCESS then
+      raise EDecryptionException.CreateFmt('BCryptSetProperty (GCM) failed: %d', [Status]);
+
+    Status := BCryptGetProperty(AlgHandle, BCRYPT_OBJECT_LENGTH,
+      @KeyObjectSize, SizeOf(KeyObjectSize), PropSize, 0);
+    if Status <> STATUS_SUCCESS then
+      raise EDecryptionException.CreateFmt('BCryptGetProperty failed: %d', [Status]);
+
+    SetLength(KeyObject, KeyObjectSize);
+    Status := BCryptGenerateSymmetricKey(AlgHandle, KeyHandle,
+      @KeyObject[0], KeyObjectSize, @KeyBytes[0], Length(KeyBytes), 0);
+    if Status <> STATUS_SUCCESS then
+      raise EEncryptionException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [Status]);
+
+    SetLength(Result, Length(Ciphertext));
+    FillChar(AuthInfo, SizeOf(AuthInfo), 0);
+    AuthInfo.cbSize := SizeOf(AuthInfo);
+    AuthInfo.dwInfoVersion := 1;
+    AuthInfo.pbNonce := @Nonce[0];
+    AuthInfo.cbNonce := Length(Nonce);
+    AuthInfo.pbTag := @Tag[0];
+    AuthInfo.cbTag := Length(Tag);
+
+    if Length(Ciphertext) > 0 then
+      Status := BCryptDecrypt(KeyHandle, @Ciphertext[0], Length(Ciphertext), @AuthInfo,
+        nil, 0, @Result[0], Length(Result), ResultSize, 0)
+    else
+      Status := BCryptDecrypt(KeyHandle, nil, 0, @AuthInfo,
+        nil, 0, nil, 0, ResultSize, 0);
+
+    if Status <> STATUS_SUCCESS then
+      raise EDecryptionException.CreateFmt('AES-GCM authentication failed: %d', [Status]);
+
+    SetLength(Result, ResultSize);
+  finally
+    if KeyHandle <> 0 then
+      BCryptDestroyKey(KeyHandle);
+    if AlgHandle <> 0 then
+      BCryptCloseAlgorithmProvider(AlgHandle, 0);
+  end;
+end;
+
 class function TBasicProtection.EncryptSensitiveData(const AData: string; const APassword: string): string;
 var
   Payload: TBytes;
@@ -437,8 +551,9 @@ begin
     Exit;
   end;
 
-  Payload := EncryptBinaryData(TEncoding.UTF8.GetBytes(AData), APassword);
-  Result := BASIC_PROTECTION_GCM_TEXT_PREFIX + BytesToHex(Payload);
+  // CORE-R2-005: New encryption uses PBKDF2-HMAC-SHA256 key derivation + AES-GCM.
+  Payload := EncryptGcmPbkdf2Bytes(TEncoding.UTF8.GetBytes(AData), APassword);
+  Result := BASIC_PROTECTION_PBKDF2_TEXT_PREFIX + BytesToHex(Payload);
 end;
 
 class function TBasicProtection.DecryptSensitiveData(const AEncryptedData: string; const APassword: string): string;
@@ -450,10 +565,19 @@ begin
   if AEncryptedData = '' then
     Exit;
 
+  // CORE-R2-005: PBKDF2-GCM path (new format)
+  if Copy(AEncryptedData, 1, Length(BASIC_PROTECTION_PBKDF2_TEXT_PREFIX)) = BASIC_PROTECTION_PBKDF2_TEXT_PREFIX then
+  begin
+    Payload := HexToBytes(Copy(AEncryptedData, Length(BASIC_PROTECTION_PBKDF2_TEXT_PREFIX) + 1, MaxInt));
+    Result := TEncoding.UTF8.GetString(DecryptGcmPbkdf2Bytes(Payload, APassword));
+    Exit;
+  end;
+
+  // Legacy UBG1 path: SHA-256 key derivation + AES-GCM
   if Copy(AEncryptedData, 1, Length(BASIC_PROTECTION_GCM_TEXT_PREFIX)) = BASIC_PROTECTION_GCM_TEXT_PREFIX then
   begin
     Payload := HexToBytes(Copy(AEncryptedData, Length(BASIC_PROTECTION_GCM_TEXT_PREFIX) + 1, MaxInt));
-    Result := TEncoding.UTF8.GetString(DecryptBinaryData(Payload, APassword));
+    Result := TEncoding.UTF8.GetString(DecryptGcmBytes(Payload, APassword));
     Exit;
   end;
 
@@ -495,7 +619,10 @@ begin
     Exit;
   end;
 
-  Result := EncryptGcmBytes(AData, APassword);
+  // CORE-R2-005: Use PBKDF2-HMAC-SHA256 key derivation + AES-GCM.
+  // The output uses the UBG2 magic so DecryptBinaryData can distinguish it
+  // from the legacy UBG1 (single SHA-256 key derivation) format.
+  Result := EncryptGcmPbkdf2Bytes(AData, APassword);
 end;
 
 
@@ -505,7 +632,11 @@ begin
   if Length(AEncryptedData) = 0 then
     Exit;
 
-  if IsGcmPayload(AEncryptedData) then
+  // CORE-R2-005: Detect PBKDF2-GCM payload first (UBG2), then legacy SHA-256
+  // GCM payload (UBG1), and finally fall back to legacy CBC (no magic).
+  if IsPbkdf2Payload(AEncryptedData) then
+    Result := DecryptGcmPbkdf2Bytes(AEncryptedData, APassword)
+  else if IsGcmPayload(AEncryptedData) then
     Result := DecryptGcmBytes(AEncryptedData, APassword)
   else
     Result := DecryptCbcBytes(AEncryptedData, APassword);
@@ -564,6 +695,67 @@ begin
     end;
   finally
     CryptReleaseContext(hProv, 0);
+  end;
+end;
+
+class function TBasicProtection.DeriveAes256KeyPBKDF2(
+  const APassword: string; const ASalt: TBytes; AIterations: Integer): TBytes;
+var
+  LPasswordBytes: TBytes;
+  LSaltPlusBlock: TBytes;
+  LBlock, LUTemp: TBytes;
+  I, J: Integer;
+begin
+  if Trim(APassword) = '' then
+    raise EMissingConfigurationException.Create('Password is required');
+  if Length(ASalt) = 0 then
+    raise EMissingConfigurationException.Create('Salt is required for PBKDF2');
+  if AIterations < 1000 then
+    raise EMissingConfigurationException.CreateFmt(
+      'PBKDF2 iteration count too low: %d (minimum 1000)', [AIterations]);
+
+  LPasswordBytes := TEncoding.UTF8.GetBytes(APassword);
+  try
+    SetLength(Result, 32);
+    SetLength(LSaltPlusBlock, Length(ASalt) + 4);
+    Move(ASalt[0], LSaltPlusBlock[0], Length(ASalt));
+
+    // PBKDF2-HMAC-SHA256 (RFC 2898 §5.2).
+    // 32 bytes fits in a single HMAC block (dkLen <= hLen), so the outer
+    // loop runs exactly once (block index = 1).
+    //
+    // U_1  = HMAC-SHA256(password, salt || INT_32_BE(1))
+    // U_j  = HMAC-SHA256(password, U_{j-1})     for j = 2..iterations
+    // DK   = U_1 xor U_2 xor ... xor U_c
+    LSaltPlusBlock[Length(ASalt)]     := 0;
+    LSaltPlusBlock[Length(ASalt) + 1] := 0;
+    LSaltPlusBlock[Length(ASalt) + 2] := 0;
+    LSaltPlusBlock[Length(ASalt) + 3] := 1; // INT_32_BE block index = 1
+
+    // U_1
+    LBlock := THashSHA2.GetHMACAsBytes(LSaltPlusBlock, LPasswordBytes);
+    Result := Copy(LBlock);
+
+    // U_2 .. U_c; accumulate XOR directly into Result
+    for J := 2 to AIterations do
+    begin
+      LUTemp := THashSHA2.GetHMACAsBytes(LBlock, LPasswordBytes);
+      for I := 0 to 31 do
+        Result[I] := Result[I] xor LUTemp[I];
+      LBlock := LUTemp;
+    end;
+  finally
+    // Zeroize ALL intermediate key material on the heap, including the
+    // UTF-8 password bytes and the salt||block buffer, so a memory dump
+    // cannot recover the password or derive inputs (CORE-R3-003 fix).
+    if Length(LPasswordBytes) > 0 then
+      FillChar(LPasswordBytes[0], Length(LPasswordBytes), 0);
+    if Length(LSaltPlusBlock) > 0 then
+      FillChar(LSaltPlusBlock[0], Length(LSaltPlusBlock), 0);
+    if Length(LBlock) > 0 then
+      FillChar(LBlock[0], Length(LBlock), 0);
+    if Length(LUTemp) > 0 then
+      FillChar(LUTemp[0], Length(LUTemp), 0);
   end;
 end;
 

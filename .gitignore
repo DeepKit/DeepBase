@@ -39,6 +39,17 @@ coverage/
 *.orig
 _tmp_*
 **/_tmp_*
+__tmp_*
+**/__tmp_*
+
+# bash/系统崩溃转储
+*.stackdump
+core
+
+# 会话临时脚本与零字节测试输出
+compile_data*.bat
+test_output.txt
+Tests/test_output.xml
 
 # AutoFix / 编译 / 测试运行产物（手工排查时会写入仓库根，但永远不应入库）
 compile_output.txt

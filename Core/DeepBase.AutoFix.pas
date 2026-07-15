@@ -69,9 +69,11 @@ begin
 
   TAutoFixHealthSignal.Emit;
 
-  // Defer scenario execution to the next message-pump turn so the calling
-  // OnShow / AfterShellShown handler can return and the UI is fully painted.
-  TThread.ForceQueue(nil,
+  // BIZ-R3-014 FIX: Use TThread.Queue instead of TThread.ForceQueue to ensure
+  // the scenario runner executes on the main thread. ForceQueue uses the thread
+  // pool, and if TAutoFixScenarioRunner.Run calls Halt (via HandleFatal),
+  // non-main-thread Halt can cause incomplete process cleanup.
+  TThread.Queue(nil,
     procedure
     begin
       TAutoFixScenarioRunner.Run;

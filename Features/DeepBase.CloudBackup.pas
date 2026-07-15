@@ -260,10 +260,11 @@ type
   /// <summary>���ݼ�����</summary>
   TBackupEncryptor = class
   private
-    FKey: TBytes;
-    FIV: TBytes;
-    
-    procedure DeriveKeyAndIV(const APassword: string);
+    // FEAT-R3-003 (E-003): the raw password is forwarded to TSimpleCrypto,
+    // which performs per-file random salt + PBKDF2(100k) + AES-256-GCM +
+    // random IV + HMAC internally. No key/IV derivation here — that would
+    // only weaken the secure path TSimpleCrypto already provides.
+    FPassword: string;
   public
     constructor Create(const APassword: string);
     destructor Destroy; override;
@@ -431,7 +432,7 @@ function FormatDuration(ASeconds: Integer): string;
 implementation
 
 uses
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES;
 
 var
   GCloudBackup: TCloudBackupManager = nil;
@@ -1228,33 +1229,20 @@ end;
 constructor TBackupEncryptor.Create(const APassword: string);
 begin
   inherited Create;
-  DeriveKeyAndIV(APassword);
+  // FEAT-R3-003 (E-003): store the raw password; TSimpleCrypto owns the
+  // salt/PBKDF2/IV/GCM/MAC derivation. No weak per-instance derivation.
+  FPassword := APassword;
 end;
 
 destructor TBackupEncryptor.Destroy;
 begin
   // �����Կ
-  FillChar(FKey[0], Length(FKey), 0);
-  FillChar(FIV[0], Length(FIV), 0);
+  // FEAT-R3-003 (E-003): FPassword is a managed string released by reference
+  // counting; managed strings cannot be securely zeroed (FillChar on the
+  // payload risks AV), and TSimpleCrypto keeps no derived key material here.
   inherited;
 end;
 
-procedure TBackupEncryptor.DeriveKeyAndIV(const APassword: string);
-var
-  LHash: TBytes;
-begin
-  // ʹ��SHA-256������Կ��ʵ��Ӧʹ��PBKDF2��
-  LHash := THashSHA2.GetHashBytes(APassword);
-  
-  SetLength(FKey, 32);  // 256 bits
-  SetLength(FIV, 16);   // 128 bits
-  
-  Move(LHash[0], FKey[0], 32);
-  
-  // ���������һ����ϣ����IV
-  LHash := THashSHA2.GetHashBytes(APassword + 'IV');
-  Move(LHash[0], FIV[0], 16);
-end;
 
 procedure TBackupEncryptor.EncryptFile(const ASourcePath, ADestPath: string);
 var
@@ -1294,8 +1282,9 @@ procedure TBackupEncryptor.EncryptStream(ASource, ADest: TStream);
 var
   LData: TBytes;
 begin
-  // ��ʵ�֣�ʵ��Ӧʹ��AES-256-CBC/GCM
-  // ������XOR��Base64ģ�⣬����������Ҫʹ�������ļ��ܿ�
+  // FEAT-R3-003 (E-003): delegates to EncryptBytes -> TSimpleCrypto
+  // (AES-256-GCM + PBKDF2 + HMAC). The stale "should use AES-CBC/GCM"
+  // comment was wrong — TSimpleCrypto already is AES-GCM.
   SetLength(LData, ASource.Size);
   ASource.Position := 0;
   ASource.ReadBuffer(LData[0], Length(LData));
@@ -1320,29 +1309,39 @@ end;
 
 function TBackupEncryptor.EncryptBytes(const AData: TBytes): TBytes;
 begin
-  // FR-002 fix: replace previous XOR with AES (TSimpleCrypto).
-  if (Length(AData) = 0) or (Length(FKey) = 0) then
+  // FEAT-R3-003 (E-003): TSimpleCrypto performs per-file random salt +
+  // PBKDF2(100k) + AES-256-GCM + random IV + HMAC. We forward the raw
+  // password; no per-instance key/IV derivation (the old SHA-256 layer was
+  // both weak and redundant — TSimpleCrypto owns the secure derivation).
+  if (Length(AData) = 0) or (FPassword = '') then
   begin
     SetLength(Result, 0);
     Exit;
   end;
-  Result := TSimpleCrypto.EncryptBytes(AData, TEncoding.UTF8.GetString(FKey));
+  Result := TSimpleCrypto.EncryptBytes(AData, FPassword);
 end;
 
 function TBackupEncryptor.DecryptBytes(const AData: TBytes): TBytes;
 begin
-  if (Length(AData) = 0) or (Length(FKey) = 0) then
+  if (Length(AData) = 0) or (FPassword = '') then
   begin
     SetLength(Result, 0);
     Exit;
   end;
-  Result := TSimpleCrypto.DecryptBytes(AData, TEncoding.UTF8.GetString(FKey));
+  Result := TSimpleCrypto.DecryptBytes(AData, FPassword);
 end;
 
 { TCloudBackupClient }
 
 constructor TCloudBackupClient.Create(const AServiceURL, AApiKey, ABucket: string);
 begin
+  // FEAT-R3-006 (E-006): enforce HTTPS for the cloud service URL. The X-API-Key
+  // header carries FApiKey in cleartext on every DoRequest; an http:// URL would
+  // expose it to MITM. Reject at construction so no insecure client can exist.
+  if not AServiceURL.ToLower.StartsWith('https://') then
+    raise ECloudServiceNotConfiguredException.CreateFmt(
+      'Cloud service URL must use HTTPS (got "%s"). HTTP is rejected to protect the API key in transit.',
+      [AServiceURL]);
   inherited Create;
   FServiceURL := AServiceURL;
   FApiKey := AApiKey;

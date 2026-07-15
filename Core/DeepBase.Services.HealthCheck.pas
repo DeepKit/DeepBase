@@ -103,15 +103,26 @@ begin
     begin
       Check := FChecks[Name];
       StartTime := Now;
+      CheckResult.Data := TDictionary<string, string>.Create;
       try
         CheckResult := Check.Check;
+        if CheckResult.Data = nil then
+          CheckResult.Data := TDictionary<string, string>.Create;
         CheckResult.Duration := MilliSecondsBetween(Now, StartTime);
       except
         on E: Exception do
         begin
           CheckResult.Status := hsUnhealthy;
-          CheckResult.Description := E.Message;
+          // BUG EXP-P1-008 FIX: do NOT echo `E.Message` to the external
+          // caller — it may contain internal paths, connection strings or
+          // SQL text. Surface only the exception class name (already safe:
+          // it's a compile-time identifier) so operators still see *which*
+          // check failed, without leaking implementation details. Internal
+          // diagnostics should be obtained from the structured log sink.
+          CheckResult.Description := Format('Check failed (%s)', [E.ClassName]);
           CheckResult.Duration := MilliSecondsBetween(Now, StartTime);
+          if CheckResult.Data = nil then
+            CheckResult.Data := TDictionary<string, string>.Create;
         end;
       end;
       Result.AddOrSetValue(Name, CheckResult);
@@ -138,6 +149,10 @@ begin
         hsUnhealthy: HasUnhealthy := True;
         hsDegraded: HasDegraded := True;
       end;
+      // BIZ2-031 fix: each CheckResult owns its Data dictionary (created by
+      // CheckHealth). Free it here since the record has no destructor to
+      // clean it up automatically.
+      FreeAndNil(CheckResult.Data);
     end;
     
     if HasUnhealthy then

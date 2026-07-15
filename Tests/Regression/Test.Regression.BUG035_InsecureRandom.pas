@@ -72,7 +72,7 @@ type
 implementation
 
 uses
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.Encoding, DeepBase.Crypto.Random;
 
 { TBug035_InsecureRandomTest }
 

@@ -4,6 +4,8 @@
 
 unit Test.DeepBase.Authorization;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses
@@ -18,6 +20,10 @@ type
   TAuthorizationTests = class
   private
     FAuthManager: TAuthorizationManager;
+    // BUG EXP-P1-006 FIX: SetCurrentUser is deprecated and now raises. Tests
+    // use this helper which stores a known test token on the user and then
+    // calls SetCurrentUserWithToken — exercising the verified path.
+    procedure LoginTestUser(const AUsername: string);
   public
     [Setup]
     procedure Setup;
@@ -455,11 +461,14 @@ var
   User: TUser;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
-  
+
   User := FAuthManager.GetUser('testuser');
-  
-  Assert.IsNotNull(User);
-  Assert.AreEqual('testuser', User.Username);
+  try
+    Assert.IsNotNull(User);
+    Assert.AreEqual('testuser', User.Username);
+  finally
+    User.Free;
+  end;
 end;
 
 procedure TAuthorizationTests.Test_GetUser_NotExists_ReturnsNil;
@@ -540,9 +549,13 @@ begin
   FAuthManager.CreateRole('admin', 'Administrator');
   
   FAuthManager.GrantPermission('admin', 'users.manage');
-  
+
   Role := FAuthManager.GetRole('admin');
-  Assert.IsTrue(Role.HasPermission('users.manage'));
+  try
+    Assert.IsTrue(Role.HasPermission('users.manage'));
+  finally
+    Role.Free;
+  end;
 end;
 
 procedure TAuthorizationTests.Test_RevokePermission_Success;
@@ -553,9 +566,13 @@ begin
   FAuthManager.GrantPermission('admin', 'users.manage');
   
   FAuthManager.RevokePermission('admin', 'users.manage');
-  
+
   Role := FAuthManager.GetRole('admin');
-  Assert.IsFalse(Role.HasPermission('users.manage'));
+  try
+    Assert.IsFalse(Role.HasPermission('users.manage'));
+  finally
+    Role.Free;
+  end;
 end;
 
 procedure TAuthorizationTests.Test_HasPermission_Direct;
@@ -688,12 +705,40 @@ end;
 // Current User Context Tests
 // ============================================================================
 
+procedure TAuthorizationTests.LoginTestUser(const AUsername: string);
+var
+  LToken: string;
+begin
+  LToken := 'test-token-' + AUsername;
+  Assert.IsTrue(FAuthManager.UserExists(AUsername),
+    'User must exist before login: ' + AUsername);
+  // CORE-R3-001: write the token on the live user via the locked manager
+  // mutator, not by mutating a GetUser snapshot (which is now a deep clone).
+  Assert.IsTrue(FAuthManager.SetUserMetadata(AUsername, 'token', LToken),
+    'SetUserMetadata must target an existing user: ' + AUsername);
+  Assert.IsTrue(FAuthManager.SetCurrentUserWithToken(AUsername, LToken),
+    'SetCurrentUserWithToken must succeed for test user');
+end;
+
 procedure TAuthorizationTests.Test_SetCurrentUser_Success;
+var
+  Raised: Boolean;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
-  
-  FAuthManager.SetCurrentUser('testuser');
-  
+
+  // BUG EXP-P1-006 FIX: the deprecated SetCurrentUser must now raise at
+  // runtime, forcing callers to migrate to SetCurrentUserWithToken.
+  Raised := False;
+  try
+    FAuthManager.SetCurrentUser('testuser');
+  except
+    on E: EAuthorizationException do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'deprecated SetCurrentUser must raise EAuthorizationException');
+
+  // The verified path still establishes context correctly.
+  LoginTestUser('testuser');
   Assert.IsNotNull(FAuthManager.CurrentUser);
   Assert.AreEqual('testuser', FAuthManager.CurrentUser.Username);
 end;
@@ -704,7 +749,7 @@ begin
   FAuthManager.CreateRole('admin', 'Administrator');
   FAuthManager.GrantPermission('admin', 'users.manage');
   FAuthManager.AssignRole('testuser', 'admin');
-  FAuthManager.SetCurrentUser('testuser');
+  LoginTestUser('testuser');
   
   Assert.IsTrue(FAuthManager.CurrentUserCan('users.manage'));
 end;
@@ -712,7 +757,7 @@ end;
 procedure TAuthorizationTests.Test_CurrentUserCan_NoPermission;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
-  FAuthManager.SetCurrentUser('testuser');
+  LoginTestUser('testuser');
   
   Assert.IsFalse(FAuthManager.CurrentUserCan('users.manage'));
 end;
@@ -723,7 +768,7 @@ begin
   FAuthManager.CreateRole('admin', 'Administrator');
   FAuthManager.GrantPermission('admin', 'users.manage');
   FAuthManager.AssignRole('testuser', 'admin');
-  FAuthManager.SetCurrentUser('testuser');
+  LoginTestUser('testuser');
   
   // Should not raise
   FAuthManager.RequirePermission('users.manage');
@@ -735,7 +780,7 @@ var
   Raised: Boolean;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
-  FAuthManager.SetCurrentUser('testuser');
+  LoginTestUser('testuser');
 
   Raised := False;
   try
@@ -767,7 +812,7 @@ var
   Logs: TArray<TAuditLogEntry>;
 begin
   FAuthManager.CreateUser('testuser', 'Test User');
-  FAuthManager.SetCurrentUser('testuser');
+  LoginTestUser('testuser');
   
   try
     FAuthManager.RequirePermission('users.manage');

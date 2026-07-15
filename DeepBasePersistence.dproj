@@ -186,6 +186,8 @@
         <DCCReference Include="Persistence\DeepBase.DB.Migrations.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.StatusMachine.pas"/>
         <DCCReference Include="Persistence\DeepBase.DB.Pool.pas"/>
+        <DCCReference Include="Persistence\DeepBase.ORM.pas"/>
+        <DCCReference Include="Persistence\DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

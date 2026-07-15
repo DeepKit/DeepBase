@@ -37,6 +37,7 @@ requires
 
 contains
   DeepBase.Speech.ASR.SAPI in 'Features\DeepBase.Speech.ASR.SAPI.pas',
+  DeepBase.Speech.ASR.SAPIAdapter in 'Features\DeepBase.Speech.ASR.SAPIAdapter.pas',
   DeepBase.Speech.ASR.Baidu in 'Features\DeepBase.Speech.ASR.Baidu.pas',
   DeepBase.Speech.FBank in 'Features\DeepBase.Speech.FBank.pas',
   DeepBase.Speech.ASR.SenseVoice in 'Features\DeepBase.Speech.ASR.SenseVoice.pas',

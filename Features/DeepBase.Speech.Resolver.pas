@@ -14,10 +14,12 @@ type
   TSpeechResolver = class
   public
     /// <summary>
-    /// Resolve the best available ASR backend with three-tier fallback:
-    ///   Tier 1 (PRO): SenseVoice — requires ILicensing.HasFeature('sensevoice_asr')
+    /// Resolve the best available ASR backend with fallback:
     ///   Tier 2 (user): Baidu — requires user-configured API key
     ///   Tier 3 (default): SAPI — always available on Windows
+    /// NOTE: Tier 1 (SenseVoice PRO) is currently disabled; the
+    /// `ILicensing.HasFeature('sensevoice_asr')` contract is not wired
+    /// into this module. See BUG EXP-P1-004 inside the implementation.
     /// </summary>
     class function ResolveASR(const ALicensing: IInterface): TASRBackendKind;
 
@@ -46,22 +48,16 @@ implementation
 
 class function TSpeechResolver.ResolveASR(const ALicensing: IInterface): TASRBackendKind;
 begin
-  // Tier 1: SenseVoice (PRO tier only)
-  if (ALicensing <> nil) then
-  begin
-    var Intf: IInterface;
-    // Check if licensing supports sensevoice_asr feature
-    // Uses late-bound HasFeature pattern to avoid circular dependency
-    try
-      if ALicensing.QueryInterface(IInterface, Intf) = 0 then
-      begin
-        // Try ILicensing.HasFeature via interface probing
-        // Fall through to next tier if not available
-      end;
-    except
-      // Graceful fallback
-    end;
-  end;
+  // BUG EXP-P1-004 FIX: Tier 1 (SenseVoice PRO) license check was previously
+  // a dead `QueryInterface` no-op, so it always fell through to Tier 2. The
+  // `ILicensing.HasFeature('sensevoice_asr')` contract is not defined in this
+  // module's dependency graph, so we cannot safely implement it here.
+  //
+  // To re-enable Tier 1, add an ILicensing reference to Speech.Types (or pass
+  // a dedicated predicate `TFunc<Boolean>`) and restore:
+  //   if (ALicensing <> nil) and LicensingHasSenseVoice(ALicensing) then
+  //     Exit(abkSenseVoice);
+  // until then, start at Tier 2 to avoid a misleading dead branch.
 
   // Tier 2: Baidu — check if registered and available
   if TSpeechRegistry.IsRegistered('Baidu', sbkASR) then

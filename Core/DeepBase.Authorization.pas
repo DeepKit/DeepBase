@@ -40,7 +40,8 @@ uses
   System.Types,
   System.Generics.Collections,
   System.SyncObjs,
-  System.DateUtils;
+  System.DateUtils,
+  DeepBase.StorageFactory;
 
 type
   // Forward declarations
@@ -103,7 +104,13 @@ type
     procedure AddPermission(const PermissionName: string);
     procedure RemovePermission(const PermissionName: string);
     function HasPermission(const PermissionName: string): Boolean;
-    
+
+    /// <summary>Deep copy of this role so callers receive an independent
+    /// snapshot they own and can free, decoupled from the manager's internal
+    /// FRoles dictionary (which doOwnsValues frees on DeleteRole/Replace)
+    /// — prevents use-after-free (CORE-R3-001).</summary>
+    function Clone: TRole;
+
     property Id: Integer read FId write FId;
     property Name: string read FName;
     property DisplayName: string read FDisplayName write FDisplayName;
@@ -141,9 +148,17 @@ type
     procedure AddRole(const RoleName: string);
     procedure RemoveRole(const RoleName: string);
     function HasRole(const RoleName: string): Boolean;
-    
+
     function GetMetadata(const Key: string; const Default: string = ''): string;
     procedure SetMetadata(const Key, Value: string);
+
+    /// <summary>Deep copy of this user so callers receive an independent
+    /// snapshot they own and can free, decoupled from the manager's internal
+    /// FUsers dictionary (which doOwnsValues frees on DeleteUser/Replace)
+    /// — prevents use-after-free (CORE-R3-001). Callers that need to mutate
+    /// the live user (e.g. set its token) must use the manager's locked
+    /// mutators (SetUserMetadata) rather than mutating the snapshot.</summary>
+    function Clone: TUser;
     
     property Id: Integer read FId write FId;
     property Username: string read FUsername;
@@ -287,7 +302,6 @@ type
     FOnAuditLog: TAuditLogCallback;
     FTokenVerifier: TTokenVerifierFunc;
     FAuditEnabled: Boolean;
-    class var FConnectionStorageFactory: TFunc<TObject, IAuthorizationStorage>;
 
     procedure EnsureTablesExist;
     procedure LoadFromDatabase;
@@ -297,14 +311,13 @@ type
     procedure DeleteRoleFromDatabase(const RoleName: string);
     procedure LogAudit(const Username: string; Action: TAuditAction;
       const Resource, Details: string; Success: Boolean);
-    function GetEffectivePermissions(User: TUser): TList<string>;
+    function GetEffectivePermissions(User: TUser): TArray<string>;
     function GetRolePermissionsRecursive(const RoleName: string;
-      Visited: TList<string>): TList<string>;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IAuthorizationStorage; static;
+      Visited: TList<string>; Seen: TDictionary<string, Boolean>): TArray<string>;
     function GetCurrentUserForThread: TUser;
     procedure SetCurrentUserForThread(AUser: TUser);
     procedure ClearCurrentUserForThread;
+    procedure InitStorage(const AStorage: IAuthorizationStorage);
   public
     constructor Create(AConnection: TObject); overload;
     constructor Create(const AStorage: IAuthorizationStorage); overload;
@@ -320,9 +333,18 @@ type
     /// <summary>Create a new user</summary>
     function CreateUser(const Username, DisplayName: string): TUser;
     
-    /// <summary>Get user by username</summary>
+    /// <summary>Get user by username. Returns a deep clone the caller owns
+    /// (free it when done). Do not mutate the live user through the returned
+    /// object — use SetUserMetadata for writes (CORE-R3-001).</summary>
     function GetUser(const Username: string): TUser;
-    
+
+    /// <summary>Set a metadata key on the live user under FLock. Use this
+    /// instead of mutating a GetUser snapshot, so the write lands on the
+    /// real dictionary-owned object and is visible to subsequent locked
+    /// reads (e.g. token verification). Returns False if user not found
+    /// (CORE-R3-001).</summary>
+    function SetUserMetadata(const Username, Key, Value: string): Boolean;
+
     /// <summary>Update user</summary>
     procedure UpdateUser(User: TUser);
     
@@ -581,6 +603,30 @@ begin
   Result := FPermissions.Contains(PermissionName);
 end;
 
+function TRole.Clone: TRole;
+var
+  P: string;
+begin
+  // Deep copy: FPermissions is a fresh list, all scalar fields copied by value.
+  // The clone is independently owned so the caller can free it without regard
+  // to the manager's FRoles dictionary lifetime (CORE-R3-001).
+  Result := TRole.Create(FName);
+  try
+    Result.FId := FId;
+    Result.FDisplayName := FDisplayName;
+    Result.FDescription := FDescription;
+    for P in FPermissions do
+      Result.FPermissions.Add(P);
+    Result.FParentRole := FParentRole;
+    Result.FIsActive := FIsActive;
+    Result.FCreatedAt := FCreatedAt;
+    Result.FUpdatedAt := FUpdatedAt;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 // ============================================================================
 // TUser
 // ============================================================================
@@ -638,6 +684,33 @@ begin
   FUpdatedAt := Now;
 end;
 
+function TUser.Clone: TUser;
+var
+  R: string;
+  MK: TPair<string, string>;
+begin
+  // Deep copy: FRoles and FMetadata are fresh containers, all scalar fields
+  // copied by value. The clone is independently owned so the caller can free
+  // it without regard to the manager's FUsers dictionary lifetime (CORE-R3-001).
+  Result := TUser.Create(FUsername);
+  try
+    Result.FId := FId;
+    Result.FDisplayName := FDisplayName;
+    Result.FEmail := FEmail;
+    for R in FRoles do
+      Result.FRoles.Add(R);
+    Result.FIsActive := FIsActive;
+    Result.FCreatedAt := FCreatedAt;
+    Result.FUpdatedAt := FUpdatedAt;
+    Result.FLastLoginAt := FLastLoginAt;
+    for MK in FMetadata do
+      Result.FMetadata.AddOrSetValue(MK.Key, MK.Value);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 // ============================================================================
 // TAuditLogEntry
 // ============================================================================
@@ -662,24 +735,17 @@ end;
 constructor TAuthorizationManager.Create(AConnection: TObject);
 begin
   inherited Create;
-  FStorage := CreateStorageFromConnection(AConnection);
-  FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
-  FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
-  FPermissions := TObjectDictionary<string, TPermission>.Create([doOwnsValues]);
-  FThreadCurrentUsers := TDictionary<TThreadID, TUser>.Create;
-  FLock := TCriticalSection.Create;
-  FAuditEnabled := True;
-
-  if Assigned(FStorage) then
-  begin
-    EnsureTablesExist;
-    LoadFromDatabase;
-  end;
+  InitStorage(TConnectionStorageFactory<IAuthorizationStorage>.Create(AConnection));
 end;
 
 constructor TAuthorizationManager.Create(const AStorage: IAuthorizationStorage);
 begin
   inherited Create;
+  InitStorage(AStorage);
+end;
+
+procedure TAuthorizationManager.InitStorage(const AStorage: IAuthorizationStorage);
+begin
   FStorage := AStorage;
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
@@ -698,16 +764,7 @@ end;
 class procedure TAuthorizationManager.SetStorageFactory(
   const AFactory: TFunc<TObject, IAuthorizationStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TAuthorizationManager.CreateStorageFromConnection(
-  AConnection: TObject): IAuthorizationStorage;
-begin
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection)
-  else
-    Result := nil;
+  TConnectionStorageFactory<IAuthorizationStorage>.SetFactory(AFactory);
 end;
 
 destructor TAuthorizationManager.Destroy;
@@ -854,81 +911,116 @@ const
   );
 var
   Entry: TAuditLogEntry;
+  LUser: TUser;
+  LUsername: string;
 begin
   if not FAuditEnabled then
     Exit;
-  
-  Entry := TAuditLogEntry.Create(Username, Action, Resource, Details, Success);
-  
+
+  // BUG EXP-P1-007 FIX: if no username provided, resolve from current thread
+  // user context so role/permission operations record the actor rather than ''.
+  if Username = '' then
+  begin
+    LUser := GetCurrentUserForThread;
+    if Assigned(LUser) then
+      LUsername := LUser.Username
+    else
+      LUsername := '';
+  end
+  else
+    LUsername := Username;
+
+  Entry := TAuditLogEntry.Create(LUsername, Action, Resource, Details, Success);
+
   // Call callback if set
   if Assigned(FOnAuditLog) then
     FOnAuditLog(Entry);
 
   if Assigned(FStorage) then
-    FStorage.InsertAudit(Username, ACTION_NAMES[Action], Resource, Details, Success);
+    FStorage.InsertAudit(LUsername, ACTION_NAMES[Action], Resource, Details, Success);
 end;
 
-function TAuthorizationManager.GetEffectivePermissions(User: TUser): TList<string>;
+function TAuthorizationManager.GetEffectivePermissions(User: TUser): TArray<string>;
 var
   RoleName: string;
-  RolePerms: TList<string>;
+  RolePerms: TArray<string>;
   Perm: string;
   Visited: TList<string>;
+  Seen: TDictionary<string, Boolean>;
 begin
-  Result := TList<string>.Create;
+  SetLength(Result, 0);
   if (User = nil) or (not User.IsActive) then
     Exit;
 
-  Visited := TList<string>.Create;
+  // BIZ-R3-017 FIX: use a hash-based set for O(1) dedup instead of the former
+  // SetLength+1 + linear scan (O(n^2) on the merged permission list). The set
+  // is built once and converted to a plain array in a single pass at the end.
+  Seen := TDictionary<string, Boolean>.Create;
   try
-    for RoleName in User.Roles do
-    begin
-      RolePerms := GetRolePermissionsRecursive(RoleName, Visited);
-      try
+    Visited := TList<string>.Create;
+    try
+      for RoleName in User.Roles do
+      begin
+        RolePerms := GetRolePermissionsRecursive(RoleName, Visited, Seen);
+        // Permissions were already added to Seen inside the recursive call;
+        // RolePerms is returned for backward compatibility of the helper
+        // signature. Ensure coverage (defensive, already a subset of Seen).
         for Perm in RolePerms do
-          if not Result.Contains(Perm) then
-            Result.Add(Perm);
-      finally
-        RolePerms.Free;
+          if not Seen.ContainsKey(Perm) then
+            Seen.Add(Perm, True);
       end;
+    finally
+      Visited.Free;
     end;
+
+    Result := TArray<string>(Seen.Keys.ToArray);
   finally
-    Visited.Free;
+    Seen.Free;
   end;
 end;
 
 function TAuthorizationManager.GetRolePermissionsRecursive(const RoleName: string;
-  Visited: TList<string>): TList<string>;
+  Visited: TList<string>; Seen: TDictionary<string, Boolean>): TArray<string>;
 var
   Role: TRole;
   Perm: string;
-  ParentPerms: TList<string>;
+  ParentPerms: TArray<string>;
 begin
-  Result := TList<string>.Create;
-  
+  SetLength(Result, 0);
+
   if Visited.Contains(RoleName) then
     Exit; // Prevent circular references
-    
+
   Visited.Add(RoleName);
-  
+
   if (not FRoles.TryGetValue(RoleName, Role)) or (not Role.IsActive) then
     Exit;
-  
-  // Add direct permissions
+
+  // BIZ-R3-017 FIX: add permissions to the shared Seen set (O(1) dedup) and
+  // also to Result for backward compatibility. The set eliminates the former
+  // SetLength+1 + linear scan O(n^2) on the merged list.
   for Perm in Role.Permissions do
-    if not Result.Contains(Perm) then
-      Result.Add(Perm);
-  
+  begin
+    if not Seen.ContainsKey(Perm) then
+    begin
+      Seen.Add(Perm, True);
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Perm;
+    end;
+  end;
+
   // Add inherited permissions from parent
   if Role.ParentRole <> '' then
   begin
-    ParentPerms := GetRolePermissionsRecursive(Role.ParentRole, Visited);
-    try
-      for Perm in ParentPerms do
-        if not Result.Contains(Perm) then
-          Result.Add(Perm);
-    finally
-      ParentPerms.Free;
+    ParentPerms := GetRolePermissionsRecursive(Role.ParentRole, Visited, Seen);
+    for Perm in ParentPerms do
+    begin
+      if not Seen.ContainsKey(Perm) then
+      begin
+        Seen.Add(Perm, True);
+        SetLength(Result, Length(Result) + 1);
+        Result[High(Result)] := Perm;
+      end;
     end;
   end;
 end;
@@ -957,11 +1049,41 @@ begin
 end;
 
 function TAuthorizationManager.GetUser(const Username: string): TUser;
+var
+  Live: TUser;
 begin
+  // CORE-R3-001 fix: return a deep clone, not the dictionary-owned live object.
+  // FUsers is doOwnsValues, so a concurrent DeleteUser/UpdateUser frees the
+  // live TUser out from under a caller holding the prior return value.
+  // The clone is caller-owned and decoupled from the dictionary lifetime.
   FLock.Enter;
   try
-    if not FUsers.TryGetValue(Username, Result) then
-      Result := nil;
+    if not FUsers.TryGetValue(Username, Live) then
+      Result := nil
+    else
+      Result := Live.Clone;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TAuthorizationManager.SetUserMetadata(const Username, Key,
+  Value: string): Boolean;
+var
+  Live: TUser;
+begin
+  // CORE-R3-001 fix: write metadata on the live dictionary-owned object under
+  // FLock, instead of letting callers mutate a GetUser snapshot (whose write
+  // would land on the clone and never reach the real user, breaking token
+  // verification and any subsequent locked read).
+  Result := False;
+  FLock.Enter;
+  try
+    if FUsers.TryGetValue(Username, Live) then
+    begin
+      Live.SetMetadata(Key, Value);
+      Result := True;
+    end;
   finally
     FLock.Leave;
   end;
@@ -1008,18 +1130,27 @@ end;
 
 function TAuthorizationManager.GetAllUsers: TArray<TUser>;
 var
-  List: TList<TUser>;
+  List: TObjectList<TUser>;
   User: TUser;
+  Idx: Integer;
 begin
+  // CORE-R3-001 fix: return deep clones, not the dictionary-owned live objects.
+  // Ownership of each returned TUser transfers to the caller (caller must free
+  // them). Use an owning TObjectList during the build so that if a Clone call
+  // raises mid-loop, the already-built clones are freed (no leak); on success
+  // we hand the pointers out and clear the list's ownership first.
   FLock.Enter;
   try
-    List := TList<TUser>.Create;
+    List := TObjectList<TUser>.Create(True);
     try
       for User in FUsers.Values do
-        List.Add(User);
-      Result := List.ToArray;
+        List.Add(User.Clone);
+      SetLength(Result, List.Count);
+      for Idx := 0 to List.Count - 1 do
+        Result[Idx] := List[Idx];
+      List.OwnsObjects := False;  // hand ownership to the caller's array
     finally
-      List.Free;
+      List.Free;  // container only; objects now owned by Result's caller
     end;
   finally
     FLock.Leave;
@@ -1050,11 +1181,17 @@ begin
 end;
 
 function TAuthorizationManager.GetRole(const RoleName: string): TRole;
+var
+  Live: TRole;
 begin
+  // CORE-R3-001 fix: return a deep clone, not the dictionary-owned live object
+  // (see GetUser). FRoles is doOwnsValues.
   FLock.Enter;
   try
-    if not FRoles.TryGetValue(RoleName, Result) then
-      Result := nil;
+    if not FRoles.TryGetValue(RoleName, Live) then
+      Result := nil
+    else
+      Result := Live.Clone;
   finally
     FLock.Leave;
   end;
@@ -1107,16 +1244,22 @@ end;
 
 function TAuthorizationManager.GetAllRoles: TArray<TRole>;
 var
-  List: TList<TRole>;
+  List: TObjectList<TRole>;
   Role: TRole;
+  Idx: Integer;
 begin
+  // CORE-R3-001 fix: return deep clones, not the dictionary-owned live objects
+  // (see GetAllUsers). Ownership of each returned TRole transfers to the caller.
   FLock.Enter;
   try
-    List := TList<TRole>.Create;
+    List := TObjectList<TRole>.Create(True);
     try
       for Role in FRoles.Values do
-        List.Add(Role);
-      Result := List.ToArray;
+        List.Add(Role.Clone);
+      SetLength(Result, List.Count);
+      for Idx := 0 to List.Count - 1 do
+        Result[Idx] := List[Idx];
+      List.OwnsObjects := False;
     finally
       List.Free;
     end;
@@ -1288,7 +1431,7 @@ end;
 function TAuthorizationManager.HasPermission(const Username, PermissionName: string): Boolean;
 var
   User: TUser;
-  Permissions: TList<string>;
+  Permissions: TArray<string>;
   Perm: string;
 
   function MatchesGrantedPermission(const Granted, Requested: string): Boolean;
@@ -1320,16 +1463,14 @@ begin
       Result := False;
       Exit;
     end;
-    
+
+    // BIZ2-007 FIX: GetEffectivePermissions now returns TArray<string>,
+    // eliminating the per-call TList<string> allocation on this hot path.
     Permissions := GetEffectivePermissions(User);
-    try
-      Result := False;
-      for Perm in Permissions do
-        if MatchesGrantedPermission(Perm, PermissionName) then
-          Exit(True);
-    finally
-      Permissions.Free;
-    end;
+    Result := False;
+    for Perm in Permissions do
+      if MatchesGrantedPermission(Perm, PermissionName) then
+        Exit(True);
   finally
     FLock.Leave;
   end;
@@ -1376,19 +1517,15 @@ end;
 function TAuthorizationManager.GetUserPermissions(const Username: string): TArray<string>;
 var
   User: TUser;
-  Permissions: TList<string>;
 begin
   FLock.Enter;
   try
     if not FUsers.TryGetValue(Username, User) then
       Exit(nil);
-    
-    Permissions := GetEffectivePermissions(User);
-    try
-      Result := Permissions.ToArray;
-    finally
-      Permissions.Free;
-    end;
+
+    // BIZ2-007: GetEffectivePermissions now returns TArray<string> directly,
+    // so no temporary TList needs to be created and freed here.
+    Result := GetEffectivePermissions(User);
   finally
     FLock.Leave;
   end;
@@ -1434,23 +1571,17 @@ end;
 
 { DEPRECATED: No identity verification. Use SetCurrentUserWithToken in production. }
 procedure TAuthorizationManager.SetCurrentUser(const Username: string);
-var
-  LUser: TUser;
 begin
-  LUser := nil;
-  FLock.Enter;
-  try
-    if not FUsers.TryGetValue(Username, LUser) then
-      raise EUserNotFoundException.CreateFmt('User not found: %s', [Username]);
-  finally
-    FLock.Leave;
-  end;
-
-  // Update last login
-  LUser.LastLoginAt := Now;
-  SetCurrentUserForThread(LUser);
-
-  LogAudit(Username, aaLogin, 'session', 'User logged in', True);
+  // BUG EXP-P1-006 FIX: runtime enforcement of the deprecation declared on
+  // the method signature. Callers must migrate to SetCurrentUserWithToken,
+  // which performs identity verification. The previous body (lookup + set)
+  // was silently allowing unauthenticated context to be established, which
+  // bypassed the contract promised by the deprecated directive.
+  raise EAuthorizationException.Create(
+    'SetCurrentUser is deprecated and no longer operational. ' +
+    'Call SetCurrentUserWithToken(username, token) to establish a ' +
+    'verified user context.'
+  );
 end;
 
 function TAuthorizationManager.SetCurrentUserWithToken(
@@ -1462,18 +1593,32 @@ var
 begin
   Result := False;
   LVerified := False;
+  LUser := nil;
 
-  { Try external token verifier callback first }
+  { Try external token verifier callback first. This runs OUTSIDE the lock
+    because the callback may be slow or may itself touch the manager
+    (reentrancy). }
   if Assigned(FTokenVerifier) then
     LVerified := FTokenVerifier(AUsername, AToken);
 
   if not LVerified then
   begin
-    { Fallback: check token stored in user metadata under key 'token' }
-    LUser := GetUser(AUsername);
+    { Fallback: check token stored in user metadata under key 'token'.
+      Copy the token out from the user object while holding FLock so a
+      concurrent DeleteUser/UpdateUser cannot free/replace LUser under us
+      (CORE-R3-007 fix). The metadata-string copy is safe to compare after
+      the lock is released. }
+    FLock.Enter;
+    try
+      if not FUsers.TryGetValue(AUsername, LUser) then
+        LUser := nil;
+      if LUser <> nil then
+        LStoredToken := LUser.GetMetadata('token');
+    finally
+      FLock.Leave;
+    end;
     if LUser = nil then
       Exit(False);
-    LStoredToken := LUser.GetMetadata('token');
     if (LStoredToken <> '') and SameText(LStoredToken, AToken) then
       LVerified := True;
   end;
@@ -1485,12 +1630,22 @@ begin
     Exit(False);
   end;
 
-  { Token valid — set the current user for this thread }
-  LUser := GetUser(AUsername);
+  { Token valid — re-acquire the user under FLock and update LastLoginAt
+    in the same critical section. A concurrent DeleteUser between the check
+    above and here would remove the user; we re-verify existence under lock. }
+  FLock.Enter;
+  try
+    if not FUsers.TryGetValue(AUsername, LUser) then
+      LUser := nil;
+    if LUser = nil then
+      Exit;
+    LUser.LastLoginAt := Now;
+  finally
+    FLock.Leave;
+  end;
   if LUser = nil then
     Exit(False);
 
-  LUser.LastLoginAt := Now;
   SetCurrentUserForThread(LUser);
   LogAudit(AUsername, aaLogin, 'session', 'User logged in (token)', True);
   Result := True;

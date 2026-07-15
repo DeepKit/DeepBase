@@ -2,7 +2,6 @@
   Test.DeepBase.Exception - Unit Tests for Global Exception Handler Module
 
   Tests the actual API provided by DeepBase.Exception:
-    - TDeepBaseExceptionHandler singleton lifecycle (class ctor/dtor)
     - Install class method
     - OnException behavior (private, tested indirectly via Install)
 
@@ -27,8 +26,6 @@ type
   [TestFixture]
   TTestExceptionHandlerClass = class
   public
-    [Test]
-    procedure Test_ClassConstructor_CreatesSingleton;
     [Test]
     procedure Test_Install_DoesNotCrash;
     [Test]
@@ -79,15 +76,6 @@ begin
 end;
 
 { TTestExceptionHandlerClass }
-
-procedure TTestExceptionHandlerClass.Test_ClassConstructor_CreatesSingleton;
-begin
-  // The class constructor auto-runs when the unit is used.
-  // It creates a private FInstance. We cannot access FInstance directly,
-  // but calling Install should work without crashing, proving the
-  // singleton was created in the class constructor.
-  Assert.Pass('Class constructor executed - singleton created');
-end;
 
 procedure TTestExceptionHandlerClass.Test_Install_DoesNotCrash;
 begin

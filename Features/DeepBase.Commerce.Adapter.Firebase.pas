@@ -403,6 +403,9 @@ begin
   Result.EntitlementCode := StrField(Fields, 'entitlement_code');
   Result.EntitlementDurationDays := IntField(Fields, 'entitlement_duration_days');
   Result.InitialQuota := IntField(Fields, 'initial_quota');
+  Result.Tier := StrField(Fields, 'tier');
+  Result.MaxDevices := IntField(Fields, 'max_devices');
+  Result.OfflineGraceDays := IntField(Fields, 'offline_grace_days');
   Result.IsActive := BoolField(Fields, 'is_active');
 end;
 
@@ -479,6 +482,9 @@ begin
   Result.AddPair('entitlement_code', WrapValue(AProduct.EntitlementCode));
   Result.AddPair('entitlement_duration_days', WrapValue(AProduct.EntitlementDurationDays));
   Result.AddPair('initial_quota', WrapValue(AProduct.InitialQuota));
+  Result.AddPair('tier', WrapValue(AProduct.Tier));
+  Result.AddPair('max_devices', WrapValue(AProduct.MaxDevices));
+  Result.AddPair('offline_grace_days', WrapValue(AProduct.OfflineGraceDays));
   Result.AddPair('is_active', WrapValue(AProduct.IsActive));
 end;
 

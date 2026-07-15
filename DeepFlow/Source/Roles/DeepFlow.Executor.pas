@@ -22,6 +22,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.JSON, System.Net.HttpClient,
+  System.Net.URLClient,
   DeepFlow.Message, DeepFlow.Role, DeepFlow.Config;
 
 type
@@ -316,6 +317,7 @@ function TExecutor.DoHandleMessage(const AMessage: TDeepFlowMessage): TDeepFlowM
 var
   SkillName: string;
   Input: TJSONObject;
+  OwnedInput: TJSONObject;
   Prompt: string;
   ExecResult: TJSONObject;
 begin
@@ -329,7 +331,14 @@ begin
       if AMessage.Payload.TryGetValue<TJSONObject>('input', Input) then
         ExecResult := Execute(SkillName, Input)
       else
-        ExecResult := Execute(SkillName, TJSONObject.Create);
+      begin
+        OwnedInput := TJSONObject.Create;
+        try
+          ExecResult := Execute(SkillName, OwnedInput);
+        finally
+          OwnedInput.Free;
+        end;
+      end;
       
       Result := TResponseMessage.Create(AMessage);
       TResponseMessage(Result).Payload.Free;
@@ -346,14 +355,18 @@ begin
     if AMessage.Payload.TryGetValue<string>('prompt', Prompt) then
     begin
       var Context: TJSONObject := nil;
-      AMessage.Payload.TryGetValue<TJSONObject>('context', Context);
-      
+      // REVIEW5-GOV-008: Explicitly handle missing 'context' branch to prevent
+      // potential confusion about ownership. Context points into AMessage.Payload
+      // and must NOT be freed here.
+      if not AMessage.Payload.TryGetValue<TJSONObject>('context', Context) then
+        Context := nil;  // Explicit: no context provided
+
       ExecResult := ExecuteLLM(Prompt, Context);
-      
+
       Result := TResponseMessage.Create(AMessage);
       TResponseMessage(Result).Payload.Free;
       TResponseMessage(Result).Payload := ExecResult;
-      
+
       var Success: Boolean;
       if ExecResult.TryGetValue<Boolean>('success', Success) then
         TResponseMessage(Result).Success := Success;

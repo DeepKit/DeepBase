@@ -29,7 +29,9 @@ type
       const MigrationsDir: string): TArray<string>; static;
     class function ExtractVersion(DatabaseType: TDatabaseType;
       const FilePath: string): string; static;
+    class function ReadScriptLocked(const FilePath: string): string; static;
     class function CalculateChecksum(const FilePath: string): string; static;
+    class function CalculateChecksumFromContent(const Content: string): string; static;
     class function AlreadyApplied(Connection: TFDConnection; const Version,
       Checksum: string): Boolean; static;
     class procedure RecordApplied(Connection: TFDConnection; const Version,
@@ -37,7 +39,7 @@ type
     class function IsTransactionControlStatement(const SQL: string): Boolean; static;
     class function SplitSQLStatements(const SQLText: string): TArray<string>; static;
     class procedure ExecuteScript(Connection: TFDConnection;
-      const ScriptPath: string); static;
+      const SQLText: string); static;
     class function BackupSQLiteDatabase(Connection: TFDConnection): string; static;
     class procedure AcquirePostgreSQLLock(Connection: TFDConnection); static;
     class procedure ReleasePostgreSQLLock(Connection: TFDConnection); static;
@@ -85,6 +87,7 @@ var
   FilePath: string;
   Version: string;
   Checksum: string;
+  ScriptContent: string;
   OwnTransaction: Boolean;
   SQLiteImmediate: Boolean;
   PgLockHeld: Boolean;
@@ -119,7 +122,12 @@ begin
     for FilePath in Files do
     begin
       Version := ExtractVersion(DatabaseType, FilePath);
-      Checksum := CalculateChecksum(FilePath);
+      // REVIEW5-DATA-006: read the script once under a shared-deny-write lock
+      // and use the same content for both checksum and execution. This closes
+      // the TOCTOU window where the file could be swapped between checksum
+      // calculation and ExecSQL.
+      ScriptContent := ReadScriptLocked(FilePath);
+      Checksum := CalculateChecksumFromContent(ScriptContent);
       Result.FailedScript := ExtractFileName(FilePath);
 
       if AlreadyApplied(Connection, Version, Checksum) then
@@ -157,7 +165,7 @@ begin
           Continue;
         end;
 
-        ExecuteScript(Connection, FilePath);
+        ExecuteScript(Connection, ScriptContent);
         RecordApplied(Connection, Version, ExtractFileName(FilePath), Checksum);
         if OwnTransaction then
         begin
@@ -329,6 +337,42 @@ begin
       'Migration version cannot be empty: %s', [FileName]);
 end;
 
+class function TMigrationEngine.ReadScriptLocked(const FilePath: string): string;
+var
+  Stream: TFileStream;
+  Bytes: TBytes;
+  Len: Integer;
+  BOM: TBytes;
+begin
+  // REVIEW5-DATA-006: open with fmShareDenyWrite to block external writers
+  // for the entire read. The returned string is the single snapshot used for
+  // both checksum verification and execution.
+  Stream := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyWrite);
+  try
+    Len := Stream.Size;
+    SetLength(Bytes, Len);
+    if Len > 0 then
+      Stream.ReadBuffer(Bytes[0], Len);
+
+    // BUG-336: TEncoding.UTF8.GetString does NOT strip a leading UTF-8 BOM
+    // (EF BB BF), so the BOM would be prepended to the first SQL statement
+    // (breaking ExecSQL) and included in the checksum. Mirror the behaviour
+    // of the previous TFile.ReadAllText(ScriptPath, TEncoding.UTF8) path by
+    // stripping the BOM before decode, so checksums stay byte-compatible with
+    // already-recorded migrations.
+    BOM := TEncoding.UTF8.GetPreamble;
+    if (Len >= Length(BOM)) and (Length(BOM) > 0) then
+    begin
+      if CompareMem(Bytes, BOM, Length(BOM)) then
+        Bytes := Copy(Bytes, Length(BOM), Len - Length(BOM));
+    end;
+
+    Result := TEncoding.UTF8.GetString(Bytes);
+  finally
+    Stream.Free;
+  end;
+end;
+
 class function TMigrationEngine.CalculateChecksum(const FilePath: string): string;
 var
   Stream: TFileStream;
@@ -341,6 +385,11 @@ begin
   finally
     Stream.Free;
   end;
+end;
+
+class function TMigrationEngine.CalculateChecksumFromContent(const Content: string): string;
+begin
+  Result := THashSHA2.GetHashString(Content, THashSHA2.TSHA2Version.SHA256);
 end;
 
 class function TMigrationEngine.AlreadyApplied(Connection: TFDConnection;
@@ -401,6 +450,7 @@ begin
   Result :=
     (S = 'BEGIN') or StartsText('BEGIN ', S) or
     (S = 'COMMIT') or StartsText('COMMIT ', S) or
+    (S = 'END') or  // REVIEW5-DATA-005: bare END is equivalent to COMMIT
     (S = 'END TRANSACTION') or StartsText('END TRANSACTION ', S) or
     (S = 'ROLLBACK') or StartsText('ROLLBACK ', S) or
     (S = 'SAVEPOINT') or StartsText('SAVEPOINT ', S) or
@@ -587,13 +637,11 @@ begin
 end;
 
 class procedure TMigrationEngine.ExecuteScript(Connection: TFDConnection;
-  const ScriptPath: string);
+  const SQLText: string);
 var
-  SQLText: string;
   Statements: TArray<string>;
   Statement: string;
 begin
-  SQLText := TFile.ReadAllText(ScriptPath, TEncoding.UTF8);
   Statements := SplitSQLStatements(SQLText);
   for Statement in Statements do
   begin

@@ -136,7 +136,7 @@ begin
     end;
   end;
   
-  Assert.IsTrue(Found, '应该�?Windows 默认主题');
+  Assert.IsTrue(Found, string('应该�?Windows 默认主题'));
 end;
 
 procedure TTestDeepBaseTheme.Test_CurrentTheme_NotEmpty;

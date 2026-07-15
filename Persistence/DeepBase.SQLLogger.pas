@@ -80,11 +80,14 @@ type
     class var FTotalDurationMs: Int64;
     class var FSlowQueryCount: Int64;
     class var FErrorCount: Int64;
-    
+    class var FLogsTableEnsured: Boolean;
+
     class procedure Initialize;
     class procedure Finalize;
     class procedure WriteToFile(const AEntry: TSQLLogEntry);
-    class procedure WriteToDatabase(const AEntry: TSQLLogEntry);
+    class procedure WriteToDatabase(const AEntry: TSQLLogEntry;
+      ADBConnection: TObject);
+    class procedure EnsureLogsTable(ADBConnection: TObject);
     class procedure TrimMemoryLog;
     class function FormatLogEntry(const AEntry: TSQLLogEntry): string;
   public
@@ -166,8 +169,15 @@ type
       AEntries: TSQLLogEntries);
     
     /// <summary>
-    /// Set database connection for database logging
+    /// Set database connection for database logging.
     /// </summary>
+    /// <remarks>
+    /// Thread-safety: the caller is responsible for ensuring that the
+    /// provided connection is either safe to share across threads (e.g. a
+    /// dedicated connection per writer thread) or that external
+    /// serialization is applied. TFDConnection is not safe to use
+    /// concurrently from multiple threads without such protection.
+    /// </remarks>
     class procedure SetDBConnection(AConnection: TObject);
     
     /// <summary>
@@ -222,6 +232,7 @@ begin
   FSlowQueryCount := 0;
   FErrorCount := 0;
   FDBConnection := nil;
+  FLogsTableEnsured := False;
   FOnLog := nil;
   FOnSlowQuery := nil;
   
@@ -239,9 +250,16 @@ end;
 class procedure TSQLLogger.NewSession;
 var
   GUID: TGUID;
+  LSid: string;
 begin
   CreateGUID(GUID);
-  FSessionId := Copy(GUIDToString(GUID), 2, 8);
+  LSid := Copy(GUIDToString(GUID), 2, 8);
+  FLock.Enter;
+  try
+    FSessionId := LSid;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TSQLLogger.StartTiming: TDateTime;
@@ -268,10 +286,15 @@ class procedure TSQLLogger.LogSQLEx(const ASQL: string; ADurationMs: Integer;
 var
   Entry: TSQLLogEntry;
   DoFile, DoDatabase, DoCallback, DoSlowAlert: Boolean;
+  LDBConn: TObject;
+  LOnLog: TProc<TSQLLogEntry>;
+  LOnSlowQuery: TProc<TSQLLogEntry>;
 begin
   if not FEnabled then Exit;
-  
 
+  LDBConn := nil;
+  LOnLog := nil;
+  LOnSlowQuery := nil;
   FLock.Enter;
   try
     // Create log entry
@@ -285,7 +308,7 @@ begin
     Entry.Success := ASuccess;
     Entry.ErrorMessage := AErrorMessage;
     Entry.RowsAffected := ARowsAffected;
-    
+
     // Determine log level
     if not ASuccess then
       Entry.LogLevel := sllError
@@ -293,10 +316,10 @@ begin
       Entry.LogLevel := sllWarn
     else
       Entry.LogLevel := sllInfo;
-    
+
     // Skip if below log level threshold
     if Entry.LogLevel < FLogLevel then Exit;
-    
+
     // Update statistics
     Inc(FTotalQueries);
     Inc(FTotalDurationMs, ADurationMs);
@@ -304,19 +327,26 @@ begin
       Inc(FSlowQueryCount);
     if not ASuccess then
       Inc(FErrorCount);
-    
+
     // Memory log (fast, stays under lock)
     if ldMemory in FDestinations then
     begin
       FMemoryLog.Add(Entry);
       TrimMemoryLog;
     end;
-    
-    // Determine which I/O destinations to write (outside lock)
+
+    // Snapshot references under lock so I/O below sees a consistent
+    // pointer even if SetDBConnection is called concurrently (DATA2-051).
     DoFile := ldFile in FDestinations;
     DoDatabase := (ldDatabase in FDestinations) and Assigned(FDBConnection);
+    if DoDatabase then
+      LDBConn := FDBConnection;
     DoCallback := (ldCallback in FDestinations) and Assigned(FOnLog);
+    if DoCallback then
+      LOnLog := FOnLog;
     DoSlowAlert := (ADurationMs >= FSlowQueryThresholdMs) and Assigned(FOnSlowQuery);
+    if DoSlowAlert then
+      LOnSlowQuery := FOnSlowQuery;
   finally
     FLock.Leave;
   end;
@@ -325,11 +355,11 @@ begin
   if DoFile then
     WriteToFile(Entry);
   if DoDatabase then
-    WriteToDatabase(Entry);
+    WriteToDatabase(Entry, LDBConn);
   if DoCallback then
-    FOnLog(Entry);
+    LOnLog(Entry);
   if DoSlowAlert then
-    FOnSlowQuery(Entry);
+    LOnSlowQuery(Entry);
 end;
 
 class procedure TSQLLogger.Execute(AQuery: TObject; AProc: TProc;
@@ -427,25 +457,46 @@ const
   LevelNames: array[TSQLLogLevel] of string = ('DEBUG', 'INFO', 'WARN', 'ERROR');
 var
   StatusStr: string;
+  SafeSQL, SafeOp, SafeError: string;
 begin
   if AEntry.Success then
     StatusStr := 'OK'
   else
     StatusStr := 'FAIL';
-    
+
+  // DATA2-049 fix: strip CR/LF from every free-text field that ends up on
+  // a single log line. Without this, SQL that contains user-supplied
+  // literals with newlines (or multiline error messages) would inject
+  // arbitrary lines into the log file — a log-injection attack that could
+  // masquerade entries, break parsers, or hide malicious activity.
+  SafeSQL := StringReplace(
+    StringReplace(Copy(AEntry.SQL, 1, 200), sLineBreak, ' ', [rfReplaceAll]),
+    #10, ' ', [rfReplaceAll]);
+  SafeSQL := StringReplace(SafeSQL, #13, ' ', [rfReplaceAll]);
+
+  SafeOp := StringReplace(
+    StringReplace(AEntry.Operation, sLineBreak, ' ', [rfReplaceAll]),
+    #10, ' ', [rfReplaceAll]);
+  SafeOp := StringReplace(SafeOp, #13, ' ', [rfReplaceAll]);
+
+  SafeError := StringReplace(
+    StringReplace(AEntry.ErrorMessage, sLineBreak, ' ', [rfReplaceAll]),
+    #10, ' ', [rfReplaceAll]);
+  SafeError := StringReplace(SafeError, #13, ' ', [rfReplaceAll]);
+
   Result := Format('%s [%s] [%s] %dms %s | %s',
     [FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', AEntry.Timestamp),
      AEntry.SessionId,
      LevelNames[AEntry.LogLevel],
      AEntry.DurationMs,
      StatusStr,
-     Copy(AEntry.SQL, 1, 200)]);  // Truncate long SQL
-     
-  if AEntry.Operation <> '' then
-    Result := Result + ' | Op: ' + AEntry.Operation;
-    
+     SafeSQL]);
+
+  if SafeOp <> '' then
+    Result := Result + ' | Op: ' + SafeOp;
+
   if not AEntry.Success then
-    Result := Result + ' | Error: ' + AEntry.ErrorMessage;
+    Result := Result + ' | Error: ' + SafeError;
 end;
 
 class function TSQLLogger.FormatExtra(const AExtra: TDictionary<string, string>): string;
@@ -485,40 +536,97 @@ begin
   end;
 end;
 
-class procedure TSQLLogger.WriteToDatabase(const AEntry: TSQLLogEntry);
+class procedure TSQLLogger.EnsureLogsTable(ADBConnection: TObject);
+var
+  Conn: TFDConnection;
+  Q: TFDQuery;
+begin
+  // Fast path — once the table has been created we never check again.
+  // The read of FLogsTableEnsured is intentionally lock-free here:
+  // it is a one-way False->True flag and a spurious re-creation
+  // attempt is harmless thanks to IF NOT EXISTS + the try/except.
+  if FLogsTableEnsured then Exit;
+  if not Assigned(ADBConnection) or not (ADBConnection is TFDConnection) then
+    Exit;
+  Conn := TFDConnection(ADBConnection);
+  if not Conn.Connected then Exit;
+
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := Conn;
+    try
+      // SQLite / Firebird syntax. Other dialects may reject
+      // IF NOT EXISTS; the broad except swallows that gracefully —
+      // if the table already exists the INSERT below will simply
+      // succeed; if it does not, the INSERT will fail and we will
+      // retry next write.
+      Q.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS Logs (' +
+        '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+        '  LogLevel VARCHAR(16),' +
+        '  Source VARCHAR(32),' +
+        '  Message VARCHAR(500),' +
+        '  LogTime TIMESTAMP,' +
+        '  SessionId VARCHAR(64),' +
+        '  MachineName VARCHAR(128),' +
+        '  Extra TEXT' +
+        ')';
+      Q.ExecSQL;
+    except
+      on E: Exception do
+      begin
+        // Table may already exist or dialect may not support
+        // IF NOT EXISTS — log and continue; we will retry next write.
+        {$IFDEF MSWINDOWS}
+        OutputDebugString(PChar(
+          'DeepBase.SQLLogger EnsureLogsTable: ' + E.Message));
+        {$ENDIF}
+      end;
+    end;
+    FLogsTableEnsured := True;
+  finally
+    Q.Free;
+  end;
+end;
+
+class procedure TSQLLogger.WriteToDatabase(const AEntry: TSQLLogEntry;
+  ADBConnection: TObject);
 var
   Conn: TFDConnection;
   Query: TFDQuery;
 begin
-  if Assigned(FDBConnection) and (FDBConnection is TFDConnection) then
-    Conn := TFDConnection(FDBConnection)
+  if Assigned(ADBConnection) and (ADBConnection is TFDConnection) then
+    Conn := TFDConnection(ADBConnection)
   else
     Conn := nil;
 
   if not Assigned(Conn) then Exit;
   if not Conn.Connected then Exit;
-  
+
+  // Ensure Logs table exists before the first INSERT (DATA2-052).
+  EnsureLogsTable(ADBConnection);
+
   Query := TFDQuery.Create(nil);
   try
     try
       Query.Connection := Conn;
-      Query.SQL.Text := 
+      Query.SQL.Text :=
         'INSERT INTO Logs (LogLevel, Source, Message, LogTime, SessionId, MachineName, Extra) ' +
         'VALUES (:LogLevel, :Source, :Message, :LogTime, :SessionId, :MachineName, :Extra)';
-      
+
       case AEntry.LogLevel of
         sllDebug: Query.ParamByName('LogLevel').AsString := 'DEBUG';
         sllInfo:  Query.ParamByName('LogLevel').AsString := 'INFO';
         sllWarn:  Query.ParamByName('LogLevel').AsString := 'WARN';
         sllError: Query.ParamByName('LogLevel').AsString := 'ERROR';
       end;
-      
+
       Query.ParamByName('Source').AsString := 'SQL';
       Query.ParamByName('Message').AsString := Copy(AEntry.SQL, 1, 500);
       Query.ParamByName('LogTime').AsDateTime := AEntry.Timestamp;
       Query.ParamByName('SessionId').AsString := AEntry.SessionId;
       Query.ParamByName('MachineName').AsString := '';
-      
+
       // Store extra info as JSON using FormatExtra
       var LExtraDict := TDictionary<string, string>.Create;
       try
@@ -531,7 +639,7 @@ begin
       finally
         LExtraDict.Free;
       end;
-      
+
       Query.ExecSQL;
     except
       on E: Exception do
@@ -635,9 +743,28 @@ end;
 class function TSQLLogger.GetStatistics: string;
 var
   AvgDuration: Double;
+  LTotalQueries, LTotalDurationMs, LSlowQueryCount, LErrorCount: Int64;
+  LMemCount, LMaxMemoryEntries, LSlowQueryThresholdMs: Integer;
+  LSessionId: string;
 begin
-  if FTotalQueries > 0 then
-    AvgDuration := FTotalDurationMs / FTotalQueries
+  // Snapshot all counters under lock so the report is self-consistent
+  // even if another thread is mutating them concurrently (DATA2-053).
+  FLock.Enter;
+  try
+    LTotalQueries := FTotalQueries;
+    LTotalDurationMs := FTotalDurationMs;
+    LSlowQueryCount := FSlowQueryCount;
+    LErrorCount := FErrorCount;
+    LMemCount := FMemoryLog.Count;
+    LSessionId := FSessionId;
+    LSlowQueryThresholdMs := FSlowQueryThresholdMs;
+    LMaxMemoryEntries := FMaxMemoryEntries;
+  finally
+    FLock.Leave;
+  end;
+
+  if LTotalQueries > 0 then
+    AvgDuration := LTotalDurationMs / LTotalQueries
   else
     AvgDuration := 0;
 
@@ -652,10 +779,11 @@ begin
     'Failed Queries: %d' + sLineBreak +
     'Memory Log Entries: %d / %d' + sLineBreak +
     '----------------------------------------',
-    [FSessionId, FTotalQueries, FTotalDurationMs, AvgDuration,
-     FSlowQueryThresholdMs, FSlowQueryCount, FErrorCount,
-     FMemoryLog.Count, FMaxMemoryEntries]);
+    [LSessionId, LTotalQueries, LTotalDurationMs, AvgDuration,
+     LSlowQueryThresholdMs, LSlowQueryCount, LErrorCount,
+     LMemCount, LMaxMemoryEntries]);
 end;
+
 class procedure TSQLLogger.ResetStatistics;
 begin
   FLock.Enter;
@@ -690,9 +818,18 @@ begin
     SL.Free;
   end;
 end;
+
 class procedure TSQLLogger.SetDBConnection(AConnection: TObject);
 begin
-  FDBConnection := AConnection;
+  FLock.Enter;
+  try
+    FDBConnection := AConnection;
+    // Reset lazy init flag so EnsureLogsTable runs against the new
+    // connection on the next database write.
+    FLogsTableEnsured := False;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 initialization

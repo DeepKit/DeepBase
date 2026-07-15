@@ -71,7 +71,9 @@ constructor TConfigLoader.Create(const AConfigDir: string;
   AOutputRegistry: TOutputRegistry);
 begin
   inherited Create;
-  FConfigDir := AConfigDir;
+  // DATA2-020: Normalize to resolve '..' / '.' segments and prevent
+  // path-traversal escapes from the intended configuration directory.
+  FConfigDir := TPath.GetFullPath(AConfigDir);
   FKeyResolver := AKeyResolver;
   FDueChecker := ADueChecker;
   FRouteResolver := ARouteResolver;
@@ -83,11 +85,16 @@ end;
 
 function TConfigLoader.FileContent(const AFileName: string): string;
 var
-  LPath: string;
+  LPath, LResolved: string;
 begin
   LPath := TPath.Combine(FConfigDir, AFileName);
-  if TFile.Exists(LPath) then
-    Result := TFile.ReadAllText(LPath, TEncoding.UTF8)
+  // DATA2-020: Resolve and verify the final path stays within FConfigDir.
+  LResolved := TPath.GetFullPath(LPath);
+  if not LResolved.StartsWith(FConfigDir, True) then
+    raise EArgumentException.CreateFmt(
+      'Config path "%s" escapes config directory "%s"', [AFileName, FConfigDir]);
+  if TFile.Exists(LResolved) then
+    Result := TFile.ReadAllText(LResolved, TEncoding.UTF8)
   else
     Result := '';
 end;

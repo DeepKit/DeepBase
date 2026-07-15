@@ -1,4 +1,4 @@
-﻿{==============================================================================
+{==============================================================================
   DeepBase.Export.PDF - Pure Object Pascal PDF Stream Writer
 
   Generates valid PDF 1.4 documents without third-party dependencies.
@@ -291,8 +291,8 @@ begin
     for I := 1 to Length(AText) do
     begin
       C := AText[I];
-      if Ord(C) > $FFFF then
-        Continue;
+      // Char in Delphi is UTF-16 code unit; Ord(C) in [0..$FFFF] always.
+      // Supplementary characters are split into surrogate pairs in AText.
       SB.AppendFormat('%4.4X', [Ord(C)]);
     end;
     Result := SB.ToString;
@@ -735,7 +735,7 @@ begin
 
   // Header
   WriteBuf('%PDF-1.4'#10);
-  WriteBuf('%'#226#227#207#211#10);
+  WriteBuf(string('%'#226#227#207#211#10));
 
   // Pages object
   PageRefs := '';

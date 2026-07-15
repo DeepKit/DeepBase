@@ -1,16 +1,16 @@
 { ============================================================================
-  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测�?
+  Test.Regression.BUG034_HardcodedKeys - 硬编码密钥漏洞回归测�?
 
-  BUG-034: 硬编码密钥漏�?
+  BUG-034: 硬编码密钥漏�?
   
-  原问�? 多个模块存在硬编码密钥，�?@2241114'�?Default_AntiTamper_Key_2025'等，
-          这些密钥可以被逆向工程提取�?
+  原问�? 多个模块存在硬编码密钥，�?@2241114'�?Default_AntiTamper_Key_2025'等，
+          这些密钥可以被逆向工程提取�?
   
-  修复方案: 移除所有硬编码默认密钥，要求用户显式配置密钥�?
+  修复方案: 移除所有硬编码默认密钥，要求用户显式配置密钥�?
   
   修复日期: 2025-12-16
   文件: Features/DeepBase.Protection.pas, Features/DeepBase.AntiTamper.pas
-  优先�? P0 (Critical)
+  优先�? P0 (Critical)
   分类: Security
   ============================================================================ }
 
@@ -50,14 +50,14 @@ type
     procedure Test_MissingKey_ThrowsClearError;
     
     [Test]
-    [Description('验证密钥配置后功能正�?)]
+    [Description('验证密钥配置后功能正�?)]
     procedure Test_ConfiguredKey_WorksCorrectly;
   end;
 
 implementation
 
 uses
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES;
 
 const
   // 已知的硬编码密钥模式（用于检测）
@@ -78,7 +78,7 @@ end;
 
 function TBug034_HardcodedKeysTest.GetBugDescription: string;
 begin
-  Result := '硬编码密钥漏�?;
+  Result := '硬编码密钥漏�?;
 end;
 
 function TBug034_HardcodedKeysTest.GetFixDate: string;
@@ -112,7 +112,7 @@ begin
     SourcePath := '..\Features\DeepBase.Protection.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -143,7 +143,7 @@ begin
     SourcePath := '..\Features\DeepBase.AntiTamper.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('源文件不可访问，跳过静态分析测�?);
       Exit;
     end;
   end;
@@ -173,7 +173,7 @@ begin
     ExceptionMessage := '';
     
     try
-      // 不设置密钥直接加�?
+      // 不设置密钥直接加�?
       AES.GenerateIV;
       AES.EncryptString('Test data');
     except
@@ -185,7 +185,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, '未配置密钥时应该抛出异常');
-    // 异常消息应该清楚地指示问�?
+    // 异常消息应该清楚地指示问�?
     Assert.IsTrue(
       ExceptionMessage.Contains('key') or 
       ExceptionMessage.Contains('Key') or
@@ -209,7 +209,7 @@ begin
   
   AES := TAESCrypto.Create(aes256, aesCBC);
   try
-    // 使用用户配置的密�?
+    // 使用用户配置的密�?
     AES.SetKeyFromPassword('UserConfiguredSecurePassword!@#$', TEncoding.UTF8.GetBytes('bug034_salt'));
     AES.GenerateIV;
     
@@ -218,7 +218,7 @@ begin
     Decrypted := AES.DecryptString(Encrypted);
     
     Assert.AreEqual(PlainText, Decrypted,
-      '使用用户配置的密钥应该能正确加密和解�?);
+      '使用用户配置的密钥应该能正确加密和解�?);
   finally
     AES.Free;
   end;

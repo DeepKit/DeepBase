@@ -101,6 +101,9 @@ type
     
     /// <summary>Evaluate rule against context</summary>
     function Evaluate(const AContext: TFlagContext): Boolean;
+
+    /// <summary>Compare two semantic version strings. Returns -1, 0, or 1.</summary>
+    class function CompareSemVer(const AVersionA, AVersionB: string): Integer;
     
     /// <summary>Create from JSON</summary>
     class function FromJSON(AJSON: TJSONObject): TTargetingRule;
@@ -210,7 +213,9 @@ type
     class function FromJSON(AJSON: TJSONObject): TFeatureFlag;
     /// <summary>Export to JSON</summary>
     function ToJSON: TJSONObject;
-    
+    /// <summary>深拷贝, 返回与原对象字段完全一致 (含时间戳) 的独立副本; 调用方拥有返回对象</summary>
+    function Clone: TFeatureFlag;
+
     property Key: string read FKey;
     property Name: string read FName write FName;
     property Description: string read FDescription write FDescription;
@@ -248,8 +253,11 @@ type
     ['{D1E2F3A4-5678-9ABC-DEF0-123456789ABC}']
     function Load: TObjectList<TFeatureFlag>;
     procedure Save(const AFlags: TObjectList<TFeatureFlag>);
+    /// <summary>Upsert 单个 flag。AFlag 所有权归调用方, storage 内部克隆后持久化, 不会释放 AFlag</summary>
     procedure SaveFlag(const AFlag: TFeatureFlag);
     procedure DeleteFlag(const AKey: string);
+    /// <summary>返回 AKey 对应 flag 的深拷贝克隆, 所有权归调用方; 不存在时返回 nil。
+    /// 返回的克隆不受 storage 后续修改/释放影响</summary>
     function GetFlag(const AKey: string): TFeatureFlag;
   end;
 
@@ -550,6 +558,53 @@ begin
     FValues[I] := AValues[I];
 end;
 
+class function TTargetingRule.CompareSemVer(const AVersionA, AVersionB: string): Integer;
+
+  procedure ParseSemVer(const AVersion: string; var AMajor, AMinor, APatch: Integer; var AValid: Boolean);
+  var
+    LParts: TArray<string>;
+  begin
+    AValid := False;
+    LParts := AVersion.Split(['.']);
+    if Length(LParts) <> 3 then
+      Exit;
+    try
+      AMajor := StrToInt(LParts[0]);
+      AMinor := StrToInt(LParts[1]);
+      APatch := StrToInt(LParts[2]);
+      AValid := True;
+    except
+      on EConvertError do
+        Exit;
+    end;
+  end;
+
+var
+  LMajA, LMinA, LPatA: Integer;
+  LMajB, LMinB, LPatB: Integer;
+  LValidA, LValidB: Boolean;
+begin
+  ParseSemVer(AVersionA, LMajA, LMinA, LPatA, LValidA);
+  ParseSemVer(AVersionB, LMajB, LMinB, LPatB, LValidB);
+
+  if not LValidA or not LValidB then
+    Exit(0);
+
+  if LMajA <> LMajB then
+  begin
+    if LMajA > LMajB then Exit(1) else Exit(-1);
+  end;
+  if LMinA <> LMinB then
+  begin
+    if LMinA > LMinB then Exit(1) else Exit(-1);
+  end;
+  if LPatA <> LPatB then
+  begin
+    if LPatA > LPatB then Exit(1) else Exit(-1);
+  end;
+  Result := 0;
+end;
+
 function TTargetingRule.Evaluate(const AContext: TFlagContext): Boolean;
 var
   LAttrValue: Variant;
@@ -655,8 +710,12 @@ begin
       
     toSemVerGT, toSemVerLT, toSemVerEQ:
       begin
-        // Simplified semantic version comparison
-        Result := LAttrStr >= LStrValue;
+        var LCompare := CompareSemVer(LAttrStr, LStrValue);
+        case FOperator of
+          toSemVerGT: Result := LCompare > 0;
+          toSemVerLT: Result := LCompare < 0;
+          toSemVerEQ: Result := LCompare = 0;
+        end;
       end;
   end;
 end;
@@ -684,6 +743,9 @@ begin
   else if LOpStr = 'gte' then LOperator := toGreaterOrEqual
   else if LOpStr = 'lte' then LOperator := toLessOrEqual
   else if LOpStr = 'regex' then LOperator := toRegex
+  else if LOpStr = 'semverGt' then LOperator := toSemVerGT
+  else if LOpStr = 'semverLt' then LOperator := toSemVerLT
+  else if LOpStr = 'semverEq' then LOperator := toSemVerEQ
   else LOperator := toEquals;
   
   if AJSON.TryGetValue<TJSONArray>('values', LValues) then
@@ -841,11 +903,14 @@ begin
   // Check dependencies first
   if (Length(FDependencies) > 0) and Assigned(AFlagManager) then
   begin
-    LManager := AFlagManager as TFeatureFlagManager;
-    for LDep in FDependencies do
+    if AFlagManager is TFeatureFlagManager then
     begin
-      if not LManager.IsEnabled(LDep, AContext) then
-        Exit(False);
+      LManager := TFeatureFlagManager(AFlagManager);
+      for LDep in FDependencies do
+      begin
+        if not LManager.IsEnabled(LDep, AContext) then
+          Exit(False);
+      end;
     end;
   end;
   
@@ -864,14 +929,21 @@ begin
       
     fsScheduled:
       begin
-        if Assigned(FSchedule) then
-          Result := FSchedule.IsActive and FDefaultValue
+        if Assigned(FSchedule) and not FSchedule.IsActive then
+          Result := False
+        else if FTargetingRules.Count > 0 then
+          Result := EvaluateTargeting(AContext)
         else
           Result := FDefaultValue;
       end;
       
     fsVariant:
-      Result := FDefaultValue;
+      begin
+        if FTargetingRules.Count > 0 then
+          Result := EvaluateTargeting(AContext)
+        else
+          Result := FDefaultValue;
+      end;
   else
     Result := FDefaultValue;
   end;
@@ -967,7 +1039,8 @@ end;
 function TFeatureFlag.AddRule(ARule: TTargetingRule): TFeatureFlag;
 begin
   FTargetingRules.Add(ARule);
-  FState := fsTargeted;
+  if FState <> fsRollout then
+    FState := fsTargeted;
   FUpdatedAt := Now;
   Inc(FVersion);
   Result := Self;
@@ -985,7 +1058,7 @@ end;
 function TFeatureFlag.WithRollout(APercentage: Integer): TFeatureFlag;
 begin
   FRolloutPercentage := APercentage;
-  if APercentage > 0 then
+  if (APercentage > 0) and not (FState in [fsTargeted, fsScheduled]) then
     FState := fsRollout;
   FUpdatedAt := Now;
   Inc(FVersion);
@@ -996,7 +1069,8 @@ function TFeatureFlag.WithSchedule(ASchedule: TFlagSchedule): TFeatureFlag;
 begin
   FreeAndNil(FSchedule);
   FSchedule := ASchedule;
-  FState := fsScheduled;
+  if not (FState in [fsTargeted, fsRollout]) then
+    FState := fsScheduled;
   FUpdatedAt := Now;
   Inc(FVersion);
   Result := Self;
@@ -1193,6 +1267,23 @@ begin
   Result.AddPair('updatedAt', DateToISO8601(FUpdatedAt, False));
 end;
 
+function TFeatureFlag.Clone: TFeatureFlag;
+var
+  LJSON: TJSONObject;
+begin
+  // BIZ-R3-003/004: 提供 SaveFlag/GetFlag 使用的深拷贝, 确保调用方对象不被 storage
+  // 接管/释放, 且 GetFlag 返回的副本不受 storage 后续修改影响。
+  LJSON := ToJSON;
+  try
+    Result := TFeatureFlag.FromJSON(LJSON);
+    // FromJSON 不读取 createdAt/updatedAt, 手动补全, 保证克隆与原对象完全一致
+    Result.FCreatedAt := FCreatedAt;
+    Result.FUpdatedAt := FUpdatedAt;
+  finally
+    LJSON.Free;
+  end;
+end;
+
 { TFlagEvaluationResult }
 
 class function TFlagEvaluationResult.Create(const AKey: string; AEnabled: Boolean;
@@ -1249,10 +1340,16 @@ begin
 end;
 
 procedure TMemoryFlagStorage.SaveFlag(const AFlag: TFeatureFlag);
+var
+  LClone: TFeatureFlag;
 begin
+  // BIZ-R3-003: 原实现 FFlags.AddOrSetValue(AFlag.Key, AFlag) 会把调用方 AFlag
+  // 接管进字典 (doOwnsValues), 调用方再释放 AFlag 即 double-free。改为克隆后入库,
+  // AFlag 所有权始终归调用方。AddOrSetValue 替换时释放旧克隆, 不影响调用方对象。
   FLock.Enter;
   try
-    FFlags.AddOrSetValue(AFlag.Key, AFlag);
+    LClone := AFlag.Clone;
+    FFlags.AddOrSetValue(AFlag.Key, LClone);
   finally
     FLock.Leave;
   end;
@@ -1269,11 +1366,17 @@ begin
 end;
 
 function TMemoryFlagStorage.GetFlag(const AKey: string): TFeatureFlag;
+var
+  LFlag: TFeatureFlag;
 begin
+  // BIZ-R3-004: 原实现返回字典内的裸对象引用, 所有权契约不明确 (调用方不应 Free,
+  // 但 storage 后续 Clear/Replace 会释放它致调用方持有悬垂引用)。改为返回深拷贝克隆,
+  // 所有权明确归调用方, 不受 storage 后续修改影响。
+  Result := nil;
   FLock.Enter;
   try
-    if not FFlags.TryGetValue(AKey, Result) then
-      Result := nil;
+    if FFlags.TryGetValue(AKey, LFlag) and Assigned(LFlag) then
+      Result := LFlag.Clone;
   finally
     FLock.Leave;
   end;
@@ -1360,6 +1463,9 @@ var
   LFound: Boolean;
   I: Integer;
 begin
+  // BIZ-R3-003: 原实现 LFlags[I]:=AFlag 在 OwnsObjects=True 的列表上会先 Free 旧对象
+  // 再接管调用方 AFlag 所有权, finally LFlags.Free 释放 AFlag 致调用方 double-free。
+  // 改为克隆 AFlag 写入, 调用方 AFlag 所有权不变; 列表 OwnsObjects=True 释放克隆, 不泄漏。
   LFlags := Load;
   try
     LFound := False;
@@ -1367,15 +1473,15 @@ begin
     begin
       if LFlags[I].Key = AFlag.Key then
       begin
-        LFlags[I] := AFlag;
+        LFlags[I] := AFlag.Clone;
         LFound := True;
         Break;
       end;
     end;
-    
+
     if not LFound then
-      LFlags.Add(AFlag);
-      
+      LFlags.Add(AFlag.Clone);
+
     Save(LFlags);
   finally
     LFlags.Free;
@@ -1408,6 +1514,9 @@ var
   LFlags: TObjectList<TFeatureFlag>;
   LFlag: TFeatureFlag;
 begin
+  // BIZ-R3-004: 原实现用 LFlags.Extract(LFlag) 转移所有权给调用方, 契约与 TMemoryFlagStorage
+  // 不一致 (后者返回 storage 拥有的裸引用)。统一为返回深拷贝克隆, 所有权归调用方,
+  // 原对象留列表由 LFlags.Free 释放, 调用方持有独立副本不受影响。
   Result := nil;
   LFlags := Load;
   try
@@ -1415,8 +1524,7 @@ begin
     begin
       if LFlag.Key = AKey then
       begin
-        Result := LFlag;
-        LFlags.Extract(LFlag); // Don't free this one
+        Result := LFlag.Clone;
         Break;
       end;
     end;

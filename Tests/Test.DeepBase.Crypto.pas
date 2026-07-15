@@ -12,6 +12,7 @@ uses
   System.Classes,
   DUnitX.TestFramework,
   DeepBase.Crypto,
+  DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Platform, DeepBase.Crypto.RSA, DeepBase.Crypto.Random,
   DeepBase.Services.Crypto;
 
 type

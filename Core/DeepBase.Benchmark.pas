@@ -347,7 +347,9 @@ class function TMemorySnapshot.Capture: TMemorySnapshot;
 var
   ProcessHandle: THandle;
   MemCounters: TProcessMemoryCounters;
+  {$WARN SYMBOL_DEPRECATED OFF}
   HeapStatus: THeapStatus;
+  {$WARN SYMBOL_DEPRECATED ON}
 begin
   Result.Timestamp := Now;
   Result.WorkingSetSize := 0;
@@ -366,8 +368,10 @@ begin
   end;
   
   {$WARN SYMBOL_DEPRECATED OFF}
+  {$WARN SYMBOL_PLATFORM OFF}
   HeapStatus := GetHeapStatus;
   Result.HeapAllocated := HeapStatus.TotalAllocated;
+  {$WARN SYMBOL_PLATFORM ON}
   {$WARN SYMBOL_DEPRECATED ON}
 end;
 
@@ -620,7 +624,8 @@ end;
 
 function TBenchmarkReport.GenerateJSON: string;
 var
-  Root, EnvObj, ResultsArr, ResultObj, TimingObj, MemObj: TJSONObject;
+  Root, EnvObj, ResultObj, TimingObj, MemObj: TJSONObject;
+  ResultsArr: TJSONArray;
   R: TBenchmarkResult;
   Pair: TPair<string, string>;
 begin
@@ -629,22 +634,22 @@ begin
     Root.AddPair('title', FTitle);
     Root.AddPair('description', FDescription);
     Root.AddPair('timestamp', FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', Now));
-    
+
     // Environment
     EnvObj := TJSONObject.Create;
     for Pair in FEnvironmentInfo do
       EnvObj.AddPair(Pair.Key, Pair.Value);
     Root.AddPair('environment', EnvObj);
-    
+
     // Results
-    ResultsArr := TJSONObject.Create;
+    ResultsArr := TJSONArray.Create;
     for R in FResults do
     begin
       ResultObj := TJSONObject.Create;
       ResultObj.AddPair('name', R.Name);
       ResultObj.AddPair('iterations', TJSONNumber.Create(R.Iterations));
       ResultObj.AddPair('warmup', TJSONNumber.Create(R.WarmupIterations));
-      
+
       TimingObj := TJSONObject.Create;
       TimingObj.AddPair('min_us', TJSONNumber.Create(R.TimingStats.Min));
       TimingObj.AddPair('max_us', TJSONNumber.Create(R.TimingStats.Max));
@@ -655,17 +660,17 @@ begin
       TimingObj.AddPair('p95_us', TJSONNumber.Create(R.TimingStats.P95));
       TimingObj.AddPair('p99_us', TJSONNumber.Create(R.TimingStats.P99));
       ResultObj.AddPair('timing', TimingObj);
-      
+
       MemObj := TJSONObject.Create;
       MemObj.AddPair('heap_delta', TJSONNumber.Create(R.MemoryDelta.HeapAllocated));
       ResultObj.AddPair('memory', MemObj);
-      
+
       ResultObj.AddPair('throughput_ops', TJSONNumber.Create(R.ThroughputPerSecond));
-      
-      TJSONArray(ResultsArr).Add(ResultObj);
+
+      ResultsArr.Add(ResultObj);
     end;
     Root.AddPair('results', ResultsArr);
-    
+
     Result := Root.Format(2);
   finally
     Root.Free;

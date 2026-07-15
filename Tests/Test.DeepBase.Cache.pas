@@ -81,7 +81,11 @@ type
     
     [Test]
     procedure Test_LFU_EvictsLeastFrequentlyUsed;
-    
+    [Test]
+    procedure Test_LFU_TiedFrequency_EvictsFirstSeenMinimum;
+    [Test]
+    procedure Test_LFU_MultipleEvictionCycles_HighFrequencySurvives;
+
     [Test]
     procedure Test_FIFO_EvictsFirstInserted;
     
@@ -360,6 +364,69 @@ begin
   Assert.IsFalse(FCache.Contains('key2'), 'key2 should be evicted (LFU)');
   Assert.IsTrue(FCache.Contains('key3'), 'key3 should still exist');
   Assert.IsTrue(FCache.Contains('key4'), 'key4 should exist');
+end;
+
+procedure TTestDeepBaseCache.Test_LFU_TiedFrequency_EvictsFirstSeenMinimum;
+var
+  I: Integer;
+begin
+  // All items are accessed exactly once, so all have AccessCount = 1 (plus the
+  // initial Put increments to 1 as well). The EvictLFU scan iterates the
+  // dictionary and picks the first entry with the minimum count.
+  FCache.MaxItems := 3;
+  FCache.EvictionPolicy := cepLFU;
+
+  FCache.Put('a', 'va');
+  FCache.Put('b', 'vb');
+  FCache.Put('c', 'vc');
+
+  // Access all three once each, so access counts are tied.
+  for I := 1 to 1 do FCache.Get('a');
+  for I := 1 to 1 do FCache.Get('b');
+  for I := 1 to 1 do FCache.Get('c');
+
+  // Adding a fourth entry forces one eviction - some entry with min count
+  // must be removed. After eviction, exactly 3 entries must remain.
+  FCache.Put('d', 'vd');
+
+  Assert.AreEqual(3, FCache.Count, 'cache must still be at capacity after eviction');
+  Assert.IsTrue(FCache.Contains('d'), 'newly inserted item must be present');
+
+  // Exactly two of the original three must still be present; the LFU scan removed one.
+  Assert.AreEqual(2, Ord(FCache.Contains('a')) + Ord(FCache.Contains('b')) +
+    Ord(FCache.Contains('c')), 'LFU must have evicted exactly one tied-frequency item');
+end;
+
+procedure TTestDeepBaseCache.Test_LFU_MultipleEvictionCycles_HighFrequencySurvives;
+var
+  I, Cycle: Integer;
+begin
+  // Run several eviction cycles and verify that the highest-frequency item
+  // always survives while low-frequency items are progressively evicted.
+  FCache.MaxItems := 3;
+  FCache.EvictionPolicy := cepLFU;
+
+  // Anchor: 'hot' is accessed on every cycle so its frequency climbs.
+  for Cycle := 1 to 5 do
+  begin
+    FCache.Put('hot', 'hot_v_' + IntToStr(Cycle));
+    FCache.Put('cold_a', 'ca_' + IntToStr(Cycle));
+    FCache.Put('cold_b', 'cb_' + IntToStr(Cycle));
+
+    // Pump up 'hot' frequency.
+    for I := 1 to 10 do FCache.Get('hot');
+    // Leave cold_a / cold_b at their Put-time access count.
+
+    // Force two evictions so only one 'cold' entry survives along with 'hot'.
+    FCache.Put('fresh_' + IntToStr(Cycle), 'f');
+    FCache.Put('fresh2_' + IntToStr(Cycle), 'f2');
+  end;
+
+  // 'hot' must have survived every cycle because its frequency is highest.
+  Assert.IsTrue(FCache.Contains('hot'),
+    'high-frequency item must survive all eviction cycles');
+  Assert.IsTrue(FCache.Stats.Evictions >= 10,
+    'expected at least 10 evictions across 5 cycles');
 end;
 
 procedure TTestDeepBaseCache.Test_FIFO_EvictsFirstInserted;

@@ -373,6 +373,18 @@ begin
       LOrder.PaidAtISO := '';
       LStorage.CreateOrder(LOrder);
 
+      // P1 fix #3 added a user-existence check in BeginPayment,
+      // so we must ensure the referenced user exists and is active.
+      var LUser: TCommerceUserData;
+      LUser.UserId := 'user-1';
+      LUser.DisplayName := 'Test User';
+      LUser.Email := '';
+      LUser.Phone := '';
+      LUser.IsActive := True;
+      LUser.CreatedAtISO := CommerceNowISO;
+      LUser.UpdatedAtISO := CommerceNowISO;
+      LStorage.UpsertUser(LUser);
+
       var LRaisedClass: TClass := nil;
       try
         LService.BeginPayment(LOrder.OrderId, cppWeChatPay,

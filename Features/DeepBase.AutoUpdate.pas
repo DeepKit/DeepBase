@@ -84,6 +84,7 @@ type
     DownloadUrl: string;        // direct URL to installer/package
     DownloadSize: Int64;        // bytes (may be 0 if unknown)
     Sha256: string;             // optional SHA256 hex string
+    Signature: string;          // REVIEW5-FEAT-003: optional digital signature (base64/PEM)
     ReleaseDate: TDateTime;     // parsed from ISO8601, or Now if missing
     Changelog: string;          // releaseNotes
     ForceUpdate: Boolean;       // isMandatory
@@ -117,17 +118,20 @@ type
     FPermissionClient: TDeepKitPermissionClient;
     FLastError: string;
     FOnCertRejected: TOnValidateCertificateEvent;
+    FConnectionTimeout: Integer;  // REVIEW5-FEAT-003: HTTP connection timeout (ms)
+    FResponseTimeout: Integer;    // REVIEW5-FEAT-003: HTTP response timeout (ms)
 
     function GetChannel: TUpdateChannel;
     procedure SetChannel(const Value: TUpdateChannel);
     function GetCurrentVersion: string;
     procedure SetCurrentVersion(const Value: string);
 
-    class function ChannelKey(Channel: TUpdateChannel): string; static;
-    class function NormalizeVersion(const S: string): string; static;
-    class function IsNewFormatJson(ARoot: TJSONObject): Boolean; static;
-    class procedure ResetUpdateInfo(out Info: TUpdateInfo; Channel: TUpdateChannel); static;
-    class procedure ParseInstallPolicy(Source: TJSONObject; var Info: TUpdateInfo); static;
+    function ChannelKey(Channel: TUpdateChannel): string;
+    function NormalizeVersion(const S: string): string;
+    function IsNewFormatJson(ARoot: TJSONObject): Boolean;
+    procedure ResetUpdateInfo(out Info: TUpdateInfo; Channel: TUpdateChannel);
+    procedure ParseInstallPolicy(Source: TJSONObject; var Info: TUpdateInfo);
+    function CreateHttpClient: THTTPClient;
 
     function CheckForUpdateFromJson(out Info: TUpdateInfo): Boolean;
     function CheckForUpdateFromNewFormat(ARoot: TJSONObject; out Info: TUpdateInfo): Boolean;
@@ -191,6 +195,18 @@ type
     /// </summary>
     property OnCertRejected: TOnValidateCertificateEvent
       read FOnCertRejected write FOnCertRejected;
+
+    /// <summary>
+    /// REVIEW5-FEAT-003: HTTP connection timeout in milliseconds.
+    /// Default: 30000 (30 seconds). Prevents indefinite hangs on slow servers.
+    /// </summary>
+    property ConnectionTimeout: Integer read FConnectionTimeout write FConnectionTimeout;
+
+    /// <summary>
+    /// REVIEW5-FEAT-003: HTTP response timeout in milliseconds.
+    /// Default: 60000 (60 seconds). Prevents indefinite hangs during download.
+    /// </summary>
+    property ResponseTimeout: Integer read FResponseTimeout write FResponseTimeout;
   end;
 
 implementation
@@ -203,6 +219,9 @@ begin
   FUpdateUrl := AUpdateUrl;
   FCurrentVersion := ACurrentVersion;
   FChannel := TUpdateChannel.ucStable;
+  // REVIEW5-FEAT-003: Default HTTP timeouts to prevent indefinite hangs
+  FConnectionTimeout := 30000; // 30 seconds
+  FResponseTimeout := 60000;   // 60 seconds
 end;
 
 function TDeepBaseAutoUpdate.GetChannel: TUpdateChannel;
@@ -228,7 +247,7 @@ begin
   FCurrentVersion := Trim(Value);
 end;
 
-class function TDeepBaseAutoUpdate.ChannelKey(Channel: TUpdateChannel): string;
+function TDeepBaseAutoUpdate.ChannelKey(Channel: TUpdateChannel): string;
 begin
   // Map to keys used in version.json
   case Channel of
@@ -241,14 +260,14 @@ begin
   end;
 end;
 
-class function TDeepBaseAutoUpdate.NormalizeVersion(const S: string): string;
+function TDeepBaseAutoUpdate.NormalizeVersion(const S: string): string;
 begin
   Result := Trim(S);
   if (Result <> '') and ((Result[Low(Result)] = 'v') or (Result[Low(Result)] = 'V')) then
     Delete(Result, Low(Result), 1);
 end;
 
-class function TDeepBaseAutoUpdate.IsNewFormatJson(ARoot: TJSONObject): Boolean;
+function TDeepBaseAutoUpdate.IsNewFormatJson(ARoot: TJSONObject): Boolean;
 begin
   if ARoot = nil then
     Exit(False);
@@ -258,7 +277,7 @@ begin
     ((ARoot.GetValue('appId') <> nil) and (ARoot.GetValue('version') <> nil));
 end;
 
-class procedure TDeepBaseAutoUpdate.ResetUpdateInfo(out Info: TUpdateInfo;
+procedure TDeepBaseAutoUpdate.ResetUpdateInfo(out Info: TUpdateInfo;
   Channel: TUpdateChannel);
 begin
   Info.Version := '';
@@ -266,6 +285,7 @@ begin
   Info.DownloadUrl := '';
   Info.DownloadSize := 0;
   Info.Sha256 := '';
+  Info.Signature := '';
   Info.ReleaseDate := 0;
   Info.Changelog := '';
   Info.ForceUpdate := False;
@@ -276,7 +296,7 @@ begin
   Info.ForceRestart := False;
 end;
 
-class procedure TDeepBaseAutoUpdate.ParseInstallPolicy(Source: TJSONObject;
+procedure TDeepBaseAutoUpdate.ParseInstallPolicy(Source: TJSONObject;
   var Info: TUpdateInfo);
 var
   PolicyObj: TJSONObject;
@@ -364,6 +384,7 @@ begin
   Info.DownloadUrl := '';
   Info.DownloadSize := 0;
   Info.Sha256 := '';
+  Info.Signature := '';
   Info.Changelog := ARoot.GetValue<string>('releaseNotes', '');
   Info.ForceUpdate := ARoot.GetValue<Boolean>('mandatory', False);
   Info.ForceRestart := Info.ForceUpdate;
@@ -393,6 +414,7 @@ begin
       Info.DownloadUrl := FileObj.GetValue<string>('downloadUrl', '');
     Info.DownloadSize := FileObj.GetValue<Int64>('size', 0);
     Info.Sha256 := FileObj.GetValue<string>('sha256', '');
+    Info.Signature := FileObj.GetValue<string>('signature', '');
   end;
 
   ParseInstallPolicy(ARoot, Info);
@@ -454,6 +476,8 @@ begin
     Delete(HashStr, 1, 7);
   Info.Sha256 := HashStr;
 
+  Info.Signature := Source.GetValue<string>('signature', '');
+
   Info.Changelog := Source.GetValue<string>('releaseNotes', '');
   if Info.Changelog = '' then
     Info.Changelog := Source.GetValue<string>('release_notes', '');
@@ -487,6 +511,27 @@ begin
   Result := Info.DownloadUrl <> '';
 end;
 
+function TDeepBaseAutoUpdate.CreateHttpClient: THTTPClient;
+var
+  UA: string;
+begin
+  Result := THTTPClient.Create;
+  try
+    if FCurrentVersion <> '' then
+      UA := Format('DeepBase/%s', [FCurrentVersion])
+    else
+      UA := 'DeepBase';
+    Result.UserAgent := UA;
+
+    // REVIEW5-FEAT-003: Apply configured HTTP timeouts
+    Result.ConnectionTimeout := FConnectionTimeout;
+    Result.ResponseTimeout := FResponseTimeout;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 function TDeepBaseAutoUpdate.CheckForUpdateFromJson(out Info: TUpdateInfo): Boolean;
 var
   Client: THTTPClient;
@@ -496,7 +541,7 @@ begin
   Result := False;
   ResetUpdateInfo(Info, FChannel);
 
-  Client := THTTPClient.Create;
+  Client := CreateHttpClient;
   try
     Response := Client.Get(FUpdateUrl);
     if Response.StatusCode <> 200 then
@@ -537,7 +582,7 @@ begin
   if RepoSlug = '' then
     Exit;
 
-  Client := THTTPClient.Create;
+  Client := CreateHttpClient;
   try
     // GitHub API: GET /repos/{owner}/{repo}/releases/latest
     Url := Format('https://api.github.com/repos/%s/releases/latest', [RepoSlug]);
@@ -604,7 +649,7 @@ begin
   if RepoSlug = '' then
     Exit;
 
-  Client := THTTPClient.Create;
+  Client := CreateHttpClient;
   try
     // Gitee API: GET /v5/repos/{owner}/{repo}/releases/latest
     Url := Format('https://gitee.com/api/v5/repos/%s/releases/latest', [RepoSlug]);
@@ -734,12 +779,35 @@ begin
   if Info.DownloadUrl = '' then
     Exit;
 
+  // REVIEW5-FEAT-003: Fail-closed integrity requirement.
+  // Production downloads must provide at least one integrity mechanism
+  // (SHA256 hash or digital signature). Without any, tampered packages
+  // cannot be detected.
+  if (Info.Sha256 = '') and (Info.Signature = '') then
+  begin
+    FLastError := 'Download rejected: update package must provide SHA256 hash or digital signature for integrity verification';
+    Exit;
+  end;
+
   if Assigned(OnProgress) then
     OnProgress(0, Info.DownloadSize);
 
-  Client := THTTPClient.Create;
+  Client := CreateHttpClient;
   try
-    Response := Client.Get(Info.DownloadUrl);
+    try
+      Response := Client.Get(Info.DownloadUrl);
+    except
+      // REVIEW5-FEAT-003: network/transient failures (DNS, connection refused,
+      // timeout 12002, etc.) must NOT propagate as unhandled exceptions. The
+      // integrity gate contract is "download may fail for network reasons, but
+      // never due to integrity rejection" — surface the failure via LastError
+      // and return False so callers can distinguish the two paths.
+      on E: Exception do
+      begin
+        FLastError := 'Download failed: ' + E.Message;
+        Exit;
+      end;
+    end;
     if Response.StatusCode <> 200 then
       Exit;
 

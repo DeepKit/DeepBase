@@ -788,6 +788,15 @@ begin
         GlobalSenseVoiceASR := TDeepBaseSenseVoiceASR.Create;
       Result := GlobalSenseVoiceASR.IsAvailable;
     end;
+  // Reuse the same lazily-created singleton as IsAvailableFunc so WireFromRegistry
+  // and availability checks share one instance (no double model load).
+  LInfo.ASRFactory :=
+    function: ISpeechRecognizerEx
+    begin
+      if GlobalSenseVoiceASR = nil then
+        GlobalSenseVoiceASR := TDeepBaseSenseVoiceASR.Create;
+      Result := GlobalSenseVoiceASR;
+    end;
   TSpeechRegistry.Register(LInfo);
 end;
 

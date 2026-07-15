@@ -33,4 +33,7 @@ requires
   designide,
   DeepBaseCore;
 
+contains
+  DeepBase.Design.Registration in 'Core\DeepBase.Design.Registration.pas';
+
 end.

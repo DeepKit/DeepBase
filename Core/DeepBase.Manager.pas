@@ -32,7 +32,8 @@ uses
   DeepBase.FormState,
   DeepBase.MRU,
   DeepBase.Hotkeys,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 const
   // FR-001 fix: alias to the canonical version constant in DeepBase.Consts
@@ -82,6 +83,10 @@ type
     // �ӳٳ�ʼ���ص�
     FReadyCallbacks: TList<TProc>;
     FReadyFired: Boolean;
+    // BIZ-R3-016 FIX: track pending WhenReady async tasks so FinalizeModules
+    // can wait for them before releasing FLogger and other modules, preventing
+    // use-after-free of FLogger inside the callback.
+    FPendingReadyTasks: TList<ITask>;
     
     // �¼�
     FOnLanguageChanged: TNotifyEvent;
@@ -98,7 +103,6 @@ type
     FFormState: TDeepBaseFormState;
     FMRU: TDeepBaseMRU;
     FHotkeys: TDeepBaseHotkeys;
-    class var FStorageFactory: TFunc<TObject, IManagerStorage>;
     class var FConnectionFactory: TManagerConnectionFactory;
     class var FConnectionIsConnected: TManagerConnectionIsConnected;
     class var FConnectionCloser: TManagerConnectionCloser;
@@ -106,6 +110,7 @@ type
     // �ڲ�����
     procedure InitializeModules;
     procedure FinalizeModules;
+    procedure WaitForPendingReadyTasks;
     function ReadRootTxt(const FilePath: string): string;
     function WriteRootTxt(const FilePath, RootPath: string): Boolean;
     function CreateRootTxt(out FilePath: string): Boolean;
@@ -119,8 +124,6 @@ type
     function CheckWritePermission(const Path: string): Boolean;
     function FindRootPath: string;
     function CreatePluginContext: IDeepBasePluginContext;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IManagerStorage; static;
     class function IsConnectionAlive(AConnection: TObject): Boolean; static;
     class procedure CloseConnection(var AConnection: TObject); static;
     
@@ -446,7 +449,7 @@ end;
 class procedure TDeepBaseManager.SetStorageFactory(
   const AFactory: TFunc<TObject, IManagerStorage>);
 begin
-  FStorageFactory := AFactory;
+  TConnectionStorageFactory<IManagerStorage>.SetFactory(AFactory);
 end;
 
 class procedure TDeepBaseManager.SetConnectionAdapter(
@@ -457,14 +460,6 @@ begin
   FConnectionFactory := AFactory;
   FConnectionIsConnected := AIsConnected;
   FConnectionCloser := ACloser;
-end;
-
-class function TDeepBaseManager.CreateStorageFromConnection(
-  AConnection: TObject): IManagerStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FStorageFactory) then
-    Result := FStorageFactory(AConnection);
 end;
 
 class function TDeepBaseManager.IsConnectionAlive(AConnection: TObject): Boolean;
@@ -498,6 +493,7 @@ begin
   inherited Create(AOwner);
   FLock := TObject.Create;
   FReadyCallbacks := TList<TProc>.Create;
+  FPendingReadyTasks := TList<ITask>.Create;
   FReadyFired := False;
   FIsInitialized := False;
   FInitErrorCode := ecUnknown;
@@ -510,6 +506,7 @@ end;
 destructor TDeepBaseManager.Destroy;
 begin
   Finalize;
+  FreeAndNil(FPendingReadyTasks);
   FreeAndNil(FReadyCallbacks);
   FreeAndNil(FLock);
   inherited;
@@ -798,6 +795,10 @@ begin
     
   TMonitor.Enter(FLock);
   try
+    // BIZ-R3-016 FIX: wait for pending WhenReady async tasks (finite timeout)
+    // before releasing modules, so callbacks can't dereference freed FLogger.
+    WaitForPendingReadyTasks;
+
     FinalizeModules;
 
     CloseConnection(FConfigDB);
@@ -821,16 +822,27 @@ begin
   // BUG-007 FIX: Use TTask.Run to prevent deadlock when callback calls DeepBase functions
   if FReadyFired then
   begin
-    TTask.Run(procedure
-    begin
-      try
-        ACallback();
-      except
-        on E: Exception do
-          if Assigned(FLogger) then
-            FLogger.Error('WhenReady callback failed: ' + E.Message, 'DeepBase');
-      end;
-    end);
+    // BIZ-R3-016 FIX: snapshot FLogger into a local so the async callback
+    // doesn't dereference the (potentially freed) field directly, and track
+    // the task so FinalizeModules can wait before releasing modules.
+    var LLogger := FLogger;
+    var LTask := TTask.Run(
+      procedure
+      begin
+        try
+          ACallback();
+        except
+          on E: Exception do
+            if Assigned(LLogger) then
+              LLogger.Error('WhenReady callback failed: ' + E.Message, 'DeepBase');
+        end;
+      end);
+    TMonitor.Enter(FLock);
+    try
+      FPendingReadyTasks.Add(LTask);
+    finally
+      TMonitor.Exit(FLock);
+    end;
     Exit;
   end;
   
@@ -1091,6 +1103,37 @@ begin
   );
 end;
 
+procedure TDeepBaseManager.WaitForPendingReadyTasks;
+var
+  LTasks: TArray<ITask>;
+  LTask: ITask;
+begin
+  // BIZ-R3-016 FIX: snapshot pending tasks under lock, then release the lock
+  // before waiting (waiting while holding FLock would deadlock any callback
+  // that calls back into a locked method). Finite timeout (5s) prevents hang.
+  TMonitor.Enter(FLock);
+  try
+    LTasks := TArray<ITask>(FPendingReadyTasks.ToArray);
+    FPendingReadyTasks.Clear;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+
+  for LTask in LTasks do
+  begin
+    if LTask = nil then
+      Continue;
+    try
+      // Wait for completion with a finite timeout to avoid indefinite hang.
+      LTask.Wait(5000);
+    except
+      // Swallow: task may be canceled or may have raised. We proceed with
+      // finalization regardless; the callback's own try/except already
+      // captured application errors via the snapshot logger.
+    end;
+  end;
+end;
+
 procedure TDeepBaseManager.FinalizeModules;
 begin
   // BASIC-020 fix: clear global translate callback BEFORE releasing FI18n,
@@ -1260,7 +1303,7 @@ begin
 
     FStorage := nil;
     try
-      FStorage := CreateStorageFromConnection(FConfigDB);
+      FStorage := TConnectionStorageFactory<IManagerStorage>.Create(FConfigDB);
     except
       on E: Exception do
       begin

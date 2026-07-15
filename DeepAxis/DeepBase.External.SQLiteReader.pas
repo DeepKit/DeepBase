@@ -10,6 +10,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.Variants, System.Hash, System.Math, System.IOUtils,
+  System.Character,
   FireDAC.Comp.Client, FireDAC.Stan.Def, FireDAC.Stan.Error,
   FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
   DeepBase.Types, DeepBase.Exceptions, DeepBase.Logging,
@@ -50,6 +51,8 @@ type
     FIsOpen: Boolean;
     FDbPath: string;
     FBCryptReader: TBCryptSQLiteReader;          // v0.7: BCrypt direct decryption backend
+    FMaxFileSizeBytes: Int64;
+    FMaxRows: Integer;
     function LoadSQLCipherLibrary: Boolean;
     procedure ApplyReadOnlySafeguards;
     function GetRawSQLiteHandle: Pointer;
@@ -61,6 +64,8 @@ type
       const AAuditor: IBodyZeroAuditor);
     destructor Destroy; override;
     procedure SetAdapterRegistry(const ARegistry: ISchemaAdapterRegistry);
+    property MaxFileSizeBytes: Int64 read FMaxFileSizeBytes write FMaxFileSizeBytes;
+    property MaxRows: Integer read FMaxRows write FMaxRows;
     // IExternalDBReader
     function OpenReadOnly(const DbPath: string; const KeyBytes: TBytes): IExternalDBReader;
     function OpenWithKeyCallback(const DbPath: string;
@@ -102,6 +107,8 @@ begin
   FBackend := AConfig.Backend;
   FAuditor := TBodyZeroAuditorImpl(AAuditor);
   FIsOpen := False;
+  FMaxFileSizeBytes := 100 * 1024 * 1024;  // 100 MB default
+  FMaxRows := 1000000;                      // 1,000,000 rows default
 end;
 
 destructor TExternalSQLiteReader.Destroy;
@@ -227,6 +234,15 @@ end;
 function TExternalSQLiteReader.OpenReadOnly(const DbPath: string;
   const KeyBytes: TBytes): IExternalDBReader;
 begin
+  // Enforce file size limit before opening (DATA2-016)
+  if not FileExists(DbPath) then
+    raise EExternalDBError.CreateFmt('Database file not found: %s', [DbPath]);
+  var FileSize := TFile.GetSize(DbPath);
+  if FileSize > FMaxFileSizeBytes then
+    raise ESQLiteReaderLimitExceeded.CreateFmt(
+      'Database file size (%d bytes) exceeds limit (%d bytes): %s',
+      [FileSize, FMaxFileSizeBytes, DbPath]);
+
   if FBackend = beBCryptDirect then
     ApplyBCryptConnection(DbPath, KeyBytes)
   else
@@ -235,6 +251,9 @@ begin
       raise EExternalDBError.Create('Cannot load SQLCipher library');
     ApplyFireDACConnection(DbPath, KeyBytes);
   end;
+  // Cache schema so SafeQueryMessages can enumerate shard tables without
+  // re-querying sqlite_master on every call (BUG-330 / REVIEW5-DATA-001).
+  FSchema := GetSchema;
   Result := Self;
 end;
 
@@ -376,9 +395,77 @@ end;
 
 function TExternalSQLiteReader.SafeQuery(const TableName: string;
   const ColumnNames: TArray<string>): TFDQuery;
+
+  // Validate and quote a SQLite identifier (REVIEW5-DATA-002).
+  // Rejects: empty, wildcards (*), SQL injection chars, expressions.
+  // Returns double-quoted identifier safe for SQL interpolation.
+  function QuoteIdentifier(const AIdent: string): string;
+  var
+    C: Char;
+  begin
+    if AIdent = '' then
+      raise EExternalDBInvalidIdentifier.Create('Empty identifier');
+    if AIdent = '*' then
+      raise EExternalDBInvalidIdentifier.Create(
+        'Wildcard (*) not allowed in SafeQuery; enumerate columns explicitly');
+    for C in AIdent do
+    begin
+      if not (C.IsLetterOrDigit or (C = '_')) then
+        raise EExternalDBInvalidIdentifier.CreateFmt(
+          'Invalid character ''%s'' in identifier ''%s''', [C, AIdent]);
+    end;
+    // SQLite quoting: wrap in double quotes, escape embedded double quotes by doubling
+    Result := '"' + AIdent.Replace('"', '""') + '"';
+  end;
+
+  function FindTable(const AName: string): Integer;
+  begin
+    for Result := 0 to High(FSchema.Tables) do
+      if SameText(FSchema.Tables[Result].Name, AName) then
+        Exit;
+    Result := -1;
+  end;
+
+  function FindColumn(const ATableIdx: Integer; const AColName: string): Boolean;
+  var
+    LCol: TColumnInfo;
+  begin
+    for LCol in FSchema.Tables[ATableIdx].Columns do
+      if SameText(LCol.Name, AColName) then
+        Exit(True);
+    Result := False;
+  end;
+
+var
+  LTableIdx: Integer;
+  LQuotedTable: string;
+  LQuotedCols: TArray<string>;
+  LCol: string;
+  LSQL: string;
+  I: Integer;
 begin
   if not FIsOpen then
     raise EExternalDBError.Create('Database not open');
+
+  // === Identifier validation against cached schema (REVIEW5-DATA-002) ===
+  if Length(ColumnNames) = 0 then
+    raise EExternalDBInvalidIdentifier.Create('ColumnNames must not be empty');
+
+  LTableIdx := FindTable(TableName);
+  if LTableIdx < 0 then
+    raise EExternalDBInvalidIdentifier.CreateFmt(
+      'Table ''%s'' not found in cached schema', [TableName]);
+
+  for LCol in ColumnNames do
+    if not FindColumn(LTableIdx, LCol) then
+      raise EExternalDBInvalidIdentifier.CreateFmt(
+        'Column ''%s'' not found in table ''%s''', [LCol, TableName]);
+
+  // Build quoted identifiers
+  LQuotedTable := QuoteIdentifier(TableName);
+  SetLength(LQuotedCols, Length(ColumnNames));
+  for I := 0 to High(ColumnNames) do
+    LQuotedCols[I] := QuoteIdentifier(ColumnNames[I]);
 
   // === Audit (non-blocking) ===
   try
@@ -404,7 +491,8 @@ begin
     Logger.WarnFmt('Schema version changed: %d -> %d, refreshing fingerprint',
       [FSchemaVersionAtOpen, CurrentVer], 'ExternalDB');
     FSchemaVersionAtOpen := CurrentVer;
-    var NewFingerprint := GetSchemaFingerprint;
+    FSchema := GetSchema; // refresh cached schema (REVIEW5-DATA-001)
+    var NewFingerprint := FSchema.SchemaFingerprint;
     if not TryResolveAdapter(NewFingerprint) then
       raise EExternalSchemaChanged.CreateFmt(
         'Schema changed to fingerprint %s, no matching adapter', [NewFingerprint]);
@@ -416,9 +504,9 @@ begin
   for var Retry := 1 to MaxRetries + 1 do
   begin
     try
-      var SQL := Format('SELECT %s FROM %s', [string.Join(',', ColumnNames), TableName]);
+      LSQL := Format('SELECT %s FROM %s', [string.Join(',', LQuotedCols), LQuotedTable]);
       try
-        if IsWriteStatement(SQL) then
+        if IsWriteStatement(LSQL) then
         begin
           FAuditor.IncrementWriteAttempts;
           raise EWriteAttemptBlocked.Create('Write blocked on external database');
@@ -430,7 +518,7 @@ begin
       end;
 
       Result := TFDQuery.Create(FConnection);
-      Result.Open(SQL);
+      Result.Open(LSQL);
       Exit;
     except
       on E: EFDDBEngineException do
@@ -442,6 +530,7 @@ begin
       end;
       on E: EWriteAttemptBlocked do raise;
       on E: EExternalSchemaChanged do raise;
+      on E: EExternalDBInvalidIdentifier do raise;
     end;
   end;
 end;
@@ -455,6 +544,9 @@ begin
     try
       while not Q.Eof do
       begin
+        if RowList.Count >= FMaxRows then
+          raise ESQLiteReaderLimitExceeded.CreateFmt(
+            'Row limit (%d) reached for table ''%s''', [FMaxRows, TableName]);
         var RowDict := TDictionary<string, Variant>.Create(Length(ColumnNames));
         for var ColName in ColumnNames do
           RowDict.Add(ColName, Q.FieldByName(ColName).AsVariant);
@@ -497,6 +589,10 @@ begin
     var ShardRows := SafeQueryAsDict(TableName, ColumnNames);
     if Length(ShardRows) > 0 then
     begin
+      if Length(Result) + Length(ShardRows) > FMaxRows then
+        raise ESQLiteReaderLimitExceeded.CreateFmt(
+          'Row limit (%d) would be exceeded by shard table ''%s''',
+          [FMaxRows, TableName]);
       var OldLen := Length(Result);
       SetLength(Result, OldLen + Length(ShardRows));
       for var I := 0 to High(ShardRows) do

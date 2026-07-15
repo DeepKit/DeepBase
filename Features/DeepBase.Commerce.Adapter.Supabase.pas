@@ -347,6 +347,9 @@ begin
   Result.EntitlementCode := Str(Obj, 'entitlement_code');
   Result.EntitlementDurationDays := IntVal(Obj, 'entitlement_duration_days');
   Result.InitialQuota := IntVal(Obj, 'initial_quota');
+  Result.Tier := Str(Obj, 'tier');
+  Result.MaxDevices := IntVal(Obj, 'max_devices');
+  Result.OfflineGraceDays := IntVal(Obj, 'offline_grace_days');
   Result.IsActive := BoolVal(Obj, 'is_active');
 end;
 
@@ -423,6 +426,9 @@ begin
   Result.AddPair('entitlement_code', AProduct.EntitlementCode);
   Result.AddPair('entitlement_duration_days', TJSONNumber.Create(AProduct.EntitlementDurationDays));
   Result.AddPair('initial_quota', TJSONNumber.Create(AProduct.InitialQuota));
+  Result.AddPair('tier', AProduct.Tier);
+  Result.AddPair('max_devices', TJSONNumber.Create(AProduct.MaxDevices));
+  Result.AddPair('offline_grace_days', TJSONNumber.Create(AProduct.OfflineGraceDays));
   Result.AddPair('is_active', TJSONBool.Create(AProduct.IsActive));
 end;
 

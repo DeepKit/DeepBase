@@ -78,6 +78,7 @@ type
     FConfigSetupProc: TGovernanceConfigSetupProc;
     FMode: TGovernanceMode;
     FStarted: Boolean;
+    FInitialized: Boolean;
     // ConfigDB-backed components
     FConfigDB: TFDConnection;
     FConfigRegistrar: TConfigRegistrar;
@@ -134,6 +135,7 @@ begin
   inherited Create;
   FMode := gmObserve;
   FStarted := False;
+  FInitialized := False;
 end;
 
 destructor TGovernanceLifecycle.Destroy;
@@ -173,6 +175,9 @@ var
   LPersistedMode: string;
 begin
   if FMode = gmOff then Exit;
+  // DATA2-008: Guard against reentry — calling Initialize twice without
+  // Shutdown leaks all engine instances created in the first call.
+  if FInitialized then Exit;
 
   // Engine graph, bottom-up.
   FKeyResolver   := TKeyResolver.Create;
@@ -188,11 +193,15 @@ begin
   // ConfigDB-backed wiring when a connection was provided.
   if FConfigDB <> nil then
   begin
-    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, False);
+    // DATA2-005: 第 3 个参数是 HMAC 密钥（空 = 回退到 SHA-256 检测篡改）。
+    // 若需 HMAC 强度，从 TKeyManager.Instance.GetActiveKeyForPurpose(kpSigning) 获取。
+    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, [], False);
     FEvidenceRecorder := TEvidenceRecorder.Create(FEvidenceStore);
     FEvidenceRecorderIntf := FEvidenceRecorder;
+    // REVIEW5-GOV-001: Pass ActionGrid and DueChecker to ConfigRegistrar so it
+    // can sync Action registrations to all three registries (KeyResolver, ActionGrid, DueChecker)
     FConfigRegistrar := TConfigRegistrar.Create(
-      FConfigDB, FKeyResolver, FPurposeSet);
+      FConfigDB, FKeyResolver, FPurposeSet, FActionGrid, FDueChecker);
 
     // Persisted mode overrides the default when caller passed gmObserve.
     if FMode = gmObserve then
@@ -231,6 +240,8 @@ begin
     FKeyResolver,
     FPurposeSet,
     TPath.Combine(ExtractFilePath(ParamStr(0)), '.kiro\steering'));
+
+  FInitialized := True;
 end;
 
 procedure TGovernanceLifecycle.Start;
@@ -278,6 +289,8 @@ end;
 procedure TGovernanceLifecycle.Shutdown;
 begin
   Stop;
+  // DATA2-008: Reset initialized flag so a subsequent Initialize can rebuild.
+  FInitialized := False;
   // SteeringExporter is a plain TObject — safe to FreeAndNil.
   FreeAndNil(FSteeringExporter);
 

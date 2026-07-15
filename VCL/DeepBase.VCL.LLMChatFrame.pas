@@ -150,6 +150,15 @@ implementation
 uses
   System.DateUtils, Winapi.RichEdit;
 
+// UI2-018: resourcestrings allow per-language overrides via satellite .res
+// files without pulling in the full i18n manager dependency here.
+resourcestring
+  SBtnSend = 'Send';      // zh-CN: '发送'
+  SBtnCancel = 'Cancel';  // zh-CN: '取消'
+  SBtnClear = 'Clear';    // zh-CN: '清空'
+  SStatusCancelled = 'Cancelled';  // zh-CN: '已取消'
+  SStatusCleared = 'Cleared';      // zh-CN: '已清空'
+
 const
   DEFAULT_USER_COLOR = clNavy;
   DEFAULT_ASSISTANT_COLOR = clGreen;
@@ -186,6 +195,17 @@ end;
 
 destructor TLLMChatFrame.Destroy;
 begin
+  // REVIEW5-UI-004: Cancel and wait for background task to prevent
+  // use-after-free when frame is destroyed during generation
+  if FIsGenerating then
+  begin
+    if Assigned(FClient) then
+      FClient.Cancel;
+    // Wait for task to complete (with timeout to prevent deadlock)
+    if Assigned(FCurrentTask) then
+      FCurrentTask.WaitFor(2000);  // 2 second timeout
+  end;
+
   if FOwnsClient and Assigned(FClient) then
     FreeAndNil(FClient);
   FreeAndNil(FHistory);
@@ -235,7 +255,7 @@ begin
   
   FBtnSend := TButton.Create(Self);
   FBtnSend.Parent := FPanelInput;
-  FBtnSend.Caption := '发送';
+  FBtnSend.Caption := SBtnSend;
   FBtnSend.Top := 4;
   FBtnSend.Left := 4;
   FBtnSend.Width := 80;
@@ -244,7 +264,7 @@ begin
   
   FBtnCancel := TButton.Create(Self);
   FBtnCancel.Parent := FPanelInput;
-  FBtnCancel.Caption := '取消';
+  FBtnCancel.Caption := SBtnCancel;
   FBtnCancel.Top := 32;
   FBtnCancel.Left := 4;
   FBtnCancel.Width := 80;
@@ -254,7 +274,7 @@ begin
   
   FBtnClear := TButton.Create(Self);
   FBtnClear.Parent := FPanelInput;
-  FBtnClear.Caption := '清空';
+  FBtnClear.Caption := SBtnClear;
   FBtnClear.Top := 60;
   FBtnClear.Left := 4;
   FBtnClear.Width := 80;
@@ -628,7 +648,7 @@ begin
   if FIsGenerating and Assigned(FClient) then
   begin
     FClient.Cancel;
-    SetStatus('已取消');
+    SetStatus(SStatusCancelled);
   end;
 end;
 
@@ -639,7 +659,7 @@ begin
     FRichEditChat.Clear;
     FChatItems.Clear;
     FHistory.Clear;
-    SetStatus('已清空');
+    SetStatus(SStatusCleared);
   end;
 end;
 

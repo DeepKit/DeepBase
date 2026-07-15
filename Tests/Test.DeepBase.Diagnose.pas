@@ -874,6 +874,7 @@ begin
   Assert.AreEqual(5, Ord(ditForeignKey));
   Assert.AreEqual(6, Ord(ditNullValue));
   Assert.AreEqual(7, Ord(ditInvalidEnum));
+  Assert.AreEqual(8, Ord(ditCheckError));
 end;
 
 procedure TTestDiagnoseResult.Test_Result_Fields;

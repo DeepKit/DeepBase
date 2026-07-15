@@ -491,7 +491,13 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM auth_users WHERE username = :username';
+    // BIZ-R3-008: Cascade delete user-role associations first.
+    // Delete from auth_user_roles before auth_users to avoid FK violations
+    // and orphaned rows in the join table.
+    Query.SQL.Text :=
+      'DELETE FROM auth_user_roles WHERE user_id = ' +
+      '(SELECT id FROM auth_users WHERE username = :username); ' +
+      'DELETE FROM auth_users WHERE username = :username';
     Query.ParamByName('username').AsString := Username;
     Query.ExecSQL;
   finally
@@ -581,14 +587,20 @@ procedure TFireDACAuthorizationStorage.ReplaceRolePermissions(RoleId: Integer;
 var
   Query: TFDQuery;
   Permission: string;
+  OwnTx: Boolean;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
-  // BASIC-009 fix: wrap DELETE + INSERT loop in an explicit transaction so
-  // a mid-loop failure does not leave the role with zero permissions.
-  FConnection.StartTransaction;
+  // DATA2-025: Only start a transaction if the caller hasn't already started
+  // one. Track ownership so we only commit/rollback what we started.
+  OwnTx := False;
   try
+    if not FConnection.InTransaction then
+    begin
+      FConnection.StartTransaction;
+      OwnTx := True;
+    end;
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
@@ -607,9 +619,11 @@ begin
     finally
       Query.Free;
     end;
-    FConnection.Commit;
+    if OwnTx then
+      FConnection.Commit;
   except
-    FConnection.Rollback;
+    if OwnTx then
+      FConnection.Rollback;
     raise;
   end;
 end;
@@ -624,7 +638,13 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
-    Query.SQL.Text := 'DELETE FROM auth_roles WHERE name = :name';
+    // BIZ-R3-008: Cascade delete user-role associations first.
+    // Delete from auth_user_roles before auth_roles to avoid FK violations
+    // and orphaned rows in the join table.
+    Query.SQL.Text :=
+      'DELETE FROM auth_user_roles WHERE role_id = ' +
+      '(SELECT id FROM auth_roles WHERE name = :name); ' +
+      'DELETE FROM auth_roles WHERE name = :name';
     Query.ParamByName('name').AsString := RoleName;
     Query.ExecSQL;
   finally

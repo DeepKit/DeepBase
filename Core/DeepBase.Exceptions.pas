@@ -4,8 +4,8 @@
 {                                                       }
 {       Copyright (C) 2025 DeepBase                      }
 {                                                       }
-{       ç»ä¸å¼å¸¸ç±»å±æ¬¡ç»æ?                             }
-{       ç¨äºæ¿æ¢æ³å Exception.Create è°ç¨             }
+{       统一异常类层次结构                             }
+{       用于替换泛型 Exception.Create 调用             }
 {                                                       }
 {*******************************************************}
 
@@ -18,8 +18,8 @@ uses
 
 type
   /// <summary>
-  /// DeepBase å¼å¸¸åºç±»
-  /// ææ?DeepBase ç¹å®å¼å¸¸é½åºç»§æ¿èªæ­¤ç±?
+  /// DeepBase 异常基类
+  /// 所有DeepBase 特定异常都应继承自此类
   /// </summary>
   EDeepBaseException = class(Exception)
   private
@@ -41,55 +41,55 @@ type
   end;
 
   //============================================================================
-  // å®å¨ä¸å å¯å¼å¸?
+  // 安全与加密异常
   //============================================================================
 
   /// <summary>
-  /// å®å¨æ¨¡åå¼å¸¸åºç±»
+  /// 安全模块异常基类
   /// </summary>
   ESecurityException = class(EDeepBaseException);
 
   /// <summary>
-  /// å å¯/è§£å¯æä½å¤±è´¥
+  /// 加密/解密操作失败
   /// </summary>
   EEncryptionException = class(ESecurityException);
 
   /// <summary>
-  /// è§£å¯æä½å¤±è´¥
+  /// 解密操作失败
   /// </summary>
   EDecryptionException = class(ESecurityException);
 
   /// <summary>
-  /// åå¸è®¡ç®å¤±è´¥
+  /// 哈希计算失败
   /// </summary>
   EHashException = class(ESecurityException);
 
   /// <summary>
-  /// æ°å­ç­¾åç¸å³å¼å¸¸
+  /// 数字签名相关异常
   /// </summary>
   ESignatureException = class(ESecurityException);
 
   /// <summary>
-  /// é²ç¯¡æ¹ç¸å³å¼å¸?
+  /// 防篡改相关异常
   /// </summary>
   EAntiTamperException = class(ESecurityException);
 
   /// <summary>
-  /// ä¿æ¤æ¨¡åå¼å¸¸
+  /// 保护模块异常
   /// </summary>
   EProtectionException = class(ESecurityException);
 
   /// <summary>
-  /// éæºæ°çæå¼å¸?
+  /// 随机数生成异常
   /// </summary>
   ERandomException = class(ESecurityException);
 
   //============================================================================
-  // æ°æ®åºå¼å¸?
+  // 数据库异常
   //============================================================================
 
   /// <summary>
-  /// æ°æ®åºæ¨¡åå¼å¸¸åºç±?
+  /// 数据库模块异常基类
   /// </summary>
   EDatabaseException = class(EDeepBaseException)
   private
@@ -102,184 +102,197 @@ type
   end;
 
   /// <summary>
-  /// è¿æ¥æ± å¼å¸?
+  /// 连接池异常
   /// </summary>
   EPoolException = class(EDatabaseException);
 
   /// <summary>
-  /// è¿æ¥è¶æ¶å¼å¸¸
+  /// 连接超时异常
   /// </summary>
   EConnectionTimeoutException = class(EPoolException);
 
   /// <summary>
-  /// è¿æ¥æ± æªåå§åå¼å¸?
+  /// 连接池未初始化异常
   /// </summary>
   EPoolNotInitializedException = class(EPoolException);
 
   //============================================================================
-  // éç½®å¼å¸¸
+  // 配置异常
   //============================================================================
 
   /// <summary>
-  /// éç½®æ¨¡åå¼å¸¸åºç±»
+  /// 配置模块异常基类
   /// </summary>
   EConfigException = class(EDeepBaseException);
 
   /// <summary>
-  /// éç½®æªæ¾å?
+  /// 配置未找到
   /// </summary>
   EConfigNotFoundException = class(EConfigException);
 
   /// <summary>
-  /// éç½®å¼æ æ?
+  /// 配置值无效
   /// </summary>
   EConfigInvalidValueException = class(EConfigException);
 
   //============================================================================
-  // å¤ä»½å¼å¸¸
+  // 备份异常
   //============================================================================
 
   /// <summary>
-  /// å¤ä»½æ¨¡åå¼å¸¸åºç±»
+  /// 备份模块异常基类
   /// </summary>
   EBackupException = class(EDeepBaseException);
 
   /// <summary>
-  /// å¤ä»½æä½åæ¶
+  /// 备份操作取消
   /// </summary>
   EBackupCancelledException = class(EBackupException);
 
   /// <summary>
-  /// å¤ä»½æä½æ­£å¨è¿è¡ä¸?
+  /// 备份操作正在进行中
   /// </summary>
   EBackupInProgressException = class(EBackupException);
 
   /// <summary>
-  /// äºæå¡æªéç½®
+  /// 云服务未配置
   /// </summary>
   ECloudServiceNotConfiguredException = class(EBackupException);
 
   /// <summary>
-  /// å¤ä»½æä»¶ä¸å­å?
+  /// 备份文件不存在
   /// </summary>
   EBackupFileNotFoundException = class(EBackupException);
 
   /// <summary>
-  /// å¤ä»½ä¸ä¼ /ä¸è½½å¤±è´¥
+  /// 备份上传/下载失败
   /// </summary>
   EBackupTransferException = class(EBackupException);
 
   //============================================================================
-  // ç½ç»ä¸æå¡å¼å¸?
+  // 网络与服务异常
   //============================================================================
 
   /// <summary>
-  /// ç½ç»æ¨¡åå¼å¸¸åºç±»
+  /// 网络模块异常基类
   /// </summary>
   ENetworkException = class(EDeepBaseException);
 
   /// <summary>
-  /// HTTP æå¡å¨å¼å¸?
+  /// HTTP 服务器异常
   /// </summary>
   EHttpServerException = class(ENetworkException);
 
   /// <summary>
-  /// æå¡å¨å·²å¨è¿è¡?
+  /// 服务器已在运行
   /// </summary>
   EServerAlreadyRunningException = class(EHttpServerException);
 
   /// <summary>
-  /// WebSocket å¼å¸¸
+  /// WebSocket 异常
   /// </summary>
   EWebSocketException = class(ENetworkException);
 
   //============================================================================
-  // å¼¹æ§ä¸å®¹éå¼å¸¸
+  // 弹性与容错异常
   //============================================================================
 
   /// <summary>
-  /// å¼¹æ§æ¨¡åå¼å¸¸åºç±?
+  /// 弹性模块异常基类
   /// </summary>
   EResilienceException = class(EDeepBaseException);
 
   /// <summary>
-  /// æ­è·¯å¨å¼å¸?
+  /// 断路器异常
   /// </summary>
   ECircuitBreakerException = class(EResilienceException);
 
   /// <summary>
-  /// æ­è·¯å¨æ³¨åè¡¨æªåå§å
+  /// 断路器注册表未初始化
   /// </summary>
   ECircuitBreakerNotInitializedException = class(ECircuitBreakerException);
 
   //============================================================================
-  // åå§åå¼å¸?
+  // 初始化异常
   //============================================================================
 
   /// <summary>
-  /// åå§åå¼å¸¸åºç±?
+  /// 初始化异常基类
   /// </summary>
   EInitializationException = class(EDeepBaseException);
 
   /// <summary>
-  /// æ¨¡åæªåå§å
+  /// 模块未初始化
   /// </summary>
   ENotInitializedException = class(EInitializationException);
 
   /// <summary>
-  /// éç½®ç¼ºå¤±
+  /// 配置缺失
   /// </summary>
   EMissingConfigurationException = class(EInitializationException);
 
   //============================================================================
-  // æä½å¼å¸¸
+  // 操作异常
   //============================================================================
 
   /// <summary>
-  /// æä½å¼å¸¸åºç±»
+  /// 操作异常基类
   /// </summary>
   EOperationException = class(EDeepBaseException);
 
   /// <summary>
-  /// æä½æ­£å¨è¿è¡ä¸?
+  /// 操作正在进行中
   /// </summary>
   EOperationInProgressException = class(EOperationException);
 
   /// <summary>
-  /// æä½å·²åæ¶?
+  /// 操作已取消
   /// </summary>
   EOperationCancelledException = class(EOperationException);
 
   /// <summary>
-  /// æ ææä½
+  /// 无效操作
   /// </summary>
   EInvalidOperationException = class(EOperationException);
 
+  /// <summary>
+  /// 功能尚未实现时抛出。用于平台桩代码、未接入的服务端点等场景，
+  /// 替代返回默认值导致的静默失败。调用方可通过
+  /// except on E: ENotImplementedException do 精确捕获。
+  /// </summary>
+  ENotImplementedException = class(EInvalidOperationException);
+
+  /// <summary>
+  /// 表达式过于复杂（嵌套层级超出上限）时抛出。
+  /// 用于防止递归求值器栈溢出（DATA2-043）。
+  /// </summary>
+  EExpressionTooComplexException = class(EInvalidOperationException);
+
   //============================================================================
-  // æä»¶å¼å¸¸
+  // 文件异常
   //============================================================================
 
   /// <summary>
-  /// æä»¶æä½å¼å¸¸åºç±»
+  /// 文件操作异常基类
   /// </summary>
   EFileOperationException = class(EDeepBaseException);
 
   /// <summary>
-  /// æä»¶æªæ¾å?
+  /// 文件未找到
   /// </summary>
   EFileNotFoundExceptionEx = class(EFileOperationException);
 
   //============================================================================
-  // è¾å©å½æ°
+  // 辅助函数
   //============================================================================
 
   /// <summary>
-  /// è·åç³»ç»éè¯¯æ¶æ¯ï¼Windowsï¼?
+  /// 获取系统错误消息（Windows）
   /// </summary>
   function GetLastErrorMessage: string;
 
   /// <summary>
-  /// æåºå¸¦ç³»ç»éè¯¯çå¼å¸¸
+  /// 抛出带系统错误的异常
   /// </summary>
   procedure RaiseLastOSError(const AContext: string = '');
 
@@ -294,6 +307,8 @@ type
   EWriteAttemptBlocked = class(EExternalDBException);
   EExternalSchemaChanged = class(EExternalDBException);
   EUnsupportedSQLCipherConfig = class(EExternalDBException);
+  EExternalDBInvalidIdentifier = class(EExternalDBException);
+  ESQLiteReaderLimitExceeded = class(EExternalDBException);
 
   //============================================================================
   // SchemaAdapter exceptions (33.data)

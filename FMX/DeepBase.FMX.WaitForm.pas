@@ -355,11 +355,22 @@ begin
 end;
 
 class procedure TFMXWaitForm.CloseWait(var AWaitForm: TFMXWaitForm);
+var
+  LForm: TFMXWaitForm;
 begin
   if Assigned(AWaitForm) then
   begin
-    AWaitForm.Close;
-    FreeAndNil(AWaitForm);
+    // UI2-015 fix: capture the reference and nil the var-param before
+    // Close, then defer the actual Free to the next message-loop tick so
+    // any OnClose handler can still safely reference AWaitForm.
+    LForm := AWaitForm;
+    AWaitForm := nil;
+    LForm.Close;
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        LForm.Free;
+      end);
   end;
 end;
 

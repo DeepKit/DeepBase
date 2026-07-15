@@ -8,7 +8,7 @@ unit DeepBase.SchemaAdapter.Registry;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections,
+  System.SysUtils, System.Generics.Collections, System.SyncObjs,
   DeepBase.SchemaAdapter.Types,
   DeepBase.SchemaAdapter,
   DeepBase.Exceptions;
@@ -22,6 +22,7 @@ type
   TSchemaAdapterRegistry = class(TInterfacedObject, ISchemaAdapterRegistry)
   private
     FAdapters: TList<TVersionedAdapter>;
+    FLock: TCriticalSection;
   public
     constructor Create;
     destructor Destroy; override;
@@ -40,10 +41,12 @@ constructor TSchemaAdapterRegistry.Create;
 begin
   inherited;
   FAdapters := TList<TVersionedAdapter>.Create;
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TSchemaAdapterRegistry.Destroy;
 begin
+  FLock.Free;
   FAdapters.Free;
   inherited;
 end;
@@ -53,9 +56,26 @@ procedure TSchemaAdapterRegistry.Register(const VersionRange: string;
 var
   Entry: TVersionedAdapter;
 begin
-  Entry.VersionRange := VersionRange;
-  Entry.AdapterClass := AdapterClass;
-  FAdapters.Add(Entry);
+  // Guard: skip adapters with empty or placeholder fingerprints (DATA2-017)
+  var Temp := AdapterClass.Create;
+  try
+    for var Prefix in Temp.GetSchemaFingerprintPrefixes do
+    begin
+      if (Prefix = '') or TBaseSchemaAdapter.IsPlaceholderFingerprint(Prefix) then
+        Exit;
+    end;
+  finally
+    Temp.Free;
+  end;
+
+  FLock.Enter;
+  try
+    Entry.VersionRange := VersionRange;
+    Entry.AdapterClass := AdapterClass;
+    FAdapters.Add(Entry);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TSchemaAdapterRegistry.Resolve(const SchemaFingerprint, Version: string): ISchemaAdapter;
@@ -71,36 +91,67 @@ end;
 
 function TSchemaAdapterRegistry.TryResolve(const SchemaFingerprint, Version: string;
   out Adapter: ISchemaAdapter): Boolean;
+var
+  BestLen: Integer;
+  MatchLen: Integer;
+  Temp: TBaseSchemaAdapter;
+  Snap: TArray<TVersionedAdapter>;
 begin
   Result := False;
   Adapter := nil;
-  for var Entry in FAdapters do
+  BestLen := 0;
+
+  FLock.Enter;
+  try
+    Snap := FAdapters.ToArray;
+  finally
+    FLock.Leave;
+  end;
+
+  for var Entry in Snap do
   begin
-    var Temp := Entry.AdapterClass.Create;
+    Temp := Entry.AdapterClass.Create;
     try
-      if Temp.TryMatchFingerprint(SchemaFingerprint) then
+      MatchLen := Temp.GetLongestMatchingPrefixLength(SchemaFingerprint);
+      if MatchLen > BestLen then
       begin
+        BestLen := MatchLen;
         Temp.Validate;
+        // Transfer ownership to Adapter (interfaced)
         Adapter := Temp;
         Temp := nil;
-        Exit(True);
       end;
     finally
       Temp.Free;
     end;
   end;
+  Result := BestLen > 0;
 end;
 
 function TSchemaAdapterRegistry.GetRegisteredVersions: TArray<string>;
+var
+  Snap: TArray<TVersionedAdapter>;
+  I: Integer;
 begin
-  SetLength(Result, FAdapters.Count);
-  for var I := 0 to FAdapters.Count - 1 do
-    Result[I] := FAdapters[I].VersionRange;
+  FLock.Enter;
+  try
+    Snap := FAdapters.ToArray;
+  finally
+    FLock.Leave;
+  end;
+  SetLength(Result, Length(Snap));
+  for I := 0 to High(Snap) do
+    Result[I] := Snap[I].VersionRange;
 end;
 
 function TSchemaAdapterRegistry.Count: Integer;
 begin
-  Result := FAdapters.Count;
+  FLock.Enter;
+  try
+    Result := FAdapters.Count;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

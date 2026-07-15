@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.EventBus - Publish-Subscribe Event Bus
   
   A flexible event bus implementation for decoupled component communication.
@@ -362,9 +362,19 @@ implementation
 var
   GEventBus: TEventBus = nil;
   GEventBusLock: TCriticalSection = nil;
+  // BUG EXP-P1-010 FIX: set in finalization to prevent `EventBus()` from
+  // lazily recreating GEventBus after the unit has torn down. Without this
+  // guard, any post-finalization call to `EventBus` would instantiate a
+  // fresh TEventBus that then leaks (no subsequent finalization will free it).
+  GEventBusFinalized: Boolean = False;
 
 function EventBus: TEventBus;
 begin
+  // BUG EXP-P1-010 FIX: once the unit has finalized, refuse to recreate the
+  // singleton — a lazy create here would leak because no finalization will
+  // free it again.
+  if GEventBusFinalized then
+    Exit(nil);
   if GEventBus = nil then
   begin
     var LNew := TEventBus.Create;
@@ -536,7 +546,7 @@ end;
 
 function TEventBus.GetEventTypeName<T>: string;
 begin
-  Result := PTypeInfo(TypeInfo(T))^.Name;
+  Result := string(PTypeInfo(TypeInfo(T))^.Name);
 end;
 
 function TEventBus.GetSubscriptionList(const EventType: string): TList<TSubscriptionInfo>;
@@ -677,31 +687,20 @@ function TEventBus.SubscribeByType(const EventType: string;
   Handler: TUntypedEventHandler;
   Priority: TEventPriority;
   DispatchMode: TEventDispatchMode): ISubscription;
-const
-  // �¼����Ͱ�����
-  ALLOWED_EVENT_TYPES: array[0..4] of string = (
-    'TUserEvent', 'TSystemEvent', 'TDataEvent', 'TUIEvent', 'TLogEvent'
-  );
 var
   Info: TSubscriptionInfo;
   List: TList<TSubscriptionInfo>;
   I: Integer;
-  IsAllowed: Boolean;
 begin
-  // ʵ���¼����Ͱ�������֤����
-  IsAllowed := False;
-  for I := Low(ALLOWED_EVENT_TYPES) to High(ALLOWED_EVENT_TYPES) do
-  begin
-    if EventType.StartsWith(ALLOWED_EVENT_TYPES[I]) then
-    begin
-      IsAllowed := True;
-      Break;
-    end;
-  end;
-  
-  if not IsAllowed then
+  // BUG EXP-P0-005 FIX: Use single shared validator. SubscribeByType delegates
+  // to IsValidEventType (whitelist of T-prefixed event types + blacklist of
+  // system+exec/cmd injection vectors). Subscribe<T>/Publish<T> rely on
+  // compile-time type safety via RTTI/generics and intentionally bypass
+  // string-based validation (BUG073 still guarded by IsValidEventType on
+  // any string-based entry point).
+  if not IsValidEventType(EventType) then
     raise EArgumentException.CreateFmt('Event type not allowed: %s', [EventType]);
-  
+
   Info.Id := TGUID.NewGuid;
   Info.Handler := Handler;
   Info.Priority := Priority;
@@ -994,25 +993,29 @@ function TEventBus.PublishAsync<T>(const Event: T): ITask;
 var
   EventCopy: T;
   LSelf: TEventBus;
-  LProc: TProc;
+  Thread: TThread;
 begin
-  // BASIC-021 fix: register this async dispatch with the bus's drain
-  // tracker so WaitForAsyncHandlers actually waits for it. Previously
-  // PublishAsync<T> went out via TTask.Run without touching FAsyncCount,
-  // so a Runtime shutdown could believe the bus was idle while a
-  // generic-typed publish was still running.
+  // BUG-317 (INFRA-011): 统一线程模型 - PublishAsync 与 edmAsync 现在都使用
+  // TThread.CreateAnonymousThread，避免 TTask.Run 线程池饱和时
+  // TrackAsyncEnd 可能不执行导致 WaitForAsyncHandlers 永远挂起的问题。
+  // 同时保留 FAsyncCount drain tracker 集成 (BASIC-021 修复)。
   EventCopy := Event;
   LSelf := Self;
   TrackAsyncBegin;
-  LProc := procedure
+  Thread := TThread.CreateAnonymousThread(
+    procedure
     begin
       try
         LSelf.Publish<T>(EventCopy);
       finally
         LSelf.TrackAsyncEnd;
       end;
-    end;
-  Result := TTask.Run(LProc);
+    end);
+  Thread.FreeOnTerminate := True;
+  Thread.Start;
+  // 返回 nil: 调用方通过 WaitForAsyncHandlers 等待异步排空，
+  // 不再依赖 ITask.Wait。外部调用方已无依赖 (仅 docs 示例引用)。
+  Result := nil;
 end;
 
 procedure TEventBus.PublishByType(const EventType: string; const Event: TValue);
@@ -1199,29 +1202,33 @@ class function TEventBus.IsValidEventType(const EventType: string): Boolean;
 var
   AllowedTypes: TArray<string>;
   I: Integer;
+  LowerType: string;
 begin
   Result := False;
-  
-  // ������Ҫ��
+
+  // Basic requirements
   if EventType.IsEmpty or (Length(EventType) > 255) then
     Exit;
-    
-  // ����ַ���Ч�� - ֻ������ĸ�����֡�����»���
+
+  // Character validation - only letters, digits, underscores and dots
   for var C in EventType do
   begin
     if not CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '.', '_']) then
       Exit;
   end;
-  
-  // �����Ե㿪ͷ���β
+
+  // Disallow leading/trailing dots
   if EventType.StartsWith('.') or EventType.EndsWith('.') then
     Exit;
-    
-  // �����������ĵ�
+
+  // Disallow consecutive dots
   if EventType.Contains('..') then
     Exit;
-    
-  // ����������¼�����ǰ׺
+
+  // CORE-R2-010 FIX: check whitelist FIRST and short-circuit to True so that
+  // the blacklist below cannot override an explicit whitelist match. A type
+  // that starts with a trusted prefix (TUser, TSystem, ...) is safe by
+  // construction.
   AllowedTypes := TArray<string>.Create(
     'TUser',
     'TSystem',
@@ -1236,21 +1243,17 @@ begin
     'TNetwork',
     'TDatabase'
   );
-  
-  // ����Ƿ��������ǰ׺��ͷ
+
   for I := Low(AllowedTypes) to High(AllowedTypes) do
   begin
     if EventType.StartsWith(AllowedTypes[I]) then
-    begin
-      Result := True;
-      Break;
-    end;
+      Exit(True);
   end;
-  
-  // ��ֹΣ�յ��¼�����
-  var LowerType := EventType.ToLower;
+
+  // Dangerous event type blacklist (only applies to non-whitelisted types)
+  LowerType := EventType.ToLower;
   if LowerType.Contains('system') and (LowerType.Contains('exec') or LowerType.Contains('cmd')) then
-    Result := False;
+    Exit;
 end;
 
 // ============================================================================
@@ -1261,7 +1264,25 @@ initialization
   GEventBusLock := TCriticalSection.Create;
 
 finalization
-  GEventBus.Free;
-  GEventBusLock.Free;
+  // BUG EXP-P1-010 FIX: guard finalization against (a) uninitialized globals
+  // (nil instance — `Free` on a nil class reference is safe in Delphi but we
+  // prefer an explicit check for clarity) and (b) concurrent access from
+  // worker threads still in-flight during unit shutdown. The Assigned guard
+  // plus nil-out makes the teardown idempotent, and holding the lock while
+  // tearing down serialises against any concurrent `GEventBusLock.Enter` in
+  // the hot path — those callers will observe `GEventBus = nil` and skip.
+  GEventBusFinalized := True;
+  if Assigned(GEventBusLock) then
+    GEventBusLock.Enter;
+  try
+    if Assigned(GEventBus) then
+      FreeAndNil(GEventBus);
+  finally
+    if Assigned(GEventBusLock) then
+    begin
+      GEventBusLock.Leave;
+      FreeAndNil(GEventBusLock);
+    end;
+  end;
 
 end.

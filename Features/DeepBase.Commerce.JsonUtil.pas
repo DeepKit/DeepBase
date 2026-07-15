@@ -346,6 +346,10 @@ begin
   Result.EntitlementDurationDays := JsonValueAsInt(AJson,
     SCommerceFieldEntitlementDurationDays, 0);
   Result.InitialQuota := JsonValueAsInt(AJson, SCommerceFieldInitialQuota, -1);
+  Result.Tier := JsonValueAsString(AJson, SCommerceFieldTier, '');
+  Result.MaxDevices := JsonValueAsInt(AJson, SCommerceFieldMaxDevices, 0);
+  Result.OfflineGraceDays := JsonValueAsInt(AJson,
+    SCommerceFieldOfflineGraceDays, 0);
   Result.IsActive := JsonValueAsBool(AJson, SCommerceFieldIsActive, True);
 end;
 
@@ -364,6 +368,11 @@ begin
     TJSONNumber.Create(AProduct.EntitlementDurationDays));
   Result.AddPair(SCommerceFieldInitialQuota,
     TJSONNumber.Create(AProduct.InitialQuota));
+  Result.AddPair(SCommerceFieldTier, AProduct.Tier);
+  Result.AddPair(SCommerceFieldMaxDevices,
+    TJSONNumber.Create(AProduct.MaxDevices));
+  Result.AddPair(SCommerceFieldOfflineGraceDays,
+    TJSONNumber.Create(AProduct.OfflineGraceDays));
   Result.AddPair(SCommerceFieldIsActive, TJSONBool.Create(AProduct.IsActive));
 end;
 

@@ -17,7 +17,8 @@ uses
   System.Math,
   System.Generics.Collections,
   DeepBase.Services.Interfaces,
-  DeepBase.Math;
+  DeepBase.Math, DeepBase.Math.Geometry, DeepBase.Math.Statistics,
+  DeepBase.Math.Interpolation, DeepBase.Math.Random;
 
 type
   // ============================================================================

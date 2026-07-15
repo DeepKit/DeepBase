@@ -984,7 +984,7 @@ end;
 
 procedure TStaticFileMiddleware.Execute(const Ctx: THttpContext; Next: TProc);
 var
-  Path, FilePath, RelPath: string;
+  Path, FilePath, RelPath, RootPath: string;
   MimeType: string;
   Bytes: TBytes;
 begin
@@ -999,12 +999,24 @@ begin
   RelPath := Copy(Path, Length(FUrlPrefix) + 1, MaxInt);
   if RelPath.StartsWith('/') then
     RelPath := Copy(RelPath, 2, MaxInt);
-  
-  // Security: prevent path traversal
-  RelPath := StringReplace(RelPath, '..', '', [rfReplaceAll]);
-  RelPath := StringReplace(RelPath, '//', '/', [rfReplaceAll]);
-  
-  FilePath := TPath.Combine(FRootPath, RelPath);
+
+  RelPath := TNetEncoding.URL.Decode(RelPath);
+  if (RelPath = '') or TPath.IsPathRooted(RelPath) or RelPath.Contains('\') then
+  begin
+    Ctx.Response.Status(403).Json('{"error":"Forbidden"}');
+    Exit;
+  end;
+
+  RootPath := TPath.GetFullPath(FRootPath);
+  FilePath := TPath.GetFullPath(TPath.Combine(RootPath, RelPath));
+  if not RootPath.EndsWith(TPath.DirectorySeparatorChar) then
+    RootPath := RootPath + TPath.DirectorySeparatorChar;
+
+  if not FilePath.StartsWith(RootPath, True) then
+  begin
+    Ctx.Response.Status(403).Json('{"error":"Forbidden"}');
+    Exit;
+  end;
   
   if TFile.Exists(FilePath) then
   begin
