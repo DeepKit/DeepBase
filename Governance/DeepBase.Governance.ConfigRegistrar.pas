@@ -48,6 +48,8 @@ type
       const AParentKey, AFieldKey: string);
     procedure ReplaceGateConditions(const AGateKey: string;
       const AConditions: array of TGateCondition);
+    procedure ReplaceGateActionKeys(const AGateKey: string;
+      const AActionKeys: array of string);
     procedure UpsertActionRow(const AActionKey, ADisplayName: string;
       ARiskLevel: TRiskLevel; const AGateKey, APurposeKey, ADueRef: string);
     procedure UpsertPurposeRow(const AKey, AName, ADescription,
@@ -55,6 +57,8 @@ type
     procedure LoadGates;
     procedure LoadActions;
     procedure LoadPurposes;
+    procedure UpsertDueRuleRow(const ARule: TDueRule);
+    procedure LoadDueRules;
     /// <summary>
     /// DATA2-023: Compute HMAC-SHA256 of the mode value using a
     /// machine-specific signing key from KeyManager. Returns hex string.
@@ -80,6 +84,15 @@ type
     procedure RegisterGate(const AGateKey, ADisplayName: string;
       AGateType: TGateType; ARiskLevel: TRiskLevel); overload;
 
+    /// <summary>
+    /// GOV-028: Persist the set of Action keys a Gate references (the
+    /// Gate→Action mapping). Replaces any previously stored mapping for the
+    /// gate. LoadGates reloads this so the "ActionKeys reference an existing
+    /// Action" cross-check becomes reachable.
+    /// </summary>
+    procedure SetGateActionKeys(const AGateKey: string;
+      const AActionKeys: array of string);
+
     /// Register an action definition.
     procedure RegisterAction(const AActionKey, ADisplayName: string;
       ARiskLevel: TRiskLevel; const AGateKey: string;
@@ -88,6 +101,14 @@ type
     /// Register a purpose.
     procedure RegisterPurpose(const AKey, AName, ADescription: string;
       const AParentKey: string = '');
+
+    /// ASY-GOV-003 (BCW-A20260715-007): Register an explicit DueRule.
+    /// Persists to governance_due_rules and mirrors into TDueChecker.RegisterRule,
+    /// bypassing AutoRegisterFromAction so the reuser controls every field.
+    /// This lets an L3 action register an observe-safe DueRule (Evidence +
+    /// Accountability only, no RequireConfirm/RequireSeal) instead of the
+    /// full L3 set AutoRegisterFromAction would force.
+    procedure RegisterDueRule(const ARule: TDueRule);
 
     /// Reload all governance definitions from ConfigDB into KeyResolver
     /// and PurposeSet.
@@ -163,6 +184,42 @@ const
     '  value TEXT NOT NULL' +
     ')';
 
+  // ASY-GOV-003 (BCW-A20260715-007): explicit DueRule registration table.
+  // Stores TDueRule verbatim so reusers can register observe-safe DueRules
+  // for L2/L3 actions without going through AutoRegisterFromAction, which
+  // hard-forces RequireConfirm+RequireSeal on every L3 rule (blocking the
+  // observe red-line under enforce).
+  SQL_CREATE_DUE_RULES =
+    'CREATE TABLE IF NOT EXISTS governance_due_rules (' +
+    '  action_key TEXT PRIMARY KEY,' +
+    '  risk_level INTEGER NOT NULL DEFAULT 2,' +
+    '  require_evidence INTEGER NOT NULL DEFAULT 0,' +
+    '  require_accountability INTEGER NOT NULL DEFAULT 0,' +
+    '  require_confirm INTEGER NOT NULL DEFAULT 0,' +
+    '  require_seal INTEGER NOT NULL DEFAULT 0,' +
+    '  description TEXT DEFAULT '''',' +
+    '  created_at TEXT DEFAULT (datetime(''now'')),' +
+    '  updated_at TEXT DEFAULT (datetime(''now''))' +
+    ')';
+
+  SQL_UPSERT_DUE_RULE =
+    'INSERT INTO governance_due_rules (action_key, risk_level, require_evidence, ' +
+    '  require_accountability, require_confirm, require_seal, description) ' +
+    'VALUES (:action_key, :risk_level, :require_evidence, ' +
+    '  :require_accountability, :require_confirm, :require_seal, :description) ' +
+    'ON CONFLICT(action_key) DO UPDATE SET ' +
+    '  risk_level = excluded.risk_level,' +
+    '  require_evidence = excluded.require_evidence,' +
+    '  require_accountability = excluded.require_accountability,' +
+    '  require_confirm = excluded.require_confirm,' +
+    '  require_seal = excluded.require_seal,' +
+    '  description = excluded.description,' +
+    '  updated_at = datetime(''now'')';
+
+  SQL_SELECT_ALL_DUE_RULES =
+    'SELECT action_key, risk_level, require_evidence, require_accountability, ' +
+    '  require_confirm, require_seal, description FROM governance_due_rules';
+
   SQL_UPSERT_GATE =
     'INSERT INTO governance_gates (key, display_name, gate_type, risk_level, ' +
     '  parent_key, field_key) ' +
@@ -218,6 +275,35 @@ const
     'SELECT kind, expression, description, blocked_message ' +
     'FROM governance_gate_conditions WHERE gate_key = :gate_key ORDER BY id';
 
+  // GOV-028 (BCW-A20260715-012/A): Persistent Gate→Action mapping.
+  // Previously TAccessGate.ActionKeys lived only in memory and was never
+  // persisted or reloaded, so the LoadGates cross-check ("every Gate.ActionKeys
+  // references an Action that exists in ActionGrid") was unreachable dead
+  // code. This table makes that mapping durable and the check reachable.
+  SQL_CREATE_GATE_ACTION_KEYS =
+    'CREATE TABLE IF NOT EXISTS governance_gate_action_keys (' +
+    '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    '  gate_key TEXT NOT NULL,' +
+    '  action_key TEXT NOT NULL,' +
+    '  seq INTEGER NOT NULL DEFAULT 0,' +
+    '  UNIQUE(gate_key, action_key)' +
+    ')';
+
+  SQL_CREATE_GATE_ACTION_KEYS_INDEX =
+    'CREATE INDEX IF NOT EXISTS idx_gate_action_keys_gate ' +
+    'ON governance_gate_action_keys(gate_key)';
+
+  SQL_DELETE_GATE_ACTION_KEYS =
+    'DELETE FROM governance_gate_action_keys WHERE gate_key = :gate_key';
+
+  SQL_INSERT_GATE_ACTION_KEY =
+    'INSERT OR IGNORE INTO governance_gate_action_keys ' +
+    '  (gate_key, action_key, seq) VALUES (:gate_key, :action_key, :seq)';
+
+  SQL_SELECT_ACTION_KEYS_FOR_GATE =
+    'SELECT action_key FROM governance_gate_action_keys ' +
+    'WHERE gate_key = :gate_key ORDER BY seq, id';
+
   SQL_SELECT_ALL_ACTIONS =
     'SELECT key, display_name, risk_level, gate_key, purpose_key, due_ref ' +
     'FROM governance_actions';
@@ -260,9 +346,12 @@ begin
   FConnection.ExecSQL(SQL_CREATE_GATES);
   FConnection.ExecSQL(SQL_CREATE_GATE_CONDITIONS);
   FConnection.ExecSQL(SQL_CREATE_GATE_CONDITIONS_INDEX);
+  FConnection.ExecSQL(SQL_CREATE_GATE_ACTION_KEYS);
+  FConnection.ExecSQL(SQL_CREATE_GATE_ACTION_KEYS_INDEX);
   FConnection.ExecSQL(SQL_CREATE_ACTIONS);
   FConnection.ExecSQL(SQL_CREATE_PURPOSES);
   FConnection.ExecSQL(SQL_CREATE_CONFIG);
+  FConnection.ExecSQL(SQL_CREATE_DUE_RULES);
 end;
 
 procedure TConfigRegistrar.EnsureDefaultMode;
@@ -346,6 +435,61 @@ begin
   end;
 end;
 
+procedure TConfigRegistrar.ReplaceGateActionKeys(const AGateKey: string;
+  const AActionKeys: array of string);
+var
+  LQuery: TFDQuery;
+  I: Integer;
+begin
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    LQuery.SQL.Text := SQL_DELETE_GATE_ACTION_KEYS;
+    LQuery.ParamByName('gate_key').AsString := AGateKey;
+    LQuery.ExecSQL;
+
+    if Length(AActionKeys) = 0 then
+      Exit;
+
+    LQuery.SQL.Text := SQL_INSERT_GATE_ACTION_KEY;
+    for I := 0 to High(AActionKeys) do
+    begin
+      if AActionKeys[I] = '' then
+        Continue;
+      LQuery.ParamByName('gate_key').AsString := AGateKey;
+      LQuery.ParamByName('action_key').AsString := AActionKeys[I];
+      LQuery.ParamByName('seq').AsInteger := I;
+      LQuery.ExecSQL;
+    end;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
+procedure TConfigRegistrar.SetGateActionKeys(const AGateKey: string;
+  const AActionKeys: array of string);
+var
+  LGate: TAccessGate;
+  I: Integer;
+begin
+  if AGateKey = '' then
+    raise EConfigRegistrarError.Create('Gate key cannot be empty');
+
+  // Persist the mapping regardless of whether the in-memory TAccessGate
+  // currently exists; LoadFromDB will rebuild it from these rows.
+  ReplaceGateActionKeys(AGateKey, AActionKeys);
+
+  // Keep the in-memory KeyResolver gate in sync if it exists.
+  LGate := FKeyResolver.ResolveGateKey(AGateKey);
+  if LGate <> nil then
+  begin
+    LGate.ActionKeys.Clear;
+    for I := 0 to High(AActionKeys) do
+      if AActionKeys[I] <> '' then
+        LGate.AddActionKey(AActionKeys[I]);
+  end;
+end;
+
 procedure TConfigRegistrar.UpsertActionRow(const AActionKey, ADisplayName: string;
   ARiskLevel: TRiskLevel; const AGateKey, APurposeKey, ADueRef: string);
 var
@@ -399,6 +543,10 @@ begin
 
   UpsertGateRow(AGateKey, ADisplayName, AGateType, ARiskLevel, '', '');
   ReplaceGateConditions(AGateKey, AConditions);
+  // GOV-028: RegisterGate is a full reset of the gate definition; clear any
+  // previously stored Gate→Action mapping so reloads match the intent.
+  // (The newly-created in-memory TAccessGate carries no ActionKeys itself.)
+  ReplaceGateActionKeys(AGateKey, []);
 
   // NOTE: risk level is persisted but not carried on TAccessGate
   // (the model attaches risk to TAction). The DB row is the source
@@ -518,6 +666,19 @@ begin
         end;
         LCondQuery.Close;
 
+        // GOV-028: Load this gate's persisted Gate→Action mapping so the
+        // cross-check below becomes reachable. Without this the mapping lived
+        // only in memory and was lost on every reload.
+        LCondQuery.SQL.Text := SQL_SELECT_ACTION_KEYS_FOR_GATE;
+        LCondQuery.ParamByName('gate_key').AsString := LGateKey;
+        LCondQuery.Open;
+        while not LCondQuery.Eof do
+        begin
+          LGate.AddActionKey(LCondQuery.FieldByName('action_key').AsString);
+          LCondQuery.Next;
+        end;
+        LCondQuery.Close;
+
         FKeyResolver.RegisterGate(LGate);
         LGate := nil;
       finally
@@ -615,6 +776,71 @@ begin
   end;
 end;
 
+procedure TConfigRegistrar.UpsertDueRuleRow(const ARule: TDueRule);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    LQuery.SQL.Text := SQL_UPSERT_DUE_RULE;
+    LQuery.ParamByName('action_key').AsString := ARule.ActionKey;
+    LQuery.ParamByName('risk_level').AsInteger := Ord(ARule.RiskLevel);
+    LQuery.ParamByName('require_evidence').AsInteger := Ord(ARule.RequireEvidence);
+    LQuery.ParamByName('require_accountability').AsInteger := Ord(ARule.RequireAccountability);
+    LQuery.ParamByName('require_confirm').AsInteger := Ord(ARule.RequireConfirm);
+    LQuery.ParamByName('require_seal').AsInteger := Ord(ARule.RequireSeal);
+    LQuery.ParamByName('description').AsString := ARule.Description;
+    LQuery.ExecSQL;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
+procedure TConfigRegistrar.RegisterDueRule(const ARule: TDueRule);
+begin
+  if ARule.ActionKey = '' then
+    raise EConfigRegistrarError.Create('DueRule ActionKey cannot be empty');
+
+  // Persist the verbatim TDueRule, then mirror into the in-memory checker.
+  // RegisterRule AddOrSetValue overwrites any AutoRegisterFromAction entry,
+  // so the explicit (observe-safe) fields win on reload too.
+  UpsertDueRuleRow(ARule);
+
+  if FDueChecker <> nil then
+    FDueChecker.RegisterRule(ARule);
+end;
+
+procedure TConfigRegistrar.LoadDueRules;
+var
+  LQuery: TFDQuery;
+  LRule: TDueRule;
+begin
+  if FDueChecker = nil then
+    Exit;
+
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    LQuery.SQL.Text := SQL_SELECT_ALL_DUE_RULES;
+    LQuery.Open;
+    while not LQuery.Eof do
+    begin
+      LRule.ActionKey := LQuery.FieldByName('action_key').AsString;
+      LRule.RiskLevel := TRiskLevel(LQuery.FieldByName('risk_level').AsInteger);
+      LRule.RequireEvidence := LQuery.FieldByName('require_evidence').AsInteger <> 0;
+      LRule.RequireAccountability := LQuery.FieldByName('require_accountability').AsInteger <> 0;
+      LRule.RequireConfirm := LQuery.FieldByName('require_confirm').AsInteger <> 0;
+      LRule.RequireSeal := LQuery.FieldByName('require_seal').AsInteger <> 0;
+      LRule.Description := LQuery.FieldByName('description').AsString;
+      FDueChecker.RegisterRule(LRule);
+      LQuery.Next;
+    end;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
 procedure TConfigRegistrar.LoadFromDB;
 begin
   // DATA2-007: Actions must be loaded before Gates, because LoadGates
@@ -623,6 +849,9 @@ begin
   LoadPurposes;
   LoadActions;
   LoadGates;
+  // ASY-GOV-003: reload explicit DueRules last so they override any
+  // AutoRegisterFromAction entries produced during LoadActions.
+  LoadDueRules;
 end;
 
 function TConfigRegistrar.ComputeModeHMAC(const AMode: string): string;
