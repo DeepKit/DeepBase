@@ -23,6 +23,7 @@ uses
   DeepBase.Governance.Purpose,
   DeepBase.Governance.ActionGrid,
   DeepBase.Governance.DueChecker,
+  DeepBase.Governance.RouteStore.SQLite,
   DeepBase.Crypto, DeepBase.Crypto.Hash, DeepBase.Crypto.Encoding,
   DeepBase.KeyManager;
 
@@ -115,6 +116,17 @@ type
     /// Accountability only, no RequireConfirm/RequireSeal) instead of the
     /// full L3 set AutoRegisterFromAction would force.
     procedure RegisterDueRule(const ARule: TDueRule);
+
+    /// <summary>
+    /// ASY-GOV-003 ③: persist a RouteRule to governance_route_rules.
+    /// Idempotent (INSERT OR REPLACE on id) so repeat registration is safe,
+    /// matching RegisterGate/RegisterAction semantics. Delegates to
+    /// TRouteStoreSQLite which owns the table DDL + index, so EnsureTables
+    /// does not need a route_rules statement.
+    /// No in-memory mirror: RouteRule is loaded into TRouteResolver by the
+    /// caller via LoadRouteRules, same split as the file-driven path.
+    /// </summary>
+    procedure RegisterRouteRule(ARule: TRouteRule);
 
     /// Reload all governance definitions from ConfigDB into KeyResolver
     /// and PurposeSet.
@@ -860,6 +872,29 @@ begin
 
   if FDueChecker <> nil then
     FDueChecker.RegisterRule(ARule);
+end;
+
+procedure TConfigRegistrar.RegisterRouteRule(ARule: TRouteRule);
+var
+  LStore: TRouteStoreSQLite;
+begin
+  if ARule = nil then
+    raise EConfigRegistrarError.Create('RouteRule cannot be nil');
+  if ARule.Id = '' then
+    raise EConfigRegistrarError.Create('RouteRule Id cannot be empty');
+  if ARule.SourceGateKey = '' then
+    raise EConfigRegistrarError.Create('RouteRule SourceGateKey cannot be empty');
+
+  // Delegate to TRouteStoreSQLite: it owns the table DDL (EnsureTable runs in
+  // its constructor), the index, and a Save that is INSERT OR REPLACE on id,
+  // so this is idempotent — repeat registration of the same id overwrites
+  // cleanly, matching RegisterGate/RegisterAction semantics.
+  LStore := TRouteStoreSQLite.Create(FConnection, False);
+  try
+    LStore.Save(ARule);
+  finally
+    LStore.Free;
+  end;
 end;
 
 procedure TConfigRegistrar.LoadDueRules;
