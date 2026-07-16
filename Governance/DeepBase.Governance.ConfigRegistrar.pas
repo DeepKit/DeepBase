@@ -50,6 +50,12 @@ type
       const AConditions: array of TGateCondition);
     procedure ReplaceGateActionKeys(const AGateKey: string;
       const AActionKeys: array of string);
+    // ASY-GOV-003 ② (BCW-A20260715-008, 方案B): Append a single
+    // gate→action_key row to the forward index. Unlike ReplaceGateActionKeys
+    // (which DELETEs then re-inserts the whole set), this INSERT OR IGNOREs a
+    // single row so RegisterAction can auto-populate the forward index without
+    // clobbering sibling actions already registered under the same gate.
+    procedure UpsertGateActionKey(const AGateKey, AActionKey: string);
     procedure UpsertActionRow(const AActionKey, ADisplayName: string;
       ARiskLevel: TRiskLevel; const AGateKey, APurposeKey, ADueRef: string);
     procedure UpsertPurposeRow(const AKey, AName, ADescription,
@@ -304,6 +310,12 @@ const
     'SELECT action_key FROM governance_gate_action_keys ' +
     'WHERE gate_key = :gate_key ORDER BY seq, id';
 
+  // ASY-GOV-003 ②: next seq for appending a single action to a gate's forward
+  // index (NULL → 0 when the gate has no rows yet). COALESCE keeps it an int.
+  SQL_NEXT_SEQ_FOR_GATE =
+    'SELECT COALESCE(MAX(seq), -1) + 1 FROM governance_gate_action_keys ' +
+    'WHERE gate_key = :gate_key';
+
   SQL_SELECT_ALL_ACTIONS =
     'SELECT key, display_name, risk_level, gate_key, purpose_key, due_ref ' +
     'FROM governance_actions';
@@ -466,6 +478,39 @@ begin
   end;
 end;
 
+procedure TConfigRegistrar.UpsertGateActionKey(const AGateKey, AActionKey: string);
+var
+  LQuery: TFDQuery;
+  LSeq: Integer;
+begin
+  // ASY-GOV-003 ② (方案B): auto-populate the forward gate→action_key index.
+  // Guarded so callers may pass an empty AGateKey (action not yet bound to a
+  // gate) — we just skip, matching RegisterAction's own guard below.
+  if (AGateKey = '') or (AActionKey = '') then
+    Exit;
+
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    // Determine the next seq for this gate so multi-action gates stay ordered.
+    LQuery.SQL.Text := SQL_NEXT_SEQ_FOR_GATE;
+    LQuery.ParamByName('gate_key').AsString := AGateKey;
+    LQuery.Open;
+    LSeq := LQuery.Fields[0].AsInteger;
+    LQuery.Close;
+
+    // INSERT OR IGNORE: re-registering the same (gate,action) pair is a no-op,
+    // so repeated calls or reload-then-register stay idempotent.
+    LQuery.SQL.Text := SQL_INSERT_GATE_ACTION_KEY;
+    LQuery.ParamByName('gate_key').AsString := AGateKey;
+    LQuery.ParamByName('action_key').AsString := AActionKey;
+    LQuery.ParamByName('seq').AsInteger := LSeq;
+    LQuery.ExecSQL;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
 procedure TConfigRegistrar.SetGateActionKeys(const AGateKey: string;
   const AActionKeys: array of string);
 var
@@ -589,6 +634,12 @@ begin
 
   UpsertActionRow(AActionKey, ADisplayName, ARiskLevel, AGateKey, APurposeKey,
     ADueRef);
+
+  // ASY-GOV-003 ② (BCW-A20260715-008, 方案B): auto-write the forward
+  // gate→action_key index so LoadGates can read it back without callers
+  // having to invoke the (private) ReplaceGateActionKeys. Skipped silently
+  // when AGateKey is empty — an action not yet bound to any gate.
+  UpsertGateActionKey(AGateKey, AActionKey);
 
   LAction := TAction.Create(AActionKey, ADisplayName, ARiskLevel, AGateKey,
     ADueRef, APurposeKey);
