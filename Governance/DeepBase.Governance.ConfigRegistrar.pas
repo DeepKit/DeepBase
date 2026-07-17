@@ -27,6 +27,17 @@ uses
   DeepBase.Crypto, DeepBase.Crypto.Hash, DeepBase.Crypto.Encoding,
   DeepBase.KeyManager;
 
+const
+  // ASY-GOV-007: versioned policy package identity keys, persisted to
+  // governance_config. Declared in the interface so external callers (e.g.
+  // Assayer.Governance.PolicyCompatibility) can read them back by name.
+  CONFIG_KEY_POLICY_PACKAGE_ID    = 'policy_package_id';
+  CONFIG_KEY_POLICY_VERSION       = 'policy_version';
+  CONFIG_KEY_DEEPBASE_MIN_VERSION = 'deepbase_min_version';
+  CONFIG_KEY_CONTRACT_VERSION     = 'contract_version';
+  CONFIG_KEY_CONTENT_DIGEST       = 'content_digest';
+  CONFIG_KEY_ACTIVATED_AT         = 'activated_at';
+
 type
   EConfigRegistrarError = class(Exception);
 
@@ -135,6 +146,16 @@ type
     /// Governance mode accessors. Valid values: 'observe' | 'enforce'.
     function GetMode: string;
     procedure SetMode(const AMode: string);
+
+    /// ASY-GOV-007: policy package identity accessors. SetPackageMetadata
+    /// writes the six package fields (id, version, deepbase_min_version,
+    /// contract_version, content_digest, activated_at) to governance_config;
+    /// GetPackageMetadata reads one back by key. Reuses the generic KV
+    /// upsert/select — no dedicated table.
+    procedure SetPackageMetadata(const APackageId, AVersion,
+      ADeepbaseMinVersion, AContractVersion, AContentDigest,
+      AActivatedAt: string);
+    function GetPackageMetadata(const AKey: string): string;
 
     property Connection: TFDConnection read FConnection;
     property KeyResolver: TKeyResolver read FKeyResolver;
@@ -1045,6 +1066,64 @@ begin
     LQuery.ParamByName('key').AsString := CONFIG_KEY_MODE_SIG;
     LQuery.ParamByName('value').AsString := LSig;
     LQuery.ExecSQL;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
+procedure TConfigRegistrar.SetPackageMetadata(const APackageId, AVersion,
+  ADeepbaseMinVersion, AContractVersion, AContentDigest,
+  AActivatedAt: string);
+const
+  // (key, value) pairs written to governance_config via SQL_UPSERT_CONFIG.
+  PAIRS: array[0..5, 0..1] of string = (
+    (CONFIG_KEY_POLICY_PACKAGE_ID,    ''),
+    (CONFIG_KEY_POLICY_VERSION,       ''),
+    (CONFIG_KEY_DEEPBASE_MIN_VERSION, ''),
+    (CONFIG_KEY_CONTRACT_VERSION,     ''),
+    (CONFIG_KEY_CONTENT_DIGEST,       ''),
+    (CONFIG_KEY_ACTIVATED_AT,         ''));
+var
+  LQuery: TFDQuery;
+  LValues: array[0..5] of string;
+  I: Integer;
+begin
+  LValues[0] := APackageId;
+  LValues[1] := AVersion;
+  LValues[2] := ADeepbaseMinVersion;
+  LValues[3] := AContractVersion;
+  LValues[4] := AContentDigest;
+  LValues[5] := AActivatedAt;
+
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    for I := Low(PAIRS) to High(PAIRS) do
+    begin
+      LQuery.SQL.Text := SQL_UPSERT_CONFIG;
+      LQuery.ParamByName('key').AsString := PAIRS[I, 0];
+      LQuery.ParamByName('value').AsString := LValues[I];
+      LQuery.ExecSQL;
+    end;
+  finally
+    FreeAndNil(LQuery);
+  end;
+end;
+
+function TConfigRegistrar.GetPackageMetadata(const AKey: string): string;
+var
+  LQuery: TFDQuery;
+begin
+  Result := '';
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    LQuery.SQL.Text := SQL_SELECT_CONFIG;
+    LQuery.ParamByName('key').AsString := AKey;
+    LQuery.Open;
+    if not LQuery.Eof then
+      Result := LQuery.FieldByName('value').AsString;
+    LQuery.Close;
   finally
     FreeAndNil(LQuery);
   end;
