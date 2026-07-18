@@ -38,6 +38,18 @@ type
     Result: TEvidenceResult;
     BlockedReason: string;
     SnapshotData: string;
+    // ASY-GOV-007: the policy package this evidence was recorded under, so a
+    // later consumer can tell whether the decision predates a policy change.
+    PolicyPackageId: string;
+    PolicyVersion: string;
+    // ASY-GOV-006: bind evidence back to the action intent and the human
+    // decision that authorized it, plus the parameters digest matched at
+    // execution time. Lets a reviewer correlate a executed action with the
+    // exact intent + approval it ran under (acceptance: evidence binds to
+    // payload digest + execution intent).
+    ActionIntentId: string;
+    HumanDecisionId: string;
+    ParametersDigest: string;
   end;
 
   /// Evidence Schema 迁移接口（P01 接口位，供后续 Phase 扩展时实现）
@@ -70,6 +82,12 @@ type
   TRiskLevelResolver = reference to function(
     const AActionKey: string): TRiskLevel;
 
+  /// ASY-GOV-007: 策略包元数据提供器——返回当前注册的策略包 id/version，
+  /// 用于在每条证据上标注它是在哪份策略下产生的。EvidenceRecorder 不直接
+  /// 依赖 ConfigRegistrar（保持 DeepBase 通用性），由宿主注入。
+  TPolicyMetadataProvider = reference to function(
+    out APackageId, AVersion: string): Boolean;
+
   /// 证据记录器实现（异步写入，不阻塞 UI）
   /// <remarks>
   /// DATA2-006 修复：PushItem 返回值必须检查。队列满时重试 3 次（100/200/400 ms
@@ -86,6 +104,7 @@ type
     FRiskResolver: TRiskLevelResolver;
     FSanitizeFields: TArray<string>;  // 白名单字段名，只有这些字段进入摘要
     FDroppedEvidenceCount: Integer;   // DATA2-006：丢弃证据计数
+    FPolicyProvider: TPolicyMetadataProvider;  // ASY-GOV-007
     procedure ProcessQueue;
     procedure SaveWithRetry(const AEntry: TEvidenceEntry);
     procedure EnqueueEntry(const AEntry: TEvidenceEntry);
@@ -93,8 +112,16 @@ type
     function GenerateId: string;
     function GetUserId(AContext: TJSONObject): string;
     function GetCorrelationId(AContext: TJSONObject): string;
+    // ASY-GOV-006: pull the review-binding fields the caller put into the
+    // governance context so each evidence row can be correlated back to the
+    // action intent + human decision + parameters digest it ran under.
+    function GetActionIntentId(AContext: TJSONObject): string;
+    function GetHumanDecisionId(AContext: TJSONObject): string;
+    function GetParametersDigest(AContext: TJSONObject): string;
     function ResolveRiskLevel(const AActionKey: string): TRiskLevel;
     function SanitizeInput(AContext: TJSONObject): string;
+    /// ASY-GOV-007: 若注入了策略提供器，把当前策略包 id/version 写入 entry。
+    procedure ApplyPolicyMetadata(var AEntry: TEvidenceEntry);
   public
     constructor Create(AStore: IEvidenceStore);
     destructor Destroy; override;
@@ -103,6 +130,9 @@ type
     procedure SetFailureCallback(ACallback: TEvidenceFailureCallback);
     procedure SetRiskResolver(AResolver: TRiskLevelResolver);
     procedure SetSanitizeWhitelist(const AFields: TArray<string>);
+    /// ASY-GOV-007: 注入策略包元数据提供器；每次记录证据时调用，
+    /// 将当前策略包 id/version 写入 entry。nil 时不写。
+    procedure SetPolicyMetadataProvider(AProvider: TPolicyMetadataProvider);
 
     // IEvidenceRecorder
     procedure LogAction(const AActionKey: string; AContext: TJSONObject;
@@ -205,6 +235,12 @@ begin
   FSanitizeFields := AFields;
 end;
 
+procedure TEvidenceRecorder.SetPolicyMetadataProvider(
+  AProvider: TPolicyMetadataProvider);
+begin
+  FPolicyProvider := AProvider;
+end;
+
 function TEvidenceRecorder.GenerateId: string;
 begin
   Result := TGUID.NewGuid.ToString;
@@ -225,6 +261,31 @@ begin
   else
     // 无 correlation_id 时生成一个新的，保证 Evidence 可关联
     Result := TGUID.NewGuid.ToString;
+end;
+
+function TEvidenceRecorder.GetActionIntentId(AContext: TJSONObject): string;
+begin
+  // ASY-GOV-006: 缺省空串——非裁决路径（无需人工授权的动作）不绑 intent。
+  if (AContext <> nil) and (AContext.GetValue('action_intent_id') <> nil) then
+    Result := AContext.GetValue<string>('action_intent_id', '')
+  else
+    Result := '';
+end;
+
+function TEvidenceRecorder.GetHumanDecisionId(AContext: TJSONObject): string;
+begin
+  if (AContext <> nil) and (AContext.GetValue('human_decision_id') <> nil) then
+    Result := AContext.GetValue<string>('human_decision_id', '')
+  else
+    Result := '';
+end;
+
+function TEvidenceRecorder.GetParametersDigest(AContext: TJSONObject): string;
+begin
+  if (AContext <> nil) and (AContext.GetValue('parameters_digest') <> nil) then
+    Result := AContext.GetValue<string>('parameters_digest', '')
+  else
+    Result := '';
 end;
 
 function TEvidenceRecorder.ResolveRiskLevel(const AActionKey: string): TRiskLevel;
@@ -258,6 +319,19 @@ begin
     Result := LSanitized.ToJSON;
   finally
     LSanitized.Free;
+  end;
+end;
+
+procedure TEvidenceRecorder.ApplyPolicyMetadata(var AEntry: TEvidenceEntry);
+var
+  LId, LVersion: string;
+begin
+  if not Assigned(FPolicyProvider) then
+    Exit;
+  if FPolicyProvider(LId, LVersion) then
+  begin
+    AEntry.PolicyPackageId := LId;
+    AEntry.PolicyVersion := LVersion;
   end;
 end;
 
@@ -367,6 +441,10 @@ begin
   LEntry.OutputSummary := AResult.Message;
   LEntry.BlockedReason := '';
   LEntry.SnapshotData := '';
+  // ASY-GOV-006: 绑定裁决上下文（裁决路径才填，非裁决路径留空）。
+  LEntry.ActionIntentId := GetActionIntentId(AContext);
+  LEntry.HumanDecisionId := GetHumanDecisionId(AContext);
+  LEntry.ParametersDigest := GetParametersDigest(AContext);
 
   case AResult.Status of
     arsSuccess: LEntry.Result := erSuccess;
@@ -375,6 +453,7 @@ begin
     arsDryRun:  LEntry.Result := erSuccess;
   end;
 
+  ApplyPolicyMetadata(LEntry);  // ASY-GOV-007
   // DATA2-006: 检查入队结果，失败时重试
   EnqueueEntry(LEntry);
 end;
@@ -397,7 +476,12 @@ begin
   LEntry.Result := erBlocked;
   LEntry.BlockedReason := AReason;
   LEntry.SnapshotData := '';
+  // ASY-GOV-006: blocked 路径也绑定裁决上下文，便于审计"为何被拦"。
+  LEntry.ActionIntentId := GetActionIntentId(AContext);
+  LEntry.HumanDecisionId := GetHumanDecisionId(AContext);
+  LEntry.ParametersDigest := GetParametersDigest(AContext);
 
+  ApplyPolicyMetadata(LEntry);  // ASY-GOV-007
   // DATA2-006: 检查入队结果，失败时重试
   EnqueueEntry(LEntry);
 end;

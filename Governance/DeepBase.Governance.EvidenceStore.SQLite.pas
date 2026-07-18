@@ -40,6 +40,9 @@ type
 
     procedure EnsureTable;
     procedure MigrateHashColumns;
+    // ASY-GOV-006/007: 加 policy_package_id/policy_version/action_intent_id/
+    // human_decision_id/parameters_digest 五列，把裁决绑定与策略包写进证据行。
+    procedure MigrateGovernanceColumns;
     procedure MigrateExistingChain;
     procedure InitializeChainState;
     function GetLastHash: string;
@@ -132,14 +135,30 @@ const
   SQL_ALTER_THIS_HASH =
     'ALTER TABLE governance_evidence ADD COLUMN this_hash TEXT NOT NULL DEFAULT '''';';
 
+  // ASY-GOV-006 / ASY-GOV-007: 裁决绑定 + 策略包列迁移（ALTER TABLE）。
+  // 与 MigrateHashColumns 同模式：ADD COLUMN 无 IF NOT EXISTS，靠 try/except
+  // EDatabaseError 兼容重复迁移。默认 '' 以匹配 Save 的空串写入。
+  SQL_ALTER_POLICY_PACKAGE_ID =
+    'ALTER TABLE governance_evidence ADD COLUMN policy_package_id TEXT NOT NULL DEFAULT '''';';
+  SQL_ALTER_POLICY_VERSION =
+    'ALTER TABLE governance_evidence ADD COLUMN policy_version TEXT NOT NULL DEFAULT '''';';
+  SQL_ALTER_ACTION_INTENT_ID =
+    'ALTER TABLE governance_evidence ADD COLUMN action_intent_id TEXT NOT NULL DEFAULT '''';';
+  SQL_ALTER_HUMAN_DECISION_ID =
+    'ALTER TABLE governance_evidence ADD COLUMN human_decision_id TEXT NOT NULL DEFAULT '''';';
+  SQL_ALTER_PARAMETERS_DIGEST =
+    'ALTER TABLE governance_evidence ADD COLUMN parameters_digest TEXT NOT NULL DEFAULT '''';';
+
   // DATA2-005: 插入时包含 prev_hash + this_hash
   SQL_INSERT =
     'INSERT INTO governance_evidence (id, schema_version, correlation_id, timestamp, user_id, action_key, ' +
     'risk_level, gate_path, input_summary, output_summary, result, ' +
-    'blocked_reason, snapshot_data, created_at, prev_hash, this_hash) VALUES ' +
+    'blocked_reason, snapshot_data, created_at, prev_hash, this_hash, ' +
+    'policy_package_id, policy_version, action_intent_id, human_decision_id, parameters_digest) VALUES ' +
     '(:id, :schema_version, :correlation_id, :timestamp, :user_id, :action_key, :risk_level, :gate_path, ' +
     ':input_summary, :output_summary, :result, :blocked_reason, ' +
-    ':snapshot_data, :created_at, :prev_hash, :this_hash)';
+    ':snapshot_data, :created_at, :prev_hash, :this_hash, ' +
+    ':policy_package_id, :policy_version, :action_intent_id, :human_decision_id, :parameters_digest)';
 
   SQL_QUERY_BY_ACTION =
     'SELECT * FROM governance_evidence WHERE action_key = :action_key ' +
@@ -160,7 +179,8 @@ const
   // DATA2-005: 链验证用查询（按创建时间正序）
   SQL_VERIFY_CHAIN =
     'SELECT id, timestamp, user_id, action_key, risk_level, ' +
-    'input_summary, output_summary, result, prev_hash, this_hash ' +
+    'gate_path, input_summary, output_summary, result, blocked_reason, ' +
+    'prev_hash, this_hash ' +
     'FROM governance_evidence ORDER BY created_at ASC, id ASC';
 
   // DATA2-005: 更新单行哈希
@@ -182,6 +202,7 @@ begin
   FLastChainHash := '';
   EnsureTable;
   MigrateHashColumns;
+  MigrateGovernanceColumns;  // ASY-GOV-006/007: 裁决绑定 + 策略包列
   // GOV-R3-002 (D-002): 旧库行 this_hash 为空, 若不回填, VerifyChain 对旧库行必然误报篡改。
   // 必须在 InitializeChainState 之前迁移, 否则链尾缓存读到的是空哈希。
   MigrateExistingChain;
@@ -217,6 +238,43 @@ begin
   end;
   try
     FConnection.ExecSQL(SQL_ALTER_THIS_HASH);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
+end;
+
+{ ASY-GOV-006/007: 迁移 —— 加 policy_package_id / policy_version /
+  action_intent_id / human_decision_id / parameters_digest 五列。
+  与 MigrateHashColumns 同模式：逐列 ALTER + 捕获 EDatabaseError 兼容重复。 }
+procedure TEvidenceStoreSQLite.MigrateGovernanceColumns;
+begin
+  try
+    FConnection.ExecSQL(SQL_ALTER_POLICY_PACKAGE_ID);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
+  try
+    FConnection.ExecSQL(SQL_ALTER_POLICY_VERSION);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
+  try
+    FConnection.ExecSQL(SQL_ALTER_ACTION_INTENT_ID);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
+  try
+    FConnection.ExecSQL(SQL_ALTER_HUMAN_DECISION_ID);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
+  try
+    FConnection.ExecSQL(SQL_ALTER_PARAMETERS_DIGEST);
   except
     on E: EDatabaseError do
       ; // 列已存在，忽略
@@ -371,6 +429,12 @@ begin
       // DATA2-005: 哈希链字段
       LQuery.ParamByName('prev_hash').AsString := LPrevHash;
       LQuery.ParamByName('this_hash').AsString := LThisHash;
+      // ASY-GOV-006/007: 裁决绑定 + 策略包字段
+      LQuery.ParamByName('policy_package_id').AsString := AEntry.PolicyPackageId;
+      LQuery.ParamByName('policy_version').AsString := AEntry.PolicyVersion;
+      LQuery.ParamByName('action_intent_id').AsString := AEntry.ActionIntentId;
+      LQuery.ParamByName('human_decision_id').AsString := AEntry.HumanDecisionId;
+      LQuery.ParamByName('parameters_digest').AsString := AEntry.ParametersDigest;
       LQuery.ExecSQL;
     finally
       LQuery.Free;
