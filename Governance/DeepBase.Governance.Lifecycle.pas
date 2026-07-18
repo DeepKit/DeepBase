@@ -39,7 +39,9 @@ uses
   DeepBase.Governance.ObserveGateResolver,
   DeepBase.Governance.EvidenceRecorder,
   DeepBase.Governance.EvidenceStore.SQLite,
-  DeepBase.Governance.ConfigRegistrar;
+  DeepBase.Governance.ConfigRegistrar,
+  DeepBase.Governance.ReviewQueue,
+  DeepBase.Governance.ReviewQueue.SQLite;
 
 type
   TGovernanceMode = (gmObserve, gmEnforce, gmOff);
@@ -82,6 +84,8 @@ type
     // ConfigDB-backed components
     FConfigDB: TFDConnection;
     FConfigRegistrar: TConfigRegistrar;
+    FReviewQueue: IReviewQueue;
+    FReviewDecisionVerifier: IReviewDecisionVerifier;
     FEvidenceStore: IEvidenceStore;
     FEvidenceRecorder: TEvidenceRecorder;
     FEvidenceRecorderIntf: IEvidenceRecorder;
@@ -212,6 +216,18 @@ begin
     end
     else
       FConfigRegistrar.SetMode('enforce');
+
+    // GOV-006 阶段4: Wire the ReviewQueue + decision verifier into the
+    // ActionExecutor so execute-path challenges are verified fail-closed.
+    // ConfigDB-backed path only — the legacy (no ConfigDB) path stays
+    // verifier=nil to preserve backward compatibility. TReviewQueueSQLite
+    // owns no connection (the ConfigDB lifecycle is managed by TDeepBaseManager)
+    // and creates its tables idempotently in its constructor (EnsureTable).
+    // DATA2-005: empty HMAC key -> ReviewQueue falls back to SHA-256 for
+    // tamper detection (same posture as EvidenceStore above).
+    FReviewQueue := TReviewQueueSQLite.Create(FConfigDB, [], False);
+    FReviewDecisionVerifier := TReviewDecisionVerifier.Create(FReviewQueue);
+    FExecutor.SetVerifier(FReviewDecisionVerifier);
   end;
 
   // Mode provider closure for the ObserveGateResolver decorator.
@@ -305,6 +321,12 @@ begin
   FObserveResolver := nil;
   FEvidenceRecorderIntf := nil;
   FEvidenceStore := nil;
+  // GOV-006 阶段4: ReviewQueue + verifier are interface refs held by this
+  // lifecycle. The verifier is also held by FExecutor (released when the
+  // executor chain is torn down above); nil our refs here — if the executor
+  // still pins the verifier, this just drops our extra ref harmlessly.
+  FReviewDecisionVerifier := nil;
+  FReviewQueue := nil;
 
   // Clear dangling raw pointers without calling Free — they're already freed.
   FEvidenceRecorder := nil;
