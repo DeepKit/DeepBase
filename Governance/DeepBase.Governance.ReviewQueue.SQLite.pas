@@ -37,6 +37,7 @@ type
     FChainInitialized: Boolean;
     FLastChainHash: string;
     procedure EnsureTable;
+    procedure MigrateExecutedAtColumn;
     procedure InitializeChainState;
     function GetLastHash: string;
     function ComputePayload(const AChallenge: TReviewChallenge): string;
@@ -69,6 +70,9 @@ type
     function ExpireOverdue: Integer;
     function VerifyChain(out ABrokenCount, ATotalRows: Integer): Boolean;
     function Count: Integer;
+    function MarkExecuted(const AReviewId: string;
+      out AOutChallenge: TReviewChallenge): Boolean;
+    function IsExecuted(const AReviewId: string): Boolean;
   end;
 
 implementation
@@ -102,7 +106,8 @@ const
     '  created_at TEXT NOT NULL,' +
     '  updated_at TEXT NOT NULL,' +
     '  prev_hash TEXT,' +
-    '  this_hash TEXT)';
+    '  this_hash TEXT,' +
+    '  executed_at TEXT)';  // ASY-GOV-006 阶段3：asOnce 消费时刻；NULL=未执行（防重放）
 
   SQL_CREATE_CHALLENGES_INDEX =
     'CREATE INDEX IF NOT EXISTS idx_review_challenges_intent ' +
@@ -127,6 +132,20 @@ const
   SQL_CREATE_DECISIONS_REVIEW_INDEX =
     'CREATE INDEX IF NOT EXISTS idx_human_decisions_review ' +
     'ON human_decisions(review_id)';
+
+  // ASY-GOV-006 阶段3：executed_at 列迁移（旧库无此列）。ALTER 无 IF NOT EXISTS，
+  // 靠捕获 EDatabaseError 兼容重复迁移（与 EvidenceStore.MigrateHashColumns 同模式）。
+  SQL_ALTER_EXECUTED_AT =
+    'ALTER TABLE review_challenges ADD COLUMN executed_at TEXT';
+
+  // 原子消费：仅当 executed_at IS NULL 时写入，防 asOnce 重放。
+  SQL_MARK_EXECUTED =
+    'UPDATE review_challenges SET executed_at = :executed_at, ' +
+    'updated_at = :updated_at WHERE review_id = :review_id ' +
+    'AND executed_at IS NULL';
+
+  SQL_SELECT_EXECUTED_AT =
+    'SELECT executed_at FROM review_challenges WHERE review_id = :review_id';
 
   SQL_INSERT_CHALLENGE =
     'INSERT INTO review_challenges ' +
@@ -161,14 +180,14 @@ const
     'SELECT review_id, action_intent_id, decision_id, action_summary, target_summary, ' +
     'impact, reversibility, parameters_digest, allowed_decisions, ' +
     'authorization_scopes, evidence_refs, expires_at, status, created_at, ' +
-    'updated_at, prev_hash, this_hash ' +
+    'updated_at, prev_hash, this_hash, executed_at ' +
     'FROM review_challenges WHERE review_id = :review_id';
 
   SQL_QUERY_BY_INTENT =
     'SELECT review_id, action_intent_id, decision_id, action_summary, target_summary, ' +
     'impact, reversibility, parameters_digest, allowed_decisions, ' +
     'authorization_scopes, evidence_refs, expires_at, status, created_at, ' +
-    'updated_at, prev_hash, this_hash ' +
+    'updated_at, prev_hash, this_hash, executed_at ' +
     'FROM review_challenges WHERE action_intent_id = :action_intent_id ' +
     'ORDER BY created_at';
 
@@ -176,7 +195,7 @@ const
     'SELECT review_id, action_intent_id, decision_id, action_summary, target_summary, ' +
     'impact, reversibility, parameters_digest, allowed_decisions, ' +
     'authorization_scopes, evidence_refs, expires_at, status, created_at, ' +
-    'updated_at, prev_hash, this_hash ' +
+    'updated_at, prev_hash, this_hash, executed_at ' +
     'FROM review_challenges WHERE status = ''pending'' ORDER BY created_at';
 
   SQL_GET_DECISION =
@@ -226,6 +245,20 @@ begin
   FConnection.ExecSQL(SQL_CREATE_CHALLENGES_STATUS_INDEX);
   FConnection.ExecSQL(SQL_CREATE_DECISIONS);
   FConnection.ExecSQL(SQL_CREATE_DECISIONS_REVIEW_INDEX);
+  MigrateExecutedAtColumn;
+end;
+
+{ ASY-GOV-006 阶段3：旧库（阶段2 建表，无 executed_at）补列。 }
+procedure TReviewQueueSQLite.MigrateExecutedAtColumn;
+begin
+  // ALTER TABLE ADD COLUMN 无 IF NOT EXISTS（SQLite 不支持），
+  // 靠捕获 EDatabaseError 兼容重复迁移（与 EvidenceStore.MigrateHashColumns 同模式）。
+  try
+    FConnection.ExecSQL(SQL_ALTER_EXECUTED_AT);
+  except
+    on E: EDatabaseError do
+      ; // 列已存在，忽略
+  end;
 end;
 
 procedure TReviewQueueSQLite.InitializeChainState;
@@ -429,6 +462,10 @@ begin
   AChallenge.UpdatedAt := ISO8601ToDate(AQuery.FieldByName('updated_at').AsString, False);
   AChallenge.PrevHash := AQuery.FieldByName('prev_hash').AsString;
   AChallenge.ThisHash := AQuery.FieldByName('this_hash').AsString;
+  if AQuery.FieldByName('executed_at').IsNull then
+    AChallenge.ExecutedAt := 0
+  else
+    AChallenge.ExecutedAt := ISO8601ToDate(AQuery.FieldByName('executed_at').AsString, False);
 end;
 
 procedure TReviewQueueSQLite.ReadDecisionRow(AQuery: TFDQuery;
@@ -767,6 +804,57 @@ begin
     LQuery.Open;
     if not LQuery.Eof then
       Result := LQuery.Fields[0].AsInteger;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+// ASY-GOV-006 stage3: atomically consume a challenge. Only writes the
+// current timestamp (ISO8601) when executed_at IS NULL, preventing asOnce
+// replay. On success refills AOutChallenge (with the new ExecutedAt).
+// Returns False if not found or already executed.
+function TReviewQueueSQLite.MarkExecuted(const AReviewId: string;
+  out AOutChallenge: TReviewChallenge): Boolean;
+var
+  LQuery: TFDQuery;
+  LExecutedAt: string;
+begin
+  Result := False;
+  LExecutedAt := DateToISO8601(Now);
+  System.TMonitor.Enter(FLock);
+  try
+    LQuery := TFDQuery.Create(nil);
+    try
+      LQuery.Connection := FConnection;
+      LQuery.SQL.Text := SQL_MARK_EXECUTED;
+      LQuery.ParamByName('executed_at').AsString := LExecutedAt;
+      LQuery.ParamByName('updated_at').AsString := LExecutedAt;
+      LQuery.ParamByName('review_id').AsString := AReviewId;
+      LQuery.ExecSQL;
+      Result := LQuery.RowsAffected = 1;
+    finally
+      LQuery.Free;
+    end;
+    if Result then
+      GetChallenge(AReviewId, AOutChallenge);
+  finally
+    System.TMonitor.Exit(FLock);
+  end;
+end;
+
+function TReviewQueueSQLite.IsExecuted(const AReviewId: string): Boolean;
+var
+  LQuery: TFDQuery;
+begin
+  Result := False;
+  LQuery := TFDQuery.Create(nil);
+  try
+    LQuery.Connection := FConnection;
+    LQuery.SQL.Text := SQL_SELECT_EXECUTED_AT;
+    LQuery.ParamByName('review_id').AsString := AReviewId;
+    LQuery.Open;
+    if (not LQuery.Eof) and (not LQuery.Fields[0].IsNull) then
+      Result := True;
   finally
     LQuery.Free;
   end;

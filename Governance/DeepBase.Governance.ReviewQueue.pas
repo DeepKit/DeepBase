@@ -18,6 +18,11 @@ uses
   System.Generics.Collections;
 
 type
+  /// ASY-GOV-006 阶段3：执行端 fail-closed 异常。ActionExecutor 在
+  /// verifier=nil 却收到非空 confirmation，或 Verify 返回 False 时抛出，
+  /// 阻止未获主权批准的高风险 action 执行。
+  EReviewDecisionRejected = class(Exception);
+
   /// ReviewChallenge 生命周期状态。
   /// pending → approved | rejected | cancelled | expired（单向，不可逆）
   TReviewStatus = (
@@ -62,8 +67,35 @@ type
     Status: TReviewStatus;
     CreatedAt: TDateTime;
     UpdatedAt: TDateTime;
+    ExecutedAt: TDateTime;         // asOnce 消费时刻；>0 表示已执行（防重放），0=未执行
     PrevHash: string;              // 哈希链：上一行 this_hash
     ThisHash: string;              // 哈希链：本行哈希
+  end;
+
+  /// <summary>
+  /// 执行端裁决验证器。ASY-GOV-006 阶段3：ActionExecutor 在执行高风险
+  /// action 前，凭人工裁决凭证（confirmation=review_id）调本接口校验
+  /// 该 action 已获主权批准且入参未被篡改。校验通过后由执行端调
+  /// MarkExecuted 标记消费，防 asOnce 重放。
+  /// </summary>
+  IReviewDecisionVerifier = interface
+    ['{C8B4A3F2-0D5E-5B9F-C2A7-4E3F1B8D6000}']
+    /// 校验 confirmation 对应的裁决是否允许执行 action。
+    /// - AActionKey：被校验的动作键（用于日志/证据，不参与哈希比对）
+    /// - AArgumentsDigest：执行端实时计算的入参摘要，须与 challenge.ParametersDigest 一致
+    /// - AConfirmation：人工裁决凭证 = review_id
+    /// - ARequiredScope：执行端要求的作用域（通常 asOnce）
+    /// fail-fast：①challenge 存在 ②ParametersDigest 匹配 ③未过期(先 ExpireOverdue)
+    /// ④status=approved ⑤AuthorizationScopes 含 ARequiredScope。
+    /// 全通过返回 True + AOutChallenge；任一失败返回 False + ARejectionReason。
+    function Verify(const AActionKey, AArgumentsDigest, AConfirmation: string;
+      ARequiredScope: TAuthorizationScope;
+      out AOutChallenge: TReviewChallenge;
+      out ARejectionReason: string): Boolean;
+    /// 消费 challenge（asOnce 防重放）。Verify 通过后、action 执行成功后由
+    /// 执行端调用。已执行返回 False（重放被拒）。封装 IReviewQueue.MarkExecuted。
+    function Consume(const AReviewId: string;
+      out AOutChallenge: TReviewChallenge): Boolean;
   end;
 
   /// <summary>
@@ -109,8 +141,135 @@ type
     function VerifyChain(out ABrokenCount, ATotalRows: Integer): Boolean;
     /// challenge 行数（不含 decision 行）。
     function Count: Integer;
+    /// 标记 challenge 已被消费（asOnce 防重放）。原子 UPDATE WHERE executed_at IS NULL。
+    /// 已执行返回 False（重放被拒）。同时刷新 AOutChallenge.ExecutedAt。
+    function MarkExecuted(const AReviewId: string;
+      out AOutChallenge: TReviewChallenge): Boolean;
+    /// 是否已消费（executed_at > 0）。不存在返回 False。
+    function IsExecuted(const AReviewId: string): Boolean;
+  end;
+
+  /// <summary>
+  /// 默认裁决验证器实现。持 IReviewQueue 做只读校验 + Consume 写，
+  /// 不直接碰 SQL。fail-fast 五步见 IReviewDecisionVerifier.Verify 注释。
+  /// 声明须在 IReviewQueue 之后（FQueue/构造参引用它）。
+  /// </summary>
+  TReviewDecisionVerifier = class(TInterfacedObject, IReviewDecisionVerifier)
+  private
+    FQueue: IReviewQueue;
+  public
+    constructor Create(const AQueue: IReviewQueue);
+    function Verify(const AActionKey, AArgumentsDigest, AConfirmation: string;
+      ARequiredScope: TAuthorizationScope;
+      out AOutChallenge: TReviewChallenge;
+      out ARejectionReason: string): Boolean;
+    function Consume(const AReviewId: string;
+      out AOutChallenge: TReviewChallenge): Boolean;
   end;
 
 implementation
+
+{ TReviewDecisionVerifier }
+
+constructor TReviewDecisionVerifier.Create(const AQueue: IReviewQueue);
+begin
+  inherited Create;
+  FQueue := AQueue;
+end;
+
+function TReviewDecisionVerifier.Verify(const AActionKey, AArgumentsDigest,
+  AConfirmation: string; ARequiredScope: TAuthorizationScope;
+  out AOutChallenge: TReviewChallenge; out ARejectionReason: string): Boolean;
+const
+  // 与 TReviewQueueSQLite.ScopeToStr 同表（verifier 不依赖 SQLite 单元，故内联）。
+  SCOPE_NAMES: array [TAuthorizationScope] of string = ('once', 'session', 'persistent');
+var
+  LScope: string;
+  LFound: Boolean;
+  LScopeStr: string;
+  I: Integer;
+begin
+  Result := False;
+  ARejectionReason := '';
+  // 缺省初始化 out 参数（managed record 编译器已置 nil，显式 Finalize 更稳）。
+  Finalize(AOutChallenge);
+  FillChar(AOutChallenge, SizeOf(AOutChallenge), 0);
+
+  if FQueue = nil then
+  begin
+    ARejectionReason := 'verifier 未绑定 review queue';
+    Exit;
+  end;
+
+  // ① challenge 存在
+  if not FQueue.GetChallenge(AConfirmation, AOutChallenge) then
+  begin
+    ARejectionReason := '裁决凭证对应的 challenge 不存在: ' + AConfirmation;
+    Exit;
+  end;
+
+  // ③ 推进过期（先 ExpireOverdue 再判 status，确保过期 challenge 被标记）
+  FQueue.ExpireOverdue;
+  // 过期后重新读一次（ExpireOverdue 可能改了 status）
+  if not FQueue.GetChallenge(AConfirmation, AOutChallenge) then
+  begin
+    ARejectionReason := 'challenge 重新读取失败';
+    Exit;
+  end;
+
+  // ② 入参摘要匹配（防篡改/重放到不同参数）
+  if not SameText(AOutChallenge.ParametersDigest, AArgumentsDigest) then
+  begin
+    ARejectionReason := '入参摘要不匹配（疑似篡改或重放到不同参数）';
+    Exit;
+  end;
+
+  // ④ status = approved
+  if AOutChallenge.Status <> rsApproved then
+  begin
+    ARejectionReason := '裁决未批准（当前状态: ' + IntToStr(Ord(AOutChallenge.Status)) + '）';
+    Exit;
+  end;
+
+  // ⑤ 作用域包含 ARequiredScope
+  LScope := SCOPE_NAMES[ARequiredScope];
+  LFound := False;
+  for I := 0 to High(AOutChallenge.AuthorizationScopes) do
+  begin
+    LScopeStr := AOutChallenge.AuthorizationScopes[I];
+    if SameText(LScopeStr, LScope) then
+    begin
+      LFound := True;
+      Break;
+    end;
+  end;
+  if not LFound then
+  begin
+    ARejectionReason := '裁决作用域不含 ' + LScope;
+    Exit;
+  end;
+
+  // asOnce 已消费检查：ExecutedAt > 0 表示已被消费（防重放）
+  if (ARequiredScope = asOnce) and (AOutChallenge.ExecutedAt > 0) then
+  begin
+    ARejectionReason := 'asOnce 裁决已被消费（防重放）';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TReviewDecisionVerifier.Consume(const AReviewId: string;
+  out AOutChallenge: TReviewChallenge): Boolean;
+begin
+  if FQueue = nil then
+  begin
+    Finalize(AOutChallenge);
+    FillChar(AOutChallenge, SizeOf(AOutChallenge), 0);
+    Result := False;
+    Exit;
+  end;
+  Result := FQueue.MarkExecuted(AReviewId, AOutChallenge);
+end;
 
 end.
