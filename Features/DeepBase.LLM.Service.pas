@@ -85,6 +85,11 @@ type
 
 var
   GLLMService: TLLMService = nil;
+  // DBA-3 fix: strong interface reference keeps the TInterfacedObject singleton
+  // alive across the transient ILLMAdmin/ILLMClient references returned by
+  // LLMAdmin()/LLM(). Without it, the last Release frees the object, leaving
+  // GLLMService a dangling pointer -> AV on the next call.
+  GLLMServiceHolder: ILLMAdmin = nil;
   GProxyClient: ILLMClient = nil;
   GProxyChecked: Boolean = False;
   GProxyAvailable: Boolean = False;
@@ -177,7 +182,6 @@ end;
 
 function LLM: ILLMClient;
 begin
-  // 优先尝试 proxy 模式
   Result := TryGetProxyClient;
   if Result <> nil then
     Exit;
@@ -188,7 +192,10 @@ begin
     TMonitor.Enter(GLLMLock);
     try
       if GLLMService = nil then
+      begin
         GLLMService := TLLMService.Create;
+        GLLMServiceHolder := GLLMService;  // DBA-3: hold strong ref, prevent FreeSelf
+      end;
     finally
       TMonitor.Exit(GLLMLock);
     end;
@@ -203,7 +210,10 @@ begin
     TMonitor.Enter(GLLMLock);
     try
       if GLLMService = nil then
+      begin
         GLLMService := TLLMService.Create;
+        GLLMServiceHolder := GLLMService;  // DBA-3: hold strong ref, prevent FreeSelf
+      end;
     finally
       TMonitor.Exit(GLLMLock);
     end;
@@ -893,11 +903,12 @@ initialization
   GLLMLock := TObject.Create;
 
 finalization
-  if GLLMService <> nil then
-  begin
-    GLLMService.Free;
-    GLLMService := nil;
-  end;
+  // DBA-3: release the strong interface reference first; this drives the
+  // TInterfacedObject refcount to 0 and frees the singleton cleanly. Do NOT
+  // call GLLMService.Free directly — the object is refcount-managed and may
+  // already be freed by a prior Release, so a bare Free would double-free.
+  GLLMServiceHolder := nil;
+  GLLMService := nil;
   GProxyClient := nil;
   FreeAndNil(GLLMLock);
 
