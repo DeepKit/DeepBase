@@ -41,6 +41,9 @@ type
     function Chat(const ATier: TModelTier; const ASystemPrompt, AUserPrompt: string): TChatResult; overload;
     function ChatWithHistory(const ATier: TModelTier; const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier; const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>; AMaxTokens: Integer = 0);
     function ChatVision(const ATier: TModelTier;
@@ -449,6 +452,51 @@ if ATemperature < 0 then
       ATemperature := 0.2;
   end;
   Result := CallWithFallback(ATier, AMessages, AMaxTokens, ATemperature);
+end;
+
+function TLLMService.ChatWithHistoryByProvider(const AProviderName: string;
+  const AModelId: string;
+  const AMessages: TArray<TChatMessage>; AMaxTokens: Integer;
+  ATemperature: Double): TChatResult;
+var
+  P: TProviderConfig;
+  Model: string;
+begin
+  EnsureLoaded;
+  if not FConfig.GetProvider(AProviderName, P) then
+  begin
+    Result := Default(TChatResult);
+    Result.ErrorCode := 'NO_PROVIDER';
+    Result.ErrorMessage := 'Provider not registered: ' + AProviderName;
+    Exit;
+  end;
+
+  Model := AModelId;
+  if Model = '' then
+  begin
+    var Models := GetAvailableModels(AProviderName);
+    if Length(Models) > 0 then
+      Model := Models[0]
+    else
+    begin
+      Result := Default(TChatResult);
+      Result.ErrorCode := 'NO_MODEL';
+      Result.ErrorMessage := 'No models configured for provider: ' + AProviderName;
+      Exit;
+    end;
+  end;
+
+  if AMaxTokens <= 0 then
+    AMaxTokens := 4000;
+  if ATemperature < 0 then
+    ATemperature := 0.2;
+
+  FHttpClient.Send(P.Endpoint, FConfig.GetApiKey(P.Name), P.ApiFormat,
+    Model, AMessages, AMaxTokens, ATemperature, Result);
+  if Result.ModelUsed = '' then
+    Result.ModelUsed := Model;
+  Inc(FCallCount);
+  FLastDurationMs := Result.DurationMs;
 end;
 
 procedure TLLMService.ChatStream(const ATier: TModelTier;

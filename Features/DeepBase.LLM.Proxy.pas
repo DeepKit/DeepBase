@@ -55,6 +55,9 @@ type
     function ChatWithHistory(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>;
@@ -336,6 +339,48 @@ begin
     else
     begin
       Result := Default(TChatResult);  // Safe: properly initializes managed string fields
+      Result.ErrorCode := 'PROXY_UNREACHABLE';
+      Result.ErrorMessage := Format('Proxy returned %d: %s', [Code, Resp]);
+      Result.DurationMs := FLastDurationMs;
+    end;
+  finally
+    Body.Free;
+  end;
+  Inc(FCallCount);
+end;
+
+function TProxyLLMClient.ChatWithHistoryByProvider(const AProviderName,
+  AModelId: string; const AMessages: TArray<TChatMessage>;
+  AMaxTokens: Integer; ATemperature: Double): TChatResult;
+var
+  Body: TJSONObject;
+  ModelField, Resp: string;
+  Code: Integer;
+begin
+  // Proxy mode: the shared DeepLLMProxy service resolves the model field.
+  // For per-provider routing we pass AModelId (or fall back to AProviderName
+  // as the model alias) so the proxy can route to the named provider rather
+  // than a tier. This mirrors the direct TLLMService.ChatWithHistoryByProvider
+  // contract (bypasses tier/priority routing).
+  ModelField := AModelId;
+  if ModelField = '' then
+    ModelField := AProviderName;
+
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('model', ModelField);
+    Body.AddPair('messages', BuildMessages(AMessages));
+    Body.AddPair('stream', TJSONBool.Create(False));
+    if AMaxTokens > 0 then
+      Body.AddPair('max_tokens', TJSONNumber.Create(AMaxTokens));
+    if ATemperature >= 0 then
+      Body.AddPair('temperature', TJSONNumber.Create(ATemperature));
+
+    if DoPost('/v1/chat/completions', Body, Resp, Code) then
+      Result := ParseChatResponse(Resp)
+    else
+    begin
+      Result := Default(TChatResult);
       Result.ErrorCode := 'PROXY_UNREACHABLE';
       Result.ErrorMessage := Format('Proxy returned %d: %s', [Code, Resp]);
       Result.DurationMs := FLastDurationMs;

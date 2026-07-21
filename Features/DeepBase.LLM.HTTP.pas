@@ -277,6 +277,15 @@ begin
       if MsgObj <> nil then
       begin
         AResult.Content := MsgObj.GetValue('content', '');
+        // Extract reasoning_content (Agnes/GPT-5/DeepSeek/o1-style models put
+        // chain-of-thought here). Falls back to 'reasoning' alias.
+        AResult.ReasoningContent := MsgObj.GetValue('reasoning_content',
+          MsgObj.GetValue('reasoning', ''));
+        // If content is empty but reasoning produced output, surface reasoning
+        // as content so callers still get usable text (matches DeepFrames
+        // historical reasoning fallback, see memory deepbase-crypto-rsa-blocking).
+        if (AResult.Content = '') and (AResult.ReasoningContent <> '') then
+          AResult.Content := AResult.ReasoningContent;
         AResult.Success := True;
         Result := True;
       end;
