@@ -55,6 +55,15 @@ contains
   DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
   DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
   DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',
-  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas';
+  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas',
+  // v0.7+: desktop perception layer (screenshot + visual recognition) and
+  // the unified actuator that composes UIA + perception under fpBestEffort.
+  // Note: the LLM-backed perception provider (DeepBase.Desktop.Perception.
+  // LLMProvider) lives in DeepBaseLLM.dpk because it uses LLM units that are
+  // owned by the LLM package, not Platform. Platform owns only the neutral
+  // perception Types/Engine and the actuator that composes UIA + perception.
+  DeepBase.Desktop.Perception.Types in 'Features\DeepBase.Desktop.Perception.Types.pas',
+  DeepBase.Desktop.Perception.Engine in 'Features\DeepBase.Desktop.Perception.Engine.pas',
+  DeepBase.UIA.UnifiedActuator in 'Features\DeepBase.UIA.UnifiedActuator.pas';
 
 end.

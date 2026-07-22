@@ -50,6 +50,10 @@ contains
   DeepBase.LLM.Config in 'Features\DeepBase.LLM.Config.pas',
   DeepBase.LLM.Providers in 'Features\DeepBase.LLM.Providers.pas',
   DeepBase.LLM.Proxy in 'Features\DeepBase.LLM.Proxy.pas',
-  DeepBase.LLM.Service in 'Features\DeepBase.LLM.Service.pas';
+  DeepBase.LLM.Service in 'Features\DeepBase.LLM.Service.pas',
+  // v0.7+: LLM-backed desktop perception provider. Bridges the Platform
+  // perception layer (DeepBase.Desktop.Perception.*) to the vision LLM tier.
+  // Lives here because it uses LLM units owned by this package.
+  DeepBase.Desktop.Perception.LLMProvider in 'Features\DeepBase.Desktop.Perception.LLMProvider.pas';
 
 end.

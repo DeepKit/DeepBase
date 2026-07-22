@@ -59,6 +59,8 @@ uses
   Test.DeepBase.Browser.Async in 'Test.DeepBase.Browser.Async.pas',
   Test.DeepBase.Browser.WindowPool in 'Test.DeepBase.Browser.WindowPool.pas',
   Test.DeepBase.Browser.Vision in 'Test.DeepBase.Browser.Vision.pas',
+  Test.DeepBase.Desktop.Perception in 'Test.DeepBase.Desktop.Perception.pas',
+  Test.DeepBase.UIA.UnifiedActuator in 'Test.DeepBase.UIA.UnifiedActuator.pas',
   Test.DeepBase.Browser.ScriptStore in 'Test.DeepBase.Browser.ScriptStore.pas',
   Test.DeepBase.Browser.CDP in 'Test.DeepBase.Browser.CDP.pas',
   Test.DeepBase.Browser.Service in 'Test.DeepBase.Browser.Service.pas',
