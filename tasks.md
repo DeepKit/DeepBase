@@ -1,6 +1,6 @@
 # deepBase 开发任务
-> **最后更新**: 2026-07-09
-> **本次更新**: 完成 OPT-REFACTOR-001 — LLM.pas 模板管理提取架构重构。新建 `Core/DeepBase.LLM.PromptTemplateManager.pas` (TLLMPromptTemplateManager 类, 迁入 9 方法 + 2 辅助), `TDeepBaseLLM` 持 `FPromptTemplateMgr` 字段, 9 公开模板方法改一行委托, 门面签名不变 (调用方 Persistence/VCL/FMX/BillingClient 零改动)。Win64 编译通过 (329078 行), 全量 DUnitX 4206/4203/0/0/0 (无 216 无回归)。DeepBaseLLM.dpk/.dproj 已加 contains。另 BUG-438 (Tests 全套 Runtime 216) 已修 (WorkerQueue 异常对象生命周期悬垂 → Clone 模式), 派生 BUG-439 待办。
+> **最后更新**: 2026-07-22
+> **本次更新**: 完成 perception-p0/p1 — 桌面感知层 + UIA 统一行动器双通道 (对应 docs/87 P0/P1)。新建 `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas` (TPerceptionSource/TDesktopScreenshot/TPerceivedElement/TPerceptionCache/TVisualRecognitionEngine, LLM-backed provider 落 DeepBaseLLM.dpk, 中性 Types/Engine 落 DeepBasePlatform.dpk, 未新建 DeepBasePerception.dpk) + `Features/DeepBase.UIA.UnifiedActuator.pas` (TUnifiedActuator 双通道 acUIA/acVisual, fpBestEffort 下 UIA selector 失败走感知层视觉坐标兜底, fpStrict 仍只走 UIA 失败即抛)。回归 Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator。SPW H1-H4+H5 全绿 (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash 双家族 identity_verified)。docs/34 v0.7 §6.5 / docs/87 v0.2 落地现状 / docs/94 新建 wechat-mac-rpa 借鉴笔记。已 fast-forward merge 回 `feat/a007-route-due-register` (c060661)。
 > **前次更新**: 二次复核 OPT-P2-002 三大文件拆分项 — 逐文件结构+引用追踪证明 2026-07-10 更正仍基于错误前提: Schema.pas 是纯 SQL DDL 常量单元 (无 Table/Column/Index/Constraint 类型, Diagnose 直接引用 20+ 单常量, 拆分只增耦合 → 标记不适用); Math.pas 已拆分完成 (Geometry/Random/Interpolation/Statistics 四子单元 + 527 行门面 → 标记完成); LLM.pas 是门面单元, 剩余 1778 行为 TDeepBaseLLM 单体类, 真正拆分需提取模板管理为独立类属架构重构 (影响 Persistence/VCL/FMX 调用方) → 拆出独立待办 OPT-REFACTOR-001。零代码改动, 仅文档对齐。REVIEW5-R3 全闭环 (53/53, BUG-386~437)。
 > **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。三专家审阅 42 项全部完成 (已归档)。第二轮五专家审阅 (REVIEW5-R2, 2026-07-06) **本轮修复 23 项已全部归档** history.md (BUG-363~BUG-385 + DATA2-005/006 补录), 详见 history.md「2026-07-06 REVIEW5-R2」段。WebAPI 可观测性模块已落地 (33 新测)。商业化模块增强: 微信支付 V3 回调验证 (9 新测)、权益 Tier/MaxDevices/OfflineGraceDays、正确性修复 4 项、测试覆盖补齐 11 验证路径。CI 单元全绿 (4084 total, 0 failed, 33 预存 CM 环境错误, STUB/编码门禁 PASSED); 编码门禁 0 硬违反, ~224 软告警。
 > **第三轮审阅 (2026-07-08, REVIEW5-R3)**: 五专家全模块只读审阅完成 (A=Core安全/加密/并发, B=Core业务/AI/LLM, C=Persistence/DataPlatform归档, D=Governance/DeepFlow, E=Features商业化/浏览器/语音/集成), 共 54 项发现 (7 P0 / 18 P1 / 22 P2 / 7 P3)。修复进行中: **已修 53 项** (BUG-386~BUG-437, 已归档 history.md「2026-07-08 REVIEW5-R3」段, 含 2026-07-09 续修 B-001~B-019 + A-001 + D-006 + D-002/D-004 + D-005 + E-002 + E-003 + E-006 + E-007 + E-008 + E-005 + D-007 + D-008 + C-001 + C-002 + C-003 + C-004 + C-005 + C-006 + C-007), **待修 0 项** (REVIEW5-R3 全部 53 项编号发现已修复闭环; 另 1 项 D 附加 P3 风格说明为非 bug 不计入发现数, 见下方 D 段), 详见下方 REVIEW5-R3 清单; 报告存档 `expert_{a,b,c,d,e}_findings_round3.md`。
@@ -116,6 +116,38 @@
 - [ ] 服务器按 entitlement 返回版本、下载地址、签名 manifest。
 - [ ] 更新包校验 hash 和签名。未付费用户仅可见免费通道。
 - **已完成**: Updater 安全测试 14 用例
+
+---
+
+## 桌面感知-推理-行动下沉 (perception-p0/p1, docs/87)
+
+> **来源**: docs/87 感知-推理-行动下沉分层开发规格 (2026-07-22 fastmeet 8 模型高共识) + docs/94 wechat-mac-rpa 借鉴笔记。
+> **已完成 (2026-07-22, c060661, 已 FF merge 回 a007 分支)**: P0 感知层 + P1 统一行动器双通道, SPW H1-H4+H5 全绿。
+
+### ~~PERCEPT-P0: 桌面感知层~~ ✅ 已完成
+- [x] `Features/DeepBase.Desktop.Perception.Types.pas` — TPerceptionSource(psOCR/psVision/psUIAProbe/psUnknown) / TDesktopScreenshot / TPerceivedElement / TPerceptionResult / TPerceptionCache
+- [x] `Features/DeepBase.Desktop.Perception.Engine.pas` — TVisualRecognitionEngine (截图→识别)
+- [x] `Features/DeepBase.Desktop.Perception.LLMProvider.pas` — LLM-backed 视觉识别 provider (落 DeepBaseLLM.dpk, 消费 LLM 单元)
+- [x] 包归属已定: 中性 Types/Engine 落 DeepBasePlatform.dpk, LLMProvider 落 DeepBaseLLM.dpk (未新建 DeepBasePerception.dpk, OCR 体积当前未拖累 Platform)
+- [x] 回归: Tests/Test.DeepBase.Desktop.Perception.pas
+
+### ~~PERCEPT-P1: UIA 统一行动器双通道~~ ✅ 已完成
+- [x] `Features/DeepBase.UIA.UnifiedActuator.pas` — TUnifiedActuator, TActuationChannel(acUIA/acVisual/acNone), TActuationResult
+- [x] fpBestEffort: UIA selector 失败 → 感知层区域截图识别 → TPerceivedElement.BoundingBox 走 acVisual 兜底
+- [x] fpStrict: 仅 acUIA, 失败即抛 EUIAElementNotFound (保持 v0.6 行为)
+- [x] DeepBasePlatform.dpk contains TUnifiedActuator (与 Perception.* 同包)
+- [x] 回归: Tests/Test.DeepBase.UIA.UnifiedActuator.pas (DUnitX, SPW H3 deep-ui-test gate)
+
+### PERCEPT-P2: 感知层心跳优化 (下一步, 来自 docs/94 借鉴)
+> **来源**: wechat-mac-rpa 帧间变化检测 (MD5 + ROI 像素 diff), 砍 60-90% LLM API 成本。
+- [ ] **PERCEPT-P2-001 帧间变化检测**: TVisualRecognitionEngine 当前线性"每次截图→识别→LLM", 缺心跳层。加两级跳过: (1) 全图 MD5 相同直接复用 TPerceptionCache 上次结果; (2) MD5 不同对消息区/列表区 ROI 做 TBitmap.ScanLine 像素 diff (阈值>10 视为有变化), 低差异跳过 LLM 只做本地 OCR; 连续 3 帧低差异阈值再降 50%。
+- [ ] **PERCEPT-P2-002 纯像素补 UIA 盲区**: TUnifiedActuator.acVisual 当前是 UIA 失败的坐标兜底, 扩展为"UIA 拿不到的视觉语义"信号源 (气泡归属/未读角标数/状态指示色, 用颜色匹配+连通区域标记)。激活 TPerceptionSource.psVision (已定义未充分使用)。
+
+### PERCEPT-P3: RPA 产品化 (应用层, 不下沉底座)
+- [ ] 登录恢复状态机 (SUCCESS/NEEDS_PHONE_CONFIRM/NEEDS_QRCODE/NO_LOGIN_BUTTON 四态自动检测+恢复, 7×24 无人值守) — 底座感知层暴露"登录态特征检测"原语, 状态机编排归应用层 DeepAxis
+- [ ] 截图内容验证 (采集后先 OCR/特征校验"确实是目标窗口", 防被覆盖窗口截错) — 落点 TDesktopScreenshot 采集后加一步特征验证
+- [ ] 反检测 (操作随机延迟/频率控制, 当前零门禁) — 应用层
+- [ ] 双模渐进增强 (默认纯视觉感知, 可选 hook 本地数据库增量同步, 失败自动降级) — 应用层策略, 底座只提供原语
 
 ---
 
