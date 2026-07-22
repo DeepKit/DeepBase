@@ -103,6 +103,9 @@ type
     function ChatWithHistory(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>;
@@ -532,6 +535,19 @@ begin
     function: TChatResult
     begin
       Result := FInner.ChatWithHistory(ATier, AMessages, AMaxTokens, ATemperature);
+    end);
+end;
+
+function TResilientLLMWrapper.ChatWithHistoryByProvider(
+  const AProviderName, AModelId: string;
+  const AMessages: TArray<TChatMessage>;
+  AMaxTokens: Integer; ATemperature: Double): TChatResult;
+begin
+  Result := ExecuteWithResilience(
+    function: TChatResult
+    begin
+      Result := FInner.ChatWithHistoryByProvider(
+        AProviderName, AModelId, AMessages, AMaxTokens, ATemperature);
     end);
 end;
 

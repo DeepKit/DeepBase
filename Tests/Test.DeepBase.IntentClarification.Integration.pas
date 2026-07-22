@@ -54,6 +54,9 @@ type
     function ChatWithHistory(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>;
@@ -321,6 +324,14 @@ function TMockLLMClient.ChatWithHistory(const ATier: TModelTier;
   AMaxTokens: Integer; ATemperature: Double): TChatResult;
 begin
   Result := Chat(ATier, 'history-call');
+end;
+
+function TMockLLMClient.ChatWithHistoryByProvider(
+  const AProviderName, AModelId: string;
+  const AMessages: TArray<TChatMessage>;
+  AMaxTokens: Integer; ATemperature: Double): TChatResult;
+begin
+  Result := Chat(TierFast, 'provider-history-call');
 end;
 
 procedure TMockLLMClient.ChatStream(const ATier: TModelTier;
