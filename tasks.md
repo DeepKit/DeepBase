@@ -1,6 +1,7 @@
 # deepBase 开发任务
-> **最后更新**: 2026-07-22
-> **本次更新**: 完成 perception-p0/p1 — 桌面感知层 + UIA 统一行动器双通道 (对应 docs/87 P0/P1)。新建 `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas` (TPerceptionSource/TDesktopScreenshot/TPerceivedElement/TPerceptionCache/TVisualRecognitionEngine, LLM-backed provider 落 DeepBaseLLM.dpk, 中性 Types/Engine 落 DeepBasePlatform.dpk, 未新建 DeepBasePerception.dpk) + `Features/DeepBase.UIA.UnifiedActuator.pas` (TUnifiedActuator 双通道 acUIA/acVisual, fpBestEffort 下 UIA selector 失败走感知层视觉坐标兜底, fpStrict 仍只走 UIA 失败即抛)。回归 Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator。SPW H1-H4+H5 全绿 (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash 双家族 identity_verified)。docs/34 v0.7 §6.5 / docs/87 v0.2 落地现状 / docs/94 新建 wechat-mac-rpa 借鉴笔记。已 fast-forward merge 回 `feat/a007-route-due-register` (c060661)。
+> **最后更新**: 2026-07-23
+> **本次更新**: expert-review specialist_run_ref=aiwb://runs/AWT-20260722-230803-4fa700/specialist/wf_741ed9d4-a41 完成 wechat-mac-rpa 对 DeepAxis/DeepBase 启示深推 (10模型扇出→53启示→对抗验证 27confirmed/18plausible/8误报剔除)。flash-worker 深读 wyjx(无影键侠 RPA 平台,D:/_Progs/04bakcup/progs/wyjx) + DeepUITest(测试编排框架,D:/_Progs/02Business/DeepUITest)。结论: wyjx 是 DeepBase 桌面 RPA 基础设施提炼源 (P0找图找色/P1坐标动作/P2动作引擎), DeepUITest 基本无可复用。老板拍板: 引入 Graphics32 + 动作引擎重构为接口驱动 + P0-P2 全搬。技术会议 (wf_0a14210d-4f7, 3模型+裁定) 定: A1=DeepBasePlatform.dpk requires 追加 GR32 (不新建 Perception.dpk, 规避 E2199); B1=单 canary 先搬 UtilsColorMatch 找色做最小验证 (前置门: grep wyjx uses 链确认零 GR32 隐藏依赖); 动作引擎接口命名 **IRPAActionExecutor** (区别于既有 Governance.IActionExecutor, 避免语义倒置)。详见新增 PERCEPT-WYJX 段 + DeepAxis RPA 闭环段。
+> **前次更新**: 完成 perception-p0/p1 — 桌面感知层 + UIA 统一行动器双通道 (对应 docs/87 P0/P1)。新建 `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas` (TPerceptionSource/TDesktopScreenshot/TPerceivedElement/TPerceptionCache/TVisualRecognitionEngine, LLM-backed provider 落 DeepBaseLLM.dpk, 中性 Types/Engine 落 DeepBasePlatform.dpk, 未新建 DeepBasePerception.dpk) + `Features/DeepBase.UIA.UnifiedActuator.pas` (TUnifiedActuator 双通道 acUIA/acVisual, fpBestEffort 下 UIA selector 失败走感知层视觉坐标兜底, fpStrict 仍只走 UIA 失败即抛)。回归 Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator。SPW H1-H4+H5 全绿 (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash 双家族 identity_verified)。docs/34 v0.7 §6.5 / docs/87 v0.2 落地现状 / docs/94 新建 wechat-mac-rpa 借鉴笔记。已 fast-forward merge 回 `feat/a007-route-due-register` (c060661)。
 > **前次更新**: 二次复核 OPT-P2-002 三大文件拆分项 — 逐文件结构+引用追踪证明 2026-07-10 更正仍基于错误前提: Schema.pas 是纯 SQL DDL 常量单元 (无 Table/Column/Index/Constraint 类型, Diagnose 直接引用 20+ 单常量, 拆分只增耦合 → 标记不适用); Math.pas 已拆分完成 (Geometry/Random/Interpolation/Statistics 四子单元 + 527 行门面 → 标记完成); LLM.pas 是门面单元, 剩余 1778 行为 TDeepBaseLLM 单体类, 真正拆分需提取模板管理为独立类属架构重构 (影响 Persistence/VCL/FMX 调用方) → 拆出独立待办 OPT-REFACTOR-001。零代码改动, 仅文档对齐。REVIEW5-R3 全闭环 (53/53, BUG-386~437)。
 > **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。三专家审阅 42 项全部完成 (已归档)。第二轮五专家审阅 (REVIEW5-R2, 2026-07-06) **本轮修复 23 项已全部归档** history.md (BUG-363~BUG-385 + DATA2-005/006 补录), 详见 history.md「2026-07-06 REVIEW5-R2」段。WebAPI 可观测性模块已落地 (33 新测)。商业化模块增强: 微信支付 V3 回调验证 (9 新测)、权益 Tier/MaxDevices/OfflineGraceDays、正确性修复 4 项、测试覆盖补齐 11 验证路径。CI 单元全绿 (4084 total, 0 failed, 33 预存 CM 环境错误, STUB/编码门禁 PASSED); 编码门禁 0 硬违反, ~224 软告警。
 > **第三轮审阅 (2026-07-08, REVIEW5-R3)**: 五专家全模块只读审阅完成 (A=Core安全/加密/并发, B=Core业务/AI/LLM, C=Persistence/DataPlatform归档, D=Governance/DeepFlow, E=Features商业化/浏览器/语音/集成), 共 54 项发现 (7 P0 / 18 P1 / 22 P2 / 7 P3)。修复进行中: **已修 53 项** (BUG-386~BUG-437, 已归档 history.md「2026-07-08 REVIEW5-R3」段, 含 2026-07-09 续修 B-001~B-019 + A-001 + D-006 + D-002/D-004 + D-005 + E-002 + E-003 + E-006 + E-007 + E-008 + E-005 + D-007 + D-008 + C-001 + C-002 + C-003 + C-004 + C-005 + C-006 + C-007), **待修 0 项** (REVIEW5-R3 全部 53 项编号发现已修复闭环; 另 1 项 D 附加 P3 风格说明为非 bug 不计入发现数, 见下方 D 段), 详见下方 REVIEW5-R3 清单; 报告存档 `expert_{a,b,c,d,e}_findings_round3.md`。
@@ -141,8 +142,35 @@
 
 ### PERCEPT-P2: 感知层心跳优化 (下一步, 来自 docs/94 借鉴)
 > **来源**: wechat-mac-rpa 帧间变化检测 (MD5 + ROI 像素 diff), 砍 60-90% LLM API 成本。
-- [ ] **PERCEPT-P2-001 帧间变化检测**: TVisualRecognitionEngine 当前线性"每次截图→识别→LLM", 缺心跳层。加两级跳过: (1) 全图 MD5 相同直接复用 TPerceptionCache 上次结果; (2) MD5 不同对消息区/列表区 ROI 做 TBitmap.ScanLine 像素 diff (阈值>10 视为有变化), 低差异跳过 LLM 只做本地 OCR; 连续 3 帧低差异阈值再降 50%。
-- [ ] **PERCEPT-P2-002 纯像素补 UIA 盲区**: TUnifiedActuator.acVisual 当前是 UIA 失败的坐标兜底, 扩展为"UIA 拿不到的视觉语义"信号源 (气泡归属/未读角标数/状态指示色, 用颜色匹配+连通区域标记)。激活 TPerceptionSource.psVision (已定义未充分使用)。
+> **状态澄清 (2026-07-23 核实)**: P2-001 第一级 (全图 MD5 帧缓存) 代码已写于 perception-p2 worktree **未提交** (Engine.pas+107/Types.pas+19, FFrameCacheKey/FFrameCache/ComputeFrameKey/TFrameCacheEntry), worktree HEAD 仍=c060661 (P0/P1)。尚未过 SPW 门禁、未合并。c060661 是 P0/P1 提交非 P2。收口待办: worktree→SPW H1-H4→合并。
+- [ ] **PERCEPT-P2-001 帧间变化检测 [代码已写未提交]**: TVisualRecognitionEngine 加两级跳过: (1) 全图 MD5 相同直接复用 TPerceptionCache 上次结果 (worktree 已写 FFrameCacheKey/FFrameCache); (2) MD5 不同对消息区/列表区 ROI 做 TBitmap.ScanLine 像素 diff (阈值>10 视为有变化), 低差异跳过 LLM 只做本地 OCR; 连续 3 帧低差异阈值再降 50%。**收口**: worktree 提交→补 DUnitX→SPW 门禁→FF merge 回 a007。
+- [ ] **PERCEPT-P2-002 纯像素补 UIA 盲区**: TUnifiedActuator.acVisual 扩展为"UIA 拿不到的视觉语义"信号源 (气泡归属/未读角标数/状态指示色, 颜色匹配+连通区域标记)。激活 TPerceptionSource.psVision。**依赖 PERCEPT-WYJX-P0 找色系统** (ColorMatch) 提供颜色匹配原语。
+
+### PERCEPT-WYJX: wyjx 桌面 RPA 原语提炼 (DeepBase 基础设施层, P3a)
+> **来源**: expert-review AWT-20260722-230803-4fa700 + flash-worker 深读 wyjx (D:/_Progs/04bakcup/progs/wyjx 无影键侠 RPA 平台)。老板 2026-07-23 拍板: 引入 Graphics32 + 接口驱动 + P0-P2 全搬。
+> **技术决策 (会议 wf_0a14210d-4f7)**: A1=DeepBasePlatform.dpk requires 追加 GR32 (不新建 Perception.dpk, 规避 E2199 传递依赖陷阱); B1=单 canary 先搬找色。动作引擎接口命名 **IRPAActionExecutor** (区别既有 Governance.IActionExecutor, 避免语义倒置)。
+> **架构升级**: DeepBase 现有 UnifiedActuator "UIA→视觉"双通道, 加 wyjx 像素匹配后变三级 fallback: UIA(结构化毫秒级)→像素模板匹配(毫秒级固定UI)→LLM视觉(秒级动态)。
+
+#### PERCEPT-WYJX-P0: 找图找色 (canary 切片)
+- [ ] **前置门**: grep wyjx UtilsColorMatch.pas uses 子句, 确认无 GR32/Graphics32 及无 wyjx 专用工具单元隐藏依赖; 若有则降级更小原语或先行剥离
+- [ ] **找色系统**: wyjx UtilsColorMatch.pas → `Features/DeepBase.Desktop.Perception.ColorMatch.pas` (单点/多点组合颜色匹配+容差, 纯算法无依赖)
+- [ ] **模板匹配引擎**: wyjx UtilsImageMatch.pas → `Features/DeepBase.Desktop.Perception.TemplateMatch.pas` (TBitmap32+金字塔多尺度+ROI+SSD/NCC, **依赖 GR32**)
+- [ ] **GR32 引入**: DeepBasePlatform.dpk requires 段末尾追加 GR32 (按字母/依赖序); 落 GR32 源码到 SourceRoot; DeepAxis.dpk 不依赖 Platform 零污染
+- [ ] 回归: `Tests/Test.DeepBase.Desktop.Perception.ColorMatch.pas` + `Tests/Test.DeepBase.Desktop.Perception.TemplateMatch.pas` (基本匹配+边界: 空图/越界/阈值/多尺度)
+- [ ] SPW: H1-H4 全绿 (run_tests.ps1 -Type Unit -CI -Platform Win64 子集, 非全量因 216 崩溃); build_packages_win64.ps1 -Profile Runtime 通过 (零 profile 排序改动)
+
+#### PERCEPT-WYJX-P1: 坐标转换 + 动作能力补全
+- [ ] **坐标转换**: wyjx UtilsCoordinate.pas → `Features/DeepBase.Desktop.Coordinate.pas` (3坐标系: 屏幕↔窗口左上↔窗口中心 + 动态缩放)
+- [ ] **平滑移动**: wyjx CtrlExecution.pas SmoothMoveMouse (贝塞尔) → 合入 UnifiedActuator 或新建 `Features/DeepBase.Desktop.Actuation.Motion.pas`
+- [ ] **滚轮+拖拽**: wyjx atMouseWheel/atMouseDrag → 合入 UnifiedActuator (DeepBase 当前缺失)
+
+#### PERCEPT-WYJX-P2: 动作序列引擎 + 窗口查找
+- [ ] **动作引擎 (接口驱动重构)**: wyjx CtrlExecution.pas 30+动作+循环/条件/跳转/子任务 → `Features/DeepBase.Automation.ActionEngine.pas`, 定义 **IRPAActionExecutor** 接口 (无状态, Execute(TActionContext)), 借鉴 wyjx 动作类型枚举但实现重写, **对接 Governance.ActionExecutor fail-closed 链** (不搬 wyjx VCL/全局状态)
+- [ ] **高级窗口查找**: wyjx HelperWindowFinder.pas (PID/位置/类名多策略) → 合入 Perception.Engine (补 UIA tree 外非 UIA 窗口查找)
+
+#### PERCEPT-WYJX-P3: 录制/回放 + 缓存 (缓议)
+- [ ] 录制骨架: wyjx CtrlRecorder.pas (WH_MOUSE_LL/WH_KEYBOARD_LL 全局钩子) → `Features/DeepBase.Automation.Recorder.pas` (补序列化+回放, IActionRecorder 接口) — 缓议
+- [ ] 多模板竞争匹配 + 三级图像缓存 (HelperMultiTemplateMatch/HelperPerformance) → 合入 TemplateMatch — 缓议
 
 ### PERCEPT-P3: RPA 产品化 (应用层, 不下沉底座)
 - [ ] 登录恢复状态机 (SUCCESS/NEEDS_PHONE_CONFIRM/NEEDS_QRCODE/NO_LOGIN_BUTTON 四态自动检测+恢复, 7×24 无人值守) — 底座感知层暴露"登录态特征检测"原语, 状态机编排归应用层 DeepAxis

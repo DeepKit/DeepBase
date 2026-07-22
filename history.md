@@ -5,6 +5,26 @@
 ---
 
 
+## 2026-07-22 perception-p0/p1 桌面感知层 + UIA 统一行动器双通道 ✅
+
+> 来源: docs/87 感知-推理-行动下沉分层开发规格 (2026-07-22 fastmeet 8 模型高共识) + docs/94 wechat-mac-rpa 借鉴笔记
+> 提交: c060661 (已 fast-forward merge 回 feat/a007-route-due-register)
+
+### 完成内容
+- **P0 感知层**: `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas`
+  - TPerceptionSource (psOCR/psVision/psUIAProbe/psUnknown) / TDesktopScreenshot / TPerceivedElement / TPerceptionResult / TPerceptionCache / TVisualRecognitionEngine
+  - LLM-backed 视觉识别 provider 落 DeepBaseLLM.dpk; 中性 Types/Engine 落 DeepBasePlatform.dpk (未新建 DeepBasePerception.dpk)
+- **P1 行动层**: `Features/DeepBase.UIA.UnifiedActuator.pas`
+  - TUnifiedActuator 双通道 (acUIA/acVisual); fpBestEffort 下 UIA selector 失败走感知层视觉坐标兜底; fpStrict 仍只走 UIA 失败即抛
+- **回归**: Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator
+- **SPW 门禁**: H1-H4+H5 全绿 (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash 双家族 identity_verified)
+- **文档**: docs/34 v0.7 §6.5 统一行动器现状 / docs/87 v0.2 落地现状 / docs/94 新建 wechat-mac-rpa 借鉴笔记
+
+### 后续 (未在本提交)
+- PERCEPT-P2 帧间变化检测: 第一级 (全图 MD5 帧缓存) 代码已写于 perception-p2 worktree 未提交, 待收口 (见 tasks.md PERCEPT-P2-001)
+- PERCEPT-WYJX wyjx 桌面 RPA 原语提炼: 2026-07-23 expert-review + 技术会议决定 (见 tasks.md PERCEPT-WYJX)
+
+
 ## 2026-07-06 REVIEW5-R2 第二轮五专家审阅修复 (已修 23 项)
 
 > 来源: 2026-07-06 第二轮五专家全模块代码审阅 (REVIEW5-R2, review5-round2)
