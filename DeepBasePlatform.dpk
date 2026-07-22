@@ -64,6 +64,7 @@ contains
   // perception Types/Engine and the actuator that composes UIA + perception.
   DeepBase.Desktop.Perception.Types in 'Features\DeepBase.Desktop.Perception.Types.pas',
   DeepBase.Desktop.Perception.Engine in 'Features\DeepBase.Desktop.Perception.Engine.pas',
+  DeepBase.Desktop.Perception.ColorMatch in 'Features\DeepBase.Desktop.Perception.ColorMatch.pas',
   DeepBase.UIA.UnifiedActuator in 'Features\DeepBase.UIA.UnifiedActuator.pas';
 
 end.
