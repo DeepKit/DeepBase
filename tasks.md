@@ -63,6 +63,7 @@
   - [x] ~~Phase 2: Resilience 系列测试~~ ✅ 已覆盖 — `Test.DeepBase.Resilience.pas` 118 测试 + `Test.DeepBase.Resilience.CircuitBreaker.PBT` 1 测试 + `Test.DeepBase.Resilience.Timeout.PBT` 2 测试 (共 121)。Retry/Policy/Bulkhead/Fallback/Timeout/CircuitBreaker 各路径有测。
   - [x] ~~Phase 3: LogQuery.pas 测试~~ ✅ 已覆盖 — `Test.DeepBase.LogAggregator.pas` 500 行/34 测试, 32 处 LogQuery 引用。文件 1804 行。
   - [x] ~~Phase 4: IntentClarification 关键路径测试~~ ✅ 已覆盖 — 6 测试文件: `.pas`/`.PBT`/`.Concurrent.PBT`/`.Round2.PBT`/`.SignalDetector.PBT`/`.Integration`。
+  - [ ] **LLM-RESILIENCE-CHATBYPROVIDER** (2026-07-22 抢救自 perception-p0 worktree 废弃前) — 未提交改动存 `.claude/patches/orphaned-llm-resilience-changes.patch`。延续 `3f056c6` (ChatWithHistoryByProvider 落地): 给 `TResilientLLMWrapper` 补 `ChatWithHistoryByProvider` resilient 包装 (绕过 tier/priority 路由直连 AProviderName, ExecuteWithResilience 全局键保留熔断保护) + TFakeClarificationLLM/TMockLLMClient 桩补同名方法 + run_tests.ps1 加 `$BaseDir\Governance` 测试目录。**接手前需验证编译 + 跑 IntentClarification/Resilience 回归**, 确认无破坏后单独提交 (LLM 域, 非 perception)。
   - [x] ~~Phase 5: Speech 关键路径测试~~ ✅ 已覆盖 — 8 测试文件: `.pas`/`.PBT`/`.Performance.PBT`/`.Voiceprint`/`.WakeWord`/`.Intent`/`.Intent.LLMBackend`/`.MFCC`。Features/DeepBase.Speech.* 共 20+ 单元已落地。
   - [ ] REVIEW-P0-002 后续 (真机): iOS/Android 权限查询真机补全 — 需要 Xcode + iOS 设备 (外部阻塞)。
 
