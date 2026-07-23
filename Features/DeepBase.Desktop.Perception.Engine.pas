@@ -31,6 +31,35 @@ uses
   DeepBase.Desktop.Perception.Types;
 
 type
+  // Pixel-diff short-circuit gate (L0 pre-gate, runs before PNG encode).
+  // Compares the current captured bitmap against the previous frame's
+  // TFrameSignature and reports whether the screen changed; below the threshold
+  // the frame is treated as static so CaptureScreen can reuse the previous
+  // encoding and skip both PNG encode and (downstream) the vision provider.
+  // The threshold is configurable and MUST be re-calibrated on real DeepAxis
+  // samples per docs/94 §4 — never copy magic numbers from external RPA
+  // projects. Thread-safe: signature state is guarded.
+  TFrameDiffer = class
+  private
+    FLast: TFrameSignature;
+    FThreshold: Double;
+    FLock: TCriticalSection;
+    function SampleSignature(const ABitmap: TBitmap): TFrameSignature;
+    class function ChangeRatio(const A, B: TFrameSignature;
+      out ARatio: Double): Boolean; static;
+  public
+    constructor Create; overload;
+    constructor Create(const AThreshold: Double); overload;
+    destructor Destroy; override;
+    // True when the frame is judged CHANGED (proceed to encode/recognize).
+    // False when static: reuse the previous frame's encoding. First frame and
+    // dimension-mismatch both return True (uncomparable => treat as changed).
+    function IsChanged(const ABitmap: TBitmap): Boolean;
+    function GetThreshold: Double;
+    procedure SetThreshold(const AValue: Double);
+    procedure Reset;
+  end;
+
   // The desktop perception engine. Owns an optional vision provider.
   // Thread-safe for capture; provider calls are serialized by FLock.
   TDesktopPerceptionEngine = class(TInterfacedObject)
@@ -45,6 +74,13 @@ type
     // provider is not invoked. Invalidated on provider swap (see SetProvider).
     FFrameCache: TFrameCacheEntry;
     FFrameCacheKey: string;
+    // L0 pixel-diff gate (runs before PNG encode in CaptureScreen). When nil,
+    // frame-diff short-circuit is disabled (every capture encodes + encodes).
+    FFrameDiffer: TFrameDiffer;
+    // Last fully-captured shot (post-encode). When the differ judges a frame
+    // static, CaptureScreen returns a copy of this with Unchanged=True instead
+    // of re-encoding. Kept so a static screen pays zero capture/encode cost.
+    FLastShot: TDesktopScreenshot;
     function BuildFrameCacheKey(const AShot: TDesktopScreenshot): string;
     // Core recognize-with-frame-cache path shared by both Perceive overloads.
     function PerceiveWithCache(
@@ -92,7 +128,214 @@ type
 
 implementation
 
-{ TDesktopPerceptionEngine }
+{$POINTERMATH ON}
+
+const
+  // Sampling stride for the frame signature: every S-th row and S-th column is
+  // averaged into one cell, so a static screen needs only (W/S)*(H/S) cell
+  // reads. S=4 -> 1/16 pixel access, < 1ms for a 1080p frame on the capture
+  // path, and the per-cell average smooths sub-pixel/anti-aliasing jitter.
+  CFrameDiffStride = 4;
+
+{ TFrameDiffer }
+
+constructor TFrameDiffer.Create;
+begin
+  Create(0.004);
+end;
+
+constructor TFrameDiffer.Create(const AThreshold: Double);
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+  FThreshold := AThreshold;
+  if FThreshold < 0 then
+    FThreshold := 0;
+  if FThreshold > 1 then
+    FThreshold := 1;
+end;
+
+destructor TFrameDiffer.Destroy;
+begin
+  FLock.Free;
+  inherited;
+end;
+
+procedure TFrameDiffer.Reset;
+begin
+  FLock.Enter;
+  try
+    FLast := Default(TFrameSignature);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TFrameDiffer.GetThreshold: Double;
+begin
+  FLock.Enter;
+  try
+    Result := FThreshold;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TFrameDiffer.SetThreshold(const AValue: Double);
+var
+  LValue: Double;
+begin
+  LValue := AValue;
+  if LValue < 0 then
+    LValue := 0;
+  if LValue > 1 then
+    LValue := 1;
+  FLock.Enter;
+  try
+    FThreshold := LValue;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+// Build a stride-sampled average-color signature from a bitmap. Returns an
+// empty signature on nil/zero-size input. Uses a pf32bit working copy so scan
+// line layout is fixed regardless of the source pixel format (BitBlt commonly
+// yields pfDevice, which is not safe to ScanLine directly). Each cell holds the
+// mean RGB of the stride x stride block it covers; the per-cell mean doubles as
+// anti-aliasing/sub-pixel-jitter smoothing.
+function TFrameDiffer.SampleSignature(const ABitmap: TBitmap): TFrameSignature;
+var
+  LWork: TBitmap;
+  LW, LH, LCellsX, LCellsY, LCX, LCY, LPX, LPY, LPXAbs, LPYAbs, LIdx: Integer;
+  LRow: PRGBQuad;
+  LSumR, LSumG, LSumB, LCount: Int64;
+begin
+  Result := Default(TFrameSignature);
+  if ABitmap = nil then
+    Exit;
+  LW := ABitmap.Width;
+  LH := ABitmap.Height;
+  if (LW <= 0) or (LH <= 0) then
+    Exit;
+
+  LWork := TBitmap.Create;
+  try
+    LWork.PixelFormat := pf32bit;
+    LWork.SetSize(LW, LH);
+    LWork.Canvas.Draw(0, 0, ABitmap);
+
+    LCellsX := (LW + CFrameDiffStride - 1) div CFrameDiffStride;
+    LCellsY := (LH + CFrameDiffStride - 1) div CFrameDiffStride;
+    Result.WidthCells := LCellsX;
+    Result.HeightCells := LCellsY;
+    Result.Stride := CFrameDiffStride;
+    SetLength(Result.Cells, LCellsX * LCellsY * 3);
+
+    for LCY := 0 to LCellsY - 1 do
+    begin
+      for LCX := 0 to LCellsX - 1 do
+      begin
+        LSumR := 0; LSumG := 0; LSumB := 0; LCount := 0;
+        for LPY := 0 to CFrameDiffStride - 1 do
+        begin
+          LPYAbs := LCY * CFrameDiffStride + LPY;  // row in source
+          if LPYAbs >= LH then
+            Break;
+          LRow := LWork.ScanLine[LPYAbs];
+          for LPX := 0 to CFrameDiffStride - 1 do
+          begin
+            LPXAbs := LCX * CFrameDiffStride + LPX;
+            if LPXAbs >= LW then
+              Break;
+            Inc(LSumR, LRow[LPXAbs].rgbRed);
+            Inc(LSumG, LRow[LPXAbs].rgbGreen);
+            Inc(LSumB, LRow[LPXAbs].rgbBlue);
+            Inc(LCount);
+          end;
+        end;
+        if LCount > 0 then
+        begin
+          LIdx := (LCY * LCellsX + LCX) * 3;
+          Result.Cells[LIdx] := LSumR div LCount;
+          Result.Cells[LIdx + 1] := LSumG div LCount;
+          Result.Cells[LIdx + 2] := LSumB div LCount;
+        end;
+      end;
+    end;
+  finally
+    LWork.Free;
+  end;
+end;
+
+// Compute the normalized mean absolute difference between two signatures.
+// Returns False (uncomparable) when the grids differ in size/stride, so the
+// caller treats a dimension change as a guaranteed change. ARatio is the sum
+// of per-channel absolute differences over (cellCount * 3 * 255), i.e. the
+// fraction of the color space the frames differ by on average.
+class function TFrameDiffer.ChangeRatio(const A, B: TFrameSignature;
+  out ARatio: Double): Boolean;
+var
+  I, LLen: Integer;
+  LSum: Int64;
+  LDenom: Int64;
+begin
+  ARatio := 1.0;
+  if A.IsEmpty or B.IsEmpty then
+    Exit(False);
+  if (A.WidthCells <> B.WidthCells) or (A.HeightCells <> B.HeightCells)
+    or (A.Stride <> B.Stride) then
+    Exit(False);
+  LLen := Length(A.Cells);
+  if (LLen = 0) or (LLen <> Length(B.Cells)) then
+    Exit(False);
+  LSum := 0;
+  for I := 0 to LLen - 1 do
+    Inc(LSum, Abs(Int64(A.Cells[I]) - Int64(B.Cells[I])));
+  LDenom := Int64(LLen) * 255;
+  if LDenom <= 0 then
+    Exit(False);
+  ARatio := LSum / LDenom;
+  Result := True;
+end;
+
+function TFrameDiffer.IsChanged(const ABitmap: TBitmap): Boolean;
+var
+  LCur: TFrameSignature;
+  LRatio: Double;
+begin
+  Result := True;
+  if ABitmap = nil then
+    Exit;
+  LCur := SampleSignature(ABitmap);
+  if LCur.IsEmpty then
+    Exit;
+  FLock.Enter;
+  try
+    if FLast.IsEmpty then
+    begin
+      // First frame: seed the signature, treat as changed so we capture once.
+      FLast := LCur;
+      Exit;
+    end;
+    if not ChangeRatio(FLast, LCur, LRatio) then
+    begin
+      // Uncomparable (dimension/format change): refresh signature, treat as
+      // changed so the new size gets a fresh capture.
+      FLast := LCur;
+      Exit;
+    end;
+    if LRatio <= FThreshold then
+    begin
+      // Static frame: keep FLast as-is (LCur is statistically identical) and
+      // signal no change so CaptureScreen reuses the previous encoding.
+      Exit(False);
+    end;
+    FLast := LCur;
+  finally
+    FLock.Leave;
+  end;
+end;
 
 constructor TDesktopPerceptionEngine.Create(
   const AProvider: IDesktopVisionProvider);
@@ -102,6 +345,10 @@ begin
   FLock := TCriticalSection.Create;
   FCache := TPerceptionCache.Create;
   FEnabled := True;
+  // L0 pixel-diff gate enabled by default with an initial threshold of 0.4%
+  // (re-calibrate on real samples per docs/94 §4). Disable by setting
+  // FrameDiffEnabled := False if the host wants every capture to encode.
+  FFrameDiffer := TFrameDiffer.Create(0.004);
   if AProvider = nil then
     Logger.Info('Desktop perception: no vision provider, degraded to '
       + 'screenshot-only', 'Perception')
@@ -112,6 +359,7 @@ end;
 
 destructor TDesktopPerceptionEngine.Destroy;
 begin
+  FFrameDiffer.Free;
   FCache.Free;
   FLock.Free;
   inherited;
@@ -228,6 +476,7 @@ function TDesktopPerceptionEngine.CaptureScreen(
 var
   LBitmap: TBitmap;
   LDpi: Double;
+  LChanged: Boolean;
 begin
   Result := Default(TDesktopScreenshot);
   LDpi := GetDpiScale;
@@ -240,6 +489,25 @@ begin
     Exit;
   end;
   try
+    // L0 pixel-diff gate: judge change BEFORE the expensive PNG encode. On a
+    // static screen this short-circuits both the Base64 encode and (via the
+    // frame cache key matching) the vision provider call downstream.
+    LChanged := True;
+    if (FFrameDiffer <> nil) and FLastShot.IsValid then
+    begin
+      LChanged := FFrameDiffer.IsChanged(LBitmap);
+      if not LChanged then
+      begin
+        // Static frame: reuse the previous encoding verbatim. WidthPx/HeightPx
+        // and CaptureRect come from FLastShot so the actuation layer still
+        // targets the same physical region. Mark Unchanged so callers/tests
+        // can distinguish a reused shot from a fresh capture.
+        Result := FLastShot;
+        Result.Unchanged := True;
+        Exit;
+      end;
+    end;
+
     Result.ImageBase64 := BitmapToPngBase64(LBitmap, Result.WidthPx,
       Result.HeightPx);
     Result.MimeType := 'image/png';
@@ -251,6 +519,9 @@ begin
     if Abs(LDpi - 1.0) > 0.01 then
       Logger.InfoFmt('CaptureScreen: dpi scale %.2f (coords are physical)',
         [LDpi], 'Perception');
+    // Remember the freshly captured shot so the next capture can diff against
+    // it and, on a static frame, reuse this encoding.
+    FLastShot := Result;
   finally
     LBitmap.Free;
   end;
