@@ -84,6 +84,21 @@ type
     function ElementCount: Integer;
   end;
 
+  // Single-slot frame cache entry: holds the fully-recognized element list of
+  // the last perceived frame so a subsequent identical frame (same provider +
+  // same screenshot bytes) can skip the vision provider call entirely. This is
+  // the L0 cost gate for heartbeat polling scenarios where the same window is
+  // polled repeatedly and most frames are pixel-identical. The cache key is
+  // composed of provider identity + screenshot MD5, so it never returns stale
+  // results across a provider swap. TPerceivedElementArray is a dynamic array
+  // (value type): assigning it copies, so the record owns its snapshot with no
+  // extra heap bookkeeping.
+  TFrameCacheEntry = record
+    Elements: TPerceivedElementArray;
+    ProviderUsed: string;
+    function IsEmpty: Boolean;
+  end;
+
   // Cache for recognized elements, keyed by neutral description string.
   // Mirrors the browser vision cache shape but lives in the desktop domain.
   TPerceptionCache = class
@@ -137,6 +152,13 @@ end;
 function TPerceptionResult.ElementCount: Integer;
 begin
   Result := Length(Elements);
+end;
+
+{ TFrameCacheEntry }
+
+function TFrameCacheEntry.IsEmpty: Boolean;
+begin
+  Result := (Length(Elements) = 0) and (ProviderUsed = '');
 end;
 
 { TPerceptionCache }

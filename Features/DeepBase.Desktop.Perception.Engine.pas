@@ -27,6 +27,7 @@ uses
   Vcl.Imaging.pngimage,
   DeepBase.Logging,
   DeepBase.Crypto.Encoding,
+  DeepBase.Crypto.Hash,
   DeepBase.Desktop.Perception.Types;
 
 type
@@ -38,6 +39,16 @@ type
     FLock: TCriticalSection;
     FCache: TPerceptionCache;
     FEnabled: Boolean;
+    // Single-slot frame cache for L0 cost gating: when a subsequent Perceive
+    // call produces an identical screenshot (same provider identity + same
+    // MD5 of ImageBase64), the cached element list is reused and the vision
+    // provider is not invoked. Invalidated on provider swap (see SetProvider).
+    FFrameCache: TFrameCacheEntry;
+    FFrameCacheKey: string;
+    function BuildFrameCacheKey(const AShot: TDesktopScreenshot): string;
+    // Core recognize-with-frame-cache path shared by both Perceive overloads.
+    function PerceiveWithCache(
+      const AShot: TDesktopScreenshot): TPerceptionResult;
     function GetDpiScale: Double;
     function CaptureToBitmap(const ARect: TRect): TBitmap;
     function BitmapToPngBase64(const ABitmap: TBitmap;
@@ -63,7 +74,12 @@ type
       const ALabel: string; out AElement: TPerceivedElement): Boolean;
 
     // Full perception pass: capture + recognize.
-    function Perceive: TPerceptionResult;
+    function Perceive: TPerceptionResult; overload;
+    // Perception pass on an already-captured screenshot: recognize (with L0
+    // frame-cache reuse) without re-capturing. The capture-free overload lets
+    // callers reuse a screenshot and makes the frame cache unit-testable with
+    // a fixed shot.
+    function Perceive(const AShot: TDesktopScreenshot): TPerceptionResult; overload;
 
     function GetEnabled: Boolean;
     procedure SetEnabled(AValue: Boolean);
@@ -265,6 +281,23 @@ begin
   Result := CaptureScreen(LRect);
 end;
 
+function TDesktopPerceptionEngine.BuildFrameCacheKey(
+  const AShot: TDesktopScreenshot): string;
+var
+  LProviderName: string;
+begin
+  // Cache key = provider identity + '|' + MD5(screenshot base64).
+  // Binding the provider identity prevents a stale hit when the provider is
+  // hot-swapped (e.g. model change) yet the screenshot bytes happen to match.
+  // MD5 is deterministic on the PNG base64 (pf24bit + standard RFC4648 base64,
+  // no salt/timestamp), so identical pixels yield an identical key.
+  if FProvider <> nil then
+    LProviderName := FProvider.GetName
+  else
+    LProviderName := 'none';
+  Result := LProviderName + '|' + THashUtils.MD5(AShot.ImageBase64);
+end;
+
 function TDesktopPerceptionEngine.Recognize(const AShot: TDesktopScreenshot;
   out AElements: TPerceivedElementArray): Boolean;
 begin
@@ -287,6 +320,7 @@ function TDesktopPerceptionEngine.FindByLabel(const AShot: TDesktopScreenshot;
   const ALabel: string; out AElement: TPerceivedElement): Boolean;
 var
   LElements: TPerceivedElementArray;
+  LKey: string;
   I: Integer;
 begin
   Result := False;
@@ -294,8 +328,24 @@ begin
     Exit;
   if FCache.Get(ALabel, AElement) then
     Exit(True);
+  // Frame-cache reuse: if this exact frame was already Perceived (same
+  // provider + same screenshot bytes), scan the cached element list before
+  // invoking the provider, saving an LLM call for a repeated-frame query.
+  LKey := BuildFrameCacheKey(AShot);
   FLock.Enter;
   try
+    if (LKey = FFrameCacheKey) and not FFrameCache.IsEmpty then
+    begin
+      for I := 0 to High(FFrameCache.Elements) do
+      begin
+        if SameText(FFrameCache.Elements[I].Label_, ALabel) then
+        begin
+          AElement := FFrameCache.Elements[I];
+          FCache.Put(ALabel, AElement);
+          Exit(True);
+        end;
+      end;
+    end;
     if FProvider = nil then
       Exit;
     if not FProvider.IsAvailable then
@@ -326,17 +376,65 @@ begin
 end;
 
 function TDesktopPerceptionEngine.Perceive: TPerceptionResult;
+begin
+  Result := PerceiveWithCache(CaptureScreen);
+end;
+
+function TDesktopPerceptionEngine.Perceive(
+  const AShot: TDesktopScreenshot): TPerceptionResult;
+begin
+  Result := PerceiveWithCache(AShot);
+end;
+
+function TDesktopPerceptionEngine.PerceiveWithCache(
+  const AShot: TDesktopScreenshot): TPerceptionResult;
 var
   LElements: TPerceivedElementArray;
+  LKey: string;
 begin
   Result := Default(TPerceptionResult);
-  Result.Screenshot := CaptureScreen;
+  Result.Screenshot := AShot;
   if not Result.Screenshot.IsValid then
     Exit;
-  if (FProvider <> nil) and Recognize(Result.Screenshot, LElements) then
+  // Degraded mode (no provider): capture-only, do not populate the frame
+  // cache so a later provider attachment cannot serve a stale 'none' result.
+  if FProvider = nil then
+  begin
+    Result.ProviderUsed := 'none';
+    Exit;
+  end;
+  LKey := BuildFrameCacheKey(Result.Screenshot);
+  FLock.Enter;
+  try
+    // L0 cost gate: identical frame (same provider + same screenshot MD5)
+    // reuses the last recognition result and skips the vision provider call.
+    if (LKey = FFrameCacheKey) and not FFrameCache.IsEmpty then
+    begin
+      Result.Elements := FFrameCache.Elements;
+      Result.ProviderUsed := FFrameCache.ProviderUsed;
+      Logger.InfoFmt('frame cache hit md5=%s reuse %d elements',
+        [LKey, Length(FFrameCache.Elements)], 'Perception');
+      Exit;
+    end;
+  finally
+    FLock.Leave;
+  end;
+  // Cache miss: invoke the provider, then store the fresh result so the next
+  // identical frame hits the cache.
+  if Recognize(Result.Screenshot, LElements) then
   begin
     Result.Elements := LElements;
     Result.ProviderUsed := FProvider.GetName;
+    FLock.Enter;
+    try
+      FFrameCache.Elements := LElements;
+      FFrameCache.ProviderUsed := Result.ProviderUsed;
+      FFrameCacheKey := LKey;
+    finally
+      FLock.Leave;
+    end;
+    Logger.InfoFmt('frame cache miss md5=%s invoke %s -> %d elements',
+      [LKey, Result.ProviderUsed, Length(LElements)], 'Perception');
   end
   else
     Result.ProviderUsed := 'none';
@@ -377,6 +475,13 @@ begin
   FLock.Enter;
   try
     FProvider := AValue;
+    // Invalidate both caches on provider swap: a new provider identity makes
+    // the frame cache key mismatch (so frame reuse auto-stops), but also clear
+    // FFrameCacheKey explicitly, and clear the label cache so FindByLabel
+    // cannot return elements recognized under the previous provider.
+    FFrameCache := Default(TFrameCacheEntry);
+    FFrameCacheKey := '';
+    FCache.Clear;
   finally
     FLock.Leave;
   end;
