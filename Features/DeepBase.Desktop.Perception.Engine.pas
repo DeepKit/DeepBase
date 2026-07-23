@@ -37,8 +37,10 @@ type
   // the frame is treated as static so CaptureScreen can reuse the previous
   // encoding and skip both PNG encode and (downstream) the vision provider.
   // The threshold is configurable and MUST be re-calibrated on real DeepAxis
-  // samples per docs/94 §4 — never copy magic numbers from external RPA
-  // projects. Thread-safe: signature state is guarded.
+  // samples per docs/94 §6 (calibration protocol) — the shipped 0.4% default is
+  // a PLACEHOLDER pending that measurement, transcribed from external RPA notes
+  // only as a starting point; never ship an un-calibrated threshold as final.
+  // Thread-safe: signature state is guarded.
   TFrameDiffer = class
   private
     FLast: TFrameSignature;
@@ -345,8 +347,8 @@ begin
   FLock := TCriticalSection.Create;
   FCache := TPerceptionCache.Create;
   FEnabled := True;
-  // L0 pixel-diff gate enabled by default with an initial threshold of 0.4%
-  // (re-calibrate on real samples per docs/94 §4). Disable by setting
+  // L0 pixel-diff gate enabled by default with a placeholder threshold of
+  // 0.4% (re-calibrate on real samples per docs/94 §6). Disable by setting
   // FrameDiffEnabled := False if the host wants every capture to encode.
   FFrameDiffer := TFrameDiffer.Create(0.004);
   if AProvider = nil then
