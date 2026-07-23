@@ -740,6 +740,42 @@ function Invoke-AutoFixCheck {
 
     Write-Host "  Runner status: $status (exit $($runResult.ExitCode))"
 
+    # Scenario failures are runtime failures even when the GUI process exits 0.
+    # The runner process only reports lifecycle success; scenario-results is the
+    # authoritative behavior result and must prevent a false-green check.
+    $scenarioFile = Join-Path $outputDir 'scenario-results.jsonl'
+    $allScenarioRecords = @(Read-Jsonl -Path $scenarioFile)
+    $scenarioRecords = @(
+        $allScenarioRecords |
+            Where-Object {
+                $_.PSObject.Properties['run_id'] -and
+                [string]$_.run_id -eq $runId
+            }
+    )
+    $scenarioFailures = @(
+        $scenarioRecords |
+            Where-Object {
+                $_.PSObject.Properties['status'] -and
+                [string]$_.status -in @('fail', 'failed', 'error', 'fatal')
+            }
+    )
+    if ($scenarioFailures.Count -gt 0) {
+        Write-Host ""
+        Write-Host "  Scenario Failures: $($scenarioFailures.Count)"
+        foreach ($failure in $scenarioFailures | Select-Object -First 10) {
+            $name = if ($failure.PSObject.Properties['name']) {
+                [string]$failure.name
+            } else { '(unknown)' }
+            $errorClass = if ($failure.PSObject.Properties['error_class']) {
+                [string]$failure.error_class
+            } else { 'ScenarioFailure' }
+            $errorMessage = if ($failure.PSObject.Properties['error_msg']) {
+                [string]$failure.error_msg
+            } else { '' }
+            Write-Host "    [$name] $errorClass`: $errorMessage"
+        }
+    }
+
     # Display runtime errors
     $errorsFile = Join-Path $outputDir 'runtime-errors.jsonl'
     $errors = @(Read-Jsonl -Path $errorsFile)
@@ -750,11 +786,24 @@ function Invoke-AutoFixCheck {
             $loc = if ($err.PSObject.Properties['source_location']) {
                 " at $($err.source_location)"
             } else { '' }
-            Write-Host "    [$($err.level)] $($err.class)$($loc)"
+            $level = if ($err.PSObject.Properties['level']) {
+                [string]$err.level
+            } elseif ($err.PSObject.Properties['severity']) {
+                [string]$err.severity
+            } else { 'error' }
+            $class = if ($err.PSObject.Properties['class']) {
+                [string]$err.class
+            } elseif ($err.PSObject.Properties['error_class']) {
+                [string]$err.error_class
+            } else { 'RuntimeError' }
+            Write-Host "    [$level] $class$loc"
         }
     }
 
-    exit $runResult.ExitCode
+    exit (Get-AutoFixCheckExitCode `
+        -RunnerExitCode $runResult.ExitCode `
+        -ScenarioFailureCount $scenarioFailures.Count `
+        -RuntimeErrorCount $errors.Count)
 }
 
 # =============================================================================

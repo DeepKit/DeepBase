@@ -160,7 +160,11 @@ function Read-Jsonl {
     $result = New-Object System.Collections.Generic.List[object]
     $parseErrors = 0
     foreach ($line in $lines) {
-        $trim = $line.Trim()
+        # Delphi's TStringList.SaveToFile may leave a UTF-8 BOM even when a
+        # JSONL file contains zero records. Treat BOM-only content as empty;
+        # otherwise ConvertFrom-Json can return a scalar placeholder that later
+        # looks like a runtime error and crashes strict-mode property access.
+        $trim = $line.Trim().TrimStart([char]0xFEFF)
         if ($trim -eq '') { continue }
         try {
             $obj = $trim | ConvertFrom-Json -Depth $Depth -DateKind String
@@ -174,7 +178,23 @@ function Read-Jsonl {
     if ($parseErrors -gt 0) {
         Write-AutoFixLog -Level 'warn' -Msg 'jsonl parse summary' -Ctx @{ path = $Path; parsed = $result.Count; errors = $parseErrors }
     }
-    return ,$result.ToArray()
+    # Emit normal pipeline records. Callers that need an array use
+    # @(Read-Jsonl ...); empty/BOM-only files therefore produce Count=0.
+    return $result.ToArray()
+}
+
+function Get-AutoFixCheckExitCode {
+    [CmdletBinding()]
+    param(
+        [int]$RunnerExitCode,
+        [int]$ScenarioFailureCount,
+        [int]$RuntimeErrorCount
+    )
+    if ($RunnerExitCode -ne 0) { return $RunnerExitCode }
+    if ($ScenarioFailureCount -gt 0 -or $RuntimeErrorCount -gt 0) {
+        return $AutoFixExit_Generic
+    }
+    return $AutoFixExit_Ok
 }
 
 function Write-Jsonl {
