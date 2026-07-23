@@ -46,13 +46,19 @@ type
     FLast: TFrameSignature;
     FThreshold: Double;
     FLock: TCriticalSection;
-    function SampleSignature(const ABitmap: TBitmap): TFrameSignature;
     class function ChangeRatio(const A, B: TFrameSignature;
       out ARatio: Double): Boolean; static;
   public
     constructor Create; overload;
     constructor Create(const AThreshold: Double); overload;
     destructor Destroy; override;
+    // Compute the frame signature for a bitmap (sampled cell averages).
+    // Public so the calibration harness and tests can compare the signature of
+    // an injected disk-PNG bitmap against a live BitBlt bitmap byte-for-byte,
+    // proving the two sources are signature-equivalent after the internal
+    // pf32bit normalization (i.e. replay calibration is not measuring a
+    // format phantom). Pure: no FLast mutation.
+    function SampleSignature(const ABitmap: TBitmap): TFrameSignature;
     // True when the frame is judged CHANGED (proceed to encode/recognize).
     // False when static: reuse the previous frame's encoding. First frame and
     // dimension-mismatch both return True (uncomparable => treat as changed).
@@ -83,11 +89,25 @@ type
     // static, CaptureScreen returns a copy of this with Unchanged=True instead
     // of re-encoding. Kept so a static screen pays zero capture/encode cost.
     FLastShot: TDesktopScreenshot;
+    // Injected bitmap source for CaptureToBitmap. When nil (the default for
+    // all production callers), CaptureToBitmap performs the real BitBlt. When
+    // assigned, CaptureToBitmap returns FBitmapSource(ARect) instead. Strictly
+    // additive: the injection is a no-op until set. Exists so a calibration
+    // harness can replay disk-recorded bitmaps through the full FrameDiffer
+    // path (which only runs inside CaptureToBitmap), and so unit tests can
+    // inject deterministic bitmaps instead of mocking BitBlt.
+    FBitmapSource: TFunc<TRect, TBitmap>;
     function BuildFrameCacheKey(const AShot: TDesktopScreenshot): string;
     // Core recognize-with-frame-cache path shared by both Perceive overloads.
     function PerceiveWithCache(
       const AShot: TDesktopScreenshot): TPerceptionResult;
     function GetDpiScale: Double;
+    // Passthroughs to FFrameDiffer (nil-guarded so a differ-less engine is a
+    // strict no-op). Exposed for the calibration harness to sweep the
+    // threshold and reset between sweep iterations without touching the
+    // differ instance directly.
+    function GetFrameDiffThreshold: Double;
+    procedure SetFrameDiffThreshold(const AValue: Double);
     function CaptureToBitmap(const ARect: TRect): TBitmap;
     function BitmapToPngBase64(const ABitmap: TBitmap;
       out AWidth, AHeight: Integer): string;
@@ -126,6 +146,21 @@ type
 
     property Enabled: Boolean read GetEnabled write SetEnabled;
     property Provider: IDesktopVisionProvider read GetProvider write SetProvider;
+
+    // Injected bitmap source. nil = real BitBlt (production default). When
+    // assigned, CaptureToBitmap returns the injected bitmap for the given
+    // rect instead of BitBlt-ing. Strictly additive. See FBitmapSource.
+    property BitmapSource: TFunc<TRect, TBitmap>
+      read FBitmapSource write FBitmapSource;
+    // FrameDiffer threshold passthrough (nil-guarded). Lets a calibration
+    // harness sweep the threshold and a runtime supervisor tune it without a
+    // rebuild. No-op read returns 0.0 when the differ is nil.
+    property FrameDiffThreshold: Double
+      read GetFrameDiffThreshold write SetFrameDiffThreshold;
+    // Clear the differ's previous-frame state so the next CaptureScreen is
+    // treated as a first frame (always judged changed). Use between
+    // independent capture sequences. Nil-guarded no-op.
+    procedure ResetFrameDiffer;
   end;
 
 implementation
@@ -381,6 +416,44 @@ begin
     Result := 1.0;
 end;
 
+function TDesktopPerceptionEngine.GetFrameDiffThreshold: Double;
+begin
+  FLock.Enter;
+  try
+    if FFrameDiffer = nil then
+      Exit(0.0);
+    Result := FFrameDiffer.GetThreshold;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TDesktopPerceptionEngine.SetFrameDiffThreshold(const AValue: Double);
+begin
+  FLock.Enter;
+  try
+    if FFrameDiffer <> nil then
+      FFrameDiffer.SetThreshold(AValue);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TDesktopPerceptionEngine.ResetFrameDiffer;
+begin
+  FLock.Enter;
+  try
+    if FFrameDiffer <> nil then
+      FFrameDiffer.Reset;
+    // Reset the last-shot too: a ResetFrameDiffer means the caller wants the
+    // next CaptureScreen treated as a first frame, so FLastShot must not be
+    // reused as the static fallback.
+    FLastShot := Default(TDesktopScreenshot);
+  finally
+    FLock.Leave;
+  end;
+end;
+
 function TDesktopPerceptionEngine.CaptureToBitmap(const ARect: TRect): TBitmap;
 var
   LScreenDc, LMemDc: HDC;
@@ -401,6 +474,18 @@ begin
 
   LWidth := LRect.Width;
   LHeight := LRect.Height;
+
+  // Injected bitmap source: when assigned, return the injected bitmap for
+  // this rect instead of BitBlt-ing. Strictly additive: nil (production
+  // default) falls through to the real capture path. The injected bitmap
+  // must outlive the call (caller owns lifetime); CaptureToBitmap does not
+  // take ownership so existing FLastShot/FreeAndNil patterns at call sites are
+  // unaffected.
+  if Assigned(FBitmapSource) then
+  begin
+    Result := FBitmapSource(LRect);
+    Exit;
+  end;
 
   LScreenDc := GetDC(0);
   if LScreenDc = 0 then

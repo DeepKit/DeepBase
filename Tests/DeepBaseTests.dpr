@@ -63,6 +63,7 @@ uses
   Test.DeepBase.Desktop.Perception.ColorMatch in 'Test.DeepBase.Desktop.Perception.ColorMatch.pas',
   Test.DeepBase.Desktop.Perception.FrameCache in 'Test.DeepBase.Desktop.Perception.FrameCache.pas',
   Test.DeepBase.Desktop.Perception.FrameDiffer in 'Test.DeepBase.Desktop.Perception.FrameDiffer.pas',
+  Test.DeepBase.Desktop.Perception.BitmapSource in 'Test.DeepBase.Desktop.Perception.BitmapSource.pas',
   Test.DeepBase.UIA.UnifiedActuator in 'Test.DeepBase.UIA.UnifiedActuator.pas',
   Test.DeepBase.Browser.ScriptStore in 'Test.DeepBase.Browser.ScriptStore.pas',
   Test.DeepBase.Browser.CDP in 'Test.DeepBase.Browser.CDP.pas',
