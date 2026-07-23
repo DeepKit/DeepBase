@@ -42,12 +42,18 @@ type
 
   // A captured screenshot. ImageBase64 + MimeType are directly consumable by
   // LLM().ChatVision. CaptureRect is the physical screen region captured.
+  // Unchanged=True marks a frame that the frame-differ gate judged pixel-stable
+  // against the previous capture: in that case ImageBase64 is the *reused*
+  // previous-frame encoding (still valid, no PNG re-encode happened) so the
+  // frame cache and any downstream consumer see a stable, cacheable shot while
+  // paying zero capture/encode cost for the static region.
   TDesktopScreenshot = record
     ImageBase64: string;
     MimeType: string;
     CaptureRect: TRect;
     WidthPx: Integer;
     HeightPx: Integer;
+    Unchanged: Boolean;
     function IsValid: Boolean;
   end;
 
@@ -82,6 +88,42 @@ type
     Elements: TPerceivedElementArray;
     ProviderUsed: string;
     function ElementCount: Integer;
+  end;
+
+  // Single-slot frame cache entry: holds the fully-recognized element list of
+  // the last perceived frame so a subsequent identical frame (same provider +
+  // same screenshot bytes) can skip the vision provider call entirely. This is
+  // the L0 cost gate for heartbeat polling scenarios where the same window is
+  // polled repeatedly and most frames are pixel-identical. The cache key is
+  // composed of provider identity + screenshot MD5, so it never returns stale
+  // results across a provider swap. TPerceivedElementArray is a dynamic array
+  // (value type): assigning it copies, so the record owns its snapshot with no
+  // extra heap bookkeeping.
+  TFrameCacheEntry = record
+    Elements: TPerceivedElementArray;
+    ProviderUsed: string;
+    function IsEmpty: Boolean;
+  end;
+
+  // Sampled RGB signature of one frame, used by the frame-differ gate to decide
+  // whether the screen changed between captures. Instead of keeping the full
+  // bitmap (expensive, and CaptureScreen frees its TBitmap right after encoding),
+  // the differ stores only a coarse average-color grid sampled with a stride.
+  // For a 1920x1080 frame at stride 4 that is 480x270 cells = ~388 KB of bytes;
+  // the per-cell average doubles as anti-aliasing/sub-pixel-jitter smoothing
+  // because each cell summarizes a stride x stride block. This is the L0
+  // pre-gate: it runs *before* PNG encoding in CaptureScreen, so a static screen
+  // short-circuits not just the vision provider but the Base64 encode itself.
+  // Kept here (neutral types unit, no VCL dependency) so the engine can store it
+  // without dragging TBitmap into the type contract.
+  TFrameSignature = record
+    WidthCells: Integer;
+    HeightCells: Integer;
+    Stride: Integer;
+    // Flat array of RGB averages, layout R,G,B per cell, row-major:
+    // cell (cx,cy) -> index ((cy*WidthCells)+cx)*3.
+    Cells: TBytes;
+    function IsEmpty: Boolean;
   end;
 
   // Cache for recognized elements, keyed by neutral description string.
@@ -137,6 +179,20 @@ end;
 function TPerceptionResult.ElementCount: Integer;
 begin
   Result := Length(Elements);
+end;
+
+{ TFrameCacheEntry }
+
+function TFrameCacheEntry.IsEmpty: Boolean;
+begin
+  Result := (Length(Elements) = 0) and (ProviderUsed = '');
+end;
+
+{ TFrameSignature }
+
+function TFrameSignature.IsEmpty: Boolean;
+begin
+  Result := (WidthCells <= 0) or (HeightCells <= 0) or (Length(Cells) = 0);
 end;
 
 { TPerceptionCache }
