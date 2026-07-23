@@ -125,6 +125,9 @@ type
     property PurposeSet: TPurposeSet read FPurposeSet;
     property ConfigRegistrar: TConfigRegistrar read FConfigRegistrar;
     property EvidenceRecorder: TEvidenceRecorder read FEvidenceRecorder;
+    // ASY-GOV-006 阶段5: 暴露 review queue 给 Assayer admin handler
+    // (HandleAdminReviews) 取实例做人工裁决录入。与 ActionExecutor 等同构只读属性。
+    property ReviewQueue: IReviewQueue read FReviewQueue;
     property Mode: TGovernanceMode read FMode;
     property Started: Boolean read FStarted;
   end;

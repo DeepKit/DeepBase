@@ -41,7 +41,7 @@ type
 
     // IOCGSRuntime
     function EnterGate(const AGateKey: string; AContext: TJSONObject;
-      AMode: TRunMode): TActionResult;
+      AMode: TRunMode; const AConfirmation: string = ''): TActionResult;
     function PreviewGate(const AGateKey: string;
       AContext: TJSONObject): TGateResolution;
     function GetAvailableActions(AContext: TJSONObject): TArray<TActionInfo>;
@@ -86,7 +86,7 @@ begin
 end;
 
 function TOCGSRuntime.EnterGate(const AGateKey: string;
-  AContext: TJSONObject; AMode: TRunMode): TActionResult;
+  AContext: TJSONObject; AMode: TRunMode; const AConfirmation: string = ''): TActionResult;
 var
   LResolution: TGateResolution;
   LTargetAction: string;
@@ -125,9 +125,9 @@ begin
     Exit;
   end;
 
-  // 4. 执行 Action
+  // 4. 执行 Action（透传 AConfirmation → 裁决侧闭环）
   if FActionExecutor <> nil then
-    Result := FActionExecutor.Execute(LTargetAction, AContext, AMode)
+    Result := FActionExecutor.Execute(LTargetAction, AContext, AMode, AConfirmation)
   else
     Result := FActionGrid.Run(LTargetAction, AContext, AMode);
 

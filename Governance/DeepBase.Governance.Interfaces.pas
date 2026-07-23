@@ -18,7 +18,7 @@ type
   IOCGSRuntime = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
     function EnterGate(const AGateKey: string; AContext: TJSONObject;
-      AMode: TRunMode): TActionResult;
+      AMode: TRunMode; const AConfirmation: string = ''): TActionResult;
     function PreviewGate(const AGateKey: string;
       AContext: TJSONObject): TGateResolution;
     function GetAvailableActions(AContext: TJSONObject): TArray<TActionInfo>;
