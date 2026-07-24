@@ -27,6 +27,12 @@ type
     FSession: IBrowserSession;
     FPendingCallbacks: TDictionary<Integer, TCDPCallback>;
     FEventCallbacks: TDictionary<string, TCDPCDEventCallback>;
+    // #12: multi-listener route. Old FEventCallbacks is per-event-name single
+    // callback (AddOrSetValue overwrites). FDevToolsListeners allows N listeners
+    // to receive ALL DevTools events without clobbering each other or the old
+    // Subscribe path. Dispatch copies the list out of the lock (see
+    // HandleDevToolsEvent) so a listener callback may Add/Remove without deadlock.
+    FDevToolsListeners: TList<IBrowserDevToolsEventListener>;
     FCallbackId: Integer;
     FLock: TCriticalSection;
 
@@ -46,6 +52,16 @@ type
     procedure Subscribe(const AEventName: string;
       ACallback: TCDPCDEventCallback);
     procedure Unsubscribe(const AEventName: string);
+
+    { #12: multi-listener route. Add a listener that receives ALL DevTools
+      events (every method) in addition to the per-event-name Subscribe path.
+      Add de-dupes (Contains check); Remove is silent on absent entries.
+      Thread-safe via FLock. Listeners are held by interface ref → kept alive
+      while registered. }
+    procedure AddDevToolsEventListener(
+      const AListener: IBrowserDevToolsEventListener);
+    procedure RemoveDevToolsEventListener(
+      const AListener: IBrowserDevToolsEventListener);
 
     procedure HandleDevToolsEvent(const AMethod, AParams: string);
     procedure HandleDevToolsMethodResult(AMessageId: Integer;
@@ -179,6 +195,7 @@ begin
   FSession := ASession;
   FPendingCallbacks := TDictionary<Integer, TCDPCallback>.Create;
   FEventCallbacks := TDictionary<string, TCDPCDEventCallback>.Create;
+  FDevToolsListeners := TList<IBrowserDevToolsEventListener>.Create;
   FCallbackId := 0;
   FLock := TCriticalSection.Create;
 end;
@@ -187,6 +204,7 @@ destructor TCDPStrategy.Destroy;
 begin
   Detach;
   FLock.Free;
+  FDevToolsListeners.Free;
   FEventCallbacks.Free;
   FPendingCallbacks.Free;
   inherited;
@@ -328,21 +346,58 @@ begin
   end;
 end;
 
+procedure TCDPStrategy.AddDevToolsEventListener(
+  const AListener: IBrowserDevToolsEventListener);
+begin
+  if AListener = nil then
+    Exit;
+  FLock.Enter;
+  try
+    if not FDevToolsListeners.Contains(AListener) then
+      FDevToolsListeners.Add(AListener);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TCDPStrategy.RemoveDevToolsEventListener(
+  const AListener: IBrowserDevToolsEventListener);
+begin
+  if AListener = nil then
+    Exit;
+  FLock.Enter;
+  try
+    FDevToolsListeners.Remove(AListener);
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TCDPStrategy.HandleDevToolsEvent(
   const AMethod, AParams: string);
 var
   LCallback: TCDPCDEventCallback;
+  LListeners: TArray<IBrowserDevToolsEventListener>;
+  L: IBrowserDevToolsEventListener;
 begin
+  // #12: snapshot both the old per-event-name callback AND the listener array
+  // inside the lock, then dispatch outside. Copying the interface array out
+  // holds strong refs (ref-counting) so listeners stay alive during dispatch,
+  // and a listener's own callback may call Add/Remove without re-entering
+  // FLock (which would deadlock under a non-recursive critical section).
   FLock.Enter;
   try
     if not FEventCallbacks.TryGetValue(AMethod, LCallback) then
       LCallback := nil;
+    LListeners := FDevToolsListeners.ToArray;
   finally
     FLock.Leave;
   end;
 
   if Assigned(LCallback) then
     LCallback(AMethod, AParams);
+  for L in LListeners do
+    L.OnDevToolsEvent(AMethod, AParams);
 end;
 
 procedure TCDPStrategy.HandleDevToolsMethodResult(
