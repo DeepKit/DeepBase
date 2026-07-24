@@ -120,7 +120,7 @@ begin
     LCache.Put('Send', LEl);
     Assert.IsTrue(LCache.Get('Send', LOut), 'get should find');
     Assert.AreEqual(1, LOut.BoundingBox.Left);
-    Assert.AreEqual(0.9, LOut.Confidence);
+    Assert.AreEqual<Double>(0.9, LOut.Confidence);
   finally
     LCache.Free;
   end;
@@ -172,7 +172,7 @@ begin
     LCache.Put('K', LEl);
     Assert.IsTrue(LCache.Get('K', LOut));
     Assert.AreEqual(5, LOut.BoundingBox.Left);
-    Assert.AreEqual(0.9, LOut.Confidence);
+    Assert.AreEqual<Double>(0.9, LOut.Confidence);
   finally
     LCache.Free;
   end;

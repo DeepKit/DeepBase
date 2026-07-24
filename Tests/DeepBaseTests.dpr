@@ -253,6 +253,7 @@ uses
   DeepBase.Security.SecretStore in '..\Core\DeepBase.Security.SecretStore.pas',
   Test.WebService in 'Test.WebService.pas',
   // REVIEW5 Regression tests
+  Test.Regression.Base in 'Regression\Test.Regression.Base.pas',
   Test.Regression.BUG320_FileWatcherLifecycle in 'Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas',
   Test.Regression.BUG324_WorkerQueueCallbackSafety in 'Regression\Test.Regression.BUG324_WorkerQueueCallbackSafety.pas',
   Test.Regression.BUG325_WorkerQueueTimeout in 'Regression\Test.Regression.BUG325_WorkerQueueTimeout.pas',
