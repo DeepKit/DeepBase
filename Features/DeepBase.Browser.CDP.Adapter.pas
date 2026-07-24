@@ -85,7 +85,7 @@ type
     property State: TBrowseSessionState read FState;
   end;
 
-  TC DPWebSocketSession = class(TInterfacedObject, ICDPSession)
+  TCDPWebSocketSession = class(TInterfacedObject, ICDPSession)
   private
     FWebSocket: IWebSocket;
     FConnectionMutex: TCriticalSection;
@@ -179,7 +179,7 @@ var
   GCDPAdapter: ICDPSession = nil;
   GDPI: Integer = 96;
 
-{ TC DPWebSocketSession }
+{ TCDPWebSocketSession }
 
 constructor TCDPWebSocketSession.Create;
 begin
@@ -302,7 +302,7 @@ end;
 procedure InitializeBrowserAdapter;
 begin
   if not Assigned(GCDPAdapter) then
-    GCDPAdapter := TC DPWebSocketSession.Create;
+    GCDPAdapter := TCDPWebSocketSession.Create;
 end;
 
 function CurrentBrowserAdapter: ICDPSession;

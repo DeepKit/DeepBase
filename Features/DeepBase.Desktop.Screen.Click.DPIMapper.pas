@@ -29,6 +29,9 @@ uses
   Graphics32;
 
 type
+  // Type definitions
+  TMonitorHandle = type HMONITOR;  // Windows HMONITOR handle type
+
   TDPIAwarePoint = record
     AbsoluteX, AbsoluteY: Integer;  // Actual pixel coordinates
     ScaledX, ScaledY: Double;       // Original relative values (0.0-1.0)
@@ -42,6 +45,16 @@ type
     ForceSystemDPI: Boolean;         // Ignore per-monitor DPI settings
     AutoDetectPrimaryMonitor: Boolean; // Use main monitor's DPI as default
   end;
+  
+// Utility function for range clamping
+function Clamp(Value, Min, Max: Double): Double;
+begin
+  if Value < Min then Result := Min
+  else if Value > Max then Result := Max
+  else Result := Value;
+end;
+  
+  TMonitorHandle = type HMONITOR;
 
   IClickDMapper = interface
     ['{ABCD5678-90EF-GHIJ-KLMN-OPQRSTUVWXZY}']
@@ -204,7 +217,7 @@ var
 begin
   // Validate input range
   RelativeX := Clamp(RelativeX, 0.0, 1.0);
-  RelativeY := Clamp(RelRelY, 0.0, 1.0);
+  RelativeY := Clamp(RelativeY, 0.0, 1.0);
   
   // Get effective screen dimensions
   EffectiveWidth := GetEffectiveScreenWidth;
