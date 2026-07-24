@@ -1,7 +1,71 @@
-﻿# DeepBase Bug Fixes & Issues Resolution
+# DeepBase Bug Fixes & Issues Resolution
 
 > 本文档记录所有发现和修复的 Bug、Issue 及改进。
 > **分卷**: 本卷 = 近期修复 (REVIEW5 第一轮五专家 + R2 第二轮 P0/P1 + R3 第三轮 + 06-21~28 OPT/EXP 审阅)。早期修复 (2025-11~12 Issues/性能/统计、2026-05 基础模块/Commerce 审计、06-18 三专家) 见 `bugfix-archive.md`。
+
+---
+
+## 2026-07-24 PERCEPT-WYJX-P3/P4 代码质量问题
+
+### BUG-WYJX-001: CDP.Adapter.pas 类名包含空格导致编译失败 ⏸️
+- 发现日期: 2026-07-24
+- 严重性: Critical (编译失败)
+- 来源: PERCEPT-WYJX-P4 代码审查
+- 文件: Features/DeepBase.Browser.CDP.Adapter.pas
+- 问题:
+  - 类名 `TC DPWebSocketSession` 包含空格 (应为 `TCDPWebSocketSession`)
+  - Delphi 编译器会报 "E2003 Undeclared identifier" 或 "E2029 Declaration syntax error"
+- 修复:
+  - 将 `TC DPWebSocketSession` 改为 `TCDPWebSocketSession`
+  - 更新所有引用该类的代码
+- 状态: **待修复** (2026-07-24)
+
+---
+
+### BUG-WYJX-002: DPIMapper.pas 参数名拼写错误 ⏸️
+- 发现日期: 2026-07-24
+- 严重性: Medium (逻辑错误)
+- 来源: PERCEPT-WYJX-P3 代码审查
+- 文件: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas
+- 问题:
+  - 参数名 `RelRelY` 应为 `RelativeY`
+  - 可能导致坐标映射计算错误
+- 修复:
+  - 将 `RelRelY` 改为 `RelativeY`
+  - 更新所有使用该参数的代码
+- 状态: **待修复** (2026-07-24)
+
+---
+
+### BUG-WYJX-003: 部分 TODO 方法未实现 ⏸️
+- 发现日期: 2026-07-24
+- 严重性: Low (功能不完整)
+- 来源: PERCEPT-WYJX-P3/P4 代码审查
+- 文件: 多个文件
+- 问题:
+  - RegionLocator.pas: FindAllTemplates 方法标记为 TODO
+  - SmartExecutor.pas: WaitForTargetToAppear 方法标记为 TODO
+  - CDP.Adapter.pas: EnableNetworkInterception 方法标记为 TODO
+  - Recorder.pas: ExportAllSessionsToDirectory 方法标记为 TODO
+- 修复:
+  - 实现所有标记为 TODO 的方法
+  - 添加相应的单元测试
+- 状态: **待修复** (2026-07-24)
+
+---
+
+### BUG-WYJX-004: 缺少 TMonitorHandle 类型定义 ⏸️
+- 发现日期: 2026-07-24
+- 严重性: Critical (编译失败)
+- 来源: PERCEPT-WYJX-P3 代码审查
+- 文件: Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas
+- 问题:
+  - 使用了 `TMonitorHandle` 类型但未定义
+  - 编译器会报 "E2003 Undeclared identifier: 'TMonitorHandle'"
+- 修复:
+  - 添加类型定义: `TMonitorHandle = type THandle;`
+  - 或使用 Windows 单元中的 `HMONITOR` 类型
+- 状态: **待修复** (2026-07-24)
 
 ---
 
