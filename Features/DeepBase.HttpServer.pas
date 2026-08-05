@@ -1246,7 +1246,13 @@ begin
     // Parse URI
     Uri := TIdURI.Create(ARequestInfo.URI);
     try
-      Ctx.Request.Path := Uri.Document;
+      // FIX(2026-08-05): TIdURI.Document 只返回最后一段、TIdURI.Path 只返回目录部分,
+      // 多段路由 (/v1/chat/completions 等) 会 404。改用 Indy 原始 Document
+      // (ARequestInfo.Document = 完整 URI 路径, 如 /v1/models)。
+      Ctx.Request.Path := ARequestInfo.Document;
+      // Normalize: ensure leading '/' for route matching
+      if (Ctx.Request.Path <> '') and (not Ctx.Request.Path.StartsWith('/')) then
+        Ctx.Request.Path := '/' + Ctx.Request.Path;
       if Uri.Params <> '' then
         Ctx.Request.ParseQuery(Copy(Uri.Params, 2, MaxInt)); // Remove leading ?
     finally
