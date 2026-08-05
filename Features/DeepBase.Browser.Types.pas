@@ -241,6 +241,16 @@ type
     procedure ClearMessageHandler;
   end;
 
+  /// <summary>P0-6 fix: DevTools 协议事件订阅能力接口。
+  /// 实现方 (TWebView2BrowserSession) 通过 WebView4Delphi 的
+  /// SubscribeToDevToolsProtocolEvent 注册事件, 事件到达后经
+  /// SetDevToolsEventHandler 注册的处理器分发。消费者用 Supports() 检测后调用。</summary>
+  IBrowserDevToolsSubscription = interface
+    ['{5A7B3C1D-9E2F-4A6B-8C3D-1E4F5A6B7C8D}']
+    procedure SetDevToolsEventHandler(AHandler: TProc<string, string>);
+    function SubscribeToDevToolsEvent(const AEventName: string): Boolean;
+  end;
+
   IBrowserRecovery = interface
     ['{E6A4F3C2-5D7B-6C9A-0E1F-2A3B4C5D6E7F}']
     procedure SaveSnapshot(const ASnapshot: TBrowserSnapshot);
