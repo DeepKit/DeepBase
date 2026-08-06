@@ -26,6 +26,7 @@ type
     baatWaitForSelector,
     baatClick,
     baatInputText,
+    baatUploadFile,
     baatGetText,
     baatExecuteScript,
     baatEvaluateScript,
@@ -87,6 +88,9 @@ type
     class function Click(const ASelector: string; const AName: string = ''):
       TBrowserAutomationAction; static;
     class function InputText(const ASelector, AText: string;
+      const AName: string = ''): TBrowserAutomationAction; static;
+    // 2026-08-06: 文件上传(CDP DOM.setFileInputFiles)——B站等视频平台投稿必需
+    class function UploadFile(const ASelector, AFilePath: string;
       const AName: string = ''): TBrowserAutomationAction; static;
     class function GetText(const ASelector: string; const AName: string = ''):
       TBrowserAutomationAction; static;
@@ -400,6 +404,7 @@ begin
     baatWaitForSelector: Result := 'wait_for_selector';
     baatClick: Result := 'click';
     baatInputText: Result := 'input_text';
+    baatUploadFile: Result := 'upload_file';
     baatGetText: Result := 'get_text';
     baatExecuteScript: Result := 'execute_script';
     baatEvaluateScript: Result := 'evaluate_script';
@@ -532,6 +537,15 @@ begin
   Result.Init(baatInputText);
   Result.Selector := ASelector;
   Result.Text := AText;
+  Result.Name := AName;
+end;
+
+class function TBrowserAutomationAction.UploadFile(const ASelector,
+  AFilePath, AName: string): TBrowserAutomationAction;
+begin
+  Result.Init(baatUploadFile);
+  Result.Selector := ASelector;
+  Result.Text := AFilePath;
   Result.Name := AName;
 end;
 
@@ -892,6 +906,92 @@ begin
             LError := ExtractJsonError(LRaw);
           Result := TBrowserAutomationResult.Fail(AIndex, AAction,
             'input_failed', LError, LRaw, LTimer.ElapsedMilliseconds);
+        end;
+      end;
+
+    baatUploadFile:
+      begin
+        // 2026-08-06: CDP DOM.setFileInputFiles 三步(getDocument -> querySelector -> setFileInputFiles)
+        // B站/视频平台 file input 上传必需; JS 无法赋值 file input(浏览器安全限制)
+        var LDocRaw, LQueryRaw, LSetRaw, LErr: string;
+        var LDocObj, LResObj, LQueryObj, LQueryObj2, LSetObj: TJSONObject;
+        var LRootId, LTargetId: string;
+        LRootId := '';
+        LTargetId := '';
+        if FSession.CallDevToolsProtocol('DOM.getDocument', '{"depth":1}',
+          EffectiveTimeout(AAction), LDocRaw, LErr) then
+        begin
+          LDocObj := TJSONObject.ParseJSONValue(LDocRaw) as TJSONObject;
+          try
+            if Assigned(LDocObj) then
+            begin
+              LResObj := LDocObj.GetValue('result') as TJSONObject;
+              if Assigned(LResObj) then
+              begin
+                var LRoot := LResObj.GetValue('root') as TJSONObject;
+                if Assigned(LRoot) then
+                  LRootId := LRoot.GetValue<string>('nodeId');
+              end;
+            end;
+          finally
+            LDocObj.Free;
+          end;
+        end;
+        if LRootId = '' then
+          Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+            'upload_failed', 'DOM.getDocument no root nodeId: ' + LErr, LDocRaw,
+            LTimer.ElapsedMilliseconds)
+        else
+        begin
+          LQueryObj := TJSONObject.Create;
+          LQueryObj.AddPair('nodeId', LRootId);
+          LQueryObj.AddPair('selector', AAction.Selector);
+          try
+            if not FSession.CallDevToolsProtocol('DOM.querySelector',
+              LQueryObj.ToJSON, EffectiveTimeout(AAction), LQueryRaw, LErr) then
+              Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+                'upload_failed', 'querySelector: ' + LErr, LQueryRaw,
+                LTimer.ElapsedMilliseconds)
+            else
+            begin
+              LQueryObj2 := TJSONObject.ParseJSONValue(LQueryRaw) as TJSONObject;
+              try
+                if Assigned(LQueryObj2) then
+                begin
+                  var LRes := LQueryObj2.GetValue('result') as TJSONObject;
+                  if Assigned(LRes) then
+                    LTargetId := LRes.GetValue<string>('nodeId');
+                end;
+              finally
+                LQueryObj2.Free;
+              end;
+              if LTargetId = '' then
+                Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+                  'upload_failed', 'querySelector no nodeId (element not found?)',
+                  LQueryRaw, LTimer.ElapsedMilliseconds)
+              else
+              begin
+                LSetObj := TJSONObject.Create;
+                LSetObj.AddPair('nodeId', LTargetId);
+                var LFiles := TJSONArray.Create;
+                LFiles.Add(AAction.Text);
+                LSetObj.AddPair('files', LFiles);
+                try
+                  if FSession.CallDevToolsProtocol('DOM.setFileInputFiles',
+                    LSetObj.ToJSON, EffectiveTimeout(AAction), LSetRaw, LErr) then
+                    Result := TBrowserAutomationResult.Ok(AIndex, AAction,
+                      AAction.Text, LSetRaw, LTimer.ElapsedMilliseconds)
+                  else
+                    Result := TBrowserAutomationResult.Fail(AIndex, AAction,
+                      'upload_failed', LErr, LSetRaw, LTimer.ElapsedMilliseconds);
+                finally
+                  LSetObj.Free;
+                end;
+              end;
+            end;
+          finally
+            LQueryObj.Free;
+          end;
         end;
       end;
 
