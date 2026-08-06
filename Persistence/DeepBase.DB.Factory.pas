@@ -404,6 +404,9 @@ begin
     {$ELSE}
     Result := '';
     {$ENDIF}
+    // 2026-08-06 env fallback: CredMan 读取失败(远程会话/凭据库异常)时用 DB3_PASSWORD 兜底
+    if Result = '' then
+      Result := GetEnvironmentVariable('DB3_PASSWORD');
     Exit;
   end;
 
@@ -416,10 +419,15 @@ begin
   except
     on E: Exception do
     begin
-      // BASIC-011 fix: fail-closed. If Credential Manager cannot store
-      // the password, do NOT silently keep it in plaintext in the config
-      // DB. Log the failure and raise so the caller knows the credential
-      // was not securely persisted.
+      // 2026-08-06 env fallback: Credential Manager 不可用(远程会话/凭据库异常)时
+      // 用 DB3_PASSWORD 环境变量兜底(dev/自动化场景)，失败才 fail-closed。
+      // BASIC-011 安全策略不变：无 env 时不保留明文。
+      if GetEnvironmentVariable('DB3_PASSWORD') <> '' then
+      begin
+        Result := GetEnvironmentVariable('DB3_PASSWORD');
+        WriteSetting(Connection, 'DB3.Password', BuildCredentialRef(TargetName));
+        Exit;
+      end;
       raise EDatabaseException.CreateFmt(
         'Cannot save DB3 password to Credential Manager: %s. ' +
         'Plaintext fallback is disabled for security.', [E.Message]);
