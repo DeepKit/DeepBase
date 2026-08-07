@@ -236,6 +236,8 @@ begin
 end;
 
 procedure TDeepBaseWinMMAudioCapture.StopRecording;
+var
+  I: Integer;
 begin
   if not GetIsRecording then
     Exit;
@@ -247,6 +249,14 @@ begin
   FLock.Enter;
   try
     waveInStop(FWaveIn);
+    // Collect completed buffers BEFORE waveInReset: reset discards buffers
+    // that never fired WIM_DATA, which would lose the last up-to-1s of
+    // speech (tail clipping). The callback already checked GetIsRecording
+    // = False, so no buffer is re-queued after this point.
+    for I := 0 to FBufferCount - 1 do
+      if ((FWaveHeaders[I].dwFlags and WHDR_DONE) <> 0) and
+         (FWaveHeaders[I].dwBytesRecorded > 0) then
+        FStream.Write(FBuffers[I]^, FWaveHeaders[I].dwBytesRecorded);
     waveInReset(FWaveIn);
     FreeBuffers;
     waveInClose(FWaveIn);
