@@ -1,4 +1,4 @@
-unit DeepBase.Speech.TTS.Edge;
+﻿unit DeepBase.Speech.TTS.Edge;
 
 { ============================================================================
   DeepBase.Speech.TTS.Edge — Free TTS via Microsoft Edge WebSocket service.
@@ -60,6 +60,15 @@ type
     procedure SpeakAsync(const AText: string; const AOptions: TTTSOptions;
       AOnDone: TProc);
     procedure Stop;
+
+    /// <summary>
+    /// Synchronous synthesis returning raw audio bytes (MP3 for Edge).
+    /// Added for DeepInput ITTSEngine adapter — ITTSBackend.Speak discards
+    /// the audio. Reuses the private Synthesize(SSML) pipeline.
+    /// </summary>
+    function SynthesizeToBytes(const AText: string;
+      const AOptions: TTTSOptions): TBytes;
+    property LastError: string read FLastError;
   end;
 
 implementation
@@ -128,6 +137,7 @@ end;
 
 function TEdgeTTSBackend.FetchVoices: TArray<TTTSVoice>;
 var
+  Client: THTTPClient;
   Response: IHTTPResponse;
   JSONArr: TJSONArray;
   JObj: TJSONObject;
@@ -137,7 +147,16 @@ var
 begin
   Result := nil;
   try
-    Response := FClient.Get(EDGE_TTS_VOICES_URL);
+    // 使用本地 HTTP 客户端：音色列表可能被后台线程（如 FrameTTS 异步刷新）
+    // 调用，成员 FClient 与合成线程共享会竞态。
+    Client := THTTPClient.Create;
+    try
+      Client.ConnectionTimeout := 8000;
+      Client.ResponseTimeout := 12000;
+      Response := Client.Get(EDGE_TTS_VOICES_URL);
+    finally
+      Client.Free;
+    end;
     if Response.StatusCode <> 200 then
     begin
       FLastError := 'Edge-TTS voices HTTP ' + IntToStr(Response.StatusCode);
@@ -185,7 +204,9 @@ begin
   if not FVoicesLoaded then
   begin
     FVoices := FetchVoices;
-    FVoicesLoaded := True;
+    // 拉取失败时不缓存（FVoices 为空），下次调用自动重试
+    if Length(FVoices) > 0 then
+      FVoicesLoaded := True;
   end;
 
   if ALanguage = '' then
@@ -433,9 +454,19 @@ end;
 
 procedure TEdgeTTSBackend.Speak(const AText: string; const AOptions: TTTSOptions);
 var
-  SSML: string;
   AudioData: TBytes;
 begin
+  // ITTSBackend.Speak discards audio per interface contract; downstream
+  // consumers use SynthesizeToBytes when they need the bytes.
+  AudioData := SynthesizeToBytes(AText, AOptions);
+end;
+
+function TEdgeTTSBackend.SynthesizeToBytes(const AText: string;
+  const AOptions: TTTSOptions): TBytes;
+var
+  SSML: string;
+begin
+  Result := nil;
   FLastError := '';
   if Trim(AText) = '' then
   begin
@@ -443,8 +474,7 @@ begin
     Exit;
   end;
   SSML := BuildSSML(AText, AOptions);
-  AudioData := Synthesize(SSML);
-  // Audio data is returned as TBytes; downstream can save/play as needed
+  Result := Synthesize(SSML);
 end;
 
 procedure TEdgeTTSBackend.SpeakAsync(const AText: string;
