@@ -291,7 +291,7 @@ begin
     #13#10 +
     '{"context":{"synthesis":{"audio":{"metadataoptions":{' +
     '"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},' +
-    '"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}');
+    '"outputFormat":"riff-24khz-16bit-mono-pcm"}}}}');
 
   SSMLMsg := UTF8String(
     'X-RequestId:' + ReqID + #13#10 +
