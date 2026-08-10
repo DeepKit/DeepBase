@@ -123,10 +123,14 @@ begin
   if (AConn = nil) or (not AConn.Connected) then
     Exit;
 
+  // Table-valued function form (SQLite 3.16+): TFDQuery.Open on a bare
+  // 'PRAGMA quick_check' is treated as a non-query statement by FireDAC and
+  // throws on every open, which misclassified healthy DBs as corrupted and
+  // quarantined them (data loss). SELECT form always returns a result set.
   if AQuickOnly then
-    Sql := 'PRAGMA quick_check'
+    Sql := 'SELECT * FROM pragma_quick_check'
   else
-    Sql := 'PRAGMA integrity_check';
+    Sql := 'SELECT * FROM pragma_integrity_check';
 
   Query := TFDQuery.Create(nil);
   try
@@ -142,8 +146,11 @@ begin
       else
         Result := isCorrupted;
     except
-      // An exception here most likely means the DB file itself can't be read
-      Result := isCorrupted;
+      // Query failure no longer means corruption: file-level damage is already
+      // caught at AConn.Open and handled by QuarantineAndRecover. Returning
+      // isUnknown lets ProtectConnection treat the DB as usable, preventing
+      // false quarantine of healthy/empty DBs.
+      Result := isUnknown;
     end;
   finally
     Query.Free;
@@ -336,6 +343,25 @@ var
   DBPath: string;
   Recovery: TGuardianResult;
 
+  procedure TryDailyBackup;
+  var
+    Latest: string;
+  begin
+    if not (AConn.Connected and TFile.Exists(DBPath)) then
+      Exit;
+    try
+      // Once per day at most. BackupTo previously had no call site, so
+      // FindLatestBackup was always empty and corruption meant a fresh empty
+      // DB. With a daily backup, recovery can actually restore data.
+      Latest := FindLatestBackup(DBPath);
+      if (Latest = '') or (DateOf(TFile.GetLastWriteTime(Latest)) < DateOf(Now)) then
+        BackupTo(AConn, DBPath + '.backup.' + FormatDateTime('yyyy-mm-dd', Now));
+    except
+      on E: Exception do
+        OutputDebugString(PChar('Guardian: daily backup failed: ' + E.Message));
+    end;
+  end;
+
   procedure CleanupSideFiles(const APath: string);
   var
     LSide: string;
@@ -413,7 +439,7 @@ begin
       AResult.Status := CheckIntegrity(AConn, True);
       // If retry open succeeded and integrity is OK, return success immediately
       // regardless of the Recovery.Status (which is always isCorrupted when no backup exists)
-      Result := AConn.Connected and (AResult.Status = isOk);
+      Result := AConn.Connected and (AResult.Status <> isCorrupted);
       Exit;
     end;
   end;
@@ -460,7 +486,10 @@ begin
     end;
   end;
 
-  Result := AConn.Connected and (AResult.Status = isOk);
+  Result := AConn.Connected and (AResult.Status <> isCorrupted);
+
+  // Healthy open -> daily backup (idempotent, once per day)
+  TryDailyBackup;
 end;
 
 end.

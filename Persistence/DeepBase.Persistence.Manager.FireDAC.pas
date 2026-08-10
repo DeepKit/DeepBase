@@ -31,7 +31,11 @@ uses
   DeepBase.Persistence.FormState.FireDAC,
   DeepBase.Persistence.MRU.FireDAC,
   DeepBase.Persistence.Hotkeys.FireDAC,
-  DeepBase.DB.Guardian;
+  DeepBase.DB.Guardian,
+  // TFDQuery object factory + async factory: required at runtime when the
+  // schema code paths actually run (previously masked by Guardian failure)
+  FireDAC.DApt,
+  FireDAC.Stan.Async;
 
 type
   TFireDACManagerStorage = class(TInterfacedObject, IManagerStorage)
