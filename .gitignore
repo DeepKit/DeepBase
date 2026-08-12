@@ -42,9 +42,9 @@ _tmp_*
 __tmp_*
 **/__tmp_*
 
-# bash/系统崩溃转储
+# bash/系统崩溃转储（仅 *.stackdump / core.* 转储文件；勿用裸 core——Windows ignoreCase 会误伤 Core/ 源码目录）
 *.stackdump
-core
+/core.*
 
 # 会话临时脚本与零字节测试输出
 compile_data*.bat
