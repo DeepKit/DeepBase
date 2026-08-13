@@ -38,7 +38,7 @@
 - [ ] **PLATFORM-P0-001：迁移 DeepBase.Plugins 到纯 C ABI r2**（Owner：DeepBase/SPW；S0 契约冻结中）
   - ✅ **S0 包格式规范已补**（77 §9，2026-08-13）：zip 目录结构 / RSA-SHA256 签名规则 / plugin_manifest.json schema / Gateway 校验顺序 / 验收标准；78 与 78a 严格按此打包。
   - ✅ **S0 C ABI r2 证据包已存在**（77a §4.1）：`include/deepbase_plugins_c.h` + `DeepBase.Plugins.CAbi.pas` 1:1；`Scripts/check_cabi_pure_c.py` EXIT 0；CAbiLoader 封装；8 个 C ABI 用例 + 原 41/41 = 49 passed。
-  - [ ] S1：四单元创建 + Contracts 公共/业务拆分 + Lease 门禁（依赖 S0 完成）
+  - ✅ **S1 验证通过**（2026-08-13）：四单元（CAbi/CAbiLoader/Manager/SafeGuard/Verifier）就位；Manager 注册制 + Lease 门禁 + DFS 环检测 + drain 等待已实现；`build_plugin_tests.bat` 全绿 49 passed 0 failed。
   - [ ] S2：TPluginManager 泛化（注册制）+ Assayer 切换 + 回归
   - [ ] S3：热重载/崩溃/签名/卸载泄漏/跨语言 JCS 测试脚本化
   - [ ] S4：ISiteAdapterPlugin 契约（字节缓冲区版本）+ Gateway 示例插件冒烟（依赖 78 制品仓库）
