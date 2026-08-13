@@ -24,7 +24,9 @@ uses
   DeepBase.Plugins.Contracts in '..\..\Core\DeepBase.Plugins.Contracts.pas',
   DeepBase.Plugins.SafeGuard in '..\..\Core\DeepBase.Plugins.SafeGuard.pas',
   DeepBase.Plugins.Verifier in '..\..\Core\DeepBase.Plugins.Verifier.pas',
-  DeepBase.Plugins.Manager in '..\..\Core\DeepBase.Plugins.Manager.pas';
+  DeepBase.Plugins.Manager in '..\..\Core\DeepBase.Plugins.Manager.pas',
+  DeepBase.Plugins.CAbi in '..\..\Core\DeepBase.Plugins.CAbi.pas',
+  DeepBase.Plugins.CAbiLoader in '..\..\Core\DeepBase.Plugins.CAbiLoader.pas';
 
 function GetProcessHandleCount(hProcess: THandle;
   var lpdwHandleCount: DWORD): BOOL; stdcall;
@@ -441,6 +443,72 @@ begin
   end;
 end;
 
+{ --- T09: 纯 C ABI 加载器（P0-001） --- }
+procedure Test_CAbi;
+const
+  DBPDLL = 'TestPlugin77.dll';
+var
+  LPath: string;
+  LPlugin: TCAbiPlugin;
+  LCode: Integer;
+  LMeta: TBytes;
+  LHealth: dbp_health_info;
+  LBefore, LAfter: DWORD;
+begin
+  Writeln('[09] C ABI loader (dbp_* pure C export)');
+  LPath := IncludeTrailingPathDelimiter(ExtractFilePath(GDllPath)) + DBPDLL;
+
+  // 9a: ABI 协商 + 默认 echo 变体往返
+  LPlugin := TCAbiPlugin.Create(LPath);
+  try
+    Check('ABI major matches host', LPlugin.Abi.major = DBP_ABI_MAJOR,
+      Format('host=%u plugin=%u', [DBP_ABI_MAJOR, LPlugin.Abi.major]));
+    Check('ABI minor >= host required', LPlugin.Abi.minor <= DBP_ABI_MINOR,
+      Format('host=%u plugin=%u', [DBP_ABI_MINOR, LPlugin.Abi.minor]));
+
+    LCode := LPlugin.Initialize(nil);
+    Check('dbp_initialize OK', LCode = DBP_OK, 'code=' + IntToStr(LCode));
+
+    LMeta := LPlugin.GetMetadata;
+    Check('dbp_get_metadata returns JSON', Length(LMeta) > 0,
+      'len=' + IntToStr(Length(LMeta)));
+
+    LHealth := LPlugin.GetHealth;
+    Check('dbp_get_health is_healthy=1', LHealth.is_healthy = 1,
+      'got ' + IntToStr(LHealth.is_healthy));
+  finally
+    LPlugin.Free;
+  end;
+
+  // 9b: init_fail 配置 -> dbp_initialize 返回负错误码
+  GetProcessHandleCount(GetCurrentProcess, LBefore);
+  LPlugin := TCAbiPlugin.Create(LPath);
+  try
+    LCode := LPlugin.Initialize(
+      TEncoding.UTF8.GetBytes('{"init_fail":true}'));
+    Check('dbp_initialize init_fail -> negative code', LCode < DBP_OK,
+      'code=' + IntToStr(LCode));
+  finally
+    LPlugin.Free;
+  end;
+
+  // 9c: 无效句柄 -> 显式错误码（不崩、不越界）
+  LPlugin := TCAbiPlugin.Create(LPath);
+  try
+    LCode := LPlugin.Shutdown;   // 通过 loader 调 dbp_shutdown
+    Check('dbp_shutdown OK', LCode = DBP_OK, 'code=' + IntToStr(LCode));
+  finally
+    LPlugin.Free;
+  end;
+
+  // 9d: 销毁后句柄数稳定（无泄漏）
+  GetProcessHandleCount(GetCurrentProcess, LAfter);
+  Check('C ABI load/destroy no handle leak (delta<=10)',
+    Integer(LAfter) - Integer(LBefore) <= 10,
+    Format('before=%d after=%d delta=%d',
+      [LBefore, LAfter, Integer(LAfter) - Integer(LBefore)]));
+end;
+
 begin
   try
     Writeln('========================================================');
@@ -467,6 +535,7 @@ begin
     Test_HotReload100;
     Test_SafeGuardCrash;
     Test_DependencyLoad;
+    Test_CAbi;
 
     Writeln;
     Writeln(Format('RESULT: %d passed, %d failed', [GPass, GFail]));
