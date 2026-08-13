@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Crypto module
 /// Tests: THashUtils, TEncodingUtils, TRandomGenerator, TPasswordUtils,
 ///        TAESCrypto, TSimpleCrypto, TCRCUtils, TCrypto
@@ -298,6 +298,8 @@ type
     [Test]
     procedure Test_LoadPublicKeyPEM_Empty;
     [Test]
+    procedure Test_LoadPublicKeyPEM_Pkcs1PublicKey_Rejected;
+    [Test]
     procedure Test_VerifySignature_KeyNotLoaded;
     [Test]
     procedure Test_VerifySignature_EmptySignature;
@@ -305,6 +307,16 @@ type
     procedure Test_IsKeyLoaded_Initial;
     [Test]
     procedure Test_LastError_AfterFailure;
+  end;
+
+  /// <summary>
+  /// Tests for TRSASigner (Windows only)
+  /// </summary>
+  [TestFixture]
+  TRSASignerTests = class
+  public
+    [Test]
+    procedure Test_LoadPrivateKeyPEM_Pkcs8_Rejected;
   end;
 {$ENDIF}
 
@@ -1429,6 +1441,32 @@ begin
   end;
 end;
 
+procedure TRSAVerifierTests.Test_LoadPublicKeyPEM_Pkcs1PublicKey_Rejected;
+var
+  LVerifier: TRSAVerifier;
+  LPEM: string;
+begin
+  // PKCS#1 公钥容器（BEGIN RSA PUBLIC KEY）与 SPKI 解析不兼容，必须显式拒绝
+  LPEM :=
+    '-----BEGIN RSA PUBLIC KEY-----' + sLineBreak +
+    'MIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWyf8SgPT3bSOPTwlDpn8OwWAk1K0fqf2M/' + sLineBreak +
+    '4xOBG8wfyQq8J3hkqD3/bFZhs3mRZmLnq6NgdS7GKBA8UqwN0WKRH5BMH3kq+6Uv' + sLineBreak +
+    'KTfpSRLy/rvU0cPoK8RiVnwDd8N3mMHZPiUmBuJjHt2hA7M8O7z0YKBN5D1hLBkm' + sLineBreak +
+    '7a5L7X4Q+ZMD0pwTTfWxOmRV9n7htcF1X5h3c4KTy4GWDdSp7J2D54U0dCTQwwP4' + sLineBreak +
+    'DA/KAyE9zF8VKj51C5LREP5h7k6Eb5UiRMZ9S5dG4e14AO8/0DWAF05g8LlFWbOB' + sLineBreak +
+    '4hwvO8h/2E6VCGvpQIDAQAB' + sLineBreak +
+    '-----END RSA PUBLIC KEY-----';
+
+  LVerifier := TRSAVerifier.Create;
+  try
+    Assert.IsFalse(LVerifier.LoadPublicKeyPEM(LPEM));
+    Assert.IsFalse(LVerifier.IsKeyLoaded);
+    Assert.Contains(LVerifier.LastError, 'SPKI');
+  finally
+    LVerifier.Free;
+  end;
+end;
+
 procedure TRSAVerifierTests.Test_VerifySignature_KeyNotLoaded;
 var
   LVerifier: TRSAVerifier;
@@ -1492,6 +1530,29 @@ begin
     LVerifier.Free;
   end;
 end;
+
+procedure TRSASignerTests.Test_LoadPrivateKeyPEM_Pkcs8_Rejected;
+var
+  LSigner: TRSASigner;
+  LPEM: string;
+begin
+  // PKCS#8 私钥容器（BEGIN PRIVATE KEY）与 RSAPrivateKey 解析不兼容，必须显式拒绝
+  LPEM :=
+    '-----BEGIN PRIVATE KEY-----' + sLineBreak +
+    'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDT' + sLineBreak +
+    'PLACEHOLDER0NPKCS8DERPLACEHOLDER0NPKCS8DERPLACEHOLDER' + sLineBreak +
+    'PLACEHOLDER0NPKCS8DERPLACEHOLDER0NPKCS8DERPLACEHOLDER' + sLineBreak +
+    '-----END PRIVATE KEY-----';
+
+  LSigner := TRSASigner.Create;
+  try
+    Assert.IsFalse(LSigner.LoadPrivateKeyPEM(LPEM));
+    Assert.IsFalse(LSigner.IsKeyLoaded);
+    Assert.Contains(LSigner.LastError, 'PKCS#8');
+  finally
+    LSigner.Free;
+  end;
+end;
 {$ENDIF}
 
 initialization
@@ -1506,6 +1567,7 @@ initialization
   TDUnitX.RegisterTestFixture(TCryptoHelperTests);
   {$IFDEF MSWINDOWS}
   TDUnitX.RegisterTestFixture(TRSAVerifierTests);
+  TDUnitX.RegisterTestFixture(TRSASignerTests);
   {$ENDIF}
 
 end.

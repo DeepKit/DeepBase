@@ -60,7 +60,8 @@ type
 
   /// <summary>
   /// RSA-SHA256 signing using Windows CNG (BCrypt).
-  /// Loads a PEM private key (PKCS#1 or PKCS#8) and signs data.
+  /// Loads a PEM private key. Container: PKCS#1 only (BEGIN RSA PRIVATE KEY);
+  /// PKCS#8 (BEGIN PRIVATE KEY) is rejected with a diagnostic error.
   /// </summary>
   TRSASigner = class
   private
@@ -105,6 +106,15 @@ begin
   LLines := APEM.Split([#10, #13], TStringSplitOptions.ExcludeEmpty);
   for LLine in LLines do
   begin
+    // 公钥仅支持 SPKI 容器（BEGIN PUBLIC KEY）。PKCS#1 公钥（BEGIN RSA PUBLIC KEY）
+    // 的 RSAPublicKey ::= SEQUENCE 布局与 ParseDERPublicKey 的 SubjectPublicKeyInfo
+    // 解析不兼容——此处显式拒绝，避免误导性报错。
+    if LLine.Contains('-----BEGIN RSA PUBLIC KEY-----') then
+    begin
+      FLastError := 'Unsupported key container: PKCS#1 public key (BEGIN RSA PUBLIC KEY). '
+        + 'Use SPKI (BEGIN PUBLIC KEY), e.g. openssl rsa -in key.pem -pubout';
+      Exit;
+    end;
     if LLine.Contains('-----BEGIN') and LLine.Contains('PUBLIC KEY') then
     begin
       LInKey := True;
@@ -493,6 +503,19 @@ begin
   LLines := APEM.Split([#10, #13], TStringSplitOptions.ExcludeEmpty);
   for LLine in LLines do
   begin
+    // 仅支持 PKCS#1 私钥容器（BEGIN RSA PRIVATE KEY）。
+    // PKCS#8（BEGIN PRIVATE KEY，如 openssl genpkey / .NET ExportPkcs8PrivateKey）
+    // 的 DER 布局（OneAsymmetricKey: algorithm SEQUENCE + OCTET STRING）与下方
+    // RSAPrivateKey 解析不兼容，会误当 n/e 字段解出错误结果——此处显式拒绝，
+    // 避免误导性报错。
+    if LLine.Contains('-----BEGIN PRIVATE KEY-----') and
+       not LLine.Contains('RSA PRIVATE KEY') then
+    begin
+      FLastError := 'Unsupported key container: PKCS#8 (BEGIN PRIVATE KEY). '
+        + 'Convert to PKCS#1 (BEGIN RSA PRIVATE KEY) first, e.g. '
+        + 'openssl rsa -in key.pem -out pkcs1.pem';
+      Exit;
+    end;
     if LLine.Contains('-----BEGIN') and
        (LLine.Contains('PRIVATE KEY') or LLine.Contains('RSA PRIVATE KEY')) then
     begin
