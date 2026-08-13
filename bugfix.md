@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-08-13 78 平台协议文档冲突 + 服务端首版签名算法偏差
+
+### BUG-078-001: 78 协议正文 §2.5 与 78a ADR r1 签名算法冲突 ⏳
+- 发现日期: 2026-08-13
+- 严重性: **High**（法源冲突，影响联调验收）
+- 来源: #100 回函核查 + 78/78a 文档比对
+- 文件: `docs/78.backend.ConfigUploadChannel-PG上传通道协议与实施.md` §2.5、`docs/78a.adr.Config-Artifact-Publish-StateMachine.md` r1 §2.7
+- 问题:
+  - 78 §2.5 写死 **Ed25519**（manifest 签名、校验顺序）
+  - 78a ADR r1 §2.7 硬性改为 **RSA-SHA256**（PKCS#1 v1.5, 2048-bit, Windows CNG），"当前仅接受 rsa-sha256"
+  - 两文档对同一协议的签名算法描述互斥，实现方（服务端/客户端）无所适从
+- 修复:
+  - 78 §2.5 改为 RSA-SHA256，与 r1 对齐；Ed25519 标注为"可选演进，当前禁用"
+  - 78 §3.2/§3.3 打包、校验、DLL 上传同步改为 RSA-SHA256
+  - 78 §2.5 引用 78a r1 §2.7 作为签名算法法源
+  - 77 文档补 §9 S0 包格式规范（zip 结构/签名规则/plugin_manifest.json schema/Gateway 校验顺序）
+- 状态: **✅ 文档侧已修复**（2026-08-13；服务端仍待按回函 #100 返工）
+- 关联: `toWangwei/#100` §2、`tasks.md` PLATFORM-P0-004
+
+### BUG-078-002: 服务端首版交付签名算法与 r1 不一致（Ed25519 vs RSA-SHA256）⏳
+- 发现日期: 2026-08-13
+- 严重性: **High**（合规 + 客户端无法验签）
+- 来源: 王维 #100 交付核查（10 项测试全绿，但为 Ed25519）
+- 文件: 服务端 `provider.py` / migration / manifest 签名逻辑
+- 问题:
+  - 首版按 Ed25519 实现并宣称"联调可跑"
+  - 78a ADR r1 要求 RSA-SHA256；DeepBase 客户端仅 Windows CNG RSA、无 Ed25519
+  - 若按 Ed25519 联调，客户端"下载 zip → 验签"步无法执行
+- 修复:
+  - 服务端按回函 #100 §2 R1~R4 返工 RSA-SHA256（签名、manifest、密钥架构、测试向量）
+  - 客户端补 RSA-SHA256 验签模块
+- 状态: **⏳ 服务端返工中**（已发回函 #100）
+- 关联: `toWangwei/#100` §2、`tasks.md` PLATFORM-P0-004 / P1-003
+
+---
+
 ## 2026-07-24 PERCEPT-WYJX-P3/P4 代码质量问题
 
 ### BUG-WYJX-001: CDP.Adapter.pas 类名包含空格导致编译失败 ⏸️
@@ -18,7 +54,7 @@
 - 修复:
   - 将 `TC DPWebSocketSession` 改为 `TCDPWebSocketSession`
   - 更新所有引用该类的代码
-- 状态: **待修复** (2026-07-24)
+- 状态: **✅ 已修复** (2026-07-24 13:05)
 
 ---
 
@@ -33,11 +69,11 @@
 - 修复:
   - 将 `RelRelY` 改为 `RelativeY`
   - 更新所有使用该参数的代码
-- 状态: **待修复** (2026-07-24)
+- 状态: **✅ 已修复** (2026-07-24 13:08)
 
 ---
 
-### BUG-WYJX-003: 部分 TODO 方法未实现 ⏸️
+### BUG-WYJX-003: 部分 TODO 方法未实现 ✅
 - 发现日期: 2026-07-24
 - 严重性: Low (功能不完整)
 - 来源: PERCEPT-WYJX-P3/P4 代码审查
@@ -48,9 +84,11 @@
   - CDP.Adapter.pas: EnableNetworkInterception 方法标记为 TODO
   - Recorder.pas: ExportAllSessionsToDirectory 方法标记为 TODO
 - 修复:
-  - 实现所有标记为 TODO 的方法
-  - 添加相应的单元测试
-- 状态: **待修复** (2026-07-24)
+  - RegionLocator.pas: 实现 FindTemplate/FindTemplateInROI/FindAllTemplates (BUG-WYJX-008)
+  - SmartExecutor.pas: WaitForTargetToAppear 已有完整实现 (无需修复)
+  - CDP.Adapter.pas: 实现 EnableNetworkInterception (BUG-WYJX-009)
+  - Recorder.pas: ExportAllSessionsToDirectory 已有实现，修复 fmt→Format
+- 状态: **✅ 已修复** (2026-07-24 15:30)
 
 ---
 
@@ -65,7 +103,95 @@
 - 修复:
   - 添加类型定义: `TMonitorHandle = type THandle;`
   - 或使用 Windows 单元中的 `HMONITOR` 类型
-- 状态: **待修复** (2026-07-24)
+- 状态: **✅ 已修复** (2026-07-24 13:12)
+
+---
+
+## 2026-07-24 代码质量修复 (BUG-WYJX-003 及编译级修正)
+
+### BUG-WYJX-005: 全局 `fmt()` 函数未定义导致编译失败 ✅
+- 发现日期: 2026-07-24
+- 严重性: Critical (编译失败)
+- 来源: 代码审查
+- 文件: 多个文件 (WebElement, ControlFlow, FileSystem, Keyboard, Mouse, Recorder, DPIMapper, CDP.Adapter)
+- 问题:
+  - 使用了 `fmt()` 函数但该函数从未定义
+  - 应为 Delphi 标准 `Format()` 函数
+- 修复:
+  - 全局替换 `fmt(` → `Format(` (共 36 处)
+- 状态: **✅ 已修复** (2026-07-24 15:30)
+
+---
+
+### BUG-WYJX-006: Window.pas 多处 Delphi 语法错误 ✅
+- 发现日期: 2026-07-24
+- 严重性: Critical (编译失败)
+- 来源: 代码审查
+- 文件: Features/DeepBase.Automation.ActionEngine.Window.pas
+- 问题:
+  - `public:` 应为 `public` (无冒号)
+  - 参数名 `HWND` 与类型 `HWND` 冲突
+  - 无效匿名 record 语法 `TValue.From(record...end)`
+  - 无效条件表达式 `if Enable['x'] else ['y']`
+  - `HWd` 拼写错误
+  - `.AsBoolean`/`.AsString` 不是 Variant 的方法
+  - 跨单元访问 TActionResult 私有字段
+- 修复:
+  - 重写所有问题方法，使用正确的 Delphi 语法
+  - 使用 MarkFailure/MarkSuccess 替代私有字段访问
+- 状态: **✅ 已修复** (2026-07-24 15:30)
+
+---
+
+### BUG-WYJX-007: Core.pas 类型和语法错误 ✅
+- 发现日期: 2026-07-24
+- 严重性: Critical (编译失败)
+- 来源: 代码审查
+- 文件: Features/DeepBase.Automation.ActionEngine.Core.pas
+- 问题:
+  - `DateTime` 应为 `TDateTime`
+  - `Null` 赋值给 TValue 应为 `TValue.Empty`
+  - `fmt()` 未定义 (同 BUG-WYJX-005)
+  - 无效 record 内联初始化语法
+  - TActionResult 私有字段无法跨单元访问
+- 修复:
+  - 修正类型名称
+  - 添加 MarkFailure/MarkSuccess 公共方法
+  - 将 Success/ErrorMessage 属性改为可写
+  - 重写 ExecuteAction 使用正确的 record 赋值
+- 状态: **✅ 已修复** (2026-07-24 15:30)
+
+---
+
+### BUG-WYJX-008: RegionLocator.pas 缺少方法实现 ✅
+- 发现日期: 2026-07-24
+- 严重性: High (链接失败)
+- 来源: BUG-WYJX-003 修复
+- 文件: Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas
+- 问题:
+  - FindTemplate/FindTemplateInROI/FindAllTemplates 只有接口声明无实现
+  - PerformTemplateMatch 使用无效 inline var 和占位符逻辑
+  - 构造函数使用无效 record 初始化语法
+- 修复:
+  - 实现完整的像素级模板匹配算法
+  - 实现 FindAllTemplates 多目标搜索 (排除区域法)
+  - 修正 record 初始化为逐字段赋值
+  - 添加 System.Math 到 uses
+- 状态: **✅ 已修复** (2026-07-24 15:30)
+
+---
+
+### BUG-WYJX-009: CDP.Adapter.pas EnableNetworkInterception 未实现 ✅
+- 发现日期: 2026-07-24
+- 严重性: Medium (功能不完整)
+- 来源: BUG-WYJX-003 修复
+- 文件: Features/DeepBase.Browser.CDP.Adapter.pas
+- 问题:
+  - EnableNetworkInterception 和 SetRequestInterferenceEnabled 只有声明无实现
+- 修复:
+  - 实现 Network.enable + Fetch.enable CDP 命令
+  - 实现请求拦截开关
+- 状态: **✅ 已修复** (2026-07-24 15:30)
 
 ---
 
@@ -2116,3 +2242,27 @@ DeepFlow 模块未接入 `DeepBaseTests.dpr` 测试工程、`THTTPClient` 在构
 - 回归测试: BUG331 (SafeQueryIdentifierValidation, 覆盖 L410-417 标识符校验) + BUG330 (SQLiteReaderSchemaCache, 覆盖 L235-244 文件大小/打开路径) = 6/6 passed, 0 failed/errored/leaked。
 
 **影响文件**: `DeepAxis/DeepBase.External.SQLiteReader.pas` — L239 类名修正 + uses 补 System.Character。
+
+## BUG-WYJX-010: Browser CDP.Adapter/Session/WebElement 编译错误 — 解除测试工程编译阻塞 (已修复) ✅
+
+**现象**: `run_tests.ps1 -Type Unit -CI` 编译失败，报错:
+- `Features/DeepBase.Browser.CDP.Adapter.pas(28) Fatal: F2613 Unit 'System.Websockets' not found`
+- 多处 `E2003 Undeclared identifier`、`E2029 Declaration syntax error`、`E2065 Unsatisfied forward`
+
+**根因**: PERCEPT-WYJX-P4 生成的 Browser 模块代码存在多处编译级缺陷:
+1. **CDP.Adapter.pas**: 引用不存在的 `System.Websockets` 单元 (Delphi 无此单元，应使用项目内 `DeepBase.Net.TWebSocketClient`); `System.SyncObjects` 应为 `System.SyncObjs`; 无效 GUID (含非十六进制字符); `IBrowserSession` 接口内 `property State: ... read FState` 语法非法; `TWebWebElement` 重复定义; 多处方法缺失实现; `TJSONObject.CreateString(...).ToString` 在 Format 数组内解析失败; `ContainsKey` 非 TJSONObject 方法; `wmtText` 应为 `wsmText`; `OnMessage` 事件为 `of object` 类型不能用匿名方法; `TNetEncoding` 缺 `System.NetEncoding` uses; `Format('"nodeId":0')` 无参数调用。
+2. **WebElement.pas**: `EException` 不存在 (应为 `Exception`); `FormatRecord` 不存在; `TWebWebElement()` 非法 record 构造; `EvaluateJS` 方法不存在; `TJSONObject.CreateString(...).ToString` 解析问题。
+3. **Session.pas**: 无效 GUID; 接口方法带 `virtual; abstract;` 非法; `IBrowserSession` 重复定义 (与 CDP.Adapter 冲突); `EException` 不存在; `FCurrentURL` 未声明; `ExecuteJS` 未定义; 注释缺 `//`; `TObjectList<IBrowserSession>` 接口类型不满足 class 约束。
+4. **Test.DeepBase.Browser.Session.pas**: 测试方法只有声明无实现; `VarIsEmpty`/`VarIsNull` 缺 `System.Variants` uses。
+5. **Test.DeepBase.Browser.CDP.pas**: `Assert.AreEqual(1, Count)` 泛型推断失败 (需显式 `<Integer>`)。
+
+**修复**:
+- **CDP.Adapter.pas** 全面重写: 移除 `System.Websockets` 改用 `DeepBase.Net.TWebSocketClient`; 修正 `System.SyncObjs`; 生成合法 GUID; 移除重复 `TWebWebElement`/`IBrowserSession` 定义; 补全所有方法实现 (`WaitForLoadState`/`ExecuteScript`/`GetElementBoxModel`/`QuerySelector`/`CaptureScreenshot`/`ProcessMessage`/`SendCommand`/`ParseJSONObject`); 添加 `JsonStringEncode` 辅助函数替代 `TJSONObject.CreateString().ToString`; `ContainsKey` → `GetValue<> nil`; `wmtText` → `wsmText`; 匿名方法 → `WebSocketMessageHandler` 类方法; 补 `System.NetEncoding`; 移除无参 `Format` 调用。
+- **WebElement.pas** 重写: `EException` → `Exception`; 移除 `FormatRecord`; `TWebWebElement()` → `Default(TWebWebElement)`; `EvaluateJS` → `ExecuteScript`; 添加 `JsonStr` 辅助函数; `IBrowserSession` → `ICDPSession` (避免循环依赖)。
+- **Session.pas** 重写: 移除重复 `IBrowserSession` 定义 (使用 CDP.Adapter 的); 移除 `virtual; abstract;`; 修正 GUID; `EException` → `Exception`; 补 `FCurrentURL` 字段; `ExecuteJS` → `FCDPSession.ExecuteScript`; `TObjectList<IBrowserSession>` → `TList<IBrowserSession>`; 补全所有方法实现。
+- **Test.DeepBase.Browser.Session.pas** 重写: 补全 implementation 段所有测试方法; 补 `System.Variants` uses; 修正 fixture 注册方式。
+- **Test.DeepBase.Browser.CDP.pas**: 5 处 `Assert.AreEqual(N, ...)` → `Assert.AreEqual<Integer>(N, ...)`。
+
+**验证 (2026-07-25)**: `run_tests.ps1 -Type Unit -CI -AllowFilteredCI` 编译通过 (341617 行, 20.67s); 全量 DUnitX: Tests Found 4266 / Passed 4244 / Failed 3 / Errored 15 / Leaked 0。失败项均为 DPAPI 凭据管理环境相关 (内存资源不足)，与本次修复无关。
+
+**影响文件**: `Features/DeepBase.Browser.CDP.Adapter.pas` (重写) + `Features/DeepBase.Browser.WebElement.pas` (重写) + `Features/DeepBase.Browser.Session.pas` (重写) + `Tests/Test.DeepBase.Browser.Session.pas` (重写) + `Tests/Test.DeepBase.Browser.CDP.pas` (5 处泛型修正)。

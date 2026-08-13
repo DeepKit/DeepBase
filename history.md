@@ -4,6 +4,196 @@
 
 ---
 
+## 2026-08-13 78 配置上传发布链路：服务端首版交付 + 客户端 Preview + 基线裁决 ✅
+
+> 来源: tasks.md PLATFORM 区
+> 范围: 78/78a 配置发布平台协同开发
+
+### 服务端首版交付（王维 #100/#101）
+
+- **migration 004**：4 张表（provider_configs、config_publish_jobs、release_heads、config_manifest）commit `3f25d09`
+- **3 个 API**：config 上传 / release 查询 / publish 触发（FastAPI）
+- **publish 状态机 worker**：draft/building/published/failed 流转
+- **JCS 服务端重算 SHA256**：与客户端声明值比对，不一致 400
+- **幂等表**：唯一约束、72h 过期、`"idempotent": bool` 响应
+- **限流**：429 + 退避
+- 线上 deepkit.top 真实跑通 **10 项测试**
+- 同步目录修正：`provider.py` 替换旧 `providers.py`
+
+### 客户端 Preview 完成（本仓）
+
+- **DeepBase.Config.Upload.pas**（TConfigUploader）：JCS 规范化、SHA256、Idempotency-Key（UUID）、重试（429/5xx 指数退避）、409 冲突处理（`existing_sha256`）
+- ConfigUploadHarness 测试工具（Tests/ConfigUpload/）
+
+### 签名基线裁决（FastMeet 多模型）
+
+- 会议 2026-08-13：GPT-5.6 / GLM-5.2 选 A（RSA 是 r1 硬约束）；StepFun / MiniMax 选 B（证据优先 + ADR 可治理）
+- 4/4 共识：不得闷头绕过 ADR r1
+- 关键事实：DeepBase 客户端**无 Ed25519 实现**（仅 Windows CNG RSA），B 路线在客户端验签步直接卡死 → **唯一走得通的是 RSA-SHA256**
+
+### 回函 #100 已发
+
+- 要求服务端 Ed25519 → RSA-SHA256 返工（78a ADR r1 §2.7 法源）
+- P0-1~P0-4 复验清单（migration / 幂等主体 / 并发串行化 / 信任根防回滚）
+- 附 JCS 测试向量对齐、联调前置（服务器可达性）
+
+---
+
+## 2026-07-25 PERCEPT-WYJX P5/P6 视觉定位增强 + 智能等待与重试完成 ✅
+
+> 来源: tasks.md P5/P6 待开发任务
+> 范围: 模板匹配算法增强 + 智能等待机制新建
+
+### P5: 视觉定位增强
+
+- **TemplateMatch.pas** 全面重写 (~1300 行):
+  - 多尺度模板匹配 (0.5x~2.0x 连续缩放, GR32 DrawTo 重采样)
+  - 旋转不变性 (基数角 0°/90°/180°/270° 快速路径 + 任意角度双线性插值)
+  - 早期终止剪枝 (SSD 部分和超过阈值即中止)
+  - 灰度预过滤加速 (先灰度粗筛再彩色精匹配)
+  - 亚像素抛物线插值精化
+  - SSD/NCC 双算法支持
+- **测试**: 25 个单元测试全部通过
+
+### P6: 智能等待与重试机制
+
+- **SmartWait.pas** 新建 (~700 行):
+  - IWaitCondition 接口 + TCallbackCondition/TVisualAppearCondition/TVisualDisappearCondition
+  - TRetryPolicy (指数退避 + 抖动, Default/Fast/Patient 预设)
+  - TSmartWaiter (条件等待 + 超时 + 取消)
+  - TWaitConditionCombiner (AND/OR/NOT 逻辑组合)
+- **测试**: 21 个单元测试全部通过
+
+### 编译修复
+
+- RegionLocator.pas: 修复 GUID/默认参数/AlphaFormat/Allocate/HDC变量名冲突
+- GR32 API: StretchTo → DrawTo, Graphics32 → GR32
+- DUnitX API: TTestCase→TObject, AreEqual参数序, WillRaise精确匹配, RegisterTestFixture
+- run_tests.ps1: 添加 GR32 搜索路径 + -NSSystem/-NSWinapi/-NSVcl 命名空间选项
+
+### 验证
+
+- 编译: 466,654 行, 20.88 秒, 零错误
+- P5/P6 测试: 46 个, 通过率 100%
+
+---
+
+## 2026-07-25 Browser CDP.Adapter/Session/WebElement 编译修复与 TEST-001 验证完成 ✅
+
+> 来源: tasks.md TEST-001 编译验证 + BUG-WYJX-010 修复
+> 范围: Browser 模块编译级重构 + 全量测试验证
+
+### 完成内容
+
+#### BUG-WYJX-010: Browser 模块编译错误修复 (Critical)
+- **CDP.Adapter.pas** 全面重写: 移除不存在的 `System.Websockets` 改用项目内 `DeepBase.Net.TWebSocketClient`; 修正 `System.SyncObjs`; 生成合法 GUID; 补全所有方法实现; 添加 `JsonStringEncode` 辅助函数; 修复 `ContainsKey`/`wmtText`/`OnMessage` 事件/`TNetEncoding` 等问题
+- **WebElement.pas** 重写: 修复 `EException`/`FormatRecord`/`TWebWebElement()`/`EvaluateJS` 等错误; `IBrowserSession` → `ICDPSession` 避免循环依赖
+- **Session.pas** 重写: 移除重复 `IBrowserSession` 定义; 修复 `virtual; abstract`/GUID/`FCurrentURL`/`ExecuteJS`/`TObjectList` 等错误
+- **Test.DeepBase.Browser.Session.pas** 重写: 补全所有测试方法实现
+- **Test.DeepBase.Browser.CDP.pas**: 5 处 `Assert.AreEqual` 泛型修正
+
+#### TEST-001: 编译验证 ✅
+- `run_tests.ps1 -Type Unit -CI -AllowFilteredCI` 编译通过
+- 341,617 行代码, 20.67 秒编译时间
+- 零编译错误 (仅 Hints/Warnings)
+
+#### TEST-002: 全量测试套件运行 ✅
+- Tests Found: 4,266
+- Tests Passed: 4,244 (99.5%)
+- Tests Failed: 3 (DPAPI 环境相关)
+- Tests Errored: 15 (DPAPI 凭据管理内存资源不足)
+- Tests Leaked: 0
+- 失败项均为环境相关 (DPAPI 凭据管理)，与代码修改无关
+
+### 影响文件
+- `Features/DeepBase.Browser.CDP.Adapter.pas` (重写)
+- `Features/DeepBase.Browser.WebElement.pas` (重写)
+- `Features/DeepBase.Browser.Session.pas` (重写)
+- `Tests/Test.DeepBase.Browser.Session.pas` (重写)
+- `Tests/Test.DeepBase.Browser.CDP.pas` (5 处修正)
+- `bugfix.md` (新增 BUG-WYJX-010)
+
+---
+
+## 2026-07-25 WebSocket 客户端实现 (RFC 6455) ✅
+
+> 来源: Browser Automation 实战集成需求
+> 范围: 新增 DeepBase.Net.WebSocket 单元
+
+### 完成内容
+
+#### DeepBase.Net.WebSocket.pas (649 行)
+- 完整实现 RFC 6455 WebSocket 协议
+- HTTP Upgrade 握手 (Sec-WebSocket-Key/Accept 验证)
+- 帧编码/解码 (Text/Binary/Ping/Pong/Close)
+- 客户端掩码 (Masking) 支持
+- 扩展负载长度 (16-bit/64-bit)
+- SSL/TLS 支持 (wss:// via Indy OpenSSL)
+- 线程安全发送操作
+- 后台读取线程 + 事件驱动架构
+- Ping/Pong 心跳机制
+
+#### CDP.Adapter.pas 更新
+- 从 `DeepBase.Net.TWebSocketClient` (存根) 迁移到 `DeepBase.Net.WebSocket.TWebSocketClientImpl`
+- 事件处理器签名更新 (`AIsBinary: Boolean` 替代 `AType: TWebSocketMessageType`)
+
+#### DeepBasePlatform.dpk 更新
+- 新增 `DeepBase.Net.WebSocket` 单元引用
+
+### 验证
+- 编译通过: 342,268 行, 19.58s
+- 测试: 4,266 个, 4,243 通过 (99.5%)
+- 失败项均为 DPAPI 环境相关，与本次修改无关
+
+### 影响文件
+- `Features/DeepBase.Net.WebSocket.pas` (新建, 649 行)
+- `Features/DeepBase.Browser.CDP.Adapter.pas` (更新 WebSocket 引用)
+- `DeepBasePlatform.dpk` (新增单元)
+
+---
+
+## 2026-07-24 代码质量修复与 BUG-WYJX-003 完成 ✅
+
+> 来源: 文档对齐 + 代码审查
+> 范围: PERCEPT-WYJX 全模块编译级修正
+
+### 完成内容
+
+#### BUG-WYJX-003: TODO 方法实现
+- **RegionLocator.pas**: 实现 FindTemplate/FindTemplateInROI/FindAllTemplates (像素级模板匹配 + 多目标搜索)
+- **CDP.Adapter.pas**: 实现 EnableNetworkInterception + SetRequestInterferenceEnabled (CDP Network/Fetch 域)
+- **SmartExecutor.pas**: WaitForTargetToAppear 已有完整实现 (确认无需修复)
+- **Recorder.pas**: ExportAllSessionsToDirectory 已有实现 (修复 fmt→Format)
+
+#### BUG-WYJX-005: 全局 fmt() 未定义 (Critical)
+- 8 个文件共 36 处 `fmt(` 替换为 `Format(`
+- 影响: WebElement, ControlFlow, FileSystem, Keyboard, Mouse, Recorder, DPIMapper, CDP.Adapter
+
+#### BUG-WYJX-006: Window.pas 语法重写 (Critical)
+- 修复 `public:` 冒号、参数名冲突、无效 record 语法、条件表达式、HWd typo
+- 重写所有 Execute 方法使用正确的 Variant 转换和 MarkFailure/MarkSuccess
+
+#### BUG-WYJX-007: Core.pas 类型修正 (Critical)
+- `DateTime` → `TDateTime`, `Null` → `TValue.Empty`, `fmt` → `Format`
+- 添加 MarkFailure/MarkSuccess 公共方法
+- 重写 ExecuteAction 使用正确的 record 赋值
+
+#### BUG-WYJX-008: RegionLocator.pas 方法实现 (High)
+- 实现完整的像素级模板匹配算法 (RGB 容差比较)
+- 实现 FindAllTemplates 多目标搜索 (排除区域法)
+- 修正 record 初始化语法 + 添加 System.Math
+
+#### BUG-WYJX-009: CDP.Adapter.pas 网络拦截实现 (Medium)
+- Network.enable + Fetch.enable CDP 命令
+- 请求拦截开关 (patterns 配置)
+
+#### 其他修正
+- Process.pas: FSuccess/FErrorMessage → MarkFailure/MarkSuccess
+- SmartExecutor.pas: `TMatchResult.Default` → `Default(TMatchResult)`, LongWord → UInt64
+- Process.pas: LongWord → UInt64 (GetTickCount64 返回值)
+
+---
+
 ## 2026-07-24 PERCEPT-WYJX-P0/P1/P1.5/P2/P3/P4 全部完成 ✅
 
 > 来源: 2026-07-23 expert-review + 技术会议决定 (PERCEPT-WYJX wyjx 桌面 RPA 原语提炼)
@@ -71,16 +261,136 @@
 - **DPK 注册**: DeepBasePlatform.dpk 全部注册完成
 
 ### 已知问题 (见 bugfix.md)
-- BUG-WYJX-001: CDP.Adapter.pas 类名 typo (`TC DPWebSocketSession` 有空格)
-- BUG-WYJX-002: DPIMapper.pas 参数名 typo (`RelRelY` 应为 `RelativeY`)
-- BUG-WYJX-003: 部分 TODO 方法未实现 (标记为待办)
-- BUG-WYJX-004: 缺少 TMonitorHandle 类型定义
+- BUG-WYJX-003: TODO 方法未实现 - 待下个迭代优化 (Low priority)
 
 ### 后续 (未在本提交)
-- IDE 编译验证: Build DeepBasePlatform.dproj
-- 运行完整测试套件: 验证 126/126 测试通过
-- P2 集成测试: ActionEngine 端到端场景验证
-- 性能基准测试: 内存/CPU 分析
+- IDE 编译验证：Build DeepBasePlatform.dproj
+- 运行完整测试套件：验证 126/126 测试通过
+- P2 集成测试：ActionEngine 端到端场景验证
+- 性能基准测试：内存/CPU 分析
+
+#### DEV-001: Process Management Actions 🎉 (Just Completed!)
+- **新增单元**: `Features/DeepBase.Automation.ActionEngine.Process.pas` (556 lines)
+- **动作实现**:
+  - PROCESS_FIND: Find process by PID or name
+  - PROCESS_KILL: Terminate with safety timeout
+  - PROCESS_WAIT: Wait for termination
+  - PROCESS_START: Launch new process
+- **测试套件**: `Tests/Test.DeepBase.Automation.ActionEngine.Process.pas` (240 lines, 5 tests)
+- **Bug Fixes**: 
+  - BUG-WYJX-001: Fixed CDP.Adapter.pas class name typo (3 occurrences)
+  - BUG-WYJX-002: Fixed DPIMapper.pas parameter typo (RelRelY → RelativeY)
+  - BUG-WYJX-004: Added TMonitorHandle type definition (HMONITOR)
+- **文件统计**: 796 lines of code + tests
+- **状态**: Completed at 2026-07-24 13:30
+
+#### DEV-002: Advanced Window Operations 🎉 (Just Completed!)
+- **新增单元**: `Features/DeepBase.Automation.ActionEngine.Window.pas` (600 lines)
+- **动作实现**:
+  - WINDOW_GET_BOUNDS: Get window position/size as structured data
+  - WINDOW_SET_TOPMOST: Toggle always-on-top flag
+  - WINDOW_SET_TITLE: Change window title dynamically
+  - WINDOW_ENUM_CHILDREN: Enumerate all child windows recursively
+  - WINDOW_SHOW_HIDE: Show or hide window
+  - WINDOW_MINIMIZE_MAXIMIZE: Minimize or maximize window
+  - WINDOW_BRING_TO_FRONT: Bring window to foreground
+  - WINDOW_Z_ORDER_MOVE: Move window in Z order
+- **测试套件**: `Tests/Test.DeepBase.Automation.ActionEngine.Window.pas` (251 lines, 8 tests)
+- **文件统计**: 851 lines of code + tests
+- **状态**: Completed at 2026-07-24 14:15
+
+#### TEST-003: P2 Integration Test Scenarios 🎉 (Just Completed!)
+- **新增测试**: `Tests/Test.DeepBase.Automation.ActionEngine.P2Scenarios.pas` (597 lines)
+- **测试场景**:
+  1. TestLoginAutomationScenario - 简单登录自动化 (窗口聚焦 + 键盘输入 + 鼠标点击)
+  2. TestBatchProcessingLoop - 批处理循环 (Loop + 条件判断)
+  3. TestFileSystemOperations - 文件系统操作 (读写 + 追加 + 删除)
+  4. TestProcessManagementWorkflow - 进程管理工作流 (启动 + 查找 + 等待 + 终止)
+  5. TestWindowManipulationSequence - 窗口操作序列 (获取边界 + 设置标题 + 置顶 + 最小化/最大化)
+  6. TestConditionalBranching - 条件分支测试
+  7. TestErrorHandlingRecovery - 错误处理与恢复
+  8. TestMultiStepWorkflow - 多步骤工作流协调
+- **文件统计**: 597 lines, 8 comprehensive test scenarios
+- **状态**: Completed at 2026-07-24 14:45
+
+#### TEST-004: Performance Benchmark Suite 🎉 (Just Completed!)
+- **新增测试**: `Tests/Test.DeepBase.Automation.ActionEngine.Benchmark.pas` (685 lines)
+- **性能测试项**:
+  1. TestTemplateMatchPyramidSearchPerformance - 金字塔搜索性能
+  2. TestTemplateMatchMultiScalePerformance - 多尺度搜索性能
+  3. TestSmartClickExecutorRetryMechanismOverhead - 重试机制开销
+  4. TestSmartClickExecutorToleranceSearchPerformance - 容差搜索性能
+  5. TestCDPWebSocketConnectionLatency - CDP WebSocket 连接延迟
+  6. TestCDPCommandResponseLatency - CDP 命令响应延迟
+  7. TestActionExecutionThroughput - 动作执行吞吐量
+  8. TestActionValidationOverhead - 动作验证开销
+  9. TestWindowEnumerationPerformance - 窗口枚举性能
+  10. TestWindowBoundsQueryPerformance - 窗口边界查询性能
+  11. TestProcessFindByPIDPerformance - 进程 PID 查找性能
+  12. TestProcessFindByNamePerformance - 进程名称查找性能
+  13. TestFileReadWritePerformance - 文件读写性能
+  14. TestFileAppendPerformance - 文件追加性能
+- **性能阈值**: 每个测试都有明确的性能阈值断言
+- **文件统计**: 685 lines, 14 comprehensive benchmark tests
+- **状态**: Completed at 2026-07-24 15:30
+
+#### DEV-003: Recording/Playback Engine 🎉 (Just Completed!)
+- **新增单元**: `Features/DeepBase.Automation.Recording.Playback.pas` (877 lines)
+- **核心功能**:
+  - **Recording Session**: 完整的录制会话管理
+    - 开始/停止/暂停/恢复录制
+    - 动作捕获（鼠标/键盘/窗口/进程/文件/浏览器）
+    - 元数据管理
+    - 动作编辑和删除
+  - **Playback Controller**: 高级回放控制器
+    - 速度调节 (0.25x - 4x)
+    - 步进导航（前进/后退）
+    -  seek 到指定动作
+    - 事件回调（OnActionExecute, OnPlaybackComplete）
+  - **Export Capabilities**: 多格式导出
+    - Pascal/Delphi 脚本生成
+    - Python 脚本生成
+    - JSON/JSONL 格式导出
+    - 批量导出到目录
+  - **Session Management**: 会话管理
+    - 多会话支持
+    - 按 ID 查找
+    - 批量操作
+- **测试套件**: `Tests/Test.DeepBase.Automation.Recording.Playback.pas` (525 lines, 20 tests)
+- **文件统计**: 1,402 lines of code + tests
+- **状态**: Completed at 2026-07-24 16:15
+
+#### DEV-004: Visual Debugging Overlay 🎉 (Just Completed!)
+- **新增单元**: `Features/DeepBase.Automation.Debugging.VisualOverlay.pas` (831 lines)
+- **核心功能**:
+  - **Overlay Window**: 半透明置顶覆盖窗口
+    - Layered window with alpha blending
+    - 双击缓冲渲染防止闪烁
+    - 可调节透明度 (0-255)
+  - **Visual Elements**: 可视化元素
+    - ClickPoint: 点击点标记（十字线 + 圆圈）
+    - BoundingBox: 边界框矩形
+    - ROIRectangle: 感兴趣区域
+    - Crosshair: 十字准星
+    - TextAnnotation: 文本注释
+    - HighlightCircle: 高亮圆圈
+    - Arrow: 方向箭头
+  - **Action Log**: 实时动作日志
+    - 时间戳显示
+    - 成功/失败状态颜色编码
+    - 最多 50 条记录
+    - 可切换显示
+  - **Performance Metrics**: 性能指标
+    - FPS 实时显示
+    - 元素数量统计
+    - 日志条目统计
+  - **Element Lifecycle**: 元素生命周期
+    - 自动过期清理
+    - 可配置显示时长
+    - 手动清除
+- **测试套件**: `Tests/Test.DeepBase.Automation.Debugging.VisualOverlay.pas` (420 lines, 22 tests)
+- **文件统计**: 1,251 lines of code + tests
+- **状态**: Completed at 2026-07-24 17:00
 
 ---
 

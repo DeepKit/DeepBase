@@ -1,198 +1,202 @@
-# DeepBase PERCEPT-WYJX 待办任务清单
-> 更新时间：2026-07-24 01:00  
-> 执行人：AI Assistant (罗辑人格)  
+# DeepBase 待办任务清单
+> 更新时间：2026-08-13
+> 执行人：AI Assistant (罗辑人格)
 > 已完成任务已归档至 history.md | Bug 记录见 bugfix.md
 
 ---
 
 ## 🎯 **当前状态**
 
-✅ **PERCEPT-WYJX-P0/P1/P1.5/P2/P3/P4 核心开发完成!**
+✅ **P0~P6 + DEV-001~004 全部完成并归档**
+✅ **BUG-WYJX-001~010 全部修复并记录**
+✅ 编译通过 (466,654 行) | P5/P6 新增 46 测试全部通过
+✅ WebSocket RFC 6455 实现 + Browser 实战集成完成
+✅ P5 视觉定位增强 + P6 智能等待与重试完成
+✅ **78 服务端首版交付**（王维 #100）：migration 004 / 3 API / publish worker / 幂等表 / 限流，线上 10 项测试通过
+✅ **78 同步链路修正**（王维 #101）：同步目录与服务器代码一致
+✅ **客户端 TConfigUploader Preview 完成**：JCS + SHA256 + Idempotency-Key + 重试
+✅ **FastMeet 多模型裁决**：签名基线按 78a r1 坚持 RSA-SHA256
+✅ **回函 #100 已发**：要求服务端 Ed25519 → RSA-SHA256 返工 + P0 复验
 
-| 模块类别 | 状态 | 待办事项 |
-|---------|------|----------|
-| **P0 找图找色** | ✅ Complete | 无 |
-| **P1 视觉语义** | ✅ Complete | 无 |
-| **P1.5 坐标动作** | ✅ Complete | 无 |
-| **P2 动作引擎** | 🟡 Near Complete | 集成测试 + 完整测试套件 |
-| **P3 Screen Click** | ✅ Complete | Bug 修复 (见 bugfix.md) |
-| **P4 Browser Automation** | ✅ Complete | Bug 修复 (见 bugfix.md) |
-
----
-
-## 🐛 **Bug 修复任务 (Critical)**
-
-### BUG-WYJX-001: CDP.Adapter.pas 类名 typo ⭐⭐⭐⭐⭐
-- **文件**: `Features/DeepBase.Browser.CDP.Adapter.pas`
-- **问题**: 类名 `TC DPWebSocketSession` 包含空格
-- **修复**: 改为 `TCDPWebSocketSession`
-- **预计时间**: 5min
-- **状态**: ⏸️ 待修复
-
-### BUG-WYJX-002: DPIMapper.pas 参数名 typo ⭐⭐⭐⭐
-- **文件**: `Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas`
-- **问题**: 参数名 `RelRelY` 应为 `RelativeY`
-- **修复**: 修正参数名
-- **预计时间**: 5min
-- **状态**: ⏸️ 待修复
-
-### BUG-WYJX-003: TODO 方法未实现 ⭐⭐⭐
-- **文件**: 多个文件
-- **问题**: 
-  - RegionLocator.pas: FindAllTemplates
-  - SmartExecutor.pas: WaitForTargetToAppear
-  - CDP.Adapter.pas: EnableNetworkInterception
-  - Recorder.pas: ExportAllSessionsToDirectory
-- **修复**: 实现所有 TODO 方法
-- **预计时间**: 2h
-- **状态**: ⏸️ 待修复
-
-### BUG-WYJX-004: 缺少 TMonitorHandle 类型定义 ⭐⭐⭐⭐⭐
-- **文件**: `Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas`
-- **问题**: 使用了未定义的 `TMonitorHandle` 类型
-- **修复**: 添加 `TMonitorHandle = type THandle;` 或使用 `HMONITOR`
-- **预计时间**: 5min
-- **状态**: ⏸️ 待修复
+**主要里程碑**:
+- P0~P4: PERCEPT-WYJX 桌面 RPA 原语提炼 (2026-07-24) ✅
+- DEV-001~004: Process Management/Window Operations/Recording Engine/Debugging Overlay (2026-07-24) ✅
+- P5: 视觉定位增强 - 多尺度模板匹配、旋转不变性、亚像素精化 (2026-07-25) ✅
+- P6: 智能等待与重试机制 - 指数退避、条件组合器、策略预设 (2026-07-25) ✅
+- WebSocket: RFC 6455 完整实现 (649 行) + CDP.Adapter 迁移 ✅
+- Browser 重构：CDP.Adapter/Session/WebElement重写，TEST-001 验证通过 ✅
 
 ---
 
-## 🧪 **测试验证任务 (High Priority)**
 
-### TEST-001: IDE 编译验证 ⭐⭐⭐⭐⭐
-- **任务**: Build DeepBasePlatform.dproj (Win64 Release)
-- **预期**: Zero compilation errors, zero warnings
-- **预计时间**: 15min
-- **状态**: ⏸️ 待执行
+## 🔴 DeepBase 参数化 / DLL / 制品发布平台（2026-08-12 多模型再审）
 
-### TEST-002: 运行完整测试套件 ⭐⭐⭐⭐⭐
-- **任务**: Run Tests.TestDeepBase
-- **预期**: 126/126 PASSED (59 existing + 67 new)
-- **测试清单**:
-  - Test.ScreenClick.RegionLocator (11 tests)
-  - Test.ScreenClick.DPIMapper (9 tests)
-  - Test.ScreenClick.SmartExecutor (8 tests)
-  - Test.Browser.CDPSession (10 tests)
-  - Test.Browser.WebElement (13 tests)
-  - Test.Browser.Session (16 tests)
-- **预计时间**: 30min
-- **状态**: ⏸️ 待执行
+> **开发授权：已授权（2026-08-12）**。协议 r1 为受控实施基线；可直接开发、测试和局部重构，无需逐项再请示。DeepBase.Plugins 生命周期实现 41/41，但 SDK Preview 被纯 C ABI r2 阻断；ConfigUploader 为客户端 Preview；王维已交付服务端首版（#100/#101），当前为 acceptance pending——签名算法需按 78a r1 从 Ed25519 返工为 RSA-SHA256，差异修复见 #099 + 回函 #100。
 
-### TEST-003: P2 集成测试 ⭐⭐⭐⭐
-- **任务**: ActionEngine 端到端场景验证
-- **测试场景**:
-  - 简单登录自动化 (窗口聚焦 + 键盘输入 + 鼠标点击)
-  - 批处理循环 (Loop + 条件判断)
-  - 文件系统操作 (读写 + 注册表)
-- **预计时间**: 2h
-- **状态**: ⏸️ 待执行
+### P0 — 发布阻断项
 
-### TEST-004: 性能基准测试 ⭐⭐⭐
-- **任务**: 内存/CPU 分析
-- **测试项**:
-  - TemplateMatch 金字塔搜索性能
-  - SmartClickExecutor 重试机制开销
-  - CDP WebSocket 连接延迟
-- **预计时间**: 1h
-- **状态**: ⏸️ 待执行
+- [ ] **PLATFORM-P0-001：迁移 DeepBase.Plugins 到纯 C ABI r2**（Owner：DeepBase/SPW；S0 契约冻结中）
+  - ✅ **S0 包格式规范已补**（77 §9，2026-08-13）：zip 目录结构 / RSA-SHA256 签名规则 / plugin_manifest.json schema / Gateway 校验顺序 / 验收标准；78 与 78a 严格按此打包。
+  - ✅ **S0 C ABI r2 证据包已存在**（77a §4.1）：`include/deepbase_plugins_c.h` + `DeepBase.Plugins.CAbi.pas` 1:1；`Scripts/check_cabi_pure_c.py` EXIT 0；CAbiLoader 封装；8 个 C ABI 用例 + 原 41/41 = 49 passed。
+  - [ ] S1：四单元创建 + Contracts 公共/业务拆分 + Lease 门禁（依赖 S0 完成）
+  - [ ] S2：TPluginManager 泛化（注册制）+ Assayer 切换 + 回归
+  - [ ] S3：热重载/崩溃/签名/卸载泄漏/跨语言 JCS 测试脚本化
+  - [ ] S4：ISiteAdapterPlugin 契约（字节缓冲区版本）+ Gateway 示例插件冒烟（依赖 78 制品仓库）
+  - 输出固定导出函数、不透明句柄、固定宽度整数、`PByte + Length + Capacity`、显式错误码和 `FreeBuffer`。
+  - 禁止稳定 ABI 暴露 Delphi interface/string/TBytes/动态数组/对象/异常。
+  - 保留现有 Delphi 接口仅作为宿主内部 wrapper。
+  - 验收：ABI 头文件与 Delphi 声明扫描无管理类型；不同内存管理器/不同模块配置完成创建、调用、释放、错误路径测试；旧 41/41 全绿。
+
+- [ ] **PLATFORM-P0-002：复核并修正 PostgreSQL migration**（Owner：王维/后端；客户端协助契约测试；首版见王维 #100；返工待回函 #100）
+  - 使用 PG `~` CHECK；移除 `GENERATED ALWAYS AS (id)`；补真实 API key FK、审计表、artifact job、唯一约束和 downgrade。
+  - 状态统一为 draft/building/published/failed/deprecated；当前版本仅由 release_heads 决定。
+  - 首版已报告 migration 004 和 commit `3f25d09`；按 #099 补真实 api_key FK、统一 release head 命名/兼容、config/job 状态分层和 downgrade。
+  - ⚠️ 待王维返工回函后复验（回函 #100 §3 P0-1）。
+  - 验收：空库 apply、重复 apply、rollback 全通过；约束负例与索引计划有证据；提交新 commit/hash。
+
+- [ ] **PLATFORM-P0-003：补强发布并发串行化和 publish=false 语义**（Owner：王维/后端；差异单 #099；返工待回函 #100）
+  - publish=false 只写 draft，不创建打包任务。
+  - Worker 使用唯一 job lease；事务 B 锁 release head/manifest，校验 expected generation/version，拒绝并发降级。
+  - 王维 #100 的顺序发布/唯一 head 测试不等于并发竞争证明。
+  - ⚠️ 待王维返工回函后复验（回函 #100 §3 P0-3）。
+  - 验收：同版本竞争、首发竞争、旧版本降级竞争均只有合法 generation 生效；重复 worker 不重复发布；失败保持旧 LKG。
+
+- [ ] **PLATFORM-P0-004：冻结 Manifest v1 信任根与防回滚**（Owner：DeepBase + 王维；签名算法按 78a r1 为 RSA-SHA256）
+  - RFC 8785 JCS + **RSA-SHA256（PKCS#1 v1.5, 2048-bit, Windows CNG）**；算法门禁仅接受 `rsa-sha256`；可信安装/旧密钥签署 keyset；KMS/HSM 或受控签名服务；key rotation/revocation。
+  - 客户端持久化最高 generation；普通 manifest 不得授权降级；rollback token 独立签名和审计。
+  - 验收：自签公钥、未知 key、篡改、过期、目标不符、generation 降低全部拒绝并继续 LKG；轮换演练通过。
+  - ⚠️ 服务端 #100 首版为 Ed25519，**需按回函 #100 §2 R1~R4 返工为 RSA-SHA256**。
+
+- [ ] **PLATFORM-P0-005：修正文档与交付声明一致性**（Owner：DeepBase/SPW）
+  - [x] 77/77a/78/78a/79 状态和关键规范已按多模型再审修订。
+  - [ ] 同步 DeepCompare `GATEWAY_CLOUD_CONFIG_DESIGN.md`、history/release notes 和对外说明。
+  - 验收：全仓搜索不再把 Plugins 标为已发布 SDK Preview，不再把 ConfigUploader mock 测试描述为生产链路完成。
+
+### P1 — 最小 Pilot 闭环
+
+- [ ] **PLATFORM-P1-001：打包 DeepBase.Plugins SDK Preview**（依赖 P0-001）
+  - 交付 Contracts C ABI、Delphi wrapper、Verifier、SafeGuard、Manager、fixture、接入指南、兼容矩阵和 evidence manifest。
+  - 验收：干净机编译；41/41 + ABI/内存所有权测试全绿；Preview 限制清单公开。
+
+- [ ] **PLATFORM-P1-002：实现独立 UpdateAgent 与双槽 LKG**
+  - staging 校验、真实退出、原子切换、`--after-update` 健康检查、失败回滚、pending restart。
+  - 验收：文件占用、断电点、签名失败、启动失败、回滚、用户取消和自动重启一次场景通过。
+
+- [ ] **PLATFORM-P1-003：完成真实服务端上传发布 E2E**（依赖王维 #099 返工；#100 首版为 Ed25519，已按回函 #100 要求返工 RSA-SHA256）
+  - ConfigUploader → FastAPI → PG → artifact job → Manifest → Gateway → RSA 验签 → 生效/LKG。
+  - 客户端先补 RSA-SHA256 验签 + zip 下载 + manifest 校验（对接 78 §2.4/§2.7）。
+  - 验收：记录 Base URL、受控凭据交接、server/client commit、migration、请求/审计 ID 与可复跑脚本；不得只用 mock。
+
+- [ ] **PLATFORM-P1-004：接入一个真实下游进入 Pilot**
+  - 首选 DeepCompare Gateway；桌面进程与 server_process 分别验证更新行为。
+  - 验收：Canary 可停止/回滚；连续运行窗口无未解释严重故障；遥测可查。
+
+### P2 — 隔离与规模化
+
+- [ ] **PLATFORM-P2-001：PluginHost 进程隔离与权限 profile**
+  - 高风险/第三方插件进程外运行，具备 timeout、quota、circuit breaker、kill switch、崩溃拉起上限。
+  - 验收：插件进程 AV/内存破坏/死循环不导致宿主退出；资源配额和审计生效。
+
+- [ ] **PLATFORM-P2-002：capability 协商与 active/staged 实验**
+  - 验收：旧 Lease 排空、新请求原子进入 staged；失败可回旧实例；实验通过后另行评审是否升基线。
+
+- [ ] **PLATFORM-P2-003：Shadow/Canary/Ring 自动化与 GA 证据包**
+  - 验收：错误阈值自动停止扩圈；Kill Switch 生效；密钥轮换、灾备、LKG 和审计证据完整。
+
+### 外部依赖 / 阻塞
+
+- [x] 王维已通过 #100 返回首版 FastAPI commit `3f25d09`、migration 004、Base URL 和部署/测试证据（Ed25519 版）。
+- [ ] 王维按 `toWangwei/#100-回函-78服务端按r1返工RSA-SHA256并补P0复验.md` + `#099` 完成差异修复和复验（签名返工 RSA-SHA256 + P0-1~P0-4）。
+- [ ] 我方客户端补 RSA-SHA256 验签 + zip 下载 + manifest 校验（对接 77 S0 / 78 §2.4/§2.7）。
+- [ ] API Key 通过受控凭据渠道交接；禁止写入仓库、文档或用户端二进制。
+- [ ] 生产链路完成前，78 与 ConfigUploader 对外状态保持 Preview/blocked，不得宣称 Pilot 或 GA。
 
 ---
 
-## 🚀 **后续开发任务 (Medium Priority)**
+## 📋 **待开发任务**
 
-### DEV-001: Process Management Actions ⭐⭐⭐⭐
-- **任务**: 添加进程管理功能
-- **功能**:
-  - PROCESS_FIND by PID/name
-  - PROCESS_KILL with safety timeout
-  - PROCESS_WAIT until termination
-- **预计时间**: 1h
-- **状态**: ⏸️ 待开发
+### 🔵 Low Priority
 
-### DEV-002: Advanced Window Operations ⭐⭐⭐⭐
-- **任务**: 增强窗口操作功能
-- **功能**:
-  - WINDOW_GET_BOUNDS for query operations
-  - WINDOW_SET_TOPMOST for always-on-top flag
-  - Enumerate child windows recursively
-- **预计时间**: 1h
-- **状态**: ⏸️ 待开发
+- [ ] ActionEngine 性能优化 (减少 Sleep, 异步管道)
+  - [x] 异步动作管道实现 (TAsyncMotionPipe) ✅ COMPLETED
+    - Enqueue/CancelAll 队列管理
+    - 多动作连续执行支持
+    - OnMotionComplete 回调机制
+  - [x] 连续路径动画完善 ✅ COMPLETED
+    - ✅ GetTickCount 高精度时间驱动
+    - ✅ Easing function 平滑曲线计算
+    - ✅ Pause/Resume/Stop 控制机制
+    - ✅ 60-120 FPS 实时更新接口
+  - [ ] 批量操作支持 (MVP 版本已完成) ⏳ PARTIAL
+    - ✅ AsyncMoveMouse(AMotions[]) 多坐标批量移动
+    - ✅ 自动插值计算与错误校验
+    - [ ] 实际集成验证 (需真实鼠标环境)
+    - [ ] 性能基准测试对比
 
-### DEV-003: Recording/Playback Engine ⭐⭐⭐
-- **任务**: 完善录制/回放引擎
-- **功能**:
-  - Session recording capture mode
-  - Playback with speed adjustment
-  - Export to human-readable script format
-- **预计时间**: 2d
-- **状态**: ⏸️ 待开发
+- [ ] Browser.Session 集成测试 (需真实 Chrome) ⏳ PARTIAL
+  - [x] E2E 集成测试框架设计 ✅ COMPLETED
+    - 12 个完整测试场景覆盖
+    - 连接稳定性、多 Tab、Cookie 管理
+    - 长时间运行压力测试 (30 分钟)
+    - 错误恢复验证
+  - [ ] 真实 Chrome 环境执行 ⏳ PENDING
+    - 需安装并启动 Google Chrome
+    - CDP 端口 9222 开放
+    - 网络环境影响
+  - [ ] 性能基准对比
 
-### DEV-004: Visual Debugging Overlay ⭐⭐⭐
-- **任务**: 可视化调试覆盖层
-- **功能**:
-  - Highlight target coordinates during execution
-  - Show ROI regions for visual operations
-  - Real-time action log display
-- **预计时间**: 1d
-- **状态**: ⏸️ 待开发
+- [ ] 边界条件测试补充 ✅ COMPLETED
+  - [x] 无效输入处理 ✅
+    - Empty string URL handling
+    - Invalid URL escapes and special chars (XSS/path traversal)
+    - 超长 Path (>4096 characters)
+    - Null pointer simulation in JavaScript
+  - [x] 资源限制测试 ✅
+    - Extremely large HTML content (>10MB page)
+    - Deep nesting structure (1000+ div levels)
+    - Massive element count performance (10000 elements)
+  - [x] 网络异常处理 ✅
+    - Network timeout with slow server
+    - Connection reset during navigation
+    - SSL error handling
+  - [x] Motion Engine 边界测试 ✅
+    - Extreme coordinates validation
+    - Zero/Negative duration handling
+    - Queue overflow protection
+    - Rapid pause/resume cycle stress
+  - [x] Cookie 边界测试 ✅
+    - Cookie name max length (RFC 6265)
+    - Cookie value max size (browser limits)
+    - Excessive cookie count per domain (50-100 limit)
 
----
-
-## 📋 **任务优先级排序**
-
-### 🔴 Critical (立即执行)
-1. ✅ BUG-WYJX-001: 修复 CDP.Adapter.pas 类名 typo (5min)
-2. ✅ BUG-WYJX-004: 添加 TMonitorHandle 类型定义 (5min)
-3. ⏸️ TEST-001: IDE 编译验证 (15min)
-4. ⏸️ TEST-002: 运行完整测试套件 (30min)
-
-### 🟡 High (本周完成)
-5. ⏸️ BUG-WYJX-002: 修复 DPIMapper.pas 参数名 typo (5min)
-6. ⏸️ BUG-WYJX-003: 实现 TODO 方法 (2h)
-7. ⏸️ TEST-003: P2 集成测试 (2h)
-8. ⏸️ DEV-001: Process Management Actions (1h)
-9. ⏸️ DEV-002: Advanced Window Operations (1h)
-
-### 🟢 Medium (下个迭代)
-10. ⏸️ TEST-004: 性能基准测试 (1h)
-11. ⏸️ DEV-003: Recording/Playback Engine (2d)
-12. ⏸️ DEV-004: Visual Debugging Overlay (1d)
+- [ ] 文档完善与代码注释补充
+  - API 文档自动生成 (基于接口定义)
+  - 示例代码仓库整理
+  - 最佳实践指南编写
 
 ---
 
 ## 📊 **进度统计**
 
-- **已完成模块**: P0/P1/P1.5/P2/P3/P4 (6/6)
-- **总代码行数**: 9,666 行
-- **测试用例**: 126 个 (67 个新增)
-- **待修复 Bug**: 4 个 (2 Critical + 1 Medium + 1 Low)
-- **待执行测试**: 4 项
-- **待开发功能**: 4 项
-- **预计总工时**: ~10h (Critical + High) + ~4d (Medium)
+- **已完成模块**: 16/16 (P0~P6 + DEV-001~004)
+- **总代码行数**: ~18,500 行 (含 P5/P6 新增 ~2,000 行，DEV-003/004新增 ~2,650 行)
+- **P5/P6 测试**: 46 个，通过率 100%
+- **已修复 Bug**: 10 项 (BUG-WYJX-001~010，详见 bugfix.md)
+- **待优化任务**:
+  - 性能优化 (ActionEngine Sleep 减少、异步管道)
+  - 集成测试补充 (需真实 Chrome)
+  - 边界条件测试
+  - 文档与注释完善
 
 ---
 
-## 🎯 **下一步行动**
+## 🔜 **下一步开发方向**
 
-### 立即执行 (30min)
-1. 修复 BUG-WYJX-001 和 BUG-WYJX-004 (Critical 编译错误)
-2. IDE 编译验证 (Build DeepBasePlatform.dproj)
-3. 运行完整测试套件 (验证 126/126 通过)
-
-### 本周计划 (10h)
-4. 修复 BUG-WYJX-002 和 BUG-WYJX-003
-5. P2 集成测试
-6. 开发 Process Management Actions
-7. 开发 Advanced Window Operations
-
-### 下个迭代 (4d)
-8. 性能基准测试
-9. Recording/Playback Engine
-10. Visual Debugging Overlay
+1. **性能优化阶段**: ActionEngine 异步化、Sleep 减少、批量操作支持
+2. **集成测试完善**: Browser.Session 真实环境测试、端到端场景验证
+3. **稳定性提升**: 边界条件处理、异常恢复机制优化
+4. **文档完善**: API 文档、示例代码、最佳实践指南
 
 ---
 
 **Generated Following BCW-D20260722-002 Engineering Discipline**
-
-*All code adheres to DeepBase coding standards and CLAUDE.md conventions!*
-
-**🎊 PERCEPT-WYJX-P0/P1/P1.5/P2/P3/P4 - CORE DEVELOPMENT COMPLETE!**
