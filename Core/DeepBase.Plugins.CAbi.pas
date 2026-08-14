@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Plugins.CAbi - 纯 C ABI 声明（r2 稳定契约）
 
   权威：include/deepbase_plugins_c.h（C 头文件为本 ABI 唯一权威来源）
@@ -42,8 +42,11 @@ type
   Pdbp_out_buffer = ^dbp_out_buffer;
 
   { 固定宽时间戳/计数（跨边界统一，避免 Delphi TDateTime/Int64 歧义） }
+  { 布局钉死：与 C 头 include/deepbase_plugins_c.h 严格一致（x64 自然对齐）。
+    is_healthy(1) + padding(7) + uptime(8) + request(8) + error(8) + msg(256) = 288。 }
   dbp_health_info = record
     is_healthy: Byte;          { 0=不健康, 1=健康 }
+    _pad: array [0..6] of Byte; { 显式 padding 使 UInt64 对齐，不依赖编译器对齐设置 }
     uptime_seconds: UInt64;
     request_count: UInt64;
     error_count: UInt64;
@@ -64,11 +67,14 @@ type
   TDbpGetHealthFunc   = function(AHandle: dbp_plugin_handle; AOut: Pdbp_health_info): Int32; stdcall;
   TDbpGetLastErrorFunc= function(AHandle: dbp_plugin_handle; AOut: Pdbp_out_buffer): Int32; stdcall;
   TDbpFreeBufferFunc  = procedure(APtr: Pointer); stdcall;
+  { ABI 1.1 通用业务调用（可选导出，host 需验证 MINOR>=1 且导出存在后再调用） }
+  TDbpInvokeFunc      = function(AHandle: dbp_plugin_handle;
+    const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
 
 const
   { ABI 版本（与 C 头文件 DBP_ABI_MAJOR/MINOR 严格一致） }
   DBP_ABI_MAJOR = 1;
-  DBP_ABI_MINOR = 0;
+  DBP_ABI_MINOR = 1;
 
   { 错误码（与 Contracts.PLUGIN_* 语义一一对应，见 77a §2.4） }
   DBP_OK                 = 0;
@@ -92,6 +98,7 @@ const
   DBP_EXPORT_GET_HEALTH   = 'dbp_get_health';
   DBP_EXPORT_GET_LAST_ERR = 'dbp_get_last_error';
   DBP_EXPORT_FREE_BUFFER  = 'dbp_free_buffer';
+  DBP_EXPORT_INVOKE       = 'dbp_invoke';
 
 implementation
 

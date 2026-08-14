@@ -46,12 +46,13 @@ type
   TPluginType = (ptCore, ptExtended, ptExperimental);
 
   TPluginState = (
-    psUnloaded,     // 未加载
-    psLoading,      // 加载中
-    psLoaded,       // 已加载且 Initialize 成功
-    psReloading,    // 热重载窗口期（新调用返回 PLUGIN_RELOADING）
-    psError,        // 加载/初始化/Lease 超时失败（人工介入）
-    psUnloading     // 卸载中
+    psUnloaded,       // 未加载
+    psLoading,        // 加载中
+    psLoaded,         // 已加载且 Initialize 成功
+    psReloading,      // 热重载窗口期（新调用返回 PLUGIN_RELOADING）
+    psPendingRestart, // 配置变更、不支持热重载，等宿主重启（新调用返回 PLUGIN_RELOADING）
+    psError,          // 加载/初始化/Lease 超时失败（人工介入）
+    psUnloading       // 卸载中
   );
 
   TPluginMetadata = record
@@ -64,6 +65,7 @@ type
     AbiMinor: Integer;
     SupportsHotReload: Boolean;
     DependsOn: TArray<string>;
+    Capabilities: TArray<string>;  // 声明能力，如 ['has_invoke']（F3: 能力门禁）
   end;
 
   TPluginHealthStatus = record
@@ -128,6 +130,7 @@ begin
     psLoading:    Result := 'Loading';
     psLoaded:     Result := 'Loaded';
     psReloading:  Result := 'Reloading';
+    psPendingRestart: Result := 'PendingRestart';
     psError:      Result := 'Error';
     psUnloading:  Result := 'Unloading';
   else
@@ -178,7 +181,9 @@ function MetadataToJsonBytes(const AMeta: TPluginMetadata): TBytes;
 var
   LJson: TJSONObject;
   LDeps: TJSONArray;
+  LCaps: TJSONArray;
   LDep: string;
+  LCap: string;
 begin
   LJson := TJSONObject.Create;
   try
@@ -198,11 +203,20 @@ begin
       for LDep in AMeta.DependsOn do
         LDeps.Add(LDep);
       LJson.AddPair('depends_on', LDeps);
-      Result := TEncoding.UTF8.GetBytes(LJson.ToJSON);
     except
       LDeps.Free;
       raise;
     end;
+    LCaps := TJSONArray.Create;
+    try
+      for LCap in AMeta.Capabilities do
+        LCaps.Add(LCap);
+      LJson.AddPair('capabilities', LCaps);
+    except
+      LCaps.Free;
+      raise;
+    end;
+    Result := TEncoding.UTF8.GetBytes(LJson.ToJSON);
   finally
     LJson.Free;
   end;
@@ -246,6 +260,12 @@ begin
         SetLength(AMeta.DependsOn, LDeps.Count);
         for I := 0 to LDeps.Count - 1 do
           AMeta.DependsOn[I] := LDeps.Items[I].Value;
+      end;
+      if LJson.TryGetValue<TJSONArray>('capabilities', LDeps) then
+      begin
+        SetLength(AMeta.Capabilities, LDeps.Count);
+        for I := 0 to LDeps.Count - 1 do
+          AMeta.Capabilities[I] := LDeps.Items[I].Value;
       end;
       Result := True;
     end;

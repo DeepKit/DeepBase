@@ -157,6 +157,7 @@ begin
   LMeta.AbiMajor := FAbiMajor;
   LMeta.AbiMinor := FAbiMinor;
   LMeta.SupportsHotReload := True;
+  LMeta.Capabilities := TArray<string>.Create('has_invoke');  // F3: 声明 invoke 能力
   AMetaJsonBytes := MetadataToJsonBytes(LMeta);
   Result := PLUGIN_OK;
 end;

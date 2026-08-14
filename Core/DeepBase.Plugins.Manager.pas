@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Plugins.Manager - 泛化插件生命周期管理器（注册制 + Lease 门禁）
 
   法源：docs/77.extend.PluginHotReload §4/§5
@@ -24,7 +24,7 @@ uses
   System.SysUtils, System.SyncObjs, System.Generics.Collections,
   Winapi.Windows,
   DeepBase.Plugins.Contracts, DeepBase.Plugins.SafeGuard,
-  DeepBase.Plugins.Verifier;
+  DeepBase.Plugins.Verifier, DeepBase.Plugins.CAbiLoader;
 
 type
   TPluginLoadEvent = procedure(const APluginName: string;
@@ -39,6 +39,7 @@ type
   TPluginKindInfo = record
     Kind: string;             // 契约类别名（宿主 RegisterPluginKind 定义）
     CreateFuncPrefix: string; // 导出函数名前缀，默认 'Create'
+    RequiredCapabilities: TArray<string>; // F3: 该类别插件必须声明的能力
   end;
 
   TPluginInfo = record
@@ -47,9 +48,11 @@ type
     DllPath: string;
     CreateFuncName: string;   // 导出函数名（缺省按 Kind 前缀约定生成）
     DependsOn: TArray<string>;
+    IsCAbi: Boolean;          // True=纯 C ABI 插件（dbp_* 通道，无 IPluginContract）
     State: TPluginState;
-    Handle: HMODULE;
-    Plugin: IPluginContract;
+    Handle: HMODULE;          // 旧接口 DLL 句柄；C ABI 句柄由 CAbiPlugin 持有
+    Plugin: IPluginContract;  // 旧接口引用；C ABI 插件此字段为 nil
+    CAbiPlugin: TCAbiPlugin;  // C ABI 插件加载器；旧接口插件此字段为 nil
     Metadata: TPluginMetadata;
     LastLoadedAt: TDateTime;
     LastReloadAt: TDateTime;
@@ -73,11 +76,17 @@ type
     FManager: TObject;        // 弱引用回指 Manager（由 Manager 负责生命周期序）
     FPluginName: string;
     FPlugin: IPluginContract;
+    FCAbiPlugin: TCAbiPlugin; // 纯 C ABI 通道；旧接口插件此字段为 nil
     FReleased: Boolean;
   public
     destructor Destroy; override;
     property PluginName: string read FPluginName;
+    { 旧接口通道（IPluginContract）。C ABI 插件访问此字段返回 nil，
+      需改走 CAbiPlugin 通道。调用方按 IsCAbi 判定。 }
     property Plugin: IPluginContract read FPlugin;
+    { 纯 C ABI 通道（TCAbiPlugin）。HasInvoke/Invoke/GetHealth 等。
+      旧接口插件访问此字段返回 nil。 }
+    property CAbiPlugin: TCAbiPlugin read FCAbiPlugin;
   end;
 
   { =========================================================================
@@ -105,6 +114,10 @@ type
     { DFS 拓扑环检测：假设 AName 依赖 ADependsOn，图中是否出现环 }
     function WouldCreateCycle(const AName: string;
       const ADependsOn: TArray<string>): Boolean;
+    { F3: 校验插件元数据是否声明了该类别要求的全部能力；缺一项返回 False + 缺失项 }
+    function CheckRequiredCapabilities(const AKind: string;
+      const ADeclared: TArray<string>;
+      out AMissing: TArray<string>): Boolean;
     function DoLoadPlugin(const APluginName: string;
       const AVisited: TList<string>): Integer;
     function DoUnloadPlugin(const APluginName: string): Integer;
@@ -121,11 +134,14 @@ type
     destructor Destroy; override;
 
     { --- 注册制（77 §4） --- }
-    procedure RegisterPluginKind(const AKind, ACreateFuncPrefix: string);
-    { ADependsOn 环检测失败时抛 EPluginDependencyError }
+    procedure RegisterPluginKind(const AKind, ACreateFuncPrefix: string;
+      const ARequiredCapabilities: TArray<string> = nil);
+    { ADependsOn 环检测失败时抛 EPluginDependencyError
+      ACAbi=True 时插件按纯 C ABI（dbp_*）通道加载，不走 IPluginContract }
     procedure RegisterPlugin(const AName, AKind: string;
       const ADependsOn: TArray<string> = nil;
-      const ACreateFuncName: string = '');
+      const ACreateFuncName: string = '';
+      const ACAbi: Boolean = False);
     procedure SetPluginDllPath(const AName, ADllPath: string);
 
     { --- 生命周期（返回错误码，不抛异常） --- }
@@ -218,7 +234,7 @@ end;
 { --- 注册制 --- }
 
 procedure TDeepBasePluginManager.RegisterPluginKind(const AKind,
-  ACreateFuncPrefix: string);
+  ACreateFuncPrefix: string; const ARequiredCapabilities: TArray<string>);
 var
   LKindInfo: TPluginKindInfo;
 begin
@@ -226,6 +242,7 @@ begin
   try
     LKindInfo.Kind := AKind;
     LKindInfo.CreateFuncPrefix := ACreateFuncPrefix;
+    LKindInfo.RequiredCapabilities := ARequiredCapabilities;
     FKinds.AddOrSetValue(AKind, LKindInfo);
   finally
     FLock.Leave;
@@ -272,8 +289,44 @@ begin
   end;
 end;
 
+function TDeepBasePluginManager.CheckRequiredCapabilities(const AKind: string;
+  const ADeclared: TArray<string>; out AMissing: TArray<string>): Boolean;
+var
+  LKindInfo: TPluginKindInfo;
+  LReq, LCap: string;
+  LFound: Boolean;
+begin
+  AMissing := nil;
+  FLock.Enter;
+  try
+    if not FKinds.TryGetValue(AKind, LKindInfo) then
+      Exit(True);  // 未知类别不强制能力（向后兼容）
+    if LKindInfo.RequiredCapabilities = nil then
+      Exit(True);
+  finally
+    FLock.Leave;
+  end;
+  for LReq in LKindInfo.RequiredCapabilities do
+  begin
+    LFound := False;
+    for LCap in ADeclared do
+      if SameText(LCap, LReq) then
+      begin
+        LFound := True;
+        Break;
+      end;
+    if not LFound then
+    begin
+      SetLength(AMissing, Length(AMissing) + 1);
+      AMissing[High(AMissing)] := LReq;
+    end;
+  end;
+  Result := (Length(AMissing) = 0);
+end;
+
 procedure TDeepBasePluginManager.RegisterPlugin(const AName, AKind: string;
-  const ADependsOn: TArray<string>; const ACreateFuncName: string);
+  const ADependsOn: TArray<string>; const ACreateFuncName: string;
+  const ACAbi: Boolean);
 var
   LInfo: TPluginInfo;
   LKindInfo: TPluginKindInfo;
@@ -300,9 +353,11 @@ begin
     LInfo.Kind := AKind;
     LInfo.DllPath := ResolveDllPath(AName, AKind);
     LInfo.DependsOn := ADependsOn;
+    LInfo.IsCAbi := ACAbi;
     LInfo.State := psUnloaded;
     LInfo.Handle := 0;
     LInfo.Plugin := nil;
+    LInfo.CAbiPlugin := nil;
     if ACreateFuncName <> '' then
       LInfo.CreateFuncName := ACreateFuncName
     else
@@ -441,10 +496,12 @@ var
   LHandle: HMODULE;
   LCreateFunc: TCreatePluginFunc;
   LPlugin: IPluginContract;
+  LCAbiPlugin: TCAbiPlugin;
   LConfigBytes: TBytes;
   LMetaBytes: TBytes;
   LDep: string;
   LDepCode: Integer;
+  LMissing: TArray<string>;  // F3: 能力门禁缺失项
 begin
   FLock.Enter;
   try
@@ -478,6 +535,67 @@ begin
   SetPluginState(APluginName, psLoading);
   LHandle := 0;
   try
+    if LInfo.IsCAbi then
+    begin
+      { === 纯 C ABI 通道（dbp_* 导出，无 IPluginContract） === }
+      { 签名校验（LoadLibrary 前） }
+      FVerifier.VerifyPlugin(LInfo.DllPath);
+
+      { 加载 DLL、解析全部 dbp_* 导出、ABI 协商、创建实例 }
+      LCAbiPlugin := TCAbiPlugin.Create(LInfo.DllPath);
+
+      { 宿主注入配置 }
+      LConfigBytes := nil;
+      if Assigned(FOnLoadConfigBytes) then
+        FOnLoadConfigBytes(APluginName, LConfigBytes);
+      Result := LCAbiPlugin.Initialize(LConfigBytes);
+      if Result <> PLUGIN_OK then
+      begin
+        LCAbiPlugin.Free;
+        raise Exception.CreateFmt('C ABI Plugin Initialize 返回 %s',
+          [PluginErrorCodeToStr(Result)]);
+      end;
+
+      { 元数据快照（JSON 字节流） }
+      LMetaBytes := LCAbiPlugin.GetMetadata;
+
+      FLock.Enter;
+      try
+        LInfo.State := psLoaded;
+        LInfo.Handle := 0;       // C ABI 句柄由 CAbiPlugin 持有
+        LInfo.Plugin := nil;
+        LInfo.CAbiPlugin := LCAbiPlugin;
+        LInfo.LastLoadedAt := Now;
+        LInfo.LastError := '';
+        JsonBytesToMetadata(LMetaBytes, LInfo.Metadata);
+        LInfo.Metadata.Name := APluginName;
+        { F3: C ABI 缺少能力清单字段时，按导出符号自动探测 has_invoke }
+        if Length(LInfo.Metadata.Capabilities) = 0 then
+        begin
+          if LCAbiPlugin.HasInvoke then
+            LInfo.Metadata.Capabilities := TArray<string>.Create('has_invoke');
+        end;
+        FPlugins.AddOrSetValue(APluginName, LInfo);
+      finally
+        FLock.Leave;
+      end;
+
+      { F3: 能力门禁——该类别声明的必须项，插件未声明则降级 psError }
+      if not CheckRequiredCapabilities(LInfo.Kind, LInfo.Metadata.Capabilities,
+        LMissing) then
+      begin
+        SetPluginError(APluginName, PLUGIN_LOAD_FAILED,
+          Format('能力门禁：插件缺少类别 %s 必需能力 [%s]',
+            [LInfo.Kind, string.Join(', ', LMissing)]));
+        Exit(PLUGIN_LOAD_FAILED);
+      end;
+
+      if Assigned(FOnPluginLoaded) then
+        FOnPluginLoaded(APluginName, True);
+      Exit(PLUGIN_OK);
+    end;
+
+    { === 旧接口通道（IPluginContract） === }
     { Step 1: 签名校验 + LoadLibrary }
     LHandle := LoadDll(LInfo.DllPath);
 
@@ -515,6 +633,7 @@ begin
       LInfo.State := psLoaded;
       LInfo.Handle := LHandle;
       LInfo.Plugin := LPlugin;
+      LInfo.CAbiPlugin := nil;
       LInfo.LastLoadedAt := Now;
       LInfo.LastError := '';
       JsonBytesToMetadata(LMetaBytes, LInfo.Metadata);
@@ -522,6 +641,16 @@ begin
       FPlugins.AddOrSetValue(APluginName, LInfo);
     finally
       FLock.Leave;
+    end;
+
+    { F3: 能力门禁——该类别声明的必须项，插件未声明则降级 psError }
+    if not CheckRequiredCapabilities(LInfo.Kind, LInfo.Metadata.Capabilities,
+      LMissing) then
+    begin
+      SetPluginError(APluginName, PLUGIN_LOAD_FAILED,
+        Format('能力门禁：插件缺少类别 %s 必需能力 [%s]',
+          [LInfo.Kind, string.Join(', ', LMissing)]));
+      Exit(PLUGIN_LOAD_FAILED);
     end;
 
     LHandle := 0;  // 所有权已转移给注册表
@@ -576,6 +705,7 @@ function TDeepBasePluginManager.DoUnloadPlugin(
 var
   LInfo: TPluginInfo;
   LHandle: HMODULE;
+  LCAbiPlugin: TCAbiPlugin;
 begin
   Result := PLUGIN_OK;
 
@@ -585,15 +715,82 @@ begin
       Exit(PLUGIN_INVALID_INPUT);
     if LInfo.State = psUnloaded then
       Exit(PLUGIN_OK);
-    { psError may be the recoverable lease-drain timeout state: the DLL and
-      interface remain loaded, and a later unload is allowed after leases return. }
-    if (LInfo.State = psError) and ((LInfo.Handle = 0) or (LInfo.Plugin = nil)) then
+    { psPendingRestart 是可卸载状态（配置已变更，卸载释放后宿主可重载） }
+    if (LInfo.State = psError) and (LInfo.Plugin = nil) and (LInfo.CAbiPlugin = nil) then
       Exit(PLUGIN_LOAD_FAILED);
   finally
     FLock.Leave;
   end;
 
   SetPluginState(APluginName, psUnloading);
+
+  if LInfo.IsCAbi then
+  begin
+    { === 纯 C ABI 通道卸载 === }
+    LCAbiPlugin := LInfo.CAbiPlugin;
+
+    { Shutdown 异常不得中断卸载 }
+    try
+      LCAbiPlugin.Shutdown;
+    except
+      FSafeGuard.RecordCrash(APluginName);
+    end;
+
+    { 等待所有 Lease 释放 }
+    if not WaitLeasesDrain(APluginName, FLeaseDrainTimeoutMs) then
+    begin
+      { F1: 超时进入 psPendingRestart 而非 psError — DLL 保持加载，等 Lease 释放后再卸 }
+      FLock.Enter;
+      try
+        if FPlugins.TryGetValue(APluginName, LInfo) then
+        begin
+          LInfo.State := psPendingRestart;
+          LInfo.LastError := 'Unload 等待 Lease 释放超时，状态已设为 psPendingRestart，' +
+            '等 Lease 释放后重试卸载；禁止强制 FreeLibrary';
+          FPlugins.AddOrSetValue(APluginName, LInfo);
+        end;
+      finally
+        FLock.Leave;
+      end;
+      if Assigned(FOnPluginError) then
+        FOnPluginError(APluginName, PLUGIN_LEASE_TIMEOUT,
+          'Lease drain timeout → psPendingRestart');
+      Exit(PLUGIN_LEASE_TIMEOUT);
+    end;
+
+    { 从注册表摘除 C ABI 引用 }
+    FLock.Enter;
+    try
+      if FPlugins.TryGetValue(APluginName, LInfo) then
+      begin
+        LInfo.CAbiPlugin := nil;
+        FPlugins.AddOrSetValue(APluginName, LInfo);
+      end;
+    finally
+      FLock.Leave;
+    end;
+
+    { 释放 C ABI 加载器（内部 FreeLibrary） }
+    LCAbiPlugin.Free;
+
+    FLock.Enter;
+    try
+      if FPlugins.TryGetValue(APluginName, LInfo) then
+      begin
+        LInfo.State := psUnloaded;
+        LInfo.CAbiPlugin := nil;
+        FPlugins.AddOrSetValue(APluginName, LInfo);
+      end;
+    finally
+      FLock.Leave;
+    end;
+
+    if Assigned(FOnPluginUnloaded) then
+      FOnPluginUnloaded(APluginName, True);
+    Exit;
+  end;
+
+  { === 旧接口通道卸载 === }
   LHandle := LInfo.Handle;
 
   { Shutdown 异常不得中断卸载。这里不能用捕获 LInfo 的匿名函数：
@@ -609,9 +806,22 @@ begin
     FLeaseDrainTimeoutMs 仅供验收测试注入短超时，生产保持 300000） }
   if not WaitLeasesDrain(APluginName, FLeaseDrainTimeoutMs) then
   begin
-    SetPluginError(APluginName, PLUGIN_LEASE_TIMEOUT,
-      'Unload 等待 Lease 释放超时（300 秒），DLL 保持加载，需人工介入；' +
-      '禁止强制 FreeLibrary（引用非零强制卸载必崩）');
+    { F1: 超时进入 psPendingRestart 而非 psError — DLL 保持加载，等 Lease 释放后再卸 }
+    FLock.Enter;
+    try
+      if FPlugins.TryGetValue(APluginName, LInfo) then
+      begin
+        LInfo.State := psPendingRestart;
+        LInfo.LastError := 'Unload 等待 Lease 释放超时，状态已设为 psPendingRestart，' +
+          '等 Lease 释放后重试卸载；禁止强制 FreeLibrary';
+        FPlugins.AddOrSetValue(APluginName, LInfo);
+      end;
+    finally
+      FLock.Leave;
+    end;
+    if Assigned(FOnPluginError) then
+      FOnPluginError(APluginName, PLUGIN_LEASE_TIMEOUT,
+        'Lease drain timeout → psPendingRestart');
     Exit(PLUGIN_LEASE_TIMEOUT);
   end;
 
@@ -671,7 +881,7 @@ function TDeepBasePluginManager.EnsureLoaded(const APluginName: string): Integer
 begin
   case GetState(APluginName) of
     psLoaded:  Exit(PLUGIN_OK);
-    psReloading: Exit(PLUGIN_RELOADING);
+    psReloading, psPendingRestart: Exit(PLUGIN_RELOADING);
     psError:   Exit(PLUGIN_LOAD_FAILED);
   end;
   Result := LoadPlugin(APluginName);  // 懒加载（ASY-DLL-004）
@@ -744,17 +954,36 @@ function TDeepBasePluginManager.ReloadPluginConfig(const APluginName: string;
 var
   LLease: TPluginLease;
   LCode: Integer;
+  LInfo: TPluginInfo;
 begin
+  { 检查是否支持热重载（77 §5 第8条：不支持则设 psPendingRestart 等宿主重启） }
+  FLock.Enter;
+  try
+    if FPlugins.TryGetValue(APluginName, LInfo) and
+       not LInfo.Metadata.SupportsHotReload then
+    begin
+      LInfo.State := psPendingRestart;
+      LInfo.LastError := '配置已接受，等待宿主重启生效（psPendingRestart）';
+      FPlugins.AddOrSetValue(APluginName, LInfo);
+      Exit(PLUGIN_OK);
+    end;
+  finally
+    FLock.Leave;
+  end;
+
   { 走 Lease 门禁拿引用，SafeGuard 截获坏插件异常（77a §2.6 宿主调用边界） }
   LCode := AcquireLease(APluginName, LLease);
   if LCode <> PLUGIN_OK then
     Exit(LCode);
   try
-    Result := FSafeGuard.SafeCallInt(APluginName,
-      function: Integer
-      begin
-        Result := LLease.Plugin.ReloadConfig(AConfigBytes);
-      end);
+    if LLease.CAbiPlugin <> nil then
+      Result := LLease.CAbiPlugin.ReloadConfig(AConfigBytes)
+    else
+      Result := FSafeGuard.SafeCallInt(APluginName,
+        function: Integer
+        begin
+          Result := LLease.Plugin.ReloadConfig(AConfigBytes);
+        end);
   finally
     LLease.Free;
   end;
@@ -816,17 +1045,22 @@ begin
       Exit;  // 硬错误直接返回
 
     LState := GetState(APluginName);
+    { F2: psPendingRestart 拒绝新 Lease（77 §5.3 停止新调用，等待宿主重启） }
+    if LState = psPendingRestart then
+      Exit(PLUGIN_RELOADING);
     if LState = psLoaded then
     begin
       FLock.Enter;
       try
         if FPlugins.TryGetValue(APluginName, LInfo) and
-           (LInfo.State = psLoaded) and (LInfo.Plugin <> nil) then
+           (LInfo.State = psLoaded) and
+           ((LInfo.Plugin <> nil) or (LInfo.CAbiPlugin <> nil)) then
         begin
           ALease := TPluginLease.Create;
           ALease.FManager := Self;
           ALease.FPluginName := APluginName;
           ALease.FPlugin := LInfo.Plugin;
+          ALease.FCAbiPlugin := LInfo.CAbiPlugin;
           ALease.FReleased := False;
           Inc(LInfo.ActiveLeases);
           FPlugins.AddOrSetValue(APluginName, LInfo);
@@ -866,8 +1100,11 @@ end;
 { --- 查询 --- }
 
 function TDeepBasePluginManager.IsLoaded(const APluginName: string): Boolean;
+var
+  LState: TPluginState;
 begin
-  Result := GetState(APluginName) = psLoaded;
+  LState := GetState(APluginName);
+  Result := (LState = psLoaded) or (LState = psPendingRestart);
 end;
 
 function TDeepBasePluginManager.IsRegistered(const APluginName: string): Boolean;
@@ -926,7 +1163,7 @@ begin
   FLock.Enter;
   try
     for LPair in FPlugins do
-      if LPair.Value.State = psLoaded then
+      if (LPair.Value.State = psLoaded) or (LPair.Value.State = psPendingRestart) then
         Inc(Result);
   finally
     FLock.Leave;

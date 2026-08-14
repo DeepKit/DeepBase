@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   PluginLifecycleHarness - 77a ADR §4 验收测试独立运行器
 
   法源：docs/77a.adr.Plugin-ABI-and-Lifetime §4 验收要点：
@@ -278,16 +278,16 @@ begin
       LThreadCode = PLUGIN_LEASE_TIMEOUT, 'code=' + IntToStr(LThreadCode));
 
     LInfo := M.GetPluginInfo('Echo');
-    Check('state=psError after drain timeout', LInfo.State = psError,
+    Check('state=psPendingRestart after drain timeout', LInfo.State = psPendingRestart,
       PluginStateToStr(LInfo.State));
     Check('DLL handle NOT force-freed (77a ban on forced FreeLibrary)',
       LInfo.Handle = LHandleBefore,
       Format('before=%d after=%d', [LHandleBefore, LInfo.Handle]));
 
-    // psError 后 AcquireLease 必须快速失败（人工介入语义）
-    LCode := M.AcquireLease('Echo', LLease);
-    Check('acquire after psError rejected',
-      (LCode <> PLUGIN_OK), 'code=' + IntToStr(LCode));
+    // psPendingRestart 后 AcquireLease 必须返回 PLUGIN_RELOADING（阻止新调用）
+    LCode := M.AcquireLease('Echo', LLease, 100);
+    Check('acquire after psPendingRestart -> PLUGIN_RELOADING',
+      LCode = PLUGIN_RELOADING, 'code=' + IntToStr(LCode));
 
     // 持有者归还后，二次 Unload 应能完成收尾（无需人工 FreeLibrary）
     M.ReleaseLease(LHeldLease);
@@ -443,6 +443,43 @@ begin
   end;
 end;
 
+{ --- T09a: dbp_free_buffer 契约符号（M1-①） --- }
+procedure Test_CAbiFreeBufferSymbol(const ADllPath: string);
+type
+  TFreeBufferProc = procedure(APtr: Pointer); stdcall;
+var
+  LMod: HMODULE;
+  LFree: TFreeBufferProc;
+  P: Pointer;
+begin
+  Writeln('  [9d] dbp_free_buffer symbol');
+  LMod := LoadLibrary(PChar(ADllPath));
+  if LMod = 0 then
+  begin
+    Check('dbp_free_buffer symbol LoadLibrary', False,
+      'Win32 ' + IntToStr(GetLastError));
+    Exit;
+  end;
+  try
+    LFree := GetProcAddress(LMod, 'dbp_free_buffer');
+    Check('dbp_free_buffer export present', Assigned(LFree),
+      'GetProcAddress returned nil');
+    if Assigned(LFree) then
+    begin
+      // 契约 L125：传入 NULL 安全（不崩）
+      LFree(nil);
+      Check('dbp_free_buffer(NULL) safe', True, 'no-op OK');
+      // 对宿主分配的内存调用为 no-op（fixture 走宿主分配主路径）
+      GetMem(P, 64);
+      LFree(P);
+      FreeMem(P);
+      Check('dbp_free_buffer(host-allocated) no-op', True, 'no-op OK');
+    end;
+  finally
+    FreeLibrary(LMod);
+  end;
+end;
+
 { --- T09: 纯 C ABI 加载器（P0-001） --- }
 procedure Test_CAbi;
 const
@@ -501,12 +538,201 @@ begin
     LPlugin.Free;
   end;
 
-  // 9d: 销毁后句柄数稳定（无泄漏）
+  // 9d: dbp_free_buffer 契约符号（77a §2.3：插件分配/宿主释放的唯一通道）
+  //     fixture 走宿主分配主路径，free_buffer 为保留符号；验证导出存在 +
+  //     NULL 安全（C 头契约 L125），不验证插件分配路径本体。
+  Test_CAbiFreeBufferSymbol(LPath);
+
+  // 9e: 销毁后句柄数稳定（无泄漏）
   GetProcessHandleCount(GetCurrentProcess, LAfter);
   Check('C ABI load/destroy no handle leak (delta<=10)',
     Integer(LAfter) - Integer(LBefore) <= 10,
     Format('before=%d after=%d delta=%d',
       [LBefore, LAfter, Integer(LAfter) - Integer(LBefore)]));
+
+  // 9f: ABI 1.1 dbp_invoke echo 往返
+  LPlugin := TCAbiPlugin.Create(LPath);
+  try
+    Check('HasInvoke=true for ABI 1.1 fixture', LPlugin.HasInvoke,
+      'HasInvoke 应为 True');
+    LCode := LPlugin.Initialize(nil);
+    Check('dbp_initialize (for invoke) OK', LCode = DBP_OK,
+      'code=' + IntToStr(LCode));
+
+    LPlugin.Invoke(TEncoding.UTF8.GetBytes('hello'), LMeta);
+    Check('dbp_invoke returns response', Length(LMeta) > 0,
+      'len=' + IntToStr(Length(LMeta)));
+    Check('dbp_invoke response is JSON echo',
+      Pos('echo', LowerCase(TEncoding.UTF8.GetString(LMeta))) > 0,
+      'got ' + TEncoding.UTF8.GetString(LMeta));
+  finally
+    LPlugin.Free;
+  end;
+end;
+
+{ --- T10: Manager C ABI 集成路径（通过 Lease.CAbiPlugin 调用 Invoke） --- }
+procedure Test_ManagerCAbi;
+const
+  DBPDLL = 'TestPlugin77.dll';
+var
+  M: TDeepBasePluginManager;
+  LCode: Integer;
+  LLease: TPluginLease;
+  LInfo: TPluginInfo;
+  LResp: TBytes;
+begin
+  Writeln('[10] Manager C ABI integration');
+  M := NewMgr;
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    M.RegisterPlugin('CAbiEcho', 'echo', nil, '', True);
+    M.SetPluginDllPath('CAbiEcho', GDllPath);
+    LCode := M.LoadPlugin('CAbiEcho');
+    Check('T10a: C ABI LoadPlugin OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    LCode := M.AcquireLease('CAbiEcho', LLease);
+    Check('T10b: C ABI AcquireLease OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    { 通过 Lease.CAbiPlugin.Invoke 调用通用业务入口 }
+    LLease.CAbiPlugin.Invoke(TEncoding.UTF8.GetBytes('{"cmd":"ping"}'), LResp);
+    Check('T10c: C ABI Invoke via lease has response', Length(LResp) > 0,
+      'len=' + IntToStr(Length(LResp)));
+
+    M.ReleaseLease(LLease);
+    LInfo := M.GetPluginInfo('CAbiEcho');
+    Check('T10d: C ABI ActiveLeases=0 after release',
+      LInfo.ActiveLeases = 0, 'got ' + IntToStr(LInfo.ActiveLeases));
+
+    LCode := M.UnloadPlugin('CAbiEcho');
+    Check('T10e: C ABI UnloadPlugin OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+  finally
+    M.Free;
+  end;
+end;
+
+{ --- T11: psPendingRestart 状态路径（通过 ReloadPluginConfig 触发） --- }
+procedure Test_PendingRestart;
+var
+  M: TDeepBasePluginManager;
+  LCode: Integer;
+  LLease: TPluginLease;
+  LInfo: TPluginInfo;
+  LResp: TBytes;
+begin
+  Writeln('[11] psPendingRestart state path');
+  M := NewMgr;
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    { 使用 BasePlugin（SupportsHotReload=False）确保 ReloadPluginConfig 设 psPendingRestart }
+    M.RegisterPlugin('PendingEcho', 'echo', nil, 'CreateBasePlugin');
+    M.SetPluginDllPath('PendingEcho', GDllPath);
+    LCode := M.LoadPlugin('PendingEcho');
+    Check('T11a: LoadPlugin OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    { 先获取 Lease（此时仍 psLoaded），再触发 ReloadPluginConfig 切到 psPendingRestart }
+    LCode := M.AcquireLease('PendingEcho', LLease);
+    Check('T11e: AcquireLease (before reload) OK',
+      LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    { ReloadPluginConfig 触发 psPendingRestart（因 SupportsHotReload=False） }
+    LCode := M.ReloadPluginConfig('PendingEcho',
+      TEncoding.UTF8.GetBytes('{"key":"val"}'));
+    Check('T11b: ReloadPluginConfig returns PLUGIN_OK (sets psPendingRestart)',
+      LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    LInfo := M.GetPluginInfo('PendingEcho');
+    Check('T11c: state=psPendingRestart after ReloadPluginConfig',
+      LInfo.State = psPendingRestart,
+      'got ' + PluginStateToStr(LInfo.State));
+
+    { psPendingRestart 状态下 IsLoaded 仍返回 True }
+    Check('T11d: IsLoaded(pendingRestart)=True',
+      M.IsLoaded('PendingEcho'), 'IsLoaded 应为 True');
+
+    { Invoke 通过已有 Lease 仍可调用（旧 Lease 被允许完成） }
+    LLease.Plugin.GetMetadata(LResp);
+    Check('T11f: Invoke (GetMetadata) while pendingRestart OK',
+      Length(LResp) > 0, 'len=' + IntToStr(Length(LResp)));
+
+    { 释放旧 Lease }
+    M.ReleaseLease(LLease);
+
+    { psPendingRestart 拒绝新 Lease（F2：停止新调用） }
+    LCode := M.AcquireLease('PendingEcho', LLease, 100);
+    Check('T11e2: AcquireLease after pendingRestart -> PLUGIN_RELOADING',
+      LCode = PLUGIN_RELOADING, 'code=' + IntToStr(LCode));
+
+    { UnloadPlugin 处理 psPendingRestart }
+    LCode := M.UnloadPlugin('PendingEcho');
+    Check('T11g: UnloadPlugin from pendingRestart OK',
+      LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+    Check('T11h: state=psUnloaded after unload',
+      M.GetPluginInfo('PendingEcho').State = psUnloaded,
+      'got ' + PluginStateToStr(M.GetPluginInfo('PendingEcho').State));
+  finally
+    M.Free;
+  end;
+end;
+
+{ --- T12: F3 capability/metadata 门禁 --- }
+{ 注：Kind 名 = 导出基底名（Create+<Kind>+Plugin）。fixture 导出
+  CreateEchoPlugin(声明 has_invoke) 与 CreateBasePlugin(无能力)。 }
+procedure Test_CapabilityGate;
+var
+  M: TDeepBasePluginManager;
+  LCode: Integer;
+  LInfo: TPluginInfo;
+begin
+  Writeln('[12] F3 capability/metadata gate');
+
+  // T12a: C ABI——类别要求 has_invoke，fixture 导出 dbp_invoke
+  //       自动探测注入 has_invoke → 门禁通过
+  M := NewMgr;
+  try
+    M.RegisterPluginKind('echo_caps', 'Create', TArray<string>.Create('has_invoke'));
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    M.RegisterPlugin('CAbiEchoCaps', 'echo_caps', nil, '', True);
+    M.SetPluginDllPath('CAbiEchoCaps', GDllPath);
+    LCode := M.LoadPlugin('CAbiEchoCaps');
+    Check('T12a: C ABI pass gate (auto-detect has_invoke)', LCode = PLUGIN_OK,
+      'code=' + IntToStr(LCode));
+    M.UnloadPlugin('CAbiEchoCaps');
+  finally
+    M.Free;
+  end;
+
+  // T12b/T12c: 旧接口 Base（无能力声明）对 has_invoke 要求 → 拒 + psError
+  { 插件名 = 导出基底名，factory 解析为 Create+<Name>+Plugin }
+  M := NewMgr;
+  try
+    M.RegisterPluginKind('base', 'Create', TArray<string>.Create('has_invoke'));
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    M.RegisterPlugin('Base', 'base', nil);  // → CreateBasePlugin（无能力声明）
+    M.SetPluginDllPath('Base', GDllPath);
+    LCode := M.LoadPlugin('Base');
+    Check('T12b: legacy reject on missing capability', LCode = PLUGIN_LOAD_FAILED,
+      'code=' + IntToStr(LCode));
+    LInfo := M.GetPluginInfo('Base');
+    Check('T12c: rejected plugin state=psError', LInfo.State = psError,
+      'state=' + IntToStr(Ord(LInfo.State)));
+  finally
+    M.Free;
+  end;
+
+  // T12d: 旧接口 Echo 声明 has_invoke → 门禁通过
+  M := NewMgr;
+  try
+    M.RegisterPluginKind('echo', 'Create', TArray<string>.Create('has_invoke'));
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    M.RegisterPlugin('Echo', 'echo', nil);  // → CreateEchoPlugin（声明 has_invoke）
+    M.SetPluginDllPath('Echo', GDllPath);
+    LCode := M.LoadPlugin('Echo');
+    Check('T12d: legacy Echo pass gate (declares has_invoke)', LCode = PLUGIN_OK,
+      'code=' + IntToStr(LCode));
+    M.UnloadPlugin('Echo');
+  finally
+    M.Free;
+  end;
 end;
 
 begin
@@ -536,6 +762,9 @@ begin
     Test_SafeGuardCrash;
     Test_DependencyLoad;
     Test_CAbi;
+    Test_ManagerCAbi;
+    Test_PendingRestart;
+    Test_CapabilityGate;
 
     Writeln;
     Writeln(Format('RESULT: %d passed, %d failed', [GPass, GFail]));

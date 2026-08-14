@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   TestPlugin77.CAbi - fixture DLL 的纯 C ABI 转发层（P0-001）
 
   法源：include/deepbase_plugins_c.h（C 权威）
@@ -8,7 +8,8 @@
   - 本 DLL 同时导出旧 Delphi 接口工厂（Create*Plugin，供 41/41）与
     dbp_* 纯 C 函数（供 P0-001 C ABI 测试）；
   - dbp_create 读 config JSON 的 plugin_type 字段决定创建哪种变体
-    （echo / base / abi_bad），默认 echo；返回不透明句柄 = 内部包装器；
+    （echo / base），默认 echo；返回不透明句柄 = 内部包装器；
+    abi_bad 变体不支持（C ABI 为 DLL 级契约，无 per-instance ABI 变体，见 77a §4.1）；
   - 内部持有 IPluginContract + TBytes 仅在 DLL 内部使用，不跨边界；
     跨边界的只有 dbp_* 函数签名（纯 C 数据面）；
   - 变长输出（metadata / last_error）走两次调用：先 GetMetadata 得 TBytes，
@@ -38,6 +39,9 @@ function dbp_get_health(AHandle: dbp_plugin_handle;
 function dbp_get_last_error(AHandle: dbp_plugin_handle;
   AOut: Pdbp_out_buffer): Int32; stdcall;
 procedure dbp_free_buffer(APtr: Pointer); stdcall;
+{ ABI 1.1 通用业务调用 }
+function dbp_invoke(AHandle: dbp_plugin_handle;
+  const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
 
 implementation
 
@@ -61,15 +65,18 @@ var
   LRoot: TJSONValue;
   LObj: TJSONObject;
   LType: string;
+  LConfigBytes: TBytes;
 begin
   Result := 'echo';   { 默认 echo }
   if (AConfig = nil) or (AConfig.length = 0) or (AConfig.data = nil) then
     Exit;
   LRoot := nil;
   try
+    LConfigBytes := nil;
+    SetLength(LConfigBytes, AConfig.length);
+    Move(AConfig.data^, LConfigBytes[0], AConfig.length);
     LRoot := TJSONObject.ParseJSONValue(
-      TEncoding.UTF8.GetString(
-        TBytes(AConfig.data), 0, AConfig.length));
+      TEncoding.UTF8.GetString(LConfigBytes));
     if LRoot is TJSONObject then
     begin
       LObj := TJSONObject(LRoot);
@@ -83,10 +90,10 @@ end;
 
 function CreateByType(const AType: string): IPluginContract;
 begin
+  { C ABI 是 DLL 级契约（77a §4.1）：无 per-instance ABI 变体，故不支持 abi_bad。
+    abi_bad 由旧接口世界独立导出 CreateAbiBadPlugin（[03] harness 测试消费）。 }
   if AType = 'base' then
     Result := CreateBasePlugin      { 调 Impl 导出的工厂（类在 implementation 区，不可直接引用） }
-  else if AType = 'abi_bad' then
-    Result := CreateAbiBadPlugin
   else
     Result := CreateEchoPlugin;     { echo 默认 }
 end;
@@ -182,7 +189,7 @@ begin
     Exit;
   end;
   if AOut.capacity < Length(ASource) then
-    Exit(DBP_ERR_INVALID_INPUT);   { 缓冲不足 }
+    Exit(Length(ASource));   { 缓冲不足：报告所需长度，宿主据此扩容重试 }
   Move(ASource[0], AOut.data^, Length(ASource));
   Result := Length(ASource);
 end;
@@ -255,6 +262,35 @@ begin
   { 本 DLL 变长输出使用宿主分配（两次调用模式），无插件分配缓存，
     故 FreeBuffer 为 no-op（保留符号以满足 ABI 契约）。 }
   APtr := nil;
+end;
+
+{ ABI 1.1 通用业务调用：echo 回显请求内容 }
+function dbp_invoke(AHandle: dbp_plugin_handle;
+  const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
+var
+  LReqBytes: TBytes;
+  LReqStr: string;
+  LResp: TBytes;
+begin
+  if (AHandle = nil) or (ARequest = nil) then
+    Exit(DBP_ERR_INVALID_INPUT);
+  try
+    { 读入请求（ARequest.data 是 raw ptr，转 TBytes 用 Move 拷贝，不可直接 cast） }
+    if (ARequest.data = nil) or (ARequest.length = 0) then
+      Exit(DBP_ERR_INVALID_INPUT);
+    SetLength(LReqBytes, ARequest.length);
+    Move(ARequest.data^, LReqBytes[0], ARequest.length);
+    LReqStr := TEncoding.UTF8.GetString(LReqBytes);
+    { 若请求含 "crash" 字样则模拟崩溃 }
+    if Pos('crash', LowerCase(LReqStr)) > 0 then
+      raise Exception.Create('crash requested');
+    { 构造 echo 响应 }
+    LResp := TEncoding.UTF8.GetBytes(
+      '{"echo":true,"request_len":' + IntToStr(Length(LReqStr)) + '}');
+    Result := TwoPhaseCopy(LResp, AOut);
+  except
+    Result := DBP_ERR_INTERNAL;
+  end;
 end;
 
 end.
