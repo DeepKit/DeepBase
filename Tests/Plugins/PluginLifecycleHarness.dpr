@@ -675,8 +675,10 @@ begin
 end;
 
 { --- T12: F3 capability/metadata 门禁 --- }
-{ 注：Kind 名 = 导出基底名（Create+<Kind>+Plugin）。fixture 导出
-  CreateEchoPlugin(声明 has_invoke) 与 CreateBasePlugin(无能力)。 }
+{ 注：插件实例名必须与导出基底名一致；factory 解析为 Create+<插件实例名>+Plugin
+  （见 Manager.pas:364）。Kind 仅用于类别与能力门禁，不参与工厂导出名解析。
+  fixture 导出 CreateEchoPlugin(声明 has_invoke) 与 CreateBasePlugin(无能力)，
+  故测试分别用插件实例名 'Echo' / 'Base' 命中，Kind 用 'echo' / 'base' 走门禁。 }
 procedure Test_CapabilityGate;
 var
   M: TDeepBasePluginManager;
