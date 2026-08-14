@@ -36,7 +36,8 @@ exports
   dbp_get_health name 'dbp_get_health',
   dbp_get_last_error name 'dbp_get_last_error',
   dbp_free_buffer name 'dbp_free_buffer',
-  dbp_invoke name 'dbp_invoke';
+  dbp_invoke name 'dbp_invoke',
+  dbp_invoke_alloc name 'dbp_invoke_alloc';
 
 begin
 end.

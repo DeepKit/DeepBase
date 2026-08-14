@@ -70,6 +70,10 @@ type
   { ABI 1.1 通用业务调用（可选导出，host 需验证 MINOR>=1 且导出存在后再调用） }
   TDbpInvokeFunc      = function(AHandle: dbp_plugin_handle;
     const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
+  { ABI 1.1 插件分配归属变体：同参数，但 AOut.data 由插件分配、宿主须用
+    dbp_free_buffer 释放（P0-001 ABI11 remediation §F5）。 }
+  TDbpInvokeAllocFunc = function(AHandle: dbp_plugin_handle;
+    const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
 
 const
   { ABI 版本（与 C 头文件 DBP_ABI_MAJOR/MINOR 严格一致） }
@@ -99,6 +103,7 @@ const
   DBP_EXPORT_GET_LAST_ERR = 'dbp_get_last_error';
   DBP_EXPORT_FREE_BUFFER  = 'dbp_free_buffer';
   DBP_EXPORT_INVOKE       = 'dbp_invoke';
+  DBP_EXPORT_INVOKE_ALLOC = 'dbp_invoke_alloc';
 
 implementation
 

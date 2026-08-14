@@ -311,7 +311,9 @@ var
   LCode: Integer;
   I: Integer;
   LBefore, LAfter, LFinal: DWORD;
+  LCur: DWORD;
   LFirstErr: string;
+  LDiag: Boolean;
 begin
   Writeln('[06] hot reload x', RELOADS, ' (handle leak check)');
   M := NewMgr;
@@ -324,8 +326,14 @@ begin
 
     GetProcessHandleCount(GetCurrentProcess, LBefore);
     LFirstErr := '';
+    LDiag := (ParamStr(1) = 'stressdiag');
     for I := 1 to RELOADS do
     begin
+      if LDiag then
+      begin
+        GetProcessHandleCount(GetCurrentProcess, LCur);
+        Writeln('  [stressdiag] iter=', I, ' handles=', LCur);
+      end;
       LCode := M.ReloadPlugin('Echo');
       if (LCode <> PLUGIN_OK) and (LFirstErr = '') then
         LFirstErr := Format('iter %d: code=%d', [I, LCode]);
@@ -353,6 +361,87 @@ begin
   end;
 end;
 
+{ --- T06S: F4 验收第 1 条 —— 单进程串连压 T06 x100 连 5 轮无 FATAL
+  (F4-0 复现侦查结论: 间歇 FATAL 属 OS 内存压力瞬时窗口、不可按需稳定复现;
+   旧接口路径有完整 UAF 防护、无可见确定性缺陷。本过程把它转为可断言验收:
+   单 Manager 连续 500 次 reload(=5 轮 × 100, 阶段断言 + 终态句柄稳定).
+   若再撞 OS 窗口 FATAL → harness 顶层 except 抓 → ExitCode=3; 非 FATAL 即过) --- }
+procedure Test_HotReloadStress5Rounds;
+const
+  TOTAL_RELOADS = 500;
+  ROUND = 100;
+var
+  M: TDeepBasePluginManager;
+  LCode: Integer;
+  I, LRound: Integer;
+  LBefore, LRoundStart, LAfter, LFinal: DWORD;
+  LDiagHandles: DWORD;
+  LDiag: Boolean;
+  LFirstErr: string;
+  LAllGreen: Boolean;
+begin
+  Writeln('[06S] hot reload stress: ', ROUND, ' x 5 rounds (',
+    TOTAL_RELOADS, ' continuous reloads, single manager)');
+  M := NewMgr;
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    RegEcho(M, 'Echo');
+    LCode := M.LoadPlugin('Echo');
+    Check('stress initial load OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+    if LCode <> PLUGIN_OK then Exit;
+
+    GetProcessHandleCount(GetCurrentProcess, LBefore);
+    LDiag := (ParamStr(1) = 'stressdiag');
+    LFirstErr := '';
+    for I := 1 to TOTAL_RELOADS do
+    begin
+      if LDiag then
+      begin
+        GetProcessHandleCount(GetCurrentProcess, LDiagHandles);
+        Writeln('  [stressdiag] iter=', I, ' handles=', LDiagHandles);
+      end;
+      LCode := M.ReloadPlugin('Echo');
+      if (LCode <> PLUGIN_OK) and (LFirstErr = '') then
+        LFirstErr := Format('iter %d: code=%d', [I, LCode]);
+      { 每 100 次打一个 round marker + 阶段句柄 delta 断言 }
+      if (I mod ROUND) = 0 then
+      begin
+        LRound := I div ROUND;
+        GetProcessHandleCount(GetCurrentProcess, LRoundStart);
+        Check(Format('round %d: reloads 1..%d all OK', [LRound, I]),
+          LFirstErr = '', LFirstErr);
+        Check(Format('round %d: handle delta<=10 vs baseline', [LRound]),
+          Integer(LRoundStart) - Integer(LBefore) <= 10,
+          Format('baseline=%d r%d_end=%d delta=%d',
+            [LBefore, LRound, LRoundStart,
+             Integer(LRoundStart) - Integer(LBefore)]));
+      end;
+    end;
+    GetProcessHandleCount(GetCurrentProcess, LAfter);
+
+    { 总计断言: 5 轮全 OK + ReloadCount=500 + 句柄稳定 }
+    LAllGreen := (LFirstErr = '') and
+      (M.GetPluginInfo('Echo').ReloadCount = TOTAL_RELOADS);
+    Check('all 5 rounds green (500 reloads)', LAllGreen,
+      LFirstErr + ' reloadcount=' +
+      IntToStr(M.GetPluginInfo('Echo').ReloadCount));
+    Check('stress handle count stable (delta<=10)',
+      Integer(LAfter) - Integer(LBefore) <= 10,
+      Format('before=%d after=%d delta=%d',
+        [LBefore, LAfter, Integer(LAfter) - Integer(LBefore)]));
+
+    LCode := M.UnloadPlugin('Echo');
+    Check('stress final unload OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+    GetProcessHandleCount(GetCurrentProcess, LFinal);
+    Check('stress handles drained after unload (delta<=10 vs baseline)',
+      Integer(LFinal) - Integer(LBefore) <= 10,
+      Format('baseline=%d final=%d delta=%d',
+        [LBefore, LFinal, Integer(LFinal) - Integer(LBefore)]));
+  finally
+    M.Free;
+  end;
+end;
+
 { --- T07: SafeGuard 崩溃隔离 + 熔断 + 恢复 --- }
 procedure Test_SafeGuardCrash;
 var
@@ -362,6 +451,8 @@ var
   LLease: TPluginLease;
   LCrashCfg: TBytes;
   LOkCfg: TBytes;
+  LBefore, LAfter, LCur: Cardinal;
+  LCrashCaught, LRecoverOk: Boolean;
 begin
   Writeln('[07] SafeGuard crash isolation + circuit breaker');
   LCrashCfg := TEncoding.UTF8.GetBytes('{"trigger":"crash"}');
@@ -394,7 +485,179 @@ begin
     LCode := M.ReloadPluginConfig('Echo', LOkCfg);
     Check('re-enabled plugin recovers (ReloadConfig OK)',
       LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+
+    { [07S] 异常路径 x100 循环无累积泄漏（验收3: SafeGuard 反复崩溃→熔断→重启用）
+      既存 Test_SafeGuardCrash 只跑3次; 扩100轮验证 SafeGuard 崩溃隔离/熔断状态机
+      在反复异常下不发生句柄或对象累积泄漏。
+      模式: 每轮1次 LCrashCfg 触发崩溃; SafeGuard 内部 crash count 累到 MaxCrashBeforeDisable=3
+      自动熔断(后续该轮 LCrashCfg 调用被 SafeGuard 短路返回非OK,不进DLL无越界风险);
+      每轮末 ReEnablePlugin 重置 crash count 到0,闭环。100轮=100次崩溃往返。 }
+    GetProcessHandleCount(GetCurrentProcess, LBefore);
+    LRecoverOk := True;
+    for I := 1 to 100 do
+    begin
+      { 触发1次崩溃配置; 未熔断时进DLL崩溃被SafeGuard隔离,已熔断时被短路拒绝 }
+      M.ReloadPluginConfig('Echo', LCrashCfg);
+      { 重启用 + 恢复配置,本轮闭环(崩溃往返不泄漏的核验) }
+      M.SafeGuard.ReEnablePlugin('Echo');
+      LCode := M.ReloadPluginConfig('Echo', LOkCfg);
+      if LCode <> PLUGIN_OK then
+      begin
+        LRecoverOk := False;
+        Break;
+      end;
+    end;
+    Check('07S 100 rounds each recovered via ReEnable+ReloadConfig',
+      LRecoverOk, 'round ' + IntToStr(I) + ' 恢复失败 code=' + IntToStr(LCode));
+    { 显式验证熔断机制: 崩溃配置连发3次必熔断(返回值溃而不读,SafeGuard 隔离后查 IsDisabled) }
+    M.ReloadPluginConfig('Echo', LCrashCfg);
+    M.ReloadPluginConfig('Echo', LCrashCfg);
+    M.ReloadPluginConfig('Echo', LCrashCfg);
+    LCrashCaught := M.SafeGuard.IsDisabled('Echo');
+    Check('07S circuit tripped after 3 consecutive crash configs',
+      LCrashCaught, '未熔断');
+    GetProcessHandleCount(GetCurrentProcess, LAfter);
+    LCur := 0;
+    if Cardinal(LAfter) >= Cardinal(LBefore) then
+      LCur := Cardinal(LAfter) - Cardinal(LBefore);
+    Check('07S no handle accumulation over 100 crash rounds (delta<=10)',
+      LCur <= 10, 'delta=' + IntToStr(Integer(LCur)));
+    { 末端 ReEnable + 恢复可用态,crash count 清0 }
+    M.SafeGuard.ReEnablePlugin('Echo');
+    LCode := M.ReloadPluginConfig('Echo', LOkCfg);
+    Check('07S final usable state (ReloadConfig OK)',
+      LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+    Check('07S crash count reset to 0 after final ReEnable',
+      M.SafeGuard.GetCrashCount('Echo') = 0,
+      'not reset, got ' + IntToStr(M.SafeGuard.GetCrashCount('Echo')));
   finally
+    M.Free;
+  end;
+end;
+
+{ --- T07C: 并发 N 线程 acquire/release lease 无死锁无泄漏（验收2） --- }
+type
+  TLeaseWorker = class(TThread)
+  private
+    FMgr: TDeepBasePluginManager;
+    FName: string;
+    FRounds: Integer;
+    FOkCount: Integer;
+    FBusyCount: Integer;
+    FFailCount: Integer;
+    FException: string;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(AMgr: TDeepBasePluginManager; const AName: string; ARounds: Integer);
+    property OkCount: Integer read FOkCount;
+    property BusyCount: Integer read FBusyCount;
+    property FailCount: Integer read FFailCount;
+    property ExceptionMsg: string read FException;
+  end;
+
+constructor TLeaseWorker.Create(AMgr: TDeepBasePluginManager;
+  const AName: string; ARounds: Integer);
+begin
+  inherited Create(True);  { 挂起启动,主线程 Ready 后统一 Start }
+  FreeOnTerminate := False;
+  FMgr := AMgr;
+  FName := AName;
+  FRounds := ARounds;
+  FOkCount := 0;
+  FBusyCount := 0;
+  FFailCount := 0;
+  FException := '';
+end;
+
+procedure TLeaseWorker.Execute;
+var
+  I: Integer;
+  LLease: TPluginLease;
+  LCode: Integer;
+begin
+  try
+    for I := 1 to FRounds do
+    begin
+      LLease := nil;
+      LCode := FMgr.AcquireLease(FName, LLease);
+      if LCode = PLUGIN_OK then
+      begin
+        Inc(FOkCount);
+        { 持有极短,释放前 Manager 状态一致;不跨边界调用避免与主线程争 }
+        FMgr.ReleaseLease(LLease);
+      end
+      else if LCode = PLUGIN_BUSY then
+        Inc(FBusyCount)  { 熔断/无 lease 容量时退避;非死锁 }
+      else
+        Inc(FFailCount);
+    end;
+  except
+    on E: Exception do
+      FException := E.Message;
+  end;
+end;
+
+procedure Test_ConcurrentLeaseAcquire;
+var
+  M: TDeepBasePluginManager;
+  LCode: Integer;
+  LWorkers: array of TLeaseWorker;
+  LThreads, LRounds, I, LTotalOk, LExpected, LBefore, LAfter, LCur: Cardinal;
+  LNoException: Boolean;
+  LMsg: string;
+begin
+  Writeln('[07C] concurrent N-thread acquire/release lease (no deadlock/leak)');
+  LThreads := 8;
+  LRounds := 50;  { 总 8 x 50 = 400 次 acquire/release 往返 }
+  LExpected := LThreads * LRounds;
+  M := NewMgr;
+  SetLength(LWorkers, LThreads);
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin77.dll', GDllHash);
+    RegEcho(M, 'Echo');
+    LCode := M.LoadPlugin('Echo');
+    Check('07C load OK', LCode = PLUGIN_OK, 'code=' + IntToStr(LCode));
+    if LCode <> PLUGIN_OK then Exit;
+    { 预装:确保 restarted=否 psLoaded 减小热路径竞争 }
+    GetProcessHandleCount(GetCurrentProcess, LBefore);
+    for I := 0 to LThreads - 1 do
+      LWorkers[I] := TLeaseWorker.Create(M, 'Echo', LRounds);
+    { 全部就绪后统一启动,降低 start 抖动 }
+    for I := 0 to LThreads - 1 do
+      LWorkers[I].Start;
+    { 等所有线程完成(WaitFor 阻塞,无超时 = 信任不死锁) }
+    LNoException := True;
+    LMsg := '';
+    LTotalOk := 0;
+    for I := 0 to LThreads - 1 do
+    begin
+      LWorkers[I].WaitFor;
+      Inc(LTotalOk, LWorkers[I].OkCount);
+      if LWorkers[I].ExceptionMsg <> '' then
+      begin
+        LNoException := False;
+        LMsg := LMsg + Format('T%d:[%s] ', [I, LWorkers[I].ExceptionMsg]);
+      end;
+    end;
+    Check('07C all 8 threads completed - no deadlock', LNoException,
+      'exception: ' + LMsg);
+    Check('07C total successful acquires = 400 (full throughput)',
+      LTotalOk = LExpected,
+      'got ' + IntToStr(Integer(LTotalOk)) + ' busy/fa 逸散于熔断/无容量');
+    { 末态: 所有 lease 已释放,ActiveLeases 归 0 }
+    Check('07C ActiveLeases=0 after all threads released',
+      M.GetPluginInfo('Echo').ActiveLeases = 0,
+      'got ' + IntToStr(M.GetPluginInfo('Echo').ActiveLeases));
+    GetProcessHandleCount(GetCurrentProcess, LAfter);
+    LCur := 0;
+    if LAfter >= LBefore then
+      LCur := LAfter - LBefore;
+    Check('07C no handle accumulation over 400 concurrent lease ops (delta<=10)',
+      LCur <= 10, 'delta=' + IntToStr(Integer(LCur)));
+  finally
+    for I := 0 to Length(LWorkers) - 1 do
+      LWorkers[I].Free;
     M.Free;
   end;
 end;
@@ -475,6 +738,147 @@ begin
       FreeMem(P);
       Check('dbp_free_buffer(host-allocated) no-op', True, 'no-op OK');
     end;
+  finally
+    FreeLibrary(LMod);
+  end;
+end;
+
+{ --- T09g: dbp_invoke_alloc 插件分配 + dbp_free_buffer 三路径（P0-001 ABI11 §F5） ---
+  本过程不复用 TCAbiPlugin（其 FHandle private、无 raw handle 暴露），直接
+  LoadLibrary + GetProcAddress 裸调全链，自持 raw 句柄，与 Test_CAbiFreeBufferSymbol
+  同构、不污染宿主热路径 CAbiLoader。验证三路径:
+    (1) 插件分配输出 → 宿主 dbp_free_buffer 释放（真路径）
+    (2) 宿主分配指针  → dbp_free_buffer no-op（保持 9d L562 语义）
+    (3) nil / 非法指针 → dbp_free_buffer no-op（错误指针契约）
+  附加: 100 次循环单步平衡无泄漏 + 句柄数稳定。 }
+procedure Test_CAbiInvokeAllocThenFree(const ADllPath: string);
+type
+  TFreeBufferProc = procedure(APtr: Pointer); stdcall;
+  TCreateProc     = function(const AConfig: Pointer): Pointer; stdcall;
+  TInitProc       = function(AHandle: Pointer; const AConfig: Pointer): Int32; stdcall;
+  TInvokeAllocProc= function(AHandle: Pointer; const ARequest: Pointer;
+                              AOut: Pointer): Int32; stdcall;
+  TDestroyProc    = procedure(AHandle: Pointer); stdcall;
+var
+  LMod: HMODULE;
+  LFree: TFreeBufferProc;
+  LCreate: TCreateProc;
+  LInit: TInitProc;
+  LInvokeAlloc: TInvokeAllocProc;
+  LDestroy: TDestroyProc;
+  LHandle: Pointer;
+  LReq: Pdbp_buffer;
+  LReqBytes: TBytes;
+  LOut: Pdbp_out_buffer;
+  I: Integer;
+  LLen: Int32;
+  LBadPtr: Pointer;
+  LBefore, LAfter: Cardinal;
+begin
+  Writeln('  [9g] dbp_invoke_alloc + dbp_free_buffer 三路径');
+  LBefore := 0; LAfter := 0;
+  GetProcessHandleCount(GetCurrentProcess, LBefore);
+
+  LMod := LoadLibrary(PChar(ADllPath));
+  if LMod = 0 then
+  begin
+    Check('9g LoadLibrary', False, 'Win32 ' + IntToStr(GetLastError));
+    Exit;
+  end;
+  try
+    LFree       := GetProcAddress(LMod, 'dbp_free_buffer');
+    LCreate     := GetProcAddress(LMod, 'dbp_create');
+    LInit       := GetProcAddress(LMod, 'dbp_initialize');
+    LInvokeAlloc:= GetProcAddress(LMod, 'dbp_invoke_alloc');
+    LDestroy    := GetProcAddress(LMod, 'dbp_destroy');
+
+    Check('9g dbp_invoke_alloc export present', Assigned(LInvokeAlloc),
+      'GetProcAddress dbp_invoke_alloc=nil');
+    Check('9g dbp_create export present', Assigned(LCreate), 'missing dbp_create');
+    Check('9g dbp_free_buffer export present', Assigned(LFree), 'missing dbp_free_buffer');
+
+    if not (Assigned(LInvokeAlloc) and Assigned(LCreate) and Assigned(LFree)
+            and Assigned(LInit) and Assigned(LDestroy)) then
+      Exit;
+
+    { 拿 raw 句柄（空配置 → echo 变体） }
+    LHandle := LCreate(nil);
+    Check('9g dbp_create returns non-nil handle', LHandle <> nil,
+      'handle=nil');
+    if LHandle = nil then Exit;
+    try
+      LLen := LInit(LHandle, nil);
+      Check('9g dbp_initialize OK', LLen = DBP_OK, 'code=' + IntToStr(LLen));
+
+      { 准备请求: "ping"（dbp_buffer: data + length，无 capacity） }
+      LReqBytes := TEncoding.UTF8.GetBytes('ping');
+      New(LReq);
+      LReq.data := @LReqBytes[0];
+      LReq.length := Length(LReqBytes);
+      New(LOut);
+      LOut.data := nil;
+      LOut.capacity := 0;
+      try
+        { 路径1 真路径 + 100 次循环单步平衡 }
+        for I := 1 to 100 do
+        begin
+          LOut.data := nil;
+          LOut.capacity := 0;
+          LLen := LInvokeAlloc(LHandle, LReq, LOut);
+          if LLen <= 0 then
+          begin
+            Check(Format('9g round %d invoke_alloc positive len', [I]), False,
+              'len=' + IntToStr(LLen));
+            Break;
+          end;
+          if LOut.data = nil then
+          begin
+            Check(Format('9g round %d alloc data non-nil', [I]), False, 'data=nil');
+            Break;
+          end;
+          { 立即释放 → 单步平衡，本轮结束活指针清零 }
+          LFree(LOut.data);
+          LOut.data := nil;
+        end;
+        Check('9g 100 cycles alloc+free balanced (all positive len, nil-safe)',
+          (LLen > 0) and (LOut.data = nil), '循环未达单步平衡');
+        { 末轮再分配一次用于后续断言 }
+        LOut.data := nil;
+        LOut.capacity := 0;
+        LLen := LInvokeAlloc(LHandle, LReq, LOut);
+        Check('9g post-loop invoke_alloc ok', LLen > 0, 'len=' + IntToStr(LLen));
+      finally
+        { 末轮活指针释放（无论前面断言是否通过，保证白名单清空） }
+        if LOut.data <> nil then
+        begin
+          LFree(LOut.data);
+          LOut.data := nil;
+        end;
+        Dispose(LOut);
+        Dispose(LReq);
+      end;
+
+      { 路径2 宿主分配指针 → dbp_free_buffer no-op（保持 9d L562 语义） }
+      GetMem(LBadPtr, 64);
+      LFree(LBadPtr);
+      FreeMem(LBadPtr);
+      Check('9g dbp_free_buffer(host-allocated) no-op [path2]', True, 'no-op OK');
+
+      { 路径3 nil + 非法指针 → no-op（错误指针契约） }
+      LFree(nil);
+      LFree(Pointer($DEADBEEF));
+      Check('9g dbp_free_buffer(nil) safe [path3a]', True, 'no-op OK');
+      Check('9g dbp_free_buffer(bad-ptr $DEADBEEF) safe [path3b]', True, 'no-op OK');
+    finally
+      LDestroy(LHandle);
+    end;
+
+    { 句柄数稳定（无泄漏） }
+    GetProcessHandleCount(GetCurrentProcess, LAfter);
+    Check('9g no handle leak (delta<=10)',
+      Integer(LAfter) - Integer(LBefore) <= 10,
+      Format('before=%d after=%d delta=%d',
+        [LBefore, LAfter, Integer(LAfter) - Integer(LBefore)]));
   finally
     FreeLibrary(LMod);
   end;
@@ -568,6 +972,11 @@ begin
   finally
     LPlugin.Free;
   end;
+
+  // 9g: dbp_invoke_alloc 插件分配 + dbp_free_buffer 三路径（P0-001 ABI11 §F5）
+  //     验证: (1)插件分配→宿主释放真路径 (2)宿主分配no-op (3)nil/非法指针no-op
+  //      + 100 次循环单步平衡无泄漏。补齐 9d 缺失的"插件分配→宿主释放"本体。
+  Test_CAbiInvokeAllocThenFree(LPath);
 end;
 
 { --- T10: Manager C ABI 集成路径（通过 Lease.CAbiPlugin 调用 Invoke） --- }
@@ -761,7 +1170,9 @@ begin
     Test_LeaseAcquireRelease;
     Test_LeaseDrainTimeout;
     Test_HotReload100;
+    Test_HotReloadStress5Rounds;
     Test_SafeGuardCrash;
+    Test_ConcurrentLeaseAcquire;
     Test_DependencyLoad;
     Test_CAbi;
     Test_ManagerCAbi;

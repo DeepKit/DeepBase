@@ -42,13 +42,25 @@ procedure dbp_free_buffer(APtr: Pointer); stdcall;
 { ABI 1.1 通用业务调用 }
 function dbp_invoke(AHandle: dbp_plugin_handle;
   const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
+{ ABI 1.1 插件分配归属变体：out.data 由本 DLL 分配，宿主须用 dbp_free_buffer 释放 }
+function dbp_invoke_alloc(AHandle: dbp_plugin_handle;
+  const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
 
 implementation
 
 uses
-  System.SysUtils, System.JSON,
+  System.SysUtils, System.Generics.Collections, System.SyncObjs, System.JSON,
   DeepBase.Plugins.Contracts,
   TestPlugin77.Impl;
+
+{ 插件分配白名单（P0-001 ABI11 remediation §F5）：
+  dbp_invoke_alloc 用 GetMem 分配的输出指针登记入 GAllocated，dbp_free_buffer
+  只有命中白名单的指针才 FreeMem，其它（nil / 宿主分配 / 非法指针）一律 no-op，
+  既保证宿主分配指针不被误释放（与旧 no-op 语义/既有 T09a L562 断言兼容），
+  又给错误指针契约留出安全余量。GLock 防御并发（为后续并发验收复用）。 }
+var
+  GAllocated: TList<Pointer> = nil;
+  GLock: TCriticalSection = nil;
 
 type
   { 内部包装器：一个 dbp 句柄 = 一个 IPluginContract 实例 }
@@ -258,10 +270,67 @@ begin
 end;
 
 procedure dbp_free_buffer(APtr: Pointer); stdcall;
+var
+  LIdx: Integer;
 begin
-  { 本 DLL 变长输出使用宿主分配（两次调用模式），无插件分配缓存，
-    故 FreeBuffer 为 no-op（保留符号以满足 ABI 契约）。 }
-  APtr := nil;
+  { §F5 真实路径：仅释放 dbp_invoke_alloc 登记入白名单的插件分配指针。
+    nil / 宿主分配 / 非法指针一律 no-op（命中检查在 GLock 保护下进行）。 }
+  if APtr = nil then
+    Exit;
+  if GLock = nil then
+    Exit;  { finalization 阶段兜底调用安全：对象已释放则 no-op }
+  GLock.Enter;
+  try
+    LIdx := GAllocated.IndexOf(APtr);
+    if LIdx >= 0 then
+    begin
+      GAllocated.Delete(LIdx);
+      FreeMem(APtr);
+    end;
+    { 未命中 → no-op：不释放非插件分配内存，不触碰非法指针 }
+  finally
+    GLock.Leave;
+  end;
+end;
+
+{ ABI 1.1 插件分配归属变体：out.data 由本 DLL GetMem 分配并登记白名单，
+  宿主用完调 dbp_free_buffer 释放。不走两次调用询问。 }
+function dbp_invoke_alloc(AHandle: dbp_plugin_handle;
+  const ARequest: Pdbp_buffer; AOut: Pdbp_out_buffer): Int32; stdcall;
+var
+  LReqBytes: TBytes;
+  LReqStr: string;
+  LResp: TBytes;
+  LBuf: PByte;
+begin
+  if (AHandle = nil) or (ARequest = nil) or (AOut = nil) then
+    Exit(DBP_ERR_INVALID_INPUT);
+  try
+    if (ARequest.data = nil) or (ARequest.length = 0) then
+      Exit(DBP_ERR_INVALID_INPUT);
+    SetLength(LReqBytes, ARequest.length);
+    Move(ARequest.data^, LReqBytes[0], ARequest.length);
+    LReqStr := TEncoding.UTF8.GetString(LReqBytes);
+    if Pos('crash', LowerCase(LReqStr)) > 0 then
+      raise Exception.Create('crash requested');
+    { 构造 echo_alloc 响应（区别于 dbp_invoke 的 echo，便于断言区分） }
+    LResp := TEncoding.UTF8.GetBytes(
+      '{"echo_alloc":true,"request_len":' + IntToStr(Length(LReqStr)) + '}');
+    { 插件分配：GetMem 一段足量缓冲写入响应，登记白名单 }
+    GetMem(LBuf, Length(LResp));
+    Move(LResp[0], LBuf^, Length(LResp));
+    GLock.Enter;
+    try
+      GAllocated.Add(LBuf);
+    finally
+      GLock.Leave;
+    end;
+    AOut.data := LBuf;
+    AOut.capacity := Length(LResp);
+    Result := Length(LResp);
+  except
+    Result := DBP_ERR_INTERNAL;
+  end;
 end;
 
 { ABI 1.1 通用业务调用：echo 回显请求内容 }
@@ -292,5 +361,24 @@ begin
     Result := DBP_ERR_INTERNAL;
   end;
 end;
+
+{ 白名单对象生命周期：unit 加载时创建，unit 卸载（DLL FreeLibrary）前
+  finalization 兜底回收仍登记在册的活指针，防宿主漏调 dbp_free_buffer 导致
+  DLL 卸载后悬挂。回收完置 nil，dbp_free_buffer 此后调用见 GLock=nil 安全 no-op。 }
+initialization
+  GAllocated := TList<Pointer>.Create;
+  GLock := TCriticalSection.Create;
+
+finalization
+  if GAllocated <> nil then
+  begin
+    while GAllocated.Count > 0 do
+    begin
+      FreeMem(GAllocated.Items[0]);
+      GAllocated.Delete(0);
+    end;
+    FreeAndNil(GAllocated);
+  end;
+  FreeAndNil(GLock);
 
 end.

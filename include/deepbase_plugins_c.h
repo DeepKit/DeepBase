@@ -155,6 +155,16 @@ DBP_API void dbp_free_buffer(void* ptr);
 DBP_API int32_t dbp_invoke(dbp_plugin_handle handle, const dbp_buffer* request,
                            dbp_out_buffer* out);
 
+/* dbp_invoke_alloc —— 插件分配输出归属（P0-001 ABI11 remediation §F5）
+ *  形参与 dbp_invoke 一致；区别在 out->data 的所有权：
+ *  - 本函数不走两次调用：插件用自身分配器分配 out->data、写入响应并返回字节数（正值）；
+ *  - 调用方（宿主）持有返回的 out->data 并**必须用 dbp_free_buffer 释放**；
+ *  - 负值=DBP_ERR_*，此时 out->data 未分配、宿主无需释放。
+ *  错误指针对 dbp_free_buffer 安全（no-op，不在白名单即不释放）。
+ *  本导出为 ABI 1.1 可选；缺失不影响基础生命周期加载。 */
+DBP_API int32_t dbp_invoke_alloc(dbp_plugin_handle handle, const dbp_buffer* request,
+                                 dbp_out_buffer* out);
+
 #ifdef __cplusplus
 }
 #endif
