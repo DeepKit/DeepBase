@@ -150,7 +150,7 @@ DBP_API void dbp_free_buffer(void* ptr);
  *  - ABI 1.0 插件可缺失本导出，仍可完成基础生命周期加载（见 77a §2.1 MINOR 规则）；
  *  - 宿主调用前必须验证 MINOR>=1 且导出存在；
  *  - 插件内部异常不得跨边界：映射为 DBP_ERR_INTERNAL，细节走 dbp_get_last_error；
- *  - 业务 schema（如站���适配 JSON）不得出现在 DeepBase ABI 类型或函数名中。
+ *  - 业务 schema（如站点适配 JSON）不得出现在 DeepBase ABI 类型或函数名中。
  */
 DBP_API int32_t dbp_invoke(dbp_plugin_handle handle, const dbp_buffer* request,
                            dbp_out_buffer* out);

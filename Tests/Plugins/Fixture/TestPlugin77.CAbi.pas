@@ -118,7 +118,6 @@ function dbp_create(const AConfig: Pdbp_buffer): dbp_plugin_handle; stdcall;
 var
   LWrapper: TDbpWrapper;
 begin
-  Result := nil;
   try
     LWrapper := TDbpWrapper.Create;
     try
