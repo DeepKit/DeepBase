@@ -20,6 +20,27 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo [build] Compiling fixture DLL TestPluginABI10.dpr (task#11 ABI 1.0) ...
+dcc64 -LUrtl -LUvcl -U"..\..\Core" -E"%OUTDIR%" %NS% "Fixture\TestPluginABI10.dpr" 2>&1
+if errorlevel 1 (
+  echo [build] TESTPLUGINABI10 COMPILE FAILED
+  exit /b 1
+)
+
+echo [build] Compiling fixture DLL TestPlugin11NoInvoke.dpr (task#11 1.1 no-invoke) ...
+dcc64 -LUrtl -LUvcl -U"..\..\Core" -E"%OUTDIR%" %NS% "Fixture\TestPlugin11NoInvoke.dpr" 2>&1
+if errorlevel 1 (
+  echo [build] TESTPLUGIN11NOINVOKE COMPILE FAILED
+  exit /b 1
+)
+
+echo [build] Compiling fixture DLL TestPlugin11NoHealth.dpr (task#11 1.1 no-health) ...
+dcc64 -LUrtl -LUvcl -U"..\..\Core" -E"%OUTDIR%" %NS% "Fixture\TestPlugin11NoHealth.dpr" 2>&1
+if errorlevel 1 (
+  echo [build] TESTPLUGIN11NOHEALTH COMPILE FAILED
+  exit /b 1
+)
+
 echo [build] Compiling PluginLifecycleHarness.dpr ...
 dcc64 -LUrtl -LUvcl -U"..\..\Core" -E"%OUTDIR%" %NS% PluginLifecycleHarness.dpr 2>&1
 if errorlevel 1 (

@@ -36,6 +36,10 @@ var
   GPass, GFail: Integer;
   GDllPath: string;
   GDllHash: string;
+  { task#11 A11-1/A11-2: 3 新 fixture DLL 的信任哈希（Manager+Verifier 路径必需） }
+  GAbi10Path, GAbi10Hash: string;
+  GNoInvokePath, GNoInvokeHash: string;
+  GNoHealthPath, GNoHealthHash: string;
 
 procedure Check(const AName: string; ACond: Boolean; const ADetail: string);
 begin
@@ -1146,6 +1150,157 @@ begin
   end;
 end;
 
+{ --- T13: ABI 1.0 / 缺 capability 门禁（task#11 A11-1/A11-2） ---
+  法源：core/DeepBase.Plugins.CAbiLoader.pas L180-196
+  - L180-185 MAJOR<>1 / MINOR不兼容 拒；
+  - L187-196 minor>=1 但无 dbp_invoke 导出 → "capability 不一致" 拒；
+  - L160-170 必需导出 ResolveProc 缺一 → "缺少导出函数 X" 拒。
+
+  5 场景（工单 WO-20260814-ABI11-TASK12-AUDIT 第三优先）：
+  1. ABI 1.0 (minor=0, 无 invoke 导出) → CAbiLoader L187 跳过 → 加载合法
+  2. ABI 1.0 软拒绝 EMissingInvoke (加载合法后调 Invoke 抛)
+  3. ABI 1.1 缺 dbp_get_health 必需导出 → ResolveProc 拒
+  4. ABI 1.1 声明 minor>=1 但缺 dbp_invoke 导出 → L189 capability 不一致拒
+  5. ABI 1.1 capability + 导出齐全 → 成功 (复用既有 TestPlugin77，于 T09/T12a 覆盖)
+  场景1/2 直 TCAbiPlugin.Create (纯测 L187 契约)；场景3/4 经 Manager+ACAbi=True
+  (Create 抛被 catch 成 PLUGIN_LOAD_FAILED + psError，与 T03 同形)。 }
+procedure Test_Abi11CapabilityConsistency;
+var
+  LPlugin: TCAbiPlugin;
+  LCode: Integer;
+  LRaised: Boolean;
+  LEMsg: string;
+  LResp: TBytes;
+  M: TDeepBasePluginManager;
+begin
+  Writeln('[13] ABI 1.0 / 缺 capability gate (task#11 A11-1/A11-2)');
+
+  { 场景1: ABI 1.0 fixture 加载合法 —— minor=0 不要求 invoke 导出 (L187 跳过) }
+  Writeln('  [13.1] ABI 1.0 (minor=0, no invoke export) loads OK');
+  LPlugin := TCAbiPlugin.Create(GAbi10Path);
+  try
+    Check('13.1a: ABI 1.0 Create does not raise', True, '');
+    Check('13.1b: ABI minor=0 for 1.0 fixture', LPlugin.Abi.minor = 0,
+      Format('minor=%u', [LPlugin.Abi.minor]));
+    Check('13.1c: HasInvoke=false for 1.0 fixture (no dbp_invoke exported)',
+      not LPlugin.HasInvoke, 'HasInvoke 应为 False');
+    LCode := LPlugin.Initialize(nil);
+    Check('13.1d: Initialize OK on 1.0 fixture', LCode = DBP_OK,
+      'code=' + IntToStr(LCode));
+
+    { 场景2: 1.0 fixture 加载合法后调 Invoke → EMissingInvoke (软拒绝, L316) }
+    Writeln('  [13.2] ABI 1.0 soft-reject EMissingInvoke on Invoke');
+    LRaised := False;
+    LEMsg := '';
+    try
+      LPlugin.Invoke(TEncoding.UTF8.GetBytes('hello'), LResp);
+    except
+      on E: EMissingInvoke do
+      begin
+        LRaised := True;
+        LEMsg := E.Message;
+      end;
+      on E: Exception do
+        LEMsg := 'WRONG_CLASS:' + E.ClassName;
+    end;
+    Check('13.2a: Invoke on 1.0 fixture raises (rejected)', LRaised,
+      '未抛异常 或 抛了非 EMissingInvoke: ' + LEMsg);
+    Check('13.2b: exception class is EMissingInvoke', LRaised and (LEMsg <> '')
+      and (Pos('WRONG_CLASS', LEMsg) = 0), 'msg=' + LEMsg);
+  finally
+    LPlugin.Free;
+  end;
+
+  { 场景3: ABI 1.1 缺 dbp_get_health 必需导出 → Manager LoadPlugin 拒 (ResolveProc 抛) }
+  Writeln('  [13.3] ABI 1.1 missing dbp_get_health export rejected');
+  M := NewMgr;
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin11NoHealth.dll', GNoHealthHash);
+    M.RegisterPlugin('NoHealth', 'echo', nil, '', True);
+    M.SetPluginDllPath('NoHealth', GNoHealthPath);
+    LCode := M.LoadPlugin('NoHealth');
+    { 注：此处经 Manager 把 Create 抛 catch 成 PLUGIN_LOAD_FAILED + psError。
+      但缺必需导出的拒绝发生在 TCAbiPlugin.Create ResolveProc，Manager catch
+      仅为 FAILED 码 + psError，不暴露原始异常文本。故断 FAILED + psError。 }
+    Check('13.3a: missing dbp_get_health rejected (LOAD_FAILED)',
+      LCode = PLUGIN_LOAD_FAILED, 'code=' + IntToStr(LCode));
+    Check('13.3b: state=psError after get_health reject',
+      M.GetPluginInfo('NoHealth').State = psError,
+      PluginStateToStr(M.GetPluginInfo('NoHealth').State));
+  finally
+    M.Free;
+  end;
+
+  { 13.3c 精确门禁证据：直 TCAbiPlugin.Create (不经 Verifier/Manager) 抓 CAbiLoader
+    ResolveProc 抛的原始异常文本，应含 "dbp_get_health" 字面，证明 FAILED 根因是
+    必需导出缺失（非哈希拒、非通用 IO 错）。 }
+  LRaised := False; LEMsg := '';
+  try
+    LPlugin := TCAbiPlugin.Create(GNoHealthPath);
+    LPlugin.Free;   { 若 Create 未拒则到此处，仍清理；但 NoHealth 必拒 }
+  except
+    on E: Exception do
+    begin LRaised := True; LEMsg := E.Message; end;
+  end;
+  Check('13.3c: direct Create raises (not via Manager)', LRaised,
+    '未抛异常');
+  Check('13.3d: direct raise text mentions dbp_get_health',
+    Pos('dbp_get_health', LEMsg) > 0, 'msg=' + LEMsg);
+
+  { 场景4: ABI 1.1 声明 minor>=1 但缺 dbp_invoke 导出 → L189 capability 不一致拒
+    与场景3 区分：NoInvoke 经 CAbiLoader L189 门禁 (9 必需导出齐全但无 invoke) }
+  Writeln('  [13.4] ABI 1.1 MINOR>=1 but no dbp_invoke export rejected');
+  M := NewMgr;
+  try
+    M.Verifier.RegisterTrustedHash('TestPlugin11NoInvoke.dll', GNoInvokeHash);
+    M.RegisterPlugin('NoInvoke', 'echo', nil, '', True);
+    M.SetPluginDllPath('NoInvoke', GNoInvokePath);
+    LCode := M.LoadPlugin('NoInvoke');
+    Check('13.4a: MINOR>=1 no-invoke rejected (capability inconsistent)',
+      LCode = PLUGIN_LOAD_FAILED, 'code=' + IntToStr(LCode));
+    Check('13.4b: state=psError after capability inconsistent reject',
+      M.GetPluginInfo('NoInvoke').State = psError,
+      PluginStateToStr(M.GetPluginInfo('NoInvoke').State));
+  finally
+    M.Free;
+  end;
+
+  { 13.4c 精确门禁证据：直 Create 抓 CAbiLoader L189 抛的原始文本，应含
+    "capability 不一致" 或 "dbp_invoke"，证明 FAILED 根因是 capability 协商
+    失败（非必需导出缺失、非哈希拒），与场景3精确区分。 }
+  LRaised := False; LEMsg := '';
+  try
+    LPlugin := TCAbiPlugin.Create(GNoInvokePath);
+    LPlugin.Free;
+  except
+    on E: Exception do
+    begin LRaised := True; LEMsg := E.Message; end;
+  end;
+  Check('13.4c: direct Create raises (not via Manager)', LRaised,
+    '未抛异常');
+  Check('13.4d: direct raise text mentions capability mismatch',
+    (Pos('capability', LEMsg) > 0) or (Pos('dbp_invoke', LEMsg) > 0)
+      or (Pos('不一致', LEMsg) > 0),
+    'msg=' + LEMsg);
+
+  { 场景5: ABI 1.1 capability + 导出齐全 → 成功
+    既有 TestPlugin77 (minor=1 + dbp_invoke) 已于 T09 9f 与 T10/T12a 全覆盖；
+    此处补一断言确保被点名 (避免工单 5 场景视觉漏项) }
+  Writeln('  [13.5] ABI 1.1 with capability + exports loads OK (reuse TPlugin77)');
+  LPlugin := TCAbiPlugin.Create(GDllPath);
+  try
+    Check('13.5a: 1.1 fixture minor=1', LPlugin.Abi.minor = 1,
+      Format('minor=%u', [LPlugin.Abi.minor]));
+    Check('13.5b: 1.1 fixture HasInvoke=true', LPlugin.HasInvoke,
+      'HasInvoke 应为 True');
+    LCode := LPlugin.Initialize(nil);
+    Check('13.5c: 1.1 fixture Initialize OK', LCode = DBP_OK,
+      'code=' + IntToStr(LCode));
+  finally
+    LPlugin.Free;
+  end;
+end;
+
 begin
   try
     Writeln('========================================================');
@@ -1162,6 +1317,28 @@ begin
     GDllHash := LowerCase(THashSHA2.GetHashStringFromFile(GDllPath));
     Writeln('fixture: ', GDllPath);
     Writeln('sha256 : ', GDllHash);
+
+    { task#11: 3 新 fixture 路径 + 哈希（Manager+Verifier 路径必需） }
+    GAbi10Path   := ExtractFilePath(GDllPath) + 'TestPluginABI10.dll';
+    GNoInvokePath:= ExtractFilePath(GDllPath) + 'TestPlugin11NoInvoke.dll';
+    GNoHealthPath:= ExtractFilePath(GDllPath) + 'TestPlugin11NoHealth.dll';
+    if not (FileExists(GAbi10Path) and FileExists(GNoInvokePath)
+        and FileExists(GNoHealthPath)) then
+    begin
+      Writeln('FATAL: task#11 fixture DLL missing in ',
+        ExtractFilePath(GDllPath));
+      ExitCode := 2;
+      Exit;
+    end;
+    GAbi10Hash   := LowerCase(THashSHA2.GetHashStringFromFile(GAbi10Path));
+    GNoInvokeHash:= LowerCase(THashSHA2.GetHashStringFromFile(GNoInvokePath));
+    GNoHealthHash:= LowerCase(THashSHA2.GetHashStringFromFile(GNoHealthPath));
+    Writeln('abi10  : ', GAbi10Path);
+    Writeln('sha256 : ', GAbi10Hash);
+    Writeln('noinv  : ', GNoInvokePath);
+    Writeln('sha256 : ', GNoInvokeHash);
+    Writeln('nohlt  : ', GNoHealthPath);
+    Writeln('sha256 : ', GNoHealthHash);
     Writeln;
 
     Test_CycleDetection;
@@ -1178,6 +1355,7 @@ begin
     Test_ManagerCAbi;
     Test_PendingRestart;
     Test_CapabilityGate;
+    Test_Abi11CapabilityConsistency;
 
     Writeln;
     Writeln(Format('RESULT: %d passed, %d failed', [GPass, GFail]));
