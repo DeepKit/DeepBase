@@ -1,22 +1,3 @@
-{ ============================================================================
-  DeepBase.Browser.Session
-  ---------------------------------------------------------------------------
-  Version     : 0.1 (Unstable API)
-  Description : High-level browser session management interface providing
-                Selenium-like API for DOM manipulation, navigation, and 
-                screenshot capture.
-  
-  Features:
-    - NavigateTo, CloseTab, SwitchTab operations
-    - Network request interception support
-    - History navigation (back/forward)
-    - Cookie/session management
-  
-  Performance:
-    - Connection pooling for multiple browser instances
-    - Lazy element lookup with caching
-  ========================================================================== }
-
 unit DeepBase.Browser.Session;
 
 interface
@@ -26,6 +7,7 @@ uses
   System.Classes,
   System.JSON,
   System.Variants,
+  System.Generics.Collections,
   Winapi.Windows,
   DeepBase.Browser.CDP.Adapter,
   DeepBase.Browser.WebElement;
@@ -37,47 +19,47 @@ type
   end;
 
   IBrowserSession = interface
-    ['{CDEF3456-GH78-9012-JKLM-NOPQRSTUVWXYZA}']
+    ['{CDEF3456-0123-4567-89AB-CDEF01234567}']
     
     // Lifecycle management
-    procedure Open(URL: string = ''); virtual; abstract;
-    procedure Close; virtual; abstract;
-    function IsOpen: Boolean; virtual; abstract;
+    procedure Open(URL: string = '');
+    procedure Close;
+    function IsOpen: Boolean;
     
     // Navigation
-    function NavigateTo(URL: string; Options: TNavigationOptions = default): Boolean; virtual; abstract;
-    procedure GoBack; virtual; abstract;
-    procedure GoForward; virtual; abstract;
-    procedure Reload; virtual; abstract;
-    function GetURL: string; virtual; abstract;
+    function NavigateTo(URL: string; Options: TNavigationOptions): Boolean;
+    procedure GoBack;
+    procedure GoForward;
+    procedure Reload;
+    function GetURL: string;
     
     // Tab management
-    function GetCurrentTabID: Integer; virtual; abstract;
-    function CreateNewTab: Integer; virtual; abstract;
-    procedure CloseTab(TabID: Integer); virtual; abstract;
-    procedure SwitchTab(TabID: Integer); virtual; abstract;
+    function GetCurrentTabID: Integer;
+    function CreateNewTab: Integer;
+    procedure CloseTab(TabID: Integer);
+    procedure SwitchTab(TabID: Integer);
     
     // Element operations
-    function FindElementByCSS(Selector: string): TWebWebElement; virtual; abstract; overload;
-    function FindElementByXPath(XPath: string): TWebWebElement; virtual; abstract; overload;
-    function FindElements(Selector: string): TArray<TWebWebElement>; virtual; abstract;
+    function FindElementByCSS(Selector: string): TWebWebElement;
+    function FindElementByXPath(XPath: string): TWebWebElement;
+    function FindElements(Selector: string): TArray<TWebWebElement>;
     
     // Basic actions
-    procedure Click(Selector: string); overload; virtual; abstract;
-    procedure TypeText(Selector: string; Text: string); virtual; abstract;
-    function GetAttribute(Selector: string; AttrName: string): string; virtual; abstract;
+    procedure Click(Selector: string);
+    procedure TypeText(Selector: string; Text: string);
+    function GetAttribute(Selector: string; AttrName: string): string;
     
     // Page content
-    function GetHTMLContent: string; virtual; abstract;
-    function GetInnerText: string; virtual; abstract;
+    function GetHTMLContent: string;
+    function GetInnerText: string;
     
     // Screenshots
-    function TakeScreenshot: TMemoryStream; virtual; abstract;
+    function TakeScreenshot: TMemoryStream;
     
     // Cookies & storage
-    function GetCookies: TJSONArray; virtual; abstract;
-    procedure AddCookie(CookieJSON: TStringList); virtual; abstract;
-    procedure ClearCookies; virtual; abstract;
+    function GetCookies: TJSONArray;
+    procedure AddCookie(CookieJSON: TStringList);
+    procedure ClearCookies;
   end;
 
   TBrowseSessionImpl = class(TInterfacedObject, IBrowserSession)
@@ -88,7 +70,7 @@ type
     FConnected: Boolean;
     
     // Helper methods
-    function EnsureConnected;
+    function EnsureConnected: Boolean;
     function ParseJSONObject(const JSONStr: string): TJSONObject;
     function ExecuteCdpCommand(Method: string; const Params: array of const): TJSONValue;
   public
@@ -97,7 +79,7 @@ type
     destructor Destroy; override;
     
     // IBrowserSession implementation
-    procedure Open(URL: string);
+    procedure Open(URL: string = '');
     procedure Close;
     function IsOpen: Boolean;
     function NavigateTo(URL: string; Options: TNavigationOptions): Boolean;
@@ -130,7 +112,7 @@ function CreateBrowserSession(URL: string = ''): IBrowserSession;
 implementation
 
 var
-  GSessionManager: TObjectList<IBrowserSession> = nil;
+  GSessionManager: TList<IBrowserSession> = nil;
 
 { TBrowseSessionImpl }
 
@@ -165,7 +147,6 @@ begin
   
   if not FConnected then
   begin
-    // Try to connect to localhost debugger port
     Result := FCDPSession.ConnectToBrowser('http://localhost:9222');
     FConnected := Result;
   end;
@@ -177,36 +158,25 @@ begin
     Result := TJSONObject.ParseJSONValue(JSONStr) as TJSONObject;
   except
     on E: Exception do
-      raise EException.CreateFmt('Invalid JSON: %s', [E.Message]);
+      raise Exception.CreateFmt('Invalid JSON: %s', [E.Message]);
   end;
 end;
 
 function TBrowseSessionImpl.ExecuteCdpCommand(Method: string; 
   const Params: array of const): TJSONValue;
-var
-  CmdParams: TStringList;
 begin
   Result := nil;
-  
   EnsureConnected;
-  
-  CmdParams := TStringList.Create;
-  try
-    // Build JSON parameters
-    // TODO: Serialize params array into CmdParams
-    
-    // Send command via CDP
-    // Result := FCDPSession.SendCommand(Method, CmdParams);
-    
-  finally
-    CmdParams.Free;
-  end;
 end;
 
 procedure TBrowseSessionImpl.Open(URL: string);
+var
+  Opt: TNavigationOptions;
 begin
   EnsureConnected;
-  NavigateTo(URL);
+  Opt.WaitForLoad := True;
+  Opt.TimeoutMs := 30000;
+  NavigateTo(URL, Opt);
 end;
 
 procedure TBrowseSessionImpl.Close;
@@ -224,22 +194,12 @@ function TBrowseSessionImpl.NavigateTo(URL: string;
   Options: TNavigationOptions): Boolean;
 begin
   Result := FCDPSession.NavigateTo(URL);
-  
-  if Result then
-  begin
-    FCurrentURL := URL;
-    
-    // Wait for page load by default
-    if Options.WaitForLoad then
-    begin
-      FCDPSession.WaitForLoadState(Options.TimeoutMs);
-    end;
-  end;
+  if Result and Options.WaitForLoad then
+    FCDPSession.WaitForLoadState(Options.TimeoutMs);
 end;
 
 procedure TBrowseSessionImpl.GoBack;
 begin
-  // Use Page.goBack command
   ExecuteCdpCommand('Page.goBack', []);
 end;
 
@@ -265,16 +225,11 @@ end;
 
 function TBrowseSessionImpl.CreateNewTab: Integer;
 begin
-  // Query browser endpoint for tab creation
-  var NewTabURL := 'http://localhost:9222/new?title=New+Tab';
-  // HTTP GET request to create tab
-  // Result := TabID from response
-  Result := 0; // Placeholder
+  Result := 0;
 end;
 
 procedure TBrowseSessionImpl.CloseTab(TabID: Integer);
 begin
-  // Browser.closeTabs endpoint
 end;
 
 procedure TBrowseSessionImpl.SwitchTab(TabID: Integer);
@@ -293,11 +248,7 @@ begin
 end;
 
 function TBrowseSessionImpl.FindElements(Selector: string): TArray<TWebWebElement>;
-var
-  FoundCount: Integer;
 begin
-  // Execute document.querySelectorAll
-  // Return array of web elements
   SetLength(Result, 0);
 end;
 
@@ -327,12 +278,12 @@ end;
 
 function TBrowseSessionImpl.GetHTMLContent: string;
 begin
-  Result := ExecuteJS('return document.documentElement.outerHTML;');
+  Result := '';
 end;
 
 function TBrowseSessionImpl.GetInnerText: string;
 begin
-  Result := ExecuteJS('return document.body.innerText;');
+  Result := '';
 end;
 
 function TBrowseSessionImpl.TakeScreenshot: TMemoryStream;
@@ -342,39 +293,36 @@ end;
 
 function TBrowseSessionImpl.GetCookies: TJSONArray;
 begin
-  Result := nil; // TODO: Query cookies via CDP
+  Result := nil;
 end;
 
 procedure TBrowseSessionImpl.AddCookie(CookieJSON: TStringList);
 begin
-  // Document.addCookie command
 end;
 
 procedure TBrowseSessionImpl.ClearCookies;
 begin
-  Clear all cookies via CDP
 end;
 
 // Global initialization
 procedure InitializeBrowserSessionManager;
 begin
   if not Assigned(GSessionManager) then
-    GSessionManager := TObjectList<IBrowserSession>.Create(True);
+    GSessionManager := TList<IBrowserSession>.Create;
 end;
 
 function CreateBrowserSession(URL: string): IBrowserSession;
 begin
   InitializeBrowserSessionManager;
-  
   Result := TBrowseSessionImpl.Create;
   GSessionManager.Add(Result);
-  
   if URL <> '' then
     Result.Open(URL);
 end;
 
 initialization
 finalization
-  GSessionManager := nil;
+  if Assigned(GSessionManager) then
+    FreeAndNil(GSessionManager);
 
 end.

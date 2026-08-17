@@ -354,7 +354,7 @@ begin
     L := TFakeDevToolsListener.Create;
     LCDP.AddDevToolsEventListener(L);
     LCDP.HandleDevToolsEvent('Network.requestWillBeSent', '{"r":"1"}');
-    Assert.AreEqual(1, L.ReceivedMethods.Count,
+    Assert.AreEqual<Integer>(1, L.ReceivedMethods.Count,
       'Listener should receive exactly one event');
     Assert.AreEqual<string>('Network.requestWillBeSent',
       L.ReceivedMethods[0]);
@@ -376,9 +376,9 @@ begin
     LCDP.AddDevToolsEventListener(LA);
     LCDP.AddDevToolsEventListener(LB);
     LCDP.HandleDevToolsEvent('Page.frameNavigated', '{}');
-    Assert.AreEqual(1, LA.ReceivedMethods.Count,
+    Assert.AreEqual<Integer>(1, LA.ReceivedMethods.Count,
       'Listener A should receive the event');
-    Assert.AreEqual(1, LB.ReceivedMethods.Count,
+    Assert.AreEqual<Integer>(1, LB.ReceivedMethods.Count,
       'Listener B should also receive the event (no clobbering)');
   finally
     LCDP.Free;
@@ -405,7 +405,7 @@ begin
     // Both paths should fire for the same event.
     Assert.AreEqual<string>('Network.responseReceived', LMethodSeen,
       'Old Subscribe path must still fire alongside listeners');
-    Assert.AreEqual(1, L.ReceivedMethods.Count,
+    Assert.AreEqual<Integer>(1, L.ReceivedMethods.Count,
       'Listener path must also fire for the same event');
   finally
     LCDP.Free;
@@ -423,7 +423,7 @@ begin
     LCDP.AddDevToolsEventListener(L);
     LCDP.RemoveDevToolsEventListener(L);
     LCDP.HandleDevToolsEvent('Network.loadingFinished', '{}');
-    Assert.AreEqual(0, L.ReceivedMethods.Count,
+    Assert.AreEqual<Integer>(0, L.ReceivedMethods.Count,
       'Removed listener should receive nothing');
   finally
     LCDP.Free;

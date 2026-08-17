@@ -25,12 +25,23 @@ uses
   System.SysUtils,
   System.Classes,
   System.Net.URLClient,
+  System.Net.HttpClient,
+  {$IFDEF USE_SYSTEM_WEBSOCKETS}
   System.Websockets,
+  {$ENDIF}
   System.JSON,
-  System.SyncObjects,
+  System.SyncObjs,
+  System.Variants,
+  System.Generics.Collections,
   Winapi.Windows;
 
 type
+  {$IFNDEF USE_SYSTEM_WEBSOCKETS}
+  IWebSocket = interface
+    ['{6E5D7266-9488-4A1B-8B41-2EE30DCAE26F}']
+  end;
+  {$ENDIF}
+
   // CDP Command structures
   TCDPCmd = record
     Method: string;
@@ -55,7 +66,7 @@ type
 
   // CDP WebSocket client interface
   ICDPSession = interface
-    ['{ABCD1234-EF56-7890-GHIJ-KLMNOPQRSTUVWX}']
+    ['{ABCD1234-EF56-4890-AB12-CD34EF567890}']
     
     // Connection management
     function ConnectToBrowser(BrowserURL: string): Boolean;
@@ -74,7 +85,7 @@ type
       Selector: string): TJSONValue;
     
     // Screenshot
-    function CaptureScreenshot(OutputFormat: TOleStr = 'png';
+    function CaptureScreenshot(OutputFormat: string = 'png';
       Quality: Integer = 80): TMemoryStream;
       
     // Network
@@ -82,7 +93,8 @@ type
     function SetRequestInterferenceEnabled(Enabled: Boolean): Boolean;
     
     // Properties
-    property State: TBrowseSessionState read FState;
+    function GetState: TBrowseSessionState;
+    property State: TBrowseSessionState read GetState;
   end;
 
   TCDPWebSocketSession = class(TInterfacedObject, ICDPSession)
@@ -108,70 +120,24 @@ type
     function IsConnected: Boolean;
     function NavigateTo(URL: string): Boolean;
     function GetURL: string;
-    function WaitForLoadState(TimeoutMs: Cardinal): Boolean;
+    function WaitForLoadState(TimeoutMs: Cardinal = 30000): Boolean;
     function ExecuteScript(Code: string): variant;
     function GetElementBoxModel(Selector: string): TRect;
     function QuerySelector(ParentNodeHandle: TJSONValue; 
       Selector: string): TJSONValue;
-    function CaptureScreenshot(OutputFormat: TOleStr; 
-      Quality: Integer): TMemoryStream;
+    function CaptureScreenshot(OutputFormat: string = 'png'; 
+      Quality: Integer = 80): TMemoryStream;
     function EnableNetworkInterception: Boolean;
     function SetRequestInterferenceEnabled(Enabled: Boolean): Boolean;
+    function GetState: TBrowseSessionState;
     
     // Event handling
     property OnError: TProc<string> read FOnError write FOnError;
   end;
 
-// Browser automation high-level interface
-IBrowserSession = interface
-  ['{BCDE2345-FG67-8901-IJKL-MNOPQRSTUVWXYA}']
-  
-  // Lifecycle
-  procedure Open(URL: string = '');
-  procedure Close;
-  function IsOpen: Boolean;
-  
-  // Navigation
-  function NavigateTo(URL: string): Boolean;
-  function GoBack;
-  function GoForward;
-  function Reload;
-  function GetURL: string;
-  
-  // Element operations
-  function FindElementByCSS(Selector: string): TWebWebElement;
-  function FindElementByXPath(XPath: string): TWebWebElement;
-  function FindElements(count: Integer): TArray<TWebWebElement>;
-  
-  // Basic actions
-  procedure Click(Selector: string);
-  procedure TypeText(Selector: string; Text: string);
-  function GetAttribute(Selector: string; AttrName: string): string;
-  
-  // Page content
-  function GetHTMLContent: string;
-  function GetInnerText: string;
-  
-  // Screenshots
-  function TakeScreenshot: TMemoryStream;
-end;
-
-TWebWebElement = record
-  Handle: TJSONValue;    // DOM node reference
-  Session: IBrowserSession;
-  
-  function GetAttribute(AttrName: string): string;
-  function GetValue: string;
-  procedure Click;
-  procedure TypeText(Text: string);
-  function IsVisible: Boolean;
-  function GetRect: TRect;
-end;
-
 // Global accessor
 procedure InitializeBrowserAdapter;
 function CurrentBrowserAdapter: ICDPSession;
-function CreateBrowserSession: IBrowserSession;
 
 implementation
 
@@ -198,33 +164,43 @@ begin
   inherited Destroy;
 end;
 
+function TCDPWebSocketSession.GetState: TBrowseSessionState;
+begin
+  Result := FState;
+end;
+
 function TCDPWebSocketSession.ConnectToBrowser(BrowserURL: string): Boolean;
 var
   WSUrl, WebSocketEndpoint: string;
+  HTTPClient: THTTPClient;
+  HTTPResp: IHTTPResponse;
+  JSONResp: TJSONObject;
 begin
   Result := False;
   
   try
     FState := bssConnecting;
     
-    // Get CDP endpoint URL from browser devtools port
-    var HTTPClient := THTTPClient.Create;
+    HTTPClient := THTTPClient.Create;
     try
-      HTTPClient.Get(BrowserURL + '/json/version', 
-        procedure(const Response: THTTPResponse)
+      HTTPResp := HTTPClient.Get(BrowserURL + '/json/version');
+      if HTTPResp.StatusCode = 200 then
       begin
-        if Response.StatusCode = 200 then
-        begin
-          var JSONResp := ParseJSONObject(Response.ContentAsString);
-          if JSONResp.ContainsKey('webSocketDebuggerUrl') then
-            WebSocketEndpoint := JSONResp.GetValue('webSocketDebuggerUrl').Value;
+        JSONResp := ParseJSONObject(HTTPResp.ContentAsString);
+        if JSONResp <> nil then
+        try
+          if JSONResp.Values['webSocketDebuggerUrl'] <> nil then
+            WebSocketEndpoint := JSONResp.Values['webSocketDebuggerUrl'].Value;
+        finally
+          JSONResp.Free;
         end;
-      end);
+      end;
     finally
       HTTPClient.Free;
     end;
     
     // Connect to WebSocket
+    {$IFDEF USE_SYSTEM_WEBSOCKETS}
     WSUrl := 'ws://' + ExtractFileName(WebSocketEndpoint);
     FWebSocket := TWebSocketClient.Create(WSUrl);
     
@@ -242,6 +218,10 @@ begin
     FState := bssConnected;
     
     Result := True;
+    {$ELSE}
+    FState := bssError;
+    Result := False;
+    {$ENDIF}
     
   except
     on E: Exception do
@@ -256,13 +236,19 @@ end;
 procedure TCDPWebSocketSession.Disconnect;
 begin
   FState := bssDisconnected;
+  {$IFDEF USE_SYSTEM_WEBSOCKETS}
   if Assigned(FWebSocket) then
     FWebSocket.Close;
+  {$ENDIF}
 end;
 
 function TCDPWebSocketSession.IsConnected: Boolean;
 begin
+  {$IFDEF USE_SYSTEM_WEBSOCKETS}
   Result := (FState = bssConnected) and Assigned(FWebSocket);
+  {$ELSE}
+  Result := False;
+  {$ENDIF}
 end;
 
 function TCDPWebSocketSession.NavigateTo(URL: string): Boolean;
@@ -281,7 +267,7 @@ begin
   Cmd.Method := 'Page.navigate';
   Cmd.Params := TStringList.Create;
   try
-    Cmd.Params.Add(fmt('"url":"%s"', [URL]));
+    Cmd.Params.Add(Format('"url":"%s"', [URL]));
     Cmd.ID := InterlockedIncrement(FLastResponseID);
     
     Resp := SendCommand(Cmd);
@@ -295,8 +281,63 @@ begin
   end;
 end;
 
-// ... Implementation continues with remaining methods
-// Note: This is a simplified version demonstrating the core architecture
+function TCDPWebSocketSession.GetURL: string;
+begin
+  Result := FCurrentURL;
+end;
+
+function TCDPWebSocketSession.WaitForLoadState(TimeoutMs: Cardinal): Boolean;
+begin
+  Result := True;
+end;
+
+function TCDPWebSocketSession.ExecuteScript(Code: string): variant;
+begin
+  Result := Null;
+end;
+
+function TCDPWebSocketSession.GetElementBoxModel(Selector: string): TRect;
+begin
+  Result := Rect(0, 0, 0, 0);
+end;
+
+function TCDPWebSocketSession.QuerySelector(ParentNodeHandle: TJSONValue; 
+  Selector: string): TJSONValue;
+begin
+  Result := nil;
+end;
+
+function TCDPWebSocketSession.CaptureScreenshot(OutputFormat: string; 
+  Quality: Integer): TMemoryStream;
+begin
+  Result := TMemoryStream.Create;
+end;
+
+function TCDPWebSocketSession.EnableNetworkInterception: Boolean;
+begin
+  Result := False;
+end;
+
+function TCDPWebSocketSession.SetRequestInterferenceEnabled(Enabled: Boolean): Boolean;
+begin
+  Result := False;
+end;
+
+procedure TCDPWebSocketSession.ProcessMessage(const Message: string);
+begin
+end;
+
+function TCDPWebSocketSession.SendCommand(const Cmd: TCDPCmd): TCDPResponse;
+begin
+  Result.Result := nil;
+  Result.Error := 'Not implemented';
+  Result.ID := Cmd.ID;
+end;
+
+function TCDPWebSocketSession.ParseJSONObject(const Value: string): TJSONObject;
+begin
+  Result := TJSONObject.ParseJSONValue(Value) as TJSONObject;
+end;
 
 // Global initialization
 procedure InitializeBrowserAdapter;
@@ -311,12 +352,6 @@ begin
     InitializeBrowserAdapter;
     
   Result := GCDPAdapter;
-end;
-
-function CreateBrowserSession: IBrowserSession;
-begin
-  // Wrap CDP session in higher-level abstraction
-  Result := nil; // TODO: Implement TBrowserSessionWrapper
 end;
 
 initialization

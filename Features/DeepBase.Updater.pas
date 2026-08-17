@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.Updater - Secure Auto-Update System
   
   Version: 0.3
@@ -277,6 +277,12 @@ type
 
     /// <summary>Verify a downloaded file's SHA256 hash (for tests/integration).</summary>
     function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
+
+    /// <summary>Stage + full verification WITHOUT install (docs/66 §16.5 steps 1-5:
+    /// package hash / package signature / manifest hash / manifest signature).
+    /// 配置同步等“下载+验证但不安装程序二进制”场景复用。</summary>
+    function StageAndVerifyPackage(const Info: TUpdateInfo;
+      out PackagePath: string; out ErrorMsg: string): Boolean;
 
     /// <summary>Enable insecure dev mode: allows updates without hash/signature.
     /// NEVER enable in production builds. Use only for local development testing.</summary>
@@ -1203,6 +1209,99 @@ begin
   Result := VerifyFileHash(PackagePath, Info.PackageHash);
   if not Result then
     FLastError := 'Package hash verification failed';
+end;
+
+function TUpdateManager.StageAndVerifyPackage(const Info: TUpdateInfo;
+  out PackagePath: string; out ErrorMsg: string): Boolean;
+var
+  SignatureAlg, ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
+begin
+  Result := False;
+  PackagePath := '';
+  ErrorMsg := '';
+  try
+    SetStatus(usDownloading, 'Downloading package...');
+    if not StageUpdatePackage(Info, PackagePath) then
+    begin
+      ErrorMsg := FLastError;
+      Exit;
+    end;
+
+    // Insecure dev mode bypass (strictly for local dev testing)
+    if FInsecureDevMode then
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    SignatureAlg := Trim(Info.SignatureAlgorithm).ToLower;
+    if SignatureAlg = '' then
+      SignatureAlg := 'rsa-sha256';
+
+    if Info.SignatureRequired then
+    begin
+      if (Pos('hmac', SignatureAlg) = 1) and (FSignatureSecret = '') then
+      begin
+        ErrorMsg := 'Package signature verification is required but HMAC secret is not configured';
+        Exit;
+      end;
+      if (Pos('rsa', SignatureAlg) = 1) and (FPublicKey = '') then
+      begin
+        ErrorMsg := 'Package signature verification is required but RSA public key is not configured';
+        Exit;
+      end;
+    end;
+
+    if Info.Signature <> '' then
+    begin
+      if not VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg) then
+      begin
+        ErrorMsg := 'Package signature verification failed';
+        Exit;
+      end;
+    end
+    else if Info.SignatureRequired then
+    begin
+      ErrorMsg := 'Package signature is missing';
+      Exit;
+    end;
+
+    if Info.ManifestSignature <> '' then
+    begin
+      ManifestPayload := BuildManifestSignaturePayload(Info);
+      ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
+      // docs/66 §16.10: manifest_hash 允许 'sha256:' 前缀，比对前剥离
+      ExpectedManifestHash := Info.ManifestHash;
+      if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
+        Delete(ExpectedManifestHash, 1, 7);
+      if (ExpectedManifestHash <> '') and (not SameText(ExpectedManifestHash, ComputedManifestHash)) then
+      begin
+        ErrorMsg := 'Manifest hash verification failed';
+        Exit;
+      end;
+      // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
+      if not VerifySignature(ManifestPayload, Info.ManifestSignature, SignatureAlg) then
+      begin
+        ErrorMsg := 'Manifest signature verification failed';
+        Exit;
+      end;
+    end
+    else if Info.SignatureRequired then
+    begin
+      ErrorMsg := 'Manifest signature is missing';
+      Exit;
+    end;
+
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      ErrorMsg := E.Message;
+      Result := False;
+    end;
+  end;
+  if not Result then
+    SetStatus(usFailed, ErrorMsg);
 end;
 
 function TUpdateManager.InstallPackage(const Info: TUpdateInfo; const PackagePath: string): Boolean;
