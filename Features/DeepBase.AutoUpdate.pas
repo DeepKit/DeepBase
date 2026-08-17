@@ -65,7 +65,8 @@ uses
   System.Threading,
   System.Generics.Collections,
   DeepBase.Updater,
-  DeepBase.Commerce.Permissions;
+  DeepBase.Commerce.Permissions,
+  DeepBase.Crypto.RSA;
 
 type
   /// <summary>
@@ -120,6 +121,7 @@ type
     FOnCertRejected: TOnValidateCertificateEvent;
     FConnectionTimeout: Integer;  // REVIEW5-FEAT-003: HTTP connection timeout (ms)
     FResponseTimeout: Integer;    // REVIEW5-FEAT-003: HTTP response timeout (ms)
+    FPublicKeyRSA: string;        // PEM RSA public key (PKCS#1 v1.5, RSA-SHA256 production)
 
     function GetChannel: TUpdateChannel;
     procedure SetChannel(const Value: TUpdateChannel);
@@ -207,6 +209,14 @@ type
     /// Default: 60000 (60 seconds). Prevents indefinite hangs during download.
     /// </summary>
     property ResponseTimeout: Integer read FResponseTimeout write FResponseTimeout;
+
+    /// <summary>
+    /// PEM-encoded RSA public key (PKCS#1 v1.5, RSA-SHA256) used for production
+    /// signature verification per 78a ADR r1 §2.7 (Windows CNG).
+    /// Default loaded from DEEPKIT_UPDATE_PUBLIC_KEY_RSA_PEM or UPDATE_PUBLIC_KEY_RSA_PEM env vars.
+    /// When set, DownloadUpdate verifies the package signature with RSA-SHA256.
+    /// </summary>
+    property PublicKeyRSA: string read FPublicKeyRSA write FPublicKeyRSA;
   end;
 
 implementation
@@ -222,6 +232,10 @@ begin
   // REVIEW5-FEAT-003: Default HTTP timeouts to prevent indefinite hangs
   FConnectionTimeout := 30000; // 30 seconds
   FResponseTimeout := 60000;   // 60 seconds
+  // Production signature protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, CNG).
+  FPublicKeyRSA := GetEnvironmentVariable('DEEPKIT_UPDATE_PUBLIC_KEY_RSA_PEM');
+  if FPublicKeyRSA = '' then
+    FPublicKeyRSA := GetEnvironmentVariable('UPDATE_PUBLIC_KEY_RSA_PEM');
 end;
 
 function TDeepBaseAutoUpdate.GetChannel: TUpdateChannel;
@@ -834,6 +848,60 @@ begin
 
     if not SameText(Hash, Info.Sha256) then
       Exit;
+  end;
+
+  // Verify package signature.
+  // Production protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, Windows CNG).
+  // RSA path is authoritative; fail-closed when a signature is present but no
+  // production RSA public key is configured.
+  if Info.Signature <> '' then
+  begin
+    if Trim(FPublicKeyRSA) = '' then
+    begin
+      FLastError := 'Signature verification rejected: no RSA public key configured (RSA-SHA256 production)';
+      if FileExists(DestFile) then
+        DeleteFile(DestFile);
+      Exit;
+    end;
+
+    var DigestBytes: TBytes;
+    FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
+    try
+      var H := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+      var Buf: array[0..65535] of Byte;
+      var ReadCount: Integer;
+      while True do
+      begin
+        ReadCount := FS.Read(Buf[0], Length(Buf));
+        if ReadCount <= 0 then Break;
+        H.Update(Buf[0], ReadCount);
+      end;
+      DigestBytes := H.HashAsBytes;
+    finally
+      FreeAndNil(FS);
+    end;
+
+    var Verifier: TRSAVerifier;
+    Verifier := TRSAVerifier.Create;
+    try
+      if not Verifier.LoadPublicKeyPEM(FPublicKeyRSA) then
+      begin
+        FLastError := 'Failed to load RSA public key: ' + Verifier.LastError;
+        if FileExists(DestFile) then
+          DeleteFile(DestFile);
+        Exit;
+      end;
+
+      if not Verifier.VerifySignature(DigestBytes, Info.Signature) then
+      begin
+        FLastError := 'Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid';
+        if FileExists(DestFile) then
+          DeleteFile(DestFile);
+        Exit;
+      end;
+    finally
+      FreeAndNil(Verifier);
+    end;
   end;
 
   if Assigned(OnProgress) then
