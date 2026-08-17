@@ -21,7 +21,7 @@ uses
   System.Hash,
   System.NetEncoding,
   DeepBase.Services.Interfaces,
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Platform, DeepBase.Crypto.Random;
 
 type
   // ============================================================================

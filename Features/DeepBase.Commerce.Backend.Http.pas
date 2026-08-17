@@ -43,6 +43,12 @@ type
   TCommerceBackendHttpResponse = record
     StatusCode: Integer;
     Body: string;
+    // BUG-428 FIX (E-005): response headers (empty when the transport does not
+    // surface them). Needed by SafeClient.SendJson to honor the Retry-After
+    // header on 429 responses. Defaults to nil (record zero-init), so existing
+    // direct constructions `Result.StatusCode := x; Result.Body := y` are
+    // unaffected — callers only read Headers when they need it.
+    Headers: TNetHeaders;
     class function Create(AStatusCode: Integer;
       const ABody: string): TCommerceBackendHttpResponse; static;
   end;
@@ -127,6 +133,7 @@ type
 
     procedure RefundOrder(const AOrderId: string; AAmountMinor: Int64 = 0;
       const AReason: string = '');
+    procedure CloseOrder(const AOrderId: string);
     procedure RevokeEntitlement(const AEntitlementId: string;
       const AReason: string = '');
     procedure RevokeLicenseSnapshot(const AAppId, ADeviceId, ASnapshotId: string;
@@ -143,7 +150,6 @@ type
     function BuildHeaders(const AIdempotencyKey: string): TNetHeaders;
     function SendJson(const AMethod, APath: string; ABody: TJSONObject;
       const AIdempotencyKey: string = ''): TCommerceBackendHttpResponse;
-    procedure RequireServerWrites(const AOperation: string);
   public
     constructor Create(const AConfig: TCommerceBackendHttpConfig;
       const ATransport: ICommerceBackendHttpTransport = nil);
@@ -271,6 +277,7 @@ begin
 
       Result.StatusCode := Response.StatusCode;
       Result.Body := Response.ContentAsString(TEncoding.UTF8);
+      Result.Headers := Response.Headers;
     except
       on E: EDeepBaseCommerceError do
         raise;
@@ -314,6 +321,7 @@ begin
   Response := FTransport.Send(Request);
   Result.StatusCode := Response.StatusCode;
   Result.Body := Response.Body;
+  Result.Headers := Response.Headers;
 end;
 
 { TCommerceHttpStorage }
@@ -791,6 +799,25 @@ begin
   end;
 end;
 
+procedure TCommerceHttpStorage.CloseOrder(const AOrderId: string);
+var
+  Body: TJSONObject;
+  Path: string;
+begin
+  if AOrderId.Trim = '' then
+    raise EDeepBaseCommerceValidationError.Create(
+      'CloseOrder requires order_id');
+  RequireServerWrites('CloseOrder');
+  Path := TCommerceBackendRoutes.OrderClose(AOrderId);
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair(SCommerceFieldOrderId, AOrderId);
+    EnsureSuccess(SHttpPost, Path, SendJson(SHttpPost, Path, Body));
+  finally
+    Body.Free;
+  end;
+end;
+
 procedure TCommerceHttpStorage.RevokeEntitlement(const AEntitlementId,
   AReason: string);
 var
@@ -914,14 +941,6 @@ begin
     BodyText := '';
   Result := FTransport.Send(AMethod, BuildUrl(APath), BodyText,
     BuildHeaders(AIdempotencyKey));
-end;
-
-procedure TCommerceHttpPaymentGateway.RequireServerWrites(
-  const AOperation: string);
-begin
-  if not FConfig.AllowServerWrites then
-    raise EDeepBaseCommerceValidationError.CreateFmt(
-      '%s requires server-admin Commerce HTTP config.', [AOperation]);
 end;
 
 function TCommerceHttpPaymentGateway.CreatePaymentIntent(

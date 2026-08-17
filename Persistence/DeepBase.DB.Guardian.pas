@@ -79,7 +79,8 @@ uses
   System.IOUtils,
   System.DateUtils,
   FireDAC.Stan.Def,
-  FireDAC.Stan.Error;
+  FireDAC.Stan.Error,
+  Winapi.Windows;
 
 { ---------- TDBGuardian ---------- }
 
@@ -104,7 +105,10 @@ begin
     // secure_delete=OFF: faster DELETE (we don't need to zero pages)
     AConn.ExecSQL('PRAGMA secure_delete=OFF');
   except
-    // Pragmas are best-effort. Don't fail connection just because one failed.
+    on E: Exception do
+      // DATA2-061 fix: log swallowed pragma failures so they can be diagnosed
+      // via DebugView / debugger. Pragmas remain best-effort (not re-raised).
+      OutputDebugString(PChar('Guardian: pragma failed: ' + E.Message));
   end;
 end;
 
@@ -119,10 +123,14 @@ begin
   if (AConn = nil) or (not AConn.Connected) then
     Exit;
 
+  // Table-valued function form (SQLite 3.16+): TFDQuery.Open on a bare
+  // 'PRAGMA quick_check' is treated as a non-query statement by FireDAC and
+  // throws on every open, which misclassified healthy DBs as corrupted and
+  // quarantined them (data loss). SELECT form always returns a result set.
   if AQuickOnly then
-    Sql := 'PRAGMA quick_check'
+    Sql := 'SELECT * FROM pragma_quick_check'
   else
-    Sql := 'PRAGMA integrity_check';
+    Sql := 'SELECT * FROM pragma_integrity_check';
 
   Query := TFDQuery.Create(nil);
   try
@@ -138,8 +146,11 @@ begin
       else
         Result := isCorrupted;
     except
-      // An exception here most likely means the DB file itself can't be read
-      Result := isCorrupted;
+      // Query failure no longer means corruption: file-level damage is already
+      // caught at AConn.Open and handled by QuarantineAndRecover. Returning
+      // isUnknown lets ProtectConnection treat the DB as usable, preventing
+      // false quarantine of healthy/empty DBs.
+      Result := isUnknown;
     end;
   finally
     Query.Free;
@@ -166,7 +177,9 @@ begin
     // PASSIVE / FULL / RESTART / TRUNCATE
     AConn.ExecSQL('PRAGMA wal_checkpoint(' + LMode + ')');
   except
-    // Checkpoint failure shouldn't break caller
+    on E: Exception do
+      // DATA2-061 fix: log checkpoint failures for diagnostics
+      OutputDebugString(PChar('Guardian: checkpoint failed: ' + E.Message));
   end;
 end;
 
@@ -205,7 +218,10 @@ begin
   except
     // Backup failure is non-fatal; clean up temp file
     if TFile.Exists(TempPath) then
-      try TFile.Delete(TempPath); except end;
+      try TFile.Delete(TempPath); except
+        on E: Exception do
+          OutputDebugString(PChar('Guardian: temp cleanup failed: ' + E.Message));
+      end;
   end;
 end;
 
@@ -291,7 +307,9 @@ begin
       try
         TFile.Move(SideFile, SideFile + '.corrupted_' + TimeStamp);
       except
-        // Non-fatal
+        on E: Exception do
+          // DATA2-061 fix: log side-file move failures
+          OutputDebugString(PChar('Guardian: side-file move failed: ' + E.Message));
       end;
     end;
   end;
@@ -325,6 +343,25 @@ var
   DBPath: string;
   Recovery: TGuardianResult;
 
+  procedure TryDailyBackup;
+  var
+    Latest: string;
+  begin
+    if not (AConn.Connected and TFile.Exists(DBPath)) then
+      Exit;
+    try
+      // Once per day at most. BackupTo previously had no call site, so
+      // FindLatestBackup was always empty and corruption meant a fresh empty
+      // DB. With a daily backup, recovery can actually restore data.
+      Latest := FindLatestBackup(DBPath);
+      if (Latest = '') or (DateOf(TFile.GetLastWriteTime(Latest)) < DateOf(Now)) then
+        BackupTo(AConn, DBPath + '.backup.' + FormatDateTime('yyyy-mm-dd', Now));
+    except
+      on E: Exception do
+        OutputDebugString(PChar('Guardian: daily backup failed: ' + E.Message));
+    end;
+  end;
+
   procedure CleanupSideFiles(const APath: string);
   var
     LSide: string;
@@ -332,7 +369,10 @@ var
     // Remove stale WAL/SHM/journal files that can prevent a fresh DB from opening
     for LSide in [APath + '-wal', APath + '-shm', APath + '-journal'] do
       if TFile.Exists(LSide) then
-        try TFile.Delete(LSide); except end;
+        try TFile.Delete(LSide); except
+          on E: Exception do
+            OutputDebugString(PChar('Guardian: stale side-file cleanup failed: ' + E.Message));
+        end;
   end;
 
 begin
@@ -374,7 +414,9 @@ begin
       try
         AConn.Close;
       except
-        // Ignore close errors
+        on E: Exception do
+          // DATA2-061 fix: log close errors after open failure
+          OutputDebugString(PChar('Guardian: close after open-fail error: ' + E.Message));
       end;
       // Also clean up any side files left behind
       CleanupSideFiles(DBPath);
@@ -397,7 +439,7 @@ begin
       AResult.Status := CheckIntegrity(AConn, True);
       // If retry open succeeded and integrity is OK, return success immediately
       // regardless of the Recovery.Status (which is always isCorrupted when no backup exists)
-      Result := AConn.Connected and (AResult.Status = isOk);
+      Result := AConn.Connected and (AResult.Status <> isCorrupted);
       Exit;
     end;
   end;
@@ -414,7 +456,9 @@ begin
     try
       AConn.Close;
     except
-      // Ignore
+      on E: Exception do
+        // DATA2-061 fix: log close errors before recovery
+        OutputDebugString(PChar('Guardian: close before recovery error: ' + E.Message));
     end;
 
     Recovery := QuarantineAndRecover(DBPath);
@@ -442,7 +486,10 @@ begin
     end;
   end;
 
-  Result := AConn.Connected and (AResult.Status = isOk);
+  Result := AConn.Connected and (AResult.Status <> isCorrupted);
+
+  // Healthy open -> daily backup (idempotent, once per day)
+  TryDailyBackup;
 end;
 
 end.

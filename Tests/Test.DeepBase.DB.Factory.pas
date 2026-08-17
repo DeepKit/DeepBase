@@ -38,6 +38,9 @@ type
     [Test]
     procedure Test_VerifyBoth_ReturnsFalseWhenSharedSettingsMissing;
 
+    [Test]
+    procedure Test_CreateConnectionFromProfile_DoesNotAllocateTemporaryPool;
+
     {$IFDEF MSWINDOWS}
     [Test]
     procedure Test_LoadSharedProfile_MigratesPlainPasswordToCredentialManager;
@@ -248,6 +251,34 @@ procedure TTestDBConnectionFactory.Test_VerifyBoth_ReturnsFalseWhenSharedSetting
 begin
   Assert.IsFalse(TDBConnectionFactory.VerifyBoth);
   Assert.IsNotEmpty(TDBConnectionFactory.LastError);
+end;
+
+procedure TTestDBConnectionFactory.Test_CreateConnectionFromProfile_DoesNotAllocateTemporaryPool;
+var
+  Conn: TFDConnection;
+  I: Integer;
+  SnapBefore, SnapAfter: TArray<string>;
+begin
+  // BUG-315 regression: the Factory used to new+free a TUniConnectionPool per
+  // call. We assert that repeated CreateLocalUnopenedConnection calls leave the
+  // global pool registry untouched.
+  SnapBefore := TPoolManager.GetPoolNames;
+  for I := 1 to 8 do
+  begin
+    Conn := TDBConnectionFactory.CreateLocalUnopenedConnection;
+    try
+      Assert.AreEqual('SQLite', Conn.DriverName);
+      Assert.AreEqual(FLocalDBPath, Conn.Params.Database);
+      Assert.IsFalse(Conn.LoginPrompt);
+      Assert.IsTrue(Conn.ResourceOptions.AutoReconnect);
+      Assert.IsTrue(Conn.ResourceOptions.KeepConnection);
+    finally
+      Conn.Free;
+    end;
+  end;
+  SnapAfter := TPoolManager.GetPoolNames;
+  Assert.AreEqual(Length(SnapBefore), Length(SnapAfter),
+    'BUG-315: Factory should not register any pool when building one-off connections');
 end;
 
 {$IFDEF MSWINDOWS}

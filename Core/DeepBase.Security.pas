@@ -36,7 +36,8 @@ uses
   System.Generics.Collections,
   DeepBase.Types,
   DeepBase.Exceptions,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   /// <summary>
@@ -47,11 +48,8 @@ type
     FStorage: ISecuritySecretStorage;
     FLock: TObject;
     FOwnsLock: Boolean;
-    class var FConnectionStorageFactory: TFunc<TObject, ISecuritySecretStorage>;
 
     procedure EnsureSecretsTable;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): ISecuritySecretStorage; static;
 
   public
     constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
@@ -446,10 +444,24 @@ begin
   OpenSSL_Init;
 
   MachineKey := GetMachineEntropy;
-  Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
-  Plaintext := OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, Tag);
-
-  Result := TEncoding.UTF8.GetString(Plaintext);
+  try
+    Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
+    try
+      Plaintext := OpenSSL_AES256GCM_Decrypt(Key, IV, Ciphertext, nil, Tag);
+      try
+        Result := TEncoding.UTF8.GetString(Plaintext);
+      finally
+        // Zeroize decrypted plaintext so a memory dump cannot recover the
+        // cleartext secret (CORE-R3-004 fix).
+        SecureClearBytes(Plaintext);
+      end;
+    finally
+      // Zeroize the derived key and machine entropy material.
+      SecureClearBytes(Key);
+    end;
+  finally
+    SecureClearBytes(MachineKey);
+  end;
 end;
 
 function DecryptUBS2(const AData: TBytes): string;
@@ -516,51 +528,63 @@ begin
   
   // Derive key from machine entropy using OpenSSL PBKDF2
   MachineKey := GetMachineEntropy;
-  Iterations := UBS2_PBKDF2_ITERATIONS;
-  Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
-  
-  // Encrypt using AES-256-GCM
-  Plaintext := TEncoding.UTF8.GetBytes(AText);
-  Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
-  
-  // Build UBS2 format output
-  SetLength(Result, UBS2_HEADER_SIZE + Length(Ciphertext) + UBS2_TAG_SIZE);
-  Offset := 0;
-  
-  // Magic
-  Move(UBS2_MAGIC[0], Result[Offset], 4);
-  Inc(Offset, 4);
-  
-  // Version
-  Result[Offset] := UBS2_VERSION_CURRENT;
-  Inc(Offset);
-  
-  // KDF type
-  Result[Offset] := UBS2_KDF_PBKDF2_SHA256;
-  Inc(Offset);
-  
-  // Iterations (little-endian)
-  Result[Offset] := Byte(Iterations);
-  Result[Offset + 1] := Byte(Iterations shr 8);
-  Result[Offset + 2] := Byte(Iterations shr 16);
-  Result[Offset + 3] := Byte(Iterations shr 24);
-  Inc(Offset, 4);
-  
-  // Salt
-  Move(Salt[0], Result[Offset], UBS2_SALT_SIZE);
-  Inc(Offset, UBS2_SALT_SIZE);
-  
-  // IV
-  Move(IV[0], Result[Offset], UBS2_IV_SIZE);
-  Inc(Offset, UBS2_IV_SIZE);
-  
-  // Ciphertext
-  if Length(Ciphertext) > 0 then
-    Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
-  Inc(Offset, Length(Ciphertext));
-  
-  // Tag
-  Move(Tag[0], Result[Offset], UBS2_TAG_SIZE);
+  try
+    Iterations := UBS2_PBKDF2_ITERATIONS;
+    Key := OpenSSL_PBKDF2_SHA256(MachineKey, Salt, Iterations, UBS2_KEY_SIZE);
+    try
+      // Encrypt using AES-256-GCM
+      Plaintext := TEncoding.UTF8.GetBytes(AText);
+      try
+        Ciphertext := OpenSSL_AES256GCM_Encrypt(Key, IV, Plaintext, nil, Tag);
+
+        // Build UBS2 format output
+        SetLength(Result, UBS2_HEADER_SIZE + Length(Ciphertext) + UBS2_TAG_SIZE);
+        Offset := 0;
+
+        // Magic
+        Move(UBS2_MAGIC[0], Result[Offset], 4);
+        Inc(Offset, 4);
+
+        // Version
+        Result[Offset] := UBS2_VERSION_CURRENT;
+        Inc(Offset);
+
+        // KDF type
+        Result[Offset] := UBS2_KDF_PBKDF2_SHA256;
+        Inc(Offset);
+
+        // Iterations (little-endian)
+        Result[Offset] := Byte(Iterations);
+        Result[Offset + 1] := Byte(Iterations shr 8);
+        Result[Offset + 2] := Byte(Iterations shr 16);
+        Result[Offset + 3] := Byte(Iterations shr 24);
+        Inc(Offset, 4);
+
+        // Salt
+        Move(Salt[0], Result[Offset], UBS2_SALT_SIZE);
+        Inc(Offset, UBS2_SALT_SIZE);
+
+        // IV
+        Move(IV[0], Result[Offset], UBS2_IV_SIZE);
+        Inc(Offset, UBS2_IV_SIZE);
+
+        // Ciphertext
+        if Length(Ciphertext) > 0 then
+          Move(Ciphertext[0], Result[Offset], Length(Ciphertext));
+        Inc(Offset, Length(Ciphertext));
+
+        // Tag
+        Move(Tag[0], Result[Offset], UBS2_TAG_SIZE);
+      finally
+        // Zeroize the UTF-8 plaintext bytes (CORE-R3-004 fix).
+        SecureClearBytes(Plaintext);
+      end;
+    finally
+      SecureClearBytes(Key);
+    end;
+  finally
+    SecureClearBytes(MachineKey);
+  end;
 end;
 {$ELSE}
 begin
@@ -634,8 +658,15 @@ end;
 // ============================================================================
 
 constructor TDeepBaseSecurity.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: ISecuritySecretStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<ISecuritySecretStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No security storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.Security.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
 end;
 
 constructor TDeepBaseSecurity.Create(const AStorage: ISecuritySecretStorage;
@@ -671,19 +702,7 @@ end;
 class procedure TDeepBaseSecurity.SetStorageFactory(
   const AFactory: TFunc<TObject, ISecuritySecretStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseSecurity.CreateStorageFromConnection(
-  AConnection: TObject): ISecuritySecretStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No security storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.Security.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<ISecuritySecretStorage>.SetFactory(AFactory);
 end;
 
 function TDeepBaseSecurity.ProtectString(const AText: string): TBytes;

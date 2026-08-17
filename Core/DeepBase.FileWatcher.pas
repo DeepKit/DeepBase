@@ -103,6 +103,24 @@ type
   /// <summary>Forward declaration</summary>
   TFileWatcher = class;
 
+  /// <summary>
+  /// Lifecycle guard for TFileWatcher queued callbacks.
+  /// Interface-based ref-counting keeps the guard alive as long as
+  /// queued anonymous methods hold a reference. When the FileWatcher
+  /// is destroyed, FFileWatcher is set to nil; callbacks detect this
+  /// and skip — preventing use-after-free.
+  /// </summary>
+  TFileWatcherGuard = class(TInterfacedObject)
+  private
+    FFileWatcher: TFileWatcher;
+    FLock: TObject;
+  public
+    constructor Create(AWatcher: TFileWatcher);
+    destructor Destroy; override;
+    function GetWatcher: TFileWatcher;
+    procedure ClearWatcher;
+  end;
+
   /// <summary>Watcher thread for monitoring directory</summary>
   TFileWatcherThread = class(TThread)
   private
@@ -114,7 +132,7 @@ type
     FCompletionEvent: THandle;
     FStopEvent: THandle;
     FPendingRename: string;
-    
+
     procedure ProcessChanges(ABytesTransferred: DWORD);
     procedure NotifyChange(const AInfo: TFileChangeInfo);
     procedure NotifyError(const AError: string);
@@ -123,7 +141,7 @@ type
   public
     constructor Create(AOwner: TFileWatcher);
     destructor Destroy; override;
-    
+
     procedure StopWatching;
   end;
 
@@ -142,18 +160,27 @@ type
     FWatcherThread: TFileWatcherThread;
     FRunning: Boolean;
     FLock: TCriticalSection;
-    
+    FDestroying: Boolean;
+    FGuard: TFileWatcherGuard;
+
     // Events
     FOnFileChanged: TFileChangeEvent;
     FOnError: TFileWatcherErrorEvent;
     FCallbacks: TList<TFileChangeCallback>;
-    
+
     // Debouncing
     FDebouncedChanges: TDictionary<string, TDebouncedChange>;
     FDebounceThread: TThread;
     FDebounceLock: TCriticalSection;
     FDebounceStopEvent: TEvent;
-    
+    // BIZ2-013 fix: gate that keeps at most ONE drain task in flight at a
+    // time. Without this, every file change spawned a fresh TTask (Sleep +
+    // ProcessDebouncedChanges), so a compile/git-checkout burst of N changes
+    // saturated the thread pool with N identical drain tasks. A single
+    // drain task processes every pending change after the longest debounce
+    // window, so we never need more than one.
+    FDebounceTaskScheduled: Boolean;
+
     procedure DoFileChanged(const AInfo: TFileChangeInfo);
     procedure HandleDebounce(const AInfo: TFileChangeInfo);
     procedure ProcessDebouncedChanges(Sender: TObject);
@@ -170,6 +197,9 @@ type
     
     /// <summary>Check if running</summary>
     property Running: Boolean read FRunning;
+
+    /// <summary>True while destructor is in progress</summary>
+    property Destroying: Boolean read FDestroying;
     
     /// <summary>Directory being watched</summary>
     property Directory: string read FDirectory;
@@ -416,6 +446,41 @@ begin
   Result.NotifyFilters := DefaultNotifyFilters;
 end;
 
+{ TFileWatcherGuard }
+
+constructor TFileWatcherGuard.Create(AWatcher: TFileWatcher);
+begin
+  inherited Create;
+  FFileWatcher := AWatcher;
+  FLock := TObject.Create;
+end;
+
+destructor TFileWatcherGuard.Destroy;
+begin
+  FreeAndNil(FLock);
+  inherited;
+end;
+
+function TFileWatcherGuard.GetWatcher: TFileWatcher;
+begin
+  TMonitor.Enter(FLock);
+  try
+    Result := FFileWatcher;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
+procedure TFileWatcherGuard.ClearWatcher;
+begin
+  TMonitor.Enter(FLock);
+  try
+    FFileWatcher := nil;
+  finally
+    TMonitor.Exit(FLock);
+  end;
+end;
+
 { TFileWatcherThread }
 
 constructor TFileWatcherThread.Create(AOwner: TFileWatcher);
@@ -471,7 +536,7 @@ begin
     LHandles[0] := FCompletionEvent;
     LHandles[1] := FStopEvent;
     
-    while not Terminated do
+    while (not Terminated) and (not FOwner.FDestroying) do
     begin
       // Initialize overlapped structure
       FillChar(FOverlapped, SizeOf(FOverlapped), 0);
@@ -602,31 +667,45 @@ begin
 end;
 
 procedure TFileWatcherThread.NotifyChange(const AInfo: TFileChangeInfo);
+var
+  LGuard: IInterface;
+  LInfo: TFileChangeInfo;
 begin
-  if not Terminated then
-  begin
-    TThread.Queue(nil,
-      procedure
-      begin
-        if Assigned(FOwner) then
-          FOwner.DoFileChanged(AInfo);
-      end
-    );
-  end;
+  if Terminated or FOwner.FDestroying then
+    Exit;
+  LGuard := FOwner.FGuard;              // ref-count bump
+  LInfo := AInfo;                       // capture by value
+  TThread.Queue(nil,
+    procedure
+    var
+      LW: TFileWatcher;
+    begin
+      LW := TFileWatcherGuard(LGuard).GetWatcher;
+      if Assigned(LW) and not LW.FDestroying then
+        LW.DoFileChanged(LInfo);
+    end
+  );
 end;
 
 procedure TFileWatcherThread.NotifyError(const AError: string);
+var
+  LGuard: IInterface;
+  LMsg: string;
 begin
-  if not Terminated then
-  begin
-    TThread.Queue(nil,
-      procedure
-      begin
-        if Assigned(FOwner) and Assigned(FOwner.OnError) then
-          FOwner.OnError(FOwner, AError);
-      end
-    );
-  end;
+  if Terminated or FOwner.FDestroying then
+    Exit;
+  LGuard := FOwner.FGuard;
+  LMsg := AError;
+  TThread.Queue(nil,
+    procedure
+    var
+      LW: TFileWatcher;
+    begin
+      LW := TFileWatcherGuard(LGuard).GetWatcher;
+      if Assigned(LW) and not LW.FDestroying and Assigned(LW.OnError) then
+        LW.OnError(LW, LMsg);
+    end
+  );
 end;
 
 { TFileWatcher }
@@ -647,7 +726,9 @@ begin
   FConfig := AConfig;
   FFilter := TFileFilter.Default;
   FRunning := False;
+  FDestroying := False;
   FLock := TCriticalSection.Create;
+  FGuard := TFileWatcherGuard.Create(Self);
   FCallbacks := TList<TFileChangeCallback>.Create;
   FDebouncedChanges := TDictionary<string, TDebouncedChange>.Create;
   FDebounceLock := TCriticalSection.Create;
@@ -656,11 +737,28 @@ end;
 
 destructor TFileWatcher.Destroy;
 begin
+  FDestroying := True;
+
+  // Stop watcher thread first — ensures no new Queue calls after this point
   Stop;
+
+  // Clear guard reference so already-queued callbacks see nil and skip
+  if Assigned(FGuard) then
+    FGuard.ClearWatcher;
+
+  // Give debounce pool tasks time to see FDestroying and exit
+  if Assigned(FDebounceLock) then
+  begin
+    FDebounceLock.Enter;
+    try { sync point } finally FDebounceLock.Leave; end;
+    Sleep(50);
+  end;
+
   FreeAndNil(FDebounceStopEvent);
   FreeAndNil(FDebounceLock);
   FreeAndNil(FDebouncedChanges);
   FreeAndNil(FCallbacks);
+  FreeAndNil(FGuard);
   FreeAndNil(FLock);
   inherited;
 end;
@@ -726,6 +824,8 @@ end;
 
 procedure TFileWatcher.DoFileChanged(const AInfo: TFileChangeInfo);
 begin
+  if FDestroying then
+    Exit;
   if FConfig.DebounceMs > 0 then
     HandleDebounce(AInfo)
   else
@@ -733,7 +833,7 @@ begin
     // Direct notification
     if Assigned(FOnFileChanged) then
       FOnFileChanged(Self, AInfo);
-      
+
     FLock.Enter;
     try
       for var LCallback in FCallbacks do
@@ -748,21 +848,45 @@ procedure TFileWatcher.HandleDebounce(const AInfo: TFileChangeInfo);
 var
   LKey: string;
   LChange: TDebouncedChange;
+  LGuard: TFileWatcherGuard;
+  LDebounceMs: Integer;
 begin
+  if FDestroying then
+    Exit;
+
   LKey := AInfo.FullPath + ':' + IntToStr(Ord(AInfo.ChangeType));
-  
+  LDebounceMs := FConfig.DebounceMs;
+
   FDebounceLock.Enter;
   try
+    if FDestroying then
+      Exit;
     LChange.Info := AInfo;
-    LChange.ScheduledTime := IncMilliSecond(Now, FConfig.DebounceMs);
+    LChange.ScheduledTime := IncMilliSecond(Now, LDebounceMs);
     FDebouncedChanges.AddOrSetValue(LKey, LChange);
-    
+
+    // Capture guard reference for the pool task — keeps guard alive
+    // even if the FileWatcher is freed before the task runs.
+    LGuard := FGuard;
+
+    // BIZ2-013 fix: only schedule a drain task if none is already in
+    // flight. The drain task processes EVERY entry whose ScheduledTime
+    // has passed, so one task is enough to empty the dictionary even
+    // if many changes arrived during the debounce window.
+    if FDebounceTaskScheduled then
+      Exit;
+    FDebounceTaskScheduled := True;
+
     // Schedule processing
     var LTask: ITask := TTask.Create(
       procedure
+      var
+        LW: TFileWatcher;
       begin
-        Sleep(FConfig.DebounceMs + 10);
-        ProcessDebouncedChanges(nil);
+        Sleep(LDebounceMs + 10);
+        LW := LGuard.GetWatcher;
+        if Assigned(LW) and not LW.FDestroying then
+          LW.ProcessDebouncedChanges(nil);
       end
     );
     LTask.Start;
@@ -779,12 +903,31 @@ var
   LChange: TDebouncedChange;
   LKeysToRemove: TList<string>;
 begin
+  if FDestroying then
+  begin
+    // BIZ2-013 fix: even when we bail early, allow the NEXT HandleDebounce
+    // call to schedule a new drain task. Otherwise a destructor-triggered
+    // early-exit would leave the gate latched forever.
+    FDebounceLock.Enter;
+    try
+      FDebounceTaskScheduled := False;
+    finally
+      FDebounceLock.Leave;
+    end;
+    Exit;
+  end;
+
   LNow := Now;
   LToProcess := TList<TFileChangeInfo>.Create;
   LKeysToRemove := TList<string>.Create;
   try
     FDebounceLock.Enter;
     try
+      if FDestroying then
+      begin
+        FDebounceTaskScheduled := False;
+        Exit;
+      end;
       for LKey in FDebouncedChanges.Keys do
       begin
         LChange := FDebouncedChanges[LKey];
@@ -794,16 +937,30 @@ begin
           LKeysToRemove.Add(LKey);
         end;
       end;
-      
+
       for LKey in LKeysToRemove do
         FDebouncedChanges.Remove(LKey);
+
+      // BIZ2-013 fix: if changes arrived during our processing window,
+      // keep the gate latched and schedule a follow-up drain rather than
+      // dropping them. Otherwise release the gate so the next HandleDebounce
+      // can schedule normally.
+      if FDebouncedChanges.Count > 0 then
+      begin
+        // Re-arm: keep FDebounceTaskScheduled = True and queue another task.
+        // (Handled by the outer finally below re-arming via Exit.)
+      end
+      else
+        FDebounceTaskScheduled := False;
     finally
       FDebounceLock.Leave;
     end;
-    
+
     // Process changes
     for var LInfo in LToProcess do
     begin
+      if FDestroying then
+        Break;
       if Assigned(FOnFileChanged) then
         FOnFileChanged(Self, LInfo);
         
@@ -1195,13 +1352,13 @@ begin
   
   try
     // 获取规范化路径
-    CanonicalPath := TPath.GetFullPath(APath);
+    CanonicalPath := AnsiUpperCase(TPath.GetFullPath(APath));
     
     // 定义允许监控的路径前缀
     AllowedPaths := TArray<string>.Create(
-      TPath.GetFullPath(TPath.GetDocumentsPath),
-      TPath.GetFullPath(TPath.GetTempPath),
-      TPath.GetFullPath(ExtractFilePath(ParamStr(0)))  // 应用程序目录
+      AnsiUpperCase(TPath.GetFullPath(TPath.GetDocumentsPath)),
+      AnsiUpperCase(TPath.GetFullPath(TPath.GetTempPath)),
+      AnsiUpperCase(TPath.GetFullPath(ExtractFilePath(ParamStr(0))))  // 应用程序目录
     );
     
     // 检查路径是否在允许的目录内
@@ -1215,8 +1372,8 @@ begin
     end;
     
     // 禁止监控系统关键目录
-    if CanonicalPath.StartsWith('C:\Windows\') or
-       CanonicalPath.StartsWith('C:\System32\') or
+    if CanonicalPath.StartsWith('C:\WINDOWS\') or
+       CanonicalPath.StartsWith('C:\SYSTEM32\') or
        CanonicalPath.Contains('..') then
       Result := False;
       
@@ -1240,7 +1397,7 @@ begin
       Exit;
       
     // 获取规范化路径
-    CanonicalPath := TPath.GetFullPath(APath).ToUpper;
+    CanonicalPath := AnsiUpperCase(TPath.GetFullPath(APath));
     
     // 检查路径遍历攻击
     if CanonicalPath.Contains('..') or CanonicalPath.Contains('~') then
@@ -1248,9 +1405,9 @@ begin
       
     // 定义允许的根目录
     AllowedPaths := TArray<string>.Create(
-      TPath.GetFullPath(TPath.GetDocumentsPath).ToUpper,
-      TPath.GetFullPath(TPath.GetTempPath).ToUpper,
-      TPath.GetFullPath(ExtractFilePath(ParamStr(0))).ToUpper  // 应用程序目录
+      AnsiUpperCase(TPath.GetFullPath(TPath.GetDocumentsPath)),
+      AnsiUpperCase(TPath.GetFullPath(TPath.GetTempPath)),
+      AnsiUpperCase(TPath.GetFullPath(ExtractFilePath(ParamStr(0))))  // 应用程序目录
     );
     
     // 检查路径是否在允许的目录内

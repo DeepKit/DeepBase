@@ -103,7 +103,12 @@ type
     
     [Test]
     procedure Test_DispatchMode_Async_ExecutesInBackground;
-    
+
+    // BUG-317 (INFRA-011): PublishAsync 必须使用 TThread.CreateAnonymousThread
+    // (与 edmAsync 线程模型统一)，并通过 drain tracker 等待完成。
+    [Test]
+    procedure Test_PublishAsync_ExecutesAndDrains;
+
     // Statistics
     [Test]
     procedure Test_Stats_TotalPublished;
@@ -634,6 +639,34 @@ begin
   finally
     CompletionEvent.Free;
   end;
+end;
+
+procedure TTestDeepBaseEventBus.Test_PublishAsync_ExecutesAndDrains;
+var
+  Counter: Integer;
+  I: Integer;
+  E: TTestEvent;
+begin
+  // BUG-317 (INFRA-011): PublishAsync 改用 TThread.CreateAnonymousThread
+  // 以与 edmAsync 线程模型对齐，并通过 FAsyncCount drain tracker 集成
+  // WaitForAsyncHandlers。这里验证:
+  //   1) WaitForAsyncHandlers 能正确等待所有异步派发完成
+  //   2) 100 并发 PublishAsync 全部被 drain
+  Counter := 0;
+  FEventBus.Subscribe<TTestEvent>(
+    procedure(const Event: TTestEvent)
+    begin
+      Sleep(10);
+      TInterlocked.Increment(Counter);
+    end, epNormal, edmSync);
+
+  for I := 1 to 100 do
+    FEventBus.PublishAsync<TTestEvent>(E);
+
+  Assert.IsTrue(FEventBus.WaitForAsyncHandlers(5000),
+    'WaitForAsyncHandlers should drain all PublishAsync dispatches');
+  Assert.AreEqual(100, Counter,
+    'all 100 PublishAsync dispatches should execute');
 end;
 
 procedure TTestDeepBaseEventBus.Test_Stats_TotalPublished;

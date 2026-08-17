@@ -13,7 +13,7 @@ uses
   {$IFDEF MSWINDOWS}
   UIAutomationClient_TLB,
   {$ENDIF}
-  DeepBase.Types, DeepBase.Exceptions, DeepBase.Logging, DeepBase.Crypto,
+  DeepBase.Types, DeepBase.Exceptions, DeepBase.Logging, DeepBase.Crypto, DeepBase.Crypto.Hash,
   DeepBase.UIA.Types,
   DeepBase.External.Auditor,
   DeepBase.ClipboardGuard,
@@ -25,7 +25,7 @@ const
   UIA_ClassNamePropertyId    = 30012;
   UIA_NamePropertyId         = 30005;
   UIA_ControlTypePropertyId  = 30003;
-  UIA_ProcessIdPropertyId    = 30005 + 4000; // 近似值 — 实际为 30010
+  UIA_ProcessIdPropertyId    = 30002; // UIA_ProcessIdPropertyId
 
   // UIA Pattern IDs
   UIA_ValuePatternId   = 10002;

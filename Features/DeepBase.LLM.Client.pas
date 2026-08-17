@@ -30,6 +30,18 @@ type
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
 
+    /// <summary>
+    /// Per-provider chat call (bypasses tier/priority routing).
+    /// Routes directly to the named provider using AModelId, so multiple
+    /// providers can coexist without one overwriting another's tier config
+    /// (fixes DeepFrames TFailoverLLMProvider tier-override trap).
+    /// Returns TChatResult with ErrorCode='NO_PROVIDER' if AProviderName
+    /// is not registered.
+    /// </summary>
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>;

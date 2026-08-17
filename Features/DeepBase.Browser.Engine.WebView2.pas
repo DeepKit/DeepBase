@@ -11,9 +11,9 @@
 
 unit DeepBase.Browser.Engine.WebView2;
 
-{$IFDEF USE_WEBVIEW2}
-
 interface
+
+{$IFDEF USE_WEBVIEW2}
 
 uses
   Winapi.ActiveX,
@@ -41,11 +41,14 @@ uses
 
 type
   TWebView2BrowserSession = class(TInterfacedObject,
-    IBrowserSession, IBrowserSessionAsync, IBrowserMessageReceiver)
+    IBrowserSession, IBrowserSessionAsync, IBrowserMessageReceiver,
+    IBrowserDevToolsSubscription)
   private
     FBrowser: TWVBrowser;
     FWindowParent: TWVWindowParent;
     FOwner: TWinControl;
+    FProfileName: string;
+    FOnDevToolsEvent: TProc<string, string>;  // BUG-012: DevTools event callback
     FReady: Boolean;
     FLastError: string;
     FCurrentUrl: string;
@@ -55,6 +58,14 @@ type
     FCDPCalls: TDictionary<Integer, TObject>;  // Integer -> TPendingCDPCall
     FCDPCallsLock: TCriticalSection;
     FNextCallId: Integer;
+    FDevToolsPending: TStringList;  // P0-6: 未就绪时缓存的 DevTools 事件名
+
+    // FEAT-R3-002 (E-002) fix: track in-flight async tasks so Destroy can wait
+    // for them. NavigateAsync/ExecuteScriptAsync/EvaluateScriptAsync/
+    // CaptureScreenshotAsync return TTask.Run(LProc) whose closure captures
+    // Self; Destroy previously freed Self while tasks were still running → UAF.
+    FAsyncTasks: TList<ITask>;
+    FAsyncTasksLock: TCriticalSection;
 
     FNavigationEvent: TEvent;  // BUG-BA-021 fix: real wait for navigation completion
     FNavigationOk: Boolean;
@@ -86,6 +97,11 @@ type
     procedure BrowserWebMessageReceived(Sender: TObject;
       const AWebView: ICoreWebView2;
       const AArgs: ICoreWebView2WebMessageReceivedEventArgs);
+    // BUG-012 fix: DevTools event outlet
+    procedure BrowserDevToolsProtocolEventReceived(Sender: TObject;
+      const AWebView: ICoreWebView2;
+      const AArgs: ICoreWebView2DevToolsProtocolEventReceivedEventArgs;
+      const AEventName: wvstring; AEventID: Integer);
 
     // C7 fix: marshal a COM call to the main (STA) thread.
     procedure OnMainThread(AProc: TThreadProcedure);
@@ -97,11 +113,18 @@ type
     function CallCDPSync(const AMethod, AParams: string;
       ATimeoutMs: Integer): string;
     function WaitForReady(ATimeoutMs: Integer): Boolean;
+    // FEAT-R3-002 (E-002): run LProc as a task AND register it for
+    // Destroy-time waiting, so the closure (which captures Self) cannot
+    // outlive the instance.
+    function RunTrackedAsync(const LProc: TProc): ITask;
+    procedure WaitForAsyncTasks;
   public
-    constructor Create(AOwner: TWinControl);
+    constructor Create(AOwner: TWinControl); overload;
+    constructor Create(AOwner: TWinControl; const AProfileName: string); overload;
     destructor Destroy; override;
 
     { IBrowserSession }
+    function IsReady: Boolean;
     function GetSessionId: TBrowserSessionId;
     function GetState: TBrowserSessionState;
     function GetCurrentUrl: string;
@@ -133,11 +156,17 @@ type
     procedure SetMessageHandler(AHandler: TProc<string>);
     procedure ClearMessageHandler;
 
+    { IBrowserDevToolsSubscription (P0-6) }
+    procedure SetDevToolsEventHandler(AHandler: TProc<string, string>);
+    function SubscribeToDevToolsEvent(const AEventName: string): Boolean;
+
     property Browser: TWVBrowser read FBrowser;
     property WindowParent: TWVWindowParent read FWindowParent;
     property Ready: Boolean read FReady;
     // C6 fix: assign to receive postMessage(json) from JS.
     property OnWebMessage: TProc<string> read FOnWebMessage write FOnWebMessage;
+    // BUG-012 fix: assign to receive CDP DevTools events (Method, ParamsJson)
+    property OnDevToolsEvent: TProc<string, string> read FOnDevToolsEvent write FOnDevToolsEvent;
   end;
 
 procedure InitializeWebView2(
@@ -252,6 +281,10 @@ begin
   FCDPCallsLock := TCriticalSection.Create;
   FNextCallId := 0;
 
+  // FEAT-R3-002 (E-002) fix: in-flight async task tracking
+  FAsyncTasks := TList<ITask>.Create;
+  FAsyncTasksLock := TCriticalSection.Create;
+
   // BUG-BA-021 fix: navigation completion event
   FNavigationEvent := TEvent.Create(nil, True, False, '');
   FNavigateMutex := TCriticalSection.Create;       // H3 fix
@@ -275,6 +308,12 @@ begin
     BrowserCallDevToolsProtocolMethodCompleted;
   // C6 fix: subscribe to JS-side window.chrome.webview.postMessage
   FBrowser.OnWebMessageReceived := BrowserWebMessageReceived;
+  // BUG-012 fix: subscribe to CDP DevTools protocol events
+  FBrowser.OnDevToolsProtocolEventReceived := BrowserDevToolsProtocolEventReceived;
+
+  // Profile support: set before CreateBrowser to inherit login cookies
+  if FProfileName <> '' then
+    FBrowser.ProfileName := wvstring(FProfileName);
 
   InitializeWebView2;
   if GlobalWebView2Loader.Initialized then
@@ -284,10 +323,22 @@ begin
       'TWebView2BrowserSession');
 end;
 
+constructor TWebView2BrowserSession.Create(AOwner: TWinControl; const AProfileName: string);
+begin
+  FProfileName := AProfileName;
+  Create(AOwner);
+end;
+
 destructor TWebView2BrowserSession.Destroy;
 var
   LObj: TObject;
 begin
+  // FEAT-R3-002 (E-002): MUST wait for in-flight async tasks FIRST. Their
+  // closures capture Self and call instance methods (Navigate/ExecuteScript/
+  // EvaluateScript/CaptureScreenshot); freeing Self before they finish → UAF.
+  // Bounded 5s/task so a stuck task cannot deadlock teardown forever.
+  WaitForAsyncTasks;
+
   // B-035: Drain CDP calls and free lock BEFORE stopping browser.
   // FBrowser.Stop can trigger callbacks that access FCDPCallsLock.
   FCDPCallsLock.Enter;
@@ -310,6 +361,11 @@ begin
   FNavigateMutex.Free;
   FScreenshotMutex.Free;
 
+  // FEAT-R3-002 (E-002): async task tracking containers (tasks already
+  // released by WaitForAsyncTasks, which drained the list under the lock).
+  FAsyncTasksLock.Free;
+  FAsyncTasks.Free;
+
   inherited;
 end;
 
@@ -321,6 +377,17 @@ begin
   begin
     FBrowser.CoreWebView2Settings.IsScriptEnabled := True;
     FBrowser.CoreWebView2Settings.AreDefaultScriptDialogsEnabled := True;
+  end;
+  // P0-6 fix: 浏览器就绪后补订阅先前缓存的 DevTools 事件
+  if FDevToolsPending <> nil then
+  try
+    for var LEventName in FDevToolsPending do
+      FBrowser.SubscribeToDevToolsProtocolEvent(LEventName);
+    Logger.InfoFmt('DevTools pending subscriptions flushed: %d',
+      [FDevToolsPending.Count], 'TWebView2BrowserSession');
+  finally
+    FDevToolsPending.Free;
+    FDevToolsPending := nil;
   end;
   Logger.InfoFmt('WebView2 session created: %s',
     [FSessionId], 'TWebView2BrowserSession');
@@ -413,6 +480,38 @@ begin
   except
     on E: Exception do
       Logger.ErrorFmt('OnWebMessage handler raised: %s',
+        [E.Message], 'TWebView2BrowserSession');
+  end;
+end;
+
+// BUG-012 fix: DevTools protocol event outlet.
+// WebView2 fires this for every CDP event the browser emits.
+// Forward to FOnDevToolsEvent so TCDPStrategy (or any consumer) can process.
+procedure TWebView2BrowserSession.BrowserDevToolsProtocolEventReceived(
+  Sender: TObject; const AWebView: ICoreWebView2;
+  const AArgs: ICoreWebView2DevToolsProtocolEventReceivedEventArgs;
+  const AEventName: wvstring; AEventID: Integer);
+var
+  LParamsJson: PWideChar;
+  LParams: string;
+  LHandler: TProc<string, string>;
+begin
+  if not Assigned(AArgs) then Exit;
+  LParamsJson := nil;
+  AArgs.Get_ParameterObjectAsJson(LParamsJson);
+  try
+    LParams := string(LParamsJson);
+  finally
+    if Assigned(LParamsJson) then
+      CoTaskMemFree(LParamsJson);
+  end;
+  LHandler := FOnDevToolsEvent;
+  if Assigned(LHandler) then
+  try
+    LHandler(string(AEventName), LParams);
+  except
+    on E: Exception do
+      Logger.ErrorFmt('OnDevToolsEvent handler raised: %s',
         [E.Message], 'TWebView2BrowserSession');
   end;
 end;
@@ -534,7 +633,56 @@ begin
   Result := True;
 end;
 
+{ FEAT-R3-002 (E-002): run LProc as a task AND register it so Destroy can wait.
+  Captures Self via FAsyncTasks/FAsyncTasksLock; the returned ITask is also
+  held by the caller, but tracking here ensures Destroy blocks until the
+  closure stops touching Self. }
+function TWebView2BrowserSession.RunTrackedAsync(const LProc: TProc): ITask;
+begin
+  Result := TTask.Run(LProc);
+  FAsyncTasksLock.Enter;
+  try
+    FAsyncTasks.Add(Result);
+  finally
+    FAsyncTasksLock.Leave;
+  end;
+end;
+
+{ FEAT-R3-002 (E-002): wait for every in-flight async task (bounded), so the
+  closure that captured Self can no longer run before Self is freed. Pruned
+  tasks (already-completed) drop out cheaply. }
+procedure TWebView2BrowserSession.WaitForAsyncTasks;
+var
+  LSnap: TArray<ITask>;
+  LTask: ITask;
+begin
+  FAsyncTasksLock.Enter;
+  try
+    LSnap := FAsyncTasks.ToArray;
+    FAsyncTasks.Clear;
+  finally
+    FAsyncTasksLock.Leave;
+  end;
+  for LTask in LSnap do
+  begin
+    try
+      // Bounded wait so a hung task cannot deadlock Destroy forever; the
+      // task object is released (refcount drop) after the loop regardless.
+      LTask.Wait(5000);
+    except
+      // Ignore WaitFor failures (timeout/AV) — Self is being torn down; we
+      // cannot salvage a stuck task, and re-raising would mask teardown.
+    end;
+  end;
+end;
+
 { IBrowserSession }
+
+function TWebView2BrowserSession.IsReady: Boolean;
+begin
+  Result := FReady;
+end;
+
 
 function TWebView2BrowserSession.GetSessionId: TBrowserSessionId;
 begin
@@ -743,6 +891,45 @@ begin
   Result := True;
 end;
 
+{ IBrowserDevToolsSubscription (P0-6 fix: CDP 事件桥接) }
+
+procedure TWebView2BrowserSession.SetDevToolsEventHandler(
+  AHandler: TProc<string, string>);
+begin
+  FOnDevToolsEvent := AHandler;
+end;
+
+function TWebView2BrowserSession.SubscribeToDevToolsEvent(
+  const AEventName: string): Boolean;
+begin
+  Result := False;
+  if (not FReady) or (FBrowser = nil) then
+  begin
+    // P0-6 fix: 浏览器未就绪时缓存, BrowserAfterCreated 后补订阅
+    if FDevToolsPending = nil then
+      FDevToolsPending := TStringList.Create;
+    FDevToolsPending.Add(AEventName);
+    Logger.InfoFmt('DevTools event queued (browser not ready): %s',
+      [AEventName], 'TWebView2BrowserSession');
+    Exit(True);   // 视为已接受 (延迟订阅)
+  end;
+  try
+    // WebView4Delphi 原生订阅; 事件经 OnDevToolsProtocolEventReceived →
+    // BrowserDevToolsProtocolEventReceived → FOnDevToolsEvent 分发
+    Result := FBrowser.SubscribeToDevToolsProtocolEvent(AEventName);
+    if Result then
+      Logger.InfoFmt('DevTools event subscribed: %s', [AEventName], 'TWebView2BrowserSession')
+    else
+      Logger.WarnFmt('DevTools event subscribe FAILED: %s', [AEventName], 'TWebView2BrowserSession');
+  except
+    on E: Exception do
+    begin
+      Logger.ErrorFmt('SubscribeToDevToolsEvent exception: %s', [E.Message], 'TWebView2BrowserSession');
+      Result := False;
+    end;
+  end;
+end;
+
 function TWebView2BrowserSession.CaptureScreenshot(
   out AImage: TBytes; out AError: string): Boolean;
 var
@@ -800,7 +987,7 @@ end;
 
 function TWebView2BrowserSession.AsAutomationSession: IBrowserAutomationSession;
 begin
-  Result := Self;
+  Result := Self as IBrowserAutomationSession;
 end;
 
 { IBrowserMessageReceiver }
@@ -837,7 +1024,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.ExecuteScriptAsync(
@@ -856,7 +1043,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.EvaluateScriptAsync(
@@ -876,7 +1063,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LResult, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 function TWebView2BrowserSession.CaptureScreenshotAsync(
@@ -895,7 +1082,7 @@ begin
       if Assigned(ACallback) then
         ACallback(LSuccess, LImage, LError);
     end;
-  Result := TTask.Run(LProc);
+  Result := RunTrackedAsync(LProc);
 end;
 
 { Self-registration }
@@ -950,6 +1137,10 @@ finalization
     GlobalWebView2Loader := nil;
   end;
   GWebView2Initialized := False;
+
+{$ELSE}
+
+implementation
 
 {$ENDIF USE_WEBVIEW2}
 

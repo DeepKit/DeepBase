@@ -33,9 +33,12 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections;
 
 type
-  TDiagnoseIssueType = (ditMissingTable, ditMissingColumn, ditMissingIndex, 
-                        ditVersionMismatch, ditDataIntegrity, ditForeignKey, 
-                        ditNullValue, ditInvalidEnum);
+  TDiagnoseIssueType = (ditMissingTable, ditMissingColumn, ditMissingIndex,
+                        ditVersionMismatch, ditDataIntegrity, ditForeignKey,
+                        ditNullValue, ditInvalidEnum,
+                        // ditCheckError: check execution itself failed (query error, schema introspection failure).
+                        // Distinguishes "data has a problem" from "we couldn't run the check" so callers don't see green-on-error.
+                        ditCheckError);
   
   TDiagnoseResult = record
     IssueType: TDiagnoseIssueType;

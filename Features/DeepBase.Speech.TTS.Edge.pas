@@ -1,4 +1,4 @@
-unit DeepBase.Speech.TTS.Edge;
+﻿unit DeepBase.Speech.TTS.Edge;
 
 { ============================================================================
   DeepBase.Speech.TTS.Edge — Free TTS via Microsoft Edge WebSocket service.
@@ -60,6 +60,15 @@ type
     procedure SpeakAsync(const AText: string; const AOptions: TTTSOptions;
       AOnDone: TProc);
     procedure Stop;
+
+    /// <summary>
+    /// Synchronous synthesis returning raw audio bytes (MP3 for Edge).
+    /// Added for DeepInput ITTSEngine adapter — ITTSBackend.Speak discards
+    /// the audio. Reuses the private Synthesize(SSML) pipeline.
+    /// </summary>
+    function SynthesizeToBytes(const AText: string;
+      const AOptions: TTTSOptions): TBytes;
+    property LastError: string read FLastError;
   end;
 
 implementation
@@ -128,6 +137,7 @@ end;
 
 function TEdgeTTSBackend.FetchVoices: TArray<TTTSVoice>;
 var
+  Client: THTTPClient;
   Response: IHTTPResponse;
   JSONArr: TJSONArray;
   JObj: TJSONObject;
@@ -137,7 +147,16 @@ var
 begin
   Result := nil;
   try
-    Response := FClient.Get(EDGE_TTS_VOICES_URL);
+    // 使用本地 HTTP 客户端：音色列表可能被后台线程（如 FrameTTS 异步刷新）
+    // 调用，成员 FClient 与合成线程共享会竞态。
+    Client := THTTPClient.Create;
+    try
+      Client.ConnectionTimeout := 8000;
+      Client.ResponseTimeout := 12000;
+      Response := Client.Get(EDGE_TTS_VOICES_URL);
+    finally
+      Client.Free;
+    end;
     if Response.StatusCode <> 200 then
     begin
       FLastError := 'Edge-TTS voices HTTP ' + IntToStr(Response.StatusCode);
@@ -185,7 +204,9 @@ begin
   if not FVoicesLoaded then
   begin
     FVoices := FetchVoices;
-    FVoicesLoaded := True;
+    // 拉取失败时不缓存（FVoices 为空），下次调用自动重试
+    if Length(FVoices) > 0 then
+      FVoicesLoaded := True;
   end;
 
   if ALanguage = '' then
@@ -270,7 +291,7 @@ begin
     #13#10 +
     '{"context":{"synthesis":{"audio":{"metadataoptions":{' +
     '"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},' +
-    '"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}');
+    '"outputFormat":"riff-24khz-16bit-mono-pcm"}}}}');
 
   SSMLMsg := UTF8String(
     'X-RequestId:' + ReqID + #13#10 +
@@ -282,157 +303,170 @@ begin
 
   ErrMode := SetErrorMode(SEM_FAILCRITICALERRORS);
   try
-    hSession := WinHttpOpen(PChar(EDGE_TTS_UA), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if hSession = nil then
-    begin
-      FLastError := 'WinHttpOpen failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    hConnect := WinHttpConnect(hSession, PChar(EDGE_TTS_WSS_HOST),
-      INTERNET_DEFAULT_HTTPS_PORT, 0);
-    if hConnect = nil then
-    begin
-      FLastError := 'WinHttpConnect failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    hRequest := WinHttpOpenRequest(hConnect, PChar('GET'),
-      PChar(EDGE_TTS_WSS_PATH + ConnID), nil, WINHTTP_NO_REFERER,
-      WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-    if hRequest = nil then
-    begin
-      FLastError := 'WinHttpOpenRequest failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    if not WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, nil, 0) then
-    begin
-      FLastError := 'WinHttpSetOption(UPGRADE) failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    WinHttpAddRequestHeaders(hRequest, PChar('Origin: ' + EDGE_TTS_ORIGIN), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
-    WinHttpAddRequestHeaders(hRequest, PChar('Pragma: no-cache'), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
-    WinHttpAddRequestHeaders(hRequest, PChar('Cache-Control: no-cache'), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
-
-    if not WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-      WINHTTP_NO_REQUEST_DATA, 0, 0, 0) then
-    begin
-      FLastError := 'WinHttpSendRequest failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    if not WinHttpReceiveResponse(hRequest, nil) then
-    begin
-      FLastError := 'WinHttpReceiveResponse failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    var hWebSocket: HINTERNET := WinHttpWebSocketCompleteUpgrade(hRequest, nil);
-    if hWebSocket = nil then
-    begin
-      FLastError := 'WebSocket upgrade failed: ' + SysErrorMessage(GetLastError);
-      Exit;
-    end;
-
-    WinHttpCloseHandle(hRequest);
-    hRequest := nil;
-
     try
-      if WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE,
-        @ConfigMsg[1], Length(ConfigMsg)) <> NO_ERROR then
+      hSession := WinHttpOpen(PChar(EDGE_TTS_UA), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+        WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+      if hSession = nil then
       begin
-        FLastError := 'WebSocket send config failed: ' + SysErrorMessage(GetLastError);
+        FLastError := 'WinHttpOpen failed: ' + SysErrorMessage(GetLastError);
         Exit;
       end;
 
-      if WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE,
-        @SSMLMsg[1], Length(SSMLMsg)) <> NO_ERROR then
+      hConnect := WinHttpConnect(hSession, PChar(EDGE_TTS_WSS_HOST),
+        INTERNET_DEFAULT_HTTPS_PORT, 0);
+      if hConnect = nil then
       begin
-        FLastError := 'WebSocket send SSML failed: ' + SysErrorMessage(GetLastError);
+        FLastError := 'WinHttpConnect failed: ' + SysErrorMessage(GetLastError);
         Exit;
       end;
 
-      MS := TMemoryStream.Create;
+      hRequest := WinHttpOpenRequest(hConnect, PChar('GET'),
+        PChar(EDGE_TTS_WSS_PATH + ConnID), nil, WINHTTP_NO_REFERER,
+        WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+      if hRequest = nil then
+      begin
+        FLastError := 'WinHttpOpenRequest failed: ' + SysErrorMessage(GetLastError);
+        Exit;
+      end;
+
+      if not WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, nil, 0) then
+      begin
+        FLastError := 'WinHttpSetOption(UPGRADE) failed: ' + SysErrorMessage(GetLastError);
+        Exit;
+      end;
+
+      WinHttpAddRequestHeaders(hRequest, PChar('Origin: ' + EDGE_TTS_ORIGIN), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
+      WinHttpAddRequestHeaders(hRequest, PChar('Pragma: no-cache'), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
+      WinHttpAddRequestHeaders(hRequest, PChar('Cache-Control: no-cache'), $FFFFFFFF, WINHTTP_ADDREQ_FLAG_ADD);
+
+      if not WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+        WINHTTP_NO_REQUEST_DATA, 0, 0, 0) then
+      begin
+        FLastError := 'WinHttpSendRequest failed: ' + SysErrorMessage(GetLastError);
+        Exit;
+      end;
+
+      if not WinHttpReceiveResponse(hRequest, nil) then
+      begin
+        FLastError := 'WinHttpReceiveResponse failed: ' + SysErrorMessage(GetLastError);
+        Exit;
+      end;
+
+      var hWebSocket: HINTERNET := WinHttpWebSocketCompleteUpgrade(hRequest, nil);
+      if hWebSocket = nil then
+      begin
+        FLastError := 'WebSocket upgrade failed: ' + SysErrorMessage(GetLastError);
+        Exit;
+      end;
+
+      WinHttpCloseHandle(hRequest);
+      hRequest := nil;
+
       try
-        Done := False;
-        SetLength(Buf, 65536);
-
-        while not Done do
+        if WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE,
+          @ConfigMsg[1], Length(ConfigMsg)) <> NO_ERROR then
         begin
-          BytesRead := 0;
-          BufSize := Length(Buf);
-          wsStatus := 0;
+          FLastError := 'WebSocket send config failed: ' + SysErrorMessage(GetLastError);
+          Exit;
+        end;
 
-          if WinHttpWebSocketReceive(hWebSocket, @Buf[0], BufSize, @BytesRead, @wsStatus) <> NO_ERROR then
+        if WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE,
+          @SSMLMsg[1], Length(SSMLMsg)) <> NO_ERROR then
+        begin
+          FLastError := 'WebSocket send SSML failed: ' + SysErrorMessage(GetLastError);
+          Exit;
+        end;
+
+        MS := TMemoryStream.Create;
+        try
+          Done := False;
+          SetLength(Buf, 65536);
+
+          while not Done do
           begin
-            FLastError := 'WebSocket receive failed: ' + SysErrorMessage(GetLastError);
-            Break;
-          end;
+            BytesRead := 0;
+            BufSize := Length(Buf);
+            wsStatus := 0;
 
-          if BytesRead = 0 then
-            Break;
-
-          if (wsStatus = WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE) or
-             (wsStatus = WINHTTP_WEB_SOCKET_BINARY_FRAGMENT_BUFFER_TYPE) then
-          begin
-            AudioStartIdx := -1;
-            for I := 0 to Integer(BytesRead) - 5 do
+            if WinHttpWebSocketReceive(hWebSocket, @Buf[0], BufSize, @BytesRead, @wsStatus) <> NO_ERROR then
             begin
-              if (Buf[I] = Ord(#13)) and (Buf[I+1] = Ord(#10)) and
-                 (Buf[I+2] = Ord(#13)) and (Buf[I+3] = Ord(#10)) then
-              begin
-                AudioStartIdx := I + 4;
-                Break;
-              end;
+              FLastError := 'WebSocket receive failed: ' + SysErrorMessage(GetLastError);
+              Break;
             end;
 
-            if AudioStartIdx > 0 then
-              MS.Write(Buf[AudioStartIdx], BytesRead - Cardinal(AudioStartIdx));
-          end
-          else if (wsStatus = WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE) or
-                  (wsStatus = WINHTTP_WEB_SOCKET_UTF8_FRAGMENT_BUFFER_TYPE) then
+            if BytesRead = 0 then
+              Break;
+
+            if (wsStatus = WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE) or
+               (wsStatus = WINHTTP_WEB_SOCKET_BINARY_FRAGMENT_BUFFER_TYPE) then
+            begin
+              AudioStartIdx := -1;
+              for I := 0 to Integer(BytesRead) - 5 do
+              begin
+                if (Buf[I] = Ord(#13)) and (Buf[I+1] = Ord(#10)) and
+                   (Buf[I+2] = Ord(#13)) and (Buf[I+3] = Ord(#10)) then
+                begin
+                  AudioStartIdx := I + 4;
+                  Break;
+                end;
+              end;
+
+              if AudioStartIdx > 0 then
+                MS.Write(Buf[AudioStartIdx], BytesRead - Cardinal(AudioStartIdx));
+            end
+            else if (wsStatus = WINHTTP_WEB_SOCKET_UTF8_MESSAGE_TYPE) or
+                    (wsStatus = WINHTTP_WEB_SOCKET_UTF8_FRAGMENT_BUFFER_TYPE) then
+            begin
+              SetString(TextPart, PAnsiChar(@Buf[0]), BytesRead);
+              if Pos(TURN_END, TextPart) > 0 then
+                Done := True;
+            end
+            else if wsStatus = WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE then
+              Break;
+          end;
+
+          if MS.Size > 0 then
           begin
-            SetString(TextPart, PAnsiChar(@Buf[0]), BytesRead);
-            if Pos(TURN_END, TextPart) > 0 then
-              Done := True;
-          end
-          else if wsStatus = WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE then
-            Break;
+            SetLength(Result, MS.Size);
+            MS.Position := 0;
+            MS.Read(Result[0], MS.Size);
+          end;
+        finally
+          MS.Free;
         end;
 
-        if MS.Size > 0 then
-        begin
-          SetLength(Result, MS.Size);
-          MS.Position := 0;
-          MS.Read(Result[0], MS.Size);
-        end;
+        WinHttpWebSocketClose(hWebSocket, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS, nil, 0);
       finally
-        MS.Free;
+        WinHttpCloseHandle(hWebSocket);
       end;
-
-      WinHttpWebSocketClose(hWebSocket, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS, nil, 0);
-    finally
-      WinHttpCloseHandle(hWebSocket);
+    except
+      on E: Exception do
+        FLastError := 'Edge-TTS synthesize: ' + E.Message;
     end;
-  except
-    on E: Exception do
-      FLastError := 'Edge-TTS synthesize: ' + E.Message;
+  finally
+    // REVIEW5-FEAT-007: Always restore error mode and clean up handles
+    SetErrorMode(ErrMode);
+    if hRequest <> nil then WinHttpCloseHandle(hRequest);
+    if hConnect <> nil then WinHttpCloseHandle(hConnect);
+    if hSession <> nil then WinHttpCloseHandle(hSession);
   end;
-
-  SetErrorMode(ErrMode);
-  if hRequest <> nil then WinHttpCloseHandle(hRequest);
-  if hConnect <> nil then WinHttpCloseHandle(hConnect);
-  if hSession <> nil then WinHttpCloseHandle(hSession);
 end;
 
 procedure TEdgeTTSBackend.Speak(const AText: string; const AOptions: TTTSOptions);
 var
-  SSML: string;
   AudioData: TBytes;
 begin
+  // ITTSBackend.Speak discards audio per interface contract; downstream
+  // consumers use SynthesizeToBytes when they need the bytes.
+  AudioData := SynthesizeToBytes(AText, AOptions);
+end;
+
+function TEdgeTTSBackend.SynthesizeToBytes(const AText: string;
+  const AOptions: TTTSOptions): TBytes;
+var
+  SSML: string;
+begin
+  Result := nil;
   FLastError := '';
   if Trim(AText) = '' then
   begin
@@ -440,8 +474,7 @@ begin
     Exit;
   end;
   SSML := BuildSSML(AText, AOptions);
-  AudioData := Synthesize(SSML);
-  // Audio data is returned as TBytes; downstream can save/play as needed
+  Result := Synthesize(SSML);
 end;
 
 procedure TEdgeTTSBackend.SpeakAsync(const AText: string;
@@ -473,6 +506,7 @@ initialization
   Info.IsAvailableFunc := function: Boolean begin Result := True; end;
   Info.Enabled := True;
   Info.Priority := 10;
+  Info.TTSFactory := function: ITTSBackend begin Result := TEdgeTTSBackend.Create; end;
   TSpeechRegistry.Register(Info);
 
 finalization

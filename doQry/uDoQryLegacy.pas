@@ -22,27 +22,27 @@ function BuildSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): st
 function ShowCurrRecord(aDataset: TDataset; field_num:Integer = 5): String;
 function ParseParamString(const paramStr: string; out paramName, paramValue: string): Boolean;
 
-// �?interface 部分添加以下函数声明
+// �?interface 部分添加以下函数声明
 function BuildWhereClauseFromDict(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function QuoteValue(const Value: string): string;
 function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
 
-// 同时�?interface 部分添加这些函数的声�?
+// 同时�?interface 部分添加这些函数的声�?
 function BuildSelectSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildUpdateSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildDeleteSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildInsertSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildCallSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 
-// �?interface 部分添加新的函数声明
+// �?interface 部分添加新的函数声明
 function doQry(const ProcName: String; aQry: TAdoQuery; const ParamString: string=''): Integer; overload;
 function doQry(const ProcName: String; aQry: TAdoQuery; var msg: string; const ParamString:string): Integer; overload;
-//Ms级参数用于返回执行的结果。经常用于出错�?
-//返回值说明：如果是选择状态返回选择到多少记录，如果是插入状态返回。最新插入记录的ID。如果是修改和更新状态返回影响到的行�?
+//Ms级参数用于返回执行的结果。经常用于出错�?
+//返回值说明：如果是选择状态返回选择到多少记录，如果是插入状态返回。最新插入记录的ID。如果是修改和更新状态返回影响到的行�?
 
 implementation
 
-// 内部使用的函数声�?
+// 内部使用的函数声�?
 function StringToParams(const ParamStr: string): TDictionary<string, string>; forward;
 procedure ValidateSQL(var SQL: string); forward;
 function GetQueryDef(Connection: TADOConnection; const ProcName: string): TADOQuery; forward;
@@ -74,7 +74,7 @@ begin
     Close;
     SQL.Clear;
 
-    // �������ݿ����͹�����ͬ��Ԫ���ݲ�ѯ���?
+    // �������ݿ����͹�����ͬ��Ԫ���ݲ�ѯ���?
     case DatabaseType of
       dtMySQL:
         begin
@@ -315,7 +315,7 @@ begin
   if orderBy <> '' then
     Result := Result + ' ORDER BY ' + orderBy;
 
-  // 添加限制 - 如果没有设置，默�?000
+  // 添加限制 - 如果没有设置，默�?000
   limits := qry.FieldByName('limits').AsInteger;
   if limits <= 0 then
     limits := 1000;
@@ -377,7 +377,7 @@ begin
   procName := qry.FieldByName('proc_name').AsString;
   setClause := '';
   
-  // 创建用于存储字段顺序的字�?
+  // 创建用于存储字段顺序的字�?
   orderedFields := TDictionary<string, Integer>.Create;
   sortedFields := TList<TPair<string, string>>.Create;
   
@@ -390,7 +390,7 @@ begin
       qryParams.Parameters.ParamByName('ProcName').Value := procName;
       qryParams.Open;
       
-      // 将字段顺序信息存入字�?
+      // 将字段顺序信息存入字�?
       while not qryParams.Eof do
       begin
         orderedFields.Add(qryParams.FieldByName('para_name').AsString, 
@@ -417,7 +417,7 @@ begin
       if orderedFields.ContainsKey(sortedFields[i].Key) then
         fieldOrder[i] := orderedFields[sortedFields[i].Key]
       else
-        fieldOrder[i] := High(Integer); // 对于没有定义顺序的字段，给一个很大的顺序�?
+        fieldOrder[i] := High(Integer); // 对于没有定义顺序的字段，给一个很大的顺序�?
     end;
     
     // 简单的冒泡排序
@@ -430,7 +430,7 @@ begin
           fieldOrder[j] := fieldOrder[j + 1];
           fieldOrder[j + 1] := tempOrder;
           
-          // 交换相应的字�?
+          // 交换相应的字�?
           tempField := sortedFields[j].Key;
           sortedFields[j] := TPair<string, string>.Create(sortedFields[j + 1].Key, 
                                                          sortedFields[j + 1].Value);
@@ -478,7 +478,7 @@ begin
   tableName := qry.FieldByName('table_name').AsString;
   procName := qry.FieldByName('proc_name').AsString;
   
-  // 获取所有参数名和默认�?
+  // 获取所有参数名和默认�?
   fieldList := TStringList.Create;
   defaultValues := TDictionary<string, string>.Create;
   paramQry := TADOQuery.Create(nil);
@@ -494,18 +494,18 @@ begin
       fieldName := paramQry.FieldByName('para_name').AsString;
       fieldList.Add(fieldName);
       
-      // 先存储默认�?
+      // 先存储默认�?
       if not paramQry.FieldByName('para_value').IsNull then
         defaultValues.Add(fieldName, paramQry.FieldByName('para_value').AsString);
         
-      // 如果参数表中有值，则覆盖默认�?
+      // 如果参数表中有值，则覆盖默认�?
       if Params.ContainsKey(fieldName) then
         defaultValues.AddOrSetValue(fieldName, Params[fieldName]);
         
       paramQry.Next;
     end;
     
-    // 构建字段名列表和值列�?
+    // 构建字段名列表和值列�?
     fieldNames := '';
     fieldValues := '';
     for i := 0 to fieldList.Count - 1 do
@@ -544,7 +544,7 @@ function BuildSQL(qry: TAdoQuery; const ParamStr: string): string; overload;
 var
   params: TDictionary<string, string>;
 begin
-  // 将参数字符串转换为字�?
+  // 将参数字符串转换为字�?
   params := StringToParams(ParamStr);
   try
     // 调用接受字典参数的BuildSQL函数
@@ -554,7 +554,7 @@ begin
   end;
 end;
 
-// 原来的BuildSQL函数，接受字典参�?
+// 原来的BuildSQL函数，接受字典参�?
 function BuildSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 var
   sqlType: string;
@@ -565,7 +565,7 @@ begin
   else
     raise EDatabaseException.Create('字段 "run_type" 未找到，无法确定SQL类型');
   
-  // 根据SQL类型调用相应的构建函�?
+  // 根据SQL类型调用相应的构建函�?
   if sqlType = 'select' then
     Result := BuildSelectSQL(qry, Params)
   else if sqlType = 'insert' then
@@ -597,7 +597,7 @@ begin
   if ParamStr = '' then
     Exit(params);
   
-  // 使用 ||| 分割参数�?
+  // 使用 ||| 分割参数�?
   pairs := ParamStr.Split(['|||']);
   
   for i := 0 to Length(pairs) - 1 do
@@ -611,15 +611,15 @@ begin
       
     if colonPos > 0 then
     begin
-      // 分割键值对，只对键去空�?
+      // 分割键值对，只对键去空�?
       key := Trim(Copy(pair, 1, colonPos - 1));
       value := Copy(pair, colonPos + 1, Length(pair));
       
-      // 如果是中文冒号，需要多偏移一个字�?
+      // 如果是中文冒号，需要多偏移一个字�?
       if pair[colonPos] = '：' then
         value := Copy(pair, colonPos + 2, Length(pair));
         
-      // 只有key不为空时才添�?
+      // 只有key不为空时才添�?
       if key <> '' then
         params.Add(key, value);
     end;
@@ -727,9 +727,9 @@ begin
           end;
         rtUpdate, rtDelete:
           begin
-            ExecSQL;  // 执行更新或删�?
+            ExecSQL;  // 执行更新或删�?
             Result := RowsAffected;  // 获取受影响的行数
-            // 不再抛出异常，因为更�?行也可能是正常情�?
+            // 不再抛出异常，因为更�?行也可能是正常情�?
           end;
         rtInsert:
           begin
@@ -753,7 +753,16 @@ begin
       end;
     except
       on E: Exception do
-        raise EDatabaseException.CreateFmt('SQL执行错误: %s'#13#10'SQL: %s', [E.Message, aSQL]);
+      begin
+        // DATA-R3-006: 不把含���数值的完整 aSQL 写进异常消息 (PII 泄漏 —
+        // 值可能为聊天正文/用户ID/分享链接, 会进入日志/错误对话框).
+        // 完整 SQL 仅 DEBUG 经 OutputDebugString 输出到调试器, 不上抛.
+        {$IFDEF DEBUG}
+        Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + aSQL));
+        {$ENDIF}
+        raise EDatabaseException.CreateFmt('SQL执行错误 (RunType=%d): %s',
+          [Ord(RunType), E.Message]);
+      end;
     end;
   end;
 end;
@@ -775,7 +784,12 @@ begin
     except
       on E: Exception do
       begin
-        raise EDatabaseException.Create('doQry Error::SQL执行错误: ' + E.Message + #13#10 + 'SQL:' + SQL);
+        // DATA-R3-006: 不把含参数值的完整 SQL 写进异常消息 (PII 泄漏).
+        // 完整 SQL 仅 DEBUG 经 OutputDebugString 输出到调试器, 不上抛.
+        {$IFDEF DEBUG}
+        Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + SQL));
+        {$ENDIF}
+        raise EDatabaseException.Create('doQry Error::SQL执行错误: ' + E.Message);
       end;
     end;
   finally
@@ -783,13 +797,13 @@ begin
   end;
 end;
 
-// 新增函数：分离参�?
+// 新增函数：分离参�?
 procedure SplitParameters(qry: TAdoQuery; var whereParams, noWhereParams: TAdoQuery);
 begin
   whereParams := TAdoQuery.Create(nil);
   noWhereParams := TAdoQuery.Create(nil);
   try
-    // 复制连接和基本设�?
+    // 复制连接和基本设�?
     whereParams.Connection := qry.Connection;
     noWhereParams.Connection := qry.Connection;
 
@@ -801,7 +815,7 @@ begin
     whereParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     whereParams.Open;
 
-    // 设置�?WHERE 参数查询
+    // 设置�?WHERE 参数查询
     noWhereParams.SQL.Text := sql + ' AND is_where = 0';
     noWhereParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     noWhereParams.Open;
@@ -863,7 +877,7 @@ var
 begin
   Result := -1;
   msg := '';
-  sSQL := '';  // 初始�?SQL，以便在出错时也能显�?
+  sSQL := '';  // 初始�?SQL，以便在出错时也能显�?
   
   try
     // 1. 获取查询配置
@@ -877,15 +891,15 @@ begin
 
       if IsEmpty then
       begin
-        msg := Format('未找到对应的 proc_name: %s'#13#10'SQL: %s', 
-          [ProcName, SQL.Text]);
+        msg := Format('未找到对应的 proc_name: %s', [ProcName]);
+        {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + SQL.Text));{$ENDIF}
         raise EDatabaseException.Create(msg);
       end;
       
       if FindField('run_type') = nil then
       begin
-        msg := Format('字段 run_type 不存在'#13#10'SQL: %s',
-          [SQL.Text]);
+        msg := '字段 run_type 不存在';
+        {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + SQL.Text));{$ENDIF}
         raise EDatabaseException.Create(msg);
       end;
 
@@ -907,13 +921,14 @@ begin
 
     Result := ExecuteAndGetResult(sSQL, aQry, RunType, TableName);
     
-    // 根据不同的操作类型判断执行结�?
+    // 根据不同的操作类型判断执行结�?
     case RunType of
       rtUpdate, rtDelete: 
         begin
           if Result < 0 then
           begin
-            msg := Format('SQL执行失败'#13#10'SQL: %s', [sSQL]);
+            msg := 'SQL执行失败';
+        {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
             raise EDatabaseException.Create(msg);
           end
           else if Result = 0 then
@@ -925,11 +940,10 @@ begin
               operationType := '删除';
               
             msg := Format('没有记录被%s。可能原因：'#13#10 +
-                        '1. 找不到匹配的记录'#13#10 + 
+                        '1. 找不到匹配的记录'#13#10 +
                         '2. 更新的值与原值相同'#13#10 +
-                        '3. WHERE条件不匹配'#13#10 +
-                        'SQL: %s', 
-                        [operationType, sSQL]);
+                        '3. WHERE条件不匹配', [operationType]);
+            {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
           end
           else
           begin
@@ -939,33 +953,38 @@ begin
             else
               operationType := '删除';
               
-            msg := Format('成功%s了%d 条记录'#13#10'SQL: %s',
-                        [operationType, Result, sSQL]);
+            msg := Format('成功%s了%d 条记录', [operationType, Result]);
+            {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
           end;
         end;
       rtSelect:
         begin
           if Result <= 0 then
           begin
-            msg := Format('查询未返回数据'#13#10'SQL: %s', [sSQL]);
+            msg := '查询未返回数据';
+          {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
             raise EDatabaseException.Create(msg);
           end
           else
-            msg := Format('查询返回 %d 条记录'#13#10'SQL: %s', [Result, sSQL]);
+            msg := Format('查询返回 %d 条记录', [Result]);
+          {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
         end;
       rtInsert:
         begin
           if Result <= 0 then
           begin
-            msg := Format('插入操作失败'#13#10'SQL: %s', [sSQL]);
+            msg := '插入操作失败';
+          {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
             raise EDatabaseException.Create(msg);
           end
           else
-            msg := Format('成功插入记录，ID: %d'#13#10'SQL: %s', [Result, sSQL]);
+            msg := Format('成功插入记录，ID: %d', [Result]);
+          {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
         end;
       rtCall:
         begin
-          msg := Format('存储过程调用未实现'#13#10'SQL: %s', [sSQL]);
+          msg := '存储过程调用未实现';
+        {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
           raise EDatabaseException.Create(msg);
         end;
     end;
@@ -974,10 +993,10 @@ begin
     on E: Exception do
     begin
       Result := -1;
-      if msg = '' then  // 如果还没有设置错误消�?
+      if msg = '' then  // 如果还没有设置错误消�?
       begin
-        msg := Format('doQry Error: %s'#13#10'SQL: %s',
-          [E.Message, sSQL]);
+        msg := Format('doQry Error: %s', [E.Message]);
+      {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
       end;
       raise EDatabaseException.Create(msg);
     end;
@@ -1010,7 +1029,7 @@ begin
     OutputDebugString(PChar('No colon found in parameter string'));
 end;
 
-// 在implementation部分添加新函�?
+// 在implementation部分添加新函�?
 function CreateParamsFromString(const ParamString: string): TParams;
 var
   paramList: TStringList;
@@ -1063,7 +1082,7 @@ begin
         Result.Add(trimmedPart);
     end;
     
-    // 检查是否成功分�?
+    // 检查是否成功分�?
     if Result.Count = 0 then
       raise EDatabaseException.CreateFmt('无法分割参数字符串: "%s"', [ParamString]);
 
@@ -1072,7 +1091,7 @@ begin
       if Result[i].Trim = '' then
         Result.Delete(i);
 
-    // 如果分割后仍为空，抛出异�?
+    // 如果分割后仍为空，抛出异�?
     if Result.Count = 0 then
       raise EDatabaseException.CreateFmt('分割后没有有效参数: "%s"', [ParamString]);
   except
@@ -1100,15 +1119,15 @@ begin
     qryParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     qryParams.Open;
 
-    // 遍历所有参数定�?
+    // 遍历所有参数定�?
     while not qryParams.Eof do
     begin
-      // 如果�?WHERE 条件字段
+      // 如果�?WHERE 条件字段
       if qryParams.FieldByName('is_where').AsInteger = 1 then
       begin
         var fieldName := qryParams.FieldByName('para_name').AsString;
         
-        // 如果在传入参数中有这个字段的�?
+        // 如果在传入参数中有这个字段的�?
         if Params.ContainsKey(fieldName) then
         begin
           if not firstWhere then
@@ -1134,14 +1153,14 @@ var
   needQuote: Boolean;
   tempValue: string;
 begin
-  // 检查是否为空�?
+  // 检查是否为空�?
   if (Value = '') or (Value = 'NULL') then
   begin
     Result := 'NULL';
     Exit;
   end;
   
-  // 检查是否需要引�?
+  // 检查是否需要引�?
   needQuote := False;
   for i := 1 to Length(Value) do
   begin
@@ -1163,7 +1182,7 @@ begin
   tempValue := StringReplace(tempValue, '（', '(', [rfReplaceAll]);
   tempValue := StringReplace(tempValue, '）', ')', [rfReplaceAll]);
   
-  // 处理单引�?(在SQL中单引号需要用两个单引号表�?
+  // 处理单引�?(在SQL中单引号需要用两个单引号表�?
   tempValue := StringReplace(tempValue, '''', '''''', [rfReplaceAll]);
   
   // 添加引号
@@ -1201,7 +1220,7 @@ begin
   end;
 end;
 
-// 添加一个新函数来检查表的主键字�?
+// 添加一个新函数来检查表的主键字�?
 function GetPrimaryKeyField(Connection: TADOConnection; const TableName: string): string;
 var
   qry: TADOQuery;
@@ -1226,7 +1245,7 @@ begin
         Result := qry.Fields[0].AsString;
     except
       // 如果上面的查询失败，可能不是PostgreSQL或表名有问题
-      // 返回默认�?
+      // 返回默认�?
       if CompareText(TableName, 'texts') = 0 then
         Result := 'text_id'
       else

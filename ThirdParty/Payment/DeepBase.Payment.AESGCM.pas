@@ -38,7 +38,7 @@ implementation
 {$IFDEF MSWINDOWS}
 
 uses
-  DeepBase.Crypto,
+  DeepBase.Crypto.Platform,
   Winapi.Windows;
 
 function Payment_AES256GCM_Decrypt(const AKey, AIV, ACiphertext, AAAD, ATag: TBytes): TBytes;

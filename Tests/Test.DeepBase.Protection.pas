@@ -13,7 +13,7 @@ unit Test.DeepBase.Protection;
 
 interface
 
-{$IFDEF MSWINDOWS} // DeepBase.Protection 基于 Windows CryptoAPI，仅�?Windows 上测�?
+{$IFDEF MSWINDOWS} // DeepBase.Protection 基于 Windows CryptoAPI，仅�?Windows 上测�?
 
 uses
   DUnitX.TestFramework,
@@ -142,7 +142,7 @@ begin
 
   Assert.IsNotEmpty(C1);
   Assert.IsNotEmpty(C2);
-  // 使用随机 IV，正常情况下两次密文应不同（碰撞概率极低�?
+  // 使用随机 IV，正常情况下两次密文应不同（碰撞概率极低�?
   Assert.AreNotEqual(C1, C2, 'Two encryptions with random IV should produce different ciphertext');
 end;
 
@@ -152,7 +152,9 @@ var
 begin
   Encrypted := TBasicProtection.EncryptSensitiveData('Secret', 'Key-123');
 
-  Assert.IsTrue(Encrypted.StartsWith('UBG1|'), 'New string encryption should use UBG1 AES-GCM format');
+  // CORE-R2-005: 字符串加密走 PBKDF2-HMAC-SHA256 派生密钥 + AES-GCM 信封,
+  // 文本前缀 'UBP1|' 区分于裸 GCM 路径的 'UBG1|' (见 DecryptSensitiveData 分流).
+  Assert.IsTrue(Encrypted.StartsWith('UBP1|'), 'New string encryption should use UBP1 PBKDF2-GCM format');
 end;
 
 procedure TTestBasicProtection.EncryptDecryptBinary_Roundtrip;
@@ -181,10 +183,11 @@ begin
   Encrypted := TBasicProtection.EncryptBinaryData(Data, 'Bin-Key');
 
   Assert.IsTrue(Length(Encrypted) > Length(Data), 'GCM envelope should include magic, nonce and tag');
+  // CORE-R2-005: 二进制加密走 PBKDF2-GCM, magic = 'UBG2' ($32='2') 区分裸 GCM 的 'UBG1'.
   Assert.AreEqual<Integer>(Ord('U'), Encrypted[0]);
   Assert.AreEqual<Integer>(Ord('B'), Encrypted[1]);
   Assert.AreEqual<Integer>(Ord('G'), Encrypted[2]);
-  Assert.AreEqual<Integer>(Ord('1'), Encrypted[3]);
+  Assert.AreEqual<Integer>(Ord('2'), Encrypted[3]);
 end;
 
 procedure TTestBasicProtection.DecryptSensitive_WithWrongPassword_RaisesException;

@@ -116,6 +116,8 @@ type
     procedure TestMetricsStaticCounter;
     [Test]
     procedure TestMetricsStaticGauge;
+    [Test]
+    procedure TestMetricsStaticRegistryConcurrent;
   end;
 
 implementation
@@ -795,6 +797,41 @@ procedure TTestDeepBaseMetrics.TestMetricsStaticGauge;
 begin
   TMetrics.Gauge('static_gauge').SetValue(100.0);
   Assert.AreEqual(100.0, TMetrics.Gauge('static_gauge').Value, EPSILON);
+end;
+
+procedure TTestDeepBaseMetrics.TestMetricsStaticRegistryConcurrent;
+const
+  THREAD_COUNT = 16;
+  ITERATIONS = 100;
+var
+  Threads: array[0..THREAD_COUNT - 1] of TThread;
+  I: Integer;
+  MetricName: string;
+begin
+  MetricName := 'static_concurrent_' + FormatDateTime('hhnnsszzz', Now);
+
+  for I := 0 to THREAD_COUNT - 1 do
+  begin
+    Threads[I] := TThread.CreateAnonymousThread(
+      procedure
+      var
+        J: Integer;
+      begin
+        for J := 1 to ITERATIONS do
+          TMetrics.Counter(MetricName).Inc;
+      end);
+    Threads[I].FreeOnTerminate := False;
+    Threads[I].Start;
+  end;
+
+  for I := 0 to THREAD_COUNT - 1 do
+  begin
+    Threads[I].WaitFor;
+    Threads[I].Free;
+  end;
+
+  Assert.AreEqual<Int64>(THREAD_COUNT * ITERATIONS,
+    TMetrics.Counter(MetricName).Value);
 end;
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseMetrics);

@@ -20,6 +20,10 @@ uses
   System.DateUtils,
   System.Generics.Collections,
   DeepBase.Payment,
+  DeepBase.Payment.Alipay,
+  DeepBase.Payment.WeChatPay,
+  DeepBase.Payment.Stripe,
+  DeepBase.Payment.PayPal,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.Service;
 
@@ -45,6 +49,7 @@ type
     FClient: IPaymentClient;
     FStripeClient: TStripeClient;
     FPayPalClient: TPayPalClient;
+    FWeChatClient: TWeChatPayClient;
     FConfig: TPaymentConfig;
     FProvider: TCommercePaymentProvider;
     FCurrency: string;
@@ -63,12 +68,11 @@ function CreateAlipayNotificationVerifier(
   const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
 
 /// <summary>Create WeChat Pay notification verifier.
-/// NOTE: WeChat Pay V3 callback verification is not yet implemented.
-/// This function always raises an exception at runtime (fails closed).
-/// Use a TCallbackNotificationVerifier with your own verification logic instead.
+/// AWeChatPublicKey is the WeChat Pay platform public key (PEM) used for
+/// SHA256-RSA2048 signature verification of V3 callbacks.
 /// </summary>
 function CreateWeChatPayNotificationVerifier(
-  const AAppId, AMchId, AApiV3Key: string;
+  const AAppId, AMchId, AApiV3Key, AWeChatPublicKey: string;
   const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
 
 /// <summary>Create Stripe notification verifier</summary>
@@ -77,17 +81,14 @@ function CreateStripeNotificationVerifier(
   const ACurrency: string = 'USD'): ICommerceNotificationVerifier;
 
 /// <summary>Create PayPal notification verifier</summary>
+/// <param name="AWebhookId">PayPal webhook ID (required for signature
+/// verification via /v1/notifications/verify-webhook-signature). When empty,
+/// the verifier will fail closed with MISSING_WEBHOOK_ID on first use.</param>
 function CreatePayPalNotificationVerifier(
-  const AClientId, AClientSecret: string;
+  const AClientId, AClientSecret, AWebhookId: string;
   const ACurrency: string = 'USD'): ICommerceNotificationVerifier;
 
 implementation
-
-uses
-  DeepBase.Payment.Alipay,
-  DeepBase.Payment.WeChatPay,
-  DeepBase.Payment.Stripe,
-  DeepBase.Payment.PayPal;
 
 /// <summary>
 /// Hard guard preventing PaymentBridge from being used outside server-side contexts.
@@ -107,7 +108,7 @@ begin
 end;
 
 function CreateWeChatPayNotificationVerifier(
-  const AAppId, AMchId, AApiV3Key: string;
+  const AAppId, AMchId, AApiV3Key, AWeChatPublicKey: string;
   const ACurrency: string = 'CNY'): ICommerceNotificationVerifier;
 begin
   raise EDeepBaseCommerceValidationError.Create(
@@ -123,7 +124,7 @@ begin
 end;
 
 function CreatePayPalNotificationVerifier(
-  const AClientId, AClientSecret: string;
+  const AClientId, AClientSecret, AWebhookId: string;
   const ACurrency: string = 'USD'): ICommerceNotificationVerifier;
 begin
   raise EDeepBaseCommerceValidationError.Create(
@@ -156,10 +157,13 @@ begin
     raise EDeepBaseCommerceValidationError.Create('Payment client does not implement IPaymentClient');
   FStripeClient := nil;
   FPayPalClient := nil;
+  FWeChatClient := nil;
   if AClient is TStripeClient then
     FStripeClient := TStripeClient(AClient)
   else if AClient is TPayPalClient then
-    FPayPalClient := TPayPalClient(AClient);
+    FPayPalClient := TPayPalClient(AClient)
+  else if AClient is TWeChatPayClient then
+    FWeChatClient := TWeChatPayClient(AClient);
   FConfig := AConfig;
   FProvider := AProvider;
   FCurrency := ACurrency;
@@ -187,32 +191,62 @@ var
         Exit(AHeaders[I].Value);
   end;
 begin
+  // WeChat Pay V3: verify HTTP-level signature (SHA256-RSA2048) then
+  // decrypt AES-256-GCM resource envelope
   if FProvider = cppWeChatPay then
-    raise EDeepBaseCommercePaymentError.Create(
-      'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
-
-  // Alipay: FClient.VerifyNotification handles RSA2 signature verification internally
-  if FProvider = cppStripe then
   begin
-    HeaderValue := GetHeaderValue('Stripe-Signature');
-    if not FStripeClient.VerifyWebhookSignature(ARawBody, HeaderValue) then
-      raise EDeepBaseCommercePaymentError.Create('Stripe notification signature verification failed');
+    if FWeChatClient = nil then
+      raise EDeepBaseCommercePaymentError.Create(
+        'WeChat Pay client not available for notification verification');
+    HeaderValue := GetHeaderValue('Wechatpay-Timestamp');
+    // The SDK's VerifyNotificationWithSignature loads and uses the WeChat Pay
+    // platform public key internally; a key-load or RSA failure surfaces as a
+    // ThirdParty EPaymentSignError/EPaymentError. The Commerce bridge contract
+    // (and the regression tests) expect the Commerce-domain
+    // EDeepBaseCommercePaymentError — wrap any ThirdParty payment exception so
+    // it never leaks through this API boundary.
+    try
+      if not FWeChatClient.VerifyNotificationWithSignature(
+        ARawBody,
+        HeaderValue,
+        GetHeaderValue('Wechatpay-Nonce'),
+        GetHeaderValue('Wechatpay-Signature'),
+        SDKNotif) then
+        raise EDeepBaseCommercePaymentError.Create(
+          'WeChat Pay V3 notification verification failed');
+    except
+      on E: EDeepBaseCommercePaymentError do
+        raise;
+      on E: Exception do
+        raise EDeepBaseCommercePaymentError.Create(
+          'WeChat Pay V3 notification verification failed: ' + E.Message);
+    end;
   end
-  else if FProvider = cppPayPal then
+  else
   begin
-    if not FPayPalClient.VerifyWebhookSignature(
-      ARawBody,
-      GetHeaderValue('Paypal-Transmission-Id'),
-      GetHeaderValue('Paypal-Transmission-Time'),
-      GetHeaderValue('Paypal-Transmission-Sig'),
-      '') then
-      raise EDeepBaseCommercePaymentError.Create('PayPal notification signature verification failed');
-  end;
+    // Alipay: FClient.VerifyNotification handles RSA2 signature verification internally
+    if FProvider = cppStripe then
+    begin
+      HeaderValue := GetHeaderValue('Stripe-Signature');
+      if not FStripeClient.VerifyWebhookSignature(ARawBody, HeaderValue) then
+        raise EDeepBaseCommercePaymentError.Create('Stripe notification signature verification failed');
+    end
+    else if FProvider = cppPayPal then
+    begin
+      if not FPayPalClient.VerifyWebhookSignature(
+        ARawBody,
+        GetHeaderValue('Paypal-Transmission-Id'),
+        GetHeaderValue('Paypal-Transmission-Time'),
+        GetHeaderValue('Paypal-Transmission-Sig'),
+        '') then
+        raise EDeepBaseCommercePaymentError.Create('PayPal notification signature verification failed');
+    end;
 
-  if not FClient.VerifyNotification(ARawBody, SDKNotif) then
-    raise EDeepBaseCommercePaymentError.CreateFmt(
-      '%s notification verification failed',
-      [CommercePaymentProviderToStr(FProvider)]);
+    if not FClient.VerifyNotification(ARawBody, SDKNotif) then
+      raise EDeepBaseCommercePaymentError.CreateFmt(
+        '%s notification verification failed',
+        [CommercePaymentProviderToStr(FProvider)]);
+  end;
 
   Result.Provider := FProvider;
   Result.OutTradeNo := SDKNotif.OrderNo;
@@ -248,11 +282,19 @@ begin
 end;
 
 function CreateWeChatPayNotificationVerifier(
-  const AAppId, AMchId, AApiV3Key: string;
+  const AAppId, AMchId, AApiV3Key, AWeChatPublicKey: string;
   const ACurrency: string): ICommerceNotificationVerifier;
+var
+  Config: TWeChatPayConfig;
+  Client: TWeChatPayClient;
 begin
-  raise EDeepBaseCommercePaymentError.Create(
-    'WeChat Pay V3 callback verification requires header signature verification and AES-GCM decrypt support; current SDK verifier fails closed.');
+  Config := TWeChatPayConfig.Create;
+  Config.AppId := AAppId;
+  Config.MchId := AMchId;
+  Config.ApiKeyV3 := AApiV3Key;
+  Config.WeChatPublicKey := AWeChatPublicKey;
+  Client := TWeChatPayClient.Create(Config);
+  Result := TSDKNotificationVerifier.Create(cppWeChatPay, Client, ACurrency, Config);
 end;
 
 function CreateStripeNotificationVerifier(
@@ -269,7 +311,7 @@ begin
 end;
 
 function CreatePayPalNotificationVerifier(
-  const AClientId, AClientSecret: string;
+  const AClientId, AClientSecret, AWebhookId: string;
   const ACurrency: string): ICommerceNotificationVerifier;
 var
   Config: TPayPalConfig;
@@ -277,6 +319,7 @@ begin
   Config := TPayPalConfig.Create;
   Config.ClientID := AClientId;
   Config.ClientSecret := AClientSecret;
+  Config.WebhookId := AWebhookId;
   Result := TSDKNotificationVerifier.Create(cppPayPal,
     TPayPalClient.Create(Config), ACurrency, Config);
 end;

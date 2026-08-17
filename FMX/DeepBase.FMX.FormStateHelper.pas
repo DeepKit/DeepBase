@@ -1,8 +1,8 @@
 { ============================================================================
-  DeepBase.FMX.FormStateHelper - FMX 窗体状态助手组�?
+  DeepBase.FMX.FormStateHelper - FMX 窗体状态助手组�?
   
   版本: 1.0
-  说明: 拖放�?FMX 窗体上即可自动保�?恢复窗体状�?
+  说明: 拖放�?FMX 窗体上即可自动保�?恢复窗体状�?
   功能:
     - 自动保存窗体位置、大小、WindowState
     - 自动恢复时检查显示器边界
@@ -38,18 +38,18 @@ type
   TFMXRestoreExtraEvent = procedure(Sender: TObject; const ExtraData: string) of object;
 
   /// <summary>
-  /// FMX 窗体状态助手组�?
+  /// FMX 窗体状态助手组�?
   /// </summary>
   TFMXFormStateHelper = class(TFmxObject)
   private
     FAutoSave: Boolean;
     FAutoRestore: Boolean;
     FForm: TCommonCustomForm;
-    FFormName: string;  // 可自定义，默认使�?Form.Name
+    FFormName: string;  // 可自定义，默认使�?Form.Name
     FOnSaveExtra: TFMXSaveExtraEvent;
     FOnRestoreExtra: TFMXRestoreExtraEvent;
     
-    // 保存原始事件处理器（链式调用�?
+    // 保存原始事件处理器（链式调用�?
     FOldOnShow: TNotifyEvent;
     FOldOnClose: TCloseEvent;
     
@@ -75,38 +75,38 @@ type
     destructor Destroy; override;
     
     /// <summary>
-    /// 手动保存状�?
+    /// 手动保存状�?
     /// </summary>
     procedure SaveState;
     
     /// <summary>
-    /// 手动恢复状�?
+    /// 手动恢复状�?
     /// </summary>
     procedure RestoreState;
     
     /// <summary>
-    /// 检查是否有已保存的状�?
+    /// 检查是否有已保存的状�?
     /// </summary>
     function HasSavedState: Boolean;
     
     /// <summary>
-    /// 删除已保存的状�?
+    /// 删除已保存的状�?
     /// </summary>
     procedure DeleteSavedState;
     
   published
     /// <summary>
-    /// 窗体关闭时自动保存状�?
+    /// 窗体关闭时自动保存状�?
     /// </summary>
     property AutoSave: Boolean read FAutoSave write FAutoSave default True;
     
     /// <summary>
-    /// 窗体显示时自动恢复状�?
+    /// 窗体显示时自动恢复状�?
     /// </summary>
     property AutoRestore: Boolean read FAutoRestore write FAutoRestore default True;
     
     /// <summary>
-    /// 自定义窗体名（留空则使用 Form.Name�?
+    /// 自定义窗体名（留空则使用 Form.Name�?
     /// </summary>
     property FormName: string read FFormName write FFormName;
     
@@ -133,7 +133,7 @@ begin
   FStateRestored := False;
   FStateSaved := False;
   
-  // 尝试获取父窗�?
+  // 尝试获取父窗�?
   if AOwner is TCommonCustomForm then
     FForm := TCommonCustomForm(AOwner);
 end;
@@ -146,7 +146,7 @@ begin
     try
       SaveState;
     except
-      // 忽略销毁时的错�?
+      // 忽略销毁时的错�?
     end;
   end;
   
@@ -200,11 +200,11 @@ procedure TFMXFormStateHelper.HookFormEvents;
 begin
   if FForm = nil then Exit;
   
-  // 保存并替�?OnShow
+  // 保存并替�?OnShow
   FOldOnShow := FForm.OnShow;
   FForm.OnShow := InternalOnShow;
   
-  // 保存并替�?OnClose
+  // 保存并替�?OnClose
   FOldOnClose := FForm.OnClose;
   FForm.OnClose := InternalOnClose;
 end;
@@ -223,7 +223,7 @@ end;
 
 procedure TFMXFormStateHelper.InternalOnShow(Sender: TObject);
 begin
-  // 先恢复状态（如果尚未恢复�?
+  // 先恢复状态（如果尚未恢复�?
   if FAutoRestore and (not FStateRestored) then
   begin
     RestoreState;
@@ -237,7 +237,7 @@ end;
 
 procedure TFMXFormStateHelper.InternalOnClose(Sender: TObject; var Action: TCloseAction);
 begin
-  // 保存状�?
+  // 保存状�?
   if FAutoSave and (not FStateSaved) then
   begin
     SaveState;
@@ -253,7 +253,7 @@ function TFMXFormStateHelper.GetScreenWorkArea: TRectF;
 var
   ScreenSvc: IFMXScreenService;
 begin
-  Result := TRectF.Create(0, 0, 1920, 1080); // 默认�?
+  Result := TRectF.Create(0, 0, 1920, 1080); // 默认�?
   
   if TPlatformServices.Current.SupportsPlatformService(IFMXScreenService, ScreenSvc) then
     Result := TRectF.Create(0, 0, ScreenSvc.GetScreenSize.X, ScreenSvc.GetScreenSize.Y);
@@ -270,7 +270,7 @@ begin
   // 检查窗体是否在工作区内
   if not WorkArea.IntersectsWith(FormRect) then
   begin
-    // 窗体完全在工作区外，移到工作区中�?
+    // 窗体完全在工作区外，移到工作区中�?
     if Data.Width > WorkArea.Width then
       Data.Width := Round(WorkArea.Width - 20);
     if Data.Height > WorkArea.Height then
@@ -298,30 +298,35 @@ begin
   FormState := DeepBase.Manager.DeepBase.FormState;
   // Collect state data.
   Data.Init;
+
+  // UI2-017 FIX: use FForm.Width/Height (full window bounds) instead of
+  // ClientWidth/ClientHeight. On macOS/iOS, ClientWidth/ClientHeight can
+  // be 0 before layout is done, causing the saved state to be corrupted.
+  // Width/Height are always valid once the form has been shown.
   // Handle FMX window state.
   if FForm.WindowState = TWindowState.wsMaximized then
   begin
     // Save current bounds even when maximized.
     Data.Left := Round(FForm.Left);
     Data.Top := Round(FForm.Top);
-    Data.Width := Round(FForm.ClientWidth);
-    Data.Height := Round(FForm.ClientHeight);
+    Data.Width := Round(FForm.Width);
+    Data.Height := Round(FForm.Height);
     Data.WindowState := 2;
   end
   else if FForm.WindowState = TWindowState.wsMinimized then
   begin
     Data.Left := Round(FForm.Left);
     Data.Top := Round(FForm.Top);
-    Data.Width := Round(FForm.ClientWidth);
-    Data.Height := Round(FForm.ClientHeight);
+    Data.Width := Round(FForm.Width);
+    Data.Height := Round(FForm.Height);
     Data.WindowState := 1;
   end
   else
   begin
     Data.Left := Round(FForm.Left);
     Data.Top := Round(FForm.Top);
-    Data.Width := Round(FForm.ClientWidth);
-    Data.Height := Round(FForm.ClientHeight);
+    Data.Width := Round(FForm.Width);
+    Data.Height := Round(FForm.Height);
     Data.WindowState := 0;
   end;
   

@@ -21,7 +21,8 @@ uses
   {$ENDIF}
   DeepBase.Types,
   DeepBase.Logging,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   TThemeApplyFunc = reference to function(const ThemeName: string;
@@ -43,7 +44,6 @@ type
     FOnThemeChanged: TNotifyEvent;
     FThemeCache: TDictionary<string, TThemeInfo>;
     FPendingThemeName: string;
-    class var FConnectionStorageFactory: TFunc<TObject, IThemeStorage>;
     class var FPlatformApplyTheme: TThemeApplyFunc;
     class var FPlatformListThemes: TThemeListFunc;
     class var FPlatformThemeExists: TThemeExistsFunc;
@@ -54,8 +54,6 @@ type
     procedure LoadThemeCache;
     procedure DoThemeChanged;
     procedure ApplyThemeSync;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IThemeStorage; static;
 
   public
     constructor Create(AConnection: TObject; ALock: TObject = nil); overload;
@@ -90,8 +88,15 @@ implementation
 { TDeepBaseTheme }
 
 constructor TDeepBaseTheme.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: IThemeStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<IThemeStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No theme storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.Theme.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -136,7 +141,7 @@ end;
 class procedure TDeepBaseTheme.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, IThemeStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
+  TConnectionStorageFactory<IThemeStorage>.SetFactory(AFactory);
 end;
 
 class procedure TDeepBaseTheme.SetPlatformAdapter(
@@ -147,18 +152,6 @@ begin
   FPlatformListThemes := AListThemes;
   FPlatformThemeExists := AThemeExists;
   FPlatformCurrentTheme := ACurrentTheme;
-end;
-
-class function TDeepBaseTheme.CreateStorageFromConnection(
-  AConnection: TObject): IThemeStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No theme storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.Theme.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
 end;
 
 procedure TDeepBaseTheme.LoadThemeCache;

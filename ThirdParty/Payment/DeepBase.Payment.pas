@@ -188,7 +188,7 @@ type
     FSecretStore: ISecretStore;
     FCredentialTarget: string;
   protected
-    function ProtectKey(const APlainKey: string): string;
+    function ProtectKey(const AKeyName, APlainKey: string): string;
     function UnprotectKey(const AEncryptedKey: string): string;
     function GetCredentialKey(const AKeyName: string): string;
     procedure SetCredentialKey(const AKeyName, AValue: string);
@@ -448,7 +448,7 @@ end;
 
 { BUG-019 FIX: TPaymentConfig 安全存储方法实现 }
 
-function TPaymentConfig.ProtectKey(const APlainKey: string): string;
+function TPaymentConfig.ProtectKey(const AKeyName, APlainKey: string): string;
 var
   KeyId: string;
 begin
@@ -457,7 +457,14 @@ begin
 
   if Assigned(FSecretStore) and FSecretStore.IsAvailable then
   begin
-    KeyId := FCredentialTarget + '.' + IntToHex(NativeUInt(Self), SizeOf(Pointer) * 2);
+    // REVIEW5-FEAT-001: key-id must be STABLE across instances and UNIQUE per
+    // field. The previous scheme derived the id from Hex(Self) (the object
+    // pointer), which (a) changed on every instantiation so each Save leaked
+    // orphaned store entries and broke cross-instance reload, and (b) collided
+    // across every protected field on the SAME object (e.g. Stripe SecretKey and
+    // WebhookSecret wrote the same slot, clobbering each other). Using a
+    // provider+field name gives a stable, per-field id.
+    KeyId := FCredentialTarget + '.vault.' + AKeyName;
     FSecretStore.Put(KeyId, APlainKey);
     Result := KeyId;
   end
@@ -681,6 +688,8 @@ end;
 
 class function TPaymentHelper.FormatAmount(AAmount: Currency;
   const ACurrency: string): string;
+var
+  Fmt: TFormatSettings;
 begin
   // Zero-decimal currencies (JPY, KRW): amount is already in minor units
   if SameText(ACurrency, 'JPY') or SameText(ACurrency, 'KRW') then
@@ -689,7 +698,14 @@ begin
   else if SameText(ACurrency, 'CNY') then
     Result := IntToStr(Round(AAmount * 100))
   else
-    Result := FormatFloat('0.00', AAmount);
+  begin
+    // International gateways require US-style period decimal separator;
+    // default FormatFloat uses thread locale which may emit a comma
+    // on zh-CN / de-DE / fr-FR systems (BUG EXP-P0-002).
+    Fmt := TFormatSettings.Create('en-US');
+    Fmt.DecimalSeparator := '.';
+    Result := FormatFloat('0.00', AAmount, Fmt);
+  end;
 end;
 
 class function TPaymentHelper.ParseAmount(const AAmountStr: string;

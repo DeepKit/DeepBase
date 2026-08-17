@@ -35,6 +35,7 @@ contains
   DeepBase.Types in 'Core\DeepBase.Types.pas',
   DeepBase.Consts in 'Core\DeepBase.Consts.pas',
   DeepBase.Storage.Interfaces in 'Core\DeepBase.Storage.Interfaces.pas',
+  DeepBase.StorageFactory in 'Core\DeepBase.StorageFactory.pas',
   DeepBase.Manager in 'Core\DeepBase.Manager.pas',
   DeepBase.Manager.Schema in 'Core\DeepBase.Manager.Schema.pas',
   DeepBase.Manager.Operational in 'Core\DeepBase.Manager.Operational.pas',
@@ -71,8 +72,10 @@ contains
   DeepBase.StateMachine in 'Core\DeepBase.StateMachine.pas',
   DeepBase.Template in 'Core\DeepBase.Template.pas',
   DeepBase.i18n.Plural in 'Core\DeepBase.i18n.Plural.pas',
+  DeepBase.i18n.Gender in 'Core\DeepBase.i18n.Gender.pas',
   DeepBase.Random in 'Core\DeepBase.Random.pas',
   DeepBase.Authorization in 'Core\DeepBase.Authorization.pas',
+  DeepBase.Permissions.Contract in 'Core\DeepBase.Permissions.Contract.pas',
   DeepBase.TestCenter in 'Core\DeepBase.TestCenter.pas',
   DeepBase.Diagnose in 'Core\DeepBase.Diagnose.pas',
   DeepBase.Services.Init in 'Core\DeepBase.Services.Init.pas',
@@ -84,6 +87,10 @@ contains
   DeepBase.Memory in 'Core\DeepBase.Memory.pas',
   DeepBase.Security in 'Core\DeepBase.Security.pas',
   DeepBase.Math in 'Core\DeepBase.Math.pas',
+  DeepBase.Math.Geometry in 'Core\DeepBase.Math.Geometry.pas',
+  DeepBase.Math.Statistics in 'Core\DeepBase.Math.Statistics.pas',
+  DeepBase.Math.Interpolation in 'Core\DeepBase.Math.Interpolation.pas',
+  DeepBase.Math.Random in 'Core\DeepBase.Math.Random.pas',
   DeepBase.TrayIcon in 'Core\DeepBase.TrayIcon.pas',
   DeepBase.Export.PDF in 'Core\DeepBase.Export.PDF.pas',
   DeepBase.Export.DOCX in 'Core\DeepBase.Export.DOCX.pas',
@@ -99,6 +106,7 @@ contains
   DeepBase.SchemaAdapter.Types in 'Core\DeepBase.SchemaAdapter.Types.pas',
   DeepBase.SchemaAdapter in 'Core\DeepBase.SchemaAdapter.pas',
   DeepBase.SchemaAdapter.Registry in 'Core\DeepBase.SchemaAdapter.Registry.pas',
-  DeepBase.SchemaAdapter.WeChat39x in 'Core\DeepBase.SchemaAdapter.WeChat39x.pas';
+  DeepBase.SchemaAdapter.WeChat39x in 'Core\DeepBase.SchemaAdapter.WeChat39x.pas',
+  DeepBase.SchemaAdapter.WeChat4x in 'Core\DeepBase.SchemaAdapter.WeChat4x.pas';
 
 end.

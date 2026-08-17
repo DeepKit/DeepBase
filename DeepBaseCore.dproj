@@ -155,6 +155,7 @@
         <DCCReference Include="Core\DeepBase.Types.pas"/>
         <DCCReference Include="Core\DeepBase.Consts.pas"/>
         <DCCReference Include="Core\DeepBase.Storage.Interfaces.pas"/>
+        <DCCReference Include="Core\DeepBase.StorageFactory.pas"/>
         <DCCReference Include="Core\DeepBase.Manager.pas"/>
         <DCCReference Include="Core\DeepBase.Manager.Schema.pas"/>
         <DCCReference Include="Core\DeepBase.Manager.Operational.pas"/>
@@ -191,6 +192,7 @@
         <DCCReference Include="Core\DeepBase.i18n.Plural.pas"/>
         <DCCReference Include="Core\DeepBase.Random.pas"/>
         <DCCReference Include="Core\DeepBase.Authorization.pas"/>
+        <DCCReference Include="Core\DeepBase.Permissions.Contract.pas"/>
         <DCCReference Include="Core\DeepBase.TestCenter.pas"/>
         <DCCReference Include="Core\DeepBase.Diagnose.pas"/>
         <DCCReference Include="Core\DeepBase.Services.Init.pas"/>
@@ -202,9 +204,30 @@
         <DCCReference Include="Core\DeepBase.Memory.pas"/>
         <DCCReference Include="Core\DeepBase.Security.pas"/>
         <DCCReference Include="Core\DeepBase.Math.pas"/>
+        <DCCReference Include="Core\DeepBase.Math.Geometry.pas"/>
+        <DCCReference Include="Core\DeepBase.Math.Statistics.pas"/>
+        <DCCReference Include="Core\DeepBase.Math.Interpolation.pas"/>
+        <DCCReference Include="Core\DeepBase.Math.Random.pas"/>
         <DCCReference Include="Core\DeepBase.TrayIcon.pas"/>
         <DCCReference Include="Core\DeepBase.Export.PDF.pas"/>
         <DCCReference Include="Core\DeepBase.Export.DOCX.pas"/>
+        <DCCReference Include="Core\DeepBase.SQL.Splitter.pas"/>
+        <DCCReference Include="Core\DeepBase.SQL.Utils.pas"/>
+        <DCCReference Include="Core\DeepBase.i18n.Gender.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.StackWalker.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.ErrorRecorder.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.ScenarioRunner.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.SelfTerminator.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.HealthSignal.pas"/>
+        <DCCReference Include="Core\DeepBase.AutoFix.pas"/>
+        <DCCReference Include="Core\DeepBase.External.Types.pas"/>
+        <DCCReference Include="Core\DeepBase.External.Auditor.pas"/>
+        <DCCReference Include="Core\DeepBase.Platform.Interfaces.pas"/>
+        <DCCReference Include="Core\DeepBase.SchemaAdapter.Types.pas"/>
+        <DCCReference Include="Core\DeepBase.SchemaAdapter.pas"/>
+        <DCCReference Include="Core\DeepBase.SchemaAdapter.Registry.pas"/>
+        <DCCReference Include="Core\DeepBase.SchemaAdapter.WeChat39x.pas"/>
+        <DCCReference Include="Core\DeepBase.SchemaAdapter.WeChat4x.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -28,6 +28,16 @@ foreach ($path in @($OutputRoot, $DcuOutputPath, $BplOutputPath, $DcpOutputPath)
     }
 }
 
+# Purge stale DCP artifacts before package builds. A stale .dcp whose source
+# package no longer contains a given unit (e.g. a unit that was moved out of a
+# package's contains clause) keeps advertising that unit to the linker, which
+# then surfaces E2199 "Packages X and Y both contain unit Z" against the freshly
+# rebuilt .dcp that legitimately contains it. Make-mode (-M) builds skip dcp
+# rebuild when the source is unchanged, so the stale symbol survives until an
+# explicit -B; clearing here removes that hazard regardless of build mode.
+Get-ChildItem -Path $DcpOutputPath -Filter *.dcp -File -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 # Keep source tree clean from stale DCU artifacts before package builds.
 $AllSourceRoots = @('Core', 'Persistence', 'Features', 'Tests', 'VCL', 'FMX', 'ThirdParty', 'Tools')
 
@@ -62,17 +72,19 @@ if (Test-Path $RenameCheckScript) {
 $MinimalPackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
+    'DeepBaseCommerce.dpk',
+    'DeepBaseSpeechCore.dpk',
     'DeepBasePersistence.dpk'
 )
 
 $RuntimePackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
-    'DeepBasePersistence.dpk',
     'DeepBaseCommerce.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBasePersistence.dpk',
     'DeepBasePlatform.dpk',
     'DeepBaseDataPlatform.dpk',
-    'DeepBaseSpeechCore.dpk',
     'DeepBaseLLM.dpk',
     'DeepBaseIntentClarification.dpk',
     'DeepBaseBrowser.dpk',
@@ -93,14 +105,17 @@ if (Test-Path (Join-Path $RepoRoot 'VCL')) {
 $LLMPackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
-    'DeepBasePersistence.dpk',
     'DeepBaseCommerce.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBasePersistence.dpk',
     'DeepBasePlatform.dpk',
     'DeepBaseLLM.dpk'
 )
 
 $SpeechPackages = @(
     'DeepBaseCore.dpk',
+    'DeepBaseServices.dpk',
+    'DeepBaseCommerce.dpk',
     'DeepBaseSpeechCore.dpk',
     'DeepBaseSpeechASR.dpk',
     'DeepBaseSpeechTTS.dpk',
@@ -123,12 +138,12 @@ $CommercePackages = @(
 $UpdaterPackages = @(
     'DeepBaseCore.dpk',
     'DeepBaseServices.dpk',
-    'DeepBasePersistence.dpk',
     'DeepBaseCommerce.dpk',
+    'DeepBaseSpeechCore.dpk',
+    'DeepBasePersistence.dpk',
     'DeepBasePlatform.dpk',
     'DeepBaseDataPlatform.dpk',
     'DeepBaseLLM.dpk',
-    'DeepBaseSpeechCore.dpk',
     'DeepBaseIntentClarification.dpk',
     'DeepBaseBrowser.dpk',
     'DeepBaseInference.dpk',

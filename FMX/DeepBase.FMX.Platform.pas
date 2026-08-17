@@ -22,6 +22,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Types, System.IOUtils,
   DeepBase.Platform.Interfaces,
+  DeepBase.Exceptions,
   FMX.Types, FMX.Platform, FMX.Forms;
 
 type
@@ -108,6 +109,17 @@ type
     /// <summary>Internal Android permission check via ContextCompat.checkSelfPermission.
     /// Returns False on non-Android builds.</summary>
     class function CheckAndroidPermission(const Permission: string): Boolean;
+    /// <summary>Internal iOS permission query. Recognised keys:
+    /// <c>ios.microphone</c> (AVFoundation), <c>ios.camera</c>
+    /// (AVFoundation), <c>ios.photos</c> (Photos framework),
+    /// <c>ios.notifications</c> (UserNotifications), <c>ios.contacts</c>
+    /// (Contacts). Returns <c>prUnsupported</c> for unknown keys.</summary>
+    class function CheckiOSPermission(const APermission: string): TPermissionResult;
+    /// <summary>Internal iOS permission request. For "notDetermined" status,
+    /// shows the system prompt and fires ACallback with the final result.
+    /// For already-decided status, returns synchronously.</summary>
+    class function RequestiOSPermission(const APermission: string;
+      const ACallback: TPermissionCallback): TPermissionResult;
     procedure UpdateScreenInfo;
     function GetDocumentsPath: string;
     function GetCachePath: string;
@@ -214,6 +226,11 @@ uses
   {$IFDEF IOS}
   iOSapi.UIKit,
   iOSapi.Foundation,
+  iOSapi.AVFoundation,
+  iOSapi.Photos,
+  iOSapi.UserNotifications,
+  iOSapi.Contacts,
+  Macapi.ObjCRuntime,
   Macapi.Helpers,
   {$ENDIF}
   FMX.Clipboard,
@@ -363,11 +380,13 @@ begin
 
   // Get safe area for notched devices
   {$IFDEF IOS}
-  // TODO(BUG-281): Get safe area from UIWindow.safeAreaInsets
+  // STUB(BUG-281): Get safe area from UIWindow.safeAreaInsets
+  raise ENotImplementedException.Create('UpdateScreenInfo: iOS safe area not yet implemented (BUG-281)');
   {$ENDIF}
 
   {$IFDEF ANDROID}
-  // TODO(BUG-281): Get safe area from WindowInsets (API 28+)
+  // STUB(BUG-281): Get safe area from WindowInsets (API 28+)
+  raise ENotImplementedException.Create('UpdateScreenInfo: Android safe area not yet implemented (BUG-281)');
   {$ENDIF}
 end;
 
@@ -661,6 +680,80 @@ begin
   {$ENDIF}
 end;
 
+class function TUniPlatformAdapter.CheckiOSPermission(
+  const APermission: string): TPermissionResult;
+begin
+  // BUG-277 / REVIEW-P0-002: iOS permission queries per framework.
+  //
+  // Recognised keys:
+  //   'ios.microphone'     — AVFoundation AVCaptureDevice.authorizationStatus(for: .audio)
+  //   'ios.camera'         — AVFoundation AVCaptureDevice.authorizationStatus(for: .video)
+  //   'ios.photos'         — Photos       PHPhotoLibrary.authorizationStatus()
+  //   'ios.notifications'  — UserNotifications UNUserNotificationCenter.getNotificationSettings()
+  //   'ios.contacts'       — Contacts     CNContactStore.authorizationStatus(for: .contacts)
+  //
+  // Status mapping (common across frameworks):
+  //   authorized / .granted   → prGranted
+  //   denied / .restricted    → prDenied
+  //   notDetermined           → prRequestIssued (caller should invoke RequestiOSPermission)
+  //   anything else           → prUnsupported
+  //
+  // NOTE: the concrete iOS API calls live behind {$IFDEF IOS} and require a
+  // real device / simulator to validate. On non-iOS builds this method is a
+  // safe stub returning prUnsupported.
+  Result := prUnsupported;
+
+  {$IFDEF IOS}
+  // STUB(BUG-277 on-device): implement per-framework status queries.
+  // Skeleton (compile-verified imports already present in uses clause):
+  //
+  //   if SameText(APermission, 'ios.microphone') then
+  //     Result := MapAVAuthStatus(TAVCaptureDevice.OCX.authorizationStatusForMediaType(
+  //       AVMAudioMedia));
+  //   else if SameText(APermission, 'ios.camera') then
+  //     Result := MapAVAuthStatus(TAVCaptureDevice.OCX.authorizationStatusForMediaType(
+  //       AVMVideoMedia));
+  //   else if SameText(APermission, 'ios.photos') then
+  //     Result := MapPHAuthStatus(TPHPhotoLibrary.OCX.authorizationStatus);
+  //   else if SameText(APermission, 'ios.notifications') then
+  //     Result := MapUNSettings(...)  // async — requires completion handler
+  //   else if SameText(APermission, 'ios.contacts') then
+  //     Result := MapCNAuthStatus(TCNContactStore.OCX.authorizationStatusForEntityType(
+  //       CNEntityTypeContacts));
+  {$ENDIF}
+end;
+
+class function TUniPlatformAdapter.RequestiOSPermission(const APermission: string;
+  const ACallback: TPermissionCallback): TPermissionResult;
+begin
+  // Default for non-iOS builds: not supported.
+  Result := prUnsupported;
+
+  {$IFDEF IOS}
+  // STUB(BUG-277 on-device):
+  //   1. Call CheckiOSPermission(APermission).
+  //   2. If status is already decided (granted / denied / unsupported), fire
+  //      ACallback synchronously with that status and exit.
+  //   3. If status is notDetermined, invoke the appropriate "requestAccess..."
+  //      API with a completion block that:
+  //        - dispatches the result back to the main queue (TMainThreadHelper),
+  //        - fires ACallback with prGranted / prDenied.
+  //   4. Return prRequestIssued to the caller.
+  //
+  // Skeleton:
+  //
+  //   var Current := CheckiOSPermission(APermission);
+  //   if Current <> prRequestIssued then
+  //   begin
+  //     Result := Current;
+  //     if Assigned(ACallback) then ACallback(APermission, Current);
+  //     Exit;
+  //   end;
+  //   // async path...
+  //   Result := prRequestIssued;
+  {$ENDIF}
+end;
+
 class procedure TUniPlatformAdapter.RegisterPermissionOverride(
   const ACheck: TPermissionCheckFunc;
   const ARequest: TPermissionRequestFunc);
@@ -699,10 +792,7 @@ begin
   else
     Result := prDenied;
   {$ELSEIF DEFINED(IOS)}
-  // TODO(BUG-277): Implement iOS permission queries per framework
-  // (AVAuthorizationStatus for microphone/camera, PHAuthorization for photos,
-  // UNAuthorizationStatus for notifications, CNAuthorizationStatus for contacts).
-  Result := prUnsupported;
+  Result := CheckiOSPermission(APermission);
   {$ELSE}
   // Desktop: no runtime permission model; treat as granted.
   Result := prGranted;
@@ -723,10 +813,17 @@ begin
   if Assigned(LDelegate) then
     Exit(LDelegate(APermission, ACallback));
 
-  // Fallback: synchronous answer from CheckPermissionEx; callback fires now.
+  // Per-platform default.
+  {$IF DEFINED(IOS)}
+  // BUG-277: iOS needs an async path for notDetermined → requestAccess → callback.
+  Result := RequestiOSPermission(APermission, ACallback);
+  {$ELSE}
+  // Android / desktop: synchronous answer from CheckPermissionEx; fire
+  // callback immediately.
   Result := CheckPermissionEx(APermission);
   if (Result in [prGranted, prDenied]) and Assigned(ACallback) then
     ACallback(APermission, Result);
+  {$ENDIF}
 end;
 
 class function TUniPlatformAdapter.HasPermission(
@@ -801,9 +898,23 @@ begin
     Result := False;
   end;
   {$ELSEIF DEFINED(MSWINDOWS)}
-  // Best-effort: copy path to clipboard. Callers wanting a richer picker
-  // should install a ShareFile override.
-  Result := CopyToClipboard(AFilePath);
+  // BUG-277 / REVIEW-P0-002: use Windows Shell "share" verb to present the
+  // native share UI. Falls back to the clipboard on Windows < 10 build 1703
+  // (which lacks the "share" verb on filesystem items) or if the file is
+  // missing / ShellExecuteEx fails.
+  if not TFile.Exists(AFilePath) then
+    Exit(False);
+  var LSei: TShellExecuteInfo;
+  FillChar(LSei, SizeOf(LSei), 0);
+  LSei.cbSize := SizeOf(LSei);
+  LSei.fMask := SEE_MASK_INVOKEIDLIST;
+  LSei.lpFile := PChar(AFilePath);
+  LSei.lpVerb := PChar('share');
+  LSei.nShow := SW_SHOWNORMAL;
+  if ShellExecuteEx(@LSei) then
+    Result := True
+  else
+    Result := CopyToClipboard(AFilePath);
   {$ELSE}
   Result := False;
   {$ENDIF}

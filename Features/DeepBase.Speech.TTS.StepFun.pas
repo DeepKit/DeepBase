@@ -169,8 +169,18 @@ begin
     if JSONVal = nil then Exit;
 
     try
-      JSONArr := (JSONVal as TJSONObject).GetValue('voices') as TJSONArray;
-      if JSONArr = nil then Exit;
+      // BUG-427 FIX (E-008): 'voices' key may be absent or non-array. The old
+      // `GetValue('voices') as TJSONArray` raised EInvalidCast when GetValue returned
+      // nil (key missing), so the following nil-check was dead code and FLastError got
+      // a confusing "Invalid cast" message instead of a clear error. Use `is` + hard
+      // cast so a missing/non-array key returns cleanly with a descriptive message.
+      var VoicesVal := (JSONVal as TJSONObject).GetValue('voices');
+      if not (VoicesVal is TJSONArray) then
+      begin
+        FLastError := 'StepFun fetch system voices: response missing "voices" array';
+        Exit;
+      end;
+      JSONArr := TJSONArray(VoicesVal);
 
       List := TList<TTTSVoice>.Create;
       try
@@ -227,8 +237,15 @@ begin
     if JSONVal = nil then Exit;
 
     try
-      JSONArr := (JSONVal as TJSONObject).GetValue('voices') as TJSONArray;
-      if JSONArr = nil then Exit;
+      // BUG-427 FIX (E-008): same as FetchSystemVoices - avoid `as TJSONArray`
+      // EInvalidCast when 'voices' is missing; use `is` + hard cast + clear error.
+      var VoicesVal := (JSONVal as TJSONObject).GetValue('voices');
+      if not (VoicesVal is TJSONArray) then
+      begin
+        FLastError := 'StepFun fetch cloned voices: response missing "voices" array';
+        Exit;
+      end;
+      JSONArr := TJSONArray(VoicesVal);
 
       List := TList<TTTSVoice>.Create;
       try

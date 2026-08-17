@@ -18,7 +18,8 @@ uses
   DUnitX.TestFramework,
   System.SysUtils, System.Classes, System.IOUtils, System.Generics.Collections,
   DeepBase.Speech.MFCC,
-  DeepBase.Speech.Voiceprint;
+  DeepBase.Speech.Voiceprint,
+  DeepBase.Speech.Voiceprint.Contracts;
 
 type
   /// <summary>In-memory storage mock implementing IVoiceProfileStorage.</summary>

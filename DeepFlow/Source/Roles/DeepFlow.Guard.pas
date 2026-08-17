@@ -46,7 +46,13 @@ type
     Details: string;
   end;
 
-  /// <summary>Guard 角色</summary>
+  /// <summary>Guard 角色
+  /// <para><b>警告 (DATA2-044):</b> Guard 当前作为普通角色注册，并非引擎自动
+  /// 调用的系统角色。工作流 <b>必须</b> 显式包含 Guard 角色，否则所有输入/输出
+  /// 校验、注入检测和安全检查均会被绕过。未注册 Guard 的工作流相当于放弃了
+  /// 全部安全防护层（门卫 → 监工 → 审核官），请在架构评审中予以拦截。</para>
+  /// <para>后续演进方向：将 Guard 提升为系统级拦截器，由引擎在每次消息路由
+  /// 时自动调用，与角色配置解耦。</para></summary>
   TGuard = class(TDeepFlowRoleBase, IGuard)
   private
     FConfig: TDeepFlowConfig;
@@ -87,7 +93,7 @@ type
 implementation
 
 uses
-  System.StrUtils, System.DateUtils;
+  System.StrUtils, System.DateUtils, System.Math;
 
 const
   // Prompt 注入模式
@@ -166,11 +172,12 @@ begin
   // 添加配置中的自定义模式
   for Pattern in FConfig.BlockedPatterns do
   begin
-    try
-      FBlockedPatterns.Add(TRegEx.Create(Pattern, [roIgnoreCase]));
-    except
-      // 忽略无效的正则表达式
-    end;
+    // DATA2-041 FIX: security-config errors must be loud (fail-closed). A typo
+    // in a regex pattern would otherwise silently reduce security coverage —
+    // the invalid pattern is skipped and the Guard pretends the rule doesn't
+    // exist. Raise so the misconfiguration surfaces at startup, not during an
+    // attack.
+    FBlockedPatterns.Add(TRegEx.Create(Pattern, [roIgnoreCase]));
   end;
   
   // 初始化敏感信息模式
@@ -297,7 +304,7 @@ begin
       Warnings.Add('输入已被消毒处理');
   end;
   
-  // TODO: JSON Schema 校验（如果提供了 Schema）
+  // TODO(PRODUCT-P2-001): JSON Schema 完整校验 (type/pattern/minMax/enum)
   if (ASchema <> nil) and (ASchema.Count > 0) then
   begin
     // 简单的必填字段检查

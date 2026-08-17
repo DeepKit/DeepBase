@@ -1,0 +1,351 @@
+{
+  "schema": "spw/evidence/v1",
+  "run_id": "SPW-20260722-153106",
+  "created_at": "2026-07-22T07:31:06.666672+00:00",
+  "manifest_path": "D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\spw-manifest.perception.json",
+  "manifest_sha256": "079a2721676fa68e76a355e67b58acc9f2714621ac086cbb3998555129054232",
+  "project_profile": "delphi_hybrid",
+  "risk_lane": "standard",
+  "runtime_contract": {
+    "logger": {
+      "standard_logger": "DeepBase.Logging",
+      "forbid_bare_console_output": true
+    },
+    "deepbase": {
+      "integration_level": "L3"
+    },
+    "code_retrieval": "explicit-resource-then-codebase-memory"
+  },
+  "flash_policy": {
+    "staging_only": true,
+    "allow_commit": false,
+    "allow_production_access": false,
+    "max_retry": 1
+  },
+  "resource_locks": [
+    {
+      "id": "DeepBasePlatform.dpk",
+      "canonical_path": "DeepBasePlatform.dpk",
+      "reason": "Perception/UIA features are registered into DeepBasePlatform.dpk; structural changes to feature units must keep the package compilable."
+    }
+  ],
+  "git_provenance": {
+    "available": true,
+    "head_sha": "0dc2fad9a46862bd145699ec921bcad63d0594c0",
+    "dirty": true,
+    "status_sha256": "6fa9b25b45f02f6777775d0b21be9b60c283d61845f99ad7ed1558ee9790b20a"
+  },
+  "subject": {
+    "workspace": "D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0",
+    "sha256": "ad9472bfb8306f18320474f03d641684538b32ff87df8a4ad57e81bbe6b07845",
+    "files": [
+      {
+        "path": "Features/DeepBase.Desktop.Perception.Types.pas",
+        "sha256": "db5e04c6996e9ed64bb58a725bf26020f981e97d712f746e0bde09e011750503",
+        "size": 5416
+      },
+      {
+        "path": "Features/DeepBase.Desktop.Perception.Engine.pas",
+        "sha256": "83d5628b5b88e88940e01a0c66180b8e538360c9cc73d9e9dcd6fc15252ff877",
+        "size": 10374
+      },
+      {
+        "path": "Features/DeepBase.Desktop.Perception.LLMProvider.pas",
+        "sha256": "d2b497e467649696409cad5e60467726e62a66c69fbe428a8191ec8743681c3b",
+        "size": 7902
+      },
+      {
+        "path": "Features/DeepBase.UIA.Types.pas",
+        "sha256": "66c49314083702f7f11533d428fecb6c1fb6372c80679f90c1cd58277992d771",
+        "size": 1403
+      },
+      {
+        "path": "Features/DeepBase.UIA.Engine.pas",
+        "sha256": "4c0132d9fda6a113c99ae59340a88852c80182999e4a956a394b2034638645b6",
+        "size": 16634
+      },
+      {
+        "path": "DeepBasePlatform.dpk",
+        "sha256": "0fcf8bb2e0becb0d5fef76093830678b0a27fbc9e9d63776629c2b833422b2c6",
+        "size": 2531
+      }
+    ],
+    "integrity_binding": "verified"
+  },
+  "policy": {
+    "id": "A0031",
+    "path": "D:\\_Progs\\.BetterCiv\\01_纲领型\\A0031-SPW工程执行纪律与防绕过机制.md",
+    "sha256": "e7d96e3fc36183f642c2f98e5d407d279e9f2953a90716c7b216579bad06a182"
+  },
+  "deterministic_gates": [
+    {
+      "gate_id": "H1.compile-packages",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/compile_core_packages_win64.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "Root: D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\n\n=== Compiling DeepBaseCore (Win64) ===\n  Core\\DeepBase.Protection.pas(279) Warning: W1000 Symbol 'DeriveAes256Key' is deprecated: 'Use DeriveAes256KeyPBKDF2 for new code (CORE-R2-005)'\n  Core\\DeepBase.Math.Random.pas(429) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n55448 lines, 2.73 seconds, 3032108 bytes code, 292828 bytes data.\nDeepBaseCore OK\n\n=== Compiling DeepBasePersistence (Win64) ===\n61045 lines, 3.30 seconds, 876540 bytes code, 87744 bytes data.\nDeepBasePersistence OK\n\n=== Compiling DeepBaseServices (Win64) ===\n33425 lines, 1.80 seconds, 2007180 bytes code, 202648 bytes data.\nDeepBaseServices OK\n\n=== Compiling DeepBaseFeatures (Win64) ===\n  Features\\DeepBase.AntiTamper.pas(349) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.AntiTamper.pas(351) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type\n  Features\\DeepBase.UIA.Engine.pas(473) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.\n  DeepBasePlatform.dpk(71) Warning: W1033 Unit 'Vcl.Imaging.pngimage' implicitly imported into package 'DeepBasePlatform'\n  DeepBasePlatform.dpk(71) Warning: W1033 Unit 'Vcl.Imaging.pnglang' implicitly imported into package 'DeepBasePlatform'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(128) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(128) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(134) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(142) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(190) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(203) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(237) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(238) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(295) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(310) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(311) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(343) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(344) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(352) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(353) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(353) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(354) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.SignalDetector.pas(354) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(48) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(56) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(59) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(61) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(65) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(68) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(76) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(79) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(81) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(84) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(87) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(88) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(92) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Exit.pas(100) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.OptionFrame.pas(121) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.OptionFrame.pas(123) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.OptionFrame.pas(125) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L2.pas(249) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L2.pas(273) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(117) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(119) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(121) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(226) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(276) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L3.pas(279) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(161) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(162) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(167) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(219) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(246) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(251) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(269) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(329) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(376) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Provider.L4.pas(376) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Anticipation.pas(153) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Anticipation.pas(221) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  Features\\DeepBase.IntentClarification.Degradation.pas(70) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'\n  DeepAxis\\DeepBase.External.BCryptDecrypt.pas(222) Warning: W1024 Combining signed and unsigned types - widened both operands\n  DeepAxis\\DeepBase.External.SQLiteReader.pas(536) Warning: W1035 Return value of function 'TExternalSQLiteReader.SafeQuery' might be undefined\n94065 lines, 6.00 seconds, 6732 bytes code, 456 bytes data.\nDeepBaseFeatures OK\n\n=== DCU output ===\nWin64 DCU files in D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DCUOutput\\Win64 : 273\nNo stale DCU files in source dirs.\n",
+      "stderr": "",
+      "evidence_sha256": "c945d37453e7458875f3227bca5e86d4745ebbf6b8e7cace3cbbfeaeb8cbf1c8",
+      "duration_ms": 14868
+    },
+    {
+      "gate_id": "H1.resource-locks",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/check-layer-violations.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "DeepBase layer checks\nSourcePath: D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\nReportPath: D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\TestResults\\architecture-layer-report.json\nErrors: 2\nWarnings: 17\n[Warning] CoreNoDbDriverDependency .\\Core\\DeepBase.LLM.PromptTemplateManager.pas: Forbidden source dependency matches \\bData\\.DB\\b\n[Warning] CoreHttpDependencyAllowlist .\\Core\\DeepBase.LogAggregator.pas: Forbidden source dependency matches \\bSystem\\.Net\\.HttpClient\\b\n[Warning] CoreHttpDependencyAllowlist .\\Core\\DeepBase.LogAlert.pas: Forbidden source dependency matches \\bSystem\\.Net\\.HttpClient\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Configuration.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.EventBus.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.LLM.BillingClient.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.LLM.Manager.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.LLM.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.LogAggregator.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.LogAlert.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Logging.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Manager.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Resilience.Retry.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Resilience.Timeout.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Theme.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.UITest.FmxProbe.pas: Forbidden source dependency matches \\bTThread\\.CreateAnonymousThread\\b\n[Warning] CoreBackgroundThreadAllowlist .\\Core\\DeepBase.Validation.pas: Forbidden source dependency matches \\bTTask\\.Run\\b\n[Error] FireDacOutsidePersistence Features\\DeepBase.LLM.Config.pas: FireDAC/Data.DB dependency must live behind Persistence adapters; matched \\bData\\.DB\\b\n[Error] FireDacOutsidePersistence Features\\DeepBase.LLM.Types.pas: FireDAC/Data.DB dependency must live behind Persistence adapters; matched \\bData\\.DB\\b\n",
+      "stderr": "",
+      "evidence_sha256": "43f0cf4c60bc89030f4adb1b996d027bde17e49906072c57bb20be0ae9796784",
+      "duration_ms": 2521
+    },
+    {
+      "gate_id": "H2.encoding-static-gate",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/check-runtime-todos.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "\n=== Runtime TODO/Stub Gate ===\nFiles scanned: 360\nTODOs total:   10 (annotated 10 / unannotated 0)\nErrors:        0\nWarnings:      0\nReport:        D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\TestResults\\runtime-todo-report.json\n",
+      "stderr": "",
+      "evidence_sha256": "ebff462bfc69197c199188ced00238ff3cbf3a9b3bf8fd6276eb945c81065451",
+      "duration_ms": 2732
+    },
+    {
+      "gate_id": "H3.encoding-guard",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/check_encoding.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "\nEncoding Gate\n-------------\n  Files scanned             : 470\n  Hard violations (errors)  : 7\n  Hard violations (allowlisted/downgraded): 0\n    invalid UTF-8           : 7\n    mojibake patterns       : 0\n  Soft violations (warnings): 260\n    missing BOM        : 210  (.pas/.dpr/.dpk/.dfm/.fmx)\n    unexpected BOM     : 50  (.md/.sql)\n  Report                    : D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\TestResults\\encoding-gate.json\n\nHard violations:\n  [InvalidUtf8] FMX/DeepBase.FMX.AutoUpdater.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.ConfigControls.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.ConfigEdit.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.Controls.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.FormControls.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.I18nControls.pas  -- File contains bytes that are not valid UTF-8\n  [InvalidUtf8] FMX/DeepBase.FMX.MRUControls.pas  -- File contains bytes that are not valid UTF-8\n\nTop soft warnings (up to 10):\n  [MissingBom] Core/DeepBase.AIErrorHandler.Bootstrap.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AIErrorHandler.LLMBridge.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AIErrorHandler.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AppLifecycle.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.Authorization.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AutoFix.ErrorRecorder.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AutoFix.HealthSignal.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AutoFix.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AutoFix.ScenarioRunner.pas  -- UTF-8 source must have BOM per .editorconfig\n  [MissingBom] Core/DeepBase.AutoFix.SelfTerminator.pas  -- UTF-8 source must have BOM per .editorconfig\n\nEncoding Gate: WARN (7 hard, 260 soft violations)\n",
+      "stderr": "",
+      "evidence_sha256": "868c4ceac81d76befd78b89cd247078609811ecda26e047961b8e34f3790d14d",
+      "duration_ms": 7131
+    },
+    {
+      "gate_id": "H3.runtime-autofix",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/run_tests.ps1",
+        "-Type",
+        "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform",
+        "Win64",
+        "-Run",
+        "Test.DeepBase.AutoFix.ExitCodes.TAutoFixExitCodesPBT"
+      ],
+      "exit_code": 0,
+      "stdout": "0\\Features\\DeepBase.LLM.Proxy.pas(154) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(228) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(279) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(423) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(467) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nTest.DeepBase.LLM.Schema.PBT.pas(118) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used\nRegression\\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(63) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(67) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(71) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(75) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(79) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(83) Warning: W1074 Unknown custom attribute\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.FileWatcher.pas(173) Hint: H2219 Private symbol 'FDebounceThread' declared but never used\nRegression\\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\Core\\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(151) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(121) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'\nTest.DeepBase.DesignTime.Registration.pas(48) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(57) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(67) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(84) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(102) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(126) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(148) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(153) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(158) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.SchemaAdapter.Registry.pas(100) Hint: H2077 Value assigned to 'TSchemaAdapterRegistry.TryResolve' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(54) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(55) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(56) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(57) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(76) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(78) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(217) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(270) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(376) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.FBank.pas(195) Hint: H2164 Variable 'LFrame' is declared but never used in 'TFBankExtractor.Extract'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.ASR.SenseVoice.pas(466) Hint: H2077 Value assigned to 'LTimeSteps' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.TTS.Edge.pas(181) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\ThirdParty\\Social\\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used\n337663 lines, 19.30 seconds, 29370088 bytes code, 2589808 bytes data.\nSUCCESS: Unit Tests compiled\nSQLite vendor copied: D:\\Program Files (x86)\\Embarcadero\\Studio\\37.0\\bin64\\sqlite3.dll -> D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Tests\\sqlite3.dll\n\nRunning Unit Tests...\n----------------------------------------------\n**********************************************************************\n*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *\n*                                                                    *\n*        License - http://www.apache.org/licenses/LICENSE-2.0        *\n**********************************************************************\n\nDUnitX - [DeepBaseTests.exe] - Starting Tests.\n\n....\n\nTests Found   : 2\nTests Ignored : 0\nTests Passed  : 2\nTests Leaked  : 0\nTests Failed  : 0\nTests Errored : 0\n\nSUCCESS: All Unit Tests tests passed\nTemporary sqlite3.dll removed from Tests directory.\n\n==============================================\n           Final Summary\n==============================================\nUnit Tests:        PASSED\n==============================================\n\nAll tests passed!\n",
+      "stderr": "",
+      "evidence_sha256": "e87118d3e404df00b6f1ab80de380ea1c064f001c00fb29c5f7bc0accf5b2141",
+      "duration_ms": 21972
+    },
+    {
+      "gate_id": "H3.deep-ui-test",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/run_tests.ps1",
+        "-Type",
+        "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform",
+        "Win64",
+        "-FromUnit",
+        "DeepBase.UIA.UnifiedActuator"
+      ],
+      "exit_code": 0,
+      "stdout": "eatures\\DeepBase.LLM.Proxy.pas(154) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(228) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(279) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(423) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(467) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nTest.DeepBase.LLM.Schema.PBT.pas(118) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used\nRegression\\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(63) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(67) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(71) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(75) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(79) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(83) Warning: W1074 Unknown custom attribute\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.FileWatcher.pas(173) Hint: H2219 Private symbol 'FDebounceThread' declared but never used\nRegression\\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\Core\\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(151) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(121) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'\nTest.DeepBase.DesignTime.Registration.pas(48) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(57) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(67) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(84) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(102) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(126) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(148) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(153) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(158) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.SchemaAdapter.Registry.pas(100) Hint: H2077 Value assigned to 'TSchemaAdapterRegistry.TryResolve' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(54) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(55) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(56) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(57) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(76) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(78) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(217) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(270) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(376) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.FBank.pas(195) Hint: H2164 Variable 'LFrame' is declared but never used in 'TFBankExtractor.Extract'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.ASR.SenseVoice.pas(466) Hint: H2077 Value assigned to 'LTimeSteps' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.TTS.Edge.pas(181) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\ThirdParty\\Social\\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used\n337663 lines, 20.05 seconds, 29370088 bytes code, 2589808 bytes data.\nSUCCESS: Unit Tests compiled\nSQLite vendor copied: D:\\Program Files (x86)\\Embarcadero\\Studio\\37.0\\bin64\\sqlite3.dll -> D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Tests\\sqlite3.dll\n\nRunning Unit Tests...\n----------------------------------------------\n**********************************************************************\n*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *\n*                                                                    *\n*        License - http://www.apache.org/licenses/LICENSE-2.0        *\n**********************************************************************\n\nDUnitX - [DeepBaseTests.exe] - Starting Tests.\n\n......I\n\nTests Found   : 4\nTests Ignored : 1\nTests Passed  : 3\nTests Leaked  : 0\nTests Failed  : 0\nTests Errored : 0\n\nSUCCESS: All Unit Tests tests passed\nTemporary sqlite3.dll removed from Tests directory.\n\n==============================================\n           Final Summary\n==============================================\nUnit Tests:        PASSED\n==============================================\n\nAll tests passed!\n",
+      "stderr": "",
+      "evidence_sha256": "2ba36c2b343b390dc77944b2fa71c7a4c73653b2fef8bd6379868f6ba21376dc",
+      "duration_ms": 23057
+    },
+    {
+      "gate_id": "H3.unit-tests-perception-and-uia",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Scripts/run_tests.ps1",
+        "-Type",
+        "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform",
+        "Win64",
+        "-FromUnit",
+        "DeepBase.Desktop.Perception,DeepBase.UIA.UnifiedActuator"
+      ],
+      "exit_code": 0,
+      "stdout": ".pas(154) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(228) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(279) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(423) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.LLM.Proxy.pas(467) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nTest.DeepBase.LLM.Schema.PBT.pas(118) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Governance\\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used\nRegression\\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(63) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(67) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(71) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(75) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(79) Warning: W1074 Unknown custom attribute\nRegression\\Test.Regression.BUG320_FileWatcherLifecycle.pas(83) Warning: W1074 Unknown custom attribute\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.FileWatcher.pas(173) Hint: H2219 Private symbol 'FDebounceThread' declared but never used\nRegression\\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\Core\\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(151) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Source\\AI\\DeepFlow.Skill.Client.pas(121) Hint: H2077 Value assigned to 'LSuccess' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\DeepFlow\\Tests\\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'\nTest.DeepBase.DesignTime.Registration.pas(48) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(57) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(67) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(84) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(102) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(126) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(148) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(153) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nTest.DeepBase.DesignTime.Registration.pas(158) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Core\\DeepBase.SchemaAdapter.Registry.pas(100) Hint: H2077 Value assigned to 'TSchemaAdapterRegistry.TryResolve' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(54) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(55) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(56) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(57) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(76) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(78) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.Persistence.TestHelper.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(217) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(270) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Persistence\\DeepBase.IntentClarification.Storage.pas(376) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.FBank.pas(195) Hint: H2164 Variable 'LFrame' is declared but never used in 'TFBankExtractor.Extract'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.ASR.SenseVoice.pas(466) Hint: H2077 Value assigned to 'LTimeSteps' never used\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Features\\DeepBase.Speech.TTS.Edge.pas(181) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'\nD:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\ThirdParty\\Social\\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used\n337663 lines, 19.31 seconds, 29370088 bytes code, 2589808 bytes data.\nSUCCESS: Unit Tests compiled\nSQLite vendor copied: D:\\Program Files (x86)\\Embarcadero\\Studio\\37.0\\bin64\\sqlite3.dll -> D:\\_Progs\\02Business\\DeepBase\\.claude\\worktrees\\perception-p0\\Tests\\sqlite3.dll\n\nRunning Unit Tests...\n----------------------------------------------\n**********************************************************************\n*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *\n*                                                                    *\n*        License - http://www.apache.org/licenses/LICENSE-2.0        *\n**********************************************************************\n\nDUnitX - [DeepBaseTests.exe] - Starting Tests.\n\n..............................I\n\nTests Found   : 16\nTests Ignored : 1\nTests Passed  : 15\nTests Leaked  : 0\nTests Failed  : 0\nTests Errored : 0\n\nSUCCESS: All Unit Tests tests passed\nTemporary sqlite3.dll removed from Tests directory.\n\n==============================================\n           Final Summary\n==============================================\nUnit Tests:        PASSED\n==============================================\n\nAll tests passed!\n",
+      "stderr": "",
+      "evidence_sha256": "b04c57c571cc15d197318718bde527236dfe0736bc31664537ee35b847b8d4b6",
+      "duration_ms": 22147
+    },
+    {
+      "gate_id": "H4.bypass-patterns",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "findings": [],
+      "evidence_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "gate_id": "H4.threat-model-coverage",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "findings": [],
+      "evidence_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "gate_id": "H6.bypass-debt-coverage",
+      "required": true,
+      "execution_status": "completed",
+      "verdict": "PASS",
+      "findings": [],
+      "h6_overdue_count": 0,
+      "h6_pending_count": 0,
+      "evidence_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ],
+  "external_observations": [
+    {
+      "requested_model": "claude-xunfei-glm-5-2",
+      "resolved_model": "xopglm52",
+      "response_model": "xopglm52",
+      "provider": "xunfei-coding-glm52",
+      "requested_family": "glm",
+      "provider_family": "glm",
+      "family": "glm",
+      "identity_verified": true,
+      "identity_source": "call_api_upstream_echo",
+      "transport_status": "succeeded",
+      "observation_status": "valid",
+      "invalid_reasons": [],
+      "observation": {
+        "findings": []
+      },
+      "raw_response_sha256": "9d0f2143c61cfbb6c0cf0425ce8b447811a32d48ec37333ba8b3700218631b36",
+      "spw_source_mtime": "2026-07-21T08:50:58.977653+00:00",
+      "spw_pyc_stale": false
+    },
+    {
+      "requested_model": "claude-stepfun-3-7-flash",
+      "resolved_model": "step-3.7-flash",
+      "response_model": "step-3.7-flash",
+      "provider": "stepfun-001",
+      "requested_family": "stepfun",
+      "provider_family": "stepfun",
+      "family": "stepfun",
+      "identity_verified": true,
+      "identity_source": "call_api_upstream_echo",
+      "transport_status": "succeeded",
+      "observation_status": "valid",
+      "invalid_reasons": [],
+      "observation": {
+        "findings": []
+      },
+      "raw_response_sha256": "9d0f2143c61cfbb6c0cf0425ce8b447811a32d48ec37333ba8b3700218631b36",
+      "spw_source_mtime": "2026-07-21T08:50:58.977653+00:00",
+      "spw_pyc_stale": false
+    }
+  ],
+  "valid_observer_families": [
+    "glm",
+    "stepfun"
+  ],
+  "required_observer_families": 2,
+  "h5_observation_verdict": "certified",
+  "pending_h5_findings": [],
+  "h5_dual_loop": {
+    "verdict": "certified",
+    "confirmed_violations": [],
+    "isolated_candidates": [],
+    "observation_notes_downgraded": [],
+    "families_reporting_findings": [],
+    "min_observer_families": 2,
+    "observer_coverage_degraded": false,
+    "missing_observer_families": [],
+    "missing_required_families": [],
+    "missing_optional_families": []
+  },
+  "h5_dispositions_applied": [],
+  "artifact_verdict": "PASS",
+  "artifact_integrity": "verified",
+  "execution_status": "completed",
+  "h6_bypass_debt": {
+    "overdue_count": 0,
+    "pending_count": 0,
+    "debt_state": "clear"
+  },
+  "coverage_status": "COVERED",
+  "active_must_debt": 0,
+  "decision_basis_sha256": "a5c72d3f481ddd2bf7a1e2bf4905b28caf570d1a4d795ec7b857fcae080ac308",
+  "release_ready": true,
+  "degradation_reasons": [],
+  "degradation_state": "nominal",
+  "certification": {
+    "status": "issued",
+    "subject_sha256": "ad9472bfb8306f18320474f03d641684538b32ff87df8a4ad57e81bbe6b07845",
+    "manifest_sha256": "079a2721676fa68e76a355e67b58acc9f2714621ac086cbb3998555129054232",
+    "git_head_sha": "0dc2fad9a46862bd145699ec921bcad63d0594c0",
+    "reason": null,
+    "observer_coverage_degraded": false,
+    "missing_observer_families": []
+  },
+  "evidence_self_sha256": "6ec6918325ed004c009548f4f27b6393d067d6d681474983fc686afb45e98536"
+}

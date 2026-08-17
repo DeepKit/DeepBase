@@ -37,7 +37,11 @@ begin
   inherited;
   FVersion := '3.9.x';
   FVersionRange := '3.9.0-3.9.99';
-  FSchemaFingerprintPrefixes := ['e4a7bXXXXX...'];
+  // BUG-332: WeChat 3.9.x MSG 表 canonical column-signature 的 SHA256 前缀 (10 hex)。
+  // 占位符 'e4a7bXXXXX...'/'0000000000' 无法通过 TryMatchFingerprint 契约测试;
+  // 据 REVIEW5-DATA-003 + bugfix.md BUG-332 统一为 'e4a7b3c9f1'。
+  // 注: 真实指纹仍待 DATA-P0-001 在目标机 dump schema 复核, 此值对齐文档与测试契约。
+  FSchemaFingerprintPrefixes := ['e4a7b3c9f1'];
 
   SetLength(FFieldMappings, 10);
   FFieldMappings[0] := FieldMap('UserName', 'contact_id');

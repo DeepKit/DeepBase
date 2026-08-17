@@ -13,13 +13,14 @@ program TestFMXPlatformStandalone;
   Does NOT require a microphone, device or mobile runtime — all paths are
   exercised via registered mock delegates.
 
-  Expected: 13 assertions, all PASS.
+  Expected: 15 assertions, all PASS.
   ============================================================================ }
 
 uses
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
+  System.IOUtils,
   DeepBase.Platform.Interfaces,
   DeepBase.FMX.Platform;
 
@@ -173,6 +174,38 @@ begin
     'After clearing override, desktop default restored');
 end;
 
+// REVIEW-P0-002 regression: Windows Shell "share" verb path must short-circuit
+// to False when the target file is absent, without attempting ShellExecuteEx.
+// On non-Windows builds, the same short-circuit is exercised by the default
+// platform branch returning False for missing files.
+procedure Test_ShareFileEx_MissingFile_ReturnsFalse;
+var
+  LTempDir, LMadeUpPath: string;
+begin
+  Writeln(''); Writeln('=== ShareFileEx: missing file returns False ===');
+  LTempDir := TPath.GetTempPath;
+  LMadeUpPath := TPath.Combine(LTempDir,
+    'deepbase-fmx-missing-' + TGuid.NewGuid.ToString + '.txt');
+  if TFile.Exists(LMadeUpPath) then
+    TFile.Delete(LMadeUpPath);
+
+  // Delegate chain cleared (no RegisterShareOverride active), so the
+  // compile-time IFDEF branch is exercised.
+  Check(not TUniPlatformAdapter.ShareFileEx(LMadeUpPath),
+    'ShareFileEx on a missing file must return False (no UI raised)');
+
+  // Sanity: delegate override still wins over the compile-time branch.
+  TUniPlatformAdapter.RegisterShareOverride(nil,
+    function(const APath: string): Boolean
+    begin Result := True; end);
+  try
+    Check(TUniPlatformAdapter.ShareFileEx(LMadeUpPath),
+      'ShareFileEx override should be invoked even when the file is missing');
+  finally
+    TUniPlatformAdapter.RegisterShareOverride(nil, nil);
+  end;
+end;
+
 begin
   GTotal := 0; GPass := 0; GFail := 0;
 
@@ -184,6 +217,7 @@ begin
   Test_RequestPermission_OverrideRequestIssued;
   Test_ShareText_Override;
   Test_ShareFile_Override;
+  Test_ShareFileEx_MissingFile_ReturnsFalse;
   Test_ClearOverride_RestoresDefault;
 
   Writeln('');

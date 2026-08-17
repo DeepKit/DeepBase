@@ -91,7 +91,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.RegularExpressions;
+  System.DateUtils, System.RegularExpressions, System.StrUtils;
 
 { TSession }
 
@@ -325,7 +325,7 @@ begin
     if AResults.Items[I] is TJSONObject then
     begin
       ResultItem := AResults.Items[I] as TJSONObject;
-      Outputs.Add(ResultItem.Clone);
+      Outputs.AddElement(ResultItem.Clone as TJSONValue);
       
       if ResultItem.TryGetValue<Boolean>('success', Success) and not Success then
         AllSuccess := False;
@@ -344,35 +344,57 @@ var
   Tasks: TJSONArray;
 begin
   Result := TJSONObject.Create;
-  
+
   // 获取或创建会话
   Session := GetOrCreateSession(ASessionId);
-  Session.State := ssActive;
-  Inc(Session.FTurnCount);
-  
+  // BUG-429 FIX (D-007): 会话字段 (State/FTurnCount) 必须在 FSessionLock 内修改,
+  // 否则并发 ProcessRequest(同 SessionId) 锁外裸改标量字段形成数据竞争.
+  // Context 引用快照也在锁内取, 避免与 Commander 停止时 FSessions.Clear 释放竞争.
+  var SessionCtx: TJSONObject;
+  var SessionSid: string;
+  TMonitor.Enter(FSessionLock);
+  try
+    Session.State := ssActive;
+    Inc(Session.FTurnCount);
+    SessionCtx := Session.Context;
+    SessionSid := Session.SessionId;
+  finally
+    TMonitor.Exit(FSessionLock);
+  end;
+
   try
     // 1. 分析意图
-    Intent := AnalyzeIntent(AInput, Session.Context);
+    Intent := AnalyzeIntent(AInput, SessionCtx);
     try
-      Result.AddPair('session_id', Session.SessionId);
+      Result.AddPair('session_id', SessionSid);
       Result.AddPair('intent', Intent.Clone as TJSONObject);
-      
+
       // 2. 分解任务
       Tasks := Decompose(Intent);
       Result.AddPair('tasks', Tasks);
-      
+
       // 3. 标记需要进一步处理
       Result.AddPair('status', 'tasks_ready');
-      
+
     finally
       Intent.Free;
     end;
-    
-    Session.State := ssPending;
+
+    TMonitor.Enter(FSessionLock);
+    try
+      Session.State := ssPending;
+    finally
+      TMonitor.Exit(FSessionLock);
+    end;
   except
     on E: Exception do
     begin
-      Session.State := ssError;
+      TMonitor.Enter(FSessionLock);
+      try
+        Session.State := ssError;
+      finally
+        TMonitor.Exit(FSessionLock);
+      end;
       Result.AddPair('status', 'error');
       Result.AddPair('error', E.Message);
     end;

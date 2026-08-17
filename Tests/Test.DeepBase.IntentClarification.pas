@@ -47,6 +47,9 @@ type
     function ChatWithHistory(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>; AOnChunk: TProc<string>;
       AOnError: TProc<string>; AMaxTokens: Integer = 0);
@@ -119,6 +122,15 @@ function TFakeClarificationLLM.ChatWithHistory(const ATier: TModelTier;
 begin
   Inc(Calls);
   LastTier := ATier;
+  Result := Response;
+end;
+
+function TFakeClarificationLLM.ChatWithHistoryByProvider(
+  const AProviderName, AModelId: string;
+  const AMessages: TArray<TChatMessage>; AMaxTokens: Integer;
+  ATemperature: Double): TChatResult;
+begin
+  Inc(Calls);
   Result := Response;
 end;
 

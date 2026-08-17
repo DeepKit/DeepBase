@@ -270,8 +270,6 @@ type
   private
     FLimiters: TDictionary<string, IRateLimiter>;
     FLock: TCriticalSection;
-    class var FInstance: TRateLimitManager;
-    class var FLockInstance: TCriticalSection;
   public
     constructor Create;
     destructor Destroy; override;

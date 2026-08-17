@@ -74,13 +74,18 @@ type
     function JsonToVersion(const JsonObj: TJSONObject): TPromptVersion;
     function JsonToMetaPrompt(const JsonObj: TJSONObject): TMetaPrompt;
     function JsonToVariable(const JsonObj: TJSONObject): TPromptVariable;
-    
-    // YAML helpers
+
+    // YAML helpers (export-only; see YamlToJson for the import limitation)
     function JsonToYaml(const JsonObj: TJSONObject; Indent: Integer = 0): string;
-    function YamlToJson(const YamlContent: string): TJSONObject;
-    
+
   public
     constructor Create(ALLMManager: TLLMManager);
+
+    /// <summary>Parse import content into a JSON object. Returns nil for YAML
+    /// content (BIZ-R3-019: YAML import is unsupported; JSON fast-path only).
+    /// Public so import/export tooling and unit tests can invoke the round-trip
+    /// contract directly.</summary>
+    function YamlToJson(const YamlContent: string): TJSONObject;
     
     /// <summary>Export all prompts to file</summary>
     function ExportPrompts(const FilePath: string; Format: TExportFormat = efJSON): Boolean;
@@ -386,22 +391,22 @@ end;
 
 function TLLMImportExport.YamlToJson(const YamlContent: string): TJSONObject;
 begin
-  // Simplified YAML parser - only supports basic structure
-  // For full YAML support, use a proper YAML library
-  Result := TJSONObject.Create;
-  
-  // Basic implementation: just try to parse as JSON if it looks like JSON
+  // BIZ-R3-019: YAML import is intentionally unsupported.
+  // The exporter (JsonToYaml) produces a human-readable YAML representation
+  // for external consumption, but a correct, safe reverse parser would
+  // require a full YAML library (indentation rules, flow/block scalars,
+  // anchors, quoted-string edge cases). A half parser would silently
+  // corrupt imported prompt data, which is worse than a clear refusal.
+  //
+  // Returning nil lets callers fall into their existing
+  // `if RootObj = nil` branch and surface a precise error rather than the
+  // previous stub object carrying an `error` key (which leaked through to
+  // "missing required array" — a misleading message). Round-tripping should
+  // be done via JSON; YAML is export-only.
   if (Copy(Trim(YamlContent), 1, 1) = '{') then
-  begin
-    Result.Free;
-    Result := TJSONObject.ParseJSONValue(YamlContent) as TJSONObject;
-  end
+    Result := TJSONObject.ParseJSONValue(YamlContent) as TJSONObject
   else
-  begin
-    // For YAML, we'd need a proper parser
-    // This is a placeholder - in real implementation, use a YAML library
-    Result.AddPair('error', 'YAML parsing not fully implemented. Please use JSON format.');
-  end;
+    Result := nil;
 end;
 
 // === Export Methods ===
@@ -601,6 +606,7 @@ var
   MetaCode: string;
   OldCatIdMap: TDictionary<Integer, Integer>; // Old ID -> New ID
 begin
+  RootObj := nil;
   Result.Init;
   
   if not Assigned(FLLMManager) then
@@ -620,19 +626,30 @@ begin
         RootObj := TJSONObject.ParseJSONValue(Content) as TJSONObject
       else
         RootObj := YamlToJson(Content);
-        
+
       if RootObj = nil then
       begin
         SetLength(Result.Errors, 1);
-        Result.Errors[0] := 'Invalid JSON/YAML format';
+        // BIZ-R3-019: YAML import is unsupported; guide users to JSON.
+        if Copy(Trim(Content), 1, 1) <> '{' then
+          Result.Errors[0] := 'YAML import is not supported. Please import as JSON (use efJSON export for round-trip).'
+        else
+          Result.Errors[0] := 'Invalid JSON format';
         Exit;
       end;
 
       // Validate all required arrays exist and are parseable BEFORE any deletion.
       // This prevents data loss in imOverwrite mode when the JSON is malformed.
-      RootObj.TryGetValue<TJSONArray>('categories', CategoriesArray);
-      RootObj.TryGetValue<TJSONArray>('meta_prompts', MetaArray);
-      RootObj.TryGetValue<TJSONArray>('prompts', PromptsArray);
+      // BIZ-R3-007: check TryGetValue return values — if any key is missing,
+      // report error and exit instead of proceeding to delete existing data.
+      if not RootObj.TryGetValue<TJSONArray>('categories', CategoriesArray) or
+         not RootObj.TryGetValue<TJSONArray>('meta_prompts', MetaArray) or
+         not RootObj.TryGetValue<TJSONArray>('prompts', PromptsArray) then
+      begin
+        SetLength(Result.Errors, 1);
+        Result.Errors[0] := 'Import validation failed: missing required array in JSON';
+        Exit;
+      end;
 
       // Overwrite mode: clear existing data AFTER validation succeeds
       if Mode = imOverwrite then
@@ -824,10 +841,14 @@ begin
       RootObj := TJSONObject.ParseJSONValue(Content) as TJSONObject
     else
       RootObj := YamlToJson(Content);
-      
+
     if RootObj = nil then
     begin
-      ErrorMsg := 'Invalid JSON/YAML format';
+      // BIZ-R3-019: YAML import is unsupported; guide users to JSON.
+      if Copy(Trim(Content), 1, 1) <> '{' then
+        ErrorMsg := 'YAML import is not supported. Please import as JSON (use efJSON export for round-trip).'
+      else
+        ErrorMsg := 'Invalid JSON format';
       Exit;
     end;
     

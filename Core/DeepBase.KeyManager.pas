@@ -44,7 +44,7 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random;
 
 type
   EKeyManagerException = class(Exception);
@@ -479,17 +479,18 @@ end;
 procedure TDataKey.EncryptWith(const AKEK: TBytes);
 var
   AES: TAESCrypto;
-  IV, Cipher: TBytes;
+  GCMData: TBytes;
 begin
-  AES := TAESCrypto.Create(aes256, aesCBC);
+  // REVIEW5-CORE-005: Upgrade from CBC to AES-GCM (AEAD).
+  // Format: Version(1) + Nonce(12) + Cipher + Tag(16)
+  // Version byte 0x01 = AES-256-GCM authenticated encryption.
+  AES := TAESCrypto.Create(aes256, aesGCM);
   try
     AES.SetKey(AKEK);
-    IV := TRandomGenerator.RandomBytes(16);
-    AES.SetIV(IV);
-    Cipher := AES.Encrypt(FKeyData);
-    SetLength(FEncryptedKeyData, Length(IV) + Length(Cipher));
-    Move(IV[0], FEncryptedKeyData[0], Length(IV));
-    Move(Cipher[0], FEncryptedKeyData[Length(IV)], Length(Cipher));
+    GCMData := AES.Encrypt(FKeyData);
+    SetLength(FEncryptedKeyData, 1 + Length(GCMData));
+    FEncryptedKeyData[0] := $01; // Version: AES-GCM
+    Move(GCMData[0], FEncryptedKeyData[1], Length(GCMData));
   finally
     AES.Free;
   end;
@@ -498,22 +499,41 @@ end;
 procedure TDataKey.DecryptWith(const AKEK: TBytes);
 var
   AES: TAESCrypto;
-  IV, Cipher: TBytes;
+  IV, Cipher, GCMData: TBytes;
 begin
   if Length(FEncryptedKeyData) = 0 then
     Exit;
-  if Length(FEncryptedKeyData) <= 16 then
-    raise EKeyManagerException.Create('Invalid encrypted data key');
-    
-  AES := TAESCrypto.Create(aes256, aesCBC);
-  try
-    AES.SetKey(AKEK);
-    IV := Copy(FEncryptedKeyData, 0, 16);
-    Cipher := Copy(FEncryptedKeyData, 16, Length(FEncryptedKeyData) - 16);
-    AES.SetIV(IV);
-    FKeyData := AES.Decrypt(Cipher);
-  finally
-    AES.Free;
+
+  if (Length(FEncryptedKeyData) > 1) and (FEncryptedKeyData[0] = $01) then
+  begin
+    // REVIEW5-CORE-005: New format — AES-256-GCM authenticated decryption.
+    // Version(1) already consumed; rest is Nonce(12) + Cipher + Tag(16).
+    GCMData := Copy(FEncryptedKeyData, 1, Length(FEncryptedKeyData) - 1);
+    AES := TAESCrypto.Create(aes256, aesGCM);
+    try
+      AES.SetKey(AKEK);
+      FKeyData := AES.Decrypt(GCMData);
+    finally
+      AES.Free;
+    end;
+  end
+  else
+  begin
+    // Legacy format — AES-256-CBC (unauthenticated).
+    // Format: IV(16) + Cipher.
+    if Length(FEncryptedKeyData) <= 16 then
+      raise EKeyManagerException.Create('Invalid encrypted data key');
+
+    AES := TAESCrypto.Create(aes256, aesCBC);
+    try
+      AES.SetKey(AKEK);
+      IV := Copy(FEncryptedKeyData, 0, 16);
+      Cipher := Copy(FEncryptedKeyData, 16, Length(FEncryptedKeyData) - 16);
+      AES.SetIV(IV);
+      FKeyData := AES.Decrypt(Cipher);
+    finally
+      AES.Free;
+    end;
   end;
 end;
 
@@ -535,7 +555,13 @@ begin
   Result.ExpiresAt := FExpiresAt;
   Result.RotatedAt := 0;
   Result.Version := FVersion;
-  Result.Algorithm := 'AES-256-CBC';
+  // CORE-R2-007: Report actual encryption mode based on version byte.
+  // EncryptWith writes version byte $01 for AES-256-GCM; legacy data
+  // lacks this prefix and was encrypted with AES-256-CBC.
+  if (Length(FEncryptedKeyData) > 0) and (FEncryptedKeyData[0] = $01) then
+    Result.Algorithm := 'AES-256-GCM'
+  else
+    Result.Algorithm := 'AES-256-CBC';
   Result.KeyLength := Length(FKeyData) * 8;
 end;
 
@@ -885,46 +911,88 @@ begin
   FKeyStore.RevokeKey(AKeyId);
 end;
 
+{ TKeyManager.Encrypt — AES-256-GCM authenticated encryption.
+
+  Output format (v2):
+    Version(1 byte = $02) + Nonce(12) + CipherText + Tag(16)
+
+  Older CBC payloads (no version byte, or unrecognized first byte) are
+  handled transparently by Decrypt for backward compatibility.
+  New data is always encrypted with GCM (AEAD) to prevent padding-oracle
+  and silent tampering attacks that plain CBC is vulnerable to. }
 function TKeyManager.Encrypt(const AData: TBytes; APurpose: TKeyPurpose): TBytes;
 var
   AES: TAESCrypto;
   KeyData: TBytes;
-  IV, Cipher: TBytes;
+  GCMData: TBytes;
 begin
   KeyData := GetActiveKeyForPurpose(APurpose);
-  AES := TAESCrypto.Create(aes256, aesCBC);
+  AES := TAESCrypto.Create(aes256, aesGCM);
   try
     AES.SetKey(KeyData);
-    IV := TRandomGenerator.RandomBytes(16);
-    AES.SetIV(IV);
-    Cipher := AES.Encrypt(AData);
-    SetLength(Result, Length(IV) + Length(Cipher));
-    Move(IV[0], Result[0], Length(IV));
-    Move(Cipher[0], Result[Length(IV)], Length(Cipher));
+    GCMData := AES.Encrypt(AData);  // Nonce(12) + Cipher + Tag(16)
+    // Prepend version byte $02 so Decrypt can distinguish from legacy CBC
+    SetLength(Result, 1 + Length(GCMData));
+    Result[0] := $02;  // v2 = AES-256-GCM
+    Move(GCMData[0], Result[1], Length(GCMData));
   finally
     AES.Free;
   end;
 end;
 
+{ TKeyManager.Decrypt — format-detecting decryption.
+
+  Recognized formats:
+    v2 (first byte = $02): AES-256-GCM authenticated decryption.
+         Payload after version byte: Nonce(12) + CipherText + Tag(16).
+    Legacy (any other leading byte): AES-256-CBC, IV(16) + CipherText.
+         Retained so data encrypted by earlier versions remains readable.
+
+  Callers do NOT need to know which format the data is in — detection is
+  automatic. Re-encrypting the decrypted plaintext with Encrypt will
+  upgrade it to GCM. }
 function TKeyManager.Decrypt(const AData: TBytes; APurpose: TKeyPurpose): TBytes;
 var
   AES: TAESCrypto;
   KeyData: TBytes;
-  IV, Cipher: TBytes;
+  IV, Cipher, GCMData: TBytes;
 begin
-  if Length(AData) <= 16 then
-    raise EKeyManagerException.Create('Invalid encrypted payload');
+  if Length(AData) = 0 then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
 
   KeyData := GetActiveKeyForPurpose(APurpose);
-  AES := TAESCrypto.Create(aes256, aesCBC);
-  try
-    AES.SetKey(KeyData);
-    IV := Copy(AData, 0, 16);
-    Cipher := Copy(AData, 16, Length(AData) - 16);
-    AES.SetIV(IV);
-    Result := AES.Decrypt(Cipher);
-  finally
-    AES.Free;
+
+  if (AData[0] = $02) and (Length(AData) > 1 + AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE) then
+  begin
+    // v2 — AES-256-GCM authenticated decryption
+    GCMData := Copy(AData, 1, Length(AData) - 1); // Nonce(12) + Cipher + Tag(16)
+    AES := TAESCrypto.Create(aes256, aesGCM);
+    try
+      AES.SetKey(KeyData);
+      Result := AES.Decrypt(GCMData);
+    finally
+      AES.Free;
+    end;
+  end
+  else
+  begin
+    // Legacy — AES-256-CBC (IV(16) + CipherText)
+    if Length(AData) <= 16 then
+      raise EKeyManagerException.Create('Invalid encrypted payload');
+
+    AES := TAESCrypto.Create(aes256, aesCBC);
+    try
+      AES.SetKey(KeyData);
+      IV := Copy(AData, 0, 16);
+      Cipher := Copy(AData, 16, Length(AData) - 16);
+      AES.SetIV(IV);
+      Result := AES.Decrypt(Cipher);
+    finally
+      AES.Free;
+    end;
   end;
 end;
 

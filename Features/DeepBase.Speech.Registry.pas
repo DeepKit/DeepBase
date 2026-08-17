@@ -14,7 +14,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.Generics.Collections,
-  System.Generics.Defaults;
+  System.Generics.Defaults,
+  DeepBase.Speech.Types;
 
 type
   TSpeechBackendKind = (sbkASR, sbkTTS, sbkWakeWord, sbkVoiceprint, sbkIntent);
@@ -30,6 +31,17 @@ type
     IsAvailableFunc: TFunc<Boolean>;
     Enabled: Boolean;
     Priority: Integer;      // lower = higher priority
+    // Backend instance factories. The closure is created inside each
+    // backend's own unit (where it can see its own constructor), so the
+    // registry stores only the pointer — no cross-package uses, no break
+    // of the Core→ASR/TTS one-way package dependency. WireFromRegistry
+    // calls the field matching the backend's Kind to obtain the instance.
+    // nil = backend cannot be auto-instantiated (e.g. needs explicit config
+    // like an API key); consumer must call the matching TSpeechService.Register*.
+    // AudioCapture has no factory here — WinMM is lazily instantiated by
+    // WireFromRegistry on Windows (capture backends don't self-register).
+    ASRFactory: TFunc<ISpeechRecognizerEx>;
+    TTSFactory: TFunc<ITTSBackend>;
   end;
 
   TSpeechRegistry = class
@@ -172,8 +184,18 @@ begin
       begin
         if LInfo.Kind <> AKind then Continue;
         if not LInfo.Enabled then Continue;
-        if AOnlyAvailable and Assigned(LInfo.IsAvailableFunc) and
-           not LInfo.IsAvailableFunc() then Continue;
+        if AOnlyAvailable and Assigned(LInfo.IsAvailableFunc) then
+        begin
+          // A backend's availability probe must never crash the whole
+          // discovery loop. SAPI/COM-backed probes can raise access violations
+          // in headless CI (no audio devices / no SCOM objects instantiated);
+          // treat a raising probe as "not available" and skip it.
+          try
+            if not LInfo.IsAvailableFunc() then Continue;
+          except
+            Continue;
+          end;
+        end;
         LResult.Add(LInfo);
       end;
     finally

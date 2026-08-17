@@ -143,7 +143,8 @@ type
 implementation
 uses
   System.SysUtils, System.Math,
-  DeepBase.Math;
+  DeepBase.Math, DeepBase.Math.Geometry, DeepBase.Math.Statistics,
+  DeepBase.Math.Interpolation, DeepBase.Math.Random;
 
 const
   EPSILON = 1E-9;

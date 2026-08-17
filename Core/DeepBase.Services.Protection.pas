@@ -14,7 +14,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  DeepBase.Services.Interfaces;
+  DeepBase.Services.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   // ============================================================================
@@ -56,8 +57,6 @@ type
     FConfig: TAntiTamperConfig;
     FInitialized: Boolean;
     FStorage: IAntiTamperStorage;
-    class var FStorageFactory: TFunc<IAntiTamperStorage>;
-    class function CreateStorage: IAntiTamperStorage; static;
     function GetStorage: IAntiTamperStorage;
   public
     constructor Create(const AStorage: IAntiTamperStorage = nil);
@@ -548,18 +547,10 @@ end;
 // TAntiTamperServiceImpl
 // ============================================================================
 
-class function TAntiTamperServiceImpl.CreateStorage: IAntiTamperStorage;
-begin
-  if Assigned(FStorageFactory) then
-    Result := FStorageFactory()
-  else
-    Result := nil;
-end;
-
 function TAntiTamperServiceImpl.GetStorage: IAntiTamperStorage;
 begin
   if FStorage = nil then
-    FStorage := CreateStorage;
+    FStorage := TStorageFactory<IAntiTamperStorage>.Create;
 
   if FStorage = nil then
     raise EInvalidOperation.Create(
@@ -572,7 +563,7 @@ end;
 class procedure TAntiTamperServiceImpl.SetStorageFactory(
   const AFactory: TFunc<IAntiTamperStorage>);
 begin
-  FStorageFactory := AFactory;
+  TStorageFactory<IAntiTamperStorage>.SetFactory(AFactory);
 end;
 
 constructor TAntiTamperServiceImpl.Create(const AStorage: IAntiTamperStorage);

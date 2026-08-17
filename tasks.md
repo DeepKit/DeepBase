@@ -1,214 +1,202 @@
-# deepBase 开发任务
-> **最后更新**: 2026-06-20
-> **代码核实**: 10 专家评估完成，P0 (12) + P1 (12) = 24 项修复全部完成，编译通过；2026-06-18 新增 3 专家框架审阅待办；REVIEW-P0-001/P0-002/P1-001/P1-002/P1-003/P1-004/P2-001 均已完成。
-> **项目状态**: 框架主体已完成。数据平台 v0.7 12 单元已落地。BUG-282/283/284 已修复。BUG-285 测试套件进程退出泄漏部分修复（130 → 80 对象），剩余泄漏主要为 DUnitX 框架自身缓存；同 BUG 新增的 DCU 产物污染已通过 `run_tests.ps1` 构建前后双重清理根治。QA-P0-001 测试门禁可信化全部完成：CI 全绿 (3608 passed, 0 leaked, 0 failed)。编译器警告清理完成 H2164 类别（57 → 0）和 H2219 类别（41 → 7，剩余均为误报），H2077 类别（78 → 42，可修复案例全部完成），总体警告数 470 → 286（-39%），跨 40+ 文件删除 670+ 行死代码。
-> **维护规则**: `tasks.md` 只保留当前待办和下一步任务；完成后移动到 `history.md`；Bug 修复和待修复缺陷记录写入 `bugfix.md`。
+# DeepBase 待办任务清单
+> 更新时间：2026-08-13
+> 执行人：AI Assistant (罗辑人格)
+> 已完成任务已归档至 history.md | Bug 记录见 bugfix.md
 
 ---
 
-## 文档导航
+## 🎯 **当前状态**
 
-| 文档 | 说明 |
-|------|------|
-| [README.md](README.md) | 项目说明 |
-| [docs/00.quickstart.AI集成总览-ai-one-file.md](docs/00.quickstart.AI集成总览-ai-one-file.md) | 对外集成入口 |
-| [docs/32-36](docs/32.data.SQLCipher外部数据库读取-开发规格.md) | 数据平台 v0.7 设计规格 (5+1 文档) |
-| [history.md](history.md) | 已完成任务归档 |
-| [bugfix.md](bugfix.md) | Bug 修复和待修复缺陷记录 |
+✅ **P0~P6 + DEV-001~004 全部完成并归档**
+✅ **BUG-WYJX-001~010 全部修复并记录**
+✅ 编译通过 (466,654 行) | P5/P6 新增 46 测试全部通过
+✅ WebSocket RFC 6455 实现 + Browser 实战集成完成
+✅ P5 视觉定位增强 + P6 智能等待与重试完成
+✅ **78 服务端首版交付**（王维 #100）：migration 004 / 3 API / publish worker / 幂等表 / 限流，线上 10 项测试通过
+✅ **78 同步链路修正**（王维 #101）：同步目录与服务器代码一致
+✅ **客户端 TConfigUploader Preview 完成**：JCS + SHA256 + Idempotency-Key + 重试
+✅ **FastMeet 多模型裁决**：签名基线按 78a r1 坚持 RSA-SHA256
+✅ **回函 #100 已发**：要求服务端 Ed25519 → RSA-SHA256 返工 + P0 复验
 
----
-
-## 当前判断
-
-- `DeepLaunch.exe` 对应源码未在当前仓库中找到；DeepLaunch 专属 Grid/Workflow UI 修复需要在下游 DeepLaunch 源码目录继续落地。
-- 商业化上线阻塞仍集中在 DB4 服务端签发、微信支付真实回调、备案/DNS/HTTPS。
-- 数据平台 v0.7: 全链路 11 包编译通过 (Core→Services→Persistence→Commerce→Platform→Speech→LLM→IC→Browser→Inference→Features)，0 errors；DeepBaseFMX.dpk 预存 E2280 已修复（LogListView 条件编译收敛）+ 平台 delegate 串联完成。
-- 3 专家审阅 7 项待办 (REVIEW-P0-001/P0-002/P1-001/P1-002/P1-003/P1-004/P2-001) 全部完成；BUG-277 可替换委托 + 4 路径测试覆盖已补齐（独立驱动 15/15 + DUnitX 10/10）。
-
----
-
-## 2026-06-18 三专家审阅新增待办
-
-> 审阅角色: 架构/API 专家、稳定性/并发专家、数据/安全专家。
-> 范围: `Core/`、`Features/`、`FMX/`、`Persistence/`、包边界和现有测试门禁。
-
-### REVIEW-P0-001: 修复 Schema/i18n 种子数据编码污染 (BUG-276)
-- **状态**: ✅ 完成 (2026-06-18，2026-06-19 修复 dcc64 代码页问题)
-- **专家**: 数据/安全专家
-- **已完成**:
-  - ✅ `zh-CN`、`zh-TW`、`ja-JP` NativeName 和 zh-CN 内置翻译恢复为正确 UTF-8。
-  - ✅ 回归测试 `TTestSchemaEncoding` (5 tests) 加入 `Tests/Test.DeepBase.Schema.pas`，全部通过 (41/41)。
-  - ✅ 2026-06-19：确认 dcc64 默认按 GBK 解析源文件，加 `--codepage:65001` 到 `Scripts/run_tests.ps1` 的 `$args` 数组，UTF-8 源文件（保留 BOM）现可正确编译。
-- **剩余**:
-  - [ ] 增加源码/文档编码扫描门禁，覆盖 `README.md`、`docs/`、`Core/*.pas`、`Features/*.pas`。
-  - [ ] 为已被坏种子数据初始化的旧库提供一次性修复 migration。
-
-### REVIEW-P0-002: FMX 平台检测和移动端权限默认值修复 (BUG-277)
-- **状态**: 🟡 核心已完成 (2026-06-18)
-- **专家**: 稳定性/并发专家
-- **已完成**:
-  - ✅ `TUniPlatform`/`TUniDeviceType` 重排，`upUnknown`/`udtUnknown` 移至 ordinal 0（class var 默认值安全）。
-  - ✅ `DetectPlatform` 改为显式 `{$IF..$ELSE..$ENDIF}` 链，未命中时明确赋 `upUnknown`。
-  - ✅ `HasPermission`/`RequestPermission` 默认在移动端拒绝；Android 已实现 `CheckAndroidPermission`（`ContextCompat.checkSelfPermission`）；桌面保持 True。
-  - ✅ 新增 6 项 FMX 回归测试（ordinal 校验、GetPlatform 先探测、桌面 HasPermission 等）。
-- **剩余**:
-  - [ ] iOS 端权限查询实现（AVFoundation/Photos/UN/Contacts）。
-  - [ ] `ShareFile` 实现 Android FileProvider / iOS UIActivityViewController / Windows Shell 分享。
-  - [x] 抽出权限/分享的可替换委托（`DeepBase.Platform.Interfaces`：`TPermissionCheckFunc`/`TPermissionRequestFunc`/`TShareTextFunc`/`TShareFileFunc` + `Set*/Get*` 注册），FMX 侧 `TUniPlatformAdapter.RegisterPermissionOverride`/`RegisterShareOverride` 串联 override → 全局 delegate → IFDEF 默认。等价于接口抽取，但无需在 Core 引入 interface 单元。
-  - [x] 四种路径覆盖：独立驱动 15/15（`Tests/FMX/TestFMXPlatformStandalone.dpr`）+ DUnitX 10 项（`Tests/Test.DeepBase.Platform.Interfaces.pas`，含 8 线程 ×200 次 Set/Get 并发压力）。
-
-### REVIEW-P1-001: 声纹模块持久化与文档承诺对齐 (BUG-278)
-- **状态**: ✅ 已完成 (2026-06-18)
-- **专家**: 数据/安全专家
-- **已完成**:
-  - ✅ 新增 `IVoiceProfileStorage` 接口（GUID 稳定）+ `TDPAPIFileVoiceProfileStorage` 实现：DPAPI 加密 JSON 文件，MFCC 特征 Base64 编码落盘。
-  - ✅ `EnrollProfile` 最小时长校验改为真实 `MIN_SAMPLE_FRAMES = 45`（≈500ms @16kHz/10ms hop）；错误信息同步更新。
-  - ✅ 公开 `SetStorage`/`LoadFromStorage`/`PersistToStorage`/`RemoveFromStorage`；`EnrollProfile` 与 `DeleteProfile` 同步落库。
-  - ✅ 新增 8 项 DUnitX 回归测试（`Tests/Test.DeepBase.Speech.Voiceprint.pas`）+ 独立驱动 33/33 断言通过验证（内存 mock + DPAPI 文件 round-trip + 实例重建后 List/Verify + OwnerApp 过滤 + 时长边界）。
-  - ✅ DeepBaseSpeechVoice.dpk 编译通过，测试文件编译通过，无新增错误。
-- **后续可选**:
-  - [ ] 迁移到 Persistence 包 `voice_profiles` 表（`DeepBase.Speech.Schema.pas`）；当前 Features 内 DPAPI 文件存储为等价实现。
-  - [ ] 为已有 JSON 文件数据提供一次性 SQL 导入工具。
-
-### REVIEW-P1-002: 语音意图 LLM fallback 从占位变为可用或降级为显式 unsupported (BUG-279)
-- **状态**: ✅ 已完成 (2026-06-18)
-- **专家**: 架构/API 专家
-- **已完成**:
-  - ✅ 定义 `TIntentLLMBackend` 回调（text/locale/timeout/registered-intents → JSON），通过 `RegisterLLMBackend` / `RegisterGlobalLLMBackend` 注入；Features 不直接依赖 LLM 包，保持 DeepBaseSpeechCore 的包边界。
-  - ✅ Source 枚举语义明确化：`'rule'` / `'llm'` / `'llm_unsupported'`（无后端）/ `'llm_unavailable'`（后端抛错或超时）/ `''`（空输入）；新增 `Reason` 字段。
-  - ✅ 后端调用在锁外执行（避免死锁）；入参携带已注册 intent 列表作为 hint；LLM JSON 容错（缺失字段默认 `'unknown'`，confidence 截断至 [0,1]，异常统一捕获为 `llm_unavailable`）。
-  - ✅ `TSpeechPolicy.IsAllowed(SPEECH_GATE_INTENT_LLM)` 默认由 False → True，让 `LLMEnabled` 属性真正生效；治理层可 opt-out。同步更新 `Tests/Speech/TestSpeechHeadless.dpr` 对应断言。
-  - ✅ 新增 `Tests/Test.DeepBase.Speech.Intent.pas` 13 项 DUnitX 测试（规则匹配 / 优先级 / 槽位 / LLM 成功-失败-超时-无效 JSON-置信度截断-全局/实例覆盖/并发）；独立驱动 16/16 断言通过。
-- **后续可选**:
-  - [ ] 提供官方 LLM 后端实现（接入 `DeepBase.LLM.Client`），作为 `DeepBaseFeatures` 或应用层代码；当前 Features 只定义接口。
-  - [ ] 完整 CI 验证并发测试（依赖 `System.Threading.TTask`）。
-
-### REVIEW-P1-003: Core 包边界和跨平台承诺重新校准 (BUG-280)
-- **状态**: ✅ 已完成 (2026-06-18)
-- **专家**: 架构/API 专家
-- **决策**: 接受现实 — `DeepBaseCore` 明确为 Windows runtime core。不物理拆包。
-- **已完成**:
-  - ✅ README 平台徽章改为 `Windows (Core) | FMX (Extended)`，跨平台扩展由 FMX 包承接。
-  - ✅ README 第 74 行运行时包边界段落重写：明确 Core 依赖 Winapi、包含桌面能力（TrayIcon / Hotkeys / Protection / FormState / AutoFix），不直接依赖 VCL/FMX/FireDAC。
-  - ✅ 架构门禁 `CoreNoUiSourceDependency` 从 Warning 升级为 Error（`Scripts/check-layer-violations.ps1`）。
-  - ✅ 已知 6 个 Vcl./FMX./Data.DB 引用登记到 allowlist，带 BUG-280 注释（AIErrorHandler / UITest.FmxProbe / VirtualScroll / Export / LLM / LLM.Manager）。
-- **后续可选**:
-  - [ ] 若未来真要跨平台，再按 `DeepBasePlatform` / `DeepBaseDesktop` 方案拆出 Windows 强相关单元；当前契约已写清，调用方不会误用。
-  - [ ] DB 相关引用（`DeepBase.LLM*` / `DeepBase.Export`）长期看应下沉到 Persistence 适配层。
-
-### REVIEW-P1-004: Runtime TODO/stub API 门禁收敛 (BUG-281)
-- **状态**: ✅ 已完成 (2026-06-18)
-- **专家**: 稳定性/并发专家
-- **已完成**:
-  - ✅ 新增 `Scripts/check-runtime-todos.ps1` 扫描 Core/Features/FMX/VCL/Persistence 下所有 `.pas`，裸 `// TODO` / `// FIXME` / `// STUB` 视为硬错误。
-  - ✅ 已为 12 处裸 TODO 补齐任务 ID (`BUG-281` / `BUG-277` / `UPD-P0-001` / `COM-P0-001`)，15/15 标注完成。
-  - ✅ 脚本修复了 PowerShell 5.1 下 `@([List[object]])` 在哈希表赋值抛 `ArgumentException` 的问题，改用 `[object[]]` 显式转型。
-- **后续可选**:
-  - [ ] 接入 CI 流水线（当前可手动运行）。
-  - [ ] `-IncludeStubApis` 开关启用后，对 `// STUB` 标记做二级门禁。
-  - [ ] 公开 API 未实现时禁止静默成功（已部分通过 BUG-278/BUG-279 完成，其余待逐项梳理）。
-
-### REVIEW-P2-001: 文档与真实功能矩阵对齐
-- **状态**: ✅ 已完成 (2026-06-18)
-- **专家**: 架构/API 专家
-- **已完成**:
-  - ✅ 新增 `docs/80.feature-matrix.md`: 24 个模块逐项标注成熟度 (Implemented / Partial / Experimental / Platform-limited / Needs-external-service), 含包归属、关键依赖、初始化要求、不可用时行为。
-  - ✅ README 插入 "功能矩阵 / 成熟度边界" 章节, 精简 9 行矩阵 + 三条高层表述边界说明 ("像 Spring Boot 一样简单" / "所有核心 API 线程安全" / "跨平台")。
-  - ✅ 明确 Speech / FMX mobile / Commerce / AutoUpdate / DataPlatform 依赖与不可用行为。
-- **后续可选**:
-  - [ ] 随模块演进保持矩阵同步 (每次新增包 / 新增公开 API 时回查)。
-  - [ ] 为每个 Implemented 模块附一行 "验证: 见 Tests/..."。
-
-### DATA-P0-001: 微信运行时密钥偏移确认
-- **状态**: 待开发 (被阻塞 — 需微信 4.1.10.30 + 管理员权限)
-- **阻塞原因**: 运行时探针需要目标机器上有微信进程运行才能扫描内存，同事有权限/环境
-- **任务**:
-- [ ] 在微信 4.1.10.30 运行时执行 WxDecryptProbe.exe，确认密钥偏移值。
-- [ ] 将偏移值回填到 KeyCallback 的 KnownOffsets 列表。
-- [ ] 解密 MicroMsg.db 后导出 MSG 表列名列表，更新 TWeChat4xAdapter 的 Schema 指纹前缀。
+**主要里程碑**:
+- P0~P4: PERCEPT-WYJX 桌面 RPA 原语提炼 (2026-07-24) ✅
+- DEV-001~004: Process Management/Window Operations/Recording Engine/Debugging Overlay (2026-07-24) ✅
+- P5: 视觉定位增强 - 多尺度模板匹配、旋转不变性、亚像素精化 (2026-07-25) ✅
+- P6: 智能等待与重试机制 - 指数退避、条件组合器、策略预设 (2026-07-25) ✅
+- WebSocket: RFC 6455 完整实现 (649 行) + CDP.Adapter 迁移 ✅
+- Browser 重构：CDP.Adapter/Session/WebElement重写，TEST-001 验证通过 ✅
 
 ---
 
-## P0 当前开发（Blocking）
 
-### DL-P0-2026-06-15: DeepLaunch Grid / Workflow UI 缺陷修复
-- **状态**: 待开发
-- **来源**: BUG-248 ~ BUG-251 (bugfix.md)
-- **任务**:
-- [ ] 定位 DeepLaunch 源码目录。
-- [ ] 修复 Grid 右键菜单空指针崩溃（BUG-248）。
-- [ ] 工作流区界面文本默认英文 + 接入 i18n（BUG-249）。
-- [ ] 接入主题同步：Grid/工作流画布/单元格/选中态/编辑窗体（BUG-250）。
-- [ ] 修复工作流区高度和绘制布局（BUG-251）。
-- [ ] 增加最小回归验证。
+## 🔴 DeepBase 参数化 / DLL / 制品发布平台（2026-08-12 多模型再审）
 
-### COM-P0-001: DB4 收费后端与 deepKit 数据库
-- **状态**: 进行中
-- **任务**:
-- [ ] 支付回调服务器验签 + 状态机 (pending→paid→failed→closed→refunded)。
-- [ ] 幂等键和重放保护。
-- [ ] DB4 服务端私钥签发许可证、撤销版本同步、公钥轮换。
+> **开发授权：已授权（2026-08-12）**。协议 r1 为受控实施基线；可直接开发、测试和局部重构，无需逐项再请示。DeepBase.Plugins 生命周期实现 41/41，但 SDK Preview 被纯 C ABI r2 阻断；ConfigUploader 为客户端 Preview；王维已交付服务端首版（#100/#101），当前为 acceptance pending——签名算法需按 78a r1 从 Ed25519 返工为 RSA-SHA256，差异修复见 #099 + 回函 #100。
 
-### OPS-P0-2026-05-13: DeepKit 备案、DNS、HTTPS
-- **状态**: 进行中
-- **任务**:
-- [ ] 完成 `deepkit.top` 备案 + DNS 解析 + HTTPS 证书。
-- [ ] 微信支付接入后，补真实预下单、回调验签、退款撤权和对账。
+### P0 — 发布阻断项
 
-### QA-P0-001: 测试和 CI 门禁可信化
-- **状态**: ✅ 已完成 (2026-06-20)
-- **已完成**:
-  - ✅ `ReportMemoryLeaksOnShutdown` 在 `{$IFDEF DEBUG}` 下启用（本地调试保留，CI 不再因 DUnitX 框架缓存误报）。
-  - ✅ `Scripts/run_tests.ps1` 的 `Start-Process` 加上 `-Wait`，修复 `ExitCode` 永远为 null 导致全绿误报为 FAILED 的长期 bug。
-  - ✅ `Compile-TestProject` 增加构建前后双重 DCU 清理（BUG-285 防御），彻底解决架构测试 `SourceDirectories_DoNotContainDcuArtifacts` 的间歇性失败。
-  - ✅ 编译器警告清理：H2164 类别 57 → 0；H2219 类别 41 → 7（剩余均为误报/单例字段保留）；H2077 类别 78 → 42（已处理 36 处，剩余 42 均为函数入口默认值或性能测试占位变量的误报）；总体 470 → 286（-39%），跨 40+ 文件删除 670+ 行死代码。剩余主要为 H2443（FireDAC inline 不展开，112）、W1000（deprecated 符号，91）、H2077 不可修复案例（42， dcc64 对 `Result := X` 入口默认值误报）。
-- **后续可选**:
-  - [ ] 退出阶段 System.JSON/FastMM memory leak 进一步定位（非阻塞，仅影响本地调试体验）。
-  - [x] 继续清理 H2077/H2219 等类别（低风险，但工作量大，可分批进行）。H2219 完成 (41 → 7，保留误报)；H2077 完成 (78 → 42，可修复案例全部完成，剩余 42 均为函数入口默认值/性能测试占位变量的误报，需 dcc64 升级或 $MESSAGE 抑制)。
+- [ ] **PLATFORM-P0-001：迁移 DeepBase.Plugins 到纯 C ABI r2**（Owner：DeepBase/SPW；S0 契约冻结中）
+  - ✅ **S0 包格式规范已补**（77 §9，2026-08-13）：zip 目录结构 / RSA-SHA256 签名规则 / plugin_manifest.json schema / Gateway 校验顺序 / 验收标准；78 与 78a 严格按此打包。
+  - ✅ **S0 C ABI r2 证据包已存在**（77a §4.1）：`include/deepbase_plugins_c.h` + `DeepBase.Plugins.CAbi.pas` 1:1；`Scripts/check_cabi_pure_c.py` EXIT 0；CAbiLoader 封装；8 个 C ABI 用例 + 原 41/41 = 49 passed。
+  - ✅ **S1 验证通过**（2026-08-13）：四单元（CAbi/CAbiLoader/Manager/SafeGuard/Verifier）就位；Manager 注册制 + Lease 门禁 + DFS 环检测 + drain 等待已实现；`build_plugin_tests.bat` 全绿 49 passed 0 failed。
+  - [ ] S2：TPluginManager 泛化（注册制）+ Assayer 切换 + 回归
+  - [ ] S3：热重载/崩溃/签名/卸载泄漏/跨语言 JCS 测试脚本化
+  - [ ] S4：ISiteAdapterPlugin 契约（字节缓冲区版本）+ Gateway 示例插件冒烟（依赖 78 制品仓库）
+  - 输出固定导出函数、不透明句柄、固定宽度整数、`PByte + Length + Capacity`、显式错误码和 `FreeBuffer`。
+  - 禁止稳定 ABI 暴露 Delphi interface/string/TBytes/动态数组/对象/异常。
+  - 保留现有 Delphi 接口仅作为宿主内部 wrapper。
+  - 验收：ABI 头文件与 Delphi 声明扫描无管理类型；不同内存管理器/不同模块配置完成创建、调用、释放、错误路径测试；旧 41/41 全绿。
 
-### UPD-P0-001: 免费版升级收费版和付费更新
-- **状态**: 进行中
-- **任务**:
-- [ ] 服务器按 entitlement 返回版本、下载地址、签名 manifest。
-- [ ] 更新包校验 hash 和签名。未付费用户仅可见免费通道。
+- [ ] **PLATFORM-P0-002：复核并修正 PostgreSQL migration**（Owner：王维/后端；客户端协助契约测试；首版见王维 #100；返工待回函 #100）
+  - 使用 PG `~` CHECK；移除 `GENERATED ALWAYS AS (id)`；补真实 API key FK、审计表、artifact job、唯一约束和 downgrade。
+  - 状态统一为 draft/building/published/failed/deprecated；当前版本仅由 release_heads 决定。
+  - 首版已报告 migration 004 和 commit `3f25d09`；按 #099 补真实 api_key FK、统一 release head 命名/兼容、config/job 状态分层和 downgrade。
+  - ⚠️ 待王维返工回函后复验（回函 #100 §3 P0-1）。
+  - 验收：空库 apply、重复 apply、rollback 全通过；约束负例与索引计划有证据；提交新 commit/hash。
+
+- [ ] **PLATFORM-P0-003：补强发布并发串行化和 publish=false 语义**（Owner：王维/后端；差异单 #099；返工待回函 #100）
+  - publish=false 只写 draft，不创建打包任务。
+  - Worker 使用唯一 job lease；事务 B 锁 release head/manifest，校验 expected generation/version，拒绝并发降级。
+  - 王维 #100 的顺序发布/唯一 head 测试不等于并发竞争证明。
+  - ⚠️ 待王维返工回函后复验（回函 #100 §3 P0-3）。
+  - 验收：同版本竞争、首发竞争、旧版本降级竞争均只有合法 generation 生效；重复 worker 不重复发布；失败保持旧 LKG。
+
+- [ ] **PLATFORM-P0-004：冻结 Manifest v1 信任根与防回滚**（Owner：DeepBase + 王维；签名算法按 78a r1 为 RSA-SHA256）
+  - RFC 8785 JCS + **RSA-SHA256（PKCS#1 v1.5, 2048-bit, Windows CNG）**；算法门禁仅接受 `rsa-sha256`；可信安装/旧密钥签署 keyset；KMS/HSM 或受控签名服务；key rotation/revocation。
+  - 客户端持久化最高 generation；普通 manifest 不得授权降级；rollback token 独立签名和审计。
+  - 验收：自签公钥、未知 key、篡改、过期、目标不符、generation 降低全部拒绝并继续 LKG；轮换演练通过。
+  - ⚠️ 服务端 #100 首版为 Ed25519，**需按回函 #100 §2 R1~R4 返工为 RSA-SHA256**。
+
+- [ ] **PLATFORM-P0-005：修正文档与交付声明一致性**（Owner：DeepBase/SPW）
+  - [x] 77/77a/78/78a/79 状态和关键规范已按多模型再审修订。
+  - [ ] 同步 DeepCompare `GATEWAY_CLOUD_CONFIG_DESIGN.md`、history/release notes 和对外说明。
+  - 验收：全仓搜索不再把 Plugins 标为已发布 SDK Preview，不再把 ConfigUploader mock 测试描述为生产链路完成。
+
+### P1 — 最小 Pilot 闭环
+
+- [ ] **PLATFORM-P1-001：打包 DeepBase.Plugins SDK Preview**（依赖 P0-001）
+  - 交付 Contracts C ABI、Delphi wrapper、Verifier、SafeGuard、Manager、fixture、接入指南、兼容矩阵和 evidence manifest。
+  - 验收：干净机编译；41/41 + ABI/内存所有权测试全绿；Preview 限制清单公开。
+
+- [ ] **PLATFORM-P1-002：实现独立 UpdateAgent 与双槽 LKG**
+  - staging 校验、真实退出、原子切换、`--after-update` 健康检查、失败回滚、pending restart。
+  - 验收：文件占用、断电点、签名失败、启动失败、回滚、用户取消和自动重启一次场景通过。
+
+- [ ] **PLATFORM-P1-003：完成真实服务端上传发布 E2E**（依赖王维 #099 返工；#100 首版为 Ed25519，已按回函 #100 要求返工 RSA-SHA256）
+  - ConfigUploader → FastAPI → PG → artifact job → Manifest → Gateway → RSA 验签 → 生效/LKG。
+  - 客户端先补 RSA-SHA256 验签 + zip 下载 + manifest 校验（对接 78 §2.4/§2.7）。
+  - 验收：记录 Base URL、受控凭据交接、server/client commit、migration、请求/审计 ID 与可复跑脚本；不得只用 mock。
+
+- [ ] **PLATFORM-P1-004：接入一个真实下游进入 Pilot**
+  - 首选 DeepCompare Gateway；桌面进程与 server_process 分别验证更新行为。
+  - 验收：Canary 可停止/回滚；连续运行窗口无未解释严重故障；遥测可查。
+
+### P2 — 隔离与规模化
+
+- [ ] **PLATFORM-P2-001：PluginHost 进程隔离与权限 profile**
+  - 高风险/第三方插件进程外运行，具备 timeout、quota、circuit breaker、kill switch、崩溃拉起上限。
+  - 验收：插件进程 AV/内存破坏/死循环不导致宿主退出；资源配额和审计生效。
+
+- [ ] **PLATFORM-P2-002：capability 协商与 active/staged 实验**
+  - 验收：旧 Lease 排空、新请求原子进入 staged；失败可回旧实例；实验通过后另行评审是否升基线。
+
+- [ ] **PLATFORM-P2-003：Shadow/Canary/Ring 自动化与 GA 证据包**
+  - 验收：错误阈值自动停止扩圈；Kill Switch 生效；密钥轮换、灾备、LKG 和审计证据完整。
+
+### 外部依赖 / 阻塞
+
+- [x] 王维已通过 #100 返回首版 FastAPI commit `3f25d09`、migration 004、Base URL 和部署/测试证据（Ed25519 版）。
+- [ ] 王维按 `toWangwei/#100-回函-78服务端按r1返工RSA-SHA256并补P0复验.md` + `#099` 完成差异修复和复验（签名返工 RSA-SHA256 + P0-1~P0-4）。
+- [ ] 我方客户端补 RSA-SHA256 验签 + zip 下载 + manifest 校验（对接 77 S0 / 78 §2.4/§2.7）。
+- [ ] API Key 通过受控凭据渠道交接；禁止写入仓库、文档或用户端二进制。
+- [ ] 生产链路完成前，78 与 ConfigUploader 对外状态保持 Preview/blocked，不得宣称 Pilot 或 GA。
 
 ---
 
-## P1 开发
+## 📋 **待开发任务**
 
-### QA-P1-001: 长期质量体系
-- **状态**: 进行中
-- **任务**:
-- [ ] 继续完善测试覆盖率和 CI 门禁。
+### 🔵 Low Priority
+
+- [ ] ActionEngine 性能优化 (减少 Sleep, 异步管道)
+  - [x] 异步动作管道实现 (TAsyncMotionPipe) ✅ COMPLETED
+    - Enqueue/CancelAll 队列管理
+    - 多动作连续执行支持
+    - OnMotionComplete 回调机制
+  - [x] 连续路径动画完善 ✅ COMPLETED
+    - ✅ GetTickCount 高精度时间驱动
+    - ✅ Easing function 平滑曲线计算
+    - ✅ Pause/Resume/Stop 控制机制
+    - ✅ 60-120 FPS 实时更新接口
+  - [ ] 批量操作支持 (MVP 版本已完成) ⏳ PARTIAL
+    - ✅ AsyncMoveMouse(AMotions[]) 多坐标批量移动
+    - ✅ 自动插值计算与错误校验
+    - [ ] 实际集成验证 (需真实鼠标环境)
+    - [ ] 性能基准测试对比
+
+- [ ] Browser.Session 集成测试 (需真实 Chrome) ⏳ PARTIAL
+  - [x] E2E 集成测试框架设计 ✅ COMPLETED
+    - 12 个完整测试场景覆盖
+    - 连接稳定性、多 Tab、Cookie 管理
+    - 长时间运行压力测试 (30 分钟)
+    - 错误恢复验证
+  - [ ] 真实 Chrome 环境执行 ⏳ PENDING
+    - 需安装并启动 Google Chrome
+    - CDP 端口 9222 开放
+    - 网络环境影响
+  - [ ] 性能基准对比
+
+- [ ] 边界条件测试补充 ✅ COMPLETED
+  - [x] 无效输入处理 ✅
+    - Empty string URL handling
+    - Invalid URL escapes and special chars (XSS/path traversal)
+    - 超长 Path (>4096 characters)
+    - Null pointer simulation in JavaScript
+  - [x] 资源限制测试 ✅
+    - Extremely large HTML content (>10MB page)
+    - Deep nesting structure (1000+ div levels)
+    - Massive element count performance (10000 elements)
+  - [x] 网络异常处理 ✅
+    - Network timeout with slow server
+    - Connection reset during navigation
+    - SSL error handling
+  - [x] Motion Engine 边界测试 ✅
+    - Extreme coordinates validation
+    - Zero/Negative duration handling
+    - Queue overflow protection
+    - Rapid pause/resume cycle stress
+  - [x] Cookie 边界测试 ✅
+    - Cookie name max length (RFC 6265)
+    - Cookie value max size (browser limits)
+    - Excessive cookie count per domain (50-100 limit)
+
+- [ ] 文档完善与代码注释补充
+  - API 文档自动生成 (基于接口定义)
+  - 示例代码仓库整理
+  - 最佳实践指南编写
 
 ---
 
-## P2 中期整理
+## 📊 **进度统计**
 
-### OPS-P2-001: 服务器可观测性和运维
-- [ ] 后端 `/health`、`/metrics`、审计日志和告警。
-- [ ] 支付回调成功率、权益发放失败率、许可证签发失败率监控。
-
-### PRODUCT-P2-001: 商业生命周期增强
-- [ ] 多产品、多租户、组织席位、续费、升级、优惠码、退款撤权。
-
----
-
-## 规范系统剩余项目
-
-### deepbase-speech
-- [ ] DeepLaunch 语音集成 (TranscribeFromMic/Speak/WakeWord/Voiceprint) — 需要 DeepLaunch 源码。
-
-### speech-tts-migration — TTS 后端迁入 DeepBase + 三层回退 Resolver
-> **来源**: DeepInput/DeepClip 商业化讨论 (2026-06-12)
-> **目标**: 将 DeepInput 中的 Edge TTS / StepFun TTS 下沉到 DeepBase，新增统一 ASR/TTS Resolver（三层回退），使 DeepInput 瘦身 + DeepClip/DeepFlow 零成本接入语音能力。
-> **总工时**: ~5h
-
-#### SPEECH-04: DeepClip 零成本接入
-- [ ] `DeepClip/src/AI/DeepClip.AI.pas` 或新 `DeepClip/src/Speech/DeepClip.Speech.pas` 中调用 `TSpeechResolver`
-- [ ] 语音输入集成：录音 → VAD → ASR → 文字注入剪贴板
-- [ ] 确认 `TClipCommerce` 的 `CanUseVoice` 与 License 联动
+- **已完成模块**: 16/16 (P0~P6 + DEV-001~004)
+- **总代码行数**: ~18,500 行 (含 P5/P6 新增 ~2,000 行，DEV-003/004新增 ~2,650 行)
+- **P5/P6 测试**: 46 个，通过率 100%
+- **已修复 Bug**: 10 项 (BUG-WYJX-001~010，详见 bugfix.md)
+- **待优化任务**:
+  - 性能优化 (ActionEngine Sleep 减少、异步管道)
+  - 集成测试补充 (需真实 Chrome)
+  - 边界条件测试
+  - 文档与注释完善
 
 ---
 
-**维护**: 罗辑
+## 🔜 **下一步开发方向**
+
+1. **性能优化阶段**: ActionEngine 异步化、Sleep 减少、批量操作支持
+2. **集成测试完善**: Browser.Session 真实环境测试、端到端场景验证
+3. **稳定性提升**: 边界条件处理、异常恢复机制优化
+4. **文档完善**: API 文档、示例代码、最佳实践指南
+
+---
+
+**Generated Following BCW-D20260722-002 Engineering Discipline**

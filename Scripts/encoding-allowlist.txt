@@ -1,0 +1,30 @@
+# Encoding-gate allow-list
+#
+# Paths listed here (repo-relative, slash-normalized) have their HARD
+# violations (invalid UTF-8 / mojibake) reported but NOT failing the gate.
+# SOFT violations (missing/unexpected BOM) are never failing anyway.
+#
+# Use this file to acknowledge known-broken legacy files so the gate can
+# block NEW regressions without forcing a mass fix of old content.
+#
+# Entries MUST be removed once the underlying files are repaired.
+# Related task: REVIEW-P0-001 (BUG-276 follow-up).
+#
+# ---- Known legacy corruption (2026-06-22 snapshot) ----
+#
+# The FMX files below contain Chinese strings whose UTF-8 3-byte sequences
+# had their third byte replaced by ASCII '?' (0x3F) at some point in the
+# past (e.g. "自动" became "鑷?浣?" — each 3-byte CJK char turned into
+# two valid but wrong CJK chars followed by a question mark). The
+# corruption is in user-facing strings and comments; ~42 invalid byte
+# positions remain unrecoverable without the original source.
+#
+# Tracked for follow-up fix.
+FMX/DeepBase.FMX.AutoUpdater.pas
+FMX/DeepBase.FMX.ConfigControls.pas
+FMX/DeepBase.FMX.ConfigEdit.pas
+FMX/DeepBase.FMX.Controls.pas
+FMX/DeepBase.FMX.FormControls.pas
+FMX/DeepBase.FMX.FormStateHelper.pas
+FMX/DeepBase.FMX.I18nControls.pas
+FMX/DeepBase.FMX.MRUControls.pas

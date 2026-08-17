@@ -253,12 +253,23 @@ function TLLMHttpClient.ParseOpenAIResponse(const AJson: string;
   out AResult: TChatResult): Boolean;
 var
   Obj: TJSONObject;
+  ErrorObj: TJSONObject;
 begin
   Result := False;
   AResult := Default(TChatResult);
   Obj := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Obj = nil then Exit;
   try
+    // REVIEW5-FEAT-006: Check for error envelope in HTTP 200 responses
+    ErrorObj := Obj.GetValue('error') as TJSONObject;
+    if ErrorObj <> nil then
+    begin
+      AResult.ErrorMessage := ErrorObj.GetValue('message', 'Unknown error');
+      AResult.ErrorCode := ErrorObj.GetValue('code', 'api_error');
+      AResult.Success := False;
+      Exit;
+    end;
+
     var Choices := Obj.GetValue('choices') as TJSONArray;
     if (Choices <> nil) and (Choices.Count > 0) then
     begin
@@ -266,6 +277,15 @@ begin
       if MsgObj <> nil then
       begin
         AResult.Content := MsgObj.GetValue('content', '');
+        // Extract reasoning_content (Agnes/GPT-5/DeepSeek/o1-style models put
+        // chain-of-thought here). Falls back to 'reasoning' alias.
+        AResult.ReasoningContent := MsgObj.GetValue('reasoning_content',
+          MsgObj.GetValue('reasoning', ''));
+        // If content is empty but reasoning produced output, surface reasoning
+        // as content so callers still get usable text (matches DeepFrames
+        // historical reasoning fallback, see memory deepbase-crypto-rsa-blocking).
+        if (AResult.Content = '') and (AResult.ReasoningContent <> '') then
+          AResult.Content := AResult.ReasoningContent;
         AResult.Success := True;
         Result := True;
       end;
@@ -286,12 +306,23 @@ function TLLMHttpClient.ParseAnthropicResponse(const AJson: string;
   out AResult: TChatResult): Boolean;
 var
   Obj: TJSONObject;
+  ErrorObj: TJSONObject;
 begin
   Result := False;
   AResult := Default(TChatResult);
   Obj := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if Obj = nil then Exit;
   try
+    // REVIEW5-FEAT-006: Check for error envelope in HTTP 200 responses
+    ErrorObj := Obj.GetValue('error') as TJSONObject;
+    if ErrorObj <> nil then
+    begin
+      AResult.ErrorMessage := ErrorObj.GetValue('message', 'Unknown error');
+      AResult.ErrorCode := ErrorObj.GetValue('type', 'api_error');
+      AResult.Success := False;
+      Exit;
+    end;
+
     var Content := Obj.GetValue('content') as TJSONArray;
     if (Content <> nil) and (Content.Count > 0) then
     begin

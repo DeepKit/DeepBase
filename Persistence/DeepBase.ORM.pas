@@ -49,7 +49,8 @@ uses
   System.Generics.Collections,
   System.Variants,
   Data.DB,
-  DeepBase.ORM.Mapping;
+  DeepBase.ORM.Mapping,
+  DeepBase.StorageFactory;
 
 type
   // Forward declarations
@@ -250,10 +251,7 @@ type
     FOwnsConnection: Boolean;
     FInTransaction: Boolean;
     FTransaction: IORMTransaction;
-    class var FConnectionStorageFactory: TFunc<TObject, IORMStorage>;
 
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IORMStorage; static;
     class function CollectEntityParams(Entity: TObject; Metadata: TEntityMetadata;
       IncludePrimaryKey: Boolean): TArray<Variant>; static;
     function RequireStorage: IORMStorage;
@@ -362,10 +360,145 @@ type
   EInvalidEntityException = class(EORMException);
   EConcurrencyException = class(EORMException);
 
+// ============================================================================
+// SQL injection defense helpers (interface-level so generic methods like
+// TQueryBuilder<T>.OrderBy can reference them — Delphi E2506 forbids generic
+// methods from calling unit-local symbols in the implementation section.)
+// ============================================================================
+
+/// <summary>
+///   Validates a SQL identifier (column/table name) to prevent injection via
+///   OrderBy/OrderByDesc. Accepts simple identifiers and schema-qualified
+///   names like "schema.table" or "dbo.order_status". Rejects anything that
+///   is not a valid identifier: quotes, spaces, semicolons, operators, etc.
+/// </summary>
+function ValidateSQLIdentifier(const AName: string): Boolean;
+
+/// <summary>
+///   Returns True when <paramref name="AValue"/> is safe to concatenate
+///   verbatim after <c>DEFAULT</c> in a DDL statement. Only values that can
+///   never introduce SQL injection are accepted: NULL / CURRENT_TIMESTAMP /
+///   CURRENT_DATE / CURRENT_TIME, numeric literals, and single-quoted string
+///   literals (already quoted, quotes escaped).
+/// </summary>
+function IsSafeDDLDefaultValue(const AValue: string): Boolean;
+
 implementation
 
 uses
   System.StrUtils;
+
+// ============================================================================
+// SQL injection defense helpers
+// ============================================================================
+
+// Validates a SQL identifier (column/table name) to prevent injection via
+// OrderBy/OrderByDesc. Accepts simple identifiers and schema-qualified names
+// like "schema.table" or "dbo.order_status". Rejects anything that is not a
+// valid identifier: quotes, spaces, semicolons, operators, etc.
+function ValidateSQLIdentifier(const AName: string): Boolean;
+var
+  I: Integer;
+  C: Char;
+  InSegment: Boolean;
+begin
+  Result := False;
+  if AName = '' then Exit;
+  InSegment := False;
+  for I := 1 to Length(AName) do
+  begin
+    C := AName[I];
+    if (I = 1) or (not InSegment) then
+    begin
+      // First char of a segment must be letter or underscore
+      if not (CharInSet(C, ['a'..'z', 'A'..'Z', '_'])) then Exit;
+      InSegment := True;
+    end
+    else if C = '.' then
+    begin
+      // Schema separator: start a new segment
+      InSegment := False;
+    end
+    else if not CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '_']) then
+      Exit; // illegal character
+  end;
+  Result := InSegment; // must not end with '.'
+end;
+
+/// <summary>
+///   Returns True when <paramref name="AValue"/> is safe to concatenate
+///   verbatim after <c>DEFAULT</c> in a DDL statement. Only values that can
+///   never introduce SQL injection are accepted:
+///   <list type="bullet">
+///     <item>NULL / CURRENT_TIMESTAMP / CURRENT_DATE / CURRENT_TIME</item>
+///     <item>Numeric literals (optional leading sign, digits, at most one
+///       decimal point)</item>
+///     <item>Single-quoted string literals (already quoted, quotes
+///       escaped)</item>
+///   </list>
+/// </summary>
+function IsSafeDDLDefaultValue(const AValue: string): Boolean;
+var
+  I: Integer;
+  Upper: string;
+  HasDigit, HasDot: Boolean;
+  V: string;
+begin
+  Result := False;
+  if AValue = '' then Exit;
+
+  Upper := UpperCase(Trim(AValue));
+
+  // 1. SQL keywords that are always safe
+  if (Upper = 'NULL') or (Upper = 'CURRENT_TIMESTAMP') or
+     (Upper = 'CURRENT_DATE') or (Upper = 'CURRENT_TIME') then
+    Exit(True);
+
+  // 2. Already single-quoted string literal — accept only if every internal
+  //    quote is properly escaped (SQL-style '') so an attacker cannot break
+  //    out of the literal.
+  if (Length(AValue) >= 2) and (AValue[1] = '''') and
+     (AValue[Length(AValue)] = '''') then
+  begin
+    V := Copy(AValue, 2, Length(AValue) - 2);
+    I := 1;
+    while I <= Length(V) do
+    begin
+      if V[I] = '''' then
+      begin
+        // Must be an escaped quote (''), not a stray single quote
+        if (I = Length(V)) or (V[I + 1] <> '''') then
+          Exit;
+        Inc(I, 2);
+      end
+      else
+        Inc(I);
+    end;
+    Exit(True);
+  end;
+
+  // 3. Numeric literal: optional leading sign, at least one digit, at most
+  //    one decimal point, nothing else.
+  HasDigit := False;
+  HasDot := False;
+  for I := 1 to Length(AValue) do
+  begin
+    case AValue[I] of
+      '+', '-':
+        if (I <> 1) or (Length(AValue) = 1) then Exit;
+      '0'..'9':
+        HasDigit := True;
+      '.':
+        begin
+          if HasDot then Exit;   // second decimal point
+          HasDot := True;
+        end;
+    else
+      Exit; // any other character is unsafe
+    end;
+  end;
+  Result := HasDigit;
+end;
 
 // ============================================================================
 // TEntityMetadata
@@ -437,10 +570,17 @@ var
   TypeInfo: PTypeInfo;
 begin
   TypeInfo := EntityType.ClassInfo;
-  if not FCache.TryGetValue(TypeInfo, Result) then
-  begin
-    Result := ExtractMetadata(EntityType);
-    FCache.Add(TypeInfo, Result);
+  // DATA2-011: Guard concurrent access to FCache. TMonitor.Enter on the
+  // dictionary instance avoids adding a separate lock field.
+  TMonitor.Enter(FCache);
+  try
+    if not FCache.TryGetValue(TypeInfo, Result) then
+    begin
+      Result := ExtractMetadata(EntityType);
+      FCache.Add(TypeInfo, Result);
+    end;
+  finally
+    TMonitor.Exit(FCache);
   end;
 end;
 
@@ -594,7 +734,14 @@ end;
 
 class procedure TMetadataCache.ClearCache;
 begin
-  FCache.Clear;
+  // DATA2-011: Match the lock in GetMetadata so ClearCache is safe against
+  // concurrent reads.
+  TMonitor.Enter(FCache);
+  try
+    FCache.Clear;
+  finally
+    TMonitor.Exit(FCache);
+  end;
 end;
 
 // ============================================================================
@@ -752,6 +899,11 @@ end;
 
 function TQueryBuilder<T>.OrderBy(const Column: string): IQueryBuilder<T>;
 begin
+  // DATA2-002 fix: validate column name to prevent SQL injection via
+  // concatenated OrderBy clauses. Use the parameterized Where overload
+  // if you need to sort by a computed expression that comes from user input.
+  if not ValidateSQLIdentifier(Column) then
+    raise EORMException.CreateFmt('Invalid ORDER BY column identifier: "%s"', [Column]);
   if FOrderByClause <> '' then
     FOrderByClause := FOrderByClause + ', ' + Column
   else
@@ -761,7 +913,15 @@ end;
 
 function TQueryBuilder<T>.OrderByDesc(const Column: string): IQueryBuilder<T>;
 begin
-  Result := OrderBy(Column + ' DESC');
+  // Validate the bare column BEFORE appending ' DESC' (the appended clause
+  // intentionally contains a space, which would fail identifier validation).
+  if not ValidateSQLIdentifier(Column) then
+    raise EORMException.CreateFmt('Invalid ORDER BY column identifier: "%s"', [Column]);
+  if FOrderByClause <> '' then
+    FOrderByClause := FOrderByClause + ', ' + Column + ' DESC'
+  else
+    FOrderByClause := Column + ' DESC';
+  Result := Self;
 end;
 
 function TQueryBuilder<T>.Limit(Count: Integer): IQueryBuilder<T>;
@@ -850,8 +1010,18 @@ end;
 // ============================================================================
 
 constructor TDbContext.Create(AConnection: TObject; AOwnsConnection: Boolean);
+var
+  LStorage: IORMStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection));
+  LStorage := nil;
+  if Supports(AConnection, IORMStorage, LStorage) then
+  else
+    LStorage := TConnectionStorageFactory<IORMStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No ORM storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.ORM.FireDAC.');
+  Create(LStorage);
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
 end;
@@ -879,23 +1049,7 @@ end;
 class procedure TDbContext.SetStorageFactory(
   const AFactory: TFunc<TObject, IORMStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDbContext.CreateStorageFromConnection(
-  AConnection: TObject): IORMStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Supports(AConnection, IORMStorage, Result) then
-    Exit;
-
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No ORM storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.ORM.FireDAC.');
+  TConnectionStorageFactory<IORMStorage>.SetFactory(AFactory);
 end;
 
 function TDbContext.RequireStorage: IORMStorage;
@@ -1264,11 +1418,16 @@ begin
         case Col.ColumnType of
           ctString, ctText, ctGuid:
             begin
-              // 如果调用方已显式传入带引号的 SQL 片段，则直接使用
+              // 如果调用方已显式传入带引号的 SQL 片段，经安全校验后直接使用
               if (Length(Col.DefaultValue) >= 2) and
                  (Col.DefaultValue[1] = '''') and
                  (Col.DefaultValue[Length(Col.DefaultValue)] = '''') then
-                SQL.Append(' DEFAULT ').Append(Col.DefaultValue)
+              begin
+                if not IsSafeDDLDefaultValue(Col.DefaultValue) then
+                  raise EORMException.CreateFmt(
+                    'Unsafe DefaultValue for column %s: rejected', [Col.ColumnName]);
+                SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
+              end
               else
                 SQL.Append(' DEFAULT ').Append(QuotedStr(Col.DefaultValue));
             end;
@@ -1277,11 +1436,20 @@ begin
               if SameText(Col.DefaultValue, 'true') or (Col.DefaultValue = '1') then
                 SQL.Append(' DEFAULT 1')
               else if SameText(Col.DefaultValue, 'false') or (Col.DefaultValue = '0') then
-                SQL.Append(' DEFAULT 0');
+                SQL.Append(' DEFAULT 0')
+              else
+                raise EORMException.CreateFmt(
+                  'Unsafe DefaultValue for boolean column %s: "%s"',
+                  [Col.ColumnName, Col.DefaultValue]);
             end;
         else
-          // 数值/日期等类型默认按原样拼接，由调用方保证合法性
-          SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
+          // 数值/日期等类型：必须通过安全白名单检查，否则拒绝拼接
+          if not IsSafeDDLDefaultValue(Col.DefaultValue) then
+            raise EORMException.CreateFmt(
+              'Unsafe DefaultValue for column %s: "%s"',
+              [Col.ColumnName, Col.DefaultValue])
+          else
+            SQL.Append(' DEFAULT ').Append(Col.DefaultValue);
         end;
       end;
       

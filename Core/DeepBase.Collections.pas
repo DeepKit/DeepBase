@@ -93,24 +93,28 @@ type
   end;
 
   /// <summary>LRU cache entry</summary>
-  TLRUCacheEntry<K,V> = record
+  TLRUCacheEntry<K,V> = class
     Key: K;
     Value: V;
-    Prev: ^TLRUCacheEntry<K,V>;
-    Next: ^TLRUCacheEntry<K,V>;
+    Prev: TLRUCacheEntry<K,V>;
+    Next: TLRUCacheEntry<K,V>;
   end;
 
   /// <summary>Least Recently Used cache</summary>
   TLRUCache<K,V> = class
   private
     FCapacity: Integer;
-    FMap: TDictionary<K, V>;
-    FKeys: TList<K>;  // Order list (most recent at end)
+    FMap: TDictionary<K, TLRUCacheEntry<K,V>>;
+    FHead: TLRUCacheEntry<K,V>;  // least recently used
+    FTail: TLRUCacheEntry<K,V>;  // most recently used
     FLock: TCriticalSection;
     FOnEvict: TProc<K, V>;
-    
-    procedure MoveToEnd(const AKey: K);
+
+    procedure UnlinkNode(ANode: TLRUCacheEntry<K,V>);
+    procedure AppendTail(ANode: TLRUCacheEntry<K,V>);
+    procedure MoveToTail(const AKey: K);
     procedure Evict;
+    function EvictOne(out AEvictedKey: K; out AEvictedValue: V): Boolean;
   public
     constructor Create(ACapacity: Integer);
     destructor Destroy; override;
@@ -662,73 +666,129 @@ constructor TLRUCache<K,V>.Create(ACapacity: Integer);
 begin
   inherited Create;
   FCapacity := ACapacity;
-  FMap := TDictionary<K, V>.Create;
-  FKeys := TList<K>.Create;
+  FMap := TDictionary<K, TLRUCacheEntry<K,V>>.Create;
+  FHead := nil;
+  FTail := nil;
   FLock := TCriticalSection.Create;
 end;
 
 destructor TLRUCache<K,V>.Destroy;
 begin
+  Clear;
   FreeAndNil(FLock);
-  FreeAndNil(FKeys);
   FreeAndNil(FMap);
   inherited;
 end;
 
-procedure TLRUCache<K,V>.MoveToEnd(const AKey: K);
-var
-  I: Integer;
+procedure TLRUCache<K,V>.UnlinkNode(ANode: TLRUCacheEntry<K,V>);
 begin
-  for I := 0 to FKeys.Count - 1 do
+  if ANode.Prev <> nil then
+    ANode.Prev.Next := ANode.Next
+  else
+    FHead := ANode.Next;
+
+  if ANode.Next <> nil then
+    ANode.Next.Prev := ANode.Prev
+  else
+    FTail := ANode.Prev;
+
+  ANode.Prev := nil;
+  ANode.Next := nil;
+end;
+
+procedure TLRUCache<K,V>.AppendTail(ANode: TLRUCacheEntry<K,V>);
+begin
+  ANode.Prev := FTail;
+  ANode.Next := nil;
+  if FTail <> nil then
+    FTail.Next := ANode
+  else
+    FHead := ANode;
+  FTail := ANode;
+end;
+
+procedure TLRUCache<K,V>.MoveToTail(const AKey: K);
+var
+  Node: TLRUCacheEntry<K,V>;
+begin
+  if FMap.TryGetValue(AKey, Node) and (Node <> FTail) then
   begin
-    if TComparer<K>.Default.Compare(FKeys[I], AKey) = 0 then
-    begin
-      FKeys.Delete(I);
-      FKeys.Add(AKey);
-      Exit;
-    end;
+    UnlinkNode(Node);
+    AppendTail(Node);
   end;
 end;
 
 procedure TLRUCache<K,V>.Evict;
 var
-  LKey: K;
-  LValue: V;
+  Node: TLRUCacheEntry<K,V>;
+  LEvictedKey: K;
+  LEvictedValue: V;
 begin
-  if FKeys.Count > 0 then
+  // Perform all structural mutation and node release FIRST, then fire the
+  // callback. We copy Key/Value to locals because Node is freed before the
+  // callback runs, so the callback never touches freed memory. Callers that
+  // hold FLock (the common Put path) still fire the callback under the lock
+  // here; the dedicated Put path below fires OUTSIDE the lock to avoid
+  // reentrancy on a half-updated list (CORE-R3-010 fix).
+  if EvictOne(LEvictedKey, LEvictedValue) then
   begin
-    LKey := FKeys[0];
-    if FMap.TryGetValue(LKey, LValue) then
-    begin
-      FMap.Remove(LKey);
-      FKeys.Delete(0);
-      
-      if Assigned(FOnEvict) then
-        FOnEvict(LKey, LValue);
-    end;
+    if Assigned(FOnEvict) then
+      FOnEvict(LEvictedKey, LEvictedValue);
   end;
 end;
 
-procedure TLRUCache<K,V>.Put(const AKey: K; const AValue: V);
+function TLRUCache<K,V>.EvictOne(out AEvictedKey: K; out AEvictedValue: V): Boolean;
+var
+  Node: TLRUCacheEntry<K,V>;
 begin
+  Result := False;
+  if FHead = nil then
+    Exit;
+  Node := FHead;
+  AEvictedKey := Node.Key;
+  AEvictedValue := Node.Value;
+  FMap.Remove(Node.Key);
+  UnlinkNode(Node);
+  Node.Free;
+  Result := True;
+end;
+
+procedure TLRUCache<K,V>.Put(const AKey: K; const AValue: V);
+var
+  Node: TLRUCacheEntry<K,V>;
+  LEvictedKey: K;
+  LEvictedValue: V;
+  LDidEvict: Boolean;
+begin
+  LDidEvict := False;
   FLock.Enter;
   try
-    if FMap.ContainsKey(AKey) then
+    if FMap.TryGetValue(AKey, Node) then
     begin
-      FMap[AKey] := AValue;
-      MoveToEnd(AKey);
+      Node.Value := AValue;
+      MoveToTail(AKey);
     end
     else
     begin
       if FMap.Count >= FCapacity then
-        Evict;
-        
-      FMap.Add(AKey, AValue);
-      FKeys.Add(AKey);
+        // Evict structurally under the lock, but capture the evicted Key/Value
+        // so we can fire FOnEvict OUTSIDE the lock after releasing it. Firing
+        // the callback under the lock lets a reentrant Put/Evict operate on a
+        // half-updated list and AV (CORE-R3-010 fix).
+        LDidEvict := EvictOne(LEvictedKey, LEvictedValue);
+
+      Node := TLRUCacheEntry<K,V>.Create;
+      Node.Key := AKey;
+      Node.Value := AValue;
+      FMap.Add(AKey, Node);
+      AppendTail(Node);
     end;
   finally
     FLock.Leave;
   end;
+
+  if LDidEvict and Assigned(FOnEvict) then
+    FOnEvict(LEvictedKey, LEvictedValue);
 end;
 
 function TLRUCache<K,V>.Get(const AKey: K): V;
@@ -738,12 +798,19 @@ begin
 end;
 
 function TLRUCache<K,V>.TryGet(const AKey: K; out AValue: V): Boolean;
+var
+  Node: TLRUCacheEntry<K,V>;
 begin
   FLock.Enter;
   try
-    Result := FMap.TryGetValue(AKey, AValue);
+    Result := FMap.TryGetValue(AKey, Node);
     if Result then
-      MoveToEnd(AKey);
+    begin
+      AValue := Node.Value;
+      MoveToTail(AKey);
+    end
+    else
+      AValue := Default(V);
   finally
     FLock.Leave;
   end;
@@ -761,18 +828,15 @@ end;
 
 procedure TLRUCache<K,V>.Remove(const AKey: K);
 var
-  I: Integer;
+  Node: TLRUCacheEntry<K,V>;
 begin
   FLock.Enter;
   try
-    FMap.Remove(AKey);
-    for I := FKeys.Count - 1 downto 0 do
+    if FMap.TryGetValue(AKey, Node) then
     begin
-      if TComparer<K>.Default.Compare(FKeys[I], AKey) = 0 then
-      begin
-        FKeys.Delete(I);
-        Break;
-      end;
+      FMap.Remove(AKey);
+      UnlinkNode(Node);
+      Node.Free;
     end;
   finally
     FLock.Leave;
@@ -780,11 +844,16 @@ begin
 end;
 
 procedure TLRUCache<K,V>.Clear;
+var
+  Node: TLRUCacheEntry<K,V>;
 begin
   FLock.Enter;
   try
+    for Node in FMap.Values do
+      Node.Free;
     FMap.Clear;
-    FKeys.Clear;
+    FHead := nil;
+    FTail := nil;
   finally
     FLock.Leave;
   end;
@@ -811,10 +880,21 @@ begin
 end;
 
 function TLRUCache<K,V>.Keys: TArray<K>;
+var
+  Node: TLRUCacheEntry<K,V>;
+  I: Integer;
 begin
   FLock.Enter;
   try
-    Result := FKeys.ToArray;
+    SetLength(Result, FMap.Count);
+    Node := FHead;
+    I := 0;
+    while Node <> nil do
+    begin
+      Result[I] := Node.Key;
+      Inc(I);
+      Node := Node.Next;
+    end;
   finally
     FLock.Leave;
   end;
@@ -1612,6 +1692,13 @@ procedure TCountingSet<T>.Add(const AItem: T; ACount: Integer);
 var
   LCurrent: Integer;
 begin
+  // Reject negative counts up front: they would corrupt FTotalCount and
+  // per-item counts (breaking MostCommon/Remove consistency) and there is no
+  // meaningful "add -3" operation (CORE-R3-009 fix).
+  if ACount < 0 then
+    raise ECollectionException.CreateFmt(
+      'TCountingSet.Add: count must be non-negative (got %d)', [ACount]);
+
   FLock.Enter;
   try
     if FCounts.TryGetValue(AItem, LCurrent) then
@@ -1977,6 +2064,7 @@ var
   LRemainingMs: Double;
 begin
   LDeadline := 0;
+  LRemainingMs := 0;
   if (ATimeoutMs > 0) and (ATimeoutMs <> INFINITE) then
     LDeadline := Now + (ATimeoutMs / MSecsPerDay);
 

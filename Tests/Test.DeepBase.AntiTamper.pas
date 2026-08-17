@@ -15,6 +15,8 @@
 
 unit Test.DeepBase.AntiTamper;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses
@@ -22,7 +24,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Hash,
-  DeepBase.AntiTamper;
+  DeepBase.AntiTamper, DeepBase.Exceptions;
 
 type
   [TestFixture]
@@ -63,7 +65,7 @@ begin
   Assert.IsEmpty(C.EncryptionKey, 'EncryptionKey must be configured explicitly by each application');
   Assert.IsNotEmpty(C.DownloadURL);
   Assert.IsNotEmpty(C.TableName);
-  Assert.IsNotEmpty(C.Salt);
+  Assert.IsEmpty(C.Salt, 'Salt must be configured explicitly by each application (BUG-426/E-007): a hardcoded default Salt enables rainbow-table attacks');
   Assert.IsTrue(C.KdfIterations > 0);
   Assert.IsTrue(C.EnableHMAC);
 end;
@@ -82,7 +84,15 @@ procedure TTestAntiTamperCrypto.Test_Initialize_WithDefaultConfig;
 var
   C: TAntiTamperConfig;
 begin
+  // BUG-426 (E-007): default config has empty Salt; Initialize must reject it.
   C := TAntiTamperPackage.GetDefaultConfig;
+  Assert.WillRaise(
+    procedure begin TAntiTamperPackage.Initialize(C); end,
+    EAntiTamperException,
+    'Initialize must reject empty Salt with EAntiTamperException');
+
+  // With an explicit Salt, Initialize succeeds.
+  C.Salt := 'UnitTest_AntiTamper_Salt_2026';
   TAntiTamperPackage.Initialize(C);
   Assert.Pass; // no exception means success
 end;
@@ -114,6 +124,7 @@ var
 begin
   C := TAntiTamperPackage.GetDefaultConfig;
   C.EncryptionKey := 'UnitTest_AntiTamper_Key_2026';
+  C.Salt := 'UnitTest_AntiTamper_Salt_2026'; // BUG-426 (E-007): Salt required, default is empty
   C.EncryptionType := etAES256;
   TAntiTamperPackage.Initialize(C);
   

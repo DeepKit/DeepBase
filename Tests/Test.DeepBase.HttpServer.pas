@@ -102,13 +102,40 @@ type
     [Test]
     procedure TestContentTypePlain;
   end;
+
+  /// <summary>
+  /// REVIEW5-FEAT-005: Path traversal protection tests for TStaticFileMiddleware.
+  /// Verifies that the static file service correctly prevents directory traversal attacks.
+  /// </summary>
+  [TestFixture]
+  TTestStaticFilePathTraversal = class
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    // Path Traversal Tests
+    [Test]
+    procedure Test_ValidPathWithinRoot;
+    [Test]
+    procedure Test_TraversalWithDotDot_Blocked;
+    [Test]
+    procedure Test_TraversalWithEncodedDotDot_Blocked;
+    [Test]
+    procedure Test_AbsolutePath_Blocked;
+    [Test]
+    procedure Test_BackslashPath_Blocked;
+    [Test]
+    procedure Test_CanonicalRootValidation;
+  end;
 {$ENDIF}
 
 implementation
 
 {$IFDEF TESTDeepInsight}
 uses
-  System.SysUtils, System.Classes, System.JSON,
+  System.SysUtils, System.Classes, System.JSON, System.IOUtils,
   DeepBase.HttpServer;
 
 procedure TTestDeepBaseHttpServer.Setup;
@@ -610,10 +637,264 @@ begin
   end;
 end;
 
+{ TTestStaticFilePathTraversal }
+
+procedure TTestStaticFilePathTraversal.Setup;
+begin
+end;
+
+procedure TTestStaticFilePathTraversal.TearDown;
+begin
+end;
+
+procedure TTestStaticFilePathTraversal.Test_ValidPathWithinRoot;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir, TestFile: string;
+  FileContent: TBytes;
+begin
+  // REVIEW5-FEAT-005: Valid path within root should be accessible
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_valid');
+  TDirectory.CreateDirectory(TempDir);
+  try
+    TestFile := TPath.Combine(TempDir, 'test.txt');
+    TFile.WriteAllText(TestFile, 'test content');
+
+    Middleware := TStaticFileMiddleware.Create(TempDir, '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        Request.Path := '/static/test.txt';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should succeed - file is within root
+        Assert.AreEqual(200, Response.StatusCode);
+        FileContent := Response.BodyBytes;
+        Assert.AreEqual('test content', TEncoding.UTF8.GetString(FileContent));
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
+procedure TTestStaticFilePathTraversal.Test_TraversalWithDotDot_Blocked;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir: string;
+begin
+  // REVIEW5-FEAT-005: Path with .. should be blocked to prevent traversal
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_traversal');
+  TDirectory.CreateDirectory(TempDir);
+  try
+    Middleware := TStaticFileMiddleware.Create(TempDir, '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        Request.Path := '/static/../../../etc/passwd';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should be blocked - path traversal attempt
+        Assert.AreEqual(403, Response.StatusCode);
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
+procedure TTestStaticFilePathTraversal.Test_TraversalWithEncodedDotDot_Blocked;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir: string;
+begin
+  // REVIEW5-FEAT-005: URL-encoded .. should be blocked after decoding
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_encoded');
+  TDirectory.CreateDirectory(TempDir);
+  try
+    Middleware := TStaticFileMiddleware.Create(TempDir, '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        // URL-encoded version of /../
+        Request.Path := '/static/%2e%2e/%2e%2e/etc/passwd';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should be blocked after URL decoding
+        Assert.AreEqual(403, Response.StatusCode);
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
+procedure TTestStaticFilePathTraversal.Test_AbsolutePath_Blocked;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir: string;
+begin
+  // REVIEW5-FEAT-005: Absolute paths should be blocked
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_absolute');
+  TDirectory.CreateDirectory(TempDir);
+  try
+    Middleware := TStaticFileMiddleware.Create(TempDir, '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        Request.Path := '/static/C:/Windows/System32/config/SAM';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should be blocked - absolute path
+        Assert.AreEqual(403, Response.StatusCode);
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
+procedure TTestStaticFilePathTraversal.Test_BackslashPath_Blocked;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir: string;
+begin
+  // REVIEW5-FEAT-005: Backslash paths should be blocked
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_backslash');
+  TDirectory.CreateDirectory(TempDir);
+  try
+    Middleware := TStaticFileMiddleware.Create(TempDir, '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        Request.Path := '/static/subdir\..\file.txt';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should be blocked - contains backslash
+        Assert.AreEqual(403, Response.StatusCode);
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
+procedure TTestStaticFilePathTraversal.Test_CanonicalRootValidation;
+var
+  Middleware: TStaticFileMiddleware;
+  Request: THttpRequest;
+  Response: THttpResponse;
+  Context: THttpContext;
+  TempDir, SubDir, TestFile: string;
+  FileContent: TBytes;
+begin
+  // REVIEW5-FEAT-005: Canonical root validation should work correctly
+  TempDir := TPath.GetTempPath;
+  TempDir := TPath.Combine(TempDir, 'httptest_canonical');
+  SubDir := TPath.Combine(TempDir, 'subdir');
+  TDirectory.CreateDirectory(SubDir);
+  try
+    TestFile := TPath.Combine(SubDir, 'test.txt');
+    TFile.WriteAllText(TestFile, 'canonical test');
+
+    // Use a path with trailing separator to test canonicalization
+    Middleware := TStaticFileMiddleware.Create(TempDir + '/', '/static');
+    try
+      Request := THttpRequest.Create;
+      Response := THttpResponse.Create;
+      Context := THttpContext.Create(Request, Response);
+      try
+        Request.Path := '/static/subdir/test.txt';
+        Request.Method := hmGet;
+
+        Middleware.Execute(Context, procedure begin end);
+
+        // Should succeed - canonical root matches
+        Assert.AreEqual(200, Response.StatusCode);
+        FileContent := Response.BodyBytes;
+        Assert.AreEqual('canonical test', TEncoding.UTF8.GetString(FileContent));
+      finally
+        Context.Free;
+      end;
+    finally
+      Middleware.Free;
+    end;
+  finally
+    if TDirectory.Exists(TempDir) then
+      TDirectory.Delete(TempDir, True);
+  end;
+end;
+
 {$ENDIF}
 
-end.
-
+{$IFDEF TESTDeepInsight}
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseHttpServer);
+  TDUnitX.RegisterTestFixture(TTestStaticFilePathTraversal);
+{$ENDIF}
 end.

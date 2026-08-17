@@ -55,6 +55,7 @@ var
   ActualDisplayName: string;
   NowStr: string;
   ExistingCount: Integer;
+  OwnTx: Boolean;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
@@ -67,44 +68,63 @@ begin
 
   NowStr := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz', Now);
 
-  Query := TFDQuery.Create(nil);
+  // DATA2-019: Wrap SELECT-then-INSERT/UPDATE in a transaction to prevent
+  // duplicate-key errors from concurrent callers both seeing "not found".
+  // DATA-R3-005: Only start a transaction if the caller hasn't already started
+  // one (shared connection / re-entrancy). Track ownership so we only
+  // commit/rollback what we started — never the caller's outer transaction.
+  OwnTx := False;
   try
-    Query.Connection := FConnection;
-    Query.SQL.Text := 'SELECT AccessCount FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
-    Query.ParamByName('Cat').AsString := Category;
-    Query.ParamByName('Key').AsString := ItemKey;
-    Query.Open;
-
-    if Query.Eof then
+    if not FConnection.InTransaction then
     begin
-      Query.Close;
-      Query.SQL.Text :=
-        'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
-        'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0)';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.ParamByName('Display').AsString := ActualDisplayName;
-      Query.ParamByName('Icon').AsInteger := IconIndex;
-      Query.ParamByName('NowTime').AsString := NowStr;
-      Query.ExecSQL;
-    end
-    else
-    begin
-      ExistingCount := Query.FieldByName('AccessCount').AsInteger;
-      Query.Close;
-      Query.SQL.Text :=
-        'UPDATE MRU SET DisplayName = :Display, IconIndex = :Icon, ' +
-        'LastAccess = :NowTime, AccessCount = :Count WHERE Category = :Cat AND ItemKey = :Key';
-      Query.ParamByName('Cat').AsString := Category;
-      Query.ParamByName('Key').AsString := ItemKey;
-      Query.ParamByName('Display').AsString := ActualDisplayName;
-      Query.ParamByName('Icon').AsInteger := IconIndex;
-      Query.ParamByName('NowTime').AsString := NowStr;
-      Query.ParamByName('Count').AsInteger := ExistingCount + 1;
-      Query.ExecSQL;
+      FConnection.StartTransaction;
+      OwnTx := True;
     end;
-  finally
-    Query.Free;
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text := 'SELECT AccessCount FROM MRU WHERE Category = :Cat AND ItemKey = :Key';
+      Query.ParamByName('Cat').AsString := Category;
+      Query.ParamByName('Key').AsString := ItemKey;
+      Query.Open;
+
+      if Query.Eof then
+      begin
+        Query.Close;
+        Query.SQL.Text :=
+          'INSERT INTO MRU (Category, ItemKey, DisplayName, IconIndex, LastAccess, AccessCount, IsPinned) ' +
+          'VALUES (:Cat, :Key, :Display, :Icon, :NowTime, 1, 0)';
+        Query.ParamByName('Cat').AsString := Category;
+        Query.ParamByName('Key').AsString := ItemKey;
+        Query.ParamByName('Display').AsString := ActualDisplayName;
+        Query.ParamByName('Icon').AsInteger := IconIndex;
+        Query.ParamByName('NowTime').AsString := NowStr;
+        Query.ExecSQL;
+      end
+      else
+      begin
+        ExistingCount := Query.FieldByName('AccessCount').AsInteger;
+        Query.Close;
+        Query.SQL.Text :=
+          'UPDATE MRU SET DisplayName = :Display, IconIndex = :Icon, ' +
+          'LastAccess = :NowTime, AccessCount = :Count WHERE Category = :Cat AND ItemKey = :Key';
+        Query.ParamByName('Cat').AsString := Category;
+        Query.ParamByName('Key').AsString := ItemKey;
+        Query.ParamByName('Display').AsString := ActualDisplayName;
+        Query.ParamByName('Icon').AsInteger := IconIndex;
+        Query.ParamByName('NowTime').AsString := NowStr;
+        Query.ParamByName('Count').AsInteger := ExistingCount + 1;
+        Query.ExecSQL;
+      end;
+    finally
+      Query.Free;
+    end;
+    if OwnTx then
+      FConnection.Commit;
+  except
+    if OwnTx then
+      FConnection.Rollback;
+    raise;
   end;
 end;
 

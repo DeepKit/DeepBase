@@ -1,5 +1,5 @@
 # DeepBase Test Runner Script
-# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-AllowFilteredCI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit DeepBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules] [-CoverageThreshold 70] [-CoverageFailOnLow]
+# Usage: .\run_tests.ps1 [-Type Unit|Integration|All] [-CI] [-AllowFilteredCI] [-Report] [-Run "Fixture[.Test]"] [-RunList path] [-Module LLM,ORM] [-FromUnit DeepBase.LLM] [-FromGitChanged] [-GitRef HEAD] [-ListModules] [-CoverageThreshold 70] [-CoverageFailOnLow] [-IncludeStubApis]
 
 param(
     [ValidateSet('Unit', 'Integration', 'All')]
@@ -46,7 +46,11 @@ param(
 
     [switch]$SkipCompile,
 
-    [switch]$NoRebuild
+    [switch]$NoRebuild,
+
+    [switch]$IncludeStubApis,
+
+    [switch]$IncludeEncoding
 )
 
 $ErrorActionPreference = "Stop"
@@ -532,6 +536,7 @@ $UnitPaths = @(
     "$BaseDir\Tools\CLI",
     "$BaseDir\Tools\WebService",
     "$TestsDir",
+    "$TestsDir\Regression",
     "$IntegrationDir",
     "D:\ProgramData\delphi\DUnitX\Source\"
 )
@@ -567,12 +572,14 @@ function Compile-TestProject {
 
     # BUG-285: dcc64 在解析 .dproj 的 DCC_DcuOutput 时,偶尔会把早期依赖的 DCU 写到源目录。
     # 构建前清理源目录中的残留 DCU,避免架构测试(源目录不得包含 DCU 产物)误报。
+    # 清单须与 Test.Arch.PackageBoundaries 的 SOURCE_DIRS(Core/Persistence/Features/Tests/VCL/FMX/ThirdParty)对齐,
+    # 否则漏掉的目录(如 Tests/)的残留 DCU 会让架构测试误报。须递归清理子目录(Tests/Architecture/ 等)。
     if (-not $script:SourceCodeDirs) {
-        $script:SourceCodeDirs = @("$BaseDir\Core", "$BaseDir\Features", "$BaseDir\Persistence", "$BaseDir\VCL", "$BaseDir\FMX")
+        $script:SourceCodeDirs = @("$BaseDir\Core", "$BaseDir\Persistence", "$BaseDir\Features", "$BaseDir\Tests", "$BaseDir\VCL", "$BaseDir\FMX", "$BaseDir\ThirdParty")
     }
     foreach ($srcDir in $script:SourceCodeDirs) {
         if (Test-Path $srcDir) {
-            Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -ErrorAction SilentlyContinue |
+            Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -Recurse -ErrorAction SilentlyContinue |
                 Remove-Item -Force -ErrorAction SilentlyContinue
         }
     }
@@ -605,10 +612,10 @@ function Compile-TestProject {
         return $false
     }
 
-    # BUG-285: 构建后再次清理源目录残留 DCU(dcc64 即使指定 -N0,也可能将 DCU 落在源目录)。
+    # BUG-285: 构建后再次清理源目录残留 DCU(dcc64 即使指定 -N0,也可能将 DCU 落在源目录)。须递归清理子目录。
     foreach ($srcDir in $script:SourceCodeDirs) {
         if (Test-Path $srcDir) {
-            $leftover = Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -ErrorAction SilentlyContinue
+            $leftover = Get-ChildItem -Path $srcDir -Filter "*.dcu" -File -Recurse -ErrorAction SilentlyContinue
             if ($leftover) {
                 Write-Host ("BUG-285: removing {0} stale DCU(s) from {1}" -f $leftover.Count, $srcDir) -ForegroundColor Yellow
                 $leftover | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -1038,6 +1045,82 @@ if ($Coverage -and $allPassed) {
             $allPassed = $false
             Write-Host "Coverage Gate: FAILED (missing checker script)" -ForegroundColor Red
         }
+    }
+}
+
+# EXP-P0-005: -IncludeStubApis secondary gate. Under -CI, when the flag is set,
+# scan runtime sources for "// STUB" markers on public-method fallbacks. Any
+# match fails the gate. Silent otherwise for backward compatibility.
+if ($CI -and $IncludeStubApis) {
+    Write-Host ""
+    Write-Host "=============================================="
+    Write-Host "   STUB API Secondary Gate (EXP-P0-005)"
+    Write-Host "=============================================="
+
+    $stubCheckScript = Join-Path $PSScriptRoot "check-runtime-todos.ps1"
+    $stubReport = Join-Path $OutputPath "StubApiGate.json"
+
+    if (Test-Path $stubCheckScript) {
+        # Use Start-Process so that `exit N` inside the child ps1 propagates
+        # as a real process exit code (& on a .ps1 sets $LASTEXITCODE only for
+        # native executables, not for script exit codes).
+        $stubArgs = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", $stubCheckScript,
+            "-SourcePath", $BaseDir,
+            "-ReportPath", $stubReport,
+            "-IncludeStubApis",
+            "-FailOnViolation"
+        )
+        $stubProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $stubArgs `
+            -Wait -PassThru -NoNewWindow
+        if ($stubProc.ExitCode -ne 0) {
+            $allPassed = $false
+            Write-Host "STUB API Gate: FAILED" -ForegroundColor Red
+        } else {
+            Write-Host "STUB API Gate: PASSED" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "WARNING: check-runtime-todos.ps1 not found at $stubCheckScript" -ForegroundColor Yellow
+    }
+}
+
+# REVIEW-P0-001: -IncludeEncoding secondary gate. Under -CI, when the flag
+# is set, scan runtime sources and docs for encoding violations. Hard
+# violations (invalid UTF-8, mojibake) fail the gate; soft violations
+# (BOM presence/absence) are reported as warnings. A known-legacy allow-list
+# (Scripts/encoding-allowlist.txt) downgrades historically corrupted files.
+if ($CI -and $IncludeEncoding) {
+    Write-Host ""
+    Write-Host "=============================================="
+    Write-Host "   Encoding Gate (REVIEW-P0-001)"
+    Write-Host "=============================================="
+
+    $encodingCheckScript = Join-Path $PSScriptRoot "check_encoding.ps1"
+    $encodingReport = Join-Path $OutputPath "EncodingGate.json"
+    $encodingAllowlist = Join-Path $BaseDir "Scripts\encoding-allowlist.txt"
+
+    if (Test-Path $encodingCheckScript) {
+        $encArgs = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", $encodingCheckScript,
+            "-SourcePath", $BaseDir,
+            "-ReportPath", $encodingReport,
+            "-AllowlistPath", $encodingAllowlist,
+            "-FailOnViolation"
+        )
+        $encProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList $encArgs `
+            -Wait -PassThru -NoNewWindow
+        if ($encProc.ExitCode -ne 0) {
+            $allPassed = $false
+            Write-Host "Encoding Gate: FAILED" -ForegroundColor Red
+        } else {
+            Write-Host "Encoding Gate: PASSED" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "WARNING: check_encoding.ps1 not found at $encodingCheckScript" -ForegroundColor Yellow
     }
 }
 

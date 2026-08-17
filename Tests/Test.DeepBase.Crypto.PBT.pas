@@ -32,7 +32,7 @@ uses
   System.Classes,
   System.Math,
   DUnitX.TestFramework,
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Hash, DeepBase.Crypto.RSA, DeepBase.Crypto.Random;
 
 type
   [TestFixture]

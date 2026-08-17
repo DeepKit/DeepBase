@@ -222,6 +222,23 @@ type
     property Queue: TWorkerQueue read FQueue write FQueue;
   end;
 
+  /// <summary>Thread for executing a job handler with timeout support.
+  /// REVIEW5-CORE-003: Owns its captured references; safe to detach on timeout.</summary>
+  TJobHandlerThread = class(TThread)
+  private
+    FHandler: TJobHandler;
+    FJob: TJob;
+    FDoneEvt: TEvent;
+    FError: Exception;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(AHandler: TJobHandler; AJob: TJob; ADoneEvt: TEvent);
+    destructor Destroy; override;
+    /// <summary>Takes ownership of the captured exception (transfers to caller).</summary>
+    function TakeError: Exception;
+  end;
+
   /// <summary>Worker thread</summary>
   TWorkerThread = class(TThread)
   private
@@ -803,9 +820,13 @@ procedure TJob.ReportProgress(AProgress: Integer; const AMessage: string);
 begin
   FProgress := AProgress;
   FProgressMessage := AMessage;
-  
+
+  // REVIEW5-CORE-002: Progress callback must not fail the job.
   if Assigned(FOnProgress) then
+  try
     FOnProgress(FId, AProgress, AMessage);
+  except
+  end;
 end;
 
 function TJob.CanRetry: Boolean;
@@ -980,6 +1001,52 @@ begin
   for LPair in FMetadata do
     LMetadata.AddPair(LPair.Key, LPair.Value);
   Result.AddPair('metadata', LMetadata);
+end;
+
+{ TJobHandlerThread }
+
+constructor TJobHandlerThread.Create(AHandler: TJobHandler; AJob: TJob; ADoneEvt: TEvent);
+begin
+  inherited Create(True); // suspended
+  FreeOnTerminate := False;
+  FHandler := AHandler;
+  FJob := AJob;
+  FDoneEvt := ADoneEvt;
+  FError := nil;
+end;
+
+destructor TJobHandlerThread.Destroy;
+begin
+  // FError ownership: if still set at destruction, free it.
+  // Normally TakeError transfers ownership to the caller before destruction.
+  FreeAndNil(FError);
+  // FDoneEvt and FJob are NOT owned by this thread.
+  FDoneEvt := nil;
+  FJob := nil;
+  inherited;
+end;
+
+function TJobHandlerThread.TakeError: Exception;
+begin
+  Result := FError;
+  FError := nil; // Transfer ownership
+end;
+
+procedure TJobHandlerThread.Execute;
+begin
+  try
+    FHandler(FJob);
+  except
+    on E: Exception do
+      // BUG-438: 克隆异常对象而非持有 E。Delphi `except on E:` 块结束时 RTL
+      // 自动释放 E, 直接 FError := E 会令 FError 悬挂, 后续 TakeError 返回野
+      // 指针, ProcessJob 的 `raise LHandlerErr` 操作已释放对象即触发 AV 216。
+      // 克隆的新对象脱离 RTL 生命周期, 由 FError 独占持有, 现有 TakeError/
+      // 析构 FreeAndNil(FError)/ProcessJob raise+FreeAndNil 引用语义正确。
+      FError := Exception.Create(E.Message);
+  end;
+  if Assigned(FDoneEvt) then
+    FDoneEvt.SetEvent;
 end;
 
 { TWorkerThread }
@@ -1168,13 +1235,20 @@ begin
   // ���Ի�ȡ�ļ������������50�Σ�5�룩
   while LRetries < 50 do
   begin
+    // BIZ2-011 fix: drop FILE_FLAG_DELETE_ON_CLOSE. With delete-on-close,
+    // the lock file vanishes the moment ANY handle is closed. If two worker
+    // processes raced on the same lock file and the first released, the
+    // second's handle would reference a deleted file and the lock semantics
+    // broke. CREATE_ALWAYS + share=0 still gives exclusive ownership (the
+    // second opener gets a sharing violation), and the file persists on disk
+    // as a tiny hidden sentinel.
     Result := CreateFile(
       PChar(FLockFilePath),
       GENERIC_READ or GENERIC_WRITE,
       0,  // ����������ռ����
       nil,
       CREATE_ALWAYS,
-      FILE_ATTRIBUTE_HIDDEN or FILE_FLAG_DELETE_ON_CLOSE,
+      FILE_ATTRIBUTE_HIDDEN,
       0
     );
 
@@ -1795,6 +1869,13 @@ var
   LHandler: TJobHandler;
   LStartTime: TDateTime;
   LElapsed: Integer;
+  LDoneEvt: TEvent;
+  LHandlerThread: TJobHandlerThread;
+  LHandlerErr: Exception;
+  LTimedOut: Boolean;
+  LTimeoutMs: Integer;
+  LWaitResult: TWaitResult;
+  LErrMsg: string;
 begin
   FLock.Enter;
   try
@@ -1813,18 +1894,111 @@ begin
     FLock.Leave;
   end;
   
-  if Assigned(FOnJobStarted) then
-    FOnJobStarted(Self, AJob);
-    
-  if Assigned(FStorage) then
-    FStorage.SaveJob(AJob);
-    
-  LStartTime := Now;
-  
+  // REVIEW5-CORE-002: Wrap the entire post-running lifecycle so that no
+  // external callback or storage exception can leave the job in jsRunning.
   try
-    LHandler(AJob);
-    
+    // --- Pre-execution callbacks (informational) ---
+    if Assigned(FOnJobStarted) then
+    try
+      FOnJobStarted(Self, AJob);
+    except
+      // Swallow: started event must not affect job state.
+    end;
+
+    if Assigned(FStorage) then
+    try
+      FStorage.SaveJob(AJob);
+    except
+      // Swallow: storage failure must not block execution.
+    end;
+
+    LStartTime := Now;
+
+  // REVIEW5-CORE-003: Execute handler with timeout enforcement.
+  // The handler runs in a dedicated thread; the worker waits up to Timeout ms.
+  // If the handler exceeds the timeout, the job is marked as failed and moved
+  // to dead letter. The handler thread is always waited for to ensure clean lifecycle.
+  try
+  LTimeoutMs := AJob.Timeout;
+  LTimedOut := False;
+  LHandlerErr := nil;
+
+  if LTimeoutMs > 0 then
+  begin
+    LDoneEvt := TEvent.Create(nil, True, False, '');
+    try
+      LHandlerThread := TJobHandlerThread.Create(LHandler, AJob, LDoneEvt);
+      try
+        LHandlerThread.Start;
+
+        LWaitResult := LDoneEvt.WaitFor(LTimeoutMs);
+        LTimedOut := (LWaitResult <> wrSignaled);
+
+        // Always wait for thread to finish for clean lifecycle.
+        // If we timed out, the handler may still be running — wait for it.
+        LHandlerThread.WaitFor;
+        LElapsed := MilliSecondsBetween(Now, LStartTime);
+        LHandlerErr := LHandlerThread.TakeError; // Transfer ownership
+      finally
+        LHandlerThread.Free;
+      end;
+    finally
+      FreeAndNil(LDoneEvt);
+    end;
+    // Re-raise handler exceptions after cleanup (unless timed out).
+    if (not LTimedOut) and Assigned(LHandlerErr) then
+      raise LHandlerErr;
+    // If timed out, we own LHandlerErr but don't raise it — free it.
+    if LTimedOut then
+      FreeAndNil(LHandlerErr);
+  end
+  else
+  begin
+    // No timeout — run handler inline
+    try
+      LHandler(AJob);
+    except
+      on E: Exception do
+      begin
+        LElapsed := MilliSecondsBetween(Now, LStartTime);
+        raise;
+      end;
+    end;
     LElapsed := MilliSecondsBetween(Now, LStartTime);
+  end;
+
+  if LTimedOut then
+  begin
+    // --- Timeout path ---
+    LErrMsg := 'Job execution timed out after ' + IntToStr(LTimeoutMs) + 'ms';
+    AJob.FResult := TJobResult.CreateFailure(LErrMsg);
+    AJob.FResult.ExecutionTime := LElapsed;
+
+    AtomicIncrement(FTotalErrors);
+
+    FLock.Enter;
+    try
+      AJob.FStatus := jsFailed;
+      AJob.FCompletedAt := Now;
+    finally
+      FLock.Leave;
+    end;
+    MoveToDeadLetter(AJob);
+
+    if Assigned(FOnJobFailed) then
+    try
+      FOnJobFailed(Self, AJob);
+    except
+    end;
+
+    if Assigned(AJob.FOnCompletion) then
+    try
+      AJob.FOnCompletion(AJob.Id, False, LErrMsg);
+    except
+    end;
+  end
+  else
+  begin
     
     // BUG-010 FIX: Protect status changes with lock
     FLock.Enter;
@@ -1841,12 +2015,20 @@ begin
     // BUG-047 FIX: Use proper atomic addition for total processing time
     TInterlocked.Add(FTotalProcessingTime, LElapsed);
     
+    // REVIEW5-CORE-002: Completion callbacks isolated from each other.
     if Assigned(FOnJobCompleted) then
+    try
       FOnJobCompleted(Self, AJob);
-      
+    except
+    end;
+
     if Assigned(AJob.FOnCompletion) then
+    try
       AJob.FOnCompletion(AJob.Id, True, AJob.Result.ResultData);
-      
+    except
+    end;
+  end;
+
   except
     on E: Exception do
     begin
@@ -1855,9 +2037,12 @@ begin
       AJob.FResult.ExecutionTime := LElapsed;
       
       AtomicIncrement(FTotalErrors);
-      
+
       if Assigned(FOnError) then
+      try
         FOnError(Self, AJob, E);
+      except
+      end;
         
       // Handle retry
       if AJob.CanRetry then
@@ -1873,7 +2058,10 @@ begin
         end;
         
         if Assigned(FOnJobRetrying) then
+        try
           FOnJobRetrying(Self, AJob);
+        except
+        end;
       end
       else
       begin
@@ -1888,16 +2076,27 @@ begin
         MoveToDeadLetter(AJob);
         
         if Assigned(FOnJobFailed) then
+        try
           FOnJobFailed(Self, AJob);
-          
+        except
+        end;
+
         if Assigned(AJob.FOnCompletion) then
+        try
           AJob.FOnCompletion(AJob.Id, False, E.Message);
+        except
+        end;
       end;
     end;
   end;
-  
-  if Assigned(FStorage) then
-    FStorage.SaveJob(AJob);
+  finally
+    // REVIEW5-CORE-002: Final persistence — always attempt, never raise.
+    if Assigned(FStorage) then
+    try
+      FStorage.SaveJob(AJob);
+    except
+    end;
+  end;
 
   FLock.Enter;
   try
@@ -2024,16 +2223,30 @@ procedure TWorkerQueue.WaitForCompletion(ATimeoutMs: Integer);
 var
   LStartTime: TDateTime;
   LStats: TQueueStats;
+  LSleepMs: Integer;
+  LRemaining: Integer;
 begin
   LStartTime := Now;
-  
-  // �ȴ����й���������е���ҵ���
+
+  // BIZ2-009 fix: back off the polling interval from 50ms to 250ms.
+  // WaitForCompletion is a best-effort "drain the queue" wait; the caller
+  // is not latency-sensitive. This cuts wakeups by 5x and reduces the
+  // O(n) GetStats scans from 20/sec to 4/sec. We clamp the sleep to the
+  // remaining timeout so we never overshoot the caller's deadline.
   repeat
     LStats := GetStats;
     if (LStats.PendingJobs = 0) and (LStats.RunningJobs = 0) then
       Break;
-      
-    Sleep(50); // ������ѯ����������Ӧ��
+
+    LSleepMs := 250;
+    if ATimeoutMs >= 0 then
+    begin
+      LRemaining := ATimeoutMs - MilliSecondsBetween(Now, LStartTime);
+      if LRemaining < LSleepMs then
+        LSleepMs := Max(0, LRemaining);
+    end;
+    Sleep(LSleepMs);
+
     if (ATimeoutMs >= 0) and (MilliSecondsBetween(Now, LStartTime) > ATimeoutMs) then
       raise EWorkerQueueException.Create('Timeout waiting for job completion');
   until False;
@@ -2047,6 +2260,9 @@ var
   LIdleRate: Double;
   LNewCount: Integer;
   LElapsedMs: Int64;
+  LTotalWorkers: Integer;
+  LMaxWorkersLocal: Integer;
+  LMinWorkersLocal: Integer;
 begin
   // ����Ƿ������Զ�����
   if not FAutoScale then
@@ -2065,43 +2281,55 @@ begin
   end;
 
   // ��ȡ��ǰͳ����Ϣ������������ΪGetStats�ڲ��������
+  // BIZ2-010 fix: read worker count and limits under the lock
+  FLock.Enter;
+  try
+    LTotalWorkers := FWorkers.Count;
+    LMaxWorkersLocal := FMaxWorkers;
+    LMinWorkersLocal := FMinWorkers;
+  finally
+    FLock.Leave;
+  end;
+
   LStats := GetStats;
 
   // ���û�й����̣߳������е���
-  if LStats.ActiveWorkers + LStats.IdleWorkers = 0 then
+  if LTotalWorkers = 0 then
     Exit;
 
-  LNewCount := FWorkers.Count;
+  LNewCount := LTotalWorkers;
 
   // ������б��Ͷ� = ��������ҵ�� / ����������
-  if FMaxPendingJobs > 0 then
-    LSaturation := LStats.PendingJobs / FMaxPendingJobs
-  else
-    LSaturation := 0;
+  // BIZ2-010 fix: saturation = pending jobs per worker, clamped to [0,1]
+  LSaturation := LStats.PendingJobs / Max(1, LTotalWorkers);
+  if LSaturation < 0.0 then
+    LSaturation := 0.0
+  else if LSaturation > 1.0 then
+    LSaturation := 1.0;
 
   // ��������� = �����߳��� / ���߳���
-  if LStats.ActiveWorkers + LStats.IdleWorkers > 0 then
-    LIdleRate := LStats.IdleWorkers / (LStats.ActiveWorkers + LStats.IdleWorkers)
+  if LTotalWorkers > 0 then
+    LIdleRate := LStats.IdleWorkers / LTotalWorkers
   else
     LIdleRate := 1;
 
   // �ж��Ƿ���Ҫ����
   // ���������б��Ͷȳ�����ֵ �� ��ǰ�߳���δ������
-  if (LSaturation > FScaleUpThreshold) and (LNewCount < FMaxWorkers) then
+  if (LSaturation > FScaleUpThreshold) and (LNewCount < LMaxWorkersLocal) then
   begin
     // ���ݣ����� 1 ���̣߳����߸��ݱ��Ͷ����Ӹ���
-    LNewCount := Min(LNewCount + Max(1, Round((LSaturation - FScaleUpThreshold) * 5)), FMaxWorkers);
+    LNewCount := Min(LNewCount + Max(1, Round((LSaturation - FScaleUpThreshold) * 5)), LMaxWorkersLocal);
   end
   // �ж��Ƿ���Ҫ����
   // �����������ʳ�����ֵ���������ʵͣ��� ��ǰ�߳���������Сֵ
-  else if (LIdleRate > (1 - FScaleDownThreshold)) and (LNewCount > FMinWorkers) then
+  else if (LIdleRate > (1 - FScaleDownThreshold)) and (LNewCount > LMinWorkersLocal) then
   begin
     // ���ݣ����� 1 ���߳�
-    LNewCount := Max(LNewCount - 1, FMinWorkers);
+    LNewCount := Max(LNewCount - 1, LMinWorkersLocal);
   end;
 
   // �����Ҫ������ִ�е���
-  if LNewCount <> FWorkers.Count then
+  if LNewCount <> LTotalWorkers then
   begin
     FLastScaleTime := Now;
     SetWorkerCount(LNewCount);

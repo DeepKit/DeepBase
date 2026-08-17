@@ -326,7 +326,7 @@ var
   Step: Integer;
 begin
   // Calculate step based on duration
-  Step := (255 * FFadeTimer.Interval) div FOptions.FadeDuration;
+  Step := (255 * Integer(FFadeTimer.Interval)) div FOptions.FadeDuration;
   if Step < 5 then Step := 5;
   
   if FFadeDirection > 0 then

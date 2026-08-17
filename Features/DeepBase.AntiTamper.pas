@@ -10,7 +10,7 @@ uses
   System.SysUtils, System.Classes, System.Hash, System.NetEncoding, System.StrUtils, System.Math,
   System.RegularExpressions,
   Winapi.ShellAPI, Winapi.Windows,
-  System.Generics.Collections, DeepBase.Crypto, DeepBase.Exceptions,
+  System.Generics.Collections, DeepBase.Crypto, DeepBase.Crypto.AES, DeepBase.Crypto.Hash, DeepBase.Exceptions,
   DeepBase.Storage.Interfaces;
 
 // 加密算法类型
@@ -103,13 +103,24 @@ begin
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
   Result.EncryptionType := etAES256;
-  Result.Salt := 'DeepMoveC_Default_Salt_2025';
+  Result.Salt := ''; // BUG-426 FIX (E-007): empty - must be configured by user, mirrors EncryptionKey (BUG-034). A hardcoded salt lets attackers precompute rainbow tables for common passwords.
   Result.KdfIterations := 5000;
   Result.EnableHMAC := True;
 end;
 
 class procedure TAntiTamperPackage.Initialize(const AConfig: TAntiTamperConfig);
 begin
+  // BUG-426 FIX (E-007): Salt must be non-empty. TEncryptionType has only etAES256
+  // (etXOR removed for security), so encryption is always active and the KDF at L187
+  // derives the key from (Password, Salt, Iterations). An empty Salt degenerates PBKDF2
+  // to a password-only KDF, enabling rainbow tables for common passwords. Random
+  // generation is NOT viable here: Salt must be stable across runs to reproduce the key
+  // for decryption, and this class has no persistence backing to store a generated salt.
+  // Reject explicitly so callers configure their own unique Salt.
+  if AConfig.Salt = '' then
+    raise EAntiTamperException.Create(
+      'AntiTamper Salt must be configured (GetDefaultConfig returns empty). ' +
+      'A unique per-deployment Salt is required to prevent rainbow-table attacks.');
   FConfig := AConfig;
   FInitialized := True;
   WriteLog('AntiTamper package initialized');

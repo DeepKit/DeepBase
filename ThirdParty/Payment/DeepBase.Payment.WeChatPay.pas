@@ -5,10 +5,10 @@ unit DeepBase.Payment.WeChatPay;
 
   Supports:
     - Native支付 (扫码支付)
-    - JSAPI支付 // TODO: restore original comment (encoding corruption)
+    - JSAPI支付 (公众号/小程序内嵌)
     - H5支付 (手机网页)
     - APP支付
-    - // TODO: restore original comment (encoding corruption)
+    - 小程序支付
 
   Official Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/
   API Version: V3
@@ -31,14 +31,14 @@ type
   /// <summary>WeChat Pay configuration</summary>
   TWeChatPayConfig = class(TPaymentConfig)
   private
-    FAppId: string;           // TODO: restore original comment (encoding corruption)
-    FMchId: string;           // TODO: restore original comment (encoding corruption)
+    FAppId: string;           // 应用ID
+    FMchId: string;           // 商户号
     FApiKeyV3: string;        // APIv3 密钥
-    FSerialNo: string;        // TODO: restore original comment (encoding corruption)
+    FSerialNo: string;        // 证书序列号
     FPrivateKey: string;      // 商户私钥 (PEM)
     FCertPath: string;        // 证书路径 (退款用)
-    FSubAppId: string;        // TODO: restore original comment (encoding corruption)
-    FSubMchId: string;        // TODO: restore original comment (encoding corruption)
+    FSubAppId: string;        // 子商户应用ID
+    FSubMchId: string;        // 子商户号
     FWeChatPublicKey: string; // BUG-014 FIX: 微信平台公钥 (用于验签)
   public
     constructor Create; reintroduce;
@@ -109,7 +109,8 @@ type
 implementation
 
 uses
-  System.Hash, System.StrUtils, DeepBase.Crypto;
+  System.Hash, System.StrUtils, DeepBase.Crypto, DeepBase.Crypto.Platform,
+  DeepBase.Crypto.Encoding, DeepBase.Crypto.RSA;
 
 const
   WECHAT_API_URL = 'https://api.mch.weixin.qq.com';
@@ -452,8 +453,10 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TWeChatPayConfig.LoadKeysFromCredentialManager;
 begin
-  ApiKeyV3 := GetCredentialKey('ApiKeyV3');
-  PrivateKey := GetCredentialKey('PrivateKey');
+  // REVIEW5-FEAT-001: assign straight to the fields to avoid re-running
+  // ProtectKey (double-protection) on every load.
+  FApiKeyV3 := GetCredentialKey('ApiKeyV3');
+  FPrivateKey := GetCredentialKey('PrivateKey');
   FWeChatPublicKey := GetCredentialKey('WeChatPublicKey');
 end;
 
@@ -466,7 +469,7 @@ end;
 
 procedure TWeChatPayConfig.SetApiKeyV3Secure(const AKey: string);
 begin
-  FApiKeyV3 := ProtectKey(AKey);
+  FApiKeyV3 := ProtectKey('ApiKeyV3', AKey);
 end;
 
 function TWeChatPayConfig.GetApiKeyV3Secure: string;
@@ -476,7 +479,7 @@ end;
 
 procedure TWeChatPayConfig.SetPrivateKeySecure(const AKey: string);
 begin
-  FPrivateKey := ProtectKey(AKey);
+  FPrivateKey := ProtectKey('PrivateKey', AKey);
 end;
 
 function TWeChatPayConfig.GetPrivateKeySecure: string;

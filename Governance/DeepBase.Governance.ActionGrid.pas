@@ -31,8 +31,6 @@ type
     FBridges: TDictionary<string, IBridge>;
     FDueChecker: IDueChecker;
     FLock: TCriticalSection;
-    procedure CheckDueIfRequired(const AActionKey: string; AContext: TJSONObject;
-      AAction: TAction; AMode: TRunMode);
   public
     constructor Create(ADueChecker: IDueChecker);
     destructor Destroy; override;
@@ -64,7 +62,16 @@ implementation
 constructor TActionGrid.Create(ADueChecker: IDueChecker);
 begin
   inherited Create;
-  FActions := TObjectDictionary<string, TAction>.Create([doOwnsValues]);
+  // GOV-027 (BCW-A20260715-011): FActions MUST NOT own its TAction values.
+  // Ownership of every TAction is held uniquely by TKeyResolver (its FActions
+  // dictionary is [doOwnsValues], the authoritative key→object registry).
+  // ActionGrid is only a runtime execution index. With doOwnsValues here too,
+  // the same TAction was owned by two dictionaries — when both got freed
+  // (KeyResolver then ActionGrid, in any teardown path), the second Free hit
+  // an already-freed object → "Invalid pointer operation" / access violation.
+  // This bug was latent in TGovernanceLifecycle (single Init/Shutdown rarely
+  // reentered) and surfaced under the per-test Setup/TearDown of this fixture.
+  FActions := TObjectDictionary<string, TAction>.Create([]);
   FBridges := TDictionary<string, IBridge>.Create;
   FDueChecker := ADueChecker;
   FLock := TCriticalSection.Create;
@@ -130,15 +137,30 @@ function TActionGrid.CanRun(const AActionKey: string;
   AContext: TJSONObject): Boolean;
 var
   LAction: TAction;
+  LEnabled: Boolean;
+  LDueRef: string;
 begin
-  if not FActions.TryGetValue(AActionKey, LAction) then
+  // D-003: 读路径须持锁——热注册路径会改 FActions 容器（rehash）并按 key
+  // 释放/替换 TAction 实例，裸读 TryGetValue 后持 LAction 引用在锁外访问会
+  // 与并发 rehash 竞争（半更新/AV），同 key 重新注册甚至会释放该对象致 UAF。
+  // 故锁内只把决策需要的值类型字段克隆到局部，锁外再跑慢速 DueChecker。
+  LEnabled := False;
+  LDueRef := '';
+  FLock.Enter;
+  try
+    if not FActions.TryGetValue(AActionKey, LAction) then
+      Exit(False);
+    LEnabled := LAction.Enabled;
+    LDueRef := LAction.DueRef;
+  finally
+    FLock.Leave;
+  end;
+
+  if not LEnabled then
     Exit(False);
 
-  if not LAction.Enabled then
-    Exit(False);
-
-  // 检查合当性（如果有 DueChecker）
-  if (FDueChecker <> nil) and (LAction.DueRef <> '') then
+  // 检查合当性（如果有 DueChecker）——放锁外，避免慢回调阻塞并发读
+  if (FDueChecker <> nil) and (LDueRef <> '') then
   begin
     var LDue := FDueChecker.Check(AActionKey, AContext);
     if LDue.Verdict <> dvPass then
@@ -152,14 +174,29 @@ function TActionGrid.GetDisabledReason(const AActionKey: string;
   AContext: TJSONObject): string;
 var
   LAction: TAction;
+  LEnabled: Boolean;
+  LDisabledReason: string;
+  LDueRef: string;
 begin
-  if not FActions.TryGetValue(AActionKey, LAction) then
-    Exit('Action not found: ' + AActionKey);
+  // D-003: 同 CanRun，锁内克隆值类型快照，锁外跑 DueChecker。
+  LEnabled := False;
+  LDisabledReason := '';
+  LDueRef := '';
+  FLock.Enter;
+  try
+    if not FActions.TryGetValue(AActionKey, LAction) then
+      Exit('Action not found: ' + AActionKey);
+    LEnabled := LAction.Enabled;
+    LDisabledReason := LAction.DisabledReason;
+    LDueRef := LAction.DueRef;
+  finally
+    FLock.Leave;
+  end;
 
-  if not LAction.Enabled then
-    Exit(LAction.DisabledReason);
+  if not LEnabled then
+    Exit(LDisabledReason);
 
-  if (FDueChecker <> nil) and (LAction.DueRef <> '') then
+  if (FDueChecker <> nil) and (LDueRef <> '') then
   begin
     var LDue := FDueChecker.Check(AActionKey, AContext);
     if LDue.Verdict <> dvPass then
@@ -173,24 +210,15 @@ procedure TActionGrid.SetEnabled(const AActionKey: string; AEnabled: Boolean);
 var
   LAction: TAction;
 begin
-  if FActions.TryGetValue(AActionKey, LAction) then
-    LAction.Enabled := AEnabled;
-end;
-
-procedure TActionGrid.CheckDueIfRequired(const AActionKey: string;
-  AContext: TJSONObject; AAction: TAction; AMode: TRunMode);
-var
-  LDue: TDueResult;
-begin
-  if (FDueChecker = nil) or (AAction.DueRef = '') then
-    Exit;
-  if AMode = rmPreview then
-    Exit;
-
-  LDue := FDueChecker.Check(AActionKey, AContext);
-  if LDue.Verdict <> dvPass then
-    raise Exception.CreateFmt('Due check failed for %s: %s',
-      [AActionKey, LDue.Reason]);
+  // D-003: 写 Enabled 字段须持锁——与热注册路径并发，否则可能写到一个正被
+  // 释放/替换的 TAction 实例上（UAF）。
+  FLock.Enter;
+  try
+    if FActions.TryGetValue(AActionKey, LAction) then
+      LAction.Enabled := AEnabled;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TActionGrid.Run(const AActionKey: string; AContext: TJSONObject;
@@ -199,38 +227,83 @@ var
   LAction: TAction;
   LBridge: IBridge;
   LBridgeKey: string;
+  LEnabled: Boolean;
+  LDisabledReason: string;
+  LDueRef: string;
+  LBridges: TArray<string>;
+  LBridgeRefs: TArray<IBridge>;
+  LRefCount, I: Integer;
+  LDue: TDueResult;
 begin
-  if not FActions.TryGetValue(AActionKey, LAction) then
-    Exit(TActionResult.Fail(AActionKey, 'Action not registered: ' + AActionKey));
+  // D-003: 锁内克隆执行所需状态到值类型/接口局部，锁外再跑 DueChecker 与
+  // Bridge.Execute——既避免锁内执行慢回调/外部调用死锁，也杜绝锁外持
+  // TAction 引用期间同 key 重新注册被 doOwnsValues 释放所致的 UAF。
+  // Bridge 接口引用计数会在锁内取引用时保活，锁外安全使用。
+  LEnabled := False;
+  LDisabledReason := '';
+  LDueRef := '';
+  LBridges := nil;
+  LBridgeRefs := nil;
+  LRefCount := 0;
+  FLock.Enter;
+  try
+    if not FActions.TryGetValue(AActionKey, LAction) then
+      Exit(TActionResult.Fail(AActionKey, 'Action not registered: ' + AActionKey));
 
-  if not LAction.Enabled then
-    Exit(TActionResult.Blocked(AActionKey, LAction.DisabledReason));
+    LEnabled := LAction.Enabled;
+    LDisabledReason := LAction.DisabledReason;
+    LDueRef := LAction.DueRef;
+    if LAction.BridgeKeys.Count > 0 then
+    begin
+      LBridges := LAction.BridgeKeys.ToArray;
+      SetLength(LBridgeRefs, Length(LBridges));
+      LRefCount := 0;
+      for LBridgeKey in LBridges do
+      begin
+        if FBridges.TryGetValue(LBridgeKey, LBridge) then
+        begin
+          LBridgeRefs[LRefCount] := LBridge;   // 引用计数 +1，锁外保活
+          Inc(LRefCount);
+        end;
+      end;
+      SetLength(LBridgeRefs, LRefCount);
+    end;
+  finally
+    FLock.Leave;
+  end;
 
-  // 合当检查
-  CheckDueIfRequired(AActionKey, AContext, LAction, AMode);
+  if not LEnabled then
+    Exit(TActionResult.Blocked(AActionKey, LDisabledReason));
+
+  // 合当检查——锁外跑，慢 DueChecker 不阻塞并发读
+  if (AMode <> rmPreview) and (FDueChecker <> nil) and (LDueRef <> '') then
+  begin
+    LDue := FDueChecker.Check(AActionKey, AContext);
+    if LDue.Verdict <> dvPass then
+      raise Exception.CreateFmt('Due check failed for %s: %s',
+        [AActionKey, LDue.Reason]);
+  end;
 
   // Preview 模式只检查不执行
   if AMode = rmPreview then
     Exit(TActionResult.DryRunOK(AActionKey, 'Preview passed'));
 
-  // 执行 Bridge 链
-  for LBridgeKey in LAction.BridgeKeys do
+  // 执行 Bridge 链——用锁内快���的引用数组，不再触碰 FBridges/LAction
+  for I := 0 to High(LBridgeRefs) do
   begin
-    if FBridges.TryGetValue(LBridgeKey, LBridge) then
-    begin
-      if not LBridge.CanExecute(AContext) then
-        Exit(TActionResult.Blocked(AActionKey,
-          'Bridge not available: ' + LBridgeKey));
+    LBridge := LBridgeRefs[I];
+    if not LBridge.CanExecute(AContext) then
+      Exit(TActionResult.Blocked(AActionKey,
+        'Bridge not available: ' + LBridges[I]));
 
-      Result := LBridge.Execute(AContext, AMode);
-      if Result.Status <> arsSuccess then
-        Exit;
-    end;
+    Result := LBridge.Execute(AContext, AMode);
+    if Result.Status <> arsSuccess then
+      Exit;
   end;
 
   // 无 Bridge 时返回 dry-run（noop）状态而非 Success，以反映没有实际执行
   // any side effect (GOV-021).
-  if LAction.BridgeKeys.Count = 0 then
+  if Length(LBridgeRefs) = 0 then
     Result := TActionResult.DryRunOK(AActionKey, 'No bridge configured (noop)')
   else
     Result := TActionResult.Success(AActionKey);
@@ -240,21 +313,28 @@ function TActionGrid.GetActionInfo(const AActionKey: string): TActionInfo;
 var
   LAction: TAction;
 begin
-  if FActions.TryGetValue(AActionKey, LAction) then
-  begin
-    Result.ActionKey := LAction.Key;
-    Result.DisplayName := LAction.DisplayName;
-    Result.Enabled := LAction.Enabled;
-    Result.DisabledReason := LAction.DisabledReason;
-    Result.RiskLevel := LAction.RiskLevel;
-  end
-  else
-  begin
-    Result.ActionKey := AActionKey;
-    Result.DisplayName := '';
-    Result.Enabled := False;
-    Result.DisabledReason := 'Not found';
-    Result.RiskLevel := rlL0;
+  // D-003: 读路径须持锁——与热注册路径并发会撞 rehash/UAF。锁内拷贝值类型字段到
+  // 结果 record 即可，TActionInfo 全是值类型，锁外无悬空引用。
+  FLock.Enter;
+  try
+    if FActions.TryGetValue(AActionKey, LAction) then
+    begin
+      Result.ActionKey := LAction.Key;
+      Result.DisplayName := LAction.DisplayName;
+      Result.Enabled := LAction.Enabled;
+      Result.DisabledReason := LAction.DisabledReason;
+      Result.RiskLevel := LAction.RiskLevel;
+    end
+    else
+    begin
+      Result.ActionKey := AActionKey;
+      Result.DisplayName := '';
+      Result.Enabled := False;
+      Result.DisabledReason := 'Not found';
+      Result.RiskLevel := rlL0;
+    end;
+  finally
+    FLock.Leave;
   end;
 end;
 
@@ -262,11 +342,27 @@ function TActionGrid.GetAllActions: TArray<TActionInfo>;
 var
   LList: TList<TActionInfo>;
   LAction: TAction;
+  LInfo: TActionInfo;
 begin
   LList := TList<TActionInfo>.Create;
   try
-    for LAction in FActions.Values do
-      LList.Add(GetActionInfo(LAction.Key));
+    // D-003: 整个遍历持锁，避免遍历期间 FActions 被并发改动（rehash/释放
+    // 正在迭代的 TAction）致 AV。直接在锁内构建 record，不再回调已加锁的
+    // GetActionInfo（TCriticalSection 不可重入，二次 Enter 会死锁）。
+    FLock.Enter;
+    try
+      for LAction in FActions.Values do
+      begin
+        LInfo.ActionKey := LAction.Key;
+        LInfo.DisplayName := LAction.DisplayName;
+        LInfo.Enabled := LAction.Enabled;
+        LInfo.DisabledReason := LAction.DisabledReason;
+        LInfo.RiskLevel := LAction.RiskLevel;
+        LList.Add(LInfo);
+      end;
+    finally
+      FLock.Leave;
+    end;
     Result := LList.ToArray;
   finally
     LList.Free;

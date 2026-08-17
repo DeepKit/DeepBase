@@ -46,6 +46,7 @@ contains
   DeepBase.Commerce.Permissions in 'Features\DeepBase.Commerce.Permissions.pas',
   DeepBase.Commerce.UpgradeFlow in 'Features\DeepBase.Commerce.UpgradeFlow.pas',
   DeepBase.Unlock in 'Features\DeepBase.Unlock.pas',
-  DeepBase.Licensing in 'Features\DeepBase.Licensing.pas';
+  DeepBase.Licensing in 'Features\DeepBase.Licensing.pas',
+  DeepBase.TimeGuard in 'Features\DeepBase.TimeGuard.pas';
 
 end.

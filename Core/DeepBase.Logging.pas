@@ -197,33 +197,36 @@ var
   GLogger: TDeepBaseLogger = nil;
   GLoggerLock: TObject = nil;
   GLoggerInitializedByManager: Boolean = False;
+  // BUG EXP-P1-011 fix: set in finalization so Logger() does not
+  // lazily recreate GLogger after shutdown (which would leak, since
+  // the new instance would never be torn down).
+  GLoggerFinalized: Boolean = False;
 
 function Logger: TDeepBaseLogger;
-var
-  NewLock: TObject;
 begin
-  // ����ģʽ�����贴��
-  // ע�⣺Ӧ�� Manager ���� SetGlobalLogger ��ʼ��
-  // ���δ��ʼ��������һ����֧���ļ���־��ʵ����ȷ����־����ʧ�ܣ�
+  // Global-access entry: return the singleton TDeepBaseLogger.
+  // The Manager should call SetGlobalLogger during startup to install
+  // a DB-backed logger. If no logger was installed, this function
+  // lazily builds a file-only fallback so logging never fails.
 
-  // �����Լ�飺��� GLoggerLock ��δ��������Ԫ initialization δִ�У����ȴ�����
-  // ʹ��ԭ�Ӳ������⾺̬����
-  if GLoggerLock = nil then
-  begin
-    NewLock := TObject.Create;
-    if TInterlocked.CompareExchange(Pointer(GLoggerLock), Pointer(NewLock), nil) <> nil then
-      NewLock.Free;  // ��һ���߳��ȴ����ˣ��ͷ����Ǵ�����
-  end;
+  // BUG EXP-P1-011 fix:
+  //   * GLoggerLock is created in initialization (no lazy-init race).
+  //   * After finalization begins, return nil rather than rebuilding a
+  //     logger that would leak (the new instance could never be freed).
+  if GLoggerFinalized or (GLoggerLock = nil) then
+    Exit(nil);
 
   if GLogger = nil then
   begin
     TMonitor.Enter(GLoggerLock);
     try
+      if GLoggerFinalized then
+        Exit(nil);
       if GLogger = nil then
       begin
-        // ������ʱ���ļ���־ʵ��
+        // Build a fallback file-only logger (no DB configured yet).
         GLogger := TDeepBaseLogger.Create('');
-        GLogger.StorageMode := lsmFile;  // ǿ���ļ�ģʽ����Ϊû�� DB
+        GLogger.StorageMode := lsmFile;  // force file mode (no DB)
         GLoggerInitializedByManager := False;
         {$IFDEF DEBUG}
         OutputDebugString('DeepBase.Logger: Created fallback file-only logger. Call SetGlobalLogger for database logging.');
@@ -237,25 +240,22 @@ begin
 end;
 
 procedure SetGlobalLogger(ALogger: TDeepBaseLogger);
-var
-  NewLock: TObject;
 begin
-  // �����Լ�� - ʹ��ԭ�Ӳ������⾺̬����
-  if GLoggerLock = nil then
-  begin
-    NewLock := TObject.Create;
-    if TInterlocked.CompareExchange(Pointer(GLoggerLock), Pointer(NewLock), nil) <> nil then
-      NewLock.Free;
-  end;
+  // BUG EXP-P1-011 fix: GLoggerLock is created in initialization.
+  // If called outside unit lifetime (e.g. from an explicitly-loaded
+  // package after finalization), GLoggerLock may be nil - silently skip.
+  if GLoggerFinalized or (GLoggerLock = nil) then
+    Exit;
 
   TMonitor.Enter(GLoggerLock);
   try
-    // �ͷžɵ���ʱ Logger������У��������ͷ��� Manager ������ʵ��
+    // Release the previous fallback Logger (built by us); the
+    // Manager-installed one is owned by the caller (Manager frees it).
     if Assigned(GLogger) and (GLogger <> ALogger) and (not GLoggerInitializedByManager) then
       FreeAndNil(GLogger);
 
     GLogger := ALogger;
-    // �������ⲿ��ʽ����ʵ��ʱ�ű��Ϊ Manager ��ʼ��
+    // Only mark as Manager-installed if a non-nil logger is supplied.
     GLoggerInitializedByManager := Assigned(ALogger);
   finally
     TMonitor.Exit(GLoggerLock);
@@ -637,6 +637,8 @@ var
   Candidate: string;
   idx: Integer;
   Size: Int64;
+const
+  MAX_ROTATED_INDEX = 999; // safety bound to prevent unbounded iteration
 begin
   // If base file fits, use it
   if TFile.Exists(BaseFile) then
@@ -647,10 +649,10 @@ begin
   end
   else
     Exit(BaseFile); // base doesn't exist yet
-  
+
   // Try existing rotated files to append if space remains
   idx := 1;
-  while True do
+  while idx <= MAX_ROTATED_INDEX do
   begin
     Candidate := ChangeFileExt(BaseFile, Format('.%d%s', [idx, ExtractFileExt(BaseFile)]));
     if not TFile.Exists(Candidate) then
@@ -660,6 +662,8 @@ begin
       Exit(Candidate);
     Inc(idx);
   end;
+  // Safety fallback: all slots exhausted, return base file so upstream rotation/overwrite can act
+  Result := BaseFile;
 end;
 
 procedure TDeepBaseLogger.Log(const Msg: string; Level: TLogLevel; const Source: string);
@@ -716,7 +720,10 @@ begin
   Entry.Source := 'Exception';
   Entry.Timestamp := Now;
   Entry.ThreadId := TThread.CurrentThread.ThreadID;
-  Entry.StackTrace := E.StackTrace; // ��ȡ��ջ��������ã�
+    // BUG EXP-P1-012 fix: E.StackTrace was added in Delphi 12 Athens
+  // (CompilerVersion 36.0). On earlier compilers, leave StackTrace empty.
+  Entry.StackTrace :=
+    {$IF CompilerVersion >= 36.0} E.StackTrace {$ELSE} '' {$ENDIF};
   Entry.Extra := '';
   
   List := FLogQueue.LockList;
@@ -978,14 +985,25 @@ initialization
   GLoggerLock := TObject.Create;
 
 finalization
-  // ���ͷ��ڲ���������ʱ Logger��Manager ע���ʵ���� Manager �Լ��ͷ�
-  if Assigned(GLogger) then
+  // BUG EXP-P1-011 fix: set the finalized flag FIRST so any in-flight
+  // Logger() / SetGlobalLogger() call after this point is a no-op.
+  GLoggerFinalized := True;
+  // If GLoggerLock was never created (initialization skipped) nothing to do.
+  if GLoggerLock <> nil then
   begin
-    if not GLoggerInitializedByManager then
-      FreeAndNil(GLogger)
-    else
-      GLogger := nil;
-  end;
-  FreeAndNil(GLoggerLock);
-
+    TMonitor.Enter(GLoggerLock);
+    try
+      // Only free the fallback (self-built) Logger; the Manager-installed
+      // one is owned externally - do not free it here.
+      if Assigned(GLogger) and (not GLoggerInitializedByManager) then
+        FreeAndNil(GLogger)
+      else
+        GLogger := nil;
+    finally
+      TMonitor.Exit(GLoggerLock);
+      FreeAndNil(GLoggerLock);
+    end;
+  end
+  else
+    GLogger := nil;
 end.

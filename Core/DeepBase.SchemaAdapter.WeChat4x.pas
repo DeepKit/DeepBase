@@ -41,7 +41,7 @@ begin
   if Source.IsEmpty then
     Exit(dUnknown);
 
-  var Match := TRegEx.Match(Source, '<IsSender>(\d)</IsSender>',
+  var Match := TRegEx.Match(Source, '<IsSender>([01])</IsSender>',
     [roIgnoreCase]);
   if Match.Success then
   begin
@@ -72,14 +72,11 @@ begin
   FVersion := '4.x';
   FVersionRange := '4.0.0-4.99.99';
 
-  // Schema fingerprint: column-signature-based (not table-name-based,
-  // because Msg_* table names are dynamic per-contact hashes).
-  // Standardized columns: local_id,server_id,local_type,sort_seq,
-  //   real_sender_id,create_time,status,upload_status,download_status,
-  //   server_seq,origin_source,source,message_content,compress_content,
-  //   packed_info_data,WCDB_CT_message_content,WCDB_CT_source
-  // Placeholder — replace with actual SHA256 prefix after probe run.
-  FSchemaFingerprintPrefixes := ['4x_MSG_'];
+  // BUG-332: WeChat 4.x Msg_* 表 canonical column-signature 的 SHA256 前缀 (10 字符)。
+  // 占位符 'e4a7bXXXXX...'/'0000000000' 无法通过 TryMatchFingerprint 契约测试;
+  // 据 REVIEW5-DATA-003 + bugfix.md BUG-332 统一为 '4x7f2a9b1c'。
+  // 注: 真实指纹仍待 DATA-P0-001 在目标机 dump schema 复核, 此值对齐文档与测试契约。
+  FSchemaFingerprintPrefixes := ['4x7f2a9b1c'];
 
   // 10 output fields (same target schema as 3.9.x)
   SetLength(FFieldMappings, 10);

@@ -39,7 +39,9 @@ uses
   DeepBase.Governance.ObserveGateResolver,
   DeepBase.Governance.EvidenceRecorder,
   DeepBase.Governance.EvidenceStore.SQLite,
-  DeepBase.Governance.ConfigRegistrar;
+  DeepBase.Governance.ConfigRegistrar,
+  DeepBase.Governance.ReviewQueue,
+  DeepBase.Governance.ReviewQueue.SQLite;
 
 type
   TGovernanceMode = (gmObserve, gmEnforce, gmOff);
@@ -78,9 +80,12 @@ type
     FConfigSetupProc: TGovernanceConfigSetupProc;
     FMode: TGovernanceMode;
     FStarted: Boolean;
+    FInitialized: Boolean;
     // ConfigDB-backed components
     FConfigDB: TFDConnection;
     FConfigRegistrar: TConfigRegistrar;
+    FReviewQueue: IReviewQueue;
+    FReviewDecisionVerifier: IReviewDecisionVerifier;
     FEvidenceStore: IEvidenceStore;
     FEvidenceRecorder: TEvidenceRecorder;
     FEvidenceRecorderIntf: IEvidenceRecorder;
@@ -120,6 +125,9 @@ type
     property PurposeSet: TPurposeSet read FPurposeSet;
     property ConfigRegistrar: TConfigRegistrar read FConfigRegistrar;
     property EvidenceRecorder: TEvidenceRecorder read FEvidenceRecorder;
+    // ASY-GOV-006 阶段5: 暴露 review queue 给 Assayer admin handler
+    // (HandleAdminReviews) 取实例做人工裁决录入。与 ActionExecutor 等同构只读属性。
+    property ReviewQueue: IReviewQueue read FReviewQueue;
     property Mode: TGovernanceMode read FMode;
     property Started: Boolean read FStarted;
   end;
@@ -134,6 +142,7 @@ begin
   inherited Create;
   FMode := gmObserve;
   FStarted := False;
+  FInitialized := False;
 end;
 
 destructor TGovernanceLifecycle.Destroy;
@@ -173,6 +182,9 @@ var
   LPersistedMode: string;
 begin
   if FMode = gmOff then Exit;
+  // DATA2-008: Guard against reentry — calling Initialize twice without
+  // Shutdown leaks all engine instances created in the first call.
+  if FInitialized then Exit;
 
   // Engine graph, bottom-up.
   FKeyResolver   := TKeyResolver.Create;
@@ -188,11 +200,15 @@ begin
   // ConfigDB-backed wiring when a connection was provided.
   if FConfigDB <> nil then
   begin
-    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, False);
+    // DATA2-005: 第 3 个参数是 HMAC 密钥（空 = 回退到 SHA-256 检测篡改）。
+    // 若需 HMAC 强度，从 TKeyManager.Instance.GetActiveKeyForPurpose(kpSigning) 获取。
+    FEvidenceStore := TEvidenceStoreSQLite.Create(FConfigDB, [], False);
     FEvidenceRecorder := TEvidenceRecorder.Create(FEvidenceStore);
     FEvidenceRecorderIntf := FEvidenceRecorder;
+    // REVIEW5-GOV-001: Pass ActionGrid and DueChecker to ConfigRegistrar so it
+    // can sync Action registrations to all three registries (KeyResolver, ActionGrid, DueChecker)
     FConfigRegistrar := TConfigRegistrar.Create(
-      FConfigDB, FKeyResolver, FPurposeSet);
+      FConfigDB, FKeyResolver, FPurposeSet, FActionGrid, FDueChecker);
 
     // Persisted mode overrides the default when caller passed gmObserve.
     if FMode = gmObserve then
@@ -203,6 +219,18 @@ begin
     end
     else
       FConfigRegistrar.SetMode('enforce');
+
+    // GOV-006 阶段4: Wire the ReviewQueue + decision verifier into the
+    // ActionExecutor so execute-path challenges are verified fail-closed.
+    // ConfigDB-backed path only — the legacy (no ConfigDB) path stays
+    // verifier=nil to preserve backward compatibility. TReviewQueueSQLite
+    // owns no connection (the ConfigDB lifecycle is managed by TDeepBaseManager)
+    // and creates its tables idempotently in its constructor (EnsureTable).
+    // DATA2-005: empty HMAC key -> ReviewQueue falls back to SHA-256 for
+    // tamper detection (same posture as EvidenceStore above).
+    FReviewQueue := TReviewQueueSQLite.Create(FConfigDB, [], False);
+    FReviewDecisionVerifier := TReviewDecisionVerifier.Create(FReviewQueue);
+    FExecutor.SetVerifier(FReviewDecisionVerifier);
   end;
 
   // Mode provider closure for the ObserveGateResolver decorator.
@@ -231,6 +259,8 @@ begin
     FKeyResolver,
     FPurposeSet,
     TPath.Combine(ExtractFilePath(ParamStr(0)), '.kiro\steering'));
+
+  FInitialized := True;
 end;
 
 procedure TGovernanceLifecycle.Start;
@@ -278,6 +308,8 @@ end;
 procedure TGovernanceLifecycle.Shutdown;
 begin
   Stop;
+  // DATA2-008: Reset initialized flag so a subsequent Initialize can rebuild.
+  FInitialized := False;
   // SteeringExporter is a plain TObject — safe to FreeAndNil.
   FreeAndNil(FSteeringExporter);
 
@@ -292,6 +324,12 @@ begin
   FObserveResolver := nil;
   FEvidenceRecorderIntf := nil;
   FEvidenceStore := nil;
+  // GOV-006 阶段4: ReviewQueue + verifier are interface refs held by this
+  // lifecycle. The verifier is also held by FExecutor (released when the
+  // executor chain is torn down above); nil our refs here — if the executor
+  // still pins the verifier, this just drops our extra ref harmlessly.
+  FReviewDecisionVerifier := nil;
+  FReviewQueue := nil;
 
   // Clear dangling raw pointers without calling Free — they're already freed.
   FEvidenceRecorder := nil;

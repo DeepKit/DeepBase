@@ -160,8 +160,18 @@ type
     FTemperature: Double;
     FCancelled: Boolean;
     FLock: TCriticalSection;
+    FCurrentResponse: IHTTPResponse;  // BIZ2-004: held so Cancel can abort the HTTP read
     
     procedure SetupHeaders;
+    // BUG EXP-P1-003 FIX: the three helpers below are declared as `class`
+    // methods so that async closures can invoke them without capturing Self.
+    // They depend only on their parameters, not on instance fields.
+    class function BuildRequestBodyStatic(const AMessages: TChatMessages;
+      AStream: Boolean; const AModel: string; AMaxTokens: Integer;
+      ATemperature: Double): string;
+    class procedure HandleHttpErrorStatic(StatusCode: Integer;
+      const ResponseBody: string);
+    class function ParseResponseStatic(const AJson: string): TChatResponse;
     function BuildRequestBody(const AMessages: TChatMessages; AStream: Boolean): string;
     procedure HandleHttpError(StatusCode: Integer; const ResponseBody: string);
     function ParseResponse(const AJson: string): TChatResponse;
@@ -227,7 +237,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.StrUtils;
+  System.DateUtils, System.StrUtils, System.Math;
 
 const
   DEFAULT_TIMEOUT = 60000;  // 60 seconds
@@ -435,6 +445,7 @@ end;
 
 destructor TBillingClient.Destroy;
 begin
+  FCurrentResponse := nil;  // BIZ2-004: release before freeing HTTP client
   FreeAndNil(FHttpClient);
   FreeAndNil(FLock);
   inherited;
@@ -451,7 +462,14 @@ begin
   FHttpClient.CustomHeaders['X-Tenant-Id'] := FTenantId;
 end;
 
-function TBillingClient.BuildRequestBody(const AMessages: TChatMessages; AStream: Boolean): string;
+// ----------------------------------------------------------------------------
+// BUG EXP-P1-003 FIX: class (static) variants that do not touch Self. Used
+// by ChatAsync closures so that they can run safely even if the owning
+// TBillingClient has been freed.
+// ----------------------------------------------------------------------------
+class function TBillingClient.BuildRequestBodyStatic(const AMessages: TChatMessages;
+  AStream: Boolean; const AModel: string; AMaxTokens: Integer;
+  ATemperature: Double): string;
 var
   JsonObj, MsgObj: TJSONObject;
   MsgArray: TJSONArray;
@@ -459,11 +477,11 @@ var
 begin
   JsonObj := TJSONObject.Create;
   try
-    JsonObj.AddPair('model', FModel);
-    JsonObj.AddPair('max_tokens', TJSONNumber.Create(FMaxTokens));
-    JsonObj.AddPair('temperature', TJSONNumber.Create(FTemperature));
+    JsonObj.AddPair('model', AModel);
+    JsonObj.AddPair('max_tokens', TJSONNumber.Create(AMaxTokens));
+    JsonObj.AddPair('temperature', TJSONNumber.Create(ATemperature));
     JsonObj.AddPair('stream', TJSONBool.Create(AStream));
-    
+
     MsgArray := TJSONArray.Create;
     for Msg in AMessages do
     begin
@@ -473,22 +491,22 @@ begin
       MsgArray.Add(MsgObj);
     end;
     JsonObj.AddPair('messages', MsgArray);
-    
+
     Result := JsonObj.ToJSON;
   finally
     JsonObj.Free;
   end;
 end;
 
-procedure TBillingClient.HandleHttpError(StatusCode: Integer; const ResponseBody: string);
+class procedure TBillingClient.HandleHttpErrorStatic(StatusCode: Integer;
+  const ResponseBody: string);
 var
   JsonObj, ErrorObj: TJSONObject;
   ErrorMsg, ErrorCode: string;
 begin
   ErrorMsg := 'HTTP Error ' + IntToStr(StatusCode);
   ErrorCode := '';
-  
-  // Try to parse error response
+
   try
     JsonObj := TJSONObject.ParseJSONValue(ResponseBody) as TJSONObject;
     if Assigned(JsonObj) then
@@ -504,61 +522,74 @@ begin
   except
     // Ignore parse errors
   end;
-  
+
   case StatusCode of
     401:
-      raise EBillingAuthError.Create('��֤ʧ��: ' + ErrorMsg, StatusCode, ErrorCode);
+      raise EBillingAuthError.Create('Auth failed: ' + ErrorMsg, StatusCode, ErrorCode);
     402:
-      raise EBillingBalanceError.Create('����: ' + ErrorMsg, StatusCode, ErrorCode);
+      raise EBillingBalanceError.Create('Insufficient balance: ' + ErrorMsg, StatusCode, ErrorCode);
     429:
-      raise EBillingRateLimitError.Create('�������Ƶ��: ' + ErrorMsg, StatusCode, ErrorCode);
+      raise EBillingRateLimitError.Create('Rate limit: ' + ErrorMsg, StatusCode, ErrorCode);
     500..599:
-      raise EBillingServerError.Create('����������: ' + ErrorMsg, StatusCode, ErrorCode);
+      raise EBillingServerError.Create('Server error: ' + ErrorMsg, StatusCode, ErrorCode);
   else
     raise EBillingError.Create(ErrorMsg, StatusCode, ErrorCode);
   end;
 end;
 
-function TBillingClient.ParseResponse(const AJson: string): TChatResponse;
+class function TBillingClient.ParseResponseStatic(const AJson: string): TChatResponse;
 var
   JsonObj, ChoiceObj, MsgObj, UsageObj: TJSONObject;
   ChoicesArray: TJSONArray;
 begin
   Result.Init;
-  
+
   JsonObj := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   if not Assigned(JsonObj) then
   begin
     Result.ErrorMessage := 'Invalid JSON response';
     Exit;
   end;
-  
+
   try
-    // Parse model
     Result.Model := JsonObj.GetValue<string>('model', '');
-    
-    // Parse choices
+
     if JsonObj.TryGetValue<TJSONArray>('choices', ChoicesArray) and (ChoicesArray.Count > 0) then
     begin
       ChoiceObj := ChoicesArray.Items[0] as TJSONObject;
       Result.FinishReason := ChoiceObj.GetValue<string>('finish_reason', '');
-      
+
       if ChoiceObj.TryGetValue<TJSONObject>('message', MsgObj) then
         Result.Content := MsgObj.GetValue<string>('content', '');
     end;
-    
-    // Parse usage
+
     if JsonObj.TryGetValue<TJSONObject>('usage', UsageObj) then
     begin
       Result.Usage.PromptTokens := UsageObj.GetValue<Integer>('prompt_tokens', 0);
       Result.Usage.CompletionTokens := UsageObj.GetValue<Integer>('completion_tokens', 0);
       Result.Usage.TotalTokens := UsageObj.GetValue<Integer>('total_tokens', 0);
     end;
-    
+
     Result.Success := True;
   finally
     JsonObj.Free;
   end;
+end;
+
+// Original instance-method variants delegate to the static ones above.
+function TBillingClient.BuildRequestBody(const AMessages: TChatMessages; AStream: Boolean): string;
+begin
+  Result := BuildRequestBodyStatic(AMessages, AStream, FModel, FMaxTokens, FTemperature);
+end;
+
+procedure TBillingClient.HandleHttpError(StatusCode: Integer; const ResponseBody: string);
+begin
+  HandleHttpErrorStatic(StatusCode, ResponseBody);
+end;
+
+function TBillingClient.ParseResponse(const AJson: string): TChatResponse;
+begin
+  Result := ParseResponseStatic(AJson);
 end;
 
 function TBillingClient.ParseStreamChunk(const ALine: string; out AContent: string; 
@@ -679,16 +710,63 @@ begin
   end;
 end;
 
-function TBillingClient.DoStreamRequest(const AMessages: TChatMessages; 
+function TBillingClient.DoStreamRequest(const AMessages: TChatMessages;
   AOnChunk: TStreamChunkCallback): Boolean;
+const
+  READ_BUF_SIZE = 4096;
 var
   RequestBody: string;
   RequestStream: TStringStream;
   Response: IHTTPResponse;
-  ResponseStr, Line, Content: string;
-  Lines: TArray<string>;
-  I: Integer;
-  Done: Boolean;
+  ContentStream: TStream;
+  Buffer: TBytes;
+  BytesRead: Integer;
+  SSEBuffer: string;
+  Url: string;
+
+  procedure ProcessSSEBuffer;
+  var
+    LEPos: Integer;
+    LLine: string;
+    LContent: string;
+    LDone: Boolean;
+  begin
+    // Extract complete SSE lines (terminated by #10) from SSEBuffer and
+    // dispatch each to ParseStreamChunk. Any trailing incomplete line is
+    // kept in SSEBuffer for the next chunk.
+    while True do
+    begin
+      LEPos := Pos(#10, SSEBuffer);
+      if LEPos = 0 then
+        Break;
+      LLine := Copy(SSEBuffer, 1, LEPos - 1);
+      Delete(SSEBuffer, 1, LEPos);
+
+      if ParseStreamChunk(LLine, LContent, LDone) then
+      begin
+        if LDone then
+        begin
+          if Assigned(AOnChunk) then
+            AOnChunk('', True);
+          Result := True;
+          Exit;
+        end
+        else if LContent <> '' then
+        begin
+          if Assigned(AOnChunk) then
+          begin
+            if not AOnChunk(LContent, False) then
+            begin
+              Cancel;
+              Result := False;
+              Exit;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
 begin
   Result := False;
   ResetCancel;
@@ -698,48 +776,62 @@ begin
   try
     SetupHeaders;
     FHttpClient.CustomHeaders['Accept'] := 'text/event-stream';
-    
-    // ע��: ��� BaseURL �Ѱ��� /v1����ֱ���� /chat/completions
+
+    // Build URL
     if FBaseURL.EndsWith('/v1') or FBaseURL.EndsWith('/v1/') then
-      Response := FHttpClient.Post(FBaseURL.TrimRight(['/']) + '/chat/completions', RequestStream)
+      Url := FBaseURL.TrimRight(['/']) + '/chat/completions'
     else
-      Response := FHttpClient.Post(FBaseURL + '/v1/chat/completions', RequestStream);
-    
-    if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-      HandleHttpError(Response.StatusCode, Response.ContentAsString(TEncoding.UTF8));
-    
-    ResponseStr := Response.ContentAsString(TEncoding.UTF8);
-    Lines := ResponseStr.Split([#10]);
-    
-    for I := 0 to High(Lines) do
-    begin
-      if IsCancelled then
+      Url := FBaseURL + '/v1/chat/completions';
+
+    Response := FHttpClient.Post(Url, RequestStream);
+
+    // BIZ2-004 FIX: publish the response handle so Cancel can abort the
+    // HTTP-level read from another thread via FHttpClient.Cancel.
+    FCurrentResponse := Response;
+    try
+      if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
+        HandleHttpError(Response.StatusCode, Response.ContentAsString(TEncoding.UTF8));
+
+      // BIZ2-003 FIX: stream the response incrementally instead of loading
+      // the entire body into a string. Read fixed-size chunks from the
+      // underlying content stream, split out complete SSE lines, and yield
+      // each event to the caller as it arrives. A small SSEBuffer carries
+      // any partial line across chunk boundaries.
+      ContentStream := Response.ContentStream;
+      if ContentStream = nil then
         Exit(False);
-        
-      Line := Lines[I];
-      if ParseStreamChunk(Line, Content, Done) then
+
+      SetLength(Buffer, READ_BUF_SIZE);
+      SSEBuffer := '';
+
+      while not IsCancelled do
       begin
-        if Done then
-        begin
-          if Assigned(AOnChunk) then
-            AOnChunk('', True);
-          Result := True;
+        BytesRead := ContentStream.Read(Buffer, READ_BUF_SIZE);
+        if BytesRead <= 0 then
           Break;
-        end
-        else if Content <> '' then
-        begin
-          if Assigned(AOnChunk) then
-          begin
-            if not AOnChunk(Content, False) then
-            begin
-              Cancel;
-              Exit(False);
-            end;
-          end;
-        end;
+
+        // Properly decode UTF-8 bytes into a Delphi string before appending
+        // to SSEBuffer — SSE payloads may contain non-ASCII content.
+        SSEBuffer := SSEBuffer + TEncoding.UTF8.GetString(Buffer, 0, BytesRead);
+
+        // Process any complete SSE lines
+        ProcessSSEBuffer;
+        if Result then  // [DONE] received
+          Exit;
       end;
+
+      // After the stream ends, flush any remaining data in the buffer
+      if (not IsCancelled) and (SSEBuffer <> '') then
+      begin
+        ProcessSSEBuffer;
+      end;
+    finally
+      FCurrentResponse := nil;
     end;
   finally
+    // BIZ-R3-013: Reset Accept header to prevent leaking 'text/event-stream'
+    // to subsequent non-streaming requests
+    FHttpClient.CustomHeaders['Accept'] := 'application/json';
     RequestStream.Free;
   end;
 end;
@@ -804,21 +896,110 @@ function TBillingClient.ChatAsync(const AMessages: TChatMessages;
 var
   MsgCopy: TChatMessages;
   Callback: TAsyncCompleteCallback;
-  Client: TBillingClient;
+  // BUG EXP-P1-003 FIX: snapshot everything the closure needs by value so it
+  // does not capture `Self`. If the owning TBillingClient is freed while the
+  // task is still running, the closure must remain safe to execute.
+  SnapBaseURL: string;
+  SnapApiKey: string;
+  SnapTenantId: string;
+  SnapTimeout: Integer;
+  SnapRequest: string;
+  SnapTransport: TLLMHttpPostProc;
 begin
-  // ���Ʋ����Ա���հ���������
   MsgCopy := Copy(AMessages);
   Callback := AOnComplete;
-  Client := Self;
-  
+  SnapBaseURL := FBaseURL;
+  SnapApiKey  := FApiKey;
+  SnapTenantId:= FTenantId;
+  SnapTimeout := FTimeout;
+  SnapRequest := BuildRequestBodyStatic(MsgCopy, False, FModel, FMaxTokens, FTemperature);
+  SnapTransport := FHttpTransport;
+
   Result := TTask.Run(TProc(
     procedure
     var
       Response: TChatResponse;
       RespCopy: TChatResponse;
+      Url, RespStr: string;
+      LHeaders: TArray<TPair<string, string>>;
+      LSuccess: Boolean;
+      ReqStream: TStringStream;
+      LHttp: THTTPClient;
+      HttpResponse: IHTTPResponse;
+      StartTime: TDateTime;
     begin
+      Response.Init;
+      StartTime := Now;
+
+      // Build URL
+      if SnapBaseURL.EndsWith('/v1') or SnapBaseURL.EndsWith('/v1/') then
+        Url := SnapBaseURL.TrimRight(['/']) + '/chat/completions'
+      else
+        Url := SnapBaseURL + '/v1/chat/completions';
+
+      LHeaders := [
+        TPair<string, string>.Create('Content-Type', 'application/json'),
+        TPair<string, string>.Create('Authorization', 'Bearer ' + SnapApiKey),
+        TPair<string, string>.Create('X-Tenant-Id', SnapTenantId)
+      ];
+
       try
-        Response := Client.DoRequest(MsgCopy);
+        if Assigned(SnapTransport) then
+        begin
+          try
+            LSuccess := SnapTransport(Url, SnapRequest, LHeaders, RespStr, SnapTimeout);
+            Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+            if LSuccess then
+              Response := ParseResponseStatic(RespStr)
+            else
+              HandleHttpErrorStatic(500, RespStr);
+            Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+          except
+            on E: Exception do
+            begin
+              Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+              Response.ErrorMessage := E.Message;
+              if E is EBillingError then
+                Response.ErrorCode := EBillingError(E).ErrorCode;
+            end;
+          end;
+        end
+        else
+        begin
+          LHttp := THTTPClient.Create;
+          try
+            LHttp.ContentType := 'application/json';
+            LHttp.AcceptCharSet := 'utf-8';
+            LHttp.ConnectionTimeout := SnapTimeout;
+            LHttp.ResponseTimeout := SnapTimeout;
+            LHttp.CustomHeaders['Authorization'] := 'Bearer ' + SnapApiKey;
+            LHttp.CustomHeaders['X-Tenant-Id'] := SnapTenantId;
+            ReqStream := TStringStream.Create(SnapRequest, TEncoding.UTF8);
+            try
+              try
+                HttpResponse := LHttp.Post(Url, ReqStream);
+                Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+                if (HttpResponse.StatusCode >= 200) and (HttpResponse.StatusCode < 300) then
+                  Response := ParseResponseStatic(HttpResponse.ContentAsString(TEncoding.UTF8))
+                else
+                  HandleHttpErrorStatic(HttpResponse.StatusCode, HttpResponse.ContentAsString(TEncoding.UTF8));
+                Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+              except
+                on E: Exception do
+                begin
+                  Response.DurationMs := MilliSecondsBetween(Now, StartTime);
+                  Response.ErrorMessage := E.Message;
+                  if E is EBillingError then
+                    Response.ErrorCode := EBillingError(E).ErrorCode;
+                end;
+              end;
+            finally
+              ReqStream.Free;
+            end;
+          finally
+            LHttp.Free;
+          end;
+        end;
       except
         on E: Exception do
         begin
@@ -828,7 +1009,7 @@ begin
             Response.ErrorCode := EBillingError(E).ErrorCode;
         end;
       end;
-      
+
       if Assigned(Callback) then
       begin
         RespCopy := Response;
@@ -863,8 +1044,10 @@ begin
         LastError := E.Message;
         if I < Retries then
         begin
-          // Exponential backoff: 1s, 2s, 4s...
-          DelayMs := 1000 * (1 shl (I - 1));
+          // BIZ-R3-012: Exponential backoff with jitter and overflow protection.
+          // Cap shift to 20 to prevent Integer overflow (1 shl 20 = 1M ms = ~17 min max).
+          // Add 0-199ms random jitter to prevent thundering herd when multiple clients retry.
+          DelayMs := 1000 * (1 shl Min(I - 1, 20)) + Random(200);
           Sleep(DelayMs);
         end;
       end;
@@ -872,7 +1055,8 @@ begin
       begin
         LastError := E.Message;
         if I < Retries then
-          Sleep(1000 * I);
+          // BIZ-R3-012: Add jitter to prevent thundering herd
+          Sleep(1000 * I + Random(200));
       end;
       on E: EBillingAuthError do
         raise; // Don't retry auth errors
@@ -883,7 +1067,7 @@ begin
     end;
   end;
   
-  raise EBillingError.Create('���� ' + IntToStr(Retries) + ' �κ�ʧ��: ' + LastError);
+  raise EBillingError.Create('Failed after ' + IntToStr(Retries) + ' retries: ' + LastError);
 end;
 
 procedure TBillingClient.Cancel;
@@ -894,6 +1078,11 @@ begin
   finally
     FLock.Leave;
   end;
+  // BIZ2-004: transport-level abort. THTTPClient does not expose a public
+  // Cancel, so the SSE read loop (DoStreamRequest) cooperatively polls
+  // IsCancelled between chunks and exits promptly on the next iteration.
+  // If a server stops responding mid-chunk, ResponseTimeout (set on the
+  // client) bounds the blocking read.
 end;
 
 function TBillingClient.IsCancelled: Boolean;

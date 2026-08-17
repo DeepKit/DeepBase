@@ -368,6 +368,18 @@ begin
     if FRunning then Exit(True);
     if Length(FWords) = 0 then Exit(False);
 
+    // REVIEW5-FEAT-008: Clean up any stale handles from previous failed Start
+    if FStopEvent <> 0 then
+    begin
+      CloseHandle(FStopEvent);
+      FStopEvent := 0;
+    end;
+    if FThreadDoneEvent <> 0 then
+    begin
+      CloseHandle(FThreadDoneEvent);
+      FThreadDoneEvent := 0;
+    end;
+
     // Create SAPI objects
     HR := CoCreateSpSharedRecognizer(FRecognizer);
     if not Succeeded(HR) then Exit(False);
@@ -411,6 +423,7 @@ end;
 procedure TDeepBaseWakeWord.Stop;
 var
   LDoneEvent: THandle;
+  LStopEvent: THandle;
 begin
   FLock.Enter;
   try
@@ -420,8 +433,9 @@ begin
     if FStopEvent <> 0 then
       SetEvent(FStopEvent);
 
-    // Grab the thread-done event handle before we nil it
+    // Grab the handles before we nil them
     LDoneEvent := FThreadDoneEvent;
+    LStopEvent := FStopEvent;
     FThreadDoneEvent := 0;
     FStopEvent := 0;
 
@@ -435,8 +449,11 @@ begin
       FLock.Enter;
     end;
 
+    // REVIEW5-FEAT-008: Close both event handles to prevent handle leaks
     if LDoneEvent <> 0 then
       CloseHandle(LDoneEvent);
+    if LStopEvent <> 0 then
+      CloseHandle(LStopEvent);
 
     if Assigned(FGrammar) then
     begin

@@ -15,6 +15,7 @@ const
   SCommerceRouteOrders = '/commerce/orders';
   SCommerceRouteOrdersByOutTradeNo = '/commerce/orders/by-out-trade-no';
   SCommerceRouteOrdersRefund = '/commerce/orders/refund';
+  SCommerceRouteOrdersClose = '/commerce/orders/close';
   SCommerceRoutePayments = '/commerce/payments';
   SCommerceRoutePaymentsByOrder = '/commerce/payments/by-order';
   SCommerceRoutePaymentIntents = '/commerce/payments/intents';
@@ -84,6 +85,7 @@ type
     class function OrderById(const AOrderId: string): string; static;
     class function OrderByOutTradeNo(const AOutTradeNo: string): string; static;
     class function OrderRefund(const AOrderId: string): string; static;
+    class function OrderClose(const AOrderId: string): string; static;
     class function PaymentById(const APaymentId: string): string; static;
     class function PaymentByOrderId(const AOrderId: string): string; static;
     class function PaymentNotify(AProvider: TCommercePaymentProvider): string; static;
@@ -131,6 +133,13 @@ class function TCommerceBackendRoutes.OrderRefund(
 begin
   Result := SCommerceRouteOrders + '/' + CommerceUrlPart(AOrderId) +
     '/refund';
+end;
+
+class function TCommerceBackendRoutes.OrderClose(
+  const AOrderId: string): string;
+begin
+  Result := SCommerceRouteOrders + '/' + CommerceUrlPart(AOrderId) +
+    '/close';
 end;
 
 class function TCommerceBackendRoutes.PaymentById(

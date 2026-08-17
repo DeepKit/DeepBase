@@ -23,22 +23,15 @@ type
 
   TDeepBaseExceptionHandler = class
   private
-    class var FInstance: TDeepBaseExceptionHandler;
-    class var FConnectionStorageFactory: TFunc<TObject, IExceptionReportStorage>;
     class var FPlatformInstallProc: TExceptionInstallProc;
     class var FPlatformShowProc: TExceptionShowProc;
     class var FIsInitializedProc: TFunc<Boolean>;
     class var FGetLoggerProc: TFunc<TDeepBaseLogger>;
     class var FGetConfigDBProc: TFunc<TObject>;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): IExceptionReportStorage; static;
     class function BuildExceptionReportData(
       E: Exception): TExceptionReportData; static;
     class procedure LogExceptionToDB(E: Exception); static;
   public
-    class constructor Create;
-    class destructor Destroy;
-
     class procedure Install;
     class procedure HandleException(Sender: TObject; E: Exception); static;
     class procedure SetStorageFactory(
@@ -54,19 +47,10 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  DeepBase.StorageFactory;
 
 { TDeepBaseExceptionHandler }
-
-class constructor TDeepBaseExceptionHandler.Create;
-begin
-  FInstance := TDeepBaseExceptionHandler.Create;
-end;
-
-class destructor TDeepBaseExceptionHandler.Destroy;
-begin
-  FreeAndNil(FInstance);
-end;
 
 class procedure TDeepBaseExceptionHandler.Install;
 begin
@@ -77,7 +61,7 @@ end;
 class procedure TDeepBaseExceptionHandler.SetStorageFactory(
   const AFactory: TFunc<TObject, IExceptionReportStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
+  TConnectionStorageFactory<IExceptionReportStorage>.SetFactory(AFactory);
 end;
 
 class procedure TDeepBaseExceptionHandler.SetPlatformAdapter(
@@ -97,21 +81,13 @@ begin
   FGetConfigDBProc := AGetConfigDB;
 end;
 
-class function TDeepBaseExceptionHandler.CreateStorageFromConnection(
-  AConnection: TObject): IExceptionReportStorage;
-begin
-  Result := nil;
-  if Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-end;
-
 class function TDeepBaseExceptionHandler.BuildExceptionReportData(
   E: Exception): TExceptionReportData;
 begin
   Result.ReportTimeISO := DateToISO8601(Now);
   Result.ExceptionClass := E.ClassName;
   Result.MessageText := E.Message;
-  {$IF CompilerVersion >= 33.0}
+  {$IF CompilerVersion >= 36.0}  // E.StackTrace added in Delphi 12 Athens
   Result.StackTrace := E.StackTrace;
   {$ELSE}
   Result.StackTrace := '';
@@ -160,13 +136,10 @@ begin
     else
       ConnectionObject := nil;
 
-    if Assigned(FConnectionStorageFactory) then
-    begin
-      try
-        Storage := CreateStorageFromConnection(ConnectionObject);
-      except
-        Storage := nil;
-      end;
+    try
+      Storage := TConnectionStorageFactory<IExceptionReportStorage>.Create(ConnectionObject);
+    except
+      Storage := nil;
     end;
 
     if Assigned(Storage) then

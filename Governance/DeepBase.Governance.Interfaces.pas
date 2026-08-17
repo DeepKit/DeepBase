@@ -10,14 +10,15 @@ interface
 uses
   System.JSON,
   DeepBase.Governance.Types,
-  DeepBase.Governance.Model;
+  DeepBase.Governance.Model,
+  DeepBase.Governance.ReviewQueue;
 
 type
   /// Runtime 入口接口
   IOCGSRuntime = interface
     ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
     function EnterGate(const AGateKey: string; AContext: TJSONObject;
-      AMode: TRunMode): TActionResult;
+      AMode: TRunMode; const AConfirmation: string = ''): TActionResult;
     function PreviewGate(const AGateKey: string;
       AContext: TJSONObject): TGateResolution;
     function GetAvailableActions(AContext: TJSONObject): TArray<TActionInfo>;
@@ -59,8 +60,11 @@ type
   /// 行为执行器接口
   IActionExecutor = interface
     ['{E5F6A7B8-C9D0-1234-EFAB-345678901234}']
+    // ASY-GOV-006 阶段3：AConfirmation = 人工裁决凭证（review_id）。
+    // 空串表示该 action 无需裁决（向后兼容）；非空时由 verifier 校验批准。
     function Execute(const AActionKey: string; AContext: TJSONObject;
-      AMode: TRunMode): TActionResult;
+      AMode: TRunMode; const AConfirmation: string = ''): TActionResult;
+    procedure SetVerifier(const AVerifier: IReviewDecisionVerifier);
   end;
 
   /// 合当判定接口

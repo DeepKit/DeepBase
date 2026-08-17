@@ -111,7 +111,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          powershell -ExecutionPolicy Bypass -File .\Scripts\run_tests.ps1 -Type Unit -CI -Platform $env:TEST_PLATFORM
+          powershell -ExecutionPolicy Bypass -File .\Scripts\run_tests.ps1 -Type Unit -CI -IncludeStubApis -IncludeEncoding -Platform $env:TEST_PLATFORM
 
       - name: Upload unit results
         if: always()

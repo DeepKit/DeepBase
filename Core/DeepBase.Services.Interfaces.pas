@@ -33,7 +33,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.Hash;
 
 type
   // ============================================================================

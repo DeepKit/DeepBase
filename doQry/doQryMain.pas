@@ -123,7 +123,8 @@ begin
     if not tblQueries.Eof then
     begin
       proc_name := tblQueries.FieldByName('proc_name').AsString;
-      aQry.SQL.Text := 'select * from queries where proc_name=' + '''' +  proc_name + '''';
+      aQry.SQL.Text := 'select * from queries where proc_name = :p';
+      aQry.Parameters.ParamByName('p').Value := proc_name; // DATA-R3-003 BUG-433: parameterize proc_name
       aQry.Open;
       // ִ�� BuildSQL �����������������?MeoSQL �ı�����
       if cboxParams.Checked  then               p :=  edtParams.Text;
@@ -148,7 +149,7 @@ begin
   end;
 
   // ����ģ����������
-  tblQueries.Filter := 'proc_name LIKE ''%' + s + '%'''; // �滻 FieldName Ϊʵ�ʵ��ֶ���
+  tblQueries.Filter := 'proc_name LIKE ' + QuotedStr('%' + s + '%'); // DATA-R3-002 BUG-432: QuotedStr escapes inner quotes to prevent filter injection
   tblQueries.Filtered := True; // ���ù���
 end;
 
@@ -302,7 +303,8 @@ begin
   Result := TStringList.Create;
   try
     aQry.Close;
-    aQry.SQL.Text := Format('SELECT column_name FROM information_schema.columns WHERE table_name = ''%s'';', [TableName]);
+    aQry.SQL.Text := 'SELECT column_name FROM information_schema.columns WHERE table_name = :t';
+    aQry.Parameters.ParamByName('t').Value := TableName; // DATA-R3-003 BUG-433: parameterize table_name to prevent injection
     aQry.Open;
     while not aQry.Eof do
     begin

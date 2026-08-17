@@ -27,7 +27,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
-  System.Math;
+  System.Math,
+  System.SyncObjs;
 
 type
   /// <summary>
@@ -75,6 +76,7 @@ type
   /// </summary>
   TPluralRules = class
   private
+    class var FLock: TCriticalSection;
     class var FRules: TDictionary<string, TLanguagePluralInfo>;
     class var FInitialized: Boolean;
     
@@ -156,6 +158,7 @@ end;
 
 class constructor TPluralRules.Create;
 begin
+  FLock := TCriticalSection.Create;
   FRules := TDictionary<string, TLanguagePluralInfo>.Create;
   FInitialized := False;
 end;
@@ -163,13 +166,20 @@ end;
 class destructor TPluralRules.Destroy;
 begin
   FreeAndNil(FRules);
+  FreeAndNil(FLock);
 end;
 
 class procedure TPluralRules.Initialize;
 begin
   if FInitialized then Exit;
-  FInitialized := True;
-  RegisterDefaultRules;
+  FLock.Enter;
+  try
+    if FInitialized then Exit;
+    FInitialized := True;
+    RegisterDefaultRules;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TPluralRules.ExtractPluralOperands(N: Double; 
@@ -220,7 +230,17 @@ begin
       else
         Result := pcOther;
     end);
-  
+
+  // BUG EXP-P1-009 FIX: register common English regional variants so that
+  // callers using the BCP 47 tag 'en-US' (or 'en-GB'/'en-AU'/'en-CA'/'en-IN')
+  // hit the rules table directly instead of relying on the slower strip-region
+  // fallback in GetCategory.
+  RegisterRule('en-US', [pcOne, pcOther], FRules['en'].RuleFunc);
+  RegisterRule('en-GB', [pcOne, pcOther], FRules['en'].RuleFunc);
+  RegisterRule('en-AU', [pcOne, pcOther], FRules['en'].RuleFunc);
+  RegisterRule('en-CA', [pcOne, pcOther], FRules['en'].RuleFunc);
+  RegisterRule('en-IN', [pcOne, pcOther], FRules['en'].RuleFunc);
+
   // Use same rule for related languages
   RegisterRule('de', [pcOne, pcOther], FRules['en'].RuleFunc);
   RegisterRule('nl', [pcOne, pcOther], FRules['en'].RuleFunc);
@@ -526,11 +546,16 @@ var
   Info: TLanguagePluralInfo;
 begin
   Initialize;
-  
+
   Info.LanguageCode := LangCode;
   Info.Categories := Categories;
   Info.RuleFunc := RuleFunc;
-  FRules.AddOrSetValue(LowerCase(LangCode), Info);
+  FLock.Enter;
+  try
+    FRules.AddOrSetValue(LowerCase(LangCode), Info);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TPluralRules.GetCategory(const LangCode: string; N: Double): TPluralCategory;
@@ -541,26 +566,31 @@ var
   Lang: string;
 begin
   Initialize;
-  
+
   Lang := LowerCase(LangCode);
-  
-  // Try exact match first
-  if not FRules.TryGetValue(Lang, Info) then
-  begin
-    // Try base language (e.g., 'en' for 'en-US')
-    if Pos('-', Lang) > 0 then
-      Lang := Copy(Lang, 1, Pos('-', Lang) - 1);
-    
+
+  FLock.Enter;
+  try
+    // Try exact match first
     if not FRules.TryGetValue(Lang, Info) then
     begin
-      // Default to English rules
-      if FRules.TryGetValue('en', Info) then
-        // Use English
-      else
-        Exit(pcOther);  // Fallback
+      // Try base language (e.g., 'en' for 'en-US')
+      if Pos('-', Lang) > 0 then
+        Lang := Copy(Lang, 1, Pos('-', Lang) - 1);
+
+      if not FRules.TryGetValue(Lang, Info) then
+      begin
+        // Default to English rules
+        if FRules.TryGetValue('en', Info) then
+          // Use English
+        else
+          Exit(pcOther);  // Fallback
+      end;
     end;
+  finally
+    FLock.Leave;
   end;
-  
+
   n_abs := ExtractPluralOperands(N, i, v, w, f, t);
   Result := Info.RuleFunc(n_abs, i, v, w, f, t);
 end;
@@ -576,17 +606,21 @@ var
   Lang: string;
 begin
   Initialize;
-  
+
   Lang := LowerCase(LangCode);
-  if not FRules.TryGetValue(Lang, Info) then
-  begin
-    if Pos('-', Lang) > 0 then
-      Lang := Copy(Lang, 1, Pos('-', Lang) - 1);
+  FLock.Enter;
+  try
     if not FRules.TryGetValue(Lang, Info) then
-      Exit([pcOther]);
+    begin
+      if Pos('-', Lang) > 0 then
+        Lang := Copy(Lang, 1, Pos('-', Lang) - 1);
+      if not FRules.TryGetValue(Lang, Info) then
+        Exit([pcOther]);
+    end;
+    Result := Info.Categories;
+  finally
+    FLock.Leave;
   end;
-  
-  Result := Info.Categories;
 end;
 
 class function TPluralRules.SelectForm(const LangCode: string; N: Double;

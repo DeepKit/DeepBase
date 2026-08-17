@@ -44,13 +44,35 @@ type
     procedure Test_Run_SQLite_TransactionControlFails;
 
     [Test]
+    procedure Test_Run_SQLite_BareEndTransactionControlFails;
+
+    [Test]
+    procedure Test_Run_SQLite_EndTransactionControlFails;
+
+    [Test]
+    procedure Test_Run_SQLite_FailedScriptLeavesDatabaseClean;
+
+    [Test]
     procedure Test_Run_SQLite_WriteLockHeldFailsBeforeApplying;
+
+    { REVIEW5-DATA-006 BUG-336: checksum must be computed from the same
+      content snapshot that is executed, closing the TOCTOU window where the
+      file could be swapped between checksum and ExecSQL. }
+    [Test]
+    procedure Test_CalculateChecksumFromContent_MatchesStoredAppliedChecksum;
+
+    { REVIEW5-DATA-006 BUG-336: For multi-statement scripts the stored checksum
+      must still equal the SHA256 of the single content snapshot that was split
+      and executed, proving the split path also uses one consistent snapshot. }
+    [Test]
+    procedure Test_MultiStatementScript_StoredChecksumMatchesContentSnapshot;
   end;
 
 implementation
 
 uses
   System.SysUtils,
+  System.Hash,
   System.IOUtils,
   FireDAC.Stan.Param,
   DeepBase.DB.Migrations,
@@ -247,6 +269,68 @@ begin
   Assert.IsFalse(TableExists('tx_test'));
 end;
 
+{ REVIEW5-DATA-005 BUG-334: bare END must be rejected as transaction control }
+procedure TTestDBMigrations.Test_Run_SQLite_BareEndTransactionControlFails;
+var
+  Result: TMigrationResult;
+begin
+  WriteMigration('001_bare_end.up.sqlite.sql',
+    'CREATE TABLE end_test (id INTEGER PRIMARY KEY);' + sLineBreak +
+    'END;');
+
+  Result := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+
+  Assert.IsFalse(Result.Success);
+  Assert.AreEqual('001_bare_end.up.sqlite.sql', Result.FailedScript);
+  Assert.Contains(Result.LastError,
+    'Migration scripts must not contain transaction control statements');
+  Assert.AreEqual(0,
+    ScalarInt('SELECT COUNT(*) FROM DeepBase_schema_migrations'));
+  { REVIEW5-DATA-005 rollback integrity: partial state must be cleaned up }
+  Assert.IsFalse(TableExists('end_test'));
+end;
+
+{ REVIEW5-DATA-005 BUG-334: explicit END TRANSACTION must also be rejected }
+procedure TTestDBMigrations.Test_Run_SQLite_EndTransactionControlFails;
+var
+  Result: TMigrationResult;
+begin
+  WriteMigration('001_end_tx.up.sqlite.sql',
+    'CREATE TABLE endtx_test (id INTEGER PRIMARY KEY);' + sLineBreak +
+    'END TRANSACTION;');
+
+  Result := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+
+  Assert.IsFalse(Result.Success);
+  Assert.AreEqual('001_end_tx.up.sqlite.sql', Result.FailedScript);
+  Assert.Contains(Result.LastError,
+    'Migration scripts must not contain transaction control statements');
+  Assert.AreEqual(0,
+    ScalarInt('SELECT COUNT(*) FROM DeepBase_schema_migrations'));
+  Assert.IsFalse(TableExists('endtx_test'));
+end;
+
+{ REVIEW5-DATA-005: verifies database cleanliness after failed migration }
+procedure TTestDBMigrations.Test_Run_SQLite_FailedScriptLeavesDatabaseClean;
+var
+  Result: TMigrationResult;
+begin
+  { Script creates a table, then contains an invalid statement to force failure }
+  WriteMigration('001_partial_fail.up.sqlite.sql',
+    'CREATE TABLE partial_test (id INTEGER PRIMARY KEY);' + sLineBreak +
+    'INSERT INTO nonexistent_table_xyz VALUES (1);');
+
+  Result := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+
+  Assert.IsFalse(Result.Success);
+  Assert.AreEqual('001_partial_fail.up.sqlite.sql', Result.FailedScript);
+  { Rollback integrity: migration must not be recorded }
+  Assert.AreEqual(0,
+    ScalarInt('SELECT COUNT(*) FROM DeepBase_schema_migrations'));
+  { Rollback integrity: partial DDL must be rolled back }
+  Assert.IsFalse(TableExists('partial_test'));
+end;
+
 procedure TTestDBMigrations.Test_Run_SQLite_WriteLockHeldFailsBeforeApplying;
 var
   SeedResult: TMigrationResult;
@@ -280,6 +364,91 @@ begin
   end;
 
   Assert.IsFalse(TableExists('locked_test'));
+end;
+
+{ REVIEW5-DATA-006 BUG-336: The checksum stored in DeepBase_schema_migrations
+  must equal the SHA256 of the executed script content. This proves the engine
+  computes the checksum from the same in-memory snapshot it executes, rather
+  than two independent file reads (the TOCTOU window). }
+procedure TTestDBMigrations.Test_CalculateChecksumFromContent_MatchesStoredAppliedChecksum;
+const
+  ScriptSQL = 'CREATE TABLE snapshot_test (id INTEGER PRIMARY KEY, name TEXT);';
+var
+  RunResult: TMigrationResult;
+  ScriptPath: string;
+  ExpectedChecksum: string;
+  StoredChecksum: string;
+  Query: TFDQuery;
+begin
+  ScriptPath := TPath.Combine(FMigrationsDir, '001_snapshot.up.sqlite.sql');
+  TFile.WriteAllText(ScriptPath, ScriptSQL, TEncoding.UTF8);
+
+  // Must mirror CalculateChecksumFromContent: SHA256 over the Delphi string
+  // (UTF-16 code units), not the on-disk UTF-8 bytes.
+  ExpectedChecksum := THashSHA2.GetHashString(ScriptSQL, THashSHA2.TSHA2Version.SHA256);
+
+  RunResult := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+  Assert.IsTrue(RunResult.Success, RunResult.LastError);
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    Query.SQL.Text := 'SELECT checksum FROM DeepBase_schema_migrations WHERE version = :v';
+    Query.ParamByName('v').AsString := '001_snapshot';
+    Query.Open;
+    Assert.IsFalse(Query.Eof, 'Migration row must be recorded');
+    StoredChecksum := Query.Fields[0].AsString;
+  finally
+    Query.Free;
+  end;
+
+  Assert.AreEqual(ExpectedChecksum, StoredChecksum,
+    'Stored checksum must equal SHA256 of the executed content snapshot');
+end;
+
+{ REVIEW5-DATA-006 BUG-336: For multi-statement scripts the stored checksum
+  must equal the SHA256 of the content snapshot that was split and executed.
+  This proves the split path (SplitSQLStatements over the single snapshot)
+  cannot diverge from the checksum even when the script contains triggers with
+  nested statement terminators. }
+procedure TTestDBMigrations.Test_MultiStatementScript_StoredChecksumMatchesContentSnapshot;
+const
+  ScriptSQL =
+    'CREATE TABLE multi_test (id INTEGER PRIMARY KEY, name TEXT);' + sLineBreak +
+    'CREATE TABLE multi_audit (id INTEGER);' + sLineBreak +
+    'CREATE TRIGGER trg_multi_ai AFTER INSERT ON multi_test' + sLineBreak +
+    'BEGIN' + sLineBreak +
+    '  INSERT INTO multi_audit (id) VALUES (new.id);' + sLineBreak +
+    'END;' + sLineBreak +
+    'INSERT INTO multi_test (id, name) VALUES (1, ''alpha'');';
+var
+  RunResult: TMigrationResult;
+  ExpectedChecksum: string;
+  StoredChecksum: string;
+  Query: TFDQuery;
+begin
+  WriteMigration('001_multi.up.sqlite.sql', ScriptSQL);
+  ExpectedChecksum := THashSHA2.GetHashString(ScriptSQL, THashSHA2.TSHA2Version.SHA256);
+
+  RunResult := TMigrationEngine.Run(FConnection, dbSQLite, FMigrationsDir);
+  Assert.IsTrue(RunResult.Success, RunResult.LastError);
+
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    Query.SQL.Text := 'SELECT checksum FROM DeepBase_schema_migrations WHERE version = :v';
+    Query.ParamByName('v').AsString := '001_multi';
+    Query.Open;
+    Assert.IsFalse(Query.Eof, 'Migration row must be recorded');
+    StoredChecksum := Query.Fields[0].AsString;
+  finally
+    Query.Free;
+  end;
+
+  Assert.AreEqual(ExpectedChecksum, StoredChecksum,
+    'Stored checksum must equal SHA256 of the executed content snapshot');
+  Assert.AreEqual(1, ScalarInt('SELECT COUNT(*) FROM multi_audit'),
+    'Trigger must have fired, proving the multi-statement snapshot executed');
 end;
 
 initialization

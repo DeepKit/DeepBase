@@ -136,23 +136,37 @@ begin
   RegisterRule('INV-7', function(AKR: TKeyResolver): TArray<TValidationIssue>
     begin Result := RuleINV7_InvalidKey; end);
 
-  // P1 骨架（后续 Phase 填充）
-  RegisterRule('INV-8', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV8_DuplicateKey; end);
-  RegisterRule('INV-9', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV9_CircularRoute; end);
-  RegisterRule('INV-10', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV10_UnreachableGate; end);
-  RegisterRule('INV-11', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV11_MissingFeedback; end);
-  RegisterRule('INV-12', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV12_L3NoSeal; end);
-  RegisterRule('INV-13', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV13_MissingProjection; end);
-  RegisterRule('INV-14', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV14_RiskMismatch; end);
-  RegisterRule('INV-15', function(AKR: TKeyResolver): TArray<TValidationIssue>
-    begin Result := RuleINV15_EmptyField; end);
+  // REVIEW5-GOV-004: P1 骨架规则暂时降级，不注册到规则引擎中。
+  // 这些规则当前返回空结果（Result := nil），会假装参与 release gate 判断。
+  // 待相应 Phase 实现后，取消注释以下行以重新注册：
+  //
+  // INV-8: 检查重复 Key（Phase P01 框架下 TObjectDictionary 自动防护）
+  // RegisterRule('INV-8', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV8_DuplicateKey; end);
+  //
+  // INV-9, INV-10: RouteImpact 分析（Phase P09）
+  // RegisterRule('INV-9', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV9_CircularRoute; end);
+  // RegisterRule('INV-10', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV10_UnreachableGate; end);
+  //
+  // INV-11, INV-13: UI 层反馈和投射检查（Phase P07）
+  // RegisterRule('INV-11', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV11_MissingFeedback; end);
+  // RegisterRule('INV-13', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV13_MissingProjection; end);
+  //
+  // INV-12: L3 高风险封存检查（Phase P10）
+  // RegisterRule('INV-12', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV12_L3NoSeal; end);
+  //
+  // INV-14: 风险等级匹配检查（Phase P03）
+  // RegisterRule('INV-14', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV14_RiskMismatch; end);
+  //
+  // INV-15: 治理配置空字段检查（Phase P06）
+  // RegisterRule('INV-15', function(AKR: TKeyResolver): TArray<TValidationIssue>
+  //   begin Result := RuleINV15_EmptyField; end);
 end;
 
 procedure TGateValidationEngine.RegisterRule(const ARuleId: string;
@@ -417,47 +431,61 @@ begin
 end;
 
 // ========== P1 骨架（后续 Phase 填充） ==========
+// DATA2-032: 以下 8 条规则为骨架实现，当前返回 nil（不报告任何问题），
+// 且未在 RegisterBuiltinRules 中注册，不会影响 CanRelease 判断。
+// 每个骨架都标注了对应 Phase，便于追踪；实现后取消 RegisterRule 注释即可。
+// 注意：若需要 fail-closed 行为（规则未实现时阻止封版），可在注册后改为
+// 返回包含 vsSevere 的 Issue 数组。
 
 function TGateValidationEngine.RuleINV8_DuplicateKey: TArray<TValidationIssue>;
 begin
-  // 注：当前 TKeyResolver 使用 TObjectDictionary，不允许重复 Key（自动覆盖）
-  // 所以此规则在 P01 框架下实际不会触发，保留供未来多命名空间检查
+  // TODO(DATA2-032): implement INV-8 — check duplicate keys across namespaces.
+  // 注：当前 TKeyResolver 使用 TObjectDictionary，不允许重复 Key（自动覆盖），
+  // 所以此规则在 P01 框架下实际不会触发，保留供未来多命名空间检查。
   Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV9_CircularRoute: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P09 实现（RouteImpact 分析）
+  // TODO(DATA2-032): implement INV-9 — cycle detection in route graph (Phase P09).
+  // Fail-closed when implemented: return vsSevere for any cycle found.
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV10_UnreachableGate: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P09 实现
+  // TODO(DATA2-032): implement INV-10 — detect gates with no incoming route (Phase P09).
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV11_MissingFeedback: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P07 UI 层实现
+  // TODO(DATA2-032): implement INV-11 — UI feedback for every action (Phase P07).
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV12_L3NoSeal: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P10 封存补救层实现
+  // TODO(DATA2-032): implement INV-12 — L3 high-risk actions must be sealed (Phase P10).
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV13_MissingProjection: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P07 UI 层实现
+  // TODO(DATA2-032): implement INV-13 — UI projection for every gate (Phase P07).
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV14_RiskMismatch: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P03 目的与主体层实现
+  // TODO(DATA2-032): implement INV-14 — risk level consistency check (Phase P03).
+  Result := nil;
 end;
 
 function TGateValidationEngine.RuleINV15_EmptyField: TArray<TValidationIssue>;
 begin
-  Result := nil;  // Phase P06 治理配置层实现
+  // TODO(DATA2-032): implement INV-15 — governance config empty field check (Phase P06).
+  Result := nil;
 end;
 
 // ========== 执行与统计 ==========

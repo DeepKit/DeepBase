@@ -62,7 +62,7 @@ type
 implementation
 
 uses
-  DeepBase.Crypto;
+  DeepBase.Crypto, DeepBase.Crypto.Encoding, DeepBase.Crypto.Hash, DeepBase.Crypto.Random;
 
 { TBug037_KeyDerivationTest }
 

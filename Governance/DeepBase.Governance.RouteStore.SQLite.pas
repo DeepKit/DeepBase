@@ -185,7 +185,12 @@ begin
     if ARule.ExpiredAt > 0 then
       LQuery.ParamByName('expired_at').AsString := DateToISO8601(ARule.ExpiredAt)
     else
+    begin
+      // expired_at is TEXT (ISO8601) / NULL. ParamByName.Clear alone leaves
+      // DataType unknown -> FireDAC SQLite -335 at Prepare. Fix the type first.
+      LQuery.ParamByName('expired_at').DataType := ftString;
       LQuery.ParamByName('expired_at').Clear;
+    end;
     LQuery.ParamByName('risk_level').AsString := RiskLevelToStr(ARule.RiskLevel);
     LQuery.ParamByName('enabled').AsInteger := Ord(ARule.Enabled);
     LQuery.ParamByName('created_by').AsString := ARule.CreatedBy;

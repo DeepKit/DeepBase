@@ -1,21 +1,80 @@
-unit DeepBase.LLM.Config;
+{ ============================================================================
+  DeepBase.LLM.Config - LLM Configuration Management
 
-/// <summary>
-/// DeepBase LLM Config - DeepBase.Config 集成 + API Key 安全存储
-/// </summary>
+  Contains configuration management for both Core (L2) and Proxy (L3)
+  architectures:
+    - L2/Core: Credential helpers, DB config loaders, API key persistence
+    - L3/Proxy: TLLMConfigStore with tier-based provider management
+  ============================================================================ }
+
+unit DeepBase.LLM.Config;
 
 interface
 
 uses
-  System.SysUtils, System.JSON, System.Generics.Collections,
+  System.SysUtils,
+  System.JSON,
+  System.Generics.Collections,
+  Data.DB,
   DeepBase.LLM.Types;
+
+// ============================================================================
+// L2/Core config helpers — credential management, DB helpers
+// ============================================================================
+
+const
+  LLM_CREDENTIAL_REF_PREFIX = 'credman:';
+  LLM_CREDENTIAL_TARGET_PREFIX = 'DeepBase_LLM_';
+  LLM_CREDENTIAL_TARGET_SUFFIX = '_ApiKey';
+
+function IsLLMCredentialRef(const Value: string): Boolean;
+function ExtractLLMCredentialTarget(const CredentialRef: string): string;
+function BuildLLMCredentialRef(const TargetName: string): string;
+function SanitizeCredentialTargetPart(const Value: string): string;
+function MakeLLMApiKeyCredentialTarget(const ConfigName: string): string;
+function ResolveLLMCredentialOrRaw(const StoredValue: string): string;
+procedure DeleteLLMCredentialRef(const StoredValue: string);
+
+function TryLoadLLMApiKeyByName(const Storage: ILLMStorage;
+  const ApiKeyName: string; out ApiKey: string): Boolean;
+function ResolveLLMApiKey(const Storage: ILLMStorage;
+  const ConfigName, StoredValue: string): string;
+function ReadStoredApiKeyRefFromConfig(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName: string): string;
+function PersistLLMApiKey(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName, ApiKey: string): string;
+
+// DB helper functions
+function LLMParam(const AName: string; const AValue: Variant): TLLMStorageParam;
+function DeepBaseTableExists(const Storage: ILLMStorage;
+  const TableName: string): Boolean;
+function DeepBaseTableHasColumn(const Storage: ILLMStorage;
+  const TableName, ColumnName: string): Boolean;
+function QueryFieldString(Query: TDataSet; const FieldName: string;
+  const DefaultValue: string = ''): string;
+function QueryFieldInteger(Query: TDataSet; const FieldName: string;
+  DefaultValue: Integer = 0): Integer;
+function QueryFieldBoolean(Query: TDataSet; const FieldName: string;
+  DefaultValue: Boolean = False): Boolean;
+function QueryFieldFloat(Query: TDataSet; const FieldName: string;
+  DefaultValue: Double = 0): Double;
+function QueryFieldDateTime(Query: TDataSet; const FieldName: string): TDateTime;
+function GetLLMConfigTableName(const Storage: ILLMStorage): string;
+function GetLLMCallsSelectSQL(const Storage: ILLMStorage;
+  const ConfigName: string): string;
+procedure LoadConfigFromQuery(Query: TDataSet; const Storage: ILLMStorage;
+  var Config: TLLMConfig);
+
+// ============================================================================
+// L3/Proxy config — TLLMConfigStore
+// ============================================================================
 
 type
   TLLMConfigStore = class
   private
     FProviders: TList<TProviderConfig>;
-    FTierModels: TDictionary<string, TArray<string>>; // tier string �� model IDs
-    FKeys: TDictionary<string, string>;               // provider name �� encrypted key
+    FTierModels: TDictionary<string, TArray<string>>; // tier string -> model IDs
+    FKeys: TDictionary<string, string>;               // provider name -> encrypted key
 
     function DecryptKey(const AEncrypted: string): string;
     function EncryptKey(const APlain: string): string;
@@ -49,10 +108,362 @@ type
 implementation
 
 uses
-  DeepBase.Config, DeepBase.Crypto
-  {$IFDEF MSWINDOWS}, DeepBase.Security.DPAPI{$ENDIF};
+  System.Variants,
+  System.StrUtils,
+  DeepBase.Config,
+  DeepBase.Crypto
+  {$IFDEF MSWINDOWS}
+  , DeepBase.Security.DPAPI
+  {$ENDIF};
 
-{ TLLMConfigStore }
+// ============================================================================
+// L2/Core config helpers — implementation
+// ============================================================================
+
+function LLMParam(const AName: string; const AValue: Variant): TLLMStorageParam;
+begin
+  Result := TLLMStorageParam.Create(AName, AValue);
+end;
+
+function DeepBaseTableExists(const Storage: ILLMStorage;
+  const TableName: string): Boolean;
+begin
+  Result := Assigned(Storage) and Storage.TableExists(TableName);
+end;
+
+function DeepBaseTableHasColumn(const Storage: ILLMStorage;
+  const TableName, ColumnName: string): Boolean;
+begin
+  Result := Assigned(Storage) and Storage.TableHasColumn(TableName, ColumnName);
+end;
+
+function QueryFieldString(Query: TDataSet; const FieldName: string;
+  const DefaultValue: string): string;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsString;
+end;
+
+function QueryFieldInteger(Query: TDataSet; const FieldName: string;
+  DefaultValue: Integer): Integer;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsInteger;
+end;
+
+function QueryFieldBoolean(Query: TDataSet; const FieldName: string;
+  DefaultValue: Boolean): Boolean;
+var
+  Field: TField;
+  Value: string;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if not Assigned(Field) or Field.IsNull then
+    Exit;
+
+  try
+    Result := Field.AsBoolean;
+    Exit;
+  except
+    // Some SQLite/FireDAC field mappings reject AsBoolean for INTEGER/TEXT.
+  end;
+
+  try
+    Result := Field.AsInteger <> 0;
+    Exit;
+  except
+    Value := Trim(Field.AsString);
+  end;
+
+  Result := SameText(Value, 'true') or SameText(Value, 'yes') or
+    SameText(Value, 'y') or SameText(Value, 'on') or (Value = '1');
+end;
+
+function QueryFieldFloat(Query: TDataSet; const FieldName: string;
+  DefaultValue: Double): Double;
+var
+  Field: TField;
+begin
+  Result := DefaultValue;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+    Result := Field.AsFloat;
+end;
+
+function QueryFieldDateTime(Query: TDataSet; const FieldName: string): TDateTime;
+var
+  Field: TField;
+begin
+  Result := 0;
+  Field := Query.FindField(FieldName);
+  if Assigned(Field) and not Field.IsNull then
+  begin
+    try
+      Result := Field.AsDateTime;
+    except
+      Result := 0;
+    end;
+  end;
+end;
+
+function GetLLMConfigTableName(const Storage: ILLMStorage): string;
+begin
+  if DeepBaseTableExists(Storage, 'LLMConfig') then
+    Result := 'LLMConfig'
+  else if DeepBaseTableExists(Storage, 'LLMConfiguration') then
+    Result := 'LLMConfiguration'
+  else
+    Result := 'LLMConfig';
+end;
+
+function GetLLMCallsSelectSQL(const Storage: ILLMStorage;
+  const ConfigName: string): string;
+var
+  HasCanonicalProvider: Boolean;
+begin
+  HasCanonicalProvider := DeepBaseTableHasColumn(Storage, 'LLMCalls', 'ProviderCode');
+  if HasCanonicalProvider then
+  begin
+    Result :=
+      'SELECT Id, ConfigName, ProviderCode AS Provider, ModelId AS Model, ' +
+      'UserPrompt AS Prompt, AssistantResponse AS Response, InputTokens, OutputTokens, ' +
+      'TotalTokens, EstimatedCost, DurationMs, Success, ErrorCode, ErrorMessage, CallTime ' +
+      'FROM LLMCalls';
+  end
+  else
+  begin
+    Result :=
+      'SELECT Id, ConfigName, Provider, Model, Prompt, Response, InputTokens, OutputTokens, ' +
+      'TotalTokens, EstimatedCost, DurationMs, Success, ErrorCode, ErrorMessage, CallTime ' +
+      'FROM LLMCalls';
+  end;
+
+  if ConfigName <> '' then
+    Result := Result + ' WHERE ConfigName = :ConfigName';
+  Result := Result + ' ORDER BY CallTime DESC LIMIT :Limit';
+end;
+
+function IsLLMCredentialRef(const Value: string): Boolean;
+begin
+  Result := StartsText(LLM_CREDENTIAL_REF_PREFIX, Trim(Value));
+end;
+
+function ExtractLLMCredentialTarget(const CredentialRef: string): string;
+begin
+  Result := '';
+  if IsLLMCredentialRef(CredentialRef) then
+    Result := Copy(Trim(CredentialRef), Length(LLM_CREDENTIAL_REF_PREFIX) + 1, MaxInt);
+end;
+
+function BuildLLMCredentialRef(const TargetName: string): string;
+begin
+  if TargetName = '' then
+    Result := ''
+  else
+    Result := LLM_CREDENTIAL_REF_PREFIX + TargetName;
+end;
+
+function SanitizeCredentialTargetPart(const Value: string): string;
+const
+  INVALID_TARGET_CHARS: array[0..8] of Char = ('\', '/', ':', '*', '?', '"', '<', '>', '|');
+var
+  C: Char;
+begin
+  Result := Trim(Value);
+  for C in INVALID_TARGET_CHARS do
+    Result := StringReplace(Result, string(C), '_', [rfReplaceAll]);
+  if Result = '' then
+    Result := 'Default';
+end;
+
+function MakeLLMApiKeyCredentialTarget(const ConfigName: string): string;
+begin
+  Result := LLM_CREDENTIAL_TARGET_PREFIX +
+    SanitizeCredentialTargetPart(ConfigName) +
+    LLM_CREDENTIAL_TARGET_SUFFIX;
+end;
+
+function ResolveLLMCredentialOrRaw(const StoredValue: string): string;
+var
+  TargetName: string;
+begin
+  Result := StoredValue;
+  TargetName := ExtractLLMCredentialTarget(StoredValue);
+  if TargetName = '' then
+    Exit;
+
+  {$IFDEF MSWINDOWS}
+  Result := TCredentialManager.GetCredential(TargetName, '');
+  {$ELSE}
+  Result := '';
+  {$ENDIF}
+end;
+
+procedure DeleteLLMCredentialRef(const StoredValue: string);
+var
+  TargetName: string;
+begin
+  TargetName := ExtractLLMCredentialTarget(StoredValue);
+  if TargetName = '' then
+    Exit;
+
+  {$IFDEF MSWINDOWS}
+  TCredentialManager.DeleteCredential(TargetName);
+  {$ENDIF}
+end;
+
+function TryLoadLLMApiKeyByName(const Storage: ILLMStorage;
+  const ApiKeyName: string; out ApiKey: string): Boolean;
+var
+  Query: TDataSet;
+  StoredApiKey: string;
+begin
+  Result := False;
+  ApiKey := '';
+  if (ApiKeyName = '') or not Assigned(Storage) or not Storage.IsConnected or
+    not DeepBaseTableExists(Storage, 'LLMApiKeys') then
+    Exit;
+
+  Query := Storage.OpenDataSet(
+    'SELECT ApiKey FROM LLMApiKeys ' +
+    'WHERE Name = :Name AND IsEnabled ' + IfThen(Storage.IsPostgreSQL, '= TRUE', '= 1') + ' ' +
+    'ORDER BY IsDefault DESC, Id LIMIT 1',
+    [LLMParam('Name', ApiKeyName)]);
+  try
+    if not Query.Eof then
+    begin
+      StoredApiKey := QueryFieldString(Query, 'ApiKey', '');
+      ApiKey := ResolveLLMCredentialOrRaw(StoredApiKey);
+      Result := True;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function ResolveLLMApiKey(const Storage: ILLMStorage;
+  const ConfigName, StoredValue: string): string;
+begin
+  Result := '';
+  if StoredValue = '' then
+    Exit;
+
+  if IsLLMCredentialRef(StoredValue) then
+    Exit(ResolveLLMCredentialOrRaw(StoredValue));
+
+  if TryLoadLLMApiKeyByName(Storage, StoredValue, Result) then
+    Exit;
+
+  // Backward compatibility: older databases wrote the real key directly into
+  // LLMConfig.ApiKeyRef or LLMConfiguration.ApiKey.
+  Result := StoredValue;
+end;
+
+function ReadStoredApiKeyRefFromConfig(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName: string): string;
+var
+  Query: TDataSet;
+begin
+  Result := '';
+  if not Assigned(Storage) or not Storage.IsConnected or
+    not DeepBaseTableExists(Storage, ConfigTable) then
+    Exit;
+
+  Query := Storage.OpenDataSet(
+    Format('SELECT * FROM %s WHERE Name = :Name', [ConfigTable]),
+    [LLMParam('Name', ConfigName)]);
+  try
+    if not Query.Eof then
+      Result := QueryFieldString(Query, 'ApiKeyRef',
+        QueryFieldString(Query, 'ApiKey', ''));
+  finally
+    Query.Free;
+  end;
+end;
+
+function PersistLLMApiKey(const Storage: ILLMStorage;
+  const ConfigTable, ConfigName, ApiKey: string): string;
+var
+  ExistingRef: string;
+  ReferencedApiKey: string;
+  TargetName: string;
+begin
+  ExistingRef := ReadStoredApiKeyRefFromConfig(Storage, ConfigTable, ConfigName);
+
+  if ApiKey = '' then
+  begin
+    DeleteLLMCredentialRef(ExistingRef);
+    DeleteLLMCredentialRef(BuildLLMCredentialRef(MakeLLMApiKeyCredentialTarget(ConfigName)));
+    Exit('');
+  end;
+
+  if IsLLMCredentialRef(ApiKey) then
+    Exit(Trim(ApiKey));
+
+  ReferencedApiKey := '';
+  if TryLoadLLMApiKeyByName(Storage, ApiKey, ReferencedApiKey) then
+    Exit(ApiKey);
+
+  {$IFDEF MSWINDOWS}
+  TargetName := MakeLLMApiKeyCredentialTarget(ConfigName);
+  TCredentialManager.SaveCredential(TargetName, '', ApiKey);
+  Result := BuildLLMCredentialRef(TargetName);
+  if IsLLMCredentialRef(ExistingRef) and
+     not SameText(Trim(ExistingRef), Result) then
+    DeleteLLMCredentialRef(ExistingRef);
+  {$ELSE}
+  Result := ApiKey;
+  {$ENDIF}
+end;
+
+procedure LoadConfigFromQuery(Query: TDataSet; const Storage: ILLMStorage;
+  var Config: TLLMConfig);
+var
+  InputPricePer1M: Double;
+  OutputPricePer1M: Double;
+  StoredApiKey: string;
+begin
+  Config.Init;
+  Config.Name := QueryFieldString(Query, 'Name', Config.Name);
+  Config.Provider := TLLMConfig.StrToProvider(
+    QueryFieldString(Query, 'ProviderCode',
+      QueryFieldString(Query, 'Provider', Config.ProviderToStr)));
+  Config.BaseUrl := QueryFieldString(Query, 'BaseUrl',
+    QueryFieldString(Query, 'ApiUrl', Config.BaseUrl));
+  StoredApiKey := QueryFieldString(Query, 'ApiKeyRef',
+    QueryFieldString(Query, 'ApiKey', Config.ApiKey));
+  Config.ApiKey := ResolveLLMApiKey(Storage, Config.Name, StoredApiKey);
+  Config.Model := QueryFieldString(Query, 'ModelId',
+    QueryFieldString(Query, 'Model', Config.Model));
+  Config.MaxTokens := QueryFieldInteger(Query, 'MaxTokens', Config.MaxTokens);
+  Config.Temperature := QueryFieldFloat(Query, 'Temperature', Config.Temperature);
+  Config.SystemPrompt := QueryFieldString(Query, 'SystemPrompt', Config.SystemPrompt);
+  Config.IsEnabled := QueryFieldBoolean(Query, 'IsEnabled', Config.IsEnabled);
+  Config.IsDefault := QueryFieldBoolean(Query, 'IsDefault', Config.IsDefault);
+
+  Config.InputTokenPrice := QueryFieldFloat(Query, 'InputTokenPrice', Config.InputTokenPrice);
+  Config.OutputTokenPrice := QueryFieldFloat(Query, 'OutputTokenPrice', Config.OutputTokenPrice);
+
+  InputPricePer1M := QueryFieldFloat(Query, 'InputPricePer1M', -1);
+  OutputPricePer1M := QueryFieldFloat(Query, 'OutputPricePer1M', -1);
+  if InputPricePer1M >= 0 then
+    Config.InputTokenPrice := InputPricePer1M / 1000.0;
+  if OutputPricePer1M >= 0 then
+    Config.OutputTokenPrice := OutputPricePer1M / 1000.0;
+end;
+
+// ============================================================================
+// L3/Proxy TLLMConfigStore — implementation
+// ============================================================================
 
 constructor TLLMConfigStore.Create;
 begin

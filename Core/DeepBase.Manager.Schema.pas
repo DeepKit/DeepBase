@@ -260,6 +260,40 @@ class procedure TDeepBaseManagerSchema.EnsureSchemaColumns(
     end;
   end;
 
+  procedure EnsureLLMPromptTemplateNameUnique;
+  begin
+    if not AStorage.TableExists('LLMPromptTemplates') or
+       not ColumnExists('LLMPromptTemplates', 'Id') or
+       not ColumnExists('LLMPromptTemplates', 'Name') then
+      Exit;
+
+    try
+      // Older application-local bootstrap patches created this table without
+      // the UNIQUE key required by the seed's ON CONFLICT(Name). Preserve all
+      // rows: keep the oldest Id as the canonical name and rename later exact
+      // duplicates before adding the authoritative unique index.
+      AStorage.ExecuteStatement(
+        'UPDATE LLMPromptTemplates AS duplicate ' +
+        'SET Name = Name || '' [duplicate-'' || CAST(Id AS TEXT) || ''-'' || ' +
+        'lower(hex(randomblob(8))) || '']'' ' +
+        'WHERE EXISTS (' +
+        '  SELECT 1 FROM LLMPromptTemplates AS canonical ' +
+        '  WHERE canonical.Name = duplicate.Name ' +
+        '    AND canonical.Id < duplicate.Id' +
+        ')');
+      AStorage.ExecuteStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS uq_llmprompttemplates_name ' +
+        'ON LLMPromptTemplates(Name)');
+    except
+      on E: Exception do
+        {$IFDEF DEBUG}
+        OutputDebugString(PChar(
+          'DeepBase.Manager: LLMPromptTemplates Name unique migration failed: ' +
+          E.Message));
+        {$ENDIF}
+    end;
+  end;
+
 begin
   if not AConnectionReady then
     Exit;
@@ -374,6 +408,7 @@ begin
   AddColumnIfMissing('LLMPromptTemplates', 'RecommendedConfig', 'TEXT');
   AddColumnIfMissing('LLMPromptTemplates', 'RecommendedModel', 'TEXT');
   AddColumnIfMissing('LLMPromptTemplates', 'MaxTokens', 'INTEGER DEFAULT 0');
+  EnsureLLMPromptTemplateNameUnique;
 end;
 
 class function TDeepBaseManagerSchema.RunMigrationScript(

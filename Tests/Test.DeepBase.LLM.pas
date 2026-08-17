@@ -120,6 +120,26 @@ type
     procedure Test_GenerateImage_Uses_Injected_Transport;
   end;
 
+  /// <summary>
+  /// REVIEW5-FEAT-006: Tests for HTTP 200 error envelope parsing.
+  /// Verifies that Send correctly handles HTTP 200 responses with error envelopes.
+  /// </summary>
+  [TestFixture]
+  TLLMHttpErrorEnvelopeTests = class
+  public
+    [Test]
+    procedure Test_Send_OpenAI_ErrorEnvelope_ExtractsError;
+
+    [Test]
+    procedure Test_Send_Anthropic_ErrorEnvelope_ExtractsError;
+
+    [Test]
+    procedure Test_Send_OpenAI_SuccessResponse_ParsesContent;
+
+    [Test]
+    procedure Test_Send_Anthropic_SuccessResponse_ParsesContent;
+  end;
+
   {$IFDEF MSWINDOWS}
   /// <summary>
   /// Tests for LLM API key persistence through Windows Credential Manager.
@@ -788,6 +808,160 @@ begin
   end;
 end;
 
+{ TLLMHttpErrorEnvelopeTests }
+
+procedure TLLMHttpErrorEnvelopeTests.Test_Send_OpenAI_ErrorEnvelope_ExtractsError;
+var
+  Client: TLLMHttpClient;
+  Fake: TFakeLLMTransport;
+  Transport: IDeepBaseHttpTransport;
+  Result: TChatResult;
+  Messages: TArray<TChatMessage>;
+begin
+  // REVIEW5-FEAT-006: HTTP 200 response with error envelope should extract error info
+  Fake := TFakeLLMTransport.Create;
+  Transport := Fake as IDeepBaseHttpTransport;
+
+  // OpenAI error envelope format
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200,
+    '{"error":{"message":"Rate limit exceeded","type":"rate_limit_error","code":"rate_limit_exceeded"}}');
+
+  Client := TLLMHttpClient.Create(5);
+  try
+    Client.HttpTransport := Transport;
+    SetLength(Messages, 1);
+    Messages[0].Role := 'user';
+    Messages[0].Content := 'Hello';
+
+    Assert.IsFalse(Client.Send('https://api.openai.com/v1', 'sk_test', 'openai',
+      'gpt-4', Messages, 100, 0.7, Result),
+      'Send should return False for error envelope');
+    Assert.IsFalse(Result.Success,
+      'Result.Success should be False for error envelope');
+    Assert.AreEqual('Rate limit exceeded', Result.ErrorMessage,
+      'ErrorMessage should be extracted from error.message');
+    Assert.AreEqual('rate_limit_exceeded', Result.ErrorCode,
+      'ErrorCode should be extracted from error.code');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TLLMHttpErrorEnvelopeTests.Test_Send_Anthropic_ErrorEnvelope_ExtractsError;
+var
+  Client: TLLMHttpClient;
+  Fake: TFakeLLMTransport;
+  Transport: IDeepBaseHttpTransport;
+  Result: TChatResult;
+  Messages: TArray<TChatMessage>;
+begin
+  // REVIEW5-FEAT-006: HTTP 200 response with error envelope should extract error info
+  Fake := TFakeLLMTransport.Create;
+  Transport := Fake as IDeepBaseHttpTransport;
+
+  // Anthropic error envelope format
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200,
+    '{"type":"error","error":{"type":"invalid_request_error","message":"Invalid API key"}}');
+
+  Client := TLLMHttpClient.Create(5);
+  try
+    Client.HttpTransport := Transport;
+    SetLength(Messages, 1);
+    Messages[0].Role := 'user';
+    Messages[0].Content := 'Hello';
+
+    Assert.IsFalse(Client.Send('https://api.anthropic.com/v1', 'sk_test', 'anthropic',
+      'claude-3', Messages, 100, 0.7, Result),
+      'Send should return False for error envelope');
+    Assert.IsFalse(Result.Success,
+      'Result.Success should be False for error envelope');
+    Assert.AreEqual('Invalid API key', Result.ErrorMessage,
+      'ErrorMessage should be extracted from error.message');
+    Assert.AreEqual('invalid_request_error', Result.ErrorCode,
+      'ErrorCode should be extracted from error.type');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TLLMHttpErrorEnvelopeTests.Test_Send_OpenAI_SuccessResponse_ParsesContent;
+var
+  Client: TLLMHttpClient;
+  Fake: TFakeLLMTransport;
+  Transport: IDeepBaseHttpTransport;
+  Result: TChatResult;
+  Messages: TArray<TChatMessage>;
+begin
+  // REVIEW5-FEAT-006: Normal success response should parse correctly
+  Fake := TFakeLLMTransport.Create;
+  Transport := Fake as IDeepBaseHttpTransport;
+
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200,
+    '{"choices":[{"message":{"content":"Hello, world!"}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}');
+
+  Client := TLLMHttpClient.Create(5);
+  try
+    Client.HttpTransport := Transport;
+    SetLength(Messages, 1);
+    Messages[0].Role := 'user';
+    Messages[0].Content := 'Hello';
+
+    Assert.IsTrue(Client.Send('https://api.openai.com/v1', 'sk_test', 'openai',
+      'gpt-4', Messages, 100, 0.7, Result),
+      'Send should return True for success response');
+    Assert.IsTrue(Result.Success,
+      'Result.Success should be True for success response');
+    Assert.AreEqual('Hello, world!', Result.Content,
+      'Content should be extracted from choices[0].message.content');
+    Assert.AreEqual(10, Result.PromptTokens,
+      'PromptTokens should be extracted from usage.prompt_tokens');
+    Assert.AreEqual(5, Result.CompletionTokens,
+      'CompletionTokens should be extracted from usage.completion_tokens');
+    Assert.AreEqual(15, Result.TotalTokens,
+      'TotalTokens should be extracted from usage.total_tokens');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TLLMHttpErrorEnvelopeTests.Test_Send_Anthropic_SuccessResponse_ParsesContent;
+var
+  Client: TLLMHttpClient;
+  Fake: TFakeLLMTransport;
+  Transport: IDeepBaseHttpTransport;
+  Result: TChatResult;
+  Messages: TArray<TChatMessage>;
+begin
+  // REVIEW5-FEAT-006: Normal success response should parse correctly
+  Fake := TFakeLLMTransport.Create;
+  Transport := Fake as IDeepBaseHttpTransport;
+
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200,
+    '{"content":[{"type":"text","text":"Hello from Claude!"}],"usage":{"input_tokens":8,"output_tokens":4}}');
+
+  Client := TLLMHttpClient.Create(5);
+  try
+    Client.HttpTransport := Transport;
+    SetLength(Messages, 1);
+    Messages[0].Role := 'user';
+    Messages[0].Content := 'Hello';
+
+    Assert.IsTrue(Client.Send('https://api.anthropic.com/v1', 'sk_test', 'anthropic',
+      'claude-3', Messages, 100, 0.7, Result),
+      'Send should return True for success response');
+    Assert.IsTrue(Result.Success,
+      'Result.Success should be True for success response');
+    Assert.AreEqual('Hello from Claude!', Result.Content,
+      'Content should be extracted from content[0].text');
+    Assert.AreEqual(8, Result.PromptTokens,
+      'PromptTokens should be extracted from usage.input_tokens');
+    Assert.AreEqual(4, Result.CompletionTokens,
+      'CompletionTokens should be extracted from usage.output_tokens');
+  finally
+    Client.Free;
+  end;
+end;
+
 {$IFDEF MSWINDOWS}
 { TLLMCredentialStorageTests }
 
@@ -953,6 +1127,7 @@ initialization
   TDUnitX.RegisterTestFixture(TLLMPromptTemplateTests);
   TDUnitX.RegisterTestFixture(TLLMStorageFactoryTests);
   TDUnitX.RegisterTestFixture(TLLMHttpClientTransportTests);
+  TDUnitX.RegisterTestFixture(TLLMHttpErrorEnvelopeTests);
   {$IFDEF MSWINDOWS}
   TDUnitX.RegisterTestFixture(TLLMCredentialStorageTests);
   {$ENDIF}

@@ -37,7 +37,8 @@ requires
   DeepBaseServices,
   DeepBaseCommerce,
   vcl,
-  RESTComponents;
+  RESTComponents,
+  GR32; // PERCEPT-WYJX: Foundation for TBitmap32 + template matching (WYJX-P0)
 
 contains
   DeepBase.Net in 'Features\DeepBase.Net.pas',
@@ -55,6 +56,45 @@ contains
   DeepBase.ClipboardGuard in 'Features\DeepBase.ClipboardGuard.pas',
   DeepBase.WindowMonitor in 'Features\DeepBase.WindowMonitor.pas',
   DeepBase.UIA.Types in 'Features\DeepBase.UIA.Types.pas',
-  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas';
+  DeepBase.UIA.Engine in 'Features\DeepBase.UIA.Engine.pas',
+  // v0.7+: desktop perception layer (screenshot + visual recognition) and
+  // the unified actuator that composes UIA + perception under fpBestEffort.
+  // Note: the LLM-backed perception provider (DeepBase.Desktop.Perception.
+  // LLMProvider) lives in DeepBaseLLM.dpk because it uses LLM units that are
+  // owned by the LLM package, not Platform. Platform owns only the neutral
+  // perception Types/Engine and the actuator that composes UIA + perception.
+  DeepBase.Desktop.Perception.Types in 'Features\DeepBase.Desktop.Perception.Types.pas',
+  DeepBase.Desktop.Perception.Engine in 'Features\DeepBase.Desktop.Perception.Engine.pas',
+  DeepBase.Desktop.Perception.ColorMatch in 'Features\DeepBase.Desktop.Perception.ColorMatch.pas',
+  // PERCEPT-WYJX-P1: Visual semantics analysis (badge/status/bubble)
+  DeepBase.Desktop.Perception.BubbleAnalysis in 'Features\DeepBase.Desktop.Perception.BubbleAnalysis.pas',
+  // PERCEPT-WYJX-P0: Template matching engine using TBitmap32 (GR32 dependency)
+  DeepBase.Desktop.Perception.TemplateMatch in 'Features\DeepBase.Desktop.Perception.TemplateMatch.pas',
+  // PERCEPT-WYJX-P0: Color matching primitives need TBitmap32 from Graphics32
+  // Action layer (Coordinate/Motion/Scroll)
+  DeepBase.Desktop.Coordinate in 'Features\DeepBase.Desktop.Coordinate.pas',
+  DeepBase.Desktop.Actuation.Motion in 'Features\DeepBase.Desktop.Actuation.Motion.pas',
+  DeepBase.Desktop.Actuation.Scroll in 'Features\DeepBase.Desktop.Actuation.Scroll.pas',
+  // Action sequence engine (P2 - Core + Executors)
+  DeepBase.Automation.ActionEngine.Core in 'Features\DeepBase.Automation.ActionEngine.Core.pas',
+  DeepBase.Automation.ActionEngine.Mouse in 'Features\DeepBase.Automation.ActionEngine.Mouse.pas',
+  DeepBase.Automation.ActionEngine.Keyboard in 'Features\DeepBase.Automation.ActionEngine.Keyboard.pas',
+  DeepBase.Automation.ActionEngine.FileSystem in 'Features\DeepBase.Automation.ActionEngine.FileSystem.pas',
+  DeepBase.Automation.ActionEngine.ControlFlow in 'Features\DeepBase.Automation.ActionEngine.ControlFlow.pas';
+  
+  // Advanced window finder (complements UIA with native Windows APIs)
+  DeepBase.UIA.WindowFinder in 'Features\DeepBase.UIA.WindowFinder.pas';
+  
+  // Screen Click Enhancer (P3 - Image-based target detection & DPI-aware clicking)
+  DeepBase.Desktop.Screen.Click.RegionLocator in 'Features\DeepBase.Desktop.Screen.Click.RegionLocator.pas',
+  DeepBase.Desktop.Screen.Click.DPIMapper in 'Features\DeepBase.Desktop.Screen.Click.DPIMapper.pas',
+  DeepBase.Desktop.Screen.Click.SmartExecutor in 'Features\DeepBase.Desktop.Screen.Click.SmartExecutor.pas';
+  
+  // Browser Automation Framework (P4 - DOM-level web automation with CDP)
+  DeepBase.Browser.CDP.Adapter in 'Features\DeepBase.Browser.CDP.Adapter.pas',
+  DeepBase.Browser.WebElement in 'Features\DeepBase.Browser.WebElement.pas',
+  DeepBase.Browser.Session in 'Features\DeepBase.Browser.Session.pas',
+  DeepBase.Browser.Recorder in 'Features\DeepBase.Browser.Recorder.pas';
+  DeepBase.UIA.UnifiedActuator in 'Features\DeepBase.UIA.UnifiedActuator.pas';
 
 end.

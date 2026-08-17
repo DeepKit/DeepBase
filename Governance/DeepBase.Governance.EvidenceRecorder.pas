@@ -1,12 +1,13 @@
 // AI-GENERATED
 // DeepBase.Governance.EvidenceRecorder.pas
 // 第四层：证据记录（异步写入，风险分层，脱敏，失败回调）
-// 依赖 Interfaces + Types
+// 依赖 Interfaces + EvidenceRecorder
 // P0 修复项：
 //   - 添加 CorrelationId 字段（为 P08 ActionRun 预留）
 //   - RiskLevel 从 Action/Gate 获取，不再硬编码 rlL1
 //   - InputSummary 采用白名单脱敏，不直接截取完整 JSON
 //   - 写入失败不再静默吞掉，支持错误回调 + 内存失败队列
+//   - DATA2-006: PushItem 返回值必须检查，失败时重试 + 丢弃计数
 
 unit DeepBase.Governance.EvidenceRecorder;
 
@@ -37,6 +38,18 @@ type
     Result: TEvidenceResult;
     BlockedReason: string;
     SnapshotData: string;
+    // ASY-GOV-007: the policy package this evidence was recorded under, so a
+    // later consumer can tell whether the decision predates a policy change.
+    PolicyPackageId: string;
+    PolicyVersion: string;
+    // ASY-GOV-006: bind evidence back to the action intent and the human
+    // decision that authorized it, plus the parameters digest matched at
+    // execution time. Lets a reviewer correlate a executed action with the
+    // exact intent + approval it ran under (acceptance: evidence binds to
+    // payload digest + execution intent).
+    ActionIntentId: string;
+    HumanDecisionId: string;
+    ParametersDigest: string;
   end;
 
   /// Evidence Schema 迁移接口（P01 接口位，供后续 Phase 扩展时实现）
@@ -69,7 +82,17 @@ type
   TRiskLevelResolver = reference to function(
     const AActionKey: string): TRiskLevel;
 
+  /// ASY-GOV-007: 策略包元数据提供器——返回当前注册的策略包 id/version，
+  /// 用于在每条证据上标注它是在哪份策略下产生的。EvidenceRecorder 不直接
+  /// 依赖 ConfigRegistrar（保持 DeepBase 通用性），由宿主注入。
+  TPolicyMetadataProvider = reference to function(
+    out APackageId, AVersion: string): Boolean;
+
   /// 证据记录器实现（异步写入，不阻塞 UI）
+  /// <remarks>
+  /// DATA2-006 修复：PushItem 返回值必须检查。队列满时重试 3 次（100/200/400 ms
+  /// 指数退避），全部失败则递增 DroppedEvidenceCount 并输出调试日志。
+  /// </remarks>
   TEvidenceRecorder = class(TInterfacedObject, IEvidenceRecorder)
   private
     FStore: IEvidenceStore;
@@ -80,12 +103,25 @@ type
     FFailureCallback: TEvidenceFailureCallback;
     FRiskResolver: TRiskLevelResolver;
     FSanitizeFields: TArray<string>;  // 白名单字段名，只有这些字段进入摘要
+    FDroppedEvidenceCount: Integer;   // DATA2-006：丢弃证据计数
+    FPolicyProvider: TPolicyMetadataProvider;  // ASY-GOV-007
     procedure ProcessQueue;
+    procedure SaveWithRetry(const AEntry: TEvidenceEntry);
+    procedure EnqueueEntry(const AEntry: TEvidenceEntry);
+    function BackoffDelayWithJitter(ABaseMs: Integer): Integer;
     function GenerateId: string;
     function GetUserId(AContext: TJSONObject): string;
     function GetCorrelationId(AContext: TJSONObject): string;
+    // ASY-GOV-006: pull the review-binding fields the caller put into the
+    // governance context so each evidence row can be correlated back to the
+    // action intent + human decision + parameters digest it ran under.
+    function GetActionIntentId(AContext: TJSONObject): string;
+    function GetHumanDecisionId(AContext: TJSONObject): string;
+    function GetParametersDigest(AContext: TJSONObject): string;
     function ResolveRiskLevel(const AActionKey: string): TRiskLevel;
     function SanitizeInput(AContext: TJSONObject): string;
+    /// ASY-GOV-007: 若注入了策略提供器，把当前策略包 id/version 写入 entry。
+    procedure ApplyPolicyMetadata(var AEntry: TEvidenceEntry);
   public
     constructor Create(AStore: IEvidenceStore);
     destructor Destroy; override;
@@ -94,6 +130,9 @@ type
     procedure SetFailureCallback(ACallback: TEvidenceFailureCallback);
     procedure SetRiskResolver(AResolver: TRiskLevelResolver);
     procedure SetSanitizeWhitelist(const AFields: TArray<string>);
+    /// ASY-GOV-007: 注入策略包元数据提供器；每次记录证据时调用，
+    /// 将当前策略包 id/version 写入 entry。nil 时不写。
+    procedure SetPolicyMetadataProvider(AProvider: TPolicyMetadataProvider);
 
     // IEvidenceRecorder
     procedure LogAction(const AActionKey: string; AContext: TJSONObject;
@@ -105,6 +144,9 @@ type
     function GetFailedEntries: TArray<TEvidenceEntry>;
     function FailedCount: Integer;
 
+    /// <summary>DATA2-006: 因队列满且重试耗尽而丢弃的证据总数</summary>
+    property DroppedEvidenceCount: Integer read FDroppedEvidenceCount;
+
     // 同步刷新（测试用）
     procedure Flush;
   end;
@@ -112,7 +154,8 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  Winapi.Windows;
 
 const
   // 默认白名单：只保留结构性字段，排除可能的敏感数据
@@ -120,6 +163,16 @@ const
     'action_key', 'gate_key', 'user_id', 'correlation_id',
     'tenant_id', 'request_id', 'risk_level'
   );
+
+  // DATA2-006: 入队重试参数（指数退避基值，实际 Sleep 加 ±30% 抖动）
+  PUSH_RETRY_DELAYS: array[0..2] of Integer = (100, 200, 400);
+
+  // GOV-R3-005 (D-005): 退避抖动幅度 ±30%，避免高并发失败时所有线程同步重试形成风暴
+  BACKOFF_JITTER_PCT = 30;
+
+  // GOV-R3-005 (D-005): Flush 上限与超时，防止析构时队列满 1000 条阻塞数百秒
+  FLUSH_MAX_ITEMS = 500;        // 单次 Flush 最多处理条数，余量交后台线程/下次 Flush
+  FLUSH_TOTAL_TIMEOUT_MS = 5000; // Flush 总预算（含 SaveWithRetry 退避），超时即停
 
 { TEvidenceRecorder }
 
@@ -132,6 +185,7 @@ begin
   FQueue := TThreadedQueue<TEvidenceEntry>.Create(1000, 100, 50);
   FFailureQueue := TThreadedQueue<TEvidenceEntry>.Create(100, 0, 0);
   FRunning := True;
+  FDroppedEvidenceCount := 0;
 
   // 初始化默认白名单
   SetLength(FSanitizeFields, Length(DEFAULT_SANITIZE_WHITELIST));
@@ -181,6 +235,12 @@ begin
   FSanitizeFields := AFields;
 end;
 
+procedure TEvidenceRecorder.SetPolicyMetadataProvider(
+  AProvider: TPolicyMetadataProvider);
+begin
+  FPolicyProvider := AProvider;
+end;
+
 function TEvidenceRecorder.GenerateId: string;
 begin
   Result := TGUID.NewGuid.ToString;
@@ -201,6 +261,31 @@ begin
   else
     // 无 correlation_id 时生成一个新的，保证 Evidence 可关联
     Result := TGUID.NewGuid.ToString;
+end;
+
+function TEvidenceRecorder.GetActionIntentId(AContext: TJSONObject): string;
+begin
+  // ASY-GOV-006: 缺省空串——非裁决路径（无需人工授权的动作）不绑 intent。
+  if (AContext <> nil) and (AContext.GetValue('action_intent_id') <> nil) then
+    Result := AContext.GetValue<string>('action_intent_id', '')
+  else
+    Result := '';
+end;
+
+function TEvidenceRecorder.GetHumanDecisionId(AContext: TJSONObject): string;
+begin
+  if (AContext <> nil) and (AContext.GetValue('human_decision_id') <> nil) then
+    Result := AContext.GetValue<string>('human_decision_id', '')
+  else
+    Result := '';
+end;
+
+function TEvidenceRecorder.GetParametersDigest(AContext: TJSONObject): string;
+begin
+  if (AContext <> nil) and (AContext.GetValue('parameters_digest') <> nil) then
+    Result := AContext.GetValue<string>('parameters_digest', '')
+  else
+    Result := '';
 end;
 
 function TEvidenceRecorder.ResolveRiskLevel(const AActionKey: string): TRiskLevel;
@@ -237,6 +322,108 @@ begin
   end;
 end;
 
+procedure TEvidenceRecorder.ApplyPolicyMetadata(var AEntry: TEvidenceEntry);
+var
+  LId, LVersion: string;
+begin
+  if not Assigned(FPolicyProvider) then
+    Exit;
+  if FPolicyProvider(LId, LVersion) then
+  begin
+    AEntry.PolicyPackageId := LId;
+    AEntry.PolicyVersion := LVersion;
+  end;
+end;
+
+{ GOV-R3-005 (D-005): 对退避基值加 ±30% 抖动，避免高并发失败时所有线程同步重试形成风暴。
+  以 GetTickCount 低 16 位作伪随机源（确定性、无线程全局锁开销），不依赖 Randomize。 }
+function TEvidenceRecorder.BackoffDelayWithJitter(ABaseMs: Integer): Integer;
+var
+  LTick: Cardinal;
+  LJitterRange: Integer;
+begin
+  if ABaseMs <= 0 then
+    Exit(ABaseMs);
+  LTick := GetTickCount and $FFFF;          // 0..65535
+  LJitterRange := (ABaseMs * BACKOFF_JITTER_PCT) div 100;  // ±30% 幅度
+  // 将 LTick 映射到 [-LJitterRange, +LJitterRange]
+  Result := ABaseMs - LJitterRange + (Integer(LTick mod Cardinal(2 * LJitterRange + 1)));
+end;
+
+{ DATA2-006: 入队时检查 PushItem 返回值，队列满则指数退避重试 }
+procedure TEvidenceRecorder.EnqueueEntry(const AEntry: TEvidenceEntry);
+var
+  LWaitResult: TWaitResult;
+  I: Integer;
+begin
+  // 首次尝试
+  LWaitResult := FQueue.PushItem(AEntry);
+  if LWaitResult = wrSignaled then
+    Exit;
+
+  // 队列可能已满，指数退避重试（D-005: 加 ±30% 抖动避免重试风暴）
+  for I := Low(PUSH_RETRY_DELAYS) to High(PUSH_RETRY_DELAYS) do
+  begin
+    Sleep(BackoffDelayWithJitter(PUSH_RETRY_DELAYS[I]));
+    if not FRunning then
+      Break;
+    LWaitResult := FQueue.PushItem(AEntry);
+    if LWaitResult = wrSignaled then
+      Exit;
+  end;
+
+  // 所有重试均失败 — 证据被丢弃
+  TInterlocked.Increment(FDroppedEvidenceCount);
+  OutputDebugString(
+    PChar('[Governance] Evidence DROPPED after retries — queue full. ' +
+    'EntryId=' + AEntry.Id + ', ActionKey=' + AEntry.ActionKey +
+    '. Total dropped=' + IntToStr(FDroppedEvidenceCount)));
+end;
+
+{ DATA2-006: 持久化写入，带重试 }
+procedure TEvidenceRecorder.SaveWithRetry(const AEntry: TEvidenceEntry);
+var
+  I: Integer;
+  LLastError: string;
+begin
+  if FStore = nil then
+    Exit;
+
+  for I := Low(PUSH_RETRY_DELAYS) to High(PUSH_RETRY_DELAYS) do
+  begin
+    try
+      FStore.Save(AEntry);
+      Exit; // 成功
+    except
+      on E: Exception do
+      begin
+        LLastError := E.ClassName + ': ' + E.Message;
+        // D-005: 加 ±30% 抖动，避免高并发失败时所有线程同步重试形成风暴
+        if I < High(PUSH_RETRY_DELAYS) then
+          Sleep(BackoffDelayWithJitter(PUSH_RETRY_DELAYS[I]));
+      end;
+    end;
+  end;
+
+  // 所有重试均失败
+  OutputDebugString(
+    PChar('[Governance] Evidence SAVE FAILED after retries — EntryId=' +
+    AEntry.Id + ', Error=' + LLastError));
+
+  // 进入失败队列（供后续诊断）
+  FFailureQueue.PushItem(AEntry);
+
+  // 触发回调
+  if Assigned(FFailureCallback) then
+  begin
+    try
+      FFailureCallback(AEntry, LLastError);
+    except
+      // 回调本身失败也不影响后续 Evidence 处理
+    end;
+  end;
+end;
+
 procedure TEvidenceRecorder.LogAction(const AActionKey: string;
   AContext: TJSONObject; AResult: TActionResult);
 var
@@ -254,6 +441,10 @@ begin
   LEntry.OutputSummary := AResult.Message;
   LEntry.BlockedReason := '';
   LEntry.SnapshotData := '';
+  // ASY-GOV-006: 绑定裁决上下文（裁决路径才填，非裁决路径留空）。
+  LEntry.ActionIntentId := GetActionIntentId(AContext);
+  LEntry.HumanDecisionId := GetHumanDecisionId(AContext);
+  LEntry.ParametersDigest := GetParametersDigest(AContext);
 
   case AResult.Status of
     arsSuccess: LEntry.Result := erSuccess;
@@ -262,7 +453,9 @@ begin
     arsDryRun:  LEntry.Result := erSuccess;
   end;
 
-  FQueue.PushItem(LEntry);
+  ApplyPolicyMetadata(LEntry);  // ASY-GOV-007
+  // DATA2-006: 检查入队结果，失败时重试
+  EnqueueEntry(LEntry);
 end;
 
 procedure TEvidenceRecorder.LogBlocked(const AGateKey, AReason: string;
@@ -283,44 +476,28 @@ begin
   LEntry.Result := erBlocked;
   LEntry.BlockedReason := AReason;
   LEntry.SnapshotData := '';
+  // ASY-GOV-006: blocked 路径也绑定裁决上下文，便于审计"为何被拦"。
+  LEntry.ActionIntentId := GetActionIntentId(AContext);
+  LEntry.HumanDecisionId := GetHumanDecisionId(AContext);
+  LEntry.ParametersDigest := GetParametersDigest(AContext);
 
-  FQueue.PushItem(LEntry);
+  ApplyPolicyMetadata(LEntry);  // ASY-GOV-007
+  // DATA2-006: 检查入队结果，失败时重试
+  EnqueueEntry(LEntry);
 end;
 
 procedure TEvidenceRecorder.ProcessQueue;
 var
   LEntry: TEvidenceEntry;
   LWaitResult: TWaitResult;
-  LError: string;
 begin
   while FRunning and not TThread.Current.CheckTerminated do
   begin
     LWaitResult := FQueue.PopItem(LEntry);
     if LWaitResult = wrSignaled then
     begin
-      try
-        if FStore <> nil then
-          FStore.Save(LEntry);
-      except
-        on E: Exception do
-        begin
-          // P0 修复：写入失败不再静默吞掉
-          LError := E.ClassName + ': ' + E.Message;
-
-          // 1. 进入失败队列（供后续诊断/重试）
-          FFailureQueue.PushItem(LEntry);
-
-          // 2. 触发回调（如注册）
-          if Assigned(FFailureCallback) then
-          begin
-            try
-              FFailureCallback(LEntry, LError);
-            except
-              // 回调本身失败也不影响后续 Evidence 处理
-            end;
-          end;
-        end;
-      end;
+      // DATA2-006: 持久化写入带重试
+      SaveWithRetry(LEntry);
     end;
   end;
 end;
@@ -329,24 +506,28 @@ procedure TEvidenceRecorder.Flush;
 var
   LEntry: TEvidenceEntry;
   LWaitResult: TWaitResult;
+  LProcessed: Integer;
+  LStartTick: Cardinal;
+  LElapsed: Cardinal;
 begin
+  // GOV-R3-005 (D-005): 析构同步 Flush 队列满 1000 条可阻塞数百秒
+  //   —— 加单次上限与总超时，余量交后台线程（FRunning 期）或下次 Flush。
+  //   超时后剩余证据项留在队列，待后台线程处理；析构路径若队列非空仍会清队列释放条目（无泄漏）。
+  LProcessed := 0;
+  LStartTick := GetTickCount;
   repeat
     LWaitResult := FQueue.PopItem(LEntry);
     if LWaitResult = wrSignaled then
     begin
-      if FStore <> nil then
-      begin
-        try
-          FStore.Save(LEntry);
-        except
-          on E: Exception do
-          begin
-            FFailureQueue.PushItem(LEntry);
-            if Assigned(FFailureCallback) then
-              FFailureCallback(LEntry, E.ClassName + ': ' + E.Message);
-          end;
-        end;
-      end;
+      // DATA2-006: 持久化写入带重试
+      SaveWithRetry(LEntry);
+      Inc(LProcessed);
+      if LProcessed >= FLUSH_MAX_ITEMS then
+        Break;
+      // 卡死 32 位计数器回绕保护
+      LElapsed := GetTickCount - LStartTick;
+      if LElapsed >= FLUSH_TOTAL_TIMEOUT_MS then
+        Break;
     end;
   until LWaitResult <> wrSignaled;
 end;

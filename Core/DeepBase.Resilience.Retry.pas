@@ -393,7 +393,11 @@ begin
   except
     on E: Exception do
     begin
-      Error := E;
+      // BUG-439: 克隆异常对象, 避免跨 except 块持有 RTL 自动释放的 E 导致 Error 悬挂。
+      // Delphi except on E: 块结束时 RTL 自动 Free E; 若直接 Error := E, 函数返回后
+      // Error 指向已释放对象, 调用方解引用 .Message/raise 触发 use-after-free
+      // (回归测试 Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn 覆盖)。
+      Error := Exception.Create(E.Message);
       Result := False;
     end;
   end;

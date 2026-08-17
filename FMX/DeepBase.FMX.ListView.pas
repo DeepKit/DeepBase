@@ -495,7 +495,7 @@ begin
   try
     for I := Items.Count - 1 downto 0 do
     begin
-      // TODO(BUG-281): TListViewItem does not have a Visible property.
+      // STUB(BUG-281): TListViewItem does not have a Visible property.
       // Filtering requires a different approach (remove/re-add items or use adapter).
       if Assigned(FilterFunc) then
         FilterFunc(Items[I]); // evaluate filter predicate only
@@ -514,7 +514,7 @@ begin
 
   Items.BeginUpdate;
   try
-    // TODO(BUG-281): TListViewItem does not have a Visible property.
+    // STUB(BUG-281): TListViewItem does not have a Visible property.
     // Clearing filter requires restoring original items if they were removed.
   finally
     Items.EndUpdate;

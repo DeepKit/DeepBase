@@ -13,21 +13,15 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Platform)'=='Win32'">
         <DCC_DCUOutput>TestResults\dcu32</DCC_DCUOutput>
-        <DCC_DcuOutput>TestResults\dcu32</DCC_DcuOutput>
         <DCC_BPLOutput>TestResults\bpl32</DCC_BPLOutput>
-        <DCC_BplOutput>TestResults\bpl32</DCC_BplOutput>
         <DCC_DCPOutput>TestResults\dcp32</DCC_DCPOutput>
-        <DCC_DcpOutput>TestResults\dcp32</DCC_DcpOutput>
-        <DCC_UnitSearchPath>TestResults\dcp32;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>TestResults\dcu32;TestResults\dcp32;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Platform)'=='Win64' or '$(Platform)'=='Win64x'">
         <DCC_DCUOutput>TestResults\dcu64</DCC_DCUOutput>
-        <DCC_DcuOutput>TestResults\dcu64</DCC_DCUOutput>
         <DCC_BPLOutput>TestResults\bpl64</DCC_BPLOutput>
-        <DCC_BplOutput>TestResults\bpl64</DCC_BplOutput>
         <DCC_DCPOutput>TestResults\dcp64</DCC_DCPOutput>
-        <DCC_DcpOutput>TestResults\dcp64</DCC_DcpOutput>
-        <DCC_UnitSearchPath>TestResults\dcp64;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>TestResults\dcu64;TestResults\dcp64;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -127,6 +121,8 @@
         <DCCReference Include="Features\DeepBase.Commerce.UpgradeFlow.pas"/>
         <DCCReference Include="Features\DeepBase.Unlock.pas"/>
         <DCCReference Include="Features\DeepBase.Licensing.pas"/>
+        <DCCReference Include="Features\DeepBase.TimeGuard.pas"/>
+        <DCCReference Include="Features\DeepBase.Net.Transport.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

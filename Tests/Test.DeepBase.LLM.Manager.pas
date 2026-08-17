@@ -21,6 +21,8 @@ uses
   System.Variants,
   System.Classes,
   System.Generics.Collections,
+  Data.DB,
+  DeepBase.LLM,
   DeepBase.LLM.Manager;
 
 type
@@ -87,12 +89,60 @@ type
     procedure Test_CreateWithStorageInterface_ShouldSucceed;
   end;
 
+  /// <summary>
+  /// Records every Execute/OpenDataSet/ExecuteScalar SQL call. Used by
+  /// TTestLLMManagerBatchOps to assert SetProductionVersion issues a single
+  /// atomic UPDATE and DeleteVersions collapses to a single DELETE + IN.
+  /// </summary>
+  TRecordingLLMStorage = class(TInterfacedObject, ILLMStorage)
+  private
+    FConnected: Boolean;
+    FSQLCalls: TList<string>;
+    FSeededPrompts: TList<TPair<string, TPrompt>>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure SeedPrompt(const InternalCode: string; const Prompt: TPrompt);
+
+    property SQLCalls: TList<string> read FSQLCalls;
+
+    // ILLMStorage
+    function IsConnected: Boolean;
+    function TableExists(const TableName: string): Boolean;
+    function TableHasColumn(const TableName, ColumnName: string): Boolean;
+    function OpenDataSet(const SQL: string;
+      const Params: array of TLLMStorageParam): TDataSet;
+    function Execute(const SQL: string;
+      const Params: array of TLLMStorageParam): Integer;
+    function ExecuteScalar(const SQL: string;
+      const Params: array of TLLMStorageParam): Variant;
+    function IsPostgreSQL: Boolean;
+  end;
+
+  /// <summary>
+  /// BUG-308 (BIZ-013) — atomicity / batch tests for SetProductionVersion
+  /// and DeleteVersions. Uses a recording mock ILLMStorage to capture SQL.
+  /// </summary>
+  [TestFixture]
+  TTestLLMManagerBatchOps = class
+  strict private
+    FManager: TLLMManager;
+    FMock: TRecordingLLMStorage;
+  public
+    [Setup]    procedure Setup;
+    [TearDown] procedure TearDown;
+    [Test] procedure Test_SetProductionVersion_SingleAtomicSQL;
+    [Test] procedure Test_SetProductionVersion_UsesCaseExpression;
+    [Test] procedure Test_DeleteVersions_EmptyArray_NoOp;
+    [Test] procedure Test_DeleteVersions_MultipleVersions_InClause;
+    [Test] procedure Test_DeleteVersions_SingleVersion_NoInClause;
+  end;
+
 implementation
 
 uses
-  Data.DB,
+  Datasnap.DBClient,
   FireDAC.Comp.Client,
-  DeepBase.LLM,
   DeepBase.Persistence.LLM.FireDAC;
 
 type
@@ -148,6 +198,78 @@ function TMockDisconnectedLLMStorage.IsPostgreSQL: Boolean;
 begin
   Result := False;
 end;
+
+{ TRecordingLLMStorage — records every Execute SQL for batch/atomicity tests }
+
+constructor TRecordingLLMStorage.Create;
+begin
+  inherited Create;
+  FConnected := True;
+  FSQLCalls := TList<string>.Create;
+  FSeededPrompts := TList<TPair<string, TPrompt>>.Create;
+end;
+
+destructor TRecordingLLMStorage.Destroy;
+begin
+  FSeededPrompts.Free;
+  FSQLCalls.Free;
+  inherited;
+end;
+
+procedure TRecordingLLMStorage.SeedPrompt(const InternalCode: string;
+  const Prompt: TPrompt);
+begin
+  FSeededPrompts.Add(TPair<string, TPrompt>.Create(InternalCode, Prompt));
+end;
+
+function TRecordingLLMStorage.IsConnected: Boolean;
+begin
+  Result := FConnected;
+end;
+
+function TRecordingLLMStorage.TableExists(const TableName: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TRecordingLLMStorage.TableHasColumn(const TableName,
+  ColumnName: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TRecordingLLMStorage.OpenDataSet(const SQL: string;
+  const Params: array of TLLMStorageParam): TDataSet;
+begin
+  FSQLCalls.Add(SQL);
+  // Initialize's LoadCategories / LoadMetaPrompts / LoadPrompts need a TDataSet,
+  // but for our batch-ops tests we never iterate the result — we only care that
+  // GetPrompt returns the seeded prompt from the cache, which we bypass by
+  // seeding the cache directly via the test accessor. Return an empty dataset
+  // to satisfy the caller.
+  Result := TClientDataSet.Create(nil);
+end;
+
+function TRecordingLLMStorage.Execute(const SQL: string;
+  const Params: array of TLLMStorageParam): Integer;
+begin
+  FSQLCalls.Add(SQL);
+  Result := 0;
+end;
+
+function TRecordingLLMStorage.ExecuteScalar(const SQL: string;
+  const Params: array of TLLMStorageParam): Variant;
+begin
+  FSQLCalls.Add(SQL);
+  Result := 0;
+end;
+
+function TRecordingLLMStorage.IsPostgreSQL: Boolean;
+begin
+  Result := False;
+end;
+
+{ TTestLLMManagerBatchOps }
 
 { TTestPromptVariable }
 
@@ -447,6 +569,130 @@ begin
   end;
 end;
 
+{ TTestLLMManagerBatchOps }
+
+procedure TTestLLMManagerBatchOps.Setup;
+var
+  P: TPrompt;
+  V1, V2, V3: TPromptVersion;
+begin
+  FMock := TRecordingLLMStorage.Create;
+  FManager := TLLMManager.Create(FMock);
+
+  // Seed the prompt cache with one prompt carrying 3 versions. This bypasses
+  // the OpenDataSet-driven cache loading — we're only testing the SQL produced
+  // by SetProductionVersion / DeleteVersions, not the cache-load path.
+  P.Id := 42;
+  P.InternalCode := 'TEST-BATCH';
+  P.Name := 'Test Batch Prompt';
+  SetLength(P.Versions, 3);
+
+  V1.VersionNumber := 1; V1.IsProduction := True;  P.Versions[0] := V1;
+  V2.VersionNumber := 2; V2.IsProduction := False; P.Versions[1] := V2;
+  V3.VersionNumber := 3; V3.IsProduction := False; P.Versions[2] := V3;
+
+  FManager.TestSeedPrompt('TEST-BATCH', P);
+end;
+
+procedure TTestLLMManagerBatchOps.TearDown;
+begin
+  FManager.Free;
+  FMock := nil; // release the interface-typed reference
+end;
+
+procedure TTestLLMManagerBatchOps.Test_SetProductionVersion_SingleAtomicSQL;
+var
+  ExecuteSQLs: TStringList;
+  I, N, C: Integer;
+begin
+  FMock.SQLCalls.Clear;
+  FManager.SetProductionVersion('TEST-BATCH', 3);
+
+  // Only the single atomic UPDATE (and any cache-load SELECTs) should appear —
+  // there must NOT be two UPDATE statements (the old non-atomic behavior).
+  ExecuteSQLs := TStringList.Create;
+  try
+    N := FMock.SQLCalls.Count;
+    for I := 0 to N - 1 do
+      if FMock.SQLCalls[I].StartsWith('UPDATE', True) then
+        ExecuteSQLs.Add(FMock.SQLCalls[I]);
+    C := ExecuteSQLs.Count;
+    Assert.AreEqual(Integer(1), C,
+      'SetProductionVersion must issue exactly one UPDATE statement (atomic)');
+  finally
+    ExecuteSQLs.Free;
+  end;
+end;
+
+procedure TTestLLMManagerBatchOps.Test_SetProductionVersion_UsesCaseExpression;
+var
+  Found: Boolean;
+  SQL: string;
+begin
+  FMock.SQLCalls.Clear;
+  FManager.SetProductionVersion('TEST-BATCH', 3);
+
+  Found := False;
+  for SQL in FMock.SQLCalls do
+    if SQL.Contains('CASE', True) and SQL.Contains('WHEN VersionNumber = :VersionNumber') then
+    begin
+      Found := True;
+      Break;
+    end;
+  Assert.IsTrue(Found,
+    'Atomic UPDATE should use a CASE expression keyed on :VersionNumber');
+end;
+
+procedure TTestLLMManagerBatchOps.Test_DeleteVersions_EmptyArray_NoOp;
+var
+  InitialCount, ActualCount: Integer;
+begin
+  FMock.SQLCalls.Clear;
+  InitialCount := FMock.SQLCalls.Count;
+  FManager.DeleteVersions('TEST-BATCH', []);
+  ActualCount := FMock.SQLCalls.Count;
+  Assert.AreEqual(InitialCount, ActualCount,
+    'DeleteVersions with an empty array must be a no-op (no SQL, no refresh)');
+end;
+
+procedure TTestLLMManagerBatchOps.Test_DeleteVersions_MultipleVersions_InClause;
+var
+  FoundIn: Boolean;
+  SQL: string;
+begin
+  FMock.SQLCalls.Clear;
+  FManager.DeleteVersions('TEST-BATCH', [1, 2]);
+
+  FoundIn := False;
+  for SQL in FMock.SQLCalls do
+    if SQL.StartsWith('DELETE', True) and SQL.Contains('IN (') then
+    begin
+      FoundIn := True;
+      // Each version number must appear as a named parameter (:V0, :V1, …).
+      Assert.IsTrue(SQL.Contains(':V0'), 'IN clause should bind :V0');
+      Assert.IsTrue(SQL.Contains(':V1'), 'IN clause should bind :V1');
+      Break;
+    end;
+  Assert.IsTrue(FoundIn,
+    'DeleteVersions must issue a single DELETE with an IN clause');
+end;
+
+procedure TTestLLMManagerBatchOps.Test_DeleteVersions_SingleVersion_NoInClause;
+var
+  DeleteCount: Integer;
+  SQL: string;
+begin
+  FMock.SQLCalls.Clear;
+  FManager.DeleteVersions('TEST-BATCH', [1]);
+
+  DeleteCount := 0;
+  for SQL in FMock.SQLCalls do
+    if SQL.StartsWith('DELETE', True) then
+      Inc(DeleteCount);
+  Assert.AreEqual(1, DeleteCount,
+    'DeleteVersions with one element must issue exactly one DELETE');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestPromptVariable);
   TDUnitX.RegisterTestFixture(TTestMetaPromptHelpers);
@@ -455,5 +701,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestPromptHelpers);
   TDUnitX.RegisterTestFixture(TTestLLMResponse);
   TDUnitX.RegisterTestFixture(TTestLLMManagerStorageFactory);
+  TDUnitX.RegisterTestFixture(TTestLLMManagerBatchOps);
 
 end.

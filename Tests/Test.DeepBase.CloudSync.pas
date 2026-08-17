@@ -22,7 +22,8 @@ uses
   System.IOUtils,
   System.DateUtils,
   System.Generics.Collections,
-  DeepBase.CloudSync;
+  DeepBase.CloudSync,
+  DeepBase.Exceptions;
 
 type
   [TestFixture]
@@ -236,6 +237,28 @@ type
   public
     [Test]
     procedure Test_Reset_ClearsAllValues;
+  end;
+
+  /// <summary>
+  /// REVIEW5-FEAT-004: Encryption fail-closed tests.
+  /// Verifies that CloudSync fails closed when encryption is enabled but no key is configured,
+  /// preventing accidental plaintext uploads.
+  /// </summary>
+  [TestFixture]
+  TTestEncryptionFailClosed = class
+  public
+    [Test]
+    procedure Test_DefaultConfig_EncryptionEnabled;
+    [Test]
+    procedure Test_DefaultConfig_EncryptionKeyEmpty;
+    [Test]
+    procedure Test_EncryptData_EmptyKey_RaisesException;
+    [Test]
+    procedure Test_DecryptData_EmptyKey_RaisesException;
+    [Test]
+    procedure Test_EncryptData_WithKey_Succeeds;
+    [Test]
+    procedure Test_EncryptDecrypt_RoundTrip;
   end;
 
 implementation
@@ -1210,14 +1233,136 @@ begin
   Stats.FailedSyncs := 2;
   Stats.TotalUploaded := 1000;
   Stats.TotalDownloaded := 2000;
-  
+
   Stats.Reset;
-  
+
   Assert.AreEqual(0, Stats.TotalSyncs);
   Assert.AreEqual(0, Stats.SuccessfulSyncs);
   Assert.AreEqual(0, Stats.FailedSyncs);
   Assert.AreEqual(Int64(0), Stats.TotalUploaded);
   Assert.AreEqual(Int64(0), Stats.TotalDownloaded);
+end;
+
+{ TTestEncryptionFailClosed }
+
+procedure TTestEncryptionFailClosed.Test_DefaultConfig_EncryptionEnabled;
+var
+  Config: TCloudServiceConfig;
+begin
+  // REVIEW5-FEAT-004: default config must have encryption enabled
+  Config := TCloudServiceConfig.Default;
+  Assert.IsTrue(Config.EnableEncryption,
+    'Default config should have encryption enabled');
+end;
+
+procedure TTestEncryptionFailClosed.Test_DefaultConfig_EncryptionKeyEmpty;
+var
+  Config: TCloudServiceConfig;
+begin
+  // REVIEW5-FEAT-004: default config has empty EncryptionKey
+  Config := TCloudServiceConfig.Default;
+  Assert.AreEqual('', Config.EncryptionKey,
+    'Default config should have empty EncryptionKey');
+end;
+
+procedure TTestEncryptionFailClosed.Test_EncryptData_EmptyKey_RaisesException;
+var
+  Client: TCloudSyncClient;
+  Config: TCloudServiceConfig;
+  ExceptionRaised: Boolean;
+begin
+  // REVIEW5-FEAT-004: EncryptData must fail closed when key is empty
+  Config := TCloudServiceConfig.Default;
+  Config.EnableEncryption := True;
+  Config.EncryptionKey := ''; // empty key
+
+  Client := TCloudSyncClient.Create(Config);
+  try
+    ExceptionRaised := False;
+    try
+      Client.EncryptData('test data');
+    except
+      on E: EEncryptionException do
+        ExceptionRaised := True;
+    end;
+    Assert.IsTrue(ExceptionRaised,
+      'EncryptData with empty key must raise EEncryptionException');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TTestEncryptionFailClosed.Test_DecryptData_EmptyKey_RaisesException;
+var
+  Client: TCloudSyncClient;
+  Config: TCloudServiceConfig;
+  ExceptionRaised: Boolean;
+begin
+  // REVIEW5-FEAT-004: DecryptData must fail closed when key is empty
+  Config := TCloudServiceConfig.Default;
+  Config.EnableEncryption := True;
+  Config.EncryptionKey := ''; // empty key
+
+  Client := TCloudSyncClient.Create(Config);
+  try
+    ExceptionRaised := False;
+    try
+      Client.DecryptData('encrypted data');
+    except
+      on E: EDecryptionException do
+        ExceptionRaised := True;
+    end;
+    Assert.IsTrue(ExceptionRaised,
+      'DecryptData with empty key must raise EDecryptionException');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TTestEncryptionFailClosed.Test_EncryptData_WithKey_Succeeds;
+var
+  Client: TCloudSyncClient;
+  Config: TCloudServiceConfig;
+  Encrypted: string;
+begin
+  // REVIEW5-FEAT-004: EncryptData with valid key should succeed
+  Config := TCloudServiceConfig.Default;
+  Config.EnableEncryption := True;
+  Config.EncryptionKey := 'test-encryption-key-32-chars-long!';
+
+  Client := TCloudSyncClient.Create(Config);
+  try
+    Encrypted := Client.EncryptData('test data');
+    Assert.IsTrue(Encrypted <> '',
+      'EncryptData should return non-empty encrypted data');
+    Assert.IsTrue(Encrypted <> 'test data',
+      'Encrypted data should differ from plaintext');
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TTestEncryptionFailClosed.Test_EncryptDecrypt_RoundTrip;
+var
+  Client: TCloudSyncClient;
+  Config: TCloudServiceConfig;
+  Original, Encrypted, Decrypted: string;
+begin
+  // REVIEW5-FEAT-004: encrypt then decrypt should return original
+  Config := TCloudServiceConfig.Default;
+  Config.EnableEncryption := True;
+  Config.EncryptionKey := 'test-encryption-key-32-chars-long!';
+
+  Client := TCloudSyncClient.Create(Config);
+  try
+    Original := 'test data with special chars: 测试数据!@#$%';
+    Encrypted := Client.EncryptData(Original);
+    Decrypted := Client.DecryptData(Encrypted);
+    Assert.AreEqual(Original, Decrypted,
+      'Decrypt(Encrypt(data)) should return original data');
+  finally
+    Client.Free;
+  end;
 end;
 
 initialization
@@ -1228,5 +1373,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestCloudServiceConfig);
   TDUnitX.RegisterTestFixture(TTestSyncProgress);
   TDUnitX.RegisterTestFixture(TTestSyncStatistics);
+  TDUnitX.RegisterTestFixture(TTestEncryptionFailClosed);
 
 end.

@@ -21,6 +21,7 @@ implementation
 uses
   System.SysUtils,
   System.Generics.Collections,
+  Winapi.Windows,
   DeepBase.Schema,
   DeepBase.SQL.Utils;
 
@@ -457,8 +458,19 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        on Exception do
+        on E: Exception do
         begin
+          // Surface check-execution failures instead of swallowing them via OutputDebugString.
+          // Without this, a query error returns an empty Result -> DiagnoseAll reports green-on-error (DATA-R3-004).
+          Issue.IssueType := ditCheckError;
+          Issue.IsOK := False;
+          Issue.TableName := FK.TableName;
+          Issue.ObjectName := FK.ColumnName;
+          Issue.Issue := '检查失败: ' + E.Message;
+          Issue.Suggestion := '确认数据库连接正常且表结构可被内省后重试外键检查';
+          Issue.FixSQL := '';
+          Issue.CanAutoFix := False;
+          ResultList.Add(Issue);
         end;
       end;
     end;
@@ -515,8 +527,18 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        on Exception do
+        on E: Exception do
         begin
+          // Surface check-execution failures (DATA-R3-004): swallowing via OutputDebugString made a failed query look like "no nulls".
+          Issue.IssueType := ditCheckError;
+          Issue.IsOK := False;
+          Issue.TableName := RF.TableName;
+          Issue.ObjectName := RF.ColumnName;
+          Issue.Issue := '检查失败: ' + E.Message;
+          Issue.Suggestion := '确认数据库连接正常且表结构可被内省后重试必填字段检查';
+          Issue.FixSQL := '';
+          Issue.CanAutoFix := False;
+          ResultList.Add(Issue);
         end;
       end;
     end;
@@ -578,8 +600,18 @@ begin
           ResultList.Add(Issue);
         end;
       except
-        on Exception do
+        on E: Exception do
         begin
+          // Surface check-execution failures (DATA-R3-004): swallowing via OutputDebugString made a failed query look like "all enum values valid".
+          Issue.IssueType := ditCheckError;
+          Issue.IsOK := False;
+          Issue.TableName := EF.TableName;
+          Issue.ObjectName := EF.ColumnName;
+          Issue.Issue := '检查失败: ' + E.Message;
+          Issue.Suggestion := '确认数据库连接正常且表结构可被内省后重试枚举值检查';
+          Issue.FixSQL := '';
+          Issue.CanAutoFix := False;
+          ResultList.Add(Issue);
         end;
       end;
     end;
@@ -655,9 +687,8 @@ begin
       [ATableName, AColumnName, AColumnDef]));
     Result := True;
   except
-    on Exception do
-    begin
-    end;
+    on E: Exception do
+      OutputDebugString(PChar('Diagnose.AddColumnIfNotExists: ' + E.Message));
   end;
 end;
 
@@ -675,9 +706,8 @@ begin
       FConnection.ExecSQL(R.FixSQL);
       Inc(Result);
     except
-      on Exception do
-      begin
-      end;
+      on E: Exception do
+        OutputDebugString(PChar('Diagnose.AutoFix: ' + E.Message));
     end;
   end;
 end;

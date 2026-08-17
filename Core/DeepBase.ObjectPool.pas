@@ -207,10 +207,13 @@ type
   private
     FPool: TObjectPool<T>;
     FObject: T;
+    FReleased: Boolean;  // CORE-R2-004 fix: prevent double-release
     function GetObject: T;
   public
     constructor Create(APool: TObjectPool<T>; AObject: T);
     destructor Destroy; override;
+    /// <summary>Manually return object to pool; safe to call multiple times.</summary>
+    procedure Release;
     property Obj: T read GetObject;
   end;
 
@@ -520,7 +523,17 @@ begin
         begin
           LWaitResult := FShutdownEvent.WaitFor(FConfig.CleanupIntervalSec * 1000);
           if (LWaitResult = wrTimeout) and (TInterlocked.CompareExchange(FShutdown, 0, 0) = 0) then
+          try
+            // CORE-R2-008 fix: isolate cleanup exceptions so a transient
+            // failure (e.g. a destructor raising during object eviction)
+            // does not kill the background cleanup task. Without this,
+            // an unhandled exception exits the while loop and the pool
+            // stops evicting idle objects for the remainder of the process
+            // lifetime.
             CleanupIdleObjects;
+          except
+            // Swallow; the next interval will retry.
+          end;
         end;
       end
     );
@@ -585,8 +598,13 @@ var
   LValid: Boolean;
 begin
   Result := nil;
-  
-  for I := 0 to FPool.Count - 1 do
+
+  // Iterate with a while loop instead of a for loop: when an invalid object is
+  // found we FPool.Delete(I), which shifts subsequent items left into index I.
+  // A for loop would then Inc(I) and skip the just-shifted item. With while we
+  // only advance I when we did NOT delete (CORE-R3-008 fix).
+  I := 0;
+  while I < FPool.Count do
   begin
     LPooled := FPool[I];
     if not LPooled.InUse then
@@ -595,23 +613,24 @@ begin
       if FConfig.ValidationOnAcquire then
       begin
         LValid := FFactory.ValidateObject(LPooled.Obj);
-        
+
         if Assigned(FOnValidation) then
           FOnValidation(Self, LPooled.Obj, LValid);
-          
+
         if not LValid then
         begin
           Inc(FStats.TotalValidationFails);
-          // Remove invalid object
+          // Remove invalid object. Do NOT Inc(I): the next item shifted into I.
           DestroyPooledObject(LPooled);
           FPool.Delete(I);
           Continue;
         end;
       end;
-      
+
       Result := LPooled;
       Break;
     end;
+    Inc(I);
   end;
 end;
 
@@ -977,13 +996,34 @@ begin
   inherited Create;
   FPool := APool;
   FObject := AObject;
+  FReleased := False;
 end;
 
 destructor TScopedPoolObject<T>.Destroy;
 begin
-  if Assigned(FPool) and Assigned(FObject) then
+  // CORE-R2-004 fix: only release once. Callers who manually call Release
+  // set FReleased=True, so the destructor becomes a no-op. Without this
+  // guard, a manual Release followed by destruction would try to release
+  // the same object a second time, either throwing EObjectPoolException
+  // (object not found in pool) or, worse, returning an object that another
+  // thread has already re-acquired.
+  if (not FReleased) and Assigned(FPool) and Assigned(FObject) then
+  begin
     FPool.Release(FObject);
+    FReleased := True;
+  end;
   inherited;
+end;
+
+procedure TScopedPoolObject<T>.Release;
+begin
+  // Idempotent: repeated calls are safe.
+  if FReleased then Exit;
+  if Assigned(FPool) and Assigned(FObject) then
+  begin
+    FPool.Release(FObject);
+    FReleased := True;
+  end;
 end;
 
 function TScopedPoolObject<T>.GetObject: T;

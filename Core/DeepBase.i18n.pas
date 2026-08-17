@@ -15,21 +15,27 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.SyncObjs,
   DeepBase.Types,
   DeepBase.Consts,
   DeepBase.Interfaces,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 const
   DEFAULT_CACHE_CAPACITY = 10000;
 
 type
   /// <summary>
-  /// LRU cache item
+  /// LRU cache node (doubly-linked list for O(1) eviction)
   /// </summary>
-  TLRUCacheItem = record
+  TCacheNode = class
+  public
+    Key: string;
     Value: string;
     LastAccess: TDateTime;
+    Prev: TCacheNode;
+    Next: TCacheNode;
   end;
 
   /// <summary>
@@ -40,23 +46,25 @@ type
   private
     FConnection: TObject;
     FStorage: II18nStorage;
-    FLock: TObject;
-    FOwnsLock: Boolean;
-    FCache: TDictionary<string, TLRUCacheItem>;
+    FLock: TCriticalSection;
+    FCache: TDictionary<string, TCacheNode>;
     FCacheCapacity: Integer;
+    FLRUHead: TCacheNode;  // LRU sentinel (most-recent end)
+    FLRUTail: TCacheNode;  // LRU sentinel (least-recent end)
     FCurrentLanguage: string;
     FOnLanguageChanged: TNotifyEvent;
     FLanguageChangeListeners: TList<TNotifyEvent>;
-    class var FConnectionStorageFactory: TFunc<TObject, II18nStorage>;
 
     function MakeCacheKey(const SourceText, LangCode: string): string;
     function ReadFromDB(const SourceText, LangCode: string): string;
     procedure EvictOldestIfNeeded;
     procedure RecordMissingTranslation(const SourceText, LangCode: string);
+    procedure LRUAdd(const ANode: TCacheNode);
+    procedure LRURemove(const ANode: TCacheNode);
+    procedure LRUAccess(const ANode: TCacheNode);
+    procedure ClearLRUList;
     function GetCurrentLanguage: string;
     procedure SetCurrentLanguage(const Value: string);
-    class function CreateStorageFromConnection(
-      AConnection: TObject): II18nStorage; static;
 
   public
     constructor Create(AConnection: TObject;
@@ -222,7 +230,12 @@ begin
   if Assigned(GLanguageCallback) then
     Result := GLanguageCallback
   else
-    Result := 'en';  // Default to English
+    // BUG EXP-P1-009 FIX: use BCP 47 tag consistent with
+    // `TDeepBaseI18n.GetDefaultLanguage` ('en-US'). Downstream lookups
+    // (plural rules, translation store) already fall back from 'en-US' to
+    // 'en' when the regional variant is not registered, so this change is
+    // behaviour-preserving while making the two default values identical.
+    Result := 'en-US';
 end;
 
 { Global function implementations }
@@ -281,8 +294,15 @@ begin
 end;
 
 constructor TDeepBaseI18n.Create(AConnection: TObject; ALock: TObject);
+var
+  LStorage: II18nStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection), ALock);
+  LStorage := TConnectionStorageFactory<II18nStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No i18n storage factory registered for connection-backed constructor. ' +
+      'Include DeepBase.Persistence.I18n.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  Create(LStorage, ALock);
   FConnection := AConnection;
 end;
 
@@ -290,67 +310,53 @@ constructor TDeepBaseI18n.Create(const AStorage: II18nStorage; ALock: TObject);
 begin
   inherited Create;
   FStorage := AStorage;
-  if Assigned(ALock) then
-  begin
-    FLock := ALock;
-    FOwnsLock := False;
-  end
-  else
-  begin
-    FLock := TObject.Create;
-    FOwnsLock := True;
-  end;
-  FCache := TDictionary<string, TLRUCacheItem>.Create;
+  FLock := TCriticalSection.Create;
+  FCache := TDictionary<string, TCacheNode>.Create;
   FLanguageChangeListeners := TList<TNotifyEvent>.Create;
   FCacheCapacity := DEFAULT_CACHE_CAPACITY;
   FCurrentLanguage := SDefaultLanguage;
+  // Initialize LRU doubly-linked list sentinels
+  FLRUHead := TCacheNode.Create;
+  FLRUTail := TCacheNode.Create;
+  FLRUHead.Next := FLRUTail;
+  FLRUTail.Prev := FLRUHead;
 end;
 
 destructor TDeepBaseI18n.Destroy;
 begin
-  if FOwnsLock then
-    FreeAndNil(FLock);
+  FreeAndNil(FLock);
   FreeAndNil(FLanguageChangeListeners);
+  ClearLRUList;
   FreeAndNil(FCache);
+  FLRUHead.Free;
+  FLRUTail.Free;
   inherited;
 end;
 
 class procedure TDeepBaseI18n.SetConnectionStorageFactory(
   const AFactory: TFunc<TObject, II18nStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseI18n.CreateStorageFromConnection(
-  AConnection: TObject): II18nStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No i18n storage factory registered for connection-backed constructor. ' +
-      'Include DeepBase.Persistence.I18n.FireDAC or DeepBase.Persistence.Manager.FireDAC.');
+  TConnectionStorageFactory<II18nStorage>.SetFactory(AFactory);
 end;
 
 procedure TDeepBaseI18n.SubscribeLanguageChange(AHandler: TNotifyEvent);
 begin
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     if not FLanguageChangeListeners.Contains(AHandler) then
       FLanguageChangeListeners.Add(AHandler);
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
 procedure TDeepBaseI18n.UnsubscribeLanguageChange(AHandler: TNotifyEvent);
 begin
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     FLanguageChangeListeners.Remove(AHandler);
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
@@ -361,11 +367,11 @@ var
   I: Integer;
 begin
   // Copy listeners to avoid lock during notification
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     Listeners := FLanguageChangeListeners.ToArray;
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
   
   // Notify all multicast listeners
@@ -387,12 +393,25 @@ begin
 end;
 
 procedure TDeepBaseI18n.ClearCache;
+var
+  LNode: TCacheNode;
+  LNext: TCacheNode;
 begin
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
+    // Free all LRU nodes
+    LNode := FLRUHead.Next;
+    while LNode <> FLRUTail do
+    begin
+      LNext := LNode.Next;
+      LNode.Free;
+      LNode := LNext;
+    end;
+    FLRUHead.Next := FLRUTail;
+    FLRUTail.Prev := FLRUHead;
     FCache.Clear;
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
@@ -401,24 +420,38 @@ var
   Translations: TDictionary<string, string>;
   Pair: TPair<string, string>;
   CacheKey: string;
-  Item: TLRUCacheItem;
+  LNode: TCacheNode;
+  LExisting: TCacheNode;
 begin
   if not Assigned(FStorage) then
     Exit;
 
   Translations := FStorage.ReadTranslations(LangCode);
   try
-    TMonitor.Enter(FLock);
+    FLock.Enter;
     try
       for Pair in Translations do
       begin
         CacheKey := MakeCacheKey(Pair.Key, LangCode);
-        Item.Value := Pair.Value;
-        Item.LastAccess := Now;
-        FCache.AddOrSetValue(CacheKey, Item);
+        if FCache.TryGetValue(CacheKey, LExisting) then
+        begin
+          LExisting.Value := Pair.Value;
+          LExisting.LastAccess := Now;
+          LRUAccess(LExisting);
+        end
+        else
+        begin
+          EvictOldestIfNeeded;
+          LNode := TCacheNode.Create;
+          LNode.Key := CacheKey;
+          LNode.Value := Pair.Value;
+          LNode.LastAccess := Now;
+          FCache.Add(CacheKey, LNode);
+          LRUAdd(LNode);
+        end;
       end;
     finally
-      TMonitor.Exit(FLock);
+      FLock.Leave;
     end;
   finally
     Translations.Free;
@@ -427,29 +460,19 @@ end;
 
 procedure TDeepBaseI18n.EvictOldestIfNeeded;
 var
-  OldestKey: string;
-  OldestTime: TDateTime;
-  Pair: TPair<string, TLRUCacheItem>;
+  LNode: TCacheNode;
 begin
-  // Called within lock
-  if FCache.Count < FCacheCapacity then
-    Exit;
-    
-  // Find oldest entry
-  OldestTime := MaxDateTime;
-  OldestKey := '';
-  
-  for Pair in FCache do
+  // Called within lock. O(1) eviction via LRU tail.
+  while FCache.Count >= FCacheCapacity do
   begin
-    if Pair.Value.LastAccess < OldestTime then
-    begin
-      OldestTime := Pair.Value.LastAccess;
-      OldestKey := Pair.Key;
-    end;
+    // Evict least-recently used (node before tail sentinel)
+    LNode := FLRUTail.Prev;
+    if LNode = FLRUHead then
+      Break;  // List empty (shouldn't happen if Count > 0)
+    LRURemove(LNode);
+    FCache.Remove(LNode.Key);
+    LNode.Free;
   end;
-  
-  if OldestKey <> '' then
-    FCache.Remove(OldestKey);
 end;
 
 function TDeepBaseI18n.ReadFromDB(const SourceText, LangCode: string): string;
@@ -487,7 +510,7 @@ end;
 function TDeepBaseI18n.TranslateTo(const Text, LangCode: string): string;
 var
   CacheKey: string;
-  Item: TLRUCacheItem;
+  LNode: TCacheNode;
   CacheHit: Boolean;
   NeedRecord: Boolean;
 begin
@@ -503,22 +526,22 @@ begin
   NeedRecord := False;
   
   // �������ĳ���ʱ�� - �ȼ�黺��
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
-    if FCache.TryGetValue(CacheKey, Item) then
+    if FCache.TryGetValue(CacheKey, LNode) then
     begin
       CacheHit := True;
-      // Update access time
-      Item.LastAccess := Now;
-      FCache.AddOrSetValue(CacheKey, Item);
+      // Update access time and move to MRU position
+      LNode.LastAccess := Now;
+      LRUAccess(LNode);
       
-      if Item.Value <> '' then
-        Result := Item.Value
+      if LNode.Value <> '' then
+        Result := LNode.Value
       else
         Result := Text; // Empty translation, return original
     end;
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
   
   // �������У�ֱ�ӷ���
@@ -534,14 +557,17 @@ begin
   // re-queries the DB (which may have become available later).
   if Result <> '' then
   begin
-    TMonitor.Enter(FLock);
+    FLock.Enter;
     try
       EvictOldestIfNeeded;
-      Item.Value := Result;
-      Item.LastAccess := Now;
-      FCache.AddOrSetValue(CacheKey, Item);
+      LNode := TCacheNode.Create;
+      LNode.Key := CacheKey;
+      LNode.Value := Result;
+      LNode.LastAccess := Now;
+      FCache.Add(CacheKey, LNode);
+      LRUAdd(LNode);
     finally
-      TMonitor.Exit(FLock);
+      FLock.Leave;
     end;
   end
   else
@@ -580,11 +606,11 @@ begin
   if not Assigned(FStorage) then
     Exit;
 
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     Result := FStorage.ReadLanguages(False);
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
@@ -594,11 +620,11 @@ begin
   if not Assigned(FStorage) then
     Exit;
 
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     Result := FStorage.ReadLanguages(True);
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
@@ -608,37 +634,89 @@ begin
   if not Assigned(FStorage) then
     Exit;
 
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     Result := FStorage.ReadDefaultLanguage(Result);
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
 procedure TDeepBaseI18n.AddTranslation(const SourceText, LangCode, TranslatedText: string);
 var
   CacheKey: string;
-  Item: TLRUCacheItem;
+  LNode: TCacheNode;
+  LExisting: TCacheNode;
 begin
   if not Assigned(FStorage) then
     Exit;
     
-  TMonitor.Enter(FLock);
+  FLock.Enter;
   try
     FStorage.UpsertTranslation(SourceText, LangCode, TranslatedText);
 
     // Update cache
     CacheKey := MakeCacheKey(SourceText, LangCode);
-    Item.Value := TranslatedText;
-    Item.LastAccess := Now;
-    FCache.AddOrSetValue(CacheKey, Item);
+    if FCache.TryGetValue(CacheKey, LExisting) then
+    begin
+      LExisting.Value := TranslatedText;
+      LExisting.LastAccess := Now;
+      LRUAccess(LExisting);
+    end
+    else
+    begin
+      EvictOldestIfNeeded;
+      LNode := TCacheNode.Create;
+      LNode.Key := CacheKey;
+      LNode.Value := TranslatedText;
+      LNode.LastAccess := Now;
+      FCache.Add(CacheKey, LNode);
+      LRUAdd(LNode);
+    end;
   finally
-    TMonitor.Exit(FLock);
+    FLock.Leave;
   end;
 end;
 
 // BUG-003 FIX: ����ȫ�ֻص����ã���ֹѭ�����õ����ڴ�й©
+procedure TDeepBaseI18n.LRUAdd(const ANode: TCacheNode);
+begin
+  // Insert at head (most-recently-used end)
+  ANode.Prev := FLRUHead;
+  ANode.Next := FLRUHead.Next;
+  FLRUHead.Next.Prev := ANode;
+  FLRUHead.Next := ANode;
+end;
+
+procedure TDeepBaseI18n.LRURemove(const ANode: TCacheNode);
+begin
+  ANode.Prev.Next := ANode.Next;
+  ANode.Next.Prev := ANode.Prev;
+end;
+
+procedure TDeepBaseI18n.LRUAccess(const ANode: TCacheNode);
+begin
+  // Move to head (most-recently-used end)
+  LRURemove(ANode);
+  LRUAdd(ANode);
+end;
+
+procedure TDeepBaseI18n.ClearLRUList;
+var
+  LNode: TCacheNode;
+  LNext: TCacheNode;
+begin
+  LNode := FLRUHead.Next;
+  while LNode <> FLRUTail do
+  begin
+    LNext := LNode.Next;
+    LNode.Free;
+    LNode := LNext;
+  end;
+  FLRUHead.Next := FLRUTail;
+  FLRUTail.Prev := FLRUHead;
+end;
+
 initialization
 
 finalization

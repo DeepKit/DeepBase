@@ -19,7 +19,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.UITypes, System.Generics.Collections,
   FMX.Types, FMX.Forms, FMX.Styles, FMX.Controls, FMX.Graphics,
-  DeepBase.Theme;
+  DeepBase.Theme, DeepBase.Exceptions;
 
 type
   /// <summary>Theme mode</summary>
@@ -269,11 +269,13 @@ begin
   {$ENDIF}
 
   {$IFDEF ANDROID}
-  // TODO(BUG-281): Check Android dark mode
+  // STUB(BUG-281): Check Android dark mode
+  raise ENotImplementedException.Create('DetectSystemTheme: Android dark mode detection not yet implemented (BUG-281)');
   {$ENDIF}
 
   {$IFDEF IOS}
-  // TODO(BUG-281): Check iOS dark mode via UITraitCollection
+  // STUB(BUG-281): Check iOS dark mode via UITraitCollection
+  raise ENotImplementedException.Create('DetectSystemTheme: iOS dark mode detection not yet implemented (BUG-281)');
   {$ENDIF}
 end;
 

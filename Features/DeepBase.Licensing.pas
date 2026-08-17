@@ -41,12 +41,15 @@ interface
 
 uses
   System.SysUtils,
+  System.JSON,
   System.Generics.Collections,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.SafeClient,
   DeepBase.Commerce.Permissions,
   DeepBase.Commerce.UpgradeFlow,
-  DeepBase.Unlock;
+  DeepBase.Commerce.JsonUtil,
+  DeepBase.Unlock,
+  DeepBase.TimeGuard;
 
 type
   /// <summary>License tier: Free or Pro.</summary>
@@ -109,6 +112,7 @@ type
     FPermissions: TDeepKitPermissionClient;
     FUpgradeFlow: TDeepKitUpgradeFlowClient;
     FUnlock: TDeepBaseUnlock;
+    FTimeGuard: TTimeGuard;
     FIsInitialized: Boolean;
     FIsOnline: Boolean;
     FUserId: string;
@@ -210,6 +214,31 @@ type
     /// </summary>
     function ApplyInviteCode(const Code: string; out ErrorMsg: string): Boolean;
 
+    /// <summary>
+    /// Get the current user's invite status (code, count, total reward days).
+    /// Returns Empty status if offline.
+    /// </summary>
+    function GetInviteStatus: TCommerceInviteStatus;
+
+    // -------------------------------------------------------------------------
+    // Time Guard (anti-tampering)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Run time verification against the server. Call during initialization
+    /// to detect clock manipulation. Safe to call multiple times.
+    /// </summary>
+    function VerifyTime: TTimeGuardResult;
+
+    /// <summary>
+    /// Get the current time corrected for server offset.
+    /// Use this for time-sensitive operations (trial expiry, etc.).
+    /// </summary>
+    function GetCorrectedNow: TDateTime;
+
+    /// <summary>Returns True if the local clock appears trustworthy.</summary>
+    function IsTimeTrusted: Boolean;
+
     // -------------------------------------------------------------------------
     // Social Unlock Codes (delegates to DeepBase.Unlock)
     // -------------------------------------------------------------------------
@@ -277,6 +306,9 @@ type
     /// <summary>Underlying SafeClient for advanced use.</summary>
     property SafeClient: TDeepKitSafeClient read FSafeClient;
 
+    /// <summary>Time guard for clock manipulation detection.</summary>
+    property TimeGuard: TTimeGuard read FTimeGuard;
+
     /// <summary>Underlying Permissions client for advanced use.</summary>
     property Permissions: TDeepKitPermissionClient read FPermissions;
   end;
@@ -284,7 +316,6 @@ type
 implementation
 
 uses
-  System.JSON,
   System.DateUtils,
   DeepBase.Config;
 
@@ -360,6 +391,7 @@ end;
 
 destructor TDeepLicensing.Destroy;
 begin
+  FTimeGuard.Free;
   FUpgradeFlow.Free;
   FPermissions.Free;
   FSafeClient.Free;
@@ -666,22 +698,39 @@ end;
 // -----------------------------------------------------------------------------
 
 function TDeepLicensing.GenerateInviteCode: string;
+var
+  LResp: TJSONObject;
+  LCodeValue: TJSONValue;
 begin
   EnsureInitialized;
   Result := '';
 
-  // TODO(COM-P0-001): When /dk/invite/generate endpoint is available on the server,
-  // call it via the SafeClient transport. For now, invite codes are generated
-  // server-side on user registration.
-  //
-  // The server auto-generates an invite_code for each user on first
-  // device_anonymous login. We could fetch it from the user profile.
   if not FIsOnline then
     Exit;
+
+  try
+    LResp := FSafeClient.InviteGenerate(FConfig.AppID);
+    try
+      LCodeValue := LResp.GetValue(SDeepKitFieldInviteCode);
+      if Assigned(LCodeValue) then
+        Result := LCodeValue.Value;
+    finally
+      LResp.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      // Network or API error — return empty
+      Result := '';
+    end;
+  end;
 end;
 
 function TDeepLicensing.ApplyInviteCode(const Code: string;
   out ErrorMsg: string): Boolean;
+var
+  LResp: TJSONObject;
+  LSuccessValue, LMsgValue: TJSONValue;
 begin
   EnsureInitialized;
   Result := False;
@@ -699,10 +748,101 @@ begin
     Exit;
   end;
 
-  // TODO(COM-P0-001): When /dk/invite/apply endpoint is available on the server,
-  // POST { app_id, invite_code } to apply the code.
-  // On success, refresh entitlements to pick up the invitee bonus.
-  ErrorMsg := 'Invite system is not yet available. Please try again later.';
+  try
+    LResp := FSafeClient.InviteApply(FConfig.AppID, Code);
+    try
+      LSuccessValue := LResp.GetValue('success');
+      if Assigned(LSuccessValue) and LSuccessValue.TryGetValue<Boolean>(Result) then
+      begin
+        if Result then
+        begin
+          LMsgValue := LResp.GetValue('message');
+          if Assigned(LMsgValue) then
+            ErrorMsg := LMsgValue.Value
+          else
+            ErrorMsg := 'Invite applied successfully.';
+          // Refresh entitlements to pick up the invitee bonus
+          RefreshCachedTier;
+        end
+        else
+        begin
+          LMsgValue := LResp.GetValue('message');
+          if Assigned(LMsgValue) then
+            ErrorMsg := LMsgValue.Value
+          else
+            ErrorMsg := 'Failed to apply invite code.';
+        end;
+      end
+      else
+      begin
+        ErrorMsg := 'Invalid response from server.';
+        Result := False;
+      end;
+    finally
+      LResp.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      Result := False;
+      ErrorMsg := 'Invite apply failed: ' + E.Message;
+    end;
+  end;
+end;
+
+function TDeepLicensing.GetInviteStatus: TCommerceInviteStatus;
+var
+  LResp: TJSONObject;
+begin
+  EnsureInitialized;
+  Result := TCommerceInviteStatus.Empty;
+
+  if not FIsOnline then
+    Exit;
+
+  try
+    LResp := FSafeClient.InviteStatus(FConfig.AppID);
+    try
+      Result.InviteCode := JsonValueAsString(LResp, SDeepKitFieldInviteCode, '');
+      Result.InviteCount := JsonValueAsInt(LResp, SDeepKitFieldInviteCount, 0);
+      Result.TotalRewardDays := JsonValueAsInt(LResp, SDeepKitFieldTotalRewardDays, 0);
+    finally
+      LResp.Free;
+    end;
+  except
+    // Network error — return empty status
+  end;
+end;
+
+// -----------------------------------------------------------------------------
+// Time Guard
+// -----------------------------------------------------------------------------
+
+function TDeepLicensing.VerifyTime: TTimeGuardResult;
+begin
+  EnsureInitialized;
+  if FTimeGuard = nil then
+  begin
+    FTimeGuard := TTimeGuard.Create(FConfig.AppID + '.timeguard');
+    FTimeGuard.SetServerUrl(FConfig.ServerBaseURL);
+  end;
+  Result := FTimeGuard.Verify;
+end;
+
+function TDeepLicensing.GetCorrectedNow: TDateTime;
+begin
+  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+    Result := FTimeGuard.GetCorrectedNow
+  else
+    Result := Now;
+end;
+
+function TDeepLicensing.IsTimeTrusted: Boolean;
+begin
+  if (FTimeGuard <> nil) and FTimeGuard.Verified then
+    Result := FTimeGuard.IsTimeTrusted
+  else
+    Result := True;  // Trust by default if not verified
 end;
 
 // -----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.Updater - Secure Auto-Update System
   
   Version: 0.3
@@ -45,7 +45,7 @@ uses
   DeepBase.Exceptions,
   DeepBase.Net.Transport
   {$IFDEF MSWINDOWS}
-  , DeepBase.Crypto, Winapi.Windows
+  , DeepBase.Crypto, DeepBase.Crypto.RSA, Winapi.Windows
   {$ENDIF}
   {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
   , DeepBase.Crypto.OpenSSL
@@ -236,10 +236,8 @@ type
     FTransport: IDeepBaseHttpTransport;
     FCancelled: Boolean;
     
-    function DownloadFile(const Url, DestPath: string; 
+    function DownloadFile(const Url, DestPath: string;
       ProgressCallback: TProgressCallback): Boolean;
-    function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
-    function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
     function CreateBackup(const Files: TArray<string>): Boolean;
     function RestoreBackup: Boolean;
     function ApplyUpdate(const PackagePath: string; 
@@ -273,6 +271,18 @@ type
 
     /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
     procedure SetSignatureSecret(const Secret: string);
+
+    /// <summary>Verify an RSA/HMAC signature over Data (for tests/integration).</summary>
+    function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
+
+    /// <summary>Verify a downloaded file's SHA256 hash (for tests/integration).</summary>
+    function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
+
+    /// <summary>Stage + full verification WITHOUT install (docs/66 §16.5 steps 1-5:
+    /// package hash / package signature / manifest hash / manifest signature).
+    /// 配置同步等“下载+验证但不安装程序二进制”场景复用。</summary>
+    function StageAndVerifyPackage(const Info: TUpdateInfo;
+      out PackagePath: string; out ErrorMsg: string): Boolean; overload;
 
     /// <summary>Enable insecure dev mode: allows updates without hash/signature.
     /// NEVER enable in production builds. Use only for local development testing.</summary>
@@ -360,7 +370,16 @@ type
     
     /// <summary>Clear update cache</summary>
     procedure ClearCache;
-    
+
+    /// <summary>Stage and verify downloaded update package against RSA-SHA256 signature and hash.</summary>
+    class function StageAndVerifyPackage(const AInfo: TUpdateInfo;
+      const APackagePath: string; const APublicKeyPEM: string;
+      out AErrMsg: string): Boolean; overload;
+
+    class function StageAndVerifyPackage(const AVersion, APackageHash, ASignature: string;
+      const APackagePath: string; const APublicKeyPEM: string;
+      out AErrMsg: string): Boolean; overload;
+
     // Properties
     property UpdateUrl: string read FUpdateUrl write FUpdateUrl;
     property CurrentVersion: TSemanticVersion read FCurrentVersion;
@@ -408,6 +427,13 @@ function ParseInstallMode(const Name: string): TUpdateInstallMode;
 function InstallModeToString(Mode: TUpdateInstallMode): string;
 
 implementation
+
+const
+  // RSA-2048 公钥，用于验签 update manifest 的 signature / manifest_signature（§16.5 / §16.10）。
+  // 生产公钥由 DB4 签发方（王维）生成并回传后填入此处，必须与 docs/66 §16.12 一致。
+  // 轮换时升 key_id，客户端走多密钥并存（TODO，本轮单公钥）。
+  // 留空时 Initialize 不自动设置——调用方需显式 SetPublicKey，否则验签 fail-closed。
+  DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM = '';
 
 var
   FUpdater: TUpdateManager = nil;
@@ -670,6 +696,10 @@ begin
     FApplicationDir := ApplicationDir
   else
     FApplicationDir := TPath.GetDirectoryName(ParamStr(0));
+  // 默认加载内置 RSA 验签公钥（docs/66 §16.12）。若 const 留空或调用方已显式
+  // SetPublicKey，则跳过——保持显式设置优先，避免覆盖。
+  if (FPublicKey = '') and (DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM <> '') then
+    SetPublicKey(DEEPBASE_UPDATE_RSA_PUBLIC_KEY_PEM);
 end;
 
 procedure TUpdateManager.SetPublicKey(const PublicKeyPEM: string);
@@ -1037,10 +1067,8 @@ begin
 end;
 
 procedure TUpdateManager.CheckForUpdates(Callback: TCheckUpdateCallback);
-var
-  LTask: ITask;
 begin
-  LTask := TTask.Create(
+  TThread.CreateAnonymousThread(
     procedure
     var
       Info: TUpdateInfo;
@@ -1054,8 +1082,7 @@ begin
           if Assigned(Callback) then
             Callback(Available, Info);
         end);
-    end);
-  LTask.Start;
+    end).Start;
 end;
 
 function TUpdateManager.CheckForUpdatesSync(out Info: TUpdateInfo): Boolean;
@@ -1188,6 +1215,99 @@ begin
   Result := VerifyFileHash(PackagePath, Info.PackageHash);
   if not Result then
     FLastError := 'Package hash verification failed';
+end;
+
+function TUpdateManager.StageAndVerifyPackage(const Info: TUpdateInfo;
+  out PackagePath: string; out ErrorMsg: string): Boolean;
+var
+  SignatureAlg, ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
+begin
+  Result := False;
+  PackagePath := '';
+  ErrorMsg := '';
+  try
+    SetStatus(usDownloading, 'Downloading package...');
+    if not StageUpdatePackage(Info, PackagePath) then
+    begin
+      ErrorMsg := FLastError;
+      Exit;
+    end;
+
+    // Insecure dev mode bypass (strictly for local dev testing)
+    if FInsecureDevMode then
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    SignatureAlg := Trim(Info.SignatureAlgorithm).ToLower;
+    if SignatureAlg = '' then
+      SignatureAlg := 'rsa-sha256';
+
+    if Info.SignatureRequired then
+    begin
+      if (Pos('hmac', SignatureAlg) = 1) and (FSignatureSecret = '') then
+      begin
+        ErrorMsg := 'Package signature verification is required but HMAC secret is not configured';
+        Exit;
+      end;
+      if (Pos('rsa', SignatureAlg) = 1) and (FPublicKey = '') then
+      begin
+        ErrorMsg := 'Package signature verification is required but RSA public key is not configured';
+        Exit;
+      end;
+    end;
+
+    if Info.Signature <> '' then
+    begin
+      if not VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg) then
+      begin
+        ErrorMsg := 'Package signature verification failed';
+        Exit;
+      end;
+    end
+    else if Info.SignatureRequired then
+    begin
+      ErrorMsg := 'Package signature is missing';
+      Exit;
+    end;
+
+    if Info.ManifestSignature <> '' then
+    begin
+      ManifestPayload := BuildManifestSignaturePayload(Info);
+      ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
+      // docs/66 §16.10: manifest_hash 允许 'sha256:' 前缀，比对前剥离
+      ExpectedManifestHash := Info.ManifestHash;
+      if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
+        Delete(ExpectedManifestHash, 1, 7);
+      if (ExpectedManifestHash <> '') and (not SameText(ExpectedManifestHash, ComputedManifestHash)) then
+      begin
+        ErrorMsg := 'Manifest hash verification failed';
+        Exit;
+      end;
+      // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
+      if not VerifySignature(ManifestPayload, Info.ManifestSignature, SignatureAlg) then
+      begin
+        ErrorMsg := 'Manifest signature verification failed';
+        Exit;
+      end;
+    end
+    else if Info.SignatureRequired then
+    begin
+      ErrorMsg := 'Manifest signature is missing';
+      Exit;
+    end;
+
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      ErrorMsg := E.Message;
+      Result := False;
+    end;
+  end;
+  if not Result then
+    SetStatus(usFailed, ErrorMsg);
 end;
 
 function TUpdateManager.InstallPackage(const Info: TUpdateInfo; const PackagePath: string): Boolean;
@@ -1639,10 +1759,8 @@ end;
 
 procedure TUpdateManager.DownloadAndInstall(const Info: TUpdateInfo;
   OnComplete: TUpdateCompleteCallback);
-var
-  LTask: ITask;
 begin
-  LTask := TTask.Create(
+  TThread.CreateAnonymousThread(
     procedure
     var
       PackagePath: string;
@@ -1770,16 +1888,13 @@ begin
             OnComplete(Success, ErrorMsg);
           end);
       end;
-    end);
-  LTask.Start;
+    end).Start;
 end;
 
 procedure TUpdateManager.DownloadOnly(const Info: TUpdateInfo;
   OnComplete: TUpdateCompleteCallback);
-var
-  LTask: ITask;
 begin
-  LTask := TTask.Create(
+  TThread.CreateAnonymousThread(
     procedure
     var
       PackagePath: string;
@@ -1831,8 +1946,7 @@ begin
             OnComplete(Success, ErrorMsg);
           end);
       end;
-    end);
-  LTask.Start;
+    end).Start;
 end;
 
 function TUpdateManager.InstallDownloadedUpdate(const PackagePath: string): Boolean;
@@ -1978,7 +2092,7 @@ begin
     FLock.Leave;
   end;
 
-  FSilentInstallTask := TTask.Run(
+  TThread.CreateAnonymousThread(
     procedure
     begin
       try
@@ -2004,7 +2118,7 @@ begin
           FLock.Leave;
         end;
       end;
-    end);
+    end).Start;
 end;
 
 procedure TUpdateManager.StopSilentInstallLoop;
@@ -2162,6 +2276,84 @@ begin
         {$ENDIF}
     end;
   end;
+end;
+
+class function TUpdateManager.StageAndVerifyPackage(const AInfo: TUpdateInfo;
+  const APackagePath: string; const APublicKeyPEM: string;
+  out AErrMsg: string): Boolean;
+var
+  LDataBytes: TBytes;
+  LComputedHash: string;
+  LSigBytes: TBytes;
+  LVerifier: TRSAVerifier;
+begin
+  AErrMsg := '';
+  Result := False;
+
+  if not TFile.Exists(APackagePath) then
+  begin
+    AErrMsg := 'Package file does not exist: ' + APackagePath;
+    Exit;
+  end;
+
+  // 1. Verify SHA-256 hash if provided
+  if AInfo.PackageHash <> '' then
+  begin
+    LComputedHash := LowerCase(THashSHA2.GetHashStringFromFile(APackagePath));
+    if not SameText(LComputedHash, AInfo.PackageHash) then
+    begin
+      AErrMsg := Format('Package hash mismatch: expected %s, got %s', [AInfo.PackageHash, LComputedHash]);
+      Exit;
+    end;
+  end;
+
+  // 2. Verify RSA-SHA256 signature if signature and public key provided
+  if (AInfo.Signature <> '') and (APublicKeyPEM <> '') then
+  begin
+    try
+      LSigBytes := TNetEncoding.Base64.DecodeStringToBytes(AInfo.Signature);
+      LVerifier := TRSAVerifier.Create;
+      try
+        if not LVerifier.LoadPublicKeyPEM(APublicKeyPEM) then
+        begin
+          AErrMsg := 'Failed to load RSA public key: ' + LVerifier.LastError;
+          Exit;
+        end;
+
+        LDataBytes := TFile.ReadAllBytes(APackagePath);
+        if not LVerifier.VerifySignature(LDataBytes, LSigBytes) then
+        begin
+          AErrMsg := 'Package RSA-SHA256 signature verification failed: ' + LVerifier.LastError;
+          Exit;
+        end;
+      finally
+        LVerifier.Free;
+      end;
+    except
+      on E: Exception do
+      begin
+        AErrMsg := 'RSA verification exception: ' + E.Message;
+        Exit;
+      end;
+    end;
+  end;
+
+  Result := True;
+end;
+
+class function TUpdateManager.StageAndVerifyPackage(const AVersion, APackageHash, ASignature: string;
+  const APackagePath: string; const APublicKeyPEM: string;
+  out AErrMsg: string): Boolean;
+var
+  LInfo: TUpdateInfo;
+  LErr: string;
+begin
+  LInfo := Default(TUpdateInfo);
+  LInfo.Version := TSemanticVersion.Parse(AVersion);
+  LInfo.PackageHash := APackageHash;
+  LInfo.Signature := ASignature;
+  Result := StageAndVerifyPackage(LInfo, APackagePath, APublicKeyPEM, LErr);
+  AErrMsg := LErr;
 end;
 
 initialization

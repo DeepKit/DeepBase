@@ -33,6 +33,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.Hash,
+  System.SyncObjs,
   Vcl.Forms;
 
 type
@@ -68,12 +70,24 @@ type
   /// </summary>
   TAIAnalysisCallback = reference to function(const APrompt: string): string;
 
+  /// <summary>
+  /// Timeout-aware callback for AI analysis. Set via the
+  /// SetAICallback(ATimeoutAwareCallback) overload. When assigned, CallAI
+  /// passes AITimeoutMs through so the LLM client can honour it.
+  /// BIZ2-020 fix: the plain TAIAnalysisCallback could not receive the
+  /// configured timeout, so AITimeoutMs was stored but never used.
+  /// </summary>
+  TAIAnalysisCallbackWithTimeout = reference to function(
+    const APrompt: string; ATimeoutMs: Integer): string;
+
   TAIErrorHandler = class
   private
+    class var FLock: TCriticalSection;
     class var FConfig: TAIErrorConfig;
     class var FCache: TDictionary<string, string>;
     class var FInstalled: Boolean;
     class var FAICallback: TAIAnalysisCallback;
+    class var FAICallbackWithTimeout: TAIAnalysisCallbackWithTimeout;
     class var FOldAppException: TExceptionEvent;
     class function ClassifyError(E: Exception): TErrorLevel;
     class function BuildPrompt(E: Exception; const AContext, AStack: string): string;
@@ -81,13 +95,32 @@ type
     class function GetExceptionLocation(AExceptAddr: Pointer): string;
     class procedure DoApplicationException(Sender: TObject; E: Exception);
   public
+    class constructor Create;
+    class destructor Destroy;
     /// <summary>Install as global Application.OnException handler.</summary>
     class procedure Install; overload;
     class procedure Install(const AConfig: TAIErrorConfig); overload;
     /// <summary>Set the AI callback. Typically wraps DeepBase.LLM.Chat.</summary>
-    class procedure SetAICallback(ACallback: TAIAnalysisCallback);
+    class procedure SetAICallback(ACallback: TAIAnalysisCallback); overload;
+    /// <summary>
+    /// Set a timeout-aware AI callback. CallAI passes AIConfig.AITimeoutMs
+    /// as the second parameter so the LLM client can honour the timeout.
+    /// BIZ2-020 fix.
+    /// </summary>
+    class procedure SetAICallback(ACallback: TAIAnalysisCallbackWithTimeout); overload;
     /// <summary>Main entry point. Call from SafeRun or directly.</summary>
     class procedure Handle(E: Exception; const AContext: string = '');
+    /// <summary>
+    /// Handle with explicit except-address. Use from except blocks where
+    /// ExceptAddr is valid; outside an except block pass nil. The legacy
+    /// Handle overload routes through here.
+    /// BIZ2-018 fix: the previous Handle called ExceptAddr directly from a
+    /// non-except context, which is undefined behaviour — the returned
+    /// address was stack garbage and the cached AI analysis key became
+    /// unpredictable.
+    /// </summary>
+    class procedure HandleAt(E: Exception; AExceptAddr: Pointer;
+      const AContext: string = '');
     /// <summary>Clear the AI response cache.</summary>
     class procedure ClearCache;
     class property Config: TAIErrorConfig read FConfig write FConfig;
@@ -121,6 +154,17 @@ begin
 end;
 
 { TAIErrorHandler }
+
+class constructor TAIErrorHandler.Create;
+begin
+  FLock := TCriticalSection.Create;
+end;
+
+class destructor TAIErrorHandler.Destroy;
+begin
+  FCache.Free;
+  FreeAndNil(FLock);
+end;
 
 class function TAIErrorHandler.ClassifyError(E: Exception): TErrorLevel;
 begin
@@ -172,40 +216,96 @@ end;
 class function TAIErrorHandler.CallAI(const APrompt: string): string;
 var
   LKey: string;
+  LCallback: TAIAnalysisCallback;
+  LCallbackTO: TAIAnalysisCallbackWithTimeout;
+  LMaxCacheSize: Integer;
+  LTimeoutMs: Integer;
 begin
   Result := '';
 
-  // Check cache first
-  LKey := Copy(APrompt, 1, 100);
-  if (FCache <> nil) and FCache.TryGetValue(LKey, Result) then
-    Exit;
+  // BIZ2-019 fix: use SHA-256 hash (first 32 hex chars) of the full prompt
+  // as cache key. The previous key was Copy(Prompt,1,100) which collided for
+  // different errors sharing a common prefix (same exception class, same
+  // context, divergent messages).
+  LKey := THashSHA2.GetHashString(APrompt).Substring(0, 32);
 
-  // Call via callback
-  if not Assigned(FAICallback) then
-    Exit;
-
+  FLock.Enter;
   try
-    Result := FAICallback(APrompt);
-  except
-    // Never let AI handler itself crash
-    Result := '';
+    if (FCache <> nil) and FCache.TryGetValue(LKey, Result) then
+      Exit;
+    LCallback := FAICallback;
+    LCallbackTO := FAICallbackWithTimeout;
+    LMaxCacheSize := FConfig.MaxCacheSize;
+    LTimeoutMs := FConfig.AITimeoutMs;
+  finally
+    FLock.Leave;
+  end;
+
+  // Prefer the timeout-aware callback (BIZ2-020 fix: passes AITimeoutMs
+  // through so the LLM client can enforce the configured deadline).
+  if Assigned(LCallbackTO) then
+  begin
+    try
+      Result := LCallbackTO(APrompt, LTimeoutMs);
+    except
+      Result := '';
+    end;
+  end
+  else if Assigned(LCallback) then
+  begin
+    try
+      Result := LCallback(APrompt);
+    except
+      Result := '';
+    end;
   end;
 
   // Cache the result
-  if (Result <> '') and (FCache <> nil) then
+  if (Result <> '') then
   begin
-    if FCache.Count >= FConfig.MaxCacheSize then
-      FCache.Clear;
-    FCache.AddOrSetValue(LKey, Result);
+    FLock.Enter;
+    try
+      if FCache <> nil then
+      begin
+        if FCache.Count >= LMaxCacheSize then
+          FCache.Clear;
+        FCache.AddOrSetValue(LKey, Result);
+      end;
+    finally
+      FLock.Leave;
+    end;
   end;
 end;
 
 class procedure TAIErrorHandler.Handle(E: Exception; const AContext: string);
+begin
+  // BIZ2-018 fix: route through HandleAt with nil address. Callers of this
+  // overload may not be inside an except block, so ExceptAddr would return
+  // undefined stack garbage. HandleAt skips the location component when
+  // AExceptAddr is nil.
+  HandleAt(E, nil, AContext);
+end;
+
+class procedure TAIErrorHandler.HandleAt(E: Exception; AExceptAddr: Pointer;
+  const AContext: string);
 var
   LLevel: TErrorLevel;
   LStack, LAIResponse, LUserMsg: string;
+  LAIEnabled: Boolean;
+  LShowTech: Boolean;
+  LSilentMode: Boolean;
 begin
   LLevel := ClassifyError(E);
+
+  // Snapshot config under lock
+  FLock.Enter;
+  try
+    LAIEnabled := FConfig.AIEnabled;
+    LShowTech := FConfig.ShowTechnicalDetails;
+    LSilentMode := FConfig.SilentMode;
+  finally
+    FLock.Leave;
+  end;
 
   case LLevel of
     elIgnore:
@@ -221,10 +321,10 @@ begin
 
     elAIAnalyze:
     begin
-      LStack := GetExceptionLocation(ExceptAddr);
+      LStack := GetExceptionLocation(AExceptAddr);
 
       // Try AI analysis
-      if FConfig.AIEnabled and Assigned(FAICallback) then
+      if LAIEnabled then
       begin
         LAIResponse := CallAI(BuildPrompt(E, AContext, LStack));
       end;
@@ -241,12 +341,12 @@ begin
           LUserMsg := '系统遇到问题：' + E.Message;
       end;
 
-      if FConfig.ShowTechnicalDetails then
+      if LShowTech then
         LUserMsg := LUserMsg + sLineBreak + sLineBreak +
           '[' + E.ClassName + ' at ' + LStack + ']';
 
       // Show to user (suppressed in SilentMode for tests / non-interactive runs)
-      if not FConfig.SilentMode then
+      if not LSilentMode then
         MessageDlg(LUserMsg, mtWarning, [mbOK], 0);
 
       // Log
@@ -261,7 +361,7 @@ begin
       Logger.Fatal(
         Format('FATAL [%s] %s: %s', [AContext, E.ClassName, E.Message]),
         'AIErrorHandler');
-      if FConfig.SilentMode then
+      if LSilentMode then
       begin
         // Non-interactive path (e.g. test runners): no dialog,
         // exit with non-zero code so CI / test harness can detect failure.
@@ -303,25 +403,53 @@ end;
 
 class procedure TAIErrorHandler.Install(const AConfig: TAIErrorConfig);
 begin
-  if FInstalled then Exit;
-  FConfig := AConfig;
-  if FCache = nil then
-    FCache := TDictionary<string, string>.Create;
-  // Save existing handler so we can chain (do not overwrite peers like AutoFix).
-  FOldAppException := Application.OnException;
-  Application.OnException := DoApplicationException;
-  FInstalled := True;
+  FLock.Enter;
+  try
+    if FInstalled then Exit;
+    FConfig := AConfig;
+    if FCache = nil then
+      FCache := TDictionary<string, string>.Create;
+    // Save existing handler so we can chain (do not overwrite peers like AutoFix).
+    FOldAppException := Application.OnException;
+    Application.OnException := DoApplicationException;
+    FInstalled := True;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure TAIErrorHandler.SetAICallback(ACallback: TAIAnalysisCallback);
 begin
-  FAICallback := ACallback;
+  FLock.Enter;
+  try
+    FAICallback := ACallback;
+    FAICallbackWithTimeout := nil;  // new overload takes precedence
+  finally
+    FLock.Leave;
+  end;
+end;
+
+class procedure TAIErrorHandler.SetAICallback(
+  ACallback: TAIAnalysisCallbackWithTimeout);
+begin
+  FLock.Enter;
+  try
+    FAICallbackWithTimeout := ACallback;
+    FAICallback := nil;  // new overload takes precedence
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure TAIErrorHandler.ClearCache;
 begin
-  if FCache <> nil then
-    FCache.Clear;
+  FLock.Enter;
+  try
+    if FCache <> nil then
+      FCache.Clear;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 { SafeRun }
@@ -332,7 +460,10 @@ begin
     AProc();
   except
     on E: Exception do
-      TAIErrorHandler.Handle(E, AContext);
+      // BIZ2-018 fix: pass ExceptAddr explicitly. This is safe because we
+      // are inside an except block; the address is valid and lets the
+      // cached AI analysis key include a stable location.
+      TAIErrorHandler.HandleAt(E, ExceptAddr, AContext);
   end;
 end;
 
@@ -340,6 +471,7 @@ initialization
   TAIErrorHandler.FCache := nil;
   TAIErrorHandler.FInstalled := False;
   TAIErrorHandler.FAICallback := nil;
+  TAIErrorHandler.FAICallbackWithTimeout := nil;
   TAIErrorHandler.FOldAppException := nil;
 
 finalization

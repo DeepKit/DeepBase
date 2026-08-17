@@ -178,6 +178,8 @@ type
     [Test]
     procedure Test_OnComplete_Called;
     [Test]
+    procedure Test_OnComplete_Exception_DoesNotFailTask;
+    [Test]
     procedure Test_OnError_Called;
   end;
 
@@ -723,6 +725,44 @@ begin
   
   FEvent.WaitFor(2000);
   Assert.IsTrue(FOnCompleteCalled);
+end;
+
+procedure TTaskCallbackTests.Test_OnComplete_Exception_DoesNotFailTask;
+var
+  Task: TScheduledTask;
+begin
+  Task := FScheduler.Schedule('complete_raises',
+    procedure
+    begin
+      // Complete successfully; only the completion callback fails.
+    end);
+
+  Task
+    .Delay(50)
+    .OnComplete(
+      procedure(const ATask: TScheduledTask)
+      begin
+        FOnCompleteCalled := True;
+        FEvent.SetEvent;
+        raise Exception.Create('completion callback failed');
+      end)
+    .OnError(
+      procedure(const ATask: TScheduledTask; const Error: Exception)
+      begin
+        FOnErrorCalled := True;
+        FLastError := Error.Message;
+      end)
+    .Run;
+
+  FEvent.WaitFor(2000);
+  Sleep(100);
+
+  Assert.IsTrue(FOnCompleteCalled);
+  Assert.IsFalse(FOnErrorCalled);
+  Assert.AreEqual(tsCompleted, Task.State);
+  Assert.AreEqual(0, FScheduler.Stats.RunningTasks);
+  Assert.AreEqual(1, FScheduler.Stats.CompletedTasks);
+  Assert.AreEqual(0, FScheduler.Stats.FailedTasks);
 end;
 
 procedure TTaskCallbackTests.Test_OnError_Called;

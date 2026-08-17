@@ -23,7 +23,8 @@ uses
   System.Variants,
   Data.DB,
   FireDAC.Stan.Param,
-  DeepBase.LLM.Manager;
+  DeepBase.LLM.Manager,
+  DeepBase.SQL.Utils;
 
 type
   TFireDACLLMStorage = class(TInterfacedObject, ILLMStorage)
@@ -221,6 +222,11 @@ var
   DataSet: TDataSet;
 begin
   Result := False;
+
+  // Validate identifiers to prevent SQL injection (DATA2-018)
+  TSQLUtils.ValidateIdentifier(TableName, 'TableName');
+  TSQLUtils.ValidateIdentifier(ColumnName, 'ColumnName');
+
   if not TableExists(TableName) then
     Exit;
 

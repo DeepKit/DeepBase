@@ -163,6 +163,13 @@ type
     [Test]
     procedure Test_DeepKitSafeClient_GetUpdatesManifest_UsesRoute_AndParsesFields;
 
+    // BUG-428 FIX (E-005): 429/5xx transient-failure backoff on SafeClient.
+    [Test]
+    procedure Test_DeepKitSafeClient_429_RetriesIdempotentGet_HonorsRetryAfter;
+
+    [Test]
+    procedure Test_DeepKitSafeClient_5xx_DoesNotRetryNonIdempotentPost;
+
     [Test]
     procedure Test_HttpStorage_RefundOrder_ServerAdmin_UsesRouteAndPayload;
 
@@ -183,6 +190,30 @@ type
 
     [Test]
     procedure Test_FirebaseAdapter_CreateServerOnly_AllowsConstruction;
+
+    // Validation path tests (test coverage #10)
+    [Test]
+    procedure Test_RegisterProduct_RejectsEmptyAppId;
+    [Test]
+    procedure Test_RegisterProduct_RejectsEmptyProductId;
+    [Test]
+    procedure Test_RegisterProduct_RejectsNegativeAmount;
+    [Test]
+    procedure Test_RegisterProduct_RejectsEmptyEntitlementCode;
+    [Test]
+    procedure Test_CreateOrder_RejectsNonExistentUser;
+    [Test]
+    procedure Test_CreateOrder_RejectsInactiveUser;
+    [Test]
+    procedure Test_EnsureUserForIdentity_RejectsEmptyProviderUserId;
+    [Test]
+    procedure Test_EnsureUserForIdentity_RejectsEmptyAppId;
+    [Test]
+    procedure Test_CloseOrder_RejectsNotFound;
+    [Test]
+    procedure Test_CloseOrder_RejectsTerminalState;
+    [Test]
+    procedure Test_ConsumeEntitlement_RejectsNonPositiveCount;
   end;
 
 implementation
@@ -218,6 +249,8 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure QueueResponse(AStatusCode: Integer; const ABody: string);
+    procedure QueueResponseWithHeaders(AStatusCode: Integer; const ABody: string;
+      const AHeaders: array of string); overload;
     function RequestCount: Integer;
     function RequestAt(AIndex: Integer): TRecordedHttpRequest;
     function Send(const AMethod, AUrl, ABody: string;
@@ -300,6 +333,25 @@ procedure TFakeCommerceTransport.QueueResponse(AStatusCode: Integer;
   const ABody: string);
 begin
   FResponses.Enqueue(TCommerceBackendHttpResponse.Create(AStatusCode, ABody));
+end;
+
+procedure TFakeCommerceTransport.QueueResponseWithHeaders(AStatusCode: Integer;
+  const ABody: string; const AHeaders: array of string);
+var
+  Resp: TCommerceBackendHttpResponse;
+  Hdrs: TNetHeaders;
+  I: Integer;
+begin
+  // AHeaders is a flat name/value sequence: [name0, value0, name1, value1, ...]
+  SetLength(Hdrs, Length(AHeaders) div 2);
+  for I := 0 to High(Hdrs) do
+  begin
+    Hdrs[I].Name := AHeaders[I * 2];
+    Hdrs[I].Value := AHeaders[(I * 2) + 1];
+  end;
+  Resp := TCommerceBackendHttpResponse.Create(AStatusCode, ABody);
+  Resp.Headers := Hdrs;
+  FResponses.Enqueue(Resp);
 end;
 
 function TFakeCommerceTransport.RequestCount: Integer;
@@ -1185,6 +1237,71 @@ begin
   end;
 end;
 
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_429_RetriesIdempotentGet_HonorsRetryAfter;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Items: TArray<TCommerceProductData>;
+begin
+  // BUG-428 FIX (E-005): a 429 on an idempotent GET must be retried. The first
+  // response carries Retry-After: 0 (sleep-free) so the test does not stall
+  // on real backoff; the second succeeds. RequestCount must reflect the retry.
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponseWithHeaders(429,
+    '{"error":"rate_limited"}', ['Retry-After', '0']);
+  Transport.QueueResponse(200,
+    '{"products":[{"app_id":"deepbase_desktop","product_id":"pro_monthly","name":"Pro Monthly","description":"monthly","amount_minor":3900,"currency":"CNY","entitlement_code":"pro_full","entitlement_duration_days":30,"initial_quota":-1,"is_active":true}]}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  try
+    Items := Client.ListProducts('deepbase_desktop');
+
+    Assert.AreEqual<Integer>(1, Length(Items));
+    Assert.AreEqual('pro_monthly', Items[0].ProductId);
+    // Two transport calls: the initial 429 + the retried 200.
+    Assert.AreEqual<Integer>(2, Transport.RequestCount);
+  finally
+    Client.Free;
+  end;
+end;
+
+procedure TCommerceServiceTests.Test_DeepKitSafeClient_5xx_DoesNotRetryNonIdempotentPost;
+var
+  Transport: TFakeCommerceTransport;
+  Client: TDeepKitSafeClient;
+  Raised: Boolean;
+begin
+  // BUG-428 FIX (E-005): a 5xx on a non-idempotent POST (no idempotency key)
+  // must NOT be retried — retrying would risk duplicating the side effect
+  // (e.g. double-charging an order). RequestCount must stay 1.
+  Transport := TFakeCommerceTransport.Create;
+  Transport.QueueResponse(503,
+    '{"error":"server_unavailable"}');
+  Client := TDeepKitSafeClient.Create(
+    TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
+      'atk_001'),
+    Transport);
+  try
+    Raised := False;
+    try
+      // CreateOrder is a POST without an idempotency key at the SafeClient
+      // boundary — retrying it on a transient 5xx would risk duplicate
+      // order creation, so it must surface the error instead.
+      Client.CreateOrder('usr_001', 'deepbase_desktop', 'pro_monthly');
+    except
+      on EDeepBaseCommerceError do
+        Raised := True;
+    end;
+
+    Assert.IsTrue(Raised, 'non-idempotent POST on 5xx must surface the error');
+    Assert.AreEqual<Integer>(1, Transport.RequestCount);
+  finally
+    Client.Free;
+  end;
+end;
+
 procedure TCommerceServiceTests.Test_DeepKitSafeClient_ListEntitlements_UsesAppIdQuery_AndParsesItems;
 var
   Transport: TFakeCommerceTransport;
@@ -1194,7 +1311,7 @@ var
 begin
   Transport := TFakeCommerceTransport.Create;
   Transport.QueueResponse(200,
-    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-07-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2099-12-31T23:59:59Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
   Client := TDeepKitSafeClient.Create(
     TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
       'atk_001'),
@@ -1293,7 +1410,7 @@ var
 begin
   Transport := TFakeCommerceTransport.Create;
   Transport.QueueResponse(200,
-    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2026-07-08T10:00:00Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
+    '{"items":[{"entitlement_id":"ent_001","user_id":"usr_001","app_id":"deepbase_desktop","product_id":"pro_monthly","code":"pro_full","status":"active","valid_from":"2026-05-08T10:00:00Z","valid_until":"2099-12-31T23:59:59Z","remaining_quota":-1,"source_order_id":"ord_001"}]}');
   Client := TDeepKitSafeClient.Create(
     TDeepKitSafeClientConfig.CreateDeepKit('https://api.example.test',
       'atk_001'),
@@ -1894,6 +2011,199 @@ begin
   Storage := TFirebaseCommerceStorage.Create(
     TFirebaseConfig.CreateServerOnly('project_001', 'access_token'));
   Assert.IsNotNull(Storage);
+end;
+
+{ Validation path tests (test coverage #10) }
+
+procedure TCommerceServiceTests.Test_RegisterProduct_RejectsEmptyAppId;
+var
+  Product: TCommerceProductData;
+  Raised: Boolean;
+begin
+  Product := TCommerceProductData.Create('', 'prod_1', 'Test', 100, 'CNY', 'code_1');
+  Raised := False;
+  try
+    FService.RegisterProduct(Product);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'RegisterProduct must reject empty AppId');
+end;
+
+procedure TCommerceServiceTests.Test_RegisterProduct_RejectsEmptyProductId;
+var
+  Product: TCommerceProductData;
+  Raised: Boolean;
+begin
+  Product := TCommerceProductData.Create('app_1', '', 'Test', 100, 'CNY', 'code_1');
+  Raised := False;
+  try
+    FService.RegisterProduct(Product);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'RegisterProduct must reject empty ProductId');
+end;
+
+procedure TCommerceServiceTests.Test_RegisterProduct_RejectsNegativeAmount;
+var
+  Product: TCommerceProductData;
+  Raised: Boolean;
+begin
+  Product := TCommerceProductData.Create('app_1', 'prod_1', 'Test', -100, 'CNY', 'code_1');
+  Raised := False;
+  try
+    FService.RegisterProduct(Product);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'RegisterProduct must reject negative amount');
+end;
+
+procedure TCommerceServiceTests.Test_RegisterProduct_RejectsEmptyEntitlementCode;
+var
+  Product: TCommerceProductData;
+  Raised: Boolean;
+begin
+  Product := TCommerceProductData.Create('app_1', 'prod_1', 'Test', 100, 'CNY', '');
+  Raised := False;
+  try
+    FService.RegisterProduct(Product);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'RegisterProduct must reject empty entitlement code');
+end;
+
+procedure TCommerceServiceTests.Test_CreateOrder_RejectsNonExistentUser;
+var
+  Raised: Boolean;
+begin
+  RegisterProduct('prod_1', 'code_1', 100);
+  Raised := False;
+  try
+    FService.CreateOrder('non_existent_user', 'desktop_tool', 'prod_1');
+  except
+    on E: EDeepBaseCommerceNotFoundError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'CreateOrder must reject non-existent user');
+end;
+
+procedure TCommerceServiceTests.Test_CreateOrder_RejectsInactiveUser;
+var
+  User: TCommerceUserData;
+  Raised: Boolean;
+begin
+  RegisterProduct('prod_1', 'code_1', 100);
+  User := EnsureUser;
+  // Deactivate the user by directly updating storage
+  User.IsActive := False;
+  FStorage.UpsertUser(User);
+
+  Raised := False;
+  try
+    FService.CreateOrder(User.UserId, 'desktop_tool', 'prod_1');
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'CreateOrder must reject inactive user');
+end;
+
+procedure TCommerceServiceTests.Test_EnsureUserForIdentity_RejectsEmptyProviderUserId;
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    FService.EnsureUserForIdentity(capWeChatMiniProgram, '', 'desktop_tool', '');
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'EnsureUserForIdentity must reject empty provider_user_id');
+end;
+
+procedure TCommerceServiceTests.Test_EnsureUserForIdentity_RejectsEmptyAppId;
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    FService.EnsureUserForIdentity(capWeChatMiniProgram, 'openid_001', '', '');
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'EnsureUserForIdentity must reject empty app_id');
+end;
+
+procedure TCommerceServiceTests.Test_CloseOrder_RejectsNotFound;
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    FService.CloseOrder('non_existent_order');
+  except
+    on E: EDeepBaseCommerceNotFoundError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'CloseOrder must reject non-existent order');
+end;
+
+procedure TCommerceServiceTests.Test_CloseOrder_RejectsTerminalState;
+var
+  User: TCommerceUserData;
+  Order: TCommerceOrderData;
+  Notification: TCommercePaymentNotification;
+  Raised: Boolean;
+begin
+  RegisterProduct('prod_1', 'code_1', 100);
+  FService.RegisterPaymentGateway(cppWeChatPay, TFakePaymentGateway.Create);
+  User := EnsureUser;
+  Order := FService.CreateOrder(User.UserId, 'desktop_tool', 'prod_1');
+  FService.BeginPayment(Order.OrderId, cppWeChatPay, cpcMiniProgram, 'openid_001');
+
+  // Confirm payment to move order to cosPaid (terminal)
+  Notification.Provider := cppWeChatPay;
+  Notification.OutTradeNo := Order.OutTradeNo;
+  Notification.ProviderTradeNo := 'wx_trade_001';
+  Notification.AmountMinor := Order.AmountMinor;
+  Notification.Currency := Order.Currency;
+  Notification.Success := True;
+  Notification.PaidAtISO := CommerceNowISO;
+  Notification.RawPayload := '{}';
+  FService.ConfirmPayment(Notification);
+
+  // Now try to close the paid order
+  Raised := False;
+  try
+    FService.CloseOrder(Order.OrderId);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'CloseOrder must reject order in terminal state');
+end;
+
+procedure TCommerceServiceTests.Test_ConsumeEntitlement_RejectsNonPositiveCount;
+var
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    FService.ConsumeEntitlement('user_1', 'app_1', 'code_1', 0);
+  except
+    on E: EDeepBaseCommerceValidationError do
+      Raised := True;
+  end;
+  Assert.IsTrue(Raised, 'ConsumeEntitlement must reject non-positive count');
 end;
 
 initialization

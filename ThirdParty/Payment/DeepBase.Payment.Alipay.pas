@@ -91,14 +91,28 @@ type
     function CreateAppPayOrder(const AOrder: TPaymentOrder): TPaymentResult;
   end;
 
+/// <summary>Format a Currency as an Alipay-compatible amount string.
+/// Alipay API requires `\d+(\.\d+)?` (US-style period decimal separator).
+/// Exposed for testability (BUG EXP-P0-002 regression).</summary>
+function FormatAlipayAmount(AAmount: Currency): string;
+
 implementation
 
 uses
-  System.Hash, System.StrUtils, DeepBase.Crypto;
+  System.Hash, System.StrUtils, DeepBase.Crypto, DeepBase.Crypto.RSA;
 
 const
   ALIPAY_GATEWAY = 'https://openapi.alipay.com/gateway.do';
   ALIPAY_SANDBOX_GATEWAY = 'https://openapi-sandbox.dl.alipaydev.com/gateway.do';
+
+function FormatAlipayAmount(AAmount: Currency): string;
+var
+  Fmt: TFormatSettings;
+begin
+  Fmt := TFormatSettings.Create('en-US');
+  Fmt.DecimalSeparator := '.';
+  Result := FormatFloat('0.00', AAmount, Fmt);
+end;
 
 { TAlipayConfig }
 
@@ -112,7 +126,9 @@ end;
 // BUG-019 FIX: 安全密钥存储方法实现
 procedure TAlipayConfig.LoadKeysFromCredentialManager;
 begin
-  PrivateKey := GetCredentialKey('PrivateKey');
+  // REVIEW5-FEAT-001: assign straight to the field to avoid re-running
+  // ProtectKey (double-protection) on every load.
+  FPrivateKey := GetCredentialKey('PrivateKey');
   FAlipayPublicKey := GetCredentialKey('AlipayPublicKey');
 end;
 
@@ -124,7 +140,7 @@ end;
 
 procedure TAlipayConfig.SetPrivateKeySecure(const AKey: string);
 begin
-  FPrivateKey := ProtectKey(AKey);
+  FPrivateKey := ProtectKey('PrivateKey', AKey);
 end;
 
 function TAlipayConfig.GetPrivateKeySecure: string;
@@ -372,7 +388,7 @@ begin
   BizContent := TJSONObject.Create;
   try
     BizContent.AddPair('out_trade_no', AOrder.OrderNo);
-    BizContent.AddPair('total_amount', FormatFloat('0.00', AOrder.Amount));
+    BizContent.AddPair('total_amount', FormatAlipayAmount(AOrder.Amount));
     BizContent.AddPair('subject', AOrder.Subject);
     if AOrder.Body <> '' then
       BizContent.AddPair('body', AOrder.Body);
@@ -414,7 +430,7 @@ begin
   BizContent := TJSONObject.Create;
   try
     BizContent.AddPair('out_trade_no', AOrder.OrderNo);
-    BizContent.AddPair('total_amount', FormatFloat('0.00', AOrder.Amount));
+    BizContent.AddPair('total_amount', FormatAlipayAmount(AOrder.Amount));
     BizContent.AddPair('subject', AOrder.Subject);
     BizContent.AddPair('product_code', 'FAST_INSTANT_TRADE_PAY');
     if AOrder.Body <> '' then
@@ -459,7 +475,7 @@ begin
   BizContent := TJSONObject.Create;
   try
     BizContent.AddPair('out_trade_no', AOrder.OrderNo);
-    BizContent.AddPair('total_amount', FormatFloat('0.00', AOrder.Amount));
+    BizContent.AddPair('total_amount', FormatAlipayAmount(AOrder.Amount));
     BizContent.AddPair('subject', AOrder.Subject);
     BizContent.AddPair('product_code', 'QUICK_WAP_WAY');
     if AOrder.Body <> '' then
@@ -500,7 +516,7 @@ begin
   BizContent := TJSONObject.Create;
   try
     BizContent.AddPair('out_trade_no', AOrder.OrderNo);
-    BizContent.AddPair('total_amount', FormatFloat('0.00', AOrder.Amount));
+    BizContent.AddPair('total_amount', FormatAlipayAmount(AOrder.Amount));
     BizContent.AddPair('subject', AOrder.Subject);
     BizContent.AddPair('product_code', 'QUICK_MSECURITY_PAY');
     if AOrder.Body <> '' then
@@ -605,7 +621,7 @@ begin
   try
     BizContent.AddPair('out_trade_no', ARequest.OrderNo);
     BizContent.AddPair('out_request_no', ARequest.RefundNo);
-    BizContent.AddPair('refund_amount', FormatFloat('0.00', ARequest.RefundAmount));
+    BizContent.AddPair('refund_amount', FormatAlipayAmount(ARequest.RefundAmount));
     if ARequest.Reason <> '' then
       BizContent.AddPair('refund_reason', ARequest.Reason);
 

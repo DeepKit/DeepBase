@@ -53,6 +53,7 @@ type
     class procedure ValidateIdentifier(const Identifier: string); static;
     class function GetTableDef(const TableName: string): TTableStateDef; static;
     class function AcquireConnection: TFDConnection; static;
+    class function QuoteIdentifier(const AName: string): string; static;
     class function ReadCurrentStatus(Connection: TFDConnection;
       const TableName: string; EntityID: Integer; out Status: string): Boolean; static;
     class function IsPostgreSQL(Connection: TFDConnection): Boolean; static;
@@ -192,20 +193,60 @@ class procedure TStatusMachine.ValidateIdentifier(const Identifier: string);
 var
   I: Integer;
   Ch: Char;
+  DotSeen: Boolean;
 begin
   if Trim(Identifier) = '' then
     raise EInvalidOperationException.Create('Table name cannot be empty');
 
+  // BUG EXP-P1-016 fix: accept "schema.table" (or bare "table") form.
+  // At most one dot is allowed; both sides of the dot must be valid SQL
+  // identifiers. This lets callers register state machines against tables
+  // in an explicit schema (e.g. "public.orders", "audit.events") without
+  // resorting to quoting tricks.
   Ch := Identifier[1];
   if not CharInSet(Ch, ['A'..'Z', 'a'..'z', '_']) then
     raise EInvalidOperationException.CreateFmt('Invalid table name: %s', [Identifier]);
 
+  DotSeen := False;
   for I := 2 to Length(Identifier) do
   begin
     Ch := Identifier[I];
+    if Ch = '.' then
+    begin
+      if DotSeen then
+        raise EInvalidOperationException.CreateFmt(
+          'Invalid table name (at most one dot allowed): %s', [Identifier]);
+      DotSeen := True;
+      // Character after dot must start a valid identifier segment.
+      if (I = Length(Identifier)) or
+         not CharInSet(Identifier[I + 1], ['A'..'Z', 'a'..'z', '_']) then
+        raise EInvalidOperationException.CreateFmt(
+          'Invalid table name (empty segment after dot): %s', [Identifier]);
+      Continue;
+    end;
     if not CharInSet(Ch, ['A'..'Z', 'a'..'z', '0'..'9', '_']) then
       raise EInvalidOperationException.CreateFmt('Invalid table name: %s', [Identifier]);
   end;
+end;
+
+/// <summary>
+///   Wraps a SQL identifier in double quotes so reserved words (Order, User,
+///   Group, …) are safe to use as table or column names. Uses the SQL-92
+///   standard quoting recognised by PostgreSQL, SQLite and SQL Server (ANSI).
+/// </summary>
+class function TStatusMachine.QuoteIdentifier(const AName: string): string;
+var
+  Ch: Char;
+begin
+  Result := '"';
+  for Ch in AName do
+  begin
+    if Ch = '"' then
+      Result := Result + '""'
+    else
+      Result := Result + Ch;
+  end;
+  Result := Result + '"';
 end;
 
 class procedure TStatusMachine.RegisterTable(const TableName: string;
@@ -298,7 +339,8 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := Connection;
-    Query.SQL.Text := Format('SELECT status FROM %s WHERE id = :id', [TableName]);
+    Query.SQL.Text := Format('SELECT status FROM %s WHERE id = :id',
+      [QuoteIdentifier(TableName)]);
     if IsPostgreSQL(Connection) then
       Query.SQL.Text := Query.SQL.Text + ' FOR UPDATE';
     Query.ParamByName('id').AsInteger := EntityID;
@@ -365,7 +407,7 @@ begin
           'UPDATE %s SET status = :new_status, prev_status = :prev_status, ' +
           'heartbeat_at = CURRENT_TIMESTAMP, progress_at = CURRENT_TIMESTAMP ' +
           'WHERE id = :id',
-          [TableName]);
+          [QuoteIdentifier(TableName)]);
         Query.ParamByName('new_status').AsString := NewStatus;
         Query.ParamByName('prev_status').AsString := CurrentStatus;
         Query.ParamByName('id').AsInteger := EntityID;
@@ -445,7 +487,7 @@ begin
       Query.Connection := Connection;
       Query.SQL.Text := Format(
         'UPDATE %s SET heartbeat_at = CURRENT_TIMESTAMP WHERE id = :id',
-        [TableName]);
+        [QuoteIdentifier(TableName)]);
       Query.ParamByName('id').AsInteger := EntityID;
       Query.ExecSQL;
       if Query.RowsAffected > 0 then

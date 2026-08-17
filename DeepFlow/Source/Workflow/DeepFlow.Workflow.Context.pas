@@ -1,25 +1,25 @@
 ﻿unit DeepFlow.Workflow.Context;
 
-{*******************************************************************************
+(********************************************************************************
   DeepFlow.Workflow.Context - 工作流上下文管理
-  
+
   描述：
     管理工作流执行时的变量上下文，包括：
     - 变量存储与作用域
     - 变量引用解析 (${varName})
     - 表达式求值
     - 条件判断
-    
+
   作者：鲁班（开发者）
   日期：2025-12-04
   版本：1.0
-*******************************************************************************}
+*******************************************************************************)
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
-  System.RegularExpressions, System.Variants,
+  System.RegularExpressions, System.Variants, System.SyncObjs,
   DeepFlow.Workflow.Definition,
   DeepBase.Exceptions;
 
@@ -69,7 +69,9 @@ type
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
   end;
 
-  /// <summary>工作流上下文</summary>
+  /// <summary>工作流上下文（线程安全）
+  /// <para>所有变量读写操作均通过内部临界区保护，可安全地在并行工作流步骤中
+  /// 并发访问。枚举类操作（ToJSON / GetAllVariables）在锁内快照数据。</para></summary>
   TWorkflowContext = class
   private
     FWorkflowId: string;
@@ -77,6 +79,8 @@ type
     FVariables: TObjectDictionary<string, TVariableValue>;
     FScopeStack: TStack<TDictionary<string, TVariableValue>>;
     FVarRefPattern: TRegEx;
+    /// <summary>DATA2-035: 保护 FVariables 与 FScopeStack 的并发访问</summary>
+    FLock: TCriticalSection;
     
     function GetScopedKey(const AName: string; AScope: TVariableScope): string;
     function FindVariable(const AName: string): TVariableValue;
@@ -104,7 +108,12 @@ type
     function ResolveJSON(const ATemplate: TJSONObject): TJSONObject;
     
     // 条件求值
-    function EvaluateCondition(const ACondition: TConditionExpression): Boolean;
+    /// <summary>求值条件表达式。
+    /// <para>DATA2-043: <c>ADepth</c> 用于跟踪递归深度，外部调用请勿传入，
+    /// 内部递归时递增。深度超过 <c>MAX_CONDITION_DEPTH</c> 时抛出
+    /// <see cref="EExpressionTooComplexException"/> 以防止栈溢出。</para></summary>
+    function EvaluateCondition(const ACondition: TConditionExpression;
+      ADepth: Integer = 0): Boolean;
     
     // 序列化
     function ToJSON: TJSONObject;
@@ -128,6 +137,12 @@ implementation
 
 uses
   System.StrUtils, System.Math;
+
+const
+  /// <summary>DATA2-043: EvaluateCondition 最大递归深度。
+  /// 超过此深度会抛出 EExpressionTooComplexException，防止恶意或
+  /// 错误配置导致的栈溢出。</summary>
+  MAX_CONDITION_DEPTH = 100;
 
 { TVariableValue }
 
@@ -278,17 +293,26 @@ begin
   FVariables := TObjectDictionary<string, TVariableValue>.Create([doOwnsValues]);
   FScopeStack := TStack<TDictionary<string, TVariableValue>>.Create;
   FVarRefPattern := TRegEx.Create('\$\{([^}]+)\}');
+  // DATA2-035: 初始化临界区以保护并发访问
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TWorkflowContext.Destroy;
 begin
-  while FScopeStack.Count > 0 do
-  begin
-    var Scope := FScopeStack.Pop;
-    Scope.Free;
+  // DATA2-035: 析构时确保持有锁，防止与其他线程的末次访问竞争
+  FLock.Enter;
+  try
+    while FScopeStack.Count > 0 do
+    begin
+      var Scope := FScopeStack.Pop;
+      Scope.Free;
+    end;
+    FScopeStack.Free;
+    FVariables.Free;
+  finally
+    FLock.Leave;
   end;
-  FScopeStack.Free;
-  FVariables.Free;
+  FLock.Free;
   inherited;
 end;
 
@@ -338,26 +362,31 @@ var
   Key: string;
   VarValue: TVariableValue;
 begin
-  Key := GetScopedKey(AName, AScope);
-  
-  if not FVariables.TryGetValue(Key, VarValue) then
-  begin
-    VarValue := TVariableValue.Create(AName, AScope);
-    FVariables.Add(Key, VarValue);
-  end
-  else if VarValue.ReadOnly then
-    raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
-  
-  if VarIsType(AValue, varString) or VarIsType(AValue, varUString) then
-    VarValue.SetString(AValue)
-  else if VarIsType(AValue, varInteger) or VarIsType(AValue, varInt64) then
-    VarValue.SetInteger(AValue)
-  else if VarIsType(AValue, varDouble) or VarIsType(AValue, varSingle) then
-    VarValue.SetFloat(AValue)
-  else if VarIsType(AValue, varBoolean) then
-    VarValue.SetBoolean(AValue)
-  else
-    VarValue.SetString(VarToStr(AValue));
+  FLock.Enter;
+  try
+    Key := GetScopedKey(AName, AScope);
+
+    if not FVariables.TryGetValue(Key, VarValue) then
+    begin
+      VarValue := TVariableValue.Create(AName, AScope);
+      FVariables.Add(Key, VarValue);
+    end
+    else if VarValue.ReadOnly then
+      raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
+
+    if VarIsType(AValue, varString) or VarIsType(AValue, varUString) then
+      VarValue.SetString(AValue)
+    else if VarIsType(AValue, varInteger) or VarIsType(AValue, varInt64) then
+      VarValue.SetInteger(AValue)
+    else if VarIsType(AValue, varDouble) or VarIsType(AValue, varSingle) then
+      VarValue.SetFloat(AValue)
+    else if VarIsType(AValue, varBoolean) then
+      VarValue.SetBoolean(AValue)
+    else
+      VarValue.SetString(VarToStr(AValue));
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TWorkflowContext.SetVariableJSON(const AName: string; const AValue: TJSONValue;
@@ -366,81 +395,121 @@ var
   Key: string;
   VarValue: TVariableValue;
 begin
-  Key := GetScopedKey(AName, AScope);
-  
-  if not FVariables.TryGetValue(Key, VarValue) then
-  begin
-    VarValue := TVariableValue.Create(AName, AScope);
-    FVariables.Add(Key, VarValue);
-  end
-  else if VarValue.ReadOnly then
-    raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
-  
-  VarValue.SetJSON(AValue);
+  FLock.Enter;
+  try
+    Key := GetScopedKey(AName, AScope);
+
+    if not FVariables.TryGetValue(Key, VarValue) then
+    begin
+      VarValue := TVariableValue.Create(AName, AScope);
+      FVariables.Add(Key, VarValue);
+    end
+    else if VarValue.ReadOnly then
+      raise EOperationException.CreateFmt('Variable %s is read-only', [AName]);
+
+    VarValue.SetJSON(AValue);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TWorkflowContext.GetVariable(const AName: string): TVariableValue;
 begin
-  Result := FindVariable(AName);
+  FLock.Enter;
+  try
+    Result := FindVariable(AName);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TWorkflowContext.GetVariableValue(const AName: string): Variant;
 var
   VarValue: TVariableValue;
 begin
-  VarValue := FindVariable(AName);
-  if VarValue <> nil then
-    Result := VarValue.Value
-  else
-    Result := Null;
+  FLock.Enter;
+  try
+    VarValue := FindVariable(AName);
+    if VarValue <> nil then
+      Result := VarValue.Value
+    else
+      Result := Null;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TWorkflowContext.GetVariableJSON(const AName: string): TJSONValue;
 var
   VarValue: TVariableValue;
 begin
-  VarValue := FindVariable(AName);
-  if VarValue <> nil then
-    Result := VarValue.AsJSON
-  else
-    Result := TJSONNull.Create;
+  FLock.Enter;
+  try
+    VarValue := FindVariable(AName);
+    if VarValue <> nil then
+      Result := VarValue.AsJSON
+    else
+      Result := TJSONNull.Create;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TWorkflowContext.HasVariable(const AName: string): Boolean;
 begin
-  Result := FindVariable(AName) <> nil;
+  FLock.Enter;
+  try
+    Result := FindVariable(AName) <> nil;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TWorkflowContext.DeleteVariable(const AName: string);
 var
   Key: string;
 begin
-  // 尝试各种作用域
-  for var Scope := Low(TVariableScope) to High(TVariableScope) do
-  begin
-    Key := GetScopedKey(AName, Scope);
-    if FVariables.ContainsKey(Key) then
+  FLock.Enter;
+  try
+    // 尝试各种作用域
+    for var Scope := Low(TVariableScope) to High(TVariableScope) do
     begin
-      FVariables.Remove(Key);
-      Exit;
+      Key := GetScopedKey(AName, Scope);
+      if FVariables.ContainsKey(Key) then
+      begin
+        FVariables.Remove(Key);
+        Exit;
+      end;
     end;
+  finally
+    FLock.Leave;
   end;
 end;
 
 procedure TWorkflowContext.PushScope;
 begin
-  FScopeStack.Push(TDictionary<string, TVariableValue>.Create);
+  FLock.Enter;
+  try
+    FScopeStack.Push(TDictionary<string, TVariableValue>.Create);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TWorkflowContext.PopScope;
 begin
-  if FScopeStack.Count > 0 then
-  begin
-    var Scope := FScopeStack.Pop;
-    // 清理步骤级变量
-    for var Key in Scope.Keys do
-      FVariables.Remove(Key);
-    Scope.Free;
+  FLock.Enter;
+  try
+    if FScopeStack.Count > 0 then
+    begin
+      var Scope := FScopeStack.Pop;
+      // 清理步骤级变量
+      for var Key in Scope.Keys do
+        FVariables.Remove(Key);
+      Scope.Free;
+    end;
+  finally
+    FLock.Leave;
   end;
 end;
 
@@ -450,20 +519,25 @@ var
   Match: TMatch;
   VarName, VarValue: string;
 begin
-  Result := ATemplate;
-  
-  Matches := FVarRefPattern.Matches(ATemplate);
-  for Match in Matches do
-  begin
-    VarName := Match.Groups[1].Value;
-    
-    var Variable := FindVariable(VarName);
-    if Variable <> nil then
-      VarValue := Variable.AsString
-    else
-      VarValue := '';
-    
-    Result := StringReplace(Result, Match.Value, VarValue, [rfReplaceAll]);
+  FLock.Enter;
+  try
+    Result := ATemplate;
+
+    Matches := FVarRefPattern.Matches(ATemplate);
+    for Match in Matches do
+    begin
+      VarName := Match.Groups[1].Value;
+
+      var Variable := FindVariable(VarName);
+      if Variable <> nil then
+        VarValue := Variable.AsString
+      else
+        VarValue := '';
+
+      Result := StringReplace(Result, Match.Value, VarValue, [rfReplaceAll]);
+    end;
+  finally
+    FLock.Leave;
   end;
 end;
 
@@ -472,60 +546,69 @@ var
   Pair: TJSONPair;
   ResolvedValue: string;
 begin
-  Result := TJSONObject.Create;
-  
-  for Pair in ATemplate do
-  begin
-    if Pair.JsonValue is TJSONString then
+  FLock.Enter;
+  try
+    Result := TJSONObject.Create;
+
+    for Pair in ATemplate do
     begin
-      ResolvedValue := ResolveString(TJSONString(Pair.JsonValue).Value);
-      Result.AddPair(Pair.JsonString.Value, ResolvedValue);
-    end
-    else if Pair.JsonValue is TJSONObject then
-    begin
-      Result.AddPair(Pair.JsonString.Value, ResolveJSON(TJSONObject(Pair.JsonValue)));
-    end
-    else
-    begin
-      Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
+      if Pair.JsonValue is TJSONString then
+      begin
+        ResolvedValue := ResolveString(TJSONString(Pair.JsonValue).Value);
+        Result.AddPair(Pair.JsonString.Value, ResolvedValue);
+      end
+      else if Pair.JsonValue is TJSONObject then
+      begin
+        Result.AddPair(Pair.JsonString.Value, ResolveJSON(TJSONObject(Pair.JsonValue)));
+      end
+      else
+      begin
+        Result.AddPair(Pair.JsonString.Value, Pair.JsonValue.Clone as TJSONValue);
+      end;
     end;
+  finally
+    FLock.Leave;
   end;
 end;
 
-function TWorkflowContext.EvaluateCondition(const ACondition: TConditionExpression): Boolean;
+function TWorkflowContext.EvaluateCondition(const ACondition: TConditionExpression;
+  ADepth: Integer): Boolean;
 var
   LeftValue, RightValue: Variant;
   SubResult: Boolean;
   SubCond: TConditionExpression;
 begin
+  // DATA2-043: 递归深度保护——防止恶意或深层嵌套的条件表达式导致栈溢出。
+  if ADepth > MAX_CONDITION_DEPTH then
+    raise EExpressionTooComplexException.CreateFmt(
+      'Condition expression exceeds maximum nesting depth (%d)',
+      [MAX_CONDITION_DEPTH]);
+
   if ACondition = nil then
-  begin
-    Result := True;
-    Exit;
-  end;
-  
-  // 解析左操作数
+    Exit(True);
+
+  // 在锁内解析操作数（GetVariableValue 会自己加锁，此处无需持锁）
   if ACondition.LeftOperand.StartsWith('$') then
     LeftValue := GetVariableValue(Copy(ACondition.LeftOperand, 2, MaxInt))
   else
     LeftValue := ACondition.LeftOperand;
-  
-  // 解析右操作数
+
   if ACondition.RightOperand.StartsWith('$') then
     RightValue := GetVariableValue(Copy(ACondition.RightOperand, 2, MaxInt))
   else
     RightValue := ACondition.RightOperand;
-  
+
   // 基本比较
   Result := TExpressionEvaluator.Compare(LeftValue, RightValue, ACondition.Operator);
-  
-  // 处理子条件
+
+  // 处理子条件——在递归前释放锁，避免长持锁及潜在的死锁。
+  // 每次循环单独加锁读取一个 SubCond 所需的状态，再解锁执行递归。
   if ACondition.SubConditions.Count > 0 then
   begin
     for SubCond in ACondition.SubConditions do
     begin
-      SubResult := EvaluateCondition(SubCond);
-      
+      SubResult := EvaluateCondition(SubCond, ADepth + 1);
+
       if SameText(ACondition.LogicalOp, 'AND') then
         Result := Result and SubResult
       else if SameText(ACondition.LogicalOp, 'OR') then
@@ -538,14 +621,19 @@ function TWorkflowContext.ToJSON: TJSONObject;
 var
   VarsObj: TJSONObject;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('workflowId', FWorkflowId);
-  Result.AddPair('instanceId', FInstanceId);
-  
-  VarsObj := TJSONObject.Create;
-  for var VarPair in FVariables do
-    VarsObj.AddPair(VarPair.Key, VarPair.Value.ToJSON);
-  Result.AddPair('variables', VarsObj);
+  FLock.Enter;
+  try
+    Result := TJSONObject.Create;
+    Result.AddPair('workflowId', FWorkflowId);
+    Result.AddPair('instanceId', FInstanceId);
+
+    VarsObj := TJSONObject.Create;
+    for var VarPair in FVariables do
+      VarsObj.AddPair(VarPair.Key, VarPair.Value.ToJSON);
+    Result.AddPair('variables', VarsObj);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TWorkflowContext.FromJSON(const AJSON: TJSONObject);
@@ -556,48 +644,58 @@ var
   Scope: TVariableScope;
   DotPos: Integer;
 begin
-  AJSON.TryGetValue<string>('workflowId', FWorkflowId);
-  AJSON.TryGetValue<string>('instanceId', FInstanceId);
-  
-  if AJSON.TryGetValue<TJSONObject>('variables', VarsObj) then
-  begin
-    for VarPair in VarsObj do
+  FLock.Enter;
+  try
+    AJSON.TryGetValue<string>('workflowId', FWorkflowId);
+    AJSON.TryGetValue<string>('instanceId', FInstanceId);
+
+    if AJSON.TryGetValue<TJSONObject>('variables', VarsObj) then
     begin
-      // 解析作用域
-      DotPos := Pos('.', VarPair.JsonString.Value);
-      if DotPos > 0 then
+      for VarPair in VarsObj do
       begin
-        ScopeName := Copy(VarPair.JsonString.Value, 1, DotPos - 1);
-        VarName := Copy(VarPair.JsonString.Value, DotPos + 1, MaxInt);
-        
-        if SameText(ScopeName, 'global') then Scope := vsGlobal
-        else if SameText(ScopeName, 'workflow') then Scope := vsWorkflow
-        else if SameText(ScopeName, 'step') then Scope := vsStep
-        else if SameText(ScopeName, 'input') then Scope := vsInput
-        else if SameText(ScopeName, 'output') then Scope := vsOutput
+        // 解析作用域
+        DotPos := Pos('.', VarPair.JsonString.Value);
+        if DotPos > 0 then
+        begin
+          ScopeName := Copy(VarPair.JsonString.Value, 1, DotPos - 1);
+          VarName := Copy(VarPair.JsonString.Value, DotPos + 1, MaxInt);
+
+          if SameText(ScopeName, 'global') then Scope := vsGlobal
+          else if SameText(ScopeName, 'workflow') then Scope := vsWorkflow
+          else if SameText(ScopeName, 'step') then Scope := vsStep
+          else if SameText(ScopeName, 'input') then Scope := vsInput
+          else if SameText(ScopeName, 'output') then Scope := vsOutput
+          else
+          begin
+            Scope := vsWorkflow;
+            VarName := VarPair.JsonString.Value;
+          end;
+        end
         else
         begin
           Scope := vsWorkflow;
           VarName := VarPair.JsonString.Value;
         end;
-      end
-      else
-      begin
-        Scope := vsWorkflow;
-        VarName := VarPair.JsonString.Value;
+
+        var Variable := TVariableValue.FromJSON(VarName, Scope, VarPair.JsonValue);
+        FVariables.AddOrSetValue(VarPair.JsonString.Value, Variable);
       end;
-      
-      var Variable := TVariableValue.FromJSON(VarName, Scope, VarPair.JsonValue);
-      FVariables.AddOrSetValue(VarPair.JsonString.Value, Variable);
     end;
+  finally
+    FLock.Leave;
   end;
 end;
 
 function TWorkflowContext.GetAllVariables: TJSONObject;
 begin
-  Result := TJSONObject.Create;
-  for var VarPair in FVariables do
-    Result.AddPair(VarPair.Key, VarPair.Value.ToJSON);
+  FLock.Enter;
+  try
+    Result := TJSONObject.Create;
+    for var VarPair in FVariables do
+      Result.AddPair(VarPair.Key, VarPair.Value.ToJSON);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 { TExpressionEvaluator }
@@ -661,16 +759,19 @@ end;
 
 class function TExpressionEvaluator.EvaluateSimpleExpression(const AExpr: string;
   AContext: TWorkflowContext): Variant;
+var
+  IntVal: Int64;
+  FloatVal: Double;
 begin
   // 简单表达式求值：支持变量引用
   if AExpr.StartsWith('$') then
     Result := AContext.GetVariableValue(Copy(AExpr, 2, MaxInt))
   else if AExpr.StartsWith('"') and AExpr.EndsWith('"') then
     Result := Copy(AExpr, 2, Length(AExpr) - 2)
-  else if TryStrToInt64(AExpr, Int64(Result)) then
-    // 已赋值
-  else if TryStrToFloat(AExpr, Double(Result)) then
-    // 已赋值
+  else if TryStrToInt64(AExpr, IntVal) then
+    Result := IntVal
+  else if TryStrToFloat(AExpr, FloatVal) then
+    Result := FloatVal
   else if SameText(AExpr, 'true') then
     Result := True
   else if SameText(AExpr, 'false') then

@@ -504,7 +504,24 @@ destructor TAsyncCommand.Destroy;
 begin
   Cancel;
   if FTask <> nil then
-    Wait;
+  begin
+    // BIZ-R3-015 FIX: Use finite timeout (5 seconds) instead of INFINITE to
+    // prevent hang during app shutdown if FExecuteProc blocks and doesn't check
+    // IsCancelledFunc. If the task doesn't complete in time, log a warning and
+    // proceed with cleanup rather than hanging indefinitely.
+    try
+      Wait(5000);
+    except
+      on E: Exception do
+      begin
+        // Swallow exceptions during destruction, but ensure FTask is cleared
+        FTask := nil;
+      end;
+    end;
+    // If Wait timed out, FTask may still be non-nil. Clear it to avoid
+    // accessing freed memory during finalization.
+    FTask := nil;
+  end;
   FreeAndNil(FCanExecuteChangedHandlers);
   inherited;
 end;

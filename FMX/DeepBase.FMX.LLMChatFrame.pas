@@ -191,6 +191,17 @@ end;
 
 destructor TFMXLLMChatFrame.Destroy;
 begin
+  // REVIEW5-UI-002: Cancel and wait for background task to prevent
+  // use-after-free when frame is destroyed during generation
+  if FIsGenerating then
+  begin
+    if Assigned(FClient) then
+      FClient.Cancel;
+    // Wait for task to complete (with timeout to prevent deadlock)
+    if Assigned(FCurrentTask) then
+      FCurrentTask.WaitFor(2000);  // 2 second timeout
+  end;
+
   if FOwnsClient and Assigned(FClient) then
     FreeAndNil(FClient);
   FreeAndNil(FHistory);
@@ -418,6 +429,7 @@ end;
 procedure TFMXLLMChatFrame.DoSendMessage;
 var
   UserMessage: string;
+  Messages: TChatMessages;
 begin
   if FIsGenerating or not Assigned(FClient) then
     Exit;
@@ -454,18 +466,27 @@ begin
   FMemoChat.Lines.Add(''); // Empty line
   
   // Run async
-  TThread.CreateAnonymousThread(
+  // UI2-002 fix: store the task in FCurrentTask so the destructor can
+  // WaitFor() it before tearing down FHistory/FClient. The previous
+  // TThread.CreateAnonymousThread(...).Start left FCurrentTask nil, so
+  // Destroy's safety net never engaged and the anonymous thread continued
+  // to access fields on the already-freed frame.
+  // UI2-009 fix: snapshot the history on the main thread BEFORE entering
+  // the background task. The previous code called FHistory.GetMessages
+  // from the worker thread while DoSendMessage (main thread) could be
+  // mutating FHistory concurrently via AddUserMessage. Capturing a
+  // TChatMessages copy up front eliminates the data race entirely.
+  Messages := FHistory.GetMessages;
+
+  FCurrentTask := TTask.Run(
     procedure
     var
-      Messages: TChatMessages;
       Response: TChatResponse;
       LocalContent: string;
       LocalErrorMsg: string;
       LocalTokenCount: Integer;
       LocalContentLineIdx: Integer;
     begin
-      Messages := FHistory.GetMessages;
-      
       try
         // Use non-streaming for simplicity in FMX
         Response := FClient.ChatWithHistory(Messages);
@@ -526,7 +547,7 @@ begin
             end);
         end;
       end;
-    end).Start;
+    end);
 end;
 
 procedure TFMXLLMChatFrame.DoCancel;

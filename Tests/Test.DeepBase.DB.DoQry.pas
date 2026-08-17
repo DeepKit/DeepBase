@@ -125,6 +125,23 @@ type
 
     [Test]
     procedure Test_PreparedPool_MaxSizeEnforcesLRUEviction;
+
+    { REVIEW5-DATA-007: a pooled TFDQuery is a single live cursor; concurrent
+      callers must never receive the same in-use instance, or their bound
+      parameters and result sets cross-contaminate. }
+    [Test]
+    procedure Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams;
+
+    { REVIEW5-DATA-008: write-type PRAGMAs must not be accepted as direct SQL;
+      they must be whitelisted through the Queries table. }
+    [Test]
+    procedure Test_DirectWritePragma_Assignment_IsBlocked;
+
+    [Test]
+    procedure Test_DirectWritePragma_SideEffect_IsBlocked;
+
+    [Test]
+    procedure Test_DirectReadOnlyPragma_IsAllowed;
   end;
 
 implementation
@@ -143,12 +160,19 @@ begin
   
   // 初始�?DoQry
   UniDbInit(ExtractFilePath(ParamStr(0)));
-  
+
+  // DATA2-028: opt-in 直连 SQL 开关。本夹具大量用例以 inline SQL(DML) 作为 ProcName 传入,
+  // 走直连通道而非 Queries 表白名单。实现层对 DDL 仍由关键字白名单独立阻断,
+  // 故开关打开不影响 Test_DirectDDL_IsBlockedUnlessStoredInQueries / Test_MissingProcName 等
+  // 安全特性用例。TearDown 复位 False 防跨测试串扰。
+  UniDbSetDirectSQLAllowed(True);
+
   CreateTestTable;
 end;
 
 procedure TTestDeepBaseDoQry.TearDown;
 begin
+  UniDbSetDirectSQLAllowed(False);
   DropTestTable;
   FConnection.Free;
 end;
@@ -1213,6 +1237,170 @@ begin
     UniDbSetPreparedPoolMaxSize(500);
     UniDbSetPreparedStatementPooling(False);
     UniDbClearPreparedStatements;
+  end;
+end;
+
+procedure TTestDeepBaseDoQry.Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams;
+const
+  CThreadCount = 6;
+  CIterations = 25;
+  SQL = 'SELECT :val AS v';
+var
+  SharedDbPath: string;
+  SharedConn: TFDConnection;
+  Ctx: TUniQueryContext;
+  Tasks: TArray<ITask>;
+  StartGate: TCountdownEvent;
+  ErrorCount: Integer;
+  MismatchCount: Integer;
+  I: Integer;
+begin
+  // REVIEW5-DATA-007: every worker runs the SAME parameterized SQL on the SAME
+  // shared connection with pooling enabled, binding its own :val each call.
+  // Without the InUseCount guard each concurrent caller would receive the same
+  // live TFDQuery and clobber the others' bound parameter / active result set
+  // ("cannot perform this operation on an active dataset" or wrong :val). With
+  // the guard, concurrent in-use lookups hand out fresh queries, so every worker
+  // always reads back its own value.
+  //
+  // A file-backed WAL database is used (rather than :memory:) so concurrent
+  // readers on the shared connection do not collide on SQLite's per-connection
+  // memory store.
+  SharedDbPath := TPath.Combine(TPath.GetTempPath,
+    Format('DeepBase_preppool_%d.db', [Random(MaxInt)]));
+  if TFile.Exists(SharedDbPath) then
+    TFile.Delete(SharedDbPath);
+
+  SharedConn := TFDConnection.Create(nil);
+  try
+    SharedConn.DriverName := 'SQLite';
+    SharedConn.Params.Database := SharedDbPath;
+    SharedConn.Params.Values['OpenMode'] := 'CreateUTF8';
+    SharedConn.Params.Values['JournalMode'] := 'WAL';
+    SharedConn.Params.Values['BusyTimeout'] := '10000';
+    SharedConn.Open;
+    Ctx := UniDbMakeContext(SharedConn, udbSQLite);
+  except
+    SharedConn.Free;
+    raise;
+  end;
+
+  UniDbClearPreparedStatements;
+  UniDbSetPreparedStatementPooling(True);
+  StartGate := TCountdownEvent.Create(1);
+  try
+    ErrorCount := 0;
+    MismatchCount := 0;
+    SetLength(Tasks, CThreadCount);
+    for I := 0 to CThreadCount - 1 do
+    begin
+      var WorkerIndex := I;
+      Tasks[I] := TTask.Run(
+        procedure
+        var
+          Data: TFDMemTable;
+          Iter: Integer;
+          Payload: string;
+          Expected: Integer;
+          Actual: Variant;
+        begin
+          try
+            // Park all workers until the gate signals, so the first burst of
+            // GetOrCreatePreparedQuery calls lands on a cold pool together and
+            // maximizes the chance of overlapping InUseCount > 0 lookups.
+            StartGate.WaitFor;
+
+            for Iter := 0 to CIterations - 1 do
+            begin
+              Expected := WorkerIndex * 1000 + Iter;
+              Payload := Format('{"val":%d}', [Expected]);
+              Data := nil;
+              try
+                UniDbSelect(SQL, Payload, Data, Ctx);
+                if (Data = nil) or Data.Eof then
+                  TInterlocked.Increment(MismatchCount)
+                else
+                begin
+                  Actual := Data.FieldByName('v').AsVariant;
+                  if Integer(Actual) <> Expected then
+                    TInterlocked.Increment(MismatchCount);
+                end;
+              finally
+                Data.Free;
+              end;
+            end;
+          except
+            TInterlocked.Increment(ErrorCount);
+          end;
+        end);
+    end;
+
+    // Release all workers at once.
+    StartGate.Signal;
+    TTask.WaitForAll(Tasks);
+
+    Assert.AreEqual(0, ErrorCount,
+      'Concurrent same-SQL pooled queries must not raise (no shared active cursor)');
+    Assert.AreEqual(0, MismatchCount,
+      'Each worker must read back its own bound :val; cross-contamination detected');
+  finally
+    UniDbSetPreparedStatementPooling(False);
+    UniDbClearPreparedStatements;
+    StartGate.Free;
+    SharedConn.Free;
+    TFile.Delete(SharedDbPath);
+  end;
+end;
+
+procedure TTestDeepBaseDoQry.Test_DirectWritePragma_Assignment_IsBlocked;
+var
+  Ctx: TUniQueryContext;
+begin
+  // REVIEW5-DATA-008: a PRAGMA that assigns a value mutates DB state and must
+  // be whitelisted through the Queries table, not run as ad-hoc direct SQL.
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  try
+    UniDbExec('PRAGMA foreign_keys=ON', '', Ctx);
+    Assert.Fail('Write-type PRAGMA assignment should be rejected as direct SQL');
+  except
+    on E: EDeepBaseDbError do
+      Assert.AreEqual(DOQRY_ERR_QUERY_NOT_FOUND, E.ErrorCode);
+  end;
+end;
+
+procedure TTestDeepBaseDoQry.Test_DirectWritePragma_SideEffect_IsBlocked;
+var
+  Ctx: TUniQueryContext;
+begin
+  // REVIEW5-DATA-008: inherently side-effecting pragmas (even without `=`)
+  // such as wal_checkpoint / optimize must be rejected as direct SQL.
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+
+  try
+    UniDbExec('PRAGMA wal_checkpoint', '', Ctx);
+    Assert.Fail('Side-effecting PRAGMA should be rejected as direct SQL');
+  except
+    on E: EDeepBaseDbError do
+      Assert.AreEqual(DOQRY_ERR_QUERY_NOT_FOUND, E.ErrorCode);
+  end;
+end;
+
+procedure TTestDeepBaseDoQry.Test_DirectReadOnlyPragma_IsAllowed;
+var
+  Ctx: TUniQueryContext;
+  Data: TFDMemTable;
+begin
+  // REVIEW5-DATA-008: read-only pragmas (no `=`, no side-effecting name) must
+  // still be accepted as direct SQL.
+  Ctx := UniDbMakeContext(FConnection, udbSQLite);
+  Data := nil;
+  try
+    UniDbSelect('PRAGMA table_info(test_users)', '', Data, Ctx);
+    Assert.IsNotNull(Data, 'Read-only PRAGMA should produce a result set');
+    Assert.IsFalse(Data.Eof, 'table_info should return at least one column row');
+  finally
+    Data.Free;
   end;
 end;
 

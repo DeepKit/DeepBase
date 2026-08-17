@@ -170,10 +170,17 @@ end;
 procedure TDfmParser.ParseFile(const AFilePath: string);
 var
   LContent: string;
+  LResolved: string;
 begin
-  if not TFile.Exists(AFilePath) then
-    raise EFileNotFoundException.Create('DFM file not found: ' + AFilePath);
-  LContent := TFile.ReadAllText(AFilePath, TEncoding.UTF8);
+  // DATA2-022: Normalize to resolve '..' / '.' segments and prevent
+  // path-traversal attacks via crafted DFM file paths.
+  LResolved := TPath.GetFullPath(AFilePath);
+  if not SameText(TPath.GetExtension(LResolved), '.dfm') then
+    raise EArgumentException.CreateFmt(
+      'Only .dfm files are accepted (got "%s")', [TPath.GetExtension(AFilePath)]);
+  if not TFile.Exists(LResolved) then
+    raise EFileNotFoundException.Create('DFM file not found: ' + LResolved);
+  LContent := TFile.ReadAllText(LResolved, TEncoding.UTF8);
   Parse(LContent);
 end;
 

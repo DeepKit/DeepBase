@@ -1,0 +1,182 @@
+{
+  "schema": "spw/run-manifest/v1",
+  "workspace": "D:/_Progs/02Business/DeepBase/.claude/worktrees/perception-p0",
+  "project_profile": "delphi_hybrid",
+  "risk_lane": "standard",
+  "subject_files": [
+    "Features/DeepBase.Desktop.Perception.Types.pas",
+    "Features/DeepBase.Desktop.Perception.Engine.pas",
+    "Features/DeepBase.Desktop.Perception.LLMProvider.pas",
+    "Features/DeepBase.UIA.Types.pas",
+    "Features/DeepBase.UIA.Engine.pas",
+    "DeepBasePlatform.dpk"
+  ],
+  "observer_files": [
+    "Features/DeepBase.Desktop.Perception.Types.pas",
+    "Features/DeepBase.Desktop.Perception.Engine.pas",
+    "Features/DeepBase.Desktop.Perception.LLMProvider.pas",
+    "Features/DeepBase.UIA.Engine.pas",
+    "Tests/Test.DeepBase.Desktop.Perception.pas",
+    "Tests/Test.DeepBase.UIA.UnifiedActuator.pas"
+  ],
+  "resource_locks": [
+    {
+      "id": "DeepBasePlatform.dpk",
+      "canonical_path": "DeepBasePlatform.dpk",
+      "reason": "Perception/UIA features are registered into DeepBasePlatform.dpk; structural changes to feature units must keep the package compilable."
+    }
+  ],
+  "runtime_contract": {
+    "logger": {
+      "standard_logger": "DeepBase.Logging",
+      "forbid_bare_console_output": true
+    },
+    "deepbase": {
+      "integration_level": "L3"
+    },
+    "code_retrieval": "explicit-resource-then-codebase-memory"
+  },
+  "flash_policy": {
+    "staging_only": true,
+    "allow_commit": false,
+    "allow_production_access": false,
+    "max_retry": 1
+  },
+  "gates": [
+    {
+      "gate_id": "H1.compile-packages",
+      "required": true,
+      "claims": ["compiles_clean", "no_new_compile_errors"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/compile_core_packages_win64.ps1"
+      ]
+    },
+    {
+      "gate_id": "H1.resource-locks",
+      "required": true,
+      "claims": ["controlled_entry_only"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/check-layer-violations.ps1"
+      ]
+    },
+    {
+      "gate_id": "H2.encoding-static-gate",
+      "required": true,
+      "claims": ["crlf_utf8_2space_pas", "active_detail_trigger", "state_machine_check", "required_fields_on_activation"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/check-runtime-todos.ps1"
+      ]
+    },
+    {
+      "gate_id": "H3.encoding-guard",
+      "required": true,
+      "claims": ["counterfactual_1", "counterfactual_2"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/check_encoding.ps1"
+      ]
+    },
+    {
+      "gate_id": "H3.runtime-autofix",
+      "required": true,
+      "claims": ["counterfactual_3", "counterfactual_4", "counterfactual_5"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/run_tests.ps1",
+        "-Type", "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform", "Win64",
+        "-Run", "Test.DeepBase.AutoFix.ExitCodes.TAutoFixExitCodesPBT"
+      ]
+    },
+    {
+      "gate_id": "H3.deep-ui-test",
+      "required": true,
+      "claims": ["counterfactual_6", "counterfactual_7", "counterfactual_8"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/run_tests.ps1",
+        "-Type", "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform", "Win64",
+        "-FromUnit", "DeepBase.UIA.UnifiedActuator"
+      ]
+    },
+    {
+      "gate_id": "H3.unit-tests-perception-and-uia",
+      "required": true,
+      "claims": ["perception_screenshot_returns_base64", "perception_zero_business_semantics", "perception_lazy_without_llm_config", "uia_strict_unchanged", "uia_besteffort_visual_fallback"],
+      "command": [
+        "powershell",
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "Scripts/run_tests.ps1",
+        "-Type", "Unit",
+        "-CI",
+        "-AllowFilteredCI",
+        "-Platform", "Win64",
+        "-FromUnit", "DeepBase.Desktop.Perception,DeepBase.UIA.UnifiedActuator"
+      ]
+    }
+  ],
+  "claim_evidence": {
+    "compiles_clean": ["Scripts/compile_core_packages_win64.ps1 exit 0: Core/Persistence/Services/Features all OK"],
+    "no_new_compile_errors": ["no new E2199/E2003/E2250 introduced; DeepBaseFMX/VCL baseline breaks predate this change (commit dfa6b13) and are out of scope"],
+    "perception_screenshot_returns_base64": ["Test.DeepBase.Desktop.Perception: CaptureScreen returns non-empty base64 png"],
+    "perception_zero_business_semantics": ["no wechat/purchase/dialog/task/button-name tokens in Perception units"],
+    "perception_lazy_without_llm_config": ["perception degrades to screenshot-only when LLM not configured"],
+    "uia_strict_unchanged": ["fpStrict path still throws on UIA failure, no visual fallback"],
+    "uia_besteffort_visual_fallback": ["fpBestEffort requests visual coords when UIA selector fails"],
+    "crlf_utf8_2space_pas": [".editorconfig: *.pas crlf utf-8 2-space"],
+    "controlled_entry_only": ["Scripts/check-layer-violations.ps1 exit 0: no new forbidden source dependency introduced by Perception/UIA units"],
+    "active_detail_trigger": ["Scripts/check-runtime-todos.ps1 exit 0: no runtime TODO weakens activation contract"],
+    "state_machine_check": ["Scripts/check-runtime-todos.ps1 exit 0: no state-machine TODO left active"],
+    "required_fields_on_activation": ["Scripts/check-runtime-todos.ps1 exit 0: activation-path TODOs resolved"],
+    "counterfactual_1": ["encoding fixture: source file encoding drift detected by check_encoding.ps1"],
+    "counterfactual_2": ["encoding fixture: BOM/CRLF violation detected by check_encoding.ps1"],
+    "counterfactual_3": ["runtime fixture: AutoFix ExitCodes regression still green under -FromUnit DeepBase.AutoFix.ExitCodes"],
+    "counterfactual_4": ["runtime fixture: AutoFix cannot weaken tests (ExitCodes baseline intact)"],
+    "counterfactual_5": ["runtime fixture: repeated error signature stops AutoFix (ExitCodes scenarios pass)"],
+    "counterfactual_6": ["DeepUITest: UIA UnifiedActuator critical action path executes"],
+    "counterfactual_7": ["DeepUITest: UIA strict-mode failure surfaces as exception, not silent skip"],
+    "counterfactual_8": ["DeepUITest: UnifiedActuator test process exits cleanly (exit 0)"]
+  },
+  "h4_patterns": [
+    {
+      "id": "H4.PROJECT_NO_BUSINESS_SEMANTICS_IN_BASE",
+      "pattern": "wechat|purchase|\\bpay\\b|dialog\\b|\\btask_id\\b|button_name"
+    },
+    {
+      "id": "H4.PROJECT_NO_BARE_WRITELN_IN_PRODUCTION",
+      "pattern": "WriteLn\\(|Write\\("
+    }
+  ],
+  "observer_files": [
+    "Features/DeepBase.Desktop.Perception.Types.pas",
+    "Features/DeepBase.Desktop.Perception.Engine.pas",
+    "Features/DeepBase.Desktop.Perception.LLMProvider.pas",
+    "Features/DeepBase.UIA.Types.pas",
+    "Features/DeepBase.UIA.Engine.pas",
+    "Features/DeepBase.UIA.UnifiedActuator.pas",
+    "Tests/Test.DeepBase.Desktop.Perception.pas",
+    "Tests/Test.DeepBase.UIA.UnifiedActuator.pas",
+    "DeepBasePlatform.dpk",
+    "DeepBaseLLM.dpk"
+  ],
+  "observer_models": [
+    "claude-xunfei-glm-5-2",
+    "claude-stepfun-3-7-flash"
+  ],
+  "min_observer_families": 2,
+  "optional_observer_families": ["kimi", "gemini"]
+}

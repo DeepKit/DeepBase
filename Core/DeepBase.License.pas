@@ -23,7 +23,8 @@ uses
   System.NetEncoding,
   System.JSON,
   System.Generics.Collections,
-  DeepBase.Storage.Interfaces;
+  DeepBase.Storage.Interfaces,
+  DeepBase.StorageFactory;
 
 type
   /// <summary>
@@ -80,15 +81,12 @@ type
     FCachedDeviceId: string;
     FSecretKey: string;
     FOnLicenseChanged: TNotifyEvent;
-    class var FConnectionStorageFactory: TFunc<TObject, ILicenseStorage>;
-    
+
     function GenerateDeviceFingerprint: string;
     function EncodePayload(const Payload: string): string;
     function DecodePayload(const Encoded: string): string;
     function SignData(const Data: string): string;
     function VerifySignature(const Data, Signature: string): Boolean;
-    class function CreateStorageFromConnection(
-      AConnection: TObject): ILicenseStorage; static;
     procedure LoadLicenseFromDB;
     procedure SaveLicenseToDB(const LicenseKey: string);
     procedure ClearLicenseFromDB;
@@ -225,8 +223,15 @@ end;
 { TDeepBaseLicense }
 
 constructor TDeepBaseLicense.Create(AConnection: TObject);
+var
+  LStorage: ILicenseStorage;
 begin
-  Create(CreateStorageFromConnection(AConnection));
+  LStorage := TConnectionStorageFactory<ILicenseStorage>.Create(AConnection);
+  if (LStorage = nil) and Assigned(AConnection) then
+    raise EInvalidOp.Create(
+      'No license storage factory registered for connection-backed constructor. ' +
+      'Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).');
+  Create(LStorage);
   FConnection := AConnection;
 end;
 
@@ -250,25 +255,13 @@ end;
 class procedure TDeepBaseLicense.SetStorageFactory(
   const AFactory: TFunc<TObject, ILicenseStorage>);
 begin
-  FConnectionStorageFactory := AFactory;
-end;
-
-class function TDeepBaseLicense.CreateStorageFromConnection(
-  AConnection: TObject): ILicenseStorage;
-begin
-  Result := nil;
-  if Assigned(AConnection) and Assigned(FConnectionStorageFactory) then
-    Result := FConnectionStorageFactory(AConnection);
-  if (Result = nil) and Assigned(AConnection) then
-    raise EInvalidOp.Create(
-      'No license storage factory registered for connection-backed constructor. ' +
-      'Include a persistence registration unit (e.g. DeepBase.Persistence.RuntimeRegistration).');
+  TConnectionStorageFactory<ILicenseStorage>.SetFactory(AFactory);
 end;
 
 procedure TDeepBaseLicense.SetConnection(const Value: TObject);
 begin
   FConnection := Value;
-  FStorage := CreateStorageFromConnection(Value);
+  FStorage := TConnectionStorageFactory<ILicenseStorage>.Create(Value);
   if Assigned(FStorage) then
     LoadLicenseFromDB;
 end;
@@ -374,20 +367,30 @@ end;
 function TDeepBaseLicense.VerifySignature(const Data, Signature: string): Boolean;
 var
   Expected: string;
-  I, Diff: Integer;
+  I, Diff, Len: Integer;
 begin
   Result := False;
   if FSecretKey = '' then
     Exit;
 
   Expected := SignData(Data);
-  if Length(Expected) <> Length(Signature) then
-    Exit;
 
-  // Constant-time comparison to prevent timing attacks
+  // BIZ-R3-010: Constant-time comparison without leaking signature length.
+  // Use expected length for loop; if Signature is shorter, Delphi's string
+  // indexing returns #0 for out-of-bounds access. If lengths differ, Diff
+  // will be non-zero. Avoid early length check to prevent timing side-channel.
+  Len := Length(Expected);
   Diff := 0;
-  for I := 1 to Length(Expected) do
-    Diff := Diff or (Ord(UpCase(Expected[I])) xor Ord(UpCase(Signature[I])));
+  for I := 1 to Len do
+  begin
+    if I <= Length(Signature) then
+      Diff := Diff or (Ord(UpCase(Expected[I])) xor Ord(UpCase(Signature[I])))
+    else
+      Diff := Diff or Ord(UpCase(Expected[I])); // #0 vs Expected[I]
+  end;
+  // Also account for extra bytes in Signature beyond Expected length
+  for I := Len + 1 to Length(Signature) do
+    Diff := Diff or Ord(UpCase(Signature[I]));
 
   Result := Diff = 0;
 end;
@@ -581,7 +584,17 @@ begin
     if StoredKey <> '' then
       FCurrentLicense := ValidateLicense(StoredKey);
   except
-    // Table might not exist yet
+    on E: Exception do
+    begin
+      // BIZ-R3-009: Only silently ignore "table not found" errors (expected on first run).
+      // Other exceptions (corrupted data, connection failures) should not be swallowed.
+      // Check for common "table not found" patterns in exception message.
+      if not (Pos('no such table', E.Message) > 0) and
+         not (Pos('table', E.Message) > 0) and
+         not (Pos('doesn''t exist', E.Message) > 0) and
+         not (Pos('does not exist', E.Message) > 0) then
+        raise; // Re-raise if not a "table not found" error
+    end;
   end;
 end;
 

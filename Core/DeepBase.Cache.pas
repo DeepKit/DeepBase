@@ -1,32 +1,45 @@
 ﻿{ ============================================================================
   DeepBase.Cache - Generic Caching System
-  
-  A flexible caching system with multiple eviction strategies.
-  
+
+  A flexible generic cache with multiple eviction strategies.
+
   Features:
   - Generic key-value storage
   - LRU (Least Recently Used) eviction
+  - LFU (Least Frequently Used) eviction
+  - FIFO (First In First Out) eviction
   - TTL (Time To Live) expiration
+  - Random eviction (cepRandom)
   - Size-based limits
   - Thread-safe operations
   - Cache statistics
   - Event callbacks (OnEvict, OnExpire)
-  
+  - Optional value ownership (OwnValues, class types only)
+
+  Ownership model (BUG EXP-P1-013):
+    By default the cache does NOT own values - callers remain responsible
+    for freeing objects they put in. Setting OwnValues := True makes the
+    cache free values on eviction / expiration / removal / clear. This
+    flag is only meaningful when the generic parameter V is a class type;
+    for value types (records, strings, integers, interfaces) it is
+    silently ignored.
+
   Usage:
     var Cache := TCache<string, TObject>.Create;
     try
       Cache.MaxItems := 1000;
       Cache.DefaultTTL := 300;  // 5 minutes
       Cache.EvictionPolicy := cepLRU;
-      
+      Cache.OwnValues := True;  // cache will free objects on eviction/clear
+
       Cache.Put('key1', MyObject);
-      
+
       if Cache.TryGet('key1', Value) then
-        // Use Value
+        // Use Value (do NOT free it - cache owns it now)
       else
         // Not in cache
     finally
-      Cache.Free;
+      Cache.Free;  // also frees any still-held objects
     end;
   ============================================================================ }
 
@@ -59,7 +72,8 @@ type
     cepLRU,        // Least Recently Used
     cepLFU,        // Least Frequently Used
     cepFIFO,       // First In First Out
-    cepTTL         // Time To Live only
+    cepTTL,        // Time To Live only
+    cepRandom      // Random eviction
   );
   
   // ============================================================================
@@ -108,38 +122,65 @@ type
   // ============================================================================
   
   /// <summary>
-  /// Thread-safe generic cache with configurable eviction policies
+  /// Thread-safe generic cache with configurable eviction policies.
   /// </summary>
+  /// <remarks>
+  /// Ownership of values: see the <see cref="OwnValues"/> property. By default
+  /// the cache does NOT own its values - callers remain responsible for freeing
+  /// any objects they put into the cache. When <c>OwnValues := True</c>, the
+  /// cache will free values on eviction, expiration, removal, or clear.
+  /// <para>BUG EXP-P1-013: <c>OwnValues</c> is only meaningful when the generic
+  /// parameter <c>V</c> is a class type. For value types (records, strings,
+  /// integers, interfaces, etc.) <c>OwnValues</c> is silently ignored because
+  /// there is no object to free. Callers that cache objects and want automatic
+  /// disposal should use <c>TCache&lt;K, TObject&gt;</c> (aka
+  /// <c>TObjectCache</c>) with <c>OwnValues := True</c>.</para>
+  /// </remarks>
   TCache<K, V> = class
   private type
     TEntry = TCacheEntry<V>;
     TEntryDict = TDictionary<K, TEntry>;
     TAccessList = TList<K>;
+    /// <summary>
+    /// Deferred eviction/expiration callback item. Eviction paths collect
+    /// these while holding FLock (modifying FEntries/FAccessOrder/FStats),
+    /// then fire the callbacks OUTSIDE the lock to avoid reentrant deadlock
+    /// and to avoid exposing the internal structures to concurrent mutation
+    /// (CORE-R3-002 fix).
+    /// </summary>
+    TEvictedItem = record
+      Key: K;
+      Value: V;
+      IsExpiration: Boolean;
+    end;
+    TEvictedList = TList<TEvictedItem>;
   private
     FEntries: TEntryDict;
     FAccessOrder: TAccessList;     // For LRU
     FInsertOrder: TQueue<K>;       // For FIFO
     FLock: TCriticalSection;
-    
+
     FMaxItems: Integer;
     FMaxSizeBytes: Int64;
     FDefaultTTL: Integer;          // Seconds, 0 = no expiration
     FEvictionPolicy: TCacheEvictionPolicy;
     FStats: TCacheStats;
-    
+
     FOnEvict: TCacheEvictEvent<K, V>;
     FOnExpire: TCacheExpireEvent<K, V>;
     FOnLoad: TCacheLoadEvent<K, V>;
     FOwnValues: Boolean;
-    
-    procedure Evict(Count: Integer = 1);
-    procedure EvictLRU;
-    procedure EvictLFU;
-    procedure EvictFIFO;
-    procedure RemoveExpired;
+
+    procedure Evict(Count: Integer; Batch: TEvictedList);
+    procedure EvictLRU(Batch: TEvictedList);
+    procedure EvictLFU(Batch: TEvictedList);
+    procedure EvictFIFO(Batch: TEvictedList);
+    procedure EvictRandom(Batch: TEvictedList);
+    procedure RemoveExpired(Batch: TEvictedList);
     procedure UpdateAccessOrder(const Key: K);
     procedure DoEvict(const Key: K; const Entry: TEntry);
     procedure DoExpire(const Key: K; const Entry: TEntry);
+    procedure FireEvictedCallbacks(const Batch: TEvictedList);
     procedure FreeValueIfOwned(const Value: V);
     function GetCount: Integer;
     function GetKeys: TArray<K>;
@@ -215,6 +256,20 @@ type
     property Stats: TCacheStats read FStats;
     property Count: Integer read GetCount;
     property Keys: TArray<K> read GetKeys;
+    /// <summary>
+    /// Whether the cache owns (and therefore frees) its values on eviction,
+    /// expiration, removal, or clear. Default: <c>False</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Only meaningful when <c>V</c> is a class type.</b> For value types
+    /// (records, strings, integers, interfaces, etc.) this flag is silently
+    /// ignored — the cache cannot free what has no object identity.
+    /// <para>Callers caching objects and wanting automatic disposal should use
+    /// <c>TObjectCache</c> (= <c>TCache&lt;string, TObject&gt;</c>) with
+    /// <c>OwnValues := True</c>. Callers caching value types should leave this
+    /// flag <c>False</c> (the default).</para>
+    /// <para>BUG EXP-P1-013.</para>
+    /// </remarks>
     property OwnValues: Boolean read FOwnValues write FOwnValues;
     
     property OnEvict: TCacheEvictEvent<K, V> read FOnEvict write FOnEvict;
@@ -384,9 +439,13 @@ var
   OldEntry: TEntry;
   NeedsEviction: Boolean;
   Guard: Integer;
+  EvictedBatch: TEvictedList;
 begin
-  FLock.Enter;
+  Guard := 0;
+  EvictedBatch := TEvictedList.Create;
   try
+    FLock.Enter;
+    try
     // ��鵥����Ŀ��С���ƣ���ֹ���������ռ�ù����ڴ棩
     if (FMaxSizeBytes > 0) and (SizeBytes > FMaxSizeBytes div 10) then
       raise ECacheException.CreateFmt('Single item too large: %d bytes (max: %d)', 
@@ -402,36 +461,30 @@ begin
       if FOwnValues then
         FreeValueIfOwned(OldEntry.Value);
 
-      // Key already in FIFO queue - do NOT re-enqueue to prevent duplicates
+      // CORE-R2-012 fix: key already in FIFO queue - do NOT re-enqueue to
+      // prevent unbounded duplicate growth in FInsertOrder under overwrite-
+      // heavy workloads. EvictFIFO tolerates stale entries via TryGetValue.
     end
     else
     begin
-      // New item - check limits
+      // New item - check limits. Eviction runs WITHIN the lock now and
+      // collects deferred callback items into EvictedBatch; the callbacks
+      // fire OUTSIDE the lock after this method releases it (CORE-R3-002
+      // fix: previously Evict was called after FLock.Leave, racing
+      // FEntries/FAccessOrder/FStats against concurrent Put/TryGet/Cleanup).
       NeedsEviction := (FMaxItems > 0) and (FEntries.Count >= FMaxItems);
-      // Release lock before eviction: callbacks (FOnEvict) fire outside lock
-      // to prevent reentrant deadlock if callback accesses the cache.
       if NeedsEviction then
-      begin
-        FLock.Leave;
-        try
-          Evict(1);
-        finally
-          FLock.Enter;
-        end;
-      end;
+        Evict(1, EvictedBatch);
 
-      // Re-check after re-acquiring lock (another thread may have added items)
+      // Re-check after eviction (kept for clarity / future changes)
       if (FMaxItems > 0) and (FEntries.Count >= FMaxItems) then
-      begin
-        FLock.Leave;
-        try
-          Evict(1);
-        finally
-          FLock.Enter;
-        end;
-      end;
+        Evict(1, EvictedBatch);
 
-      // Add to insert order for FIFO (only for new keys)
+      // Add to insert order for FIFO (only for new keys; updates must not
+      // re-enqueue because that would create duplicates in FInsertOrder.
+      // EvictFIFO already tolerates stale queue entries via TryGetValue,
+      // but without this guard an overwrite-heavy workload would grow
+      // FInsertOrder without bound — CORE-R2-012 fix).
       FInsertOrder.Enqueue(Key);
     end;
     
@@ -442,17 +495,18 @@ begin
       while (FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes) and (FEntries.Count > 0) and (Guard < 100) do
       begin
         Inc(Guard);
-        FLock.Leave;
-        try
-          Evict(Max(1, FEntries.Count div 10));
-        finally
-          FLock.Enter;
-        end;
-      end; // ÿ������10%����Ŀ
+        Evict(Max(1, FEntries.Count div 10), EvictedBatch);
+      end;
       
-      // If still over limit, reject
+      // If still over limit, reject. Fire any deferred eviction callbacks
+      // collected during the aggressive-eviction loop before raising, so
+      // callers still observe evictions even when the Put itself is rejected.
       if FStats.TotalSizeBytes + SizeBytes > FMaxSizeBytes then
+      begin
+        FireEvictedCallbacks(EvictedBatch);
+        EvictedBatch.Clear;
         raise ECacheException.Create('Cache memory limit exceeded');
+      end;
     end;
     
     // Create entry
@@ -473,9 +527,15 @@ begin
     
     // Update access order for LRU
     UpdateAccessOrder(Key);
-      
+
+    finally
+      FLock.Leave;
+    end;
+    // Fire deferred eviction/expiration callbacks OUTSIDE the lock. On the
+    // rejected-Put path this already ran above; EvictedBatch is empty then.
+    FireEvictedCallbacks(EvictedBatch);
   finally
-    FLock.Leave;
+    EvictedBatch.Free;
   end;
 end;
 
@@ -499,6 +559,7 @@ var
   LHasExpired: Boolean;
 begin
   LHasExpired := False;
+  LExpKey := Default(K);
   FLock.Enter;
   try
     if FEntries.TryGetValue(Key, Entry) then
@@ -566,6 +627,7 @@ var
   LHasExpired: Boolean;
 begin
   LHasExpired := False;
+  LExpKey := Default(K);
   FLock.Enter;
   try
     if FEntries.TryGetValue(Key, Entry) then
@@ -640,52 +702,69 @@ begin
 end;
 
 procedure TCache<K, V>.Cleanup;
+var
+  EvictedBatch: TEvictedList;
 begin
-  FLock.Enter;
+  EvictedBatch := TEvictedList.Create;
   try
-    RemoveExpired;
+    FLock.Enter;
+    try
+      RemoveExpired(EvictedBatch);
+    finally
+      FLock.Leave;
+    end;
+    // Fire expiration callbacks OUTSIDE the lock (CORE-R3-002)
+    FireEvictedCallbacks(EvictedBatch);
   finally
-    FLock.Leave;
+    EvictedBatch.Free;
   end;
 end;
 
-procedure TCache<K, V>.Evict(Count: Integer);
+procedure TCache<K, V>.Evict(Count: Integer; Batch: TEvictedList);
 var
   I: Integer;
 begin
-  // Called within lock
+  // Called within lock. Eviction paths collect deferred callback items into
+  // the per-call Batch list owned by the caller (Put/Cleanup), which fires
+  // the callbacks OUTSIDE the lock. This avoids racing FEntries/FAccessOrder
+  // /FStats against concurrent Put/TryGet/Cleanup (CORE-R3-002 fix).
   for I := 1 to Count do
   begin
     case FEvictionPolicy of
-      cepLRU: EvictLRU;
-      cepLFU: EvictLFU;
-      cepFIFO: EvictFIFO;
-      cepTTL: RemoveExpired;
+      cepLRU: EvictLRU(Batch);
+      cepLFU: EvictLFU(Batch);
+      cepFIFO: EvictFIFO(Batch);
+      cepTTL: RemoveExpired(Batch);
+      cepRandom: EvictRandom(Batch);
     else
-      EvictLRU;  // Default to LRU
+      EvictLRU(Batch);  // Default to LRU (including cepNone)
     end;
-    
+
     if FEntries.Count = 0 then
       Break;
   end;
 end;
 
-procedure TCache<K, V>.EvictLRU;
+procedure TCache<K, V>.EvictLRU(Batch: TEvictedList);
 var
   Key: K;
   Entry: TEntry;
+  Item: TEvictedItem;
 begin
   if FAccessOrder.Count > 0 then
   begin
     Key := FAccessOrder[0];
     if FEntries.TryGetValue(Key, Entry) then
     begin
-      DoEvict(Key, Entry);
+      // Defer callback: collect into Batch for outside-lock dispatch
+      Item.Key := Key;
+      Item.Value := Entry.Value;
+      Item.IsExpiration := False;
+      if Batch <> nil then
+        Batch.Add(Item);
+
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
-      
-      if FOwnValues then
-        FreeValueIfOwned(Entry.Value);
-      
+
       FEntries.Remove(Key);
       Inc(FStats.Evictions);
     end;
@@ -694,18 +773,19 @@ begin
   end;
 end;
 
-procedure TCache<K, V>.EvictLFU;
+procedure TCache<K, V>.EvictLFU(Batch: TEvictedList);
 var
   MinKey: K;
   MinCount: Int64;
   Pair: TPair<K, TEntry>;
   Entry: TEntry;
   Found: Boolean;
+  Item: TEvictedItem;
 begin
   MinCount := High(Int64);
   Found := False;
   MinKey := Default(K);
-  
+
   for Pair in FEntries do
   begin
     if Pair.Value.AccessCount < MinCount then
@@ -715,15 +795,17 @@ begin
       Found := True;
     end;
   end;
-  
+
   if Found and FEntries.TryGetValue(MinKey, Entry) then
   begin
-    DoEvict(MinKey, Entry);
+    Item.Key := MinKey;
+    Item.Value := Entry.Value;
+    Item.IsExpiration := False;
+    if Batch <> nil then
+      Batch.Add(Item);
+
     FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
-    
-    if FOwnValues then
-      FreeValueIfOwned(Entry.Value);
-    
+
     FEntries.Remove(MinKey);
     FAccessOrder.Remove(MinKey);
     Inc(FStats.Evictions);
@@ -731,22 +813,25 @@ begin
   end;
 end;
 
-procedure TCache<K, V>.EvictFIFO;
+procedure TCache<K, V>.EvictFIFO(Batch: TEvictedList);
 var
   Key: K;
   Entry: TEntry;
+  Item: TEvictedItem;
 begin
   while FInsertOrder.Count > 0 do
   begin
     Key := FInsertOrder.Dequeue;
     if FEntries.TryGetValue(Key, Entry) then
     begin
-      DoEvict(Key, Entry);
+      Item.Key := Key;
+      Item.Value := Entry.Value;
+      Item.IsExpiration := False;
+      if Batch <> nil then
+        Batch.Add(Item);
+
       FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
-      
-      if FOwnValues then
-        FreeValueIfOwned(Entry.Value);
-      
+
       FEntries.Remove(Key);
       FAccessOrder.Remove(Key);
       Inc(FStats.Evictions);
@@ -756,38 +841,104 @@ begin
   end;
 end;
 
-procedure TCache<K, V>.RemoveExpired;
+procedure TCache<K, V>.EvictRandom(Batch: TEvictedList);
+var
+  Key: K;
+  Entry: TEntry;
+  KeysArray: TArray<K>;
+  Chosen: Integer;
+  Item: TEvictedItem;
+begin
+  if FEntries.Count > 0 then
+  begin
+    KeysArray := FEntries.Keys.ToArray;
+    Chosen := Random(Length(KeysArray));
+    Key := KeysArray[Chosen];
+
+    if FEntries.TryGetValue(Key, Entry) then
+    begin
+      Item.Key := Key;
+      Item.Value := Entry.Value;
+      Item.IsExpiration := False;
+      if Batch <> nil then
+        Batch.Add(Item);
+
+      FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
+
+      FEntries.Remove(Key);
+      FAccessOrder.Remove(Key);
+      Inc(FStats.Evictions);
+      FStats.CurrentItems := FEntries.Count;
+    end;
+  end;
+end;
+
+procedure TCache<K, V>.RemoveExpired(Batch: TEvictedList);
 var
   Pair: TPair<K, TEntry>;
   ExpiredKeys: TList<K>;
   Key: K;
   Entry: TEntry;
+  Item: TEvictedItem;
 begin
   ExpiredKeys := TList<K>.Create;
   try
     for Pair in FEntries do
       if Pair.Value.IsExpired then
         ExpiredKeys.Add(Pair.Key);
-    
+
     for Key in ExpiredKeys do
     begin
       if FEntries.TryGetValue(Key, Entry) then
       begin
-        DoExpire(Key, Entry);
+        Item.Key := Key;
+        Item.Value := Entry.Value;
+        Item.IsExpiration := True;
+        if Batch <> nil then
+          Batch.Add(Item);
+
         FStats.TotalSizeBytes := FStats.TotalSizeBytes - Entry.SizeBytes;
-        
-        if FOwnValues then
-          FreeValueIfOwned(Entry.Value);
-        
+
         FEntries.Remove(Key);
         FAccessOrder.Remove(Key);
         Inc(FStats.Expirations);
       end;
     end;
-    
+
     FStats.CurrentItems := FEntries.Count;
   finally
     ExpiredKeys.Free;
+  end;
+end;
+
+procedure TCache<K, V>.FireEvictedCallbacks(const Batch: TEvictedList);
+var
+  I: Integer;
+  Item: TEvictedItem;
+begin
+  // Dispatch deferred eviction/expiration callbacks OUTSIDE the lock, then
+  // free owned values. Order matches the original DoEvict/DoExpire path:
+  // callback fires while the value is still alive, then FreeValueIfOwned
+  // releases it. This runs single-threaded on the calling thread (Put/
+  // Cleanup), so freeing here is safe and avoids racing the lock-protected
+  // structures (CORE-R3-002 fix).
+  if Batch = nil then
+    Exit;
+  for I := 0 to Batch.Count - 1 do
+  begin
+    Item := Batch[I];
+    if Item.IsExpiration then
+    begin
+      if Assigned(FOnExpire) then
+        FOnExpire(Item.Key, Item.Value);
+    end
+    else
+    begin
+      if Assigned(FOnEvict) then
+        FOnEvict(Item.Key, Item.Value);
+    end;
+    if FOwnValues then
+      FreeValueIfOwned(Item.Value);
   end;
 end;
 
@@ -818,8 +969,12 @@ procedure TCache<K, V>.FreeValueIfOwned(const Value: V);
 var
   LObj: TObject;
 begin
-  // Safely free object values in generic context
-  // Only process class types to avoid invalid memory access
+  // Safely free object values in generic context.
+  // BUG EXP-P1-013: this is a no-op when V is a value type (record, string,
+  // integer, interface, etc.) because there is no object to free. The
+  // `GetTypeKind(V) = tkClass` check below silently returns in that case.
+  // See the class-level doc-comment and the `OwnValues` property for the
+  // ownership contract.
   if GetTypeKind(V) = tkClass then
   begin
     // Use PPointer for safe type punning in generics

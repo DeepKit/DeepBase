@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Browser.Types
   ---------------------------------------------------------------------------
   Version     : 1.0
@@ -192,6 +192,19 @@ type
       out AError: string): Boolean;
   end;
 
+  /// <summary>DevTools 事件监听者接口。实现本接口并经
+  /// TCDPStrategy.AddDevToolsEventListener 注册，即可收到所有 DevTools 事件
+  /// 分发（method + params JSON 原文）。多 listener 并存互不覆盖。
+  /// 与旧 TCDPCDEventCallback 单回调解耦：listener 走多路路由，旧回调走
+  /// 单回调映射，两路并存。订阅真实事件流由引擎层（如
+  /// TWebView2BrowserSession）挂 OnDevToolsProtocolEventReceived +
+  /// SubscribeToDevToolsProtocolEvent 后转调 TCDPStrategy.HandleDevToolsEvent
+  /// 完成。</summary>
+  IBrowserDevToolsEventListener = interface
+    ['{7E2A3B5C-9D14-4F8E-A1B6-3C7D8E9F0A12}']
+    procedure OnDevToolsEvent(const AMethod, AParams: string);
+  end;
+
   IBrowserSession = interface(IBrowserAutomationSession)
     ['{C4E2D1A0-3B5F-4A7E-8C9D-0E1F2A3B4C5D}']
     function GetSessionId: TBrowserSessionId;
@@ -226,6 +239,16 @@ type
     ['{2F8D6C5B-4A3E-91D7-B2C0-3E4F5A6B7C8D}']
     procedure SetMessageHandler(AHandler: TProc<string>);
     procedure ClearMessageHandler;
+  end;
+
+  /// <summary>P0-6 fix: DevTools 协议事件订阅能力接口。
+  /// 实现方 (TWebView2BrowserSession) 通过 WebView4Delphi 的
+  /// SubscribeToDevToolsProtocolEvent 注册事件, 事件到达后经
+  /// SetDevToolsEventHandler 注册的处理器分发。消费者用 Supports() 检测后调用。</summary>
+  IBrowserDevToolsSubscription = interface
+    ['{5A7B3C1D-9E2F-4A6B-8C3D-1E4F5A6B7C8D}']
+    procedure SetDevToolsEventHandler(AHandler: TProc<string, string>);
+    function SubscribeToDevToolsEvent(const AEventName: string): Boolean;
   end;
 
   IBrowserRecovery = interface

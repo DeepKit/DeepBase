@@ -43,7 +43,7 @@
         <DCC_K>false</DCC_K>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
-        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\VCL;..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Persistence;..\Core;..\Features;..\Governance;..\VCL;..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;..\DeepFlow\Source\Core;..\DeepFlow\Source\Roles;..\DeepFlow\Source\Workflow;..\DeepFlow\Source\AI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>DeepBaseTests</SanitizedProjectName>
         <VerInfo_Locale>2052</VerInfo_Locale>

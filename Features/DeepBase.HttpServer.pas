@@ -984,7 +984,7 @@ end;
 
 procedure TStaticFileMiddleware.Execute(const Ctx: THttpContext; Next: TProc);
 var
-  Path, FilePath, RelPath: string;
+  Path, FilePath, RelPath, RootPath: string;
   MimeType: string;
   Bytes: TBytes;
 begin
@@ -999,12 +999,24 @@ begin
   RelPath := Copy(Path, Length(FUrlPrefix) + 1, MaxInt);
   if RelPath.StartsWith('/') then
     RelPath := Copy(RelPath, 2, MaxInt);
-  
-  // Security: prevent path traversal
-  RelPath := StringReplace(RelPath, '..', '', [rfReplaceAll]);
-  RelPath := StringReplace(RelPath, '//', '/', [rfReplaceAll]);
-  
-  FilePath := TPath.Combine(FRootPath, RelPath);
+
+  RelPath := TNetEncoding.URL.Decode(RelPath);
+  if (RelPath = '') or TPath.IsPathRooted(RelPath) or RelPath.Contains('\') then
+  begin
+    Ctx.Response.Status(403).Json('{"error":"Forbidden"}');
+    Exit;
+  end;
+
+  RootPath := TPath.GetFullPath(FRootPath);
+  FilePath := TPath.GetFullPath(TPath.Combine(RootPath, RelPath));
+  if not RootPath.EndsWith(TPath.DirectorySeparatorChar) then
+    RootPath := RootPath + TPath.DirectorySeparatorChar;
+
+  if not FilePath.StartsWith(RootPath, True) then
+  begin
+    Ctx.Response.Status(403).Json('{"error":"Forbidden"}');
+    Exit;
+  end;
   
   if TFile.Exists(FilePath) then
   begin
@@ -1234,7 +1246,13 @@ begin
     // Parse URI
     Uri := TIdURI.Create(ARequestInfo.URI);
     try
-      Ctx.Request.Path := Uri.Document;
+      // FIX(2026-08-05): TIdURI.Document 只返回最后一段、TIdURI.Path 只返回目录部分,
+      // 多段路由 (/v1/chat/completions 等) 会 404。改用 Indy 原始 Document
+      // (ARequestInfo.Document = 完整 URI 路径, 如 /v1/models)。
+      Ctx.Request.Path := ARequestInfo.Document;
+      // Normalize: ensure leading '/' for route matching
+      if (Ctx.Request.Path <> '') and (not Ctx.Request.Path.StartsWith('/')) then
+        Ctx.Request.Path := '/' + Ctx.Request.Path;
       if Uri.Params <> '' then
         Ctx.Request.ParseQuery(Copy(Uri.Params, 2, MaxInt)); // Remove leading ?
     finally

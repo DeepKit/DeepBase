@@ -16,14 +16,17 @@ interface
 uses
   System.SysUtils, System.Classes, System.NetEncoding, System.Hash,
   System.Generics.Collections, System.JSON, System.DateUtils,
+  System.SyncObjs, System.Threading,
   DUnitX.TestFramework,
   DeepBase.Payment,
   DeepBase.Payment.AESGCM,
   DeepBase.Payment.WeChatPay,
   DeepBase.Payment.Alipay,
-  DeepBase.Payment.Stripe
+  DeepBase.Payment.Stripe,
+  DeepBase.Security.SecretStore
   {$IFDEF MSWINDOWS}
   , DeepBase.Crypto
+  , DeepBase.Crypto.Platform
   , Winapi.Windows
   {$ENDIF}
   ;
@@ -104,6 +107,43 @@ type
 
     [Test]
     procedure Test_Config_ProtectKey_EmptyInput;
+
+    { REVIEW5-FEAT-001: save/load must not double-ProtectKey, and protected
+      fields on the same config must not collide (Stripe SecretKey vs
+      WebhookSecret). }
+    [Test]
+    procedure Test_StripeConfig_SaveLoad_NoDoubleProtect_NoFieldCollision;
+
+    [Test]
+    procedure Test_AlipayConfig_SaveLoad_RoundTripsPrivateKey;
+  end;
+
+  /// <summary>Regression test: FormatAlipayAmount must produce US-style
+  /// decimal output regardless of thread locale (BUG EXP-P0-002).</summary>
+  [TestFixture]
+  TAlipayAmountLocaleTests = class
+  public
+    [Test]
+    procedure Test_FormatAmount_IntegerValue_AlwaysPeriod;
+    [Test]
+    procedure Test_FormatAmount_FractionalValue_AlwaysPeriod;
+    [Test]
+    procedure Test_FormatAmount_LargeValue_AlwaysPeriod;
+    [Test]
+    procedure Test_FormatAmount_UnderThreadLocaleChange_StillPeriod;
+  end;
+
+  /// <summary>Regression test: Stripe idempotency key must be unique across
+  /// concurrent calls and follow the documented format (BUG EXP-P0-003).</summary>
+  [TestFixture]
+  TStripeIdempotencyKeyTests = class
+  public
+    [Test]
+    procedure Test_BuildKey_Format_HasPrefixAndGuid;
+    [Test]
+    procedure Test_BuildKey_100Calls_AllUnique;
+    [Test]
+    procedure Test_BuildKey_100ConcurrentCalls_AllUnique;
   end;
 
 implementation
@@ -111,13 +151,13 @@ implementation
 type
   TTestableAlipayConfig = class(TAlipayConfig)
   public
-    function PublicProtectKey(const APlainKey: string): string;
+    function PublicProtectKey(const AKeyName, APlainKey: string): string;
     function PublicUnprotectKey(const AEncryptedKey: string): string;
   end;
 
   TTestableStripeConfig = class(TStripeConfig)
   public
-    function PublicProtectKey(const APlainKey: string): string;
+    function PublicProtectKey(const AKeyName, APlainKey: string): string;
     function PublicUnprotectKey(const AEncryptedKey: string): string;
   end;
 
@@ -127,9 +167,9 @@ type
     procedure PublicSetCredentialKey(const AKeyName, AValue: string);
   end;
 
-function TTestableAlipayConfig.PublicProtectKey(const APlainKey: string): string;
+function TTestableAlipayConfig.PublicProtectKey(const AKeyName, APlainKey: string): string;
 begin
-  Result := ProtectKey(APlainKey);
+  Result := ProtectKey(AKeyName, APlainKey);
 end;
 
 function TTestableAlipayConfig.PublicUnprotectKey(
@@ -138,9 +178,9 @@ begin
   Result := UnprotectKey(AEncryptedKey);
 end;
 
-function TTestableStripeConfig.PublicProtectKey(const APlainKey: string): string;
+function TTestableStripeConfig.PublicProtectKey(const AKeyName, APlainKey: string): string;
 begin
-  Result := ProtectKey(APlainKey);
+  Result := ProtectKey(AKeyName, APlainKey);
 end;
 
 function TTestableStripeConfig.PublicUnprotectKey(
@@ -509,7 +549,7 @@ begin
     Config.WebhookSecret := 'whsec_test_secret_key_value_here';
     Client := TStripeClient.Create(Config);
     try
-      Assert.IsFalse(Client.VerifyNotification(
+      Assert.IsFalse(Client.VerifyNotificationWithSignature(
         '{"type":"checkout.session.completed"}',
         'malformed_header_without_equals',
         Notification));
@@ -533,7 +573,7 @@ begin
     Client := TStripeClient.Create(Config);
     try
       // Only v1 without t=
-      Assert.IsFalse(Client.VerifyNotification(
+      Assert.IsFalse(Client.VerifyNotificationWithSignature(
         '{"type":"checkout.session.completed"}',
         'v1=badsignature',
         Notification));
@@ -569,7 +609,7 @@ begin
       ExpectedSig := THashSHA2.GetHMAC(SignedPayload, Secret, SHA256);
       Header := 't=' + IntToStr(Timestamp) + ',v1=' + ExpectedSig;
 
-      Assert.IsTrue(Client.VerifyNotification(Payload, Header, Notification),
+      Assert.IsTrue(Client.VerifyNotificationWithSignature(Payload, Header, Notification),
         'Should verify valid HMAC signature');
       Assert.AreEqual(ppStripe, Notification.Provider);
     finally
@@ -603,7 +643,7 @@ begin
       ExpectedSig := THashSHA2.GetHMAC(SignedPayload, Secret, SHA256);
       Header := 't=' + IntToStr(Timestamp) + ',v1=' + ExpectedSig;
 
-      Assert.IsFalse(Client.VerifyNotification(Payload, Header, Notification),
+      Assert.IsFalse(Client.VerifyNotificationWithSignature(Payload, Header, Notification),
         'Should reject expired timestamp');
     finally
       Client.Free;
@@ -635,7 +675,7 @@ var
 begin
   Config := TTestableStripeConfig.Create;
   try
-    Protected := Config.PublicProtectKey('sk_test_secret_value_12345');
+    Protected := Config.PublicProtectKey('SecretKey', 'sk_test_secret_value_12345');
     Assert.AreNotEqual('sk_test_secret_value_12345', Protected,
       'ProtectKey should return a key reference, not the plain value');
 
@@ -672,10 +712,283 @@ var
 begin
   Config := TTestableAlipayConfig.Create;
   try
-    Assert.AreEqual('', Config.PublicProtectKey(''));
+    Assert.AreEqual('', Config.PublicProtectKey('PrivateKey', ''));
     Assert.AreEqual('', Config.PublicUnprotectKey(''));
   finally
     Config.Free;
+  end;
+end;
+
+{ REVIEW5-FEAT-001 regression }
+
+type
+  /// <summary>In-memory ISecretStore so the save/load regression test does not
+  /// touch the real Windows Credential Manager and stays deterministic.</summary>
+  TFakeSecretStore = class(TInterfacedObject, ISecretStore)
+  private
+    FStore: TDictionary<string, string>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function TryGet(const AKey: string; out AValue: string): Boolean;
+    procedure Put(const AKey: string; const AValue: string);
+    procedure Delete(const AKey: string);
+    function IsAvailable: Boolean;
+  end;
+
+constructor TFakeSecretStore.Create;
+begin
+  inherited Create;
+  FStore := TDictionary<string, string>.Create;
+end;
+
+destructor TFakeSecretStore.Destroy;
+begin
+  FStore.Free;
+  inherited;
+end;
+
+function TFakeSecretStore.TryGet(const AKey: string; out AValue: string): Boolean;
+begin
+  Result := FStore.TryGetValue(AKey, AValue);
+end;
+
+procedure TFakeSecretStore.Put(const AKey: string; const AValue: string);
+begin
+  FStore.AddOrSetValue(AKey, AValue);
+end;
+
+procedure TFakeSecretStore.Delete(const AKey: string);
+begin
+  FStore.Remove(AKey);
+end;
+
+function TFakeSecretStore.IsAvailable: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TPaymentSecretStoreTests.Test_StripeConfig_SaveLoad_NoDoubleProtect_NoFieldCollision;
+var
+  Store: TFakeSecretStore;
+  Config1, Config2: TStripeConfig;
+begin
+  // REVIEW5-FEAT-001: previously the load path routed the stored handle back
+  // through the Secure setter, re-running ProtectKey on every load, so each
+  // save/load cycle added another indirection and ultimately returned the
+  // key-id instead of the secret. Worse, the old Hex(Self) key-id collided
+  // across every protected field on the same object, so SecretKey and
+  // WebhookSecret clobbered each other. This test verifies both are fixed.
+  Store := TFakeSecretStore.Create;
+  Config1 := TStripeConfig.Create;
+  try
+    Config1.SecretStore := Store;
+    Config1.SecretKey := 'sk_test_secret_value_12345';
+    Config1.WebhookSecret := 'whsec_webhook_value_67890';
+    Config1.SaveKeysToCredentialManager;
+
+    // Load into a fresh instance sharing the same store.
+    Config2 := TStripeConfig.Create;
+    try
+      Config2.SecretStore := Store;
+      Config2.LoadKeysFromCredentialManager;
+
+      Assert.AreEqual('sk_test_secret_value_12345', Config2.SecretKey,
+        'SecretKey must round-trip without double-protection');
+      Assert.AreEqual('whsec_webhook_value_67890', Config2.WebhookSecret,
+        'WebhookSecret must round-trip; fields must not collide');
+    finally
+      Config2.Free;
+    end;
+  finally
+    Config1.Free;
+  end;
+end;
+
+procedure TPaymentSecretStoreTests.Test_AlipayConfig_SaveLoad_RoundTripsPrivateKey;
+var
+  Store: TFakeSecretStore;
+  Config1, Config2: TAlipayConfig;
+begin
+  // REVIEW5-FEAT-001: Alipay PrivateKey has the same double-ProtectKey load
+  // path; verify a save/load round-trips the plaintext.
+  Store := TFakeSecretStore.Create;
+  Config1 := TAlipayConfig.Create;
+  try
+    Config1.SecretStore := Store;
+    Config1.PrivateKey := 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAkEA_demo_key';
+    Config1.SaveKeysToCredentialManager;
+
+    Config2 := TAlipayConfig.Create;
+    try
+      Config2.SecretStore := Store;
+      Config2.LoadKeysFromCredentialManager;
+      Assert.AreEqual('MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAkEA_demo_key',
+        Config2.PrivateKey, 'PrivateKey must round-trip without double-protection');
+    finally
+      Config2.Free;
+    end;
+  finally
+    Config1.Free;
+  end;
+end;
+
+{ ---- Alipay Amount Locale-Independent Formatting (EXP-P0-002) ---- }
+
+procedure TAlipayAmountLocaleTests.Test_FormatAmount_IntegerValue_AlwaysPeriod;
+var
+  S: string;
+begin
+  S := FormatAlipayAmount(1234);
+  Assert.IsTrue(Pos('.', S) > 0, 'expected US-style decimal point');
+  Assert.AreEqual(0, Pos(',', S), 'must not contain comma (thousands separator)');
+  Assert.AreEqual('1234.00', S);
+end;
+
+procedure TAlipayAmountLocaleTests.Test_FormatAmount_FractionalValue_AlwaysPeriod;
+var
+  S: string;
+begin
+  S := FormatAlipayAmount(99.5);
+  Assert.AreEqual('99.50', S);
+  S := FormatAlipayAmount(0.01);
+  Assert.AreEqual('0.01', S);
+  S := FormatAlipayAmount(0);
+  Assert.AreEqual('0.00', S);
+end;
+
+procedure TAlipayAmountLocaleTests.Test_FormatAmount_LargeValue_AlwaysPeriod;
+var
+  S: string;
+begin
+  S := FormatAlipayAmount(1234567.89);
+  Assert.AreEqual('1234567.89', S);
+  Assert.IsTrue(Pos(',', S) = 0, 'no thousands separator in output');
+end;
+
+procedure TAlipayAmountLocaleTests.Test_FormatAmount_UnderThreadLocaleChange_StillPeriod;
+{$IFDEF MSWINDOWS}
+var
+  OldLocale: LCID;
+  S: string;
+  Lcids: array[0..3] of LCID;
+  I: Integer;
+begin
+  OldLocale := GetThreadLocale;
+  // zh-CN (0x0804), de-DE (0x0407), fr-FR (0x040C), ja-JP (0x0411)
+  Lcids[0] := $0804;
+  Lcids[1] := $0407;
+  Lcids[2] := $040C;
+  Lcids[3] := $0411;
+  try
+    for I := Low(Lcids) to High(Lcids) do
+    begin
+      SetThreadLocale(Lcids[I]);
+      S := FormatAlipayAmount(123.45);
+      Assert.AreEqual('123.45', S,
+        'FormatAlipayAmount must use period under any thread locale');
+    end;
+  finally
+    SetThreadLocale(OldLocale);
+  end;
+end;
+{$ELSE}
+begin
+  // Non-Windows: verify deterministic format without manipulating thread locale.
+  Assert.AreEqual('123.45', FormatAlipayAmount(123.45));
+end;
+{$ENDIF}
+
+{ ---- Stripe Idempotency Key (EXP-P0-003) ---- }
+
+procedure TStripeIdempotencyKeyTests.Test_BuildKey_Format_HasPrefixAndGuid;
+var
+  K: string;
+  Underscores: Integer;
+  I: Integer;
+begin
+  K := TStripeClient.BuildIdempotencyKey('pi_', 'ORD-001');
+  // Format: "pi_ORD-001_<guid>" - starts with prefix, ends with GUID, contains GUID hyphens.
+  Assert.IsTrue(Pos('pi_ORD-001_', K) = 1, 'key must start with prefix + order number');
+
+  Underscores := 0;
+  for I := 1 to Length(K) do
+    if K[I] = '_' then Inc(Underscores);
+  // "pi_" contributes 1, "_<guid>" contributes 1 = 2 total minimum.
+  Assert.IsTrue(Underscores >= 2, 'key must contain at least two underscores');
+
+  // Length must be at least prefix + orderNo + 1 + 36 (GUID with hyphens)
+  Assert.IsTrue(Length(K) >= Length('pi_ORD-001_') + 36, 'key suffix must be a GUID');
+
+  Assert.AreEqual(0, Pos(',', K), 'key must not contain comma');
+end;
+
+procedure TStripeIdempotencyKeyTests.Test_BuildKey_100Calls_AllUnique;
+var
+  Seen: TDictionary<string, Boolean>;
+  I, SeenCount: Integer;
+  K: string;
+begin
+  Seen := TDictionary<string, Boolean>.Create;
+  try
+    for I := 1 to 100 do
+    begin
+      K := TStripeClient.BuildIdempotencyKey('pi_', 'ORD-SEQ');
+      Assert.IsFalse(Seen.ContainsKey(K),
+        Format('duplicate idempotency key at iteration %d: %s', [I, K]));
+      Seen.Add(K, True);
+    end;
+    SeenCount := Seen.Count;
+    Assert.AreEqual(Integer(100), SeenCount, '100 unique keys generated');
+  finally
+    Seen.Free;
+  end;
+end;
+
+procedure TStripeIdempotencyKeyTests.Test_BuildKey_100ConcurrentCalls_AllUnique;
+var
+  Seen: TDictionary<string, Boolean>;
+  Lock: TCriticalSection;
+  Tasks: TArray<ITask>;
+  I: Integer;
+  Duplicates, SeenCount: Integer;
+  TaskProc: TProc;
+begin
+  Seen := TDictionary<string, Boolean>.Create;
+  Lock := TCriticalSection.Create;
+  Duplicates := 0;
+  try
+    SetLength(Tasks, 100);
+    TaskProc := procedure
+      var
+        K: string;
+        IsDupe: Boolean;
+      begin
+        K := TStripeClient.BuildIdempotencyKey('pi_', 'ORD-PAR');
+        Lock.Enter;
+        try
+          IsDupe := Seen.ContainsKey(K);
+          if IsDupe then
+            Inc(Duplicates)
+          else
+            Seen.Add(K, True);
+        finally
+          Lock.Leave;
+        end;
+        Assert.IsFalse(IsDupe,
+          'concurrent idempotency key collision: ' + K);
+      end;
+    for I := 0 to High(Tasks) do
+      Tasks[I] := TTask.Run(TaskProc);
+    TTask.WaitForAll(Tasks);
+
+    Assert.AreEqual(Integer(0), Duplicates,
+      Format('expected 0 duplicates, got %d (generated %d keys)', [Duplicates, Seen.Count]));
+    SeenCount := Seen.Count;
+    Assert.AreEqual(Integer(100), SeenCount, 'all 100 concurrent keys should be unique');
+  finally
+    Lock.Free;
+    Seen.Free;
   end;
 end;
 
@@ -685,5 +998,7 @@ initialization
   TDUnitX.RegisterTestFixture(TAlipayNotificationTests);
   TDUnitX.RegisterTestFixture(TStripeWebhookTests);
   TDUnitX.RegisterTestFixture(TPaymentSecretStoreTests);
+  TDUnitX.RegisterTestFixture(TAlipayAmountLocaleTests);
+  TDUnitX.RegisterTestFixture(TStripeIdempotencyKeyTests);
 
 end.

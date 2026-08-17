@@ -57,10 +57,14 @@ type
     FOnRejected: TOnCircuitRejected;
     FHalfOpenActiveCount: Integer;  // BUG-119 FIX: 跟踪HalfOpen状态下的活跃请求数
     FMaxHalfOpenRequests: Integer;  // BUG-119 FIX: HalfOpen状态下允许的最大并发请求数
+    FPendingStateChanged: Boolean;  // CORE-R3-011: state change observed under lock, fire callback outside
+    FPendingOldState: TCircuitState;
+    FPendingNewState: TCircuitState;
 
     procedure SetState(NewState: TCircuitState);
     function GetState: TCircuitState;
     procedure CheckHalfOpenTransition;
+    procedure FirePendingStateChanged;
   public
     constructor Create(const AName: string = 'default');
     destructor Destroy; override;
@@ -98,7 +102,6 @@ type
   private
     FBreakers: TDictionary<string, TCircuitBreaker>;
     FLock: TCriticalSection;
-    class var FInstance: TCircuitBreakerRegistry;
   public
     constructor Create;
     destructor Destroy; override;
@@ -216,15 +219,37 @@ procedure TCircuitBreaker.SetState(NewState: TCircuitState);
 var
   OldState: TCircuitState;
 begin
+  // Called while the caller holds FLock. Perform the state mutation under the
+  // lock (required for consistency), but do NOT fire FOnStateChanged here — a
+  // slow callback would block every concurrent AllowRequest/Execute. Instead
+  // record the transition and let the entry method fire it after releasing the
+  // lock (CORE-R3-011 fix).
   if FState <> NewState then
   begin
     OldState := FState;
     FState := NewState;
     FLastStateChange := Now;
-    
-    if Assigned(FOnStateChanged) then
-      FOnStateChanged(FName, OldState, NewState);
+    FPendingOldState := OldState;
+    FPendingNewState := NewState;
+    FPendingStateChanged := True;
   end;
+end;
+
+procedure TCircuitBreaker.FirePendingStateChanged;
+var
+  LOld, LNew: TCircuitState;
+begin
+  // Read & clear the pending flag first. FOnStateChanged may re-enter this
+  // breaker (e.g. call RecordSuccess), which could set a new pending change;
+  // we must not lose that. Reading under no lock here is safe because this is
+  // called by the same thread that just released FLock and set the flag.
+  if not FPendingStateChanged then
+    Exit;
+  FPendingStateChanged := False;
+  LOld := FPendingOldState;
+  LNew := FPendingNewState;
+  if Assigned(FOnStateChanged) then
+    FOnStateChanged(FName, LOld, LNew);
 end;
 
 function TCircuitBreaker.GetState: TCircuitState;
@@ -236,6 +261,7 @@ begin
   finally
     FLock.Leave;
   end;
+  FirePendingStateChanged;
 end;
 
 procedure TCircuitBreaker.CheckHalfOpenTransition;
@@ -290,6 +316,10 @@ begin
   finally
     FLock.Leave;
   end;
+  // CORE-R3-011: CheckHalfOpenTransition may have staged a state change under
+  // the lock; fire the callback now, outside the lock, so a slow handler never
+  // blocks concurrent AllowRequest callers (and so the change isn't lost).
+  FirePendingStateChanged;
 end;
 
 procedure TCircuitBreaker.RecordSuccess;
@@ -317,6 +347,9 @@ begin
   finally
     FLock.Leave;
   end;
+  // CORE-R3-011: SetState(csClosed) above stages the change under lock; fire
+  // outside the lock so the handler can't block other callers.
+  FirePendingStateChanged;
 end;
 
 procedure TCircuitBreaker.RecordFailure;
@@ -346,6 +379,9 @@ begin
   finally
     FLock.Leave;
   end;
+  // CORE-R3-011: SetState(csOpen) above stages the change under lock; fire
+  // outside the lock so the handler can't block other callers.
+  FirePendingStateChanged;
 end;
 
 procedure TCircuitBreaker.Reset;

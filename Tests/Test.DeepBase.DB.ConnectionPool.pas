@@ -7,6 +7,8 @@
 
 unit Test.DeepBase.DB.ConnectionPool;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses

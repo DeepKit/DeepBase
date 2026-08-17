@@ -13,7 +13,8 @@ requires
   FireDACSqliteDriver,
   FireDACPGDriver,
   DeepBaseCore,
-  DeepBaseServices;
+  DeepBaseServices,
+  DeepBaseSpeechCore;
 
 contains
   DeepBase.Persistence.FormState.FireDAC in 'Persistence\DeepBase.Persistence.FormState.FireDAC.pas',
@@ -33,6 +34,7 @@ contains
   DeepBase.ORM in 'Persistence\DeepBase.ORM.pas',
   DeepBase.Persistence.Manager.FireDAC in 'Persistence\DeepBase.Persistence.Manager.FireDAC.pas',
   DeepBase.Speech.Schema in 'Persistence\DeepBase.Speech.Schema.pas',
+  DeepBase.Persistence.Speech.Voiceprint.FireDAC in 'Persistence\DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas',
   DeepBase.Persistence.RuntimeRegistration in 'Persistence\DeepBase.Persistence.RuntimeRegistration.pas',
   DeepBase.DB.ConnectionPool in 'Persistence\DeepBase.DB.ConnectionPool.pas',
   DeepBase.SQLLogger in 'Persistence\DeepBase.SQLLogger.pas',

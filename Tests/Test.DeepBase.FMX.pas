@@ -25,6 +25,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.Generics.Collections,
   FMX.Forms,
   FMX.Types,
@@ -224,8 +225,19 @@ type
     procedure Test_Platform_HasPermission_UnknownPermissionDesktopTrue;
     [Test]
     procedure Test_Platform_GetPlatformName_NotEmpty;
+
+    // REVIEW-P0-002 regression: ShareFileEx / CheckPermissionEx /
+    // RequestPermissionEx delegate chain
+    [Test]
+    procedure Test_Platform_ShareFileEx_DelegateOverride_IsInvoked;
+    [Test]
+    procedure Test_Platform_ShareFileEx_MissingFile_ReturnsFalse;
+    [Test]
+    procedure Test_Platform_CheckPermissionEx_DelegateOverride_IsInvoked;
+    [Test]
+    procedure Test_Platform_RequestPermissionEx_DelegateOverride_FiresCallback;
   end;
-  
+
   /// <summary>
   /// Test fixture for FMX Theme Manager
   /// </summary>
@@ -257,7 +269,8 @@ uses
   DeepBase.FMX.FormControls,
   DeepBase.FMX.ListView,
   DeepBase.FMX.Platform,
-  DeepBase.FMX.Theme;
+  DeepBase.FMX.Theme,
+  DeepBase.Platform.Interfaces;
 
 { TTestFMXI18nControls }
 
@@ -839,6 +852,126 @@ begin
   Assert.IsNotEmpty(TUniPlatformAdapter.GetPlatformName);
   Assert.AreNotEqual('Unknown', TUniPlatformAdapter.GetPlatformName,
     'GetPlatformName on a known target should not return "Unknown"');
+end;
+
+// REVIEW-P0-002 regression: ShareFileEx / CheckPermissionEx /
+// RequestPermissionEx delegate chain
+procedure TTestFMXPlatform.Test_Platform_ShareFileEx_DelegateOverride_IsInvoked;
+var
+  LReceivedPath: string;
+  LDelegateCalled: Boolean;
+begin
+  LDelegateCalled := False;
+  TUniPlatformAdapter.RegisterShareOverride(nil,
+    function(const AFilePath: string): Boolean
+    begin
+      LDelegateCalled := True;
+      LReceivedPath := AFilePath;
+      Exit(True);
+    end);
+  try
+    Assert.IsTrue(TUniPlatformAdapter.ShareFileEx('C:\fake\path\file.txt'),
+      'ShareFileEx should return what the registered delegate returns');
+    Assert.IsTrue(LDelegateCalled, 'ShareFileEx delegate was not invoked');
+    Assert.AreEqual('C:\fake\path\file.txt', LReceivedPath);
+  finally
+    // Clear override so it doesn't leak into other tests.
+    TUniPlatformAdapter.RegisterShareOverride(nil, nil);
+  end;
+end;
+
+procedure TTestFMXPlatform.Test_Platform_ShareFileEx_MissingFile_ReturnsFalse;
+var
+  LTempDir: string;
+  LMadeUpPath: string;
+begin
+  // On Windows the default path performs TFile.Exists and returns False
+  // when the file is absent. Delegate chain is empty (RegisterShareOverride
+  // clears overrides above), so this exercises the compile-time branch.
+  LTempDir := TPath.GetTempPath;
+  LMadeUpPath := TPath.Combine(LTempDir,
+    'deepbase-fmx-missing-' + IntToStr(GetCurrentThreadId) + '.txt');
+  if TFile.Exists(LMadeUpPath) then
+    TFile.Delete(LMadeUpPath);
+
+  {$IFDEF MSWINDOWS}
+  Assert.IsFalse(TUniPlatformAdapter.ShareFileEx(LMadeUpPath),
+    'ShareFileEx on a missing file must return False (no UI raised)');
+  {$ELSE}
+  // On mobile platforms a missing file either returns False or shows a
+  // native picker that returns False in a test environment. Either way
+  // we must never see True.
+  Assert.IsFalse(TUniPlatformAdapter.ShareFileEx(LMadeUpPath),
+    'ShareFileEx on a missing file should not return True');
+  {$ENDIF}
+end;
+
+procedure TTestFMXPlatform.Test_Platform_CheckPermissionEx_DelegateOverride_IsInvoked;
+var
+  LDelegateCalled: Boolean;
+  LReceivedPerm: string;
+begin
+  LDelegateCalled := False;
+  TUniPlatformAdapter.RegisterPermissionOverride(
+    function(const APermission: string): TPermissionResult
+    begin
+      LDelegateCalled := True;
+      LReceivedPerm := APermission;
+      Exit(prGranted);
+    end,
+    nil);
+  try
+    Assert.AreEqual(prGranted,
+      TUniPlatformAdapter.CheckPermissionEx('test.permission.camera'),
+      'CheckPermissionEx should return what the registered delegate returns');
+    Assert.IsTrue(LDelegateCalled,
+      'CheckPermissionEx delegate was not invoked');
+    Assert.AreEqual('test.permission.camera', LReceivedPerm);
+  finally
+    TUniPlatformAdapter.RegisterPermissionOverride(nil, nil);
+  end;
+end;
+
+procedure TTestFMXPlatform.Test_Platform_RequestPermissionEx_DelegateOverride_FiresCallback;
+var
+  LDelegateCalled: Boolean;
+  LCallbackFired: Boolean;
+  LReceivedPerm: string;
+  LReceivedResult: TPermissionResult;
+begin
+  LDelegateCalled := False;
+  LCallbackFired := False;
+
+  // The delegate is responsible for invoking the callback itself (or
+  // explicitly signalling prRequestIssued) — replicate that contract.
+  TUniPlatformAdapter.RegisterPermissionOverride(
+    nil,
+    function(const APermission: string; const ACallback: TPermissionCallback): TPermissionResult
+    begin
+      LDelegateCalled := True;
+      LReceivedPerm := APermission;
+      if Assigned(ACallback) then
+        ACallback(APermission, prGranted);
+      Exit(prGranted);
+    end);
+  try
+    Assert.AreEqual(prGranted,
+      TUniPlatformAdapter.RequestPermissionEx('test.permission.camera',
+        procedure(const APerm: string; ARes: TPermissionResult)
+        begin
+          LCallbackFired := True;
+          LReceivedResult := ARes;
+        end),
+      'RequestPermissionEx should return what the registered delegate returns');
+    Assert.IsTrue(LDelegateCalled,
+      'RequestPermissionEx delegate was not invoked');
+    Assert.AreEqual('test.permission.camera', LReceivedPerm);
+    Assert.IsTrue(LCallbackFired,
+      'RequestPermissionEx delegate should fire the caller-supplied callback');
+    Assert.AreEqual(prGranted, LReceivedResult);
+  finally
+    TUniPlatformAdapter.RegisterPermissionOverride(nil, nil);
+  end;
 end;
 
 { TTestFMXTheme }

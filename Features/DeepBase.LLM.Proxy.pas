@@ -55,6 +55,9 @@ type
     function ChatWithHistory(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
+    function ChatWithHistoryByProvider(const AProviderName, AModelId: string;
+      const AMessages: TArray<TChatMessage>;
+      AMaxTokens: Integer = 0; ATemperature: Double = -1): TChatResult;
     procedure ChatStream(const ATier: TModelTier;
       const AMessages: TArray<TChatMessage>;
       AOnChunk: TProc<string>; AOnError: TProc<string>;
@@ -346,6 +349,48 @@ begin
   Inc(FCallCount);
 end;
 
+function TProxyLLMClient.ChatWithHistoryByProvider(const AProviderName,
+  AModelId: string; const AMessages: TArray<TChatMessage>;
+  AMaxTokens: Integer; ATemperature: Double): TChatResult;
+var
+  Body: TJSONObject;
+  ModelField, Resp: string;
+  Code: Integer;
+begin
+  // Proxy mode: the shared DeepLLMProxy service resolves the model field.
+  // For per-provider routing we pass AModelId (or fall back to AProviderName
+  // as the model alias) so the proxy can route to the named provider rather
+  // than a tier. This mirrors the direct TLLMService.ChatWithHistoryByProvider
+  // contract (bypasses tier/priority routing).
+  ModelField := AModelId;
+  if ModelField = '' then
+    ModelField := AProviderName;
+
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair('model', ModelField);
+    Body.AddPair('messages', BuildMessages(AMessages));
+    Body.AddPair('stream', TJSONBool.Create(False));
+    if AMaxTokens > 0 then
+      Body.AddPair('max_tokens', TJSONNumber.Create(AMaxTokens));
+    if ATemperature >= 0 then
+      Body.AddPair('temperature', TJSONNumber.Create(ATemperature));
+
+    if DoPost('/v1/chat/completions', Body, Resp, Code) then
+      Result := ParseChatResponse(Resp)
+    else
+    begin
+      Result := Default(TChatResult);
+      Result.ErrorCode := 'PROXY_UNREACHABLE';
+      Result.ErrorMessage := Format('Proxy returned %d: %s', [Code, Resp]);
+      Result.DurationMs := FLastDurationMs;
+    end;
+  finally
+    Body.Free;
+  end;
+  Inc(FCallCount);
+end;
+
 procedure TProxyLLMClient.ChatStream(const ATier: TModelTier;
   const AMessages: TArray<TChatMessage>;
   AOnChunk: TProc<string>; AOnError: TProc<string>;
@@ -538,7 +583,21 @@ procedure TProxyLLMClient.GenerateImageStream(const APrompt: string;
   const AOnResult: TProc<TImageGenerationResult>;
   const AOnError: TProc<string>;
   const ASize: string);
+var
+  LSelf: ILLMClient;
 begin
+  // BIZ-R3-001 fix: the TTask closure below captures Self implicitly (it calls
+  // GenerateImage, an instance method). TProxyLLMClient derives from
+  // TInterfacedObject, but anonymous-method capture of a bare Self does NOT
+  // increment the reference count — so if the caller's last interface
+  // reference is released while the task is still in flight, the instance is
+  // destroyed and the task dereferences a dangling Self (use-after-free).
+  // Capturing an ILLMClient reference instead keeps the instance alive via
+  // reference counting for the lifetime of the task; when the task finishes
+  // and the closure releases LSelf, the reference count drops to zero and the
+  // instance is freed. (Same pattern as CORE-R3-006 / BUG-390 in Metrics.)
+  LSelf := Self;
+
   TTask.Run(
     procedure
     var
@@ -548,7 +607,7 @@ begin
         if Assigned(AOnProgress) then
           AOnProgress(0.0, 'Starting image generation...', False);
 
-        LResult := GenerateImage(APrompt, ASize);
+        LResult := LSelf.GenerateImage(APrompt, ASize);
 
         if Assigned(AOnProgress) then
           AOnProgress(1.0, 'Complete', True);

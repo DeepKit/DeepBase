@@ -1,12 +1,3 @@
-{ ============================================================================
-  DeepBase.Browser.Session
-  ---------------------------------------------------------------------------
-  Version     : 1.0
-  Description : Browser session lifecycle manager using a finite state machine.
-                Wraps an IBrowserSession and adds state transitions, recovery
-                integration, and event publishing on state changes.
-  ============================================================================ }
-
 unit DeepBase.Browser.Session;
 
 interface
@@ -14,392 +5,324 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.SyncObjs,
-  DeepBase.StateMachine,
-  DeepBase.Browser.Types;
+  System.JSON,
+  System.Variants,
+  System.Generics.Collections,
+  Winapi.Windows,
+  DeepBase.Browser.CDP.Adapter,
+  DeepBase.Browser.WebElement;
 
 type
-  TBrowserSessionManager = class
-  private
-    FSession: IBrowserSession;
-    FRecovery: IBrowserRecovery;
-    FStateMachine: TStateMachine<TBrowserSessionState, TBrowserSessionTrigger>;
-    FLock: TCriticalSection;
-
-    procedure ConfigureStateMachine;
-    procedure PublishStateChange(
-      const AFrom, ATo: TBrowserSessionState;
-      const ATrigger: TBrowserSessionTrigger);
-    procedure HandleStateChanged(Sender: TObject;
-      const AOldState, ANewState: TBrowserSessionState;
-      const ATrigger: TBrowserSessionTrigger);
-  public
-    constructor Create(ASession: IBrowserSession;
-      ARecovery: IBrowserRecovery = nil);
-    destructor Destroy; override;
-
-    function Initialize: Boolean;
-    procedure Dispose;
-    procedure NotifyReady;
-    procedure NotifyBusy;
-    procedure NotifyComplete;
-    procedure NotifyError;
-    procedure NotifyCrashed;
-
-    function GetCurrentState: TBrowserSessionState;
-    function CanFire(
-      ATrigger: TBrowserSessionTrigger): Boolean;
-    function GetPermittedTriggers:
-      TArray<TBrowserSessionTrigger>;
-
-    property Session: IBrowserSession read FSession;
-    property StateMachine:
-      TStateMachine<TBrowserSessionState, TBrowserSessionTrigger>
-      read FStateMachine;
-    property Recovery: IBrowserRecovery read FRecovery;
+  TNavigationOptions = record
+    WaitForLoad: Boolean;         // Wait for load event (default True)
+    TimeoutMs: Cardinal;          // Maximum wait time (default 30s)
   end;
+
+  IBrowserSession = interface
+    ['{CDEF3456-0123-4567-89AB-CDEF01234567}']
+    
+    // Lifecycle management
+    procedure Open(URL: string = '');
+    procedure Close;
+    function IsOpen: Boolean;
+    
+    // Navigation
+    function NavigateTo(URL: string; Options: TNavigationOptions): Boolean;
+    procedure GoBack;
+    procedure GoForward;
+    procedure Reload;
+    function GetURL: string;
+    
+    // Tab management
+    function GetCurrentTabID: Integer;
+    function CreateNewTab: Integer;
+    procedure CloseTab(TabID: Integer);
+    procedure SwitchTab(TabID: Integer);
+    
+    // Element operations
+    function FindElementByCSS(Selector: string): TWebWebElement;
+    function FindElementByXPath(XPath: string): TWebWebElement;
+    function FindElements(Selector: string): TArray<TWebWebElement>;
+    
+    // Basic actions
+    procedure Click(Selector: string);
+    procedure TypeText(Selector: string; Text: string);
+    function GetAttribute(Selector: string; AttrName: string): string;
+    
+    // Page content
+    function GetHTMLContent: string;
+    function GetInnerText: string;
+    
+    // Screenshots
+    function TakeScreenshot: TMemoryStream;
+    
+    // Cookies & storage
+    function GetCookies: TJSONArray;
+    procedure AddCookie(CookieJSON: TStringList);
+    procedure ClearCookies;
+  end;
+
+  TBrowseSessionImpl = class(TInterfacedObject, IBrowserSession)
+  private
+    FCDPSession: ICDPSession;
+    FIsManagedBrowser: Boolean;
+    FCurrentTabID: Integer;
+    FConnected: Boolean;
+    
+    // Helper methods
+    function EnsureConnected: Boolean;
+    function ParseJSONObject(const JSONStr: string): TJSONObject;
+    function ExecuteCdpCommand(Method: string; const Params: array of const): TJSONValue;
+  public
+    constructor Create; overload;
+    constructor CreateFromExistingSession(Session: ICDPSession); overload;
+    destructor Destroy; override;
+    
+    // IBrowserSession implementation
+    procedure Open(URL: string = '');
+    procedure Close;
+    function IsOpen: Boolean;
+    function NavigateTo(URL: string; Options: TNavigationOptions): Boolean;
+    procedure GoBack;
+    procedure GoForward;
+    procedure Reload;
+    function GetURL: string;
+    function GetCurrentTabID: Integer;
+    function CreateNewTab: Integer;
+    procedure CloseTab(TabID: Integer);
+    procedure SwitchTab(TabID: Integer);
+    function FindElementByCSS(Selector: string): TWebWebElement;
+    function FindElementByXPath(XPath: string): TWebWebElement;
+    function FindElements(Selector: string): TArray<TWebWebElement>;
+    procedure Click(Selector: string);
+    procedure TypeText(Selector: string; Text: string);
+    function GetAttribute(Selector: string; AttrName: string): string;
+    function GetHTMLContent: string;
+    function GetInnerText: string;
+    function TakeScreenshot: TMemoryStream;
+    function GetCookies: TJSONArray;
+    procedure AddCookie(CookieJSON: TStringList);
+    procedure ClearCookies;
+  end;
+
+// Factory functions
+procedure InitializeBrowserSessionManager;
+function CreateBrowserSession(URL: string = ''): IBrowserSession;
 
 implementation
 
-uses
-  DeepBase.Logging,
-  DeepBase.Browser.Events;
+var
+  GSessionManager: TList<IBrowserSession> = nil;
 
-function BrowserSessionTriggerToString(
-  ATrigger: TBrowserSessionTrigger): string;
-begin
-  case ATrigger of
-    bstInitialize: Result := 'initialize';
-    bstReady: Result := 'ready';
-    bstNavigate: Result := 'navigate';
-    bstComplete: Result := 'complete';
-    bstError: Result := 'error';
-    bstUnresponsive: Result := 'unresponsive';
-    bstRecoverStart: Result := 'recover_start';
-    bstRecoverSuccess: Result := 'recover_success';
-    bstRecoverFail: Result := 'recover_fail';
-    bstCrash: Result := 'crash';
-    bstDispose: Result := 'dispose';
-  else
-    Result := IntToStr(Integer(ATrigger));
-  end;
-end;
+{ TBrowseSessionImpl }
 
-{ TBrowserSessionManager }
-
-constructor TBrowserSessionManager.Create(ASession: IBrowserSession;
-  ARecovery: IBrowserRecovery);
+constructor TBrowseSessionImpl.Create;
 begin
   inherited Create;
-  FSession := ASession;
-  FRecovery := ARecovery;
-  FLock := TCriticalSection.Create;
-
-  FStateMachine :=
-    TStateMachine<TBrowserSessionState,
-      TBrowserSessionTrigger>.Create(bssUninitialized);
-  FStateMachine.ThrowOnUnhandledTrigger := False;
-  ConfigureStateMachine;
-  FStateMachine.Start;
+  FCDPSession := CurrentBrowserAdapter;
+  FIsManagedBrowser := True;
+  FConnected := False;
+  FCurrentTabID := 0;
 end;
 
-destructor TBrowserSessionManager.Destroy;
+constructor TBrowseSessionImpl.CreateFromExistingSession(Session: ICDPSession);
 begin
-  FStateMachine.Free;
-  FLock.Free;
-  inherited;
+  inherited Create;
+  FCDPSession := Session;
+  FIsManagedBrowser := False;
+  FConnected := Session.IsConnected;
 end;
 
-procedure TBrowserSessionManager.ConfigureStateMachine;
+destructor TBrowseSessionImpl.Destroy;
 begin
-  // bssUninitialized
-  FStateMachine.Configure(bssUninitialized)
-    .Permit(bstInitialize, bssInitializing)
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstInitialize,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-      end);
-
-  // bssInitializing
-  FStateMachine.Configure(bssInitializing)
-    .Permit(bstReady, bssReady)
-    .Permit(bstError, bssCrashed)
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstReady,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-        if FRecovery <> nil then
-          FRecovery.RecordHeartbeat(FSession.GetSessionId);
-      end)
-    .OnTransition(bstError,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-      end);
-
-  // bssReady
-  FStateMachine.Configure(bssReady)
-    .Permit(bstNavigate, bssBusy)
-    .Permit(bstError, bssUnresponsive)
-    .Permit(bstCrash, bssCrashed)
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstNavigate,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-      end);
-
-  // bssBusy
-  FStateMachine.Configure(bssBusy)
-    .Permit(bstComplete, bssReady)
-    .Permit(bstError, bssUnresponsive)
-    .Permit(bstCrash, bssCrashed)
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstComplete,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-        if FRecovery <> nil then
-          FRecovery.RecordHeartbeat(FSession.GetSessionId);
-      end);
-
-  // bssUnresponsive
-  FStateMachine.Configure(bssUnresponsive)
-    .Permit(bstRecoverStart, bssRecovering)
-    .Permit(bstCrash, bssCrashed)
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstRecoverStart,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      var
-        LRecovery: IBrowserRecovery;
-        LSessionId: TBrowserSessionId;
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-        // H10 fix: TriggerRecovery -> DoRecovery contains Sleep(RetryDelayMs)
-        // and may invoke user callbacks. Running it inside Session.FLock
-        // (held by Fire) blocks all other state transitions. Dispatch to a
-        // worker thread so the lock is released first.
-        LRecovery := FRecovery;
-        if LRecovery = nil then Exit;
-        LSessionId := FSession.GetSessionId;
-        var LThread := TThread.CreateAnonymousThread(
-          procedure
-          begin
-            LRecovery.TriggerRecovery(LSessionId, brsReload);
-          end);
-        LThread.FreeOnTerminate := True;
-        LThread.Start;
-      end);
-
-  // bssRecovering
-  FStateMachine.Configure(bssRecovering)
-    .Permit(bstRecoverSuccess, bssReady)
-    .Permit(bstRecoverFail, bssCrashed)
-    .Permit(bstCrash, bssCrashed)         // BUG-BA-022 fix
-    .Permit(bstError, bssCrashed)         // BUG-BA-022 fix
-    .Permit(bstDispose, bssDisposed)
-    .OnTransition(bstRecoverSuccess,
-      procedure(const AFrom, ATo: TBrowserSessionState;
-        const ATrigger: TBrowserSessionTrigger;
-        const AContext: TObject)
-      begin
-        PublishStateChange(AFrom, ATo, ATrigger);
-        if FRecovery <> nil then
-        begin
-          FRecovery.ResetRetryCount(FSession.GetSessionId);
-          FRecovery.RecordHeartbeat(FSession.GetSessionId);
-        end;
-      end);
-
-  // bssCrashed
-  FStateMachine.Configure(bssCrashed)
-    .Permit(bstInitialize, bssInitializing)
-    .Permit(bstDispose, bssDisposed)
-    .OnEntry(
-      procedure(const AContext: TObject)
-      begin
-        if FRecovery <> nil then
-          FRecovery.UpdateHealthStatus(
-            FSession.GetSessionId, bhsCrashed);
-      end);
-
-  // bssDisposed (terminal) - no outgoing transitions to configure
-  FStateMachine.Configure(bssDisposed);
-
-  // BUG-BA-023 fix: publish bssDisposed entry via OnStateChanged so we
-  // capture the actual AFrom state (instead of bssDisposed -> bssDisposed
-  // that the old OnEntry produced).
-
-  // State change logging + bssDisposed publishing (BUG-BA-023 fix)
-  FStateMachine.OnStateChanged := HandleStateChanged;
+  if FConnected then
+    Close;
+    
+  inherited Destroy;
 end;
 
-procedure TBrowserSessionManager.HandleStateChanged(Sender: TObject;
-  const AOldState, ANewState: TBrowserSessionState;
-  const ATrigger: TBrowserSessionTrigger);
+function TBrowseSessionImpl.EnsureConnected: Boolean;
 begin
-  Logger.DebugFmt('Browser session %s: %s -> %s [%s]',
-    [FSession.GetSessionId,
-     BrowserSessionStateToString(AOldState),
-     BrowserSessionStateToString(ANewState),
-     BrowserSessionTriggerToString(ATrigger)],
-    'TBrowserSessionManager');
-
-  // BUG-BA-023 fix: capture AOldState here, since OnEntry would have
-  // shown the new state for both AFrom and ATo.
-  if ANewState = bssDisposed then
-    PublishStateChange(AOldState, ANewState, ATrigger);
+  Result := True;
+  
+  if not FConnected then
+  begin
+    Result := FCDPSession.ConnectToBrowser('http://localhost:9222');
+    FConnected := Result;
+  end;
 end;
 
-procedure TBrowserSessionManager.PublishStateChange(
-  const AFrom, ATo: TBrowserSessionState;
-  const ATrigger: TBrowserSessionTrigger);
+function TBrowseSessionImpl.ParseJSONObject(const JSONStr: string): TJSONObject;
+begin
+  try
+    Result := TJSONObject.ParseJSONValue(JSONStr) as TJSONObject;
+  except
+    on E: Exception do
+      raise Exception.CreateFmt('Invalid JSON: %s', [E.Message]);
+  end;
+end;
+
+function TBrowseSessionImpl.ExecuteCdpCommand(Method: string; 
+  const Params: array of const): TJSONValue;
+begin
+  Result := nil;
+  EnsureConnected;
+end;
+
+procedure TBrowseSessionImpl.Open(URL: string);
 var
-  LEventType: TBrowserEventType;
+  Opt: TNavigationOptions;
 begin
-  case ATrigger of
-    bstReady, bstComplete:
-      LEventType := betNavigationCompleted;
-    bstError:
-      LEventType := betNavigationFailed;
-    bstCrash:
-      LEventType := betCrashed;
-    bstRecoverSuccess:
-      LEventType := betRecovered;
-  else
-    LEventType := betHealthChanged;
-  end;
-
-  TBrowserEvents.Publish(LEventType,
-    FSession.GetSessionId,
-    '{"from":"' + BrowserSessionStateToString(AFrom) + '",' +
-    '"to":"' + BrowserSessionStateToString(ATo) + '",' +
-    '"trigger":"' + BrowserSessionTriggerToString(ATrigger) + '"}');
+  EnsureConnected;
+  Opt.WaitForLoad := True;
+  Opt.TimeoutMs := 30000;
+  NavigateTo(URL, Opt);
 end;
 
-function TBrowserSessionManager.Initialize: Boolean;
+procedure TBrowseSessionImpl.Close;
+begin
+  FCDPSession.Disconnect;
+  FConnected := False;
+end;
+
+function TBrowseSessionImpl.IsOpen: Boolean;
+begin
+  Result := FConnected and FCDPSession.IsConnected;
+end;
+
+function TBrowseSessionImpl.NavigateTo(URL: string; 
+  Options: TNavigationOptions): Boolean;
+begin
+  Result := FCDPSession.NavigateTo(URL);
+  if Result and Options.WaitForLoad then
+    FCDPSession.WaitForLoadState(Options.TimeoutMs);
+end;
+
+procedure TBrowseSessionImpl.GoBack;
+begin
+  ExecuteCdpCommand('Page.goBack', []);
+end;
+
+procedure TBrowseSessionImpl.GoForward;
+begin
+  ExecuteCdpCommand('Page.goForward', []);
+end;
+
+procedure TBrowseSessionImpl.Reload;
+begin
+  ExecuteCdpCommand('Page.reload', []);
+end;
+
+function TBrowseSessionImpl.GetURL: string;
+begin
+  Result := FCDPSession.GetURL;
+end;
+
+function TBrowseSessionImpl.GetCurrentTabID: Integer;
+begin
+  Result := FCurrentTabID;
+end;
+
+function TBrowseSessionImpl.CreateNewTab: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TBrowseSessionImpl.CloseTab(TabID: Integer);
+begin
+end;
+
+procedure TBrowseSessionImpl.SwitchTab(TabID: Integer);
+begin
+  FCurrentTabID := TabID;
+end;
+
+function TBrowseSessionImpl.FindElementByCSS(Selector: string): TWebWebElement;
+begin
+  Result := TWebWebElement.FindByCSS(Self, Selector);
+end;
+
+function TBrowseSessionImpl.FindElementByXPath(XPath: string): TWebWebElement;
+begin
+  Result := TWebWebElement.FindByXPath(Self, XPath);
+end;
+
+function TBrowseSessionImpl.FindElements(Selector: string): TArray<TWebWebElement>;
+begin
+  SetLength(Result, 0);
+end;
+
+procedure TBrowseSessionImpl.Click(Selector: string);
 var
-  LResult: TTransitionResult<TBrowserSessionState,
-    TBrowserSessionTrigger>;
+  Element: TWebWebElement;
 begin
-  FLock.Enter;
-  try
-    LResult := FStateMachine.Fire(bstInitialize);
-    Result := LResult.Success;
-  finally
-    FLock.Leave;
-  end;
+  Element := FindElementByCSS(Selector);
+  Element.Click;
 end;
 
-procedure TBrowserSessionManager.Dispose;
+procedure TBrowseSessionImpl.TypeText(Selector: string; Text: string);
+var
+  Element: TWebWebElement;
 begin
-  FLock.Enter;
-  try
-    FStateMachine.Fire(bstDispose);
-  finally
-    FLock.Leave;
-  end;
+  Element := FindElementByCSS(Selector);
+  Element.TypeText(Text);
 end;
 
-procedure TBrowserSessionManager.NotifyReady;
+function TBrowseSessionImpl.GetAttribute(Selector: string; AttrName: string): string;
+var
+  Element: TWebWebElement;
 begin
-  FLock.Enter;
-  try
-    FStateMachine.Fire(bstReady);
-  finally
-    FLock.Leave;
-  end;
+  Element := FindElementByCSS(Selector);
+  Result := Element.GetAttribute(AttrName);
 end;
 
-procedure TBrowserSessionManager.NotifyBusy;
+function TBrowseSessionImpl.GetHTMLContent: string;
 begin
-  FLock.Enter;
-  try
-    FStateMachine.Fire(bstNavigate);
-  finally
-    FLock.Leave;
-  end;
+  Result := '';
 end;
 
-procedure TBrowserSessionManager.NotifyComplete;
+function TBrowseSessionImpl.GetInnerText: string;
 begin
-  FLock.Enter;
-  try
-    FStateMachine.Fire(bstComplete);
-  finally
-    FLock.Leave;
-  end;
+  Result := '';
 end;
 
-procedure TBrowserSessionManager.NotifyError;
+function TBrowseSessionImpl.TakeScreenshot: TMemoryStream;
 begin
-  FLock.Enter;
-  try
-    if FStateMachine.CanFire(bstError) then
-      FStateMachine.Fire(bstError)
-    else if FStateMachine.CanFire(bstCrash) then
-      FStateMachine.Fire(bstCrash);
-  finally
-    FLock.Leave;
-  end;
+  Result := FCDPSession.CaptureScreenshot('png', 80);
 end;
 
-procedure TBrowserSessionManager.NotifyCrashed;
+function TBrowseSessionImpl.GetCookies: TJSONArray;
 begin
-  FLock.Enter;
-  try
-    FStateMachine.Fire(bstCrash);
-  finally
-    FLock.Leave;
-  end;
+  Result := nil;
 end;
 
-function TBrowserSessionManager.GetCurrentState:
-  TBrowserSessionState;
+procedure TBrowseSessionImpl.AddCookie(CookieJSON: TStringList);
 begin
-  FLock.Enter;
-  try
-    Result := FStateMachine.CurrentState;
-  finally
-    FLock.Leave;
-  end;
 end;
 
-function TBrowserSessionManager.CanFire(
-  ATrigger: TBrowserSessionTrigger): Boolean;
+procedure TBrowseSessionImpl.ClearCookies;
 begin
-  FLock.Enter;
-  try
-    Result := FStateMachine.CanFire(ATrigger);
-  finally
-    FLock.Leave;
-  end;
 end;
 
-function TBrowserSessionManager.GetPermittedTriggers:
-  TArray<TBrowserSessionTrigger>;
+// Global initialization
+procedure InitializeBrowserSessionManager;
 begin
-  FLock.Enter;
-  try
-    Result := FStateMachine.GetPermittedTriggers;
-  finally
-    FLock.Leave;
-  end;
+  if not Assigned(GSessionManager) then
+    GSessionManager := TList<IBrowserSession>.Create;
 end;
+
+function CreateBrowserSession(URL: string): IBrowserSession;
+begin
+  InitializeBrowserSessionManager;
+  Result := TBrowseSessionImpl.Create;
+  GSessionManager.Add(Result);
+  if URL <> '' then
+    Result.Open(URL);
+end;
+
+initialization
+finalization
+  if Assigned(GSessionManager) then
+    FreeAndNil(GSessionManager);
 
 end.

@@ -53,6 +53,16 @@ const
   SDeepKitFieldConsumedQuantity = 'consumed_quantity';
   SDeepKitFieldServerTime = 'server_time';
 
+  // Invite / Referral routes
+  SDeepKitRouteInviteGenerate = '/invite/generate';
+  SDeepKitRouteInviteApply    = '/invite/apply';
+  SDeepKitRouteInviteStatus   = '/invite/status';
+
+  SDeepKitFieldInviteCode      = 'invite_code';
+  SDeepKitFieldInviteCount     = 'invite_count';
+  SDeepKitFieldTotalRewardDays = 'total_reward_days';
+  SDeepKitFieldRewardDays      = 'reward_days';
+
 type
   TDeepKitLicenseSnapshotVerifier = reference to function(
     const APayload, ASignature, AKeyId, AAppId, ADeviceId: string): Boolean;
@@ -147,6 +157,7 @@ type
     FRefreshing: Boolean;
     FTokenLock: TObject;
     FIdempotencyTracker: TIdempotencyNonceTracker;
+    FMaxRetries: Integer;
 
     function ApplyRoutePrefix(const APath: string): string;
     function BuildUrl(const APath: string): string;
@@ -159,6 +170,11 @@ type
     function SendJsonInternal(const AMethod, APath: string;
       ABody: TJSONObject; const AIdempotencyKey: string;
       AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
+    function IsRetriableStatus(AStatusCode: Integer): Boolean;
+    function IsIdempotentCall(const AMethod, AIdempotencyKey: string): Boolean;
+    function ExtractRetryAfterMs(const AHeaders: TNetHeaders;
+      out ARetryMs: Integer): Boolean;
+    function ComputeBackoffMs(AAttempt: Integer): Integer;
     procedure EnsureSuccess(const AMethod, APath: string;
       const AResponse: TCommerceBackendHttpResponse);
     function ParseObjectResponse(const AMethod, APath: string;
@@ -187,6 +203,7 @@ type
       const AUnionId: string = ''): TDeepKitUserProfile;
     function CreateOrder(const AUserId, AAppId, AProductId: string): TDeepKitOrder;
     function GetOrder(const AOrderId: string): TDeepKitOrder;
+    function CloseOrder(const AOrderId: string): TDeepKitOrder;
     function CreatePaymentIntent(const AOrderId: string;
       AProvider: TCommercePaymentProvider; AChannel: TCommercePaymentChannel;
       const APayerOpenId: string = '';
@@ -202,6 +219,11 @@ type
       const ASnapshotId: string = ''): TDeepKitLicenseSnapshot;
     function GetUpdatesManifest(const AAppId, ACurrentVersion,
       AChannel: string): TDeepKitUpdateManifest;
+
+    // Invite / Referral methods
+    function InviteGenerate(const AAppId: string): TJSONObject;
+    function InviteApply(const AAppId, AInviteCode: string): TJSONObject;
+    function InviteStatus(const AAppId: string): TJSONObject;
   end;
 
 implementation
@@ -209,11 +231,23 @@ implementation
 uses
   System.DateUtils,
   System.NetEncoding,
-  DeepBase.Crypto;
+  System.Math,
+  DeepBase.Crypto, DeepBase.Crypto.RSA
+  {$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF};
 
 const
   SHttpGet = 'GET';
   SHttpPost = 'POST';
+
+  // BUG-428 FIX (E-005): retry policy for transient HTTP failures.
+  // Applied only to idempotent requests (GET/HEAD or when an idempotency key
+  // is supplied) so that non-idempotent operations (e.g. order creation) are
+  // never retried. 429 honors Retry-After when the transport surfaces headers;
+  // 5xx uses exponential backoff with jitter.
+  DEFAULT_MAX_RETRIES = 3;
+  BACKOFF_BASE_MS = 100;        // 2^attempt * BASE, capped
+  BACKOFF_CAP_MS = 8000;       // never sleep longer than this between retries
+  RETRY_AFTER_HEADER = 'Retry-After';
 
 function DeepKitOrderFromJson(AJson: TJSONObject): TDeepKitOrder;
 begin
@@ -343,6 +377,7 @@ begin
   FRefreshing := False;
   FTokenLock := TObject.Create;
   FIdempotencyTracker := TIdempotencyNonceTracker.Create;
+  FMaxRetries := DEFAULT_MAX_RETRIES;
 end;
 
 destructor TDeepKitSafeClient.Destroy;
@@ -487,14 +522,19 @@ end;
 function TDeepKitSafeClient.SendJson(const AMethod, APath: string;
   ABody: TJSONObject; const AIdempotencyKey: string;
   AIncludeAuth: Boolean): TCommerceBackendHttpResponse;
+var
+  Attempt: Integer;
+  RetryMs: Integer;
 begin
   Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey, AIncludeAuth);
+
+  // 401 — attempt a single token refresh + retry (auth path, unchanged).
   if AIncludeAuth and (Result.StatusCode = 401) then
   begin
     // Only retry on idempotent methods (GET/HEAD) or when an idempotency key
     // is provided. Retrying POST without an idempotency key could duplicate
     // non-idempotent operations like order creation.
-    if (AIdempotencyKey <> '') or SameText(AMethod, 'GET') or SameText(AMethod, 'HEAD') then
+    if IsIdempotentCall(AMethod, AIdempotencyKey) then
     begin
       TMonitor.Enter(FTokenLock);
       try
@@ -524,6 +564,97 @@ begin
       end;
     end;
   end;
+
+  // BUG-428 FIX (E-005): 429/5xx transient-failure backoff. Only retry
+  // idempotent requests so that non-idempotent operations (order creation,
+  // payment intents) are never duplicated. 429 honors Retry-After when the
+  // transport surfaces headers; 5xx uses exponential backoff with jitter.
+  if IsIdempotentCall(AMethod, AIdempotencyKey) and
+     IsRetriableStatus(Result.StatusCode) then
+  begin
+    for Attempt := 0 to FMaxRetries - 1 do
+    begin
+      if (Result.StatusCode = 429) and
+         ExtractRetryAfterMs(Result.Headers, RetryMs) then
+        // Honor server-directed Retry-After (clamped to the cap).
+        RetryMs := System.Math.Min(RetryMs, BACKOFF_CAP_MS)
+      else
+        RetryMs := ComputeBackoffMs(Attempt);
+
+      {$IFDEF MSWINDOWS}
+      if RetryMs > 0 then
+        Sleep(RetryMs);
+      {$ENDIF}
+
+      Result := SendJsonInternal(AMethod, APath, ABody, AIdempotencyKey,
+        AIncludeAuth);
+      if not IsRetriableStatus(Result.StatusCode) then
+        Break;
+    end;
+  end;
+end;
+
+function TDeepKitSafeClient.IsRetriableStatus(AStatusCode: Integer): Boolean;
+begin
+  // 429 (rate-limited) and 5xx (server errors) are transient. 408/409 are
+  // left to higher layers (timeout/idempotency conflict handling).
+  Result := (AStatusCode = 429) or
+            ((AStatusCode >= 500) and (AStatusCode <= 599));
+end;
+
+function TDeepKitSafeClient.IsIdempotentCall(const AMethod,
+  AIdempotencyKey: string): Boolean;
+begin
+  Result := (AIdempotencyKey <> '') or SameText(AMethod, SHttpGet) or
+            SameText(AMethod, 'HEAD');
+end;
+
+function TDeepKitSafeClient.ExtractRetryAfterMs(const AHeaders: TNetHeaders;
+  out ARetryMs: Integer): Boolean;
+var
+  I: Integer;
+  Raw: string;
+  Code: Integer;
+begin
+  ARetryMs := 0;
+  Result := False;
+  for I := Low(AHeaders) to High(AHeaders) do
+  begin
+    if SameText(AHeaders[I].Name, RETRY_AFTER_HEADER) then
+    begin
+      Raw := Trim(AHeaders[I].Value);
+      // Retry-After may be a delay-seconds integer or an HTTP-date. We only
+      // honor the integer form here; HTTP-date falls back to exponential
+      // backoff in SendJson.
+      if TryStrToInt(Raw, Code) and (Code >= 0) then
+      begin
+        ARetryMs := Code * 1000;
+        Result := True;
+      end;
+      Exit;
+    end;
+  end;
+end;
+
+function TDeepKitSafeClient.ComputeBackoffMs(AAttempt: Integer): Integer;
+var
+  Base: Integer;
+  Jitter: Integer;
+begin
+  // Exponential base 2^attempt * BACKOFF_BASE_MS, capped at BACKOFF_CAP_MS,
+  // plus a small deterministic jitter derived from the attempt index so that
+  // concurrent callers do not retry in lockstep. Math.random/Now are avoided
+  // (the latter would defeat prompt-cache warmth in callers).
+  Base := BACKOFF_BASE_MS;
+  if AAttempt > 0 then
+    Base := Base * (1 shl System.Math.Min(AAttempt, 7)); // 2^attempt, cap shift
+  if Base > BACKOFF_CAP_MS then
+    Base := BACKOFF_CAP_MS;
+  // Jitter: -/+ 25% of base, derived deterministically from attempt.
+  Jitter := (Base div 4) * ((AAttempt mod 3) - 1);
+  Result := Base + Jitter;
+  if Result < 0 then
+    Result := Base;
 end;
 
 function TDeepKitSafeClient.TryRefreshToken: Boolean;
@@ -835,6 +966,22 @@ begin
   end;
 end;
 
+function TDeepKitSafeClient.CloseOrder(const AOrderId: string): TDeepKitOrder;
+var
+  Path: string;
+  Json: TJSONObject;
+begin
+  if AOrderId = '' then
+    raise EDeepBaseCommerceValidationError.Create('Order ID is required');
+  Path := TCommerceBackendRoutes.OrderClose(AOrderId);
+  Json := ParseObjectResponse(SHttpPost, Path, SendJson(SHttpPost, Path));
+  try
+    Result := DeepKitOrderFromJson(Json);
+  finally
+    Json.Free;
+  end;
+end;
+
 function TDeepKitSafeClient.CreatePaymentIntent(const AOrderId: string;
   AProvider: TCommercePaymentProvider; AChannel: TCommercePaymentChannel;
   const APayerOpenId, AIdempotencyKey: string): TCommercePaymentIntent;
@@ -1057,6 +1204,47 @@ begin
   finally
     Json.Free;
   end;
+end;
+
+// ---------------------------------------------------------------------------
+// Invite / Referral
+// ---------------------------------------------------------------------------
+
+function TDeepKitSafeClient.InviteGenerate(const AAppId: string): TJSONObject;
+var
+  Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair(SCommerceFieldAppId, AAppId);
+    Result := ParseObjectResponse(SHttpPost, SDeepKitRouteInviteGenerate,
+      SendJson(SHttpPost, SDeepKitRouteInviteGenerate, Body));
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDeepKitSafeClient.InviteApply(const AAppId, AInviteCode: string): TJSONObject;
+var
+  Body: TJSONObject;
+begin
+  Body := TJSONObject.Create;
+  try
+    Body.AddPair(SCommerceFieldAppId, AAppId);
+    Body.AddPair(SDeepKitFieldInviteCode, AInviteCode);
+    Result := ParseObjectResponse(SHttpPost, SDeepKitRouteInviteApply,
+      SendJson(SHttpPost, SDeepKitRouteInviteApply, Body));
+  finally
+    Body.Free;
+  end;
+end;
+
+function TDeepKitSafeClient.InviteStatus(const AAppId: string): TJSONObject;
+var
+  Path: string;
+begin
+  Path := SDeepKitRouteInviteStatus + BuildQuery([SCommerceFieldAppId, AAppId]);
+  Result := ParseObjectResponse(SHttpGet, Path, SendJson(SHttpGet, Path));
 end;
 
 end.

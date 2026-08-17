@@ -277,9 +277,46 @@ type
     procedure Test_GlobalHelper_Manager_IsThreadSafeSingleton;
   end;
 
+  /// <summary>
+  /// Test fixture for IFeatureFlagStorage 实现 (TMemoryFlagStorage / TFileFlagStorage)
+  /// 覆盖 BIZ-R3-003/004 所有权契约: SaveFlag 不接管调用方对象, GetFlag 返回深拷贝克隆
+  /// </summary>
+  [TestFixture]
+  TTestFeatureFlagStorage = class
+  private
+    function TempFlagFilePath: string;
+  public
+    [SetUp]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Clone_IsIndependentDeepCopy;
+
+    [Test]
+    procedure Test_Memory_SaveFlag_DoesNotOwnCallerFlag;
+
+    [Test]
+    procedure Test_Memory_GetFlag_ReturnsIndependentClone;
+
+    [Test]
+    procedure Test_Memory_GetFlag_ReturnsNilForMissing;
+
+    [Test]
+    procedure Test_File_SaveFlag_DoesNotOwnCallerFlag;
+
+    [Test]
+    procedure Test_File_GetFlag_ReturnsIndependentClone;
+
+    [Test]
+    procedure Test_File_GetFlag_ReturnsNilForMissing;
+  end;
+
 implementation
 
 uses
+  System.IOUtils,
   DeepBase.FeatureFlags;
 
 { TTestFlagContext }
@@ -1428,6 +1465,187 @@ begin
     Assert.AreSame(Managers[0], Managers[I]);
 end;
 
+{ TTestFeatureFlagStorage }
+
+function TTestFeatureFlagStorage.TempFlagFilePath: string;
+begin
+  // 每个测试独立临时文件, 避免并发/串行污染
+  Result := TPath.Combine(TPath.GetTempPath,
+    'deepbase_ff_test_' + IntToStr(UIntPtr(Self)) + '.json');
+end;
+
+procedure TTestFeatureFlagStorage.Setup;
+begin
+  if TFile.Exists(TempFlagFilePath) then
+    TFile.Delete(TempFlagFilePath);
+end;
+
+procedure TTestFeatureFlagStorage.TearDown;
+begin
+  if TFile.Exists(TempFlagFilePath) then
+    TFile.Delete(TempFlagFilePath);
+end;
+
+procedure TTestFeatureFlagStorage.Test_Clone_IsIndependentDeepCopy;
+var
+  Flag, Clone: TFeatureFlag;
+begin
+  // BIZ-R3-003/004: Clone 必须是深拷贝, 修改克隆不影响原对象
+  Flag := TFeatureFlag.Create('clone-key');
+  try
+    Flag.Name := 'original';
+    Flag.State := fsDisabled;
+    Clone := Flag.Clone;
+    try
+      Assert.AreNotSame(Flag, Clone, 'Clone 必须返回独立对象, 而非同一引用');
+      Assert.AreEqual('clone-key', Clone.Key);
+      Assert.AreEqual('original', Clone.Name);
+      Assert.AreEqual(fsDisabled, Clone.State);
+
+      // 修改克隆, 原对象不受影响
+      Clone.Name := 'modified';
+      Clone.State := fsEnabled;
+      Assert.AreEqual('original', Flag.Name, '修改克隆不应影响原对象');
+      Assert.AreEqual(fsDisabled, Flag.State, '修改克隆不应影响原对象');
+    finally
+      Clone.Free;
+    end;
+  finally
+    Flag.Free;
+  end;
+end;
+
+procedure TTestFeatureFlagStorage.Test_Memory_SaveFlag_DoesNotOwnCallerFlag;
+var
+  Storage: IFeatureFlagStorage;
+  Flag, Loaded: TFeatureFlag;
+begin
+  // BIZ-R3-003: SaveFlag 不得接管调用方 AFlag 所有权。
+  // 旧实现 FFlags.AddOrSetValue(AFlag.Key, AFlag) 把 AFlag 接管进字典 (doOwnsValues),
+  // 调用方 Free AFlag 后字典内对象悬垂, GetFlag 访问已释放内存 (use-after-free)。
+  Storage := TMemoryFlagStorage.Create;
+  Flag := TFeatureFlag.Create('mem-owner');
+  Flag.Name := 'caller-owned';
+  Storage.SaveFlag(Flag);
+  // 调用方释放 AFlag — storage 应已克隆, 不依赖此对象
+  Flag.Free;
+  Loaded := Storage.GetFlag('mem-owner');
+  try
+    Assert.IsNotNull(Loaded, 'SaveFlag 后 GetFlag 应返回内部克隆, 不依赖调用方对象');
+    Assert.AreEqual('mem-owner', Loaded.Key);
+    Assert.AreEqual('caller-owned', Loaded.Name);
+  finally
+    Loaded.Free;
+  end;
+end;
+
+procedure TTestFeatureFlagStorage.Test_Memory_GetFlag_ReturnsIndependentClone;
+var
+  Storage: IFeatureFlagStorage;
+  Flag, Got1, Got2, Got3: TFeatureFlag;
+begin
+  // BIZ-R3-004: GetFlag 返回深拷贝克隆, 两次调用返回不同对象, 修改任一不影响 storage。
+  // 返回的克隆所有权归调用方, 必须释放, 否则泄漏 (契约验证)。
+  Storage := TMemoryFlagStorage.Create;
+  Flag := TFeatureFlag.Create('mem-clone');
+  Flag.Name := 'v1';
+  try
+    Storage.SaveFlag(Flag);
+    Got1 := Storage.GetFlag('mem-clone');
+    Got2 := Storage.GetFlag('mem-clone');
+    Got3 := nil;
+    try
+      Assert.IsNotNull(Got1);
+      Assert.IsNotNull(Got2);
+      Assert.AreNotSame(Got1, Got2, '两次 GetFlag 应返回不同克隆');
+      Assert.AreNotSame(Flag, Got1, 'GetFlag 不应返回 storage 内部引用');
+
+      Got1.Name := 'mutated';
+      Assert.AreEqual('v1', Got2.Name, '修改一个克隆不应影响其他克隆');
+      Got3 := Storage.GetFlag('mem-clone');
+      Assert.AreEqual('v1', Got3.Name, '修改克隆不应影响 storage');
+    finally
+      Got3.Free;
+      Got2.Free;
+      Got1.Free;
+    end;
+  finally
+    Flag.Free;
+  end;
+end;
+
+procedure TTestFeatureFlagStorage.Test_Memory_GetFlag_ReturnsNilForMissing;
+var
+  Storage: IFeatureFlagStorage;
+begin
+  Storage := TMemoryFlagStorage.Create;
+  Assert.IsNull(Storage.GetFlag('does-not-exist'));
+end;
+
+procedure TTestFeatureFlagStorage.Test_File_SaveFlag_DoesNotOwnCallerFlag;
+var
+  Storage: IFeatureFlagStorage;
+  Flag, Loaded: TFeatureFlag;
+begin
+  // BIZ-R3-003: TFileFlagStorage.SaveFlag 旧实现 LFlags[I]:=AFlag 在 OwnsObjects=True
+  // 列表上接管 AFlag, finally LFlags.Free 释放 AFlag 致调用方 double-free。
+  Storage := TFileFlagStorage.Create(TempFlagFilePath);
+  Flag := TFeatureFlag.Create('file-owner');
+  Flag.Name := 'caller-owned';
+  Storage.SaveFlag(Flag);
+  // 调用方释放 AFlag — storage 应已克隆, 不依赖此对象
+  Flag.Free;
+  Loaded := Storage.GetFlag('file-owner');
+  try
+    Assert.IsNotNull(Loaded, 'SaveFlag 后 GetFlag 应返回内部克隆, 不依赖调用方对象');
+    Assert.AreEqual('file-owner', Loaded.Key);
+    Assert.AreEqual('caller-owned', Loaded.Name);
+  finally
+    Loaded.Free;
+  end;
+end;
+
+procedure TTestFeatureFlagStorage.Test_File_GetFlag_ReturnsIndependentClone;
+var
+  Storage: IFeatureFlagStorage;
+  Flag, Got, Recheck: TFeatureFlag;
+begin
+  // BIZ-R3-004: TFileFlagStorage.GetFlag 旧实现用 Extract 转移所有权给调用方,
+  // 契约与 TMemoryFlagStorage 不一致。统一为返回深拷贝克隆。返回克隆所有权归调用方。
+  Storage := TFileFlagStorage.Create(TempFlagFilePath);
+  Flag := TFeatureFlag.Create('file-clone');
+  Flag.Name := 'v1';
+  try
+    Storage.SaveFlag(Flag);
+    Got := Storage.GetFlag('file-clone');
+    Recheck := nil;
+    try
+      Assert.IsNotNull(Got);
+      Assert.AreNotSame(Flag, Got, 'GetFlag 不应返回 storage 内部引用');
+      Assert.AreEqual('file-clone', Got.Key);
+      Assert.AreEqual('v1', Got.Name);
+
+      // 修改克隆不影响再次读取
+      Got.Name := 'mutated';
+      Recheck := Storage.GetFlag('file-clone');
+      Assert.AreEqual('v1', Recheck.Name, '修改克隆不应影响 storage');
+    finally
+      Recheck.Free;
+      Got.Free;
+    end;
+  finally
+    Flag.Free;
+  end;
+end;
+
+procedure TTestFeatureFlagStorage.Test_File_GetFlag_ReturnsNilForMissing;
+var
+  Storage: IFeatureFlagStorage;
+begin
+  Storage := TFileFlagStorage.Create(TempFlagFilePath);
+  Assert.IsNull(Storage.GetFlag('does-not-exist'));
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestFlagContext);
   TDUnitX.RegisterTestFixture(TTestTargetingRule);
@@ -1435,5 +1653,7 @@ initialization
   TDUnitX.RegisterTestFixture(TTestFlagSchedule);
   TDUnitX.RegisterTestFixture(TTestFeatureFlag);
   TDUnitX.RegisterTestFixture(TTestFeatureFlagManager);
+  TDUnitX.RegisterTestFixture(TTestFeatureFlagStorage);
+
 
 end.

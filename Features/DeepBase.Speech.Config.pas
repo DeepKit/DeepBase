@@ -106,8 +106,32 @@ begin
   LParts := LTag.Split(['-']);
 
   if Length(LParts) = 1 then
-    raise EArgumentException.CreateFmt(
-      'Ambiguous language tag "%s": must include region (e.g. zh-CN, en-US)', [ATag]);
+  begin
+    // Short code without region — expand to canonical form via well-known defaults.
+    LPrimary := LowerCase(LParts[0]);
+    if LPrimary = 'zh' then
+      Exit('zh-CN')
+    else if LPrimary = 'en' then
+      Exit('en-US')
+    else if LPrimary = 'ja' then
+      Exit('ja-JP')
+    else if LPrimary = 'ko' then
+      Exit('ko-KR')
+    else if LPrimary = 'fr' then
+      Exit('fr-FR')
+    else if LPrimary = 'de' then
+      Exit('de-DE')
+    else if LPrimary = 'es' then
+      Exit('es-ES')
+    else if LPrimary = 'ru' then
+      Exit('ru-RU')
+    else if Length(LPrimary) = 2 then
+      // Unknown 2-letter code: conventionally upper-case the code as region
+      Exit(LPrimary + '-' + UpperCase(LPrimary))
+    else
+      raise EArgumentException.CreateFmt(
+        'Ambiguous language tag "%s": must include region (e.g. zh-CN, en-US)', [ATag]);
+  end;
 
   LPrimary := LowerCase(LParts[0]);
 
