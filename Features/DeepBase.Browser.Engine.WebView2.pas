@@ -11,9 +11,9 @@
 
 unit DeepBase.Browser.Engine.WebView2;
 
-{$IFDEF USE_WEBVIEW2}
-
 interface
+
+{$IFDEF USE_WEBVIEW2}
 
 uses
   Winapi.ActiveX,
@@ -1137,6 +1137,10 @@ finalization
     GlobalWebView2Loader := nil;
   end;
   GWebView2Initialized := False;
+
+{$ELSE}
+
+implementation
 
 {$ENDIF USE_WEBVIEW2}
 
