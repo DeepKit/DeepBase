@@ -189,12 +189,22 @@ begin
     'if(!el)return {success:false,error:"not_found"};' +
     'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
     'if(el.focus)el.focus();' +
-    'if("value" in el){el.value={{text}};}else{el.textContent={{text}};}' +
+    // CP-LOGIN-R1 (2026-08-22): React 受控组件必须走原生 setter 更新内部 state,
+    // 直接 el.value={{text}} 会被 React value tracker 覆盖 → 发送按钮 disabled →
+    // 点击无效 → wait_response 永不命中 (deepseek 新版 DOM 实测)。
+    'try{' +
+    '  var proto=null;' +
+    '  if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
+    '  else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
+    '  var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
+    '  if(setter){setter.call(el,{{text}});}' +
+    '  else{if("value" in el){el.value={{text}};}else{el.textContent={{text}};}}' +
+    '}catch(e){if("value" in el){el.value={{text}};}else{el.textContent={{text}};}}' +
     'el.dispatchEvent(new Event("input",{bubbles:true}));' +
     'el.dispatchEvent(new Event("change",{bubbles:true}));' +
     'return {success:true,error:""};' +
     '}catch(e){return {success:false,error:String(e)}}})();',
-    'Sets text on the first matching input. Returns {success,error}.');
+    'Sets text on the first matching input (React-setter aware). Returns {success,error}.');
   Result[3] := CreateScriptDefinition(JSCRIPT_GET_TEXT,
     '(function(){try{' +
     'var list=document.querySelectorAll({{selector}});' +

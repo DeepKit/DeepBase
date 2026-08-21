@@ -706,7 +706,18 @@ begin
     'if(!el)return {success:false,error:"not_found"};' +
     'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
     'if(el.focus)el.focus();' +
-    'if("value" in el){el.value=text;}else{el.textContent=text;}' +
+    // CP-LOGIN-R1 fix (2026-08-22): React 受控组件必须走原生 setter 才会更新
+    // 组件内部 state，直接 el.value=text 会被 React 的 value tracker 覆盖，
+    // 发送按钮保持 disabled → 点击无效 → wait_response 永不命中。
+    // 走 HTMLTextAreaElement/HTMLInputElement 原型 setter，对受控/非受控通用。
+    'try{' +
+    '  var proto=null;' +
+    '  if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
+    '  else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
+    '  var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
+    '  if(setter){setter.call(el,text);}' +
+    '  else{if("value" in el){el.value=text;}else{el.textContent=text;}}' +
+    '}catch(e){if("value" in el){el.value=text;}else{el.textContent=text;}}' +
     'el.dispatchEvent(new Event("input",{bubbles:true}));' +
     'el.dispatchEvent(new Event("change",{bubbles:true}));' +
     'return {success:true};' +
