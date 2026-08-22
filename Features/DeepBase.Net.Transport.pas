@@ -255,7 +255,15 @@ begin
           Memory.Position := 0;
           Memory.ReadBuffer(Result.BodyBytes[0], Memory.Size);
         end;
-        Result.Body := TEncoding.UTF8.GetString(Result.BodyBytes);
+        // P4.5-T3: 二进制载荷(zip)不是合法 UTF8, TEncoding.UTF8.GetString 抛
+        // EEncodingError(1113 "No mapping...")。BodyBytes 已完整保留字节,
+        // 文本体仅用于 JSON 响应解析, 二进制时置空即可(调用方按 BodyBytes 用)。
+        try
+          Result.Body := TEncoding.UTF8.GetString(Result.BodyBytes);
+        except
+          on E: EEncodingError do
+            Result.Body := '';
+        end;
       finally
         Memory.Free;
       end;
