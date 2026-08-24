@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.RateLimiter - Rate Limiting Module
   
   A comprehensive rate limiting implementation for API throttling.
@@ -85,7 +85,7 @@ type
     type
       TBucket = record
         Tokens: Double;
-        LastRefill: TDateTime;
+        LastRefillTicks: UInt64; // CR-290: 单调时钟, 免疫NTP/DST跳变
       end;
   private
     FCapacity: Integer;           // Maximum tokens
@@ -126,7 +126,7 @@ type
     type
       TWindow = record
         Count: Integer;
-        WindowStart: TDateTime;
+        StartTicks: UInt64; // CR-290
       end;
   private
     FMaxRequests: Integer;
@@ -163,14 +163,14 @@ type
   private
     FMaxRequests: Integer;
     FWindowSizeMs: Int64;
-    FRequestLogs: TDictionary<string, TList<TDateTime>>;
+    FRequestLogs: TDictionary<string, TList<UInt64>>;
     FLock: TCriticalSection;
     FDefaultKey: string;
     FCleanupCounter: Integer;
     const CLEANUP_THRESHOLD = 100;
     procedure CleanupExpired;
-    function GetOrCreateLog(const Key: string): TList<TDateTime>;
-    procedure CleanupOldRequests(Log: TList<TDateTime>);
+    function GetOrCreateLog(const Key: string): TList<UInt64>;
+    procedure CleanupOldRequests(Log: TList<UInt64>);
   public
     constructor Create(AMaxRequests: Integer; AWindowSizeMs: Int64);
     destructor Destroy; override;
@@ -198,7 +198,7 @@ type
       TWindowCounter = record
         CurrentCount: Integer;
         PreviousCount: Integer;
-        CurrentWindowStart: TDateTime;
+        StartTicks: UInt64; // CR-290
       end;
   private
     FMaxRequests: Integer;
@@ -386,23 +386,24 @@ end;
 
 procedure TTokenBucketLimiter.RefillBucket(var Bucket: TBucket);
 var
-  Now: TDateTime;
+  NowTicks: UInt64;
   ElapsedSec: Double;
   TokensToAdd: Double;
 begin
-  Now := System.SysUtils.Now;
-  ElapsedSec := (Now - Bucket.LastRefill) * 24 * 60 * 60;
+  // CR-290: 单调时钟取时间差，NTP 回拨/DST 不再影响补充计算
+  NowTicks := TThread.GetTickCount64;
+  ElapsedSec := (NowTicks - Bucket.LastRefillTicks) / 1000.0;
   TokensToAdd := ElapsedSec * FRefillRate;
-  
+
   Bucket.Tokens := Min(FCapacity, Bucket.Tokens + TokensToAdd);
-  Bucket.LastRefill := Now;
+  Bucket.LastRefillTicks := NowTicks;
 end;
 
 procedure TTokenBucketLimiter.CleanupExpired;
 var
   KeysToRemove: TList<string>;
   Pair: TPair<string, TBucket>;
-  Now: TDateTime;
+  NowTicks: UInt64;
   ElapsedSec: Double;
 begin
   Inc(FCleanupCounter);
@@ -412,10 +413,10 @@ begin
 
   KeysToRemove := TList<string>.Create;
   try
-    Now := System.SysUtils.Now;
+    NowTicks := TThread.GetTickCount64;
     for Pair in FBuckets do
     begin
-      ElapsedSec := (Now - Pair.Value.LastRefill) * 24 * 60 * 60;
+      ElapsedSec := (NowTicks - Pair.Value.LastRefillTicks) / 1000.0;
       if (ElapsedSec * FRefillRate >= FCapacity) then
         KeysToRemove.Add(Pair.Key);
     end;
@@ -431,11 +432,11 @@ var
   ActualKey: string;
 begin
   ActualKey := IfThen(Key = '', FDefaultKey, Key);
-  
+
   if not FBuckets.TryGetValue(ActualKey, Result) then
   begin
     Result.Tokens := FCapacity;
-    Result.LastRefill := Now;
+    Result.LastRefillTicks := TThread.GetTickCount64;
   end;
 end;
 
@@ -516,7 +517,7 @@ begin
   try
     ActualKey := IfThen(Key = '', FDefaultKey, Key);
     Bucket.Tokens := FCapacity;
-    Bucket.LastRefill := Now;
+    Bucket.LastRefillTicks := TThread.GetTickCount64;
     FBuckets.AddOrSetValue(ActualKey, Bucket);
   finally
     FLock.Leave;
@@ -594,7 +595,7 @@ begin
   if not FWindows.TryGetValue(ActualKey, Result) then
   begin
     Result.Count := 0;
-    Result.WindowStart := Now;
+    Result.StartTicks := TThread.GetTickCount64;
   end;
 end;
 
@@ -610,7 +611,8 @@ function TFixedWindowLimiter.IsWindowExpired(const Window: TWindow): Boolean;
 var
   ElapsedMs: Int64;
 begin
-  ElapsedMs := MilliSecondsBetween(Now, Window.WindowStart);
+  // CR-290: 单调时钟差值
+  ElapsedMs := Int64(TThread.GetTickCount64 - Window.StartTicks);
   Result := ElapsedMs >= FWindowSizeMs;
 end;
 
@@ -631,7 +633,7 @@ begin
     else if IsWindowExpired(Window) then
     begin
       Window.Count := 0;
-      Window.WindowStart := Now;
+      Window.StartTicks := TThread.GetTickCount64;
     end;
     
     if Window.Count < FMaxRequests then
@@ -666,10 +668,11 @@ begin
     else if IsWindowExpired(Window) then
     begin
       Window.Count := 0;
-      Window.WindowStart := Now;
+      Window.StartTicks := TThread.GetTickCount64;
     end;
     
-    ResetTime := IncMilliSecond(Window.WindowStart, FWindowSizeMs);
+    // CR-290: 窗口起始为单调刻度, 展示墙钟按剩余时间近似还原
+    ResetTime := IncMilliSecond(Now, FWindowSizeMs - Int64(TThread.GetTickCount64 - Window.StartTicks));
     
     if Window.Count < FMaxRequests then
     begin
@@ -679,7 +682,9 @@ begin
     end
     else
     begin
-      RetryAfterMs := MilliSecondsBetween(ResetTime, Now);
+      // CR-290: 窗口起始刻度 + 窗口长 即为解禁时刻
+      RetryAfterMs := Int64(Window.StartTicks + UInt64(FWindowSizeMs)) - Int64(TThread.GetTickCount64);
+      if RetryAfterMs < 0 then RetryAfterMs := 0;
       Result := TRateLimitResult.Deny(RetryAfterMs, ResetTime);
     end;
   finally
@@ -696,7 +701,7 @@ begin
   try
     ActualKey := IfThen(Key = '', FDefaultKey, Key);
     Window.Count := 0;
-    Window.WindowStart := Now;
+    Window.StartTicks := TThread.GetTickCount64;
     FWindows.AddOrSetValue(ActualKey, Window);
   finally
     FLock.Leave;
@@ -716,7 +721,7 @@ begin
       Result := TRateLimitResult.Allow(FMaxRequests, IncMilliSecond(Now, FWindowSizeMs))
     else
       Result := TRateLimitResult.Allow(FMaxRequests - Window.Count,
-        IncMilliSecond(Window.WindowStart, FWindowSizeMs));
+        IncMilliSecond(Now, FWindowSizeMs - Int64(TThread.GetTickCount64 - Window.StartTicks)));
   finally
     FLock.Leave;
   end;
@@ -737,14 +742,14 @@ begin
     raise EArgumentException.Create('RateLimiter: AWindowSizeMs must be > 0');
   FMaxRequests := AMaxRequests;
   FWindowSizeMs := AWindowSizeMs;
-  FRequestLogs := TDictionary<string, TList<TDateTime>>.Create;
+  FRequestLogs := TDictionary<string, TList<UInt64>>.Create;
   FLock := TCriticalSection.Create;
   FDefaultKey := '__default__';
 end;
 
 destructor TSlidingWindowLimiter.Destroy;
 var
-  Pair: TPair<string, TList<TDateTime>>;
+  Pair: TPair<string, TList<UInt64>>;
 begin
   for Pair in FRequestLogs do
     Pair.Value.Free;
@@ -756,7 +761,7 @@ end;
 procedure TSlidingWindowLimiter.CleanupExpired;
 var
   KeysToRemove: TList<string>;
-  Pair: TPair<string, TList<TDateTime>>;
+  Pair: TPair<string, TList<UInt64>>;
 begin
   Inc(FCleanupCounter);
   if (FCleanupCounter < CLEANUP_THRESHOLD) and (FRequestLogs.Count <= CLEANUP_THRESHOLD) then
@@ -781,7 +786,7 @@ begin
   end;
 end;
 
-function TSlidingWindowLimiter.GetOrCreateLog(const Key: string): TList<TDateTime>;
+function TSlidingWindowLimiter.GetOrCreateLog(const Key: string): TList<UInt64>;
 var
   ActualKey: string;
 begin
@@ -789,17 +794,18 @@ begin
   
   if not FRequestLogs.TryGetValue(ActualKey, Result) then
   begin
-    Result := TList<TDateTime>.Create;
+    Result := TList<UInt64>.Create;
     FRequestLogs.Add(ActualKey, Result);
   end;
 end;
 
-procedure TSlidingWindowLimiter.CleanupOldRequests(Log: TList<TDateTime>);
+procedure TSlidingWindowLimiter.CleanupOldRequests(Log: TList<UInt64>);
 var
-  Cutoff: TDateTime;
+  Cutoff: UInt64;
   I: Integer;
 begin
-  Cutoff := IncMilliSecond(Now, -FWindowSizeMs);
+  // CR-290: 单调刻度截止线
+  Cutoff := TThread.GetTickCount64 - UInt64(FWindowSizeMs);
   
   // Remove old requests from beginning of list
   I := 0;
@@ -812,7 +818,7 @@ end;
 
 function TSlidingWindowLimiter.TryAcquire(const Key: string): Boolean;
 var
-  Log: TList<TDateTime>;
+  Log: TList<UInt64>;
 begin
   FLock.Enter;
   try
@@ -822,7 +828,7 @@ begin
     
     if Log.Count < FMaxRequests then
     begin
-      Log.Add(Now);
+      Log.Add(TThread.GetTickCount64);
       Result := True;
     end
     else
@@ -834,7 +840,7 @@ end;
 
 function TSlidingWindowLimiter.Acquire(const Key: string): TRateLimitResult;
 var
-  Log: TList<TDateTime>;
+  Log: TList<UInt64>;
   ResetTime: TDateTime;
   RetryAfterMs: Int64;
 begin
@@ -844,19 +850,22 @@ begin
     Log := GetOrCreateLog(Key);
     CleanupOldRequests(Log);
     
+    // CR-290: Log[0] 为单调刻度, 展示墙钟按剩余时间近似还原
     if Log.Count > 0 then
-      ResetTime := IncMilliSecond(Log[0], FWindowSizeMs)
+      ResetTime := IncMilliSecond(Now, Int64(UInt64(FWindowSizeMs) + Log[0] - TThread.GetTickCount64))
     else
       ResetTime := IncMilliSecond(Now, FWindowSizeMs);
     
     if Log.Count < FMaxRequests then
     begin
-      Log.Add(Now);
+      Log.Add(TThread.GetTickCount64);
       Result := TRateLimitResult.Allow(FMaxRequests - Log.Count, ResetTime);
     end
     else
     begin
-      RetryAfterMs := MilliSecondsBetween(ResetTime, Now);
+      // CR-290: 队首请求刻度 + 窗口长 即为解禁时刻（SlidingWindow 用 Log[0]）
+      RetryAfterMs := Int64(UInt64(FWindowSizeMs) + Log[0] - TThread.GetTickCount64);
+      if RetryAfterMs < 0 then RetryAfterMs := 0;
       Result := TRateLimitResult.Deny(RetryAfterMs, ResetTime);
     end;
   finally
@@ -866,7 +875,7 @@ end;
 
 procedure TSlidingWindowLimiter.Reset(const Key: string);
 var
-  Log: TList<TDateTime>;
+  Log: TList<UInt64>;
 begin
   FLock.Enter;
   try
@@ -880,7 +889,7 @@ end;
 
 function TSlidingWindowLimiter.GetStats(const Key: string): TRateLimitResult;
 var
-  Log: TList<TDateTime>;
+  Log: TList<UInt64>;
   ResetTime: TDateTime;
 begin
   FLock.Enter;
@@ -889,8 +898,9 @@ begin
     Log := GetOrCreateLog(Key);
     CleanupOldRequests(Log);
     
+    // CR-290: Log[0] 为单调刻度, 展示墙钟按剩余时间近似还原
     if Log.Count > 0 then
-      ResetTime := IncMilliSecond(Log[0], FWindowSizeMs)
+      ResetTime := IncMilliSecond(Now, Int64(UInt64(FWindowSizeMs) + Log[0] - TThread.GetTickCount64))
     else
       ResetTime := IncMilliSecond(Now, FWindowSizeMs);
     
@@ -942,7 +952,7 @@ begin
   try
     for Pair in FCounters do
     begin
-      ElapsedMs := MilliSecondsBetween(Now, Pair.Value.CurrentWindowStart);
+      ElapsedMs := Int64(TThread.GetTickCount64 - Pair.Value.StartTicks);
       if (ElapsedMs >= FWindowSizeMs * 2)
         and (Pair.Value.CurrentCount = 0)
         and (Pair.Value.PreviousCount = 0) then
@@ -965,7 +975,7 @@ begin
   begin
     Result.CurrentCount := 0;
     Result.PreviousCount := 0;
-    Result.CurrentWindowStart := Now;
+    Result.StartTicks := TThread.GetTickCount64;
   end;
 end;
 
@@ -982,7 +992,7 @@ var
   ElapsedMs: Int64;
   ProgressRatio: Double;
 begin
-  ElapsedMs := MilliSecondsBetween(Now, Counter.CurrentWindowStart);
+  ElapsedMs := Int64(TThread.GetTickCount64 - Counter.StartTicks);
   
   // Handle window transitions
   if ElapsedMs >= FWindowSizeMs * 2 then
@@ -1014,7 +1024,7 @@ begin
   try
     CleanupExpired;
     Counter := GetOrCreateCounter(Key);
-    ElapsedMs := MilliSecondsBetween(Now, Counter.CurrentWindowStart);
+    ElapsedMs := Int64(TThread.GetTickCount64 - Counter.StartTicks);
     
     // Handle window transitions
     if ElapsedMs >= FWindowSizeMs * 2 then
@@ -1028,14 +1038,14 @@ begin
       begin
         Counter.PreviousCount := 0;
         Counter.CurrentCount := 0;
-        Counter.CurrentWindowStart := Now;
+        Counter.StartTicks := TThread.GetTickCount64;
       end;
     end
     else if ElapsedMs >= FWindowSizeMs then
     begin
       Counter.PreviousCount := Counter.CurrentCount;
       Counter.CurrentCount := 0;
-      Counter.CurrentWindowStart := IncMilliSecond(Counter.CurrentWindowStart, FWindowSizeMs);
+      Counter.StartTicks := Counter.StartTicks + UInt64(FWindowSizeMs);
     end;
     
     WeightedCount := GetWeightedCount(Counter);
@@ -1065,7 +1075,7 @@ begin
   try
     CleanupExpired;
     Counter := GetOrCreateCounter(Key);
-    ElapsedMs := MilliSecondsBetween(Now, Counter.CurrentWindowStart);
+    ElapsedMs := Int64(TThread.GetTickCount64 - Counter.StartTicks);
     
     // Handle window transitions
     if ElapsedMs >= FWindowSizeMs * 2 then
@@ -1079,18 +1089,18 @@ begin
       begin
         Counter.PreviousCount := 0;
         Counter.CurrentCount := 0;
-        Counter.CurrentWindowStart := Now;
+        Counter.StartTicks := TThread.GetTickCount64;
       end;
     end
     else if ElapsedMs >= FWindowSizeMs then
     begin
       Counter.PreviousCount := Counter.CurrentCount;
       Counter.CurrentCount := 0;
-      Counter.CurrentWindowStart := IncMilliSecond(Counter.CurrentWindowStart, FWindowSizeMs);
+      Counter.StartTicks := Counter.StartTicks + UInt64(FWindowSizeMs);
     end;
     
     WeightedCount := GetWeightedCount(Counter);
-    ResetTime := IncMilliSecond(Counter.CurrentWindowStart, FWindowSizeMs);
+    ResetTime := IncMilliSecond(Now, FWindowSizeMs - Int64(TThread.GetTickCount64 - Counter.StartTicks));
     
     if WeightedCount < FMaxRequests then
     begin
@@ -1100,7 +1110,9 @@ begin
     end
     else
     begin
-      RetryAfterMs := MilliSecondsBetween(ResetTime, Now);
+      // CR-290: 当前窗口起始刻度 + 窗口长 即为本窗解禁时刻
+      RetryAfterMs := Int64(Counter.StartTicks + UInt64(FWindowSizeMs)) - Int64(TThread.GetTickCount64);
+      if RetryAfterMs < 0 then RetryAfterMs := 0;
       Result := TRateLimitResult.Deny(RetryAfterMs, ResetTime);
     end;
   finally
@@ -1118,7 +1130,7 @@ begin
     ActualKey := IfThen(Key = '', FDefaultKey, Key);
     Counter.CurrentCount := 0;
     Counter.PreviousCount := 0;
-    Counter.CurrentWindowStart := Now;
+    Counter.StartTicks := TThread.GetTickCount64;
     FCounters.AddOrSetValue(ActualKey, Counter);
   finally
     FLock.Leave;
@@ -1136,7 +1148,7 @@ begin
     CleanupExpired;
     Counter := GetOrCreateCounter(Key);
     WeightedCount := GetWeightedCount(Counter);
-    ResetTime := IncMilliSecond(Counter.CurrentWindowStart, FWindowSizeMs);
+    ResetTime := IncMilliSecond(Now, FWindowSizeMs - Int64(TThread.GetTickCount64 - Counter.StartTicks));
     Result := TRateLimitResult.Allow(Trunc(FMaxRequests - WeightedCount), ResetTime);
   finally
     FLock.Leave;

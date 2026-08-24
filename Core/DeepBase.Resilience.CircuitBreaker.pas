@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.Resilience.CircuitBreaker - Circuit breaker resilience policy
   Split from DeepBase.Resilience; use DeepBase.Resilience for compatibility.
   ============================================================================ }
@@ -9,6 +9,7 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
   System.Generics.Collections,
   System.SyncObjs,
   DeepBase.Constants,
@@ -50,7 +51,7 @@ type
     FFailureThreshold: Integer;
     FSuccessThreshold: Integer;
     FOpenDurationMs: Int64;
-    FLastStateChange: TDateTime;
+    FLastStateChangeTicks: UInt64; // CR-290: 单调时钟
     FLastFailure: TDateTime;
     FLock: TCriticalSection;
     FOnStateChanged: TOnCircuitStateChanged;
@@ -172,7 +173,7 @@ begin
   FFailureThreshold := 5;
   FSuccessThreshold := 2;
   FOpenDurationMs := DEFAULT_KEEP_ALIVE_TIMEOUT_MS;
-  FLastStateChange := Now;
+  FLastStateChangeTicks := TThread.GetTickCount64;
   FLock := TCriticalSection.Create;
   // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?
   FHalfOpenActiveCount := 0;
@@ -228,7 +229,7 @@ begin
   begin
     OldState := FState;
     FState := NewState;
-    FLastStateChange := Now;
+    FLastStateChangeTicks := TThread.GetTickCount64;
     FPendingOldState := OldState;
     FPendingNewState := NewState;
     FPendingStateChanged := True;
@@ -270,7 +271,8 @@ var
 begin
   if FState = csOpen then
   begin
-    ElapsedMs := MilliSecondsBetween(Now, FLastStateChange);
+    // CR-290: 单调差值, NTP/DST 跳变免疫
+    ElapsedMs := Int64(TThread.GetTickCount64 - FLastStateChangeTicks);
     if ElapsedMs >= FOpenDurationMs then
     begin
       SetState(csHalfOpen);
@@ -356,7 +358,7 @@ procedure TCircuitBreaker.RecordFailure;
 begin
   FLock.Enter;
   try
-    FLastFailure := Now;
+    FLastFailure := Now; // 仅展示用途
 
     case FState of
       csClosed:
@@ -391,7 +393,7 @@ begin
     FState := csClosed;
     FFailureCount := 0;
     FSuccessCount := 0;
-    FLastStateChange := Now;
+    FLastStateChangeTicks := TThread.GetTickCount64;
     FHalfOpenActiveCount := 0;  // BUG-119 FIX: 重置活跃请求计数
   finally
     FLock.Leave;
