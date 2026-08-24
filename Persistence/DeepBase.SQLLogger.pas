@@ -554,12 +554,22 @@ begin
   Q := TFDQuery.Create(nil);
   try
     Q.Connection := Conn;
-    try
-      // SQLite / Firebird syntax. Other dialects may reject
-      // IF NOT EXISTS; the broad except swallows that gracefully —
-      // if the table already exists the INSERT below will simply
-      // succeed; if it does not, the INSERT will fail and we will
-      // retry next write.
+    // CR-229: 按驱动方言建表（原 SQLite 专用 AUTOINCREMENT 在 PG 直接语法错），
+    // 且仅在建表成功后才置 ensured 标志——失败时下次写入重试，
+    // 而不是把"数据库日志目标永久静默失效"固化下来。
+    if Conn.DriverName.ToLower.Contains('postgres') then
+      Q.SQL.Text :=
+        'CREATE TABLE IF NOT EXISTS Logs (' +
+        '  Id BIGSERIAL PRIMARY KEY,' +
+        '  LogLevel VARCHAR(16),' +
+        '  Source VARCHAR(32),' +
+        '  Message VARCHAR(500),' +
+        '  LogTime TIMESTAMP,' +
+        '  SessionId VARCHAR(64),' +
+        '  MachineName VARCHAR(128),' +
+        '  Extra TEXT' +
+        ')'
+    else
       Q.SQL.Text :=
         'CREATE TABLE IF NOT EXISTS Logs (' +
         '  Id INTEGER PRIMARY KEY AUTOINCREMENT,' +
@@ -571,7 +581,9 @@ begin
         '  MachineName VARCHAR(128),' +
         '  Extra TEXT' +
         ')';
+    try
       Q.ExecSQL;
+      FLogsTableEnsured := True;   // CR-229: 成功才置位
     except
       on E: Exception do
       begin
@@ -583,7 +595,6 @@ begin
         {$ENDIF}
       end;
     end;
-    FLogsTableEnsured := True;
   finally
     Q.Free;
   end;

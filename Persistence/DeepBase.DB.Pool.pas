@@ -1614,12 +1614,15 @@ end;
 
 function TUniConnectionPool.GetStatistics: TPoolStatistics;
 begin
-  FStatsLock.Enter;
+  // CR-013: 锁序必须与其余路径一致（FLock → FStatsLock）。
+  // 原实现反向嵌套（FStatsLock → FLock）与 TryGetConnection/Recycle 等
+  // 形成 ABBA 死锁。
+  FLock.Enter;
   try
-    Result := FStatistics;
-    // 更新实时数据
-    FLock.Enter;
+    FStatsLock.Enter;
     try
+      Result := FStatistics;
+      // 更新实时数据
       Result.TotalConnections := FPool.Count;
       Result.ActiveConnections := 0;
       Result.IdleConnections := 0;
@@ -1630,12 +1633,12 @@ begin
         else if FPool[I].State = csIdle then
           Inc(Result.IdleConnections);
       end;
+      Result.PoolUptime := TTimeSpan.FromSeconds(SecondsBetween(Now, FStartTime));
     finally
-      FLock.Leave;
+      FStatsLock.Leave;
     end;
-    Result.PoolUptime := TTimeSpan.FromSeconds(SecondsBetween(Now, FStartTime));
   finally
-    FStatsLock.Leave;
+    FLock.Leave;
   end;
 end;
 

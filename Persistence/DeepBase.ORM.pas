@@ -254,6 +254,10 @@ type
 
     class function CollectEntityParams(Entity: TObject; Metadata: TEntityMetadata;
       IncludePrimaryKey: Boolean): TArray<Variant>; static;
+    /// <summary>CR-004: INSERT 用——仅跳过自增主键，与 BuildInsertSQL 对齐，
+    /// 保证非自增主键实体的占位符与参数一一对应。</summary>
+    class function CollectEntityParamsForInsert(Entity: TObject;
+      Metadata: TEntityMetadata): TArray<Variant>; static;
     function RequireStorage: IORMStorage;
     function GetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata): Variant;
     procedure SetPrimaryKeyValue(Entity: TObject; Metadata: TEntityMetadata; Value: Variant);
@@ -1072,9 +1076,34 @@ begin
   try
     for Col in Metadata.Columns do
     begin
+      // Update 语义：跳过全部主键（BuildUpdateSQL 的 SET 子句不含 PK）
       if Col.IsPrimaryKey and (not IncludePrimaryKey) then
         Continue;
-      if Col.IsPrimaryKey and Col.IsAutoIncrement and (not IncludePrimaryKey) then
+
+      Value := Col.RttiField.GetValue(Entity);
+      ParamList.Add(Value.AsVariant);
+    end;
+    Result := ParamList.ToArray;
+  finally
+    ParamList.Free;
+  end;
+end;
+
+class function TDbContext.CollectEntityParamsForInsert(Entity: TObject;
+  Metadata: TEntityMetadata): TArray<Variant>;
+var
+  Col: TColumnMetadata;
+  Value: TValue;
+  ParamList: TList<Variant>;
+begin
+  ParamList := TList<Variant>.Create;
+  try
+    for Col in Metadata.Columns do
+    begin
+      // CR-004: 与 BuildInsertSQL(False) 一致——仅跳过自增主键。
+      // 非自增主键（GUID/自然键）必须包含在 INSERT 列与参数中，
+      // 否则占位符与参数错位一位。
+      if Col.IsPrimaryKey and Col.IsAutoIncrement then
         Continue;
 
       Value := Col.RttiField.GetValue(Entity);
@@ -1195,7 +1224,7 @@ var
   NewId: Variant;
 begin
   Metadata := TMetadataCache.GetMetadata<T>;
-  Params := CollectEntityParams(TObject(Entity), Metadata, False);
+  Params := CollectEntityParamsForInsert(TObject(Entity), Metadata);
   RequireStorage.Execute(BuildInsertSQL(Metadata, False), Params);
 
   // Get auto-generated ID

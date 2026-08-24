@@ -214,9 +214,14 @@ begin
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
+    // CR-008: INSERT OR REPLACE 会重置 Id 并清零 Context/Module/IsAutoTranslated/
+    // IsVerified 等列。改 upsert，冲突时只更新译文与最近使用时间。
     Query.SQL.Text :=
-      'INSERT OR REPLACE INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedAt) ' +
-      'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedAt)';
+      'INSERT INTO I18nTexts (SourceText, LangCode, TranslatedText, LastUsedAt) ' +
+      'VALUES (:SourceText, :LangCode, :TranslatedText, :LastUsedAt) ' +
+      'ON CONFLICT(SourceText, LangCode) DO UPDATE SET ' +
+      'TranslatedText = excluded.TranslatedText, ' +
+      'LastUsedAt = excluded.LastUsedAt';
     Query.ParamByName('SourceText').AsString := SourceText;
     Query.ParamByName('LangCode').AsString := LangCode;
     Query.ParamByName('TranslatedText').AsString := TranslatedText;

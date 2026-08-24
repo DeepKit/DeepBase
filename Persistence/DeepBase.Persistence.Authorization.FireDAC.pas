@@ -484,22 +484,42 @@ end;
 procedure TFireDACAuthorizationStorage.DeleteUser(const Username: string);
 var
   Query: TFDQuery;
+  OwnTx: Boolean;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
+  // CR-014: 单条 ExecSQL 内放两条语句只有 SQLite 驱动支持，
+  // PG prepared protocol 在 prepare 阶段即报错。拆成两次执行并包入事务，
+  // 保持 BIZ-R3-008 的级联删除顺序（先关联表后主表）。
+  OwnTx := False;
+  if not FConnection.InTransaction then
+  begin
+    FConnection.StartTransaction;
+    OwnTx := True;
+  end;
+
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
-    // BIZ-R3-008: Cascade delete user-role associations first.
-    // Delete from auth_user_roles before auth_users to avoid FK violations
-    // and orphaned rows in the join table.
-    Query.SQL.Text :=
-      'DELETE FROM auth_user_roles WHERE user_id = ' +
-      '(SELECT id FROM auth_users WHERE username = :username); ' +
-      'DELETE FROM auth_users WHERE username = :username';
-    Query.ParamByName('username').AsString := Username;
-    Query.ExecSQL;
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text :=
+        'DELETE FROM auth_user_roles WHERE user_id = ' +
+        '(SELECT id FROM auth_users WHERE username = :username)';
+      Query.ParamByName('username').AsString := Username;
+      Query.ExecSQL;
+
+      Query.SQL.Text := 'DELETE FROM auth_users WHERE username = :username';
+      Query.ParamByName('username').AsString := Username;
+      Query.ExecSQL;
+
+      if OwnTx then
+        FConnection.Commit;
+    except
+      if OwnTx then
+        FConnection.Rollback;
+      raise;
+    end;
   finally
     Query.Free;
   end;
@@ -631,22 +651,40 @@ end;
 procedure TFireDACAuthorizationStorage.DeleteRole(const RoleName: string);
 var
   Query: TFDQuery;
+  OwnTx: Boolean;
 begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
+  // CR-014: 同 DeleteUser——拆双语句为事务内两次执行（PG 兼容）
+  OwnTx := False;
+  if not FConnection.InTransaction then
+  begin
+    FConnection.StartTransaction;
+    OwnTx := True;
+  end;
+
   Query := TFDQuery.Create(nil);
   try
-    Query.Connection := FConnection;
-    // BIZ-R3-008: Cascade delete user-role associations first.
-    // Delete from auth_user_roles before auth_roles to avoid FK violations
-    // and orphaned rows in the join table.
-    Query.SQL.Text :=
-      'DELETE FROM auth_user_roles WHERE role_id = ' +
-      '(SELECT id FROM auth_roles WHERE name = :name); ' +
-      'DELETE FROM auth_roles WHERE name = :name';
-    Query.ParamByName('name').AsString := RoleName;
-    Query.ExecSQL;
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text :=
+        'DELETE FROM auth_user_roles WHERE role_id = ' +
+        '(SELECT id FROM auth_roles WHERE name = :name)';
+      Query.ParamByName('name').AsString := RoleName;
+      Query.ExecSQL;
+
+      Query.SQL.Text := 'DELETE FROM auth_roles WHERE name = :name';
+      Query.ParamByName('name').AsString := RoleName;
+      Query.ExecSQL;
+
+      if OwnTx then
+        FConnection.Commit;
+    except
+      if OwnTx then
+        FConnection.Rollback;
+      raise;
+    end;
   finally
     Query.Free;
   end;

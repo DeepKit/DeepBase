@@ -664,8 +664,9 @@ begin
       '  WHERE queue_name = :queue_name AND status = ''pending'' ' +
       '    AND (next_run_at IS NULL OR next_run_at <= CURRENT_TIMESTAMP) ' +
       '  ORDER BY created_at, id ' +
-      '  FOR UPDATE SKIP LOCKED ' +
-      '  LIMIT 1' +
+      '  LIMIT 1 ' +
+      // CR-003: PostgreSQL 要求锁定子句位于 LIMIT/OFFSET 之后
+      '  FOR UPDATE SKIP LOCKED' +
       ') ' +
       'RETURNING id, queue_name, logical_key, payload, status, attempts, last_error';
     Query.ParamByName('queue_name').AsString := QueueName;

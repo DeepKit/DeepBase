@@ -116,9 +116,11 @@ begin
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
+      // CR-008: 改 upsert，避免 REPLACE 清零 Settings 兄弟列
       Query.SQL.Text :=
-        'INSERT OR REPLACE INTO Settings (Key, Value, Category, Description) ' +
-        'VALUES (''license_key'', :Value, ''License'', ''License activation key'')';
+        'INSERT INTO Settings (Key, Value, Category, Description) ' +
+        'VALUES (''license_key'', :Value, ''License'', ''License activation key'') ' +
+        'ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value';
       Query.ParamByName('Value').AsString := Encrypted;
       Query.ExecSQL;
     finally
@@ -243,9 +245,11 @@ begin
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := FConnection;
+      // CR-008: 改 upsert，避免 REPLACE 清零 Settings 兄弟列
       Query.SQL.Text :=
-        'INSERT OR REPLACE INTO Settings (Key, Value, Category, Description) ' +
-        'VALUES (''license_snapshot'', :Value, ''License'', ''License snapshot JSON'')';
+        'INSERT INTO Settings (Key, Value, Category, Description) ' +
+        'VALUES (''license_snapshot'', :Value, ''License'', ''License snapshot JSON'') ' +
+        'ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value';
       Query.ParamByName('Value').AsString := Encrypted;
       Query.ExecSQL;
     finally

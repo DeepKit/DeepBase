@@ -10,6 +10,7 @@ interface
 
 uses
   DeepBase.Diagnose,
+  DeepBase.Types,
   FireDAC.Comp.Client;
 
 function CreateDiagnoseFireDACStorage(
@@ -265,8 +266,10 @@ begin
     SetLength(Result, 1);
     Result[0] := Issue;
   end
-  else if DBVersion < MIN_COMPATIBLE_SCHEMA_VERSION then
+  else if CompareVersions(DBVersion, MIN_COMPATIBLE_SCHEMA_VERSION) < 0 then
   begin
+    // CR-238: 字典序比较在两位数字段时误判（'0.10' < '0.3'），
+    // 改用数值化版本比较
     Issue.IssueType := ditVersionMismatch;
     Issue.IsOK := False;
     Issue.TableName := 'SchemaInfo';

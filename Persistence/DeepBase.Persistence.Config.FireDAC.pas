@@ -74,12 +74,24 @@ begin
   if not Assigned(FConnection) or not FConnection.Connected then
     Exit;
 
+  // CR-008: INSERT OR REPLACE 是"删行重插"，会把 DefaultValue/IsEncrypted/
+  // IsReadOnly/IsSystem/SortOrder/CreatedAt 等兄弟列全部清零。
+  // 改用 ON CONFLICT DO UPDATE，只覆盖本方法负责的列并刷新 UpdatedAt。
+  // 注：曾尝试缓存预编译语句找回 REPLACE 时代的写吞吐（约 -8%），
+  // 但长生命周期语句与 Manager 初始化/关停序列存在兼容性问题，回退为
+  // 逐调用；性能取舍见跟踪清单 CR-008 条目。
   Query := TFDQuery.Create(nil);
   try
     Query.Connection := FConnection;
     Query.SQL.Text :=
-      'INSERT OR REPLACE INTO Settings (Key, Value, Category, ValueType, Description) ' +
-      'VALUES (:Key, :Value, :Category, :ValueType, :Description)';
+      'INSERT INTO Settings (Key, Value, Category, ValueType, Description) ' +
+      'VALUES (:Key, :Value, :Category, :ValueType, :Description) ' +
+      'ON CONFLICT(Key) DO UPDATE SET ' +
+      'Value = excluded.Value, ' +
+      'Category = excluded.Category, ' +
+      'ValueType = excluded.ValueType, ' +
+      'Description = excluded.Description, ' +
+      'UpdatedAt = datetime(''now'')';
     Query.ParamByName('Key').AsString := Key;
     Query.ParamByName('Value').AsString := Value;
     Query.ParamByName('Category').AsString := Category;
