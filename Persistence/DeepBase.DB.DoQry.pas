@@ -1037,6 +1037,20 @@ var
   Entry: TQueryCacheEntry;
   LoadedSQL: string;
   LoadSucceeded: Boolean;
+  CacheKey: string;
+
+  function DbIdOfConn: string;
+  begin
+    // CR-226: 缓存键必须携带连接标识，否则多库场景下同名 ProcName
+    // 会交叉污染（A 库的 SQL 被用于 B 库）
+    if not Assigned(Ctx.Connection) then
+      Exit('');
+    Result := Ctx.Connection.ConnectionName;
+    if Result = '' then
+      Result := Ctx.Connection.Params.Database;
+    if Result = '' then
+      Result := Ctx.Connection.ConnectionString;
+  end;
 
   function TryLoadQueryDef(const QuerySQL, ParamName, FieldName: string): Boolean;
   begin
@@ -1060,13 +1074,15 @@ begin
   LoadedSQL := '';
   LoadSucceeded := False;
   
-  // 如果是直�?SQL，直接返�?
+  // 如果是直连SQL，直接返回
   if IsDirectSQL(ProcName) then
   begin
     Result := ProcName;
     Exit;
   end;
-  
+
+  CacheKey := DbIdOfConn + '|' + ProcName;
+
   // 检查缓存并协调并发加载（同一 ProcName 只允许一个线程查库）
   if Assigned(GQueryCacheLock) then
   begin
@@ -1079,7 +1095,7 @@ begin
 
       while True do
       begin
-        if GQueryCache.TryGetValue(ProcName, Entry) then
+        if GQueryCache.TryGetValue(CacheKey, Entry) then
         begin
           // 检�?TTL
           if Now < Entry.ExpireTime then
@@ -1089,17 +1105,17 @@ begin
             Exit;
           end
           else
-            GQueryCache.Remove(ProcName);  // 已过期，移除
+            GQueryCache.Remove(CacheKey);  // 已过期，移除
         end;
 
-        if GQueryCacheLoading.ContainsKey(ProcName) then
+        if GQueryCacheLoading.ContainsKey(CacheKey) then
         begin
           TMonitor.Wait(GQueryCacheLock, 1000);
           Continue;
         end;
 
         Inc(GCacheMisses);
-        GQueryCacheLoading.AddOrSetValue(ProcName, 1);
+        GQueryCacheLoading.AddOrSetValue(CacheKey, 1);
         Break;
       end;
     finally
@@ -1142,13 +1158,13 @@ begin
       TMonitor.Enter(GQueryCacheLock);
       try
         if Assigned(GQueryCacheLoading) then
-          GQueryCacheLoading.Remove(ProcName);
+          GQueryCacheLoading.Remove(CacheKey);
 
         if LoadSucceeded and Assigned(GQueryCache) then
         begin
           Entry.SQL := Result;
           Entry.ExpireTime := IncSecond(Now, GCacheTTLSec);
-          GQueryCache.AddOrSetValue(ProcName, Entry);
+          GQueryCache.AddOrSetValue(CacheKey, Entry);
         end;
 
         TMonitor.PulseAll(GQueryCacheLock);
@@ -1193,12 +1209,19 @@ end;
 /// 精确失效某个 ProcName 的缓�?
 /// </summary>
 procedure UniDbInvalidateQuery(const ProcName: string);
+var
+  K: string;
+  Keys: TArray<string>;
 begin
   if Assigned(GQueryCacheLock) and Assigned(GQueryCache) then
   begin
     TMonitor.Enter(GQueryCacheLock);
     try
-      GQueryCache.Remove(ProcName);
+      // CR-226: 键含连接前缀，按后缀匹配失效所有连接上的同名查询
+      Keys := GQueryCache.Keys.ToArray;
+      for K in Keys do
+        if K.EndsWith('|' + ProcName) then
+          GQueryCache.Remove(K);
     finally
       TMonitor.Exit(GQueryCacheLock);
     end;

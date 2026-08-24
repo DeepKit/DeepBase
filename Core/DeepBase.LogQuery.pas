@@ -859,16 +859,23 @@ end;
 function TLogQueryBuilder.ExecuteFirst: TLogQueryItem;
 var
   QueryResult: TLogQueryResult;
+  PrevLimit: Integer;
 begin
+  // CR-281: 临时 Limit=1 不得永久污染 builder——保存并在结束后恢复
+  PrevLimit := FFilter.Limit;
   FFilter.Limit := 1;
-  QueryResult := Execute;
   try
-    if QueryResult.Items.Count > 0 then
-      Result := QueryResult.Items[0]
-    else
-      Result := Default(TLogQueryItem);
+    QueryResult := Execute;
+    try
+      if QueryResult.Items.Count > 0 then
+        Result := QueryResult.Items[0]
+      else
+        Result := Default(TLogQueryItem);
+    finally
+      QueryResult.Free;
+    end;
   finally
-    QueryResult.Free;
+    FFilter.Limit := PrevLimit;
   end;
 end;
 

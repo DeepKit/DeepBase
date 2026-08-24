@@ -60,6 +60,7 @@ type
     FWriteThread: TThread;
     FStopEvent: TEvent;
     FLogEvent: TEvent;
+    FShuttingDown: Boolean;  // CR-278: 置位后 Log 快速返回，析构窗口不再入队
     
     FStorageMode: TLogStorageMode;
     FMinLevel: TLogLevel;
@@ -328,7 +329,9 @@ end;
 
 destructor TDeepBaseLogger.Destroy;
 begin
-  // Stop write thread
+  // CR-278: 先拒绝新日志入队，再停线程——写线程收到 Stop 后会排干
+  // 残余队列才退出，关停尾部日志不再丢失
+  FShuttingDown := True;
   FStopEvent.SetEvent;
   FWriteThread.WaitFor;
   FreeAndNil(FWriteThread);
@@ -348,6 +351,7 @@ var
   I, BatchCount, RemainingCount: Integer;
   WaitResult: DWORD;
   Events: array[0..1] of THandle;
+  LHasMore: Boolean;
 const
   MAX_BATCH_SIZE = 100;  // Process up to 100 entries per batch
 begin
@@ -359,7 +363,18 @@ begin
     WaitResult := WaitForMultipleObjects(2, @Events, False, INFINITE);
     
     if WaitResult = WAIT_OBJECT_0 then
-      Break; // Stop event
+    begin
+      // CR-278: 停止信号后不立即退出——排干残余队列（stop 保持有信号，
+      // 每轮立即返回；队列空时才 Break），尾部日志不再丢失
+      List := FLogQueue.LockList;
+      try
+        LHasMore := List.Count > 0;
+      finally
+        FLogQueue.UnlockList;
+      end;
+      if not LHasMore then
+        Break;
+    end;
       
     // Reset event BEFORE processing to avoid race condition
     FLogEvent.ResetEvent;
@@ -672,6 +687,8 @@ var
   List: TList<TLogEntry>;
   SafeMsg: string;
 begin
+  // CR-278: 析构窗口内拒绝新条目（避免入队后无人消费）
+  if FShuttingDown then Exit;
   if Level < FMinLevel then Exit;
   
   // ��ֹ��־ע�빥�� - ������Ϣ����
@@ -706,6 +723,8 @@ var
   List: TList<TLogEntry>;
   FinalMsg: string;
 begin
+  // CR-278: 队列已随析构释放后到达的异常日志直接丢弃，防 nil.LockList AV
+  if FShuttingDown then Exit;
   if Level < FMinLevel then Exit;
   
   Entry.Level := Level;

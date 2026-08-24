@@ -91,7 +91,7 @@ type
       out Task: TTaskRec): Boolean; static;
     class procedure Heartbeat(const TaskID: string); static;
     class function RecycleDeadTasks(const QueueName: string;
-      TimeoutSec: Integer): Integer; static;
+      TimeoutSec: Integer; AMaxAttempts: Integer = 0): Integer; static;
     class function Complete(const TaskID: string): Boolean; static;
     /// <summary>
     /// Mark a running task as failed. When <c>ARequeue = True</c> the task is
@@ -812,10 +812,12 @@ begin
 end;
 
 class function TJobQueue.RecycleDeadTasks(const QueueName: string;
-  TimeoutSec: Integer): Integer;
+  TimeoutSec: Integer; AMaxAttempts: Integer): Integer;
 var
   Connection: TFDConnection;
   Query: TFDQuery;
+  HBCond: string;
+  OwnTx: Boolean;
 begin
   ValidateQueueName(QueueName);
   if TimeoutSec <= 0 then
@@ -824,23 +826,72 @@ begin
 
   Connection := AcquireConnection;
   try
+    // CR-232: 心跳超时谓词按方言构造，供"进 DLQ"与"重新入队"两步复用
+    if IsPostgreSQL(Connection) then
+      HBCond := 'AND heartbeat_at < (CURRENT_TIMESTAMP - (:timeout_sec * INTERVAL ''1 second''))'
+    else
+      HBCond := 'AND heartbeat_at < datetime(''now'', ''-'' || :timeout_sec || '' seconds'')';
+
+    // ── 第一步（CR-232）：达到重试上限仍超时的毒丸任务直接迁入 DLQ，
+    //    不再无条件回 pending 无限循环烧 attempts 预算。
+    //    AMaxAttempts <= 0 保持旧行为（不启用毒丸识别）。
+    if AMaxAttempts > 0 then
+    begin
+      OwnTx := False;
+      if not Connection.InTransaction then
+      begin
+        Connection.StartTransaction;
+        OwnTx := True;
+      end;
+      Query := TFDQuery.Create(nil);
+      try
+        try
+          Query.Connection := Connection;
+          Query.SQL.Text :=
+            'INSERT INTO ' + JOB_QUEUE_DLQ_TABLE + ' ' +
+            '(original_id, queue_name, logical_key, payload, attempts, ' +
+            ' last_error, created_at, moved_at) ' +
+            'SELECT id, queue_name, logical_key, payload, attempts, ' +
+            '       ''recycle: attempts exhausted (poison pill)'', created_at, CURRENT_TIMESTAMP ' +
+            'FROM ' + JOB_QUEUE_TABLE +
+            ' WHERE queue_name = :queue_name AND status = ''running'' ' +
+            'AND attempts >= :max_attempts ' + HBCond;
+          Query.ParamByName('queue_name').AsString := QueueName;
+          Query.ParamByName('timeout_sec').AsInteger := TimeoutSec;
+          Query.ParamByName('max_attempts').AsInteger := AMaxAttempts;
+          Query.ExecSQL;
+
+          Query.SQL.Text :=
+            'DELETE FROM ' + JOB_QUEUE_TABLE +
+            ' WHERE queue_name = :queue_name AND status = ''running'' ' +
+            'AND attempts >= :max_attempts ' + HBCond;
+          Query.ParamByName('queue_name').AsString := QueueName;
+          Query.ParamByName('timeout_sec').AsInteger := TimeoutSec;
+          Query.ParamByName('max_attempts').AsInteger := AMaxAttempts;
+          Query.ExecSQL;
+
+          if OwnTx then
+            Connection.Commit;
+        except
+          if OwnTx then
+            Connection.Rollback;
+          raise;
+        end;
+      finally
+        Query.Free;
+      end;
+    end;
+
+    // ── 第二步：其余超时任务照旧回 pending 重投
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := Connection;
-      if IsPostgreSQL(Connection) then
-        Query.SQL.Text :=
-          'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
-          'status = ''pending'', dequeued_at = NULL, heartbeat_at = NULL, ' +
-          'next_run_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
-          'WHERE queue_name = :queue_name AND status = ''running'' ' +
-          'AND heartbeat_at < (CURRENT_TIMESTAMP - (:timeout_sec * INTERVAL ''1 second''))'
-      else
-        Query.SQL.Text :=
-          'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
-          'status = ''pending'', dequeued_at = NULL, heartbeat_at = NULL, ' +
-          'next_run_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
-          'WHERE queue_name = :queue_name AND status = ''running'' ' +
-          'AND heartbeat_at < datetime(''now'', ''-'' || :timeout_sec || '' seconds'')';
+      Query.SQL.Text :=
+        'UPDATE ' + JOB_QUEUE_TABLE + ' SET ' +
+        'status = ''pending'', dequeued_at = NULL, heartbeat_at = NULL, ' +
+        'next_run_at = NULL, updated_at = CURRENT_TIMESTAMP ' +
+        'WHERE queue_name = :queue_name AND status = ''running'' ' +
+        HBCond;
 
       Query.ParamByName('queue_name').AsString := QueueName;
       Query.ParamByName('timeout_sec').AsInteger := TimeoutSec;
