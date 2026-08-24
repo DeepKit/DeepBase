@@ -413,8 +413,11 @@ begin
       FManager.Config.SetConfig('write_key', 'value_' + IntToStr(Counter));
     end);
   
-  Assert.IsTrue(R.OpsPerSecond > 5000,
-    Format('Config write should exceed 5K ops/sec, got %.0f', [R.OpsPerSecond]));
+  // CR-605/CR-008: WriteValue 由 INSERT OR REPLACE 改为 ON CONFLICT DO UPDATE
+  // （修复兄弟列被清零的数据损坏）后写吞吐实测约 4.6K-5K ops/s，原 5K 阈值
+  // 处于临界区、满载下间歇失守。校准到 4K，保留回归保护同时消除抖动。
+  Assert.IsTrue(R.OpsPerSecond > 4000,
+    Format('Config write should exceed 4K ops/sec, got %.0f', [R.OpsPerSecond]));
 end;
 
 procedure TTestConfigPerformance.Benchmark_ConfigWrite_Batch;
@@ -432,10 +435,11 @@ begin
       for I := 1 to 10 do
         FManager.Config.SetConfig('batch_key_' + IntToStr(I), 'value_' + IntToStr(Counter));
     end);
-  
+
   // 1000 batches * 10 writes = 10000 total writes
-  Assert.IsTrue((R.OpsPerSecond * 10) > 5000,
-    Format('Batch write should exceed 5K effective ops/sec', []));
+  // CR-605/CR-008: 同上，随单写阈值同步校准到有效 4K ops/sec
+  Assert.IsTrue((R.OpsPerSecond * 10) > 4000,
+    Format('Batch write should exceed 4K effective ops/sec', []));
 end;
 
 { TTestLoggingPerformance }
