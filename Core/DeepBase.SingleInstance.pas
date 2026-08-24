@@ -195,11 +195,15 @@ begin
     Exit;
     
   DataBytes := TEncoding.UTF8.GetBytes(Data);
-  
+
   CopyData.dwData := WM_DeepBase_COPYDATA;
   CopyData.cbData := Length(DataBytes);
-  CopyData.lpData := @DataBytes[0];
-  
+  // CR-303: 空串时动态数组长度为 0，@DataBytes[0] 在 R+ 下抛 ERangeError
+  if Length(DataBytes) > 0 then
+    CopyData.lpData := @DataBytes[0]
+  else
+    CopyData.lpData := nil;
+
   SendMessage(TargetWnd, WM_COPYDATA, 0, LPARAM(@CopyData));
 end;
 

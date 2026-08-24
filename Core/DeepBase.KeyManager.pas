@@ -120,11 +120,17 @@ type
     destructor Destroy; override;
     
     procedure DeriveFromPassword(const APassword: string; const AParams: TKeyDerivationParams);
-    procedure DeriveWithHardwareBinding(const APassword: string);
+    procedure DeriveWithHardwareBinding(const APassword: string); overload;
+    /// <summary>CR-001: APersistedKdf 含盐时复用（跨会话 KEK 可复现），
+    /// 否则生成新的 High 参数。</summary>
+    procedure DeriveWithHardwareBinding(const APassword: string;
+      const APersistedKdf: TKeyDerivationParams); overload;
     procedure Lock;
     function GetKeyData: TBytes;
     
     property IsUnlocked: Boolean read FIsUnlocked;
+    /// <summary>CR-001: 当前派生参数，供 keystore 持久化（盐不是机密）</summary>
+    property Params: TKeyDerivationParams read FParams;
     property CreatedAt: TDateTime read FCreatedAt;
     property Fingerprint: THardwareFingerprint read FFingerprint;
   end;
@@ -164,6 +170,7 @@ type
     FLock: TCriticalSection;
     FStorePath: string;
     FMasterKey: TMasterKey;
+    FKdfParams: TKeyDerivationParams;
     
     function GetKEK: TBytes;
     procedure SaveToFile;
@@ -182,6 +189,16 @@ type
     function GetAllKeys: TArray<TKeyInfo>;
     procedure Save;
     procedure Load;
+
+    /// <summary>CR-001: 只从 keystore 读取 KDF 参数（盐不是机密），
+    /// 在派生 KEK 之前调用，保证跨会话可复现。</summary>
+    procedure LoadKdfParams;
+    /// <summary>CR-001: 抽验一把存量密钥可用当前 KEK 解密，
+    /// 密码错误时尽早失败，而不是推迟到业务首次加解密。</summary>
+    procedure VerifyKeysDecryptable;
+
+    property KdfParams: TKeyDerivationParams read FKdfParams;
+    function HasPersistedKdf: Boolean;
   end;
 
   TKeyManager = class
@@ -426,15 +443,24 @@ begin
 end;
 
 procedure TMasterKey.DeriveWithHardwareBinding(const APassword: string);
+begin
+  // CR-001: 无持久化参数时生成 High 参数；FParams 由 DeriveFromPassword 记录，
+  // 随后由 TKeyStore.SaveToFile 写入 keystore（盐不是机密）。
+  DeriveWithHardwareBinding(APassword, Default(TKeyDerivationParams));
+end;
+
+procedure TMasterKey.DeriveWithHardwareBinding(const APassword: string;
+  const APersistedKdf: TKeyDerivationParams);
 var
-  Params: TKeyDerivationParams;
   HWData: string;
 begin
   FFingerprint := THardwareFingerprint.Collect;
   HWData := APassword + '|' + FFingerprint.ToHash;
   
-  Params := TKeyDerivationParams.High;
-  DeriveFromPassword(HWData, Params);
+  if Length(APersistedKdf.Salt) > 0 then
+    DeriveFromPassword(HWData, APersistedKdf)
+  else
+    DeriveFromPassword(HWData, TKeyDerivationParams.High);
 end;
 
 procedure TMasterKey.Lock;
@@ -717,13 +743,25 @@ procedure TKeyStore.SaveToFile;
 var
   JSON: TJSONObject;
   KeysArray: TJSONArray;
-  KeyObj: TJSONObject;
+  KeyObj, KdfObj: TJSONObject;
   Key: TDataKey;
 begin
   JSON := TJSONObject.Create;
   try
     JSON.AddPair('version', TJSONNumber.Create(1));
-    
+
+    // CR-001: 持久化 KDF 参数（盐不是机密），否则下次会话无法复现 KEK
+    if (FMasterKey <> nil) and (Length(FMasterKey.Params.Salt) > 0) then
+    begin
+      FKdfParams := FMasterKey.Params;
+      KdfObj := TJSONObject.Create;
+      KdfObj.AddPair('salt', TEncodingUtils.Base64Encode(FKdfParams.Salt));
+      KdfObj.AddPair('iterations', TJSONNumber.Create(FKdfParams.Iterations));
+      KdfObj.AddPair('keylength', TJSONNumber.Create(FKdfParams.KeyLength));
+      KdfObj.AddPair('algorithm', TJSONNumber.Create(Ord(FKdfParams.Algorithm)));
+      JSON.AddPair('kdf', KdfObj);
+    end;
+
     KeysArray := TJSONArray.Create;
     for Key in FKeys.Values do
     begin
@@ -761,6 +799,9 @@ begin
     Exit;
     
   try
+    // CR-001: 顺带读取 KDF 参数（旧格式文件无此节点，保持为空）
+    LoadKdfParams;
+
     KeysArray := JSON.GetValue<TJSONArray>('keys');
     if KeysArray = nil then
       Exit;
@@ -781,6 +822,50 @@ begin
   finally
     JSON.Free;
   end;
+end;
+
+procedure TKeyStore.LoadKdfParams;
+var
+  JSON, KdfObj: TJSONObject;
+begin
+  // CR-001: 仅解析 keystore 的 kdf 节点；文件不存在或为旧格式时保持为空
+  FKdfParams := Default(TKeyDerivationParams);
+  if not TFile.Exists(FStorePath) then
+    Exit;
+
+  JSON := TJSONObject.ParseJSONValue(TFile.ReadAllText(FStorePath)) as TJSONObject;
+  if JSON = nil then
+    Exit;
+
+  try
+    if not JSON.TryGetValue<TJSONObject>('kdf', KdfObj) then
+      Exit;
+
+    FKdfParams.Salt := TEncodingUtils.Base64Decode(KdfObj.GetValue<string>('salt'));
+    FKdfParams.Iterations := KdfObj.GetValue<Integer>('iterations');
+    FKdfParams.KeyLength := KdfObj.GetValue<Integer>('keylength');
+    FKdfParams.Algorithm := THashAlgorithm(KdfObj.GetValue<Integer>('algorithm'));
+  finally
+    JSON.Free;
+  end;
+end;
+
+function TKeyStore.HasPersistedKdf: Boolean;
+begin
+  Result := Length(FKdfParams.Salt) > 0;
+end;
+
+procedure TKeyStore.VerifyKeysDecryptable;
+var
+  Key: TDataKey;
+begin
+  for Key in FKeys.Values do
+    if Length(Key.EncryptedKeyData) > 0 then
+    begin
+      // 抽验第一把：失败即抛（GCM tag 校验），不修改 FKeyData
+      Key.DecryptWith(GetKEK);
+      Exit;
+    end;
 end;
 
 { TKeyManager }
@@ -831,17 +916,40 @@ begin
 end;
 
 procedure TKeyManager.Initialize(const AMasterPassword: string; AUseHardwareBinding: Boolean);
+var
+  PersistedKdf: TKeyDerivationParams;
 begin
   FLock.Enter;
   try
+    // CR-001: 先读持久化 KDF 参数再派生 KEK。盐不是机密；
+    // 同一密码必须跨会话复现同一 KEK，否则存量数据密钥永久无法解密。
+    FKeyStore.LoadKdfParams;
+    PersistedKdf := FKeyStore.KdfParams;
+
     if AUseHardwareBinding then
-      FMasterKey.DeriveWithHardwareBinding(AMasterPassword)
+      FMasterKey.DeriveWithHardwareBinding(AMasterPassword, PersistedKdf)
+    else if Length(PersistedKdf.Salt) > 0 then
+      FMasterKey.DeriveFromPassword(AMasterPassword, PersistedKdf)
     else
       FMasterKey.DeriveFromPassword(AMasterPassword, TKeyDerivationParams.Default);
-      
+
     FKeyStore.Initialize(FMasterKey);
     FIsInitialized := True;
-    
+
+    // keystore 带有持久化参数时，密码错误应在此处立即失败，
+    // 而不是等到业务首次加解密才发现（此时可能已写入新数据）。
+    if FKeyStore.HasPersistedKdf then
+    begin
+      try
+        FKeyStore.VerifyKeysDecryptable;
+      except
+        on E: Exception do
+          raise EKeyManagerException.Create(
+            '主密码错误或密钥材料损坏：无法用当前 KEK 解密存量密钥。' +
+            E.Message);
+      end;
+    end;
+
     // Create default keys if none exist
     if Length(FKeyStore.GetAllKeys) = 0 then
     begin

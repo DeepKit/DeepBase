@@ -19,10 +19,11 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.ZLib, System.Zip, System.Types,
-  System.Generics.Collections, System.IOUtils, System.SyncObjs;
+  System.Generics.Collections, System.IOUtils, System.SyncObjs,
+  DeepBase.Exceptions;
 
 type
-  ECompressionException = class(Exception);
+  ECompressionException = class(EDeepBaseException);
 
   /// <summary>Compression level</summary>
   TCompressionLevel = (

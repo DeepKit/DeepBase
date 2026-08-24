@@ -856,10 +856,20 @@ begin
     
   // æ£æ¥ä¿çåç§?
   var LowerName := AName.ToLower;
-  if (LowerName = 'con') or (LowerName = 'prn') or (LowerName = 'aux') or 
-     (LowerName = 'nul') or LowerName.StartsWith('com') or LowerName.StartsWith('lpt') then
+  if (LowerName = 'con') or (LowerName = 'prn') or (LowerName = 'aux') or
+     (LowerName = 'nul') then
     Exit;
-    
+  // CR-254: Windows 保留设备名是 COM1..9/LPT1..9（含扩展名变体）的精确形态，
+  // 前缀匹配会误杀 common_config、lpt_settings 等合法名称
+  var LStem := LowerName;
+  var LDot := Pos('.', LStem);
+  if LDot > 1 then
+    LStem := Copy(LStem, 1, LDot - 1); // 首个扩展名前的主干（COM1.ini 形态）
+  if (Length(LStem) = 4) and
+     (LStem.StartsWith('com') or LStem.StartsWith('lpt')) and
+     CharInSet(LStem[4], ['1'..'9']) then
+    Exit;
+
   Result := True;
 end;
 

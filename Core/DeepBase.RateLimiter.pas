@@ -546,6 +546,12 @@ end;
 constructor TFixedWindowLimiter.Create(AMaxRequests: Integer; AWindowSizeMs: Int64);
 begin
   inherited Create;
+  // CR-294: 参数校验对齐 TokenBucket(BUG-045)——窗口 0 会使限流完全失效,
+  // MaxRequests<=0 则全拒绝
+  if AMaxRequests <= 0 then
+    raise EArgumentException.Create('RateLimiter: AMaxRequests must be > 0');
+  if AWindowSizeMs <= 0 then
+    raise EArgumentException.Create('RateLimiter: AWindowSizeMs must be > 0');
   FMaxRequests := AMaxRequests;
   FWindowSizeMs := AWindowSizeMs;
   FWindows := TDictionary<string, TWindow>.Create;
@@ -723,6 +729,12 @@ end;
 constructor TSlidingWindowLimiter.Create(AMaxRequests: Integer; AWindowSizeMs: Int64);
 begin
   inherited Create;
+  // CR-294: 参数校验对齐 TokenBucket(BUG-045)——窗口 0 会使限流完全失效,
+  // MaxRequests<=0 则全拒绝
+  if AMaxRequests <= 0 then
+    raise EArgumentException.Create('RateLimiter: AMaxRequests must be > 0');
+  if AWindowSizeMs <= 0 then
+    raise EArgumentException.Create('RateLimiter: AWindowSizeMs must be > 0');
   FMaxRequests := AMaxRequests;
   FWindowSizeMs := AWindowSizeMs;
   FRequestLogs := TDictionary<string, TList<TDateTime>>.Create;
@@ -895,6 +907,12 @@ end;
 constructor TSlidingWindowCounterLimiter.Create(AMaxRequests: Integer; AWindowSizeMs: Int64);
 begin
   inherited Create;
+  // CR-294: 参数校验对齐 TokenBucket(BUG-045)——窗口 0 会使限流完全失效,
+  // MaxRequests<=0 则全拒绝
+  if AMaxRequests <= 0 then
+    raise EArgumentException.Create('RateLimiter: AMaxRequests must be > 0');
+  if AWindowSizeMs <= 0 then
+    raise EArgumentException.Create('RateLimiter: AWindowSizeMs must be > 0');
   FMaxRequests := AMaxRequests;
   FWindowSizeMs := AWindowSizeMs;
   FCounters := TDictionary<string, TWindowCounter>.Create;

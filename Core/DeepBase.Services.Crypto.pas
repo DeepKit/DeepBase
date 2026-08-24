@@ -442,16 +442,16 @@ var
   Score: Integer;
 begin
   Score := TPasswordUtils.CheckStrength(Password);
-  if Score < 20 then
-    Result := psVeryWeak
-  else if Score < 40 then
-    Result := psWeak
-  else if Score < 60 then
-    Result := psFair
-  else if Score < 80 then
-    Result := psStrong
+  // CR-256: CheckStrength 返回 0..5（长度档 0-2 + 字符类最多 4，封顶 5），
+  // 原阈值按 0-100 设计导致所有密码恒判 psVeryWeak。
+  case Score of
+    0, 1: Result := psVeryWeak;
+    2:    Result := psWeak;
+    3:    Result := psFair;
+    4:    Result := psStrong;
   else
     Result := psVeryStrong;
+  end;
 end;
 
 function TPasswordServiceImpl.GeneratePassword(Length: Integer;

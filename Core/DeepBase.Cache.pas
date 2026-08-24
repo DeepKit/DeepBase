@@ -1020,7 +1020,14 @@ begin
     if FEntries.TryGetValue(Key, Entry) then
     begin
       if Entry.ExpiresAt > 0 then
-        Result := SecondsBetween(Now, Entry.ExpiresAt)
+      begin
+        // CR-261: 已过期条目返回 0（剩余寿命），而非 SecondsBetween 的
+        // 绝对值（过期越久数值越大，调用方误认为还有剩余 TTL）
+        if Entry.ExpiresAt > Now then
+          Result := SecondsBetween(Now, Entry.ExpiresAt)
+        else
+          Result := 0;
+      end
       else
         Result := -1;  // No expiration
     end

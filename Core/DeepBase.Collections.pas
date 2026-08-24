@@ -1715,6 +1715,10 @@ procedure TCountingSet<T>.Remove(const AItem: T; ACount: Integer);
 var
   LCurrent: Integer;
 begin
+  // CR-264: 与 Add 对称的负数防御——负实参会使计数反向膨胀
+  if ACount < 0 then
+    raise ECollectionException.CreateFmt(
+      'CountingSet.Remove: count 不能为负数 (%d)', [ACount]);
   FLock.Enter;
   try
     if FCounts.TryGetValue(AItem, LCurrent) then

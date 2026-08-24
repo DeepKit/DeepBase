@@ -44,7 +44,9 @@ type
   /// - TNoOpPermissionClient (for development/free tier)
   /// </summary>
   IPermissionClient = interface
-    ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
+    // CR-010: 原 GUID 与 IRateLimiter 的模板占位值完全相同，导致按 GUID
+    // 的接口查询互相混淆。此处换用真实唯一 GUID（IRateLimiter 保持不变）。
+    ['{4D40A5CC-59F6-4F98-AF01-784EF1C61527}']
 
     /// <summary>
     /// Check if a feature is available without raising an exception.

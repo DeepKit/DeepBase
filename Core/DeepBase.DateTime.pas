@@ -19,10 +19,11 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils, System.TimeSpan,
-  System.Generics.Collections, System.SyncObjs, Winapi.Windows;
+  System.Generics.Collections, System.SyncObjs, Winapi.Windows,
+  DeepBase.Exceptions;
 
 type
-  EDateTimeException = class(Exception);
+  EDateTimeException = class(EDeepBaseException);
 
   /// <summary>Day of week</summary>
   /// <summary>
@@ -660,8 +661,16 @@ class function TTimeZones.CurrentUtcOffset: Integer;
 var
   LTZ: TTimeZoneInformation;
 begin
-  GetTimeZoneInformation(LTZ);
-  Result := -LTZ.Bias;
+  // CR-119: 需结合 GetTimeZoneInformation 返回值取当前生效偏移，
+  // 否则 DST 生效期间 RFC2822 等输出偏差整整 60 分钟
+  case GetTimeZoneInformation(LTZ) of
+    TIME_ZONE_ID_DAYLIGHT:
+      Result := -(LTZ.Bias + LTZ.DaylightBias);
+    TIME_ZONE_ID_STANDARD:
+      Result := -(LTZ.Bias + LTZ.StandardBias);
+  else
+    Result := -LTZ.Bias;
+  end;
 end;
 
 class function TTimeZones.IsDaylightSavingTime(ADateTime: TDateTime): Boolean;
@@ -723,10 +732,14 @@ begin
               TryStrToInt(Copy(LValue, 15, 2), IMin) and
               TryStrToInt(Copy(LValue, 18, 2), ISec);
     if Result then
-    begin
+    try
       LYear := IYear; LMonth := IMonth; LDay := IDay;
       LHour := IHour; LMin := IMin; LSec := ISec;
       ADateTime := EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0);
+    except
+      // CR-D3: "Try" 契约——非法日期(2025-13-40 等)返回 False 而非抛出
+      on E: EConvertError do
+        Exit(False);
     end;
   end
   // Try date only
@@ -736,9 +749,12 @@ begin
               TryStrToInt(Copy(LValue, 6, 2), IMonth) and
               TryStrToInt(Copy(LValue, 9, 2), IDay);
     if Result then
-    begin
+    try
       LYear := IYear; LMonth := IMonth; LDay := IDay;
       ADateTime := EncodeDate(LYear, LMonth, LDay);
+    except
+      on E: EConvertError do
+        Exit(False);
     end;
   end;
 end;
@@ -874,7 +890,10 @@ class function TDateTimeFormat.FromRFC2822(const AValue: string): TDateTime;
     begin
       case U[1] of
         'Z':             begin OffsetMinutes := 0;    Exit(True); end;
-        'A'..'M':        begin OffsetMinutes := (Ord(U[1]) - Ord('A') + 1) * 60; Exit(True); end;
+        // CR-D4: RFC 5322 §4.3——'J' 保留、无偏移，必须视为未知时区
+        'J':             Exit(False);
+        'A'..'I', 'K', 'L':
+                         begin OffsetMinutes := (Ord(U[1]) - Ord('A') + 1) * 60; Exit(True); end;
         'N'..'Y':        begin OffsetMinutes := -(Ord(U[1]) - Ord('N') + 1) * 60; Exit(True); end;
       else
         Exit(False);
@@ -1331,23 +1350,22 @@ begin
 end;
 
 class function TDateTimeCalc.RoundToMinute(ADateTime: TDateTime): TDateTime;
-var
-  LYear, LMonth, LDay, LHour, LMin, LSec, LMs: Word;
 begin
-  DecodeDateTime(ADateTime, LYear, LMonth, LDay, LHour, LMin, LSec, LMs);
-  if LSec >= 30 then
-    Inc(LMin);
-  Result := EncodeDateTime(LYear, LMonth, LDay, LHour, LMin, 0, 0);
+  // CR-120: 借助分钟刻度取整避免手工 Inc(LMin) 在 59→60 边界触发
+  // EncodeDateTime 范围异常（xx:59:30 及以后每小时命中）
+  if SecondOf(ADateTime) >= 30 then
+    Result := (Trunc(ADateTime * MinsPerDay) + 1) / MinsPerDay
+  else
+    Result := Trunc(ADateTime * MinsPerDay) / MinsPerDay;
 end;
 
 class function TDateTimeCalc.RoundToHour(ADateTime: TDateTime): TDateTime;
-var
-  LYear, LMonth, LDay, LHour, LMin, LSec, LMs: Word;
 begin
-  DecodeDateTime(ADateTime, LYear, LMonth, LDay, LHour, LMin, LSec, LMs);
-  if LMin >= 30 then
-    Inc(LHour);
-  Result := EncodeDateTime(LYear, LMonth, LDay, LHour, 0, 0, 0);
+  // CR-120: 同 RoundToMinute，按半小时界就近取整到小时
+  if MinuteOf(ADateTime) >= 30 then
+    Result := (Trunc(ADateTime * HoursPerDay) + 1) / HoursPerDay
+  else
+    Result := Trunc(ADateTime * HoursPerDay) / HoursPerDay;
 end;
 
 class function TDateTimeCalc.RoundToDay(ADateTime: TDateTime): TDateTime;

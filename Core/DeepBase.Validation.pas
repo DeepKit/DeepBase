@@ -46,7 +46,7 @@ uses
   System.Generics.Collections,
   System.Rtti,
   System.RegularExpressions,
-  System.TypInfo,
+  System.TypInfo, DeepBase.Exceptions,
   System.StrUtils,
   System.Threading,
   System.DateUtils,
@@ -360,7 +360,7 @@ type
   // Validation Exception
   // ============================================================================
   
-  EValidationException = class(Exception)
+  EValidationException = class(EDeepBaseException)
   private
     FErrors: TArray<TValidationError>;
   public

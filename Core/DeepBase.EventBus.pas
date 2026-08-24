@@ -1069,14 +1069,27 @@ begin
       begin
         TInterlocked.Increment(FStats.TotalErrors);
         if Assigned(FOnError) then
-          FOnError(EventType, Event, E);
+          // CR-268: 错误回调自身抛异常不得中断剩余订阅者派发、
+          // 也不得把异常泄漏回发布方
+          try
+            FOnError(EventType, Event, E);
+          except
+            on EE: Exception do
+              TInterlocked.Increment(FStats.TotalErrors);
+          end;
       end;
     end;
   end;
-  
+
   // Dead letter handling
   if not Delivered and Assigned(FOnDeadLetter) then
-    FOnDeadLetter(EventType, Event, 'No subscribers');
+    // CR-268: 同上，死信回调防护
+    try
+      FOnDeadLetter(EventType, Event, 'No subscribers');
+    except
+      on EE: Exception do
+        TInterlocked.Increment(FStats.TotalErrors);
+    end;
 end;
 
 function TEventBus.HasSubscribers<T>: Boolean;

@@ -21,7 +21,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   System.SyncObjs, System.Threading, System.IOUtils,
-  System.RegularExpressions, Winapi.Windows;
+  System.RegularExpressions, Winapi.Windows, DeepBase.Exceptions;
 
 const
   FILE_ACTION_ADDED = $00000001;
@@ -41,7 +41,7 @@ type
   end;
 
 type
-  EFileWatcherException = class(Exception);
+  EFileWatcherException = class(EDeepBaseException);
 
   /// <summary>Types of file system changes</summary>
   TFileChangeType = (

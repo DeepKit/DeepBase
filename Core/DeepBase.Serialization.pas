@@ -218,6 +218,8 @@ type
   TJsonSerializer = class(TBaseSerializer)
   private
     function ValueToJson(const AValue: TValue; AContext: TSerializationContext): TJSONValue;
+    function RecordToJson(const AValue: TValue; AContext: TSerializationContext): TJSONObject;
+    function JsonToRecord(AJson: TJSONObject; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
     function ObjectToJson(AObject: TObject; AContext: TSerializationContext): TJSONObject;
     function ArrayToJson(const AValue: TValue; AContext: TSerializationContext): TJSONArray;
     
@@ -373,6 +375,45 @@ implementation
 
 uses
   System.DateUtils, System.StrUtils, System.Math, System.NetEncoding;
+
+/// CR-016: 反序列化不得依赖区域设置。序列化端输出固定模板
+/// （默认 yyyy-mm-ddThh:nn:ss，即 ISO8601 本地时间），解析端统一走
+/// ISO8601/不变量格式，杜绝 zh-CN/en-US 等区域词序差异导致错乱。
+function TryParsePersistedDateTime(const S: string; out DT: TDateTime): Boolean;
+var
+  FS: TFormatSettings;
+begin
+  FS := TFormatSettings.Invariant;
+  // 首选：按序列化固定模板做朴素本地时间解析（不变量格式，无时区换算）。
+  // 注意：本机实测 RTL 的 TryISO8601ToDate 即使 AInputIsUTC=False，
+  // 对无时区后缀的串仍会做 UTC→本地换算（+TZ），导致往返漂移 8 小时。
+  Result := TryStrToDateTime(S, DT, FS);
+  if not Result then
+    Result := TryISO8601ToDate(S, DT, True); // 显式带 Z/偏移的输入才做时区换算
+end;
+
+procedure ParsePersistedDateTime(const S: string; out DT: TDateTime);
+begin
+  if not TryParsePersistedDateTime(S, DT) then
+    raise ESerializationException.CreateFmt('无法按固定格式解析日期时间: "%s"', [S]);
+end;
+
+/// CR-018: 枚举名未知(GetEnumValue=-1)或序数越界时必须报错，
+/// 禁止把非法序数静默写入业务对象。
+procedure ValidateEnumOrdinal(ATypeInfo: PTypeInfo; AOrdinal: Integer;
+  const AValueText: string);
+var
+  TypeData: PTypeData;
+begin
+  if AOrdinal < 0 then
+    raise ESerializationException.CreateFmt('未知枚举值 "%s" (%s)',
+      [AValueText, ATypeInfo.Name]);
+  TypeData := GetTypeData(ATypeInfo);
+  if (AOrdinal < TypeData.MinValue) or (AOrdinal > TypeData.MaxValue) then
+    raise ESerializationException.CreateFmt(
+      '枚举序数 %d 超出 %s 的范围 [%d..%d]',
+      [AOrdinal, ATypeInfo.Name, TypeData.MinValue, TypeData.MaxValue]);
+end;
 
 { TSerializationOptions }
 
@@ -888,12 +929,24 @@ begin
       Result := ArrayToJson(AValue, AContext);
       
     tkRecord, tkMRecord:
-      // Simplified - treat records as objects
-      Result := TJSONObject.Create;
+      // CR-015: 递归序列化记录字段（此前输出空 {} 静默丢数据）
+      Result := RecordToJson(AValue, AContext);
       
     else
       Result := TJSONNull.Create;
   end;
+end;
+
+function TJsonSerializer.RecordToJson(const AValue: TValue; AContext: TSerializationContext): TJSONObject;
+var
+  LType: TRttiType;
+  LField: TRttiField;
+begin
+  Result := TJSONObject.Create;
+  LType := FRttiContext.GetType(AValue.TypeInfo);
+  for LField in LType.GetFields do
+    Result.AddPair(LField.Name,
+      ValueToJson(LField.GetValue(AValue.GetReferenceToRawData), AContext));
 end;
 
 function TJsonSerializer.ObjectToJson(AObject: TObject; AContext: TSerializationContext): TJSONObject;
@@ -985,6 +1038,8 @@ end;
 function TJsonSerializer.JsonToValue(AJson: TJSONValue; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
 var
   LConverter: IValueConverter;
+  LDT: TDateTime;
+  LOrdinal: Integer;
 begin
   if (AJson = nil) or (AJson is TJSONNull) then
     Exit(TValue.Empty);
@@ -1011,7 +1066,11 @@ begin
         if ATypeInfo = TypeInfo(TDateTime) then
         begin
           if AJson is TJSONString then
-            Result := TValue.From<TDateTime>(StrToDateTime(TJSONString(AJson).Value))
+          begin
+            // CR-016: 区域无关解析，失败即抛出而非产生错误日期
+            ParsePersistedDateTime(TJSONString(AJson).Value, LDT);
+            Result := TValue.From<TDateTime>(LDT);
+          end
           else
             Result := TValue.From<TDateTime>(TJSONNumber(AJson).AsDouble);
         end
@@ -1021,19 +1080,73 @@ begin
       
     tkString, tkLString, tkWString, tkUString:
       Result := TValue.From<string>(TJSONString(AJson).Value);
+
+    tkRecord, tkMRecord:
+      begin
+        // CR-015: 递归还原记录字段（此前返回 Empty 静默丢数据）
+        if not (AJson is TJSONObject) then
+          raise ESerializationException.CreateFmt(
+            '记录类型 %s 需要 JSON 对象，实际收到 %s',
+            [ATypeInfo.Name, AJson.ClassName]);
+        Result := JsonToRecord(TJSONObject(AJson), ATypeInfo, AContext);
+      end;
       
     tkEnumeration:
       begin
         if ATypeInfo = TypeInfo(Boolean) then
           Result := TValue.From<Boolean>((AJson as TJSONBool).AsBoolean)
         else if AJson is TJSONString then
-          Result := TValue.FromOrdinal(ATypeInfo, GetEnumValue(ATypeInfo, TJSONString(AJson).Value))
+        begin
+          // CR-018: 未知枚举名报错而非写入 -1
+          LOrdinal := GetEnumValue(ATypeInfo, TJSONString(AJson).Value);
+          ValidateEnumOrdinal(ATypeInfo, LOrdinal, TJSONString(AJson).Value);
+          Result := TValue.FromOrdinal(ATypeInfo, LOrdinal);
+        end
         else
-          Result := TValue.FromOrdinal(ATypeInfo, TJSONNumber(AJson).AsInt);
+        begin
+          // CR-018: 数字路径同样校验范围
+          LOrdinal := TJSONNumber(AJson).AsInt;
+          ValidateEnumOrdinal(ATypeInfo, LOrdinal, AJson.ToJSON);
+          Result := TValue.FromOrdinal(ATypeInfo, LOrdinal);
+        end;
       end;
       
     else
       Result := TValue.Empty;
+  end;
+end;
+
+function TJsonSerializer.JsonToRecord(AJson: TJSONObject; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
+var
+  LType: TRttiType;
+  LField: TRttiField;
+  LFieldVal: TValue;
+  LV: TJSONValue;
+  LData: Pointer;
+  LDataRef: Pointer;
+begin
+  // CR-015: AllocMem 零填充对托管字段（string/接口/动态数组/variant）
+  // 均为合法初始态，配合 FinalizeRecord 释放临时缓冲。
+  GetMem(LData, GetTypeData(ATypeInfo).RecSize);
+  try
+    FillChar(LData^, GetTypeData(ATypeInfo).RecSize, 0);
+    TValue.Make(LData, ATypeInfo, Result);
+  finally
+    FinalizeRecord(LData, ATypeInfo);
+    FreeMem(LData);
+  end;
+
+  LType := FRttiContext.GetType(ATypeInfo);
+  LDataRef := Result.GetReferenceToRawData;
+  for LField in LType.GetFields do
+  begin
+    LV := AJson.FindValue(LField.Name);
+    if LV <> nil then
+    begin
+      LFieldVal := JsonToValue(LV, LField.FieldType.Handle, AContext);
+      if not LFieldVal.IsEmpty then
+        LField.SetValue(LDataRef, LFieldVal);
+    end;
   end;
 end;
 
@@ -1245,7 +1358,13 @@ begin
       
     tkClass:
       Result := ObjectToXml(AValue.AsObject, AName, AIndent, AContext);
-      
+
+    tkRecord, tkMRecord:
+      // CR-015: 此前静默输出空元素丢数据，改为显式失败
+      raise ESerializationException.CreateFmt(
+        'XML 序列化暂不支持 record 字段: %s（请改用 JSON 序列化器）',
+        [AValue.TypeInfo.Name]);
+
     else
       Result := LIndentStr + '<' + AName + '/>' + LNewLine;
   end;
@@ -1362,6 +1481,8 @@ function TXmlSerializer.DoDeserialize(const AData: string; AClass: TClass; ACont
   var
     LConverter: IValueConverter;
     LStr: string;
+    LDT: TDateTime;
+    LOrdinal: Integer;
   begin
     LStr := UnescapeXml(AText);
     LConverter := AContext.FindConverter(ATypeInfo);
@@ -1379,7 +1500,11 @@ function TXmlSerializer.DoDeserialize(const AData: string; AClass: TClass; ACont
       tkFloat:
         begin
           if ATypeInfo = TypeInfo(TDateTime) then
-            AValue := TValue.From<TDateTime>(StrToDateTimeDef(LStr, 0))
+          begin
+            // CR-016: 区域无关解析；解析失败抛出而非静默归零
+            ParsePersistedDateTime(LStr, LDT);
+            AValue := TValue.From<TDateTime>(LDT);
+          end
           else
             AValue := TValue.From<Double>(StrToFloatDef(LStr, 0));
         end;
@@ -1390,8 +1515,18 @@ function TXmlSerializer.DoDeserialize(const AData: string; AClass: TClass; ACont
           if ATypeInfo = TypeInfo(Boolean) then
             AValue := TValue.From<Boolean>(SameText(LStr, 'True'))
           else
-            AValue := TValue.FromOrdinal(ATypeInfo, GetEnumValue(ATypeInfo, LStr));
+          begin
+            // CR-018: 未知枚举名报错而非写入 -1
+            LOrdinal := GetEnumValue(ATypeInfo, LStr);
+            ValidateEnumOrdinal(ATypeInfo, LOrdinal, LStr);
+            AValue := TValue.FromOrdinal(ATypeInfo, LOrdinal);
+          end;
         end;
+      tkRecord, tkMRecord:
+        // CR-015: 此前静默置 Empty，改为显式失败
+        raise ESerializationException.CreateFmt(
+          'XML 反序列化暂不支持 record 字段: %s（请改用 JSON 序列化器）',
+          [ATypeInfo.Name]);
     else
       AValue := TValue.Empty;
     end;
@@ -1493,11 +1628,17 @@ begin
 end;
 
 function TBinarySerializer.ReadString(AStream: TStream): string;
+const
+  // CR-017: 长度字段无上限时可被构造为 2GB 级分配（OOM）
+  MAX_BINARY_STRING_BYTES = 16 * 1024 * 1024;
 var
   LLen: Integer;
   LBytes: TBytes;
 begin
   AStream.ReadBuffer(LLen, SizeOf(LLen));
+  if (LLen < 0) or (LLen > MAX_BINARY_STRING_BYTES) then
+    raise ESerializationException.CreateFmt(
+      '二进制流字符串长度非法: %d', [LLen]);
   if LLen > 0 then
   begin
     SetLength(LBytes, LLen);
@@ -1572,6 +1713,12 @@ begin
       
     tkClass:
       WriteObject(AStream, AValue.AsObject, AContext);
+
+    tkRecord, tkMRecord:
+      // CR-015: 此后 kind 字节被写入但值被丢弃（静默丢数据），改为显式失败
+      raise ESerializationException.CreateFmt(
+        '二进制序列化暂不支持 record 字段: %s（请改用 JSON 序列化器）',
+        [AValue.TypeInfo.Name]);
   end;
 end;
 
@@ -1632,12 +1779,23 @@ end;
 function TBinarySerializer.ReadValue(AStream: TStream; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
 var
   LKind: Byte;
+  LOrdinal: Integer;
 begin
   AStream.ReadBuffer(LKind, 1);
-  
+
   if LKind = 0 then
     Exit(TValue.Empty);
-    
+
+  // CR-017: kind 字节与目标属性类型不符说明流被篡改或版本错位，
+  // 此前会按垃圾继续解析（tkClass 分支甚至把整数当类指针解引用）。
+  if Assigned(ATypeInfo) and
+     not ((TTypeKind(LKind) = ATypeInfo.Kind) or
+          ((TTypeKind(LKind) in [tkInteger, tkInt64]) and
+           (ATypeInfo.Kind in [tkInteger, tkInt64]))) then
+    raise ESerializationException.CreateFmt(
+      '二进制流类型不匹配: 流内 kind=%d，目标 %s (kind=%d)',
+      [LKind, ATypeInfo.Name, Ord(ATypeInfo.Kind)]);
+
   case TTypeKind(LKind) of
     tkInteger:
       Result := TValue.From<Integer>(ReadInteger(AStream));
@@ -1652,7 +1810,12 @@ begin
       Result := TValue.From<string>(ReadString(AStream));
       
     tkEnumeration:
-      Result := TValue.FromOrdinal(ATypeInfo, ReadInteger(AStream));
+      begin
+        // CR-018: 二进制路径同样校验枚举序数范围（流内数据可能被篡改）
+        LOrdinal := ReadInteger(AStream);
+        ValidateEnumOrdinal(ATypeInfo, LOrdinal, IntToStr(LOrdinal));
+        Result := TValue.FromOrdinal(ATypeInfo, LOrdinal);
+      end;
       
     tkClass:
       begin
@@ -1661,9 +1824,16 @@ begin
         else
           Result := TValue.From<TObject>(ReadObject(AStream, nil, AContext));
       end;
-      
+
+    tkRecord, tkMRecord:
+      // CR-015: 防御分支——写入端已拒绝 record，读到即流被篡改/版本不符
+      raise ESerializationException.CreateFmt(
+        '二进制反序列化不支持 record kind: %s', [ATypeInfo.Name]);
+
     else
-      Result := TValue.Empty;
+      // CR-017: 未知 kind 不再静默吞成 Empty（旧数据丢失不可见）
+      raise ESerializationException.CreateFmt(
+        '二进制流包含不支持的值类型 kind=%d', [LKind]);
   end;
 end;
 
@@ -1692,6 +1862,18 @@ begin
     
   if not Assigned(LActualClass) then
     raise ESerializationException.CreateFmt('Cannot deserialize unknown class: %s', [LClassName]);
+
+  // CR-017: 二进制路径此前完全绕过类型白名单（仅 JSON/XML 检查），
+  // 流内任意已注册类名都会被实例化。
+  if not AContext.IsAllowedType(LActualClass) then
+    raise ESerializationException.CreateFmt(
+      '类型不在反序列化白名单内: %s', [LActualClass.ClassName]);
+
+  // CR-017: 注册表解析出的类必须是声明类的自身或后代，防止类型替换
+  if (AClass <> nil) and not LActualClass.InheritsFrom(AClass) then
+    raise ESerializationException.CreateFmt(
+      '流内类 %s 与声明类型 %s 不兼容',
+      [LActualClass.ClassName, AClass.ClassName]);
     
   // Create instance
   LType := FRttiContext.GetType(LActualClass);
@@ -1701,7 +1883,12 @@ begin
   try
     // Read property count
     AStream.ReadBuffer(LPropCount, SizeOf(LPropCount));
-    
+
+    // CR-017: 属性数上限，防止被构造的流驱动超长循环
+    if (LPropCount < 0) or (LPropCount > 100000) then
+      raise ESerializationException.CreateFmt(
+        '二进制流属性数非法: %d', [LPropCount]);
+
     // Read properties
     for I := 0 to LPropCount - 1 do
     begin
@@ -1812,9 +1999,15 @@ begin
 end;
 
 function TDateTimeConverter.Deserialize(const AValue: TValue; ATargetType: PTypeInfo; AContext: TSerializationContext): TValue;
+var
+  LDT: TDateTime;
 begin
   if AValue.TypeInfo.Kind in [tkString, tkLString, tkWString, tkUString] then
-    Result := TValue.From<TDateTime>(StrToDateTime(AValue.AsString))
+  begin
+    // CR-016: 区域无关解析（与 Serialize 的固定模板对应）
+    ParsePersistedDateTime(AValue.AsString, LDT);
+    Result := TValue.From<TDateTime>(LDT);
+  end
   else
     Result := TValue.From<TDateTime>(AValue.AsExtended);
 end;
@@ -1835,11 +2028,30 @@ begin
 end;
 
 function TEnumConverter.Deserialize(const AValue: TValue; ATargetType: PTypeInfo; AContext: TSerializationContext): TValue;
+var
+  LOrdinal: Integer;
 begin
   if AValue.TypeInfo.Kind in [tkString, tkLString, tkWString, tkUString] then
-    Result := TValue.FromOrdinal(ATargetType, GetEnumValue(ATargetType, AValue.AsString))
+  begin
+    // CR-018: 未知枚举名报错而非写入 -1
+    LOrdinal := GetEnumValue(ATargetType, AValue.AsString);
+    ValidateEnumOrdinal(ATargetType, LOrdinal, AValue.AsString);
+    Result := TValue.FromOrdinal(ATargetType, LOrdinal);
+  end
+  else if AValue.TypeInfo.Kind = tkFloat then
+  begin
+    // JsonToValue 的转换器入口把 JSON 数字包装为 Double，此处必须先取整，
+    // 否则 AsInt64 对浮点 TValue 直接抛 EInvalidCast（修复前行为）。
+    LOrdinal := Trunc(AValue.AsExtended);
+    ValidateEnumOrdinal(ATargetType, LOrdinal, AValue.ToString);
+    Result := TValue.FromOrdinal(ATargetType, LOrdinal);
+  end
   else
-    Result := TValue.FromOrdinal(ATargetType, AValue.AsInt64);
+  begin
+    LOrdinal := AValue.AsInt64;
+    ValidateEnumOrdinal(ATargetType, LOrdinal, AValue.ToString);
+    Result := TValue.FromOrdinal(ATargetType, LOrdinal);
+  end;
 end;
 
 { TSerializer }

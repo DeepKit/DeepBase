@@ -153,8 +153,10 @@ type
   TEVP_CIPHER_CTX_ctrl = function(ctx: PEVP_CIPHER_CTX; ctype, arg: Integer;
     ptr: Pointer): Integer; cdecl;
   TEVP_sha256 = function: PEVP_MD; cdecl;
+  // CR-002: 与 OpenSSL 原型严格对齐（8 参数）。原声明多出 digest_len，
+  // 导致 POSIX 下第 6 实参(密钥长度)被当作 EVP_MD* 解引用。
   TPKCS5_PBKDF2_HMAC = function(pass: PAnsiChar; passlen: Integer;
-    salt: PByte; saltlen, iter, digest_len: Integer; digest: PEVP_MD;
+    salt: PByte; saltlen, iter: Integer; digest: PEVP_MD;
     keylen: Integer; outkey: PByte): Integer; cdecl;
   TOpenSSL_version = function(t: Integer): PAnsiChar; cdecl;
 
@@ -451,7 +453,7 @@ begin
   if _PKCS5_PBKDF2_HMAC(
        PassPtr, Length(APassword),
        SaltPtr, Length(ASalt),
-       AIterations, AKeyLen,
+       AIterations,
        _EVP_sha256(),
        AKeyLen, @Result[0]) <> 1 then
     raise EOpenSSLError.Create('PKCS5_PBKDF2_HMAC failed');

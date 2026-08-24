@@ -183,7 +183,9 @@ begin
            (UInt64(Bytes[6]) shl 8) or UInt64(Bytes[7]);
            
   // Convert to double in range [0.0, 1.0)
-  Result := (Value shr 11) * (1.0 / (1 shl 53));
+  // CR-011: 原写法 (1 shl 53) 按 32 位序数移位实际等于 1 shl 21，
+  // 导致结果域膨胀。改用显式 Double 常量 2^53。
+  Result := (Value shr 11) * (1.0 / 9007199254740992.0);
 end;
 
 function TSecureRandom.NextString(const ALength: Integer; const ACharSet: string): string;

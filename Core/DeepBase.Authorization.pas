@@ -1102,6 +1102,10 @@ begin
 end;
 
 procedure TAuthorizationManager.DeleteUser(const Username: string);
+var
+  ThreadID: TThreadID;
+  ContextUser: TUser;
+  AffectedThreads: TArray<TThreadID>;
 begin
   FLock.Enter;
   try
@@ -1109,6 +1113,19 @@ begin
       raise EUserNotFoundException.CreateFmt('User not found: %s', [Username]);
     
     DeleteUserFromDatabase(Username);
+
+    // CR-009: FThreadCurrentUsers 持有 FUsers(doOwnsValues) 的活体指针。
+    // 删除用户时必须同步清除其线程登录上下文，否则后续 CurrentUserCan/
+    // RequirePermission 解引用已释放对象；内存被复用时甚至会读到另一个
+    // 用户的身份做鉴权（提权面）。
+    AffectedThreads := nil;
+    for ThreadID in FThreadCurrentUsers.Keys.ToArray do
+      if FThreadCurrentUsers.TryGetValue(ThreadID, ContextUser) and
+         (ContextUser <> nil) and SameText(ContextUser.Username, Username) then
+        AffectedThreads := AffectedThreads + [ThreadID];
+    for ThreadID in AffectedThreads do
+      FThreadCurrentUsers.Remove(ThreadID);
+
     FUsers.Remove(Username);
     
     LogAudit(Username, aaUserDeleted, 'user',
