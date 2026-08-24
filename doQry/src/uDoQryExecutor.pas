@@ -24,11 +24,26 @@ type
     Count: Integer;
   end;
 
+/// CR-005: 整数字面量按 Int64 绑定，避免一律 AsFloat 导致超过 2^53 的
+/// 整数 ID（雪花 ID 等）精度丢失而误更新/误删除。返回 False 表示按浮点处理。
+function TryBindIntegralNumber(ANum: TJSONNumber; AParam: TFDParam): Boolean;
+var
+  S: string;
+  I64: Int64;
+begin
+  S := ANum.Value; // 原始字面量文本
+  Result := (S <> '') and (Pos('.', S) = 0) and
+    (Pos('e', LowerCase(S)) = 0) and TryStrToInt64(S, I64);
+  if Result then
+    AParam.AsInt64 := I64;
+end;
+
 function IsSelectSQL(const S: string): Boolean;
 var T: string;
 begin
   T := TrimLeft(S);
-  Result := StartsText('select', T);
+  // CR-202: WITH ... SELECT（CTE）同样应受 DefaultLimit 保护
+  Result := StartsText('select', T) or StartsText('with', T);
 end;
 
 function IsUpdateOrDelete(const S: string): Boolean;
@@ -39,8 +54,16 @@ begin
 end;
 
 function HasWhere(const S: string): Boolean;
+var
+  T: string;
 begin
-  Result := Pos(' where ', LowerCase(' ' + S + ' ')) > 0;
+  // CR-203: 模板常含换行/多空白，先把连续空白折叠为单空格再探测，
+  // 否则 "DELETE FROM t\nWHERE ..." 被误判为无 WHERE 而遭拦截
+  T := ' ' + S + ' ';
+  T := T.Replace(#13#10, ' ').Replace(#13, ' ').Replace(#10, ' ').Replace(#9, ' ');
+  while Pos('  ', T) > 0 do
+    T := T.Replace('  ', ' ');
+  Result := Pos(' where ', LowerCase(T)) > 0;
 end;
 
 function ExpandInPlaceholders(const SQL: string; Params: TJSONObject; out Expanded: TArray<TInExp>): string;
@@ -63,7 +86,7 @@ begin
     if p2 = 0 then Break;
     Name := Trim(Copy(OutSQL, p1 + 4, p2 - (p1 + 4)));
     if not Assigned(Params) or (Params.GetValue(Name) = nil) or not (Params.GetValue(Name) is TJSONArray) then
-      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数�?, [Name]);
+      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数�?, [Name]);
     JArr := TJSONArray(Params.GetValue(Name));
     if JArr.Count = 0 then
       raise EDatabaseException.CreateFmt('IN 参数 %s 不能为空数组', [Name]);
@@ -112,7 +135,10 @@ begin
             if Arr.Items[N] is TJSONNull then
               Param.Clear
             else if Arr.Items[N] is TJSONNumber then
-              Param.AsFloat := TJSONNumber(Arr.Items[N]).AsDouble
+            begin
+              if not TryBindIntegralNumber(TJSONNumber(Arr.Items[N]), Param) then
+                Param.AsFloat := TJSONNumber(Arr.Items[N]).AsDouble
+            end
             else if Arr.Items[N] is TJSONBool then
               Param.AsBoolean := TJSONBool(Arr.Items[N]).AsBoolean
             else // string or object
@@ -137,7 +163,10 @@ begin
       if Val is TJSONNull then
         Param.Clear
       else if Val is TJSONNumber then
-        Param.AsFloat := TJSONNumber(Val).AsDouble
+      begin
+        if not TryBindIntegralNumber(TJSONNumber(Val), Param) then
+          Param.AsFloat := TJSONNumber(Val).AsDouble
+      end
       else if Val is TJSONBool then
         Param.AsBoolean := TJSONBool(Val).AsBoolean
       else if Val is TJSONString then
@@ -246,7 +275,7 @@ end;
 procedure GuardNonQuery(const SQL: string; const Def: TQueryDef);
 begin
   if IsUpdateOrDelete(SQL) and (not Def.AllowFullScan) and (not HasWhere(SQL)) then
-    raise EDatabaseException.Create('非查询语句缺�?WHERE，已阻止执行');
+    raise EDatabaseException.Create('非查询语句缺�?WHERE，已阻止执行');
 end;
 
 function ExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
@@ -329,7 +358,7 @@ begin
         begin
           Q.Open;
           if (Q.Fields.Count = 0) or Q.IsEmpty then
-            raise EDatabaseException.Create('未返回插�?ID');
+            raise EDatabaseException.Create('未返回插�?ID');
           Result := Q.Fields[0].AsInteger;
         end
         else

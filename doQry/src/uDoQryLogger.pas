@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.SyncObjs, System.IOUtils, System.StrUtils,
+  System.DateUtils,
   uDoQryTypes;
 
 procedure DoQryLoggerInit(const ProjectRoot: string);
@@ -88,7 +89,9 @@ begin
   EJson := Trim(ErrorMsg);
   if EJson = '' then EJson := 'null' else EJson := '"' + JsonEscape(EJson) + '"';
   Line := '{' +
-    '"ts":"' + FormatDateTime('yyyy"-"mm"-"dd"T"hh":"nn":"ss.zzz"Z"', Now) + '",' +
+    // CR-208: 字段名带 Z（UTC 标记）就必须写真 UTC；此前写本地时间冒充 UTC
+    '"ts":"' + FormatDateTime('yyyy"-"mm"-"dd"T"hh":"nn":"ss.zzz"Z"',
+      TTimeZone.Local.ToUniversalTime(Now)) + '",' +
     '"level":"' + JsonEscape(Level) + '",' +
     '"corrId":"' + JsonEscape(CorrId) + '",' +
     '"proc":"' + JsonEscape(ProcName) + '",' +

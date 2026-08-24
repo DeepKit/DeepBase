@@ -7,7 +7,7 @@ uses
   FireDAC.Comp.Client, DBClient,
   uDoQryTypes;
 
-// 初始化与上下�?procedure DoQryInit(const ProjectRoot: string);
+// 初始化与上下�?procedure DoQryInit(const ProjectRoot: string);
 function DoQryMakeContext(Conn: TFDConnection; DBType: TDBType; TimeoutSec: Integer; const CorrelationId: string): TDoQryContext;
 function DoQryNewCorrelationId: string;
 
@@ -15,7 +15,7 @@ function DoQryNewCorrelationId: string;
 function DoQryBeginTx(const Ctx: TDoQryContext): IDoQryTx;
 procedure DoQryRunInTx(const Ctx: TDoQryContext; const Proc: TProc);
 
-// 执行�?function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
+// 执行�?function DoQryExecSelect(const Proc: string; const ParamsJson: string; var Data: TClientDataSet; const Ctx: TDoQryContext): Integer;
 function DoQryExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecInsertReturningId(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
 function DoQryExecScalar(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Variant;
@@ -59,7 +59,14 @@ begin
     Proc();
     Tx.Commit;
   except
-    Tx.Rollback;
+    // CR-210: Rollback 自身失败（连接已断等）时不得顶替原始业务异常
+    try
+      Tx.Rollback;
+    except
+      on E: Exception do
+        DoQryLogEvent('WARN', Ctx.CorrelationId, '', Ctx.DBType, 'tx-rollback',
+          '', '', 0, -1, 'rollback failed: ' + E.Message);
+    end;
     raise;
   end;
 end;

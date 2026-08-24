@@ -44,7 +44,7 @@ implementation
 
 // 内部使用的函数声�?
 function StringToParams(const ParamStr: string): TDictionary<string, string>; forward;
-procedure ValidateSQL(var SQL: string); forward;
+procedure ValidateSQL(const SQL: string); forward;
 function GetQueryDef(Connection: TADOConnection; const ProcName: string): TADOQuery; forward;
 function ExecuteSQL(Connection: TADOConnection; const SQL: string): TDataSet; forward;
 procedure DataSetToClientDataSet(Source: TDataSet; Dest: TClientDataSet); forward;
@@ -235,21 +235,39 @@ begin
 end;
 
 function HandleParamValue(paramType: string; value: string): string;
+var
+  LInt: Int64;
+  LFloat: Double;
+  FSI: TFormatSettings;
 begin
   // 如果值为空，返回 NULL
   if value = '' then
     Result := 'NULL'
   else
+  begin
+    FSI := TFormatSettings.Invariant;
     case StringToParaType(paramType) of
       ptString:
         Result := QuotedStr(StringReplace(value, '''', '''''', [rfReplaceAll]));
-      ptInteger, ptFloat:
-        Result := value;
+      ptInteger:
+        begin
+          // CR-006: 数值类型不再原样拼接，先严格校验，杜绝注入通道
+          if not TryStrToInt64(Trim(value), LInt) then
+            raise EDatabaseException.Create('非法的整型参数值: ' + value);
+          Result := IntToStr(LInt);
+        end;
+      ptFloat:
+        begin
+          if not TryStrToFloat(Trim(value), LFloat, FSI) then
+            raise EDatabaseException.Create('非法的浮点参数值: ' + value);
+          Result := FloatToStr(LFloat, FSI);
+        end;
       ptDate:
         Result := QuotedStr(FormatDateTime('yyyy-mm-dd', StrToDate(value)));
       ptBoolean:
         Result := BoolToPostgreSQL(StrToBool(value));
     end;
+  end;
 end;
 
 function BuildWhereClause(qry: TAdoQuery; qryParams: TDataSet): string;
@@ -333,8 +351,10 @@ begin
   Result := 'DELETE FROM ' + tableName;
   
   whereClause := BuildWhereClauseFromDict(qry, Params);
-  if whereClause <> '' then
-    Result := Result + ' WHERE ' + whereClause;
+  if whereClause = '' then
+    // CR-007: 与 BuildUpdateSQL 对齐——禁止无 WHERE 的全表删除
+    raise EDatabaseException.Create('删除操作必须包含WHERE条件');
+  Result := Result + ' WHERE ' + whereClause;
 end;
 
 function BuildCallSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
@@ -628,57 +648,24 @@ begin
   Result := params;
 end;
 
-procedure ValidateSQL(var SQL: string);
+procedure ValidateSQL(const SQL: string);
 var
   i: Integer;
   inSingleQuote: Boolean;
-  hasUnbalancedQuotes: Boolean;
 begin
-  // 检查SQL语句中的引号是否平衡
+  // CR-012: 移除全部"自动修复"改写逻辑（补引号/补括号/, ,→NULL, 等），
+  // 它们会静默篡改含合法字符的 SQL 并损坏数据。本过程只做校验，
+  // 引号不平衡时直接抛出，由调用方决定如何处理。
   inSingleQuote := False;
-  hasUnbalancedQuotes := False;
-  
+
   for i := 1 to Length(SQL) do
   begin
     if CharInSet(SQL[i], ['''']) then
       inSingleQuote := not inSingleQuote;
   end;
-  
+
   if inSingleQuote then
-  begin
-    SQL := SQL + '''';
-    hasUnbalancedQuotes := True;
-  end;
-  
-  // 检查字段名中是否有空格
-  if Pos(' ,', SQL) > 0 then
-    SQL := StringReplace(SQL, ' ,', ',', [rfReplaceAll]);
-  
-  // 检查VALUES关键字后面的格式
-  i := Pos('VALUES', UpperCase(SQL));
-  if i > 0 then
-  begin
-    if i + 6 <= Length(SQL) then
-    begin
-      if SQL[i + 6] <> ' ' then
-        SQL := Copy(SQL, 1, i + 5) + ' ' + Copy(SQL, i + 6, Length(SQL));
-        
-      i := Pos('VALUES ', UpperCase(SQL));
-      if (i > 0) and (i + 7 <= Length(SQL)) and (SQL[i + 7] <> '(') then
-        SQL := Copy(SQL, 1, i + 6) + '(' + Copy(SQL, i + 7, Length(SQL));
-    end;
-  end;
-  
-  // 检查连续逗号
-  if Pos(',,', SQL) > 0 then
-    SQL := StringReplace(SQL, ',,', ',NULL,', [rfReplaceAll]);
-  
-  // 检查末尾是否缺少右括号
-  if (Copy(SQL, Length(SQL), 1) <> ')') and (Pos('VALUES', UpperCase(SQL)) > 0) then
-    SQL := SQL + ')';
-  
-  if hasUnbalancedQuotes then
-    OutputDebugString(PChar('SQL语句引号不平衡，已自动修复: ' + SQL));
+    raise EDatabaseException.Create('SQL语句中的引号不平衡，请检查参数值');
 end;
 
 
