@@ -508,7 +508,6 @@ var
   LItem: TDiffItem;
   LColWidth, LLineNumWidth: Integer;
   LOldLine, LNewLine: string;
-  LOldIdx, LNewIdx: Integer;
   
   function PadRight(const S: string; ALen: Integer): string;
   begin
@@ -534,9 +533,8 @@ begin
     // Header
     LSB.AppendLine(StringOfChar('-', AWidth));
     
-    LOldIdx := 0;
-    LNewIdx := 0;
-    
+    // CR-287: 直接使用条目自带的全局行号（此前局部计数器跨 hunk 漂移，
+    // 第二个及以后 hunk 的所有行号全部错误）
     for LHunk in FHunks do
     begin
       for LItem in LHunk.Items do
@@ -544,27 +542,23 @@ begin
         case LItem.Operation of
           doEqual:
             begin
-              LOldLine := FormatLine(LOldIdx, LItem.Text);
-              LNewLine := FormatLine(LNewIdx, LItem.Text);
+              LOldLine := FormatLine(LItem.OldIndex, LItem.Text);
+              LNewLine := FormatLine(LItem.NewIndex, LItem.Text);
               LSB.AppendLine(LOldLine + ' ' + LNewLine);
-              Inc(LOldIdx);
-              Inc(LNewIdx);
             end;
-            
+
           doDelete:
             begin
-              LOldLine := FormatLine(LOldIdx, LItem.Text);
+              LOldLine := FormatLine(LItem.OldIndex, LItem.Text);
               LNewLine := FormatLine(-1, '');
               LSB.AppendLine(LOldLine + '<' + LNewLine);
-              Inc(LOldIdx);
             end;
-            
+
           doInsert:
             begin
               LOldLine := FormatLine(-1, '');
-              LNewLine := FormatLine(LNewIdx, LItem.Text);
+              LNewLine := FormatLine(LItem.NewIndex, LItem.Text);
               LSB.AppendLine(LOldLine + '>' + LNewLine);
-              Inc(LNewIdx);
             end;
         end;
       end;
@@ -1219,7 +1213,11 @@ begin
           end;
           
           if K >= LDiffItems.Count then
-            LContextEnd := LDiffItems.Count;
+            LContextEnd := LDiffItems.Count
+          else if LDiffItems[K].Operation = doEqual then
+            // CR-287: 正常退出（窗口内无后续变更）时补满尾随上下文——
+            // 此前 LContextEnd 滞留在 I，中间 hunk 尾随上下文全部丢失
+            LContextEnd := K;
             
           // Add trailing context and potentially more changes
           for J := I to Min(LContextEnd, I + FOptions.ContextLines) - 1 do

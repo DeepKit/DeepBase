@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.Schema - Database Schema SQL Definitions
   
   Version: 1.0.0
@@ -21,7 +21,11 @@
 
 unit DeepBase.Schema;
 
-interface
+interface
+uses
+  DeepBase.Consts; // CR-315: 种子键引用统一常量防漂移
+
+
 
 const
   // Schema version - increment when schema changes
@@ -78,7 +82,7 @@ const
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
     '  (''App.Theme'', ''Windows11'', ''String'', ''UI'', ''Application theme'', ''Windows11'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''App.LogLevel'', ''INFO'', ''String'', ''General'', ''Logging level'', ''INFO'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+    '  (''' + SConfigKeyLogLevel + ''', ''INFO'', ''String'', ''General'', ''Logging level'', ''INFO'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
     '  (''App.DebugMode'', ''False'', ''Boolean'', ''General'', ''Debug mode'', ''False'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +

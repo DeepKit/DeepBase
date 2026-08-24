@@ -559,13 +559,25 @@ begin
   begin
     FLock.Enter;
     try
-      EvictOldestIfNeeded;
-      LNode := TCacheNode.Create;
-      LNode.Key := CacheKey;
-      LNode.Value := Result;
-      LNode.LastAccess := Now;
-      FCache.Add(CacheKey, LNode);
-      LRUAdd(LNode);
+      // CR-310: miss→查库→回填窗口内另一线程可能已插入同键，
+      // 直接 Add 会抛重复键异常；已存在则更新并移到 LRU 头部
+      if FCache.TryGetValue(CacheKey, LNode) then
+      begin
+        LNode.Value := Result;
+        LNode.LastAccess := Now;
+        LRURemove(LNode);
+        LRUAdd(LNode);
+      end
+      else
+      begin
+        EvictOldestIfNeeded;
+        LNode := TCacheNode.Create;
+        LNode.Key := CacheKey;
+        LNode.Value := Result;
+        LNode.LastAccess := Now;
+        FCache.Add(CacheKey, LNode);
+        LRUAdd(LNode);
+      end;
     finally
       FLock.Leave;
     end;

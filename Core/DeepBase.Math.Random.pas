@@ -17,7 +17,10 @@ unit DeepBase.Math.Random;
 interface
 
 uses
-  System.SysUtils, System.Math, System.SyncObjs, Winapi.Windows,
+  System.SysUtils, System.Math, System.SyncObjs,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   DeepBase.Exceptions,
   DeepBase.Math, DeepBase.Math.Geometry, DeepBase.Math.Statistics;
 
@@ -102,9 +105,11 @@ implementation
 const
   BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
 
+{$IFDEF MSWINDOWS}
 function BCryptGenRandom(hAlgorithm: THandle; pbBuffer: PByte;
   cbBuffer: Cardinal; dwFlags: Cardinal): Integer; stdcall;
   external 'bcrypt.dll';
+{$ENDIF}
 
 { TRandomDist }
 
@@ -424,9 +429,15 @@ begin
   if ALength <= 0 then
     raise EArgumentException.Create('Length must be positive');
   SetLength(Result, ALength);
+  {$IFDEF MSWINDOWS}
   if BCryptGenRandom(0, @Result[0], Cardinal(ALength),
        BCRYPT_USE_SYSTEM_PREFERRED_RNG) <> 0 then
     raise EDeepBaseException.Create('BCryptGenRandom failed — OS CSPRNG unavailable');
+  {$ELSE}
+  // CR-296: 非 Windows 平台暂无实现——显式失败而非链接错误/静默不安全
+  raise ENotSupportedException.Create(
+    'TSecureRandom.NextBytes: CSPRNG not implemented on this platform');
+  {$ENDIF}
 end;
 
 function TSecureRandom.NextInt(const AMax: Integer): Integer;
