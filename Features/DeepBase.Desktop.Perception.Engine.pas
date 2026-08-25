@@ -260,7 +260,27 @@ begin
   try
     LWork.PixelFormat := pf32bit;
     LWork.SetSize(LW, LH);
-    LWork.Canvas.Draw(0, 0, ABitmap);
+    // CR-606 fix: Canvas.Draw on an alpha=0 pf32 source goes through
+    // AlphaBlend and leaves the target pixels UNINITIALIZED, so two
+    // identical frames produce different signatures at random.
+    // Replace with deterministic scanline copy + opaque alpha.
+    if ABitmap.PixelFormat = pf32bit then
+    begin
+      for var LY := 0 to LH - 1 do
+      begin
+        var PSrc: PRGBQuad := ABitmap.ScanLine[LY];
+        var PDst: PRGBQuad := LWork.ScanLine[LY];
+        for var LX := 0 to LW - 1 do
+        begin
+          PDst[LX].rgbRed := PSrc[LX].rgbRed;
+          PDst[LX].rgbGreen := PSrc[LX].rgbGreen;
+          PDst[LX].rgbBlue := PSrc[LX].rgbBlue;
+          PDst[LX].rgbReserved := 255;
+        end;
+      end;
+    end
+    else
+      LWork.Canvas.Draw(0, 0, ABitmap);
 
     LCellsX := (LW + CFrameDiffStride - 1) div CFrameDiffStride;
     LCellsY := (LH + CFrameDiffStride - 1) div CFrameDiffStride;

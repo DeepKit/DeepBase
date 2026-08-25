@@ -128,6 +128,7 @@ var
   LEngine: TDesktopPerceptionEngine;
   LShot1, LShot2: TDesktopScreenshot;
   LEmitter: Integer;
+  B1, B2: TBitmap;
 begin
   // Inject a source that returns a FRESH bitmap of identical content on each
   // call (simulating replaying the same recorded frame twice). CaptureScreen
@@ -142,6 +143,8 @@ begin
       begin
         Inc(LEmitter);
         Result := MakeSolidBitmap(clNavy, 80, 80);  // fresh, handed to engine
+        if LEmitter = 1 then B1 := Result
+        else if LEmitter = 2 then B2 := Result;
       end;
     LShot1 := LEngine.CaptureScreen;
     LShot2 := LEngine.CaptureScreen;
