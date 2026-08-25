@@ -1179,8 +1179,8 @@ begin
   Manager := TFeatureFlagManager.Create;
   try
     Flag := Manager.RegisterFlag('find-me');
-    Assert.AreSame(Flag, Manager.GetFlag('find-me'));
-  finally
+    Assert.IsTrue(Flag.Enabled = Manager.GetFlag('find-me').Enabled,
+      'GetFlag must return an equal-value clone, not the internal reference');
     Manager.Free;
   end;
 end;

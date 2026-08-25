@@ -941,17 +941,11 @@ begin
       for LKey in LKeysToRemove do
         FDebouncedChanges.Remove(LKey);
 
-      // BIZ2-013 fix: if changes arrived during our processing window,
-      // keep the gate latched and schedule a follow-up drain rather than
-      // dropping them. Otherwise release the gate so the next HandleDebounce
-      // can schedule normally.
-      if FDebouncedChanges.Count > 0 then
-      begin
-        // Re-arm: keep FDebounceTaskScheduled = True and queue another task.
-        // (Handled by the outer finally below re-arming via Exit.)
-      end
-      else
-        FDebounceTaskScheduled := False;
+      // CR-606-a fix: always release the debounce gate. The original code
+      // kept the gate latched when pending changes existed but never
+      // re-armed, causing all subsequent file events to be silently lost.
+      // Releasing here lets the next file event go through normal debounce.
+      FDebounceTaskScheduled := False;
     finally
       FDebounceLock.Leave;
     end;

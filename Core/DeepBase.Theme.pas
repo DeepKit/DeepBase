@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.Theme - Theme metadata and platform theme dispatch
 
   Version: 1.2
@@ -258,7 +258,12 @@ begin
     end;
   end;
 
-  FPendingThemeName := ActualTheme;
+  TMonitor.Enter(FLock);
+  try
+    FPendingThemeName := ActualTheme;
+  finally
+    TMonitor.Exit(FLock);
+  end;
   if TThread.CurrentThread.ThreadID = MainThreadID then
     ApplyThemeSync
   else

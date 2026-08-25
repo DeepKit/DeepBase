@@ -1,4 +1,4 @@
-﻿unit DeepBase.FeatureFlags;
+unit DeepBase.FeatureFlags;
 
 {*******************************************************************************
   DeepBase Feature Flags
@@ -390,7 +390,8 @@ type
     FFlag: TFeatureFlag;
   public
     constructor Create(const AKey: string);
-    
+    destructor Destroy; override;
+
     function WithName(const AName: string): TFeatureFlagBuilder;
     function WithDescription(const ADescription: string): TFeatureFlagBuilder;
     function Enabled: TFeatureFlagBuilder;
@@ -1543,7 +1544,10 @@ begin
   FEvaluationHistory := TList<TFlagEvaluationResult>.Create;
   FOverrides := TDictionary<string, Boolean>.Create;
   FMaxHistorySize := 1000;
-  
+  // CR-4848 fix: eagerly create the default context so IsEnabled(AKey)
+  // doesn't AV on a nil FDefaultContext
+  FDefaultContext := TFlagContext.Create;
+
   if Assigned(AStorage) then
     FStorage := AStorage
   else
@@ -1730,10 +1734,16 @@ begin
 end;
 
 function TFeatureFlagManager.GetFlag(const AKey: string): TFeatureFlag;
+var
+  LTemp: TFeatureFlag;
 begin
   FLock.Enter;
   try
-    if not FFlags.TryGetValue(AKey, Result) then
+    if not FFlags.TryGetValue(AKey, LTemp) then
+      Result := nil
+    else if Assigned(LTemp) then
+      Result := LTemp.Clone
+    else
       Result := nil;
   finally
     FLock.Leave;
@@ -2012,6 +2022,14 @@ constructor TFeatureFlagBuilder.Create(const AKey: string);
 begin
   inherited Create;
   FFlag := TFeatureFlag.Create(AKey);
+end;
+
+destructor TFeatureFlagBuilder.Destroy;
+begin
+  // CR-4876 fix: free flag if Build was never called (ownership not transferred)
+  if Assigned(FFlag) then
+    FreeAndNil(FFlag);
+  inherited;
 end;
 
 function TFeatureFlagBuilder.WithName(const AName: string): TFeatureFlagBuilder;

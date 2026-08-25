@@ -1,4 +1,4 @@
-﻿unit DeepBase.Feedback;
+unit DeepBase.Feedback;
 
 {*******************************************************************************
   DeepBase Framework - User Feedback System
@@ -1056,7 +1056,10 @@ var
 {$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
-  Result := GetDiskFreeSpaceEx(PChar(TPath.GetHomePath[1] + ':\'),
+  // CR-4708 fix: guard against empty GetHomePath
+  var LHome := TPath.GetHomePath;
+  if LHome.Length < 2 then LHome := 'C:';
+  Result := GetDiskFreeSpaceEx(PChar(LHome[1] + ':\'),
     LFreeBytes, LTotalBytes, @LTotalFreeBytes);
   if Result then
   begin
@@ -1809,8 +1812,9 @@ end;
 function TFeedbackManager.GenerateTrackingCode: string;
 begin
   // ����6λ�׶�׷����
+  var G: TGUID; CreateGUID(G); // CR-4810 fix: ensure uniqueness across concurrent calls
   Result := FormatDateTime('yymmdd', Now) + '-' +
-            Copy(THashMD5.GetHashString(FormatDateTime('hhnnsszzz', Now)), 1, 6).ToUpper;
+            Copy(THashMD5.GetHashString(FormatDateTime('hhnnsszzz', Now) + GUIDToString(G)), 1, 6).ToUpper;
 end;
 
 
@@ -1841,9 +1845,8 @@ begin
       AFeedback.SubmittedAt := Now;
     end;
   except
-    // �ύʧ�ܣ��������߶���
-    FOfflineQueue.Enqueue(AFeedback);
-    Result := False;
+    on E: Exception do
+      Result := False; // CR-122 fix: no enqueue (ownership ambiguity with OwnsObjects queue)
   end;
 end;
 
@@ -1855,7 +1858,12 @@ begin
   begin
     LFeedback := FOfflineQueue.Peek;
     if InternalSubmit(LFeedback) then
-      FOfflineQueue.Dequeue
+    begin
+      // CR-122 fix: release the Extract-ed object after successful retry
+      var LDone := FOfflineQueue.Dequeue;
+      if Assigned(LDone) then
+        LDone.Free;
+    end
     else
       Break;  // ��Ȼʧ�ܣ�ֹͣ����
   end;
@@ -2117,7 +2125,9 @@ begin
   if Assigned(FPollingThread) then
   begin
     FPollingThread.Terminate;
-    FPollingThread := nil;
+    // CR-123 fix: wait for thread exit before nil-ing the reference
+    FPollingThread.WaitFor;
+    FreeAndNil(FPollingThread);
   end;
 end;
 

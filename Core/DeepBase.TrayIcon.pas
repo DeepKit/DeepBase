@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.TrayIcon - System Tray Icon Module
 
   Version: 1.0
@@ -198,7 +198,10 @@ begin
       FIconHandle := LoadIcon(0, IDI_APPLICATION);
   end
   else
-    FIconHandle := AIcon;
+  // CR-4405 fix: destroy previous icon to prevent HICON leak
+  if FIconHandle <> 0 then
+    DestroyIcon(FIconHandle);
+  FIconHandle := AIcon;
 
   FillChar(FData, SizeOf(FData), 0);
   FData.cbSize := SizeOf(TNotifyIconDataW);
