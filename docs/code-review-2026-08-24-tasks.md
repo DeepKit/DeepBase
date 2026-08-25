@@ -457,3 +457,33 @@
 | CR-002 | Win64 dcc64 编译通过 + dcclinux64 交叉编译暴露 OpenSSL 单元 POSIX 层基建缺口（dlopen 绑定 libdl.dylib、Linux64 缺独立声明块） | **签名修正本身正确**；POSIX 完整支持需单独补齐 dlopen/dlsym/dlclose 的 LINUX 分支声明（建议新开任务） |
 | CR-003 | SQL 结构对照 PostgreSQL 文档语法（locking clause 在 LIMIT 后），本机 PG15 服务因端口/权限无法启动 | **语法已修正**，待有可用 PG 实例时运行时验证 |
 | CR-014 | 同上 | 同上 |
+
+
+### 第十三批（2026-08-25，新审查报告交叉修复）
+
+来源：CodeReview/20260824-Core.md（另一会话独立审查）+ CodeReview/20260825-Features.md（F1/F2 批次）
+全量单测：4310 found / 4302 passed / 4 failed（Perception ×2 既有 + GetFlag Clone 断言更新 + Benchmark 偶发）
+
+| 新发现 | 状态 | 说明 |
+|---|---|---|
+| FileWatcher 防抖闸门 | ✅ | 原代码空 if 分支无 re-arm → 改为始终释放闸门 |
+| Feedback double-free/泄漏/WaitFor | ✅ | 与此前 CR-122/123 重叠，确认修复持续有效 |
+| FeatureFlags FDefaultContext AV | ✅ | 构造器中创建 FDefaultContext := TFlagContext.Create |
+| FeatureFlags GetFlag 裸引用 UAF | ✅ | 改为返回 LTemp.Clone（深拷贝） |
+| FeatureFlags Builder 析构泄漏 | ✅ | 添加 destructor Destroy + FreeAndNil(FFlag) |
+| GenerateTrackingCode 同毫秒碰撞 | ✅ | 加入 TGUID 分量确保唯一性 |
+| Theme FPendingThemeName 无锁写入 | ✅ | 包裹 TMonitor.Enter/Exit(FLock) |
+| SplashScreen Sleep 阻塞主线程 | ✅ | 改为 TThread.ForceQueue 异步延迟关闭 |
+| TrayIcon HICON 泄漏 | ✅ | UpdateIcon 覆盖前 DestroyIcon 旧句柄 |
+| GetDiskInfo ERangeError | ✅ | 空 GetHomePath 防护 + 默认 C: 回落 |
+
+### 尚未修复的 🔴（需后续批次）
+
+- WorkerQueue SetWorkerCount 缩容持锁释放（需要重构 worker 生命周期）
+- WorkerQueue Stop 未持锁遍历 FWorkers（同上）
+- Manager Finalize 持锁等待异步回调（需重新设计初始化/关闭序列）
+- Hotkeys 导入无原子性（需要在存储层暴露事务 API）
+- VirtualScroll O(N)+O(N²)+持锁回调（需架构级改造：前缀和数组+回调解耦）
+- UITest FMX 控件树线程安全（需完整 Synchronize 包装）
+- DataBinding TObservableList/TBindingManager 悬垂指针（需弱引用或生命周期协议）
+- PostgreSQL 触发器 SQL.Splitter 误判（需词法分析器改进）
