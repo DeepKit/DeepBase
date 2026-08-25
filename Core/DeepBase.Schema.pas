@@ -92,7 +92,12 @@ const
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
     '  (''DeepBase.AutoDiagnose'', ''True'', ''Boolean'', ''DeepBase'', ''Auto diagnose on startup'', ''True'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
     'INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES ' +
-    '  (''DeepBase.AutoFix'', ''False'', ''Boolean'', ''DeepBase'', ''Auto fix issues'', ''False'') ON CONFLICT (Key) DO NOTHING;';
+    '  (''DeepBase.AutoFix'', ''False'', ''Boolean'', ''DeepBase'', ''Auto fix issues'', ''False'') ON CONFLICT (Key) DO NOTHING;' + #13#10 +
+
+    // CR-315(Owner 决策A): 存量库一次性迁移——历史种子误用 App.LogLevel 键，
+    // 与读取常量 SConfigKeyLogLevel('Log.Level') 永不匹配。幂等改名：
+    // 已迁移的库 0 行受影响，用户既有设置无缝延续。
+    'UPDATE Settings SET Key = ''Log.Level'' WHERE Key = ''App.LogLevel'';';
   
   // 3. FormStates - Window position and state persistence
   SQL_TIER0_FORM_STATES =

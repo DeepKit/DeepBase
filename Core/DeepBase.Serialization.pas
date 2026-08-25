@@ -1,4 +1,4 @@
-﻿unit DeepBase.Serialization;
+unit DeepBase.Serialization;
 
 (*******************************************************************************
   DeepBase Serialization Framework
@@ -220,7 +220,7 @@ type
     function ValueToJson(const AValue: TValue; AContext: TSerializationContext): TJSONValue;
     function RecordToJson(const AValue: TValue; AContext: TSerializationContext): TJSONObject;
     function JsonToRecord(AJson: TJSONObject; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
-    function ObjectToJson(AObject: TObject; AContext: TSerializationContext): TJSONObject;
+    function ObjectToJson(AObject: TObject; AContext: TSerializationContext; AIsRoot: Boolean = False): TJSONObject;
     function ArrayToJson(const AValue: TValue; AContext: TSerializationContext): TJSONArray;
     
     function JsonToValue(AJson: TJSONValue; ATypeInfo: PTypeInfo; AContext: TSerializationContext): TValue;
@@ -949,7 +949,7 @@ begin
       ValueToJson(LField.GetValue(AValue.GetReferenceToRawData), AContext));
 end;
 
-function TJsonSerializer.ObjectToJson(AObject: TObject; AContext: TSerializationContext): TJSONObject;
+function TJsonSerializer.ObjectToJson(AObject: TObject; AContext: TSerializationContext; AIsRoot: Boolean): TJSONObject;
 var
   LType: TRttiType;
   LProp: TRttiProperty;
@@ -998,6 +998,14 @@ begin
         AContext.PopPath;
       end;
     end;
+
+    // 决策3(CR-283): 根对象可实例化却产出 0 个字段 = 典型的静默数据丢失
+    // (普通 public 属性未加 [Serialize]/{$M+})。按 Owner 决策快速失败并指路。
+    if AIsRoot and (Result.Count = 0) then
+      raise ESerializationException.CreateFmt(
+        '%s 序列化结果为空: 未找到任何可序列化属性。请为属性添加 [Serialize] 特性，' +
+        '或为类启用 {$M+}/继承 TPersistent。',
+        [AObject.ClassName]);
   finally
     AContext.LeaveObject(AObject);
   end;
@@ -1019,7 +1027,7 @@ function TJsonSerializer.DoSerialize(AObject: TObject; AContext: TSerializationC
 var
   LJson: TJSONObject;
 begin
-  LJson := ObjectToJson(AObject, AContext);
+  LJson := ObjectToJson(AObject, AContext, True); // CR-决策3: 根对象启用空结果诊断
   try
     if Assigned(LJson) then
     begin

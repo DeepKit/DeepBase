@@ -259,6 +259,7 @@ uses
   Test.Regression.CR20260824_P0Batch3 in 'Regression\Test.Regression.CR20260824_P0Batch3.pas',
   Test.Regression.CR20260824_P0Batch4 in 'Regression\Test.Regression.CR20260824_P0Batch4.pas',
   Test.Regression.CR20260824_P0Batch5 in 'Regression\Test.Regression.CR20260824_P0Batch5.pas',
+  Test.Regression.CR20260824_OwnerDecisions in 'Regression\Test.Regression.CR20260824_OwnerDecisions.pas',
   Test.Regression.BUG320_FileWatcherLifecycle in 'Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas',
   Test.Regression.BUG324_WorkerQueueCallbackSafety in 'Regression\Test.Regression.BUG324_WorkerQueueCallbackSafety.pas',
   Test.Regression.BUG325_WorkerQueueTimeout in 'Regression\Test.Regression.BUG325_WorkerQueueTimeout.pas',

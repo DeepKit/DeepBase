@@ -270,6 +270,7 @@ type
   private
     FLimiters: TDictionary<string, IRateLimiter>;
     FLock: TCriticalSection;
+    FFailOpenOnUnknownLimit: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -286,6 +287,11 @@ type
     
     function GetLimiter(const Name: string): IRateLimiter;
     function HasLimit(const Name: string): Boolean;
+
+    /// <summary>CR-294(Owner 决策B): 限额名不存在时的策略。
+    /// False(默认)=fail-closed 拒绝；True=fail-open 放行(仅限非关键路径显式开启)。</summary>
+    property FailOpenOnUnknownLimit: Boolean
+      read FFailOpenOnUnknownLimit write FFailOpenOnUnknownLimit;
     
     class function Instance: TRateLimitManager;
     class procedure ReleaseInstance;
@@ -1259,6 +1265,9 @@ begin
   inherited Create;
   FLimiters := TDictionary<string, IRateLimiter>.Create;
   FLock := TCriticalSection.Create;
+  // CR-294(Owner 决策B): 默认 fail-closed——限额名不存在(拼写错误/配置
+  // 未加载)时拒绝并保持可观测，而非静默放行裸奔。非关键路径可显式打开。
+  FFailOpenOnUnknownLimit := False;
 end;
 
 destructor TRateLimitManager.Destroy;
@@ -1306,11 +1315,14 @@ function TRateLimitManager.Check(const LimitName: string; const Key: string): Bo
 var
   Limiter: IRateLimiter;
 begin
-  Result := True;
   FLock.Enter;
   try
+    // CR-294(Owner 决策B): 未知限额默认拒绝(fail-closed)，拼写错误/配置
+    // 未加载不再静默放行；非关键路径可经 FailOpenOnUnknownLimit 显式放行
     if FLimiters.TryGetValue(LimitName, Limiter) then
-      Result := Limiter.TryAcquire(Key);
+      Result := Limiter.TryAcquire(Key)
+    else
+      Result := FFailOpenOnUnknownLimit;
   finally
     FLock.Leave;
   end;
@@ -1337,10 +1349,14 @@ var
 begin
   FLock.Enter;
   try
+    // CR-294(Owner 决策B): 与 Check 同策略；拒绝时给 60s 重试窗口，
+    // 避免调用方 ExecuteOrWait 拿到 0 值陷入忙等
     if FLimiters.TryGetValue(LimitName, Limiter) then
       Result := Limiter.Acquire(Key)
+    else if FFailOpenOnUnknownLimit then
+      Result := TRateLimitResult.Allow(MaxInt, Now)
     else
-      Result := TRateLimitResult.Allow(MaxInt, Now);
+      Result := TRateLimitResult.Deny(60000, Now);
   finally
     FLock.Leave;
   end;

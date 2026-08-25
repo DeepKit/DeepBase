@@ -614,16 +614,27 @@ begin
 end;
 
 function TLogFilter.WithLevel(ALevel: TLogLevel): TLogFilter;
+var
+  I: Integer;
 begin
   Result := Self;
-  SetLength(Result.Levels, 1);
-  Result.Levels[0] := ALevel;
+  // CR-281b(Owner 决策A): 链式调用改追加语义(与 WithSource 一致)，
+  // WhereLevel(Warn).WhereLevel(Error) 现在表示两者皆收；去重防重复条件
+  for I := 0 to High(Result.Levels) do
+    if Result.Levels[I] = ALevel then
+      Exit;
+  SetLength(Result.Levels, Length(Result.Levels) + 1);
+  Result.Levels[High(Result.Levels)] := ALevel;
 end;
 
 function TLogFilter.WithLevels(const ALevels: TArray<TLogLevel>): TLogFilter;
+var
+  I: Integer;
 begin
   Result := Self;
-  Result.Levels := ALevels;
+  // CR-281b(Owner 决策A): 追加而非覆盖
+  for I := 0 to High(ALevels) do
+    Result := Result.WithLevel(ALevels[I]);
 end;
 
 function TLogFilter.WithSource(const ASource: string): TLogFilter;

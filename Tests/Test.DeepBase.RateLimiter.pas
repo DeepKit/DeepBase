@@ -920,8 +920,8 @@ end;
 
 procedure TTestRateLimitManager.Test_Check_NonExistentLimit;
 begin
-  // Non-existent limit should return True (allow by default)
-  Assert.IsTrue(FManager.Check('nonexistent'));
+  // CR-294(Owner 决策B): 未知限额默认 fail-closed 拒绝，不再静默放行
+  Assert.IsFalse(FManager.Check('nonexistent'));
 end;
 
 procedure TTestRateLimitManager.Test_CheckAll_AllPass;
