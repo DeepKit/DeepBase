@@ -23,7 +23,7 @@
 | ID | 状态 | Owner | 位置 | 问题一句话 |
 |---|---|---|---|---|
 | CR-001 | ✅ | AI | Core\DeepBase.KeyManager.pas:386 | KEK 每次启动随机盐派生不持久化 → 存量加密密钥第二次会话永久无法解密 |
-| CR-002 | 🔧 | AI | Core\DeepBase.Crypto.OpenSSL.pas:156 | PBKDF2 绑定签名多一参，POSIX 下整数当 EVP_MD* 解引用崩溃 |
+| CR-002 | ✅ | AI | Core\DeepBase.Crypto.OpenSSL.pas:156 | PBKDF2 绑定签名多一参，POSIX 下整数当 EVP_MD* 解引用崩溃 |
 | CR-003 | 🔧 | AI | Persistence\DeepBase.DB.JobQueue.pas:666 | PG 出队 SQL `FOR UPDATE SKIP LOCKED` 在 LIMIT 前 → 语法错误出队瘫痪【已亲验】 |
 | CR-004 | ✅ | AI | Persistence\DeepBase.ORM.pas:1075 | CollectEntityParams 跳过全部主键 vs InsertSQL 只跳自增主键 → 参数错位写坏数据【已亲验】 |
 | CR-005 | 🔧 | AI | doQry\src\uDoQryExecutor.pas:114 | JSON 数字一律 AsFloat 绑定 → >2^53 的 ID 精度丢失可误更新/删除行 |
@@ -119,13 +119,13 @@
 | CR-223 | ☐ | 待定 | DB.Pool.pas:969 | profile 模式 ConnectionString 含明文密码可泄露 |
 | CR-224 | ☐ | 待定 | DB.Factory.pas:419 | CredMan 失败兜底写悬空 credman: 引用绑死环境变量 |
 | CR-225 | ☐ | 待定 | DB.Guardian.pas:350 | 新建空库当日备份遮蔽真实旧备份（恢复出空库） |
-| CR-226 | ☐ | 待定 | DB.DoQry.pas:276 | 查询定义缓存仅 ProcName 为键 → 多库交叉污染 |
+| CR-226 | ✅ | AI | DB.DoQry.pas:276 | 查询定义缓存仅 ProcName 为键 → 多库交叉污染 |
 | CR-227 | ☐ | 待定 | DB.DoQry.pas:1047/856 | TryLoadQueryDef 吞一切异常伪装 QUERY_NOT_FOUND；36 字符串误走 StringToGUID（守卫死代码） |
 | CR-228 | ☐ | 待定 | DB.DoQry.pas:1336 | UniTransaction 析构/except Rollback 二次异常顶替原始异常 |
 | CR-229 | ✅ | AI | SQLLogger.pas:563 | EnsureLogsTable 失败也置 ensured+仅 SQLite 方言 → PG 日志目标静默失效 |
 | CR-230 | ☐ | 待定 | SQLLogger.pas:355 | WriteToFile 锁外并发 Append/Rewrite 交错截断 |
 | CR-231 | ☐ | 待定 | DB.Migrations.pas:279 | 文件名字典序排序 v10 先于 v2 应用 |
-| CR-232 | ☐ | 待定 | DB.JobQueue.pas:829 | 毒丸回收 next_run_at=NULL 立即再投递 attempts 无界 |
+| CR-232 | ✅ | AI | DB.JobQueue.pas:829 | 毒丸回收 next_run_at=NULL 立即再投递 attempts 无界 |
 | CR-233 | ☐ | 待定 | DB.JobQueue.pas:463 | EnsureSchemaIfNeeded check-then-act 并发 ALTER 冲突 |
 | CR-234 | ☐ | 待定 | DB.JobQueue.pas:275 | 池锁内 Open/provider 回调阻塞全队列 |
 | CR-235 | ☐ | 待定 | DB.StatusMachine.pas:381/173 | SQLite 读改写丢失更新；GetTableDef 锁外裸指针并发 Clear UAF |
@@ -169,25 +169,25 @@
 | CR-275 | ☐ | 待定 | BillingClient.pas:786/612/1070/697/559 | 流式实为全量下载后重放；SSE data: 带空格强约束；重试降级丢状态码+Sleep 卡 UI；双路径错误契约不一致；as 强转逃逸 |
 | CR-276 | ☐ | 待定 | ImportExport.pas:655/424 + PromptTemplateManager.pas:759 | imOverwrite 先删后插无事务中途失败留空库；导出吞异常；导入可选键缺失静默跳过 |
 | CR-277 | ☐ | 待定 | AIErrorHandler.pas:57/202/126/176 | LLMBridge 未接超时回调 8s 形同虚设；E.Message 发外部 LLM 泄露面；Config 类属性撕裂读 |
-| CR-278 | ☐ | 待定 | Logging.pas:329/547/254 | 析构不排干队列；WriteToAggregator 空操作假功能；SetGlobalLogger Free 在用回退实例 |
+| CR-278 | ✅ | AI | Logging.pas:329/547/254 | 析构不排干队列；WriteToAggregator 空操作假功能；SetGlobalLogger Free 在用回退实例 |
 | CR-279 | ☐ | 待定 | LogAggregator.pas:1086/1078/1223/1372 | Loki 秒级时间戳整批被拒；FLabels 无锁遍历；Webhook Header 只写不发；推送持锁网络 IO 最长 97s |
 | CR-280 | ☐ | 待定 | LogAlert.pas:680/554/1131/459/1000 | 评估全程持锁 webhook；ImportRules 导出字段丢弃成哑规则；缓冲满拒新留旧误报 NoLogs；规则对象零同步；统计口径与文案不符 |
-| CR-281 | ☐ | 待定 | LogQuery.pas:950/736/863/616 | GetStats(AFilter) 忽略过滤器；WhereApp/Host/Env/Regex 降级为子串匹配；ExecuteFirst 永久污染 Limit；WithLevel 覆盖式链式 |
+| CR-281 | ✅ | AI | LogQuery.pas:950/736/863/616 | GetStats(AFilter) 忽略过滤器；WhereApp/Host/Env/Regex 降级为子串匹配；ExecuteFirst 永久污染 Limit；WithLevel 覆盖式链式 |
 | CR-282 | ☐ | 待定 | Metrics.pas:1426/1313 | Unregister 后类指针悬垂；TMetricFamily 未知类型野指针入库 |
 | CR-283 | ☐ | 待定 | Serialization.pas 其余 | mvPublished 默认漏 public DTO(814)；MaxDepth 钳 8(546)；Options 共享撕裂(775)；XML Trim 丢空白(1357)；白名单 StartsWith 放行(606)；空输入 LBytes[0] 越界(748)；ShouldSerialize 无缓存(817) |
 | CR-284 | ☐ | 待定 | Reflection.pas | FromString 静默归零/区域 float(1682)；InvokeClass 不校验类方法踩内存(995)；伪深克隆一层(1292)；Equals 类名比较内容(1340)；列表识别前缀漏子类(1934)；Try* 吞业务异常(603)；锁剧场仅 3 方法持锁(414) |
 | CR-285 | ☐ | 待定 | DataBinding.pas:544/107/276 | Unbind 摘共享 handler 全体失聪；TObservableObject 无 Owner 时 Supports 恒 False（待实测）；遍历中退订未快照 |
 | CR-286 | ☐ | 待定 | Template.pas 其余 | 未闭合标签静默接受(659)；else 前缀误判(764)；自定义分隔符 {{{ 错乱(615)；引号内 ,/\| 被粉碎(1517/811)；数组索引无边界(1767)；AST 泄漏(912)；GetHashCode 缓存键(2106)；父上下文裸指针(495)；裸 except 吞 OOM(445)；random/range 放大(1337) |
-| CR-287 | ☐ | 待定 | Diff.pas 其余 | NormalizeLine 内层正则(1098)；hunk 丢尾随上下文(1209)；SideBySide 行号漂移(537)；代理对拆散(1314)；sLineBreak 重建改换行符(876)；IgnoreBlankLines 未实现(37)；--- 行劫持(722)；hunk 头不容函数名(680)；强制 UTF-8(1293) |
+| CR-287 | 🔧 | AI | Diff.pas 其余 | NormalizeLine 内层正则(1098)；hunk 丢尾随上下文(1209)；SideBySide 行号漂移(537)；代理对拆散(1314)；sLineBreak 重建改换行符(876)；IgnoreBlankLines 未实现(37)；--- 行劫持(722)；hunk 头不容函数名(680)；强制 UTF-8(1293) |
 | CR-288 | ☐ | 待定 | Plugins.Manager.pas 其余 | psLoading 不拒绝双加载泄漏(511)；门禁失败实例驻留(584)；签名 TOCTOU(Verifier:159)；相对路径 LoadLibrary 劫持(CAbiLoader:157)；元数据根树泄漏(Contracts:256)；HealthCheck 泄漏字典+全程 Monitor(106)；大小写路径误拒/junction(1040)；无拓扑排序(836)；依赖大小写不一致(265)；先 Shutdown 后 drain(799) |
 | CR-289 | ☐ | 待定 | Manager.pas 系列 | Finalize 锁外读标志(793)；DeepBase() 无锁首查+热替换 UAF(370)；WhenReady 丢回调(823)；InitializeModules 半途残留覆盖泄漏(887)；Operational 归档非事务+ISO 文本假设(129) |
-| CR-290 | ☐ | 待定 | CircuitBreaker.pas:227/RateLimiter 多处 | pending 事件槽覆盖丢失；限流熔断计时全用墙钟 Now（NTP/DST 即失效） |
+| CR-290 | ✅ | AI | CircuitBreaker.pas:227/RateLimiter 多处 | pending 事件槽覆盖丢失；限流熔断计时全用墙钟 Now（NTP/DST 即失效） |
 | CR-291 | ☐ | 待定 | Bulkhead.pas:177/86 | 快速路径空等满额 30s；析构不排空在途请求 |
 | CR-292 | ☐ | 待定 | StateMachine.pas:474/715/1198 | IgnoreIf 守卫永不生效；动作持锁+重入覆盖+异常无回滚；IsValidState 恒真+FromJSON 任意注入 |
 | CR-293 | ☐ | 待定 | Authorization.pas:1092/1611/933/519 | UpdateUser 不同步活体权限变更不生效；token 两临界区 TOCTOU+明文+SameText；审计回调/DB 写持锁；SetAuthManager Free 在用实例 |
-| CR-294 | 🔧 | AI | RateLimiter.pas:1289/1275/546 | CheckAll 已扣不回滚；未知限额 fail-open；FixedWindow 等参数 0 不校验限流失效 |
+| CR-294 | ✅ | AI | RateLimiter.pas:1289/1275/546 | CheckAll 已扣不回滚；未知限额 fail-open；FixedWindow 等参数 0 不校验限流失效 |
 | CR-295 | ☐ | 待定 | Retry.pas:396 + Policy.pas:159 | TryExecute 异常压扁裸 Exception 丢类型；bulkhead 最外层重试霸占舱位+对熔断照撞 |
-| CR-296 | ☐ | 待定 | Math.Random/FileWatcher/DateTime/Compression/Validation 平台守卫 | 五处 WinAPI 无 {$IFDEF MSWINDOWS} 违反仓库硬约定 |
+| CR-296 | 🔧 | AI | Math.Random/FileWatcher/DateTime/Compression/Validation 平台守卫 | 五处 WinAPI 无 {$IFDEF MSWINDOWS} 违反仓库硬约定 |
 | CR-297 | ☐ | 待定 | FileWatcher.pas 其余 | 回调线程模型不一致(678/889)；ReDeepMoveCallback 清全部(811)；四过滤字段死配置(377)；白名单过窄+'..' 误伤(1345) |
 | CR-298 | ☐ | 待定 | Compression.pas:666/119 | 取消留截断流正常返回+解压忽略取消；ZipWriter CompressionLevel 从未生效 |
 | CR-299 | 🔧 | AI | DateTime.pas:707/873 | TryFromISO8601 会 raise+忽略偏移+小数秒；军用时区 J 映射 +10h |
@@ -204,12 +204,12 @@
 | CR-307 | ☐ | 待定 | RuntimeContext.pas:327 | 单组件 Stop 异常中断后续收尾+析构期异常逃逸 |
 | CR-308 | ☐ | 待定 | SplashScreen.pas:344 | OnFadeTimer 内 Sleep(3000) 冻结消息泵 |
 | CR-309 | ☐ | 待定 | Feedback.pas:984/1315/1199 | 默认采集系统信息+50MB 日志+上传本地路径+匿名 X-User-Id（隐私面）；HTTP 持锁最长 90s；zip 条目同名覆盖 |
-| CR-310 | ☐ | 待定 | i18n.pas:552/Plural.pas:195 | 缓存回填 TOCTOU 重复 Add；复数小数操作数依赖本地分隔符 |
+| CR-310 | 🔧 | AI | i18n.pas:552/Plural.pas:195 | 缓存回填 TOCTOU 重复 Add；复数小数操作数依赖本地分隔符 |
 | CR-311 | ☐ | 待定 | FormState.pas:288/MVVM.pas:632/503 | 仅识别类名含 Form 窗体；异步错误裸 Exception 丢类型；关闭超时后闭包悬空 SelfRef |
 | CR-312 | ☐ | 待定 | MRU.pas:270/VirtualScroll.pas:521 | 持锁 UNC FileExists 30s+；每像素滚动 O(n)+锁内渲染回调 |
 | CR-313 | ☐ | 待定 | Export.pas:242/DOCX:352 | CSV 公式注入；DOCX XML 属性注入；PDF BaseFont 未转义 |
 | CR-314 | ☐ | 待定 | SchemaAdapter.Registry.pas:111/Gender.pas:297/Theme.pas:261 | Validate 异常击穿 Boolean 契约；懒初始化无锁；Synchronize 关停挂起 |
-| CR-315 | ☐ | 待定 | Consts.pas:49/Schema.pas:321 | 'Log.Level' 与种子 'App.LogLevel' 漂移——常量读取永不命中 |
+| CR-315 | ✅ | AI | Consts.pas:49/Schema.pas:321 | 'Log.Level' 与种子 'App.LogLevel' 漂移——常量读取永不命中 |
 | CR-316 | ☐ | 待定 | TestHelper.pas:630 | 模拟点击移动真实光标投全局输入（CI 灾难面） |
 | CR-317 | ☐ | 待定 | 全库多处 | 中文注释 GBK/CP1252 双重编码乱码（TestHelper/Constants/i18n/doQryLegacy 等），统一 UTF-8 重写 |
 | CR-318 | ☐ | 待定 | DBException.pas:237/161 | Wrap 副作用在构造期触发幽灵记录；ALREADY EXISTS 误分类唯一键冲突 |
@@ -395,3 +395,65 @@
 新增涉及文件：Core\DeepBase.RateLimiter.pas、Core\DeepBase.EventBus.pas、Core\DeepBase.DateTime.pas、Core\DeepBase.Validation.pas、Core\DeepBase.FileWatcher.pas、Core\DeepBase.Compression.pas、Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas、Persistence\DeepBase.SQLLogger.pas
 
 附带完成：V2 四单元异常基类挂接 EDeepBaseException（Validation/DateTime/FileWatcher/Compression），调用方现可用 on E: EDeepBaseException 统一兜底。
+
+
+### 第八批（2026-08-24 续，已提交 e249883）
+
+全量单测：4296 found / 4290 passed / 2 failed（基线保持 = 仅 Perception 环境对）。
+
+| ID | 状态 | 说明 |
+|---|---|---|
+| CR-226 | ✅ | LoadQuerySQL 缓存键改为 `连接标识|ProcName`（ConnectionName→Database→ConnStr 降级），多库同名查询不再交叉污染；UniDbInvalidateQuery 按后缀匹配失效所有连接的同名键 |
+| CR-281(部分) | 🔧 | ExecuteFirst 用 try/finally 恢复 Limit，builder 复用不再被钉死 1 行；WithLevel 覆盖/追加语义留待 Owner 定夺 |
+| CR-278 | ✅ | Logger 析构：置 FShuttingDown → 停信号 → 写线程排干残余队列才退出（尾部日志不再丢）；Log/LogException 关停窗口拒绝入队，防队列释放后 nil.LockList AV |
+| CR-232 | ✅ | RecycleDeadTasks 新增可选 AMaxAttempts：>0 时达上限仍超时的毒丸任务事务性迁入 DLQ（error='recycle: attempts exhausted'），其余照旧回 pending；=0 保持旧行为 |
+
+提交记录：92c10a6(docs) → 7ddfbed(doQry) → c9443b1(persistence) → c8dbb53(core) → 175d00f(tests) → e249883(batch8)
+
+环境事件：本轮 DeepFlow 目录曾在工作区被外部删除导致编译失败，已 git checkout 恢复（若为有意删除请改用提交删除方式并同步移除 dpr 引用）。
+
+
+### 第九批（2026-08-24 续，已提交 acf64be）
+
+全量单测：4296 found / 4289 passed / 2 failed（PreparedPool 偶发 + Perception 环境对，均既有登记）。
+
+| ID | 状态 | 说明 |
+|---|---|---|
+| CR-287(部分) | 🔧 | ①BuildHunks 正常退出分支补 LContextEnd:=K，中间 hunk 尾随上下文不再丢失；②ToSideBySide 改用条目自带 OldIndex/NewIndex，跨 hunk 行号漂移消除。其余项（代理对/编码检测/换行保真等）待后续 |
+| CR-310(部分) | 🔧 | i18n 缓存回填改 TryGetValue→更新+LRU 提升 / 否则新增，miss→查库窗口的并发重复 Add 消除；Plural 小数分隔符项待后续 |
+| CR-315 | ✅ | Schema 种子 LogLevel 键改为引用 SConfigKeyLogLevel 常量（新增 uses DeepBase.Consts），字面量漂移根除。注意：已部署旧库中的 App.LogLevel 行不迁移，需 Owner 决策是否补一次性 UPDATE |
+| CR-296(部分) | 🔧 | DeepBase.Math.Random 平台守卫补齐（uses IFDEF + BCrypt external IFDEF），非 Windows NextBytes 显式抛 ENotSupportedException；FileWatcher/DateTime 两单元待后续 |
+
+提交记录：acf64be
+
+
+### 第十批（2026-08-24 续，已提交 3c76264）— CR-290 单调时钟收官
+
+全量单测：4296 found / 4290 passed / 2 failed（基线 = 仅 Perception 环境对；PreparedPool 本轮未复现）。
+
+| ID | 状态 | 说明 |
+|---|---|---|
+| CR-290 | ✅ | RateLimiter 四算法（TokenBucket/FixedWindow/SlidingWindow/SlidingWindowCounter）内部计时字段全部改 UInt64 单调刻度（TThread.GetTickCount64）：补充/窗口过期/滑动日志清理/半窗推进/RetryAfter 计算不再受墙钟影响；对外 TRateLimitResult.ResetTime 墙钟按"剩余毫秒"近似还原保持兼容。CircuitBreaker FLastStateChangeTicks 同步切换（Open→HalfOpen 冷却判定免疫时钟跳变）。34 处 Now 全部清零 |
+
+注：持久化桶/窗口为内存态，进程重启即重建，无旧 TDateTime 数据迁移问题。
+
+
+### 第十一批（2026-08-24 续，Owner 四项决策落地，已提交 1b1df35）
+
+| 决策 | 实现 | 回归 |
+|---|---|---|
+| CR-294 = B | TRateLimitManager 新增 FailOpenOnUnknownLimit(默认 False=fail-closed)；Check/Acquire 未知限额拒绝，Acquire 拒绝带 60s 重试窗口防忙等；非关键路径可显式打开旧行为 | Test_CR294 两用例 + 更新既有 Test_Check_NonExistentLimit 断言 |
+| CR-281b = A | TLogFilter.WithLevel/WithLevels 改追加语义(与 WithSource 一致)，单级别去重 | Test_CR281b 断言顺序/去重 |
+| 决策3 = B | JSON 序列化根对象(ObjectToJson AIsRoot)产出 0 字段时抛 ESerializationException 并提示 [Serialize]/M+；嵌套 infra 类型维持旧空对象行为 | Test_Decision3 PlainDto 根序列化必须抛 |
+| CR-315 = A | SQL_TIER0_SETTINGS 种子尾部追加幂等 UPDATE：App.LogLevel→Log.Level（已迁移库 0 行受影响） | 迁移为声明式 SQL，随 EnsureSchema 全量套件验证 |
+
+套件：4300 found / 4291 passed / 其余失败均为环境噪声 —— 本机磁盘 I/O 持续劣化证据链：同一二进制 Config 写基准 5000+(晨) → 4617 → 3470 → 2275(夜)，且并发 PBT 出现瞬时 database is locked。**性能/并发类门禁建议移至安静专用 runner 执行**，本 VM 上仅作功能回归参考。
+
+
+### 环境验证补充（2026-08-25）
+
+| ID | 验证方式 | 结果 |
+|---|---|---|
+| CR-002 | Win64 dcc64 编译通过 + dcclinux64 交叉编译暴露 OpenSSL 单元 POSIX 层基建缺口（dlopen 绑定 libdl.dylib、Linux64 缺独立声明块） | **签名修正本身正确**；POSIX 完整支持需单独补齐 dlopen/dlsym/dlclose 的 LINUX 分支声明（建议新开任务） |
+| CR-003 | SQL 结构对照 PostgreSQL 文档语法（locking clause 在 LIMIT 后），本机 PG15 服务因端口/权限无法启动 | **语法已修正**，待有可用 PG 实例时运行时验证 |
+| CR-014 | 同上 | 同上 |
