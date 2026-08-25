@@ -790,20 +790,28 @@ end;
 
 procedure TDeepBaseManager.Finalize;
 begin
-  if not FIsInitialized then
-    Exit;
-    
+  // CR-289 fix: FIsInitialized check moved inside lock to prevent race with
+  // concurrent Initialize; also WaitForPendingReadyTasks no longer holds
+  // the main lock during its 5-second wait, preventing potential deadlock
   TMonitor.Enter(FLock);
   try
-    // BIZ-R3-016 FIX: wait for pending WhenReady async tasks (finite timeout)
-    // before releasing modules, so callbacks can't dereference freed FLogger.
-    WaitForPendingReadyTasks;
+    if not FIsInitialized then
+      Exit;
+
+    // Release the lock while waiting for async callbacks so they can
+    // acquire it if needed (prevents deadlock), then re-acquire.
+    TMonitor.Exit(FLock);
+    try
+      WaitForPendingReadyTasks;
+    finally
+      TMonitor.Enter(FLock);
+    end;
 
     FinalizeModules;
 
     CloseConnection(FConfigDB);
     FStorage := nil;
-    
+
     FIsInitialized := False;
     FReadyFired := False;
     FRootPath := '';
