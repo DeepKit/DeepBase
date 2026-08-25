@@ -10,7 +10,15 @@ function ApplyLimitOffset(const SQL: string; Limit, Offset: Integer; DBType: TDB
 function EnsureReturningId(const SQL: string; const IdField: string; DBType: TDBType): string;
 function NeedsLastInsertRowId(DBType: TDBType): Boolean;
 
+
 implementation
+
+function PosTextCI(const ASub, ASrc: string): Integer;
+begin
+  // 编译验证修正: PosText 为已淘汰标识符, 以小写比较等价实现
+  Result := Pos(LowerCase(ASub), LowerCase(ASrc));
+end;
+
 
 function QuoteIdent(const Name: string; DBType: TDBType): string;
 begin
@@ -19,7 +27,7 @@ end;
 
 function HasLimitClause(const SQL: string): Boolean;
 begin
-  Result := PosText(' LIMIT ', ' ' + SQL + ' ') > 0;
+  Result := PosTextCI(' limit ', ' ' + SQL + ' ') > 0;
 end;
 
 function ApplyLimitOffset(const SQL: string; Limit, Offset: Integer; DBType: TDBType): string;
@@ -47,12 +55,12 @@ begin
   case DBType of
     dbPostgreSQL:
       begin
-        if PosText(' RETURNING ', S) = 0 then
+        if PosTextCI(' returning ', S) = 0 then
           S := S + ' RETURNING ' + IdField;
       end;
     dbSQLite:
       begin
-        // SQLite 不支�?RETURNING（老版本）。在执行器中通过 last_insert_rowid() 获取
+        // SQLite 不支�?RETURNING（老版本）。在执行器中通过 last_insert_rowid() 获取
       end;
   end;
   Result := S;

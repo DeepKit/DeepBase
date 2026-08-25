@@ -23,19 +23,29 @@ function JsonEscape(const S: string): string;
 var
   I: Integer;
 begin
+  // 编译验证修正: 原实现误用 C 风格双反斜杠字面量(非法)且缺少 else 分支，
+  // 导致普通字符全部被丢弃。现按 JSON 转义规范补齐。
   Result := '';
   for I := 1 to Length(S) do
     case S[I] of
       '"': Result := Result + '\"';
-      '\\': Result := Result + '\\';
-      #8: Result := Result + '\\b';
-      #9: Result := Result + '\\t';
-      #10: Result := Result + '\\n';
-      #12: Result := Result + '\\f';
-      #13: Result := Result + '\\r';
+      '\': Result := Result + '\\';
+      #8: Result := Result + '\b';
+      #9: Result := Result + '\t';
+      #10: Result := Result + '\n';
+      #12: Result := Result + '\f';
+      #13: Result := Result + '\r';
     else
       Result := Result + S[I];
     end;
+end;
+
+procedure SafeMove(const ASrc, ADest: string);
+begin
+  // 编译验证修正: System.IOUtils.TFile.Move 无三参 overwrite 重载
+  if TFile.Exists(ADest) then
+    TFile.Delete(ADest);
+  TFile.Move(ASrc, ADest);
 end;
 
 procedure RotateLogs;
@@ -48,11 +58,13 @@ begin
   for I := GLogMaxFiles - 1 downto 1 do
   begin
     if TFile.Exists(TPath.Combine(Dir, BasePath + '.' + I.ToString)) then
-      TFile.Move(TPath.Combine(Dir, BasePath + '.' + I.ToString), TPath.Combine(Dir, BasePath + '.' + (I+1).ToString), True);
+      SafeMove(TPath.Combine(Dir, BasePath + '.' + I.ToString),
+               TPath.Combine(Dir, BasePath + '.' + (I+1).ToString));
   end;
   if TFile.Exists(GLogFile) then
-    TFile.Move(GLogFile, TPath.Combine(Dir, BasePath + '.1'), True);
+    SafeMove(GLogFile, TPath.Combine(Dir, BasePath + '.1'));
 end;
+
 
 procedure EnsureLog;
 begin

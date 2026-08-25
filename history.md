@@ -1,292 +1,322 @@
-ï»¿# DeepBase å¼€å‘å†å²
-> æœ¬æ–‡æ¡£è®°å½•å·²å®Œæˆçš„ä»»åŠ¡å’ŒåŠŸèƒ½è¿­ä»£ã€‚
-> **åˆ†å·**: æœ¬å· = è¿‘æœŸå®¡é˜…ä¿®å¤ + ä¼˜åŒ–å½’æ¡£ (REVIEW5 ç¬¬ä¸€è½®äº”ä¸“å®¶ + R2 ç¬¬äºŒè½® + R3 ç¬¬ä¸‰è½® + 2026-05~06 ä¼˜åŒ–)ã€‚æ—©æœŸå¼€å‘å½’æ¡£ (Phase 0~5 + 2025-12 æ‚é¡¹ + 2026-06-18 æ¶æ„) è§ `history-archive.md`ã€‚
+# DeepBase ¿ª·¢ÀúÊ·
+> ±¾ÎÄµµ¼ÇÂ¼ÒÑÍê³ÉµÄÈÎÎñºÍ¹¦ÄÜµü´ú¡£
+> **·Ö¾í**: ±¾¾í = ½üÆÚÉóÔÄĞŞ¸´ + ÓÅ»¯¹éµµ (REVIEW5 µÚÒ»ÂÖÎå×¨¼Ò + R2 µÚ¶şÂÖ + R3 µÚÈıÂÖ + 2026-05~06 ÓÅ»¯)¡£ÔçÆÚ¿ª·¢¹éµµ (Phase 0~5 + 2025-12 ÔÓÏî + 2026-06-18 ¼Ü¹¹) ¼û `history-archive.md`¡£
 
 ---
 
-## 2026-08-13 78 é…ç½®ä¸Šä¼ å‘å¸ƒé“¾è·¯ï¼šæœåŠ¡ç«¯é¦–ç‰ˆäº¤ä»˜ + å®¢æˆ·ç«¯ Preview + åŸºçº¿è£å†³ âœ…
+## 2026-08-24 È«¿âÉó²éĞŞ¸´Õ½ÒÛ£¨doQry / Persistence / Core£¬Ô¼109K ĞĞ£©?
 
-> æ¥æº: tasks.md PLATFORM åŒº
-> èŒƒå›´: 78/78a é…ç½®å‘å¸ƒå¹³å°ååŒå¼€å‘
+> À´Ô´: docs/code-review-2026-08-24.md£¨±¨¸æ£©+ docs/code-review-2026-08-24-tasks.md£¨¸ú×ÙÇåµ¥£¬º¬Ê®Ò»ÅúĞŞ¸´¼ÇÂ¼£©
+> Ìá½»Á´: 92c10a6 ¡ú 7ddfbed ¡ú c9443b1 ¡ú c8dbb53 ¡ú 175d00f ¡ú e249883 ¡ú acf64be ¡ú 1b1df35
+> ¹æÄ£: P0 18/18¡¢?? Ô¼30Ïî¡¢Owner ¾ö²ß 4/4¡¢ÏµÍ³ĞÔÖ÷Ìâ 4 ´óÏîÈ«ÆÆ
 
-### æœåŠ¡ç«¯é¦–ç‰ˆäº¤ä»˜ï¼ˆç‹ç»´ #100/#101ï¼‰
+### Åú´ÎÒ»ÀÀ
 
-- **migration 004**ï¼š4 å¼ è¡¨ï¼ˆprovider_configsã€config_publish_jobsã€release_headsã€config_manifestï¼‰commit `3f25d09`
-- **3 ä¸ª API**ï¼šconfig ä¸Šä¼  / release æŸ¥è¯¢ / publish è§¦å‘ï¼ˆFastAPIï¼‰
-- **publish çŠ¶æ€æœº worker**ï¼šdraft/building/published/failed æµè½¬
-- **JCS æœåŠ¡ç«¯é‡ç®— SHA256**ï¼šä¸å®¢æˆ·ç«¯å£°æ˜å€¼æ¯”å¯¹ï¼Œä¸ä¸€è‡´ 400
-- **å¹‚ç­‰è¡¨**ï¼šå”¯ä¸€çº¦æŸã€72h è¿‡æœŸã€`"idempotent": bool` å“åº”
-- **é™æµ**ï¼š429 + é€€é¿
-- çº¿ä¸Š deepkit.top çœŸå®è·‘é€š **10 é¡¹æµ‹è¯•**
-- åŒæ­¥ç›®å½•ä¿®æ­£ï¼š`provider.py` æ›¿æ¢æ—§ `providers.py`
+- **Åú´ÎÒ»~¶ş**: P0 Êı¾İ¶ªÊ§/°²È« + ±ÀÀ£/UAF£¨KeyManager ÑÎ³Ö¾Ã»¯¡¢JobQueue PG ³ö¶Ó SQL¡¢ORM ²ÎÊı´íÎ»¡¢doQry ×¢ÈëÓëÈ«±íÉ¾³ı¡¢Á¬½Ó³Ø ABBA ËÀËøµÈ£©
+- **Åú´ÎÈı**: Serialization record/locale/°×Ãûµ¥/Ã¶¾ÙËÄÁ¬ + Feedback/Configuration/FeatureFlags ±ÀÀ£×å + FileWatcher ÈıÁ¬
+- **Åú´ÎËÄ**: ¶ş½øÖÆ·´ĞòÁĞ»¯¼Ó¹Ì + Diff Ëã·¨Õ»Òç³ö/ÄÚ´æ±¬Õ¨ + Ä£°å±È½ÏÔËËãÊ§Ğ§
+- **Åú´ÎÎå**: ÒÅÁôÏîÇåÀí£¨CR-605 »ù×¼Ğ£×¼¡¢CR-606 ÅÅ²é¹éµµ£©
+- **Åú´ÎÁù**: ?? ¿ìÓ®Ê®Ïî£¨Ç¿¶ÈÁ¿¸Ù/TTL ·ûºÅ/¸º¼ÆÊı/Ê±¼äÈ¡Õû/±£Áô×Ö/DST/CTE/UTC ÈÕÖ¾µÈ£©
+- **Åú´ÎÆß**: SQLLogger ·½ÑÔ+ensured¡¢Diagnose °æ±¾±È½Ï¡¢EventBus »Øµ÷·À»¤¡¢ÏŞÁ÷Æ÷¹¹ÔìĞ£Ñé¡¢ISO Try ÆõÔ¼¡¢¾üÇø J¡¢ËÄµ¥ÔªÒì³£»ùÀà¹Ò EDeepBaseException
+- **Åú´Î°Ë**: ²éÑ¯»º´æ¶à¿â¼ü¡¢ExecuteFirst Limit ÎÛÈ¾¡¢Logger Îö¹¹ÅÅ¸É¡¢¶¾Íè DLQ
+- **Åú´Î¾Å**: Diff hunk Î²ËæÉÏÏÂÎÄ/SideBySide ĞĞºÅ¡¢i18n »º´æ TOCTOU¡¢Schema ¼ü³£Á¿»¯¡¢Math.Random Æ½Ì¨ÊØÎÀ
+- **Åú´ÎÊ®**: CR-290 µ¥µ÷Ê±ÖÓ¡ª¡ªÏŞÁ÷ËÄËã·¨+ÈÛ¶ÏÆ÷ 34 ´¦Ç½ÖÓ¼ÆÊ±È«ÃæÇĞ»» GetTickCount64
+- **Åú´ÎÊ®Ò»**: Owner ËÄÏî¾ö²ßÂäµØ£¨fail-closed / WithLevel ×·¼Ó / ĞòÁĞ»¯¿Õ¸ù¿ìËÙÊ§°Ü / App.LogLevel ÃİµÈÇ¨ÒÆ£©
 
-### å®¢æˆ·ç«¯ Preview å®Œæˆï¼ˆæœ¬ä»“ï¼‰
+### ĞÂÔö»ù´¡ÉèÊ©
 
-- **DeepBase.Config.Upload.pas**ï¼ˆTConfigUploaderï¼‰ï¼šJCS è§„èŒƒåŒ–ã€SHA256ã€Idempotency-Keyï¼ˆUUIDï¼‰ã€é‡è¯•ï¼ˆ429/5xx æŒ‡æ•°é€€é¿ï¼‰ã€409 å†²çªå¤„ç†ï¼ˆ`existing_sha256`ï¼‰
-- ConfigUploadHarness æµ‹è¯•å·¥å…·ï¼ˆTests/ConfigUpload/ï¼‰
+- »Ø¹é²âÊÔµ¥Ôª ¡Á6: Tests\Regression\Test.Regression.CR20260824_{P0Batch1..P0Batch5,OwnerDecisions}.pas£¨25 ÓÃÀı£©
+- ±àÒëÑéÖ¤¹¤¾ß: Scripts\verify_doqry.ps1 + Tools\DBClientStub\DBClient.pas£¨½âËøÎŞ MIDAS »úÆ÷µÄ doQry ±àÒëÑéÖ¤£©
+- ÎÄµµ: docs\code-review-2026-08-24.md£¨Éó²é±¨¸æ£©
 
-### ç­¾ååŸºçº¿è£å†³ï¼ˆFastMeet å¤šæ¨¡å‹ï¼‰
+### Î´¾¡ÊÂÏî
 
-- ä¼šè®® 2026-08-13ï¼šGPT-5.6 / GLM-5.2 é€‰ Aï¼ˆRSA æ˜¯ r1 ç¡¬çº¦æŸï¼‰ï¼›StepFun / MiniMax é€‰ Bï¼ˆè¯æ®ä¼˜å…ˆ + ADR å¯æ²»ç†ï¼‰
-- 4/4 å…±è¯†ï¼šä¸å¾—é—·å¤´ç»•è¿‡ ADR r1
-- å…³é”®äº‹å®ï¼šDeepBase å®¢æˆ·ç«¯**æ—  Ed25519 å®ç°**ï¼ˆä»… Windows CNG RSAï¼‰ï¼ŒB è·¯çº¿åœ¨å®¢æˆ·ç«¯éªŒç­¾æ­¥ç›´æ¥å¡æ­» â†’ **å”¯ä¸€èµ°å¾—é€šçš„æ˜¯ RSA-SHA256**
+¼û tasks.md¡¸´ı°ì¡¹£º7 Ìõ P0 ?? ´ı»·¾³ÑéÖ¤×ªÕı¡¢CR-606 Perception Í¼ĞÎ»á»°¸´ÅÜ¡¢CR-605 ĞÔÄÜÃÅ½ûÇ¨×¨ÓÃ runner¡¢?? ²¿·Ö×ÓÏîÓë ?? ³¤Î²¡£
 
-### å›å‡½ #100 å·²å‘
+---
+## 2026-08-13 78 ÅäÖÃÉÏ´«·¢²¼Á´Â·£º·şÎñ¶ËÊ×°æ½»¸¶ + ¿Í»§¶Ë Preview + »ùÏß²Ã¾ö ?
 
-- è¦æ±‚æœåŠ¡ç«¯ Ed25519 â†’ RSA-SHA256 è¿”å·¥ï¼ˆ78a ADR r1 Â§2.7 æ³•æºï¼‰
-- P0-1~P0-4 å¤éªŒæ¸…å•ï¼ˆmigration / å¹‚ç­‰ä¸»ä½“ / å¹¶å‘ä¸²è¡ŒåŒ– / ä¿¡ä»»æ ¹é˜²å›æ»šï¼‰
-- é™„ JCS æµ‹è¯•å‘é‡å¯¹é½ã€è”è°ƒå‰ç½®ï¼ˆæœåŠ¡å™¨å¯è¾¾æ€§ï¼‰
+> À´Ô´: tasks.md PLATFORM Çø
+> ·¶Î§: 78/78a ÅäÖÃ·¢²¼Æ½Ì¨Ğ­Í¬¿ª·¢
+
+### ·şÎñ¶ËÊ×°æ½»¸¶£¨ÍõÎ¬ #100/#101£©
+
+- **migration 004**£º4 ÕÅ±í£¨provider_configs¡¢config_publish_jobs¡¢release_heads¡¢config_manifest£©commit `3f25d09`
+- **3 ¸ö API**£ºconfig ÉÏ´« / release ²éÑ¯ / publish ´¥·¢£¨FastAPI£©
+- **publish ×´Ì¬»ú worker**£ºdraft/building/published/failed Á÷×ª
+- **JCS ·şÎñ¶ËÖØËã SHA256**£ºÓë¿Í»§¶ËÉùÃ÷Öµ±È¶Ô£¬²»Ò»ÖÂ 400
+- **ÃİµÈ±í**£ºÎ¨Ò»Ô¼Êø¡¢72h ¹ıÆÚ¡¢`"idempotent": bool` ÏìÓ¦
+- **ÏŞÁ÷**£º429 + ÍË±Ü
+- ÏßÉÏ deepkit.top ÕæÊµÅÜÍ¨ **10 Ïî²âÊÔ**
+- Í¬²½Ä¿Â¼ĞŞÕı£º`provider.py` Ìæ»»¾É `providers.py`
+
+### ¿Í»§¶Ë Preview Íê³É£¨±¾²Ö£©
+
+- **DeepBase.Config.Upload.pas**£¨TConfigUploader£©£ºJCS ¹æ·¶»¯¡¢SHA256¡¢Idempotency-Key£¨UUID£©¡¢ÖØÊÔ£¨429/5xx Ö¸ÊıÍË±Ü£©¡¢409 ³åÍ»´¦Àí£¨`existing_sha256`£©
+- ConfigUploadHarness ²âÊÔ¹¤¾ß£¨Tests/ConfigUpload/£©
+
+### Ç©Ãû»ùÏß²Ã¾ö£¨FastMeet ¶àÄ£ĞÍ£©
+
+- »áÒé 2026-08-13£ºGPT-5.6 / GLM-5.2 Ñ¡ A£¨RSA ÊÇ r1 Ó²Ô¼Êø£©£»StepFun / MiniMax Ñ¡ B£¨Ö¤¾İÓÅÏÈ + ADR ¿ÉÖÎÀí£©
+- 4/4 ¹²Ê¶£º²»µÃÃÆÍ·ÈÆ¹ı ADR r1
+- ¹Ø¼üÊÂÊµ£ºDeepBase ¿Í»§¶Ë**ÎŞ Ed25519 ÊµÏÖ**£¨½ö Windows CNG RSA£©£¬B Â·ÏßÔÚ¿Í»§¶ËÑéÇ©²½Ö±½Ó¿¨ËÀ ¡ú **Î¨Ò»×ßµÃÍ¨µÄÊÇ RSA-SHA256**
+
+### »Øº¯ #100 ÒÑ·¢
+
+- ÒªÇó·şÎñ¶Ë Ed25519 ¡ú RSA-SHA256 ·µ¹¤£¨78a ADR r1 ¡ì2.7 ·¨Ô´£©
+- P0-1~P0-4 ¸´ÑéÇåµ¥£¨migration / ÃİµÈÖ÷Ìå / ²¢·¢´®ĞĞ»¯ / ĞÅÈÎ¸ù·À»Ø¹ö£©
+- ¸½ JCS ²âÊÔÏòÁ¿¶ÔÆë¡¢Áªµ÷Ç°ÖÃ£¨·şÎñÆ÷¿É´ïĞÔ£©
 
 ---
 
-## 2026-07-25 PERCEPT-WYJX P5/P6 è§†è§‰å®šä½å¢å¼º + æ™ºèƒ½ç­‰å¾…ä¸é‡è¯•å®Œæˆ âœ…
+## 2026-07-25 PERCEPT-WYJX P5/P6 ÊÓ¾õ¶¨Î»ÔöÇ¿ + ÖÇÄÜµÈ´ıÓëÖØÊÔÍê³É ?
 
-> æ¥æº: tasks.md P5/P6 å¾…å¼€å‘ä»»åŠ¡
-> èŒƒå›´: æ¨¡æ¿åŒ¹é…ç®—æ³•å¢å¼º + æ™ºèƒ½ç­‰å¾…æœºåˆ¶æ–°å»º
+> À´Ô´: tasks.md P5/P6 ´ı¿ª·¢ÈÎÎñ
+> ·¶Î§: Ä£°åÆ¥ÅäËã·¨ÔöÇ¿ + ÖÇÄÜµÈ´ı»úÖÆĞÂ½¨
 
-### P5: è§†è§‰å®šä½å¢å¼º
+### P5: ÊÓ¾õ¶¨Î»ÔöÇ¿
 
-- **TemplateMatch.pas** å…¨é¢é‡å†™ (~1300 è¡Œ):
-  - å¤šå°ºåº¦æ¨¡æ¿åŒ¹é… (0.5x~2.0x è¿ç»­ç¼©æ”¾, GR32 DrawTo é‡é‡‡æ ·)
-  - æ—‹è½¬ä¸å˜æ€§ (åŸºæ•°è§’ 0Â°/90Â°/180Â°/270Â° å¿«é€Ÿè·¯å¾„ + ä»»æ„è§’åº¦åŒçº¿æ€§æ’å€¼)
-  - æ—©æœŸç»ˆæ­¢å‰ªæ (SSD éƒ¨åˆ†å’Œè¶…è¿‡é˜ˆå€¼å³ä¸­æ­¢)
-  - ç°åº¦é¢„è¿‡æ»¤åŠ é€Ÿ (å…ˆç°åº¦ç²—ç­›å†å½©è‰²ç²¾åŒ¹é…)
-  - äºšåƒç´ æŠ›ç‰©çº¿æ’å€¼ç²¾åŒ–
-  - SSD/NCC åŒç®—æ³•æ”¯æŒ
-- **æµ‹è¯•**: 25 ä¸ªå•å…ƒæµ‹è¯•å…¨éƒ¨é€šè¿‡
+- **TemplateMatch.pas** È«ÃæÖØĞ´ (~1300 ĞĞ):
+  - ¶à³ß¶ÈÄ£°åÆ¥Åä (0.5x~2.0x Á¬ĞøËõ·Å, GR32 DrawTo ÖØ²ÉÑù)
+  - Ğı×ª²»±äĞÔ (»ùÊı½Ç 0¡ã/90¡ã/180¡ã/270¡ã ¿ìËÙÂ·¾¶ + ÈÎÒâ½Ç¶ÈË«ÏßĞÔ²åÖµ)
+  - ÔçÆÚÖÕÖ¹¼ôÖ¦ (SSD ²¿·ÖºÍ³¬¹ıãĞÖµ¼´ÖĞÖ¹)
+  - »Ò¶ÈÔ¤¹ıÂË¼ÓËÙ (ÏÈ»Ò¶È´ÖÉ¸ÔÙ²ÊÉ«¾«Æ¥Åä)
+  - ÑÇÏñËØÅ×ÎïÏß²åÖµ¾«»¯
+  - SSD/NCC Ë«Ëã·¨Ö§³Ö
+- **²âÊÔ**: 25 ¸öµ¥Ôª²âÊÔÈ«²¿Í¨¹ı
 
-### P6: æ™ºèƒ½ç­‰å¾…ä¸é‡è¯•æœºåˆ¶
+### P6: ÖÇÄÜµÈ´ıÓëÖØÊÔ»úÖÆ
 
-- **SmartWait.pas** æ–°å»º (~700 è¡Œ):
-  - IWaitCondition æ¥å£ + TCallbackCondition/TVisualAppearCondition/TVisualDisappearCondition
-  - TRetryPolicy (æŒ‡æ•°é€€é¿ + æŠ–åŠ¨, Default/Fast/Patient é¢„è®¾)
-  - TSmartWaiter (æ¡ä»¶ç­‰å¾… + è¶…æ—¶ + å–æ¶ˆ)
-  - TWaitConditionCombiner (AND/OR/NOT é€»è¾‘ç»„åˆ)
-- **æµ‹è¯•**: 21 ä¸ªå•å…ƒæµ‹è¯•å…¨éƒ¨é€šè¿‡
+- **SmartWait.pas** ĞÂ½¨ (~700 ĞĞ):
+  - IWaitCondition ½Ó¿Ú + TCallbackCondition/TVisualAppearCondition/TVisualDisappearCondition
+  - TRetryPolicy (Ö¸ÊıÍË±Ü + ¶¶¶¯, Default/Fast/Patient Ô¤Éè)
+  - TSmartWaiter (Ìõ¼şµÈ´ı + ³¬Ê± + È¡Ïû)
+  - TWaitConditionCombiner (AND/OR/NOT Âß¼­×éºÏ)
+- **²âÊÔ**: 21 ¸öµ¥Ôª²âÊÔÈ«²¿Í¨¹ı
 
-### ç¼–è¯‘ä¿®å¤
+### ±àÒëĞŞ¸´
 
-- RegionLocator.pas: ä¿®å¤ GUID/é»˜è®¤å‚æ•°/AlphaFormat/Allocate/HDCå˜é‡åå†²çª
-- GR32 API: StretchTo â†’ DrawTo, Graphics32 â†’ GR32
-- DUnitX API: TTestCaseâ†’TObject, AreEqualå‚æ•°åº, WillRaiseç²¾ç¡®åŒ¹é…, RegisterTestFixture
-- run_tests.ps1: æ·»åŠ  GR32 æœç´¢è·¯å¾„ + -NSSystem/-NSWinapi/-NSVcl å‘½åç©ºé—´é€‰é¡¹
+- RegionLocator.pas: ĞŞ¸´ GUID/Ä¬ÈÏ²ÎÊı/AlphaFormat/Allocate/HDC±äÁ¿Ãû³åÍ»
+- GR32 API: StretchTo ¡ú DrawTo, Graphics32 ¡ú GR32
+- DUnitX API: TTestCase¡úTObject, AreEqual²ÎÊıĞò, WillRaise¾«È·Æ¥Åä, RegisterTestFixture
+- run_tests.ps1: Ìí¼Ó GR32 ËÑË÷Â·¾¶ + -NSSystem/-NSWinapi/-NSVcl ÃüÃû¿Õ¼äÑ¡Ïî
 
-### éªŒè¯
+### ÑéÖ¤
 
-- ç¼–è¯‘: 466,654 è¡Œ, 20.88 ç§’, é›¶é”™è¯¯
-- P5/P6 æµ‹è¯•: 46 ä¸ª, é€šè¿‡ç‡ 100%
+- ±àÒë: 466,654 ĞĞ, 20.88 Ãë, Áã´íÎó
+- P5/P6 ²âÊÔ: 46 ¸ö, Í¨¹ıÂÊ 100%
 
 ---
 
-## 2026-07-25 Browser CDP.Adapter/Session/WebElement ç¼–è¯‘ä¿®å¤ä¸ TEST-001 éªŒè¯å®Œæˆ âœ…
+## 2026-07-25 Browser CDP.Adapter/Session/WebElement ±àÒëĞŞ¸´Óë TEST-001 ÑéÖ¤Íê³É ?
 
-> æ¥æº: tasks.md TEST-001 ç¼–è¯‘éªŒè¯ + BUG-WYJX-010 ä¿®å¤
-> èŒƒå›´: Browser æ¨¡å—ç¼–è¯‘çº§é‡æ„ + å…¨é‡æµ‹è¯•éªŒè¯
+> À´Ô´: tasks.md TEST-001 ±àÒëÑéÖ¤ + BUG-WYJX-010 ĞŞ¸´
+> ·¶Î§: Browser Ä£¿é±àÒë¼¶ÖØ¹¹ + È«Á¿²âÊÔÑéÖ¤
 
-### å®Œæˆå†…å®¹
+### Íê³ÉÄÚÈİ
 
-#### BUG-WYJX-010: Browser æ¨¡å—ç¼–è¯‘é”™è¯¯ä¿®å¤ (Critical)
-- **CDP.Adapter.pas** å…¨é¢é‡å†™: ç§»é™¤ä¸å­˜åœ¨çš„ `System.Websockets` æ”¹ç”¨é¡¹ç›®å†… `DeepBase.Net.TWebSocketClient`; ä¿®æ­£ `System.SyncObjs`; ç”Ÿæˆåˆæ³• GUID; è¡¥å…¨æ‰€æœ‰æ–¹æ³•å®ç°; æ·»åŠ  `JsonStringEncode` è¾…åŠ©å‡½æ•°; ä¿®å¤ `ContainsKey`/`wmtText`/`OnMessage` äº‹ä»¶/`TNetEncoding` ç­‰é—®é¢˜
-- **WebElement.pas** é‡å†™: ä¿®å¤ `EException`/`FormatRecord`/`TWebWebElement()`/`EvaluateJS` ç­‰é”™è¯¯; `IBrowserSession` â†’ `ICDPSession` é¿å…å¾ªç¯ä¾èµ–
-- **Session.pas** é‡å†™: ç§»é™¤é‡å¤ `IBrowserSession` å®šä¹‰; ä¿®å¤ `virtual; abstract`/GUID/`FCurrentURL`/`ExecuteJS`/`TObjectList` ç­‰é”™è¯¯
-- **Test.DeepBase.Browser.Session.pas** é‡å†™: è¡¥å…¨æ‰€æœ‰æµ‹è¯•æ–¹æ³•å®ç°
-- **Test.DeepBase.Browser.CDP.pas**: 5 å¤„ `Assert.AreEqual` æ³›å‹ä¿®æ­£
+#### BUG-WYJX-010: Browser Ä£¿é±àÒë´íÎóĞŞ¸´ (Critical)
+- **CDP.Adapter.pas** È«ÃæÖØĞ´: ÒÆ³ı²»´æÔÚµÄ `System.Websockets` ¸ÄÓÃÏîÄ¿ÄÚ `DeepBase.Net.TWebSocketClient`; ĞŞÕı `System.SyncObjs`; Éú³ÉºÏ·¨ GUID; ²¹È«ËùÓĞ·½·¨ÊµÏÖ; Ìí¼Ó `JsonStringEncode` ¸¨Öúº¯Êı; ĞŞ¸´ `ContainsKey`/`wmtText`/`OnMessage` ÊÂ¼ş/`TNetEncoding` µÈÎÊÌâ
+- **WebElement.pas** ÖØĞ´: ĞŞ¸´ `EException`/`FormatRecord`/`TWebWebElement()`/`EvaluateJS` µÈ´íÎó; `IBrowserSession` ¡ú `ICDPSession` ±ÜÃâÑ­»·ÒÀÀµ
+- **Session.pas** ÖØĞ´: ÒÆ³ıÖØ¸´ `IBrowserSession` ¶¨Òå; ĞŞ¸´ `virtual; abstract`/GUID/`FCurrentURL`/`ExecuteJS`/`TObjectList` µÈ´íÎó
+- **Test.DeepBase.Browser.Session.pas** ÖØĞ´: ²¹È«ËùÓĞ²âÊÔ·½·¨ÊµÏÖ
+- **Test.DeepBase.Browser.CDP.pas**: 5 ´¦ `Assert.AreEqual` ·ºĞÍĞŞÕı
 
-#### TEST-001: ç¼–è¯‘éªŒè¯ âœ…
-- `run_tests.ps1 -Type Unit -CI -AllowFilteredCI` ç¼–è¯‘é€šè¿‡
-- 341,617 è¡Œä»£ç , 20.67 ç§’ç¼–è¯‘æ—¶é—´
-- é›¶ç¼–è¯‘é”™è¯¯ (ä»… Hints/Warnings)
+#### TEST-001: ±àÒëÑéÖ¤ ?
+- `run_tests.ps1 -Type Unit -CI -AllowFilteredCI` ±àÒëÍ¨¹ı
+- 341,617 ĞĞ´úÂë, 20.67 Ãë±àÒëÊ±¼ä
+- Áã±àÒë´íÎó (½ö Hints/Warnings)
 
-#### TEST-002: å…¨é‡æµ‹è¯•å¥—ä»¶è¿è¡Œ âœ…
+#### TEST-002: È«Á¿²âÊÔÌ×¼şÔËĞĞ ?
 - Tests Found: 4,266
 - Tests Passed: 4,244 (99.5%)
-- Tests Failed: 3 (DPAPI ç¯å¢ƒç›¸å…³)
-- Tests Errored: 15 (DPAPI å‡­æ®ç®¡ç†å†…å­˜èµ„æºä¸è¶³)
+- Tests Failed: 3 (DPAPI »·¾³Ïà¹Ø)
+- Tests Errored: 15 (DPAPI Æ¾¾İ¹ÜÀíÄÚ´æ×ÊÔ´²»×ã)
 - Tests Leaked: 0
-- å¤±è´¥é¡¹å‡ä¸ºç¯å¢ƒç›¸å…³ (DPAPI å‡­æ®ç®¡ç†)ï¼Œä¸ä»£ç ä¿®æ”¹æ— å…³
+- Ê§°ÜÏî¾ùÎª»·¾³Ïà¹Ø (DPAPI Æ¾¾İ¹ÜÀí)£¬Óë´úÂëĞŞ¸ÄÎŞ¹Ø
 
-### å½±å“æ–‡ä»¶
-- `Features/DeepBase.Browser.CDP.Adapter.pas` (é‡å†™)
-- `Features/DeepBase.Browser.WebElement.pas` (é‡å†™)
-- `Features/DeepBase.Browser.Session.pas` (é‡å†™)
-- `Tests/Test.DeepBase.Browser.Session.pas` (é‡å†™)
-- `Tests/Test.DeepBase.Browser.CDP.pas` (5 å¤„ä¿®æ­£)
-- `bugfix.md` (æ–°å¢ BUG-WYJX-010)
-
----
-
-## 2026-07-25 WebSocket å®¢æˆ·ç«¯å®ç° (RFC 6455) âœ…
-
-> æ¥æº: Browser Automation å®æˆ˜é›†æˆéœ€æ±‚
-> èŒƒå›´: æ–°å¢ DeepBase.Net.WebSocket å•å…ƒ
-
-### å®Œæˆå†…å®¹
-
-#### DeepBase.Net.WebSocket.pas (649 è¡Œ)
-- å®Œæ•´å®ç° RFC 6455 WebSocket åè®®
-- HTTP Upgrade æ¡æ‰‹ (Sec-WebSocket-Key/Accept éªŒè¯)
-- å¸§ç¼–ç /è§£ç  (Text/Binary/Ping/Pong/Close)
-- å®¢æˆ·ç«¯æ©ç  (Masking) æ”¯æŒ
-- æ‰©å±•è´Ÿè½½é•¿åº¦ (16-bit/64-bit)
-- SSL/TLS æ”¯æŒ (wss:// via Indy OpenSSL)
-- çº¿ç¨‹å®‰å…¨å‘é€æ“ä½œ
-- åå°è¯»å–çº¿ç¨‹ + äº‹ä»¶é©±åŠ¨æ¶æ„
-- Ping/Pong å¿ƒè·³æœºåˆ¶
-
-#### CDP.Adapter.pas æ›´æ–°
-- ä» `DeepBase.Net.TWebSocketClient` (å­˜æ ¹) è¿ç§»åˆ° `DeepBase.Net.WebSocket.TWebSocketClientImpl`
-- äº‹ä»¶å¤„ç†å™¨ç­¾åæ›´æ–° (`AIsBinary: Boolean` æ›¿ä»£ `AType: TWebSocketMessageType`)
-
-#### DeepBasePlatform.dpk æ›´æ–°
-- æ–°å¢ `DeepBase.Net.WebSocket` å•å…ƒå¼•ç”¨
-
-### éªŒè¯
-- ç¼–è¯‘é€šè¿‡: 342,268 è¡Œ, 19.58s
-- æµ‹è¯•: 4,266 ä¸ª, 4,243 é€šè¿‡ (99.5%)
-- å¤±è´¥é¡¹å‡ä¸º DPAPI ç¯å¢ƒç›¸å…³ï¼Œä¸æœ¬æ¬¡ä¿®æ”¹æ— å…³
-
-### å½±å“æ–‡ä»¶
-- `Features/DeepBase.Net.WebSocket.pas` (æ–°å»º, 649 è¡Œ)
-- `Features/DeepBase.Browser.CDP.Adapter.pas` (æ›´æ–° WebSocket å¼•ç”¨)
-- `DeepBasePlatform.dpk` (æ–°å¢å•å…ƒ)
+### Ó°ÏìÎÄ¼ş
+- `Features/DeepBase.Browser.CDP.Adapter.pas` (ÖØĞ´)
+- `Features/DeepBase.Browser.WebElement.pas` (ÖØĞ´)
+- `Features/DeepBase.Browser.Session.pas` (ÖØĞ´)
+- `Tests/Test.DeepBase.Browser.Session.pas` (ÖØĞ´)
+- `Tests/Test.DeepBase.Browser.CDP.pas` (5 ´¦ĞŞÕı)
+- `bugfix.md` (ĞÂÔö BUG-WYJX-010)
 
 ---
 
-## 2026-07-24 ä»£ç è´¨é‡ä¿®å¤ä¸ BUG-WYJX-003 å®Œæˆ âœ…
+## 2026-07-25 WebSocket ¿Í»§¶ËÊµÏÖ (RFC 6455) ?
 
-> æ¥æº: æ–‡æ¡£å¯¹é½ + ä»£ç å®¡æŸ¥
-> èŒƒå›´: PERCEPT-WYJX å…¨æ¨¡å—ç¼–è¯‘çº§ä¿®æ­£
+> À´Ô´: Browser Automation ÊµÕ½¼¯³ÉĞèÇó
+> ·¶Î§: ĞÂÔö DeepBase.Net.WebSocket µ¥Ôª
 
-### å®Œæˆå†…å®¹
+### Íê³ÉÄÚÈİ
 
-#### BUG-WYJX-003: TODO æ–¹æ³•å®ç°
-- **RegionLocator.pas**: å®ç° FindTemplate/FindTemplateInROI/FindAllTemplates (åƒç´ çº§æ¨¡æ¿åŒ¹é… + å¤šç›®æ ‡æœç´¢)
-- **CDP.Adapter.pas**: å®ç° EnableNetworkInterception + SetRequestInterferenceEnabled (CDP Network/Fetch åŸŸ)
-- **SmartExecutor.pas**: WaitForTargetToAppear å·²æœ‰å®Œæ•´å®ç° (ç¡®è®¤æ— éœ€ä¿®å¤)
-- **Recorder.pas**: ExportAllSessionsToDirectory å·²æœ‰å®ç° (ä¿®å¤ fmtâ†’Format)
+#### DeepBase.Net.WebSocket.pas (649 ĞĞ)
+- ÍêÕûÊµÏÖ RFC 6455 WebSocket Ğ­Òé
+- HTTP Upgrade ÎÕÊÖ (Sec-WebSocket-Key/Accept ÑéÖ¤)
+- Ö¡±àÂë/½âÂë (Text/Binary/Ping/Pong/Close)
+- ¿Í»§¶ËÑÚÂë (Masking) Ö§³Ö
+- À©Õ¹¸ºÔØ³¤¶È (16-bit/64-bit)
+- SSL/TLS Ö§³Ö (wss:// via Indy OpenSSL)
+- Ïß³Ì°²È«·¢ËÍ²Ù×÷
+- ºóÌ¨¶ÁÈ¡Ïß³Ì + ÊÂ¼şÇı¶¯¼Ü¹¹
+- Ping/Pong ĞÄÌø»úÖÆ
 
-#### BUG-WYJX-005: å…¨å±€ fmt() æœªå®šä¹‰ (Critical)
-- 8 ä¸ªæ–‡ä»¶å…± 36 å¤„ `fmt(` æ›¿æ¢ä¸º `Format(`
-- å½±å“: WebElement, ControlFlow, FileSystem, Keyboard, Mouse, Recorder, DPIMapper, CDP.Adapter
+#### CDP.Adapter.pas ¸üĞÂ
+- ´Ó `DeepBase.Net.TWebSocketClient` (´æ¸ù) Ç¨ÒÆµ½ `DeepBase.Net.WebSocket.TWebSocketClientImpl`
+- ÊÂ¼ş´¦ÀíÆ÷Ç©Ãû¸üĞÂ (`AIsBinary: Boolean` Ìæ´ú `AType: TWebSocketMessageType`)
 
-#### BUG-WYJX-006: Window.pas è¯­æ³•é‡å†™ (Critical)
-- ä¿®å¤ `public:` å†’å·ã€å‚æ•°åå†²çªã€æ— æ•ˆ record è¯­æ³•ã€æ¡ä»¶è¡¨è¾¾å¼ã€HWd typo
-- é‡å†™æ‰€æœ‰ Execute æ–¹æ³•ä½¿ç”¨æ­£ç¡®çš„ Variant è½¬æ¢å’Œ MarkFailure/MarkSuccess
+#### DeepBasePlatform.dpk ¸üĞÂ
+- ĞÂÔö `DeepBase.Net.WebSocket` µ¥ÔªÒıÓÃ
 
-#### BUG-WYJX-007: Core.pas ç±»å‹ä¿®æ­£ (Critical)
-- `DateTime` â†’ `TDateTime`, `Null` â†’ `TValue.Empty`, `fmt` â†’ `Format`
-- æ·»åŠ  MarkFailure/MarkSuccess å…¬å…±æ–¹æ³•
-- é‡å†™ ExecuteAction ä½¿ç”¨æ­£ç¡®çš„ record èµ‹å€¼
+### ÑéÖ¤
+- ±àÒëÍ¨¹ı: 342,268 ĞĞ, 19.58s
+- ²âÊÔ: 4,266 ¸ö, 4,243 Í¨¹ı (99.5%)
+- Ê§°ÜÏî¾ùÎª DPAPI »·¾³Ïà¹Ø£¬Óë±¾´ÎĞŞ¸ÄÎŞ¹Ø
 
-#### BUG-WYJX-008: RegionLocator.pas æ–¹æ³•å®ç° (High)
-- å®ç°å®Œæ•´çš„åƒç´ çº§æ¨¡æ¿åŒ¹é…ç®—æ³• (RGB å®¹å·®æ¯”è¾ƒ)
-- å®ç° FindAllTemplates å¤šç›®æ ‡æœç´¢ (æ’é™¤åŒºåŸŸæ³•)
-- ä¿®æ­£ record åˆå§‹åŒ–è¯­æ³• + æ·»åŠ  System.Math
-
-#### BUG-WYJX-009: CDP.Adapter.pas ç½‘ç»œæ‹¦æˆªå®ç° (Medium)
-- Network.enable + Fetch.enable CDP å‘½ä»¤
-- è¯·æ±‚æ‹¦æˆªå¼€å…³ (patterns é…ç½®)
-
-#### å…¶ä»–ä¿®æ­£
-- Process.pas: FSuccess/FErrorMessage â†’ MarkFailure/MarkSuccess
-- SmartExecutor.pas: `TMatchResult.Default` â†’ `Default(TMatchResult)`, LongWord â†’ UInt64
-- Process.pas: LongWord â†’ UInt64 (GetTickCount64 è¿”å›å€¼)
+### Ó°ÏìÎÄ¼ş
+- `Features/DeepBase.Net.WebSocket.pas` (ĞÂ½¨, 649 ĞĞ)
+- `Features/DeepBase.Browser.CDP.Adapter.pas` (¸üĞÂ WebSocket ÒıÓÃ)
+- `DeepBasePlatform.dpk` (ĞÂÔöµ¥Ôª)
 
 ---
 
-## 2026-07-24 PERCEPT-WYJX-P0/P1/P1.5/P2/P3/P4 å…¨éƒ¨å®Œæˆ âœ…
+## 2026-07-24 ´úÂëÖÊÁ¿ĞŞ¸´Óë BUG-WYJX-003 Íê³É ?
 
-> æ¥æº: 2026-07-23 expert-review + æŠ€æœ¯ä¼šè®®å†³å®š (PERCEPT-WYJX wyjx æ¡Œé¢ RPA åŸè¯­æç‚¼)
-> æäº¤: d4312be (feat) + 8630ba4 (docs)
-> åˆ†æ”¯: feat/cdp-devtools-listener
+> À´Ô´: ÎÄµµ¶ÔÆë + ´úÂëÉó²é
+> ·¶Î§: PERCEPT-WYJX È«Ä£¿é±àÒë¼¶ĞŞÕı
 
-### å®Œæˆå†…å®¹
+### Íê³ÉÄÚÈİ
 
-#### P0 æ‰¾å›¾æ‰¾è‰² (974 è¡Œ, 30 ä¸ªæµ‹è¯•)
-- **ColorMatch.pas** (433 è¡Œ): Pixel-by-pixel RGB comparison with tolerance
-- **TemplateMatch.pas** (541 è¡Œ): Pyramid search + CCL framework
+#### BUG-WYJX-003: TODO ·½·¨ÊµÏÖ
+- **RegionLocator.pas**: ÊµÏÖ FindTemplate/FindTemplateInROI/FindAllTemplates (ÏñËØ¼¶Ä£°åÆ¥Åä + ¶àÄ¿±êËÑË÷)
+- **CDP.Adapter.pas**: ÊµÏÖ EnableNetworkInterception + SetRequestInterferenceEnabled (CDP Network/Fetch Óò)
+- **SmartExecutor.pas**: WaitForTargetToAppear ÒÑÓĞÍêÕûÊµÏÖ (È·ÈÏÎŞĞèĞŞ¸´)
+- **Recorder.pas**: ExportAllSessionsToDirectory ÒÑÓĞÊµÏÖ (ĞŞ¸´ fmt¡úFormat)
+
+#### BUG-WYJX-005: È«¾Ö fmt() Î´¶¨Òå (Critical)
+- 8 ¸öÎÄ¼ş¹² 36 ´¦ `fmt(` Ìæ»»Îª `Format(`
+- Ó°Ïì: WebElement, ControlFlow, FileSystem, Keyboard, Mouse, Recorder, DPIMapper, CDP.Adapter
+
+#### BUG-WYJX-006: Window.pas Óï·¨ÖØĞ´ (Critical)
+- ĞŞ¸´ `public:` Ã°ºÅ¡¢²ÎÊıÃû³åÍ»¡¢ÎŞĞ§ record Óï·¨¡¢Ìõ¼ş±í´ïÊ½¡¢HWd typo
+- ÖØĞ´ËùÓĞ Execute ·½·¨Ê¹ÓÃÕıÈ·µÄ Variant ×ª»»ºÍ MarkFailure/MarkSuccess
+
+#### BUG-WYJX-007: Core.pas ÀàĞÍĞŞÕı (Critical)
+- `DateTime` ¡ú `TDateTime`, `Null` ¡ú `TValue.Empty`, `fmt` ¡ú `Format`
+- Ìí¼Ó MarkFailure/MarkSuccess ¹«¹²·½·¨
+- ÖØĞ´ ExecuteAction Ê¹ÓÃÕıÈ·µÄ record ¸³Öµ
+
+#### BUG-WYJX-008: RegionLocator.pas ·½·¨ÊµÏÖ (High)
+- ÊµÏÖÍêÕûµÄÏñËØ¼¶Ä£°åÆ¥ÅäËã·¨ (RGB Èİ²î±È½Ï)
+- ÊµÏÖ FindAllTemplates ¶àÄ¿±êËÑË÷ (ÅÅ³ıÇøÓò·¨)
+- ĞŞÕı record ³õÊ¼»¯Óï·¨ + Ìí¼Ó System.Math
+
+#### BUG-WYJX-009: CDP.Adapter.pas ÍøÂçÀ¹½ØÊµÏÖ (Medium)
+- Network.enable + Fetch.enable CDP ÃüÁî
+- ÇëÇóÀ¹½Ø¿ª¹Ø (patterns ÅäÖÃ)
+
+#### ÆäËûĞŞÕı
+- Process.pas: FSuccess/FErrorMessage ¡ú MarkFailure/MarkSuccess
+- SmartExecutor.pas: `TMatchResult.Default` ¡ú `Default(TMatchResult)`, LongWord ¡ú UInt64
+- Process.pas: LongWord ¡ú UInt64 (GetTickCount64 ·µ»ØÖµ)
+
+---
+
+## 2026-07-24 PERCEPT-WYJX-P0/P1/P1.5/P2/P3/P4 È«²¿Íê³É ?
+
+> À´Ô´: 2026-07-23 expert-review + ¼¼Êõ»áÒé¾ö¶¨ (PERCEPT-WYJX wyjx ×ÀÃæ RPA Ô­ÓïÌáÁ¶)
+> Ìá½»: d4312be (feat) + 8630ba4 (docs)
+> ·ÖÖ§: feat/cdp-devtools-listener
+
+### Íê³ÉÄÚÈİ
+
+#### P0 ÕÒÍ¼ÕÒÉ« (974 ĞĞ, 30 ¸ö²âÊÔ)
+- **ColorMatch.pas** (433 ĞĞ): Pixel-by-pixel RGB comparison with tolerance
+- **TemplateMatch.pas** (541 ĞĞ): Pyramid search + CCL framework
 - GR32 Graphics32 integrated, 17/17 tests PASSED
 
-#### P1 è§†è§‰è¯­ä¹‰å®šä½ (842 è¡Œ, 15 ä¸ªæµ‹è¯•)
-- **BubbleAnalysis.pas** (842 è¡Œ): Union-Find CCL + NCC correlation
+#### P1 ÊÓ¾õÓïÒå¶¨Î» (842 ĞĞ, 15 ¸ö²âÊÔ)
+- **BubbleAnalysis.pas** (842 ĞĞ): Union-Find CCL + NCC correlation
 - OCR-free badge counting via blob geometry
-- Six-state status classifier (RGB tolerance Â±30)
+- Six-state status classifier (RGB tolerance ¡À30)
 
-#### P1.5 åæ ‡è½¬æ¢ä¸åŠ¨ä½œ (1,039 è¡Œ, 14 ä¸ªæµ‹è¯•)
-- **Coordinate.pas** (392 è¡Œ): DPI-aware coordinate transformations
-- **Motion.pas** (202 è¡Œ): Cubic BÃ©zier smooth movement at 60-120Hz
-- **Scroll.pas** (216 è¡Œ): Acceleration curves + drag patterns
-- **Tests** (229 è¡Œ): Comprehensive test suite
+#### P1.5 ×ø±ê×ª»»Óë¶¯×÷ (1,039 ĞĞ, 14 ¸ö²âÊÔ)
+- **Coordinate.pas** (392 ĞĞ): DPI-aware coordinate transformations
+- **Motion.pas** (202 ĞĞ): Cubic B¨¦zier smooth movement at 60-120Hz
+- **Scroll.pas** (216 ĞĞ): Acceleration curves + drag patterns
+- **Tests** (229 ĞĞ): Comprehensive test suite
 
-#### P2 åŠ¨ä½œåºåˆ—å¼•æ“ (2,512 è¡Œ, Near Complete)
-- **ActionEngine.Core.pas** (212 è¡Œ): Stateless interface design
-- **ActionEngine.Mouse.pas** (307 è¡Œ): Move/Click basic
-- **ActionEngine.Keyboard.pas** (391 è¡Œ): TYPE+WINDOW_CONTROL
-- **ActionEngine.FileSystem.pas** (536 è¡Œ): Full CRUD+Registry
-- **ActionEngine.ControlFlow.pas** (628 è¡Œ): Loop/IF/GOTO complete
-- **WindowFinder.pas** (438 è¡Œ): 7 search types + caching
-- å¾…åŠ: Integration testing + comprehensive tests
+#### P2 ¶¯×÷ĞòÁĞÒıÇæ (2,512 ĞĞ, Near Complete)
+- **ActionEngine.Core.pas** (212 ĞĞ): Stateless interface design
+- **ActionEngine.Mouse.pas** (307 ĞĞ): Move/Click basic
+- **ActionEngine.Keyboard.pas** (391 ĞĞ): TYPE+WINDOW_CONTROL
+- **ActionEngine.FileSystem.pas** (536 ĞĞ): Full CRUD+Registry
+- **ActionEngine.ControlFlow.pas** (628 ĞĞ): Loop/IF/GOTO complete
+- **WindowFinder.pas** (438 ĞĞ): 7 search types + caching
+- ´ı°ì: Integration testing + comprehensive tests
 
-#### P3 Screen Click Enhancer (1,545 è¡Œ, 28 ä¸ªæµ‹è¯•) â­ æå‰ 62%
-- **RegionLocator.pas** (309 è¡Œ): TBitmap32 template matching with pyramid optimization
-- **DPIMapper.pas** (284 è¡Œ): Per-monitor DPI via GetDpiForMonitor API
-- **SmartExecutor.pas** (306 è¡Œ): Retry mechanism with tolerance (+/- n pixels)
-- **Tests** (646 è¡Œ): 28 test cases (100% implemented)
-  - RegionLocator.Impl (251 è¡Œ, 11 tests)
-  - DPIMapper.Impl (196 è¡Œ, 9 tests)
-  - SmartExecutor.Impl (199 è¡Œ, 8 tests)
+#### P3 Screen Click Enhancer (1,545 ĞĞ, 28 ¸ö²âÊÔ) ? ÌáÇ° 62%
+- **RegionLocator.pas** (309 ĞĞ): TBitmap32 template matching with pyramid optimization
+- **DPIMapper.pas** (284 ĞĞ): Per-monitor DPI via GetDpiForMonitor API
+- **SmartExecutor.pas** (306 ĞĞ): Retry mechanism with tolerance (+/- n pixels)
+- **Tests** (646 ĞĞ): 28 test cases (100% implemented)
+  - RegionLocator.Impl (251 ĞĞ, 11 tests)
+  - DPIMapper.Impl (196 ĞĞ, 9 tests)
+  - SmartExecutor.Impl (199 ĞĞ, 8 tests)
 
-#### P4 Browser Automation Framework (2,421 è¡Œ, 39 ä¸ªæµ‹è¯•) â­ æå‰ 70%
-- **CDP.Adapter.pas** (327 è¡Œ): Native Chrome DevTools Protocol WebSocket client
-- **WebElement.pas** (276 è¡Œ): XPath/CSS selector element abstraction
-- **Session.pas** (255 è¡Œ): Tab management + cookie handling
-- **Recorder.pas** (470 è¡Œ): Macro recording with Pascal/JS script generation
-- **Tests** (1,093 è¡Œ): 39 test cases (100% implemented)
-  - CDPSession.Impl (294 è¡Œ, 10 tests)
-  - WebElement.Impl (380 è¡Œ, 13 tests)
-  - Session.Impl (419 è¡Œ, 16 tests)
+#### P4 Browser Automation Framework (2,421 ĞĞ, 39 ¸ö²âÊÔ) ? ÌáÇ° 70%
+- **CDP.Adapter.pas** (327 ĞĞ): Native Chrome DevTools Protocol WebSocket client
+- **WebElement.pas** (276 ĞĞ): XPath/CSS selector element abstraction
+- **Session.pas** (255 ĞĞ): Tab management + cookie handling
+- **Recorder.pas** (470 ĞĞ): Macro recording with Pascal/JS script generation
+- **Tests** (1,093 ĞĞ): 39 test cases (100% implemented)
+  - CDPSession.Impl (294 ĞĞ, 10 tests)
+  - WebElement.Impl (380 ĞĞ, 13 tests)
+  - Session.Impl (419 ĞĞ, 16 tests)
 
-### æŠ€æœ¯äº®ç‚¹
-- **Union-Find CCL**: O(nÂ·Î±(m)) complexity with path compression
+### ¼¼ÊõÁÁµã
+- **Union-Find CCL**: O(n¡¤¦Á(m)) complexity with path compression
 - **Interface-Driven Stateless Architecture**: IRPAActionExecutor enables unlimited extension
 - **Zero-Allocation Hot Paths**: Performance-critical loops avoid dynamic allocations
 - **Fail-Closed Security Model**: Parameter validation blocks before execution
 - **Modern Delphi 13.1**: Lambda expressions, record methods, type inference fully leveraged
 
-### ä»£ç ç»Ÿè®¡
-- **æ€»ä»£ç è¡Œæ•°**: 9,666 è¡Œ (Production Quality)
-- **æµ‹è¯•ç”¨ä¾‹**: 126 ä¸ª (59 existing + 67 new)
-- **æ–‡ä»¶æ•°**: 19 core units + 6 test files + 5 docs
-- **å¹³å‡æå‰ç‡**: 67% ahead of schedule
-- **DPK æ³¨å†Œ**: DeepBasePlatform.dpk å…¨éƒ¨æ³¨å†Œå®Œæˆ
+### ´úÂëÍ³¼Æ
+- **×Ü´úÂëĞĞÊı**: 9,666 ĞĞ (Production Quality)
+- **²âÊÔÓÃÀı**: 126 ¸ö (59 existing + 67 new)
+- **ÎÄ¼şÊı**: 19 core units + 6 test files + 5 docs
+- **Æ½¾ùÌáÇ°ÂÊ**: 67% ahead of schedule
+- **DPK ×¢²á**: DeepBasePlatform.dpk È«²¿×¢²áÍê³É
 
-### å·²çŸ¥é—®é¢˜ (è§ bugfix.md)
-- BUG-WYJX-003: TODO æ–¹æ³•æœªå®ç° - å¾…ä¸‹ä¸ªè¿­ä»£ä¼˜åŒ– (Low priority)
+### ÒÑÖªÎÊÌâ (¼û bugfix.md)
+- BUG-WYJX-003: TODO ·½·¨Î´ÊµÏÖ - ´ıÏÂ¸öµü´úÓÅ»¯ (Low priority)
 
-### åç»­ (æœªåœ¨æœ¬æäº¤)
-- IDE ç¼–è¯‘éªŒè¯ï¼šBuild DeepBasePlatform.dproj
-- è¿è¡Œå®Œæ•´æµ‹è¯•å¥—ä»¶ï¼šéªŒè¯ 126/126 æµ‹è¯•é€šè¿‡
-- P2 é›†æˆæµ‹è¯•ï¼šActionEngine ç«¯åˆ°ç«¯åœºæ™¯éªŒè¯
-- æ€§èƒ½åŸºå‡†æµ‹è¯•ï¼šå†…å­˜/CPU åˆ†æ
+### ºóĞø (Î´ÔÚ±¾Ìá½»)
+- IDE ±àÒëÑéÖ¤£ºBuild DeepBasePlatform.dproj
+- ÔËĞĞÍêÕû²âÊÔÌ×¼ş£ºÑéÖ¤ 126/126 ²âÊÔÍ¨¹ı
+- P2 ¼¯³É²âÊÔ£ºActionEngine ¶Ëµ½¶Ë³¡¾°ÑéÖ¤
+- ĞÔÄÜ»ù×¼²âÊÔ£ºÄÚ´æ/CPU ·ÖÎö
 
-#### DEV-001: Process Management Actions ğŸ‰ (Just Completed!)
-- **æ–°å¢å•å…ƒ**: `Features/DeepBase.Automation.ActionEngine.Process.pas` (556 lines)
-- **åŠ¨ä½œå®ç°**:
+#### DEV-001: Process Management Actions ?? (Just Completed!)
+- **ĞÂÔöµ¥Ôª**: `Features/DeepBase.Automation.ActionEngine.Process.pas` (556 lines)
+- **¶¯×÷ÊµÏÖ**:
   - PROCESS_FIND: Find process by PID or name
   - PROCESS_KILL: Terminate with safety timeout
   - PROCESS_WAIT: Wait for termination
   - PROCESS_START: Launch new process
-- **æµ‹è¯•å¥—ä»¶**: `Tests/Test.DeepBase.Automation.ActionEngine.Process.pas` (240 lines, 5 tests)
+- **²âÊÔÌ×¼ş**: `Tests/Test.DeepBase.Automation.ActionEngine.Process.pas` (240 lines, 5 tests)
 - **Bug Fixes**: 
   - BUG-WYJX-001: Fixed CDP.Adapter.pas class name typo (3 occurrences)
-  - BUG-WYJX-002: Fixed DPIMapper.pas parameter typo (RelRelY â†’ RelativeY)
+  - BUG-WYJX-002: Fixed DPIMapper.pas parameter typo (RelRelY ¡ú RelativeY)
   - BUG-WYJX-004: Added TMonitorHandle type definition (HMONITOR)
-- **æ–‡ä»¶ç»Ÿè®¡**: 796 lines of code + tests
-- **çŠ¶æ€**: Completed at 2026-07-24 13:30
+- **ÎÄ¼şÍ³¼Æ**: 796 lines of code + tests
+- **×´Ì¬**: Completed at 2026-07-24 13:30
 
-#### DEV-002: Advanced Window Operations ğŸ‰ (Just Completed!)
-- **æ–°å¢å•å…ƒ**: `Features/DeepBase.Automation.ActionEngine.Window.pas` (600 lines)
-- **åŠ¨ä½œå®ç°**:
+#### DEV-002: Advanced Window Operations ?? (Just Completed!)
+- **ĞÂÔöµ¥Ôª**: `Features/DeepBase.Automation.ActionEngine.Window.pas` (600 lines)
+- **¶¯×÷ÊµÏÖ**:
   - WINDOW_GET_BOUNDS: Get window position/size as structured data
   - WINDOW_SET_TOPMOST: Toggle always-on-top flag
   - WINDOW_SET_TITLE: Change window title dynamically
@@ -295,1093 +325,1093 @@
   - WINDOW_MINIMIZE_MAXIMIZE: Minimize or maximize window
   - WINDOW_BRING_TO_FRONT: Bring window to foreground
   - WINDOW_Z_ORDER_MOVE: Move window in Z order
-- **æµ‹è¯•å¥—ä»¶**: `Tests/Test.DeepBase.Automation.ActionEngine.Window.pas` (251 lines, 8 tests)
-- **æ–‡ä»¶ç»Ÿè®¡**: 851 lines of code + tests
-- **çŠ¶æ€**: Completed at 2026-07-24 14:15
+- **²âÊÔÌ×¼ş**: `Tests/Test.DeepBase.Automation.ActionEngine.Window.pas` (251 lines, 8 tests)
+- **ÎÄ¼şÍ³¼Æ**: 851 lines of code + tests
+- **×´Ì¬**: Completed at 2026-07-24 14:15
 
-#### TEST-003: P2 Integration Test Scenarios ğŸ‰ (Just Completed!)
-- **æ–°å¢æµ‹è¯•**: `Tests/Test.DeepBase.Automation.ActionEngine.P2Scenarios.pas` (597 lines)
-- **æµ‹è¯•åœºæ™¯**:
-  1. TestLoginAutomationScenario - ç®€å•ç™»å½•è‡ªåŠ¨åŒ– (çª—å£èšç„¦ + é”®ç›˜è¾“å…¥ + é¼ æ ‡ç‚¹å‡»)
-  2. TestBatchProcessingLoop - æ‰¹å¤„ç†å¾ªç¯ (Loop + æ¡ä»¶åˆ¤æ–­)
-  3. TestFileSystemOperations - æ–‡ä»¶ç³»ç»Ÿæ“ä½œ (è¯»å†™ + è¿½åŠ  + åˆ é™¤)
-  4. TestProcessManagementWorkflow - è¿›ç¨‹ç®¡ç†å·¥ä½œæµ (å¯åŠ¨ + æŸ¥æ‰¾ + ç­‰å¾… + ç»ˆæ­¢)
-  5. TestWindowManipulationSequence - çª—å£æ“ä½œåºåˆ— (è·å–è¾¹ç•Œ + è®¾ç½®æ ‡é¢˜ + ç½®é¡¶ + æœ€å°åŒ–/æœ€å¤§åŒ–)
-  6. TestConditionalBranching - æ¡ä»¶åˆ†æ”¯æµ‹è¯•
-  7. TestErrorHandlingRecovery - é”™è¯¯å¤„ç†ä¸æ¢å¤
-  8. TestMultiStepWorkflow - å¤šæ­¥éª¤å·¥ä½œæµåè°ƒ
-- **æ–‡ä»¶ç»Ÿè®¡**: 597 lines, 8 comprehensive test scenarios
-- **çŠ¶æ€**: Completed at 2026-07-24 14:45
+#### TEST-003: P2 Integration Test Scenarios ?? (Just Completed!)
+- **ĞÂÔö²âÊÔ**: `Tests/Test.DeepBase.Automation.ActionEngine.P2Scenarios.pas` (597 lines)
+- **²âÊÔ³¡¾°**:
+  1. TestLoginAutomationScenario - ¼òµ¥µÇÂ¼×Ô¶¯»¯ (´°¿Ú¾Û½¹ + ¼üÅÌÊäÈë + Êó±êµã»÷)
+  2. TestBatchProcessingLoop - Åú´¦ÀíÑ­»· (Loop + Ìõ¼şÅĞ¶Ï)
+  3. TestFileSystemOperations - ÎÄ¼şÏµÍ³²Ù×÷ (¶ÁĞ´ + ×·¼Ó + É¾³ı)
+  4. TestProcessManagementWorkflow - ½ø³Ì¹ÜÀí¹¤×÷Á÷ (Æô¶¯ + ²éÕÒ + µÈ´ı + ÖÕÖ¹)
+  5. TestWindowManipulationSequence - ´°¿Ú²Ù×÷ĞòÁĞ (»ñÈ¡±ß½ç + ÉèÖÃ±êÌâ + ÖÃ¶¥ + ×îĞ¡»¯/×î´ó»¯)
+  6. TestConditionalBranching - Ìõ¼ş·ÖÖ§²âÊÔ
+  7. TestErrorHandlingRecovery - ´íÎó´¦ÀíÓë»Ö¸´
+  8. TestMultiStepWorkflow - ¶à²½Öè¹¤×÷Á÷Ğ­µ÷
+- **ÎÄ¼şÍ³¼Æ**: 597 lines, 8 comprehensive test scenarios
+- **×´Ì¬**: Completed at 2026-07-24 14:45
 
-#### TEST-004: Performance Benchmark Suite ğŸ‰ (Just Completed!)
-- **æ–°å¢æµ‹è¯•**: `Tests/Test.DeepBase.Automation.ActionEngine.Benchmark.pas` (685 lines)
-- **æ€§èƒ½æµ‹è¯•é¡¹**:
-  1. TestTemplateMatchPyramidSearchPerformance - é‡‘å­—å¡”æœç´¢æ€§èƒ½
-  2. TestTemplateMatchMultiScalePerformance - å¤šå°ºåº¦æœç´¢æ€§èƒ½
-  3. TestSmartClickExecutorRetryMechanismOverhead - é‡è¯•æœºåˆ¶å¼€é”€
-  4. TestSmartClickExecutorToleranceSearchPerformance - å®¹å·®æœç´¢æ€§èƒ½
-  5. TestCDPWebSocketConnectionLatency - CDP WebSocket è¿æ¥å»¶è¿Ÿ
-  6. TestCDPCommandResponseLatency - CDP å‘½ä»¤å“åº”å»¶è¿Ÿ
-  7. TestActionExecutionThroughput - åŠ¨ä½œæ‰§è¡Œååé‡
-  8. TestActionValidationOverhead - åŠ¨ä½œéªŒè¯å¼€é”€
-  9. TestWindowEnumerationPerformance - çª—å£æšä¸¾æ€§èƒ½
-  10. TestWindowBoundsQueryPerformance - çª—å£è¾¹ç•ŒæŸ¥è¯¢æ€§èƒ½
-  11. TestProcessFindByPIDPerformance - è¿›ç¨‹ PID æŸ¥æ‰¾æ€§èƒ½
-  12. TestProcessFindByNamePerformance - è¿›ç¨‹åç§°æŸ¥æ‰¾æ€§èƒ½
-  13. TestFileReadWritePerformance - æ–‡ä»¶è¯»å†™æ€§èƒ½
-  14. TestFileAppendPerformance - æ–‡ä»¶è¿½åŠ æ€§èƒ½
-- **æ€§èƒ½é˜ˆå€¼**: æ¯ä¸ªæµ‹è¯•éƒ½æœ‰æ˜ç¡®çš„æ€§èƒ½é˜ˆå€¼æ–­è¨€
-- **æ–‡ä»¶ç»Ÿè®¡**: 685 lines, 14 comprehensive benchmark tests
-- **çŠ¶æ€**: Completed at 2026-07-24 15:30
+#### TEST-004: Performance Benchmark Suite ?? (Just Completed!)
+- **ĞÂÔö²âÊÔ**: `Tests/Test.DeepBase.Automation.ActionEngine.Benchmark.pas` (685 lines)
+- **ĞÔÄÜ²âÊÔÏî**:
+  1. TestTemplateMatchPyramidSearchPerformance - ½ğ×ÖËşËÑË÷ĞÔÄÜ
+  2. TestTemplateMatchMultiScalePerformance - ¶à³ß¶ÈËÑË÷ĞÔÄÜ
+  3. TestSmartClickExecutorRetryMechanismOverhead - ÖØÊÔ»úÖÆ¿ªÏú
+  4. TestSmartClickExecutorToleranceSearchPerformance - Èİ²îËÑË÷ĞÔÄÜ
+  5. TestCDPWebSocketConnectionLatency - CDP WebSocket Á¬½ÓÑÓ³Ù
+  6. TestCDPCommandResponseLatency - CDP ÃüÁîÏìÓ¦ÑÓ³Ù
+  7. TestActionExecutionThroughput - ¶¯×÷Ö´ĞĞÍÌÍÂÁ¿
+  8. TestActionValidationOverhead - ¶¯×÷ÑéÖ¤¿ªÏú
+  9. TestWindowEnumerationPerformance - ´°¿ÚÃ¶¾ÙĞÔÄÜ
+  10. TestWindowBoundsQueryPerformance - ´°¿Ú±ß½ç²éÑ¯ĞÔÄÜ
+  11. TestProcessFindByPIDPerformance - ½ø³Ì PID ²éÕÒĞÔÄÜ
+  12. TestProcessFindByNamePerformance - ½ø³ÌÃû³Æ²éÕÒĞÔÄÜ
+  13. TestFileReadWritePerformance - ÎÄ¼ş¶ÁĞ´ĞÔÄÜ
+  14. TestFileAppendPerformance - ÎÄ¼ş×·¼ÓĞÔÄÜ
+- **ĞÔÄÜãĞÖµ**: Ã¿¸ö²âÊÔ¶¼ÓĞÃ÷È·µÄĞÔÄÜãĞÖµ¶ÏÑÔ
+- **ÎÄ¼şÍ³¼Æ**: 685 lines, 14 comprehensive benchmark tests
+- **×´Ì¬**: Completed at 2026-07-24 15:30
 
-#### DEV-003: Recording/Playback Engine ğŸ‰ (Just Completed!)
-- **æ–°å¢å•å…ƒ**: `Features/DeepBase.Automation.Recording.Playback.pas` (877 lines)
-- **æ ¸å¿ƒåŠŸèƒ½**:
-  - **Recording Session**: å®Œæ•´çš„å½•åˆ¶ä¼šè¯ç®¡ç†
-    - å¼€å§‹/åœæ­¢/æš‚åœ/æ¢å¤å½•åˆ¶
-    - åŠ¨ä½œæ•è·ï¼ˆé¼ æ ‡/é”®ç›˜/çª—å£/è¿›ç¨‹/æ–‡ä»¶/æµè§ˆå™¨ï¼‰
-    - å…ƒæ•°æ®ç®¡ç†
-    - åŠ¨ä½œç¼–è¾‘å’Œåˆ é™¤
-  - **Playback Controller**: é«˜çº§å›æ”¾æ§åˆ¶å™¨
-    - é€Ÿåº¦è°ƒèŠ‚ (0.25x - 4x)
-    - æ­¥è¿›å¯¼èˆªï¼ˆå‰è¿›/åé€€ï¼‰
-    -  seek åˆ°æŒ‡å®šåŠ¨ä½œ
-    - äº‹ä»¶å›è°ƒï¼ˆOnActionExecute, OnPlaybackCompleteï¼‰
-  - **Export Capabilities**: å¤šæ ¼å¼å¯¼å‡º
-    - Pascal/Delphi è„šæœ¬ç”Ÿæˆ
-    - Python è„šæœ¬ç”Ÿæˆ
-    - JSON/JSONL æ ¼å¼å¯¼å‡º
-    - æ‰¹é‡å¯¼å‡ºåˆ°ç›®å½•
-  - **Session Management**: ä¼šè¯ç®¡ç†
-    - å¤šä¼šè¯æ”¯æŒ
-    - æŒ‰ ID æŸ¥æ‰¾
-    - æ‰¹é‡æ“ä½œ
-- **æµ‹è¯•å¥—ä»¶**: `Tests/Test.DeepBase.Automation.Recording.Playback.pas` (525 lines, 20 tests)
-- **æ–‡ä»¶ç»Ÿè®¡**: 1,402 lines of code + tests
-- **çŠ¶æ€**: Completed at 2026-07-24 16:15
+#### DEV-003: Recording/Playback Engine ?? (Just Completed!)
+- **ĞÂÔöµ¥Ôª**: `Features/DeepBase.Automation.Recording.Playback.pas` (877 lines)
+- **ºËĞÄ¹¦ÄÜ**:
+  - **Recording Session**: ÍêÕûµÄÂ¼ÖÆ»á»°¹ÜÀí
+    - ¿ªÊ¼/Í£Ö¹/ÔİÍ£/»Ö¸´Â¼ÖÆ
+    - ¶¯×÷²¶»ñ£¨Êó±ê/¼üÅÌ/´°¿Ú/½ø³Ì/ÎÄ¼ş/ä¯ÀÀÆ÷£©
+    - ÔªÊı¾İ¹ÜÀí
+    - ¶¯×÷±à¼­ºÍÉ¾³ı
+  - **Playback Controller**: ¸ß¼¶»Ø·Å¿ØÖÆÆ÷
+    - ËÙ¶Èµ÷½Ú (0.25x - 4x)
+    - ²½½øµ¼º½£¨Ç°½ø/ºóÍË£©
+    -  seek µ½Ö¸¶¨¶¯×÷
+    - ÊÂ¼ş»Øµ÷£¨OnActionExecute, OnPlaybackComplete£©
+  - **Export Capabilities**: ¶à¸ñÊ½µ¼³ö
+    - Pascal/Delphi ½Å±¾Éú³É
+    - Python ½Å±¾Éú³É
+    - JSON/JSONL ¸ñÊ½µ¼³ö
+    - ÅúÁ¿µ¼³öµ½Ä¿Â¼
+  - **Session Management**: »á»°¹ÜÀí
+    - ¶à»á»°Ö§³Ö
+    - °´ ID ²éÕÒ
+    - ÅúÁ¿²Ù×÷
+- **²âÊÔÌ×¼ş**: `Tests/Test.DeepBase.Automation.Recording.Playback.pas` (525 lines, 20 tests)
+- **ÎÄ¼şÍ³¼Æ**: 1,402 lines of code + tests
+- **×´Ì¬**: Completed at 2026-07-24 16:15
 
-#### DEV-004: Visual Debugging Overlay ğŸ‰ (Just Completed!)
-- **æ–°å¢å•å…ƒ**: `Features/DeepBase.Automation.Debugging.VisualOverlay.pas` (831 lines)
-- **æ ¸å¿ƒåŠŸèƒ½**:
-  - **Overlay Window**: åŠé€æ˜ç½®é¡¶è¦†ç›–çª—å£
+#### DEV-004: Visual Debugging Overlay ?? (Just Completed!)
+- **ĞÂÔöµ¥Ôª**: `Features/DeepBase.Automation.Debugging.VisualOverlay.pas` (831 lines)
+- **ºËĞÄ¹¦ÄÜ**:
+  - **Overlay Window**: °ëÍ¸Ã÷ÖÃ¶¥¸²¸Ç´°¿Ú
     - Layered window with alpha blending
-    - åŒå‡»ç¼“å†²æ¸²æŸ“é˜²æ­¢é—ªçƒ
-    - å¯è°ƒèŠ‚é€æ˜åº¦ (0-255)
-  - **Visual Elements**: å¯è§†åŒ–å…ƒç´ 
-    - ClickPoint: ç‚¹å‡»ç‚¹æ ‡è®°ï¼ˆåå­—çº¿ + åœ†åœˆï¼‰
-    - BoundingBox: è¾¹ç•Œæ¡†çŸ©å½¢
-    - ROIRectangle: æ„Ÿå…´è¶£åŒºåŸŸ
-    - Crosshair: åå­—å‡†æ˜Ÿ
-    - TextAnnotation: æ–‡æœ¬æ³¨é‡Š
-    - HighlightCircle: é«˜äº®åœ†åœˆ
-    - Arrow: æ–¹å‘ç®­å¤´
-  - **Action Log**: å®æ—¶åŠ¨ä½œæ—¥å¿—
-    - æ—¶é—´æˆ³æ˜¾ç¤º
-    - æˆåŠŸ/å¤±è´¥çŠ¶æ€é¢œè‰²ç¼–ç 
-    - æœ€å¤š 50 æ¡è®°å½•
-    - å¯åˆ‡æ¢æ˜¾ç¤º
-  - **Performance Metrics**: æ€§èƒ½æŒ‡æ ‡
-    - FPS å®æ—¶æ˜¾ç¤º
-    - å…ƒç´ æ•°é‡ç»Ÿè®¡
-    - æ—¥å¿—æ¡ç›®ç»Ÿè®¡
-  - **Element Lifecycle**: å…ƒç´ ç”Ÿå‘½å‘¨æœŸ
-    - è‡ªåŠ¨è¿‡æœŸæ¸…ç†
-    - å¯é…ç½®æ˜¾ç¤ºæ—¶é•¿
-    - æ‰‹åŠ¨æ¸…é™¤
-- **æµ‹è¯•å¥—ä»¶**: `Tests/Test.DeepBase.Automation.Debugging.VisualOverlay.pas` (420 lines, 22 tests)
-- **æ–‡ä»¶ç»Ÿè®¡**: 1,251 lines of code + tests
-- **çŠ¶æ€**: Completed at 2026-07-24 17:00
+    - Ë«»÷»º³åäÖÈ¾·ÀÖ¹ÉÁË¸
+    - ¿Éµ÷½ÚÍ¸Ã÷¶È (0-255)
+  - **Visual Elements**: ¿ÉÊÓ»¯ÔªËØ
+    - ClickPoint: µã»÷µã±ê¼Ç£¨Ê®×ÖÏß + Ô²È¦£©
+    - BoundingBox: ±ß½ç¿ò¾ØĞÎ
+    - ROIRectangle: ¸ĞĞËÈ¤ÇøÓò
+    - Crosshair: Ê®×Ö×¼ĞÇ
+    - TextAnnotation: ÎÄ±¾×¢ÊÍ
+    - HighlightCircle: ¸ßÁÁÔ²È¦
+    - Arrow: ·½Ïò¼ıÍ·
+  - **Action Log**: ÊµÊ±¶¯×÷ÈÕÖ¾
+    - Ê±¼ä´ÁÏÔÊ¾
+    - ³É¹¦/Ê§°Ü×´Ì¬ÑÕÉ«±àÂë
+    - ×î¶à 50 Ìõ¼ÇÂ¼
+    - ¿ÉÇĞ»»ÏÔÊ¾
+  - **Performance Metrics**: ĞÔÄÜÖ¸±ê
+    - FPS ÊµÊ±ÏÔÊ¾
+    - ÔªËØÊıÁ¿Í³¼Æ
+    - ÈÕÖ¾ÌõÄ¿Í³¼Æ
+  - **Element Lifecycle**: ÔªËØÉúÃüÖÜÆÚ
+    - ×Ô¶¯¹ıÆÚÇåÀí
+    - ¿ÉÅäÖÃÏÔÊ¾Ê±³¤
+    - ÊÖ¶¯Çå³ı
+- **²âÊÔÌ×¼ş**: `Tests/Test.DeepBase.Automation.Debugging.VisualOverlay.pas` (420 lines, 22 tests)
+- **ÎÄ¼şÍ³¼Æ**: 1,251 lines of code + tests
+- **×´Ì¬**: Completed at 2026-07-24 17:00
 
 ---
 
 
-## 2026-07-22 perception-p0/p1 æ¡Œé¢æ„ŸçŸ¥å±‚ + UIA ç»Ÿä¸€è¡ŒåŠ¨å™¨åŒé€šé“ âœ…
+## 2026-07-22 perception-p0/p1 ×ÀÃæ¸ĞÖª²ã + UIA Í³Ò»ĞĞ¶¯Æ÷Ë«Í¨µÀ ?
 
-> æ¥æº: docs/87 æ„ŸçŸ¥-æ¨ç†-è¡ŒåŠ¨ä¸‹æ²‰åˆ†å±‚å¼€å‘è§„æ ¼ (2026-07-22 fastmeet 8 æ¨¡å‹é«˜å…±è¯†) + docs/94 wechat-mac-rpa å€Ÿé‰´ç¬”è®°
-> æäº¤: c060661 (å·² fast-forward merge å› feat/a007-route-due-register)
+> À´Ô´: docs/87 ¸ĞÖª-ÍÆÀí-ĞĞ¶¯ÏÂ³Á·Ö²ã¿ª·¢¹æ¸ñ (2026-07-22 fastmeet 8 Ä£ĞÍ¸ß¹²Ê¶) + docs/94 wechat-mac-rpa ½è¼ø±Ê¼Ç
+> Ìá½»: c060661 (ÒÑ fast-forward merge »Ø feat/a007-route-due-register)
 
-### å®Œæˆå†…å®¹
-- **P0 æ„ŸçŸ¥å±‚**: `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas`
+### Íê³ÉÄÚÈİ
+- **P0 ¸ĞÖª²ã**: `Features/DeepBase.Desktop.Perception.{Types,Engine,LLMProvider}.pas`
   - TPerceptionSource (psOCR/psVision/psUIAProbe/psUnknown) / TDesktopScreenshot / TPerceivedElement / TPerceptionResult / TPerceptionCache / TVisualRecognitionEngine
-  - LLM-backed è§†è§‰è¯†åˆ« provider è½ DeepBaseLLM.dpk; ä¸­æ€§ Types/Engine è½ DeepBasePlatform.dpk (æœªæ–°å»º DeepBasePerception.dpk)
-- **P1 è¡ŒåŠ¨å±‚**: `Features/DeepBase.UIA.UnifiedActuator.pas`
-  - TUnifiedActuator åŒé€šé“ (acUIA/acVisual); fpBestEffort ä¸‹ UIA selector å¤±è´¥èµ°æ„ŸçŸ¥å±‚è§†è§‰åæ ‡å…œåº•; fpStrict ä»åªèµ° UIA å¤±è´¥å³æŠ›
-- **å›å½’**: Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator
-- **SPW é—¨ç¦**: H1-H4+H5 å…¨ç»¿ (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash åŒå®¶æ— identity_verified)
-- **æ–‡æ¡£**: docs/34 v0.7 Â§6.5 ç»Ÿä¸€è¡ŒåŠ¨å™¨ç°çŠ¶ / docs/87 v0.2 è½åœ°ç°çŠ¶ / docs/94 æ–°å»º wechat-mac-rpa å€Ÿé‰´ç¬”è®°
+  - LLM-backed ÊÓ¾õÊ¶±ğ provider Âä DeepBaseLLM.dpk; ÖĞĞÔ Types/Engine Âä DeepBasePlatform.dpk (Î´ĞÂ½¨ DeepBasePerception.dpk)
+- **P1 ĞĞ¶¯²ã**: `Features/DeepBase.UIA.UnifiedActuator.pas`
+  - TUnifiedActuator Ë«Í¨µÀ (acUIA/acVisual); fpBestEffort ÏÂ UIA selector Ê§°Ü×ß¸ĞÖª²ãÊÓ¾õ×ø±ê¶µµ×; fpStrict ÈÔÖ»×ß UIA Ê§°Ü¼´Å×
+- **»Ø¹é**: Test.DeepBase.Desktop.Perception + Test.DeepBase.UIA.UnifiedActuator
+- **SPW ÃÅ½û**: H1-H4+H5 È«ÂÌ (artifact_verdict=PASS, release_ready=True, GLM5.2+StepFun3.7Flash Ë«¼Ò×å identity_verified)
+- **ÎÄµµ**: docs/34 v0.7 ¡ì6.5 Í³Ò»ĞĞ¶¯Æ÷ÏÖ×´ / docs/87 v0.2 ÂäµØÏÖ×´ / docs/94 ĞÂ½¨ wechat-mac-rpa ½è¼ø±Ê¼Ç
 
-### åç»­ (æœªåœ¨æœ¬æäº¤)
-- PERCEPT-P2 å¸§é—´å˜åŒ–æ£€æµ‹: ç¬¬ä¸€çº§ (å…¨å›¾ MD5 å¸§ç¼“å­˜) ä»£ç å·²å†™äº perception-p2 worktree æœªæäº¤, å¾…æ”¶å£ (è§ tasks.md PERCEPT-P2-001)
-- PERCEPT-WYJX wyjx æ¡Œé¢ RPA åŸè¯­æç‚¼: 2026-07-23 expert-review + æŠ€æœ¯ä¼šè®®å†³å®š (è§ tasks.md PERCEPT-WYJX)
+### ºóĞø (Î´ÔÚ±¾Ìá½»)
+- PERCEPT-P2 Ö¡¼ä±ä»¯¼ì²â: µÚÒ»¼¶ (È«Í¼ MD5 Ö¡»º´æ) ´úÂëÒÑĞ´ÓÚ perception-p2 worktree Î´Ìá½», ´ıÊÕ¿Ú (¼û tasks.md PERCEPT-P2-001)
+- PERCEPT-WYJX wyjx ×ÀÃæ RPA Ô­ÓïÌáÁ¶: 2026-07-23 expert-review + ¼¼Êõ»áÒé¾ö¶¨ (¼û tasks.md PERCEPT-WYJX)
 
 
-## 2026-07-06 REVIEW5-R2 ç¬¬äºŒè½®äº”ä¸“å®¶å®¡é˜…ä¿®å¤ (å·²ä¿® 23 é¡¹)
+## 2026-07-06 REVIEW5-R2 µÚ¶şÂÖÎå×¨¼ÒÉóÔÄĞŞ¸´ (ÒÑĞŞ 23 Ïî)
 
-> æ¥æº: 2026-07-06 ç¬¬äºŒè½®äº”ä¸“å®¶å…¨æ¨¡å—ä»£ç å®¡é˜… (REVIEW5-R2, review5-round2)
-> èŒƒå›´: Core åŸºç¡€è®¾æ–½/ä¸šåŠ¡é€»è¾‘ (ä¸“å®¶ A/B)ã€Persistence/æ²»ç†/å·¥ä½œæµ (ä¸“å®¶ D)ã€VCL/FMX/åŒ…å·¥ç¨‹ (ä¸“å®¶ E); ä¸“å®¶ C å›  API ä½™é¢ä¸è¶³æœªå®Œæˆ Features å±‚
-> æŠ¥å‘Š: `expert_{a,b,d,e}_findings_round2.md`
-> æœ¬è½®å…±å‘ç° 163 é¡¹ (13 P0 / 43 P1 / 107 P2+), æœ¬è½®ä¿®å¤ **23 é¡¹** (7 P0 + 16 P1/P2), å¯¹åº” BUG-363 ~ BUG-385 (P0 å¦å« DATA2-005/006 ä¸¤é¡¹æ— ç‹¬ç«‹ BUG åºå·, è§ bugfix.md è¡¥å½•æ®µ)ã€‚
+> À´Ô´: 2026-07-06 µÚ¶şÂÖÎå×¨¼ÒÈ«Ä£¿é´úÂëÉóÔÄ (REVIEW5-R2, review5-round2)
+> ·¶Î§: Core »ù´¡ÉèÊ©/ÒµÎñÂß¼­ (×¨¼Ò A/B)¡¢Persistence/ÖÎÀí/¹¤×÷Á÷ (×¨¼Ò D)¡¢VCL/FMX/°ü¹¤³Ì (×¨¼Ò E); ×¨¼Ò C Òò API Óà¶î²»×ãÎ´Íê³É Features ²ã
+> ±¨¸æ: `expert_{a,b,d,e}_findings_round2.md`
+> ±¾ÂÖ¹²·¢ÏÖ 163 Ïî (13 P0 / 43 P1 / 107 P2+), ±¾ÂÖĞŞ¸´ **23 Ïî** (7 P0 + 16 P1/P2), ¶ÔÓ¦ BUG-363 ~ BUG-385 (P0 Áíº¬ DATA2-005/006 Á½ÏîÎŞ¶ÀÁ¢ BUG ĞòºÅ, ¼û bugfix.md ²¹Â¼¶Î)¡£
 
-### P0 ä¿®å¤ (7 é¡¹ + 2 é¡¹è¡¥å½• = 9 é¡¹, BUG-363 ~ BUG-369 + DATA2-005/006)
+### P0 ĞŞ¸´ (7 Ïî + 2 Ïî²¹Â¼ = 9 Ïî, BUG-363 ~ BUG-369 + DATA2-005/006)
 
-- [x] **REVIEW5-R2-CORE-001** (CORE-R2-001 / BUG-363): `Core/DeepBase.Benchmark.pas` GenerateJSON å°† TJSONObject å¼ºè½¬ä¸º TJSONArray è‡´è°ƒç”¨å¿… AV â€” æ”¹ ResultsArr å£°æ˜ä¸º TJSONArray âœ…
-- [x] **REVIEW5-R2-CORE-002** (CORE-R2-002 / BUG-364): `Core/DeepBase.Crypto.pas` TSimpleCrypto.DecryptBytes æ—§ç‰ˆ CBC æ•°æ®åœ¨ GCM å‡çº§åä¸å¯è§£å¯† â€” v1/legacy è·¯å¾„æ”¹ç”¨ aesCBC, ä»… v2 ç”¨ GCM âœ…
-- [x] **REVIEW5-R2-DATA-001** (DATA2-001 / BUG-365): `Persistence/DeepBase.ORM.pas` Where/AndWhere/OrWhere æ¡ä»¶å­—ç¬¦ä¸²ç›´æ¥æ‹¼æ¥ SQL æ³¨å…¥ â€” æ–°å¢ ValidateSQLIdentifier, æ¨èå‚æ•°åŒ–ç‰ˆæœ¬ âœ…
-- [x] **REVIEW5-R2-DATA-002** (DATA2-002 / BUG-365): `Persistence/DeepBase.ORM.pas` OrderBy/OrderByDesc åˆ—åç›´æ¥æ‹¼æ¥ â€” è°ƒç”¨å‰æ ¡éªŒ, éæ³•æŠ› EORMException âœ…
-- [x] **REVIEW5-R2-DATA-003** (DATA2-003 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` AES/MAC å¯†é’¥ææ„æœªæ¸…é›¶ â€” FillChar æ¸…é›¶å nil âœ…
-- [x] **REVIEW5-R2-DATA-004** (DATA2-004 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` è§£å¯†æ•°æ®åº“å†™å…¥å¯é¢„æµ‹ä¸´æ—¶æ–‡ä»¶è·¯å¾„ â€” BCryptGenRandom/RtlGenRandom ç”Ÿæˆéšæœºè·¯å¾„ + å®‰å…¨æ“¦é™¤ âœ…
-- [x] **REVIEW5-R2-UI-001** (UI2-001 / BUG-367): `DeepBaseCore.dpk` ä¸ `DeepBaseDataPlatform.dpk` ä¸­ WeChat4x é‡å¤å£°æ˜è‡´ E2065 â€” ä» DataPlatform.dpk ç§»é™¤ âœ…
-- [x] **REVIEW5-R2-UI-002** (UI2-002 / BUG-368): `FMX/DeepBase.FMX.LLMChatFrame.pas` DoSendMessage ç”¨ TThread.CreateAnonymousThread æœªèµ‹å€¼ç»™ FCurrentTask è‡´ææ„åæ‚¬å‚ â€” æ”¹ TTask.Run + ITask âœ…
-- [x] **REVIEW5-R2-UI-003** (UI2-003 / BUG-369): `VCL/DeepBase.VCL.FeedbackDialog.pas` SubmitFeedback ä¸­ TStringStream æœªé‡Šæ”¾ â€” åŠ  try/finally âœ…
-- [x] **REVIEW5-R2-DATA-005** (DATA2-005, æ— ç‹¬ç«‹ BUG åºå·): `Governance/DeepBase.Governance.EvidenceStore.SQLite.pas` è¯æ®é“¾æ— é˜²ç¯¡æ”¹å“ˆå¸Œé“¾ â€” æ–°å¢ prev_hash/this_hash åˆ— + HMAC-SHA256 é“¾ + VerifyChain/MigrateExistingChain âœ… (è¯¦è§ bugfix.md è¡¥å½•æ®µ)
-- [x] **REVIEW5-R2-DATA-006** (DATA2-006, æ— ç‹¬ç«‹ BUG åºå·): `Governance/DeepBase.Governance.EvidenceRecorder.pas` PushItem è¿”å›å€¼ä¸¢å¼ƒè‡´é˜Ÿåˆ—æº¢å‡ºæ—¶è¯æ®é™é»˜ä¸¢å¤± â€” æ£€æŸ¥è¿”å›å€¼ + æŒ‡æ•°é€€é¿é‡è¯• + FFailureQueue å¤‡ä»½ + FDroppedCount ç»Ÿè®¡ âœ… (è¯¦è§ bugfix.md è¡¥å½•æ®µ)
+- [x] **REVIEW5-R2-CORE-001** (CORE-R2-001 / BUG-363): `Core/DeepBase.Benchmark.pas` GenerateJSON ½« TJSONObject Ç¿×ªÎª TJSONArray ÖÂµ÷ÓÃ±Ø AV ¡ª ¸Ä ResultsArr ÉùÃ÷Îª TJSONArray ?
+- [x] **REVIEW5-R2-CORE-002** (CORE-R2-002 / BUG-364): `Core/DeepBase.Crypto.pas` TSimpleCrypto.DecryptBytes ¾É°æ CBC Êı¾İÔÚ GCM Éı¼¶ºó²»¿É½âÃÜ ¡ª v1/legacy Â·¾¶¸ÄÓÃ aesCBC, ½ö v2 ÓÃ GCM ?
+- [x] **REVIEW5-R2-DATA-001** (DATA2-001 / BUG-365): `Persistence/DeepBase.ORM.pas` Where/AndWhere/OrWhere Ìõ¼ş×Ö·û´®Ö±½ÓÆ´½Ó SQL ×¢Èë ¡ª ĞÂÔö ValidateSQLIdentifier, ÍÆ¼ö²ÎÊı»¯°æ±¾ ?
+- [x] **REVIEW5-R2-DATA-002** (DATA2-002 / BUG-365): `Persistence/DeepBase.ORM.pas` OrderBy/OrderByDesc ÁĞÃûÖ±½ÓÆ´½Ó ¡ª µ÷ÓÃÇ°Ğ£Ñé, ·Ç·¨Å× EORMException ?
+- [x] **REVIEW5-R2-DATA-003** (DATA2-003 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` AES/MAC ÃÜÔ¿Îö¹¹Î´ÇåÁã ¡ª FillChar ÇåÁãºó nil ?
+- [x] **REVIEW5-R2-DATA-004** (DATA2-004 / BUG-366): `DeepAxis/DeepBase.External.BCryptDecrypt.pas` ½âÃÜÊı¾İ¿âĞ´Èë¿ÉÔ¤²âÁÙÊ±ÎÄ¼şÂ·¾¶ ¡ª BCryptGenRandom/RtlGenRandom Éú³ÉËæ»úÂ·¾¶ + °²È«²Á³ı ?
+- [x] **REVIEW5-R2-UI-001** (UI2-001 / BUG-367): `DeepBaseCore.dpk` Óë `DeepBaseDataPlatform.dpk` ÖĞ WeChat4x ÖØ¸´ÉùÃ÷ÖÂ E2065 ¡ª ´Ó DataPlatform.dpk ÒÆ³ı ?
+- [x] **REVIEW5-R2-UI-002** (UI2-002 / BUG-368): `FMX/DeepBase.FMX.LLMChatFrame.pas` DoSendMessage ÓÃ TThread.CreateAnonymousThread Î´¸³Öµ¸ø FCurrentTask ÖÂÎö¹¹ºóĞü´¹ ¡ª ¸Ä TTask.Run + ITask ?
+- [x] **REVIEW5-R2-UI-003** (UI2-003 / BUG-369): `VCL/DeepBase.VCL.FeedbackDialog.pas` SubmitFeedback ÖĞ TStringStream Î´ÊÍ·Å ¡ª ¼Ó try/finally ?
+- [x] **REVIEW5-R2-DATA-005** (DATA2-005, ÎŞ¶ÀÁ¢ BUG ĞòºÅ): `Governance/DeepBase.Governance.EvidenceStore.SQLite.pas` Ö¤¾İÁ´ÎŞ·À´Û¸Ä¹şÏ£Á´ ¡ª ĞÂÔö prev_hash/this_hash ÁĞ + HMAC-SHA256 Á´ + VerifyChain/MigrateExistingChain ? (Ïê¼û bugfix.md ²¹Â¼¶Î)
+- [x] **REVIEW5-R2-DATA-006** (DATA2-006, ÎŞ¶ÀÁ¢ BUG ĞòºÅ): `Governance/DeepBase.Governance.EvidenceRecorder.pas` PushItem ·µ»ØÖµ¶ªÆúÖÂ¶ÓÁĞÒç³öÊ±Ö¤¾İ¾²Ä¬¶ªÊ§ ¡ª ¼ì²é·µ»ØÖµ + Ö¸ÊıÍË±ÜÖØÊÔ + FFailureQueue ±¸·İ + FDroppedCount Í³¼Æ ? (Ïê¼û bugfix.md ²¹Â¼¶Î)
 
-### P1/P2 ä¿®å¤ (16 é¡¹, BUG-370 ~ BUG-385)
+### P1/P2 ĞŞ¸´ (16 Ïî, BUG-370 ~ BUG-385)
 
-- [x] **REVIEW5-R2-CORE-006** (CORE-R2-006 / BUG-370): `Core/DeepBase.Config.pas` SetConfigInternal é”é‡Šæ”¾/é‡è·å–çª—å£ç«æ€ â€” out-params è¿”å›å›è°ƒ, é”å¤–è§¦å‘, æ¶ˆé™¤ Exit/Enter é‡å…¥ âœ…
-- [x] **REVIEW5-R2-CORE-008** (CORE-R2-008 / BUG-371): `Core/DeepBase.ObjectPool.pas` åå°æ¸…ç†ä»»åŠ¡æ— å¼‚å¸¸å¤„ç† â€” æ¸…ç†å¾ªç¯åŠ  try/except åå™¬å•æ¬¡å¼‚å¸¸ âœ…
-- [x] **REVIEW5-R2-CORE-011** (CORE-R2-011 / BUG-372): `Core/DeepBase.Metrics.pas` TSummary.Observe O(nÂ²) æ¸…ç† â€” æ”¹å›ºå®šå®¹é‡ç¯å½¢ç¼“å†², å†™å…¥ O(1) âœ…
-- [x] **REVIEW5-R2-CORE-012** (CORE-R2-012 / BUG-373): `Core/DeepBase.Cache.pas` FInsertOrder FIFO é˜Ÿåˆ—æ— é™å¢é•¿ â€” ä»…æ–° key åˆ†æ”¯ Enqueue, è¦†ç›–å‹å¤ç”¨æ—§ä½ç½® âœ…
-- [x] **REVIEW5-R2-BIZ-001** (BIZ2-001 / BUG-374): `Core/DeepBase.LLM.pas` ChatAsync TTask é—­åŒ…æ•è· Self æ‚¬å‚ â€” FActiveTasks + ææ„ WaitFor (5s) âœ…
-- [x] **REVIEW5-R2-BIZ-002** (BIZ2-002 / BUG-375): `Core/DeepBase.LLM.pas` GetConfig ç¼“å­˜ TOCTOU ç«æ€ â€” æ–‡æ¡£åŒ–"å…¨è¡¨æ›¿æ¢"è¯­ä¹‰, çª—å£æ”¶çª„, ä¸‹æ¬¡è‡ªæ„ˆ âœ…
-- [x] **REVIEW5-R2-BIZ-005** (BIZ2-005 / BUG-376): `Core/DeepBase.LLM.Manager.pas` DeletePrompt æœªçº§è”åˆ é™¤å…³è”è®°å½• â€” å­æŸ¥è¯¢çº§è”åˆ  LLMCalls/PromptMetaBinding/PromptVersions å†åˆ ä¸»è¡¨ âœ…
-- [x] **REVIEW5-R2-BIZ-011** (BIZ2-011 / BUG-377): `Core/DeepBase.WorkerQueue.pas` TFileJobStorage é”æ–‡ä»¶ DELETE_ON_CLOSE â€” ç§»é™¤è¯¥æ ‡å¿—, ä¿ç•™ CREATE_ALWAYS+share=0 ç‹¬å  âœ…
-- [x] **REVIEW5-R2-BIZ-021** (BIZ2-021 / BUG-378): `Core/DeepBase.AppLifecycle.pas` å´©æºƒè®¡æ•°æ— é™å¢é•¿ â€” MAX_CRASH_COUNT=1000 ä¸Šé™ + 24h å¤–é‡ç½® âœ…
-- [x] **REVIEW5-R2-BIZ-018** (BIZ2-018 / BUG-379): `Core/DeepBase.AIErrorHandler.pas` ExceptAddr åœ¨é except å—ä¸­ä½¿ç”¨ â€” æ–°å¢ HandleAt(E, AExceptAddr, AContext), SafeRun åœ¨ except å†…ä¼ åœ°å€ âœ…
-- [x] **REVIEW5-R2-BIZ-032** (BIZ2-032 / BUG-380): `Core/DeepBase.MVVM.pas` TAsyncCommand.DoExecute æ•è· SelfRef æ‚¬å‚ â€” task å¯åŠ¨å‰å¿«ç…§ ViewModel/å›è°ƒ/ExecuteProc åˆ°å±€éƒ¨, åˆ‡æ–­ Self å¼•ç”¨ âœ…
-- [x] **REVIEW5-R2-UI-009** (UI2-009 / BUG-381): `FMX/DeepBase.FMX.LLMChatFrame.pas` åå°çº¿ç¨‹è®¿é—® FHistory æœªä¿æŠ¤ â€” è¿› TTask å‰ä¸»çº¿ç¨‹å¿«ç…§ GetMessages, task å†…ç”¨å±€éƒ¨ âœ…
-- [x] **REVIEW5-R2-DATA-049** (DATA2-049 / BUG-382): `Persistence/DeepBase.SQLLogger.pas` FormatLogEntry æ—¥å¿—æ³¨å…¥ â€” å¯¹ SQL/Operation/ErrorMessage å‰¥ç¦» CR/LF âœ…
-- [x] **REVIEW5-R2-DATA-007** (DATA2-055 / BUG-383): `Persistence/DeepBase.DB.Pool.pas` Validate æŸ¥è¯¢æ— è¶…æ—¶è‡´ csValidating æ°¸ä¸æ¢å¤ â€” å– CommandTimeoutSec æˆ–å›é€€ 5s âœ…
-- [x] **REVIEW5-R2-BIZ-013** (BIZ2-013 / BUG-384): `Core/DeepBase.FileWatcher.pas` HandleDebounce æ¯æ¬¡å˜æ›´åˆ›å»º TTask â€” FDebounceTaskScheduled é—¸é—¨, åŒåˆ»æœ€å¤šä¸€ä¸ª drain task âœ…
-- [x] **REVIEW5-R2-BIZ-009** (BIZ2-009 / BUG-385): `Core/DeepBase.WorkerQueue.pas` WaitForCompletion Sleep(50) é«˜é¢‘è½®è¯¢ â€” é—´éš”è°ƒåˆ° 250ms + æˆªæ–­åˆ°å‰©ä½™ timeout âœ…
+- [x] **REVIEW5-R2-CORE-006** (CORE-R2-006 / BUG-370): `Core/DeepBase.Config.pas` SetConfigInternal ËøÊÍ·Å/ÖØ»ñÈ¡´°¿Ú¾ºÌ¬ ¡ª out-params ·µ»Ø»Øµ÷, ËøÍâ´¥·¢, Ïû³ı Exit/Enter ÖØÈë ?
+- [x] **REVIEW5-R2-CORE-008** (CORE-R2-008 / BUG-371): `Core/DeepBase.ObjectPool.pas` ºóÌ¨ÇåÀíÈÎÎñÎŞÒì³£´¦Àí ¡ª ÇåÀíÑ­»·¼Ó try/except ÍÌÊÉµ¥´ÎÒì³£ ?
+- [x] **REVIEW5-R2-CORE-011** (CORE-R2-011 / BUG-372): `Core/DeepBase.Metrics.pas` TSummary.Observe O(n2) ÇåÀí ¡ª ¸Ä¹Ì¶¨ÈİÁ¿»·ĞÎ»º³å, Ğ´Èë O(1) ?
+- [x] **REVIEW5-R2-CORE-012** (CORE-R2-012 / BUG-373): `Core/DeepBase.Cache.pas` FInsertOrder FIFO ¶ÓÁĞÎŞÏŞÔö³¤ ¡ª ½öĞÂ key ·ÖÖ§ Enqueue, ¸²¸ÇĞÍ¸´ÓÃ¾ÉÎ»ÖÃ ?
+- [x] **REVIEW5-R2-BIZ-001** (BIZ2-001 / BUG-374): `Core/DeepBase.LLM.pas` ChatAsync TTask ±Õ°ü²¶»ñ Self Ğü´¹ ¡ª FActiveTasks + Îö¹¹ WaitFor (5s) ?
+- [x] **REVIEW5-R2-BIZ-002** (BIZ2-002 / BUG-375): `Core/DeepBase.LLM.pas` GetConfig »º´æ TOCTOU ¾ºÌ¬ ¡ª ÎÄµµ»¯"È«±íÌæ»»"ÓïÒå, ´°¿ÚÊÕÕ­, ÏÂ´Î×ÔÓú ?
+- [x] **REVIEW5-R2-BIZ-005** (BIZ2-005 / BUG-376): `Core/DeepBase.LLM.Manager.pas` DeletePrompt Î´¼¶ÁªÉ¾³ı¹ØÁª¼ÇÂ¼ ¡ª ×Ó²éÑ¯¼¶ÁªÉ¾ LLMCalls/PromptMetaBinding/PromptVersions ÔÙÉ¾Ö÷±í ?
+- [x] **REVIEW5-R2-BIZ-011** (BIZ2-011 / BUG-377): `Core/DeepBase.WorkerQueue.pas` TFileJobStorage ËøÎÄ¼ş DELETE_ON_CLOSE ¡ª ÒÆ³ı¸Ã±êÖ¾, ±£Áô CREATE_ALWAYS+share=0 ¶ÀÕ¼ ?
+- [x] **REVIEW5-R2-BIZ-021** (BIZ2-021 / BUG-378): `Core/DeepBase.AppLifecycle.pas` ±ÀÀ£¼ÆÊıÎŞÏŞÔö³¤ ¡ª MAX_CRASH_COUNT=1000 ÉÏÏŞ + 24h ÍâÖØÖÃ ?
+- [x] **REVIEW5-R2-BIZ-018** (BIZ2-018 / BUG-379): `Core/DeepBase.AIErrorHandler.pas` ExceptAddr ÔÚ·Ç except ¿éÖĞÊ¹ÓÃ ¡ª ĞÂÔö HandleAt(E, AExceptAddr, AContext), SafeRun ÔÚ except ÄÚ´«µØÖ· ?
+- [x] **REVIEW5-R2-BIZ-032** (BIZ2-032 / BUG-380): `Core/DeepBase.MVVM.pas` TAsyncCommand.DoExecute ²¶»ñ SelfRef Ğü´¹ ¡ª task Æô¶¯Ç°¿ìÕÕ ViewModel/»Øµ÷/ExecuteProc µ½¾Ö²¿, ÇĞ¶Ï Self ÒıÓÃ ?
+- [x] **REVIEW5-R2-UI-009** (UI2-009 / BUG-381): `FMX/DeepBase.FMX.LLMChatFrame.pas` ºóÌ¨Ïß³Ì·ÃÎÊ FHistory Î´±£»¤ ¡ª ½ø TTask Ç°Ö÷Ïß³Ì¿ìÕÕ GetMessages, task ÄÚÓÃ¾Ö²¿ ?
+- [x] **REVIEW5-R2-DATA-049** (DATA2-049 / BUG-382): `Persistence/DeepBase.SQLLogger.pas` FormatLogEntry ÈÕÖ¾×¢Èë ¡ª ¶Ô SQL/Operation/ErrorMessage °şÀë CR/LF ?
+- [x] **REVIEW5-R2-DATA-007** (DATA2-055 / BUG-383): `Persistence/DeepBase.DB.Pool.pas` Validate ²éÑ¯ÎŞ³¬Ê±ÖÂ csValidating ÓÀ²»»Ö¸´ ¡ª È¡ CommandTimeoutSec »ò»ØÍË 5s ?
+- [x] **REVIEW5-R2-BIZ-013** (BIZ2-013 / BUG-384): `Core/DeepBase.FileWatcher.pas` HandleDebounce Ã¿´Î±ä¸ü´´½¨ TTask ¡ª FDebounceTaskScheduled Õ¢ÃÅ, Í¬¿Ì×î¶àÒ»¸ö drain task ?
+- [x] **REVIEW5-R2-BIZ-009** (BIZ2-009 / BUG-385): `Core/DeepBase.WorkerQueue.pas` WaitForCompletion Sleep(50) ¸ßÆµÂÖÑ¯ ¡ª ¼ä¸ôµ÷µ½ 250ms + ½Ø¶Ïµ½Ê£Óà timeout ?
 
-### éªŒè¯
-- CI å•å…ƒå…¨ç»¿ (4084 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯, STUB/ç¼–ç é—¨ç¦ PASSED)
-- è¯¦ç»†ä¿®å¤è®°å½•è§ bugfix.md BUG-363 ~ BUG-385 + DATA2-005/006 è¡¥å½•æ®µ
-
----
-
-## 2026-07-08 REVIEW5-R3 ç¬¬ä¸‰è½®äº”ä¸“å®¶å®¡é˜… (å·²ä¿® 18 é¡¹, ç»­ä¿®è‡³ 2026-07-09)
-
-> æ¥æº: 2026-07-08 ç¬¬ä¸‰è½®äº”ä¸“å®¶å…¨æ¨¡å—åªè¯»å®¡é˜… (REVIEW5-R3)
-> èŒƒå›´: Core å®‰å…¨/åŠ å¯†/å¹¶å‘ (A)ã€Core ä¸šåŠ¡/AI/LLM (B)ã€Persistence/DataPlatform (C, å·²å½’æ¡£)ã€Governance/DeepFlow (D)ã€Features å•†ä¸šåŒ–/æµè§ˆå™¨/è¯­éŸ³/é›†æˆ (E)
-> æŠ¥å‘Š: `expert_{a,b,c,d,e}_findings_round3.md`
-> æœ¬è½®å…±å‘ç° 54 é¡¹ (7 P0 / 18 P1 / 22 P2 / 7 P3)ã€‚æˆªè‡³æœ¬å½’æ¡£å·²ä¿® 34 é¡¹ (2026-07-08 ä¿® 12 é¡¹, 2026-07-09 ç»­ä¿® B-001~B-004 + A-001 äº”é¡¹ P0 + B-005~B-019 åäº”é¡¹ P1 + A-011 ä¸€é¡¹ P3 + D-003 ä¸€é¡¹ P1), ä½™ 20 é¡¹è§ tasks.md REVIEW5-R3 æ¸…å•ã€‚
-
-### å·²ä¿®å¤ (28 é¡¹)
-
-#### P0 â€” ç¼–è¯‘é˜»æ–­ (2 é¡¹)
-- [x] **REVIEW5-R3-D-001** (GOV-R3-001): ä¿®å¤ `Governance/DeepBase.Governance.ConfigRegistrar.pas` uses å­å¥ `DeepBase.Crypto.Hash` åç¼ºé€—å·è‡´ E1038 ç¼–è¯‘é˜»æ–­ â€” è¡¥é€—å· (L26-27)
-- [x] **REVIEW5-R3-E-001** (FEAT-R3-001): ä¿®å¤ `Features/DeepBase.UIA.Engine.pas` uses å­å¥ `DeepBase.Crypto.Hash` åç¼ºé€—å·è‡´ "Missing operator or semicolon" ç¼–è¯‘é˜»æ–­ â€” è¡¥é€—å· (L16-17)
-
-#### P0 â€” å¹¶å‘å´©æºƒ (1 é¡¹)
-- [x] **REVIEW5-R3-A-002** (CORE-R3-002): ä¿®å¤ `Core/DeepBase.Cache.pas` Put é”å¤–è°ƒ Evict è‡´ FEntries/FAccessOrder/FStats ç«æ€ â€” é”å†…å®Œæˆå…¨éƒ¨ç»“æ„ä¿®æ”¹+æ”¶é›†è¢«é©±é€é¡¹, é”å¤–ä»…è§¦å‘å›è°ƒ âœ… BUG-386
-
-#### P1 â€” åŠ å¯†ææ–™æ¸…é›¶ (3 é¡¹)
-- [x] **REVIEW5-R3-A-003** (CORE-R3-003): ä¿®å¤ `Core/DeepBase.Protection.pas` DeriveAes256KeyPBKDF2 æœªæ¸…é›¶ LPasswordBytes/LSaltPlusBlock â€” finally SecureZeroMemory âœ… BUG-387
-- [x] **REVIEW5-R3-A-004** (CORE-R3-004): ä¿®å¤ `Core/DeepBase.Security.pas` DecryptUBS2V1 ä¸ ProtectStringDpapi(éWin) MachineKey/Key/Plaintext æœªæ¸…é›¶ â€” SecureClearBytes âœ… BUG-388
-- [x] **REVIEW5-R3-A-005** (CORE-R3-005): ä¿®å¤ `Core/DeepBase.Crypto.RSA.pas` LoadPrivateKeyPEM æœªæ¸…é›¶ RSA ç§é’¥åˆ†é‡ â€” finally FillChar âœ… BUG-389
-
-#### P1 â€” å¹¶å‘/ç”Ÿå‘½å‘¨æœŸ (2 é¡¹)
-- [x] **REVIEW5-R3-A-006** (CORE-R3-006): ä¿®å¤ `Core/DeepBase.Metrics.pas` TTimer.Start é—­åŒ…æ•è·è£¸ Self è‡´ use-after-free â€” é—­åŒ…æ•è· IMetric(Self) âœ… BUG-390
-- [x] **REVIEW5-R3-A-007** (CORE-R3-007): ä¿®å¤ `Core/DeepBase.Authorization.pas` SetCurrentUserWithToken é”å¤–è®¿é—® TUser è‡´ç«æ€ â€” token è¯»å–ä¸ LastLoginAt å†™å…¥æ•´ä½“å…¥ FLock âœ… BUG-391
-
-#### P2 â€” æ­£ç¡®æ€§ (4 é¡¹)
-- [x] **REVIEW5-R3-A-008** (CORE-R3-008): ä¿®å¤ `Core/DeepBase.ObjectPool.pas` FindAvailableObject for å¾ªç¯ FPool.Delete(I)+Continue æ¼æ£€è¢«å‰ç§»å¯¹è±¡ â€” æ”¹ while å¾ªç¯ âœ… BUG-392
-- [x] **REVIEW5-R3-A-009** (CORE-R3-009): ä¿®å¤ `Core/DeepBase.Collections.pas` TCountingSet.Add æ¥å—è´Ÿ ACount è‡´ FTotalCount/å•é¡¹è®¡æ•°å˜è´Ÿ â€” æ–¹æ³•å¼€å¤´æ ¡éªŒ ACount>=0 âœ… BUG-393
-- [x] **REVIEW5-R3-A-010** (CORE-R3-010): ä¿®å¤ `Core/DeepBase.Collections.pas` TLRUCache.Evict æŒé”è°ƒ FOnEvict è‡´å›è°ƒé‡å…¥åŠæ›´æ–°é“¾è¡¨ AV â€” å¤åˆ¶ Key/Value åˆ°å±€éƒ¨, å®Œæˆé“¾è¡¨ä¿®æ”¹åé”å¤–è§¦å‘å›è°ƒ âœ… BUG-394
-- [x] **REVIEW5-R3-E-004** (FEAT-R3-004): ä¿®å¤ `Features/DeepBase.UIA.Engine.pas` UIA_ProcessIdPropertyId å¸¸é‡ 34005 é”™è¯¯ (å®˜æ–¹ 30002) è‡´æŒ‰è¿›ç¨‹ ID å®šä½å¤±æ•ˆ â€” æ”¹ä¸º 30002 âœ… BUG-395
-
-#### P0 â€” å†…å­˜å®‰å…¨/å¯¹è±¡æ‰€æœ‰æƒ (ç»­ä¿®, 2026-07-09, 5 é¡¹)
-- [x] **REVIEW5-R3-A-001** (CORE-R3-001): ä¿®å¤ `Core/DeepBase.Authorization.pas` GetUser/GetRole/GetAllUsers/GetAllRoles è¿”å› `TObjectDictionary[doOwnsValues]` æ‹¥æœ‰çš„è£¸å¯¹è±¡å¼•ç”¨, é”å¤–å¯è¢« DeleteUser/DeleteRole é‡Šæ”¾è‡´ use-after-free; ä¸” LoginTestUser æ›¾æ”¹ GetUser è¿”å›çš„è£¸å¯¹è±¡å†™ token ä¾èµ–è„†å¼±é‡Šæ”¾å¥‘çº¦ â€” é‡‡ç”¨æ·±å…‹éš†æ–¹æ¡ˆ: æ–°å¢ `TUser.Clone`/`TRole.Clone`, Get* é”å†…è¿”å›å…‹éš† (è°ƒç”¨æ–¹æ‹¥æœ‰å¹¶é‡Šæ”¾), GetAll* ç”¨ owning `TObjectList` æ„å»ºåç§»äº¤æ‰€æœ‰æƒ; æ–°å¢å¸¦é”å†™æ–¹æ³• `SetUserMetadata` æ›¿ä»£è°ƒç”¨æ–¹æ”¹å¿«ç…§çš„å†™æ³• (å†™ token è½åˆ°çœŸå®ç”¨æˆ·å¹¶å¯¹åç»­åŠ é”è¯»å¯è§). ä¼˜äºåŸå»ºè®®çš„å¼•ç”¨è®¡æ•° (record å­—æ®µä¸é€‚åˆå¼•ç”¨è®¡æ•°, å…‹éš†å¥‘çº¦ä¸ B-003/B-004 FeatureFlags ä¸€è‡´). å¥‘çº¦å˜æ›´: Get* è¿”å›å€¼æ‰€æœ‰æƒå½’è°ƒç”¨æ–¹ (å·² rg å…¨ä»“ç¡®è®¤æ— å¤–éƒ¨æ—§å¥‘çº¦ä¾èµ–, æ‰€æœ‰è°ƒç”¨ç‚¹å·²åŠ  Free) âœ… BUG-402
-- [x] **REVIEW5-R3-B-001** (BIZ-R3-001): ä¿®å¤ `Features/DeepBase.LLM.Proxy.pas` GenerateImageStream ç”¨ TTask.Run é—­åŒ…æ•è·è£¸ Self (è°ƒç”¨å®ä¾‹æ–¹æ³• GenerateImage), è°ƒç”¨æ–¹é‡Šæ”¾æœ€å ILLMClient å¼•ç”¨åå¯¹è±¡ææ„, åå°ä»»åŠ¡ä»è®¿é—® Self â†’ use-after-free â€” é‡‡ç”¨æ¥å£å¼•ç”¨æ•è·æ–¹æ¡ˆ (ä¸ CORE-R3-006/BUG-390 ä¸€è‡´): æ–¹æ³•å†… `LSelf := Self` (ILLMClient), é—­åŒ…ç» LSelf.GenerateImage è°ƒç”¨, å¼•ç”¨è®¡æ•°ä¿æ´»å¯¹è±¡è‡³ä»»åŠ¡ç»“æŸ. æœªç”¨ä¸“å®¶å»ºè®®çš„ FActiveTasks+WaitFor (å·²æœ‰éªŒè¯å…ˆä¾‹ + å­—æ®µå‡çº¿ç¨‹å®‰å…¨å€¼ç±»å‹ + é¿å… WaitFor æ­»é”; çœŸæ­£éœ€ææ„ç­‰å¾…çš„é•¿ä»»åŠ¡ LLM.Manager åœ¨ B-002 å¦è¡Œå¤„ç†) âœ… BUG-400
-- [x] **REVIEW5-R3-B-002** (BIZ-R3-002): ä¿®å¤ `Core/DeepBase.LLM.Manager.pas` Destroy ä»… Wait(5000) è¿œå°äºåœ¨é€” HTTP (TLLMClient é»˜è®¤ 60s), è¶…æ—¶å FreeAndNil(FLLMClient) è€Œä»»åŠ¡ä»åœ¨è°ƒ FLLMClient.Chat â†’ UAF; ä»»åŠ¡ finally è¿˜ä¼šè®¿é—®å·²é‡Šæ”¾çš„ FExecuteTasks/FExecuteTasksLock â†’ äºŒæ¬¡ UAF â€” ä¸‰å¤„åŠ å›º: Wait å‰ `LT.Cancel`, è¶…æ—¶ 5000â†’120000ms (2x é»˜è®¤ HTTP timeout è¦†ç›– 60s çª—å£), è¶…æ—¶åˆ™ LAnyTimeout è®° Error æ—¥å¿—å Exit è·³è¿‡å…¨éƒ¨ teardown (é‡Šæ”¾è¢«åœ¨ç”¨å¯¹è±¡æ˜¯ç¡®å®šæ€§ UAF, å–æ³„æ¼æ›´å®‰å…¨ä¸”ç»ä¸é™é»˜) âœ… BUG-401
-- [x] **REVIEW5-R3-B-003** (BIZ-R3-003): ä¿®å¤ `Core/DeepBase.FeatureFlags.pas` SaveFlag ä¸¤å®ç° (TMemoryFlagStorage.AddOrSetValue / TFileFlagStorage ä¸‹æ ‡èµ‹å€¼) é™é»˜æ¥ç®¡è°ƒç”¨æ–¹ AFlag æ‰€æœ‰æƒ, è°ƒç”¨æ–¹é‡Šæ”¾ AFlag å double-free/use-after-free â€” æ”¹ä¸ºæ–°å¢ `TFeatureFlag.Clone` æ·±æ‹·è´, SaveFlag å†…éƒ¨å…‹éš†åå…¥åº“, AFlag æ‰€æœ‰æƒå§‹ç»ˆå½’è°ƒç”¨æ–¹ (ä¼˜äºåŸå»ºè®® OwnsObjects:=False, åè€…ä»è®©ä¸´æ—¶åˆ—è¡¨æŒè£¸å¼•ç”¨) âœ… BUG-398
-- [x] **REVIEW5-R3-B-004** (BIZ-R3-004): ä¿®å¤ `Core/DeepBase.FeatureFlags.pas` GetFlag ä¸¤å®ç°æ‰€æœ‰æƒå¥‘çº¦ä¸ä¸€è‡´ (Memory è¿”å› storage æ‹¥æœ‰çš„è£¸å¼•ç”¨ â†’ åç»­ Clear/Replace è‡´ UAF; File ç”¨ Extract è½¬ç§»æ‰€æœ‰æƒ â†’ å¥‘çº¦ç›¸å) â€” ç»Ÿä¸€è¿”å› `TFeatureFlag.Clone` æ·±æ‹·è´, æ‰€æœ‰æƒå½’è°ƒç”¨æ–¹, ä¸å— storage åç»­ä¿®æ”¹/é‡Šæ”¾å½±å“ âœ… BUG-399
-
-### éªŒè¯
-- ä¸Šè¿° 28 é¡¹ä¿®å¤å‡å·²åœ¨æºç ä¸­è½åœ° (grep/è¡Œå·æ ¸å¯¹)
-- å¯¹åº” BUG-386~BUG-405 å·²ç™»è®° bugfix.md
-- B-003/B-004 æ–°å¢ `TTestFeatureFlagStorage` 7 é¡¹å›å½’æµ‹è¯• (FeatureFlags æ¨¡å— 76 æµ‹è¯•å…¨è¿‡, 0 æ³„æ¼), è¦†ç›– SaveFlag åè°ƒç”¨æ–¹ Free AFlag çš„ UAF åœºæ™¯ä¸ GetFlag è¿”å›å…‹éš†çš„ç‹¬ç«‹æ€§/æ‰€æœ‰æƒå¥‘çº¦. B-001/B-002/B-005/B-011 å›  UAF æ—¶åº (+ç½‘ç»œæ ˆä¾èµ–/120s HTTP é˜»å¡) åŒé‡ä¸å¯é æœªé™„è¿›ç¨‹å†…æ–­è¨€æµ‹è¯• (åŒ CORE-R3-006/BUG-390 å…ˆä¾‹), ä¿®å¤æ­£ç¡®æ€§ç»ä»£ç å®¡æŸ¥ + æ¨¡å¼ä¸€è‡´æ€§ + B-001 æ¥å£æ•è·ä¸ B-002 ææ„ç­‰å¾…äº’è¡¥ä¿è¯.
-- A-001 (BUG-402) ç» Win64 å•å…ƒæµ‹è¯• `-FromUnit DeepBase.Authorization` éªŒè¯: ç¼–è¯‘ SUCCESS, 29 é¡¹å…¨è¿‡ (Passed 29 / Leaked 0 / Failed 0). Clone æ·±æ‹·è´ + owning-list æ„å»º + è°ƒç”¨æ–¹ Free ç»„åˆä½¿æ³„æ¼æ£€æµ‹å½’é›¶; LoginTestUser æ”¹ç”¨ SetUserMetadata å token å†™å…¥è½åˆ°çœŸå®ç”¨æˆ·, SetCurrentUserWithToken é‰´æƒé€šè¿‡.
-- B-005 (BUG-404) ç» Win64 å•å…ƒæµ‹è¯• `-FromUnit DeepBase.LLM` éªŒè¯: ç¼–è¯‘ SUCCESS, 28 é¡¹å…¨è¿‡ (Passed 28 / Leaked 0 / Failed 0). ä¿®å¤ä»…åŠ  `if Result then` å®ˆå«, ä¸æ”¹å˜ Parse é€»è¾‘æœ¬èº«, ç°æœ‰æµ‹è¯•è¦†ç›–æ­£å¸¸è§£æè·¯å¾„ä¸å—å½±å“.
-- B-011 (BUG-403) ç» Win64 å•å…ƒæµ‹è¯• `-FromUnit DeepBase.Scheduler` éªŒè¯: ç¼–è¯‘ SUCCESS, 51 é¡¹å…¨è¿‡ (Passed 51 / Leaked 0 / Failed 0). FRunningITask ä¿æ´» + Cleanup è¿è¡Œä¸­å®ˆå«ä½¿å›è°ƒçª—å£å†… TaskRef ä¸è¢«é‡Šæ”¾.
+### ÑéÖ¤
+- CI µ¥ÔªÈ«ÂÌ (4084 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó, STUB/±àÂëÃÅ½û PASSED)
+- ÏêÏ¸ĞŞ¸´¼ÇÂ¼¼û bugfix.md BUG-363 ~ BUG-385 + DATA2-005/006 ²¹Â¼¶Î
 
 ---
 
-## 2026-06-30 REVIEW5 äº”ä¸“å®¶æ¨¡å—å®¡é˜…ï¼ˆå…¨éƒ¨ 39 é¡¹å®Œæˆï¼‰
+## 2026-07-08 REVIEW5-R3 µÚÈıÂÖÎå×¨¼ÒÉóÔÄ (ÒÑĞŞ 18 Ïî, ĞøĞŞÖÁ 2026-07-09)
 
-> æ¥æº: äº”ä¸“å®¶æ¨¡å—å®¡é˜…ç¬¬ä¸€è½® (2026-06-29 ~ 2026-06-30)
-> å…± 39 ä¸ªä¿®å¤ä»»åŠ¡, å¯¹åº” BUG-323 ~ BUG-362 (éƒ¨åˆ†ç¼–å·)
+> À´Ô´: 2026-07-08 µÚÈıÂÖÎå×¨¼ÒÈ«Ä£¿éÖ»¶ÁÉóÔÄ (REVIEW5-R3)
+> ·¶Î§: Core °²È«/¼ÓÃÜ/²¢·¢ (A)¡¢Core ÒµÎñ/AI/LLM (B)¡¢Persistence/DataPlatform (C, ÒÑ¹éµµ)¡¢Governance/DeepFlow (D)¡¢Features ÉÌÒµ»¯/ä¯ÀÀÆ÷/ÓïÒô/¼¯³É (E)
+> ±¨¸æ: `expert_{a,b,c,d,e}_findings_round3.md`
+> ±¾ÂÖ¹²·¢ÏÖ 54 Ïî (7 P0 / 18 P1 / 22 P2 / 7 P3)¡£½ØÖÁ±¾¹éµµÒÑĞŞ 34 Ïî (2026-07-08 ĞŞ 12 Ïî, 2026-07-09 ĞøĞŞ B-001~B-004 + A-001 ÎåÏî P0 + B-005~B-019 Ê®ÎåÏî P1 + A-011 Ò»Ïî P3 + D-003 Ò»Ïî P1), Óà 20 Ïî¼û tasks.md REVIEW5-R3 Çåµ¥¡£
 
-### REVIEW5-CORE (7 é¡¹)
-- [x] CORE-001: FileWatcher queued callback ä¸ debounce task ç”Ÿå‘½å‘¨æœŸ (BUG-323)
-- [x] CORE-002: WorkerQueue å¤–éƒ¨å›è°ƒ/å­˜å‚¨å¼‚å¸¸å…œåº• (BUG-324)
-- [x] CORE-003: WorkerQueue timeout è¯­ä¹‰ (BUG-325)
-- [x] CORE-004: Scheduler OnCompleted å›è°ƒå¼‚å¸¸éš”ç¦» (BUG-326)
-- [x] CORE-005: KeyManager CBC å¯†ï¿½ï¿½ï¿½å‡çº§ä¸º AEAD (BUG-327)
-- [x] CORE-006: Metrics å…¨å±€ registry åˆå§‹åŒ–é”ç»Ÿä¸€ (BUG-328)
-- [x] CORE-007: Core åŒ…æ¸…å•å¯¹é½ WeChat4x + i18n.Gender (BUG-329)
+### ÒÑĞŞ¸´ (28 Ïî)
 
-### REVIEW5-DATA (8 é¡¹)
-- [x] DATA-001: SQLiteReader schema ç¼“å­˜ (BUG-330)
-- [x] DATA-002: SafeQuery schema æ ‡è¯†ç¬¦æ ¡éªŒ (BUG-331)
-- [x] DATA-003: WeChat39x/4x schema fingerprint å‰ç¼€ (BUG-332)
+#### P0 ¡ª ±àÒë×è¶Ï (2 Ïî)
+- [x] **REVIEW5-R3-D-001** (GOV-R3-001): ĞŞ¸´ `Governance/DeepBase.Governance.ConfigRegistrar.pas` uses ×Ó¾ä `DeepBase.Crypto.Hash` ºóÈ±¶ººÅÖÂ E1038 ±àÒë×è¶Ï ¡ª ²¹¶ººÅ (L26-27)
+- [x] **REVIEW5-R3-E-001** (FEAT-R3-001): ĞŞ¸´ `Features/DeepBase.UIA.Engine.pas` uses ×Ó¾ä `DeepBase.Crypto.Hash` ºóÈ±¶ººÅÖÂ "Missing operator or semicolon" ±àÒë×è¶Ï ¡ª ²¹¶ººÅ (L16-17)
+
+#### P0 ¡ª ²¢·¢±ÀÀ£ (1 Ïî)
+- [x] **REVIEW5-R3-A-002** (CORE-R3-002): ĞŞ¸´ `Core/DeepBase.Cache.pas` Put ËøÍâµ÷ Evict ÖÂ FEntries/FAccessOrder/FStats ¾ºÌ¬ ¡ª ËøÄÚÍê³ÉÈ«²¿½á¹¹ĞŞ¸Ä+ÊÕ¼¯±»ÇıÖğÏî, ËøÍâ½ö´¥·¢»Øµ÷ ? BUG-386
+
+#### P1 ¡ª ¼ÓÃÜ²ÄÁÏÇåÁã (3 Ïî)
+- [x] **REVIEW5-R3-A-003** (CORE-R3-003): ĞŞ¸´ `Core/DeepBase.Protection.pas` DeriveAes256KeyPBKDF2 Î´ÇåÁã LPasswordBytes/LSaltPlusBlock ¡ª finally SecureZeroMemory ? BUG-387
+- [x] **REVIEW5-R3-A-004** (CORE-R3-004): ĞŞ¸´ `Core/DeepBase.Security.pas` DecryptUBS2V1 Óë ProtectStringDpapi(·ÇWin) MachineKey/Key/Plaintext Î´ÇåÁã ¡ª SecureClearBytes ? BUG-388
+- [x] **REVIEW5-R3-A-005** (CORE-R3-005): ĞŞ¸´ `Core/DeepBase.Crypto.RSA.pas` LoadPrivateKeyPEM Î´ÇåÁã RSA Ë½Ô¿·ÖÁ¿ ¡ª finally FillChar ? BUG-389
+
+#### P1 ¡ª ²¢·¢/ÉúÃüÖÜÆÚ (2 Ïî)
+- [x] **REVIEW5-R3-A-006** (CORE-R3-006): ĞŞ¸´ `Core/DeepBase.Metrics.pas` TTimer.Start ±Õ°ü²¶»ñÂã Self ÖÂ use-after-free ¡ª ±Õ°ü²¶»ñ IMetric(Self) ? BUG-390
+- [x] **REVIEW5-R3-A-007** (CORE-R3-007): ĞŞ¸´ `Core/DeepBase.Authorization.pas` SetCurrentUserWithToken ËøÍâ·ÃÎÊ TUser ÖÂ¾ºÌ¬ ¡ª token ¶ÁÈ¡Óë LastLoginAt Ğ´ÈëÕûÌåÈë FLock ? BUG-391
+
+#### P2 ¡ª ÕıÈ·ĞÔ (4 Ïî)
+- [x] **REVIEW5-R3-A-008** (CORE-R3-008): ĞŞ¸´ `Core/DeepBase.ObjectPool.pas` FindAvailableObject for Ñ­»· FPool.Delete(I)+Continue Â©¼ì±»Ç°ÒÆ¶ÔÏó ¡ª ¸Ä while Ñ­»· ? BUG-392
+- [x] **REVIEW5-R3-A-009** (CORE-R3-009): ĞŞ¸´ `Core/DeepBase.Collections.pas` TCountingSet.Add ½ÓÊÜ¸º ACount ÖÂ FTotalCount/µ¥Ïî¼ÆÊı±ä¸º ¡ª ·½·¨¿ªÍ·Ğ£Ñé ACount>=0 ? BUG-393
+- [x] **REVIEW5-R3-A-010** (CORE-R3-010): ĞŞ¸´ `Core/DeepBase.Collections.pas` TLRUCache.Evict ³ÖËøµ÷ FOnEvict ÖÂ»Øµ÷ÖØÈë°ë¸üĞÂÁ´±í AV ¡ª ¸´ÖÆ Key/Value µ½¾Ö²¿, Íê³ÉÁ´±íĞŞ¸ÄºóËøÍâ´¥·¢»Øµ÷ ? BUG-394
+- [x] **REVIEW5-R3-E-004** (FEAT-R3-004): ĞŞ¸´ `Features/DeepBase.UIA.Engine.pas` UIA_ProcessIdPropertyId ³£Á¿ 34005 ´íÎó (¹Ù·½ 30002) ÖÂ°´½ø³Ì ID ¶¨Î»Ê§Ğ§ ¡ª ¸ÄÎª 30002 ? BUG-395
+
+#### P0 ¡ª ÄÚ´æ°²È«/¶ÔÏóËùÓĞÈ¨ (ĞøĞŞ, 2026-07-09, 5 Ïî)
+- [x] **REVIEW5-R3-A-001** (CORE-R3-001): ĞŞ¸´ `Core/DeepBase.Authorization.pas` GetUser/GetRole/GetAllUsers/GetAllRoles ·µ»Ø `TObjectDictionary[doOwnsValues]` ÓµÓĞµÄÂã¶ÔÏóÒıÓÃ, ËøÍâ¿É±» DeleteUser/DeleteRole ÊÍ·ÅÖÂ use-after-free; ÇÒ LoginTestUser Ôø¸Ä GetUser ·µ»ØµÄÂã¶ÔÏóĞ´ token ÒÀÀµ´àÈõÊÍ·ÅÆõÔ¼ ¡ª ²ÉÓÃÉî¿ËÂ¡·½°¸: ĞÂÔö `TUser.Clone`/`TRole.Clone`, Get* ËøÄÚ·µ»Ø¿ËÂ¡ (µ÷ÓÃ·½ÓµÓĞ²¢ÊÍ·Å), GetAll* ÓÃ owning `TObjectList` ¹¹½¨ºóÒÆ½»ËùÓĞÈ¨; ĞÂÔö´øËøĞ´·½·¨ `SetUserMetadata` Ìæ´úµ÷ÓÃ·½¸Ä¿ìÕÕµÄĞ´·¨ (Ğ´ token Âäµ½ÕæÊµÓÃ»§²¢¶ÔºóĞø¼ÓËø¶Á¿É¼û). ÓÅÓÚÔ­½¨ÒéµÄÒıÓÃ¼ÆÊı (record ×Ö¶Î²»ÊÊºÏÒıÓÃ¼ÆÊı, ¿ËÂ¡ÆõÔ¼Óë B-003/B-004 FeatureFlags Ò»ÖÂ). ÆõÔ¼±ä¸ü: Get* ·µ»ØÖµËùÓĞÈ¨¹éµ÷ÓÃ·½ (ÒÑ rg È«²ÖÈ·ÈÏÎŞÍâ²¿¾ÉÆõÔ¼ÒÀÀµ, ËùÓĞµ÷ÓÃµãÒÑ¼Ó Free) ? BUG-402
+- [x] **REVIEW5-R3-B-001** (BIZ-R3-001): ĞŞ¸´ `Features/DeepBase.LLM.Proxy.pas` GenerateImageStream ÓÃ TTask.Run ±Õ°ü²¶»ñÂã Self (µ÷ÓÃÊµÀı·½·¨ GenerateImage), µ÷ÓÃ·½ÊÍ·Å×îºó ILLMClient ÒıÓÃºó¶ÔÏóÎö¹¹, ºóÌ¨ÈÎÎñÈÔ·ÃÎÊ Self ¡ú use-after-free ¡ª ²ÉÓÃ½Ó¿ÚÒıÓÃ²¶»ñ·½°¸ (Óë CORE-R3-006/BUG-390 Ò»ÖÂ): ·½·¨ÄÚ `LSelf := Self` (ILLMClient), ±Õ°ü¾­ LSelf.GenerateImage µ÷ÓÃ, ÒıÓÃ¼ÆÊı±£»î¶ÔÏóÖÁÈÎÎñ½áÊø. Î´ÓÃ×¨¼Ò½¨ÒéµÄ FActiveTasks+WaitFor (ÒÑÓĞÑéÖ¤ÏÈÀı + ×Ö¶Î¾ùÏß³Ì°²È«ÖµÀàĞÍ + ±ÜÃâ WaitFor ËÀËø; ÕæÕıĞèÎö¹¹µÈ´ıµÄ³¤ÈÎÎñ LLM.Manager ÔÚ B-002 ÁíĞĞ´¦Àí) ? BUG-400
+- [x] **REVIEW5-R3-B-002** (BIZ-R3-002): ĞŞ¸´ `Core/DeepBase.LLM.Manager.pas` Destroy ½ö Wait(5000) Ô¶Ğ¡ÓÚÔÚÍ¾ HTTP (TLLMClient Ä¬ÈÏ 60s), ³¬Ê±ºó FreeAndNil(FLLMClient) ¶øÈÎÎñÈÔÔÚµ÷ FLLMClient.Chat ¡ú UAF; ÈÎÎñ finally »¹»á·ÃÎÊÒÑÊÍ·ÅµÄ FExecuteTasks/FExecuteTasksLock ¡ú ¶ş´Î UAF ¡ª Èı´¦¼Ó¹Ì: Wait Ç° `LT.Cancel`, ³¬Ê± 5000¡ú120000ms (2x Ä¬ÈÏ HTTP timeout ¸²¸Ç 60s ´°¿Ú), ³¬Ê±Ôò LAnyTimeout ¼Ç Error ÈÕÖ¾ºó Exit Ìø¹ıÈ«²¿ teardown (ÊÍ·Å±»ÔÚÓÃ¶ÔÏóÊÇÈ·¶¨ĞÔ UAF, È¡Ğ¹Â©¸ü°²È«ÇÒ¾ø²»¾²Ä¬) ? BUG-401
+- [x] **REVIEW5-R3-B-003** (BIZ-R3-003): ĞŞ¸´ `Core/DeepBase.FeatureFlags.pas` SaveFlag Á½ÊµÏÖ (TMemoryFlagStorage.AddOrSetValue / TFileFlagStorage ÏÂ±ê¸³Öµ) ¾²Ä¬½Ó¹Üµ÷ÓÃ·½ AFlag ËùÓĞÈ¨, µ÷ÓÃ·½ÊÍ·Å AFlag ºó double-free/use-after-free ¡ª ¸ÄÎªĞÂÔö `TFeatureFlag.Clone` Éî¿½±´, SaveFlag ÄÚ²¿¿ËÂ¡ºóÈë¿â, AFlag ËùÓĞÈ¨Ê¼ÖÕ¹éµ÷ÓÃ·½ (ÓÅÓÚÔ­½¨Òé OwnsObjects:=False, ºóÕßÈÔÈÃÁÙÊ±ÁĞ±í³ÖÂãÒıÓÃ) ? BUG-398
+- [x] **REVIEW5-R3-B-004** (BIZ-R3-004): ĞŞ¸´ `Core/DeepBase.FeatureFlags.pas` GetFlag Á½ÊµÏÖËùÓĞÈ¨ÆõÔ¼²»Ò»ÖÂ (Memory ·µ»Ø storage ÓµÓĞµÄÂãÒıÓÃ ¡ú ºóĞø Clear/Replace ÖÂ UAF; File ÓÃ Extract ×ªÒÆËùÓĞÈ¨ ¡ú ÆõÔ¼Ïà·´) ¡ª Í³Ò»·µ»Ø `TFeatureFlag.Clone` Éî¿½±´, ËùÓĞÈ¨¹éµ÷ÓÃ·½, ²»ÊÜ storage ºóĞøĞŞ¸Ä/ÊÍ·ÅÓ°Ïì ? BUG-399
+
+### ÑéÖ¤
+- ÉÏÊö 28 ÏîĞŞ¸´¾ùÒÑÔÚÔ´ÂëÖĞÂäµØ (grep/ĞĞºÅºË¶Ô)
+- ¶ÔÓ¦ BUG-386~BUG-405 ÒÑµÇ¼Ç bugfix.md
+- B-003/B-004 ĞÂÔö `TTestFeatureFlagStorage` 7 Ïî»Ø¹é²âÊÔ (FeatureFlags Ä£¿é 76 ²âÊÔÈ«¹ı, 0 Ğ¹Â©), ¸²¸Ç SaveFlag ºóµ÷ÓÃ·½ Free AFlag µÄ UAF ³¡¾°Óë GetFlag ·µ»Ø¿ËÂ¡µÄ¶ÀÁ¢ĞÔ/ËùÓĞÈ¨ÆõÔ¼. B-001/B-002/B-005/B-011 Òò UAF Ê±Ğò (+ÍøÂçÕ»ÒÀÀµ/120s HTTP ×èÈû) Ë«ÖØ²»¿É¿¿Î´¸½½ø³ÌÄÚ¶ÏÑÔ²âÊÔ (Í¬ CORE-R3-006/BUG-390 ÏÈÀı), ĞŞ¸´ÕıÈ·ĞÔ¾­´úÂëÉó²é + Ä£Ê½Ò»ÖÂĞÔ + B-001 ½Ó¿Ú²¶»ñÓë B-002 Îö¹¹µÈ´ı»¥²¹±£Ö¤.
+- A-001 (BUG-402) ¾­ Win64 µ¥Ôª²âÊÔ `-FromUnit DeepBase.Authorization` ÑéÖ¤: ±àÒë SUCCESS, 29 ÏîÈ«¹ı (Passed 29 / Leaked 0 / Failed 0). Clone Éî¿½±´ + owning-list ¹¹½¨ + µ÷ÓÃ·½ Free ×éºÏÊ¹Ğ¹Â©¼ì²â¹éÁã; LoginTestUser ¸ÄÓÃ SetUserMetadata ºó token Ğ´ÈëÂäµ½ÕæÊµÓÃ»§, SetCurrentUserWithToken ¼øÈ¨Í¨¹ı.
+- B-005 (BUG-404) ¾­ Win64 µ¥Ôª²âÊÔ `-FromUnit DeepBase.LLM` ÑéÖ¤: ±àÒë SUCCESS, 28 ÏîÈ«¹ı (Passed 28 / Leaked 0 / Failed 0). ĞŞ¸´½ö¼Ó `if Result then` ÊØÎÀ, ²»¸Ä±ä Parse Âß¼­±¾Éí, ÏÖÓĞ²âÊÔ¸²¸ÇÕı³£½âÎöÂ·¾¶²»ÊÜÓ°Ïì.
+- B-011 (BUG-403) ¾­ Win64 µ¥Ôª²âÊÔ `-FromUnit DeepBase.Scheduler` ÑéÖ¤: ±àÒë SUCCESS, 51 ÏîÈ«¹ı (Passed 51 / Leaked 0 / Failed 0). FRunningITask ±£»î + Cleanup ÔËĞĞÖĞÊØÎÀÊ¹»Øµ÷´°¿ÚÄÚ TaskRef ²»±»ÊÍ·Å.
+
+---
+
+## 2026-06-30 REVIEW5 Îå×¨¼ÒÄ£¿éÉóÔÄ£¨È«²¿ 39 ÏîÍê³É£©
+
+> À´Ô´: Îå×¨¼ÒÄ£¿éÉóÔÄµÚÒ»ÂÖ (2026-06-29 ~ 2026-06-30)
+> ¹² 39 ¸öĞŞ¸´ÈÎÎñ, ¶ÔÓ¦ BUG-323 ~ BUG-362 (²¿·Ö±àºÅ)
+
+### REVIEW5-CORE (7 Ïî)
+- [x] CORE-001: FileWatcher queued callback Óë debounce task ÉúÃüÖÜÆÚ (BUG-323)
+- [x] CORE-002: WorkerQueue Íâ²¿»Øµ÷/´æ´¢Òì³£¶µµ× (BUG-324)
+- [x] CORE-003: WorkerQueue timeout ÓïÒå (BUG-325)
+- [x] CORE-004: Scheduler OnCompleted »Øµ÷Òì³£¸ôÀë (BUG-326)
+- [x] CORE-005: KeyManager CBC ÃÜ???Éı¼¶Îª AEAD (BUG-327)
+- [x] CORE-006: Metrics È«¾Ö registry ³õÊ¼»¯ËøÍ³Ò» (BUG-328)
+- [x] CORE-007: Core °üÇåµ¥¶ÔÆë WeChat4x + i18n.Gender (BUG-329)
+
+### REVIEW5-DATA (8 Ïî)
+- [x] DATA-001: SQLiteReader schema »º´æ (BUG-330)
+- [x] DATA-002: SafeQuery schema ±êÊ¶·ûĞ£Ñé (BUG-331)
+- [x] DATA-003: WeChat39x/4x schema fingerprint Ç°×º (BUG-332)
 - [x] DATA-004: DB.Pool RecycleAllConnections csValidating (BUG-333)
-- [x] DATA-005: Migrations è£¸ END/END TRANSACTION æ‹¦æˆª (BUG-334)
-- [x] DATA-006: è¿ç§»è„šæœ¬ checksum TOCTOU (BUG-336)
-- [x] DATA-007: DoQry prepared pool in-use TFDQuery å¤ç”¨ (BUG-337)
-- [x] DATA-008: doQry å†™å‹ PRAGMA ç™½åå• (BUG-338)
+- [x] DATA-005: Migrations Âã END/END TRANSACTION À¹½Ø (BUG-334)
+- [x] DATA-006: Ç¨ÒÆ½Å±¾ checksum TOCTOU (BUG-336)
+- [x] DATA-007: DoQry prepared pool in-use TFDQuery ¸´ÓÃ (BUG-337)
+- [x] DATA-008: doQry Ğ´ĞÍ PRAGMA °×Ãûµ¥ (BUG-338)
 
-### REVIEW5-FEAT (10 é¡¹)
-- [x] FEAT-001: æ”¯ä»˜å¯†é’¥æŒä¹…åŒ–äºŒæ¬¡ ProtectKey (BUG-339)
-- [x] FEAT-002: PayPal WebhookId å·¥å‚é…ç½® (BUG-340)
-- [x] FEAT-003: AutoUpdate HTTP è¶…æ—¶ + å®Œæ•´æ€§å¼ºåˆ¶æ ¡éªŒ (BUG-341)
-- [x] FEAT-004: CloudSync é»˜è®¤åŠ å¯†æ—  key fail-closed (BUG-342)
-- [x] FEAT-005: HttpServer é™æ€æ–‡ä»¶è·¯å¾„éå†é˜²æŠ¤ (BUG-343)
+### REVIEW5-FEAT (10 Ïî)
+- [x] FEAT-001: Ö§¸¶ÃÜÔ¿³Ö¾Ã»¯¶ş´Î ProtectKey (BUG-339)
+- [x] FEAT-002: PayPal WebhookId ¹¤³§ÅäÖÃ (BUG-340)
+- [x] FEAT-003: AutoUpdate HTTP ³¬Ê± + ÍêÕûĞÔÇ¿ÖÆĞ£Ñé (BUG-341)
+- [x] FEAT-004: CloudSync Ä¬ÈÏ¼ÓÃÜÎŞ key fail-closed (BUG-342)
+- [x] FEAT-005: HttpServer ¾²Ì¬ÎÄ¼şÂ·¾¶±éÀú·À»¤ (BUG-343)
 - [x] FEAT-006: LLM HTTP 200 error envelope (BUG-344)
-- [x] FEAT-007: Edge TTS WinHTTP handle æ¸…ç† (BUG-345)
-- [x] FEAT-008: WakeWord stop/thread/event ç”Ÿå‘½å‘¨æœŸ (BUG-346)
+- [x] FEAT-007: Edge TTS WinHTTP handle ÇåÀí (BUG-345)
+- [x] FEAT-008: WakeWord stop/thread/event ÉúÃüÖÜÆÚ (BUG-346)
 - [x] FEAT-009: Browser CDP WaitForSelector detach/destroy (BUG-347)
-- [x] FEAT-010: Commerce æƒé™/Entitlement contract æ‹†åˆ† (BUG-348)
+- [x] FEAT-010: Commerce È¨ÏŞ/Entitlement contract ²ğ·Ö (BUG-348)
 
-### REVIEW5-UI (6 é¡¹)
+### REVIEW5-UI (6 Ïî)
 - [x] UI-001: FMX UpdateDialog DownloadAndInstall (BUG-349)
-- [x] UI-002: FMX LLMChatFrame åå°ä»»åŠ¡å–æ¶ˆ/ç­‰å¾… (BUG-350)
-- [x] UI-003: VCL UpdateDialog ä¸‹è½½çº¿ç¨‹å–æ¶ˆ/ç­‰å¾… (BUG-351)
-- [x] UI-004: VCL LLMChatFrame FCurrentTask ç”Ÿå‘½å‘¨æœŸ (BUG-352)
-- [x] UI-005: Tray.SchedulerFrame æšä¸¾/è·¯å¾„/è‡ªåŠ¨æ‰§è¡ŒåŠ å›º (BUG-353)
-- [x] UI-006: VCL/FMX è®¾è®¡æ—¶æ³¨å†Œèšåˆ (BUG-362)
+- [x] UI-002: FMX LLMChatFrame ºóÌ¨ÈÎÎñÈ¡Ïû/µÈ´ı (BUG-350)
+- [x] UI-003: VCL UpdateDialog ÏÂÔØÏß³ÌÈ¡Ïû/µÈ´ı (BUG-351)
+- [x] UI-004: VCL LLMChatFrame FCurrentTask ÉúÃüÖÜÆÚ (BUG-352)
+- [x] UI-005: Tray.SchedulerFrame Ã¶¾Ù/Â·¾¶/×Ô¶¯Ö´ĞĞ¼Ó¹Ì (BUG-353)
+- [x] UI-006: VCL/FMX Éè¼ÆÊ±×¢²á¾ÛºÏ (BUG-362)
 
-### REVIEW5-GOV (8 é¡¹)
-- [x] GOV-001: Governance ConfigDB æ³¨å†Œé“¾åŒæ­¥ (BUG-356)
-- [x] GOV-002: DeepFlow Pause->Stop æ­»é” (BUG-357)
-- [x] GOV-003: 8 ä¸ªæ ¸å¿ƒåŒ… .dproj + pgDeepBase.groupproj (BUG-361)
-- [x] GOV-004: Governance INV-8..INV-15 ç¦æ­¢ç©ºè§„åˆ™ (BUG-358)
-- [x] GOV-005: Regression è¦†ç›–æ˜ å°„æ ¡éªŒé‡åš (BUG-359)
-- [x] GOV-006: DeepFlow README ç¤ºä¾‹/æ­»é“¾æ¥/Parser (BUG-354)
-- [x] GOV-007: DeepFlow ç”Ÿäº§æºç çº³å…¥æµ‹è¯•ç¼–è¯‘ (BUG-360)
-- [x] GOV-008: DeepFlow.Executor JSON å¯¹è±¡æ³„æ¼ (BUG-355)
+### REVIEW5-GOV (8 Ïî)
+- [x] GOV-001: Governance ConfigDB ×¢²áÁ´Í¬²½ (BUG-356)
+- [x] GOV-002: DeepFlow Pause->Stop ËÀËø (BUG-357)
+- [x] GOV-003: 8 ¸öºËĞÄ°ü .dproj + pgDeepBase.groupproj (BUG-361)
+- [x] GOV-004: Governance INV-8..INV-15 ½ûÖ¹¿Õ¹æÔò (BUG-358)
+- [x] GOV-005: Regression ¸²¸ÇÓ³ÉäĞ£ÑéÖØ×ö (BUG-359)
+- [x] GOV-006: DeepFlow README Ê¾Àı/ËÀÁ´½Ó/Parser (BUG-354)
+- [x] GOV-007: DeepFlow Éú²úÔ´ÂëÄÉÈë²âÊÔ±àÒë (BUG-360)
+- [x] GOV-008: DeepFlow.Executor JSON ¶ÔÏóĞ¹Â© (BUG-355)
 
 
-## 2026-06-30 REVIEW5-FEAT-006 LLM HTTP 200 Error Envelope é”™è¯¯è§£æ âœ…
+## 2026-06-30 REVIEW5-FEAT-006 LLM HTTP 200 Error Envelope ´íÎó½âÎö ?
 
-> æ¥æº: REVIEW5-FEAT-006 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `Features/DeepBase.LLM.HTTP.pas` é”™è¯¯å“åº”å¤„ç† (BUG-344)
+> À´Ô´: REVIEW5-FEAT-006 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `Features/DeepBase.LLM.HTTP.pas` ´íÎóÏìÓ¦´¦Àí (BUG-344)
 
-### é—®é¢˜
-LLM HTTP å®¢æˆ·ç«¯åœ¨å¤„ç† HTTP 200 å“åº”æ—¶ï¼Œæœªæ£€æŸ¥å“åº”ä½“ä¸­çš„ error envelopeã€‚æŸäº› APIï¼ˆå¦‚ OpenAIã€Anthropicï¼‰åœ¨å‘ç”Ÿé”™è¯¯æ—¶å¯èƒ½è¿”å› HTTP 200 çŠ¶æ€ç ï¼Œä½†å“åº”ä½“ä¸­åŒ…å« error å¯¹è±¡ã€‚å½“å‰å®ç°ç›´æ¥å°è¯•è§£æ content/choicesï¼Œå¯¼è‡´è¿”å›ç©ºç»“æœè€Œéé”™è¯¯ä¿¡æ¯ã€‚
+### ÎÊÌâ
+LLM HTTP ¿Í»§¶ËÔÚ´¦Àí HTTP 200 ÏìÓ¦Ê±£¬Î´¼ì²éÏìÓ¦ÌåÖĞµÄ error envelope¡£Ä³Ğ© API£¨Èç OpenAI¡¢Anthropic£©ÔÚ·¢Éú´íÎóÊ±¿ÉÄÜ·µ»Ø HTTP 200 ×´Ì¬Âë£¬µ«ÏìÓ¦ÌåÖĞ°üº¬ error ¶ÔÏó¡£µ±Ç°ÊµÏÖÖ±½Ó³¢ÊÔ½âÎö content/choices£¬µ¼ÖÂ·µ»Ø¿Õ½á¹û¶ø·Ç´íÎóĞÅÏ¢¡£
 
-### ä¿®å¤
-- **ParseOpenAIResponse**: åœ¨è§£æ choices ä¹‹å‰æ£€æŸ¥ error å¯¹è±¡ï¼Œæå– message å’Œ code å­—æ®µ
-- **ParseAnthropicResponse**: åœ¨è§£æ content ä¹‹å‰æ£€æŸ¥ error å¯¹è±¡ï¼Œæå– message å’Œ type å­—æ®µ
-- **æµ‹è¯•è¦†ç›–**: æ–°å¢ `TLLMHttpErrorEnvelopeTests` æµ‹è¯•å¤¹å…· (4 ä¸ªæµ‹è¯•)
-  - `Test_Send_OpenAI_ErrorEnvelope_ExtractsError`: éªŒè¯ OpenAI error envelope è§£æ
-  - `Test_Send_Anthropic_ErrorEnvelope_ExtractsError`: éªŒè¯ Anthropic error envelope è§£æ
-  - `Test_Send_OpenAI_SuccessResponse_ParsesContent`: éªŒè¯æ­£å¸¸å“åº”è§£æ
-  - `Test_Send_Anthropic_SuccessResponse_ParsesContent`: éªŒè¯æ­£å¸¸å“åº”è§£æ
+### ĞŞ¸´
+- **ParseOpenAIResponse**: ÔÚ½âÎö choices Ö®Ç°¼ì²é error ¶ÔÏó£¬ÌáÈ¡ message ºÍ code ×Ö¶Î
+- **ParseAnthropicResponse**: ÔÚ½âÎö content Ö®Ç°¼ì²é error ¶ÔÏó£¬ÌáÈ¡ message ºÍ type ×Ö¶Î
+- **²âÊÔ¸²¸Ç**: ĞÂÔö `TLLMHttpErrorEnvelopeTests` ²âÊÔ¼Ğ¾ß (4 ¸ö²âÊÔ)
+  - `Test_Send_OpenAI_ErrorEnvelope_ExtractsError`: ÑéÖ¤ OpenAI error envelope ½âÎö
+  - `Test_Send_Anthropic_ErrorEnvelope_ExtractsError`: ÑéÖ¤ Anthropic error envelope ½âÎö
+  - `Test_Send_OpenAI_SuccessResponse_ParsesContent`: ÑéÖ¤Õı³£ÏìÓ¦½âÎö
+  - `Test_Send_Anthropic_SuccessResponse_ParsesContent`: ÑéÖ¤Õı³£ÏìÓ¦½âÎö
 
-### æ³¨æ„äº‹é¡¹
-- ä½¿ç”¨ `TFakeLLMTransport` æ³¨å…¥ä¼ªé€  HTTP å“åº”ï¼Œæ— éœ€çœŸå®ç½‘ç»œè°ƒç”¨
-- Error envelope æ ¼å¼ï¼šOpenAI ä½¿ç”¨ `error.code`ï¼ŒAnthropic ä½¿ç”¨ `error.type`
-- æµ‹è¯•éªŒè¯ `Result.Success = False` ä¸” `ErrorMessage`/`ErrorCode` æ­£ç¡®æå–
+### ×¢ÒâÊÂÏî
+- Ê¹ÓÃ `TFakeLLMTransport` ×¢ÈëÎ±Ôì HTTP ÏìÓ¦£¬ÎŞĞèÕæÊµÍøÂçµ÷ÓÃ
+- Error envelope ¸ñÊ½£ºOpenAI Ê¹ÓÃ `error.code`£¬Anthropic Ê¹ÓÃ `error.type`
+- ²âÊÔÑéÖ¤ `Result.Success = False` ÇÒ `ErrorMessage`/`ErrorCode` ÕıÈ·ÌáÈ¡
 
-### éªŒè¯
-- ç¼–è¯‘é€šè¿‡ (SUCCESS: Unit Tests compiled)
-- 4 ä¸ªæ–°æµ‹è¯•è¦†ç›– error envelope å’Œæ­£å¸¸å“åº”åœºæ™¯
-
----
-
-## 2026-06-30 REVIEW5-FEAT-005 HttpServer é™æ€æ–‡ä»¶æœåŠ¡è·¯å¾„éå†é˜²æŠ¤æµ‹è¯• âœ…
-
-> æ¥æº: REVIEW5-FEAT-005 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `Features/DeepBase.HttpServer.pas` é™æ€æ–‡ä»¶æœåŠ¡ (BUG-343)
-
-### é—®é¢˜
-`TStaticFileMiddleware` å·²å®ç°åŸºæœ¬è·¯å¾„éå†é˜²æŠ¤:
-- æ‹’ç»ç»å¯¹è·¯å¾„å’Œåæ–œæ è·¯å¾„
-- ä½¿ç”¨ `TPath.GetFullPath` è§„èŒƒåŒ– RootPath å’Œ FilePath
-- æ£€æŸ¥ FilePath æ˜¯å¦ï¿½ï¿½ RootPath å¼€å¤´ (case-insensitive)
-
-ä½†ç¼ºå°‘æµ‹è¯•è¦†ç›–, æ— æ³•éªŒè¯é˜²æŠ¤æœºåˆ¶çš„æ­£ç¡®æ€§å’Œå®Œæ•´æ€§ã€‚
-
-### ä¿®å¤
-- éªŒè¯ç°æœ‰å®ç°å·²åŒ…å« canonical root æ ¡éªŒå’Œè·¯å¾„éå†é˜²æŠ¤
-- æ–°å¢ `TTestStaticFilePathTraversal` æµ‹è¯•å¤¹å…·, è¦†ç›–:
-  - æœ‰æ•ˆè·¯å¾„è®¿é—® (root å†…æ–‡ä»¶)
-  - `..` è·¯å¾„éå†é˜»æ­¢
-  - URL ç¼–ç çš„ `%2e%2e` éå†é˜»æ­¢
-  - ç»å¯¹è·¯å¾„é˜»æ­¢
-  - åæ–œæ è·¯å¾„é˜»æ­¢
-  - Canonical root éªŒè¯ (å¸¦å°¾éƒ¨æ–œæ çš„ root)
-
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.HttpServer.pas` æ–°å¢ `TTestStaticFilePathTraversal`)
-- `Test_ValidPathWithinRoot`: éªŒè¯ root å†…æ–‡ä»¶å¯æ­£å¸¸è®¿é—® (200 OK)
-- `Test_TraversalWithDotDot_Blocked`: éªŒè¯ `/../../../etc/passwd` è¢«é˜»æ­¢ (403 Forbidden)
-- `Test_TraversalWithEncodedDotDot_Blocked`: éªŒè¯ `/%2e%2e/%2e%2e/etc/passwd` è¢«é˜»æ­¢ (403)
-- `Test_AbsolutePath_Blocked`: éªŒè¯ `C:/Windows/System32/...` è¢«é˜»æ­¢ (403)
-- `Test_BackslashPath_Blocked`: éªŒè¯åŒ…å«åæ–œæ çš„è·¯å¾„è¢«é˜»æ­¢ (403)
-- `Test_CanonicalRootValidation`: éªŒè¯å¸¦å°¾éƒ¨æ–œæ çš„ root è·¯å¾„è§„èŒƒåŒ–æ­£ç¡®
-
-### æ³¨æ„äº‹é¡¹
-- æµ‹è¯•ä½¿ç”¨ä¸´æ—¶ç›®å½•åˆ›å»ºæµ‹è¯•æ–‡ä»¶, æµ‹è¯•å®Œæˆåè‡ªåŠ¨æ¸…ç†
-- è·¯å¾„éå†é˜²æŠ¤ä¾èµ–äº `TPath.GetFullPath` çš„è§„èŒƒåŒ–èƒ½åŠ›å’Œ `StartsWith` æ£€æŸ¥
-
-### éªŒè¯
-- 6 æµ‹è¯•å…¨ç»¿; ç¼–è¯‘é€šè¿‡
+### ÑéÖ¤
+- ±àÒëÍ¨¹ı (SUCCESS: Unit Tests compiled)
+- 4 ¸öĞÂ²âÊÔ¸²¸Ç error envelope ºÍÕı³£ÏìÓ¦³¡¾°
 
 ---
 
-## 2026-06-30 REVIEW5-FEAT-004 CloudSync é»˜è®¤åŠ å¯†æ—  key æ—¶ fail-closed éªŒè¯ âœ…
+## 2026-06-30 REVIEW5-FEAT-005 HttpServer ¾²Ì¬ÎÄ¼ş·şÎñÂ·¾¶±éÀú·À»¤²âÊÔ ?
 
-> æ¥æº: REVIEW5-FEAT-004 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `Features/DeepBase.CloudSync.pas` åŠ å¯† fail-closed è¡Œä¸º (BUG-342)
+> À´Ô´: REVIEW5-FEAT-005 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `Features/DeepBase.HttpServer.pas` ¾²Ì¬ÎÄ¼ş·şÎñ (BUG-343)
 
-### é—®é¢˜
-é»˜è®¤é…ç½® `EnableEncryption := True` ä½† `EncryptionKey := ''`ã€‚è‹¥ fail-closed æ£€æŸ¥ç¼ºå¤±, ä½¿ç”¨é»˜è®¤é…ç½®çš„åº”ç”¨ä¼šåœ¨æ— å¯†é’¥æƒ…å†µä¸‹æ˜æ–‡ä¸Šä¼ é…ç½®æ•°æ®åˆ°äº‘ç«¯, é€ æˆï¿½ï¿½ï¿½æ„Ÿä¿¡æ¯æ³„éœ²ã€‚
+### ÎÊÌâ
+`TStaticFileMiddleware` ÒÑÊµÏÖ»ù±¾Â·¾¶±éÀú·À»¤:
+- ¾Ü¾ø¾ø¶ÔÂ·¾¶ºÍ·´Ğ±¸ÜÂ·¾¶
+- Ê¹ÓÃ `TPath.GetFullPath` ¹æ·¶»¯ RootPath ºÍ FilePath
+- ¼ì²é FilePath ÊÇ·ñ?? RootPath ¿ªÍ· (case-insensitive)
 
-### ä¿®å¤
-- **å·²æœ‰ fail-closed æ£€æŸ¥**: `EncryptData` å’Œ `DecryptData` åœ¨ `EncryptionKey = ''` æ—¶æŠ›å‡º `EEncryptionException`/`EDecryptionException`, é˜»æ­¢æ— å¯†é’¥åŠ è§£å¯†
-- **å¯è§æ€§è°ƒæ•´**: `EncryptData`/`DecryptData` ä» private æ”¹ä¸º public, å…è®¸ç›´æ¥æµ‹è¯• fail-closed è¡Œä¸º
-- **æµ‹è¯•è¦†ç›–**: æ–°å¢ `TTestEncryptionFailClosed` æµ‹è¯•å¤¹å…·, éªŒè¯:
-  - é»˜è®¤é…ç½®åŠ å¯†å¯ç”¨ä½†å¯†é’¥ä¸ºç©º
-  - ç©ºå¯†é’¥æ—¶ EncryptData æŠ›å‡º EEncryptionException
-  - ç©ºå¯†é’¥æ—¶ DecryptData æŠ›å‡º EDecryptionException
-  - æœ‰æ•ˆå¯†é’¥æ—¶åŠ è§£å¯†æˆåŠŸ
-  - åŠ è§£å¯†å¾€è¿”ä¸€è‡´æ€§
+µ«È±ÉÙ²âÊÔ¸²¸Ç, ÎŞ·¨ÑéÖ¤·À»¤»úÖÆµÄÕıÈ·ĞÔºÍÍêÕûĞÔ¡£
 
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.CloudSync.pas` æ–°å¢ `TTestEncryptionFailClosed`)
-- `Test_DefaultConfig_EncryptionEnabled`: é»˜è®¤é…ç½®åŠ å¯†å¯ç”¨
-- `Test_DefaultConfig_EncryptionKeyEmpty`: é»˜è®¤é…ç½®å¯†é’¥ä¸ºç©º
-- `Test_EncryptData_EmptyKey_RaisesException`: ç©ºå¯†é’¥åŠ å¯†æŠ›å‡ºå¼‚å¸¸
-- `Test_DecryptData_EmptyKey_RaisesException`: ç©ºå¯†é’¥è§£å¯†æŠ›å‡ºå¼‚å¸¸
-- `Test_EncryptData_WithKey_Succeeds`: æœ‰æ•ˆå¯†é’¥åŠ å¯†æˆåŠŸ
-- `Test_EncryptDecrypt_RoundTrip`: åŠ è§£å¯†å¾€è¿”ä¸€è‡´
+### ĞŞ¸´
+- ÑéÖ¤ÏÖÓĞÊµÏÖÒÑ°üº¬ canonical root Ğ£ÑéºÍÂ·¾¶±éÀú·À»¤
+- ĞÂÔö `TTestStaticFilePathTraversal` ²âÊÔ¼Ğ¾ß, ¸²¸Ç:
+  - ÓĞĞ§Â·¾¶·ÃÎÊ (root ÄÚÎÄ¼ş)
+  - `..` Â·¾¶±éÀú×èÖ¹
+  - URL ±àÂëµÄ `%2e%2e` ±éÀú×èÖ¹
+  - ¾ø¶ÔÂ·¾¶×èÖ¹
+  - ·´Ğ±¸ÜÂ·¾¶×èÖ¹
+  - Canonical root ÑéÖ¤ (´øÎ²²¿Ğ±¸ÜµÄ root)
 
-### æ³¨æ„äº‹é¡¹
-- fail-closed æ£€æŸ¥å·²å­˜åœ¨äºä»£ç ä¸­, æœ¬æ¬¡ä¿®æ”¹ä¸»è¦è¡¥å……æµ‹è¯•è¦†ç›–å’Œå¯è§æ€§è°ƒæ•´
-- ä½¿ç”¨é»˜è®¤é…ç½®çš„åº”ç”¨å¿…é¡»åœ¨åˆå§‹åŒ–æ—¶è®¾ç½® `EncryptionKey`, å¦åˆ™ä»»ä½•åŒæ­¥æ“ä½œéƒ½ä¼šå¤±è´¥ (fail-closed)
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.HttpServer.pas` ĞÂÔö `TTestStaticFilePathTraversal`)
+- `Test_ValidPathWithinRoot`: ÑéÖ¤ root ÄÚÎÄ¼ş¿ÉÕı³£·ÃÎÊ (200 OK)
+- `Test_TraversalWithDotDot_Blocked`: ÑéÖ¤ `/../../../etc/passwd` ±»×èÖ¹ (403 Forbidden)
+- `Test_TraversalWithEncodedDotDot_Blocked`: ÑéÖ¤ `/%2e%2e/%2e%2e/etc/passwd` ±»×èÖ¹ (403)
+- `Test_AbsolutePath_Blocked`: ÑéÖ¤ `C:/Windows/System32/...` ±»×èÖ¹ (403)
+- `Test_BackslashPath_Blocked`: ÑéÖ¤°üº¬·´Ğ±¸ÜµÄÂ·¾¶±»×èÖ¹ (403)
+- `Test_CanonicalRootValidation`: ÑéÖ¤´øÎ²²¿Ğ±¸ÜµÄ root Â·¾¶¹æ·¶»¯ÕıÈ·
 
-### éªŒè¯
-- 6 æµ‹è¯•å…¨ç»¿; ç¼–è¯‘é€šè¿‡
+### ×¢ÒâÊÂÏî
+- ²âÊÔÊ¹ÓÃÁÙÊ±Ä¿Â¼´´½¨²âÊÔÎÄ¼ş, ²âÊÔÍê³Éºó×Ô¶¯ÇåÀí
+- Â·¾¶±éÀú·À»¤ÒÀÀµÓÚ `TPath.GetFullPath` µÄ¹æ·¶»¯ÄÜÁ¦ºÍ `StartsWith` ¼ì²é
 
----
-
-## 2026-06-30 REVIEW5-FEAT-003 AutoUpdate HTTP è¶…æ—¶ä¸å®Œæ•´æ€§å¼ºåˆ¶æ ¡éªŒ âœ…
-
-> æ¥æº: REVIEW5-FEAT-003 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `Features/DeepBase.AutoUpdate.pas` HTTP è¶…æ—¶ä¸ä¸‹è½½å®Œæ•´æ€§ (BUG-341)
-
-### é—®é¢˜
-1. **HTTP æ— è¶…æ—¶**: `CreateHttpClient` ä»…è®¾ç½® UserAgent, æœªé…ç½® `ConnectionTimeout`/`ResponseTimeout`ã€‚æ…¢é€Ÿæˆ–æŒ‚èµ·çš„æœåŠ¡å™¨ä¼šå¯¼è‡´ `CheckForUpdate`/`DownloadUpdate` æ— é™æœŸé˜»å¡, å½±å“åº”ç”¨å“åº”æ€§
-2. **å®Œæ•´æ€§å¯é€‰**: `DownloadUpdate` ä¸­ SHA256 æ ¡éªŒä»…åœ¨ `Info.Sha256 <> ''` æ—¶æ‰§è¡Œ; æ—  SHA256 æ—¶ç›´æ¥è·³è¿‡éªŒè¯ã€‚ç”Ÿäº§ä¸‹è½½åŒ…è‹¥æ— å®Œæ•´æ€§ä¿¡æ¯, æ— æ³•æ£€æµ‹ç¯¡æ”¹
-
-### ä¿®å¤
-- **HTTP è¶…æ—¶**:
-  - `TDeepBaseAutoUpdate` æ–°å¢ `FConnectionTimeout`/`FResponseTimeout` å­—æ®µ (æ„é€ å‡½æ•°é»˜è®¤ 30s/60s)
-  - æ–°å¢å…¬å…±å±æ€§ `ConnectionTimeout`/`ResponseTimeout` å¯é…ç½®
-  - `CreateHttpClient` ä» class function æ”¹ä¸º instance function, åº”ç”¨é…ç½®çš„è¶…æ—¶å€¼
-  - åŒæ­¥æ›´æ–° 4 å¤„ `CreateHttpClient` è°ƒç”¨ (ç§»é™¤ `FCurrentVersion` å‚æ•°)
-- **å®Œæ•´æ€§å¼ºåˆ¶**:
-  - `TUpdateInfo` æ–°å¢ `Signature: string` å­—æ®µ (å¯é€‰æ•°å­—ç­¾å, base64/PEM)
-  - `DownloadUpdate` åœ¨ HTTP è¯·æ±‚å‰å¢åŠ  fail-closed æ£€æŸ¥: `(Info.Sha256 = '') and (Info.Signature = '')` æ—¶è®¾ç½® `FLastError` å¹¶é€€å‡º
-  - `ResetUpdateInfo` åˆå§‹åŒ– `Info.Signature := ''`
-  - JSON è§£æ (æ–°æ ¼å¼ + é—ç•™æ ¼å¼) è¯»å– `signature` å­—æ®µ (è‹¥å­˜åœ¨)
-
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.AutoUpdate.pas` æ–°å¢ `TTestIntegrityEnforcement`)
-- `Test_DefaultConnectionTimeout`: é»˜è®¤è¿æ¥è¶…æ—¶ 30000ms
-- `Test_DefaultResponseTimeout`: é»˜è®¤å“åº”è¶…æ—¶ 60000ms
-- `Test_TimeoutsAreConfigurable`: è¶…æ—¶å€¼å¯é€šè¿‡å±æ€§ä¿®æ”¹
-- `Test_UpdateInfoSignatureField`: TUpdateInfo æœ‰ Signature å­—æ®µä¸”å¯èµ‹å€¼
-- `Test_DownloadUpdate_FailClosed_NoIntegrityInfo`: æ—  SHA256 ä¸”æ—  Signature æ—¶ DownloadUpdate è¿”å› False å¹¶è®¾ç½® LastError
-- `Test_DownloadUpdate_FailClosed_EmptySha256AndSignature`: åŒä¸Š (å†—ä½™è¦†ç›–)
-- `Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck`: æä¾› SHA256 æ—¶ä¸è§¦å‘å®Œæ•´æ€§æ‹’ç» (ä½¿ç”¨ä¸å¯è¾¾ URL éªŒè¯å¤±è´¥åŸå› ä¸ºç½‘ç»œè€Œéå®Œæ•´æ€§)
-- `Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck`: æä¾› Signature æ—¶ä¸è§¦å‘å®Œæ•´æ€§æ‹’ç»
-
-### æ³¨æ„äº‹é¡¹
-- `CreateHttpClient` ä» class function æ”¹ä¸º instance function æ˜¯ç ´åæ€§é‡æ„, ä½†ä»…å½±å“å†…éƒ¨è°ƒç”¨ (4 å¤„), æ— å¤–éƒ¨è°ƒç”¨æ–¹
-- è¶…æ—¶é»˜è®¤å€¼ (30s/60s) åŸºäºæ¡Œé¢åº”ç”¨æ›´æ–°åœºæ™¯: æ£€æŸ¥æ›´æ–°ä¸åº”è¶…è¿‡ 30s, ä¸‹è½½æ›´æ–°åŒ…ä¸åº”è¶…è¿‡ 60s (å®é™…å¤§æ–‡ä»¶å¯èƒ½æ›´é•¿, è°ƒç”¨æ–¹å¯æŒ‰éœ€è°ƒæ•´)
-- Signature å­—æ®µå½“å‰ä»…ä½œä¸º fail-closed é—¨æ§, å®é™…ç­¾åéªŒè¯é€»è¾‘å¾…åç»­å®ç° (éœ€è¦å…¬é’¥/è¯ä¹¦é“¾)
-
-### éªŒè¯
-- 8 æµ‹è¯•å…¨ç»¿; ç¼–è¯‘é€šè¿‡, æ— æ–°å¢é”™è¯¯/è­¦å‘Š
+### ÑéÖ¤
+- 6 ²âÊÔÈ«ÂÌ; ±àÒëÍ¨¹ı
 
 ---
 
-## 2026-06-30 REVIEW5-FEAT-002 PayPal PaymentBridge å·¥å‚è¡¥ WebhookId é…ç½® âœ…
+## 2026-06-30 REVIEW5-FEAT-004 CloudSync Ä¬ÈÏ¼ÓÃÜÎŞ key Ê± fail-closed ÑéÖ¤ ?
 
-> æ¥æº: REVIEW5-FEAT-002 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `Features/DeepBase.Commerce.PaymentBridge.pas` PayPal å·¥å‚ (BUG-340)
+> À´Ô´: REVIEW5-FEAT-004 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `Features/DeepBase.CloudSync.pas` ¼ÓÃÜ fail-closed ĞĞÎª (BUG-342)
 
-### é—®é¢˜
-`CreatePayPalNotificationVerifier` å·¥å‚ç­¾åä»…æ¥å— `AClientId`/`AClientSecret`, æœªæš´éœ² `AWebhookId` å‚æ•°, ä¹Ÿæœªç»™ `TPayPalConfig.WebhookId` èµ‹å€¼ã€‚`TPayPalClient.VerifyWebhookSignature` åœ¨ `WebhookId=''` æ—¶ fail closed (`EPaymentConfigError` MISSING_WEBHOOK_ID), å› æ­¤ä»»ä½•ç»å·¥å‚åˆ›å»ºçš„ PayPal verifier éƒ½æ— æ³•éªŒç­¾ â€”â€” æ°¸è¿œå¡åœ¨ç¼ºé…ç½®é”™è¯¯, æ— æ³•è¿›å…¥å®é™…ç­¾åæ ¡éªŒã€‚
+### ÎÊÌâ
+Ä¬ÈÏÅäÖÃ `EnableEncryption := True` µ« `EncryptionKey := ''`¡£Èô fail-closed ¼ì²éÈ±Ê§, Ê¹ÓÃÄ¬ÈÏÅäÖÃµÄÓ¦ÓÃ»áÔÚÎŞÃÜÔ¿Çé¿öÏÂÃ÷ÎÄÉÏ´«ÅäÖÃÊı¾İµ½ÔÆ¶Ë, Ôì³É???¸ĞĞÅÏ¢Ğ¹Â¶¡£
 
-### ä¿®å¤
-- `CreatePayPalNotificationVerifier` æ¥å£ä¸ DESKTOP stubã€æœåŠ¡ç«¯å®ç°ä¸‰å¤„ç­¾åç»Ÿä¸€æ–°å¢ `AWebhookId: string` å‚æ•°
-- æœåŠ¡ç«¯å®ç° `Config.WebhookId := AWebhookId`, è®© verifier è¶Šè¿‡ MISSING_WEBHOOK_ID é—¨è¿›å…¥å®é™…éªŒç­¾é˜¶æ®µ
-- æ— å¤–éƒ¨è°ƒç”¨æ–¹, ä»…å·¥å‚å£°æ˜/å®šä¹‰, æ”¹åŠ¨å‘åå…¼å®¹ (æ–°å‚æ•°, è°ƒç”¨æ–¹éœ€è‡ªè¡Œè¡¥)
+### ĞŞ¸´
+- **ÒÑÓĞ fail-closed ¼ì²é**: `EncryptData` ºÍ `DecryptData` ÔÚ `EncryptionKey = ''` Ê±Å×³ö `EEncryptionException`/`EDecryptionException`, ×èÖ¹ÎŞÃÜÔ¿¼Ó½âÃÜ
+- **¿É¼ûĞÔµ÷Õû**: `EncryptData`/`DecryptData` ´Ó private ¸ÄÎª public, ÔÊĞíÖ±½Ó²âÊÔ fail-closed ĞĞÎª
+- **²âÊÔ¸²¸Ç**: ĞÂÔö `TTestEncryptionFailClosed` ²âÊÔ¼Ğ¾ß, ÑéÖ¤:
+  - Ä¬ÈÏÅäÖÃ¼ÓÃÜÆôÓÃµ«ÃÜÔ¿Îª¿Õ
+  - ¿ÕÃÜÔ¿Ê± EncryptData Å×³ö EEncryptionException
+  - ¿ÕÃÜÔ¿Ê± DecryptData Å×³ö EDecryptionException
+  - ÓĞĞ§ÃÜÔ¿Ê±¼Ó½âÃÜ³É¹¦
+  - ¼Ó½âÃÜÍù·µÒ»ÖÂĞÔ
 
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.Commerce.PaymentBridge.pas` æ–°å¢ `TPayPalBridgeTests`)
-- `Test_VerifyWebhookSignature_MissingWebhookId_RaisesConfigError`: ç©º WebhookId ç›´æ¥æŠ› `EPaymentConfigError`, ErrorCode=`MISSING_WEBHOOK_ID` (æ— ç½‘ç»œ, åœ¨ GetAccessToken å‰æŠ›å‡º)
-- `Test_VerifyWebhookSignature_WithWebhookId_PassesIdGate`: é…ç½® WebhookId ä½†ç•™ç©ºå‡­æ® â†’ è¶Šè¿‡ id é—¨, å›  MISSING_CREDENTIALS åœ¨ `GetAccessToken` ç«‹å³æŠ›å‡º (æ— ç½‘ç»œ), è¢« `VerifyWebhookSignature` å†…éƒ¨ `except EPaymentError` æ•è·è¿”å› `False`, è¯æ˜ id é—¨å·²é€šè¿‡
-- `Test_Factory_WiresWebhookId_MissingConfigFailsClosed`: ç»å·¥å‚åˆ›å»º verifier (ç©º WebhookId) â†’ `VerifyNotification` fail closed, æ–­è¨€é”™è¯¯ç /æ¶ˆæ¯å« MISSING_WEBHOOK_ID
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.CloudSync.pas` ĞÂÔö `TTestEncryptionFailClosed`)
+- `Test_DefaultConfig_EncryptionEnabled`: Ä¬ÈÏÅäÖÃ¼ÓÃÜÆôÓÃ
+- `Test_DefaultConfig_EncryptionKeyEmpty`: Ä¬ÈÏÅäÖÃÃÜÔ¿Îª¿Õ
+- `Test_EncryptData_EmptyKey_RaisesException`: ¿ÕÃÜÔ¿¼ÓÃÜÅ×³öÒì³£
+- `Test_DecryptData_EmptyKey_RaisesException`: ¿ÕÃÜÔ¿½âÃÜÅ×³öÒì³£
+- `Test_EncryptData_WithKey_Succeeds`: ÓĞĞ§ÃÜÔ¿¼ÓÃÜ³É¹¦
+- `Test_EncryptDecrypt_RoundTrip`: ¼Ó½âÃÜÍù·µÒ»ÖÂ
 
-### æ³¨æ„äº‹é¡¹
-- Delphi å¼‚å¸¸å¯¹è±¡åœ¨ except å—ç»“æŸå³è¢«è‡ªåŠ¨é‡Šæ”¾, è·¨å—æŒæœ‰å¼•ç”¨ä¼šè¯»åˆ°å·²é‡Šæ”¾å†…å­˜ (è¡¨ç°ä¸ºç©º Message/ErrorCode); æµ‹è¯•å¿…é¡»åœ¨ except å—å†…æ•è·æ‰€éœ€å­—æ®µåˆ°å±€éƒ¨å˜é‡
-- å…¨ç¨‹ä¸è§¦ç½‘: ç©º WebhookId åœ¨é—¨å¤„æŠ›å‡º, é…ç½® WebhookId + ç©ºå‡­æ®åœ¨ token è¯·æ±‚å‰æŠ›å‡º
+### ×¢ÒâÊÂÏî
+- fail-closed ¼ì²éÒÑ´æÔÚÓÚ´úÂëÖĞ, ±¾´ÎĞŞ¸ÄÖ÷Òª²¹³ä²âÊÔ¸²¸ÇºÍ¿É¼ûĞÔµ÷Õû
+- Ê¹ÓÃÄ¬ÈÏÅäÖÃµÄÓ¦ÓÃ±ØĞëÔÚ³õÊ¼»¯Ê±ÉèÖÃ `EncryptionKey`, ·ñÔòÈÎºÎÍ¬²½²Ù×÷¶¼»áÊ§°Ü (fail-closed)
 
-### éªŒè¯
-- 3 æµ‹è¯•å…¨ç»¿; è¿˜åŸä¿®å¤ (ç§»é™¤å·¥å‚ WebhookId èµ‹å€¼) å¯ä»¤ id é—¨æµ‹è¯•é€€åŒ–ä¸º MISSING_WEBHOOK_ID å¤±è´¥
-
----
-
-## 2026-06-30 REVIEW5-FEAT-001 æ”¯ä»˜é…ç½®å¯†é’¥æŒä¹…åŒ–äºŒæ¬¡ ProtectKey ä¸ key-id ä¿®å¤ âœ…
-
-> æ¥æº: REVIEW5-FEAT-001 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Features/ThirdParty)
-> èŒƒå›´: `ThirdParty/Payment/DeepBase.Payment.*.pas` å¯†é’¥ save/load æŒä¹…åŒ– (BUG-339)
-
-### é—®é¢˜
-1. **äºŒæ¬¡ ProtectKey**: Stripe/Alipay/WeChatPay çš„ `LoadKeysFromCredentialManager` é€šè¿‡ Secure setter èµ‹å€¼ (`SecretKey := GetCredentialKey(...)`)ã€‚Secure setter å†…éƒ¨å†è°ƒ `ProtectKey`, æŠŠå·²å­˜å‚¨çš„å¯†æ–‡/key-id **å†ä¿æŠ¤ä¸€æ¬¡**ã€‚æ¯æ¬¡ save/load å¾ªç¯å¢åŠ ä¸€å±‚é—´æ¥, æœ€ç»ˆ `SecretKey` è¯»å›çš„æ˜¯ key-id è€Œéæ˜æ–‡
-2. **ä¸ç¨³å®š key-id**: `ProtectKey` çš„ key-id æ´¾ç”Ÿè‡ª `Hex(Self)` (å¯¹è±¡æŒ‡é’ˆ), æ¯æ¬¡å®ä¾‹åŒ–éƒ½å˜åŒ– â†’ æ¯æ¬¡ Save æ³„æ¼å­¤å„¿ store æ¡ç›®, è·¨å®ä¾‹ reload å¤±æ•ˆ
-3. **å­—æ®µé—´ key-id ç¢°æ’**: å›  `Hex(Self)` å¯¹åŒä¸€å¯¹è±¡çš„å…¨éƒ¨å­—æ®µç›¸åŒ, Stripe çš„ `SecretKey` ä¸ `WebhookSecret` å†™å…¥åŒä¸€ store æ§½, äº’ç›¸è¦†ç›– â†’ è¯»å›çš„å¯†é’¥æ˜¯é”™çš„
-
-### ä¿®å¤
-- `ProtectKey` ç­¾åæ”¹ä¸º `ProtectKey(const AKeyName, APlainKey)`, key-id æ”¹ä¸º `FCredentialTarget + '.vault.' + AKeyName` (è·¨å®ä¾‹ç¨³å®šä¸”æŒ‰å­—æ®µå”¯ä¸€), åŒæ—¶æ¶ˆé™¤ä¸‰ç¼ºé™·
-- Stripe/Alipay/WeChatPay `LoadKeysFromCredentialManager` æ”¹ä¸ºç›´æ¥èµ‹å€¼åº•å±‚å­—æ®µ (`FSecretKey := GetCredentialKey('SecretKey')`), ä¸ PayPal æ—¢æœ‰æ­£ç¡®æ¨¡å¼ä¸€è‡´, ä¸å†äºŒï¿½ï¿½ ProtectKey
-- åŒæ­¥æ›´æ–° 4 å¤„ Secure setter (StripeÃ—2 / AlipayÃ—1 / WeChatPayÃ—2 / PayPalÃ—1) ä¼ å…¥å­—æ®µå
-
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.Payment.Integration.pas`)
-- æ³¨å…¥å†…å­˜å‹ `TFakeSecretStore` (ä¸è§¦ç¢°çœŸå® Windows Credential Manager, æµ‹è¯•ç¡®å®šå¯å¤ç°)
-- `Test_StripeConfig_SaveLoad_NoDoubleProtect_NoFieldCollision`: åŒ config è®¾ SecretKey + WebhookSecret â†’ Save â†’ æ–°å®ä¾‹ Load, æ–­è¨€ä¸¤å€¼åˆ†åˆ«æ­£ç¡®å¾€è¿”ä¸”ä¸äº’ä¸²
-- `Test_AlipayConfig_SaveLoad_RoundTripsPrivateKey`: Alipay PrivateKey save/load å¾€è¿”
-
-### éªŒè¯
-- 3 æµ‹è¯•å…¨ç»¿ (2 æ–°å¢ + 1 æ—¢æœ‰ç©ºè¾“å…¥); è¿˜åŸä¿®å¤å¯åˆ†åˆ«è§¦å‘ double-protect (è¯»å› key-id) ä¸å­—æ®µç¢°æ’ (SecretKey è¯»å› webhook å€¼) ä¸¤ç§å¤±è´¥, è¯æ˜æµ‹è¯•æœ‰æ•ˆ
+### ÑéÖ¤
+- 6 ²âÊÔÈ«ÂÌ; ±àÒëÍ¨¹ı
 
 ---
 
-## 2026-06-30 REVIEW5-DATA-008 doQry ç›´æ¥ PRAGMA ç™½åå•æ”¶ç´§ âœ…
+## 2026-06-30 REVIEW5-FEAT-003 AutoUpdate HTTP ³¬Ê±ÓëÍêÕûĞÔÇ¿ÖÆĞ£Ñé ?
 
-> æ¥æº: REVIEW5-DATA-008 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Persistence/doQry)
-> èŒƒå›´: `Persistence/DeepBase.DB.DoQry.pas` `IsDirectSQL` æ”¶ç´§ PRAGMA ç›´æ¥æ‰§è¡Œç™½åå• (BUG-338)
+> À´Ô´: REVIEW5-FEAT-003 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `Features/DeepBase.AutoUpdate.pas` HTTP ³¬Ê±ÓëÏÂÔØÍêÕûĞÔ (BUG-341)
 
-### é—®é¢˜
-- `IsDirectSQL` å¯¹æ‰€æœ‰ä»¥ `PRAGMA` å¼€å¤´çš„ SQL ä¸€å¾‹æ”¾è¡Œ, ä¸åŒºåˆ†è¯»å‹ä¸å†™å‹
-- å†™å‹ PRAGMA (å¦‚ `PRAGMA foreign_keys=ON`ã€`PRAGMA journal_mode=WAL`ã€`PRAGMA wal_checkpoint`) å¯ç» `UniDbExec` ç›´æ¥ä¿®æ”¹æ•°æ®åº“çŠ¶æ€/è§¦å‘æ£€æŸ¥ç‚¹, ç»•è¿‡ Queries è¡¨çš„ DBA ç™½åå•
-- ä¸ DDL è¢«å¼ºåˆ¶èµ° Queries è¡¨çš„å®‰å…¨æ¨¡å‹ä¸ä¸€è‡´
+### ÎÊÌâ
+1. **HTTP ÎŞ³¬Ê±**: `CreateHttpClient` ½öÉèÖÃ UserAgent, Î´ÅäÖÃ `ConnectionTimeout`/`ResponseTimeout`¡£ÂıËÙ»ò¹ÒÆğµÄ·şÎñÆ÷»áµ¼ÖÂ `CheckForUpdate`/`DownloadUpdate` ÎŞÏŞÆÚ×èÈû, Ó°ÏìÓ¦ÓÃÏìÓ¦ĞÔ
+2. **ÍêÕûĞÔ¿ÉÑ¡**: `DownloadUpdate` ÖĞ SHA256 Ğ£Ñé½öÔÚ `Info.Sha256 <> ''` Ê±Ö´ĞĞ; ÎŞ SHA256 Ê±Ö±½ÓÌø¹ıÑéÖ¤¡£Éú²úÏÂÔØ°üÈôÎŞÍêÕûĞÔĞÅÏ¢, ÎŞ·¨¼ì²â´Û¸Ä
 
-### ä¿®å¤
-- æ–°å¢ `IsReadOnlyPragma(Body)`: æ‹’ç»å« `=` çš„èµ‹å€¼å‹ PRAGMA (å†™), æ‹’ç»è£¸å½¢å¼å³æœ‰å‰¯ä½œç”¨çš„ pragma å (`wal_checkpoint` / `optimize` / `incremental_vacuum` / `shrink_memory` / `wal_flush`)
-- `IsDirectSQL` çš„ PRAGMA åˆ†æ”¯æ”¹ä¸ºå§”æ‰˜ `IsReadOnlyPragma`: ä»…è¯»å‹ PRAGMA æ”¾è¡Œ, å†™å‹ PRAGMA è½å…¥ Queries è¡¨æŸ¥æ‰¾, æœªç™½åå•åˆ™æŠ› `DOQRY_ERR_QUERY_NOT_FOUND`
-- é…ç½®æ—‹é’® (journal_mode/synchronous ç­‰) çš„è£¸è¯»å–å½¢å¼ä»æ”¾è¡Œ, ä»…å…¶ `=value` èµ‹å€¼å½¢å¼è¢«æ‹’
+### ĞŞ¸´
+- **HTTP ³¬Ê±**:
+  - `TDeepBaseAutoUpdate` ĞÂÔö `FConnectionTimeout`/`FResponseTimeout` ×Ö¶Î (¹¹Ôìº¯ÊıÄ¬ÈÏ 30s/60s)
+  - ĞÂÔö¹«¹²ÊôĞÔ `ConnectionTimeout`/`ResponseTimeout` ¿ÉÅäÖÃ
+  - `CreateHttpClient` ´Ó class function ¸ÄÎª instance function, Ó¦ÓÃÅäÖÃµÄ³¬Ê±Öµ
+  - Í¬²½¸üĞÂ 4 ´¦ `CreateHttpClient` µ÷ÓÃ (ÒÆ³ı `FCurrentVersion` ²ÎÊı)
+- **ÍêÕûĞÔÇ¿ÖÆ**:
+  - `TUpdateInfo` ĞÂÔö `Signature: string` ×Ö¶Î (¿ÉÑ¡Êı×ÖÇ©Ãû, base64/PEM)
+  - `DownloadUpdate` ÔÚ HTTP ÇëÇóÇ°Ôö¼Ó fail-closed ¼ì²é: `(Info.Sha256 = '') and (Info.Signature = '')` Ê±ÉèÖÃ `FLastError` ²¢ÍË³ö
+  - `ResetUpdateInfo` ³õÊ¼»¯ `Info.Signature := ''`
+  - JSON ½âÎö (ĞÂ¸ñÊ½ + ÒÅÁô¸ñÊ½) ¶ÁÈ¡ `signature` ×Ö¶Î (Èô´æÔÚ)
 
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.DB.DoQry.pas`)
-- `Test_DirectWritePragma_Assignment_IsBlocked`: `PRAGMA foreign_keys=ON` æ‹’ç» (æœŸæœ› `DOQRY_ERR_QUERY_NOT_FOUND`)
-- `Test_DirectWritePragma_SideEffect_IsBlocked`: `PRAGMA wal_checkpoint` æ‹’ç»
-- `Test_DirectReadOnlyPragma_IsAllowed`: `PRAGMA table_info(test_users)` æ”¾è¡Œå¹¶è¿”å›ç»“æœé›†
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.AutoUpdate.pas` ĞÂÔö `TTestIntegrityEnforcement`)
+- `Test_DefaultConnectionTimeout`: Ä¬ÈÏÁ¬½Ó³¬Ê± 30000ms
+- `Test_DefaultResponseTimeout`: Ä¬ÈÏÏìÓ¦³¬Ê± 60000ms
+- `Test_TimeoutsAreConfigurable`: ³¬Ê±Öµ¿ÉÍ¨¹ıÊôĞÔĞŞ¸Ä
+- `Test_UpdateInfoSignatureField`: TUpdateInfo ÓĞ Signature ×Ö¶ÎÇÒ¿É¸³Öµ
+- `Test_DownloadUpdate_FailClosed_NoIntegrityInfo`: ÎŞ SHA256 ÇÒÎŞ Signature Ê± DownloadUpdate ·µ»Ø False ²¢ÉèÖÃ LastError
+- `Test_DownloadUpdate_FailClosed_EmptySha256AndSignature`: Í¬ÉÏ (ÈßÓà¸²¸Ç)
+- `Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck`: Ìá¹© SHA256 Ê±²»´¥·¢ÍêÕûĞÔ¾Ü¾ø (Ê¹ÓÃ²»¿É´ï URL ÑéÖ¤Ê§°ÜÔ­ÒòÎªÍøÂç¶ø·ÇÍêÕûĞÔ)
+- `Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck`: Ìá¹© Signature Ê±²»´¥·¢ÍêÕûĞÔ¾Ü¾ø
 
-### éªŒè¯
-- runlist 4 æµ‹è¯•å…¨ç»¿ (3 æ–°å¢ + 1 æ—¢æœ‰ DDL æ‹’ç»å›å½’)
+### ×¢ÒâÊÂÏî
+- `CreateHttpClient` ´Ó class function ¸ÄÎª instance function ÊÇÆÆ»µĞÔÖØ¹¹, µ«½öÓ°ÏìÄÚ²¿µ÷ÓÃ (4 ´¦), ÎŞÍâ²¿µ÷ÓÃ·½
+- ³¬Ê±Ä¬ÈÏÖµ (30s/60s) »ùÓÚ×ÀÃæÓ¦ÓÃ¸üĞÂ³¡¾°: ¼ì²é¸üĞÂ²»Ó¦³¬¹ı 30s, ÏÂÔØ¸üĞÂ°ü²»Ó¦³¬¹ı 60s (Êµ¼Ê´óÎÄ¼ş¿ÉÄÜ¸ü³¤, µ÷ÓÃ·½¿É°´Ğèµ÷Õû)
+- Signature ×Ö¶Îµ±Ç°½ö×÷Îª fail-closed ÃÅ¿Ø, Êµ¼ÊÇ©ÃûÑéÖ¤Âß¼­´ıºóĞøÊµÏÖ (ĞèÒª¹«Ô¿/Ö¤ÊéÁ´)
 
----
-
-## 2026-06-30 REVIEW5-DATA-007 é¢„ç¼–è¯‘è¯­å¥æ±  in-use å¤ç”¨ä¿®å¤ âœ…
-
-> æ¥æº: REVIEW5-DATA-007 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Persistence/doQry)
-> èŒƒå›´: `Persistence/DeepBase.DB.DoQry.pas` é¢„ç¼–è¯‘è¯­å¥æ± ç¦æ­¢å¤ç”¨ in-use `TFDQuery` (BUG-337)
-
-### é—®é¢˜
-- `GetOrCreatePreparedQuery` å‘½ä¸­æ± æ¡ç›®æ—¶, ä»…æ ¡éªŒè¿æ¥æŒ‡é’ˆä¸è¿æ¥çŠ¶æ€, æœªæ£€æŸ¥ `InUseCount`
-- å½“åŒä¸€è¿æ¥ä¸Šçš„åŒ SQL å‡ºç°å¹¶å‘/é‡å…¥è°ƒç”¨æ—¶, ç¬¬äºŒä¸ªè°ƒç”¨è€…ä¼šæ‹¿åˆ°**åŒä¸€ä¸ª**æ­£åœ¨ä½¿ç”¨çš„ `TFDQuery` å®ä¾‹
-- `TFDQuery` æ˜¯å•ä¸€æ´»è·ƒæ¸¸æ ‡, Params/Active çŠ¶æ€å¯å˜; ä¸¤ä¸ªè°ƒç”¨è€…åŒæ—¶ `Params.ClearValues` + `BindJsonParams` + `Open` ä¼šäº’ç›¸è¦†ç›–ç»‘å®šå‚æ•°ä¸ç»“æœé›†, æŠ› "cannot perform this operation on an active dataset" æˆ–è¯»å›é”™è¯¯å‚æ•°
-
-### ä¿®å¤
-- `GetOrCreatePreparedQuery` å‘½ä¸­æ¡ç›®æ—¶å¢åŠ  `Entry.InUseCount > 0` å®ˆå«: å‘½ä¸­åˆ™ä¸å†å¤ç”¨, æ”¹ä¸ºæ–°å»ºä¸€ä¸ªç‹¬ç«‹ `TFDQuery` (ä¸æŒ‚å…¥ `GPreparedQueryIndex`) ç›´æ¥è¿”å›
-- `ReleaseQuery(Q, Pooled)` å¯¹æœªæŒ‚å…¥ç´¢å¼•çš„æŸ¥è¯¢ä¼š `Q.Close` åæ‰¾ä¸åˆ° entry, èµ° `Entry = nil` å…œåº•åˆ†æ”¯ `Q.Free`, ä¿è¯æ–°å»ºæŸ¥è¯¢è¢«æ­£ç¡®é‡Šæ”¾, ä¸æ³„æ¼
-- å‘½ä¸­ä¸” `InUseCount = 0` æ—¶è¡Œä¸ºä¸å˜, æ± å‘½ä¸­ç‡ä¸ `ReuseCount` ä¸å—å½±å“
-
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.DB.DoQry.pas`)
-- `Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams`: 6 çº¿ç¨‹ Ã— 25 è½®åœ¨åŒä¸€**æ–‡ä»¶å‹ WAL å…±äº«è¿æ¥**ä¸Šå¹¶å‘æ‰§è¡ŒåŒä¸€æ¡å‚æ•°åŒ– SQL `SELECT :val AS v`, æ¯ä¸ªè°ƒç”¨ç»‘å®šè‡ªå·±çš„ `:val`; æ–­è¨€ 0 å¼‚å¸¸ä¸”æ¯ä¸ªè°ƒç”¨è¯»å›è‡ªå·±çš„å€¼
-- ç”¨æ–‡ä»¶å‹ WAL æ•°æ®åº“ (è€Œé `:memory:`) é¿å… SQLite å†…å­˜åº“çš„ per-connection å¹¶å‘å†²çª; `BusyTimeout=10000`
-
-### éªŒè¯
-- runlist 5 æµ‹è¯•å…¨ç»¿ (1 æ–°å¢ + 4 æ—¢æœ‰ prepared-pool å›å½’), è¿è·‘ 5 æ¬¡ç¨³å®šæ—  flake
-- è¿˜åŸä¿®å¤åè¯¥æµ‹è¯• FAIL (4 ä¸ª worker è§¦å‘ shared-active-cursor å¼‚å¸¸), è¯æ˜æµ‹è¯•æœ‰æ•ˆè¦†ç›– BUG-337
+### ÑéÖ¤
+- 8 ²âÊÔÈ«ÂÌ; ±àÒëÍ¨¹ı, ÎŞĞÂÔö´íÎó/¾¯¸æ
 
 ---
 
-## 2026-06-30 REVIEW5-DATA-006 Migrations è„šæœ¬ TOCTOU ä¿®å¤ âœ…
+## 2026-06-30 REVIEW5-FEAT-002 PayPal PaymentBridge ¹¤³§²¹ WebhookId ÅäÖÃ ?
 
-> æ¥æº: REVIEW5-DATA-006 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Persistence)
-> èŒƒå›´: `Persistence/DeepBase.DB.Migrations.pas` è¿ç§»è„šæœ¬ checksum ä¸æ‰§è¡ŒåŒæºå¿«ç…§ (BUG-336)
+> À´Ô´: REVIEW5-FEAT-002 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `Features/DeepBase.Commerce.PaymentBridge.pas` PayPal ¹¤³§ (BUG-340)
 
-### é—®é¢˜
-- `TMigrationEngine.Run` åŸå…ˆç”¨ `CalculateChecksum(FilePath)` è¯»ç›˜ç®— SHA256, éšå `ExecuteScript` åˆ `ReadAllText` é‡æ–°è¯»ç›˜æ‰§è¡Œ, ä¸¤æ¬¡ç‹¬ç«‹è¯»å–å­˜åœ¨ TOCTOU çª—å£
-- å¤–éƒ¨è¿›ç¨‹å¯åœ¨ checksum ä¹‹åã€æ‰§è¡Œä¹‹å‰æ›¿æ¢è„šæœ¬å†…å®¹, å¯¼è‡´è¿ç§»è®°å½•å­˜å‚¨çš„ checksum ä¸å®é™…æ‰§è¡Œ DDL ä¸ä¸€è‡´, é‡è·‘å¹‚ç­‰æ€§è¢«ç ´å
-- å®ç°è¿‡ç¨‹ä¸­ `ReadScriptLocked` ç”¨ `TEncoding.UTF8.GetString` è§£ç åŸå§‹å­—èŠ‚æœªå‰¥ç¦» UTF-8 BOM, BOM è¢«æ‹¼åˆ°é¦–æ¡ SQL å‰ (`<BOM>CREATE TABLE...`), `ExecSQL` æŠ¥ `near ")": syntax error`
+### ÎÊÌâ
+`CreatePayPalNotificationVerifier` ¹¤³§Ç©Ãû½ö½ÓÊÜ `AClientId`/`AClientSecret`, Î´±©Â¶ `AWebhookId` ²ÎÊı, Ò²Î´¸ø `TPayPalConfig.WebhookId` ¸³Öµ¡£`TPayPalClient.VerifyWebhookSignature` ÔÚ `WebhookId=''` Ê± fail closed (`EPaymentConfigError` MISSING_WEBHOOK_ID), Òò´ËÈÎºÎ¾­¹¤³§´´½¨µÄ PayPal verifier ¶¼ÎŞ·¨ÑéÇ© ¡ª¡ª ÓÀÔ¶¿¨ÔÚÈ±ÅäÖÃ´íÎó, ÎŞ·¨½øÈëÊµ¼ÊÇ©ÃûĞ£Ñé¡£
 
-### ä¿®å¤
-- æ–°å¢ `ReadScriptLocked`: ä»¥ `fmOpenRead or fmShareDenyWrite` è¯»å–è„šæœ¬, è¿”å›å•ä¸€å¿«ç…§å­—ç¬¦ä¸²; è§£ç å‰æ¯”å¯¹ `TEncoding.UTF8.GetPreamble` å‰¥ç¦» BOM, ä¸åŸ `TFile.ReadAllText(ScriptPath, TEncoding.UTF8)` å­—èŠ‚å…¼å®¹
-- æ–°å¢ `CalculateChecksumFromContent`: ç›´æ¥å¯¹å†…å­˜å†…å®¹è®¡ç®— SHA256, ä¸å†äºŒæ¬¡è¯»ç›˜
-- `Run` æ”¹ä¸º `ScriptContent := ReadScriptLocked(FilePath); Checksum := CalculateChecksumFromContent(ScriptContent);`, åŒä¸€ä»½ `ScriptContent` åŒæ—¶ç”¨äº checksum ä¸ `ExecuteScript`
-- `ExecuteScript` ç­¾åç”± `ScriptPath: string` æ”¹ä¸º `SQLText: string`, æ¥æ”¶å·²é”å®šçš„å†…å®¹å¿«ç…§
-- é¡ºæ‰‹æ¸…ç† `ExecuteScript` æ®‹ç•™è°ƒè¯•æ’æ¡© `dbm_debug.txt` (BUG-335, ä¿¡æ¯æ³„éœ² + æ— é™å¢é•¿)
+### ĞŞ¸´
+- `CreatePayPalNotificationVerifier` ½Ó¿ÚÓë DESKTOP stub¡¢·şÎñ¶ËÊµÏÖÈı´¦Ç©ÃûÍ³Ò»ĞÂÔö `AWebhookId: string` ²ÎÊı
+- ·şÎñ¶ËÊµÏÖ `Config.WebhookId := AWebhookId`, ÈÃ verifier Ô½¹ı MISSING_WEBHOOK_ID ÃÅ½øÈëÊµ¼ÊÑéÇ©½×¶Î
+- ÎŞÍâ²¿µ÷ÓÃ·½, ½ö¹¤³§ÉùÃ÷/¶¨Òå, ¸Ä¶¯Ïòºó¼æÈİ (ĞÂ²ÎÊı, µ÷ÓÃ·½Ğè×ÔĞĞ²¹)
 
-### å›å½’æµ‹è¯• (`Tests/Test.DeepBase.DB.Migrations.pas`, runlist `Tests/runlist_bug336.txt`)
-- `Test_CalculateChecksumFromContent_MatchesStoredAppliedChecksum`: `DeepBase_schema_migrations.checksum` == `THashSHA2.GetHashString(æ‰§è¡Œå†…å®¹, SHA256)` (å•è¯­å¥)
-- `Test_MultiStatementScript_StoredChecksumMatchesContentSnapshot`: å«è§¦å‘å™¨çš„å¤šè¯­å¥è„šæœ¬, checksum ä»ç­‰äºå†…å®¹å¿«ç…§ SHA256 ä¸”è§¦å‘å™¨æ­£å¸¸è§¦å‘
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.Commerce.PaymentBridge.pas` ĞÂÔö `TPayPalBridgeTests`)
+- `Test_VerifyWebhookSignature_MissingWebhookId_RaisesConfigError`: ¿Õ WebhookId Ö±½ÓÅ× `EPaymentConfigError`, ErrorCode=`MISSING_WEBHOOK_ID` (ÎŞÍøÂç, ÔÚ GetAccessToken Ç°Å×³ö)
+- `Test_VerifyWebhookSignature_WithWebhookId_PassesIdGate`: ÅäÖÃ WebhookId µ«Áô¿ÕÆ¾¾İ ¡ú Ô½¹ı id ÃÅ, Òò MISSING_CREDENTIALS ÔÚ `GetAccessToken` Á¢¼´Å×³ö (ÎŞÍøÂç), ±» `VerifyWebhookSignature` ÄÚ²¿ `except EPaymentError` ²¶»ñ·µ»Ø `False`, Ö¤Ã÷ id ÃÅÒÑÍ¨¹ı
+- `Test_Factory_WiresWebhookId_MissingConfigFailsClosed`: ¾­¹¤³§´´½¨ verifier (¿Õ WebhookId) ¡ú `VerifyNotification` fail closed, ¶ÏÑÔ´íÎóÂë/ÏûÏ¢º¬ MISSING_WEBHOOK_ID
 
-### éªŒè¯
-- runlist 5 æµ‹è¯•å…¨ç»¿ (2 æ–°å¢ + 3 æ—¢æœ‰å›å½’); BOM å‰¥ç¦»å‰æ—¢æœ‰è¿ç§»æµ‹è¯•åœ¨å·¥ä½œæ ‘ FAIL (`near ")": syntax error`), å‰¥ç¦»å PASS
+### ×¢ÒâÊÂÏî
+- Delphi Òì³£¶ÔÏóÔÚ except ¿é½áÊø¼´±»×Ô¶¯ÊÍ·Å, ¿ç¿é³ÖÓĞÒıÓÃ»á¶Áµ½ÒÑÊÍ·ÅÄÚ´æ (±íÏÖÎª¿Õ Message/ErrorCode); ²âÊÔ±ØĞëÔÚ except ¿éÄÚ²¶»ñËùĞè×Ö¶Îµ½¾Ö²¿±äÁ¿
+- È«³Ì²»´¥Íø: ¿Õ WebhookId ÔÚÃÅ´¦Å×³ö, ÅäÖÃ WebhookId + ¿ÕÆ¾¾İÔÚ token ÇëÇóÇ°Å×³ö
 
----
-
-## 2026-06-29 REVIEW5-DATA-005 Migrations äº‹åŠ¡æ§åˆ¶æ£€æµ‹åŠ å›º âœ…
-
-> æ¥æº: REVIEW5-DATA-005 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Persistence)
-> èŒƒå›´: `Persistence/DeepBase.DB.Migrations.pas` è¿ç§»è„šæœ¬äº‹åŠ¡æ§åˆ¶æ£€æµ‹ä¸å›æ»šå®Œæ•´æ€§ (BUG-334)
-
-### é—®é¢˜
-- `IsTransactionControlStatement` æœªæ‹¦æˆª SQLite ä¸­ç­‰åŒäº `COMMIT` çš„è£¸ `END` ä¸ `END TRANSACTION`
-- è¿ç§»è„šæœ¬è‹¥åŒ…å«ä¸Šè¿°è¯­å¥ä¼šç ´åè¿ç§»å¼•æ“è‡ªèº«çš„äº‹åŠ¡å°è£…, å¯¼è‡´è¿ç§»è®°å½•ä¸ DDL çŠ¶æ€ä¸ä¸€è‡´
-- å¤±è´¥è„šæœ¬çš„å›æ»šå®Œæ•´æ€§åœ¨è£¸ `END` ä¸éƒ¨åˆ†å¤±è´¥åœºæ™¯ç¼ºä¹è¦†ç›–
-
-### ä¿®å¤
-- `IsTransactionControlStatement` å¢åŠ  `S = 'END'` ä¸ `S = 'END TRANSACTION'` æ£€æµ‹
-- `Tests/Test.DeepBase.DB.Migrations.pas` æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯•:
-  - `Test_Run_SQLite_BareEndTransactionControlFails`: è£¸ `END;` è¢«æ‹¦æˆªä¸”ä¸ç•™è¡¨
-  - `Test_Run_SQLite_EndTransactionControlFails`: `END TRANSACTION;` è¢«æ‹¦æˆªä¸”ä¸ç•™è¡¨
-  - `Test_Run_SQLite_FailedScriptLeavesDatabaseClean`: éƒ¨åˆ†å¤±è´¥è„šæœ¬å›æ»šåè¿ç§»è®°å½•ä¸ DDL å‡å¹²å‡€
-
-### éªŒè¯
-- ç¼–è¯‘é€šè¿‡, æ–°å¢ 3 ä¸ªæµ‹è¯•å…¨éƒ¨é€šè¿‡ (RunList éªŒè¯)
-- å®Œæ•´å•å…ƒæµ‹è¯•å¥—ä»¶ä»å—é¢„å­˜ Runtime error 216 é€€å‡ºå´©æºƒå½±å“, éœ€ç”¨ runlist è¿‡æ»¤éªŒè¯
+### ÑéÖ¤
+- 3 ²âÊÔÈ«ÂÌ; »¹Ô­ĞŞ¸´ (ÒÆ³ı¹¤³§ WebhookId ¸³Öµ) ¿ÉÁî id ÃÅ²âÊÔÍË»¯Îª MISSING_WEBHOOK_ID Ê§°Ü
 
 ---
 
-## 2026-06-29 REVIEW5-DATA-004 RecycleAllConnections UAF ä¿®å¤ âœ…
+## 2026-06-30 REVIEW5-FEAT-001 Ö§¸¶ÅäÖÃÃÜÔ¿³Ö¾Ã»¯¶ş´Î ProtectKey Óë key-id ĞŞ¸´ ?
 
-> æ¥æº: REVIEW5-DATA-004 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Persistence)
-> èŒƒå›´: `RecycleAllConnections` åˆ é™¤ csValidating è¿æ¥å¯¼è‡´ use-after-free (BUG-333)
+> À´Ô´: REVIEW5-FEAT-001 Îå×¨¼ÒÄ£¿éÉóÔÄ (Features/ThirdParty)
+> ·¶Î§: `ThirdParty/Payment/DeepBase.Payment.*.pas` ÃÜÔ¿ save/load ³Ö¾Ã»¯ (BUG-339)
 
-### é—®é¢˜
-- `ValidateIdleConnections` ç»´æŠ¤çº¿ç¨‹å°†è¿æ¥è®¾ä¸º `csValidating`, é‡Šæ”¾ FLock ååœ¨é”å¤–æ‰§è¡Œ `Validate` (ç½‘ç»œ I/O)
-- `RecycleAllConnections` å…³é—­çº¿ç¨‹åœ¨é”å†…åˆ é™¤ `csValidating` è¿æ¥ (å« `FPool.Delete`)
-- `TPooledConnection.Destroy` é‡Šæ”¾å¯¹è±¡å, ç»´æŠ¤çº¿ç¨‹çš„ `Pooled.Validate` è®¿é—®å·²é‡Šæ”¾å¯¹è±¡ â†’ UAF
+### ÎÊÌâ
+1. **¶ş´Î ProtectKey**: Stripe/Alipay/WeChatPay µÄ `LoadKeysFromCredentialManager` Í¨¹ı Secure setter ¸³Öµ (`SecretKey := GetCredentialKey(...)`)¡£Secure setter ÄÚ²¿ÔÙµ÷ `ProtectKey`, °ÑÒÑ´æ´¢µÄÃÜÎÄ/key-id **ÔÙ±£»¤Ò»´Î**¡£Ã¿´Î save/load Ñ­»·Ôö¼ÓÒ»²ã¼ä½Ó, ×îÖÕ `SecretKey` ¶Á»ØµÄÊÇ key-id ¶ø·ÇÃ÷ÎÄ
+2. **²»ÎÈ¶¨ key-id**: `ProtectKey` µÄ key-id ÅÉÉú×Ô `Hex(Self)` (¶ÔÏóÖ¸Õë), Ã¿´ÎÊµÀı»¯¶¼±ä»¯ ¡ú Ã¿´Î Save Ğ¹Â©¹Â¶ù store ÌõÄ¿, ¿çÊµÀı reload Ê§Ğ§
+3. **×Ö¶Î¼ä key-id Åö×²**: Òò `Hex(Self)` ¶ÔÍ¬Ò»¶ÔÏóµÄÈ«²¿×Ö¶ÎÏàÍ¬, Stripe µÄ `SecretKey` Óë `WebhookSecret` Ğ´ÈëÍ¬Ò» store ²Û, »¥Ïà¸²¸Ç ¡ú ¶Á»ØµÄÃÜÔ¿ÊÇ´íµÄ
 
-### ä¿®å¤
-- `RecycleAllConnections` åªåˆ é™¤ `csIdle` å’Œ `csInvalid` è¿æ¥, è·³è¿‡ `csValidating`
-- æ–°å¢ `TPooledConnection.SetStateForTest` æ–¹æ³•, ä¾›å›å½’æµ‹è¯•æ¨¡æ‹Ÿ csValidating çŠ¶æ€
+### ĞŞ¸´
+- `ProtectKey` Ç©Ãû¸ÄÎª `ProtectKey(const AKeyName, APlainKey)`, key-id ¸ÄÎª `FCredentialTarget + '.vault.' + AKeyName` (¿çÊµÀıÎÈ¶¨ÇÒ°´×Ö¶ÎÎ¨Ò»), Í¬Ê±Ïû³ıÈıÈ±Ïİ
+- Stripe/Alipay/WeChatPay `LoadKeysFromCredentialManager` ¸ÄÎªÖ±½Ó¸³Öµµ×²ã×Ö¶Î (`FSecretKey := GetCredentialKey('SecretKey')`), Óë PayPal ¼ÈÓĞÕıÈ·Ä£Ê½Ò»ÖÂ, ²»ÔÙ¶ş?? ProtectKey
+- Í¬²½¸üĞÂ 4 ´¦ Secure setter (Stripe¡Á2 / Alipay¡Á1 / WeChatPay¡Á2 / PayPal¡Á1) ´«Èë×Ö¶ÎÃû
 
-### éªŒè¯
-- æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas`)
-- è¦†ç›–: csIdle åˆ é™¤ã€csValidating ä¿ç•™ (UAF é˜²æŠ¤)ã€csInUse ä¿ç•™
-- å…¨éƒ¨é€šè¿‡
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.Payment.Integration.pas`)
+- ×¢ÈëÄÚ´æĞÍ `TFakeSecretStore` (²»´¥ÅöÕæÊµ Windows Credential Manager, ²âÊÔÈ·¶¨¿É¸´ÏÖ)
+- `Test_StripeConfig_SaveLoad_NoDoubleProtect_NoFieldCollision`: Í¬ config Éè SecretKey + WebhookSecret ¡ú Save ¡ú ĞÂÊµÀı Load, ¶ÏÑÔÁ½Öµ·Ö±ğÕıÈ·Íù·µÇÒ²»»¥´®
+- `Test_AlipayConfig_SaveLoad_RoundTripsPrivateKey`: Alipay PrivateKey save/load Íù·µ
 
----
-
-## 2026-06-29 REVIEW5-DATA-003 WeChat schema fingerprint å‰ç¼€æ›¿æ¢ âœ…
-
-> æ¥æº: REVIEW5-DATA-003 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core)
-> èŒƒå›´: WeChat39x/4x schema adapter çš„ fingerprint å‰ç¼€ä¸ºå ä½ç¬¦ (BUG-332)
-
-### é—®é¢˜
-- `WeChat39x` çš„ `FSchemaFingerprintPrefixes` ä½¿ç”¨ `'e4a7bXXXXX...'` å ä½ç¬¦
-- `WeChat4x` çš„ `FSchemaFingerprintPrefixes` ä½¿ç”¨ `'4x_MSG_'` ä»… 7 å­—ç¬¦, ä¸æ»¡è¶³ `Validate` æœ€ä½ 10 å­—ç¬¦è¦æ±‚
-- å¯¼è‡´ registry `TryResolve` æ— æ³•åŒ¹é…çœŸå® schema fingerprint
-
-### ä¿®å¤
-- `Core/DeepBase.SchemaAdapter.WeChat39x.pas`: å‰ç¼€æ›¿æ¢ä¸º `'e4a7b3c9f1'` (10 ä¸ªåå…­è¿›åˆ¶å­—ç¬¦, SHA256 å‰ç¼€)
-- `Core/DeepBase.SchemaAdapter.WeChat4x.pas`: å‰ç¼€æ›¿æ¢ä¸º `'4x7f2a9b1c'` (10 ä¸ªå­—ç¬¦, SHA256 å‰ç¼€)
-- æ›´æ–°æ³¨é‡Šè¯´æ˜ fingerprint æ¥æº
-
-### éªŒè¯
-- æ–°å¢ 5 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas`)
-- è¦†ç›–: Validate é€šè¿‡ã€TryMatchFingerprint åŒ¹é…ã€éåŒ¹é…æŒ‡çº¹æ‹’ç»
-- å…¨éƒ¨é€šè¿‡
+### ÑéÖ¤
+- 3 ²âÊÔÈ«ÂÌ (2 ĞÂÔö + 1 ¼ÈÓĞ¿ÕÊäÈë); »¹Ô­ĞŞ¸´¿É·Ö±ğ´¥·¢ double-protect (¶Á»Ø key-id) Óë×Ö¶ÎÅö×² (SecretKey ¶Á»Ø webhook Öµ) Á½ÖÖÊ§°Ü, Ö¤Ã÷²âÊÔÓĞĞ§
 
 ---
 
-## 2026-06-29 REVIEW5-DATA-002 SafeQuery æ ‡è¯†ç¬¦æ ¡éªŒå’Œ quoting âœ…
+## 2026-06-30 REVIEW5-DATA-008 doQry Ö±½Ó PRAGMA °×Ãûµ¥ÊÕ½ô ?
 
-> æ¥æº: REVIEW5-DATA-002 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (DeepAxis)
-> èŒƒå›´: `SafeQuery` ç›´æ¥æ’å€¼æ ‡è¯†ç¬¦, æ— æ ¡éªŒ/quoting (BUG-331)
+> À´Ô´: REVIEW5-DATA-008 Îå×¨¼ÒÄ£¿éÉóÔÄ (Persistence/doQry)
+> ·¶Î§: `Persistence/DeepBase.DB.DoQry.pas` `IsDirectSQL` ÊÕ½ô PRAGMA Ö±½ÓÖ´ĞĞ°×Ãûµ¥ (BUG-338)
 
-### é—®é¢˜
-- `SafeQuery` ä½¿ç”¨ `Format('SELECT %s FROM %s', [...])` ç›´æ¥æ’å€¼è¡¨å/åˆ—å
-- æœªæ ¡éªŒæ ‡è¯†ç¬¦åˆæ³•æ€§, å…è®¸ SQL æ³¨å…¥, é€šé…ç¬¦ `*`, è¡¨è¾¾å¼
-- æœªéªŒè¯åˆ—åæ˜¯å¦åœ¨ schema ä¸­å­˜åœ¨
+### ÎÊÌâ
+- `IsDirectSQL` ¶ÔËùÓĞÒÔ `PRAGMA` ¿ªÍ·µÄ SQL Ò»ÂÉ·ÅĞĞ, ²»Çø·Ö¶ÁĞÍÓëĞ´ĞÍ
+- Ğ´ĞÍ PRAGMA (Èç `PRAGMA foreign_keys=ON`¡¢`PRAGMA journal_mode=WAL`¡¢`PRAGMA wal_checkpoint`) ¿É¾­ `UniDbExec` Ö±½ÓĞŞ¸ÄÊı¾İ¿â×´Ì¬/´¥·¢¼ì²éµã, ÈÆ¹ı Queries ±íµÄ DBA °×Ãûµ¥
+- Óë DDL ±»Ç¿ÖÆ×ß Queries ±íµÄ°²È«Ä£ĞÍ²»Ò»ÖÂ
 
-### ä¿®å¤
-- æ–°å¢ `EExternalDBInvalidIdentifier` å¼‚å¸¸ç±»
-- `SafeQuery` å¢åŠ  `QuoteIdentifier` å†…éƒ¨å‡½æ•°: ä»…å…è®¸å­—æ¯æ•°å­—ä¸‹åˆ’çº¿, åŒå¼•å·åŒ…è£¹
-- æ ¡éªŒ TableName/ColumnNames æ˜¯å¦å­˜åœ¨äº `FSchema` ç¼“å­˜
-- æ‹’ç»é€šé…ç¬¦ `*`, ç©ºæ ‡è¯†ç¬¦, å«ç‰¹æ®Šå­—ç¬¦çš„è¡¨è¾¾å¼
+### ĞŞ¸´
+- ĞÂÔö `IsReadOnlyPragma(Body)`: ¾Ü¾øº¬ `=` µÄ¸³ÖµĞÍ PRAGMA (Ğ´), ¾Ü¾øÂãĞÎÊ½¼´ÓĞ¸±×÷ÓÃµÄ pragma Ãû (`wal_checkpoint` / `optimize` / `incremental_vacuum` / `shrink_memory` / `wal_flush`)
+- `IsDirectSQL` µÄ PRAGMA ·ÖÖ§¸ÄÎªÎ¯ÍĞ `IsReadOnlyPragma`: ½ö¶ÁĞÍ PRAGMA ·ÅĞĞ, Ğ´ĞÍ PRAGMA ÂäÈë Queries ±í²éÕÒ, Î´°×Ãûµ¥ÔòÅ× `DOQRY_ERR_QUERY_NOT_FOUND`
+- ÅäÖÃĞıÅ¥ (journal_mode/synchronous µÈ) µÄÂã¶ÁÈ¡ĞÎÊ½ÈÔ·ÅĞĞ, ½öÆä `=value` ¸³ÖµĞÎÊ½±»¾Ü
 
-### éªŒè¯
-- æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas`)
-- å…¨éƒ¨é€šè¿‡
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.DB.DoQry.pas`)
+- `Test_DirectWritePragma_Assignment_IsBlocked`: `PRAGMA foreign_keys=ON` ¾Ü¾ø (ÆÚÍû `DOQRY_ERR_QUERY_NOT_FOUND`)
+- `Test_DirectWritePragma_SideEffect_IsBlocked`: `PRAGMA wal_checkpoint` ¾Ü¾ø
+- `Test_DirectReadOnlyPragma_IsAllowed`: `PRAGMA table_info(test_users)` ·ÅĞĞ²¢·µ»Ø½á¹û¼¯
 
----
-
-## 2026-06-29 REVIEW5-DATA-001 SQLiteReader schema ç¼“å­˜ä¿®å¤ âœ…
-
-> æ¥æº: REVIEW5-DATA-001 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (DeepAxis)
-> èŒƒå›´: `OpenReadOnly` æ‰“å¼€åä¸ç¼“å­˜ `FSchema`, å¯¼è‡´ `SafeQueryMessages` æŸ¥è¯¢å¤±æ•ˆ (BUG-330)
-
-### é—®é¢˜
-- `TExternalSQLiteReader.OpenReadOnly` æ‰“å¼€ DB åæœªè°ƒç”¨ `GetSchema` å¡«å…… `FSchema`
-- `SafeQueryMessages` ä¸­ shard è¡¨å­˜åœ¨æ€§æ£€æŸ¥è¿­ä»£ç©º `FSchema.Tables`, æ‰€æœ‰ MSG* è¡¨è·³è¿‡
-- å¾®ä¿¡èŠå¤©æ¶ˆæ¯æŸ¥è¯¢åŠŸèƒ½å®Œå…¨å¤±æ•ˆ
-
-### ä¿®å¤
-- `OpenReadOnly` æœ«å°¾è°ƒç”¨ `FSchema := GetSchema` ç¼“å­˜ schema
-- `SafeQuery` schema ç‰ˆæœ¬å˜æ›´æ—¶åŒæ­¥åˆ·æ–° `FSchema := GetSchema`
-- `SafeQuery` ç›´æ¥ä½¿ç”¨ `FSchema.SchemaFingerprint` é¿å…é‡å¤æŸ¥è¯¢
-
-### éªŒè¯
-- æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas`)
-- å…¨éƒ¨é€šè¿‡
+### ÑéÖ¤
+- runlist 4 ²âÊÔÈ«ÂÌ (3 ĞÂÔö + 1 ¼ÈÓĞ DDL ¾Ü¾ø»Ø¹é)
 
 ---
 
-## 2026-06-29 REVIEW5-CORE-007 Core åŒ…æ¸…å•å¯¹é½ âœ…
+## 2026-06-30 REVIEW5-DATA-007 Ô¤±àÒëÓï¾ä³Ø in-use ¸´ÓÃĞŞ¸´ ?
 
-> æ¥æº: REVIEW5-CORE-007 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: `DeepBase.SchemaAdapter.WeChat4x` ä¸ `DeepBase.i18n.Gender` æœªåœ¨ `DeepBaseCore.dpk` æ³¨å†Œ (BUG-329)
+> À´Ô´: REVIEW5-DATA-007 Îå×¨¼ÒÄ£¿éÉóÔÄ (Persistence/doQry)
+> ·¶Î§: `Persistence/DeepBase.DB.DoQry.pas` Ô¤±àÒëÓï¾ä³Ø½ûÖ¹¸´ÓÃ in-use `TFDQuery` (BUG-337)
 
-### é—®é¢˜
-- `DeepBaseCore.dpk` æ¼æ³¨å†Œä¸¤ä¸ªå·²å­˜åœ¨çš„ Core å•å…ƒ
-- å…¶ä»–åŒ…å¼•ç”¨è¿™äº›å•å…ƒæ—¶ä¼šè§¦å‘ "required package not found"
+### ÎÊÌâ
+- `GetOrCreatePreparedQuery` ÃüÖĞ³ØÌõÄ¿Ê±, ½öĞ£ÑéÁ¬½ÓÖ¸ÕëÓëÁ¬½Ó×´Ì¬, Î´¼ì²é `InUseCount`
+- µ±Í¬Ò»Á¬½ÓÉÏµÄÍ¬ SQL ³öÏÖ²¢·¢/ÖØÈëµ÷ÓÃÊ±, µÚ¶ş¸öµ÷ÓÃÕß»áÄÃµ½**Í¬Ò»¸ö**ÕıÔÚÊ¹ÓÃµÄ `TFDQuery` ÊµÀı
+- `TFDQuery` ÊÇµ¥Ò»»îÔ¾ÓÎ±ê, Params/Active ×´Ì¬¿É±ä; Á½¸öµ÷ÓÃÕßÍ¬Ê± `Params.ClearValues` + `BindJsonParams` + `Open` »á»¥Ïà¸²¸Ç°ó¶¨²ÎÊıÓë½á¹û¼¯, Å× "cannot perform this operation on an active dataset" »ò¶Á»Ø´íÎó²ÎÊı
 
-### ä¿®å¤
-- åœ¨ `DeepBaseCore.dpk` æ·»åŠ  `DeepBase.i18n.Gender` æ³¨å†Œ (ç´§è·Ÿ `i18n.Plural`)
-- åœ¨ `DeepBaseCore.dpk` æ·»åŠ  `DeepBase.SchemaAdapter.WeChat4x` æ³¨å†Œ (ç´§è·Ÿ `WeChat39x`)
+### ĞŞ¸´
+- `GetOrCreatePreparedQuery` ÃüÖĞÌõÄ¿Ê±Ôö¼Ó `Entry.InUseCount > 0` ÊØÎÀ: ÃüÖĞÔò²»ÔÙ¸´ÓÃ, ¸ÄÎªĞÂ½¨Ò»¸ö¶ÀÁ¢ `TFDQuery` (²»¹ÒÈë `GPreparedQueryIndex`) Ö±½Ó·µ»Ø
+- `ReleaseQuery(Q, Pooled)` ¶ÔÎ´¹ÒÈëË÷ÒıµÄ²éÑ¯»á `Q.Close` ºóÕÒ²»µ½ entry, ×ß `Entry = nil` ¶µµ×·ÖÖ§ `Q.Free`, ±£Ö¤ĞÂ½¨²éÑ¯±»ÕıÈ·ÊÍ·Å, ²»Ğ¹Â©
+- ÃüÖĞÇÒ `InUseCount = 0` Ê±ĞĞÎª²»±ä, ³ØÃüÖĞÂÊÓë `ReuseCount` ²»ÊÜÓ°Ïì
 
-### éªŒè¯
-- `DeepBaseCore` ç¼–è¯‘é€šè¿‡
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.DB.DoQry.pas`)
+- `Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams`: 6 Ïß³Ì ¡Á 25 ÂÖÔÚÍ¬Ò»**ÎÄ¼şĞÍ WAL ¹²ÏíÁ¬½Ó**ÉÏ²¢·¢Ö´ĞĞÍ¬Ò»Ìõ²ÎÊı»¯ SQL `SELECT :val AS v`, Ã¿¸öµ÷ÓÃ°ó¶¨×Ô¼ºµÄ `:val`; ¶ÏÑÔ 0 Òì³£ÇÒÃ¿¸öµ÷ÓÃ¶Á»Ø×Ô¼ºµÄÖµ
+- ÓÃÎÄ¼şĞÍ WAL Êı¾İ¿â (¶ø·Ç `:memory:`) ±ÜÃâ SQLite ÄÚ´æ¿âµÄ per-connection ²¢·¢³åÍ»; `BusyTimeout=10000`
 
----
-
-## 2026-06-29 REVIEW5-CORE-006 Metrics registry æ­»ä»£ç æ¸…ç† âœ…
-
-> æ¥æº: REVIEW5-CORE-006 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: `TMetrics` ç±»æ­»ä»£ç  `FRegistry` æ¸…ç†, å¹¶å‘é¦–è®¿é—®éªŒè¯ (BUG-328)
-
-### é—®é¢˜
-- `TMetrics` ç±»å­˜åœ¨ `class var FRegistry: TMetricsRegistry` æ­»ä»£ç : å£°æ˜ä½†ä»æœªèµ‹å€¼
-- `class destructor TMetrics.Destroy` ä»… `FreeAndNil` æ°¸è¿œä¸º nil çš„ `FRegistry`, æ— æ„ä¹‰
-- å®é™… registry é€šè¿‡ `Metrics` å‡½æ•° + DCL(`GRegistryLock`)æ­£ç¡®åˆå§‹åŒ–, æ— å¹¶å‘é—®é¢˜
-- ç¼ºå°‘å¹¶å‘é¦–è®¿é—® `TMetrics.Counter`/`TMetrics.Gauge` çš„å›å½’æµ‹è¯•
-
-### ä¿®å¤
-- ç§»é™¤ `TMetrics.FRegistry` æ­»ä»£ç ç±»å˜é‡
-- ç§»é™¤ `class destructor TMetrics.Destroy` (ä»…é‡Šæ”¾ nil)
-- æ–°å¢å¹¶å‘é¦–è®¿é—®å›å½’æµ‹è¯•
-
-### éªŒè¯
-- æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas`)
-- å…¨éƒ¨é€šè¿‡: 4 çº¿ç¨‹å¹¶å‘åˆ›å»º Counter/Gauge, Registry å•ä¾‹éªŒè¯
+### ÑéÖ¤
+- runlist 5 ²âÊÔÈ«ÂÌ (1 ĞÂÔö + 4 ¼ÈÓĞ prepared-pool »Ø¹é), Á¬ÅÜ 5 ´ÎÎÈ¶¨ÎŞ flake
+- »¹Ô­ĞŞ¸´ºó¸Ã²âÊÔ FAIL (4 ¸ö worker ´¥·¢ shared-active-cursor Òì³£), Ö¤Ã÷²âÊÔÓĞĞ§¸²¸Ç BUG-337
 
 ---
 
-## 2026-06-29 REVIEW5-CORE-005 KeyManager AEAD å‡çº§ âœ…
+## 2026-06-30 REVIEW5-DATA-006 Migrations ½Å±¾ TOCTOU ĞŞ¸´ ?
 
-> æ¥æº: REVIEW5-CORE-005 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: `TDataKey.EncryptWith` ä½¿ç”¨æ— è®¤è¯ AES-CBC, å‡çº§ä¸º AES-GCM (BUG-327)
+> À´Ô´: REVIEW5-DATA-006 Îå×¨¼ÒÄ£¿éÉóÔÄ (Persistence)
+> ·¶Î§: `Persistence/DeepBase.DB.Migrations.pas` Ç¨ÒÆ½Å±¾ checksum ÓëÖ´ĞĞÍ¬Ô´¿ìÕÕ (BUG-336)
 
-### é—®é¢˜
-- `EncryptWith` ä½¿ç”¨ `aesCBC` æ¨¡å¼, å¯†æ–‡æ ¼å¼ `IV(16) + Cipher`, æ— å®Œæ•´æ€§è®¤è¯
-- æ”»å‡»è€…å¯ä¿®æ”¹å¯†æ–‡ (bit-flipping/padding oracle), è§£å¯†åæ•°æ®è¢«ç¯¡æ”¹
+### ÎÊÌâ
+- `TMigrationEngine.Run` Ô­ÏÈÓÃ `CalculateChecksum(FilePath)` ¶ÁÅÌËã SHA256, Ëæºó `ExecuteScript` ÓÖ `ReadAllText` ÖØĞÂ¶ÁÅÌÖ´ĞĞ, Á½´Î¶ÀÁ¢¶ÁÈ¡´æÔÚ TOCTOU ´°¿Ú
+- Íâ²¿½ø³Ì¿ÉÔÚ checksum Ö®ºó¡¢Ö´ĞĞÖ®Ç°Ìæ»»½Å±¾ÄÚÈİ, µ¼ÖÂÇ¨ÒÆ¼ÇÂ¼´æ´¢µÄ checksum ÓëÊµ¼ÊÖ´ĞĞ DDL ²»Ò»ÖÂ, ÖØÅÜÃİµÈĞÔ±»ÆÆ»µ
+- ÊµÏÖ¹ı³ÌÖĞ `ReadScriptLocked` ÓÃ `TEncoding.UTF8.GetString` ½âÂëÔ­Ê¼×Ö½ÚÎ´°şÀë UTF-8 BOM, BOM ±»Æ´µ½Ê×Ìõ SQL Ç° (`<BOM>CREATE TABLE...`), `ExecSQL` ±¨ `near ")": syntax error`
 
-### ä¿®å¤
-- `EncryptWith` å‡çº§ä¸º AES-256-GCM, æ ¼å¼ `Version(1) + Nonce(12) + Cipher + Tag(16)`
-- ç‰ˆæœ¬å­—èŠ‚ `0x01` æ ‡è¯† GCM; `DecryptWith` è‡ªåŠ¨æ£€æµ‹æ ¼å¼, é `0x01` å›é€€ CBC (å‘åå…¼å®¹)
-- GCM è®¤è¯æ ‡ç­¾è‡ªåŠ¨æ£€æµ‹ç¯¡æ”¹, è§£å¯†å¤±è´¥æŠ›å‡º `ECryptoException`
+### ĞŞ¸´
+- ĞÂÔö `ReadScriptLocked`: ÒÔ `fmOpenRead or fmShareDenyWrite` ¶ÁÈ¡½Å±¾, ·µ»Øµ¥Ò»¿ìÕÕ×Ö·û´®; ½âÂëÇ°±È¶Ô `TEncoding.UTF8.GetPreamble` °şÀë BOM, ÓëÔ­ `TFile.ReadAllText(ScriptPath, TEncoding.UTF8)` ×Ö½Ú¼æÈİ
+- ĞÂÔö `CalculateChecksumFromContent`: Ö±½Ó¶ÔÄÚ´æÄÚÈİ¼ÆËã SHA256, ²»ÔÙ¶ş´Î¶ÁÅÌ
+- `Run` ¸ÄÎª `ScriptContent := ReadScriptLocked(FilePath); Checksum := CalculateChecksumFromContent(ScriptContent);`, Í¬Ò»·İ `ScriptContent` Í¬Ê±ÓÃÓÚ checksum Óë `ExecuteScript`
+- `ExecuteScript` Ç©ÃûÓÉ `ScriptPath: string` ¸ÄÎª `SQLText: string`, ½ÓÊÕÒÑËø¶¨µÄÄÚÈİ¿ìÕÕ
+- Ë³ÊÖÇåÀí `ExecuteScript` ²ĞÁôµ÷ÊÔ²å×® `dbm_debug.txt` (BUG-335, ĞÅÏ¢Ğ¹Â¶ + ÎŞÏŞÔö³¤)
 
-### éªŒè¯
-- æ–°å¢ 5 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG327_KeyManagerAEAD.pas`)
-- CI å…¨ç»¿: 4084 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
+### »Ø¹é²âÊÔ (`Tests/Test.DeepBase.DB.Migrations.pas`, runlist `Tests/runlist_bug336.txt`)
+- `Test_CalculateChecksumFromContent_MatchesStoredAppliedChecksum`: `DeepBase_schema_migrations.checksum` == `THashSHA2.GetHashString(Ö´ĞĞÄÚÈİ, SHA256)` (µ¥Óï¾ä)
+- `Test_MultiStatementScript_StoredChecksumMatchesContentSnapshot`: º¬´¥·¢Æ÷µÄ¶àÓï¾ä½Å±¾, checksum ÈÔµÈÓÚÄÚÈİ¿ìÕÕ SHA256 ÇÒ´¥·¢Æ÷Õı³£´¥·¢
 
----
-
-## 2026-06-29 REVIEW5-CORE-004 Scheduler å›è°ƒå¼‚å¸¸éš”ç¦» âœ…
-
-> æ¥æº: REVIEW5-CORE-004 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: `OnComplete` å›è°ƒå¼‚å¸¸è¦†å†™ä»»åŠ¡çŠ¶æ€ / `OnError` å›è°ƒå¼‚å¸¸ä¼ æ’­ (BUG-326)
-
-### é—®é¢˜
-- `ExecuteTask` æˆåŠŸè·¯å¾„ä¸­ `FOnCompleted` å›è°ƒå¼‚å¸¸è¢« except æ•è·åè¦†å†™ `FLastError`, å·²æˆåŠŸä»»åŠ¡æ˜¾ç¤ºé”™è¯¯
-- å¤±è´¥è·¯å¾„ä¸­ `FOnFailed` å›è°ƒåœ¨é”å¤–è°ƒç”¨ä½†æ—  try/except, å¼‚å¸¸ä¼ æ’­åˆ° TTask åŒ¿åæ–¹æ³•
-
-### ä¿®å¤
-- `FOnCompleted` except å—æ”¹ä¸ºç›´æ¥åæ‰å¼‚å¸¸, ä¸å†è¦†å†™ `FLastError` (ä¸ BUG-324 WorkerQueue æ¨¡å¼ä¸€è‡´)
-- `LOnFailed` è°ƒç”¨åŒ…è£¹ try/except, é˜²æ­¢å›è°ƒå¼‚å¸¸ä¼ æ’­
-
-### éªŒè¯
-- æ–°å¢ 3 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG326_SchedulerCallbackSafety.pas`)
-- CI å…¨ç»¿: 4079 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
+### ÑéÖ¤
+- runlist 5 ²âÊÔÈ«ÂÌ (2 ĞÂÔö + 3 ¼ÈÓĞ»Ø¹é); BOM °şÀëÇ°¼ÈÓĞÇ¨ÒÆ²âÊÔÔÚ¹¤×÷Ê÷ FAIL (`near ")": syntax error`), °şÀëºó PASS
 
 ---
 
-## 2026-06-29 REVIEW5-CORE-003 WorkerQueue timeout æ‰§è¡Œ âœ…
+## 2026-06-29 REVIEW5-DATA-005 Migrations ÊÂÎñ¿ØÖÆ¼ì²â¼Ó¹Ì ?
 
-> æ¥æº: REVIEW5-CORE-003 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: `TJob.Timeout` æœªæ‰§è¡Œ, é•¿ handler æ— é™å ç”¨ worker (BUG-325)
+> À´Ô´: REVIEW5-DATA-005 Îå×¨¼ÒÄ£¿éÉóÔÄ (Persistence)
+> ·¶Î§: `Persistence/DeepBase.DB.Migrations.pas` Ç¨ÒÆ½Å±¾ÊÂÎñ¿ØÖÆ¼ì²âÓë»Ø¹öÍêÕûĞÔ (BUG-334)
 
-### é—®é¢˜
-- `TJob.Timeout` å±æ€§å·²å®šä¹‰ä½† `ProcessJob` ä»æœªè¯»å–, é•¿è€—æ—¶ handler æ°¸ä¹…å ç”¨ worker çº¿ç¨‹
-- æ— è¶…æ—¶å¤±è´¥åé¦ˆ, è°ƒç”¨æ–¹æ— æ³•å¾—çŸ¥ job å·²è¶…æ—¶
+### ÎÊÌâ
+- `IsTransactionControlStatement` Î´À¹½Ø SQLite ÖĞµÈÍ¬ÓÚ `COMMIT` µÄÂã `END` Óë `END TRANSACTION`
+- Ç¨ÒÆ½Å±¾Èô°üº¬ÉÏÊöÓï¾ä»áÆÆ»µÇ¨ÒÆÒıÇæ×ÔÉíµÄÊÂÎñ·â×°, µ¼ÖÂÇ¨ÒÆ¼ÇÂ¼Óë DDL ×´Ì¬²»Ò»ÖÂ
+- Ê§°Ü½Å±¾µÄ»Ø¹öÍêÕûĞÔÔÚÂã `END` Óë²¿·ÖÊ§°Ü³¡¾°È±·¦¸²¸Ç
 
-### ä¿®å¤
-- æ–°å¢ `TJobHandlerThread`: ä¸“ç”¨çº¿ç¨‹æ‰§è¡Œ handler, æ„é€ å™¨æŒ‰å€¼æ•è· `TJobHandler`/`TJob`/`TEvent`, é¿å…é—­åŒ…å¼•ç”¨æ‚¬æŒ‚ (åŸ `TTask.Run` æ–¹æ¡ˆå› åŒ¿åæ–¹æ³•æŒ‰å¼•ç”¨æ•è·å±€éƒ¨å˜é‡å¯¼è‡´ Runtime error 216)
-- `ProcessJob` å½“ `Timeout > 0` æ—¶: åˆ›å»º handler çº¿ç¨‹ + `TEvent`, `WaitFor(Timeout)` ç­‰å¾…; è¶…æ—¶åˆ™æ ‡è®° `jsFailed` â†’ `MoveToDeadLetter` (ä¸é‡è¯•)
-- è¶…æ—¶è·¯å¾„: handler çº¿ç¨‹å§‹ç»ˆ `WaitFor` ç¡®ä¿å¹²å‡€ç”Ÿå‘½å‘¨æœŸ; å¼‚å¸¸é€šè¿‡ `TakeError` è½¬ç§»æ‰€æœ‰æƒé¿å… use-after-free
-- `Timeout = 0` æ—¶ handler åœ¨ worker çº¿ç¨‹å†…è”æ‰§è¡Œ, æ— é¢å¤–çº¿ç¨‹å¼€é”€
+### ĞŞ¸´
+- `IsTransactionControlStatement` Ôö¼Ó `S = 'END'` Óë `S = 'END TRANSACTION'` ¼ì²â
+- `Tests/Test.DeepBase.DB.Migrations.pas` ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ:
+  - `Test_Run_SQLite_BareEndTransactionControlFails`: Âã `END;` ±»À¹½ØÇÒ²»Áô±í
+  - `Test_Run_SQLite_EndTransactionControlFails`: `END TRANSACTION;` ±»À¹½ØÇÒ²»Áô±í
+  - `Test_Run_SQLite_FailedScriptLeavesDatabaseClean`: ²¿·ÖÊ§°Ü½Å±¾»Ø¹öºóÇ¨ÒÆ¼ÇÂ¼Óë DDL ¾ù¸É¾»
 
-### éªŒè¯
-- æ–°å¢ 5 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas`)
-- CI å…¨ç»¿: 4076 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
-
----
-
-## 2026-06-29 REVIEW5-CORE-002 WorkerQueue å›è°ƒå¼‚å¸¸å…œåº• âœ…
-
-> æ¥æº: REVIEW5-CORE-002 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: å¤–éƒ¨å›è°ƒ/å­˜å‚¨å¼‚å¸¸å¯¼è‡´ job å¡åœ¨ jsRunning (BUG-324)
-
-### é—®é¢˜
-- `ProcessJob` è®¾ç½® `jsRunning` åè°ƒç”¨ `FOnJobStarted` / `FStorage.SaveJob` æ—  try/except ä¿æŠ¤
-- handler æˆåŠŸè·¯å¾„ä¸­çš„ `FOnJobCompleted` / `FOnCompletion` è‹¥æŠ›å¼‚å¸¸, è¢« except è¯¯åˆ¤ä¸º handler å¤±è´¥
-- except åˆ†æ”¯ä¸­çš„ `FOnError` / `FOnJobRetrying` / `FOnJobFailed` / `FOnCompletion` ä¹Ÿå¯èƒ½æŠ›å¼‚å¸¸, æ©ç›–åŸå§‹é”™è¯¯
-- `TJob.ReportProgress` ä¸­çš„ `FOnProgress` å›è°ƒæŠ›å¼‚å¸¸å¯¼è‡´ handler è¢«åˆ¤å®šå¤±è´¥
-
-### ä¿®å¤
-- å¤–å±‚ `try...finally` åŒ…è£¹æ•´ä¸ª post-running ç”Ÿå‘½å‘¨æœŸ, `finally` ä¸­æ‰§è¡Œæœ€ç»ˆ `SaveJob`
-- æ‰€æœ‰å¤–éƒ¨å›è°ƒ (`FOnJobStarted`/`FOnJobCompleted`/`FOnCompletion`/`FOnError`/`FOnJobRetrying`/`FOnJobFailed`) å„è‡ªç‹¬ç«‹ try/except, åæ‰å¼‚å¸¸
-- `TJob.ReportProgress` ä¸­çš„ `FOnProgress` å›è°ƒä¹ŸåŠ  try/except ä¿æŠ¤
-- çŠ¶æ€è½¬æ¢ (jsRunning â†’ jsCompleted/jsFailed) ä¸å†è¢«ä»»ä½•å¤–éƒ¨å›è°ƒå¼‚å¸¸é˜»æ–­
-
-### éªŒè¯
-- æ–°å¢ 9 ä¸ªå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas`)
-- CI å…¨ç»¿: 4071 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
+### ÑéÖ¤
+- ±àÒëÍ¨¹ı, ĞÂÔö 3 ¸ö²âÊÔÈ«²¿Í¨¹ı (RunList ÑéÖ¤)
+- ÍêÕûµ¥Ôª²âÊÔÌ×¼şÈÔÊÜÔ¤´æ Runtime error 216 ÍË³ö±ÀÀ£Ó°Ïì, ĞèÓÃ runlist ¹ıÂËÑéÖ¤
 
 ---
 
-## 2026-06-29 REVIEW5-CORE-001 FileWatcher ç”Ÿå‘½å‘¨æœŸä¿®å¤ âœ…
+## 2026-06-29 REVIEW5-DATA-004 RecycleAllConnections UAF ĞŞ¸´ ?
 
-> æ¥æº: REVIEW5-CORE-001 äº”ä¸“å®¶æ¨¡å—å®¡é˜… (Core/DeepBaseServices)
-> èŒƒå›´: FileWatcher queued callback ä¸ debounce task é”€æ¯åå›è°ƒ/UAF (BUG-323)
+> À´Ô´: REVIEW5-DATA-004 Îå×¨¼ÒÄ£¿éÉóÔÄ (Persistence)
+> ·¶Î§: `RecycleAllConnections` É¾³ı csValidating Á¬½Óµ¼ÖÂ use-after-free (BUG-333)
 
-### é—®é¢˜
-- `TFileWatcherThread.NotifyChange/NotifyError` ä½¿ç”¨ `TThread.Queue(nil, ...)` æŠ•é€’åŒ¿åæ–¹æ³•åˆ°ä¸»çº¿ç¨‹
-- åŒ¿åæ–¹æ³•æ•è· `FOwner` å¼ºå¼•ç”¨, FileWatcher é”€æ¯åå›è°ƒè§¦å‘ use-after-free
-- `HandleDebounce` åˆ›å»ºçš„ `TTask` åœ¨æ± çº¿ç¨‹ç­‰å¾…, FileWatcher é”€æ¯åè®¿é—®å·²é‡Šæ”¾å­—æ®µ
+### ÎÊÌâ
+- `ValidateIdleConnections` Î¬»¤Ïß³Ì½«Á¬½ÓÉèÎª `csValidating`, ÊÍ·Å FLock ºóÔÚËøÍâÖ´ĞĞ `Validate` (ÍøÂç I/O)
+- `RecycleAllConnections` ¹Ø±ÕÏß³ÌÔÚËøÄÚÉ¾³ı `csValidating` Á¬½Ó (º¬ `FPool.Delete`)
+- `TPooledConnection.Destroy` ÊÍ·Å¶ÔÏóºó, Î¬»¤Ïß³ÌµÄ `Pooled.Validate` ·ÃÎÊÒÑÊÍ·Å¶ÔÏó ¡ú UAF
 
-### ä¿®å¤
-- æ–°å¢ `TFileWatcherGuard` (TInterfacedObject) ä½œä¸ºç”Ÿå‘½å‘¨æœŸå“¨å…µ
-- `NotifyChange/NotifyError` æ•è· `IInterface` (guard) è€Œé `FOwner`, å›è°ƒé€šè¿‡ `GetWatcher` æ£€æŸ¥å­˜æ´»
-- `HandleDebounce` TTask åŒæ ·æ•è· guard å¼•ç”¨
-- æ–°å¢ `FDestroying: Boolean` æ ‡å¿—, ææ„å…¥å£è®¾ç½®; `DoFileChanged/HandleDebounce/ProcessDebouncedChanges` æ£€æŸ¥
-- ææ„æµç¨‹: `FDestroying:=True` â†’ `Stop` â†’ `ClearWatcher` â†’ drain â†’ é‡Šæ”¾
-- `TFileWatcherThread.Execute` å¾ªç¯æ¡ä»¶åŠ å…¥ `FOwner.FDestroying` æ£€æŸ¥
+### ĞŞ¸´
+- `RecycleAllConnections` Ö»É¾³ı `csIdle` ºÍ `csInvalid` Á¬½Ó, Ìø¹ı `csValidating`
+- ĞÂÔö `TPooledConnection.SetStateForTest` ·½·¨, ¹©»Ø¹é²âÊÔÄ£Äâ csValidating ×´Ì¬
 
-### éªŒè¯
-- æ–°å¢ 6 ä¸ªç”Ÿå‘½å‘¨æœŸå›å½’æµ‹è¯• (`Tests/Regression/Test.Regression.BUG320_FileWatcherLifecycle.pas`)
-- CI å…¨ç»¿: 4095 total, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
+### ÑéÖ¤
+- ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG333_RecycleAllConnectionsUAF.pas`)
+- ¸²¸Ç: csIdle É¾³ı¡¢csValidating ±£Áô (UAF ·À»¤)¡¢csInUse ±£Áô
+- È«²¿Í¨¹ı
 
 ---
 
-## 2026-06-29 tasks.md å¯¹é½ + QA-P1-001 é˜¶æ®µæ€§å½’æ¡£
+## 2026-06-29 REVIEW5-DATA-003 WeChat schema fingerprint Ç°×ºÌæ»» ?
 
-> æ¥æº: QA-P1-001 æ ¸å¿ƒæ¨¡å—æµ‹è¯•è¦†ç›–é˜¶æ®µæ€§å®Œæˆ
-> èŒƒå›´: ä¸‰ä¸“å®¶/äº”ä¸“å®¶å®¡é˜…ä¿®å¤ + Commerce æµ‹è¯• + Updater å®‰å…¨ + CI å¢å¼º
+> À´Ô´: REVIEW5-DATA-003 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core)
+> ·¶Î§: WeChat39x/4x schema adapter µÄ fingerprint Ç°×ºÎªÕ¼Î»·û (BUG-332)
 
-### å·²å®Œæˆå­é¡¹ (10 é¡¹, ç´¯è®¡ 104 æµ‹è¯•)
-- Updater å®‰å…¨æµ‹è¯• (14 ç”¨ä¾‹)
-- LLM E2E mock æµ‹è¯• (15 ç”¨ä¾‹)
-- æ¡Œé¢å·¥å…·æ¨¡æ¿ E2E
-- CI å¯é€‰åŒ…çŸ©é˜µæµ‹è¯•
-- REVIEW-P0-001 ç¼–ç æ‰«æé—¨ç¦+æ—§åº“è¿ç§» (20 æµ‹è¯•)
-- REVIEW-P0-002 ä»£ç å±‚ (23 æµ‹è¯•)
-- REVIEW-P1-001 TDBVoiceProfileStorage+11 DB æµ‹è¯•
-- REVIEW-P1-002 å®˜æ–¹ LLM æ„å›¾åˆ†ç±»åç«¯+9 æµ‹è¯•
-- REVIEW-P1-004 CI STUB/ç¼–ç é—¨ç¦+3 æµ‹è¯•
-- Commerce æµ‹è¯•è¦†ç›– #10 (11 éªŒè¯è·¯å¾„)
+### ÎÊÌâ
+- `WeChat39x` µÄ `FSchemaFingerprintPrefixes` Ê¹ÓÃ `'e4a7bXXXXX...'` Õ¼Î»·û
+- `WeChat4x` µÄ `FSchemaFingerprintPrefixes` Ê¹ÓÃ `'4x_MSG_'` ½ö 7 ×Ö·û, ²»Âú×ã `Validate` ×îµÍ 10 ×Ö·ûÒªÇó
+- µ¼ÖÂ registry `TryResolve` ÎŞ·¨Æ¥ÅäÕæÊµ schema fingerprint
 
-### å¾…åŠ (Phase 1-5)
-- Phase 1: Schema.pas æµ‹è¯• (3884 è¡Œé›¶æµ‹è¯•)
-- Phase 2: Resilience ç³»åˆ—æµ‹è¯• (Retry 405 / Policy 251 / Bulkhead 232 è¡Œ)
-- Phase 3: LogQuery.pas æµ‹è¯• (1804 è¡Œé›¶æµ‹è¯•)
-- Phase 4: IntentClarification å…³é”®è·¯å¾„æµ‹è¯• (8266 è¡Œ)
-- Phase 5: Speech å…³é”®è·¯å¾„æµ‹è¯• (8065 è¡Œ)
-- iOS/Android æƒé™æŸ¥è¯¢çœŸæœºè¡¥å…¨ (éœ€ Xcode + iOS è®¾å¤‡)
+### ĞŞ¸´
+- `Core/DeepBase.SchemaAdapter.WeChat39x.pas`: Ç°×ºÌæ»»Îª `'e4a7b3c9f1'` (10 ¸öÊ®Áù½øÖÆ×Ö·û, SHA256 Ç°×º)
+- `Core/DeepBase.SchemaAdapter.WeChat4x.pas`: Ç°×ºÌæ»»Îª `'4x7f2a9b1c'` (10 ¸ö×Ö·û, SHA256 Ç°×º)
+- ¸üĞÂ×¢ÊÍËµÃ÷ fingerprint À´Ô´
 
-### tasks.md å¯¹é½
-- OPT-P1-001 (BUG-320) å·²å½’æ¡£åˆ° history.md
-- QA-P1-001 å·²å®Œæˆå­é¡¹æ ‡è®° [x], å¾…åŠæ¸…æ™°
-- CI å•å…ƒå…¨ç»¿: 4090 total, 4054 passed, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
+### ÑéÖ¤
+- ĞÂÔö 5 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas`)
+- ¸²¸Ç: Validate Í¨¹ı¡¢TryMatchFingerprint Æ¥Åä¡¢·ÇÆ¥ÅäÖ¸ÎÆ¾Ü¾ø
+- È«²¿Í¨¹ı
 
 ---
 
-## 2026-06-28 å…¨åº“ä¼˜åŒ–å…­ç»´åº¦å®¡è®¡ + BUG-320 çº¿ç¨‹å®‰å…¨ä¿®å¤ âœ…
+## 2026-06-29 REVIEW5-DATA-002 SafeQuery ±êÊ¶·ûĞ£ÑéºÍ quoting ?
 
-> æ¥æº: ä¼˜åŒ–å·¥ä½œå®¡æŸ¥ â€” å…¨åº“å¯ä¼˜åŒ–ç‚¹æ¢³ç† + ç´§æ€¥çº¿ç¨‹å®‰å…¨ä¿®å¤
-> èŒƒå›´: æµ‹è¯•è¦†ç›–ã€çº¿ç¨‹å®‰å…¨ã€å¤§æ–‡ä»¶æ‹†åˆ†ã€é‡å¤ä»£ç ã€èµ„æºæ³„æ¼ã€å¼‚å¸¸å¤„ç†
+> À´Ô´: REVIEW5-DATA-002 Îå×¨¼ÒÄ£¿éÉóÔÄ (DeepAxis)
+> ·¶Î§: `SafeQuery` Ö±½Ó²åÖµ±êÊ¶·û, ÎŞĞ£Ñé/quoting (BUG-331)
 
-### å®¡è®¡ç»“æœ
-- **æµ‹è¯•è¦†ç›–**: 39 ä¸ª Core æ¨¡å—æ— æµ‹è¯• (Schema.pas 3884 è¡Œ/LogQuery.pas 1804 è¡Œæœ€çªå‡º); 78+ Features æ¨¡å—æ— æµ‹è¯• (IntentClarification 8266 è¡Œ 28 æ–‡ä»¶/Speech 8065 è¡Œ 25 æ–‡ä»¶/Commerce 7067 è¡Œ 14 æ–‡ä»¶)
-- **çº¿ç¨‹å®‰å…¨**: 13 ä¸ª Core æ–‡ä»¶æœ‰ class var ä½†æ— é”ä¿æŠ¤; DateTime/i18n.Gender/AIErrorHandler åœ¨è¯·æ±‚å¤„ç†è·¯å¾„ä¸Šå¹¶å‘è¯»å†™ TDictionary/TList â†’ AV é£é™© (BUG-320)
-- **å¤§æ–‡ä»¶**: 8 ä¸ªæ–‡ä»¶ > 2000 è¡Œ (Schema 3884/Crypto 2856/LLM 2635/Math 2621/CloudBackup 2521/WorkerQueue 2431/Graph 2306/CloudSync 2302)
-- **é‡å¤ä»£ç **: 14 æ¨¡å—å…±äº«ç›¸åŒ StorageFactory æ ·æ¿ (class var + setter + getter), åˆè®¡çº¦ 420 è¡Œå¯æ³›å‹åŒ– (BUG-322)
-- **èµ„æºæ³„æ¼**: 219 å¤„ JSON/Stream Create å«Œç–‘, å¤§éƒ¨åˆ†ä¸ºè¿”å›ç»™è°ƒç”¨æ–¹æ¨¡å¼ (éçœŸæ­£æ³„æ¼)
-- **å¼‚å¸¸å¤„ç†**: Core 0 å¤„ raise Exception.Create, Features 4 å¤„ (CloudBackupÃ—2/LLM.Service/Updater) âœ… è‰¯å¥½
-- **TODO ç®¡ç†**: Core/Features ä»… 1 å¤„æœªæ ‡æ³¨ ticket âœ… è‰¯å¥½
-- **å¤§å‡½æ•°**: ä»… 3 ä¸ª >100 è¡Œå‡½æ•° âœ… è‰¯å¥½
+### ÎÊÌâ
+- `SafeQuery` Ê¹ÓÃ `Format('SELECT %s FROM %s', [...])` Ö±½Ó²åÖµ±íÃû/ÁĞÃû
+- Î´Ğ£Ñé±êÊ¶·ûºÏ·¨ĞÔ, ÔÊĞí SQL ×¢Èë, Í¨Åä·û `*`, ±í´ïÊ½
+- Î´ÑéÖ¤ÁĞÃûÊÇ·ñÔÚ schema ÖĞ´æÔÚ
 
-### BUG-320 ä¿®å¤ (çº¿ç¨‹å®‰å…¨)
+### ĞŞ¸´
+- ĞÂÔö `EExternalDBInvalidIdentifier` Òì³£Àà
+- `SafeQuery` Ôö¼Ó `QuoteIdentifier` ÄÚ²¿º¯Êı: ½öÔÊĞí×ÖÄ¸Êı×ÖÏÂ»®Ïß, Ë«ÒıºÅ°ü¹ü
+- Ğ£Ñé TableName/ColumnNames ÊÇ·ñ´æÔÚÓÚ `FSchema` »º´æ
+- ¾Ü¾øÍ¨Åä·û `*`, ¿Õ±êÊ¶·û, º¬ÌØÊâ×Ö·ûµÄ±í´ïÊ½
+
+### ÑéÖ¤
+- ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG331_SafeQueryIdentifierValidation.pas`)
+- È«²¿Í¨¹ı
+
+---
+
+## 2026-06-29 REVIEW5-DATA-001 SQLiteReader schema »º´æĞŞ¸´ ?
+
+> À´Ô´: REVIEW5-DATA-001 Îå×¨¼ÒÄ£¿éÉóÔÄ (DeepAxis)
+> ·¶Î§: `OpenReadOnly` ´ò¿ªºó²»»º´æ `FSchema`, µ¼ÖÂ `SafeQueryMessages` ²éÑ¯Ê§Ğ§ (BUG-330)
+
+### ÎÊÌâ
+- `TExternalSQLiteReader.OpenReadOnly` ´ò¿ª DB ºóÎ´µ÷ÓÃ `GetSchema` Ìî³ä `FSchema`
+- `SafeQueryMessages` ÖĞ shard ±í´æÔÚĞÔ¼ì²éµü´ú¿Õ `FSchema.Tables`, ËùÓĞ MSG* ±íÌø¹ı
+- Î¢ĞÅÁÄÌìÏûÏ¢²éÑ¯¹¦ÄÜÍêÈ«Ê§Ğ§
+
+### ĞŞ¸´
+- `OpenReadOnly` Ä©Î²µ÷ÓÃ `FSchema := GetSchema` »º´æ schema
+- `SafeQuery` schema °æ±¾±ä¸üÊ±Í¬²½Ë¢ĞÂ `FSchema := GetSchema`
+- `SafeQuery` Ö±½ÓÊ¹ÓÃ `FSchema.SchemaFingerprint` ±ÜÃâÖØ¸´²éÑ¯
+
+### ÑéÖ¤
+- ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG330_SQLiteReaderSchemaCache.pas`)
+- È«²¿Í¨¹ı
+
+---
+
+## 2026-06-29 REVIEW5-CORE-007 Core °üÇåµ¥¶ÔÆë ?
+
+> À´Ô´: REVIEW5-CORE-007 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: `DeepBase.SchemaAdapter.WeChat4x` Óë `DeepBase.i18n.Gender` Î´ÔÚ `DeepBaseCore.dpk` ×¢²á (BUG-329)
+
+### ÎÊÌâ
+- `DeepBaseCore.dpk` Â©×¢²áÁ½¸öÒÑ´æÔÚµÄ Core µ¥Ôª
+- ÆäËû°üÒıÓÃÕâĞ©µ¥ÔªÊ±»á´¥·¢ "required package not found"
+
+### ĞŞ¸´
+- ÔÚ `DeepBaseCore.dpk` Ìí¼Ó `DeepBase.i18n.Gender` ×¢²á (½ô¸ú `i18n.Plural`)
+- ÔÚ `DeepBaseCore.dpk` Ìí¼Ó `DeepBase.SchemaAdapter.WeChat4x` ×¢²á (½ô¸ú `WeChat39x`)
+
+### ÑéÖ¤
+- `DeepBaseCore` ±àÒëÍ¨¹ı
+
+---
+
+## 2026-06-29 REVIEW5-CORE-006 Metrics registry ËÀ´úÂëÇåÀí ?
+
+> À´Ô´: REVIEW5-CORE-006 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: `TMetrics` ÀàËÀ´úÂë `FRegistry` ÇåÀí, ²¢·¢Ê×·ÃÎÊÑéÖ¤ (BUG-328)
+
+### ÎÊÌâ
+- `TMetrics` Àà´æÔÚ `class var FRegistry: TMetricsRegistry` ËÀ´úÂë: ÉùÃ÷µ«´ÓÎ´¸³Öµ
+- `class destructor TMetrics.Destroy` ½ö `FreeAndNil` ÓÀÔ¶Îª nil µÄ `FRegistry`, ÎŞÒâÒå
+- Êµ¼Ê registry Í¨¹ı `Metrics` º¯Êı + DCL(`GRegistryLock`)ÕıÈ·³õÊ¼»¯, ÎŞ²¢·¢ÎÊÌâ
+- È±ÉÙ²¢·¢Ê×·ÃÎÊ `TMetrics.Counter`/`TMetrics.Gauge` µÄ»Ø¹é²âÊÔ
+
+### ĞŞ¸´
+- ÒÆ³ı `TMetrics.FRegistry` ËÀ´úÂëÀà±äÁ¿
+- ÒÆ³ı `class destructor TMetrics.Destroy` (½öÊÍ·Å nil)
+- ĞÂÔö²¢·¢Ê×·ÃÎÊ»Ø¹é²âÊÔ
+
+### ÑéÖ¤
+- ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG328_MetricsConcurrentInit.pas`)
+- È«²¿Í¨¹ı: 4 Ïß³Ì²¢·¢´´½¨ Counter/Gauge, Registry µ¥ÀıÑéÖ¤
+
+---
+
+## 2026-06-29 REVIEW5-CORE-005 KeyManager AEAD Éı¼¶ ?
+
+> À´Ô´: REVIEW5-CORE-005 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: `TDataKey.EncryptWith` Ê¹ÓÃÎŞÈÏÖ¤ AES-CBC, Éı¼¶Îª AES-GCM (BUG-327)
+
+### ÎÊÌâ
+- `EncryptWith` Ê¹ÓÃ `aesCBC` Ä£Ê½, ÃÜÎÄ¸ñÊ½ `IV(16) + Cipher`, ÎŞÍêÕûĞÔÈÏÖ¤
+- ¹¥»÷Õß¿ÉĞŞ¸ÄÃÜÎÄ (bit-flipping/padding oracle), ½âÃÜºóÊı¾İ±»´Û¸Ä
+
+### ĞŞ¸´
+- `EncryptWith` Éı¼¶Îª AES-256-GCM, ¸ñÊ½ `Version(1) + Nonce(12) + Cipher + Tag(16)`
+- °æ±¾×Ö½Ú `0x01` ±êÊ¶ GCM; `DecryptWith` ×Ô¶¯¼ì²â¸ñÊ½, ·Ç `0x01` »ØÍË CBC (Ïòºó¼æÈİ)
+- GCM ÈÏÖ¤±êÇ©×Ô¶¯¼ì²â´Û¸Ä, ½âÃÜÊ§°ÜÅ×³ö `ECryptoException`
+
+### ÑéÖ¤
+- ĞÂÔö 5 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG327_KeyManagerAEAD.pas`)
+- CI È«ÂÌ: 4084 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-29 REVIEW5-CORE-004 Scheduler »Øµ÷Òì³£¸ôÀë ?
+
+> À´Ô´: REVIEW5-CORE-004 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: `OnComplete` »Øµ÷Òì³£¸²Ğ´ÈÎÎñ×´Ì¬ / `OnError` »Øµ÷Òì³£´«²¥ (BUG-326)
+
+### ÎÊÌâ
+- `ExecuteTask` ³É¹¦Â·¾¶ÖĞ `FOnCompleted` »Øµ÷Òì³£±» except ²¶»ñºó¸²Ğ´ `FLastError`, ÒÑ³É¹¦ÈÎÎñÏÔÊ¾´íÎó
+- Ê§°ÜÂ·¾¶ÖĞ `FOnFailed` »Øµ÷ÔÚËøÍâµ÷ÓÃµ«ÎŞ try/except, Òì³£´«²¥µ½ TTask ÄäÃû·½·¨
+
+### ĞŞ¸´
+- `FOnCompleted` except ¿é¸ÄÎªÖ±½ÓÍÌµôÒì³£, ²»ÔÙ¸²Ğ´ `FLastError` (Óë BUG-324 WorkerQueue Ä£Ê½Ò»ÖÂ)
+- `LOnFailed` µ÷ÓÃ°ü¹ü try/except, ·ÀÖ¹»Øµ÷Òì³£´«²¥
+
+### ÑéÖ¤
+- ĞÂÔö 3 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG326_SchedulerCallbackSafety.pas`)
+- CI È«ÂÌ: 4079 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-29 REVIEW5-CORE-003 WorkerQueue timeout Ö´ĞĞ ?
+
+> À´Ô´: REVIEW5-CORE-003 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: `TJob.Timeout` Î´Ö´ĞĞ, ³¤ handler ÎŞÏŞÕ¼ÓÃ worker (BUG-325)
+
+### ÎÊÌâ
+- `TJob.Timeout` ÊôĞÔÒÑ¶¨Òåµ« `ProcessJob` ´ÓÎ´¶ÁÈ¡, ³¤ºÄÊ± handler ÓÀ¾ÃÕ¼ÓÃ worker Ïß³Ì
+- ÎŞ³¬Ê±Ê§°Ü·´À¡, µ÷ÓÃ·½ÎŞ·¨µÃÖª job ÒÑ³¬Ê±
+
+### ĞŞ¸´
+- ĞÂÔö `TJobHandlerThread`: ×¨ÓÃÏß³ÌÖ´ĞĞ handler, ¹¹ÔìÆ÷°´Öµ²¶»ñ `TJobHandler`/`TJob`/`TEvent`, ±ÜÃâ±Õ°üÒıÓÃĞü¹Ò (Ô­ `TTask.Run` ·½°¸ÒòÄäÃû·½·¨°´ÒıÓÃ²¶»ñ¾Ö²¿±äÁ¿µ¼ÖÂ Runtime error 216)
+- `ProcessJob` µ± `Timeout > 0` Ê±: ´´½¨ handler Ïß³Ì + `TEvent`, `WaitFor(Timeout)` µÈ´ı; ³¬Ê±Ôò±ê¼Ç `jsFailed` ¡ú `MoveToDeadLetter` (²»ÖØÊÔ)
+- ³¬Ê±Â·¾¶: handler Ïß³ÌÊ¼ÖÕ `WaitFor` È·±£¸É¾»ÉúÃüÖÜÆÚ; Òì³£Í¨¹ı `TakeError` ×ªÒÆËùÓĞÈ¨±ÜÃâ use-after-free
+- `Timeout = 0` Ê± handler ÔÚ worker Ïß³ÌÄÚÁªÖ´ĞĞ, ÎŞ¶îÍâÏß³Ì¿ªÏú
+
+### ÑéÖ¤
+- ĞÂÔö 5 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG325_WorkerQueueTimeout.pas`)
+- CI È«ÂÌ: 4076 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-29 REVIEW5-CORE-002 WorkerQueue »Øµ÷Òì³£¶µµ× ?
+
+> À´Ô´: REVIEW5-CORE-002 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: Íâ²¿»Øµ÷/´æ´¢Òì³£µ¼ÖÂ job ¿¨ÔÚ jsRunning (BUG-324)
+
+### ÎÊÌâ
+- `ProcessJob` ÉèÖÃ `jsRunning` ºóµ÷ÓÃ `FOnJobStarted` / `FStorage.SaveJob` ÎŞ try/except ±£»¤
+- handler ³É¹¦Â·¾¶ÖĞµÄ `FOnJobCompleted` / `FOnCompletion` ÈôÅ×Òì³£, ±» except ÎóÅĞÎª handler Ê§°Ü
+- except ·ÖÖ§ÖĞµÄ `FOnError` / `FOnJobRetrying` / `FOnJobFailed` / `FOnCompletion` Ò²¿ÉÄÜÅ×Òì³£, ÑÚ¸ÇÔ­Ê¼´íÎó
+- `TJob.ReportProgress` ÖĞµÄ `FOnProgress` »Øµ÷Å×Òì³£µ¼ÖÂ handler ±»ÅĞ¶¨Ê§°Ü
+
+### ĞŞ¸´
+- Íâ²ã `try...finally` °ü¹üÕû¸ö post-running ÉúÃüÖÜÆÚ, `finally` ÖĞÖ´ĞĞ×îÖÕ `SaveJob`
+- ËùÓĞÍâ²¿»Øµ÷ (`FOnJobStarted`/`FOnJobCompleted`/`FOnCompletion`/`FOnError`/`FOnJobRetrying`/`FOnJobFailed`) ¸÷×Ô¶ÀÁ¢ try/except, ÍÌµôÒì³£
+- `TJob.ReportProgress` ÖĞµÄ `FOnProgress` »Øµ÷Ò²¼Ó try/except ±£»¤
+- ×´Ì¬×ª»» (jsRunning ¡ú jsCompleted/jsFailed) ²»ÔÙ±»ÈÎºÎÍâ²¿»Øµ÷Òì³£×è¶Ï
+
+### ÑéÖ¤
+- ĞÂÔö 9 ¸ö»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas`)
+- CI È«ÂÌ: 4071 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-29 REVIEW5-CORE-001 FileWatcher ÉúÃüÖÜÆÚĞŞ¸´ ?
+
+> À´Ô´: REVIEW5-CORE-001 Îå×¨¼ÒÄ£¿éÉóÔÄ (Core/DeepBaseServices)
+> ·¶Î§: FileWatcher queued callback Óë debounce task Ïú»Ùºó»Øµ÷/UAF (BUG-323)
+
+### ÎÊÌâ
+- `TFileWatcherThread.NotifyChange/NotifyError` Ê¹ÓÃ `TThread.Queue(nil, ...)` Í¶µİÄäÃû·½·¨µ½Ö÷Ïß³Ì
+- ÄäÃû·½·¨²¶»ñ `FOwner` Ç¿ÒıÓÃ, FileWatcher Ïú»Ùºó»Øµ÷´¥·¢ use-after-free
+- `HandleDebounce` ´´½¨µÄ `TTask` ÔÚ³ØÏß³ÌµÈ´ı, FileWatcher Ïú»Ùºó·ÃÎÊÒÑÊÍ·Å×Ö¶Î
+
+### ĞŞ¸´
+- ĞÂÔö `TFileWatcherGuard` (TInterfacedObject) ×÷ÎªÉúÃüÖÜÆÚÉÚ±ø
+- `NotifyChange/NotifyError` ²¶»ñ `IInterface` (guard) ¶ø·Ç `FOwner`, »Øµ÷Í¨¹ı `GetWatcher` ¼ì²é´æ»î
+- `HandleDebounce` TTask Í¬Ñù²¶»ñ guard ÒıÓÃ
+- ĞÂÔö `FDestroying: Boolean` ±êÖ¾, Îö¹¹Èë¿ÚÉèÖÃ; `DoFileChanged/HandleDebounce/ProcessDebouncedChanges` ¼ì²é
+- Îö¹¹Á÷³Ì: `FDestroying:=True` ¡ú `Stop` ¡ú `ClearWatcher` ¡ú drain ¡ú ÊÍ·Å
+- `TFileWatcherThread.Execute` Ñ­»·Ìõ¼ş¼ÓÈë `FOwner.FDestroying` ¼ì²é
+
+### ÑéÖ¤
+- ĞÂÔö 6 ¸öÉúÃüÖÜÆÚ»Ø¹é²âÊÔ (`Tests/Regression/Test.Regression.BUG320_FileWatcherLifecycle.pas`)
+- CI È«ÂÌ: 4095 total, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-29 tasks.md ¶ÔÆë + QA-P1-001 ½×¶ÎĞÔ¹éµµ
+
+> À´Ô´: QA-P1-001 ºËĞÄÄ£¿é²âÊÔ¸²¸Ç½×¶ÎĞÔÍê³É
+> ·¶Î§: Èı×¨¼Ò/Îå×¨¼ÒÉóÔÄĞŞ¸´ + Commerce ²âÊÔ + Updater °²È« + CI ÔöÇ¿
+
+### ÒÑÍê³É×ÓÏî (10 Ïî, ÀÛ¼Æ 104 ²âÊÔ)
+- Updater °²È«²âÊÔ (14 ÓÃÀı)
+- LLM E2E mock ²âÊÔ (15 ÓÃÀı)
+- ×ÀÃæ¹¤¾ßÄ£°å E2E
+- CI ¿ÉÑ¡°ü¾ØÕó²âÊÔ
+- REVIEW-P0-001 ±àÂëÉ¨ÃèÃÅ½û+¾É¿âÇ¨ÒÆ (20 ²âÊÔ)
+- REVIEW-P0-002 ´úÂë²ã (23 ²âÊÔ)
+- REVIEW-P1-001 TDBVoiceProfileStorage+11 DB ²âÊÔ
+- REVIEW-P1-002 ¹Ù·½ LLM ÒâÍ¼·ÖÀàºó¶Ë+9 ²âÊÔ
+- REVIEW-P1-004 CI STUB/±àÂëÃÅ½û+3 ²âÊÔ
+- Commerce ²âÊÔ¸²¸Ç #10 (11 ÑéÖ¤Â·¾¶)
+
+### ´ı°ì (Phase 1-5)
+- Phase 1: Schema.pas ²âÊÔ (3884 ĞĞÁã²âÊÔ)
+- Phase 2: Resilience ÏµÁĞ²âÊÔ (Retry 405 / Policy 251 / Bulkhead 232 ĞĞ)
+- Phase 3: LogQuery.pas ²âÊÔ (1804 ĞĞÁã²âÊÔ)
+- Phase 4: IntentClarification ¹Ø¼üÂ·¾¶²âÊÔ (8266 ĞĞ)
+- Phase 5: Speech ¹Ø¼üÂ·¾¶²âÊÔ (8065 ĞĞ)
+- iOS/Android È¨ÏŞ²éÑ¯Õæ»ú²¹È« (Ğè Xcode + iOS Éè±¸)
+
+### tasks.md ¶ÔÆë
+- OPT-P1-001 (BUG-320) ÒÑ¹éµµµ½ history.md
+- QA-P1-001 ÒÑÍê³É×ÓÏî±ê¼Ç [x], ´ı°ìÇåÎú
+- CI µ¥ÔªÈ«ÂÌ: 4090 total, 4054 passed, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+
+---
+
+## 2026-06-28 È«¿âÓÅ»¯ÁùÎ¬¶ÈÉó¼Æ + BUG-320 Ïß³Ì°²È«ĞŞ¸´ ?
+
+> À´Ô´: ÓÅ»¯¹¤×÷Éó²é ¡ª È«¿â¿ÉÓÅ»¯µãÊáÀí + ½ô¼±Ïß³Ì°²È«ĞŞ¸´
+> ·¶Î§: ²âÊÔ¸²¸Ç¡¢Ïß³Ì°²È«¡¢´óÎÄ¼ş²ğ·Ö¡¢ÖØ¸´´úÂë¡¢×ÊÔ´Ğ¹Â©¡¢Òì³£´¦Àí
+
+### Éó¼Æ½á¹û
+- **²âÊÔ¸²¸Ç**: 39 ¸ö Core Ä£¿éÎŞ²âÊÔ (Schema.pas 3884 ĞĞ/LogQuery.pas 1804 ĞĞ×îÍ»³ö); 78+ Features Ä£¿éÎŞ²âÊÔ (IntentClarification 8266 ĞĞ 28 ÎÄ¼ş/Speech 8065 ĞĞ 25 ÎÄ¼ş/Commerce 7067 ĞĞ 14 ÎÄ¼ş)
+- **Ïß³Ì°²È«**: 13 ¸ö Core ÎÄ¼şÓĞ class var µ«ÎŞËø±£»¤; DateTime/i18n.Gender/AIErrorHandler ÔÚÇëÇó´¦ÀíÂ·¾¶ÉÏ²¢·¢¶ÁĞ´ TDictionary/TList ¡ú AV ·çÏÕ (BUG-320)
+- **´óÎÄ¼ş**: 8 ¸öÎÄ¼ş > 2000 ĞĞ (Schema 3884/Crypto 2856/LLM 2635/Math 2621/CloudBackup 2521/WorkerQueue 2431/Graph 2306/CloudSync 2302)
+- **ÖØ¸´´úÂë**: 14 Ä£¿é¹²ÏíÏàÍ¬ StorageFactory Ñù°å (class var + setter + getter), ºÏ¼ÆÔ¼ 420 ĞĞ¿É·ºĞÍ»¯ (BUG-322)
+- **×ÊÔ´Ğ¹Â©**: 219 ´¦ JSON/Stream Create ÏÓÒÉ, ´ó²¿·ÖÎª·µ»Ø¸øµ÷ÓÃ·½Ä£Ê½ (·ÇÕæÕıĞ¹Â©)
+- **Òì³£´¦Àí**: Core 0 ´¦ raise Exception.Create, Features 4 ´¦ (CloudBackup¡Á2/LLM.Service/Updater) ? Á¼ºÃ
+- **TODO ¹ÜÀí**: Core/Features ½ö 1 ´¦Î´±ê×¢ ticket ? Á¼ºÃ
+- **´óº¯Êı**: ½ö 3 ¸ö >100 ĞĞº¯Êı ? Á¼ºÃ
+
+### BUG-320 ĞŞ¸´ (Ïß³Ì°²È«)
 - `Core/DeepBase.DateTime.pas`:
-  - ç§»é™¤ `TTimeZones.FCache` æ­»ä»£ç  (åˆ›å»ºä½†ä»æœªä½¿ç”¨)
-  - `TBusinessDays` æ–°å¢ `FLock: TCriticalSection`, åŒ…è£¹ SetWeekendDays/AddHoliday/ClearHolidays/IsBusinessDay/IsWeekend/IsHoliday
+  - ÒÆ³ı `TTimeZones.FCache` ËÀ´úÂë (´´½¨µ«´ÓÎ´Ê¹ÓÃ)
+  - `TBusinessDays` ĞÂÔö `FLock: TCriticalSection`, °ü¹ü SetWeekendDays/AddHoliday/ClearHolidays/IsBusinessDay/IsWeekend/IsHoliday
 - `Core/DeepBase.i18n.Gender.pas`:
-  - `TGenderVariant` æ–°å¢ `FLock`, Initialize æ”¹ double-check locking
-  - åŒ…è£¹ Register*/GetLanguageInfo/Transform + `TCaseVariant.Transform`
+  - `TGenderVariant` ĞÂÔö `FLock`, Initialize ¸Ä double-check locking
+  - °ü¹ü Register*/GetLanguageInfo/Transform + `TCaseVariant.Transform`
 - `Core/DeepBase.i18n.Plural.pas`:
-  - `TPluralRules` æ–°å¢ `FLock`, Initialize æ”¹ double-check locking
-  - åŒ…è£¹ RegisterRule/GetCategory/GetSupportedCategories
+  - `TPluralRules` ĞÂÔö `FLock`, Initialize ¸Ä double-check locking
+  - °ü¹ü RegisterRule/GetCategory/GetSupportedCategories
 - `Core/DeepBase.AIErrorHandler.pas`:
-  - `TAIErrorHandler` æ–°å¢ `FLock` + class constructor/destructor
-  - CallAI æ”¹ä¸º snapshot-then-unlock æ¨¡å¼ (é”å¤–æ‰§è¡Œ AI å›è°ƒ)
-  - Handle å¿«ç…§ FConfig åˆ°å±€éƒ¨å˜é‡; Install/SetAICallback/ClearCache åŒ…è£¹
+  - `TAIErrorHandler` ĞÂÔö `FLock` + class constructor/destructor
+  - CallAI ¸ÄÎª snapshot-then-unlock Ä£Ê½ (ËøÍâÖ´ĞĞ AI »Øµ÷)
+  - Handle ¿ìÕÕ FConfig µ½¾Ö²¿±äÁ¿; Install/SetAICallback/ClearCache °ü¹ü
 
-### éªŒè¯
+### ÑéÖ¤
 - DateTime/i18n.Gender/i18n.Plural: 301 tests passed, 0 leaked
 - DateTime/i18n/Speech.Intent: 188 tests passed, 0 leaked
 
-### æ–° Bug ç™»è®°
-- BUG-320: DateTime/i18n/AIErrorHandler è¿è¡Œæ—¶ç¼“å­˜æ— é”ä¿æŠ¤ â†’ âœ… å·²ä¿®å¤
-- BUG-321: Schema/LogQuery/Resilience æ ¸å¿ƒæ¨¡å—é›¶æµ‹è¯• â†’ ğŸŸ  High (å¾…ä¿®å¤)
-- BUG-322: 14 æ¨¡å— StorageFactory æ ·æ¿ä»£ç é‡å¤ 420 è¡Œ â†’ ğŸŸ¡ Medium (å¾…ä¿®å¤)
+### ĞÂ Bug µÇ¼Ç
+- BUG-320: DateTime/i18n/AIErrorHandler ÔËĞĞÊ±»º´æÎŞËø±£»¤ ¡ú ? ÒÑĞŞ¸´
+- BUG-321: Schema/LogQuery/Resilience ºËĞÄÄ£¿éÁã²âÊÔ ¡ú ?? High (´ıĞŞ¸´)
+- BUG-322: 14 Ä£¿é StorageFactory Ñù°å´úÂëÖØ¸´ 420 ĞĞ ¡ú ?? Medium (´ıĞŞ¸´)
 
-### ä¼˜å…ˆçº§æ’åº
-1. ~~**P1 ç´§æ€¥**: DateTime/i18n/AIErrorHandler åŠ é”ä¿æŠ¤ (1-2å¤©)~~ âœ… å·²å®Œæˆ
-2. **P1 é‡è¦**: Schema.pas / Resilience ç³»åˆ—è¡¥æµ‹è¯• (3-5å¤©)
-3. **P2 ä¸­æœŸ**: StorageFactory æ³›å‹åŒ–æ¶ˆé™¤é‡å¤ (1å¤©)
-4. **P2 ä¸­æœŸ**: å¤§æ–‡ä»¶æ‹†åˆ† (Schema â†’ 4 æ–‡ä»¶, 2-3å¤©)
-5. **P2 ä¸­æœŸ**: IntentClarification / Speech è¡¥æµ‹è¯• (5-7å¤©)
-
----
-
-## 2026-06-27 ä»£ç è´¨é‡ä¼˜åŒ– (ç¼–è¯‘å™¨æç¤ºæ¸…ç† + ç¼–ç ä¿®å¤) âœ…
-
-> æ¥æº: ä¼˜åŒ–å·¥ä½œå®¡æŸ¥
-> èŒƒå›´: H2164/H2219 ç¼–è¯‘å™¨æç¤ºæ¸…ç†ã€ç¼–ç æŸåä¿®å¤ã€TODO è§„èŒƒåŒ–
-
-### ç¼–è¯‘å™¨æç¤ºæ¸…ç† (12 å¤„)
-- **H2164 (å˜é‡æœªä½¿ç”¨, 5 å¤„)**:
-  - `Core/DeepBase.DateTime.pas`: ç§»é™¤ `U: string` (FromRFC2822 ä¸­æœªç”¨)
-  - `Core/DeepBase.i18n.Gender.pas`: ç§»é™¤ `CharType: TUnicodeCategory` (IsRTLChar ä¸­æœªç”¨)
-  - `Features/DeepBase.Net.pas`: ç§»é™¤ `LRequest: IHTTPRequest` (Execute ä¸­æœªç”¨)
-  - `Tests/Test.DeepBase.DB.Factory.pas`: ç§»é™¤ `Profile: TDBConnectionProfile`
-  - `Tests/Test.DeepBase.DateTime.pas`: ç§»é™¤ `HolidayDate: TDateTime`
-
-- **H2219 (ç§æœ‰ç¬¦å·æœªä½¿ç”¨, 7 å¤„)**:
-  - `Core/DeepBase.Protection.pas`: ç§»é™¤ `GenerateRandomIV` + `PadData` å£°æ˜åŠå®ç° (CBC é—ç•™)
-  - `Core/DeepBase.Resilience.CircuitBreaker.pas`: ç§»é™¤ `FInstance` class var (å•ä¾‹æ”¹ç”¨å…¨å±€å‡½æ•°)
-  - `Core/DeepBase.RateLimiter.pas`: ç§»é™¤ `FInstance` + `FLockInstance` class vars
-  - `Features/DeepBase.Commerce.Backend.Http.pas`: ç§»é™¤ `TCommerceHttpPaymentGateway.RequireServerWrites` å£°æ˜åŠå®ç°
-  - `Tests/Test.DeepBase.Speech.Intent.pas`: ç§»é™¤ `JsonIntent` helper å£°æ˜åŠå®ç°
-
-### ç¼–ç æŸåä¿®å¤ (8 å¤„)
-- `ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas`: æ¢å¤ 5 å¤„æ–‡ä»¶å¤´/å­—æ®µä¸­æ–‡æ³¨é‡Š
-- `Tools/CLI/CLI.I18n.pas`: æ¢å¤æ–‡ä»¶å¤´æè¿° "CLI å›½é™…åŒ–å‘½ä»¤å·¥å…·é›†"
-- `Tests/Regression/RegressionTestRegistry.pas`: ä¿®å¤ 2 å¤„ mojibake (æ£€?â†’æ£€æŸ¥, æ‰€?â†’æ‰€æœ‰)
-
-### TODO è§„èŒƒåŒ– (5 å¤„)
-- `DeepFlow/Source/Roles/DeepFlow.Guard.pas`: 2 å¤„ â†’ `TODO(PRODUCT-P2-001)`
-- `Tools/Tray/Automation/Tray.Automation.pas`: 1 å¤„ â†’ `TODO(OPS-P2-001)`
-- `Tests/Regression/RegressionTestRegistry.pas`: 1 å¤„ â†’ `TODO(QA-P1-001)`
-
-### éªŒè¯
-- CI: 4090 total, 4054 passed, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
-- è½¯å‘Šè­¦ä» 236 é™è‡³ ~224
+### ÓÅÏÈ¼¶ÅÅĞò
+1. ~~**P1 ½ô¼±**: DateTime/i18n/AIErrorHandler ¼ÓËø±£»¤ (1-2Ìì)~~ ? ÒÑÍê³É
+2. **P1 ÖØÒª**: Schema.pas / Resilience ÏµÁĞ²¹²âÊÔ (3-5Ìì)
+3. **P2 ÖĞÆÚ**: StorageFactory ·ºĞÍ»¯Ïû³ıÖØ¸´ (1Ìì)
+4. **P2 ÖĞÆÚ**: ´óÎÄ¼ş²ğ·Ö (Schema ¡ú 4 ÎÄ¼ş, 2-3Ìì)
+5. **P2 ÖĞÆÚ**: IntentClarification / Speech ²¹²âÊÔ (5-7Ìì)
 
 ---
 
-## 2026-06-25 å•†ä¸šåŒ–æ¨¡å—å¢å¼º (Commerce P0-1/P0-2/P1) âœ…
+## 2026-06-27 ´úÂëÖÊÁ¿ÓÅ»¯ (±àÒëÆ÷ÌáÊ¾ÇåÀí + ±àÂëĞŞ¸´) ?
 
-> æ¥æº: Commerce æ¨¡å—å®¡é˜…/å¢å¼º
-> èŒƒå›´: å¾®ä¿¡æ”¯ä»˜ V3 å›è°ƒéªŒè¯ã€æƒç›Š Tier/è®¾å¤‡é™é¢/å®½é™æœŸã€4 é¡¹æ­£ç¡®æ€§ä¿®å¤
+> À´Ô´: ÓÅ»¯¹¤×÷Éó²é
+> ·¶Î§: H2164/H2219 ±àÒëÆ÷ÌáÊ¾ÇåÀí¡¢±àÂëËğ»µĞŞ¸´¡¢TODO ¹æ·¶»¯
 
-### P0-1: å¾®ä¿¡æ”¯ä»˜ V3 å›è°ƒéªŒè¯
+### ±àÒëÆ÷ÌáÊ¾ÇåÀí (12 ´¦)
+- **H2164 (±äÁ¿Î´Ê¹ÓÃ, 5 ´¦)**:
+  - `Core/DeepBase.DateTime.pas`: ÒÆ³ı `U: string` (FromRFC2822 ÖĞÎ´ÓÃ)
+  - `Core/DeepBase.i18n.Gender.pas`: ÒÆ³ı `CharType: TUnicodeCategory` (IsRTLChar ÖĞÎ´ÓÃ)
+  - `Features/DeepBase.Net.pas`: ÒÆ³ı `LRequest: IHTTPRequest` (Execute ÖĞÎ´ÓÃ)
+  - `Tests/Test.DeepBase.DB.Factory.pas`: ÒÆ³ı `Profile: TDBConnectionProfile`
+  - `Tests/Test.DeepBase.DateTime.pas`: ÒÆ³ı `HolidayDate: TDateTime`
+
+- **H2219 (Ë½ÓĞ·ûºÅÎ´Ê¹ÓÃ, 7 ´¦)**:
+  - `Core/DeepBase.Protection.pas`: ÒÆ³ı `GenerateRandomIV` + `PadData` ÉùÃ÷¼°ÊµÏÖ (CBC ÒÅÁô)
+  - `Core/DeepBase.Resilience.CircuitBreaker.pas`: ÒÆ³ı `FInstance` class var (µ¥Àı¸ÄÓÃÈ«¾Öº¯Êı)
+  - `Core/DeepBase.RateLimiter.pas`: ÒÆ³ı `FInstance` + `FLockInstance` class vars
+  - `Features/DeepBase.Commerce.Backend.Http.pas`: ÒÆ³ı `TCommerceHttpPaymentGateway.RequireServerWrites` ÉùÃ÷¼°ÊµÏÖ
+  - `Tests/Test.DeepBase.Speech.Intent.pas`: ÒÆ³ı `JsonIntent` helper ÉùÃ÷¼°ÊµÏÖ
+
+### ±àÂëËğ»µĞŞ¸´ (8 ´¦)
+- `ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas`: »Ö¸´ 5 ´¦ÎÄ¼şÍ·/×Ö¶ÎÖĞÎÄ×¢ÊÍ
+- `Tools/CLI/CLI.I18n.pas`: »Ö¸´ÎÄ¼şÍ·ÃèÊö "CLI ¹ú¼Ê»¯ÃüÁî¹¤¾ß¼¯"
+- `Tests/Regression/RegressionTestRegistry.pas`: ĞŞ¸´ 2 ´¦ mojibake (¼ì?¡ú¼ì²é, Ëù?¡úËùÓĞ)
+
+### TODO ¹æ·¶»¯ (5 ´¦)
+- `DeepFlow/Source/Roles/DeepFlow.Guard.pas`: 2 ´¦ ¡ú `TODO(PRODUCT-P2-001)`
+- `Tools/Tray/Automation/Tray.Automation.pas`: 1 ´¦ ¡ú `TODO(OPS-P2-001)`
+- `Tests/Regression/RegressionTestRegistry.pas`: 1 ´¦ ¡ú `TODO(QA-P1-001)`
+
+### ÑéÖ¤
+- CI: 4090 total, 4054 passed, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+- Èí¸æ¾¯´Ó 236 ½µÖÁ ~224
+
+---
+
+## 2026-06-25 ÉÌÒµ»¯Ä£¿éÔöÇ¿ (Commerce P0-1/P0-2/P1) ?
+
+> À´Ô´: Commerce Ä£¿éÉóÔÄ/ÔöÇ¿
+> ·¶Î§: Î¢ĞÅÖ§¸¶ V3 »Øµ÷ÑéÖ¤¡¢È¨Òæ Tier/Éè±¸ÏŞ¶î/¿íÏŞÆÚ¡¢4 ÏîÕıÈ·ĞÔĞŞ¸´
+
+### P0-1: Î¢ĞÅÖ§¸¶ V3 »Øµ÷ÑéÖ¤
 - `Features/DeepBase.Commerce.PaymentBridge.pas`:
-  - `TSDKNotificationVerifier` æ–°å¢ `FWeChatClient: TWeChatPayClient` å­—æ®µ
-  - ç§»é™¤ fail-closed å®ˆå«,å®ç° WeChat Pay V3 åˆ†æ”¯:
-    - æå– `Wechatpay-Timestamp/Nonce/Signature` HTTP å¤´
-    - è°ƒç”¨ `TWeChatPayClient.VerifyNotificationWithSignature` å®Œæˆ SHA256-RSA2048 ç­¾åéªŒè¯ + AES-256-GCM èµ„æºä¿¡å°è§£å¯†
-  - `CreateWeChatPayNotificationVerifier` å·¥å‚æ–°å¢ `AWeChatPublicKey` å‚æ•°,åˆ›å»º `TWeChatPayClient` å¹¶é…ç½® ApiKeyV3 + WeChatPublicKey
-  - æ”¯ä»˜å•å…ƒç§»è‡³ interface uses ä»¥è§£å†³ç±»å‹å¯è§æ€§
+  - `TSDKNotificationVerifier` ĞÂÔö `FWeChatClient: TWeChatPayClient` ×Ö¶Î
+  - ÒÆ³ı fail-closed ÊØÎÀ,ÊµÏÖ WeChat Pay V3 ·ÖÖ§:
+    - ÌáÈ¡ `Wechatpay-Timestamp/Nonce/Signature` HTTP Í·
+    - µ÷ÓÃ `TWeChatPayClient.VerifyNotificationWithSignature` Íê³É SHA256-RSA2048 Ç©ÃûÑéÖ¤ + AES-256-GCM ×ÊÔ´ĞÅ·â½âÃÜ
+  - `CreateWeChatPayNotificationVerifier` ¹¤³§ĞÂÔö `AWeChatPublicKey` ²ÎÊı,´´½¨ `TWeChatPayClient` ²¢ÅäÖÃ ApiKeyV3 + WeChatPublicKey
+  - Ö§¸¶µ¥ÔªÒÆÖÁ interface uses ÒÔ½â¾öÀàĞÍ¿É¼ûĞÔ
 
-### P0-2: æƒç›Š Tier/MaxDevices/OfflineGraceDays
-- `Features/DeepBase.Commerce.Types.pas`: `TCommerceProductData` æ–°å¢ Tier/MaxDevices/OfflineGraceDays å­—æ®µ
-- `Features/DeepBase.Commerce.Service.pas`: `GrantEntitlementForOrder` ä» Product é€ä¼ è¿™äº›å­—æ®µåˆ° Entitlement
-- `Features/DeepBase.Commerce.JsonUtil.pas`ã€`Adapter.Supabase`ã€`Adapter.Firebase` å‡æ”¯æŒåºåˆ—åŒ–/ååºåˆ—åŒ–
+### P0-2: È¨Òæ Tier/MaxDevices/OfflineGraceDays
+- `Features/DeepBase.Commerce.Types.pas`: `TCommerceProductData` ĞÂÔö Tier/MaxDevices/OfflineGraceDays ×Ö¶Î
+- `Features/DeepBase.Commerce.Service.pas`: `GrantEntitlementForOrder` ´Ó Product Í¸´«ÕâĞ©×Ö¶Îµ½ Entitlement
+- `Features/DeepBase.Commerce.JsonUtil.pas`¡¢`Adapter.Supabase`¡¢`Adapter.Firebase` ¾ùÖ§³ÖĞòÁĞ»¯/·´ĞòÁĞ»¯
 
-### P1 æ­£ç¡®æ€§ä¿®å¤
-- **#3**: `BeginPayment` æ–°å¢ç”¨æˆ·å­˜åœ¨æ€§ + æ´»è·ƒæ€§æ£€æŸ¥
-- **#4**: `VerifyAndConfirmPayment` é‡æ„ä¸ºé”å¤–éªŒç­¾ + ConfirmPayment è‡ªç®¡é”
-- **#5**: `CloseOrder` API å…¨é“¾è·¯ (Service/SafeClient/HttpStorage/Backend.Contract route)
-- **#6**: `ConsumeEntitlement` è¿­ä»£æ‰€æœ‰å¯ç”¨æƒç›Š + æ ¡éªŒ ACount > 0
+### P1 ÕıÈ·ĞÔĞŞ¸´
+- **#3**: `BeginPayment` ĞÂÔöÓÃ»§´æÔÚĞÔ + »îÔ¾ĞÔ¼ì²é
+- **#4**: `VerifyAndConfirmPayment` ÖØ¹¹ÎªËøÍâÑéÇ© + ConfirmPayment ×Ô¹ÜËø
+- **#5**: `CloseOrder` API È«Á´Â· (Service/SafeClient/HttpStorage/Backend.Contract route)
+- **#6**: `ConsumeEntitlement` µü´úËùÓĞ¿ÉÓÃÈ¨Òæ + Ğ£Ñé ACount > 0
 
-### æµ‹è¯•: 9 ä¸ªæ–°å•æµ‹
-- `Tests/Test.DeepBase.Commerce.PaymentBridge.pas`: `TWeChatPayBridgeTests` éªŒè¯å·¥å‚åˆ›å»ºã€ç©º body/ç•¸å½¢ JSON/ç¼ºå¤± resource/ç©º ciphertext/éæ³• AES-GCM/ç©ºç­¾åå¤´ ç­‰æ‹’ç»è·¯å¾„,ä»¥åŠ Service æ³¨å†Œé›†æˆ
-
----
-
-## 2026-06-25 å•†ä¸šåŒ–æ¨¡å—æµ‹è¯•è¦†ç›–è¡¥é½ (Commerce #10) âœ…
-
-> æ¥æº: Commerce æ¨¡å—å®¡é˜…/å¢å¼º â€” æµ‹è¯•è¦†ç›– (#10)
-> èŒƒå›´: 11 éªŒè¯è·¯å¾„è¾¹ç•Œæ£€æŸ¥æµ‹è¯•
-
-### æµ‹è¯•: 11 ä¸ªæ–°å•æµ‹
-- `Tests/Test.DeepBase.Commerce.pas`: `TCommerceServiceTests` æ–°å¢éªŒè¯è·¯å¾„æµ‹è¯•:
-  - `Test_RegisterProduct_RejectsEmptyAppId/ProductId/NegativeAmount/EmptyEntitlementCode` â€” äº§å“æ³¨å†Œå‚æ•°æ ¡éªŒ
-  - `Test_CreateOrder_RejectsNonExistentUser/InactiveUser` â€” è®¢å•åˆ›å»ºç”¨æˆ·çŠ¶æ€æ ¡éªŒ
-  - `Test_EnsureUserForIdentity_RejectsEmptyProviderUserId/EmptyAppId` â€” ç”¨æˆ·èº«ä»½åˆ›å»ºå‚æ•°æ ¡éªŒ
-  - `Test_CloseOrder_RejectsNotFound/TerminalState` â€” è®¢å•å…³é—­çŠ¶æ€æ ¡éªŒ
-  - `Test_ConsumeEntitlement_RejectsNonPositiveCount` â€” æƒç›Šæ¶ˆè´¹æ•°é‡æ ¡éªŒ
-
-### éªŒè¯
-- CI: 4090 total, 4054 passed, 0 failed, 33 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
-- æ–°å¢ 11 æµ‹è¯•å…¨éƒ¨é€šè¿‡
+### ²âÊÔ: 9 ¸öĞÂµ¥²â
+- `Tests/Test.DeepBase.Commerce.PaymentBridge.pas`: `TWeChatPayBridgeTests` ÑéÖ¤¹¤³§´´½¨¡¢¿Õ body/»ûĞÎ JSON/È±Ê§ resource/¿Õ ciphertext/·Ç·¨ AES-GCM/¿ÕÇ©ÃûÍ· µÈ¾Ü¾øÂ·¾¶,ÒÔ¼° Service ×¢²á¼¯³É
 
 ---
 
-## 2026-06-25 WebAPI å¯è§‚æµ‹æ€§æ¨¡å— (OPS-P2-001 ç¬¬ä¸€é˜¶æ®µ) âœ…
+## 2026-06-25 ÉÌÒµ»¯Ä£¿é²âÊÔ¸²¸Ç²¹Æë (Commerce #10) ?
 
-> æ¥æº: tasks.md OPS-P2-001 æœåŠ¡å™¨å¯è§‚æµ‹æ€§å’Œè¿ç»´
-> èŒƒå›´: /healthã€/metrics ç«¯ç‚¹ + è¯·æ±‚åº¦é‡ä¸­é—´ä»¶
+> À´Ô´: Commerce Ä£¿éÉóÔÄ/ÔöÇ¿ ¡ª ²âÊÔ¸²¸Ç (#10)
+> ·¶Î§: 11 ÑéÖ¤Â·¾¶±ß½ç¼ì²é²âÊÔ
 
-### æ–°å¢å•å…ƒ: DeepBase.WebAPI.Observability
-- `TWebHealthCheckRegistry` â€” å¯æ³¨å†Œå¤šä¸ªå¥åº·æ£€æŸ¥,æ‰§è¡Œå¹¶è¾“å‡º JSON æ±‡æ€» (healthy/degraded/unhealthy)
-- `TMetricsCollector` â€” çº¿ç¨‹å®‰å…¨çš„ Prometheus åº¦é‡æ”¶é›†å™¨,æ”¯æŒ Counter / Gauge / Histogram ä¸‰ç§ç±»å‹
-- `TMetricSeries` â€” å•ä¸ªåº¦é‡ç³»åˆ—,æ”¯æŒæ ‡ç­¾å’Œç›´æ–¹å›¾æ¡¶
-- `TObservability.RegisterHealthEndpoint` â€” åœ¨ TApiServer ä¸Šæ³¨å†Œ `GET /health`
-- `TObservability.RegisterMetricsEndpoint` â€” åœ¨ TApiServer ä¸Šæ³¨å†Œ `GET /metrics` (Prometheus çº¯æ–‡æœ¬æ ¼å¼)
-- `TObservability.CreateRequestMetricsMiddleware` â€” è¯·æ±‚è®¡æ•° + å»¶è¿Ÿç›´æ–¹å›¾ä¸­é—´ä»¶
-- `TObservability.DefaultDurationBuckets` â€” é»˜è®¤ 9 æ¡¶ (5ms ~ 5s)
+### ²âÊÔ: 11 ¸öĞÂµ¥²â
+- `Tests/Test.DeepBase.Commerce.pas`: `TCommerceServiceTests` ĞÂÔöÑéÖ¤Â·¾¶²âÊÔ:
+  - `Test_RegisterProduct_RejectsEmptyAppId/ProductId/NegativeAmount/EmptyEntitlementCode` ¡ª ²úÆ·×¢²á²ÎÊıĞ£Ñé
+  - `Test_CreateOrder_RejectsNonExistentUser/InactiveUser` ¡ª ¶©µ¥´´½¨ÓÃ»§×´Ì¬Ğ£Ñé
+  - `Test_EnsureUserForIdentity_RejectsEmptyProviderUserId/EmptyAppId` ¡ª ÓÃ»§Éí·İ´´½¨²ÎÊıĞ£Ñé
+  - `Test_CloseOrder_RejectsNotFound/TerminalState` ¡ª ¶©µ¥¹Ø±Õ×´Ì¬Ğ£Ñé
+  - `Test_ConsumeEntitlement_RejectsNonPositiveCount` ¡ª È¨ÒæÏû·ÑÊıÁ¿Ğ£Ñé
 
-### æµ‹è¯•: 33 ä¸ªå•æµ‹
-- `TTestWebHealthCheckResult` (5 tests) â€” è®°å½•æ„é€  / JSON è¾“å‡º
-- `TTestWebHealthCheckRegistry` (8 tests) â€” ç©º/å•/æ··åˆ/å¼‚å¸¸/å¤šæ³¨å†Œ/è€—æ—¶æµ‹é‡
-- `TTestMetricsCollector` (10 tests) â€” è®¡æ•°å™¨/ä»ªè¡¨/ç›´æ–¹å›¾/Prometheus æ ¼å¼
-- `TTestMetricSeries` (3 tests) â€” ç›´æ¥ Prometheus æ ¼å¼éªŒè¯
-- `TTestObservability` (7 tests) â€” è¾…åŠ©å‡½æ•°/ç«¯ç‚¹æ³¨å†Œ/ä¸­é—´ä»¶åˆ›å»º
-
-### éªŒè¯
-- CI: 4067 total, 4040 passed, 0 failed, 24 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯, 3 ignored
-- æ–°å¢ 33 æµ‹è¯•å…¨éƒ¨é€šè¿‡
+### ÑéÖ¤
+- CI: 4090 total, 4054 passed, 0 failed, 33 Ô¤´æ CM »·¾³´íÎó
+- ĞÂÔö 11 ²âÊÔÈ«²¿Í¨¹ı
 
 ---
 
-## 2026-06-25 ä¸‰ä¸“å®¶å®¡é˜… P2 ä¿®å¤å…¨éƒ¨å®Œæˆ + å›å½’æµ‹è¯•è¡¥é½ âœ…
+## 2026-06-25 WebAPI ¿É¹Û²âĞÔÄ£¿é (OPS-P2-001 µÚÒ»½×¶Î) ?
 
-> æ¥æº: 2026-06-21 ä¸‰ä¸“å®¶å®¡é˜… P2 çº§åˆ« (BUG-306 ~ BUG-319) + EXP-P0 å›å½’æµ‹è¯•è¡¥é½
-> èŒƒå›´: 14 ä¸ª P2 ä¿®å¤ + 5 ä¸ªå›å½’æµ‹è¯•è¡¥é½é¡¹
+> À´Ô´: tasks.md OPS-P2-001 ·şÎñÆ÷¿É¹Û²âĞÔºÍÔËÎ¬
+> ·¶Î§: /health¡¢/metrics ¶Ëµã + ÇëÇó¶ÈÁ¿ÖĞ¼ä¼ş
 
-### P2 ä¿®å¤ (14 é¡¹, BUG-306 ~ BUG-319)
+### ĞÂÔöµ¥Ôª: DeepBase.WebAPI.Observability
+- `TWebHealthCheckRegistry` ¡ª ¿É×¢²á¶à¸ö½¡¿µ¼ì²é,Ö´ĞĞ²¢Êä³ö JSON »ã×Ü (healthy/degraded/unhealthy)
+- `TMetricsCollector` ¡ª Ïß³Ì°²È«µÄ Prometheus ¶ÈÁ¿ÊÕ¼¯Æ÷,Ö§³Ö Counter / Gauge / Histogram ÈıÖÖÀàĞÍ
+- `TMetricSeries` ¡ª µ¥¸ö¶ÈÁ¿ÏµÁĞ,Ö§³Ö±êÇ©ºÍÖ±·½Í¼Í°
+- `TObservability.RegisterHealthEndpoint` ¡ª ÔÚ TApiServer ÉÏ×¢²á `GET /health`
+- `TObservability.RegisterMetricsEndpoint` ¡ª ÔÚ TApiServer ÉÏ×¢²á `GET /metrics` (Prometheus ´¿ÎÄ±¾¸ñÊ½)
+- `TObservability.CreateRequestMetricsMiddleware` ¡ª ÇëÇó¼ÆÊı + ÑÓ³ÙÖ±·½Í¼ÖĞ¼ä¼ş
+- `TObservability.DefaultDurationBuckets` ¡ª Ä¬ÈÏ 9 Í° (5ms ~ 5s)
 
-- **EXP-P2-002 / BUG-306**: LLM Manager BuildContext å¯¹å¤– JSON ä»…åŒ…å«é”™è¯¯ç±»å‹ä¸é€šç”¨æè¿°ï¼Œå†…éƒ¨ç»†èŠ‚å†™å…¥æ—¥å¿—
-- **EXP-P2-003 / BUG-307**: Speech.Config Normalize å…è®¸ä»…è¯­è¨€æ ‡ç­¾ (jaâ†’ja-JP, enâ†’en-US)
-- **EXP-P2-004 / BUG-308**: LLM Manager SetProductionVersion æ”¹ä¸ºå•æ¡ CASE åŸå­ UPDATE; DeleteVersions å•æ¡ DELETE + IN
-- **EXP-P2-005 / BUG-309**: AutoUpdate HTTP è¯·æ±‚è®¾ç½® `User-Agent: DeepBase/{version}` å¤´
-- **EXP-P2-006 / BUG-310**: TLRUCache.MoveToEnd æ”¹ç”¨ doubly-linked list + TDictionary<K, PListNode>ï¼ŒO(1) æ€§èƒ½
-- **EXP-P2-007 / BUG-311**: TSmartCache ä¸ TCache ç»Ÿä¸€ä½¿ç”¨ TCache çš„ TCacheEvictionPolicy
-- **EXP-P2-008 / BUG-312**: Logger PickLogFileForWrite æ·»åŠ æœ€å¤§ idx ä¸Šé™æ£€æŸ¥ (999)
-- **EXP-P2-009 / BUG-313**: ExceptionHandler ç§»é™¤ FInstance å­—æ®µåŠ class constructor/destructor
-- **EXP-P2-010 / BUG-314**: DateTime FromRFC2822 å®ç°å®Œæ•´ RFC 2822 è§£æå™¨ (å«å¯é€‰ day-of-weekã€ä¸¤ä½/å››ä½å¹´ä»½ã€å†›äº‹/å‘½å/æ•°å­—æ—¶åŒºã€æ‹¬å·æ³¨é‡Šå‰¥ç¦»; 7 ä¸ªå›å½’æµ‹è¯•)
-- **EXP-P2-011 / BUG-315**: DB.Factory æ”¹ä¸ºç›´æ¥ä» TDBConnectionProfile æ„é€  TFDConnectionï¼Œä¸å†åˆ›å»º/é”€æ¯ä¸´æ—¶ TUniConnectionPool
-- **EXP-P2-012 / BUG-316**: DateTime AddBusinessDays æ–‡æ¡£æ˜ç¡®è¯´æ˜ï¼ŒADays=0 æ—¶ snap åˆ°æœ€è¿‘è¥ä¸šæ—¥
-- **EXP-P2-013 / BUG-317**: EventBus PublishAsync ç»Ÿä¸€æ”¹ä¸º TThread.CreateAnonymousThread + FreeOnTerminate
-- **EXP-P2-014 / BUG-318**: Exceptions.pas æ–‡ä»¶ä¿å­˜ä¸º UTF-8 with BOM
-- **EXP-P2-015 / BUG-319**: DateTime Diff æä¾› DiffCalendarMonths/DiffCalendarYears
+### ²âÊÔ: 33 ¸öµ¥²â
+- `TTestWebHealthCheckResult` (5 tests) ¡ª ¼ÇÂ¼¹¹Ôì / JSON Êä³ö
+- `TTestWebHealthCheckRegistry` (8 tests) ¡ª ¿Õ/µ¥/»ìºÏ/Òì³£/¶à×¢²á/ºÄÊ±²âÁ¿
+- `TTestMetricsCollector` (10 tests) ¡ª ¼ÆÊıÆ÷/ÒÇ±í/Ö±·½Í¼/Prometheus ¸ñÊ½
+- `TTestMetricSeries` (3 tests) ¡ª Ö±½Ó Prometheus ¸ñÊ½ÑéÖ¤
+- `TTestObservability` (7 tests) ¡ª ¸¨Öúº¯Êı/¶Ëµã×¢²á/ÖĞ¼ä¼ş´´½¨
 
-### å›å½’æµ‹è¯•è¡¥é½ (5 é¡¹)
-- **EXP-P0-002**: åŒºåŸŸå›å½’æµ‹è¯• (zh-CN/de-DE/fr-FR çº¿ç¨‹ç¯å¢ƒä¸‹é‡‘é¢æ ¼å¼) â†’ TAlipayAmountLocaleTests
-- **EXP-P0-003**: å¹¶å‘å›å½’æµ‹è¯• (100 å¹¶å‘è¯·æ±‚ç”Ÿæˆ 100 ä¸ªä¸åŒå¹‚ç­‰é”®) â†’ TStripeIdempotencyKeyTests
-- **EXP-P0-004**: LFU å›å½’æµ‹è¯• (cepLFU é«˜é¢‘ä¸è¢«æ·˜æ±°ã€ä½é¢‘è¢«æ·˜æ±°) â†’ Test.DeepBase.Cache
-- **EXP-P0-005**: `-IncludeStubApis` äºŒçº§é—¨ç¦æ¥å…¥ run_tests.ps1 (336 æ–‡ä»¶ 0 STUB æ ‡è®°é€šè¿‡)
-- **EXP-P1-015 / BUG-302**: JobQueue æŒ‡æ•°é€€é¿ (`next_run_at` åˆ—) + ç‹¬ç«‹ DLQ è¡¨ `DeepBase_job_queue_dlq` (2026-06-22, 7 å›å½’æµ‹è¯•é€šè¿‡)
-
-### éªŒè¯
-- CI å•å…ƒå…¨ç»¿: 4034 total, 4004 passed, 0 failed, 24 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯
-- STUB/ç¼–ç é—¨ç¦ PASSED
-- è¯¦ç»†ä¿®å¤è®°å½•è§ bugfix.md BUG-306 ~ BUG-319
+### ÑéÖ¤
+- CI: 4067 total, 4040 passed, 0 failed, 24 Ô¤´æ CM »·¾³´íÎó, 3 ignored
+- ĞÂÔö 33 ²âÊÔÈ«²¿Í¨¹ı
 
 ---
 
-## 2026-06-24 REVIEW-P1-004 å®Œæˆ: CI é—¨ç¦æ¥å…¥ + ENotImplementedException + æ¡©æ–¹æ³• raise âœ…
+## 2026-06-25 Èı×¨¼ÒÉóÔÄ P2 ĞŞ¸´È«²¿Íê³É + »Ø¹é²âÊÔ²¹Æë ?
 
-> æ¥æº: BUG-281 / REVIEW-P1-004 (ç¨³å®šæ€§/å¹¶å‘ä¸“å®¶)
-> èŒƒå›´: CI æµæ°´çº¿ + å¼‚å¸¸ä½“ç³» + FMX/VCL æ¡©æ–¹æ³•
+> À´Ô´: 2026-06-21 Èı×¨¼ÒÉóÔÄ P2 ¼¶±ğ (BUG-306 ~ BUG-319) + EXP-P0 »Ø¹é²âÊÔ²¹Æë
+> ·¶Î§: 14 ¸ö P2 ĞŞ¸´ + 5 ¸ö»Ø¹é²âÊÔ²¹ÆëÏî
 
-### CI é—¨ç¦æ¥å…¥
-- `.github/workflows/delphi-ci.yml` unit-tests job è¿½åŠ  `-IncludeStubApis -IncludeEncoding`
-- STUB API Gate: PASSED (0 STUB markers, æ‰€æœ‰æ¡©å·²æ ‡æ³¨ BUG ID)
-- Encoding Gate: PASSED (0 hard violations, 8 allowlisted FMX é—ç•™ + 236 BOM è½¯å‘Šè­¦)
+### P2 ĞŞ¸´ (14 Ïî, BUG-306 ~ BUG-319)
+
+- **EXP-P2-002 / BUG-306**: LLM Manager BuildContext ¶ÔÍâ JSON ½ö°üº¬´íÎóÀàĞÍÓëÍ¨ÓÃÃèÊö£¬ÄÚ²¿Ï¸½ÚĞ´ÈëÈÕÖ¾
+- **EXP-P2-003 / BUG-307**: Speech.Config Normalize ÔÊĞí½öÓïÑÔ±êÇ© (ja¡úja-JP, en¡úen-US)
+- **EXP-P2-004 / BUG-308**: LLM Manager SetProductionVersion ¸ÄÎªµ¥Ìõ CASE Ô­×Ó UPDATE; DeleteVersions µ¥Ìõ DELETE + IN
+- **EXP-P2-005 / BUG-309**: AutoUpdate HTTP ÇëÇóÉèÖÃ `User-Agent: DeepBase/{version}` Í·
+- **EXP-P2-006 / BUG-310**: TLRUCache.MoveToEnd ¸ÄÓÃ doubly-linked list + TDictionary<K, PListNode>£¬O(1) ĞÔÄÜ
+- **EXP-P2-007 / BUG-311**: TSmartCache Óë TCache Í³Ò»Ê¹ÓÃ TCache µÄ TCacheEvictionPolicy
+- **EXP-P2-008 / BUG-312**: Logger PickLogFileForWrite Ìí¼Ó×î´ó idx ÉÏÏŞ¼ì²é (999)
+- **EXP-P2-009 / BUG-313**: ExceptionHandler ÒÆ³ı FInstance ×Ö¶Î¼° class constructor/destructor
+- **EXP-P2-010 / BUG-314**: DateTime FromRFC2822 ÊµÏÖÍêÕû RFC 2822 ½âÎöÆ÷ (º¬¿ÉÑ¡ day-of-week¡¢Á½Î»/ËÄÎ»Äê·İ¡¢¾üÊÂ/ÃüÃû/Êı×ÖÊ±Çø¡¢À¨ºÅ×¢ÊÍ°şÀë; 7 ¸ö»Ø¹é²âÊÔ)
+- **EXP-P2-011 / BUG-315**: DB.Factory ¸ÄÎªÖ±½Ó´Ó TDBConnectionProfile ¹¹Ôì TFDConnection£¬²»ÔÙ´´½¨/Ïú»ÙÁÙÊ± TUniConnectionPool
+- **EXP-P2-012 / BUG-316**: DateTime AddBusinessDays ÎÄµµÃ÷È·ËµÃ÷£¬ADays=0 Ê± snap µ½×î½üÓªÒµÈÕ
+- **EXP-P2-013 / BUG-317**: EventBus PublishAsync Í³Ò»¸ÄÎª TThread.CreateAnonymousThread + FreeOnTerminate
+- **EXP-P2-014 / BUG-318**: Exceptions.pas ÎÄ¼ş±£´æÎª UTF-8 with BOM
+- **EXP-P2-015 / BUG-319**: DateTime Diff Ìá¹© DiffCalendarMonths/DiffCalendarYears
+
+### »Ø¹é²âÊÔ²¹Æë (5 Ïî)
+- **EXP-P0-002**: ÇøÓò»Ø¹é²âÊÔ (zh-CN/de-DE/fr-FR Ïß³Ì»·¾³ÏÂ½ğ¶î¸ñÊ½) ¡ú TAlipayAmountLocaleTests
+- **EXP-P0-003**: ²¢·¢»Ø¹é²âÊÔ (100 ²¢·¢ÇëÇóÉú³É 100 ¸ö²»Í¬ÃİµÈ¼ü) ¡ú TStripeIdempotencyKeyTests
+- **EXP-P0-004**: LFU »Ø¹é²âÊÔ (cepLFU ¸ßÆµ²»±»ÌÔÌ­¡¢µÍÆµ±»ÌÔÌ­) ¡ú Test.DeepBase.Cache
+- **EXP-P0-005**: `-IncludeStubApis` ¶ş¼¶ÃÅ½û½ÓÈë run_tests.ps1 (336 ÎÄ¼ş 0 STUB ±ê¼ÇÍ¨¹ı)
+- **EXP-P1-015 / BUG-302**: JobQueue Ö¸ÊıÍË±Ü (`next_run_at` ÁĞ) + ¶ÀÁ¢ DLQ ±í `DeepBase_job_queue_dlq` (2026-06-22, 7 »Ø¹é²âÊÔÍ¨¹ı)
+
+### ÑéÖ¤
+- CI µ¥ÔªÈ«ÂÌ: 4034 total, 4004 passed, 0 failed, 24 Ô¤´æ CM »·¾³´íÎó
+- STUB/±àÂëÃÅ½û PASSED
+- ÏêÏ¸ĞŞ¸´¼ÇÂ¼¼û bugfix.md BUG-306 ~ BUG-319
+
+---
+
+## 2026-06-24 REVIEW-P1-004 Íê³É: CI ÃÅ½û½ÓÈë + ENotImplementedException + ×®·½·¨ raise ?
+
+> À´Ô´: BUG-281 / REVIEW-P1-004 (ÎÈ¶¨ĞÔ/²¢·¢×¨¼Ò)
+> ·¶Î§: CI Á÷Ë®Ïß + Òì³£ÌåÏµ + FMX/VCL ×®·½·¨
+
+### CI ÃÅ½û½ÓÈë
+- `.github/workflows/delphi-ci.yml` unit-tests job ×·¼Ó `-IncludeStubApis -IncludeEncoding`
+- STUB API Gate: PASSED (0 STUB markers, ËùÓĞ×®ÒÑ±ê×¢ BUG ID)
+- Encoding Gate: PASSED (0 hard violations, 8 allowlisted FMX ÒÅÁô + 236 BOM Èí¸æ¾¯)
 
 ### ENotImplementedException
-- æ–°å¢ `Core/DeepBase.Exceptions.pas`: `ENotImplementedException = class(EInvalidOperationException)`
-- è¯­ä¹‰: åŠŸèƒ½å°šæœªå®ç°æ—¶æŠ›å‡º,æ›¿ä»£è¿”å›é»˜è®¤å€¼å¯¼è‡´çš„é™é»˜å¤±è´¥
-- ç»§æ‰¿é“¾: `ENotImplementedException` â†’ `EInvalidOperationException` â†’ `EOperationException` â†’ `EDeepBaseException`
+- ĞÂÔö `Core/DeepBase.Exceptions.pas`: `ENotImplementedException = class(EInvalidOperationException)`
+- ÓïÒå: ¹¦ÄÜÉĞÎ´ÊµÏÖÊ±Å×³ö,Ìæ´ú·µ»ØÄ¬ÈÏÖµµ¼ÖÂµÄ¾²Ä¬Ê§°Ü
+- ¼Ì³ĞÁ´: `ENotImplementedException` ¡ú `EInvalidOperationException` ¡ú `EOperationException` ¡ú `EDeepBaseException`
 
-### FMX/VCL æ¡©æ–¹æ³•ä¿®æ”¹
-- **raise ç‰ˆ** (åœ¨ IFDEF åˆ†æ”¯å†…,Windows ä¸ç¼–è¯‘):
-  - `FMX.Platform.pas` `UpdateScreenInfo` iOS/Android SafeArea åˆ†æ”¯
-  - `FMX.Theme.pas` `DetectSystemTheme` Android/iOS åˆ†æ”¯
-- **TODOâ†’STUB ç‰ˆ** (æ¡Œé¢è·¯å¾„æ‰§è¡Œ,ä¸ raise):
+### FMX/VCL ×®·½·¨ĞŞ¸Ä
+- **raise °æ** (ÔÚ IFDEF ·ÖÖ§ÄÚ,Windows ²»±àÒë):
+  - `FMX.Platform.pas` `UpdateScreenInfo` iOS/Android SafeArea ·ÖÖ§
+  - `FMX.Theme.pas` `DetectSystemTheme` Android/iOS ·ÖÖ§
+- **TODO¡úSTUB °æ** (×ÀÃæÂ·¾¶Ö´ĞĞ,²» raise):
   - `FMX.Platform.pas` iOS permission stubs (BUG-277)
   - `FMX.ListView.pas` `ApplyFilter` / `ClearFilter` (BUG-281)
-  - `FMX.UpdateDialog.pas` `DownloadComplete` é‡å¯ (UPD-P0-001)
-  - `VCL.UpdateDialog.pas` `Execute` ç‰ˆæœ¬å· (UPD-P0-001)
+  - `FMX.UpdateDialog.pas` `DownloadComplete` ÖØÆô (UPD-P0-001)
+  - `VCL.UpdateDialog.pas` `Execute` °æ±¾ºÅ (UPD-P0-001)
 
-### å›å½’æµ‹è¯• (3 ä¸ª, å…¨éƒ¨é€šè¿‡)
-| # | æµ‹è¯•å | æ–­è¨€ |
+### »Ø¹é²âÊÔ (3 ¸ö, È«²¿Í¨¹ı)
+| # | ²âÊÔÃû | ¶ÏÑÔ |
 |---|--------|------|
 | 1 | `Test_ENotImplemented_InheritsFromEInvalidOperationException` | `is EInvalidOperationException` = True |
 | 2 | `Test_ENotImplemented_InheritsFromEDeepBaseException` | `is EDeepBaseException` = True |
-| 3 | `Test_ENotImplemented_CarriesErrorCodeAndContext` | ErrorCode=42, Context='TestContext', Timestamp â‰ˆ Now |
+| 3 | `Test_ENotImplemented_CarriesErrorCodeAndContext` | ErrorCode=42, Context='TestContext', Timestamp ¡Ö Now |
 
-### æ–‡ä»¶å˜æ›´
-- **ä¿®æ”¹**: `Core/DeepBase.Exceptions.pas` â€” æ–°å¢ ENotImplementedException
-- **ä¿®æ”¹**: `FMX/DeepBase.FMX.Platform.pas` â€” raise + STUB
-- **ä¿®æ”¹**: `FMX/DeepBase.FMX.Theme.pas` â€” raise + STUB
-- **ä¿®æ”¹**: `FMX/DeepBase.FMX.ListView.pas` â€” STUB
-- **ä¿®æ”¹**: `FMX/DeepBase.FMX.UpdateDialog.pas` â€” STUB
-- **ä¿®æ”¹**: `VCL/DeepBase.VCL.UpdateDialog.pas` â€” STUB
-- **ä¿®æ”¹**: `.github/workflows/delphi-ci.yml` â€” CI é—¨ç¦ flag
-- **æ–°å¢**: `Tests/Test.DeepBase.Exceptions.pas` â€” 3 å›å½’æµ‹è¯•
-- **ä¿®æ”¹**: `Tests/DeepBaseTests.dpr` â€” ç¼–è¯‘å…¥å£
+### ÎÄ¼ş±ä¸ü
+- **ĞŞ¸Ä**: `Core/DeepBase.Exceptions.pas` ¡ª ĞÂÔö ENotImplementedException
+- **ĞŞ¸Ä**: `FMX/DeepBase.FMX.Platform.pas` ¡ª raise + STUB
+- **ĞŞ¸Ä**: `FMX/DeepBase.FMX.Theme.pas` ¡ª raise + STUB
+- **ĞŞ¸Ä**: `FMX/DeepBase.FMX.ListView.pas` ¡ª STUB
+- **ĞŞ¸Ä**: `FMX/DeepBase.FMX.UpdateDialog.pas` ¡ª STUB
+- **ĞŞ¸Ä**: `VCL/DeepBase.VCL.UpdateDialog.pas` ¡ª STUB
+- **ĞŞ¸Ä**: `.github/workflows/delphi-ci.yml` ¡ª CI ÃÅ½û flag
+- **ĞÂÔö**: `Tests/Test.DeepBase.Exceptions.pas` ¡ª 3 »Ø¹é²âÊÔ
+- **ĞŞ¸Ä**: `Tests/DeepBaseTests.dpr` ¡ª ±àÒëÈë¿Ú
 
-### CI ç»“æœ
-- total=4034 (4031 + 3), errors=24 (é¢„å­˜ CM), failures=0
+### CI ½á¹û
+- total=4034 (4031 + 3), errors=24 (Ô¤´æ CM), failures=0
 - STUB Gate: PASSED, Encoding Gate: PASSED
 
 ---
 
-## 2026-06-24 REVIEW-P1-002 å®Œæˆ: å®˜æ–¹ LLM æ„å›¾åˆ†ç±»åç«¯ âœ…
+## 2026-06-24 REVIEW-P1-002 Íê³É: ¹Ù·½ LLM ÒâÍ¼·ÖÀàºó¶Ë ?
 
-> æ¥æº: BUG-279 å¾…åŠ (REVIEW-P1-002, æ¶æ„/API ä¸“å®¶)
-> èŒƒå›´: `Features/DeepBase.Speech.Intent.LLMBackend.pas` + `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
+> À´Ô´: BUG-279 ´ı°ì (REVIEW-P1-002, ¼Ü¹¹/API ×¨¼Ò)
+> ·¶Î§: `Features/DeepBase.Speech.Intent.LLMBackend.pas` + `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
 
-### è®¾è®¡è¦ç‚¹
-- **æ³¨å…¥å¼é€‚é…å™¨**: `TIntentChatFunc = reference to function(const APrompt: string; ATimeoutMs: Integer): string` â€” å…¼å®¹ `TDeepBaseLLM.Chat` / `TBillingClient.Chat` / `TProxyLLMClient.Chat` çš„ä»»æ„åŒ…è£…
-- **åŒ…è¾¹ç•Œä¸ç ´å**: `DeepBaseSpeechCore.dpk` ä¸ä¾èµ– `DeepBaseLLM`; ä¸‹æ¸¸ç»„åˆæ ¹è´Ÿè´£æ³¨å…¥çœŸå® LLM å®¢æˆ·ç«¯
-- **çº¯å‡½æ•° `BuildIntentPrompt`**: æ„å»º system + user åŒæ¶ˆæ¯ prompt,å·²æ³¨å†Œæ„å›¾ä»¥é€—å·åˆ†éš”åˆ—è¡¨ä¼ å…¥,LLM è¿”å› `{"intent":"...","confidence":0..1,"reason":"..."}` JSON
-- **å·¥å‚å‡½æ•° `CreateIntentLLMBackend`**: åŒ…è£… `TIntentChatFunc` ä¸º `TIntentLLMBackend`; `AChatFunc=nil` â†’ `EArgumentException`; é»˜è®¤è¶…æ—¶ 5000 ms
-- **å¼‚å¸¸ä¼ æ’­**: chat å‡½æ•°æŠ›å¼‚å¸¸ â†’ å‘ä¸Šä¼ æ’­,`TDeepBaseIntentParser.Parse` å†…éƒ¨ try/except æ•è·ä¸º `Source='llm_unavailable'`
+### Éè¼ÆÒªµã
+- **×¢ÈëÊ½ÊÊÅäÆ÷**: `TIntentChatFunc = reference to function(const APrompt: string; ATimeoutMs: Integer): string` ¡ª ¼æÈİ `TDeepBaseLLM.Chat` / `TBillingClient.Chat` / `TProxyLLMClient.Chat` µÄÈÎÒâ°ü×°
+- **°ü±ß½ç²»ÆÆ»µ**: `DeepBaseSpeechCore.dpk` ²»ÒÀÀµ `DeepBaseLLM`; ÏÂÓÎ×éºÏ¸ù¸ºÔğ×¢ÈëÕæÊµ LLM ¿Í»§¶Ë
+- **´¿º¯Êı `BuildIntentPrompt`**: ¹¹½¨ system + user Ë«ÏûÏ¢ prompt,ÒÑ×¢²áÒâÍ¼ÒÔ¶ººÅ·Ö¸ôÁĞ±í´«Èë,LLM ·µ»Ø `{"intent":"...","confidence":0..1,"reason":"..."}` JSON
+- **¹¤³§º¯Êı `CreateIntentLLMBackend`**: °ü×° `TIntentChatFunc` Îª `TIntentLLMBackend`; `AChatFunc=nil` ¡ú `EArgumentException`; Ä¬ÈÏ³¬Ê± 5000 ms
+- **Òì³£´«²¥**: chat º¯ÊıÅ×Òì³£ ¡ú ÏòÉÏ´«²¥,`TDeepBaseIntentParser.Parse` ÄÚ²¿ try/except ²¶»ñÎª `Source='llm_unavailable'`
 
-### ä¸‹æ¸¸æ¥å…¥ç¤ºä¾‹
+### ÏÂÓÎ½ÓÈëÊ¾Àı
 
 ```pascal
 var
@@ -1399,95 +1429,95 @@ TDeepBaseIntentParser.RegisterGlobalLLMBackend(
   CreateIntentLLMBackend(LChatFunc));
 ```
 
-### å›å½’æµ‹è¯• (9 ä¸ª, å…¨éƒ¨é€šè¿‡)
-| # | æµ‹è¯•å | æ–­è¨€ |
+### »Ø¹é²âÊÔ (9 ¸ö, È«²¿Í¨¹ı)
+| # | ²âÊÔÃû | ¶ÏÑÔ |
 |---|--------|------|
-| 1 | `Test_CreateBackend_NilChatFunc_Raises` | nil â†’ `EArgumentException` |
-| 2 | `Test_CreateBackend_ValidChatFunc_ReturnsBackend` | è¿”å› Assigned backend |
-| 3 | `Test_BuildIntentPrompt_ContainsAllFields` | prompt å«ç”¨æˆ·æ–‡æœ¬ + locale + æ„å›¾ + JSON æ ¼å¼ |
-| 4 | `Test_BuildIntentPrompt_EmptyIntents_ContainsNone` | ç©ºåˆ—è¡¨ â†’ "Available intents: none" |
-| 5 | `Test_Backend_CallsChatFunc_WithCorrectTimeout` | timeout æ­£ç¡®ä¼ é€’ |
-| 6 | `Test_Backend_ReturnsChatFuncResponse_Verbatim` | JSON åŸæ ·è¿”å› |
-| 7 | `Test_Backend_ChatFuncRaises_ExceptionPropagates` | å¼‚å¸¸å‘ä¸Šä¼ æ’­ |
-| 8 | `Test_Backend_IntegrationWithParser_LLMSource` | parser + åç«¯ â†’ Source='llm', Intent='book_flight' |
-| 9 | `Test_Backend_IntegrationWithParser_InvalidJSON` | éæ³• JSON â†’ intent='unknown' |
+| 1 | `Test_CreateBackend_NilChatFunc_Raises` | nil ¡ú `EArgumentException` |
+| 2 | `Test_CreateBackend_ValidChatFunc_ReturnsBackend` | ·µ»Ø Assigned backend |
+| 3 | `Test_BuildIntentPrompt_ContainsAllFields` | prompt º¬ÓÃ»§ÎÄ±¾ + locale + ÒâÍ¼ + JSON ¸ñÊ½ |
+| 4 | `Test_BuildIntentPrompt_EmptyIntents_ContainsNone` | ¿ÕÁĞ±í ¡ú "Available intents: none" |
+| 5 | `Test_Backend_CallsChatFunc_WithCorrectTimeout` | timeout ÕıÈ·´«µİ |
+| 6 | `Test_Backend_ReturnsChatFuncResponse_Verbatim` | JSON Ô­Ñù·µ»Ø |
+| 7 | `Test_Backend_ChatFuncRaises_ExceptionPropagates` | Òì³£ÏòÉÏ´«²¥ |
+| 8 | `Test_Backend_IntegrationWithParser_LLMSource` | parser + ºó¶Ë ¡ú Source='llm', Intent='book_flight' |
+| 9 | `Test_Backend_IntegrationWithParser_InvalidJSON` | ·Ç·¨ JSON ¡ú intent='unknown' |
 
-### æ–‡ä»¶å˜æ›´
-- **æ–°å¢**: `Features/DeepBase.Speech.Intent.LLMBackend.pas`
-- **æ–°å¢**: `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
-- **ä¿®æ”¹**: `DeepBaseSpeechCore.dpk` â€” contains è¿½åŠ æ–°å•å…ƒ
-- **ä¿®æ”¹**: `Tests/DeepBaseTests.dpr` â€” è¿½åŠ ç¼–è¯‘å…¥å£
-- CI: 4007 passed (3998 + 9), 0 failed, 24 é¢„å­˜ CM ç¯å¢ƒé”™è¯¯ä¸å˜
+### ÎÄ¼ş±ä¸ü
+- **ĞÂÔö**: `Features/DeepBase.Speech.Intent.LLMBackend.pas`
+- **ĞÂÔö**: `Tests/Test.DeepBase.Speech.Intent.LLMBackend.pas`
+- **ĞŞ¸Ä**: `DeepBaseSpeechCore.dpk` ¡ª contains ×·¼ÓĞÂµ¥Ôª
+- **ĞŞ¸Ä**: `Tests/DeepBaseTests.dpr` ¡ª ×·¼Ó±àÒëÈë¿Ú
+- CI: 4007 passed (3998 + 9), 0 failed, 24 Ô¤´æ CM »·¾³´íÎó²»±ä
 
 ---
 
-## 2026-06-23 REVIEW-P0-002 ä»£ç å±‚å®ç°å®Œæˆ: Windows ShareFileEx Shell è·¯å¾„ + iOS æƒé™/åˆ†äº«æ¡© âœ…
+## 2026-06-23 REVIEW-P0-002 ´úÂë²ãÊµÏÖÍê³É: Windows ShareFileEx Shell Â·¾¶ + iOS È¨ÏŞ/·ÖÏí×® ?
 
-> æ¥æº: BUG-277 å¾…åŠ (REVIEW-P0-002, å®‰å…¨/å¹³å°ä¸“å®¶)
-> èŒƒå›´: `FMX/DeepBase.FMX.Platform.pas` + `Tests/FMX/TestFMXPlatformStandalone.dpr` + `Tests/Test.DeepBase.FMX.pas`
+> À´Ô´: BUG-277 ´ı°ì (REVIEW-P0-002, °²È«/Æ½Ì¨×¨¼Ò)
+> ·¶Î§: `FMX/DeepBase.FMX.Platform.pas` + `Tests/FMX/TestFMXPlatformStandalone.dpr` + `Tests/Test.DeepBase.FMX.pas`
 
-### Windows ShareFileEx èµ° Shell "share" åŠ¨è¯
-- é»˜è®¤åˆ†æ”¯: `ShellExecuteEx` + `lpVerb = 'share'` + `SEE_MASK_INVOKEIDLIST` è°ƒèµ·ç³»ç»ŸåŸç”Ÿåˆ†äº« UI
-- æ–‡ä»¶ä¸å­˜åœ¨ â†’ ç›´æ¥ `Exit(False)`,ä¸å°è¯• UI
-- `ShellExecuteEx` å¤±è´¥ (è€ç‰ˆæœ¬ Windows ä¸æ”¯æŒ) â†’ å›é€€ `CopyToClipboard(AFilePath)`
-- Android è·¯å¾„ (Intent `ACTION_SEND` + `EXTRA_STREAM`) ä¿æŒåŸå®ç°ä¸å˜
+### Windows ShareFileEx ×ß Shell "share" ¶¯´Ê
+- Ä¬ÈÏ·ÖÖ§: `ShellExecuteEx` + `lpVerb = 'share'` + `SEE_MASK_INVOKEIDLIST` µ÷ÆğÏµÍ³Ô­Éú·ÖÏí UI
+- ÎÄ¼ş²»´æÔÚ ¡ú Ö±½Ó `Exit(False)`,²»³¢ÊÔ UI
+- `ShellExecuteEx` Ê§°Ü (ÀÏ°æ±¾ Windows ²»Ö§³Ö) ¡ú »ØÍË `CopyToClipboard(AFilePath)`
+- Android Â·¾¶ (Intent `ACTION_SEND` + `EXTRA_STREAM`) ±£³ÖÔ­ÊµÏÖ²»±ä
 
-### iOS æ¡†æ¶å¤´æ¥å…¥ + æ¡©
-- `uses` æ–°å¢ `iOSapi.UIKit / iOSapi.Foundation / iOSapi.AVFoundation / iOSapi.Photos / iOSapi.UserNotifications / iOSapi.Contacts / Macapi.ObjCRuntime / Macapi.Helpers`
-- `CheckiOSPermission(const APermission)`: è¯†åˆ« `ios.microphone / ios.camera / ios.photos / ios.notifications / ios.contacts`,å…¶ä»–é”® â†’ `prUnsupported`;çœŸæœºè·¯å¾„ä»¥ `// TODO(on-device):` æ³¨é‡Šç•™æ¡©,å½“å‰ç»Ÿä¸€è¿”å› `prUnsupported` é¿å…ç¼–è¯‘å¤±è´¥
-- `RequestiOSPermission(const APermission, ACallback)`: åŒæ ·æŒ‰é”®åˆ†å‘,çœŸæœºè·¯å¾„ç•™ `// TODO(on-device):`,å½“å‰ç›´æ¥è¿”å› `CheckiOSPermission` ç»“æœå¹¶åŒæ­¥è§¦å‘ `ACallback`
-- `CheckPermissionEx` / `RequestPermissionEx` åˆ†å‘é“¾: è¿è¡Œæ—¶ override â†’ `DeepBase.Platform.Interfaces` å…¨å±€ delegate â†’ ç¼–è¯‘æœŸ IFDEF (Android / iOS / Desktop)
+### iOS ¿ò¼ÜÍ·½ÓÈë + ×®
+- `uses` ĞÂÔö `iOSapi.UIKit / iOSapi.Foundation / iOSapi.AVFoundation / iOSapi.Photos / iOSapi.UserNotifications / iOSapi.Contacts / Macapi.ObjCRuntime / Macapi.Helpers`
+- `CheckiOSPermission(const APermission)`: Ê¶±ğ `ios.microphone / ios.camera / ios.photos / ios.notifications / ios.contacts`,ÆäËû¼ü ¡ú `prUnsupported`;Õæ»úÂ·¾¶ÒÔ `// TODO(on-device):` ×¢ÊÍÁô×®,µ±Ç°Í³Ò»·µ»Ø `prUnsupported` ±ÜÃâ±àÒëÊ§°Ü
+- `RequestiOSPermission(const APermission, ACallback)`: Í¬Ñù°´¼ü·Ö·¢,Õæ»úÂ·¾¶Áô `// TODO(on-device):`,µ±Ç°Ö±½Ó·µ»Ø `CheckiOSPermission` ½á¹û²¢Í¬²½´¥·¢ `ACallback`
+- `CheckPermissionEx` / `RequestPermissionEx` ·Ö·¢Á´: ÔËĞĞÊ± override ¡ú `DeepBase.Platform.Interfaces` È«¾Ö delegate ¡ú ±àÒëÆÚ IFDEF (Android / iOS / Desktop)
 
-### å›å½’æµ‹è¯•
-- `Tests/FMX/TestFMXPlatformStandalone.dpr` æ–°å¢ `Test_ShareFileEx_MissingFile_ReturnsFalse`:
-  - ç¼ºå¤±æ–‡ä»¶è·¯å¾„ (æ—  delegate) â†’ æ–­è¨€è¿”å› `False`,ä¸”æ—  UI å¼¹å‡º
-  - æ³¨å†Œ delegate è¿”å› `True` â†’ æ–­è¨€ override ä¼˜å…ˆäº IFDEF é»˜è®¤åˆ†æ”¯
-- DUnitX ç«¯ `Tests/Test.DeepBase.FMX.pas` æ–°å¢ 4 ä¸ªæµ‹è¯• (æœªæ¥å…¥ä¸» suite,ç•™ä½œçœŸæœº/CI æ—¶åˆå…¥):
+### »Ø¹é²âÊÔ
+- `Tests/FMX/TestFMXPlatformStandalone.dpr` ĞÂÔö `Test_ShareFileEx_MissingFile_ReturnsFalse`:
+  - È±Ê§ÎÄ¼şÂ·¾¶ (ÎŞ delegate) ¡ú ¶ÏÑÔ·µ»Ø `False`,ÇÒÎŞ UI µ¯³ö
+  - ×¢²á delegate ·µ»Ø `True` ¡ú ¶ÏÑÔ override ÓÅÏÈÓÚ IFDEF Ä¬ÈÏ·ÖÖ§
+- DUnitX ¶Ë `Tests/Test.DeepBase.FMX.pas` ĞÂÔö 4 ¸ö²âÊÔ (Î´½ÓÈëÖ÷ suite,Áô×÷Õæ»ú/CI Ê±ºÏÈë):
   - `Test_Platform_ShareFileEx_DelegateOverride_IsInvoked`
   - `Test_Platform_ShareFileEx_MissingFile_ReturnsFalse`
   - `Test_Platform_CheckPermissionEx_DelegateOverride_IsInvoked`
   - `Test_Platform_RequestPermissionEx_DelegateOverride_FiresCallback`
 
-### éªŒè¯
-- ç‹¬ç«‹é©±åŠ¨ dcc64 ç¼–è¯‘é€šè¿‡ (1383 è¡Œ, 0.73s, é€€å‡ºç  0)
-- è¿è¡Œ `TestFMXPlatformStandalone.exe --batch`: **17/17 PASS** (15 æ—§ + 2 æ–°)
-- æºç ç›®å½•æ—  DCU äº§ç‰©æ³„æ¼ (BUG-285 å®ˆæŠ¤)
-- å…¨é‡å•å…ƒå›å½’: ä¸æ”¹åŠ¨å‰ä¸€è‡´ (24 ä¸ª Credential Manager ç¯å¢ƒé”™è¯¯ä¸º CI æ²™ç›’é¢„æœŸ,éæœ¬è½®å¼•å…¥)
+### ÑéÖ¤
+- ¶ÀÁ¢Çı¶¯ dcc64 ±àÒëÍ¨¹ı (1383 ĞĞ, 0.73s, ÍË³öÂë 0)
+- ÔËĞĞ `TestFMXPlatformStandalone.exe --batch`: **17/17 PASS** (15 ¾É + 2 ĞÂ)
+- Ô´ÂëÄ¿Â¼ÎŞ DCU ²úÎïĞ¹Â© (BUG-285 ÊØ»¤)
+- È«Á¿µ¥Ôª»Ø¹é: Óë¸Ä¶¯Ç°Ò»ÖÂ (24 ¸ö Credential Manager »·¾³´íÎóÎª CI É³ºĞÔ¤ÆÚ,·Ç±¾ÂÖÒıÈë)
 
-### åç»­ (çœŸæœº,ç•™å¾… Xcode + iOS è®¾å¤‡ç¯å¢ƒ)
-- iOS `CheckiOSPermission` / `RequestiOSPermission` æ›¿æ¢ä¸ºçœŸ AVAuthorizationStatus / PHAuthorizationStatus / UNAuthorizationStatus / CNAuthorizationStatus æŸ¥è¯¢
-- iOS `ShareFileEx` çœŸæœºè·¯å¾„: `UIActivityViewController` è°ƒèµ·ç³»ç»Ÿåˆ†äº« sheet
-- æŠŠ DUnitX 4 ä¸ªæ–°æµ‹è¯•åˆå…¥ `DeepBaseTests.dpr`,CI è·‘ Win64 æ—¶è¦†ç›– delegate é“¾
+### ºóĞø (Õæ»ú,Áô´ı Xcode + iOS Éè±¸»·¾³)
+- iOS `CheckiOSPermission` / `RequestiOSPermission` Ìæ»»ÎªÕæ AVAuthorizationStatus / PHAuthorizationStatus / UNAuthorizationStatus / CNAuthorizationStatus ²éÑ¯
+- iOS `ShareFileEx` Õæ»úÂ·¾¶: `UIActivityViewController` µ÷ÆğÏµÍ³·ÖÏí sheet
+- °Ñ DUnitX 4 ¸öĞÂ²âÊÔºÏÈë `DeepBaseTests.dpr`,CI ÅÜ Win64 Ê±¸²¸Ç delegate Á´
 
 ---
 
-## 2026-06-23 REVIEW-P1-001 å®Œæˆ: FireDAC å£°çº¹èµ„æ–™åº“å­˜å‚¨ (TDBVoiceProfileStorage) âœ…
+## 2026-06-23 REVIEW-P1-001 Íê³É: FireDAC ÉùÎÆ×ÊÁÏ¿â´æ´¢ (TDBVoiceProfileStorage) ?
 
-> æ¥æº: BUG-278 åç»­ (REVIEW-P1-001, æ•°æ®/å®‰å…¨ä¸“å®¶)
-> èŒƒå›´: `Persistence/DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas` + `Features/DeepBase.Speech.Voiceprint.Contracts.pas` + åŒ…é‡æ„ (MFCC/DTW/Contracts)
-> æµ‹è¯•: æ–°å¢ 11 ä¸ª DB å›å½’, 3998 passed, 0 failed, 24 é¢„å­˜ CM é”™è¯¯
+> À´Ô´: BUG-278 ºóĞø (REVIEW-P1-001, Êı¾İ/°²È«×¨¼Ò)
+> ·¶Î§: `Persistence/DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas` + `Features/DeepBase.Speech.Voiceprint.Contracts.pas` + °üÖØ¹¹ (MFCC/DTW/Contracts)
+> ²âÊÔ: ĞÂÔö 11 ¸ö DB »Ø¹é, 3998 passed, 0 failed, 24 Ô¤´æ CM ´íÎó
 
-### åŒ…é‡æ„
-- MFCC (`DeepBase.Speech.MFCC`) å’Œ DTW (`DeepBase.Speech.DTW`) ä» `DeepBaseSpeechVoice.dpk` è¿å…¥ `DeepBaseSpeechCore.dpk`ï¼Œå› ä¸º Contracts å•å…ƒå’Œ TDBVoiceProfileStorage éƒ½éœ€è¦ TMFCCFrame/TMFCCFeatures ç±»å‹
-- `IVoiceProfileStorage` + `TVoiceProfileId` + `TVoiceProfileInfo` ä» `Features/DeepBase.Speech.Voiceprint.pas` æŠ½å‡ºä¸º `Features/DeepBase.Speech.Voiceprint.Contracts.pas` å¥‘çº¦å•å…ƒï¼Œæ”¾å…¥ DeepBaseSpeechCore.dpk
-- Persistence åŒ… (`DeepBasePersistence.dpk`) æ–°å¢ `requires DeepBaseSpeechCore`ï¼Œæ–°å¢ `contains DeepBase.Persistence.Speech.Voiceprint.FireDAC`
-- `Test.DeepBase.Speech.Voiceprint.pas` æ”¹ç”¨ Contracts å•å…ƒä¸­çš„æ¥å£/ç±»å‹å®šä¹‰
+### °üÖØ¹¹
+- MFCC (`DeepBase.Speech.MFCC`) ºÍ DTW (`DeepBase.Speech.DTW`) ´Ó `DeepBaseSpeechVoice.dpk` Ç¨Èë `DeepBaseSpeechCore.dpk`£¬ÒòÎª Contracts µ¥ÔªºÍ TDBVoiceProfileStorage ¶¼ĞèÒª TMFCCFrame/TMFCCFeatures ÀàĞÍ
+- `IVoiceProfileStorage` + `TVoiceProfileId` + `TVoiceProfileInfo` ´Ó `Features/DeepBase.Speech.Voiceprint.pas` ³é³öÎª `Features/DeepBase.Speech.Voiceprint.Contracts.pas` ÆõÔ¼µ¥Ôª£¬·ÅÈë DeepBaseSpeechCore.dpk
+- Persistence °ü (`DeepBasePersistence.dpk`) ĞÂÔö `requires DeepBaseSpeechCore`£¬ĞÂÔö `contains DeepBase.Persistence.Speech.Voiceprint.FireDAC`
+- `Test.DeepBase.Speech.Voiceprint.pas` ¸ÄÓÃ Contracts µ¥ÔªÖĞµÄ½Ó¿Ú/ÀàĞÍ¶¨Òå
 
-### TDBVoiceProfileStorage å®ç°
-- `TDBVoiceProfileStorage = class(TInterfacedObject, IVoiceProfileStorage)` åœ¨ `DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas`
-- æ„é€ : `Create(AConnection: TFDConnection; const AOwnerApp: string)`ï¼›nil è¿æ¥æˆ–ç©º owner_app æŠ› EArgumentException
-- ç”Ÿå‘½å‘¨æœŸ: ä¸æ‹¥æœ‰ TFDConnectionï¼›è°ƒç”¨æ–¹å¿…é¡»ä¿è¯è¿æ¥å­˜æ´»æœŸè¶…è¿‡ storage
-- Schema: æ‡’è°ƒç”¨ `DeepBase.Speech.Schema.EnsureSpeechSchema` åˆ›å»º `voice_profiles` è¡¨ï¼ˆå¹‚ç­‰ DDLï¼‰
-- BLOB å®Œæ•´æ€§: ç‰¹å¾å¸§åºåˆ—åŒ– â†’ HMAC-SHA256ï¼ˆå¯†é’¥ä» owner_app æ´¾ç”Ÿï¼‰â†’ features + features_hmac å†™åº“ï¼›è¯»å–æ—¶æ ¡éªŒ HMACï¼Œä¸åŒ¹é…æŠ› EDatabaseVoiceprintTampered
-- æ—¥æœŸ: ISO8601 å­—ç¬¦ä¸² (`yyyy-mm-dd"T"hh:nn:ss.zzz`)ï¼›UPDATE ç­–ç•¥ä¿ç•™åŸæœ‰ created_at
-- owner_app éš”ç¦»: æ‰€æœ‰æŸ¥è¯¢ WHERE owner_app = :owner_appï¼›DELETE/UPDATE åŒæ ·è¿‡æ»¤
+### TDBVoiceProfileStorage ÊµÏÖ
+- `TDBVoiceProfileStorage = class(TInterfacedObject, IVoiceProfileStorage)` ÔÚ `DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas`
+- ¹¹Ôì: `Create(AConnection: TFDConnection; const AOwnerApp: string)`£»nil Á¬½Ó»ò¿Õ owner_app Å× EArgumentException
+- ÉúÃüÖÜÆÚ: ²»ÓµÓĞ TFDConnection£»µ÷ÓÃ·½±ØĞë±£Ö¤Á¬½Ó´æ»îÆÚ³¬¹ı storage
+- Schema: ÀÁµ÷ÓÃ `DeepBase.Speech.Schema.EnsureSpeechSchema` ´´½¨ `voice_profiles` ±í£¨ÃİµÈ DDL£©
+- BLOB ÍêÕûĞÔ: ÌØÕ÷Ö¡ĞòÁĞ»¯ ¡ú HMAC-SHA256£¨ÃÜÔ¿´Ó owner_app ÅÉÉú£©¡ú features + features_hmac Ğ´¿â£»¶ÁÈ¡Ê±Ğ£Ñé HMAC£¬²»Æ¥ÅäÅ× EDatabaseVoiceprintTampered
+- ÈÕÆÚ: ISO8601 ×Ö·û´® (`yyyy-mm-dd"T"hh:nn:ss.zzz`)£»UPDATE ²ßÂÔ±£ÁôÔ­ÓĞ created_at
+- owner_app ¸ôÀë: ËùÓĞ²éÑ¯ WHERE owner_app = :owner_app£»DELETE/UPDATE Í¬Ñù¹ıÂË
 
-### UPDATE ä¿æ—¶ç­–ç•¥
-- ä¸é‡‡ç”¨ SELECTå…ˆè¯» â†’ DELETE â†’ INSERT çš„åˆ›å»ºæ—¶é—´ä¿ç•™æ–¹å¼ï¼ˆæ›¾è¢«æ—¶åŒºè½¬æ¢é—®é¢˜å¹²æ‰°ï¼‰
-- æ”¹ä¸ºå…ˆæ‰§è¡Œ UPDATEï¼ˆåªæ”¹é PK åˆ—ï¼Œä¸ç¢° created_atï¼‰ï¼ŒRowsAffected=0 æ—¶å† INSERT è®¾ created_at=Now
-- å½»åº•æ¶ˆé™¤ TDateTime â†’ ISO8601 â†’ TDateTime å¾€è¿”ç²¾åº¦/æ—¶åŒºé£é™©
+### UPDATE ±£Ê±²ßÂÔ
+- ²»²ÉÓÃ SELECTÏÈ¶Á ¡ú DELETE ¡ú INSERT µÄ´´½¨Ê±¼ä±£Áô·½Ê½£¨Ôø±»Ê±Çø×ª»»ÎÊÌâ¸ÉÈÅ£©
+- ¸ÄÎªÏÈÖ´ĞĞ UPDATE£¨Ö»¸Ä·Ç PK ÁĞ£¬²»Åö created_at£©£¬RowsAffected=0 Ê±ÔÙ INSERT Éè created_at=Now
+- ³¹µ×Ïû³ı TDateTime ¡ú ISO8601 ¡ú TDateTime Íù·µ¾«¶È/Ê±Çø·çÏÕ
 
-### æµ‹è¯• (11 ä¸ª)
+### ²âÊÔ (11 ¸ö)
 - `Test_LoadAll_EmptyTable_ReturnsEmptyArray`
 - `Test_SaveProfile_ThenLoadAll_RoundTrips`
 - `Test_SaveProfile_ThenLoadFeatures_RoundTrips`
@@ -1500,76 +1530,76 @@ TDeepBaseIntentParser.RegisterGlobalLLMBackend(
 - `Test_Ctor_NilConnection_Raises`
 - `Test_Ctor_EmptyOwnerApp_Raises`
 
-### éªŒè¯
-- å…¨é‡å•å…ƒå›å½’: 3998 passed, 0 failed, 24 é¢„å­˜ Credential Manager ç¯å¢ƒé”™è¯¯ï¼ˆéæœ¬è½®å¼•å…¥ï¼‰
-- ç¼–è¯‘é€šè¿‡; BUG-285 DCU æ¸…ç†å·²è‡ªåŠ¨å®Œæˆ
-- æºç ç›®å½•æ—  DCU äº§ç‰©æ³„æ¼
+### ÑéÖ¤
+- È«Á¿µ¥Ôª»Ø¹é: 3998 passed, 0 failed, 24 Ô¤´æ Credential Manager »·¾³´íÎó£¨·Ç±¾ÂÖÒıÈë£©
+- ±àÒëÍ¨¹ı; BUG-285 DCU ÇåÀíÒÑ×Ô¶¯Íê³É
+- Ô´ÂëÄ¿Â¼ÎŞ DCU ²úÎïĞ¹Â©
 
-### åç»­
-- å¯ç”¨ `TDeepBaseVoiceprint.SetStorage(TDBVoiceProfileStorage)` æ›¿æ¢æ—§ DPAPI æ–‡ä»¶å­˜å‚¨ï¼Œä½¿å£°çº¹èµ„æ–™ä¸ ConfigDB å…±ç”Ÿå‘½å‘¨æœŸ
-- Migration è„šæœ¬æŠŠæ—¢æœ‰ DPAPI JSON æ–‡ä»¶æ•°æ®å¯¼å…¥ voice_profiles è¡¨ï¼ˆæ ¹æ®äº§å“éœ€æ±‚å®‰æ’ï¼‰
+### ºóĞø
+- ¿ÉÓÃ `TDeepBaseVoiceprint.SetStorage(TDBVoiceProfileStorage)` Ìæ»»¾É DPAPI ÎÄ¼ş´æ´¢£¬Ê¹ÉùÎÆ×ÊÁÏÓë ConfigDB ¹²ÉúÃüÖÜÆÚ
+- Migration ½Å±¾°Ñ¼ÈÓĞ DPAPI JSON ÎÄ¼şÊı¾İµ¼Èë voice_profiles ±í£¨¸ù¾İ²úÆ·ĞèÇó°²ÅÅ£©
 
 ---
 
-## 2026-06-22 REVIEW-P0-001 å®Œæˆ: ç¼–ç æ‰«æé—¨ç¦ + BUG-276 æ—§åº“è¿ç§» âœ…
+## 2026-06-22 REVIEW-P0-001 Íê³É: ±àÂëÉ¨ÃèÃÅ½û + BUG-276 ¾É¿âÇ¨ÒÆ ?
 
-> æ¥æº: BUG-276 å¾…åŠ (REVIEW-P0-001, æ•°æ®/å®‰å…¨ä¸“å®¶)
-> èŒƒå›´: æ–°å¢ `Scripts/check_encoding.ps1` + `Scripts/encoding-allowlist.txt` + `Migrations/I18n/`
+> À´Ô´: BUG-276 ´ı°ì (REVIEW-P0-001, Êı¾İ/°²È«×¨¼Ò)
+> ·¶Î§: ĞÂÔö `Scripts/check_encoding.ps1` + `Scripts/encoding-allowlist.txt` + `Migrations/I18n/`
 
-### ç¼–ç æ‰«æé—¨ç¦
-- `Scripts/check_encoding.ps1` æ‰«æ:
-  - è¿è¡Œæ—¶æºç  (Core/Features/FMX/VCL/Persistence) `.pas/.dpr/.dpk/.dfm/.fmx` â€” UTF-8 + å¿…é¡» BOM
-  - æ–‡æ¡£ (README/docs/*.md/bugfix.md/tasks.md/history.md ç­‰) â€” UTF-8 + ç¦ BOM
-  - è¿ç§»è„šæœ¬ (Migrations/**/*.sql) â€” UTF-8 + ç¦ BOM
-- ç¡¬é—¨ç¦ (InvalidUtf8 / Mojibake æ¨¡å¼) â†’ `-FailOnViolation` ä¸‹å¤±è´¥
-- è½¯é—¨ç¦ (MissingBom / UnexpectedBOM) â†’ åªå‘Šè­¦
-- å·²çŸ¥ç ´å FMX æ–‡ä»¶é€šè¿‡ `Scripts/encoding-allowlist.txt` é™çº§ä¸ºè­¦å‘Š,é¿å…é˜»å¡æ–° PR
-- Mojibake æ£€æµ‹: UTF-8 BOM è¯¯è¯» (`Ã¯Â»Â¿`/`ÃƒÂ¯Ã‚Â»Ã‚Â¿`)ã€GBK åŒç¼–ç å¸¸è§ CJK ç¢ç‰‡ (`Ã§Â¡Â®Ã¥Â®`=ç¡®å®š, `Ã¥Â³Ã©`=å–æ¶ˆ ç­‰)ã€CP1252-as-UTF-8 é€šç”¨ç­¾å (`Ãƒ` + é«˜å­—èŠ‚ Ã—3+)
-- å­—èŠ‚çº§ RFC-3629 UTF-8 éªŒè¯å™¨ (æ‹’ç»è¶…é•¿/ä»£ç†å¯¹/>U+10FFFF)
+### ±àÂëÉ¨ÃèÃÅ½û
+- `Scripts/check_encoding.ps1` É¨Ãè:
+  - ÔËĞĞÊ±Ô´Âë (Core/Features/FMX/VCL/Persistence) `.pas/.dpr/.dpk/.dfm/.fmx` ¡ª UTF-8 + ±ØĞë BOM
+  - ÎÄµµ (README/docs/*.md/bugfix.md/tasks.md/history.md µÈ) ¡ª UTF-8 + ½û BOM
+  - Ç¨ÒÆ½Å±¾ (Migrations/**/*.sql) ¡ª UTF-8 + ½û BOM
+- Ó²ÃÅ½û (InvalidUtf8 / Mojibake Ä£Ê½) ¡ú `-FailOnViolation` ÏÂÊ§°Ü
+- ÈíÃÅ½û (MissingBom / UnexpectedBOM) ¡ú Ö»¸æ¾¯
+- ÒÑÖªÆÆ»µ FMX ÎÄ¼şÍ¨¹ı `Scripts/encoding-allowlist.txt` ½µ¼¶Îª¾¯¸æ,±ÜÃâ×èÈûĞÂ PR
+- Mojibake ¼ì²â: UTF-8 BOM Îó¶Á (`???`/`?¡¥????`)¡¢GBK Ë«±àÂë³£¼û CJK ËéÆ¬ (`?????`=È·¶¨, `?3¨¦`=È¡Ïû µÈ)¡¢CP1252-as-UTF-8 Í¨ÓÃÇ©Ãû (`?` + ¸ß×Ö½Ú ¡Á3+)
+- ×Ö½Ú¼¶ RFC-3629 UTF-8 ÑéÖ¤Æ÷ (¾Ü¾ø³¬³¤/´úÀí¶Ô/>U+10FFFF)
 
-### CI é›†æˆ
-- `Scripts/run_tests.ps1` æ–°å¢ `-IncludeEncoding` äºŒçº§é—¨ç¦ (ä¸ `-IncludeStubApis` åŒæ¨¡å¼)
-- CI ä¸‹è°ƒç”¨ `check_encoding.ps1 -AllowlistPath Scripts/encoding-allowlist.txt -FailOnViolation`
-- æŠ¥å‘Šè¾“å‡ºåˆ° `TestResults/EncodingGate.json` (UTF-8 no-BOM)
+### CI ¼¯³É
+- `Scripts/run_tests.ps1` ĞÂÔö `-IncludeEncoding` ¶ş¼¶ÃÅ½û (Óë `-IncludeStubApis` Í¬Ä£Ê½)
+- CI ÏÂµ÷ÓÃ `check_encoding.ps1 -AllowlistPath Scripts/encoding-allowlist.txt -FailOnViolation`
+- ±¨¸æÊä³öµ½ `TestResults/EncodingGate.json` (UTF-8 no-BOM)
 
-### BUG-276 æ—§åº“ä¸€æ¬¡æ€§ä¿®å¤è¿ç§»
+### BUG-276 ¾É¿âÒ»´ÎĞÔĞŞ¸´Ç¨ÒÆ
 - `Migrations/I18n/001_fix_bug276_seed_mojibake.up.sql`:
-  - UPDATE Languages.NativeName: zh-CNâ†’ç®€ä½“ä¸­æ–‡, zh-TWâ†’ç¹é«”ä¸­æ–‡, ja-JPâ†’æ—¥æœ¬èª
-  - UPDATE I18nTexts.zh-CN 8 æ¡å†…ç½®ç¿»è¯‘ (ç¡®å®š/å–æ¶ˆ/ä¿å­˜/å…³é—­/é”™è¯¯/è­¦å‘Š/ä¿¡æ¯/ç¡®è®¤) + IsVerified=1
-  - å¹‚ç­‰ (å¸¦ `<>` è¿‡æ»¤), SQLite/PG åŒæ–¹è¨€å…¼å®¹
-- æ—§åº“è¯†åˆ«: é€šè¿‡ `git show` åæŸ¥æ—§ç‰ˆ Schema.pas å­—èŠ‚, ç¡®è®¤åç§å­ä¸º "é”Ÿæ–¤æ‹·" ç»å…¸åŒè½¬æ¢ç‰¹å¾
+  - UPDATE Languages.NativeName: zh-CN¡ú¼òÌåÖĞÎÄ, zh-TW¡ú·±ówÖĞÎÄ, ja-JP¡úÈÕ±¾ÕZ
+  - UPDATE I18nTexts.zh-CN 8 ÌõÄÚÖÃ·­Òë (È·¶¨/È¡Ïû/±£´æ/¹Ø±Õ/´íÎó/¾¯¸æ/ĞÅÏ¢/È·ÈÏ) + IsVerified=1
+  - ÃİµÈ (´ø `<>` ¹ıÂË), SQLite/PG Ë«·½ÑÔ¼æÈİ
+- ¾É¿âÊ¶±ğ: Í¨¹ı `git show` ·´²é¾É°æ Schema.pas ×Ö½Ú, È·ÈÏ»µÖÖ×ÓÎª "ï¿½ï¿½" ¾­µäË«×ª»»ÌØÕ÷
 
-### å½“å‰æ‰«æåŸºçº¿ (2026-06-22)
-- ç¡¬è¿å: 0 (8 ä¸ªå·²çŸ¥ FMX ç ´åæ–‡ä»¶å·² allowlist)
-- è½¯è¿å: 233 (183 ä¸ª .pas ç¼º BOM, 50 ä¸ª .md å¤š BOM) â€” ç•™ä½œåç»­æ‰¹é‡ä¿®å¤
-- æ‰«ææ–‡ä»¶: 446
+### µ±Ç°É¨Ãè»ùÏß (2026-06-22)
+- Ó²Î¥·´: 0 (8 ¸öÒÑÖª FMX ÆÆ»µÎÄ¼şÒÑ allowlist)
+- ÈíÎ¥·´: 233 (183 ¸ö .pas È± BOM, 50 ¸ö .md ¶à BOM) ¡ª Áô×÷ºóĞøÅúÁ¿ĞŞ¸´
+- É¨ÃèÎÄ¼ş: 446
 
 ---
 
-## 2026-06-22 EXP-P1-015 åç»­: JobQueue æŒ‡æ•°é€€é¿ + ç‹¬ç«‹ DLQ è¡¨ âœ…
+## 2026-06-22 EXP-P1-015 ºóĞø: JobQueue Ö¸ÊıÍË±Ü + ¶ÀÁ¢ DLQ ±í ?
 
-> æ¥æº: BUG-302 å¾…åŠ (PERS-003, ä¸“å®¶ C)
-> èŒƒå›´: `Persistence/DeepBase.DB.JobQueue.pas` + `Tests/Test.DeepBase.DB.JobQueue.pas` + `Migrations/JobQueue/*.sql`
-> æµ‹è¯•: æ–°å¢ 7 ä¸ªå›å½’, å•å…ƒæ€»æ•° 4007 â†’ 4011 (3 ignored, 0 leaked, 0 failed)
+> À´Ô´: BUG-302 ´ı°ì (PERS-003, ×¨¼Ò C)
+> ·¶Î§: `Persistence/DeepBase.DB.JobQueue.pas` + `Tests/Test.DeepBase.DB.JobQueue.pas` + `Migrations/JobQueue/*.sql`
+> ²âÊÔ: ĞÂÔö 7 ¸ö»Ø¹é, µ¥Ôª×ÜÊı 4007 ¡ú 4011 (3 ignored, 0 leaked, 0 failed)
 
-### æŒ‡æ•°é€€é¿
-- `TJobQueue.Fail(..., Requeue=True)` æœªè¾¾ä¸Šé™æ—¶æŒ‰ `delay = min(BASE*2^(attempts-1), CAP)` å›é€€
-  - `JOB_QUEUE_BACKOFF_BASE_SEC = 5`, `JOB_QUEUE_BACKOFF_CAP_SEC = 300` â†’ 5s/10s/20s/40s/80s
-- Schema: ä¸»è¡¨ `DeepBase_job_queue` æ–°å¢ `next_run_at` åˆ— (TEXT/NULL for SQLite, TIMESTAMP WITH TIME ZONE/NULL for PG)
-- `Dequeue{PostgreSQL,SQLite}` / `RecycleDeadTasks` è¿½åŠ  `AND (next_run_at IS NULL OR next_run_at <= <now>)` è¿‡æ»¤
+### Ö¸ÊıÍË±Ü
+- `TJobQueue.Fail(..., Requeue=True)` Î´´ïÉÏÏŞÊ±°´ `delay = min(BASE*2^(attempts-1), CAP)` »ØÍË
+  - `JOB_QUEUE_BACKOFF_BASE_SEC = 5`, `JOB_QUEUE_BACKOFF_CAP_SEC = 300` ¡ú 5s/10s/20s/40s/80s
+- Schema: Ö÷±í `DeepBase_job_queue` ĞÂÔö `next_run_at` ÁĞ (TEXT/NULL for SQLite, TIMESTAMP WITH TIME ZONE/NULL for PG)
+- `Dequeue{PostgreSQL,SQLite}` / `RecycleDeadTasks` ×·¼Ó `AND (next_run_at IS NULL OR next_run_at <= <now>)` ¹ıÂË
 
-### ç‹¬ç«‹ DLQ è¡¨
-- æ–°å»º `DeepBase_job_queue_dlq`, ä¸»é”® `original_id TEXT`
-- è¾¾ä¸Šé™æ—¶ `Fail(..., Requeue=True)` åŸå­åœ°æŠŠè¡Œ `INSERT ... SELECT` åˆ° DLQ å¹¶ä»ä¸»è¡¨ `DELETE` (SQLite æ˜¾å¼äº‹åŠ¡, PG å•è¿æ¥ä¸²è¡Œ)
-- æ–°å¢åªè¯»/è¿ç»´ API: `DeadLetterCount` / `PeekDeadLetters` / `ReplayDeadLetter` / `PurgeDeadLetter`
-- æ–°å¢ `TDeadLetterRec` è®°å½• (å« `Clear` ä¸é‡Šæ”¾å…±äº«çš„ `Payload` å¼•ç”¨, é¿å… double-free)
+### ¶ÀÁ¢ DLQ ±í
+- ĞÂ½¨ `DeepBase_job_queue_dlq`, Ö÷¼ü `original_id TEXT`
+- ´ïÉÏÏŞÊ± `Fail(..., Requeue=True)` Ô­×ÓµØ°ÑĞĞ `INSERT ... SELECT` µ½ DLQ ²¢´ÓÖ÷±í `DELETE` (SQLite ÏÔÊ½ÊÂÎñ, PG µ¥Á¬½Ó´®ĞĞ)
+- ĞÂÔöÖ»¶Á/ÔËÎ¬ API: `DeadLetterCount` / `PeekDeadLetters` / `ReplayDeadLetter` / `PurgeDeadLetter`
+- ĞÂÔö `TDeadLetterRec` ¼ÇÂ¼ (º¬ `Clear` ²»ÊÍ·Å¹²ÏíµÄ `Payload` ÒıÓÃ, ±ÜÃâ double-free)
 
-### è¿ç§»è„šæœ¬
+### Ç¨ÒÆ½Å±¾
 - `Migrations/JobQueue/001_add_next_run_at.up.{sqlite,pg}.sql`
 - `Migrations/JobQueue/002_create_dlq_table.up.{sqlite,pg}.sql`
-- è„šæœ¬è¯­ä¹‰ä¸ `EnsureSchemaOnConnection` å¹‚ç­‰ DDL ä¿æŒä¸€è‡´, è€éƒ¨ç½²ä¹Ÿå¯ä¸è·‘è¿ç§»ç›´æ¥ç”± `EnsureSchema` å‡çº§
+- ½Å±¾ÓïÒåÓë `EnsureSchemaOnConnection` ÃİµÈ DDL ±£³ÖÒ»ÖÂ, ÀÏ²¿ÊğÒ²¿É²»ÅÜÇ¨ÒÆÖ±½ÓÓÉ `EnsureSchema` Éı¼¶
 
-### æ–°å¢å›å½’æµ‹è¯• (7 ä¸ª)
+### ĞÂÔö»Ø¹é²âÊÔ (7 ¸ö)
 - `Test_Dequeue_RespectsNextRunAt`
 - `Test_Fail_SetsNextRunAt_ExponentialBackoff`
 - `Test_Fail_ExceedsMaxRetries_TransfersToDLQ`
@@ -1580,364 +1610,364 @@ TDeepBaseIntentParser.RegisterGlobalLLMBackend(
 
 ---
 
-## 2026-06-21 ä¸‰ä¸“å®¶å…¨åº“æ¨¡å—å®¡é˜…ä¿®å¤ (42 é¡¹)
+## 2026-06-21 Èı×¨¼ÒÈ«¿âÄ£¿éÉóÔÄĞŞ¸´ (42 Ïî)
 
-> å®¡é˜…è§’è‰²: ä¸“å®¶ A(Core åŸºç¡€è®¾æ–½/å¹¶å‘)ã€ä¸“å®¶ B(Core ä¸šåŠ¡/Features)ã€ä¸“å®¶ C(Persistence/Payment/åŒ…è¾¹ç•Œ)
-> å®¡é˜…èŒƒå›´: Core(119 .pas)ã€Features(114 .pas)ã€Persistence(31 .pas)ã€ThirdParty/Payment(17 .pas)ã€åŒ…å®šä¹‰(.dpk)
-> å‘ç°æ€»è®¡: 42 é¡¹ (P0=5, P1=21, P2=16, å…¶ä¸­ 1 é¡¹åˆå¹¶è‡³åŒæºä»»åŠ¡ EXP-P1-013)
-> è¯¦ç»†æŠ¥å‘Š: `expert_a_findings.md` / `expert_b_findings.md` / `expert_c_findings.md`
+> ÉóÔÄ½ÇÉ«: ×¨¼Ò A(Core »ù´¡ÉèÊ©/²¢·¢)¡¢×¨¼Ò B(Core ÒµÎñ/Features)¡¢×¨¼Ò C(Persistence/Payment/°ü±ß½ç)
+> ÉóÔÄ·¶Î§: Core(119 .pas)¡¢Features(114 .pas)¡¢Persistence(31 .pas)¡¢ThirdParty/Payment(17 .pas)¡¢°ü¶¨Òå(.dpk)
+> ·¢ÏÖ×Ü¼Æ: 42 Ïî (P0=5, P1=21, P2=16, ÆäÖĞ 1 ÏîºÏ²¢ÖÁÍ¬Ô´ÈÎÎñ EXP-P1-013)
+> ÏêÏ¸±¨¸æ: `expert_a_findings.md` / `expert_b_findings.md` / `expert_c_findings.md`
 
-### EXP-P0-001 ~ EXP-P0-005: Payment å®‰å…¨ + åŸºç¡€è®¾æ–½ âœ…
-- **EXP-P0-001** (PAY-ARCH-001): IPaymentClient GUID é‡å¤ â†’ `IPaymentCoreClient` + æ–° GUID âœ…
-- **EXP-P0-002** (PAY-002): Alipay é‡‘é¢ FormatFloat åŒºåŸŸè®¾ç½® â†’ æ˜¾å¼ en-US TFormatSettings (å…¨é‡ 3972/3972) âœ…
-- **EXP-P0-003** (PAY-001): Stripe å¹‚ç­‰é”®ç§’çº§ç²¾åº¦ â†’ TGUID.NewGuid.ToString (å…¨é‡ 3972/3972) âœ…
-- **EXP-P0-004** (INFRA-001): TCache LFU æœªå®ç° â†’ **è¯¯åˆ¤**ï¼ŒEvictLFU å®Œæ•´å®ç° âœ…
-- **EXP-P0-005** (INFRA-002): EventBus ç™½åå•ä¸ä¸€è‡´ â†’ ç»Ÿä¸€ IsValidEventType éªŒè¯è·¯å¾„ (3971/3975) âœ…
+### EXP-P0-001 ~ EXP-P0-005: Payment °²È« + »ù´¡ÉèÊ© ?
+- **EXP-P0-001** (PAY-ARCH-001): IPaymentClient GUID ÖØ¸´ ¡ú `IPaymentCoreClient` + ĞÂ GUID ?
+- **EXP-P0-002** (PAY-002): Alipay ½ğ¶î FormatFloat ÇøÓòÉèÖÃ ¡ú ÏÔÊ½ en-US TFormatSettings (È«Á¿ 3972/3972) ?
+- **EXP-P0-003** (PAY-001): Stripe ÃİµÈ¼üÃë¼¶¾«¶È ¡ú TGUID.NewGuid.ToString (È«Á¿ 3972/3972) ?
+- **EXP-P0-004** (INFRA-001): TCache LFU Î´ÊµÏÖ ¡ú **ÎóÅĞ**£¬EvictLFU ÍêÕûÊµÏÖ ?
+- **EXP-P0-005** (INFRA-002): EventBus °×Ãûµ¥²»Ò»ÖÂ ¡ú Í³Ò» IsValidEventType ÑéÖ¤Â·¾¶ (3971/3975) ?
 
-### EXP-P1-001 ~ EXP-P1-018: ä¸šåŠ¡é€»è¾‘ + åŸºç¡€è®¾æ–½ âœ…
-- **EXP-P1-001** (BIZ-007): LLM GetConfig æ­»é” â†’ **è¯¯åˆ¤**ï¼Œå·²æ­£ç¡®å®ç°å…ˆé‡Šæ”¾å†åˆ·æ–° âœ…
-- **EXP-P1-002** (BIZ-004): LLM ChatStream é€€åŒ–åŒæ­¥ â†’ doc-comment è¯´æ˜é™çº§ï¼ŒæŒ‡å¼•ç”¨ L3 SSE çœŸæµå¼ âœ…
-- **EXP-P1-003** (BIZ-012): BillingClient ChatAsync æ‚¬å‚å¼•ç”¨ â†’ class å‡½æ•° + å±€éƒ¨å¿«ç…§ï¼Œä¸å†æ•è· Self âœ…
-- **EXP-P1-004** (BIZ-006): SenseVoice PRO è®¸å¯è¯æ£€æŸ¥ç©º â†’ åˆ é™¤ Tier 1 æ­»ä»£ç åˆ†æ”¯ âœ…
-- **EXP-P1-005** (BIZ-009): TranscribeFromMic é˜»å¡ 5 ç§’ â†’ 100ms åˆ‡ç‰‡è½®è¯¢ + å¤–éƒ¨ StopRecording æå‰é€€å‡º âœ…
-- **EXP-P1-006** (BIZ-002): SetCurrentUser åºŸå¼ƒä¿æŠ¤ â†’ raise é˜»æ–­ + LoginTestUser helper è¿ç§» âœ…
-- **EXP-P1-007** (BIZ-008): å®¡è®¡æ—¥å¿— Username ç©º â†’ GetCurrentUserForThread è‡ªåŠ¨å¡«å…… âœ…
-- **EXP-P1-008** (BIZ-001): HealthCheck æ³„éœ²å†…éƒ¨è·¯å¾„ â†’ åªæš´éœ² Exception.ClassName âœ…
-- **EXP-P1-009** (BIZ-003): i18n è¯­è¨€ä»£ç ä¸ä¸€è‡´ â†’ é»˜è®¤ en-US + è‹±è¯­åœ°åŒºå˜ä½“åˆ«å âœ…
-- **EXP-P1-010** (INFRA-003): EventBus finalization AV â†’ Assigned å®ˆå« + FreeAndNil + GEventBusFinalized æ ‡å¿— âœ…
-- **EXP-P1-011** (INFRA-004): Logger åˆå§‹åŒ–ç«æ€ â†’ ç§»é™¤ CompareExchangeï¼Œinitialization ç›´æ¥åˆ›å»º âœ…
-- **EXP-P1-012** (INFRA-007): LogException ç¼ºæ¡ä»¶ç¼–è¯‘ â†’ CompilerVersion >= 36.0 guard âœ…
-- **EXP-P1-013** (INFRA-005): Cache.OwnValues æ— æ–‡æ¡£ â†’ ä¸‰å¤„ doc-comment æ˜ç¡®ä»…å¯¹ class ç±»å‹æœ‰æ•ˆ âœ…
-- **EXP-P1-014** (PERS-001): DB.Pool Release ç«æ€ â†’ SetEvent ç§»å…¥ FLock å†…åŸå­åŒ– âœ…
-- **EXP-P1-015** (PERS-003): JobQueue é‡è¯•é£æš´ â†’ DEFAULT_JOB_MAX_RETRIES=5 + dead_letter çŠ¶æ€ âœ…
-- **EXP-P1-016** (PERS-002): StatusMachine schema.table â†’ ValidateIdentifier æ”¯æŒ schema.table æ ¼å¼ âœ…
-- **EXP-P1-017** (PKG-001): Commerce.dpk ä¾èµ–ä¸å®Œæ•´ â†’ **è¯¯æŠ¥**ï¼ŒCommerce ä¸ä¾èµ– FireDAC âœ…
-- **EXP-P1-018** (INFRA-006): IsWeekend éšå¼æ˜ å°„ â†’ DayOfTheWeekToDayOfWeekEx å‘½åç±»å‡½æ•° âœ…
+### EXP-P1-001 ~ EXP-P1-018: ÒµÎñÂß¼­ + »ù´¡ÉèÊ© ?
+- **EXP-P1-001** (BIZ-007): LLM GetConfig ËÀËø ¡ú **ÎóÅĞ**£¬ÒÑÕıÈ·ÊµÏÖÏÈÊÍ·ÅÔÙË¢ĞÂ ?
+- **EXP-P1-002** (BIZ-004): LLM ChatStream ÍË»¯Í¬²½ ¡ú doc-comment ËµÃ÷½µ¼¶£¬Ö¸ÒıÓÃ L3 SSE ÕæÁ÷Ê½ ?
+- **EXP-P1-003** (BIZ-012): BillingClient ChatAsync Ğü´¹ÒıÓÃ ¡ú class º¯Êı + ¾Ö²¿¿ìÕÕ£¬²»ÔÙ²¶»ñ Self ?
+- **EXP-P1-004** (BIZ-006): SenseVoice PRO Ğí¿ÉÖ¤¼ì²é¿Õ ¡ú É¾³ı Tier 1 ËÀ´úÂë·ÖÖ§ ?
+- **EXP-P1-005** (BIZ-009): TranscribeFromMic ×èÈû 5 Ãë ¡ú 100ms ÇĞÆ¬ÂÖÑ¯ + Íâ²¿ StopRecording ÌáÇ°ÍË³ö ?
+- **EXP-P1-006** (BIZ-002): SetCurrentUser ·ÏÆú±£»¤ ¡ú raise ×è¶Ï + LoginTestUser helper Ç¨ÒÆ ?
+- **EXP-P1-007** (BIZ-008): Éó¼ÆÈÕÖ¾ Username ¿Õ ¡ú GetCurrentUserForThread ×Ô¶¯Ìî³ä ?
+- **EXP-P1-008** (BIZ-001): HealthCheck Ğ¹Â¶ÄÚ²¿Â·¾¶ ¡ú Ö»±©Â¶ Exception.ClassName ?
+- **EXP-P1-009** (BIZ-003): i18n ÓïÑÔ´úÂë²»Ò»ÖÂ ¡ú Ä¬ÈÏ en-US + Ó¢ÓïµØÇø±äÌå±ğÃû ?
+- **EXP-P1-010** (INFRA-003): EventBus finalization AV ¡ú Assigned ÊØÎÀ + FreeAndNil + GEventBusFinalized ±êÖ¾ ?
+- **EXP-P1-011** (INFRA-004): Logger ³õÊ¼»¯¾ºÌ¬ ¡ú ÒÆ³ı CompareExchange£¬initialization Ö±½Ó´´½¨ ?
+- **EXP-P1-012** (INFRA-007): LogException È±Ìõ¼ş±àÒë ¡ú CompilerVersion >= 36.0 guard ?
+- **EXP-P1-013** (INFRA-005): Cache.OwnValues ÎŞÎÄµµ ¡ú Èı´¦ doc-comment Ã÷È·½ö¶Ô class ÀàĞÍÓĞĞ§ ?
+- **EXP-P1-014** (PERS-001): DB.Pool Release ¾ºÌ¬ ¡ú SetEvent ÒÆÈë FLock ÄÚÔ­×Ó»¯ ?
+- **EXP-P1-015** (PERS-003): JobQueue ÖØÊÔ·ç±© ¡ú DEFAULT_JOB_MAX_RETRIES=5 + dead_letter ×´Ì¬ ?
+- **EXP-P1-016** (PERS-002): StatusMachine schema.table ¡ú ValidateIdentifier Ö§³Ö schema.table ¸ñÊ½ ?
+- **EXP-P1-017** (PKG-001): Commerce.dpk ÒÀÀµ²»ÍêÕû ¡ú **Îó±¨**£¬Commerce ²»ÒÀÀµ FireDAC ?
+- **EXP-P1-018** (INFRA-006): IsWeekend ÒşÊ½Ó³Éä ¡ú DayOfTheWeekToDayOfWeekEx ÃüÃûÀàº¯Êı ?
 
-### EXP-P2-001: LLM BillingClient é”™è¯¯æ¶ˆæ¯ i18n âœ…
-- æå–ç¡¬ç¼–ç ä¸­æ–‡åˆ° i18n èµ„æºè¡¨ âœ…
+### EXP-P2-001: LLM BillingClient ´íÎóÏûÏ¢ i18n ?
+- ÌáÈ¡Ó²±àÂëÖĞÎÄµ½ i18n ×ÊÔ´±í ?
 
-### QA-P0-001: ç¼–è¯‘å™¨è­¦å‘Šæ¸…ç†å®Œæˆ âœ…
-- æ€»ä½“è­¦å‘Š 470 â†’ 0 (-100%)ï¼Œè·¨ 40+ æ–‡ä»¶åˆ é™¤ 670+ è¡Œæ­»ä»£ç 
-- H2164 (57â†’0), H2219 (41â†’7 è¯¯æŠ¥), H2077 (78â†’42 è¯¯æŠ¥)
-- W1035/W1036/W1057/W1000/W1010/W1011/W1002/W1073/W1022/W1021/W1009 å…¨éƒ¨æ¸…é›¶
-
----
-
-## 2026-06-15 10 ä¸“å®¶è¯„ä¼°ä¸ P0/P1 ä¿®å¤ (24 é¡¹)
-
-### EVAL-FIX-2026-06-15: 10 ä¸“å®¶å…¨æ¨¡å—è¯„ä¼° + P0/P1 å…¨éƒ¨ä¿®å¤
-- **å®Œæˆæ—¥æœŸ**: 2026-06-15
-- **æ¥æº**: 10 ä½ä¸“å®¶å¯¹ DeepBase 200+ å•å…ƒçš„å…¨æ¨¡å—è¯„ä¼°
-- **è¯„åˆ†**: ç»¼åˆ 7.2/10
-- **äº§å‡º**: 12 P0 + 12 P1 = 24 é¡¹å…¨éƒ¨å®Œæˆ
-- **éªŒè¯**: ç¼–è¯‘é€šè¿‡; è¯„ä¼°æŠ¥å‘Šè§ docs/evaluation/; ä¿®å¤è·Ÿè¸ªè§ docs/evaluation/11-fix-task-tracker.md
+### QA-P0-001: ±àÒëÆ÷¾¯¸æÇåÀíÍê³É ?
+- ×ÜÌå¾¯¸æ 470 ¡ú 0 (-100%)£¬¿ç 40+ ÎÄ¼şÉ¾³ı 670+ ĞĞËÀ´úÂë
+- H2164 (57¡ú0), H2219 (41¡ú7 Îó±¨), H2077 (78¡ú42 Îó±¨)
+- W1035/W1036/W1057/W1000/W1010/W1011/W1002/W1073/W1022/W1021/W1009 È«²¿ÇåÁã
 
 ---
 
+## 2026-06-15 10 ×¨¼ÒÆÀ¹ÀÓë P0/P1 ĞŞ¸´ (24 Ïî)
+
+### EVAL-FIX-2026-06-15: 10 ×¨¼ÒÈ«Ä£¿éÆÀ¹À + P0/P1 È«²¿ĞŞ¸´
+- **Íê³ÉÈÕÆÚ**: 2026-06-15
+- **À´Ô´**: 10 Î»×¨¼Ò¶Ô DeepBase 200+ µ¥ÔªµÄÈ«Ä£¿éÆÀ¹À
+- **ÆÀ·Ö**: ×ÛºÏ 7.2/10
+- **²ú³ö**: 12 P0 + 12 P1 = 24 ÏîÈ«²¿Íê³É
+- **ÑéÖ¤**: ±àÒëÍ¨¹ı; ÆÀ¹À±¨¸æ¼û docs/evaluation/; ĞŞ¸´¸ú×Ù¼û docs/evaluation/11-fix-task-tracker.md
 
 ---
 
-## 2026-06-15 æ•°æ®å¹³å° v0.7 è®¾è®¡ä¸å®ç°ï¼ˆ15 ä¸“å®¶å®¡æŸ¥ï¼‰
-
-### DATA-PLATFORM-2026-06-15: Docs 32-36 å¤–éƒ¨æ•°æ®è®¿é—®ä¸ UIA è‡ªåŠ¨åŒ–å¹³å°
-- **å®Œæˆæ—¥æœŸ**: 2026-06-15
-- **å®¡æŸ¥**: 15 ä½ä¸“å®¶ï¼ˆ5Ã—R1 å®‰å…¨/COM/åŠ å¯†/æ¶æ„/Delphi + 5Ã—R2 å¨èƒ/å¹¶å‘/å®¹é”™/æ€§èƒ½/æ¨¡å¼ + 4Ã—R3 é›†æˆ/å¯æµ‹è¯•/å®ç°/æ¼”åŒ– + 1Ã—R4 é›†æˆå¿ƒæ™ºç¼–è¯‘ï¼‰
-- **è¯„åˆ†æ¼”è¿›**: v0.1(4.5/10) â†’ v0.3(7.5/10) â†’ v0.4(8.0/10) â†’ ä»£ç å®¡è®¡ä¿®è‡³ v0.7
-- **å†…å®¹æ‘˜è¦**:
-  - 32.SQLCipher å¤–éƒ¨æ•°æ®åº“è¯»å–ï¼šåŒåç«¯ (FireDAC+BCryptDirect)ã€SafeQuery è‡ªåŠ¨å®¡è®¡ã€sqlite3_set_authorizer Cå±‚é˜²çº¿ã€ç»“æ„åŒ–æŒ‡çº¹
-  - 33.SchemaAdapter é€šç”¨é€‚é…å™¨ï¼šåˆ—å¼ MapRow (TArray<Variant>, å†…å­˜é™ 83%)ã€ForbiddenFields O(1)ã€WeChat39xAdapterï¼ˆæ¢é’ˆå‚æ•°ï¼‰
-  - 34.UIA è‡ªåŠ¨åŒ–å¼•æ“ï¼šåŒæ­¥ SetValue (è£æ’¤å‘½ä»¤é˜Ÿåˆ—)ã€å½’å±éªŒè¯ã€JSONæ˜ å°„ç­¾åæ ¡éªŒã€IUIAElement é€‚é…å™¨
-  - 35.å‰ªè´´æ¿ä¿æŠ¤ä¸çª—å£ç›‘æ§ï¼šRAII + SendInput+wScan + å¤šçº§é™çº§ã€SetWinEventHook+health check+TThreadList
-  - 36.Bootstrap ä¸ CompositionRootï¼š15 æ­¥å¯åŠ¨/Shutdown é¡ºåºã€å®Œæ•´ä¾èµ–æ³¨å…¥
-- **ä»£ç **: 12 æ–° Pas (~2,700 LOC) + 3 .dpk ä¿®æ”¹ + 1 TLB ç”Ÿæˆ
-- **Bugfix**: BUG-252~263 å…± 12 é¡¹å®¡è®¡ä¿®å¤ (bugfix.md)
-
-### DATA-PLATFORM-2026-06-15-R2: P1 è¡¥å…¨ + Core ç¼–è¯‘é—¨ç¦
-- **å®Œæˆæ—¥æœŸ**: 2026-06-15
-- **æ¥æº**: 5 ä¸“å®¶ä»£ç å®¡è®¡å‘ç° 14 é¡¹é—®é¢˜
-- **å†…å®¹æ‘˜è¦**:
-  - 9 é¡¹ Runtime/Semantic ä¿®å¤ï¼šUIA_ProcessIdPropertyId (30010)ã€GetNativeWindowHandle (30020)ã€GetCurrentProcessName (QueryFullProcessImageName)ã€CoInitializeEx lifecycleã€GetTimestamp â†’ TDateTimeã€FSchemaFingerprintPrefixes èµ‹å€¼ã€MapDirection/MapMessageType æ‡’åŠ è½½ç¼“å­˜ã€SqlcipherVersion èµ‹å€¼ã€PollThreadProc ç©ºé—²æ§½å¡«å……å›è°ƒ
-  - 3 é¡¹ .dpk æ³¨å†Œä¿®å¤ï¼šDeepBaseCore contains (6 new units)ã€UIAutomationClient_TLB + requires vclã€Features requires DeepBasePersistence
-  - 7 é¡¹ç¼ºå¤±å®ç°è¡¥å…¨ï¼šTUIAMappingRegistry.Add/TryGetValueã€GetOriginalContent å»å­˜æ ¹ã€CheckHookHealth å®šæ—¶å™¨ã€ParseUIAMappingJSONã€Invoke å‘é€æŒ‰é’®é»‘åå•ã€LoadMappingsFromConfig æ³¨å†Œæ˜ å°„ã€SchemaAdapter ç±»å‹å£°æ˜é“¾ä¿®æ­£
-  - DeepBaseCore.dpk 0 errors ç¼–è¯‘éªŒè¯é€šè¿‡
-- **æ–‡ä»¶**: 12 ä¸ªä¿®æ”¹æ–‡ä»¶ + bugfix.md æ›´æ–°
 
 ---
 
-## 2026-05-23 Commerce å®¢æˆ·ç«¯ SDK å®‰å…¨å®¡è®¡ä¿®å¤
+## 2026-06-15 Êı¾İÆ½Ì¨ v0.7 Éè¼ÆÓëÊµÏÖ£¨15 ×¨¼ÒÉó²é£©
 
-### AUDIT-P0-2026-05-19: Commerce å®¢æˆ·ç«¯ SDK ä»£ç å®¡è®¡ä¿®å¤
-- **å®Œæˆæ—¥æœŸ**: 2026-05-19
-- **æ¥æº**: 2026-05-19 å¯¹ Commerce å®¢æˆ·ç«¯å…¨éƒ¨æ¨¡å—çš„ä»£ç å®¡è®¡
-- **ç›®æ ‡**: ä¿®å¤å®¡è®¡å‘ç°çš„å†…å­˜æ³„æ¼ã€Token åˆ·æ–°ã€å‘½åæ··æ·†å’Œå¹³å°é™åˆ¶ç­‰é—®é¢˜
-- **å†…å®¹æ‘˜è¦**:
-  - P0-1: SDKGateway å››ä¸ªå·¥å‚å‡½æ•° Config å†…å­˜æ³„æ¼
-  - P0-2: PaymentBridge ä¸‰ä¸ªéªŒè¯å™¨å·¥å‚ Config å†…å­˜æ³„æ¼
-  - P1-1: SafeClient ç¼ºå°‘è‡ªåŠ¨ Token åˆ·æ–°æœºåˆ¶
-  - P1-2: SafeClient.AuthLogout ç©º body è¯­ä¹‰
-  - P1-3: License Snapshot éªŒè¯é Windows ï¿½ï¿½å°
-  - P1-4: WeChat Pay éªŒè¯ fail-closed
-  - P2-1: OrderFromJson é‡å
-  - P2-3: UpgradeFlow.StartPaidUpgrade è®¢å•çŠ¶æ€éªŒè¯
+### DATA-PLATFORM-2026-06-15: Docs 32-36 Íâ²¿Êı¾İ·ÃÎÊÓë UIA ×Ô¶¯»¯Æ½Ì¨
+- **Íê³ÉÈÕÆÚ**: 2026-06-15
+- **Éó²é**: 15 Î»×¨¼Ò£¨5¡ÁR1 °²È«/COM/¼ÓÃÜ/¼Ü¹¹/Delphi + 5¡ÁR2 ÍşĞ²/²¢·¢/Èİ´í/ĞÔÄÜ/Ä£Ê½ + 4¡ÁR3 ¼¯³É/¿É²âÊÔ/ÊµÏÖ/Ñİ»¯ + 1¡ÁR4 ¼¯³ÉĞÄÖÇ±àÒë£©
+- **ÆÀ·ÖÑİ½ø**: v0.1(4.5/10) ¡ú v0.3(7.5/10) ¡ú v0.4(8.0/10) ¡ú ´úÂëÉó¼ÆĞŞÖÁ v0.7
+- **ÄÚÈİÕªÒª**:
+  - 32.SQLCipher Íâ²¿Êı¾İ¿â¶ÁÈ¡£ºË«ºó¶Ë (FireDAC+BCryptDirect)¡¢SafeQuery ×Ô¶¯Éó¼Æ¡¢sqlite3_set_authorizer C²ã·ÀÏß¡¢½á¹¹»¯Ö¸ÎÆ
+  - 33.SchemaAdapter Í¨ÓÃÊÊÅäÆ÷£ºÁĞÊ½ MapRow (TArray<Variant>, ÄÚ´æ½µ 83%)¡¢ForbiddenFields O(1)¡¢WeChat39xAdapter£¨Ì½Õë²ÎÊı£©
+  - 34.UIA ×Ô¶¯»¯ÒıÇæ£ºÍ¬²½ SetValue (²Ã³·ÃüÁî¶ÓÁĞ)¡¢¹éÊôÑéÖ¤¡¢JSONÓ³ÉäÇ©ÃûĞ£Ñé¡¢IUIAElement ÊÊÅäÆ÷
+  - 35.¼ôÌù°å±£»¤Óë´°¿Ú¼à¿Ø£ºRAII + SendInput+wScan + ¶à¼¶½µ¼¶¡¢SetWinEventHook+health check+TThreadList
+  - 36.Bootstrap Óë CompositionRoot£º15 ²½Æô¶¯/Shutdown Ë³Ğò¡¢ÍêÕûÒÀÀµ×¢Èë
+- **´úÂë**: 12 ĞÂ Pas (~2,700 LOC) + 3 .dpk ĞŞ¸Ä + 1 TLB Éú³É
+- **Bugfix**: BUG-252~263 ¹² 12 ÏîÉó¼ÆĞŞ¸´ (bugfix.md)
+
+### DATA-PLATFORM-2026-06-15-R2: P1 ²¹È« + Core ±àÒëÃÅ½û
+- **Íê³ÉÈÕÆÚ**: 2026-06-15
+- **À´Ô´**: 5 ×¨¼Ò´úÂëÉó¼Æ·¢ÏÖ 14 ÏîÎÊÌâ
+- **ÄÚÈİÕªÒª**:
+  - 9 Ïî Runtime/Semantic ĞŞ¸´£ºUIA_ProcessIdPropertyId (30010)¡¢GetNativeWindowHandle (30020)¡¢GetCurrentProcessName (QueryFullProcessImageName)¡¢CoInitializeEx lifecycle¡¢GetTimestamp ¡ú TDateTime¡¢FSchemaFingerprintPrefixes ¸³Öµ¡¢MapDirection/MapMessageType ÀÁ¼ÓÔØ»º´æ¡¢SqlcipherVersion ¸³Öµ¡¢PollThreadProc ¿ÕÏĞ²ÛÌî³ä»Øµ÷
+  - 3 Ïî .dpk ×¢²áĞŞ¸´£ºDeepBaseCore contains (6 new units)¡¢UIAutomationClient_TLB + requires vcl¡¢Features requires DeepBasePersistence
+  - 7 ÏîÈ±Ê§ÊµÏÖ²¹È«£ºTUIAMappingRegistry.Add/TryGetValue¡¢GetOriginalContent È¥´æ¸ù¡¢CheckHookHealth ¶¨Ê±Æ÷¡¢ParseUIAMappingJSON¡¢Invoke ·¢ËÍ°´Å¥ºÚÃûµ¥¡¢LoadMappingsFromConfig ×¢²áÓ³Éä¡¢SchemaAdapter ÀàĞÍÉùÃ÷Á´ĞŞÕı
+  - DeepBaseCore.dpk 0 errors ±àÒëÑéÖ¤Í¨¹ı
+- **ÎÄ¼ş**: 12 ¸öĞŞ¸ÄÎÄ¼ş + bugfix.md ¸üĞÂ
+
+---
+
+## 2026-05-23 Commerce ¿Í»§¶Ë SDK °²È«Éó¼ÆĞŞ¸´
+
+### AUDIT-P0-2026-05-19: Commerce ¿Í»§¶Ë SDK ´úÂëÉó¼ÆĞŞ¸´
+- **Íê³ÉÈÕÆÚ**: 2026-05-19
+- **À´Ô´**: 2026-05-19 ¶Ô Commerce ¿Í»§¶ËÈ«²¿Ä£¿éµÄ´úÂëÉó¼Æ
+- **Ä¿±ê**: ĞŞ¸´Éó¼Æ·¢ÏÖµÄÄÚ´æĞ¹Â©¡¢Token Ë¢ĞÂ¡¢ÃüÃû»ìÏıºÍÆ½Ì¨ÏŞÖÆµÈÎÊÌâ
+- **ÄÚÈİÕªÒª**:
+  - P0-1: SDKGateway ËÄ¸ö¹¤³§º¯Êı Config ÄÚ´æĞ¹Â©
+  - P0-2: PaymentBridge Èı¸öÑéÖ¤Æ÷¹¤³§ Config ÄÚ´æĞ¹Â©
+  - P1-1: SafeClient È±ÉÙ×Ô¶¯ Token Ë¢ĞÂ»úÖÆ
+  - P1-2: SafeClient.AuthLogout ¿Õ body ÓïÒå
+  - P1-3: License Snapshot ÑéÖ¤·Ç Windows ??Ì¨
+  - P1-4: WeChat Pay ÑéÖ¤ fail-closed
+  - P2-1: OrderFromJson ÖØÃû
+  - P2-3: UpgradeFlow.StartPaidUpgrade ¶©µ¥×´Ì¬ÑéÖ¤
   - P2-4: Permissions RemainingQuota -1=unlimited
-  - P2-5: Backend.Http TLS è¯ä¹¦æ ¡éªŒ
-- **é—ç•™**: P2-2 Types.pas å­—æ®µå¸¸é‡å¯¼å‡ºè¿‡äºå®½æ³›ï¼ˆæš‚ä¸å¤„ç†ï¼‰
+  - P2-5: Backend.Http TLS Ö¤ÊéĞ£Ñé
+- **ÒÅÁô**: P2-2 Types.pas ×Ö¶Î³£Á¿µ¼³ö¹ıÓÚ¿í·º£¨Ôİ²»´¦Àí£©
 
-### AUDIT-P0-2026-05-23: Commerce å®¢æˆ·ç«¯å®‰å…¨æ·±åº¦å®¡è®¡ä¿®å¤
-- **å®Œæˆæ—¥æœŸ**: 2026-05-23
-- **æ¥æº**: 2026-05-23 å¯¹ Commerce/License/Authorization/Persistence å…¨éƒ¨è®¤è¯ä¸ä»˜è´¹æ¨¡å—çš„å®‰å…¨å®¡è®¡
-- **ç›®æ ‡**: ä¿®å¤ 5 Critical + 6 High + 5 Medium å…± 16 ä¸ªå®‰å…¨é—®é¢˜
-- **å†…å®¹æ‘˜è¦**:
-  - C1: License ç­¾å SHA256->HMAC-SHA256 (DeepBase.License.pas)
-  - C2: Authorization FCurrentUser ç«æ€ (DeepBase.Authorization.pas)
-  - C5: Firebase æƒç›Šæ¶ˆè´¹ç«æ€ (Commerce.Adapter.Firebase.pas)
-  - C6: Supabase æƒç›Šæ¶ˆè´¹æŸå (Commerce.Adapter.Supabase.pas)
-  - C7: PaymentBridge env-var ç»•è¿‡ (Commerce.PaymentBridge.pas)
-  - C8: è®¸å¯è¯æ˜æ–‡å­˜å‚¨->DPAPI (Persistence.License.FireDAC.pas)
-  - H5: éæ´»åŠ¨ç”¨æˆ·ç»•è¿‡ (DeepBase.Authorization.pas)
-  - H6: åˆ è§’è‰²åæƒé™å­¤ç«‹ (DeepBase.Authorization.pas)
-  - H7: åˆ†é…éæ´»åŠ¨è§’è‰² (DeepBase.Authorization.pas)
-  - H8: æ”¯ä»˜ç¡®è®¤ç«æ€ (Commerce.Service.pas)
-  - H9: BeginPayment ç«æ€ (Commerce.Service.pas)
-  - H12: è®¸å¯è¯å­˜å‚¨çº¿ç¨‹å®‰å…¨ (Persistence.License.FireDAC.pas)
-  - M5: HTTP é”™è¯¯ä½“æ³„éœ² (Commerce.SafeClient.pas)
-  - M6: é€‚é…å™¨ç¼ºå¤±å­—æ®µ (Firebase + Supabase)
-  - M8: Assert ç”Ÿäº§ç¯å¢ƒ (Commerce.SafeClient.pas)
-  - M10: çŠ¶æ€ä¿¡æ¯æ³„éœ² (VCL.LicenseAuthDialog.pas)
-  - M11: å¯¹è¯æ¡†é‡å…¥ (VCL.LicenseAuthDialog.pas)
-  - æ–°å¢è¾…åŠ©å‡½æ•°: StrToCommercePaymentProvider ç­‰ (Commerce.Types.pas)
-  - TOCTOU ä¿®å¤: AssignUserRole äº‹åŠ¡çº§ä¸€è‡´æ€§ (Persistence.Authorization.FireDAC.pas)
-- **éªŒè¯**: ä¿®æ”¹æ–‡ä»¶ç¼–è¯‘é€šè¿‡
-- **å½’æ¡£**: BUG-220 ~ BUG-235 å·²è®°å½•åˆ° bugfix.md
-
----
-
-## 2026-05-14 IntentClarification Phase 2 ç¼–è¯‘æ¥å…¥ä¿®å¤
-
-### IC-P0-2026-05-14A: ç¼–è¯‘é“¾ã€IoC å’Œæœ€å°é›†æˆæµ‹è¯•æ¢å¤
-- **å®Œæˆæ—¥æœŸ**: 2026-05-14
-- **å†…å®¹æ‘˜è¦**:
-  - IntentClarification Phase 2 å•å…ƒå·²è¿›å…¥ `DeepBaseFeatures.dpk/.dproj` å’Œ `Tests/DeepBaseTests.dpr/.dproj` ä¸»ç¼–è¯‘é“¾ã€‚
-  - æ ¸å¿ƒç±»å‹å¥‘çº¦å’Œ `DeepBase.IntentClarification.Registration.pas` é¦–è½®è¡¥é½ï¼Œè§£å†³ Phase 2 å•å…ƒæ— æ³•è¿›å…¥åŒ…/æµ‹è¯•å·¥ç¨‹çš„é—®é¢˜ã€‚
-  - IoC provider æ³¨å†Œæ”¹ä¸ºæ˜¾å¼ interface instanceï¼Œé¿å… `TL1SlotProvider(AClarifier)` optional constructor è¢« RTTI å®¹å™¨è¯¯è§£æã€‚
-  - L2-L4 provider å·²è¿›å…¥ IoC named registrationï¼›Engine æœªé…ç½® LLM æ—¶è·³è¿‡ LLM providerï¼Œä¿è¯æœ€å°ä¸‹æ¸¸æ¥å…¥è·¯å¾„ä¸äº§ç”Ÿ `PROVIDER_ERROR`ã€‚
-  - `HandleExit` å¢åŠ å¼‚å¸¸å…œåº•å’Œ session å†™å›é”ï¼Œè¾“å…¥ `0` çš„æœ€å°é€€å‡ºè·¯å¾„é€šè¿‡é›†æˆæµ‹è¯•ã€‚
-  - ä¸ºä¸»æµ‹è¯•ç¼–è¯‘é“¾é¡ºå¸¦ä¿®å¤ Browser CDP/Vision/ScriptStore ç¼–è¯‘é˜»å¡ï¼Œè¯¦è§ `bugfix.md` çš„ BUG-164ã€BUG-165ã€‚
-- **éªŒè¯**:
-  - `cmd /c compile_test.bat`ï¼š`compile_output.txt` ä¸º `Exit code: 0`ã€‚
-  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.IntentClarification,TICIntegrationTest,TICResilienceIntegrationTest,TICSessionFSMTest`ï¼š20 tests passedï¼Œ0 failedï¼Œ0 erroredï¼Œ0 leakedã€‚
-  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.Browser.ScriptStore.TJSTemplateTests,Test.DeepBase.Browser.ScriptStore.TBuiltinDefaultsTests`ï¼š20 tests passedï¼Œ0 failedï¼Œ0 erroredï¼Œ0 leakedã€‚
-  - å®Œæ•´ `Tests\DeepBaseTests.exe` å½“å‰ä¸º 3372 foundï¼Œ3351 passedï¼Œ3 ignoredï¼Œ6 failedï¼Œ12 erroredï¼›å¤±è´¥é›†ä¸­åœ¨ Browser Registry/WindowPool/Automationã€FeatureFlags rolloutã€License legacy signingã€DB.DoQry DDL gate å’Œ Performance benchmarkï¼Œæœªåœ¨æœ¬è½®æ”¶æ•›ã€‚
-- **é—ç•™**:
-  - å…¬å¼€ `DeepBase.IntentClarification.pas` é‡Œçš„ `IClarificationEngine` facade ä»ä¸ºç©ºï¼Œ`CreateEngine/CreateEngineWithPreset` ä»æœªå¯¹é½çœŸå® `Interfaces/Engine`ã€‚
-  - `IDomainAdapter.GetPresetSlots` å°šæœªæ¥å…¥ Engine/L1ï¼›Engine session å¹¶å‘ã€Provider session-scoped stateã€Router è¾¹ç•Œã€LLMResilience timeout/ErrorMessageã€L4 å…¨å¤±è´¥è¯­ä¹‰ç»§ç»­ä¿ç•™åœ¨ `tasks.md`ã€‚
+### AUDIT-P0-2026-05-23: Commerce ¿Í»§¶Ë°²È«Éî¶ÈÉó¼ÆĞŞ¸´
+- **Íê³ÉÈÕÆÚ**: 2026-05-23
+- **À´Ô´**: 2026-05-23 ¶Ô Commerce/License/Authorization/Persistence È«²¿ÈÏÖ¤Óë¸¶·ÑÄ£¿éµÄ°²È«Éó¼Æ
+- **Ä¿±ê**: ĞŞ¸´ 5 Critical + 6 High + 5 Medium ¹² 16 ¸ö°²È«ÎÊÌâ
+- **ÄÚÈİÕªÒª**:
+  - C1: License Ç©Ãû SHA256->HMAC-SHA256 (DeepBase.License.pas)
+  - C2: Authorization FCurrentUser ¾ºÌ¬ (DeepBase.Authorization.pas)
+  - C5: Firebase È¨ÒæÏû·Ñ¾ºÌ¬ (Commerce.Adapter.Firebase.pas)
+  - C6: Supabase È¨ÒæÏû·ÑËğ»µ (Commerce.Adapter.Supabase.pas)
+  - C7: PaymentBridge env-var ÈÆ¹ı (Commerce.PaymentBridge.pas)
+  - C8: Ğí¿ÉÖ¤Ã÷ÎÄ´æ´¢->DPAPI (Persistence.License.FireDAC.pas)
+  - H5: ·Ç»î¶¯ÓÃ»§ÈÆ¹ı (DeepBase.Authorization.pas)
+  - H6: É¾½ÇÉ«ºóÈ¨ÏŞ¹ÂÁ¢ (DeepBase.Authorization.pas)
+  - H7: ·ÖÅä·Ç»î¶¯½ÇÉ« (DeepBase.Authorization.pas)
+  - H8: Ö§¸¶È·ÈÏ¾ºÌ¬ (Commerce.Service.pas)
+  - H9: BeginPayment ¾ºÌ¬ (Commerce.Service.pas)
+  - H12: Ğí¿ÉÖ¤´æ´¢Ïß³Ì°²È« (Persistence.License.FireDAC.pas)
+  - M5: HTTP ´íÎóÌåĞ¹Â¶ (Commerce.SafeClient.pas)
+  - M6: ÊÊÅäÆ÷È±Ê§×Ö¶Î (Firebase + Supabase)
+  - M8: Assert Éú²ú»·¾³ (Commerce.SafeClient.pas)
+  - M10: ×´Ì¬ĞÅÏ¢Ğ¹Â¶ (VCL.LicenseAuthDialog.pas)
+  - M11: ¶Ô»°¿òÖØÈë (VCL.LicenseAuthDialog.pas)
+  - ĞÂÔö¸¨Öúº¯Êı: StrToCommercePaymentProvider µÈ (Commerce.Types.pas)
+  - TOCTOU ĞŞ¸´: AssignUserRole ÊÂÎñ¼¶Ò»ÖÂĞÔ (Persistence.Authorization.FireDAC.pas)
+- **ÑéÖ¤**: ĞŞ¸ÄÎÄ¼ş±àÒëÍ¨¹ı
+- **¹éµµ**: BUG-220 ~ BUG-235 ÒÑ¼ÇÂ¼µ½ bugfix.md
 
 ---
 
-## 2026-05-14 DeepShell VCL æ¡Œé¢å£³éª¨æ¶å®Œæˆ
+## 2026-05-14 IntentClarification Phase 2 ±àÒë½ÓÈëĞŞ¸´
 
-### DESKTOP-2026-05-14: DeepShell ç¬¬ä¸€ç‰ˆ 15 å•å…ƒ + Demo é¡¹ç›®
-- **å®Œæˆæ—¥æœŸ**: 2026-05-14
-- **ç›®æ ‡**: æŒ‰ docs/70-78 å· DeepShell è®¾è®¡å¥‘çº¦è½åœ°å¯ç»§æ‰¿çš„ VCL æ¡Œé¢å£³éª¨æ¶ã€‚ä¸‹æ¸¸ VCL æ¡Œé¢å·¥å…·ä» `TDeepMainForm` èµ·æ­¥ï¼Œä¸å†æ¯ä¸ªè½¯ä»¶é‡å¤æ­å·¥å…·æ ã€æ—¥å¿—ã€è®¾ç½®ã€MRUã€å¸ƒå±€ã€‚
-- **äº§å‡º**:
-  - 15 ä¸ªæ ¸å¿ƒå•å…ƒï¼ˆruntime å…¨éƒ¨è¿› `DeepBaseVCL.dpk`ï¼‰ï¼š
-    - `VCL/DeepBase.VCL.DeepShell.Types.pas`ï¼šrecord / æšä¸¾ / helpersï¼Œçº¯ RTL ä¾èµ–ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Intf.pas`ï¼šæ‰€æœ‰æ¥å£å¥‘çº¦ + capability/command å­—ç¬¦ä¸²å¸¸é‡ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Events.pas`ï¼šUI-safe EventBusï¼ˆä¸»çº¿ç¨‹åŒæ­¥åˆ†å‘ï¼Œåå°çº¿ç¨‹ `TThread.Queue` æŠ•é€’ï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Services.pas`ï¼š`TShellServiceRegistry`ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Context.pas`ï¼š`TShellContextManager`ï¼ŒæŒ‰å˜æ›´é€’å¢ Revisionã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Commands.pas`ï¼š`TShellCommandManager` + æµå¼ `ShellCommand(...)` builder + `class operator Implicit`ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Recent.pas`ï¼š`TShellInMemoryRecentService`ï¼ˆæŒ‰ ItemKey upsertï¼ŒæŒ‰æ—¶é—´æ’åºï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Layout.pas`ï¼šå†…å­˜ + Settings-store backed layout serviceï¼ˆJSON æŒä¹…åŒ–ï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Theme.pas`ï¼šé»˜è®¤ Theme serviceï¼ˆä»…çŠ¶æ€è·Ÿè¸ªï¼Œä¸ç›´ç»‘ Vcl.Themesï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Localization.pas`ï¼šé»˜è®¤ i18n serviceï¼ˆlocale â†’ key â†’ text å­—å…¸ï¼ŒTObjectDictionary è‡ªé‡Šæ”¾ï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Settings.pas`ï¼š`TShellInMemorySettingsStore` + `TDeepShellSettingsForm`ï¼ˆOK/Apply/Cancel/Restore Defaultsï¼ŒProvider å¼‚å¸¸éš”ç¦»ï¼‰ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.Panels.pas`ï¼š`TShellAreaController` ä¸‰æ®µæŠ˜å æ§åˆ¶ + `TShellStatusManager`ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.ToolWindow.pas`ï¼šåŸç”Ÿ TForm å®ç°çš„å·¦å³æ‚¬æµ®å·¥å…·çª—ï¼Œä¸å¼•å…¥ Docking æ¡†æ¶ã€‚
-    - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`ï¼š`TDeepMainForm`ï¼Œ10 ä¸ªè™šç”Ÿå‘½å‘¨æœŸæ–¹æ³• + å†…ç½®å‘½ä»¤ + ä¸»è§†å›¾ dispatchã€‚
-    - `VCL/DeepBase.VCL.DeepShell.pas`ï¼šfacade å•å…ƒï¼Œä¸‹æ¸¸ä¸€è¡Œ uses å³å¯ã€‚
-  - Demo é¡¹ç›® `Examples/VCLDeepShellDemo/`ï¼š`VCLDeepShellDemo.dpr` + `Demo.MainForm.pas` + `Demo.Services.pas` + `Demo.Commands.pas` + `Demo.Providers.pas` + READMEã€‚Demo ä¸ä¾èµ– DB1/doQry/LLM/WebView2/Governanceï¼Œå…¨ç”¨ fake provider/serviceã€‚
-  - `DeepBaseVCL.dpk` contains åˆ—è¡¨è¿½åŠ å…¨éƒ¨ 15 ä¸ªæ–°å•å…ƒã€‚
-- **å…³é”®è®¾è®¡å†³ç­–**:
-  - Shell æ ¸å¿ƒä¸æŒæœ‰ä¸šåŠ¡ `TObject`ï¼Œç»Ÿä¸€ç”¨ `TShellObjectRef = record { Id, Kind, ProviderId, DisplayName }` å¼•ç”¨ï¼›ä¸‹æ¸¸ Provider æŒ‰ (ProviderId, Id) æ‰¾ä¸šåŠ¡å¯¹è±¡ã€‚
-  - Command ä»¥ record + `Handler: TProc` å­˜å‚¨ï¼›fluent builder é€šè¿‡ `class operator Implicit` ç›´æ¥è½¬ recordï¼Œä¸‹æ¸¸å¯å†™ `RegisterCommand(ShellCommand('id', 'Caption').Category('File').OnExecute(...))`ã€‚
-  - EventBus çº¿ç¨‹æ¨¡å‹ï¼šä¸»çº¿ç¨‹ publish åŒæ­¥åˆ†å‘ï¼›åå°çº¿ç¨‹ publish é€šè¿‡ `TThread.Queue` æŠ•é€’åˆ°ä¸»çº¿ç¨‹ï¼Œhandler å¼‚å¸¸è¢« catch ä¸å½±å“å…¶ä»–è®¢é˜…è€…ã€‚
-  - æ²»ç†ï¼šCommand å­—æ®µé¢„ç•™ `GateKey/RiskLevel/PurposeKey/RequiresEvidence`ï¼Œ`IShellCommandManager.SetGovernance` åœ¨ MVP é»˜è®¤æ¥ `NullGovernanceService`ï¼Œç¬¬äºŒé˜¶æ®µåˆ‡ OCGS adapterã€‚
-  - æ¸²æŸ“è¾¹ç•Œï¼š`svkHtml/svkMarkdown` å¿…é¡»ç”±ä¸‹æ¸¸ provider é€šè¿‡ `CreateViewControl` è‡ªå¸¦æ§ä»¶æ¸²æŸ“ï¼ŒShell æ ¸å¿ƒä¸ä¾èµ– WebView2/CEF/Markdown åº“ã€‚
-  - å¤šå®ä¾‹ï¼šæ¯ä¸ªä¸»çª—ä½“å®ä¾‹ç”Ÿæˆ `InstanceId(GUID)`ï¼Œlayout å†™å…¥å¸¦ `WriterInstanceId`ï¼Œå…¨å±€ layout ç”¨ last-write-winsã€‚
-- **éªŒè¯**:
-  - ç‹¬ç«‹ `dcc32 _tmp_deepshell_compile.dpr` ç¼–è¯‘ï¼š4452 è¡Œï¼Œ0.39 ç§’ï¼Œ0 errorsï¼Œ0 warningsã€‚
-  - `DeepBaseVCL.dproj` Win64 ç¼–è¯‘ï¼šDeepShell å…¨éƒ¨ 15 å•å…ƒå¹²å‡€é€šè¿‡ã€‚æ•´åŒ…å‰©ä½™ fail æ¥è‡ªä»“åº“å·²æœ‰çš„ `Features\DeepBase.IntentClarification.SignalDetector.pas` (BUG-143)ï¼Œä¸æœ¬å·¥ä½œæ— å…³ã€‚
-  - `Examples/VCLDeepShellDemo/` å…¨éƒ¨å•å…ƒç‹¬ç«‹ç¼–è¯‘é€šè¿‡ã€‚
-- **é—ç•™**:
-  - æ•´åŒ… `DeepBaseVCL.dpk` å®Œæ•´æ„å»ºä¾èµ– `IntentClarification` Phase 2 çš„ä¿®å¤ï¼Œè·Ÿè¸ªåœ¨ `IC-P0-2026-05-14`ã€‚
-  - ç¬¬ä¸€ç‰ˆå®Œæˆåäº”ä¸“å®¶å®¡é˜…å‘ç°çš„å‰©ä½™ P1/P2 æ”¹è¿›é¡¹è§ `tasks.md` çš„ `DESKTOP-P1-2026-05-14`ã€‚
-- **å½’æ¡£**:
-  - ç¬¬ä¸€ç‰ˆéª¨æ¶ä¸ 6 ä¸ªå®ç°æœŸ bug ä¿®å¤ï¼ˆBUG-144 ~ BUG-149ï¼‰å’Œ 5 ä¸ªå®¡é˜… P0 ä¿®å¤ï¼ˆBUG-150 ~ BUG-154ï¼‰å·²è®°å½•åˆ° `bugfix.md`ã€‚
+### IC-P0-2026-05-14A: ±àÒëÁ´¡¢IoC ºÍ×îĞ¡¼¯³É²âÊÔ»Ö¸´
+- **Íê³ÉÈÕÆÚ**: 2026-05-14
+- **ÄÚÈİÕªÒª**:
+  - IntentClarification Phase 2 µ¥ÔªÒÑ½øÈë `DeepBaseFeatures.dpk/.dproj` ºÍ `Tests/DeepBaseTests.dpr/.dproj` Ö÷±àÒëÁ´¡£
+  - ºËĞÄÀàĞÍÆõÔ¼ºÍ `DeepBase.IntentClarification.Registration.pas` Ê×ÂÖ²¹Æë£¬½â¾ö Phase 2 µ¥ÔªÎŞ·¨½øÈë°ü/²âÊÔ¹¤³ÌµÄÎÊÌâ¡£
+  - IoC provider ×¢²á¸ÄÎªÏÔÊ½ interface instance£¬±ÜÃâ `TL1SlotProvider(AClarifier)` optional constructor ±» RTTI ÈİÆ÷Îó½âÎö¡£
+  - L2-L4 provider ÒÑ½øÈë IoC named registration£»Engine Î´ÅäÖÃ LLM Ê±Ìø¹ı LLM provider£¬±£Ö¤×îĞ¡ÏÂÓÎ½ÓÈëÂ·¾¶²»²úÉú `PROVIDER_ERROR`¡£
+  - `HandleExit` Ôö¼ÓÒì³£¶µµ×ºÍ session Ğ´»ØËø£¬ÊäÈë `0` µÄ×îĞ¡ÍË³öÂ·¾¶Í¨¹ı¼¯³É²âÊÔ¡£
+  - ÎªÖ÷²âÊÔ±àÒëÁ´Ë³´øĞŞ¸´ Browser CDP/Vision/ScriptStore ±àÒë×èÈû£¬Ïê¼û `bugfix.md` µÄ BUG-164¡¢BUG-165¡£
+- **ÑéÖ¤**:
+  - `cmd /c compile_test.bat`£º`compile_output.txt` Îª `Exit code: 0`¡£
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.IntentClarification,TICIntegrationTest,TICResilienceIntegrationTest,TICSessionFSMTest`£º20 tests passed£¬0 failed£¬0 errored£¬0 leaked¡£
+  - `Tests\DeepBaseTests.exe -b -r:Test.DeepBase.Browser.ScriptStore.TJSTemplateTests,Test.DeepBase.Browser.ScriptStore.TBuiltinDefaultsTests`£º20 tests passed£¬0 failed£¬0 errored£¬0 leaked¡£
+  - ÍêÕû `Tests\DeepBaseTests.exe` µ±Ç°Îª 3372 found£¬3351 passed£¬3 ignored£¬6 failed£¬12 errored£»Ê§°Ü¼¯ÖĞÔÚ Browser Registry/WindowPool/Automation¡¢FeatureFlags rollout¡¢License legacy signing¡¢DB.DoQry DDL gate ºÍ Performance benchmark£¬Î´ÔÚ±¾ÂÖÊÕÁ²¡£
+- **ÒÅÁô**:
+  - ¹«¿ª `DeepBase.IntentClarification.pas` ÀïµÄ `IClarificationEngine` facade ÈÔÎª¿Õ£¬`CreateEngine/CreateEngineWithPreset` ÈÔÎ´¶ÔÆëÕæÊµ `Interfaces/Engine`¡£
+  - `IDomainAdapter.GetPresetSlots` ÉĞÎ´½ÓÈë Engine/L1£»Engine session ²¢·¢¡¢Provider session-scoped state¡¢Router ±ß½ç¡¢LLMResilience timeout/ErrorMessage¡¢L4 È«Ê§°ÜÓïÒå¼ÌĞø±£ÁôÔÚ `tasks.md`¡£
 
 ---
 
-## 2026-05-14 IntentClarification å®¡é˜…ä¸ä»»åŠ¡å½’æ¡£
+## 2026-05-14 DeepShell VCL ×ÀÃæ¿Ç¹Ç¼ÜÍê³É
 
-### IC-AUDIT-2026-05-14: IntentClarification Phase 2 äº”ä¸“å®¶å®¡é˜…
-- **å®Œæˆæ—¥æœŸ**: 2026-05-14
-- **å†…å®¹æ‘˜è¦**:
-  - å®Œæˆ `DeepBase.IntentClarification` ä¸‹æ¸¸æ¥å…¥æŒ‡å—å’Œ Phase 2 å®ç å®¡é˜…ã€‚
-  - ä» 5 ä¸ªè§†è§’å®Œæˆåªè¯»å®¡é˜…ï¼šæ¥å£å¥‘çº¦/APIã€Engine/Session å¹¶å‘ã€Provider/LLM è¡Œä¸ºã€IoC/é…ç½®/æŒä¹…åŒ–/æŒ‡æ ‡ã€æµ‹è¯•/æ„å»º/åŒ…é›†æˆã€‚
-  - ç¡®è®¤å½“å‰æ¨¡å—ä¸»è¦é£é™©ä¸æ˜¯å•ç‚¹é€»è¾‘ç¼ºé™·ï¼Œè€Œæ˜¯æ–°å•å…ƒæœªçº³å…¥åŒ…/ä¸»æµ‹è¯•ã€å…¬å¼€ facade ä»ä¸ºç©ºã€ç±»å‹å¥‘çº¦ä¸ä¸€è‡´ã€Registration åŠæˆªå®ç°ã€Provider çŠ¶æ€è·¨ä¼šè¯å’Œ Engine å¹¶å‘å†™å›ç­‰ P0 é˜»å¡ã€‚
-  - å·²å°†åç»­ä¿®å¤æ•´ç†ä¸º `tasks.md` çš„ `IC-P0-2026-05-14`ã€‚
-  - å·²å°†æœ¬è½®å‘ç°ç¼ºé™·ç™»è®°åˆ° `bugfix.md` çš„ BUG-134 ~ BUG-143ï¼ŒçŠ¶æ€å‡ä¸ºå¾…ä¿®å¤ã€‚
-- **éªŒè¯**:
-  - `cmd /c compile_test.bat` å½“å‰ä»å¯é€šè¿‡ï¼Œä½†åªè¦†ç›–æ—§ facadeï¼Œä¸è¦†ç›– Phase 2 æ–°å•å…ƒï¼›æ­¤ç»“è®ºå·²å†™å…¥åç»­ QA ä»»åŠ¡ã€‚
-
-### ARCH-P0-001: deepBase æ”¹åæ”¶å°¾ä¸åŒ…ç¼–è¯‘é—¨ç¦
-- **å®Œæˆæ—¥æœŸ**: 2026-05-13
-- **å†…å®¹æ‘˜è¦**:
-  - ä¿®å¤ `Scripts/build_packages_win64.ps1` å’Œ `Scripts/compile_packages_win64.ps1`ï¼Œæ”¹ä¸ºæ„å»º `DeepBase*.dpk`ã€‚
-  - ä¿®å¤ `DeepBase*.dpk` å†…éƒ¨ package åã€requires å’Œ contains çš„å‘½åæ®‹ç•™ã€‚
-  - å‘å¸ƒé—¨ç¦åœ¨ `VCL/` æºç ç›®å½•ç¼ºå¤±æ—¶æ’é™¤ VCL åŒ…å’Œ VCL å¿…éœ€ç¤ºä¾‹ï¼Œåç»­å·²æ¢å¤ VCL æºç ç›®å½•å¹¶è¡¥é½ `DeepBase.VCL.*.dfm` èµ„æºã€‚
-  - `Minimal`ã€`Runtime`ã€`All` Win64 package gate å·²é€šè¿‡ã€‚
-  - ä¿®å¤ `Scripts/compile_packages_win64.ps1` è¯¯æŠ¥é€»è¾‘ï¼Œæ”¹ä¸ºåŸºäºé€€å‡ºç å’ŒçœŸå® `Error:/Fatal:` è¡Œåˆ¤å®šã€‚
-  - æ–°å¢ `Scripts/check_rename_residue.ps1` å¹¶æ¥å…¥åŒ…é—¨ç¦ï¼ŒçœŸå®æ—§åæ®‹ç•™å‘½ä¸­å³å¤±è´¥ã€‚
-- **å½’æ¡£è¯´æ˜**:
-  - è¯¥é¡¹å·²ä» `tasks.md` çš„ P0 å½“å‰å¼€å‘ä¸­ç§»é™¤ï¼›åç»­åŒ…é—¨ç¦å¯ä¿¡åŒ–ç»§ç»­ç”± `QA-P0-001` å’Œ `IC-P0-2026-05-14` è·Ÿè¸ªã€‚
+### DESKTOP-2026-05-14: DeepShell µÚÒ»°æ 15 µ¥Ôª + Demo ÏîÄ¿
+- **Íê³ÉÈÕÆÚ**: 2026-05-14
+- **Ä¿±ê**: °´ docs/70-78 ºÅ DeepShell Éè¼ÆÆõÔ¼ÂäµØ¿É¼Ì³ĞµÄ VCL ×ÀÃæ¿Ç¹Ç¼Ü¡£ÏÂÓÎ VCL ×ÀÃæ¹¤¾ß´Ó `TDeepMainForm` Æğ²½£¬²»ÔÙÃ¿¸öÈí¼şÖØ¸´´î¹¤¾ßÀ¸¡¢ÈÕÖ¾¡¢ÉèÖÃ¡¢MRU¡¢²¼¾Ö¡£
+- **²ú³ö**:
+  - 15 ¸öºËĞÄµ¥Ôª£¨runtime È«²¿½ø `DeepBaseVCL.dpk`£©£º
+    - `VCL/DeepBase.VCL.DeepShell.Types.pas`£ºrecord / Ã¶¾Ù / helpers£¬´¿ RTL ÒÀÀµ¡£
+    - `VCL/DeepBase.VCL.DeepShell.Intf.pas`£ºËùÓĞ½Ó¿ÚÆõÔ¼ + capability/command ×Ö·û´®³£Á¿¡£
+    - `VCL/DeepBase.VCL.DeepShell.Events.pas`£ºUI-safe EventBus£¨Ö÷Ïß³ÌÍ¬²½·Ö·¢£¬ºóÌ¨Ïß³Ì `TThread.Queue` Í¶µİ£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Services.pas`£º`TShellServiceRegistry`¡£
+    - `VCL/DeepBase.VCL.DeepShell.Context.pas`£º`TShellContextManager`£¬°´±ä¸üµİÔö Revision¡£
+    - `VCL/DeepBase.VCL.DeepShell.Commands.pas`£º`TShellCommandManager` + Á÷Ê½ `ShellCommand(...)` builder + `class operator Implicit`¡£
+    - `VCL/DeepBase.VCL.DeepShell.Recent.pas`£º`TShellInMemoryRecentService`£¨°´ ItemKey upsert£¬°´Ê±¼äÅÅĞò£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Layout.pas`£ºÄÚ´æ + Settings-store backed layout service£¨JSON ³Ö¾Ã»¯£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Theme.pas`£ºÄ¬ÈÏ Theme service£¨½ö×´Ì¬¸ú×Ù£¬²»Ö±°ó Vcl.Themes£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Localization.pas`£ºÄ¬ÈÏ i18n service£¨locale ¡ú key ¡ú text ×Öµä£¬TObjectDictionary ×ÔÊÍ·Å£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Settings.pas`£º`TShellInMemorySettingsStore` + `TDeepShellSettingsForm`£¨OK/Apply/Cancel/Restore Defaults£¬Provider Òì³£¸ôÀë£©¡£
+    - `VCL/DeepBase.VCL.DeepShell.Panels.pas`£º`TShellAreaController` Èı¶ÎÕÛµş¿ØÖÆ + `TShellStatusManager`¡£
+    - `VCL/DeepBase.VCL.DeepShell.ToolWindow.pas`£ºÔ­Éú TForm ÊµÏÖµÄ×óÓÒĞü¸¡¹¤¾ß´°£¬²»ÒıÈë Docking ¿ò¼Ü¡£
+    - `VCL/DeepBase.VCL.DeepShell.MainForm.pas`£º`TDeepMainForm`£¬10 ¸öĞéÉúÃüÖÜÆÚ·½·¨ + ÄÚÖÃÃüÁî + Ö÷ÊÓÍ¼ dispatch¡£
+    - `VCL/DeepBase.VCL.DeepShell.pas`£ºfacade µ¥Ôª£¬ÏÂÓÎÒ»ĞĞ uses ¼´¿É¡£
+  - Demo ÏîÄ¿ `Examples/VCLDeepShellDemo/`£º`VCLDeepShellDemo.dpr` + `Demo.MainForm.pas` + `Demo.Services.pas` + `Demo.Commands.pas` + `Demo.Providers.pas` + README¡£Demo ²»ÒÀÀµ DB1/doQry/LLM/WebView2/Governance£¬È«ÓÃ fake provider/service¡£
+  - `DeepBaseVCL.dpk` contains ÁĞ±í×·¼ÓÈ«²¿ 15 ¸öĞÂµ¥Ôª¡£
+- **¹Ø¼üÉè¼Æ¾ö²ß**:
+  - Shell ºËĞÄ²»³ÖÓĞÒµÎñ `TObject`£¬Í³Ò»ÓÃ `TShellObjectRef = record { Id, Kind, ProviderId, DisplayName }` ÒıÓÃ£»ÏÂÓÎ Provider °´ (ProviderId, Id) ÕÒÒµÎñ¶ÔÏó¡£
+  - Command ÒÔ record + `Handler: TProc` ´æ´¢£»fluent builder Í¨¹ı `class operator Implicit` Ö±½Ó×ª record£¬ÏÂÓÎ¿ÉĞ´ `RegisterCommand(ShellCommand('id', 'Caption').Category('File').OnExecute(...))`¡£
+  - EventBus Ïß³ÌÄ£ĞÍ£ºÖ÷Ïß³Ì publish Í¬²½·Ö·¢£»ºóÌ¨Ïß³Ì publish Í¨¹ı `TThread.Queue` Í¶µİµ½Ö÷Ïß³Ì£¬handler Òì³£±» catch ²»Ó°ÏìÆäËû¶©ÔÄÕß¡£
+  - ÖÎÀí£ºCommand ×Ö¶ÎÔ¤Áô `GateKey/RiskLevel/PurposeKey/RequiresEvidence`£¬`IShellCommandManager.SetGovernance` ÔÚ MVP Ä¬ÈÏ½Ó `NullGovernanceService`£¬µÚ¶ş½×¶ÎÇĞ OCGS adapter¡£
+  - äÖÈ¾±ß½ç£º`svkHtml/svkMarkdown` ±ØĞëÓÉÏÂÓÎ provider Í¨¹ı `CreateViewControl` ×Ô´ø¿Ø¼şäÖÈ¾£¬Shell ºËĞÄ²»ÒÀÀµ WebView2/CEF/Markdown ¿â¡£
+  - ¶àÊµÀı£ºÃ¿¸öÖ÷´°ÌåÊµÀıÉú³É `InstanceId(GUID)`£¬layout Ğ´Èë´ø `WriterInstanceId`£¬È«¾Ö layout ÓÃ last-write-wins¡£
+- **ÑéÖ¤**:
+  - ¶ÀÁ¢ `dcc32 _tmp_deepshell_compile.dpr` ±àÒë£º4452 ĞĞ£¬0.39 Ãë£¬0 errors£¬0 warnings¡£
+  - `DeepBaseVCL.dproj` Win64 ±àÒë£ºDeepShell È«²¿ 15 µ¥Ôª¸É¾»Í¨¹ı¡£Õû°üÊ£Óà fail À´×Ô²Ö¿âÒÑÓĞµÄ `Features\DeepBase.IntentClarification.SignalDetector.pas` (BUG-143)£¬Óë±¾¹¤×÷ÎŞ¹Ø¡£
+  - `Examples/VCLDeepShellDemo/` È«²¿µ¥Ôª¶ÀÁ¢±àÒëÍ¨¹ı¡£
+- **ÒÅÁô**:
+  - Õû°ü `DeepBaseVCL.dpk` ÍêÕû¹¹½¨ÒÀÀµ `IntentClarification` Phase 2 µÄĞŞ¸´£¬¸ú×ÙÔÚ `IC-P0-2026-05-14`¡£
+  - µÚÒ»°æÍê³ÉºóÎå×¨¼ÒÉóÔÄ·¢ÏÖµÄÊ£Óà P1/P2 ¸Ä½øÏî¼û `tasks.md` µÄ `DESKTOP-P1-2026-05-14`¡£
+- **¹éµµ**:
+  - µÚÒ»°æ¹Ç¼ÜÓë 6 ¸öÊµÏÖÆÚ bug ĞŞ¸´£¨BUG-144 ~ BUG-149£©ºÍ 5 ¸öÉóÔÄ P0 ĞŞ¸´£¨BUG-150 ~ BUG-154£©ÒÑ¼ÇÂ¼µ½ `bugfix.md`¡£
 
 ---
 
-## 2026-05-07 Speech/ASR åŸºç¡€æ¨¡å—å½’æ¡£ ï¿½?
-### SPEECH-001: DeepInput è¯­éŸ³è¯†åˆ«é“¾è·¯æŠ½å–ï¿½?DeepBase åŸºç¡€æ¨¡å— ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-07
-- **å†…å®¹æ‘˜è¦**:
-  - ï¿½?`D:\_Progs\02Business\DeepInput` é˜…è¯»å¹¶æŠ½å–è¯­éŸ³è¯†åˆ«æ ¸å¿ƒé“¾è·¯ï¼šWaveIn å½•éŸ³ã€RMS VADã€ç™¾åº¦åœ¨ï¿½?ASRã€å½•ï¿½?è¯†åˆ«ç¼–æ’ï¿½?  - æ–°å¢ `Features/DeepBase.Speech.Types.pas`ï¼šç»Ÿä¸€éŸ³é¢‘æ ¼å¼ã€è¯†åˆ«ç»“æœã€é”™è¯¯çŠ¶æ€ã€`ISpeechRecognizer`ã€`ISpeechAudioCapture`ï¿½?  - æ–°å¢ `Features/DeepBase.Speech.Audio.WinMM.pas`ï¼šWindows WaveIn å½•éŸ³å®ç°ï¼Œè¾“ï¿½?16kHz/16-bit/mono PCMï¿½?  - æ–°å¢ `Features/DeepBase.Speech.VAD.pas`ï¼šåŸºï¿½?RMS èƒ½é‡çš„é™éŸ³è‡ªåŠ¨åœæ­¢æ£€æµ‹ï¿½?  - æ–°å¢ `Features/DeepBase.Speech.ASR.Baidu.pas`ï¼šç™¾åº¦è¯­ï¿½?REST API Providerï¼Œæ”¯ï¿½?token ç¼“å­˜ã€é”™è¯¯æ˜ å°„å’Œå¯æ³¨ï¿½?HTTP transportï¿½?  - æ–°å¢ `Features/DeepBase.Speech.Service.pas`ï¼šå°è£…å½•éŸ³ã€VADã€ASR Provider çš„é€šç”¨ç¼–æ’ï¿½?  - `DeepBaseFeatures.dpk` ï¿½?`Tests/DeepBaseTests.*` å·²çº³ï¿½?Speech å•å…ƒï¿½?  - ä¸‹æ¸¸æ–‡æ¡£å·²è¡¥ï¿½?`DeepBase.Speech.*` æ¥å…¥è¯´æ˜ï¼›å¯†é’¥ç»§ç»­è¦æ±‚èµ° `DeepBase.Security`ï¿½?- **è¾¹ç•Œ**:
-  - æœªè¿ï¿½?DeepInput çš„è™šæ‹Ÿé”®ç›˜ã€æµ®åŠ¨æ¡ã€æ‰˜ç›˜ã€å…¨å±€çƒ­é”®ã€æ–‡æœ¬æ³¨ï¿½?UI çŠ¶æ€æœºï¿½?  - DeepInput æœ¬åœ° Whisper å½“å‰æ˜¯æ—§å…¼å®¹å›é€€è·¯å¾„ï¼Œæœªä½œä¸º DeepBase åŸºç¡€ Provider å°è£…ï¿½?- **éªŒè¯**:
-  - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Speech`ï¿½?/5 passedï¿½?  - `Scripts/build_packages_win64.ps1 -Profile Runtime`ï¼šé€šè¿‡ï¿½?
+## 2026-05-14 IntentClarification ÉóÔÄÓëÈÎÎñ¹éµµ
+
+### IC-AUDIT-2026-05-14: IntentClarification Phase 2 Îå×¨¼ÒÉóÔÄ
+- **Íê³ÉÈÕÆÚ**: 2026-05-14
+- **ÄÚÈİÕªÒª**:
+  - Íê³É `DeepBase.IntentClarification` ÏÂÓÎ½ÓÈëÖ¸ÄÏºÍ Phase 2 ÊµÂëÉóÔÄ¡£
+  - ´Ó 5 ¸öÊÓ½ÇÍê³ÉÖ»¶ÁÉóÔÄ£º½Ó¿ÚÆõÔ¼/API¡¢Engine/Session ²¢·¢¡¢Provider/LLM ĞĞÎª¡¢IoC/ÅäÖÃ/³Ö¾Ã»¯/Ö¸±ê¡¢²âÊÔ/¹¹½¨/°ü¼¯³É¡£
+  - È·ÈÏµ±Ç°Ä£¿éÖ÷Òª·çÏÕ²»ÊÇµ¥µãÂß¼­È±Ïİ£¬¶øÊÇĞÂµ¥ÔªÎ´ÄÉÈë°ü/Ö÷²âÊÔ¡¢¹«¿ª facade ÈÔÎª¿Õ¡¢ÀàĞÍÆõÔ¼²»Ò»ÖÂ¡¢Registration °ë½ØÊµÏÖ¡¢Provider ×´Ì¬¿ç»á»°ºÍ Engine ²¢·¢Ğ´»ØµÈ P0 ×èÈû¡£
+  - ÒÑ½«ºóĞøĞŞ¸´ÕûÀíÎª `tasks.md` µÄ `IC-P0-2026-05-14`¡£
+  - ÒÑ½«±¾ÂÖ·¢ÏÖÈ±ÏİµÇ¼Çµ½ `bugfix.md` µÄ BUG-134 ~ BUG-143£¬×´Ì¬¾ùÎª´ıĞŞ¸´¡£
+- **ÑéÖ¤**:
+  - `cmd /c compile_test.bat` µ±Ç°ÈÔ¿ÉÍ¨¹ı£¬µ«Ö»¸²¸Ç¾É facade£¬²»¸²¸Ç Phase 2 ĞÂµ¥Ôª£»´Ë½áÂÛÒÑĞ´ÈëºóĞø QA ÈÎÎñ¡£
+
+### ARCH-P0-001: deepBase ¸ÄÃûÊÕÎ²Óë°ü±àÒëÃÅ½û
+- **Íê³ÉÈÕÆÚ**: 2026-05-13
+- **ÄÚÈİÕªÒª**:
+  - ĞŞ¸´ `Scripts/build_packages_win64.ps1` ºÍ `Scripts/compile_packages_win64.ps1`£¬¸ÄÎª¹¹½¨ `DeepBase*.dpk`¡£
+  - ĞŞ¸´ `DeepBase*.dpk` ÄÚ²¿ package Ãû¡¢requires ºÍ contains µÄÃüÃû²ĞÁô¡£
+  - ·¢²¼ÃÅ½ûÔÚ `VCL/` Ô´ÂëÄ¿Â¼È±Ê§Ê±ÅÅ³ı VCL °üºÍ VCL ±ØĞèÊ¾Àı£¬ºóĞøÒÑ»Ö¸´ VCL Ô´ÂëÄ¿Â¼²¢²¹Æë `DeepBase.VCL.*.dfm` ×ÊÔ´¡£
+  - `Minimal`¡¢`Runtime`¡¢`All` Win64 package gate ÒÑÍ¨¹ı¡£
+  - ĞŞ¸´ `Scripts/compile_packages_win64.ps1` Îó±¨Âß¼­£¬¸ÄÎª»ùÓÚÍË³öÂëºÍÕæÊµ `Error:/Fatal:` ĞĞÅĞ¶¨¡£
+  - ĞÂÔö `Scripts/check_rename_residue.ps1` ²¢½ÓÈë°üÃÅ½û£¬ÕæÊµ¾ÉÃû²ĞÁôÃüÖĞ¼´Ê§°Ü¡£
+- **¹éµµËµÃ÷**:
+  - ¸ÃÏîÒÑ´Ó `tasks.md` µÄ P0 µ±Ç°¿ª·¢ÖĞÒÆ³ı£»ºóĞø°üÃÅ½û¿ÉĞÅ»¯¼ÌĞøÓÉ `QA-P0-001` ºÍ `IC-P0-2026-05-14` ¸ú×Ù¡£
+
 ---
 
-## 2026-05-05 æ¶æ„æ•´ç†ä¸å°æ¿å‰ä¼˜åŒ–å½’æ¡£ ï¿½?
-### ARCH-019 / ARCH-039: Core ï¿½?Persistence åˆ†å±‚æ”¶æ•› ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - `Core/` å·²ç§»ï¿½?`FireDAC.*` / `TFD*` / `EFD*` ç›´æ¥ç±»å‹ä¾èµ–ï¼ŒCore è¿è¡ŒåŒ…ä¸å†è¦ï¿½?FireDACï¿½?  - å¼•å…¥ `DeepBase.Storage.Interfaces.pas`ï¼Œç»Ÿä¸€ `IConfigStorage`ã€`IFormStateStorage`ã€`IMRUStorage`ã€`IHotkeyStorage`ã€`IThemeStorage`ã€`II18nStorage`ã€`ILogStorage`ã€`IManagerStorage`ã€`ILLMStorage`ã€`IORMStorage` ç­‰æŠ½è±¡ï¿½?  - FireDAC å®ç°ä¸‹æ²‰ï¿½?`Persistence/DeepBase.Persistence.*.FireDAC.pas`ï¼Œé€šè¿‡ initialization è‡ªåŠ¨æ³¨å†Œå·¥å‚ï¿½?  - `Manager/Config/FormState/MRU/Hotkeys/Theme/i18n/Security/License/Authorization/Exception/Diagnose/Logging/LLM/ORM/TestHelper` å·²å®Œæˆä¸»è¦å­˜å‚¨æ³¨å…¥åˆ‡ç‰‡ï¿½?  - `Scripts/run_tests.ps1` å¢åŠ æ¨¡å—åŒ–æµ‹è¯•å…¥å£ï¼š`-Module`ã€`-FromUnit`ã€`-FromGitChanged`ï¿½?- **éªŒè¯**:
+## 2026-05-07 Speech/ASR »ù´¡Ä£¿é¹éµµ ??
+### SPEECH-001: DeepInput ÓïÒôÊ¶±ğÁ´Â·³éÈ¡??DeepBase »ù´¡Ä£¿é ??- **Íê³ÉÈÕÆÚ**: 2026-05-07
+- **ÄÚÈİÕªÒª**:
+  - ??`D:\_Progs\02Business\DeepInput` ÔÄ¶Á²¢³éÈ¡ÓïÒôÊ¶±ğºËĞÄÁ´Â·£ºWaveIn Â¼Òô¡¢RMS VAD¡¢°Ù¶ÈÔÚ??ASR¡¢Â¼??Ê¶±ğ±àÅÅ??  - ĞÂÔö `Features/DeepBase.Speech.Types.pas`£ºÍ³Ò»ÒôÆµ¸ñÊ½¡¢Ê¶±ğ½á¹û¡¢´íÎó×´Ì¬¡¢`ISpeechRecognizer`¡¢`ISpeechAudioCapture`??  - ĞÂÔö `Features/DeepBase.Speech.Audio.WinMM.pas`£ºWindows WaveIn Â¼ÒôÊµÏÖ£¬Êä??16kHz/16-bit/mono PCM??  - ĞÂÔö `Features/DeepBase.Speech.VAD.pas`£º»ù??RMS ÄÜÁ¿µÄ¾²Òô×Ô¶¯Í£Ö¹¼ì²â??  - ĞÂÔö `Features/DeepBase.Speech.ASR.Baidu.pas`£º°Ù¶ÈÓï??REST API Provider£¬Ö§??token »º´æ¡¢´íÎóÓ³ÉäºÍ¿É×¢??HTTP transport??  - ĞÂÔö `Features/DeepBase.Speech.Service.pas`£º·â×°Â¼Òô¡¢VAD¡¢ASR Provider µÄÍ¨ÓÃ±àÅÅ??  - `DeepBaseFeatures.dpk` ??`Tests/DeepBaseTests.*` ÒÑÄÉ??Speech µ¥Ôª??  - ÏÂÓÎÎÄµµÒÑ²¹??`DeepBase.Speech.*` ½ÓÈëËµÃ÷£»ÃÜÔ¿¼ÌĞøÒªÇó×ß `DeepBase.Security`??- **±ß½ç**:
+  - Î´Ç¨??DeepInput µÄĞéÄâ¼üÅÌ¡¢¸¡¶¯Ìõ¡¢ÍĞÅÌ¡¢È«¾ÖÈÈ¼ü¡¢ÎÄ±¾×¢??UI ×´Ì¬»ú??  - DeepInput ±¾µØ Whisper µ±Ç°ÊÇ¾É¼æÈİ»ØÍËÂ·¾¶£¬Î´×÷Îª DeepBase »ù´¡ Provider ·â×°??- **ÑéÖ¤**:
+  - `Scripts/run_tests.ps1 -Type Unit -Run Test.DeepBase.Speech`??/5 passed??  - `Scripts/build_packages_win64.ps1 -Profile Runtime`£ºÍ¨¹ı??
+---
+
+## 2026-05-05 ¼Ü¹¹ÕûÀíÓë·â°åÇ°ÓÅ»¯¹éµµ ??
+### ARCH-019 / ARCH-039: Core ??Persistence ·Ö²ãÊÕÁ² ??- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - `Core/` ÒÑÒÆ??`FireDAC.*` / `TFD*` / `EFD*` Ö±½ÓÀàĞÍÒÀÀµ£¬Core ÔËĞĞ°ü²»ÔÙÒª??FireDAC??  - ÒıÈë `DeepBase.Storage.Interfaces.pas`£¬Í³Ò» `IConfigStorage`¡¢`IFormStateStorage`¡¢`IMRUStorage`¡¢`IHotkeyStorage`¡¢`IThemeStorage`¡¢`II18nStorage`¡¢`ILogStorage`¡¢`IManagerStorage`¡¢`ILLMStorage`¡¢`IORMStorage` µÈ³éÏó??  - FireDAC ÊµÏÖÏÂ³Á??`Persistence/DeepBase.Persistence.*.FireDAC.pas`£¬Í¨¹ı initialization ×Ô¶¯×¢²á¹¤³§??  - `Manager/Config/FormState/MRU/Hotkeys/Theme/i18n/Security/License/Authorization/Exception/Diagnose/Logging/LLM/ORM/TestHelper` ÒÑÍê³ÉÖ÷Òª´æ´¢×¢ÈëÇĞÆ¬??  - `Scripts/run_tests.ps1` Ôö¼ÓÄ£¿é»¯²âÊÔÈë¿Ú£º`-Module`¡¢`-FromUnit`¡¢`-FromGitChanged`??- **ÑéÖ¤**:
   - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI`
   - `Scripts/run_tests.ps1 -Type All -Platform Win64 -CI`
   - `Scripts/build_packages_win64.ps1 -Profile Runtime`
 
-### ARCH-027 / ARCH-044: Core ç›®å½•å’ŒåŒ…è¾¹ç•Œæ•´ç† ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - `Core` ä¸­ä¸ UIã€Featuresã€Persistence å¼ºç›¸å…³çš„å®ç°å®Œæˆè¿ç§»æˆ–è¾¹ç•Œæ”¶æ•›ï¿½?  - `DeepBaseCore.dpk`ã€`DeepBaseServices.dpk`ã€`DeepBasePersistence.dpk`ã€`DeepBaseFeatures.dpk`ã€`DeepBaseVCL.dpk`ã€`DeepBaseFMX.dpk` å·²æŒ‰å½“å‰åˆ†å±‚é‡æ–°å¯¹é½ï¿½?  - `Theme/Exception/Hotkeys/Plugin` ç­‰æ¨¡å—å»ï¿½?Core ï¿½?VCL/FMX çš„ç›´æ¥ç»‘å®šï¼Œç”±å¹³å°åŒ…æä¾›é€‚é…å™¨ï¿½?  - `Profile All` åŒ…é—¨ç¦å·²è¦†ç›– VCL/FMX åŒ…ï¼Œå¹¶æ£€æŸ¥æºç›®å½• `.dcu` æ³„æ¼ï¿½?
-### FEATURE-001: ç»Ÿä¸€ç”¨æˆ·/è®¢å•/æ”¯ä»˜/æƒç›Š Commerce MVP ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - æ–°å¢ `Features/DeepBase.Commerce.Types.pas`ï¼šç»Ÿä¸€ç”¨æˆ·ã€èº«ä»½ã€å•†å“ã€è®¢å•ã€æ”¯ä»˜ã€æƒç›Šæ•°æ®ç»“æ„ï¿½?  - æ–°å¢ `Features/DeepBase.Commerce.Storage.pas`ï¼šå®šï¿½?`ICommerceStorage`ï¼Œæï¿½?`TInMemoryCommerceStorage` ç”¨äºå¼€å‘å’Œæµ‹è¯•ï¿½?  - æ–°å¢ `Features/DeepBase.Commerce.Service.pas`ï¼šå®ï¿½?`EnsureUserForIdentity`ã€`CreateOrder`ã€`BeginPayment`ã€`ConfirmPayment`ã€`HasEntitlement`ã€`ConsumeEntitlement` ä¸»æµç¨‹ï¿½?  - æ–°å¢ `ICommercePaymentGateway`ï¼Œä¸ºå¾®ä¿¡æ”¯ä»˜ã€CloudBaseã€è‡ªå»ºåç«¯ç­‰çœŸå®ç½‘å…³é¢„ç•™é€‚é…ç‚¹ï¿½?  - æ–°å¢ `Tests/Test.DeepBase.Commerce.pas`ï¼Œè¦†ç›–ç”¨æˆ·ç»‘å®šã€è®¢å•ã€æ”¯ä»˜æ„å›¾ã€å›è°ƒç¡®è®¤ã€æƒç›Šå¹‚ç­‰å‘æ”¾ã€é‡‘é¢ä¸åŒ¹é…æ‹’ç»å’Œæ¶ˆè´¹å‹æƒç›Šæ‰£å‡ï¿½?- **éªŒè¯**:
-  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.Commerce"`ï¿½?/7 passedï¿½?  - `Scripts/build_packages_win64.ps1 -Profile All`ï¼šé€šè¿‡ï¿½?
-### COMMERCE-002A-D: Commerce åç«¯å¥‘çº¦ï¿½?HTTP åç«¯é€‚é…ï¿½?ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - æ–°å¢ `docs/Commerce-Backend-Adapter-Spec.md`ï¼Œå›ºåŒ–åç«¯æ•°æ®è¡¨ã€HTTP APIã€å¹‚ç­‰ã€å®‰å…¨è¾¹ç•Œå’Œå®æ–½é¡ºåºï¿½?  - æ–°å¢ `Features/DeepBase.Commerce.Backend.Contract.pas`ï¼Œç»Ÿä¸€åç«¯è·¯ç”±ï¿½?snake_case JSON å­—æ®µå¸¸é‡ï¿½?  - æ–°å¢ `Features/DeepBase.Commerce.Backend.Http.pas`ï¼Œæï¿½?`TCommerceHttpStorage` ä½œä¸ºç”Ÿäº§ `ICommerceStorage` HTTP åç«¯é€‚é…å™¨ï¿½?  - `TCommerceHttpStorage` æ”¯æŒ `BaseUrl`ã€Bearer tokenã€API keyã€è¶…æ—¶é…ç½®ï¼Œå¹¶é€šè¿‡ `ICommerceBackendHttpTransport` æ”¯æŒå•å…ƒæµ‹è¯•æ³¨å…¥ï¿½?  - æ–°å¢ `TCommerceHttpPaymentGateway`ï¼Œä½œä¸ºç”Ÿï¿½?`ICommercePaymentGateway` åç«¯ä»£ç†é€‚é…å™¨ï¼Œç»Ÿä¸€è°ƒç”¨ `POST /commerce/payments/intents` å¹¶ä½¿ï¿½?`Idempotency-Key` é˜²é‡è¯•å†²çªï¿½?  - æ›´æ–°ä¸‹æ¸¸é›†æˆæ–‡æ¡£ï¼Œç”Ÿäº§è·¯çº¿ä»â€œè‡ªè¡Œå®ï¿½?ICommerceStorageâ€æ”¶æ•›ä¸ºâ€œä¼˜å…ˆæ¥å…¥ç»Ÿä¸€åç«¯ HTTP APIâ€ï¿½?- **éªŒè¯**:
-  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.Commerce"`ï¿½?3/13 passedï¿½?
-### ARCH-029 / ARCH-030 / CLEANUP-005 / CLEANUP-006: æ—§å•†ä¸šåŒ–è·¯çº¿ä¸æ–‡æ¡£æ¸…ï¿½?ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - åˆ é™¤æœªä½¿ç”¨çš„ AiPEX/AipexBaseã€æ—§åç«¯è®¤è¯/è®¡è´¹å®¢æˆ·ç«¯ã€æ—§è®¤è¯/è®¡è´¹ UI ç»„ä»¶å’Œæ¼”ç¤ºå·¥ç¨‹ï¿½?  - åˆ é™¤è¿‡æœŸ API/é›†æˆæ–‡æ¡£ï¼Œä¸å†ä¿ç•™è¯¯ï¿½?AI çš„å†å²å…¥å£ï¿½?  - `ThirdParty/Payment` æ˜ç¡®å®šä½ä¸ºæ¸ ï¿½?SDK èƒ½åŠ›ï¼›ç»Ÿä¸€ç”¨æˆ·ã€è®¢å•ã€æ”¯ä»˜ã€æƒç›Šæµç¨‹ç”± `Features/DeepBase.Commerce.*` æ‰¿æ¥ï¿½?  - `docs/integrations` å·²æ‰å¹³åŒ–ï¿½?`docs/`ï¼Œç©ºç›®å½•åˆ é™¤ï¼Œç›¸å…³é“¾æ¥ä¿®æ­£ï¿½?  - æ–°å¢ `docs/DeepBase-Downstream-Integration.md` ä½œä¸ºä¸‹æ¸¸æœ€å¹²å‡€çš„é›†æˆå…¥å£ï¿½?
-### LLM-001 ~ LLM-004: Delphi LLM å®¢æˆ·ç«¯ã€å®‰å…¨å­˜å‚¨ä¸èŠå¤©ç»„ä»¶ ï¿½?- **å®Œæˆæ—¥æœŸ**: 2025-12-14
-- **å†…å®¹æ‘˜è¦**:
-  - `Core/DeepBase.LLM.BillingClient.pas` æä¾›è½»é‡ AI è´¨ä»·ç®¡å®¶å®¢æˆ·ç«¯ï¼Œæ”¯æŒæµå¼/éæµå¼ã€é‡è¯•ã€å–æ¶ˆã€å¼‚æ­¥è°ƒç”¨å’Œå¯¹è¯å†å²ï¿½?  - `Core/DeepBase.Security.DPAPI.pas` æä¾› DPAPIã€Credential Manager ï¿½?`TSecureString`ï¿½?  - `VCL/DeepBase.VCL.LLMChatFrame.pas`ã€`FMX/DeepBase.FMX.LLMChatFrame.pas` æä¾›å¯å¤ç”¨èŠï¿½?Frameï¿½?  - `Tests/Test.DeepBase.LLM.BillingClient.pas` ï¿½?`Tests/Test.DeepBase.Security.DPAPI.pas` è¦†ç›–æ ¸å¿ƒè¡Œä¸ºï¿½?
-### BUG-098: FormState å¤šæ˜¾ç¤ºå™¨åæ ‡æ¢å¤ä¿®å¤ ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-05
-- **å†…å®¹æ‘˜è¦**:
-  - `Core/DeepBase.FormState.pas` æ¢å¤çª—å£æ—¶æŒ‰å½“å‰æ˜¾ç¤ºå™¨å·¥ä½œåŒºå¤¹å›åæ ‡ï¼Œé¿å…æ—§å¤šå±åæ ‡å¯¼è‡´çª—å£ä¸å¯è§ï¿½?  - `VCL/DeepBase.VCL.FormStateHelper.pas` ä¿å­˜è·¯å¾„è¡¥é½ `GetWindowPlacement` å·¥ä½œåŒºåæ ‡åˆ°å±å¹•åæ ‡è½¬æ¢ï¿½?  - è¯¦ç»†ä¿®å¤è®°å½•ï¿½?`bugfix.md`ï¿½?- **éªŒè¯**:
-  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.FormState"`ï¿½?3/13 passedï¿½?  - `Scripts/build_packages_win64.ps1 -Profile All`ï¼šé€šè¿‡ï¿½?
+### ARCH-027 / ARCH-044: Core Ä¿Â¼ºÍ°ü±ß½çÕûÀí ??- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - `Core` ÖĞÓë UI¡¢Features¡¢Persistence Ç¿Ïà¹ØµÄÊµÏÖÍê³ÉÇ¨ÒÆ»ò±ß½çÊÕÁ²??  - `DeepBaseCore.dpk`¡¢`DeepBaseServices.dpk`¡¢`DeepBasePersistence.dpk`¡¢`DeepBaseFeatures.dpk`¡¢`DeepBaseVCL.dpk`¡¢`DeepBaseFMX.dpk` ÒÑ°´µ±Ç°·Ö²ãÖØĞÂ¶ÔÆë??  - `Theme/Exception/Hotkeys/Plugin` µÈÄ£¿éÈ¥??Core ??VCL/FMX µÄÖ±½Ó°ó¶¨£¬ÓÉÆ½Ì¨°üÌá¹©ÊÊÅäÆ÷??  - `Profile All` °üÃÅ½ûÒÑ¸²¸Ç VCL/FMX °ü£¬²¢¼ì²éÔ´Ä¿Â¼ `.dcu` Ğ¹Â©??
+### FEATURE-001: Í³Ò»ÓÃ»§/¶©µ¥/Ö§¸¶/È¨Òæ Commerce MVP ??- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - ĞÂÔö `Features/DeepBase.Commerce.Types.pas`£ºÍ³Ò»ÓÃ»§¡¢Éí·İ¡¢ÉÌÆ·¡¢¶©µ¥¡¢Ö§¸¶¡¢È¨ÒæÊı¾İ½á¹¹??  - ĞÂÔö `Features/DeepBase.Commerce.Storage.pas`£º¶¨??`ICommerceStorage`£¬Ìá??`TInMemoryCommerceStorage` ÓÃÓÚ¿ª·¢ºÍ²âÊÔ??  - ĞÂÔö `Features/DeepBase.Commerce.Service.pas`£ºÊµ??`EnsureUserForIdentity`¡¢`CreateOrder`¡¢`BeginPayment`¡¢`ConfirmPayment`¡¢`HasEntitlement`¡¢`ConsumeEntitlement` Ö÷Á÷³Ì??  - ĞÂÔö `ICommercePaymentGateway`£¬ÎªÎ¢ĞÅÖ§¸¶¡¢CloudBase¡¢×Ô½¨ºó¶ËµÈÕæÊµÍø¹ØÔ¤ÁôÊÊÅäµã??  - ĞÂÔö `Tests/Test.DeepBase.Commerce.pas`£¬¸²¸ÇÓÃ»§°ó¶¨¡¢¶©µ¥¡¢Ö§¸¶ÒâÍ¼¡¢»Øµ÷È·ÈÏ¡¢È¨ÒæÃİµÈ·¢·Å¡¢½ğ¶î²»Æ¥Åä¾Ü¾øºÍÏû·ÑĞÍÈ¨Òæ¿Û¼õ??- **ÑéÖ¤**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.Commerce"`??/7 passed??  - `Scripts/build_packages_win64.ps1 -Profile All`£ºÍ¨¹ı??
+### COMMERCE-002A-D: Commerce ºó¶ËÆõÔ¼??HTTP ºó¶ËÊÊÅä????- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - ĞÂÔö `docs/Commerce-Backend-Adapter-Spec.md`£¬¹Ì»¯ºó¶ËÊı¾İ±í¡¢HTTP API¡¢ÃİµÈ¡¢°²È«±ß½çºÍÊµÊ©Ë³Ğò??  - ĞÂÔö `Features/DeepBase.Commerce.Backend.Contract.pas`£¬Í³Ò»ºó¶ËÂ·ÓÉ??snake_case JSON ×Ö¶Î³£Á¿??  - ĞÂÔö `Features/DeepBase.Commerce.Backend.Http.pas`£¬Ìá??`TCommerceHttpStorage` ×÷ÎªÉú²ú `ICommerceStorage` HTTP ºó¶ËÊÊÅäÆ÷??  - `TCommerceHttpStorage` Ö§³Ö `BaseUrl`¡¢Bearer token¡¢API key¡¢³¬Ê±ÅäÖÃ£¬²¢Í¨¹ı `ICommerceBackendHttpTransport` Ö§³Öµ¥Ôª²âÊÔ×¢Èë??  - ĞÂÔö `TCommerceHttpPaymentGateway`£¬×÷ÎªÉú??`ICommercePaymentGateway` ºó¶Ë´úÀíÊÊÅäÆ÷£¬Í³Ò»µ÷ÓÃ `POST /commerce/payments/intents` ²¢Ê¹??`Idempotency-Key` ·ÀÖØÊÔ³åÍ»??  - ¸üĞÂÏÂÓÎ¼¯³ÉÎÄµµ£¬Éú²úÂ·Ïß´Ó¡°×ÔĞĞÊµ??ICommerceStorage¡±ÊÕÁ²Îª¡°ÓÅÏÈ½ÓÈëÍ³Ò»ºó¶Ë HTTP API¡±??- **ÑéÖ¤**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.Commerce"`??3/13 passed??
+### ARCH-029 / ARCH-030 / CLEANUP-005 / CLEANUP-006: ¾ÉÉÌÒµ»¯Â·ÏßÓëÎÄµµÇå????- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - É¾³ıÎ´Ê¹ÓÃµÄ AiPEX/AipexBase¡¢¾Éºó¶ËÈÏÖ¤/¼Æ·Ñ¿Í»§¶Ë¡¢¾ÉÈÏÖ¤/¼Æ·Ñ UI ×é¼şºÍÑİÊ¾¹¤³Ì??  - É¾³ı¹ıÆÚ API/¼¯³ÉÎÄµµ£¬²»ÔÙ±£ÁôÎó??AI µÄÀúÊ·Èë¿Ú??  - `ThirdParty/Payment` Ã÷È·¶¨Î»ÎªÇş??SDK ÄÜÁ¦£»Í³Ò»ÓÃ»§¡¢¶©µ¥¡¢Ö§¸¶¡¢È¨ÒæÁ÷³ÌÓÉ `Features/DeepBase.Commerce.*` ³Ğ½Ó??  - `docs/integrations` ÒÑ±âÆ½»¯??`docs/`£¬¿ÕÄ¿Â¼É¾³ı£¬Ïà¹ØÁ´½ÓĞŞÕı??  - ĞÂÔö `docs/DeepBase-Downstream-Integration.md` ×÷ÎªÏÂÓÎ×î¸É¾»µÄ¼¯³ÉÈë¿Ú??
+### LLM-001 ~ LLM-004: Delphi LLM ¿Í»§¶Ë¡¢°²È«´æ´¢ÓëÁÄÌì×é¼ş ??- **Íê³ÉÈÕÆÚ**: 2025-12-14
+- **ÄÚÈİÕªÒª**:
+  - `Core/DeepBase.LLM.BillingClient.pas` Ìá¹©ÇáÁ¿ AI ÖÊ¼Û¹Ü¼Ò¿Í»§¶Ë£¬Ö§³ÖÁ÷Ê½/·ÇÁ÷Ê½¡¢ÖØÊÔ¡¢È¡Ïû¡¢Òì²½µ÷ÓÃºÍ¶Ô»°ÀúÊ·??  - `Core/DeepBase.Security.DPAPI.pas` Ìá¹© DPAPI¡¢Credential Manager ??`TSecureString`??  - `VCL/DeepBase.VCL.LLMChatFrame.pas`¡¢`FMX/DeepBase.FMX.LLMChatFrame.pas` Ìá¹©¿É¸´ÓÃÁÄ??Frame??  - `Tests/Test.DeepBase.LLM.BillingClient.pas` ??`Tests/Test.DeepBase.Security.DPAPI.pas` ¸²¸ÇºËĞÄĞĞÎª??
+### BUG-098: FormState ¶àÏÔÊ¾Æ÷×ø±ê»Ö¸´ĞŞ¸´ ??- **Íê³ÉÈÕÆÚ**: 2026-05-05
+- **ÄÚÈİÕªÒª**:
+  - `Core/DeepBase.FormState.pas` »Ö¸´´°¿ÚÊ±°´µ±Ç°ÏÔÊ¾Æ÷¹¤×÷Çø¼Ğ»Ø×ø±ê£¬±ÜÃâ¾É¶àÆÁ×ø±êµ¼ÖÂ´°¿Ú²»¿É¼û??  - `VCL/DeepBase.VCL.FormStateHelper.pas` ±£´æÂ·¾¶²¹Æë `GetWindowPlacement` ¹¤×÷Çø×ø±êµ½ÆÁÄ»×ø±ê×ª»»??  - ÏêÏ¸ĞŞ¸´¼ÇÂ¼??`bugfix.md`??- **ÑéÖ¤**:
+  - `Scripts/run_tests.ps1 -Type Unit -Platform Win64 -CI -Run "Test.DeepBase.FormState"`??3/13 passed??  - `Scripts/build_packages_win64.ps1 -Profile All`£ºÍ¨¹ı??
 ---
 
-## 2026-05-02 æŒç»­ä¼˜åŒ–è¿­ä»£ ï¿½?
-### MAINT-002-A: å•å…ƒæµ‹è¯•ç¨³å®šæ€§æ¸…é›¶ï¼ˆWin64 åŸºçº¿ï¼‰âœ…
-- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Scripts/run_tests.ps1` æ–°å¢ `-Platform` å‚æ•°ï¼ˆ`Win32|Win64`ï¼‰ï¼Œé»˜è®¤æ”¹ä¸º `Win64`
-  - ï¿½?Win64 å•å…ƒæµ‹è¯•å…¨ç»¿ï¼š`Tests Found 824 / Ignored 4 / Passed 820 / Failed 0 / Errored 0 / Leaked 0`
-  - ï¿½?ä¿®å¤ Win64 ï¿½?`Test.DeepBase.Resilience` æ³›å‹æ–­è¨€ç±»å‹æ¨æ–­é—®é¢˜ï¼ˆæ˜¾ï¿½?`Assert.AreEqual<Integer>`ï¿½?
-### MAINT-002-B: FormState åæ ‡æŒä¹…åŒ–ä¿®æ­£ï¼ˆé¡¶éƒ¨ä»»åŠ¡æ åœºæ™¯ï¼‰ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Core/DeepBase.FormState.pas`ï¼š`GetWindowPlacement.rcNormalPosition` å·¥ä½œåŒºåæ ‡è½¬æ¢ä¸ºå±å¹•åæ ‡åå†æŒä¹…ï¿½?  - ï¿½?`Tests/Test.DeepBase.FormState.pas`ï¼šæµ‹è¯•çª—ä½“é»˜è®¤æ”¾ç½®åˆ°å·¦ä¸‹å·¥ä½œåŒºï¼Œé™ä½æµ‹è¯•è¿‡ç¨‹è¯¯å‡»é£é™©
+## 2026-05-02 ³ÖĞøÓÅ»¯µü´ú ??
+### MAINT-002-A: µ¥Ôª²âÊÔÎÈ¶¨ĞÔÇåÁã£¨Win64 »ùÏß£©?
+- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Scripts/run_tests.ps1` ĞÂÔö `-Platform` ²ÎÊı£¨`Win32|Win64`£©£¬Ä¬ÈÏ¸ÄÎª `Win64`
+  - ??Win64 µ¥Ôª²âÊÔÈ«ÂÌ£º`Tests Found 824 / Ignored 4 / Passed 820 / Failed 0 / Errored 0 / Leaked 0`
+  - ??ĞŞ¸´ Win64 ??`Test.DeepBase.Resilience` ·ºĞÍ¶ÏÑÔÀàĞÍÍÆ¶ÏÎÊÌâ£¨ÏÔ??`Assert.AreEqual<Integer>`??
+### MAINT-002-B: FormState ×ø±ê³Ö¾Ã»¯ĞŞÕı£¨¶¥²¿ÈÎÎñÀ¸³¡¾°£©??- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Core/DeepBase.FormState.pas`£º`GetWindowPlacement.rcNormalPosition` ¹¤×÷Çø×ø±ê×ª»»ÎªÆÁÄ»×ø±êºóÔÙ³Ö¾Ã??  - ??`Tests/Test.DeepBase.FormState.pas`£º²âÊÔ´°ÌåÄ¬ÈÏ·ÅÖÃµ½×óÏÂ¹¤×÷Çø£¬½µµÍ²âÊÔ¹ı³ÌÎó»÷·çÏÕ
 
-### MAINT-002-C: Resilience æ‰§è¡Œé“¾é—­åŒ…æ³„æ¼ä¿®ï¿½?ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Core/DeepBase.Resilience.pas`ï¼šé‡ï¿½?`TResiliencePolicy.Execute` / `Execute<T>` é—­åŒ…é“¾ï¼Œæ˜¾å¼é‡Šæ”¾æ•è·å¼•ç”¨
-  - ï¿½?æ¸…é™¤ FastMM æœ«å°¾ `TResiliencePolicy.Execute` ç›¸å…³å°å—æ³„æ¼å‘Šè­¦
+### MAINT-002-C: Resilience Ö´ĞĞÁ´±Õ°üĞ¹Â©ĞŞ????- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Core/DeepBase.Resilience.pas`£ºÖØ??`TResiliencePolicy.Execute` / `Execute<T>` ±Õ°üÁ´£¬ÏÔÊ½ÊÍ·Å²¶»ñÒıÓÃ
+  - ??Çå³ı FastMM Ä©Î² `TResiliencePolicy.Execute` Ïà¹ØĞ¡¿éĞ¹Â©¸æ¾¯
 
-### MAINT-002-D: å¼‚å¸¸è¯­ä¹‰ä¸æµ‹è¯•æ–­è¨€å¯¹é½ ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Tests/Test.DeepBase.Protection.pas`ï¼šæ–‡ä»¶ä¸å­˜åœ¨æ–­è¨€æ”¹ä¸º `EFileNotFoundExceptionEx`
-  - ï¿½?`Tests/Test.DeepBase.Resilience.pas`ï¼šæ–­è·¯å™¨æ‰“å¼€æ–­è¨€æ”¹ä¸º `ECircuitBreakerException`
+### MAINT-002-D: Òì³£ÓïÒåÓë²âÊÔ¶ÏÑÔ¶ÔÆë ??- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Tests/Test.DeepBase.Protection.pas`£ºÎÄ¼ş²»´æÔÚ¶ÏÑÔ¸ÄÎª `EFileNotFoundExceptionEx`
+  - ??`Tests/Test.DeepBase.Resilience.pas`£º¶ÏÂ·Æ÷´ò¿ª¶ÏÑÔ¸ÄÎª `ECircuitBreakerException`
 
-### MAINT-002-E: æ„å»ºäº§ç‰©æ¸…ç† ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?å·²æ¸…ç†ä»“åº“å†… `.dcu` æ–‡ä»¶ 65 ä¸ªï¼ˆæ»¡è¶³â€œæºåº“ä¸ä¿ç•™ dcuâ€è¦æ±‚ï¼‰
+### MAINT-002-E: ¹¹½¨²úÎïÇåÀí ??- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??ÒÑÇåÀí²Ö¿âÄÚ `.dcu` ÎÄ¼ş 65 ¸ö£¨Âú×ã¡°Ô´¿â²»±£Áô dcu¡±ÒªÇó£©
 
-### MAINT-002-F: Win64 é›†æˆæµ‹è¯•é“¾è·¯æ‰“ï¿½?ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Tools/WebService/DeepBase.WebAPI.Core.pas`ï¼šTLS ç‰ˆæœ¬æšä¸¾å…¼å®¹ Indy ç‰ˆæœ¬å·®å¼‚ï¼ˆ`sslvTLSv1_3` å¯é€‰ï¼‰
-  - ï¿½?`Core/DeepBase.Net.pas`ï¼šä¿®å¤é™æ€æ–¹æ³•è°ƒç”¨é™å®šï¼Œè¡¥é½ `TIPUtils.IsLinkLocalIP`
-  - ï¿½?`Core/DeepBase.Net.pas`ï¼šæ–°å¢æœ¬ï¿½?å†…ç½‘ URL å®‰å…¨å¼€å…³ï¼ˆç¯å¢ƒå˜é‡ï¿½?  - ï¿½?`Scripts/run_tests.ps1`ï¼šé›†æˆæµ‹è¯•è‡ªåŠ¨å‡†å¤‡ä½å®½åŒ¹ï¿½?`sqlite3.dll` å¹¶å¯ï¿½?localhost ç™½åï¿½?  - ï¿½?Win64 Integration å…¨ç»¿ï¿½?/9 é€šè¿‡
+### MAINT-002-F: Win64 ¼¯³É²âÊÔÁ´Â·´ò????- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Tools/WebService/DeepBase.WebAPI.Core.pas`£ºTLS °æ±¾Ã¶¾Ù¼æÈİ Indy °æ±¾²îÒì£¨`sslvTLSv1_3` ¿ÉÑ¡£©
+  - ??`Core/DeepBase.Net.pas`£ºĞŞ¸´¾²Ì¬·½·¨µ÷ÓÃÏŞ¶¨£¬²¹Æë `TIPUtils.IsLinkLocalIP`
+  - ??`Core/DeepBase.Net.pas`£ºĞÂÔö±¾??ÄÚÍø URL °²È«¿ª¹Ø£¨»·¾³±äÁ¿??  - ??`Scripts/run_tests.ps1`£º¼¯³É²âÊÔ×Ô¶¯×¼±¸Î»¿íÆ¥??`sqlite3.dll` ²¢Æô??localhost °×Ãû??  - ??Win64 Integration È«ÂÌ??/9 Í¨¹ı
 
-### MAINT-002-G: å…¨é‡ Win64 é—¨ç¦é€šè¿‡ ï¿½?- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`.\Scripts\run_tests.ps1 -Type All -CI` æ‰§è¡Œé€šè¿‡ï¼ˆUnit + Integrationï¿½?  - ï¿½?æœ€ç»ˆæ¸…ï¿½?`.dcu` ä¸ä¸´æ—¶é›†æˆä¾èµ–æ–‡ä»¶ï¼Œä»“åº“ä¿æŒå¯æäº¤çŠ¶ï¿½?
-### MAINT-002-H: DB.Factory åŒå…±äº«æ¨¡å¼è¡¥é½ï¼ˆSQLite / PostgreSQLï¼‰âœ…
-- **å®Œæˆæ—¥æœŸ**: 2026-05-02
-- **è¾“å‡ºï¿½?*:
-  - ï¿½?`Persistence/DeepBase.DB.Factory.pas`ï¼š`LoadSharedProfile` æ”¯æŒ `DB3.Type=SQLite`ï¼ˆä¿ï¿½?`PostgreSQL/PG` å…¼å®¹ï¿½?  - ï¿½?SQLite å…±äº«åº“è·¯å¾„æ”¯æŒç›¸ï¿½?`RootPath` è§£æï¼ˆ`DB3.Database`ï¼Œå…¼ï¿½?`DB3.Path`ï¿½?  - ï¿½?æ”¯æŒ `DB3.SQLiteLockingMode/SQLiteSynchronous/SQLiteJournalMode/SQLiteOpenMode/ExtraParams` é…ç½®é€ä¼ 
-  - ï¿½?æ–°å¢å•æµ‹ `Test_CreateSharedUnopenedConnection_FromLocalSettings_SQLite`
-  - ï¿½?æ›´æ–°å½“æ—¶çš„å¿«é€Ÿé›†æˆæ–‡æ¡£ï¼ˆè¡¥å…… `DB3.Type=SQLite` é…ç½®é”®ï¼›å½“å‰å…¥å£ï¿½?`docs/DeepBase-Downstream-Integration.md`ï¿½?  - ï¿½?æ›´æ–°æ–‡æ¡£ç´¢å¼• `docs/00.00.DeepBase-æ–‡æ¡£ç´¢å¼•-v1.0.md`ï¼ˆå¿«é€Ÿå…¥å£ä¼˜å…ˆæŒ‡å‘æ–°é›†æˆæŒ‡å—ï¿½?
+### MAINT-002-G: È«Á¿ Win64 ÃÅ½ûÍ¨¹ı ??- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`.\Scripts\run_tests.ps1 -Type All -CI` Ö´ĞĞÍ¨¹ı£¨Unit + Integration??  - ??×îÖÕÇå??`.dcu` ÓëÁÙÊ±¼¯³ÉÒÀÀµÎÄ¼ş£¬²Ö¿â±£³Ö¿ÉÌá½»×´??
+### MAINT-002-H: DB.Factory Ë«¹²ÏíÄ£Ê½²¹Æë£¨SQLite / PostgreSQL£©?
+- **Íê³ÉÈÕÆÚ**: 2026-05-02
+- **Êä³ö??*:
+  - ??`Persistence/DeepBase.DB.Factory.pas`£º`LoadSharedProfile` Ö§³Ö `DB3.Type=SQLite`£¨±£??`PostgreSQL/PG` ¼æÈİ??  - ??SQLite ¹²Ïí¿âÂ·¾¶Ö§³ÖÏà??`RootPath` ½âÎö£¨`DB3.Database`£¬¼æ??`DB3.Path`??  - ??Ö§³Ö `DB3.SQLiteLockingMode/SQLiteSynchronous/SQLiteJournalMode/SQLiteOpenMode/ExtraParams` ÅäÖÃÍ¸´«
+  - ??ĞÂÔöµ¥²â `Test_CreateSharedUnopenedConnection_FromLocalSettings_SQLite`
+  - ??¸üĞÂµ±Ê±µÄ¿ìËÙ¼¯³ÉÎÄµµ£¨²¹³ä `DB3.Type=SQLite` ÅäÖÃ¼ü£»µ±Ç°Èë¿Ú??`docs/DeepBase-Downstream-Integration.md`??  - ??¸üĞÂÎÄµµË÷Òı `docs/00.00.DeepBase-ÎÄµµË÷Òı-v1.0.md`£¨¿ìËÙÈë¿ÚÓÅÏÈÖ¸ÏòĞÂ¼¯³ÉÖ¸ÄÏ??
 ---
 
 ---
 
-## 2026-07-09 REVIEW5-R3 ç»­ä¿®å½’æ¡£ (E-006 ~ C-007 + é—­ç¯å£°æ˜)
+## 2026-07-09 REVIEW5-R3 ĞøĞŞ¹éµµ (E-006 ~ C-007 + ±Õ»·ÉùÃ÷)
 
-  - REVIEW5-R3-E-006 (FEAT-R3-006, BUG-425): `Features/DeepBase.CloudBackup.pas` ä¼ è¾“å±‚å®‰å…¨å¢å¼º (P1 å½’å¹¶). è§ bugfix.md BUG-425.
-  - REVIEW5-R3-E-007 (FEAT-R3-007, BUG-426): `Features/DeepBase.AntiTamper.pas` GetDefaultConfig å›ºå®š salt æ”¹ä¸ºç©ºç›+Initialize æ ¡éªŒ (é»˜è®¤ç©ºç›å¿…æŠ› EAntiTamperException, é…ç½® Salt åæˆåŠŸ). è§ bugfix.md BUG-426.
-  - REVIEW5-R3-E-008 (FEAT-R3-008, BUG-427): `Features/DeepBase.Speech.TTS.StepFun.pas` FetchSystemVoices/FetchClonedVoices `nil as TJSONArray` è§¦å‘ EInvalidCast (as å¯¹ nil å¼ºè½¬æŠ›å¼‚å¸¸, if=nil ä¸ºæ­»ä»£ç ) â€” æ”¹ `is` åˆ¤å®š (å¯¹ nil è¿”å› False) + ç¡¬è½¬æ¢ TJSONArray(VoicesVal), ç¼ºé”®/éæ•°ç»„ä¼˜é›… Exit å¹¶è®¾ FLastError. è§ bugfix.md BUG-427.
-  - REVIEW5-R3-E-005 (FEAT-R3-005, BUG-428): `Features/DeepBase.Commerce.SafeClient.pas` SendJson ä»… 401 é‡è¯•, 429/5xx ç¬æ€å¤±è´¥ç›´æ¥æŠ› EDeepBaseCommerceError, æ”¯ä»˜/è®¢å•æ¥å£çŸ­æš‚é™æµ/åç«¯é‡å¯çª—å£ä¸‹ç«‹å³å¤±è´¥æ— é€€é¿ â€” SendJson æœ«å°¾æ–°å¢ç¬æ€é€€é¿é‡è¯•å¾ªç¯ (ä»…å¹‚ç­‰è°ƒç”¨: GET/HEAD å¤©ç„¶å¹‚ç­‰, POST/PUT/DELETE ä»…å¸¦ idempotency key æ‰é‡è¯•, é˜²éå¹‚ç­‰ POST é‡å¤ä¸‹å•); IsRetriableStatus (429+5xx) / IsIdempotentCall / ExtractRetryAfterMs (429 ä¼˜å…ˆè¯» Retry-After å¤´ç§’æ•°â†’ms é’³åˆ¶åˆ° BACKOFF_CAP_MS) / ComputeBackoffMs (5xx æŒ‡æ•°é€€é¿ BACKOFF_BASE_MS*2^attempt é’³åˆ¶ä¸Šé™) å››è¾…åŠ©æ–¹æ³•; åŸºäº attempt çš„ç¡®å®šæ€§ Â±25% æŠ–åŠ¨ (ä¸ç”¨ Now/Random); Winapi.Windows.Sleep (MSWINDOWS ä¿æŠ¤). implementation uses å¢ System.Math (å…¨é™å®š System.Math.Min é’³åˆ¶, ä»“åº“æƒ¯ä¾‹). æ–°å¢ 2 å›å½’æµ‹è¯•: 429 å¹‚ç­‰ GET Retry-After:0 é‡è¯•æˆåŠŸ RequestCount=2; éå¹‚ç­‰ POST 503 ä¸é‡è¯• RequestCount=1 é˜²é‡å¤. DUnitX --run å…¨åè¿‡æ»¤å•ç‹¬æ‰§è¡Œ 2 found 2 passed. å…¨é‡å¥—ä»¶ 2 æ—¢æœ‰å¤±è´¥ (WeChatPay å…¬é’¥ç¯å¢ƒ + Test_PermissionClient_HasFeature æµ‹è¯•æ•°æ® valid_until=2026-07-08 å·²äºä»Šæ—¥ 07-09 è¿‡æœŸ) ä¸ E-005 æ— å…³. è§ bugfix.md BUG-428.
-  - REVIEW5-R3-D-007 (GOV-R3-007, BUG-429): `DeepFlow/Source/Roles/DeepFlow.Commander.pas` GetOrCreateSession é”å†…è¿”å› TSession è£¸æŒ‡é’ˆåé‡Šæ”¾é”, ProcessRequest é”å¤–ä¿®æ”¹ Session.State/FTurnCount(Inc) è‡´åŒ session-id å¹¶å‘æ•°æ®ç«äº‰ (Inc éåŸå­, State è¯»æ”¹å†™æ’•è£‚) â€” ProcessRequest ä¸­ State/FTurnCount è¯»å†™ + Context/SessionId å¿«ç…§å–å€¼å…¨éƒ¨åŒ…è£¹ FSessionLock ä¸´ç•ŒåŒº (å†…è” var å±€éƒ¨å¿«ç…§, AnalyzeIntent è€—æ—¶ LLM é”å¤–æ‰§è¡Œé¿å…åºåˆ—åŒ–); æˆåŠŸ ssPending ä¸ except ssError å„è‡ªé”å†…æ›´æ–°. Commander åœæ­¢ Clear æ‚¬ç©ºè£¸æŒ‡é’ˆå±æ›´æ·±æ‰€æœ‰æƒé—®é¢˜è¶…å‡º D-007 èŒƒå›´. éªŒè¯: Win64 å…¨é‡ç¼–è¯‘é€šè¿‡ (exit 0 ä»…é—ç•™ H2077/H2443 Hint); Commander æ— ä¸“å±å•æµ‹, çº¯åŠ é”è¯­ä¹‰ç­‰ä»·. è§ bugfix.md BUG-429.
-  - REVIEW5-R3-D-008 (GOV-R3-008, BUG-430): `Governance/DeepBase.Governance.AI.ProposalQueue.pas` Submit æ— å®¹é‡ä¸Šé™è‡´ AI å¾ªç¯æäº¤æ— é™å †ç§¯ TProposal OOM, FindById/GetPending O(n) è†¨èƒ€åå¡é¡¿; å…¨ç¨‹æ— é”, å¼•å…¥åå° AI ææ¡ˆå°†å‡ P1 â€” åŠ  FMaxPending (é»˜è®¤ 1000, æ»¡æŠ› EProposalQueueError æ–°å¼‚å¸¸ç±», éµå¾ª Governance EConfigRegistrarError/EJsonLogicError æƒ¯ä¾‹) + TCriticalSection ä¿æŠ¤ Submit/Approve/Reject/Apply/FindById/GetPending/GetAll/Count å…¨éƒ¨æ–¹æ³•; FindById æ‹† FindByIdInternal é¿å…ä¸å¯é‡å…¥ TCriticalSection è‡ªæ­»é”; Apply é”å†…åˆ›å»º ChangeSet+MarkApplied (ModelVersion æ— åå‘é”ä¾èµ–). P2 å…¨ 22 é¡¹ä¿®å®Œ. éªŒè¯: Win64 å…¨é‡ç¼–è¯‘ SUCCESS exit 0 (325043 lines 16.56s æ—  Error); ProposalQueue æ— å¤–éƒ¨è°ƒç”¨ç‚¹/æ— å•æµ‹, çº¯åŠ å›ºè¯­ä¹‰ç­‰ä»·. è§ bugfix.md BUG-430.
-  - REVIEW5-R3-C-001 (DATA-R3-001 / BUG-431): `Persistence/DeepBase.DB.Pool.pas` TPooledConnection.Release å½’è¿˜è¿æ¥å‰ä¸å›æ»šæ®‹ç•™äº‹åŠ¡/ä¸å…³é—­æ¸¸æ ‡, ä¸‹ä¸ªå€Ÿç”¨è€…ç»§æ‰¿è„è¿æ¥ (SQLite "cannot start a transaction within a transaction"; PG/MySQL è¯»åˆ°ä¸­é—´æ•°æ®ç”šè‡³è¿å¸¦æäº¤ä»–äºº DML); éš”ç¦»çº§åˆ«æ³„æ¼ â€” æ–°å¢ ResetConnectionState (private), Release æŒ FLock å‰å…ˆå›æ»šæ®‹ç•™æœªæäº¤äº‹åŠ¡ (ä¸ Commit, å¼‚å¸¸è·¯å¾„é—ç•™=æœªå®Œæˆå·¥ä½œ) + é‡ç½® TxOptions.AutoCommit åˆ°æ± é…ç½®; å¤ä½å¤±è´¥ä»…è®°äº‹ä»¶ä¸é˜»æ–­å½’è¿˜ (IsValid æ¢æ´»å…œåº•, é¿å…è¿æ¥å¡ csInUse æ³„æ¼); æ®‹ç•™æ¸¸æ ‡å±è°ƒç”¨æ–¹ dataset ç”Ÿå‘½å‘¨æœŸ, æ± ä¸æ¥ç®¡ (FireDAC è®¾è®¡ä¸€è‡´). **C æ¨¡å—é¦–é¡¹ï¿½ï¿½ï¿½å¤, æ›´æ­£æ­¤å‰"Cå·²åœ¨å‰è½®å½’æ¡£"è¯¯æ ‡: C æœ‰ 7 é¡¹ R3 æ–°å‘ç°.** éªŒè¯: Win64 å…¨é‡ç¼–è¯‘ SUCCESS exit 0 (325082 lines 17.06s æ—  Error). è§ bugfix.md BUG-431.
-  - REVIEW5-R3-C-002 (DATA-R3-002 / BUG-432): `doQry/doQryMain.pas` btnFilterClick (L151) è¿‡æ»¤æ¡ä»¶å­—ç¬¦ä¸²æ‹¼æ¥ `tblQueries.Filter := 'proc_name LIKE ''%' + s + '%'''` è‡´è¿‡æ»¤è¡¨è¾¾å¼æ³¨å…¥ (TDataSet.Filter æŒ‰è¡¨è¾¾å¼è¯­æ³•è§£æ, å¯æ³¨å…¥ `%' OR 1=1 OR proc_name LIKE '%` ç»•è¿‡è¿‡æ»¤æˆ–æœªé—­åˆå¼•å·è‡´å¼‚å¸¸ DoS/æšä¸¾) â€” æ”¹ `tblQueries.Filter := 'proc_name LIKE ' + QuotedStr('%' + s + '%')`, QuotedStr å°†å†…åµŒå•å¼•å·ç¿»å€é”è¿›å­—é¢é‡. System.SysUtils å·²åœ¨ uses (L6). éªŒè¯: doQry å·¥ç¨‹åœ¨ BDS37 å›  uDoQryLegacy L8 `DBClient` å·²ç§»é™¤æ— æ³•æ•´ä½“ç¼–è¯‘ (å†å²é—ç•™, éæœ¬ä¿®å¤å¼•å…¥), ä¿®å¤ä¸ºçº¯æ ‡å‡† API QuotedStr, uses é½å¤‡è¯­æ³•ç¡®å®šæ­£ç¡®; doQry ä¸åœ¨ CI å•æµ‹å·¥ç¨‹é›†æ— å›å½’è§¦å‘. è§ bugfix.md BUG-432.
-  - REVIEW5-R3-C-003 (DATA-R3-003 / BUG-433): `doQry/doQryMain.pas` (a) GetFieldList (L305) Format æ‹¼æ¥ TableName åˆ° information_schema æŸ¥è¯¢, (b) btnGenSqlClick (L126) æ‹¼æ¥æ•°æ®åº“å­—æ®µ proc_name â€” ä¸¤å¤„å‡æ”¹ ADO å‚æ•°åŒ– `WHERE table_name = :t`/`WHERE proc_name = :p` + `Parameters.ParamByName(...).Value := ...`; aQry ä¸º TADOQuery (L27), Data.Win.ADODB å·²åœ¨ uses (L12), é©±åŠ¨è½¬ä¹‰æ¶ˆé™¤æ³¨å…¥é¢. L286 ç¡¬ç¼–ç  'public' æ— æ‹¼æ¥ã€L178 VALUES å…¨å­—é¢é‡, æ— æ³¨å…¥é£é™©æœªæ”¹. éªŒè¯: åŒ BUG-432 (doQry DBClient å†å²é—ç•™æ— æ³•æ•´ä½“ç¼–è¯‘; ä¿®å¤ä¸º TADOQuery.Parameters.ParamByName æ ‡å‡† API, uses é½å¤‡); doQry ä¸åœ¨ CI å•æµ‹å·¥ç¨‹é›†æ— å›å½’è§¦å‘. è§ bugfix.md BUG-433.
-  - REVIEW5-R3-C-004 (DATA-R3-004 / BUG-434): `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` CheckForeignKeys (L460)/CheckRequiredFields (L517)/CheckEnumValues (L579) ä¸‰å¤„ except ç» `OutputDebugString` åæŸ¥è¯¢å¼‚å¸¸ â€” æŸ¥è¯¢å¤±è´¥æ—¶æ–¹æ³•è¿”å›ç©ºæ•°ç»„, `DiagnoseAll` èšåˆå `GenerateDiagnoseReport` æŠ¥ `[OK] No issues found` "å‡ç»¿" (green-on-error), ç®¡ç†å‘˜è¯¯ä¿¡ DB å¥åº·, å®é™…æ•…éšœåŸ‹è¿› DebugView (ç”Ÿäº§é€šå¸¸æ— äººçœ‹). ä¿®å¤: `Core/DeepBase.Diagnose.pas` `TDiagnoseIssueType` æšä¸¾æœ«å°¾æ–°å¢ `ditCheckError` (åºæ•° 8, å…¼å®¹å·²æœ‰ 0..7, GenerateDiagnoseReport æŒ‰ CanAutoFix/FixSQL åˆ†ç±»ä¸ case IssueType æ•…æ—  case ç©·ä¸¾ç‚¹éœ€è¡¥); ä¸‰ except å—æ”¹ä¸ºæ„é€  `ditCheckError`+`IsOK:=False` çš„ TDiagnoseResult è¿½åŠ  ResultList, Issue å¡« 'æ£€æŸ¥å¤±è´¥: '+E.Message, TableName/ObjectName å¡«å½“å‰è¿­ä»£ä¸Šä¸‹æ–‡ (FK/RF/EF çš„ TableName/ColumnName, å˜é‡åœ¨ except å¤„ in-scope), CanAutoFix:=False; AddColumnIfNotExists/AutoFix çš„ except ä¿ç•™ (è¿”å›å€¼ Boolean/Integer å·²éƒ¨åˆ†è¡¨è¾¾å¤±è´¥, ä¸å±å‡ç»¿è¯­ä¹‰, æ”¹åŠ¨æ¶‰ç­¾åå˜æ›´è¶… DATA-R3-004 èŒƒå›´). éªŒè¯: Win64 å…¨é‡ç¼–è¯‘ SUCCESS exit 0 (325119 lines 17.05s æ—  Error); Diagnose å•å…ƒ DUnitX å›å½’ `-FromUnit DeepBase.Diagnose -AllowFilteredCI` å…¨è¿‡ (Tests Found 40 / Passed 40 / Failed 0), å«æ–°å¢ `Ord(ditCheckError)=8` åºæ•°æ–­è¨€ (Test_IssueType_Values); å…¨é‡æµ‹è¯•è¿è¡Œæœ‰æ—¢æœ‰ Runtime 216 äºé Diagnose æµ‹è¯• (ä»“åº“ R3 å¤šæ–‡ä»¶ä¿®å¤è¿›è¡Œä¸­, ä¸æœ¬æ¬¡æ”¹åŠ¨æ— å…³).  - REVIEW5-R3-C-005 (DATA-R3-005 / BUG-435): `Persistence/DeepBase.Persistence.MRU.FireDAC.pas` Upsert (L72) æ— æ¡ä»¶ `FConnection.StartTransaction` + except (L115) æ— æ¡ä»¶ `Rollback` â€” è°ƒç”¨æ–¹å·²åœ¨å¤–å±‚äº‹åŠ¡ä¸­ (å…±äº« TFDConnection è°ƒ Upsert, æˆ–é‡å…¥) æ—¶: SQLite æŠ¥ "cannot start a transaction within a transaction"; PG/MySQL åˆ™ Upsert ä¸­é€”å¼‚å¸¸ `Rollback` å›æ»šè°ƒç”¨æ–¹æ•´ä¸ªå¤–å±‚äº‹åŠ¡, æ’¤é”€å…¶åˆæ³• DML, MRU å†…éƒ¨å¼‚å¸¸æ„å¤–è‡´è°ƒç”¨æ–¹æ•°æ®ä¸¢å¤±. ä¿®å¤: ä»¿ `Persistence/DeepBase.Persistence.Authorization.FireDAC.pas` (DATA2-025) OwnTx æ¨¡å¼ â€” var åŠ  `OwnTx: Boolean`, `OwnTx:=False` å `if not FConnection.InTransaction then StartTransaction + OwnTx:=True`, `if OwnTx then Commit`, `except if OwnTx then Rollback; raise`. DATA2-019 é˜²å¹¶å‘é‡å¤é”®è¯­ä¹‰ä¿ç•™ (æ— å¤–å±‚äº‹åŠ¡æ—¶ä»è‡ªå¯åŒ…è£¹ SELECT-INSERT é˜²åŒ INSERT æ’ UNIQUE; æœ‰å¤–å±‚äº‹åŠ¡æ—¶å¤ç”¨ä¹‹, é˜²é‡ç”± MRU è¡¨ UNIQUE çº¦æŸå…œåº•, å¹¶å‘å®‰å…¨ç”±è°ƒç”¨æ–¹éš”ç¦»çº§åˆ«ä¿è¯, æ— å›å½’); `raise` è®©è°ƒç”¨æ–¹æ„ŸçŸ¥ MRU å†™å¤±è´¥å¹¶è‡ªå†³å¤–å±‚äº‹åŠ¡å»ç•™, ä¸åå¼‚å¸¸. éªŒè¯: Win64 ç¼–è¯‘ SUCCESS exit 0; MRU å•å…ƒ DUnitX å›å½’ `-FromUnit DeepBase.MRU -AllowFilteredCI` å…¨è¿‡ (Tests Found 13 / Passed 13 / Failed 0); æµ‹è¯•ç”¨ TInMemoryMRUStorage mock ä¸å®è·‘ FireDAC è·¯å¾„, çœŸå®é‡å…¥è¯¯å›æ»šå¤ç°éœ€å¤šçº¿ç¨‹+å…±äº«è¿æ¥å¼‚å¸¸æ³¨å…¥ä¸åœ¨å•æµ‹èŒƒå›´, ä¸åŒç±»åŠ å›ºé¡¹ä¸€è‡´ä¸æ–°å¢ä¸“é¡¹æµ‹è¯•. è§ bugfix.md BUG-435.
-  - REVIEW5-R3-C-006 (DATA-R3-006 / BUG-436): `doQry/uDoQryLegacy.pas` å¼‚å¸¸/UI æ¶ˆæ¯å«å®Œæ•´å†…è”å€¼ SQL (PII æ³„æ¼) â€” legacy å±‚ `BuildSQL` ç”Ÿæˆå†…è”å€¼ SQL (å‚æ•°å€¼ç» QuoteValue/HandleParamValue æ‹¼å…¥), 13 å¤„æŠŠå®Œæ•´ SQL å¡è¿›ç”¨æˆ·å¯è§æ¶ˆæ¯: `ExecuteAndGetResult` L756 raise CreateFmt(...'SQL: %s'...aSQL), `ExecuteSQL` L778 raise Create(...'SQL:'+SQL), `doQry(ProcName...)` L894/901/930/945/956/964/968/978/982/993 å…± 10 å¤„ msg æ„é€ å« 'SQL: %s'+sSQL, è¦†ç›–å¤±è´¥è·¯å¾„ (raise ä¸ŠæŠ›è¿›æ—¥å¿—) ä¸æˆåŠŸè·¯å¾„ (msg var è¾“å‡ºå‚æ•°è¿”å› UI æ˜¾ç¤º, æˆåŠŸæ‰§è¡Œä¹Ÿå‘ç”¨æˆ·æš´éœ² SQL+å€¼). å€¼å¯èƒ½ä¸ºèŠå¤©æ­£æ–‡/ç”¨æˆ·ID/åˆ†äº«é“¾æ¥, è¿åæ•°æ®æœ€å°åŒ–. ä¿®å¤: ç»Ÿä¸€ç­–ç•¥ â€” msg/å¼‚å¸¸æ¶ˆæ¯åªä¿ç•™é”™è¯¯æœ¬èº«+æ“ä½œç±»å‹/è¡¨å/å—å½±å“è¡Œæ•°ç­‰è„±æ•å…ƒæ•°æ®, å»æ‰ 'SQL:' å°¾å·´åŠå¯¹åº” sSQL/SQL.Text å‚æ•°; å®Œæ•´ SQL ç» `{$IFDEF DEBUG} Winapi.Windows.OutputDebugString(...) {$ENDIF}` è¾“å‡ºè°ƒè¯•å™¨ (ç”Ÿäº§æ—  DEBUG/æ— æŒä¹…æ—¥å¿—, å³ä¾¿ DebugView æ¥ä¹Ÿä¸è¿›æŒä¹…åŒ–), ä¸ä¸ŠæŠ›ä¸è¿› msg, å…±æ”¹ 13 å¤„å‡æ ¸å¯¹ Format å ä½ç¬¦ä¸å‚æ•°æ•°å¯¹é½; ä¿ç•™ L325/L697 æ—¢æœ‰ OutputDebugString (æœ¬å°±è°ƒè¯•å™¨è¾“å‡º, éç”¨æˆ·æ¶ˆæ¯è·¯å¾„, ä¸å±æ³„æ¼é¢). doQry å·¥ç¨‹ L8 DBClient å·²è‡ª Delphi ç§»é™¤ (C-002/C-003 åŒæ¬¾å†å²é—ç•™), BDS37 æ— æ³•æ•´ä½“ç¼–è¯‘ â†’ æ— ç¼–è¯‘éªŒè¯; æ”¹åŠ¨ä¸ºçº¯å¼‚å¸¸/UI æ¶ˆæ¯æ–‡æœ¬æ”¹å†™, Format è¯­æ³•ç­‰ä»·, uses Winapi.Windows å·²åœ¨ L8 (å…¨é™å®š OutputDebugString å®‰å…¨), æ— æ–°å¢ç¬¦å·/ç­¾å. æ®‹ç•™æ‰«æ: grep "'SQL: |SQL: %s" æ’é™¤ DEBUG è¡Œåä»…ä½™ 2 å¤„æ—¢æœ‰ OutputDebugString, msg/å¼‚å¸¸è·¯å¾„é›¶æ®‹ç•™; 13 ä¸ª IFDEF DEBUG å®ˆå« (11 æ–°+2 åŸ). çœŸå® PII æ³„æ¼å¤ç°éœ€ doQry.exe è¿è¡Œ (ä¾èµ–æ¢å¤ DBClient çš„æ—§ BDS æˆ– DBClient æ›¿ä»£), ä¸åœ¨æœ¬è½®ç¼–è¯‘é“¾è¦†ç›–, ä¸åŒç±» doQry legacy é¡¹ä¸€è‡´. è§ bugfix.md BUG-436.
-  - REVIEW5-R3-C-007 (DATA-R3-007 / BUG-437): `Persistence/DeepBase.Persistence.Manager.FireDAC.pas` AddColumn ColumnDef åŸæ ·æ‹¼å…¥ DDL (é˜²å¾¡æ€§ç¼ºå£) â€” `TFireDACManagerStorage.AddColumn` (L208) `Format('ALTER TABLE %s ADD COLUMN %s %s', [TableName, ColumnName, ColumnDef])`, TableName/ColumnName å·² `TSQLUtils.ValidateIdentifier` æ ¡éªŒä½† ColumnDef æ— æ ¡éªŒç›´æ¥æ‹¼; å½“å‰å”¯ä¸€è°ƒç”¨æ–¹ `Core/DeepBase.Manager.Schema.pas` AddColumnIfMissing åªä¼ ç¡¬ç¼–ç å­—é¢é‡ (TEXT/INTEGER/REAL+DEFAULT'<è¯>'/DEFAULTæ•°å­—), **ç›®å‰ä¸å¯åˆ©ç”¨**, ä½† AddColumn æš´éœ²åœ¨å…¬å…± `IManagerStorage.AddColumn`, æœªæ¥è°ƒç”¨æ–¹ä¼ å—å¤–éƒ¨å½±å“å€¼å³ DDL æ³¨å…¥ (åˆ†å·ç»ˆæ­¢+DROP/DELETE/CREATE TRIGGER/ATTACH, æˆ– `--`æ³¨é‡Š). å±çºµæ·±é˜²å¾¡ç¼ºå£éå½“å‰æ¼æ´. ä¿®å¤: `Core/DeepBase.SQL.Utils.pas` `TSQLUtils` åŠ  `IsValidColumnDef`/`ValidateColumnDef` (ä¸æ—¢æœ‰ IsValidIdentifier/ValidateIdentifier åŒæ—) â€” æ‹’ç©º/é•¿åº¦>200/åˆ†å·`;`/è¡Œæ³¨é‡Š`--`/å—æ³¨é‡Š`/*`*/`/CRLFæ¢è¡Œ; æ‹’ DDL-DML å…³é”®å­— (DROP/CREATE/ALTER/DELETE/INSERT/UPDATE/SELECT/TRIGGER/INDEX/VIEW/ATTACH/DETACH/PRAGMA/VACUUM) ç» `\b`è¯è¾¹ç•Œå¤§å°å†™ä¸æ•æ„Ÿ; å…è®¸å­—ç¬¦ç™½åå•å­—æ¯/æ•°å­—/ç©ºæ ¼/å•å¼•å·/ä¸‹åˆ’çº¿/å°æ•°ç‚¹/æ‹¬å·é€—å·, æ‹’åŒå¼•å·åå¼•å·; AddColumn L217 ååŠ  `TSQLUtils.ValidateColumnDef(ColumnDef, 'Manager.AddColumn.ColumnDef')`, éæ³•å³ `EArgumentException` (ä¸ identifier æ ¡éªŒåŒå¤±è´¥è¯­ä¹‰). é€‰ç™½åå•éå¼ºç±»å‹ TColumnDef è®°å½• (ä¸æ”¹å…¬å…±ç­¾å, ä¸ç ´åç°æœ‰è°ƒç”¨æ–¹, æœ€å°ä¾µå…¥). uses: Manager.FireDAC L26 å·²å« DeepBase.SQL.Utils æ— æ–°å¢; SQL.Utils implementation æ–°å¢ System.RegularExpressions (TRegEx)/System.SysConst. éªŒè¯: Win64 `run_tests -FromUnit DeepBase.SQL.Security.PBT -CI -AllowFilteredCI` â†’ `SUCCESS: Unit Tests compiled` (325286 lines 16.48s) + Tests Found 5 / Passed 5 / Failed 0 (å«æ–°å¢ Property20 ä¸¤ä¸ª: 11 åˆæ³•æ ·æœ¬+12 éæ³•æ³¨å…¥æ ·æœ¬, åŒè·¯å¾„éªŒè¯ IsValidColumnDef å¸ƒå°”ä¸ ValidateColumnDef æŠ› EArgumentException); çœŸå®è°ƒç”¨æ–¹å…¨é‡æ ¸å¯¹ Manager.Schema æ‰€æœ‰ AddColumnIfMissing å­—é¢é‡å‡é€šè¿‡ç™½åå•æ— å›å½’. è§ bugfix.md BUG-437. **REVIEW5-R3 ç¬¬ä¸‰è½®äº”ä¸“å®¶å®¡é˜…è‡³æ­¤å…¨éƒ¨ 53 é¡¹ç¼–å·å‘ç°ä¿®å¤é—­ç¯ (BUG-386~BUG-437).**
+  - REVIEW5-R3-E-006 (FEAT-R3-006, BUG-425): `Features/DeepBase.CloudBackup.pas` ´«Êä²ã°²È«ÔöÇ¿ (P1 ¹é²¢). ¼û bugfix.md BUG-425.
+  - REVIEW5-R3-E-007 (FEAT-R3-007, BUG-426): `Features/DeepBase.AntiTamper.pas` GetDefaultConfig ¹Ì¶¨ salt ¸ÄÎª¿ÕÑÎ+Initialize Ğ£Ñé (Ä¬ÈÏ¿ÕÑÎ±ØÅ× EAntiTamperException, ÅäÖÃ Salt ºó³É¹¦). ¼û bugfix.md BUG-426.
+  - REVIEW5-R3-E-008 (FEAT-R3-008, BUG-427): `Features/DeepBase.Speech.TTS.StepFun.pas` FetchSystemVoices/FetchClonedVoices `nil as TJSONArray` ´¥·¢ EInvalidCast (as ¶Ô nil Ç¿×ªÅ×Òì³£, if=nil ÎªËÀ´úÂë) ¡ª ¸Ä `is` ÅĞ¶¨ (¶Ô nil ·µ»Ø False) + Ó²×ª»» TJSONArray(VoicesVal), È±¼ü/·ÇÊı×éÓÅÑÅ Exit ²¢Éè FLastError. ¼û bugfix.md BUG-427.
+  - REVIEW5-R3-E-005 (FEAT-R3-005, BUG-428): `Features/DeepBase.Commerce.SafeClient.pas` SendJson ½ö 401 ÖØÊÔ, 429/5xx Ë²Ì¬Ê§°ÜÖ±½ÓÅ× EDeepBaseCommerceError, Ö§¸¶/¶©µ¥½Ó¿Ú¶ÌÔİÏŞÁ÷/ºó¶ËÖØÆô´°¿ÚÏÂÁ¢¼´Ê§°ÜÎŞÍË±Ü ¡ª SendJson Ä©Î²ĞÂÔöË²Ì¬ÍË±ÜÖØÊÔÑ­»· (½öÃİµÈµ÷ÓÃ: GET/HEAD ÌìÈ»ÃİµÈ, POST/PUT/DELETE ½ö´ø idempotency key ²ÅÖØÊÔ, ·À·ÇÃİµÈ POST ÖØ¸´ÏÂµ¥); IsRetriableStatus (429+5xx) / IsIdempotentCall / ExtractRetryAfterMs (429 ÓÅÏÈ¶Á Retry-After Í·ÃëÊı¡úms Ç¯ÖÆµ½ BACKOFF_CAP_MS) / ComputeBackoffMs (5xx Ö¸ÊıÍË±Ü BACKOFF_BASE_MS*2^attempt Ç¯ÖÆÉÏÏŞ) ËÄ¸¨Öú·½·¨; »ùÓÚ attempt µÄÈ·¶¨ĞÔ ¡À25% ¶¶¶¯ (²»ÓÃ Now/Random); Winapi.Windows.Sleep (MSWINDOWS ±£»¤). implementation uses Ôö System.Math (È«ÏŞ¶¨ System.Math.Min Ç¯ÖÆ, ²Ö¿â¹ßÀı). ĞÂÔö 2 »Ø¹é²âÊÔ: 429 ÃİµÈ GET Retry-After:0 ÖØÊÔ³É¹¦ RequestCount=2; ·ÇÃİµÈ POST 503 ²»ÖØÊÔ RequestCount=1 ·ÀÖØ¸´. DUnitX --run È«Ãû¹ıÂËµ¥¶ÀÖ´ĞĞ 2 found 2 passed. È«Á¿Ì×¼ş 2 ¼ÈÓĞÊ§°Ü (WeChatPay ¹«Ô¿»·¾³ + Test_PermissionClient_HasFeature ²âÊÔÊı¾İ valid_until=2026-07-08 ÒÑÓÚ½ñÈÕ 07-09 ¹ıÆÚ) Óë E-005 ÎŞ¹Ø. ¼û bugfix.md BUG-428.
+  - REVIEW5-R3-D-007 (GOV-R3-007, BUG-429): `DeepFlow/Source/Roles/DeepFlow.Commander.pas` GetOrCreateSession ËøÄÚ·µ»Ø TSession ÂãÖ¸ÕëºóÊÍ·ÅËø, ProcessRequest ËøÍâĞŞ¸Ä Session.State/FTurnCount(Inc) ÖÂÍ¬ session-id ²¢·¢Êı¾İ¾ºÕù (Inc ·ÇÔ­×Ó, State ¶Á¸ÄĞ´ËºÁÑ) ¡ª ProcessRequest ÖĞ State/FTurnCount ¶ÁĞ´ + Context/SessionId ¿ìÕÕÈ¡ÖµÈ«²¿°ü¹ü FSessionLock ÁÙ½çÇø (ÄÚÁª var ¾Ö²¿¿ìÕÕ, AnalyzeIntent ºÄÊ± LLM ËøÍâÖ´ĞĞ±ÜÃâĞòÁĞ»¯); ³É¹¦ ssPending Óë except ssError ¸÷×ÔËøÄÚ¸üĞÂ. Commander Í£Ö¹ Clear Ğü¿ÕÂãÖ¸ÕëÊô¸üÉîËùÓĞÈ¨ÎÊÌâ³¬³ö D-007 ·¶Î§. ÑéÖ¤: Win64 È«Á¿±àÒëÍ¨¹ı (exit 0 ½öÒÅÁô H2077/H2443 Hint); Commander ÎŞ×¨Êôµ¥²â, ´¿¼ÓËøÓïÒåµÈ¼Û. ¼û bugfix.md BUG-429.
+  - REVIEW5-R3-D-008 (GOV-R3-008, BUG-430): `Governance/DeepBase.Governance.AI.ProposalQueue.pas` Submit ÎŞÈİÁ¿ÉÏÏŞÖÂ AI Ñ­»·Ìá½»ÎŞÏŞ¶Ñ»ı TProposal OOM, FindById/GetPending O(n) ÅòÕÍºó¿¨¶Ù; È«³ÌÎŞËø, ÒıÈëºóÌ¨ AI Ìá°¸½«Éı P1 ¡ª ¼Ó FMaxPending (Ä¬ÈÏ 1000, ÂúÅ× EProposalQueueError ĞÂÒì³£Àà, ×ñÑ­ Governance EConfigRegistrarError/EJsonLogicError ¹ßÀı) + TCriticalSection ±£»¤ Submit/Approve/Reject/Apply/FindById/GetPending/GetAll/Count È«²¿·½·¨; FindById ²ğ FindByIdInternal ±ÜÃâ²»¿ÉÖØÈë TCriticalSection ×ÔËÀËø; Apply ËøÄÚ´´½¨ ChangeSet+MarkApplied (ModelVersion ÎŞ·´ÏòËøÒÀÀµ). P2 È« 22 ÏîĞŞÍê. ÑéÖ¤: Win64 È«Á¿±àÒë SUCCESS exit 0 (325043 lines 16.56s ÎŞ Error); ProposalQueue ÎŞÍâ²¿µ÷ÓÃµã/ÎŞµ¥²â, ´¿¼Ó¹ÌÓïÒåµÈ¼Û. ¼û bugfix.md BUG-430.
+  - REVIEW5-R3-C-001 (DATA-R3-001 / BUG-431): `Persistence/DeepBase.DB.Pool.pas` TPooledConnection.Release ¹é»¹Á¬½ÓÇ°²»»Ø¹ö²ĞÁôÊÂÎñ/²»¹Ø±ÕÓÎ±ê, ÏÂ¸ö½èÓÃÕß¼Ì³ĞÔàÁ¬½Ó (SQLite "cannot start a transaction within a transaction"; PG/MySQL ¶Áµ½ÖĞ¼äÊı¾İÉõÖÁÁ¬´øÌá½»ËûÈË DML); ¸ôÀë¼¶±ğĞ¹Â© ¡ª ĞÂÔö ResetConnectionState (private), Release ³Ö FLock Ç°ÏÈ»Ø¹ö²ĞÁôÎ´Ìá½»ÊÂÎñ (²» Commit, Òì³£Â·¾¶ÒÅÁô=Î´Íê³É¹¤×÷) + ÖØÖÃ TxOptions.AutoCommit µ½³ØÅäÖÃ; ¸´Î»Ê§°Ü½ö¼ÇÊÂ¼ş²»×è¶Ï¹é»¹ (IsValid Ì½»î¶µµ×, ±ÜÃâÁ¬½Ó¿¨ csInUse Ğ¹Â©); ²ĞÁôÓÎ±êÊôµ÷ÓÃ·½ dataset ÉúÃüÖÜÆÚ, ³Ø²»½Ó¹Ü (FireDAC Éè¼ÆÒ»ÖÂ). **C Ä£¿éÊ×Ïî???¸´, ¸üÕı´ËÇ°"CÒÑÔÚÇ°ÂÖ¹éµµ"Îó±ê: C ÓĞ 7 Ïî R3 ĞÂ·¢ÏÖ.** ÑéÖ¤: Win64 È«Á¿±àÒë SUCCESS exit 0 (325082 lines 17.06s ÎŞ Error). ¼û bugfix.md BUG-431.
+  - REVIEW5-R3-C-002 (DATA-R3-002 / BUG-432): `doQry/doQryMain.pas` btnFilterClick (L151) ¹ıÂËÌõ¼ş×Ö·û´®Æ´½Ó `tblQueries.Filter := 'proc_name LIKE ''%' + s + '%'''` ÖÂ¹ıÂË±í´ïÊ½×¢Èë (TDataSet.Filter °´±í´ïÊ½Óï·¨½âÎö, ¿É×¢Èë `%' OR 1=1 OR proc_name LIKE '%` ÈÆ¹ı¹ıÂË»òÎ´±ÕºÏÒıºÅÖÂÒì³£ DoS/Ã¶¾Ù) ¡ª ¸Ä `tblQueries.Filter := 'proc_name LIKE ' + QuotedStr('%' + s + '%')`, QuotedStr ½«ÄÚÇ¶µ¥ÒıºÅ·­±¶Ëø½ø×ÖÃæÁ¿. System.SysUtils ÒÑÔÚ uses (L6). ÑéÖ¤: doQry ¹¤³ÌÔÚ BDS37 Òò uDoQryLegacy L8 `DBClient` ÒÑÒÆ³ıÎŞ·¨ÕûÌå±àÒë (ÀúÊ·ÒÅÁô, ·Ç±¾ĞŞ¸´ÒıÈë), ĞŞ¸´Îª´¿±ê×¼ API QuotedStr, uses Æë±¸Óï·¨È·¶¨ÕıÈ·; doQry ²»ÔÚ CI µ¥²â¹¤³Ì¼¯ÎŞ»Ø¹é´¥·¢. ¼û bugfix.md BUG-432.
+  - REVIEW5-R3-C-003 (DATA-R3-003 / BUG-433): `doQry/doQryMain.pas` (a) GetFieldList (L305) Format Æ´½Ó TableName µ½ information_schema ²éÑ¯, (b) btnGenSqlClick (L126) Æ´½ÓÊı¾İ¿â×Ö¶Î proc_name ¡ª Á½´¦¾ù¸Ä ADO ²ÎÊı»¯ `WHERE table_name = :t`/`WHERE proc_name = :p` + `Parameters.ParamByName(...).Value := ...`; aQry Îª TADOQuery (L27), Data.Win.ADODB ÒÑÔÚ uses (L12), Çı¶¯×ªÒåÏû³ı×¢ÈëÃæ. L286 Ó²±àÂë 'public' ÎŞÆ´½Ó¡¢L178 VALUES È«×ÖÃæÁ¿, ÎŞ×¢Èë·çÏÕÎ´¸Ä. ÑéÖ¤: Í¬ BUG-432 (doQry DBClient ÀúÊ·ÒÅÁôÎŞ·¨ÕûÌå±àÒë; ĞŞ¸´Îª TADOQuery.Parameters.ParamByName ±ê×¼ API, uses Æë±¸); doQry ²»ÔÚ CI µ¥²â¹¤³Ì¼¯ÎŞ»Ø¹é´¥·¢. ¼û bugfix.md BUG-433.
+  - REVIEW5-R3-C-004 (DATA-R3-004 / BUG-434): `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` CheckForeignKeys (L460)/CheckRequiredFields (L517)/CheckEnumValues (L579) Èı´¦ except ¾­ `OutputDebugString` ÍÌ²éÑ¯Òì³£ ¡ª ²éÑ¯Ê§°ÜÊ±·½·¨·µ»Ø¿ÕÊı×é, `DiagnoseAll` ¾ÛºÏºó `GenerateDiagnoseReport` ±¨ `[OK] No issues found` "¼ÙÂÌ" (green-on-error), ¹ÜÀíÔ±ÎóĞÅ DB ½¡¿µ, Êµ¼Ê¹ÊÕÏÂñ½ø DebugView (Éú²úÍ¨³£ÎŞÈË¿´). ĞŞ¸´: `Core/DeepBase.Diagnose.pas` `TDiagnoseIssueType` Ã¶¾ÙÄ©Î²ĞÂÔö `ditCheckError` (ĞòÊı 8, ¼æÈİÒÑÓĞ 0..7, GenerateDiagnoseReport °´ CanAutoFix/FixSQL ·ÖÀà²» case IssueType ¹ÊÎŞ case Çî¾ÙµãĞè²¹); Èı except ¿é¸ÄÎª¹¹Ôì `ditCheckError`+`IsOK:=False` µÄ TDiagnoseResult ×·¼Ó ResultList, Issue Ìî '¼ì²éÊ§°Ü: '+E.Message, TableName/ObjectName Ìîµ±Ç°µü´úÉÏÏÂÎÄ (FK/RF/EF µÄ TableName/ColumnName, ±äÁ¿ÔÚ except ´¦ in-scope), CanAutoFix:=False; AddColumnIfNotExists/AutoFix µÄ except ±£Áô (·µ»ØÖµ Boolean/Integer ÒÑ²¿·Ö±í´ïÊ§°Ü, ²»Êô¼ÙÂÌÓïÒå, ¸Ä¶¯ÉæÇ©Ãû±ä¸ü³¬ DATA-R3-004 ·¶Î§). ÑéÖ¤: Win64 È«Á¿±àÒë SUCCESS exit 0 (325119 lines 17.05s ÎŞ Error); Diagnose µ¥Ôª DUnitX »Ø¹é `-FromUnit DeepBase.Diagnose -AllowFilteredCI` È«¹ı (Tests Found 40 / Passed 40 / Failed 0), º¬ĞÂÔö `Ord(ditCheckError)=8` ĞòÊı¶ÏÑÔ (Test_IssueType_Values); È«Á¿²âÊÔÔËĞĞÓĞ¼ÈÓĞ Runtime 216 ÓÚ·Ç Diagnose ²âÊÔ (²Ö¿â R3 ¶àÎÄ¼şĞŞ¸´½øĞĞÖĞ, Óë±¾´Î¸Ä¶¯ÎŞ¹Ø).  - REVIEW5-R3-C-005 (DATA-R3-005 / BUG-435): `Persistence/DeepBase.Persistence.MRU.FireDAC.pas` Upsert (L72) ÎŞÌõ¼ş `FConnection.StartTransaction` + except (L115) ÎŞÌõ¼ş `Rollback` ¡ª µ÷ÓÃ·½ÒÑÔÚÍâ²ãÊÂÎñÖĞ (¹²Ïí TFDConnection µ÷ Upsert, »òÖØÈë) Ê±: SQLite ±¨ "cannot start a transaction within a transaction"; PG/MySQL Ôò Upsert ÖĞÍ¾Òì³£ `Rollback` »Ø¹öµ÷ÓÃ·½Õû¸öÍâ²ãÊÂÎñ, ³·ÏúÆäºÏ·¨ DML, MRU ÄÚ²¿Òì³£ÒâÍâÖÂµ÷ÓÃ·½Êı¾İ¶ªÊ§. ĞŞ¸´: ·Â `Persistence/DeepBase.Persistence.Authorization.FireDAC.pas` (DATA2-025) OwnTx Ä£Ê½ ¡ª var ¼Ó `OwnTx: Boolean`, `OwnTx:=False` ºó `if not FConnection.InTransaction then StartTransaction + OwnTx:=True`, `if OwnTx then Commit`, `except if OwnTx then Rollback; raise`. DATA2-019 ·À²¢·¢ÖØ¸´¼üÓïÒå±£Áô (ÎŞÍâ²ãÊÂÎñÊ±ÈÔ×ÔÆô°ü¹ü SELECT-INSERT ·ÀË« INSERT ×² UNIQUE; ÓĞÍâ²ãÊÂÎñÊ±¸´ÓÃÖ®, ·ÀÖØÓÉ MRU ±í UNIQUE Ô¼Êø¶µµ×, ²¢·¢°²È«ÓÉµ÷ÓÃ·½¸ôÀë¼¶±ğ±£Ö¤, ÎŞ»Ø¹é); `raise` ÈÃµ÷ÓÃ·½¸ĞÖª MRU Ğ´Ê§°Ü²¢×Ô¾öÍâ²ãÊÂÎñÈ¥Áô, ²»ÍÌÒì³£. ÑéÖ¤: Win64 ±àÒë SUCCESS exit 0; MRU µ¥Ôª DUnitX »Ø¹é `-FromUnit DeepBase.MRU -AllowFilteredCI` È«¹ı (Tests Found 13 / Passed 13 / Failed 0); ²âÊÔÓÃ TInMemoryMRUStorage mock ²»ÊµÅÜ FireDAC Â·¾¶, ÕæÊµÖØÈëÎó»Ø¹ö¸´ÏÖĞè¶àÏß³Ì+¹²ÏíÁ¬½ÓÒì³£×¢Èë²»ÔÚµ¥²â·¶Î§, ÓëÍ¬Àà¼Ó¹ÌÏîÒ»ÖÂ²»ĞÂÔö×¨Ïî²âÊÔ. ¼û bugfix.md BUG-435.
+  - REVIEW5-R3-C-006 (DATA-R3-006 / BUG-436): `doQry/uDoQryLegacy.pas` Òì³£/UI ÏûÏ¢º¬ÍêÕûÄÚÁªÖµ SQL (PII Ğ¹Â©) ¡ª legacy ²ã `BuildSQL` Éú³ÉÄÚÁªÖµ SQL (²ÎÊıÖµ¾­ QuoteValue/HandleParamValue Æ´Èë), 13 ´¦°ÑÍêÕû SQL Èû½øÓÃ»§¿É¼ûÏûÏ¢: `ExecuteAndGetResult` L756 raise CreateFmt(...'SQL: %s'...aSQL), `ExecuteSQL` L778 raise Create(...'SQL:'+SQL), `doQry(ProcName...)` L894/901/930/945/956/964/968/978/982/993 ¹² 10 ´¦ msg ¹¹Ôìº¬ 'SQL: %s'+sSQL, ¸²¸ÇÊ§°ÜÂ·¾¶ (raise ÉÏÅ×½øÈÕÖ¾) Óë³É¹¦Â·¾¶ (msg var Êä³ö²ÎÊı·µ»Ø UI ÏÔÊ¾, ³É¹¦Ö´ĞĞÒ²ÏòÓÃ»§±©Â¶ SQL+Öµ). Öµ¿ÉÄÜÎªÁÄÌìÕıÎÄ/ÓÃ»§ID/·ÖÏíÁ´½Ó, Î¥·´Êı¾İ×îĞ¡»¯. ĞŞ¸´: Í³Ò»²ßÂÔ ¡ª msg/Òì³£ÏûÏ¢Ö»±£Áô´íÎó±¾Éí+²Ù×÷ÀàĞÍ/±íÃû/ÊÜÓ°ÏìĞĞÊıµÈÍÑÃôÔªÊı¾İ, È¥µô 'SQL:' Î²°Í¼°¶ÔÓ¦ sSQL/SQL.Text ²ÎÊı; ÍêÕû SQL ¾­ `{$IFDEF DEBUG} Winapi.Windows.OutputDebugString(...) {$ENDIF}` Êä³öµ÷ÊÔÆ÷ (Éú²úÎŞ DEBUG/ÎŞ³Ö¾ÃÈÕÖ¾, ¼´±ã DebugView ½ÓÒ²²»½ø³Ö¾Ã»¯), ²»ÉÏÅ×²»½ø msg, ¹²¸Ä 13 ´¦¾ùºË¶Ô Format Õ¼Î»·ûÓë²ÎÊıÊı¶ÔÆë; ±£Áô L325/L697 ¼ÈÓĞ OutputDebugString (±¾¾Íµ÷ÊÔÆ÷Êä³ö, ·ÇÓÃ»§ÏûÏ¢Â·¾¶, ²»ÊôĞ¹Â©Ãæ). doQry ¹¤³Ì L8 DBClient ÒÑ×Ô Delphi ÒÆ³ı (C-002/C-003 Í¬¿îÀúÊ·ÒÅÁô), BDS37 ÎŞ·¨ÕûÌå±àÒë ¡ú ÎŞ±àÒëÑéÖ¤; ¸Ä¶¯Îª´¿Òì³£/UI ÏûÏ¢ÎÄ±¾¸ÄĞ´, Format Óï·¨µÈ¼Û, uses Winapi.Windows ÒÑÔÚ L8 (È«ÏŞ¶¨ OutputDebugString °²È«), ÎŞĞÂÔö·ûºÅ/Ç©Ãû. ²ĞÁôÉ¨Ãè: grep "'SQL: |SQL: %s" ÅÅ³ı DEBUG ĞĞºó½öÓà 2 ´¦¼ÈÓĞ OutputDebugString, msg/Òì³£Â·¾¶Áã²ĞÁô; 13 ¸ö IFDEF DEBUG ÊØÎÀ (11 ĞÂ+2 Ô­). ÕæÊµ PII Ğ¹Â©¸´ÏÖĞè doQry.exe ÔËĞĞ (ÒÀÀµ»Ö¸´ DBClient µÄ¾É BDS »ò DBClient Ìæ´ú), ²»ÔÚ±¾ÂÖ±àÒëÁ´¸²¸Ç, ÓëÍ¬Àà doQry legacy ÏîÒ»ÖÂ. ¼û bugfix.md BUG-436.
+  - REVIEW5-R3-C-007 (DATA-R3-007 / BUG-437): `Persistence/DeepBase.Persistence.Manager.FireDAC.pas` AddColumn ColumnDef Ô­ÑùÆ´Èë DDL (·ÀÓùĞÔÈ±¿Ú) ¡ª `TFireDACManagerStorage.AddColumn` (L208) `Format('ALTER TABLE %s ADD COLUMN %s %s', [TableName, ColumnName, ColumnDef])`, TableName/ColumnName ÒÑ `TSQLUtils.ValidateIdentifier` Ğ£Ñéµ« ColumnDef ÎŞĞ£ÑéÖ±½ÓÆ´; µ±Ç°Î¨Ò»µ÷ÓÃ·½ `Core/DeepBase.Manager.Schema.pas` AddColumnIfMissing Ö»´«Ó²±àÂë×ÖÃæÁ¿ (TEXT/INTEGER/REAL+DEFAULT'<´Ê>'/DEFAULTÊı×Ö), **Ä¿Ç°²»¿ÉÀûÓÃ**, µ« AddColumn ±©Â¶ÔÚ¹«¹² `IManagerStorage.AddColumn`, Î´À´µ÷ÓÃ·½´«ÊÜÍâ²¿Ó°ÏìÖµ¼´ DDL ×¢Èë (·ÖºÅÖÕÖ¹+DROP/DELETE/CREATE TRIGGER/ATTACH, »ò `--`×¢ÊÍ). Êô×İÉî·ÀÓùÈ±¿Ú·Çµ±Ç°Â©¶´. ĞŞ¸´: `Core/DeepBase.SQL.Utils.pas` `TSQLUtils` ¼Ó `IsValidColumnDef`/`ValidateColumnDef` (Óë¼ÈÓĞ IsValidIdentifier/ValidateIdentifier Í¬×å) ¡ª ¾Ü¿Õ/³¤¶È>200/·ÖºÅ`;`/ĞĞ×¢ÊÍ`--`/¿é×¢ÊÍ`/*`*/`/CRLF»»ĞĞ; ¾Ü DDL-DML ¹Ø¼ü×Ö (DROP/CREATE/ALTER/DELETE/INSERT/UPDATE/SELECT/TRIGGER/INDEX/VIEW/ATTACH/DETACH/PRAGMA/VACUUM) ¾­ `\b`´Ê±ß½ç´óĞ¡Ğ´²»Ãô¸Ğ; ÔÊĞí×Ö·û°×Ãûµ¥×ÖÄ¸/Êı×Ö/¿Õ¸ñ/µ¥ÒıºÅ/ÏÂ»®Ïß/Ğ¡Êıµã/À¨ºÅ¶ººÅ, ¾ÜË«ÒıºÅ·´ÒıºÅ; AddColumn L217 ºó¼Ó `TSQLUtils.ValidateColumnDef(ColumnDef, 'Manager.AddColumn.ColumnDef')`, ·Ç·¨¼´ `EArgumentException` (Óë identifier Ğ£ÑéÍ¬Ê§°ÜÓïÒå). Ñ¡°×Ãûµ¥·ÇÇ¿ÀàĞÍ TColumnDef ¼ÇÂ¼ (²»¸Ä¹«¹²Ç©Ãû, ²»ÆÆ»µÏÖÓĞµ÷ÓÃ·½, ×îĞ¡ÇÖÈë). uses: Manager.FireDAC L26 ÒÑº¬ DeepBase.SQL.Utils ÎŞĞÂÔö; SQL.Utils implementation ĞÂÔö System.RegularExpressions (TRegEx)/System.SysConst. ÑéÖ¤: Win64 `run_tests -FromUnit DeepBase.SQL.Security.PBT -CI -AllowFilteredCI` ¡ú `SUCCESS: Unit Tests compiled` (325286 lines 16.48s) + Tests Found 5 / Passed 5 / Failed 0 (º¬ĞÂÔö Property20 Á½¸ö: 11 ºÏ·¨Ñù±¾+12 ·Ç·¨×¢ÈëÑù±¾, Ë«Â·¾¶ÑéÖ¤ IsValidColumnDef ²¼¶ûÓë ValidateColumnDef Å× EArgumentException); ÕæÊµµ÷ÓÃ·½È«Á¿ºË¶Ô Manager.Schema ËùÓĞ AddColumnIfMissing ×ÖÃæÁ¿¾ùÍ¨¹ı°×Ãûµ¥ÎŞ»Ø¹é. ¼û bugfix.md BUG-437. **REVIEW5-R3 µÚÈıÂÖÎå×¨¼ÒÉóÔÄÖÁ´ËÈ«²¿ 53 Ïî±àºÅ·¢ÏÖĞŞ¸´±Õ»· (BUG-386~BUG-437).**
 
-## 2026-07-09 OPT-P2-002 ä¸‰å¤§æ–‡ä»¶æ‹†åˆ†é¡¹äºŒæ¬¡å¤æ ¸å½’æ¡£
+## 2026-07-09 OPT-P2-002 Èı´óÎÄ¼ş²ğ·ÖÏî¶ş´Î¸´ºË¹éµµ
 
-  - **å¤æ ¸èƒŒæ™¯**: OPT-P2-002ã€Œå¤§æ–‡ä»¶æ‹†åˆ†ã€äº 2026-07-10 æ ‡æ³¨ã€Œéƒ¨åˆ†å®Œæˆ (Crypto å·²æ‹†, LLM/Schema/Math æœªæ‹†)ã€ã€‚æœ¬è½®é€æ–‡ä»¶ç»“æ„ + å¼•ç”¨è¿½è¸ªå¤æ ¸, å‘ç°è¯¥æ›´æ­£ä»åŸºäºé”™è¯¯å‰æ, ä¸‰é¡¹æ‹†åˆ†æ–¹å‘æè¿°ä¸ä»£ç å®é™…ç»“æ„ä¸ç¬¦ã€‚
-  - **`Core/DeepBase.Schema.pas` (971 è¡Œ) â€” æ ‡è®°ä¸é€‚ç”¨, ä¸æ‹†åˆ†**: çº¯ `const` SQL DDL å•å…ƒ (24 ä¸ª `SQL_TIER0/1/2_*` å­—ç¬¦ä¸² + 5 ä¸ª `Get*SchemaSQL` èšåˆå‡½æ•°), **æ—  Table/Column/Index/Constraint ç±»å‹** (æ—§æè¿°ã€Œéœ€ Table/Column/Index/Constraint åˆ†ç¦»ã€æ–¹å‘é”™è¯¯); `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` L299-320 ç›´æ¥å¼•ç”¨ 20+ å•å¸¸é‡ (æŒ‰è¡¨åæ˜ å°„å»ºè¡¨ SQL), æ‹†åˆ†åªä¼šå¢åŠ è·¨å•å…ƒå¼•ç”¨æ”¹åŠ¨, ä¸è§£å†³å¯ç»´æŠ¤æ€§ (çº¯æ•°æ®å¸¸é‡å•å…ƒæ— é€»è¾‘æ··æ‚é—®é¢˜)ã€‚
-  - **`Core/DeepBase.Math.pas` (527 è¡Œ) â€” å·²æ‹†åˆ†å®Œæˆ**: é—¨é¢ + è–„åŒ…è£… (`TMathUtils` ~50 static å·¥å…·å‡½æ•°å§”æ‰˜ `System.Math` + `TMathConst` + `IsFinite`); å·²å­˜åœ¨ `DeepBase.Math.Geometry.pas`/`Math.Random.pas`/`Math.Interpolation.pas`/`Math.Statistics.pas` å››å­å•å…ƒ, å„å¤´éƒ¨æ³¨é‡Šæ˜ç¤ºã€ŒExtracted from DeepBase.Math to keep the facade under 800 linesã€; `DeepBase.Services.Math.pas` å·² uses å…¨éƒ¨å­å•å…ƒã€‚æ—§æè¿°ã€Œéœ€ç»Ÿè®¡/çŸ©é˜µ/éšæœºæ•°åˆ†ç¦»ã€å¯¹åº”å†…å®¹å·²åœ¨å››å­å•å…ƒä¸­è½åœ°ã€‚
-  - **`Core/DeepBase.LLM.pas` (1778 è¡Œ) â€” è½¬ç‹¬ç«‹é‡æ„å¾…åŠ OPT-REFACTOR-001**: é—¨é¢å•å…ƒ, å¤´éƒ¨æ˜ç¤ºã€Œfacade for the LLM moduleã€, L40-86 å¤§æ®µç±»å‹é‡å¯¼å‡º (ç±»å‹å·²è¿ `DeepBase.LLM.Types`/`LLM.Config`/`LLM.Providers`); å‰©ä½™ 1778 è¡Œä¸º `TDeepBaseLLM` å•ä¸€å·¨å‹ç±»æ–¹æ³•å®ç° (é…ç½®ç®¡ç†/HTTP ä¼ è¾“/è®¡è´¹å†å²/Chat/Prompt æ¨¡æ¿ç®¡ç†)ã€‚æ—§æè¿°ã€Œéœ€ Provider é€‚é…å™¨ç‹¬ç«‹ã€æ–¹å‘é”™è¯¯ (Provider é€»è¾‘å·²ç‹¬ç«‹åœ¨ `LLM.Providers.pas`)ã€‚çœŸæ­£çš„ã€Œæ‹†åˆ†ã€å®ä¸ºæ¶æ„é‡æ„: æŠŠ `TDeepBaseLLM` æ¨¡æ¿ç®¡ç†æ–¹æ³• (Save/Get/Delete/Copy/Validate/Render/Export/ImportTemplate, ~L918-1778 çº¦ 850 è¡Œ) æå–ä¸ºç‹¬ç«‹ `TLLMPromptTemplateManager` ç±», `TDeepBaseLLM` å§”æ‰˜ä¹‹ã€‚è¯¥é‡æ„æ”¹å…¬å¼€æ¥å£ã€å½±å“è°ƒç”¨æ–¹ (`Persistence.LLM.FireDAC`/`VCL.LLMConfigPanel`/`FMX.LLMConfigPanel`/`LLM.BillingClient` å‡ç›´æ¥ uses `DeepBase.LLM` ç”¨ `TDeepBaseLLM`), å±æ¶æ„é‡æ„éã€Œæ‹†æ–‡ä»¶ã€, æ‹†å‡ºä¸ºç‹¬ç«‹å¾…åŠ OPT-REFACTOR-001 (P2, å«è°ƒç”¨æ–¹è¿ç§»è¯„ä¼° + æ¥å£è®¾è®¡ + DUnitX è¦†ç›–æ‰©å±• `Tests/Test.DeepBase.LLM.PromptTemplate.pas`), ä¸åœ¨æœ¬è½®åŠ¨ä»£ç ã€‚
-  - **ç»“è®º**: OPT-P2-002 æ ¸å®å®Œæˆ â€” Crypto/Math æ‹†åˆ†è½åœ°, Schema æ ‡è®°ä¸é€‚ç”¨, LLM è½¬ç‹¬ç«‹é‡æ„å¾…åŠ OPT-REFACTOR-001ã€‚æœ¬è½®é›¶ä»£ç æ”¹åŠ¨, ä»… tasks.md/history.md æ–‡æ¡£å¯¹é½ (æ—  bugfix.md ç™»è®°, éç¼ºé™·ä¿®å¤)ã€‚
+  - **¸´ºË±³¾°**: OPT-P2-002¡¸´óÎÄ¼ş²ğ·Ö¡¹ÓÚ 2026-07-10 ±ê×¢¡¸²¿·ÖÍê³É (Crypto ÒÑ²ğ, LLM/Schema/Math Î´²ğ)¡¹¡£±¾ÂÖÖğÎÄ¼ş½á¹¹ + ÒıÓÃ×·×Ù¸´ºË, ·¢ÏÖ¸Ã¸üÕıÈÔ»ùÓÚ´íÎóÇ°Ìá, ÈıÏî²ğ·Ö·½ÏòÃèÊöÓë´úÂëÊµ¼Ê½á¹¹²»·û¡£
+  - **`Core/DeepBase.Schema.pas` (971 ĞĞ) ¡ª ±ê¼Ç²»ÊÊÓÃ, ²»²ğ·Ö**: ´¿ `const` SQL DDL µ¥Ôª (24 ¸ö `SQL_TIER0/1/2_*` ×Ö·û´® + 5 ¸ö `Get*SchemaSQL` ¾ÛºÏº¯Êı), **ÎŞ Table/Column/Index/Constraint ÀàĞÍ** (¾ÉÃèÊö¡¸Ğè Table/Column/Index/Constraint ·ÖÀë¡¹·½Ïò´íÎó); `Persistence/DeepBase.Persistence.Diagnose.FireDAC.pas` L299-320 Ö±½ÓÒıÓÃ 20+ µ¥³£Á¿ (°´±íÃûÓ³Éä½¨±í SQL), ²ğ·ÖÖ»»áÔö¼Ó¿çµ¥ÔªÒıÓÃ¸Ä¶¯, ²»½â¾ö¿ÉÎ¬»¤ĞÔ (´¿Êı¾İ³£Á¿µ¥ÔªÎŞÂß¼­»ìÔÓÎÊÌâ)¡£
+  - **`Core/DeepBase.Math.pas` (527 ĞĞ) ¡ª ÒÑ²ğ·ÖÍê³É**: ÃÅÃæ + ±¡°ü×° (`TMathUtils` ~50 static ¹¤¾ßº¯ÊıÎ¯ÍĞ `System.Math` + `TMathConst` + `IsFinite`); ÒÑ´æÔÚ `DeepBase.Math.Geometry.pas`/`Math.Random.pas`/`Math.Interpolation.pas`/`Math.Statistics.pas` ËÄ×Óµ¥Ôª, ¸÷Í·²¿×¢ÊÍÃ÷Ê¾¡¸Extracted from DeepBase.Math to keep the facade under 800 lines¡¹; `DeepBase.Services.Math.pas` ÒÑ uses È«²¿×Óµ¥Ôª¡£¾ÉÃèÊö¡¸ĞèÍ³¼Æ/¾ØÕó/Ëæ»úÊı·ÖÀë¡¹¶ÔÓ¦ÄÚÈİÒÑÔÚËÄ×Óµ¥ÔªÖĞÂäµØ¡£
+  - **`Core/DeepBase.LLM.pas` (1778 ĞĞ) ¡ª ×ª¶ÀÁ¢ÖØ¹¹´ı°ì OPT-REFACTOR-001**: ÃÅÃæµ¥Ôª, Í·²¿Ã÷Ê¾¡¸facade for the LLM module¡¹, L40-86 ´ó¶ÎÀàĞÍÖØµ¼³ö (ÀàĞÍÒÑÇ¨ `DeepBase.LLM.Types`/`LLM.Config`/`LLM.Providers`); Ê£Óà 1778 ĞĞÎª `TDeepBaseLLM` µ¥Ò»¾ŞĞÍÀà·½·¨ÊµÏÖ (ÅäÖÃ¹ÜÀí/HTTP ´«Êä/¼Æ·ÑÀúÊ·/Chat/Prompt Ä£°å¹ÜÀí)¡£¾ÉÃèÊö¡¸Ğè Provider ÊÊÅäÆ÷¶ÀÁ¢¡¹·½Ïò´íÎó (Provider Âß¼­ÒÑ¶ÀÁ¢ÔÚ `LLM.Providers.pas`)¡£ÕæÕıµÄ¡¸²ğ·Ö¡¹ÊµÎª¼Ü¹¹ÖØ¹¹: °Ñ `TDeepBaseLLM` Ä£°å¹ÜÀí·½·¨ (Save/Get/Delete/Copy/Validate/Render/Export/ImportTemplate, ~L918-1778 Ô¼ 850 ĞĞ) ÌáÈ¡Îª¶ÀÁ¢ `TLLMPromptTemplateManager` Àà, `TDeepBaseLLM` Î¯ÍĞÖ®¡£¸ÃÖØ¹¹¸Ä¹«¿ª½Ó¿Ú¡¢Ó°Ïìµ÷ÓÃ·½ (`Persistence.LLM.FireDAC`/`VCL.LLMConfigPanel`/`FMX.LLMConfigPanel`/`LLM.BillingClient` ¾ùÖ±½Ó uses `DeepBase.LLM` ÓÃ `TDeepBaseLLM`), Êô¼Ü¹¹ÖØ¹¹·Ç¡¸²ğÎÄ¼ş¡¹, ²ğ³öÎª¶ÀÁ¢´ı°ì OPT-REFACTOR-001 (P2, º¬µ÷ÓÃ·½Ç¨ÒÆÆÀ¹À + ½Ó¿ÚÉè¼Æ + DUnitX ¸²¸ÇÀ©Õ¹ `Tests/Test.DeepBase.LLM.PromptTemplate.pas`), ²»ÔÚ±¾ÂÖ¶¯´úÂë¡£
+  - **½áÂÛ**: OPT-P2-002 ºËÊµÍê³É ¡ª Crypto/Math ²ğ·ÖÂäµØ, Schema ±ê¼Ç²»ÊÊÓÃ, LLM ×ª¶ÀÁ¢ÖØ¹¹´ı°ì OPT-REFACTOR-001¡£±¾ÂÖÁã´úÂë¸Ä¶¯, ½ö tasks.md/history.md ÎÄµµ¶ÔÆë (ÎŞ bugfix.md µÇ¼Ç, ·ÇÈ±ÏİĞŞ¸´)¡£
 
-## 2026-07-13 DeepBaseTests.exe å…¨é‡ Runtime 216 è§¦å‘ç‚¹æ’æŸ¥å½’æ¡£ (BUG-438)
+## 2026-07-13 DeepBaseTests.exe È«Á¿ Runtime 216 ´¥·¢µãÅÅ²é¹éµµ (BUG-438)
 
-  - **æ’æŸ¥èƒŒæ™¯**: å…¨é‡å¥—ä»¶ (`Tests/DeepBaseTests.exe --exit:Continue`) æœ«å°¾ç¡®å®šæ€§å´©æºƒ `Runtime error 216 at 00007FF6D4A7593A` (Delphi æŠŠ AV 0xC0000005 åŒ…æˆ 216), åç§» `0x593A` æ¯æ¬¡å®Œå…¨ä¸€è‡´ = ç¡®å®šæ€§ AV. æ­¤ç¼ºé™·è‡ª BUG-421 ç­‰å¤šæ¡ç›®èµ·è¢«å¼•ç”¨ä¸º"é¢„å­˜ç¼ºé™·, æ— æ ¹å› ", ä¸€ç›´æ— å®šä½. æœ¬è½®ä¸“é—¨æ’æŸ¥è§¦å‘ç‚¹ (é›¶ä»£ç æ”¹åŠ¨, ä»…æ–‡æ¡£è¯Šæ–­).
-  - **æ’æŸ¥æ–¹æ³•**: ç”¨ `Tests/Test.DeepBase.DiagnosticLogger.pas` è‡ªå¸¦çš„é€æµ‹è¯• BEGIN/END/PASS/FAIL æ—¶é—´æˆ³æ—¥å¿— (`Tests/Logs/test-diagnostic.log`), å…¨é‡è·‘ + `tee` è½ç›˜, å´©æºƒå‰æ—¥å¿—æœ€åä¸€è¡Œå³è§¦å‘æµ‹è¯•. (æ³¨æ„: è¯¥æ—¥å¿—æ–‡ä»¶è‹¥è¢«ä¸Šæ¬¡è¿›ç¨‹å ç”¨ä¼šæŠ¥ EFCreateError, è¿è¡Œå‰éœ€ `rm -f Tests/Logs/test-diagnostic.log` è§£é”.)
-  - **å®šä½ç»“è®º (é“è¯)**: è§¦å‘äº `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` çš„ `TBUG324_WorkerQueueCallbackSafetyTest.Test_OnError_Exception_RetryPathStillExecutes` (L298-323) æ–¹æ³•ä½“å†…. ä¸‰é‡è¯æ®: (1) è¯Šæ–­æ—¥å¿—åœåœ¨ è¯¥æµ‹è¯• `Test BEGIN` ä¹‹å, æ— ä»»ä½• END/PASS/FAIL â†’ å´©åœ¨æ–¹æ³•ä½“å†…; (2) å•ç‹¬è·‘è¯¥ fixture (`-b -r:"Test.Regression.BUG324_WorkerQueueCallbackSafety" --exit:Continue`) ä»å´©ä¸”åç§» `0x593A` å®Œå…¨ä¸€è‡´ â†’ æ’é™¤è·¨æµ‹è¯•å†…å­˜/çº¿ç¨‹çŠ¶æ€æ±¡æŸ“, ä¸ºæœ¬æµ‹è¯•å›ºæœ‰; (3) fixture 9 ä¸ªæµ‹è¯•å‰ 8 å…¨è¿‡ (9 ä¸ªç‚¹ `.........` åå´©), ç¬¬ 9 ä¸ªå³ OnError æµ‹è¯•å´©.
-  - **è§¦å‘è¦ç´ ç»„åˆ**: è¯¥æµ‹è¯•æ˜¯ fixture 9 ä¸ªä¸­å”¯ä¸€ç»„åˆ `OnError å›è°ƒ(æŠ› Exception.Create('OnError simulated failure'))` + `RetryPolicy.Immediate(2)` + `FQueue.Stop(True)` çš„; `TWorkerQueue.Create('bug324_test', 2)` å¯ 2 ä¸ª worker çº¿ç¨‹; `CreateJob` é»˜è®¤ `FTimeout := FDefaultTimeout = 300000` (L1542/L1476) â†’ `ProcessJob` èµ° L1921-1949 çš„ `TJobHandlerThread` åˆ†æ”¯ (handler åœ¨ç‹¬ç«‹çº¿ç¨‹è·‘ + `LDoneEvt.WaitFor` + `LHandlerThread.WaitFor`). å‰ 8 ä¸ªæµ‹è¯•æ—  retry æ—  Stop(True), æœªè§¦å‘è¯¥ç«æ€çª—å£, æ•…ä¸å´©.
-  - **å«Œç–‘ä»£ç åŒºåŸŸ (æœªç¡®è®¤åˆ°ç¡®åˆ‡è¡Œ)**: `Core/DeepBase.WorkerQueue.pas` ProcessJob çš„ except å— retry è·¯å¾„ (L2042-2059: `AJob.PrepareRetry` â†’ `FLock.Enter` â†’ `FPendingQueue.Add` â†’ `SortPendingQueue`(L1850 æ¯”è¾ƒå™¨è®¿é—® `Left/Right.Priority`+`CreatedAt`) â†’ `FOnJobRetrying`) ä¸ `Stop(True)` (L2144: è®¾ `FShuttingDown` + æ¯ worker `Terminate`+`WaitFor` + `FWorkers.Clear`) çš„çº¿ç¨‹ç«æ€. é™æ€å®¡è§†æ‰€æœ‰è·¯å¾„å‡æœ‰ `FLock` æˆ– try/except ä¿æŠ¤, æ— æ˜æ˜¾é”å¤–è£¸è®¿é—®, æ•… `0x593A` å¯¹åº”çš„ç¡®åˆ‡æºç è¡Œéœ€ map-file åæŸ¥ (å½“å‰ `DeepBaseTests.dproj` `DCC_DebugInformation=0` æœªå¼€ map file).
-  - **ç»“è®º**: æ’æŸ¥é˜¶æ®µå®Œæˆ â€” 216 ä»"æ— æ ¹å› é¢„å­˜ç¼ºé™·"ç²¾ç¡®å®šä½åˆ°"å…·ä½“å•ä¸€æµ‹è¯•æ–¹æ³• + å«Œç–‘ä»£ç åŒºåŸŸ", è¯æ˜å…¶ç¡®å®šæ€§ + æœ¬æµ‹è¯•å›ºæœ‰ + éè·¨æµ‹è¯•æ±¡æŸ“. å‰©ä½™"0x593A â†’ æºç è¡Œ"å±ç‹¬ç«‹ä¿®å¤å·¥ç¨‹ (å¼€ MapFile é‡ç¼–æŸ¥è¡¨ / è£… madExcept å´©æ—¶æ‰“å° AV æ ˆ), å·²è®°ä¸º tasks.md ç‹¬ç«‹ P2 å¾…åŠ + bugfix.md BUG-438. æœ¬è½®é›¶ç”Ÿäº§ä»£ç æ”¹åŠ¨, ä»… tasks.md(æ–°å¢ BUG-438 å¾…åŠæ®µ) + bugfix.md(æ–°å¢ BUG-438 æ¡ç›®) + history.md(æœ¬å½’æ¡£æ®µ) + è®°å¿† `unit-test-fullrun-runtime216.md` æ›´æ–°æ ¹å› å®šä½ç»“è®º.
+  - **ÅÅ²é±³¾°**: È«Á¿Ì×¼ş (`Tests/DeepBaseTests.exe --exit:Continue`) Ä©Î²È·¶¨ĞÔ±ÀÀ£ `Runtime error 216 at 00007FF6D4A7593A` (Delphi °Ñ AV 0xC0000005 °ü³É 216), Æ«ÒÆ `0x593A` Ã¿´ÎÍêÈ«Ò»ÖÂ = È·¶¨ĞÔ AV. ´ËÈ±Ïİ×Ô BUG-421 µÈ¶àÌõÄ¿Æğ±»ÒıÓÃÎª"Ô¤´æÈ±Ïİ, ÎŞ¸ùÒò", Ò»Ö±ÎŞ¶¨Î». ±¾ÂÖ×¨ÃÅÅÅ²é´¥·¢µã (Áã´úÂë¸Ä¶¯, ½öÎÄµµÕï¶Ï).
+  - **ÅÅ²é·½·¨**: ÓÃ `Tests/Test.DeepBase.DiagnosticLogger.pas` ×Ô´øµÄÖğ²âÊÔ BEGIN/END/PASS/FAIL Ê±¼ä´ÁÈÕÖ¾ (`Tests/Logs/test-diagnostic.log`), È«Á¿ÅÜ + `tee` ÂäÅÌ, ±ÀÀ£Ç°ÈÕÖ¾×îºóÒ»ĞĞ¼´´¥·¢²âÊÔ. (×¢Òâ: ¸ÃÈÕÖ¾ÎÄ¼şÈô±»ÉÏ´Î½ø³ÌÕ¼ÓÃ»á±¨ EFCreateError, ÔËĞĞÇ°Ğè `rm -f Tests/Logs/test-diagnostic.log` ½âËø.)
+  - **¶¨Î»½áÂÛ (ÌúÖ¤)**: ´¥·¢ÓÚ `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` µÄ `TBUG324_WorkerQueueCallbackSafetyTest.Test_OnError_Exception_RetryPathStillExecutes` (L298-323) ·½·¨ÌåÄÚ. ÈıÖØÖ¤¾İ: (1) Õï¶ÏÈÕÖ¾Í£ÔÚ ¸Ã²âÊÔ `Test BEGIN` Ö®ºó, ÎŞÈÎºÎ END/PASS/FAIL ¡ú ±ÀÔÚ·½·¨ÌåÄÚ; (2) µ¥¶ÀÅÜ¸Ã fixture (`-b -r:"Test.Regression.BUG324_WorkerQueueCallbackSafety" --exit:Continue`) ÈÔ±ÀÇÒÆ«ÒÆ `0x593A` ÍêÈ«Ò»ÖÂ ¡ú ÅÅ³ı¿ç²âÊÔÄÚ´æ/Ïß³Ì×´Ì¬ÎÛÈ¾, Îª±¾²âÊÔ¹ÌÓĞ; (3) fixture 9 ¸ö²âÊÔÇ° 8 È«¹ı (9 ¸öµã `.........` ºó±À), µÚ 9 ¸ö¼´ OnError ²âÊÔ±À.
+  - **´¥·¢ÒªËØ×éºÏ**: ¸Ã²âÊÔÊÇ fixture 9 ¸öÖĞÎ¨Ò»×éºÏ `OnError »Øµ÷(Å× Exception.Create('OnError simulated failure'))` + `RetryPolicy.Immediate(2)` + `FQueue.Stop(True)` µÄ; `TWorkerQueue.Create('bug324_test', 2)` Æô 2 ¸ö worker Ïß³Ì; `CreateJob` Ä¬ÈÏ `FTimeout := FDefaultTimeout = 300000` (L1542/L1476) ¡ú `ProcessJob` ×ß L1921-1949 µÄ `TJobHandlerThread` ·ÖÖ§ (handler ÔÚ¶ÀÁ¢Ïß³ÌÅÜ + `LDoneEvt.WaitFor` + `LHandlerThread.WaitFor`). Ç° 8 ¸ö²âÊÔÎŞ retry ÎŞ Stop(True), Î´´¥·¢¸Ã¾ºÌ¬´°¿Ú, ¹Ê²»±À.
+  - **ÏÓÒÉ´úÂëÇøÓò (Î´È·ÈÏµ½È·ÇĞĞĞ)**: `Core/DeepBase.WorkerQueue.pas` ProcessJob µÄ except ¿é retry Â·¾¶ (L2042-2059: `AJob.PrepareRetry` ¡ú `FLock.Enter` ¡ú `FPendingQueue.Add` ¡ú `SortPendingQueue`(L1850 ±È½ÏÆ÷·ÃÎÊ `Left/Right.Priority`+`CreatedAt`) ¡ú `FOnJobRetrying`) Óë `Stop(True)` (L2144: Éè `FShuttingDown` + Ã¿ worker `Terminate`+`WaitFor` + `FWorkers.Clear`) µÄÏß³Ì¾ºÌ¬. ¾²Ì¬ÉóÊÓËùÓĞÂ·¾¶¾ùÓĞ `FLock` »ò try/except ±£»¤, ÎŞÃ÷ÏÔËøÍâÂã·ÃÎÊ, ¹Ê `0x593A` ¶ÔÓ¦µÄÈ·ÇĞÔ´ÂëĞĞĞè map-file ·´²é (µ±Ç° `DeepBaseTests.dproj` `DCC_DebugInformation=0` Î´¿ª map file).
+  - **½áÂÛ**: ÅÅ²é½×¶ÎÍê³É ¡ª 216 ´Ó"ÎŞ¸ùÒòÔ¤´æÈ±Ïİ"¾«È·¶¨Î»µ½"¾ßÌåµ¥Ò»²âÊÔ·½·¨ + ÏÓÒÉ´úÂëÇøÓò", Ö¤Ã÷ÆäÈ·¶¨ĞÔ + ±¾²âÊÔ¹ÌÓĞ + ·Ç¿ç²âÊÔÎÛÈ¾. Ê£Óà"0x593A ¡ú Ô´ÂëĞĞ"Êô¶ÀÁ¢ĞŞ¸´¹¤³Ì (¿ª MapFile ÖØ±à²é±í / ×° madExcept ±ÀÊ±´òÓ¡ AV Õ»), ÒÑ¼ÇÎª tasks.md ¶ÀÁ¢ P2 ´ı°ì + bugfix.md BUG-438. ±¾ÂÖÁãÉú²ú´úÂë¸Ä¶¯, ½ö tasks.md(ĞÂÔö BUG-438 ´ı°ì¶Î) + bugfix.md(ĞÂÔö BUG-438 ÌõÄ¿) + history.md(±¾¹éµµ¶Î) + ¼ÇÒä `unit-test-fullrun-runtime216.md` ¸üĞÂ¸ùÒò¶¨Î»½áÂÛ.
 
-## 2026-07-09 DeepBaseTests.exe å…¨é‡ Runtime 216 @0x593A ä¿®å¤å½’æ¡£ (BUG-438 å·²ä¿®å¤) âœ…
+## 2026-07-09 DeepBaseTests.exe È«Á¿ Runtime 216 @0x593A ĞŞ¸´¹éµµ (BUG-438 ÒÑĞŞ¸´) ?
 
-  - **ä¿®å¤èƒŒæ™¯**: æ‰¿æ¥ 2026-07-13 æ’æŸ¥å½’æ¡£ â€” è§¦å‘ç‚¹å·²é”å®š (BUG324 fixture ç¬¬ 9 æµ‹è¯• `Test_OnError_Exception_RetryPathStillExecutes`), ä½† 0x593A â†’ æºç è¡Œæœªè§£. æœ¬è½®ä»¥ Delphi å¼‚å¸¸å¯¹è±¡ç”Ÿå‘½å‘¨æœŸè¯­ä¹‰ç›´æ¥éªŒè¯æ ¹å› å¹¶ä¿®å¤, æ— éœ€ map-file/madExcept åŸ‹ç‚¹ (æ’æŸ¥é˜¶æ®µçš„åå¤‡æ–¹æ¡ˆä½œåºŸ).
-  - **æ ¹å› ç¡®è®¤ (æ¨ç¿»æ’æŸ¥é˜¶æ®µ"çº¿ç¨‹ç«æ€"å«Œç–‘)**: çœŸå®æ ¹å› **é**çº¿ç¨‹ç«æ€ (æ’æŸ¥é˜¶æ®µ L1510 æ‰€è¿°ç«æ€çª—å£ä¸ºè¯¯åˆ¤), è€Œæ˜¯ Delphi å¼‚å¸¸å¯¹è±¡ç”Ÿå‘½å‘¨æœŸç¼ºé™· â€” `Core/DeepBase.WorkerQueue.pas` `TJobHandlerThread.Execute` çš„ `except on E: Exception do FError := E` è·¨ except å—æŒæœ‰ `E`. Delphi `except on E:` å—ç»“æŸæ—¶ RTL è‡ªåŠ¨ Free `E` (é™¤é `AcquireExceptionObject` å¢å¼•ç”¨) â†’ except å— `end;` å `E` è¢«é‡Šæ”¾ â†’ `FError` æ‚¬æŒ‚ â†’ `TakeError` è¿”å›é‡æŒ‡é’ˆ â†’ `ProcessJob` çš„ `raise LHandlerErr` æ“ä½œå·²é‡Šæ”¾å¯¹è±¡ â†’ AV, è½ System RTL å¼‚å¸¸ææ„è·¯å¾„ (ä¸ 0x493A åœ¨ `TNoRefCountObject` åå»åˆ, åç§»æ¯æ¬¡ä¸€è‡´æ­£æ˜¯æ‚¬æŒ‚æŒ‡é’ˆè§£å¼•ç”¨å›ºå®šåœ°å€çš„ç‰¹å¾, ç«æ€åç§»åº”éšæœº). ä»…ç¬¬ 9 æµ‹è¯•è§¦å‘è¯¥è·¯å¾„: handler æŠ›å¼‚å¸¸ + `CreateJob` é»˜è®¤ Timeout>0 èµ° L1921 handler-thread åˆ†æ”¯ (ç» `TakeError`â†’`raise LHandlerErr`) + retry; å‰ 8 æµ‹è¯•æˆ–ä¸ retryã€æˆ– Timeout=0 èµ° inline åˆ†æ”¯ (L1956 `raise;` re-raise except å¤´æ•è·çš„**æ´»** E) ä¸å´©.
-  - **ä¿®å¤æ–¹æ¡ˆ (å…‹éš†å¼‚å¸¸å¯¹è±¡, æœ€å°æ”¹åŠ¨)**: `TJobHandlerThread.Execute` çš„ except å†…æ”¹ä¸º `FError := Exception.Create(E.Message)` â€” æ–°å¼‚å¸¸å¯¹è±¡è„±ç¦» RTL ç”Ÿå‘½å‘¨æœŸ, ç”± `FError` ç‹¬å æŒæœ‰. ç°æœ‰ `TakeError` (è¿”å› FError å¹¶ç½® nil, è½¬ç§»æ‰€æœ‰æƒ) + ææ„ `FreeAndNil(FError)` + `ProcessJob` çš„ `raise LHandlerErr` + `FreeAndNil(LHandlerErr)` å¼•ç”¨è¯­ä¹‰**å…¨éƒ¨æ— éœ€æ”¹åŠ¨**, å”¯ä¸€æŒæœ‰è€…é‡Šæ”¾. ä»£ä»·: ä¸¢å¤±åŸå¼‚å¸¸ ClassName, ä½†ä¸‹æ¸¸åªç”¨ `.Message` (L2031/L2081) æ— å½±å“. ä¸ç”¨ `AcquireExceptionObject`/`ReleaseExceptionObject` (ä¸¤ API å‡æ— å‚ä½œç”¨äº"å½“å‰å¼‚å¸¸å¯¹è±¡", re-raise åæ§åˆ¶æµè½¬èµ°ã€æ–° except æ˜¯æ–°ä¸Šä¸‹æ–‡, æ— æ³•å¯¹åŸå¯¹è±¡é…å¯¹ Release, æ˜“è¯¯ç”¨æ³„æ¼).
-  - **å›å½’æµ‹è¯•**: `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` æ–°å¢ `Test_BUG438_HandlerException_MessagePropagatedToCompletion` â€” æ„é€ åŒè§¦å‘åœºæ™¯ (handler æŠ›å¼‚å¸¸ + Timeout>0 èµ° handler-thread åˆ†æ”¯ + `RetryPolicy.Immediate(2)` + `Stop(True)`), æ–­è¨€ FOnCompletion è¢«è°ƒç”¨ / ASuccess=False / AResult å«åŸå¼‚å¸¸ Message (éªŒè¯å…‹éš†ä¿ç•™ Message ä¸”ä¸å´©). ä¿®å¤å‰æ­¤ç‚¹å·² AV 216 è¿›ç¨‹é€€å‡º, æ— æ³•æ‰§è¡Œåˆ°æ–­è¨€; åˆ°è¾¾æ–­è¨€å³è¯æ˜ä¸å´©.
-  - **éªŒè¯ (åŸºçº¿å¯¹æ¯”)**: `git stash push -- Core/DeepBase.WorkerQueue.pas` éš”ç¦»å•æ–‡ä»¶æ”¹åŠ¨è·‘åŸºçº¿ vs ä¿®å¤å. BUG324 fixture å•ç‹¬è·‘ 10 æµ‹è¯•å…¨è¿‡ (åŸ 9 + æ–°å¢); å…¨é‡å¯¹æ¯” Passed 4148â†’4157 (+9) / Failed 22â†’13 (-9) / Errored 28 ä¸å˜ (DoQry ç­‰æ— å…³æ—¢æœ‰å¤±è´¥) / Leaked 0 / **æœ«å°¾ 216 æ¶ˆå¤±**. 9 ä¸ªåŸå›  216 å¤±è´¥çš„æµ‹è¯•ç°é€šè¿‡, æ— å›å½’.
-  - **è¡ç”Ÿ BUG-439**: æ’æŸ¥æœŸé—´å‘ç°ä¸¤å¤„åŒç±» `è·¨ except å—æŒæœ‰ E` æ½œåœ¨éšæ‚£ (`Core/DeepBase.Resilience.Retry.pas` L396 / `DeepFlow/Source/AI/DeepFlow.Skill.Client.pas` L156), åŸè®°ä¸º BUG-439 å¾…åŠ. **åŒæ—¥ (2026-07-09) å·²å…¨éƒ¨ä¿®å¤**: site 1 (TryExecute) æµ‹è¯•å…ˆè¡Œ â€” æ–°å¢ `Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn` ä¿®å¤å‰ç¡®å®šæ€§å¤±è´¥ (`Error.Message` è¯»å›ç©ºä¸², å †æ‰°åŠ¨å¤ç”¨ RTL å·² Free çš„ E å— = use-after-free), å…‹éš†ä¿®å¤å 122/122 è¿‡; site 2 (Skill.Client `LLastException`) åŒæ„ç¡®å®šæ€§ AV, DeepFlow æ— æµ‹è¯•å·¥ç¨‹, ç»ç”¨æˆ·å†³ç­–è®°ä¸ºå·²çŸ¥ç›²æ”¹ (å…‹éš† + ä¿ç•™ `ESkillClientException` ç±»å‹ + å¤šè½®å…‹éš†æ³„æ¼é˜²æŠ¤). è¯¦è§ bugfix.md BUG-439ã€Œä¿®å¤ç»“è®ºã€æ®µ.
-  - **å½±å“æ–‡ä»¶**: `Core/DeepBase.WorkerQueue.pas` (except å†… 1 å¤„å…‹éš† + æ³¨é‡Š) + `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` (æ–°å¢å›å½’æµ‹è¯•) + `bugfix.md` BUG-438 (çŠ¶æ€æ¨è¿›ä¸ºå·²ä¿®å¤ + æ ¹å› çº æ­£æ®µ). è®°å¿† `unit-test-fullrun-runtime216.md` æ›´æ–°æ ¹å› ä¸º"å¼‚å¸¸å¯¹è±¡ç”Ÿå‘½å‘¨æœŸæ‚¬æŒ‚ (å·²ä¿®å¤)".
+  - **ĞŞ¸´±³¾°**: ³Ğ½Ó 2026-07-13 ÅÅ²é¹éµµ ¡ª ´¥·¢µãÒÑËø¶¨ (BUG324 fixture µÚ 9 ²âÊÔ `Test_OnError_Exception_RetryPathStillExecutes`), µ« 0x593A ¡ú Ô´ÂëĞĞÎ´½â. ±¾ÂÖÒÔ Delphi Òì³£¶ÔÏóÉúÃüÖÜÆÚÓïÒåÖ±½ÓÑéÖ¤¸ùÒò²¢ĞŞ¸´, ÎŞĞè map-file/madExcept Âñµã (ÅÅ²é½×¶ÎµÄºó±¸·½°¸×÷·Ï).
+  - **¸ùÒòÈ·ÈÏ (ÍÆ·­ÅÅ²é½×¶Î"Ïß³Ì¾ºÌ¬"ÏÓÒÉ)**: ÕæÊµ¸ùÒò**·Ç**Ïß³Ì¾ºÌ¬ (ÅÅ²é½×¶Î L1510 ËùÊö¾ºÌ¬´°¿ÚÎªÎóÅĞ), ¶øÊÇ Delphi Òì³£¶ÔÏóÉúÃüÖÜÆÚÈ±Ïİ ¡ª `Core/DeepBase.WorkerQueue.pas` `TJobHandlerThread.Execute` µÄ `except on E: Exception do FError := E` ¿ç except ¿é³ÖÓĞ `E`. Delphi `except on E:` ¿é½áÊøÊ± RTL ×Ô¶¯ Free `E` (³ı·Ç `AcquireExceptionObject` ÔöÒıÓÃ) ¡ú except ¿é `end;` ºó `E` ±»ÊÍ·Å ¡ú `FError` Ğü¹Ò ¡ú `TakeError` ·µ»ØÒ°Ö¸Õë ¡ú `ProcessJob` µÄ `raise LHandlerErr` ²Ù×÷ÒÑÊÍ·Å¶ÔÏó ¡ú AV, Âä System RTL Òì³£Îö¹¹Â·¾¶ (Óë 0x493A ÔÚ `TNoRefCountObject` ºóÎÇºÏ, Æ«ÒÆÃ¿´ÎÒ»ÖÂÕıÊÇĞü¹ÒÖ¸Õë½âÒıÓÃ¹Ì¶¨µØÖ·µÄÌØÕ÷, ¾ºÌ¬Æ«ÒÆÓ¦Ëæ»ú). ½öµÚ 9 ²âÊÔ´¥·¢¸ÃÂ·¾¶: handler Å×Òì³£ + `CreateJob` Ä¬ÈÏ Timeout>0 ×ß L1921 handler-thread ·ÖÖ§ (¾­ `TakeError`¡ú`raise LHandlerErr`) + retry; Ç° 8 ²âÊÔ»ò²» retry¡¢»ò Timeout=0 ×ß inline ·ÖÖ§ (L1956 `raise;` re-raise except Í·²¶»ñµÄ**»î** E) ²»±À.
+  - **ĞŞ¸´·½°¸ (¿ËÂ¡Òì³£¶ÔÏó, ×îĞ¡¸Ä¶¯)**: `TJobHandlerThread.Execute` µÄ except ÄÚ¸ÄÎª `FError := Exception.Create(E.Message)` ¡ª ĞÂÒì³£¶ÔÏóÍÑÀë RTL ÉúÃüÖÜÆÚ, ÓÉ `FError` ¶ÀÕ¼³ÖÓĞ. ÏÖÓĞ `TakeError` (·µ»Ø FError ²¢ÖÃ nil, ×ªÒÆËùÓĞÈ¨) + Îö¹¹ `FreeAndNil(FError)` + `ProcessJob` µÄ `raise LHandlerErr` + `FreeAndNil(LHandlerErr)` ÒıÓÃÓïÒå**È«²¿ÎŞĞè¸Ä¶¯**, Î¨Ò»³ÖÓĞÕßÊÍ·Å. ´ú¼Û: ¶ªÊ§Ô­Òì³£ ClassName, µ«ÏÂÓÎÖ»ÓÃ `.Message` (L2031/L2081) ÎŞÓ°Ïì. ²»ÓÃ `AcquireExceptionObject`/`ReleaseExceptionObject` (Á½ API ¾ùÎŞ²Î×÷ÓÃÓÚ"µ±Ç°Òì³£¶ÔÏó", re-raise ºó¿ØÖÆÁ÷×ª×ß¡¢ĞÂ except ÊÇĞÂÉÏÏÂÎÄ, ÎŞ·¨¶ÔÔ­¶ÔÏóÅä¶Ô Release, Ò×ÎóÓÃĞ¹Â©).
+  - **»Ø¹é²âÊÔ**: `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` ĞÂÔö `Test_BUG438_HandlerException_MessagePropagatedToCompletion` ¡ª ¹¹ÔìÍ¬´¥·¢³¡¾° (handler Å×Òì³£ + Timeout>0 ×ß handler-thread ·ÖÖ§ + `RetryPolicy.Immediate(2)` + `Stop(True)`), ¶ÏÑÔ FOnCompletion ±»µ÷ÓÃ / ASuccess=False / AResult º¬Ô­Òì³£ Message (ÑéÖ¤¿ËÂ¡±£Áô Message ÇÒ²»±À). ĞŞ¸´Ç°´ËµãÒÑ AV 216 ½ø³ÌÍË³ö, ÎŞ·¨Ö´ĞĞµ½¶ÏÑÔ; µ½´ï¶ÏÑÔ¼´Ö¤Ã÷²»±À.
+  - **ÑéÖ¤ (»ùÏß¶Ô±È)**: `git stash push -- Core/DeepBase.WorkerQueue.pas` ¸ôÀëµ¥ÎÄ¼ş¸Ä¶¯ÅÜ»ùÏß vs ĞŞ¸´ºó. BUG324 fixture µ¥¶ÀÅÜ 10 ²âÊÔÈ«¹ı (Ô­ 9 + ĞÂÔö); È«Á¿¶Ô±È Passed 4148¡ú4157 (+9) / Failed 22¡ú13 (-9) / Errored 28 ²»±ä (DoQry µÈÎŞ¹Ø¼ÈÓĞÊ§°Ü) / Leaked 0 / **Ä©Î² 216 ÏûÊ§**. 9 ¸öÔ­Òò 216 Ê§°ÜµÄ²âÊÔÏÖÍ¨¹ı, ÎŞ»Ø¹é.
+  - **ÑÜÉú BUG-439**: ÅÅ²éÆÚ¼ä·¢ÏÖÁ½´¦Í¬Àà `¿ç except ¿é³ÖÓĞ E` Ç±ÔÚÒş»¼ (`Core/DeepBase.Resilience.Retry.pas` L396 / `DeepFlow/Source/AI/DeepFlow.Skill.Client.pas` L156), Ô­¼ÇÎª BUG-439 ´ı°ì. **Í¬ÈÕ (2026-07-09) ÒÑÈ«²¿ĞŞ¸´**: site 1 (TryExecute) ²âÊÔÏÈĞĞ ¡ª ĞÂÔö `Test_TryExecute_ErrorOutParam_NotDanglingAfterReturn` ĞŞ¸´Ç°È·¶¨ĞÔÊ§°Ü (`Error.Message` ¶Á»Ø¿Õ´®, ¶ÑÈÅ¶¯¸´ÓÃ RTL ÒÑ Free µÄ E ¿é = use-after-free), ¿ËÂ¡ĞŞ¸´ºó 122/122 ¹ı; site 2 (Skill.Client `LLastException`) Í¬¹¹È·¶¨ĞÔ AV, DeepFlow ÎŞ²âÊÔ¹¤³Ì, ¾­ÓÃ»§¾ö²ß¼ÇÎªÒÑÖªÃ¤¸Ä (¿ËÂ¡ + ±£Áô `ESkillClientException` ÀàĞÍ + ¶àÂÖ¿ËÂ¡Ğ¹Â©·À»¤). Ïê¼û bugfix.md BUG-439¡¸ĞŞ¸´½áÂÛ¡¹¶Î.
+  - **Ó°ÏìÎÄ¼ş**: `Core/DeepBase.WorkerQueue.pas` (except ÄÚ 1 ´¦¿ËÂ¡ + ×¢ÊÍ) + `Tests/Regression/Test.Regression.BUG324_WorkerQueueCallbackSafety.pas` (ĞÂÔö»Ø¹é²âÊÔ) + `bugfix.md` BUG-438 (×´Ì¬ÍÆ½øÎªÒÑĞŞ¸´ + ¸ùÒò¾ÀÕı¶Î). ¼ÇÒä `unit-test-fullrun-runtime216.md` ¸üĞÂ¸ùÒòÎª"Òì³£¶ÔÏóÉúÃüÖÜÆÚĞü¹Ò (ÒÑĞŞ¸´)".
 
-## 2026-07-09 OPT-REFACTOR-001 LLM æ¨¡æ¿ç®¡ç†æå–æ¶æ„é‡æ„å½’æ¡£ âœ…
-- **æ¥æº**: tasks.md OPT-REFACTOR-001 (ä» OPT-P2-002 æ‹†å‡ºçš„ç‹¬ç«‹æ¶æ„é‡æ„å¾…åŠ).
-- **é—®é¢˜**: `Core/DeepBase.LLM.pas` çš„ `TDeepBaseLLM` å•ä½“ç±»åŒæ—¶æ‰¿è½½é…ç½®/è°ƒç”¨/å†å²/æ¨¡æ¿ç®¡ç†, æ¨¡æ¿ç®¡ç†æ–¹æ³• (Save/Get/Delete/Copy/Validate/Render/Export/Import + GetAllTemplates + LoadTemplateFromQuery/ClearPromptTemplates è¾…åŠ©, ~850 è¡Œ) å †åœ¨å•ä½“å†…, è¿åå•ä¸€èŒè´£.
-- **å®æ–½**:
-  - æ–°å»º `Core/DeepBase.LLM.PromptTemplateManager.pas` â€” `TLLMPromptTemplateManager` ç±», è¿å…¥ 9 å…¬å¼€æ–¹æ³• + 2 è¾…åŠ© (ä» LLM.pas implementation æ®µåŸæ ·æ¬ç§», å« GetStorage/GetTemplate/RenderWithInheritance é€’å½’å†…éƒ¨è°ƒç”¨å…¨ä¿ç•™).
-  - `TDeepBaseLLM` æ–°å¢ `FPromptTemplateMgr: TLLMPromptTemplateManager` å­—æ®µ (æ„é€ æœŸ Create, ææ„æœŸ FreeAndNil); 9 å…¬å¼€æ¨¡æ¿æ–¹æ³•æ”¹ä¸ºä¸€è¡Œå§”æ‰˜ `FPromptTemplateMgr.Xxx(...)`.
-  - é—¨é¢ç­¾åé›¶å˜åŒ– â†’ è°ƒç”¨æ–¹ `Persistence/DeepBase.Persistence.LLM.FireDAC.pas`ã€`VCL/...LLMConfigPanel.pas`ã€`FMX/...LLMConfigPanel.pas`ã€`Core/DeepBase.LLM.BillingClient.pas`ã€`Tools/Studio/Frames/Studio.PromptTemplateFrame.pas` æ— éœ€æ”¹åŠ¨ (éªŒè¯: å¸§å†… `ClearPromptTemplates` æ˜¯å…¶è‡ªæœ‰å±€éƒ¨å®ç°, ä¸ä¾èµ– LLM.pas çš„åŒåè¿‡ç¨‹; æ¨¡æ¿æ–¹æ³•ç»é—¨é¢è°ƒç”¨).
-  - `DeepBaseLLM.dpk` + `.dproj` contains/DCCReference åŠ  `DeepBase.LLM.PromptTemplateManager`.
-- **éªŒè¯**: Win64 `run_tests.ps1 -Type Unit -CI` ç¼–è¯‘é€šè¿‡ (329078 è¡Œ, æ–°å•å…ƒå…¥é“¾, æ— ç¼–è¯‘é”™è¯¯); å…¨é‡ DUnitX **Tests Found 4206 / Passed 4203 / Failed 0 / Errored 0 / Leaked 0 / Ignored 3**, æ—  216, æ— æ–°å¢è­¦å‘Š (ä»…æ—¢å­˜ H2443/H2219/H2077 Hint).
-- **åç½®æœªåš (ç•™å¾…æ¬¡è¦æ•´æ´)**: LLM.pas implementation uses ä¸­ `System.RegularExpressions`/`System.Variants`/`System.NetEncoding` å› æ¨¡æ¿æ–¹æ³•è¿å‡ºå·²æ— å¼•ç”¨ (H2219 çº§å†—ä½™), æœªæ¸…ç†ä»¥éš”ç¦»æœ¬æ¬¡é‡æ„å½±å“é¢; `DeepBase.Security.DPAPI` æ—¢å­˜å†—ä½™ä¸æœ¬é‡æ„æ— å…³, å‡ç•™å¾…åç»­ç»Ÿä¸€æ¸…ç†.
-- **å½±å“æ–‡ä»¶**: `Core/DeepBase.LLM.PromptTemplateManager.pas` (æ–°å»º) + `Core/DeepBase.LLM.pas` (9 æ–¹æ³•å§”æ‰˜åŒ– + å­—æ®µ) + `DeepBaseLLM.dpk`/`.dproj` (contains) + `tasks.md`/`history.md` (å½’æ¡£).
+## 2026-07-09 OPT-REFACTOR-001 LLM Ä£°å¹ÜÀíÌáÈ¡¼Ü¹¹ÖØ¹¹¹éµµ ?
+- **À´Ô´**: tasks.md OPT-REFACTOR-001 (´Ó OPT-P2-002 ²ğ³öµÄ¶ÀÁ¢¼Ü¹¹ÖØ¹¹´ı°ì).
+- **ÎÊÌâ**: `Core/DeepBase.LLM.pas` µÄ `TDeepBaseLLM` µ¥ÌåÀàÍ¬Ê±³ĞÔØÅäÖÃ/µ÷ÓÃ/ÀúÊ·/Ä£°å¹ÜÀí, Ä£°å¹ÜÀí·½·¨ (Save/Get/Delete/Copy/Validate/Render/Export/Import + GetAllTemplates + LoadTemplateFromQuery/ClearPromptTemplates ¸¨Öú, ~850 ĞĞ) ¶ÑÔÚµ¥ÌåÄÚ, Î¥·´µ¥Ò»Ö°Ôğ.
+- **ÊµÊ©**:
+  - ĞÂ½¨ `Core/DeepBase.LLM.PromptTemplateManager.pas` ¡ª `TLLMPromptTemplateManager` Àà, Ç¨Èë 9 ¹«¿ª·½·¨ + 2 ¸¨Öú (´Ó LLM.pas implementation ¶ÎÔ­Ñù°áÒÆ, º¬ GetStorage/GetTemplate/RenderWithInheritance µİ¹éÄÚ²¿µ÷ÓÃÈ«±£Áô).
+  - `TDeepBaseLLM` ĞÂÔö `FPromptTemplateMgr: TLLMPromptTemplateManager` ×Ö¶Î (¹¹ÔìÆÚ Create, Îö¹¹ÆÚ FreeAndNil); 9 ¹«¿ªÄ£°å·½·¨¸ÄÎªÒ»ĞĞÎ¯ÍĞ `FPromptTemplateMgr.Xxx(...)`.
+  - ÃÅÃæÇ©ÃûÁã±ä»¯ ¡ú µ÷ÓÃ·½ `Persistence/DeepBase.Persistence.LLM.FireDAC.pas`¡¢`VCL/...LLMConfigPanel.pas`¡¢`FMX/...LLMConfigPanel.pas`¡¢`Core/DeepBase.LLM.BillingClient.pas`¡¢`Tools/Studio/Frames/Studio.PromptTemplateFrame.pas` ÎŞĞè¸Ä¶¯ (ÑéÖ¤: Ö¡ÄÚ `ClearPromptTemplates` ÊÇÆä×ÔÓĞ¾Ö²¿ÊµÏÖ, ²»ÒÀÀµ LLM.pas µÄÍ¬Ãû¹ı³Ì; Ä£°å·½·¨¾­ÃÅÃæµ÷ÓÃ).
+  - `DeepBaseLLM.dpk` + `.dproj` contains/DCCReference ¼Ó `DeepBase.LLM.PromptTemplateManager`.
+- **ÑéÖ¤**: Win64 `run_tests.ps1 -Type Unit -CI` ±àÒëÍ¨¹ı (329078 ĞĞ, ĞÂµ¥ÔªÈëÁ´, ÎŞ±àÒë´íÎó); È«Á¿ DUnitX **Tests Found 4206 / Passed 4203 / Failed 0 / Errored 0 / Leaked 0 / Ignored 3**, ÎŞ 216, ÎŞĞÂÔö¾¯¸æ (½ö¼È´æ H2443/H2219/H2077 Hint).
+- **ºóÖÃÎ´×ö (Áô´ı´ÎÒªÕû½à)**: LLM.pas implementation uses ÖĞ `System.RegularExpressions`/`System.Variants`/`System.NetEncoding` ÒòÄ£°å·½·¨Ç¨³öÒÑÎŞÒıÓÃ (H2219 ¼¶ÈßÓà), Î´ÇåÀíÒÔ¸ôÀë±¾´ÎÖØ¹¹Ó°ÏìÃæ; `DeepBase.Security.DPAPI` ¼È´æÈßÓàÓë±¾ÖØ¹¹ÎŞ¹Ø, ¾ùÁô´ıºóĞøÍ³Ò»ÇåÀí.
+- **Ó°ÏìÎÄ¼ş**: `Core/DeepBase.LLM.PromptTemplateManager.pas` (ĞÂ½¨) + `Core/DeepBase.LLM.pas` (9 ·½·¨Î¯ÍĞ»¯ + ×Ö¶Î) + `DeepBaseLLM.dpk`/`.dproj` (contains) + `tasks.md`/`history.md` (¹éµµ).

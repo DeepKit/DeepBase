@@ -35,7 +35,8 @@ begin
   Result := (S <> '') and (Pos('.', S) = 0) and
     (Pos('e', LowerCase(S)) = 0) and TryStrToInt64(S, I64);
   if Result then
-    AParam.AsInt64 := I64;
+    AParam.DataType := ftLargeint;
+    AParam.Value := I64;
 end;
 
 function IsSelectSQL(const S: string): Boolean;
@@ -86,7 +87,7 @@ begin
     if p2 = 0 then Break;
     Name := Trim(Copy(OutSQL, p1 + 4, p2 - (p1 + 4)));
     if not Assigned(Params) or (Params.GetValue(Name) = nil) or not (Params.GetValue(Name) is TJSONArray) then
-      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数�?, [Name]);
+      raise EDatabaseException.CreateFmt('IN 参数 %s 缺失或不是数组', [Name]);
     JArr := TJSONArray(Params.GetValue(Name));
     if JArr.Count = 0 then
       raise EDatabaseException.CreateFmt('IN 参数 %s 不能为空数组', [Name]);
