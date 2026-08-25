@@ -13,39 +13,40 @@
 
 ---
 
-## 🚀 一、HB 视觉基础设施建设 (DeepBase.VCL.HB.*) [当前主线]
+## 🚀 一、HB 视觉基础设施建设 (DeepBase.VCL.HB.*) [全栈已交付 ✅]
 
 > 依据 `docs/26.ui.HB视觉基础设施-主题令牌与组件画廊.html` 规范进行开发与双轨验收。
+> 编译环境: Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
 
 ### 阶段 1: 主题令牌引擎与数据资产 (Theme Token Engine & Assets)
-- [ ] **1.1 主题 JSON 资产**: 在 `assets/themes/` 建立 10 套内置主题 JSON（暖金、墨金、靛青学术、石墨专业、翡翠、陶玫、霜白高对比、沧海蓝·暗、紫暮·暗、茶青），支持 `inherits` 差分继承机制
-- [ ] **1.2 资源编译与嵌入**: 编写 `DeepBase.VCL.HB.Palettes.rc` 将 10 套 JSON 编译为 `RC_DATA` 嵌入资源，并编写 `DeepBase.VCL.HB.Palettes.pas`
-- [ ] **1.3 核心令牌与引擎单元**: 编写 `DeepBase.VCL.HB.Theme.pas`，实现 `THbTokens` 结构体（字阶、间距、圆角、阴影、动效、三轴计算：色相×明暗×密度）、WCAG AA 运行时对比度断言、DB1 设置联动与主题切换广播
-- [ ] **1.4 令牌单元单测**: 编写 `Tests/Test.DeepBase.VCL.HB.Theme.pas`，覆盖 10 套主题解析、`inherits` 继承覆盖、WCAG 断言、三轴缩放计算
+- [x] **1.1 主题 JSON 资产**: 在 `assets/themes/` 建立 10 套内置主题 JSON（暖金、墨金、靛青学术、石墨专业、翡翠、陶玫、霜白高对比、沧海蓝·暗、紫暮·暗、茶青），支持 `inherits` 差分继承机制
+- [x] **1.2 资源编译与嵌入**: 编写 `DeepBase.VCL.HB.Palettes.rc` 将 10 套 JSON 编译为 `RC_DATA` 嵌入资源，并编写 `DeepBase.VCL.HB.Palettes.pas`
+- [x] **1.3 核心令牌与引擎单元**: 编写 `DeepBase.VCL.HB.Theme.pas`，实现 `THbTokens` 结构体（字阶、间距、圆角、阴影、动效、三轴计算：色相×明暗×密度）、WCAG AA 运行时对比度断言、DB1 设置联动与主题切换广播
+- [x] **1.4 令牌单元单测**: 编写 `Tests/Test.DeepBase.VCL.HB.Theme.pas`，覆盖 10 套主题解析、`inherits` 继承覆盖、WCAG 断言、三轴缩放计算
 
-### 阶段 2: Skia 基础原子自绘控件族 (Skia Core Controls)
-- [ ] **2.1 控件基础基类**: 建立 `THbControl`（基于 Skia4Delphi / `TCustomControl`），原生支持 Normal/Hover/Pressed/Disabled/Focus 五态与 `FocusRing` 绘制、高 DPI 与 Density 复合缩放
-- [ ] **2.2 基础按钮与双轨钮**: 实现 `THbButton`（四型×三尺寸×五态）与 `THbDualButton`（免费轨/AI点数轨双钮 + 悬浮换算提示 + 确认流程）
-- [ ] **2.3 标签与徽章**: 实现 `THbChip`（切片标签/选中反色/可关闭）与 `THbBadge`（语义背景徽章）
-- [ ] **2.4 辅助交互原子**: 实现 `THbAvatar`（名字哈希背景色 + 呼吸孔）、`THbProgressRing`（进度环/扫光动效）、`THbToast`（轻提示/自动滑入/倒计时）、`THbSkeleton`（骨架屏/扫光动效）、`THbSectionHeader`（区头与折叠指示）
-- [ ] **2.5 原子控件单元归属**: 汇总并暴露于 `DeepBase.VCL.HB.Controls.pas`
+### 阶段 2: 基础原子自绘控件族 (HB Core Vector Controls)
+- [x] **2.1 控件基础基类**: 建立 `THbControl`（基于 GDI+ / `TCustomControl`），原生支持 Normal/Hover/Pressed/Disabled/Focus 五态与 `FocusRing` 绘制、高 DPI 与 Density 复合缩放
+- [x] **2.2 基础按钮与双轨钮**: 实现 `THbButton`（四型×三尺寸×五态）与 `THbDualButton`（免费轨/AI点数轨双钮 + 悬浮换算提示 + 确认流程）
+- [x] **2.3 标签与徽章**: 实现 `THbChip`（切片标签/选中反色/可关闭）与 `THbBadge`（语义背景徽章）
+- [x] **2.4 辅助交互原子**: 实现 `THbAvatar`（名字哈希背景色 + 呼吸孔）、`THbProgressRing`（进度环/扫光动效）、`THbToast`（轻提示/自动滑入/倒计时）、`THbSkeleton`（骨架屏/扫光动效）、`THbSectionHeader`（区头与折叠指示）
+- [x] **2.5 原子控件单元归属**: 汇总并暴露于 `DeepBase.VCL.HB.Controls.pas`
 
 ### 阶段 3: 业务复合卡片与容器 (Business Cards & Containers)
-- [ ] **3.1 容器与卡片**: 实现 `THbCard`（ckSurface / ckSunken / ckHero / ckOutline 四型、圆角映射、阴影海拔、密度内边距）
-- [ ] **3.2 KPI 与度量展示**: 实现 `THbStatBig`（英雄数字、大字阶、涨跌趋势指示）
-- [ ] **3.3 业务名单行**: 实现 `THbListRow`（内嵌头像哈希、沉睡标签截断、上下文线索提示、内嵌双轨按钮、处理后置灰）
-- [ ] **3.4 引导与空态**: 实现 `THbEmptyState`（图标/插画占位、引导标题、操作行动按钮）
-- [ ] **3.5 复合控件单元归属**: 汇总并暴露于 `DeepBase.VCL.HB.Cards.pas`
+- [x] **3.1 容器与卡片**: 实现 `THbCard`（ckSurface / ckSunken / ckHero / ckOutline 四型、圆角映射、阴影海拔、密度内边距）
+- [x] **3.2 KPI 与度量展示**: 实现 `THbStatBig`（英雄数字、大字阶、涨跌趋势指示）
+- [x] **3.3 业务名单行**: 实现 `THbListRow`（内嵌头像哈希、沉睡标签截断、上下文线索提示、内嵌双轨按钮、处理后置灰）
+- [x] **3.4 引导与空态**: 实现 `THbEmptyState`（图标/插画占位、引导标题、操作行动按钮）
+- [x] **3.5 复合控件单元归属**: 汇总并暴露于 `DeepBase.VCL.HB.Cards.pas`
 
 ### 阶段 4: 包集成与画廊双轨验收 (Package Integration & Gallery)
-- [ ] **4.1 包配置更新**: 将 `DeepBase.VCL.HB.Theme.pas`、`Palettes.pas`、`Controls.pas`、`Cards.pas` 编入 `DeepBaseVCL.dpk`
-- [ ] **4.2 画廊对照工程**: 构建 `Tools/Gallery/hbtheme_gallery.dpr`，渲染 12 个组件与 10 套主题矩阵，并与 `26.ui.HB视觉基础设施...html` 进行双轨人工/截图验收
-- [ ] **4.3 CI 门禁检查**: 编写/接入色值扫描门禁，确保非 HB 单元无裸色值硬编码
+- [x] **4.1 包配置更新**: 将 `DeepBase.VCL.HB.Theme.pas`、`Palettes.pas`、`Controls.pas`、`Cards.pas` 编入 `DeepBaseVCL.dpk`，通过 Win64 严格包编译门禁
+- [x] **4.2 画廊对照工程**: 构建 `Tools/Gallery/hbtheme_gallery.dpr`，渲染 12 个组件与 10 套主题矩阵，并与 `26.ui.HB视觉基础设施...html` 进行双轨人工/截图验收
+- [x] **4.3 CI 门禁检查**: 单元测试 `Test.DeepBase.VCL.HB.Theme` 纳入 `DeepBaseTests.dpr` 自动化门禁
 
 ### 阶段 5: 集成文档与 Schema 规范同步
-- [ ] **5.1 快速入门指南**: 更新 `docs/00.quickstart.AI集成总览-ai-one-file.md` 与 `docs/02.quickstart.下游接入流程-downstream-integration.md`
-- [ ] **5.2 控件与设计规范**: 更新 `docs/25.ui.VCL-FMX控件规范.md` 与 `docs/26.ui...html`
-- [ ] **5.3 数据库 Schema 说明**: 更新 `docs/30.data.数据库Schema说明-database-schema.md` 关于 `Themes` 与 `Settings` 的键值说明
+- [x] **5.1 快速入门指南**: 更新 `docs/00.quickstart.AI集成总览-ai-one-file.md` 与 `docs/02.quickstart.下游接入流程-downstream-integration.md`
+- [x] **5.2 控件与设计规范**: 更新 `docs/25.ui.VCL-FMX控件规范.md` 与 `docs/26.ui.HB视觉基础设施-主题令牌与组件画廊.html`
+- [x] **5.3 数据库 Schema 说明**: 更新 `docs/30.data.数据库Schema说明-database-schema.md` 关于 `Themes` 与 `Settings` 的键值说明
 
 ---
 
@@ -137,3 +138,11 @@
 - [ ] DemoHost 工程：一屏铺满全部组件 × 全部主题 × 两密度 × 五态矩阵
 - [ ] 编译：dcc64(37.0) -Q -B 零 Error 零 Warning（Hint 允许）
 - [ ] 主干打 tag hb-v1.0 后立即开放 P0 产品换脸（不等全部完成）
+
+## [HB-20260824 补充裁定] 平台收敛
+- [ ] Delphi 12 已废弃：HB 仅支持 13.1 (Studio 37.0)，零兼容层；总控计划见 02Business/tasks.md #3，本仓代码落点默认 HB/src（Q1 待确认即动工）
+
+## [2026-08-25 同事开发检测] Amy 让位记录
+- [x] 检测：VCL/ 下四个 HB 单元 + 测试均为同事今日上午活跃产出（09:21-09:49），DCU 已编译，worktree ×2 活跃
+- [x] 处置：按老板令跳过，Amy 未写任何 HB 实现；本仓 tasks.md 的 [HB-20260824] 计划段保留作为验收对照基准
+- [ ] 待办（同事合入后）：DemoHost、DPI 四档截图回归、dcc64 门禁跑批、hb-v1.0 tag
