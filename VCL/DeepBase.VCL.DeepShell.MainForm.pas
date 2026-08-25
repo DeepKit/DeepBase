@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.MainForm
 
   TDeepMainForm - reusable VCL desktop main form. Downstream apps inherit
@@ -234,8 +234,10 @@ uses
   System.Types,
   System.TypInfo,
   System.JSON,
+  System.IOUtils,
   Vcl.Dialogs,
-  Vcl.Graphics;
+  Vcl.Graphics,
+  DeepBase.VCL.DeepShell; // [i18n 2026-08-25] RegisterDefaultShellTexts（implementation 循环引用合法）
 
 type
   PShellObjectRef = ^TShellObjectRef;
@@ -323,7 +325,15 @@ begin
   FSettings := TShellInMemorySettingsStore.Create;
   FLayout := TShellInMemoryLayoutService.Create;
   FTheme := TShellDefaultThemeService.Create;
-  FLocalization := TShellDefaultLocalizationService.Create;
+  // [i18n 2026-08-25] 显式传 DetectSystemLocale：构造默认参数是 'en-US'，
+  // 无参调用会绕过系统语言检测恒落英文（zh-CN 文本包因此从未生效）。
+  FLocalization := TShellDefaultLocalizationService.Create(DetectSystemLocale);
+  // [i18n 2026-08-25] 注册内置 zh-CN 文本包：构造函数已 DetectSystemLocale
+  // 自动选中系统语言（中文 Windows → zh-CN），但 zh 桶需要显式灌文本，
+  // 否则 ShellText 全部落英文 default，菜单恒为英文。
+  if FLocalization is TShellDefaultLocalizationService then
+    RegisterDefaultShellTexts(TShellDefaultLocalizationService(FLocalization),
+      TShellDefaultLocalizationService(FLocalization).CurrentLocale);
   FStatus := TShellStatusManager.Create(FBus);
   FContext := TShellContextManager.Create(FBus);
   FCommands := TShellCommandManager.Create(FBus,
@@ -581,7 +591,7 @@ begin
 
   FBottomSummary := TLabel.Create(Self);
   FBottomSummary.Parent := FBottomPanel;
-  FBottomSummary.Caption := 'Logs collapsed';
+  FBottomSummary.Caption := ShellText('shell.status.logsCollapsed', 'Logs collapsed');
   FBottomSummary.Layout := tlCenter;
   FBottomSummary.Visible := False;
 
@@ -618,7 +628,7 @@ begin
 
   FMiddleSummary := TLabel.Create(Self);
   FMiddleSummary.Parent := FMiddlePanel;
-  FMiddleSummary.Caption := 'Workspace collapsed - use View / Restore Workspace.';
+  FMiddleSummary.Caption := ShellText('shell.status.workspaceCollapsed', 'Workspace collapsed - use View / Restore Workspace.');
   FMiddleSummary.Layout := tlCenter;
   FMiddleSummary.Visible := False;
 
@@ -917,8 +927,8 @@ begin
   if FStatusBar = nil then
     Exit;
   LText := if AContext.ProjectId <> ''
-    then Format('Project: %s | View: %s', [AContext.ProjectId, AContext.ViewId])
-    else 'Ready';
+    then Format(ShellText('shell.status.projectView', 'Project: %s | View: %s'), [AContext.ProjectId, AContext.ViewId])
+    else ShellText('shell.status.ready', 'Ready');
   FStatusBar.SimpleText := LText;
   if FTopController <> nil then
     FTopController.SetSummary(LText);

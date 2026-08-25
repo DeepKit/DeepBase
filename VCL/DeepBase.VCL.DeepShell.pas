@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell
 
   Facade unit. Re-exports DeepShell types, interfaces, services, the fluent
@@ -129,6 +129,26 @@ begin
   if ALoc = nil then Exit;
   if SameText(ALocale, 'zh-CN') or SameText(ALocale, 'zh-TW') then
   begin
+    // [i18n 2026-08-25] 补顶层菜单分类键——RebuildMainMenu 的 Category 走
+    // ShellText('shell.cat.*')，缺这些键时中文环境分类恒落英文。
+    ALoc.RegisterText(ALocale, 'shell.cat.file',
+      {$IFDEF ZH_TW}'檔案'{$ELSE}'文件'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cat.view',
+      {$IFDEF ZH_TW}'檢視'{$ELSE}'视图'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cat.log',
+      {$IFDEF ZH_TW}'日誌'{$ELSE}'日志'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cat.tools',
+      {$IFDEF ZH_TW}'工具'{$ELSE}'工具'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.cat.help',
+      {$IFDEF ZH_TW}'說明'{$ELSE}'帮助'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.status.projectView',
+      {$IFDEF ZH_TW}'專案: %s | 檢視: %s'{$ELSE}'项目: %s | 视图: %s'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.status.ready',
+      {$IFDEF ZH_TW}'就緒'{$ELSE}'就绪'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.status.logsCollapsed',
+      {$IFDEF ZH_TW}'日誌已摺疊'{$ELSE}'日志已折叠'{$ENDIF});
+    ALoc.RegisterText(ALocale, 'shell.status.workspaceCollapsed',
+      {$IFDEF ZH_TW}'工作區已摺疊 - 使用 檢視 / 還原工作區。'{$ELSE}'工作区已折叠 - 使用 视图 / 恢复工作区。'{$ENDIF});
     ALoc.RegisterText(ALocale, 'shell.cmd.fileExit',
       {$IFDEF ZH_TW}'結束'{$ELSE}'退出'{$ENDIF});
     ALoc.RegisterText(ALocale, 'shell.cmd.view.toggleTop',

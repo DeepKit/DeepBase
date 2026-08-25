@@ -72,7 +72,26 @@ const
 var
   LBuffer: array[0..LOCALE_NAME_MAX_LENGTH - 1] of WideChar;
   LLen: Integer;
+  LLangId: LANGID;
 begin
+  // [i18n 2026-08-25] 显式覆盖优先：DEEPBASE_LANG 环境变量（如 zh-CN / en-US）。
+  // 自动检测在"英文 Windows + 中文用户"的机器上会返回 en-US，此时以此开关
+  // 强制界面语言，无需改系统设置。
+  var LOverride := GetEnvironmentVariable('DEEPBASE_LANG');
+  if LOverride <> '' then
+    Exit(LOverride);
+  // [i18n 2026-08-25] 用户 **UI 语言**（显示语言）优先——GetUserDefaultLocaleName
+  // 返回的是区域格式（Regional Format），机器完全可能"显示语言中文 + 区域格式
+  // 英文"，此时按旧逻辑会错配 en-US。先取 GetUserDefaultUILanguage 的
+  // LOCALE_SNAME（BCP-47 如 'zh-CN'），失败再退回区域格式，最后 en-US。
+  LLangId := GetUserDefaultUILanguage;
+  LLen := GetLocaleInfoW(LLangId, LOCALE_SNAME, LBuffer, LOCALE_NAME_MAX_LENGTH);
+  if LLen > 1 then
+  begin
+    Result := string(PWideChar(@LBuffer[0]));
+    if Result <> '' then
+      Exit;
+  end;
   // Prefer GetUserDefaultLocaleName (BCP-47 form like 'zh-CN' / 'en-US').
   LLen := GetUserDefaultLocaleName(LBuffer, LOCALE_NAME_MAX_LENGTH);
   if LLen > 1 then
@@ -82,6 +101,10 @@ begin
     if Result <> '' then
       Exit;
   end;
+  // [i18n 2026-08-25] 中国区常见"英文显示语言 + 中文区域"配置：系统 ANSI
+  // 代码页 936(GB2312) 时按中文用户对待。
+  if GetACP = 936 then
+    Exit('zh-CN');
   Result := 'en-US';
 end;
 
