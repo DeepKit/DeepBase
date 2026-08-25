@@ -192,7 +192,9 @@ begin
   i := Trunc(Result);
   
   // Get fraction part
-  FracStr := FloatToStr(Frac(Result));
+  // CR-310: 小数操作数提取必须与区域设置无关——FloatToStr 在逗号小数区
+  // 返回 '0,25'，Pos('.') 失配导致 v/w/f/t 全 0，小数复数规则失效
+  FracStr := FloatToStr(Frac(Result), TFormatSettings.Invariant);
   Idx := Pos('.', FracStr);
   if Idx > 0 then
   begin
