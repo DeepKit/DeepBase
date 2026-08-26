@@ -4,7 +4,7 @@
 > **提出方**：DeepRW
 > **承接方**：DeepBase HB 视觉组件线
 > **日期**：2026-08-26
-> **优先级**：A1/A2＝P0，A3＝P1，页面原型＝P1
+> **优先级**：A1/A2＝P0，B1/B2＝P0，A3＝P1，B3＝P1，页面原型＝P1
 > **状态**：待承接
 > **取代**：WO-20260825-DEEPRW-HB-RESEARCH-DISCOVERY（该单基于过时的"双工作台"假设与 v1.1 前组件清单，作废留档）
 > **依据指南**：`D:\_Progs\02Business\DeepBase\docs\28.ui.HB视觉基础设施-下游软件集成统一指南.md`（v1.2）
@@ -89,4 +89,70 @@ A1/A2 附万级行性能数据（滚动不掉帧）；A3 附三尺寸渲染样�
 
 ## 交付顺序
 
-A1 → A2 → A3 → 五张原型。
+A1 → A2 并行启动；B1/B2 与 A 组并行（独立组件互不阻塞）；
+A3 → 五张原型 → B3。
+
+
+## B 档：通用组件 Delphi 实现（2026-08-26 由排期请求升格为正式需求）
+
+> 依据 29.ui v2.1 成熟度矩阵，以下组件已有交互原型（hb-suite-showcase.html），
+> 属跨产品通用资产：由 DeepBase HB 线实现并交付 🟢 VERIFIED。
+> 下游业务语义（如 DeepRW 的证据状态灯着色规则、候选五态处置逻辑）一律经
+> 渲染器插槽 / 回调注入，不进入组件本体——保持通用性。
+
+### B1（P0）`THbNavTree` Delphi 实现
+
+从现有原型落地 VCL 实现（FMX 对等后置）。
+
+要求：
+
+- 多树容器＋分组粘性头；240px ⇄ 48px Mini Rail 平滑折叠（记忆状态）；
+- 节点要素：矢量图标(16/20/24)＋文本＋计数徽章＋状态灯；支持禁用/隐藏节点；
+- 关键字过滤即时高亮＋命中计数；
+- 键盘全可达（↑↓←→ Enter Space Esc）；五态/令牌/DPI 四档/WCAG AA；
+- 万级节点虚拟化渲染不掉帧；
+- 最小 API：`RegisterTree` / `BeginUpdate` / `AddNode` / `SetBadge(node,count,tone)` /
+  `Filter(keyword)` / `OnNodeClick` / `OnNodeDoubleClick`。
+
+验收：DUnitX 用例＋画廊交互样例＋万级节点滚动性能数据。
+
+### B2（P0）`THbDataGrid` Delphi 实现
+
+类 Excel 高性能虚拟数据网格，对齐 29.ui §4 基准：
+**100 万逻辑行滚动帧耗时 P95 ≤ 16ms**（内存驻留数组＋GDI+ 双缓冲），
+超预算自动降级纯色块渲染。
+
+要求：
+
+- OwnerData 模式：行数由宿主声明，单元格值经 `OnGetCellContent` 回调取用；
+- 列能力：拖宽／点击排序（回调宿主执行）／冻结首列；
+- 单元格渲染器插槽：状态灯、徽章、进度、等宽字体（哈希/编号）、多行截断省略；
+- 单元格延迟 Tooltip（宿主回调内容）；行悬停高亮；选区（单行/矩形区/Ctrl 散选）；
+- 空态／加载骨架／错误态三态齐备；
+- 最小 API：`Columns[]` / `SetRowCount(n)` / `OnGetCellContent` / `OnCellDraw` /
+  `OnSortRequest` / `SelectedRows` / `EnsureVisible(row)`。
+
+验收：DUnitX＋性能基准报告（注明测量机器环境）＋画廊样例。
+复用方：DeepRW 主张—证据矩阵 / DeepDsh / Assayer / DeepSync 冲突对比。
+
+### B3（P1）`THbVirtualList` 虚拟审阅列表
+
+面向「一行＝一条待办对象」的审阅场景（DeepRW 候选审阅队列、通知中心、任务队列）。
+
+要求：
+
+- 行模板插槽：状态灯＋标题＋摘要两行截断＋标签 Chip 组＋右侧动作按钮区（宿主注入）；
+- 多选（Shift/Ctrl）＋顶部批量操作条挂钩（宿主定义批量动作）；
+- 分组折叠（按宿主提供的 group key）；关键字增量过滤；
+- 十万行级虚拟化；
+- 若评估结论是「可由 B2 的列表模式覆盖」，允许合并交付，
+  但须在本单书面说明取舍理由与 API 差异。
+
+验收：DUnitX＋画廊样例（含 DeepRW 候选队列传票场景）。
+
+### B 档与 DeepRW P1 的依赖关系
+
+- DeepRW 界面开发位于 P1 第 5–7 周；若 B1/B2 届时交付 🟢 VERIFIED 则直接消费；
+- 若排期冲突，DeepRW 按 `docs/09.底座与DeepBase集成设计.md` §14 自建兜底，
+  组件转绿后换壳——两条路径都已冻结，无论哪条先到都不返工；
+- 请承接时**逐项反馈承诺交付日**（B1 / B2 / B3 分开报）。
