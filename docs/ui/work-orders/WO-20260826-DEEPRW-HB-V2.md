@@ -1,0 +1,92 @@
+# WO-20260826-DEEPRW-HB-V2
+
+> **类型**：HB 通用组件新增与既有组件扩展工单
+> **提出方**：DeepRW
+> **承接方**：DeepBase HB 视觉组件线
+> **日期**：2026-08-26
+> **优先级**：A1/A2＝P0，A3＝P1，页面原型＝P1
+> **状态**：待承接
+> **取代**：WO-20260825-DEEPRW-HB-RESEARCH-DISCOVERY（该单基于过时的"双工作台"假设与 v1.1 前组件清单，作废留档）
+> **依据指南**：`D:\_Progs\02Business\DeepBase\docs\28.ui.HB视觉基础设施-下游软件集成统一指南.md`（v1.2）
+> **下游基准**：
+> - `D:\_Progs\02Business\DeepRW\docs\05.架构基线-认知论证核心模型.md`（v0.8）
+> - `D:\_Progs\02Business\DeepRW\docs\07.语义契约-v1.0.md`
+> - `D:\_Progs\02Business\DeepRW\docs\01.产品功能及未来蓝图.md`
+
+## 0. 已裁决前提（不再讨论）
+
+1. DeepRW 主题锁定 **`canghai-blue` + `hdComfortable`**（采用现货调色板，不注册自定义品牌色）；
+2. 语音链路（THbVoiceDialog / Waveform / FieldCard）对 DeepRW **排期至 P2**，本单不含语音需求；
+3. 研究语义组件（ClaimCard、EvidenceExcerpt、主张—证据矩阵网格、局部关系卡、状态胶囊）
+   由 DeepRW 业务层自建，**不进入本单、不下沉 DeepBase**。
+
+## A1（P0）命令面板 `THbCommandPalette`
+
+全产品通用的 Ctrl+K 动词入口。复用方：DeepRW / DeepDsh / Assayer / DeepSync。
+
+要求：
+
+- Ctrl+K 唤起 / Esc 关闭；置顶搜索框，支持关键词与拼音首字母模糊匹配；
+- 条目模型：`Caption / VerbGroup / ShortcutText / Enabled / DisabledReason / CommandID`；
+  禁用态灰显并悬浮显示原因（对接统一 Command ID 军规，指南 §6.2.5）;
+- 最近使用排序（宿主可注入历史源）；分组标题粘性头；
+- 全键盘导航（↑↓ Enter）、五态齐备、令牌取色、DPI 四档、WCAG AA；
+- 宿主注入条目提供者接口（`RegisterProvider`），面板本身零业务语义。
+
+## A2（P0）门禁结果面板 `THbGatePanel`
+
+编译器式检查结果清单。复用方：DeepRW 体检报告页 / Assayer 自检报告 / DeepDsh 校验输出。
+
+行模型：
+
+```text
+RuleID        规则编号（如 R01）
+Severity      sePass / seNotice / seWarning / seError
+Title         一句话结论
+TargetText    触发对象摘要（可空）
+ReasonText    为什么触发（必填，展开区显示）
+FixHint       修复建议（可空）
+JumpRef       string —— 跳转引用（由下游解析定位，面板只回调 OnJump）
+```
+
+要求：
+
+- 汇总头：`X Error · Y Warning · Z Pass · N Notice` 计数胶囊（点击按严重度过滤）；
+- 行内 severity 徽章（红/琥珀/蓝灰/绿）＋图标＋文本三重冗余（不只靠颜色）；
+- 行点击平滑展开解释区（Reason/FixHint/原始上下文槽）；
+- 底部可选动作条插槽：宿主注入"处置"按钮（如 DeepRW 的书面豁免，走 THbDialog.PromptReason）；
+- 万级行虚拟化渲染；规则编号等宽字体列对齐；
+- 五态/令牌/DPI/WCAG 同 A1。
+
+## A3（P1）ShareCardRenderer 扩展
+
+在保持离屏矢量渲染与 `EnableAutoMasking` 语义不变的前提下：
+
+1. 新增输出规格 `scfPortrait4x5`（1080×1350），与现有 16:9、1:1 并存；
+2. `THbShareCardData` 扩展字段：
+   - `FooterNote: string` —— 底部强制声明行（如"通过本地检查 ≠ 事实正确"）；
+   - `BadgeText: string` + `WatermarkLocked: Boolean` —— 角标水印文案；
+     锁定后任何调用方不可关闭渲染（演示数据场景硬性要求）；
+   - `MetricRows: TArray<string>` —— 多行指标（替代单行 Metrics 的超集，旧字段保留兼容）；
+   - `LogoRef / QRSlot` —— 可选品牌位（空则不渲染）；
+3. 三种卡片模板（门禁收据 / 证据护照 / 矩阵快照）由下游用扩展字段自行拼装，
+   渲染器只保证版式与脱敏，不内置业务模板。
+
+## 页面原型（P1，5 张）
+
+基于 canghai-blue + hdComfortable 输出 SVG 与 Delphi API 草案（1366×768 / 1920×1080 / 150% DPI 截图）：
+
+1. 治理仪表盘：四问卡（交付就绪/阻断项/证据缺口/待我拍板）+ 第二排今日变化与健康趋势；
+2. 材料阅读器：左原文右锚点列表，选区浮出"提取为 Statement / 记为候选 Claim"动作；
+3. 候选审阅队列：表格+右侧 Inspector，五态处置按钮组，批量操作条；
+4. 体检报告页：A2 GatePanel 全幅应用，含"为什么触发"展开与书面豁免入口；
+5. 主张—证据矩阵：单元格状态灯（Direct/Partial/Contradicted/Unclear），行=Claim 列=证据簇。
+
+## 验收
+
+沿用指南 §7 七项 CI 门禁；新增组件各附 DUnitX 用例与画廊交互样例；
+A1/A2 附万级行性能数据（滚动不掉帧）；A3 附三尺寸渲染样张。
+
+## 交付顺序
+
+A1 → A2 → A3 → 五张原型。
