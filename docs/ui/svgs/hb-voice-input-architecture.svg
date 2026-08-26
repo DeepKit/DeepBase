@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="100%" height="100%" style="background:#12100C; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <filter id="voiceShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="40" y="30" width="1520" height="64" rx="10" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+  <text x="70" y="70" fill="#FDFCF8" font-size="20" font-weight="800">🎤 DeepBase HB 视觉基础设施 - 通用语音录入与确认交互架构图 (THbVoiceInputHost)</text>
+  <rect x="1330" y="48" width="200" height="28" rx="6" fill="#F59E0B" fill-opacity="0.2" stroke="#D97706" stroke-width="1" />
+  <text x="1348" y="67" fill="#FBBF24" font-size="12" font-weight="700">六态闭环 · Fail-Closed</text>
+
+  <!-- =========================================================================
+       SECTION 1: 六态状态机流转 (Six Lifecycle States)
+       ========================================================================= -->
+  <g transform="translate(40, 120)">
+    <rect x="0" y="0" width="1520" height="110" rx="10" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+    <text x="24" y="28" fill="#B8A995" font-size="11" font-weight="700">VOICE LIFECYCLE 全生命周期六态：</text>
+
+    <!-- State 1 -->
+    <g transform="translate(30, 42)">
+      <rect x="0" y="0" width="210" height="50" rx="6" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+      <circle cx="24" cy="25" r="12" fill="#3D352A" />
+      <text x="20" y="30" fill="#FDFCF8" font-size="12" font-weight="700">1</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">入口态 (Entry)</text>
+      <text x="46" y="40" fill="#B8A995" font-size="10">🎤 悬浮/内嵌口述按钮</text>
+    </g>
+
+    <text x="254" y="72" fill="#B8A995" font-size="16">→</text>
+
+    <!-- State 2 -->
+    <g transform="translate(280, 42)">
+      <rect x="0" y="0" width="210" height="50" rx="6" fill="#29241D" stroke="#F59E0B" stroke-width="1.2" />
+      <circle cx="24" cy="25" r="12" fill="#F59E0B" />
+      <text x="20" y="30" fill="#12100C" font-size="12" font-weight="800">2</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">录音态 (Recording)</text>
+      <text x="46" y="40" fill="#FBBF24" font-size="10">波形动画 + 120s 限制</text>
+    </g>
+
+    <text x="504" y="72" fill="#B8A995" font-size="16">→</text>
+
+    <!-- State 3 -->
+    <g transform="translate(530, 42)">
+      <rect x="0" y="0" width="210" height="50" rx="6" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+      <circle cx="24" cy="25" r="12" fill="#3D352A" />
+      <text x="20" y="30" fill="#FDFCF8" font-size="12" font-weight="700">3</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">整理态 (Extracting)</text>
+      <text x="46" y="40" fill="#B8A995" font-size="10">骨架屏 + 实体抽取</text>
+    </g>
+
+    <text x="754" y="72" fill="#B8A995" font-size="16">→</text>
+
+    <!-- State 4 -->
+    <g transform="translate(780, 42)">
+      <rect x="0" y="0" width="230" height="50" rx="6" fill="#29241D" stroke="#10B981" stroke-width="1.5" />
+      <circle cx="24" cy="25" r="12" fill="#10B981" />
+      <text x="20" y="30" fill="#FFFFFF" font-size="12" font-weight="800">4</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">确认态 (Confirming)</text>
+      <text x="46" y="40" fill="#34D399" font-size="10">Diff对比 + 就地编辑 (核心)</text>
+    </g>
+
+    <text x="1024" y="72" fill="#B8A995" font-size="16">→</text>
+
+    <!-- State 5 -->
+    <g transform="translate(1050, 42)">
+      <rect x="0" y="0" width="210" height="50" rx="6" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+      <circle cx="24" cy="25" r="12" fill="#3D352A" />
+      <text x="20" y="30" fill="#FDFCF8" font-size="12" font-weight="700">5</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">入库反馈 (Persisted)</text>
+      <text x="46" y="40" fill="#B8A995" font-size="10">Toast 轻提示 + 字段闪亮</text>
+    </g>
+
+    <text x="1274" y="72" fill="#B8A995" font-size="16">→</text>
+
+    <!-- State 6 -->
+    <g transform="translate(1296, 42)">
+      <rect x="0" y="0" width="190" height="50" rx="6" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+      <circle cx="24" cy="25" r="12" fill="#3D352A" />
+      <text x="20" y="30" fill="#FDFCF8" font-size="12" font-weight="700">6</text>
+      <text x="46" y="24" fill="#FDFCF8" font-size="12" font-weight="700">草稿态 (Draft)</text>
+      <text x="46" y="40" fill="#B8A995" font-size="10">意外中断离线恢复</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SECTION 2: 核心确认态容器高保真结构 (Confirmation State UI)
+       ========================================================================= -->
+  <g transform="translate(40, 250)">
+    <rect x="0" y="0" width="1520" height="910" rx="14" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" filter="url(#voiceShadow)" />
+    
+    <!-- Top Header -->
+    <rect x="0" y="0" width="1520" height="64" rx="14 14 0 0" fill="#29241D" />
+    <text x="30" y="38" fill="#FDFCF8" font-size="16" font-weight="800">🎤 语音提取结果确认 (AI 初筛 · 人工逐项把关 · 未确认绝不入库)</text>
+    <rect x="1340" y="16" width="150" height="32" rx="6" fill="url(#goldGrad)" />
+    <text x="1358" y="37" fill="#FFFFFF" font-size="12" font-weight="700">✓ 全部接受 (Enter)</text>
+
+    <!-- Left: Waveform & ASR Audio Box (440px) -->
+    <g transform="translate(30, 84)">
+      <rect x="0" y="0" width="440" height="730" rx="10" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      
+      <!-- Privacy Badge -->
+      <rect x="24" y="20" width="392" height="30" rx="6" fill="#2B251B" stroke="#3D352A" stroke-width="1" />
+      <text x="36" y="40" fill="#B8A995" font-size="11">🔒 本地安全沙箱处理 · 录音与特征向量不外泄</text>
+
+      <!-- Waveform Simulation -->
+      <rect x="24" y="66" width="392" height="120" rx="8" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+      <text x="170" y="100" fill="#FBBF24" font-size="22" font-weight="800" font-family="Consolas">00:28 / 02:00</text>
+      <!-- Bars -->
+      <g transform="translate(100, 120)">
+        <line x1="0" y1="-10" x2="0" y2="10" stroke="#F59E0B" stroke-width="3" />
+        <line x1="12" y1="-20" x2="12" y2="20" stroke="#F59E0B" stroke-width="3" />
+        <line x1="24" y1="-30" x2="24" y2="30" stroke="#F59E0B" stroke-width="3" />
+        <line x1="36" y1="-15" x2="36" y2="15" stroke="#F59E0B" stroke-width="3" />
+        <line x1="48" y1="-25" x2="48" y2="25" stroke="#F59E0B" stroke-width="3" />
+        <line x1="60" y1="-35" x2="60" y2="35" stroke="#F59E0B" stroke-width="3" />
+        <line x1="72" y1="-18" x2="72" y2="18" stroke="#F59E0B" stroke-width="3" />
+        <line x1="84" y1="-28" x2="84" y2="28" stroke="#F59E0B" stroke-width="3" />
+        <line x1="96" y1="-12" x2="96" y2="12" stroke="#F59E0B" stroke-width="3" />
+      </g>
+
+      <!-- Raw Audio Transcript Box -->
+      <text x="24" y="214" fill="#B8A995" font-size="12" font-weight="700">口述原话完整转写 (ASR Transcript)：</text>
+      <rect x="24" y="226" width="392" height="140" rx="8" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+      <text x="36" y="254" fill="#FDFCF8" font-size="12" font-family="Consolas">“王总今天来店里看了新款茶具，嫌 2800</text>
+      <text x="36" y="278" fill="#FDFCF8" font-size="12" font-family="Consolas">略贵，但下周儿子结婚要买 4 套，留了备用</text>
+      <text x="36" y="302" fill="#FDFCF8" font-size="12" font-family="Consolas">手机 139-8877-6655，下周三再回访他。”</text>
+
+      <!-- Extraction Legend -->
+      <text x="24" y="394" fill="#B8A995" font-size="12" font-weight="700">AI 初筛提取纪律：</text>
+      <text x="24" y="420" fill="#FDFCF8" font-size="11">• 增量 Diff：对数据库已有原值进行显著对比标注</text>
+      <text x="24" y="444" fill="#FDFCF8" font-size="11">• 琥珀告警：低置信度项目高亮并优先获取焦点</text>
+      <text x="24" y="468" fill="#FDFCF8" font-size="11">• 兜底备忘：闲聊杂项归入备忘，不丢弃有效信息</text>
+      <text x="24" y="492" fill="#FDFCF8" font-size="11">• 键盘流：Enter 全选确认，Ctrl+Enter 立即入库</text>
+    </g>
+
+    <!-- Right: Extracted Field Cards (990px) -->
+    <g transform="translate(500, 84)">
+      
+      <!-- Card 1: Diff Phone -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="990" height="96" rx="8" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="96" rx="2" fill="#10B981" />
+        <text x="20" y="34" fill="#FDFCF8" font-size="14" font-weight="700">备用联系手机</text>
+        <text x="170" y="34" fill="#FDFCF8" font-size="14" font-family="Consolas" font-weight="700">139-8877-6655</text>
+        
+        <!-- Diff Tag -->
+        <rect x="360" y="18" width="280" height="24" rx="4" fill="#D97706" fill-opacity="0.2" />
+        <text x="372" y="34" fill="#FBBF24" font-size="11" font-weight="700">⚠️ 原值: 138-0000-1122 → 提议更新</text>
+
+        <!-- Quote -->
+        <text x="170" y="66" fill="#B8A995" font-size="11" font-style="italic">原话摘录：“留了备用手机 139-8877-6655”</text>
+
+        <!-- Actions -->
+        <rect x="740" y="24" width="70" height="28" rx="4" fill="#10B981" fill-opacity="0.2" />
+        <text x="756" y="43" fill="#34D399" font-size="12" font-weight="700">✓ 接受</text>
+
+        <rect x="820" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="836" y="43" fill="#FDFCF8" font-size="12">✏️ 修改</text>
+
+        <rect x="900" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="916" y="43" fill="#B8A995" font-size="12">🗑️ 丢弃</text>
+      </g>
+
+      <!-- Card 2: Low Confidence Item -->
+      <g transform="translate(0, 110)">
+        <rect x="0" y="0" width="990" height="96" rx="8" fill="#29241D" stroke="#D97706" stroke-width="1.2" />
+        <rect x="0" y="0" width="4" height="96" rx="2" fill="#F59E0B" />
+        <text x="20" y="34" fill="#FDFCF8" font-size="14" font-weight="700">意向采购量</text>
+        <text x="170" y="34" fill="#FDFCF8" font-size="14">4 套 (定制结婚茶具礼盒)</text>
+
+        <rect x="420" y="18" width="90" height="24" rx="4" fill="#F59E0B" fill-opacity="0.2" />
+        <text x="434" y="34" fill="#FBBF24" font-size="11" font-weight="700">⚠ 请核对</text>
+
+        <text x="170" y="66" fill="#B8A995" font-size="11" font-style="italic">原话摘录：“下周儿子结婚要买 4 套”</text>
+
+        <rect x="740" y="24" width="70" height="28" rx="4" fill="#10B981" fill-opacity="0.2" />
+        <text x="756" y="43" fill="#34D399" font-size="12" font-weight="700">✓ 接受</text>
+        <rect x="820" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="836" y="43" fill="#FDFCF8" font-size="12">✏️ 修改</text>
+        <rect x="900" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="916" y="43" fill="#B8A995" font-size="12">🗑️ 丢弃</text>
+      </g>
+
+      <!-- Card 3: Price Sensitivity -->
+      <g transform="translate(0, 220)">
+        <rect x="0" y="0" width="990" height="96" rx="8" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="96" rx="2" fill="#10B981" />
+        <text x="20" y="34" fill="#FDFCF8" font-size="14" font-weight="700">价格敏感度</text>
+        <text x="170" y="34" fill="#FDFCF8" font-size="14">中高 (嫌 2800 略贵，期待套餐满减)</text>
+        <text x="170" y="66" fill="#B8A995" font-size="11" font-style="italic">原话摘录：“嫌 2800 略贵”</text>
+
+        <rect x="740" y="24" width="70" height="28" rx="4" fill="#10B981" fill-opacity="0.2" />
+        <text x="756" y="43" fill="#34D399" font-size="12" font-weight="700">✓ 接受</text>
+        <rect x="820" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="836" y="43" fill="#FDFCF8" font-size="12">✏️ 修改</text>
+        <rect x="900" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="916" y="43" fill="#B8A995" font-size="12">🗑️ 丢弃</text>
+      </g>
+
+      <!-- Card 4: Fallback Memo -->
+      <g transform="translate(0, 330)">
+        <rect x="0" y="0" width="990" height="96" rx="8" fill="#29241D" stroke="#3D352A" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="96" rx="2" fill="#10B981" />
+        <text x="20" y="34" fill="#FDFCF8" font-size="14" font-weight="700">📝 跟进备忘</text>
+        <text x="170" y="34" fill="#FDFCF8" font-size="14">下周三上午电话回访，备好优惠礼盒样品方案</text>
+        <text x="170" y="66" fill="#B8A995" font-size="11" font-style="italic">原话摘录：“下周三再回访联系他”</text>
+
+        <rect x="740" y="24" width="70" height="28" rx="4" fill="#10B981" fill-opacity="0.2" />
+        <text x="756" y="43" fill="#34D399" font-size="12" font-weight="700">✓ 接受</text>
+        <rect x="820" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="836" y="43" fill="#FDFCF8" font-size="12">✏️ 修改</text>
+        <rect x="900" y="24" width="70" height="28" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="916" y="43" fill="#B8A995" font-size="12">🗑️ 丢弃</text>
+      </g>
+
+      <!-- Bottom Confirm Footer -->
+      <g transform="translate(0, 660)">
+        <line x1="0" y1="0" x2="990" y2="0" stroke="#3D352A" stroke-width="1" />
+        <text x="0" y="36" fill="#B8A995" font-size="13">已确认 4 / 共 4 项结构化属性</text>
+        <rect x="630" y="16" width="130" height="34" rx="6" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="648" y="38" fill="#B8A995" font-size="12">💾 暂存草稿退出</text>
+
+        <rect x="780" y="16" width="210" height="34" rx="6" fill="url(#goldGrad)" />
+        <text x="802" y="38" fill="#FFFFFF" font-size="13" font-weight="700">💾 写入顾客档案 (Ctrl+Enter)</text>
+      </g>
+
+    </g>
+  </g>
+
+</svg>

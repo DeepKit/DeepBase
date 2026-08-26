@@ -1,0 +1,309 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="100%" height="100%" style="background:#0B0E14; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#141824" stop-opacity="0" />
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="40" y="30" width="1520" height="64" rx="10" fill="#141824" stroke="#262F46" stroke-width="1.5" />
+  <text x="70" y="70" fill="#FFFFFF" font-size="20" font-weight="800">🛡️ DeepBase HB 视觉基础设施 - 对话框与瀑布流矢量架构图</text>
+  <rect x="1340" y="48" width="190" height="28" rx="6" fill="#6366F1" fill-opacity="0.2" stroke="#6366F1" stroke-width="1" />
+  <text x="1355" y="67" fill="#A5B4FC" font-size="12" font-weight="700">Delphi 13.1 VCL &amp; FMX 双端</text>
+
+  <!-- =========================================================================
+       SECTION 1: 现代分块多按钮对话框 (THbDialog - 含统一输入区)
+       ========================================================================= -->
+  <g transform="translate(40, 120)">
+    <rect x="0" y="0" width="740" height="520" rx="14" fill="#141824" stroke="#262F46" stroke-width="1.5" filter="url(#cardShadow)" />
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="740" height="60" rx="14" fill="url(#headerGrad)" />
+    <rect x="0" y="59" width="740" height="1" fill="#262F46" />
+    <rect x="20" y="14" width="34" height="34" rx="8" fill="#EF4444" fill-opacity="0.2" stroke="#EF4444" stroke-width="1.5" />
+    <text x="29" y="38" font-size="18">🛡️</text>
+    <text x="66" y="32" fill="#FFFFFF" font-size="15" font-weight="700">拦截到高风险外部调用 (P0 Fail-Closed)</text>
+    <text x="66" y="50" fill="#8E9BAE" font-size="11">Assayer Governance 策略引擎触发拦截 · 需要主权裁决确认</text>
+    <circle cx="705" cy="30" r="14" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+    <text x="700" y="35" fill="#8E9BAE" font-size="14">✕</text>
+
+    <!-- Zone A: Core Event -->
+    <rect x="20" y="76" width="700" height="48" rx="8" fill="#1E263C" stroke="#262F46" stroke-width="1" />
+    <text x="36" y="94" fill="#8E9BAE" font-size="10" font-weight="700">ACTION INTENT 动作摘要</text>
+    <text x="36" y="112" fill="#F1F5F9" font-size="12">检测到未授权的本地配置文件覆写尝试：<tspan fill="#38BDF8" font-family="Consolas">/etc/assayer/proxy_route.json</tspan></text>
+
+    <!-- Zone B: Structured Key-Value -->
+    <rect x="20" y="134" width="700" height="68" rx="8" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+    <text x="36" y="156" fill="#8E9BAE" font-size="11" font-weight="600">发起组件</text>
+    <text x="140" y="156" fill="#F1F5F9" font-size="12" font-family="Consolas">Assayer.Proxy.Pipeline (PID: 4092)</text>
+    <rect x="630" y="142" width="74" height="20" rx="4" fill="#6366F1" fill-opacity="0.2" />
+    <text x="645" y="156" fill="#818CF8" font-size="10" font-weight="700">内部模块</text>
+
+    <line x1="36" y1="168" x2="704" y2="168" stroke="#262F46" stroke-width="0.8" />
+    <text x="36" y="188" fill="#8E9BAE" font-size="11" font-weight="600">目标 API Key</text>
+    <text x="140" y="188" fill="#F1F5F9" font-size="12" font-family="Consolas">sk-ant-api03-••••••••••••-99A1</text>
+    <rect x="644" y="174" width="60" height="20" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+    <text x="654" y="188" fill="#8E9BAE" font-size="10">📋 复制</text>
+
+    <!-- Zone Input: 统一输入区 -->
+    <rect x="20" y="212" width="700" height="96" rx="8" fill="#0E121B" stroke="#6366F1" stroke-width="1.2" />
+    <text x="36" y="232" fill="#818CF8" font-size="10" font-weight="700">✍️ 用户输入区 (INPUT ZONE - 支持单行/多行/必填理由)</text>
+    <text x="36" y="250" fill="#8E9BAE" font-size="11">请输入审批处理意见或驳回原因（必填）：</text>
+    <rect x="36" y="258" width="668" height="38" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+    <text x="48" y="282" fill="#F1F5F9" font-size="12">安全合规审计未通过，拒绝覆写主路由配置...</text>
+
+    <!-- Zone C: Boundary Banner -->
+    <rect x="20" y="318" width="700" height="50" rx="8" fill="#EF4444" fill-opacity="0.12" stroke="#EF4444" stroke-opacity="0.4" stroke-width="1" />
+    <text x="36" y="338" fill="#FCA5A5" font-size="11" font-weight="700">⚠️ 影响范围：不可逆配置文件重写</text>
+    <text x="36" y="354" fill="#F87171" font-size="11">放行此动作将覆盖当前路由表；驳回此动作将执行 Fail-Closed 降级并阻断此链路。</text>
+
+    <!-- Zone D: Thought Fold -->
+    <rect x="20" y="378" width="700" height="58" rx="8" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+    <text x="36" y="398" fill="#8E9BAE" font-size="11">▼ Agent 决策思考流与调用栈 (Evidence: 3 items, 0.42s)</text>
+    <text x="36" y="418" fill="#38BDF8" font-size="10" font-family="Consolas">[00:01.120] Invoking Gate.ActionIntentPermissionChecker... Target path outside sandbox</text>
+
+    <!-- Footer Multi-Action Bar -->
+    <rect x="0" y="454" width="740" height="66" rx="0 0 14 14" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+    <rect x="20" y="470" width="80" height="32" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+    <text x="34" y="490" fill="#8E9BAE" font-size="11">导出日志</text>
+
+    <rect x="110" y="470" width="80" height="32" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+    <text x="124" y="490" fill="#8E9BAE" font-size="11">暂存稍后</text>
+
+    <rect x="420" y="470" width="84" height="32" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+    <text x="435" y="490" fill="#F1F5F9" font-size="11">取消/驳回</text>
+
+    <rect x="514" y="470" width="94" height="32" rx="6" fill="#1E263C" stroke="#262F46" stroke-width="1" />
+    <text x="526" y="490" fill="#93C5FD" font-size="11">仅本次放行</text>
+
+    <rect x="618" y="470" width="102" height="32" rx="6" fill="#EF4444" />
+    <text x="636" y="490" fill="#FFFFFF" font-size="11" font-weight="700">主权确认放行</text>
+  </g>
+
+  <!-- =========================================================================
+       SECTION 2: 纵向瀑布收缩向导 (wmWaterfall)
+       ========================================================================= -->
+  <g transform="translate(820, 120)">
+    <rect x="0" y="0" width="740" height="520" rx="14" fill="#141824" stroke="#262F46" stroke-width="1.5" />
+    <text x="24" y="36" fill="#FFFFFF" font-size="16" font-weight="700">🌊 纵向瀑布收缩式向导 (wmWaterfall)</text>
+    <text x="24" y="54" fill="#8E9BAE" font-size="11">单行摘要区 + 收展按钮 + 详情表单区 · 与 DB1 (ConfigDB) 双向原子同步</text>
+
+    <!-- Block 1: Completed (Collapsed) -->
+    <g transform="translate(20, 70)">
+      <rect x="0" y="0" width="700" height="46" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <rect x="0" y="0" width="4" height="46" rx="2" fill="#10B981" />
+      <circle cx="28" cy="23" r="11" fill="#10B981" />
+      <text x="23" y="28" fill="#FFFFFF" font-size="12" font-weight="700">✓</text>
+      <text x="50" y="27" fill="#F1F5F9" font-size="12" font-weight="700">1. 本机端口与 DB1 基础存储</text>
+      <rect x="240" y="13" width="74" height="20" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="250" y="27" fill="#F1F5F9" font-size="11" font-family="Consolas">:8088</text>
+      <rect x="320" y="13" width="110" height="20" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="330" y="27" fill="#F1F5F9" font-size="11" font-family="Consolas">SQLite (12ms)</text>
+      <rect x="520" y="13" width="66" height="20" rx="4" fill="#10B981" fill-opacity="0.15" />
+      <text x="530" y="27" fill="#34D399" font-size="11" font-weight="600">✓ 已完成</text>
+      <rect x="600" y="13" width="84" height="20" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="614" y="27" fill="#8E9BAE" font-size="10">展开详情 ▼</text>
+    </g>
+
+    <!-- Block 2: Active (Expanded) -->
+    <g transform="translate(20, 126)">
+      <rect x="0" y="0" width="700" height="220" rx="8" fill="#141824" stroke="#6366F1" stroke-width="1.5" filter="url(#cardShadow)" />
+      <rect x="0" y="0" width="4" height="220" rx="2" fill="#6366F1" />
+      
+      <!-- Summary Row -->
+      <circle cx="28" cy="23" r="11" fill="#6366F1" />
+      <text x="24" y="28" fill="#FFFFFF" font-size="12" font-weight="700">2</text>
+      <text x="50" y="27" fill="#F1F5F9" font-size="12" font-weight="700">2. 模型渠道与 API 凭据绑定</text>
+      <rect x="240" y="13" width="140" height="20" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="250" y="27" fill="#F1F5F9" font-size="11" font-family="Consolas">Claude 3.5 Sonnet</text>
+      <rect x="520" y="13" width="66" height="20" rx="4" fill="#6366F1" fill-opacity="0.15" />
+      <text x="530" y="27" fill="#818CF8" font-size="11" font-weight="600">⚡ 进行中</text>
+      <rect x="600" y="13" width="84" height="20" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="622" y="27" fill="#6366F1" font-size="10" font-weight="700">收起 ▲</text>
+
+      <!-- Expanded Detail Area -->
+      <line x1="0" y1="46" x2="700" y2="46" stroke="#262F46" stroke-width="1" />
+      <rect x="0" y="47" width="700" height="173" rx="0 0 8 8" fill="#0E121B" />
+      
+      <text x="24" y="74" fill="#8E9BAE" font-size="11" font-weight="600">主力提供商 (Primary Provider)</text>
+      <rect x="24" y="82" width="652" height="28" rx="4" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="36" y="100" fill="#F1F5F9" font-size="12">Claude 3.5 Sonnet (Anthropic Direct API)</text>
+
+      <text x="24" y="130" fill="#8E9BAE" font-size="11" font-weight="600">API 密钥凭据 (DPAPI 加密存入 DB1)</text>
+      <rect x="24" y="138" width="560" height="28" rx="4" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="36" y="156" fill="#F1F5F9" font-size="12" font-family="Consolas">sk-ant-api03-999888777666555</text>
+      <rect x="592" y="138" width="84" height="28" rx="4" fill="#1E263C" stroke="#262F46" stroke-width="1" />
+      <text x="610" y="156" fill="#F1F5F9" font-size="11">测试连接</text>
+
+      <!-- Detail Footer -->
+      <line x1="24" y1="180" x2="676" y2="180" stroke="#262F46" stroke-width="0.8" stroke-dasharray="3 3" />
+      <rect x="24" y="188" width="110" height="26" rx="4" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="34" y="204" fill="#8E9BAE" font-size="10">💾 暂存草稿 DB1</text>
+      <rect x="500" y="188" width="176" height="26" rx="4" fill="#6366F1" />
+      <text x="512" y="204" fill="#FFFFFF" font-size="11" font-weight="700">保存此步骤并进入步骤 3 →</text>
+    </g>
+
+    <!-- Block 3: Pending (Collapsed) -->
+    <g transform="translate(20, 356)">
+      <rect x="0" y="0" width="700" height="46" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" opacity="0.8" />
+      <rect x="0" y="0" width="4" height="46" rx="2" fill="#262F46" />
+      <circle cx="28" cy="23" r="11" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="28" fill="#8E9BAE" font-size="12" font-weight="700">3</text>
+      <text x="50" y="27" fill="#8E9BAE" font-size="12" font-weight="700">3. 记忆生命周期与治理策略</text>
+      <rect x="240" y="13" width="130" height="20" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="250" y="27" fill="#8E9BAE" font-size="11">P0 Fail-Closed</text>
+      <rect x="520" y="13" width="66" height="20" rx="4" fill="#262F46" />
+      <text x="532" y="27" fill="#8E9BAE" font-size="11">待配置</text>
+      <rect x="600" y="13" width="84" height="20" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="614" y="27" fill="#8E9BAE" font-size="10">展开详情 ▼</text>
+    </g>
+
+    <!-- Block 4: Pending (Collapsed) -->
+    <g transform="translate(20, 412)">
+      <rect x="0" y="0" width="700" height="46" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" opacity="0.8" />
+      <rect x="0" y="0" width="4" height="46" rx="2" fill="#262F46" />
+      <circle cx="28" cy="23" r="11" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="28" fill="#8E9BAE" font-size="12" font-weight="700">4</text>
+      <text x="50" y="27" fill="#8E9BAE" font-size="12" font-weight="700">4. 全系统冒烟自检与启动就绪</text>
+      <rect x="240" y="13" width="110" height="20" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="250" y="27" fill="#8E9BAE" font-size="11">5 独立进程自检</text>
+      <rect x="520" y="13" width="66" height="20" rx="4" fill="#262F46" />
+      <text x="532" y="27" fill="#8E9BAE" font-size="11">待配置</text>
+      <rect x="600" y="13" width="84" height="20" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="614" y="27" fill="#8E9BAE" font-size="10">展开详情 ▼</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SECTION 3: ⭐ 横向瀑布流手风琴可展开组件 (wmHorizontalWaterfall)
+       ========================================================================= -->
+  <g transform="translate(40, 680)">
+    <rect x="0" y="0" width="1520" height="480" rx="14" fill="#141824" stroke="#262F46" stroke-width="1.5" />
+    <text x="28" y="38" fill="#FFFFFF" font-size="18" font-weight="800">⭐ 横向瀑布流可展开组件 (wmHorizontalWaterfall - Horizontal Accordion)</text>
+    <text x="28" y="58" fill="#8E9BAE" font-size="12">折叠态为紧凑窄列（140px）；点击展开时平滑横向延伸为宽详情面板（480px），支持多步骤连续配置与 DB1 同步</text>
+
+    <!-- Horizontal Track Container -->
+    <g transform="translate(28, 80)">
+      
+      <!-- Column 1: Completed Collapsed (140px) -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="140" height="360" rx="10" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+        <rect x="0" y="0" width="140" height="4" rx="2" fill="#10B981" />
+        
+        <circle cx="70" cy="40" r="16" fill="#10B981" />
+        <text x="64" y="46" fill="#FFFFFF" font-size="16" font-weight="700">✓</text>
+        
+        <text x="70" y="86" fill="#F1F5F9" font-size="13" font-weight="700" text-anchor="middle">1. 端口与 DB1</text>
+        <rect x="15" y="106" width="110" height="24" rx="4" fill="#1E263C" />
+        <text x="70" y="122" fill="#38BDF8" font-size="10" font-family="Consolas" text-anchor="middle">:8088 / SQLite</text>
+        
+        <rect x="30" y="146" width="80" height="20" rx="4" fill="#10B981" fill-opacity="0.15" />
+        <text x="70" y="160" fill="#34D399" font-size="10" font-weight="700" text-anchor="middle">✓ 已完成</text>
+        
+        <rect x="25" y="316" width="90" height="26" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="70" y="333" fill="#8E9BAE" font-size="10" text-anchor="middle">展开详情 ▶</text>
+      </g>
+
+      <!-- Column 2: Active Expanded (480px) -->
+      <g transform="translate(160, 0)">
+        <rect x="0" y="0" width="520" height="360" rx="12" fill="#141824" stroke="#6366F1" stroke-width="2" filter="url(#cardShadow)" />
+        <rect x="0" y="0" width="520" height="4" rx="2" fill="#6366F1" />
+        
+        <!-- Top Bar -->
+        <rect x="0" y="4" width="520" height="48" fill="#1C2234" />
+        <circle cx="28" cy="28" r="12" fill="#6366F1" />
+        <text x="24" y="33" fill="#FFFFFF" font-size="13" font-weight="700">2</text>
+        <text x="50" y="32" fill="#FFFFFF" font-size="14" font-weight="700">步骤 2: 模型渠道与 API 凭据绑定</text>
+        <rect x="340" y="18" width="70" height="20" rx="4" fill="#6366F1" fill-opacity="0.2" />
+        <text x="350" y="32" fill="#818CF8" font-size="10" font-weight="700">⚡ 进行中</text>
+        <rect x="420" y="18" width="84" height="20" rx="4" fill="#141824" stroke="#262F46" stroke-width="1" />
+        <text x="440" y="32" fill="#6366F1" font-size="10" font-weight="700">收起 ◀</text>
+
+        <!-- Form Body -->
+        <text x="24" y="80" fill="#8E9BAE" font-size="11" font-weight="600">主力提供商 (Primary Provider)</text>
+        <rect x="24" y="88" width="472" height="32" rx="6" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+        <text x="36" y="108" fill="#F1F5F9" font-size="12">Claude 3.5 Sonnet (Anthropic Direct API)</text>
+
+        <text x="24" y="142" fill="#8E9BAE" font-size="11" font-weight="600">API 密钥凭据 (DPAPI 加密)</text>
+        <rect x="24" y="150" width="380" height="32" rx="6" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+        <text x="36" y="170" fill="#F1F5F9" font-size="12" font-family="Consolas">sk-ant-api03-999888777666555</text>
+        <rect x="412" y="150" width="84" height="32" rx="6" fill="#1E263C" stroke="#262F46" stroke-width="1" />
+        <text x="430" y="170" fill="#F1F5F9" font-size="11">测试连接</text>
+
+        <!-- Circuit Breaker Card -->
+        <rect x="24" y="196" width="472" height="60" rx="8" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+        <text x="38" y="218" fill="#F1F5F9" font-size="11" font-weight="700">⚡ 智能熔断与备用路由策略</text>
+        <text x="38" y="238" fill="#8E9BAE" font-size="10">当主力渠道连续 3 次超时 (>15s) 或报 429 时，自动无缝降级切流至备用池。</text>
+
+        <!-- Footer Bar -->
+        <rect x="0" y="306" width="520" height="54" rx="0 0 12 12" fill="#1C2234" />
+        <rect x="24" y="318" width="110" height="30" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+        <text x="36" y="337" fill="#8E9BAE" font-size="11">💾 暂存 DB1</text>
+        <rect x="300" y="318" width="196" height="30" rx="6" fill="#6366F1" />
+        <text x="312" y="337" fill="#FFFFFF" font-size="11" font-weight="700">保存并展开步骤 3 ▶</text>
+      </g>
+
+      <!-- Column 3: Pending Collapsed (140px) -->
+      <g transform="translate(700, 0)">
+        <rect x="0" y="0" width="140" height="360" rx="10" fill="#0E121B" stroke="#262F46" stroke-width="1" opacity="0.85" />
+        <rect x="0" y="0" width="140" height="4" rx="2" fill="#262F46" />
+        
+        <circle cx="70" cy="40" r="16" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="64" y="46" fill="#8E9BAE" font-size="16" font-weight="700">3</text>
+        
+        <text x="70" y="86" fill="#8E9BAE" font-size="13" font-weight="700" text-anchor="middle">3. 记忆与治理</text>
+        <rect x="15" y="106" width="110" height="24" rx="4" fill="#1E263C" />
+        <text x="70" y="122" fill="#8E9BAE" font-size="10" text-anchor="middle">P0 Fail-Closed</text>
+        
+        <rect x="30" y="146" width="80" height="20" rx="4" fill="#262F46" />
+        <text x="70" y="160" fill="#8E9BAE" font-size="10" text-anchor="middle">待配置</text>
+        
+        <rect x="25" y="316" width="90" height="26" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="70" y="333" fill="#8E9BAE" font-size="10" text-anchor="middle">展开详情 ▶</text>
+      </g>
+
+      <!-- Column 4: Pending Collapsed (140px) -->
+      <g transform="translate(860, 0)">
+        <rect x="0" y="0" width="140" height="360" rx="10" fill="#0E121B" stroke="#262F46" stroke-width="1" opacity="0.85" />
+        <rect x="0" y="0" width="140" height="4" rx="2" fill="#262F46" />
+        
+        <circle cx="70" cy="40" r="16" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="64" y="46" fill="#8E9BAE" font-size="16" font-weight="700">4</text>
+        
+        <text x="70" y="86" fill="#8E9BAE" font-size="13" font-weight="700" text-anchor="middle">4. 冒烟自检</text>
+        <rect x="15" y="106" width="110" height="24" rx="4" fill="#1E263C" />
+        <text x="70" y="122" fill="#8E9BAE" font-size="10" text-anchor="middle">5 进程联调</text>
+        
+        <rect x="30" y="146" width="80" height="20" rx="4" fill="#262F46" />
+        <text x="70" y="160" fill="#8E9BAE" font-size="10" text-anchor="middle">待配置</text>
+        
+        <rect x="25" y="316" width="90" height="26" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="70" y="333" fill="#8E9BAE" font-size="10" text-anchor="middle">展开详情 ▶</text>
+      </g>
+
+      <!-- Description Legend Box -->
+      <g transform="translate(1020, 0)">
+        <rect x="0" y="0" width="440" height="360" rx="10" fill="#0E121B" stroke="#262F46" stroke-width="1" stroke-dasharray="4 4" />
+        <text x="24" y="40" fill="#818CF8" font-size="14" font-weight="700">💡 横向瀑布手风琴交互特性</text>
+        <text x="24" y="74" fill="#F1F5F9" font-size="12">• 空间利用率最大化：折叠态仅占 140px 导轨宽度</text>
+        <text x="24" y="104" fill="#F1F5F9" font-size="12">• 动态伸缩：点击任意卡片，自动收起其他卡片并展开自身</text>
+        <text x="24" y="134" fill="#F1F5F9" font-size="12">• 双向状态同步：每步与 DB1 (ConfigDB) 原子事务提交</text>
+        <text x="24" y="164" fill="#F1F5F9" font-size="12">• 适应多场景：适用于宽屏、工作台顶部或向导式初始化</text>
+
+        <rect x="24" y="240" width="392" height="80" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" />
+        <text x="40" y="268" fill="#34D399" font-size="12" font-weight="700">✓ VCL &amp; FMX 架构已全面交付</text>
+        <text x="40" y="292" fill="#8E9BAE" font-size="11">编译包: DeepBaseCore.dpk / DeepBaseVCL.dpk / DeepBaseFMX.dpk</text>
+      </g>
+
+    </g>
+  </g>
+
+</svg>

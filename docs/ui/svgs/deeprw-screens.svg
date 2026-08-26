@@ -1,0 +1,407 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 3200" width="100%" height="100%" style="background:#0B0E14; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="rwPrimaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+    <linearGradient id="rwPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+    <filter id="rwCardShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Top Title Banner -->
+  <rect x="40" y="30" width="1520" height="70" rx="12" fill="#141824" stroke="#262F46" stroke-width="1.5" />
+  <text x="70" y="74" fill="#FFFFFF" font-size="22" font-weight="800">🔬 DeepRW 研究发现与证据链审计 - 5 张核心界面高保真矢量图</text>
+  <rect x="1310" y="50" width="220" height="30" rx="6" fill="#0284C7" fill-opacity="0.2" stroke="#0284C7" stroke-width="1" />
+  <text x="1328" y="70" fill="#38BDF8" font-size="12" font-weight="700">HB Design Tokens 规范</text>
+
+  <!-- =========================================================================
+       SCREEN 1: Problem Manifestation Landing Page (着陆与原话输入)
+       ========================================================================= -->
+  <g transform="translate(40, 130)">
+    <!-- Screen Frame -->
+    <rect x="0" y="0" width="1520" height="560" rx="14" fill="#131E33" stroke="#23375D" stroke-width="1.5" />
+    <!-- Screen Header -->
+    <rect x="0" y="0" width="1520" height="46" rx="14 14 0 0" fill="#0B1220" />
+    <circle cx="24" cy="23" r="6" fill="#EF4444" />
+    <circle cx="42" cy="23" r="6" fill="#F59E0B" />
+    <circle cx="60" cy="23" r="6" fill="#10B981" />
+    <text x="84" y="28" fill="#8DA4C4" font-size="12" font-weight="700">SCREEN 1: 问题显性化着陆与前线原话输入 (Problem Manifestation Landing)</text>
+
+    <!-- Center Hero Card -->
+    <g transform="translate(360, 70)">
+      <rect x="0" y="0" width="800" height="440" rx="14" fill="#141824" stroke="#262F46" stroke-width="1.5" filter="url(#rwCardShadow)" />
+      
+      <!-- Prompt Badge -->
+      <rect x="36" y="32" width="240" height="26" rx="13" fill="#1E263C" stroke="#262F46" stroke-width="1" />
+      <text x="48" y="49" fill="#38BDF8" font-size="11" font-weight="700">💬 前线原话驱动 · 7 字段 PFM 法源解析</text>
+
+      <text x="36" y="90" fill="#FFFFFF" font-size="22" font-weight="800">将前线模糊原话显性化为结构化研究问题</text>
+      <text x="36" y="116" fill="#8E9BAE" font-size="13">拒绝拍脑袋决策。从第一现场日志、工单记录与用户原话中提取严谨法源依据。</text>
+
+      <!-- Raw Input Box -->
+      <rect x="36" y="140" width="728" height="110" rx="8" fill="#0E121B" stroke="#6366F1" stroke-width="1.5" />
+      <text x="52" y="170" fill="#F1F5F9" font-size="13" font-family="Consolas">“工控上位机在 300 节点并发断线重连时，主界面偶发卡死 3~5 秒，</text>
+      <text x="52" y="196" fill="#F1F5F9" font-size="13" font-family="Consolas">客户现场已经报障 4 次，怀疑是 Socket 消息循环和主线程锁竞争。”</text>
+
+      <!-- Quick Chips -->
+      <text x="36" y="276" fill="#8E9BAE" font-size="11" font-weight="600">推荐原话模板：</text>
+      <rect x="130" y="260" width="170" height="24" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="142" y="276" fill="#F1F5F9" font-size="11">高并发 TCP 重连雪崩</text>
+
+      <rect x="310" y="260" width="160" height="24" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="322" y="276" fill="#F1F5F9" font-size="11">SQLite WAL 锁竞争</text>
+
+      <!-- Action Buttons -->
+      <rect x="36" y="370" width="130" height="38" rx="8" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="56" y="394" fill="#8E9BAE" font-size="13">清空重填</text>
+
+      <rect x="524" y="370" width="240" height="38" rx="8" fill="url(#rwPurpleGrad)" />
+      <text x="548" y="394" fill="#FFFFFF" font-size="13" font-weight="700">🚀 启动 PFM 七字段法源显性化</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SCREEN 2: 3-Pane Manifestation Workbench (七字段法源溯源工作台)
+       ========================================================================= -->
+  <g transform="translate(40, 720)">
+    <!-- Screen Frame -->
+    <rect x="0" y="0" width="1520" height="580" rx="14" fill="#131E33" stroke="#23375D" stroke-width="1.5" />
+    <rect x="0" y="0" width="1520" height="46" rx="14 14 0 0" fill="#0B1220" />
+    <circle cx="24" cy="23" r="6" fill="#EF4444" /><circle cx="42" cy="23" r="6" fill="#F59E0B" /><circle cx="60" cy="23" r="6" fill="#10B981" />
+    <text x="84" y="28" fill="#8DA4C4" font-size="12" font-weight="700">SCREEN 2: 七字段法源工作台三栏布局 (3-Pane PFM Workbench)</text>
+
+    <!-- Left Rail (240px) -->
+    <g transform="translate(16, 60)">
+      <rect x="0" y="0" width="240" height="504" rx="8" fill="#16191E" stroke="#2B313A" stroke-width="1" />
+      <text x="16" y="30" fill="#FFFFFF" font-size="13" font-weight="700">研究问题溯源与版本</text>
+      
+      <rect x="12" y="46" width="216" height="60" rx="6" fill="#1E263C" stroke="#6366F1" stroke-width="1" />
+      <text x="24" y="68" fill="#FFFFFF" font-size="12" font-weight="700">PFM-20260825-01 (v1.2)</text>
+      <text x="24" y="88" fill="#38BDF8" font-size="10">● 高并发断线重连主线程卡死</text>
+
+      <rect x="12" y="114" width="216" height="50" rx="6" fill="#0E121B" stroke="#2B313A" stroke-width="1" />
+      <text x="24" y="136" fill="#8E9BAE" font-size="11">PFM-20260824-03 (v1.0)</text>
+      <text x="24" y="152" fill="#8E9BAE" font-size="10">SQLite 事务死锁优化</text>
+    </g>
+
+    <!-- Center Workspace (840px) - 7 PFM Field Cards -->
+    <g transform="translate(270, 60)">
+      <rect x="0" y="0" width="880" height="504" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" />
+      
+      <!-- Breadcrumb Bar -->
+      <rect x="14" y="12" width="852" height="30" rx="4" fill="#0E121B" stroke="#262F46" stroke-width="1" />
+      <text x="26" y="31" fill="#8E9BAE" font-size="11">法源路径: <tspan fill="#F1F5F9">客户原话 #409</tspan> → <tspan fill="#38BDF8">弱信号探针 (重传率24%)</tspan> → <tspan fill="#34D399" font-weight="700">7字段确认</tspan></text>
+
+      <!-- 7 Cards Grid (2 Columns) -->
+      <!-- Field 1 -->
+      <g transform="translate(14, 52)">
+        <rect x="0" y="0" width="418" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="98" rx="2" fill="#10B981" />
+        <text x="14" y="24" fill="#FFFFFF" font-size="12" font-weight="700">1. 用户原话与现场表象 (Manifestation)</text>
+        <rect x="340" y="10" width="66" height="18" rx="3" fill="#10B981" fill-opacity="0.2" />
+        <text x="350" y="23" fill="#34D399" font-size="10" font-weight="700">已确认</text>
+        <text x="14" y="46" fill="#8E9BAE" font-size="11">上位机 300 节点并发重连时界面卡死 3~5 秒，报障 4 次。</text>
+        <line x1="14" y1="64" x2="404" y2="64" stroke="#262F46" stroke-width="0.8" />
+        <text x="14" y="82" fill="#8E9BAE" font-size="10">法源权重: 0.94 · 关联工单: #TK-8891</text>
+      </g>
+
+      <!-- Field 2 -->
+      <g transform="translate(448, 52)">
+        <rect x="0" y="0" width="418" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="98" rx="2" fill="#10B981" />
+        <text x="14" y="24" fill="#FFFFFF" font-size="12" font-weight="700">2. 弱信号探针 (Weak Signal Probe)</text>
+        <rect x="340" y="10" width="66" height="18" rx="3" fill="#10B981" fill-opacity="0.2" />
+        <text x="350" y="23" fill="#34D399" font-size="10" font-weight="700">已确认</text>
+        <text x="14" y="46" fill="#8E9BAE" font-size="11">抓包显示 TCP ACK 丢失导致指数级重发，Socket Buffer 溢出。</text>
+        <line x1="14" y1="64" x2="404" y2="64" stroke="#262F46" stroke-width="0.8" />
+        <text x="14" y="82" fill="#8E9BAE" font-size="10">探针抓包: pcap_20260825.dump (1.2MB)</text>
+      </g>
+
+      <!-- Field 3 -->
+      <g transform="translate(14, 160)">
+        <rect x="0" y="0" width="418" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="98" rx="2" fill="#6366F1" />
+        <text x="14" y="24" fill="#FFFFFF" font-size="12" font-weight="700">3. 根因假说 (Root Cause Hypothesis)</text>
+        <rect x="340" y="10" width="66" height="18" rx="3" fill="#6366F1" fill-opacity="0.2" />
+        <text x="350" y="23" fill="#818CF8" font-size="10" font-weight="700">候选</text>
+        <text x="14" y="46" fill="#8E9BAE" font-size="11">假说 A: 重连退避算法缺失导致同步浪涌挤占 UI 消息队列。</text>
+        <line x1="14" y1="64" x2="404" y2="64" stroke="#262F46" stroke-width="0.8" />
+        <text x="14" y="82" fill="#8E9BAE" font-size="10">验证方式: 混沌测试注入 500 节点重连</text>
+      </g>
+
+      <!-- Field 4 -->
+      <g transform="translate(448, 160)">
+        <rect x="0" y="0" width="418" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="98" rx="2" fill="#F59E0B" />
+        <text x="14" y="24" fill="#FFFFFF" font-size="12" font-weight="700">4. 边界提示与阻断 (Boundary Guard)</text>
+        <rect x="340" y="10" width="66" height="18" rx="3" fill="#F59E0B" fill-opacity="0.2" />
+        <text x="350" y="23" fill="#FBBF24" font-size="10" font-weight="700">争议/待核</text>
+        <text x="14" y="46" fill="#8E9BAE" font-size="11">若属于硬件晶振时钟漂移，需立即转交硬件固件组。</text>
+        <line x1="14" y1="64" x2="404" y2="64" stroke="#262F46" stroke-width="0.8" />
+        <text x="14" y="82" fill="#8E9BAE" font-size="10">转介目标: #hardware-firmware</text>
+      </g>
+
+      <!-- Field 5, 6, 7 Compact Row -->
+      <g transform="translate(14, 268)">
+        <rect x="0" y="0" width="272" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="12" y="24" fill="#FFFFFF" font-size="11" font-weight="700">5. 停止条件 (Stop Condition)</text>
+        <text x="12" y="46" fill="#8E9BAE" font-size="10">重连成功率 99.9% 且 UI 帧率保持 60 FPS 无卡顿。</text>
+      </g>
+      <g transform="translate(294, 268)">
+        <rect x="0" y="0" width="272" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="12" y="24" fill="#FFFFFF" font-size="11" font-weight="700">6. 候选方案集 (Candidates)</text>
+        <text x="12" y="46" fill="#8E9BAE" font-size="10">方案 A (指数退避+抖动) / 方案 B (RingBuffer 分离)</text>
+      </g>
+      <g transform="translate(574, 268)">
+        <rect x="0" y="0" width="292" height="98" rx="6" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="12" y="24" fill="#FFFFFF" font-size="11" font-weight="700">7. 不可篡改协议哈希 (Hash)</text>
+        <text x="12" y="46" fill="#38BDF8" font-size="10" font-family="Consolas">sha256: 9b8c11f4a902...e31</text>
+      </g>
+
+      <!-- Bottom Decision Bar -->
+      <rect x="0" y="444" width="880" height="60" rx="0 0 8 8" fill="#1C2234" />
+      <rect x="640" y="456" width="220" height="34" rx="6" fill="url(#rwPrimaryGrad)" />
+      <text x="664" y="478" fill="#FFFFFF" font-size="12" font-weight="700">下一步: 进入候选方案对比 →</text>
+    </g>
+
+    <!-- Right Inspector (340px) -->
+    <g transform="translate(1164, 60)">
+      <rect x="0" y="0" width="340" height="504" rx="8" fill="#16191E" stroke="#2B313A" stroke-width="1" />
+      <text x="16" y="30" fill="#FFFFFF" font-size="13" font-weight="700">原话证据快照与信号检视</text>
+
+      <rect x="14" y="46" width="312" height="120" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="70" fill="#8E9BAE" font-size="11" font-weight="700">现场录音与原话提取片段：</text>
+      <rect x="24" y="78" width="292" height="54" rx="4" fill="#0E121B" />
+      <text x="32" y="98" fill="#F1F5F9" font-size="11" font-style="italic">“断线重连一拥而上，主线程直接死锁了...”</text>
+      <text x="24" y="152" fill="#8E9BAE" font-size="10">时间戳: 2026-08-25 14:32:01</text>
+
+      <!-- Boundary Alert Card -->
+      <rect x="14" y="180" width="312" height="90" rx="6" fill="#EF4444" fill-opacity="0.12" stroke="#EF4444" stroke-opacity="0.4" stroke-width="1" />
+      <text x="24" y="204" fill="#FCA5A5" font-size="11" font-weight="700">⚠️ 边界拦截规则 (Fail-Closed)</text>
+      <text x="24" y="224" fill="#F87171" font-size="10">如果重现失败超过 3 次，立即触发停机回滚并转介专家。</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SCREEN 3: Candidate Comparison (候选方案多维对比与晋级)
+       ========================================================================= -->
+  <g transform="translate(40, 1330)">
+    <rect x="0" y="0" width="1520" height="560" rx="14" fill="#131E33" stroke="#23375D" stroke-width="1.5" />
+    <rect x="0" y="0" width="1520" height="46" rx="14 14 0 0" fill="#0B1220" />
+    <circle cx="24" cy="23" r="6" fill="#EF4444" /><circle cx="42" cy="23" r="6" fill="#F59E0B" /><circle cx="60" cy="23" r="6" fill="#10B981" />
+    <text x="84" y="28" fill="#8DA4C4" font-size="12" font-weight="700">SCREEN 3: 候选方案多维对比与晋级裁决 (Candidate Solution Comparison)</text>
+
+    <!-- 3 Candidate Cards Side by Side -->
+    <!-- Candidate A: Promoted Winner -->
+    <g transform="translate(30, 70)">
+      <rect x="0" y="0" width="470" height="460" rx="12" fill="#141824" stroke="#6366F1" stroke-width="2" filter="url(#rwCardShadow)" />
+      <rect x="0" y="0" width="470" height="6" rx="3" fill="#6366F1" />
+      <text x="24" y="40" fill="#FFFFFF" font-size="16" font-weight="800">方案 A: 指数退避加抖动 + 独立重连队列</text>
+      <rect x="360" y="24" width="86" height="24" rx="4" fill="#10B981" fill-opacity="0.2" />
+      <text x="372" y="40" fill="#34D399" font-size="11" font-weight="700">⭐ 推荐晋级</text>
+
+      <text x="24" y="80" fill="#8E9BAE" font-size="11" font-weight="700">核心原理与法源对应：</text>
+      <text x="24" y="100" fill="#F1F5F9" font-size="12">重连间隔按 base * (2^attempt) + random_jitter(100ms) 散列，</text>
+      <text x="24" y="120" fill="#F1F5F9" font-size="12">将 300 节点瞬时浪涌平滑摊销至 4.5 秒内，主线程零阻塞。</text>
+
+      <!-- Metrics Row -->
+      <rect x="24" y="146" width="130" height="40" rx="6" fill="#0E121B" />
+      <text x="34" y="164" fill="#8E9BAE" font-size="10">重连雪崩抑制率</text>
+      <text x="34" y="180" fill="#34D399" font-size="13" font-weight="700">99.98%</text>
+
+      <rect x="164" y="146" width="130" height="40" rx="6" fill="#0E121B" />
+      <text x="174" y="164" fill="#8E9BAE" font-size="10">主线程卡顿时间</text>
+      <text x="174" y="180" fill="#38BDF8" font-size="13" font-weight="700">&lt; 2 ms (无感)</text>
+
+      <rect x="304" y="146" width="140" height="40" rx="6" fill="#0E121B" />
+      <text x="314" y="164" fill="#8E9BAE" font-size="10">代码重构代价</text>
+      <text x="314" y="180" fill="#FBBF24" font-size="13" font-weight="700">低 (抽离中间件)</text>
+
+      <!-- Evidence Support Tag -->
+      <text x="24" y="220" fill="#8E9BAE" font-size="11" font-weight="700">证据链支撑：</text>
+      <rect x="24" y="230" width="422" height="60" rx="6" fill="#1E263C" />
+      <text x="36" y="254" fill="#F1F5F9" font-size="11">✓ IEEE 论文 #2024-88: Jittered Backoff 工业实测数据</text>
+      <text x="36" y="274" fill="#F1F5F9" font-size="11">✓ 压力测试报告 #PT-09: 1000 节点 0 死锁通过</text>
+
+      <!-- Decision Action -->
+      <rect x="24" y="400" width="422" height="38" rx="8" fill="url(#rwPurpleGrad)" />
+      <text x="170" y="424" fill="#FFFFFF" font-size="13" font-weight="700">🏆 晋级为主力实施协议</text>
+    </g>
+
+    <!-- Candidate B: Secondary Option -->
+    <g transform="translate(526, 70)">
+      <rect x="0" y="0" width="470" height="460" rx="12" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="40" fill="#FFFFFF" font-size="16" font-weight="700">方案 B: 环形缓冲区 (RingBuffer) 消息降采样</text>
+      <rect x="380" y="24" width="66" height="24" rx="4" fill="#262F46" />
+      <text x="392" y="40" fill="#8E9BAE" font-size="11">备选</text>
+
+      <text x="24" y="80" fill="#8E9BAE" font-size="11" font-weight="700">核心原理与法源对应：</text>
+      <text x="24" y="100" fill="#F1F5F9" font-size="12">重连期间放弃非关键状态帧，只保留心跳与报警。</text>
+      <text x="24" y="120" fill="#8E9BAE" font-size="12">存在 0.1% 历史监控数据丢包风险，需业务方二次确认。</text>
+
+      <rect x="24" y="146" width="130" height="40" rx="6" fill="#0E121B" />
+      <text x="34" y="164" fill="#8E9BAE" font-size="10">主线程卡顿时间</text>
+      <text x="34" y="180" fill="#F1F5F9" font-size="13" font-weight="700">0 ms</text>
+
+      <rect x="24" y="400" width="422" height="38" rx="8" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="180" y="424" fill="#8E9BAE" font-size="12">保留作为降级备用方案</text>
+    </g>
+
+    <!-- Candidate C: Rejected -->
+    <g transform="translate(1022, 70)">
+      <rect x="0" y="0" width="470" height="460" rx="12" fill="#141824" stroke="#262F46" stroke-width="1" opacity="0.75" />
+      <text x="24" y="40" fill="#8E9BAE" font-size="16" font-weight="700">方案 C: 单纯提升主线程优先级</text>
+      <rect x="380" y="24" width="66" height="24" rx="4" fill="#EF4444" fill-opacity="0.15" />
+      <text x="396" y="40" fill="#F87171" font-size="11">已驳回</text>
+
+      <text x="24" y="80" fill="#8E9BAE" font-size="11" font-weight="700">驳回原因：</text>
+      <text x="24" y="100" fill="#F87171" font-size="12">饮鸩止渴。提高优先级导致后台 I/O 线程饥饿，</text>
+      <text x="24" y="120" fill="#F87171" font-size="12">引发更严重的 TCP Window 假死。</text>
+
+      <rect x="24" y="400" width="422" height="38" rx="8" fill="#1C2234" />
+      <text x="200" y="424" fill="#8E9BAE" font-size="12">✕ 终止探索</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SCREEN 4: Claim-Evidence Audit (证据链审计与争议调和)
+       ========================================================================= -->
+  <g transform="translate(40, 1920)">
+    <rect x="0" y="0" width="1520" height="580" rx="14" fill="#131E33" stroke="#23375D" stroke-width="1.5" />
+    <rect x="0" y="0" width="1520" height="46" rx="14 14 0 0" fill="#0B1220" />
+    <circle cx="24" cy="23" r="6" fill="#EF4444" /><circle cx="42" cy="23" r="6" fill="#F59E0B" /><circle cx="60" cy="23" r="6" fill="#10B981" />
+    <text x="84" y="28" fill="#8DA4C4" font-size="12" font-weight="700">SCREEN 4: 证据链审计与争议调和工作台 (Claim-Evidence Audit &amp; Reconciliation)</text>
+
+    <!-- Center Audit List -->
+    <g transform="translate(24, 60)">
+      <rect x="0" y="0" width="980" height="504" rx="8" fill="#141824" stroke="#262F46" stroke-width="1" />
+      
+      <!-- Claim 1 -->
+      <g transform="translate(16, 16)">
+        <rect x="0" y="0" width="948" height="150" rx="8" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+        <text x="20" y="30" fill="#FFFFFF" font-size="14" font-weight="700">Claim #1: 主线程消息队列挤压由同步 TCP 重连 ACK 引发</text>
+        <rect x="800" y="14" width="130" height="22" rx="4" fill="#10B981" fill-opacity="0.2" />
+        <text x="814" y="29" fill="#34D399" font-size="11" font-weight="700">3 份强证据支撑</text>
+
+        <!-- Supporting Evidence -->
+        <rect x="20" y="48" width="908" height="40" rx="4" fill="#0E121B" />
+        <text x="32" y="72" fill="#34D399" font-size="11" font-weight="700">[证据 1A] 现场 PCAP 抓包分析报告: TCP 重传率 24.8% 时引发消息队列堆积</text>
+
+        <rect x="20" y="96" width="908" height="40" rx="4" fill="#0E121B" />
+        <text x="32" y="120" fill="#34D399" font-size="11" font-weight="700">[证据 1B] Windows Performance Analyzer (WPA) 栈采样: PeekMessage 处于阻塞态</text>
+      </g>
+
+      <!-- Claim 2: Disputed -->
+      <g transform="translate(16, 180)">
+        <rect x="0" y="0" width="948" height="180" rx="8" fill="#1C2234" stroke="#F59E0B" stroke-width="1.2" />
+        <text x="20" y="30" fill="#FFFFFF" font-size="14" font-weight="700">Claim #2: 指数退避加随机抖动可将雪崩概率降至 0.01%</text>
+        <rect x="800" y="14" width="130" height="22" rx="4" fill="#F59E0B" fill-opacity="0.2" />
+        <text x="814" y="29" fill="#FBBF24" font-size="11" font-weight="700">2 证据支持 · 1 争议</text>
+
+        <rect x="20" y="48" width="908" height="38" rx="4" fill="#0E121B" />
+        <text x="32" y="72" fill="#34D399" font-size="11">✓ [支持] IEEE Trans on Mobile Computing: Jittered backoff 消除集群同步风暴</text>
+
+        <rect x="20" y="94" width="908" height="38" rx="4" fill="#0E121B" />
+        <text x="32" y="118" fill="#F87171" font-size="11">❌ [争议反证] 压力测试报告 #PT-09: 节点数超 5000 时仍存在 2.4% 次级同步浪涌</text>
+
+        <rect x="20" y="138" width="908" height="30" rx="4" fill="#1E263C" />
+        <text x="32" y="158" fill="#818CF8" font-size="11">🔍 调和批注: 5000+ 节点场景引入分区打散因子 (Partition Key) 即可闭环解决。</text>
+      </g>
+    </g>
+
+    <!-- Right Inspector -->
+    <g transform="translate(1020, 60)">
+      <rect x="0" y="0" width="476" height="504" rx="8" fill="#16191E" stroke="#2B313A" stroke-width="1" />
+      <text x="20" y="32" fill="#FFFFFF" font-size="14" font-weight="700">不可篡改证据签名与调和审计</text>
+
+      <rect x="20" y="56" width="436" height="120" rx="6" fill="#141824" stroke="#262F46" stroke-width="1" />
+      <text x="32" y="80" fill="#8E9BAE" font-size="11" font-weight="700">证据链快照哈希 (SHA-256):</text>
+      <text x="32" y="104" fill="#38BDF8" font-size="11" font-family="Consolas">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</text>
+      <text x="32" y="140" fill="#34D399" font-size="11">✓ 已通过本地安全沙箱只读凭证验签</text>
+
+      <rect x="20" y="440" width="436" height="38" rx="8" fill="url(#rwPrimaryGrad)" />
+      <text x="140" y="464" fill="#FFFFFF" font-size="13" font-weight="700">进入构建与签发门禁 →</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       SCREEN 5: Quality & Protocol Gate (不可篡改研究协议签发门禁)
+       ========================================================================= -->
+  <g transform="translate(40, 2530)">
+    <rect x="0" y="0" width="1520" height="600" rx="14" fill="#131E33" stroke="#23375D" stroke-width="1.5" />
+    <rect x="0" y="0" width="1520" height="46" rx="14 14 0 0" fill="#0B1220" />
+    <circle cx="24" cy="23" r="6" fill="#EF4444" /><circle cx="42" cy="23" r="6" fill="#F59E0B" /><circle cx="60" cy="23" r="6" fill="#10B981" />
+    <text x="84" y="28" fill="#8DA4C4" font-size="12" font-weight="700">SCREEN 5: 最终构建与签发门禁 (Quality Gate &amp; Protocol Sign-Off)</text>
+
+    <!-- Table Container -->
+    <g transform="translate(30, 70)">
+      <rect x="0" y="0" width="1460" height="440" rx="10" fill="#141824" stroke="#262F46" stroke-width="1" />
+      
+      <!-- Table Header -->
+      <rect x="0" y="0" width="1460" height="42" rx="10 10 0 0" fill="#1C2234" />
+      <text x="24" y="26" fill="#8E9BAE" font-size="12" font-weight="700">规则 ID</text>
+      <text x="160" y="26" fill="#8E9BAE" font-size="12" font-weight="700">门禁检查项</text>
+      <text x="440" y="26" fill="#8E9BAE" font-size="12" font-weight="700">判定结果</text>
+      <text x="580" y="26" fill="#8E9BAE" font-size="12" font-weight="700">解释说明与关联对象</text>
+      <text x="1260" y="26" fill="#8E9BAE" font-size="12" font-weight="700">修复指引 / 行动</text>
+
+      <!-- Row 1 -->
+      <line x1="0" y1="42" x2="1460" y2="42" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="74" fill="#FFFFFF" font-size="12" font-weight="700">RULE-GW-01</text>
+      <text x="160" y="74" fill="#F1F5F9" font-size="12">前线原话与弱信号覆盖</text>
+      <rect x="440" y="58" width="70" height="22" rx="11" fill="#10B981" fill-opacity="0.2" />
+      <text x="454" y="73" fill="#34D399" font-size="11" font-weight="700">✓ PASS</text>
+      <text x="580" y="74" fill="#8E9BAE" font-size="12">所有 7 字段均有对应原话或现场日志关联，无凭空捏造。</text>
+      <text x="1260" y="74" fill="#8E9BAE" font-size="12">-</text>
+
+      <!-- Row 2 -->
+      <line x1="0" y1="96" x2="1460" y2="96" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="128" fill="#FFFFFF" font-size="12" font-weight="700">RULE-GW-02</text>
+      <text x="160" y="128" fill="#F1F5F9" font-size="12">边界风险阻断与转介</text>
+      <rect x="440" y="112" width="86" height="22" rx="11" fill="#F59E0B" fill-opacity="0.2" />
+      <text x="452" y="127" fill="#FBBF24" font-size="11" font-weight="700">⚠ WARNING</text>
+      <text x="580" y="128" fill="#8E9BAE" font-size="12">存在硬件晶振时钟漂移边界风险，已设定转交目标 #firmware-hw。</text>
+      <rect x="1260" y="116" width="90" height="24" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="1272" y="132" fill="#F1F5F9" font-size="11">查看转介单</text>
+
+      <!-- Row 3 -->
+      <line x1="0" y1="150" x2="1460" y2="150" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="182" fill="#FFFFFF" font-size="12" font-weight="700">RULE-GW-03</text>
+      <text x="160" y="182" fill="#F1F5F9" font-size="12">证据链 SHA-256 验签</text>
+      <rect x="440" y="166" width="70" height="22" rx="11" fill="#10B981" fill-opacity="0.2" />
+      <text x="454" y="181" fill="#34D399" font-size="11" font-weight="700">✓ PASS</text>
+      <text x="580" y="182" fill="#8E9BAE" font-size="12">12 份引用源快照哈希与本地证据库完全吻合。</text>
+      <text x="1260" y="182" fill="#8E9BAE" font-size="12">-</text>
+
+      <!-- Row 4 -->
+      <line x1="0" y1="204" x2="1460" y2="204" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="236" fill="#FFFFFF" font-size="12" font-weight="700">RULE-GW-04</text>
+      <text x="160" y="236" fill="#F1F5F9" font-size="12">未解决反证争议 (Dispute)</text>
+      <rect x="440" y="220" width="86" height="22" rx="11" fill="#F59E0B" fill-opacity="0.2" />
+      <text x="452" y="235" fill="#FBBF24" font-size="11" font-weight="700">⚠ WARNING</text>
+      <text x="580" y="236" fill="#8E9BAE" font-size="12">Claim #2 存在 5000+ 节点浪涌争议，已有人工调和批注。</text>
+      <rect x="1260" y="224" width="90" height="24" rx="4" fill="#1C2234" stroke="#262F46" stroke-width="1" />
+      <text x="1272" y="240" fill="#F1F5F9" font-size="11">核验批注</text>
+
+      <!-- Row 5 -->
+      <line x1="0" y1="258" x2="1460" y2="258" stroke="#262F46" stroke-width="1" />
+      <text x="24" y="290" fill="#FFFFFF" font-size="12" font-weight="700">RULE-GW-05</text>
+      <text x="160" y="290" fill="#F1F5F9" font-size="12">停止条件明确性</text>
+      <rect x="440" y="274" width="70" height="22" rx="11" fill="#10B981" fill-opacity="0.2" />
+      <text x="454" y="289" fill="#34D399" font-size="11" font-weight="700">✓ PASS</text>
+      <text x="580" y="290" fill="#8E9BAE" font-size="12">已包含量化自动化测试基准 (1000 次重连 0 死锁)。</text>
+      <text x="1260" y="290" fill="#8E9BAE" font-size="12">-</text>
+
+      <!-- Sign Off Action Bar -->
+      <rect x="0" y="370" width="1460" height="70" rx="0 0 10 10" fill="#1C2234" />
+      <rect x="1170" y="385" width="260" height="40" rx="8" fill="#10B981" />
+      <text x="1194" y="410" fill="#FFFFFF" font-size="13" font-weight="700">✍️ 签发不可篡改研究协议报告</text>
+    </g>
+  </g>
+
+</svg>
