@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Services
 
   Service registry for DeepShell. Stores interfaces by string id, allows

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Layout
 
   In-memory IShellLayoutService and an IShellSettingsStore-backed variant.

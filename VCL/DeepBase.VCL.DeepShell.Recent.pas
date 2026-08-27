@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Recent
 
   In-memory IShellRecentService implementation. Production apps should

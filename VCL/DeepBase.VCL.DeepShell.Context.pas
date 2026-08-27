@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Context
 
   ContextManager keeps the current TShellContext (project / object / view)

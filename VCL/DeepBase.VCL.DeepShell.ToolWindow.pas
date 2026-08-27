@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.ToolWindow
 
   Native TForm-based floating tool window. The first version intentionally

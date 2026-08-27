@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Panels
 
   Helpers for the three collapsible main areas (top / middle / bottom)

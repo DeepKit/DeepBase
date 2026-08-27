@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Localization
 
   Default IShellLocalizationService implementation. Stores text key /

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Types
 
   Plain records / enums / helpers used by the DeepShell desktop frame.

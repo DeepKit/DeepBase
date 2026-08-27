@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Governance
 
   Default IGovernanceService implementations bundled with the shell core.

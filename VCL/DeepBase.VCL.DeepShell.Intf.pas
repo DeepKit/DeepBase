@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Intf
 
   All interfaces consumed and exposed by the DeepShell desktop frame.

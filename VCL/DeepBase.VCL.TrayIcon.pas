@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.TrayIcon - VCL Tray Icon Component
 
   Description: VCL wrapper for DeepBase.TrayIcon with host-form lifecycle
