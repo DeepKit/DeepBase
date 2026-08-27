@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1366 768" width="1366" height="768" style="background:#0b0f19; font-family:'Segoe UI', system-ui, sans-serif;">
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="1366" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="30" fill="#38BDF8" font-size="16" font-weight="bold">◈ DeepRW</text>
+  <text x="110" y="30" fill="#94A3B8" font-size="13">认知论证工作台 · 材料阅读器 (Document Excerpt Reader)</text>
+
+  <!-- Left Mini Rail -->
+  <rect x="0" y="48" width="56" height="720" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="18" y="85" fill="#64748B" font-size="18">📊</text>
+  <rect x="8" y="110" width="40" height="40" rx="8" fill="#0284c7" opacity="0.2"/>
+  <text x="18" y="135" fill="#38BDF8" font-size="18">📖</text>
+  <text x="18" y="185" fill="#64748B" font-size="18">📋</text>
+  <text x="18" y="235" fill="#64748B" font-size="18">🛡</text>
+
+  <!-- Left Container: Raw Material Document (750px) -->
+  <rect x="76" y="68" width="750" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  
+  <!-- Doc Header -->
+  <text x="100" y="104" fill="#38BDF8" font-size="12" font-weight="bold">DOC REF: LAW-SRC-2026-08-A42 · 法源证据原文</text>
+  <text x="100" y="132" fill="#F8FAFC" font-size="18" font-weight="bold">《关于规范跨市场衍生品套利及穿透式风控指令的指导意见（节选）》</text>
+  <text x="100" y="154" fill="#64748B" font-size="12">发布机构: 金融监管局 · 实施日期: 2026-06-01 · 哈希指纹: sha256:8f4c...9e21</text>
+  <line x1="100" y1="168" x2="800" y2="168" stroke="#1f2937" stroke-width="1"/>
+
+  <!-- Doc Text Lines -->
+  <g fill="#E2E8F0" font-size="14" font-family="'Segoe UI', 'SimSun', serif;">
+    <text x="100" y="200">第三条【穿透式责任主体与承压者认定】</text>
+    <text x="100" y="226">金融机构及算法自动化交易运营方在实施高频统计套利时，必须在系统内部建立</text>
+    <text x="100" y="252">明确的止损阻断闭环。任何自动化策略在未确定最终法人承压主体之前，不得向</text>
+    <text x="100" y="278">生产撮合环境发送不受单笔敞口上限约束的连续买卖意向单。</text>
+
+    <!-- Selection Highlight Box -->
+    <rect x="96" y="300" width="700" height="74" fill="#0284C7" opacity="0.25" rx="4"/>
+    <text x="100" y="324" fill="#F8FAFC" font-weight="600">第四条【停止条件与前线弱信号响应机制】</text>
+    <text x="100" y="348" fill="#F8FAFC" font-weight="600">“当跨期现货基差偏离超过历史 3σ 分位，且单边流动性枯竭指数连续 3 秒处于警戒线”</text>
+    <text x="100" y="370" fill="#F8FAFC" font-weight="600">“以上时，策略必须无条件进入冷却停机状态，并向审计日志写入完整决策上下文。”</text>
+
+    <text x="100" y="416">第五条【责任转交与人工接管规则】</text>
+    <text x="100" y="442">停机后需在 60 秒内将风控权限转交至值班风险官（CRO），在未取得人工书面签批</text>
+    <text x="100" y="468">前，严禁任何形式的策略自恢复启动。</text>
+  </g>
+
+  <!-- Floating Selection Action Bar (浮动操作胶囊) -->
+  <g transform="translate(240, 240)">
+    <rect width="420" height="46" rx="8" fill="#1E293B" stroke="#0284C7" stroke-width="1.5" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.4))"/>
+    <rect x="8" y="8" width="150" height="30" rx="6" fill="#0284C7"/>
+    <text x="20" y="28" fill="#FFFFFF" font-size="12" font-weight="bold">⚡ 提取为 Statement</text>
+
+    <rect x="166" y="8" width="140" height="30" rx="6" fill="#334155"/>
+    <text x="178" y="28" fill="#F8FAFC" font-size="12">◈ 记为候选 Claim</text>
+
+    <rect x="314" y="8" width="96" height="30" rx="6" fill="#1E293B" stroke="#475569"/>
+    <text x="328" y="28" fill="#94A3B8" font-size="12">🔍 查重比对</text>
+  </g>
+
+  <!-- Right Container: Anchors & Lineage Excerpts (480px) -->
+  <rect x="846" y="68" width="480" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="870" y="104" fill="#F8FAFC" font-size="15" font-weight="bold">已提取锚点与法源引证 (3 项)</text>
+  <text x="870" y="124" fill="#94A3B8" font-size="12">与主张知识图谱保持强双向引用同步</text>
+
+  <!-- Anchor Card 1 -->
+  <rect x="870" y="144" width="432" height="110" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="886" y="170" fill="#38BDF8" font-size="11" font-weight="bold">锚点 #A01 · §4 停止条件</text>
+  <text x="886" y="192" fill="#F8FAFC" font-size="13" font-weight="600">基差偏离超过 3σ 且流动性枯竭无条件停机</text>
+  <text x="886" y="214" fill="#94A3B8" font-size="12">关联主张: Claim-14 (已闭环) · 极性: 支撑 (+Support)</text>
+  <text x="886" y="236" fill="#10B981" font-size="11">✓ 快照哈希已验证 (SHA-256 Match)</text>
+
+  <!-- Anchor Card 2 -->
+  <rect x="870" y="266" width="432" height="110" rx="8" fill="#1e293b" stroke="#334155"/>
+  <text x="886" y="292" fill="#F59E0B" font-size="11" font-weight="bold">锚点 #A02 · §3 承压主体</text>
+  <text x="886" y="314" fill="#F8FAFC" font-size="13" font-weight="600">自动化策略在未确定最终承压法人前禁发单</text>
+  <text x="886" y="336" fill="#94A3B8" font-size="12">关联主张: Claim-09 (待处置) · 极性: 核心约束</text>
+  <text x="886" y="358" fill="#EF4444" font-size="11">✕ 门禁 R01 触发：缺少具体责任法人绑定</text>
+
+  <!-- Anchor Card 3 -->
+  <rect x="870" y="388" width="432" height="110" rx="8" fill="#1e293b" stroke="#334155"/>
+  <text x="886" y="414" fill="#64748B" font-size="11" font-weight="bold">锚点 #A03 · §5 人工接管</text>
+  <text x="886" y="436" fill="#F8FAFC" font-size="13" font-weight="600">60秒内转交CRO，人工签批前严禁自恢复</text>
+  <text x="886" y="458" fill="#94A3B8" font-size="12">关联主张: Claim-12 (待审阅) · 极性: 转交目标</text>
+  <text x="886" y="480" fill="#38BDF8" font-size="11">◈ 待专家合规员完成双签</text>
+</svg>

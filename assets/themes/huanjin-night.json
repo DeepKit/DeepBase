@@ -1,0 +1,41 @@
+{
+  "id": "huanjin-night",
+  "name": "墨金",
+  "nameEn": "Ink Gold",
+  "description": "夜间销售人 · inherits 暖金结构",
+  "inherits": "huanjin-gold",
+  "isDark": true,
+  "surface": {
+    "surface": "#211D18",
+    "surfaceAlt": "#2A251E",
+    "border": "#3E372C",
+    "soft": "#3B2F1A",
+    "sunken": "#181512",
+    "elevation1": "#66000000",
+    "elevation2": "#80000000",
+    "elevation3": "#99000000"
+  },
+  "ink": {
+    "ink": "#F5F0E6",
+    "inkMuted": "#A8A29E"
+  },
+  "brand": {
+    "primary": "#F59E0B",
+    "primaryHover": "#FBBF24",
+    "primaryPressed": "#D97706",
+    "onPrimary": "#1C1917",
+    "heroGradFrom": "#78350F",
+    "heroGradTo": "#F59E0B",
+    "focusRing": "#F59E0B"
+  },
+  "status": {
+    "success": "#34D399",
+    "successSoft": "#0B2E22",
+    "warning": "#FBBF24",
+    "warningSoft": "#3B2F1A",
+    "danger": "#F87171",
+    "dangerSoft": "#3B1515",
+    "info": "#60A5FA",
+    "infoSoft": "#172554"
+  }
+}

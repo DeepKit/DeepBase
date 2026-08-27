@@ -1,0 +1,74 @@
+{
+  "id": "huanjin-gold",
+  "name": "暖金",
+  "nameEn": "Warm Gold",
+  "description": "唤金默认 · 温暖生意感",
+  "isDark": false,
+  "surface": {
+    "surface": "#FFFDF8",
+    "surfaceAlt": "#FFF6E6",
+    "border": "#EBDFC8",
+    "soft": "#FDF0DA",
+    "sunken": "#F5EFE6",
+    "elevation1": "#1A000000",
+    "elevation2": "#26000000",
+    "elevation3": "#33000000"
+  },
+  "ink": {
+    "ink": "#292524",
+    "inkMuted": "#8A8175",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#D97706",
+    "primaryHover": "#B45309",
+    "primaryPressed": "#92400E",
+    "onPrimary": "#FFFFFF",
+    "heroGradFrom": "#78350F",
+    "heroGradTo": "#F59E0B",
+    "focusRing": "#D97706"
+  },
+  "status": {
+    "success": "#059669",
+    "successSoft": "#ECFDF5",
+    "warning": "#D97706",
+    "warningSoft": "#FEF9C3",
+    "danger": "#DC2626",
+    "dangerSoft": "#FEF2F2",
+    "info": "#2563EB",
+    "infoSoft": "#EFF6FF"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

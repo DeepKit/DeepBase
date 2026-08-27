@@ -1,4 +1,4 @@
-﻿program DeepBaseTests;
+program DeepBaseTests;
 
 {$IFNDEF TESTDeepInsight}
 {$APPTYPE CONSOLE}
@@ -157,6 +157,13 @@ uses
   Test.DeepBase.Persistence.Speech.Voiceprint.FireDAC in 'Test.DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas',
   Test.DeepBase.Plugin in 'Test.DeepBase.Plugin.pas',
   Test.DeepBase.PluginManager in 'Test.DeepBase.PluginManager.pas',
+  // HB Visual Infrastructure Tests
+  Test.DeepBase.HB.DeepRW in 'Test.DeepBase.HB.DeepRW.pas',
+  Test.DeepBase.HB.Suite in 'Test.DeepBase.HB.Suite.pas',
+  Test.DeepBase.HB.Tray in 'Test.DeepBase.HB.Tray.pas',
+  Test.DeepBase.HB.Voice.CF in 'Test.DeepBase.HB.Voice.CF.pas',
+  Test.DeepBase.VCL.HB.Theme in 'Test.DeepBase.VCL.HB.Theme.pas',
+  Test.DeepBase.FMX.HB.Dialogs in 'Test.DeepBase.FMX.HB.Dialogs.pas',
   { Test.DeepBase.PublishConfig excluded: depends on Tools/UniPublisher unit Publisher.Config }
   Test.DeepBase.Reflection in 'Test.DeepBase.Reflection.pas',
   Test.DeepBase.RuntimeContext in 'Test.DeepBase.RuntimeContext.pas',

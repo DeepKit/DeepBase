@@ -1,0 +1,74 @@
+{
+  "id": "violet-dusk",
+  "name": "紫暮",
+  "nameEn": "Violet Dusk",
+  "description": "创作类工具预留 · 暗色紫调",
+  "isDark": true,
+  "surface": {
+    "surface": "#17111F",
+    "surfaceAlt": "#241A31",
+    "border": "#392B4D",
+    "soft": "#322148",
+    "sunken": "#0E0A14",
+    "elevation1": "#66000000",
+    "elevation2": "#80000000",
+    "elevation3": "#99000000"
+  },
+  "ink": {
+    "ink": "#EDE9FE",
+    "inkMuted": "#9C90B5",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#A78BFA",
+    "primaryHover": "#C4B5FD",
+    "primaryPressed": "#7C3AED",
+    "onPrimary": "#2E1065",
+    "heroGradFrom": "#2E1065",
+    "heroGradTo": "#7C3AED",
+    "focusRing": "#A78BFA"
+  },
+  "status": {
+    "success": "#34D399",
+    "successSoft": "#064E3B",
+    "warning": "#FBBF24",
+    "warningSoft": "#451A03",
+    "danger": "#F87171",
+    "dangerSoft": "#450A0A",
+    "info": "#A78BFA",
+    "infoSoft": "#3B0764"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

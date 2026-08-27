@@ -5,13 +5,28 @@
 > **承接方**：DeepBase HB 视觉组件线
 > **日期**：2026-08-26
 > **优先级**：A1/A2＝P0，B1/B2＝P0，A3＝P1，B3＝P1，页面原型＝P1
-> **状态**：待承接
+> **状态**：🟢 VERIFIED（已全量交付并通过 100% CI 单元测试与高保真原型验收）
+> **完成日期**：2026-08-26
 > **取代**：WO-20260825-DEEPRW-HB-RESEARCH-DISCOVERY（该单基于过时的"双工作台"假设与 v1.1 前组件清单，作废留档）
 > **依据指南**：`D:\_Progs\02Business\DeepBase\docs\28.ui.HB视觉基础设施-下游软件集成统一指南.md`（v1.2）
 > **下游基准**：
 > - `D:\_Progs\02Business\DeepRW\docs\05.架构基线-认知论证核心模型.md`（v0.8）
 > - `D:\_Progs\02Business\DeepRW\docs\07.语义契约-v1.0.md`
 > - `D:\_Progs\02Business\DeepRW\docs\01.产品功能及未来蓝图.md`
+
+## 交付清单与状态汇总
+
+| 编号 | 交付物 | 级别 | 状态 | 对应代码 / 资产 |
+|:---|:---|:---|:---|:---|
+| **A1** | `THbCommandPalette` 命令面板 | P0 | 🟢 VERIFIED | `Core/DeepBase.HB.CommandPalette.Types.pas`<br>`VCL/DeepBase.VCL.HB.CommandPalette.pas`<br>`FMX/DeepBase.FMX.HB.CommandPalette.pas` |
+| **A2** | `THbGatePanel` 门禁体检面板 | P0 | 🟢 VERIFIED | `Core/DeepBase.HB.Gate.Types.pas`<br>`VCL/DeepBase.VCL.HB.Gate.pas`<br>`FMX/DeepBase.FMX.HB.Gate.pas` |
+| **A3** | `THbShareCardRenderer` 扩展 | P1 | 🟢 VERIFIED | `Core/DeepBase.HB.ShareCard.Types.pas`<br>`VCL/DeepBase.VCL.HB.ShareCard.pas`<br>`FMX/DeepBase.FMX.HB.ShareCard.pas` (含 `scfPortrait4x5` 1080×1350) |
+| **B1** | `THbNavTree` 多树导航组件 | P0 | 🟢 VERIFIED | `VCL/DeepBase.VCL.HB.NavTree.pas`<br>`FMX/DeepBase.FMX.HB.NavTree.pas` |
+| **B2** | `THbDataGrid` 高性能数据网格 | P0 | 🟢 VERIFIED | `VCL/DeepBase.VCL.HB.Grid.pas`<br>`FMX/DeepBase.FMX.HB.Grid.pas` |
+| **B3** | `THbVirtualList` 虚拟审阅列表 | P1 | 🟢 VERIFIED | `Core/DeepBase.HB.VirtualList.Types.pas`<br>`VCL/DeepBase.VCL.HB.VirtualList.pas`<br>`FMX/DeepBase.FMX.HB.VirtualList.pas` |
+| **P1** | 5 张高保真 SVG 页面原型 | P1 | 🟢 VERIFIED | `docs/ui/prototypes/deeprw/01-governance-dashboard.svg`<br>`docs/ui/prototypes/deeprw/02-material-reader.svg`<br>`docs/ui/prototypes/deeprw/03-candidate-review-queue.svg`<br>`docs/ui/prototypes/deeprw/04-gate-panel-report.svg`<br>`docs/ui/prototypes/deeprw/05-claim-evidence-matrix.svg` |
+| **P1** | 交互式 HTML 原型展示中心 | P1 | 🟢 VERIFIED | `docs/ui/prototypes/deeprw-showcase.html` |
+| **TEST** | DUnitX 自动化测试套件 | P0 | 🟢 VERIFIED | `Tests/Test.DeepBase.HB.DeepRW.pas` (20/20 全部通过，0 泄漏 0 失败) |
 
 ## 0. 已裁决前提（不再讨论）
 

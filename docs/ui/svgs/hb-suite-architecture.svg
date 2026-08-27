@@ -1,0 +1,262 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="100%" height="100%" style="background:#12100C; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Top Title Banner -->
+  <rect x="40" y="30" width="1520" height="64" rx="10" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+  <text x="70" y="70" fill="#FDFCF8" font-size="20" font-weight="800">🏛️ DeepBase HB 视觉基础设施 · 核心现代化组件矩阵全景架构图</text>
+  <rect x="1310" y="48" width="220" height="28" rx="6" fill="#F59E0B" fill-opacity="0.2" stroke="#D97706" stroke-width="1" />
+  <text x="1328" y="67" fill="#FBBF24" font-size="12" font-weight="700">VCL / FMX 孪生对等基座</text>
+
+  <!-- Row 1: Left (THbFacetWaterfall) & Right (THbDataGrid Excel-like) -->
+  <g transform="translate(40, 120)">
+    
+    <!-- 1. THbFacetWaterfall Card (740 x 480) -->
+    <g filter="url(#cardShadow)">
+      <rect x="0" y="0" width="740" height="480" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      <rect x="0" y="0" width="740" height="48" rx="12 12 0 0" fill="#29241D" />
+      <text x="24" y="30" fill="#FDFCF8" font-size="14" font-weight="800">📑 1. 分面瀑布流 (THbFacetWaterfall · 双模式与非A排除)</text>
+      
+      <!-- Inner Mockup -->
+      <!-- Left Facet Rail -->
+      <g transform="translate(20, 68)">
+        <rect x="0" y="0" width="210" height="380" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+        <text x="16" y="28" fill="#B8A995" font-size="12" font-weight="700">📂 分面分类 (42)</text>
+        
+        <!-- Facet item 1 -->
+        <rect x="12" y="44" width="186" height="36" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="22" y="66" fill="#FDFCF8" font-size="11">⚖️ 7字段法源 (14)</text>
+        <rect x="144" y="52" width="46" height="20" rx="3" fill="#EF4444" fill-opacity="0.15" />
+        <text x="150" y="66" fill="#EF4444" font-size="10">🚫 排除</text>
+
+        <!-- Facet item 2 (Excluded) -->
+        <rect x="12" y="88" width="186" height="36" rx="4" fill="#0C0A07" stroke="#3D352A" stroke-width="1" stroke-dasharray="3 3" opacity="0.5" />
+        <text x="22" y="110" fill="#B8A995" font-size="11" text-decoration="line-through">🤖 候选推演 (8)</text>
+        <text x="150" y="110" fill="#10B981" font-size="10">恢复</text>
+
+        <!-- Facet item 3 -->
+        <rect x="12" y="132" width="186" height="36" rx="4" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="22" y="154" fill="#FDFCF8" font-size="11">🛡️ 治理审计 (12)</text>
+        <rect x="144" y="140" width="46" height="20" rx="3" fill="#EF4444" fill-opacity="0.15" />
+        <text x="150" y="154" fill="#EF4444" font-size="10">🚫 排除</text>
+
+        <text x="16" y="340" fill="#B8A995" font-size="10">💡 点击排除一键展示全部非A流</text>
+      </g>
+
+      <!-- Right Waterfall Viewport -->
+      <g transform="translate(244, 68)">
+        <rect x="0" y="0" width="476" height="380" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+        
+        <!-- Header Bar with Mode Switcher -->
+        <text x="16" y="28" fill="#FBBF24" font-size="12" font-weight="700">仅展示非排除分类瀑布 (34 条)</text>
+        <rect x="290" y="12" width="170" height="24" rx="4" fill="#1C1914" />
+        <rect x="292" y="14" width="80" height="20" rx="3" fill="#D97706" />
+        <text x="300" y="28" fill="#FFF" font-size="10" font-weight="700">📑 分段式</text>
+        <text x="382" y="28" fill="#B8A995" font-size="10">⏱️ 时间线</text>
+
+        <!-- Section Group 1 -->
+        <rect x="16" y="48" width="444" height="22" rx="4" fill="#1C1914" />
+        <text x="24" y="63" fill="#FBBF24" font-size="11" font-weight="700">⚖️ 7 字段法源溯源区 (14 项)</text>
+
+        <!-- Waterfall Item 1 -->
+        <rect x="16" y="78" width="444" height="60" rx="6" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="28" y="98" fill="#FDFCF8" font-size="11" font-weight="700">[✓] 01.商业模式-原理篇.md §13 (已核实)</text>
+        <text x="28" y="122" fill="#B8A995" font-size="10">原话溯源：“所有下游系统在继承 HB 控件并发起 PR 验收时...”</text>
+
+        <!-- Section Group 2 -->
+        <rect x="16" y="150" width="444" height="22" rx="4" fill="#1C1914" />
+        <text x="24" y="165" fill="#38BDF8" font-size="11" font-weight="700">🛡️ 治理审计拦截区 (12 项)</text>
+
+        <!-- Waterfall Item 2 -->
+        <rect x="16" y="180" width="444" height="60" rx="6" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="28" y="200" fill="#FDFCF8" font-size="11" font-weight="700">[🚫] 拦截未授权主路由覆盖尝试 (P0 Fail-Closed)</text>
+        <text x="28" y="224" fill="#EF4444" font-size="10">已触发 THbDialog.PromptReason 阻断，记录审计哈希 #0x9F41</text>
+      </g>
+    </g>
+
+    <!-- 2. THbDataGrid (类 Excel 高性能数据网格) (740 x 480) -->
+    <g transform="translate(780, 0)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="740" height="480" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      <rect x="0" y="0" width="740" height="48" rx="12 12 0 0" fill="#29241D" />
+      <text x="24" y="30" fill="#FDFCF8" font-size="14" font-weight="800">📊 2. 类 Excel 高性能数据工作表 (THbDataGrid · 虚拟化与热力分析)</text>
+
+      <!-- Table Mockup -->
+      <g transform="translate(20, 68)">
+        <rect x="0" y="0" width="700" height="340" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+        
+        <!-- Table Header -->
+        <rect x="0" y="0" width="700" height="32" rx="8 8 0 0" fill="#29241D" />
+        <text x="16" y="21" fill="#FDFCF8" font-size="11" font-weight="700">#</text>
+        <text x="46" y="21" fill="#FDFCF8" font-size="11" font-weight="700">客户/实体名称 ▾</text>
+        <text x="240" y="21" fill="#FDFCF8" font-size="11" font-weight="700">手机号 / 唯一标识</text>
+        <text x="380" y="21" fill="#FDFCF8" font-size="11" font-weight="700">采购总额</text>
+        <text x="490" y="21" fill="#FDFCF8" font-size="11" font-weight="700">转化热力值</text>
+        <text x="610" y="21" fill="#FDFCF8" font-size="11" font-weight="700">状态</text>
+
+        <!-- Row 1 (Selected) -->
+        <rect x="0" y="32" width="700" height="42" fill="#D97706" fill-opacity="0.15" />
+        <text x="16" y="58" fill="#B8A995" font-size="11">1</text>
+        <text x="46" y="58" fill="#FDFCF8" font-size="11" font-weight="700">东方明珠置业 (上海)</text>
+        <text x="240" y="58" fill="#FDFCF8" font-size="11">139-8877-6655</text>
+        <text x="380" y="58" fill="#FDFCF8" font-size="11">¥ 248,500.00</text>
+        <text x="490" y="52" fill="#FBBF24" font-size="10">92%</text>
+        <rect x="490" y="58" width="92" height="4" rx="2" fill="#D97706" />
+        <text x="610" y="58" fill="#10B981" font-size="11">● 活跃</text>
+
+        <!-- Row 2 -->
+        <line x1="0" y1="74" x2="700" y2="74" stroke="#3D352A" stroke-width="1" />
+        <text x="16" y="100" fill="#B8A995" font-size="11">2</text>
+        <text x="46" y="100" fill="#FDFCF8" font-size="11" font-weight="700">环球金融科技有限公司</text>
+        <text x="240" y="100" fill="#FDFCF8" font-size="11">138-0011-2233</text>
+        <text x="380" y="100" fill="#FDFCF8" font-size="11">¥ 180,000.00</text>
+        <text x="490" y="94" fill="#FBBF24" font-size="10">78%</text>
+        <rect x="490" y="100" width="78" height="4" rx="2" fill="#D97706" />
+        <text x="610" y="100" fill="#10B981" font-size="11">● 活跃</text>
+
+        <!-- Row 3 -->
+        <line x1="0" y1="116" x2="700" y2="116" stroke="#3D352A" stroke-width="1" />
+        <text x="16" y="142" fill="#B8A995" font-size="11">3</text>
+        <text x="46" y="142" fill="#FDFCF8" font-size="11">江南皮革制造厂</text>
+        <text x="240" y="142" fill="#FDFCF8" font-size="11">137-9988-7766</text>
+        <text x="380" y="142" fill="#FDFCF8" font-size="11">¥ 42,000.00</text>
+        <text x="490" y="136" fill="#FBBF24" font-size="10">45%</text>
+        <rect x="490" y="142" width="45" height="4" rx="2" fill="#D97706" />
+        <text x="610" y="142" fill="#B8A995" font-size="11">○ 沉睡</text>
+
+        <!-- Footer Stats Bar -->
+        <rect x="0" y="300" width="700" height="40" rx="0 0 8 8" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="24" y="325" fill="#B8A995" font-size="11">当前总行数: 4,280 行</text>
+        <text x="360" y="325" fill="#B8A995" font-size="11">已选中: <tspan fill="#FDFCF8" font-weight="700">1 行</tspan></text>
+        <text x="500" y="325" fill="#B8A995" font-size="11">求和: <tspan fill="#FBBF24" font-weight="700">¥ 248,500.00</tspan></text>
+      </g>
+    </g>
+
+  </g>
+
+  <!-- Row 2: Left (THbAIConsole), Middle (THbServiceDesk), Right (THbPageControl & THbNavTree) -->
+  <g transform="translate(40, 630)">
+    
+    <!-- 3. THbAIConsole (490 x 510) -->
+    <g filter="url(#cardShadow)">
+      <rect x="0" y="0" width="490" height="510" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      <rect x="0" y="0" width="490" height="44" rx="12 12 0 0" fill="#29241D" />
+      <text x="20" y="28" fill="#FDFCF8" font-size="13" font-weight="800">🤖 3. AI 交互套件 (THbAIConsole · 思维链与Diff)</text>
+
+      <!-- Thought Fold -->
+      <g transform="translate(16, 60)">
+        <rect x="0" y="0" width="458" height="100" rx="6" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+        <rect x="0" y="0" width="4" height="100" rx="2 0 0 2" fill="#8B5CF6" />
+        <text x="16" y="24" fill="#8B5CF6" font-size="11" font-weight="700">🧠 Agent 深度思考推演流 (0.84s · 4项证据)</text>
+        <text x="16" y="48" fill="#B8A995" font-size="10" font-family="Consolas">[00:00.120] 触发 IntentClarification.SignalDetector...</text>
+        <text x="16" y="68" fill="#B8A995" font-size="10" font-family="Consolas">[00:00.680] 发现配置冲突：AuthMode 被标记为弃用</text>
+      </g>
+
+      <!-- Diff Box -->
+      <g transform="translate(16, 175)">
+        <rect x="0" y="0" width="458" height="130" rx="6" fill="#060503" stroke="#3D352A" stroke-width="1" />
+        <text x="16" y="22" fill="#FBBF24" font-size="11" font-weight="700">📝 AI 提议变更审阅 (Diff Propose)</text>
+        <rect x="12" y="34" width="434" height="22" fill="#EF4444" fill-opacity="0.1" />
+        <text x="16" y="49" fill="#EF4444" font-size="10" font-family="Consolas">- AllowAnonymousAccess = True;</text>
+        <rect x="12" y="58" width="434" height="22" fill="#10B981" fill-opacity="0.1" />
+        <text x="16" y="73" fill="#34D399" font-size="10" font-family="Consolas">+ AllowAnonymousAccess = False; // P0 强制验签</text>
+        
+        <rect x="330" y="92" width="116" height="26" rx="4" fill="#8B5CF6" />
+        <text x="342" y="109" fill="#FFF" font-size="10" font-weight="700">✓ 采纳变更</text>
+      </g>
+
+      <!-- Multi-Modal Prompt Bar -->
+      <g transform="translate(16, 440)">
+        <rect x="0" y="0" width="458" height="48" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+        <text x="14" y="30" font-size="14">🎤</text>
+        <text x="40" y="30" fill="#8B5CF6" font-size="11" font-weight="700">@Agent-罗辑</text>
+        <text x="130" y="30" fill="#B8A995" font-size="11">输入需求或使用 / 指令...</text>
+        <rect x="380" y="8" width="66" height="32" rx="4" fill="#D97706" />
+        <text x="394" y="28" fill="#FFF" font-size="11" font-weight="700">发送 ▶</text>
+      </g>
+    </g>
+
+    <!-- 4. THbServiceDesk (490 x 510) -->
+    <g transform="translate(515, 0)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="490" height="510" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      <rect x="0" y="0" width="490" height="44" rx="12 12 0 0" fill="#29241D" />
+      <text x="20" y="28" fill="#FDFCF8" font-size="13" font-weight="800">🎫 4. 用户工单与通知中枢 (THbServiceDesk)</text>
+
+      <g transform="translate(16, 60)">
+        <!-- Ticket Card 1 -->
+        <rect x="0" y="0" width="458" height="80" rx="6" fill="#0C0A07" stroke="#8B5CF6" stroke-width="1" />
+        <text x="16" y="26" fill="#FDFCF8" font-size="12" font-weight="700">[BUG] 4K显示器下偶发缩放偏移</text>
+        <rect x="374" y="12" width="68" height="20" rx="3" fill="#F59E0B" fill-opacity="0.2" />
+        <text x="384" y="26" fill="#FBBF24" font-size="10" font-weight="700">处理中</text>
+        <text x="16" y="50" fill="#B8A995" font-size="10">单号: WO-20260826-01 · 提交人: 东方明珠专柜</text>
+        <text x="16" y="68" fill="#34D399" font-size="10">💬 工程师已回复: 已在 THbWindowProportion 修复</text>
+
+        <!-- Notification 1 -->
+        <g transform="translate(0, 92)">
+          <rect x="0" y="0" width="458" height="60" rx="6" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+          <text x="16" y="24" fill="#FDFCF8" font-size="11" font-weight="700">📢 系统公告: DeepBase 2.0 正式发布</text>
+          <text x="16" y="44" fill="#B8A995" font-size="10">全量支持 Per-Monitor v2 动态 DPI 与分面瀑布流</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- 5. Navigation & Tab Controls (515 x 510) -->
+    <g transform="translate(1030, 0)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="490" height="510" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      <rect x="0" y="0" width="490" height="44" rx="12 12 0 0" fill="#29241D" />
+      <text x="20" y="28" fill="#FDFCF8" font-size="13" font-weight="800">🗂️ 5. 多树导航与选项卡 (THbNavTree &amp; THbPageControl)</text>
+
+      <!-- Tab Style 1: Underline -->
+      <g transform="translate(16, 60)">
+        <text x="0" y="0" fill="#FBBF24" font-size="11" font-weight="700">Underline 极简下划线风：</text>
+        <g transform="translate(0, 10)">
+          <text x="0" y="16" fill="#8B5CF6" font-size="11" font-weight="700">概览仪表盘</text>
+          <line x1="0" y1="24" x2="60" y2="24" stroke="#8B5CF6" stroke-width="2" />
+          <text x="80" y="16" fill="#B8A995" font-size="11">🛡️ 安全拦截 (3)</text>
+          <text x="180" y="16" fill="#B8A995" font-size="11">终端流水</text>
+        </g>
+      </g>
+
+      <!-- Tab Style 2: Segmented -->
+      <g transform="translate(16, 120)">
+        <text x="0" y="0" fill="#FBBF24" font-size="11" font-weight="700">Segmented 分段器胶囊风：</text>
+        <g transform="translate(0, 10)">
+          <rect x="0" y="0" width="280" height="28" rx="6" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+          <rect x="2" y="2" width="90" height="24" rx="4" fill="#D97706" />
+          <text x="18" y="18" fill="#FFF" font-size="10" font-weight="700">📊 数据分析</text>
+          <text x="110" y="18" fill="#B8A995" font-size="10">⚙️ 规则配置</text>
+          <text x="198" y="18" fill="#B8A995" font-size="10">📜 审计历史</text>
+        </g>
+      </g>
+
+      <!-- NavTree Mini Rail Mockup -->
+      <g transform="translate(16, 185)">
+        <text x="0" y="0" fill="#FBBF24" font-size="11" font-weight="700">THbNavTree 侧边栏多树导航 (240px ⇄ 48px Mini Rail)：</text>
+        <g transform="translate(0, 10)">
+          <rect x="0" y="0" width="458" height="240" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+          <text x="16" y="24" fill="#B8A995" font-size="10" font-weight="700">CORE WORKSPACE</text>
+          
+          <rect x="12" y="34" width="434" height="32" rx="4" fill="#1C1914" stroke="#D97706" stroke-width="1" />
+          <text x="24" y="55" fill="#FDFCF8" font-size="11" font-weight="700">📑 分面情报发现</text>
+          <rect x="400" y="42" width="34" height="16" rx="8" fill="#29241D" />
+          <text x="410" y="54" fill="#FBBF24" font-size="9" font-weight="700">42</text>
+
+          <text x="24" y="92" fill="#FDFCF8" font-size="11">📊 全景数据工作表 (THbDataGrid)</text>
+          <text x="24" y="124" fill="#FDFCF8" font-size="11">🤖 Agent 协同座舱 (THbAIConsole)</text>
+          <text x="24" y="156" fill="#FDFCF8" font-size="11">🎫 工单与通知中心 (THbServiceDesk)</text>
+
+          <line x1="12" y1="180" x2="446" y2="180" stroke="#3D352A" stroke-width="1" />
+          <text x="24" y="210" fill="#B8A995" font-size="11">◀ 收起为 48px 极窄图标栏</text>
+        </g>
+      </g>
+    </g>
+
+  </g>
+
+</svg>

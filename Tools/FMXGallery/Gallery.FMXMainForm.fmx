@@ -1,0 +1,13 @@
+object FMXGalleryMainForm: TFMXGalleryMainForm
+  Left = 0
+  Top = 0
+  Caption = 'DeepBase HB Theme FMX Gallery - 10 Themes x 2 Densities x 12 Components'
+  ClientHeight = 840
+  ClientWidth = 1100
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+end

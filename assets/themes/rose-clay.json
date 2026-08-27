@@ -1,0 +1,74 @@
+{
+  "id": "rose-clay",
+  "name": "陶玫",
+  "nameEn": "Rose Clay",
+  "description": "女性向/情感类预留",
+  "isDark": false,
+  "surface": {
+    "surface": "#FFF8FA",
+    "surfaceAlt": "#FCEEF4",
+    "border": "#F0D5E1",
+    "soft": "#FBDCE9",
+    "sunken": "#FCE7F3",
+    "elevation1": "#1A000000",
+    "elevation2": "#26000000",
+    "elevation3": "#33000000"
+  },
+  "ink": {
+    "ink": "#59223A",
+    "inkMuted": "#A87E92",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#C2477E",
+    "primaryHover": "#A13065",
+    "primaryPressed": "#831843",
+    "onPrimary": "#FFFFFF",
+    "heroGradFrom": "#701A75",
+    "heroGradTo": "#EC4899",
+    "focusRing": "#C2477E"
+  },
+  "status": {
+    "success": "#059669",
+    "successSoft": "#ECFDF5",
+    "warning": "#D97706",
+    "warningSoft": "#FEF9C3",
+    "danger": "#DC2626",
+    "dangerSoft": "#FEF2F2",
+    "info": "#8B5CF6",
+    "infoSoft": "#F5F3FF"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

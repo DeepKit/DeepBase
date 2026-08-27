@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1366 768" width="1366" height="768" style="background:#0b0f19; font-family:'Segoe UI', system-ui, sans-serif;">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Top Title Bar -->
+  <rect x="0" y="0" width="1366" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="30" fill="#38BDF8" font-size="16" font-weight="bold">◈ DeepRW</text>
+  <text x="110" y="30" fill="#94A3B8" font-size="13">认知论证工作台 · 治理仪表盘</text>
+  <rect x="1160" y="10" width="180" height="28" rx="6" fill="#1e293b" stroke="#334155"/>
+  <text x="1175" y="28" fill="#94A3B8" font-size="12">按 Ctrl+K 唤出动词指令</text>
+
+  <!-- Left Mini Rail Navigation (THbNavTree Mini Rail 48px) -->
+  <rect x="0" y="48" width="56" height="720" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <rect x="8" y="60" width="40" height="40" rx="8" fill="#0284c7" opacity="0.2"/>
+  <text x="18" y="85" fill="#38BDF8" font-size="18">📊</text>
+  <text x="18" y="135" fill="#64748B" font-size="18">📖</text>
+  <text x="18" y="185" fill="#64748B" font-size="18">📋</text>
+  <text x="18" y="235" fill="#64748B" font-size="18">🛡</text>
+  <text x="18" y="285" fill="#64748B" font-size="18">🗂</text>
+
+  <!-- Main Canvas Area -->
+  <!-- Header: Four-Question Executive Summary Cards -->
+  <text x="80" y="86" fill="#F8FAFC" font-size="20" font-weight="bold">治理四问与项目就绪度看板</text>
+  <text x="80" y="108" fill="#94A3B8" font-size="13">项目：A股跨市场套利主张与证据合规审计（基线版本: v2.4）</text>
+
+  <!-- Card 1: 交付就绪 (Delivery Ready) -->
+  <g transform="translate(80, 130)">
+    <rect width="280" height="130" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="16" y="28" fill="#38BDF8" font-size="13" font-weight="600">Q1. 交付是否就绪？</text>
+    <text x="16" y="68" fill="#10B981" font-size="28" font-weight="bold">92.8%</text>
+    <text x="16" y="94" fill="#94A3B8" font-size="12">14/15 核心论证主张已闭环</text>
+    <rect x="16" y="106" width="248" height="6" rx="3" fill="#0f172a"/>
+    <rect x="16" y="106" width="230" height="6" rx="3" fill="#10B981"/>
+  </g>
+
+  <!-- Card 2: 阻断项 (Blocking Gates) -->
+  <g transform="translate(380, 130)">
+    <rect width="280" height="130" rx="10" fill="#1e293b" stroke="#EF4444" stroke-width="1.5"/>
+    <text x="16" y="28" fill="#EF4444" font-size="13" font-weight="600">Q2. 是否存在阻断项？</text>
+    <text x="16" y="68" fill="#EF4444" font-size="28" font-weight="bold">1 项阻断</text>
+    <text x="16" y="94" fill="#FCA5A5" font-size="12">R01: 7 字段法源缺少承压者溯源</text>
+    <text x="16" y="112" fill="#94A3B8" font-size="11">需首席架构师书面豁免或补全</text>
+  </g>
+
+  <!-- Card 3: 证据缺口 (Evidence Gaps) -->
+  <g transform="translate(680, 130)">
+    <rect width="280" height="130" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="16" y="28" fill="#F59E0B" font-size="13" font-weight="600">Q3. 存在哪些证据缺口？</text>
+    <text x="16" y="68" fill="#F59E0B" font-size="28" font-weight="bold">3 处待补</text>
+    <text x="16" y="94" fill="#94A3B8" font-size="12">2 处置信度 &lt;0.60 · 1 处间接孤证</text>
+    <text x="16" y="112" fill="#38BDF8" font-size="11">查看缺口清单 ↗</text>
+  </g>
+
+  <!-- Card 4: 待我拍板 (Decisions Pending) -->
+  <g transform="translate(980, 130)">
+    <rect width="280" height="130" rx="10" fill="#1e293b" stroke="#D97706" stroke-width="1.5"/>
+    <text x="16" y="28" fill="#FBBF24" font-size="13" font-weight="600">Q4. 有多少待我拍板？</text>
+    <text x="16" y="68" fill="#FBBF24" font-size="28" font-weight="bold">4 个候选</text>
+    <text x="16" y="94" fill="#94A3B8" font-size="12">2 个主张待裁定 · 2 个豁免待签批</text>
+    <text x="16" y="112" fill="#FBBF24" font-size="11">立即进入审阅队列 ▶</text>
+  </g>
+
+  <!-- Second Row: Today's Changes & Health Trend -->
+  <!-- Left Box: Today's Lineage Changes -->
+  <g transform="translate(80, 280)">
+    <rect width="580" height="450" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+    <text x="24" y="36" fill="#F8FAFC" font-size="15" font-weight="bold">今日法源与证据流转变化</text>
+    <text x="24" y="56" fill="#94A3B8" font-size="12">按时间线逆序排列（今日产生 18 次原子修订）</text>
+
+    <!-- Item 1 -->
+    <rect x="24" y="76" width="532" height="76" rx="8" fill="#1e293b" stroke="#334155"/>
+    <text x="40" y="100" fill="#10B981" font-size="11" font-weight="bold">✓ 门禁通过</text>
+    <text x="110" y="100" fill="#F8FAFC" font-size="13" font-weight="600">Claim-14: 资金费率套利边界条件已固化</text>
+    <text x="40" y="122" fill="#94A3B8" font-size="12">经 3 篇法源比对，停止条件（StopCondition）已完成双人交叉确认。</text>
+    <text x="40" y="140" fill="#64748B" font-size="11">操作人: 专家合规员 · 10:42:15</text>
+
+    <!-- Item 2 -->
+    <rect x="24" y="164" width="532" height="76" rx="8" fill="#1e293b" stroke="#334155"/>
+    <text x="40" y="188" fill="#EF4444" font-size="11" font-weight="bold">✕ 门禁拦截</text>
+    <text x="110" y="188" fill="#F8FAFC" font-size="13" font-weight="600">Claim-09: 穿透式风控存在承压者定义模糊</text>
+    <text x="40" y="210" fill="#94A3B8" font-size="12">触发 R01 阻断规则：承压者（PressureBearer）未指定具体法人责任主体。</text>
+    <text x="40" y="228" fill="#64748B" font-size="11">拦截引擎: THbGatePanel · 09:15:02</text>
+
+    <!-- Item 3 -->
+    <rect x="24" y="252" width="532" height="76" rx="8" fill="#1e293b" stroke="#334155"/>
+    <text x="40" y="276" fill="#F59E0B" font-size="11" font-weight="bold">⚠ 弱信号接入</text>
+    <text x="110" y="276" fill="#F8FAFC" font-size="13" font-weight="600">Signal-42: 现货基差异常拉大波动前兆</text>
+    <text x="40" y="298" fill="#94A3B8" font-size="12">来自实时行情采集源，已自动归入候选审阅队列，等待主张关联。</text>
+    <text x="40" y="316" fill="#64748B" font-size="11">来源: 现场日志抓取 · 08:30:19</text>
+  </g>
+
+  <!-- Right Box: Gate Health Radar & Distribution -->
+  <g transform="translate(680, 280)">
+    <rect width="580" height="450" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+    <text x="24" y="36" fill="#F8FAFC" font-size="15" font-weight="bold">论证网络健康度分布</text>
+    <text x="24" y="56" fill="#94A3B8" font-size="12">七维度严密性打分基准（目标 ≥ 90.0 分）</text>
+
+    <!-- Metric Rows -->
+    <g transform="translate(24, 80)">
+      <text x="0" y="20" fill="#E2E8F0" font-size="13">1. 法源溯源覆盖度</text>
+      <text x="480" y="20" fill="#10B981" font-size="13" font-weight="bold">96.5%</text>
+      <rect x="0" y="30" width="532" height="8" rx="4" fill="#0f172a"/>
+      <rect x="0" y="30" width="513" height="8" rx="4" fill="#10B981"/>
+
+      <text x="0" y="70" fill="#E2E8F0" font-size="13">2. 证据链条闭环率</text>
+      <text x="480" y="70" fill="#38BDF8" font-size="13" font-weight="bold">91.2%</text>
+      <rect x="0" y="80" width="532" height="8" rx="4" fill="#0f172a"/>
+      <rect x="0" y="80" width="485" height="8" rx="4" fill="#0284C7"/>
+
+      <text x="0" y="120" fill="#E2E8F0" font-size="13">3. 矛盾反例排除度</text>
+      <text x="480" y="120" fill="#F59E0B" font-size="13" font-weight="bold">84.0%</text>
+      <rect x="0" y="130" width="532" height="8" rx="4" fill="#0f172a"/>
+      <rect x="0" y="130" width="446" height="8" rx="4" fill="#D97706"/>
+
+      <text x="0" y="170" fill="#E2E8F0" font-size="13">4. 边界与停止条件明确度</text>
+      <text x="480" y="170" fill="#10B981" font-size="13" font-weight="bold">98.0%</text>
+      <rect x="0" y="180" width="532" height="8" rx="4" fill="#0f172a"/>
+      <rect x="0" y="180" width="521" height="8" rx="4" fill="#10B981"/>
+    </g>
+
+    <!-- Bottom Action Button: Export ShareCard -->
+    <rect x="360" y="380" width="196" height="38" rx="6" fill="url(#primaryGrad)"/>
+    <text x="382" y="404" fill="#FFFFFF" font-size="13" font-weight="bold">📊 导出论证收据长图 (4:5)</text>
+  </g>
+</svg>

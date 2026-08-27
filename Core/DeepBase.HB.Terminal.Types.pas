@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Terminal.Types - Data Types for Terminal, Shell & Agent Views
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

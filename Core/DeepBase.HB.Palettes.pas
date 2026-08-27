@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Palettes - Framework-Agnostic Built-in 10 Theme Palettes Registration
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

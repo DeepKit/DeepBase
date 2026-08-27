@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1366 768" width="1366" height="768" style="background:#0b0f19; font-family:'Segoe UI', system-ui, sans-serif;">
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="1366" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="30" fill="#38BDF8" font-size="16" font-weight="bold">◈ DeepRW</text>
+  <text x="110" y="30" fill="#94A3B8" font-size="13">认知论证工作台 · 主张—证据关系矩阵 (THbDataGrid Matrix)</text>
+
+  <!-- Left Mini Rail -->
+  <rect x="0" y="48" width="56" height="720" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="18" y="85" fill="#64748B" font-size="18">📊</text>
+  <text x="18" y="135" fill="#64748B" font-size="18">📖</text>
+  <text x="18" y="185" fill="#64748B" font-size="18">📋</text>
+  <text x="18" y="235" fill="#64748B" font-size="18">🛡</text>
+  <rect x="8" y="260" width="40" height="40" rx="8" fill="#0284c7" opacity="0.2"/>
+  <text x="18" y="285" fill="#38BDF8" font-size="18">🗂</text>
+
+  <!-- Main DataGrid Container (1240px Full Width) -->
+  <g transform="translate(76, 68)">
+    <rect width="1240" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- Matrix Toolbar & Status Light Legend -->
+    <g transform="translate(20, 16)">
+      <rect x="0" y="0" width="300" height="34" rx="6" fill="#1e293b" stroke="#334155"/>
+      <text x="16" y="22" fill="#94A3B8" font-size="12">🔍 快速定位主张或证据编号...</text>
+
+      <!-- Legend Pills -->
+      <g transform="translate(340, 6)" font-size="12">
+        <circle cx="10" cy="11" r="5" fill="#10B981"/>
+        <text x="22" y="15" fill="#E2E8F0">直接支撑 (Direct)</text>
+
+        <circle cx="150" cy="11" r="5" fill="#38BDF8"/>
+        <text x="162" y="15" fill="#E2E8F0">部分间接 (Partial)</text>
+
+        <circle cx="290" cy="11" r="5" fill="#EF4444"/>
+        <text x="302" y="15" fill="#E2E8F0">矛盾反例 (Contradicted)</text>
+
+        <circle cx="450" cy="11" r="5" fill="#64748B"/>
+        <text x="462" y="15" fill="#E2E8F0">存疑待定 (Unclear)</text>
+      </g>
+
+      <rect x="1050" y="0" width="150" height="34" rx="6" fill="#0284C7"/>
+      <text x="1070" y="22" fill="#FFFFFF" font-size="12" font-weight="bold">📥 导出 Excel / CSV</text>
+    </g>
+
+    <line x1="20" y1="60" x2="1220" y2="60" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- Grid Header Row (Frozen Columns) -->
+    <g transform="translate(20, 70)">
+      <!-- Corner Header -->
+      <rect x="0" y="0" width="280" height="42" fill="#1E293B" stroke="#334155"/>
+      <text x="16" y="26" fill="#F8FAFC" font-size="13" font-weight="bold">主张标识 (Claim ID \ Evidence)</text>
+
+      <!-- Evidence Columns Header -->
+      <rect x="280" y="0" width="230" height="42" fill="#1E293B" stroke="#334155"/>
+      <text x="296" y="20" fill="#38BDF8" font-size="12" font-weight="bold">EVD-01: 《指导意见》§4</text>
+      <text x="296" y="36" fill="#94A3B8" font-size="10">基差偏离 3σ 强平法源</text>
+
+      <rect x="510" y="0" width="230" height="42" fill="#1E293B" stroke="#334155"/>
+      <text x="526" y="20" fill="#38BDF8" font-size="12" font-weight="bold">EVD-02: 交易所行情日志</text>
+      <text x="526" y="36" fill="#94A3B8" font-size="10">流动性枯竭历史 Tick 数据</text>
+
+      <rect x="740" y="0" width="230" height="42" fill="#1E293B" stroke="#334155"/>
+      <text x="756" y="20" fill="#38BDF8" font-size="12" font-weight="bold">EVD-03: 风险委员会纪要</text>
+      <text x="756" y="36" fill="#94A3B8" font-size="10">自营量化一号专户授权</text>
+
+      <rect x="970" y="0" width="230" height="42" fill="#1E293B" stroke="#334155"/>
+      <text x="986" y="20" fill="#38BDF8" font-size="12" font-weight="bold">EVD-04: 历史熔断反例集</text>
+      <text x="986" y="36" fill="#94A3B8" font-size="10">2024-02 极端波动样本</text>
+    </g>
+
+    <!-- Grid Data Rows -->
+    <!-- Row 1: Claim-01 -->
+    <g transform="translate(20, 112)">
+      <rect x="0" y="0" width="280" height="70" fill="#0F172A" stroke="#334155"/>
+      <text x="16" y="26" fill="#F8FAFC" font-size="13" font-weight="bold">Claim-01: 极端基差止损闭环</text>
+      <text x="16" y="46" fill="#10B981" font-size="11">✓ 状态: 已闭环 (100%)</text>
+      <text x="16" y="62" fill="#94A3B8" font-size="10">承压者与停止条件齐全</text>
+
+      <!-- Cell 1: EVD-01 -->
+      <rect x="280" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="300" cy="24" r="5" fill="#10B981"/>
+      <text x="312" y="28" fill="#10B981" font-size="12" font-weight="bold">直接支撑 (Direct)</text>
+      <text x="300" y="50" fill="#94A3B8" font-size="11">相关系数: 0.96 · 溯源已固化</text>
+
+      <!-- Cell 2: EVD-02 -->
+      <rect x="510" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="530" cy="24" r="5" fill="#38BDF8"/>
+      <text x="542" y="28" fill="#38BDF8" font-size="12" font-weight="bold">部分支撑 (Partial)</text>
+      <text x="530" y="50" fill="#94A3B8" font-size="11">Tick 级别回测覆盖 98.4%</text>
+
+      <!-- Cell 3: EVD-03 -->
+      <rect x="740" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="760" cy="24" r="5" fill="#10B981"/>
+      <text x="772" y="28" fill="#10B981" font-size="12" font-weight="bold">直接支撑 (Direct)</text>
+      <text x="760" y="50" fill="#94A3B8" font-size="11">法人承压责任明确归属</text>
+
+      <!-- Cell 4: EVD-04 -->
+      <rect x="970" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="990" cy="24" r="5" fill="#64748B"/>
+      <text x="1002" y="28" fill="#94A3B8" font-size="12">无直接关联</text>
+      <text x="990" y="50" fill="#64748B" font-size="11">已完成反例排除扫描</text>
+    </g>
+
+    <!-- Row 2: Claim-09 (Has Blocking Conflict) -->
+    <g transform="translate(20, 182)">
+      <rect x="0" y="0" width="280" height="70" fill="#1e293b" stroke="#EF4444" stroke-width="1.5"/>
+      <text x="16" y="26" fill="#EF4444" font-size="13" font-weight="bold">Claim-09: 穿透式风控法人责任</text>
+      <text x="16" y="46" fill="#EF4444" font-size="11">✕ 状态: 阻断待拍板</text>
+      <text x="16" y="62" fill="#FCA5A5" font-size="10">触发 R01 承压者缺失</text>
+
+      <!-- Cell 1: EVD-01 -->
+      <rect x="280" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="300" cy="24" r="5" fill="#EF4444"/>
+      <text x="312" y="28" fill="#EF4444" font-size="12" font-weight="bold">存在矛盾 (Contradicted)</text>
+      <text x="300" y="50" fill="#FCA5A5" font-size="11">法源第3条强制要求法人明示</text>
+
+      <!-- Cell 2: EVD-02 -->
+      <rect x="510" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="530" cy="24" r="5" fill="#64748B"/>
+      <text x="542" y="28" fill="#94A3B8" font-size="12">不适用</text>
+      <text x="530" y="50" fill="#64748B" font-size="11">非行情维度约束</text>
+
+      <!-- Cell 3: EVD-03 -->
+      <rect x="740" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="760" cy="24" r="5" fill="#F59E0B"/>
+      <text x="772" y="28" fill="#F59E0B" font-size="12" font-weight="bold">存疑需澄清 (Unclear)</text>
+      <text x="760" y="50" fill="#94A3B8" font-size="11">纪要提及专户但未附公章</text>
+
+      <!-- Cell 4: EVD-04 -->
+      <rect x="970" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="990" cy="24" r="5" fill="#64748B"/>
+      <text x="1002" y="28" fill="#94A3B8" font-size="12">无冲突</text>
+      <text x="990" y="50" fill="#64748B" font-size="11">通过反例基线</text>
+    </g>
+
+    <!-- Row 3: Claim-14 -->
+    <g transform="translate(20, 252)">
+      <rect x="0" y="0" width="280" height="70" fill="#0F172A" stroke="#334155"/>
+      <text x="16" y="26" fill="#F8FAFC" font-size="13" font-weight="bold">Claim-14: 资金费率套利边界</text>
+      <text x="16" y="46" fill="#10B981" font-size="11">✓ 状态: 已闭环 (100%)</text>
+      <text x="16" y="62" fill="#94A3B8" font-size="10">双人交叉核验完成</text>
+
+      <!-- Cell 1: EVD-01 -->
+      <rect x="280" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="300" cy="24" r="5" fill="#10B981"/>
+      <text x="312" y="28" fill="#10B981" font-size="12" font-weight="bold">直接支撑 (Direct)</text>
+      <text x="300" y="50" fill="#94A3B8" font-size="11">满足法源 §4 全部要求</text>
+
+      <!-- Cell 2: EVD-02 -->
+      <rect x="510" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="530" cy="24" r="5" fill="#10B981"/>
+      <text x="542" y="28" fill="#10B981" font-size="12" font-weight="bold">直接支撑 (Direct)</text>
+      <text x="530" y="50" fill="#94A3B8" font-size="11">近 3 年数据 0 穿仓</text>
+
+      <!-- Cell 3: EVD-03 -->
+      <rect x="740" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="760" cy="24" r="5" fill="#10B981"/>
+      <text x="772" y="28" fill="#10B981" font-size="12" font-weight="bold">直接支撑 (Direct)</text>
+      <text x="760" y="50" fill="#94A3B8" font-size="11">经风控委全票通过</text>
+
+      <!-- Cell 4: EVD-04 -->
+      <rect x="970" y="0" width="230" height="70" fill="#111827" stroke="#334155"/>
+      <circle cx="990" cy="24" r="5" fill="#10B981"/>
+      <text x="1002" y="28" fill="#10B981" font-size="12" font-weight="bold">反例已排除</text>
+      <text x="990" y="50" fill="#94A3B8" font-size="11">在 2024-02 样本中平稳停机</text>
+    </g>
+  </g>
+</svg>

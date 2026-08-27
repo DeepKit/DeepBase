@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" width="100%" height="100%" style="background:#12100C; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <filter id="trayShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="40" y="30" width="1520" height="64" rx="10" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+  <text x="70" y="70" fill="#FDFCF8" font-size="20" font-weight="800">🖥️ DeepBase HB 视觉基础设施 - 现代化系统托盘与令牌菜单封装 (THbTrayIcon &amp; THbTrayMenu)</text>
+  <rect x="1330" y="48" width="200" height="28" rx="6" fill="#F59E0B" fill-opacity="0.2" stroke="#D97706" stroke-width="1" />
+  <text x="1348" y="67" fill="#FBBF24" font-size="12" font-weight="700">Multi-Zone · DPI-Aware</text>
+
+  <!-- Left: Architectural Breakdown & Features (680px) -->
+  <g transform="translate(40, 120)">
+    <rect x="0" y="0" width="680" height="920" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+    
+    <rect x="0" y="0" width="680" height="54" rx="12 12 0 0" fill="#29241D" />
+    <text x="24" y="34" fill="#FDFCF8" font-size="15" font-weight="800">🏛️ 封装架构与工程特性</text>
+
+    <!-- Point 1 -->
+    <g transform="translate(24, 74)">
+      <rect x="0" y="0" width="632" height="120" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      <text x="20" y="30" fill="#FBBF24" font-size="14" font-weight="700">1. 设计令牌驱动 (Tokens-Driven Styling)</text>
+      <text x="20" y="56" fill="#FDFCF8" font-size="12">• 彻底告别 Windows 95/经典灰白丑陋右键菜单</text>
+      <text x="20" y="78" fill="#FDFCF8" font-size="12">• 严格继承当前应用主题 (暖金/玄石/紫暮等 10 套调色板)</text>
+      <text x="20" y="100" fill="#B8A995" font-size="11">• 支持圆角 RadiusM=8px、深色模式及柔和抗锯齿阴影</text>
+    </g>
+
+    <!-- Point 2 -->
+    <g transform="translate(24, 210)">
+      <rect x="0" y="0" width="632" height="130" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      <text x="20" y="30" fill="#FBBF24" font-size="14" font-weight="700">2. 四大功能分块 (Multi-Zone Layout)</text>
+      <text x="20" y="56" fill="#FDFCF8" font-size="12">• Zone 1: 状态头部 (应用名、运行状态、呼吸灯、版本号)</text>
+      <text x="20" y="78" fill="#FDFCF8" font-size="12">• Zone 2: 常用快捷业务动作 (默认加粗、带快捷键说明)</text>
+      <text x="20" y="100" fill="#FDFCF8" font-size="12">• Zone 3: 偏好设置项 (开机自启、气泡提醒、开关勾选)</text>
+      <text x="20" y="120" fill="#EF4444" font-size="11">• Zone 4: 危险/退出动作 (Hover 呈现 Danger 警示色)</text>
+    </g>
+
+    <!-- Point 3 -->
+    <g transform="translate(24, 356)">
+      <rect x="0" y="0" width="632" height="130" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      <text x="20" y="30" fill="#FBBF24" font-size="14" font-weight="700">3. 动态托盘小图标 (Dynamic Tray Badges)</text>
+      <text x="20" y="56" fill="#FDFCF8" font-size="12">• 未读消息红点徽标 (BadgeCount > 0 动态叠加渲染)</text>
+      <text x="20" y="78" fill="#FDFCF8" font-size="12">• 在线/执行中状态呼吸小绿点 (Breathing Dot)</text>
+      <text x="20" y="100" fill="#B8A995" font-size="11">• 双击/单击主窗显隐防抖切换，支持 BringToFront</text>
+    </g>
+
+    <!-- Point 4 -->
+    <g transform="translate(24, 502)">
+      <rect x="0" y="0" width="632" height="150" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      <text x="20" y="30" fill="#FBBF24" font-size="14" font-weight="700">4. 多显示器智能吸附与失焦关闭 (No-Steal-Focus)</text>
+      <text x="20" y="56" fill="#FDFCF8" font-size="12">• 智能识别任务栏方位 (底部/顶部/左侧/右侧) 与 Monitor 边界</text>
+      <text x="20" y="78" fill="#FDFCF8" font-size="12">• 自动吸附至工作区安全范围内，绝不越界出屏</text>
+      <text x="20" y="100" fill="#FDFCF8" font-size="12">• 采用 WS_EX_TOOLWINDOW + WS_EX_TOPMOST，不抢占前台焦点</text>
+      <text x="20" y="122" fill="#B8A995" font-size="11">• 点击外部区域或切换应用时平滑自动销毁/淡出</text>
+    </g>
+
+    <!-- Code Block Example -->
+    <g transform="translate(24, 670)">
+      <rect x="0" y="0" width="632" height="220" rx="8" fill="#060503" stroke="#3D352A" stroke-width="1" />
+      <text x="16" y="24" fill="#B8A995" font-size="11" font-weight="700">极简 Delphi 接入代码：</text>
+      <text x="16" y="52" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray := THbTrayIcon.Create(Self);</text>
+      <text x="16" y="74" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray.Menu.SetHeader('唤金 CRM', '● 在线服务中', 'v1.2');</text>
+      <text x="16" y="96" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray.Menu.AddItem('打开主控制台', ShowMain, 'Enter', True);</text>
+      <text x="16" y="118" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray.Menu.AddItem('🎤 快捷语音录入', ShowVoice, 'Ctrl+Shift+V');</text>
+      <text x="16" y="140" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray.Menu.AddCheckItem('开机自动启动', ToggleAutoStart, True);</text>
+      <text x="16" y="162" fill="#FDFCF8" font-size="11" font-family="Consolas">Tray.Menu.AddDestructiveItem('退出唤金', ExitApp);</text>
+      <text x="16" y="184" fill="#34D399" font-size="11" font-family="Consolas">Tray.Active := True;</text>
+    </g>
+  </g>
+
+  <!-- Right: High-Fidelity Visual Mockup (800px) -->
+  <g transform="translate(760, 120)">
+    <rect x="0" y="0" width="800" height="920" rx="12" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+    
+    <rect x="0" y="0" width="800" height="54" rx="12 12 0 0" fill="#29241D" />
+    <text x="24" y="34" fill="#FDFCF8" font-size="15" font-weight="800">🎨 高保真渲染效果与吸附预览</text>
+
+    <!-- Windows Taskbar Simulation -->
+    <g transform="translate(30, 770)">
+      <rect x="0" y="0" width="740" height="60" rx="8" fill="#0C0A07" stroke="#3D352A" stroke-width="1" />
+      <text x="24" y="36" fill="#B8A995" font-size="13">⊞  Windows 任务栏</text>
+
+      <!-- Tray Notification Area -->
+      <g transform="translate(560, 10)">
+        <rect x="0" y="0" width="160" height="40" rx="6" fill="#1C1914" stroke="#3D352A" stroke-width="1" />
+        <text x="16" y="25" fill="#B8A995" font-size="11">14:15</text>
+        
+        <!-- Tray Icon Box -->
+        <g transform="translate(80, 4)">
+          <rect x="0" y="0" width="32" height="32" rx="4" fill="#29241D" stroke="#D97706" stroke-width="1" />
+          <text x="8" y="22" font-size="15">🔔</text>
+          <!-- Badge 3 -->
+          <circle cx="28" cy="4" r="8" fill="#EF4444" />
+          <text x="25" y="7" fill="#FFFFFF" font-size="9" font-weight="800">3</text>
+          <!-- Breathing Dot -->
+          <circle cx="28" cy="28" r="4" fill="#10B981" />
+        </g>
+      </g>
+    </g>
+
+    <!-- Floating HB Tray Menu Popup Card -->
+    <g transform="translate(420, 240)" filter="url(#trayShadow)">
+      <rect x="0" y="0" width="350" height="500" rx="10" fill="#1C1914" stroke="#3D352A" stroke-width="1.5" />
+      
+      <!-- Zone 1: Status Header -->
+      <rect x="0" y="0" width="350" height="74" rx="10 10 0 0" fill="#0C0A07" />
+      <circle cx="24" cy="28" r="5" fill="#10B981" />
+      <text x="38" y="32" fill="#FDFCF8" font-size="14" font-weight="700">DeepCommerce 唤金</text>
+      
+      <rect x="236" y="16" width="96" height="22" rx="4" fill="#10B981" fill-opacity="0.15" />
+      <text x="246" y="31" fill="#34D399" font-size="10" font-weight="700">● 在线运行中</text>
+      
+      <text x="24" y="56" fill="#B8A995" font-size="11">东方明珠店 · 导购01 (Port: 8088 · v1.2.0)</text>
+
+      <line x1="0" y1="74" x2="350" y2="74" stroke="#3D352A" stroke-width="1" />
+
+      <!-- Zone 2: Business Actions -->
+      <g transform="translate(10, 86)">
+        <!-- Item 1 (Default Bold) -->
+        <rect x="0" y="0" width="330" height="42" rx="6" fill="#29241D" />
+        <text x="16" y="26" fill="#FDFCF8" font-size="13" font-weight="700">🗖 打开主控制台</text>
+        <text x="280" y="26" fill="#B8A995" font-size="11" font-family="Consolas">Enter</text>
+
+        <!-- Item 2 -->
+        <g transform="translate(0, 48)">
+          <rect x="0" y="0" width="330" height="42" rx="6" fill="transparent" />
+          <text x="16" y="26" fill="#FDFCF8" font-size="13">🎤 快捷语音录入</text>
+          <text x="236" y="26" fill="#B8A995" font-size="11" font-family="Consolas">Ctrl+Shift+V</text>
+        </g>
+
+        <!-- Item 3 -->
+        <g transform="translate(0, 96)">
+          <rect x="0" y="0" width="330" height="42" rx="6" fill="transparent" />
+          <text x="16" y="26" fill="#FDFCF8" font-size="13">📊 今日唤醒看板</text>
+          <text x="284" y="26" fill="#B8A995" font-size="11" font-family="Consolas">Alt+D</text>
+        </g>
+      </g>
+
+      <!-- Divider -->
+      <line x1="16" y1="238" x2="334" y2="238" stroke="#3D352A" stroke-width="1" />
+
+      <!-- Zone 3: Preferences -->
+      <g transform="translate(10, 248)">
+        <!-- Check Item 1 -->
+        <g transform="translate(0, 0)">
+          <text x="16" y="26" fill="#F59E0B" font-size="13" font-weight="700">✓</text>
+          <text x="36" y="26" fill="#FDFCF8" font-size="13">开机自动启动</text>
+        </g>
+
+        <!-- Check Item 2 -->
+        <g transform="translate(0, 44)">
+          <text x="16" y="26" fill="#F59E0B" font-size="13" font-weight="700">✓</text>
+          <text x="36" y="26" fill="#FDFCF8" font-size="13">托盘气泡消息通知</text>
+        </g>
+
+        <!-- Submenu Item -->
+        <g transform="translate(0, 88)">
+          <text x="16" y="26" fill="#FDFCF8" font-size="13">🌓 切换视觉主题</text>
+          <text x="300" y="26" fill="#B8A995" font-size="12">▶</text>
+        </g>
+      </g>
+
+      <!-- Divider -->
+      <line x1="16" y1="390" x2="334" y2="390" stroke="#3D352A" stroke-width="1" />
+
+      <!-- Zone 4: Destructive Item -->
+      <g transform="translate(10, 402)">
+        <rect x="0" y="0" width="330" height="42" rx="6" fill="#EF4444" fill-opacity="0.15" />
+        <text x="16" y="26" fill="#EF4444" font-size="13" font-weight="700">🚪 彻底退出唤金</text>
+        <text x="270" y="26" fill="#EF4444" font-size="11">Alt+F4</text>
+      </g>
+
+    </g>
+  </g>
+
+</svg>

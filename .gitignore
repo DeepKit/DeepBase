@@ -114,3 +114,5 @@ root.txt
 *.dcp
 *.dcu
 *.bpl
+.claude/
+

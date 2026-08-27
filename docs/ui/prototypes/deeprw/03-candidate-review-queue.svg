@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1366 768" width="1366" height="768" style="background:#0b0f19; font-family:'Segoe UI', system-ui, sans-serif;">
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="1366" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="30" fill="#38BDF8" font-size="16" font-weight="bold">◈ DeepRW</text>
+  <text x="110" y="30" fill="#94A3B8" font-size="13">认知论证工作台 · 候选审阅队列 (THbVirtualList Review Queue)</text>
+
+  <!-- Left Mini Rail -->
+  <rect x="0" y="48" width="56" height="720" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="18" y="85" fill="#64748B" font-size="18">📊</text>
+  <text x="18" y="135" fill="#64748B" font-size="18">📖</text>
+  <rect x="8" y="160" width="40" height="40" rx="8" fill="#0284c7" opacity="0.2"/>
+  <text x="18" y="185" fill="#38BDF8" font-size="18">📋</text>
+  <text x="18" y="235" fill="#64748B" font-size="18">🛡</text>
+
+  <!-- Left Side: THbVirtualList (760px) -->
+  <g transform="translate(76, 68)">
+    <rect width="760" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- Search & Filter Bar -->
+    <rect x="16" y="14" width="400" height="34" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="32" y="36" fill="#94A3B8" font-size="13">🔍 过滤候选标题、标签或法源编号 (按 / 聚焦)...</text>
+    <rect x="428" y="14" width="90" height="34" rx="6" fill="#0284C7"/>
+    <text x="444" y="36" fill="#FFFFFF" font-size="12" font-weight="bold">全部 (18)</text>
+    <rect x="526" y="14" width="100" height="34" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="540" y="36" fill="#EF4444" font-size="12">待拍板 (4)</text>
+
+    <!-- Batch Operation Banner (Active State: 2 Selected) -->
+    <rect x="16" y="58" width="728" height="42" rx="6" fill="#1e293b" stroke="#0284C7" stroke-width="1.5"/>
+    <text x="32" y="84" fill="#38BDF8" font-size="13" font-weight="bold">已选中 2 项候选主张：</text>
+    <rect x="180" y="64" width="100" height="30" rx="6" fill="#0284C7"/>
+    <text x="196" y="84" fill="#FFFFFF" font-size="12" font-weight="bold">✓ 批量采纳</text>
+    <rect x="290" y="64" width="100" height="30" rx="6" fill="#EF4444"/>
+    <text x="306" y="84" fill="#FFFFFF" font-size="12" font-weight="bold">✕ 批量驳回</text>
+    <rect x="400" y="64" width="120" height="30" rx="6" fill="#334155"/>
+    <text x="414" y="84" fill="#E2E8F0" font-size="12">◈ 拆分重组 (Split)</text>
+
+    <!-- Virtual List Items -->
+    <!-- Item 1 (Selected) -->
+    <g transform="translate(16, 110)">
+      <rect width="728" height="78" rx="8" fill="#1e293b" stroke="#0284C7" stroke-width="2"/>
+      <text x="16" y="44" fill="#38BDF8" font-size="16">☑</text>
+      <text x="42" y="28" fill="#F8FAFC" font-size="14" font-weight="bold">候选 #01: 跨市场现货套利极端基差止损规则</text>
+      <rect x="360" y="14" width="70" height="20" rx="4" fill="#EF4444" opacity="0.2"/>
+      <text x="368" y="28" fill="#EF4444" font-size="11" font-weight="bold">阻断待拍板</text>
+      <text x="42" y="48" fill="#94A3B8" font-size="12">法源: 《指导意见》§4 · 承压者与核心约束已定义，缺少双签豁免凭据。</text>
+      <text x="42" y="68" fill="#38BDF8" font-size="11">#法源R01  #P0阻断  #套利策略  · 10:42</text>
+    </g>
+
+    <!-- Item 2 (Selected) -->
+    <g transform="translate(16, 196)">
+      <rect width="728" height="78" rx="8" fill="#1e293b" stroke="#0284C7" stroke-width="2"/>
+      <text x="16" y="44" fill="#38BDF8" font-size="16">☑</text>
+      <text x="42" y="28" fill="#F8FAFC" font-size="14" font-weight="bold">候选 #02: 前线弱信号异常波动与流动性预警</text>
+      <rect x="360" y="14" width="60" height="20" rx="4" fill="#F59E0B" opacity="0.2"/>
+      <text x="368" y="28" fill="#F59E0B" font-size="11" font-weight="bold">弱信号待定</text>
+      <text x="42" y="48" fill="#94A3B8" font-size="12">置信度 0.58（略低于0.60阈值）· 需合规员确认是否升级为正式证据。</text>
+      <text x="42" y="68" fill="#38BDF8" font-size="11">#弱信号  #需澄清  #行情日志  · 09:15</text>
+    </g>
+
+    <!-- Item 3 (Unselected) -->
+    <g transform="translate(16, 282)">
+      <rect width="728" height="78" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="16" y="44" fill="#64748B" font-size="16">☐</text>
+      <text x="42" y="28" fill="#F8FAFC" font-size="14" font-weight="bold">候选 #03: 风险官人工接管 60 秒硬时限约束</text>
+      <rect x="360" y="14" width="50" height="20" rx="4" fill="#10B981" opacity="0.2"/>
+      <text x="368" y="28" fill="#10B981" font-size="11" font-weight="bold">已就绪</text>
+      <text x="42" y="48" fill="#94A3B8" font-size="12">法源: 《指导意见》§5 · 7 字段完整，已满足全部门禁条件。</text>
+      <text x="42" y="68" fill="#38BDF8" font-size="11">#人工接管  #已闭环  · 08:30</text>
+    </g>
+  </g>
+
+  <!-- Right Side: Candidate Inspector & 5-State Disposition Actions (470px) -->
+  <g transform="translate(852, 68)">
+    <rect width="470" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+    
+    <!-- Inspector Title -->
+    <text x="20" y="36" fill="#38BDF8" font-size="12" font-weight="bold">CANDIDATE INSPECTOR 审阅详情</text>
+    <text x="20" y="64" fill="#F8FAFC" font-size="17" font-weight="bold">候选 #01 事实推演与法源比对</text>
+    <line x1="20" y1="78" x2="450" y2="78" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- 7 Fields Summary Table -->
+    <g transform="translate(20, 92)" fill="#E2E8F0" font-size="13">
+      <text x="0" y="20" fill="#94A3B8">① 问题场 (IssueField):</text>
+      <text x="160" y="20" fill="#F8FAFC">跨市场自动化统计套利敞口</text>
+
+      <text x="0" y="48" fill="#94A3B8">② 承压者 (Bearer):</text>
+      <text x="160" y="48" fill="#EF4444" font-weight="bold">缺失具体法人责任人 ✕</text>
+
+      <text x="0" y="76" fill="#94A3B8">③ 核心约束 (Constraint):</text>
+      <text x="160" y="76" fill="#F8FAFC">基差偏离 3σ 强平止损</text>
+
+      <text x="0" y="104" fill="#94A3B8">④ 弱信号 (WeakSignal):</text>
+      <text x="160" y="104" fill="#F8FAFC">流动性枯竭指数连续 3 秒预警</text>
+
+      <text x="0" y="132" fill="#94A3B8">⑤ 边界提示 (Boundary):</text>
+      <text x="160" y="132" fill="#F8FAFC">非流动性做市时段除外</text>
+
+      <text x="0" y="160" fill="#94A3B8">⑥ 转交目标 (Handoff):</text>
+      <text x="160" y="160" fill="#F8FAFC">值班风险官（CRO 专席）</text>
+
+      <text x="0" y="188" fill="#94A3B8">⑦ 停止条件 (StopCond):</text>
+      <text x="160" y="188" fill="#10B981" font-weight="bold">无条件进入冷却停机态 ✓</text>
+    </g>
+
+    <line x1="20" y1="300" x2="450" y2="300" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- 5-State Disposition Buttons (五态处置动作组) -->
+    <text x="20" y="326" fill="#F8FAFC" font-size="14" font-weight="bold">专家拍板处置（五态决策）</text>
+    
+    <g transform="translate(20, 344)">
+      <!-- 1. Confirm -->
+      <rect x="0" y="0" width="205" height="38" rx="6" fill="#10B981"/>
+      <text x="42" y="24" fill="#FFFFFF" font-size="13" font-weight="bold">✓ 确认采纳 (Confirm)</text>
+
+      <!-- 2. Reject -->
+      <rect x="220" y="0" width="205" height="38" rx="6" fill="#EF4444"/>
+      <text x="262" y="24" fill="#FFFFFF" font-size="13" font-weight="bold">✕ 彻底驳回 (Reject)</text>
+
+      <!-- 3. Clarify -->
+      <rect x="0" y="48" width="135" height="36" rx="6" fill="#1E293B" stroke="#38BDF8"/>
+      <text x="24" y="71" fill="#38BDF8" font-size="12">🔍 需澄清 (Clarify)</text>
+
+      <!-- 4. Split -->
+      <rect x="145" y="48" width="135" height="36" rx="6" fill="#1E293B" stroke="#F59E0B"/>
+      <text x="172" y="71" fill="#F59E0B" font-size="12">◈ 拆分主张 (Split)</text>
+
+      <!-- 5. Defer / Waiver -->
+      <rect x="290" y="48" width="135" height="36" rx="6" fill="#1E293B" stroke="#94A3B8"/>
+      <text x="312" y="71" fill="#94A3B8" font-size="12">⏳ 搁置/豁免 (Defer)</text>
+    </g>
+
+    <!-- Audit Rationale Note Box -->
+    <text x="20" y="460" fill="#94A3B8" font-size="12">决策理由记录（必填，将永久写入审计证据链）：</text>
+    <rect x="20" y="474" width="430" height="90" rx="6" fill="#0F172A" stroke="#334155"/>
+    <text x="32" y="498" fill="#E2E8F0" font-size="12">经风险委员会例会讨论，承压法人指定为“自营量化一号专户”。</text>
+    <text x="32" y="520" fill="#E2E8F0" font-size="12">符合监管《指导意见》第3条规定，予以有条件放行。</text>
+
+    <!-- Sign Button -->
+    <rect x="20" y="580" width="430" height="42" rx="6" fill="#0284C7"/>
+    <text x="156" y="606" fill="#FFFFFF" font-size="14" font-weight="bold">🛡 签署电子印章并提交闭环</text>
+  </g>
+</svg>

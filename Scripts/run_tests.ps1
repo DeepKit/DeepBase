@@ -87,6 +87,7 @@ $ModuleRunMap = [ordered]@{
     "SERVICES"   = "Test.DeepBase.Services.HealthCheck,Test.DeepBase.Services.Protection,Test.DeepBase.Services.Registration"
     "NET"        = "Test.WebService"
     "RESILIENCE" = "Test.DeepBase.Resilience,Test.DeepBase.RateLimiter"
+    "HB"         = "Test.DeepBase.HB.DeepRW,Test.DeepBase.HB.Suite,Test.DeepBase.HB.Tray,Test.DeepBase.HB.Voice.CF,Test.DeepBase.VCL.HB.Theme,Test.DeepBase.FMX.HB.Dialogs"
     "PERF"       = "Test.DeepBase.Benchmark,Test.DeepBase.Performance,Test.DeepBase.PerformanceSuite,Test.DeepBase.LockContention"
 }
 
@@ -587,8 +588,7 @@ function Compile-TestProject {
     $args = @(
         "-U$SearchPath",
         "-N0$projectDcuDir",
-        "-Q",
-        "--codepage:65001"   # Source files are UTF-8; force dcc64 to honor that (BUG-276)
+        "-Q"
     )
 
     if (-not $NoRebuild) {

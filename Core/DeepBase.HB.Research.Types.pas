@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Research.Types - Data Types & API Contracts for Research Discovery
                                 & Evidence Audit Infrastructure
 

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Grid - High-Performance Virtual Data Grid for VCL
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -310,29 +310,32 @@ begin
     for C := 0 to FColumns.Count - 1 do
     begin
       Inc(Result.SelectedCellCount);
-      ValFloat := 0.0;
-      if Assigned(FOnGetCellFloat) then
+      if FColumns[C].ColType in [gctFloat, gctInteger] then
       begin
-        FOnGetCellFloat(Self, R, C, ValFloat);
-        Inc(Result.NumericCount);
-        Result.SumValue := Result.SumValue + ValFloat;
-        if (Result.NumericCount = 1) or (ValFloat < Result.MinValue) then
-          Result.MinValue := ValFloat;
-        if (Result.NumericCount = 1) or (ValFloat > Result.MaxValue) then
-          Result.MaxValue := ValFloat;
-      end
-      else if Assigned(FOnGetCellText) then
-      begin
-        ValStr := '';
-        FOnGetCellText(Self, R, C, ValStr);
-        if TryStrToFloat(ValStr, ValFloat) then
+        ValFloat := 0.0;
+        if Assigned(FOnGetCellFloat) then
         begin
+          FOnGetCellFloat(Self, R, C, ValFloat);
           Inc(Result.NumericCount);
           Result.SumValue := Result.SumValue + ValFloat;
           if (Result.NumericCount = 1) or (ValFloat < Result.MinValue) then
             Result.MinValue := ValFloat;
           if (Result.NumericCount = 1) or (ValFloat > Result.MaxValue) then
             Result.MaxValue := ValFloat;
+        end
+        else if Assigned(FOnGetCellText) then
+        begin
+          ValStr := '';
+          FOnGetCellText(Self, R, C, ValStr);
+          if TryStrToFloat(ValStr, ValFloat) then
+          begin
+            Inc(Result.NumericCount);
+            Result.SumValue := Result.SumValue + ValFloat;
+            if (Result.NumericCount = 1) or (ValFloat < Result.MinValue) then
+              Result.MinValue := ValFloat;
+            if (Result.NumericCount = 1) or (ValFloat > Result.MaxValue) then
+              Result.MaxValue := ValFloat;
+          end;
         end;
       end;
     end;

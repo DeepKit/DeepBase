@@ -1,0 +1,74 @@
+{
+  "id": "jade-emerald",
+  "name": "翡翠",
+  "nameEn": "Jade Emerald",
+  "description": "健康/生活类预留",
+  "isDark": false,
+  "surface": {
+    "surface": "#F7FDF9",
+    "surfaceAlt": "#E7F6EE",
+    "border": "#CFE9DB",
+    "soft": "#D1FAE5",
+    "sunken": "#D1FAE5",
+    "elevation1": "#1A000000",
+    "elevation2": "#26000000",
+    "elevation3": "#33000000"
+  },
+  "ink": {
+    "ink": "#064E3B",
+    "inkMuted": "#5F8272",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#059669",
+    "primaryHover": "#047857",
+    "primaryPressed": "#065F46",
+    "onPrimary": "#FFFFFF",
+    "heroGradFrom": "#064E3B",
+    "heroGradTo": "#10B981",
+    "focusRing": "#059669"
+  },
+  "status": {
+    "success": "#059669",
+    "successSoft": "#ECFDF5",
+    "warning": "#D97706",
+    "warningSoft": "#FEF9C3",
+    "danger": "#DC2626",
+    "dangerSoft": "#FEF2F2",
+    "info": "#0284C7",
+    "infoSoft": "#E0F2FE"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

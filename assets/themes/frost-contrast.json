@@ -1,0 +1,74 @@
+{
+  "id": "frost-contrast",
+  "name": "霜白高对比",
+  "nameEn": "Frost High Contrast",
+  "description": "老年模式/视力关怀 · 加粗描边",
+  "isDark": false,
+  "surface": {
+    "surface": "#FFFFFF",
+    "surfaceAlt": "#F0F4FF",
+    "border": "#94A3B8",
+    "soft": "#DBEAFE",
+    "sunken": "#E2E8F0",
+    "elevation1": "#26000000",
+    "elevation2": "#33000000",
+    "elevation3": "#4D000000"
+  },
+  "ink": {
+    "ink": "#000000",
+    "inkMuted": "#334155",
+    "fontScale": 1.1
+  },
+  "brand": {
+    "primary": "#1D4ED8",
+    "primaryHover": "#1E40AF",
+    "primaryPressed": "#1E3A8A",
+    "onPrimary": "#FFFFFF",
+    "heroGradFrom": "#1E3A8A",
+    "heroGradTo": "#3B82F6",
+    "focusRing": "#1D4ED8"
+  },
+  "status": {
+    "success": "#047857",
+    "successSoft": "#D1FAE5",
+    "warning": "#B45309",
+    "warningSoft": "#FEF3C7",
+    "danger": "#B91C1C",
+    "dangerSoft": "#FEE2E2",
+    "info": "#1D4ED8",
+    "infoSoft": "#DBEAFE"
+  },
+  "shape": {
+    "radiusS": 4.0,
+    "radiusM": 8.0,
+    "radiusL": 14.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.5
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 12.0,
+    "sizeS": 13.5,
+    "sizeM": 15.0,
+    "sizeL": 18.0,
+    "sizeXL": 24.0,
+    "sizeXXL": 36.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "ocean-deep",
+  "name": "沧海蓝",
+  "nameEn": "Ocean Deep",
+  "description": "数据密集工具 · 冷色夜航",
+  "isDark": true,
+  "surface": {
+    "surface": "#0B1220",
+    "surfaceAlt": "#16213A",
+    "border": "#27354F",
+    "soft": "#123055",
+    "sunken": "#060B14",
+    "elevation1": "#66000000",
+    "elevation2": "#80000000",
+    "elevation3": "#99000000"
+  },
+  "ink": {
+    "ink": "#E2E8F0",
+    "inkMuted": "#7C8CA5",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#38BDF8",
+    "primaryHover": "#7DD3FC",
+    "primaryPressed": "#0284C7",
+    "onPrimary": "#082F49",
+    "heroGradFrom": "#082F49",
+    "heroGradTo": "#0284C7",
+    "focusRing": "#38BDF8"
+  },
+  "status": {
+    "success": "#34D399",
+    "successSoft": "#064E3B",
+    "warning": "#FBBF24",
+    "warningSoft": "#451A03",
+    "danger": "#F87171",
+    "dangerSoft": "#450A0A",
+    "info": "#38BDF8",
+    "infoSoft": "#0C4A6E"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "admin-graphite",
+  "name": "石墨专业",
+  "nameEn": "Admin Graphite",
+  "description": "管理端 · 低彩度冷静",
+  "isDark": false,
+  "surface": {
+    "surface": "#F8FAFC",
+    "surfaceAlt": "#EEF2F6",
+    "border": "#DDE3EA",
+    "soft": "#E2E8F0",
+    "sunken": "#E2E8F0",
+    "elevation1": "#1A000000",
+    "elevation2": "#26000000",
+    "elevation3": "#33000000"
+  },
+  "ink": {
+    "ink": "#0F172A",
+    "inkMuted": "#64748B",
+    "fontScale": 1.0
+  },
+  "brand": {
+    "primary": "#475569",
+    "primaryHover": "#334155",
+    "primaryPressed": "#1E293B",
+    "onPrimary": "#FFFFFF",
+    "heroGradFrom": "#0F172A",
+    "heroGradTo": "#475569",
+    "focusRing": "#475569"
+  },
+  "status": {
+    "success": "#059669",
+    "successSoft": "#ECFDF5",
+    "warning": "#D97706",
+    "warningSoft": "#FEF9C3",
+    "danger": "#DC2626",
+    "dangerSoft": "#FEF2F2",
+    "info": "#3B82F6",
+    "infoSoft": "#EFF6FF"
+  },
+  "shape": {
+    "radiusS": 6.0,
+    "radiusM": 12.0,
+    "radiusL": 20.0,
+    "pillRatio": 0.5,
+    "borderWidth": 1.0
+  },
+  "typography": {
+    "fontFamily": "Microsoft YaHei UI",
+    "sizeXS": 11.0,
+    "sizeS": 12.5,
+    "sizeM": 14.0,
+    "sizeL": 17.0,
+    "sizeXL": 22.0,
+    "sizeXXL": 34.0,
+    "weightBold": 700
+  },
+  "space": {
+    "spaceXS": 4.0,
+    "spaceS": 8.0,
+    "spaceM": 14.0,
+    "spaceL": 22.0,
+    "spaceXL": 32.0
+  },
+  "motion": {
+    "durFast": 120,
+    "durNorm": 220,
+    "durSlow": 380,
+    "easeMode": "EaseOut"
+  },
+  "density": {
+    "rowHeightScale": 1.0
+  }
+}

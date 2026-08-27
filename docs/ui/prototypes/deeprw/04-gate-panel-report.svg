@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1366 768" width="1366" height="768" style="background:#0b0f19; font-family:'Segoe UI', system-ui, sans-serif;">
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="1366" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="30" fill="#38BDF8" font-size="16" font-weight="bold">◈ DeepRW</text>
+  <text x="110" y="30" fill="#94A3B8" font-size="13">认知论证工作台 · 门禁体检报告 (THbGatePanel Audit Report)</text>
+
+  <!-- Left Mini Rail -->
+  <rect x="0" y="48" width="56" height="720" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="18" y="85" fill="#64748B" font-size="18">📊</text>
+  <text x="18" y="135" fill="#64748B" font-size="18">📖</text>
+  <text x="18" y="185" fill="#64748B" font-size="18">📋</text>
+  <rect x="8" y="210" width="40" height="40" rx="8" fill="#0284c7" opacity="0.2"/>
+  <text x="18" y="235" fill="#38BDF8" font-size="18">🛡</text>
+
+  <!-- Main Gate Panel Container (1240px Full Width) -->
+  <g transform="translate(76, 68)">
+    <rect width="1240" height="680" rx="10" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- 1. Top Summary Count Filter Pills -->
+    <g transform="translate(20, 16)">
+      <rect x="0" y="0" width="120" height="36" rx="6" fill="#0284C7"/>
+      <text x="18" y="23" fill="#FFFFFF" font-size="13" font-weight="bold">全部规则 (19)</text>
+
+      <rect x="130" y="0" width="140" height="36" rx="6" fill="#1E293B" stroke="#EF4444" stroke-width="1.5"/>
+      <text x="146" y="23" fill="#EF4444" font-size="13" font-weight="bold">✕ 阻断拦截 (1)</text>
+
+      <rect x="280" y="0" width="140" height="36" rx="6" fill="#1E293B" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="296" y="23" fill="#F59E0B" font-size="13" font-weight="bold">⚠ 警告风险 (2)</text>
+
+      <rect x="430" y="0" width="140" height="36" rx="6" fill="#1E293B" stroke="#10B981" stroke-width="1.5"/>
+      <text x="446" y="23" fill="#10B981" font-size="13" font-weight="bold">✓ 门禁通过 (15)</text>
+
+      <rect x="580" y="0" width="140" height="36" rx="6" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5"/>
+      <text x="596" y="23" fill="#38BDF8" font-size="13" font-weight="bold">ℹ 提示关注 (1)</text>
+    </g>
+
+    <line x1="20" y1="64" x2="1220" y2="64" stroke="#1f2937" stroke-width="1"/>
+
+    <!-- Rule Table Header -->
+    <g transform="translate(20, 76)" fill="#94A3B8" font-size="12" font-weight="bold">
+      <text x="16" y="14">规则编号</text>
+      <text x="110" y="14">严重级别 (Severity)</text>
+      <text x="240" y="14">体检规则名称与检验目标</text>
+      <text x="1000" y="14">溯源跳转 / 操作</text>
+    </g>
+
+    <!-- Rule Rows -->
+    <!-- Row 1: EXPANDED ACCORDION (Rule R01 - ERROR) -->
+    <g transform="translate(20, 104)">
+      <rect width="1200" height="150" rx="8" fill="#1e293b" stroke="#EF4444" stroke-width="1.5"/>
+      
+      <!-- Summary Row -->
+      <text x="16" y="28" fill="#EF4444" font-family="Consolas" font-size="14" font-weight="bold">RULE-R01</text>
+      <rect x="110" y="12" width="90" height="22" rx="4" fill="#EF4444" opacity="0.2"/>
+      <text x="118" y="28" fill="#EF4444" font-size="11" font-weight="bold">✕ FAIL 阻断</text>
+      <text x="240" y="28" fill="#F8FAFC" font-size="14" font-weight="bold">7 字段法源缺少承压主体（PressureBearer）严格溯源绑定</text>
+      <text x="1000" y="28" fill="#38BDF8" font-size="13" font-weight="bold">定位溯源 ↗</text>
+      <text x="1160" y="28" fill="#94A3B8" font-size="13">▲</text>
+
+      <!-- Accordion Drawer (Why / Fix Hint / Context) -->
+      <line x1="16" y1="46" x2="1184" y2="46" stroke="#334155" stroke-width="1"/>
+      <g transform="translate(16, 56)" font-size="13">
+        <text x="0" y="18" fill="#FCA5A5" font-weight="bold">【为什么触发】</text>
+        <text x="110" y="18" fill="#E2E8F0">主张 Claim-09 未显式指定最终承担强制平仓亏损的法人实体，违反《指导意见》第3条与知识图谱强约束。</text>
+
+        <text x="0" y="44" fill="#FBBF24" font-weight="bold">【修复建议】</text>
+        <text x="110" y="44" fill="#E2E8F0">在候选审阅详情中为 Bearer 字段补充合法法人主体名称；或由首席架构师发起有条件书面豁免流程。</text>
+
+        <text x="0" y="70" fill="#94A3B8" font-weight="bold">【触发上下文】</text>
+        <text x="110" y="70" fill="#94A3B8" font-family="Consolas">TargetRef: claim:claim-09 · ConstraintHash: 7a9f...b23d · GatePolicy: strict_financial_v2</text>
+      </g>
+    </g>
+
+    <!-- Row 2: Collapsed Warning (Rule R02 - WARNING) -->
+    <g transform="translate(20, 264)">
+      <rect width="1200" height="46" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="16" y="28" fill="#F59E0B" font-family="Consolas" font-size="14" font-weight="bold">RULE-R02</text>
+      <rect x="110" y="12" width="90" height="22" rx="4" fill="#F59E0B" opacity="0.2"/>
+      <text x="118" y="28" fill="#F59E0B" font-size="11" font-weight="bold">⚠ WARN 警告</text>
+      <text x="240" y="28" fill="#F8FAFC" font-size="14">前线弱信号置信度低于 0.60 阈值（当前: 0.58，属间接孤证）</text>
+      <text x="1000" y="28" fill="#38BDF8" font-size="13">定位溯源 ↗</text>
+      <text x="1160" y="28" fill="#94A3B8" font-size="13">▼</text>
+    </g>
+
+    <!-- Row 3: Collapsed Pass (Rule R03 - PASS) -->
+    <g transform="translate(20, 318)">
+      <rect width="1200" height="46" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="16" y="28" fill="#10B981" font-family="Consolas" font-size="14" font-weight="bold">RULE-R03</text>
+      <rect x="110" y="12" width="90" height="22" rx="4" fill="#10B981" opacity="0.2"/>
+      <text x="118" y="28" fill="#10B981" font-size="11" font-weight="bold">✓ PASS 通过</text>
+      <text x="240" y="28" fill="#F8FAFC" font-size="14">反例排除检验：未在历史行情知识库中检索到有效矛盾反例</text>
+      <text x="1000" y="28" fill="#64748B" font-size="13">无跳转</text>
+      <text x="1160" y="28" fill="#94A3B8" font-size="13">▼</text>
+    </g>
+
+    <!-- Row 4: Collapsed Pass (Rule R04 - PASS) -->
+    <g transform="translate(20, 372)">
+      <rect width="1200" height="46" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="16" y="28" fill="#10B981" font-family="Consolas" font-size="14" font-weight="bold">RULE-R04</text>
+      <rect x="110" y="12" width="90" height="22" rx="4" fill="#10B981" opacity="0.2"/>
+      <text x="118" y="28" fill="#10B981" font-size="11" font-weight="bold">✓ PASS 通过</text>
+      <text x="240" y="28" fill="#F8FAFC" font-size="14">转交目标定义明确：人工接管时限指定为 60 秒，接收席位为 CRO 专席</text>
+      <text x="1000" y="28" fill="#38BDF8" font-size="13">定位溯源 ↗</text>
+      <text x="1160" y="28" fill="#94A3B8" font-size="13">▼</text>
+    </g>
+
+    <!-- Bottom Action Slot (Host Injected Slot) -->
+    <line x1="20" y1="610" x2="1220" y2="610" stroke="#1f2937" stroke-width="1"/>
+    <g transform="translate(20, 626)">
+      <text x="0" y="24" fill="#EF4444" font-size="13" font-weight="bold">⚠ 当前存在 1 项阻断门禁未解决，全量论证网络未达到就绪基线要求。</text>
+      
+      <rect x="850" y="0" width="160" height="38" rx="6" fill="#1E293B" stroke="#D97706" stroke-width="1.5"/>
+      <text x="868" y="24" fill="#FBBF24" font-size="13" font-weight="bold">📝 申请书面豁免...</text>
+
+      <rect x="1025" y="0" width="175" height="38" rx="6" fill="#0284C7"/>
+      <text x="1055" y="24" fill="#FFFFFF" font-size="13" font-weight="bold">🔄 重新执行全量体检</text>
+    </g>
+  </g>
+</svg>

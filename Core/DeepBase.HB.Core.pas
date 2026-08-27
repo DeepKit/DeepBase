@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Core - Framework-Agnostic HB Design Tokens & Theme Engine Core
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -546,7 +546,9 @@ begin
       ATokens.RadiusM := TJSONNumber(SubObj.Values['radiusM']).AsDouble;
     if SubObj.Values['radiusL'] is TJSONNumber then
       ATokens.RadiusL := TJSONNumber(SubObj.Values['radiusL']).AsDouble;
-    if SubObj.Values['pill'] is TJSONNumber then
+    if SubObj.Values['pillRatio'] is TJSONNumber then
+      ATokens.PillRatio := TJSONNumber(SubObj.Values['pillRatio']).AsDouble
+    else if SubObj.Values['pill'] is TJSONNumber then
       ATokens.PillRatio := TJSONNumber(SubObj.Values['pill']).AsDouble;
     if SubObj.Values['borderWidth'] is TJSONNumber then
       ATokens.BorderWidth := TJSONNumber(SubObj.Values['borderWidth']).AsDouble;
@@ -559,6 +561,8 @@ begin
     SubObj := TJSONObject(Val);
     if SubObj.Values['fontFamily'] <> nil then
       ATokens.FontFamily := SubObj.Values['fontFamily'].Value;
+    if SubObj.Values['weightBold'] is TJSONNumber then
+      ATokens.WeightBold := TJSONNumber(SubObj.Values['weightBold']).AsInt;
     if SubObj.Values['sizeXS'] is TJSONNumber then
       ATokens.SizeXS := TJSONNumber(SubObj.Values['sizeXS']).AsDouble;
     if SubObj.Values['sizeS'] is TJSONNumber then
@@ -578,15 +582,29 @@ begin
   if Val is TJSONObject then
   begin
     SubObj := TJSONObject(Val);
-    if SubObj.Values['xs'] is TJSONNumber then
+    if SubObj.Values['spaceXS'] is TJSONNumber then
+      ATokens.SpaceXS := TJSONNumber(SubObj.Values['spaceXS']).AsDouble
+    else if SubObj.Values['xs'] is TJSONNumber then
       ATokens.SpaceXS := TJSONNumber(SubObj.Values['xs']).AsDouble;
-    if SubObj.Values['s'] is TJSONNumber then
+
+    if SubObj.Values['spaceS'] is TJSONNumber then
+      ATokens.SpaceS := TJSONNumber(SubObj.Values['spaceS']).AsDouble
+    else if SubObj.Values['s'] is TJSONNumber then
       ATokens.SpaceS := TJSONNumber(SubObj.Values['s']).AsDouble;
-    if SubObj.Values['m'] is TJSONNumber then
+
+    if SubObj.Values['spaceM'] is TJSONNumber then
+      ATokens.SpaceM := TJSONNumber(SubObj.Values['spaceM']).AsDouble
+    else if SubObj.Values['m'] is TJSONNumber then
       ATokens.SpaceM := TJSONNumber(SubObj.Values['m']).AsDouble;
-    if SubObj.Values['l'] is TJSONNumber then
+
+    if SubObj.Values['spaceL'] is TJSONNumber then
+      ATokens.SpaceL := TJSONNumber(SubObj.Values['spaceL']).AsDouble
+    else if SubObj.Values['l'] is TJSONNumber then
       ATokens.SpaceL := TJSONNumber(SubObj.Values['l']).AsDouble;
-    if SubObj.Values['xl'] is TJSONNumber then
+
+    if SubObj.Values['spaceXL'] is TJSONNumber then
+      ATokens.SpaceXL := TJSONNumber(SubObj.Values['spaceXL']).AsDouble
+    else if SubObj.Values['xl'] is TJSONNumber then
       ATokens.SpaceXL := TJSONNumber(SubObj.Values['xl']).AsDouble;
   end;
 
@@ -595,12 +613,38 @@ begin
   if Val is TJSONObject then
   begin
     SubObj := TJSONObject(Val);
-    if SubObj.Values['fast'] is TJSONNumber then
+    if SubObj.Values['durFast'] is TJSONNumber then
+      ATokens.DurFast := TJSONNumber(SubObj.Values['durFast']).AsInt
+    else if SubObj.Values['fast'] is TJSONNumber then
       ATokens.DurFast := TJSONNumber(SubObj.Values['fast']).AsInt;
-    if SubObj.Values['normal'] is TJSONNumber then
+
+    if SubObj.Values['durNorm'] is TJSONNumber then
+      ATokens.DurNorm := TJSONNumber(SubObj.Values['durNorm']).AsInt
+    else if SubObj.Values['normal'] is TJSONNumber then
       ATokens.DurNorm := TJSONNumber(SubObj.Values['normal']).AsInt;
-    if SubObj.Values['slow'] is TJSONNumber then
+
+    if SubObj.Values['durSlow'] is TJSONNumber then
+      ATokens.DurSlow := TJSONNumber(SubObj.Values['durSlow']).AsInt
+    else if SubObj.Values['slow'] is TJSONNumber then
       ATokens.DurSlow := TJSONNumber(SubObj.Values['slow']).AsInt;
+
+    if SubObj.Values['easeMode'] <> nil then
+    begin
+      var EaseStr := SubObj.Values['easeMode'].Value;
+      if SameText(EaseStr, 'Linear') then ATokens.EaseMode := emLinear
+      else if SameText(EaseStr, 'EaseIn') then ATokens.EaseMode := emEaseIn
+      else if SameText(EaseStr, 'EaseOut') then ATokens.EaseMode := emEaseOut
+      else if SameText(EaseStr, 'EaseInOut') then ATokens.EaseMode := emEaseInOut;
+    end;
+  end;
+
+  // Density
+  Val := AObj.Values['density'];
+  if Val is TJSONObject then
+  begin
+    SubObj := TJSONObject(Val);
+    if SubObj.Values['rowHeightScale'] is TJSONNumber then
+      ATokens.RowHeightScale := TJSONNumber(SubObj.Values['rowHeightScale']).AsDouble;
   end;
 end;
 
@@ -617,7 +661,7 @@ end;
 class function THbTheme.RegisterThemeFromJson(const AJson: string): string;
 var
   JsonVal: TJSONValue;
-  Obj: TJSONObject;
+  Obj, MetaObj: TJSONObject;
   Def, ParentDef: THbThemeDefinition;
   InheritsId: string;
 begin
@@ -631,15 +675,29 @@ begin
 
   Obj := TJSONObject(JsonVal);
   try
-    Def.Meta.Id := Obj.GetValue<string>('id', '');
+    if Obj.Values['meta'] is TJSONObject then
+    begin
+      MetaObj := TJSONObject(Obj.Values['meta']);
+      Def.Meta.Id := MetaObj.GetValue<string>('id', '');
+      Def.Meta.Name := MetaObj.GetValue<string>('name', Def.Meta.Id);
+      Def.Meta.NameEn := MetaObj.GetValue<string>('nameEn', Def.Meta.Name);
+      Def.Meta.Description := MetaObj.GetValue<string>('description', '');
+      Def.Meta.InheritsId := MetaObj.GetValue<string>('inherits', '');
+      Def.Meta.IsDark := MetaObj.GetValue<Boolean>('isDark', False);
+    end
+    else
+    begin
+      Def.Meta.Id := Obj.GetValue<string>('id', '');
+      Def.Meta.Name := Obj.GetValue<string>('name', Def.Meta.Id);
+      Def.Meta.NameEn := Obj.GetValue<string>('nameEn', Def.Meta.Name);
+      Def.Meta.Description := Obj.GetValue<string>('description', '');
+      Def.Meta.InheritsId := Obj.GetValue<string>('inherits', '');
+      Def.Meta.IsDark := Obj.GetValue<Boolean>('isDark', False);
+    end;
+
     if Def.Meta.Id = '' then
       Exit;
 
-    Def.Meta.Name := Obj.GetValue<string>('name', Def.Meta.Id);
-    Def.Meta.NameEn := Obj.GetValue<string>('nameEn', Def.Meta.Name);
-    Def.Meta.Description := Obj.GetValue<string>('description', '');
-    Def.Meta.InheritsId := Obj.GetValue<string>('inherits', '');
-    Def.Meta.IsDark := Obj.GetValue<Boolean>('isDark', False);
     Def.RawJson := AJson;
 
     // 1. Initialize tokens: from parent if inherits is set, otherwise default
