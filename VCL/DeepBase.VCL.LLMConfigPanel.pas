@@ -141,9 +141,12 @@ constructor TLLMConfigPanel.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   
-  Width := 500;
-  Height := 450;
+  Width := 680;
+  Height := 560;
+  Constraints.MinWidth := 480;
+  Constraints.MinHeight := 380;
   BevelOuter := bvNone;
+  Caption := '';
   
   FConfigName := 'Default';
   FOwnsLLM := False;
@@ -167,7 +170,7 @@ begin
   FConfigGroupBox.Parent := Self;
   FConfigGroupBox.Caption := 'LLM Configuration';
   FConfigGroupBox.Align := alTop;
-  FConfigGroupBox.Height := 280;
+  FConfigGroupBox.Height := 275;
   
   Y := 25;
   
@@ -179,7 +182,7 @@ begin
   
   FProviderCombo := TComboBox.Create(Self);
   FProviderCombo.Parent := FConfigGroupBox;
-  FProviderCombo.SetBounds(100, Y - 3, 150, 24);
+  FProviderCombo.SetBounds(100, Y - 3, 180, 24);
   FProviderCombo.Style := csDropDownList;
   FProviderCombo.Items.Add('OpenAI');
   FProviderCombo.Items.Add('Anthropic');
@@ -190,7 +193,7 @@ begin
   FProviderCombo.ItemIndex := 0;
   FProviderCombo.OnChange := ProviderChanged;
   
-  Inc(Y, 30);
+  Inc(Y, 32);
   
   // Base URL
   FBaseUrlLabel := TLabel.Create(Self);
@@ -200,10 +203,11 @@ begin
   
   FBaseUrlEdit := TEdit.Create(Self);
   FBaseUrlEdit.Parent := FConfigGroupBox;
-  FBaseUrlEdit.SetBounds(100, Y - 3, 380, 24);
+  FBaseUrlEdit.SetBounds(100, Y - 3, FConfigGroupBox.ClientWidth - 115, 24);
+  FBaseUrlEdit.Anchors := [akLeft, akTop, akRight];
   FBaseUrlEdit.Text := '';
   
-  Inc(Y, 30);
+  Inc(Y, 32);
   
   // API Key
   FApiKeyLabel := TLabel.Create(Self);
@@ -213,10 +217,11 @@ begin
   
   FApiKeyEdit := TEdit.Create(Self);
   FApiKeyEdit.Parent := FConfigGroupBox;
-  FApiKeyEdit.SetBounds(100, Y - 3, 380, 24);
+  FApiKeyEdit.SetBounds(100, Y - 3, FConfigGroupBox.ClientWidth - 115, 24);
+  FApiKeyEdit.Anchors := [akLeft, akTop, akRight];
   FApiKeyEdit.PasswordChar := '*';
   
-  Inc(Y, 30);
+  Inc(Y, 32);
   
   // Model
   FModelLabel := TLabel.Create(Self);
@@ -226,10 +231,10 @@ begin
   
   FModelEdit := TEdit.Create(Self);
   FModelEdit.Parent := FConfigGroupBox;
-  FModelEdit.SetBounds(100, Y - 3, 200, 24);
+  FModelEdit.SetBounds(100, Y - 3, 240, 24);
   FModelEdit.Text := 'gpt-4o-mini';
   
-  Inc(Y, 30);
+  Inc(Y, 32);
   
   // Max Tokens
   FMaxTokensLabel := TLabel.Create(Self);
@@ -239,47 +244,48 @@ begin
   
   FMaxTokensEdit := TEdit.Create(Self);
   FMaxTokensEdit.Parent := FConfigGroupBox;
-  FMaxTokensEdit.SetBounds(100, Y - 3, 80, 24);
+  FMaxTokensEdit.SetBounds(100, Y - 3, 85, 24);
   FMaxTokensEdit.Text := '4096';
   
   // Temperature
   FTemperatureLabel := TLabel.Create(Self);
   FTemperatureLabel.Parent := FConfigGroupBox;
-  FTemperatureLabel.SetBounds(200, Y, 80, 16);
+  FTemperatureLabel.SetBounds(210, Y, 80, 16);
   FTemperatureLabel.Caption := 'Temperature:';
   
   FTemperatureEdit := TEdit.Create(Self);
   FTemperatureEdit.Parent := FConfigGroupBox;
-  FTemperatureEdit.SetBounds(285, Y - 3, 60, 24);
+  FTemperatureEdit.SetBounds(295, Y - 3, 60, 24);
   FTemperatureEdit.Text := '0.7';
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
   // Buttons
   FTestButton := TButton.Create(Self);
   FTestButton.Parent := FConfigGroupBox;
-  FTestButton.SetBounds(15, Y, 90, 28);
+  FTestButton.SetBounds(15, Y, 100, 28);
   FTestButton.Caption := 'Test';
   FTestButton.OnClick := TestButtonClick;
   
   FSaveButton := TButton.Create(Self);
   FSaveButton.Parent := FConfigGroupBox;
-  FSaveButton.SetBounds(115, Y, 90, 28);
+  FSaveButton.SetBounds(125, Y, 90, 28);
   FSaveButton.Caption := 'Save';
   FSaveButton.OnClick := SaveButtonClick;
   
   FResetButton := TButton.Create(Self);
   FResetButton.Parent := FConfigGroupBox;
-  FResetButton.SetBounds(215, Y, 90, 28);
+  FResetButton.SetBounds(225, Y, 90, 28);
   FResetButton.Caption := 'Reset';
   FResetButton.OnClick := ResetButtonClick;
   
-  Inc(Y, 35);
+  Inc(Y, 34);
   
   // Status
   FStatusLabel := TLabel.Create(Self);
   FStatusLabel.Parent := FConfigGroupBox;
-  FStatusLabel.SetBounds(15, Y, 460, 16);
+  FStatusLabel.SetBounds(15, Y, FConfigGroupBox.ClientWidth - 30, 16);
+  FStatusLabel.Anchors := [akLeft, akTop, akRight];
   FStatusLabel.Caption := '';
   FStatusLabel.Font.Color := clGray;
   
@@ -294,12 +300,12 @@ begin
   FHistoryGrid.Parent := FHistoryGroupBox;
   FHistoryGrid.Align := alClient;
   FHistoryGrid.AlignWithMargins := True;
-  FHistoryGrid.Margins.SetBounds(10, 20, 10, 40);
+  FHistoryGrid.Margins.SetBounds(10, 20, 10, 42);
   FHistoryGrid.RowCount := 2;
   FHistoryGrid.ColCount := 5;
   FHistoryGrid.FixedRows := 1;
   FHistoryGrid.FixedCols := 0;
-  FHistoryGrid.Options := FHistoryGrid.Options + [goRowSelect];
+  FHistoryGrid.Options := FHistoryGrid.Options + [goRowSelect, goThumbTracking];
   FHistoryGrid.DefaultRowHeight := 22;
   
   // Set column headers
@@ -336,20 +342,25 @@ end;
 procedure TLLMConfigPanel.LayoutControls;
 begin
   // Adjust grid column widths
-  if Assigned(FHistoryGrid) and (FHistoryGrid.Width > 100) then
+  if Assigned(FHistoryGrid) and (FHistoryGrid.ClientWidth > 100) then
   begin
-    FHistoryGrid.ColWidths[0] := 120; // Time
-    FHistoryGrid.ColWidths[1] := 100; // Model
-    FHistoryGrid.ColWidths[2] := 60;  // Tokens
-    FHistoryGrid.ColWidths[3] := 60;  // Cost
-    FHistoryGrid.ColWidths[4] := Max(80, FHistoryGrid.Width - 360); // Status
+    var AvailW := FHistoryGrid.ClientWidth - 10;
+    FHistoryGrid.ColWidths[0] := Max(110, AvailW * 26 div 100); // Time
+    FHistoryGrid.ColWidths[1] := Max(100, AvailW * 24 div 100); // Model
+    FHistoryGrid.ColWidths[2] := Max(60, AvailW * 14 div 100);  // Tokens
+    FHistoryGrid.ColWidths[3] := Max(60, AvailW * 14 div 100);  // Cost
+    FHistoryGrid.ColWidths[4] := Max(80, AvailW - (
+      FHistoryGrid.ColWidths[0] +
+      FHistoryGrid.ColWidths[1] +
+      FHistoryGrid.ColWidths[2] +
+      FHistoryGrid.ColWidths[3])); // Status
   end;
   
   // Position clear button
   if Assigned(FClearHistoryButton) and Assigned(FHistoryGroupBox) then
   begin
-    FClearHistoryButton.Left := FHistoryGroupBox.Width - FClearHistoryButton.Width - 15;
-    FClearHistoryButton.Top := FHistoryGroupBox.Height - FClearHistoryButton.Height - 10;
+    FClearHistoryButton.Left := FHistoryGroupBox.ClientWidth - FClearHistoryButton.Width - 15;
+    FClearHistoryButton.Top := FHistoryGroupBox.ClientHeight - FClearHistoryButton.Height - 8;
   end;
 end;
 

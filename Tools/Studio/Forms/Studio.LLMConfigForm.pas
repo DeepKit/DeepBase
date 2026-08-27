@@ -1,7 +1,7 @@
-{ ============================================================================
+ï»¿{ ============================================================================
   Studio.LLMConfigForm - LLM Configuration Management Window
   
-  Version: 1.0
+  Version: 1.1
   Description: Provides interface for managing LLM provider configurations
   Features:
     - Configuration editing (Provider/Model/APIKey/Temperature)
@@ -32,6 +32,7 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   FireDAC.Comp.Client,
+  DeepBase.LLM.Types,
   DeepBase.LLM;
 
 type
@@ -39,6 +40,11 @@ type
   
   TLLMConfigForm = class(TForm)
   private
+    // === Top Container & Splitters ===
+    FTopContainer: TPanel;
+    FVSplitter: TSplitter;
+    FHSplitter: TSplitter;
+
     // === Top Left: Config Editor ===
     FEditorPanel: TPanel;
     
@@ -117,6 +123,7 @@ type
     procedure SaveConfig;
     procedure RefreshGrid;
     procedure UpdateUsageStats;
+    procedure AdjustGridColumns;
     
     // Events
     procedure CboConfigNameChange(Sender: TObject);
@@ -135,7 +142,9 @@ type
     
     procedure SetStatus(const Text: string; IsError: Boolean = False);
     procedure UpdateProviderDefaults;
-    function GetConfigStatus(const ConfigName: string): TConfigStatus;
+    
+  protected
+    procedure Resize; override;
     
   public
     constructor Create(AOwner: TComponent); override;
@@ -196,8 +205,10 @@ begin
   inherited Create(AOwner);
   
   Caption := 'LLM Configuration Manager';
-  Width := 1100;
-  Height := 750;
+  Width := 1180;
+  Height := 820;
+  Constraints.MinWidth := 920;
+  Constraints.MinHeight := 640;
   Position := poScreenCenter;
   
   FOwnsLLM := False;
@@ -228,6 +239,37 @@ begin
   inherited;
 end;
 
+procedure TLLMConfigForm.Resize;
+begin
+  inherited;
+  AdjustGridColumns;
+end;
+
+procedure TLLMConfigForm.AdjustGridColumns;
+var
+  AvailW: Integer;
+begin
+  if Assigned(FConfigGrid) and (FConfigGrid.ClientWidth > 200) then
+  begin
+    AvailW := FConfigGrid.ClientWidth - 25;
+    FConfigGrid.ColWidths[GRID_COL_NAME] := Max(100, AvailW * 14 div 100);
+    FConfigGrid.ColWidths[GRID_COL_PROVIDER] := Max(80, AvailW * 10 div 100);
+    FConfigGrid.ColWidths[GRID_COL_MODEL] := Max(140, AvailW * 22 div 100);
+    FConfigGrid.ColWidths[GRID_COL_STATUS] := Max(70, AvailW * 8 div 100);
+    FConfigGrid.ColWidths[GRID_COL_CALLS] := Max(70, AvailW * 8 div 100);
+    FConfigGrid.ColWidths[GRID_COL_TOKENS] := Max(80, AvailW * 10 div 100);
+    FConfigGrid.ColWidths[GRID_COL_COST] := Max(80, AvailW * 10 div 100);
+    FConfigGrid.ColWidths[GRID_COL_DEFAULT] := Max(60, AvailW - (
+      FConfigGrid.ColWidths[GRID_COL_NAME] +
+      FConfigGrid.ColWidths[GRID_COL_PROVIDER] +
+      FConfigGrid.ColWidths[GRID_COL_MODEL] +
+      FConfigGrid.ColWidths[GRID_COL_STATUS] +
+      FConfigGrid.ColWidths[GRID_COL_CALLS] +
+      FConfigGrid.ColWidths[GRID_COL_TOKENS] +
+      FConfigGrid.ColWidths[GRID_COL_COST]));
+  end;
+end;
+
 procedure TLLMConfigForm.CreateControls;
 begin
   // Status Bar
@@ -239,8 +281,31 @@ begin
   // List Panel (Bottom)
   CreateListPanel;
   
+  // Horizontal Splitter between Top Container and List Panel
+  FHSplitter := TSplitter.Create(Self);
+  FHSplitter.Parent := Self;
+  FHSplitter.Align := alBottom;
+  FHSplitter.Height := 5;
+  FHSplitter.Cursor := crVSplit;
+  FHSplitter.MinSize := 120;
+  
+  // Top Container for Editor & Test panels
+  FTopContainer := TPanel.Create(Self);
+  FTopContainer.Parent := Self;
+  FTopContainer.Align := alClient;
+  FTopContainer.BevelOuter := bvNone;
+  FTopContainer.Caption := '';
+  
   // Editor Panel (Top Left)
   CreateEditorPanel;
+  
+  // Vertical Splitter between Editor and Test
+  FVSplitter := TSplitter.Create(Self);
+  FVSplitter.Parent := FTopContainer;
+  FVSplitter.Align := alLeft;
+  FVSplitter.Width := 5;
+  FVSplitter.Cursor := crHSplit;
+  FVSplitter.MinSize := 380;
   
   // Test Panel (Top Right)
   CreateTestPanel;
@@ -251,195 +316,199 @@ var
   Y: Integer;
 begin
   FEditorPanel := TPanel.Create(Self);
-  FEditorPanel.Parent := Self;
+  FEditorPanel.Parent := FTopContainer;
   FEditorPanel.Align := alLeft;
-  FEditorPanel.Width := 380;
+  FEditorPanel.Width := 450;
+  FEditorPanel.Constraints.MinWidth := 390;
   FEditorPanel.BevelOuter := bvNone;
   FEditorPanel.Caption := '';
   
-  Y := 10;
+  Y := 12;
   
-  // Config Name
+  // Row 1: Config Name
   FLblConfigName := TLabel.Create(Self);
   FLblConfigName.Parent := FEditorPanel;
-  FLblConfigName.SetBounds(10, Y, 80, 16);
+  FLblConfigName.SetBounds(12, Y, 85, 16);
   FLblConfigName.Caption := 'Config Name:';
   
   FCboConfigName := TComboBox.Create(Self);
   FCboConfigName.Parent := FEditorPanel;
-  FCboConfigName.SetBounds(100, Y - 4, 160, 24);
+  FCboConfigName.SetBounds(105, Y - 4, 180, 24);
   FCboConfigName.Style := csDropDownList;
   FCboConfigName.OnChange := CboConfigNameChange;
   
   FBtnNewConfig := TButton.Create(Self);
   FBtnNewConfig.Parent := FEditorPanel;
-  FBtnNewConfig.SetBounds(270, Y - 5, 50, 24);
+  FBtnNewConfig.SetBounds(295, Y - 5, 65, 26);
   FBtnNewConfig.Caption := 'New';
   FBtnNewConfig.OnClick := BtnNewConfigClick;
   
   FBtnDeleteConfig := TButton.Create(Self);
   FBtnDeleteConfig.Parent := FEditorPanel;
-  FBtnDeleteConfig.SetBounds(325, Y - 5, 45, 24);
+  FBtnDeleteConfig.SetBounds(368, Y - 5, 65, 26);
   FBtnDeleteConfig.Caption := 'Del';
   FBtnDeleteConfig.OnClick := BtnDeleteConfigClick;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Provider
+  // Row 2: Provider
   FLblProvider := TLabel.Create(Self);
   FLblProvider.Parent := FEditorPanel;
-  FLblProvider.SetBounds(10, Y, 80, 16);
+  FLblProvider.SetBounds(12, Y, 85, 16);
   FLblProvider.Caption := 'Provider:';
   
   FCboProvider := TComboBox.Create(Self);
   FCboProvider.Parent := FEditorPanel;
-  FCboProvider.SetBounds(100, Y - 4, 160, 24);
+  FCboProvider.SetBounds(105, Y - 4, 180, 24);
   FCboProvider.Style := csDropDownList;
   FCboProvider.OnChange := CboProviderChange;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Model
+  // Row 3: Model
   FLblModel := TLabel.Create(Self);
   FLblModel.Parent := FEditorPanel;
-  FLblModel.SetBounds(10, Y, 80, 16);
+  FLblModel.SetBounds(12, Y, 85, 16);
   FLblModel.Caption := 'Model:';
   
   FEdtModel := TEdit.Create(Self);
   FEdtModel.Parent := FEditorPanel;
-  FEdtModel.SetBounds(100, Y - 4, 260, 24);
+  FEdtModel.SetBounds(105, Y - 4, 328, 24);
+  FEdtModel.Anchors := [akLeft, akTop, akRight];
   FEdtModel.OnChange := ContentChanged;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // API URL
+  // Row 4: API URL
   FLblApiUrl := TLabel.Create(Self);
   FLblApiUrl.Parent := FEditorPanel;
-  FLblApiUrl.SetBounds(10, Y, 80, 16);
+  FLblApiUrl.SetBounds(12, Y, 85, 16);
   FLblApiUrl.Caption := 'API URL:';
   
   FEdtApiUrl := TEdit.Create(Self);
   FEdtApiUrl.Parent := FEditorPanel;
-  FEdtApiUrl.SetBounds(100, Y - 4, 260, 24);
+  FEdtApiUrl.SetBounds(105, Y - 4, 328, 24);
+  FEdtApiUrl.Anchors := [akLeft, akTop, akRight];
   FEdtApiUrl.OnChange := ContentChanged;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // API Key
+  // Row 5: API Key
   FLblApiKey := TLabel.Create(Self);
   FLblApiKey.Parent := FEditorPanel;
-  FLblApiKey.SetBounds(10, Y, 80, 16);
+  FLblApiKey.SetBounds(12, Y, 85, 16);
   FLblApiKey.Caption := 'API Key:';
   
   FEdtApiKey := TEdit.Create(Self);
   FEdtApiKey.Parent := FEditorPanel;
-  FEdtApiKey.SetBounds(100, Y - 4, 200, 24);
+  FEdtApiKey.SetBounds(105, Y - 4, 255, 24);
+  FEdtApiKey.Anchors := [akLeft, akTop, akRight];
   FEdtApiKey.PasswordChar := '*';
   FEdtApiKey.OnChange := ContentChanged;
   
   FChkShowKey := TCheckBox.Create(Self);
   FChkShowKey.Parent := FEditorPanel;
-  FChkShowKey.SetBounds(310, Y - 2, 60, 20);
+  FChkShowKey.SetBounds(368, Y - 2, 65, 20);
+  FChkShowKey.Anchors := [akTop, akRight];
   FChkShowKey.Caption := 'Show';
   FChkShowKey.OnClick := ChkShowKeyClick;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Temperature
+  // Row 6: Temperature
   FLblTemperature := TLabel.Create(Self);
   FLblTemperature.Parent := FEditorPanel;
-  FLblTemperature.SetBounds(10, Y, 80, 16);
+  FLblTemperature.SetBounds(12, Y, 85, 16);
   FLblTemperature.Caption := 'Temperature:';
   
   FEdtTemperature := TEdit.Create(Self);
   FEdtTemperature.Parent := FEditorPanel;
-  FEdtTemperature.SetBounds(100, Y - 4, 50, 24);
+  FEdtTemperature.SetBounds(105, Y - 4, 50, 24);
   FEdtTemperature.Text := '0.7';
   FEdtTemperature.OnChange := EdtTemperatureChange;
   
   FTrkTemperature := TTrackBar.Create(Self);
   FTrkTemperature.Parent := FEditorPanel;
-  FTrkTemperature.SetBounds(155, Y - 6, 200, 30);
+  FTrkTemperature.SetBounds(165, Y - 6, 268, 30);
+  FTrkTemperature.Anchors := [akLeft, akTop, akRight];
   FTrkTemperature.Min := 0;
   FTrkTemperature.Max := 20;
   FTrkTemperature.Position := 7;
   FTrkTemperature.TickStyle := tsNone;
   FTrkTemperature.OnChange := TrkTemperatureChange;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Max Tokens
+  // Row 7: Max Tokens & Timeout (Spacious, No Overlap)
   FLblMaxTokens := TLabel.Create(Self);
   FLblMaxTokens.Parent := FEditorPanel;
-  FLblMaxTokens.SetBounds(10, Y, 80, 16);
+  FLblMaxTokens.SetBounds(12, Y, 85, 16);
   FLblMaxTokens.Caption := 'Max Tokens:';
   
   FEdtMaxTokens := TEdit.Create(Self);
   FEdtMaxTokens.Parent := FEditorPanel;
-  FEdtMaxTokens.SetBounds(100, Y - 4, 80, 24);
+  FEdtMaxTokens.SetBounds(105, Y - 4, 85, 24);
   FEdtMaxTokens.Text := '4096';
   FEdtMaxTokens.OnChange := ContentChanged;
   
-  // Timeout
   FLblTimeout := TLabel.Create(Self);
   FLblTimeout.Parent := FEditorPanel;
-  FLblTimeout.SetBounds(200, Y, 60, 16);
+  FLblTimeout.SetBounds(210, Y, 60, 16);
   FLblTimeout.Caption := 'Timeout:';
   
   FEdtTimeout := TEdit.Create(Self);
   FEdtTimeout.Parent := FEditorPanel;
-  FEdtTimeout.SetBounds(265, Y - 4, 60, 24);
+  FEdtTimeout.SetBounds(275, Y - 4, 85, 24);
   FEdtTimeout.Text := '60000';
   FEdtTimeout.OnChange := ContentChanged;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Input Price
+  // Row 8: Input Price & Output Price (Spacious, No Overlap)
   FLblInputPrice := TLabel.Create(Self);
   FLblInputPrice.Parent := FEditorPanel;
-  FLblInputPrice.SetBounds(10, Y, 80, 16);
+  FLblInputPrice.SetBounds(12, Y, 85, 16);
   FLblInputPrice.Caption := 'In Price/1K:';
   
   FEdtInputPrice := TEdit.Create(Self);
   FEdtInputPrice.Parent := FEditorPanel;
-  FEdtInputPrice.SetBounds(100, Y - 4, 70, 24);
+  FEdtInputPrice.SetBounds(105, Y - 4, 85, 24);
   FEdtInputPrice.Text := '0.00015';
   FEdtInputPrice.OnChange := ContentChanged;
   
-  // Output Price
   FLblOutputPrice := TLabel.Create(Self);
   FLblOutputPrice.Parent := FEditorPanel;
-  FLblOutputPrice.SetBounds(185, Y, 80, 16);
+  FLblOutputPrice.SetBounds(210, Y, 80, 16);
   FLblOutputPrice.Caption := 'Out Price/1K:';
   
   FEdtOutputPrice := TEdit.Create(Self);
   FEdtOutputPrice.Parent := FEditorPanel;
-  FEdtOutputPrice.SetBounds(270, Y - 4, 70, 24);
+  FEdtOutputPrice.SetBounds(295, Y - 4, 85, 24);
   FEdtOutputPrice.Text := '0.0006';
   FEdtOutputPrice.OnChange := ContentChanged;
   
   Inc(Y, 40);
   
-  // Checkboxes
+  // Row 9: Checkboxes
   FChkIsDefault := TCheckBox.Create(Self);
   FChkIsDefault.Parent := FEditorPanel;
-  FChkIsDefault.SetBounds(10, Y, 100, 20);
+  FChkIsDefault.SetBounds(12, Y, 105, 20);
   FChkIsDefault.Caption := 'Is Default';
   FChkIsDefault.OnClick := ContentChanged;
   
   FChkIsEnabled := TCheckBox.Create(Self);
   FChkIsEnabled.Parent := FEditorPanel;
-  FChkIsEnabled.SetBounds(120, Y, 100, 20);
+  FChkIsEnabled.SetBounds(130, Y, 105, 20);
   FChkIsEnabled.Caption := 'Enabled';
   FChkIsEnabled.Checked := True;
   FChkIsEnabled.OnClick := ContentChanged;
   
-  Inc(Y, 35);
+  Inc(Y, 36);
   
-  // Save Button
+  // Row 10: Save Button
   FBtnSaveConfig := TButton.Create(Self);
   FBtnSaveConfig.Parent := FEditorPanel;
-  FBtnSaveConfig.SetBounds(10, Y, 100, 30);
+  FBtnSaveConfig.SetBounds(12, Y, 130, 32);
   FBtnSaveConfig.Caption := 'Save Config';
   FBtnSaveConfig.Font.Style := [fsBold];
   FBtnSaveConfig.OnClick := BtnSaveConfigClick;
@@ -450,7 +519,7 @@ end;
 procedure TLLMConfigForm.CreateTestPanel;
 begin
   FTestPanel := TPanel.Create(Self);
-  FTestPanel.Parent := Self;
+  FTestPanel.Parent := FTopContainer;
   FTestPanel.Align := alClient;
   FTestPanel.BevelOuter := bvNone;
   FTestPanel.Caption := '';
@@ -458,13 +527,13 @@ begin
   // Test Prompt Label
   FLblTestPrompt := TLabel.Create(Self);
   FLblTestPrompt.Parent := FTestPanel;
-  FLblTestPrompt.SetBounds(10, 10, 80, 16);
+  FLblTestPrompt.SetBounds(12, 12, 100, 16);
   FLblTestPrompt.Caption := 'Test Prompt:';
   
   // Test Prompt Memo
   FMmoTestPrompt := TMemo.Create(Self);
   FMmoTestPrompt.Parent := FTestPanel;
-  FMmoTestPrompt.SetBounds(10, 28, 680, 80);
+  FMmoTestPrompt.SetBounds(12, 32, FTestPanel.ClientWidth - 24, 85);
   FMmoTestPrompt.Anchors := [akLeft, akTop, akRight];
   FMmoTestPrompt.ScrollBars := ssVertical;
   FMmoTestPrompt.Text := 'Reply with exactly: OK';
@@ -472,33 +541,34 @@ begin
   // Test Buttons
   FBtnTestConnection := TButton.Create(Self);
   FBtnTestConnection.Parent := FTestPanel;
-  FBtnTestConnection.SetBounds(10, 115, 120, 28);
+  FBtnTestConnection.SetBounds(12, 126, 130, 28);
   FBtnTestConnection.Caption := 'Test Connection';
   FBtnTestConnection.OnClick := BtnTestConnectionClick;
   
   FBtnSendTest := TButton.Create(Self);
   FBtnSendTest.Parent := FTestPanel;
-  FBtnSendTest.SetBounds(140, 115, 100, 28);
+  FBtnSendTest.SetBounds(150, 126, 100, 28);
   FBtnSendTest.Caption := 'Send Test';
   FBtnSendTest.OnClick := BtnSendTestClick;
   
   // Test Stats
   FLblTestStats := TLabel.Create(Self);
   FLblTestStats.Parent := FTestPanel;
-  FLblTestStats.SetBounds(260, 120, 400, 16);
+  FLblTestStats.SetBounds(260, 131, 380, 16);
+  FLblTestStats.Anchors := [akLeft, akTop, akRight];
   FLblTestStats.Caption := '';
   FLblTestStats.Font.Color := clGray;
   
   // Response Label
   FLblTestResponse := TLabel.Create(Self);
   FLblTestResponse.Parent := FTestPanel;
-  FLblTestResponse.SetBounds(10, 150, 100, 16);
+  FLblTestResponse.SetBounds(12, 164, 100, 16);
   FLblTestResponse.Caption := 'Response:';
   
   // Response Memo
   FMmoTestResponse := TMemo.Create(Self);
   FMmoTestResponse.Parent := FTestPanel;
-  FMmoTestResponse.SetBounds(10, 168, 680, 190);
+  FMmoTestResponse.SetBounds(12, 184, FTestPanel.ClientWidth - 24, Max(80, FTestPanel.ClientHeight - 196));
   FMmoTestResponse.Anchors := [akLeft, akTop, akRight, akBottom];
   FMmoTestResponse.ScrollBars := ssBoth;
   FMmoTestResponse.ReadOnly := True;
@@ -511,22 +581,24 @@ begin
   FListPanel := TPanel.Create(Self);
   FListPanel.Parent := Self;
   FListPanel.Align := alBottom;
-  FListPanel.Height := 350;
+  FListPanel.Height := 250;
+  FListPanel.Constraints.MinHeight := 120;
   FListPanel.BevelOuter := bvNone;
   FListPanel.Caption := '';
   
   // Usage Stats Label
   FLblUsageStats := TLabel.Create(Self);
   FLblUsageStats.Parent := FListPanel;
-  FLblUsageStats.SetBounds(10, 5, 600, 16);
-  FLblUsageStats.Caption := 'Last 30 days: 0 calls, 0 tokens, $0.0000 total cost';
+  FLblUsageStats.SetBounds(12, 6, 600, 16);
+  FLblUsageStats.Caption := 'Configured Models';
   FLblUsageStats.Font.Style := [fsBold];
   
   // Config Grid
   FConfigGrid := TStringGrid.Create(Self);
   FConfigGrid.Parent := FListPanel;
-  FConfigGrid.SetBounds(10, 26, 1070, 310);
-  FConfigGrid.Anchors := [akLeft, akTop, akRight, akBottom];
+  FConfigGrid.Align := alClient;
+  FConfigGrid.AlignWithMargins := True;
+  FConfigGrid.Margins.SetBounds(12, 26, 12, 8);
   FConfigGrid.ColCount := 8;
   FConfigGrid.RowCount := 2;
   FConfigGrid.FixedRows := 1;
@@ -546,15 +618,7 @@ begin
   FConfigGrid.Cells[GRID_COL_COST, 0] := 'Cost';
   FConfigGrid.Cells[GRID_COL_DEFAULT, 0] := 'Default';
   
-  // Column widths
-  FConfigGrid.ColWidths[GRID_COL_NAME] := 120;
-  FConfigGrid.ColWidths[GRID_COL_PROVIDER] := 100;
-  FConfigGrid.ColWidths[GRID_COL_MODEL] := 180;
-  FConfigGrid.ColWidths[GRID_COL_STATUS] := 80;
-  FConfigGrid.ColWidths[GRID_COL_CALLS] := 70;
-  FConfigGrid.ColWidths[GRID_COL_TOKENS] := 90;
-  FConfigGrid.ColWidths[GRID_COL_COST] := 90;
-  FConfigGrid.ColWidths[GRID_COL_DEFAULT] := 60;
+  AdjustGridColumns;
 end;
 
 procedure TLLMConfigForm.Initialize(AConnection: TFDConnection; ALLM: TDeepBaseLLM);
@@ -566,7 +630,7 @@ begin
     FLLM := ALLM;
     FOwnsLLM := False;
   end
-  else if Assigned(FConnection) and FConnection.Connected then
+  else if Assigned(FConnection) then
   begin
     FLLM := TDeepBaseLLM.Create(FConnection);
     FOwnsLLM := True;
@@ -577,21 +641,18 @@ end;
 
 procedure TLLMConfigForm.RefreshData;
 begin
-  if not Assigned(FLLM) then
-  begin
-    SetStatus('No LLM - open database first', True);
-    Exit;
-  end;
-  
-  FLLM.RefreshConfigCache;
   LoadConfigList;
   RefreshGrid;
   UpdateUsageStats;
   
   if FCboConfigName.Items.Count > 0 then
+  begin
+    if FCboConfigName.ItemIndex < 0 then
+      FCboConfigName.ItemIndex := 0;
     LoadConfig(FCboConfigName.Text);
-    
-  SetStatus('Data loaded');
+  end
+  else
+    BtnNewConfigClick(nil);
 end;
 
 procedure TLLMConfigForm.LoadProviders;
@@ -601,7 +662,7 @@ begin
   FCboProvider.Items.Clear;
   for I := Low(PROVIDERS) to High(PROVIDERS) do
     FCboProvider.Items.Add(PROVIDERS[I]);
-  FCboProvider.ItemIndex := 3; // Default to LiteLLM
+  FCboProvider.ItemIndex := 0;
 end;
 
 procedure TLLMConfigForm.LoadConfigList;
@@ -611,14 +672,15 @@ var
 begin
   FCboConfigName.Items.Clear;
   
-  if not Assigned(FLLM) then Exit;
+  if Assigned(FLLM) then
+  begin
+    Configs := FLLM.GetAllConfigs;
+    for I := 0 to High(Configs) do
+      FCboConfigName.Items.Add(Configs[I].Name);
+  end;
   
-  Configs := FLLM.GetAllConfigs;
-  for I := 0 to High(Configs) do
-    FCboConfigName.Items.Add(Configs[I].Name);
-    
   if FCboConfigName.Items.Count = 0 then
-    FCboConfigName.Items.Add('Default');
+    FCboConfigName.Items.Add('default');
     
   FCboConfigName.ItemIndex := 0;
 end;
@@ -629,7 +691,6 @@ begin
   
   FCurrentConfig := FLLM.GetConfig(ConfigName);
   
-  // Provider
   case FCurrentConfig.Provider of
     lpOpenAI:    FCboProvider.ItemIndex := 0;
     lpAnthropic: FCboProvider.ItemIndex := 1;
@@ -637,127 +698,128 @@ begin
     lpLiteLLM:   FCboProvider.ItemIndex := 3;
     lpOllama:    FCboProvider.ItemIndex := 4;
     lpCustom:    FCboProvider.ItemIndex := 5;
+  else
+    FCboProvider.ItemIndex := 0;
   end;
-  
+    
   FEdtModel.Text := FCurrentConfig.Model;
   FEdtApiUrl.Text := FCurrentConfig.BaseUrl;
   FEdtApiKey.Text := FCurrentConfig.ApiKey;
   FEdtTemperature.Text := FormatFloat('0.0', FCurrentConfig.Temperature);
   FTrkTemperature.Position := Round(FCurrentConfig.Temperature * 10);
   FEdtMaxTokens.Text := IntToStr(FCurrentConfig.MaxTokens);
+  FEdtTimeout.Text := '60000';
   FEdtInputPrice.Text := FormatFloat('0.00000', FCurrentConfig.InputTokenPrice);
   FEdtOutputPrice.Text := FormatFloat('0.00000', FCurrentConfig.OutputTokenPrice);
   FChkIsDefault.Checked := FCurrentConfig.IsDefault;
   FChkIsEnabled.Checked := FCurrentConfig.IsEnabled;
   
   FModified := False;
-  SetStatus('Loaded: ' + ConfigName);
+  SetStatus(Format('Loaded configuration "%s"', [ConfigName]));
 end;
 
 procedure TLLMConfigForm.SaveConfig;
-var
-  Config: TLLMConfig;
 begin
-  if not Assigned(FLLM) then
+  if not Assigned(FLLM) then Exit;
+  
+  FCurrentConfig.Name := FCboConfigName.Text;
+  case FCboProvider.ItemIndex of
+    0: FCurrentConfig.Provider := lpOpenAI;
+    1: FCurrentConfig.Provider := lpAnthropic;
+    2: FCurrentConfig.Provider := lpAzure;
+    3: FCurrentConfig.Provider := lpLiteLLM;
+    4: FCurrentConfig.Provider := lpOllama;
+    5: FCurrentConfig.Provider := lpCustom;
+  else
+    FCurrentConfig.Provider := lpOpenAI;
+  end;
+  FCurrentConfig.Model := FEdtModel.Text;
+  FCurrentConfig.BaseUrl := FEdtApiUrl.Text;
+  FCurrentConfig.ApiKey := FEdtApiKey.Text;
+  FCurrentConfig.Temperature := StrToFloatDef(FEdtTemperature.Text, 0.7);
+  FCurrentConfig.MaxTokens := StrToIntDef(FEdtMaxTokens.Text, 4096);
+  FCurrentConfig.InputTokenPrice := StrToFloatDef(FEdtInputPrice.Text, 0.0);
+  FCurrentConfig.OutputTokenPrice := StrToFloatDef(FEdtOutputPrice.Text, 0.0);
+  FCurrentConfig.IsDefault := FChkIsDefault.Checked;
+  FCurrentConfig.IsEnabled := FChkIsEnabled.Checked;
+  
+  // Validation
+  if FCurrentConfig.Name = '' then
   begin
-    SetStatus('No LLM manager', True);
+    MessageDlg('Config Name cannot be empty.', mtError, [mbOK], 0);
     Exit;
   end;
   
-  Config.Init;
-  Config.Name := FCboConfigName.Text;
-  
-  case FCboProvider.ItemIndex of
-    0: Config.Provider := lpOpenAI;
-    1: Config.Provider := lpAnthropic;
-    2: Config.Provider := lpAzure;
-    3: Config.Provider := lpLiteLLM;
-    4: Config.Provider := lpOllama;
-    5: Config.Provider := lpCustom;
+  if (FCurrentConfig.Provider <> lpOllama) and (FCurrentConfig.ApiKey = '') then
+  begin
+    if MessageDlg('API Key is empty. Continue saving?', mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+      Exit;
   end;
   
-  Config.Model := FEdtModel.Text;
-  Config.BaseUrl := FEdtApiUrl.Text;
-  Config.ApiKey := FEdtApiKey.Text;
-  Config.Temperature := StrToFloatDef(FEdtTemperature.Text, 0.7);
-  Config.MaxTokens := StrToIntDef(FEdtMaxTokens.Text, 4096);
-  Config.InputTokenPrice := StrToFloatDef(FEdtInputPrice.Text, 0);
-  Config.OutputTokenPrice := StrToFloatDef(FEdtOutputPrice.Text, 0);
-  Config.IsDefault := FChkIsDefault.Checked;
-  Config.IsEnabled := FChkIsEnabled.Checked;
-  
-  FLLM.SaveConfig(Config);
-  FCurrentConfig := Config;
+  FLLM.SaveConfig(FCurrentConfig);
+  FLLM.RefreshConfigCache;
   FModified := False;
   
+  SetStatus(Format('Configuration "%s" saved successfully', [FCurrentConfig.Name]));
   RefreshGrid;
-  LoadConfigList;
   
-  // Reselect
-  FCboConfigName.ItemIndex := FCboConfigName.Items.IndexOf(Config.Name);
-  
-  SetStatus('Config saved: ' + Config.Name);
+  // Update combo if new name
+  if FCboConfigName.Items.IndexOf(FCurrentConfig.Name) < 0 then
+  begin
+    FCboConfigName.Items.Add(FCurrentConfig.Name);
+    FCboConfigName.ItemIndex := FCboConfigName.Items.IndexOf(FCurrentConfig.Name);
+  end;
 end;
 
 procedure TLLMConfigForm.RefreshGrid;
 var
   Configs: TLLMConfigArray;
-  I: Integer;
-  TotalCalls, TotalTokens: Integer;
-  TotalCost: Double;
+  I, Row: Integer;
 begin
+  FConfigGrid.RowCount := 2;
+  FConfigGrid.Rows[1].Clear;
+  
   if not Assigned(FLLM) then Exit;
   
   Configs := FLLM.GetAllConfigs;
-  FConfigGrid.RowCount := Max(2, Length(Configs) + 1);
-  
-  // Clear grid
-  for I := 1 to FConfigGrid.RowCount - 1 do
+  if Length(Configs) = 0 then
   begin
-    FConfigGrid.Rows[I].Clear;
+    FConfigGrid.Cells[GRID_COL_NAME, 1] := '(No configurations)';
+    Exit;
   end;
+  
+  FConfigGrid.RowCount := Length(Configs) + 1;
   
   for I := 0 to High(Configs) do
   begin
-    FConfigGrid.Cells[GRID_COL_NAME, I + 1] := Configs[I].Name;
-    FConfigGrid.Cells[GRID_COL_PROVIDER, I + 1] := Configs[I].ProviderToStr;
-    FConfigGrid.Cells[GRID_COL_MODEL, I + 1] := Configs[I].Model;
+    Row := I + 1;
+    FConfigGrid.Cells[GRID_COL_NAME, Row] := Configs[I].Name;
+    FConfigGrid.Cells[GRID_COL_PROVIDER, Row] := Configs[I].ProviderToStr;
+    FConfigGrid.Cells[GRID_COL_MODEL, Row] := Configs[I].Model;
     
-    // Status - simplified
     if Configs[I].IsEnabled then
-      FConfigGrid.Cells[GRID_COL_STATUS, I + 1] := 'Enabled'
+      FConfigGrid.Cells[GRID_COL_STATUS, Row] := 'Enabled'
     else
-      FConfigGrid.Cells[GRID_COL_STATUS, I + 1] := 'Disabled';
-    
-    // Get usage stats
-    FLLM.GetUsageStats(Configs[I].Name, 30, TotalCalls, TotalTokens, TotalCost);
-    FConfigGrid.Cells[GRID_COL_CALLS, I + 1] := IntToStr(TotalCalls);
-    FConfigGrid.Cells[GRID_COL_TOKENS, I + 1] := IntToStr(TotalTokens);
-    FConfigGrid.Cells[GRID_COL_COST, I + 1] := FormatFloat('$0.0000', TotalCost);
+      FConfigGrid.Cells[GRID_COL_STATUS, Row] := 'Disabled';
+      
+    FConfigGrid.Cells[GRID_COL_CALLS, Row] := '-';
+    FConfigGrid.Cells[GRID_COL_TOKENS, Row] := IntToStr(Configs[I].MaxTokens);
+    FConfigGrid.Cells[GRID_COL_COST, Row] := Format('$%.4f', [Configs[I].InputTokenPrice]);
     
     if Configs[I].IsDefault then
-      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := '*'
+      FConfigGrid.Cells[GRID_COL_DEFAULT, Row] := '*'
     else
-      FConfigGrid.Cells[GRID_COL_DEFAULT, I + 1] := '';
+      FConfigGrid.Cells[GRID_COL_DEFAULT, Row] := '';
   end;
   
-  if Length(Configs) = 0 then
-    FConfigGrid.Cells[GRID_COL_NAME, 1] := '(No configurations)';
+  AdjustGridColumns;
 end;
 
 procedure TLLMConfigForm.UpdateUsageStats;
-var
-  TotalCalls, TotalTokens: Integer;
-  TotalCost: Double;
 begin
   if not Assigned(FLLM) then Exit;
-  
-  FLLM.GetUsageStats('', 30, TotalCalls, TotalTokens, TotalCost);
-  FLblUsageStats.Caption := Format('Last 30 days: %d calls, %d tokens, $%.4f total cost',
-    [TotalCalls, TotalTokens, TotalCost]);
+  FLblUsageStats.Caption := 'Configured Models: ' + IntToStr(Length(FLLM.GetAllConfigs));
 end;
-
-// === Event Handlers ===
 
 procedure TLLMConfigForm.CboConfigNameChange(Sender: TObject);
 begin
@@ -778,44 +840,50 @@ begin
   NewName := InputBox('New Configuration', 'Enter configuration name:', '');
   if NewName = '' then Exit;
   
+  if FCboConfigName.Items.IndexOf(NewName) >= 0 then
+  begin
+    MessageDlg('A configuration with this name already exists.', mtError, [mbOK], 0);
+    Exit;
+  end;
+  
   FCboConfigName.Items.Add(NewName);
   FCboConfigName.ItemIndex := FCboConfigName.Items.IndexOf(NewName);
   
   // Reset to defaults
-  FCboProvider.ItemIndex := 3; // LiteLLM
-  UpdateProviderDefaults;
-  FEdtApiKey.Clear;
-  FEdtMaxTokens.Text := '4096';
-  FEdtTemperature.Text := '0.7';
-  FTrkTemperature.Position := 7;
-  FChkIsDefault.Checked := False;
-  FChkIsEnabled.Checked := True;
+  FCurrentConfig.Init;
+  FCurrentConfig.Name := NewName;
+  FCurrentConfig.Provider := lpOpenAI;
+  FCurrentConfig.Model := 'gpt-4o-mini';
+  FCurrentConfig.BaseUrl := 'https://api.openai.com/v1';
+  FCurrentConfig.Temperature := 0.7;
+  FCurrentConfig.MaxTokens := 4096;
   
+  LoadConfig(NewName);
   FModified := True;
-  SetStatus('New config: ' + NewName + ' (not saved)');
 end;
 
 procedure TLLMConfigForm.BtnDeleteConfigClick(Sender: TObject);
 var
   ConfigName: string;
 begin
-  if not Assigned(FLLM) then Exit;
-  
   ConfigName := FCboConfigName.Text;
   if ConfigName = '' then Exit;
   
-  if MessageDlg(Format('Delete configuration "%s"?', [ConfigName]), 
-     mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+  if MessageDlg(Format('Delete configuration "%s"?', [ConfigName]), mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
     Exit;
-  
-  FLLM.DeleteConfig(ConfigName);
-  LoadConfigList;
-  RefreshGrid;
-  
-  if FCboConfigName.Items.Count > 0 then
-    LoadConfig(FCboConfigName.Text);
     
-  SetStatus('Config deleted: ' + ConfigName);
+  if Assigned(FLLM) then
+    FLLM.DeleteConfig(ConfigName);
+    
+  FCboConfigName.Items.Delete(FCboConfigName.ItemIndex);
+  if FCboConfigName.Items.Count > 0 then
+  begin
+    FCboConfigName.ItemIndex := 0;
+    LoadConfig(FCboConfigName.Text);
+  end;
+  
+  RefreshGrid;
+  SetStatus(Format('Configuration "%s" deleted', [ConfigName]));
 end;
 
 procedure TLLMConfigForm.BtnSaveConfigClick(Sender: TObject);
@@ -825,79 +893,64 @@ end;
 
 procedure TLLMConfigForm.BtnTestConnectionClick(Sender: TObject);
 var
-  DurationMs: Int64;
+  Success: Boolean;
   ErrorMsg: string;
+  DurationMs: Int64;
 begin
-  if not Assigned(FLLM) then
-  begin
-    SetStatus('No LLM manager', True);
-    Exit;
-  end;
+  if not Assigned(FLLM) then Exit;
   
-  // Save first
-  if FModified then
-    SaveConfig;
-  
-  SetStatus('Testing connection...');
-  FMmoTestResponse.Clear;
+  SaveConfig;
   FBtnTestConnection.Enabled := False;
-  Application.ProcessMessages;
-  
+  SetStatus('Testing connection...');
+  Screen.Cursor := crHourGlass;
   try
-    if FLLM.TestConnection(FCboConfigName.Text, DurationMs, ErrorMsg) then
+    Success := FLLM.TestConnection(FCboConfigName.Text, DurationMs, ErrorMsg);
+    
+    if Success then
     begin
-      FMmoTestResponse.Lines.Add('âœ?Connection successful!');
-      FLblTestStats.Caption := Format('Response time: %d ms', [DurationMs]);
-      SetStatus('Connection OK');
+      FLblTestStats.Caption := Format('Connection OK (%d ms)', [DurationMs]);
+      FLblTestStats.Font.Color := clGreen;
+      SetStatus('Connection test succeeded');
     end
     else
     begin
-      FMmoTestResponse.Lines.Add('âœ?Connection failed:');
-      FMmoTestResponse.Lines.Add(ErrorMsg);
-      FLblTestStats.Caption := Format('Failed after %d ms', [DurationMs]);
-      SetStatus('Connection failed', True);
+      FLblTestStats.Caption := Format('Failed: %s (%d ms)', [ErrorMsg, DurationMs]);
+      FLblTestStats.Font.Color := clRed;
+      SetStatus('Connection test failed: ' + ErrorMsg, True);
     end;
   finally
     FBtnTestConnection.Enabled := True;
+    Screen.Cursor := crDefault;
   end;
-  
-  RefreshGrid;
 end;
 
 procedure TLLMConfigForm.BtnSendTestClick(Sender: TObject);
 var
-  Response: TLLMChatResponse;
   Prompt: string;
+  Response: TLLMChatResponse;
 begin
-  if not Assigned(FLLM) then
-  begin
-    SetStatus('No LLM manager', True);
-    Exit;
-  end;
+  if not Assigned(FLLM) then Exit;
   
-  Prompt := FMmoTestPrompt.Text;
+  Prompt := Trim(FMmoTestPrompt.Text);
   if Prompt = '' then
   begin
-    SetStatus('Enter a test prompt', True);
+    MessageDlg('Please enter a test prompt.', mtWarning, [mbOK], 0);
     Exit;
   end;
   
-  // Save first
-  if FModified then
-    SaveConfig;
-  
-  SetStatus('Sending...');
-  FMmoTestResponse.Clear;
   FBtnSendTest.Enabled := False;
-  Application.ProcessMessages;
+  SetStatus('Sending request...');
+  FMmoTestResponse.Clear;
   
   try
     if FLLM.Chat(Prompt, Response, FCboConfigName.Text) then
     begin
       FMmoTestResponse.Text := Response.Content;
-      FLblTestStats.Caption := Format('Tokens: %d in / %d out | Time: %d ms | Finish: %s',
-        [Response.InputTokens, Response.OutputTokens, Response.DurationMs, Response.FinishReason]);
-      SetStatus('Response received');
+      FLblTestStats.Caption := Format(
+        'Tokens: %d in, %d out | Time: %d ms',
+        [Response.InputTokens, Response.OutputTokens, Response.DurationMs]
+      );
+      SetStatus('Request completed successfully');
     end
     else
     begin
@@ -1015,12 +1068,6 @@ begin
     FEdtApiUrl.Text := DEFAULT_URLS[Idx];
     FEdtModel.Text := DEFAULT_MODELS[Idx];
   end;
-end;
-
-function TLLMConfigForm.GetConfigStatus(const ConfigName: string): TConfigStatus;
-begin
-  // Simplified - real implementation would check last test result
-  Result := csUnknown;
 end;
 
 end.

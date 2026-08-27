@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.LLM.Manager - Unit Tests for LLM Prompt Manager Types
   
   Test Coverage (pure types/helpers only):

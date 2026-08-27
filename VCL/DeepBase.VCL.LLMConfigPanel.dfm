@@ -1,8 +1,8 @@
 object LLMConfigPanel: TLLMConfigPanel
   Left = 0
   Top = 0
-  Width = 600
-  Height = 400
+  Width = 680
+  Height = 560
   TabOrder = 0
   object Splitter1: TSplitter
     Left = 0

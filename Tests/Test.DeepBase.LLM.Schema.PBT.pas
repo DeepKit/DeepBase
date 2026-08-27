@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.LLM.Schema.PBT - Property-based tests for LLM canonical
   schema initialization.
 

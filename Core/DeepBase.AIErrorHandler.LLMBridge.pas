@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AIErrorHandler.LLMBridge
 
   Bridges TAIErrorHandler.SetAICallback to DeepBase.LLM.Service.LLM().Chat.

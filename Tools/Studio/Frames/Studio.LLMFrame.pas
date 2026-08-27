@@ -32,6 +32,7 @@ uses
   Vcl.ComCtrls,
   Vcl.Grids,
   FireDAC.Comp.Client,
+  DeepBase.LLM.Types,
   DeepBase.LLM;
 
 type
@@ -210,119 +211,123 @@ begin
   // Config Name
   lblConfigName := TLabel.Create(Self);
   lblConfigName.Parent := pnlConfigTop;
-  lblConfigName.SetBounds(16, 20, 80, 16);
+  lblConfigName.SetBounds(16, 18, 85, 16);
   lblConfigName.Caption := 'Config Name:';
   
   cboConfigName := TComboBox.Create(Self);
   cboConfigName.Parent := pnlConfigTop;
-  cboConfigName.SetBounds(110, 16, 150, 24);
+  cboConfigName.SetBounds(110, 14, 180, 24);
   cboConfigName.Style := csDropDownList;
   cboConfigName.OnChange := cboConfigNameChange;
   
   btnNewConfig := TButton.Create(Self);
   btnNewConfig.Parent := pnlConfigTop;
-  btnNewConfig.SetBounds(270, 15, 70, 25);
+  btnNewConfig.SetBounds(300, 13, 75, 26);
   btnNewConfig.Caption := 'New...';
   btnNewConfig.OnClick := btnNewConfigClick;
   
   // Provider
   lblProvider := TLabel.Create(Self);
   lblProvider.Parent := pnlConfigTop;
-  lblProvider.SetBounds(16, 55, 80, 16);
+  lblProvider.SetBounds(16, 52, 85, 16);
   lblProvider.Caption := 'Provider:';
   
   cboProvider := TComboBox.Create(Self);
   cboProvider.Parent := pnlConfigTop;
-  cboProvider.SetBounds(110, 51, 150, 24);
+  cboProvider.SetBounds(110, 48, 180, 24);
   cboProvider.Style := csDropDownList;
   cboProvider.OnChange := cboProviderChange;
   
   // Base URL
   lblBaseUrl := TLabel.Create(Self);
   lblBaseUrl.Parent := pnlConfigTop;
-  lblBaseUrl.SetBounds(16, 90, 80, 16);
+  lblBaseUrl.SetBounds(16, 86, 85, 16);
   lblBaseUrl.Caption := 'Base URL:';
   
   edtBaseUrl := TEdit.Create(Self);
   edtBaseUrl.Parent := pnlConfigTop;
-  edtBaseUrl.SetBounds(110, 86, 400, 24);
+  edtBaseUrl.SetBounds(110, 82, 420, 24);
+  edtBaseUrl.Anchors := [akLeft, akTop, akRight];
   edtBaseUrl.Text := 'http://localhost:4000';
   
   // API Key
   lblApiKey := TLabel.Create(Self);
   lblApiKey.Parent := pnlConfigTop;
-  lblApiKey.SetBounds(16, 125, 80, 16);
+  lblApiKey.SetBounds(16, 120, 85, 16);
   lblApiKey.Caption := 'API Key:';
   
   edtApiKey := TEdit.Create(Self);
   edtApiKey.Parent := pnlConfigTop;
-  edtApiKey.SetBounds(110, 121, 400, 24);
+  edtApiKey.SetBounds(110, 116, 420, 24);
+  edtApiKey.Anchors := [akLeft, akTop, akRight];
   edtApiKey.Text := '';
   // Use simple ASCII mask char for compatibility with all code pages
   edtApiKey.PasswordChar := '*';
+
   // Model
   lblModel := TLabel.Create(Self);
   lblModel.Parent := pnlConfigTop;
-  lblModel.SetBounds(16, 160, 80, 16);
+  lblModel.SetBounds(16, 154, 85, 16);
   lblModel.Caption := 'Model:';
   
   edtModel := TEdit.Create(Self);
   edtModel.Parent := pnlConfigTop;
-  edtModel.SetBounds(110, 156, 200, 24);
+  edtModel.SetBounds(110, 150, 240, 24);
   edtModel.Text := 'gpt-4o-mini';
   
   // Max Tokens
   lblMaxTokens := TLabel.Create(Self);
   lblMaxTokens.Parent := pnlConfigTop;
-  lblMaxTokens.SetBounds(16, 195, 80, 16);
+  lblMaxTokens.SetBounds(16, 188, 85, 16);
   lblMaxTokens.Caption := 'Max Tokens:';
   
   edtMaxTokens := TEdit.Create(Self);
   edtMaxTokens.Parent := pnlConfigTop;
-  edtMaxTokens.SetBounds(110, 191, 80, 24);
+  edtMaxTokens.SetBounds(110, 184, 80, 24);
   edtMaxTokens.Text := '4096';
   
   // Temperature
   lblTemperature := TLabel.Create(Self);
   lblTemperature.Parent := pnlConfigTop;
-  lblTemperature.SetBounds(210, 195, 80, 16);
+  lblTemperature.SetBounds(210, 188, 80, 16);
   lblTemperature.Caption := 'Temperature:';
   
   edtTemperature := TEdit.Create(Self);
   edtTemperature.Parent := pnlConfigTop;
-  edtTemperature.SetBounds(300, 191, 60, 24);
+  edtTemperature.SetBounds(295, 184, 60, 24);
   edtTemperature.Text := '0.7';
   
-  // Buttons
+  // Row 1: Action Buttons (Test & Save)
   btnTestConnection := TButton.Create(Self);
   btnTestConnection.Parent := pnlConfigTop;
-  btnTestConnection.SetBounds(16, 240, 120, 30);
+  btnTestConnection.SetBounds(16, 230, 130, 30);
   btnTestConnection.Caption := 'Test Connection';
   btnTestConnection.OnClick := btnTestConnectionClick;
   
   btnSaveConfig := TButton.Create(Self);
   btnSaveConfig.Parent := pnlConfigTop;
-  btnSaveConfig.SetBounds(150, 240, 100, 30);
+  btnSaveConfig.SetBounds(155, 230, 110, 30);
   btnSaveConfig.Caption := 'Save Config';
   btnSaveConfig.OnClick := btnSaveConfigClick;
   
-  // Advanced tools
+  // Row 2: Advanced tools (Open Config Manager & Prompt Debugger)
   btnOpenConfigManager := TButton.Create(Self);
   btnOpenConfigManager.Parent := pnlConfigTop;
-  btnOpenConfigManager.SetBounds(270, 240, 150, 30);
+  btnOpenConfigManager.SetBounds(16, 270, 160, 30);
   btnOpenConfigManager.Caption := 'Open Config Manager...';
   btnOpenConfigManager.OnClick := btnOpenConfigManagerClick;
   
   btnOpenPromptDebug := TButton.Create(Self);
   btnOpenPromptDebug.Parent := pnlConfigTop;
-  btnOpenPromptDebug.SetBounds(430, 240, 150, 30);
+  btnOpenPromptDebug.SetBounds(185, 270, 160, 30);
   btnOpenPromptDebug.Caption := 'Prompt Debugger...';
   btnOpenPromptDebug.OnClick := btnOpenPromptDebugClick;
   
-  // Status
+  // Status Panel
   pnlConfigStatus := TPanel.Create(Self);
   pnlConfigStatus.Parent := pnlConfigTop;
-  pnlConfigStatus.SetBounds(16, 290, 500, 30);
+  pnlConfigStatus.SetBounds(16, 315, 420, 30);
+  pnlConfigStatus.Anchors := [akLeft, akTop, akRight];
   pnlConfigStatus.BevelOuter := bvLowered;
   pnlConfigStatus.Caption := '';
   
