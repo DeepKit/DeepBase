@@ -13,9 +13,51 @@ uses
   System.SysUtils, System.IOUtils, System.Variants, System.Threading, System.SyncObjs,
   System.Generics.Collections,
   FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Def, FireDAC.Phys.SQLite,
-  DeepBase.DB.DoQry;
+  FireDAC.Phys.PG, FireDAC.Phys.PGDef,
+  DeepBase.DB.DoQry, DeepBase.DB.Factory, DeepBase.DB.Pool;
 
 type
+  [TestFixture]
+  TTestDeepBaseDoQryPG = class
+  private
+    FConnection: TFDConnection;
+    FAvailable: Boolean;
+    procedure CreateTestTable;
+    procedure DropTestTable;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_PG_InsertReturningId_InsertsAndReturnsSerial;
+
+    [Test]
+    procedure Test_PG_Select_WithParamBinding_ReturnsData;
+
+    [Test]
+    procedure Test_PG_Exec_UpdateAndRowCount;
+
+    [Test]
+    procedure Test_PG_Scalar_ReturnsAggregateAndSingleValue;
+
+    [Test]
+    procedure Test_PG_ParamBinding_DiverseTypes;
+
+    [Test]
+    procedure Test_PG_Transaction_Commit_PersistsData;
+
+    [Test]
+    procedure Test_PG_Transaction_Rollback_RevertsData;
+
+    [Test]
+    procedure Test_PG_RunInTx_Counterfactual_RollbackOnException;
+
+    [Test]
+    procedure Test_PG_UniqueConstraint_RaisesEDeepBaseDbError;
+  end;
+
   [TestFixture]
   TTestDeepBaseDoQry = class
   private
@@ -1404,7 +1446,387 @@ begin
   end;
 end;
 
+{ TTestDeepBaseDoQryPG }
+
+procedure TTestDeepBaseDoQryPG.Setup;
+var
+  Profile: TDBConnectionProfile;
+  Host, Database, Username, Password: string;
+  Port: Integer;
+begin
+  FAvailable := False;
+  FConnection := nil;
+
+  Host := GetEnvironmentVariable('DB3_SERVER');
+  if Host = '' then
+    Host := '127.0.0.1';
+
+  Port := StrToIntDef(GetEnvironmentVariable('DB3_PORT'), 5432);
+
+  Database := GetEnvironmentVariable('DB3_DATABASE');
+  if Database = '' then
+    Database := 'postgres';
+
+  Username := GetEnvironmentVariable('DB3_USER');
+  if Username = '' then
+    Username := 'postgres';
+
+  Password := GetEnvironmentVariable('DB3_PASSWORD');
+  if Password = '' then
+    Password := GetEnvironmentVariable('PGPASSWORD');
+  if Password = '' then
+    Password := GetEnvironmentVariable('ARTIFACTOS_DB_PASS');
+
+  try
+    FConnection := TFDConnection.Create(nil);
+    FConnection.DriverName := 'PG';
+    FConnection.Params.Values['Server'] := Host;
+    FConnection.Params.Values['Port'] := IntToStr(Port);
+    FConnection.Params.Database := Database;
+    FConnection.Params.UserName := Username;
+    FConnection.Params.Password := Password;
+    FConnection.Params.Values['LoginTimeout'] := '3';
+    FConnection.Open;
+    FAvailable := True;
+  except
+    on E: Exception do
+    begin
+      FAvailable := False;
+      FreeAndNil(FConnection);
+      Exit;
+    end;
+  end;
+
+  UniDbInit(ExtractFilePath(ParamStr(0)));
+  UniDbSetDirectSQLAllowed(True);
+  CreateTestTable;
+end;
+
+procedure TTestDeepBaseDoQryPG.TearDown;
+begin
+  UniDbSetDirectSQLAllowed(False);
+  if FAvailable then
+    DropTestTable;
+  FreeAndNil(FConnection);
+end;
+
+procedure TTestDeepBaseDoQryPG.CreateTestTable;
+var
+  Q: TFDQuery;
+begin
+  if not FAvailable then
+    Exit;
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text :=
+      'CREATE TABLE IF NOT EXISTS deepbase_doqry_pg_smoke (' +
+      '  id BIGSERIAL PRIMARY KEY,' +
+      '  name TEXT NOT NULL,' +
+      '  amount NUMERIC(10, 2),' +
+      '  is_active BOOLEAN DEFAULT true,' +
+      '  uuid_val UUID,' +
+      '  big_num BIGINT,' +
+      '  created_at TIMESTAMPTZ DEFAULT now(),' +
+      '  extra_info TEXT' +
+      ');';
+    Q.ExecSQL;
+
+    Q.SQL.Text :=
+      'CREATE TABLE IF NOT EXISTS deepbase_doqry_pg_unique (' +
+      '  id SERIAL PRIMARY KEY,' +
+      '  code TEXT NOT NULL UNIQUE' +
+      ');';
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+end;
+
+procedure TTestDeepBaseDoQryPG.DropTestTable;
+var
+  Q: TFDQuery;
+begin
+  if not FAvailable or (FConnection = nil) or not FConnection.Connected then
+    Exit;
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text := 'DROP TABLE IF EXISTS deepbase_doqry_pg_smoke; DROP TABLE IF EXISTS deepbase_doqry_pg_unique;';
+    Q.ExecSQL;
+  except
+    // ignore cleanup error
+  end;
+  Q.Free;
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_InsertReturningId_InsertsAndReturnsSerial;
+var
+  Ctx: TUniQueryContext;
+  NewId: Integer;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  NewId := UniDbInsertReturningId(
+    'INSERT INTO deepbase_doqry_pg_smoke (name, amount, is_active) VALUES (:name, :amount, :is_active)',
+    '{"name": "ItemAlpha", "amount": 42.50, "is_active": true}',
+    Ctx
+  );
+
+  Assert.IsTrue(NewId > 0, 'UniDbInsertReturningId on PG should return generated serial ID > 0');
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_Select_WithParamBinding_ReturnsData;
+var
+  Ctx: TUniQueryContext;
+  Data: TFDMemTable;
+  RowCount: Integer;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  UniDbExec(
+    'INSERT INTO deepbase_doqry_pg_smoke (name, amount, is_active) VALUES (:name, :amount, :is_active)',
+    '{"name": "ItemBeta", "amount": 100.00, "is_active": true}',
+    Ctx
+  );
+
+  Data := nil;
+  try
+    RowCount := UniDbSelect(
+      'SELECT * FROM deepbase_doqry_pg_smoke WHERE name = :name',
+      '{"name": "ItemBeta"}',
+      Data,
+      Ctx
+    );
+
+    Assert.AreEqual(1, RowCount, 'Should return 1 matching row');
+    Assert.IsNotNull(Data, 'Data memtable should not be nil');
+    Assert.AreEqual('ItemBeta', Data.FieldByName('name').AsString);
+    Assert.AreEqual(100.0, Data.FieldByName('amount').AsFloat, 0.001);
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_Exec_UpdateAndRowCount;
+var
+  Ctx: TUniQueryContext;
+  Affected: Integer;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  UniDbExec(
+    'INSERT INTO deepbase_doqry_pg_smoke (name, amount) VALUES (:name, :amount)',
+    '{"name": "ItemGamma", "amount": 10.00}',
+    Ctx
+  );
+
+  Affected := UniDbExec(
+    'UPDATE deepbase_doqry_pg_smoke SET name = :new_name, amount = :new_amount WHERE name = :old_name',
+    '{"new_name": "ItemGammaUpdated", "new_amount": 25.50, "old_name": "ItemGamma"}',
+    Ctx
+  );
+  Assert.AreEqual(1, Affected, 'UniDbExec UPDATE should affect 1 row');
+
+  Affected := UniDbExec(
+    'DELETE FROM deepbase_doqry_pg_smoke WHERE name = :name',
+    '{"name": "ItemGammaUpdated"}',
+    Ctx
+  );
+  Assert.AreEqual(1, Affected, 'UniDbExec DELETE should affect 1 row');
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_Scalar_ReturnsAggregateAndSingleValue;
+var
+  Ctx: TUniQueryContext;
+  V: Variant;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  UniDbExec('DELETE FROM deepbase_doqry_pg_smoke', '', Ctx);
+  UniDbExec(
+    'INSERT INTO deepbase_doqry_pg_smoke (name, amount) VALUES (:name, :amount)',
+    '{"name": "ScalarTest", "amount": 77.77}',
+    Ctx
+  );
+
+  V := UniDbScalar('SELECT COUNT(*) FROM deepbase_doqry_pg_smoke', '', Ctx);
+  Assert.IsFalse(VarIsNull(V), 'Scalar COUNT(*) must not be null');
+  Assert.IsTrue(VarToStr(V) = '1', 'Scalar count should equal 1');
+
+  V := UniDbScalar(
+    'SELECT name FROM deepbase_doqry_pg_smoke WHERE name = :name',
+    '{"name": "ScalarTest"}',
+    Ctx
+  );
+  Assert.AreEqual('ScalarTest', VarToStr(V));
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_ParamBinding_DiverseTypes;
+var
+  Ctx: TUniQueryContext;
+  Data: TFDMemTable;
+  NewId: Integer;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  NewId := UniDbInsertReturningId(
+    'INSERT INTO deepbase_doqry_pg_smoke (name, amount, is_active, uuid_val, big_num, extra_info) ' +
+    'VALUES (:name, :amount, :is_active, :uuid_val, :big_num, :extra_info)',
+    '{"name": "TypesTest", "amount": 88.88, "is_active": false, ' +
+    '"uuid_val": "d8e3b482-628a-4d74-8b65-68e1467a840e", ' +
+    '"big_num": 9007199254740993, "extra_info": null}',
+    Ctx
+  );
+  Assert.IsTrue(NewId > 0);
+
+  Data := nil;
+  try
+    UniDbSelect(
+      'SELECT * FROM deepbase_doqry_pg_smoke WHERE id = :id',
+      Format('{"id": %d}', [NewId]),
+      Data,
+      Ctx
+    );
+    Assert.AreEqual(1, Data.RecordCount);
+    Assert.AreEqual('TypesTest', Data.FieldByName('name').AsString);
+    Assert.AreEqual(88.88, Data.FieldByName('amount').AsFloat, 0.001);
+    Assert.IsFalse(Data.FieldByName('is_active').AsBoolean);
+    Assert.IsTrue(Pos('d8e3b482-628a-4d74-8b65-68e1467a840e', LowerCase(Data.FieldByName('uuid_val').AsString)) > 0);
+    Assert.AreEqual(Int64(9007199254740993), Data.FieldByName('big_num').AsLargeInt);
+    Assert.IsTrue(Data.FieldByName('extra_info').IsNull);
+  finally
+    Data.Free;
+  end;
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_Transaction_Commit_PersistsData;
+var
+  Ctx: TUniQueryContext;
+  Tx: IUniTransaction;
+  V: Variant;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  Tx := UniDbBeginTx(Ctx);
+  try
+    UniDbExec(
+      'INSERT INTO deepbase_doqry_pg_smoke (name) VALUES (:name)',
+      '{"name": "TxCommittedItem"}',
+      Ctx
+    );
+    Tx.Commit;
+  except
+    Tx.Rollback;
+    raise;
+  end;
+
+  V := UniDbScalar('SELECT COUNT(*) FROM deepbase_doqry_pg_smoke WHERE name = :name', '{"name": "TxCommittedItem"}', Ctx);
+  Assert.IsTrue(VarToStr(V) = '1', 'Committed row must persist');
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_Transaction_Rollback_RevertsData;
+var
+  Ctx: TUniQueryContext;
+  Tx: IUniTransaction;
+  V: Variant;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  Tx := UniDbBeginTx(Ctx);
+  try
+    UniDbExec(
+      'INSERT INTO deepbase_doqry_pg_smoke (name) VALUES (:name)',
+      '{"name": "TxRolledBackItem"}',
+      Ctx
+    );
+    Tx.Rollback;
+  except
+    Tx.Rollback;
+    raise;
+  end;
+
+  V := UniDbScalar('SELECT COUNT(*) FROM deepbase_doqry_pg_smoke WHERE name = :name', '{"name": "TxRolledBackItem"}', Ctx);
+  Assert.IsTrue(VarToStr(V) = '0', 'Rolled back row must not exist');
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_RunInTx_Counterfactual_RollbackOnException;
+var
+  Ctx: TUniQueryContext;
+  V: Variant;
+  Caught: Boolean;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  Caught := False;
+
+  try
+    UniDbRunInTx(Ctx, procedure
+    begin
+      UniDbExec(
+        'INSERT INTO deepbase_doqry_pg_smoke (name) VALUES (:name)',
+        '{"name": "CounterfactualShouldRollback"}',
+        Ctx
+      );
+      raise Exception.Create('Simulated business error inside UniDbRunInTx');
+    end);
+  except
+    on E: Exception do
+      Caught := True;
+  end;
+
+  Assert.IsTrue(Caught, 'Exception inside UniDbRunInTx must propagate to caller');
+
+  V := UniDbScalar(
+    'SELECT COUNT(*) FROM deepbase_doqry_pg_smoke WHERE name = :name',
+    '{"name": "CounterfactualShouldRollback"}',
+    Ctx
+  );
+  Assert.IsTrue(VarToStr(V) = '0', 'Counterfactual test: Exception in UniDbRunInTx must rollback all operations within transaction');
+end;
+
+procedure TTestDeepBaseDoQryPG.Test_PG_UniqueConstraint_RaisesEDeepBaseDbError;
+var
+  Ctx: TUniQueryContext;
+  CaughtErrorCode: Integer;
+begin
+  if not FAvailable then
+    Exit;
+
+  Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
+  UniDbExec('DELETE FROM deepbase_doqry_pg_unique', '', Ctx);
+  UniDbExec('INSERT INTO deepbase_doqry_pg_unique (code) VALUES (:code)', '{"code": "UQ001"}', Ctx);
+
+  CaughtErrorCode := 0;
+  try
+    UniDbExec('INSERT INTO deepbase_doqry_pg_unique (code) VALUES (:code)', '{"code": "UQ001"}', Ctx);
+    Assert.Fail('Duplicate key insert on PG must raise exception');
+  except
+    on E: EDeepBaseDbError do
+      CaughtErrorCode := E.ErrorCode;
+  end;
+
+  Assert.AreEqual(DOQRY_ERR_UNIQUE, CaughtErrorCode, 'PostgreSQL unique violation must map to DOQRY_ERR_UNIQUE');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestDeepBaseDoQry);
+  TDUnitX.RegisterTestFixture(TTestDeepBaseDoQryPG);
 
 end.
