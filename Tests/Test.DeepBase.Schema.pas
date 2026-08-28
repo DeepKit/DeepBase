@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Schema - Unit Tests for Database Schema Module
 
   Test Coverage:
@@ -16,9 +16,42 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
-  DeepBase.Schema;
+  System.IOUtils,
+  FireDAC.Comp.Client,
+  FireDAC.Stan.Def,
+  FireDAC.Stan.Async,
+  FireDAC.Stan.Param,
+  FireDAC.DApt,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  DeepBase.Schema,
+  DeepBase.SQL.Splitter;
 
 type
+  [TestFixture]
+  TTestSchemaLogLevelMigration = class
+  private
+    FTempDir: string;
+    FDBPath: string;
+    FConnection: TFDConnection;
+    function CreateConnection: TFDConnection;
+    procedure ExecuteSplitSQL(const ASQL: string);
+    function CountKey(const AKey: string): Integer;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_DualKeys_MigrationIdempotency_Twice;
+
+    [Test]
+    procedure Test_OnlyOldKey_MigrationIdempotency_Twice;
+
+    [Test]
+    procedure Test_OnlyNewKey_MigrationIdempotency_Twice;
+  end;
   [TestFixture]
   TTestSchemaVersion = class
   public
@@ -489,7 +522,130 @@ begin
   Assert.IsTrue(Data.Contains('确认'), 'Confirm should translate to 确认');
 end;
 
+{ TTestSchemaLogLevelMigration }
+
+procedure TTestSchemaLogLevelMigration.Setup;
+var
+  GuidText: string;
+begin
+  GuidText := TGUID.NewGuid.ToString;
+  GuidText := StringReplace(GuidText, '{', '', [rfReplaceAll]);
+  GuidText := StringReplace(GuidText, '}', '', [rfReplaceAll]);
+  FTempDir := TPath.Combine(TPath.GetTempPath, 'DB_LogLevel_' + GuidText);
+  TDirectory.CreateDirectory(FTempDir);
+  FDBPath := TPath.Combine(FTempDir, 'test_config.db');
+  FConnection := CreateConnection;
+  FConnection.ExecSQL(SQL_TIER0_SETTINGS);
+end;
+
+procedure TTestSchemaLogLevelMigration.TearDown;
+begin
+  FConnection.Free;
+  if (FTempDir <> '') and TDirectory.Exists(FTempDir) then
+    TDirectory.Delete(FTempDir, True);
+end;
+
+function TTestSchemaLogLevelMigration.CreateConnection: TFDConnection;
+begin
+  Result := TFDConnection.Create(nil);
+  try
+    Result.DriverName := 'SQLite';
+    Result.Params.Database := FDBPath;
+    Result.Params.Values['OpenMode'] := 'CreateUTF8';
+    Result.Params.Values['LockingMode'] := 'Normal';
+    Result.LoginPrompt := False;
+    Result.Open;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+procedure TTestSchemaLogLevelMigration.ExecuteSplitSQL(const ASQL: string);
+var
+  Stmts: TArray<string>;
+  Stmt: string;
+begin
+  Stmts := TDeepBaseSQLSplitter.Split(ASQL);
+  for Stmt in Stmts do
+  begin
+    if Trim(Stmt) <> '' then
+      FConnection.ExecSQL(Stmt);
+  end;
+end;
+
+function TTestSchemaLogLevelMigration.CountKey(const AKey: string): Integer;
+var
+  Q: TFDQuery;
+begin
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := FConnection;
+    Q.SQL.Text := 'SELECT COUNT(*) FROM Settings WHERE Key = :Key';
+    Q.ParamByName('Key').AsString := AKey;
+    Q.Open;
+    Result := Q.Fields[0].AsInteger;
+  finally
+    Q.Free;
+  end;
+end;
+
+procedure TTestSchemaLogLevelMigration.Test_DualKeys_MigrationIdempotency_Twice;
+begin
+  // Fixture 1: Dual keys exist (App.LogLevel and Log.Level both present)
+  FConnection.ExecSQL('INSERT INTO Settings (Key, Value) VALUES (''App.LogLevel'', ''INFO''), (''Log.Level'', ''INFO'')');
+  Assert.AreEqual(1, CountKey('App.LogLevel'), 'Initial App.LogLevel must exist');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Initial Log.Level must exist');
+
+  // 1st migration execution
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must be removed after 1st run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must be preserved after 1st run');
+
+  // 2nd migration execution (idempotency check)
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must still be absent after 2nd run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must still be unique after 2nd run');
+end;
+
+procedure TTestSchemaLogLevelMigration.Test_OnlyOldKey_MigrationIdempotency_Twice;
+begin
+  // Fixture 2: Only old key exists (App.LogLevel)
+  FConnection.ExecSQL('INSERT INTO Settings (Key, Value) VALUES (''App.LogLevel'', ''DEBUG'')');
+  Assert.AreEqual(1, CountKey('App.LogLevel'), 'Initial App.LogLevel must exist');
+  Assert.AreEqual(0, CountKey('Log.Level'), 'Initial Log.Level must not exist');
+
+  // 1st migration execution
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must be migrated after 1st run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must exist after 1st run');
+
+  // 2nd migration execution (idempotency check)
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must remain absent after 2nd run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must remain unique after 2nd run');
+end;
+
+procedure TTestSchemaLogLevelMigration.Test_OnlyNewKey_MigrationIdempotency_Twice;
+begin
+  // Fixture 3: Only new key exists (Log.Level)
+  FConnection.ExecSQL('INSERT INTO Settings (Key, Value) VALUES (''Log.Level'', ''WARN'')');
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'Initial App.LogLevel must not exist');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Initial Log.Level must exist');
+
+  // 1st migration execution
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must remain absent after 1st run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must remain unique after 1st run');
+
+  // 2nd migration execution (idempotency check)
+  ExecuteSplitSQL(SQL_TIER0_SETTINGS_DATA);
+  Assert.AreEqual(0, CountKey('App.LogLevel'), 'App.LogLevel must remain absent after 2nd run');
+  Assert.AreEqual(1, CountKey('Log.Level'), 'Log.Level must remain unique after 2nd run');
+end;
+
 initialization
+  TDUnitX.RegisterTestFixture(TTestSchemaLogLevelMigration);
   TDUnitX.RegisterTestFixture(TTestSchemaVersion);
   TDUnitX.RegisterTestFixture(TTestTier0Schema);
   TDUnitX.RegisterTestFixture(TTestTier1Schema);

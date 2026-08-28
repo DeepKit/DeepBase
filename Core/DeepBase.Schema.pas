@@ -97,6 +97,7 @@ const
     // CR-315(Owner 决策A): 存量库一次性迁移——历史种子误用 App.LogLevel 键，
     // 与读取常量 SConfigKeyLogLevel('Log.Level') 永不匹配。幂等改名：
     // 已迁移的库 0 行受影响，用户既有设置无缝延续。
+    'DELETE FROM Settings WHERE Key = ''App.LogLevel'' AND EXISTS (SELECT 1 FROM Settings WHERE Key = ''Log.Level'');' + #13#10 +
     'UPDATE Settings SET Key = ''Log.Level'' WHERE Key = ''App.LogLevel'';';
   
   // 3. FormStates - Window position and state persistence
