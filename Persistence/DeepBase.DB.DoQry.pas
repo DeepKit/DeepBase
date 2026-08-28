@@ -236,8 +236,12 @@ uses
   FireDAC.Stan.Option,
   FireDAC.Stan.Param,
   FireDAC.Stan.Error,
+  FireDAC.Phys.PG,
+  FireDAC.Phys.PGDef,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
   DeepBase.Logging,
-  DeepBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监�?
+  DeepBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监?
 
 type
   TQueryCacheEntry = record
