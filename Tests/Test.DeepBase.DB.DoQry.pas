@@ -22,6 +22,8 @@ type
   private
     FConnection: TFDConnection;
     FAvailable: Boolean;
+    FUnavailableReason: string;
+    procedure CheckAvailableOrSkip;
     procedure CreateTestTable;
     procedure DropTestTable;
   public
@@ -187,6 +189,12 @@ type
   end;
 
 implementation
+
+uses
+  {$IFDEF MSWINDOWS}
+  DeepBase.Security.DPAPI,
+  {$ENDIF}
+  Data.DB;
 
 { TTestDeepBaseDoQry }
 
@@ -1448,13 +1456,22 @@ end;
 
 { TTestDeepBaseDoQryPG }
 
+procedure TTestDeepBaseDoQryPG.CheckAvailableOrSkip;
+begin
+  if not FAvailable then
+    Assert.Pass('SKIPPED: PostgreSQL environment unavailable (' + FUnavailableReason + ')');
+end;
+
 procedure TTestDeepBaseDoQryPG.Setup;
 var
-  Profile: TDBConnectionProfile;
   Host, Database, Username, Password: string;
   Port: Integer;
+{$IFDEF MSWINDOWS}
+  LUser, LPassword: string;
+{$ENDIF}
 begin
   FAvailable := False;
+  FUnavailableReason := '';
   FConnection := nil;
 
   Host := GetEnvironmentVariable('DB3_SERVER');
@@ -1463,15 +1480,32 @@ begin
 
   Port := StrToIntDef(GetEnvironmentVariable('DB3_PORT'), 5432);
 
+  // T4: 默认连接目标与生产库对齐 (bcw_runtime)
   Database := GetEnvironmentVariable('DB3_DATABASE');
   if Database = '' then
-    Database := 'postgres';
+    Database := 'bcw_runtime';
 
   Username := GetEnvironmentVariable('DB3_USER');
   if Username = '' then
     Username := 'postgres';
 
-  Password := GetEnvironmentVariable('DB3_PASSWORD');
+  // T3: 凭据通道优先读取 Windows 凭据管理器 (TCredentialManager)，无时回退环境变量
+  Password := '';
+{$IFDEF MSWINDOWS}
+  try
+    if TCredentialManager.GetCredential('DeepBase.DB3.Password', LUser, LPassword) and (LPassword <> '') then
+    begin
+      Password := LPassword;
+      if (Username = 'postgres') and (LUser <> '') then
+        Username := LUser;
+    end;
+  except
+    // 忽略凭据库读取异常，回退环境变量
+  end;
+{$ENDIF}
+
+  if Password = '' then
+    Password := GetEnvironmentVariable('DB3_PASSWORD');
   if Password = '' then
     Password := GetEnvironmentVariable('PGPASSWORD');
   if Password = '' then
@@ -1492,6 +1526,7 @@ begin
     on E: Exception do
     begin
       FAvailable := False;
+      FUnavailableReason := E.Message;
       FreeAndNil(FConnection);
       Exit;
     end;
@@ -1565,8 +1600,7 @@ var
   Ctx: TUniQueryContext;
   NewId: Integer;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   NewId := UniDbInsertReturningId(
@@ -1584,8 +1618,7 @@ var
   Data: TFDMemTable;
   RowCount: Integer;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   UniDbExec(
@@ -1617,8 +1650,7 @@ var
   Ctx: TUniQueryContext;
   Affected: Integer;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   UniDbExec(
@@ -1647,8 +1679,7 @@ var
   Ctx: TUniQueryContext;
   V: Variant;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   UniDbExec('DELETE FROM deepbase_doqry_pg_smoke', '', Ctx);
@@ -1676,8 +1707,7 @@ var
   Data: TFDMemTable;
   NewId: Integer;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   NewId := UniDbInsertReturningId(
@@ -1716,8 +1746,7 @@ var
   Tx: IUniTransaction;
   V: Variant;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   Tx := UniDbBeginTx(Ctx);
@@ -1743,8 +1772,7 @@ var
   Tx: IUniTransaction;
   V: Variant;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   Tx := UniDbBeginTx(Ctx);
@@ -1770,8 +1798,7 @@ var
   V: Variant;
   Caught: Boolean;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   Caught := False;
@@ -1806,8 +1833,7 @@ var
   Ctx: TUniQueryContext;
   CaughtErrorCode: Integer;
 begin
-  if not FAvailable then
-    Exit;
+  CheckAvailableOrSkip;
 
   Ctx := UniDbMakeContext(FConnection, udbPostgreSQL);
   UniDbExec('DELETE FROM deepbase_doqry_pg_unique', '', Ctx);
