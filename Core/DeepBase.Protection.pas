@@ -1,4 +1,7 @@
-﻿unit DeepBase.Protection;
+unit DeepBase.Protection;
+
+{$WARN SYMBOL_DEPRECATED OFF}
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 interface
 

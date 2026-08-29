@@ -398,16 +398,7 @@ begin
     Btn := THbButton(Sender);
     Idx := Btn.Tag;
     if (Idx >= 0) and (Idx < FFacets.Count) then
-    begin
-      if FFocusedCategoryId = FFacets[Idx].Id then
-        FFocusedCategoryId := ''
-      else
-        FFocusedCategoryId := FFacets[Idx].Id;
-      RebuildLeftRail;
-      RebuildWaterfall;
-      if Assigned(FOnFilterChanged) then
-        FOnFilterChanged(Self, FFocusedCategoryId, False);
-    end;
+      FocusFacet(FFacets[Idx].Id);
   end;
 end;
 
@@ -462,7 +453,12 @@ begin
       LblTitle.Top := Round(10 * (CurrentPPI / 96.0));
       LblTitle.Font.Style := [fsBold];
       if FMode = wmTimeline then
-        LblTitle.Caption := '⏱ ' + Item.Title
+      begin
+        if Item.TimestampStr <> '' then
+          LblTitle.Caption := '⏱ [' + Item.TimestampStr + '] ' + Item.Title
+        else
+          LblTitle.Caption := '⏱ ' + Item.Title;
+      end
       else
         LblTitle.Caption := '[' + Item.CategoryTitle + '] ' + Item.Title;
 

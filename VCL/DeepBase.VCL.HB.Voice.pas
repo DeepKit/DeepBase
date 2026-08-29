@@ -261,18 +261,18 @@ begin
 
         // Top Privacy Trust Badge
         PrivacyStr := '🔒 本地安全沙箱处理 · 录音不外泄';
-        PrivacyRect := MakeRect(0.0, 10.0, Single(Width), 20.0);
+        PrivacyRect := MakeRect(0.0, ScaleDIP(10.0), Single(Width), ScaleDIP(20.0));
         Graphics.DrawString(PrivacyStr, Length(PrivacyStr), FontBadge, PrivacyRect, StrFmt, BrushMuted);
 
         // Center Waveform Bars (24 bars)
-        CenterY := Height / 2.0 + 4.0;
+        CenterY := Height / 2.0 + ScaleDIP(4.0);
         for I := 0 to 23 do
         begin
-          BarX := Width / 2.0 - 140.0 + I * 12.0;
+          BarX := Width / 2.0 - ScaleDIP(140.0) + I * ScaleDIP(12.0);
           if FIsRecording and not FIsPaused then
-            BarH := 8.0 + 26.0 * Abs(Sin(FAnimPhase + I * 0.35))
+            BarH := ScaleDIP(8.0) + ScaleDIP(26.0) * Abs(Sin(FAnimPhase + I * 0.35))
           else
-            BarH := 6.0;
+            BarH := ScaleDIP(6.0);
 
           Graphics.DrawLine(PenWave, BarX, CenterY - BarH / 2.0, BarX, CenterY + BarH / 2.0);
         end;
@@ -284,7 +284,7 @@ begin
         var MaxSec := FMaxDurationSec mod 60;
         TimerStr := Format('%.2d:%.2d / %.2d:%.2d', [MinVal, SecVal, MaxMin, MaxSec]);
 
-        TimerRect := MakeRect(0.0, Single(Height) - 34.0, Single(Width), 26.0);
+        TimerRect := MakeRect(0.0, Single(Height) - ScaleDIP(34.0), Single(Width), ScaleDIP(26.0));
         Graphics.DrawString(TimerStr, Length(TimerStr), FontTimer, TimerRect, StrFmt, BrushInk);
       finally
         StrFmt.Free;
@@ -308,8 +308,8 @@ end;
 constructor THbVoiceFieldCard.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Width := 560;
-  Height := 80;
+  Width := ScalePixels(560);
+  Height := ScalePixels(80);
   FIsEditing := False;
 
   FEditBox := TEdit.Create(Self);
@@ -394,10 +394,10 @@ begin
   inherited;
   if Assigned(FEditBox) then
   begin
-    FEditBox.Left := 140;
-    FEditBox.Top := 22;
-    FEditBox.Width := Width - 320;
-    FEditBox.Height := 26;
+    FEditBox.Left := ScalePixels(140);
+    FEditBox.Top := ScalePixels(22);
+    FEditBox.Width := Width - ScalePixels(320);
+    FEditBox.Height := ScalePixels(26);
   end;
 end;
 
@@ -407,11 +407,11 @@ begin
   if (Button = mbLeft) and Enabled then
   begin
     // Check Action Buttons on Right
-    if (X >= Width - 60) and (X <= Width - 14) and (Y >= 14) and (Y <= 40) then
+    if (X >= Width - ScalePixels(60)) and (X <= Width - ScalePixels(14)) and (Y >= ScalePixels(14)) and (Y <= ScalePixels(40)) then
       Discard
-    else if (X >= Width - 110) and (X <= Width - 66) and (Y >= 14) and (Y <= 40) then
+    else if (X >= Width - ScalePixels(110)) and (X <= Width - ScalePixels(66)) and (Y >= ScalePixels(14)) and (Y <= ScalePixels(40)) then
       BeginEdit
-    else if (X >= Width - 160) and (X <= Width - 116) and (Y >= 14) and (Y <= 40) then
+    else if (X >= Width - ScalePixels(160)) and (X <= Width - ScalePixels(116)) and (Y >= ScalePixels(14)) and (Y <= ScalePixels(40)) then
       Accept;
   end;
 end;
@@ -456,9 +456,9 @@ begin
           IndicatorColor := Tokens.Primary;
     end;
 
-    IndicatorPen := TGPPen.Create(ColorToARGB(IndicatorColor), 4.0);
+    IndicatorPen := TGPPen.Create(ColorToARGB(IndicatorColor), ScaleDIP(4.0));
     try
-      Graphics.DrawLine(IndicatorPen, 2.0, 0.0, 2.0, Single(Height));
+      Graphics.DrawLine(IndicatorPen, ScaleDIP(2.0), 0.0, ScaleDIP(2.0), Single(Height));
     finally
       IndicatorPen.Free;
     end;

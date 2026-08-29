@@ -1,5 +1,7 @@
 unit DeepBase.Math.Random;
 
+{$WARN IMPLICIT_STRING_CAST OFF}
+
 {*******************************************************************************
   DeepBase Math — Random Distribution Generators & Secure Random
   Extracted from DeepBase.Math to keep the facade under 800 lines.

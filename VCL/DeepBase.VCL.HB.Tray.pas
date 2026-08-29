@@ -165,9 +165,16 @@ begin
   Result := (ARGB(A) shl 24) or (ARGB(R) shl 16) or (ARGB(G) shl 8) or ARGB(B);
 end;
 
-function ScaleDIP(APixels: Single): Single;
+function ScaleDIP(APixels: Single; APPI: Integer = 0): Single;
 begin
-  Result := APixels * (Screen.PixelsPerInch / 96.0);
+  if APPI <= 0 then
+    APPI := Screen.PixelsPerInch;
+  Result := APixels * (APPI / 96.0);
+end;
+
+function ScalePixels(APixels: Single; APPI: Integer = 0): Integer;
+begin
+  Result := Round(ScaleDIP(APixels, APPI));
 end;
 
 { THbTrayMenuItem }
@@ -288,46 +295,53 @@ var
   MonRect: TRect;
   CalcH, CalcW, I: Integer;
   Item: THbTrayMenuItem;
+  LPPI: Integer;
 begin
   if not Assigned(FMenu) then
     Exit;
 
-  CalcW := 280;
-  CalcH := 16; // Top/Bottom padding
+  // Multi-monitor coordinate detection & clamping
+  Mon := Screen.MonitorFromPoint(Point(X, Y));
+  if Assigned(Mon) then
+  begin
+    MonRect := Mon.WorkareaRect;
+    LPPI := Mon.PixelsPerInch;
+  end
+  else
+  begin
+    MonRect := Screen.WorkAreaRect;
+    LPPI := Screen.PixelsPerInch;
+  end;
+
+  CalcW := ScalePixels(280, LPPI);
+  CalcH := ScalePixels(16, LPPI); // Top/Bottom padding
 
   if FMenu.Header.Visible then
-    Inc(CalcH, 60);
+    Inc(CalcH, ScalePixels(60, LPPI));
 
   for I := 0 to FMenu.Items.Count - 1 do
   begin
     Item := FMenu.Items[I];
     if Item.Kind = tikSeparator then
-      Inc(CalcH, 9)
+      Inc(CalcH, ScalePixels(9, LPPI))
     else
-      Inc(CalcH, 32);
+      Inc(CalcH, ScalePixels(32, LPPI));
   end;
 
   Width := CalcW;
   Height := CalcH;
 
-  // Multi-monitor coordinate detection & clamping
-  Mon := Screen.MonitorFromPoint(Point(X, Y));
-  if Assigned(Mon) then
-    MonRect := Mon.WorkareaRect
-  else
-    MonRect := Screen.WorkAreaRect;
-
   // Clamping X
-  if X + Width > MonRect.Right - 8 then
-    X := MonRect.Right - Width - 8;
-  if X < MonRect.Left + 8 then
-    X := MonRect.Left + 8;
+  if X + Width > MonRect.Right - ScalePixels(8, LPPI) then
+    X := MonRect.Right - Width - ScalePixels(8, LPPI);
+  if X < MonRect.Left + ScalePixels(8, LPPI) then
+    X := MonRect.Left + ScalePixels(8, LPPI);
 
   // Clamping Y (upwards from bottom taskbar)
-  if Y + Height > MonRect.Bottom - 8 then
-    Y := Y - Height - 8;
-  if Y < MonRect.Top + 8 then
-    Y := MonRect.Top + 8;
+  if Y + Height > MonRect.Bottom - ScalePixels(8, LPPI) then
+    Y := Y - Height - ScalePixels(8, LPPI);
+  if Y < MonRect.Top + ScalePixels(8, LPPI) then
+    Y := MonRect.Top + ScalePixels(8, LPPI);
 
   Left := X;
   Top := Y;
@@ -350,10 +364,15 @@ var
   Item: THbTrayMenuItem;
   R, HeaderRect, ItemRect: TGPRectF;
   NativeRect: TRect;
+  LPPI: Integer;
 begin
   Tokens := THbTheme.Tokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
   FItemRects.Clear;
+  LPPI := CurrentPPI;
+  if LPPI <= 0 then
+    LPPI := Screen.PixelsPerInch;
+
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
@@ -373,9 +392,9 @@ begin
 
     FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
     try
-      FontNormal := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleRegular, UnitPixel);
-      FontBold := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleBold, UnitPixel);
-      FontSmall := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleRegular, UnitPixel);
+      FontNormal := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS, LPPI), FontStyleRegular, UnitPixel);
+      FontBold := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS, LPPI), FontStyleBold, UnitPixel);
+      FontSmall := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS, LPPI), FontStyleRegular, UnitPixel);
       BrushInk := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
       BrushMuted := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
       BrushHover := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
@@ -391,31 +410,31 @@ begin
         StrFmtCenter.SetAlignment(StringAlignmentCenter);
         StrFmtCenter.SetLineAlignment(StringAlignmentCenter);
 
-        CurY := 8.0;
+        CurY := ScaleDIP(8.0, LPPI);
 
         // 1. Header Zone
         if Assigned(FMenu) and FMenu.Header.Visible then
         begin
-          HeaderRect := MakeRect(12.0, CurY, Single(Width) - 24.0, 48.0);
+          HeaderRect := MakeRect(ScaleDIP(12.0, LPPI), CurY, Single(Width) - ScaleDIP(24.0, LPPI), ScaleDIP(48.0, LPPI));
           var BrushHdrBg := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
           try Graphics.FillRectangle(BrushHdrBg, HeaderRect); finally BrushHdrBg.Free; end;
 
           // Header Title
-          var HdrTitleRect := MakeRect(24.0, CurY + 6.0, Single(Width) - 48.0, 18.0);
+          var HdrTitleRect := MakeRect(ScaleDIP(24.0, LPPI), CurY + ScaleDIP(6.0, LPPI), Single(Width) - ScaleDIP(48.0, LPPI), ScaleDIP(18.0, LPPI));
           Graphics.DrawString(FMenu.Header.Title, Length(FMenu.Header.Title), FontBold, HdrTitleRect, StrFmtNear, BrushInk);
 
           // Subtitle / Status
-          var HdrSubRect := MakeRect(24.0, CurY + 26.0, Single(Width) - 48.0, 16.0);
+          var HdrSubRect := MakeRect(ScaleDIP(24.0, LPPI), CurY + ScaleDIP(26.0, LPPI), Single(Width) - ScaleDIP(48.0, LPPI), ScaleDIP(16.0, LPPI));
           Graphics.DrawString(FMenu.Header.Subtitle, Length(FMenu.Header.Subtitle), FontSmall, HdrSubRect, StrFmtNear, BrushMuted);
 
           // Breathing dot
           if FMenu.Header.HasBreathingDot then
           begin
             var DotBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Success));
-            try Graphics.FillEllipse(DotBrush, 14.0, CurY + 11.0, 6.0, 6.0); finally DotBrush.Free; end;
+            try Graphics.FillEllipse(DotBrush, ScaleDIP(14.0, LPPI), CurY + ScaleDIP(11.0, LPPI), ScaleDIP(6.0, LPPI), ScaleDIP(6.0, LPPI)); finally DotBrush.Free; end;
           end;
 
-          CurY := CurY + 54.0;
+          CurY := CurY + ScaleDIP(54.0, LPPI);
         end;
 
         // 2. Menu Items
@@ -428,18 +447,18 @@ begin
             begin
               var PenDiv := TGPPen.Create(ColorToARGB(Tokens.Border), 1.0);
               try
-                Graphics.DrawLine(PenDiv, 12.0, CurY + 4.0, Single(Width) - 12.0, CurY + 4.0);
+                Graphics.DrawLine(PenDiv, ScaleDIP(12.0, LPPI), CurY + ScaleDIP(4.0, LPPI), Single(Width) - ScaleDIP(12.0, LPPI), CurY + ScaleDIP(4.0, LPPI));
               finally
                 PenDiv.Free;
               end;
-              NativeRect := Rect(12, Trunc(CurY), Width - 12, Trunc(CurY + 9));
+              NativeRect := Rect(ScalePixels(12, LPPI), Trunc(CurY), Width - ScalePixels(12, LPPI), Trunc(CurY + ScaleDIP(9.0, LPPI)));
               FItemRects.Add(NativeRect);
-              CurY := CurY + 9.0;
+              CurY := CurY + ScaleDIP(9.0, LPPI);
             end
             else
             begin
-              ItemRect := MakeRect(8.0, CurY, Single(Width) - 16.0, 32.0);
-              NativeRect := Rect(8, Trunc(CurY), Width - 8, Trunc(CurY + 32));
+              ItemRect := MakeRect(ScaleDIP(8.0, LPPI), CurY, Single(Width) - ScaleDIP(16.0, LPPI), ScaleDIP(32.0, LPPI));
+              NativeRect := Rect(ScalePixels(8, LPPI), Trunc(CurY), Width - ScalePixels(8, LPPI), Trunc(CurY + ScaleDIP(32.0, LPPI)));
               FItemRects.Add(NativeRect);
 
               // Hover effect
@@ -457,14 +476,14 @@ begin
                 if Item.IsChecked then
                 begin
                   var CheckStr: string := #$2713;
-                  var CheckRect := MakeRect(12.0, CurY, 20.0, 32.0);
+                  var CheckRect := MakeRect(ScaleDIP(12.0, LPPI), CurY, ScaleDIP(20.0, LPPI), ScaleDIP(32.0, LPPI));
                   var CheckBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
                   try Graphics.DrawString(CheckStr, Length(CheckStr), FontBold, CheckRect, StrFmtCenter, CheckBrush); finally CheckBrush.Free; end;
                 end;
               end;
 
               // Caption
-              var CapRect := MakeRect(32.0, CurY, Single(Width) - 120.0, 32.0);
+              var CapRect := MakeRect(ScaleDIP(32.0, LPPI), CurY, Single(Width) - ScaleDIP(120.0, LPPI), ScaleDIP(32.0, LPPI));
               var FontToUse := FontNormal;
               if Item.IsDefault then
                 FontToUse := FontBold;
@@ -482,11 +501,11 @@ begin
               // Shortcut Text
               if Item.ShortcutText <> '' then
               begin
-                var ShortRect := MakeRect(Single(Width) - 100.0, CurY, 86.0, 32.0);
+                var ShortRect := MakeRect(Single(Width) - ScaleDIP(100.0, LPPI), CurY, ScaleDIP(86.0, LPPI), ScaleDIP(32.0, LPPI));
                 Graphics.DrawString(Item.ShortcutText, Length(Item.ShortcutText), FontSmall, ShortRect, StrFmtFar, BrushMuted);
               end;
 
-              CurY := CurY + 32.0;
+              CurY := CurY + ScaleDIP(32.0, LPPI);
             end;
           end;
         end;

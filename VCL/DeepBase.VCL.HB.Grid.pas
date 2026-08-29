@@ -184,7 +184,18 @@ var
 begin
   if not HandleAllocated then
     Exit;
+  if FRowCount <= 0 then
+  begin
+    ShowScrollBar(Handle, SB_VERT, False);
+    Exit;
+  end;
   VisRows := Max(1, (Height - FHeaderHeight) div Max(1, FRowHeight));
+  if FRowCount <= VisRows then
+  begin
+    ShowScrollBar(Handle, SB_VERT, False);
+    Exit;
+  end;
+  ShowScrollBar(Handle, SB_VERT, True);
   FillChar(SI, SizeOf(SI), 0);
   SI.cbSize := SizeOf(SI);
   SI.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;

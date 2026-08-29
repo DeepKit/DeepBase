@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Dialogs - Modern Multi-Zone Dialog & Accordion Summary Bar for VCL
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -316,21 +316,21 @@ begin
       else IndicatorColor := Tokens.Border;
     end;
 
-    IndicatorPen := TGPPen.Create(ColorToARGB(IndicatorColor), 4.0);
+    IndicatorPen := TGPPen.Create(ColorToARGB(IndicatorColor), ScaleDIP(Tokens.SpaceXS));
     try
       if FOrientation = woVertical then
-        Graphics.DrawLine(IndicatorPen, 2.0, 0.0, 2.0, Single(Height))
+        Graphics.DrawLine(IndicatorPen, ScaleDIP(Tokens.SpaceXS * 0.5), 0.0, ScaleDIP(Tokens.SpaceXS * 0.5), Single(Height))
       else
-        Graphics.DrawLine(IndicatorPen, 0.0, 2.0, Single(Width), 2.0);
+        Graphics.DrawLine(IndicatorPen, 0.0, ScaleDIP(Tokens.SpaceXS * 0.5), Single(Width), ScaleDIP(Tokens.SpaceXS * 0.5));
     finally
       IndicatorPen.Free;
     end;
 
     // Header Summary Row
     if FOrientation = woVertical then
-      HeaderRect := MakeRect(12.0, 0.0, Width - 24.0, Single(FCollapsedSize))
+      HeaderRect := MakeRect(ScaleDIP(Tokens.SpaceM), 0.0, Width - ScaleDIP(Tokens.SpaceM * 2), Single(FCollapsedSize))
     else
-      HeaderRect := MakeRect(12.0, 0.0, Single(FCollapsedSize), Single(Height));
+      HeaderRect := MakeRect(ScaleDIP(Tokens.SpaceM), 0.0, Single(FCollapsedSize), Single(Height));
 
     FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
     try
@@ -344,7 +344,7 @@ begin
         StrFmt.SetLineAlignment(StringAlignmentCenter);
 
         // Step Badge Circle
-        var BadgeRect := MakeRect(14.0, (FCollapsedSize - 22.0) / 2.0, 22.0, 22.0);
+        var BadgeRect := MakeRect(ScaleDIP(Tokens.SpaceM), (FCollapsedSize - ScaleDIP(Tokens.SpaceL)) / 2.0, ScaleDIP(Tokens.SpaceL), ScaleDIP(Tokens.SpaceL));
         var BadgeBrush := TGPSolidBrush.Create(ColorToARGB(IndicatorColor, 40));
         try Graphics.FillEllipse(BadgeBrush, BadgeRect); finally BadgeBrush.Free; end;
 
@@ -356,14 +356,14 @@ begin
 
         // Title + Summary Text
         StrFmt.SetAlignment(StringAlignmentNear);
-        var TitleRect := MakeRect(44.0, 0.0, 180.0, Single(FCollapsedSize));
+        var TitleRect := MakeRect(ScaleDIP(Tokens.SpaceM * 3.14), 0.0, ScaleDIP(180.0), Single(FCollapsedSize));
         Graphics.DrawString(FTitle, Length(FTitle), FontTitle, TitleRect, StrFmt, BrushInk);
 
-        var SummaryRect := MakeRect(230.0, 0.0, Width - 340.0, Single(FCollapsedSize));
+        var SummaryRect := MakeRect(ScaleDIP(230.0), 0.0, Width - ScaleDIP(340.0), Single(FCollapsedSize));
         Graphics.DrawString(FSummaryText, Length(FSummaryText), FontSummary, SummaryRect, StrFmt, BrushMuted);
 
         // Toggle Button
-        var ToggleRect := MakeRect(Width - 90.0, (FCollapsedSize - 24.0) / 2.0, 78.0, 24.0);
+        var ToggleRect := MakeRect(Width - ScaleDIP(90.0), (FCollapsedSize - ScaleDIP(Tokens.SpaceL + Tokens.SpaceXS * 0.5)) / 2.0, ScaleDIP(78.0), ScaleDIP(Tokens.SpaceL + Tokens.SpaceXS * 0.5));
         var BtnBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
         try Graphics.FillRectangle(BtnBrush, ToggleRect); finally BtnBrush.Free; end;
 
@@ -378,7 +378,7 @@ begin
         // Detail Content Area (when expanded)
         if FIsExpanded and (Height > FCollapsedSize) then
         begin
-          DetailRect := MakeRect(12.0, Single(FCollapsedSize) + 4.0, Width - 24.0, Height - FCollapsedSize - 8.0);
+          DetailRect := MakeRect(ScaleDIP(Tokens.SpaceS + Tokens.SpaceXS), Single(FCollapsedSize) + ScaleDIP(Tokens.SpaceXS), Width - ScaleDIP((Tokens.SpaceS + Tokens.SpaceXS) * 2), Height - FCollapsedSize - ScaleDIP(Tokens.SpaceS));
           var DetailBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
           try Graphics.FillRectangle(DetailBrush, DetailRect); finally DetailBrush.Free; end;
         end;
@@ -403,9 +403,9 @@ end;
 class function THbDialog.Execute(const AOptions: THbDialogOptions; var AInputValue: string): THbDialogResult;
 var
   DlgForm: TForm;
-  LblTitle, LblSummary, LblBoundary, LblPrompt: TLabel;
+  LblTitle, LblSummary, LblPrompt: TLabel;
   EdtInput: TCustomEdit;
-  BtnOk, BtnCancel, BtnOnce, BtnDefer: TButton;
+  BtnOk, BtnCancel: TButton;
   PnlHeader, PnlBody, PnlFooter: TPanel;
   Tokens: THbTokens;
 begin

@@ -60,6 +60,7 @@ type
 
     procedure SetSearchFilter(const Value: string);
     procedure SetVirtualItemCount(Value: Integer);
+    procedure SetOnGetItem(Value: THbVirtualListGetItemEvent);
     function GetFilteredCount: Integer;
     procedure RebuildFilteredIndices;
     procedure UpdateBatchBar;
@@ -99,7 +100,7 @@ type
     property Anchors;
     property RowHeight: Integer read FRowHeight write FRowHeight default 72;
     property VirtualItemCount: Integer read FVirtualItemCount write SetVirtualItemCount default 0;
-    property OnGetItem: THbVirtualListGetItemEvent read FOnGetItem write FOnGetItem;
+    property OnGetItem: THbVirtualListGetItemEvent read FOnGetItem write SetOnGetItem;
     property OnItemAction: THbVirtualListItemActionEvent read FOnItemAction write FOnItemAction;
     property OnSelectionChange: THbVirtualListSelectionEvent read FOnSelectionChange write FOnSelectionChange;
   end;
@@ -176,14 +177,45 @@ begin
   if FVirtualItemCount <> Value then
   begin
     FVirtualItemCount := Max(0, Value);
+    if FVirtualItemCount > 0 then
+    begin
+      FItems.Clear;
+      FFilteredIndices.Clear;
+      FSelectedIndices.Clear;
+    end;
     UpdateScrollBars;
+    UpdateBatchBar;
+    Invalidate;
+  end;
+end;
+
+procedure THbVirtualList.SetOnGetItem(Value: THbVirtualListGetItemEvent);
+begin
+  if @FOnGetItem <> @Value then
+  begin
+    FOnGetItem := Value;
+    if Assigned(FOnGetItem) then
+    begin
+      FItems.Clear;
+      FFilteredIndices.Clear;
+      FSelectedIndices.Clear;
+    end
+    else
+    begin
+      FVirtualItemCount := 0;
+      FFilteredIndices.Clear;
+      FSelectedIndices.Clear;
+    end;
+    RebuildFilteredIndices;
+    UpdateScrollBars;
+    UpdateBatchBar;
     Invalidate;
   end;
 end;
 
 function THbVirtualList.GetFilteredCount: Integer;
 begin
-  if Assigned(FOnGetItem) and (FVirtualItemCount > 0) then
+  if FVirtualItemCount > 0 then
     Result := FVirtualItemCount
   else if FSearchFilter <> '' then
     Result := FFilteredIndices.Count
@@ -286,15 +318,35 @@ end;
 
 procedure THbVirtualList.OnSelectAllClick(Sender: TObject);
 var
-  I: Integer;
+  I, LTotal: Integer;
 begin
-  if FSelectedIndices.Count = FFilteredIndices.Count then
-    FSelectedIndices.Clear
+  LTotal := GetFilteredCount;
+  if LTotal <= 0 then
+  begin
+    FSelectedIndices.Clear;
+  end
+  else if FSelectedIndices.Count >= LTotal then
+  begin
+    FSelectedIndices.Clear;
+  end
   else
   begin
     FSelectedIndices.Clear;
-    for I := 0 to FFilteredIndices.Count - 1 do
-      FSelectedIndices.Add(FFilteredIndices[I]);
+    if Assigned(FOnGetItem) and (FVirtualItemCount > 0) then
+    begin
+      for I := 0 to FVirtualItemCount - 1 do
+        FSelectedIndices.Add(I);
+    end
+    else if FSearchFilter <> '' then
+    begin
+      for I := 0 to FFilteredIndices.Count - 1 do
+        FSelectedIndices.Add(FFilteredIndices[I]);
+    end
+    else
+    begin
+      for I := 0 to FItems.Count - 1 do
+        FSelectedIndices.Add(I);
+    end;
   end;
   UpdateBatchBar;
   Invalidate;

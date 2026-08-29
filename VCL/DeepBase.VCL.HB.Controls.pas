@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Controls - HB Visual Infrastructure Core Atomic Controls
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -15,6 +15,8 @@
   ============================================================================ }
 
 unit DeepBase.VCL.HB.Controls;
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 interface
 
@@ -164,12 +166,14 @@ type
     FClosable: Boolean;
     FCaption: string;
     FOnClose: TNotifyEvent;
+    FClosePressed: Boolean;
     procedure SetTone(Value: THbChipTone);
     procedure SetSelected(Value: Boolean);
     procedure SetClosable(Value: Boolean);
     procedure SetCaption(const Value: string);
   protected
     procedure Paint; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -322,11 +326,13 @@ type
     FCount: Integer;
     FTrailingLink: string;
     FOnTrailingClick: TNotifyEvent;
+    FTrailingPressed: Boolean;
     procedure SetTitle(const Value: string);
     procedure SetCount(Value: Integer);
     procedure SetTrailingLink(const Value: string);
   protected
     procedure Paint; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -667,7 +673,7 @@ begin
       bkDanger:
       begin
         BgColor := Tokens.Danger;
-        TextColor := $FFFFFFFF;
+        TextColor := Tokens.OnPrimary;
       end;
     end;
 
@@ -974,6 +980,7 @@ begin
   FSelected := False;
   FClosable := False;
   FCaption := 'Chip';
+  FClosePressed := False;
   SetBounds(0, 0, ScalePixels(70), ScalePixels(24));
 end;
 
@@ -1013,11 +1020,21 @@ begin
   end;
 end;
 
+procedure THbChip.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  inherited;
+  if (Button = mbLeft) and FClosable and (X > (Width - ScalePixels(20))) then
+    FClosePressed := True
+  else
+    FClosePressed := False;
+end;
+
 procedure THbChip.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
-  if FClosable and (X > (Width - ScalePixels(20))) and Assigned(FOnClose) then
+  if (Button = mbLeft) and FClosePressed and FClosable and (X > (Width - ScalePixels(20))) and Assigned(FOnClose) then
     FOnClose(Self);
+  FClosePressed := False;
 end;
 
 procedure THbChip.Paint;
@@ -1039,6 +1056,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
     Radius := RectF.Height * 0.5;
@@ -1155,6 +1173,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
     if FShape = hpPill then
@@ -1300,6 +1319,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
 
@@ -1446,6 +1466,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     var Thick := ScaleDIP(FThickness);
     RectF := MakeRect(Thick * 0.5 + 1.0, Thick * 0.5 + 1.0, Width - Thick - 2.0, Height - Thick - 2.0);
@@ -1574,6 +1595,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
 
@@ -1714,6 +1736,7 @@ begin
   Graphics := TGPGraphics.Create(Canvas.Handle);
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
+    EraseBackground(Graphics);
 
     RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
     case FVariant of
@@ -1748,6 +1771,7 @@ begin
   FTitle := '区段标题';
   FCount := -1;
   FTrailingLink := '';
+  FTrailingPressed := False;
   SetBounds(0, 0, ScalePixels(240), ScalePixels(28));
 end;
 
@@ -1778,11 +1802,21 @@ begin
   end;
 end;
 
+procedure THbSectionHeader.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  inherited;
+  if (Button = mbLeft) and (FTrailingLink <> '') and (X > (Width - ScalePixels(80))) then
+    FTrailingPressed := True
+  else
+    FTrailingPressed := False;
+end;
+
 procedure THbSectionHeader.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
-  if (FTrailingLink <> '') and (X > (Width - ScalePixels(80))) and Assigned(FOnTrailingClick) then
+  if (Button = mbLeft) and FTrailingPressed and (FTrailingLink <> '') and (X > (Width - ScalePixels(80))) and Assigned(FOnTrailingClick) then
     FOnTrailingClick(Self);
+  FTrailingPressed := False;
 end;
 
 procedure THbSectionHeader.Paint;
@@ -1800,6 +1834,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
     try
@@ -1829,7 +1864,7 @@ begin
             TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
             try
               StrFmt.SetAlignment(StringAlignmentFar);
-              Graphics.DrawString(FTrailingLink, -1, Font, MakeRect(Width * 0.5, 0.0, Width * 0.5, Height), StrFmt, TextBrush);
+              Graphics.DrawString(FTrailingLink, -1, Font, MakeRect(Width * 0.5, 0.0, Width * 0.5 - ScaleDIP(Tokens.SpaceXS), Height), StrFmt, TextBrush);
             finally
               TextBrush.Free;
             end;

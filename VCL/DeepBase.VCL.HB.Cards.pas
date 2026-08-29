@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Cards - HB Visual Infrastructure Business Cards & Containers
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -11,6 +11,8 @@
   ============================================================================ }
 
 unit DeepBase.VCL.HB.Cards;
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 interface
 
@@ -458,6 +460,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
+    EraseBackground(Graphics);
 
     if FEmphasis = peHero then
       ValColor := Tokens.Primary
@@ -486,7 +489,7 @@ begin
           // 2. Draw Caption
           CapBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
           try
-            Graphics.DrawString(FCaption, -1, CapFont, MakeRect(0.0, ValHeight * 1.1 + 2.0, Width, Height - ValHeight * 1.1), StrFmt, CapBrush);
+            Graphics.DrawString(FCaption, -1, CapFont, MakeRect(0.0, ValHeight * 1.1 + ScaleDIP(Tokens.SpaceXS * 0.5), Width, Height - ValHeight * 1.1), StrFmt, CapBrush);
           finally
             CapBrush.Free;
           end;
@@ -747,8 +750,8 @@ begin
     end;
 
     // 2. Draw Avatar
-    var AvSize := ScaleDIP(32);
-    var AvRect := MakeRect(ScaleDIP(10), (Height - AvSize) * 0.5, AvSize, AvSize);
+    var AvSize := ScaleDIP(Tokens.SpaceXL);
+    var AvRect := MakeRect(ScaleDIP(Tokens.SpaceM), (Height - AvSize) * 0.5, AvSize, AvSize);
     Brush := TGPSolidBrush.Create(ColorToARGB(GetSeedColor(FAvatarSeed), Round(255 * AlphaMult)));
     try
       Graphics.FillEllipse(Brush, AvRect);
@@ -779,10 +782,10 @@ begin
 
           // 3. Draw Title Text
           StrFmt.SetAlignment(StringAlignmentNear);
-          var ContentX := AvRect.X + AvSize + ScaleDIP(10);
+          var ContentX := AvRect.X + AvSize + ScaleDIP(Tokens.SpaceM);
           TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink, Round(255 * AlphaMult)));
           try
-            Graphics.DrawString(FTitle, -1, TitleFont, MakeRect(ContentX, ScaleDIP(8), ScaleDIP(120), ScaleDIP(18)), StrFmt, TextBrush);
+            Graphics.DrawString(FTitle, -1, TitleFont, MakeRect(ContentX, ScaleDIP(Tokens.SpaceS), ScaleDIP(120), ScaleDIP(18)), StrFmt, TextBrush);
           finally
             TextBrush.Free;
           end;
@@ -790,8 +793,8 @@ begin
           // 4. Draw Badge 1 (if present)
           if FBadge1Text <> '' then
           begin
-            var BadgeRect := MakeRect(ContentX + ScaleDIP(50), ScaleDIP(8), ScaleDIP(60), ScaleDIP(16));
-            var BadgePath := CreateRoundRectPath(BadgeRect, ScaleDIP(4));
+            var BadgeRect := MakeRect(ContentX + ScaleDIP(50), ScaleDIP(Tokens.SpaceS), ScaleDIP(60), ScaleDIP(16));
+            var BadgePath := CreateRoundRectPath(BadgeRect, ScaleDIP(Tokens.SpaceXS));
             try
               Brush := TGPSolidBrush.Create(ColorToARGB(Tokens.DangerSoft, Round(255 * AlphaMult)));
               try Graphics.FillPath(Brush, BadgePath); finally Brush.Free; end;
@@ -812,7 +815,7 @@ begin
           StrFmt.SetAlignment(StringAlignmentNear);
           TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted, Round(255 * AlphaMult)));
           try
-            Graphics.DrawString(FContextText, -1, SubFont, MakeRect(ContentX, ScaleDIP(28), Width - ContentX - ScaleDIP(195), ScaleDIP(20)), StrFmt, TextBrush);
+            Graphics.DrawString(FContextText, -1, SubFont, MakeRect(ContentX, ScaleDIP(Tokens.SpaceL + Tokens.SpaceS * 0.75), Width - ContentX - ScaleDIP(195), ScaleDIP(20)), StrFmt, TextBrush);
           finally
             TextBrush.Free;
           end;

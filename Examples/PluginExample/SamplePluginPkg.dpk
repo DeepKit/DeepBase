@@ -3,17 +3,10 @@
   
   Build this package to create SamplePluginPkg.bpl which can be loaded
   by DeepBase PluginManager.
-  
-  Build instructions:
-  1. Open this package in RAD Studio
-  2. Build (Ctrl+F9)
-  3. Copy the resulting .bpl to your application's Plugins directory
   ============================================================================ }
 
 package SamplePluginPkg;
 
-{$R *.res}
-{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -35,20 +28,15 @@ package SamplePluginPkg;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
-{$ENDIF IMPLICITBUILDING}
 {$RUNONLY}
 {$IMPLICITBUILD ON}
 
 requires
   rtl,
-  vcl;
+  vcl,
+  DeepBaseCore;
 
 contains
-  SamplePlugin in 'SamplePlugin.pas',
-  DeepBase.Plugin in '..\..\Core\DeepBase.Plugin.pas';
-
-exports
-  RegisterPlugin;
+  SamplePlugin in 'SamplePlugin.pas';
 
 end.

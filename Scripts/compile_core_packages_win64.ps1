@@ -26,9 +26,8 @@ Write-Host "Root: $RootDir"
 $DCUOut = Join-Path $RootDir "DCUOutput\Win64"
 if (-not (Test-Path $DCUOut)) { New-Item -ItemType Directory -Path $DCUOut -Force | Out-Null }
 
-# Core runtime packages only; FMX/VCL intentionally excluded (baseline broken,
-# out of scope). See header comment.
-$Packages = @('DeepBaseCore','DeepBasePersistence','DeepBaseServices','DeepBaseFeatures')
+# Core runtime packages only (L1 Core, Persistence, Services)
+$Packages = @('DeepBaseCore','DeepBasePersistence','DeepBaseServices')
 
 $SrcPathRoots = @('Core','Features','VCL','FMX','Persistence','ThirdParty','ThirdParty\Payment') |
     Where-Object { Test-Path (Join-Path $RootDir $_) }

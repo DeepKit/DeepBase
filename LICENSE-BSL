@@ -1,0 +1,39 @@
+﻿Business Source License 1.1
+
+Parameters
+
+Licensor: 
+    DeepBase / DeepPulse Project Contributors
+
+Licensed Work: 
+    DeepBase Layer 3 Moat Components (AutoFix Engine, Browser Automation & Scraping Kernel, Governance Kernel)
+    including all source code files under Core/DeepBase.AutoFix*, FMX/DeepBase.AutoFix*, Features/DeepBase.Browser*, 
+    Governance/DeepBase.Governance*, and corresponding project files (*.dpk).
+
+Additional Use Grant: 
+    You may use the Licensed Work to build, run, and maintain internal business applications, enterprise workflows, 
+    and custom tooling for internal operational purposes without payment. 
+    
+    You may NOT:
+    1. Resell, sublicense, or distribute the Licensed Work (or derivative works thereof) as a standalone software product, SDK, or hosted commercial SaaS service.
+    2. Incorporate the Licensed Work into a software offering that directly competes with DeepBase / DeepPulse commercial products or governance suites.
+
+Change Date: 
+    Unset / Perpetual (Effective until amended or relicensed in writing by the Licensor).
+
+Change License: 
+    Apache License, Version 2.0
+
+----------------------------------------------------------------------
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor also grants you an Additional Use Grant, defined above, allowing specific production and commercial uses.
+
+Any use of the Licensed Work for production purposes other than what is explicitly authorized by the Additional Use Grant requires a separate commercial license from the Licensor.
+
+On the Change Date, or on the fourth anniversary of the first public release of a version of the Licensed Work if no Change Date is specified, the Licensed Work will automatically be licensed under the Change License without additional action by the Licensor.
+
+All copies of the Licensed Work must retain this notice and the copyright notice of the Licensor.
+
+THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE LICENSOR OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE LICENSED WORK OR THE USE OR OTHER DEALINGS IN THE LICENSED WORK.

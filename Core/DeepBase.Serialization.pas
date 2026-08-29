@@ -1,5 +1,7 @@
 unit DeepBase.Serialization;
 
+{$WARN IMPLICIT_STRING_CAST OFF}
+
 (*******************************************************************************
   DeepBase Serialization Framework
   A unified serialization system with:

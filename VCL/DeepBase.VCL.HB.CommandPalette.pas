@@ -22,6 +22,7 @@ uses
   System.Types,
   System.UITypes,
   System.Math,
+  System.Generics.Defaults,
   System.Generics.Collections,
   Vcl.Controls,
   Vcl.Graphics,
@@ -193,6 +194,26 @@ begin
       FFilteredIndices.Add(I);
   end;
 
+  // Sort filtered indices by MRU (LastUsedAt descending), preserving original order for equal timestamps
+  FFilteredIndices.Sort(
+    TComparer<Integer>.Construct(
+      function(const Left, Right: Integer): Integer
+      var
+        ItemL, ItemR: THbCommandItem;
+      begin
+        ItemL := FItems[Left];
+        ItemR := FItems[Right];
+        if ItemL.LastUsedAt <> ItemR.LastUsedAt then
+        begin
+          if ItemL.LastUsedAt > ItemR.LastUsedAt then
+            Result := -1
+          else
+            Result := 1;
+        end
+        else
+          Result := Left - Right;
+      end));
+
   if FSelectedIndex >= FFilteredIndices.Count then
     FSelectedIndex := Max(0, FFilteredIndices.Count - 1);
 end;
@@ -273,6 +294,8 @@ begin
     Item := FItems[ItemIndex];
     if Item.Enabled then
     begin
+      Item.LastUsedAt := Now;
+      FItems[ItemIndex] := Item;
       if Assigned(FOnCommandExecute) then
         FOnCommandExecute(Self, Item);
       HidePalette;
@@ -292,7 +315,7 @@ begin
   Item.IconName := AIcon;
   Item.Enabled := AEnabled;
   Item.DisabledReason := ADisabledReason;
-  Item.LastUsedAt := Now;
+  Item.LastUsedAt := 0;
   Item.Payload := '';
   FItems.Add(Item);
   RebuildFilteredList;
