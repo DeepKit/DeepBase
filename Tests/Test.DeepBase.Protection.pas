@@ -60,6 +60,9 @@ type
     procedure DecryptBinary_LegacyCbcPayload_Roundtrip;
 
     [Test]
+    procedure DecryptLegacyUbg1Payload_TextAndBinary_Roundtrip;
+
+    [Test]
     procedure CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue;
 
     [Test]
@@ -260,6 +263,25 @@ begin
   Decrypted := TBasicProtection.DecryptBinaryData(TestHexToBytes(LegacyEncrypted), 'Legacy-Key');
 
   Assert.AreEqual('Legacy CBC payload', TEncoding.UTF8.GetString(Decrypted));
+end;
+
+procedure TTestBasicProtection.DecryptLegacyUbg1Payload_TextAndBinary_Roundtrip;
+const
+  // UBG1 legacy GCM fixture: magic 'UBG1' + fixed nonce(12) + tag(16) + ciphertext(14)，
+  // 明文 'Secret payload'，密码 'Correct-Key'，按 PBKDF2 升级前的单次 SHA-256 派生
+  // 参数一次性生成。守卫 legacy 解密分支（DeriveLegacyUbg1Key）在 KDF 重命名后
+  // 对旧密文仍可读（WO-20260829-0229 RC6）。
+  LegacyUbg1Hex =
+    '55424731' + '0102030405060708090A0B0C' +
+    '26391B5E2F69227F0FA4E86380329240' +
+    '1DFBDE48E8E15D750AB8AC4AEFB1';
+begin
+  Assert.AreEqual('Secret payload',
+    TBasicProtection.DecryptSensitiveData('UBG1|' + LegacyUbg1Hex, 'Correct-Key'));
+
+  Assert.AreEqual('Secret payload',
+    TEncoding.UTF8.GetString(
+      TBasicProtection.DecryptBinaryData(TestHexToBytes(LegacyUbg1Hex), 'Correct-Key')));
 end;
 
 procedure TTestBasicProtection.CalculateHMAC_And_VerifyDataIntegrity_ReturnsTrue;

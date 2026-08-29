@@ -1,6 +1,4 @@
-unit DeepBase.Math.Random;
-
-{$WARN IMPLICIT_STRING_CAST OFF}
+﻿unit DeepBase.Math.Random;
 
 {*******************************************************************************
   DeepBase Math — Random Distribution Generators & Secure Random

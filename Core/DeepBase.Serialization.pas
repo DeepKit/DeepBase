@@ -1,6 +1,4 @@
-unit DeepBase.Serialization;
-
-{$WARN IMPLICIT_STRING_CAST OFF}
+﻿unit DeepBase.Serialization;
 
 (*******************************************************************************
   DeepBase Serialization Framework

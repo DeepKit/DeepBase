@@ -1,8 +1,5 @@
 unit DeepBase.Protection;
 
-{$WARN SYMBOL_DEPRECATED OFF}
-{$WARN IMPLICIT_STRING_CAST OFF}
-
 interface
 
 uses
@@ -144,7 +141,7 @@ type
   TBasicProtection = class
   private
     class function GenerateRandomBytes(ALength: Integer): TBytes; static;
-    class function DeriveAes256Key(const APassword: string): TBytes; static; deprecated 'Use DeriveAes256KeyPBKDF2 for new code (CORE-R2-005)';
+    class function DeriveLegacyUbg1Key(const APassword: string): TBytes; static;
     class function IsGcmPayload(const AData: TBytes): Boolean; static;
     class function DecryptGcmBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
     class function DecryptCbcBytes(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
@@ -154,9 +151,9 @@ type
     class function CalculateHMACBinary(const AData: TBytes; const AKey: TBytes): TBytes; static;
     /// <summary>
     ///   PBKDF2-HMAC-SHA256 key derivation (RFC 2898).
-    ///   Use for new encryption code paths. Replaces the deprecated single-SHA-256
-    ///   DeriveAes256Key with an iteration-hardened derivation that resists
-    ///   brute-force and dictionary attacks.
+    ///   Use for new encryption code paths. Successor of the single-SHA-256
+    ///   UBG1 legacy derivation (DeriveLegacyUbg1Key) with iteration hardening
+    ///   that resists brute-force and dictionary attacks.
     /// </summary>
     /// <param name="APassword">Password string (UTF-8 encoded internally).</param>
     /// <param name="ASalt">Random salt; 16 bytes recommended. Must be unique per derivation.</param>
@@ -218,16 +215,15 @@ begin
     raise ERandomException.CreateFmt('BCryptGenRandom failed with status: %d', [Status]);
 end;
 
-class function TBasicProtection.DeriveAes256Key(const APassword: string): TBytes;
+class function TBasicProtection.DeriveLegacyUbg1Key(const APassword: string): TBytes;
 begin
   if Trim(APassword) = '' then
     raise EMissingConfigurationException.Create('Password is required');
 
-  // DEPRECATED (CORE-R2-005): single SHA-256 is too fast for password-derived keys;
-  // it offers no resistance to brute-force or dictionary attacks.
-  // Retained ONLY for decrypting data produced by EncryptGcmBytes prior to the
-  // PBKDF2 upgrade (UBG1 payloads). New code paths must use DeriveAes256KeyPBKDF2
-  // together with EncryptGcmPbkdf2Bytes / DecryptGcmPbkdf2Bytes (UBG2 payloads).
+  // UBG1 遗留载荷（PBKDF2 升级前由 EncryptGcmBytes 产出）的密钥派生：单次 SHA-256。
+  // 仅 DecryptGcmBytes 读取旧数据使用；新加密路径必须走
+  // DeriveAes256KeyPBKDF2 + EncryptGcmPbkdf2Bytes / DecryptGcmPbkdf2Bytes (UBG2)。
+  // 弱 KDF 本身不构成可移除的弃用项——旧密文可读性依赖它（CORE-R2-005 / WO-20260829-0229）。
   Result := THashSHA2.GetHashBytes(APassword);
   if Length(Result) <> 32 then
     raise EHashException.Create('Failed to derive AES-256 key');
@@ -279,7 +275,7 @@ begin
 
   AlgHandle := 0;
   KeyHandle := 0;
-  KeyBytes := DeriveAes256Key(APassword);
+  KeyBytes := DeriveLegacyUbg1Key(APassword);
 
   try
     Status := BCryptOpenAlgorithmProvider(AlgHandle, BCRYPT_AES_ALGORITHM, nil, 0);
