@@ -141,6 +141,8 @@ type
     property Density: THbDensity read FDensity;
   end;
 
+  THbOverrideHook = reference to procedure(const AThemeId: string; var ATokens: THbTokens);
+
   /// <summary>
   /// Singleton Theme Engine for HB Visual Infrastructure (Shared Core).
   /// </summary>
@@ -152,6 +154,9 @@ type
     class var FCurrentDensity: THbDensity;
     class var FListeners: TList<TNotifyEvent>;
     class var FSettingsBridge: TObject;
+
+    class var FOverrides: TDictionary<string, THbTokens>;
+    class var FOverrideHook: THbOverrideHook;
 
     class procedure EnsureInitialized;
     class procedure ParseTokensFromJson(AObj: TJSONObject; var ATokens: THbTokens); static;
@@ -165,6 +170,10 @@ type
     class function RegisterThemeFromJson(const AJson: string): string; static;
     class function GetTheme(const AThemeId: string; out ADef: THbThemeDefinition): Boolean; static;
     class function GetAvailableThemes: TArray<THbThemeMetadata>; static;
+
+    class procedure RegisterOverride(const AThemeId: string; const AOverrideTokens: THbTokens); static;
+    class procedure RegisterOverrideHook(AHook: THbOverrideHook); static;
+    class procedure ClearOverrides; static;
 
     class procedure ApplyTheme(const AThemeId: string; ADensity: THbDensity = hdComfortable); static;
     class procedure SetDensity(ADensity: THbDensity); static;
@@ -186,6 +195,8 @@ type
 
 function CalculateContrastRatio(AColor1, AColor2: TAlphaColor): Double;
 function RelativeLuminance(AColor: TAlphaColor): Double;
+function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaColor;
+function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor;
 
 implementation
 
@@ -371,6 +382,8 @@ class constructor THbTheme.Create;
 begin
   FLock := TCriticalSection.Create;
   FRegistry := TDictionary<string, THbThemeDefinition>.Create;
+  FOverrides := TDictionary<string, THbTokens>.Create;
+  FOverrideHook := nil;
   FListeners := TList<TNotifyEvent>.Create;
   FCurrentThemeId := 'huanjin-gold';
   FCurrentDensity := hdComfortable;
@@ -380,6 +393,7 @@ end;
 class destructor THbTheme.Destroy;
 begin
   FListeners.Free;
+  FOverrides.Free;
   FRegistry.Free;
   FLock.Free;
 end;
@@ -810,12 +824,59 @@ begin
   end;
 end;
 
+class procedure THbTheme.RegisterOverride(const AThemeId: string; const AOverrideTokens: THbTokens);
+begin
+  FLock.Enter;
+  try
+    EnsureInitialized;
+    FOverrides.AddOrSetValue(AThemeId, AOverrideTokens);
+  finally
+    FLock.Leave;
+  end;
+  BroadcastChange;
+end;
+
+class procedure THbTheme.RegisterOverrideHook(AHook: THbOverrideHook);
+begin
+  FLock.Enter;
+  try
+    FOverrideHook := AHook;
+  finally
+    FLock.Leave;
+  end;
+  BroadcastChange;
+end;
+
+class procedure THbTheme.ClearOverrides;
+begin
+  FLock.Enter;
+  try
+    FOverrides.Clear;
+    FOverrideHook := nil;
+  finally
+    FLock.Leave;
+  end;
+  BroadcastChange;
+end;
+
 class function THbTheme.Tokens: THbTokens;
 var
   Def: THbThemeDefinition;
+  OverrideTokens: THbTokens;
 begin
   Def := Current;
   Result := Def.Tokens;
+
+  FLock.Enter;
+  try
+    if FOverrides.TryGetValue(FCurrentThemeId, OverrideTokens) then
+      Result := OverrideTokens;
+    if Assigned(FOverrideHook) then
+      FOverrideHook(FCurrentThemeId, Result);
+  finally
+    FLock.Leave;
+  end;
+
   if FCurrentDensity = hdCompact then
     Result.RowHeightScale := 0.85
   else
@@ -907,6 +968,59 @@ begin
   finally
     FLock.Leave;
   end;
+end;
+
+function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaColor;
+var
+  Hash: Cardinal;
+  C: Char;
+const
+  SeedPalettes: array[0..11] of TAlphaColor = (
+    $FFE0F2FE, // Sky Soft
+    $FFDCFCE7, // Green Soft
+    $FFFEF3C7, // Amber Soft
+    $FFFEE2E2, // Rose Soft
+    $FFF3E8FF, // Purple Soft
+    $FFEDE9FE, // Violet Soft
+    $FFCCFBF1, // Teal Soft
+    $FFFFEDD5, // Orange Soft
+    $FFE0E7FF, // Indigo Soft
+    $FFFCE7F3, // Pink Soft
+    $FFD1FAE5, // Emerald Soft
+    $FFE2E8F0  // Slate Soft
+  );
+begin
+  if ASeed = '' then
+    Exit(ATokens.Soft);
+  Hash := 5381;
+  for C in ASeed do
+    Hash := ((Hash shl 5) + Hash) + Ord(C);
+  Result := SeedPalettes[Hash mod 12];
+end;
+
+function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor;
+var
+  A1, R1, G1, B1, A2, R2, G2, B2: Byte;
+  A, R, G, B: Byte;
+  ClampedRatio: Single;
+begin
+  ClampedRatio := EnsureRange(ARatio, 0.0, 1.0);
+  A1 := TAlphaColorRec(AColor1).A;
+  R1 := TAlphaColorRec(AColor1).R;
+  G1 := TAlphaColorRec(AColor1).G;
+  B1 := TAlphaColorRec(AColor1).B;
+
+  A2 := TAlphaColorRec(AColor2).A;
+  R2 := TAlphaColorRec(AColor2).R;
+  G2 := TAlphaColorRec(AColor2).G;
+  B2 := TAlphaColorRec(AColor2).B;
+
+  A := Round(A1 + (A2 - A1) * ClampedRatio);
+  R := Round(R1 + (R2 - R1) * ClampedRatio);
+  G := Round(G1 + (G2 - G1) * ClampedRatio);
+  B := Round(B1 + (B2 - B1) * ClampedRatio);
+
+  Result := (TAlphaColor(A) shl 24) or (TAlphaColor(R) shl 16) or (TAlphaColor(G) shl 8) or TAlphaColor(B);
 end;
 
 end.
