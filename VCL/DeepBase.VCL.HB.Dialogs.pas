@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Dialogs - Modern Multi-Zone Dialog & Accordion Summary Bar for VCL
 
   Version: 1.0 (Delphi 13.1 on Win64)
