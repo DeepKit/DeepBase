@@ -1073,7 +1073,7 @@ begin
 
   KeyData := GetActiveKeyForPurpose(APurpose);
 
-  if (AData[0] = $02) and (Length(AData) > 1 + AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE) then
+  if (AData[0] = $02) and (Length(AData) >= 1 + AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE) then
   begin
     // v2 — AES-256-GCM authenticated decryption
     GCMData := Copy(AData, 1, Length(AData) - 1); // Nonce(12) + Cipher + Tag(16)

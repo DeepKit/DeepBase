@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG327_KeyManagerAEAD - REVIEW5-CORE-005
 
   Verifies KeyManager upgraded from CBC to AES-GCM (AEAD):
@@ -15,6 +15,7 @@ interface
 
 uses
   System.SysUtils,
+  System.IOUtils,
   DUnitX.TestFramework,
   Test.Regression.Base,
   DeepBase.Crypto, DeepBase.Crypto.Random,
@@ -53,6 +54,10 @@ type
     /// <summary>Rotate produces GCM format</summary>
     [Test]
     procedure Test_Rotate_ProducesGCMFormat;
+
+    /// <summary>Empty plaintext GCM roundtrip (WO-20260902 FIX-6)</summary>
+    [Test]
+    procedure Test_EmptyPlaintext_GCMRoundtrip;
 
     /// <summary>Multiple encrypt/decrypt cycles work correctly</summary>
     [Test]
@@ -180,6 +185,35 @@ begin
   end;
 end;
 
+procedure TBUG327_KeyManagerAEADTest.Test_EmptyPlaintext_GCMRoundtrip;
+var
+  KM: TKeyManager;
+  StorePath: string;
+  Enc, Dec: TBytes;
+begin
+  StorePath := TPath.Combine(TPath.GetTempPath,
+    Format('bug327_km_%d.json', [Random(MaxInt)]));
+
+  KM := TKeyManager.Create(StorePath);
+  try
+    KM.Initialize('test-master-password-wo20260902', False);
+
+    SetLength(Enc, 0);
+    Enc := KM.Encrypt(Enc, kpEncryption);
+    Assert.IsTrue(Length(Enc) = 29, 'Empty GCM payload: 1 + 12 + 0 + 16');
+    Assert.IsTrue(Enc[0] = $02, 'Version byte must be $02 (GCM)');
+
+    Dec := KM.Decrypt(Enc, kpEncryption);
+    Assert.IsTrue(Length(Dec) = 0, 'Empty plaintext roundtrip');
+
+    Assert.AreEqual('', KM.DecryptString(KM.EncryptString('', kpEncryption), kpEncryption));
+  finally
+    KM.Free;
+    if TFile.Exists(StorePath) then
+      TFile.Delete(StorePath);
+  end;
+end;
+
 procedure TBUG327_KeyManagerAEADTest.Test_Rotate_ProducesGCMFormat;
 var
   LKey: TDataKey;
@@ -234,5 +268,8 @@ begin
     LKey.Free;
   end;
 end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TBUG327_KeyManagerAEADTest);
 
 end.

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SchemaAdapter.Registry - Adapter Registry
   Version: 0.7
   ============================================================================ }
@@ -55,11 +55,16 @@ procedure TSchemaAdapterRegistry.Register(const VersionRange: string;
   const AdapterClass: TSchemaAdapterClass);
 var
   Entry: TVersionedAdapter;
+  Prefixes: TArray<string>;
+  Prefix: string;
 begin
   // Guard: skip adapters with empty or placeholder fingerprints (DATA2-017)
   var Temp := AdapterClass.Create;
   try
-    for var Prefix in Temp.GetSchemaFingerprintPrefixes do
+    Prefixes := Temp.GetSchemaFingerprintPrefixes;
+    if Length(Prefixes) = 0 then
+      Exit;
+    for Prefix in Prefixes do
     begin
       if (Prefix = '') or TBaseSchemaAdapter.IsPlaceholderFingerprint(Prefix) then
         Exit;

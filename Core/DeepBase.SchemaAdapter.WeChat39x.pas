@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SchemaAdapter.WeChat39x - WeChat 3.9.x Adapter
   Version: 0.7
   ============================================================================ }
@@ -19,7 +19,7 @@ type
     function GetMessageType: TMsgTypeMapping; override;
     function GetTimestamp: TTimestampMapping; override;
   public
-    constructor Create;
+    constructor Create; override;
   end;
 
 implementation

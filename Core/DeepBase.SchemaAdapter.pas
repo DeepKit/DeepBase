@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SchemaAdapter - Schema Adapter Core
   Version: 0.7
   ============================================================================ }
@@ -61,7 +61,8 @@ type
     function GetMessageType: TMsgTypeMapping; virtual; abstract;
     function GetTimestamp: TTimestampMapping; virtual; abstract;
   public
-    constructor Create;
+    // Must be virtual: registry creates adapters via TSchemaAdapterClass metaclass.
+    constructor Create; virtual;
     destructor Destroy; override;
     function GetVersion: string;
     function GetVersionRange: string;
@@ -237,9 +238,15 @@ begin
           'Forbidden field %s appears in FieldMappings', [Forbidden]);
 
   for var Prefix in FSchemaFingerprintPrefixes do
+  begin
     if Length(Prefix) < 10 then
       raise ESchemaAdapterValidationError.Create(
         'Fingerprint prefix must be at least 10 hex characters');
+    for var C in Prefix do
+      if not CharInSet(C, ['0'..'9', 'a'..'f', 'A'..'F']) then
+        raise ESchemaAdapterValidationError.CreateFmt(
+          'Fingerprint prefix must be hex; invalid character in "%s"', [Prefix]);
+  end;
 
   for var I := 0 to High(FFieldMappings) do
     if FFieldMappings[I].ColumnIndex <> I then

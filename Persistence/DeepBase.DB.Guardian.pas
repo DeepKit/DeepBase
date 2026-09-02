@@ -82,6 +82,94 @@ uses
   FireDAC.Stan.Error,
   Winapi.Windows;
 
+const
+  { WO-20260902 FIX-2: SSOT open-error classification keywords }
+  GUARDIAN_SQLITE_STRUCTURAL: array[0..4] of string = (
+    'database disk image is malformed',
+    'file is not a database',
+    'file is encrypted or is not a database',
+    'database corruption',
+    'malformed database schema'
+  );
+  GUARDIAN_SQLITE_TRANSIENT: array[0..3] of string = (
+    'database is locked',
+    'database is busy',
+    'unable to open database file',
+    'disk i/o error'
+  );
+  GUARDIAN_PG_STRUCTURAL: array[0..2] of string = (
+    'invalid page',
+    'could not read blocks',
+    'database file is corrupt'
+  );
+  GUARDIAN_PG_TRANSIENT: array[0..3] of string = (
+    'could not connect',
+    'connection refused',
+    'timeout expired',
+    'deadlock detected'
+  );
+  GUARDIAN_MYSQL_STRUCTURAL: array[0..2] of string = (
+    'table is corrupted',
+    'incorrect information in file',
+    'got error 11 from table handler'
+  );
+  GUARDIAN_MYSQL_TRANSIENT: array[0..3] of string = (
+    'lock wait timeout',
+    'deadlock found',
+    'too many connections',
+    'can''t connect'
+  );
+
+type
+  TGuardianOpenErrorClass = (geStructural, geTransient, geUnknown);
+
+function MessageMatchesKeywords(const Msg: string;
+  const Keywords: array of string): Boolean;
+var
+  LLower, Kw: string;
+begin
+  LLower := LowerCase(Msg);
+  for Kw in Keywords do
+    if Pos(LowerCase(Kw), LLower) > 0 then
+      Exit(True);
+  Result := False;
+end;
+
+function ClassifyOpenError(AConn: TFDConnection; const E: Exception): TGuardianOpenErrorClass;
+var
+  Driver: string;
+  Msg: string;
+begin
+  Msg := E.Message;
+  Driver := '';
+  if AConn <> nil then
+    Driver := LowerCase(AConn.DriverName);
+
+  if (Driver = '') or (Pos('sqlite', Driver) > 0) then
+  begin
+    if MessageMatchesKeywords(Msg, GUARDIAN_SQLITE_STRUCTURAL) then
+      Exit(geStructural);
+    if MessageMatchesKeywords(Msg, GUARDIAN_SQLITE_TRANSIENT) then
+      Exit(geTransient);
+  end
+  else if Pos('postgres', Driver) > 0 then
+  begin
+    if MessageMatchesKeywords(Msg, GUARDIAN_PG_STRUCTURAL) then
+      Exit(geStructural);
+    if MessageMatchesKeywords(Msg, GUARDIAN_PG_TRANSIENT) then
+      Exit(geTransient);
+  end
+  else if Pos('mysql', Driver) > 0 then
+  begin
+    if MessageMatchesKeywords(Msg, GUARDIAN_MYSQL_STRUCTURAL) then
+      Exit(geStructural);
+    if MessageMatchesKeywords(Msg, GUARDIAN_MYSQL_TRANSIENT) then
+      Exit(geTransient);
+  end;
+
+  Result := geUnknown;
+end;
+
 { ---------- TDBGuardian ---------- }
 
 class procedure TDBGuardian.ApplyRecommendedPragmas(AConn: TFDConnection);
@@ -401,46 +489,53 @@ begin
   except
     on E: Exception do
     begin
-      // Open itself failed: DB file likely corrupted at filesystem level
       AResult.Message := 'Open failed: ' + E.Message;
-      AResult.Status := isCorrupted;
 
-      // Try quarantine + recovery
-      Recovery := QuarantineAndRecover(DBPath);
-      AResult.QuarantinePath := Recovery.QuarantinePath;
-      AResult.RestoredFromBackup := Recovery.RestoredFromBackup;
+      case ClassifyOpenError(AConn, E) of
+        geStructural:
+          begin
+            AResult.Status := isCorrupted;
 
-      // Reset connection to clear any stale state from the failed open
-      try
-        AConn.Close;
-      except
-        on E: Exception do
-          // DATA2-061 fix: log close errors after open failure
-          OutputDebugString(PChar('Guardian: close after open-fail error: ' + E.Message));
+            Recovery := QuarantineAndRecover(DBPath);
+            AResult.QuarantinePath := Recovery.QuarantinePath;
+            AResult.RestoredFromBackup := Recovery.RestoredFromBackup;
+
+            try
+              AConn.Close;
+            except
+              on EClose: Exception do
+                OutputDebugString(PChar('Guardian: close after open-fail error: ' + EClose.Message));
+            end;
+            CleanupSideFiles(DBPath);
+            AConn.Params.Database := DBPath;
+
+            try
+              AConn.Open;
+            except
+              on E2: Exception do
+              begin
+                AResult.Message := AResult.Message +
+                  '; Retry open failed: ' + E2.Message;
+                Exit;
+              end;
+            end;
+
+            ApplyRecommendedPragmas(AConn);
+            AResult.Status := CheckIntegrity(AConn, True);
+            Result := AConn.Connected and (AResult.Status <> isCorrupted);
+            Exit;
+          end;
+        geTransient:
+          begin
+            OutputDebugString(PChar('Guardian: transient open failure (no quarantine): ' + E.Message));
+            AResult.Status := isUnknown;
+            Exit;
+          end;
+      else
+        OutputDebugString(PChar('Guardian: unclassified open failure (no quarantine): ' + E.Message));
+        AResult.Status := isUnknown;
+        Exit;
       end;
-      // Also clean up any side files left behind
-      CleanupSideFiles(DBPath);
-      AConn.Params.Database := DBPath;
-
-      // Retry open (will create fresh DB if no backup restored)
-      try
-        AConn.Open;
-      except
-        on E2: Exception do
-        begin
-          AResult.Message := AResult.Message +
-            '; Retry open failed: ' + E2.Message;
-          Exit;
-        end;
-      end;
-
-      // Retry succeeded - apply pragmas and check integrity
-      ApplyRecommendedPragmas(AConn);
-      AResult.Status := CheckIntegrity(AConn, True);
-      // If retry open succeeded and integrity is OK, return success immediately
-      // regardless of the Recovery.Status (which is always isCorrupted when no backup exists)
-      Result := AConn.Connected and (AResult.Status <> isCorrupted);
-      Exit;
     end;
   end;
 

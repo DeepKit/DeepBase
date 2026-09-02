@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG320_FileWatcherLifecycle
 
   REVIEW5-CORE-001: FileWatcher queued callback 与 debounce task 生命周期

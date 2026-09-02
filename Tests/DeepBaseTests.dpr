@@ -277,6 +277,13 @@ uses
   Test.Regression.BUG331_SafeQueryIdentifierValidation in 'Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas',
   Test.Regression.BUG332_WeChatSchemaRegistryResolve in 'Regression\Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas',
   Test.Regression.BUG333_RecycleAllConnectionsUAF in 'Regression\Test.Regression.BUG333_RecycleAllConnectionsUAF.pas',
+  Test.Regression.BUG334_PoolShutdownInUse in 'Regression\Test.Regression.BUG334_PoolShutdownInUse.pas',
+  Test.Regression.BUG335_GuardianTransientOpen in 'Regression\Test.Regression.BUG335_GuardianTransientOpen.pas',
+  Test.Regression.BUG336_WorkerQueueStopWait in 'Regression\Test.Regression.BUG336_WorkerQueueStopWait.pas',
+  Test.Regression.BUG337_AuthorizationUpdateSync in 'Regression\Test.Regression.BUG337_AuthorizationUpdateSync.pas',
+  Test.Regression.BUG338_DoQryBindTrim in 'Regression\Test.Regression.BUG338_DoQryBindTrim.pas',
+  Test.Regression.BUG339_DoQrySweepInUse in 'Regression\Test.Regression.BUG339_DoQrySweepInUse.pas',
+  Test.Regression.BUG340_PluginUnloadOrder in 'Regression\Test.Regression.BUG340_PluginUnloadOrder.pas',
   // REVIEW5-GOV-007: DeepFlow production source code and tests
   DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
   DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',

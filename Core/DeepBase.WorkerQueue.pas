@@ -2149,25 +2149,31 @@ end;
 procedure TWorkerQueue.Stop(AWaitForCompletion: Boolean);
 var
   LWorker: TWorkerThread;
+  LSnapshot: TArray<TWorkerThread>;
+  I: Integer;
 begin
   FShuttingDown := True;
   FShutdownEvent.SetEvent;
   FJobAvailable.SetEvent;
-  
-  if AWaitForCompletion then
-  begin
-    for LWorker in FWorkers do
-    begin
-      LWorker.Terminate;
-      LWorker.WaitFor;
-    end;
-  end
-  else
-  begin
-    for LWorker in FWorkers do
-      LWorker.Terminate;
+
+  // WO-20260902 FIX-5: always join workers. Snapshot refs under lock, WaitFor
+  // outside lock (workers may need FLock to finish ProcessJob), then Clear.
+  // FWorkers is TObjectList(OwnsObjects=True) — Clear must run ONLY after WaitFor.
+  FLock.Enter;
+  try
+    SetLength(LSnapshot, FWorkers.Count);
+    for I := 0 to FWorkers.Count - 1 do
+      LSnapshot[I] := FWorkers[I];
+  finally
+    FLock.Leave;
   end;
-  
+
+  for LWorker in LSnapshot do
+  begin
+    LWorker.Terminate;
+    LWorker.WaitFor;
+  end;
+
   FLock.Enter;
   try
     FWorkers.Clear;
@@ -2339,28 +2345,39 @@ end;
 procedure TWorkerQueue.SetWorkerCount(ACount: Integer);
 var
   LWorker: TWorkerThread;
+  LRemoved: TList<TWorkerThread>;
 begin
-  FLock.Enter;
+  LRemoved := TList<TWorkerThread>.Create;
   try
-    // Remove excess workers
-    while FWorkers.Count > ACount do
-    begin
-      LWorker := FWorkers[FWorkers.Count - 1];
-      LWorker.Terminate;
-      FWorkers.Delete(FWorkers.Count - 1);
+    FLock.Enter;
+    try
+      while FWorkers.Count > ACount do
+      begin
+        // Extract keeps the thread alive; Delete would free (OwnsObjects=True).
+        LWorker := FWorkers.Extract(FWorkers.Last);
+        LWorker.Terminate;
+        LRemoved.Add(LWorker);
+      end;
+
+      while FWorkers.Count < ACount do
+      begin
+        LWorker := TWorkerThread.Create(Self, FWorkers.Count + 1);
+        FWorkers.Add(LWorker);
+        LWorker.Start;
+      end;
+
+      FMaxWorkers := ACount;
+    finally
+      FLock.Leave;
     end;
-    
-    // Add new workers
-    while FWorkers.Count < ACount do
+
+    for LWorker in LRemoved do
     begin
-      LWorker := TWorkerThread.Create(Self, FWorkers.Count + 1);
-      FWorkers.Add(LWorker);
-      LWorker.Start;
+      LWorker.WaitFor;
+      LWorker.Free;
     end;
-    
-    FMaxWorkers := ACount;
   finally
-    FLock.Leave;
+    LRemoved.Free;
   end;
 end;
 

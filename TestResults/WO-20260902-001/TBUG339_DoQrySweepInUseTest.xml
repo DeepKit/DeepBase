@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="1" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-02" time="16:08:33">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="16:08:33" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.121" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TBUG339_DoQrySweepInUseTest" executed="True" result="Success" success="True" time="0.121" >
+                <categories>
+                  <category name="regression" />
+                </categories>
+                <results>
+                  <test-case name="Test_SweepDuringConcurrentUse_DoesNotBreakWorkers" executed="True" result="Success" success="True" time="0.114" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

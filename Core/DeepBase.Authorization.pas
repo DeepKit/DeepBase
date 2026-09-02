@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Authorization - Role-Based Access Control (RBAC)
   
   Version: 0.3
@@ -345,7 +345,9 @@ type
     /// (CORE-R3-001).</summary>
     function SetUserMetadata(const Username, Key, Value: string): Boolean;
 
-    /// <summary>Update user</summary>
+    /// <summary>Update user. User must already exist (same semantics as
+    /// CreateUser for unknown keys: raises). Mutates the live dictionary-owned
+    /// object after persisting; GetUser continues to return clones.</summary>
     procedure UpdateUser(User: TUser);
     
     /// <summary>Delete user</summary>
@@ -367,7 +369,7 @@ type
     /// <summary>Get role by name</summary>
     function GetRole(const RoleName: string): TRole;
     
-    /// <summary>Update role</summary>
+    /// <summary>Update role. Role must already exist; mutates live FRoles entry.</summary>
     procedure UpdateRole(Role: TRole);
     
     /// <summary>Delete role</summary>
@@ -779,6 +781,7 @@ begin
     FLock.Leave;
   end;
   FreeAndNil(FLock);
+  FStorage := nil;
   inherited;
 end;
 
@@ -1090,10 +1093,34 @@ begin
 end;
 
 procedure TAuthorizationManager.UpdateUser(User: TUser);
+var
+  Live: TUser;
+  R: string;
 begin
+  if User = nil then
+    raise EAuthorizationException.Create('UpdateUser: user is nil');
+
   FLock.Enter;
   try
+    if not FUsers.TryGetValue(User.Username, Live) then
+      raise EUserNotFoundException.CreateFmt('User not found: %s', [User.Username]);
+
     SaveUserToDatabase(User);
+
+    Live.FDisplayName := User.DisplayName;
+    Live.FEmail := User.Email;
+    Live.FIsActive := User.IsActive;
+    Live.FLastLoginAt := User.LastLoginAt;
+    Live.FUpdatedAt := User.UpdatedAt;
+
+    Live.FRoles.Clear;
+    for R in User.Roles do
+      Live.FRoles.Add(R);
+
+    Live.FMetadata.Clear;
+    for var MK in User.Metadata do
+      Live.FMetadata.AddOrSetValue(MK.Key, MK.Value);
+
     LogAudit(User.Username, aaUserUpdated, 'user',
       Format('Updated user: %s', [User.Username]), True);
   finally
@@ -1215,10 +1242,30 @@ begin
 end;
 
 procedure TAuthorizationManager.UpdateRole(Role: TRole);
+var
+  Live: TRole;
+  P: string;
 begin
+  if Role = nil then
+    raise EAuthorizationException.Create('UpdateRole: role is nil');
+
   FLock.Enter;
   try
+    if not FRoles.TryGetValue(Role.Name, Live) then
+      raise ERoleNotFoundException.CreateFmt('Role not found: %s', [Role.Name]);
+
     SaveRoleToDatabase(Role);
+
+    Live.FDisplayName := Role.DisplayName;
+    Live.FDescription := Role.Description;
+    Live.FParentRole := Role.ParentRole;
+    Live.FIsActive := Role.IsActive;
+    Live.FUpdatedAt := Role.UpdatedAt;
+
+    Live.FPermissions.Clear;
+    for P in Role.Permissions do
+      Live.FPermissions.Add(P);
+
     LogAudit('', aaRoleUpdated, 'role',
       Format('Updated role: %s', [Role.Name]), True);
   finally

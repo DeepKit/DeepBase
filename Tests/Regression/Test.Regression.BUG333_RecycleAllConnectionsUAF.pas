@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG333_RecycleAllConnectionsUAF - REVIEW5-DATA-004
 
   Verifies that RecycleAllConnections does NOT free csValidating connections.

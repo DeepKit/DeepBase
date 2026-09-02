@@ -790,7 +790,7 @@ begin
     PackageHandle := LoadedRec.PackageHandle;
     PluginIntf := LoadedRec.Plugin;
 
-    // Finalize plugin
+    // Finalize plugin while BPL is still loaded
     if PluginIntf <> nil then
     begin
       try
@@ -801,12 +801,12 @@ begin
       end;
     end;
 
-    // Unload BPL
-    UnloadBPL(PackageHandle);
-
-    // Remove from collections
+    // WO-20260902 FIX-11: drop dictionary + local interface refs before UnloadBPL
     FPlugins.Remove(PluginID);
     FLoadOrder.Remove(PluginID);
+    PluginIntf := nil;
+
+    UnloadBPL(PackageHandle);
     Result := True;
   finally
     // BIZ2-023 fix: release FLock BEFORE invoking the Unloaded callback.

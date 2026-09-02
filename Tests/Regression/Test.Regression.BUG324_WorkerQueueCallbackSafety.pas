@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG324_WorkerQueueCallbackSafety - REVIEW5-CORE-002
 
   Verifies that external callbacks (OnJobStarted, OnJobCompleted, OnError,

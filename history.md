@@ -1971,3 +1971,164 @@ TDeepBaseIntentParser.RegisterGlobalLLMBackend(
 - **��֤**: Win64 `run_tests.ps1 -Type Unit -CI` ����ͨ�� (329078 ��, �µ�Ԫ����, �ޱ������); ȫ�� DUnitX **Tests Found 4206 / Passed 4203 / Failed 0 / Errored 0 / Leaked 0 / Ignored 3**, �� 216, ���������� (���ȴ� H2443/H2219/H2077 Hint).
 - **����δ�� (������Ҫ����)**: LLM.pas implementation uses �� `System.RegularExpressions`/`System.Variants`/`System.NetEncoding` ��ģ�巽��Ǩ���������� (H2219 ������), δ�����Ը��뱾���ع�Ӱ����; `DeepBase.Security.DPAPI` �ȴ������뱾�ع��޹�, ����������ͳһ����.
 - **Ӱ���ļ�**: `Core/DeepBase.LLM.PromptTemplateManager.pas` (�½�) + `Core/DeepBase.LLM.pas` (9 ����ί�л� + �ֶ�) + `DeepBaseLLM.dpk`/`.dproj` (contains) + `tasks.md`/`history.md` (�鵵).
+
+
+## 2026-08-29 VCL HB �������Ǩ��
+
+���Ǩ���� tasks.md ��������
+
+- [x] **1.1 ���� JSON �ʲ�**: �� `assets/themes/` ���� 10 ���������� JSON��ů��ī�𡢵���ѧ����ʯīרҵ����䡢��õ��˪�׸߶Աȡ��׺�����������ĺ���������ࣩ��֧�� `inherits` ��ּ̳л���
+- [x] **1.2 ��Դ������Ƕ��**: ��д `DeepBase.VCL.HB.Palettes.rc` �� 10 �� JSON ����Ϊ `RC_DATA` Ƕ����Դ������д `DeepBase.VCL.HB.Palettes.pas`
+- [x] **1.3 �������������浥Ԫ**: ��д `DeepBase.VCL.HB.Theme.pas`��ʵ�� `THbTokens` �ṹ�壨�ֽס���ࡢԲ�ǡ���Ӱ����Ч��������㣺ɫ����������ܶȣ���WCAG AA ����ʱ�Աȶȶ��ԡ�DB1 ���������������л��㲥
+- [x] **1.4 ���Ƶ�Ԫ����**: ��д `Tests/Test.DeepBase.VCL.HB.Theme.pas`������ 10 �����������`inherits` �̳и��ǡ�WCAG ���ԡ��������ż���
+- [x] **2.1 �ؼ���������**: ���� `THbControl`������ GDI+ / `TCustomControl`����ԭ��֧�� Normal/Hover/Pressed/Disabled/Focus ��̬�� `FocusRing` ���ơ��� DPI �� Density ��������
+- [x] **2.2 ������ť��˫��ť**: ʵ�� `THbButton`�����͡����ߴ����̬���� `THbDualButton`����ѹ�/AI������˫ť + ����������ʾ + ȷ�����̣�
+- [x] **2.3 ��ǩ�����**: ʵ�� `THbChip`����Ƭ��ǩ/ѡ�з�ɫ/�ɹرգ��� `THbBadge`�����屳�����£�
+- [x] **2.4 ��������ԭ��**: ʵ�� `THbAvatar`�����ֹ�ϣ����ɫ + �����ף���`THbProgressRing`�����Ȼ�/ɨ�⶯Ч����`THbToast`������ʾ/�Զ�����/����ʱ����`THbSkeleton`���Ǽ���/ɨ�⶯Ч����`THbSectionHeader`����ͷ���۵�ָʾ��
+- [x] **2.5 ԭ�ӿؼ���Ԫ����**: ���ܲ���¶�� `DeepBase.VCL.HB.Controls.pas`
+- [x] **3.1 �����뿨Ƭ**: ʵ�� `THbCard`��ckSurface / ckSunken / ckHero / ckOutline ���͡�Բ��ӳ�䡢��Ӱ���Ρ��ܶ��ڱ߾ࣩ
+- [x] **3.2 KPI �����չʾ**: ʵ�� `THbStatBig`��Ӣ�����֡����ֽס��ǵ�����ָʾ��
+- [x] **3.3 ҵ��������**: ʵ�� `THbListRow`����Ƕͷ���ϣ����˯��ǩ�ضϡ�������������ʾ����Ƕ˫�찴ť���������ûң�
+- [x] **3.4 �������̬**: ʵ�� `THbEmptyState`��ͼ��/�廭ռλ���������⡢�����ж���ť��
+- [x] **3.5 ���Ͽؼ���Ԫ����**: ���ܲ���¶�� `DeepBase.VCL.HB.Cards.pas`
+- [x] **4.1 �����ø���**: �� `DeepBase.VCL.HB.Theme.pas`��`Palettes.pas`��`Controls.pas`��`Cards.pas` ���� `DeepBaseVCL.dpk`��ͨ�� Win64 �ϸ�������Ž�
+- [x] **4.2 ���ȶ��չ���**: ���� `Tools/Gallery/hbtheme_gallery.dpr`����Ⱦ 12 ������� 10 ��������󣬲��� `26.ui.HB�Ӿ�������ʩ...html` ����˫���˹�/��ͼ����
+- [x] **4.3 CI �Ž����**: ��Ԫ���� `Test.DeepBase.VCL.HB.Theme` ���� `DeepBaseTests.dpr` �Զ����Ž�
+- [x] **5.1 ��������ָ��**: ���� `docs/00.quickstart.AI��������-ai-one-file.md` �� `docs/02.quickstart.���ν�������-downstream-integration.md`
+- [x] **5.2 �ؼ�����ƹ淶**: ���� `docs/25.ui.VCL-FMX�ؼ��淶.md` �� `docs/26.ui.HB�Ӿ�������ʩ-�����������������.html`
+- [x] **5.3 ���ݿ� Schema ˵��**: ���� `docs/30.data.���ݿ�Schema˵��-database-schema.md` ���� `Themes` �� `Settings` �ļ�ֵ˵��
+- [x] ��⣺VCL/ ���ĸ� HB ��Ԫ + ���Ծ�Ϊͬ�½��������Ծ������09:21-09:49����DCU �ѱ��룬worktree ��2 ��Ծ
+- [x] ���ã����ϰ���������Amy δд�κ� HB ʵ�֣����� tasks.md �� [HB-20260824] �ƻ��α�����Ϊ���ն��ջ�׼
+
+## 2026-08-30 WO-20260829-0230 / WO-20260830-补修 VCL HB 视觉层全面修复与门禁复核
+- **来源**: 工单 WO-20260829-0230 及 WO-20260830-补修（开发甲）。
+- **内容**: 对 VCL HB 视觉层全量 18 个单元进行 35 项缺陷修复与性能/高DPI/主题架构优化：
+  - P1 必修缺陷（14项全部修复并通过验证，含 Dialogs 守护、Tray/Terminal/Dock 内存生命周期、Controls 状态机/热区/厚度钳位、Cards 趋势绘制与 MouseDown 重算、ShareCard 正则掩码、VirtualList 滚动刷新、PageControl 动态Tab宽、Grid 范围多选）。
+  - P2 性能优化（9项全部修复并通过验证，含 VirtualList/CommandPalette 搜索防抖、Waterfall 控件复用增量更新、Grid SB_THUMBTRACK 拖拽平滑、PageControl 局部 InvalidateRect、NavTree GDI+ 对象池化、Controls/Skeleton 60ms 降频、Terminal 状态切换停用定时器）。
+  - P3 美观与架构对齐（12项全部修复并通过验证，含 Dialogs/Gate/Grid/PageControl 全尺寸 ScaleDIP/PixelsPerInch 高分屏适配、Core 层 12 色哈希调色板共享、Controls 矢量 Toast 绘制与 Chip 关闭热区、Theme 动态覆盖钩子 RegisterOverride、ShareCard 字体绑定 Tokens、VirtualList 批量栏主题色、Waterfall 状态栏 Tokens 绑定、NavTree Mini Rail 折叠态首字母与高亮交互）。
+- **验证**:
+  - 编译门禁: Win64 `dcc64 -Q -B` 针对全部 25 个 HB 相关单元单独编译，全部 0 Error 0 Warning。
+  - 单测门禁: DUnitX 自动化回归套件 `run_tests.ps1 -Type Unit -Platform Win64 -Module HB` 全部 52/52 用例通过 (Tests Found 52, Passed 52, Failed 0, Errored 0)。
+- **交付文档**: `docs/WO-20260830-补修-开发甲-交付报告.md` 与 `docs/WO-20260829-0230-开发甲-VCL-HB-视觉层全面修复交付报告.md`。
+
+## 2026-08-30 WO-20260830-文档整理 VCL HB 视觉审计整改与编号规范化
+- **来源**: 工单 WO-20260830-文档整理（基于 WO-20260830-审核 交付验收最终裁决整改建议，开发甲）。
+- **内容**:
+  1. `bugfix.md` 重复章节与编号冲突修复：清理 4 处重复的 `## 2026-08-29 VCL HB 视觉审计` 章节，仅保留唯一主标题；保留 P2 审计原有的 `BUG-459` (ProgressRing/Skeleton 30ms Invalidate)、`BUG-460` (CommandPalette 全量排序防抖)、`BUG-461` (Terminal.StreamBlock 定时器停用) 原始编号与语义；将 2026-08-30 补修记录重编号为 `BUG-468`（Cards.MouseDown 坐标重算）、`BUG-469`（ProgressRing/Skeleton 定时器 60ms 降频）、`BUG-470`（PageControl 局部 InvalidateRect）。
+  2. 交付报告语义补注：在 `WO-20260829-0230` 及后续交付报告交付状态处明确标注 52/52 为 HB fixture 子集（-r 过滤），说明既有红与 HB 修复无关。
+- **验证**:
+  - `grep -c "BUG-468\|BUG-469\|BUG-470" bugfix.md` 返回 3（全部通过）。
+  - `grep -c "## 2026-08-29 VCL HB 视觉审计" bugfix.md` 返回 1（全部通过）。
+  - 交付报告全部完成语义补注。
+- **交付文档**: `docs/WO-20260830-文档整理-开发甲-交付报告.md`。
+
+## 2026-08-30 WO-20260830-003 HB 视觉系统缺失组件补齐与行内控件扩展
+- **来源**: 工单 WO-20260830-003（DeepPulse 全量 HB 集成组件补齐需求，开发甲）。
+- **内容**: 交付 6 大缺失视觉组件与行内交互能力，全面替代原生 VCL 割裂控件：
+  1. `THbText` / `THbLabel`（`DeepBase.VCL.HB.Text.pas`）：语义化排版标签（Body, Muted, Primary, Success, Warning, Danger, Info, Heading, Subheading, Caption），支持 WordWrap、多行自适应、水平/垂直对齐、Design Tokens 颜色与字体绑定及高 DPI 缩放。
+  2. 输入控件集（`DeepBase.VCL.HB.Inputs.pas`）：
+     - `THbEdit`：矢量圆角单行输入框，内置占位符提示（Placeholder）、一键清除按钮（ClearButton）、焦点光环（FocusRing）、只读与密码模式。
+     - `THbComboBox`：矢量下拉选择框，自定义圆角边框、Chevron 箭头指示与主题色弹出菜单。
+     - `THbCheckBox`：矢量复选框，平滑 Checkmark 矢量勾选与 Token 语义着色。
+     - `THbToggleSwitch`：行内胶囊启停开关，即点即生效，支持 ON/OFF 状态文本与主题主色渲染。
+  3. `THbStatusDot`（`DeepBase.VCL.HB.Status.pas`）：四态（Success/Danger/Warning/Muted/Info）状态指示灯，支持呼吸/脉冲光晕微动效（Pulse 60ms 周期），用于替代原生 TShape。
+  4. `THbThemeSelector`（`DeepBase.VCL.HB.Inputs.pas`）：通用主题切换下拉控件，自动枚举加载可用主题并在切换时自动调用 `THbTheme.ApplyTheme` 广播 `WM_HB_THEME_CHANGED`。
+  5. `THbDataGrid` 行内控件扩展（`DeepBase.VCL.HB.Grid.pas` + `DeepBase.HB.Grid.Types.pas`）：新增 `gctToggleSwitch` 与 `gctCheckbox` 列类型渲染支持，支持 `OnGetCellBool` 与 `OnCellToggle` 实时点击回调，实现任务与纳管列表的行内即点即生效。
+  6. `THbGlassPanel`（`DeepBase.VCL.HB.Glass.pas`）：Windows 11 Fluent 亚克力磨砂毛玻璃容器面板，支持软阴影（DropShadow）、高光内边缘以及 FadeIn/FadeOut 微过渡动效。
+- **验证**:
+  - 编译门禁: Win64 `dcc64 -Q -B` 对全量 32 个 HB 单元与单测文件进行编译，全部 0 Error 0 Warning。
+  - 单测门禁: DUnitX 自动化回归套件 `run_tests.ps1 -Type Unit -Platform Win64 -Module HB` 新增 9 项针对性用例，总计 61/61 全部通过 (Tests Found 61, Passed 61, Failed 0, Errored 0, Leaked 0)。
+- **交付文档**: `docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md`。
+
+## 2026-08-30 WO-20260830-HB-交付报告纠偏 HB 交付报告测试口径与编译证据归档
+- **来源**: 工单 WO-20260830-HB-交付报告纠偏（基于 WO-20260830-003 审核验收意见，开发甲）。
+- **内容**:
+  1. 测试口径分层纠偏：澄清 HB 核心控件专项套件 `Test.DeepBase.HB.Suite` 为 25/25 实测全绿；全量 HB 视觉子系统模块（6 个 Fixture）为 61/61 全部通过。
+  2. 真实编译证据归档：使用 Win64 `dcc64 -Q -B` 对全量 32 个 HB 源码与测试单元进行独立编译，全部 0 Error 0 Warning 通过，实测证据日志存档于 `docs/evidence-dcc64-hb-32units.txt`。
+  3. 双仓报告同步：同步 DeepBase 与 DeepPulse 双仓工单报告路径与内容。
+- **验证**:
+  - `Tests\DeepBaseTests.exe -r:"Test.DeepBase.HB.Suite" -exit:Continue` 实测 25/25 通过 (0 Failed, 0 Errored, 0 Leaked)。
+  - 32 个 HB 单元编译实测 32/32 通过 (0 Error, 0 Warning)。
+- **交付文档**: `docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md` 与 `docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md`。
+
+## 2026-08-30 WO-20260830-004 HB 审计文档编号冲突、重复章节与交付记录收敛
+- **来源**: 工单 WO-20260830-004（HB 审计文档整理与交付记录收敛，开发甲）。
+- **内容**:
+  1. `bugfix.md` 全面收敛收束：彻底消除 HB 审计 4 处历史重复片段及中间待审占位，统一合并为权威单一真相源（SSOT）章节 `## 2026-08-29 ~ 2026-08-30 VCL HB 视觉基础设施审计、修复与组件补齐（BUG-449 ~ BUG-471 / FEAT-HB-001 ~ FEAT-HB-005）`。
+  2. 缺陷编号全局唯一：理顺并规范化所有缺陷编号，消除双重编号与语义冲突（P1 稳定性 9 项 BUG-449~457；P2 性能与安全 6 项 BUG-458~461, BUG-468, BUG-469；P3 美观度与高分屏 8 项 BUG-462~467, BUG-470, BUG-471；HB 缺失组件补齐 5 项 FEAT-HB-001~005）。全文件 161 个 BUG 条目实现 100% 唯一无重。
+  3. 任务与历史台账同步：更新 `tasks.md` 阶段 1~6 交付状态与报告索引，清理过期待办，保证与 `history.md`、`docs/` 路径完全一致。
+- **验证**:
+  - 正则脚本检查 `bugfix.md`：161 个 BUG-* 条目 0 重复 (Count = 0)。
+  - 路径引用检查：所有工单文档与报告链接 100% 存在且有效。
+- **交付文档**: `docs/WO-20260830-004-开发甲-HB审计文档整理交付报告.md`。
+
+## 2026-08-30 WO-20260830-005 HB 审计文档统计口径纠偏
+- **来源**: 工单 WO-20260830-005（基于 WO-20260830-004 交付复核要求，开发甲）。
+- **内容**:
+  1. 统计口径精准分层：将交付报告中的“161 项 BUG 编号 100% 唯一”订正为准确的“136 个 `### BUG-*` 定义标题唯一无重复，HB 视觉审计 23 项缺陷（BUG-449~471）单一真相源收敛”。
+  2. 双仓同步：同步订正 DeepBase 与 DeepPulse 路径下的 WO-20260830-004 交付报告。
+  3. 脚本实测验证：正则复核 0 重复、0 冲突。
+- **验证**:
+  - ugfix.md 独立正则脚本：### BUG-* 定义标题 0 重复。
+- **交付文档**: `docs/WO-20260830-005-开发甲-HB审计统计口径纠偏交付报告.md` 与 `docs/WO-20260830-005-审核-最终裁决.md`。
+
+## 2026-08-30 WO-20260830-005 HB 新增「0-9 选择控件 + 嵌套瀑布 + 信息粒度」
+- **来源**: 工单 WO-20260830-005（AsWish 0027D-R1 前置依赖，开发甲）。
+- **内容**: 交付 3 大下游核心预置能力：
+  1. `THbChoiceDeck`（`DeepBase.VCL.HB.Choice.pas` + `DeepBase.HB.Choice.Types.pas`）：0–9 统一选择预置控件，支持 1–7 候选项（1 号标推荐）、8 重新生成、9 自己输入、0 返回；鼠标与数字键（0..9）完全等价响应；四类语义色 Token（`Choice.Option`, `Choice.Regenerate`, `Choice.Input`, `Choice.Back`）浅深主题绑定；五态自绘与高 DPI 适配。
+  2. `THbWaterfall` 嵌套包含扩展（`DeepBase.VCL.HB.Waterfall.pas` + `DeepBase.HB.Waterfall.Types.pas`）：`THbWaterfallCardData` 扩展 `ParentId` 与 `Depth` 字段，支持父子层级、缩进渲染与折叠展开，平铺旧用法（ParentId 空）100% 向后兼容。
+  3. `THbGranularity` 信息粒度体系（`DeepBase.HB.Core.pas` + `DeepBase.VCL.HB.Theme.pas`）：6 档枚举（`gCoarsest` 超粗 → `gFinest` 极细），与密度（`THbDensity`）正交独立；`THbWaterfall` 联动按粒度动态折叠展开对应深度。
+  4. 示例窗体（`DeepBase.VCL.HB.Choice.Demo.pas`）：提供可交互式全功能最小演示窗体。
+- **验证**:
+  - 编译门禁: Win64 `dcc64 -Q -B` 对全量 34 个 HB 单元与单测文件进行编译，全部 0 Error 0 Warning (日志存档 `docs/evidence-dcc64-hb-005-34units.txt`)。
+  - 单测门禁: DUnitX 自动化回归套件 `run_tests.ps1 -Type Unit -Platform Win64 -Module HB` 新增 3 项针对性用例，总计 64/64 全部通过 (Tests Found 64, Passed 64, Failed 0, Errored 0, Leaked 0)；核心 Fixture `Test.DeepBase.HB.Suite` 实测 28/28 通过。
+- **交付文档**: `docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度交付报告.md`。
+
+## 2026-08-31 WO-20260830-005 退回整改全部达标闭环（WO-20260830-005-A / WO-20260830-005-B）
+- **来源**: 工单 WO-20260830-005 审核裁决退回整改意见（开发甲）。
+- **内容**:
+  1. 工单编号解耦：拆分为 `WO-20260830-005-A`（HB 审计统计口径纠偏）与 `WO-20260830-005-B`（HB 0-9选择控件+嵌套瀑布+信息粒度）。
+  2. 统计证据统一：纠正为新鲜可复现的 145 个 H3 标题定义 + 23 个 HB 专项条目 = 168 个唯一缺陷定义，消除 136/145 证据矛盾。
+  3. 瀑布 28px 缩进与高 DPI 适配：严格改为 28px 递增，覆盖 96/120/144/192 DPI 断言。
+  4. L0–L5 六级数字色标区：Token 注册表增加 `Level0`..`Level5` 语义色，左侧固定 28px 宽度醒目色标区。
+  5. 右侧下拉详情交互：实现 `IsExpanded` 状态机与右侧 `▾`/`▴` 按钮，展开时高度自适应展开呈现 `DetailText` 与引用源。
+  6. 界面链接与右侧属性面板：实现 `THbWaterfallLinkKind`、`THbCardProperty` 属性表与右侧可收放属性面板（含打开链接与全屏模态预览）。
+  7. 色彩纪律严谨表述：明确 Token 注册表为 SSOT 来源，所有 UI 渲染管线 100% 走 Token 零硬编码。
+  8. 0–9 测试矩阵全覆盖：覆盖 1..7、8、9、0、Key 1 推荐、Key 9 自定义输入、禁用项拦截、鼠标区域命中与主题切换。
+- **验证**:
+  - Win64 `dcc64 -Q -B` 34 个单元全量编译：34/34 全部 0 Error 0 Warning (日志存档 `docs/evidence-dcc64-hb-005-34units.txt`)。
+  - DUnitX 回归测试：全量 HB 视觉模块 66/66 全部通过 (Tests Found 66, Passed 66, Failed 0, Errored 0, Leaked 0)；核心套件 `Test.DeepBase.HB.Suite` 实测 30/30 通过。
+- **交付文档**:
+  - `docs/WO-20260830-005-开发甲-HB审计统计口径纠偏交付报告.md`
+  - `docs/WO-20260830-005-开发甲-HB-0-9选择控件与嵌套瀑布与信息粒度交付报告.md`
+
+## 2026-08-30 ~ 2026-08-31 HB 视觉基础设施全栈交付（自 tasks.md 归档）
+
+> 依据: `docs/26.ui.HB视觉基础设施-主题令牌与组件画廊.html` · 编译: Delphi 13.1 dcc64 Win64
+
+- **阶段 1–4**: 主题令牌引擎、原子控件族、业务卡片与容器、高级交互组件族。
+- **阶段 5–6 (WO-20260830-003)**: Text/Edit/ComboBox/CheckBox/ToggleSwitch/StatusDot/ThemeSelector/GlassPanel + DataGrid 行内控件。32 单元 0E/0W，HB 61/61 全绿。
+- **阶段 7 (WO-20260830-005-B)**: THbChoiceDeck / THbWaterfall 嵌套 / THbGranularity。66/66 全绿。
+- **阶段 8 (WO-20260830-005-A)**: 审计统计口径 — 145 H3 + 23 HB = 168 唯一缺陷定义。
+- **Bug 记录**: `bugfix.md` § BUG-449 ~ BUG-471 / FEAT-HB-001 ~ FEAT-HB-005
+
+## 2026-09-02 框架分模块代码审阅（只读）
+
+> 报告: `CodeReview/20260902-Framework-Audit.md`
+
+- 复核 20260824 已修复项；新识别 Top 10 → 工单 WO-20260902-001。
+- ~35 P0 / ~95 P1 actionable；Features F3–F9 未审。
+
+## 2026-09-02 WO-20260902-001 框架审计 Top10 修复（代码已落地 · 待证据闭环）
+
+> 工单: `docs/WO-20260902-001-开发甲-框架审计P0修复工单.md` · Bug 详情: `bugfix.md` § 2026-09-02
+
+| FIX | 模块 | 要点 |
+|-----|------|------|
+| FIX-1~5,11 | Pool/Guardian/Scheduler/FileWatcher/WorkerQueue/PluginManager | UAF/生命周期顺序修复 |
+| FIX-6 | KeyManager | GCM 空明文边界 >= 29 |
+| FIX-7 | WeChat4x | hex 校验已交付；真实指纹 BLOCKED-DATA-P0-001 |
+| FIX-8~10 | Authorization/DoQry | RBAC 内存同步 + Bind/Sweep 数据语义 |
+
+- 回归: BUG-334~340 + BUG-320/326/327/332 扩展（已编入 DeepBaseTests.dpr）
+- 待闭环: 全量单测 XML、`RegressionTestRegistry` 登记、交付报告

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.SchemaAdapter.WeChat4x - WeChat 4.x Adapter
   Version: 0.8
   ============================================================================ }
@@ -22,7 +22,7 @@ type
     function GetMessageType: TMsgTypeMapping; override;
     function GetTimestamp: TTimestampMapping; override;
   public
-    constructor Create;
+    constructor Create; override;
   end;
 
 implementation
@@ -72,11 +72,9 @@ begin
   FVersion := '4.x';
   FVersionRange := '4.0.0-4.99.99';
 
-  // BUG-332: WeChat 4.x Msg_* 表 canonical column-signature 的 SHA256 前缀 (10 字符)。
-  // 占位符 'e4a7bXXXXX...'/'0000000000' 无法通过 TryMatchFingerprint 契约测试;
-  // 据 REVIEW5-DATA-003 + bugfix.md BUG-332 统一为 '4x7f2a9b1c'。
-  // 注: 真实指纹仍待 DATA-P0-001 在目标机 dump schema 复核, 此值对齐文档与测试契约。
-  FSchemaFingerprintPrefixes := ['4x7f2a9b1c'];
+  // BLOCKED-DATA-P0-001: real Msg_* canonical column-signature SHA256 prefix
+  // pending target-machine schema dump. Empty until DATA-P0-001 delivers fixture.
+  FSchemaFingerprintPrefixes := [];
 
   // 10 output fields (same target schema as 3.9.x)
   SetLength(FFieldMappings, 10);

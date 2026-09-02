@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG326_SchedulerCallbackSafety - REVIEW5-CORE-004
 
   Verifies that Scheduler isolates callback exceptions:
@@ -47,6 +47,9 @@ type
     /// <summary>OnComplete raises => Stats.RunningTasks correctly decremented to 0</summary>
     [Test]
     procedure Test_OnCompleteRaises_RunningTasksCorrect;
+
+    [Test]
+    procedure Test_OnCompleted_CleanupDuringCallback_TaskRefSafe;
   end;
 
 implementation
@@ -173,5 +176,33 @@ begin
   Assert.AreEqual(0, FScheduler.Stats.RunningTasks,
     'RunningTasks should be 0 after task completes');
 end;
+
+procedure TBUG326_SchedulerCallbackSafetyTest.Test_OnCompleted_CleanupDuringCallback_TaskRefSafe;
+var
+  LTask: TScheduledTask;
+  LReadId: string;
+begin
+  LReadId := '';
+  LTask := FScheduler.Schedule('cleanup_during_callback',
+    procedure
+    begin
+      Sleep(10);
+    end);
+  LTask.OnComplete(
+    procedure(const ATask: TScheduledTask)
+    begin
+      LReadId := ATask.Id;
+      FScheduler.Cleanup;
+    end);
+  LTask.MaxRuns(1);
+  LTask.Run;
+
+  Sleep(500);
+  Assert.AreEqual('cleanup_during_callback', LReadId,
+    'TaskRef must remain safe when Cleanup runs inside OnCompleted');
+end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TBUG326_SchedulerCallbackSafetyTest);
 
 end.

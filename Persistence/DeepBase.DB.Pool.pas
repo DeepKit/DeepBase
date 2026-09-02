@@ -1035,6 +1035,8 @@ var
   I: Integer;
   DrainStart: TDateTime;
   HasActive: Boolean;
+  SkippedInUse: Integer;
+  ToRemove: TList<Integer>;
 begin
   if not FInitialized then
     Exit;
@@ -1085,16 +1087,45 @@ begin
   until (not HasActive) or
         (MilliSecondsBetween(Now, DrainStart) >= FConfig.AcquireTimeoutMs);
 
-  // Now clear all connections under lock.
-  FLock.Enter;
+  // WO-20260902 FIX-1: release only non-in-use connections. Leaking an
+  // in-use TPooledConnection at shutdown is preferable to freeing it while
+  // the borrower still holds a reference (UAF / heap corruption).
+  ToRemove := TList<Integer>.Create;
   try
-    FInitialized := False;
-    FPool.Clear;
-  finally
-    FLock.Leave;
-  end;
+    FLock.Enter;
+    try
+      FInitialized := False;
+      SkippedInUse := 0;
+      for I := FPool.Count - 1 downto 0 do
+      begin
+        if FPool[I].State = csInUse then
+        begin
+          Inc(SkippedInUse);
+          {$IFDEF DEBUG}
+          OutputDebugString(PChar(Format(
+            'DeepBase.DB.Pool: Shutdown skipped csInUse connection (AcquireCount=%d) — intentional leak to avoid UAF',
+            [FPool[I].AcquireCount])));
+          {$ENDIF}
+        end
+        else
+          ToRemove.Add(I);
+      end;
 
-  DoPoolEvent(peConnectionDestroyed, 'Connection pool shut down');
+      for I in ToRemove do
+        FPool.Delete(I);
+
+      if SkippedInUse > 0 then
+        DoPoolEvent(peConnectionDestroyed,
+          Format('Connection pool shut down; %d csInUse connection(s) deliberately retained (leak > UAF)',
+            [SkippedInUse]))
+      else
+        DoPoolEvent(peConnectionDestroyed, 'Connection pool shut down');
+    finally
+      FLock.Leave;
+    end;
+  finally
+    ToRemove.Free;
+  end;
 end;
 
 { TUniConnectionPool }

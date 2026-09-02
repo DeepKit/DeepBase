@@ -848,7 +848,7 @@ procedure TFileWatcher.HandleDebounce(const AInfo: TFileChangeInfo);
 var
   LKey: string;
   LChange: TDebouncedChange;
-  LGuard: TFileWatcherGuard;
+  LGuard: IInterface;
   LDebounceMs: Integer;
 begin
   if FDestroying then
@@ -865,8 +865,8 @@ begin
     LChange.ScheduledTime := IncMilliSecond(Now, LDebounceMs);
     FDebouncedChanges.AddOrSetValue(LKey, LChange);
 
-    // Capture guard reference for the pool task — keeps guard alive
-    // even if the FileWatcher is freed before the task runs.
+    // WO-20260902 FIX-4: capture IInterface (same pattern as NotifyChange)
+    // so the debounce task holds a ref-count bump until it finishes.
     LGuard := FGuard;
 
     // BIZ2-013 fix: only schedule a drain task if none is already in
@@ -884,7 +884,7 @@ begin
         LW: TFileWatcher;
       begin
         Sleep(LDebounceMs + 10);
-        LW := LGuard.GetWatcher;
+        LW := TFileWatcherGuard(LGuard).GetWatcher;
         if Assigned(LW) and not LW.FDestroying then
           LW.ProcessDebouncedChanges(nil);
       end

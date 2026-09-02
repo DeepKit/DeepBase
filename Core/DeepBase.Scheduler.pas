@@ -1029,17 +1029,11 @@ begin
             Inc(FStats.CompletedTasks);
           end;
           
-          TaskRef.FRunningITask := nil;  // Release ITask reference
           Dec(FRunningCount);
           Dec(FStats.RunningTasks);
 
-          // BIZ-R3-011: capture the completed callback under FLock. The lock
-          // is released before invoking it (deadlock avoidance), but reading
-          // TaskRef.FOnCompleted outside the lock is a use-after-free window:
-          // another thread's Cleanup can remove + free this task once its
-          // state flips to tsCompleted/tsFailed (doOwnsValues). FRunningITask
-          // is left non-nil until after the callback so Cleanup's running-task
-          // guard keeps the object alive for the duration of the callback.
+          // WO-20260902 FIX-3: keep FRunningITask non-nil until after OnCompleted
+          // so Cleanup's running-task guard keeps TaskRef alive (BIZ-R3-011).
           LOnCompleted := TaskRef.FOnCompleted;
         finally
           FLock.Leave;
@@ -1051,6 +1045,13 @@ begin
         except
           // REVIEW5-CORE-004: Swallow callback exceptions.
           // OnCompleted is informational — must not overwrite task state.
+        end;
+
+        FLock.Enter;
+        try
+          TaskRef.FRunningITask := nil;
+        finally
+          FLock.Leave;
         end;
 
       except
@@ -1080,11 +1081,11 @@ begin
               LOnFailed := TaskRef.FOnFailed;
             end;
 
-            // BIZ-R3-011: defer FRunningITask:=nil until after the failed
-            // callback so the running-task guard keeps TaskRef alive across
-            // the unlocked LOnFailed(TaskRef, E) call.
+            // WO-20260902 FIX-3: defer FRunningITask:=nil until after OnFailed;
+            // retry path has no callback and may clear immediately.
             LTaskFailed := (TaskRef.FState = tsFailed);
-            TaskRef.FRunningITask := nil;  // Release ITask reference
+            if not LTaskFailed then
+              TaskRef.FRunningITask := nil;
             Dec(FRunningCount);
             Dec(FStats.RunningTasks);
           finally
@@ -1098,6 +1099,16 @@ begin
           try
             LOnFailed(TaskRef, E);
           except
+          end;
+
+          if LTaskFailed then
+          begin
+            FLock.Enter;
+            try
+              TaskRef.FRunningITask := nil;
+            finally
+              FLock.Leave;
+            end;
           end;
         end;
       end;

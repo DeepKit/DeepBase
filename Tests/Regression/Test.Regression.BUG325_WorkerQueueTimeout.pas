@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG325_WorkerQueueTimeout - REVIEW5-CORE-003
 
   Verifies that WorkerQueue enforces job timeout semantics:

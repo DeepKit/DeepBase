@@ -1,0 +1,354 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: False
+No Rebuild: False
+Run Filter: Test.Regression.BUG336_WorkerQueueStopWait.TBUG336_WorkerQueueStopWaitTest
+Output: D:\_Progs\02Business\DeepBase\TestResults\WO-20260902-001
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\WO-20260902-001\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+D:\_Progs\02Business\DeepBase\Core\DeepBase.PluginManager.pas(1032) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Manager.pas(566) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(60) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(95) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(97) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(98) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(99) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(150) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(177) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Config.FireDAC.pas(196) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(142) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(148) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(193) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(194) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(281) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(285) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(311) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Manager.FireDAC.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(332) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(333) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(404) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(405) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(406) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(407) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(408) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(409) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(410) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(411) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(417) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(418) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(420) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(421) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(427) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(428) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(430) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(431) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(437) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(438) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(440) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Manager.pas(441) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(629) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(630) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(631) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(632) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(635) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(636) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(637) Hint: H2443 Inline function 'TFDParam.SetAsDateTime' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(638) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(639) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.SQLLogger.pas(649) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.DoQry.pas(1851) Hint: H2077 Value assigned to 'SkippedInUse' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.DoQry.pas(1844) Hint: H2077 Value assigned to 'SkippedInUse' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Security.DPAPI.pas(394) Hint: H2077 Value assigned to 'TDPAPIHelper.IsAvailable' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.Migrations.pas(401) Hint: H2077 Value assigned to 'TMigrationEngine.AlreadyApplied' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.Migrations.pas(33) Hint: H2219 Private symbol 'CalculateChecksum' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Providers.pas(177) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Providers.pas(234) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.pas(624) Hint: H2077 Value assigned to 'TDeepBaseLLM.DoHttpRequest' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(276) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(329) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(549) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(552) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(553) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(661) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.HTTP.pas(724) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(128) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(128) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(134) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(142) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(190) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(203) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(237) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(238) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(295) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(310) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(311) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(343) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(344) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(352) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(353) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(353) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(354) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.SignalDetector.pas(354) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(48) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(56) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(59) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(61) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(65) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(68) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(76) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(79) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(81) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(84) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(87) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(88) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(92) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Exit.pas(100) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.OptionFrame.pas(121) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.OptionFrame.pas(123) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.OptionFrame.pas(125) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L2.pas(249) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L2.pas(273) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(117) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(119) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(121) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(226) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(276) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L3.pas(279) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(161) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(162) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(167) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(219) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(246) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(251) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(269) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(329) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(376) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Provider.L4.pas(376) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.StateMachine.pas(867) Hint: H2077 Value assigned to 'DeepBase.StateMachine.TStateMachine<TState,TTrigger>.IsInState' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.LLMResilience.pas(306) Hint: H2443 Inline function 'TTask.Run' has not been expanded because unit 'System.Classes' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.LLMResilience.pas(435) Hint: H2443 Inline function 'TTask.Run' has not been expanded because unit 'System.Classes' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.BrowserAutomation.pas(279) Hint: H2077 Value assigned to 'TryJsonString' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.PageDriver.pas(780) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.PageDriver.pas(729) Hint: H2077 Value assigned to 'TPageDriver.CallPlanner' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.PageDriver.pas(873) Hint: H2077 Value assigned to 'TPageDriver.ExecutePlan' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(174) Hint: H2164 Variable 'WSUrl' is declared but never used in 'TCDPWebSocketSession.ConnectToBrowser'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(259) Hint: H2077 Value assigned to 'TCDPWebSocketSession.NavigateTo' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.Adapter.pas(110) Hint: H2219 Private symbol 'ProcessMessage' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(36) Hint: H2219 Private symbol 'FIsVisibleCached' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(37) Hint: H2219 Private symbol 'FRectCached' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.WebElement.pas(38) Hint: H2219 Private symbol 'FVisibilityChecked' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.Session.pas(74) Hint: H2219 Private symbol 'ParseJSONObject' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Desktop.Perception.Engine.pas(532) Hint: H2077 Value assigned to 'TDesktopPerceptionEngine.CaptureToBitmap' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Desktop.Perception.Engine.pas(602) Hint: H2077 Value assigned to 'LChanged' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(210) Warning: W1073 Combining signed type and unsigned 64-bit type - treated as an unsigned type
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(297) Hint: H2077 Value assigned to 'Running' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.WindowMonitor.pas(66) Hint: H2219 Private symbol 'CheckHookHealth' declared but never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.UIA.Engine.pas(473) Warning: W1050 WideChar reduced to byte char in set expressions.  Consider using 'CharInSet' function in 'System.SysUtils' unit, or 'TCharHelper.IsInArray' function in 'System.Character' unit.
+Test.DeepBase.UIA.UnifiedActuator.pas(45) Hint: H2219 Private symbol 'HasDesktopSession' declared but never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.Alipay.pas(317) Hint: H2077 Value assigned to 'TAlipayClient.ExecuteRequest' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.Alipay.pas(590) Hint: H2077 Value assigned to 'TAlipayClient.CloseOrder' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(625) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatPost' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(662) Hint: H2077 Value assigned to 'TWeChatPayClient.DoWeChatGet' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1045) Hint: H2077 Value assigned to 'TWeChatPayClient.CloseOrder' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.WeChatPay.pas(1202) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.PayPal.pas(887) Hint: H2077 Value assigned to 'TPayPalClient.VerifyWebhookSignature' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.Stripe.pas(194) Hint: H2077 Value assigned to 'TStripeClient.DoStripePost' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.Stripe.pas(228) Hint: H2077 Value assigned to 'TStripeClient.DoStripeGet' never used
+D:\_Progs\02Business\DeepBase\ThirdParty\Payment\DeepBase.Payment.Stripe.pas(431) Hint: H2077 Value assigned to 'TStripeClient.CancelPaymentIntent' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.Backend.Http.pas(227) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.Backend.Http.pas(713) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.Backend.Http.pas(714) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.SafeClient.pas(1035) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.SafeClient.pas(1036) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.SafeClient.pas(1060) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Commerce.SafeClient.pas(1061) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.ASR.Baidu.pas(414) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Cache.pas(181) Hint: H2219 Private symbol 'DoEvict' declared but never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.FeatureFlags.pas(957) Hint: H2077 Value assigned to 'TFeatureFlag.EvaluateTargeting' never used
+Test.DeepBase.FeatureFlags.pas(1181) Hint: H2077 Value assigned to 'Flag' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.i18n.Gender.pas(583) Hint: H2164 Variable 'CharType' is declared but never used in 'TRTLUtils.IsRTLChar'
+Test.DeepBase.PerformanceSuite.pas(444) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.PerformanceSuite.pas(809) Hint: H2077 Value assigned to 'Value' never used
+Test.DeepBase.PerformanceSuite.pas(801) Hint: H2077 Value assigned to 'Value' never used
+Test.DeepBase.PerformanceSuite.pas(926) Hint: H2077 Value assigned to 'Counter' never used
+Test.DeepBase.PerformanceSuite.pas(921) Hint: H2077 Value assigned to 'Counter' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(180) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(182) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(175) Hint: H2077 Value assigned to 'TFireDACDiagnoseStorage.TableExists' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(220) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(222) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(215) Hint: H2077 Value assigned to 'TFireDACDiagnoseStorage.IndexExists' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.Diagnose.FireDAC.pas(241) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.ORM.FireDAC.pas(115) Hint: H2443 Inline function 'TFDParams.GetItem' has not been expanded because unit 'System.Classes' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.ORM.FireDAC.pas(115) Hint: H2443 Inline function 'TFDParam.SetAsVariant' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.AntiTamper.pas(349) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.AntiTamper.pas(351) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.AntiTamper.pas(486) Hint: H2077 Value assigned to 'TAntiTamperPackage.IsSecureImageEnabled' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.AppLifecycle.pas(207) Hint: H2077 Value assigned to 'TAppLifecycle.AcquireSingleton' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Collections.pas(723) Hint: H2164 Variable 'Node' is declared but never used in 'DeepBase.Collections.TLRUCache<K,V>.Evict'
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Collections.pas(116) Hint: H2219 Private symbol 'Evict' declared but never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.ConnectionPool.pas(294) Hint: H2077 Value assigned to 'TDBConnectionPool.AcquireTimeout' never used
+Test.DeepBase.DB.DoQry.pas(640) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.DB.DoQry.pas(740) Hint: H2443 Inline function 'TTask.Run' has not been expanded because unit 'System.Classes' is not specified in USES list
+Test.DeepBase.DB.DoQry.pas(940) Hint: H2443 Inline function 'TTask.Run' has not been expanded because unit 'System.Classes' is not specified in USES list
+Test.DeepBase.DB.DoQry.pas(1348) Hint: H2443 Inline function 'TTask.Run' has not been expanded because unit 'System.Classes' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.JobQueue.pas(451) Hint: H2077 Value assigned to 'TJobQueue.ParsePayload' never used
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.DB.JobQueue.pas(653) Hint: H2077 Value assigned to 'TJobQueue.DequeuePostgreSQL' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Export.pas(375) Hint: H2077 Value assigned to 'StartRow' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Feedback.pas(1181) Hint: H2077 Value assigned to 'TLogCollector.CollectRecentLogs' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Feedback.pas(1823) Hint: H2077 Value assigned to 'TFeedbackManager.InternalSubmit' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Graph.pas(1242) Hint: H2077 Value assigned to 'DeepBase.Graph.TGraph<T>.IsConnected' never used
+Test.DeepBase.Graph.pas(1195) Hint: H2077 Value assigned to 'C3' never used
+Test.DeepBase.Graph.pas(1194) Hint: H2077 Value assigned to 'C2' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.BillingClient.pas(440) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.BillingClient.pas(441) Hint: H2443 Inline function 'THTTPClient.SetAcceptCharSet' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.BillingClient.pas(971) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.BillingClient.pas(972) Hint: H2443 Inline function 'THTTPClient.SetAcceptCharSet' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.LLM.BillingClient.pas(1141) Hint: H2077 Value assigned to 'TBillingClient.HealthCheck' never used
+Test.DeepBase.LLM.PromptTemplate.pas(292) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.LLM.PromptTemplate.pas(293) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.pas(585) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Net.pas(1413) Hint: H2077 Value assigned to 'TNetworkUtils.CanReach' never used
+Test.DeepBase.Performance.pas(730) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(731) Hint: H2443 Inline function 'TFDParam.SetAsFloat' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(732) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(782) Hint: H2443 Inline function 'TFDParam.SetAsInteger' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(814) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(815) Hint: H2443 Inline function 'TFDParam.SetAsFloat' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(816) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(846) Hint: H2443 Inline function 'TFDParam.SetAsInteger' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+Test.DeepBase.Performance.pas(847) Hint: H2443 Inline function 'TFDParam.SetAsFloat' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Scheduler.pas(1061) Hint: H2077 Value assigned to 'LTaskFailed' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.WorkerQueue.pas(1963) Hint: H2077 Value assigned to 'LElapsed' never used
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.HB.Dialogs.pas(417) Hint: H2077 Value assigned to 'THbDialog.Execute' never used
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.HB.Voice.pas(602) Hint: H2077 Value assigned to 'THbVoiceDialog.Execute' never used
+Test.DeepBase.HB.DeepRW.pas(341) Warning: W1000 Symbol 'AllocMemSize' is deprecated
+Test.DeepBase.HB.DeepRW.pas(353) Warning: W1000 Symbol 'AllocMemSize' is deprecated
+Test.DeepBase.HB.Voice.CF.pas(176) Hint: H2077 Value assigned to 'InTransaction' never used
+Test.DeepBase.HB.Voice.CF.pas(167) Hint: H2077 Value assigned to 'InTransaction' never used
+Test.DeepBase.HB.Voice.CF.pas(158) Hint: H2077 Value assigned to 'InTransaction' never used
+D:\_Progs\02Business\DeepBase\FMX\DeepBase.FMX.HB.Dialogs.pas(346) Hint: H2077 Value assigned to 'THbDialog.Execute' never used
+D:\_Progs\02Business\DeepBase\FMX\DeepBase.FMX.HB.Voice.pas(384) Hint: H2077 Value assigned to 'THbVoiceDialog.Execute' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(121) Hint: H2077 Value assigned to 'TProxyLLMClient.Probe' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(154) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(228) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(279) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(423) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.LLM.Proxy.pas(467) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+Test.DeepBase.LLM.Schema.PBT.pas(118) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ReviewQueue.pas(200) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ReviewQueue.pas(223) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ReviewQueue.pas(255) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(147) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(182) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(247) Hint: H2077 Value assigned to 'LRefCount' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ActionGrid.pas(242) Hint: H2077 Value assigned to 'LEnabled' never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(76) Hint: H2219 Private symbol 'RuleINV8_DuplicateKey' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(77) Hint: H2219 Private symbol 'RuleINV9_CircularRoute' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(78) Hint: H2219 Private symbol 'RuleINV10_UnreachableGate' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(79) Hint: H2219 Private symbol 'RuleINV11_MissingFeedback' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(80) Hint: H2219 Private symbol 'RuleINV12_L3NoSeal' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(81) Hint: H2219 Private symbol 'RuleINV13_MissingProjection' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(82) Hint: H2219 Private symbol 'RuleINV14_RiskMismatch' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.Validation.pas(83) Hint: H2219 Private symbol 'RuleINV15_EmptyField' declared but never used
+D:\_Progs\02Business\DeepBase\Governance\DeepBase.Governance.ReviewQueue.SQLite.pas(822) Hint: H2077 Value assigned to 'TReviewQueueSQLite.MarkExecuted' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Anticipation.pas(153) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Anticipation.pas(221) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+Regression\Test.Regression.CR20260824_P0Batch4.pas(132) Hint: H2077 Value assigned to 'KindByte' never used
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(63) Warning: W1074 Unknown custom attribute
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(67) Warning: W1074 Unknown custom attribute
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(71) Warning: W1074 Unknown custom attribute
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(75) Warning: W1074 Unknown custom attribute
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(79) Warning: W1074 Unknown custom attribute
+Regression\Test.Regression.BUG320_FileWatcherLifecycle.pas(83) Warning: W1074 Unknown custom attribute
+D:\_Progs\02Business\DeepBase\Core\DeepBase.FileWatcher.pas(173) Hint: H2219 Private symbol 'FDebounceThread' declared but never used
+Regression\Test.Regression.BUG331_SafeQueryIdentifierValidation.pas(103) Hint: H2077 Value assigned to 'LCaught' never used
+D:\_Progs\02Business\DeepBase\Core\DeepBase.SchemaAdapter.Registry.pas(100) Hint: H2077 Value assigned to 'TSchemaAdapterRegistry.TryResolve' never used
+D:\_Progs\02Business\DeepBase\DeepFlow\Source\Core\DeepFlow.Engine.pas(565) Hint: H2077 Value assigned to 'LOwnsWaiter' never used
+D:\_Progs\02Business\DeepBase\DeepFlow\Source\AI\DeepFlow.Skill.Client.pas(151) Hint: H2077 Value assigned to 'LSuccess' never used
+D:\_Progs\02Business\DeepBase\DeepFlow\Source\AI\DeepFlow.Skill.Client.pas(121) Hint: H2077 Value assigned to 'LSuccess' never used
+D:\_Progs\02Business\DeepBase\DeepFlow\Tests\Test.DeepFlow.Engine.pas(55) Hint: H2164 Variable 'LCompleted' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+D:\_Progs\02Business\DeepBase\DeepFlow\Tests\Test.DeepFlow.Engine.pas(56) Hint: H2164 Variable 'LWaitThread' is declared but never used in 'TDeepFlowEngineTests.Stop_FromWorkerThread_DoesNotDeadlock'
+D:\_Progs\02Business\DeepBase\DeepFlow\Tests\Test.DeepFlow.Engine.pas(80) Hint: H2164 Variable 'LWaitResult' is declared but never used in 'TDeepFlowEngineTests.Stop_WhilePaused_ExitsCleanly'
+Test.DeepBase.DesignTime.Registration.pas(48) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(57) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(67) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(84) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(102) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(126) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(148) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(153) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+Test.DeepBase.DesignTime.Registration.pas(158) Hint: H2443 Inline function 'TDirectory.GetCurrentDirectory' has not been expanded because unit 'Winapi.Windows' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(54) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(55) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(56) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(57) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(76) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(78) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.Persistence.TestHelper.FireDAC.pas(96) Hint: H2443 Inline function 'TFDParam.SetAsString' has not been expanded because unit 'FireDAC.Stan.Param' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.IntentClarification.Storage.pas(217) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.IntentClarification.Storage.pas(270) Hint: H2443 Inline function 'TDataSet.IsEmpty' has not been expanded because unit 'Data.DB' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Persistence\DeepBase.IntentClarification.Storage.pas(376) Hint: H2443 Inline function 'TJSONArray.GetValue' has not been expanded because unit 'System.Generics.Collections' is not specified in USES list
+D:\_Progs\02Business\DeepBase\Features\DeepBase.IntentClarification.Degradation.pas(70) Warning: W1057 Implicit string cast from 'AnsiString' to 'string'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.FBank.pas(195) Hint: H2164 Variable 'LFrame' is declared but never used in 'TFBankExtractor.Extract'
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.ASR.SenseVoice.pas(466) Hint: H2077 Value assigned to 'LTimeSteps' never used
+D:\_Progs\02Business\DeepBase\Features\DeepBase.Speech.TTS.Edge.pas(200) Hint: H2164 Variable 'All' is declared but never used in 'TEdgeTTSBackend.SupportedVoices'
+D:\_Progs\02Business\DeepBase\ThirdParty\Social\DeepBase.Social.QQ.pas(198) Hint: H2077 Value assigned to 'TQQClient.ParseCallbackJson' never used
+369408 lines, 21.94 seconds, 37402408 bytes code, 3234896 bytes data.
+SUCCESS: Unit Tests compiled
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+.E
+
+Tests Found   : 1
+Tests Ignored : 0
+Tests Passed  : 0
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 1
+
+Tests With Errors
+
+  Test.Regression.BUG336_WorkerQueueStopWait.TBUG336_WorkerQueueStopWaitTest.Test_StopFalse_WaitsForWorkers
+  Message: Thread Error: 句柄无效。 (6)
+
+
+
+FAILED: Some Unit Tests tests failed (Exit code: 1)
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        FAILED
+==============================================
+
+Some tests failed!

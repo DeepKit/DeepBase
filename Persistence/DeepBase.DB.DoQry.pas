@@ -233,6 +233,9 @@ implementation
 uses
   System.DateUtils, System.IOUtils, System.JSON, System.Generics.Collections,
   Data.DB,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   FireDAC.Stan.Option,
   FireDAC.Stan.Param,
   FireDAC.Stan.Error,
@@ -850,18 +853,18 @@ begin
         P.AsBoolean := TJSONBool(Pair.JsonValue).AsBoolean
       else
       begin
-        S := Trim(Pair.JsonValue.Value);
+        S := Pair.JsonValue.Value;
         if S = '' then
           P.AsString := S
         else
         begin
-          // UUID auto-detection: 36-char hex string with 4 dashes at correct positions.
-          // Binds as ftGuid instead of ftWideString to avoid PG "uuid = character varying" errors.
-          if (Length(S) = 36) and
-             (S[9] = '-') and (S[14] = '-') and (S[19] = '-') and (S[24] = '-') then
+          // UUID auto-detection uses trimmed copy; bind preserves original spacing.
+          var STrim := Trim(S);
+          if (Length(STrim) = 36) and
+             (STrim[9] = '-') and (STrim[14] = '-') and (STrim[19] = '-') and (STrim[24] = '-') then
           begin
             P.DataType := ftGuid;
-            P.AsGuid := StringToGUID('{' + S + '}');
+            P.AsGuid := StringToGUID('{' + STrim + '}');
           end
           else
           begin
@@ -1761,13 +1764,36 @@ begin
 end;
 
 procedure UniDbClearPreparedStatements;
+var
+  Pair: TPair<string, TPreparedEntry>;
+  KeysToRemove: TList<string>;
 begin
   if Assigned(GPreparedPoolLock) then
   begin
     TMonitor.Enter(GPreparedPoolLock);
     try
       if Assigned(GPreparedPool) then
-        GPreparedPool.Clear;
+      begin
+        KeysToRemove := TList<string>.Create;
+        try
+          for Pair in GPreparedPool do
+          begin
+            if Assigned(Pair.Value) and (Pair.Value.InUseCount > 0) then
+            begin
+              {$IFDEF DEBUG}{$IFDEF MSWINDOWS}
+              OutputDebugString(PChar(
+                'DeepBase.DB.DoQry: UniDbClearPreparedStatements skipped in-use entry'));
+              {$ENDIF}{$ENDIF}
+              Continue;
+            end;
+            KeysToRemove.Add(Pair.Key);
+          end;
+          for var Key in KeysToRemove do
+            GPreparedPool.Remove(Key);
+        finally
+          KeysToRemove.Free;
+        end;
+      end;
       if Assigned(GPreparedQueryIndex) then
         GPreparedQueryIndex.Clear;
       GPreparedReuseCount := 0;
@@ -1803,6 +1829,7 @@ var
   KeysToRemove: TList<string>;
   Key: string;
   Entry: TPreparedEntry;
+  SkippedInUse: Integer;
 begin
   if (Conn = nil) or not Assigned(GPreparedPoolLock) then
     Exit;
@@ -1814,9 +1841,22 @@ begin
 
     KeysToRemove := TList<string>.Create;
     try
+      SkippedInUse := 0;
       for Pair in GPreparedPool do
-        if Assigned(Pair.Value) and (Pair.Value.Connection = Conn) then
-          KeysToRemove.Add(Pair.Key);
+      begin
+        if not Assigned(Pair.Value) or (Pair.Value.Connection <> Conn) then
+          Continue;
+        if Pair.Value.InUseCount > 0 then
+        begin
+          Inc(SkippedInUse);
+          {$IFDEF DEBUG}{$IFDEF MSWINDOWS}
+          OutputDebugString(PChar(
+            'DeepBase.DB.DoQry: UniDbSweepConnectionFromPool skipped in-use prepared entry'));
+          {$ENDIF}{$ENDIF}
+          Continue;
+        end;
+        KeysToRemove.Add(Pair.Key);
+      end;
 
       for Key in KeysToRemove do
       begin

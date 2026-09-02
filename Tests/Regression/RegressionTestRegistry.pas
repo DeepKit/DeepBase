@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   RegressionTestRegistry - 回归测试注册�?
 
   此文件列出所有回归测试，用于�?
@@ -31,13 +31,14 @@ type
   end;
 
 const
-  /// <summary>回归测试总数</summary>
-  REGRESSION_TEST_COUNT = 72;
+  /// <summary>回归测试总数（本注册表已列条目）</summary>
+  REGRESSION_TEST_COUNT = 31;
 
   // ============================================================================
-  // P0 级别测试 (Critical) - 9 �?  // ============================================================================
+  // P0 级别测试 (Critical)
+  // ============================================================================
 
-  P0_TEST_COUNT = 9;
+  P0_TEST_COUNT = 14;
 
   P0_TESTS: array[0..P0_TEST_COUNT - 1] of TBugTestInfo = (
     (BugNumber: 'BUG-058'; Priority: bpP0; Category: bcSecurity;
@@ -49,7 +50,7 @@ const
     (BugNumber: 'BUG-062'; Priority: bpP0; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG062_PluginSandbox';
      SourceFile: 'Core/DeepBase.PluginManager.pas';
-     Description: '插件沙箱逃逸风�?;
+     Description: '插件沙箱逃逸风险';
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-063'; Priority: bpP0; Category: bcSecurity;
@@ -61,7 +62,7 @@ const
     (BugNumber: 'BUG-013'; Priority: bpP0; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG013_RSASignature';
      SourceFile: 'ThirdParty/Payment/DeepBase.Payment.Alipay.pas';
-     Description: '支付模块RSA签名未实�?;
+     Description: '支付模块RSA签名未实现';
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-035'; Priority: bpP0; Category: bcCrypto;
@@ -85,20 +86,51 @@ const
     (BugNumber: 'BUG-033'; Priority: bpP0; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG033_WeakEncryption';
      SourceFile: 'Features/DeepBase.AntiTamper.pas';
-     Description: '弱加密算法使�?;
+     Description: '弱加密算法使用';
      FixDate: '2025-12-16'),
 
     (BugNumber: 'BUG-034'; Priority: bpP0; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG034_HardcodedKeys';
      SourceFile: 'Features/DeepBase.Protection.pas';
-     Description: '硬编码密钥漏�?;
-     FixDate: '2025-12-16')
+     Description: '硬编码密钥漏洞';
+     FixDate: '2025-12-16'),
+
+    (BugNumber: 'BUG-334'; Priority: bpP0; Category: bcConcurrency;
+     TestUnit: 'Test.Regression.BUG334_PoolShutdownInUse';
+     SourceFile: 'Persistence/DeepBase.DB.Pool.pas';
+     Description: 'Pool Shutdown 跳过 csInUse 连接避免 UAF';
+     FixDate: '2026-09-02'),
+
+    (BugNumber: 'BUG-335'; Priority: bpP0; Category: bcOther;
+     TestUnit: 'Test.Regression.BUG335_GuardianTransientOpen';
+     SourceFile: 'Persistence/DeepBase.DB.Guardian.pas';
+     Description: 'Guardian 瞬态 Open 失败不 quarantine';
+     FixDate: '2026-09-02'),
+
+    (BugNumber: 'BUG-336'; Priority: bpP0; Category: bcConcurrency;
+     TestUnit: 'Test.Regression.BUG336_WorkerQueueStopWait';
+     SourceFile: 'Core/DeepBase.WorkerQueue.pas';
+     Description: 'WorkerQueue Stop 必须 WaitFor 后再 Clear';
+     FixDate: '2026-09-02'),
+
+    (BugNumber: 'BUG-339'; Priority: bpP0; Category: bcConcurrency;
+     TestUnit: 'Test.Regression.BUG339_DoQrySweepInUse';
+     SourceFile: 'Persistence/DeepBase.DB.DoQry.pas';
+     Description: 'DoQry Sweep 跳过 InUseCount>0 条目';
+     FixDate: '2026-09-02'),
+
+    (BugNumber: 'BUG-340'; Priority: bpP0; Category: bcOther;
+     TestUnit: 'Test.Regression.BUG340_PluginUnloadOrder';
+     SourceFile: 'Core/DeepBase.PluginManager.pas';
+     Description: 'PluginManager Unload 顺序 Finalize→nil→UnloadBPL';
+     FixDate: '2026-09-02')
   );
 
   // ============================================================================
-  // P1 级别测试 (High) - 31 个（部分列出�?  // ============================================================================
+  // P1 级别测试 (High)
+  // ============================================================================
 
-  P1_TEST_COUNT = 15;
+  P1_TEST_COUNT = 17;
 
   P1_TESTS: array[0..P1_TEST_COUNT - 1] of TBugTestInfo = (
     // 内存泄漏相关
@@ -193,8 +225,20 @@ const
     (BugNumber: 'BUG-009'; Priority: bpP1; Category: bcConcurrency;
      TestUnit: 'Test.Regression.BUG009_LoggingRace';
      SourceFile: 'Core/DeepBase.Logging.pas';
-     Description: '日志系统竞态条�?;
-     FixDate: '2025-12-16')
+     Description: '日志系统竞态条件';
+     FixDate: '2025-12-16'),
+
+    (BugNumber: 'BUG-337'; Priority: bpP1; Category: bcOther;
+     TestUnit: 'Test.Regression.BUG337_AuthorizationUpdateSync';
+     SourceFile: 'Core/DeepBase.Authorization.pas';
+     Description: 'UpdateUser/UpdateRole 同步内存 RBAC 字典';
+     FixDate: '2026-09-02'),
+
+    (BugNumber: 'BUG-338'; Priority: bpP1; Category: bcValidation;
+     TestUnit: 'Test.Regression.BUG338_DoQryBindTrim';
+     SourceFile: 'Persistence/DeepBase.DB.DoQry.pas';
+     Description: 'DoQry BindJsonParams 不 Trim 字符串参数';
+     FixDate: '2026-09-02')
   );
 
 /// <summary>获取所�?P0 测试单元名称</summary>
@@ -288,24 +332,24 @@ begin
     if (P0_TEST_COUNT + P1_TEST_COUNT) <> REGRESSION_TEST_COUNT then
       Exit(False); // Total mismatch
 
-    // Check 4: Verify all registered test files exist on disk
+    // Check 4: Verify all registered test units map to existing files
     for I := 0 to P0_TEST_COUNT - 1 do
     begin
-      if P0_TESTS[I].TestFile <> '' then
+      if P0_TESTS[I].TestUnit <> '' then
       begin
-        LFilePath := 'Tests\Regression\' + P0_TESTS[I].TestFile;
+        LFilePath := 'Tests\Regression\' + P0_TESTS[I].TestUnit + '.pas';
         if not TFile.Exists(LFilePath) then
-          LMissingFiles.Add(P0_TESTS[I].TestFile);
+          LMissingFiles.Add(P0_TESTS[I].TestUnit);
       end;
     end;
 
     for I := 0 to P1_TEST_COUNT - 1 do
     begin
-      if P1_TESTS[I].TestFile <> '' then
+      if P1_TESTS[I].TestUnit <> '' then
       begin
-        LFilePath := 'Tests\Regression\' + P1_TESTS[I].TestFile;
+        LFilePath := 'Tests\Regression\' + P1_TESTS[I].TestUnit + '.pas';
         if not TFile.Exists(LFilePath) then
-          LMissingFiles.Add(P1_TESTS[I].TestFile);
+          LMissingFiles.Add(P1_TESTS[I].TestUnit);
       end;
     end;
 
