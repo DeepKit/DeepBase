@@ -72,9 +72,10 @@ begin
   FVersion := '4.x';
   FVersionRange := '4.0.0-4.99.99';
 
-  // BLOCKED-DATA-P0-001: real Msg_* canonical column-signature SHA256 prefix
-  // pending target-machine schema dump. Empty until DATA-P0-001 delivers fixture.
-  FSchemaFingerprintPrefixes := [];
+  // Msg 17-col signature SHA256 prefix (column-signature口径, 去表名).
+  // Source: WeChat 4.1.13.12 production dump 2026-09-02 (DeepAxis DeCrypt fingerprint).
+  // Full: 26d53fe31f389e65779419dc30bfdd73df5f1c299215fa4a0dccd525910cda84
+  FSchemaFingerprintPrefixes := ['26d53fe31f'];
 
   // 10 output fields (same target schema as 3.9.x)
   SetLength(FFieldMappings, 10);

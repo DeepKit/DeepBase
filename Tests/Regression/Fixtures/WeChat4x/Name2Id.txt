@@ -1,0 +1,3 @@
+cid	name	type	notnull	dflt_value	pk
+0	user_name	TEXT	0		1
+1	is_session	INTEGER	0		0

@@ -2146,12 +2146,13 @@ DeepFlow 模块未接�?`DeepBaseTests.dpr` 测试工程、`THTTPClient` 在构
 - **修复**: 改为 `Length >= 1 + NONCE + TAG`（29 字节）
 - **回归**: `Tests/Regression/Test.Regression.BUG327_KeyManagerAEAD.pas::Test_EmptyPlaintext_GCMRoundtrip`
 
-#### BUG-332 扩展 WeChat4x 指纹前缀非 hex ⏸ 部分交付
-- **文件**: `Core/DeepBase.SchemaAdapter.WeChat4x.pas`, `Core/DeepBase.SchemaAdapter.pas`
-- **问题**: 占位符 `'4x7f2a9b1c'` 含非 hex 字符，registry 永不命中 4.x 适配器
-- **修复**: `Validate` 阶段 hex 合法性 fail-fast；移除非法占位符（前缀列表暂空）
-- **阻塞**: **BLOCKED-DATA-P0-001** — 真实 4.x Msg_* canonical SHA256 前缀待目标机 schema dump
-- **回归**: `Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas`（含 `Test_InvalidHexPrefix_RaisesOnValidate`, `Test_WeChat4x_NoPrefixUntilDataDump`）
+#### BUG-332 扩展 WeChat4x 指纹前缀非 hex ✅（WO-20260902-002 补根因）
+- **文件**: `DeepAxis/DeepBase.External.SQLiteReader.pas`, `Core/DeepBase.SchemaAdapter.WeChat4x.pas`, `Core/DeepBase.SchemaAdapter.WeChat39x.pas`
+- **问题**: TryResolve 传全量指纹，适配器前缀是列签名 → 口径错位；4.x 前缀曾空（BLOCKED-DATA-P0-001）
+- **修复**: Msg 列签名指纹 SSOT + resolve 改传列签名；4x 前缀 `26d53fe31f`；39x 显式 BLOCKED-39X-DATA
+- **阻塞解除**: **BLOCKED-DATA-P0-001** 已解锁
+- **新债务**: **BLOCKED-39X-DATA** — 3.9.x 真实列签名前缀待目标机 dump（禁止虚构）
+- **回归**: `Tests/Regression/Test.Regression.BUG332_WeChatSchemaRegistryResolve.pas` + `Fixtures/WeChat4x/`
 
 ### P1 — RBAC / DoQry 数据语义
 

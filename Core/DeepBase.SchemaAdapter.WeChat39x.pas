@@ -37,10 +37,9 @@ begin
   inherited;
   FVersion := '3.9.x';
   FVersionRange := '3.9.0-3.9.99';
-  // BUG-332: WeChat 3.9.x MSG 表 canonical column-signature 的 SHA256 前缀 (10 hex)。
-  // 占位符 'e4a7bXXXXX...'/'0000000000' 无法通过 TryMatchFingerprint 契约测试;
-  // 据 REVIEW5-DATA-003 + bugfix.md BUG-332 统一为 'e4a7b3c9f1'。
-  // 注: 真实指纹仍待 DATA-P0-001 在目标机 dump schema 复核, 此值对齐文档与测试契约。
+  // BLOCKED-39X-DATA: 占位前缀 e4a7b3c9f1（契约/测试用）。
+  // 列签名口径下该值不会命中真实 3.9.x 库；待 3.9.x 目标机 dump 后以同口径
+  // （Msg 列签名 SHA256 前 10 hex）替换。禁止虚构真实指纹。
   FSchemaFingerprintPrefixes := ['e4a7b3c9f1'];
 
   SetLength(FFieldMappings, 10);

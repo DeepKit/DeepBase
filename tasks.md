@@ -8,38 +8,42 @@
 ## 当前基线
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
-- 单测基线: 4393 found / 4386 passed / 3 failed（Perception×2 + Timeout PBT；证据 `TestResults/WO-20260902-001-full/`）
-- 当前主线: **WO-20260902-001 框架审计 Top10 修复（开发完成 / 待数据解锁；禁止 CLOSE）**
+- 单测基线: 4396 found / 4389 passed / 3 failed（CR-606×2 + CR-608；证据 `TestResults/WO-20260902-002/full/`）
+- 当前主线: **WO-20260902-002 指纹口径改造已交付（可与 001 一并 CLOSE；保留 BLOCKED-39X-DATA）**
 - 审计报告: `CodeReview/20260902-Framework-Audit.md`（~35 P0 / ~95 P1 actionable，Features F3–F9 未审）
 
 ---
 
-## 一、🔧 WO-20260902-001 框架审计 Top10 修复
+## 一、🔧 WO-20260902-002 SchemaAdapter 指纹口径改造
 
-> 工单: `docs/WO-20260902-001-开发甲-框架审计P0修复工单.md` · brief: `docs/brief-WO-20260902-001-开发甲.md`
+> 工单: `docs/WO-20260902-002-开发甲-SchemaAdapter指纹口径改造工单.md` · brief: `docs/brief-WO-20260902-002-开发甲.md`
 
-| FIX | 模块 | 状态 | 回归 |
-|-----|------|------|------|
-| FIX-1 Pool Shutdown 跳过 csInUse | `Persistence/DeepBase.DB.Pool.pas` | ✅ | BUG-334 |
-| FIX-2 Guardian 瞬态 Open 不误 quarantine | `Persistence/DeepBase.DB.Guardian.pas` | ✅ | BUG-335 |
-| FIX-3 Scheduler FRunningITask 回调后置 nil | `Core/DeepBase.Scheduler.pas` | ✅ | BUG-326 扩展 |
-| FIX-4 FileWatcher Debounce IInterface 捕获 | `Core/DeepBase.FileWatcher.pas` | ✅ | BUG-320 扩展 |
-| FIX-5 WorkerQueue Stop 先 WaitFor 再释放 | `Core/DeepBase.WorkerQueue.pas` | ✅ | BUG-336 |
-| FIX-6 KeyManager GCM 空明文边界 `>=` | `Core/DeepBase.KeyManager.pas` | ✅ | BUG-327 扩展 |
-| FIX-7 WeChat4x 指纹 hex 校验 + 真实前缀 | `Core/DeepBase.SchemaAdapter.WeChat4x.pas` | ⏸ **BLOCKED-DATA-P0-001**（hex 校验已交付，真实 SHA256 待 schema dump） | BUG-332 扩展 |
-| FIX-8 Authorization UpdateUser/Role 内存同步 | `Core/DeepBase.Authorization.pas` | ✅ | BUG-337 |
-| FIX-9 DoQry Bind 保留原始空格 | `Persistence/DeepBase.DB.DoQry.pas` | ✅ | BUG-338 |
-| FIX-10 DoQry Sweep 跳过 InUseCount>0 | `Persistence/DeepBase.DB.DoQry.pas` | ✅ | BUG-339 |
-| FIX-11 PluginManager UnloadBPL 顺序 | `Core/DeepBase.PluginManager.pas` | ✅ | BUG-340 |
+| FIX | 状态 | 说明 |
+|-----|------|------|
+| FIX-A Msg 列签名指纹 SSOT | ✅ | Types helper + `GetMessageColumnSignatureFingerprint` |
+| FIX-B TryResolve 改传列签名 | ✅ | Open/SafeQuery → `ResolveAdapterOrRaise` |
+| FIX-C WeChat4x `26d53fe31f` | ✅ | 解锁 BLOCKED-DATA-P0-001 |
+| FIX-D WeChat39x BLOCKED-39X-DATA | ✅ 台账 | 占位 `e4a7b3c9f1`（待 3.9 dump） |
+| FIX-E fixture + BUG332 | ✅ | 10/10 PASS · `TestResults/WO-20260902-002/` |
 
-**交付产物：** `docs/WO-20260902-001-开发甲-框架审计P0修复交付报告.md`
+**债务：** ⏸ **BLOCKED-39X-DATA**（3.9.x 列签名待 dump）
 
-**待闭环（禁止宣告 CLOSE）：**
+**交付：** `docs/WO-20260902-002-开发甲-交付报告.md` · 全量 `TestResults/WO-20260902-002/full/`（4389/4396）
 
-- [x] 全量单测 + junit XML 证据落 `TestResults/WO-20260902-001-full/`（4386/4393；3 失败=环境债，非本 WO）
-- [x] `RegressionTestRegistry.pas` 登记 BUG-334~340，`REGRESSION_TEST_COUNT=31`
-- [x] 交付报告已落盘
-- [ ] FIX-7 真实 4.x 指纹（依赖 DATA-P0-001 目标机 schema dump）---
+---
+
+## 一附、WO-20260902-001 框架审计 Top10（待与 002 一并 CLOSE）
+
+> 工单: `docs/WO-20260902-001-开发甲-框架审计P0修复工单.md`
+
+| FIX | 状态 | 回归 |
+|-----|------|------|
+| FIX-1～6,8～11 | ✅ | BUG-334/335/336/326/320/327/337/338/339/340 |
+| FIX-7 WeChat4x 指纹 | ✅ 由 WO-002 解锁 BLOCKED-DATA-P0-001 | BUG-332 |
+
+**待闭环：** WO-002 证据 + 交付报告后可与 001 一并 CLOSE（仍保留 BLOCKED-39X-DATA）。
+
+---
 
 ## 二、🔧 P0 待环境验证转正（7 条）
 

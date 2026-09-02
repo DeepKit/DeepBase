@@ -18,6 +18,9 @@ uses
   DeepBase.External.BCryptDecrypt,
   DeepBase.SchemaAdapter, DeepBase.SchemaAdapter.Registry;
 
+/// <summary>Append PRAGMA table_info rows via External.Types SSOT column format.</summary>
+procedure AppendColumnSignatureEntriesFromQuery(SB: TStringBuilder; ColQ: TFDQuery);
+
 type
   IExternalDBReader = interface
     ['{A86F1C3E-7D2B-4F92-8E15-3C6B09A4F7D2}']
@@ -26,6 +29,7 @@ type
       const KeyCallback: TFunc<string, TBytes>): IExternalDBReader;
     function GetSchema: TExternalDBSchema;
     function GetSchemaFingerprint: string;
+    function GetMessageColumnSignatureFingerprint: string;
     function SafeQuery(const TableName: string;
       const ColumnNames: TArray<string>): TFDQuery;
     function SafeQueryAsDict(const TableName: string;
@@ -57,6 +61,7 @@ type
     procedure ApplyReadOnlySafeguards;
     function GetRawSQLiteHandle: Pointer;
     function TryResolveAdapter(const Fingerprint: string): Boolean;
+    procedure ResolveAdapterOrRaise;
     procedure ApplyFireDACConnection(const DbPath: string; const KeyBytes: TBytes);
     procedure ApplyBCryptConnection(const DbPath: string; const KeyBytes: TBytes);
   public
@@ -72,6 +77,7 @@ type
       const KeyCallback: TFunc<string, TBytes>): IExternalDBReader;
     function GetSchema: TExternalDBSchema;
     function GetSchemaFingerprint: string;
+    function GetMessageColumnSignatureFingerprint: string;
     function SafeQuery(const TableName: string;
       const ColumnNames: TArray<string>): TFDQuery;
     function SafeQueryAsDict(const TableName: string;
@@ -98,6 +104,27 @@ type
   end;
 
 implementation
+
+procedure AppendColumnSignatureEntriesFromQuery(SB: TStringBuilder; ColQ: TFDQuery);
+var
+  Names, Types: TList<string>;
+begin
+  // Collect then delegate to External.Types SSOT (single name:type, format).
+  Names := TList<string>.Create;
+  Types := TList<string>.Create;
+  try
+    while not ColQ.Eof do
+    begin
+      Names.Add(ColQ.Fields[1].AsString);
+      Types.Add(ColQ.Fields[2].AsString);
+      ColQ.Next;
+    end;
+    AppendColumnSignatureEntries(SB, Names.ToArray, Types.ToArray);
+  finally
+    Names.Free;
+    Types.Free;
+  end;
+end;
 
 constructor TExternalSQLiteReader.Create(const AConfig: TSQLCipherCompatibilityConfig;
   const AAuditor: IBodyZeroAuditor);
@@ -130,8 +157,34 @@ begin
     Logger.Warn('ISchemaAdapterRegistry not injected, skipping adapter resolution', 'ExternalDB');
     Exit(True);
   end;
+  // Empty column-signature fingerprint must not reach Registry (no false match).
+  if Fingerprint = '' then
+  begin
+    Logger.Warn(
+      'Message column-signature fingerprint empty (no Msg_* tables or inconsistent); skip resolve',
+      'ExternalDB');
+    Exit(True);
+  end;
   var Adapter: ISchemaAdapter;
   Result := FAdapterRegistry.TryResolve(Fingerprint, '', Adapter);
+end;
+
+procedure TExternalSQLiteReader.ResolveAdapterOrRaise;
+var
+  FullFp, ColFp: string;
+begin
+  FullFp := GetSchemaFingerprint;
+  ColFp := GetMessageColumnSignatureFingerprint;
+  if ColFp = '' then
+  begin
+    Logger.WarnFmt(
+      'Skip adapter resolve: empty Msg column signature (fullFp=%s)', [FullFp], 'ExternalDB');
+    Exit;
+  end;
+  if not TryResolveAdapter(ColFp) then
+    raise EExternalSchemaChanged.CreateFmt(
+      'No matching SchemaAdapter; fullFingerprint=%s columnSignatureFingerprint=%s',
+      [FullFp, ColFp]);
 end;
 
 // ===== Backend: FireDAC =====
@@ -254,6 +307,8 @@ begin
   // Cache schema so SafeQueryMessages can enumerate shard tables without
   // re-querying sqlite_master on every call (BUG-330 / REVIEW5-DATA-001).
   FSchema := GetSchema;
+  // Resolve with Msg column-signature fingerprint (not full schema fingerprint).
+  ResolveAdapterOrRaise;
   Result := Self;
 end;
 
@@ -370,12 +425,7 @@ begin
         var ColQ := TFDQuery.Create(FConnection);
         try
           ColQ.Open(Format('PRAGMA table_info(''%s'')', [TableName]));
-          while not ColQ.Eof do
-          begin
-            SB.Append(ColQ.Fields[1].AsString).Append(':');
-            SB.Append(ColQ.Fields[2].AsString).Append(',');
-            ColQ.Next;
-          end;
+          AppendColumnSignatureEntriesFromQuery(SB, ColQ);
         finally
           ColQ.Free;
         end;
@@ -384,6 +434,7 @@ begin
         Q.Next;
       end;
 
+      // Full fingerprint keeps historical casing; adapters match on column-sig path.
       Result := THashSHA2.GetHashString(SB.ToString, SHA256);
     finally
       Q.Free;
@@ -391,6 +442,63 @@ begin
   finally
     SB.Free;
   end;
+end;
+
+function TExternalSQLiteReader.GetMessageColumnSignatureFingerprint: string;
+var
+  Q, ColQ: TFDQuery;
+  TableName, ThisSig, CommonSig: string;
+  SB: TStringBuilder;
+  MsgCount: Integer;
+begin
+  Result := '';
+  if not FIsOpen then Exit;
+
+  CommonSig := '';
+  MsgCount := 0;
+  Q := TFDQuery.Create(FConnection);
+  try
+    Q.Open('SELECT name FROM sqlite_master ' +
+           'WHERE type=''table'' AND name LIKE ''Msg_%'' ORDER BY name');
+    while not Q.Eof do
+    begin
+      TableName := Q.Fields[0].AsString;
+      SB := TStringBuilder.Create;
+      try
+        SB.Append('(');
+        ColQ := TFDQuery.Create(FConnection);
+        try
+          ColQ.Open(Format('PRAGMA table_info(''%s'')', [TableName]));
+          AppendColumnSignatureEntriesFromQuery(SB, ColQ);
+        finally
+          ColQ.Free;
+        end;
+        SB.Append(')');
+        ThisSig := SB.ToString;
+      finally
+        SB.Free;
+      end;
+
+      if MsgCount = 0 then
+        CommonSig := ThisSig
+      else if ThisSig <> CommonSig then
+      begin
+        Logger.WarnFmt(
+          'Msg_* column signatures inconsistent (table=%s); refusing fingerprint',
+          [TableName], 'ExternalDB');
+        Exit('');
+      end;
+      Inc(MsgCount);
+      Q.Next;
+    end;
+  finally
+    Q.Free;
+  end;
+
+  if MsgCount = 0 then
+    Exit('');
+
+  Result := HashColumnSignatureFingerprint(CommonSig);
 end;
 
 function TExternalSQLiteReader.SafeQuery(const TableName: string;
@@ -492,10 +600,8 @@ begin
       [FSchemaVersionAtOpen, CurrentVer], 'ExternalDB');
     FSchemaVersionAtOpen := CurrentVer;
     FSchema := GetSchema; // refresh cached schema (REVIEW5-DATA-001)
-    var NewFingerprint := FSchema.SchemaFingerprint;
-    if not TryResolveAdapter(NewFingerprint) then
-      raise EExternalSchemaChanged.CreateFmt(
-        'Schema changed to fingerprint %s, no matching adapter', [NewFingerprint]);
+    // Re-resolve on Msg column signature (full fingerprint still drives change detect).
+    ResolveAdapterOrRaise;
   end;
 
   // === SQLITE_BUSY retry ===

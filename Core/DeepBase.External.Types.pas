@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.External.Types - External Database Type Definitions
   Version: 0.7
   ============================================================================ }
@@ -8,7 +8,7 @@ unit DeepBase.External.Types;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections;
+  System.SysUtils, System.Classes, System.Generics.Collections, System.Hash;
 
 type
   TDecryptBackend = (beFireDAC, beBCryptDirect);
@@ -70,6 +70,16 @@ function WeChat39xCipherConfig: TSQLCipherCompatibilityConfig;
 function WeChat4xCipherConfig: TSQLCipherCompatibilityConfig;
 function IsWriteStatement(const SQL: string): Boolean;
 
+/// <summary>
+/// Column-signature SSOT helpers (shared by SQLiteReader full fingerprint and
+/// Msg column-signature fingerprint). Each column is ``name:type,`` including
+/// a trailing comma after the last column; whole signature is wrapped in ``()``.
+/// </summary>
+procedure AppendColumnSignatureEntries(SB: TStringBuilder;
+  const ANames, ATypes: TArray<string>);
+function FormatColumnSignature(const ANames, ATypes: TArray<string>): string;
+function HashColumnSignatureFingerprint(const AColumnSignature: string): string;
+
 implementation
 
 function WeChat39xCipherConfig: TSQLCipherCompatibilityConfig;
@@ -122,6 +132,38 @@ begin
               TrimmedUpper.Contains('WAL_CHECKPOINT') or
               TrimmedUpper.Contains('OPTIMIZE') or
               TrimmedUpper.Contains('SHRINK_MEMORY')));
+end;
+
+procedure AppendColumnSignatureEntries(SB: TStringBuilder;
+  const ANames, ATypes: TArray<string>);
+var
+  I: Integer;
+begin
+  if Length(ANames) <> Length(ATypes) then
+    raise EArgumentException.Create(
+      'AppendColumnSignatureEntries: name/type array length mismatch');
+  for I := 0 to High(ANames) do
+    SB.Append(ANames[I]).Append(':').Append(ATypes[I]).Append(',');
+end;
+
+function FormatColumnSignature(const ANames, ATypes: TArray<string>): string;
+var
+  SB: TStringBuilder;
+begin
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('(');
+    AppendColumnSignatureEntries(SB, ANames, ATypes);
+    SB.Append(')');
+    Result := SB.ToString;
+  finally
+    SB.Free;
+  end;
+end;
+
+function HashColumnSignatureFingerprint(const AColumnSignature: string): string;
+begin
+  Result := LowerCase(THashSHA2.GetHashString(AColumnSignature, SHA256));
 end;
 
 { TExternalDBSchema }

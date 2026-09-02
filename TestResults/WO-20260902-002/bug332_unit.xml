@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="10" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-02" time="21:56:30">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="21:56:30" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.002" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TBUG332_WeChatSchemaRegistryResolveTest" executed="True" result="Success" success="True" time="0.002" >
+                <categories>
+                  <category name="regression" />
+                </categories>
+                <results>
+                  <test-case name="Test_WeChat39x_FingerprintPrefixValid" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_WeChat4x_FingerprintPrefixValid" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_WeChat39x_FingerprintMatch" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_WeChat4x_FingerprintMatch" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_Adapter_Reject_NonMatching" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_InvalidHexPrefix_RaisesOnValidate" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_Fixture_MsgColumnSignature_MatchesFrozenSHA256" executed="True" result="Success" success="True" time="0.001" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_Registry_Resolve_ColumnSignature_HitsWeChat4x" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_Name2Id_Signature_DoesNotMatchWeChat4x" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                  <test-case name="Test_EmptyColumnSignature_DoesNotMatchAnyAdapter" executed="True" result="Success" success="True" time="0.000" asserts="0" >
+                    <categories>
+                      <category name="regression" />
+                    </categories>
+                  </test-case>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

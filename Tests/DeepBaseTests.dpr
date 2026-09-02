@@ -320,6 +320,7 @@ uses
   DeepBase.SchemaAdapter.Registry in '..\Core\DeepBase.SchemaAdapter.Registry.pas',
   DeepBase.SchemaAdapter.WeChat39x in '..\Core\DeepBase.SchemaAdapter.WeChat39x.pas',
   DeepBase.SchemaAdapter.WeChat4x in '..\Core\DeepBase.SchemaAdapter.WeChat4x.pas',
+  DeepBase.External.Types in '..\Core\DeepBase.External.Types.pas',
   // DoQry 集成模块（Persistence 包的唯一实现）
   DeepBase.DB.DoQry in '..\Persistence\DeepBase.DB.DoQry.pas',
   DeepBase.Persistence.Manager.FireDAC in '..\Persistence\DeepBase.Persistence.Manager.FireDAC.pas',

@@ -1,0 +1,10 @@
+WeChat 4.x 消息库 schema 指纹 dump（归档 fixture，仅结构）
+--------------------------------
+微信精确版本号 : 4.1.13.12
+操作系统       : Windows
+账号(subject)  : wxid_<redacted>
+源库文件       : message\message_0.db
+dump 日期时间  : 2026-09-02
+合规           : 仅导出表名/列名/类型结构信息，无任何业务数据
+口径           : Msg 列签名（去表名）SHA256；注册前缀 26d53fe31f
+冻结完整指纹   : 26d53fe31f389e65779419dc30bfdd73df5f1c299215fa4a0dccd525910cda84

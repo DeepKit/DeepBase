@@ -1,0 +1,18 @@
+cid	name	type	notnull	dflt_value	pk
+0	local_id	INTEGER	0		1
+1	server_id	INTEGER	0		0
+2	local_type	INTEGER	0		0
+3	sort_seq	INTEGER	0		0
+4	real_sender_id	INTEGER	0		0
+5	create_time	INTEGER	0		0
+6	status	INTEGER	0		0
+7	upload_status	INTEGER	0		0
+8	download_status	INTEGER	0		0
+9	server_seq	INTEGER	0		0
+10	origin_source	INTEGER	0		0
+11	source	TEXT	0		0
+12	message_content	TEXT	0		0
+13	compress_content	TEXT	0		0
+14	packed_info_data	BLOB	0		0
+15	WCDB_CT_message_content	INTEGER	0	NULL	0
+16	WCDB_CT_source	INTEGER	0	NULL	0
