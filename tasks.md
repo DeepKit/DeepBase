@@ -8,7 +8,7 @@
 ## 当前基线
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
-- 单测基线: `TestResults/WO-20260903-001/full6/`（4410/4417；CR-608 绿；CR-606×2 + FeaturesMetaPackage 工单外红）
+- 单测基线: `TestResults/WO-20260903-001/full6/` + `pkg-fix2/`（FeaturesMeta 已绿；CR-608 绿；CR-606×2 可红）
 - 当前主线: **WO-20260903-001 已交付（待主控复核 CLOSE）**
 - 审计报告: `CodeReview/20260902-Framework-Audit.md`（~35 P0 / ~95 P1 actionable，Features F3–F9 未审）
 
@@ -28,7 +28,7 @@
 | FIX-6 JobQueue BEGIN IMMEDIATE + busy_timeout | ✅ | BUG346 |
 | FIX-7 DoQry 连接串行化（CR-608） | ✅ | BUG347 · 20× cr608-post/ · 全量 ConcurrentSameSql 绿 |
 
-**债务：** ⏸ CR-606 Perception VM 图形会话（允许红）；⏸ FeaturesMetaPackage 断言仍要 `DeepBasePlatform`（包已改 require `DeepBaseDataPlatform`，工单外）
+**债务：** ⏸ CR-606 Perception VM 图形会话（允许红）
 
 ---
 
