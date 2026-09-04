@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="2" errors="0" failures="2" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-04" time="12:45:27">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Failure" success="False" time="12:45:27" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Failure" success="False" time="0.254" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Regression" executed="true" result="Failure" success="False" time="0.254" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TBUG344_WorkerQueueTimeoutSlotReuseTest" executed="True" result="Failure" success="False" time="0.126" >
+                      <categories>
+                        <category name="regression" />
+                      </categories>
+                      <results>
+                        <test-case name="Test_TimeoutFreesWorkerSlotForNextJob" executed="True" result="Failure" success="False" time="0.127" asserts="0" >
+                          <categories>
+                            <category name="regression" />
+                          </categories>
+                          <failure>
+                            <message>
+                              <![CDATA[ Expected [jsCompleted] but got [jsRunning] Follow-up job must complete after slot reuse ]]>
+                            </message>
+                            <stack-trace>
+                              <![CDATA[  ]]>
+                            </stack-trace>
+                          </failure>
+                        </test-case>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TBUG346_JobQueueConcurrentDequeueTest" executed="True" result="Failure" success="False" time="0.128" >
+                      <categories>
+                        <category name="regression" />
+                      </categories>
+                      <results>
+                        <test-case name="Test_ConcurrentDequeue_NoBusyAndNoDoubleClaim" executed="True" result="Failure" success="False" time="0.059" asserts="0" >
+                          <categories>
+                            <category name="regression" />
+                          </categories>
+                          <failure>
+                            <message>
+                              <![CDATA[ Expected [0] but got [1] Concurrent Dequeue must not raise BUSY or double-claim ]]>
+                            </message>
+                            <stack-trace>
+                              <![CDATA[  ]]>
+                            </stack-trace>
+                          </failure>
+                        </test-case>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>
