@@ -49,6 +49,12 @@ type
     FSearchFilter: string;
     FOnNodeSelect: THbNavNodeSelectEvent;
 
+    // Cached GDI+ format objects
+    FFontFamily: TGPFontFamily;
+    FStrFmtNear: TGPStringFormat;
+    FStrFmtFar: TGPStringFormat;
+    FStrFmtCenter: TGPStringFormat;
+
     procedure SetIsCollapsed(Value: Boolean);
     procedure SetSearchFilter(const Value: string);
     function GetItemAt(X, Y: Integer): Integer;
@@ -117,12 +123,27 @@ begin
   FSearchFilter := '';
   FItems := TList<THbNavItemData>.Create;
 
+  FFontFamily := TGPFontFamily.Create(THbTheme.Tokens.FontFamily);
+  FStrFmtNear := TGPStringFormat.Create;
+  FStrFmtNear.SetAlignment(StringAlignmentNear);
+  FStrFmtNear.SetLineAlignment(StringAlignmentCenter);
+  FStrFmtFar := TGPStringFormat.Create;
+  FStrFmtFar.SetAlignment(StringAlignmentFar);
+  FStrFmtFar.SetLineAlignment(StringAlignmentCenter);
+  FStrFmtCenter := TGPStringFormat.Create;
+  FStrFmtCenter.SetAlignment(StringAlignmentCenter);
+  FStrFmtCenter.SetLineAlignment(StringAlignmentCenter);
+
   DoubleBuffered := True;
   TabStop := True;
 end;
 
 destructor THbNavTree.Destroy;
 begin
+  FreeAndNil(FStrFmtCenter);
+  FreeAndNil(FStrFmtFar);
+  FreeAndNil(FStrFmtNear);
+  FreeAndNil(FFontFamily);
   FItems.Free;
   inherited;
 end;
@@ -275,7 +296,7 @@ var
   Idx: Integer;
 begin
   inherited;
-  SetFocus;
+  if CanFocus then SetFocus;
   if Button = mbLeft then
   begin
     Idx := GetItemAt(X, Y);
@@ -293,14 +314,13 @@ var
   Tokens: THbTokens;
   BrushBg, BrushHover, BrushSel, BrushInk, BrushMuted, BrushSection, BrushPrimary, DotBrush, BrushBdg: TGPSolidBrush;
   PenBorder, PenDiv: TGPPen;
-  FontFamily: TGPFontFamily;
   FontSection, FontItem, FontBold, FontBadge: TGPFont;
-  StrFmtNear, StrFmtFar, StrFmtCenter: TGPStringFormat;
   CurY, ItemH: Single;
   I: Integer;
   Item: THbNavItemData;
   IsSel: Boolean;
-  SecRect, ItemRect, TitleRect, BadgeRect: TGPRectF;
+  SecRect, ItemRect, TitleRect, BadgeRect, MiniIconRect: TGPRectF;
+  InitialChar: string;
 begin
   Tokens := THbTheme.Tokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -319,70 +339,73 @@ begin
       BrushBg.Free;
     end;
 
-    FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
+    FontSection := TGPFont.Create(FFontFamily, ScaleDIP(Tokens.SizeXS), FontStyleBold, UnitPixel);
+    FontItem := TGPFont.Create(FFontFamily, ScaleDIP(Tokens.SizeS), FontStyleRegular, UnitPixel);
+    FontBold := TGPFont.Create(FFontFamily, ScaleDIP(Tokens.SizeS), FontStyleBold, UnitPixel);
+    FontBadge := TGPFont.Create(FFontFamily, ScaleDIP(Tokens.SizeXS), FontStyleBold, UnitPixel);
+    BrushHover := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
+    BrushSel := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
+    BrushPrimary := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
+    BrushInk := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
+    BrushMuted := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
+    BrushSection := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
+    PenDiv := TGPPen.Create(ColorToARGB(Tokens.Border), 1.0);
     try
-      FontSection := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleBold, UnitPixel);
-      FontItem := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleRegular, UnitPixel);
-      FontBold := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleBold, UnitPixel);
-      FontBadge := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleBold, UnitPixel);
-      BrushHover := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
-      BrushSel := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt));
-      BrushPrimary := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
-      BrushInk := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
-      BrushMuted := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
-      BrushSection := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
-      PenDiv := TGPPen.Create(ColorToARGB(Tokens.Border), 1.0);
-      StrFmtNear := TGPStringFormat.Create;
-      StrFmtFar := TGPStringFormat.Create;
-      StrFmtCenter := TGPStringFormat.Create;
-      try
-        StrFmtNear.SetAlignment(StringAlignmentNear);
-        StrFmtNear.SetLineAlignment(StringAlignmentCenter);
-        StrFmtFar.SetAlignment(StringAlignmentFar);
-        StrFmtFar.SetLineAlignment(StringAlignmentCenter);
-        StrFmtCenter.SetAlignment(StringAlignmentCenter);
-        StrFmtCenter.SetLineAlignment(StringAlignmentCenter);
+      CurY := 8.0;
+      var Q := LowerCase(Trim(FSearchFilter));
+      for I := 0 to FItems.Count - 1 do
+      begin
+        Item := FItems[I];
+        if (Q <> '') and (Item.Kind = nnItem) and (Pos(Q, LowerCase(Item.Title)) = 0) then
+          Continue;
 
-        CurY := 8.0;
-        var Q := LowerCase(Trim(FSearchFilter));
-        for I := 0 to FItems.Count - 1 do
+        if Item.Kind = nnSectionHeader then
         begin
-          Item := FItems[I];
-          if (Q <> '') and (Item.Kind = nnItem) and (Pos(Q, LowerCase(Item.Title)) = 0) then
-            Continue;
+          ItemH := 28.0;
+          if not FIsCollapsed then
+          begin
+            SecRect := MakeRect(12.0, CurY, Single(Width) - 24.0, ItemH);
+            Graphics.DrawString(UpperCase(Item.Title), Length(Item.Title), FontSection, SecRect, FStrFmtNear, BrushSection);
+          end;
+        end
+        else if Item.Kind = nnDivider then
+        begin
+          ItemH := 9.0;
+          Graphics.DrawLine(PenDiv, 8.0, CurY + 4.0, Single(Width) - 8.0, CurY + 4.0);
+        end
+        else
+        begin
+          ItemH := 36.0;
+          IsSel := (Item.Id <> '') and (Item.Id = FSelectedId);
+          ItemRect := MakeRect(4.0, CurY, Single(Width) - 8.0, ItemH);
 
-          if Item.Kind = nnSectionHeader then
+          if IsSel then
           begin
-            ItemH := 28.0;
-            if not FIsCollapsed then
-            begin
-              SecRect := MakeRect(12.0, CurY, Single(Width) - 24.0, ItemH);
-              Graphics.DrawString(UpperCase(Item.Title), Length(Item.Title), FontSection, SecRect, StrFmtNear, BrushSection);
-            end;
+            Graphics.FillRectangle(BrushSel, ItemRect);
+            // Left active vertical strip (3px)
+            Graphics.FillRectangle(BrushPrimary, 4.0, CurY + 4.0, 3.0, ItemH - 8.0);
           end
-          else if Item.Kind = nnDivider then
+          else if I = FHoverIndex then
           begin
-            ItemH := 9.0;
-            Graphics.DrawLine(PenDiv, 8.0, CurY + 4.0, Single(Width) - 8.0, CurY + 4.0);
+            Graphics.FillRectangle(BrushHover, ItemRect);
+          end;
+
+          if FIsCollapsed then
+          begin
+            // Mini Rail Mode: Center icon / initial char
+            if Item.Title <> '' then
+            begin
+              InitialChar := Item.Title.Substring(0, 1);
+              MiniIconRect := MakeRect(4.0, CurY, Single(Width) - 8.0, ItemH);
+              if IsSel then
+                Graphics.DrawString(InitialChar, Length(InitialChar), FontBold, MiniIconRect, FStrFmtCenter, BrushPrimary)
+              else
+                Graphics.DrawString(InitialChar, Length(InitialChar), FontItem, MiniIconRect, FStrFmtCenter, BrushInk);
+            end;
           end
           else
           begin
-            ItemH := 36.0;
-            IsSel := (Item.Id <> '') and (Item.Id = FSelectedId);
-            ItemRect := MakeRect(6.0, CurY, Single(Width) - 12.0, ItemH);
-
-            if IsSel then
-            begin
-              Graphics.FillRectangle(BrushSel, ItemRect);
-              // Left active vertical strip (3px)
-              Graphics.FillRectangle(BrushPrimary, 6.0, CurY + 4.0, 3.0, ItemH - 8.0);
-            end
-            else if I = FHoverIndex then
-            begin
-              Graphics.FillRectangle(BrushHover, ItemRect);
-            end;
-
-            // Icon / Indicator
+            // Expanded Mode: Icon / Indicator Dot + Title + Badge
             DotBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
             try
               Graphics.FillEllipse(DotBrush, 18.0, CurY + (ItemH - 6.0) / 2.0, 6.0, 6.0);
@@ -390,51 +413,43 @@ begin
               DotBrush.Free;
             end;
 
-            if not FIsCollapsed then
-            begin
-              TitleRect := MakeRect(34.0, CurY, Single(Width) - 90.0, ItemH);
-              if IsSel then
-                Graphics.DrawString(Item.Title, Length(Item.Title), FontBold, TitleRect, StrFmtNear, BrushInk)
-              else
-                Graphics.DrawString(Item.Title, Length(Item.Title), FontItem, TitleRect, StrFmtNear, BrushInk);
+            TitleRect := MakeRect(34.0, CurY, Single(Width) - 90.0, ItemH);
+            if IsSel then
+              Graphics.DrawString(Item.Title, Length(Item.Title), FontBold, TitleRect, FStrFmtNear, BrushInk)
+            else
+              Graphics.DrawString(Item.Title, Length(Item.Title), FontItem, TitleRect, FStrFmtNear, BrushInk);
 
-              // Badge
-              if Item.BadgeText <> '' then
-              begin
-                BadgeRect := MakeRect(Single(Width) - 48.0, CurY + (ItemH - 18.0) / 2.0, 36.0, 18.0);
-                BrushBdg := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
-                try
-                  Graphics.FillRectangle(BrushBdg, BadgeRect);
-                  Graphics.DrawRectangle(PenDiv, BadgeRect);
-                  Graphics.DrawString(Item.BadgeText, Length(Item.BadgeText), FontBadge, BadgeRect, StrFmtCenter, BrushPrimary);
-                finally
-                  BrushBdg.Free;
-                end;
+            // Badge
+            if Item.BadgeText <> '' then
+            begin
+              BadgeRect := MakeRect(Single(Width) - 48.0, CurY + (ItemH - 18.0) / 2.0, 36.0, 18.0);
+              BrushBdg := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
+              try
+                Graphics.FillRectangle(BrushBdg, BadgeRect);
+                Graphics.DrawRectangle(PenDiv, BadgeRect);
+                Graphics.DrawString(Item.BadgeText, Length(Item.BadgeText), FontBadge, BadgeRect, FStrFmtCenter, BrushPrimary);
+              finally
+                BrushBdg.Free;
               end;
             end;
           end;
-
-          CurY := CurY + ItemH;
         end;
 
-      finally
-        StrFmtCenter.Free;
-        StrFmtFar.Free;
-        StrFmtNear.Free;
-        PenDiv.Free;
-        BrushSection.Free;
-        BrushMuted.Free;
-        BrushInk.Free;
-        BrushPrimary.Free;
-        BrushSel.Free;
-        BrushHover.Free;
-        FontBadge.Free;
-        FontBold.Free;
-        FontItem.Free;
-        FontSection.Free;
+        CurY := CurY + ItemH;
       end;
+
     finally
-      FontFamily.Free;
+      PenDiv.Free;
+      BrushSection.Free;
+      BrushMuted.Free;
+      BrushInk.Free;
+      BrushPrimary.Free;
+      BrushSel.Free;
+      BrushHover.Free;
+      FontBadge.Free;
+      FontBold.Free;
+      FontItem.Free;
+      FontSection.Free;
     end;
   finally
     Graphics.Free;

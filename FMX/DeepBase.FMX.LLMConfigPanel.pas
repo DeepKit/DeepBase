@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.FMX.LLMConfigPanel - FMX LLM ����������
   
   �汾: 1.0
@@ -35,7 +35,9 @@ uses
   FMX.Graphics,
   FMX.Forms,
   DeepBase.Types,
-  DeepBase.LLM;
+  DeepBase.FMX.Dialogs,
+  DeepBase.LLM,
+  DeepBase.LLM.Types;
 
 type
   /// <summary>
@@ -154,9 +156,6 @@ type
 procedure Register;
 
 implementation
-
-uses
-  FMX.DialogService;
 
 procedure Register;
 begin
@@ -734,17 +733,12 @@ procedure TFMXLLMConfigPanel.ClearHistoryClick(Sender: TObject);
 begin
   if not Assigned(FLLM) then Exit;
   
-  TDialogService.MessageDialog('Clear all call hiDeepStory?',
-    TMsgDlgType.mtConfirmation, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo],
-    TMsgDlgBtn.mbNo, 0,
-    procedure(const AResult: TModalResult)
+  ShowFMXConfirm('Clear all call history?',
+    procedure
     begin
-      if AResult = mrYes then
-      begin
-        FLLM.ClearOldCalls(0); // Clear all
-        RefreshHistory;
-        SetStatus('History cleared');
-      end;
+      FLLM.ClearOldCalls(0); // Clear all
+      RefreshHistory;
+      SetStatus('History cleared');
     end);
 end;
 

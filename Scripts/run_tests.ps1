@@ -87,7 +87,7 @@ $ModuleRunMap = [ordered]@{
     "SERVICES"   = "Test.DeepBase.Services.HealthCheck,Test.DeepBase.Services.Protection,Test.DeepBase.Services.Registration"
     "NET"        = "Test.WebService"
     "RESILIENCE" = "Test.DeepBase.Resilience,Test.DeepBase.RateLimiter"
-    "HB"         = "Test.DeepBase.HB.DeepRW,Test.DeepBase.HB.Suite,Test.DeepBase.HB.Tray,Test.DeepBase.HB.Voice.CF,Test.DeepBase.VCL.HB.Theme,Test.DeepBase.FMX.HB.Dialogs"
+    "HB"         = "Test.DeepBase.HB.DeepRW,Test.DeepBase.HB.Suite,Test.DeepBase.HB.Tray,Test.DeepBase.HB.Voice.CF,Test.DeepBase.VCL.HB.Theme,Test.DeepBase.FMX.HB.Dialogs,Test.DeepBase.HB.Touchpoint,Test.DeepBase.HB.Lifecycle,Test.DeepBase.HB.Benchmark"
     "PERF"       = "Test.DeepBase.Benchmark,Test.DeepBase.Performance,Test.DeepBase.PerformanceSuite,Test.DeepBase.LockContention"
 }
 

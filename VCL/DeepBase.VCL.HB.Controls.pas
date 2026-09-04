@@ -26,6 +26,7 @@ uses
   System.UITypes,
   System.UIConsts,
   System.Math,
+  System.DateUtils,
   System.Types,
   Winapi.Windows,
   Winapi.Messages,
@@ -36,10 +37,17 @@ uses
   Vcl.ExtCtrls,
   Vcl.Forms,
   DeepBase.HB.Core,
+  DeepBase.HB.StateSlot.Types,
+  DeepBase.HB.Touchpoint.Types,
+  DeepBase.HB.Touchpoint.Engine,
+  DeepBase.HB.Runtime,
   DeepBase.VCL.HB.Theme;
 
 type
   THbControlState = (csNormal, csHover, csPressed, csDisabled);
+  THbLifecyclePhase = DeepBase.HB.Runtime.THbLifecyclePhase;
+  EHbLifecycleViolation = DeepBase.HB.Runtime.EHbLifecycleViolation;
+  THbLifecycleErrorEvent = procedure(Sender: TObject; const AStep: string; AException: Exception) of object;
 
   THbBtnKind = (bkPrimary, bkGhost, bkSoft, bkDanger);
   THbBtnSize = (bsS, bsM, bsL);
@@ -58,6 +66,13 @@ type
     -------------------------------------------------------------------------- }
   THbCustomControl = class(TCustomControl)
   private
+    FLifecyclePhase: THbLifecyclePhase;
+    FTouchpoint: IHbTouchpoint;
+    FTouchpointId: string;
+    FSurfaceId: string;
+    FTargetState: string;
+    FOnLifecycleError: THbLifecycleErrorEvent;
+    FIsDisposed: Boolean;
     FIsHovered: Boolean;
     FIsPressed: Boolean;
     FHasFocus: Boolean;
@@ -67,11 +82,21 @@ type
     procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
     procedure WMHbThemeChanged(var Message: TMessage); message WM_HB_THEME_CHANGED;
     procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure WMPaint(var Message: TWMPaint); message WM_PAINT;
     procedure OnThemeChangedNotification(Sender: TObject);
   protected
+    // 7-Step Lifecycle Pipeline
+    procedure BindToken; virtual;
+    procedure BindState; virtual;
+    procedure AttachTouchpoint(const ATouchpoint: IHbTouchpoint); virtual;
+    procedure Render; virtual;
+    procedure EmitTelemetry; virtual;
+    procedure HandleLifecycleError(const AStep: string; AException: Exception); virtual;
+
     function GetCurrentState: THbControlState; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure Paint; override;
     function GetTokens: THbTokens; virtual;
     function ScaleDIP(AValue: Single): Single; virtual;
     function ScalePixels(AValue: Single): Integer; virtual;
@@ -84,7 +109,16 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DoDispose; virtual;
+
+    property LifecyclePhase: THbLifecyclePhase read FLifecyclePhase write FLifecyclePhase;
+    property Touchpoint: IHbTouchpoint read FTouchpoint write FTouchpoint;
+    property TouchpointId: string read FTouchpointId write FTouchpointId;
+    property SurfaceId: string read FSurfaceId write FSurfaceId;
+    property TargetState: string read FTargetState write FTargetState;
     property CurrentState: THbControlState read GetCurrentState;
+    property IsDisposed: Boolean read FIsDisposed;
+    property OnLifecycleError: THbLifecycleErrorEvent read FOnLifecycleError write FOnLifecycleError;
   end;
 
   { --------------------------------------------------------------------------
@@ -105,6 +139,7 @@ type
     function GetDefaultSize: TSize;
   public
     constructor Create(AOwner: TComponent); override;
+    procedure Click; override;
   published
     property Kind: THbBtnKind read FKind write SetKind default bkPrimary;
     property Size: THbBtnSize read FSize write SetSize default bsM;
@@ -167,12 +202,16 @@ type
     FCaption: string;
     FOnClose: TNotifyEvent;
     FClosePressed: Boolean;
+    FCloseHovered: Boolean;
+    function GetCloseRect: TGPRectF;
     procedure SetTone(Value: THbChipTone);
     procedure SetSelected(Value: Boolean);
     procedure SetClosable(Value: Boolean);
     procedure SetCaption(const Value: string);
+    procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
   protected
     procedure Paint; override;
+    procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
@@ -327,6 +366,7 @@ type
     FTrailingLink: string;
     FOnTrailingClick: TNotifyEvent;
     FTrailingPressed: Boolean;
+    function GetTrailingRect: TGPRectF;
     procedure SetTitle(const Value: string);
     procedure SetCount(Value: Integer);
     procedure SetTrailingLink(const Value: string);
@@ -352,18 +392,132 @@ implementation
 constructor THbCustomControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FLifecyclePhase := lpCreated;
   DoubleBuffered := True;
   ControlStyle := ControlStyle - [csOpaque] + [csCaptureMouse];
   FIsHovered := False;
   FIsPressed := False;
   FHasFocus := False;
+  FIsDisposed := False;
+  FTouchpoint := nil;
+  FTouchpointId := '';
+  FSurfaceId := '';
+  FTargetState := '';
+
+  try
+    BindToken;
+    BindState;
+  except
+    on E: Exception do
+    begin
+      HandleLifecycleError('Create/Binding', E);
+      raise;
+    end;
+  end;
+
   THbTheme.AddListener(OnThemeChangedNotification);
+end;
+
+procedure THbCustomControl.BindToken;
+begin
+  FLifecyclePhase := lpTokenBound;
+end;
+
+procedure THbCustomControl.BindState;
+begin
+  FLifecyclePhase := lpStateBound;
+end;
+
+procedure THbCustomControl.AttachTouchpoint(const ATouchpoint: IHbTouchpoint);
+begin
+  FTouchpoint := ATouchpoint;
+  if FTouchpoint <> nil then
+  begin
+    FTouchpointId := FTouchpoint.GetTouchpointId;
+    FSurfaceId := FTouchpoint.GetSurfaceId;
+    FTargetState := FTouchpoint.GetTargetState;
+    THbTouchpointEngine.Instance.RegisterTouchpoint(
+      FTouchpointId,
+      FTouchpoint.GetLevel,
+      FSurfaceId,
+      FTargetState
+    );
+    FLifecyclePhase := lpTouchpointAttached;
+  end;
+end;
+
+procedure THbCustomControl.Render;
+begin
+  // Base vector render pipeline hook
+end;
+
+procedure THbCustomControl.EmitTelemetry;
+var
+  Ev: TTouchEvidence;
+begin
+  if (FTouchpoint <> nil) or (FTouchpointId <> '') then
+  begin
+    FillChar(Ev, SizeOf(Ev), 0);
+    if FTouchpoint <> nil then
+    begin
+      Ev.TouchpointId := FTouchpoint.GetTouchpointId;
+      Ev.SurfaceId := FTouchpoint.GetSurfaceId;
+    end
+    else
+    begin
+      Ev.TouchpointId := FTouchpointId;
+      Ev.SurfaceId := FSurfaceId;
+    end;
+    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev.ActionType := 'Render';
+    Ev.Success := True;
+    THbTouchpointEngine.Instance.EmitEvidence(Ev);
+  end;
+end;
+
+procedure THbCustomControl.HandleLifecycleError(const AStep: string; AException: Exception);
+begin
+  if Assigned(FOnLifecycleError) then
+    FOnLifecycleError(Self, AStep, AException);
+end;
+
+procedure THbCustomControl.Paint;
+begin
+  if FLifecyclePhase < lpTokenBound then
+    raise EHbLifecycleViolation.Create(ClassName, FLifecyclePhase);
+  Render;
+end;
+
+procedure THbCustomControl.WMPaint(var Message: TWMPaint);
+begin
+  if FLifecyclePhase < lpTokenBound then
+    raise EHbLifecycleViolation.Create(ClassName, FLifecyclePhase);
+
+  try
+    inherited;
+    EmitTelemetry;
+    if FLifecyclePhase < lpRendered then
+      FLifecyclePhase := lpRendered;
+  except
+    on E: Exception do
+      HandleLifecycleError('Paint/Render', E);
+  end;
+end;
+
+procedure THbCustomControl.DoDispose;
+begin
+  if FIsDisposed then
+    Exit;
+  FIsDisposed := True;
+  FLifecyclePhase := lpDisposed;
+  THbTheme.RemoveListener(OnThemeChangedNotification);
+  FTouchpoint := nil;
 end;
 
 destructor THbCustomControl.Destroy;
 begin
-  THbTheme.RemoveListener(OnThemeChangedNotification);
-  inherited;
+  DoDispose;
+  inherited Destroy;
 end;
 
 procedure THbCustomControl.OnThemeChangedNotification(Sender: TObject);
@@ -417,7 +571,7 @@ begin
   begin
     FIsPressed := True;
     if CanFocus and TabStop then
-      SetFocus;
+      if CanFocus then SetFocus;
     Invalidate;
   end;
 end;
@@ -600,6 +754,35 @@ begin
   end;
 end;
 
+procedure THbButton.Click;
+var
+  Ev: TTouchEvidence;
+begin
+  inherited Click;
+  if FTouchpoint <> nil then
+  begin
+    FillChar(Ev, SizeOf(Ev), 0);
+    Ev.TouchpointId := FTouchpoint.GetTouchpointId;
+    Ev.SurfaceId := FTouchpoint.GetSurfaceId;
+    Ev.ActionType := 'Click';
+    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev.Success := True;
+    Ev.SupportDeflected := True;
+    FTouchpoint.EmitEvidence(Ev);
+    THbTouchpointEngine.Instance.EmitEvidence(Ev);
+  end
+  else if FTouchpointId <> '' then
+  begin
+    FillChar(Ev, SizeOf(Ev), 0);
+    Ev.TouchpointId := FTouchpointId;
+    Ev.SurfaceId := FSurfaceId;
+    Ev.ActionType := 'Click';
+    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev.Success := True;
+    THbTouchpointEngine.Instance.EmitEvidence(Ev);
+  end;
+end;
+
 procedure THbButton.Paint;
 var
   Graphics: TGPGraphics;
@@ -616,6 +799,7 @@ var
   BgColor, TextColor, BorderColor: TAlphaColor;
   FontSize: Single;
 begin
+  inherited Paint;
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
   try
@@ -672,7 +856,12 @@ begin
       end;
       bkDanger:
       begin
-        BgColor := Tokens.Danger;
+        case CurrentState of
+          csNormal:   BgColor := Tokens.Danger;
+          csHover:    BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.15);
+          csPressed:  BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.30);
+          csDisabled: BgColor := Tokens.Danger;
+        end;
         TextColor := Tokens.OnPrimary;
       end;
     end;
@@ -907,9 +1096,12 @@ begin
     // 1. Draw Left Free Track (Ghost / Success Outlined)
     LeftPath := CreateRoundRectPath(LeftRect, Radius);
     try
-      if (FHoverPart = 1) and (FPressPart = 1) then
+      if (FHoverPart = 1) or (FPressPart = 1) then
       begin
-        LeftBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.SuccessSoft));
+        var LeftAlpha: Byte := 160;
+        if (FHoverPart = 1) and (FPressPart = 1) then
+          LeftAlpha := 255;
+        LeftBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.SuccessSoft, LeftAlpha));
         try Graphics.FillPath(LeftBrush, LeftPath); finally LeftBrush.Free; end;
       end;
       LeftPen := TGPPen.Create(ColorToARGB(Tokens.Success), ScaleDIP(1.2));
@@ -1020,20 +1212,69 @@ begin
   end;
 end;
 
-procedure THbChip.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+function THbChip.GetCloseRect: TGPRectF;
+var
+  Sz: Single;
+begin
+  Sz := ScaleDIP(14.0);
+  Result := MakeRect(Width - ScaleDIP(18.0), (Height - Sz) * 0.5, Sz, Sz);
+end;
+
+procedure THbChip.MouseMove(Shift: TShiftState; X, Y: Integer);
+var
+  R: TGPRectF;
+  NewHover: Boolean;
 begin
   inherited;
-  if (Button = mbLeft) and FClosable and (X > (Width - ScalePixels(20))) then
-    FClosePressed := True
+  if FClosable then
+  begin
+    R := GetCloseRect;
+    NewHover := (X >= R.X) and (X <= R.X + R.Width) and (Y >= R.Y) and (Y <= R.Y + R.Height);
+    if FCloseHovered <> NewHover then
+    begin
+      FCloseHovered := NewHover;
+      Invalidate;
+    end;
+  end;
+end;
+
+procedure THbChip.CMMouseLeave(var Message: TMessage);
+begin
+  inherited;
+  if FCloseHovered then
+  begin
+    FCloseHovered := False;
+    Invalidate;
+  end;
+end;
+
+procedure THbChip.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TGPRectF;
+begin
+  inherited;
+  if (Button = mbLeft) and FClosable then
+  begin
+    R := GetCloseRect;
+    FClosePressed := (X >= R.X) and (X <= R.X + R.Width) and (Y >= R.Y) and (Y <= R.Y + R.Height);
+  end
   else
     FClosePressed := False;
 end;
 
 procedure THbChip.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TGPRectF;
+  IsHit: Boolean;
 begin
   inherited;
-  if (Button = mbLeft) and FClosePressed and FClosable and (X > (Width - ScalePixels(20))) and Assigned(FOnClose) then
-    FOnClose(Self);
+  if (Button = mbLeft) and FClosePressed and FClosable then
+  begin
+    R := GetCloseRect;
+    IsHit := (X >= R.X) and (X <= R.X + R.Width) and (Y >= R.Y) and (Y <= R.Y + R.Height);
+    if IsHit and Assigned(FOnClose) then
+      FOnClose(Self);
+  end;
   FClosePressed := False;
 end;
 
@@ -1041,15 +1282,17 @@ procedure THbChip.Paint;
 var
   Graphics: TGPGraphics;
   Tokens: THbTokens;
-  RectF: TGPRectF;
+  RectF, TextRect, CloseR: TGPRectF;
   Radius: Single;
   Path: TGPGraphicsPath;
-  Brush: TGPSolidBrush;
+  Brush, CloseBgBrush: TGPSolidBrush;
+  ClosePen: TGPPen;
   Font: TGPFont;
   FontFamily: TGPFontFamily;
   StrFmt: TGPStringFormat;
   TextBrush: TGPSolidBrush;
   BgColor, TextColor: TAlphaColor;
+  Pad: Single;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -1091,15 +1334,39 @@ begin
       try
         StrFmt := TGPStringFormat.Create;
         try
-          StrFmt.SetAlignment(StringAlignmentCenter);
           StrFmt.SetLineAlignment(StringAlignmentCenter);
 
-          var DrawText := FCaption;
           if FClosable then
-            DrawText := DrawText + '  ✕';
+          begin
+            StrFmt.SetAlignment(StringAlignmentNear);
+            TextRect := MakeRect(ScaleDIP(Tokens.SpaceS), 0.0, Width - ScaleDIP(24.0), Height);
+          end
+          else
+          begin
+            StrFmt.SetAlignment(StringAlignmentCenter);
+            TextRect := RectF;
+          end;
 
           TextBrush := TGPSolidBrush.Create(ColorToARGB(TextColor));
-          try Graphics.DrawString(DrawText, -1, Font, RectF, StrFmt, TextBrush); finally TextBrush.Free; end;
+          try Graphics.DrawString(FCaption, -1, Font, TextRect, StrFmt, TextBrush); finally TextBrush.Free; end;
+
+          if FClosable then
+          begin
+            CloseR := GetCloseRect;
+            if FCloseHovered or FClosePressed then
+            begin
+              CloseBgBrush := TGPSolidBrush.Create(ColorToARGB(TextColor, 40));
+              try Graphics.FillEllipse(CloseBgBrush, CloseR); finally CloseBgBrush.Free; end;
+            end;
+            ClosePen := TGPPen.Create(ColorToARGB(TextColor), 1.2);
+            try
+              Pad := ScaleDIP(3.5);
+              Graphics.DrawLine(ClosePen, CloseR.X + Pad, CloseR.Y + Pad, CloseR.X + CloseR.Width - Pad, CloseR.Y + CloseR.Height - Pad);
+              Graphics.DrawLine(ClosePen, CloseR.X + CloseR.Width - Pad, CloseR.Y + Pad, CloseR.X + Pad, CloseR.Y + CloseR.Height - Pad);
+            finally
+              ClosePen.Free;
+            end;
+          end;
         finally
           StrFmt.Free;
         end;
@@ -1283,22 +1550,8 @@ begin
 end;
 
 function THbAvatar.GetSeedColor(const ASeed: string): TAlphaColor;
-var
-  Hash: Cardinal;
-  C: Char;
-  Tokens: THbTokens;
 begin
-  Tokens := GetTokens;
-  Hash := 5381;
-  for C in ASeed do
-    Hash := ((Hash shl 5) + Hash) + Ord(C);
-
-  case (Hash mod 4) of
-    0: Result := Tokens.Soft;
-    1: Result := Tokens.SuccessSoft;
-    2: Result := Tokens.WarningSoft;
-    else Result := Tokens.InfoSoft;
-  end;
+  Result := GetHbSeedColor(ASeed, GetTokens);
 end;
 
 procedure THbAvatar.Paint;
@@ -1392,7 +1645,7 @@ begin
   FShowCaption := True;
   FAnimAngle := 0.0;
   FAnimTimer := TTimer.Create(Self);
-  FAnimTimer.Interval := 30;
+  FAnimTimer.Interval := 60;
   FAnimTimer.OnTimer := OnAnimTimer;
   FAnimTimer.Enabled := False;
   SetBounds(0, 0, ScalePixels(74), ScalePixels(74));
@@ -1443,7 +1696,7 @@ end;
 
 procedure THbProgressRing.OnAnimTimer(Sender: TObject);
 begin
-  FAnimAngle := FAnimAngle + 8.0;
+  FAnimAngle := FAnimAngle + 16.0;
   if FAnimAngle >= 360.0 then
     FAnimAngle := FAnimAngle - 360.0;
   Invalidate;
@@ -1469,6 +1722,11 @@ begin
     EraseBackground(Graphics);
 
     var Thick := ScaleDIP(FThickness);
+    var MinDim := Min(Width, Height);
+    if Thick >= MinDim * 0.5 then
+      Thick := MinDim * 0.25;
+    if (Width - Thick - 2.0 <= 0) or (Height - Thick - 2.0 <= 0) then
+      Exit;
     RectF := MakeRect(Thick * 0.5 + 1.0, Thick * 0.5 + 1.0, Width - Thick - 2.0, Height - Thick - 2.0);
 
     // Track
@@ -1579,16 +1837,16 @@ procedure THbToast.Paint;
 var
   Graphics: TGPGraphics;
   Tokens: THbTokens;
-  RectF: TGPRectF;
+  RectF, TextRect, IconRect: TGPRectF;
   Path: TGPGraphicsPath;
-  Brush: TGPSolidBrush;
-  Pen: TGPPen;
+  Brush, IconBgBrush: TGPSolidBrush;
+  Pen, IconPen: TGPPen;
   Font: TGPFont;
   FontFamily: TGPFontFamily;
   StrFmt: TGPStringFormat;
   TextBrush: TGPSolidBrush;
   BgColor, BorderColor, TextColor: TAlphaColor;
-  PrefixIcon: string;
+  IconSz, IconX, IconY: Single;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -1605,28 +1863,24 @@ begin
         BgColor := Tokens.Soft;
         BorderColor := Tokens.Success;
         TextColor := Tokens.Success;
-        PrefixIcon := '✓ ';
       end;
       tkDanger:
       begin
         BgColor := Tokens.Soft;
         BorderColor := Tokens.Danger;
         TextColor := Tokens.Danger;
-        PrefixIcon := '✕ ';
       end;
       tkWarning:
       begin
         BgColor := Tokens.Soft;
         BorderColor := Tokens.Warning;
         TextColor := Tokens.Warning;
-        PrefixIcon := '⚠ ';
       end;
       else
       begin
         BgColor := Tokens.Soft;
         BorderColor := Tokens.Info;
         TextColor := Tokens.Info;
-        PrefixIcon := 'ℹ ';
       end;
     end;
 
@@ -1641,6 +1895,47 @@ begin
       Path.Free;
     end;
 
+    // Vector Icon Circle + Shape
+    IconSz := ScaleDIP(16.0);
+    IconX := RectF.X + ScaleDIP(Tokens.SpaceS);
+    IconY := (Height - IconSz) * 0.5;
+    IconRect := MakeRect(IconX, IconY, IconSz, IconSz);
+
+    IconBgBrush := TGPSolidBrush.Create(ColorToARGB(BorderColor, 35));
+    try
+      Graphics.FillEllipse(IconBgBrush, IconRect);
+    finally
+      IconBgBrush.Free;
+    end;
+
+    IconPen := TGPPen.Create(ColorToARGB(BorderColor), 1.4);
+    try
+      case FKind of
+        tkSuccess:
+        begin
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.25, IconY + IconSz * 0.52, IconX + IconSz * 0.44, IconY + IconSz * 0.72);
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.44, IconY + IconSz * 0.72, IconX + IconSz * 0.76, IconY + IconSz * 0.30);
+        end;
+        tkDanger:
+        begin
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.30, IconY + IconSz * 0.30, IconX + IconSz * 0.70, IconY + IconSz * 0.70);
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.70, IconY + IconSz * 0.30, IconX + IconSz * 0.30, IconY + IconSz * 0.70);
+        end;
+        tkWarning:
+        begin
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.50, IconY + IconSz * 0.25, IconX + IconSz * 0.50, IconY + IconSz * 0.60);
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.50, IconY + IconSz * 0.75, IconX + IconSz * 0.50, IconY + IconSz * 0.78);
+        end;
+        else
+        begin
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.50, IconY + IconSz * 0.25, IconX + IconSz * 0.50, IconY + IconSz * 0.28);
+          Graphics.DrawLine(IconPen, IconX + IconSz * 0.50, IconY + IconSz * 0.45, IconX + IconSz * 0.50, IconY + IconSz * 0.75);
+        end;
+      end;
+    finally
+      IconPen.Free;
+    end;
+
     FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
     try
       Font := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleBold, UnitPixel);
@@ -1650,12 +1945,11 @@ begin
           StrFmt.SetAlignment(StringAlignmentNear);
           StrFmt.SetLineAlignment(StringAlignmentCenter);
 
-          RectF.X := RectF.X + ScaleDIP(Tokens.SpaceM);
-          RectF.Width := RectF.Width - ScaleDIP(Tokens.SpaceM * 2);
+          TextRect := MakeRect(IconX + IconSz + ScaleDIP(Tokens.SpaceS), 0.0, Width - (IconX + IconSz + ScaleDIP(Tokens.SpaceS * 2)), Height);
 
           TextBrush := TGPSolidBrush.Create(ColorToARGB(TextColor));
           try
-            Graphics.DrawString(PrefixIcon + FMessageText, -1, Font, RectF, StrFmt, TextBrush);
+            Graphics.DrawString(FMessageText, -1, Font, TextRect, StrFmt, TextBrush);
           finally
             TextBrush.Free;
           end;
@@ -1684,7 +1978,7 @@ begin
   FAnimated := True;
   FAnimOffset := 0.0;
   FAnimTimer := TTimer.Create(Self);
-  FAnimTimer.Interval := 30;
+  FAnimTimer.Interval := 60;
   FAnimTimer.OnTimer := OnAnimTimer;
   FAnimTimer.Enabled := True;
   SetBounds(0, 0, ScalePixels(160), ScalePixels(14));
@@ -1717,7 +2011,7 @@ end;
 
 procedure THbSkeleton.OnAnimTimer(Sender: TObject);
 begin
-  FAnimOffset := FAnimOffset + 0.04;
+  FAnimOffset := FAnimOffset + 0.08;
   if FAnimOffset > 1.5 then
     FAnimOffset := -0.5;
   Invalidate;
@@ -1802,20 +2096,71 @@ begin
   end;
 end;
 
+function THbSectionHeader.GetTrailingRect: TGPRectF;
+var
+  Tokens: THbTokens;
+  Graphics: TGPGraphics;
+  FontFamily: TGPFontFamily;
+  Font: TGPFont;
+  LayoutRect, BoundingBox: TGPRectF;
+  StrFmt: TGPStringFormat;
+begin
+  if FTrailingLink = '' then
+    Exit(MakeRect(0.0, 0.0, 0.0, 0.0));
+  Tokens := GetTokens;
+  Graphics := TGPGraphics.Create(Canvas.Handle);
+  try
+    FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
+    try
+      Font := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeM), FontStyleBold, UnitPixel);
+      try
+        StrFmt := TGPStringFormat.Create;
+        try
+          LayoutRect := MakeRect(0.0, 0.0, Single(Width), Single(Height));
+          Graphics.MeasureString(FTrailingLink, Length(FTrailingLink), Font, LayoutRect, StrFmt, BoundingBox);
+          var LinkW := BoundingBox.Width + ScaleDIP(Tokens.SpaceS);
+          Result := MakeRect(Width - LinkW - ScaleDIP(Tokens.SpaceXS), 0.0, LinkW, Single(Height));
+        finally
+          StrFmt.Free;
+        end;
+      finally
+        Font.Free;
+      end;
+    finally
+      FontFamily.Free;
+    end;
+  finally
+    Graphics.Free;
+  end;
+end;
+
 procedure THbSectionHeader.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TGPRectF;
 begin
   inherited;
-  if (Button = mbLeft) and (FTrailingLink <> '') and (X > (Width - ScalePixels(80))) then
-    FTrailingPressed := True
+  if (Button = mbLeft) and (FTrailingLink <> '') then
+  begin
+    R := GetTrailingRect;
+    FTrailingPressed := (X >= R.X) and (X <= R.X + R.Width) and (Y >= R.Y) and (Y <= R.Y + R.Height);
+  end
   else
     FTrailingPressed := False;
 end;
 
 procedure THbSectionHeader.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  R: TGPRectF;
+  IsHit: Boolean;
 begin
   inherited;
-  if (Button = mbLeft) and FTrailingPressed and (FTrailingLink <> '') and (X > (Width - ScalePixels(80))) and Assigned(FOnTrailingClick) then
-    FOnTrailingClick(Self);
+  if (Button = mbLeft) and FTrailingPressed and (FTrailingLink <> '') then
+  begin
+    R := GetTrailingRect;
+    IsHit := (X >= R.X) and (X <= R.X + R.Width) and (Y >= R.Y) and (Y <= R.Y + R.Height);
+    if IsHit and Assigned(FOnTrailingClick) then
+      FOnTrailingClick(Self);
+  end;
   FTrailingPressed := False;
 end;
 
@@ -1828,6 +2173,7 @@ var
   StrFmt: TGPStringFormat;
   TextBrush: TGPSolidBrush;
   TitleText: string;
+  TrailingR: TGPRectF;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -1853,7 +2199,7 @@ begin
           TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
           try
             StrFmt.SetAlignment(StringAlignmentNear);
-            Graphics.DrawString(TitleText, -1, Font, MakeRect(0.0, 0.0, Width * 0.7, Height), StrFmt, TextBrush);
+            Graphics.DrawString(TitleText, -1, Font, MakeRect(0.0, 0.0, Width * 0.6, Height), StrFmt, TextBrush);
           finally
             TextBrush.Free;
           end;
@@ -1861,10 +2207,11 @@ begin
           // Trailing Link
           if FTrailingLink <> '' then
           begin
+            TrailingR := GetTrailingRect;
             TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
             try
               StrFmt.SetAlignment(StringAlignmentFar);
-              Graphics.DrawString(FTrailingLink, -1, Font, MakeRect(Width * 0.5, 0.0, Width * 0.5 - ScaleDIP(Tokens.SpaceXS), Height), StrFmt, TextBrush);
+              Graphics.DrawString(FTrailingLink, -1, Font, TrailingR, StrFmt, TextBrush);
             finally
               TextBrush.Free;
             end;

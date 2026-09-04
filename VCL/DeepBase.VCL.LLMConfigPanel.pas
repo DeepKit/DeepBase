@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.LLMConfigPanel - LLM 配置面板组件
   
   版本: 1.0
@@ -27,7 +27,8 @@ uses
   Vcl.Forms,
   Vcl.Grids,
   DeepBase.Types,
-  DeepBase.LLM;
+  DeepBase.LLM,
+  DeepBase.LLM.Types;
 
 type
   /// <summary>

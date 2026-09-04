@@ -94,6 +94,8 @@ type
 
 implementation
 
+{$WARN IMPLICIT_STRING_CAST OFF}
+
 { THbGatePanel }
 
 constructor THbGatePanel.Create(AOwner: TComponent);
@@ -101,8 +103,8 @@ begin
   inherited Create(AOwner);
   Width := 750;
   Height := 500;
-  FRowHeightCollapsed := 42;
-  FRowHeightExpanded := 130;
+  FRowHeightCollapsed := Round(ScaleDIP(42.0));
+  FRowHeightExpanded := Round(ScaleDIP(130.0));
   FFilterSeverity := -1; // All
   FSelectedIndex := -1;
   FRules := TList<THbGateRowItem>.Create;
@@ -376,7 +378,7 @@ begin
     if (Y >= CurY) and (Y < CurY + RowH) then
     begin
       ToggleRowExpand(I);
-      if (R.JumpRef <> '') and (X > Width - 100) and Assigned(FOnJump) then
+      if (R.JumpRef <> '') and (X > Width - Round(ScaleDIP(100.0))) and Assigned(FOnJump) then
         FOnJump(Self, R.JumpRef);
       Break;
     end;

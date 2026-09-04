@@ -37,7 +37,6 @@ requires
   DeepBaseCommerce,
   DeepBaseInference,
   DeepBaseSpeechCore,
-  DeepBasePlatform,
   DeepBaseDataPlatform;
 
 end.

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.LLMChatFrame - VCL LLM Chat Component
   
   Version: 1.0
@@ -203,7 +203,7 @@ begin
       FClient.Cancel;
     // Wait for task to complete (with timeout to prevent deadlock)
     if Assigned(FCurrentTask) then
-      FCurrentTask.WaitFor(2000);  // 2 second timeout
+      FCurrentTask.Wait(2000);  // 2 second timeout
   end;
 
   if FOwnsClient and Assigned(FClient) then

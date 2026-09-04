@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.FMX.LLMChatFrame - FMX LLM Chat Component
   
   Version: 1.0
@@ -199,7 +199,7 @@ begin
       FClient.Cancel;
     // Wait for task to complete (with timeout to prevent deadlock)
     if Assigned(FCurrentTask) then
-      FCurrentTask.WaitFor(2000);  // 2 second timeout
+      FCurrentTask.Wait(2000);  // 2 second timeout
   end;
 
   if FOwnsClient and Assigned(FClient) then
@@ -475,8 +475,8 @@ begin
   // the background task. The previous code called FHistory.GetMessages
   // from the worker thread while DoSendMessage (main thread) could be
   // mutating FHistory concurrently via AddUserMessage. Capturing a
-  // TChatMessages copy up front eliminates the data race entirely.
-  Messages := FHistory.GetMessages;
+  var LClient := FClient;
+  var LMessages := FHistory.GetMessages;
 
   FCurrentTask := TTask.Run(
     procedure
@@ -489,7 +489,7 @@ begin
     begin
       try
         // Use non-streaming for simplicity in FMX
-        Response := FClient.ChatWithHistory(Messages);
+        Response := LClient.ChatWithHistory(LMessages);
         LocalContent := Response.Content;
         LocalTokenCount := Response.Usage.TotalTokens;
         LocalErrorMsg := Response.ErrorMessage;

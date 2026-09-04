@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.HB.Grid.Types - High-Performance Data Grid Contract Types
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -29,7 +29,8 @@ type
     gctHeatBar,     // Horizontal progress / heatmap data bar
     gctBadge,       // Pill badge with tone
     gctButton,      // Clickable action button in cell
-    gctCheckbox     // Boolean toggle
+    gctCheckbox,    // Boolean toggle
+    gctToggleSwitch // Inline pill toggle switch for instant activation
   );
 
   /// <summary>

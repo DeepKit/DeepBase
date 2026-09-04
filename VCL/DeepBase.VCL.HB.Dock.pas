@@ -179,7 +179,7 @@ begin
     FIsFloating := True;
     if not Assigned(FFloatForm) then
     begin
-      FFloatForm := TCustomForm.CreateNew(Application);
+      FFloatForm := TCustomForm.CreateNew(nil);
       FFloatForm.Caption := FTitle;
       FFloatForm.SetBounds(200, 200, Width, Height);
     end;

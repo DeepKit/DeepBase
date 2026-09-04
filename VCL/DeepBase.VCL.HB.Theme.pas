@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Theme - VCL Adapter for HB Visual Infrastructure Theme Engine
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -24,17 +24,25 @@ const
 
 type
   THbDensity = DeepBase.HB.Core.THbDensity;
+  THbGranularity = DeepBase.HB.Core.THbGranularity;
   THbEaseMode = DeepBase.HB.Core.THbEaseMode;
   THbTokens = DeepBase.HB.Core.THbTokens;
   THbThemeMetadata = DeepBase.HB.Core.THbThemeMetadata;
   THbThemeDefinition = DeepBase.HB.Core.THbThemeDefinition;
   THbThemeChangeEvent = DeepBase.HB.Core.THbThemeChangeEvent;
   THbThemeChangedMessage = DeepBase.HB.Core.THbThemeChangedMessage;
+  THbGranularityChangedMessage = DeepBase.HB.Core.THbGranularityChangedMessage;
+  THbOverrideHook = DeepBase.HB.Core.THbOverrideHook;
   THbTheme = DeepBase.HB.Core.THbTheme;
 
 function CalculateContrastRatio(AColor1, AColor2: TAlphaColor): Double; inline;
 function RelativeLuminance(AColor: TAlphaColor): Double; inline;
 function AlphaColorToColor(AColor: TAlphaColor): TColor; inline;
+function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaColor; inline;
+function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor; inline;
+procedure RegisterThemeOverride(const AThemeId: string; const AOverrideTokens: THbTokens); inline;
+procedure RegisterThemeOverrideHook(AHook: THbOverrideHook); inline;
+procedure ClearThemeOverrides; inline;
 
 implementation
 
@@ -51,6 +59,31 @@ end;
 function RelativeLuminance(AColor: TAlphaColor): Double;
 begin
   Result := DeepBase.HB.Core.RelativeLuminance(AColor);
+end;
+
+function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaColor;
+begin
+  Result := DeepBase.HB.Core.GetHbSeedColor(ASeed, ATokens);
+end;
+
+function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor;
+begin
+  Result := DeepBase.HB.Core.BlendAlphaColor(AColor1, AColor2, ARatio);
+end;
+
+procedure RegisterThemeOverride(const AThemeId: string; const AOverrideTokens: THbTokens);
+begin
+  THbTheme.RegisterOverride(AThemeId, AOverrideTokens);
+end;
+
+procedure RegisterThemeOverrideHook(AHook: THbOverrideHook);
+begin
+  THbTheme.RegisterOverrideHook(AHook);
+end;
+
+procedure ClearThemeOverrides;
+begin
+  THbTheme.ClearOverrides;
 end;
 
 end.

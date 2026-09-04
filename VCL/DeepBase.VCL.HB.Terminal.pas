@@ -412,8 +412,17 @@ begin
   if FStage <> Value then
   begin
     FStage := Value;
-    if FStage in [ssCommitted, ssCompleted] then
+    if FStage in [ssCommitted, ssCompleted, ssError] then
+    begin
       FIsThoughtCollapsed := True;
+      if Assigned(FAnimTimer) then
+        FAnimTimer.Enabled := False;
+    end
+    else if FStage = ssThinking then
+    begin
+      if Assigned(FAnimTimer) then
+        FAnimTimer.Enabled := True;
+    end;
     Invalidate;
   end;
 end;
@@ -623,7 +632,7 @@ begin
   if FHostControl = nil then
     Exit;
 
-  T := THbToast.Create(FHostControl);
+  T := THbToast.Create(nil);
   T.Parent := FHostControl;
   T.MessageText := AMessage;
   T.Kind := AKind;

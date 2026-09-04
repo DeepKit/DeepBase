@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.VirtualList - High-Performance Virtual Review List for VCL
   
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -57,6 +57,7 @@ type
     FBtnBatchApprove: THbButton;
     FBtnBatchReject: THbButton;
     FBtnSelectAll: THbButton;
+    FSearchDebounceTimer: TTimer;
 
     procedure SetSearchFilter(const Value: string);
     procedure SetVirtualItemCount(Value: Integer);
@@ -64,6 +65,7 @@ type
     function GetFilteredCount: Integer;
     procedure RebuildFilteredIndices;
     procedure UpdateBatchBar;
+    procedure OnSearchDebounceTimer(Sender: TObject);
     procedure OnBatchApproveClick(Sender: TObject);
     procedure OnBatchRejectClick(Sender: TObject);
     procedure OnSelectAllClick(Sender: TObject);
@@ -106,6 +108,8 @@ type
   end;
 
 implementation
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 { THbVirtualList }
 
@@ -161,11 +165,15 @@ begin
   FBtnSelectAll.Caption := '全选/反选';
   FBtnSelectAll.Kind := bkSoft;
   FBtnSelectAll.OnClick := OnSelectAllClick;
-  FBtnSelectAll.Parent := FPnlBatchBar;
+  FSearchDebounceTimer := TTimer.Create(Self);
+  FSearchDebounceTimer.Interval := 100;
+  FSearchDebounceTimer.Enabled := False;
+  FSearchDebounceTimer.OnTimer := OnSearchDebounceTimer;
 end;
 
 destructor THbVirtualList.Destroy;
 begin
+  FreeAndNil(FSearchDebounceTimer);
   FItems.Free;
   FFilteredIndices.Free;
   FSelectedIndices.Free;
@@ -269,21 +277,39 @@ begin
   if FSearchFilter <> Value then
   begin
     FSearchFilter := Value;
+    if Assigned(FSearchDebounceTimer) then
+      FSearchDebounceTimer.Enabled := False;
     RebuildFilteredIndices;
+    UpdateScrollBars;
     Invalidate;
   end;
+end;
+
+procedure THbVirtualList.OnSearchDebounceTimer(Sender: TObject);
+begin
+  FSearchDebounceTimer.Enabled := False;
+  RebuildFilteredIndices;
+  UpdateScrollBars;
+  Invalidate;
 end;
 
 procedure THbVirtualList.UpdateBatchBar;
 var
   Cnt: Integer;
+  Tokens: THbTokens;
 begin
   Cnt := FSelectedIndices.Count;
+  Tokens := THbTheme.Tokens;
   if Assigned(FPnlBatchBar) then
   begin
     FPnlBatchBar.Visible := (Cnt > 0);
+    FPnlBatchBar.Color := TColor(Tokens.SurfaceAlt and $00FFFFFF);
+    FPnlBatchBar.ParentBackground := False;
     if Assigned(FLblBatchStats) then
+    begin
       FLblBatchStats.Caption := Format('  已选中 %d 项:', [Cnt]);
+      FLblBatchStats.Font.Color := TColor(Tokens.Ink and $00FFFFFF);
+    end;
   end;
 
   if Assigned(FOnSelectionChange) then
@@ -395,6 +421,7 @@ procedure THbVirtualList.Resize;
 begin
   inherited;
   UpdateScrollBars;
+  Invalidate;
 end;
 
 procedure THbVirtualList.CreateWnd;

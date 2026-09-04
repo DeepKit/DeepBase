@@ -635,8 +635,6 @@ end;
 
 destructor THbTrayIcon.Destroy;
 begin
-  FTrayIcon.Free;
-  FMenu.Free;
   inherited;
 end;
 

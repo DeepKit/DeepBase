@@ -186,16 +186,32 @@ end;
 function THbPageControl.GetTabRect(Index: Integer): TRect;
 var
   I: Integer;
-  CurX: Integer;
-  TabW: Integer;
+  CurX, TabW, TextW: Integer;
+  Tokens: THbTokens;
 begin
-  CurX := 8;
+  if (Index < 0) or (Index >= FTabs.Count) then
+    Exit(Rect(0, 0, 0, 0));
+
+  Tokens := THbTheme.Tokens;
+  Canvas.Font.Name := Tokens.FontFamily;
+  Canvas.Font.Size := Round(Tokens.SizeS);
+  Canvas.Font.Style := [fsBold];
+
+  CurX := Round(ScaleDIP(8.0));
   for I := 0 to Index do
   begin
-    TabW := 120;
+    TextW := Canvas.TextWidth(FTabs[I].Title);
+    TabW := TextW + Round(ScaleDIP(Tokens.SpaceM * 2));
+    if FTabs[I].BadgeCount > 0 then
+      TabW := TabW + Round(ScaleDIP(24.0));
+    if FTabs[I].IsClosable then
+      TabW := TabW + Round(ScaleDIP(18.0));
+    if TabW < Round(ScaleDIP(60.0)) then
+      TabW := Round(ScaleDIP(60.0));
+
     if I = Index then
       Exit(Rect(CurX, 0, CurX + TabW, FTabHeight));
-    Inc(CurX, TabW + 6);
+    Inc(CurX, TabW + Round(ScaleDIP(6.0)));
   end;
   Result := Rect(0, 0, 0, 0);
 end;
@@ -220,13 +236,23 @@ end;
 procedure THbPageControl.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   NewHover: Integer;
+  R: TRect;
 begin
   inherited;
   NewHover := GetTabAt(X, Y);
   if FHoverIndex <> NewHover then
   begin
+    if (FHoverIndex >= 0) and (FHoverIndex < FTabs.Count) then
+    begin
+      R := GetTabRect(FHoverIndex);
+      InvalidateRect(Handle, @R, False);
+    end;
     FHoverIndex := NewHover;
-    Invalidate;
+    if (FHoverIndex >= 0) and (FHoverIndex < FTabs.Count) then
+    begin
+      R := GetTabRect(FHoverIndex);
+      InvalidateRect(Handle, @R, False);
+    end;
   end;
 end;
 
@@ -235,7 +261,7 @@ var
   ClickedTab: Integer;
 begin
   inherited;
-  SetFocus;
+  if CanFocus then SetFocus;
   if Button = mbLeft then
   begin
     ClickedTab := GetTabAt(X, Y);
@@ -379,7 +405,9 @@ begin
           if FTabs[I].BadgeCount > 0 then
           begin
             var BdgText := IntToStr(FTabs[I].BadgeCount);
-            var BdgRect := MakeRect(Single(TabRect.Right) - 24.0, Single(TabRect.Top) + 6.0, 18.0, 14.0);
+            var BdgW := ScaleDIP(20.0);
+            var BdgH := ScaleDIP(15.0);
+            var BdgRect := MakeRect(Single(TabRect.Right) - BdgW - ScaleDIP(6.0), Single(TabRect.Top) + (FTabHeight - BdgH) * 0.5, BdgW, BdgH);
             var BrushBdg := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
             var BrushBdgText := TGPSolidBrush.Create(ColorToARGB(Tokens.OnPrimary));
             try

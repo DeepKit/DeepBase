@@ -164,6 +164,9 @@ uses
   Test.DeepBase.HB.Voice.CF in 'Test.DeepBase.HB.Voice.CF.pas',
   Test.DeepBase.VCL.HB.Theme in 'Test.DeepBase.VCL.HB.Theme.pas',
   Test.DeepBase.FMX.HB.Dialogs in 'Test.DeepBase.FMX.HB.Dialogs.pas',
+  Test.DeepBase.HB.Touchpoint in 'Test.DeepBase.HB.Touchpoint.pas',
+  Test.DeepBase.HB.Lifecycle in 'Test.DeepBase.HB.Lifecycle.pas',
+  Test.DeepBase.HB.Benchmark in 'Test.DeepBase.HB.Benchmark.pas',
   { Test.DeepBase.PublishConfig excluded: depends on Tools/UniPublisher unit Publisher.Config }
   Test.DeepBase.Reflection in 'Test.DeepBase.Reflection.pas',
   Test.DeepBase.RuntimeContext in 'Test.DeepBase.RuntimeContext.pas',
@@ -284,6 +287,13 @@ uses
   Test.Regression.BUG338_DoQryBindTrim in 'Regression\Test.Regression.BUG338_DoQryBindTrim.pas',
   Test.Regression.BUG339_DoQrySweepInUse in 'Regression\Test.Regression.BUG339_DoQrySweepInUse.pas',
   Test.Regression.BUG340_PluginUnloadOrder in 'Regression\Test.Regression.BUG340_PluginUnloadOrder.pas',
+  Test.Regression.BUG341_ObjectPoolCallbackOutsideLock in 'Regression\Test.Regression.BUG341_ObjectPoolCallbackOutsideLock.pas',
+  Test.Regression.BUG342_EventBusMainThreadDrain in 'Regression\Test.Regression.BUG342_EventBusMainThreadDrain.pas',
+  Test.Regression.BUG343_SchedulerStartRace in 'Regression\Test.Regression.BUG343_SchedulerStartRace.pas',
+  Test.Regression.BUG344_WorkerQueueTimeoutSlotReuse in 'Regression\Test.Regression.BUG344_WorkerQueueTimeoutSlotReuse.pas',
+  Test.Regression.BUG345_PoolReleaseInvalidate in 'Regression\Test.Regression.BUG345_PoolReleaseInvalidate.pas',
+  Test.Regression.BUG346_JobQueueConcurrentDequeue in 'Regression\Test.Regression.BUG346_JobQueueConcurrentDequeue.pas',
+  Test.Regression.BUG347_DoQryConnectionSerialize in 'Regression\Test.Regression.BUG347_DoQryConnectionSerialize.pas',
   // REVIEW5-GOV-007: DeepFlow production source code and tests
   DeepFlow.Message in '..\DeepFlow\Source\Core\DeepFlow.Message.pas',
   DeepFlow.Role in '..\DeepFlow\Source\Core\DeepFlow.Role.pas',

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.CommandPalette - Universal Ctrl+K Command Palette for VCL
   
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -54,11 +54,13 @@ type
     FPnlSearchBox: TPanel;
     FEdtSearch: TEdit;
     FLblHint: TLabel;
+    FSearchDebounceTimer: TTimer;
 
     procedure SetSearchText(const Value: string);
     function GetFilteredCount: Integer;
     procedure RebuildFilteredList;
     function MatchFuzzy(const AQuery, ATarget: string): Boolean;
+    procedure OnSearchDebounceTimer(Sender: TObject);
     procedure OnSearchChange(Sender: TObject);
     procedure OnSearchKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     function HitTestRow(Y: Integer): Integer;
@@ -94,6 +96,8 @@ type
   end;
 
 implementation
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 { THbCommandPalette }
 
@@ -134,10 +138,16 @@ begin
   FEdtSearch.OnChange := OnSearchChange;
   FEdtSearch.OnKeyDown := OnSearchKeyDown;
   FEdtSearch.Parent := FPnlSearchBox;
+
+  FSearchDebounceTimer := TTimer.Create(Self);
+  FSearchDebounceTimer.Interval := 80;
+  FSearchDebounceTimer.Enabled := False;
+  FSearchDebounceTimer.OnTimer := OnSearchDebounceTimer;
 end;
 
 destructor THbCommandPalette.Destroy;
 begin
+  FreeAndNil(FSearchDebounceTimer);
   FItems.Free;
   FFilteredIndices.Free;
   FProviders.Free;
@@ -223,14 +233,36 @@ begin
   if FSearchText <> Value then
   begin
     FSearchText := Value;
+    if Assigned(FSearchDebounceTimer) then
+      FSearchDebounceTimer.Enabled := False;
     RebuildFilteredList;
     Invalidate;
   end;
 end;
 
+procedure THbCommandPalette.OnSearchDebounceTimer(Sender: TObject);
+begin
+  FSearchDebounceTimer.Enabled := False;
+  RebuildFilteredList;
+  Invalidate;
+end;
+
 procedure THbCommandPalette.OnSearchChange(Sender: TObject);
 begin
-  SetSearchText(FEdtSearch.Text);
+  if FSearchText <> FEdtSearch.Text then
+  begin
+    FSearchText := FEdtSearch.Text;
+    if Assigned(FSearchDebounceTimer) then
+    begin
+      FSearchDebounceTimer.Enabled := False;
+      FSearchDebounceTimer.Enabled := True;
+    end
+    else
+    begin
+      RebuildFilteredList;
+      Invalidate;
+    end;
+  end;
 end;
 
 procedure THbCommandPalette.OnSearchKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);

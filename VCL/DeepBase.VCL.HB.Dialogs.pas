@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Dialogs - Modern Multi-Zone Dialog & Accordion Summary Bar for VCL
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -24,6 +24,7 @@ uses
   System.Types,
   System.UITypes,
   System.Math,
+  System.DateUtils,
   System.Generics.Collections,
   Vcl.Controls,
   Vcl.Graphics,
@@ -31,6 +32,8 @@ uses
   Vcl.ExtCtrls,
   Vcl.StdCtrls,
   DeepBase.HB.Core,
+  DeepBase.HB.Touchpoint.Types,
+  DeepBase.HB.Touchpoint.Engine,
   DeepBase.HB.Dialogs.Types,
   DeepBase.VCL.HB.Theme,
   DeepBase.VCL.HB.Controls;
@@ -253,9 +256,9 @@ begin
   inherited MouseMove(Shift, X, Y);
   OldHover := FHoverToggle;
   if FOrientation = woVertical then
-    FHoverToggle := (Y <= FCollapsedSize) and (X >= Width - 100)
+    FHoverToggle := (Y <= FCollapsedSize) and (X >= Width - ScaleDIP(100.0))
   else
-    FHoverToggle := (X <= FCollapsedSize) and (Y >= Height - 40);
+    FHoverToggle := (X <= FCollapsedSize) and (Y >= Height - ScaleDIP(40.0));
   if OldHover <> FHoverToggle then
     Invalidate;
 end;
@@ -408,16 +411,27 @@ var
   BtnOk, BtnCancel: TButton;
   PnlHeader, PnlBody, PnlFooter: TPanel;
   Tokens: THbTokens;
+  PPI: Integer;
+  function ScalePx(AVal: Integer): Integer;
+  begin
+    Result := Round(AVal * (PPI / 96.0));
+  end;
 begin
   Result := drCancel;
   Tokens := THbTheme.Tokens;
 
   DlgForm := TForm.CreateNew(nil);
   try
+    PPI := DlgForm.PixelsPerInch;
+    if PPI <= 0 then
+      PPI := Screen.PixelsPerInch;
+    if PPI <= 0 then
+      PPI := 96;
+
     DlgForm.Position := poScreenCenter;
     DlgForm.BorderStyle := bsDialog;
-    DlgForm.ClientWidth := 560;
-    DlgForm.ClientHeight := 380;
+    DlgForm.ClientWidth := ScalePx(560);
+    DlgForm.ClientHeight := ScalePx(380);
     DlgForm.Caption := AOptions.Title;
     DlgForm.Color := TColor(Tokens.Surface and $00FFFFFF);
 
@@ -425,53 +439,67 @@ begin
     PnlHeader := TPanel.Create(DlgForm);
     PnlHeader.Parent := DlgForm;
     PnlHeader.Align := alTop;
-    PnlHeader.Height := 54;
+    PnlHeader.Height := ScalePx(54);
     PnlHeader.BevelOuter := bvNone;
+    PnlHeader.Color := TColor(Tokens.Surface and $00FFFFFF);
+    PnlHeader.ParentBackground := False;
 
     LblTitle := TLabel.Create(PnlHeader);
     LblTitle.Parent := PnlHeader;
-    LblTitle.Left := 16;
-    LblTitle.Top := 16;
+    LblTitle.Left := ScalePx(16);
+    LblTitle.Top := ScalePx(16);
     LblTitle.Caption := AOptions.Title;
-    LblTitle.Font.Size := 12;
+    LblTitle.Font.Name := Tokens.FontFamily;
+    LblTitle.Font.Size := Round(Tokens.SizeM);
     LblTitle.Font.Style := [fsBold];
+    LblTitle.Font.Color := TColor(Tokens.Ink and $00FFFFFF);
 
     PnlFooter := TPanel.Create(DlgForm);
     PnlFooter.Parent := DlgForm;
     PnlFooter.Align := alBottom;
-    PnlFooter.Height := 48;
+    PnlFooter.Height := ScalePx(52);
     PnlFooter.BevelOuter := bvNone;
+    PnlFooter.Color := TColor(Tokens.Surface and $00FFFFFF);
+    PnlFooter.ParentBackground := False;
 
     PnlBody := TPanel.Create(DlgForm);
     PnlBody.Parent := DlgForm;
     PnlBody.Align := alClient;
     PnlBody.BevelOuter := bvNone;
+    PnlBody.Color := TColor(Tokens.Surface and $00FFFFFF);
+    PnlBody.ParentBackground := False;
 
     LblSummary := TLabel.Create(PnlBody);
     LblSummary.Parent := PnlBody;
-    LblSummary.Left := 16;
-    LblSummary.Top := 8;
-    LblSummary.Width := 528;
+    LblSummary.Left := ScalePx(16);
+    LblSummary.Top := ScalePx(8);
+    LblSummary.Width := DlgForm.ClientWidth - ScalePx(32);
     LblSummary.WordWrap := True;
     LblSummary.Caption := AOptions.Summary;
+    LblSummary.Font.Name := Tokens.FontFamily;
+    LblSummary.Font.Size := Round(Tokens.SizeS);
+    LblSummary.Font.Color := TColor(Tokens.Ink and $00FFFFFF);
 
     // Optional Prompt Input Zone
     if AOptions.Kind in [dkPrompt, dkPromptReason] then
     begin
       LblPrompt := TLabel.Create(PnlBody);
       LblPrompt.Parent := PnlBody;
-      LblPrompt.Left := 16;
-      LblPrompt.Top := 70;
+      LblPrompt.Left := ScalePx(16);
+      LblPrompt.Top := ScalePx(70);
       LblPrompt.Caption := AOptions.PromptLabel;
+      LblPrompt.Font.Name := Tokens.FontFamily;
+      LblPrompt.Font.Size := Round(Tokens.SizeS);
+      LblPrompt.Font.Color := TColor(Tokens.InkMuted and $00FFFFFF);
 
       if AOptions.IsInputMultiline then
       begin
         var Memo := TMemo.Create(PnlBody);
         Memo.Parent := PnlBody;
-        Memo.Left := 16;
-        Memo.Top := 90;
-        Memo.Width := 528;
-        Memo.Height := 90;
+        Memo.Left := ScalePx(16);
+        Memo.Top := ScalePx(94);
+        Memo.Width := DlgForm.ClientWidth - ScalePx(32);
+        Memo.Height := ScalePx(110);
         Memo.Text := AOptions.DefaultInput;
         EdtInput := Memo;
       end
@@ -479,9 +507,10 @@ begin
       begin
         var Edit := TEdit.Create(PnlBody);
         Edit.Parent := PnlBody;
-        Edit.Left := 16;
-        Edit.Top := 90;
-        Edit.Width := 528;
+        Edit.Left := ScalePx(16);
+        Edit.Top := ScalePx(94);
+        Edit.Width := DlgForm.ClientWidth - ScalePx(32);
+        Edit.Height := ScalePx(32);
         Edit.Text := AOptions.DefaultInput;
         EdtInput := Edit;
       end;
@@ -492,9 +521,10 @@ begin
     // Footer Buttons
     BtnOk := TButton.Create(PnlFooter);
     BtnOk.Parent := PnlFooter;
-    BtnOk.Left := 460;
-    BtnOk.Top := 10;
-    BtnOk.Width := 86;
+    BtnOk.Width := ScalePx(86);
+    BtnOk.Height := ScalePx(32);
+    BtnOk.Top := ScalePx(10);
+    BtnOk.Left := DlgForm.ClientWidth - ScalePx(16 + 86);
     BtnOk.Caption := '确定';
     if AOptions.OkCaption <> '' then
       BtnOk.Caption := AOptions.OkCaption;
@@ -502,9 +532,10 @@ begin
 
     BtnCancel := TButton.Create(PnlFooter);
     BtnCancel.Parent := PnlFooter;
-    BtnCancel.Left := 366;
-    BtnCancel.Top := 10;
-    BtnCancel.Width := 86;
+    BtnCancel.Width := ScalePx(86);
+    BtnCancel.Height := ScalePx(32);
+    BtnCancel.Top := ScalePx(10);
+    BtnCancel.Left := BtnOk.Left - ScalePx(10 + 86);
     BtnCancel.Caption := '取消';
     BtnCancel.ModalResult := mrCancel;
 
@@ -519,6 +550,22 @@ begin
       Result := drOk;
       if Assigned(EdtInput) then
         AInputValue := EdtInput.Text;
+
+      var Ev: TTouchEvidence;
+      FillChar(Ev, SizeOf(Ev), 0);
+      Ev.TouchpointId := 'tp_dialog_confirm';
+      Ev.SurfaceId := 'frm_dialog';
+      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+      Ev.DwellTimeMs := 0;
+      Ev.Success := True;
+      Ev.BeforeState := 'Prompting';
+      Ev.AfterState := 'Confirmed';
+      Ev.ActionType := 'Confirm';
+      Ev.SupportDeflected := True;
+
+      if not THbTouchpointEngine.Instance.IsRegistered('tp_dialog_confirm') then
+        THbTouchpointEngine.Instance.RegisterTouchpoint('tp_dialog_confirm', tlCritical, 'frm_dialog', 'Confirmed');
+      THbTouchpointEngine.Instance.EmitEvidence(Ev);
     end
     else
       Result := drCancel;

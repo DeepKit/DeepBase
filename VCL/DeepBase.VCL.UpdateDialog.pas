@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.UpdateDialog - 更新提示对话框
   
   版本: 0.3
@@ -95,19 +95,12 @@ end;
 
 procedure TUpdateDialog.WaitForDownloadThread;
 begin
-  // Wait for download thread to complete with timeout
   if Assigned(FDownloadThread) then
   begin
     // Set cancel flag to signal thread to stop
     FCancelRequested := True;
-
-    // Wait up to 3 seconds for thread to finish
-    if FDownloadThread.WaitFor(3000) = wrTimeout then
-    begin
-      // Thread didn't finish in time, terminate it
-      // Note: This is a last resort as termination is not clean
-      FDownloadThread.Terminate;
-    end;
+    FDownloadThread.Terminate;
+    FDownloadThread.WaitFor;
     FreeAndNil(FDownloadThread);
   end;
 end;
@@ -140,7 +133,7 @@ begin
       // Check for cancellation before starting download
       if FCancelRequested then
       begin
-        TThread.Synchronize(nil, procedure
+        TThread.Synchronize(TThread.CurrentThread, procedure
         begin
           FIsDownloading := False;
           btnUpdate.Enabled := True;
@@ -155,7 +148,7 @@ begin
           if FCancelRequested then
             Abort;  // Abort the download
 
-          TThread.Queue(nil, procedure
+          TThread.Queue(TThread.CurrentThread, procedure
           begin
             if TotalCount > 0 then
               pbDownload.Position := Round((ReadCount / TotalCount) * 100);
@@ -165,7 +158,7 @@ begin
       if DownloadSuccess then
       begin
         // Success
-        TThread.Synchronize(nil, procedure
+        TThread.Synchronize(TThread.CurrentThread, procedure
         begin
           if MessageDlg('Download complete. Install now?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
           begin
@@ -179,7 +172,7 @@ begin
       end
       else
       begin
-        TThread.Synchronize(nil, procedure
+        TThread.Synchronize(TThread.CurrentThread, procedure
         begin
           if not FCancelRequested then
             ShowMessage('Download failed.');
@@ -191,7 +184,7 @@ begin
       on E: EAbort do
       begin
         // Download was cancelled
-        TThread.Synchronize(nil, procedure
+        TThread.Synchronize(TThread.CurrentThread, procedure
         begin
           btnUpdate.Enabled := True;
           FIsDownloading := False;
@@ -199,7 +192,7 @@ begin
         end);
       end;
       on E: Exception do
-        TThread.Synchronize(nil, procedure
+        TThread.Synchronize(TThread.CurrentThread, procedure
         begin
           if not FCancelRequested then
             ShowMessage('Error: ' + E.Message);

@@ -1,10 +1,11 @@
 ﻿{ ============================================================================
   DeepBase.VCL.HB.Grid - High-Performance Virtual Data Grid for VCL
 
-  Version: 1.0 (Delphi 13.1 on Win64)
+  Version: 1.1 (Delphi 13.1 on Win64)
   Description: THbDataGrid:
                - Virtual row rendering (constant memory & 60fps scrolling)
-               - Column definitions (Heatbars, Badges, Currencies, Sort)
+               - Column definitions (Heatbars, Badges, ToggleSwitch, Checkbox, Sort)
+               - Inline interactive controls (ToggleSwitch, Checkbox with OnCellToggle)
                - Selection range stats (Sum, Avg, Count, Min, Max)
                - Token-driven styling with GDI+ anti-aliasing
   ============================================================================ }
@@ -46,6 +47,16 @@ type
   THbGetCellFloatEvent = procedure(Sender: TObject; ARow, ACol: Integer; var AValue: Double) of object;
 
   /// <summary>
+  /// Callback to retrieve cell boolean value for toggle switch and checkbox.
+  /// </summary>
+  THbGetCellBoolEvent = procedure(Sender: TObject; ARow, ACol: Integer; var AValue: Boolean) of object;
+
+  /// <summary>
+  /// Callback fired when an inline toggle or checkbox in a cell is toggled by user click.
+  /// </summary>
+  THbCellToggleEvent = procedure(Sender: TObject; ARow, ACol: Integer; ANewValue: Boolean) of object;
+
+  /// <summary>
   /// THbDataGrid: Modern Virtual Data Grid Component for VCL.
   /// </summary>
   THbDataGrid = class(TCustomControl)
@@ -58,11 +69,15 @@ type
     FSelectedRows: TList<Integer>;
     FOnGetCellText: THbGetCellTextEvent;
     FOnGetCellFloat: THbGetCellFloatEvent;
+    FOnGetCellBool: THbGetCellBoolEvent;
+    FOnCellToggle: THbCellToggleEvent;
     FScrollTopRow: Integer;
+
     procedure SetRowCount(Value: Integer);
     procedure SetRowHeight(Value: Integer);
     procedure SetHeaderHeight(Value: Integer);
     procedure UpdateScrollBars;
+    function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
   protected
     procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -71,6 +86,7 @@ type
     procedure CreateWnd; override;
     procedure WMVScroll(var Message: TWMVScroll); message WM_VSCROLL;
     procedure CMMouseWheel(var Message: TCMMouseWheel); message CM_MOUSEWHEEL;
+    procedure WMLButtonDblClk(var Message: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -81,6 +97,7 @@ type
 
     function ComputeSelectionStats: THbGridStats;
     procedure SelectRow(ARowIndex: Integer; AAddToSelection: Boolean = False);
+    procedure SelectRange(AStartRow, AEndRow: Integer);
     procedure ClearSelection;
     procedure ScrollToRow(ARow: Integer);
 
@@ -96,6 +113,13 @@ type
     property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight default 36;
     property OnGetCellText: THbGetCellTextEvent read FOnGetCellText write FOnGetCellText;
     property OnGetCellFloat: THbGetCellFloatEvent read FOnGetCellFloat write FOnGetCellFloat;
+    property OnGetCellBool: THbGetCellBoolEvent read FOnGetCellBool write FOnGetCellBool;
+    property OnCellToggle: THbCellToggleEvent read FOnCellToggle write FOnCellToggle;
+    property OnClick;
+    property OnDblClick;
+    property Enabled;
+    property Visible;
+    property TabStop;
   end;
 
 implementation
@@ -224,15 +248,24 @@ begin
   UpdateScrollBars;
 end;
 
+procedure THbDataGrid.WMLButtonDblClk(var Message: TWMLButtonDblClk);
+begin
+  inherited;
+  DblClick;
+end;
+
 procedure THbDataGrid.CreateWnd;
 begin
   inherited;
+  FRowHeight := Round(ScaleDIP(34.0));
+  FHeaderHeight := Round(ScaleDIP(36.0));
   UpdateScrollBars;
 end;
 
 procedure THbDataGrid.WMVScroll(var Message: TWMVScroll);
 var
   VisRows: Integer;
+  SI: TScrollInfo;
 begin
   VisRows := Max(1, (Height - FHeaderHeight) div Max(1, FRowHeight));
   case Message.ScrollCode of
@@ -240,7 +273,16 @@ begin
     SB_LINEDOWN: ScrollToRow(FScrollTopRow + 1);
     SB_PAGEUP:   ScrollToRow(FScrollTopRow - VisRows);
     SB_PAGEDOWN: ScrollToRow(FScrollTopRow + VisRows);
-    SB_THUMBPOSITION, SB_THUMBTRACK: ScrollToRow(Message.Pos);
+    SB_THUMBPOSITION, SB_THUMBTRACK:
+    begin
+      FillChar(SI, SizeOf(SI), 0);
+      SI.cbSize := SizeOf(SI);
+      SI.fMask := SIF_TRACKPOS;
+      if GetScrollInfo(Handle, SB_VERT, SI) then
+        ScrollToRow(SI.nTrackPos)
+      else
+        ScrollToRow(Message.Pos);
+    end;
     SB_TOP:      ScrollToRow(0);
     SB_BOTTOM:   ScrollToRow(FRowCount - 1);
   end;
@@ -293,6 +335,22 @@ begin
     FSelection.StartRow := ARowIndex;
     FSelection.EndRow := ARowIndex;
   end;
+  Invalidate;
+end;
+
+procedure THbDataGrid.SelectRange(AStartRow, AEndRow: Integer);
+var
+  LowRow, HighRow, R: Integer;
+begin
+  FSelectedRows.Clear;
+  if FRowCount <= 0 then
+    Exit;
+  LowRow := Max(0, Min(AStartRow, AEndRow));
+  HighRow := Min(FRowCount - 1, Max(AStartRow, AEndRow));
+  for R := LowRow to HighRow do
+    FSelectedRows.Add(R);
+  FSelection.StartRow := LowRow;
+  FSelection.EndRow := HighRow;
   Invalidate;
 end;
 
@@ -356,18 +414,85 @@ begin
     Result.AvgValue := Result.SumValue / Result.NumericCount;
 end;
 
+function THbDataGrid.CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
+var
+  Diameter: Single;
+begin
+  Result := TGPGraphicsPath.Create;
+  Diameter := ARadius * 2.0;
+  if Diameter > ARect.Width then Diameter := ARect.Width;
+  if Diameter > ARect.Height then Diameter := ARect.Height;
+
+  if Diameter <= 0.1 then
+  begin
+    Result.AddRectangle(ARect);
+    Exit;
+  end;
+
+  Result.AddArc(ARect.X, ARect.Y, Diameter, Diameter, 180, 90);
+  Result.AddArc(ARect.X + ARect.Width - Diameter, ARect.Y, Diameter, Diameter, 270, 90);
+  Result.AddArc(ARect.X + ARect.Width - Diameter, ARect.Y + ARect.Height - Diameter, Diameter, Diameter, 0, 90);
+  Result.AddArc(ARect.X, ARect.Y + ARect.Height - Diameter, Diameter, Diameter, 90, 90);
+  Result.CloseFigure;
+end;
+
 procedure THbDataGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-  ClickedRow: Integer;
+  ClickedRow, ClickedCol, C: Integer;
+  CurX: Single;
+  CurVal: Boolean;
+  ValStr: string;
 begin
-  inherited;
-  SetFocus;
+  try
+    if CanFocus then
+      SetFocus;
+  except
+  end;
+  if Assigned(OnMouseDown) then
+    OnMouseDown(Self, Button, Shift, X, Y);
+
   if (Y > FHeaderHeight) and (FRowHeight > 0) then
   begin
     ClickedRow := FScrollTopRow + (Y - FHeaderHeight) div FRowHeight;
     if (ClickedRow >= 0) and (ClickedRow < FRowCount) then
     begin
-      SelectRow(ClickedRow, ssCtrl in Shift);
+      // Hit-test columns
+      ClickedCol := -1;
+      CurX := 0.0;
+      for C := 0 to FColumns.Count - 1 do
+      begin
+        if (X >= CurX) and (X < CurX + FColumns[C].Width) then
+        begin
+          ClickedCol := C;
+          Break;
+        end;
+        CurX := CurX + FColumns[C].Width;
+      end;
+
+      // Handle interactive cell toggle
+      if (ClickedCol >= 0) and (FColumns[ClickedCol].ColType in [gctToggleSwitch, gctCheckbox]) then
+      begin
+        CurVal := False;
+        if Assigned(FOnGetCellBool) then
+          FOnGetCellBool(Self, ClickedRow, ClickedCol, CurVal)
+        else if Assigned(FOnGetCellText) then
+        begin
+          ValStr := '';
+          FOnGetCellText(Self, ClickedRow, ClickedCol, ValStr);
+          CurVal := SameText(ValStr, '1') or SameText(ValStr, 'true') or SameText(ValStr, 'on');
+        end;
+
+        if Assigned(FOnCellToggle) then
+          FOnCellToggle(Self, ClickedRow, ClickedCol, not CurVal);
+
+        Invalidate;
+        Exit;
+      end;
+
+      if (ssShift in Shift) and (FSelection.StartRow >= 0) then
+        SelectRange(FSelection.StartRow, ClickedRow)
+      else
+        SelectRow(ClickedRow, ssCtrl in Shift);
     end;
   end;
 end;
@@ -405,7 +530,10 @@ var
   Col: THbGridColumnDef;
   CellText: string;
   CellFloat: Double;
-  HdrRect, ColRect, RowRect, BarTrack, CellRect: TGPRectF;
+  CellBool: Boolean;
+  HdrRect, ColRect, RowRect, BarTrack, CellRect, PillR, BoxR: TGPRectF;
+  Path: TGPGraphicsPath;
+  KnobDiameter, KnobX, KnobY, BoxSz: Single;
 begin
   Tokens := THbTheme.Tokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -491,31 +619,146 @@ begin
             Col := FColumns[C];
             CellText := '';
             CellFloat := 0.0;
+            CellBool := False;
 
             if Assigned(FOnGetCellText) then
               FOnGetCellText(Self, R, C, CellText);
 
-            if Col.ColType = gctHeatBar then
-            begin
-              if Assigned(FOnGetCellFloat) then
-                FOnGetCellFloat(Self, R, C, CellFloat);
-              // Draw HeatBar
-              BarTrack := MakeRect(CurX + 8.0, CurY + FRowHeight - 8.0, Single(Col.Width) - 16.0, 4.0);
-              BrushTrack := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
-              BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
-              try
-                Graphics.FillRectangle(BrushTrack, BarTrack);
-                FillW := (Single(Col.Width) - 16.0) * (EnsureRange(CellFloat, 0.0, 100.0) / 100.0);
-                if FillW > 0 then
-                  Graphics.FillRectangle(BrushFill, CurX + 8.0, CurY + FRowHeight - 8.0, FillW, 4.0);
-              finally
-                BrushFill.Free;
-                BrushTrack.Free;
+            if Assigned(FOnGetCellBool) then
+              FOnGetCellBool(Self, R, C, CellBool)
+            else if CellText <> '' then
+              CellBool := SameText(CellText, '1') or SameText(CellText, 'true') or SameText(CellText, 'on');
+
+            case Col.ColType of
+              gctToggleSwitch:
+              begin
+                // Inline Pill Switch
+                PillR := MakeRect(CurX + 8.0, CurY + (FRowHeight - 18.0) * 0.5, 32.0, 18.0);
+                Path := CreateRoundRectPath(PillR, 9.0);
+                try
+                  if CellBool then
+                    BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary))
+                  else
+                    BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
+                  try
+                    Graphics.FillPath(BrushFill, Path);
+                  finally
+                    BrushFill.Free;
+                  end;
+
+                  if not CellBool then
+                  begin
+                    PenDiv := TGPPen.Create(ColorToARGB(Tokens.Border), 1.0);
+                    try
+                      Graphics.DrawPath(PenDiv, Path);
+                    finally
+                      PenDiv.Free;
+                    end;
+                  end;
+                finally
+                  Path.Free;
+                end;
+
+                KnobDiameter := 14.0;
+                KnobY := PillR.Y + 2.0;
+                if CellBool then
+                  KnobX := PillR.X + PillR.Width - KnobDiameter - 2.0
+                else
+                  KnobX := PillR.X + 2.0;
+
+                BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
+                try
+                  Graphics.FillEllipse(BrushFill, KnobX, KnobY, KnobDiameter, KnobDiameter);
+                finally
+                  BrushFill.Free;
+                end;
+
+                if CellText <> '' then
+                begin
+                  CellRect := MakeRect(CurX + 46.0, CurY, Single(Col.Width) - 50.0, Single(FRowHeight));
+                  Graphics.DrawString(CellText, Length(CellText), FontCell, CellRect, StrFmtNear, BrushInk);
+                end;
+              end;
+
+              gctCheckbox:
+              begin
+                // Inline Checkbox
+                BoxSz := 16.0;
+                BoxR := MakeRect(CurX + 8.0, CurY + (FRowHeight - BoxSz) * 0.5, BoxSz, BoxSz);
+                Path := CreateRoundRectPath(BoxR, 3.0);
+                try
+                  if CellBool then
+                  begin
+                    BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
+                    try
+                      Graphics.FillPath(BrushFill, Path);
+                    finally
+                      BrushFill.Free;
+                    end;
+
+                    PenDiv := TGPPen.Create(ColorToARGB(Tokens.OnPrimary), 1.6);
+                    try
+                      Graphics.DrawLine(PenDiv, BoxR.X + 3.5, BoxR.Y + 8.5, BoxR.X + 7.0, BoxR.Y + 12.0);
+                      Graphics.DrawLine(PenDiv, BoxR.X + 7.0, BoxR.Y + 12.0, BoxR.X + 12.5, BoxR.Y + 4.5);
+                    finally
+                      PenDiv.Free;
+                    end;
+                  end
+                  else
+                  begin
+                    BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
+                    try
+                      Graphics.FillPath(BrushFill, Path);
+                    finally
+                      BrushFill.Free;
+                    end;
+
+                    PenDiv := TGPPen.Create(ColorToARGB(Tokens.Border), 1.0);
+                    try
+                      Graphics.DrawPath(PenDiv, Path);
+                    finally
+                      PenDiv.Free;
+                    end;
+                  end;
+                finally
+                  Path.Free;
+                end;
+
+                if CellText <> '' then
+                begin
+                  CellRect := MakeRect(CurX + 30.0, CurY, Single(Col.Width) - 34.0, Single(FRowHeight));
+                  Graphics.DrawString(CellText, Length(CellText), FontCell, CellRect, StrFmtNear, BrushInk);
+                end;
+              end;
+
+              gctHeatBar:
+              begin
+                if Assigned(FOnGetCellFloat) then
+                  FOnGetCellFloat(Self, R, C, CellFloat);
+                // Draw HeatBar
+                BarTrack := MakeRect(CurX + 8.0, CurY + FRowHeight - 8.0, Single(Col.Width) - 16.0, 4.0);
+                BrushTrack := TGPSolidBrush.Create(ColorToARGB(Tokens.Sunken));
+                BrushFill := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
+                try
+                  Graphics.FillRectangle(BrushTrack, BarTrack);
+                  FillW := (Single(Col.Width) - 16.0) * (EnsureRange(CellFloat, 0.0, 100.0) / 100.0);
+                  if FillW > 0 then
+                    Graphics.FillRectangle(BrushFill, CurX + 8.0, CurY + FRowHeight - 8.0, FillW, 4.0);
+                finally
+                  BrushFill.Free;
+                  BrushTrack.Free;
+                end;
+
+                CellRect := MakeRect(CurX + 8.0, CurY, Single(Col.Width) - 16.0, Single(FRowHeight));
+                Graphics.DrawString(CellText, Length(CellText), FontCell, CellRect, StrFmtNear, BrushInk);
+              end;
+
+              else
+              begin
+                CellRect := MakeRect(CurX + 8.0, CurY, Single(Col.Width) - 16.0, Single(FRowHeight));
+                Graphics.DrawString(CellText, Length(CellText), FontCell, CellRect, StrFmtNear, BrushInk);
               end;
             end;
-
-            CellRect := MakeRect(CurX + 8.0, CurY, Single(Col.Width) - 16.0, Single(FRowHeight));
-            Graphics.DrawString(CellText, Length(CellText), FontCell, CellRect, StrFmtNear, BrushInk);
 
             CurX := CurX + Col.Width;
           end;

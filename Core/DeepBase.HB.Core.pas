@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.HB.Core - Framework-Agnostic HB Design Tokens & Theme Engine Core
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -11,6 +11,8 @@
   ============================================================================ }
 
 unit DeepBase.HB.Core;
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 interface
 
@@ -26,6 +28,7 @@ uses
 
 type
   THbDensity = (hdComfortable, hdCompact);
+  THbGranularity = (gCoarsest, gCoarse, gMedium, gFine, gFiner, gFinest);
   THbEaseMode = (emLinear, emEaseIn, emEaseOut, emEaseInOut);
 
   /// <summary>
@@ -47,6 +50,13 @@ type
     Elevation1: TAlphaColor;
     Elevation2: TAlphaColor;
     Elevation3: TAlphaColor;
+
+    // Choice Group
+    ChoiceOption: TAlphaColor;
+    ChoiceRegenerate: TAlphaColor;
+    ChoiceInput: TAlphaColor;
+    ChoiceBack: TAlphaColor;
+    ChoiceRecommended: TAlphaColor;
 
     // Ink (Typography color) Group
     Ink: TAlphaColor;
@@ -102,6 +112,14 @@ type
     DurSlow: Integer; // ms
     EaseMode: THbEaseMode;
 
+    // Level / Depth Group (L0..L5)
+    Level0: TAlphaColor;
+    Level1: TAlphaColor;
+    Level2: TAlphaColor;
+    Level3: TAlphaColor;
+    Level4: TAlphaColor;
+    Level5: TAlphaColor;
+
     // Density Group
     RowHeightScale: Single;
 
@@ -109,6 +127,7 @@ type
     function ScaleForDPI(APPI: Integer): THbTokens;
     function CalculateContrastRatio(AColor1, AColor2: TAlphaColor): Double;
     function ValidateWcagAA(out AReason: string): Boolean;
+    function GetLevelColor(ADepth: Integer): TAlphaColor;
   end;
 
   THbThemeMetadata = record
@@ -141,6 +160,17 @@ type
     property Density: THbDensity read FDensity;
   end;
 
+  /// <summary>
+  /// Cross-framework RTL Message broadcast on information granularity changes.
+  /// </summary>
+  THbGranularityChangedMessage = class(TMessage<THbGranularity>)
+  private
+    FGranularity: THbGranularity;
+  public
+    constructor Create(AGranularity: THbGranularity);
+    property Granularity: THbGranularity read FGranularity;
+  end;
+
   THbOverrideHook = reference to procedure(const AThemeId: string; var ATokens: THbTokens);
 
   /// <summary>
@@ -152,6 +182,7 @@ type
     class var FRegistry: TDictionary<string, THbThemeDefinition>;
     class var FCurrentThemeId: string;
     class var FCurrentDensity: THbDensity;
+    class var FGranularity: THbGranularity;
     class var FListeners: TList<TNotifyEvent>;
     class var FSettingsBridge: TObject;
 
@@ -177,8 +208,10 @@ type
 
     class procedure ApplyTheme(const AThemeId: string; ADensity: THbDensity = hdComfortable); static;
     class procedure SetDensity(ADensity: THbDensity); static;
+    class procedure SetGranularity(AGranularity: THbGranularity); static;
     class function CurrentId: string; static;
     class function CurrentDensity: THbDensity; static;
+    class function CurrentGranularity: THbGranularity; static;
     class function Current: THbThemeDefinition; static;
     class function Tokens: THbTokens; static;
     class function IsDark: Boolean; static;
@@ -207,6 +240,14 @@ begin
   inherited Create(AThemeId);
   FThemeId := AThemeId;
   FDensity := ADensity;
+end;
+
+{ THbGranularityChangedMessage }
+
+constructor THbGranularityChangedMessage.Create(AGranularity: THbGranularity);
+begin
+  inherited Create(AGranularity);
+  FGranularity := AGranularity;
 end;
 
 { Color & Luminance Helpers }
@@ -262,6 +303,13 @@ begin
   Result.Elevation2 := $26000000;
   Result.Elevation3 := $33000000;
 
+  // Choice Group
+  Result.ChoiceOption      := $FFFFF6E6; // SurfaceAlt
+  Result.ChoiceRegenerate  := $FF6366F1; // Indigo / Purple
+  Result.ChoiceInput       := $FF0284C7; // Sky / Blue
+  Result.ChoiceBack        := $FF78716C; // Stone / Muted
+  Result.ChoiceRecommended := $FFD97706; // Amber 600 (Primary)
+
   // Ink Group
   Result.Ink        := $FF292524;
   Result.InkMuted   := $FF8A8175;
@@ -316,8 +364,31 @@ begin
   Result.DurSlow  := 350;
   Result.EaseMode := emEaseOut;
 
+  // Level / Depth Group (L0..L5 semantic colors)
+  Result.Level0 := $FFD97706; // L0 Top Root: Warm Gold / Primary
+  Result.Level1 := $FF4F46E5; // L1 First Child: Indigo / Blue
+  Result.Level2 := $FF0D9488; // L2 Second Child: Teal / Cyan
+  Result.Level3 := $FFEA580C; // L3 Third Child: Amber / Orange
+  Result.Level4 := $FF9333EA; // L4 Fourth Child: Purple / Violet
+  Result.Level5 := $FF64748B; // L5 Deep Leaf: Slate / Muted
+
   // Density Group
   Result.RowHeightScale := 1.0;
+end;
+
+function THbTokens.GetLevelColor(ADepth: Integer): TAlphaColor;
+begin
+  case ADepth of
+    0: Result := Level0;
+    1: Result := Level1;
+    2: Result := Level2;
+    3: Result := Level3;
+    4: Result := Level4;
+  else
+    Result := Level5;
+  end;
+  if Result = 0 then
+    Result := Primary;
 end;
 
 function THbTokens.CalculateContrastRatio(AColor1, AColor2: TAlphaColor): Double;
@@ -387,6 +458,7 @@ begin
   FListeners := TList<TNotifyEvent>.Create;
   FCurrentThemeId := 'huanjin-gold';
   FCurrentDensity := hdComfortable;
+  FGranularity := gMedium;
   FSettingsBridge := nil;
 end;
 
@@ -547,6 +619,42 @@ begin
       ATokens.Info := ParseColor(SubObj.Values['info'].Value, ATokens.Info);
     if SubObj.Values['infoSoft'] <> nil then
       ATokens.InfoSoft := ParseColor(SubObj.Values['infoSoft'].Value, ATokens.InfoSoft);
+  end;
+
+  // Choice
+  Val := AObj.Values['choice'];
+  if Val is TJSONObject then
+  begin
+    SubObj := TJSONObject(Val);
+    if SubObj.Values['option'] <> nil then
+      ATokens.ChoiceOption := ParseColor(SubObj.Values['option'].Value, ATokens.ChoiceOption);
+    if SubObj.Values['regenerate'] <> nil then
+      ATokens.ChoiceRegenerate := ParseColor(SubObj.Values['regenerate'].Value, ATokens.ChoiceRegenerate);
+    if SubObj.Values['input'] <> nil then
+      ATokens.ChoiceInput := ParseColor(SubObj.Values['input'].Value, ATokens.ChoiceInput);
+    if SubObj.Values['back'] <> nil then
+      ATokens.ChoiceBack := ParseColor(SubObj.Values['back'].Value, ATokens.ChoiceBack);
+    if SubObj.Values['recommended'] <> nil then
+      ATokens.ChoiceRecommended := ParseColor(SubObj.Values['recommended'].Value, ATokens.ChoiceRecommended);
+  end;
+
+  // Level / Depth Group
+  Val := AObj.Values['level'];
+  if Val is TJSONObject then
+  begin
+    SubObj := TJSONObject(Val);
+    if SubObj.Values['level0'] <> nil then
+      ATokens.Level0 := ParseColor(SubObj.Values['level0'].Value, ATokens.Level0);
+    if SubObj.Values['level1'] <> nil then
+      ATokens.Level1 := ParseColor(SubObj.Values['level1'].Value, ATokens.Level1);
+    if SubObj.Values['level2'] <> nil then
+      ATokens.Level2 := ParseColor(SubObj.Values['level2'].Value, ATokens.Level2);
+    if SubObj.Values['level3'] <> nil then
+      ATokens.Level3 := ParseColor(SubObj.Values['level3'].Value, ATokens.Level3);
+    if SubObj.Values['level4'] <> nil then
+      ATokens.Level4 := ParseColor(SubObj.Values['level4'].Value, ATokens.Level4);
+    if SubObj.Values['level5'] <> nil then
+      ATokens.Level5 := ParseColor(SubObj.Values['level5'].Value, ATokens.Level5);
   end;
 
   // Shape
@@ -789,6 +897,29 @@ begin
   end;
 
   BroadcastChange;
+end;
+
+class procedure THbTheme.SetGranularity(AGranularity: THbGranularity);
+begin
+  FLock.Enter;
+  try
+    FGranularity := AGranularity;
+  finally
+    FLock.Leave;
+  end;
+
+  TMessageManager.DefaultManager.SendMessage(nil, THbGranularityChangedMessage.Create(AGranularity), True);
+  BroadcastChange;
+end;
+
+class function THbTheme.CurrentGranularity: THbGranularity;
+begin
+  FLock.Enter;
+  try
+    Result := FGranularity;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function THbTheme.CurrentId: string;

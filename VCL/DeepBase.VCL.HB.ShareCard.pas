@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.ShareCard - Offscreen Vector Share & Proof Card Renderer
   
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -23,6 +23,7 @@ uses
   System.Types,
   System.UITypes,
   System.Math,
+  System.RegularExpressions,
   Vcl.Graphics,
   Vcl.Clipbrd,
   Vcl.Imaging.pngimage,
@@ -44,6 +45,8 @@ type
   end;
 
 implementation
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 { THbShareCardRenderer }
 
@@ -86,8 +89,10 @@ begin
       if DigitCount > 3 then
         Result[I] := '*';
     end
-    else
+    else if not CharInSet(Result[I], [' ', '-']) then
+    begin
       DigitCount := 0;
+    end;
   end;
 end;
 
@@ -138,7 +143,7 @@ begin
     // Header Category Pill
     if AData.HeaderCategory <> '' then
     begin
-      Bmp.Canvas.Font.Name := 'Segoe UI';
+      Bmp.Canvas.Font.Name := Tokens.FontFamily;
       Bmp.Canvas.Font.Size := 16;
       Bmp.Canvas.Font.Style := [fsBold];
       Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.Primary);
@@ -146,7 +151,7 @@ begin
     end;
 
     // Title
-    Bmp.Canvas.Font.Name := 'Segoe UI';
+    Bmp.Canvas.Font.Name := Tokens.FontFamily;
     Bmp.Canvas.Font.Size := 28;
     Bmp.Canvas.Font.Style := [fsBold];
     Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.Ink);
@@ -155,6 +160,7 @@ begin
     // Subtitle
     if SubText <> '' then
     begin
+      Bmp.Canvas.Font.Name := Tokens.FontFamily;
       Bmp.Canvas.Font.Size := 18;
       Bmp.Canvas.Font.Style := [];
       Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.InkMuted);
@@ -163,6 +169,7 @@ begin
 
     // Metrics Rows
     CurY := 260;
+    Bmp.Canvas.Font.Name := Tokens.FontFamily;
     Bmp.Canvas.Font.Size := 16;
     Bmp.Canvas.Font.Style := [];
     Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.Ink);
@@ -183,6 +190,7 @@ begin
     // Watermark / Badge
     if (AData.BadgeText <> '') or AData.WatermarkLocked then
     begin
+      Bmp.Canvas.Font.Name := Tokens.FontFamily;
       Bmp.Canvas.Font.Size := 20;
       Bmp.Canvas.Font.Style := [fsBold];
       Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.Primary);
@@ -193,12 +201,14 @@ begin
     end;
 
     // Footer Disclaimer Note
+    Bmp.Canvas.Font.Name := Tokens.FontFamily;
     Bmp.Canvas.Font.Size := 14;
     Bmp.Canvas.Font.Style := [];
     Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.Warning);
     Bmp.Canvas.TextOut(80, H - 120, '⚠ ' + FootNote);
 
     // Timestamp
+    Bmp.Canvas.Font.Name := Tokens.FontFamily;
     Bmp.Canvas.Font.Size := 12;
     Bmp.Canvas.Font.Color := AlphaColorToColor(Tokens.InkMuted);
     if AData.TimestampStr <> '' then

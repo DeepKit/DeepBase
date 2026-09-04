@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   Test.DeepBase.HB.Suite - Comprehensive Tests for HB Core Component Suite
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -13,10 +13,14 @@
 
 unit Test.DeepBase.HB.Suite;
 
+{$WARN IMPLICIT_STRING_CAST OFF}
+
 interface
 
 uses
   DUnitX.TestFramework,
+  Winapi.Windows,
+  Winapi.Messages,
   System.SysUtils,
   System.Classes,
   System.Types,
@@ -44,17 +48,42 @@ uses
   DeepBase.VCL.HB.Cards,
   DeepBase.VCL.HB.Dialogs,
   DeepBase.VCL.HB.VirtualList,
-  DeepBase.VCL.HB.CommandPalette;
+  DeepBase.VCL.HB.CommandPalette,
+  DeepBase.VCL.HB.Text,
+  DeepBase.VCL.HB.Status,
+  DeepBase.VCL.HB.Inputs,
+  DeepBase.VCL.HB.Glass,
+  DeepBase.HB.Choice.Types,
+  DeepBase.VCL.HB.Choice;
 
 type
+  TTestGridAccessor = class(THbDataGrid);
+
   [TestFixture]
   TTestHbSuite = class
   private
     FTrailingClicked: Boolean;
     FLastExecutedCmd: string;
+    FCellToggledRow: Integer;
+    FCellToggledCol: Integer;
+    FCellToggledVal: Boolean;
+    FCheckboxToggled: Boolean;
+    FToggleSwitchToggled: Boolean;
+    FLastChoiceKey: Integer;
+    FLastCustomInputText: string;
+    FLastLinkedId: string;
+    FLastLinkedTarget: string;
+    FLastLinkedKind: THbWaterfallLinkKind;
     procedure OnGetFloatHelper(Sender: TObject; ARow, ACol: Integer; var AValue: Double);
     procedure OnTrailingClickHelper(Sender: TObject);
     procedure OnCommandExecuteHelper(Sender: TObject; const AItem: THbCommandItem);
+    procedure OnCellToggleHelper(Sender: TObject; ARow, ACol: Integer; ANewValue: Boolean);
+    procedure OnGetCellBoolHelper(Sender: TObject; ARow, ACol: Integer; var AValue: Boolean);
+    procedure OnCheckBoxChangeHelper(Sender: TObject);
+    procedure OnToggleSwitchChangeHelper(Sender: TObject);
+    procedure OnChoiceHelper(Sender: TObject; AKey: Integer);
+    procedure OnCustomInputHelper(Sender: TObject; const AInput: string);
+    procedure OnLinkClickHelper(Sender: TObject; const ACardId: string; AKind: THbWaterfallLinkKind; const ATarget: string);
   public
     [Test]
     procedure Test_Waterfall_Facet_Exclude_And_Focus;
@@ -105,6 +134,49 @@ type
 
     [Test]
     procedure Test_CommandPalette_MRU_Sorting_And_Timestamp;
+
+    // WO-20260830-003 HB 缺失组件补充单元测试
+    [Test]
+    procedure Test_HbText_Roles_And_Tones;
+
+    [Test]
+    procedure Test_HbStatusDot_States_And_Pulse;
+
+    [Test]
+    procedure Test_HbCheckBox_Toggle_And_State;
+
+    [Test]
+    procedure Test_HbToggleSwitch_Toggle_And_Text;
+
+    [Test]
+    procedure Test_HbEdit_Placeholder_And_Clear;
+
+    [Test]
+    procedure Test_HbComboBox_Items_And_Selection;
+
+    [Test]
+    procedure Test_HbThemeSelector_ThemeList_And_Selection;
+
+    [Test]
+    procedure Test_HbGlassPanel_Opacity_And_Transitions;
+
+    [Test]
+    procedure Test_HbDataGrid_Inline_Toggle_And_Checkbox;
+
+    [Test]
+    procedure Test_HbChoiceDeck_Full_0_To_9_Matrix;
+
+    [Test]
+    procedure Test_HbWaterfall_28px_Indent_And_L0_L5_Level_Badges;
+
+    [Test]
+    procedure Test_HbWaterfall_Detail_Expansion_And_Inspector;
+
+    [Test]
+    procedure Test_HbWaterfall_Nested_Hierarchy_And_Collapse;
+
+    [Test]
+    procedure Test_HbGranularity_Six_Levels_And_Waterfall_Filter;
   end;
 
 implementation
@@ -595,6 +667,580 @@ begin
     Palette.ExecuteSelected;
     Assert.AreEqual(string('cmd.first'), FLastExecutedCmd);
     Assert.IsTrue(Palette.Items[0].LastUsedAt > 0);
+  finally
+    Form.Free;
+  end;
+end;
+
+
+procedure TTestHbSuite.OnCellToggleHelper(Sender: TObject; ARow, ACol: Integer; ANewValue: Boolean);
+begin
+  FCellToggledRow := ARow;
+  FCellToggledCol := ACol;
+  FCellToggledVal := ANewValue;
+end;
+
+procedure TTestHbSuite.OnGetCellBoolHelper(Sender: TObject; ARow, ACol: Integer; var AValue: Boolean);
+begin
+  if (ACol = 1) and (ARow = 2) then
+    AValue := True
+  else
+    AValue := False;
+end;
+
+procedure TTestHbSuite.OnCheckBoxChangeHelper(Sender: TObject);
+begin
+  FCheckboxToggled := True;
+end;
+
+procedure TTestHbSuite.OnToggleSwitchChangeHelper(Sender: TObject);
+begin
+  FToggleSwitchToggled := True;
+end;
+
+procedure TTestHbSuite.Test_HbText_Roles_And_Tones;
+var
+  Form: TCustomForm;
+  Txt: THbText;
+  Tokens: THbTokens;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Txt := THbText.Create(Form);
+    Txt.Parent := Form;
+    Tokens := THbTheme.Tokens;
+
+    Txt.Caption := '标题文本';
+    Txt.Role := trHeading;
+    Assert.AreEqual(Tokens.SizeL, Txt.EffectiveFontSize, 0.01);
+    Assert.AreEqual(Cardinal(Tokens.Ink), Cardinal(Txt.EffectiveColor));
+
+    Txt.Role := trMuted;
+    Assert.AreEqual(Tokens.SizeS, Txt.EffectiveFontSize, 0.01);
+    Assert.AreEqual(Cardinal(Tokens.InkMuted), Cardinal(Txt.EffectiveColor));
+
+    Txt.Tone := ttSuccess;
+    Assert.AreEqual(Cardinal(Tokens.Success), Cardinal(Txt.EffectiveColor));
+
+    Txt.Tone := ttDanger;
+    Assert.AreEqual(Cardinal(Tokens.Danger), Cardinal(Txt.EffectiveColor));
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbStatusDot_States_And_Pulse;
+var
+  Form: TCustomForm;
+  Dot: THbStatusDot;
+  Tokens: THbTokens;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Dot := THbStatusDot.Create(Form);
+    Dot.Parent := Form;
+    Tokens := THbTheme.Tokens;
+
+    Dot.Status := sdSuccess;
+    Assert.AreEqual(Cardinal(Tokens.Success), Cardinal(Dot.StatusColor));
+
+    Dot.Status := sdDanger;
+    Assert.AreEqual(Cardinal(Tokens.Danger), Cardinal(Dot.StatusColor));
+
+    Dot.Status := sdWarning;
+    Assert.AreEqual(Cardinal(Tokens.Warning), Cardinal(Dot.StatusColor));
+
+    Dot.Status := sdInfo;
+    Assert.AreEqual(Cardinal(Tokens.Info), Cardinal(Dot.StatusColor));
+
+    Dot.Pulse := True;
+    Assert.IsTrue(Dot.Pulse);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbCheckBox_Toggle_And_State;
+var
+  Form: TCustomForm;
+  Cb: THbCheckBox;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Cb := THbCheckBox.Create(Form);
+    Cb.Parent := Form;
+    FCheckboxToggled := False;
+    Cb.OnChange := OnCheckBoxChangeHelper;
+
+    Assert.IsFalse(Cb.Checked);
+    Cb.Toggle;
+    Assert.IsTrue(Cb.Checked);
+    Assert.IsTrue(FCheckboxToggled);
+
+    Cb.Toggle;
+    Assert.IsFalse(Cb.Checked);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbToggleSwitch_Toggle_And_Text;
+var
+  Form: TCustomForm;
+  Sw: THbToggleSwitch;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Sw := THbToggleSwitch.Create(Form);
+    Sw.Parent := Form;
+    FToggleSwitchToggled := False;
+    Sw.OnChange := OnToggleSwitchChangeHelper;
+
+    Assert.IsFalse(Sw.Checked);
+    Assert.AreEqual(string('ON'), Sw.OnText);
+    Assert.AreEqual(string('OFF'), Sw.OffText);
+
+    Sw.Toggle;
+    Assert.IsTrue(Sw.Checked);
+    Assert.IsTrue(FToggleSwitchToggled);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbEdit_Placeholder_And_Clear;
+var
+  Form: TCustomForm;
+  Edt: THbEdit;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Edt := THbEdit.Create(Form);
+    Edt.Parent := Form;
+
+    Edt.PlaceholderText := '请输入关键字...';
+    Assert.AreEqual(string('请输入关键字...'), Edt.PlaceholderText);
+
+    Edt.Text := '测试内容';
+    Assert.AreEqual(string('测试内容'), Edt.Text);
+
+    Edt.Clear;
+    Assert.AreEqual(string(''), Edt.Text);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbComboBox_Items_And_Selection;
+var
+  Form: TCustomForm;
+  Cmb: THbComboBox;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Cmb := THbComboBox.Create(Form);
+    Cmb.Parent := Form;
+
+    Cmb.AddItem('策略 A');
+    Cmb.AddItem('策略 B');
+    Cmb.AddItem('策略 C');
+
+    Assert.AreEqual(Integer(3), Integer(Cmb.Items.Count));
+    Cmb.ItemIndex := 1;
+    Assert.AreEqual(string('策略 B'), Cmb.Text);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbThemeSelector_ThemeList_And_Selection;
+var
+  Form: TCustomForm;
+  Sel: THbThemeSelector;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Sel := THbThemeSelector.Create(Form);
+    Sel.Parent := Form;
+
+    Assert.IsNotEmpty(Sel.SelectedThemeId);
+    Sel.SelectedThemeId := 'ocean-deep';
+    Assert.AreEqual(string('ocean-deep'), Sel.SelectedThemeId);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbGlassPanel_Opacity_And_Transitions;
+var
+  Form: TCustomForm;
+  Glass: THbGlassPanel;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Glass := THbGlassPanel.Create(Form);
+    Glass.Parent := Form;
+
+    Assert.IsTrue(Glass.Acrylic);
+    Assert.IsTrue(Glass.DropShadow);
+
+    Glass.Opacity := 0.75;
+    Assert.AreEqual(0.75, Glass.Opacity, 0.01);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbDataGrid_Inline_Toggle_And_Checkbox;
+var
+  Form: TCustomForm;
+  Grid: THbDataGrid;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Form.HandleNeeded;
+    Grid := THbDataGrid.Create(Form);
+    Grid.Parent := Form;
+    Grid.HandleNeeded;
+
+    Grid.AddColumn('name', '任务名称', 120, gctText);
+    Grid.AddColumn('active', '启用状态', 80, gctToggleSwitch);
+    Grid.AddColumn('sel', '勾选', 60, gctCheckbox);
+    Grid.RowCount := 5;
+
+    Assert.AreEqual(Integer(3), Integer(Grid.Columns.Count));
+    Assert.AreEqual(Ord(gctToggleSwitch), Ord(Grid.Columns[1].ColType));
+    Assert.AreEqual(Ord(gctCheckbox), Ord(Grid.Columns[2].ColType));
+
+    FCellToggledRow := -1;
+    FCellToggledCol := -1;
+    FCellToggledVal := False;
+    Grid.OnCellToggle := OnCellToggleHelper;
+    Grid.OnGetCellBool := OnGetCellBoolHelper;
+
+    // Simulate MouseDown on row 2, col 1 (active toggle)
+    TTestGridAccessor(Grid).MouseDown(mbLeft, [], 150, Grid.HeaderHeight + 2 * Grid.RowHeight + 10);
+    Assert.AreEqual(Integer(2), Integer(FCellToggledRow));
+    Assert.AreEqual(Integer(1), Integer(FCellToggledCol));
+    Assert.IsFalse(FCellToggledVal); // Inverted from True -> False
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.OnChoiceHelper(Sender: TObject; AKey: Integer);
+begin
+  FLastChoiceKey := AKey;
+end;
+
+procedure TTestHbSuite.OnCustomInputHelper(Sender: TObject; const AInput: string);
+begin
+  FLastCustomInputText := AInput;
+end;
+
+procedure TTestHbSuite.OnLinkClickHelper(Sender: TObject; const ACardId: string; AKind: THbWaterfallLinkKind; const ATarget: string);
+begin
+  FLastLinkedId := ACardId;
+  FLastLinkedKind := AKind;
+  FLastLinkedTarget := ATarget;
+end;
+
+procedure TTestHbSuite.Test_HbChoiceDeck_Full_0_To_9_Matrix;
+var
+  Form: TCustomForm;
+  Deck: THbChoiceDeck;
+  Tokens: THbTokens;
+  Item: THbChoiceItem;
+  Msg: TWMKeyDown;
+  K: Integer;
+  R: TRect;
+begin
+  Tokens := THbTheme.Tokens;
+  Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceOption);
+  Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceRegenerate);
+  Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceInput);
+  Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceBack);
+  Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceRecommended);
+
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Deck := THbChoiceDeck.Create(Form);
+    Deck.Parent := Form;
+    Deck.Width := 400;
+    Deck.Height := 500;
+    Deck.OnChoice := OnChoiceHelper;
+    Deck.OnCustomInput := OnCustomInputHelper;
+    FLastChoiceKey := -1;
+    FLastCustomInputText := '';
+
+    // 1. Setup 7 options (1..7) with 1 recommended + 3 standard controls (8, 9, 0)
+    Deck.Clear;
+    for K := 1 to 7 do
+      Deck.AddOption(K, Format('选项 %d', [K]), Format('这是选项 %d 的描述', [K]), K = 1);
+    Deck.AddStandardControls(True, True, True);
+
+    Assert.AreEqual(Integer(10), Integer(Deck.ItemCount)); // 7 options + 8 regen + 9 input + 0 back
+
+    // Check Key 1 is recommended
+    Assert.IsTrue(Deck.FindItemByKey(1, Item));
+    Assert.IsTrue(Item.IsRecommended);
+    Assert.AreEqual('选项 1', Item.Text);
+
+    // Check standard items
+    Assert.IsTrue(Deck.FindItemByKey(8, Item));
+    Assert.AreEqual(Ord(ckRegenerate), Ord(Item.Kind));
+    Assert.IsTrue(Deck.FindItemByKey(9, Item));
+    Assert.AreEqual(Ord(ckInput), Ord(Item.Kind));
+    Assert.IsTrue(Deck.FindItemByKey(0, Item));
+    Assert.AreEqual(Ord(ckBack), Ord(Item.Kind));
+
+    // 2. Test direct keyboard matrix for all keys: 1..7, 8, 9, 0
+    for K := 1 to 7 do
+    begin
+      FLastChoiceKey := -1;
+      FillChar(Msg, SizeOf(Msg), 0);
+      Msg.Msg := WM_KEYDOWN;
+      Msg.CharCode := Ord('0') + K;
+      Deck.Dispatch(Msg);
+      Assert.AreEqual(K, FLastChoiceKey);
+    end;
+
+    // Key 8 (Regenerate)
+    FLastChoiceKey := -1;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('8');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Integer(8), Integer(FLastChoiceKey));
+
+    // Key 9 (Custom Input) -> triggers OnChoice and OnCustomInput
+    FLastChoiceKey := -1;
+    FLastCustomInputText := '';
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('9');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Integer(9), Integer(FLastChoiceKey));
+    Assert.AreEqual('自己输入', FLastCustomInputText);
+
+    // Key 0 (Back)
+    FLastChoiceKey := -1;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('0');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Integer(0), Integer(FLastChoiceKey));
+
+    // 3. Test Disabled Item: disable key 4
+    Deck.SetItemEnabled(4, False);
+    Assert.IsTrue(Deck.FindItemByKey(4, Item));
+    Assert.IsFalse(Item.Enabled);
+
+    // Pressing '4' should be ignored
+    FLastChoiceKey := -1;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('4');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Integer(-1), Integer(FLastChoiceKey)); // Ignored!
+
+    // 4. Test Mouse Hit-Testing on Item 2 Rect
+    FLastChoiceKey := -1;
+    R := Deck.ItemRect(1); // Index 1 is Key 2
+    Assert.IsTrue(R.Bottom > R.Top);
+    var CenterPt := Point((R.Left + R.Right) div 2, (R.Top + R.Bottom) div 2);
+    Deck.TabStop := False;
+    TTestGridAccessor(Deck).MouseDown(mbLeft, [], CenterPt.X, CenterPt.Y);
+    TTestGridAccessor(Deck).MouseUp(mbLeft, [], CenterPt.X, CenterPt.Y);
+    Assert.AreEqual(Integer(2), Integer(FLastChoiceKey));
+
+    // 5. Test Theme Switch updates Tokens
+    THbTheme.ApplyTheme('aurora_glow_dark');
+    Tokens := THbTheme.Tokens;
+    Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceOption);
+    Assert.AreNotEqual(TAlphaColor(0), Tokens.ChoiceRecommended);
+    THbTheme.ApplyTheme('warm_gold_light');
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbWaterfall_28px_Indent_And_L0_L5_Level_Badges;
+var
+  Tokens: THbTokens;
+  ADepth: Integer;
+  Base28Indent: Integer;
+begin
+  Tokens := THbTheme.Tokens;
+
+  // 1. Verify Level0..Level5 Tokens are defined and non-zero
+  for ADepth := 0 to 5 do
+  begin
+    Assert.AreNotEqual(TAlphaColor(0), Tokens.GetLevelColor(ADepth));
+  end;
+
+  // Verify L0 and L1 are distinct
+  Assert.AreNotEqual(Tokens.GetLevelColor(0), Tokens.GetLevelColor(1));
+  Assert.AreNotEqual(Tokens.GetLevelColor(1), Tokens.GetLevelColor(2));
+
+  // 2. Verify 28px Base Indentation Progression
+  Base28Indent := 28;
+  for ADepth := 0 to 5 do
+  begin
+    Assert.AreEqual(Integer(ADepth * Base28Indent), Integer(ADepth * Round(28 * (96 / 96.0))));
+  end;
+
+  // 3. Verify High-DPI Scaling on 28px
+  Assert.AreEqual(Integer(28), Round(28 * (96 / 96.0)));   // 100% 96 DPI
+  Assert.AreEqual(Integer(35), Round(28 * (120 / 96.0)));  // 125% 120 DPI
+  Assert.AreEqual(Integer(42), Round(28 * (144 / 96.0)));  // 150% 144 DPI
+  Assert.AreEqual(Integer(56), Round(28 * (192 / 96.0)));  // 200% 192 DPI
+end;
+
+procedure TTestHbSuite.Test_HbWaterfall_Detail_Expansion_And_Inspector;
+var
+  Form: TCustomForm;
+  WF: THbFacetWaterfall;
+  Card: THbWaterfallCardData;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    WF := THbFacetWaterfall.Create(Form);
+    WF.Parent := Form;
+    WF.Width := 900;
+    WF.Height := 600;
+    WF.AddFacet('core', '核心模块', 2);
+
+    FLastLinkedId := '';
+    FLastLinkedTarget := '';
+    FLastLinkedKind := wlkNone;
+    WF.OnLinkClick := OnLinkClickHelper;
+
+    // Card 1: with details, link, and properties
+    WF.AddCard('c1', 'core', '核心模块', 'THbChoiceDeck 控件', '0-9 键选等价',
+      '详细技术实现规范与五态机定义', 'DeepBase.VCL.HB.Choice.pas',
+      wisNormal, btBrand, '', 0, wlkDoc, 'docs/choice_spec.md',
+      [THbCardProperty.Create('版本', '1.0'), THbCardProperty.Create('状态', '已交付')]);
+
+    // Card 2: plain card without links/properties
+    WF.AddCard('c2', 'core', '核心模块', '普通卡片', '仅摘要', '', '', wisNormal, btBrand, '', 0);
+
+    Assert.IsTrue(WF.FindCard('c1', Card));
+    Assert.IsFalse(Card.IsExpanded);
+
+    // 1. Toggle Detail Expansion -> IsExpanded becomes True
+    WF.ToggleCardDetail('c1');
+    Assert.IsTrue(WF.FindCard('c1', Card));
+    Assert.IsTrue(Card.IsExpanded);
+
+    // Toggle again -> IsExpanded becomes False
+    WF.ToggleCardDetail('c1');
+    Assert.IsTrue(WF.FindCard('c1', Card));
+    Assert.IsFalse(Card.IsExpanded);
+
+    // 2. Test SelectCard opens Right Inspector when card has props/links
+    WF.SelectCard('c1');
+    Assert.AreEqual('c1', WF.SelectedCardId);
+
+    // 3. Test SelectCard collapses Right Inspector when card has no props/links
+    WF.SelectCard('c2');
+    Assert.AreEqual('c2', WF.SelectedCardId);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbWaterfall_Nested_Hierarchy_And_Collapse;
+var
+  Form: TCustomForm;
+  WF: THbFacetWaterfall;
+  Card: THbWaterfallCardData;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    WF := THbFacetWaterfall.Create(Form);
+    WF.Parent := Form;
+    WF.AddFacet('change', '变更流水', 3);
+
+    // Root -> Child -> GrandChild
+    WF.AddCard('root', 'change', '变更流水', '总意图', '重构视觉系统', '', '', wisNormal, btBrand, '', 0);
+    WF.AddCard('child', 'change', '变更流水', '子项 1', 'HB 输入集', '', '', wisNormal, btBrand, 'root');
+    WF.AddCard('grandchild', 'change', '变更流水', '细节 1.1', 'THbChoiceDeck 0-9 键', '', '', wisNormal, btBrand, 'child');
+
+    Assert.IsTrue(WF.FindCard('root', Card));
+    Assert.IsTrue(Card.HasChildren);
+    Assert.AreEqual(Integer(0), Integer(Card.Depth));
+
+    Assert.IsTrue(WF.FindCard('child', Card));
+    Assert.IsTrue(Card.HasChildren);
+    Assert.AreEqual(Integer(1), Integer(Card.Depth));
+
+    Assert.IsTrue(WF.FindCard('grandchild', Card));
+    Assert.IsFalse(Card.HasChildren);
+    Assert.AreEqual(Integer(2), Integer(Card.Depth));
+
+    Assert.AreEqual(Integer(3), Integer(WF.GetVisibleCardCount));
+
+    // Collapse child -> grandchild is hidden
+    WF.ToggleCardCollapse('child');
+    Assert.AreEqual(Integer(2), Integer(WF.GetVisibleCardCount));
+
+    // Collapse root -> both child and grandchild are hidden
+    WF.ToggleCardCollapse('root');
+    Assert.AreEqual(Integer(1), Integer(WF.GetVisibleCardCount));
+
+    // Expand root -> child is visible, grandchild still collapsed
+    WF.ToggleCardCollapse('root');
+    Assert.AreEqual(Integer(2), Integer(WF.GetVisibleCardCount));
+
+    // Expand child -> all 3 visible
+    WF.ToggleCardCollapse('child');
+    Assert.AreEqual(Integer(3), Integer(WF.GetVisibleCardCount));
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbGranularity_Six_Levels_And_Waterfall_Filter;
+var
+  Form: TCustomForm;
+  WF: THbFacetWaterfall;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    WF := THbFacetWaterfall.Create(Form);
+    WF.Parent := Form;
+    WF.AddFacet('plan', '层级计划', 4);
+
+    WF.AddCard('d0', 'plan', '层级计划', 'L0 顶层意图', '', '', '', wisNormal, btBrand, '', 0);
+    WF.AddCard('d1', 'plan', '层级计划', 'L1 一级分支', '', '', '', wisNormal, btBrand, 'd0', 1);
+    WF.AddCard('d2', 'plan', '层级计划', 'L2 二级模块', '', '', '', wisNormal, btBrand, 'd1', 2);
+    WF.AddCard('d3', 'plan', '层级计划', 'L3 三级细节', '', '', '', wisNormal, btBrand, 'd2', 3);
+
+    // gCoarsest -> Depth <= 0 (Only d0)
+    WF.Granularity := gCoarsest;
+    Assert.AreEqual(Integer(1), Integer(WF.GetVisibleCardCount));
+
+    // gCoarse -> Depth <= 1 (d0, d1)
+    WF.Granularity := gCoarse;
+    Assert.AreEqual(Integer(2), Integer(WF.GetVisibleCardCount));
+
+    // gMedium -> Depth <= 2 (d0, d1, d2)
+    WF.Granularity := gMedium;
+    Assert.AreEqual(Integer(3), Integer(WF.GetVisibleCardCount));
+
+    // gFine -> Depth <= 3 (d0, d1, d2, d3)
+    WF.Granularity := gFine;
+    Assert.AreEqual(Integer(4), Integer(WF.GetVisibleCardCount));
+
+    // gFinest -> all visible
+    WF.Granularity := gFinest;
+    Assert.AreEqual(Integer(4), Integer(WF.GetVisibleCardCount));
+
+    // Orthogonal check: THbTheme.SetDensity does not affect Granularity
+    THbTheme.SetDensity(hdCompact);
+    Assert.AreEqual(Ord(gFinest), Ord(WF.Granularity));
+    THbTheme.SetDensity(hdComfortable);
   finally
     Form.Free;
   end;

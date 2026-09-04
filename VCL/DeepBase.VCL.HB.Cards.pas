@@ -71,6 +71,7 @@ type
     property Enabled;
     property Padding;
     property Visible;
+    property OnClick;
   end;
 
   { --------------------------------------------------------------------------
@@ -449,11 +450,13 @@ var
   Graphics: TGPGraphics;
   Tokens: THbTokens;
   FontFamily: TGPFontFamily;
-  ValFont, CapFont: TGPFont;
+  ValFont, CapFont, TrendFont: TGPFont;
   StrFmt: TGPStringFormat;
-  ValBrush, CapBrush: TGPSolidBrush;
-  ValColor: TAlphaColor;
+  ValBrush, CapBrush, TrendBrush: TGPSolidBrush;
+  ValColor, TrendColor: TAlphaColor;
   ValHeight: Single;
+  TrendStr: string;
+  ValBoundingBox, LayoutRect: TGPRectF;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -472,6 +475,7 @@ begin
       ValHeight := ScaleDIP(Tokens.SizeXXL);
       ValFont := TGPFont.Create(FontFamily, ValHeight, FontStyleBold, UnitPixel);
       CapFont := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleRegular, UnitPixel);
+      TrendFont := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleBold, UnitPixel);
       try
         StrFmt := TGPStringFormat.Create;
         try
@@ -481,12 +485,45 @@ begin
           // 1. Draw Large Number Value
           ValBrush := TGPSolidBrush.Create(ColorToARGB(ValColor));
           try
-            Graphics.DrawString(FValue, -1, ValFont, MakeRect(0.0, 0.0, Width, ValHeight * 1.1), StrFmt, ValBrush);
+            LayoutRect := MakeRect(0.0, 0.0, Single(Width), ValHeight * 1.2);
+            Graphics.DrawString(FValue, -1, ValFont, LayoutRect, StrFmt, ValBrush);
+            Graphics.MeasureString(FValue, Length(FValue), ValFont, LayoutRect, StrFmt, ValBoundingBox);
           finally
             ValBrush.Free;
           end;
 
-          // 2. Draw Caption
+          // 2. Draw Trend (▲/▼ + FTrendText)
+          if (FTrend <> trNone) or (FTrendText <> '') then
+          begin
+            case FTrend of
+              trUp:
+              begin
+                TrendStr := '▲ ' + FTrendText;
+                TrendColor := Tokens.Success;
+              end;
+              trDown:
+              begin
+                TrendStr := '▼ ' + FTrendText;
+                TrendColor := Tokens.Danger;
+              end;
+              else
+              begin
+                TrendStr := FTrendText;
+                TrendColor := Tokens.InkMuted;
+              end;
+            end;
+
+            TrendBrush := TGPSolidBrush.Create(ColorToARGB(TrendColor));
+            try
+              var TrendX := ValBoundingBox.Width + ScaleDIP(Tokens.SpaceS);
+              var TrendY := ValHeight * 0.4;
+              Graphics.DrawString(TrendStr, -1, TrendFont, MakeRect(TrendX, TrendY, Width - TrendX, ScaleDIP(20)), StrFmt, TrendBrush);
+            finally
+              TrendBrush.Free;
+            end;
+          end;
+
+          // 3. Draw Caption
           CapBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
           try
             Graphics.DrawString(FCaption, -1, CapFont, MakeRect(0.0, ValHeight * 1.1 + ScaleDIP(Tokens.SpaceXS * 0.5), Width, Height - ValHeight * 1.1), StrFmt, CapBrush);
@@ -497,6 +534,7 @@ begin
           StrFmt.Free;
         end;
       finally
+        TrendFont.Free;
         CapFont.Free;
         ValFont.Free;
       end;
@@ -631,22 +669,8 @@ begin
 end;
 
 function THbListRow.GetSeedColor(const ASeed: string): TAlphaColor;
-var
-  Hash: Cardinal;
-  C: Char;
-  Tokens: THbTokens;
 begin
-  Tokens := GetTokens;
-  Hash := 5381;
-  for C in ASeed do
-    Hash := ((Hash shl 5) + Hash) + Ord(C);
-
-  case (Hash mod 4) of
-    0: Result := Tokens.Soft;
-    1: Result := Tokens.SuccessSoft;
-    2: Result := Tokens.WarningSoft;
-    else Result := Tokens.InfoSoft;
-  end;
+  Result := GetHbSeedColor(ASeed, GetTokens);
 end;
 
 procedure THbListRow.MouseMove(Shift: TShiftState; X, Y: Integer);
@@ -656,7 +680,8 @@ var
 begin
   inherited;
   BtnAreaStart := Width - ScalePixels(190);
-  if X >= BtnAreaStart then
+  if (X >= BtnAreaStart) and (X <= Width - ScalePixels(10)) and
+     (Y >= (Height - ScalePixels(26)) div 2) and (Y <= (Height + ScalePixels(26)) div 2) then
   begin
     if X < (BtnAreaStart + ScalePixels(90)) then
       NewPart := 1
@@ -674,11 +699,24 @@ begin
 end;
 
 procedure THbListRow.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  BtnAreaStart: Single;
 begin
   inherited;
   if (Button = mbLeft) and Enabled then
   begin
-    FActionPressPart := FActionHoverPart;
+    BtnAreaStart := Width - ScalePixels(190);
+    if (X >= BtnAreaStart) and (X <= Width - ScalePixels(10)) and
+       (Y >= (Height - ScalePixels(26)) div 2) and (Y <= (Height + ScalePixels(26)) div 2) then
+    begin
+      if X < (BtnAreaStart + ScalePixels(90)) then
+        FActionPressPart := 1
+      else
+        FActionPressPart := 2;
+    end
+    else
+      FActionPressPart := 0;
+    FActionHoverPart := FActionPressPart;
     Invalidate;
   end;
 end;

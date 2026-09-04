@@ -166,9 +166,9 @@ function Invoke-PackageCompile {
 
     $buildFlag = if ($BuildAll) { '-B' } else { '-M' }
     $cmd = "call ""$RsVarsBat"" && dcc64 $buildFlag -Q -U""$SourceSearchPath"" -I""$SourceSearchPath"" -N0""$DcuOutputPath"" -LE""$BplOutputPath"" -LN""$DcpOutputPath"" ""$PackagePath"""
-    $process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $cmd -Wait -PassThru -NoNewWindow -WorkingDirectory $RepoRoot
-    if ($process.ExitCode -ne 0) {
-        throw "Package compile failed: $(Split-Path $PackagePath -Leaf), exit code: $($process.ExitCode)"
+    & cmd.exe /c $cmd
+    if ($LASTEXITCODE -ne 0) {
+        throw "Package compile failed: $(Split-Path $PackagePath -Leaf), exit code: $LASTEXITCODE"
     }
 
     foreach ($root in $SourceRoots) {

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.HB.Waterfall.Types - Faceted Waterfall Core Contract Types
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -52,6 +52,26 @@ type
   );
 
   /// <summary>
+  /// Kind of external interface/resource link on a card.
+  /// </summary>
+  THbWaterfallLinkKind = (
+    wlkNone,
+    wlkDoc,      // Document / Specification
+    wlkUrl,      // Web URL
+    wlkSymbol,   // Source code symbol / unit
+    wlkTask      // Workorder / Task ID
+  );
+
+  /// <summary>
+  /// Key-value property metadata for right inspector panel.
+  /// </summary>
+  THbCardProperty = record
+    Key: string;
+    Value: string;
+    class function Create(const AKey, AValue: string): THbCardProperty; static;
+  end;
+
+  /// <summary>
   /// Data record for a single waterfall card.
   /// </summary>
   THbWaterfallCardData = record
@@ -65,10 +85,25 @@ type
     TimestampStr: string;
     State: THbWaterfallItemState;
     BadgeTone: THbBadgeTone;
-    IsExpanded: Boolean;
+    IsExpanded: Boolean; // True = Right-side detail expanded downwards
+    ParentId: string;    // Empty = Root card (backward-compatible)
+    Depth: Integer;      // Hierarchy depth: 0 = L0, 1 = L1, ..., 5 = L5
+    Collapsed: Boolean;  // True if child cards are folded
+    HasChildren: Boolean;// True if card has nested sub-cards
+    LinkKind: THbWaterfallLinkKind; // Interface link kind
+    LinkTarget: string;             // Target document/URL/symbol
+    Properties: TArray<THbCardProperty>; // Metadata for inspector panel
     Tag: NativeInt;
   end;
 
 implementation
+
+{ THbCardProperty }
+
+class function THbCardProperty.Create(const AKey, AValue: string): THbCardProperty;
+begin
+  Result.Key := AKey;
+  Result.Value := AValue;
+end;
 
 end.

@@ -1,14 +1,23 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Waterfall - Modern Token-Driven Faceted Waterfall Component
 
-  Version: 1.0 (Delphi 13.1 on Win64)
+  Version: 1.3 (Delphi 13.1 on Win64)
   Description: THbFacetWaterfall:
                - Left Facet Rail: Categories, Count Badges, Exclude Non-A, Focus
                - Right Waterfall: Dual Modes (wmSectioned, wmTimeline),
                  Summary + Expandable Details, Diff/Quote badges.
+               - Nested Hierarchy: ParentId, Depth (28px Indent per level)
+               - Fixed 28px Numeric Color Badge for L0-L5 Levels
+               - Right-side Detail Expander (▾ / ▸) & IsExpanded state
+               - Right-side Property / Inspector Panel (Key-Value metadata & Links)
+               - Fullscreen Modal Preview
+               - Information Granularity: 6 levels (gCoarsest..gFinest)
+               - Strongly-typed THbWaterfallCard for 100% crash-proof lifecycle
   ============================================================================ }
 
 unit DeepBase.VCL.HB.Waterfall;
+
+{$WARN IMPLICIT_STRING_CAST OFF}
 
 interface
 
@@ -39,6 +48,36 @@ type
   THbFacetFilterEvent = procedure(Sender: TObject; const ACategoryId: string; AIsExcluded: Boolean) of object;
 
   /// <summary>
+  /// Event fired when a card is selected in the waterfall.
+  /// </summary>
+  THbCardSelectEvent = procedure(Sender: TObject; const ACardId: string) of object;
+
+  /// <summary>
+  /// Event fired when user clicks an external resource link on a card.
+  /// </summary>
+  THbCardLinkEvent = procedure(Sender: TObject; const ACardId: string;
+    AKind: THbWaterfallLinkKind; const ATarget: string) of object;
+
+  /// <summary>
+  /// Strongly-typed child card widget inside THbFacetWaterfall.
+  /// </summary>
+  THbWaterfallCard = class(THbCard)
+  private
+    FPnlBadge: TPanel;
+    FLblBadge: TLabel;
+    FBtnFold: THbButton;
+    FBtnDetail: THbButton;
+    FLblTitle: TLabel;
+    FLblSummary: TLabel;
+    FLblDetails: TLabel;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure UpdateCard(const AItem: THbWaterfallCardData; AMode: THbWaterfallMode;
+      const ATokens: THbTokens; APPI: Integer; AIndex: Integer;
+      AOnFold, AOnDetail: TNotifyEvent);
+  end;
+
+  /// <summary>
   /// THbFacetWaterfall: Modern Faceted Waterfall Container for VCL.
   /// </summary>
   THbFacetWaterfall = class(TCustomControl)
@@ -47,25 +86,48 @@ type
     FItems: TList<THbWaterfallCardData>;
     FMode: THbWaterfallMode;
     FFacetWidth: Integer;
+    FInspectorWidth: Integer;
     FFocusedCategoryId: string;
+    FSelectedCardId: string;
+    FGranularity: THbGranularity;
     FOnFilterChanged: THbFacetFilterEvent;
-    
+    FOnCardSelected: THbCardSelectEvent;
+    FOnLinkClick: THbCardLinkEvent;
+
     // UI layout sub-panels
     FPnlLeftRail: TPanel;
-    FPnlRightContainer: TPanel;
+    FPnlCenterArea: TPanel;
     FPnlToolbar: TPanel;
     FScrollWaterfall: TScrollBox;
+    FPnlRightInspector: TPanel;
     FBtnModeSec: THbButton;
     FBtnModeTime: THbButton;
     FLblStatus: TLabel;
 
+    // Inspector controls
+    FLblInspTitle: TLabel;
+    FLblInspDepth: TLabel;
+    FLblInspLink: TLabel;
+    FBtnOpenLink: THbButton;
+    FBtnFullscreen: THbButton;
+    FMemoProperties: TMemo;
+
     procedure SetMode(Value: THbWaterfallMode);
     procedure SetFacetWidth(Value: Integer);
+    procedure SetInspectorWidth(Value: Integer);
+    procedure SetGranularity(Value: THbGranularity);
     procedure RebuildLeftRail;
     procedure RebuildWaterfall;
+    procedure UpdateInspectorPanel;
     procedure OnFacetButtonClick(Sender: TObject);
     procedure OnModeSecClick(Sender: TObject);
     procedure OnModeTimeClick(Sender: TObject);
+    procedure OnCardClick(Sender: TObject);
+    procedure OnCardDetailToggleClick(Sender: TObject);
+    procedure OnCardFoldToggleClick(Sender: TObject);
+    procedure OnOpenLinkClick(Sender: TObject);
+    procedure OnFullscreenClick(Sender: TObject);
+    function MaxDepthForGranularity(AGranularity: THbGranularity): Integer;
   protected
     procedure Resize; override;
   public
@@ -75,40 +137,206 @@ type
     procedure AddFacet(const AId, ATitle: string; ACount: Integer = 0);
     procedure AddCard(const AId, ACatId, ACatTitle, ATitle, ASummary: string;
       const ADetails: string = ''; const AQuote: string = '';
-      AState: THbWaterfallItemState = wisNormal; ABadgeTone: THbBadgeTone = btBrand);
+      AState: THbWaterfallItemState = wisNormal; ABadgeTone: THbBadgeTone = btBrand;
+      const AParentId: string = ''; ADepth: Integer = -1;
+      ALinkKind: THbWaterfallLinkKind = wlkNone; const ALinkTarget: string = '';
+      const AProperties: TArray<THbCardProperty> = nil);
     procedure Clear;
     procedure ClearCards;
-    
+
     procedure ExcludeFacet(const ACategoryId: string; AExclude: Boolean = True);
     procedure FocusFacet(const ACategoryId: string);
     procedure ResetFilter;
 
+    procedure ToggleCardCollapse(const ACardId: string);
+    procedure SetCardCollapsed(const ACardId: string; ACollapsed: Boolean);
+    procedure ToggleCardDetail(const ACardId: string);
+    procedure SetCardDetailExpanded(const ACardId: string; AExpanded: Boolean);
+    procedure SelectCard(const ACardId: string);
+    procedure PreviewFullscreen(const ACardId: string);
+
+    function FindCard(const ACardId: string; out ACard: THbWaterfallCardData): Boolean;
+    function IsCardVisible(const ACard: THbWaterfallCardData): Boolean;
     function IsCategoryVisible(const ACategoryId: string): Boolean;
     function GetVisibleCardCount: Integer;
 
     property Facets: TList<THbFacetCategory> read FFacets;
     property Items: TList<THbWaterfallCardData> read FItems;
     property FocusedCategoryId: string read FFocusedCategoryId;
+    property SelectedCardId: string read FSelectedCardId;
   published
     property Align;
     property Anchors;
     property FacetWidth: Integer read FFacetWidth write SetFacetWidth default 220;
+    property InspectorWidth: Integer read FInspectorWidth write SetInspectorWidth default 260;
     property Mode: THbWaterfallMode read FMode write SetMode default wmSectioned;
+    property Granularity: THbGranularity read FGranularity write SetGranularity default gMedium;
     property OnFilterChanged: THbFacetFilterEvent read FOnFilterChanged write FOnFilterChanged;
+    property OnCardSelected: THbCardSelectEvent read FOnCardSelected write FOnCardSelected;
+    property OnLinkClick: THbCardLinkEvent read FOnLinkClick write FOnLinkClick;
   end;
 
 implementation
+
+{ THbWaterfallCard }
+
+constructor THbWaterfallCard.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  DoubleBuffered := True;
+  Align := alTop;
+  AlignWithMargins := True;
+
+  FPnlBadge := TPanel.Create(Self);
+  FPnlBadge.Parent := Self;
+  FPnlBadge.BevelOuter := bvNone;
+
+  FLblBadge := TLabel.Create(FPnlBadge);
+  FLblBadge.Parent := FPnlBadge;
+  FLblBadge.Align := alClient;
+  FLblBadge.Alignment := taCenter;
+  FLblBadge.Layout := tlCenter;
+  FLblBadge.Font.Style := [fsBold];
+
+  FBtnFold := THbButton.Create(Self);
+  FBtnFold.Parent := Self;
+  FBtnFold.Kind := bkGhost;
+
+  FBtnDetail := THbButton.Create(Self);
+  FBtnDetail.Parent := Self;
+  FBtnDetail.Align := alRight;
+  FBtnDetail.Kind := bkGhost;
+  FBtnDetail.AlignWithMargins := True;
+
+  FLblTitle := TLabel.Create(Self);
+  FLblTitle.Parent := Self;
+  FLblTitle.Font.Style := [fsBold];
+
+  FLblSummary := TLabel.Create(Self);
+  FLblSummary.Parent := Self;
+
+  FLblDetails := TLabel.Create(Self);
+  FLblDetails.Parent := Self;
+  FLblDetails.Font.Color := clGray;
+end;
+
+procedure THbWaterfallCard.UpdateCard(const AItem: THbWaterfallCardData;
+  AMode: THbWaterfallMode; const ATokens: THbTokens; APPI: Integer; AIndex: Integer;
+  AOnFold, AOnDetail: TNotifyEvent);
+var
+  DpiScale: Double;
+  IndentPx, CardHeightPx: Integer;
+  TitleStr, DetailTextStr: string;
+begin
+  DpiScale := APPI / 96.0;
+  Tag := AIndex;
+
+  // 1. Exact 28px Indentation per depth level
+  IndentPx := AItem.Depth * Round(28 * DpiScale);
+
+  // 2. Dynamic card height when DetailText is expanded
+  if AItem.IsExpanded then
+    CardHeightPx := Round(116 * DpiScale)
+  else
+    CardHeightPx := Round(68 * DpiScale);
+
+  Height := CardHeightPx;
+  Margins.SetBounds(Round(8 * DpiScale) + IndentPx,
+                    Round(4 * DpiScale),
+                    Round(8 * DpiScale),
+                    Round(4 * DpiScale));
+
+  // 3. Setup 28px numeric level badge
+  FPnlBadge.Left := Round(6 * DpiScale);
+  FPnlBadge.Top := Round(10 * DpiScale);
+  FPnlBadge.Width := Round(28 * DpiScale);
+  FPnlBadge.Height := Round(28 * DpiScale);
+  FPnlBadge.Color := AlphaColorToColor(ATokens.GetLevelColor(AItem.Depth));
+  FLblBadge.Caption := IntToStr(AItem.Depth);
+  FLblBadge.Font.Color := clWhite;
+
+  // 4. Setup fold button
+  FBtnFold.Left := Round(38 * DpiScale);
+  FBtnFold.Top := Round(12 * DpiScale);
+  FBtnFold.Width := Round(24 * DpiScale);
+  FBtnFold.Height := Round(24 * DpiScale);
+  FBtnFold.Tag := AIndex;
+  FBtnFold.OnClick := AOnFold;
+  if AItem.HasChildren then
+  begin
+    FBtnFold.Visible := True;
+    if AItem.Collapsed then
+      FBtnFold.Caption := '▶'
+    else
+      FBtnFold.Caption := '▼';
+  end
+  else
+    FBtnFold.Visible := False;
+
+  // 5. Setup detail button
+  FBtnDetail.Width := Round(36 * DpiScale);
+  FBtnDetail.Margins.SetBounds(0, Round(6 * DpiScale), Round(6 * DpiScale), Round(6 * DpiScale));
+  FBtnDetail.Tag := AIndex;
+  FBtnDetail.OnClick := AOnDetail;
+  if AItem.IsExpanded then
+    FBtnDetail.Caption := '▴'
+  else
+    FBtnDetail.Caption := '▾';
+
+  // 6. Title and Summary Text
+  if AMode = wmTimeline then
+  begin
+    Kind := ckOutline;
+    Radius := rsS;
+    if AItem.TimestampStr <> '' then
+      TitleStr := '⏱ [' + AItem.TimestampStr + '] ' + AItem.Title
+    else
+      TitleStr := '⏱ ' + AItem.Title;
+  end
+  else
+  begin
+    Kind := ckSurface;
+    Radius := rsM;
+    TitleStr := '[' + AItem.CategoryTitle + '] ' + AItem.Title;
+  end;
+
+  FLblTitle.Left := Round(68 * DpiScale);
+  FLblTitle.Top := Round(10 * DpiScale);
+  FLblTitle.Caption := TitleStr;
+
+  FLblSummary.Left := Round(68 * DpiScale);
+  FLblSummary.Top := Round(34 * DpiScale);
+  FLblSummary.Caption := AItem.SummaryText;
+
+  // 7. Expanded Details Area
+  if AItem.IsExpanded then
+  begin
+    FLblDetails.Visible := True;
+    FLblDetails.Left := Round(68 * DpiScale);
+    FLblDetails.Top := Round(60 * DpiScale);
+    FLblDetails.Width := Round(400 * DpiScale);
+    DetailTextStr := '详情: ' + AItem.DetailText;
+    if AItem.QuoteSource <> '' then
+      DetailTextStr := DetailTextStr + ' (来源: ' + AItem.QuoteSource + ')';
+    FLblDetails.Caption := DetailTextStr;
+  end
+  else
+    FLblDetails.Visible := False;
+end;
 
 { THbFacetWaterfall }
 
 constructor THbFacetWaterfall.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Width := 800;
-  Height := 500;
+  Width := 1024;
+  Height := 580;
   FFacetWidth := 220;
+  FInspectorWidth := 260;
   FMode := wmSectioned;
+  FGranularity := gMedium;
   FFocusedCategoryId := '';
+  FSelectedCardId := '';
   FFacets := TList<THbFacetCategory>.Create;
   FItems := TList<THbWaterfallCardData>.Create;
 
@@ -122,53 +350,112 @@ begin
   FPnlLeftRail.BevelOuter := bvNone;
   FPnlLeftRail.ParentBackground := False;
 
-  // 2. Right Viewport Container
-  FPnlRightContainer := TPanel.Create(Self);
-  FPnlRightContainer.Parent := Self;
-  FPnlRightContainer.Align := alClient;
-  FPnlRightContainer.BevelOuter := bvNone;
-  FPnlRightContainer.ParentBackground := False;
+  // 2. Center Viewport Area
+  FPnlCenterArea := TPanel.Create(Self);
+  FPnlCenterArea.Parent := Self;
+  FPnlCenterArea.Align := alClient;
+  FPnlCenterArea.BevelOuter := bvNone;
 
-  // 3. Right Toolbar
-  FPnlToolbar := TPanel.Create(FPnlRightContainer);
-  FPnlToolbar.Parent := FPnlRightContainer;
+  // 3. Center Toolbar
+  FPnlToolbar := TPanel.Create(FPnlCenterArea);
+  FPnlToolbar.Parent := FPnlCenterArea;
   FPnlToolbar.Align := alTop;
-  FPnlToolbar.Height := 42;
+  FPnlToolbar.Height := Round(42 * (CurrentPPI / 96.0));
   FPnlToolbar.BevelOuter := bvNone;
+  FPnlToolbar.ParentBackground := False;
 
   FLblStatus := TLabel.Create(FPnlToolbar);
   FLblStatus.Parent := FPnlToolbar;
-  FLblStatus.Left := 12;
-  FLblStatus.Top := 12;
-  FLblStatus.Caption := '全部信息流 (0 项)';
-  FLblStatus.Font.Style := [fsBold];
+  FLblStatus.Left := Round(12 * (CurrentPPI / 96.0));
+  FLblStatus.Top := Round(12 * (CurrentPPI / 96.0));
+  FLblStatus.Caption := '瀑布信息流';
 
   FBtnModeTime := THbButton.Create(FPnlToolbar);
   FBtnModeTime.Parent := FPnlToolbar;
   FBtnModeTime.Align := alRight;
-  FBtnModeTime.Width := 110;
-  FBtnModeTime.Caption := '时间线模式';
-  FBtnModeTime.Kind := bkSoft;
+  FBtnModeTime.Width := Round(90 * (CurrentPPI / 96.0));
+  FBtnModeTime.Caption := '时间轴流';
+  FBtnModeTime.Kind := bkGhost;
   FBtnModeTime.OnClick := OnModeTimeClick;
+  FBtnModeTime.Margins.SetBounds(Round(4 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)), Round(8 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)));
+  FBtnModeTime.AlignWithMargins := True;
 
   FBtnModeSec := THbButton.Create(FPnlToolbar);
   FBtnModeSec.Parent := FPnlToolbar;
   FBtnModeSec.Align := alRight;
-  FBtnModeSec.Width := 120;
-  FBtnModeSec.Caption := '分段聚合模式';
+  FBtnModeSec.Width := Round(90 * (CurrentPPI / 96.0));
+  FBtnModeSec.Caption := '分类分段';
   FBtnModeSec.Kind := bkPrimary;
   FBtnModeSec.OnClick := OnModeSecClick;
+  FBtnModeSec.Margins.SetBounds(Round(4 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)));
+  FBtnModeSec.AlignWithMargins := True;
 
-  // 4. Right Waterfall Scrollbox
-  FScrollWaterfall := TScrollBox.Create(FPnlRightContainer);
-  FScrollWaterfall.Parent := FPnlRightContainer;
+  // 4. Scrollable Content Area
+  FScrollWaterfall := TScrollBox.Create(FPnlCenterArea);
+  FScrollWaterfall.Parent := FPnlCenterArea;
   FScrollWaterfall.Align := alClient;
+  FScrollWaterfall.BorderStyle := bsNone;
+  FScrollWaterfall.DoubleBuffered := True;
+
+  // 5. Right Inspector Panel
+  FPnlRightInspector := TPanel.Create(Self);
+  FPnlRightInspector.Parent := Self;
+  FPnlRightInspector.Align := alRight;
+  FPnlRightInspector.Width := 0; // Hidden initially
+  FPnlRightInspector.BevelOuter := bvNone;
+  FPnlRightInspector.ParentBackground := False;
+
+  FLblInspTitle := TLabel.Create(FPnlRightInspector);
+  FLblInspTitle.Parent := FPnlRightInspector;
+  FLblInspTitle.Left := Round(12 * (CurrentPPI / 96.0));
+  FLblInspTitle.Top := Round(12 * (CurrentPPI / 96.0));
+  FLblInspTitle.Font.Style := [fsBold];
+  FLblInspTitle.Caption := '卡片属性检查器';
+
+  FLblInspDepth := TLabel.Create(FPnlRightInspector);
+  FLblInspDepth.Parent := FPnlRightInspector;
+  FLblInspDepth.Left := Round(12 * (CurrentPPI / 96.0));
+  FLblInspDepth.Top := Round(36 * (CurrentPPI / 96.0));
+  FLblInspDepth.Caption := '层级: -';
+
+  FLblInspLink := TLabel.Create(FPnlRightInspector);
+  FLblInspLink.Parent := FPnlRightInspector;
+  FLblInspLink.Left := Round(12 * (CurrentPPI / 96.0));
+  FLblInspLink.Top := Round(56 * (CurrentPPI / 96.0));
+  FLblInspLink.Caption := '资源链接: 无';
+
+  FBtnOpenLink := THbButton.Create(FPnlRightInspector);
+  FBtnOpenLink.Parent := FPnlRightInspector;
+  FBtnOpenLink.Left := Round(12 * (CurrentPPI / 96.0));
+  FBtnOpenLink.Top := Round(80 * (CurrentPPI / 96.0));
+  FBtnOpenLink.Width := Round(110 * (CurrentPPI / 96.0));
+  FBtnOpenLink.Caption := '🔗 打开链接';
+  FBtnOpenLink.Kind := bkSoft;
+  FBtnOpenLink.OnClick := OnOpenLinkClick;
+
+  FBtnFullscreen := THbButton.Create(FPnlRightInspector);
+  FBtnFullscreen.Parent := FPnlRightInspector;
+  FBtnFullscreen.Left := Round(130 * (CurrentPPI / 96.0));
+  FBtnFullscreen.Top := Round(80 * (CurrentPPI / 96.0));
+  FBtnFullscreen.Width := Round(110 * (CurrentPPI / 96.0));
+  FBtnFullscreen.Caption := '⛶ 全屏预览';
+  FBtnFullscreen.Kind := bkPrimary;
+  FBtnFullscreen.OnClick := OnFullscreenClick;
+
+  FMemoProperties := TMemo.Create(FPnlRightInspector);
+  FMemoProperties.Parent := FPnlRightInspector;
+  FMemoProperties.Left := Round(12 * (CurrentPPI / 96.0));
+  FMemoProperties.Top := Round(124 * (CurrentPPI / 96.0));
+  FMemoProperties.Width := Round(236 * (CurrentPPI / 96.0));
+  FMemoProperties.Height := Round(400 * (CurrentPPI / 96.0));
+  FMemoProperties.ReadOnly := True;
+  FMemoProperties.ScrollBars := ssVertical;
 end;
 
 destructor THbFacetWaterfall.Destroy;
 begin
-  FFacets.Free;
   FItems.Free;
+  FFacets.Free;
   inherited;
 end;
 
@@ -187,11 +474,11 @@ begin
     if FMode = wmSectioned then
     begin
       FBtnModeSec.Kind := bkPrimary;
-      FBtnModeTime.Kind := bkSoft;
+      FBtnModeTime.Kind := bkGhost;
     end
     else
     begin
-      FBtnModeSec.Kind := bkSoft;
+      FBtnModeSec.Kind := bkGhost;
       FBtnModeTime.Kind := bkPrimary;
     end;
     RebuildWaterfall;
@@ -208,38 +495,344 @@ begin
   end;
 end;
 
+procedure THbFacetWaterfall.SetInspectorWidth(Value: Integer);
+begin
+  if FInspectorWidth <> Value then
+  begin
+    FInspectorWidth := Value;
+    UpdateInspectorPanel;
+  end;
+end;
+
+function THbFacetWaterfall.MaxDepthForGranularity(AGranularity: THbGranularity): Integer;
+begin
+  case AGranularity of
+    gCoarsest: Result := 0;
+    gCoarse:   Result := 1;
+    gMedium:   Result := 2;
+    gFine:     Result := 3;
+    gFiner:    Result := 4;
+    gFinest:   Result := 999;
+  else
+    Result := 2;
+  end;
+end;
+
+procedure THbFacetWaterfall.SetGranularity(Value: THbGranularity);
+begin
+  if FGranularity <> Value then
+  begin
+    FGranularity := Value;
+    RebuildWaterfall;
+  end;
+end;
+
 procedure THbFacetWaterfall.AddFacet(const AId, ATitle: string; ACount: Integer);
 var
-  F: THbFacetCategory;
+  Facet: THbFacetCategory;
 begin
-  F.Id := AId;
-  F.Title := ATitle;
-  F.Count := ACount;
-  F.IsExcluded := False;
-  F.IsFocused := False;
-  FFacets.Add(F);
+  Facet.Id := AId;
+  Facet.Title := ATitle;
+  Facet.Count := ACount;
+  Facet.IconSvg := '';
+  Facet.IsExcluded := False;
+  Facet.IsFocused := False;
+  FFacets.Add(Facet);
   RebuildLeftRail;
 end;
 
-procedure THbFacetWaterfall.AddCard(const AId, ACatId, ACatTitle, ATitle, ASummary, ADetails, AQuote: string;
-  AState: THbWaterfallItemState; ABadgeTone: THbBadgeTone);
+procedure THbFacetWaterfall.AddCard(const AId, ACatId, ACatTitle, ATitle, ASummary,
+  ADetails, AQuote: string; AState: THbWaterfallItemState; ABadgeTone: THbBadgeTone;
+  const AParentId: string; ADepth: Integer; ALinkKind: THbWaterfallLinkKind;
+  const ALinkTarget: string; const AProperties: TArray<THbCardProperty>);
 var
-  C: THbWaterfallCardData;
+  Card: THbWaterfallCardData;
+  ParentCard: THbWaterfallCardData;
+  I: Integer;
+  CalculatedDepth: Integer;
 begin
-  C.Id := AId;
-  C.CategoryId := ACatId;
-  C.CategoryTitle := ACatTitle;
-  C.Title := ATitle;
-  C.SummaryText := ASummary;
-  C.DetailText := ADetails;
-  C.QuoteSource := AQuote;
-  C.TimestampStr := FormatDateTime('hh:nn:ss', Now);
-  C.State := AState;
-  C.BadgeTone := ABadgeTone;
-  C.IsExpanded := False;
-  C.Tag := 0;
-  FItems.Add(C);
+  Card.Id := AId;
+  Card.CategoryId := ACatId;
+  Card.CategoryTitle := ACatTitle;
+  Card.Title := ATitle;
+  Card.SummaryText := ASummary;
+  Card.DetailText := ADetails;
+  Card.QuoteSource := AQuote;
+  Card.TimestampStr := '';
+  Card.State := AState;
+  Card.BadgeTone := ABadgeTone;
+  Card.IsExpanded := False;
+  Card.ParentId := AParentId;
+  Card.Collapsed := False;
+  Card.HasChildren := False;
+  Card.LinkKind := ALinkKind;
+  Card.LinkTarget := ALinkTarget;
+  SetLength(Card.Properties, Length(AProperties));
+  for I := 0 to High(AProperties) do
+    Card.Properties[I] := AProperties[I];
+  Card.Tag := 0;
+
+  // Resolve Depth
+  if ADepth >= 0 then
+    Card.Depth := ADepth
+  else if AParentId <> '' then
+  begin
+    CalculatedDepth := 1;
+    if FindCard(AParentId, ParentCard) then
+      CalculatedDepth := ParentCard.Depth + 1;
+    Card.Depth := CalculatedDepth;
+  end
+  else
+    Card.Depth := 0;
+
+  // Mark parent has children
+  if AParentId <> '' then
+  begin
+    for I := 0 to FItems.Count - 1 do
+    begin
+      if FItems[I].Id = AParentId then
+      begin
+        ParentCard := FItems[I];
+        ParentCard.HasChildren := True;
+        FItems[I] := ParentCard;
+        Break;
+      end;
+    end;
+  end;
+
+  FItems.Add(Card);
   RebuildWaterfall;
+end;
+
+function THbFacetWaterfall.FindCard(const ACardId: string; out ACard: THbWaterfallCardData): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to FItems.Count - 1 do
+  begin
+    if FItems[I].Id = ACardId then
+    begin
+      ACard := FItems[I];
+      Exit(True);
+    end;
+  end;
+end;
+
+procedure THbFacetWaterfall.ToggleCardCollapse(const ACardId: string);
+var
+  I: Integer;
+  Card: THbWaterfallCardData;
+begin
+  for I := 0 to FItems.Count - 1 do
+  begin
+    if FItems[I].Id = ACardId then
+    begin
+      Card := FItems[I];
+      Card.Collapsed := not Card.Collapsed;
+      FItems[I] := Card;
+      RebuildWaterfall;
+      Break;
+    end;
+  end;
+end;
+
+procedure THbFacetWaterfall.SetCardCollapsed(const ACardId: string; ACollapsed: Boolean);
+var
+  I: Integer;
+  Card: THbWaterfallCardData;
+begin
+  for I := 0 to FItems.Count - 1 do
+  begin
+    if FItems[I].Id = ACardId then
+    begin
+      Card := FItems[I];
+      if Card.Collapsed <> ACollapsed then
+      begin
+        Card.Collapsed := ACollapsed;
+        FItems[I] := Card;
+        RebuildWaterfall;
+      end;
+      Break;
+    end;
+  end;
+end;
+
+procedure THbFacetWaterfall.ToggleCardDetail(const ACardId: string);
+var
+  I: Integer;
+  Card: THbWaterfallCardData;
+begin
+  for I := 0 to FItems.Count - 1 do
+  begin
+    if FItems[I].Id = ACardId then
+    begin
+      Card := FItems[I];
+      Card.IsExpanded := not Card.IsExpanded;
+      FItems[I] := Card;
+      RebuildWaterfall;
+      Break;
+    end;
+  end;
+end;
+
+procedure THbFacetWaterfall.SetCardDetailExpanded(const ACardId: string; AExpanded: Boolean);
+var
+  I: Integer;
+  Card: THbWaterfallCardData;
+begin
+  for I := 0 to FItems.Count - 1 do
+  begin
+    if FItems[I].Id = ACardId then
+    begin
+      Card := FItems[I];
+      if Card.IsExpanded <> AExpanded then
+      begin
+        Card.IsExpanded := AExpanded;
+        FItems[I] := Card;
+        RebuildWaterfall;
+      end;
+      Break;
+    end;
+  end;
+end;
+
+procedure THbFacetWaterfall.SelectCard(const ACardId: string);
+begin
+  FSelectedCardId := ACardId;
+  UpdateInspectorPanel;
+  if Assigned(FOnCardSelected) then
+    FOnCardSelected(Self, ACardId);
+end;
+
+procedure THbFacetWaterfall.UpdateInspectorPanel;
+var
+  Card: THbWaterfallCardData;
+  I: Integer;
+begin
+  if (FSelectedCardId <> '') and FindCard(FSelectedCardId, Card) and
+     ((Card.LinkTarget <> '') or (Length(Card.Properties) > 0)) then
+  begin
+    FPnlRightInspector.Width := Round(FInspectorWidth * (CurrentPPI / 96.0));
+    FLblInspTitle.Caption := Card.Title;
+    FLblInspDepth.Caption := Format('层级: L%d (深度 %d)', [Card.Depth, Card.Depth]);
+
+    if Card.LinkTarget <> '' then
+    begin
+      FLblInspLink.Caption := '资源: ' + Card.LinkTarget;
+      FBtnOpenLink.Visible := True;
+    end
+    else
+    begin
+      FLblInspLink.Caption := '资源链接: 无';
+      FBtnOpenLink.Visible := False;
+    end;
+
+    FMemoProperties.Lines.Clear;
+    for I := 0 to High(Card.Properties) do
+      FMemoProperties.Lines.Add(Format('%s: %s', [Card.Properties[I].Key, Card.Properties[I].Value]));
+  end
+  else
+  begin
+    FPnlRightInspector.Width := 0; // Collapsed when no link or props
+  end;
+end;
+
+procedure THbFacetWaterfall.PreviewFullscreen(const ACardId: string);
+var
+  Card: THbWaterfallCardData;
+  PreviewForm: TForm;
+  TitleLbl: TLabel;
+  DetailMemo: TMemo;
+begin
+  if not FindCard(ACardId, Card) then
+    Exit;
+
+  PreviewForm := TForm.CreateNew(nil);
+  try
+    PreviewForm.Caption := '全屏预览 - ' + Card.Title;
+    PreviewForm.Width := 800;
+    PreviewForm.Height := 600;
+    PreviewForm.Position := poScreenCenter;
+
+    TitleLbl := TLabel.Create(PreviewForm);
+    TitleLbl.Parent := PreviewForm;
+    TitleLbl.Left := 20;
+    TitleLbl.Top := 20;
+    TitleLbl.Font.Size := 14;
+    TitleLbl.Font.Style := [fsBold];
+    TitleLbl.Caption := Format('[L%d] %s (%s)', [Card.Depth, Card.Title, Card.CategoryTitle]);
+
+    DetailMemo := TMemo.Create(PreviewForm);
+    DetailMemo.Parent := PreviewForm;
+    DetailMemo.Left := 20;
+    DetailMemo.Top := 60;
+    DetailMemo.Width := 740;
+    DetailMemo.Height := 460;
+    DetailMemo.ReadOnly := True;
+    DetailMemo.ScrollBars := ssVertical;
+
+    DetailMemo.Lines.Add('=== 摘要 ===');
+    DetailMemo.Lines.Add(Card.SummaryText);
+    DetailMemo.Lines.Add('');
+    DetailMemo.Lines.Add('=== 详情内容 ===');
+    if Card.DetailText <> '' then
+      DetailMemo.Lines.Add(Card.DetailText)
+    else
+      DetailMemo.Lines.Add('(无额外详情)');
+    DetailMemo.Lines.Add('');
+
+    if Card.LinkTarget <> '' then
+    begin
+      DetailMemo.Lines.Add('=== 链接资源 ===');
+      DetailMemo.Lines.Add(Card.LinkTarget);
+      DetailMemo.Lines.Add('');
+    end;
+
+    var NativeCloseBtn := TButton.Create(PreviewForm);
+    NativeCloseBtn.Parent := PreviewForm;
+    NativeCloseBtn.Left := 660;
+    NativeCloseBtn.Top := 530;
+    NativeCloseBtn.Width := 100;
+    NativeCloseBtn.Caption := '关闭';
+    NativeCloseBtn.ModalResult := mrOk;
+
+    PreviewForm.ShowModal;
+  finally
+    PreviewForm.Free;
+  end;
+end;
+
+function THbFacetWaterfall.IsCardVisible(const ACard: THbWaterfallCardData): Boolean;
+var
+  CurParentId: string;
+  ParentCard: THbWaterfallCardData;
+  MaxDepth: Integer;
+begin
+  // 1. Check category filter
+  if not IsCategoryVisible(ACard.CategoryId) then
+    Exit(False);
+
+  // 2. Check Granularity Max Visible Depth
+  MaxDepth := MaxDepthForGranularity(FGranularity);
+  if ACard.Depth > MaxDepth then
+    Exit(False);
+
+  // 3. Check Ancestor Collapsed status in parent chain
+  CurParentId := ACard.ParentId;
+  while CurParentId <> '' do
+  begin
+    if FindCard(CurParentId, ParentCard) then
+    begin
+      if ParentCard.Collapsed then
+        Exit(False);
+      CurParentId := ParentCard.ParentId;
+    end
+    else
+      Break;
+  end;
+
+  Result := True;
 end;
 
 procedure THbFacetWaterfall.Clear;
@@ -247,6 +840,8 @@ begin
   FFacets.Clear;
   FItems.Clear;
   FFocusedCategoryId := '';
+  FSelectedCardId := '';
+  UpdateInspectorPanel;
   RebuildLeftRail;
   RebuildWaterfall;
 end;
@@ -254,6 +849,8 @@ end;
 procedure THbFacetWaterfall.ClearCards;
 begin
   FItems.Clear;
+  FSelectedCardId := '';
+  UpdateInspectorPanel;
   RebuildWaterfall;
 end;
 
@@ -345,7 +942,7 @@ begin
   Result := 0;
   for I := 0 to FItems.Count - 1 do
   begin
-    if IsCategoryVisible(FItems[I].CategoryId) then
+    if IsCardVisible(FItems[I]) then
       Inc(Result);
   end;
 end;
@@ -373,15 +970,17 @@ begin
       Btn.Height := Round(36 * (CurrentPPI / 96.0));
       Btn.Margins.SetBounds(Round(4 * (CurrentPPI / 96.0)), Round(2 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)), Round(2 * (CurrentPPI / 96.0)));
       Btn.AlignWithMargins := True;
+
+      if Facet.IsFocused then
+        Btn.Kind := bkPrimary
+      else if Facet.IsExcluded then
+        Btn.Kind := bkDanger
+      else
+        Btn.Kind := bkSoft;
+
       Btn.Caption := Format('%s (%d)', [Facet.Title, Facet.Count]);
       Btn.Tag := I;
       Btn.OnClick := OnFacetButtonClick;
-      if Facet.Id = FFocusedCategoryId then
-        Btn.Kind := bkPrimary
-      else if Facet.IsExcluded then
-        Btn.Kind := bkGhost
-      else
-        Btn.Kind := bkSoft;
     end;
   finally
     FPnlLeftRail.UnlockDrawing;
@@ -402,13 +1001,67 @@ begin
   end;
 end;
 
+procedure THbFacetWaterfall.OnCardClick(Sender: TObject);
+var
+  CardIdx: Integer;
+begin
+  if Sender is THbWaterfallCard then
+  begin
+    CardIdx := THbWaterfallCard(Sender).Tag;
+    if (CardIdx >= 0) and (CardIdx < FItems.Count) then
+      SelectCard(FItems[CardIdx].Id);
+  end;
+end;
+
+procedure THbFacetWaterfall.OnCardFoldToggleClick(Sender: TObject);
+var
+  CardIdx: Integer;
+begin
+  if Sender is THbButton then
+  begin
+    CardIdx := THbButton(Sender).Tag;
+    if (CardIdx >= 0) and (CardIdx < FItems.Count) then
+      ToggleCardCollapse(FItems[CardIdx].Id);
+  end;
+end;
+
+procedure THbFacetWaterfall.OnCardDetailToggleClick(Sender: TObject);
+var
+  CardIdx: Integer;
+begin
+  if Sender is THbButton then
+  begin
+    CardIdx := THbButton(Sender).Tag;
+    if (CardIdx >= 0) and (CardIdx < FItems.Count) then
+      ToggleCardDetail(FItems[CardIdx].Id);
+  end;
+end;
+
+procedure THbFacetWaterfall.OnOpenLinkClick(Sender: TObject);
+var
+  Card: THbWaterfallCardData;
+begin
+  if (FSelectedCardId <> '') and FindCard(FSelectedCardId, Card) and (Card.LinkTarget <> '') then
+  begin
+    if Assigned(FOnLinkClick) then
+      FOnLinkClick(Self, Card.Id, Card.LinkKind, Card.LinkTarget);
+  end;
+end;
+
+procedure THbFacetWaterfall.OnFullscreenClick(Sender: TObject);
+begin
+  if FSelectedCardId <> '' then
+    PreviewFullscreen(FSelectedCardId);
+end;
+
 procedure THbFacetWaterfall.RebuildWaterfall;
 var
-  I, VisCount: Integer;
-  Card: THbCard;
-  LblTitle, LblSummary: TLabel;
+  I, VisIndex, VisCount: Integer;
+  Card: THbWaterfallCard;
   Item: THbWaterfallCardData;
+  Tokens: THbTokens;
 begin
+  Tokens := THbTheme.Tokens;
   VisCount := GetVisibleCardCount;
   if FFocusedCategoryId <> '' then
     FLblStatus.Caption := '正向聚焦: ' + FFocusedCategoryId + ' (共 ' + IntToStr(VisCount) + ' 项)'
@@ -420,54 +1073,34 @@ begin
 
   FScrollWaterfall.LockDrawing;
   try
-    while FScrollWaterfall.ControlCount > 0 do
-      FScrollWaterfall.Controls[0].Free;
-
+    VisIndex := 0;
     for I := 0 to FItems.Count - 1 do
     begin
       Item := FItems[I];
-      if not IsCategoryVisible(Item.CategoryId) then
+      if not IsCardVisible(Item) then
         Continue;
 
-      Card := THbCard.Create(FScrollWaterfall);
-      Card.Parent := FScrollWaterfall;
-      Card.Align := alTop;
-      Card.Height := Round(68 * (CurrentPPI / 96.0));
-      Card.Margins.SetBounds(Round(8 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)), Round(8 * (CurrentPPI / 96.0)), Round(4 * (CurrentPPI / 96.0)));
-      Card.AlignWithMargins := True;
-
-      if FMode = wmTimeline then
+      if VisIndex < FScrollWaterfall.ControlCount then
       begin
-        Card.Kind := ckOutline;
-        Card.Radius := rsS;
+        Card := THbWaterfallCard(FScrollWaterfall.Controls[VisIndex]);
+        Card.Visible := True;
       end
       else
       begin
-        Card.Kind := ckSurface;
-        Card.Radius := rsM;
+        Card := THbWaterfallCard.Create(FScrollWaterfall);
+        Card.Parent := FScrollWaterfall;
+        Card.OnClick := OnCardClick;
       end;
 
-      LblTitle := TLabel.Create(Card);
-      LblTitle.Parent := Card;
-      LblTitle.Left := Round(16 * (CurrentPPI / 96.0));
-      LblTitle.Top := Round(10 * (CurrentPPI / 96.0));
-      LblTitle.Font.Style := [fsBold];
-      if FMode = wmTimeline then
-      begin
-        if Item.TimestampStr <> '' then
-          LblTitle.Caption := '⏱ [' + Item.TimestampStr + '] ' + Item.Title
-        else
-          LblTitle.Caption := '⏱ ' + Item.Title;
-      end
-      else
-        LblTitle.Caption := '[' + Item.CategoryTitle + '] ' + Item.Title;
+      Card.UpdateCard(Item, FMode, Tokens, CurrentPPI, I,
+        OnCardFoldToggleClick, OnCardDetailToggleClick);
 
-      LblSummary := TLabel.Create(Card);
-      LblSummary.Parent := Card;
-      LblSummary.Left := Round(16 * (CurrentPPI / 96.0));
-      LblSummary.Top := Round(34 * (CurrentPPI / 96.0));
-      LblSummary.Caption := Item.SummaryText;
+      Inc(VisIndex);
     end;
+
+    // Remove remaining extra controls
+    for var J := FScrollWaterfall.ControlCount - 1 downto VisIndex do
+      FScrollWaterfall.Controls[J].Free;
   finally
     FScrollWaterfall.UnlockDrawing;
   end;
