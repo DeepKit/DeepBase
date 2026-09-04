@@ -1,0 +1,33 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: True
+Skip Compile: False
+No Rebuild: False
+Run Filter: Test.DeepBase.HB
+Output: D:\_Progs\02Business\DeepBase\TestResults\WO-20260904-004
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\WO-20260904-004\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+SUCCESS: Unit Tests compiled
+
+Running Unit Tests...
+----------------------------------------------
+
+SUCCESS: All Unit Tests tests passed
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+
+All tests passed!

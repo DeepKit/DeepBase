@@ -66,6 +66,27 @@ type
     procedure ExecuteFallbackAction;
   end;
 
+  /// <summary>
+  /// HB 遥测持久化驱动接口（注入式持久化槽，纯 RTL，零重依赖）
+  /// </summary>
+  IHbTelemetrySink = interface
+    ['{7E9F4B12-9A8C-4F3D-B2E1-6C5D4A3F2E1B}']
+    procedure PersistEvidence(const AEvidence: TArray<TTouchEvidence>);
+    procedure Flush;
+  end;
+
+  /// <summary>
+  /// HB 会话断点快照提供者契约（由可恢复交互容器实现）
+  /// </summary>
+  IHbSnapshotProvider = interface
+    ['{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}']
+    function GetSurfaceId: string;
+    function GetControlId: string;
+    function CaptureSnapshot: string;
+    procedure RestoreSnapshot(const APayload: string);
+  end;
+
 implementation
 
 end.
+

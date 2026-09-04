@@ -66,6 +66,10 @@ type
     FBuffer: TRingBuffer<TTouchEvidence>;
     FAggregators: TDictionary<string, THbGridAggregator>;
     FAggregationThreshold: Integer;
+    FSink: IHbTelemetrySink;
+    FLastFlushUtc: Int64;
+    FFlushThresholdCount: Integer;
+    FFlushIntervalMs: Int64;
 
     procedure PushToBuffer(const AEvidence: TTouchEvidence);
   public
@@ -74,6 +78,12 @@ type
 
     // 单例访问
     class property Instance: THbTouchpointEngine read FInstance;
+
+    // 持久化槽注入 (Sink)
+    procedure SetSink(const ASink: IHbTelemetrySink);
+    function GetSink: IHbTelemetrySink;
+    procedure FlushSink;
+    procedure CheckAutoFlush(ANowUtc: Int64 = 0);
 
     // 触点登记与注销
     procedure RegisterTouchpoint(const ATouchpoint: IHbTouchpoint); overload;
@@ -102,6 +112,8 @@ type
     procedure Reset;
 
     property AggregationThreshold: Integer read FAggregationThreshold write FAggregationThreshold;
+    property FlushThresholdCount: Integer read FFlushThresholdCount write FFlushThresholdCount;
+    property FlushIntervalMs: Int64 read FFlushIntervalMs write FFlushIntervalMs;
   end;
 
 implementation
@@ -130,15 +142,119 @@ begin
   FAggregationThreshold := AAggregationThreshold;
   if FAggregationThreshold <= 0 then
     FAggregationThreshold := 50;
+  FSink := nil;
+  FFlushThresholdCount := ABufferCapacity div 2;
+  if FFlushThresholdCount <= 0 then
+    FFlushThresholdCount := 5000;
+  FFlushIntervalMs := 30000;
+  FLastFlushUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
 end;
 
 destructor THbTouchpointEngine.Destroy;
 begin
+  FlushSink;
   FAggregators.Free;
   FBuffer.Free;
   FRegistry.Free;
   FRegistryLock.Free;
   inherited Destroy;
+end;
+
+procedure THbTouchpointEngine.SetSink(const ASink: IHbTelemetrySink);
+begin
+  FRegistryLock.Enter;
+  try
+    FSink := ASink;
+  finally
+    FRegistryLock.Leave;
+  end;
+end;
+
+function THbTouchpointEngine.GetSink: IHbTelemetrySink;
+begin
+  FRegistryLock.Enter;
+  try
+    Result := FSink;
+  finally
+    FRegistryLock.Leave;
+  end;
+end;
+
+procedure THbTouchpointEngine.CheckAutoFlush(ANowUtc: Int64);
+var
+  ShouldFlush: Boolean;
+  Items: TArray<TTouchEvidence>;
+  Item: TTouchEvidence;
+  List: TList<TTouchEvidence>;
+  SinkRef: IHbTelemetrySink;
+begin
+  if FSink = nil then
+    Exit;
+
+  if ANowUtc <= 0 then
+    ANowUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+
+  FRegistryLock.Enter;
+  try
+    ShouldFlush := (FBuffer.Count >= FFlushThresholdCount) or
+      (ANowUtc - FLastFlushUtc >= FFlushIntervalMs);
+
+    if ShouldFlush and (FBuffer.Count > 0) then
+    begin
+      List := TList<TTouchEvidence>.Create;
+      try
+        while FBuffer.Read(Item) do
+          List.Add(Item);
+        Items := List.ToArray;
+      finally
+        List.Free;
+      end;
+      FLastFlushUtc := ANowUtc;
+      SinkRef := FSink;
+    end
+    else
+      SinkRef := nil;
+  finally
+    FRegistryLock.Leave;
+  end;
+
+  if (SinkRef <> nil) and (Length(Items) > 0) then
+    SinkRef.PersistEvidence(Items);
+end;
+
+procedure THbTouchpointEngine.FlushSink;
+var
+  Items: TArray<TTouchEvidence>;
+  Item: TTouchEvidence;
+  List: TList<TTouchEvidence>;
+  SinkRef: IHbTelemetrySink;
+begin
+  FlushGridAggregations;
+  if FSink = nil then
+    Exit;
+
+  FRegistryLock.Enter;
+  try
+    SinkRef := FSink;
+    List := TList<TTouchEvidence>.Create;
+    try
+      while FBuffer.Read(Item) do
+        List.Add(Item);
+      Items := List.ToArray;
+    finally
+      List.Free;
+    end;
+    FLastFlushUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+  finally
+    FRegistryLock.Leave;
+  end;
+
+  if (SinkRef <> nil) then
+  begin
+    if Length(Items) > 0 then
+      SinkRef.PersistEvidence(Items);
+    SinkRef.Flush;
+  end;
 end;
 
 procedure THbTouchpointEngine.PushToBuffer(const AEvidence: TTouchEvidence);
@@ -148,6 +264,7 @@ begin
   if FBuffer.IsFull then
     FBuffer.Read(Dummy);
   FBuffer.Write(AEvidence);
+  CheckAutoFlush(AEvidence.TimestampUtc);
 end;
 
 procedure THbTouchpointEngine.RegisterTouchpoint(const ATouchpoint: IHbTouchpoint);
@@ -424,6 +541,7 @@ begin
     FRegistry.Clear;
     FBuffer.Clear;
     FAggregators.Clear;
+    FSink := nil;
   finally
     FRegistryLock.Leave;
   end;

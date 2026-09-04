@@ -29,12 +29,15 @@ uses
   System.Types,
   System.UITypes,
   System.Generics.Collections,
+  System.DateUtils,
+  System.JSON,
   Vcl.Controls,
   Vcl.Graphics,
   Vcl.Forms,
   Vcl.ExtCtrls,
   Vcl.StdCtrls,
   DeepBase.HB.Core,
+  DeepBase.HB.Touchpoint.Types,
   DeepBase.HB.Waterfall.Types,
   DeepBase.VCL.HB.Theme,
   DeepBase.VCL.HB.Controls,
@@ -80,8 +83,11 @@ type
   /// <summary>
   /// THbFacetWaterfall: Modern Faceted Waterfall Container for VCL.
   /// </summary>
-  THbFacetWaterfall = class(TCustomControl)
+  THbFacetWaterfall = class(TCustomControl, IHbSnapshotProvider)
   private
+    FSurfaceId: string;
+    FControlId: string;
+    FRestoreNotice: string;
     FFacets: TList<THbFacetCategory>;
     FItems: TList<THbWaterfallCardData>;
     FMode: THbWaterfallMode;
@@ -160,6 +166,15 @@ type
     function IsCategoryVisible(const ACategoryId: string): Boolean;
     function GetVisibleCardCount: Integer;
 
+    // IHbSnapshotProvider
+    function GetSurfaceId: string;
+    function GetControlId: string;
+    function CaptureSnapshot: string;
+    procedure RestoreSnapshot(const APayload: string);
+
+    property SurfaceId: string read FSurfaceId write FSurfaceId;
+    property ControlId: string read FControlId write FControlId;
+    property RestoreNotice: string read FRestoreNotice;
     property Facets: TList<THbFacetCategory> read FFacets;
     property Items: TList<THbWaterfallCardData> read FItems;
     property FocusedCategoryId: string read FFocusedCategoryId;
@@ -337,6 +352,9 @@ begin
   FGranularity := gMedium;
   FFocusedCategoryId := '';
   FSelectedCardId := '';
+  FSurfaceId := 'HbFacetWaterfall';
+  FControlId := 'waterfall_main';
+  FRestoreNotice := '';
   FFacets := TList<THbFacetCategory>.Create;
   FItems := TList<THbWaterfallCardData>.Create;
 
@@ -1114,6 +1132,158 @@ end;
 procedure THbFacetWaterfall.OnModeTimeClick(Sender: TObject);
 begin
   SetMode(wmTimeline);
+end;
+
+function THbFacetWaterfall.GetSurfaceId: string;
+begin
+  if FSurfaceId <> '' then
+    Result := FSurfaceId
+  else
+    Result := 'HbFacetWaterfall';
+end;
+
+function THbFacetWaterfall.GetControlId: string;
+begin
+  if FControlId <> '' then
+    Result := FControlId
+  else if Name <> '' then
+    Result := Name
+  else
+    Result := 'waterfall_main';
+end;
+
+function THbFacetWaterfall.CaptureSnapshot: string;
+var
+  Obj: TJSONObject;
+  ExArr, ColArr, ExpArr: TJSONArray;
+  I: Integer;
+begin
+  Obj := TJSONObject.Create;
+  try
+    Obj.AddPair('surface_id', GetSurfaceId);
+    Obj.AddPair('control_id', GetControlId);
+    Obj.AddPair('mode', TJSONNumber.Create(Ord(FMode)));
+    Obj.AddPair('granularity', TJSONNumber.Create(Ord(FGranularity)));
+    Obj.AddPair('focused_category', FFocusedCategoryId);
+    Obj.AddPair('selected_card', FSelectedCardId);
+    Obj.AddPair('timestamp_utc', TJSONNumber.Create(DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000));
+
+    ExArr := TJSONArray.Create;
+    for I := 0 to FFacets.Count - 1 do
+      if FFacets[I].IsExcluded then
+        ExArr.Add(FFacets[I].Id);
+    Obj.AddPair('excluded_facets', ExArr);
+
+    ColArr := TJSONArray.Create;
+    ExpArr := TJSONArray.Create;
+    for I := 0 to FItems.Count - 1 do
+    begin
+      if FItems[I].Collapsed then
+        ColArr.Add(FItems[I].Id);
+      if FItems[I].IsExpanded then
+        ExpArr.Add(FItems[I].Id);
+    end;
+    Obj.AddPair('collapsed_cards', ColArr);
+    Obj.AddPair('expanded_cards', ExpArr);
+
+    Result := Obj.ToJSON;
+  finally
+    Obj.Free;
+  end;
+end;
+
+procedure THbFacetWaterfall.RestoreSnapshot(const APayload: string);
+var
+  Val: TJSONValue;
+  Obj: TJSONObject;
+  ExArr, ColArr, ExpArr: TJSONArray;
+  I, J: Integer;
+  Cat: THbFacetCategory;
+  Item: THbWaterfallCardData;
+begin
+  FRestoreNotice := '';
+  if Trim(APayload) = '' then
+    Exit;
+
+  Val := TJSONObject.ParseJSONValue(APayload);
+  if Val = nil then
+    Exit;
+
+  try
+    if Val is TJSONObject then
+    begin
+      Obj := TJSONObject(Val);
+      if Obj.Values['mode'] is TJSONNumber then
+        FMode := THbWaterfallMode(TJSONNumber(Obj.Values['mode']).AsInt);
+      if Obj.Values['granularity'] is TJSONNumber then
+        FGranularity := THbGranularity(TJSONNumber(Obj.Values['granularity']).AsInt);
+      if Obj.Values['focused_category'] <> nil then
+        FFocusedCategoryId := Obj.Values['focused_category'].Value;
+      if Obj.Values['selected_card'] <> nil then
+        FSelectedCardId := Obj.Values['selected_card'].Value;
+
+      // Excluded facets
+      if Obj.Values['excluded_facets'] is TJSONArray then
+      begin
+        ExArr := TJSONArray(Obj.Values['excluded_facets']);
+        for I := 0 to FFacets.Count - 1 do
+        begin
+          Cat := FFacets[I];
+          Cat.IsExcluded := False;
+          for J := 0 to ExArr.Count - 1 do
+          begin
+            if ExArr.Items[J].Value = Cat.Id then
+            begin
+              Cat.IsExcluded := True;
+              Break;
+            end;
+          end;
+          FFacets[I] := Cat;
+        end;
+      end;
+
+      // Collapsed and expanded cards
+      ColArr := nil;
+      ExpArr := nil;
+      if Obj.Values['collapsed_cards'] is TJSONArray then
+        ColArr := TJSONArray(Obj.Values['collapsed_cards']);
+      if Obj.Values['expanded_cards'] is TJSONArray then
+        ExpArr := TJSONArray(Obj.Values['expanded_cards']);
+
+      for I := 0 to FItems.Count - 1 do
+      begin
+        Item := FItems[I];
+        if Assigned(ColArr) then
+        begin
+          Item.Collapsed := False;
+          for J := 0 to ColArr.Count - 1 do
+            if ColArr.Items[J].Value = Item.Id then
+            begin
+              Item.Collapsed := True;
+              Break;
+            end;
+        end;
+        if Assigned(ExpArr) then
+        begin
+          Item.IsExpanded := False;
+          for J := 0 to ExpArr.Count - 1 do
+            if ExpArr.Items[J].Value = Item.Id then
+            begin
+              Item.IsExpanded := True;
+              Break;
+            end;
+        end;
+        FItems[I] := Item;
+      end;
+
+      FRestoreNotice := '已为您恢复上次推演进度';
+      RebuildLeftRail;
+      RebuildWaterfall;
+      UpdateInspectorPanel;
+    end;
+  finally
+    Val.Free;
+  end;
 end;
 
 end.
