@@ -61,6 +61,13 @@ type
     class function CreateTaskID: string; static;
     class function IsPostgreSQL(Connection: TFDConnection): Boolean; static;
     class function IsSQLite(Connection: TFDConnection): Boolean; static;
+    class procedure EnsureSQLiteWriterPragmas(Connection: TFDConnection); static;
+    class procedure BeginOwnWriteTransaction(Connection: TFDConnection;
+      out OwnTx, SQLiteImmediate: Boolean); static;
+    class procedure CommitOwnWriteTransaction(Connection: TFDConnection;
+      OwnTx, SQLiteImmediate: Boolean); static;
+    class procedure RollbackOwnWriteTransaction(Connection: TFDConnection;
+      OwnTx, SQLiteImmediate: Boolean); static;
     class function PayloadToText(Payload: TJSONObject): string; static;
     class function ParsePayload(const PayloadText: string): TJSONObject; static;
     class procedure ValidateQueueName(const QueueName: string); static;
@@ -418,6 +425,59 @@ begin
   Result := Assigned(Connection) and SameText(Connection.DriverName, 'SQLite');
 end;
 
+/// <summary>
+/// FireDAC Params BusyTimeout is not always honored for BEGIN IMMEDIATE races.
+/// Apply busy_timeout once per write so concurrent writers wait instead of
+/// failing immediately with "database is locked". Do not set journal_mode here:
+/// PRAGMA journal_mode=WAL contends with in-flight writers and can crash suites.
+/// </summary>
+class procedure TJobQueue.EnsureSQLiteWriterPragmas(Connection: TFDConnection);
+begin
+  if not IsSQLite(Connection) or not Connection.Connected then
+    Exit;
+  Connection.ExecSQL('PRAGMA busy_timeout=10000');
+end;
+
+class procedure TJobQueue.BeginOwnWriteTransaction(Connection: TFDConnection;
+  out OwnTx, SQLiteImmediate: Boolean);
+begin
+  OwnTx := not Connection.InTransaction;
+  SQLiteImmediate := False;
+  if not OwnTx then
+    Exit;
+  // P-DB-P1: SQLite DEFERRED upgrades race under concurrent writers — use IMMEDIATE.
+  if IsSQLite(Connection) then
+  begin
+    EnsureSQLiteWriterPragmas(Connection);
+    Connection.ExecSQL('BEGIN IMMEDIATE');
+    SQLiteImmediate := True;
+  end
+  else
+    Connection.StartTransaction;
+end;
+
+class procedure TJobQueue.CommitOwnWriteTransaction(Connection: TFDConnection;
+  OwnTx, SQLiteImmediate: Boolean);
+begin
+  if not OwnTx then
+    Exit;
+  if SQLiteImmediate then
+    Connection.ExecSQL('COMMIT')
+  else
+    Connection.Commit;
+end;
+
+class procedure TJobQueue.RollbackOwnWriteTransaction(Connection: TFDConnection;
+  OwnTx, SQLiteImmediate: Boolean);
+begin
+  if not OwnTx then
+    Exit;
+  if SQLiteImmediate then
+    Connection.ExecSQL('ROLLBACK')
+  else
+    Connection.Rollback;
+end;
+
 class procedure TJobQueue.ValidateQueueName(const QueueName: string);
 begin
   if Trim(QueueName) = '' then
@@ -687,12 +747,10 @@ var
   SelectQuery: TFDQuery;
   UpdateQuery: TFDQuery;
   TaskID: string;
-  OwnTransaction: Boolean;
+  OwnTx, SQLiteImmediate: Boolean;
 begin
   Result := False;
-  OwnTransaction := not Connection.InTransaction;
-  if OwnTransaction then
-    Connection.StartTransaction;
+  BeginOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
   try
     SelectQuery := TFDQuery.Create(nil);
     try
@@ -706,8 +764,7 @@ begin
       SelectQuery.Open;
       if SelectQuery.Eof then
       begin
-        if OwnTransaction then
-          Connection.Commit;
+        CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
         Exit(False);
       end;
       TaskID := SelectQuery.FieldByName('id').AsString;
@@ -728,8 +785,7 @@ begin
       UpdateQuery.ExecSQL;
       if UpdateQuery.RowsAffected = 0 then
       begin
-        if OwnTransaction then
-          Connection.Commit;
+        CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
         Exit(False);
       end;
 
@@ -747,11 +803,9 @@ begin
       UpdateQuery.Free;
     end;
 
-    if OwnTransaction then
-      Connection.Commit;
+    CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
   except
-    if OwnTransaction and Connection.InTransaction then
-      Connection.Rollback;
+    RollbackOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
     raise;
   end;
 end;
@@ -818,6 +872,7 @@ var
   Query: TFDQuery;
   HBCond: string;
   OwnTx: Boolean;
+  SQLiteImmediate: Boolean;
 begin
   ValidateQueueName(QueueName);
   if TimeoutSec <= 0 then
@@ -837,12 +892,7 @@ begin
     //    AMaxAttempts <= 0 保持旧行为（不启用毒丸识别）。
     if AMaxAttempts > 0 then
     begin
-      OwnTx := False;
-      if not Connection.InTransaction then
-      begin
-        Connection.StartTransaction;
-        OwnTx := True;
-      end;
+      BeginOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
       Query := TFDQuery.Create(nil);
       try
         try
@@ -870,11 +920,9 @@ begin
           Query.ParamByName('max_attempts').AsInteger := AMaxAttempts;
           Query.ExecSQL;
 
-          if OwnTx then
-            Connection.Commit;
+          CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
         except
-          if OwnTx then
-            Connection.Rollback;
+          RollbackOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
           raise;
         end;
       finally
@@ -977,6 +1025,7 @@ var
   IsPG: Boolean;
   DLQInsertSQL, DLQDeleteSQL: string;
   OwnTx: Boolean;
+  SQLiteImmediate: Boolean;
 begin
   ValidateTaskID(TaskID);
   EnsureSchemaIfNeeded;
@@ -1017,9 +1066,7 @@ begin
           // both PG and SQLite. Previously PG ran the two statements without a
           // transaction, so a DELETE failure left the row in BOTH the main
           // queue and the DLQ. FireDAC's StartTransaction/Commit/Rollback
-          // works uniformly for both drivers.
-          OwnTx := not Connection.InTransaction;
-
+          // works uniformly for both drivers; SQLite uses BEGIN IMMEDIATE.
           DLQInsertSQL :=
             'INSERT INTO ' + JOB_QUEUE_DLQ_TABLE + ' ' +
             '(original_id, queue_name, logical_key, payload, attempts, ' +
@@ -1032,8 +1079,7 @@ begin
             'DELETE FROM ' + JOB_QUEUE_TABLE +
             ' WHERE id = :id AND status = ''running''';
 
-          if OwnTx then
-            Connection.StartTransaction;
+          BeginOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
           try
             InsertQuery := TFDQuery.Create(nil);
             try
@@ -1060,11 +1106,9 @@ begin
               end;
             end;
 
-            if OwnTx then
-              Connection.Commit;
+            CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
           except
-            if OwnTx and Connection.InTransaction then
-              Connection.Rollback;
+            RollbackOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
             raise;
           end;
           Exit;
@@ -1268,6 +1312,7 @@ var
   InsertQuery, DeleteQuery: TFDQuery;
   IsPG: Boolean;
   OwnTx: Boolean;
+  SQLiteImmediate: Boolean;
 begin
   ValidateTaskID(OriginalID);
   EnsureSchemaIfNeeded;
@@ -1280,9 +1325,7 @@ begin
     // DATA2-047: always wrap the INSERT+DELETE pair in a transaction on both
     // PG and SQLite. Previously PG ran without a transaction, so a DELETE
     // failure left the row in both the main queue and the DLQ.
-    OwnTx := not Connection.InTransaction;
-    if OwnTx then
-      Connection.StartTransaction;
+    BeginOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
     try
       InsertQuery := TFDQuery.Create(nil);
       try
@@ -1329,11 +1372,9 @@ begin
         end;
       end;
 
-      if OwnTx then
-        Connection.Commit;
+      CommitOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
     except
-      if OwnTx and Connection.InTransaction then
-        Connection.Rollback;
+      RollbackOwnWriteTransaction(Connection, OwnTx, SQLiteImmediate);
       raise;
     end;
   finally

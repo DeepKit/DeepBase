@@ -8,13 +8,31 @@
 ## 当前基线
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
-- 单测基线: 4396 found / 4389 passed / 3 failed（CR-606×2 + CR-608；证据 `TestResults/WO-20260902-002/full/`）
-- 当前主线: **WO-20260902-002 指纹口径改造已交付（可与 001 一并 CLOSE；保留 BLOCKED-39X-DATA）**
+- 单测基线: `TestResults/WO-20260903-001/full6/`（4410/4417；CR-608 绿；CR-606×2 + FeaturesMetaPackage 工单外红）
+- 当前主线: **WO-20260903-001 已交付（待主控复核 CLOSE）**
 - 审计报告: `CodeReview/20260902-Framework-Audit.md`（~35 P0 / ~95 P1 actionable，Features F3–F9 未审）
 
 ---
 
-## 一、🔧 WO-20260902-002 SchemaAdapter 指纹口径改造
+## 一、✅ WO-20260903-001 并发与池生命周期 P1 + CR-608
+
+> 工单: docs/WO-20260903-001-开发甲-并发与池生命周期P1批次工单.md · brief: docs/brief-WO-20260903-001-开发甲.md · 交付: docs/WO-20260903-001-开发甲-交付报告.md
+
+| FIX | 状态 | 回归 |
+|-----|------|------|
+| FIX-1 ObjectPool 回调出锁 | ✅ | BUG341 |
+| FIX-2 EventBus TrackAsync+Destroy drain | ✅ | BUG342 |
+| FIX-3 Scheduler FLifecycleLock | ✅ | BUG343 |
+| FIX-4 WorkerQueue 超时弃 join | ✅ | BUG344 |
+| FIX-5 Pool Release/Invalidate | ✅ | BUG345 |
+| FIX-6 JobQueue BEGIN IMMEDIATE + busy_timeout | ✅ | BUG346 |
+| FIX-7 DoQry 连接串行化（CR-608） | ✅ | BUG347 · 20× cr608-post/ · 全量 ConcurrentSameSql 绿 |
+
+**债务：** ⏸ CR-606 Perception VM 图形会话（允许红）；⏸ FeaturesMetaPackage 断言仍要 `DeepBasePlatform`（包已改 require `DeepBaseDataPlatform`，工单外）
+
+---
+
+## 一附、🔧 WO-20260902-002 SchemaAdapter 指纹口径改造
 
 > 工单: `docs/WO-20260902-002-开发甲-SchemaAdapter指纹口径改造工单.md` · brief: `docs/brief-WO-20260902-002-开发甲.md`
 
@@ -60,7 +78,7 @@
 | ID | 内容 |
 |---|---|
 | CR-606 | Perception 两测试（StaticPair/InjectedBitmap_FlowsThroughFrameDifferGate）在本 VM 确定性失败；代码链路走读无异常，需图形完整会话复跑；同步开启 DPI 感知对照 |
-| CR-608 | Test_PreparedPool_ConcurrentSameSql 偶发（AV 一次 / 竞态 Expected0 got1 一次）；排查 DeepBase.DB.DoQry prepared-pool 并发领取路径 |
+| CR-608 | ✅ 已关（WO-20260903-001 FIX-7）：连接级串行化 + 加压回归；证据 `TestResults/WO-20260903-001/cr608-post/` |
 
 ## 四、🟠 20260902 审计剩余高优（Top10 之外 · 未纳入 WO-001）
 

@@ -246,6 +246,24 @@ uses
   DeepBase.Logging,
   DeepBase.SQLLogger;  // BUG-032 FIX: 集成慢查询监?
 
+/// <summary>
+/// FireDAC TFDConnection is not thread-safe. Concurrent Open/Exec/Close on the
+/// same connection (even via distinct TFDQuery instances) corrupts driver-owned
+/// lists. Serialize the execute lifetime per connection; uncontended Enter is cheap.
+/// Lock order: connection first, then GPreparedPoolLock (never reverse).
+/// </summary>
+procedure EnterConnectionExec(Conn: TFDConnection);
+begin
+  if Assigned(Conn) then
+    TMonitor.Enter(Conn);
+end;
+
+procedure LeaveConnectionExec(Conn: TFDConnection);
+begin
+  if Assigned(Conn) then
+    TMonitor.Exit(Conn);
+end;
+
 type
   TQueryCacheEntry = record
     SQL: string;
@@ -1433,56 +1451,62 @@ begin
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
 
-  if Pooled then
-    Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
-  else
-  begin
-    Q := TFDQuery.Create(nil);
-    Q.Connection := Ctx.Connection;
-    Q.SQL.Text := SQL;
-  end;
-
+  // CR-608 / WO-20260903-001 FIX-7: serialize FireDAC use of the shared connection.
+  EnterConnectionExec(Ctx.Connection);
   try
+    if Pooled then
+      Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
+    else
+    begin
+      Q := TFDQuery.Create(nil);
+      Q.Connection := Ctx.Connection;
+      Q.SQL.Text := SQL;
+    end;
+
     try
-      if Q.Prepared then
-        Q.Unprepare;
-      Q.Params.ClearValues;
-      Q.FetchOptions.Mode := fmAll;
+      try
+        if Q.Prepared then
+          Q.Unprepare;
+        Q.Params.ClearValues;
+        Q.FetchOptions.Mode := fmAll;
 
-      // 绑定参数
-      BindJsonParams(Q, ParamsJson);
+        // 绑定参数
+        BindJsonParams(Q, ParamsJson);
 
-      Q.Open;
-      Result := Q.RecordCount;
+        Q.Open;
+        Result := Q.RecordCount;
 
-      // 复制数据�?TFDMemTable
-      if Data = nil then
-        Data := TFDMemTable.Create(nil);
-      CopyQueryToMemTable(Q, Data);
+        // 复制数据�?TFDMemTable
+        if Data = nil then
+          Data := TFDMemTable.Create(nil);
+        CopyQueryToMemTable(Q, Data);
 
-      DurationMs := MilliSecondsBetween(Now, StartTime);
-
-      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
-
-      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
-        SQL, ParamsJson, DurationMs, Result, '');
-    except
-      on E: Exception do
-      begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
-        // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+        // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+        TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
 
-        LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
-          SQL, ParamsJson, DurationMs, 0, E.Message);
-        raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
+          SQL, ParamsJson, DurationMs, Result, '');
+      except
+        on E: Exception do
+        begin
+          DurationMs := MilliSecondsBetween(Now, StartTime);
+
+          // BUG-032 FIX: 记录失败的查询到SQLLogger
+          TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+
+          LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SELECT',
+            SQL, ParamsJson, DurationMs, 0, E.Message);
+          raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
+            Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        end;
       end;
+    finally
+      ReleaseQuery(Q, Pooled);
     end;
   finally
-    ReleaseQuery(Q, Pooled);
+    LeaveConnectionExec(Ctx.Connection);
   end;
 end;
 
@@ -1500,49 +1524,54 @@ begin
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
 
-  if Pooled then
-    Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
-  else
-  begin
-    Q := TFDQuery.Create(nil);
-    Q.Connection := Ctx.Connection;
-    Q.SQL.Text := SQL;
-  end;
-
+  EnterConnectionExec(Ctx.Connection);
   try
+    if Pooled then
+      Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
+    else
+    begin
+      Q := TFDQuery.Create(nil);
+      Q.Connection := Ctx.Connection;
+      Q.SQL.Text := SQL;
+    end;
+
     try
-      if Q.Prepared then
-        Q.Unprepare;
-      Q.Params.ClearValues;
-      // 绑定参数
-      BindJsonParams(Q, ParamsJson);
+      try
+        if Q.Prepared then
+          Q.Unprepare;
+        Q.Params.ClearValues;
+        // 绑定参数
+        BindJsonParams(Q, ParamsJson);
 
-      Q.ExecSQL;
-      Result := Q.RowsAffected;
+        Q.ExecSQL;
+        Result := Q.RowsAffected;
 
-      DurationMs := MilliSecondsBetween(Now, StartTime);
-
-      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
-
-      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
-        SQL, ParamsJson, DurationMs, Result, '');
-    except
-      on E: Exception do
-      begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
-        // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+        // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+        TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', Result);
 
-        LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
-          SQL, ParamsJson, DurationMs, 0, E.Message);
-        raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
+          SQL, ParamsJson, DurationMs, Result, '');
+      except
+        on E: Exception do
+        begin
+          DurationMs := MilliSecondsBetween(Now, StartTime);
+
+          // BUG-032 FIX: 记录失败的查询到SQLLogger
+          TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+
+          LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'EXEC',
+            SQL, ParamsJson, DurationMs, 0, E.Message);
+          raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
+            Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        end;
       end;
+    finally
+      ReleaseQuery(Q, Pooled);
     end;
   finally
-    ReleaseQuery(Q, Pooled);
+    LeaveConnectionExec(Ctx.Connection);
   end;
 end;
 
@@ -1605,72 +1634,77 @@ begin
   // logging insert loops).
   Pooled := GPreparedPoolEnabled;
 
-  if Pooled then
-    Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
-  else
-  begin
-    Q := TFDQuery.Create(nil);
-    Q.Connection := Ctx.Connection;
-    Q.SQL.Text := SQL;
-  end;
-
+  EnterConnectionExec(Ctx.Connection);
   try
+    if Pooled then
+      Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
+    else
+    begin
+      Q := TFDQuery.Create(nil);
+      Q.Connection := Ctx.Connection;
+      Q.SQL.Text := SQL;
+    end;
+
     try
-      if Q.Prepared then
-        Q.Unprepare;
-      Q.Params.ClearValues;
+      try
+        if Q.Prepared then
+          Q.Unprepare;
+        Q.Params.ClearValues;
 
-      case Ctx.DBType of
-        udbPostgreSQL:
-        begin
-          BindJsonParams(Q, ParamsJson);
-          Q.Open;
-          if not Q.Eof then
-            Result := Q.Fields[0].AsInteger;
-        end;
+        case Ctx.DBType of
+          udbPostgreSQL:
+          begin
+            BindJsonParams(Q, ParamsJson);
+            Q.Open;
+            if not Q.Eof then
+              Result := Q.Fields[0].AsInteger;
+          end;
 
-        udbSQLite:
-        begin
-          BindJsonParams(Q, ParamsJson);
-          Q.ExecSQL;
+          udbSQLite:
+          begin
+            BindJsonParams(Q, ParamsJson);
+            Q.ExecSQL;
 
-          // SQLite returns the inserted rowid on a separate query. Use a
-          // disposable, non-pooled TFDQuery so we never rewrite the SQL on
-          // the pooled INSERT statement (which would defeat the pool).
-          IdQuery := TFDQuery.Create(nil);
-          try
-            IdQuery.Connection := Ctx.Connection;
-            IdQuery.SQL.Text := 'SELECT last_insert_rowid()';
-            IdQuery.Open;
-            if not IdQuery.Eof then
-              Result := IdQuery.Fields[0].AsInteger;
-          finally
-            IdQuery.Free;
+            // SQLite returns the inserted rowid on a separate query. Use a
+            // disposable, non-pooled TFDQuery so we never rewrite the SQL on
+            // the pooled INSERT statement (which would defeat the pool).
+            IdQuery := TFDQuery.Create(nil);
+            try
+              IdQuery.Connection := Ctx.Connection;
+              IdQuery.SQL.Text := 'SELECT last_insert_rowid()';
+              IdQuery.Open;
+              if not IdQuery.Eof then
+                Result := IdQuery.Fields[0].AsInteger;
+            finally
+              IdQuery.Free;
+            end;
           end;
         end;
-      end;
 
-      DurationMs := MilliSecondsBetween(Now, StartTime);
-
-      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
-
-      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
-        SQL, ParamsJson, DurationMs, 1, '');
-    except
-      on E: Exception do
-      begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
-        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+        TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
 
-        LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
-          SQL, ParamsJson, DurationMs, 0, E.Message);
-        raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
+          SQL, ParamsJson, DurationMs, 1, '');
+      except
+        on E: Exception do
+        begin
+          DurationMs := MilliSecondsBetween(Now, StartTime);
+
+          TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+
+          LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'INSERT_ID',
+            SQL, ParamsJson, DurationMs, 0, E.Message);
+          raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
+            Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        end;
       end;
+    finally
+      ReleaseQuery(Q, Pooled);
     end;
   finally
-    ReleaseQuery(Q, Pooled);
+    LeaveConnectionExec(Ctx.Connection);
   end;
 end;
 
@@ -1689,51 +1723,56 @@ begin
   SQL := LoadQuerySQL(ProcName, Ctx);
   Pooled := GPreparedPoolEnabled;
 
-  if Pooled then
-    Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
-  else
-  begin
-    Q := TFDQuery.Create(nil);
-    Q.Connection := Ctx.Connection;
-    Q.SQL.Text := SQL;
-  end;
-
+  EnterConnectionExec(Ctx.Connection);
   try
+    if Pooled then
+      Q := GetOrCreatePreparedQuery(Ctx.Connection, SQL)
+    else
+    begin
+      Q := TFDQuery.Create(nil);
+      Q.Connection := Ctx.Connection;
+      Q.SQL.Text := SQL;
+    end;
+
     try
-      if Q.Prepared then
-        Q.Unprepare;
-      Q.Params.ClearValues;
-      // 绑定参数（与 UniDbSelect/UniDbExec 一致）
-      BindJsonParams(Q, ParamsJson);
+      try
+        if Q.Prepared then
+          Q.Unprepare;
+        Q.Params.ClearValues;
+        // 绑定参数（与 UniDbSelect/UniDbExec 一致）
+        BindJsonParams(Q, ParamsJson);
 
-      Q.Open;
+        Q.Open;
 
-      if not Q.Eof and (Q.Fields.Count > 0) then
-        Result := Q.Fields[0].Value;
+        if not Q.Eof and (Q.Fields.Count > 0) then
+          Result := Q.Fields[0].Value;
 
-      DurationMs := MilliSecondsBetween(Now, StartTime);
-
-      // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
-      TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
-
-      LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
-        SQL, ParamsJson, DurationMs, 1, '');
-    except
-      on E: Exception do
-      begin
         DurationMs := MilliSecondsBetween(Now, StartTime);
 
-        // BUG-032 FIX: 记录失败的查询到SQLLogger
-        TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+        // BUG-032 FIX: 集成TSQLLogger进行慢查询监控和统计
+        TSQLLogger.LogSQL(SQL, StartTime, True, 'DoQry:' + Ctx.CorrelationId, '', 1);
 
-        LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
-          SQL, ParamsJson, DurationMs, 0, E.Message);
-        raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
-          Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        LogQuery('INFO', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
+          SQL, ParamsJson, DurationMs, 1, '');
+      except
+        on E: Exception do
+        begin
+          DurationMs := MilliSecondsBetween(Now, StartTime);
+
+          // BUG-032 FIX: 记录失败的查询到SQLLogger
+          TSQLLogger.LogSQL(SQL, StartTime, False, 'DoQry:' + Ctx.CorrelationId, E.Message, 0);
+
+          LogQuery('ERROR', Ctx.CorrelationId, ProcName, Ctx.DBType, 'SCALAR',
+            SQL, ParamsJson, DurationMs, 0, E.Message);
+          raise EDeepBaseDbError.Create(E.Message, ProcName, SQL, ParamsJson,
+            Ctx.DBType, Ctx.CorrelationId, InferErrorCode(E));
+        end;
       end;
+    finally
+      ReleaseQuery(Q, Pooled);
     end;
   finally
-    ReleaseQuery(Q, Pooled);
+    LeaveConnectionExec(Ctx.Connection);
   end;
 end;
 
@@ -1767,6 +1806,7 @@ procedure UniDbClearPreparedStatements;
 var
   Pair: TPair<string, TPreparedEntry>;
   KeysToRemove: TList<string>;
+  Entry: TPreparedEntry;
 begin
   if Assigned(GPreparedPoolLock) then
   begin
@@ -1789,13 +1829,18 @@ begin
             KeysToRemove.Add(Pair.Key);
           end;
           for var Key in KeysToRemove do
+          begin
+            if GPreparedPool.TryGetValue(Key, Entry) and Assigned(Entry) and
+               Assigned(GPreparedQueryIndex) and Assigned(Entry.Query) then
+              GPreparedQueryIndex.Remove(Entry.Query);
             GPreparedPool.Remove(Key);
+          end;
         finally
           KeysToRemove.Free;
         end;
       end;
-      if Assigned(GPreparedQueryIndex) then
-        GPreparedQueryIndex.Clear;
+      // Do not Clear the entire index: in-use entries remain in the pool and
+      // must stay tracked so ReleaseQuery can DecrementUse instead of Free.
       GPreparedReuseCount := 0;
       GPreparedUseTick := 0;
     finally

@@ -544,20 +544,34 @@ end;
 procedure TObjectPool<T>.EnsureMinSize;
 var
   LCount: Integer;
+  LCreated: TList<T>;
+  LPooled: TPooledObject<T>;
+  LObj: T;
 begin
-  FLock.Enter;
+  LCreated := TList<T>.Create;
   try
-    LCount := FPool.Count;
-    while LCount < FConfig.MinSize do
-    begin
-      FPool.Add(CreatePooledObject);
-      Inc(LCount);
+    FLock.Enter;
+    try
+      LCount := FPool.Count;
+      while LCount < FConfig.MinSize do
+      begin
+        LPooled := CreatePooledObject;
+        FPool.Add(LPooled);
+        LCreated.Add(LPooled.Obj);
+        Inc(LCount);
+      end;
+
+      if FPool.Count > 0 then
+        FAvailable.SetEvent;
+    finally
+      FLock.Leave;
     end;
-    
-    if FPool.Count > 0 then
-      FAvailable.SetEvent;
+
+    if Assigned(FOnObjectCreated) then
+      for LObj in LCreated do
+        FOnObjectCreated(Self, LObj);
   finally
-    FLock.Leave;
+    LCreated.Free;
   end;
 end;
 
@@ -567,22 +581,23 @@ var
 begin
   LObj := FFactory.CreateObject;
   Result := TPooledObject<T>.Create(LObj);
-  
+
   Inc(FStats.TotalCreated);
   Inc(FStats.CurrentPoolSize);
   Inc(FStats.CurrentIdle);
-  
-  if Assigned(FOnObjectCreated) then
-    FOnObjectCreated(Self, LObj);
+  // OnObjectCreated fired by callers after FLock.Leave (C-CON-05).
 end;
 
 procedure TObjectPool<T>.DestroyPooledObject(APooled: TPooledObject<T>);
 begin
+  // OnObjectDestroyed: object must still be alive for the callback. Callers that
+  // hold FLock accept a brief in-lock callback here; Acquire/Release paths no
+  // longer fire user callbacks under FLock (C-CON-05 primary fix).
   if Assigned(FOnObjectDestroyed) then
     FOnObjectDestroyed(Self, APooled.Obj);
-    
+
   FFactory.DestroyObject(APooled.Obj);
-  
+
   Inc(FStats.TotalDestroyed);
   Dec(FStats.CurrentPoolSize);
   if not APooled.InUse then
@@ -656,87 +671,89 @@ var
   LStartTime: TDateTime;
   LWaitResult: TWaitResult;
   LElapsedMs: Int64;
+  LFireAcquired: Boolean;
+  LFireCreated: Boolean;
 begin
   Result := False;
   AObject := nil;
   LStartTime := Now;
-  
+
   while True do
   begin
+    LFireAcquired := False;
+    LFireCreated := False;
     FLock.Enter;
     try
-      // Try to find available object
       LPooled := FindAvailableObject;
-      
+
       if Assigned(LPooled) then
       begin
         LPooled.MarkUsed;
         FFactory.ResetObject(LPooled.Obj);
         AObject := LPooled.Obj;
-        
+
         Inc(FStats.TotalAcquires);
         Dec(FStats.CurrentIdle);
         Inc(FStats.CurrentInUse);
-        
+
         if FStats.CurrentInUse > FStats.PeakUsage then
           FStats.PeakUsage := FStats.CurrentInUse;
-        
-        // Update average wait time
+
         LElapsedMs := MilliSecondsBetween(Now, LStartTime);
-        FStats.AverageWaitTimeMs := 
+        FStats.AverageWaitTimeMs :=
           (FStats.AverageWaitTimeMs * (FStats.TotalAcquires - 1) + LElapsedMs) / FStats.TotalAcquires;
-        
-        if Assigned(FOnObjectAcquired) then
-          FOnObjectAcquired(Self, AObject);
-          
+
+        LFireAcquired := Assigned(FOnObjectAcquired);
         Result := True;
-        Exit;
-      end;
-      
-      // Try to create new object if under max
-      if FPool.Count < FConfig.MaxSize then
+      end
+      else if FPool.Count < FConfig.MaxSize then
       begin
         LPooled := CreatePooledObject;
         FPool.Add(LPooled);
-        
+        LFireCreated := Assigned(FOnObjectCreated);
+
         LPooled.MarkUsed;
         Dec(FStats.CurrentIdle);
         Inc(FStats.CurrentInUse);
-        
+
         FFactory.ResetObject(LPooled.Obj);
         AObject := LPooled.Obj;
-        
+
         Inc(FStats.TotalAcquires);
-        
+
         if FStats.CurrentInUse > FStats.PeakUsage then
           FStats.PeakUsage := FStats.CurrentInUse;
-          
+
         LElapsedMs := MilliSecondsBetween(Now, LStartTime);
-        FStats.AverageWaitTimeMs := 
+        FStats.AverageWaitTimeMs :=
           (FStats.AverageWaitTimeMs * (FStats.TotalAcquires - 1) + LElapsedMs) / FStats.TotalAcquires;
-        
-        if Assigned(FOnObjectAcquired) then
-          FOnObjectAcquired(Self, AObject);
-          
+
+        LFireAcquired := Assigned(FOnObjectAcquired);
         Result := True;
-        Exit;
-      end;
-      
-      // No available objects, need to wait
-      FAvailable.ResetEvent;
+      end
+      else
+        FAvailable.ResetEvent;
     finally
       FLock.Leave;
     end;
-    
-    // Check timeout
+
+    if Result then
+    begin
+      // C-CON-05: never invoke user callbacks while holding FLock.
+      if LFireCreated and Assigned(FOnObjectCreated) then
+        FOnObjectCreated(Self, AObject);
+      if LFireAcquired and Assigned(FOnObjectAcquired) then
+        FOnObjectAcquired(Self, AObject);
+      Exit;
+    end;
+
     LElapsedMs := MilliSecondsBetween(Now, LStartTime);
     if LElapsedMs >= ATimeoutMs then
     begin
       Inc(FStats.TotalTimeouts);
       Exit;
     end;
-    
-    // Wait for object to become available
+
     LWaitResult := FAvailable.WaitFor(ATimeoutMs - LElapsedMs);
     if LWaitResult <> wrSignaled then
     begin
@@ -752,9 +769,13 @@ var
   LPooled: TPooledObject<T>;
   LFound: Boolean;
   LValid: Boolean;
+  LFireReleased: Boolean;
+  LNeedEnsureMin: Boolean;
 begin
   LFound := False;
-  
+  LFireReleased := False;
+  LNeedEnsureMin := False;
+
   FLock.Enter;
   try
     for I := 0 to FPool.Count - 1 do
@@ -763,34 +784,32 @@ begin
       if LPooled.Obj = AObject then
       begin
         LFound := True;
-        
-        // Validate if configured
+
         if FConfig.ValidationOnRelease then
         begin
           LValid := FFactory.ValidateObject(AObject);
-          
+
           if Assigned(FOnValidation) then
             FOnValidation(Self, AObject, LValid);
-            
+
           if not LValid then
           begin
             Inc(FStats.TotalValidationFails);
             DestroyPooledObject(LPooled);
             FPool.Delete(I);
-            EnsureMinSize;
+            LNeedEnsureMin := True;
             Break;
           end;
         end;
-        
+
         LPooled.MarkReturned;
-        
+
         Inc(FStats.TotalReleases);
         Inc(FStats.CurrentIdle);
         Dec(FStats.CurrentInUse);
-        
-        if Assigned(FOnObjectReleased) then
-          FOnObjectReleased(Self, AObject);
-          
+
+        LFireReleased := Assigned(FOnObjectReleased);
+
         FAvailable.SetEvent;
         Break;
       end;
@@ -798,7 +817,13 @@ begin
   finally
     FLock.Leave;
   end;
-  
+
+  if LNeedEnsureMin then
+    EnsureMinSize;
+
+  if LFireReleased and Assigned(FOnObjectReleased) then
+    FOnObjectReleased(Self, AObject);
+
   if not LFound then
     raise EObjectPoolException.Create('Object not found in pool');
 end;
@@ -921,17 +946,33 @@ end;
 procedure TObjectPool<T>.Warm(ACount: Integer);
 var
   LTarget: Integer;
+  LCreated: TList<T>;
+  LPooled: TPooledObject<T>;
+  LObj: T;
 begin
-  FLock.Enter;
+  LCreated := TList<T>.Create;
   try
-    LTarget := Min(ACount, FConfig.MaxSize);
-    while FPool.Count < LTarget do
-      FPool.Add(CreatePooledObject);
-      
-    if FPool.Count > 0 then
-      FAvailable.SetEvent;
+    FLock.Enter;
+    try
+      LTarget := Min(ACount, FConfig.MaxSize);
+      while FPool.Count < LTarget do
+      begin
+        LPooled := CreatePooledObject;
+        FPool.Add(LPooled);
+        LCreated.Add(LPooled.Obj);
+      end;
+
+      if FPool.Count > 0 then
+        FAvailable.SetEvent;
+    finally
+      FLock.Leave;
+    end;
+
+    if Assigned(FOnObjectCreated) then
+      for LObj in LCreated do
+        FOnObjectCreated(Self, LObj);
   finally
-    FLock.Leave;
+    LCreated.Free;
   end;
 end;
 

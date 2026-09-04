@@ -259,6 +259,7 @@ type
   private
     FTasks: TObjectDictionary<string, TScheduledTask>;
     FLock: TCriticalSection;
+    FLifecycleLock: TCriticalSection;
     FTimerThread: TThread;
     FRunning: Boolean;
     FStats: TSchedulerStats;
@@ -780,6 +781,7 @@ begin
   inherited Create;
   FTasks := TObjectDictionary<string, TScheduledTask>.Create([doOwnsValues]);
   FLock := TCriticalSection.Create;
+  FLifecycleLock := TCriticalSection.Create;
   FShutdownEvent := TEvent.Create(nil, True, False, '');
   FRunning := False;
   FCheckIntervalMs := 100;
@@ -806,6 +808,7 @@ begin
 
   FreeAndNil(FTasks);
   FreeAndNil(FLock);
+  FreeAndNil(FLifecycleLock);
   FreeAndNil(FShutdownEvent);
   inherited;
 end;
@@ -835,42 +838,58 @@ end;
 
 
 procedure TTaskScheduler.Start;
+var
+  LThread: TThread;
 begin
-  if FRunning then
-    Exit;
+  // C-CON-07: dedicated lifecycle lock — do not share with job FLock.
+  FLifecycleLock.Enter;
+  try
+    if FRunning then
+      Exit;
 
-  // Reset shutdown event so it can be re-armed by Stop.
-  if FShutdownEvent <> nil then
-    FShutdownEvent.ResetEvent;
+    if FShutdownEvent <> nil then
+      FShutdownEvent.ResetEvent;
 
-  FRunning := True;
-  FTimerThread := TThread.CreateAnonymousThread(TimerProc);
-  FTimerThread.FreeOnTerminate := False;
-  FTimerThread.Start;
+    FRunning := True;
+    LThread := TThread.CreateAnonymousThread(TimerProc);
+    LThread.FreeOnTerminate := False;
+    FTimerThread := LThread;
+    LThread.Start;
+  finally
+    FLifecycleLock.Leave;
+  end;
 end;
 
 function TTaskScheduler.Stop: Boolean;
 var
   Stopwatch: TStopwatch;
   TimeoutMs: Int64;
+  LThread: TThread;
 begin
-  if not FRunning then
-    Exit(True);
+  LThread := nil;
+  FLifecycleLock.Enter;
+  try
+    if not FRunning then
+      Exit(True);
 
-  FRunning := False;
+    FRunning := False;
 
-  // Signal timer thread to stop
-  if FShutdownEvent <> nil then
-    FShutdownEvent.SetEvent;
+    if FShutdownEvent <> nil then
+      FShutdownEvent.SetEvent;
 
-  if FTimerThread <> nil then
-  begin
-    FTimerThread.WaitFor;
-    FreeAndNil(FTimerThread);
+    LThread := FTimerThread;
+    FTimerThread := nil;
+  finally
+    FLifecycleLock.Leave;
   end;
 
-  // Wait for running tasks to finish.
-  // FStopDrainTimeoutMs = -1 means wait indefinitely.
+  if LThread <> nil then
+  begin
+    LThread.WaitFor;
+    LThread.Free;
+  end;
+
+  // Drain running tasks outside lifecycle lock.
   Stopwatch := TStopwatch.StartNew;
   TimeoutMs := FStopDrainTimeoutMs;
   while FRunningCount > 0 do

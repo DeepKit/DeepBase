@@ -1934,13 +1934,29 @@ begin
         LWaitResult := LDoneEvt.WaitFor(LTimeoutMs);
         LTimedOut := (LWaitResult <> wrSignaled);
 
-        // Always wait for thread to finish for clean lifecycle.
-        // If we timed out, the handler may still be running — wait for it.
-        LHandlerThread.WaitFor;
-        LElapsed := MilliSecondsBetween(Now, LStartTime);
-        LHandlerErr := LHandlerThread.TakeError; // Transfer ownership
+        if LTimedOut then
+        begin
+          // C-CON-08: abandon join — free worker slot; leak handler thread with warning.
+          // TerminateThread is forbidden; FreeOnTerminate lets the OS reclaim after handler exits.
+          LHandlerThread.FreeOnTerminate := True;
+          LHandlerErr := LHandlerThread.TakeError;
+          LHandlerThread := nil;
+          LElapsed := MilliSecondsBetween(Now, LStartTime);
+          {$IFDEF MSWINDOWS}
+          OutputDebugString(PChar(Format(
+            'DeepBase.WorkerQueue: job timed out after %dms; abandoning handler thread (worker slot released)',
+            [LTimeoutMs])));
+          {$ENDIF}
+        end
+        else
+        begin
+          LHandlerThread.WaitFor;
+          LElapsed := MilliSecondsBetween(Now, LStartTime);
+          LHandlerErr := LHandlerThread.TakeError;
+        end;
       finally
-        LHandlerThread.Free;
+        if LHandlerThread <> nil then
+          LHandlerThread.Free;
       end;
     finally
       FreeAndNil(LDoneEvt);

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DB.DoQry - DoQry 集成模块测试
   
   说明: 测试 DeepBase.DB.DoQry 模块的核心功�?
@@ -1292,8 +1292,9 @@ end;
 
 procedure TTestDeepBaseDoQry.Test_PreparedPool_ConcurrentSameSql_DoesNotCrossContaminateParams;
 const
-  CThreadCount = 6;
-  CIterations = 25;
+  CThreadCount = 8;
+  CIterations = 40;
+  CBursts = 3;
   SQL = 'SELECT :val AS v';
 var
   SharedDbPath: string;
@@ -1303,15 +1304,11 @@ var
   StartGate: TCountdownEvent;
   ErrorCount: Integer;
   MismatchCount: Integer;
-  I: Integer;
+  I, Burst: Integer;
 begin
-  // REVIEW5-DATA-007: every worker runs the SAME parameterized SQL on the SAME
-  // shared connection with pooling enabled, binding its own :val each call.
-  // Without the InUseCount guard each concurrent caller would receive the same
-  // live TFDQuery and clobber the others' bound parameter / active result set
-  // ("cannot perform this operation on an active dataset" or wrong :val). With
-  // the guard, concurrent in-use lookups hand out fresh queries, so every worker
-  // always reads back its own value.
+  // REVIEW5-DATA-007 / CR-608: same SQL + shared connection + pooling.
+  // InUseCount prevents sharing one TFDQuery; FIX-7 serializes FireDAC use of
+  // the connection. Bursts raise pressure without sleep masks.
   //
   // A file-backed WAL database is used (rather than :memory:) so concurrent
   // readers on the shared connection do not collide on SQLite's per-connection
@@ -1337,57 +1334,60 @@ begin
 
   UniDbClearPreparedStatements;
   UniDbSetPreparedStatementPooling(True);
-  StartGate := TCountdownEvent.Create(1);
   try
     ErrorCount := 0;
     MismatchCount := 0;
-    SetLength(Tasks, CThreadCount);
-    for I := 0 to CThreadCount - 1 do
+
+    for Burst := 1 to CBursts do
     begin
-      var WorkerIndex := I;
-      Tasks[I] := TTask.Run(
-        procedure
-        var
-          Data: TFDMemTable;
-          Iter: Integer;
-          Payload: string;
-          Expected: Integer;
-          Actual: Variant;
+      StartGate := TCountdownEvent.Create(1);
+      try
+        SetLength(Tasks, CThreadCount);
+        for I := 0 to CThreadCount - 1 do
         begin
-          try
-            // Park all workers until the gate signals, so the first burst of
-            // GetOrCreatePreparedQuery calls lands on a cold pool together and
-            // maximizes the chance of overlapping InUseCount > 0 lookups.
-            StartGate.WaitFor;
-
-            for Iter := 0 to CIterations - 1 do
+          var WorkerIndex := I;
+          Tasks[I] := TTask.Run(
+            procedure
+            var
+              Data: TFDMemTable;
+              Iter: Integer;
+              Payload: string;
+              Expected: Integer;
+              Actual: Variant;
             begin
-              Expected := WorkerIndex * 1000 + Iter;
-              Payload := Format('{"val":%d}', [Expected]);
-              Data := nil;
               try
-                UniDbSelect(SQL, Payload, Data, Ctx);
-                if (Data = nil) or Data.Eof then
-                  TInterlocked.Increment(MismatchCount)
-                else
+                StartGate.WaitFor;
+                for Iter := 0 to CIterations - 1 do
                 begin
-                  Actual := Data.FieldByName('v').AsVariant;
-                  if Integer(Actual) <> Expected then
-                    TInterlocked.Increment(MismatchCount);
+                  Expected := WorkerIndex * 1000 + Iter;
+                  Payload := Format('{"val":%d}', [Expected]);
+                  Data := nil;
+                  try
+                    UniDbSelect(SQL, Payload, Data, Ctx);
+                    if (Data = nil) or Data.Eof then
+                      TInterlocked.Increment(MismatchCount)
+                    else
+                    begin
+                      Actual := Data.FieldByName('v').AsVariant;
+                      if Integer(Actual) <> Expected then
+                        TInterlocked.Increment(MismatchCount);
+                    end;
+                  finally
+                    Data.Free;
+                  end;
                 end;
-              finally
-                Data.Free;
+              except
+                TInterlocked.Increment(ErrorCount);
               end;
-            end;
-          except
-            TInterlocked.Increment(ErrorCount);
-          end;
-        end);
-    end;
+            end);
+        end;
 
-    // Release all workers at once.
-    StartGate.Signal;
-    TTask.WaitForAll(Tasks);
+        StartGate.Signal;
+        TTask.WaitForAll(Tasks);
+      finally
+        StartGate.Free;
+      end;
+    end;
 
     Assert.AreEqual(0, ErrorCount,
       'Concurrent same-SQL pooled queries must not raise (no shared active cursor)');
@@ -1396,7 +1396,6 @@ begin
   finally
     UniDbSetPreparedStatementPooling(False);
     UniDbClearPreparedStatements;
-    StartGate.Free;
     SharedConn.Free;
     TFile.Delete(SharedDbPath);
   end;

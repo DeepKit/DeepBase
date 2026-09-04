@@ -755,29 +755,37 @@ begin
   if Assigned(FPool) then
   begin
     var LUseTime := UseTime;
-    // DATA-R3-001 (BUG-431): 归还前必须复位连接状态, 否则下个借用者继承脏连接
-    // —— 残留未提交事务 (SQLite: "cannot start a transaction within a transaction";
-    //   PG/MySQL: 可能读到上一调用方未提交的中间数据甚至把别人的 DML 一起提交)
-    //   以及隔离级别泄漏. 必须在持 FPool.FLock 前做事务复位 (复位本身是连接级操作,
-    //   不涉及池状态), 然后再持锁置 csIdle, 保证复位与空闲可见性原子.
+    var LDoReleaseStats := False;
+    // DATA-R3-001 (BUG-431): reset dirty connection state before returning to pool.
     ResetConnectionState;
     FPool.FLock.Enter;
     try
+      // P-DB-P1: only csInUse may return to idle. Invalidate must stick; double
+      // Release must be a no-op (no SetEvent / no TotalReleases bump).
+      if FState = csInvalid then
+      begin
+        FPool.DoPoolEvent(peConnectionReleased,
+          'release after invalidate, discarded');
+        Exit;
+      end;
+      if FState <> csInUse then
+      begin
+        FPool.DoPoolEvent(peConnectionReleased,
+          Format('duplicate or unexpected Release ignored (state=%d)', [Ord(FState)]));
+        Exit;
+      end;
+
       FState := csIdle;
       FLastUsedAt := Now;
       FOwnerThreadId := 0;
       FLeakWarned := False;
-      // BUG EXP-P1-014 fix: signal availability WHILE holding the pool lock.
-      // If SetEvent were called outside the lock, a concurrent waiter could
-      // (a) acquire the lock, find this connection csIdle + in-use it, and
-      // then (b) see SetEvent fire afterwards - the signal would be wasted
-      // because no idle connection remains (lost-wakeup / missed-signal).
-      // Holding the lock during SetEvent ensures the waiter that observes
-      // csIdle also observes the corresponding signal, and vice-versa.
       FPool.FAvailableEvent.SetEvent;
+      LDoReleaseStats := True;
     finally
       FPool.FLock.Leave;
     end;
+    if not LDoReleaseStats then
+      Exit;
     FPool.DoPoolEvent(peConnectionReleased, Format('Connection released, use time: %.2f sec',
       [LUseTime.TotalSeconds]));
     FPool.FStatsLock.Enter;
@@ -790,9 +798,18 @@ begin
 end;
 procedure TPooledConnection.Invalidate;
 begin
-  FState := csInvalid;
   if Assigned(FPool) then
+  begin
+    FPool.FLock.Enter;
+    try
+      FState := csInvalid;
+    finally
+      FPool.FLock.Leave;
+    end;
     FPool.DoPoolEvent(peConnectionInvalidated, 'Connection marked invalid');
+  end
+  else
+    FState := csInvalid;
 end;
 
 // DATA-R3-001 (BUG-431): 归还连接前复位脏状态. 回滚调用方残留的未提交事务,

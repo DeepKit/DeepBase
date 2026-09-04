@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.EventBus - Publish-Subscribe Event Bus
   
   A flexible event bus implementation for decoupled component communication.
@@ -523,6 +523,23 @@ var
 begin
   WaitForAsyncHandlers(30000);
 
+  // C-CON-06: flush any TThread.Queue callbacks still pending on the main thread
+  // after async count drained (Queue work may race TrackAsyncEnd ordering).
+  if TThread.CurrentThread.ThreadID = MainThreadID then
+  begin
+    // Already on main thread — process queued procs via empty Synchronize noop is N/A;
+    // Queue items ahead of us run when we return to the message loop. Force a yield:
+    CheckSynchronize;
+  end
+  else
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        // Barrier: runs on main thread after previously queued procs for this bus.
+      end);
+
+  WaitForAsyncHandlers(5000);
+
   FLock.Enter;
   try
     // BASIC-023: invalidate all live TSubscription tokens so external
@@ -955,9 +972,15 @@ begin
         LHandler(LEvent)
       else
       begin
+        // C-CON-06: TrackAsync so Destroy drain waits for queued main-thread work.
+        TrackAsyncBegin;
         QueueProc := procedure
           begin
-            LHandler(LEvent);
+            try
+              LHandler(LEvent);
+            finally
+              TrackAsyncEnd;
+            end;
           end;
         TThread.Queue(nil, QueueProc);
       end;

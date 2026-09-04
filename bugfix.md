@@ -2173,3 +2173,48 @@ DeepFlow 模块未接�?`DeepBaseTests.dpr` 测试工程、`THTTPClient` 在构
 - **问题**: 按 Connection sweep 时不跳过 in-use prepared entry → UAF/泄漏
 - **修复**: `InUseCount > 0` 时跳过并 DEBUG 日志
 - **回归**: `Tests/Regression/Test.Regression.BUG339_DoQrySweepInUse.pas`
+
+
+### P1 — 并发与池生命周期（WO-20260903-001）
+
+#### BUG-341 ObjectPool 回调持 FLock ✅
+- **文件**: Core/DeepBase.ObjectPool.pas
+- **问题**: Created/Acquired/Released 回调在持 FLock 时触发 → 重入死锁
+- **修复**: 回调移出 FLock；EnsureMinSize 不在 Release 持锁路径调用
+- **回归**: Tests/Regression/Test.Regression.BUG341_ObjectPoolCallbackOutsideLock.pas
+
+#### BUG-342 EventBus MainThread Queue Destroy 竞态 ✅
+- **文件**: Core/DeepBase.EventBus.pas
+- **问题**: dmMainThread 队列 handler 无 TrackAsync；Destroy 可能在主线程 drain 前返回
+- **修复**: Queue 路径 TrackAsyncBegin/End；Destroy Synchronize barrier + 二次 WaitForAsyncHandlers
+- **回归**: Tests/Regression/Test.Regression.BUG342_EventBusMainThreadDrain.pas
+
+#### BUG-343 Scheduler 并发 Start 竞态 ✅
+- **文件**: Core/DeepBase.Scheduler.pas
+- **问题**: Start/Stop 无生命周期互斥 → 并发 Start 双开
+- **修复**: FLifecycleLock；并发 Start 幂等
+- **回归**: Tests/Regression/Test.Regression.BUG343_SchedulerStartRace.pas
+
+#### BUG-344 WorkerQueue 超时占槽 ✅
+- **文件**: Core/DeepBase.WorkerQueue.pas
+- **问题**: 超时仍 WaitFor 占 worker 槽
+- **修复**: 超时 FreeOnTerminate、放弃 join、释放槽
+- **回归**: Tests/Regression/Test.Regression.BUG344_WorkerQueueTimeoutSlotReuse.pas
+
+#### BUG-345 DB.Pool Invalidate/双 Release ✅
+- **文件**: Persistence/DeepBase.DB.Pool.pas
+- **问题**: Release 可把已 Invalidate 连接还 idle；双 Release 危险
+- **修复**: 仅 csInUse→idle；Invalidate 粘性；双 Release 无副作用
+- **回归**: Tests/Regression/Test.Regression.BUG345_PoolReleaseInvalidate.pas
+
+#### BUG-346 JobQueue SQLite 写事务模式 ✅
+- **文件**: Persistence/DeepBase.DB.JobQueue.pas
+- **问题**: 写事务与 Migrations/BEGIN IMMEDIATE 不一致 → 并发 dequeue BUSY
+- **修复**: BeginOwnWriteTransaction（SQLite IMMEDIATE）+ PRAGMA busy_timeout（不在写路径改 journal_mode）
+- **回归**: Tests/Regression/Test.Regression.BUG346_JobQueueConcurrentDequeue.pas
+
+#### BUG-347 / CR-608 DoQry 连接并发 Open/Close ✅
+- **文件**: Persistence/DeepBase.DB.DoQry.pas
+- **问题**: 共享 TFDConnection 多线程 Open/Close 损坏 FireDAC 内部列表（CR-608）
+- **修复**: 连接级 TMonitor 串行化 Select/Exec/Scalar/InsertReturningId；Clear 不再整表清 index
+- **回归**: Tests/Regression/Test.Regression.BUG347_DoQryConnectionSerialize.pas；证据 TestResults/WO-20260903-001/cr608-post/（20/20）
