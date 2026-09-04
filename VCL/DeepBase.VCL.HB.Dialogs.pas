@@ -561,6 +561,7 @@ begin
       Ev.BeforeState := 'Prompting';
       Ev.AfterState := 'Confirmed';
       Ev.ActionType := 'Confirm';
+      Ev.ErrorCode := 0;
       Ev.SupportDeflected := True;
 
       if not THbTouchpointEngine.Instance.IsRegistered('tp_dialog_confirm') then

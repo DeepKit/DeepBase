@@ -50,20 +50,20 @@ type
   /// </summary>
   TLifecycleMockTouchpoint = class(TInterfacedObject, IHbTouchpoint)
   private
-    FTouchpointId: string;
+    FId: string;
     FSurfaceId: string;
     FLevel: THbTouchpointLevel;
   public
     constructor Create(const AId, ASurface: string; ALevel: THbTouchpointLevel);
-    function GetTouchpointId: string;
-    function GetSurfaceId: string;
+    function GetID: string;
     function GetLevel: THbTouchpointLevel;
-    function GetTargetState: string;
-    function GetMetricDefinitions: TArray<TMetricDefinition>;
-    function TransformState(const ACurrentState: string; const AActionContext: string): string;
-    function EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
-    function ValidateZeroSupportClosure: Boolean;
-    function EvaluateHealth: Double;
+    function GetBeforeState: string;
+    function GetAction: string;
+    function GetAfterState: string;
+    function GetMeasure: TMetricDefinition;
+    function EmitEvidence: TTouchEvidence;
+    procedure ExecuteNextAction;
+    procedure ExecuteFallbackAction;
   end;
 
   [TestFixture]
@@ -115,19 +115,14 @@ end;
 constructor TLifecycleMockTouchpoint.Create(const AId, ASurface: string; ALevel: THbTouchpointLevel);
 begin
   inherited Create;
-  FTouchpointId := AId;
+  FId := AId;
   FSurfaceId := ASurface;
   FLevel := ALevel;
 end;
 
-function TLifecycleMockTouchpoint.GetTouchpointId: string;
+function TLifecycleMockTouchpoint.GetID: string;
 begin
-  Result := FTouchpointId;
-end;
-
-function TLifecycleMockTouchpoint.GetSurfaceId: string;
-begin
-  Result := FSurfaceId;
+  Result := FId;
 end;
 
 function TLifecycleMockTouchpoint.GetLevel: THbTouchpointLevel;
@@ -135,34 +130,48 @@ begin
   Result := FLevel;
 end;
 
-function TLifecycleMockTouchpoint.GetTargetState: string;
+function TLifecycleMockTouchpoint.GetBeforeState: string;
 begin
   Result := 'Active';
 end;
 
-function TLifecycleMockTouchpoint.GetMetricDefinitions: TArray<TMetricDefinition>;
+function TLifecycleMockTouchpoint.GetAction: string;
 begin
-  SetLength(Result, 0);
+  Result := 'Click';
 end;
 
-function TLifecycleMockTouchpoint.TransformState(const ACurrentState: string; const AActionContext: string): string;
+function TLifecycleMockTouchpoint.GetAfterState: string;
 begin
   Result := 'Active';
 end;
 
-function TLifecycleMockTouchpoint.EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
+function TLifecycleMockTouchpoint.GetMeasure: TMetricDefinition;
 begin
-  Result := True;
+  FillChar(Result, SizeOf(Result), 0);
+  Result.MetricKey := 'SDR';
 end;
 
-function TLifecycleMockTouchpoint.ValidateZeroSupportClosure: Boolean;
+function TLifecycleMockTouchpoint.EmitEvidence: TTouchEvidence;
 begin
-  Result := True;
+  FillChar(Result, SizeOf(Result), 0);
+  Result.TouchpointId := FId;
+  Result.SurfaceId := FSurfaceId;
+  Result.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+  Result.DwellTimeMs := 0;
+  Result.Success := True;
+  Result.BeforeState := 'Active';
+  Result.AfterState := 'Active';
+  Result.ActionType := 'Click';
+  Result.ErrorCode := 0;
+  Result.SupportDeflected := True;
 end;
 
-function TLifecycleMockTouchpoint.EvaluateHealth: Double;
+procedure TLifecycleMockTouchpoint.ExecuteNextAction;
 begin
-  Result := 1.0;
+end;
+
+procedure TLifecycleMockTouchpoint.ExecuteFallbackAction;
+begin
 end;
 
 { TTestHbLifecycle }

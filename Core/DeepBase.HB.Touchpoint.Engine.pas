@@ -76,14 +76,16 @@ type
     class property Instance: THbTouchpointEngine read FInstance;
 
     // 触点登记与注销
+    procedure RegisterTouchpoint(const ATouchpoint: IHbTouchpoint); overload;
     procedure RegisterTouchpoint(const ATouchpointId: string; ALevel: THbTouchpointLevel;
-      const ASurfaceId: string = ''; const ATargetState: string = '');
+      const ASurfaceId: string = ''; const ATargetState: string = ''); overload;
     procedure UnregisterTouchpoint(const ATouchpointId: string);
     function IsRegistered(const ATouchpointId: string): Boolean;
     function TryGetRegistration(const ATouchpointId: string; out AReg: THbTouchpointRegistration): Boolean;
     function GetRegisteredCount: Integer;
 
     // 分级上报 API (tlCritical: 全量 11 字段, tlStandard: 轻量 3 字段, 未登记: 拒绝/零开销)
+    function RecordTouchpoint(const ATouchpoint: IHbTouchpoint): Boolean;
     function EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
 
     // Grid 聚合采样 API (每 N 次同类行交互合并为一条聚合证据)
@@ -148,6 +150,13 @@ begin
   FBuffer.Write(AEvidence);
 end;
 
+procedure THbTouchpointEngine.RegisterTouchpoint(const ATouchpoint: IHbTouchpoint);
+begin
+  if ATouchpoint = nil then
+    Exit;
+  RegisterTouchpoint(ATouchpoint.GetID, ATouchpoint.GetLevel, '', ATouchpoint.GetAfterState);
+end;
+
 procedure THbTouchpointEngine.RegisterTouchpoint(const ATouchpointId: string; ALevel: THbTouchpointLevel;
   const ASurfaceId: string; const ATargetState: string);
 var
@@ -210,6 +219,14 @@ begin
   finally
     FRegistryLock.Leave;
   end;
+end;
+
+function THbTouchpointEngine.RecordTouchpoint(const ATouchpoint: IHbTouchpoint): Boolean;
+begin
+  Result := False;
+  if ATouchpoint = nil then
+    Exit;
+  Result := EmitEvidence(ATouchpoint.EmitEvidence);
 end;
 
 function THbTouchpointEngine.EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
@@ -296,11 +313,12 @@ begin
       Ev.TouchpointId := Agg.TouchpointId;
       Ev.SurfaceId := Agg.SurfaceId;
       Ev.TimestampUtc := Agg.LastTimestampUtc;
-      Ev.DwellTimeMs := Integer(Agg.LastTimestampUtc - Agg.FirstTimestampUtc);
+      Ev.DwellTimeMs := Cardinal(Agg.LastTimestampUtc - Agg.FirstTimestampUtc);
       Ev.Success := (Agg.SuccessCount > 0);
       Ev.BeforeState := 'Aggregated';
       Ev.AfterState := 'Processed';
       Ev.ActionType := Format('GridAggregated:%d', [Agg.AccumulatedCount]);
+      Ev.ErrorCode := 0;
       Ev.SupportDeflected := True;
 
       PushToBuffer(Ev);
@@ -328,11 +346,12 @@ begin
         Ev.TouchpointId := Pair.Value.TouchpointId;
         Ev.SurfaceId := Pair.Value.SurfaceId;
         Ev.TimestampUtc := Pair.Value.LastTimestampUtc;
-        Ev.DwellTimeMs := Integer(Pair.Value.LastTimestampUtc - Pair.Value.FirstTimestampUtc);
+        Ev.DwellTimeMs := Cardinal(Pair.Value.LastTimestampUtc - Pair.Value.FirstTimestampUtc);
         Ev.Success := (Pair.Value.SuccessCount > 0);
         Ev.BeforeState := 'Aggregated';
         Ev.AfterState := 'Processed';
         Ev.ActionType := Format('GridAggregated:%d', [Pair.Value.AccumulatedCount]);
+        Ev.ErrorCode := 0;
         Ev.SupportDeflected := True;
         PushToBuffer(Ev);
       end;

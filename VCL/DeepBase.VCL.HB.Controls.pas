@@ -433,9 +433,8 @@ begin
   FTouchpoint := ATouchpoint;
   if FTouchpoint <> nil then
   begin
-    FTouchpointId := FTouchpoint.GetTouchpointId;
-    FSurfaceId := FTouchpoint.GetSurfaceId;
-    FTargetState := FTouchpoint.GetTargetState;
+    FTouchpointId := FTouchpoint.GetID;
+    FTargetState := FTouchpoint.GetAfterState;
     THbTouchpointEngine.Instance.RegisterTouchpoint(
       FTouchpointId,
       FTouchpoint.GetLevel,
@@ -457,19 +456,24 @@ var
 begin
   if (FTouchpoint <> nil) or (FTouchpointId <> '') then
   begin
-    FillChar(Ev, SizeOf(Ev), 0);
     if FTouchpoint <> nil then
     begin
-      Ev.TouchpointId := FTouchpoint.GetTouchpointId;
-      Ev.SurfaceId := FTouchpoint.GetSurfaceId;
+      Ev := FTouchpoint.EmitEvidence;
+      if Ev.TouchpointId = '' then
+        Ev.TouchpointId := FTouchpoint.GetID;
+      if (Ev.SurfaceId = '') and (FSurfaceId <> '') then
+        Ev.SurfaceId := FSurfaceId;
     end
     else
     begin
+      FillChar(Ev, SizeOf(Ev), 0);
       Ev.TouchpointId := FTouchpointId;
       Ev.SurfaceId := FSurfaceId;
     end;
-    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
-    Ev.ActionType := 'Render';
+    if Ev.TimestampUtc <= 0 then
+      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    if Ev.ActionType = '' then
+      Ev.ActionType := 'Render';
     Ev.Success := True;
     THbTouchpointEngine.Instance.EmitEvidence(Ev);
   end;
@@ -761,14 +765,17 @@ begin
   inherited Click;
   if FTouchpoint <> nil then
   begin
-    FillChar(Ev, SizeOf(Ev), 0);
-    Ev.TouchpointId := FTouchpoint.GetTouchpointId;
-    Ev.SurfaceId := FTouchpoint.GetSurfaceId;
-    Ev.ActionType := 'Click';
-    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev := FTouchpoint.EmitEvidence;
+    if Ev.TouchpointId = '' then
+      Ev.TouchpointId := FTouchpoint.GetID;
+    if (Ev.SurfaceId = '') and (FSurfaceId <> '') then
+      Ev.SurfaceId := FSurfaceId;
+    if Ev.ActionType = '' then
+      Ev.ActionType := 'Click';
+    if Ev.TimestampUtc <= 0 then
+      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
     Ev.Success := True;
     Ev.SupportDeflected := True;
-    FTouchpoint.EmitEvidence(Ev);
     THbTouchpointEngine.Instance.EmitEvidence(Ev);
   end
   else if FTouchpointId <> '' then

@@ -8,66 +8,62 @@
 
 unit DeepBase.HB.Touchpoint.Types;
 
-{ IMPLICIT_STRING_CAST OFF}
-
 interface
 
 uses
   System.SysUtils,
-  System.Classes,
-  System.Generics.Collections;
+  System.Classes;
 
 type
   /// <summary>
-  /// 触点重要度分级（三级分级策略）
+  /// 触点重要度分级
   /// </summary>
   THbTouchpointLevel = (
-    tlCritical,   // 关键触点：全量度量（DwellTime/State/Action/11 字段完整证据），100% 采样
-    tlStandard    // 常规触点：轻量度量（仅 TouchpointId + ActionType + TimestampUtc），降采样或聚合
-    // 注：非触点由未实现 IHbTouchpoint 或未在引擎登记的控件自然表达，零采集、零开销
+    tlCritical,   // 关键转化触点（确认对话、提交、支付、高危门禁）
+    tlStandard    // 常规交互触点（常规按钮、输入框、菜单项）
   );
 
   /// <summary>
-  /// 触点发生不可逆状态转换时沉淀的确定性证据结构体
+  /// 触点行为证据数据块
   /// </summary>
   TTouchEvidence = record
-    TouchpointId: string;       // 触点唯一标识符（如 'tp_gold_checkout_confirm'）
-    SurfaceId: string;          // 宿主界面/窗体标识（如 'frm_checkout'）
-    TimestampUtc: Int64;        // 发生时间戳 (Unix Epoch ms, UTC)
-    DwellTimeMs: Integer;       // 用户在该触点/容器的注视/停留毫秒数
-    Success: Boolean;           // 转换是否达成预期成功状态
-    BeforeState: string;        // 交互前用户/业务状态（如 'Browsing'）
-    AfterState: string;         // 交互后跃迁目标状态（如 'OrderPlaced'）
-    ActionType: string;         // 驱动跃迁的物理动作（如 'Click' / 'VoiceConfirm' / 'KeyEnter'）
-    ExitPosition: string;       // 离开/跳出位置（若转换失败/中断）
-    ErrorCode: string;          // 错误码（Fail-Closed 时记录，成功为空）
-    SupportDeflected: Boolean;  // 本次交互是否成功避免了客服介入（零客服闭环证据）
+    TouchpointId: string;
+    SurfaceId: string;
+    TimestampUtc: Int64;
+    DwellTimeMs: Cardinal;
+    Success: Boolean;
+    BeforeState: string;
+    AfterState: string;
+    ActionType: string;
+    ExitPosition: string;
+    ErrorCode: Integer;
+    SupportDeflected: Boolean;
   end;
 
   /// <summary>
-  /// 四自指标目标与实测对照记录
+  /// 触点指标定义与度量契约
   /// </summary>
   TMetricDefinition = record
-    MetricKey: string;          // 指标标识（如 'SDR' / 'FCR' / 'CSAT' / 'TTF'）
-    BaseValue: Double;          // 历史/行业基线值
-    TargetValue: Double;        // 本触点设定的目标值
-    AchievedValue: Double;      // 运行时采集的实测值
+    MetricKey: string;
+    BaseValue: Double;
+    TargetValue: Double;
+    AchievedValue: Double;
   end;
 
   /// <summary>
-  /// 触点核心代码级契约接口
+  /// HB 触点核心接口 - 每一个合格触点必须实现的唯一标准
   /// </summary>
   IHbTouchpoint = interface
     ['{8F9B6E12-4C3D-4E5F-8A9B-1C2D3E4F5A6B}']
-    function GetTouchpointId: string;
-    function GetSurfaceId: string;
+    function GetID: string;
     function GetLevel: THbTouchpointLevel;
-    function GetTargetState: string;
-    function GetMetricDefinitions: TArray<TMetricDefinition>;
-    function TransformState(const ACurrentState: string; const AActionContext: string): string;
-    function EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
-    function ValidateZeroSupportClosure: Boolean;
-    function EvaluateHealth: Double;
+    function GetBeforeState: string;
+    function GetAction: string;
+    function GetAfterState: string;
+    function GetMeasure: TMetricDefinition;
+    function EmitEvidence: TTouchEvidence;
+    procedure ExecuteNextAction;
+    procedure ExecuteFallbackAction;
   end;
 
 implementation

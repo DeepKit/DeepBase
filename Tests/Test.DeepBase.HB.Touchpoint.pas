@@ -30,27 +30,31 @@ type
   /// </summary>
   TMockTouchpoint = class(TInterfacedObject, IHbTouchpoint)
   private
-    FTouchpointId: string;
+    FId: string;
     FSurfaceId: string;
     FLevel: THbTouchpointLevel;
-    FTargetState: string;
-    FMetrics: TArray<TMetricDefinition>;
-    FEvidences: TList<TTouchEvidence>;
+    FBeforeState: string;
+    FAction: string;
+    FAfterState: string;
+    FMeasure: TMetricDefinition;
+    FNextActionExecuted: Boolean;
+    FFallbackActionExecuted: Boolean;
   public
-    constructor Create(const AId, ASurface: string; ALevel: THbTouchpointLevel; const ATarget: string);
-    destructor Destroy; override;
+    constructor Create(const AId, ASurface: string; ALevel: THbTouchpointLevel;
+      const ABefore, AAction, AAfter: string);
 
-    function GetTouchpointId: string;
-    function GetSurfaceId: string;
+    function GetID: string;
     function GetLevel: THbTouchpointLevel;
-    function GetTargetState: string;
-    function GetMetricDefinitions: TArray<TMetricDefinition>;
-    function TransformState(const ACurrentState: string; const AActionContext: string): string;
-    function EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
-    function ValidateZeroSupportClosure: Boolean;
-    function EvaluateHealth: Double;
+    function GetBeforeState: string;
+    function GetAction: string;
+    function GetAfterState: string;
+    function GetMeasure: TMetricDefinition;
+    function EmitEvidence: TTouchEvidence;
+    procedure ExecuteNextAction;
+    procedure ExecuteFallbackAction;
 
-    property Evidences: TList<TTouchEvidence> read FEvidences;
+    property NextActionExecuted: Boolean read FNextActionExecuted;
+    property FallbackActionExecuted: Boolean read FFallbackActionExecuted;
   end;
 
   /// <summary>
@@ -96,39 +100,28 @@ implementation
 
 { TMockTouchpoint }
 
-constructor TMockTouchpoint.Create(const AId, ASurface: string; ALevel: THbTouchpointLevel; const ATarget: string);
-var
-  M: TMetricDefinition;
+constructor TMockTouchpoint.Create(const AId, ASurface: string; ALevel: THbTouchpointLevel;
+  const ABefore, AAction, AAfter: string);
 begin
   inherited Create;
-  FTouchpointId := AId;
+  FId := AId;
   FSurfaceId := ASurface;
   FLevel := ALevel;
-  FTargetState := ATarget;
-  FEvidences := TList<TTouchEvidence>.Create;
+  FBeforeState := ABefore;
+  FAction := AAction;
+  FAfterState := AAfter;
+  FNextActionExecuted := False;
+  FFallbackActionExecuted := False;
 
-  SetLength(FMetrics, 1);
-  M.MetricKey := 'SDR';
-  M.BaseValue := 0.20;
-  M.TargetValue := 0.05;
-  M.AchievedValue := 0.02;
-  FMetrics[0] := M;
+  FMeasure.MetricKey := 'SDR';
+  FMeasure.BaseValue := 0.20;
+  FMeasure.TargetValue := 0.05;
+  FMeasure.AchievedValue := 0.02;
 end;
 
-destructor TMockTouchpoint.Destroy;
+function TMockTouchpoint.GetID: string;
 begin
-  FEvidences.Free;
-  inherited Destroy;
-end;
-
-function TMockTouchpoint.GetTouchpointId: string;
-begin
-  Result := FTouchpointId;
-end;
-
-function TMockTouchpoint.GetSurfaceId: string;
-begin
-  Result := FSurfaceId;
+  Result := FId;
 end;
 
 function TMockTouchpoint.GetLevel: THbTouchpointLevel;
@@ -136,35 +129,50 @@ begin
   Result := FLevel;
 end;
 
-function TMockTouchpoint.GetTargetState: string;
+function TMockTouchpoint.GetBeforeState: string;
 begin
-  Result := FTargetState;
+  Result := FBeforeState;
 end;
 
-function TMockTouchpoint.GetMetricDefinitions: TArray<TMetricDefinition>;
+function TMockTouchpoint.GetAction: string;
 begin
-  Result := FMetrics;
+  Result := FAction;
 end;
 
-function TMockTouchpoint.TransformState(const ACurrentState: string; const AActionContext: string): string;
+function TMockTouchpoint.GetAfterState: string;
 begin
-  Result := FTargetState;
+  Result := FAfterState;
 end;
 
-function TMockTouchpoint.EmitEvidence(const AEvidence: TTouchEvidence): Boolean;
+function TMockTouchpoint.GetMeasure: TMetricDefinition;
 begin
-  FEvidences.Add(AEvidence);
-  Result := True;
+  Result := FMeasure;
 end;
 
-function TMockTouchpoint.ValidateZeroSupportClosure: Boolean;
+function TMockTouchpoint.EmitEvidence: TTouchEvidence;
 begin
-  Result := True;
+  FillChar(Result, SizeOf(Result), 0);
+  Result.TouchpointId := FId;
+  Result.SurfaceId := FSurfaceId;
+  Result.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+  Result.DwellTimeMs := 850;
+  Result.Success := True;
+  Result.BeforeState := FBeforeState;
+  Result.AfterState := FAfterState;
+  Result.ActionType := FAction;
+  Result.ExitPosition := '';
+  Result.ErrorCode := 0;
+  Result.SupportDeflected := True;
 end;
 
-function TMockTouchpoint.EvaluateHealth: Double;
+procedure TMockTouchpoint.ExecuteNextAction;
 begin
-  Result := 1.0;
+  FNextActionExecuted := True;
+end;
+
+procedure TMockTouchpoint.ExecuteFallbackAction;
+begin
+  FFallbackActionExecuted := True;
 end;
 
 { TMockStateSlot }
@@ -209,39 +217,40 @@ end;
 procedure TTestHbTouchpoint.TestTouchpointContract_MethodsAndEvidence;
 var
   Tp: IHbTouchpoint;
+  MockTp: TMockTouchpoint;
   Ev: TTouchEvidence;
-  Metrics: TArray<TMetricDefinition>;
+  Measure: TMetricDefinition;
 begin
-  Tp := TMockTouchpoint.Create('tp_mock_1', 'frm_mock', tlCritical, 'StateCompleted');
-  Assert.AreEqual('tp_mock_1', Tp.GetTouchpointId);
-  Assert.AreEqual('frm_mock', Tp.GetSurfaceId);
+  MockTp := TMockTouchpoint.Create('tp_mock_1', 'frm_mock', tlCritical, 'Browsing', 'Confirm', 'StateCompleted');
+  Tp := MockTp;
+
+  Assert.AreEqual('tp_mock_1', Tp.GetID);
   Assert.AreEqual(Ord(tlCritical), Ord(Tp.GetLevel));
-  Assert.AreEqual('StateCompleted', Tp.GetTargetState);
-  Assert.AreEqual('StateCompleted', Tp.TransformState('StateInit', 'Click'));
-  Assert.IsTrue(Tp.ValidateZeroSupportClosure);
-  Assert.IsTrue(Tp.EvaluateHealth >= 0.0);
+  Assert.AreEqual('Browsing', Tp.GetBeforeState);
+  Assert.AreEqual('Confirm', Tp.GetAction);
+  Assert.AreEqual('StateCompleted', Tp.GetAfterState);
 
-  Metrics := Tp.GetMetricDefinitions;
-  Assert.AreEqual(1, Integer(Length(Metrics)));
-  Assert.AreEqual('SDR', Metrics[0].MetricKey);
-  Assert.AreEqual(0.20, Metrics[0].BaseValue, 0.001);
-  Assert.AreEqual(0.05, Metrics[0].TargetValue, 0.001);
+  Measure := Tp.GetMeasure;
+  Assert.AreEqual('SDR', Measure.MetricKey);
+  Assert.AreEqual(0.20, Measure.BaseValue, 0.001);
+  Assert.AreEqual(0.05, Measure.TargetValue, 0.001);
 
-  FillChar(Ev, SizeOf(Ev), 0);
-  Ev.TouchpointId := Tp.GetTouchpointId;
-  Ev.SurfaceId := Tp.GetSurfaceId;
-  Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
-  Ev.DwellTimeMs := 850;
-  Ev.Success := True;
-  Ev.BeforeState := 'Browsing';
-  Ev.AfterState := 'StateCompleted';
-  Ev.ActionType := 'Confirm';
-  Ev.ExitPosition := '';
-  Ev.ErrorCode := '';
-  Ev.SupportDeflected := True;
+  Ev := Tp.EmitEvidence;
+  Assert.AreEqual('tp_mock_1', Ev.TouchpointId);
+  Assert.AreEqual('frm_mock', Ev.SurfaceId);
+  Assert.AreEqual(Cardinal(850), Ev.DwellTimeMs);
+  Assert.IsTrue(Ev.Success);
+  Assert.AreEqual('Browsing', Ev.BeforeState);
+  Assert.AreEqual('StateCompleted', Ev.AfterState);
+  Assert.AreEqual('Confirm', Ev.ActionType);
+  Assert.AreEqual(0, Ev.ErrorCode);
+  Assert.IsTrue(Ev.SupportDeflected);
 
-  Assert.IsTrue(Tp.EmitEvidence(Ev));
-  Assert.AreEqual(1, Integer((Tp as TMockTouchpoint).Evidences.Count));
+  Tp.ExecuteNextAction;
+  Assert.IsTrue(MockTp.NextActionExecuted);
+
+  Tp.ExecuteFallbackAction;
+  Assert.IsTrue(MockTp.FallbackActionExecuted);
 end;
 
 procedure TTestHbTouchpoint.TestTouchpointLevel_CriticalFullEvidence;
@@ -263,7 +272,7 @@ begin
   EvIn.AfterState := 'Paid';
   EvIn.ActionType := 'SubmitPayment';
   EvIn.ExitPosition := 'None';
-  EvIn.ErrorCode := '';
+  EvIn.ErrorCode := 0;
   EvIn.SupportDeflected := True;
 
   Assert.IsTrue(Engine.EmitEvidence(EvIn));
@@ -273,13 +282,13 @@ begin
   Assert.AreEqual('tp_crit_order', EvOut.TouchpointId);
   Assert.AreEqual('frm_checkout', EvOut.SurfaceId);
   Assert.AreEqual(Int64(1700000000000), EvOut.TimestampUtc);
-  Assert.AreEqual(3400, EvOut.DwellTimeMs);
+  Assert.AreEqual(Cardinal(3400), EvOut.DwellTimeMs);
   Assert.IsTrue(EvOut.Success);
   Assert.AreEqual('Unpaid', EvOut.BeforeState);
   Assert.AreEqual('Paid', EvOut.AfterState);
   Assert.AreEqual('SubmitPayment', EvOut.ActionType);
   Assert.AreEqual('None', EvOut.ExitPosition);
-  Assert.AreEqual('', EvOut.ErrorCode);
+  Assert.AreEqual(0, EvOut.ErrorCode);
   Assert.IsTrue(EvOut.SupportDeflected);
 end;
 
@@ -302,7 +311,7 @@ begin
   EvIn.AfterState := 'Filtered';
   EvIn.ActionType := 'ChipToggle';
   EvIn.ExitPosition := 'Tab2';
-  EvIn.ErrorCode := 'ERR_NONE';
+  EvIn.ErrorCode := 0;
   EvIn.SupportDeflected := True;
 
   Assert.IsTrue(Engine.EmitEvidence(EvIn));
@@ -316,8 +325,8 @@ begin
   // 其余字段必须为默认零/空值（轻量开销保障）
   Assert.AreEqual('', EvOut.BeforeState);
   Assert.AreEqual('', EvOut.AfterState);
-  Assert.AreEqual(0, EvOut.DwellTimeMs);
-  Assert.AreEqual('', EvOut.ErrorCode);
+  Assert.AreEqual(Cardinal(0), EvOut.DwellTimeMs);
+  Assert.AreEqual(0, EvOut.ErrorCode);
   Assert.IsFalse(EvOut.SupportDeflected);
 end;
 
