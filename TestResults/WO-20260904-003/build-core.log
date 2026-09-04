@@ -1,0 +1,18 @@
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.PluginManager.pas(1032) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(566) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+Core\DeepBase.FeatureFlags.pas(957) Hint: H2077 Value assigned to 'TFeatureFlag.EvaluateTargeting' never used
+Core\DeepBase.Collections.pas(723) Hint: H2164 Variable 'Node' is declared but never used in 'DeepBase.Collections.TLRUCache<K,V>.Evict'
+Core\DeepBase.Collections.pas(116) Hint: H2219 Private symbol 'Evict' declared but never used
+Core\DeepBase.Diff.pas(1364) Hint: H2077 Value assigned to 'LTheirIdx' never used
+Core\DeepBase.Diff.pas(1363) Hint: H2077 Value assigned to 'LOurIdx' never used
+Core\DeepBase.Diff.pas(1362) Hint: H2077 Value assigned to 'LBaseIdx' never used
+Core\DeepBase.StateMachine.pas(867) Hint: H2077 Value assigned to 'DeepBase.StateMachine.TStateMachine<TState,TTrigger>.IsInState' never used
+Core\DeepBase.i18n.Gender.pas(583) Hint: H2164 Variable 'CharType' is declared but never used in 'TRTLUtils.IsRTLChar'
+Core\DeepBase.TestCenter.pas(532) Hint: H2164 Variable 'TestsArray' is declared but never used in 'TTestCenterManager.SaveResultsToFile'
+Core\DeepBase.Cache.pas(181) Hint: H2219 Private symbol 'DoEvict' declared but never used
+Core\DeepBase.Export.PDF.pas(731) Hint: H2077 Value assigned to 'CIDObj' never used
+Core\DeepBase.SchemaAdapter.Registry.pas(105) Hint: H2077 Value assigned to 'TSchemaAdapterRegistry.TryResolve' never used
+59562 lines, 2.94 seconds, 3295900 bytes code, 320448 bytes data.

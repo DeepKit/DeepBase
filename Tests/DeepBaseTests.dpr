@@ -167,6 +167,7 @@ uses
   Test.DeepBase.HB.Touchpoint in 'Test.DeepBase.HB.Touchpoint.pas',
   Test.DeepBase.HB.Lifecycle in 'Test.DeepBase.HB.Lifecycle.pas',
   Test.DeepBase.HB.Benchmark in 'Test.DeepBase.HB.Benchmark.pas',
+  Test.DeepBase.HB.Font in 'Test.DeepBase.HB.Font.pas',
   { Test.DeepBase.PublishConfig excluded: depends on Tools/UniPublisher unit Publisher.Config }
   Test.DeepBase.Reflection in 'Test.DeepBase.Reflection.pas',
   Test.DeepBase.RuntimeContext in 'Test.DeepBase.RuntimeContext.pas',

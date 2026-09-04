@@ -180,7 +180,7 @@ end;
 
 class function TUniTypography.Default: TUniTypography;
 begin
-  Result.FontFamily := 'Segoe UI';
+  Result.FontFamily := 'Microsoft YaHei UI';
   Result.TitleSize := 20;
   Result.SubtitleSize := 16;
   Result.BodySize := 14;

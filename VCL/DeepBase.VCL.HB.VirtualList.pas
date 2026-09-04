@@ -685,7 +685,7 @@ begin
     end;
 
     // Title + Status
-    CanvasObj.Font.Name := 'Segoe UI';
+    CanvasObj.Font.Name := Tokens.FontFamily;
     CanvasObj.Font.Size := 10;
     CanvasObj.Font.Style := [fsBold];
     CanvasObj.Font.Color := AlphaColorToColor(Tokens.Ink);

@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Gate - Compiler-Style Gate Check Panel for VCL
   
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -455,7 +455,7 @@ begin
 
     // 2. Severity Badge (Triple redundancy)
     SevColor := AlphaColorToColor(GetSeverityColor(R.Severity));
-    CanvasObj.Font.Name := 'Segoe UI';
+    CanvasObj.Font.Name := Tokens.FontFamily;
     CanvasObj.Font.Size := 9;
     CanvasObj.Font.Style := [fsBold];
     CanvasObj.Font.Color := SevColor;

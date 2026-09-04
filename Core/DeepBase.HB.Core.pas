@@ -173,6 +173,17 @@ type
 
   THbOverrideHook = reference to procedure(const AThemeId: string; var ATokens: THbTokens);
 
+const
+  HB_DEFAULT_FONT_FAMILY = 'Microsoft YaHei UI';
+  HB_FONT_FALLBACK_CANDIDATES: array[0..2] of string = (
+    'Microsoft YaHei UI',
+    'Microsoft YaHei',
+    'Segoe UI'
+  );
+
+type
+  THbFontProbeFunc = reference to function(const AFontName: string): Boolean;
+
   /// <summary>
   /// Singleton Theme Engine for HB Visual Infrastructure (Shared Core).
   /// </summary>
@@ -185,6 +196,7 @@ type
     class var FGranularity: THbGranularity;
     class var FListeners: TList<TNotifyEvent>;
     class var FSettingsBridge: TObject;
+    class var FCachedDefaultFontFamily: string;
 
     class var FOverrides: TDictionary<string, THbTokens>;
     class var FOverrideHook: THbOverrideHook;
@@ -205,6 +217,10 @@ type
     class procedure RegisterOverride(const AThemeId: string; const AOverrideTokens: THbTokens); static;
     class procedure RegisterOverrideHook(AHook: THbOverrideHook); static;
     class procedure ClearOverrides; static;
+
+    class function ResolveFontFamily(const ACandidates: array of string; AProbeFunc: THbFontProbeFunc = nil): string; static;
+    class function GetDefaultFontFamily: string; static;
+    class procedure ResetDefaultFontCache; static;
 
     class procedure ApplyTheme(const AThemeId: string; ADensity: THbDensity = hdComfortable); static;
     class procedure SetDensity(ADensity: THbDensity); static;
@@ -232,6 +248,11 @@ function GetHbSeedColor(const ASeed: string; const ATokens: THbTokens): TAlphaCo
 function BlendAlphaColor(AColor1, AColor2: TAlphaColor; ARatio: Single): TAlphaColor;
 
 implementation
+
+{$IFDEF MSWINDOWS}
+uses
+  Winapi.Windows;
+{$ENDIF}
 
 { THbThemeChangedMessage }
 
@@ -342,7 +363,7 @@ begin
   Result.BorderWidth := 1.0;
 
   // Typography Group
-  Result.FontFamily := 'Segoe UI';
+  Result.FontFamily := THbTheme.GetDefaultFontFamily;
   Result.SizeXS     := 11.0;
   Result.SizeS      := 12.5;
   Result.SizeM      := 14.0;
@@ -447,6 +468,47 @@ begin
   Result.SpaceXL := SpaceXL * DpiScale;
 end;
 
+{$IFDEF MSWINDOWS}
+function EnumFontFamExProc(var lpelfe: ENUMLOGFONTEXW; var lpntme: NEWTEXTMETRICEXW;
+  FontType: DWORD; lParam: LPARAM): Integer; stdcall;
+begin
+  PBoolean(lParam)^ := True;
+  Result := 0; // stop enumeration on first match
+end;
+
+function SystemFontExists(const AFontName: string): Boolean;
+var
+  DC: HDC;
+  LFont: TLogFontW;
+  Found: Boolean;
+begin
+  Found := False;
+  if AFontName = '' then
+    Exit(False);
+  DC := GetDC(0);
+  if DC <> 0 then
+  begin
+    try
+      FillChar(LFont, SizeOf(LFont), 0);
+      LFont.lfCharSet := DEFAULT_CHARSET;
+      if Length(AFontName) < LF_FACESIZE then
+        Move(PChar(AFontName)^, LFont.lfFaceName[0], Length(AFontName) * SizeOf(Char))
+      else
+        Move(PChar(AFontName)^, LFont.lfFaceName[0], (LF_FACESIZE - 1) * SizeOf(Char));
+      EnumFontFamiliesExW(DC, LFont, @EnumFontFamExProc, LPARAM(@Found), 0);
+    finally
+      ReleaseDC(0, DC);
+    end;
+  end;
+  Result := Found;
+end;
+{$ELSE}
+function SystemFontExists(const AFontName: string): Boolean;
+begin
+  Result := True;
+end;
+{$ENDIF}
+
 { THbTheme }
 
 class constructor THbTheme.Create;
@@ -460,6 +522,7 @@ begin
   FCurrentDensity := hdComfortable;
   FGranularity := gMedium;
   FSettingsBridge := nil;
+  FCachedDefaultFontFamily := '';
 end;
 
 class destructor THbTheme.Destroy;
@@ -468,6 +531,52 @@ begin
   FOverrides.Free;
   FRegistry.Free;
   FLock.Free;
+  FCachedDefaultFontFamily := '';
+end;
+
+class function THbTheme.ResolveFontFamily(const ACandidates: array of string; AProbeFunc: THbFontProbeFunc): string;
+var
+  Candidate: string;
+begin
+  for Candidate in ACandidates do
+  begin
+    if Assigned(AProbeFunc) then
+    begin
+      if AProbeFunc(Candidate) then
+        Exit(Candidate);
+    end
+    else
+    begin
+      if SystemFontExists(Candidate) then
+        Exit(Candidate);
+    end;
+  end;
+  if Length(ACandidates) > 0 then
+    Result := ACandidates[High(ACandidates)]
+  else
+    Result := HB_DEFAULT_FONT_FAMILY;
+end;
+
+class function THbTheme.GetDefaultFontFamily: string;
+begin
+  FLock.Enter;
+  try
+    if FCachedDefaultFontFamily = '' then
+      FCachedDefaultFontFamily := ResolveFontFamily(HB_FONT_FALLBACK_CANDIDATES);
+    Result := FCachedDefaultFontFamily;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+class procedure THbTheme.ResetDefaultFontCache;
+begin
+  FLock.Enter;
+  try
+    FCachedDefaultFontFamily := '';
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure THbTheme.EnsureInitialized;
