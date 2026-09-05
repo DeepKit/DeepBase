@@ -9,12 +9,12 @@
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
 - 单测基线: `TestResults/WO-20260903-001/full6/` + `pkg-fix2/`（FeaturesMeta 已绿；CR-608 绿；CR-606×2 可红）
-- 当前主线: **WO-20260903-001 已交付（待主控复核 CLOSE）**
+- 当前主线: **WO-20260903-001 已交付 · 待主控 CLOSE**（余债仅 CR-606）
 - 审计报告: `CodeReview/20260902-Framework-Audit.md`（~35 P0 / ~95 P1 actionable，Features F3–F9 未审）
 
 ---
 
-## 一、✅ WO-20260903-001 并发与池生命周期 P1 + CR-608
+## 一、✅ WO-20260903-001 并发与池生命周期 P1 + CR-608（交付完成）
 
 > 工单: docs/WO-20260903-001-开发甲-并发与池生命周期P1批次工单.md · brief: docs/brief-WO-20260903-001-开发甲.md · 交付: docs/WO-20260903-001-开发甲-交付报告.md
 
