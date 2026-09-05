@@ -19,3 +19,7 @@ powershell -ExecutionPolicy Bypass -File .\Scripts\run_tests.ps1 -Type Unit -CI 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Scripts\check_doc_links.ps1 -Path <doc-path>
 ```
+
+## 会话章程与跨线移交
+
+本仓开发会话的章程边界与跨线议题移交纪律，见 `AGENTS.md` 的「会话章程与跨线移交纪律」节（BOUNDARY-20260905-001）。
