@@ -25,9 +25,11 @@ uses
   System.Classes,
   System.Types,
   System.UITypes,
+  System.IOUtils,
   Vcl.Forms,
   Vcl.Controls,
   Vcl.Graphics,
+  Vcl.Imaging.pngimage,
   DeepBase.HB.Core,
   DeepBase.HB.Waterfall.Types,
   DeepBase.HB.Grid.Types,
@@ -54,7 +56,8 @@ uses
   DeepBase.VCL.HB.Inputs,
   DeepBase.VCL.HB.Glass,
   DeepBase.HB.Choice.Types,
-  DeepBase.VCL.HB.Choice;
+  DeepBase.VCL.HB.Choice,
+  DeepBase.VCL.HB.Theme;
 
 type
   TTestGridAccessor = class(THbDataGrid);
@@ -177,6 +180,12 @@ type
 
     [Test]
     procedure Test_HbGranularity_Six_Levels_And_Waterfall_Filter;
+
+    [Test]
+    procedure Test_SurfaceProvider_Resolution_AndCardContainerBg;
+
+    [Test]
+    procedure Test_SurfaceProvider_VisualVerification_ExportCardScreenshots;
   end;
 
 implementation
@@ -1241,6 +1250,126 @@ begin
     THbTheme.SetDensity(hdCompact);
     Assert.AreEqual(Ord(gFinest), Ord(WF.Granularity));
     THbTheme.SetDensity(hdComfortable);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_SurfaceProvider_Resolution_AndCardContainerBg;
+var
+  Form: TForm;
+  Card: THbCard;
+  Btn: THbButton;
+  PageCtrl: THbPageControl;
+  TabBtn: THbButton;
+begin
+  Form := TForm.CreateNew(nil);
+  try
+    Form.Color := AlphaColorToColor(THbTheme.Tokens.Surface);
+
+    // 1. Standalone button on Form (Parent has no IHbSurfaceProvider -> fallback to Tokens.Surface)
+    Btn := THbButton.Create(Form);
+    Btn.Parent := Form;
+    Assert.AreEqual(THbTheme.Tokens.Surface, Btn.GetContainerBgColor, 'Standalone button on Form must resolve Tokens.Surface');
+
+    // 2. Button placed inside THbCard
+    Card := THbCard.Create(Form);
+    Card.Parent := Form;
+    Card.Kind := ckSurface;
+
+    Btn.Parent := Card;
+    Assert.AreEqual(THbTheme.Tokens.SurfaceAlt, Btn.GetContainerBgColor, 'Button inside ckSurface Card must resolve SurfaceAlt');
+
+    Card.Kind := ckSunken;
+    Assert.AreEqual(THbTheme.Tokens.Sunken, Btn.GetContainerBgColor, 'Button inside ckSunken Card must resolve Sunken');
+
+    // 3. Button placed inside THbPageControl
+    PageCtrl := THbPageControl.Create(Form);
+    PageCtrl.Parent := Form;
+    PageCtrl.AddTab('Tab1', 'Tab 1');
+
+    TabBtn := THbButton.Create(Form);
+    TabBtn.Parent := PageCtrl;
+    Assert.AreEqual(THbTheme.Tokens.Surface, TabBtn.GetContainerBgColor, 'Button inside PageControl must resolve Surface');
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_SurfaceProvider_VisualVerification_ExportCardScreenshots;
+var
+  Form: TForm;
+  Card: THbCard;
+  BtnPill, BtnRect: THbButton;
+  Bmp: TBitmap;
+  PNG: TPngImage;
+  OutDir, FilePath: string;
+  Kind: THbCardKind;
+  KindName: string;
+begin
+  OutDir := TPath.Combine(ExtractFilePath(ParamStr(0)), '..\..\TestResults\WO-20260905-001\screenshots');
+  if not TDirectory.Exists(OutDir) then
+    OutDir := 'TestResults\WO-20260905-001\screenshots';
+  if not TDirectory.Exists(OutDir) then
+    OutDir := TPath.Combine(GetCurrentDir, 'TestResults\WO-20260905-001\screenshots');
+  if not TDirectory.Exists(OutDir) then
+    TDirectory.CreateDirectory(OutDir);
+
+  Form := TForm.CreateNew(nil);
+  try
+    Form.SetBounds(0, 0, 420, 260);
+    Form.Color := AlphaColorToColor(THbTheme.Tokens.Surface);
+
+    Card := THbCard.Create(Form);
+    Card.Parent := Form;
+    Card.SetBounds(20, 20, 380, 200);
+
+    BtnPill := THbButton.Create(Form);
+    BtnPill.Parent := Card;
+    BtnPill.SetBounds(24, 60, 150, 42);
+    BtnPill.Caption := 'Pill Primary';
+    BtnPill.Kind := bkPrimary;
+    BtnPill.Pill := True;
+
+    BtnRect := THbButton.Create(Form);
+    BtnRect.Parent := Card;
+    BtnRect.SetBounds(190, 60, 150, 42);
+    BtnRect.Caption := 'Soft Rounded';
+    BtnRect.Kind := bkSoft;
+    BtnRect.Pill := False;
+
+    for Kind in [ckSurface, ckSunken, ckHero, ckOutline] do
+    begin
+      Card.Kind := Kind;
+      case Kind of
+        ckSurface: KindName := 'ckSurface';
+        ckSunken:  KindName := 'ckSunken';
+        ckHero:    KindName := 'ckHero';
+        ckOutline: KindName := 'ckOutline';
+      end;
+
+      Bmp := TBitmap.Create;
+      try
+        Bmp.SetSize(Card.Width, Card.Height);
+        Bmp.Canvas.Lock;
+        try
+          Card.PaintTo(Bmp.Canvas.Handle, 0, 0);
+        finally
+          Bmp.Canvas.Unlock;
+        end;
+
+        PNG := TPngImage.Create;
+        try
+          PNG.Assign(Bmp);
+          FilePath := TPath.Combine(OutDir, Format('card_%s_button_blend.png', [KindName]));
+          PNG.SaveToFile(FilePath);
+        finally
+          PNG.Free;
+        end;
+      finally
+        Bmp.Free;
+      end;
+    end;
   finally
     Form.Free;
   end;

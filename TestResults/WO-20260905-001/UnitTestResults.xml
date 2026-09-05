@@ -1,0 +1,144 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="92" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-05" time="09:57:57">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="09:57:57" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="2.279" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="HB" executed="true" result="Success" success="True" time="2.279" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestHbBenchmark" executed="True" result="Success" success="True" time="0.173" >
+                      <results>
+                        <test-case name="BenchmarkTouchpointAggregation_100kRows_LatencyP95Under2ms" executed="True" result="Success" success="True" time="0.172" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbDeepRWSuite" executed="True" result="Success" success="True" time="0.329" >
+                      <results>
+                        <test-case name="Test_CommandPalette_FuzzySearch_And_Execution" executed="True" result="Success" success="True" time="0.026" asserts="0" />
+                        <test-case name="Test_GatePanel_Severities_Filter_And_Expand" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                        <test-case name="Test_VirtualList_MultiSelect_And_BatchOperations" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                        <test-case name="Test_VirtualList_100k_CallbackDataSource_O1Memory" executed="True" result="Success" success="True" time="0.023" asserts="0" />
+                        <test-case name="Test_Waterfall_Facet_Interactions_And_Mode_Rendering" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                        <test-case name="Test_ShareCardRenderer_Portrait4x5_And_Watermark" executed="True" result="Success" success="True" time="0.016" asserts="0" />
+                        <test-case name="Test_TokenJson_Space_Motion_Shape_Parsing" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ShareCard_TruePngExport" executed="True" result="Success" success="True" time="0.038" asserts="0" />
+                        <test-case name="Test_VCL_Dialog_Execute_DoublePath" executed="True" result="Success" success="True" time="0.132" asserts="0" />
+                        <test-case name="Test_VCL_VoiceDialog_Execute_DoublePath" executed="True" result="Success" success="True" time="0.058" asserts="0" />
+                        <test-case name="Test_UTF8_BOM_Chinese_Literal_Integrity" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbFont" executed="True" result="Success" success="True" time="0.528" >
+                      <results>
+                        <test-case name="Test_DefaultFont_ResolvesToMicrosoftYaHeiUI" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FallbackChain_PrimaryAvailable_SelectsPrimary" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FallbackChain_PrimaryMissing_SelectsSecondary" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FallbackChain_PrimaryAndSecondaryMissing_SelectsSegoeUI" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_FallbackChain_AllMissing_ReturnsLastOrFallback" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_ResetDefaultFontCache_ClearsCache" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_NoHardcodedSegoeUI_InVclHBUnits" executed="True" result="Success" success="True" time="0.023" asserts="0" />
+                        <test-case name="Test_VisualVerification_ExportShareCard_PNG" executed="True" result="Success" success="True" time="0.076" asserts="0" />
+                        <test-case name="Test_VisualVerification_ExportTypographyLadder_DPI_100_125_150" executed="True" result="Success" success="True" time="0.429" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbLifecycle" executed="True" result="Success" success="True" time="0.028" >
+                      <results>
+                        <test-case name="TestLifecycle_StandardPipeline_PhaseProgression" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPaintAssertion_BypassBindToken_ThrowsEHbLifecycleViolation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestDispose_Idempotent_MultipleCallsNoError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestFailurePath_BindStateError_RaisesAndCallsErrorHook" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPilot_THbButton_Click_ProducesStandardEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPilot_THbDialog_Confirm_ProducesCriticalEvidence" executed="True" result="Success" success="True" time="0.028" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbPersistence" executed="True" result="Success" success="True" time="0.742" >
+                      <results>
+                        <test-case name="Test_Sink_WALMode_Assert" executed="True" result="Success" success="True" time="0.038" asserts="0" />
+                        <test-case name="Test_Sink_DatabaseFilePath_Assert" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                        <test-case name="Test_Sink_ManualFlush" executed="True" result="Success" success="True" time="0.035" asserts="0" />
+                        <test-case name="Test_Sink_Watermark50Percent_AutoFlush" executed="True" result="Success" success="True" time="0.099" asserts="0" />
+                        <test-case name="Test_Sink_Interval_AutoFlush" executed="True" result="Success" success="True" time="0.028" asserts="0" />
+                        <test-case name="Test_Sink_Uninjected_Regression" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Sink_CrashSimulation_BestEffort" executed="True" result="Success" success="True" time="0.042" asserts="0" />
+                        <test-case name="Test_Sink_ZeroPII_Assert" executed="True" result="Success" success="True" time="0.033" asserts="0" />
+                        <test-case name="Test_Snapshot_DialogWizardSession_CaptureAndRestore" executed="True" result="Success" success="True" time="0.027" asserts="0" />
+                        <test-case name="Test_Snapshot_FacetWaterfall_CaptureAndRestore" executed="True" result="Success" success="True" time="0.057" asserts="0" />
+                        <test-case name="Test_Snapshot_TaskCompleted_Delete" executed="True" result="Success" success="True" time="0.028" asserts="0" />
+                        <test-case name="Test_Snapshot_7DayTTL_PurgeExpired" executed="True" result="Success" success="True" time="0.029" asserts="0" />
+                        <test-case name="Test_Snapshot_CrashRecovery_RestartSimulation" executed="True" result="Success" success="True" time="0.033" asserts="0" />
+                        <test-case name="Test_Performance_BatchInsert_P95_Latency" executed="True" result="Success" success="True" time="0.100" asserts="0" />
+                        <test-case name="Test_InterfaceGUID_UniquenessAndCrossCast_NoCollision" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Core_AntiPollution_NoFireDACReferences" executed="True" result="Success" success="True" time="0.128" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbSuite" executed="True" result="Success" success="True" time="0.297" >
+                      <results>
+                        <test-case name="Test_Waterfall_Facet_Exclude_And_Focus" executed="True" result="Success" success="True" time="0.028" asserts="0" />
+                        <test-case name="Test_DataGrid_VirtualRows_And_Stats" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_AIConsole_Thoughts_And_Proposals" executed="True" result="Success" success="True" time="0.031" asserts="0" />
+                        <test-case name="Test_NavTree_Sections_And_Collapse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_PageControl_Tabs_And_Styles" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_Dock_Panels_And_Proportions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HB_Controls_EraseBackground_And_DPI_Scaling" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                        <test-case name="Test_HB_Controls_Mouse_Press_State_Transitions" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                        <test-case name="Test_HB_Button_Danger_Token_Alignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HB_SummaryBar_And_Space_Tokens" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                        <test-case name="Test_VirtualList_ModeSwitch_And_StaleCache_Clearing" executed="True" result="Success" success="True" time="0.022" asserts="0" />
+                        <test-case name="Test_VirtualList_VirtualMode_And_Filtered_SelectAll" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                        <test-case name="Test_DataGrid_ZeroRows_Scrollbar_Hiding" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_Waterfall_FocusFacet_Single_SSOT" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                        <test-case name="Test_Waterfall_Timeline_TimestampStr" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                        <test-case name="Test_CommandPalette_MRU_Sorting_And_Timestamp" executed="True" result="Success" success="True" time="0.012" asserts="0" />
+                        <test-case name="Test_HbText_Roles_And_Tones" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HbStatusDot_States_And_Pulse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HbCheckBox_Toggle_And_State" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="Test_HbToggleSwitch_Toggle_And_Text" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HbEdit_Placeholder_And_Clear" executed="True" result="Success" success="True" time="0.011" asserts="0" />
+                        <test-case name="Test_HbComboBox_Items_And_Selection" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_HbThemeSelector_ThemeList_And_Selection" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_HbGlassPanel_Opacity_And_Transitions" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_HbDataGrid_Inline_Toggle_And_Checkbox" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                        <test-case name="Test_HbChoiceDeck_Full_0_To_9_Matrix" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HbWaterfall_28px_Indent_And_L0_L5_Level_Badges" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HbWaterfall_Detail_Expansion_And_Inspector" executed="True" result="Success" success="True" time="0.027" asserts="0" />
+                        <test-case name="Test_HbWaterfall_Nested_Hierarchy_And_Collapse" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_HbGranularity_Six_Levels_And_Waterfall_Filter" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                        <test-case name="Test_SurfaceProvider_Resolution_AndCardContainerBg" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_SurfaceProvider_VisualVerification_ExportCardScreenshots" executed="True" result="Success" success="True" time="0.042" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbTouchpoint" executed="True" result="Success" success="True" time="0.179" >
+                      <results>
+                        <test-case name="TestTouchpointContract_MethodsAndEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestTouchpointLevel_CriticalFullEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestTouchpointLevel_StandardLightweightEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestTouchpointLevel_UnregisteredZeroCost" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestGridAggregation_100kInteractions_ReducesEvidenceVolume" executed="True" result="Success" success="True" time="0.158" asserts="0" />
+                        <test-case name="TestStateSlot_Register_Override_AuditChain" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestAntiPollution_CoreUnitsZeroBusinessEnums" executed="True" result="Success" success="True" time="0.021" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbTrayMenu" executed="True" result="Success" success="True" time="0.003" >
+                      <results>
+                        <test-case name="Test_TrayMenu_Creation_And_ItemCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TrayMenu_CheckItem_Toggle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TrayMenu_HeaderData" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_TrayIcon_BadgeCount_Formatting" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbVoiceCounterfactual" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_CF_VOICE_01_BypassConfirmation_MustBeRejectedAndAudited" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CF_VOICE_02_MalformedJson_GracefulFallback_NoCrash_AudioRetained" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CF_VOICE_03_AtomicWriteFailure_ZeroResidue_Rollback" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CF_VOICE_04_DraftRecovery_NeverResurrectsDiscardedItems" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CF_VOICE_05_UnconfirmedItems_AbnormalAbort_NeverInProductionDB" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CF_VOICE_06_AudioTimeout_120s_SmoothTruncate_RetainsPreCutoffTranscript" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

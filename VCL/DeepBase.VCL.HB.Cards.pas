@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Cards - HB Visual Infrastructure Business Cards & Containers
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -44,7 +44,7 @@ type
   { --------------------------------------------------------------------------
     THbCard - Modern container card with gradient/elevation/sunken support
     -------------------------------------------------------------------------- }
-  THbCard = class(TCustomControl)
+  THbCard = class(TCustomControl, IHbSurfaceProvider)
   private
     FKind: THbCardKind;
     FRadius: THbCardRadius;
@@ -59,15 +59,18 @@ type
     procedure Paint; override;
     function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
     function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
+    function GetParentSurfaceColor: TAlphaColor;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function GetSurfaceColor: TAlphaColor;
   published
     property Kind: THbCardKind read FKind write SetKind default ckSurface;
     property Radius: THbCardRadius read FRadius write SetRadius default rsM;
     property Elevation: Integer read FElevation write SetElevation default 0;
     property Align;
     property Anchors;
+    property Color;
     property Enabled;
     property Padding;
     property Visible;
@@ -212,6 +215,7 @@ begin
   FRadius := rsM;
   FElevation := 0;
   SetBounds(0, 0, 240, 160);
+  Color := AlphaColorToColor(GetSurfaceColor);
   THbTheme.AddListener(OnThemeChangedNotification);
 end;
 
@@ -221,8 +225,54 @@ begin
   inherited;
 end;
 
+function THbCard.GetSurfaceColor: TAlphaColor;
+var
+  Tokens: THbTokens;
+begin
+  Tokens := THbTheme.Tokens;
+  case FKind of
+    ckSurface: Result := Tokens.SurfaceAlt;
+    ckSunken:  Result := Tokens.Sunken;
+    ckHero:    Result := Tokens.HeroGradFrom;
+    ckOutline: Result := Tokens.Surface;
+  else
+    Result := Tokens.SurfaceAlt;
+  end;
+end;
+
+type
+  TControlCracker = class(TControl);
+
+function THbCard.GetParentSurfaceColor: TAlphaColor;
+var
+  P: TControl;
+  Provider: IHbSurfaceProvider;
+  RGBVal: Longint;
+begin
+  P := Parent;
+  while P <> nil do
+  begin
+    if Supports(P, IHbSurfaceProvider, Provider) then
+      Exit(Provider.GetSurfaceColor);
+
+    if (P is TWinControl) and (TControlCracker(P).Color <> clBtnFace) and (TControlCracker(P).Color <> clDefault) then
+    begin
+      RGBVal := ColorToRGB(TControlCracker(P).Color);
+      Exit((ARGB(255) shl 24) or
+           (ARGB(GetRValue(RGBVal)) shl 16) or
+           (ARGB(GetGValue(RGBVal)) shl 8) or
+           ARGB(GetBValue(RGBVal)));
+    end;
+
+    P := P.Parent;
+  end;
+
+  Result := THbTheme.Tokens.Surface;
+end;
+
 procedure THbCard.OnThemeChangedNotification(Sender: TObject);
 begin
+  Color := AlphaColorToColor(GetSurfaceColor);
   Invalidate;
 end;
 
@@ -233,6 +283,7 @@ end;
 
 procedure THbCard.WMHbThemeChanged(var Message: TMessage);
 begin
+  Color := AlphaColorToColor(GetSurfaceColor);
   Invalidate;
 end;
 
@@ -241,6 +292,7 @@ begin
   if FKind <> Value then
   begin
     FKind := Value;
+    Color := AlphaColorToColor(GetSurfaceColor);
     Invalidate;
   end;
 end;
@@ -317,7 +369,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
-    Brush := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
+    Brush := TGPSolidBrush.Create(ColorToARGB(GetParentSurfaceColor));
     try
       Graphics.FillRectangle(Brush, MakeRect(0.0, 0.0, Width, Height));
     finally
@@ -762,13 +814,7 @@ begin
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
-
-    Brush := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
-    try
-      Graphics.FillRectangle(Brush, MakeRect(0.0, 0.0, Width, Height));
-    finally
-      Brush.Free;
-    end;
+    EraseBackground(Graphics);
 
     RowRect := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
     AlphaMult := 1.0;
@@ -1033,20 +1079,13 @@ var
   BtnRect: TGPRectF;
   BtnPath: TGPGraphicsPath;
   BtnBrush: TGPSolidBrush;
-  BrushBg: TGPSolidBrush;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
   try
     Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
-
-    BrushBg := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
-    try
-      Graphics.FillRectangle(BrushBg, MakeRect(0.0, 0.0, Width, Height));
-    finally
-      BrushBg.Free;
-    end;
+    EraseBackground(Graphics);
 
     FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
     try

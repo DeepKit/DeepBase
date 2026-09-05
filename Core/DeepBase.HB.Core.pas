@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Core - Framework-Agnostic HB Design Tokens & Theme Engine Core
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -35,6 +35,15 @@ type
   /// Semantic badge tones.
   /// </summary>
   THbBadgeTone = (btNeutral, btBrand, btSuccess, btWarning, btDanger);
+
+  /// <summary>
+  /// Surface provider interface for container controls (cards, panels, dialogs)
+  /// providing background token resolution to child controls.
+  /// </summary>
+  IHbSurfaceProvider = interface
+    ['{69611684-5658-4FE2-895C-6EF54C532001}']
+    function GetSurfaceColor: TAlphaColor;
+  end;
 
   /// <summary>
   /// Comprehensive Design Tokens structure for HB Visual Infrastructure.

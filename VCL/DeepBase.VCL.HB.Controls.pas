@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Controls - HB Visual Infrastructure Core Atomic Controls
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -64,7 +64,7 @@ type
   { --------------------------------------------------------------------------
     THbCustomControl - Base class for all HB vector-rendered controls
     -------------------------------------------------------------------------- }
-  THbCustomControl = class(TCustomControl)
+  THbCustomControl = class(TCustomControl, IHbSurfaceProvider)
   private
     FLifecyclePhase: THbLifecyclePhase;
     FTouchpoint: IHbTouchpoint;
@@ -110,6 +110,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure DoDispose; virtual;
+
+    // Surface Provider & Background Resolution
+    function GetContainerBgColor: TAlphaColor; virtual;
+    function GetSurfaceColor: TAlphaColor; virtual;
 
     property LifecyclePhase: THbLifecyclePhase read FLifecyclePhase write FLifecyclePhase;
     property Touchpoint: IHbTouchpoint read FTouchpoint write FTouchpoint;
@@ -607,11 +611,50 @@ begin
   Result := THbTheme.Tokens;
 end;
 
+type
+  TControlCracker = class(TControl);
+
+function THbCustomControl.GetContainerBgColor: TAlphaColor;
+var
+  P: TControl;
+  Provider: IHbSurfaceProvider;
+  RGBVal: Longint;
+begin
+  P := Parent;
+  while P <> nil do
+  begin
+    if Supports(P, IHbSurfaceProvider, Provider) then
+      Exit(Provider.GetSurfaceColor);
+
+    if (P is TWinControl) and (TControlCracker(P).Color <> clBtnFace) and (TControlCracker(P).Color <> clDefault) then
+    begin
+      RGBVal := ColorToRGB(TControlCracker(P).Color);
+      Exit((ARGB(255) shl 24) or
+           (ARGB(GetRValue(RGBVal)) shl 16) or
+           (ARGB(GetGValue(RGBVal)) shl 8) or
+           ARGB(GetBValue(RGBVal)));
+    end;
+
+    P := P.Parent;
+  end;
+
+  Result := GetTokens.Surface;
+end;
+
+function THbCustomControl.GetSurfaceColor: TAlphaColor;
+begin
+  Result := GetContainerBgColor;
+end;
+
 procedure THbCustomControl.EraseBackground(AGraphics: TGPGraphics);
 var
   BrushBg: TGPSolidBrush;
+  ARGBVal: ARGB;
 begin
-  BrushBg := TGPSolidBrush.Create(ColorToARGB(GetTokens.Surface));
+  // 动态解析父级容器（如 THbCard / 祖先表面）的实际 Token 底色，
+  // 确保 Pill 按钮与圆角控件外侧完美无缝融入父容器，杜绝矩形底色露边
+  ARGBVal := ColorToARGB(GetContainerBgColor);
+  BrushBg := TGPSolidBrush.Create(ARGBVal);
   try
     AGraphics.FillRectangle(BrushBg, MakeRect(0.0, 0.0, Width, Height));
   finally
@@ -677,14 +720,18 @@ begin
     Exit;
 
   Tokens := GetTokens;
-  RingPen := TGPPen.Create(ColorToARGB(Tokens.FocusRing), 2.0);
+  RingPen := TGPPen.Create(ColorToARGB(Tokens.FocusRing), 1.5);
   try
     RingRect := ARect;
-    RingRect.X := RingRect.X - 2;
-    RingRect.Y := RingRect.Y - 2;
-    RingRect.Width := RingRect.Width + 4;
-    RingRect.Height := RingRect.Height + 4;
-    Path := CreateRoundRectPath(RingRect, ARadius + 2);
+    // 严格限制在控件自身可见矩形内（缩进 1px），防止超出边界被 Windows 窗口矩形硬切成尖锐矩形边框
+    if (RingRect.Width > 4.0) and (RingRect.Height > 4.0) then
+    begin
+      RingRect.X := RingRect.X + 1.0;
+      RingRect.Y := RingRect.Y + 1.0;
+      RingRect.Width := RingRect.Width - 2.0;
+      RingRect.Height := RingRect.Height - 2.0;
+    end;
+    Path := CreateRoundRectPath(RingRect, Max(1.0, ARadius - 1.0));
     try
       AGraphics.DrawPath(RingPen, Path);
     finally

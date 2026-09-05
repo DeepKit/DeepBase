@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.PageControl - Modern 4-Style Tab & PageControl for VCL
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -37,7 +37,7 @@ type
   /// <summary>
   /// THbPageControl: Modern 4-Style Tab Control for VCL.
   /// </summary>
-  THbPageControl = class(TCustomControl)
+  THbPageControl = class(TCustomControl, IHbSurfaceProvider)
   private
     FTabs: TList<THbTabItemData>;
     FTabStyle: THbTabStyle;
@@ -58,6 +58,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function GetSurfaceColor: TAlphaColor;
 
     function AddTab(const AId, ATitle: string; ABadgeCount: Integer = 0; AClosable: Boolean = False): Integer;
     procedure RemoveTab(Index: Integer);
@@ -95,6 +96,11 @@ begin
 end;
 
 { THbPageControl }
+
+function THbPageControl.GetSurfaceColor: TAlphaColor;
+begin
+  Result := THbTheme.Tokens.Surface;
+end;
 
 constructor THbPageControl.Create(AOwner: TComponent);
 begin
