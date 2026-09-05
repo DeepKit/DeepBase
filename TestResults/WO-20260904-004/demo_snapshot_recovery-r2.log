@@ -1,0 +1,18 @@
+=== [PHASE 1: USER FILLING WIZARD HALFWAY] ===
+  -> Wizard Step set to 3 / 5
+  -> Fields filled: cluster_id=prod-asia-east-01, service_mesh=istio-enabled, replica_count=8
+  -> Session Snapshot saved to SQLite WAL storage.
+  -> Touchpoint evidence persisted to hb_evidence table.
+  -> SIMULATING UNEXPECTED APP CRASH / WINDOW FORCE CLOSE (Process terminated)...
+
+=== [PHASE 2: NEW PROCESS LAUNCH & AUTO-RECOVERY] ===
+  -> Application restarted cleanly by user.
+  -> Checking for existing snapshot on DeployWizard:step_container...
+  -> FOUND SNAPSHOT payload: {"surface_id":"DeployWizard","control_id":"step_container","current_step":3,"total_steps":5,"timestamp_utc":1788543457000,"fields":{"replica_count":"8","service_mesh":"istio-enabled","cluster_id":"prod-asia-east-01"}}
+  -> Restored Step: 3 / 5
+  -> Restored Field cluster_id: prod-asia-east-01
+  -> Restored Field service_mesh: istio-enabled
+  -> Restored Field replica_count: 8
+  -> User Notice Rendered: "已为您恢复上次推演进度"
+
+>>> [SUCCESS] Crash & Recovery Verification PASSED (100% Fidelity) <<<

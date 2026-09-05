@@ -37,6 +37,7 @@ uses
   FireDAC.Stan.Def,
   DeepBase.HB.Core,
   DeepBase.HB.Touchpoint.Types,
+  DeepBase.HB.StateSlot.Types,
   DeepBase.HB.Touchpoint.Engine,
   DeepBase.HB.Waterfall.Types,
   DeepBase.Persistence.HBTelemetry.FireDAC,
@@ -103,7 +104,10 @@ type
     [Test]
     procedure Test_Performance_BatchInsert_P95_Latency;
 
-    // --- Anti-Pollution Guard ---
+    // --- Anti-Pollution Guard & GUID Uniqueness ---
+    [Test]
+    procedure Test_InterfaceGUID_UniquenessAndCrossCast_NoCollision;
+
     [Test]
     procedure Test_Core_AntiPollution_NoFireDACReferences;
   end;
@@ -742,6 +746,154 @@ begin
   finally
     Violations.Free;
   end;
+end;
+
+type
+  TMockDualGuidProvider = class(TInterfacedObject, IHbSnapshotProvider, IHbStateSlotProvider)
+  public
+    function GetSurfaceId: string;
+    function GetControlId: string;
+    function CaptureSnapshot: string;
+    procedure RestoreSnapshot(const APayload: string);
+    function GetSlotId: string;
+    function GetStateLabel: string;
+    function GetStateRank: Integer;
+  end;
+
+  TMockSnapshotOnlyProvider = class(TInterfacedObject, IHbSnapshotProvider)
+  public
+    function GetSurfaceId: string;
+    function GetControlId: string;
+    function CaptureSnapshot: string;
+    procedure RestoreSnapshot(const APayload: string);
+  end;
+
+  TMockStateSlotOnlyProvider = class(TInterfacedObject, IHbStateSlotProvider)
+  public
+    function GetSlotId: string;
+    function GetStateLabel: string;
+    function GetStateRank: Integer;
+  end;
+
+{ TMockDualGuidProvider }
+
+function TMockDualGuidProvider.GetSurfaceId: string;
+begin
+  Result := 'DualSurface';
+end;
+
+function TMockDualGuidProvider.GetControlId: string;
+begin
+  Result := 'DualControl';
+end;
+
+function TMockDualGuidProvider.CaptureSnapshot: string;
+begin
+  Result := '{"snapshot":"dual"}';
+end;
+
+procedure TMockDualGuidProvider.RestoreSnapshot(const APayload: string);
+begin
+end;
+
+function TMockDualGuidProvider.GetSlotId: string;
+begin
+  Result := 'DualSlot';
+end;
+
+function TMockDualGuidProvider.GetStateLabel: string;
+begin
+  Result := 'DualState';
+end;
+
+function TMockDualGuidProvider.GetStateRank: Integer;
+begin
+  Result := 99;
+end;
+
+{ TMockSnapshotOnlyProvider }
+
+function TMockSnapshotOnlyProvider.GetSurfaceId: string;
+begin
+  Result := 'SnapSurface';
+end;
+
+function TMockSnapshotOnlyProvider.GetControlId: string;
+begin
+  Result := 'SnapControl';
+end;
+
+function TMockSnapshotOnlyProvider.CaptureSnapshot: string;
+begin
+  Result := '{"snapshot":"snap_only"}';
+end;
+
+procedure TMockSnapshotOnlyProvider.RestoreSnapshot(const APayload: string);
+begin
+end;
+
+{ TMockStateSlotOnlyProvider }
+
+function TMockStateSlotOnlyProvider.GetSlotId: string;
+begin
+  Result := 'SlotOnly';
+end;
+
+function TMockStateSlotOnlyProvider.GetStateLabel: string;
+begin
+  Result := 'SlotState';
+end;
+
+function TMockStateSlotOnlyProvider.GetStateRank: Integer;
+begin
+  Result := 42;
+end;
+
+procedure TTestHbPersistence.Test_InterfaceGUID_UniquenessAndCrossCast_NoCollision;
+var
+  DualObj: IInterface;
+  SnapOnlyObj: IInterface;
+  SlotOnlyObj: IInterface;
+  SnapIntf: IHbSnapshotProvider;
+  SlotIntf: IHbStateSlotProvider;
+  GuidSnap, GuidSlot, GuidLegacy: TGUID;
+begin
+  // 1. GUID Raw Check
+  GuidSnap := StringToGUID('{7D4B6E20-8F31-4A5C-9E12-6B8F0A2C4D6E}');
+  GuidSlot := StringToGUID('{E3A1C590-7D82-4F6B-B415-9C0E2A4F8D17}');
+  GuidLegacy := StringToGUID('{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}');
+
+  Assert.IsTrue(GuidSnap <> GuidSlot, 'IHbSnapshotProvider and IHbStateSlotProvider must have distinct GUIDs');
+  Assert.IsTrue(GuidSnap <> GuidLegacy, 'IHbSnapshotProvider must not use legacy placeholder GUID');
+  Assert.IsTrue(GuidSlot <> GuidLegacy, 'IHbStateSlotProvider must not use legacy placeholder GUID');
+
+  // 2. Dual Provider Supports & Casting
+  DualObj := TMockDualGuidProvider.Create;
+  Assert.IsTrue(Supports(DualObj, IHbSnapshotProvider, SnapIntf), 'Dual object must support IHbSnapshotProvider');
+  Assert.IsNotNull(SnapIntf);
+  Assert.AreEqual('DualSurface', SnapIntf.GetSurfaceId);
+  Assert.AreEqual('{"snapshot":"dual"}', SnapIntf.CaptureSnapshot);
+
+  Assert.IsTrue(Supports(DualObj, IHbStateSlotProvider, SlotIntf), 'Dual object must support IHbStateSlotProvider');
+  Assert.IsNotNull(SlotIntf);
+  Assert.AreEqual('DualSlot', SlotIntf.GetSlotId);
+  Assert.AreEqual('DualState', SlotIntf.GetStateLabel);
+  Assert.AreEqual(99, SlotIntf.GetStateRank);
+
+  // Cross-casting between interfaces
+  SnapIntf := nil;
+  Assert.IsTrue(Supports(SlotIntf, IHbSnapshotProvider, SnapIntf), 'Interface cross-cast from Slot to Snapshot must succeed on dual object');
+  Assert.AreEqual('DualControl', SnapIntf.GetControlId);
+
+  // 3. SnapshotOnly Provider (Must NOT match IHbStateSlotProvider)
+  SnapOnlyObj := TMockSnapshotOnlyProvider.Create;
+  Assert.IsTrue(Supports(SnapOnlyObj, IHbSnapshotProvider), 'Must support IHbSnapshotProvider');
+  Assert.IsFalse(Supports(SnapOnlyObj, IHbStateSlotProvider), 'Must NOT support IHbStateSlotProvider (anti-collision)');
+
+  // 4. StateSlotOnly Provider (Must NOT match IHbSnapshotProvider)
+  SlotOnlyObj := TMockStateSlotOnlyProvider.Create;
+  Assert.IsTrue(Supports(SlotOnlyObj, IHbStateSlotProvider), 'Must support IHbStateSlotProvider');
+  Assert.IsFalse(Supports(SlotOnlyObj, IHbSnapshotProvider), 'Must NOT support IHbSnapshotProvider (anti-collision)');
 end;
 
 initialization

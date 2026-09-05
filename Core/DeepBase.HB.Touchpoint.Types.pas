@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Touchpoint.Types - HB Touchpoint Contract & Evidence Types
 
   Version: 2.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
@@ -79,7 +79,7 @@ type
   /// HB 会话断点快照提供者契约（由可恢复交互容器实现）
   /// </summary>
   IHbSnapshotProvider = interface
-    ['{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}']
+    ['{7D4B6E20-8F31-4A5C-9E12-6B8F0A2C4D6E}']
     function GetSurfaceId: string;
     function GetControlId: string;
     function CaptureSnapshot: string;

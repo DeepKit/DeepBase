@@ -26,6 +26,7 @@ uses
   Data.DB,
   FireDAC.Comp.Client,
   FireDAC.Stan.Param,
+  FireDAC.DApt,
   FireDAC.Phys.SQLite,
   DeepBase.HB.Touchpoint.Types;
 
@@ -66,6 +67,7 @@ type
     class var FClassLock: TCriticalSection;
     class constructor ClassCreate;
     class destructor ClassDestroy;
+    class function GetInstance: THbFireDACSnapshotStorage; static;
   private
     FDBPath: string;
     FConnection: TFDConnection;
@@ -76,7 +78,7 @@ type
     constructor Create(const ADBPath: string = '');
     destructor Destroy; override;
 
-    class property Instance: THbFireDACSnapshotStorage read FInstance;
+    class property Instance: THbFireDACSnapshotStorage read GetInstance;
 
     procedure SaveSnapshot(const ASurfaceId, AControlId, APayload: string);
     function LoadSnapshot(const ASurfaceId, AControlId: string; out APayload: string): Boolean;
@@ -433,13 +435,28 @@ end;
 class constructor THbFireDACSnapshotStorage.ClassCreate;
 begin
   FClassLock := TCriticalSection.Create;
-  FInstance := THbFireDACSnapshotStorage.Create;
+  FInstance := nil;
 end;
 
 class destructor THbFireDACSnapshotStorage.ClassDestroy;
 begin
   FreeAndNil(FInstance);
   FreeAndNil(FClassLock);
+end;
+
+class function THbFireDACSnapshotStorage.GetInstance: THbFireDACSnapshotStorage;
+begin
+  if FInstance = nil then
+  begin
+    FClassLock.Enter;
+    try
+      if FInstance = nil then
+        FInstance := THbFireDACSnapshotStorage.Create;
+    finally
+      FClassLock.Leave;
+    end;
+  end;
+  Result := FInstance;
 end;
 
 constructor THbFireDACSnapshotStorage.Create(const ADBPath: string);
