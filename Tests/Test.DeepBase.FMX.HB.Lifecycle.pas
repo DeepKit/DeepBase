@@ -38,6 +38,7 @@ type
     procedure TriggerPaint;
     procedure SetPhase(APhase: THbLifecyclePhase);
     procedure Attach(const ATouchpoint: IHbTouchpoint);
+    procedure CallHandleLifecycleError(const AStep: string; AException: Exception);
   end;
 
   TFailingFmxBindStateControl = class(THbFmxControl)
@@ -79,6 +80,9 @@ type
 
   [TestFixture]
   TTestFmxHbLifecycle = class
+  private
+    FHookCalled: Boolean;
+    procedure OnLifecycleErrorHandler(Sender: TObject; const AStep: string; AException: Exception);
   public
     [Setup]
     procedure Setup;
@@ -93,6 +97,8 @@ type
     procedure TestDispose_Idempotent_MultipleCallsNoError;
     [Test]
     procedure TestFailurePath_BindStateError_RaisesAndCallsErrorHook;
+    [Test]
+    procedure TestFailurePath_FmxControl_HandleLifecycleError_EnforcesDispose;
     [Test]
     procedure TestPilot_THbButton_Click_ProducesStandardEvidence;
     [Test]
@@ -124,6 +130,12 @@ end;
 procedure TTestFmxLifecycleControl.Attach(const ATouchpoint: IHbTouchpoint);
 begin
   AttachTouchpoint(ATouchpoint);
+end;
+
+procedure TTestFmxLifecycleControl.CallHandleLifecycleError(const AStep: string;
+  AException: Exception);
+begin
+  HandleLifecycleError(AStep, AException);
 end;
 
 { TFailingFmxBindStateControl }
@@ -334,6 +346,41 @@ begin
 
   Assert.IsTrue(CaughtException,
     'Exception during FMX lifecycle binding must propagate under Fail-Closed policy');
+end;
+
+procedure TTestFmxHbLifecycle.OnLifecycleErrorHandler(Sender: TObject; const AStep: string; AException: Exception);
+begin
+  FHookCalled := True;
+end;
+
+procedure TTestFmxHbLifecycle.TestFailurePath_FmxControl_HandleLifecycleError_EnforcesDispose;
+var
+  Ctrl: TTestFmxLifecycleControl;
+  TestEx: Exception;
+begin
+  Ctrl := TTestFmxLifecycleControl.Create(nil);
+  try
+    Assert.IsFalse(Ctrl.IsDisposed);
+    FHookCalled := False;
+    Ctrl.OnLifecycleError := OnLifecycleErrorHandler;
+
+    TestEx := Exception.Create('FMX Lifecycle Test Exception');
+    try
+      Ctrl.CallHandleLifecycleError('FmxPaintStep', TestEx);
+    finally
+      TestEx.Free;
+    end;
+
+    Assert.IsTrue(FHookCalled, 'Lifecycle error hook must be invoked on FMX control');
+    Assert.IsTrue(Ctrl.IsDisposed, 'FMX Control must be marked Disposed after HandleLifecycleError');
+    Assert.AreEqual(Ord(lpDisposed), Ord(Ctrl.LifecyclePhase));
+
+    // Multiple DoDispose calls must be idempotent
+    Ctrl.DoDispose;
+    Assert.IsTrue(Ctrl.IsDisposed);
+  finally
+    Ctrl.Free;
+  end;
 end;
 
 procedure TTestFmxHbLifecycle.TestPilot_THbButton_Click_ProducesStandardEvidence;

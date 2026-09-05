@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="9" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-06" time="00:24:05">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="00:24:05" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.535" asserts="0" >
+          <results>
+              <test-suite type="Fixture" name="TTestHbFont" executed="True" result="Success" success="True" time="0.535" >
+                <results>
+                  <test-case name="Test_DefaultFont_ResolvesToMicrosoftYaHeiUI" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_FallbackChain_PrimaryAvailable_SelectsPrimary" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_FallbackChain_PrimaryMissing_SelectsSecondary" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_FallbackChain_PrimaryAndSecondaryMissing_SelectsSegoeUI" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_FallbackChain_AllMissing_ReturnsLastOrFallback" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_ResetDefaultFontCache_ClearsCache" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="Test_NoHardcodedSegoeUI_InVclHBUnits" executed="True" result="Success" success="True" time="0.019" asserts="0" />
+                  <test-case name="Test_VisualVerification_ExportShareCard_PNG" executed="True" result="Success" success="True" time="0.292" asserts="0" />
+                  <test-case name="Test_VisualVerification_ExportTypographyLadder_DPI_100_125_150" executed="True" result="Success" success="True" time="0.223" asserts="0" />
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

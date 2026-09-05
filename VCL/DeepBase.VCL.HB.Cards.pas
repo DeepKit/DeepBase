@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Cards - HB Visual Infrastructure Business Cards & Containers
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -56,6 +56,7 @@ type
     procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure OnThemeChangedNotification(Sender: TObject);
   protected
+    procedure CreateParams(var Params: TCreateParams); override;
     procedure Paint; override;
     function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
     function ColorToARGB(AColor: TAlphaColor; AAlphaOverride: Byte = 0): ARGB;
@@ -210,13 +211,20 @@ constructor THbCard.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   DoubleBuffered := True;
-  ControlStyle := ControlStyle + [csAcceptsControls] - [csOpaque];
+  ControlStyle := ControlStyle + [csAcceptsControls, csOpaque] - [csParentBackground];
   FKind := ckSurface;
   FRadius := rsM;
   FElevation := 0;
   SetBounds(0, 0, 240, 160);
   Color := AlphaColorToColor(GetSurfaceColor);
   THbTheme.AddListener(OnThemeChangedNotification);
+end;
+
+procedure THbCard.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
+  Params.WindowClass.Style := Params.WindowClass.Style and not (CS_HREDRAW or CS_VREDRAW);
 end;
 
 destructor THbCard.Destroy;
@@ -354,86 +362,83 @@ end;
 
 procedure THbCard.Paint;
 var
-  Graphics: TGPGraphics;
   Tokens: THbTokens;
-  RectF: TGPRectF;
-  RadiusVal: Single;
-  Path: TGPGraphicsPath;
-  Brush: TGPSolidBrush;
-  GradBrush: TGPLinearGradientBrush;
-  Pen: TGPPen;
+  RadiusVal: Integer;
   BgColor, BorderColor: TAlphaColor;
+  Graphics: TGPGraphics;
+  RectF: TGPRectF;
+  Path: TGPGraphicsPath;
+  GradBrush: TGPLinearGradientBrush;
+  DC: HDC;
+  ParentBg: TAlphaColor;
 begin
   Tokens := THbTheme.Tokens;
-  Graphics := TGPGraphics.Create(Canvas.Handle);
-  try
-    Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
-    Brush := TGPSolidBrush.Create(ColorToARGB(GetParentSurfaceColor));
+  case FRadius of
+    rsS: RadiusVal := Round(THbTheme.GetScaledDIP(Tokens.RadiusS, CurrentPPI));
+    rsL: RadiusVal := Round(THbTheme.GetScaledDIP(Tokens.RadiusL, CurrentPPI));
+    else RadiusVal := Round(THbTheme.GetScaledDIP(Tokens.RadiusM, CurrentPPI));
+  end;
+
+  if FKind = ckHero then
+  begin
+    Graphics := TGPGraphics.Create(Canvas.Handle);
     try
-      Graphics.FillRectangle(Brush, MakeRect(0.0, 0.0, Width, Height));
-    finally
-      Brush.Free;
-    end;
-
-    RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
-
-    case FRadius of
-      rsS: RadiusVal := THbTheme.GetScaledDIP(Tokens.RadiusS, CurrentPPI);
-      rsL: RadiusVal := THbTheme.GetScaledDIP(Tokens.RadiusL, CurrentPPI);
-      else RadiusVal := THbTheme.GetScaledDIP(Tokens.RadiusM, CurrentPPI);
-    end;
-
-    Path := CreateRoundRectPath(RectF, RadiusVal);
-    try
-      case FKind of
-        ckHero:
-        begin
-          // Linear gradient from HeroGradFrom to HeroGradTo
-          GradBrush := TGPLinearGradientBrush.Create(
-            MakeRect(0.0, 0.0, Width, Height),
-            ColorToARGB(Tokens.HeroGradFrom),
-            ColorToARGB(Tokens.HeroGradTo),
-            LinearGradientModeForwardDiagonal
-          );
-          try
-            Graphics.FillPath(GradBrush, Path);
-          finally
-            GradBrush.Free;
-          end;
+      Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
+      RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
+      Path := CreateRoundRectPath(RectF, RadiusVal);
+      try
+        GradBrush := TGPLinearGradientBrush.Create(
+          MakeRect(0.0, 0.0, Width, Height),
+          ColorToARGB(Tokens.HeroGradFrom),
+          ColorToARGB(Tokens.HeroGradTo),
+          LinearGradientModeForwardDiagonal
+        );
+        try
+          Graphics.FillPath(GradBrush, Path);
+        finally
+          GradBrush.Free;
         end;
-        ckSunken:
-        begin
-          BgColor := Tokens.Sunken;
-          BorderColor := Tokens.Border;
-          Brush := TGPSolidBrush.Create(ColorToARGB(BgColor));
-          try Graphics.FillPath(Brush, Path); finally Brush.Free; end;
-
-          Pen := TGPPen.Create(ColorToARGB(BorderColor), 1.0);
-          try Graphics.DrawPath(Pen, Path); finally Pen.Free; end;
-        end;
-        ckOutline:
-        begin
-          BorderColor := Tokens.Border;
-          Pen := TGPPen.Create(ColorToARGB(BorderColor), 1.0);
-          try Graphics.DrawPath(Pen, Path); finally Pen.Free; end;
-        end;
-        else // ckSurface
-        begin
-          BgColor := Tokens.SurfaceAlt;
-          BorderColor := Tokens.Border;
-          Brush := TGPSolidBrush.Create(ColorToARGB(BgColor));
-          try Graphics.FillPath(Brush, Path); finally Brush.Free; end;
-
-          Pen := TGPPen.Create(ColorToARGB(BorderColor), 1.0);
-          try Graphics.DrawPath(Pen, Path); finally Pen.Free; end;
-        end;
+      finally
+        Path.Free;
       end;
     finally
-      Path.Free;
+      Graphics.Free;
     end;
-  finally
-    Graphics.Free;
+  end
+  else
+  begin
+    case FKind of
+      ckSunken:
+      begin
+        BgColor := Tokens.Sunken;
+        BorderColor := Tokens.Border;
+      end;
+      ckOutline:
+      begin
+        BgColor := Tokens.Surface;
+        BorderColor := Tokens.Border;
+      end;
+      else // ckSurface
+      begin
+        BgColor := Tokens.SurfaceAlt;
+        BorderColor := Tokens.Border;
+      end;
+    end;
+
+    DC := Canvas.Handle;
+    ParentBg := GetParentSurfaceColor;
+
+    SelectObject(DC, GetStockObject(DC_BRUSH));
+    SelectObject(DC, GetStockObject(DC_PEN));
+
+    SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(ParentBg)));
+    SetDCPenColor(DC, ColorToRGB(AlphaColorToColor(ParentBg)));
+    Winapi.Windows.FillRect(DC, ClientRect, GetStockObject(DC_BRUSH));
+
+    SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(BgColor)));
+    SetDCPenColor(DC, ColorToRGB(AlphaColorToColor(BorderColor)));
+    Winapi.Windows.RoundRect(DC, 0, 0, Width, Height, RadiusVal * 2, RadiusVal * 2);
   end;
 end;
 

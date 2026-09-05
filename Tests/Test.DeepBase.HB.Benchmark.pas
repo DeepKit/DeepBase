@@ -19,6 +19,7 @@ uses
   System.Types,
   System.UITypes,
   System.Math,
+  System.DateUtils,
   Winapi.Windows,
   Winapi.Messages,
   Vcl.Forms,
@@ -228,7 +229,7 @@ end;
 
 procedure TTestHbBenchmark.SetupFixture;
 begin
-  FEvidenceDir := TPath.GetFullPath('TestResults\WO-20260905-002');
+  FEvidenceDir := TPath.GetFullPath('TestResults\WO-20260905-003');
   ForceDirectories(FEvidenceDir);
   ForceDirectories(TPath.Combine(FEvidenceDir, 'gate4-screens'));
   BuildProbeIfNeeded;
@@ -634,7 +635,7 @@ const
   BATCH = 400; // stay under per-process USER/GDI object ceiling while totaling 10k creates
 var
   Form: TCustomForm;
-  RoundIdx, Created, N, I: Integer;
+  RoundIdx, Created, N, I, P: Integer;
   List: TList<THbButton>;
   GdiBefore, GdiAfter, UserBefore, UserAfter: DWORD;
   HeapBefore, HeapAfter: NativeUInt;
@@ -649,6 +650,11 @@ begin
     for RoundIdx := 1 to 2 do
     begin
       Form.Update;
+      for P := 1 to 5 do
+      begin
+        Application.ProcessMessages;
+        Sleep(1);
+      end;
       GdiBefore := GetGuiResources(GetCurrentProcess, GR_GDIOBJECTS);
       UserBefore := GetGuiResources(GetCurrentProcess, GR_USEROBJECTS);
       HeapBefore := AllocMemSize;
@@ -675,6 +681,7 @@ begin
             List[I].Free;
           end;
           List.Clear;
+          Application.ProcessMessages;
         finally
           List.Free;
         end;
@@ -682,6 +689,11 @@ begin
       end;
 
       Form.Update;
+      for P := 1 to 5 do
+      begin
+        Application.ProcessMessages;
+        Sleep(1);
+      end;
       GdiAfter := GetGuiResources(GetCurrentProcess, GR_GDIOBJECTS);
       UserAfter := GetGuiResources(GetCurrentProcess, GR_USEROBJECTS);
       HeapAfter := AllocMemSize;

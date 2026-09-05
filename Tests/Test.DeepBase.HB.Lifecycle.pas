@@ -22,6 +22,7 @@ uses
   DUnitX.TestFramework,
   DeepBase.HB.Core,
   DeepBase.HB.Runtime,
+  DeepBase.HB.Lifecycle,
   DeepBase.HB.Touchpoint.Types,
   DeepBase.HB.Touchpoint.Engine,
   DeepBase.VCL.HB.Controls,
@@ -35,6 +36,7 @@ type
   public
     procedure TriggerPaint;
     procedure SetPhase(APhase: THbLifecyclePhase);
+    procedure CallHandleLifecycleError(const AStep: string; AException: Exception);
   end;
 
   /// <summary>
@@ -68,6 +70,9 @@ type
 
   [TestFixture]
   TTestHbLifecycle = class
+  private
+    FHookCalled: Boolean;
+    procedure OnLifecycleErrorHandler(Sender: TObject; const AStep: string; AException: Exception);
   public
     [Setup]
     procedure Setup;
@@ -82,6 +87,10 @@ type
     procedure TestDispose_Idempotent_MultipleCallsNoError;
     [Test]
     procedure TestFailurePath_BindStateError_RaisesAndCallsErrorHook;
+    [Test]
+    procedure TestFailurePath_CoreState_HandleError_EnforcesDispose_And_Idempotency;
+    [Test]
+    procedure TestFailurePath_VclControl_HandleLifecycleError_EnforcesDispose;
     [Test]
     procedure TestPilot_THbButton_Click_ProducesStandardEvidence;
     [Test]
@@ -100,6 +109,11 @@ end;
 procedure TTestLifecycleControl.SetPhase(APhase: THbLifecyclePhase);
 begin
   LifecyclePhase := APhase;
+end;
+
+procedure TTestLifecycleControl.CallHandleLifecycleError(const AStep: string; AException: Exception);
+begin
+  HandleLifecycleError(AStep, AException);
 end;
 
 { TFailingBindStateControl }
@@ -282,6 +296,83 @@ begin
   end;
 
   Assert.IsTrue(CaughtException, 'Exception during lifecycle binding must propagate under Fail-Closed policy');
+end;
+
+procedure TTestHbLifecycle.TestFailurePath_CoreState_HandleError_EnforcesDispose_And_Idempotency;
+var
+  State: THbLifecycleState;
+  HookCalled: Boolean;
+  HookStep: string;
+  HookExMsg: string;
+  TestEx: Exception;
+begin
+  State.ResetCreated;
+  State.BindToken;
+  State.BindState;
+  Assert.AreEqual(Ord(lpStateBound), Ord(State.Phase));
+  Assert.IsFalse(State.IsDisposed);
+
+  HookCalled := False;
+  TestEx := Exception.Create('Core Lifecycle Test Error');
+  try
+    State.HandleError(
+      procedure(const AStep: string; AEx: Exception)
+      begin
+        HookCalled := True;
+        HookStep := AStep;
+        HookExMsg := AEx.Message;
+      end,
+      'TestPhase',
+      TestEx);
+
+    Assert.IsTrue(HookCalled, 'Lifecycle error hook must be invoked');
+    Assert.AreEqual('TestPhase', HookStep);
+    Assert.AreEqual('Core Lifecycle Test Error', HookExMsg);
+    Assert.IsTrue(State.IsDisposed, 'State must be disposed after HandleError');
+    Assert.AreEqual(Ord(lpDisposed), Ord(State.Phase));
+
+    // Multiple Dispose calls must be idempotent
+    State.Dispose;
+    Assert.IsTrue(State.IsDisposed);
+    Assert.AreEqual(Ord(lpDisposed), Ord(State.Phase));
+  finally
+    TestEx.Free;
+  end;
+end;
+
+procedure TTestHbLifecycle.OnLifecycleErrorHandler(Sender: TObject; const AStep: string; AException: Exception);
+begin
+  FHookCalled := True;
+end;
+
+procedure TTestHbLifecycle.TestFailurePath_VclControl_HandleLifecycleError_EnforcesDispose;
+var
+  Ctrl: TTestLifecycleControl;
+  TestEx: Exception;
+begin
+  Ctrl := TTestLifecycleControl.Create(nil);
+  try
+    Assert.IsFalse(Ctrl.IsDisposed);
+    FHookCalled := False;
+    Ctrl.OnLifecycleError := OnLifecycleErrorHandler;
+
+    TestEx := Exception.Create('VCL Lifecycle Test Exception');
+    try
+      Ctrl.CallHandleLifecycleError('VclRenderStep', TestEx);
+    finally
+      TestEx.Free;
+    end;
+
+    Assert.IsTrue(FHookCalled, 'Lifecycle error hook must be invoked on VCL control');
+    Assert.IsTrue(Ctrl.IsDisposed, 'VCL Control must be marked Disposed after HandleLifecycleError');
+    Assert.AreEqual(Ord(lpDisposed), Ord(Ctrl.LifecyclePhase));
+
+    // Further DoDispose should be idempotent without error
+    Ctrl.DoDispose;
+    Assert.IsTrue(Ctrl.IsDisposed);
+  finally
+    Ctrl.Free;
+  end;
 end;
 
 procedure TTestHbLifecycle.TestPilot_THbButton_Click_ProducesStandardEvidence;

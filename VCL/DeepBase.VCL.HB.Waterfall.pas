@@ -62,11 +62,37 @@ type
     AKind: THbWaterfallLinkKind; const ATarget: string) of object;
 
   /// <summary>
+  /// Internal high-performance flicker-free subpanel with clipped children.
+  /// </summary>
+  THbWaterfallSubPanel = class(THbCustomControl, IHbSurfaceProvider)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure Paint; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    function GetSurfaceColor: TAlphaColor; override;
+  end;
+
+  /// <summary>
+  /// Internal high-performance flicker-free scrollbox with clipped children.
+  /// </summary>
+  THbWaterfallScrollBox = class(TScrollBox, IHbSurfaceProvider)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure PaintWindow(DC: HDC); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    function GetSurfaceColor: TAlphaColor;
+  end;
+
+  /// <summary>
   /// Strongly-typed child card widget inside THbFacetWaterfall.
   /// </summary>
   THbWaterfallCard = class(THbCard)
   private
-    FPnlBadge: TPanel;
+    FPnlBadge: THbWaterfallSubPanel;
     FLblBadge: TLabel;
     FBtnFold: THbButton;
     FBtnDetail: THbButton;
@@ -83,7 +109,7 @@ type
   /// <summary>
   /// THbFacetWaterfall: Modern Faceted Waterfall Container for VCL.
   /// </summary>
-  THbFacetWaterfall = class(TCustomControl, IHbSnapshotProvider)
+  THbFacetWaterfall = class(THbCustomControl, IHbSnapshotProvider, IHbSurfaceProvider)
   private
     FSurfaceId: string;
     FControlId: string;
@@ -101,11 +127,11 @@ type
     FOnLinkClick: THbCardLinkEvent;
 
     // UI layout sub-panels
-    FPnlLeftRail: TPanel;
-    FPnlCenterArea: TPanel;
-    FPnlToolbar: TPanel;
-    FScrollWaterfall: TScrollBox;
-    FPnlRightInspector: TPanel;
+    FPnlLeftRail: THbWaterfallSubPanel;
+    FPnlCenterArea: THbWaterfallSubPanel;
+    FPnlToolbar: THbWaterfallSubPanel;
+    FScrollWaterfall: THbWaterfallScrollBox;
+    FPnlRightInspector: THbWaterfallSubPanel;
     FBtnModeSec: THbButton;
     FBtnModeTime: THbButton;
     FLblStatus: TLabel;
@@ -135,10 +161,14 @@ type
     procedure OnFullscreenClick(Sender: TObject);
     function MaxDepthForGranularity(AGranularity: THbGranularity): Integer;
   protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure Paint; override;
     procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function GetSurfaceColor: TAlphaColor; override;
 
     procedure AddFacet(const AId, ATitle: string; ACount: Integer = 0);
     procedure AddCard(const AId, ACatId, ACatTitle, ATitle, ASummary: string;
@@ -193,18 +223,94 @@ type
 
 implementation
 
+{ THbWaterfallSubPanel }
+
+constructor THbWaterfallSubPanel.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  // Parent THbFacetWaterfall is already DoubleBuffered; nested DB bitmaps
+  // realloc on every resize and dominate Gate #5 Form.Update cost.
+  DoubleBuffered := False;
+  ControlStyle := [csAcceptsControls, csCaptureMouse, csOpaque];
+end;
+
+procedure THbWaterfallSubPanel.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
+  Params.WindowClass.Style := Params.WindowClass.Style and not (CS_HREDRAW or CS_VREDRAW);
+end;
+
+procedure THbWaterfallSubPanel.WMEraseBkgnd(var Message: TWMEraseBkgnd);
+begin
+  Message.Result := 1;
+end;
+
+procedure THbWaterfallSubPanel.Paint;
+var
+  DC: HDC;
+begin
+  DC := Canvas.Handle;
+  SelectObject(DC, GetStockObject(DC_BRUSH));
+  SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(THbTheme.Tokens.Surface)));
+  Winapi.Windows.FillRect(DC, ClientRect, GetStockObject(DC_BRUSH));
+end;
+
+function THbWaterfallSubPanel.GetSurfaceColor: TAlphaColor;
+begin
+  Result := THbTheme.Tokens.Surface;
+end;
+
+{ THbWaterfallScrollBox }
+
+constructor THbWaterfallScrollBox.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  // Nested double-buffer bitmaps realloc on resize; parent waterfall owns DB.
+  DoubleBuffered := False;
+  ControlStyle := ControlStyle + [csOpaque] - [csParentBackground];
+  BorderStyle := bsNone;
+end;
+
+procedure THbWaterfallScrollBox.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
+  Params.WindowClass.Style := Params.WindowClass.Style and not (CS_HREDRAW or CS_VREDRAW);
+end;
+
+procedure THbWaterfallScrollBox.WMEraseBkgnd(var Message: TWMEraseBkgnd);
+begin
+  Message.Result := 1;
+end;
+
+procedure THbWaterfallScrollBox.PaintWindow(DC: HDC);
+var
+  R: TRect;
+begin
+  SelectObject(DC, GetStockObject(DC_BRUSH));
+  SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(THbTheme.Tokens.Surface)));
+  R := ClientRect;
+  Winapi.Windows.FillRect(DC, R, GetStockObject(DC_BRUSH));
+end;
+
+function THbWaterfallScrollBox.GetSurfaceColor: TAlphaColor;
+begin
+  Result := THbTheme.Tokens.Surface;
+end;
+
 { THbWaterfallCard }
 
 constructor THbWaterfallCard.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  DoubleBuffered := True;
+  // Card base already DoubleBuffered; keep a single buffer layer under scroll host.
+  DoubleBuffered := False;
   Align := alTop;
   AlignWithMargins := True;
 
-  FPnlBadge := TPanel.Create(Self);
+  FPnlBadge := THbWaterfallSubPanel.Create(Self);
   FPnlBadge.Parent := Self;
-  FPnlBadge.BevelOuter := bvNone;
 
   FLblBadge := TLabel.Create(FPnlBadge);
   FLblBadge.Parent := FPnlBadge;
@@ -212,6 +318,7 @@ begin
   FLblBadge.Alignment := taCenter;
   FLblBadge.Layout := tlCenter;
   FLblBadge.Font.Style := [fsBold];
+  FLblBadge.Transparent := True;
 
   FBtnFold := THbButton.Create(Self);
   FBtnFold.Parent := Self;
@@ -359,34 +466,34 @@ begin
   FItems := TList<THbWaterfallCardData>.Create;
 
   DoubleBuffered := True;
+  ControlStyle := ControlStyle + [csAcceptsControls, csOpaque] - [csParentBackground];
 
   // 1. Left Rail Panel
-  FPnlLeftRail := TPanel.Create(Self);
+  FPnlLeftRail := THbWaterfallSubPanel.Create(Self);
   FPnlLeftRail.Parent := Self;
   FPnlLeftRail.Align := alLeft;
   FPnlLeftRail.Width := FFacetWidth;
-  FPnlLeftRail.BevelOuter := bvNone;
-  FPnlLeftRail.ParentBackground := False;
 
   // 2. Center Viewport Area
-  FPnlCenterArea := TPanel.Create(Self);
+  FPnlCenterArea := THbWaterfallSubPanel.Create(Self);
   FPnlCenterArea.Parent := Self;
   FPnlCenterArea.Align := alClient;
-  FPnlCenterArea.BevelOuter := bvNone;
 
   // 3. Center Toolbar
-  FPnlToolbar := TPanel.Create(FPnlCenterArea);
+  FPnlToolbar := THbWaterfallSubPanel.Create(FPnlCenterArea);
   FPnlToolbar.Parent := FPnlCenterArea;
   FPnlToolbar.Align := alTop;
   FPnlToolbar.Height := Round(42 * (CurrentPPI / 96.0));
-  FPnlToolbar.BevelOuter := bvNone;
-  FPnlToolbar.ParentBackground := False;
 
   FLblStatus := TLabel.Create(FPnlToolbar);
   FLblStatus.Parent := FPnlToolbar;
+  FLblStatus.AutoSize := False;
   FLblStatus.Left := Round(12 * (CurrentPPI / 96.0));
   FLblStatus.Top := Round(12 * (CurrentPPI / 96.0));
+  FLblStatus.Width := Round(70 * (CurrentPPI / 96.0));
+  FLblStatus.Height := Round(20 * (CurrentPPI / 96.0));
   FLblStatus.Caption := '瀑布信息流';
+  FLblStatus.Transparent := True;
 
   FBtnModeTime := THbButton.Create(FPnlToolbar);
   FBtnModeTime.Parent := FPnlToolbar;
@@ -409,19 +516,16 @@ begin
   FBtnModeSec.AlignWithMargins := True;
 
   // 4. Scrollable Content Area
-  FScrollWaterfall := TScrollBox.Create(FPnlCenterArea);
+  FScrollWaterfall := THbWaterfallScrollBox.Create(FPnlCenterArea);
   FScrollWaterfall.Parent := FPnlCenterArea;
   FScrollWaterfall.Align := alClient;
-  FScrollWaterfall.BorderStyle := bsNone;
-  FScrollWaterfall.DoubleBuffered := True;
 
   // 5. Right Inspector Panel
-  FPnlRightInspector := TPanel.Create(Self);
+  FPnlRightInspector := THbWaterfallSubPanel.Create(Self);
   FPnlRightInspector.Parent := Self;
   FPnlRightInspector.Align := alRight;
   FPnlRightInspector.Width := 0; // Hidden initially
-  FPnlRightInspector.BevelOuter := bvNone;
-  FPnlRightInspector.ParentBackground := False;
+  FPnlRightInspector.Visible := False;
 
   FLblInspTitle := TLabel.Create(FPnlRightInspector);
   FLblInspTitle.Parent := FPnlRightInspector;
@@ -429,18 +533,21 @@ begin
   FLblInspTitle.Top := Round(12 * (CurrentPPI / 96.0));
   FLblInspTitle.Font.Style := [fsBold];
   FLblInspTitle.Caption := '卡片属性检查器';
+  FLblInspTitle.Transparent := True;
 
   FLblInspDepth := TLabel.Create(FPnlRightInspector);
   FLblInspDepth.Parent := FPnlRightInspector;
   FLblInspDepth.Left := Round(12 * (CurrentPPI / 96.0));
   FLblInspDepth.Top := Round(36 * (CurrentPPI / 96.0));
   FLblInspDepth.Caption := '层级: -';
+  FLblInspDepth.Transparent := True;
 
   FLblInspLink := TLabel.Create(FPnlRightInspector);
   FLblInspLink.Parent := FPnlRightInspector;
   FLblInspLink.Left := Round(12 * (CurrentPPI / 96.0));
   FLblInspLink.Top := Round(56 * (CurrentPPI / 96.0));
   FLblInspLink.Caption := '资源链接: 无';
+  FLblInspLink.Transparent := True;
 
   FBtnOpenLink := THbButton.Create(FPnlRightInspector);
   FBtnOpenLink.Parent := FPnlRightInspector;
@@ -448,8 +555,9 @@ begin
   FBtnOpenLink.Top := Round(80 * (CurrentPPI / 96.0));
   FBtnOpenLink.Width := Round(110 * (CurrentPPI / 96.0));
   FBtnOpenLink.Caption := '🔗 打开链接';
-  FBtnOpenLink.Kind := bkSoft;
+  FBtnOpenLink.Kind := bkGhost;
   FBtnOpenLink.OnClick := OnOpenLinkClick;
+  FBtnOpenLink.Visible := False;
 
   FBtnFullscreen := THbButton.Create(FPnlRightInspector);
   FBtnFullscreen.Parent := FPnlRightInspector;
@@ -457,17 +565,21 @@ begin
   FBtnFullscreen.Top := Round(80 * (CurrentPPI / 96.0));
   FBtnFullscreen.Width := Round(110 * (CurrentPPI / 96.0));
   FBtnFullscreen.Caption := '⛶ 全屏预览';
-  FBtnFullscreen.Kind := bkPrimary;
+  FBtnFullscreen.Kind := bkGhost;
   FBtnFullscreen.OnClick := OnFullscreenClick;
 
   FMemoProperties := TMemo.Create(FPnlRightInspector);
   FMemoProperties.Parent := FPnlRightInspector;
   FMemoProperties.Left := Round(12 * (CurrentPPI / 96.0));
-  FMemoProperties.Top := Round(124 * (CurrentPPI / 96.0));
+  FMemoProperties.Top := Round(120 * (CurrentPPI / 96.0));
   FMemoProperties.Width := Round(236 * (CurrentPPI / 96.0));
-  FMemoProperties.Height := Round(400 * (CurrentPPI / 96.0));
+  FMemoProperties.Height := Round(200 * (CurrentPPI / 96.0));
   FMemoProperties.ReadOnly := True;
   FMemoProperties.ScrollBars := ssVertical;
+
+  // Initialize view
+  RebuildLeftRail;
+  RebuildWaterfall;
 end;
 
 destructor THbFacetWaterfall.Destroy;
@@ -477,10 +589,36 @@ begin
   inherited;
 end;
 
+procedure THbFacetWaterfall.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
+  Params.WindowClass.Style := Params.WindowClass.Style and not (CS_HREDRAW or CS_VREDRAW);
+end;
+
+procedure THbFacetWaterfall.WMEraseBkgnd(var Message: TWMEraseBkgnd);
+begin
+  Message.Result := 1;
+end;
+
+procedure THbFacetWaterfall.Paint;
+begin
+  if (FPnlLeftRail = nil) or (FPnlCenterArea = nil) then
+  begin
+    Canvas.Brush.Color := AlphaColorToColor(THbTheme.Tokens.Surface);
+    Canvas.FillRect(ClientRect);
+  end;
+end;
+
+function THbFacetWaterfall.GetSurfaceColor: TAlphaColor;
+begin
+  Result := THbTheme.Tokens.Surface;
+end;
+
 procedure THbFacetWaterfall.Resize;
 begin
   inherited;
-  if Assigned(FPnlLeftRail) then
+  if Assigned(FPnlLeftRail) and (FPnlLeftRail.Width <> FFacetWidth) then
     FPnlLeftRail.Width := FFacetWidth;
 end;
 
@@ -731,6 +869,7 @@ begin
   if (FSelectedCardId <> '') and FindCard(FSelectedCardId, Card) and
      ((Card.LinkTarget <> '') or (Length(Card.Properties) > 0)) then
   begin
+    FPnlRightInspector.Visible := True;
     FPnlRightInspector.Width := Round(FInspectorWidth * (CurrentPPI / 96.0));
     FLblInspTitle.Caption := Card.Title;
     FLblInspDepth.Caption := Format('层级: L%d (深度 %d)', [Card.Depth, Card.Depth]);
@@ -753,6 +892,7 @@ begin
   else
   begin
     FPnlRightInspector.Width := 0; // Collapsed when no link or props
+    FPnlRightInspector.Visible := False;
   end;
 end;
 

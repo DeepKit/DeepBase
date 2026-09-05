@@ -28,6 +28,7 @@ uses
   System.Math,
   System.DateUtils,
   System.Types,
+  System.Generics.Collections,
   Winapi.Windows,
   Winapi.Messages,
   Winapi.GDIPAPI,
@@ -43,6 +44,9 @@ uses
   DeepBase.HB.Runtime,
   DeepBase.HB.Lifecycle,
   DeepBase.VCL.HB.Theme;
+
+function GetCachedFontFamily(const AName: string): TGPFontFamily;
+function GetCachedFont(const AName: string; ASize: Single; AStyle: Integer): TGPFont;
 
 type
   THbControlState = (csNormal, csHover, csPressed, csDisabled);
@@ -398,6 +402,54 @@ type
 
 implementation
 
+var
+  GFontFamilyCache: TDictionary<string, TGPFontFamily>;
+  GFontCache: TDictionary<string, TGPFont>;
+  GFontCacheLock: TRTLCriticalSection;
+  GStringFormatCenter: TGPStringFormat;
+
+function GetCachedFontFamily(const AName: string): TGPFontFamily;
+var
+  FontName: string;
+begin
+  if AName <> '' then
+    FontName := AName
+  else
+    FontName := THbTheme.Tokens.FontFamily;
+
+  EnterCriticalSection(GFontCacheLock);
+  try
+    if not GFontFamilyCache.TryGetValue(FontName, Result) then
+    begin
+      Result := TGPFontFamily.Create(FontName);
+      GFontFamilyCache.Add(FontName, Result);
+    end;
+  finally
+    LeaveCriticalSection(GFontCacheLock);
+  end;
+end;
+
+function GetCachedFont(const AName: string; ASize: Single; AStyle: Integer): TGPFont;
+var
+  Key: string;
+  Family: TGPFontFamily;
+  IntSize: Integer;
+begin
+  IntSize := Round(ASize * 10);
+  Key := Format('%s_%d_%d', [AName, IntSize, AStyle]);
+  EnterCriticalSection(GFontCacheLock);
+  try
+    if not GFontCache.TryGetValue(Key, Result) then
+    begin
+      Family := GetCachedFontFamily(AName);
+      Result := TGPFont.Create(Family, ASize, AStyle, UnitPixel);
+      GFontCache.Add(Key, Result);
+    end;
+  finally
+    LeaveCriticalSection(GFontCacheLock);
+  end;
+end;
+
 { THbCustomControl }
 
 constructor THbCustomControl.Create(AOwner: TComponent);
@@ -405,7 +457,7 @@ begin
   inherited Create(AOwner);
   FLife.ResetCreated;
   DoubleBuffered := True;
-  ControlStyle := ControlStyle - [csOpaque] + [csCaptureMouse];
+  ControlStyle := ControlStyle + [csCaptureMouse, csOpaque] - [csParentBackground];
   FIsHovered := False;
   FIsPressed := False;
   FHasFocus := False;
@@ -510,6 +562,7 @@ procedure THbCustomControl.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
   Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
+  Params.WindowClass.Style := Params.WindowClass.Style and not (CS_HREDRAW or CS_VREDRAW);
 end;
 
 procedure THbCustomControl.Paint;
@@ -642,6 +695,9 @@ begin
   P := Parent;
   while P <> nil do
   begin
+    if P is THbCustomControl then
+      Exit(THbCustomControl(P).GetSurfaceColor);
+
     if Supports(P, IHbSurfaceProvider, Provider) then
       Exit(Provider.GetSurfaceColor);
 
@@ -666,19 +722,11 @@ begin
 end;
 
 procedure THbCustomControl.EraseBackground(AGraphics: TGPGraphics);
-var
-  BrushBg: TGPSolidBrush;
-  ARGBVal: ARGB;
 begin
   // 动态解析父级容器（如 THbCard / 祖先表面）的实际 Token 底色，
   // 确保 Pill 按钮与圆角控件外侧完美无缝融入父容器，杜绝矩形底色露边
-  ARGBVal := ColorToARGB(GetContainerBgColor);
-  BrushBg := TGPSolidBrush.Create(ARGBVal);
-  try
-    AGraphics.FillRectangle(BrushBg, MakeRect(0.0, 0.0, Width, Height));
-  finally
-    BrushBg.Free;
-  end;
+  Canvas.Brush.Color := AlphaColorToColor(GetContainerBgColor);
+  Canvas.FillRect(ClientRect);
 end;
 
 function THbCustomControl.ScaleDIP(AValue: Single): Single;
@@ -858,153 +906,130 @@ end;
 
 procedure THbButton.Paint;
 var
-  Graphics: TGPGraphics;
   Tokens: THbTokens;
-  RectF: TGPRectF;
-  Radius: Single;
-  Path: TGPGraphicsPath;
-  Brush: TGPSolidBrush;
-  Pen: TGPPen;
-  Font: TGPFont;
-  FontFamily: TGPFontFamily;
-  StringFormat: TGPStringFormat;
-  TextBrush: TGPSolidBrush;
+  RadiusVal: Integer;
   BgColor, TextColor, BorderColor: TAlphaColor;
   FontSize: Single;
+  R: TRect;
+  RadiusPx: Single;
+  DC: HDC;
+  ParentBg: TAlphaColor;
 begin
   inherited Paint;
   Tokens := GetTokens;
-  Graphics := TGPGraphics.Create(Canvas.Handle);
-  try
-    Graphics.SetSmoothingMode(SmoothingModeAntiAlias);
-    Graphics.SetTextRenderingHint(TextRenderingHintClearTypeGridFit);
-    EraseBackground(Graphics);
 
-    RectF := MakeRect(1.0, 1.0, Width - 2.0, Height - 2.0);
+  if FPill then
+    RadiusPx := Height * 0.5
+  else
+    RadiusPx := ScaleDIP(Tokens.RadiusM);
+  RadiusVal := Round(RadiusPx);
 
-    if FPill then
-      Radius := RectF.Height * 0.5
-    else
-      Radius := ScaleDIP(Tokens.RadiusM);
-
-    // Determine colors by Kind & State
-    BgColor := Tokens.Primary;
-    TextColor := Tokens.OnPrimary;
-    BorderColor := TAlphaColors.Null;
-    FontSize := Tokens.SizeM;
-    case FKind of
-      bkPrimary:
-      begin
-        case CurrentState of
-          csNormal:   BgColor := Tokens.Primary;
-          csHover:    BgColor := Tokens.PrimaryHover;
-          csPressed:  BgColor := Tokens.PrimaryPressed;
-          csDisabled: BgColor := Tokens.Primary;
-        end;
-        TextColor := Tokens.OnPrimary;
+  // Determine colors by Kind & State
+  BgColor := Tokens.Primary;
+  TextColor := Tokens.OnPrimary;
+  BorderColor := TAlphaColors.Null;
+  case FKind of
+    bkPrimary:
+    begin
+      case CurrentState of
+        csNormal:   BgColor := Tokens.Primary;
+        csHover:    BgColor := Tokens.PrimaryHover;
+        csPressed:  BgColor := Tokens.PrimaryPressed;
+        csDisabled: BgColor := Tokens.Primary;
       end;
-      bkGhost:
-      begin
-        BgColor := TAlphaColors.Null;
-        case CurrentState of
-          csNormal:   TextColor := Tokens.Primary;
-          csHover:    TextColor := Tokens.PrimaryHover;
-          csPressed:  TextColor := Tokens.PrimaryPressed;
-          csDisabled: TextColor := Tokens.InkMuted;
-        end;
-        BorderColor := TextColor;
-      end;
-      bkSoft:
-      begin
-        case CurrentState of
-          csNormal:   BgColor := Tokens.Soft;
-          csHover:    BgColor := Tokens.PrimaryHover;
-          csPressed:  BgColor := Tokens.PrimaryPressed;
-          csDisabled: BgColor := Tokens.Soft;
-        end;
-        if CurrentState in [csHover, csPressed] then
-          TextColor := Tokens.OnPrimary
-        else
-          TextColor := Tokens.Primary;
-      end;
-      bkDanger:
-      begin
-        case CurrentState of
-          csNormal:   BgColor := Tokens.Danger;
-          csHover:    BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.15);
-          csPressed:  BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.30);
-          csDisabled: BgColor := Tokens.Danger;
-        end;
-        TextColor := Tokens.OnPrimary;
-      end;
+      TextColor := Tokens.OnPrimary;
     end;
-
-    // Draw Background
-    Path := CreateRoundRectPath(RectF, Radius);
-    try
-      if BgColor <> TAlphaColors.Null then
-      begin
-        var AlphaVal: Byte := 255;
-        if CurrentState = csDisabled then
-          AlphaVal := 115;
-        Brush := TGPSolidBrush.Create(ColorToARGB(BgColor, AlphaVal));
-        try
-          Graphics.FillPath(Brush, Path);
-        finally
-          Brush.Free;
-        end;
+    bkGhost:
+    begin
+      BgColor := TAlphaColors.Null;
+      case CurrentState of
+        csNormal:   TextColor := Tokens.Primary;
+        csHover:    TextColor := Tokens.PrimaryHover;
+        csPressed:  TextColor := Tokens.PrimaryPressed;
+        csDisabled: TextColor := Tokens.InkMuted;
       end;
-
-      if BorderColor <> TAlphaColors.Null then
-      begin
-        Pen := TGPPen.Create(ColorToARGB(BorderColor), ScaleDIP(Tokens.BorderWidth));
-        try
-          Graphics.DrawPath(Pen, Path);
-        finally
-          Pen.Free;
-        end;
+      BorderColor := TextColor;
+    end;
+    bkSoft:
+    begin
+      case CurrentState of
+        csNormal:   BgColor := Tokens.Soft;
+        csHover:    BgColor := Tokens.PrimaryHover;
+        csPressed:  BgColor := Tokens.PrimaryPressed;
+        csDisabled: BgColor := Tokens.Soft;
       end;
-    finally
-      Path.Free;
+      if CurrentState in [csHover, csPressed] then
+        TextColor := Tokens.OnPrimary
+      else
+        TextColor := Tokens.Primary;
     end;
-
-    // Draw Focus Ring
-    DrawFocusRing(Graphics, RectF, Radius);
-
-    // Draw Text
-    case FSize of
-      bsS: FontSize := Tokens.SizeS;
-      bsM: FontSize := Tokens.SizeM;
-      bsL: FontSize := Tokens.SizeL;
-    end;
-
-    FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
-    try
-      Font := TGPFont.Create(FontFamily, ScaleDIP(FontSize), FontStyleBold, UnitPixel);
-      try
-        StringFormat := TGPStringFormat.Create;
-        try
-          StringFormat.SetAlignment(StringAlignmentCenter);
-          StringFormat.SetLineAlignment(StringAlignmentCenter);
-
-          TextBrush := TGPSolidBrush.Create(ColorToARGB(TextColor));
-          try
-            Graphics.DrawString(FCaption, -1, Font, RectF, StringFormat, TextBrush);
-          finally
-            TextBrush.Free;
-          end;
-        finally
-          StringFormat.Free;
-        end;
-      finally
-        Font.Free;
+    bkDanger:
+    begin
+      case CurrentState of
+        csNormal:   BgColor := Tokens.Danger;
+        csHover:    BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.15);
+        csPressed:  BgColor := BlendAlphaColor(Tokens.Danger, $FF000000, 0.30);
+        csDisabled: BgColor := Tokens.Danger;
       end;
-    finally
-      FontFamily.Free;
+      TextColor := Tokens.OnPrimary;
     end;
-  finally
-    Graphics.Free;
   end;
+
+  DC := Canvas.Handle;
+  ParentBg := GetContainerBgColor;
+
+  // 1. Fill background with parent container color using fast DC_BRUSH
+  SelectObject(DC, GetStockObject(DC_BRUSH));
+  SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(ParentBg)));
+  R := ClientRect;
+  Winapi.Windows.FillRect(DC, R, GetStockObject(DC_BRUSH));
+
+  // 2. Draw Button Pill / Rounded Rect
+  if BgColor <> TAlphaColors.Null then
+  begin
+    SelectObject(DC, GetStockObject(DC_BRUSH));
+    SetDCBrushColor(DC, ColorToRGB(AlphaColorToColor(BgColor)));
+  end
+  else
+    SelectObject(DC, GetStockObject(NULL_BRUSH));
+
+  if BorderColor <> TAlphaColors.Null then
+  begin
+    SelectObject(DC, GetStockObject(DC_PEN));
+    SetDCPenColor(DC, ColorToRGB(AlphaColorToColor(BorderColor)));
+  end
+  else
+    SelectObject(DC, GetStockObject(NULL_PEN));
+
+  if (BgColor <> TAlphaColors.Null) or (BorderColor <> TAlphaColors.Null) then
+  begin
+    Winapi.Windows.RoundRect(DC, 0, 0, Width, Height, RadiusVal * 2, RadiusVal * 2);
+  end;
+
+  // 3. Draw Focus Ring if needed
+  if FHasFocus and (CurrentState <> csDisabled) then
+  begin
+    SelectObject(DC, GetStockObject(NULL_BRUSH));
+    SelectObject(DC, GetStockObject(DC_PEN));
+    SetDCPenColor(DC, ColorToRGB(AlphaColorToColor(Tokens.FocusRing)));
+    Winapi.Windows.RoundRect(DC, 1, 1, Width - 1, Height - 1, RadiusVal * 2, RadiusVal * 2);
+  end;
+
+  // 4. Draw Text
+  case FSize of
+    bsS: FontSize := Tokens.SizeS;
+    bsM: FontSize := Tokens.SizeM;
+    bsL: FontSize := Tokens.SizeL;
+  else
+    FontSize := Tokens.SizeM;
+  end;
+
+  Canvas.Font.Name := Tokens.FontFamily;
+  Canvas.Font.Height := -Round(ScaleDIP(FontSize));
+  Canvas.Font.Style := [fsBold];
+  Canvas.Font.Color := AlphaColorToColor(TextColor);
+  SetBkMode(DC, TRANSPARENT);
+  DrawTextW(DC, PWideChar(FCaption), -1, R, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
 end;
 
 { --------------------------------------------------------------------------
@@ -2302,5 +2327,23 @@ begin
     Graphics.Free;
   end;
 end;
+
+initialization
+  InitializeCriticalSection(GFontCacheLock);
+  GFontFamilyCache := TDictionary<string, TGPFontFamily>.Create;
+  GFontCache := TDictionary<string, TGPFont>.Create;
+  GStringFormatCenter := TGPStringFormat.Create;
+  GStringFormatCenter.SetAlignment(StringAlignmentCenter);
+  GStringFormatCenter.SetLineAlignment(StringAlignmentCenter);
+
+finalization
+  GStringFormatCenter.Free;
+  for var F in GFontCache.Values do
+    F.Free;
+  GFontCache.Free;
+  for var Family in GFontFamilyCache.Values do
+    Family.Free;
+  GFontFamilyCache.Free;
+  DeleteCriticalSection(GFontCacheLock);
 
 end.
