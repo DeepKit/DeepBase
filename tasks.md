@@ -8,14 +8,14 @@
 ## 当前基线
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
-- 单测基线: `TestResults/WO-20260903-001/full6/` + `pkg-fix2/`（FeaturesMeta 已绿；CR-608 绿；CR-606×2 可红）
-- 当前主线: **WO-20260903-001 已交付 · 主控复核通过 · CLOSED**（余债仅 CR-606×2 允许红）
-- 最新主线: **WO-20260905-001 已交付 · 主控复核 + 异族终审（12 席异构）有条件 CLOSE，条件已当日落账**（95edea6 / d42bf8d）
+- 单测基线: `TestResults/WO-20260905-001/`（92/92 全绿；HB 门禁 Gate #7 已实施）
+- 当前主线: **WO-20260905-002 已派发 · HB 视觉性能门禁基准 1–6 + FMX 行为层生命周期对齐**（罗辑执行中）
+- 已闭环: WO-20260903-001（CR-606×2 允许红余债）· WO-20260904-001/002R/003/004/005R · WO-20260905-001（95edea6 / d42bf8d）
 
 ## 登记债务（异族终审 CLOSE 条件·均已入账待治理）
 
 - **DEBT-20260905-001** ⏸ `DeepBase.DataBinding.pas` / `DeepBase.Services.Interfaces.pas` 占位 GUID `{A1B2C3D4-...}` 复用（非 HB 领域，历史遗留，待下轮接口治理统一换发）
-- **DEBT-20260905-002** ☐ `Tools/gen_ev.js` 未跟踪待归属（决定入库或移出仓库，归属主控）
+- ~~**DEBT-20260905-002**~~ ✅ 已处置：`Tools/gen_ev.js`（构建/测试证据生成工具）已入库归属 Tools/
 
 ---
 
