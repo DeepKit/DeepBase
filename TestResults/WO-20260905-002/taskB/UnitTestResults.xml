@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="20" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-05" time="16:10:28">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="16:10:28" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="2.072" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="2.072" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="HB" executed="true" result="Success" success="True" time="1.977" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestFmxHbDialogs" executed="True" result="Success" success="True" time="1.927" >
+                            <results>
+                              <test-case name="Test_FMX_DialogOptions_Structure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FMX_SummaryBar_Toggle_And_States" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FMX_VoiceField_Status_Transitions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_FMX_Dialog_Execute_OkPath" executed="True" result="Success" success="True" time="1.563" asserts="0" />
+                              <test-case name="Test_FMX_Dialog_Execute_CancelPath" executed="True" result="Success" success="True" time="0.236" asserts="0" />
+                              <test-case name="Test_FMX_VoiceDialog_Execute_OkPath" executed="True" result="Success" success="True" time="0.073" asserts="0" />
+                              <test-case name="Test_FMX_VoiceDialog_Execute_CancelPath" executed="True" result="Success" success="True" time="0.052" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestFmxHbLifecycle" executed="True" result="Success" success="True" time="0.049" >
+                            <results>
+                              <test-case name="TestLifecycle_StandardPipeline_PhaseProgression" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="TestPaintAssertion_BypassBindToken_ThrowsEHbLifecycleViolation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="TestDispose_Idempotent_MultipleCallsNoError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="TestFailurePath_BindStateError_RaisesAndCallsErrorHook" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="TestPilot_THbButton_Click_ProducesStandardEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="TestPilot_THbDialog_Confirm_ProducesCriticalEvidence" executed="True" result="Success" success="True" time="0.048" asserts="0" />
+                              <test-case name="TestStateSlot_RegisterStateSlot_ReusesCoreRuntime" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbLifecycle" executed="True" result="Success" success="True" time="0.096" >
+                      <results>
+                        <test-case name="TestLifecycle_StandardPipeline_PhaseProgression" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPaintAssertion_BypassBindToken_ThrowsEHbLifecycleViolation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestDispose_Idempotent_MultipleCallsNoError" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestFailurePath_BindStateError_RaisesAndCallsErrorHook" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPilot_THbButton_Click_ProducesStandardEvidence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestPilot_THbDialog_Confirm_ProducesCriticalEvidence" executed="True" result="Success" success="True" time="0.095" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

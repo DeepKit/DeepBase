@@ -45,6 +45,7 @@ type
     function Percentile(ASorted: TList<Double>; APct: Double): Double;
     procedure WriteTimingCsv(const AGateName: string; ASamples: TList<Double>);
     procedure EnsureTenBenchThemes;
+    procedure RemoveTenBenchThemes;
     procedure CaptureFormPng(AForm: TCustomForm; const AFileName: string);
     procedure BuildProbeIfNeeded;
   public
@@ -147,14 +148,24 @@ begin
     Def.Meta.Id := Format('bench-palette-%d', [I]);
     Def.Meta.Name := Format('Bench Palette %d', [I]);
     Def.Meta.NameEn := Def.Meta.Name;
-    Def.Meta.Description := 'WO-20260905-002 Gate #3 palette';
+    Def.Meta.Description := 'WO-20260905-002 Gate #3 palette (ephemeral)';
     Def.Meta.IsDark := (I mod 2) = 0;
     Def.Tokens := Base;
-    // Distinct surface tint so ApplyTheme is not a no-op.
-    Def.Tokens.Surface := (Def.Tokens.Surface and $FF000000) or
-      (((I * 17) and $FF) shl 16) or (((I * 29) and $FF) shl 8) or ((I * 41) and $FF);
+    // Vary Primary only — keep Surface/Ink WCAG AA so a leaked registry entry
+    // cannot poison Test_WCAG_AA_Contrast_All_BuiltInThemes.
+    Def.Tokens.Primary := (Def.Tokens.Primary and $FF000000) or
+      ((($80 + I * 7) and $FF) shl 16) or ((($60 + I * 5) and $FF) shl 8) or
+      (($20 + I * 3) and $FF);
     THbTheme.RegisterTheme(Def);
   end;
+end;
+
+procedure TTestHbBenchmark.RemoveTenBenchThemes;
+var
+  I: Integer;
+begin
+  for I := 1 to 10 do
+    THbTheme.UnregisterTheme(Format('bench-palette-%d', [I]));
 end;
 
 procedure TTestHbBenchmark.CaptureFormPng(AForm: TCustomForm; const AFileName: string);
@@ -226,11 +237,11 @@ end;
 procedure TTestHbBenchmark.Setup;
 begin
   THbTouchpointEngine.Instance.Reset;
-  EnsureTenBenchThemes;
 end;
 
 procedure TTestHbBenchmark.TearDown;
 begin
+  RemoveTenBenchThemes;
   THbTouchpointEngine.Instance.Reset;
 end;
 
@@ -414,6 +425,7 @@ var
   Sw: TStopwatch;
   ThemeId: string;
 begin
+  EnsureTenBenchThemes;
   Samples := TList<Double>.Create;
   Form := TCustomForm.CreateNew(nil);
   try
@@ -456,6 +468,7 @@ begin
   finally
     Form.Free;
     Samples.Free;
+    RemoveTenBenchThemes;
   end;
 end;
 

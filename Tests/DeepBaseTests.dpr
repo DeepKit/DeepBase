@@ -164,6 +164,7 @@ uses
   Test.DeepBase.HB.Voice.CF in 'Test.DeepBase.HB.Voice.CF.pas',
   Test.DeepBase.VCL.HB.Theme in 'Test.DeepBase.VCL.HB.Theme.pas',
   Test.DeepBase.FMX.HB.Dialogs in 'Test.DeepBase.FMX.HB.Dialogs.pas',
+  Test.DeepBase.FMX.HB.Lifecycle in 'Test.DeepBase.FMX.HB.Lifecycle.pas',
   Test.DeepBase.HB.Touchpoint in 'Test.DeepBase.HB.Touchpoint.pas',
   Test.DeepBase.HB.Lifecycle in 'Test.DeepBase.HB.Lifecycle.pas',
   Test.DeepBase.HB.Benchmark in 'Test.DeepBase.HB.Benchmark.pas',

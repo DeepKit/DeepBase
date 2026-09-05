@@ -20,6 +20,7 @@ uses
   System.Types,
   System.UITypes,
   System.Math,
+  System.DateUtils,
   System.Generics.Collections,
   FMX.Types,
   FMX.Controls,
@@ -31,6 +32,8 @@ uses
   FMX.Memo,
   DeepBase.HB.Core,
   DeepBase.HB.Dialogs.Types,
+  DeepBase.HB.Touchpoint.Types,
+  DeepBase.HB.Touchpoint.Engine,
   DeepBase.FMX.HB.Theme,
   DeepBase.FMX.HB.Controls;
 
@@ -463,6 +466,25 @@ begin
         else if EdtInput is TMemo then
           AInputValue := TMemo(EdtInput).Text;
       end;
+
+      // Pilot: Confirm path emits tlCritical full evidence via Core engine (parity with VCL)
+      var Ev: TTouchEvidence;
+      FillChar(Ev, SizeOf(Ev), 0);
+      Ev.TouchpointId := 'tp_dialog_confirm';
+      Ev.SurfaceId := 'frm_dialog';
+      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+      Ev.DwellTimeMs := 0;
+      Ev.Success := True;
+      Ev.BeforeState := 'Prompting';
+      Ev.AfterState := 'Confirmed';
+      Ev.ActionType := 'Confirm';
+      Ev.ErrorCode := 0;
+      Ev.SupportDeflected := True;
+
+      if not THbTouchpointEngine.Instance.IsRegistered('tp_dialog_confirm') then
+        THbTouchpointEngine.Instance.RegisterTouchpoint(
+          'tp_dialog_confirm', tlCritical, 'frm_dialog', 'Confirmed');
+      THbTouchpointEngine.Instance.EmitEvidence(Ev);
     end
     else
       Result := drCancel;
@@ -494,6 +516,7 @@ begin
   Opts.Summary := AMessage;
   Opts.Kind := dkConfirm;
   Opts.OkCaption := '确定';
+  Opts.BoundaryNotice := ABoundaryNotice;
   Result := (Execute(Opts, Dummy) = drOk);
 end;
 

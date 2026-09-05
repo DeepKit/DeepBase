@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.HB.Controls - HB Visual Infrastructure Core Atomic Controls
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -41,6 +41,7 @@ uses
   DeepBase.HB.Touchpoint.Types,
   DeepBase.HB.Touchpoint.Engine,
   DeepBase.HB.Runtime,
+  DeepBase.HB.Lifecycle,
   DeepBase.VCL.HB.Theme;
 
 type
@@ -66,13 +67,9 @@ type
     -------------------------------------------------------------------------- }
   THbCustomControl = class(TCustomControl, IHbSurfaceProvider)
   private
-    FLifecyclePhase: THbLifecyclePhase;
+    FLife: THbLifecycleState;
     FTouchpoint: IHbTouchpoint;
-    FTouchpointId: string;
-    FSurfaceId: string;
-    FTargetState: string;
     FOnLifecycleError: THbLifecycleErrorEvent;
-    FIsDisposed: Boolean;
     FIsHovered: Boolean;
     FIsPressed: Boolean;
     FHasFocus: Boolean;
@@ -84,6 +81,15 @@ type
     procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure WMPaint(var Message: TWMPaint); message WM_PAINT;
     procedure OnThemeChangedNotification(Sender: TObject);
+    function GetLifecyclePhase: THbLifecyclePhase;
+    procedure SetLifecyclePhase(Value: THbLifecyclePhase);
+    function GetTouchpointId: string;
+    procedure SetTouchpointId(const Value: string);
+    function GetSurfaceId: string;
+    procedure SetSurfaceId(const Value: string);
+    function GetTargetState: string;
+    procedure SetTargetState(const Value: string);
+    function GetIsDisposed: Boolean;
   protected
     // 7-Step Lifecycle Pipeline
     procedure BindToken; virtual;
@@ -102,6 +108,7 @@ type
     function ScalePixels(AValue: Single): Integer; virtual;
 
     // GDI+ Drawing Helpers
+    procedure CreateParams(var Params: TCreateParams); override;
     procedure EraseBackground(AGraphics: TGPGraphics); virtual;
     procedure DrawFocusRing(AGraphics: TGPGraphics; const ARect: TGPRectF; ARadius: Single);
     function CreateRoundRectPath(const ARect: TGPRectF; ARadius: Single): TGPGraphicsPath;
@@ -115,13 +122,13 @@ type
     function GetContainerBgColor: TAlphaColor; virtual;
     function GetSurfaceColor: TAlphaColor; virtual;
 
-    property LifecyclePhase: THbLifecyclePhase read FLifecyclePhase write FLifecyclePhase;
+    property LifecyclePhase: THbLifecyclePhase read GetLifecyclePhase write SetLifecyclePhase;
     property Touchpoint: IHbTouchpoint read FTouchpoint write FTouchpoint;
-    property TouchpointId: string read FTouchpointId write FTouchpointId;
-    property SurfaceId: string read FSurfaceId write FSurfaceId;
-    property TargetState: string read FTargetState write FTargetState;
+    property TouchpointId: string read GetTouchpointId write SetTouchpointId;
+    property SurfaceId: string read GetSurfaceId write SetSurfaceId;
+    property TargetState: string read GetTargetState write SetTargetState;
     property CurrentState: THbControlState read GetCurrentState;
-    property IsDisposed: Boolean read FIsDisposed;
+    property IsDisposed: Boolean read GetIsDisposed;
     property OnLifecycleError: THbLifecycleErrorEvent read FOnLifecycleError write FOnLifecycleError;
   end;
 
@@ -396,17 +403,13 @@ implementation
 constructor THbCustomControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FLifecyclePhase := lpCreated;
+  FLife.ResetCreated;
   DoubleBuffered := True;
   ControlStyle := ControlStyle - [csOpaque] + [csCaptureMouse];
   FIsHovered := False;
   FIsPressed := False;
   FHasFocus := False;
-  FIsDisposed := False;
   FTouchpoint := nil;
-  FTouchpointId := '';
-  FSurfaceId := '';
-  FTargetState := '';
 
   try
     BindToken;
@@ -422,31 +425,65 @@ begin
   THbTheme.AddListener(OnThemeChangedNotification);
 end;
 
+function THbCustomControl.GetLifecyclePhase: THbLifecyclePhase;
+begin
+  Result := FLife.Phase;
+end;
+
+procedure THbCustomControl.SetLifecyclePhase(Value: THbLifecyclePhase);
+begin
+  FLife.Phase := Value;
+end;
+
+function THbCustomControl.GetTouchpointId: string;
+begin
+  Result := FLife.TouchpointId;
+end;
+
+procedure THbCustomControl.SetTouchpointId(const Value: string);
+begin
+  FLife.TouchpointId := Value;
+end;
+
+function THbCustomControl.GetSurfaceId: string;
+begin
+  Result := FLife.SurfaceId;
+end;
+
+procedure THbCustomControl.SetSurfaceId(const Value: string);
+begin
+  FLife.SurfaceId := Value;
+end;
+
+function THbCustomControl.GetTargetState: string;
+begin
+  Result := FLife.TargetState;
+end;
+
+procedure THbCustomControl.SetTargetState(const Value: string);
+begin
+  FLife.TargetState := Value;
+end;
+
+function THbCustomControl.GetIsDisposed: Boolean;
+begin
+  Result := FLife.IsDisposed;
+end;
+
 procedure THbCustomControl.BindToken;
 begin
-  FLifecyclePhase := lpTokenBound;
+  FLife.BindToken;
 end;
 
 procedure THbCustomControl.BindState;
 begin
-  FLifecyclePhase := lpStateBound;
+  FLife.BindState;
 end;
 
 procedure THbCustomControl.AttachTouchpoint(const ATouchpoint: IHbTouchpoint);
 begin
   FTouchpoint := ATouchpoint;
-  if FTouchpoint <> nil then
-  begin
-    FTouchpointId := FTouchpoint.GetID;
-    FTargetState := FTouchpoint.GetAfterState;
-    THbTouchpointEngine.Instance.RegisterTouchpoint(
-      FTouchpointId,
-      FTouchpoint.GetLevel,
-      FSurfaceId,
-      FTargetState
-    );
-    FLifecyclePhase := lpTouchpointAttached;
-  end;
+  FLife.AttachTouchpoint(ATouchpoint, FLife.SurfaceId);
 end;
 
 procedure THbCustomControl.Render;
@@ -455,57 +492,40 @@ begin
 end;
 
 procedure THbCustomControl.EmitTelemetry;
-var
-  Ev: TTouchEvidence;
 begin
-  if (FTouchpoint <> nil) or (FTouchpointId <> '') then
-  begin
-    if FTouchpoint <> nil then
-    begin
-      Ev := FTouchpoint.EmitEvidence;
-      if Ev.TouchpointId = '' then
-        Ev.TouchpointId := FTouchpoint.GetID;
-      if (Ev.SurfaceId = '') and (FSurfaceId <> '') then
-        Ev.SurfaceId := FSurfaceId;
-    end
-    else
-    begin
-      FillChar(Ev, SizeOf(Ev), 0);
-      Ev.TouchpointId := FTouchpointId;
-      Ev.SurfaceId := FSurfaceId;
-    end;
-    if Ev.TimestampUtc <= 0 then
-      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
-    if Ev.ActionType = '' then
-      Ev.ActionType := 'Render';
-    Ev.Success := True;
-    THbTouchpointEngine.Instance.EmitEvidence(Ev);
-  end;
+  FLife.EmitTelemetry(FTouchpoint, 'Render');
 end;
 
 procedure THbCustomControl.HandleLifecycleError(const AStep: string; AException: Exception);
 begin
-  if Assigned(FOnLifecycleError) then
-    FOnLifecycleError(Self, AStep, AException);
+  try
+    if Assigned(FOnLifecycleError) then
+      FOnLifecycleError(Self, AStep, AException);
+  finally
+    DoDispose;
+  end;
+end;
+
+procedure THbCustomControl.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_CLIPCHILDREN or WS_CLIPSIBLINGS;
 end;
 
 procedure THbCustomControl.Paint;
 begin
-  if FLifecyclePhase < lpTokenBound then
-    raise EHbLifecycleViolation.Create(ClassName, FLifecyclePhase);
+  FLife.AssertPaintAllowed(ClassName);
   Render;
 end;
 
 procedure THbCustomControl.WMPaint(var Message: TWMPaint);
 begin
-  if FLifecyclePhase < lpTokenBound then
-    raise EHbLifecycleViolation.Create(ClassName, FLifecyclePhase);
+  FLife.AssertPaintAllowed(ClassName);
 
   try
     inherited;
     EmitTelemetry;
-    if FLifecyclePhase < lpRendered then
-      FLifecyclePhase := lpRendered;
+    FLife.MarkRendered;
   except
     on E: Exception do
       HandleLifecycleError('Paint/Render', E);
@@ -514,10 +534,9 @@ end;
 
 procedure THbCustomControl.DoDispose;
 begin
-  if FIsDisposed then
+  if FLife.IsDisposed then
     Exit;
-  FIsDisposed := True;
-  FLifecyclePhase := lpDisposed;
+  FLife.Dispose;
   THbTheme.RemoveListener(OnThemeChangedNotification);
   FTouchpoint := nil;
 end;
@@ -815,8 +834,8 @@ begin
     Ev := FTouchpoint.EmitEvidence;
     if Ev.TouchpointId = '' then
       Ev.TouchpointId := FTouchpoint.GetID;
-    if (Ev.SurfaceId = '') and (FSurfaceId <> '') then
-      Ev.SurfaceId := FSurfaceId;
+    if (Ev.SurfaceId = '') and (SurfaceId <> '') then
+      Ev.SurfaceId := SurfaceId;
     if Ev.ActionType = '' then
       Ev.ActionType := 'Click';
     if Ev.TimestampUtc <= 0 then
@@ -825,11 +844,11 @@ begin
     Ev.SupportDeflected := True;
     THbTouchpointEngine.Instance.EmitEvidence(Ev);
   end
-  else if FTouchpointId <> '' then
+  else if TouchpointId <> '' then
   begin
     FillChar(Ev, SizeOf(Ev), 0);
-    Ev.TouchpointId := FTouchpointId;
-    Ev.SurfaceId := FSurfaceId;
+    Ev.TouchpointId := TouchpointId;
+    Ev.SurfaceId := SurfaceId;
     Ev.ActionType := 'Click';
     Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
     Ev.Success := True;

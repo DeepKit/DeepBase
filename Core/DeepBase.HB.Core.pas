@@ -219,6 +219,7 @@ type
 
     class procedure Initialize;
     class procedure RegisterTheme(const ADef: THbThemeDefinition); static;
+    class procedure UnregisterTheme(const AThemeId: string); static;
     class function RegisterThemeFromJson(const AJson: string): string; static;
     class function GetTheme(const AThemeId: string; out ADef: THbThemeDefinition): Boolean; static;
     class function GetAvailableThemes: TArray<THbThemeMetadata>; static;
@@ -893,6 +894,20 @@ begin
   FLock.Enter;
   try
     FRegistry.AddOrSetValue(ADef.Meta.Id, ADef);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+class procedure THbTheme.UnregisterTheme(const AThemeId: string);
+begin
+  if AThemeId = '' then
+    Exit;
+  FLock.Enter;
+  try
+    FRegistry.Remove(AThemeId);
+    if SameText(FCurrentThemeId, AThemeId) then
+      FCurrentThemeId := '';
   finally
     FLock.Leave;
   end;

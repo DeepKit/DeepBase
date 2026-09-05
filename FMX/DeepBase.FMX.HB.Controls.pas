@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.FMX.HB.Controls - Core Vector-Rendered HB Controls for FireMonkey
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform FMX)
@@ -18,12 +18,18 @@ uses
   System.UITypes,
   System.Types,
   System.Math,
+  System.DateUtils,
   System.Messaging,
   FMX.Types,
   FMX.Controls,
   FMX.Graphics,
   FMX.Objects,
-  DeepBase.HB.Core;
+  DeepBase.HB.Core,
+  DeepBase.HB.Runtime,
+  DeepBase.HB.Lifecycle,
+  DeepBase.HB.StateSlot.Types,
+  DeepBase.HB.Touchpoint.Types,
+  DeepBase.HB.Touchpoint.Engine;
 
 type
   THbControlState = (stNormal, stHover, stPressed, stDisabled, stFocused);
@@ -38,15 +44,38 @@ type
   THbToastKind = (tkSuccess, tkWarning, tkDanger, tkInfo);
   THbSkeletonShape = (skLine, skCircle, skCard);
 
+  THbLifecyclePhase = DeepBase.HB.Runtime.THbLifecyclePhase;
+  EHbLifecycleViolation = DeepBase.HB.Runtime.EHbLifecycleViolation;
+  THbLifecycleErrorEvent = procedure(Sender: TObject; const AStep: string; AException: Exception) of object;
+
   /// <summary>
   /// Abstract base class for all HB FMX vector-rendered controls.
+  /// Shares Core THbLifecycleState with VCL (no second truth source).
   /// </summary>
   THbFmxControl = class(TControl)
   private
     FState: THbControlState;
     FThemeSubId: Integer;
+    FLife: THbLifecycleState;
+    FTouchpoint: IHbTouchpoint;
+    FOnLifecycleError: THbLifecycleErrorEvent;
     procedure OnThemeChangedMessage(const Sender: TObject; const M: TMessage);
+    function GetLifecyclePhase: THbLifecyclePhase;
+    procedure SetLifecyclePhase(Value: THbLifecyclePhase);
+    function GetTouchpointId: string;
+    procedure SetTouchpointId(const Value: string);
+    function GetSurfaceId: string;
+    procedure SetSurfaceId(const Value: string);
+    function GetIsDisposed: Boolean;
+    function GetTargetState: string;
+    procedure SetTargetState(const Value: string);
   protected
+    procedure BindToken; virtual;
+    procedure BindState; virtual;
+    procedure AttachTouchpoint(const ATouchpoint: IHbTouchpoint); virtual;
+    procedure Render; virtual;
+    procedure EmitTelemetry; virtual;
+    procedure HandleLifecycleError(const AStep: string; AException: Exception); virtual;
     procedure DoMouseEnter; override;
     procedure DoMouseLeave; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
@@ -59,7 +88,18 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DoDispose; virtual;
+    /// <summary>Forwarder to Core THbRuntime.RegisterStateSlot (no FMX-local registry).</summary>
+    class procedure RegisterStateSlot(const AWorkOrder: string;
+      const ASlot: IHbStateSlotProvider); static;
     property State: THbControlState read FState;
+    property LifecyclePhase: THbLifecyclePhase read GetLifecyclePhase write SetLifecyclePhase;
+    property Touchpoint: IHbTouchpoint read FTouchpoint write FTouchpoint;
+    property TouchpointId: string read GetTouchpointId write SetTouchpointId;
+    property SurfaceId: string read GetSurfaceId write SetSurfaceId;
+    property TargetState: string read GetTargetState write SetTargetState;
+    property IsDisposed: Boolean read GetIsDisposed;
+    property OnLifecycleError: THbLifecycleErrorEvent read FOnLifecycleError write FOnLifecycleError;
   end;
 
   /// <summary>
@@ -79,6 +119,7 @@ type
     procedure DrawHbControl(const Canvas: TCanvas; const ARect: TRectF; const Tokens: THbTokens); override;
   public
     constructor Create(AOwner: TComponent); override;
+    procedure Click; override;
   published
     property Align;
     property Anchors;
@@ -328,17 +369,124 @@ implementation
 constructor THbFmxControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FLife.ResetCreated;
   FState := stNormal;
   HitTest := True;
   TabStop := True;
+  FTouchpoint := nil;
   FThemeSubId := Integer(TMessageManager.DefaultManager.SubscribeToMessage(
     THbThemeChangedMessage, OnThemeChangedMessage));
+  try
+    BindToken;
+    BindState;
+  except
+    on E: Exception do
+    begin
+      HandleLifecycleError('Create/Binding', E);
+      raise;
+    end;
+  end;
 end;
 
 destructor THbFmxControl.Destroy;
 begin
+  DoDispose;
   TMessageManager.DefaultManager.Unsubscribe(THbThemeChangedMessage, FThemeSubId);
   inherited Destroy;
+end;
+
+function THbFmxControl.GetLifecyclePhase: THbLifecyclePhase;
+begin
+  Result := FLife.Phase;
+end;
+
+procedure THbFmxControl.SetLifecyclePhase(Value: THbLifecyclePhase);
+begin
+  FLife.Phase := Value;
+end;
+
+function THbFmxControl.GetTouchpointId: string;
+begin
+  Result := FLife.TouchpointId;
+end;
+
+procedure THbFmxControl.SetTouchpointId(const Value: string);
+begin
+  FLife.TouchpointId := Value;
+end;
+
+function THbFmxControl.GetSurfaceId: string;
+begin
+  Result := FLife.SurfaceId;
+end;
+
+procedure THbFmxControl.SetSurfaceId(const Value: string);
+begin
+  FLife.SurfaceId := Value;
+end;
+
+function THbFmxControl.GetIsDisposed: Boolean;
+begin
+  Result := FLife.IsDisposed;
+end;
+
+function THbFmxControl.GetTargetState: string;
+begin
+  Result := FLife.TargetState;
+end;
+
+procedure THbFmxControl.SetTargetState(const Value: string);
+begin
+  FLife.TargetState := Value;
+end;
+
+class procedure THbFmxControl.RegisterStateSlot(const AWorkOrder: string;
+  const ASlot: IHbStateSlotProvider);
+begin
+  THbRuntime.RegisterStateSlot(AWorkOrder, ASlot);
+end;
+
+procedure THbFmxControl.BindToken;
+begin
+  FLife.BindToken;
+end;
+
+procedure THbFmxControl.BindState;
+begin
+  FLife.BindState;
+end;
+
+procedure THbFmxControl.AttachTouchpoint(const ATouchpoint: IHbTouchpoint);
+begin
+  FTouchpoint := ATouchpoint;
+  FLife.AttachTouchpoint(ATouchpoint, FLife.SurfaceId);
+end;
+
+procedure THbFmxControl.Render;
+begin
+end;
+
+procedure THbFmxControl.EmitTelemetry;
+begin
+  FLife.EmitTelemetry(FTouchpoint, 'Render');
+end;
+
+procedure THbFmxControl.HandleLifecycleError(const AStep: string; AException: Exception);
+begin
+  try
+    if Assigned(FOnLifecycleError) then
+      FOnLifecycleError(Self, AStep, AException);
+  finally
+    DoDispose;
+  end;
+end;
+
+procedure THbFmxControl.DoDispose;
+begin
+  if FLife.IsDisposed then
+    Exit;
+  FLife.Dispose;
+  FTouchpoint := nil;
 end;
 
 procedure THbFmxControl.OnThemeChangedMessage(const Sender: TObject; const M: TMessage);
@@ -416,20 +564,29 @@ var
   Tokens: THbTokens;
   R: TRectF;
 begin
-  inherited Paint;
-  Tokens := THbTheme.Tokens;
-  R := LocalRect;
+  FLife.AssertPaintAllowed(ClassName);
+  try
+    inherited Paint;
+    Tokens := THbTheme.Tokens;
+    R := LocalRect;
 
-  DrawHbControl(Canvas, R, Tokens);
+    DrawHbControl(Canvas, R, Tokens);
+    Render;
+    EmitTelemetry;
+    FLife.MarkRendered;
 
-  // Paint focus ring if focused
-  if IsFocused and TabStop and Enabled then
-  begin
-    Canvas.Stroke.Color := Tokens.FocusRing;
-    Canvas.Stroke.Thickness := 2.0;
-    Canvas.Stroke.Kind := TBrushKind.Solid;
-    R.Inflate(-1, -1);
-    Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 0.75);
+    // Paint focus ring if focused
+    if IsFocused and TabStop and Enabled then
+    begin
+      Canvas.Stroke.Color := Tokens.FocusRing;
+      Canvas.Stroke.Thickness := 2.0;
+      Canvas.Stroke.Kind := TBrushKind.Solid;
+      R.Inflate(-1, -1);
+      Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 0.75);
+    end;
+  except
+    on E: Exception do
+      HandleLifecycleError('Paint/Render', E);
   end;
 end;
 
@@ -484,6 +641,38 @@ begin
   begin
     FCaption := Value;
     Repaint;
+  end;
+end;
+
+procedure THbButton.Click;
+var
+  Ev: TTouchEvidence;
+begin
+  inherited;
+  if FTouchpoint <> nil then
+  begin
+    Ev := FTouchpoint.EmitEvidence;
+    if Ev.TouchpointId = '' then
+      Ev.TouchpointId := FTouchpoint.GetID;
+    if (Ev.SurfaceId = '') and (SurfaceId <> '') then
+      Ev.SurfaceId := SurfaceId;
+    if Ev.ActionType = '' then
+      Ev.ActionType := 'Click';
+    if Ev.TimestampUtc <= 0 then
+      Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev.Success := True;
+    Ev.SupportDeflected := True;
+    THbTouchpointEngine.Instance.EmitEvidence(Ev);
+  end
+  else if TouchpointId <> '' then
+  begin
+    FillChar(Ev, SizeOf(Ev), 0);
+    Ev.TouchpointId := TouchpointId;
+    Ev.SurfaceId := SurfaceId;
+    Ev.ActionType := 'Click';
+    Ev.TimestampUtc := DateTimeToUnix(TTimeZone.Local.ToUniversalTime(Now), False) * 1000;
+    Ev.Success := True;
+    THbTouchpointEngine.Instance.EmitEvidence(Ev);
   end;
 end;
 

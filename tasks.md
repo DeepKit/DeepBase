@@ -8,9 +8,10 @@
 ## 当前基线
 
 - 编译器环境: Embarcadero Delphi 13.1 (Florence / Compiler 37.0) on Win64 (`dcc64.exe`)
-- 单测基线: `TestResults/WO-20260905-001/`（92/92 全绿；HB 门禁 Gate #7 已实施）
-- 当前主线: **WO-20260905-002 已派发 · HB 视觉性能门禁基准 1–6 + FMX 行为层生命周期对齐**（罗辑执行中）
+- 单测基线: `TestResults/WO-20260905-002/`（Task A 基准 + Task B FMX 生命周期；Gate5 诚实 FAIL）
+- 当前主线: **WO-20260905-002 交付中 · 待老板重跑基准 exe + CLOSE 裁定**
 - 已闭环: WO-20260903-001（CR-606×2 允许红余债）· WO-20260904-001/002R/003/004/005R · WO-20260905-001（95edea6 / d42bf8d）
+- WO-20260905-002: Commit1 `0f1f640`（Task A）· Task B 代码已齐（Core Lifecycle SSOT + FMX Enforcement）· 异族终审 PASS_WITH_DEBT
 
 ## 登记债务（异族终审 CLOSE 条件·均已入账待治理）
 
