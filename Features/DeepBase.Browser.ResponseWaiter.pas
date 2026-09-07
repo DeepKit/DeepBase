@@ -136,10 +136,35 @@ const
     '    },' +
     '    getLatestResponse: function() {' +
     '      if (!responseSel) return "";' +
-    '      var els = document.querySelectorAll(responseSel);' +
-    '      if (els.length === 0) return "";' +
-    '      var last = els[els.length - 1];' +
-    '      return last.innerText || last.textContent || "";' +
+    '      try {' +
+    '        var els = document.querySelectorAll(responseSel);' +
+    '        if (els.length > 0) {' +
+    '          var last = els[els.length - 1];' +
+    '          var t = (last.textContent || last.innerText || "").trim();' +
+    '          if (t) return t;' +
+    '        }' +
+    '      } catch (e) {}' +
+    '      try {' +
+    '        var best = "";' +
+    '        var nodes = document.querySelectorAll("div");' +
+    '        for (var i = 0; i < nodes.length; i++) {' +
+    '          var tx = (nodes[i].innerText || "").trim();' +
+    '          if (!tx || tx.indexOf("内容由 AI 生成") < 0) continue;' +
+    '          var cut = -1;' +
+    '          var m1 = tx.indexOf("快速模式");' +
+    '          var m2 = tx.indexOf("深度思考");' +
+    '          if (m1 > 0) cut = m1;' +
+    '          if (m2 > 0 && (cut < 0 || m2 < cut)) cut = m2;' +
+    '          if (cut <= 0) continue;' +
+    '          var ans = tx.substring(0, cut).replace(/\s+$/g,"");' +
+    '          if (ans && ans.length < 12000 && (best === "" || ans.length < best.length))' +
+    '            best = ans;' +
+    '        }' +
+    '        if (best) return best;' +
+    '        var tm = (document.title || "").replace(/\s*[-–—]\s*DeepSeek\s*$/i, "").trim();' +
+    '        if (tm && tm.length < 200) return tm;' +
+    '        return "";' +
+    '      } catch (e2) { return ""; }' +
     '    },' +
     '    finish: function(result, response) {' +
     '      if (this.cancelled) return;' +

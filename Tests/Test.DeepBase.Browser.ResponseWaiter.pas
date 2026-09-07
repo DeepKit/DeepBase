@@ -38,6 +38,9 @@ type
 
     [Test]
     procedure Test_DefaultTimeoutAndStable;
+
+    [Test]
+    procedure Test_GetWaiterJS_ContainsDeepSeekFallback;
   end;
 
 implementation
@@ -296,6 +299,22 @@ begin
   finally
     LWaiter.Free;
   end;
+end;
+
+procedure TBrowserResponseWaiterTests.Test_GetWaiterJS_ContainsDeepSeekFallback;
+var
+  LJS: string;
+begin
+  LJS := TBrowserResponseWaiter.BuildWaiterJS(
+    '.response', '.loading', 30000, 3000);
+  Assert.IsTrue(Pos('内容由 AI 生成', LJS) > 0,
+    'JS should contain DeepSeek fallback marker: 内容由 AI 生成');
+  Assert.IsTrue(Pos('快速模式', LJS) > 0,
+    'JS should contain DeepSeek mode marker: 快速模式');
+  Assert.IsTrue(Pos('深度思考', LJS) > 0,
+    'JS should contain DeepSeek mode marker: 深度思考');
+  Assert.IsTrue(Pos('DeepSeek', LJS) > 0,
+    'JS should contain title fallback for DeepSeek');
 end;
 
 initialization
