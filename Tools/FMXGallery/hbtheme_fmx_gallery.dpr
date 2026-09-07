@@ -9,7 +9,8 @@ uses
   DeepBase.FMX.HB.Theme in '..\..\FMX\DeepBase.FMX.HB.Theme.pas',
   DeepBase.FMX.HB.Palettes in '..\..\FMX\DeepBase.FMX.HB.Palettes.pas',
   DeepBase.FMX.HB.Controls in '..\..\FMX\DeepBase.FMX.HB.Controls.pas',
-  DeepBase.FMX.HB.Cards in '..\..\FMX\DeepBase.FMX.HB.Cards.pas';
+  DeepBase.FMX.HB.Cards in '..\..\FMX\DeepBase.FMX.HB.Cards.pas',
+  DeepBase.FMX.HB.Choice in '..\..\FMX\DeepBase.FMX.HB.Choice.pas';
 
 begin
   Application.Initialize;

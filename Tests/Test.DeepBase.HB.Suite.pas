@@ -74,6 +74,7 @@ type
     FToggleSwitchToggled: Boolean;
     FLastChoiceKey: Integer;
     FLastCustomInputText: string;
+    FLastAction: THbChoiceAction;
     FLastLinkedId: string;
     FLastLinkedTarget: string;
     FLastLinkedKind: THbWaterfallLinkKind;
@@ -86,6 +87,7 @@ type
     procedure OnToggleSwitchChangeHelper(Sender: TObject);
     procedure OnChoiceHelper(Sender: TObject; AKey: Integer);
     procedure OnCustomInputHelper(Sender: TObject; const AInput: string);
+    procedure OnActionHelper(Sender: TObject; const AAction: THbChoiceAction);
     procedure OnLinkClickHelper(Sender: TObject; const ACardId: string; AKind: THbWaterfallLinkKind; const ATarget: string);
   public
     [Test]
@@ -186,6 +188,22 @@ type
 
     [Test]
     procedure Test_SurfaceProvider_VisualVerification_ExportCardScreenshots;
+
+    [Test]
+    procedure Test_Extended_Semantic_Tones_And_Action_Hierarchy;
+
+    // WO-20260907 HB AI Choice Interaction Standard Tests
+    [Test]
+    procedure Test_HbChoice_Action_Intent_And_Input_Sources;
+
+    [Test]
+    procedure Test_HbChoice_Layout_Modes_And_Item_Rects;
+
+    [Test]
+    procedure Test_HbChoice_Truthful_State_Transitions;
+
+    [Test]
+    procedure Test_HbChoice_Text_Entry_Suspension_And_Active_Surface;
   end;
 
 implementation
@@ -947,6 +965,11 @@ begin
   FLastCustomInputText := AInput;
 end;
 
+procedure TTestHbSuite.OnActionHelper(Sender: TObject; const AAction: THbChoiceAction);
+begin
+  FLastAction := AAction;
+end;
+
 procedure TTestHbSuite.OnLinkClickHelper(Sender: TObject; const ACardId: string; AKind: THbWaterfallLinkKind; const ATarget: string);
 begin
   FLastLinkedId := ACardId;
@@ -1031,6 +1054,9 @@ begin
     Deck.Dispatch(Msg);
     Assert.AreEqual(Integer(9), Integer(FLastChoiceKey));
     Assert.AreEqual('自己输入', FLastCustomInputText);
+
+    // Cancel built-in free input mode to return to ready choice state
+    Deck.CancelFreeInput;
 
     // Key 0 (Back)
     FLastChoiceKey := -1;
@@ -1370,6 +1396,297 @@ begin
         Bmp.Free;
       end;
     end;
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_Extended_Semantic_Tones_And_Action_Hierarchy;
+var
+  Form: TForm;
+  BadgeChange, BadgeNotice, BadgeUnresolved: THbBadge;
+  ChipChange, ChipNotice, ChipUnresolved: THbChip;
+  BtnRec: THbButton;
+  CardGhost, CardQuiet: THbCard;
+  EmptyAllClear: THbEmptyState;
+  Bmp: TBitmap;
+  Tokens: THbTokens;
+begin
+  Tokens := THbTheme.Tokens;
+  Assert.AreNotEqual(TAlphaColors.Null, Tokens.Change, 'Tokens.Change must be defined');
+  Assert.AreNotEqual(TAlphaColors.Null, Tokens.Notice, 'Tokens.Notice must be defined');
+  Assert.AreNotEqual(TAlphaColors.Null, Tokens.Unresolved, 'Tokens.Unresolved must be defined');
+  Assert.AreNotEqual(TAlphaColors.Null, Tokens.SurfaceQuiet, 'Tokens.SurfaceQuiet must be defined');
+
+  Form := TForm.CreateNew(nil);
+  try
+    Form.SetBounds(0, 0, 480, 400);
+
+    // 1. Test Extended Badges
+    BadgeChange := THbBadge.Create(Form);
+    BadgeChange.Parent := Form;
+    BadgeChange.Tone := btChange;
+    BadgeChange.Caption := '工商变更';
+
+    BadgeNotice := THbBadge.Create(Form);
+    BadgeNotice.Parent := Form;
+    BadgeNotice.Tone := btNotice;
+    BadgeNotice.Caption := '建议核验';
+
+    BadgeUnresolved := THbBadge.Create(Form);
+    BadgeUnresolved.Parent := Form;
+    BadgeUnresolved.Tone := btUnresolved;
+    BadgeUnresolved.Caption := '待决挂起';
+
+    // 2. Test Extended Chips
+    ChipChange := THbChip.Create(Form);
+    ChipChange.Parent := Form;
+    ChipChange.Tone := ttChange;
+    ChipChange.Caption := 'Diff: 资本增资';
+
+    ChipNotice := THbChip.Create(Form);
+    ChipNotice.Parent := Form;
+    ChipNotice.Tone := ttNotice;
+    ChipNotice.Caption := '提示: 需复核';
+
+    ChipUnresolved := THbChip.Create(Form);
+    ChipUnresolved.Parent := Form;
+    ChipUnresolved.Tone := ttUnresolved;
+    ChipUnresolved.Caption := '待定: 外部数据';
+
+    // 3. Test Action Hierarchy (AI Recommended button)
+    BtnRec := THbButton.Create(Form);
+    BtnRec.Parent := Form;
+    BtnRec.Kind := bkRecommended;
+    BtnRec.Caption := 'AI 建议方案';
+
+    // 4. Test Card Containers (Ghost / Quiet)
+    CardGhost := THbCard.Create(Form);
+    CardGhost.Parent := Form;
+    CardGhost.Kind := ckGhost;
+
+    CardQuiet := THbCard.Create(Form);
+    CardQuiet.Parent := Form;
+    CardQuiet.Kind := ckQuiet;
+
+    // 5. Test EmptyState (esmAllClear)
+    EmptyAllClear := THbEmptyState.Create(Form);
+    EmptyAllClear.Parent := Form;
+    EmptyAllClear.Mode := esmAllClear;
+    EmptyAllClear.Title := '天下太平，无需关注';
+    EmptyAllClear.Hint := '今日各项指标平稳，无需要处理的事项';
+
+    // 6. Test Paint & Vector Rendering without exception
+    Bmp := TBitmap.Create;
+    try
+      Bmp.SetSize(Form.Width, Form.Height);
+      Form.PaintTo(Bmp.Canvas.Handle, 0, 0);
+      Assert.IsTrue(Bmp.Width > 0, 'Form successfully rendered with all new tokens & action primitives');
+    finally
+      Bmp.Free;
+    end;
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbChoice_Action_Intent_And_Input_Sources;
+var
+  Form: TCustomForm;
+  Deck: THbChoiceDeck;
+  Msg: TWMKeyDown;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Deck := THbChoiceDeck.Create(Form);
+    Deck.Parent := Form;
+    Deck.OnAction := OnActionHelper;
+    Deck.OnChoice := OnChoiceHelper;
+
+    Deck.Clear;
+    Deck.AddOption(1, '候选方案A', '描述A', True, 8881);
+    Deck.AddOption(2, '候选方案B', '描述B', False, 8882);
+    Deck.AddStandardControls(True, True, True);
+
+    // 1. Test Keyboard Digit 1 -> Candidate Action
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('1');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Ord(cakCandidate), Ord(FLastAction.Kind));
+    Assert.AreEqual(1, FLastAction.Key);
+    Assert.AreEqual('候选方案A', FLastAction.Text);
+    Assert.AreEqual(NativeInt(8881), FLastAction.Payload);
+    Assert.AreEqual(Ord(cisKeyboard), Ord(FLastAction.InputSource));
+
+    // 2. Test NumPad Digit 2 -> cisNumPad
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := VK_NUMPAD2;
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Ord(cakCandidate), Ord(FLastAction.Kind));
+    Assert.AreEqual(2, FLastAction.Key);
+    Assert.AreEqual('候选方案B', FLastAction.Text);
+    Assert.AreEqual(NativeInt(8882), FLastAction.Payload);
+    Assert.AreEqual(Ord(cisNumPad), Ord(FLastAction.InputSource));
+
+    // 3. Test Key 8 (Regenerate) -> cakRegenerate
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('8');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Ord(cakRegenerate), Ord(FLastAction.Kind));
+    Assert.AreEqual(8, FLastAction.Key);
+
+    // 4. Test Key 9 (Free Input) -> cakFreeInput
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('9');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Ord(cakFreeInput), Ord(FLastAction.Kind));
+    Assert.AreEqual(9, FLastAction.Key);
+
+    // Cancel free input to return to ready state
+    Deck.CancelFreeInput;
+
+    // 5. Test Key 0 (Back) -> cakBack
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('0');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(Ord(cakBack), Ord(FLastAction.Kind));
+    Assert.AreEqual(0, FLastAction.Key);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbChoice_Layout_Modes_And_Item_Rects;
+var
+  Form: TCustomForm;
+  Deck: THbChoiceDeck;
+  RDeck, RRow, RList, RInline: TRect;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Deck := THbChoiceDeck.Create(Form);
+    Deck.Parent := Form;
+    Deck.Width := 400;
+    Deck.Height := 500;
+    Deck.SetOptions(['选项一', '选项二', '选项三']);
+
+    // 1. Mode A: clmDeck (Vertical Card Stack)
+    Deck.LayoutMode := clmDeck;
+    RDeck := Deck.ItemRect(0);
+    Assert.IsTrue(RDeck.Width > 200, 'Deck mode item should span width');
+    Assert.AreEqual(Integer(Deck.ItemHeight), Integer(RDeck.Height));
+
+    // 2. Mode B: clmRow (Horizontal Wrapped Row)
+    Deck.LayoutMode := clmRow;
+    RRow := Deck.ItemRect(0);
+    Assert.IsTrue(RRow.Width < RDeck.Width, 'Row mode item should be a compact cell');
+
+    // 3. Mode C: clmNumberedList
+    Deck.LayoutMode := clmNumberedList;
+    RList := Deck.ItemRect(0);
+    Assert.IsTrue(RList.Height < RDeck.Height, 'List mode item should be compact height');
+
+    // 4. Mode D: clmInline
+    Deck.LayoutMode := clmInline;
+    RInline := Deck.ItemRect(0);
+    Assert.AreEqual(Integer(80), Integer(RInline.Width), 'Inline mode item has standard compact width');
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbChoice_Truthful_State_Transitions;
+var
+  Form: TCustomForm;
+  Deck: THbChoiceDeck;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Deck := THbChoiceDeck.Create(Form);
+    Deck.Parent := Form;
+    Assert.AreEqual(Ord(csReady), Ord(Deck.State));
+
+    // 1. Regenerate
+    Deck.BeginRegenerate;
+    Assert.AreEqual(Ord(csRegenerating), Ord(Deck.State));
+    Deck.EndRegenerate;
+    Assert.AreEqual(Ord(csReady), Ord(Deck.State));
+
+    // 2. No Reliable Candidates (Truthful AI State)
+    Deck.SetNoReliableCandidates('信息不足，暂无建议');
+    Assert.AreEqual(Ord(csNoReliableCandidates), Ord(Deck.State));
+    Assert.AreEqual('信息不足，暂无建议', Deck.StatusMessage);
+
+    // 3. Technical Error State (Distinct from NoCandidates)
+    Deck.SetError('网络超时: 504');
+    Assert.AreEqual(Ord(csError), Ord(Deck.State));
+    Assert.AreEqual('网络超时: 504', Deck.StatusMessage);
+
+    // 4. Reset
+    Deck.ResetToReady;
+    Assert.AreEqual(Ord(csReady), Ord(Deck.State));
+    Assert.AreEqual('', Deck.StatusMessage);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure TTestHbSuite.Test_HbChoice_Text_Entry_Suspension_And_Active_Surface;
+var
+  Form: TCustomForm;
+  Deck: THbChoiceDeck;
+  Msg: TWMKeyDown;
+begin
+  Form := TCustomForm.CreateNew(nil);
+  try
+    Deck := THbChoiceDeck.Create(Form);
+    Deck.Parent := Form;
+    Deck.OnChoice := OnChoiceHelper;
+    Deck.SetOptions(['方案1', '方案2', '方案3']);
+    FLastChoiceKey := -1;
+
+    // 1. Normal active state -> key '2' triggers option 2
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('2');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(2, FLastChoiceKey);
+
+    // 2. Inactive Surface -> key '2' ignored
+    FLastChoiceKey := -1;
+    Deck.IsActiveChoiceSurface := False;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('2');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(-1, FLastChoiceKey, 'Inactive choice surface must not intercept shortcuts');
+
+    // 3. Text Entry Owns Keyboard: State = csFreeInput -> key '2' ignored
+    Deck.IsActiveChoiceSurface := True;
+    Deck.EnterFreeInput('用户正在输入手机号 13800...');
+    Assert.AreEqual(Ord(csFreeInput), Ord(Deck.State));
+
+    FLastChoiceKey := -1;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('2');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(-1, FLastChoiceKey, 'Choice shortcuts MUST be suspended during text entry');
+
+    // 4. Cancel Free Input -> restores choice shortcuts
+    Deck.CancelFreeInput;
+    Assert.AreEqual(Ord(csReady), Ord(Deck.State));
+    FLastChoiceKey := -1;
+    FillChar(Msg, SizeOf(Msg), 0);
+    Msg.Msg := WM_KEYDOWN;
+    Msg.CharCode := Ord('3');
+    Deck.Dispatch(Msg);
+    Assert.AreEqual(3, FLastChoiceKey);
   finally
     Form.Free;
   end;
