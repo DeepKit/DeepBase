@@ -3,8 +3,8 @@
 
   Version: 2.0 (Delphi 13.1 on Win64)
   Description: Interactive Demonstration for HB AI Choice Interaction Standard:
-               - Showcase 1: HuanJin Intent & Icebreaker Flow (Continuous 2 -> 1)
-               - Showcase 2: HuanJin Contact Tidy (Mode B clmRow Compact)
+               - Showcase 1: AI Intent & Icebreaker Flow (Continuous 2 -> 1)
+               - Showcase 2: Contact List Compact (Mode B clmRow Compact)
                - Showcase 3: AI Uncertainty / No Reliable Candidates State
                - Showcase 4: Generic AI Writing Assistant (Multi-Layout Switcher)
                - Full keyboard (0-9 / NumPad) & mouse multi-modal telemetry log
@@ -97,8 +97,8 @@ begin
   FCmbShowcase.Left := 16;
   FCmbShowcase.Top := 12;
   FCmbShowcase.Width := 240;
-  FCmbShowcase.Items.Add('场景 1: 唤金·联系人意图与开场');
-  FCmbShowcase.Items.Add('场景 2: 唤金·联系人快速整理 (Row)');
+  FCmbShowcase.Items.Add('场景 1: 联系人意图与开场');
+  FCmbShowcase.Items.Add('场景 2: 资料快速整理 (Row)');
   FCmbShowcase.Items.Add('场景 3: AI 无法形成可靠候选 (NoCandidates)');
   FCmbShowcase.Items.Add('场景 4: 通用 AI·文档写作与润色助手');
   FCmbShowcase.ItemIndex := 0;
@@ -183,7 +183,7 @@ procedure THbChoiceAndWaterfallDemoForm.LoadShowcase(AShowcaseIdx: Integer);
 begin
   FDeck.ResetToReady;
   case AShowcaseIdx of
-    0: // HuanJin Intent & Flow
+    0: // Intent & Flow
     begin
       FCurrentFlowStep := 1;
       FDeck.LayoutMode := clmDeck;
@@ -199,7 +199,7 @@ begin
       FDeck.AddStandardControls(True, True, True);
     end;
 
-    1: // HuanJin Contact Tidy (Mode B)
+    1: // Contact Tidy (Mode B)
     begin
       FDeck.LayoutMode := clmRow;
       FCmbLayout.ItemIndex := 1;

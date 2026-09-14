@@ -1,19 +1,21 @@
 { ============================================================================
   DeepBase.VCL.HB.Choice - Modern Token-Driven 0-9 Choice Deck Component
 
-  Version: 2.0 (Delphi 13.1 on Win64)
+  Version: 2.1 (Delphi 13.1 on Win64)
   Description: THbChoiceDeck - Universal AI Choice Interaction Standard Control:
                - 1-7 Contextual options (Key 1 can be Recommended)
                - 8 Fixed control: Regenerate (Contextual re-generation)
                - 9 Fixed control: Human Override / Free Input (Frame Rejection)
                - 0 Fixed control: Navigate Back (Pure navigation)
+                - Decision Cardinality: ecSingle, ecMultiple (L4 §5.5, CSV-003)
+               - Frame Rejection Tri-State: eokCandidateReject, eokAlternativeExpression, eokFrameRejection
                - Multi-modal action abstraction: THbChoiceAction & THbChoiceInputSource
                - 4 Layout modes: clmDeck, clmRow, clmNumberedList, clmInline
                - Truthful State Machine: csReady, csChoosing, csRegenerating,
                  csFreeInput, csLoading, csNoReliableCandidates, csDisabled, csError
                - Active Choice Surface arbitration & Text Entry Owns Keyboard rule
                - High-DPI GDI+ vector rendering, WCAG AA contrast
-               - Verified 100% backward-compatible with v1.0 callers
+               - Verified 100% backward-compatible with v1.0 & v2.0 callers
   ============================================================================ }
 
 unit DeepBase.VCL.HB.Choice;
@@ -39,6 +41,7 @@ uses
   Winapi.GDIPAPI,
   Winapi.GDIPOBJ,
   DeepBase.HB.Core,
+  DeepBase.EHAI.Types,
   DeepBase.HB.Choice.Types,
   DeepBase.VCL.HB.Theme,
   DeepBase.VCL.HB.Controls;
@@ -58,6 +61,9 @@ type
     FLayoutMode: THbChoiceLayoutMode;
     FState: THbChoiceState;
     FFreeInputMode: THbChoiceFreeInputMode;
+    FCardinality: TEhaiCardinality;
+    FDefaultProfile: TEhaiInvolvementProfile;
+    FContextBinding: TEhaiContextBinding;
     FContextTitle: string;
     FStepInfo: string;
     FStatusMessage: string;
@@ -74,10 +80,12 @@ type
     FOnAction: THbChoiceActionEvent;
     FOnFreeInputRequested: THbChoiceFreeInputRequestEvent;
     FOnStateChanged: TNotifyEvent;
+    FOnMultiSelect: THbChoiceMultiSelectEvent;
 
     procedure SetSelectedIndex(Value: Integer);
     procedure SetLayoutMode(Value: THbChoiceLayoutMode);
     procedure SetState(Value: THbChoiceState);
+    procedure SetCardinality(Value: TEhaiCardinality);
     procedure SetContextTitle(const Value: string);
     procedure SetStepInfo(const Value: string);
     procedure SetStatusMessage(const Value: string);
@@ -117,7 +125,9 @@ type
     procedure Clear;
     procedure AddOption(AKey: Integer; const AText: string;
       const ADesc: string = ''; AIsRecommended: Boolean = False;
-      APayload: NativeInt = 0);
+      APayload: NativeInt = 0; AIsSelected: Boolean = False;
+      AOverrideKind: TEhaiOverrideKind = eokNone;
+      ASource: TEhaiSource = esHuman);
     procedure AddStandardControls(AHasRegenerate: Boolean = True;
       AHasInput: Boolean = True; AHasBack: Boolean = True);
     procedure SetOptions(const AOptions: array of string; ARecommendedKey: Integer = 1);
@@ -128,10 +138,24 @@ type
     procedure SelectKey(AKey: Integer; ASource: THbChoiceInputSource = cisProgrammatic);
     procedure TriggerAction(AKind: THbChoiceActionKind; AKey: Integer;
       const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+    procedure TriggerActionWithOverride(AKind: THbChoiceActionKind; AKey: Integer;
+      const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource;
+      AOverrideKind: TEhaiOverrideKind; ASemanticSource: TEhaiSource = esHuman;
+      AProfile: TEhaiInvolvementProfile = eipJudge);
+    procedure TriggerOverrideAction(AOverrideKind: TEhaiOverrideKind;
+      const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+    procedure TriggerMultiAction(const ASelectedKeys: array of Integer;
+      APayload: NativeInt; ASource: THbChoiceInputSource);
     procedure SetItemEnabled(AKey: Integer; AEnabled: Boolean);
     function FindItemByKey(AKey: Integer; out AItem: THbChoiceItem): Boolean;
     function IndexOfKey(AKey: Integer): Integer;
     function ItemRect(AIndex: Integer): TRect;
+
+    // Multi-choice operations (L4 §5.5, CSV-003)
+    function GetSelectedKeys: TArray<Integer>;
+    procedure SetItemChecked(AKey: Integer; AChecked: Boolean);
+    procedure ToggleItemChecked(AKey: Integer);
+    procedure SubmitMultiChoice(ASource: THbChoiceInputSource = cisProgrammatic);
 
     // State management
     procedure BeginRegenerate;
@@ -142,11 +166,13 @@ type
     procedure EnterFreeInput(const APrefillText: string = '');
     procedure CancelFreeInput;
     procedure SubmitFreeInput(const AText: string);
+    procedure SubmitFreeInputWithKind(const AText: string; AOverrideKind: TEhaiOverrideKind);
 
     // Properties
     property Items[Index: Integer]: THbChoiceItem read GetItem write SetItem;
     property ItemCount: Integer read GetItemCount;
     property SelectedIndex: Integer read FSelectedIndex write SetSelectedIndex;
+    property SelectedKeys: TArray<Integer> read GetSelectedKeys;
   published
     property Align;
     property Anchors;
@@ -156,6 +182,9 @@ type
     property LayoutMode: THbChoiceLayoutMode read FLayoutMode write SetLayoutMode default clmDeck;
     property State: THbChoiceState read FState write SetState default csReady;
     property FreeInputMode: THbChoiceFreeInputMode read FFreeInputMode write FFreeInputMode default fimBuiltIn;
+    property Cardinality: TEhaiCardinality read FCardinality write SetCardinality default ecSingle;
+    property DefaultProfile: TEhaiInvolvementProfile read FDefaultProfile write FDefaultProfile default eipJudge;
+    property ContextBinding: TEhaiContextBinding read FContextBinding write FContextBinding;
     property ContextTitle: string read FContextTitle write SetContextTitle;
     property StepInfo: string read FStepInfo write SetStepInfo;
     property StatusMessage: string read FStatusMessage write SetStatusMessage;
@@ -168,6 +197,7 @@ type
     property OnCustomInput: THbChoiceInputEvent read FOnCustomInput write FOnCustomInput;
     property OnFreeInputRequested: THbChoiceFreeInputRequestEvent read FOnFreeInputRequested write FOnFreeInputRequested;
     property OnStateChanged: TNotifyEvent read FOnStateChanged write FOnStateChanged;
+    property OnMultiSelect: THbChoiceMultiSelectEvent read FOnMultiSelect write FOnMultiSelect;
 
     property OnClick;
     property OnEnter;
@@ -175,6 +205,29 @@ type
   end;
 
 implementation
+
+function CreateRoundRectPath(const Rect: TGPRectF; Radius: Single): TGPGraphicsPath;
+var
+  D: Single;
+begin
+  Result := TGPGraphicsPath.Create;
+  D := Radius * 2.0;
+
+  if (D > Rect.Width) or (D > Rect.Height) then
+    D := Min(Rect.Width, Rect.Height);
+
+  if D <= 0 then
+  begin
+    Result.AddRectangle(Rect);
+    Exit;
+  end;
+
+  Result.AddArc(Rect.X, Rect.Y, D, D, 180, 90);
+  Result.AddArc(Rect.X + Rect.Width - D, Rect.Y, D, D, 270, 90);
+  Result.AddArc(Rect.X + Rect.Width - D, Rect.Y + Rect.Height - D, D, D, 0, 90);
+  Result.AddArc(Rect.X, Rect.Y + Rect.Height - D, D, D, 90, 90);
+  Result.CloseFigure;
+end;
 
 { THbChoiceDeck }
 
@@ -188,6 +241,9 @@ begin
   FLayoutMode := clmDeck;
   FState := csReady;
   FFreeInputMode := fimBuiltIn;
+  FCardinality := ecSingle;
+  FDefaultProfile := eipJudge;
+  FillChar(FContextBinding, SizeOf(FContextBinding), 0);
   FContextTitle := '';
   FStepInfo := '';
   FStatusMessage := '';
@@ -207,23 +263,23 @@ begin
 
   FBtnSubmit := THbButton.Create(Self);
   FBtnSubmit.Parent := Self;
-  FBtnSubmit.Visible := False;
-  FBtnSubmit.Caption := '提交';
+  FBtnSubmit.Caption := '确认';
   FBtnSubmit.Kind := bkPrimary;
+  FBtnSubmit.Visible := False;
   FBtnSubmit.OnClick := OnSubmitClick;
 
   FBtnCancel := THbButton.Create(Self);
   FBtnCancel.Parent := Self;
-  FBtnCancel.Visible := False;
   FBtnCancel.Caption := '取消';
   FBtnCancel.Kind := bkGhost;
+  FBtnCancel.Visible := False;
   FBtnCancel.OnClick := OnCancelClick;
 end;
 
 destructor THbChoiceDeck.Destroy;
 begin
   FItems.Free;
-  inherited;
+  inherited Destroy;
 end;
 
 procedure THbChoiceDeck.Resize;
@@ -280,6 +336,15 @@ begin
   end;
 end;
 
+procedure THbChoiceDeck.SetCardinality(Value: TEhaiCardinality);
+begin
+  if FCardinality <> Value then
+  begin
+    FCardinality := Value;
+    Invalidate;
+  end;
+end;
+
 procedure THbChoiceDeck.SetState(Value: THbChoiceState);
 begin
   if FState <> Value then
@@ -315,6 +380,7 @@ begin
   if FContextTitle <> Value then
   begin
     FContextTitle := Value;
+    FContextBinding.ContextTitle := Value;
     Invalidate;
   end;
 end;
@@ -324,6 +390,7 @@ begin
   if FStepInfo <> Value then
   begin
     FStepInfo := Value;
+    FContextBinding.StepInfo := Value;
     Invalidate;
   end;
 end;
@@ -354,11 +421,13 @@ begin
 end;
 
 procedure THbChoiceDeck.AddOption(AKey: Integer; const AText, ADesc: string;
-  AIsRecommended: Boolean; APayload: NativeInt);
+  AIsRecommended: Boolean; APayload: NativeInt; AIsSelected: Boolean;
+  AOverrideKind: TEhaiOverrideKind; ASource: TEhaiSource);
 var
   Item: THbChoiceItem;
 begin
-  Item := THbChoiceItem.Create(AKey, AText, ADesc, AIsRecommended, True, APayload);
+  Item := THbChoiceItem.Create(AKey, AText, ADesc, AIsRecommended, True, APayload,
+    AIsSelected, AOverrideKind, ASource);
   FItems.Add(Item);
   if (FSelectedIndex = -1) and (FItems.Count = 1) then
     FSelectedIndex := 0;
@@ -448,13 +517,86 @@ begin
   end;
 end;
 
+function THbChoiceDeck.GetSelectedKeys: TArray<Integer>;
+var
+  I, Count: Integer;
+begin
+  Count := 0;
+  for I := 0 to FItems.Count - 1 do
+    if FItems[I].IsSelected and (FItems[I].Kind = ckOption) then
+      Inc(Count);
+
+  SetLength(Result, Count);
+  Count := 0;
+  for I := 0 to FItems.Count - 1 do
+    if FItems[I].IsSelected and (FItems[I].Kind = ckOption) then
+    begin
+      Result[Count] := FItems[I].Key;
+      Inc(Count);
+    end;
+end;
+
+procedure THbChoiceDeck.SetItemChecked(AKey: Integer; AChecked: Boolean);
+var
+  Idx: Integer;
+  Item: THbChoiceItem;
+begin
+  Idx := IndexOfKey(AKey);
+  if (Idx >= 0) and (FItems[Idx].Kind = ckOption) then
+  begin
+    Item := FItems[Idx];
+    if Item.IsSelected <> AChecked then
+    begin
+      Item.IsSelected := AChecked;
+      FItems[Idx] := Item;
+      Invalidate;
+      if Assigned(FOnMultiSelect) then
+        FOnMultiSelect(Self, GetSelectedKeys);
+    end;
+  end;
+end;
+
+procedure THbChoiceDeck.ToggleItemChecked(AKey: Integer);
+var
+  Idx: Integer;
+begin
+  Idx := IndexOfKey(AKey);
+  if (Idx >= 0) and (FItems[Idx].Kind = ckOption) then
+    SetItemChecked(AKey, not FItems[Idx].IsSelected);
+end;
+
+procedure THbChoiceDeck.SubmitMultiChoice(ASource: THbChoiceInputSource);
+var
+  Keys: TArray<Integer>;
+  Action: THbChoiceAction;
+begin
+  Keys := GetSelectedKeys;
+  if Length(Keys) = 0 then
+    Exit;
+
+  Action := THbChoiceAction.CreateMulti(Keys, 0, ASource, FDefaultProfile, FContextBinding.ContextId);
+  if Assigned(FOnAction) then
+    FOnAction(Self, Action);
+  if Assigned(FOnMultiSelect) then
+    FOnMultiSelect(Self, Keys);
+end;
+
 procedure THbChoiceDeck.TriggerAction(AKind: THbChoiceActionKind; AKey: Integer;
   const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+begin
+  TriggerActionWithOverride(AKind, AKey, AText, APayload, ASource, eokNone, esHuman, FDefaultProfile);
+end;
+
+procedure THbChoiceDeck.TriggerActionWithOverride(AKind: THbChoiceActionKind; AKey: Integer;
+  const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource;
+  AOverrideKind: TEhaiOverrideKind; ASemanticSource: TEhaiSource;
+  AProfile: TEhaiInvolvementProfile);
 var
   Action: THbChoiceAction;
   Handled: Boolean;
 begin
-  Action := THbChoiceAction.Create(AKind, AKey, AText, APayload, ASource);
+  Action := THbChoiceAction.Create(AKind, AKey, AText, APayload, ASource,
+    AOverrideKind, ASemanticSource, AProfile, FContextBinding.ContextId);
 
   // 1. Dispatch Unified Action Event
   if Assigned(FOnAction) then
@@ -479,6 +621,35 @@ begin
   end;
 end;
 
+procedure THbChoiceDeck.TriggerOverrideAction(AOverrideKind: TEhaiOverrideKind;
+  const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+begin
+  TriggerActionWithOverride(cakFreeInput, 9, AText, APayload, ASource,
+    AOverrideKind, esHuman, eipProvide);
+end;
+
+procedure THbChoiceDeck.TriggerMultiAction(const ASelectedKeys: array of Integer;
+  APayload: NativeInt; ASource: THbChoiceInputSource);
+var
+  Action: THbChoiceAction;
+  KeysArray: TArray<Integer>;
+  I: Integer;
+begin
+  Action := THbChoiceAction.CreateMulti(ASelectedKeys, APayload, ASource,
+    FDefaultProfile, FContextBinding.ContextId);
+
+  if Assigned(FOnAction) then
+    FOnAction(Self, Action);
+
+  if Assigned(FOnMultiSelect) then
+  begin
+    SetLength(KeysArray, Length(ASelectedKeys));
+    for I := 0 to High(ASelectedKeys) do
+      KeysArray[I] := ASelectedKeys[I];
+    FOnMultiSelect(Self, KeysArray);
+  end;
+end;
+
 procedure THbChoiceDeck.SelectKey(AKey: Integer; ASource: THbChoiceInputSource);
 var
   Idx: Integer;
@@ -489,8 +660,16 @@ begin
   begin
     Item := FItems[Idx];
     FSelectedIndex := Idx;
-    Invalidate;
-    TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, ASource);
+
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+    begin
+      ToggleItemChecked(AKey);
+    end
+    else
+    begin
+      Invalidate;
+      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, ASource);
+    end;
   end;
 end;
 
@@ -541,9 +720,11 @@ begin
   end;
 end;
 
-procedure THbChoiceDeck.SubmitFreeInput(const AText: string);
+procedure THbChoiceDeck.SubmitFreeInputWithKind(const AText: string; AOverrideKind: TEhaiOverrideKind);
+var
+  Trimmed: string;
 begin
-  var Trimmed := Trim(AText);
+  Trimmed := Trim(AText);
   SetState(csReady);
   if CanFocus and Showing then
   try
@@ -551,7 +732,13 @@ begin
   except
   end;
   if Trimmed <> '' then
-    TriggerAction(cakFreeInput, 9, Trimmed, 0, cisKeyboard);
+    TriggerActionWithOverride(cakFreeInput, 9, Trimmed, 0, cisKeyboard,
+      AOverrideKind, esHuman, eipProvide);
+end;
+
+procedure THbChoiceDeck.SubmitFreeInput(const AText: string);
+begin
+  SubmitFreeInputWithKind(AText, eokNone);
 end;
 
 procedure THbChoiceDeck.UpdateInlineEditLayout;
@@ -641,15 +828,11 @@ end;
 function THbChoiceDeck.ItemIndexAt(X, Y: Integer): Integer;
 var
   I: Integer;
-  R: TRect;
 begin
   Result := -1;
   for I := 0 to FItems.Count - 1 do
-  begin
-    R := ItemRect(I);
-    if PtInRect(R, Point(X, Y)) then
+    if PtInRect(ItemRect(I), Point(X, Y)) then
       Exit(I);
-  end;
 end;
 
 procedure THbChoiceDeck.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -701,8 +884,16 @@ begin
     begin
       Item := FItems[Idx];
       FPressedIndex := -1;
-      Invalidate;
-      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, cisMouse);
+
+      if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+      begin
+        ToggleItemChecked(Item.Key);
+      end
+      else
+      begin
+        Invalidate;
+        TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, cisMouse);
+      end;
     end
     else
     begin
@@ -804,9 +995,20 @@ begin
 
     VK_RETURN, VK_SPACE:
     begin
-      if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
+      if FCardinality = ecMultiple then
       begin
-        DigitKey := FItems[FSelectedIndex].Key;
+        if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
+          DigitKey := FItems[FSelectedIndex].Key
+        else
+        begin
+          SubmitMultiChoice(cisKeyboard);
+          Exit;
+        end;
+      end
+      else
+      begin
+        if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
+          DigitKey := FItems[FSelectedIndex].Key;
       end;
     end;
   end;
@@ -818,8 +1020,16 @@ begin
     begin
       Item := FItems[Idx];
       FSelectedIndex := Idx;
-      Invalidate;
-      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, InputSrc);
+
+      if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+      begin
+        ToggleItemChecked(DigitKey);
+      end
+      else
+      begin
+        Invalidate;
+        TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, InputSrc);
+      end;
     end;
   end
   else
@@ -967,6 +1177,8 @@ begin
             BorderColor := Tokens.Border;
             if Item.IsRecommended then
               BorderColor := Tokens.ChoiceRecommended;
+            if Item.IsSelected then
+              BorderColor := Tokens.Primary;
           end;
           ckRegenerate:
           begin
@@ -998,10 +1210,12 @@ begin
           FillColor := ColorToARGB(AccentColor, Round(60 * DimAlphaFactor))
         else if IsItemHover then
           FillColor := ColorToARGB(AccentColor, Round(35 * DimAlphaFactor))
+        else if Item.IsSelected and (Item.Kind = ckOption) then
+          FillColor := ColorToARGB(AccentColor, Round(25 * DimAlphaFactor))
         else
           FillColor := ColorToARGB(Tokens.Surface, Round(255 * DimAlphaFactor));
 
-        // Container Box
+        // Draw Container Card
         ItemPath := CreateRoundRectPath(ItemBox, Rad);
         try
           BgBrush := TGPSolidBrush.Create(FillColor);
@@ -1013,10 +1227,10 @@ begin
 
           if IsItemFocused then
             BorderPen := TGPPen.Create(ColorToARGB(Tokens.FocusRing), 2.0)
-          else if IsItemHover or (Item.IsRecommended and (Item.Kind = ckOption)) then
-            BorderPen := TGPPen.Create(ColorToARGB(BorderColor, Round(255 * DimAlphaFactor)), 1.5)
+          else if Item.IsSelected and (Item.Kind = ckOption) then
+            BorderPen := TGPPen.Create(ColorToARGB(Tokens.Primary, Round(220 * DimAlphaFactor)), 2.0)
           else
-            BorderPen := TGPPen.Create(ColorToARGB(BorderColor, Round(160 * DimAlphaFactor)), 1.0);
+            BorderPen := TGPPen.Create(ColorToARGB(BorderColor, Round(180 * DimAlphaFactor)), 1.0);
 
           try
             Graphics.DrawPath(BorderPen, ItemPath);
@@ -1027,36 +1241,79 @@ begin
           ItemPath.Free;
         end;
 
-        // Key Badge [1..7, 8, 9, 0]
-        BadgeBox := MakeRect(ItemBox.X + ScaleDIP(8), ItemBox.Y + (ItemBox.Height - ScaleDIP(28)) * 0.5,
+        // Key Badge [1..7, 8, 9, 0] or Checkbox badge in multi-choice
+        BadgeBox := MakeRect(ItemBox.X + ScaleDIP(8),
+                             ItemBox.Y + (ItemBox.Height - ScaleDIP(28)) * 0.5,
                              ScaleDIP(32), ScaleDIP(28));
         BadgePath := CreateRoundRectPath(BadgeBox, ScaleDIP(Tokens.RadiusS));
         try
-          if Item.Kind in [ckRegenerate, ckInput, ckBack] then
-            BadgeBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(35 * DimAlphaFactor)))
-          else if Item.IsRecommended then
-            BadgeBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.ChoiceRecommended, Round(40 * DimAlphaFactor)))
+          if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+          begin
+            if Item.IsSelected then
+            begin
+              BadgeBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(220 * DimAlphaFactor)));
+              try
+                Graphics.FillPath(BadgeBrush, BadgePath);
+              finally
+                BadgeBrush.Free;
+              end;
+
+              KeyStr := '✓ ' + IntToStr(Item.Key);
+              TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface, Round(255 * DimAlphaFactor)));
+              try
+                Graphics.DrawString(PWideChar(KeyStr), Length(KeyStr), KeyFont, BadgeBox, FormatCenter, TextBrush);
+              finally
+                TextBrush.Free;
+              end;
+            end
+            else
+            begin
+              BadgeBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(35 * DimAlphaFactor)));
+              try
+                Graphics.FillPath(BadgeBrush, BadgePath);
+              finally
+                BadgeBrush.Free;
+              end;
+
+              BorderPen := TGPPen.Create(ColorToARGB(BorderColor, Round(160 * DimAlphaFactor)), 1.0);
+              try
+                Graphics.DrawPath(BorderPen, BadgePath);
+              finally
+                BorderPen.Free;
+              end;
+
+              KeyStr := IntToStr(Item.Key);
+              TextBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(255 * DimAlphaFactor)));
+              try
+                Graphics.DrawString(PWideChar(KeyStr), Length(KeyStr), KeyFont, BadgeBox, FormatCenter, TextBrush);
+              finally
+                TextBrush.Free;
+              end;
+            end;
+          end
           else
-            BadgeBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Border, Round(60 * DimAlphaFactor)));
+          begin
+            BadgeBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(35 * DimAlphaFactor)));
+            try
+              Graphics.FillPath(BadgeBrush, BadgePath);
+            finally
+              BadgeBrush.Free;
+            end;
 
-          try
-            Graphics.FillPath(BadgeBrush, BadgePath);
-          finally
-            BadgeBrush.Free;
-          end;
+            BorderPen := TGPPen.Create(ColorToARGB(BorderColor, Round(160 * DimAlphaFactor)), 1.0);
+            try
+              Graphics.DrawPath(BorderPen, BadgePath);
+            finally
+              BorderPen.Free;
+            end;
 
-          KeyStr := IntToStr(Item.Key);
-          if Item.Kind in [ckRegenerate, ckInput, ckBack] then
-            TextBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(255 * DimAlphaFactor)))
-          else if Item.IsRecommended then
-            TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.ChoiceRecommended, Round(255 * DimAlphaFactor)))
-          else
-            TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink, Round(255 * DimAlphaFactor)));
-
-          try
-            Graphics.DrawString(PWideChar(KeyStr), Length(KeyStr), KeyFont, BadgeBox, FormatCenter, TextBrush);
-          finally
-            TextBrush.Free;
+            KeyStr := IntToStr(Item.Key);
+            TextBrush := TGPSolidBrush.Create(ColorToARGB(AccentColor, Round(255 * DimAlphaFactor)));
+            try
+              Graphics.DrawString(PWideChar(KeyStr), Length(KeyStr), KeyFont, BadgeBox, FormatCenter, TextBrush);
+            finally
+              TextBrush.Free;
+            end;
           end;
         finally
           BadgePath.Free;
@@ -1184,6 +1441,8 @@ begin
         BorderColor := AccentColor;
         if IsItemHover then
           FillColor := ColorToARGB(AccentColor, 40)
+        else if Item.IsSelected and (Item.Kind = ckOption) then
+          FillColor := ColorToARGB(AccentColor, 60)
         else
           FillColor := Tokens.Surface;
 
@@ -1200,13 +1459,18 @@ begin
             BorderPen := TGPPen.Create(ColorToARGB(Tokens.FocusRing), 2.0)
           else
             BorderPen := TGPPen.Create(ColorToARGB(BorderColor, 180), 1.0);
+
           try
             Graphics.DrawPath(BorderPen, ItemPath);
           finally
             BorderPen.Free;
           end;
 
-          LabelStr := Format('%d %s', [Item.Key, Item.Text]);
+          if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+            LabelStr := '✓ ' + IntToStr(Item.Key) + ' ' + Item.Text
+          else
+            LabelStr := IntToStr(Item.Key) + ' ' + Item.Text;
+
           TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
           try
             Graphics.DrawString(PWideChar(LabelStr), Length(LabelStr), MainFont, ItemBox, FormatCenter, TextBrush);
@@ -1232,22 +1496,22 @@ var
   Item: THbChoiceItem;
   R: TRect;
   ItemBox, TextR: TGPRectF;
-  ItemPath: TGPGraphicsPath;
-  BgBrush, TextBrush, SubBrush: TGPSolidBrush;
+  BgBrush, TextBrush: TGPSolidBrush;
   FontFam: TGPFontFamily;
-  MainFont, DescFont: TGPFont;
-  FormatLeft: TGPStringFormat;
-  IsItemHover, IsItemFocused: Boolean;
-  LineStr: string;
+  MainFont, KeyFont: TGPFont;
+  FormatLeft, FormatCenter: TGPStringFormat;
+  LabelStr: string;
 begin
   FontFam := TGPFontFamily.Create(PWideChar(Tokens.FontFamily));
   try
     MainFont := TGPFont.Create(FontFam, Tokens.SizeM, FontStyleRegular, UnitPoint);
-    DescFont := TGPFont.Create(FontFam, Tokens.SizeS, FontStyleRegular, UnitPoint);
+    KeyFont := TGPFont.Create(FontFam, Tokens.SizeM, FontStyleBold, UnitPoint);
     FormatLeft := TGPStringFormat.Create;
     FormatLeft.SetAlignment(StringAlignmentNear);
     FormatLeft.SetLineAlignment(StringAlignmentCenter);
-    FormatLeft.SetFormatFlags(StringFormatFlagsNoWrap);
+    FormatCenter := TGPStringFormat.Create;
+    FormatCenter.SetAlignment(StringAlignmentCenter);
+    FormatCenter.SetLineAlignment(StringAlignmentCenter);
     try
       for I := 0 to FItems.Count - 1 do
       begin
@@ -1255,56 +1519,44 @@ begin
         R := ItemRect(I);
         ItemBox := MakeRect(Single(R.Left), Single(R.Top), Single(R.Width), Single(R.Height));
 
-        IsItemHover := (FHoverIndex = I) and (FState = csReady);
-        IsItemFocused := (FSelectedIndex = I) and Focused and FIsActiveChoiceSurface;
-
-        if IsItemHover or IsItemFocused then
+        if (FHoverIndex = I) or (FSelectedIndex = I) then
         begin
-          ItemPath := CreateRoundRectPath(ItemBox, ScaleDIP(Tokens.RadiusS));
+          BgBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary, 30));
           try
-            BgBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.ChoiceOption, 30));
-            try
-              Graphics.FillPath(BgBrush, ItemPath);
-            finally
-              BgBrush.Free;
-            end;
+            Graphics.FillRectangle(BgBrush, ItemBox);
           finally
-            ItemPath.Free;
+            BgBrush.Free;
           end;
         end;
 
-        if Item.Description <> '' then
-        begin
-          var TitleR := MakeRect(ItemBox.X + ScaleDIP(6), ItemBox.Y + ScaleDIP(2), ItemBox.Width - ScaleDIP(12), ScaleDIP(16));
-          var DescR := MakeRect(ItemBox.X + ScaleDIP(24), ItemBox.Y + ScaleDIP(18), ItemBox.Width - ScaleDIP(30), ScaleDIP(14));
-          TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
-          try
-            Graphics.DrawString(PWideChar(LineStr), Length(LineStr), MainFont, TitleR, FormatLeft, TextBrush);
-          finally
-            TextBrush.Free;
-          end;
-
-          SubBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.InkMuted));
-          try
-            Graphics.DrawString(PWideChar(Item.Description), Length(Item.Description), DescFont, DescR, FormatLeft, SubBrush);
-          finally
-            SubBrush.Free;
-          end;
-        end
+        // Key Prefix
+        var KeyR := MakeRect(ItemBox.X, ItemBox.Y, ScaleDIP(32), ItemBox.Height);
+        if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+          LabelStr := '✓' + IntToStr(Item.Key) + '.'
         else
-        begin
-          TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
-          try
-            Graphics.DrawString(PWideChar(LineStr), Length(LineStr), MainFont, TextR, FormatLeft, TextBrush);
-          finally
-            TextBrush.Free;
-          end;
+          LabelStr := IntToStr(Item.Key) + '.';
+
+        TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
+        try
+          Graphics.DrawString(PWideChar(LabelStr), Length(LabelStr), KeyFont, KeyR, FormatCenter, TextBrush);
+        finally
+          TextBrush.Free;
+        end;
+
+        // Content
+        TextR := MakeRect(ItemBox.X + ScaleDIP(36), ItemBox.Y, ItemBox.Width - ScaleDIP(40), ItemBox.Height);
+        TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
+        try
+          Graphics.DrawString(PWideChar(Item.Text), Length(Item.Text), MainFont, TextR, FormatLeft, TextBrush);
+        finally
+          TextBrush.Free;
         end;
       end;
     finally
       FormatLeft.Free;
+      FormatCenter.Free;
       MainFont.Free;
-      DescFont.Free;
+      KeyFont.Free;
     end;
   finally
     FontFam.Free;
@@ -1327,7 +1579,7 @@ var
 begin
   FontFam := TGPFontFamily.Create(PWideChar(Tokens.FontFamily));
   try
-    MainFont := TGPFont.Create(FontFam, Tokens.SizeXS, FontStyleBold, UnitPoint);
+    MainFont := TGPFont.Create(FontFam, Tokens.SizeS, FontStyleBold, UnitPoint);
     FormatCenter := TGPStringFormat.Create;
     FormatCenter.SetAlignment(StringAlignmentCenter);
     FormatCenter.SetLineAlignment(StringAlignmentCenter);
@@ -1340,21 +1592,29 @@ begin
 
         ItemPath := CreateRoundRectPath(ItemBox, ScaleDIP(Tokens.RadiusS));
         try
-          BgBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceQuiet, 200));
+          if (FHoverIndex = I) or (FSelectedIndex = I) or (Item.IsSelected and (Item.Kind = ckOption)) then
+            BgBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.ChoiceOption, 40))
+          else
+            BgBrush := TGPSolidBrush.Create(Tokens.Surface);
+
           try
             Graphics.FillPath(BgBrush, ItemPath);
           finally
             BgBrush.Free;
           end;
 
-          BorderPen := TGPPen.Create(ColorToARGB(Tokens.Border, 140), 1.0);
+          BorderPen := TGPPen.Create(ColorToARGB(Tokens.ChoiceOption, 160), 1.0);
           try
             Graphics.DrawPath(BorderPen, ItemPath);
           finally
             BorderPen.Free;
           end;
 
-          LabelStr := Format('%d %s', [Item.Key, Item.Text]);
+          if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+            LabelStr := '✓' + IntToStr(Item.Key) + ':' + Item.Text
+          else
+            LabelStr := IntToStr(Item.Key) + ':' + Item.Text;
+
           TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Ink));
           try
             Graphics.DrawString(PWideChar(LabelStr), Length(LabelStr), MainFont, ItemBox, FormatCenter, TextBrush);
@@ -1376,81 +1636,54 @@ end;
 
 procedure THbChoiceDeck.PaintStatusOverlay(Graphics: TGPGraphics; const Tokens: THbTokens; TopOffset: Integer);
 var
-  FontFam: TGPFontFamily;
-  StatusFont: TGPFont;
-  FormatCenter: TGPStringFormat;
-  StatusBox: TGPRectF;
-  StatusPath: TGPGraphicsPath;
+  BoxR: TGPRectF;
+  BoxPath: TGPGraphicsPath;
   BgBrush, TextBrush: TGPSolidBrush;
-  BorderPen: TGPPen;
+  FontFam: TGPFontFamily;
+  FontMsg: TGPFont;
+  FormatCenter: TGPStringFormat;
   DisplayMsg: string;
-  AccentCol: TAlphaColor;
 begin
+  if FStatusMessage <> '' then
+    DisplayMsg := FStatusMessage
+  else if FState = csRegenerating then
+    DisplayMsg := '正在换一组候选...'
+  else if FState = csNoReliableCandidates then
+    DisplayMsg := '当前信息不足，暂无可靠建议。'
+  else if FState = csError then
+    DisplayMsg := '加载失败，请重试。'
+  else
+    DisplayMsg := '处理中...';
+
+  BoxR := MakeRect(ScaleDIP(16), Single(Height - ScaleDIP(42)), Single(Width - ScaleDIP(32)), ScaleDIP(34));
+  BoxPath := CreateRoundRectPath(BoxR, ScaleDIP(Tokens.RadiusM));
+  try
+    BgBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.SurfaceAlt, 240));
+    try
+      Graphics.FillPath(BgBrush, BoxPath);
+    finally
+      BgBrush.Free;
+    end;
+  finally
+    BoxPath.Free;
+  end;
+
   FontFam := TGPFontFamily.Create(PWideChar(Tokens.FontFamily));
   try
-    StatusFont := TGPFont.Create(FontFam, Tokens.SizeM, FontStyleBold, UnitPoint);
+    FontMsg := TGPFont.Create(FontFam, Tokens.SizeS, FontStyleBold, UnitPoint);
     FormatCenter := TGPStringFormat.Create;
     FormatCenter.SetAlignment(StringAlignmentCenter);
     FormatCenter.SetLineAlignment(StringAlignmentCenter);
     try
-      StatusBox := MakeRect(ScaleDIP(16), Single(TopOffset) + ScaleDIP(8),
-                            Single(Width) - ScaleDIP(32), ScaleDIP(42));
-
-      case FState of
-        csRegenerating:
-        begin
-          DisplayMsg := '正在换一批候选...';
-          AccentCol := Tokens.ChoiceRegenerate;
-        end;
-        csNoReliableCandidates:
-        begin
-          if FStatusMessage <> '' then
-            DisplayMsg := FStatusMessage
-          else
-            DisplayMsg := '当前信息还不足以给出可靠候选。';
-          AccentCol := Tokens.Notice;
-        end;
-        csError:
-        begin
-          if FStatusMessage <> '' then
-            DisplayMsg := FStatusMessage
-          else
-            DisplayMsg := '候选获取失败，请重试。';
-          AccentCol := Tokens.Danger;
-        end;
-      else
-        DisplayMsg := '加载中...';
-        AccentCol := Tokens.Primary;
-      end;
-
-      StatusPath := CreateRoundRectPath(StatusBox, ScaleDIP(Tokens.RadiusM));
+      TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
       try
-        BgBrush := TGPSolidBrush.Create(ColorToARGB(AccentCol, 28));
-        try
-          Graphics.FillPath(BgBrush, StatusPath);
-        finally
-          BgBrush.Free;
-        end;
-
-        BorderPen := TGPPen.Create(ColorToARGB(AccentCol, 160), 1.2);
-        try
-          Graphics.DrawPath(BorderPen, StatusPath);
-        finally
-          BorderPen.Free;
-        end;
-
-        TextBrush := TGPSolidBrush.Create(ColorToARGB(AccentCol));
-        try
-          Graphics.DrawString(PWideChar(DisplayMsg), Length(DisplayMsg), StatusFont, StatusBox, FormatCenter, TextBrush);
-        finally
-          TextBrush.Free;
-        end;
+        Graphics.DrawString(PWideChar(DisplayMsg), Length(DisplayMsg), FontMsg, BoxR, FormatCenter, TextBrush);
       finally
-        StatusPath.Free;
+        TextBrush.Free;
       end;
     finally
       FormatCenter.Free;
-      StatusFont.Free;
+      FontMsg.Free;
     end;
   finally
     FontFam.Free;

@@ -1,18 +1,21 @@
 { ============================================================================
   DeepBase.FMX.HB.Choice - Modern Token-Driven 0-9 Choice Deck for FireMonkey
 
-  Version: 2.0 (Delphi 13.1 on Win64 / Cross-Platform FMX)
+  Version: 2.1 (Delphi 13.1 on Win64 / Cross-Platform FMX)
   Description: THbFmxChoiceDeck - Universal AI Choice Interaction Standard for FMX:
                - 1-7 Contextual options (Key 1 can be Recommended)
                - 8 Fixed control: Regenerate (Contextual re-generation)
                - 9 Fixed control: Human Override / Free Input (Frame Rejection)
                - 0 Fixed control: Navigate Back (Pure navigation)
+               - Decision Cardinality: ecSingle, ecMultiple (L4 §5.5, CSV-003)
+               - Frame Rejection Tri-State: eokCandidateReject, eokAlternativeExpression, eokFrameRejection
                - Multi-modal action abstraction: THbChoiceAction & THbChoiceInputSource
                - 4 Layout modes: clmDeck, clmRow, clmNumberedList, clmInline
                - Truthful State Machine: csReady, csRegenerating, csFreeInput,
                  csLoading, csNoReliableCandidates, csDisabled, csError
                - Active Choice Surface arbitration & Text Entry Owns Keyboard rule
                - FMX TCanvas vector anti-aliased rendering
+               - Verified 100% backward-compatible with v1.0 & v2.0
   ============================================================================ }
 
 unit DeepBase.FMX.HB.Choice;
@@ -33,6 +36,7 @@ uses
   FMX.Graphics,
   FMX.Objects,
   DeepBase.HB.Core,
+  DeepBase.EHAI.Types,
   DeepBase.HB.Choice.Types,
   DeepBase.FMX.HB.Theme,
   DeepBase.FMX.HB.Controls;
@@ -52,6 +56,9 @@ type
     FLayoutMode: THbChoiceLayoutMode;
     FChoiceState: THbChoiceState;
     FFreeInputMode: THbChoiceFreeInputMode;
+    FCardinality: TEhaiCardinality;
+    FDefaultProfile: TEhaiInvolvementProfile;
+    FContextBinding: TEhaiContextBinding;
     FContextTitle: string;
     FStepInfo: string;
     FStatusMessage: string;
@@ -63,10 +70,12 @@ type
     FOnAction: THbChoiceActionEvent;
     FOnFreeInputRequested: THbChoiceFreeInputRequestEvent;
     FOnStateChanged: TNotifyEvent;
+    FOnMultiSelect: THbChoiceMultiSelectEvent;
 
     procedure SetSelectedIndex(Value: Integer);
     procedure SetLayoutMode(Value: THbChoiceLayoutMode);
     procedure SetChoiceState(Value: THbChoiceState);
+    procedure SetCardinality(Value: TEhaiCardinality);
     procedure SetContextTitle(const Value: string);
     procedure SetStepInfo(const Value: string);
     procedure SetStatusMessage(const Value: string);
@@ -98,7 +107,9 @@ type
     procedure Clear;
     procedure AddOption(AKey: Integer; const AText: string;
       const ADesc: string = ''; AIsRecommended: Boolean = False;
-      APayload: NativeInt = 0);
+      APayload: NativeInt = 0; AIsSelected: Boolean = False;
+      AOverrideKind: TEhaiOverrideKind = eokNone;
+      ASource: TEhaiSource = esHuman);
     procedure AddStandardControls(AHasRegenerate: Boolean = True;
       AHasInput: Boolean = True; AHasBack: Boolean = True);
     procedure SetOptions(const AOptions: array of string; ARecommendedKey: Integer = 1);
@@ -109,10 +120,24 @@ type
     procedure SelectKey(AKey: Integer; ASource: THbChoiceInputSource = cisProgrammatic);
     procedure TriggerAction(AKind: THbChoiceActionKind; AKey: Integer;
       const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+    procedure TriggerActionWithOverride(AKind: THbChoiceActionKind; AKey: Integer;
+      const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource;
+      AOverrideKind: TEhaiOverrideKind; ASemanticSource: TEhaiSource = esHuman;
+      AProfile: TEhaiInvolvementProfile = eipJudge);
+    procedure TriggerOverrideAction(AOverrideKind: TEhaiOverrideKind;
+      const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+    procedure TriggerMultiAction(const ASelectedKeys: array of Integer;
+      APayload: NativeInt; ASource: THbChoiceInputSource);
     procedure SetItemEnabled(AKey: Integer; AEnabled: Boolean);
     function FindItemByKey(AKey: Integer; out AItem: THbChoiceItem): Boolean;
     function IndexOfKey(AKey: Integer): Integer;
     function ItemRect(AIndex: Integer): TRectF;
+
+    // Multi-choice operations (L4 §5.5, CSV-003)
+    function GetSelectedKeys: TArray<Integer>;
+    procedure SetItemChecked(AKey: Integer; AChecked: Boolean);
+    procedure ToggleItemChecked(AKey: Integer);
+    procedure SubmitMultiChoice(ASource: THbChoiceInputSource = cisProgrammatic);
 
     // State management
     procedure BeginRegenerate;
@@ -123,11 +148,13 @@ type
     procedure EnterFreeInput(const APrefillText: string = '');
     procedure CancelFreeInput;
     procedure SubmitFreeInput(const AText: string);
+    procedure SubmitFreeInputWithKind(const AText: string; AOverrideKind: TEhaiOverrideKind);
 
     // Properties
     property Items[Index: Integer]: THbChoiceItem read GetItem write SetItem;
     property ItemCount: Integer read GetItemCount;
     property SelectedIndex: Integer read FSelectedIndex write SetSelectedIndex;
+    property SelectedKeys: TArray<Integer> read GetSelectedKeys;
   published
     property Align;
     property Anchors;
@@ -136,6 +163,9 @@ type
     property LayoutMode: THbChoiceLayoutMode read FLayoutMode write SetLayoutMode default clmDeck;
     property State: THbChoiceState read FChoiceState write SetChoiceState default csReady;
     property FreeInputMode: THbChoiceFreeInputMode read FFreeInputMode write FFreeInputMode default fimBuiltIn;
+    property Cardinality: TEhaiCardinality read FCardinality write SetCardinality default ecSingle;
+    property DefaultProfile: TEhaiInvolvementProfile read FDefaultProfile write FDefaultProfile default eipJudge;
+    property ContextBinding: TEhaiContextBinding read FContextBinding write FContextBinding;
     property ContextTitle: string read FContextTitle write SetContextTitle;
     property StepInfo: string read FStepInfo write SetStepInfo;
     property StatusMessage: string read FStatusMessage write SetStatusMessage;
@@ -148,6 +178,7 @@ type
     property OnCustomInput: THbChoiceInputEvent read FOnCustomInput write FOnCustomInput;
     property OnFreeInputRequested: THbChoiceFreeInputRequestEvent read FOnFreeInputRequested write FOnFreeInputRequested;
     property OnStateChanged: TNotifyEvent read FOnStateChanged write FOnStateChanged;
+    property OnMultiSelect: THbChoiceMultiSelectEvent read FOnMultiSelect write FOnMultiSelect;
 
     property OnClick;
   end;
@@ -168,6 +199,9 @@ begin
   FLayoutMode := clmDeck;
   FChoiceState := csReady;
   FFreeInputMode := fimBuiltIn;
+  FCardinality := ecSingle;
+  FDefaultProfile := eipJudge;
+  FillChar(FContextBinding, SizeOf(FContextBinding), 0);
   FContextTitle := '';
   FStepInfo := '';
   FStatusMessage := '';
@@ -229,6 +263,15 @@ begin
   end;
 end;
 
+procedure THbFmxChoiceDeck.SetCardinality(Value: TEhaiCardinality);
+begin
+  if FCardinality <> Value then
+  begin
+    FCardinality := Value;
+    Repaint;
+  end;
+end;
+
 procedure THbFmxChoiceDeck.SetChoiceState(Value: THbChoiceState);
 begin
   if FChoiceState <> Value then
@@ -245,6 +288,7 @@ begin
   if FContextTitle <> Value then
   begin
     FContextTitle := Value;
+    FContextBinding.ContextTitle := Value;
     Repaint;
   end;
 end;
@@ -254,6 +298,7 @@ begin
   if FStepInfo <> Value then
   begin
     FStepInfo := Value;
+    FContextBinding.StepInfo := Value;
     Repaint;
   end;
 end;
@@ -284,11 +329,13 @@ begin
 end;
 
 procedure THbFmxChoiceDeck.AddOption(AKey: Integer; const AText, ADesc: string;
-  AIsRecommended: Boolean; APayload: NativeInt);
+  AIsRecommended: Boolean; APayload: NativeInt; AIsSelected: Boolean;
+  AOverrideKind: TEhaiOverrideKind; ASource: TEhaiSource);
 var
   Item: THbChoiceItem;
 begin
-  Item := THbChoiceItem.Create(AKey, AText, ADesc, AIsRecommended, True, APayload);
+  Item := THbChoiceItem.Create(AKey, AText, ADesc, AIsRecommended, True, APayload,
+    AIsSelected, AOverrideKind, ASource);
   FItems.Add(Item);
   if (FSelectedIndex = -1) and (FItems.Count = 1) then
     FSelectedIndex := 0;
@@ -378,13 +425,86 @@ begin
   end;
 end;
 
+function THbFmxChoiceDeck.GetSelectedKeys: TArray<Integer>;
+var
+  I, Count: Integer;
+begin
+  Count := 0;
+  for I := 0 to FItems.Count - 1 do
+    if FItems[I].IsSelected and (FItems[I].Kind = ckOption) then
+      Inc(Count);
+
+  SetLength(Result, Count);
+  Count := 0;
+  for I := 0 to FItems.Count - 1 do
+    if FItems[I].IsSelected and (FItems[I].Kind = ckOption) then
+    begin
+      Result[Count] := FItems[I].Key;
+      Inc(Count);
+    end;
+end;
+
+procedure THbFmxChoiceDeck.SetItemChecked(AKey: Integer; AChecked: Boolean);
+var
+  Idx: Integer;
+  Item: THbChoiceItem;
+begin
+  Idx := IndexOfKey(AKey);
+  if (Idx >= 0) and (FItems[Idx].Kind = ckOption) then
+  begin
+    Item := FItems[Idx];
+    if Item.IsSelected <> AChecked then
+    begin
+      Item.IsSelected := AChecked;
+      FItems[Idx] := Item;
+      Repaint;
+      if Assigned(FOnMultiSelect) then
+        FOnMultiSelect(Self, GetSelectedKeys);
+    end;
+  end;
+end;
+
+procedure THbFmxChoiceDeck.ToggleItemChecked(AKey: Integer);
+var
+  Idx: Integer;
+begin
+  Idx := IndexOfKey(AKey);
+  if (Idx >= 0) and (FItems[Idx].Kind = ckOption) then
+    SetItemChecked(AKey, not FItems[Idx].IsSelected);
+end;
+
+procedure THbFmxChoiceDeck.SubmitMultiChoice(ASource: THbChoiceInputSource);
+var
+  Keys: TArray<Integer>;
+  Action: THbChoiceAction;
+begin
+  Keys := GetSelectedKeys;
+  if Length(Keys) = 0 then
+    Exit;
+
+  Action := THbChoiceAction.CreateMulti(Keys, 0, ASource, FDefaultProfile, FContextBinding.ContextId);
+  if Assigned(FOnAction) then
+    FOnAction(Self, Action);
+  if Assigned(FOnMultiSelect) then
+    FOnMultiSelect(Self, Keys);
+end;
+
 procedure THbFmxChoiceDeck.TriggerAction(AKind: THbChoiceActionKind; AKey: Integer;
   const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+begin
+  TriggerActionWithOverride(AKind, AKey, AText, APayload, ASource, eokNone, esHuman, FDefaultProfile);
+end;
+
+procedure THbFmxChoiceDeck.TriggerActionWithOverride(AKind: THbChoiceActionKind; AKey: Integer;
+  const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource;
+  AOverrideKind: TEhaiOverrideKind; ASemanticSource: TEhaiSource;
+  AProfile: TEhaiInvolvementProfile);
 var
   Action: THbChoiceAction;
   Handled: Boolean;
 begin
-  Action := THbChoiceAction.Create(AKind, AKey, AText, APayload, ASource);
+  Action := THbChoiceAction.Create(AKind, AKey, AText, APayload, ASource,
+    AOverrideKind, ASemanticSource, AProfile, FContextBinding.ContextId);
 
   if Assigned(FOnAction) then
     FOnAction(Self, Action);
@@ -406,6 +526,35 @@ begin
   end;
 end;
 
+procedure THbFmxChoiceDeck.TriggerOverrideAction(AOverrideKind: TEhaiOverrideKind;
+  const AText: string; APayload: NativeInt; ASource: THbChoiceInputSource);
+begin
+  TriggerActionWithOverride(cakFreeInput, 9, AText, APayload, ASource,
+    AOverrideKind, esHuman, eipProvide);
+end;
+
+procedure THbFmxChoiceDeck.TriggerMultiAction(const ASelectedKeys: array of Integer;
+  APayload: NativeInt; ASource: THbChoiceInputSource);
+var
+  Action: THbChoiceAction;
+  KeysArray: TArray<Integer>;
+  I: Integer;
+begin
+  Action := THbChoiceAction.CreateMulti(ASelectedKeys, APayload, ASource,
+    FDefaultProfile, FContextBinding.ContextId);
+
+  if Assigned(FOnAction) then
+    FOnAction(Self, Action);
+
+  if Assigned(FOnMultiSelect) then
+  begin
+    SetLength(KeysArray, Length(ASelectedKeys));
+    for I := 0 to High(ASelectedKeys) do
+      KeysArray[I] := ASelectedKeys[I];
+    FOnMultiSelect(Self, KeysArray);
+  end;
+end;
+
 procedure THbFmxChoiceDeck.SelectKey(AKey: Integer; ASource: THbChoiceInputSource);
 var
   Idx: Integer;
@@ -416,8 +565,16 @@ begin
   begin
     Item := FItems[Idx];
     FSelectedIndex := Idx;
-    Repaint;
-    TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, ASource);
+
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+    begin
+      ToggleItemChecked(AKey);
+    end
+    else
+    begin
+      Repaint;
+      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, ASource);
+    end;
   end;
 end;
 
@@ -462,12 +619,20 @@ begin
   SetChoiceState(csReady);
 end;
 
-procedure THbFmxChoiceDeck.SubmitFreeInput(const AText: string);
+procedure THbFmxChoiceDeck.SubmitFreeInputWithKind(const AText: string; AOverrideKind: TEhaiOverrideKind);
+var
+  Trimmed: string;
 begin
-  var Trimmed := Trim(AText);
+  Trimmed := Trim(AText);
   SetChoiceState(csReady);
   if Trimmed <> '' then
-    TriggerAction(cakFreeInput, 9, Trimmed, 0, cisKeyboard);
+    TriggerActionWithOverride(cakFreeInput, 9, Trimmed, 0, cisKeyboard,
+      AOverrideKind, esHuman, eipProvide);
+end;
+
+procedure THbFmxChoiceDeck.SubmitFreeInput(const AText: string);
+begin
+  SubmitFreeInputWithKind(AText, eokNone);
 end;
 
 function THbFmxChoiceDeck.ItemRect(AIndex: Integer): TRectF;
@@ -577,8 +742,16 @@ begin
     begin
       Item := FItems[Idx];
       FPressedIndex := -1;
-      Repaint;
-      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, cisMouse);
+
+      if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+      begin
+        ToggleItemChecked(Item.Key);
+      end
+      else
+      begin
+        Repaint;
+        TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, cisMouse);
+      end;
     end
     else
     begin
@@ -640,8 +813,21 @@ begin
       end;
       vkReturn, vkSpace:
       begin
-        if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
-          DigitKey := FItems[FSelectedIndex].Key;
+        if FCardinality = ecMultiple then
+        begin
+          if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
+            DigitKey := FItems[FSelectedIndex].Key
+          else
+          begin
+            SubmitMultiChoice(cisKeyboard);
+            Exit;
+          end;
+        end
+        else
+        begin
+          if (FSelectedIndex >= 0) and (FSelectedIndex < FItems.Count) and FItems[FSelectedIndex].Enabled then
+            DigitKey := FItems[FSelectedIndex].Key;
+        end;
       end;
     end;
   end;
@@ -653,8 +839,16 @@ begin
     begin
       Item := FItems[Idx];
       FSelectedIndex := Idx;
-      Repaint;
-      TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, InputSrc);
+
+      if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+      begin
+        ToggleItemChecked(DigitKey);
+      end
+      else
+      begin
+        Repaint;
+        TriggerAction(ChoiceKindToActionKind(Item.Kind), Item.Key, Item.Text, Item.Payload, InputSrc);
+      end;
     end;
   end
   else
@@ -748,6 +942,8 @@ begin
     end
     else if IsItemHover then
       FillColor := ColorToARGB(AccentColor, Round(35 * DimFactor))
+    else if Item.IsSelected and (Item.Kind = ckOption) then
+      FillColor := ColorToARGB(AccentColor, Round(25 * DimFactor))
     else
       FillColor := ColorToARGB(Tokens.Surface, Round(255 * DimFactor));
 
@@ -762,6 +958,11 @@ begin
       Canvas.Stroke.Color := Tokens.FocusRing;
       Canvas.Stroke.Thickness := 2.0;
     end
+    else if Item.IsSelected and (Item.Kind = ckOption) then
+    begin
+      Canvas.Stroke.Color := Tokens.Primary;
+      Canvas.Stroke.Thickness := 2.0;
+    end
     else
     begin
       Canvas.Stroke.Color := ColorToARGB(BorderColor, Round(180 * DimFactor));
@@ -769,15 +970,39 @@ begin
     end;
     Canvas.DrawRect(R, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
 
-    // Key Badge [1..7, 8, 9, 0]
+    // Key Badge [1..7, 8, 9, 0] or Multi-choice Checkbox badge
     BadgeR := RectF(R.Left + 8, R.Top + (R.Height - 28) * 0.5, R.Left + 40, R.Top + (R.Height + 28) * 0.5);
-    Canvas.Fill.Color := ColorToARGB(AccentColor, Round(35 * DimFactor));
-    Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) then
+    begin
+      if Item.IsSelected then
+      begin
+        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(220 * DimFactor));
+        Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
+        Canvas.Font.Size := Tokens.SizeS;
+        Canvas.Font.Style := [TFontStyle.fsBold];
+        Canvas.Fill.Color := ColorToARGB(Tokens.Surface, Round(255 * DimFactor));
+        Canvas.FillText(BadgeR, '✓ ' + IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+      end
+      else
+      begin
+        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(35 * DimFactor));
+        Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
+        Canvas.Font.Size := Tokens.SizeM;
+        Canvas.Font.Style := [TFontStyle.fsBold];
+        Canvas.Fill.Color := ColorToARGB(AccentColor, Round(255 * DimFactor));
+        Canvas.FillText(BadgeR, IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+      end;
+    end
+    else
+    begin
+      Canvas.Fill.Color := ColorToARGB(AccentColor, Round(35 * DimFactor));
+      Canvas.FillRect(BadgeR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
-    Canvas.Font.Size := Tokens.SizeM;
-    Canvas.Font.Style := [TFontStyle.fsBold];
-    Canvas.Fill.Color := ColorToARGB(AccentColor, Round(255 * DimFactor));
-    Canvas.FillText(BadgeR, IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+      Canvas.Font.Size := Tokens.SizeM;
+      Canvas.Font.Style := [TFontStyle.fsBold];
+      Canvas.Fill.Color := ColorToARGB(AccentColor, Round(255 * DimFactor));
+      Canvas.FillText(BadgeR, IntToStr(Item.Key), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+    end;
 
     // Text & Description
     TextR := RectF(R.Left + 48, R.Top + 4, R.Right - 56, R.Bottom - 4);
@@ -803,12 +1028,13 @@ begin
       Canvas.FillText(TextR, Item.Text, False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
     end;
 
-    // Recommended badge
+    // Recommended Badge
     if Item.IsRecommended then
     begin
       RecR := RectF(R.Right - 54, R.Top + (R.Height - 20) * 0.5, R.Right - 8, R.Top + (R.Height + 20) * 0.5);
       Canvas.Fill.Color := ColorToARGB(Tokens.ChoiceRecommended, Round(30 * DimFactor));
       Canvas.FillRect(RecR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
+
       Canvas.Stroke.Color := ColorToARGB(Tokens.ChoiceRecommended, Round(160 * DimFactor));
       Canvas.Stroke.Thickness := 1.0;
       Canvas.DrawRect(RecR, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
@@ -826,12 +1052,16 @@ var
   I: Integer;
   Item: THbChoiceItem;
   R: TRectF;
-  AccentColor: TAlphaColor;
+  AccentColor, BorderColor, FillColor: TAlphaColor;
+  IsItemHover, IsItemFocused: Boolean;
+  LabelStr: string;
 begin
   for I := 0 to FItems.Count - 1 do
   begin
     Item := FItems[I];
     R := ItemRect(I);
+    IsItemHover := (FHoverIndex = I) and (FChoiceState = csReady);
+    IsItemFocused := (FSelectedIndex = I) and IsFocused and FIsActiveChoiceSurface;
 
     case Item.Kind of
       ckRegenerate: AccentColor := Tokens.ChoiceRegenerate;
@@ -844,19 +1074,41 @@ begin
         AccentColor := Tokens.ChoiceOption;
     end;
 
+    BorderColor := AccentColor;
+    if IsItemHover then
+      FillColor := ColorToARGB(AccentColor, 40)
+    else if Item.IsSelected and (Item.Kind = ckOption) then
+      FillColor := ColorToARGB(AccentColor, 60)
+    else
+      FillColor := Tokens.Surface;
+
     Canvas.Fill.Kind := TBrushKind.Solid;
-    Canvas.Fill.Color := Tokens.Surface;
+    Canvas.Fill.Color := FillColor;
     Canvas.FillRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
     Canvas.Stroke.Kind := TBrushKind.Solid;
-    Canvas.Stroke.Color := ColorToARGB(AccentColor, 180);
-    Canvas.Stroke.Thickness := 1.0;
+    if IsItemFocused then
+    begin
+      Canvas.Stroke.Color := Tokens.FocusRing;
+      Canvas.Stroke.Thickness := 2.0;
+    end
+    else
+    begin
+      Canvas.Stroke.Color := ColorToARGB(BorderColor, 180);
+      Canvas.Stroke.Thickness := 1.0;
+    end;
     Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
     Canvas.Font.Size := Tokens.SizeS;
     Canvas.Font.Style := [TFontStyle.fsBold];
     Canvas.Fill.Color := Tokens.Ink;
-    Canvas.FillText(R, Format('%d %s', [Item.Key, Item.Text]), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+      LabelStr := '✓ ' + IntToStr(Item.Key) + ' ' + Item.Text
+    else
+      LabelStr := IntToStr(Item.Key) + ' ' + Item.Text;
+
+    Canvas.FillText(R, LabelStr, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
   end;
 end;
 
@@ -864,17 +1116,38 @@ procedure THbFmxChoiceDeck.DrawNumberedListLayout(const Canvas: TCanvas; const A
 var
   I: Integer;
   Item: THbChoiceItem;
-  R: TRectF;
+  R, KeyR, TextR: TRectF;
+  LabelStr: string;
 begin
   for I := 0 to FItems.Count - 1 do
   begin
     Item := FItems[I];
     R := ItemRect(I);
 
+    if (FHoverIndex = I) or (FSelectedIndex = I) then
+    begin
+      Canvas.Fill.Kind := TBrushKind.Solid;
+      Canvas.Fill.Color := ColorToARGB(Tokens.Primary, 30);
+      Canvas.FillRect(R, 0, 0, [], 1.0);
+    end;
+
+    KeyR := RectF(R.Left, R.Top, R.Left + 32, R.Bottom);
+    Canvas.Font.Size := Tokens.SizeM;
+    Canvas.Font.Style := [TFontStyle.fsBold];
+    Canvas.Fill.Color := Tokens.Primary;
+
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+      LabelStr := '✓' + IntToStr(Item.Key) + '.'
+    else
+      LabelStr := IntToStr(Item.Key) + '.';
+
+    Canvas.FillText(KeyR, LabelStr, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+
+    TextR := RectF(R.Left + 36, R.Top, R.Right - 4, R.Bottom);
     Canvas.Font.Size := Tokens.SizeM;
     Canvas.Font.Style := [];
     Canvas.Fill.Color := Tokens.Ink;
-    Canvas.FillText(R, Format('%d.  %s', [Item.Key, Item.Text]), False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
+    Canvas.FillText(TextR, Item.Text, False, 1.0, [], TTextAlign.Leading, TTextAlign.Center);
   end;
 end;
 
@@ -883,6 +1156,7 @@ var
   I: Integer;
   Item: THbChoiceItem;
   R: TRectF;
+  LabelStr: string;
 begin
   for I := 0 to FItems.Count - 1 do
   begin
@@ -890,67 +1164,57 @@ begin
     R := ItemRect(I);
 
     Canvas.Fill.Kind := TBrushKind.Solid;
-    Canvas.Fill.Color := Tokens.SurfaceQuiet;
+    if (FHoverIndex = I) or (FSelectedIndex = I) or (Item.IsSelected and (Item.Kind = ckOption)) then
+      Canvas.Fill.Color := ColorToARGB(Tokens.ChoiceOption, 40)
+    else
+      Canvas.Fill.Color := Tokens.Surface;
+
     Canvas.FillRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
-    Canvas.Stroke.Color := Tokens.Border;
+    Canvas.Stroke.Kind := TBrushKind.Solid;
+    Canvas.Stroke.Color := ColorToARGB(Tokens.ChoiceOption, 160);
     Canvas.Stroke.Thickness := 1.0;
     Canvas.DrawRect(R, Tokens.RadiusS, Tokens.RadiusS, AllCorners, 1.0);
 
-    Canvas.Font.Size := Tokens.SizeXS;
+    Canvas.Font.Size := Tokens.SizeS;
     Canvas.Font.Style := [TFontStyle.fsBold];
     Canvas.Fill.Color := Tokens.Ink;
-    Canvas.FillText(R, Format('%d %s', [Item.Key, Item.Text]), False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+
+    if (FCardinality = ecMultiple) and (Item.Kind = ckOption) and Item.IsSelected then
+      LabelStr := '✓' + IntToStr(Item.Key) + ':' + Item.Text
+    else
+      LabelStr := IntToStr(Item.Key) + ':' + Item.Text;
+
+    Canvas.FillText(R, LabelStr, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
   end;
 end;
 
 procedure THbFmxChoiceDeck.DrawStatusOverlay(const Canvas: TCanvas; const ARect: TRectF; const Tokens: THbTokens; TopOffset: Single);
 var
-  StatusR: TRectF;
+  BoxR: TRectF;
   DisplayMsg: string;
-  AccentCol: TAlphaColor;
 begin
-  StatusR := RectF(16, TopOffset + 8, ARect.Width - 16, TopOffset + 50);
-
-  case FChoiceState of
-    csRegenerating:
-    begin
-      DisplayMsg := '正在换一批候选...';
-      AccentCol := Tokens.ChoiceRegenerate;
-    end;
-    csNoReliableCandidates:
-    begin
-      if FStatusMessage <> '' then
-        DisplayMsg := FStatusMessage
-      else
-        DisplayMsg := '当前信息还不足以给出可靠候选。';
-      AccentCol := Tokens.Notice;
-    end;
-    csError:
-    begin
-      if FStatusMessage <> '' then
-        DisplayMsg := FStatusMessage
-      else
-        DisplayMsg := '候选获取失败，请重试。';
-      AccentCol := Tokens.Danger;
-    end;
+  if FStatusMessage <> '' then
+    DisplayMsg := FStatusMessage
+  else if FChoiceState = csRegenerating then
+    DisplayMsg := '正在换一组候选...'
+  else if FChoiceState = csNoReliableCandidates then
+    DisplayMsg := '当前信息不足，暂无可靠建议。'
+  else if FChoiceState = csError then
+    DisplayMsg := '加载失败，请重试。'
   else
-    DisplayMsg := '加载中...';
-    AccentCol := Tokens.Primary;
-  end;
+    DisplayMsg := '处理中...';
 
+  BoxR := RectF(16, Height - 42, Width - 16, Height - 8);
   Canvas.Fill.Kind := TBrushKind.Solid;
-  Canvas.Fill.Color := ColorToARGB(AccentCol, 30);
-  Canvas.FillRect(StatusR, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
+  Canvas.Fill.Color := ColorToARGB(Tokens.SurfaceAlt, 240);
+  Canvas.FillRect(BoxR, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
 
-  Canvas.Stroke.Color := ColorToARGB(AccentCol, 160);
-  Canvas.Stroke.Thickness := 1.2;
-  Canvas.DrawRect(StatusR, Tokens.RadiusM, Tokens.RadiusM, AllCorners, 1.0);
-
-  Canvas.Font.Size := Tokens.SizeM;
+  Canvas.Font.Family := Tokens.FontFamily;
+  Canvas.Font.Size := Tokens.SizeS;
   Canvas.Font.Style := [TFontStyle.fsBold];
-  Canvas.Fill.Color := AccentCol;
-  Canvas.FillText(StatusR, DisplayMsg, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+  Canvas.Fill.Color := Tokens.Primary;
+  Canvas.FillText(BoxR, DisplayMsg, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
 end;
 
 end.
