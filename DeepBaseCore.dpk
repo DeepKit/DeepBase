@@ -130,6 +130,7 @@ contains
   DeepBase.HB.StateSlot.Types in 'Core\DeepBase.HB.StateSlot.Types.pas',
   DeepBase.HB.Runtime in 'Core\DeepBase.HB.Runtime.pas',
   DeepBase.HB.Lifecycle in 'Core\DeepBase.HB.Lifecycle.pas',
-  DeepBase.HB.Touchpoint.Engine in 'Core\DeepBase.HB.Touchpoint.Engine.pas';
+  DeepBase.HB.Touchpoint.Engine in 'Core\DeepBase.HB.Touchpoint.Engine.pas',
+  DeepBase.EHAI.Types in 'Core\DeepBase.EHAI.Types.pas';
 
 end.
