@@ -289,6 +289,17 @@ Write-Host ""
 Write-Host ("[SUMMARY] packages={0} ok={1} fail={2} error={3} warning={4}" -f `
     $Global:BuildStats.Total, $Global:BuildStats.Ok, $Global:BuildStats.Fail, $Global:BuildStats.Errors, $Global:BuildStats.Warnings)
 
+if ($Profile -eq 'All') {
+    Write-Host ""
+    Write-Host "Declared All profile scope:"
+    Write-Host ("  RuntimePackages = {0}" -f $RuntimePackages.Count)
+    Write-Host ("  UiPackages      = {0}" -f $UiPackages.Count)
+    Write-Host ("  Total           = {0}" -f ($RuntimePackages.Count + $UiPackages.Count))
+    Write-Host ""
+    Write-Host "This summary covers the declared All profile only."
+    Write-Host "It does not assert that every .dpk file in the repository was built."
+}
+
 if ($Global:BuildStats.Warnings -gt 0) {
     Write-Host "Warning categories breakdown:"
     foreach ($cat in $Global:BuildStats.WarningCategories.Keys) {
