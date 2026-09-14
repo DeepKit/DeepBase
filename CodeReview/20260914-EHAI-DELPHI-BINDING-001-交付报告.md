@@ -81,7 +81,7 @@
 - **命令**：`powershell -NoProfile -ExecutionPolicy Bypass -Command ".\Scripts\build_packages_win64.ps1 -Profile All"`
 - **结果**：**14/14 Win64 Packages 全部编译通过，0 Error, 144 Warning, 0 DCU 泄露**。
 - **覆盖范围声明**：
-  > Build Profile 'All' in this script covers the declared RuntimePackages + UiPackages set (14 packages); it does not mean every .dpk present in the repository.
+  > Declared All profile scope: RuntimePackages = 12 / UiPackages = 2 / Total = 14. This summary covers the declared All profile only. It does not assert that every .dpk file in the repository was built.
 - **Warning 分布台账**：
   - `W1057` (Implicit string cast): 122
   - `W1033` (Implicit unit import): 8
@@ -89,7 +89,7 @@
   - `W1050` (WideChar cast): 5
   - `W1035` (Return value might be undefined): 2
   - `W1024` (Combining signed/unsigned): 2
-- **归档日志**：`TestResults/WO-20260914-EHAI-001R1/build_packages.log` (43,369 bytes, UTF-8)
+- **归档日志**：`TestResults/WO-20260914-EHAI-001R3/build_packages.log` (43,595 bytes, UTF-8)
 
 ### G2 性能门禁：HB 性能 Gates 1–7 全部达标
 - **Gate #1 (冷启动首帧)**：119 ms $\le 800$ ms

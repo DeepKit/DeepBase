@@ -57,7 +57,7 @@ HB Human-facing Realization (THbChoiceDeck in VCL & FMX)
 
 | 门禁 | 判定 | 验证指标与证据说明 | 证据文件 |
 | :--- | :---: | :--- | :--- |
-| **G1 构建门禁** | **PASS** | 14/14 Win64 Packages 全部通过（0 Error, 144 Warning, 0 DCU 泄露）<br>（声明：Build Profile 'All' in this script covers the declared RuntimePackages + UiPackages set (14 packages); it does not mean every .dpk present in the repository.） | `TestResults/WO-20260914-EHAI-001R1/build_packages.log` |
+| **G1 构建门禁** | **PASS** | 14/14 Win64 Packages 全部通过（0 Error, 144 Warning, 0 DCU 泄露）<br>（声明：Declared All profile scope: RuntimePackages = 12 / UiPackages = 2 / Total = 14. This summary covers the declared All profile only. It does not assert that every .dpk file in the repository was built.） | `TestResults/WO-20260914-EHAI-001R3/build_packages.log` |
 | **G2 性能门禁** | **PASS** | Gate #1~#7 全部绿灯（Gate #5 Resize 3.795ms $\le 16.6$ms；Gate #6 0 GDI/Heap Leak；Gate #7 0.0034ms） | `TestResults/WO-20260914-EHAI-001R1/UnitTestResults.xml` |
 | **G3 契约符合性** | **PASS** | 13 项 EHAI 契约向量测试全部通过（Tier A 8/8 CSV-001~CSV-008, Tier B 5/5 HB-V-001~HB-V-005） | `TestResults/WO-20260914-EHAI-001R1/TierA-vectors.xml`<br>`TestResults/WO-20260914-EHAI-001R1/TierB-surface.xml` |
 | **G4 文档与映射** | **PASS** | 机器生成 182 符号基准与上游 10 项共用契约（SRC-01~SRC-10）As-Is 映射台账完整落盘 | `docs/EHAI-Delphi-Symbol-Baseline.md`<br>`docs/Delphi-Common-Contract-AsIs-Mapping.md` |
