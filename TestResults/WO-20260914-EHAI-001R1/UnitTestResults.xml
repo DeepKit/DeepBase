@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="13" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-14" time="12:26:10">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="DeepBaseTests.exe" executed="true" result="Success" success="True" time="12:26:10" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.003" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="Conformance" executed="true" result="Success" success="True" time="0.003" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="TTestEhaiConformanceTierA" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="Test_CSV001_CandidateSpaceBounded_And_RecommendedNonExecution" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV002_CandidateSelection_NonInherentCommitment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV003_MultiChoice_Cardinality_And_SubmitBoundary" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV004_Regenerate_Exploratory_CanonicalStateReadonly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV005_HumanOverride_Availability_And_TriState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV006_Source_Vs_Interpretation_Distinction_And_Lineage" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV007_FrameRejection_NonRemapping_HumanSourcePreservation" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_CSV008_CommitmentBoundary_RejectSemanticEffect_And_AuthorityBasis" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TTestHbSurfaceVectorsTierB" executed="True" result="Success" success="True" time="0.002" >
+                      <results>
+                        <test-case name="Test_HBV001_FreeInputTextEntry_OwnsKeyboard_ShortcutSuspension" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HBV002_Regenerate_VisualReferenceRetention_DimmedOverlay" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="Test_HBV003_MultiChoice_VCL_Rendering_Toggle_And_Submit" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HBV004_Keyboard_Main_Numpad_Mouse_SemanticEquivalence" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="Test_HBV005_Focus_Cancel_BackNavigation_Safety" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

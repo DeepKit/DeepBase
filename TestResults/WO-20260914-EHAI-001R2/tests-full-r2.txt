@@ -1,0 +1,16 @@
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+....................................................................................................
+
+Tests Found   : 50
+Tests Ignored : 0
+Tests Passed  : 50
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
