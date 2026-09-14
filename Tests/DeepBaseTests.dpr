@@ -158,6 +158,7 @@ uses
   Test.DeepBase.Plugin in 'Test.DeepBase.Plugin.pas',
   Test.DeepBase.PluginManager in 'Test.DeepBase.PluginManager.pas',
   // HB Visual Infrastructure Tests
+  Test.DeepBase.EHAI.Conformance in 'Test.DeepBase.EHAI.Conformance.pas',
   Test.DeepBase.HB.DeepRW in 'Test.DeepBase.HB.DeepRW.pas',
   Test.DeepBase.HB.Suite in 'Test.DeepBase.HB.Suite.pas',
   Test.DeepBase.HB.Tray in 'Test.DeepBase.HB.Tray.pas',

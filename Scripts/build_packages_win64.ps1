@@ -12,6 +12,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Force UTF-8 console output for unambiguous machine parsing and international log verification
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $BdsRoot = if ($env:BDS) { $env:BDS } else { 'D:\Program Files (x86)\Embarcadero\Studio\37.0' }
 $Dcc64Path = Join-Path $BdsRoot 'bin\dcc64.exe'
@@ -36,6 +40,8 @@ foreach ($path in @($OutputRoot, $DcuOutputPath, $BplOutputPath, $DcpOutputPath)
 # rebuild when the source is unchanged, so the stale symbol survives until an
 # explicit -B; clearing here removes that hazard regardless of build mode.
 Get-ChildItem -Path $DcpOutputPath -Filter *.dcp -File -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path $RepoRoot -Filter *.dcp -File -ErrorAction SilentlyContinue |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
 # Keep source tree clean from stale DCU artifacts before package builds.
@@ -150,6 +156,15 @@ $UpdaterPackages = @(
     'DeepBaseFeatures.dpk'
 )
 
+$Global:BuildStats = @{
+    Total = 0
+    Ok = 0
+    Fail = 0
+    Errors = 0
+    Warnings = 0
+    WarningCategories = @{}
+}
+
 function Invoke-PackageCompile {
     param(
         [Parameter(Mandatory = $true)]
@@ -162,13 +177,38 @@ function Invoke-PackageCompile {
         throw "Package file not found: $PackagePath"
     }
 
-    Write-Host "Compiling $(Split-Path $PackagePath -Leaf) ..."
+    $pkgLeaf = Split-Path $PackagePath -Leaf
+    $Global:BuildStats.Total++
+    Write-Host "[BUILD] $pkgLeaf START"
 
     $buildFlag = if ($BuildAll) { '-B' } else { '-M' }
     $cmd = "call ""$RsVarsBat"" && dcc64 $buildFlag -Q -U""$SourceSearchPath"" -I""$SourceSearchPath"" -N0""$DcuOutputPath"" -LE""$BplOutputPath"" -LN""$DcpOutputPath"" ""$PackagePath"""
-    & cmd.exe /c $cmd
-    if ($LASTEXITCODE -ne 0) {
-        throw "Package compile failed: $(Split-Path $PackagePath -Leaf), exit code: $LASTEXITCODE"
+    
+    $output = & cmd.exe /c $cmd 2>&1
+    $exitCode = $LASTEXITCODE
+
+    foreach ($line in $output) {
+        Write-Host $line
+        if ($line -match "Warning:\s*(W\d+)?\s*(.*)") {
+            $Global:BuildStats.Warnings++
+            $cat = if ($Matches[1]) { $Matches[1] } else { "General" }
+            if (-not $Global:BuildStats.WarningCategories.ContainsKey($cat)) {
+                $Global:BuildStats.WarningCategories[$cat] = 0
+            }
+            $Global:BuildStats.WarningCategories[$cat]++
+        }
+        if ($line -match "Error:\s*(.*)" -or $line -match "Fatal:\s*(.*)") {
+            $Global:BuildStats.Errors++
+        }
+    }
+
+    if ($exitCode -ne 0) {
+        $Global:BuildStats.Fail++
+        Write-Host "[BUILD] $pkgLeaf FAIL (exit code: $exitCode)" -ForegroundColor Red
+        throw "Package compile failed: $pkgLeaf, exit code: $exitCode"
+    } else {
+        $Global:BuildStats.Ok++
+        Write-Host "[BUILD] $pkgLeaf OK" -ForegroundColor Green
     }
 
     foreach ($root in $SourceRoots) {
@@ -243,6 +283,23 @@ if (-not $SkipDcuSourceCheck) {
         Write-Host $leaked
         throw 'Found leaked .dcu files in source directories'
     }
+}
+
+Write-Host ""
+Write-Host ("[SUMMARY] packages={0} ok={1} fail={2} error={3} warning={4}" -f `
+    $Global:BuildStats.Total, $Global:BuildStats.Ok, $Global:BuildStats.Fail, $Global:BuildStats.Errors, $Global:BuildStats.Warnings)
+
+if ($Global:BuildStats.Warnings -gt 0) {
+    Write-Host "Warning categories breakdown:"
+    foreach ($cat in $Global:BuildStats.WarningCategories.Keys) {
+        Write-Host ("  {0}: {1}" -f $cat, $Global:BuildStats.WarningCategories[$cat])
+    }
+}
+
+if ($Global:BuildStats.Fail -gt 0 -or $Global:BuildStats.Errors -gt 0) {
+    Write-Host ""
+    Write-Host "Win64 package build gate FAILED." -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""
