@@ -23,4 +23,4 @@ Evidence directory files serve as immutable raw test and regression execution ev
 - **Source Commit**: `66ba6f62641c19c60d4f9e8abcdabf84f3d0b143`
 - **SHA256**: `3998fda32b2233d715935634679fd43037cb40edd699aad4076788daee15613b`
 - **Size**: 632 bytes
-- **Results**: Tests Found: 50, Ignored: 0, Passed: 50, Leaked: 0, Failed: 0, Errored: 0, Time: 0.040s
+- **Results**: Tests Found: 50, Ignored: 0, Passed: 50, Leaked: 0, Failed: 0, Errored: 0
