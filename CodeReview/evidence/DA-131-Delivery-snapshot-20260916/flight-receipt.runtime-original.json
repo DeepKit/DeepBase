@@ -1,0 +1,52 @@
+﻿{
+  "stage": "DA-131-Phase-B",
+  "timestamp": "2026-09-16T14:53:21.306Z",
+  "mode": "real",
+  "dispatch_success": true,
+  "terminal_state": "DELIVERY_CONFIRMED",
+  "contact_id": "wxid_pilot_001",
+  "grant_id": "grant-flight-20260916145321",
+  "error": "",
+  "audit_trail": [
+    {
+      "kind": "f2b_mode_real_declared",
+      "item_id": "",
+      "detail": "[F2B][MODE=REAL] real dispatch armed"
+    },
+    {
+      "kind": "f2b_first_flight_confirmed",
+      "item_id": "",
+      "detail": "first_flight_gate_armed"
+    },
+    {
+      "kind": "f2b_locate",
+      "item_id": "item-flight-001",
+      "detail": "ok:handle=1"
+    },
+    {
+      "kind": "f2b_inject",
+      "item_id": "item-flight-001",
+      "detail": "ok"
+    },
+    {
+      "kind": "f2b_uia_paste_executed",
+      "item_id": "item-flight-001",
+      "detail": "status=executed;capability=send.execute_uia_paste"
+    },
+    {
+      "kind": "f2b_send",
+      "item_id": "item-flight-001",
+      "detail": "ok:user_confirmed_send"
+    },
+    {
+      "kind": "f2b_verify",
+      "item_id": "item-flight-001",
+      "detail": "ok"
+    },
+    {
+      "kind": "f2b_receipt",
+      "item_id": "item-flight-001",
+      "detail": "delivery_confirmed"
+    }
+  ]
+}
