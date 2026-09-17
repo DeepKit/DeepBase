@@ -148,6 +148,7 @@ AXIS 作为 EHAI 商业关系经营首发产品（Product Binding 002），其�
 主控复审指出：AsWish 仓内的 `batch_dogfood/`（158 文件）与全部 8 个 `dogfood_*/` 目录目前受 `AsWish/.gitignore:55/57` 规则忽略，处于未受控的工作树本地暂存态。
 为彻底消除证据生命周期保障不成立的硬伤，本报告在此做出**正式事实澄清与受控基座锚定**：
 1. **AsWish Comparison B 版本控制内基座**：
+   - **已受控尖兵样本**：`AsWish/Spikes/WO-0030-VCL-HighFidelity/`（9 个源码与元数据文件已正式提交入库，Commit `7624a1d09da164b60d3a6deffb2d4c1127383548`，彻底消除 N-3 声明失真）；
    - **已受控工程样本**：AsWish 仓内 `WO/evidence/runtime-generic-project/` 完整处于 Git 版本控制内（含 `.deepspec/`、`app.py`、`legacy.pas` 等），可直接作为受控测试用例；
    - **历史冻结存证**：建立 [`DeepBase/evidence/L8-E001/baselines/aswish-historical-manifest.json`](file:///D:/_Progs/02Business/DeepBase/evidence/L8-E001/baselines/aswish-historical-manifest.json)，对 `batch_dogfood/proj_calc_tool` 全部 51 个文件进行逐文件 SHA256 哈希固化，正式声明为 **FROZEN_READ_ONLY_EXTERNAL_SAMPLE**；
 2. **AXIS Comparison B 版本控制内基座**：
