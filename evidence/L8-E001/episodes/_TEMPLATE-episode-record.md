@@ -1,19 +1,21 @@
 # Episode Record 模板（L8-E001 Case 001）
 
 > **用途**：Case 001 观察期每条 Episode 的标准承载件。
-> **放置**：`evidence/L8-E001/episodes/ep-YYYYMMDD-AW|AX-###.yaml`
-> **正源**：`docs/ui/work-orders/L8-E001-Observation-Protocol.md` §3（26 项最小字段）
+> **放置**：`evidence/L8-E001/episodes/L8-E001-<ASWISH|AXIS>-<####>.yaml`
+> **正源**：`docs/ui/work-orders/L8-E001-Observation-Protocol.md` §3（26 项最小字段）｜`L8-E001-Observation-Active-Execution-Policy.md`（Observation Active 口径）
 > **纪律**：不得增删字段；不得省略「题面」；每条 Episode 单独成文件；当日 commit 入库。
+> **Episode ID 规范（Human Authority 口径）**：`L8-E001-ASWISH-0001` / `L8-E001-AXIS-0001`，之后**单调递增**。
+> **首个 Episode 无特殊待遇**：与后续 Episode 使用完全相同的 Protocol / Evidence Admission / 字段要求 / Claim Boundary。
 
 ```yaml
 # ===== L8-E001 Episode Record v1（协议 §3，26 项最小字段）=====
-# 命名：ep-<YYYYMMDD>-<AW|AX>-<###>.yaml
+# 命名：L8-E001-<ASWISH|AXIS>-<####>.yaml（单调递增，不跳号、不复用）
 
 # --- 身份与时间 ---
-episode_id: ep-2026XXXX-AW-001        # 1  唯一 ID（AsWish: ep-aw-{ChangeSetId} / AXIS: ep-ax-{CorrelationId}）
+episode_id: L8-E001-ASWISH-0001        # 1  Human Authority 口径 ID（协议 §3 内部映射 ep-aw-{ChangeSetId} / ep-ax-{CorrelationId} 记入 notes）
 timestamp: 2026-XX-XXTXX:XX:XXZ       # 2  ISO 8601 UTC，必须精确到秒
 product: AsWish                       # 3  'AsWish' | 'AXIS'
-software_commit: <40位 HEAD>          # 4  本条 Episode 实际运行的软件版本（如实记录，不得沿用报告值）
+software_commit: NOT ESTABLISHED      # 4  填【实际运行版本】，非 git rev-parse HEAD；无法确立则填 `NOT ESTABLISHED` 并在 notes 登记原因，禁推测
 
 # --- 模型与任务 ---
 model: deepseek-chat                  # 5  实际执行模型（须与 Intervention-Registry 一致）
@@ -66,8 +68,21 @@ counterexample: |                     # 反例（强制登记，无则写 none�
 ## 填写纪律
 
 1. **题面必须保留**：`human_goal` 逐字抄录，不得改写、不得事后补写。
-2. **`software_commit` 如实**：填**实际运行**的版本，不是报告里的版本（N-5 教训）。
+2. **`software_commit` 如实**：填**实际运行**的版本；无法确立运行版与 Commit 的对应关系时填 `NOT ESTABLISHED` 并登记原因，**禁推测**（N-5 教训）。
 3. **证据镜像**：Episode 结束后，将 `.AsWish/` 快照/决策/树 或 AXIS 回执/审计链 复制到 `evidence/L8-E001/{aswish,axis}/`，当日 commit。
 4. **F4 影响面标注**：AXIS Episode 若落在 F4 影响面，须在 `raw_evidence_ref` 显式标注，**不得晋级 Admission Gate**。
 5. **禁单一合成分数**：不得把 26 项压成一个总分。
 6. **反例单独成章**：`counterexample` 有内容时，须在分析报告中单列一节。
+7. **真实任务来源**：Episode 必须来自 Human 原本就需完成的真实工作；**禁止**造易过任务、刻意制造 EHAI 场景、重复已知答案任务、挑漂亮案例。**失败/放弃/返工/Frame Rejection 同样必须进入观察。**
+8. **Episode 结束六步顺序（禁止倒置）**：
+   ```
+   1. Preserve Raw Evidence
+   2. 填 Episode Record
+   3. 建 Evidence References
+   4. 判断 Reality Evidence Admission
+   5. 当日进入受控 evidence base
+   6. Git commit
+   ```
+   禁止「先写效果结论 → 再整理 Episode」。
+9. **不做阶段结论**：只形成 `Episode Facts` / `Evidence` / `Outcome Record` / `Self-report` / `Incident` / `Intervention`；不得形成 `EHAI 有效/无效`、`改善了多少` 等结论（属观察结束后的 R1→R2→R3 阶段）。
+10. **干预分段**：`intervention_id` 与 `timestamp` 须对照 `L8-E001-Intervention-Registry.md`；跨干预的 Episode **不得混池**统计。

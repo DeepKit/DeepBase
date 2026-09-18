@@ -13,6 +13,13 @@
 | Intervention ID | Target Repo | Commit SHA | Effective Time (UTC+8) | Reason | Affected Behavior | Expected Effect | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
 | **INT-20260916-01** | `DeepAxis` | `12dd4da9eb8ef8b1c165e8e35e6d3d26079f0a21` | 2026-09-16 16:56:12 | F4 机器语义失真定点整改 | 修正回执机器模式为 `engine-verification`，拦截仿真时钟跨入真实路径 | 彻底杜绝仿真冒充真实交付，消除语义失真 | **ACTIVE** |
+| **INT-20260917-01** | `DeepAxis` | `c3215d3` (DataStore 搬迁收尾) | 2026-09-17 18:29:55 | DA-136 收尾：DataStore 搬迁 + 测试动态锚定恢复 159/159 | 数据存储位置变更，测试由硬编码 ID 改为动态锚定 | 消除硬编码 ID 失效，稳定数据存储基座 | **ACTIVE**（START 后）|
+| **INT-20260917-02** | `DeepAxis` | `3b9f135` (明文库消费通路) | 2026-09-17 18:52:33 | DA-137-T1：`DecryptedDataPath` 直接消费外部明文 SQLite | **数据通路变更**：由原路径改为直接消费外部明文库 | 打通明文库消费通路 | **ACTIVE**（START 后）|
+| **INT-20260917-03** | `DeepAxis` | `e389cd5` (hook 取钥移植) | 2026-09-17 18:52:51 | DA-137-T2：hook 取钥移植 + Profile 门禁 + 版本自检 | **执行行为/门禁变更**：取钥方式改为 hook，新增 Profile 门禁与版本自检 | 提升取钥合规性与版本一致性 | **ACTIVE**（START 后）|
+
+> **登记来源**：`L8-E001-Observation-Active-Execution-Policy.md` §二（START Anchor `f47c573` 之后 commit 分类登记）。
+> **时间界**：INT-20260917-01/02/03 均发生在 Case 001 START 宣告（2026-09-17 16:31）**之后** ⇒ 凡 `timestamp` 早于其 `Effective Time` 的 Episode 归入 `Before`，晚者归入 `After`，**严禁混池**。
+> **F4 相关性**：三项均未触及 `F2B`/`Engine`/`flight-receipt`，**与 F4 影响面无交集**。
 
 ---
 
