@@ -1,7 +1,7 @@
 # EHAI Delphi 公共层符号基准 (Delphi Symbol Baseline)
 
 > **生成机制**：由 `Scripts/gen_ehai_symbol_baseline.py` 自动从 Delphi 源码机械提取生成（禁止手工伪造与维护）。
-> **生成时间 (UTC)**：`2026-09-14T02:08:58Z`
+> **生成时间 (UTC)**：`2026-09-19T06:46:34Z`
 > **基准状态**：`APPROVED ENGINEERING BASELINE v0` / 机器可校验唯一真相源 (SSOT)
 > **法源契约**：`EHAI-Language-Neutral-Realization-Contract-v0.md`
 
