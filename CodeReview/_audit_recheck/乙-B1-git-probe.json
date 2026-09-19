@@ -1,0 +1,1160 @@
+[
+ {
+  "f": "Core/DeepBase.Cache.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Cache.pas",
+  "commits": 11,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.Config.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Config.pas",
+  "commits": 12,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Core/DeepBase.EventBus.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Core/UniBase.EventBus.pas",
+  "commits": 12,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.Feedback.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Feedback.pas",
+  "commits": 8,
+  "damageCommit": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Core/DeepBase.Hotkeys.pas",
+  "cleanRev": null,
+  "cleanKind": null,
+  "cleanPath": null,
+  "commits": 3,
+  "damageCommit": null,
+  "note": "NO CLEAN REV IN HISTORY (首提交即受损或全史受损)"
+ },
+ {
+  "f": "Core/DeepBase.i18n.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.i18n.pas",
+  "commits": 13,
+  "damageCommit": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Core/DeepBase.LLM.Manager.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.LLM.Manager.pas",
+  "commits": 9,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Core/DeepBase.Logging.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Logging.pas",
+  "commits": 14,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.Manager.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Manager.pas",
+  "commits": 6,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.PluginManager.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.PluginManager.pas",
+  "commits": 10,
+  "damageCommit": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.Protection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Protection.pas",
+  "commits": 14,
+  "damageCommit": "6bb513806ec16b10569016ae788380bdc9cb2bdc",
+  "note": "",
+  "commitsBetweenCleanAndHead": 8
+ },
+ {
+  "f": "Core/DeepBase.Resilience.CircuitBreaker.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Resilience.CircuitBreaker.pas",
+  "commits": 5,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 4
+ },
+ {
+  "f": "Core/DeepBase.Scheduler.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Scheduler.pas",
+  "commits": 13,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 6
+ },
+ {
+  "f": "Core/DeepBase.Services.Protection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.Services.Protection.pas",
+  "commits": 7,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Core/DeepBase.WorkerQueue.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Core/DeepBase.WorkerQueue.pas",
+  "commits": 12,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 6
+ },
+ {
+  "f": "doQry/doQryMain.pas",
+  "cleanRev": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "doQry/doQryMain.pas",
+  "commits": 4,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "doQry/src/uDoQry.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "doQry/src/uDoQry.pas",
+  "commits": 3,
+  "damageCommit": "7ddfbeda5c3c144441e2be5bd1c086028c83ddbe",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "doQry/src/uDoQryDialect.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "doQry/src/uDoQryDialect.pas",
+  "commits": 3,
+  "damageCommit": "949f7590152188ccc07adf9e9fbb7c081d244016",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "doQry/src/uDoQryExecutor.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "doQry/src/uDoQryExecutor.pas",
+  "commits": 5,
+  "damageCommit": "7ddfbeda5c3c144441e2be5bd1c086028c83ddbe",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "doQry/uDoQryLegacy.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "doQry/uDoQryLegacy.pas",
+  "commits": 6,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Examples/FullDemo/FullDemo.MainForm.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/FullDemo/FullDemo.MainForm.pas",
+  "commits": 4,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Examples/MultiLanguageDemo/MainForm.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/MultiLanguageDemo/MainForm.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/Common/Template.AutoUpdateBootstrap.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/Common/Template.AutoUpdateBootstrap.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Data.Module.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Data.Module.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Entity.Category.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Entity.Category.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Entity.Document.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Entity.Document.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Entity.Tag.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Entity.Tag.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Form.CategoryTree.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Form.CategoryTree.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Form.DocumentEdit.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Form.DocumentEdit.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Main.Form.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Main.Form.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Service.Document.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Service.Document.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Examples/Templates/DocManager/Service.Search.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Examples/Templates/DocManager/Service.Search.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Features/DeepBase.AntiTamper.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Features/DeepBase.AntiTamper.pas",
+  "commits": 11,
+  "damageCommit": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Features/DeepBase.CloudBackup.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Features/DeepBase.CloudBackup.pas",
+  "commits": 11,
+  "damageCommit": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Features/DeepBase.CloudSync.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Features/DeepBase.CloudSync.pas",
+  "commits": 9,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Features/DeepBase.LLM.Client.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Features/UniBase.LLM.Client.pas",
+  "commits": 5,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 4
+ },
+ {
+  "f": "Features/DeepBase.LLM.HTTP.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Features/UniBase.LLM.HTTP.pas",
+  "commits": 8,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 7
+ },
+ {
+  "f": "Features/DeepBase.Speech.SAPI.Decl.pas",
+  "cleanRev": "5977fc72f2a5615c2bf849374cadbcdf4929b8df",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Features/DeepBase.Speech.SAPI.Decl.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.AboutFrame.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.AboutFrame.pas",
+  "commits": 5,
+  "damageCommit": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "FMX/DeepBase.FMX.AutoUpdater.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.AutoUpdater.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.ConfigControls.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.ConfigControls.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.ConfigEdit.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.ConfigEdit.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.Controls.pas",
+  "cleanRev": "e616d3a6472247e7fd6408e085e6f775001e005f",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.Controls.pas",
+  "commits": 5,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.FormControls.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.FormControls.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.FormStateHelper.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.FormStateHelper.pas",
+  "commits": 5,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "FMX/DeepBase.FMX.I18nControls.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.I18nControls.pas",
+  "commits": 5,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.LLMChatFrame.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "FMX/UniBase.FMX.LLMChatFrame.pas",
+  "commits": 5,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "FMX/DeepBase.FMX.LLMConfigPanel.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "FMX/UniBase.FMX.LLMConfigPanel.pas",
+  "commits": 5,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "FMX/DeepBase.FMX.LogListView.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.LogListView.pas",
+  "commits": 5,
+  "damageCommit": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "FMX/DeepBase.FMX.MRUControls.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.MRUControls.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "FMX/DeepBase.FMX.UpdateDialog.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "FMX/DeepBase.FMX.UpdateDialog.pas",
+  "commits": 5,
+  "damageCommit": "5a6b9d0e9f73c15bcbf9d561cb962b1558199d98",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Governance/DeepBase.Governance.ActionGrid.pas",
+  "cleanRev": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Governance/DeepBase.Governance.ActionGrid.pas",
+  "commits": 4,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Persistence/DeepBase.DB.ConnectionPool.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Persistence/DeepBase.DB.ConnectionPool.pas",
+  "commits": 8,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 3
+ },
+ {
+  "f": "Persistence/DeepBase.DB.DoQry.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Persistence/DeepBase.DB.DoQry.pas",
+  "commits": 18,
+  "damageCommit": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "note": "",
+  "commitsBetweenCleanAndHead": 9
+ },
+ {
+  "f": "Persistence/DeepBase.DB.Pool.pas",
+  "cleanRev": "e616d3a6472247e7fd6408e085e6f775001e005f",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Persistence/DeepBase.DB.Pool.pas",
+  "commits": 13,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 6
+ },
+ {
+  "f": "Tests/Acceptance/AcceptanceMain.pas",
+  "cleanRev": "4266417792d500b6063f851b4555c22a5323126a",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/Acceptance/AcceptanceMain.pas",
+  "commits": 2,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Acceptance/AcceptanceReport.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Acceptance/AcceptanceReport.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Acceptance/AcceptanceRunner.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Acceptance/AcceptanceRunner.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/GUI/DeepBase.GUITest.pas",
+  "cleanRev": "7516962d5797bd319dad9dc9d41267dc67ce78de",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/GUI/UniBase.GUITest.pas",
+  "commits": 2,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/GUI/GUITest.FormFactory.pas",
+  "cleanRev": "7516962d5797bd319dad9dc9d41267dc67ce78de",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/GUI/GUITest.FormFactory.pas",
+  "commits": 2,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/GUI/Test.GUI.Core.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/GUI/Test.GUI.Core.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/GUI/Test.GUI.VCL.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/GUI/Test.GUI.VCL.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Integration/DeepBase.IntegrationTest.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Integration/DeepBase.IntegrationTest.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Integration/Test.Integration.Core.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Integration/Test.Integration.Core.pas",
+  "commits": 4,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Integration/Test.Integration.WebAPI.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Integration/Test.Integration.WebAPI.pas",
+  "commits": 4,
+  "damageCommit": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Regression/RegressionTestRegistry.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/RegressionTestRegistry.pas",
+  "commits": 4,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.Base.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.Base.pas",
+  "commits": 3,
+  "damageCommit": "197f674751bccff694c66caa086cdcee8bf245b1",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas",
+  "commits": 2,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG009_LoggingRace.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG009_LoggingRace.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG013_RSASignature.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG013_RSASignature.pas",
+  "commits": 3,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas",
+  "commits": 3,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG066_PathTraversal.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG066_PathTraversal.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG070_LogInjection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG070_LogInjection.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.Browser.Selectors.pas",
+  "cleanRev": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/Test.DeepBase.Browser.Selectors.pas",
+  "commits": 2,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Test.DeepBase.Crypto.OpenSSL.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.Crypto.OpenSSL.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.DB.DoQry.pas",
+  "cleanRev": "0c899b59e85a3da4d34850da3cae2d77d11bb3e0",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.DB.DoQry.pas",
+  "commits": 12,
+  "damageCommit": "26f533d72c44b84cc0d5115a87a8f4517068de42",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "Tests/Test.DeepBase.EventBus.pas",
+  "cleanRev": "69d3f66cefd61bbc850529935ca4521ef0bc6272",
+  "cleanKind": "CLEAN_UTF8",
+  "cleanPath": "Tests/Test.UniBase.EventBus.pas",
+  "commits": 8,
+  "damageCommit": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "note": "",
+  "commitsBetweenCleanAndHead": 4
+ },
+ {
+  "f": "Tests/Test.DeepBase.FormState.pas",
+  "cleanRev": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.FormState.pas",
+  "commits": 7,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.Hotkeys.pas",
+  "cleanRev": null,
+  "cleanKind": null,
+  "cleanPath": null,
+  "commits": 2,
+  "damageCommit": null,
+  "note": "NO CLEAN REV IN HISTORY (首提交即受损或全史受损)"
+ },
+ {
+  "f": "Tests/Test.DeepBase.i18n.pas",
+  "cleanRev": "2fe0ce0b7866a6d73a18a02c968e6b4e2a4e462a",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.i18n.pas",
+  "commits": 7,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.License.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.License.pas",
+  "commits": 7,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Test.DeepBase.LLM.PromptTemplate.pas",
+  "cleanRev": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.LLM.PromptTemplate.pas",
+  "commits": 6,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tests/Test.DeepBase.Manager.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.Manager.pas",
+  "commits": 7,
+  "damageCommit": "26f533d72c44b84cc0d5115a87a8f4517068de42",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tests/Test.DeepBase.MRU.pas",
+  "cleanRev": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.MRU.pas",
+  "commits": 6,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.Protection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.Protection.pas",
+  "commits": 5,
+  "damageCommit": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tests/Test.DeepBase.Schema.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.Schema.pas",
+  "commits": 5,
+  "damageCommit": "5a6b9d0e9f73c15bcbf9d561cb962b1558199d98",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tests/Test.DeepBase.SingleInstance.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.SingleInstance.pas",
+  "commits": 3,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.DeepBase.Theme.pas",
+  "cleanRev": "dfa6b130789e944f623ace10a432a5520b06c070",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.DeepBase.Theme.pas",
+  "commits": 6,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.LogAnalyzer.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.LogAnalyzer.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.SeedTool.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.SeedTool.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tests/Test.WebService.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tests/Test.WebService.pas",
+  "commits": 5,
+  "damageCommit": "663970ba1895651b57ee15667459a9ab1dbf8c03",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "ThirdParty/Payment/DeepBase.Payment.Alipay.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Payment/DeepBase.Payment.Alipay.pas",
+  "commits": 8,
+  "damageCommit": "6bb513806ec16b10569016ae788380bdc9cb2bdc",
+  "note": "",
+  "commitsBetweenCleanAndHead": 4
+ },
+ {
+  "f": "ThirdParty/Payment/DeepBase.Payment.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Payment/DeepBase.Payment.pas",
+  "commits": 11,
+  "damageCommit": "04f1841621fa7dd44bc61482a40c5eb575bde927",
+  "note": "",
+  "commitsBetweenCleanAndHead": 7
+ },
+ {
+  "f": "ThirdParty/Payment/DeepBase.Payment.Stripe.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Payment/DeepBase.Payment.Stripe.pas",
+  "commits": 9,
+  "damageCommit": "6bb513806ec16b10569016ae788380bdc9cb2bdc",
+  "note": "",
+  "commitsBetweenCleanAndHead": 5
+ },
+ {
+  "f": "ThirdParty/Social/DeepBase.Social.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Social/DeepBase.Social.pas",
+  "commits": 6,
+  "damageCommit": "6072d9967a674dc2644c7cb1f104975a26c5a32e",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "ThirdParty/Social/DeepBase.Social.QQ.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Social/DeepBase.Social.QQ.pas",
+  "commits": 4,
+  "damageCommit": "6072d9967a674dc2644c7cb1f104975a26c5a32e",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "ThirdParty/Social/DeepBase.Social.WeChat.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Social/DeepBase.Social.WeChat.pas",
+  "commits": 4,
+  "damageCommit": "6072d9967a674dc2644c7cb1f104975a26c5a32e",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "ThirdParty/Social/DeepBase.Social.Weibo.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "ThirdParty/Social/DeepBase.Social.Weibo.pas",
+  "commits": 4,
+  "damageCommit": "6072d9967a674dc2644c7cb1f104975a26c5a32e",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tools/CLI/CLI.DB.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/CLI/CLI.DB.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/CLI/CLI.Main.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/CLI/CLI.Main.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/LogAnalyzer/LogAnalyzer.Export.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/LogAnalyzer/LogAnalyzer.Export.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/LogAnalyzer/LogAnalyzer.MainForm.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/LogAnalyzer/LogAnalyzer.MainForm.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/LogAnalyzer/LogAnalyzer.Stats.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/LogAnalyzer/LogAnalyzer.Stats.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/SeedTool/uAntiTamperPackage.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/SeedTool/uAntiTamperPackage.pas",
+  "commits": 6,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 1
+ },
+ {
+  "f": "Tools/SeedTool/uBasicProtection.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/SeedTool/uBasicProtection.pas",
+  "commits": 5,
+  "damageCommit": "cd20ddc654075403f13311d051241bfcdded7ad2",
+  "note": "",
+  "commitsBetweenCleanAndHead": 2
+ },
+ {
+  "f": "Tools/Studio/Forms/Studio.VersionDetailForm.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/Studio/Forms/Studio.VersionDetailForm.pas",
+  "commits": 2,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ },
+ {
+  "f": "Tools/Studio/Studio.Resources.pas",
+  "cleanRev": "ca3364ee55fdd243fc5985bc896ec051e6018968",
+  "cleanKind": "CLEAN_GBK",
+  "cleanPath": "Tools/Studio/Studio.Resources.pas",
+  "commits": 4,
+  "damageCommit": null,
+  "note": "",
+  "commitsBetweenCleanAndHead": 0
+ }
+]

@@ -1,0 +1,8 @@
+﻿闂ㄧ杈撳嚭锛堥鏈熷寘鍚?O1/O2/O4 杩濊锛汷3 鍥?tmp 鏃犳柊杞?Manager.pas 鏂囦欢涓嶉€傜敤锛?
+鏋勫缓褰掑睘闂ㄧ澶辫触锛岃繚瑙?4 椤?
+  O2/C2 BLOCK 鏂拌建鍗曞厓杩涘叆鐢熶骇鏋勫缓: DeepBase.Plugins.Manager 鈭?prod.dpk
+  O4/C2 BLOCK 鐢熶骇鍗曞厓寮曠敤鏂拌建: Core/Evil.pas -> DeepBase.Plugins.Manager
+  O1 FAIL 鏂板瀛ゅ効鍗曞厓锛堜笉鍦ㄥ熀绾匡級: Core/Evil.pas (unit Evil)
+  O1 FAIL 鏂板瀛ゅ効鍗曞厓锛堜笉鍦ㄥ熀绾匡級: Core/FooOrphan.pas (unit FooOrphan)
+
+OWNERSHIP-NEGATIVE-TEST: PASS

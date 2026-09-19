@@ -1,0 +1,17 @@
+﻿113: FDetached: Boolean;
+124: procedure WaitForSelector(const ASelector: string;
+679: FDetached := False;
+690: FDetached := True;
+696: if FDetached or (FCDP = nil) then
+731: if FDetached or (FCDP = nil) then
+792: if FDetached or (FCDP = nil) then
+882: procedure TAutomationCDP.WaitForSelector(const ASelector: string;
+888: if FDetached or (FCDP = nil) then
+903: // REVIEW5-FEAT-009: Capture Self instead of FCDP to avoid use-after-free.
+904: // Check FDetached on each iteration to detect detach/destroy during polling.
+925: // REVIEW5-FEAT-009: Check detached flag on each iteration
+927: if LSelf.FDetached then
+938: // REVIEW5-FEAT-009: Capture FCDP under each iteration to get
+1010: LThread.FreeOnTerminate := True;
+1019: if FDetached or (FCDP = nil) then
+1038: if FDetached or (FCDP = nil) then

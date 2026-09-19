@@ -1,0 +1,43 @@
+﻿=== Core ===  瀹為檯鍗曞厓 165锛屽鏉惧尮閰嶅悗浠嶆湭鍑虹幇 5 涓?
+    DeepBase.HB.NavTree.Types.pas
+    DeepBase.HB.PageControl.Types.pas
+    DeepBase.HB.Tray.Types.pas
+    DeepBase.Manager.Operational.pas
+    DeepBase.SchemaAdapter.Types.pas
+
+=== Features ===  瀹為檯鍗曞厓 131锛屽鏉惧尮閰嶅悗浠嶆湭鍑虹幇 34 涓?
+    DeepBase.Browser.AutomationAdapter.pas
+    DeepBase.Browser.Events.pas
+    DeepBase.Browser.Recorder.pas
+    DeepBase.Browser.Registry.pas
+    DeepBase.Browser.ScriptStore.pas
+    DeepBase.DataPlatform.Bootstrap.pas
+    DeepBase.Desktop.Perception.ColorMatch.pas
+    DeepBase.Desktop.Perception.LLMProvider.pas
+    DeepBase.Desktop.Perception.Types.pas
+    DeepBase.Inference.Types.pas
+    DeepBase.IntentClarification.Anticipation.pas
+    DeepBase.IntentClarification.Budget.pas
+    DeepBase.IntentClarification.Degradation.pas
+    DeepBase.IntentClarification.Exit.pas
+    DeepBase.IntentClarification.Logging.pas
+    DeepBase.IntentClarification.Moments.pas
+    DeepBase.IntentClarification.OptionFrame.pas
+    DeepBase.IntentClarification.Provider.L0.pas
+    DeepBase.IntentClarification.Provider.L1.pas
+    DeepBase.IntentClarification.Provider.L2.pas
+    DeepBase.IntentClarification.Provider.L3.pas
+    DeepBase.IntentClarification.Provider.L4.pas
+    DeepBase.IntentClarification.Rapport.pas
+    DeepBase.IntentClarification.Registration.pas
+    DeepBase.IntentClarification.Router.pas
+    DeepBase.LLM.Client.pas
+    DeepBase.LLM.Config.pas
+    DeepBase.LLM.ConfigBridge.pas
+    DeepBase.LLM.HTTP.pas
+    DeepBase.LLM.Providers.pas
+    DeepBase.LLM.Proxy.pas
+    DeepBase.LLM.Service.pas
+    DeepBase.LLM.Types.pas
+    DeepBase.Speech.Types.pas
+

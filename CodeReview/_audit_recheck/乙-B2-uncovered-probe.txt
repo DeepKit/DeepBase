@@ -1,0 +1,159 @@
+Core/DeepBase.HB.NavTree.Types.pas | 48L | procs:0 | - | 无资源旗标
+Core/DeepBase.HB.PageControl.Types.pas | 54L | procs:0 | - | 无资源旗标
+Core/DeepBase.HB.Tray.Types.pas | 70L | procs:0 | - | 无资源旗标
+Core/DeepBase.Manager.Operational.pas | 229L | procs:14 | TDeepBaseManagerOperational | Except×1
+Core/DeepBase.SchemaAdapter.Types.pas | 88L | procs:11 | TMapResult:TInterfacedObject, IMapResult | 无资源旗标
+DeepFlow/Source/Roles/DeepFlow.Chronicler.pas | 668L | procs:44 | TChronicler:TDeepFlowRoleBase, IChronicler | CritSec×2 Destroy×4 DB×1
+Features/DeepBase.Browser.AutomationAdapter.pas | 154L | procs:16 | TBrowserSession2AutomationAdapter:TInterfacedObject,
+    IBrowserAutomationSession | 无资源旗标
+Features/DeepBase.Browser.Events.pas | 103L | procs:14 | TBrowserEvents | 无资源旗标
+Features/DeepBase.Browser.Recorder.pas | 470L | procs:42 | TRecordingSession:TObject,TBrowserRecorderManager:TInterfacedObject, IBrowserRecorder | Atomic×5 finalization×1 Destroy×10
+Features/DeepBase.Browser.Registry.pas | 342L | procs:22 | TBrowserRegistry | finalization×1 Destroy×5
+Features/DeepBase.Browser.ScriptStore.pas | 569L | procs:33 | EBrowserScriptStore:Exception,TJSScriptStoreSqlite,TMemoryJSScriptStore:TInterfacedObject, IJSScriptStore | CritSec×4 finalization×1 Destroy×4 DB×1 Except×9
+Features/DeepBase.DataPlatform.Bootstrap.pas | 105L | procs:4 | TDataPlatformBootstrap | DB×1
+Features/DeepBase.Desktop.Perception.ColorMatch.pas | 433L | procs:28 | TColorMatcher | Except×1
+Features/DeepBase.Desktop.Perception.LLMProvider.pas | 264L | procs:16 | TLLMVisionProvider:TInterfacedObject, IDesktopVisionProvider | CritSec×2 Except×2
+Features/DeepBase.Desktop.Perception.Types.pas | 247L | procs:24 | TPerceptionCache | CritSec×2 Destroy×4
+Features/DeepBase.Inference.Types.pas | 271L | procs:32 | EInferenceError:Exception,EInferenceSessionError:EInferenceError,EInferenceProviderError:EInferenceError,EInferenceModelError:EInferenceError | 无资源旗标
+Features/DeepBase.IntentClarification.Anticipation.pas | 273L | procs:22 | TAnticipationEngine:TInterfacedObject, IAnticipationEngine | CritSec×2 Destroy×4
+Features/DeepBase.IntentClarification.Budget.pas | 94L | procs:6 | TBudgetController | 无资源旗标
+Features/DeepBase.IntentClarification.Degradation.pas | 85L | procs:2 | TDegradationHandler | 无资源旗标
+Features/DeepBase.IntentClarification.Exit.pas | 104L | procs:8 | TGracefulExitHandler | 无资源旗标
+Features/DeepBase.IntentClarification.Logging.pas | 27L | procs:2 | - | 无资源旗标
+Features/DeepBase.IntentClarification.Moments.pas | 107L | procs:6 | TMomentsGenerator | 无资源旗标
+Features/DeepBase.IntentClarification.OptionFrame.pas | 220L | procs:14 | TOptionFrameBuilder | 无资源旗标
+Features/DeepBase.IntentClarification.Provider.L0.pas | 93L | procs:8 | TL0BackgroundProvider:TInterfacedObject, ILevelProvider | 无资源旗标
+Features/DeepBase.IntentClarification.Provider.L1.pas | 170L | procs:12 | TL1SlotProvider:TInterfacedObject, ILevelProvider | Destroy×4
+Features/DeepBase.IntentClarification.Provider.L2.pas | 348L | procs:24 | TL2ProblemProvider:TInterfacedObject, ILevelProvider | CritSec×2 Destroy×4
+Features/DeepBase.IntentClarification.Provider.L3.pas | 340L | procs:28 | TL3ExpertProvider:TInterfacedObject, ILevelProvider | CritSec×2 Destroy×4
+Features/DeepBase.IntentClarification.Provider.L4.pas | 393L | procs:22 | TL4RoundtableProvider:TInterfacedObject, ILevelProvider | 无资源旗标
+Features/DeepBase.IntentClarification.Rapport.pas | 191L | procs:16 | TRapportLayer | CritSec×2 Destroy×4 DB×1
+Features/DeepBase.IntentClarification.Registration.pas | 108L | procs:12 | TClarificationRegistration | 无资源旗标
+Features/DeepBase.IntentClarification.Router.pas | 282L | procs:16 | TPostureDepthRouter | 无资源旗标
+Features/DeepBase.LLM.Client.pas | 104L | procs:23 | - | FFFD残留×3
+Features/DeepBase.LLM.Config.pas | 790L | procs:79 | TLLMConfigStore | Destroy×4 DB×1 Except×4
+Features/DeepBase.LLM.ConfigBridge.pas | 58L | procs:4 | TLLMConfigBridge | 无资源旗标
+Features/DeepBase.LLM.HTTP.pas | 763L | procs:31 | TLLMHttpClient | Destroy×4 HTTP×1 Except×4 FFFD残留×2
+Features/DeepBase.LLM.Providers.pas | 263L | procs:10 | - | Except×2
+Features/DeepBase.LLM.Proxy.pas | 668L | procs:42 | TProxyLLMClient:TInterfacedObject, ILLMClient | TThread×3 TQueue×3 HTTP×1 Except×4
+Features/DeepBase.LLM.Service.pas | 916L | procs:68 | TLLMService:TInterfacedObject, ILLMClient, ILLMAdmin | TThread×3 TQueue×3 finalization×1 Destroy×4 Except×1
+Features/DeepBase.LLM.Types.pas | 575L | procs:51 | ELLMException:Exception | DB×1 HTTP×1
+Features/DeepBase.Speech.Types.pas | 373L | procs:63 | EDeepBaseSpeechError:Exception,EDeepBaseSpeechProviderError:EDeepBaseSpeechError,EDeepBaseSpeechAudioError:EDeepBaseSpeechError | 无资源旗标
+FMX/DeepBase.FMX.AboutFrame.pas | 463L | procs:29 | TFMXAboutFrame:TFrame | Destroy×4 DB×1 Except×3
+FMX/DeepBase.FMX.ConfigControls.pas | 322L | procs:30 | TFMXConfigEdit:TEdit,TFMXConfigCheckBox:TCheckBox,TFMXConfigSpinBox:TSpinBox | 无资源旗标
+FMX/DeepBase.FMX.ConfigEdit.pas | 413L | procs:52 | TFMXConfigEdit:TEdit,TFMXConfigSpinBox:TSpinBox,TFMXConfigSwitch:TSwitch | 无资源旗标
+FMX/DeepBase.FMX.Controls.pas | 86L | procs:2 | - | 无资源旗标
+FMX/DeepBase.FMX.DesktopLifecycle.pas | 159L | procs:12 | TDeepBaseFMXDesktopLifecycleHelper | Except×2
+FMX/DeepBase.FMX.FormStateHelper.pas | 408L | procs:26 | TFMXFormStateHelper:TFmxObject | Destroy×4 Except×1
+FMX/DeepBase.FMX.HB.AI.pas | 108L | procs:6 | THbFmxAIConsole:TControl | Destroy×4
+FMX/DeepBase.FMX.HB.Cards.pas | 869L | procs:70 | THbCard:THbFmxControl,THbStatBig:THbFmxControl,THbListRow:THbFmxControl,THbEmptyState:THbFmxControl | 无资源旗标
+FMX/DeepBase.FMX.HB.Choice.pas | 1221L | procs:102 | THbFmxChoiceDeck:THbFmxControl | Destroy×4
+FMX/DeepBase.FMX.HB.CommandPalette.pas | 293L | procs:22 | THbCommandPalette:THbFmxControl | Destroy×4
+FMX/DeepBase.FMX.HB.Dock.pas | 52L | procs:0 | THbFmxDockPanel:TControl | 无资源旗标
+FMX/DeepBase.FMX.HB.Gate.pas | 265L | procs:14 | THbGatePanel:THbFmxControl | Destroy×4
+FMX/DeepBase.FMX.HB.Grid.pas | 118L | procs:10 | THbFmxDataGrid:TControl | Destroy×4
+FMX/DeepBase.FMX.HB.NavTree.pas | 116L | procs:8 | THbFmxNavTree:TControl | Destroy×4
+FMX/DeepBase.FMX.HB.PageControl.pas | 101L | procs:6 | THbFmxPageControl:TControl | Destroy×4
+FMX/DeepBase.FMX.HB.Palettes.pas | 31L | procs:2 | - | 无资源旗标
+FMX/DeepBase.FMX.HB.ShareCard.pas | 217L | procs:8 | THbShareCardRenderer | Except×1
+FMX/DeepBase.FMX.HB.Theme.pas | 49L | procs:4 | - | 无资源旗标
+FMX/DeepBase.FMX.HB.Tray.pas | 130L | procs:10 | THbFmxTrayMenuItem,THbFmxTrayMenu:TComponent | Destroy×4
+FMX/DeepBase.FMX.HB.Voice.pas | 481L | procs:30 | THbVoiceWaveform:THbFmxControl,THbVoiceFieldCard:THbFmxControl,THbVoiceDialog | Timer×2 Destroy×4
+FMX/DeepBase.FMX.Hotkeys.pas | 449L | procs:40 | TDeepBaseFMXHotkeyBinding,TDeepBaseFMXHotkeyBinder | Destroy×4
+FMX/DeepBase.FMX.LicenseStatusPanel.pas | 369L | procs:20 | TFMXLicenseStatusPanel:TLayout | Destroy×4
+FMX/DeepBase.FMX.ListView.pas | 690L | procs:61 | TUniListView:TListView,TUniPullRefresh:TLayout,TUniVirtualListAdapter | Destroy×12
+FMX/DeepBase.FMX.LLMConfigPanel.pas | 746L | procs:43 | TFMXLLMConfigPanel:TLayout | Destroy×4 FFFD残留×10
+FMX/DeepBase.FMX.MRUControls.pas | 176L | procs:12 | TFMXMRUComboBox:TComboBox | 无资源旗标
+FMX/DeepBase.FMX.Theme.pas | 493L | procs:49 | TUniFMXTheme | finalization×1 Destroy×4 Except×1
+Governance/DeepBase.Governance.AbilityRegistry.pas | 209L | procs:26 | TAbilityRegistry | Destroy×4
+Governance/DeepBase.Governance.Accountability.pas | 327L | procs:23 | THumanReviewRequest,TAccountabilityChecker | Destroy×4
+Governance/DeepBase.Governance.ActionBinding.pas | 177L | procs:14 | TActionBindingEntry,TActionBindingRegistry | Destroy×4
+Governance/DeepBase.Governance.Actor.pas | 236L | procs:16 | TActor,TAccountabilityRecord,TRuntimeContext,TActorRegistry | Destroy×8
+Governance/DeepBase.Governance.AI.ProposalQueue.pas | 294L | procs:26 | EProposalQueueError:Exception,TProposal,TProposalQueue | CritSec×3 Destroy×4
+Governance/DeepBase.Governance.AI.SteeringExporter.pas | 162L | procs:14 | TSteeringExporter | 无资源旗标
+Governance/DeepBase.Governance.AI.ViewScopeEnforcer.pas | 149L | procs:14 | TViewScopeEnforcer | Destroy×4
+Governance/DeepBase.Governance.ComponentAdapter.pas | 547L | procs:48 | TDfmParser,TRuntimeEventHook,TComponentAdapter | Destroy×12
+Governance/DeepBase.Governance.EventBridge.pas | 184L | procs:12 | TEventBridge | Destroy×4
+Governance/DeepBase.Governance.Explain.pas | 224L | procs:22 | TExplainRecord,TAuditReport | Destroy×4
+Governance/DeepBase.Governance.FeedbackResolver.pas | 166L | procs:8 | TFeedbackResolver:TInterfacedObject, IFeedbackResolver | Destroy×4
+Governance/DeepBase.Governance.Interfaces.pas | 121L | procs:31 | - | 无资源旗标
+Governance/DeepBase.Governance.LegacyWrap.pas | 107L | procs:8 | TLegacyWrapBridge:TInterfacedObject, IBridge | Except×1
+Governance/DeepBase.Governance.Model.pas | 300L | procs:10 | TGateCondition,TAccessGate,TAction,TAbility,TContextField,TRouteRule | Destroy×12
+Governance/DeepBase.Governance.ModelVersion.pas | 245L | procs:24 | TChangeSet,TModelVersion,TViewScope | Destroy×12
+Governance/DeepBase.Governance.NativeRegistry.pas | 364L | procs:24 | TNativeObjectRef,TNativeEventRef,TNativeRoutineRef,TNativeRegistry | Destroy×4
+Governance/DeepBase.Governance.Output.pas | 224L | procs:16 | TOutputDef,TOutputInstance,TOutputRegistry | Destroy×4
+Governance/DeepBase.Governance.ProjectionResolver.pas | 146L | procs:10 | TProjectionResolver:TInterfacedObject, IProjectionResolver | Destroy×4
+Governance/DeepBase.Governance.Purpose.pas | 109L | procs:12 | TPurpose,TPurposeSet | Destroy×4
+Governance/DeepBase.Governance.Registration.pas | 80L | procs:8 | - | DB×1
+Governance/DeepBase.Governance.RouteStore.SQLite.pas | 366L | procs:26 | TRouteStoreSQLite | Destroy×4 DB×1
+Tools/CLI/CLI.I18n.pas | 639L | procs:20 | TI18nCommands | 无资源旗标
+Tools/CLI/CLI.Main.pas | 122L | procs:6 | TCliMain | 无资源旗标
+Tools/FMXGallery/Gallery.FMXMainForm.pas | 569L | procs:14 | TFMXGalleryMainForm:TForm | 无资源旗标
+Tools/Gallery/Gallery.MainForm.pas | 486L | procs:14 | TGalleryMainForm:TForm | 无资源旗标
+Tools/LogAnalyzer/LogAnalyzer.Data.pas | 148L | procs:7 | TDbLogSource:TInterfacedObject, ILogSource | DB×1
+Tools/Studio/Forms/Studio.MainForm.pas | 478L | procs:17 | TfrmStudioMain:TForm | DB×1 Except×1
+Tools/Studio/Forms/Studio.TranslationForm.pas | 1007L | procs:42 | TTranslationForm:TForm | Destroy×4 DB×1 Except×1
+Tools/Studio/Forms/Studio.VersionDetailForm.pas | 721L | procs:41 | TVersionDetailForm:TForm | Destroy×4
+Tools/Studio/Frames/Studio.ConfigFrame.pas | 445L | procs:36 | TfraConfig:TFrame | Destroy×4 DB×1 Except×3
+Tools/Studio/Frames/Studio.HotkeyFrame.pas | 599L | procs:42 | TfraHotkey:TFrame | Destroy×4 DB×1 Except×2
+Tools/Studio/Frames/Studio.LogFrame.pas | 306L | procs:28 | TfraLog:TFrame | Timer×1 DB×1 Except×3
+Tools/Studio/Frames/Studio.PromptTemplateFrame.pas | 1300L | procs:55 | TfraPromptTemplate:TFrame | Destroy×4 DB×1 Except×1
+Tools/Studio/Frames/Studio.QueriesFrame.pas | 615L | procs:30 | TfraQueries:TFrame | DB×1 Except×2
+Tools/Studio/Frames/Studio.ThemeFrame.pas | 317L | procs:24 | TfraTheme:TFrame | Destroy×4 DB×1
+Tools/Studio/Studio.HelpPanel.pas | 77L | procs:6 | - | 无资源旗标
+Tools/Studio/Studio.i18nInit.pas | 82L | procs:4 | - | Except×1
+Tools/Studio/Studio.Resources.pas | 386L | procs:34 | TStudioResources | DB×1
+Tools/Tray/Forms/Tray.LogSearchForm.pas | 496L | procs:22 | TLogSearchForm:TForm | 无资源旗标
+Tools/Tray/Forms/Tray.SettingsForm.pas | 311L | procs:18 | TTraySettingsForm:TForm | 无资源旗标
+Tools/Tray/Tray.Hotkey.pas | 355L | procs:36 | TTrayHotkeyManager | Destroy×4
+Tools/UniPublisher/Core/Publisher.Config.pas | 703L | procs:72 | TPublishConfig,TPublishConfigMRU | Destroy×8 HTTP×1 Except×3
+Tools/UniPublisher/Core/Publisher.Manifest.pas | 529L | procs:38 | TManifestGenerator | Except×4
+Tools/WebService/DeepBase.WebAPI.OpenAPI.pas | 1802L | procs:141 | TOpenApiSchema,TOpenApiParameter,TOpenApiRequestBody,TOpenApiResponse,TOpenApiOperation,TOpenApiPathItem | Destroy×36 HTTP×1 Except×13
+VCL/DeepBase.VCL.AboutFrame.pas | 582L | procs:40 | TUniAboutFrame:TFrame | Timer×2 Destroy×4 Except×9
+VCL/DeepBase.VCL.AutoUpdater.pas | 121L | procs:7 | TAutoUpdater:TComponent | TThread×1 TQueue×1 Destroy×4
+VCL/DeepBase.VCL.ComboBoxes.pas | 174L | procs:16 | TLanguageComboBox:TComboBox,TThemeComboBox:TComboBox | Destroy×8
+VCL/DeepBase.VCL.ConfigControls.pas | 236L | procs:30 | TConfigEdit:TEdit,TConfigCheckBox:TCheckBox,TConfigSpinEdit:TSpinEdit | 无资源旗标
+VCL/DeepBase.VCL.Controls.pas | 50L | procs:2 | - | 无资源旗标
+VCL/DeepBase.VCL.DBInitWizard.pas | 265L | procs:23 | TDBInitWizard:TForm | Except×2
+VCL/DeepBase.VCL.DeepShell.Commands.pas | 509L | procs:57 | TShellCommandManager:TInterfacedObject, IShellCommandManager | TThread×5 CritSec×2 TQueue×2 Destroy×4 Except×2
+VCL/DeepBase.VCL.DeepShell.Context.pas | 150L | procs:12 | TShellContextManager:TInterfacedObject, IShellContextManager | CritSec×2 Destroy×4
+VCL/DeepBase.VCL.DeepShell.Intf.pas | 392L | procs:102 | - | TThread×2 TQueue×1
+VCL/DeepBase.VCL.DeepShell.Layout.pas | 459L | procs:40 | TShellInMemoryLayoutService:TInterfacedObject, IShellLayoutService,TShellSettingsBackedLayoutService:TInterfacedObject, IShellLayoutService | CritSec×2 Destroy×8 Except×1
+VCL/DeepBase.VCL.DeepShell.Localization.pas | 281L | procs:21 | TShellDefaultLocalizationService:TInterfacedObject, IShellLocalizationService | TThread×2 CritSec×2 TQueue×1 Destroy×4 Except×2
+VCL/DeepBase.VCL.DeepShell.MainForm.pas | 1650L | procs:111 | TDeepMainForm:TForm,TShellMainFormBridge:TInterfacedObject, IShellMainFormBridge | TThread×1 TQueue×1 Destroy×4 Except×2
+VCL/DeepBase.VCL.DeepShell.Panels.pas | 419L | procs:42 | TShellAreaController,TShellStatusManager:TInterfacedObject, IShellStatusManager | CritSec×2 Destroy×4 Except×1
+VCL/DeepBase.VCL.DeepShell.Recent.pas | 199L | procs:18 | TShellInMemoryRecentService:TInterfacedObject, IShellRecentService | CritSec×2 Destroy×4
+VCL/DeepBase.VCL.DeepShell.Services.pas | 112L | procs:8 | TShellServiceRegistry:TInterfacedObject, IShellServiceRegistry | CritSec×2 Destroy×4
+VCL/DeepBase.VCL.DeepShell.Settings.pas | 457L | procs:42 | TShellInMemorySettingsStore:TInterfacedObject, IShellSettingsStore,TDeepShellSettingsForm:TForm | CritSec×2 Destroy×8 Except×6
+VCL/DeepBase.VCL.DeepShell.Theme.pas | 179L | procs:13 | TShellDefaultThemeService:TInterfacedObject, IShellThemeService | TThread×2 CritSec×2 TQueue×1 Destroy×4 Except×2
+VCL/DeepBase.VCL.DeepShell.ToolWindow.pas | 218L | procs:18 | TDeepShellToolWindow:TForm | 无资源旗标
+VCL/DeepBase.VCL.DeepShell.Types.pas | 351L | procs:24 | - | 无资源旗标
+VCL/DeepBase.VCL.ExceptionAdapter.pas | 68L | procs:4 | TDeepBaseVCLExceptionBridge | finalization×1
+VCL/DeepBase.VCL.Export.Image.pas | 501L | procs:55 | TImageExport | Destroy×4
+VCL/DeepBase.VCL.HB.AI.pas | 443L | procs:32 | THbAIConsole:TCustomControl | Destroy×4
+VCL/DeepBase.VCL.HB.Cards.pas | 1218L | procs:92 | THbCard:TCustomControl, IHbSurfaceProvider,THbStatBig:THbCustomControl,THbListRow:THbCustomControl,THbEmptyState:THbCustomControl,TControlCracker:TControl | Destroy×4
+VCL/DeepBase.VCL.HB.Choice.Demo.pas | 314L | procs:12 | THbChoiceAndWaterfallDemoForm:TForm | 无资源旗标
+VCL/DeepBase.VCL.HB.CommandPalette.pas | 547L | procs:42 | THbCommandPalette:THbCustomControl | Timer×2 Destroy×4
+VCL/DeepBase.VCL.HB.Dialogs.pas | 635L | procs:37 | THbSummaryBar:THbCustomControl,THbDialog | 无资源旗标
+VCL/DeepBase.VCL.HB.Dock.pas | 294L | procs:18 | THbDockPanel,THbDockSite:TCustomControl,THbDockPanel:TCustomControl,THbWindowProportionHelper | Destroy×8
+VCL/DeepBase.VCL.HB.Gate.pas | 518L | procs:34 | THbGatePanel:THbCustomControl | Destroy×4
+VCL/DeepBase.VCL.HB.Glass.pas | 292L | procs:20 | THbGlassPanel:THbCustomControl | Timer×2 Destroy×4
+VCL/DeepBase.VCL.HB.Inputs.pas | 1544L | procs:112 | THbCheckBox:THbCustomControl,THbToggleSwitch:THbCustomControl,THbEdit:THbCustomControl,THbComboBox:THbCustomControl,THbThemeSelector:THbCustomControl | Destroy×12
+VCL/DeepBase.VCL.HB.NavTree.pas | 460L | procs:28 | THbNavTree:TCustomControl | Destroy×4
+VCL/DeepBase.VCL.HB.PageControl.pas | 448L | procs:24 | THbPageControl:TCustomControl, IHbSurfaceProvider | Destroy×4
+VCL/DeepBase.VCL.HB.Palettes.pas | 31L | procs:2 | - | 无资源旗标
+VCL/DeepBase.VCL.HB.ShareCard.pas | 269L | procs:10 | THbShareCardRenderer | Except×1
+VCL/DeepBase.VCL.HB.Status.pas | 291L | procs:20 | THbStatusDot:THbCustomControl | Timer×2 Destroy×4
+VCL/DeepBase.VCL.HB.Text.pas | 482L | procs:36 | THbText:THbCustomControl | 无资源旗标
+VCL/DeepBase.VCL.HB.Theme.pas | 90L | procs:16 | - | 无资源旗标
+VCL/DeepBase.VCL.LicenseAuthDialog.pas | 317L | procs:22 | TLicenseAuthDialog:TForm | Destroy×4
+VCL/DeepBase.VCL.LicenseStatusPanel.pas | 325L | procs:20 | TLicenseStatusPanel:TCustomPanel | Destroy×4
+VCL/DeepBase.VCL.LLMConfigPanel.pas | 614L | procs:38 | TLLMConfigPanel:TPanel | Destroy×4
+VCL/DeepBase.VCL.LLMSettingsFrame.pas | 546L | procs:88 | TLLMSettingsFrame:TFrame | TThread×6 TQueue×3 Destroy×4
+VCL/DeepBase.VCL.LogListView.pas | 245L | procs:20 | TLogListView:TListView | Timer×2 Destroy×4 Except×1
+VCL/DeepBase.VCL.NotificationBar.pas | 557L | procs:50 | TNotificationBar:TPanel | Timer×4 Destroy×4
+VCL/DeepBase.VCL.PromptVariableGrid.pas | 974L | procs:66 | TPromptVariableGrid,TPromptVariableGrid:TDrawGrid | Destroy×4
+VCL/DeepBase.VCL.TestCenterFrame.pas | 656L | procs:43 | TTestCenterFrame:TFrame | Destroy×4
+VCL/DeepBase.VCL.ThemeAdapter.pas | 97L | procs:7 | - | 无资源旗标
+VCL/DeepBase.VCL.UIHelper.pas | 97L | procs:5 | TDeepBaseUIHelper | 无资源旗标
+VCL/DeepBase.VCL.UnlockDialog.pas | 367L | procs:20 | TUnlockDialog:TForm | Destroy×4

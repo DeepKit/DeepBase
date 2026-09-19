@@ -1,0 +1,7 @@
+﻿闂ㄧ杈撳嚭锛堥鏈熷寘鍚?3 绫昏繚瑙勶級:
+缂栫爜闂ㄧ澶辫触锛岃繚瑙?3 椤?
+  G2 闈炴硶UTF-8(GBK/ANSI鍘熷瀛楄妭): src/Gbk.pas
+  G1 U+FFFD 1 > 鍩虹嚎 0: src/Injected.pas
+  G3 缂篣TF-8 BOM: src/NoBom.pas
+
+NEGATIVE-TEST: PASS

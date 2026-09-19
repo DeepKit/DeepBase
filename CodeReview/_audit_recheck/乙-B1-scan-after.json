@@ -1,0 +1,201 @@
+{
+ "total": 954,
+ "files": [
+  {
+   "f": "Core/DeepBase.Hotkeys.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 128,
+   "litFFFD": 0,
+   "commentFFFD": 128,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Resilience.CircuitBreaker.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 166,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/uDoQryLegacy.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 1694,
+   "fffd": 7,
+   "litFFFD": 0,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/FullDemo/FullDemo.MainForm.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 184,
+   "fffd": 2,
+   "litFFFD": 2,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.LLM.Client.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 31,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.LLM.HTTP.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.LLMConfigPanel.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 208,
+   "fffd": 10,
+   "litFFFD": 0,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Governance/DeepBase.Governance.ActionGrid.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 415,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Persistence/DeepBase.DB.DoQry.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 1151,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Acceptance/AcceptanceMain.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 209,
+   "fffd": 33,
+   "litFFFD": 30,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/GUI/DeepBase.GUITest.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 582,
+   "fffd": 35,
+   "litFFFD": 4,
+   "commentFFFD": 30,
+   "codeFFFD": 1
+  },
+  {
+   "f": "Tests/GUI/GUITest.FormFactory.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 226,
+   "fffd": 10,
+   "litFFFD": 0,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 385,
+   "fffd": 20,
+   "litFFFD": 10,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG013_RSASignature.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 509,
+   "fffd": 5,
+   "litFFFD": 1,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Browser.Selectors.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 0,
+   "codeFFFD": 1
+  },
+  {
+   "f": "Tests/Test.DeepBase.EventBus.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 106,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Hotkeys.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 158,
+   "fffd": 5,
+   "litFFFD": 2,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/SeedTool/uAntiTamperPackage.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 1460,
+   "fffd": 19,
+   "litFFFD": 19,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/SeedTool/uBasicProtection.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 618,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  }
+ ],
+ "summary": {
+  "fffdFiles": 19,
+  "cjkNoBom": 40,
+  "cjkWithBom": 366,
+  "invalidUtf8Files": 0
+ }
+}

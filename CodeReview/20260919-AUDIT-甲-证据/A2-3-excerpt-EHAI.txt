@@ -1,0 +1,29 @@
+﻿class function TEhaiAuthorityBasis.CreateExplicit(const AHolder, AScope: string): TEhaiAuthorityBasis;
+begin
+  Result.Kind := eabExplicitConfirmation;
+  Result.AuthorityHolder := AHolder;
+  Result.ScopeBoundary := AScope;
+  Result.CeilingAmount := 0.0;
+  Result.ConditionExpr := '';
+  Result.EstablishedAt := Now;
+  Result.ExpiresAt := 0.0;
+end;
+function TEhaiAuthorityBasis.Covers(const AScope: string; AAmount: Double): Boolean;
+begin
+  if not IsValidAt(Now) then
+    Exit(False);
+
+  // Fail-closed: Empty Scope = no authorization (must not be treated as wildcard)
+  if ScopeBoundary = '' then
+    Exit(False);
+
+  if (ScopeBoundary <> '*') and
+     (SameText(ScopeBoundary, AScope) = False) then
+    Exit(False);
+
+  // CeilingAmount = 0.0 means no ceiling amount constraint
+  if (CeilingAmount > 0.0) and (AAmount > CeilingAmount) then
+    Exit(False);
+
+  Result := True;
+end;

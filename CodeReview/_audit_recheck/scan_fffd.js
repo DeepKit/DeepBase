@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const ROOT = 'D:/_Progs/02Business/DeepBase';
-const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules']);
+const SKIP = new Set(['.git', '.claude', '__history', 'BuildOutput', 'DCUOutput', 'bin', 'dcu', 'node_modules', '.tmp']);
 
 function walk(dir, out) {
   let ents;

@@ -1,0 +1,1171 @@
+{
+ "total": 954,
+ "files": [
+  {
+   "f": "Core/DeepBase.Cache.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 37,
+   "fffd": 58,
+   "litFFFD": 0,
+   "commentFFFD": 58,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Config.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 21,
+   "litFFFD": 0,
+   "commentFFFD": 21,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.EventBus.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 113,
+   "fffd": 212,
+   "litFFFD": 0,
+   "commentFFFD": 212,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Feedback.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 529,
+   "litFFFD": 44,
+   "commentFFFD": 485,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Hotkeys.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 128,
+   "litFFFD": 0,
+   "commentFFFD": 128,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.i18n.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 41,
+   "fffd": 137,
+   "litFFFD": 0,
+   "commentFFFD": 137,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.LLM.Manager.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 109,
+   "fffd": 182,
+   "litFFFD": 0,
+   "commentFFFD": 182,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Logging.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 133,
+   "fffd": 182,
+   "litFFFD": 0,
+   "commentFFFD": 182,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Manager.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 2,
+   "fffd": 836,
+   "litFFFD": 0,
+   "commentFFFD": 836,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.PluginManager.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 1,
+   "fffd": 41,
+   "litFFFD": 0,
+   "commentFFFD": 41,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Protection.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 144,
+   "fffd": 4,
+   "litFFFD": 0,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Resilience.CircuitBreaker.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 142,
+   "fffd": 6,
+   "litFFFD": 0,
+   "commentFFFD": 6,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Scheduler.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.Services.Protection.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 12,
+   "litFFFD": 0,
+   "commentFFFD": 12,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Core/DeepBase.WorkerQueue.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 71,
+   "fffd": 843,
+   "litFFFD": 0,
+   "commentFFFD": 843,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/doQryMain.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 82,
+   "fffd": 288,
+   "litFFFD": 32,
+   "commentFFFD": 256,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/src/uDoQry.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 30,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/src/uDoQryDialect.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 36,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/src/uDoQryExecutor.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 142,
+   "fffd": 2,
+   "litFFFD": 2,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "doQry/uDoQryLegacy.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 1449,
+   "fffd": 83,
+   "litFFFD": 0,
+   "commentFFFD": 83,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/FullDemo/FullDemo.MainForm.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 147,
+   "fffd": 7,
+   "litFFFD": 0,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/MultiLanguageDemo/MainForm.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 30,
+   "fffd": 10,
+   "litFFFD": 10,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/Common/Template.AutoUpdateBootstrap.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 81,
+   "fffd": 7,
+   "litFFFD": 0,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Data.Module.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 79,
+   "fffd": 10,
+   "litFFFD": 1,
+   "commentFFFD": 9,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Entity.Category.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 222,
+   "fffd": 17,
+   "litFFFD": 0,
+   "commentFFFD": 17,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Entity.Document.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 191,
+   "fffd": 16,
+   "litFFFD": 1,
+   "commentFFFD": 14,
+   "codeFFFD": 1
+  },
+  {
+   "f": "Examples/Templates/DocManager/Entity.Tag.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 199,
+   "fffd": 12,
+   "litFFFD": 1,
+   "commentFFFD": 11,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Form.CategoryTree.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 65,
+   "fffd": 10,
+   "litFFFD": 4,
+   "commentFFFD": 6,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Form.DocumentEdit.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 139,
+   "fffd": 10,
+   "litFFFD": 6,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Main.Form.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 116,
+   "fffd": 12,
+   "litFFFD": 4,
+   "commentFFFD": 8,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Service.Document.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 436,
+   "fffd": 17,
+   "litFFFD": 2,
+   "commentFFFD": 15,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Examples/Templates/DocManager/Service.Search.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 353,
+   "fffd": 24,
+   "litFFFD": 2,
+   "commentFFFD": 22,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.AntiTamper.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 244,
+   "fffd": 12,
+   "litFFFD": 3,
+   "commentFFFD": 9,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.CloudBackup.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 20,
+   "fffd": 807,
+   "litFFFD": 0,
+   "commentFFFD": 807,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.CloudSync.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 18,
+   "fffd": 851,
+   "litFFFD": 0,
+   "commentFFFD": 851,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.LLM.Client.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 31,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.LLM.HTTP.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Features/DeepBase.Speech.SAPI.Decl.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 0,
+   "fffd": 21,
+   "litFFFD": 0,
+   "commentFFFD": 21,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.AboutFrame.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 260,
+   "fffd": 17,
+   "litFFFD": 1,
+   "commentFFFD": 16,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.AutoUpdater.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 238,
+   "fffd": 21,
+   "litFFFD": 0,
+   "commentFFFD": 21,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.ConfigControls.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 86,
+   "fffd": 8,
+   "litFFFD": 0,
+   "commentFFFD": 8,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.ConfigEdit.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 150,
+   "fffd": 17,
+   "litFFFD": 0,
+   "commentFFFD": 17,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.Controls.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 17,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.FormControls.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 0,
+   "fffd": 2,
+   "litFFFD": 2,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.FormStateHelper.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 356,
+   "fffd": 22,
+   "litFFFD": 0,
+   "commentFFFD": 22,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.I18nControls.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 125,
+   "fffd": 12,
+   "litFFFD": 0,
+   "commentFFFD": 12,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.LLMChatFrame.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 69,
+   "litFFFD": 69,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.LLMConfigPanel.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 3,
+   "fffd": 308,
+   "litFFFD": 0,
+   "commentFFFD": 308,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.LogListView.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 12,
+   "litFFFD": 0,
+   "commentFFFD": 12,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.MRUControls.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 59,
+   "fffd": 4,
+   "litFFFD": 0,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "FMX/DeepBase.FMX.UpdateDialog.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 237,
+   "fffd": 12,
+   "litFFFD": 2,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Governance/DeepBase.Governance.ActionGrid.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 415,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Persistence/DeepBase.DB.ConnectionPool.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 0,
+   "fffd": 33,
+   "litFFFD": 0,
+   "commentFFFD": 33,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Persistence/DeepBase.DB.DoQry.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 965,
+   "fffd": 53,
+   "litFFFD": 0,
+   "commentFFFD": 53,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Persistence/DeepBase.DB.Pool.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 741,
+   "fffd": 31,
+   "litFFFD": 0,
+   "commentFFFD": 31,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Acceptance/AcceptanceMain.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 209,
+   "fffd": 33,
+   "litFFFD": 30,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Acceptance/AcceptanceReport.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 126,
+   "fffd": 19,
+   "litFFFD": 17,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Acceptance/AcceptanceRunner.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 511,
+   "fffd": 49,
+   "litFFFD": 38,
+   "commentFFFD": 11,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/GUI/DeepBase.GUITest.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 582,
+   "fffd": 35,
+   "litFFFD": 4,
+   "commentFFFD": 30,
+   "codeFFFD": 1
+  },
+  {
+   "f": "Tests/GUI/GUITest.FormFactory.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 226,
+   "fffd": 10,
+   "litFFFD": 0,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/GUI/Test.GUI.Core.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 727,
+   "fffd": 69,
+   "litFFFD": 27,
+   "commentFFFD": 42,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/GUI/Test.GUI.VCL.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 391,
+   "fffd": 32,
+   "litFFFD": 14,
+   "commentFFFD": 18,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Integration/DeepBase.IntegrationTest.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 75,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Integration/Test.Integration.Core.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 42,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Integration/Test.Integration.WebAPI.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 259,
+   "fffd": 24,
+   "litFFFD": 0,
+   "commentFFFD": 24,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/RegressionTestRegistry.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 398,
+   "fffd": 17,
+   "litFFFD": 3,
+   "commentFFFD": 14,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.Base.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 312,
+   "fffd": 25,
+   "litFFFD": 0,
+   "commentFFFD": 25,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG001_AnimationMemoryLeak.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 237,
+   "fffd": 12,
+   "litFFFD": 7,
+   "commentFFFD": 5,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 385,
+   "fffd": 20,
+   "litFFFD": 10,
+   "commentFFFD": 10,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG009_LoggingRace.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 271,
+   "fffd": 14,
+   "litFFFD": 6,
+   "commentFFFD": 8,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG010_WorkerQueueRace.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 185,
+   "fffd": 15,
+   "litFFFD": 6,
+   "commentFFFD": 9,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG013_RSASignature.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 433,
+   "fffd": 22,
+   "litFFFD": 5,
+   "commentFFFD": 17,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG014_WeChatPaySignature.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 390,
+   "fffd": 21,
+   "litFFFD": 7,
+   "commentFFFD": 14,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG034_HardcodedKeys.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 286,
+   "fffd": 16,
+   "litFFFD": 5,
+   "commentFFFD": 11,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG054_SemaphoreLeak.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 258,
+   "fffd": 10,
+   "litFFFD": 3,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG059_JsonDeserializationType.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 223,
+   "fffd": 8,
+   "litFFFD": 4,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG060_SerializationDepth.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 181,
+   "fffd": 10,
+   "litFFFD": 3,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG062_PluginSandbox.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 496,
+   "fffd": 36,
+   "litFFFD": 16,
+   "commentFFFD": 20,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG063_PluginConfigBypass.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 354,
+   "fffd": 16,
+   "litFFFD": 8,
+   "commentFFFD": 8,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG066_PathTraversal.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 238,
+   "fffd": 9,
+   "litFFFD": 5,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG070_LogInjection.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 217,
+   "fffd": 8,
+   "litFFFD": 2,
+   "commentFFFD": 6,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Regression/Test.Regression.BUG073_EventTypeInjection.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 172,
+   "fffd": 10,
+   "litFFFD": 4,
+   "commentFFFD": 6,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Browser.Selectors.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 0,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 0,
+   "codeFFFD": 2
+  },
+  {
+   "f": "Tests/Test.DeepBase.Crypto.OpenSSL.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 93,
+   "fffd": 11,
+   "litFFFD": 0,
+   "commentFFFD": 11,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.DB.DoQry.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 337,
+   "fffd": 15,
+   "litFFFD": 0,
+   "commentFFFD": 15,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.EventBus.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 106,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.FormState.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 148,
+   "fffd": 4,
+   "litFFFD": 2,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Hotkeys.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 158,
+   "fffd": 5,
+   "litFFFD": 2,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.i18n.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 296,
+   "fffd": 17,
+   "litFFFD": 0,
+   "commentFFFD": 17,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.License.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 176,
+   "fffd": 7,
+   "litFFFD": 5,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.LLM.PromptTemplate.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 27,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Manager.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 247,
+   "fffd": 11,
+   "litFFFD": 3,
+   "commentFFFD": 8,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.MRU.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 120,
+   "fffd": 9,
+   "litFFFD": 3,
+   "commentFFFD": 6,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Protection.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 123,
+   "fffd": 3,
+   "litFFFD": 0,
+   "commentFFFD": 3,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Schema.pas",
+   "bom": true,
+   "validUtf8": true,
+   "cjk": 65,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.SingleInstance.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 0,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.DeepBase.Theme.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 107,
+   "fffd": 6,
+   "litFFFD": 1,
+   "commentFFFD": 5,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.LogAnalyzer.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 120,
+   "fffd": 7,
+   "litFFFD": 0,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.SeedTool.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 125,
+   "fffd": 9,
+   "litFFFD": 2,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tests/Test.WebService.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 28,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Payment/DeepBase.Payment.Alipay.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 95,
+   "fffd": 5,
+   "litFFFD": 0,
+   "commentFFFD": 5,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Payment/DeepBase.Payment.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 55,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Payment/DeepBase.Payment.Stripe.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 106,
+   "fffd": 4,
+   "litFFFD": 0,
+   "commentFFFD": 4,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Social/DeepBase.Social.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 14,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Social/DeepBase.Social.QQ.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 43,
+   "fffd": 2,
+   "litFFFD": 0,
+   "commentFFFD": 2,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Social/DeepBase.Social.WeChat.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 49,
+   "fffd": 7,
+   "litFFFD": 0,
+   "commentFFFD": 7,
+   "codeFFFD": 0
+  },
+  {
+   "f": "ThirdParty/Social/DeepBase.Social.Weibo.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 72,
+   "fffd": 5,
+   "litFFFD": 0,
+   "commentFFFD": 5,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/CLI/CLI.DB.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 14,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/CLI/CLI.Main.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 27,
+   "fffd": 1,
+   "litFFFD": 0,
+   "commentFFFD": 1,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/LogAnalyzer/LogAnalyzer.Export.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 156,
+   "fffd": 14,
+   "litFFFD": 2,
+   "commentFFFD": 12,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/LogAnalyzer/LogAnalyzer.MainForm.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 339,
+   "fffd": 34,
+   "litFFFD": 25,
+   "commentFFFD": 9,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/LogAnalyzer/LogAnalyzer.Stats.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 156,
+   "fffd": 14,
+   "litFFFD": 0,
+   "commentFFFD": 14,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/SeedTool/uAntiTamperPackage.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 1053,
+   "fffd": 44,
+   "litFFFD": 7,
+   "commentFFFD": 37,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/SeedTool/uBasicProtection.pas",
+   "bom": false,
+   "validUtf8": true,
+   "cjk": 566,
+   "fffd": 17,
+   "litFFFD": 0,
+   "commentFFFD": 17,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/Studio/Forms/Studio.VersionDetailForm.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 0,
+   "fffd": 1,
+   "litFFFD": 1,
+   "commentFFFD": 0,
+   "codeFFFD": 0
+  },
+  {
+   "f": "Tools/Studio/Studio.Resources.pas",
+   "bom": false,
+   "validUtf8": false,
+   "cjk": 99,
+   "fffd": 9,
+   "litFFFD": 0,
+   "commentFFFD": 9,
+   "codeFFFD": 0
+  }
+ ],
+ "summary": {
+  "fffdFiles": 116,
+  "cjkNoBom": 221,
+  "cjkWithBom": 176,
+  "invalidUtf8Files": 56
+ }
+}

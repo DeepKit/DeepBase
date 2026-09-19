@@ -1,0 +1,76 @@
+﻿UPD:6: incremental updates, signature verification, and rollback support.
+UPD:11: - Cryptographic signature verification
+UPD:145: Hash: string;        // SHA256 hash
+UPD:163: PackageHash: string;    // SHA256 of package
+UPD:164: Signature: string;      // RSA signature
+UPD:165: SignatureAlgorithm: string;  // rsa-sha256/hmac-sha256/sha256
+UPD:167: ManifestSignature: string;
+UPD:168: SignatureRequired: Boolean;
+UPD:219: FPublicKey: string;  // RSA public key for signature verification
+UPD:220: FSignatureSecret: string;  // Shared secret for HMAC signature verification
+UPD:246: function BuildManifestSignaturePayload(const Info: TUpdateInfo): string;
+UPD:269: /// <summary>Set RSA public key for signature verification</summary>
+UPD:272: /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
+UPD:273: procedure SetSignatureSecret(const Secret: string);
+UPD:275: /// <summary>Verify an RSA/HMAC signature over Data (for tests/integration).</summary>
+UPD:276: function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
+UPD:278: /// <summary>Verify a downloaded file's SHA256 hash (for tests/integration).</summary>
+UPD:282: /// package hash / package signature / manifest hash / manifest signature).
+UPD:284: function StageAndVerifyPackage(const Info: TUpdateInfo;
+UPD:287: /// <summary>Enable insecure dev mode: allows updates without hash/signature.
+UPD:374: /// <summary>Stage and verify downloaded update package against RSA-SHA256 signature and hash.</summary>
+UPD:375: class function StageAndVerifyPackage(const AInfo: TUpdateInfo;
+UPD:379: class function StageAndVerifyPackage(const AVersion, APackageHash, ASignature: string;
+UPD:432: // RSA-2048 公钥，用于验签 update manifest 的 signature / manifest_signature（§16.5 / §16.10）。
+UPD:664: FSignatureSecret := '';
+UPD:710: procedure TUpdateManager.SetSignatureSecret(const Secret: string);
+UPD:712: FSignatureSecret := Secret;
+UPD:853: LPackageHash := JSON.GetValue<string>('sha256', '');
+UPD:854: if SameText(Copy(LPackageHash, 1, 7), 'sha256:') then
+UPD:857: Result.Signature := JSON.GetValue<string>('signature', '');
+UPD:858: Result.SignatureAlgorithm := JSON.GetValue<string>('signatureAlgorithm', '');
+UPD:859: if Result.SignatureAlgorithm = '' then
+UPD:860: Result.SignatureAlgorithm := JSON.GetValue<string>('signature_algorithm', '');
+UPD:864: Result.ManifestSignature := JSON.GetValue<string>('manifestSignature', '');
+UPD:865: if Result.ManifestSignature = '' then
+UPD:866: Result.ManifestSignature := JSON.GetValue<string>('manifest_signature', '');
+UPD:867: Result.SignatureRequired := ReadBool(JSON, 'signatureRequired', 'signature_required', False);
+UPD:954: Result.Files[I].Hash := FileObj.GetValue<string>('sha256', '');
+UPD:973: // EDGE-006 fix: auto-require signature when trust anchors are configured
+UPD:974: // or when metadata already contains a signature. This prevents an attacker
+AUTOUPD:13: - Optionally mark releases as mandatory with SHA256 checksum
+AUTOUPD:23: "files": [{ "name": "...", "url": "...", "size": ..., "sha256": "..." }],
+AUTOUPD:36: "sha256": "...",
+AUTOUPD:87: Sha256: string;             // optional SHA256 hex string
+AUTOUPD:88: Signature: string;          // REVIEW5-FEAT-003: optional digital signature (base64/PEM)
+AUTOUPD:124: FPublicKeyRSA: string;        // PEM RSA public key (PKCS#1 v1.5, RSA-SHA256 production)
+AUTOUPD:172: /// Download update package to DestFile and optionally verify SHA256.
+AUTOUPD:214: /// PEM-encoded RSA public key (PKCS#1 v1.5, RSA-SHA256) used for production
+AUTOUPD:215: /// signature verification per 78a ADR r1 §2.7 (Windows CNG).
+AUTOUPD:217: /// When set, DownloadUpdate verifies the package signature with RSA-SHA256.
+AUTOUPD:235: // Production signature protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, CNG).
+AUTOUPD:301: Info.Sha256 := '';
+AUTOUPD:302: Info.Signature := '';
+AUTOUPD:400: Info.Sha256 := '';
+AUTOUPD:401: Info.Signature := '';
+AUTOUPD:430: Info.Sha256 := FileObj.GetValue<string>('sha256', '');
+AUTOUPD:431: Info.Signature := FileObj.GetValue<string>('signature', '');
+AUTOUPD:484: HashStr := Source.GetValue<string>('sha256', '');
+AUTOUPD:489: if SameText(Copy(HashStr, 1, 7), 'sha256:') then
+AUTOUPD:491: Info.Sha256 := HashStr;
+AUTOUPD:493: Info.Signature := Source.GetValue<string>('signature', '');
+AUTOUPD:798: // (SHA256 hash or digital signature). Without any, tampered packages
+AUTOUPD:800: if (Info.Sha256 = '') and (Info.Signature = '') then
+AUTOUPD:802: FLastError := 'Download rejected: update package must provide SHA256 hash or digital signature for integrity verification';
+AUTOUPD:839: // Verify SHA256 if provided
+AUTOUPD:840: if Info.Sha256 <> '' then
+AUTOUPD:844: Hash := THashSHA2.GetHashString(FS, SHA256);
+AUTOUPD:849: if not SameText(Hash, Info.Sha256) then
+AUTOUPD:853: // Verify package signature.
+AUTOUPD:854: // Production protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, Windows CNG).
+AUTOUPD:855: // RSA path is authoritative; fail-closed when a signature is present but no
+AUTOUPD:857: if Info.Signature <> '' then
+AUTOUPD:861: FLastError := 'Signature verification rejected: no RSA public key configured (RSA-SHA256 production)';
+AUTOUPD:870: var H := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+AUTOUPD:895: if not Verifier.VerifySignature(DigestBytes, Info.Signature) then
+AUTOUPD:897: FLastError := 'Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid';

@@ -1,0 +1,81 @@
+﻿  { out 璇箟鑷姩娓呯┖鎵樼瀛楁锛涙棤闇€ ZeroMemory }
+
+  { 淇′换鏍圭己澶?= 瀹夊叏澶辫触锛堥獙鏀剁‖鏉′欢 #3锛?}
+  if not FHasTrustedKeys then
+    raise EManifestVerificationError.Create(
+      'No trusted keys injected; refusing to verify manifest (safe-fail)');
+
+  LRoot := nil;
+  try
+    LRoot := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
+    if LRoot = nil then
+    begin
+      FLastError := 'Malformed manifest: not a JSON object';
+      Exit;
+    end;
+
+    AMetadata := ParseMetadata(LRoot);
+
+    { 绠楁硶闂ㄧ }
+    if not SameText(AMetadata.Algorithm, CManifestAlgorithmRsaSha256) then
+    begin
+      FLastError := Format('Unsupported signature algorithm "%s"; expected %s',
+        [AMetadata.Algorithm, CManifestAlgorithmRsaSha256]);
+      Exit;
+    end;
+
+    { signing_key_id 蹇呴』澹版槑涓斿懡涓俊浠绘牴 }
+    LKeyId := AMetadata.SigningKeyId;
+    if LKeyId = '' then
+    begin
+      FLastError := 'Manifest missing signing_key_id';
+      Exit;
+    end;
+    if not FTrustedKeys.TryGetValue(LKeyId, LPem) then
+    begin
+      FLastError := Format('signing_key_id "%s" not in trusted keyset', [LKeyId]);
+      Exit;
+    end;
+
+    { 闃插洖婊?}
+    if not CheckGeneration(AMetadata, AMinGeneration) then
+      Exit;
+
+    { 杩囨湡鏍￠獙 }
+    if not CheckTimestamps(AMetadata, ANow, False) then
+      Exit;
+
+    { 绛惧悕楠岃瘉锛氱鍚嶆暟鎹?= 鍓ョ signature 鐨?JCS 瑙勮寖鍖?}
+    LSigningData := CanonicalSigningData(LRoot);
+
+    LVerifier := TRSAVerifier.Create;
+    try
+      if not LVerifier.LoadPublicKeyPEM(LPem) then
+      begin
+        FLastError := 'Failed to load trusted public key: ' + LVerifier.LastError;
+        Exit;
+      end;
+      if not LVerifier.VerifySignature(LSigningData, AMetadata.SignatureBase64) then
+      begin
+        FLastError := 'Signature verification failed: ' + LVerifier.LastError;
+        Exit;
+      end;
+    finally
+      LVerifier.Free;
+    end;
+
+    Result := True;
+  finally
+    LRoot.Free;
+  end;
+end;
+
+function TManifestVerifier.VerifyManifest(const AJson: string;
+  AMinGeneration: Int64): Boolean;
+var
+  LMeta: TManifestMetadata;
+begin
+  Result := VerifyManifest(AJson, AMinGeneration, Now, LMeta);
+end;
+
+end.

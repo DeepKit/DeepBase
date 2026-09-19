@@ -27,13 +27,13 @@
 
 | 严重度 | 数量 | 其中活代码 | 其中死代码 |
 |---|---:|---:|---:|
-| 🔴 崩溃/数据损坏/安全漏洞 | 11 | 9 | 2 |
-| 🟡 功能缺陷 | 22 | 18 | 4 |
+| 🔴 崩溃/数据损坏/安全漏洞 | 10 | 8 | 2 |
+| 🟡 功能缺陷 | 23 | 19 | 4 |
 | 🔵 优化建议 | 9 | 7 | 2 |
 | 存疑区（需动态验证） | 6 | 4 | 2 |
 | **合计** | **48** | 38 | 10 |
 
-- 历史 F2 批 🔴 复核：**5 条全部仍存在**（未修复），详见第 4 节。
+- 历史 F2 批 🔴 复核：4 条仍存在；`WaitForSelector` 线程项经 20260919 主控复核确认已有 `REVIEW5-FEAT-009` 针对性缓解，降级 🟡「已缓解未根治」（见 CDP-01 与 §4），详见第 4 节。（本条为 WO-20260919-AUDIT-甲 A2-② 更正；更正前 🔴11/🟡22 → 更正后 🔴10/🟡23，合计 48 不变）
 - 7 维度中"安全"与"架构"问题最集中：CDP JSON 注入、URL 注入、UIA 所有权/防篡改校验恒真、同名接口双 GUID、CDP 双实现（SSOT 违背）、大面积半成品。
 
 ## 2. 按单元分组的发现
@@ -93,20 +93,19 @@ Result := TJSONObject.ParseJSONValue(Value) as TJSONObject;
 
 ### 2.2 DeepBase.Browser.CDP.pas（1055 行，✅ 活代码）
 
-#### CDP-01 🔴 `WaitForSelector` 匿名线程 use-after-free + 数据竞争（历史 F2.B.1.1 未真正修复）
-`d:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.pas:905`
+#### CDP-01 🟡 `WaitForSelector` 匿名线程：已缓解未根治（Destroy 缺 WaitFor，窄悬垂窗口残留）
+`d:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.pas:903-1010`
 ```pascal
-LSelf := Self;                     // 捕获裸对象指针
+LSelf := Self;                     // :905 REVIEW5-FEAT-009：捕获 Self 而非 FCDP
 var LThread := TThread.CreateAnonymousThread(procedure ...
-  ...
-  if LSelf.FDetached then ...       // L927 读裸指针字段
-  LLiveCDP := LSelf.FCDP; ...       // L940 读裸指针字段
+  if LSelf.FDetached then ...       // :927 每轮检查分离标志（缓解已落地）
+  LLiveCDP := LSelf.FCDP; ...       // :938/:940 每轮重取 + nil 检查（缓解已落地）
 end);
-LThread.FreeOnTerminate := True;    // L1010，无人 WaitFor
+LThread.FreeOnTerminate := True;    // :1010，Destroy(:690 仅置 FDetached) 无 WaitFor
 ```
-- **说明**：`REVIEW5-FEAT-009` 的缓解措施是"每轮检查 `LSelf.FDetached`"，但线程捕获的是 `TAutomationCDP` 的**裸对象指针** `LSelf`，且 `FreeOnTerminate=True`、没有任何引用/事件让 `Destroy` 等待它。一旦宿主对象在线程仍在轮询时被 `Free`（`Destroy` 置 `FDetached:=True` 后对象内存随即被释放/复用），线程下一次 `LSelf.FDetached`/`LSelf.FCDP` 读取即访问**已释放内存**（检查标志位本身就发生在悬垂指针上）。此外 `FDetached`/`FCDP` 由主线程写、工作线程读，无同步、无内存屏障，是数据竞争（读到的可能是撕裂/过期值，`FCDP` 甚至可能非 nil 但对象正在销毁）。
-- **触发条件**：关闭/释放浏览器会话时恰有未完成的 `WaitForSelector` 轮询（timeout 上限内）。
-- **修复建议**：参照同库 `Recovery.pas` 的正确停止模式（`FreeOnTerminate=False` + `TEvent` 取消 + `Free` 前 `WaitFor`），或以引用计数/`SafeInterval` 式宿主令牌保证对象生命周期；对 `FDetached/FCDP` 用锁或原子访问。
+- **说明（20260919 主控复核改判，WO-20260919-AUDIT-甲 A2-②）**：`REVIEW5-FEAT-009` 针对性缓解已落地（`:903` 注释、`:905` LSelf 捕获、`:927` 每轮 `FDetached` 轮询、`:938/:940` 每轮重取 `FCDP`+nil 检查），初判「至今未真正修复」不成立，🔴→🟡。真实残留：线程 `FreeOnTerminate=True`（`:1010`）而 `TAutomationCDP.Destroy`（`:690`）只置 `FDetached := True`，全文件无任何 `WaitFor`（grep 证据：`CodeReview/20260919-AUDIT-甲-证据/A2-2-grep-CDP.txt`）⇒ 宿主销毁后线程仍可跑一小段，`LSelf` 存在窄窗口悬垂读；`FDetached`/`FCDP` 无同步/内存屏障，属残留数据竞争。
+- **触发条件**：关闭/释放浏览器会话时恰有未完成的 `WaitForSelector` 轮询（窄窗口，概率较缓解前大幅下降）。
+- **修复建议**：`Destroy` 内按「取消 → WaitFor → 置 nil」三步：`FreeOnTerminate=False` + 保存线程引用，置 `FDetached` 后 `WaitFor` 再接管释放（参照同库 `Recovery.pas` 停止模式）；归入总报告 T3 家族统一治理。
 
 #### CDP-02 🟡 `as TJSONArray`/`as TJSONObject` 未判定即转型
 `d:\_Progs\02Business\DeepBase\Features\DeepBase.Browser.CDP.pas:858`
@@ -548,7 +547,7 @@ if LKey > 255 then Continue; // 非 ASCII 直接跳过
 
 1. **UIA-01**：`UIA.Engine.pas:177/186` 所有权与前台窗口校验结构性恒真 → 剪贴板粘贴注入防护全线失效（活代码，安全）。
 2. **UIA-02**：`UIA.Engine.pas:449/496` 映射完整性/防篡改恒真、签名表永不填充、映射从不真正加载（活代码，安全）。
-3. **CDP-01**：`CDP.pas:905/927/940/1010` `WaitForSelector` 匿名线程 `FreeOnTerminate=True` 且不 `WaitFor`，捕获裸 `Self` → 销毁后会话 use-after-free（活代码，崩溃；历史 F2.B.1.1 未修复）。
+3. **CDP-01**：`CDP.pas:903-1010` `WaitForSelector` 线程已缓解未根治（🟡）：`REVIEW5-FEAT-009` 轮询检查已落地，残留 `Destroy` 缺取消→WaitFor→置 nil（活代码，窄窗口悬垂；20260919 A2-② 改判）。
 4. **ADP-01**：`CDP.Adapter.pas:270` `NavigateTo` URL 未 JSON 转义 → CDP 参数注入（活代码，安全）。
 5. **ADP-02**：`CDP.Adapter.pas:333` `SendCommand` 返回 "Not implemented" → `ICDPSession` 发送链路整体失效 + 与 `TAutomationCDP` 双实现违背 SSOT（活代码，功能断裂）。
 6. **WEL-01**：`WebElement.pas:100-130` `Click/TypeText/GetAttribute/SelectOption` 全空实现，`Session.FindElementByCSS(...).Click` 静默 no-op（活代码，静默功能失效）。
@@ -563,7 +562,7 @@ if LKey > 255 then Continue; // 非 ASCII 直接跳过
 
 | 历史编号 | 描述 | 本轮复核结论 |
 |---|---|---|
-| F2.B.1.1 | `CDP.pas` WaitForSelector 匿名线程 UAF | ❌ **仍存在**（REVIEW5-FEAT-009 加 `FDetached` 检查不足以消除裸 `Self` 悬垂读，见 CDP-01） |
+| F2.B.1.1 | `CDP.pas` WaitForSelector 匿名线程 | 🟡 **已缓解未根治**（`REVIEW5-FEAT-009` 轮询检查已落地 903/905/927/938，残留 Destroy 缺 WaitFor，见 CDP-01；20260919 A2-② 改判，🔴→🟡） |
 | F2.B.2.1 | `CDP.Adapter.pas` NavigateTo URL 注入 | ❌ **仍存在**（L270，见 ADP-01） |
 | F2.B.2.2 | `CDP.Adapter.pas` SendCommand 空实现 | ❌ **仍存在**（L333，见 ADP-02） |
 | F2.C.1.1 | `IBrowserSession` 双 GUID 契约分裂 | ❌ **仍存在**（Types L208 / Session L21，见 TYP-01） |
@@ -572,7 +571,7 @@ if LKey > 255 then Continue; // 非 ASCII 直接跳过
 | — | `Vision` M6 设备→CSS 像素、C4/H7 `JsStringLiteral`/`JsFloat` | ✅ **已修复**（残留仅主屏 DPI，见 VIS-01） |
 | — | `WebView2` BUG-BA-014/FEAT-R3-002/C5-C7/H3/H4/H6/H8 | ✅ **大幅修复**（残留见 WV2-01/02/03） |
 
-> 计注：上述 5 条历史 🔴 本轮按当前行号**重新计入**（未修复），不重复计为新增。
+> 计注：上述历史 🔴 本轮按当前行号重新复核：4 条仍存在（计入 🔴），`WaitForSelector` 一条降级 🟡（20260919 A2-②）；均不重复计为新增。
 
 ---
 
