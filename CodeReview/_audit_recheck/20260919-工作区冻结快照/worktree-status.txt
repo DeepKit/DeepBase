@@ -1,0 +1,181 @@
+ M .github/workflows/delphi-ci.yml
+ M "CodeReview/20260919-AUDIT-\344\271\231-R2-\344\272\244\344\273\230\345\233\236\346\211\247.md"
+ M Core/DeepBase.Crypto.Encoding.pas
+ M Core/DeepBase.Crypto.Hash.pas
+ M Core/DeepBase.Crypto.JCS.pas
+ M Core/DeepBase.Crypto.Platform.pas
+ M Core/DeepBase.Crypto.RSA.pas
+ M Core/DeepBase.Crypto.Random.pas
+ M Core/DeepBase.Crypto.pas
+ M Core/DeepBase.HB.Core.pas
+ M Core/DeepBase.HB.Dialogs.Types.pas
+ M Core/DeepBase.HB.Grid.Types.pas
+ M Core/DeepBase.HB.Lifecycle.pas
+ M Core/DeepBase.HB.Runtime.pas
+ M Core/DeepBase.HB.Touchpoint.Engine.pas
+ M Core/DeepBase.HB.Waterfall.Types.pas
+ M Core/DeepBase.ManagedWorker.pas
+ M Core/DeepBase.Manifest.Verifier.pas
+ M Core/DeepBase.Resilience.Timeout.pas
+ M Core/DeepBase.Resilience.pas
+ M Examples/MicroserviceClientDemo/DeepBase.Microservice.Client.pas
+ M Examples/MicroserviceClientDemo/MainForm.pas
+ M FMX/DeepBase.FMX.HB.Cards.pas
+ M FMX/DeepBase.FMX.HB.Choice.pas
+ M FMX/DeepBase.FMX.HB.Controls.pas
+ M FMX/DeepBase.FMX.LLMChatFrame.pas
+ M Features/DeepBase.AutoUpdate.pas
+ M Features/DeepBase.Browser.Engine.WebView2.pas
+ M Features/DeepBase.Browser.ScriptStore.pas
+ M Features/DeepBase.BrowserAutomation.pas
+ M Features/DeepBase.CloudBackup.pas
+ M Features/DeepBase.CloudSync.pas
+ M Features/DeepBase.IntentClarification.LLMResilience.pas
+ M Features/DeepBase.Speech.ASR.SenseVoice.pas
+ M Features/DeepBase.UIA.Types.pas
+ M Features/DeepBase.Updater.pas
+ M Governance/DeepBase.Governance.ActionExecutor.pas
+ M Governance/DeepBase.Governance.ConfigRegistrar.pas
+ M Governance/DeepBase.Governance.ReviewQueue.pas
+ M TestResults/WO-20260904-003/screenshots/sharecard_yahei.png
+ M TestResults/WO-20260905-001/screenshots/card_ckHero_button_blend.png
+ M TestResults/WO-20260905-001/screenshots/card_ckOutline_button_blend.png
+ M TestResults/WO-20260905-001/screenshots/card_ckSunken_button_blend.png
+ M TestResults/WO-20260905-001/screenshots/card_ckSurface_button_blend.png
+ M TestResults/WO-20260905-003/gate1-coldstart-timings.csv
+ M TestResults/WO-20260905-003/gate2-scroll-timings.csv
+ M TestResults/WO-20260905-003/gate3-theme-timings.csv
+ M TestResults/WO-20260905-003/gate4-dpi-timings.csv
+ M TestResults/WO-20260905-003/gate5-resize-timings.csv
+ M TestResults/WO-20260905-003/gate7-touchpoint-timings.csv
+ M Tests/DeepBaseTests.dpr
+ M Tests/Test.DeepBase.Browser.Selectors.pas
+ M Tests/Test.DeepBase.CloudBackup.pas
+ M Tests/Test.DeepBase.CloudSync.pas
+ M Tests/Test.DeepBase.Crypto.pas
+ M Tests/Test.DeepBase.FMX.HB.Lifecycle.pas
+ M Tests/Test.DeepBase.HB.Benchmark.pas
+ M Tests/Test.DeepBase.HB.Font.pas
+ M Tests/Test.DeepBase.HB.Lifecycle.pas
+ M Tests/Test.DeepBase.HB.Persistence.pas
+ M Tests/Test.DeepBase.HB.Suite.pas
+ M Tests/Test.DeepBase.HB.Touchpoint.pas
+ M Tests/Test.DeepBase.ManagedWorker.pas
+ M Tests/Test.DeepBase.Manifest.Verifier.pas
+ M Tests/Test.DeepBase.Reflection.pas
+ M Tests/Test.DeepBase.Resilience.pas
+ M Tests/Test.DeepBase.Updater.pas
+ M VCL/DeepBase.VCL.HB.Cards.pas
+ M VCL/DeepBase.VCL.HB.Choice.Demo.pas
+ M VCL/DeepBase.VCL.HB.Choice.pas
+ M VCL/DeepBase.VCL.HB.CommandPalette.pas
+ M VCL/DeepBase.VCL.HB.Controls.pas
+ M VCL/DeepBase.VCL.HB.Gate.pas
+ M VCL/DeepBase.VCL.HB.Glass.pas
+ M VCL/DeepBase.VCL.HB.PageControl.pas
+ M VCL/DeepBase.VCL.HB.ShareCard.pas
+ M VCL/DeepBase.VCL.HB.Status.pas
+ M VCL/DeepBase.VCL.HB.Terminal.pas
+ M VCL/DeepBase.VCL.HB.Text.pas
+ M VCL/DeepBase.VCL.HB.Theme.pas
+ M VCL/DeepBase.VCL.HB.VirtualList.pas
+ M VCL/DeepBase.VCL.HB.Waterfall.pas
+ M VCL/DeepBase.VCL.LLMChatFrame.pas
+ M "docs/28.ui.HB\350\247\206\350\247\211\345\237\272\347\241\200\350\256\276\346\226\275-\344\270\213\346\270\270\350\275\257\344\273\266\351\233\206\346\210\220\347\273\237\344\270\200\346\214\207\345\215\227.md"
+ M docs/29.ui-runtime.md
+ M "docs/29.ui.HB\350\247\206\350\247\211\345\237\272\347\241\200\350\256\276\346\226\275-\346\200\273\350\256\276\350\256\241\344\270\216\345\216\237\347\224\237\346\241\214\351\235\242\345\205\250\346\231\257\346\236\266\346\236\204\344\271\246.md"
+ M docs/30.touchpoint.md
+ M docs/31.hb-test.md
+ M docs/README.md
+ M docs/ui/00-Index.md
+ M docs/ui/DeepBase-HB-AI-Choice-Interaction-Standard.md
+?? .superpowers/
+?? .tmp_bug_audit.py
+?? .workbuddy/
+?? "09_\345\267\245\347\250\213\350\204\232\346\234\254/managed-copy-gate/"
+?? "CodeReview/20260919-AUDIT-\347\224\262-R3-\344\272\244\344\273\230\345\233\236\346\211\247.md"
+?? "CodeReview/_audit_recheck/20260919-\345\267\245\344\275\234\345\214\272\345\206\273\347\273\223\345\277\253\347\205\247/"
+?? "CodeReview/_audit_recheck/\344\271\231-R2-E8-frame-uaf-regression.txt"
+?? Scripts/__pycache__/
+?? TestResults/WO-20260905-002/UnitTestResults.xml
+?? TestResults/WO-20260905-002/fullbench/
+?? TestResults/WO-20260905-002/gate1-coldstart-timings.csv
+?? TestResults/WO-20260905-002/gate2-scroll-timings.csv
+?? TestResults/WO-20260905-002/gate3-theme-timings.csv
+?? TestResults/WO-20260905-002/gate4-dpi-timings.csv
+?? TestResults/WO-20260905-002/gate4-screens/
+?? TestResults/WO-20260905-002/gate45/
+?? TestResults/WO-20260905-002/gate45b/
+?? TestResults/WO-20260905-002/gate5-resize-timings.csv
+?? TestResults/WO-20260905-002/gate7-touchpoint-timings.csv
+?? TestResults/WO-20260905-002/probe_stderr.txt
+?? TestResults/WO-20260905-002/probe_stdout.txt
+?? TestResults/WO-20260905-002/taskB-full/
+?? TestResults/WO-20260905-002/taskB-gate6-wcag/
+?? TestResults/WO-20260905-003/gate5-baseline380-console.txt
+?? TestResults/WO-20260905-003/gate5-db-console.txt
+?? TestResults/WO-20260905-003/gate5-final-console.txt
+?? TestResults/WO-20260905-003/gate5-head-console.txt
+?? TestResults/WO-20260905-003/gate5-min3-console.txt
+?? TestResults/WO-20260905-003/gate5-min3-verify2-console.txt
+?? TestResults/WO-20260905-003/gate5-paintto-console.txt
+?? TestResults/WO-20260905-003/gate5-postfix-console.txt
+?? TestResults/WO-20260905-003/gate5-reverify-console.txt
+?? TestResults/WO-20260905-003/gate5-reverify/
+?? TestResults/WO-20260905-003/gate5-reverify2-console.txt
+?? TestResults/WO-20260905-003/gate5-reverify2/
+?? TestResults/WO-20260905-003/gate5-scr-console.txt
+?? TestResults/WO-20260905-003/gate5-split-console.txt
+?? TestResults/WO-20260905-003/gate5-split-console2.txt
+?? TestResults/WO-20260914-EHAI-001/
+?? Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+?? Tests/Test.DeepBase.IntentClarification.LLMResilience.pas
+?? Tests/Test.DeepBase.Speech.ASR.SenseVoice.pas
+?? docs/AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md
+?? docs/DeepBase-AI-Cost-Optimization-and-Template-Tiering-Standard.md
+?? docs/DeepBase-AI-Delivery-Principles-v1.md
+?? docs/DeepBase-AI-Human-Cognition-Philosophy-v1.md
+?? docs/DeepBase-AI-Human-Intervention-Principles-v1.md
+?? docs/DeepBase-AI-Human-Judgment-Memory.md
+?? docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md
+?? docs/DeepBase-General-AI-Interaction-Protocol-v1.md
+?? docs/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+?? docs/DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md
+?? docs/DeepBase-Product-Realization-Boundary-v1-r2.md
+?? docs/DeepBase-Product-Realization-Boundary-v1.md
+?? docs/EHAI-Language-Common-Layer-Overview.md
+?? docs/EHAI-Language-Neutral-Realization-Contract-v0.md
+?? docs/EHAI-Realization-001-HB-AsWish-CandidateFirst-0-9-HumanOverride-AsIs.md
+?? "docs/EHAI.00-\346\200\273\347\272\262\344\270\216\350\247\204\350\214\203\347\264\242\345\274\225.md"
+?? "docs/EHAI.00-\346\200\273\350\247\210\344\270\216\346\216\250\345\257\274\346\200\273\347\272\262.md"
+?? "docs/EHAI.03.L3-\344\272\272\347\261\273\344\273\213\345\205\245\345\216\237\345\210\231.md"
+?? "docs/EHAI.04.L4-\351\200\232\347\224\250\344\272\244\344\272\222\345\215\217\350\256\256.md"
+?? "docs/EHAI.05.D1-\350\241\250\350\277\260\351\200\202\351\205\215.md"
+?? "docs/EHAI.05.L5-\346\236\201\347\256\200\344\272\272\347\261\273\344\272\244\344\272\222\351\200\202\351\205\215.md"
+?? "docs/EHAI.06.L6-\346\234\272\345\231\250\350\257\255\344\271\211\344\270\216\344\273\213\345\205\245.md"
+?? "docs/EHAI.07.L7-\345\205\267\344\275\223\345\256\236\347\216\260\350\276\271\347\225\214.md"
+?? "docs/EHAI.08.L8-\347\216\260\345\256\236\346\225\210\345\272\224\344\270\216\347\273\217\351\252\214\351\227\255\347\216\257.md"
+?? "docs/WO-20260829-0230-\345\274\200\345\217\221\347\224\262-VCL-HB-\350\247\206\350\247\211\345\261\202\345\205\250\351\235\242\344\277\256\345\244\215\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-003-\345\256\241\346\240\270-\344\272\244\344\273\230\351\252\214\346\224\266\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-003-\345\274\200\345\217\221\347\224\262-HB\350\247\206\350\247\211\347\263\273\347\273\237\347\274\272\345\244\261\347\273\204\344\273\266\350\241\245\351\275\220\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-004-\345\256\241\346\240\270-\346\234\200\347\273\210\350\243\201\345\206\263.md"
+?? "docs/WO-20260830-004-\345\274\200\345\217\221\347\224\262-HB\345\256\241\350\256\241\346\226\207\346\241\243\346\225\264\347\220\206\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-005-\345\256\241\346\240\270-\346\234\200\347\273\210\350\243\201\345\206\263.md"
+?? "docs/WO-20260830-005-\345\274\200\345\217\221\347\224\262-HB-0-9\351\200\211\346\213\251\346\216\247\344\273\266\344\270\216\345\265\214\345\245\227\347\200\221\345\270\203\344\270\216\344\277\241\346\201\257\347\262\222\345\272\246\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-005-\345\274\200\345\217\221\347\224\262-HB-0-9\351\200\211\346\213\251\346\216\247\344\273\266\344\270\216\345\265\214\345\245\227\347\200\221\345\270\203\344\270\216\344\277\241\346\201\257\347\262\222\345\272\246\345\267\245\345\215\225.md"
+?? "docs/WO-20260830-005-\345\274\200\345\217\221\347\224\262-HB\345\256\241\350\256\241\347\273\237\350\256\241\345\217\243\345\276\204\347\272\240\345\201\217\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-HB-\344\272\244\344\273\230\346\212\245\345\221\212\347\272\240\345\201\217-\345\256\241\346\240\270-\346\234\200\347\273\210\350\243\201\345\206\263.md"
+?? "docs/WO-20260830-HB-\344\272\244\344\273\230\346\212\245\345\221\212\347\272\240\345\201\217-\345\274\200\345\217\221\347\224\262-\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-\345\256\241\346\240\270-\344\272\244\344\273\230\351\252\214\346\224\266-\346\234\200\347\273\210\350\243\201\345\206\263.md"
+?? "docs/WO-20260830-\346\226\207\346\241\243\346\225\264\347\220\206-\345\274\200\345\217\221\347\224\262-\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-\346\234\200\347\273\210\351\252\214\350\257\201-\345\274\200\345\217\221\347\224\262-\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? "docs/WO-20260830-\350\241\245\344\277\256-\345\274\200\345\217\221\347\224\262-\344\272\244\344\273\230\346\212\245\345\221\212.md"
+?? docs/backup_20260909_l1_l7/
+?? "docs/brief-WO-20260905-003-\345\274\200\345\217\221\347\224\262.md"
+?? "docs/brief-WO-20260905-004-\345\274\200\345\217\221\347\224\262.md"
+?? "docs/brief-WO-20260905-005-\345\274\200\345\217\221\347\224\262.md"
+?? docs/evidence-dcc64-hb-005-34units.txt
+?? docs/evidence-dcc64-hb-32units.txt
+?? docs/ui/DeepBase-HB-AI-Delivery-Four-Self-Inspection-Standard.md
+?? docs/ui/DeepBase-HB-AI-Preference-Learning-Interaction-Standard.md
+?? "docs/\350\247\204\350\214\203\345\216\206\345\217\262\347\211\210\346\234\254\344\270\216\345\257\271\346\257\224\345\272\223/"
