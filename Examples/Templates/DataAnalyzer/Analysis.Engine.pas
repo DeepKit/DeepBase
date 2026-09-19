@@ -1,4 +1,4 @@
-unit Analysis.Engine;
+﻿unit Analysis.Engine;
 
 {*******************************************************************************
   Data Analyzer Template - Analysis Engine

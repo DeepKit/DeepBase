@@ -1,4 +1,4 @@
-// AI-GENERATED
+﻿// AI-GENERATED
 unit Test.DeepBase.Governance.ConfigRegistrar;
 
 interface

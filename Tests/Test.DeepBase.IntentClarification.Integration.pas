@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.IntentClarification.Integration - Integration Test Skeleton
 
   DUnitX test class that verifies the full IntentClarification module

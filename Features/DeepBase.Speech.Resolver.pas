@@ -1,4 +1,4 @@
-unit DeepBase.Speech.Resolver;
+﻿unit DeepBase.Speech.Resolver;
 
 { ============================================================================
   DeepBase.Speech.Resolver — Unified ASR/TTS Resolver with three-tier fallback.

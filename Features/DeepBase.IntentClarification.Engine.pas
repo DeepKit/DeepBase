@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Engine - Core Clarification Engine
 
   Implements IClarificationEngine: manages session lifecycle, turn cycle,

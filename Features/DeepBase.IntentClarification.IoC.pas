@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.IoC - IoC Container Integration
 
   Registers all IntentClarification components into the DeepBase IoC container.

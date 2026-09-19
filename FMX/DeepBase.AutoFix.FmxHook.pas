@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.FmxHook
 
   L1 capture for FMX apps: hooks Application.OnException so main-thread

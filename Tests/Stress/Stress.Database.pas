@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.Database - Database Stress Tests
   
   Tests database connection pool and concurrent operations:

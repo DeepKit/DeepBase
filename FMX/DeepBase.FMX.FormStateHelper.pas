@@ -1,8 +1,8 @@
-{ ============================================================================
-  DeepBase.FMX.FormStateHelper - FMX 窗体状态助手组�?
+﻿{ ============================================================================
+  DeepBase.FMX.FormStateHelper - FMX 绐椾綋鐘舵€佸姪鎵嬬粍浠?
   
   版本: 1.0
-  说明: 拖放�?FMX 窗体上即可自动保�?恢复窗体状�?
+  璇存槑: 鎷栨斁鍒?FMX 绐椾綋涓婂嵆鍙嚜鍔ㄤ繚瀛?鎭㈠绐椾綋鐘舵€?
   功能:
     - 自动保存窗体位置、大小、WindowState
     - 自动恢复时检查显示器边界
@@ -38,18 +38,18 @@ type
   TFMXRestoreExtraEvent = procedure(Sender: TObject; const ExtraData: string) of object;
 
   /// <summary>
-  /// FMX 窗体状态助手组�?
+  /// FMX 绐椾綋鐘舵€佸姪鎵嬬粍浠?
   /// </summary>
   TFMXFormStateHelper = class(TFmxObject)
   private
     FAutoSave: Boolean;
     FAutoRestore: Boolean;
     FForm: TCommonCustomForm;
-    FFormName: string;  // 可自定义，默认使�?Form.Name
+    FFormName: string;  // 鍙嚜瀹氫箟锛岄粯璁や娇鐢?Form.Name
     FOnSaveExtra: TFMXSaveExtraEvent;
     FOnRestoreExtra: TFMXRestoreExtraEvent;
     
-    // 保存原始事件处理器（链式调用�?
+    // 淇濆瓨鍘熷浜嬩欢澶勭悊鍣紙閾惧紡璋冪敤锛?
     FOldOnShow: TNotifyEvent;
     FOldOnClose: TCloseEvent;
     
@@ -75,38 +75,38 @@ type
     destructor Destroy; override;
     
     /// <summary>
-    /// 手动保存状�?
+    /// 鎵嬪姩淇濆瓨鐘舵€?
     /// </summary>
     procedure SaveState;
     
     /// <summary>
-    /// 手动恢复状�?
+    /// 鎵嬪姩鎭㈠鐘舵€?
     /// </summary>
     procedure RestoreState;
     
     /// <summary>
-    /// 检查是否有已保存的状�?
+    /// 妫€鏌ユ槸鍚︽湁宸蹭繚瀛樼殑鐘舵€?
     /// </summary>
     function HasSavedState: Boolean;
     
     /// <summary>
-    /// 删除已保存的状�?
+    /// 鍒犻櫎宸蹭繚瀛樼殑鐘舵€?
     /// </summary>
     procedure DeleteSavedState;
     
   published
     /// <summary>
-    /// 窗体关闭时自动保存状�?
+    /// 绐椾綋鍏抽棴鏃惰嚜鍔ㄤ繚瀛樼姸鎬?
     /// </summary>
     property AutoSave: Boolean read FAutoSave write FAutoSave default True;
     
     /// <summary>
-    /// 窗体显示时自动恢复状�?
+    /// 绐椾綋鏄剧ず鏃惰嚜鍔ㄦ仮澶嶇姸鎬?
     /// </summary>
     property AutoRestore: Boolean read FAutoRestore write FAutoRestore default True;
     
     /// <summary>
-    /// 自定义窗体名（留空则使用 Form.Name�?
+    /// 鑷畾涔夌獥浣撳悕锛堢暀绌哄垯浣跨敤 Form.Name锛?
     /// </summary>
     property FormName: string read FFormName write FFormName;
     
@@ -133,7 +133,7 @@ begin
   FStateRestored := False;
   FStateSaved := False;
   
-  // 尝试获取父窗�?
+  // 灏濊瘯鑾峰彇鐖剁獥浣?
   if AOwner is TCommonCustomForm then
     FForm := TCommonCustomForm(AOwner);
 end;
@@ -146,7 +146,7 @@ begin
     try
       SaveState;
     except
-      // 忽略销毁时的错�?
+      // 蹇界暐閿€姣佹椂鐨勯敊璇?
     end;
   end;
   
@@ -200,11 +200,11 @@ procedure TFMXFormStateHelper.HookFormEvents;
 begin
   if FForm = nil then Exit;
   
-  // 保存并替�?OnShow
+  // 淇濆瓨骞舵浛鎹?OnShow
   FOldOnShow := FForm.OnShow;
   FForm.OnShow := InternalOnShow;
   
-  // 保存并替�?OnClose
+  // 淇濆瓨骞舵浛鎹?OnClose
   FOldOnClose := FForm.OnClose;
   FForm.OnClose := InternalOnClose;
 end;
@@ -223,7 +223,7 @@ end;
 
 procedure TFMXFormStateHelper.InternalOnShow(Sender: TObject);
 begin
-  // 先恢复状态（如果尚未恢复�?
+  // 鍏堟仮澶嶇姸鎬侊紙濡傛灉灏氭湭鎭㈠锛?
   if FAutoRestore and (not FStateRestored) then
   begin
     RestoreState;
@@ -237,7 +237,7 @@ end;
 
 procedure TFMXFormStateHelper.InternalOnClose(Sender: TObject; var Action: TCloseAction);
 begin
-  // 保存状�?
+  // 淇濆瓨鐘舵€?
   if FAutoSave and (not FStateSaved) then
   begin
     SaveState;
@@ -253,7 +253,7 @@ function TFMXFormStateHelper.GetScreenWorkArea: TRectF;
 var
   ScreenSvc: IFMXScreenService;
 begin
-  Result := TRectF.Create(0, 0, 1920, 1080); // 默认�?
+  Result := TRectF.Create(0, 0, 1920, 1080); // 榛樿鍊?
   
   if TPlatformServices.Current.SupportsPlatformService(IFMXScreenService, ScreenSvc) then
     Result := TRectF.Create(0, 0, ScreenSvc.GetScreenSize.X, ScreenSvc.GetScreenSize.Y);
@@ -270,7 +270,7 @@ begin
   // 检查窗体是否在工作区内
   if not WorkArea.IntersectsWith(FormRect) then
   begin
-    // 窗体完全在工作区外，移到工作区中�?
+    // 绐椾綋瀹屽叏鍦ㄥ伐浣滃尯澶栵紝绉诲埌宸ヤ綔鍖轰腑蹇?
     if Data.Width > WorkArea.Width then
       Data.Width := Round(WorkArea.Width - 20);
     if Data.Height > WorkArea.Height then

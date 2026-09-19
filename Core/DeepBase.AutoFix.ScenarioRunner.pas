@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.ScenarioRunner
 
   Executes registered scenarios in AutoFix mode and writes incremental

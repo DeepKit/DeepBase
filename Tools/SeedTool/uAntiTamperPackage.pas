@@ -1,30 +1,30 @@
-unit uAntiTamperPackage;
+﻿unit uAntiTamperPackage;
 
 {
-  防篡改机制打包模�?
+  闃茬鏀规満鍒舵墦鍖呮ā鍧?
   
-  功能�?
-  1. 图像数据加密/解密
-  2. SHA-256完整性校�?
-  3. 篡改检测和安全响应
-  4. 数据库表结构管理
+  鍔熻兘锛?
+  1. 鍥惧儚鏁版嵁鍔犲瘑/瑙ｅ瘑
+  2. SHA-256瀹屾暣鎬ф牎楠?
+  3. 绡℃敼妫€娴嬪拰瀹夊叏鍝嶅簲
+  4. 鏁版嵁搴撹〃缁撴瀯绠＄悊
   
-  使用方法�?
-  1. 在项目中引用此单�?
-  2. 调用 TAntiTamperPackage.SetupDatabase() 初始化数据库
-  3. 使用 TAntiTamperPackage.SaveSecureImage() 保存加密图像
-  4. 使用 TAntiTamperPackage.LoadSecureImage() 加载并校验图�?
+  浣跨敤鏂规硶锛?
+  1. 鍦ㄩ」鐩腑寮曠敤姝ゅ崟鍏?
+  2. 璋冪敤 TAntiTamperPackage.SetupDatabase() 鍒濆鍖栨暟鎹簱
+  3. 浣跨敤 TAntiTamperPackage.SaveSecureImage() 淇濆瓨鍔犲瘑鍥惧儚
+  4. 浣跨敤 TAntiTamperPackage.LoadSecureImage() 鍔犺浇骞舵牎楠屽浘鍍?
   
-  依赖�?
-  - FireDAC组件
-  - System.Hash单元
+  渚濊禆锛?
+  - FireDAC缁勪欢
+  - System.Hash鍗曞厓
   
-  编译指令�?
-  - 在Release配置中定义RELEASE符号以禁用详细日�?
+  缂栬瘧鎸囦护锛?
+  - 鍦≧elease閰嶇疆涓畾涔塕ELEASE绗﹀彿浠ョ鐢ㄨ缁嗘棩蹇?
 }
 
 {$IFDEF RELEASE}
-  {$DEFINE NO_DEBUG_LOG}  // 生产环境禁用详细日志
+  {$DEFINE NO_DEBUG_LOG}  // 鐢熶骇鐜绂佺敤璇︾粏鏃ュ織
 {$ENDIF}
 
 interface
@@ -36,76 +36,76 @@ uses
   DeepBase.Exceptions;
 
 type
-  // 加密算法类型
+  // 鍔犲瘑绠楁硶绫诲瀷
   TEncryptionType = (etXOR, etAES256);
   
-  // 安全配置
+  // 瀹夊叏閰嶇疆
   TAntiTamperConfig = record
-    EncryptionKey: string;        // 加密密钥
-    DownloadURL: string;          // 官网下载地址
-    TableName: string;            // 数据库表�?
-    EnableLogging: Boolean;       // 是否启用日志
-    LogFileName: string;          // 日志文件�?
-    EncryptionType: TEncryptionType; // 加密算法类型
-    // KDF �?HMAC 设置
-    Salt: string;                 // KDF�?
-    KdfIterations: Integer;       // KDF迭代次数
-    EnableHMAC: Boolean;          // 是否启用HMAC完整性签�?
+    EncryptionKey: string;        // 鍔犲瘑瀵嗛挜
+    DownloadURL: string;          // 瀹樼綉涓嬭浇鍦板潃
+    TableName: string;            // 鏁版嵁搴撹〃鍚?
+    EnableLogging: Boolean;       // 鏄惁鍚敤鏃ュ織
+    LogFileName: string;          // 鏃ュ織鏂囦欢鍚?
+    EncryptionType: TEncryptionType; // 鍔犲瘑绠楁硶绫诲瀷
+    // KDF 涓?HMAC 璁剧疆
+    Salt: string;                 // KDF鐩?
+    KdfIterations: Integer;       // KDF杩唬娆℃暟
+    EnableHMAC: Boolean;          // 鏄惁鍚敤HMAC瀹屾暣鎬х鍚?
   end;
 
  
 
-  // 防篡改包主类
+  // 闃茬鏀瑰寘涓荤被
   TAntiTamperPackage = class
   private
     class var FConfig: TAntiTamperConfig;
     class var FInitialized: Boolean;
     
-    // 内部方法
+    // 鍐呴儴鏂规硶
     class function SimpleXOREncrypt(const Data: TBytes; const Key: string): TBytes;
     class function SimpleXORDecrypt(const Data: TBytes; const Key: string): TBytes;
     class procedure WriteLog(const AMessage: string);
-    class function DeriveKeyBytes: TBytes; // 基于EncryptionKey+Salt的迭代哈�?
-    class function GetEffectiveKeyString: string; // 供对称加解密使用的派生密钥（hex�?
-    class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC签名
+    class function DeriveKeyBytes: TBytes; // 鍩轰簬EncryptionKey+Salt鐨勮凯浠ｅ搱甯?
+    class function GetEffectiveKeyString: string; // 渚涘绉板姞瑙ｅ瘑浣跨敤鐨勬淳鐢熷瘑閽ワ紙hex锛?
+    class function ComputeHMACSHA256(const Data: TBytes): string; // HMAC绛惧悕
     
   public
-    // 初始化配�?
+    // 鍒濆鍖栭厤缃?
     class procedure Initialize(const AConfig: TAntiTamperConfig);
     
-    // 数据库表结构管理
+    // 鏁版嵁搴撹〃缁撴瀯绠＄悊
     class function SetupDatabase(AConnection: TFDConnection): Boolean;
     class function UpgradeDatabase(AConnection: TFDConnection): Boolean;
     class procedure ClearTable(AConnection: TFDConnection);
     class procedure ReseedMinimal(AConnection: TFDConnection);
     
-    // 哈希计算
+    // 鍝堝笇璁＄畻
     class function CalculateMD5(const Data: TBytes): string; deprecated 'Use CalculateSHA256 instead';
     class function CalculateSHA256(const Data: TBytes): string;
     
-    // 加密解密
+    // 鍔犲瘑瑙ｅ瘑
     class function EncryptImageData(const ImageData: TBytes): TBytes;
     class function DecryptImageData(const EncryptedData: TBytes): TBytes;
     
-    // 完整性校�?
+    // 瀹屾暣鎬ф牎楠?
     class function VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
     
-    // 安全图像操作
+    // 瀹夊叏鍥惧儚鎿嶄綔
     class function SaveSecureImage(AConnection: TFDConnection; const AImageKey: string; 
       const AImageData: TBytes; const AAddressText: string = ''; const ADescription: string = ''): Boolean;
     class function LoadSecureImage(ATable: TFDTable; const AImageKey: string; 
       AImage: TImage; out AAddressText: string): Boolean;
     
-    // 安全响应
+    // 瀹夊叏鍝嶅簲
     class procedure HandleSecurityViolation(const ImageKey: string; const Reason: string);
     
-    // 工具方法
+    // 宸ュ叿鏂规硶
     class function GetDefaultConfig: TAntiTamperConfig;
   end;
 
 implementation
 
-// 默认配置
+// 榛樿閰嶇疆
 class function TAntiTamperPackage.GetDefaultConfig: TAntiTamperConfig;
 begin
   Result.EncryptionKey := 'Default_AntiTamper_Key_2025';
@@ -113,8 +113,8 @@ begin
   Result.TableName := 'aboutMeImages';
   Result.EnableLogging := True;
   Result.LogFileName := 'antitamper_debug.log';
-  Result.EncryptionType := etAES256; // 默认使用AES-256
-  // KDF/HMAC 默认�?
+  Result.EncryptionType := etAES256; // 榛樿浣跨敤AES-256
+  // KDF/HMAC 榛樿鍊?
   Result.Salt := 'DeepMoveC_Default_Salt_2025';
   Result.KdfIterations := 5000;
   Result.EnableHMAC := True;
@@ -124,7 +124,7 @@ class procedure TAntiTamperPackage.Initialize(const AConfig: TAntiTamperConfig);
 begin
   FConfig := AConfig;
   FInitialized := True;
-    WriteLog('防篡改包初始化完成');
+    WriteLog('闃茬鏀瑰寘鍒濆鍖栧畬鎴�');
 end;
 
 class procedure TAntiTamperPackage.WriteLog(const AMessage: string);
@@ -169,7 +169,7 @@ end;
 
 class function TAntiTamperPackage.SimpleXORDecrypt(const Data: TBytes; const Key: string): TBytes;
 begin
-  // XOR加密是对称的，解密和加密使用相同算法
+  // XOR鍔犲瘑鏄绉扮殑锛岃В瀵嗗拰鍔犲瘑浣跨敤鐩稿悓绠楁硶
   Result := SimpleXOREncrypt(Data, Key);
 end;
 
@@ -191,7 +191,7 @@ begin
   Result := Hash.HashAsString;
 end;
 
-// 基于 SHA-256 的简单迭代KDF，输�?2字节
+// 鍩轰簬 SHA-256 鐨勭畝鍗曡凯浠DF锛岃緭鍑?2瀛楄妭
 class function TAntiTamperPackage.DeriveKeyBytes: TBytes;
   function HexToBytes(const Hex: string): TBytes;
   var
@@ -207,17 +207,17 @@ var
   AccHex: string;
   SeedStr: string;
 begin
-  // 种子采用UTF-8字符串参与哈�?
+  // 绉嶅瓙閲囩敤UTF-8瀛楃涓插弬涓庡搱甯?
   SeedStr := FConfig.EncryptionKey + '|' + FConfig.Salt;
-  AccHex := THashSHA2.GetHashString(SeedStr); // 64位十六进制字符串
+  AccHex := THashSHA2.GetHashString(SeedStr); // 64浣嶅崄鍏繘鍒跺瓧绗︿覆
   Iterations := FConfig.KdfIterations;
   if Iterations < 2 then Iterations := 2;
   for I := 2 to Iterations do
     AccHex := THashSHA2.GetHashString(AccHex);
-  Result := HexToBytes(AccHex); // 32字节
+  Result := HexToBytes(AccHex); // 32瀛楄妭
 end;
 
-// 将派生密钥转为HEX字符串，作为对称口令
+// 灏嗘淳鐢熷瘑閽ヨ浆涓篐EX瀛楃涓诧紝浣滀负瀵圭О鍙ｄ护
 class function TAntiTamperPackage.GetEffectiveKeyString: string;
   function BytesToHex(const B: TBytes): string;
   const
@@ -235,18 +235,18 @@ class function TAntiTamperPackage.GetEffectiveKeyString: string;
     Result := string.Create(S);
   end;
 begin
-  // 返回十六进制口令字符�?
+  // 杩斿洖鍗佸叚杩涘埗鍙ｄ护瀛楃涓?
   Result := BytesToHex(DeriveKeyBytes);
 end;
 
-// 计算 HMAC-SHA256 并返回HEX
-// 注意：这里实际计算的�?HMAC(SHA256(Data), Key)，而非标准 HMAC(Data, Key)
-// 但只要播种和验证使用相同逻辑，防篡改仍然有效
+// 璁＄畻 HMAC-SHA256 骞惰繑鍥濰EX
+// 娉ㄦ剰锛氳繖閲屽疄闄呰绠楃殑鏄?HMAC(SHA256(Data), Key)锛岃€岄潪鏍囧噯 HMAC(Data, Key)
+// 浣嗗彧瑕佹挱绉嶅拰楠岃瘉浣跨敤鐩稿悓閫昏緫锛岄槻绡℃敼浠嶇劧鏈夋晥
 class function TAntiTamperPackage.ComputeHMACSHA256(const Data: TBytes): string;
 var
   DataDigest, KeyHex: string;
 begin
-  // 先计�?Data �?SHA-256 摘要，再计算�?HMAC
+  // 鍏堣绠?Data 鐨?SHA-256 鎽樿锛屽啀璁＄畻鍏?HMAC
   DataDigest := THash.DigestAsString(Data);
   KeyHex := GetEffectiveKeyString;
   Result := THashSHA2.GetHMAC(DataDigest, KeyHex);
@@ -255,55 +255,55 @@ end;
 class function TAntiTamperPackage.EncryptImageData(const ImageData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise EAntiTamperException.Create('防篡改包未初始化');
+    raise EAntiTamperException.Create('闃茬鏀瑰寘鏈垵濮嬪寲');
   
-  // 根据配置选择加密算法
+  // 鏍规嵁閰嶇疆閫夋嫨鍔犲瘑绠楁硶
   case FConfig.EncryptionType of
     etXOR:
       Result := SimpleXOREncrypt(ImageData, FConfig.EncryptionKey);
     etAES256:
       Result := TBasicProtection.EncryptBinaryData(ImageData, GetEffectiveKeyString);
   else
-      raise EAntiTamperException.Create('未知的加密类型');
+      raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨�');
   end;
   
   if FConfig.EncryptionType = etAES256 then
-      WriteLog(Format('使用AES-256加密，数据长度: %d bytes', [Length(Result)]))
+      WriteLog(Format('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]))
   else
-      WriteLog(Format('使用XOR加密，数据长度: %d bytes', [Length(Result)]));
+      WriteLog(Format('浣跨敤XOR鍔犲瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
 begin
   if not FInitialized then
-    raise EAntiTamperException.Create('防篡改包未初始化');
+    raise EAntiTamperException.Create('闃茬鏀瑰寘鏈垵濮嬪寲');
   
-  // 根据配置选择解密算法
+  // 鏍规嵁閰嶇疆閫夋嫨瑙ｅ瘑绠楁硶
   case FConfig.EncryptionType of
     etXOR:
       Result := SimpleXORDecrypt(EncryptedData, FConfig.EncryptionKey);
     etAES256:
       Result := TBasicProtection.DecryptBinaryData(EncryptedData, GetEffectiveKeyString);
   else
-      raise EAntiTamperException.Create('未知的加密类型');
+      raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨�');
   end;
   
   if FConfig.EncryptionType = etAES256 then
-      WriteLog(Format('使用AES-256解密，数据长度: %d bytes', [Length(Result)]))
+      WriteLog(Format('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]))
   else
-      WriteLog(Format('使用XOR解密，数据长度: %d bytes', [Length(Result)]));
+      WriteLog(Format('浣跨敤XOR瑙ｅ瘑锛屾暟鎹暱搴�: %d bytes', [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
 var
   ActualHash: string;
 begin
-  // 使用SHA-256进行完整性校�?
+  // 浣跨敤SHA-256杩涜瀹屾暣鎬ф牎楠?
   ActualHash := CalculateSHA256(DecryptedData);
   Result := SameText(ActualHash, ExpectedHash);
   
   if not Result then
-    WriteLog(Format('SHA-256校验失败: 期望=%s, 实际=%s', [ExpectedHash, ActualHash]));
+    WriteLog(Format('SHA-256鏍￠獙澶辫触: 鏈熸湜=%s, 瀹為檯=%s', [ExpectedHash, ActualHash]));
 end;
 
 class function TAntiTamperPackage.SetupDatabase(AConnection: TFDConnection): Boolean;
@@ -317,7 +317,7 @@ begin
     try
       Query.Connection := AConnection;
       
-      // 检查表是否存在
+      // 妫€鏌ヨ〃鏄惁瀛樺湪
       Query.SQL.Text := 'SELECT name FROM sqlite_master WHERE type=''table'' AND name=''' + FConfig.TableName + '''';
       Query.Open;
       TableExists := not Query.IsEmpty;
@@ -325,7 +325,7 @@ begin
       
       if not TableExists then
       begin
-        // 创建新表结构（包含所有字段）
+        // 鍒涘缓鏂拌〃缁撴瀯锛堝寘鍚墍鏈夊瓧娈碉級
         Query.SQL.Text :=
           'CREATE TABLE ' + FConfig.TableName + ' (' +
           '  id INTEGER PRIMARY KEY AUTOINCREMENT,' +
@@ -341,15 +341,15 @@ begin
           '  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP' +
           ')';
         Query.ExecSQL;
-        WriteLog('防篡改数据表创建成功');
+        WriteLog('闃茬鏀规暟鎹〃鍒涘缓鎴愬姛');
       end
       else
       begin
-        // 表已存在，升级表结构
-        WriteLog('防篡改数据表已存在，检查并升级字段');
+        // 琛ㄥ凡瀛樺湪锛屽崌绾ц〃缁撴瀯
+        WriteLog('闃茬鏀规暟鎹〃宸插瓨鍦紝妫€鏌ュ苟鍗囩骇瀛楁');
         if not UpgradeDatabase(AConnection) then
         begin
-            WriteLog('升级数据表失败');
+            WriteLog('鍗囩骇鏁版嵁琛ㄥけ璐�');
           Exit;
         end;
       end;
@@ -362,7 +362,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLog('设置防篡改数据表失败: ' + E.Message);
+      WriteLog('璁剧疆闃茬鏀规暟鎹〃澶辫触: ' + E.Message);
       Result := False;
     end;
   end;
@@ -378,37 +378,37 @@ begin
     try
       Query.Connection := AConnection;
       
-      // 为现有表添加sha256_hash字段
+      // 涓虹幇鏈夎〃娣诲姞sha256_hash瀛楁
       try
         Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN sha256_hash TEXT';
         Query.ExecSQL;
-        WriteLog('sha256_hash字段添加成功');
+        WriteLog('sha256_hash瀛楁娣诲姞鎴愬姛');
       except
-          WriteLog('sha256_hash字段可能已存在');
+          WriteLog('sha256_hash瀛楁鍙兘宸插瓨鍦�');
       end;
-      // 为现有表添加hmac_sha256字段
+      // 涓虹幇鏈夎〃娣诲姞hmac_sha256瀛楁
       try
         Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN hmac_sha256 TEXT';
         Query.ExecSQL;
-        WriteLog('hmac_sha256字段添加成功');
+        WriteLog('hmac_sha256瀛楁娣诲姞鎴愬姛');
       except
-          WriteLog('hmac_sha256字段可能已存在');
+          WriteLog('hmac_sha256瀛楁鍙兘宸插瓨鍦�');
       end;
-      // 为现有表添加enabled字段
+      // 涓虹幇鏈夎〃娣诲姞enabled瀛楁
       try
         Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1';
         Query.ExecSQL;
-        WriteLog('enabled字段添加成功');
+        WriteLog('enabled瀛楁娣诲姞鎴愬姛');
       except
-          WriteLog('enabled字段可能已存在');
+          WriteLog('enabled瀛楁鍙兘宸插瓨鍦�');
       end;
-      // 为现有表添加md5_hash字段（兼容旧实现�?
+      // 涓虹幇鏈夎〃娣诲姞md5_hash瀛楁锛堝吋瀹规棫瀹炵幇锛?
       try
         Query.SQL.Text := 'ALTER TABLE ' + FConfig.TableName + ' ADD COLUMN md5_hash TEXT';
         Query.ExecSQL;
-        WriteLog('md5_hash字段添加成功');
+        WriteLog('md5_hash瀛楁娣诲姞鎴愬姛');
       except
-          WriteLog('md5_hash字段可能已存在');
+          WriteLog('md5_hash瀛楁鍙兘宸插瓨鍦�');
       end;
       
       Result := True;
@@ -419,7 +419,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLog('升级数据库失�? ' + E.Message);
+      WriteLog('鍗囩骇鏁版嵁搴撳け璐? ' + E.Message);
       Result := False;
     end;
   end;
@@ -437,22 +437,22 @@ begin
   try
     if Length(AImageData) = 0 then
     begin
-      WriteLog('图像数据为空: ' + AImageKey);
+      WriteLog('鍥惧儚鏁版嵁涓虹┖: ' + AImageKey);
       Exit;
     end;
     
-    // 计算原始图像数据的SHA-256
+    // 璁＄畻鍘熷鍥惧儚鏁版嵁鐨凷HA-256
     Sha256Hex := CalculateSHA256(AImageData);
-    WriteLog(Format('图像 %s 的SHA-256: %s', [AImageKey, Sha256Hex]));
+    WriteLog(Format('鍥惧儚 %s 鐨凷HA-256: %s', [AImageKey, Sha256Hex]));
     
-    // 加密图像数据
+    // 鍔犲瘑鍥惧儚鏁版嵁
     EncryptedData := EncryptImageData(AImageData);
     
     Query := TFDQuery.Create(nil);
     try
       Query.Connection := AConnection;
       
-      // 检查记录是否存�?
+      // 妫€鏌ヨ褰曟槸鍚﹀瓨鍦?
       Query.SQL.Text := 'SELECT COUNT(*) as cnt FROM ' + FConfig.TableName + ' WHERE image_key = :key';
       Query.ParamByName('key').AsString := AImageKey;
       Query.Open;
@@ -461,7 +461,7 @@ begin
       
       if RecordExists then
       begin
-        // 更新现有记录（严格模式：必须包含 sha256_hash �?hmac_sha256，md5_hash 保持兼容�?
+        // 鏇存柊鐜版湁璁板綍锛堜弗鏍兼ā寮忥細蹇呴』鍖呭惈 sha256_hash 涓?hmac_sha256锛宮d5_hash 淇濇寔鍏煎锛?
         Query.SQL.Text :=
           'UPDATE ' + FConfig.TableName + ' SET image_data = :data, address_text = :addr, description = :desc, ' +
           'sha256_hash = :hash, hmac_sha256 = :hmac, md5_hash = :md5, updated_at = CURRENT_TIMESTAMP ' +
@@ -469,7 +469,7 @@ begin
       end
       else
       begin
-        // 插入新记录（严格模式，md5_hash 写入空字符串以兼容旧�?NOT NULL 约束�?
+        // 鎻掑叆鏂拌褰曪紙涓ユ牸妯″紡锛宮d5_hash 鍐欏叆绌哄瓧绗︿覆浠ュ吋瀹规棫琛?NOT NULL 绾︽潫锛?
         Query.SQL.Text :=
           'INSERT INTO ' + FConfig.TableName + ' (image_key, image_data, address_text, description, sha256_hash, hmac_sha256, md5_hash) ' +
           'VALUES (:key, :data, :addr, :desc, :hash, :hmac, :md5)';
@@ -485,13 +485,13 @@ begin
       finally
         Stream.Free;
       end;
-      // 写入HMAC（严格模式：必须�?
+      // 鍐欏叆HMAC锛堜弗鏍兼ā寮忥細蹇呴』锛?
       Query.ParamByName('hmac').AsString := ComputeHMACSHA256(AImageData);
-      // 写入md5_hash（兼容旧表的NOT NULL约束，写入空字符串）
+      // 鍐欏叆md5_hash锛堝吋瀹规棫琛ㄧ殑NOT NULL绾︽潫锛屽啓鍏ョ┖瀛楃涓诧級
       Query.ParamByName('md5').AsString := '';
       Query.ExecSQL;
       
-      WriteLog(Format('安全图像保存成功: %s', [AImageKey]));
+      WriteLog(Format('瀹夊叏鍥惧儚淇濆瓨鎴愬姛: %s', [AImageKey]));
       Result := True;
       
     finally
@@ -500,7 +500,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLog(Format('保存安全图像失败: %s - %s', [AImageKey, E.Message]));
+      WriteLog(Format('淇濆瓨瀹夊叏鍥惧儚澶辫触: %s - %s', [AImageKey, E.Message]));
       Result := False;
     end;
   end;
@@ -520,22 +520,22 @@ begin
   try
     if not Assigned(AImage) then
     begin
-      WriteLog('Image控件未分�? ' + AImageKey);
+      WriteLog('Image鎺т欢鏈垎閰? ' + AImageKey);
       Exit;
     end;
     
     if not ATable.Active then
     begin
-      WriteLog('数据表未激�? ' + AImageKey);
+      WriteLog('鏁版嵁琛ㄦ湭婵€娲? ' + AImageKey);
       Exit;
     end;
     
-    // 查找记录
+    // 鏌ユ壘璁板綍
     if ATable.Locate('image_key', AImageKey, []) then
     begin
-      WriteLog('在数据库中找到记�? ' + AImageKey);
+      WriteLog('鍦ㄦ暟鎹簱涓壘鍒拌褰? ' + AImageKey);
       
-      // 获取字段
+      // 鑾峰彇瀛楁
       var ImageField := ATable.FieldByName('image_data');
       var AddressField := ATable.FieldByName('address_text');
       var SHAField := ATable.FieldByName('sha256_hash');
@@ -545,37 +545,37 @@ begin
       begin
         MemoryStream := TMemoryStream.Create;
         try
-          // 从Blob字段加载加密数据
+          // 浠嶣lob瀛楁鍔犺浇鍔犲瘑鏁版嵁
           TBlobField(ImageField).SaveToStream(MemoryStream);
           MemoryStream.Position := 0;
           
-          // 读取加密数据
+          // 璇诲彇鍔犲瘑鏁版嵁
           SetLength(EncryptedData, MemoryStream.Size);
           MemoryStream.ReadBuffer(EncryptedData[0], MemoryStream.Size);
           
-          WriteLog(Format('加密数据长度: %d bytes - %s', [Length(EncryptedData), AImageKey]));
+          WriteLog(Format('鍔犲瘑鏁版嵁闀垮害: %d bytes - %s', [Length(EncryptedData), AImageKey]));
           
-          // 解密数据
+          // 瑙ｅ瘑鏁版嵁
           DecryptedData := DecryptImageData(EncryptedData);
-          WriteLog(Format('解密数据长度: %d bytes - %s', [Length(DecryptedData), AImageKey]));
+          WriteLog(Format('瑙ｅ瘑鏁版嵁闀垮害: %d bytes - %s', [Length(DecryptedData), AImageKey]));
           
-          // SHA-256完整性校验（严格：字段必须存在）
+          // SHA-256瀹屾暣鎬ф牎楠岋紙涓ユ牸锛氬瓧娈靛繀椤诲瓨鍦級
           if not Assigned(SHAField) or SHAField.IsNull then
           begin
-              HandleSecurityViolation(AImageKey, '缺少 sha256_hash 字段或为空');
+              HandleSecurityViolation(AImageKey, '缂哄皯 sha256_hash 瀛楁鎴栦负绌�');
             Exit;
           end;
           ExpectedMD5 := SHAField.AsString;
           if not VerifyImageIntegrity(DecryptedData, ExpectedMD5) then
           begin
-            WriteLog(Format('SHA-256校验失败: %s', [AImageKey]));
-            HandleSecurityViolation(AImageKey, 'SHA-256校验失败，图像数据可能被篡改');
+            WriteLog(Format('SHA-256鏍￠獙澶辫触: %s', [AImageKey]));
+            HandleSecurityViolation(AImageKey, 'SHA-256鏍￠獙澶辫触锛屽浘鍍忔暟鎹彲鑳借绡℃敼');
             Exit;
           end;
-          // HMAC 校验（严格：字段必须存在且匹配）
+          // HMAC 鏍￠獙锛堜弗鏍硷細瀛楁蹇呴』瀛樺湪涓斿尮閰嶏級
           if not Assigned(HMACField) or HMACField.IsNull then
           begin
-              HandleSecurityViolation(AImageKey, '缺少 hmac_sha256 字段或为空');
+              HandleSecurityViolation(AImageKey, '缂哄皯 hmac_sha256 瀛楁鎴栦负绌�');
             Exit;
           end;
           if FConfig.EnableHMAC then
@@ -584,23 +584,23 @@ begin
             var ActualHMAC := ComputeHMACSHA256(DecryptedData);
             if not SameText(ExpectedHMAC, ActualHMAC) then
             begin
-              WriteLog(Format('HMAC-SHA256校验失败: %s', [AImageKey]));
-              HandleSecurityViolation(AImageKey, 'HMAC-SHA256校验失败，图像数据可能被篡改');
+              WriteLog(Format('HMAC-SHA256鏍￠獙澶辫触: %s', [AImageKey]));
+              HandleSecurityViolation(AImageKey, 'HMAC-SHA256鏍￠獙澶辫触锛屽浘鍍忔暟鎹彲鑳借绡℃敼');
               Exit;
             end;
           end;
           
-          WriteLog(Format('SHA-256校验通过: %s', [AImageKey]));
+          WriteLog(Format('SHA-256鏍￠獙閫氳繃: %s', [AImageKey]));
           
-          // 从解密数据加载图�?
+          // 浠庤В瀵嗘暟鎹姞杞藉浘鍍?
           MemoryStream.Clear;
           MemoryStream.WriteBuffer(DecryptedData[0], Length(DecryptedData));
           MemoryStream.Position := 0;
           
           AImage.Picture.LoadFromStream(MemoryStream);
-          WriteLog(Format('安全图像加载成功: %s, 尺寸: %dx%d', [AImageKey, AImage.Picture.Width, AImage.Picture.Height]));
+          WriteLog(Format('瀹夊叏鍥惧儚鍔犺浇鎴愬姛: %s, 灏哄: %dx%d', [AImageKey, AImage.Picture.Width, AImage.Picture.Height]));
           
-          // 获取地址文本
+          // 鑾峰彇鍦板潃鏂囨湰
           if not AddressField.IsNull then
             AAddressText := AddressField.AsString;
             
@@ -612,18 +612,18 @@ begin
       end
       else
       begin
-        WriteLog('图像字段为空: ' + AImageKey);
+        WriteLog('鍥惧儚瀛楁涓虹┖: ' + AImageKey);
       end;
     end
     else
     begin
-      WriteLog('数据库中未找到记�? ' + AImageKey);
+      WriteLog('鏁版嵁搴撲腑鏈壘鍒拌褰? ' + AImageKey);
     end;
     
   except
     on E: Exception do
     begin
-      WriteLog(Format('加载安全图像时出�? %s - %s', [AImageKey, E.Message]));
+      WriteLog(Format('鍔犺浇瀹夊叏鍥惧儚鏃跺嚭閿? %s - %s', [AImageKey, E.Message]));
       Result := False;
     end;
   end;
@@ -634,29 +634,29 @@ var
   ErrorMsg: string;
   Response: Integer;
 begin
-  WriteLog(Format('安全违规: %s - %s', [ImageKey, Reason]));
+  WriteLog(Format('瀹夊叏杩濊: %s - %s', [ImageKey, Reason]));
   
-  ErrorMsg := Format('安全检查失败！'#13#10#13#10 +
-    '图像: %s'#13#10 +
-    '原因: %s'#13#10#13#10 +
-      '检测到程序文件可能被篡改，为了您的安全，程序将退出。'#13#10 +
-      '请从官方网站下载最新版本。'#13#10#13#10 +
-      '是否现在访问官方下载页面？', [ImageKey, Reason]);
+  ErrorMsg := Format('瀹夊叏妫€鏌ュけ璐ワ紒'#13#10#13#10 +
+    '鍥惧儚: %s'#13#10 +
+    '鍘熷洜: %s'#13#10#13#10 +
+      '妫€娴嬪埌绋嬪簭鏂囦欢鍙兘琚鏀癸紝涓轰簡鎮ㄧ殑瀹夊叏锛岀▼搴忓皢閫€鍑恒€�'#13#10 +
+      '璇蜂粠瀹樻柟缃戠珯涓嬭浇鏈€鏂扮増鏈€�'#13#10#13#10 +
+      '鏄惁鐜板湪璁块棶瀹樻柟涓嬭浇椤甸潰锛�', [ImageKey, Reason]);
     
-  Response := MessageBox(0, PChar(ErrorMsg), '安全警告', MB_YESNO or MB_ICONERROR or MB_TOPMOST);
+  Response := MessageBox(0, PChar(ErrorMsg), '瀹夊叏璀﹀憡', MB_YESNO or MB_ICONERROR or MB_TOPMOST);
   
   if Response = IDYES then
   begin
-    // 打开官方下载页面
+    // 鎵撳紑瀹樻柟涓嬭浇椤甸潰
     ShellExecute(0, 'open', PChar(FConfig.DownloadURL), nil, nil, SW_SHOWNORMAL);
   end;
   
-  // 强制退出程�?
-    WriteLog('程序因安全违规退出');
+  // 寮哄埗閫€鍑虹▼搴?
+    WriteLog('绋嬪簭鍥犲畨鍏ㄨ繚瑙勯€€鍑�');
   ExitProcess(1);
 end;
 
-// 清空防篡改表（严格模式辅助）
+// 娓呯┖闃茬鏀硅〃锛堜弗鏍兼ā寮忚緟鍔╋級
 class procedure TAntiTamperPackage.ClearTable(AConnection: TFDConnection);
 var
   Q: TFDQuery;
@@ -667,13 +667,13 @@ begin
     Q.Connection := AConnection;
     Q.SQL.Text := 'DELETE FROM ' + FConfig.TableName;
     Q.ExecSQL;
-      WriteLog('已清空防篡改数据表');
+      WriteLog('宸叉竻绌洪槻绡℃敼鏁版嵁琛�');
   finally
     Q.Free;
   end;
 end;
 
-// 播种最小合法记录（严格模式辅助�?
+// 鎾鏈€灏忓悎娉曡褰曪紙涓ユ牸妯″紡杈呭姪锛?
 class procedure TAntiTamperPackage.ReseedMinimal(AConnection: TFDConnection);
 var
   Q: TFDQuery;
@@ -702,7 +702,7 @@ begin
     Q.ParamByName('sha').AsString := SHAHex;
     Q.ParamByName('hmac').AsString := HMACHex;
     Q.ExecSQL;
-    WriteLog('已播种最小合法记�?seed');
+    WriteLog('宸叉挱绉嶆渶灏忓悎娉曡褰?seed');
   finally
     Q.Free;
   end;

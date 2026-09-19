@@ -1,4 +1,4 @@
-unit Test.Regression.BUG339_DoQrySweepInUse;
+﻿unit Test.Regression.BUG339_DoQrySweepInUse;
 
 interface
 

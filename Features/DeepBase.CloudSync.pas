@@ -1,14 +1,14 @@
-unit DeepBase.CloudSync;
+﻿unit DeepBase.CloudSync;
 
 {*******************************************************************************
   DeepBase Framework - Cloud Configuration Sync
   
-  �ƶ�����ͬ��ģ�飬֧�֣�
-  - ���豸����ͬ��
-  - �汾��ͻ�������
-  - �����޸ı��غϲ�
-  - ���ܴ���ʹ洢
-  - ����ͬ���Ż�
+  云端配置同步模块，支持：
+  - 多设备配置同步
+  - 版本冲突检测与解决
+  - 离线修改本地合并
+  - 加密传输和存储
+  - 增量同步优化
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -23,41 +23,41 @@ uses
   System.Math, DeepBase.Exceptions;
 
 type
-  /// <summary>ͬ��״̬</summary>
+  /// <summary>同步状态</summary>
   TSyncStatus = (
-    ssIdle,           // ����
-    ssSyncing,        // ͬ����
-    ssUploading,      // �ϴ���
-    ssDownloading,    // ������
-    ssConflict,       // ��ͻ
-    ssError           // ����
+    ssIdle,           // 空闲
+    ssSyncing,        // 同步中
+    ssUploading,      // 上传中
+    ssDownloading,    // 下载中
+    ssConflict,       // 冲突
+    ssError           // 错误
   );
 
-  /// <summary>��ͻ�������</summary>
+  /// <summary>冲突解决策略</summary>
   TConflictResolution = (
-    crLocalWins,      // ��������
-    crRemoteWins,     // Զ������
-    crNewerWins,      // ����������
-    crMerge,          // ���ܺϲ�
-    crManual          // �ֶ����
+    crLocalWins,      // 本地优先
+    crRemoteWins,     // 远程优先
+    crNewerWins,      // 较新者优先
+    crMerge,          // 智能合并
+    crManual          // 手动解决
   );
   
-  /// <summary>����ϲ�����</summary>
+  /// <summary>数组合并策略</summary>
   TArrayMergeStrategy = (
-    amsReplace,       // �滻 - ��Դ�����滻Ŀ������
-    amsAppend,        // ׷�� - ��Դ����Ԫ��׷�ӵ�Ŀ������
-    amsMergeByIndex,  // �������ϲ� - ��ͬ������Ԫ�ؽ��кϲ�
-    amsUnion          // ���� - ȥ�غϲ�������JSONֵ����ԣ�
+    amsReplace,       // 替换 - 用源数组替换目标数组
+    amsAppend,        // 追加 - 将源数组元素追加到目标数组
+    amsMergeByIndex,  // 按索引合并 - 相同索引的元素进行合并
+    amsUnion          // 并集 - 去重合并（基于JSON值相等性）
   );
 
-  /// <summary>ͬ������</summary>
+  /// <summary>同步方向</summary>
   TSyncDirection = (
-    sdBidirectional,  // ˫��ͬ��
-    sdUploadOnly,     // ���ϴ�
-    sdDownloadOnly    // ������
+    sdBidirectional,  // 双向同步
+    sdUploadOnly,     // 仅上传
+    sdDownloadOnly    // 仅下载
   );
 
-  /// <summary>����������</summary>
+  /// <summary>配置项类型</summary>
   TConfigItemType = (
     citString,
     citInteger,
@@ -68,19 +68,19 @@ type
     citBinary
   );
 
-  /// <summary>������汾��Ϣ</summary>
+  /// <summary>配置项版本信息</summary>
   TConfigVersion = record
-    Version: Integer;           // �汾��
-    ModifiedAt: TDateTime;      // �޸�ʱ��
-    ModifiedBy: string;         // �޸��豸ID
-    Checksum: string;           // ����У���
+    Version: Integer;           // 版本号
+    ModifiedAt: TDateTime;      // 修改时间
+    ModifiedBy: string;         // 修改设备ID
+    Checksum: string;           // 内容校验和
     class function Create(AVersion: Integer; AModifiedAt: TDateTime;
       const AModifiedBy, AChecksum: string): TConfigVersion; static;
     function ToJSON: TJSONObject;
     class function FromJSON(AJSON: TJSONObject): TConfigVersion; static;
   end;
 
-  /// <summary>������</summary>
+  /// <summary>配置项</summary>
   TConfigItem = class
   private
     FKey: string;
@@ -120,7 +120,7 @@ type
     property IsDirty: Boolean read FIsDirty write FIsDirty;
   end;
 
-  /// <summary>ͬ����ͻ</summary>
+  /// <summary>同步冲突</summary>
   TSyncConflict = class
   private
     FKey: string;
@@ -142,7 +142,7 @@ type
     property Resolution: TConflictResolution read FResolution;
   end;
 
-  /// <summary>ͬ������</summary>
+  /// <summary>同步进度</summary>
   TSyncProgress = record
     Status: TSyncStatus;
     TotalItems: Integer;
@@ -154,7 +154,7 @@ type
     function ProgressPercent: Integer;
   end;
 
-  /// <summary>ͬ��ͳ��</summary>
+  /// <summary>同步统计</summary>
   TSyncStatistics = record
     LastSyncTime: TDateTime;
     TotalSyncs: Integer;
@@ -167,28 +167,28 @@ type
     procedure Reset;
   end;
 
-  /// <summary>�ƶ˷�������</summary>
+  /// <summary>云端服务配置</summary>
   TCloudServiceConfig = record
-    ServiceURL: string;           // ����URL
-    ApiKey: string;               // API��Կ
-    DeviceId: string;             // �豸ID
-    UserId: string;               // �û�ID
-    EncryptionKey: string;        // ������Կ (AES-256)
-    TimeoutSeconds: Integer;      // ��ʱ����
-    RetryCount: Integer;          // ���Դ���
-    EnableCompression: Boolean;   // ����ѹ��
-    EnableEncryption: Boolean;    // ���ü���
+    ServiceURL: string;           // 服务URL
+    ApiKey: string;               // API密钥
+    DeviceId: string;             // 设备ID
+    UserId: string;               // 用户ID
+    EncryptionKey: string;        // 加密密钥 (AES-256)
+    TimeoutSeconds: Integer;      // 超时秒数
+    RetryCount: Integer;          // 重试次数
+    EnableCompression: Boolean;   // 启用压缩
+    EnableEncryption: Boolean;    // 启用加密
     SyncDirection: TSyncDirection;
     ConflictResolution: TConflictResolution;
     class function Default: TCloudServiceConfig; static;
   end;
 
-  // �¼�����
+  // 事件类型
   TSyncProgressEvent = procedure(Sender: TObject; const Progress: TSyncProgress) of object;
   TSyncCompleteEvent = procedure(Sender: TObject; Success: Boolean; const ErrorMsg: string) of object;
   TConflictEvent = procedure(Sender: TObject; Conflict: TSyncConflict; var Resolution: TConflictResolution) of object;
 
-  /// <summary>�ƶ�ͬ���ͻ���</summary>
+  /// <summary>云端同步客户端</summary>
   TCloudSyncClient = class
   private
     FConfig: TCloudServiceConfig;
@@ -203,7 +203,7 @@ type
     constructor Create(const AConfig: TCloudServiceConfig);
     destructor Destroy; override;
     
-    // API����
+    // API方法
     function Authenticate: Boolean;
     function GetRemoteConfig(const AKey: string): TConfigItem;
     function GetAllRemoteConfigs: TObjectList<TConfigItem>;
@@ -216,7 +216,7 @@ type
     property Config: TCloudServiceConfig read FConfig write FConfig;
   end;
 
-  /// <summary>�������ô洢</summary>
+  /// <summary>本地配置存储</summary>
   TLocalConfigStore = class
   private
     FFilePath: string;
@@ -247,7 +247,7 @@ type
     property IsDirty: Boolean read FIsDirty;
   end;
 
-  /// <summary>����ͬ��������</summary>
+  /// <summary>配置同步管理器</summary>
   TCloudConfigSync = class
   private
     FConfig: TCloudServiceConfig;
@@ -259,7 +259,7 @@ type
     FStatistics: TSyncStatistics;
     FLock: TCriticalSection;
     FSyncThread: TThread;
-    FAutoSyncInterval: Integer;  // �Զ�ͬ��������룩
+    FAutoSyncInterval: Integer;  // 自动同步间隔（秒）
     FAutoSyncEnabled: Boolean;
     FAutoSyncTimer: TThread;
     
@@ -282,14 +282,14 @@ type
     constructor Create(const AConfig: TCloudServiceConfig; const ALocalStorePath: string);
     destructor Destroy; override;
     
-    // ͬ������
+    // 同步操作
     procedure Sync;
     procedure SyncAsync;
     procedure CancelSync;
     procedure ForceUpload;
     procedure ForceDownload;
     
-    // ���ò��� (���Զ�ͬ�����)
+    // 配置操作 (带自动同步标记)
     function GetString(const AKey: string; const ADefault: string = ''): string;
     function GetInteger(const AKey: string; ADefault: Integer = 0): Integer;
     function GetFloat(const AKey: string; ADefault: Double = 0): Double;
@@ -307,13 +307,13 @@ type
     procedure DeleteKey(const AKey: string);
     function KeyExists(const AKey: string): Boolean;
     
-    // ��ͻ����
+    // 冲突处理
     function HasConflicts: Boolean;
     function GetConflicts: TObjectList<TSyncConflict>;
     procedure ResolveConflict(const AKey: string; AResolution: TConflictResolution);
     procedure ResolveAllConflicts(AResolution: TConflictResolution);
     
-    // �Զ�ͬ��
+    // 自动同步
     procedure EnableAutoSync(AIntervalSeconds: Integer = 300);
     procedure DisableAutoSync;
     
@@ -325,13 +325,13 @@ type
     property AutoSyncEnabled: Boolean read FAutoSyncEnabled;
     property AutoSyncInterval: Integer read FAutoSyncInterval;
     
-    // �¼�
+    // 事件
     property OnProgress: TSyncProgressEvent read FOnProgress write FOnProgress;
     property OnComplete: TSyncCompleteEvent read FOnComplete write FOnComplete;
     property OnConflict: TConflictEvent read FOnConflict write FOnConflict;
   end;
 
-  /// <summary>���ñ����־</summary>
+  /// <summary>配置变更日志</summary>
   TConfigChangeLog = class
   private
     FLogPath: string;
@@ -347,7 +347,7 @@ type
     procedure Cleanup(ADaysToKeep: Integer = 30);
   end;
 
-  /// <summary>���⻧ͬ��������</summary>
+  /// <summary>多租户同步管理器</summary>
   TMultiTenantSyncManager = class
   private
     FSyncInstances: TObjectDictionary<string, TCloudConfigSync>;
@@ -369,37 +369,37 @@ type
     property DefaultTenantId: string read FDefaultTenantId;
   end;
 
-// ȫ�ֺ���
+// 全局函数
 function CloudSync: TCloudConfigSync;
 procedure SetCloudSync(ASync: TCloudConfigSync);
 
 function MultiTenantSync: TMultiTenantSyncManager;
 
-// ��������
+// 辅助函数
 function GenerateDeviceId: string;
 function CalculateChecksum(const AData: string): string;
 
-/// <summary>JSON��Ⱥϲ�</summary>
-/// <param name="ATarget">Ŀ��JSON���󣨽����޸ģ�</param>
-/// <param name="ASource">ԴJSON����</param>
-/// <param name="AArrayStrategy">����ϲ�����</param>
+/// <summary>JSON深度合并</summary>
+/// <param name="ATarget">目标JSON对象（将被修改）</param>
+/// <param name="ASource">源JSON对象</param>
+/// <param name="AArrayStrategy">数组合并策略</param>
 /// <remarks>
-/// �ݹ�ϲ�����JSON����
-/// - �����ֶΣ��ݹ�ϲ�
-/// - �����ֶΣ����ݲ��Ժϲ�
-/// - ���ֶΣ�Դֵ����Ŀ��ֵ
-/// - Դ�д��ڵ�Ŀ�겻���ڵ��ֶΣ����ӵ�Ŀ��
+/// 递归合并两个JSON对象：
+/// - 对象字段：递归合并
+/// - 数组字段：根据策略合并
+/// - 简单字段：源值覆盖目标值
+/// - 源中存在但目标不存在的字段：添加到目标
 /// </remarks>
 procedure JSONDeepMerge(ATarget, ASource: TJSONObject;
   AArrayStrategy: TArrayMergeStrategy = amsReplace);
 
-/// <summary>��¡JSONֵ</summary>
+/// <summary>克隆JSON值</summary>
 function JSONClone(AValue: TJSONValue): TJSONValue;
 
-/// <summary>�Ƚ�����JSONֵ�Ƿ����</summary>
+/// <summary>比较两个JSON值是否相等</summary>
 function JSONValuesEqual(A, B: TJSONValue): Boolean;
 
-/// <summary>�����Ժϲ�����JSON����</summary>
+/// <summary>按策略合并两个JSON数组</summary>
 procedure JSONMergeArrays(ATarget, ASource: TJSONArray;
   AStrategy: TArrayMergeStrategy);
 
@@ -469,7 +469,7 @@ begin
   case AStrategy of
     amsReplace:
       begin
-        // ���Ŀ�����鲢����Դ��������
+        // 清空目标数组并复制源数组内容
         while ATarget.Count > 0 do
         begin
           LRemoved := ATarget.Remove(0);
@@ -485,7 +485,7 @@ begin
       
     amsAppend:
       begin
-        // ׷��Դ����Ԫ�ص�Ŀ��
+        // 追加源数组元素到目标
         for I := 0 to ASource.Count - 1 do
         begin
           LCloned := JSONClone(ASource.Items[I]);
@@ -496,33 +496,33 @@ begin
       
     amsMergeByIndex:
       begin
-        // �������ϲ�
+        // 按索引合并
         for I := 0 to ASource.Count - 1 do
         begin
           LSourceItem := ASource.Items[I];
           if I < ATarget.Count then
           begin
             LTargetItem := ATarget.Items[I];
-            // ������߶��Ƕ��󣬵ݹ�ϲ�
+            // 如果两边都是对象，递归合并
             if (LTargetItem is TJSONObject) and (LSourceItem is TJSONObject) then
               JSONDeepMerge(TJSONObject(LTargetItem), TJSONObject(LSourceItem), amsMergeByIndex)
             else
             begin
-              // ������Դֵ�滻
+              // 否则用源值替换
               LCloned := JSONClone(LSourceItem);
               if LCloned <> nil then
               begin
                 LRemoved := ATarget.Remove(I);
                 LRemoved.Free;
-                // TJSONArrayû��Insert��������Ҫ�ؽ�
-                // �򻯴��������ڷǶ���Ԫ��ֱ���滻
+                // TJSONArray没有Insert方法，需要重建
+                // 简化处理：对于非对象元素直接替换
                 ATarget.AddElement(LCloned);
               end;
             end;
           end
           else
           begin
-            // Ŀ������϶̣�׷��
+            // 目标数组较短，追加
             LCloned := JSONClone(LSourceItem);
             if LCloned <> nil then
               ATarget.AddElement(LCloned);
@@ -532,7 +532,7 @@ begin
       
     amsUnion:
       begin
-        // ����ȥ��
+        // 并集去重
         for I := 0 to ASource.Count - 1 do
         begin
           LSourceItem := ASource.Items[I];
@@ -574,24 +574,24 @@ begin
     
     if LTargetValue = nil then
     begin
-      // Ŀ�겻���ڴ˼���ֱ�����ӿ�¡
+      // 目标不存在此键，直接添加克隆
       LCloned := JSONClone(LSourceValue);
       if LCloned <> nil then
         ATarget.AddPair(LKey, LCloned);
     end
     else if (LTargetValue is TJSONObject) and (LSourceValue is TJSONObject) then
     begin
-      // ���߶��Ƕ��󣬵ݹ�ϲ�
+      // 两边都是对象，递归合并
       JSONDeepMerge(TJSONObject(LTargetValue), TJSONObject(LSourceValue), AArrayStrategy);
     end
     else if (LTargetValue is TJSONArray) and (LSourceValue is TJSONArray) then
     begin
-      // ���߶������飬�����Ժϲ�
+      // 两边都是数组，按策略合并
       JSONMergeArrays(TJSONArray(LTargetValue), TJSONArray(LSourceValue), AArrayStrategy);
     end
     else
     begin
-      // ��ֵ�����Ͳ�ƥ�䣬��Դֵ����
+      // 简单值或类型不匹配，用源值覆盖
       LCloned := JSONClone(LSourceValue);
       if LCloned <> nil then
       begin
@@ -965,10 +965,10 @@ begin
         begin
           Inc(LRetry);
           if LRetry <= FConfig.RetryCount then
-            Sleep(1000 * LRetry);  // ָ���˱�
+            Sleep(1000 * LRetry);  // 指数退避
         end
         else
-          Break;  // �ͻ��˴��󣬲�����
+          Break;  // 客户端错误，不重试
       finally
         FLock.Leave;
       end;
@@ -1472,16 +1472,16 @@ begin
   Result := TObjectList<TSyncConflict>.Create(True);
   LRemoteMap := TDictionary<string, TConfigItem>.Create;
   try
-    // ����Զ��������
+    // 建立远程项索引
     for LRemoteItem in ARemoteItems do
       LRemoteMap.AddOrSetValue(LRemoteItem.Key, LRemoteItem);
     
-    // ��鱾�����Ƿ��г�ͻ
+    // 检查本地项是否有冲突
     for LLocalItem in ALocalItems do
     begin
       if LLocalItem.IsDirty and LRemoteMap.TryGetValue(LLocalItem.Key, LRemoteItem) then
       begin
-        // �������޸���Զ��Ҳ���޸� = ��ͻ
+        // 本地有修改且远程也有修改 = 冲突
         if (LRemoteItem.RemoteVersion.Version > LLocalItem.RemoteVersion.Version) and
            (LLocalItem.LocalVersion.Checksum <> LRemoteItem.RemoteVersion.Checksum) then
         begin
@@ -1506,7 +1506,7 @@ begin
   LResolvedItem := AConflict.GetResolvedItem;
   if Assigned(LResolvedItem) then
   begin
-    // ���±��ش洢
+    // 更新本地存储
     FLocalStore.Put(LResolvedItem);
     Inc(FStatistics.ConflictsResolved);
   end;
@@ -1529,7 +1529,7 @@ begin
   DoProgress;
   
   try
-    // 1. ��ȡԶ������
+    // 1. 获取远程配置
     FProgress.Status := ssDownloading;
     DoProgress;
     
@@ -1537,13 +1537,13 @@ begin
     try
       FProgress.DownloadedItems := LRemoteItems.Count;
       
-      // 2. ��ȡ����������
+      // 2. 获取本地脏数据
       LLocalItems := FLocalStore.GetAll;
       LDirtyItems := FLocalStore.GetDirtyItems;
       try
         FProgress.TotalItems := LDirtyItems.Count + LRemoteItems.Count;
         
-        // 3. ����ͻ
+        // 3. 检测冲突
         if FConfig.SyncDirection = sdBidirectional then
         begin
           LDetectedConflicts := DetectConflicts(LDirtyItems, LRemoteItems);
@@ -1555,7 +1555,7 @@ begin
               FProgress.Status := ssConflict;
               DoProgress;
               
-              // ������ͻ
+              // 处理冲突
               for LConflict in LDetectedConflicts do
               begin
                 LResolution := DoResolveConflict(LConflict);
@@ -1563,19 +1563,19 @@ begin
                 ApplyResolution(LConflict);
                 FConflicts.Add(LConflict);
               end;
-              LDetectedConflicts.OwnsObjects := False;  // ת������Ȩ
+              LDetectedConflicts.OwnsObjects := False;  // 转移所有权
             end;
           finally
             LDetectedConflicts.Free;
           end;
         end;
         
-        // 4. Ӧ��Զ�̸��ĵ�����
+        // 4. 应用远程更改到本地
         if FConfig.SyncDirection in [sdBidirectional, sdDownloadOnly] then
         begin
           for LItem in LRemoteItems do
           begin
-            // �����г�ͻ����Ѵ�����
+            // 跳过有冲突的项（已处理）
             if not HasConflictForKey(LItem.Key) then
             begin
               FLocalStore.Put(LItem);
@@ -1584,7 +1584,7 @@ begin
           end;
         end;
         
-        // 5. �ϴ����ظ���
+        // 5. 上传本地更改
         if FConfig.SyncDirection in [sdBidirectional, sdUploadOnly] then
         begin
           FProgress.Status := ssUploading;
@@ -1600,10 +1600,10 @@ begin
           end;
         end;
         
-        // 6. ���°汾
+        // 6. 更新版本
         FLocalStore.CurrentVersion := FClient.GetServerVersion;
         
-        // ����ͳ��
+        // 更新统计
         Inc(FStatistics.TotalSyncs);
         Inc(FStatistics.SuccessfulSyncs);
         FStatistics.LastSyncTime := Now;
@@ -1713,7 +1713,7 @@ var
 begin
   LItems := FLocalStore.GetAll;
   try
-    // ���������Ϊ��
+    // 标记所有项为脏
     for var LItem in LItems do
       LItem.IsDirty := True;
     
@@ -1741,7 +1741,7 @@ begin
   end;
 end;
 
-// ���÷��ʷ���
+// 配置访问方法
 
 function TCloudConfigSync.GetString(const AKey: string; const ADefault: string): string;
 var

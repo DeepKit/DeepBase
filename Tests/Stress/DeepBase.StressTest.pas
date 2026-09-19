@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.StressTest - Stress Testing Framework
   
   A comprehensive stress testing framework for evaluating system behavior

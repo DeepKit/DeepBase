@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Arch.PackageBoundaries - Package boundary architecture tests
 
   These tests make package boundaries executable. They intentionally inspect

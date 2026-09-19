@@ -1,15 +1,15 @@
-unit DeepBase.Feedback;
+﻿unit DeepBase.Feedback;
 
 {*******************************************************************************
   DeepBase Framework - User Feedback System
   
-  �û������ռ�ϵͳ��֧�֣�
-  - �����ύ��Bug/���ܽ���/���⣩
-  - ��������־�Զ��ռ�
-  - ϵͳ��Ϣ�ɼ�
-  - ����׷�ٺ�״̬����
-  - �û�֪ͨ����
-  - ���߷�������
+  用户反馈收集系统，支持：
+  - 反馈提交（Bug/功能建议/问题）
+  - 附件和日志自动收集
+  - 系统信息采集
+  - 反馈追踪和状态更新
+  - 用户通知中心
+  - 离线反馈队列
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -21,49 +21,49 @@ uses
   System.SysUtils, System.Classes, System.Types, System.Generics.Collections,
   System.JSON, System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading, System.IOUtils,
-  System.Zip;
+  System.Zip, DeepBase.ManagedWorker;
 
 type
-  /// <summary>��������</summary>
+  /// <summary>反馈类型</summary>
   TFeedbackType = (
-    ftBug,            // Bug����
-    ftFeature,        // ���ܽ���
-    ftQuestion,       // ������ѯ
-    ftImprovement,    // �Ľ�����
-    ftCrash,          // ��������
-    ftPerformance,    // ��������
-    ftOther           // ����
+    ftBug,            // Bug报告
+    ftFeature,        // 功能建议
+    ftQuestion,       // 问题咨询
+    ftImprovement,    // 改进建议
+    ftCrash,          // 崩溃报告
+    ftPerformance,    // 性能问题
+    ftOther           // 其他
   );
 
-  /// <summary>�������ȼ�</summary>
+  /// <summary>反馈优先级</summary>
   TFeedbackPriority = (
-    fpLow,            // ��
-    fpNormal,         // ��ͨ
-    fpHigh,           // ��
-    fpCritical        // ����
+    fpLow,            // 低
+    fpNormal,         // 普通
+    fpHigh,           // 高
+    fpCritical        // 紧急
   );
 
-  /// <summary>����״̬</summary>
+  /// <summary>反馈状态</summary>
   TFeedbackStatus = (
-    fsNew,            // �½�
-    fsPending,        // ������
-    fsInProgress,     // ������
-    fsResolved,       // �ѽ��
-    fsClosed,         // �ѹر�
-    fsRejected        // �Ѿܾ�
+    fsNew,            // 新建
+    fsPending,        // 待处理
+    fsInProgress,     // 处理中
+    fsResolved,       // 已解决
+    fsClosed,         // 已关闭
+    fsRejected        // 已拒绝
   );
 
-  /// <summary>֪ͨ����</summary>
+  /// <summary>通知类型</summary>
   TNotificationType = (
-    ntStatusChange,   // ״̬���
-    ntComment,        // ������
-    ntAssignment,     // ��ָ��
-    ntResolution,     // �ѽ��
-    ntAnnouncement,   // ����
-    ntReminder        // ����
+    ntStatusChange,   // 状态变更
+    ntComment,        // 新评论
+    ntAssignment,     // 被指派
+    ntResolution,     // 已解决
+    ntAnnouncement,   // 公告
+    ntReminder        // 提醒
   );
 
-  /// <summary>������Ϣ</summary>
+  /// <summary>附件信息</summary>
   TAttachmentInfo = record
     Id: string;
     FileName: string;
@@ -77,7 +77,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TAttachmentInfo; static;
   end;
 
-  /// <summary>ϵͳ��Ϣ</summary>
+  /// <summary>系统信息</summary>
   TSystemInfo = record
     OSName: string;
     OSVersion: string;
@@ -99,7 +99,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TSystemInfo; static;
   end;
 
-  /// <summary>������Ŀ</summary>
+  /// <summary>反馈条目</summary>
   TFeedbackItem = class
   private
     FId: string;
@@ -133,7 +133,7 @@ type
     function ToJSON: TJSONObject;
     class function FromJSON(AJSON: TJSONObject): TFeedbackItem;
     
-    function Validate: TArray<string>;  // ������֤����
+    function Validate: TArray<string>;  // 返回验证错误
     
     property Id: string read FId write FId;
     property FeedbackType: TFeedbackType read FFeedbackType write FFeedbackType;
@@ -157,7 +157,7 @@ type
     property TrackingCode: string read FTrackingCode write FTrackingCode;
   end;
 
-  /// <summary>��������</summary>
+  /// <summary>反馈评论</summary>
   TFeedbackComment = class
   private
     FId: string;
@@ -180,7 +180,7 @@ type
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
   end;
 
-  /// <summary>�û�֪ͨ</summary>
+  /// <summary>用户通知</summary>
   TUserNotification = class
   private
     FId: string;
@@ -205,7 +205,7 @@ type
     property ReadAt: TDateTime read FReadAt write FReadAt;
   end;
 
-  /// <summary>�ύ����</summary>
+  /// <summary>提交进度</summary>
   TSubmitProgress = record
     CurrentFile: string;
     TotalFiles: Integer;
@@ -215,7 +215,7 @@ type
     function ProgressPercent: Integer;
   end;
 
-  /// <summary>������������</summary>
+  /// <summary>反馈服务配置</summary>
   TFeedbackConfig = record
     ServiceURL: string;
     ApiKey: string;
@@ -232,13 +232,13 @@ type
     class function Default: TFeedbackConfig; static;
   end;
 
-  // �¼�����
+  // 事件类型
   TFeedbackSubmitEvent = procedure(Sender: TObject; AFeedback: TFeedbackItem;
     Success: Boolean; const AErrorMsg: string) of object;
   TSubmitProgressEvent = procedure(Sender: TObject; const Progress: TSubmitProgress) of object;
   TNotificationEvent = procedure(Sender: TObject; ANotification: TUserNotification) of object;
 
-  /// <summary>ϵͳ��Ϣ�ռ���</summary>
+  /// <summary>系统信息收集器</summary>
   TSystemInfoCollector = class
   private
     class function GetOSInfo: string;
@@ -251,7 +251,7 @@ type
     class function Collect: TSystemInfo;
   end;
 
-  /// <summary>��־�ռ���</summary>
+  /// <summary>日志收集器</summary>
   TLogCollector = class
   private
     FLogPaths: TStringList;
@@ -273,7 +273,7 @@ type
     property MaxSizeMB: Integer read FMaxSizeMB write FMaxSizeMB;
   end;
 
-  /// <summary>��ͼ������</summary>
+  /// <summary>截图捕获器</summary>
   TScreenCaptureProc = reference to function(ALeft, ATop, AWidth, AHeight: Integer;
     const AOutputPath: string): Boolean;
 
@@ -288,7 +288,7 @@ type
       const AOutputPath: string): Boolean;
   end;
 
-  /// <summary>��������ͻ���</summary>
+  /// <summary>反馈服务客户端</summary>
   TFeedbackServiceClient = class
   private
     FConfig: TFeedbackConfig;
@@ -319,7 +319,7 @@ type
     property Config: TFeedbackConfig read FConfig write FConfig;
   end;
 
-  /// <summary>���߷�������</summary>
+  /// <summary>离线反馈队列</summary>
   TOfflineFeedbackQueue = class
   private
     FQueuePath: string;
@@ -342,7 +342,7 @@ type
     function GetAll: TObjectList<TFeedbackItem>;
   end;
 
-  /// <summary>����������</summary>
+  /// <summary>反馈管理器</summary>
   TFeedbackManager = class
   private
     FConfig: TFeedbackConfig;
@@ -351,8 +351,11 @@ type
     FLogCollector: TLogCollector;
     FNotifications: TObjectList<TUserNotification>;
     FLock: TCriticalSection;
-    FSubmitThread: TThread;
-    FPollingThread: TThread;
+    // WO-乙 B4：后台线程统一走 TManagedWorker（取消→WaitFor→置nil 内聚于 Destroy），
+    // 消灭旧 FreeOnTerminate=True 与宿主销毁并存的 UAF/竞态
+    FSubmitWorker: TManagedWorker;
+    FPollingWorker: TManagedWorker;
+    FOfflineWorker: TManagedWorker;
     FPollingEnabled: Boolean;
     FPollingInterval: Integer;
     
@@ -374,30 +377,30 @@ type
     constructor Create(const AConfig: TFeedbackConfig);
     destructor Destroy; override;
     
-    // ��������
+    // 创建反馈
     function CreateFeedback(AType: TFeedbackType): TFeedbackItem;
     function CreateBugReport(const ATitle, ADescription: string): TFeedbackItem;
     function CreateFeatureRequest(const ATitle, ADescription: string): TFeedbackItem;
     function CreateCrashReport(const AException: Exception): TFeedbackItem;
     
-    // �ύ����
+    // 提交反馈
     function Submit(AFeedback: TFeedbackItem): Boolean;
     procedure SubmitAsync(AFeedback: TFeedbackItem);
     function SubmitQuickFeedback(const ATitle, ADescription: string;
-      AType: TFeedbackType = ftOther): string;  // ����׷����
+      AType: TFeedbackType = ftOther): string;  // 返回追踪码
     
-    // ��������
+    // 附件管理
     function AddScreenshot(AFeedback: TFeedbackItem): Boolean;
     function AddLogFiles(AFeedback: TFeedbackItem): Boolean;
     function AddFile(AFeedback: TFeedbackItem; const AFilePath: string): Boolean;
     
-    // ������ѯ
+    // 反馈查询
     function GetFeedback(const AFeedbackId: string): TFeedbackItem;
     function GetMyFeedbacks: TObjectList<TFeedbackItem>;
     function SearchByTrackingCode(const ACode: string): TFeedbackItem;
     function GetFeedbackStatus(const AFeedbackId: string): TFeedbackStatus;
     
-    // ����
+    // 评论
     function GetComments(const AFeedbackId: string): TObjectList<TFeedbackComment>;
     function AddComment(const AFeedbackId, AContent: string): Boolean;
     
@@ -407,31 +410,31 @@ type
     procedure MarkNotificationRead(const ANotificationId: string);
     procedure MarkAllNotificationsRead;
     
-    // ֪ͨ��ѯ
+    // 通知轮询
     procedure StartNotificationPolling(AIntervalSeconds: Integer = 300);
     procedure StopNotificationPolling;
     
-    // ���߶���
+    // 离线队列
     procedure ProcessOfflineQueueAsync;
     function GetOfflineQueueCount: Integer;
     
-    // ϵͳ��Ϣ
+    // 系统信息
     function GetSystemInfo: TSystemInfo;
     
-    // ��־�ռ�
+    // 日志收集
     procedure AddLogPath(const APath: string);
     function CollectLogs(const AOutputPath: string): Boolean;
     
-    // ����
+    // 配置
     property Config: TFeedbackConfig read FConfig write FConfig;
     
-    // �¼�
+    // 事件
     property OnFeedbackSubmit: TFeedbackSubmitEvent read FOnFeedbackSubmit write FOnFeedbackSubmit;
     property OnSubmitProgress: TSubmitProgressEvent read FOnSubmitProgress write FOnSubmitProgress;
     property OnNotification: TNotificationEvent read FOnNotification write FOnNotification;
   end;
 
-  /// <summary>���ٷ����Ի�����</summary>
+  /// <summary>快速反馈对话框辅助</summary>
   TQuickFeedbackHelper = class
   public
     class function ShowBugReport(AManager: TFeedbackManager;
@@ -442,11 +445,11 @@ type
       AType: TFeedbackType = ftOther): string;
   end;
 
-// ȫ�ֺ���
+// 全局函数
 function FeedbackManager: TFeedbackManager;
 procedure SetFeedbackManager(AManager: TFeedbackManager);
 
-// ��������
+// 辅助函数
 function FeedbackTypeToString(AType: TFeedbackType): string;
 function StringToFeedbackType(const AValue: string): TFeedbackType;
 function FeedbackStatusToString(AStatus: TFeedbackStatus): string;
@@ -641,7 +644,7 @@ begin
     Result.FileSize := TFile.GetSize(ALocalPath);
     Result.MimeType := 'application/octet-stream';
     
-    // ������չ������MIME����
+    // 根据扩展名设置MIME类型
     var LExt := LowerCase(TPath.GetExtension(AFileName));
     if LExt = '.txt' then Result.MimeType := 'text/plain'
     else if LExt = '.log' then Result.MimeType := 'text/plain'
@@ -876,13 +879,13 @@ begin
   LErrors := TList<string>.Create;
   try
     if FTitle.Trim = '' then
-      LErrors.Add('���ⲻ��Ϊ��');
+      LErrors.Add('标题不能为空');
     if Length(FTitle) > 200 then
-      LErrors.Add('���ⲻ�ܳ���200���ַ�');
+      LErrors.Add('标题不能超过200个字符');
     if FDescription.Trim = '' then
-      LErrors.Add('��������Ϊ��');
+      LErrors.Add('描述不能为空');
     if (FUserEmail <> '') and not FUserEmail.Contains('@') then
-      LErrors.Add('�����ʽ����ȷ');
+      LErrors.Add('邮箱格式不正确');
       
     Result := LErrors.ToArray;
   finally
@@ -1734,7 +1737,7 @@ function TOfflineFeedbackQueue.GetAll: TObjectList<TFeedbackItem>;
 var
   I: Integer;
 begin
-  Result := TObjectList<TFeedbackItem>.Create(False);  // ��ӵ�ж���
+  Result := TObjectList<TFeedbackItem>.Create(False);  // 不拥有对象
   FLock.Enter;
   try
     for I := 0 to FItems.Count - 1 do
@@ -1771,6 +1774,9 @@ end;
 destructor TFeedbackManager.Destroy;
 begin
   StopNotificationPolling;
+  // B4：在途提交/离线处理经 TManagedWorker 收敛（取消→WaitFor），不再裸弃线程
+  FreeAndNil(FSubmitWorker);
+  FreeAndNil(FOfflineWorker);
   FreeAndNil(FNotifications);
   FreeAndNil(FLogCollector);
   FreeAndNil(FOfflineQueue);
@@ -1811,7 +1817,7 @@ end;
 
 function TFeedbackManager.GenerateTrackingCode: string;
 begin
-  // ����6λ�׶�׷����
+  // 生成6位易读追踪码
   var G: TGUID; CreateGUID(G); // CR-4810 fix: ensure uniqueness across concurrent calls
   Result := FormatDateTime('yymmdd', Now) + '-' +
             Copy(THashMD5.GetHashString(FormatDateTime('hhnnsszzz', Now) + GUIDToString(G)), 1, 6).ToUpper;
@@ -1822,21 +1828,21 @@ function TFeedbackManager.InternalSubmit(AFeedback: TFeedbackItem): Boolean;
 begin
   Result := False;
   
-  // �Զ��ռ�ϵͳ��Ϣ
+  // 自动收集系统信息
   if FConfig.EnableAutoSystemInfo then
     AFeedback.SystemInfo := TSystemInfoCollector.Collect;
     
-  // �����û���Ϣ
+  // 设置用户信息
   AFeedback.UserId := FConfig.UserId;
   AFeedback.UserEmail := FConfig.UserEmail;
   AFeedback.UserName := FConfig.UserName;
   
-  // ����׷����
+  // 生成追踪码
   if AFeedback.TrackingCode = '' then
     AFeedback.TrackingCode := GenerateTrackingCode;
     
   try
-    // �ύ����
+    // 提交反馈
     Result := FClient.SubmitFeedback(AFeedback);
     
     if Result then
@@ -1865,7 +1871,7 @@ begin
         LDone.Free;
     end
     else
-      Break;  // ��Ȼʧ�ܣ�ֹͣ����
+      Break;  // 仍然失败，停止处理
   end;
 end;
 
@@ -1932,11 +1938,11 @@ end;
 function TFeedbackManager.CreateCrashReport(const AException: Exception): TFeedbackItem;
 begin
   Result := CreateFeedback(ftCrash);
-  Result.Title := '�������: ' + AException.ClassName;
+  Result.Title := '程序崩溃: ' + AException.ClassName;
   Result.Description := AException.Message;
   Result.Priority := fpCritical;
   
-  // �Զ�������־
+  // 自动添加日志
   if FConfig.EnableAutoLogCollection then
     AddLogFiles(Result);
 end;
@@ -1953,8 +1959,12 @@ begin
 end;
 
 procedure TFeedbackManager.SubmitAsync(AFeedback: TFeedbackItem);
+var
+  LWorker: TManagedWorker;
 begin
-  FSubmitThread := TThread.CreateAnonymousThread(
+  // 旧实现：FreeOnTerminate=True 的匿名线程，宿主销毁不等待→访问已释放 Manager 的 UAF 竞态。
+  // 现由 TManagedWorker 接管：Destroy/FreeAndNil 时 Cancel→WaitFor，生命周期闭合。
+  LWorker := TManagedWorker.Create(
     procedure
     var
       LSuccess: Boolean;
@@ -1966,9 +1976,9 @@ begin
       finally
         FLock.Leave;
       end;
-    end);
-  FSubmitThread.FreeOnTerminate := True;
-  FSubmitThread.Start;
+    end, 'FeedbackSubmit');
+  FSubmitWorker := LWorker;
+  FSubmitWorker.Start;
 end;
 
 function TFeedbackManager.SubmitQuickFeedback(const ATitle, ADescription: string;
@@ -2102,38 +2112,46 @@ begin
 end;
 
 procedure TFeedbackManager.StartNotificationPolling(AIntervalSeconds: Integer);
+var
+  LWorker: TManagedWorker;
 begin
+  StopNotificationPolling; // 幂等：禁止叠加多个看护循环
   FPollingInterval := AIntervalSeconds;
   FPollingEnabled := True;
-  
-  FPollingThread := TThread.CreateAnonymousThread(
+
+  LWorker := TManagedWorker.Create(
     procedure
+    var
+      LWait: Cardinal;
     begin
-      while not TThread.CurrentThread.CheckTerminated and FPollingEnabled do
+      // 协作式取消：用 CancelEvent 等待替代 Sleep，Stop/Destroy 的 Cancel 立即中断间歇
+      LWait := Cardinal(FPollingInterval) * 1000;
+      while FPollingEnabled and not TThread.CurrentThread.CheckTerminated do
       begin
         PollNotifications;
-        Sleep(FPollingInterval * 1000);
+        if LWorker.CancelEvent.WaitFor(LWait) = wrSignaled then
+          Break;
       end;
-    end);
-  FPollingThread.FreeOnTerminate := True;
-  FPollingThread.Start;
+    end, 'FeedbackPolling');
+  FPollingWorker := LWorker;
+  FPollingWorker.Start;
 end;
 
 procedure TFeedbackManager.StopNotificationPolling;
 begin
   FPollingEnabled := False;
-  if Assigned(FPollingThread) then
-  begin
-    FPollingThread.Terminate;
-    // CR-123 fix: wait for thread exit before nil-ing the reference
-    FPollingThread.WaitFor;
-    FreeAndNil(FPollingThread);
-  end;
+  // TManagedWorker.Destroy 内聚 Cancel→WaitFor→释放，不存在“销毁不等结束”路径
+  FreeAndNil(FPollingWorker);
 end;
 
 procedure TFeedbackManager.ProcessOfflineQueueAsync;
+var
+  LWorker: TManagedWorker;
 begin
-  TThread.CreateAnonymousThread(
+  // 旧实现同样 fire-and-forget；FreeAndNil(FSubmitWorker) 不互斥：离线路径独立计时
+  if FOfflineWorker <> nil then
+    Exit; // 已在处理：不叠加
+  LWorker := TManagedWorker.Create(
     procedure
     begin
       FLock.Enter;
@@ -2142,7 +2160,9 @@ begin
       finally
         FLock.Leave;
       end;
-    end).Start;
+    end, 'FeedbackOfflineQueue');
+  FOfflineWorker := LWorker;
+  FOfflineWorker.Start;
 end;
 
 function TFeedbackManager.GetOfflineQueueCount: Integer;
@@ -2171,7 +2191,7 @@ end;
 class function TQuickFeedbackHelper.ShowBugReport(AManager: TFeedbackManager;
   const ATitle: string): string;
 begin
-  // ����Ӧ����ʾһ���Ի������û����룬��ʵ��ֱ���ύ
+  // 这里应该显示一个对话框让用户输入，简化实现直接提交
   Result := AManager.SubmitQuickFeedback(ATitle, '', ftBug);
 end;
 

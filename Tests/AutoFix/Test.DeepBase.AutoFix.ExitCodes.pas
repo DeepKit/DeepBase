@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.AutoFix.ExitCodes - Cross-module property tests for the
   AutoFix runtime-error pipeline (autofix-runtime-errors, sub-tasks 7.3 + 7.4).
 

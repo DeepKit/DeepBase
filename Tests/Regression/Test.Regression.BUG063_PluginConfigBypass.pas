@@ -1,18 +1,18 @@
-{ ============================================================================
-  Test.Regression.BUG063_PluginConfigBypass - 插件配置权限绕过回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG063_PluginConfigBypass - 鎻掍欢閰嶇疆鏉冮檺缁曡繃鍥炲綊娴嬭瘯
 
-  BUG-063: 插件配置权限绕过
+  BUG-063: 鎻掍欢閰嶇疆鏉冮檺缁曡繃
   
-  原问�? 插件可以通过SetConfig修改任意配置，包括系统级和安全相关配置，
-          存在权限提升风险�?
+  鍘熼棶棰? 鎻掍欢鍙互閫氳繃SetConfig淇敼浠绘剰閰嶇疆锛屽寘鎷郴缁熺骇鍜屽畨鍏ㄧ浉鍏抽厤缃紝
+          瀛樺湪鏉冮檺鎻愬崌椋庨櫓銆?
   
-  修复方案: 实现基于角色的配置访问控制，限制插件只能修改 Plugin. 前缀的配置，
-            并禁止修改包含安全关键字的配置项�?
+  淇鏂规: 瀹炵幇鍩轰簬瑙掕壊鐨勯厤缃闂帶鍒讹紝闄愬埗鎻掍欢鍙兘淇敼 Plugin. 鍓嶇紑鐨勯厤缃紝
+            骞剁姝慨鏀瑰寘鍚畨鍏ㄥ叧閿瓧鐨勯厤缃」銆?
   
-  修复日期: 2025-01-27
-  文件: Core/DeepBase.PluginManager.pas
-  优先�? P0 (Critical)
-  分类: Security
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: Core/DeepBase.PluginManager.pas
+  浼樺厛绾? P0 (Critical)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG063_PluginConfigBypass;
@@ -46,31 +46,31 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证插件无法修改系统级配�?)]
+    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼绯荤粺绾ч厤缃?)]
     procedure Test_PluginCannotModifySystemConfig;
     
     [Test]
-    [Description('验证插件无法修改安全相关配置 - password')]
+    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - password')]
     procedure Test_PluginCannotModifyPasswordConfig;
     
     [Test]
-    [Description('验证插件无法修改安全相关配置 - secret')]
+    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - secret')]
     procedure Test_PluginCannotModifySecretConfig;
     
     [Test]
-    [Description('验证插件无法修改安全相关配置 - token')]
+    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - token')]
     procedure Test_PluginCannotModifyTokenConfig;
     
     [Test]
-    [Description('验证插件无法修改安全相关配置 - key')]
+    [Description('楠岃瘉鎻掍欢鏃犳硶淇敼瀹夊叏鐩稿叧閰嶇疆 - key')]
     procedure Test_PluginCannotModifyKeyConfig;
     
     [Test]
-    [Description('验证插件可以修改自己的配�?(Plugin.前缀)')]
+    [Description('楠岃瘉鎻掍欢鍙互淇敼鑷繁鐨勯厤缃?(Plugin.鍓嶇紑)')]
     procedure Test_PluginCanModifyOwnConfig;
     
     [Test]
-    [Description('验证配置前缀检查区分大小写')]
+    [Description('楠岃瘉閰嶇疆鍓嶇紑妫€鏌ュ尯鍒嗗ぇ灏忓啓')]
     procedure Test_ConfigPrefixIsCaseSensitive;
   end;
 
@@ -88,7 +88,7 @@ end;
 
 function TBug063_PluginConfigBypassTest.GetBugDescription: string;
 begin
-  Result := '插件配置权限绕过';
+  Result := '鎻掍欢閰嶇疆鏉冮檺缁曡繃';
 end;
 
 function TBug063_PluginConfigBypassTest.GetFixDate: string;
@@ -132,7 +132,7 @@ begin
     ExceptionType := '';
     
     try
-      // 尝试修改系统级配�?
+      // 灏濊瘯淇敼绯荤粺绾ч厤缃?
       Context.SetConfig('System.Language', 'zh-CN');
     except
       on E: EArgumentException do
@@ -147,9 +147,9 @@ begin
       end;
     end;
     
-    Assert.IsTrue(ExceptionRaised, '插件修改系统配置应该抛出异常');
+    Assert.IsTrue(ExceptionRaised, '鎻掍欢淇敼绯荤粺閰嶇疆搴旇鎶涘嚭寮傚父');
     Assert.AreEqual('EArgumentException', ExceptionType, 
-      '应该抛出 EArgumentException 表示参数无效');
+      '搴旇鎶涘嚭 EArgumentException 琛ㄧず鍙傛暟鏃犳晥');
   finally
     Context.Free;
   end;
@@ -169,7 +169,7 @@ begin
     ExceptionRaised := False;
     
     try
-      // 尝试修改包含 password 的配�?
+      // 灏濊瘯淇敼鍖呭惈 password 鐨勯厤缃?
       Context.SetConfig('Plugin.MyPlugin.password', 'stolen');
     except
       on E: EInvalidOpException do
@@ -177,7 +177,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 password 的配置应该抛�?EInvalidOpException');
+      '鎻掍欢淇敼鍖呭惈 password 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -204,7 +204,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 secret 的配置应该抛�?EInvalidOpException');
+      '鎻掍欢淇敼鍖呭惈 secret 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -231,7 +231,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 token 的配置应该抛�?EInvalidOpException');
+      '鎻掍欢淇敼鍖呭惈 token 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -258,7 +258,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '插件修改包含 key 的配置应该抛�?EInvalidOpException');
+      '鎻掍欢淇敼鍖呭惈 key 鐨勯厤缃簲璇ユ姏鍑?EInvalidOpException');
   finally
     Context.Free;
   end;
@@ -286,11 +286,11 @@ begin
     end,
     nil, nil, FTempDir);
   try
-    // 设置合法的插件配�?
+    // 璁剧疆鍚堟硶鐨勬彃浠堕厤缃?
     Context.SetConfig('Plugin.MyPlugin.DisplayName', 'Test Plugin');
     
-    Assert.IsTrue(ConfigSet, '合法的插件配置应该被设置');
-    Assert.AreEqual('Test Plugin', SetValue, '配置值应该正确传�?);
+    Assert.IsTrue(ConfigSet, '鍚堟硶鐨勬彃浠堕厤缃簲璇ヨ璁剧疆');
+    Assert.AreEqual('Test Plugin', SetValue, '閰嶇疆鍊煎簲璇ユ纭紶閫?);
   finally
     Context.Free;
   end;
@@ -307,7 +307,7 @@ begin
   
   Context := TPluginContext.Create(nil, nil, nil, nil, FTempDir);
   try
-    // 测试小写 plugin. 前缀（应该失败，因为要求 Plugin.�?
+    // 娴嬭瘯灏忓啓 plugin. 鍓嶇紑锛堝簲璇ュけ璐ワ紝鍥犱负瑕佹眰 Plugin.锛?
     ExceptionRaised := False;
     try
       Context.SetConfig('plugin.MyPlugin.Setting', 'value');
@@ -317,7 +317,7 @@ begin
     end;
     
     Assert.IsTrue(ExceptionRaised, 
-      '小写 plugin. 前缀应该被拒绝（要求 Plugin.�?);
+      '灏忓啓 plugin. 鍓嶇紑搴旇琚嫆缁濓紙瑕佹眰 Plugin.锛?);
   finally
     Context.Free;
   end;

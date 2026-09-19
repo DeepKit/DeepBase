@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.Protection.FireDAC - FireDAC adapter for anti-tamper
   ============================================================================
   Moves SecureImages SQLite/FireDAC persistence out of service layer.

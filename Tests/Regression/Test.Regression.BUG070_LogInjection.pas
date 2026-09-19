@@ -1,16 +1,16 @@
-{ ============================================================================
-  Test.Regression.BUG070_LogInjection - 日志注入攻击风险回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG070_LogInjection - 鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓鍥炲綊娴嬭瘯
 
-  BUG-070: 日志注入攻击风险
+  BUG-070: 鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓
   
-  原问�? 使用TFile.AppendAllText直接写入用户输入，未进行转义或过�?
+  鍘熼棶棰? 浣跨敤TFile.AppendAllText鐩存帴鍐欏叆鐢ㄦ埛杈撳叆锛屾湭杩涜杞箟鎴栬繃婊?
   
-  修复方案: 对所有日志内容进行转义和验证，防止日志注入攻�?
+  淇鏂规: 瀵规墍鏈夋棩蹇楀唴瀹硅繘琛岃浆涔夊拰楠岃瘉锛岄槻姝㈡棩蹇楁敞鍏ユ敾鍑?
   
-  修复日期: 2025-01-27
-  文件: Core/DeepBase.Logging.pas
-  优先�? P1 (High)
-  分类: Security
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: Core/DeepBase.Logging.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG070_LogInjection;
@@ -36,15 +36,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证日志内容转义函数存在')]
+    [Description('楠岃瘉鏃ュ織鍐呭杞箟鍑芥暟瀛樺湪')]
     procedure Test_LogSanitization_Exists;
     
     [Test]
-    [Description('验证换行符被转义')]
+    [Description('楠岃瘉鎹㈣绗﹁杞箟')]
     procedure Test_NewlineChars_AreEscaped;
     
     [Test]
-    [Description('验证控制字符被过�?)]
+    [Description('楠岃瘉鎺у埗瀛楃琚繃婊?)]
     procedure Test_ControlChars_AreFiltered;
   end;
 
@@ -62,7 +62,7 @@ end;
 
 function TBug070_LogInjectionTest.GetBugDescription: string;
 begin
-  Result := '日志注入攻击风险';
+  Result := '鏃ュ織娉ㄥ叆鏀诲嚮椋庨櫓';
 end;
 
 function TBug070_LogInjectionTest.GetFixDate: string;
@@ -94,20 +94,20 @@ begin
     SourcePath := '..\Core\DeepBase.Logging.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在日志清理相关代码
+  // 楠岃瘉瀛樺湪鏃ュ織娓呯悊鐩稿叧浠ｇ爜
   Assert.IsTrue(
     SourceCode.Contains('Sanitize') or 
     SourceCode.Contains('Escape') or
     SourceCode.Contains('Clean') or
     SourceCode.Contains('Filter'),
-    '代码应该包含日志内容清理函数');
+    '浠ｇ爜搴旇鍖呭惈鏃ュ織鍐呭娓呯悊鍑芥暟');
   
   LogTestEnd('Test_LogSanitization_Exists', True);
 end;
@@ -116,9 +116,9 @@ procedure TBug070_LogInjectionTest.Test_NewlineChars_AreEscaped;
 begin
   LogTestStart('Test_NewlineChars_AreEscaped');
   
-  // 验证换行符被转义，防止日志伪�?
-  // 实际测试需要日志模块的具体实现
-  Assert.Pass('换行符转义测试通过代码审查确认');
+  // 楠岃瘉鎹㈣绗﹁杞箟锛岄槻姝㈡棩蹇椾吉閫?
+  // 瀹為檯娴嬭瘯闇€瑕佹棩蹇楁ā鍧楃殑鍏蜂綋瀹炵幇
+  Assert.Pass('鎹㈣绗﹁浆涔夋祴璇曢€氳繃浠ｇ爜瀹℃煡纭');
   
   LogTestEnd('Test_NewlineChars_AreEscaped', True);
 end;
@@ -127,8 +127,8 @@ procedure TBug070_LogInjectionTest.Test_ControlChars_AreFiltered;
 begin
   LogTestStart('Test_ControlChars_AreFiltered');
   
-  // 验证控制字符被过�?
-  Assert.Pass('控制字符过滤测试通过代码审查确认');
+  // 楠岃瘉鎺у埗瀛楃琚繃婊?
+  Assert.Pass('鎺у埗瀛楃杩囨护娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');
   
   LogTestEnd('Test_ControlChars_AreFiltered', True);
 end;

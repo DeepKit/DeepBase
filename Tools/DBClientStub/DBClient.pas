@@ -1,4 +1,4 @@
-unit DBClient;
+﻿unit DBClient;
 
 // COMPILE-ONLY STUB (D:\Temp\opencode, NOT part of DeepBase).
 // Unlocks dcc64 verification for doQry units where the RAD Studio install

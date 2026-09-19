@@ -1,4 +1,4 @@
-unit LogAnalyzer.Data;
+﻿unit LogAnalyzer.Data;
 
 interface
 

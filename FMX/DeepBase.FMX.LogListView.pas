@@ -1,5 +1,5 @@
-{ ============================================================================
-  DeepBase.FMX.LogListView - FMX ��������־�б��ؼ�
+﻿{ ============================================================================
+  DeepBase.FMX.LogListView - FMX 高性能日志列表控件
   
   Version: 1.0
   Description: FMX cross-platform log viewer with virtual scrolling

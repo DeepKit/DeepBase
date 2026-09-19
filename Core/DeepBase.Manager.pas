@@ -43,7 +43,7 @@ const
   DATA_DB_SUFFIX = 'Data.db';
   ROOT_TXT_NAME = 'root.txt';
   
-  // R-004: Schema ��֤����ĺ��ı�
+  // R-004: Schema 验证所需的核心表
   REQUIRED_CORE_TABLES: array[0..5] of string = (
     'SchemaInfo', 'ProjectInfo', 'Settings', 'FormStates', 'Languages', 'I18nTexts'
   );
@@ -60,11 +60,11 @@ type
   TManagerConnectionCloser = procedure(AConnection: TObject);
 
   /// <summary>
-  /// DeepBase ���Ĺ�����
+  /// DeepBase 核心管理器
   /// </summary>
   TDeepBaseManager = class(TComponent)
   private
-    // ����״̬
+    // 核心状态
     FRootPath: string;
     FConfigDBPath: string;
     FConfigDB: TObject;
@@ -73,14 +73,14 @@ type
     FLastError: string;
     FInitErrorCode: TInitErrorCode;
     
-    // ��ǰ����
+    // 当前设置
     FCurrentLanguage: string;
     FCurrentTheme: string;
     
-    // �߳�ͬ��
+    // 线程同步
     FLock: TObject;
     
-    // �ӳٳ�ʼ���ص�
+    // 延迟初始化回调
     FReadyCallbacks: TList<TProc>;
     FReadyFired: Boolean;
     // BIZ-R3-016 FIX: track pending WhenReady async tasks so FinalizeModules
@@ -88,12 +88,12 @@ type
     // use-after-free of FLogger inside the callback.
     FPendingReadyTasks: TList<ITask>;
     
-    // �¼�
+    // 事件
     FOnLanguageChanged: TNotifyEvent;
     FOnThemeChanged: TNotifyEvent;
     FOnConfigChanged: TConfigChangedEvent;
     
-    // ����ģ��
+    // 核心模块
     FConfig: TDeepBaseConfig;
     FI18n: TDeepBaseI18n;
     FTheme: TDeepBaseTheme;
@@ -107,7 +107,7 @@ type
     class var FConnectionIsConnected: TManagerConnectionIsConnected;
     class var FConnectionCloser: TManagerConnectionCloser;
     
-    // �ڲ�����
+    // 内部方法
     procedure InitializeModules;
     procedure FinalizeModules;
     procedure WaitForPendingReadyTasks;
@@ -127,7 +127,7 @@ type
     class function IsConnectionAlive(AConnection: TObject): Boolean; static;
     class procedure CloseConnection(var AConnection: TObject); static;
     
-    // InitializeEx ����������R-001 �ع���
+    // InitializeEx 辅助方法（R-001 重构）
     function DoFindRootPath(out ErrorMsg: string): Boolean;
     function DoLocateConfigDB(out ErrorMsg: string): Boolean;
     function DoConnectAndValidate(out ErrorMsg: string): Boolean;
@@ -136,12 +136,12 @@ type
     procedure RaiseInitializationError(const Operation,
       ErrorMsg: string);
     
-    // �¼������� (������ģ��ص�)
+    // 事件处理器 (用于子模块回调)
     procedure HandleConfigChanged(Sender: TObject; const Key, OldValue, NewValue: string);
     procedure HandleLanguageChanged(Sender: TObject);
     procedure HandleThemeChanged(Sender: TObject);
     
-    // ���� Setter
+    // 属性 Setter
     procedure SetCurrentLanguage(const Value: string);
     procedure SetCurrentTheme(const Value: string);
     
@@ -161,54 +161,54 @@ type
       const ACloser: TManagerConnectionCloser); static;
     
     // ========================================
-    // ��ʼ������
+    // 初始化方法
     // ========================================
     
     /// <summary>
-    /// ��ʼ�� DeepBase�����̵߳��ã�
-    /// Boolean ��ڣ�ʧ��ʱ���� False����ͨ�� LastError / InitErrorCode ��¶ԭ��
+    /// 初始化 DeepBase（主线程调用）
+    /// Boolean 入口：失败时返回 False，并通过 LastError / InitErrorCode 暴露原因。
     /// </summary>
     function Initialize: Boolean;
     
     /// <summary>
-    /// ��ʼ�� DeepBase��������ϸ������Ϣ
-    /// Boolean ��ڣ�ʧ��ʱ���׳���ʼ���쳣�����÷�Ӧ��鷵��ֵ��
+    /// 初始化 DeepBase，返回详细错误信息
+    /// Boolean 入口：失败时不抛出初始化异常，调用方应检查返回值。
     /// </summary>
     function InitializeEx(out ErrorMsg: string): Boolean;
     
     /// <summary>
-    /// ʹ��ָ�����ݿ�·����ʼ����֧�� :memory: ���ڲ��ԣ�
-    /// Boolean ��ڣ�ʧ��ʱ���� False����ͨ�� LastError / InitErrorCode ��¶ԭ��
+    /// 使用指定数据库路径初始化（支持 :memory: 用于测试）
+    /// Boolean 入口：失败时返回 False，并通过 LastError / InitErrorCode 暴露原因。
     /// </summary>
     function InitializeWithDB(const DBPath: string): Boolean;
 
     /// <summary>
-    /// �쳣��ڣ���ʼ��ʧ��ʱ�׳� EInitializationException��
+    /// 异常入口：初始化失败时抛出 EInitializationException。
     /// </summary>
     procedure InitializeOrRaise;
 
     /// <summary>
-    /// �쳣��ڣ�ʹ��ָ�����ݿ�·����ʼ����ʧ��ʱ�׳� EInitializationException��
+    /// 异常入口：使用指定数据库路径初始化，失败时抛出 EInitializationException。
     /// </summary>
     procedure InitializeWithDBOrRaise(const DBPath: string);
     
     /// <summary>
-    /// ע���ʼ����ɺ�Ļص�������ѳ�ʼ��������ִ�С�
-    /// ���ڽ������ FormShow �з��� DeepBase ����ʱ����δ���������⡣
+    /// 注册初始化完成后的回调。如果已初始化则立即执行。
+    /// 用于解决窗体 FormShow 中访问 DeepBase 功能时对象未就绪的问题。
     /// </summary>
     /// <example>
     /// procedure TMyForm.FormShow(Sender: TObject);
     /// begin
     ///   DeepBase.WhenReady(procedure
     ///   begin
-    ///     LoadProviders;  // ��ȫ����ʱ DeepBase ����ȫ��ʼ��
+    ///     LoadProviders;  // 安全：此时 DeepBase 已完全初始化
     ///   end);
     /// end;
     /// </example>
     procedure WhenReady(ACallback: TProc);
     
     /// <summary>
-    /// ����������ע��� Ready �ص����� Application.Run ǰ���ã�
+    /// 触发所有已注册的 Ready 回调（由 Application.Run 前调用）
     /// </summary>
     procedure FireReadyCallbacks;
     
@@ -233,41 +233,41 @@ type
     // ========================================
     
     /// <summary>
-    /// ִ�н������
+    /// 执行健康检查
     /// </summary>
     function HealthCheck: THealthCheckResult;
     
     // ========================================
-    // ��Ŀ��Ϣ
+    // 项目信息
     // ========================================
     
     /// <summary>
-    /// ��ȡ��Ŀ��Ϣ
+    /// 获取项目信息
     /// </summary>
     function GetProjectInfo(const Key: string): string;
     
     /// <summary>
-    /// ������Ŀ��Ϣ
+    /// 设置项目信息
     /// </summary>
     procedure SetProjectInfo(const Key, Value: string);
     
     // ========================================
-    // ��Դ·��
+    // 资源路径
     // ========================================
     
     /// <summary>
-    /// ��ȡ��Դ����·��
+    /// 获取资源完整路径
     /// </summary>
     function GetAssetPath(const RelativePath: string): string;
     
     // ========================================
-    // ����
+    // 属性
     // ========================================
     
-    /// <summary>���ݿ����ӣ�����ģ��ʹ�ã�</summary>
+    /// <summary>数据库连接（供子模块使用）</summary>
     property ConfigDB: TObject read FConfigDB;
     
-    // ��ģ����ʵ�
+    // 子模块访问点
     property Config: TDeepBaseConfig read FConfig;
     property I18n: TDeepBaseI18n read FI18n;
     property Theme: TDeepBaseTheme read FTheme;
@@ -278,32 +278,32 @@ type
     property MRU: TDeepBaseMRU read FMRU;
     property Hotkeys: TDeepBaseHotkeys read FHotkeys;
     
-    /// <summary>��Ŀ��Ŀ¼</summary>
+    /// <summary>项目根目录</summary>
     property RootPath: string read FRootPath;
     
-    /// <summary>�������ݿ�·��</summary>
+    /// <summary>配置数据库路径</summary>
     property ConfigDBPath: string read FConfigDBPath;
     
-    /// <summary>�Ƿ��ѳ�ʼ��</summary>
+    /// <summary>是否已初始化</summary>
     property IsInitialized: Boolean read FIsInitialized;
     
-    /// <summary>���һ�δ�����Ϣ</summary>
+    /// <summary>最后一次错误信息</summary>
     property LastError: string read FLastError;
     
-    /// <summary>��ʼ��������</summary>
+    /// <summary>初始化错误码</summary>
     property InitErrorCode: TInitErrorCode read FInitErrorCode;
     
-    /// <summary>��ǰ����</summary>
+    /// <summary>当前语言</summary>
     property CurrentLanguage: string read FCurrentLanguage write SetCurrentLanguage;
     
-    /// <summary>��ǰ����</summary>
+    /// <summary>当前主题</summary>
     property CurrentTheme: string read FCurrentTheme write SetCurrentTheme;
     
-    /// <summary>ͬ�������󣨹���ģ��ʹ�ã�</summary>
+    /// <summary>同步锁对象（供子模块使用）</summary>
     property Lock: TObject read FLock;
     
     // ========================================
-    // �¼�
+    // 事件
     // ========================================
     
     property OnLanguageChanged: TNotifyEvent read FOnLanguageChanged write FOnLanguageChanged;
@@ -526,12 +526,12 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // ���� root.txt
+  // 查找 root.txt
   FRootPath := FindRootPath;
   
   if FRootPath = '' then
   begin
-    // ���Դ��� root.txt
+    // 尝试创建 root.txt
     if not CreateRootTxt(RootTxtPath) then
     begin
       FInitErrorCode := ecPermissionDenied;
@@ -543,7 +543,7 @@ begin
     FRootPath := ExtractFilePath(RootTxtPath);
   end;
   
-  // ��֤��Ŀ¼
+  // 验证根目录
   if not TDirectory.Exists(FRootPath) then
   begin
     FInitErrorCode := ecInvalidPath;
@@ -566,10 +566,10 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // ���� ConfigDB �ļ�����{AppName}Config.db
+  // 计算 ConfigDB 文件名：{AppName}Config.db
   AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
   if AppName = '' then
-    AppName := 'DeepBase'; // ���ף������Ӧ����
+    AppName := 'DeepBase'; // 兜底，避免空应用名
 
   // Avoid doubled "Config" (e.g. DeepShineConfig.exe → DeepShineConfigConfig.db)
   if AppName.EndsWith('Config', True) then
@@ -577,12 +577,12 @@ begin
   else
     ConfigFileName := AppName + CONFIG_DB_SUFFIX;
 
-  // ������ RootPath �²��� {AppName}Config.db
+  // 优先在 RootPath 下查找 {AppName}Config.db
   FConfigDBPath := TPath.Combine(FRootPath, ConfigFileName);
 
   if not TFile.Exists(FConfigDBPath) then
   begin
-    // ����λ�ã�%APPDATA%/{AppName}/{AppName}Config.db
+    // 备用位置：%APPDATA%/{AppName}/{AppName}Config.db
     AppDataDir := GetAppDataDir;
     if AppDataDir <> '' then
     begin
@@ -591,10 +591,10 @@ begin
       begin
         FConfigDBPath := FallbackPath;
       end;
-      // �������λ�ö������ڣ����� FConfigDBPath ָ�� RootPath �µ�·��
-      // ConnectToDatabase ��ʹ�� OpenMode=CreateUTF8 �Զ��������ݿ��ļ�
+      // 如果两个位置都不存在，保持 FConfigDBPath 指向 RootPath 下的路径
+      // ConnectToDatabase 会使用 OpenMode=CreateUTF8 自动创建数据库文件
     end;
-    // ���ٱ������� ConnectToDatabase �Զ��������ݿ�
+    // 不再报错，让 ConnectToDatabase 自动创建数据库
   end;
   
   Result := True;
@@ -605,7 +605,7 @@ begin
   Result := False;
   ErrorMsg := '';
   
-  // �������ݿ�
+  // 连接数据库
   if not ConnectToDatabase(FConfigDBPath) then
   begin
     ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
@@ -613,7 +613,7 @@ begin
     Exit;
   end;
   
-  // ��֤/���� Schema��ʹ�� IF NOT EXISTS ȷ�����б����ڣ�
+  // 验证/创建 Schema（使用 IF NOT EXISTS 确保所有表存在）
   if not CreateSchema then
   begin
     ErrorMsg := Format('[%d] %s: %s', [Ord(FInitErrorCode),
@@ -826,7 +826,7 @@ begin
   if not Assigned(ACallback) then
     Exit;
     
-  // ����Ѿ������� Ready��ʹ���첽ִ�б���Ƕ��������������
+  // 如果已经触发过 Ready，使用异步执行避免嵌套锁定导致死锁
   // BUG-007 FIX: Use TTask.Run to prevent deadlock when callback calls DeepBase functions
   if FReadyFired then
   begin
@@ -854,7 +854,7 @@ begin
     Exit;
   end;
   
-  // ���������еȴ�
+  // 否则加入队列等待
   TMonitor.Enter(FLock);
   try
     FReadyCallbacks.Add(ACallback);
@@ -925,11 +925,11 @@ begin
     FConfig := TDeepBaseConfig.Create(FConfigDB, FLock);
   FConfig.OnConfigChanged := HandleConfigChanged;
   
-  // PERF-001: Ԥ�����û��棬�����״η���ʱ�������С��ѯ
+  // PERF-001: 预热配置缓存，避免首次访问时产生多次小查询
   try
     FConfig.PreloadCache;
   except
-    // Ԥ��ʧ�ܲ�Ӱ���������У����־�Ĭ���� DEBUG �����
+    // 预热失败不影响正常运行，保持静默或在 DEBUG 下输出
     {$IFDEF DEBUG}
     OutputDebugString('DeepBase.Manager: PreloadCache failed');
     {$ENDIF}
@@ -1171,7 +1171,7 @@ var
 begin
   Result := '';
   
-  // ���ȼ� 1: EXE ����Ŀ¼
+  // 优先级 1: EXE 所在目录
   ExeDir := GetExeDir;
   RootTxtPath := TPath.Combine(ExeDir, ROOT_TXT_NAME);
   
@@ -1185,7 +1185,7 @@ begin
     end;
   end;
   
-  // ���ȼ� 2: APPDATA Ŀ¼
+  // 优先级 2: APPDATA 目录
   AppDataDir := GetAppDataDir;
   if AppDataDir <> '' then
   begin
@@ -1212,21 +1212,21 @@ begin
     begin
       Line := Trim(Lines[0]);
       
-      // ����Ƿ��� INI ��ʽ��չ
+      // 检查是否是 INI 格式扩展
       if (Length(Line) > 0) and (Line[1] = '[') then
       begin
-        // INI ��ʽ�� [Paths] ��չĿǰ��֧�֣�Ϊ���ּ���ֱ�ӷ��ؿ�·��
+        // INI 格式的 [Paths] 扩展目前不支持，为保持兼容直接返回空路径
         Exit;
       end;
       
-      // �򵥸�ʽ����һ����·��
+      // 简单格式：第一行是路径
       if TDirectory.Exists(Line) then
         Result := Line;
     end;
   except
     on E: Exception do
     begin
-      // ��ȡʧ�ܣ���¼��־�󷵻ؿ�
+      // 读取失败，记录日志后返回空
       if Assigned(FLogger) then
         FLogger.Log('ReadRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
     end;
@@ -1242,7 +1242,7 @@ begin
   except
     on E: Exception do
     begin
-      // д��ʧ�ܣ���¼��־
+      // 写入失败，记录日志
       if Assigned(FLogger) then
         FLogger.Log('WriteRootTxt failed: ' + FilePath + ' - ' + E.Message, llWarn, 'Manager');
     end;
@@ -1256,7 +1256,7 @@ begin
   Result := False;
   FilePath := '';
   
-  // ���ȳ��� EXE Ŀ¼
+  // 优先尝试 EXE 目录
   ExeDir := GetExeDir;
   if CheckWritePermission(ExeDir) then
   begin
@@ -1266,7 +1266,7 @@ begin
       Exit;
   end;
   
-  // ���˵� APPDATA
+  // 回退到 APPDATA
   AppDataDir := GetAppDataDir;
   if (AppDataDir <> '') and TDirectory.Exists(AppDataDir) then
   begin
@@ -1436,7 +1436,7 @@ var
 begin
   Result := '';
   
-  // Ӧ����Լ����ʹ�� EXE �ļ�����������չ��
+  // 应用名约定：使用 EXE 文件名（不含扩展）
   AppName := ChangeFileExt(ExtractFileName(ParamStr(0)), '');
   if AppName = '' then
     AppName := 'DeepBase';
@@ -1455,7 +1455,7 @@ begin
     end;
   end;
   {$ELSE}
-  // �� Windows ƽ̨��ʹ�� ~/.{AppName}
+  // 非 Windows 平台：使用 ~/.{AppName}
   Result := TPath.Combine(TPath.GetHomePath, '.' + AppName.ToLower);
   if not TDirectory.Exists(Result) then
   begin
@@ -1483,7 +1483,7 @@ begin
     TFile.Delete(TestFile);
     Result := True;
   except
-    // ��д��Ȩ��
+    // 无写入权限
   end;
 end;
 

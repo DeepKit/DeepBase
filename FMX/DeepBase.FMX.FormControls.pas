@@ -1,4 +1,4 @@
-unit DeepBase.FMX.FormControls;
+ï»¿unit DeepBase.FMX.FormControls;
 
 {*******************************************************************************
   DeepBase FMX Form Controls - Enhanced Cross-Platform Input Controls
@@ -962,7 +962,7 @@ begin
   CloseBtn.Parent := ChipLayout;
   CloseBtn.Align := TAlignLayout.Right;
   CloseBtn.Width := 24;
-  CloseBtn.Text := '¡Á';
+  CloseBtn.Text := 'Ã—';
   CloseBtn.StyledSettings := [];
   CloseBtn.TextSettings.FontColor := FChipTextColor;
   CloseBtn.TextSettings.HorzAlign := TTextAlign.Center;

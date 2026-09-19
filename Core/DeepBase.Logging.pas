@@ -301,7 +301,7 @@ begin
   inherited Create;
   FDBPath := DBPath;
   FStorage := CreateStorage(DBPath);
-  FStorageMode := lsmDatabase; // Ĭ��
+  FStorageMode := lsmDatabase; // 默认
   FMinLevel := llDebug;
   FLogFileDir := TPath.Combine(ExtractFilePath(ParamStr(0)), 'Logs');
   
@@ -321,7 +321,7 @@ begin
   FStopEvent := TEvent.Create;
   FLogEvent := TEvent.Create;
   
-  // ����д���߳�
+  // 启动写入线程
   FWriteThread := TThread.CreateAnonymousThread(WriteLogThread);
   FWriteThread.FreeOnTerminate := False;
   FWriteThread.Start;
@@ -379,7 +379,7 @@ begin
     // Reset event BEFORE processing to avoid race condition
     FLogEvent.ResetEvent;
     
-    // R-003: �������������������ȡ��ʣ�����
+    // R-003: 单次锁定即完成批量提取和剩余计数
     RemainingCount := 0;
     SetLength(LocalBatch, 0);
     List := FLogQueue.LockList;
@@ -398,7 +398,7 @@ begin
         // Remove processed entries from queue
         List.DeleteRange(0, BatchCount);
         
-        // ����ʣ����Ŀ������ͬһ�������У�
+        // 计算剩余条目数（在同一次锁定中）
         RemainingCount := List.Count;
       end;
     finally
@@ -422,7 +422,7 @@ begin
     end;
     
     // If there are more entries in queue, signal ourselves to continue
-    // ע�⣺ʹ����ǰ��¼�� RemainingCount�������ٴμ���
+    // 注意：使用先前记录的 RemainingCount，避免再次加锁
     if RemainingCount > 0 then
       FLogEvent.SetEvent;
   end;
@@ -691,7 +691,7 @@ begin
   if FShuttingDown then Exit;
   if Level < FMinLevel then Exit;
   
-  // ��ֹ��־ע�빥�� - ������Ϣ����
+  // 防止日志注入攻击 - 清理消息内容
   SafeMsg := SanitizeLogMessage(Msg);
   
   Entry.Level := Level;
@@ -729,7 +729,7 @@ begin
   
   Entry.Level := Level;
   
-  // ����������Ϣ
+  // 构建完整消息
   if Msg <> '' then
     FinalMsg := Msg + ' - [' + E.ClassName + '] ' + E.Message
   else
@@ -813,7 +813,7 @@ var
   FileDate: TDateTime;
   FileName: string;
 begin
-  // �������ݿ���־
+  // 清理数据库日志
   if Assigned(FStorage) then
   begin
     CutoffDate := DateToISO8601(IncDay(Now, -DaysToKeep));
@@ -825,16 +825,16 @@ begin
     end;
   end;
   
-  // ��������־�ļ� (.txt �� .jsonl)
+  // 清理旧日志文件 (.txt 和 .jsonl)
   if DirectoryExists(FLogFileDir) then
   begin
-    // ���� .txt ��־�ļ�
+    // 清理 .txt 日志文件
     try
       LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.txt');
       for LogFile in LogFiles do
       begin
         FileName := ExtractFileName(LogFile);
-        // ��������: Log_yyyy-MM-dd.txt
+        // 解析日期: Log_yyyy-MM-dd.txt
         if Length(FileName) >= 14 then
         begin
           try
@@ -846,7 +846,7 @@ begin
             if FileDate < IncDay(Now, -DaysToKeep) then
               TFile.Delete(LogFile);
           except
-            // ��������ʧ�ܵ��ļ�
+            // 跳过解析失败的文件
           end;
         end;
       end;
@@ -854,13 +854,13 @@ begin
       // ignore
     end;
     
-    // ���� .jsonl ��־�ļ�
+    // 清理 .jsonl 日志文件
     try
       LogFiles := TDirectory.GetFiles(FLogFileDir, 'Log_*.jsonl');
       for LogFile in LogFiles do
       begin
         FileName := ExtractFileName(LogFile);
-        // ��������: Log_yyyy-MM-dd.jsonl
+        // 解析日期: Log_yyyy-MM-dd.jsonl
         if Length(FileName) >= 16 then
         begin
           try
@@ -872,7 +872,7 @@ begin
             if FileDate < IncDay(Now, -DaysToKeep) then
               TFile.Delete(LogFile);
           except
-            // ��������ʧ�ܵ��ļ�
+            // 跳过解析失败的文件
           end;
         end;
       end;

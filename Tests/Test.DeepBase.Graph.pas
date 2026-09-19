@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Graph module
 /// Tests: TGraph, TPath, TEdge, TPriorityQueue, TTreeNode, TTree, TGraphBuilder
 /// </summary>

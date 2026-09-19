@@ -159,6 +159,7 @@
         <DCCReference Include="Core\DeepBase.Manager.pas"/>
         <DCCReference Include="Core\DeepBase.Manager.Schema.pas"/>
         <DCCReference Include="Core\DeepBase.Manager.Operational.pas"/>
+        <DCCReference Include="Core\DeepBase.ManagedWorker.pas"/>
         <DCCReference Include="Core\DeepBase.Plugin.pas"/>
         <DCCReference Include="Core\DeepBase.PluginManager.pas"/>
         <DCCReference Include="Core\DeepBase.Config.pas"/>

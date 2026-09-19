@@ -19,6 +19,7 @@ uses
   Test.DeepBase.DiagnosticLogger,
   // Test units - Phase 0
   Test.DeepBase.Manager in 'Test.DeepBase.Manager.pas',
+  Test.DeepBase.ManagedWorker in 'Test.DeepBase.ManagedWorker.pas',
   // Test units - Phase 0 (more)
   Test.DeepBase.Config in 'Test.DeepBase.Config.pas',
   Test.DeepBase.i18n in 'Test.DeepBase.i18n.pas',

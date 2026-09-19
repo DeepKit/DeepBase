@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Templates - Preset Template Manager
 
   Manages loading, validation, and override of preset templates

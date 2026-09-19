@@ -1,4 +1,4 @@
-unit Test.DeepBase.Desktop.Perception.FrameDiffer;
+﻿unit Test.DeepBase.Desktop.Perception.FrameDiffer;
 
 { ============================================================================
   Tests for the L0 pixel-diff gate (PERCEPT-P2-001b): TFrameDiffer decides

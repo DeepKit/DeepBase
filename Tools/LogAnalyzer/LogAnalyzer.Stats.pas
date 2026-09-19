@@ -1,12 +1,12 @@
-{ ============================================================================
-  LogAnalyzer.Stats - 日志统计模块
+﻿{ ============================================================================
+  LogAnalyzer.Stats - 鏃ュ織缁熻妯″潡
 
-  版本: 1.0
-  功能:
-    - 按级别统计日志数�?
-    - 按来源统计日志数�?
-    - 时间范围分析
-    - 趋势分析
+  鐗堟湰: 1.0
+  鍔熻兘:
+    - 鎸夌骇鍒粺璁℃棩蹇楁暟閲?
+    - 鎸夋潵婧愮粺璁℃棩蹇楁暟閲?
+    - 鏃堕棿鑼冨洿鍒嗘瀽
+    - 瓒嬪娍鍒嗘瀽
   ============================================================================ }
 
 unit LogAnalyzer.Stats;
@@ -23,7 +23,7 @@ uses
 
 type
   /// <summary>
-  /// 日志统计结果
+  /// 鏃ュ織缁熻缁撴灉
   /// </summary>
   TLogStats = record
     TotalCount: Integer;
@@ -37,7 +37,7 @@ type
   end;
 
   /// <summary>
-  /// 按来源分组的统计
+  /// 鎸夋潵婧愬垎缁勭殑缁熻
   /// </summary>
   TSourceStats = record
     Source: string;
@@ -47,7 +47,7 @@ type
   end;
 
   /// <summary>
-  /// 时间段统�?(用于趋势�?
+  /// 鏃堕棿娈电粺璁?(鐢ㄤ簬瓒嬪娍鍥?
   /// </summary>
   TTimeSlotStats = record
     SlotTime: TDateTime;
@@ -56,7 +56,7 @@ type
   end;
 
   /// <summary>
-  /// 日志统计分析�?
+  /// 鏃ュ織缁熻鍒嗘瀽鍣?
   /// </summary>
   TLogStatsAnalyzer = class
   private
@@ -65,32 +65,32 @@ type
     constructor Create(const ALogs: TArray<TLogEntry>);
 
     /// <summary>
-    /// 获取基本统计信息
+    /// 鑾峰彇鍩烘湰缁熻淇℃伅
     /// </summary>
     function GetBasicStats: TLogStats;
 
     /// <summary>
-    /// 按来源分组统�?
+    /// 鎸夋潵婧愬垎缁勭粺璁?
     /// </summary>
     function GetStatsBySource: TArray<TSourceStats>;
 
     /// <summary>
-    /// 按小时分组统�?(用于趋势�?
+    /// 鎸夊皬鏃跺垎缁勭粺璁?(鐢ㄤ簬瓒嬪娍鍥?
     /// </summary>
     function GetHourlyStats: TArray<TTimeSlotStats>;
 
     /// <summary>
-    /// 按天分组统计
+    /// 鎸夊ぉ鍒嗙粍缁熻
     /// </summary>
     function GetDailyStats: TArray<TTimeSlotStats>;
 
     /// <summary>
-    /// 获取错误最多的来源 (Top N)
+    /// 鑾峰彇閿欒鏈€澶氱殑鏉ユ簮 (Top N)
     /// </summary>
     function GetTopErrorSources(ACount: Integer = 10): TArray<TSourceStats>;
 
     /// <summary>
-    /// 获取最活跃的来�?(Top N)
+    /// 鑾峰彇鏈€娲昏穬鐨勬潵婧?(Top N)
     /// </summary>
     function GetTopActiveSources(ACount: Integer = 10): TArray<TSourceStats>;
 
@@ -119,14 +119,14 @@ begin
 
     for I := 0 to High(ALogs) do
     begin
-      // 按级别计�?
+      // 鎸夌骇鍒鏁?
       Inc(Result.CountByLevel[ALogs[I].Level]);
 
-      // 唯一来源
+      // 鍞竴鏉ユ簮
       if not Sources.ContainsKey(ALogs[I].Source) then
         Sources.Add(ALogs[I].Source, True);
 
-      // 时间范围
+      // 鏃堕棿鑼冨洿
       if ALogs[I].Timestamp < Result.FirstTime then
         Result.FirstTime := ALogs[I].Timestamp;
       if ALogs[I].Timestamp > Result.LastTime then
@@ -199,7 +199,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按数量降序排�?
+    // 鎸夋暟閲忛檷搴忔帓搴?
     List.Sort(TComparer<TSourceStats>.Construct(
       function(const L, R: TSourceStats): Integer
       begin
@@ -227,7 +227,7 @@ begin
   try
     for I := 0 to High(FLogs) do
     begin
-      // 截断到小�?
+      // 鎴柇鍒板皬鏃?
       SlotTime := RecodeMinute(RecodeSecond(RecodeMilliSecond(FLogs[I].Timestamp, 0), 0), 0);
 
       if Dict.TryGetValue(SlotTime, Stats) then
@@ -249,7 +249,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按时间升序排�?
+    // 鎸夋椂闂村崌搴忔帓搴?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin
@@ -282,7 +282,7 @@ begin
   try
     for I := 0 to High(FLogs) do
     begin
-      // 截断到天
+      // 鎴柇鍒板ぉ
       SlotTime := DateOf(FLogs[I].Timestamp);
 
       if Dict.TryGetValue(SlotTime, Stats) then
@@ -304,7 +304,7 @@ begin
     for Pair in Dict do
       List.Add(Pair.Value);
 
-    // 按时间升序排�?
+    // 鎸夋椂闂村崌搴忔帓搴?
     List.Sort(TComparer<TTimeSlotStats>.Construct(
       function(const L, R: TTimeSlotStats): Integer
       begin
@@ -331,7 +331,7 @@ var
 begin
   AllStats := GetStatsBySource;
 
-  // 按错误数降序排序
+  // 鎸夐敊璇暟闄嶅簭鎺掑簭
   List := TList<TSourceStats>.Create;
   try
     for I := 0 to High(AllStats) do

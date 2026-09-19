@@ -1,4 +1,4 @@
-unit DeepBase.Browser.Session;
+﻿unit DeepBase.Browser.Session;
 
 interface
 

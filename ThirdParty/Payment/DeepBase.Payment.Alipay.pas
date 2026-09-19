@@ -1,15 +1,15 @@
-unit DeepBase.Payment.Alipay;
+﻿unit DeepBase.Payment.Alipay;
 
 {*******************************************************************************
-  DeepBase Alipay (支付�? Payment Integration
+  DeepBase Alipay (鏀粯瀹? Payment Integration
 
   Supports:
     - 电脑网站支付 (alipay.trade.page.pay)
     - 手机网站支付 (alipay.trade.wap.pay)
-    - 当面�?扫码支付 (alipay.trade.precreate)
+    - 褰撻潰浠?鎵爜鏀粯 (alipay.trade.precreate)
     - APP支付 (alipay.trade.app.pay)
     - 统一收单交易查询 (alipay.trade.query)
-    - 统一收单交易退�?(alipay.trade.refund)
+    - 缁熶竴鏀跺崟浜ゆ槗閫€娆?(alipay.trade.refund)
     - 统一收单交易关闭 (alipay.trade.close)
 
   Official Docs: https://opendocs.alipay.com/open/
@@ -286,7 +286,7 @@ begin
     Exit(False);
 
   {$IFDEF MSWINDOWS}
-  // 兼容仅传�?Base64 主体的公钥配�?  NormalizedKey := PublicKey;
+  // 鍏煎浠呬紶鍏?Base64 涓讳綋鐨勫叕閽ラ厤缃?  NormalizedKey := PublicKey;
   if Pos('BEGIN PUBLIC KEY', UpperCase(NormalizedKey)) = 0 then
     NormalizedKey := '-----BEGIN PUBLIC KEY-----' + sLineBreak +
       NormalizedKey + sLineBreak +

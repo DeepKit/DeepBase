@@ -1,4 +1,4 @@
-unit Tray.Automation;
+﻿unit Tray.Automation;
 
 {*******************************************************************************
   DeepBaseTray - 自动化脚本引擎

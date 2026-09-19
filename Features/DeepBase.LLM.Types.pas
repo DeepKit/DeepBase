@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.LLM.Types - Unified LLM Type Definitions
 
   Contains all type definitions for both the Core (L2) and Proxy (L3)

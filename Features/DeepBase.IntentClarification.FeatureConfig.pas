@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.FeatureConfig - Config & Feature Flags
 
   Integrates with DeepBase.Config for runtime configuration and

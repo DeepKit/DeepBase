@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DeepShell.Theme
 
   Default IShellThemeService implementation. Tracks the active theme id and

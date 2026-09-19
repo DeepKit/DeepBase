@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AIErrorHandler.Bootstrap
 
   One-line entry point for installing the DeepBase AI runtime-error handler.

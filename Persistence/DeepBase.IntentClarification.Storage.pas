@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Storage - SQLite Persistence via FireDAC
 
   Provides SQLite-based persistence for session checkpoints and rapport

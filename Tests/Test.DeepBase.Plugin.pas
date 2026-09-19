@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Plugin - Plugin System Unit Tests
   
   Tests for DeepBase.Plugin and DeepBase.PluginManager modules including:

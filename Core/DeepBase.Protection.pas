@@ -1,4 +1,4 @@
-unit DeepBase.Protection;
+﻿unit DeepBase.Protection;
 
 interface
 
@@ -173,7 +173,7 @@ type
     class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string): string; static;
     class function EncryptBinaryData(const AData: TBytes; const APassword: string): TBytes; static;
     class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string): TBytes; static;
-    // 完整性校�?
+    // 瀹屾暣鎬ф牎楠?
     class function CalculateHMAC(const AData: string; const APassword: string): string; static;
     class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string): Boolean; static;
     class function CalculateFileHash(const AFileName: string): string; static;
@@ -182,12 +182,12 @@ type
 
 implementation
 
-// 以下实现直接来自�?uBasicProtection.pas，保持语义不�?
+// 浠ヤ笅瀹炵幇鐩存帴鏉ヨ嚜鍘?uBasicProtection.pas锛屼繚鎸佽涔変笉鍙?
 
 class function TBasicProtection.GetDynamicKey: string;
 begin
   // 移除动态密钥生成，返回空字符串
-  // 这个方法已被弃用，建议使用更安全的密钥管理方�?
+  // 杩欎釜鏂规硶宸茶寮冪敤锛屽缓璁娇鐢ㄦ洿瀹夊叏鐨勫瘑閽ョ鐞嗘柟妗?
   Result := '';
   
   // 记录警告日志

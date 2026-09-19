@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.External.BCryptDecrypt - BCrypt Direct Decryption Backend
   Version: 0.7
   Based on WxDecryptProbe v0.2 (colleague's verified implementation)

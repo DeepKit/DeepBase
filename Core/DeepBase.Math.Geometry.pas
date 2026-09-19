@@ -1,4 +1,4 @@
-unit DeepBase.Math.Geometry;
+﻿unit DeepBase.Math.Geometry;
 
 {*******************************************************************************
   DeepBase Math — Vector & Matrix Geometry

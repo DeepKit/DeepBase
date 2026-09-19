@@ -1,16 +1,16 @@
-{ ============================================================================
-  Test.Regression.BUG001_AnimationMemoryLeak - 动画对象内存泄漏回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG001_AnimationMemoryLeak - 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡鍥炲綊娴嬭瘯
 
-  BUG-001: 动画对象内存泄漏
+  BUG-001: 鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡
   
-  原问�? 析构函数中FAnimationTimer只禁用但未释�?
+  鍘熼棶棰? 鏋愭瀯鍑芥暟涓璅AnimationTimer鍙鐢ㄤ絾鏈噴鏀?
   
-  修复方案: 使用FreeAndNil确保定时器对象被正确释放
+  淇鏂规: 浣跨敤FreeAndNil纭繚瀹氭椂鍣ㄥ璞¤姝ｇ‘閲婃斁
   
-  修复日期: 2025-01-27
-  文件: VCL/DeepBase.VCL.WaitForm.pas
-  优先�? P1 (High)
-  分类: Memory
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: VCL/DeepBase.VCL.WaitForm.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Memory
   ============================================================================ }
 
 unit Test.Regression.BUG001_AnimationMemoryLeak;
@@ -36,15 +36,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 WaitForm 创建和销毁不会泄漏内�?)]
+    [Description('楠岃瘉 WaitForm 鍒涘缓鍜岄攢姣佷笉浼氭硠婕忓唴瀛?)]
     procedure Test_WaitForm_NoMemoryLeak;
     
     [Test]
-    [Description('验证多次创建销�?WaitForm 内存稳定')]
+    [Description('楠岃瘉澶氭鍒涘缓閿€姣?WaitForm 鍐呭瓨绋冲畾')]
     procedure Test_WaitForm_RepeatedCreateDestroy_MemoryStable;
     
     [Test]
-    [Description('验证源代码使�?FreeAndNil')]
+    [Description('楠岃瘉婧愪唬鐮佷娇鐢?FreeAndNil')]
     procedure Test_SourceCode_UsesFreeAndNil;
   end;
 
@@ -62,7 +62,7 @@ end;
 
 function TBug001_AnimationMemoryLeakTest.GetBugDescription: string;
 begin
-  Result := '动画对象内存泄漏';
+  Result := '鍔ㄧ敾瀵硅薄鍐呭瓨娉勬紡';
 end;
 
 function TBug001_AnimationMemoryLeakTest.GetFixDate: string;
@@ -84,11 +84,11 @@ procedure TBug001_AnimationMemoryLeakTest.Test_WaitForm_NoMemoryLeak;
 begin
   LogTestStart('Test_WaitForm_NoMemoryLeak');
   
-  // 由于 WaitForm �?VCL 组件，需要在主线程中测试
-  // 这里验证概念：创建和销毁应该不泄漏内存
+  // 鐢变簬 WaitForm 鏄?VCL 缁勪欢锛岄渶瑕佸湪涓荤嚎绋嬩腑娴嬭瘯
+  // 杩欓噷楠岃瘉姒傚康锛氬垱寤哄拰閿€姣佸簲璇ヤ笉娉勬紡鍐呭瓨
   
-  // 实际测试需�?VCL 环境，这里通过代码审查验证
-  Assert.Pass('内存泄漏测试需�?VCL 环境，通过代码审查确认修复');
+  // 瀹為檯娴嬭瘯闇€瑕?VCL 鐜锛岃繖閲岄€氳繃浠ｇ爜瀹℃煡楠岃瘉
+  Assert.Pass('鍐呭瓨娉勬紡娴嬭瘯闇€瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
   
   LogTestEnd('Test_WaitForm_NoMemoryLeak', True);
 end;
@@ -97,8 +97,8 @@ procedure TBug001_AnimationMemoryLeakTest.Test_WaitForm_RepeatedCreateDestroy_Me
 begin
   LogTestStart('Test_WaitForm_RepeatedCreateDestroy_MemoryStable');
   
-  // 多次创建销毁后内存应该稳定
-  Assert.Pass('重复创建销毁测试需�?VCL 环境，通过代码审查确认修复');
+  // 澶氭鍒涘缓閿€姣佸悗鍐呭瓨搴旇绋冲畾
+  Assert.Pass('閲嶅鍒涘缓閿€姣佹祴璇曢渶瑕?VCL 鐜锛岄€氳繃浠ｇ爜瀹℃煡纭淇');
   
   LogTestEnd('Test_WaitForm_RepeatedCreateDestroy_MemoryStable', True);
 end;
@@ -117,16 +117,16 @@ begin
     SourcePath := '..\VCL\DeepBase.VCL.WaitForm.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证使用 FreeAndNil 而不是简单的 Free
+  // 楠岃瘉浣跨敤 FreeAndNil 鑰屼笉鏄畝鍗曠殑 Free
   Assert.IsTrue(SourceCode.Contains('FreeAndNil'),
-    '析构函数应该使用 FreeAndNil 释放定时器对�?);
+    '鏋愭瀯鍑芥暟搴旇浣跨敤 FreeAndNil 閲婃斁瀹氭椂鍣ㄥ璞?);
   
   LogTestEnd('Test_SourceCode_UsesFreeAndNil', True);
 end;

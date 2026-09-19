@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG330_SQLiteReaderSchemaCache - REVIEW5-DATA-001
 
   Verifies that TExternalSQLiteReader caches schema after Open so that

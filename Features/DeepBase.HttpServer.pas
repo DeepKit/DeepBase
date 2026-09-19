@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HttpServer - Lightweight HTTP Server
   
   A lightweight HTTP server with routing and middleware support.

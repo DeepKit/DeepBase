@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.LLM.Config - LLM Configuration Management
 
   Contains configuration management for both Core (L2) and Proxy (L3)

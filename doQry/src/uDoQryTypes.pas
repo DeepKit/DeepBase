@@ -1,4 +1,4 @@
-unit uDoQryTypes;
+﻿unit uDoQryTypes;
 
 interface
 

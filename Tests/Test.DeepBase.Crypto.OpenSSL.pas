@@ -1,4 +1,4 @@
-unit Test.DeepBase.Crypto.OpenSSL;
+﻿unit Test.DeepBase.Crypto.OpenSSL;
 
 interface
 
@@ -14,9 +14,9 @@ type
   /// <summary>
   /// Basic tests for DeepBase.Crypto.OpenSSL helper functions.
   ///
-  /// 说明�?
-  /// - 这些测试在没�?libcrypto 时不会失败，只验证不会抛出意外异常；
-  /// - 当运行环境正确部�?libcrypto 时，会进一步验证随机数长度�?AES-256-GCM 的加解密往返�?
+  /// 璇存槑锛?
+  /// - 杩欎簺娴嬭瘯鍦ㄦ病鏈?libcrypto 鏃朵笉浼氬け璐ワ紝鍙獙璇佷笉浼氭姏鍑烘剰澶栧紓甯革紱
+  /// - 褰撹繍琛岀幆澧冩纭儴缃?libcrypto 鏃讹紝浼氳繘涓€姝ラ獙璇侀殢鏈烘暟闀垮害鍜?AES-256-GCM 鐨勫姞瑙ｅ瘑寰€杩斻€?
   /// </summary>
   [TestFixture]
   TOpenSSLBasicTests = class
@@ -55,7 +55,7 @@ begin
     except
       on E: EOpenSSLNotLoaded do
       begin
-        // 在当前环境无法加�?OpenSSL 时，后续测试直接返回，避免失�?
+        // 鍦ㄥ綋鍓嶇幆澧冩棤娉曞姞杞?OpenSSL 鏃讹紝鍚庣画娴嬭瘯鐩存帴杩斿洖锛岄伩鍏嶅け璐?
         Result := False;
       end;
       on E: Exception do
@@ -73,7 +73,7 @@ begin
     OpenSSL_Init;
   except
     on E: EOpenSSLNotLoaded do
-      ; // 在缺�?libcrypto 的环境下允许出现该异�?
+      ; // 鍦ㄧ己灏?libcrypto 鐨勭幆澧冧笅鍏佽鍑虹幇璇ュ紓甯?
     on E: Exception do
       Assert.Fail('Unexpected exception from OpenSSL_Init: ' + E.ClassName + ': ' + E.Message);
   end;
@@ -84,7 +84,7 @@ var
   Bytes: TBytes;
 begin
   if not EnsureLoadedOrSkip then
-    Exit; // 环境未加�?OpenSSL，跳过具体行为验�?
+    Exit; // 鐜鏈姞杞?OpenSSL锛岃烦杩囧叿浣撹涓洪獙璇?
 
   Bytes := OpenSSL_RandomBytes(32);
   Assert.AreEqual(32, Integer(Length(Bytes)));

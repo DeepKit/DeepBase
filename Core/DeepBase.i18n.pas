@@ -494,7 +494,7 @@ begin
   except
     on E: Exception do
     begin
-      // ��¼ȱʧ����ʧ�ܣ��ǹؼ���������ʹ��OutputDebugString����ѭ������
+      // 记录缺失翻译失败（非关键操作），使用OutputDebugString避免循环依赖
       {$IFDEF DEBUG}
       OutputDebugString(PChar('DeepBase.i18n RecordMissingTranslation failed: ' + E.Message));
       {$ENDIF}
@@ -525,7 +525,7 @@ begin
   CacheHit := False;
   NeedRecord := False;
   
-  // �������ĳ���ʱ�� - �ȼ�黺��
+  // 减少锁的持有时间 - 先检查缓存
   FLock.Enter;
   try
     if FCache.TryGetValue(CacheKey, LNode) then
@@ -544,14 +544,14 @@ begin
     FLock.Leave;
   end;
   
-  // �������У�ֱ�ӷ���
+  // 缓存命中，直接返回
   if CacheHit then
     Exit;
   
-  // ����δ���У���ѯ���ݿ⣨��������У�
+  // 缓存未命中，查询数据库（在锁外进行）
   Result := ReadFromDB(Text, LangCode);
   
-  // ���»��棨���»�ȡ����������ʱ����̣�
+  // 更新缓存（重新获取锁，但持有时间更短）
   // »棨»ȡʱ̣
   // IMPORTANT: do NOT cache empty results so that the next call
   // re-queries the DB (which may have become available later).
@@ -588,7 +588,7 @@ begin
     NeedRecord := True;
   end;
   
-  // �������¼ȱʧ����
+  // 在锁外记录缺失翻译
   if NeedRecord then
     RecordMissingTranslation(Text, LangCode);
 end;
@@ -690,7 +690,7 @@ begin
   end;
 end;
 
-// BUG-003 FIX: ����ȫ�ֻص����ã���ֹѭ�����õ����ڴ�й©
+// BUG-003 FIX: 清理全局回调引用，防止循环引用导致内存泄漏
 procedure TDeepBaseI18n.LRUAdd(const ANode: TCacheNode);
 begin
   // Insert at head (most-recently-used end)

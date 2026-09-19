@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Session - Session Lifecycle Manager
 
   Manages session state transitions, idle timeout detection, and checkpoint

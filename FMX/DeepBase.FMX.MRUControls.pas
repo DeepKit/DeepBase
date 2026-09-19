@@ -1,10 +1,10 @@
-{ ============================================================================
-  DeepBase.FMX.MRUControls - FMX MRU 控件
+﻿{ ============================================================================
+  DeepBase.FMX.MRUControls - FMX MRU 鎺т欢
   
-  版本: 1.0
-  说明: 自动绑定 MRU 列表�?FMX 控件
-  控件:
-    - TFMXMRUComboBox: MRU 下拉列表
+  鐗堟湰: 1.0
+  璇存槑: 鑷姩缁戝畾 MRU 鍒楄〃鐨?FMX 鎺т欢
+  鎺т欢:
+    - TFMXMRUComboBox: MRU 涓嬫媺鍒楄〃
   ============================================================================ }
 
 unit DeepBase.FMX.MRUControls;
@@ -22,7 +22,7 @@ uses
 
 type
   /// <summary>
-  /// MRU 下拉列表控件
+  /// MRU 涓嬫媺鍒楄〃鎺т欢
   /// </summary>
   TFMXMRUComboBox = class(TComboBox)
   private
@@ -41,38 +41,38 @@ type
     constructor Create(AOwner: TComponent); override;
     
     /// <summary>
-    /// 刷新 MRU 列表
+    /// 鍒锋柊 MRU 鍒楄〃
     /// </summary>
     procedure RefreshMRU;
     
     /// <summary>
-    /// 添加当前选中项到 MRU
+    /// 娣诲姞褰撳墠閫変腑椤瑰埌 MRU
     /// </summary>
     procedure AddCurrentToMRU;
     
     /// <summary>
-    /// 获取当前选中�?MRU �?
+    /// 鑾峰彇褰撳墠閫変腑鐨?MRU 閿?
     /// </summary>
     function GetSelectedKey: string;
     
   published
     /// <summary>
-    /// MRU 类别
+    /// MRU 绫诲埆
     /// </summary>
     property Category: string read FCategory write SetCategory;
     
     /// <summary>
-    /// 最大显示项�?
+    /// 鏈€澶ф樉绀洪」鏁?
     /// </summary>
     property MaxItems: Integer read FMaxItems write FMaxItems default 10;
     
     /// <summary>
-    /// 自动刷新
+    /// 鑷姩鍒锋柊
     /// </summary>
     property AutoRefresh: Boolean read FAutoRefresh write FAutoRefresh default True;
     
     /// <summary>
-    /// MRU 选中事件
+    /// MRU 閫変腑浜嬩欢
     /// </summary>
     property OnMRUSelected: TNotifyEvent read FOnMRUSelected write FOnMRUSelected;
   end;

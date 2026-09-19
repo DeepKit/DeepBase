@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG037_KeyDerivation - Key Derivation Regression Test
 
   BUG-037: Insecure Key Derivation

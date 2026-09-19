@@ -1,10 +1,10 @@
-unit Service.Document;
+﻿unit Service.Document;
 
 {*******************************************************************************
-  Document Service - 文档服务
+  Document Service - 鏂囨。鏈嶅姟
 
-  DeepBase 框架文档管理模板 - 文档业务逻辑�?
-  提供 CRUD、版本控制、标签、附件管理功�?
+  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏂囨。涓氬姟閫昏緫灞?
+  鎻愪緵 CRUD銆佺増鏈帶鍒躲€佹爣绛俱€侀檮浠剁鐞嗗姛鑳?
 *******************************************************************************}
 
 interface
@@ -16,7 +16,7 @@ uses
 
 type
   /// <summary>
-  /// 文档服务 - 核心业务逻辑
+  /// 鏂囨。鏈嶅姟 - 鏍稿績涓氬姟閫昏緫
   /// </summary>
   TDocumentService = class
   private
@@ -30,115 +30,115 @@ type
   public
     constructor Create(AConnection: TFDConnection; const AStoragePath: string);
 
-    // ============= 基本 CRUD =============
+    // ============= 鍩烘湰 CRUD =============
 
-    /// <summary>创建文档</summary>
+    /// <summary>鍒涘缓鏂囨。</summary>
     function CreateDocument(const Title, Content: string; 
       const CategoryId: string = ''): TDocument;
 
-    /// <summary>获取单个文档</summary>
+    /// <summary>鑾峰彇鍗曚釜鏂囨。</summary>
     function GetDocument(const Id: string): TDocument;
 
-    /// <summary>获取文档列表</summary>
+    /// <summary>鑾峰彇鏂囨。鍒楄〃</summary>
     function GetDocuments(const CategoryId: string = ''; 
       Status: TDocumentStatus = dsActive): TObjectList<TDocument>;
 
-    /// <summary>获取指定分类及其子分类下的文�?/summary>
+    /// <summary>鑾峰彇鎸囧畾鍒嗙被鍙婂叾瀛愬垎绫讳笅鐨勬枃妗?/summary>
     function GetDocumentsInCategory(const CategoryId: string; 
       IncludeSubCategories: Boolean = True): TObjectList<TDocument>;
 
-    /// <summary>更新文档</summary>
+    /// <summary>鏇存柊鏂囨。</summary>
     procedure UpdateDocument(Doc: TDocument; SaveVersion: Boolean = True);
 
-    /// <summary>删除文档（软删除�?/summary>
+    /// <summary>鍒犻櫎鏂囨。锛堣蒋鍒犻櫎锛?/summary>
     procedure DeleteDocument(const Id: string; HardDelete: Boolean = False);
 
-    /// <summary>恢复已删除的文档</summary>
+    /// <summary>鎭㈠宸插垹闄ょ殑鏂囨。</summary>
     procedure RestoreDocument(const Id: string);
 
-    /// <summary>归档文档</summary>
+    /// <summary>褰掓。鏂囨。</summary>
     procedure ArchiveDocument(const Id: string);
 
-    /// <summary>克隆文档</summary>
+    /// <summary>鍏嬮殕鏂囨。</summary>
     function CloneDocument(const Id: string): TDocument;
 
-    // ============= 版本控制 =============
+    // ============= 鐗堟湰鎺у埗 =============
 
-    /// <summary>保存当前版本</summary>
+    /// <summary>淇濆瓨褰撳墠鐗堟湰</summary>
     function SaveVersion(const DocId: string; const Note: string = ''): Integer;
 
-    /// <summary>获取版本历史</summary>
+    /// <summary>鑾峰彇鐗堟湰鍘嗗彶</summary>
     function GetVersions(const DocId: string): TObjectList<TDocumentVersion>;
 
-    /// <summary>获取指定版本</summary>
+    /// <summary>鑾峰彇鎸囧畾鐗堟湰</summary>
     function GetVersion(const DocId: string; Version: Integer): TDocumentVersion;
 
-    /// <summary>恢复到指定版�?/summary>
+    /// <summary>鎭㈠鍒版寚瀹氱増鏈?/summary>
     procedure RestoreVersion(const DocId: string; Version: Integer);
 
-    /// <summary>比较两个版本</summary>
+    /// <summary>姣旇緝涓や釜鐗堟湰</summary>
     function CompareVersions(const DocId: string; Version1, Version2: Integer): string;
 
-    // ============= 标签管理 =============
+    // ============= 鏍囩绠＄悊 =============
 
-    /// <summary>添加标签</summary>
+    /// <summary>娣诲姞鏍囩</summary>
     procedure AddTag(const DocId, TagName: string);
 
-    /// <summary>移除标签</summary>
+    /// <summary>绉婚櫎鏍囩</summary>
     procedure RemoveTag(const DocId, TagId: string);
 
-    /// <summary>设置标签（替换所有）</summary>
+    /// <summary>璁剧疆鏍囩锛堟浛鎹㈡墍鏈夛級</summary>
     procedure SetTags(const DocId: string; const TagNames: TArray<string>);
 
-    /// <summary>根据标签获取文档</summary>
+    /// <summary>鏍规嵁鏍囩鑾峰彇鏂囨。</summary>
     function GetDocumentsByTag(const TagName: string): TObjectList<TDocument>;
 
-    /// <summary>获取文档的标�?/summary>
+    /// <summary>鑾峰彇鏂囨。鐨勬爣绛?/summary>
     function GetDocumentTags(const DocId: string): TArray<string>;
 
-    // ============= 附件管理 =============
+    // ============= 闄勪欢绠＄悊 =============
 
-    /// <summary>添加附件</summary>
+    /// <summary>娣诲姞闄勪欢</summary>
     function AttachFile(const DocId, FilePath: string): TAttachment;
 
-    /// <summary>移除附件</summary>
+    /// <summary>绉婚櫎闄勪欢</summary>
     procedure DetachFile(const AttachmentId: string);
 
-    /// <summary>获取附件列表</summary>
+    /// <summary>鑾峰彇闄勪欢鍒楄〃</summary>
     function GetAttachments(const DocId: string): TObjectList<TAttachment>;
 
-    /// <summary>打开附件</summary>
+    /// <summary>鎵撳紑闄勪欢</summary>
     procedure OpenAttachment(const AttachmentId: string);
 
-    /// <summary>导出附件</summary>
+    /// <summary>瀵煎嚭闄勪欢</summary>
     procedure ExportAttachment(const AttachmentId, DestPath: string);
 
-    // ============= 导入导出 =============
+    // ============= 瀵煎叆瀵煎嚭 =============
 
-    /// <summary>导出文档</summary>
+    /// <summary>瀵煎嚭鏂囨。</summary>
     procedure ExportDocument(const DocId, FilePath: string; Format: TExportFormat);
 
-    /// <summary>批量导出</summary>
+    /// <summary>鎵归噺瀵煎嚭</summary>
     procedure ExportDocuments(const DocIds: TArray<string>; 
       const FolderPath: string; Format: TExportFormat);
 
-    /// <summary>导入文档</summary>
+    /// <summary>瀵煎叆鏂囨。</summary>
     function ImportDocument(const FilePath: string; 
       const CategoryId: string = ''): TDocument;
 
-    /// <summary>批量导入</summary>
+    /// <summary>鎵归噺瀵煎叆</summary>
     function ImportDocuments(const FilePaths: TArray<string>; 
       const CategoryId: string = ''): TArray<TDocument>;
 
-    // ============= 统计 =============
+    // ============= 缁熻 =============
 
-    /// <summary>获取文档总数</summary>
+    /// <summary>鑾峰彇鏂囨。鎬绘暟</summary>
     function GetDocumentCount(Status: TDocumentStatus = dsActive): Integer;
 
-    /// <summary>获取分类下的文档�?/summary>
+    /// <summary>鑾峰彇鍒嗙被涓嬬殑鏂囨。鏁?/summary>
     function GetCategoryDocumentCount(const CategoryId: string): Integer;
 
-    /// <summary>获取最近修改的文档</summary>
+    /// <summary>鑾峰彇鏈€杩戜慨鏀圭殑鏂囨。</summary>
     function GetRecentDocuments(Count: Integer = 10): TObjectList<TDocument>;
 
     property Connection: TFDConnection read FConnection;
@@ -160,12 +160,12 @@ begin
   FConnection := AConnection;
   FStoragePath := AStoragePath;
   
-  // 确保存储目录存在
+  // 纭繚瀛樺偍鐩綍瀛樺湪
   if not TDirectory.Exists(FStoragePath) then
     TDirectory.CreateDirectory(FStoragePath);
 end;
 
-// ============= 基本 CRUD =============
+// ============= 鍩烘湰 CRUD =============
 
 function TDocumentService.CreateDocument(const Title, Content: string;
   const CategoryId: string): TDocument;
@@ -227,7 +227,7 @@ begin
       Result.UpdatedAt := Query.FieldByName('UpdatedAt').AsDateTime;
       Result.CreatedBy := Query.FieldByName('CreatedBy').AsString;
       
-      // 加载关联数据
+      // 鍔犺浇鍏宠仈鏁版嵁
       LoadDocumentTags(Result);
       LoadDocumentAttachments(Result);
     end;
@@ -281,7 +281,7 @@ end;
 function TDocumentService.GetDocumentsInCategory(const CategoryId: string;
   IncludeSubCategories: Boolean): TObjectList<TDocument>;
 begin
-  // 简化实现，实际应从 CategoryTree 获取所有子分类 ID
+  // 绠€鍖栧疄鐜帮紝瀹為檯搴斾粠 CategoryTree 鑾峰彇鎵€鏈夊瓙鍒嗙被 ID
   Result := GetDocuments(CategoryId);
 end;
 
@@ -290,7 +290,7 @@ var
   Query: TFDQuery;
 begin
   if SaveVersion then
-    Self.SaveVersion(Doc.Id, '自动保存');
+    Self.SaveVersion(Doc.Id, '鑷姩淇濆瓨');
   
   Doc.UpdatedAt := Now;
   Doc.Version := Doc.Version + 1;
@@ -310,7 +310,7 @@ begin
     Query.ParamByName('Id').AsString := Doc.Id;
     Query.ExecSQL;
     
-    // 保存标签
+    // 淇濆瓨鏍囩
     SaveDocumentTags(Doc.Id, Doc.Tags);
     
     Doc.ClearDirty;
@@ -330,7 +330,7 @@ begin
     
     if HardDelete then
     begin
-      // 删除关联数据
+      // 鍒犻櫎鍏宠仈鏁版嵁
       Query.SQL.Text := 'DELETE FROM DocumentTags WHERE DocumentId = :DocId';
       Query.ParamByName('DocId').AsString := Id;
       Query.ExecSQL;
@@ -412,7 +412,7 @@ begin
     begin
       Result := Original.Clone;
       
-      // 保存克隆的文�?
+      // 淇濆瓨鍏嬮殕鐨勬枃妗?
       var Query := TFDQuery.Create(nil);
       try
         Query.Connection := FConnection;
@@ -431,7 +431,7 @@ begin
         Query.ParamByName('CreatedBy').AsString := DeepBase.Config.GetConfig('user.name', 'System');
         Query.ExecSQL;
         
-        // 复制标签
+        // 澶嶅埗鏍囩
         SaveDocumentTags(Result.Id, Original.Tags);
         
         Log.Info('Document cloned: %s -> %s', [Id, Result.Id]);
@@ -446,7 +446,7 @@ begin
   end;
 end;
 
-// ============= 版本控制 =============
+// ============= 鐗堟湰鎺у埗 =============
 
 function TDocumentService.SaveVersion(const DocId: string; const Note: string): Integer;
 var
@@ -568,10 +568,10 @@ begin
       if Doc = nil then
         Exit;
       
-      // 先保存当前版�?
-      SaveVersion(DocId, Format('恢复到版�?%d 前的自动保存', [Version]));
+      // 鍏堜繚瀛樺綋鍓嶇増鏈?
+      SaveVersion(DocId, Format('鎭㈠鍒扮増鏈?%d 鍓嶇殑鑷姩淇濆瓨', [Version]));
       
-      // 恢复内容
+      // 鎭㈠鍐呭
       Doc.Title := Ver.Title;
       Doc.Content := Ver.Content;
       UpdateDocument(Doc, False);
@@ -589,16 +589,16 @@ function TDocumentService.CompareVersions(const DocId: string; Version1, Version
 var
   V1, V2: TDocumentVersion;
 begin
-  // 简化实现，返回差异描述
+  // 绠€鍖栧疄鐜帮紝杩斿洖宸紓鎻忚堪
   V1 := GetVersion(DocId, Version1);
   V2 := GetVersion(DocId, Version2);
   try
     if (V1 = nil) or (V2 = nil) then
-      Exit('版本不存�?);
+      Exit('鐗堟湰涓嶅瓨鍦?);
     
-    Result := Format('版本 %d (%s) vs 版本 %d (%s)'#13#10 +
-      '标题: %s -> %s'#13#10 +
-      '内容长度: %d -> %d', [
+    Result := Format('鐗堟湰 %d (%s) vs 鐗堟湰 %d (%s)'#13#10 +
+      '鏍囬: %s -> %s'#13#10 +
+      '鍐呭闀垮害: %d -> %d', [
       V1.Version, DateTimeToStr(V1.CreatedAt),
       V2.Version, DateTimeToStr(V2.CreatedAt),
       V1.Title, V2.Title,
@@ -610,7 +610,7 @@ begin
   end;
 end;
 
-// ============= 标签管理 =============
+// ============= 鏍囩绠＄悊 =============
 
 procedure TDocumentService.AddTag(const DocId, TagName: string);
 var
@@ -621,14 +621,14 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 查找或创建标�?
+    // 鏌ユ壘鎴栧垱寤烘爣绛?
     Query.SQL.Text := 'SELECT Id FROM Tags WHERE LOWER(Name) = LOWER(:Name)';
     Query.ParamByName('Name').AsString := TagName;
     Query.Open;
     
     if Query.Eof then
     begin
-      // 创建新标�?
+      // 鍒涘缓鏂版爣绛?
       TagId := TTag.NewId;
       Query.SQL.Text := 'INSERT INTO Tags (Id, Name, Color, UsageCount, CreatedAt) ' +
         'VALUES (:Id, :Name, :Color, 0, :CreatedAt)';
@@ -641,7 +641,7 @@ begin
     else
       TagId := Query.FieldByName('Id').AsString;
     
-    // 添加关联
+    // 娣诲姞鍏宠仈
     Query.SQL.Text := 'INSERT OR IGNORE INTO DocumentTags (DocumentId, TagId, CreatedAt) ' +
       'VALUES (:DocId, :TagId, :CreatedAt)';
     Query.ParamByName('DocId').AsString := DocId;
@@ -649,7 +649,7 @@ begin
     Query.ParamByName('CreatedAt').AsDateTime := Now;
     Query.ExecSQL;
     
-    // 更新使用计数
+    // 鏇存柊浣跨敤璁℃暟
     Query.SQL.Text := 'UPDATE Tags SET UsageCount = UsageCount + 1 WHERE Id = :Id';
     Query.ParamByName('Id').AsString := TagId;
     Query.ExecSQL;
@@ -670,7 +670,7 @@ begin
     Query.ParamByName('TagId').AsString := TagId;
     Query.ExecSQL;
     
-    // 更新使用计数
+    // 鏇存柊浣跨敤璁℃暟
     Query.SQL.Text := 'UPDATE Tags SET UsageCount = MAX(0, UsageCount - 1) WHERE Id = :Id';
     Query.ParamByName('Id').AsString := TagId;
     Query.ExecSQL;
@@ -688,12 +688,12 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 清除现有标签
+    // 娓呴櫎鐜版湁鏍囩
     Query.SQL.Text := 'DELETE FROM DocumentTags WHERE DocumentId = :DocId';
     Query.ParamByName('DocId').AsString := DocId;
     Query.ExecSQL;
     
-    // 添加新标�?
+    // 娣诲姞鏂版爣绛?
     for TagName in TagNames do
       AddTag(DocId, TagName);
   finally
@@ -804,20 +804,20 @@ begin
   end;
 end;
 
-// ============= 附件管理 =============
+// ============= 闄勪欢绠＄悊 =============
 
 function TDocumentService.GenerateAttachmentPath(const FileName: string): string;
 var
   SubDir: string;
 begin
-  // 按年月组织目�?
+  // 鎸夊勾鏈堢粍缁囩洰褰?
   SubDir := FormatDateTime('yyyy-mm', Now);
   Result := TPath.Combine(FStoragePath, SubDir);
   
   if not TDirectory.Exists(Result) then
     TDirectory.CreateDirectory(Result);
   
-  // 生成唯一文件�?
+  // 鐢熸垚鍞竴鏂囦欢鍚?
   Result := TPath.Combine(Result, Format('%s_%s', [
     FormatDateTime('yyyymmdd_hhnnss', Now),
     FileName
@@ -835,7 +835,7 @@ begin
   Result := TAttachment.CreateFromFile(FilePath);
   Result.DocumentId := DocId;
   
-  // 复制文件到存储目�?
+  // 澶嶅埗鏂囦欢鍒板瓨鍌ㄧ洰褰?
   DestPath := GenerateAttachmentPath(Result.FileName);
   TFile.Copy(FilePath, DestPath);
   Result.FilePath := DestPath;
@@ -870,7 +870,7 @@ begin
   try
     Query.Connection := FConnection;
     
-    // 获取文件路径
+    // 鑾峰彇鏂囦欢璺緞
     Query.SQL.Text := 'SELECT FilePath FROM Attachments WHERE Id = :Id';
     Query.ParamByName('Id').AsString := AttachmentId;
     Query.Open;
@@ -879,11 +879,11 @@ begin
     begin
       FilePath := Query.FieldByName('FilePath').AsString;
       
-      // 删除文件
+      // 鍒犻櫎鏂囦欢
       if TFile.Exists(FilePath) then
         TFile.Delete(FilePath);
       
-      // 删除记录
+      // 鍒犻櫎璁板綍
       Query.SQL.Text := 'DELETE FROM Attachments WHERE Id = :Id';
       Query.ParamByName('Id').AsString := AttachmentId;
       Query.ExecSQL;
@@ -972,7 +972,7 @@ begin
   end;
 end;
 
-// ============= 导入导出 =============
+// ============= 瀵煎叆瀵煎嚭 =============
 
 procedure TDocumentService.ExportDocument(const DocId, FilePath: string; Format: TExportFormat);
 var
@@ -988,9 +988,9 @@ begin
       case Format of
         efText:
           begin
-            Content.Add('标题: ' + Doc.Title);
-            Content.Add('创建时间: ' + DateTimeToStr(Doc.CreatedAt));
-            Content.Add('更新时间: ' + DateTimeToStr(Doc.UpdatedAt));
+            Content.Add('鏍囬: ' + Doc.Title);
+            Content.Add('鍒涘缓鏃堕棿: ' + DateTimeToStr(Doc.CreatedAt));
+            Content.Add('鏇存柊鏃堕棿: ' + DateTimeToStr(Doc.UpdatedAt));
             Content.Add('');
             Content.Add(Doc.Content);
           end;
@@ -1085,7 +1085,7 @@ begin
   end;
 end;
 
-// ============= 统计 =============
+// ============= 缁熻 =============
 
 function TDocumentService.GetDocumentCount(Status: TDocumentStatus): Integer;
 var

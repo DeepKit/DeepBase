@@ -1,17 +1,17 @@
-{ ============================================================================
-  Test.Regression.BUG059_JsonDeserializationType - JSON反序列化类型验证回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG059_JsonDeserializationType - JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉鍥炲綊娴嬭瘯
 
-  BUG-059: JSON反序列化类型验证缺失
+  BUG-059: JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉缂哄け
   
-  原问�? JsonToObject方法缺少类型白名单验证，直接创建任意类型实例
+  鍘熼棶棰? JsonToObject鏂规硶缂哄皯绫诲瀷鐧藉悕鍗曢獙璇侊紝鐩存帴鍒涘缓浠绘剰绫诲瀷瀹炰緥
   
-  修复方案: 添加类型白名单验证机制，只允许安全的基础类型和标记了
-            SerializableAttribute的类
+  淇鏂规: 娣诲姞绫诲瀷鐧藉悕鍗曢獙璇佹満鍒讹紝鍙厑璁稿畨鍏ㄧ殑鍩虹绫诲瀷鍜屾爣璁颁簡
+            SerializableAttribute鐨勭被
   
-  修复日期: 2025-01-27
-  文件: Core/DeepBase.Serialization.pas
-  优先�? P1 (High)
-  分类: Security
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: Core/DeepBase.Serialization.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG059_JsonDeserializationType;
@@ -37,15 +37,15 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证类型白名单验证机制存�?)]
+    [Description('楠岃瘉绫诲瀷鐧藉悕鍗曢獙璇佹満鍒跺瓨鍦?)]
     procedure Test_TypeWhitelist_Exists;
     
     [Test]
-    [Description('验证未授权类型被拒绝')]
+    [Description('楠岃瘉鏈巿鏉冪被鍨嬭鎷掔粷')]
     procedure Test_UnauthorizedType_IsRejected;
     
     [Test]
-    [Description('验证基础类型被允�?)]
+    [Description('楠岃瘉鍩虹绫诲瀷琚厑璁?)]
     procedure Test_BasicTypes_AreAllowed;
   end;
 
@@ -63,7 +63,7 @@ end;
 
 function TBug059_JsonDeserializationTypeTest.GetBugDescription: string;
 begin
-  Result := 'JSON反序列化类型验证缺失';
+  Result := 'JSON鍙嶅簭鍒楀寲绫诲瀷楠岃瘉缂哄け';
 end;
 
 function TBug059_JsonDeserializationTypeTest.GetFixDate: string;
@@ -95,21 +95,21 @@ begin
     SourcePath := '..\Core\DeepBase.Serialization.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在类型验证相关代码
+  // 楠岃瘉瀛樺湪绫诲瀷楠岃瘉鐩稿叧浠ｇ爜
   Assert.IsTrue(
     SourceCode.Contains('whitelist') or 
     SourceCode.Contains('Whitelist') or
     SourceCode.Contains('AllowedTypes') or
     SourceCode.Contains('IsTypeAllowed') or
     SourceCode.Contains('ValidateType'),
-    '代码应该包含类型白名单验证机�?);
+    '浠ｇ爜搴旇鍖呭惈绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?);
   
   LogTestEnd('Test_TypeWhitelist_Exists', True);
 end;
@@ -118,8 +118,8 @@ procedure TBug059_JsonDeserializationTypeTest.Test_UnauthorizedType_IsRejected;
 begin
   LogTestStart('Test_UnauthorizedType_IsRejected');
   
-  // 实际测试需要序列化模块的具体实�?
-  Assert.Pass('未授权类型拒绝测试通过代码审查确认');
+  // 瀹為檯娴嬭瘯闇€瑕佸簭鍒楀寲妯″潡鐨勫叿浣撳疄鐜?
+  Assert.Pass('鏈巿鏉冪被鍨嬫嫆缁濇祴璇曢€氳繃浠ｇ爜瀹℃煡纭');
   
   LogTestEnd('Test_UnauthorizedType_IsRejected', True);
 end;
@@ -128,8 +128,8 @@ procedure TBug059_JsonDeserializationTypeTest.Test_BasicTypes_AreAllowed;
 begin
   LogTestStart('Test_BasicTypes_AreAllowed');
   
-  // 基础类型（string, integer, boolean 等）应该被允�?
-  Assert.Pass('基础类型允许测试通过代码审查确认');
+  // 鍩虹绫诲瀷锛坰tring, integer, boolean 绛夛級搴旇琚厑璁?
+  Assert.Pass('鍩虹绫诲瀷鍏佽娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');
   
   LogTestEnd('Test_BasicTypes_AreAllowed', True);
 end;

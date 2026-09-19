@@ -1,4 +1,4 @@
-unit DeepBase.Speech.VAD;
+﻿unit DeepBase.Speech.VAD;
 
 interface
 

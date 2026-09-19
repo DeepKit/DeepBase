@@ -1,4 +1,4 @@
-unit Test.DeepBase.Configuration;
+﻿unit Test.DeepBase.Configuration;
 
 {*******************************************************************************
   DeepBase Configuration Module Unit Tests

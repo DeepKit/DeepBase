@@ -1,4 +1,4 @@
-unit Form.CustomerEdit;
+﻿unit Form.CustomerEdit;
 
 {*******************************************************************************
   CRUD Application Template - Customer Edit Form

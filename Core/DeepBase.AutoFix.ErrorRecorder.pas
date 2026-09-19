@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.ErrorRecorder
 
   Records runtime exceptions to JSONL for the AutoFix loop.

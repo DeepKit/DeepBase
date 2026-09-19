@@ -39,24 +39,24 @@ type
   /// Variable type for prompt variables
   /// </summary>
   TPromptVariableType = (
-    pvtString,    // �ַ���
-    pvtNumber,    // ��ֵ
-    pvtBoolean,   // ����
-    pvtDate,      // ����
-    pvtDateTime,  // ����ʱ��
-    pvtList,      // �б�/����
-    pvtJson       // JSON����
+    pvtString,    // 字符串
+    pvtNumber,    // 数值
+    pvtBoolean,   // 布尔
+    pvtDate,      // 日期
+    pvtDateTime,  // 日期时间
+    pvtList,      // 列表/数组
+    pvtJson       // JSON对象
   );
   
   /// <summary>
   /// Prompt variable definition
   /// </summary>
   TPromptVariable = record
-    Name: string;              // ������
-    VarType: TPromptVariableType;  // ��������
-    DefaultValue: Variant;     // Ĭ��ֵ
-    Description: string;       // ˵��
-    Required: Boolean;         // �Ƿ����
+    Name: string;              // 变量名
+    VarType: TPromptVariableType;  // 变量类型
+    DefaultValue: Variant;     // 默认值
+    Description: string;       // 说明
+    Required: Boolean;         // 是否必填
     
     function TypeToStr: string;
     class function StrToType(const S: string): TPromptVariableType; static;
@@ -67,20 +67,20 @@ type
   /// Meta-prompt merge mode
   /// </summary>
   TMetaMergeMode = (
-    mmPrefix,     // ǰ׺ģʽ��Ԫ��ʾ�� + ��ʾ��
-    mmSuffix,     // ��׺ģʽ����ʾ�� + Ԫ��ʾ��
-    mmWrap        // ����ģʽ��Ԫ��ʾ��ǰ�� + ��ʾ�� + Ԫ��ʾ�ʺ��
+    mmPrefix,     // 前缀模式：元提示词 + 提示词
+    mmSuffix,     // 后缀模式：提示词 + 元提示词
+    mmWrap        // 包裹模式：元提示词前半 + 提示词 + 元提示词后半
   );
   
   /// <summary>
   /// Meta-prompt category
   /// </summary>
   TMetaCategory = (
-    mcSecurity,   // ��ȫԼ��
-    mcFormat,     // �����ʽ
-    mcRole,       // ��ɫ�趨
-    mcDomain,     // ����֪ʶ
-    mcQuality     // ����Ҫ��
+    mcSecurity,   // 安全约束
+    mcFormat,     // 输出格式
+    mcRole,       // 角色设定
+    mcDomain,     // 领域知识
+    mcQuality     // 质量要求
   );
   
   /// <summary>
@@ -90,7 +90,7 @@ type
     Id: Integer;
     ParentId: Integer;
     Level: Integer;           // 1-4
-    Code: string;             // �� '01', '02'
+    Code: string;             // 如 '01', '02'
     Name: string;
     Description: string;
     SortOrder: Integer;
@@ -107,13 +107,13 @@ type
     Id: Integer;
     PromptId: Integer;
     VersionNumber: Integer;   // 1-4
-    Content: string;          // ��ʾ������
-    IsProduction: Boolean;    // �Ƿ�Ϊ�����汾
+    Content: string;          // 提示词内容
+    IsProduction: Boolean;    // 是否为生产版本
     TestCount: Integer;
     SuccessCount: Integer;
     TotalTokens: Integer;
     TotalCost: Double;
-    AvgDuration: Double;      // ƽ����ʱ(ms)
+    AvgDuration: Double;      // 平均耗时(ms)
     LastTestedAt: TDateTime;
     LastResponse: string;
     CreatedAt: TDateTime;
@@ -128,13 +128,13 @@ type
   /// </summary>
   TMetaPrompt = record
     Id: Integer;
-    InternalCode: string;     // �� 'META-001'
+    InternalCode: string;     // 如 'META-001'
     Name: string;
     Category: TMetaCategory;
     Content: string;
     MergeMode: TMetaMergeMode;
-    Priority: Integer;        // �ϲ����ȼ� (����С���Ⱥϲ�)
-    Level: Integer;           // 0=��ܼ�, 1=��Ŀ��
+    Priority: Integer;        // 合并优先级 (数字小的先合并)
+    Level: Integer;           // 0=框架级, 1=项目级
     IsActive: Boolean;
     
     function CategoryToStr: string;
@@ -150,10 +150,10 @@ type
   TPrompt = record
     Id: Integer;
     CategoryId: Integer;
-    InternalCode: string;     // �� '01-01-001'
+    InternalCode: string;     // 如 '01-01-001'
     Name: string;
     Description: string;
-    BoundQueryName: string;   // �󶨵� DoQry ��ѯ��
+    BoundQueryName: string;   // 绑定的 DoQry 查询名
     Variables: TPromptVariableArray;
     IsActive: Boolean;
     CreatedAt: TDateTime;
@@ -162,7 +162,7 @@ type
     // Populated on load
     Versions: TPromptVersionArray;
     MetaPrompts: TMetaPromptArray;
-    CategoryPath: string;     // �� 'ϵͳ��ʾ��/����/ͨ��'
+    CategoryPath: string;     // 如 '系统提示词/翻译/通用'
     
     function GetProductionVersion: Integer;
     function GetVersion(AVersionNum: Integer): TPromptVersion;

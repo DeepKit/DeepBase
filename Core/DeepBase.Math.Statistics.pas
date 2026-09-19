@@ -1,4 +1,4 @@
-unit DeepBase.Math.Statistics;
+﻿unit DeepBase.Math.Statistics;
 
 {*******************************************************************************
   DeepBase Math — Statistics & Interpolation

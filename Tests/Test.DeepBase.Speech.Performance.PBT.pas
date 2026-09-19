@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Speech.Performance.PBT - PBT for the SpeechService
   incremental-VAD performance refactor.
 

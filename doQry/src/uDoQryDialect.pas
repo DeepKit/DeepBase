@@ -1,4 +1,4 @@
-unit uDoQryDialect;
+﻿unit uDoQryDialect;
 
 interface
 
@@ -60,7 +60,7 @@ begin
       end;
     dbSQLite:
       begin
-        // SQLite 不支�?RETURNING（老版本）。在执行器中通过 last_insert_rowid() 获取
+        // SQLite 涓嶆敮鎸?RETURNING锛堣€佺増鏈級銆傚湪鎵ц鍣ㄤ腑閫氳繃 last_insert_rowid() 鑾峰彇
       end;
   end;
   Result := S;

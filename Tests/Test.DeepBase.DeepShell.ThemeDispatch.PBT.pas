@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DeepShell.ThemeDispatch.PBT - Property test for
   Theme/Localization main-thread dispatch (DSHELL-009).
 

@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Resilience module
 /// Tests: Circuit Breaker, Retry Policy, Timeout Policy, Fallback Policy,
 ///        Bulkhead Policy, Combined Resilience Policy, Circuit Breaker Registry

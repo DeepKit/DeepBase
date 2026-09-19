@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG035_InsecureRandom - Insecure Random Generation Regression Test
 
   BUG-035: Insecure Random Number Generation

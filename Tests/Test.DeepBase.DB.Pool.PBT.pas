@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DB.Pool.PBT - Property-based tests for TUniConnectionPool
   initialization-time deadlock freedom.
 

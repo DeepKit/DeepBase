@@ -1,4 +1,4 @@
-unit Test.DeepBase.Browser.CDP;
+﻿unit Test.DeepBase.Browser.CDP;
 
 { ============================================================================
   Test.DeepBase.Browser.CDP
@@ -568,6 +568,8 @@ begin
   // Destroy the object while the thread is polling
   // This should not crash due to the lifecycle fix
   LAutoCDP.Free;
+  // TCDPStrategy 持有 LFake（同族用例均由 strategy 托管释放），本用例此前漏 Free 造成泄漏
+  LCDP.Free;
 
   // Wait for the thread to finish (it should exit gracefully)
   Sleep(500);

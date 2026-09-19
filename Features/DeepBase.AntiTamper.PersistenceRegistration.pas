@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AntiTamper.PersistenceRegistration
 
   Wires the feature-level anti-tamper API to the Persistence storage adapter

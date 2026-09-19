@@ -1,4 +1,4 @@
-unit Test.DeepBase.Logging;
+﻿unit Test.DeepBase.Logging;
 
 {*******************************************************************************
   DeepBase Logging module tests

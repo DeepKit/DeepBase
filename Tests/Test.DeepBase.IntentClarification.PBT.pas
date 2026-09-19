@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.IntentClarification.PBT - Property-based tests for the
   IntentClarification engine and its providers.
 

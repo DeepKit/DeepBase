@@ -1,4 +1,4 @@
-unit uDoQryParamPool;
+﻿unit uDoQryParamPool;
 
 interface
 

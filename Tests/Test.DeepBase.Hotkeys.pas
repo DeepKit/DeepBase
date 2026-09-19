@@ -1,4 +1,4 @@
-unit Test.DeepBase.Hotkeys;
+﻿unit Test.DeepBase.Hotkeys;
 
 {*******************************************************************************
   DeepBase Hotkeys 模块单元测试

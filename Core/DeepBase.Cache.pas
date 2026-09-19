@@ -60,7 +60,7 @@ uses
   DeepBase.Constants;
 
 type
-  /// <summary>��������쳣</summary>
+  /// <summary>缓存相关异常</summary>
   ECacheException = class(Exception);
   
   // ============================================================================
@@ -389,7 +389,7 @@ end;
 
 destructor TCache<K, V>.Destroy;
 begin
-  // BUG-047 FIX: �����ص����ã���ֹѭ�����õ����ڴ�й©
+  // BUG-047 FIX: 清理回调引用，防止循环引用导致内存泄漏
   FOnEvict := nil;
   FOnExpire := nil;
   FOnLoad := nil;
@@ -446,7 +446,7 @@ begin
   try
     FLock.Enter;
     try
-    // ��鵥����Ŀ��С���ƣ���ֹ���������ռ�ù����ڴ棩
+    // 检查单个项目大小限制（防止单个大对象占用过多内存）
     if (FMaxSizeBytes > 0) and (SizeBytes > FMaxSizeBytes div 10) then
       raise ECacheException.CreateFmt('Single item too large: %d bytes (max: %d)', 
         [SizeBytes, FMaxSizeBytes div 10]);

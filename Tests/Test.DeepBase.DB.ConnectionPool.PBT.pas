@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DB.ConnectionPool.PBT - Property-based tests for the
   Round-2 TDBConnectionPool concurrency fixes.
 

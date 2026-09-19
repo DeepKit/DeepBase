@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.VclHook
 
   L1 capture for VCL apps: hooks Application.OnException so all main-thread

@@ -1,4 +1,4 @@
-unit DeepBase.AntiTamper;
+﻿unit DeepBase.AntiTamper;
 
 {$IFDEF RELEASE}
   {$DEFINE NO_DEBUG_LOG}
@@ -25,14 +25,14 @@ uses
   TAntiTamperConfig = record
     EncryptionKey: string;        // 加密密钥
     DownloadURL: string;          // 官网下载地址
-    TableName: string;            // 数据库表�?
+    TableName: string;            // 鏁版嵁搴撹〃鍚?
     EnableLogging: Boolean;       // 是否启用日志
-    LogFileName: string;          // 日志文件�?
+    LogFileName: string;          // 鏃ュ織鏂囦欢鍚?
     EncryptionType: TEncryptionType; // 加密算法类型
-    // KDF �?HMAC 设置
-    Salt: string;                 // KDF�?
+    // KDF 涓?HMAC 璁剧疆
+    Salt: string;                 // KDF鐩?
     KdfIterations: Integer;       // KDF迭代次数
-    EnableHMAC: Boolean;          // 是否启用HMAC完整性签�?
+    EnableHMAC: Boolean;          // 鏄惁鍚敤HMAC瀹屾暣鎬х鍚?
   end;
 
   // 防篡改包主类
@@ -51,7 +51,7 @@ uses
     // BUG-036 FIX: Constant-time string comparison to prevent timing attacks
     class function ConstantTimeCompare(const A, B: string): Boolean; static;
   public
-    // 初始化配�?
+    // 鍒濆鍖栭厤缃?
     class procedure Initialize(const AConfig: TAntiTamperConfig); static;
 
     // 数据库表结构管理
@@ -70,7 +70,7 @@ uses
     class function EncryptImageData(const ImageData: TBytes): TBytes; static;
     class function DecryptImageData(const EncryptedData: TBytes): TBytes; static;
 
-    // 完整性校�?
+    // 瀹屾暣鎬ф牎楠?
     class function VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean; static;
 
     // 安全图像操作
@@ -193,7 +193,7 @@ class function TAntiTamperPackage.DeriveKeyBytes: TBytes;
 var
   Iterations: Integer;
 begin
-  Iterations := Max(FConfig.KdfIterations, 10000); // 最�?0000次迭�?
+  Iterations := Max(FConfig.KdfIterations, 10000); // 鏈€灏?0000娆¤凯浠?
   Result := TPasswordUtils.PBKDF2(FConfig.EncryptionKey,
     TEncoding.UTF8.GetBytes(FConfig.Salt), Iterations, 32, haSHA256);
 end;
@@ -278,7 +278,7 @@ begin
   finally
     AES.Free;
   end;
-  WriteLog(Format(string('使用AES-256加密，数据长�? %d bytes'), [Length(Result)]));
+  WriteLog(Format(string('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.DecryptImageData(const EncryptedData: TBytes): TBytes;
@@ -315,7 +315,7 @@ begin
   finally
     AES.Free;
   end;
-  WriteLog(Format(string('使用AES-256解密，数据长�? %d bytes'), [Length(Result)]));
+  WriteLog(Format(string('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴? %d bytes'), [Length(Result)]));
 end;
 
 class function TAntiTamperPackage.VerifyImageIntegrity(const DecryptedData: TBytes; const ExpectedHash: string): Boolean;
@@ -328,7 +328,7 @@ begin
   // BUG-036 FIX: Use constant-time comparison to prevent timing attacks
   if Length(ActualHash) <> Length(ExpectedHash) then
   begin
-    WriteLog(Format(string('SHA-256校验失败: 长度不匹�?期望=%d, 实际=%d'), [Length(ExpectedHash), Length(ActualHash)]));
+    WriteLog(Format(string('SHA-256鏍￠獙澶辫触: 闀垮害涓嶅尮閰?鏈熸湜=%d, 瀹為檯=%d'), [Length(ExpectedHash), Length(ActualHash)]));
     Exit(False);
   end;
   

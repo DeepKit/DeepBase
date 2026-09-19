@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.i18n.Plural module
 /// Tests: TPluralRules, CLDR plural categories, multi-language support
 /// </summary>

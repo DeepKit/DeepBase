@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Validation - Declarative Template Validation
 
   Replaces manual if-checks in Templates.ValidateTemplate with a declarative

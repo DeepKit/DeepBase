@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Commerce.Adapter.PBT - Property-based test for Commerce
   Adapter JSON nil-safety patterns.
 

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AIErrorHandler
 
   AI-powered runtime error handler for DeepBase applications.
@@ -346,8 +346,15 @@ begin
           '[' + E.ClassName + ' at ' + LStack + ']';
 
       // Show to user (suppressed in SilentMode for tests / non-interactive runs)
+      // B4（WO-20260919-AUDIT-乙）：HandleAt 可被 SafeRun 从任意线程触达，而 MessageDlg 是
+      // VCL UI 只允许主线程执行（审计 T3 同族：跨线程 UI）。Synchronize 在主线程调用时
+      // 直接内联执行（RTL 文档行为），对既有主线程路径无语义变化。
       if not LSilentMode then
-        MessageDlg(LUserMsg, mtWarning, [mbOK], 0);
+        TThread.Synchronize(nil,
+          procedure
+          begin
+            MessageDlg(LUserMsg, mtWarning, [mbOK], 0);
+          end);
 
       // Log
       Logger.Error(
@@ -370,9 +377,14 @@ begin
       end
       else
       begin
-        MessageDlg('程序遇到严重错误，即将关闭。' + sLineBreak +
-          E.Message, mtError, [mbOK], 0);
-        Application.Terminate;
+        // 同上：对话框 + Application.Terminate 均须主线程执行；Fatal 路径同步等待用户确认后再终止
+        TThread.Synchronize(nil,
+          procedure
+          begin
+            MessageDlg('程序遇到严重错误，即将关闭。' + sLineBreak +
+              E.Message, mtError, [mbOK], 0);
+            Application.Terminate;
+          end);
       end;
     end;
   end;

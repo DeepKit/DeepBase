@@ -1,4 +1,4 @@
-unit Test.Regression.BUG347_DoQryConnectionSerialize;
+﻿unit Test.Regression.BUG347_DoQryConnectionSerialize;
 
 interface
 

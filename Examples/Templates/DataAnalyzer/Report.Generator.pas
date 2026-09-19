@@ -1,4 +1,4 @@
-unit Report.Generator;
+﻿unit Report.Generator;
 
 {*******************************************************************************
   Data Analyzer Template - Report Generator

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Browser.CDP
   ---------------------------------------------------------------------------
   Version     : 1.0
@@ -19,7 +19,8 @@ uses
   System.SyncObjs,
   System.Generics.Collections,
   System.JSON,
-  DeepBase.Browser.Types;
+  DeepBase.Browser.Types,
+  DeepBase.ManagedWorker;
 
 type
   TCDPStrategy = class
@@ -111,6 +112,11 @@ type
     FCDP: TCDPStrategy;
     FRootNodeId: Integer;
     FDetached: Boolean;
+    // WO-乙 B4：WaitForSelector 轮询线程由 TManagedWorker 接管（旧 fire-and-forget
+    // + FreeOnTerminate 只能靠 FDetached 裸指针防护）；列表仅经 FWaitLock 触达
+    FWaitWorkers: TList<TManagedWorker>;
+    FWaitLock: TCriticalSection;
+    procedure RegisterWaitWorker(AWorker: TManagedWorker);
   public
     constructor Create(ACDP: TCDPStrategy);
     destructor Destroy; override;
@@ -677,18 +683,73 @@ begin
   FCDP := ACDP;
   FRootNodeId := 0;
   FDetached := False;
+  FWaitWorkers := TList<TManagedWorker>.Create; // 所有权自管：结束时锁外 Free
+  FWaitLock := TCriticalSection.Create;
 end;
 
 destructor TAutomationCDP.Destroy;
+var
+  LWorkers: TArray<TManagedWorker>;
+  W: TManagedWorker;
 begin
   Detach;
+  // 取表后锁外逐个 Free：TManagedWorker.Destroy 内聚 Cancel→WaitFor，
+  // 宿主销毁后不可能有轮询线程在跑（消灭旧“裸指针+FDetached”竞态窗口）
+  FWaitLock.Enter;
+  try
+    LWorkers := FWaitWorkers.ToArray;
+    FWaitWorkers.Clear;
+  finally
+    FWaitLock.Leave;
+  end;
+  for W in LWorkers do
+    W.Free;
+  FreeAndNil(FWaitWorkers);
+  FreeAndNil(FWaitLock);
   inherited;
 end;
 
 procedure TAutomationCDP.Detach;
+var
+  W: TManagedWorker;
 begin
   FDetached := True;
   FCDP := nil;
+  // 非阻塞取消全部在途轮询（WaitFor 不在此做：Detach 可能在任意时刻被调用，
+  // 收敛统一留到 Destroy）
+  FWaitLock.Enter;
+  try
+    for W in FWaitWorkers do
+      W.Cancel;
+  finally
+    FWaitLock.Leave;
+  end;
+end;
+
+procedure TAutomationCDP.RegisterWaitWorker(AWorker: TManagedWorker);
+var
+  I: Integer;
+  W: TManagedWorker;
+begin
+  FWaitLock.Enter;
+  try
+    // 顺带回收已结束者（线程已退出，Free 的 WaitFor 立即返回，锁内安全）
+    I := 0;
+    while I < FWaitWorkers.Count do
+    begin
+      W := FWaitWorkers[I];
+      if W.Finished then
+      begin
+        FWaitWorkers.Delete(I);
+        W.Free;
+      end
+      else
+        Inc(I);
+    end;
+    FWaitWorkers.Add(AWorker);
+  finally
+    FWaitLock.Leave;
+  end;
 end;
 
 procedure TAutomationCDP.InitDOM(ACallback: TCDPCallback);
@@ -903,7 +964,11 @@ begin
   // REVIEW5-FEAT-009: Capture Self instead of FCDP to avoid use-after-free.
   // Check FDetached on each iteration to detect detach/destroy during polling.
   LSelf := Self;
-  var LThread := TThread.CreateAnonymousThread(
+  // B4：改由 TManagedWorker 承载——Detach/Destroy 统一 Cancel 收敛，轮询间歇用
+  // CancelEvent.WaitFor 代替 Sleep，取消信号立即中断等待；LWorker 在 Start 前
+  // 完成赋值，proc 仅在 Start 后才执行，无捕获竞态
+  var LWorker: TManagedWorker := nil;
+  LWorker := TManagedWorker.Create(
     procedure
     var
       LStartTime: TDateTime;
@@ -982,7 +1047,8 @@ begin
             LParams.Free;
           end;
 
-          TThread.Sleep(100);  // PollIntervalMs
+          if LWorker.CancelEvent.WaitFor(100) = wrSignaled then  // PollIntervalMs
+            Exit; // Detach/Destroy 已取消：静默退出，宿主销毁中不再回调
           LElapsed := MilliSecondsBetween(Now, LStartTime);
         until LElapsed >= ATimeoutMs;
 
@@ -1006,9 +1072,9 @@ begin
               end);
           end;
       end;
-    end);
-  LThread.FreeOnTerminate := True;
-  LThread.Start;
+    end, 'CDPWaitForSelector');
+  RegisterWaitWorker(LWorker);
+  LWorker.Start;
 end;
 
 procedure TAutomationCDP.GetElementText(

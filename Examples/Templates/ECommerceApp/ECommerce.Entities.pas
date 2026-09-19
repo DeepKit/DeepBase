@@ -1,4 +1,4 @@
-unit ECommerce.Entities;
+﻿unit ECommerce.Entities;
 
 {*******************************************************************************
   E-Commerce Application Template - Entity Definitions

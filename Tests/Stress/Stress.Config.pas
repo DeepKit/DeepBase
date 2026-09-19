@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.Config - Configuration Module Stress Tests
   
   Tests high-concurrency configuration read/write scenarios:

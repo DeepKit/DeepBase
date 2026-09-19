@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG328_MetricsConcurrentInit - REVIEW5-CORE-006
 
   Verifies that TMetrics global registry handles concurrent first access:

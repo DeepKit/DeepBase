@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Commerce.Idempotency - Client-side idempotency nonce tracking
 
   Generates unique idempotency keys for commerce operations and tracks used

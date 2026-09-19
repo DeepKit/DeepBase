@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.IntentClarification.Concurrent.PBT - Property test for
   concurrent SubmitInput turn serialization on a single session.
 

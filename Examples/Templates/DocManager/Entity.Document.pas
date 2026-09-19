@@ -1,10 +1,10 @@
-unit Entity.Document;
+﻿unit Entity.Document;
 
 {*******************************************************************************
-  Document Entity - 文档实体
+  Document Entity - 鏂囨。瀹炰綋
 
-  DeepBase 框架文档管理模板 - 核心文档实体定义
-  支持 ORM 映射、版本控制、附件管�?
+  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏍稿績鏂囨。瀹炰綋瀹氫箟
+  鏀寔 ORM 鏄犲皠銆佺増鏈帶鍒躲€侀檮浠剁鐞?
 *******************************************************************************}
 
 interface
@@ -14,29 +14,29 @@ uses
   DeepBase.ORM.Attributes, DeepBase.ORM.Entity;
 
 type
-  /// <summary>文档状�?/summary>
+  /// <summary>鏂囨。鐘舵€?/summary>
   TDocumentStatus = (
-    dsActive = 0,     // 活动
-    dsArchived = 1,   // 已归�?
-    dsDeleted = 2     // 已删除（软删除）
+    dsActive = 0,     // 娲诲姩
+    dsArchived = 1,   // 宸插綊妗?
+    dsDeleted = 2     // 宸插垹闄わ紙杞垹闄わ級
   );
 
-  /// <summary>导出格式</summary>
+  /// <summary>瀵煎嚭鏍煎紡</summary>
   TExportFormat = (
-    efText,           // 纯文�?
+    efText,           // 绾枃鏈?
     efHTML,           // HTML
     efMarkdown,       // Markdown
     efPDF,            // PDF
-    efWord            // Word 文档
+    efWord            // Word 鏂囨。
   );
 
-  // 前向声明
+  // 鍓嶅悜澹版槑
   TDocument = class;
   TDocumentVersion = class;
   TAttachment = class;
 
   /// <summary>
-  /// 文档实体
+  /// 鏂囨。瀹炰綋
   /// </summary>
   [Table('Documents')]
   TDocument = class(TEntityBase)
@@ -69,7 +69,7 @@ type
     [Column('CreatedBy')]
     FCreatedBy: string;
 
-    // 非持久化字段
+    // 闈炴寔涔呭寲瀛楁
     FTags: TList<string>;
     FAttachments: TObjectList<TAttachment>;
     FVersions: TObjectList<TDocumentVersion>;
@@ -85,34 +85,34 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
-    /// <summary>生成新的文档 ID</summary>
+    /// <summary>鐢熸垚鏂扮殑鏂囨。 ID</summary>
     class function NewId: string;
 
-    /// <summary>验证文档</summary>
+    /// <summary>楠岃瘉鏂囨。</summary>
     function Validate: Boolean; override;
 
-    /// <summary>获取验证错误</summary>
+    /// <summary>鑾峰彇楠岃瘉閿欒</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>克隆文档（不包含 ID�?/summary>
+    /// <summary>鍏嬮殕鏂囨。锛堜笉鍖呭惈 ID锛?/summary>
     function Clone: TDocument;
 
-    /// <summary>标记为已修改</summary>
+    /// <summary>鏍囪涓哄凡淇敼</summary>
     procedure MarkDirty;
 
-    /// <summary>清除已修改标�?/summary>
+    /// <summary>娓呴櫎宸蹭慨鏀规爣璁?/summary>
     procedure ClearDirty;
 
-    // 标签操作
+    // 鏍囩鎿嶄綔
     procedure AddTag(const TagName: string);
     procedure RemoveTag(const TagName: string);
     function HasTag(const TagName: string): Boolean;
 
-    // 附件操作
+    // 闄勪欢鎿嶄綔
     procedure AddAttachment(Attachment: TAttachment);
     procedure RemoveAttachment(const AttachmentId: string);
 
-    // 属�?
+    // 灞炴€?
     property Id: string read FId write FId;
     property Title: string read FTitle write FTitle;
     property Content: string read FContent write FContent;
@@ -124,21 +124,21 @@ type
     property UpdatedAt: TDateTime read FUpdatedAt write FUpdatedAt;
     property CreatedBy: string read FCreatedBy write FCreatedBy;
 
-    // 计算属�?
+    // 璁＄畻灞炴€?
     property Tags: TArray<string> read GetTags;
     property Attachments: TArray<TAttachment> read GetAttachments;
     property DisplayStatus: string read GetDisplayStatus;
     property ContentPreview: string read GetContentPreview;
     property IsDirty: Boolean read FIsDirty;
 
-    // 内部列表访问
+    // 鍐呴儴鍒楄〃璁块棶
     property TagList: TList<string> read FTags;
     property AttachmentList: TObjectList<TAttachment> read FAttachments;
     property VersionList: TObjectList<TDocumentVersion> read FVersions;
   end;
 
   /// <summary>
-  /// 文档版本实体
+  /// 鏂囨。鐗堟湰瀹炰綋
   /// </summary>
   [Table('DocumentVersions')]
   TDocumentVersion = class(TEntityBase)
@@ -172,7 +172,7 @@ type
 
     class function NewId: string;
 
-    /// <summary>从文档创建版本快�?/summary>
+    /// <summary>浠庢枃妗ｅ垱寤虹増鏈揩鐓?/summary>
     class function CreateFromDocument(Doc: TDocument; const Note: string = ''): TDocumentVersion;
 
     property Id: string read FId write FId;
@@ -186,7 +186,7 @@ type
   end;
 
   /// <summary>
-  /// 附件实体
+  /// 闄勪欢瀹炰綋
   /// </summary>
   [Table('Attachments')]
   TAttachment = class(TEntityBase)
@@ -220,10 +220,10 @@ type
 
     class function NewId: string;
 
-    /// <summary>从文件路径创建附�?/summary>
+    /// <summary>浠庢枃浠惰矾寰勫垱寤洪檮浠?/summary>
     class function CreateFromFile(const FilePath: string): TAttachment;
 
-    /// <summary>检查文件是否存�?/summary>
+    /// <summary>妫€鏌ユ枃浠舵槸鍚﹀瓨鍦?/summary>
     function FileExists: Boolean;
 
     property Id: string read FId write FId;
@@ -234,13 +234,13 @@ type
     property FilePath: string read FFilePath write FFilePath;
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
 
-    // 计算属�?
+    // 璁＄畻灞炴€?
     property DisplaySize: string read GetDisplaySize;
     property FileExtension: string read GetFileExtension;
   end;
 
   /// <summary>
-  /// 搜索结果
+  /// 鎼滅储缁撴灉
   /// </summary>
   TSearchResult = class
   private
@@ -315,7 +315,7 @@ end;
 
 function TDocument.GetDisplayStatus: string;
 const
-  StatusNames: array[TDocumentStatus] of string = ('活动', '已归�?, '已删�?);
+  StatusNames: array[TDocumentStatus] of string = ('娲诲姩', '宸插綊妗?, '宸插垹闄?);
 begin
   Result := StatusNames[Status];
 end;
@@ -329,7 +329,7 @@ begin
   else
     Result := Copy(FContent, 1, MaxLength) + '...';
 
-  // 移除换行�?
+  // 绉婚櫎鎹㈣绗?
   Result := Result.Replace(#13#10, ' ').Replace(#10, ' ').Replace(#13, ' ');
 end;
 
@@ -348,10 +348,10 @@ begin
   Errors := TList<string>.Create;
   try
     if FTitle.Trim.IsEmpty then
-      Errors.Add('标题不能为空');
+      Errors.Add('鏍囬涓嶈兘涓虹┖');
 
     if Length(FTitle) > 500 then
-      Errors.Add('标题长度不能超过 500 字符');
+      Errors.Add('鏍囬闀垮害涓嶈兘瓒呰繃 500 瀛楃');
 
     Result := Errors.ToArray;
   finally
@@ -364,8 +364,8 @@ var
   Tag: string;
 begin
   Result := TDocument.Create;
-  Result.FId := NewId;  // �?ID
-  Result.FTitle := FTitle + ' (副本)';
+  Result.FId := NewId;  // 鏂?ID
+  Result.FTitle := FTitle + ' (鍓湰)';
   Result.FContent := FContent;
   Result.FCategoryId := FCategoryId;
   Result.FStatusValue := Ord(dsActive);
@@ -373,7 +373,7 @@ begin
   Result.FCreatedAt := Now;
   Result.FUpdatedAt := Now;
 
-  // 复制标签
+  // 澶嶅埗鏍囩
   for Tag in FTags do
     Result.FTags.Add(Tag);
 end;

@@ -1,4 +1,4 @@
-unit Test.Regression.BUG345_PoolReleaseInvalidate;
+﻿unit Test.Regression.BUG345_PoolReleaseInvalidate;
 
 interface
 

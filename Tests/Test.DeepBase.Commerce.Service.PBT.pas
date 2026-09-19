@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Commerce.Service.PBT - Property-based tests for the
   Round-2 commerce-service fixes.
 

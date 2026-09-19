@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Net.Streaming.PBT - Property-based tests for the
   IDeepBaseStreamingTransport SSE chunk delivery contract.
 

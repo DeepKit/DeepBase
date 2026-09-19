@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Scheduler module
 /// Tests: TCronExpression, TRetryPolicy, TScheduledTask, TTaskScheduler
 /// </summary>

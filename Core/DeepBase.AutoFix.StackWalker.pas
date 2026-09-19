@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.StackWalker
 
   Captures call-stack frames as (module_name, module_base, rva) tuples using

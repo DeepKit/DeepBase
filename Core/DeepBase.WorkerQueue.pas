@@ -26,7 +26,8 @@ uses
   {$IFDEF MSWINDOWS}
   Winapi.Windows,
   {$ENDIF}
-  DeepBase.Constants;
+  DeepBase.Constants,
+  DeepBase.ManagedWorker;
 
 type
   EWorkerQueueException = class(Exception);
@@ -222,21 +223,24 @@ type
     property Queue: TWorkerQueue read FQueue write FQueue;
   end;
 
-  /// <summary>Thread for executing a job handler with timeout support.
-  /// REVIEW5-CORE-003: Owns its captured references; safe to detach on timeout.</summary>
-  TJobHandlerThread = class(TThread)
+  /// <summary>B4（WO-20260919-AUDIT-乙）：handler 超时执行的跨线程异常移交容器，
+  /// 承接原 TJobHandlerThread.FError 的线程所有权语义。
+  /// Capture 在线程体内于结束前写入；Take 转移所有权给调用方；
+  /// 未被 Take 则由 Destroy 释放——Evacuate 抛弃路径经接口引用计数归零，无泄漏无悬挂。</summary>
+  IJobErrorSink = interface
+    ['{B7E4C012-6A3B-4C1E-9D2F-3F5A8C1E6B20}']
+    procedure Capture(AError: Exception);
+    function Take: Exception;
+  end;
+
+  TJobErrorSink = class(TInterfacedObject, IJobErrorSink)
   private
-    FHandler: TJobHandler;
-    FJob: TJob;
-    FDoneEvt: TEvent;
     FError: Exception;
-  protected
-    procedure Execute; override;
+    FTaken: Boolean;
   public
-    constructor Create(AHandler: TJobHandler; AJob: TJob; ADoneEvt: TEvent);
     destructor Destroy; override;
-    /// <summary>Takes ownership of the captured exception (transfers to caller).</summary>
-    function TakeError: Exception;
+    procedure Capture(AError: Exception);
+    function Take: Exception;
   end;
 
   /// <summary>Worker thread</summary>
@@ -311,11 +315,11 @@ type
   private
     FDirectory: string;
     FLock: TCriticalSection;
-    FLockFilePath: string;  // BUG-117 FIX: ���̼��ļ���·��
+    FLockFilePath: string;  // BUG-117 FIX: 进程间文件锁路径
 
     function GetJobPath(const AJobId: TJobId): string;
-    function AcquireFileLock: THandle;  // BUG-117 FIX: ��ȡ���̼��ļ���
-    procedure ReleaseFileLock(AHandle: THandle);  // BUG-117 FIX: �ͷŽ��̼��ļ���
+    function AcquireFileLock: THandle;  // BUG-117 FIX: 获取进程间文件锁
+    procedure ReleaseFileLock(AHandle: THandle);  // BUG-117 FIX: 释放进程间文件锁
   public
     constructor Create(const ADirectory: string);
     destructor Destroy; override;
@@ -347,7 +351,7 @@ type
     FJobAvailable: TEvent;
     FShutdownEvent: TEvent;
     FMaxWorkers: Integer;
-    FMinWorkers: Integer;  // BUG-056 FIX: ��С�����߳���
+    FMinWorkers: Integer;  // BUG-056 FIX: 最小工作线程数
     FMaxPendingJobs: Integer;
     FDefaultRetryPolicy: TRetryPolicy;
     FDefaultTimeout: Integer;
@@ -357,12 +361,12 @@ type
     FTotalProcessed: Int64;
     FTotalErrors: Int64;
     FTotalProcessingTime: Int64;
-    // BUG-056 FIX: ��̬�̳߳ص�������ֶ�
+    // BUG-056 FIX: 动态线程池调整相关字段
     FAutoScale: Boolean;
-    FScaleUpThreshold: Double;    // ���б��Ͷȳ�����ֵʱ�����߳�
-    FScaleDownThreshold: Double;  // �����ʳ�����ֵʱ�����߳�
+    FScaleUpThreshold: Double;    // 队列饱和度超过此值时增加线程
+    FScaleDownThreshold: Double;  // 空闲率超过此值时减少线程
     FLastScaleTime: TDateTime;
-    FScaleCooldownMs: Integer;    // ������ȴʱ��(����)
+    FScaleCooldownMs: Integer;    // 调整冷却时间(毫秒)
     
     FOnJobQueued: TQueueEvent;
     FOnJobStarted: TQueueEvent;
@@ -376,7 +380,7 @@ type
     procedure MoveToDeadLetter(AJob: TJob);
     function AreDependenciesMet(const AJob: TJob): Boolean;
     procedure SortPendingQueue;
-    procedure CheckAutoScale;  // BUG-056 FIX: ��鲢ִ���Զ�����
+    procedure CheckAutoScale;  // BUG-056 FIX: 检查并执行自动调整
 
     function GetStats: TQueueStats;
     function GetActiveWorkerCount: Integer;
@@ -473,7 +477,7 @@ type
     property IsShuttingDown: Boolean read FShuttingDown;
     property Stats: TQueueStats read GetStats;
     property ActiveWorkerCount: Integer read GetActiveWorkerCount;
-    // BUG-056 FIX: ��̬�̳߳ص�������
+    // BUG-056 FIX: 动态线程池调整属性
     property AutoScale: Boolean read FAutoScale write FAutoScale;
     property ScaleUpThreshold: Double read FScaleUpThreshold write FScaleUpThreshold;
     property ScaleDownThreshold: Double read FScaleDownThreshold write FScaleDownThreshold;
@@ -859,22 +863,22 @@ var
   LMetadata: TJSONObject;
   LPair: TJSONPair;
 begin
-  // BUG-107 FIX: ����������֤
+  // BUG-107 FIX: 添加输入验证
   if AJSON = nil then
     raise EWorkerQueueException.Create('Invalid JSON: nil object');
   
-  // ��֤��Ҫ�ֶ�
+  // 验证必要字段
   LJobType := AJSON.GetValue<string>('jobType', '');
   if LJobType = '' then
     raise EWorkerQueueException.Create('Invalid JSON: missing jobType');
   
-  // ��֤jobType���ȣ���ֹ����������
+  // 验证jobType长度，防止过长的输入
   if Length(LJobType) > 256 then
     raise EWorkerQueueException.Create('Invalid JSON: jobType too long');
   
   Result := TJob.Create(LJobType);
   
-  // ��֤������ID
+  // 验证并设置ID
   LJobId := AJSON.GetValue<string>('id', Result.FId);
   if Length(LJobId) > 256 then
   begin
@@ -1003,50 +1007,31 @@ begin
   Result.AddPair('metadata', LMetadata);
 end;
 
-{ TJobHandlerThread }
+{ TJobErrorSink }
 
-constructor TJobHandlerThread.Create(AHandler: TJobHandler; AJob: TJob; ADoneEvt: TEvent);
+destructor TJobErrorSink.Destroy;
 begin
-  inherited Create(True); // suspended
-  FreeOnTerminate := False;
-  FHandler := AHandler;
-  FJob := AJob;
-  FDoneEvt := ADoneEvt;
-  FError := nil;
-end;
-
-destructor TJobHandlerThread.Destroy;
-begin
-  // FError ownership: if still set at destruction, free it.
-  // Normally TakeError transfers ownership to the caller before destruction.
   FreeAndNil(FError);
-  // FDoneEvt and FJob are NOT owned by this thread.
-  FDoneEvt := nil;
-  FJob := nil;
   inherited;
 end;
 
-function TJobHandlerThread.TakeError: Exception;
+procedure TJobErrorSink.Capture(AError: Exception);
 begin
-  Result := FError;
-  FError := nil; // Transfer ownership
+  // 入参恒为克隆新对象（BUG-438：except 结束时 RTL 自动释放 E，不得持 E 本体）。
+  // Take 后所有权已移交 raise/Free 方；被抛弃 handler 迟到的写入在此直接释放，杜绝双 free/泄漏
+  if FTaken or (FError <> nil) then
+  begin
+    AError.Free;
+    Exit;
+  end;
+  FError := AError;
 end;
 
-procedure TJobHandlerThread.Execute;
+function TJobErrorSink.Take: Exception;
 begin
-  try
-    FHandler(FJob);
-  except
-    on E: Exception do
-      // BUG-438: 克隆异常对象而非持有 E。Delphi `except on E:` 块结束时 RTL
-      // 自动释放 E, 直接 FError := E 会令 FError 悬挂, 后续 TakeError 返回野
-      // 指针, ProcessJob 的 `raise LHandlerErr` 操作已释放对象即触发 AV 216。
-      // 克隆的新对象脱离 RTL 生命周期, 由 FError 独占持有, 现有 TakeError/
-      // 析构 FreeAndNil(FError)/ProcessJob raise+FreeAndNil 引用语义正确。
-      FError := Exception.Create(E.Message);
-  end;
-  if Assigned(FDoneEvt) then
-    FDoneEvt.SetEvent;
+  Result := FError;
+  FError := nil;
+  FTaken := True; // 所有权转移给调用方
 end;
 
 { TWorkerThread }
@@ -1208,7 +1193,7 @@ begin
   if not TDirectory.Exists(FDirectory) then
     TDirectory.CreateDirectory(FDirectory);
 
-  // BUG-117 FIX: ��ʼ�����̼����ļ�·��
+  // BUG-117 FIX: 初始化进程间锁文件路径
   FLockFilePath := TPath.Combine(FDirectory, '.lock');
 end;
 
@@ -1223,7 +1208,7 @@ begin
   Result := TPath.Combine(FDirectory, AJobId + '.json');
 end;
 
-// BUG-117 FIX: ʵ�ֽ��̼��ļ���
+// BUG-117 FIX: 实现进程间文件锁
 function TFileJobStorage.AcquireFileLock: THandle;
 {$IFDEF MSWINDOWS}
 var
@@ -1232,7 +1217,7 @@ begin
   Result := INVALID_HANDLE_VALUE;
   LRetries := 0;
 
-  // ���Ի�ȡ�ļ������������50�Σ�5�룩
+  // 尝试获取文件锁，最多重试50次（5秒）
   while LRetries < 50 do
   begin
     // BIZ2-011 fix: drop FILE_FLAG_DELETE_ON_CLOSE. With delete-on-close,
@@ -1245,7 +1230,7 @@ begin
     Result := CreateFile(
       PChar(FLockFilePath),
       GENERIC_READ or GENERIC_WRITE,
-      0,  // ����������ռ����
+      0,  // 不共享，独占访问
       nil,
       CREATE_ALWAYS,
       FILE_ATTRIBUTE_HIDDEN,
@@ -1256,15 +1241,15 @@ begin
       Exit;
 
     Inc(LRetries);
-    Sleep(100);  // �ȴ�100ms������
+    Sleep(100);  // 等待100ms后重试
   end;
 
-  // ��ʱ�����޷���ȡ������¼���浫����ִ��
-  // �ڵ����̻������ⲻ���Ϊ����
+  // 超时后仍无法获取锁，记录警告但继续执行
+  // 在单进程环境下这不会成为问题
 end;
 {$ELSE}
 begin
-  // ��Windowsƽ̨�ݲ�֧�ֽ��̼���
+  // 非Windows平台暂不支持进程间锁
   Result := 0;
 end;
 {$ENDIF}
@@ -1283,7 +1268,7 @@ var
   LJSON: TJSONObject;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1308,7 +1293,7 @@ var
   LPath: string;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1331,7 +1316,7 @@ var
   LFileLock: THandle;
 begin
   Result := nil;
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1367,7 +1352,7 @@ var
   LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1410,7 +1395,7 @@ var
   LFileLock: THandle;
 begin
   Result := TObjectList<TJob>.Create(True);
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1450,7 +1435,7 @@ var
   LFile: string;
   LFileLock: THandle;
 begin
-  // BUG-117 FIX: ʹ�ý��̼��ļ�������
+  // BUG-117 FIX: 使用进程间文件锁保护
   LFileLock := AcquireFileLock;
   try
     FLock.Enter;
@@ -1476,7 +1461,7 @@ begin
   inherited Create;
   FName := AName;
   FMaxWorkers := AMaxWorkers;
-  FMinWorkers := 1;  // BUG-056 FIX: Ĭ����С1�������߳�
+  FMinWorkers := 1;  // BUG-056 FIX: 默认最小1个工作线程
   FMaxPendingJobs := 10000;
   FDefaultTimeout := 300000; // 5 minutes
   FHandlers := TDictionary<string, TJobHandler>.Create;
@@ -1484,19 +1469,19 @@ begin
   FPendingQueue := TList<TJob>.Create;
   FWorkers := TObjectList<TWorkerThread>.Create(True);
   FLock := TCriticalSection.Create;
-  // BUG-055 FIX: ��Ϊ�ֶ������¼�����ֹ���̳߳������źŶ�ʧ
-  // �Զ������¼�(ManualReset=False)ֻ����һ���̺߳�����ã�
-  // ���¶������ж����ҵʱ������ҵ�޷�����ʱ����
+  // BUG-055 FIX: 改为手动重置事件，防止多线程场景下信号丢失
+  // 自动重置事件(ManualReset=False)只唤醒一个线程后就重置，
+  // 导致队列中有多个作业时其他作业无法被及时处理
   FJobAvailable := TEvent.Create(nil, True, False, '');
   FShutdownEvent := TEvent.Create(nil, True, False, '');
   FDefaultRetryPolicy := TRetryPolicy.Exponential(3, 1000, 60000);
   FStorage := TMemoryJobStorage.Create;
-  // BUG-056 FIX: ��ʼ����̬�̳߳ص�������ֶ�
-  FAutoScale := False;  // Ĭ�Ϲر��Զ�����
-  FScaleUpThreshold := 0.8;    // ���б��Ͷȳ���80%ʱ�����߳�
-  FScaleDownThreshold := 0.2;  // �����ʳ���80%(�������ʵ���20%)ʱ�����߳�
+  // BUG-056 FIX: 初始化动态线程池调整相关字段
+  FAutoScale := False;  // 默认关闭自动调整
+  FScaleUpThreshold := 0.8;    // 队列饱和度超过80%时增加线程
+  FScaleDownThreshold := 0.2;  // 空闲率超过80%(即利用率低于20%)时减少线程
   FLastScaleTime := 0;
-  FScaleCooldownMs := 5000;    // 5����ȴʱ��
+  FScaleCooldownMs := 5000;    // 5秒冷却时间
 end;
 
 destructor TWorkerQueue.Destroy;
@@ -1820,8 +1805,8 @@ begin
       end;
     end;
 
-    // BUG-055 FIX: �ֶ������¼�������
-    // ɾ����ǰ job �����¼��ʣ����У�����ɾ���ڼ�Խ���ȡ��
+    // BUG-055 FIX: 手动重置事件管理。
+    // 删除当前 job 后重新检查剩余队列，避免删除期间越界读取。
     if LHasAvailableJobs then
       FJobAvailable.SetEvent
     else
@@ -1869,12 +1854,11 @@ var
   LHandler: TJobHandler;
   LStartTime: TDateTime;
   LElapsed: Integer;
-  LDoneEvt: TEvent;
-  LHandlerThread: TJobHandlerThread;
+  LWorker: TManagedWorker;
+  LErrSink: IJobErrorSink;
   LHandlerErr: Exception;
   LTimedOut: Boolean;
   LTimeoutMs: Integer;
-  LWaitResult: TWaitResult;
   LErrMsg: string;
 begin
   FLock.Enter;
@@ -1925,48 +1909,46 @@ begin
 
   if LTimeoutMs > 0 then
   begin
-    LDoneEvt := TEvent.Create(nil, True, False, '');
-    try
-      LHandlerThread := TJobHandlerThread.Create(LHandler, AJob, LDoneEvt);
-      try
-        LHandlerThread.Start;
-
-        LWaitResult := LDoneEvt.WaitFor(LTimeoutMs);
-        LTimedOut := (LWaitResult <> wrSignaled);
-
-        if LTimedOut then
-        begin
-          // C-CON-08: abandon join — free worker slot; leak handler thread with warning.
-          // TerminateThread is forbidden; FreeOnTerminate lets the OS reclaim after handler exits.
-          LHandlerThread.FreeOnTerminate := True;
-          LHandlerErr := LHandlerThread.TakeError;
-          LHandlerThread := nil;
-          LElapsed := MilliSecondsBetween(Now, LStartTime);
-          {$IFDEF MSWINDOWS}
-          OutputDebugString(PChar(Format(
-            'DeepBase.WorkerQueue: job timed out after %dms; abandoning handler thread (worker slot released)',
-            [LTimeoutMs])));
-          {$ENDIF}
-        end
-        else
-        begin
-          LHandlerThread.WaitFor;
-          LElapsed := MilliSecondsBetween(Now, LStartTime);
-          LHandlerErr := LHandlerThread.TakeError;
+    // B4（WO-20260919-AUDIT-乙）：TManagedWorker 取代 TJobHandlerThread + 外部持有的 LDoneEvt。
+    // 旧实现两处硬伤：①超时后在线程存活中翻 FreeOnTerminate=True，与线程退出自释竞态；
+    // ②外层 FreeAndNil(LDoneEvt) 先于被抛弃线程尾部 SetEvent → 事件 use-after-free。
+    // 现：Wait(ms) 用组件内完成事件；超时走 Evacuate（抛弃唯一合法出口：隔离区跑完由 janitor 回收）。
+    LErrSink := TJobErrorSink.Create;
+    LWorker := TManagedWorker.Create(
+      procedure
+      begin
+        try
+          LHandler(AJob);
+        except
+          on E: Exception do
+            // BUG-438 语义承接：克隆新对象而非持 E（except 块结束 RTL 会自动释放 E）
+            LErrSink.Capture(Exception.Create(E.Message));
         end;
-      finally
-        if LHandlerThread <> nil then
-          LHandlerThread.Free;
-      end;
-    finally
-      FreeAndNil(LDoneEvt);
+      end, 'JobHandler:' + AJob.JobType);
+    LWorker.Start;
+
+    LTimedOut := not LWorker.Wait(LTimeoutMs);
+    if LTimedOut then
+    begin
+      // C-CON-08: abandon join — free worker slot; handler 移交隔离区跑完即回收（禁止 TerminateThread）
+      LWorker.Evacuate;
+      LElapsed := MilliSecondsBetween(Now, LStartTime);
+      {$IFDEF MSWINDOWS}
+      OutputDebugString(PChar(Format(
+        'DeepBase.WorkerQueue: job timed out after %dms; handler evacuated to quarantine (worker slot released)',
+        [LTimeoutMs])));
+      {$ENDIF}
+    end
+    else
+    begin
+      LElapsed := MilliSecondsBetween(Now, LStartTime);
+      LHandlerErr := LErrSink.Take;
+      LWorker.Free; // 已结束：Destroy 内 WaitFor 立即返回
     end;
     // Re-raise handler exceptions after cleanup (unless timed out).
     if (not LTimedOut) and Assigned(LHandlerErr) then
       raise LHandlerErr;
-    // If timed out, we own LHandlerErr but don't raise it — free it.
-    if LTimedOut then
-      FreeAndNil(LHandlerErr);
+    // 超时：错误对象由 LErrSink 持有，接口引用归零时安全释放，不在此 Take
   end
   else
   begin
@@ -2122,7 +2104,7 @@ begin
     FLock.Leave;
   end;
 
-  // BUG-056 FIX: ��ҵ������ɺ����Ƿ���Ҫ��̬�����̳߳�
+  // BUG-056 FIX: 作业处理完成后检查是否需要动态调整线程池
   CheckAutoScale;
 end;
 
@@ -2274,7 +2256,7 @@ begin
   until False;
 end;
 
-// BUG-056 FIX: ʵ���̳߳ض�̬����
+// BUG-056 FIX: 实现线程池动态调整
 procedure TWorkerQueue.CheckAutoScale;
 var
   LStats: TQueueStats;
@@ -2286,15 +2268,15 @@ var
   LMaxWorkersLocal: Integer;
   LMinWorkersLocal: Integer;
 begin
-  // ����Ƿ������Զ�����
+  // 检查是否启用自动调整
   if not FAutoScale then
     Exit;
 
-  // ����Ƿ����ڹر�
+  // 检查是否正在关闭
   if FShuttingDown or FPaused then
     Exit;
 
-  // �����ȴʱ��
+  // 检查冷却时间
   if FLastScaleTime > 0 then
   begin
     LElapsedMs := MilliSecondsBetween(Now, FLastScaleTime);
@@ -2302,7 +2284,7 @@ begin
       Exit;
   end;
 
-  // ��ȡ��ǰͳ����Ϣ������������ΪGetStats�ڲ��������
+  // 获取当前统计信息（不加锁，因为GetStats内部会加锁）
   // BIZ2-010 fix: read worker count and limits under the lock
   FLock.Enter;
   try
@@ -2315,13 +2297,13 @@ begin
 
   LStats := GetStats;
 
-  // ���û�й����̣߳������е���
+  // 如果没有工作线程，不进行调整
   if LTotalWorkers = 0 then
     Exit;
 
   LNewCount := LTotalWorkers;
 
-  // ������б��Ͷ� = ��������ҵ�� / ����������
+  // 计算队列饱和度 = 待处理作业数 / 最大待处理数
   // BIZ2-010 fix: saturation = pending jobs per worker, clamped to [0,1]
   LSaturation := LStats.PendingJobs / Max(1, LTotalWorkers);
   if LSaturation < 0.0 then
@@ -2329,28 +2311,28 @@ begin
   else if LSaturation > 1.0 then
     LSaturation := 1.0;
 
-  // ��������� = �����߳��� / ���߳���
+  // 计算空闲率 = 空闲线程数 / 总线程数
   if LTotalWorkers > 0 then
     LIdleRate := LStats.IdleWorkers / LTotalWorkers
   else
     LIdleRate := 1;
 
-  // �ж��Ƿ���Ҫ����
-  // ���������б��Ͷȳ�����ֵ �� ��ǰ�߳���δ������
+  // 判断是否需要扩容
+  // 条件：队列饱和度超过阈值 且 当前线程数未达上限
   if (LSaturation > FScaleUpThreshold) and (LNewCount < LMaxWorkersLocal) then
   begin
-    // ���ݣ����� 1 ���̣߳����߸��ݱ��Ͷ����Ӹ���
+    // 扩容：增加 1 个线程，或者根据饱和度增加更多
     LNewCount := Min(LNewCount + Max(1, Round((LSaturation - FScaleUpThreshold) * 5)), LMaxWorkersLocal);
   end
-  // �ж��Ƿ���Ҫ����
-  // �����������ʳ�����ֵ���������ʵͣ��� ��ǰ�߳���������Сֵ
+  // 判断是否需要缩容
+  // 条件：空闲率超过阈值（即利用率低）且 当前线程数超过最小值
   else if (LIdleRate > (1 - FScaleDownThreshold)) and (LNewCount > LMinWorkersLocal) then
   begin
-    // ���ݣ����� 1 ���߳�
+    // 缩容：减少 1 个线程
     LNewCount := Max(LNewCount - 1, LMinWorkersLocal);
   end;
 
-  // �����Ҫ������ִ�е���
+  // 如果需要调整，执行调整
   if LNewCount <> LTotalWorkers then
   begin
     FLastScaleTime := Now;

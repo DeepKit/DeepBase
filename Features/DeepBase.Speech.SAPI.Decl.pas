@@ -1,4 +1,4 @@
-{ ============================================================================
+Ôªø{ ============================================================================
   DeepBase.Speech.SAPI.Decl
   ---------------------------------------------------------------------------
   Version     : 2.0
@@ -14,17 +14,17 @@
        SetInput@9 S_OK, CreateRecoContext@12 S_OK, SetInterest@10 S_OK,
        CreateGrammar@14 S_OK, LoadDictation@20 S_OK, SetDictationState@22
        S_OK, SetRecoState@17 S_OK, BindToFile@17 S_OK, GetEvents@11 returns
-       SPEI_RECOGNITION(0x20026), GetText@5 S_OK ("¬ß" for a 440 Hz tone).
+       SPEI_RECOGNITION(0x20026), GetText@5 S_OK ("ÊêÇ" for a 440 Hz tone).
 
   Event IDs are SAPI 5.3+ numbering (SPEI_RECOGNITION = 38, NOT 19). The
   SetInterest validator (disassembled at sapi+0x8127C) REQUIRES bits 30+33
-  (SPEI_RESERVED1|SPEI_RESERVED2) and REJECTS bits 0-29, 31, 32, 56-63 ‚Ä?
+  (SPEI_RESERVED1|SPEI_RESERVED2) and REJECTS bits 0-29, 31, 32, 56-63 Èà•?
   SPFEI_ALL_SR_EVENTS with old numbering fails E_INVALIDARG.
 
   SPEVENT (Win64, 40 bytes): eEventId@0 elParamType@4 ulStreamNum@8 pad@12
   ullAudioStreamOffset@16 wParam@24 lParam@32. For SPEI_RECOGNITION the
   wParam is the ISpRecoResult pointer. eEventId may carry high flag bits
-  (observed 0x20026 = RECOGNITION) ‚Ä?mask with $FF before comparing.
+  (observed 0x20026 = RECOGNITION) Èà•?mask with $FF before comparing.
 
   Thread Safety: COM interfaces are apartment-threaded (STA).
   ============================================================================ }
@@ -165,17 +165,17 @@ type
   );
 
 // ============================================================================
-// SPEVENT record (ISpRecoContext.GetEvents) ‚Ä?Win64 layout VERIFIED by probe
+// SPEVENT record (ISpRecoContext.GetEvents) Èà•?Win64 layout VERIFIED by probe
 // ============================================================================
 
 type
   //   eEventId@0 (4) elParamType@4 (4) ulStreamNum@8 (4) pad@12 (4)
-  //   ullAudioStreamOffset@16 (8) wParam@24 (8) lParam@32 (8) ‚Ä?total 40
+  //   ullAudioStreamOffset@16 (8) wParam@24 (8) lParam@32 (8) Èà•?total 40
   // For SPEI_RECOGNITION the wParam holds the ISpRecoResult*.
-  // eEventId may include high flag bits (observed 0x20026) ‚Ä?compare & $FF.
+  // eEventId may include high flag bits (observed 0x20026) Èà•?compare & $FF.
   SPEVENT = record
-    eEventId: Integer;          // SPEVENTENUM ‚Ä?C enum, 4 bytes
-    elParamType: Integer;       // SPEVENTLPARAMTYPE ‚Ä?C enum, 4 bytes
+    eEventId: Integer;          // SPEVENTENUM Èà•?C enum, 4 bytes
+    elParamType: Integer;       // SPEVENTLPARAMTYPE Èà•?C enum, 4 bytes
     ulStreamNum: ULONG;         // audio stream number
     ulPadding: ULONG;           // alignment padding
     ullAudioStreamOffset: UInt64;
@@ -209,10 +209,10 @@ type
   ISpStream = interface;
 
 // ============================================================================
-// Interfaces ‚Ä?vtable slots are VERIFIED (System.Speech reflection + probes)
+// Interfaces Èà•?vtable slots are VERIFIED (System.Speech reflection + probes)
 // ============================================================================
 
-  // ISpNotifySource : IUnknown ‚Ä?7 methods (vtable 3..9) [verified via
+  // ISpNotifySource : IUnknown Èà•?7 methods (vtable 3..9) [verified via
   // ISpEventSource reflection: SetNotifySink@3 SetNotifyWindowMessage@4
   // SetNotifyCallbackFunction@5 SetNotifyCallbackInterface@6
   // SetNotifyWin32Event@7 WaitForNotifyEvent@8 GetNotifyEventHandle@9]
@@ -230,7 +230,7 @@ type
     function GetNotifyEventHandle(out pEventHandle: THandle): HRESULT; stdcall;
   end;
 
-  // ISpEventSource : ISpNotifySource ‚Ä?3 methods (vtable 10..12)
+  // ISpEventSource : ISpNotifySource Èà•?3 methods (vtable 10..12)
   ISpEventSource = interface(ISpNotifySource)
     ['{BE7A9CCE-5F9E-11D2-960F-00C04F8EE628}']
     function SetInterest(ullEventInterest, ullQueuedInterest: UInt64): HRESULT; stdcall; // 10 VERIFIED
@@ -239,8 +239,8 @@ type
     function GetInfo(pInfo: Pointer): HRESULT; stdcall;                                  // 12
   end;
 
-  // ISpProperties : IUnknown ‚Ä?4 methods (vtable 3..6) [verified: ISpRecognizer
-  // reflection slots 3-6 are Set/GetPropertyNum/String ‚Ä?the REAL base of
+  // ISpProperties : IUnknown Èà•?4 methods (vtable 3..6) [verified: ISpRecognizer
+  // reflection slots 3-6 are Set/GetPropertyNum/String Èà•?the REAL base of
   // ISpRecognizer, NOT ISpEventSource!]
   ISpProperties = interface(IUnknown)
     ['{5B4A9714-94FC-4243-8B0B-051E46C84165}']
@@ -251,14 +251,14 @@ type
       out ppCoMemValue: PWideChar): HRESULT; stdcall;
   end;
 
-  // ISpStreamFormat : IStream ‚Ä?1 method (vtable 13)
+  // ISpStreamFormat : IStream Èà•?1 method (vtable 13)
   ISpStreamFormat = interface(IStream)
     ['{BED530BE-2606-4F4D-A1C0-54CD5A2796C2}']
     function GetFormat(out pguidFormatId: TGUID;
       out ppCoMemWaveFormatEx: Pointer): HRESULT; stdcall; // 13
   end;
 
-  // ISpStream : ISpStreamFormat ‚Ä?vtable 14..18. BindToFile sits at 17
+  // ISpStream : ISpStreamFormat Èà•?vtable 14..18. BindToFile sits at 17
   // (VERIFIED by probe; one extra slot vs the classic listing at 16).
   ISpStream = interface(ISpStreamFormat)
     ['{12E3CCA9-7518-44C5-A5E7-BA5A79CB929E}']
@@ -271,7 +271,7 @@ type
     function Close: HRESULT; stdcall;                 // 18
   end;
 
-  // ISpObjectTokenCategory : IUnknown ‚Ä?5 methods (vtable 3..7)
+  // ISpObjectTokenCategory : IUnknown Èà•?5 methods (vtable 3..7)
   ISpObjectTokenCategory = interface(IUnknown)
     ['{2D3D3845-39AF-4850-BBF9-40B49780011D}']
     function SetId(pszCategoryId: PWideChar; fCreateIfNotExist: BOOL): HRESULT; stdcall;
@@ -284,7 +284,7 @@ type
       out ppEnum: IUnknown): HRESULT; stdcall;
   end;
 
-  // ISpObjectToken : ISpObjectTokenCategory ‚Ä?7 methods (vtable 8..14)
+  // ISpObjectToken : ISpObjectTokenCategory Èà•?7 methods (vtable 8..14)
   ISpObjectToken = interface(ISpObjectTokenCategory)
     ['{14056589-E16C-11D2-BB90-00C04F8EE6C0}']
     function CreateInstance(const pUnkOuter: IUnknown; dwClsContext: DWORD;
@@ -300,7 +300,7 @@ type
       out ppszCoMemValue: PWideChar): HRESULT; stdcall;
   end;
 
-  // ISpRecognizer : ISpProperties ‚Ä?vtable 7..22 (VERIFIED slots 9/12/17)
+  // ISpRecognizer : ISpProperties Èà•?vtable 7..22 (VERIFIED slots 9/12/17)
   ISpRecognizer = interface(ISpProperties)
     ['{C2B5F241-DAA0-4507-9E16-5A1EAA2B7A5C}']
     function SetRecognizer(pToken: ISpObjectToken): HRESULT; stdcall;  // 7
@@ -313,7 +313,7 @@ type
     function Slot14: HRESULT; stdcall;                // 14 (unused)
     function Slot15: HRESULT; stdcall;                // 15 (unused)
     function GetRecoState(out pState: SPRECOSTATE): HRESULT; stdcall; // 16
-    function SetRecoState(NewState: SPRECOSTATE): HRESULT; stdcall;  // 17 VERIFIED ‚Ä?recognition START switch!
+    function SetRecoState(NewState: SPRECOSTATE): HRESULT; stdcall;  // 17 VERIFIED Èà•?recognition START switch!
     function GetStatus(pStatus: Pointer): HRESULT; stdcall;          // 18
     function GetFormat(WaveFormatType: DWORD; out pFormatId: TGUID;
       out ppCoMemWaveFormatEx: Pointer): HRESULT; stdcall;           // 19
@@ -325,7 +325,7 @@ type
     function EmulateRecognition(pPhrase: IUnknown): HRESULT; stdcall; // 22
   end;
 
-  // ISpRecoContext : ISpEventSource ‚Ä?vtable 13..30. NOTE: CreateGrammar is
+  // ISpRecoContext : ISpEventSource Èà•?vtable 13..30. NOTE: CreateGrammar is
   // at 14 on this sapi.dll (VERIFIED), NOT at 26 as the classic sapi.idl
   // listing claims. Slots marked (unused) are placeholders only.
   ISpRecoContext = interface(ISpEventSource)
@@ -387,7 +387,7 @@ type
     function SetGrammarState(eState: DWORD): HRESULT; stdcall; // 26
   end;
 
-  // ISpRecoResult : IUnknown ‚Ä?we only use GetText@5 (VERIFIED). The classic
+  // ISpRecoResult : IUnknown Èà•?we only use GetText@5 (VERIFIED). The classic
   // ISpPhrase base (GetPhrase@3 GetSerializedPhrase@4 Discard@6) applies.
   ISpRecoResult = interface(IUnknown)
     ['{20B053BE-E235-43CD-9A2A-8D17A48B7842}']
@@ -398,7 +398,7 @@ type
     function Discard(ulValueTypes: ULONG): HRESULT; stdcall; // 6
   end;
 
-  // ISpVoice : ISpEventSource ‚Ä?25 methods (vtable 13..37), classic order
+  // ISpVoice : ISpEventSource Èà•?25 methods (vtable 13..37), classic order
   // (TTS path; not re-verified on 24H2 but SAPI TTS was working before).
   ISpVoice = interface(ISpEventSource)
     ['{6C44DF74-72B9-4992-A1EC-EF996E0422D4}']

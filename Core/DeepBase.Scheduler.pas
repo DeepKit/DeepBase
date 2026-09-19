@@ -57,7 +57,8 @@ uses
   System.DateUtils,
   System.Math,
   System.RegularExpressions,
-  DeepBase.Exceptions;
+  DeepBase.Exceptions,
+  DeepBase.ManagedWorker;
 
 type
   // ============================================================================
@@ -68,7 +69,7 @@ type
   TTaskPriority = (tpLow, tpNormal, tpHigh, tpCritical);
 
   /// <summary>
-  /// Persisted task metadata (no proc reference �� callers re-register on restart).
+  /// Persisted task metadata (no proc reference — callers re-register on restart).
   /// </summary>
   TTaskMeta = record
     Id: string;
@@ -260,17 +261,17 @@ type
     FTasks: TObjectDictionary<string, TScheduledTask>;
     FLock: TCriticalSection;
     FLifecycleLock: TCriticalSection;
-    FTimerThread: TThread;
+    // B4：定时器线程收敛到 TManagedWorker（取消→WaitFor→置nil 内聚于组件），
+    // 循环间歇直接用 worker 的 CancelEvent，取代原 FShutdownEvent + 裸 TThread 模板
+    FTimerWorker: TManagedWorker;
     FRunning: Boolean;
     FStats: TSchedulerStats;
     FCheckIntervalMs: Integer;
     FMaxConcurrentTasks: Integer;
     FRunningCount: Integer;
     FJobStore: IJobStore;
-    FShutdownEvent: TEvent;
     FStopDrainTimeoutMs: Integer;
 
-    procedure TimerProc;
     procedure ExecuteTask(Task: TScheduledTask);
     procedure ProcessPendingTasks;
     function CanRunTask(Task: TScheduledTask): Boolean;
@@ -782,7 +783,6 @@ begin
   FTasks := TObjectDictionary<string, TScheduledTask>.Create([doOwnsValues]);
   FLock := TCriticalSection.Create;
   FLifecycleLock := TCriticalSection.Create;
-  FShutdownEvent := TEvent.Create(nil, True, False, '');
   FRunning := False;
   FCheckIntervalMs := 100;
   FMaxConcurrentTasks := 4;
@@ -809,7 +809,6 @@ begin
   FreeAndNil(FTasks);
   FreeAndNil(FLock);
   FreeAndNil(FLifecycleLock);
-  FreeAndNil(FShutdownEvent);
   inherited;
 end;
 
@@ -839,7 +838,7 @@ end;
 
 procedure TTaskScheduler.Start;
 var
-  LThread: TThread;
+  LWorker: TManagedWorker;
 begin
   // C-CON-07: dedicated lifecycle lock — do not share with job FLock.
   FLifecycleLock.Enter;
@@ -847,14 +846,22 @@ begin
     if FRunning then
       Exit;
 
-    if FShutdownEvent <> nil then
-      FShutdownEvent.ResetEvent;
-
     FRunning := True;
-    LThread := TThread.CreateAnonymousThread(TimerProc);
-    LThread.FreeOnTerminate := False;
-    FTimerThread := LThread;
-    LThread.Start;
+    // B4：定时器线程收敛到 TManagedWorker；循环间歇用 CancelEvent 代替原 FShutdownEvent。
+    // proc 仅在 Start 后执行，LWorker 在 Start 前已赋值，无捕获竞态。
+    LWorker := TManagedWorker.Create(
+      procedure
+      begin
+        while FRunning do
+        begin
+          ProcessPendingTasks;
+          // Wait responsively so Stop can interrupt the loop.
+          if LWorker.CancelEvent.WaitFor(FCheckIntervalMs) = wrSignaled then
+            Break;
+        end;
+      end, 'SchedulerTimer');
+    FTimerWorker := LWorker;
+    FTimerWorker.Start;
   finally
     FLifecycleLock.Leave;
   end;
@@ -864,9 +871,9 @@ function TTaskScheduler.Stop: Boolean;
 var
   Stopwatch: TStopwatch;
   TimeoutMs: Int64;
-  LThread: TThread;
+  LWorker: TManagedWorker;
 begin
-  LThread := nil;
+  LWorker := nil;
   FLifecycleLock.Enter;
   try
     if not FRunning then
@@ -874,19 +881,17 @@ begin
 
     FRunning := False;
 
-    if FShutdownEvent <> nil then
-      FShutdownEvent.SetEvent;
-
-    LThread := FTimerThread;
-    FTimerThread := nil;
+    LWorker := FTimerWorker;
+    FTimerWorker := nil;
   finally
     FLifecycleLock.Leave;
   end;
 
-  if LThread <> nil then
+  if LWorker <> nil then
   begin
-    LThread.WaitFor;
-    LThread.Free;
+    // Cancel 非阻塞立即中断循环等待；Free 内聚 WaitFor（旧 SetEvent→WaitFor→Free 模板收进组件）
+    LWorker.Cancel;
+    LWorker.Free;
   end;
 
   // Drain running tasks outside lifecycle lock.
@@ -900,17 +905,6 @@ begin
   end;
 
   Result := True;
-end;
-
-procedure TTaskScheduler.TimerProc;
-begin
-  while FRunning do
-  begin
-    ProcessPendingTasks;
-    // Wait responsively so Stop can interrupt the loop.
-    if FShutdownEvent.WaitFor(FCheckIntervalMs) = wrSignaled then
-      Break;
-  end;
 end;
 
 function TTaskScheduler.CanRunTask(Task: TScheduledTask): Boolean;

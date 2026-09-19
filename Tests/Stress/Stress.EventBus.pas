@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.EventBus - EventBus High Load Stress Tests
 
   Tests EventBus under extreme load conditions:

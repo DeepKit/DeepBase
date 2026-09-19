@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.ExceptionAdapter - VCL Application.OnException bridge
 
   Keeps DeepBase.Exception UI-neutral while wiring the global VCL exception

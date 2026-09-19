@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.AutoFix.ErrorRecorder
 
   DUnitX property-based tests for the AutoFix error recorder.

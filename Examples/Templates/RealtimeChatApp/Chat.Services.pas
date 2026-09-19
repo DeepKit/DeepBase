@@ -1,4 +1,4 @@
-unit Chat.Services;
+﻿unit Chat.Services;
 
 {*******************************************************************************
   Realtime Chat Application Template - Services

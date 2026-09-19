@@ -7,10 +7,10 @@
   所属包: DeepBasePersistence
   功能:
   - 官方 profile 路径支持 SQLite + PostgreSQL 双数据库并存
-  - 保留�?DatabaseType/ConnectionString 兼容入口
-  - 连接健康检�?
+  - 淇濈暀鏃?DatabaseType/ConnectionString 鍏煎鍏ュ彛
+  - 杩炴帴鍋ュ悍妫€鏌?
   - 空闲连接回收
-  - 连接泄漏检�?
+  - 杩炴帴娉勬紡妫€娴?
   - 详细统计监控
   - 连接预热
   - 自动重连
@@ -18,7 +18,7 @@
   线程安全: 所有公共方法都是线程安全的
 
   用法:
-    // 创建连接�?
+    // 鍒涘缓杩炴帴姹?
     Pool := TUniConnectionPool.Create;
     Pool.DatabaseType := dbSQLite;
     Pool.ConnectionString := 'path/to/db.sqlite';
@@ -32,7 +32,7 @@
       // 使用 Connection
       Connection.ExecSQL('INSERT INTO Log(Msg) VALUES(:Msg)', ['test']);
     finally
-      Release; // 或自动释�?
+      Release; // 鎴栬嚜鍔ㄩ噴鏀?
     end;
 
     // 或使用作用域连接
@@ -93,7 +93,7 @@ type
     function SameConnectionAs(const Other: TDBConnectionProfile): Boolean;
   end;
 
-  /// <summary>连接状�?/summary>
+  /// <summary>杩炴帴鐘舵€?/summary>
   TConnectionState = (
     csIdle,       // 空闲可用
     csInUse,      // 正在使用
@@ -101,7 +101,7 @@ type
     csValidating  // 正在验证
   );
 
-  /// <summary>连接池事件类�?/summary>
+  /// <summary>杩炴帴姹犱簨浠剁被鍨?/summary>
   TPoolEventType = (
     peConnectionCreated,
     peConnectionDestroyed,
@@ -113,11 +113,11 @@ type
     pePoolExhausted
   );
 
-  /// <summary>连接池事�?/summary>
+  /// <summary>杩炴帴姹犱簨浠?/summary>
   TPoolEvent = procedure(Sender: TObject; EventType: TPoolEventType;
     const Message: string) of object;
 
-  /// <summary>连接池统计信�?/summary>
+  /// <summary>杩炴帴姹犵粺璁′俊鎭?/summary>
   TPoolStatistics = record
     TotalConnections: Integer;
     ActiveConnections: Integer;
@@ -139,7 +139,7 @@ type
 
   TUniConnectionPool = class;
 
-  /// <summary>池化连接包装�?/summary>
+  /// <summary>姹犲寲杩炴帴鍖呰鍣?/summary>
   TPooledConnection = class
   private
     FPool: TUniConnectionPool;
@@ -164,10 +164,10 @@ type
     /// <summary>释放回连接池</summary>
     procedure Release;
 
-    /// <summary>标记为无�?/summary>
+    /// <summary>鏍囪涓烘棤鏁?/summary>
     procedure Invalidate;
 
-    /// <summary>验证连接有效�?/summary>
+    /// <summary>楠岃瘉杩炴帴鏈夋晥鎬?/summary>
     function Validate: Boolean;
 
     /// <summary>Set connection state (for unit-test regression scenarios only).</summary>
@@ -185,7 +185,7 @@ type
     property AcquireCount: Int64 read FAcquireCount;
   end;
 
-  /// <summary>连接池配�?/summary>
+  /// <summary>杩炴帴姹犻厤缃?/summary>
   TPoolConfig = record
     MinSize: Integer;
     MaxSize: Integer;
@@ -257,28 +257,28 @@ type
     /// <summary>Configure pool from explicit profile. Must be called before Initialize.</summary>
     procedure Configure(const AProfile: TDBConnectionProfile);
 
-    /// <summary>关闭连接�?/summary>
+    /// <summary>鍏抽棴杩炴帴姹?/summary>
     procedure Shutdown;
 
-    /// <summary>获取一个连�?/summary>
+    /// <summary>鑾峰彇涓€涓繛鎺?/summary>
     function GetConnection: TPooledConnection;
 
     /// <summary>Create a configured FireDAC connection without opening it.</summary>
     function CreateUnopenedConnection: TFDConnection;
 
-    /// <summary>获取连接（带超时�?/summary>
+    /// <summary>鑾峰彇杩炴帴锛堝甫瓒呮椂锛?/summary>
     function TryGetConnection(TimeoutMs: Cardinal; out Conn: TPooledConnection): Boolean;
 
-    /// <summary>执行操作（自动获取和释放连接�?/summary>
+    /// <summary>鎵ц鎿嶄綔锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>
     procedure Execute(Proc: TProc<TFDConnection>);
 
-    /// <summary>执行查询（自动获取和释放连接�?/summary>
+    /// <summary>鎵ц鏌ヨ锛堣嚜鍔ㄨ幏鍙栧拰閲婃斁杩炴帴锛?/summary>
     function Query<T>(Func: TFunc<TFDConnection, T>): T;
 
-    /// <summary>清空所有空闲连�?/summary>
+    /// <summary>娓呯┖鎵€鏈夌┖闂茶繛鎺?/summary>
     procedure ClearIdleConnections;
 
-    /// <summary>强制回收所有连�?/summary>
+    /// <summary>寮哄埗鍥炴敹鎵€鏈夎繛鎺?/summary>
     procedure RecycleAllConnections;
 
     /// <summary>获取统计信息</summary>
@@ -287,10 +287,10 @@ type
     /// <summary>重置统计信息</summary>
     procedure ResetStatistics;
 
-    /// <summary>预热连接�?/summary>
+    /// <summary>棰勭儹杩炴帴姹?/summary>
     procedure Warmup(Count: Integer = 0);
 
-    // 属�?
+    // 灞炴€?
     property DatabaseType: TDatabaseType read FDatabaseType write SetDatabaseType;
     property ConnectionString: string read FConnectionString write SetConnectionString;
     property Profile: TDBConnectionProfile read FProfile;
@@ -298,7 +298,7 @@ type
     property Config: TPoolConfig read FConfig write FConfig;
     property Initialized: Boolean read FInitialized;
 
-    // 快捷属�?
+    // 蹇嵎灞炴€?
     property MinSize: Integer read FConfig.MinSize write FConfig.MinSize;
     property MaxSize: Integer read FConfig.MaxSize write FConfig.MaxSize;
     property AcquireTimeoutMs: Cardinal read FConfig.AcquireTimeoutMs write FConfig.AcquireTimeoutMs;
@@ -337,10 +337,10 @@ type
       const Profile: TDBConnectionProfile; const Config: TPoolConfig;
       AutoInitialize: Boolean = False): TUniConnectionPool; overload;
 
-    /// <summary>注册连接�?/summary>
+    /// <summary>娉ㄥ唽杩炴帴姹?/summary>
     class procedure RegisterPool(const Name: string; Pool: TUniConnectionPool);
 
-    /// <summary>移除连接�?/summary>
+    /// <summary>绉婚櫎杩炴帴姹?/summary>
     class procedure RemovePool(const Name: string);
 
     /// <summary>获取所有池名称</summary>
@@ -370,10 +370,10 @@ type
     procedure ShutdownAll;
   end;
 
-/// <summary>获取默认连接�?/summary>
+/// <summary>鑾峰彇榛樿杩炴帴姹?/summary>
 function DefaultPool: TUniConnectionPool;
 
-/// <summary>设置默认连接�?/summary>
+/// <summary>璁剧疆榛樿杩炴帴姹?/summary>
 procedure SetDefaultPool(Pool: TUniConnectionPool);
 
 /// <summary>Get the default DB pool provider facade.</summary>
@@ -690,7 +690,7 @@ class function TPoolConfig.Default: TPoolConfig;
 begin
   Result.MinSize := 2;
   Result.MaxSize := 10;
-  Result.AcquireTimeoutMs := 30000;  // 30�?
+  Result.AcquireTimeoutMs := 30000;  // 30绉?
   Result.IdleTimeoutSec := 300;      // 5分钟
   Result.MaxLifetimeSec := 3600;     // 1小时
   Result.ValidationIntervalSec := 60; // 1分钟
@@ -1461,7 +1461,7 @@ begin
       end
       else
       begin
-        // 无效连接，标记移�?
+        // 鏃犳晥杩炴帴锛屾爣璁扮Щ闄?
         Pooled.Invalidate;
       end;
     end;
@@ -1533,7 +1533,7 @@ begin
         Exit;
       end;
 
-      // 无可用连接，尝试创建新连�?
+      // 鏃犲彲鐢ㄨ繛鎺ワ紝灏濊瘯鍒涘缓鏂拌繛鎺?
       if FPool.Count < FConfig.MaxSize then
       begin
         try
@@ -1567,7 +1567,7 @@ begin
       FLock.Leave;
     end;
 
-    // 检查超�?
+    // 妫€鏌ヨ秴鏃?
     ElapsedMs := Stopwatch.ElapsedMilliseconds;
     if ElapsedMs >= TimeoutMs then
       Exit(False);

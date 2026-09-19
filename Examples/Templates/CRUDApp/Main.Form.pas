@@ -1,4 +1,4 @@
-unit Main.Form;
+﻿unit Main.Form;
 
 {*******************************************************************************
   CRUD Application Template - Main Form

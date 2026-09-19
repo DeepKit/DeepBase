@@ -1,4 +1,4 @@
-unit DeepBase.IntentClarification.Interfaces;
+﻿unit DeepBase.IntentClarification.Interfaces;
 
 interface
 

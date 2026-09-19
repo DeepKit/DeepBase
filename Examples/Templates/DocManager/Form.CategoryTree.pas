@@ -1,9 +1,9 @@
-unit Form.CategoryTree;
+﻿unit Form.CategoryTree;
 
 {*******************************************************************************
-  Category Tree Form - 分类管理窗体
+  Category Tree Form - 鍒嗙被绠＄悊绐椾綋
 
-  DeepBase 框架文档管理模板 - 分类树管�?
+  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鍒嗙被鏍戠鐞?
 *******************************************************************************}
 
 interface
@@ -109,7 +109,7 @@ begin
       Q.Free;
     end;
 
-    // 构建�?
+    // 鏋勫缓鏍?
     for Cat in FCategories do
     begin
       if Cat.ParentId.IsEmpty then
@@ -120,7 +120,7 @@ begin
       end;
     end;
 
-    // 添加子节�?
+    // 娣诲姞瀛愯妭鐐?
     for Cat in FCategories do
     begin
       if not Cat.ParentId.IsEmpty and NodeMap.ContainsKey(Cat.ParentId) then
@@ -145,7 +145,7 @@ var
   Cat: TCategory;
 begin
   cmbParent.Items.Clear;
-  cmbParent.Items.Add('(�?- 根分�?');
+  cmbParent.Items.Add('(鏃?- 鏍瑰垎绫?');
 
   for Cat in FCategories do
     cmbParent.Items.Add(Cat.Name);
@@ -169,7 +169,7 @@ begin
   edtName.Text := Cat.Name;
   mmoDescription.Text := Cat.Description;
 
-  // 父分�?
+  // 鐖跺垎绫?
   cmbParent.ItemIndex := 0;
   for I := 0 to FCategories.Count - 1 do
   begin
@@ -211,7 +211,7 @@ var
 begin
   if edtName.Text.Trim.IsEmpty then
   begin
-    ShowMessage('请输入分类名�?);
+    ShowMessage('璇疯緭鍏ュ垎绫诲悕绉?);
     edtName.SetFocus;
     Exit;
   end;
@@ -221,7 +221,7 @@ begin
   FCurrentCategory.Name := edtName.Text.Trim;
   FCurrentCategory.Description := mmoDescription.Text;
 
-  // 父分�?
+  // 鐖跺垎绫?
   if cmbParent.ItemIndex > 0 then
     ParentId := FCategories[cmbParent.ItemIndex - 1].Id
   else
@@ -273,7 +273,7 @@ var
 begin
   if FCurrentCategory = nil then Exit;
 
-  if MessageDlg(Format('确定要删除分�?"%s" 吗？', [FCurrentCategory.Name]),
+  if MessageDlg(Format('纭畾瑕佸垹闄ゅ垎绫?"%s" 鍚楋紵', [FCurrentCategory.Name]),
     mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
     Exit;
 
@@ -281,17 +281,17 @@ begin
   try
     Q.Connection := DataModule1.FDConnection1;
 
-    // 将该分类下的文档移到�?
+    // 灏嗚鍒嗙被涓嬬殑鏂囨。绉诲埌鏍?
     Q.SQL.Text := 'UPDATE Documents SET CategoryId = NULL WHERE CategoryId = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;
 
-    // 将子分类提升为根
+    // 灏嗗瓙鍒嗙被鎻愬崌涓烘牴
     Q.SQL.Text := 'UPDATE Categories SET ParentId = NULL WHERE ParentId = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;
 
-    // 删除分类
+    // 鍒犻櫎鍒嗙被
     Q.SQL.Text := 'DELETE FROM Categories WHERE Id = :Id';
     Q.ParamByName('Id').AsString := FCurrentCategory.Id;
     Q.ExecSQL;

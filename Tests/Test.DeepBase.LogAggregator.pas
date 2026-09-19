@@ -1,4 +1,4 @@
-unit Test.DeepBase.LogAggregator;
+﻿unit Test.DeepBase.LogAggregator;
 
 {*******************************************************************************
   Unit Tests for DeepBase Log Aggregation System

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   M10 fix: integration-style tests with a controllable fake session.
   Cover the validate / fallback / heal code paths that previously had
   no coverage (because all earlier tests passed nil sessions).

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Moments - "Being Understood" Micro-Moments
 
   Generates echo confirmations, memory references, and expectation hints

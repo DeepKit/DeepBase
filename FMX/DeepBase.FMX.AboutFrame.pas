@@ -1,14 +1,14 @@
-unit DeepBase.FMX.AboutFrame;
+﻿unit DeepBase.FMX.AboutFrame;
 
 {
-  DeepBase FMX AboutFrame - FireMonkey 版关�?打赏页面组件
+  DeepBase FMX AboutFrame - FireMonkey 鐗堝叧浜?鎵撹祻椤甸潰缁勪欢
 
   功能:
-  - 6 个标�?Tab �?(公众�?微信/支付�?BTC/USDT/关于�?
-  - �?SQLite 数据库安全加载图�?(HMAC 签名验证)
+  - 6 涓爣鍑?Tab 椤?(鍏紬鍙?寰俊/鏀粯瀹?BTC/USDT/鍏充簬鎴?
+  - 浠?SQLite 鏁版嵁搴撳畨鍏ㄥ姞杞藉浘鐗?(HMAC 绛惧悕楠岃瘉)
   - BTC/USDT 地址复制功能
-  - 机器码显�?
-  - 根据 enabled 字段动态显�?隐藏 Tab
+  - 鏈哄櫒鐮佹樉绀?
+  - 鏍规嵁 enabled 瀛楁鍔ㄦ€佹樉绀?闅愯棌 Tab
 
   使用方法:
     var Frame := TFMXAboutFrame.Create(Self);
@@ -29,7 +29,7 @@ uses
 
 type
   /// <summary>
-  /// FMX �?AboutFrame - 关于/打赏页面组件
+  /// FMX 鐗?AboutFrame - 鍏充簬/鎵撹祻椤甸潰缁勪欢
   /// </summary>
   TFMXAboutFrame = class(TFrame)
   private
@@ -96,7 +96,7 @@ type
     /// <summary>初始化组件并加载数据</summary>
     procedure Initialize;
 
-    /// <summary>数据库路�?/summary>
+    /// <summary>鏁版嵁搴撹矾寰?/summary>
     property DatabasePath: string read FDatabasePath write FDatabasePath;
   end;
 
@@ -140,7 +140,7 @@ begin
   FTabControl.Align := TAlignLayout.Client;
   FTabControl.TabPosition := TTabPosition.Top;
 
-  // 创建各个 Tab �?
+  // 鍒涘缓鍚勪釜 Tab 椤?
   CreateTabPage(FTabOfficialGzh, FImgOfficialGzh, FLblOfficialGzhTip, 'Official', TIP_OFFICIAL_GZH);
   CreateTabPage(FTabWechat, FImgWechat, FLblWechatTip, '微信', TIP_WECHAT);
   CreateTabPage(FTabAlipay, FImgAlipay, FLblAlipayTip, 'Alipay', TIP_ALIPAY);
@@ -267,21 +267,21 @@ begin
   FLblAboutMeTip.TextSettings.HorzAlign := TTextAlign.Center;
   FLblAboutMeTip.Margins.Top := 10;
 
-  // 底部布局 (机器�?
+  // 搴曢儴甯冨眬 (鏈哄櫒鐮?
   BottomLayout := TLayout.Create(Layout);
   BottomLayout.Parent := Layout;
   BottomLayout.Align := TAlignLayout.Bottom;
   BottomLayout.Height := 60;
 
-  // 机器码标�?
+  // 鏈哄櫒鐮佹爣绛?
   FLblMachineCode := TLabel.Create(BottomLayout);
   FLblMachineCode.Parent := BottomLayout;
   FLblMachineCode.Align := TAlignLayout.Top;
   FLblMachineCode.Height := 20;
-  FLblMachineCode.Text := '机器�?';
+  FLblMachineCode.Text := '鏈哄櫒鐮?';
   FLblMachineCode.TextSettings.HorzAlign := TTextAlign.Center;
 
-  // 机器码�?
+  // 鏈哄櫒鐮佸€?
   FLblMachineCodeValue := TLabel.Create(BottomLayout);
   FLblMachineCodeValue.Parent := BottomLayout;
   FLblMachineCodeValue.Align := TAlignLayout.Client;

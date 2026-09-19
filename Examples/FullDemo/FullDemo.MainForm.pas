@@ -1,8 +1,8 @@
-{ ============================================================================
-  FullDemo.MainForm - 综合演示主窗�?
+﻿{ ============================================================================
+  FullDemo.MainForm - 缁煎悎婕旂ず涓荤獥浣?
   
-  版本: 1.0
-  说明: 演示 DeepBase 框架所有核心功�?
+  鐗堟湰: 1.0
+  璇存槑: 婕旂ず DeepBase 妗嗘灦鎵€鏈夋牳蹇冨姛鑳?
   ============================================================================ }
 
 unit FullDemo.MainForm;
@@ -44,7 +44,7 @@ uses
 type
   TMainForm = class(TForm)
   private
-    // 主界�?
+    // 涓荤晫闈?
     FPageControl: TPageControl;
     FStatusBar: TStatusBar;
     FMainMenu: TMainMenu;
@@ -157,30 +157,30 @@ begin
   Height := 600;
   Position := poScreenCenter;
   
-  // 初始�?DeepBase
+  // 鍒濆鍖?DeepBase
   DBPath := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), 'demo.db');
   if not DeepBase.Manager.DeepBase.InitializeWithDB(DBPath) then
   begin
-    ShowMessage('DeepBase 初始化失败: ' + DeepBase.Manager.DeepBase.LastError);
+    ShowMessage('DeepBase 鍒濆鍖栧け璐�: ' + DeepBase.Manager.DeepBase.LastError);
   end;
   
-  // 创建界面
+  // 鍒涘缓鐣岄潰
   CreateUI;
   
-  // 恢复窗体状�?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
+  // 鎭㈠绐椾綋鐘舵€?  DeepBase.Manager.DeepBase.FormState.RestoreFormState(Self);
   
-  // 记录启动日志
-  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用已启动', 'App');
+  // 璁板綍鍚姩鏃ュ織
+  DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤宸插惎鍔�', 'App');
   
   UpdateStatusBar;
 end;
 
 destructor TMainForm.Destroy;
 begin
-  // 保存窗体状�?  if DeepBase.Manager.DeepBase.IsInitialized then
+  // 淇濆瓨绐椾綋鐘舵€?  if DeepBase.Manager.DeepBase.IsInitialized then
   begin
     DeepBase.Manager.DeepBase.FormState.SaveFormState(Self);
-    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 应用正在关闭', 'App');
+    DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤姝ｅ湪鍏抽棴', 'App');
     DeepBase.Manager.DeepBase.Finalize;
   end;
   
@@ -189,22 +189,22 @@ end;
 
 procedure TMainForm.CreateUI;
 begin
-  // 状态栏
+  // 鐘舵€佹爮
   FStatusBar := TStatusBar.Create(Self);
   FStatusBar.Parent := Self;
   FStatusBar.Panels.Add.Width := 200;
   FStatusBar.Panels.Add.Width := 150;
   FStatusBar.Panels.Add.Width := 100;
   
-  // 主菜�?
+  // 涓昏彍鍗?
   CreateMainMenu;
   
-  // 页面控件
+  // 椤甸潰鎺т欢
   FPageControl := TPageControl.Create(Self);
   FPageControl.Parent := Self;
   FPageControl.Align := alClient;
   
-  // 创建各功能页
+  // 鍒涘缓鍚勫姛鑳介〉
   CreateConfigTab;
   CreateI18nTab;
   CreateLoggingTab;
@@ -256,7 +256,7 @@ begin
   
   FLblConfigDemo := TLabel.Create(Self);
   FLblConfigDemo.Parent := FTabConfig;
-  FLblConfigDemo.Caption := '配置管理演示 - 修改下方控件，值会自动保存到数据库';
+  FLblConfigDemo.Caption := '閰嶇疆绠＄悊婕旂ず - 淇敼涓嬫柟鎺т欢锛屽€间細鑷姩淇濆瓨鍒版暟鎹簱';
   FLblConfigDemo.Font.Style := [fsBold];
   FLblConfigDemo.SetBounds(20, Y, 500, 20);
   Inc(Y, 40);
@@ -433,7 +433,7 @@ begin
   
   var LblDemo := TLabel.Create(Self);
   LblDemo.Parent := FTabMRU;
-  LblDemo.Caption := '最近使用项演示';
+  LblDemo.Caption := '鏈€杩戜娇鐢ㄩ」婕旂ず';
   LblDemo.Font.Style := [fsBold];
   LblDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -502,7 +502,7 @@ begin
   
   FLblThemeDemo := TLabel.Create(Self);
   FLblThemeDemo.Parent := FTabTheme;
-  FLblThemeDemo.Caption := '主题切换演示';
+  FLblThemeDemo.Caption := '涓婚鍒囨崲婕旂ず';
   FLblThemeDemo.Font.Style := [fsBold];
   FLblThemeDemo.SetBounds(20, Y, 200, 20);
   Inc(Y, 40);
@@ -596,7 +596,7 @@ procedure TMainForm.CreateTestCenterTab;
 begin
   FTabTestCenter := TTabSheet.Create(FPageControl);
   FTabTestCenter.PageControl := FPageControl;
-  FTabTestCenter.Caption := '测试中心';
+  FTabTestCenter.Caption := '娴嬭瘯涓績';
   
   FTestCenterFrame := TTestCenterFrame.Create(Self);
   FTestCenterFrame.Parent := FTabTestCenter;

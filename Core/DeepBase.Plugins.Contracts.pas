@@ -1,4 +1,8 @@
-﻿{ ============================================================================
+﻿// [FROZEN — NOT IN BUILD — DO NOT USE IN PRODUCTION]
+// 法源：WO-20260919-AUDIT-乙 B3 / H10（主控终裁 2f011fd）：插件生产唯一真相源 =
+// 旧轨 Core\DeepBase.PluginManager.pas（BPL）。本单元冻结隔离：不进任何 .dpk/.dproj，
+// 禁止生产 uses；复活须满足 B3-C5 四条件。同名类已按 C1 消解（TDllPluginManager）。
+{ ============================================================================
   DeepBase.Plugins.Contracts - DLL 插件公共契约（字节缓冲区协议版）
 
   法源：docs/77.extend.PluginHotReload §3/§5/§6

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG033_WeakEncryption - Weak Encryption Algorithm Regression Test
 
   BUG-033: Weak Encryption Algorithm Usage

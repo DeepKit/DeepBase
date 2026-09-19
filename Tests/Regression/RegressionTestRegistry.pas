@@ -1,15 +1,15 @@
 ﻿{ ============================================================================
-  RegressionTestRegistry - 回归测试注册�?
+  RegressionTestRegistry - 鍥炲綊娴嬭瘯娉ㄥ唽琛?
 
-  此文件列出所有回归测试，用于�?
-  1. 快速查找特�?Bug 的测�?
+  姝ゆ枃浠跺垪鍑烘墍鏈夊洖褰掓祴璇曪紝鐢ㄤ簬锛?
+  1. 蹇€熸煡鎵剧壒瀹?Bug 鐨勬祴璇?
   2. 验证所有已修复 Bug 都有对应测试
   3. CI 报告生成
-  4. 测试覆盖率统�?
+  4. 娴嬭瘯瑕嗙洊鐜囩粺璁?
 
-  更新说明�?
+  鏇存柊璇存槑锛?
   - 添加新的回归测试时，请同时更新此文件
-  - 保持 Bug 编号�?docs/bugFixed.md 一�?
+  - 淇濇寔 Bug 缂栧彿涓?docs/bugFixed.md 涓€鑷?
   ============================================================================ }
 
 unit RegressionTestRegistry;
@@ -140,7 +140,7 @@ const
      Description: '动画对象内存泄漏';
      FixDate: '2025-01-27'),
 
-    // 序列化安全相�?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
+    // 搴忓垪鍖栧畨鍏ㄧ浉鍏?    (BugNumber: 'BUG-059'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG059_JsonDeserializationType';
      SourceFile: 'Core/DeepBase.Serialization.pas';
      Description: 'JSON反序列化类型验证缺失';
@@ -149,7 +149,7 @@ const
     (BugNumber: 'BUG-060'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG060_SerializationDepth';
      SourceFile: 'Core/DeepBase.Serialization.pas';
-     Description: '序列化深度限制过�?;
+     Description: '搴忓垪鍖栨繁搴﹂檺鍒惰繃楂?;
      FixDate: '2025-01-27'),
 
     (BugNumber: 'BUG-018'; Priority: bpP1; Category: bcSecurity;
@@ -193,10 +193,10 @@ const
     (BugNumber: 'BUG-039'; Priority: bpP1; Category: bcSecurity;
      TestUnit: 'Test.Regression.BUG039_HTTPHeaderInjection';
      SourceFile: 'Core/DeepBase.Net.pas';
-     Description: 'HTTP请求头注入风�?;
+     Description: 'HTTP璇锋眰澶存敞鍏ラ闄?;
      FixDate: '2025-01-27'),
 
-    // 密码学相�?
+    // 瀵嗙爜瀛︾浉鍏?
     (BugNumber: 'BUG-037'; Priority: bpP1; Category: bcCrypto;
      TestUnit: 'Test.Regression.BUG037_KeyDerivation';
      SourceFile: 'Features/DeepBase.AntiTamper.pas';
@@ -213,7 +213,7 @@ const
     (BugNumber: 'BUG-010'; Priority: bpP1; Category: bcConcurrency;
      TestUnit: 'Test.Regression.BUG010_WorkerQueueRace';
      SourceFile: 'Core/DeepBase.WorkerQueue.pas';
-     Description: '工作队列状态竞�?;
+     Description: '宸ヤ綔闃熷垪鐘舵€佺珵浜?;
      FixDate: '2025-12-16'),
 
     (BugNumber: 'BUG-054'; Priority: bpP1; Category: bcConcurrency;
@@ -241,16 +241,16 @@ const
      FixDate: '2026-09-02')
   );
 
-/// <summary>获取所�?P0 测试单元名称</summary>
+/// <summary>鑾峰彇鎵€鏈?P0 娴嬭瘯鍗曞厓鍚嶇О</summary>
 function GetP0TestUnits: TArray<string>;
 
-/// <summary>获取所�?P1 测试单元名称</summary>
+/// <summary>鑾峰彇鎵€鏈?P1 娴嬭瘯鍗曞厓鍚嶇О</summary>
 function GetP1TestUnits: TArray<string>;
 
 /// <summary>根据 Bug 编号查找测试信息</summary>
 function FindBugTestInfo(const BugNumber: string): TBugTestInfo;
 
-/// <summary>检查是否所�?Bug 都有对应测试</summary>
+/// <summary>妫€鏌ユ槸鍚︽墍鏈?Bug 閮芥湁瀵瑰簲娴嬭瘯</summary>
 function ValidateTestCoverage: Boolean;
 
 implementation
@@ -292,7 +292,7 @@ begin
     if SameText(P1_TESTS[I].BugNumber, BugNumber) then
       Exit(P1_TESTS[I]);
 
-  // 未找�?
+  // 鏈壘鍒?
   Result := Default(TBugTestInfo);
   Result.BugNumber := '';
 end;

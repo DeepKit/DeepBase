@@ -1,4 +1,4 @@
-unit Test.Regression.BUG337_AuthorizationUpdateSync;
+﻿unit Test.Regression.BUG337_AuthorizationUpdateSync;
 
 interface
 

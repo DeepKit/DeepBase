@@ -1,4 +1,4 @@
-unit Tray.KeyboardMouse;
+﻿unit Tray.KeyboardMouse;
 
 {*******************************************************************************
   DeepBaseTray - 键盘鼠标自动化模块

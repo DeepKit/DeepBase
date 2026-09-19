@@ -1,16 +1,16 @@
-{ ============================================================================
-  Test.Regression.BUG073_EventTypeInjection - 事件类型注入风险回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG073_EventTypeInjection - 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓鍥炲綊娴嬭瘯
 
-  BUG-073: 事件类型注入风险
+  BUG-073: 浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓
   
-  原问�? 允许通过字符串动态注册事件类型，可能被恶意利�?
+  鍘熼棶棰? 鍏佽閫氳繃瀛楃涓插姩鎬佹敞鍐屼簨浠剁被鍨嬶紝鍙兘琚伓鎰忓埄鐢?
   
-  修复方案: 实现事件类型白名单验证机�?
+  淇鏂规: 瀹炵幇浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?
   
-  修复日期: 2025-01-27
-  文件: Core/DeepBase.EventBus.pas
-  优先�? P1 (High)
-  分类: Security
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: Core/DeepBase.EventBus.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG073_EventTypeInjection;
@@ -36,11 +36,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证事件类型白名单验证存�?)]
+    [Description('楠岃瘉浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佸瓨鍦?)]
     procedure Test_EventTypeWhitelist_Exists;
     
     [Test]
-    [Description('验证恶意事件类型被拒�?)]
+    [Description('楠岃瘉鎭舵剰浜嬩欢绫诲瀷琚嫆缁?)]
     procedure Test_MaliciousEventType_IsRejected;
   end;
 
@@ -58,7 +58,7 @@ end;
 
 function TBug073_EventTypeInjectionTest.GetBugDescription: string;
 begin
-  Result := '事件类型注入风险';
+  Result := '浜嬩欢绫诲瀷娉ㄥ叆椋庨櫓';
 end;
 
 function TBug073_EventTypeInjectionTest.GetFixDate: string;
@@ -90,20 +90,20 @@ begin
     SourcePath := '..\Core\DeepBase.EventBus.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在事件类型验证相关代码
+  // 楠岃瘉瀛樺湪浜嬩欢绫诲瀷楠岃瘉鐩稿叧浠ｇ爜
   Assert.IsTrue(
     SourceCode.Contains('Whitelist') or 
     SourceCode.Contains('AllowedEvents') or
     SourceCode.Contains('ValidateEventType') or
     SourceCode.Contains('IsValidEventType'),
-    '代码应该包含事件类型白名单验证机�?);
+    '浠ｇ爜搴旇鍖呭惈浜嬩欢绫诲瀷鐧藉悕鍗曢獙璇佹満鍒?);
   
   LogTestEnd('Test_EventTypeWhitelist_Exists', True);
 end;
@@ -112,8 +112,8 @@ procedure TBug073_EventTypeInjectionTest.Test_MaliciousEventType_IsRejected;
 begin
   LogTestStart('Test_MaliciousEventType_IsRejected');
   
-  // 实际测试需�?EventBus 模块的具体实�?
-  Assert.Pass('恶意事件类型拒绝测试通过代码审查确认');
+  // 瀹為檯娴嬭瘯闇€瑕?EventBus 妯″潡鐨勫叿浣撳疄鐜?
+  Assert.Pass('鎭舵剰浜嬩欢绫诲瀷鎷掔粷娴嬭瘯閫氳繃浠ｇ爜瀹℃煡纭');
   
   LogTestEnd('Test_MaliciousEventType_IsRejected', True);
 end;

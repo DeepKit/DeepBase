@@ -1,10 +1,10 @@
-unit Main.Form;
+﻿unit Main.Form;
 
 {*******************************************************************************
-  Main Form - 主窗�?
+  Main Form - 涓荤獥浣?
 
-  DeepBase 框架文档管理模板 - 主界�?
-  左侧分类�?+ 中间文档列表 + 右侧预览/编辑
+  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 涓荤晫闈?
+  宸︿晶鍒嗙被鏍?+ 涓棿鏂囨。鍒楄〃 + 鍙充晶棰勮/缂栬緫
 *******************************************************************************}
 
 interface
@@ -123,18 +123,18 @@ begin
   FCategoryTree := TCategoryTree.Create;
   FCurrentDocument := nil;
 
-  // 配置列表视图
+  // 閰嶇疆鍒楄〃瑙嗗浘
   lvDocuments.ViewStyle := vsReport;
   lvDocuments.RowSelect := True;
   lvDocuments.ReadOnly := True;
   lvDocuments.Columns.Clear;
-  with lvDocuments.Columns.Add do begin Caption := '标题'; Width := 200; end;
-  with lvDocuments.Columns.Add do begin Caption := '更新时间'; Width := 150; end;
-  with lvDocuments.Columns.Add do begin Caption := '状�?; Width := 80; end;
-  with lvDocuments.Columns.Add do begin Caption := '版本'; Width := 60; end;
+  with lvDocuments.Columns.Add do begin Caption := '鏍囬'; Width := 200; end;
+  with lvDocuments.Columns.Add do begin Caption := '鏇存柊鏃堕棿'; Width := 150; end;
+  with lvDocuments.Columns.Add do begin Caption := '鐘舵€?; Width := 80; end;
+  with lvDocuments.Columns.Add do begin Caption := '鐗堟湰'; Width := 60; end;
 
-  // 配置搜索�?
-  edtSearch.TextHint := '搜索文档...';
+  // 閰嶇疆鎼滅储妗?
+  edtSearch.TextHint := '鎼滅储鏂囨。...';
 
   Log.Info('MainForm created');
 end;
@@ -180,7 +180,7 @@ begin
   Categories := TObjectList<TCategory>.Create(True);
   NodeMap := TDictionary<string, TTreeNode>.Create;
   try
-    // 加载分类数据
+    // 鍔犺浇鍒嗙被鏁版嵁
     Q := TFDQuery.Create(nil);
     try
       Q.Connection := DataModule1.FDConnection1;
@@ -204,11 +204,11 @@ begin
 
     FCategoryTree.LoadFromList(Categories);
 
-    // 添加"全部文档"根节�?
-    Node := tvCategories.Items.Add(nil, '全部文档');
+    // 娣诲姞"鍏ㄩ儴鏂囨。"鏍硅妭鐐?
+    Node := tvCategories.Items.Add(nil, '鍏ㄩ儴鏂囨。');
     Node.Data := nil;
 
-    // 构建树节�?
+    // 鏋勫缓鏍戣妭鐐?
     for Cat in FCategoryTree.RootCategories do
     begin
       Node := tvCategories.Items.Add(nil, Cat.Name);
@@ -217,14 +217,14 @@ begin
       AddChildNodes(Node, Cat);
     end;
 
-    // 展开根节�?
+    // 灞曞紑鏍硅妭鐐?
     if tvCategories.Items.Count > 0 then
     begin
       tvCategories.Items[0].Expand(False);
       tvCategories.Selected := tvCategories.Items[0];
     end;
 
-    // 保留分类列表供后续使�?
+    // 淇濈暀鍒嗙被鍒楄〃渚涘悗缁娇鐢?
     Categories.OwnsObjects := False;
   finally
     NodeMap.Free;
@@ -271,7 +271,7 @@ begin
 
   if Node.Data = nil then
   begin
-    // "全部文档"
+    // "鍏ㄩ儴鏂囨。"
     LoadDocuments('');
   end
   else
@@ -321,7 +321,7 @@ end;
 
 procedure TMainForm.UpdateStatusBar;
 begin
-  StatusBar1.Panels[0].Text := Format('文档�? %d', [FDocuments.Count]);
+  StatusBar1.Panels[0].Text := Format('鏂囨。鏁? %d', [FDocuments.Count]);
   StatusBar1.Panels[1].Text := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now);
 end;
 
@@ -374,7 +374,7 @@ procedure TMainForm.actDeleteExecute(Sender: TObject);
 begin
   if FCurrentDocument = nil then Exit;
 
-  if MessageDlg(Format('确定要删除文�?"%s" 吗？', [FCurrentDocument.Title]),
+  if MessageDlg(Format('纭畾瑕佸垹闄ゆ枃妗?"%s" 鍚楋紵', [FCurrentDocument.Title]),
     mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     DataModule1.DocumentService.DeleteDocument(FCurrentDocument.Id);
@@ -426,7 +426,7 @@ begin
     Results.Free;
   end;
 
-  StatusBar1.Panels[0].Text := Format('搜索结果: %d', [FDocuments.Count]);
+  StatusBar1.Panels[0].Text := Format('鎼滅储缁撴灉: %d', [FDocuments.Count]);
 end;
 
 procedure TMainForm.edtSearchKeyPress(Sender: TObject; var Key: Char);
@@ -446,8 +446,8 @@ end;
 procedure TMainForm.mnuAboutClick(Sender: TObject);
 begin
   MessageDlg('Document Manager'#13#10 +
-    '基于 DeepBase 框架的文档管理系�?#13#10#13#10 +
-    '版本: 1.0.0',
+    '鍩轰簬 DeepBase 妗嗘灦鐨勬枃妗ｇ鐞嗙郴缁?#13#10#13#10 +
+    '鐗堟湰: 1.0.0',
     mtInformation, [mbOK], 0);
 end;
 

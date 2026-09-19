@@ -1,4 +1,4 @@
-unit DeepBase.Commerce.Adapter.Firebase;
+﻿unit DeepBase.Commerce.Adapter.Firebase;
 
 {==============================================================================
   DeepBase.Commerce.Adapter.Firebase - Firebase Firestore Storage Adapter

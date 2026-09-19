@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DiagnosticLogger
 
   Diagnostic ITestLogger that writes each test and fixture event to

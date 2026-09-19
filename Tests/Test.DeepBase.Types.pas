@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Types module
 /// Tests: THealthCheckResult, TInitErrorCode, TLogLevel, helper functions
 /// </summary>

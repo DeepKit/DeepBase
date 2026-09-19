@@ -23,6 +23,8 @@ uses
 const
   /// <summary>Default plugins subdirectory name</summary>
   DEFAULT_PLUGINS_DIR = 'Plugins';
+  /// <summary>A8 在途计数门禁：卸载前等待在途调用归零的缺省超时（ms）。</summary>
+  UNLOAD_DEFAULT_TIMEOUT_MS = 5000;
   
   /// <summary>Plugin registration export name</summary>
   REGISTER_PLUGIN_FUNC = 'RegisterPlugin';
@@ -94,6 +96,9 @@ type
     FContext: IDeepBasePluginContext;
     FLock: TObject;
     FNextLoadOrder: Integer;
+    { A8 在途计数门禁：线程安全的插件调用在途计数，用于卸载前 drain。 }
+    FInFlightCount: Integer;
+    FUnloadTimeoutMS: Cardinal;
     
     // Events
     FOnPluginLoaded: TPluginLoadedEvent;
@@ -120,6 +125,8 @@ type
     /// BIZ2-023: used to invoke callbacks outside FLock safely.
     /// </summary>
     function SnapshotLoadedPlugins: TArray<TLoadedPluginData>;
+    /// A8: spin-wait until FInFlightCount=0 or timeout. True=drained, False=timeout.
+    function WaitForInFlightDrain: Boolean;
     
   public
     constructor Create(const APluginsDir: string; AContext: IDeepBasePluginContext);
@@ -192,6 +199,14 @@ type
     
     /// <summary>Plugins directory path</summary>
     property PluginsDir: string read FPluginsDir;
+
+    /// <summary>A8 在途计数：调用方取得插件接口执行前 Acquire，执行后 Release。</summary>
+    procedure AcquirePluginCall;
+    procedure ReleasePluginCall;
+    /// <summary>A8 当前在途调用数（只读，供测试/监控）。</summary>
+    property InFlightCount: Integer read FInFlightCount;
+    /// <summary>A8 卸载超时（ms），可配置。</summary>
+    property UnloadTimeoutMS: Cardinal read FUnloadTimeoutMS write FUnloadTimeoutMS;
     
     /// <summary>Plugin loaded event</summary>
     property OnPluginLoaded: TPluginLoadedEvent read FOnPluginLoaded write FOnPluginLoaded;
@@ -396,6 +411,8 @@ begin
   FContext := AContext;
   FLock := TObject.Create;
   FNextLoadOrder := 0;
+  FInFlightCount := 0;
+  FUnloadTimeoutMS := UNLOAD_DEFAULT_TIMEOUT_MS;
 end;
 
 destructor TDeepBasePluginManager.Destroy;
@@ -535,6 +552,35 @@ begin
   end;
 end;
 
+{ A8 在途计数门禁：调用方在取得 IDeepBasePlugin 并执行前 Acquire，执行完成后 Release。 }
+procedure TDeepBasePluginManager.AcquirePluginCall;
+begin
+  System.SyncObjs.TInterlocked.Increment(FInFlightCount);
+end;
+
+procedure TDeepBasePluginManager.ReleasePluginCall;
+begin
+  System.SyncObjs.TInterlocked.Decrement(FInFlightCount);
+end;
+
+function TDeepBasePluginManager.WaitForInFlightDrain: Boolean;
+var
+  LDeadline, LRemaining: Cardinal;
+const
+  POLL_INTERVAL_MS = 10;
+begin
+  if FInFlightCount <= 0 then
+    Exit(True);
+  LDeadline := FUnloadTimeoutMS;
+  LRemaining := LDeadline;
+  while (FInFlightCount > 0) and (LRemaining > 0) do
+  begin
+    TThread.Sleep(POLL_INTERVAL_MS);
+    Dec(LRemaining, POLL_INTERVAL_MS);
+  end;
+  Result := (FInFlightCount <= 0);
+end;
+
 function TDeepBasePluginManager.GetPluginEnabledSetting(const PluginID: TGUID): Boolean;
 var
   Key, Value: string;
@@ -584,7 +630,7 @@ begin
 
   TMonitor.Enter(FLock);
   try
-    // 1. ��֤����ļ�·����ȫ��
+    // 1. 验证插件文件路径安全性
     if not IsValidPluginPath(BPLPath) then
     begin
       ErrorMsg := 'Invalid plugin path (potential path traversal): ' + BPLPath;
@@ -806,6 +852,12 @@ begin
     FLoadOrder.Remove(PluginID);
     PluginIntf := nil;
 
+    // A8 在途计数门禁：等待已发出但尚未完成的插件调用归零，超时则拒绝卸载。
+    if not WaitForInFlightDrain then
+      raise EPluginInUse.CreateFmt(
+        'Cannot unload plugin "%s": %d in-flight call(s) still active after %d ms timeout',
+        [PluginInfo.Name, FInFlightCount, FUnloadTimeoutMS]);
+
     UnloadBPL(PackageHandle);
     Result := True;
   finally
@@ -868,6 +920,17 @@ begin
     UnloadedCallback := FOnPluginUnloaded;
   finally
     TMonitor.Exit(FLock);
+  end;
+
+  // A8 在途计数门禁：等待所有在途插件调用归零，超时则跳过 UnloadBPL（保留 BPL 映射不卸载）。
+  if not WaitForInFlightDrain then
+  begin
+    // 无法安全卸载：已取出的 Snapshot 指向已移除的注册，但 BPL 内存仍有效。
+    // 记录错误并返回（不崩溃），由调用方决定后续动作。
+    FirePluginError(Default(TGUID), 'UnloadAllPlugins',
+      Format('In-flight drain timeout (%d ms): %d call(s) pending; BPL unload skipped',
+        [FUnloadTimeoutMS, FInFlightCount]), True);
+    Exit;
   end;
 
   // Finalize and unload in reverse load order, lock-free
@@ -1032,15 +1095,15 @@ begin
   Result := False;
   
   try
-    // ��ȡ�淶��·��
+    // 获取规范化路径
     CanonicalPath := TPath.GetFullPath(Path);
     PluginsCanonical := TPath.GetFullPath(FPluginsDir);
     
-    // ���·���Ƿ��ڲ��Ŀ¼��
+    // 检查路径是否在插件目录内
     Result := CanonicalPath.StartsWith(PluginsCanonical + TPath.DirectorySeparatorChar) or
               (CanonicalPath = PluginsCanonical);
               
-    // ����ļ���չ��
+    // 检查文件扩展名
     if Result then
       Result := SameText(TPath.GetExtension(Path), '.bpl');
       

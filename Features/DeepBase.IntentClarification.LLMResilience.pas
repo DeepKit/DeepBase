@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.LLMResilience - Resilient LLM Wrapper
 
   Decorator around ILLMClient that adds retry, timeout, and circuit-breaker

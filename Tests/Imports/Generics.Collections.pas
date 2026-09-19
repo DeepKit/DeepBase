@@ -1,4 +1,4 @@
-unit Generics.Collections;
+﻿unit Generics.Collections;
 interface
 uses
   System.Generics.Collections;

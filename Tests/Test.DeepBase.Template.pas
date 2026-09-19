@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Template module
 /// Tests: TTemplateContext, TTemplateParser, TTemplateRenderer, TTemplateEngine,
 ///        Variables, Conditionals, Loops, Filters, Includes, Custom Functions

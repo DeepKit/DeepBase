@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.AutoFix.HealthSignal
 
   Writes health-signal.json once after the application is fully initialized.

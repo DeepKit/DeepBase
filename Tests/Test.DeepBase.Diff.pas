@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Diff module
 /// Tests: TTextDiff, TDiffResult, TDiffHunk, TPatch, TMergeResult, TDiff helper
 /// </summary>

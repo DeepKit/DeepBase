@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Security.SecretStore - Unit tests for cross-platform
   secret store abstraction.
 

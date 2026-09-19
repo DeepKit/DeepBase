@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.VCL.DeepShell.Commands.PBT - Property tests for menu state
   refresh signalling.
 

@@ -1,4 +1,4 @@
-unit Test.DeepBase.Browser.ScriptStore;
+﻿unit Test.DeepBase.Browser.ScriptStore;
 
 { ============================================================================
   Test.DeepBase.Browser.ScriptStore

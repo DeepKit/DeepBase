@@ -1,4 +1,4 @@
-unit Chart.Builder;
+﻿unit Chart.Builder;
 
 {*******************************************************************************
   Data Analyzer Template - Chart Builder

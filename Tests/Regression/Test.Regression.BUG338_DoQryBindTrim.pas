@@ -1,4 +1,4 @@
-unit Test.Regression.BUG338_DoQryBindTrim;
+﻿unit Test.Regression.BUG338_DoQryBindTrim;
 
 interface
 

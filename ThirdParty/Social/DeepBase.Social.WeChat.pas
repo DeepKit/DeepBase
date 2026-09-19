@@ -1,13 +1,13 @@
-unit DeepBase.Social.WeChat;
+﻿unit DeepBase.Social.WeChat;
 
 {*******************************************************************************
   DeepBase WeChat (微信) Social Integration
 
   Supports:
-    - 微信开放平台登�?(网站应用)
-    - 微信公众号登�?(网页授权)
+    - 寰俊寮€鏀惧钩鍙扮櫥褰?(缃戠珯搴旂敤)
+    - 寰俊鍏紬鍙风櫥褰?(缃戦〉鎺堟潈)
     - 获取用户信息
-    - 分享到微�?
+    - 鍒嗕韩鍒板井淇?
   Official Docs: https://developers.weixin.qq.com/doc/oplatform/
 *******************************************************************************}
 
@@ -21,8 +21,8 @@ uses
 type
   /// <summary>WeChat login type</summary>
   TWeChatLoginType = (
-    wltOpen,      // 开放平�?(网站/APP)
-    wltMP         // 公众号网页授�?
+    wltOpen,      // 寮€鏀惧钩鍙?(缃戠珯/APP)
+    wltMP         // 鍏紬鍙风綉椤垫巿鏉?
   );
 
   /// <summary>WeChat configuration</summary>
@@ -68,11 +68,11 @@ uses
   System.Hash;
 
 const
-  // WeChat Open Platform (开放平�?
+  // WeChat Open Platform (寮€鏀惧钩鍙?
   WECHAT_OPEN_AUTH_URL = 'https://open.weixin.qq.com/connect/qrconnect';
   WECHAT_OPEN_API_URL = 'https://api.weixin.qq.com/sns';
 
-  // WeChat MP (公众�?
+  // WeChat MP (鍏紬鍙?
   WECHAT_MP_AUTH_URL = 'https://open.weixin.qq.com/connect/oauth2/authorize';
   WECHAT_MP_API_URL = 'https://api.weixin.qq.com/sns';
 

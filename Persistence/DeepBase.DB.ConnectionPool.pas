@@ -192,7 +192,7 @@ begin
     except
       on E: Exception do
       begin
-        // R-006: ��ʼ�ش���ʧ��ʱ���������Ϣ
+        // R-006: 初始池创建失败时输出调试信息
         {$IF DEFINED(DEBUG) AND DEFINED(MSWINDOWS)}
         OutputDebugString(PChar('DeepBase.ConnectionPool pre-create failed: ' + E.Message));
         {$ENDIF}
@@ -321,7 +321,7 @@ begin
         except
           on E: Exception do
           begin
-            // �����Ӵ���ʧ�ܣ���¼��־
+            // 新连接创建失败，记录日志
             if DeepBase.Logging.Logger <> nil then
               DeepBase.Logging.Logger.Error('Connection pool new connection failed: ' + E.Message);
           end;
@@ -369,7 +369,7 @@ begin
     end;
     
     // Connection not found in pool - might be externally created
-    // BUG-076 FIX: Logger.Warning �� Warn
+    // BUG-076 FIX: Logger.Warning → Warn
     if DeepBase.Logging.Logger <> nil then
       DeepBase.Logging.Logger.Warn('Attempting to release connection not in pool - possible connection leak');
   finally

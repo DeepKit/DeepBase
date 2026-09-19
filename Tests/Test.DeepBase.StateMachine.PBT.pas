@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.StateMachine.PBT - Property-based tests for TStateMachine
 
   Properties covered (deepbase-round2-fixes):

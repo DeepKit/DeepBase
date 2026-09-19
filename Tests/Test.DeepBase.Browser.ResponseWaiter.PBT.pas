@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Browser.ResponseWaiter.PBT - Property-based tests for the
   WebView2 postMessage envelope parsing and multi-waiter routing logic.
 

@@ -1,4 +1,4 @@
-unit DeepBase.Reflection;
+﻿unit DeepBase.Reflection;
 
 {*******************************************************************************
   DeepBase Reflection/RTTI Utilities
@@ -68,7 +68,6 @@ type
   /// <summary>Type info utilities</summary>
   TTypeInfo = class
   private
-    class var FContext: TRttiContext;
     class var FLock: TCriticalSection;
     class constructor Create;
     class destructor Destroy;
@@ -395,45 +394,54 @@ end;
 class constructor TTypeInfo.Create;
 begin
   FLock := TCriticalSection.Create;
-  FContext := TRttiContext.Create;
 end;
 
 class destructor TTypeInfo.Destroy;
 begin
-  FContext.Free;
   FreeAndNil(FLock);
 end;
 
 class function TTypeInfo.Context: TRttiContext;
 begin
-  Result := FContext;
+  // A16/Top20#16: per-call context eliminates shared-lifetime hazard.
+  // In Delphi 10.3+, TRttiContext is a lightweight record (no manual Free needed).
+  Result := TRttiContext.Create;
 end;
 
 class function TTypeInfo.GetType(const ATypeName: string): TRttiType;
+var
+  LCtx: TRttiContext;
 begin
   FLock.Enter;
   try
-    Result := FContext.FindType(ATypeName);
+    LCtx := TRttiContext.Create;
+    Result := LCtx.FindType(ATypeName);
   finally
     FLock.Leave;
   end;
 end;
 
 class function TTypeInfo.GetType<T>: TRttiType;
+var
+  LCtx: TRttiContext;
 begin
   FLock.Enter;
   try
-    Result := FContext.GetType(TypeInfo(T));
+    LCtx := TRttiContext.Create;
+    Result := LCtx.GetType(TypeInfo(T));
   finally
     FLock.Leave;
   end;
 end;
 
 class function TTypeInfo.GetTypeByClass(AClass: TClass): TRttiType;
+var
+  LCtx: TRttiContext;
 begin
   FLock.Enter;
   try
-    Result := FContext.GetType(AClass);
+    LCtx := TRttiContext.Create;
+    Result := LCtx.GetType(AClass);
   finally
     FLock.Leave;
   end;

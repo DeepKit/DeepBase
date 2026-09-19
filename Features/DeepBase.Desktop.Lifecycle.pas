@@ -1,4 +1,4 @@
-unit DeepBase.Desktop.Lifecycle;
+﻿unit DeepBase.Desktop.Lifecycle;
 
 interface
 

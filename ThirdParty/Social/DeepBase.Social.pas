@@ -1,4 +1,4 @@
-unit DeepBase.Social;
+﻿unit DeepBase.Social;
 
 {*******************************************************************************
   DeepBase Social Integration
@@ -42,7 +42,7 @@ type
   TSocialShareTarget = (
     stDefault,    // Platform default
     stSession,    // WeChat: 好友
-    stTimeline,   // WeChat: 朋友�?
+    stTimeline,   // WeChat: 鏈嬪弸鍦?
     stFavorite    // WeChat: 收藏
   );
 

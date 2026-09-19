@@ -1,4 +1,4 @@
-unit DeepBase.Commerce.Types;
+﻿unit DeepBase.Commerce.Types;
 
 interface
 

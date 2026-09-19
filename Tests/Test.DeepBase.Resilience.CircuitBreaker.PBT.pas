@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Resilience.CircuitBreaker.PBT - Property-based tests for
   TCircuitBreaker state transitions.
 

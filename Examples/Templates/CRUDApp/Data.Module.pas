@@ -1,4 +1,4 @@
-unit Data.Module;
+﻿unit Data.Module;
 
 {*******************************************************************************
   CRUD Application Template - Data Module

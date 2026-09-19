@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   M11 fix: integration tests covering Recovery's actual recovery execution
   paths: factory-driven recreate, OnRecovery callback, and best-effort
   fallback. The original Test.DeepBase.Browser.Recovery suite only exercised

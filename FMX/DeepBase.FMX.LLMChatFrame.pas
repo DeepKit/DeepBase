@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.LLMChatFrame - FMX LLM Chat Component
   
   Version: 1.0
@@ -220,7 +220,7 @@ begin
   FLabelStatus := TLabel.Create(Self);
   FLabelStatus.Parent := FLayoutTop;
   FLabelStatus.Align := TAlignLayout.Client;
-  FLabelStatus.Text := '����';
+  FLabelStatus.Text := '就绪';
   FLabelStatus.TextSettings.HorzAlign := TTextAlign.Leading;
   FLabelStatus.Margins.Left := 8;
   
@@ -245,7 +245,7 @@ begin
   
   FBtnSend := TButton.Create(Self);
   FBtnSend.Parent := FLayoutButtons;
-  FBtnSend.Text := '����';
+  FBtnSend.Text := '发送';
   FBtnSend.Position.X := 5;
   FBtnSend.Position.Y := 5;
   FBtnSend.Width := 80;
@@ -254,7 +254,7 @@ begin
   
   FBtnCancel := TButton.Create(Self);
   FBtnCancel.Parent := FLayoutButtons;
-  FBtnCancel.Text := 'ȡ��';
+  FBtnCancel.Text := '取消';
   FBtnCancel.Position.X := 5;
   FBtnCancel.Position.Y := 36;
   FBtnCancel.Width := 80;
@@ -264,7 +264,7 @@ begin
   
   FBtnClear := TButton.Create(Self);
   FBtnClear.Parent := FLayoutButtons;
-  FBtnClear.Text := '���';
+  FBtnClear.Text := '清空';
   FBtnClear.Position.X := 5;
   FBtnClear.Position.Y := 67;
   FBtnClear.Width := 80;
@@ -351,8 +351,8 @@ begin
   // Determine role text
   case ARole of
     mrSystem: RoleText := '[ϵͳ]';
-    mrUser: RoleText := '[��]';
-    mrAssistant: RoleText := '[����]';
+    mrUser: RoleText := '[你]';
+    mrAssistant: RoleText := '[助手]';
   else
     RoleText := '';
   end;
@@ -455,13 +455,13 @@ begin
   FIsGenerating := True;
   FStreamBuffer := '';
   UpdateUI;
-  SetStatus('��������...', True);
+  SetStatus('正在生成...', True);
   
   // Add assistant header
   if FShowTimestamps then
-    FMemoChat.Lines.Add('[����] ' + FormatTimestamp(Now))
+    FMemoChat.Lines.Add('[助手] ' + FormatTimestamp(Now))
   else
-    FMemoChat.Lines.Add('[����]');
+    FMemoChat.Lines.Add('[助手]');
   FMemoChat.Lines.Add(''); // Content placeholder
   FMemoChat.Lines.Add(''); // Empty line
   
@@ -514,14 +514,14 @@ begin
               Item.TokenCount := LocalTokenCount;
               FChatItems.Add(Item);
               
-              SetStatus('��� (' + IntToStr(LocalTokenCount) + ' tokens)');
+              SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
             end
             else
             begin
               if LocalContentLineIdx >= 0 then
-                FMemoChat.Lines[LocalContentLineIdx] := '����: ' + LocalErrorMsg;
+                FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
               
-              SetStatus('����: ' + LocalErrorMsg);
+              SetStatus('错误: ' + LocalErrorMsg);
             end;
             
             FIsGenerating := False;
@@ -539,11 +539,11 @@ begin
             begin
               LocalContentLineIdx := FMemoChat.Lines.Count - 2;
               if LocalContentLineIdx >= 0 then
-                FMemoChat.Lines[LocalContentLineIdx] := '����: ' + LocalErrorMsg;
+                FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
               
               FIsGenerating := False;
               UpdateUI;
-              SetStatus('����: ' + LocalErrorMsg);
+              SetStatus('错误: ' + LocalErrorMsg);
             end);
         end;
       end;
@@ -555,7 +555,7 @@ begin
   if FIsGenerating and Assigned(FClient) then
   begin
     FClient.Cancel;
-    SetStatus('��ȡ��');
+    SetStatus('已取消');
   end;
 end;
 
@@ -566,7 +566,7 @@ begin
     FMemoChat.Lines.Clear;
     FChatItems.Clear;
     FHistory.Clear;
-    SetStatus('�����');
+    SetStatus('已清空');
   end;
 end;
 
@@ -598,8 +598,8 @@ begin
     begin
       case Item.Role of
         mrSystem: RoleText := '[ϵͳ]';
-        mrUser: RoleText := '[��]';
-        mrAssistant: RoleText := '[����]';
+        mrUser: RoleText := '[你]';
+        mrAssistant: RoleText := '[助手]';
       else
         RoleText := '';
       end;

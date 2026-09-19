@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.SessionFSM - State Machine Integration
 
   Defines TSessionTrigger enum and TSessionFSM type alias.

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.DesktopLifecycle
 
   Thin VCL helpers for wiring the non-visual desktop lifecycle facade to common

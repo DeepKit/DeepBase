@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.DesktopLifecycle
 
   Thin FMX helpers for wiring the non-visual desktop lifecycle facade to common

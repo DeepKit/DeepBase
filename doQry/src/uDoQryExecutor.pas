@@ -1,4 +1,4 @@
-unit uDoQryExecutor;
+﻿unit uDoQryExecutor;
 
 interface
 
@@ -276,7 +276,7 @@ end;
 procedure GuardNonQuery(const SQL: string; const Def: TQueryDef);
 begin
   if IsUpdateOrDelete(SQL) and (not Def.AllowFullScan) and (not HasWhere(SQL)) then
-    raise EDatabaseException.Create('非查询语句缺�?WHERE，已阻止执行');
+    raise EDatabaseException.Create('闈炴煡璇㈣鍙ョ己灏?WHERE锛屽凡闃绘鎵ц');
 end;
 
 function ExecNonQuery(const Proc: string; const ParamsJson: string; const Ctx: TDoQryContext): Integer;
@@ -359,7 +359,7 @@ begin
         begin
           Q.Open;
           if (Q.Fields.Count = 0) or Q.IsEmpty then
-            raise EDatabaseException.Create('未返回插�?ID');
+            raise EDatabaseException.Create('鏈繑鍥炴彃鍏?ID');
           Result := Q.Fields[0].AsInteger;
         end
         else

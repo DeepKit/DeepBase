@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Commerce.Enum.PBT - Property-based tests for Commerce
   enum string serialization round-trip.
 

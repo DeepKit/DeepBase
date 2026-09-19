@@ -1,4 +1,4 @@
-unit DeepBase.Social.OAuth;
+﻿unit DeepBase.Social.OAuth;
 
 {*******************************************************************************
   DeepBase OAuth 2.0 Generic Client

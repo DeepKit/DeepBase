@@ -1,4 +1,8 @@
-﻿{ ============================================================================
+﻿// [FROZEN — NOT IN BUILD — DO NOT USE IN PRODUCTION]
+// 法源：WO-20260919-AUDIT-乙 B3 / H10（主控终裁 2f011fd）：插件生产唯一真相源 =
+// 旧轨 Core\DeepBase.PluginManager.pas（BPL）。本单元冻结隔离：不进任何 .dpk/.dproj，
+// 禁止生产 uses；复活须满足 B3-C5 四条件。同名类已按 C1 消解（TDllPluginManager）。
+{ ============================================================================
   DeepBase.Plugins.Manager - 泛化插件生命周期管理器（注册制 + Lease 门禁）
 
   法源：docs/77.extend.PluginHotReload §4/§5
@@ -90,9 +94,9 @@ type
   end;
 
   { =========================================================================
-    TDeepBasePluginManager
+    TDllPluginManager
     ========================================================================= }
-  TDeepBasePluginManager = class
+  TDllPluginManager = class
   private
     FLock: TCriticalSection;
     FPlugins: TDictionary<string, TPluginInfo>;
@@ -198,14 +202,14 @@ uses
 destructor TPluginLease.Destroy;
 begin
   if not FReleased then
-    TDeepBasePluginManager(FManager).ReleaseLeaseInternal(Self);
+    TDllPluginManager(FManager).ReleaseLeaseInternal(Self);
   FPlugin := nil;
   inherited;
 end;
 
-{ TDeepBasePluginManager }
+{ TDllPluginManager }
 
-constructor TDeepBasePluginManager.Create(const APluginDir: string);
+constructor TDllPluginManager.Create(const APluginDir: string);
 begin
   inherited Create;
   FLock := TCriticalSection.Create;
@@ -219,7 +223,7 @@ begin
   ForceDirectories(FPluginDir);
 end;
 
-destructor TDeepBasePluginManager.Destroy;
+destructor TDllPluginManager.Destroy;
 begin
   FDestroying := True;
   UnloadAll;
@@ -233,7 +237,7 @@ end;
 
 { --- 注册制 --- }
 
-procedure TDeepBasePluginManager.RegisterPluginKind(const AKind,
+procedure TDllPluginManager.RegisterPluginKind(const AKind,
   ACreateFuncPrefix: string; const ARequiredCapabilities: TArray<string>);
 var
   LKindInfo: TPluginKindInfo;
@@ -249,7 +253,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.WouldCreateCycle(const AName: string;
+function TDllPluginManager.WouldCreateCycle(const AName: string;
   const ADependsOn: TArray<string>): Boolean;
 var
   LVisited: TList<string>;
@@ -289,7 +293,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.CheckRequiredCapabilities(const AKind: string;
+function TDllPluginManager.CheckRequiredCapabilities(const AKind: string;
   const ADeclared: TArray<string>; out AMissing: TArray<string>): Boolean;
 var
   LKindInfo: TPluginKindInfo;
@@ -324,7 +328,7 @@ begin
   Result := (Length(AMissing) = 0);
 end;
 
-procedure TDeepBasePluginManager.RegisterPlugin(const AName, AKind: string;
+procedure TDllPluginManager.RegisterPlugin(const AName, AKind: string;
   const ADependsOn: TArray<string>; const ACreateFuncName: string;
   const ACAbi: Boolean);
 var
@@ -375,7 +379,7 @@ begin
   end;
 end;
 
-procedure TDeepBasePluginManager.SetPluginDllPath(const AName,
+procedure TDllPluginManager.SetPluginDllPath(const AName,
   ADllPath: string);
 var
   LInfo: TPluginInfo;
@@ -392,7 +396,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.ResolveDllPath(const APluginName,
+function TDllPluginManager.ResolveDllPath(const APluginName,
   AKind: string): string;
 var
   LSubDir: string;
@@ -409,7 +413,7 @@ end;
 
 { --- 加载 / 卸载 --- }
 
-function TDeepBasePluginManager.LoadDll(const ADllPath: string): HMODULE;
+function TDllPluginManager.LoadDll(const ADllPath: string): HMODULE;
 begin
   if not FileExists(ADllPath) then
     raise EFileNotFoundException.Create('Plugin DLL not found: ' + ADllPath);
@@ -423,7 +427,7 @@ begin
       [ADllPath, GetLastError]);
 end;
 
-function TDeepBasePluginManager.GetCreateFunc(AHandle: HMODULE;
+function TDllPluginManager.GetCreateFunc(AHandle: HMODULE;
   const AFuncName: string): TCreatePluginFunc;
 var
   LProc: Pointer;
@@ -435,7 +439,7 @@ begin
   Result := TCreatePluginFunc(LProc);
 end;
 
-procedure TDeepBasePluginManager.SetPluginState(const AName: string;
+procedure TDllPluginManager.SetPluginState(const AName: string;
   AState: TPluginState);
 var
   LInfo: TPluginInfo;
@@ -452,7 +456,7 @@ begin
   end;
 end;
 
-procedure TDeepBasePluginManager.SetPluginError(const AName: string;
+procedure TDllPluginManager.SetPluginError(const AName: string;
   ACode: Integer; const AMessage: string);
 var
   LInfo: TPluginInfo;
@@ -473,7 +477,7 @@ begin
     FOnPluginError(AName, ACode, AMessage);
 end;
 
-function TDeepBasePluginManager.GetState(
+function TDllPluginManager.GetState(
   const APluginName: string): TPluginState;
 var
   LInfo: TPluginInfo;
@@ -489,7 +493,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.DoLoadPlugin(const APluginName: string;
+function TDllPluginManager.DoLoadPlugin(const APluginName: string;
   const AVisited: TList<string>): Integer;
 var
   LInfo: TPluginInfo;
@@ -672,7 +676,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.WaitLeasesDrain(const APluginName: string;
+function TDllPluginManager.WaitLeasesDrain(const APluginName: string;
   ATimeoutMs: Integer): Boolean;
 var
   LDeadline: TDateTime;
@@ -700,7 +704,7 @@ begin
   until False;
 end;
 
-function TDeepBasePluginManager.DoUnloadPlugin(
+function TDllPluginManager.DoUnloadPlugin(
   const APluginName: string): Integer;
 var
   LInfo: TPluginInfo;
@@ -865,7 +869,7 @@ begin
     FOnPluginUnloaded(APluginName, True);
 end;
 
-function TDeepBasePluginManager.LoadPlugin(const APluginName: string): Integer;
+function TDllPluginManager.LoadPlugin(const APluginName: string): Integer;
 var
   LVisited: TList<string>;
 begin
@@ -877,7 +881,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.EnsureLoaded(const APluginName: string): Integer;
+function TDllPluginManager.EnsureLoaded(const APluginName: string): Integer;
 begin
   case GetState(APluginName) of
     psLoaded:  Exit(PLUGIN_OK);
@@ -887,12 +891,12 @@ begin
   Result := LoadPlugin(APluginName);  // 懒加载（ASY-DLL-004）
 end;
 
-function TDeepBasePluginManager.UnloadPlugin(const APluginName: string): Integer;
+function TDllPluginManager.UnloadPlugin(const APluginName: string): Integer;
 begin
   Result := DoUnloadPlugin(APluginName);
 end;
 
-function TDeepBasePluginManager.ReloadPlugin(const APluginName: string): Integer;
+function TDllPluginManager.ReloadPlugin(const APluginName: string): Integer;
 var
   LInfo: TPluginInfo;
   LVisited: TList<string>;
@@ -949,7 +953,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.ReloadPluginConfig(const APluginName: string;
+function TDllPluginManager.ReloadPluginConfig(const APluginName: string;
   const AConfigBytes: TBytes): Integer;
 var
   LLease: TPluginLease;
@@ -989,7 +993,7 @@ begin
   end;
 end;
 
-procedure TDeepBasePluginManager.UnloadAll;
+procedure TDllPluginManager.UnloadAll;
 var
   LNames: TArray<string>;
   LName: string;
@@ -1007,7 +1011,7 @@ end;
 
 { --- Lease 门禁 --- }
 
-procedure TDeepBasePluginManager.DecLease(const AName: string);
+procedure TDllPluginManager.DecLease(const AName: string);
 var
   LInfo: TPluginInfo;
 begin
@@ -1024,7 +1028,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.AcquireLease(const APluginName: string;
+function TDllPluginManager.AcquireLease(const APluginName: string;
   out ALease: TPluginLease; ATimeoutMs: Integer): Integer;
 var
   LDeadline: TDateTime;
@@ -1083,7 +1087,7 @@ begin
   until False;
 end;
 
-procedure TDeepBasePluginManager.ReleaseLeaseInternal(
+procedure TDllPluginManager.ReleaseLeaseInternal(
   const ALease: TPluginLease);
 begin
   if (ALease = nil) or FDestroying then
@@ -1092,14 +1096,14 @@ begin
   ALease.FReleased := True;
 end;
 
-procedure TDeepBasePluginManager.ReleaseLease(const ALease: TPluginLease);
+procedure TDllPluginManager.ReleaseLease(const ALease: TPluginLease);
 begin
   ReleaseLeaseInternal(ALease);
 end;
 
 { --- 查询 --- }
 
-function TDeepBasePluginManager.IsLoaded(const APluginName: string): Boolean;
+function TDllPluginManager.IsLoaded(const APluginName: string): Boolean;
 var
   LState: TPluginState;
 begin
@@ -1107,7 +1111,7 @@ begin
   Result := (LState = psLoaded) or (LState = psPendingRestart);
 end;
 
-function TDeepBasePluginManager.IsRegistered(const APluginName: string): Boolean;
+function TDllPluginManager.IsRegistered(const APluginName: string): Boolean;
 begin
   FLock.Enter;
   try
@@ -1117,7 +1121,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.GetPluginInfo(
+function TDllPluginManager.GetPluginInfo(
   const APluginName: string): TPluginInfo;
 begin
   FLock.Enter;
@@ -1135,7 +1139,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.ListPlugins: TArray<TPluginInfo>;
+function TDllPluginManager.ListPlugins: TArray<TPluginInfo>;
 var
   LPair: TPair<string, TPluginInfo>;
   I: Integer;
@@ -1155,7 +1159,7 @@ begin
   end;
 end;
 
-function TDeepBasePluginManager.GetLoadedCount: Integer;
+function TDllPluginManager.GetLoadedCount: Integer;
 var
   LPair: TPair<string, TPluginInfo>;
 begin

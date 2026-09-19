@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.Stability - Long-running Stability Tests
   
   Tests system stability over extended periods:

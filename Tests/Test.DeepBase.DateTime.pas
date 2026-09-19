@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.DateTime module
 /// Tests: TTimeSpanEx, TDateRange, TTimeZones, TDateTimeFormat,
 ///        TRelativeTime, TDateTimeCalc, TBusinessDays, TDateTimeUtils

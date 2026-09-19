@@ -1,12 +1,12 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG013_RSASignature - 支付模块RSA签名回归测试
 
-  BUG-013: 支付模块RSA签名未实�?  
+  BUG-013: 鏀粯妯″潡RSA绛惧悕鏈疄鐜?  
   原问�? RSA2Sign方法只使用SHA256+Base64，未实现真正的RSA2-SHA256签名�?  
   修复方案: 使用Windows CryptoAPI实现真正的RSA2-SHA256签名�?  
   修复日期: 2025-01-27
   文件: ThirdParty/Payment/DeepBase.Payment.Alipay.pas
-  优先�? P0 (Critical)
+  浼樺厛绾? P0 (Critical)
   分类: Security
   ============================================================================ }
 
@@ -49,7 +49,7 @@ type
     procedure Test_RSASign_DifferentContent_DifferentSignature;
     
     [Test]
-    [Description('验证缺少私钥时抛出明确错�?)]
+    [Description('楠岃瘉缂哄皯绉侀挜鏃舵姏鍑烘槑纭敊璇?)]
     procedure Test_RSASign_WithoutPrivateKey_ThrowsError;
   end;
 
@@ -69,7 +69,7 @@ end;
 
 function TBug013_RSASignatureTest.GetBugDescription: string;
 begin
-  Result := '支付模块RSA签名未实�?;
+  Result := '鏀粯妯″潡RSA绛惧悕鏈疄鐜?;
 end;
 
 function TBug013_RSASignatureTest.GetFixDate: string;
@@ -97,14 +97,14 @@ begin
   
   TestContent := 'test_content_for_signing';
   
-  // 计算简单的 SHA256+Base64（这是错误的实现方式�?  HashBytes := THashSHA2.GetHashBytes(TestContent);
+  // 璁＄畻绠€鍗曠殑 SHA256+Base64锛堣繖鏄敊璇殑瀹炵幇鏂瑰紡锛?  HashBytes := THashSHA2.GetHashBytes(TestContent);
   SimpleSHA256Base64 := TNetEncoding.Base64.EncodeBytesToString(HashBytes);
   
   // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符�?  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
-    'SHA256+Base64 应该产生 44 字符的结�?);
+    'SHA256+Base64 搴旇浜х敓 44 瀛楃鐨勭粨鏋?);
   
   // RSA-2048 签名应该产生 256 字节，Base64 编码后约 344 字符
-  // 这里我们只验证概念，实际签名需要私�?  
+  // 杩欓噷鎴戜滑鍙獙璇佹蹇碉紝瀹為檯绛惧悕闇€瑕佺閽?  
   Assert.Pass('验证通过：RSA 签名长度应该远大于简�?SHA256+Base64');
   
   LogTestEnd('Test_RSASign_IsNotSimpleSHA256Base64', True);
@@ -114,13 +114,13 @@ procedure TBug013_RSASignatureTest.Test_RSASign_HasCorrectLength;
 begin
   LogTestStart('Test_RSASign_HasCorrectLength');
   
-  // RSA-2048 签名特征�?  // - 原始签名�?56 字节
-  // - Base64 编码后：�?344 字符
+  // RSA-2048 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?56 瀛楄妭
+  // - Base64 缂栫爜鍚庯細绾?344 瀛楃
   
-  // RSA-4096 签名特征�?  // - 原始签名�?12 字节
-  // - Base64 编码后：�?684 字符
+  // RSA-4096 绛惧悕鐗瑰緛锛?  // - 鍘熷绛惧悕锛?12 瀛楄妭
+  // - Base64 缂栫爜鍚庯細绾?684 瀛楃
   
-  // 由于没有实际的私钥，这里只验证概�?  Assert.Pass('RSA 签名长度验证通过（需要实际私钥进行完整测试）');
+  // 鐢变簬娌℃湁瀹為檯鐨勭閽ワ紝杩欓噷鍙獙璇佹蹇?  Assert.Pass('RSA 绛惧悕闀垮害楠岃瘉閫氳繃锛堥渶瑕佸疄闄呯閽ヨ繘琛屽畬鏁存祴璇曪級');
   
   LogTestEnd('Test_RSASign_HasCorrectLength', True);
 end;
@@ -130,7 +130,7 @@ begin
   LogTestStart('Test_RSASign_IsDeterministic');
   
   // RSA-SHA256 签名是确定性的：相同的私钥和内容应该产生相同的签名
-  // 这与 RSA-PSS 不同，后者使用随机填�?  
+  // 杩欎笌 RSA-PSS 涓嶅悓锛屽悗鑰呬娇鐢ㄩ殢鏈哄～鍏?  
   Assert.Pass('RSA-SHA256 签名确定性验证通过（需要实际私钥进行完整测试）');
   
   LogTestEnd('Test_RSASign_IsDeterministic', True);
@@ -141,7 +141,7 @@ begin
   LogTestStart('Test_RSASign_DifferentContent_DifferentSignature');
   
   // 不同的内容应该产生不同的签名
-  // 这是签名算法的基本安全属�?  
+  // 杩欐槸绛惧悕绠楁硶鐨勫熀鏈畨鍏ㄥ睘鎬?  
   Assert.Pass('不同内容产生不同签名验证通过（需要实际私钥进行完整测试）');
   
   LogTestEnd('Test_RSASign_DifferentContent_DifferentSignature', True);
@@ -157,7 +157,7 @@ begin
   // 测试 RSA 验证器在没有加载公钥时的行为
   Verifier := TRSAVerifier.Create;
   try
-    Assert.IsFalse(Verifier.IsKeyLoaded, '未加载密钥时 IsKeyLoaded 应该�?False');
+    Assert.IsFalse(Verifier.IsKeyLoaded, '鏈姞杞藉瘑閽ユ椂 IsKeyLoaded 搴旇涓?False');
     
     // 尝试验证签名应该失败
     var Result := Verifier.VerifySignature('test', 'fake_signature');

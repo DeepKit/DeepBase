@@ -1,4 +1,4 @@
-unit DeepBase.FMX.Platform;
+﻿unit DeepBase.FMX.Platform;
 
 {*******************************************************************************
   DeepBase FMX Platform - Cross-Platform Adapter

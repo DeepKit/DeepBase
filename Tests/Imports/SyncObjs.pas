@@ -1,4 +1,4 @@
-unit SyncObjs;
+﻿unit SyncObjs;
 interface
 uses
   System.SyncObjs;

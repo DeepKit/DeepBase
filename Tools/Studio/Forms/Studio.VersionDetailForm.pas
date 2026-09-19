@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Studio.VersionDetailForm - Version Detail Popup Window
   
   Version: 1.0
@@ -213,7 +213,7 @@ begin
   FBtnClose.Width := 30;
   FBtnClose.Height := 30;
   FBtnClose.Flat := True;
-  FBtnClose.Caption := '×';
+  FBtnClose.Caption := '脳';
   FBtnClose.Font.Size := 16;
   FBtnClose.OnClick := BtnCloseClick;
   
@@ -345,7 +345,7 @@ begin
   FBtnRefreshPreview.Height := 24;
   FBtnRefreshPreview.Top := 4;
   FBtnRefreshPreview.Flat := True;
-  FBtnRefreshPreview.Caption := '�?;
+  FBtnRefreshPreview.Caption := '鈫?;
   FBtnRefreshPreview.Font.Size := 12;
   FBtnRefreshPreview.OnClick := BtnRefreshPreviewClick;
   FBtnRefreshPreview.Hint := 'Refresh preview';

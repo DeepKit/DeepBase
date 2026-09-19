@@ -184,7 +184,7 @@ var
   MajorStr: string;
   MajorVal: Integer;
 begin
-  // SCHEMA_VERSION = '1.0.0' �?extract major part before first dot
+  // SCHEMA_VERSION = '1.0.0' 鈥?extract major part before first dot
   MajorStr := SCHEMA_VERSION.Split(['.'])[0];
   MajorVal := StrToIntDef(MajorStr, 0);
   Assert.IsTrue(MajorVal >= 1, 'Major version should be at least 1');
@@ -195,7 +195,7 @@ var
   Parts: TArray<string>;
   MinorVal: Integer;
 begin
-  // SCHEMA_VERSION = '1.0.0' �?extract minor part (second segment)
+  // SCHEMA_VERSION = '1.0.0' 鈥?extract minor part (second segment)
   Parts := SCHEMA_VERSION.Split(['.']);
   Assert.IsTrue(Length(Parts) >= 2, 'Version should have at least major.minor');
   MinorVal := StrToIntDef(Parts[1], 0);

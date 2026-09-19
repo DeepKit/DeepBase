@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.Memory48h - 48-Hour Memory Leak Detection Tests
 
   Extended duration memory tests for detecting subtle leaks:

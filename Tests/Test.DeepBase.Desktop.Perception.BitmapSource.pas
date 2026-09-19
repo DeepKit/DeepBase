@@ -1,4 +1,4 @@
-unit Test.DeepBase.Desktop.Perception.BitmapSource;
+﻿unit Test.DeepBase.Desktop.Perception.BitmapSource;
 
 { ============================================================================
   Tests for the CaptureToBitmap injection point (PERCEPT-P2-001 Step B1):

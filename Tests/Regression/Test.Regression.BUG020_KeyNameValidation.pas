@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG020_KeyNameValidation - Key Name Validation Regression Test
 
   BUG-020: Missing Key Name Validation

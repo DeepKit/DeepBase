@@ -1,13 +1,13 @@
-unit Test.DeepBase.MRU;
+﻿unit Test.DeepBase.MRU;
 
 {*******************************************************************************
-  DeepBase MRU 模块单元测试
+  DeepBase MRU 妯″潡鍗曞厓娴嬭瘯
   
-  测试内容:
+  娴嬭瘯鍐呭:
   - AddMRU / GetMRUList / GetMRUItems
   - ClearMRU / RemoveInvalidMRU
-  - 排序验证
-  - 重复添加处理
+  - 鎺掑簭楠岃瘉
+  - 閲嶅娣诲姞澶勭悊
 *******************************************************************************}
 
 interface
@@ -85,7 +85,7 @@ end;
 
 procedure TTestDeepBaseMRU.TearDown;
 begin
-  // 清理测试数据
+  // 娓呯悊娴嬭瘯鏁版嵁
   if FMRU <> nil then
     FMRU.ClearMRU(FTestCategory);
   FMRU := nil;
@@ -100,7 +100,7 @@ begin
   Items := FMRU.GetMRUList(FTestCategory);
   
   Assert.AreEqual(Integer(1), Integer(Length(Items)), 'should have 1 item');
-  Assert.AreEqual('key1', string(Items[0]), 'Key 应该正确');
+  Assert.AreEqual('key1', string(Items[0]), 'Key 搴旇姝ｇ‘');
 end;
 
 procedure TTestDeepBaseMRU.Test_AddMRU_MultipleItems;
@@ -154,9 +154,9 @@ begin
   Items := FMRU.GetMRUItems(FTestCategory);
   
   Assert.AreEqual(Integer(1), Integer(Length(Items)), 'should have 1 item');
-  Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 应该正确');
-  Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 应该正确');
-  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 应该至少�?1'));
+  Assert.AreEqual('mykey', string(Items[0].ItemKey), 'ItemKey 搴旇姝ｇ‘');
+  Assert.AreEqual('My Display Name', string(Items[0].DisplayName), 'DisplayName 搴旇姝ｇ‘');
+  Assert.IsTrue(Items[0].AccessCount >= 1, string('AccessCount 搴旇鑷冲皯涓?1'));
 end;
 
 procedure TTestDeepBaseMRU.Test_GetMRUList_MaxItems;
@@ -164,11 +164,11 @@ var
   Items: TArray<string>;
   I: Integer;
 begin
-  // 添加 10 个项�?
+  // 娣诲姞 10 涓」鐩?
   for I := 1 to 10 do
     FMRU.AddMRU(FTestCategory, 'key' + IntToStr(I), 'Display ' + IntToStr(I));
   
-  // 只获�?5 �?
+  // 鍙幏鍙?5 涓?
   Items := FMRU.GetMRUList(FTestCategory, 5);
   
   Assert.AreEqual(Integer(5), Integer(Length(Items)), 'should return only 5 items');
@@ -184,7 +184,7 @@ begin
   
   Items := FMRU.GetMRUItems(FTestCategory);
   
-  // 最新的应该排在前面
+  // 鏈€鏂扮殑搴旇鎺掑湪鍓嶉潰
   Assert.AreEqual('new', string(Items[0].ItemKey), 'newest item should be first');
 end;
 
@@ -218,9 +218,9 @@ begin
   Items2 := FMRU.GetMRUList(OtherCategory);
   
   Assert.AreEqual(Integer(0), Integer(Length(Items1)), 'cleared category should be empty');
-  Assert.AreEqual(Integer(1), Integer(Length(Items2)), '其他分类不应该受影响');
+  Assert.AreEqual(Integer(1), Integer(Length(Items2)), '鍏朵粬鍒嗙被涓嶅簲璇ュ彈褰卞搷');
   
-  // 清理
+  // 娓呯悊
   FMRU.ClearMRU(OtherCategory);
 end;
 
@@ -236,7 +236,7 @@ begin
   Items := FMRU.GetMRUList(FTestCategory);
   
   Assert.AreEqual(Integer(1), Integer(Length(Items)), 'should have 1 item after removal');
-  Assert.AreEqual('key2', string(Items[0]), '剩余的应该是 key2');
+  Assert.AreEqual('key2', string(Items[0]), '鍓╀綑鐨勫簲璇ユ槸 key2');
 end;
 
 procedure TTestDeepBaseMRU.Test_RemoveInvalidMRU_RemovesNonexistentFiles;
@@ -244,16 +244,16 @@ var
   TempFile: string;
   Items: TArray<string>;
 begin
-  // 创建一个临时文�?
+  // 鍒涘缓涓€涓复鏃舵枃浠?
   TempFile := TPath.Combine(TPath.GetTempPath, 'mru_test_' + TGUID.NewGuid.ToString + '.tmp');
   TFile.WriteAllText(TempFile, 'test');
   
   try
-    // 添加存在的文件和不存在的文件
+    // 娣诲姞瀛樺湪鐨勬枃浠跺拰涓嶅瓨鍦ㄧ殑鏂囦欢
     FMRU.AddMRU(FTestCategory, TempFile, 'Existing File');
     FMRU.AddMRU(FTestCategory, 'C:\nonexistent\file.txt', 'Nonexistent File');
     
-    // 移除无效�?
+    // 绉婚櫎鏃犳晥椤?
     FMRU.RemoveInvalidMRU(FTestCategory);
     
     Items := FMRU.GetMRUList(FTestCategory);
@@ -275,11 +275,11 @@ begin
   Items := FMRU.GetMRUItems(FTestCategory);
   InitialCount := Items[0].AccessCount;
   
-  // 再次添加同一�?key
+  // 鍐嶆娣诲姞鍚屼竴涓?key
   FMRU.AddMRU(FTestCategory, 'key1', 'Display 1');
   Items := FMRU.GetMRUItems(FTestCategory);
   
-  Assert.IsTrue(Items[0].AccessCount > InitialCount, 'AccessCount 应该增加');
+  Assert.IsTrue(Items[0].AccessCount > InitialCount, 'AccessCount 搴旇澧炲姞');
 end;
 
 procedure TTestDeepBaseMRU.Test_DifferentCategories_Isolated;
@@ -298,10 +298,10 @@ begin
   
   Assert.AreEqual(Integer(1), Integer(Length(Items1)), 'Cat1 should have 1 item');
   Assert.AreEqual(Integer(1), Integer(Length(Items2)), 'Cat2 should have 1 item');
-  Assert.AreEqual('key1', string(Items1[0]), string('Cat1 �?key 应该正确'));
-  Assert.AreEqual('key2', string(Items2[0]), string('Cat2 �?key 应该正确'));
+  Assert.AreEqual('key1', string(Items1[0]), string('Cat1 鐨?key 搴旇姝ｇ‘'));
+  Assert.AreEqual('key2', string(Items2[0]), string('Cat2 鐨?key 搴旇姝ｇ‘'));
   
-  // 清理
+  // 娓呯悊
   FMRU.ClearMRU(Cat1);
   FMRU.ClearMRU(Cat2);
 end;

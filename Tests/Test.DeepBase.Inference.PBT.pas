@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Inference.PBT - Property tests for Round-2 inference fixes
   (deepbase-round2-fixes, sub-task 21.9).
 

@@ -1,4 +1,4 @@
-unit DeepBase.IntentClarification.Degradation;
+﻿unit DeepBase.IntentClarification.Degradation;
 
 interface
 

@@ -1,4 +1,4 @@
-unit uBasicProtection;
+﻿unit uBasicProtection;
 
 interface
 
@@ -80,7 +80,7 @@ type
     class function DecryptSensitiveData(const AEncryptedData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
     class function EncryptBinaryData(const AData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
     class function DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
-    // 完整性校�?
+    // 瀹屾暣鎬ф牎楠?
     class function CalculateHMAC(const AData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
     class function VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string = DEFAULT_SEED_PASSWORD): Boolean;
     class function CalculateFileHash(const AFileName: string): string;
@@ -144,7 +144,7 @@ begin
   
   PadLength := AData[High(AData)];
   
-  // 验证填充的正确�?
+  // 楠岃瘉濉厖鐨勬纭€?
   for I := Length(AData) - PadLength to High(AData) do
   begin
     if AData[I] <> PadLength then
@@ -177,7 +177,7 @@ begin
   DataBytes := TEncoding.UTF8.GetBytes(AData);
   IV := GenerateRandomIV;
   
-  // 获取AES加密上下�?
+  // 鑾峰彇AES鍔犲瘑涓婁笅鏂?
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
     raise EProtectionException.Create('获取AES加密上下文失败');
   
@@ -187,7 +187,7 @@ begin
       raise EProtectionException.Create('创建哈希对象失败');
     
     try
-      // 添加密钥数据到哈�?
+      // 娣诲姞瀵嗛挜鏁版嵁鍒板搱甯?
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
         raise EProtectionException.Create('哈希密钥数据失败');
       
@@ -209,7 +209,7 @@ begin
         PaddedData := PadData(DataBytes, 16);
         DataLen := Length(PaddedData);
         
-        // 为加密预留足够空�?
+        // 涓哄姞瀵嗛鐣欒冻澶熺┖闂?
         SetLength(EncryptedData, DataLen + 16);
         Move(PaddedData[0], EncryptedData[0], DataLen);
         
@@ -220,7 +220,7 @@ begin
         // 调整加密数据长度
         SetLength(EncryptedData, DataLen);
         
-        // 返回 IV + 加密数据 的十六进制表�?
+        // 杩斿洖 IV + 鍔犲瘑鏁版嵁 鐨勫崄鍏繘鍒惰〃绀?
         Result := BytesToHex(IV) + '|' + BytesToHex(EncryptedData);
         
       finally
@@ -250,7 +250,7 @@ begin
   if AEncryptedData = '' then
     Exit;
   
-  // 分离IV和加密数�?
+  // 鍒嗙IV鍜屽姞瀵嗘暟鎹?
   Parts := AEncryptedData.Split(['|']);
   if Length(Parts) <> 2 then
     raise EProtectionException.Create('加密数据格式错误');
@@ -260,7 +260,7 @@ begin
   
   KeyBytes := TEncoding.UTF8.GetBytes(APassword + GetDynamicKey);
   
-  // 获取AES解密上下�?
+  // 鑾峰彇AES瑙ｅ瘑涓婁笅鏂?
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
     raise EProtectionException.Create('获取AES解密上下文失败');
   
@@ -270,7 +270,7 @@ begin
       raise EProtectionException.Create('创建哈希对象失败');
     
     try
-      // 添加密钥数据到哈�?
+      // 娣诲姞瀵嗛挜鏁版嵁鍒板搱甯?
       if not CryptHashData(hHash, @KeyBytes[0], Length(KeyBytes), 0) then
         raise EProtectionException.Create('哈希密钥数据失败');
       
@@ -296,7 +296,7 @@ begin
         if not CryptDecrypt(hKey, 0, True, 0, @DecryptedData[0], DataLen) then
           raise EProtectionException.Create('AES解密失败');
         
-        // 调整解密数据长度并移除填�?
+        // 璋冩暣瑙ｅ瘑鏁版嵁闀垮害骞剁Щ闄ゅ～鍏?
         SetLength(DecryptedData, DataLen);
         DecryptedData := UnpadData(DecryptedData);
         Result := TEncoding.UTF8.GetString(DecryptedData);
@@ -312,7 +312,7 @@ begin
   end;
 end;
 
-// 二进制数据加�?
+// 浜岃繘鍒舵暟鎹姞瀵?
 class function TBasicProtection.EncryptBinaryData(const AData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
 var
   hProv: HCRYPTPROV;
@@ -382,7 +382,7 @@ begin
   end;
 end;
 
-// 二进制数据解�?
+// 浜岃繘鍒舵暟鎹В瀵?
 class function TBasicProtection.DecryptBinaryData(const AEncryptedData: TBytes; const APassword: string = DEFAULT_SEED_PASSWORD): TBytes;
 var
   hProv: HCRYPTPROV;
@@ -396,13 +396,13 @@ begin
   SetLength(Result, 0);
   if Length(AEncryptedData) < 16 then Exit;
 
-  // 分离IV和加密数�?
+  // 鍒嗙IV鍜屽姞瀵嗘暟鎹?
   SetLength(IV, 16);
   Move(AEncryptedData[0], IV[0], 16);
   SetLength(EncryptedBytes, Length(AEncryptedData) - 16);
   Move(AEncryptedData[16], EncryptedBytes[0], Length(EncryptedBytes));
 
-  // 尝试新方法（固定口令 + salt + PBKDF2�?
+  // 灏濊瘯鏂版柟娉曪紙鍥哄畾鍙ｄ护 + salt + PBKDF2锛?
   KeyBytes := TEncoding.UTF8.GetBytes(APassword); // 先尝试旧方法派生密钥
   if not CryptAcquireContext(hProv, nil, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT) then
     raise EProtectionException.Create('Failed to acquire AES decryption context');
@@ -467,7 +467,7 @@ begin
   end;
 end;
 
-// 数据完整性验�?
+// 鏁版嵁瀹屾暣鎬ч獙璇?
 class function TBasicProtection.VerifyDataIntegrity(const AData, AHMAC: string; const APassword: string = DEFAULT_SEED_PASSWORD): Boolean;
 begin
   Result := SameText(CalculateHMAC(AData, APassword), AHMAC);
@@ -530,7 +530,7 @@ begin
     raise EProtectionException.Create('Failed to get hash value');
 end;
 
-// 计算HMAC字符�?
+// 璁＄畻HMAC瀛楃涓?
 class function TBasicProtection.CalculateHMAC(const AData: string; const APassword: string = DEFAULT_SEED_PASSWORD): string;
 var
   DataBytes, KeyBytes, HMACBytes: TBytes;

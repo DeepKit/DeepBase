@@ -76,6 +76,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="Test.DeepBase.Manager.pas"/>
+        <DCCReference Include="Test.DeepBase.ManagedWorker.pas"/>
         <DCCReference Include="..\Core\DeepBase.Types.pas"/>
         <DCCReference Include="..\Core\DeepBase.Manager.pas"/>
         <DCCReference Include="..\Core\DeepBase.Config.pas"/>

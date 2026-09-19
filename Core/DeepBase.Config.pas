@@ -69,7 +69,7 @@ type
     procedure WriteToDB(const Key, Value: string; const Category: string; 
       const ValueType: string; const Description: string);
 
-    // R-002: ���������߼������� SetConfig* �ظ����룩
+    // R-002: 公共设置逻辑（消除 SetConfig* 重复代码）
     procedure SetConfigInternal(const Key, NewValue, Category, ValueType: string;
       out AFireCallback: Boolean; out AOldValue: string);
     

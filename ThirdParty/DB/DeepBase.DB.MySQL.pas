@@ -1,4 +1,4 @@
-unit DeepBase.DB.MySQL;
+﻿unit DeepBase.DB.MySQL;
 
 {*******************************************************************************
   DeepBase MySQL Driver Adapter

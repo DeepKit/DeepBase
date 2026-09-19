@@ -85,7 +85,7 @@ uses
   DeepBase.Exceptions;
 
 const
-  // Windows Crypto API ����
+  // Windows Crypto API 常量
   PROV_RSA_AES = 24;
   CRYPT_VERIFYCONTEXT = $F0000000;
   CRYPT_EXPORTABLE = $00000001;
@@ -102,7 +102,7 @@ type
   HCRYPTKEY = THandle;
   HCRYPTHASH = THandle;
 
-// Windows Crypto API ��������
+// Windows Crypto API 函数声明
 function CryptAcquireContextA(var phProv: HCRYPTPROV; pszContainer: PAnsiChar;
   pszProvider: PAnsiChar; dwProvType: DWORD; dwFlags: DWORD): BOOL; stdcall; external 'advapi32.dll';
 

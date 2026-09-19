@@ -1,10 +1,10 @@
-unit DeepBase.Payment;
+﻿unit DeepBase.Payment;
 
 {*******************************************************************************
   DeepBase Payment Integration
 
   Unified interface for payment providers:
-    - Alipay (支付�?
+    - Alipay (鏀粯瀹?
     - WeChat Pay (微信支付)
     - Stripe
     - PayPal
@@ -205,7 +205,7 @@ type
     property Timeout: Integer read FTimeout write FTimeout;
     property NotifyUrl: string read FNotifyUrl write FNotifyUrl;
     property ReturnUrl: string read FReturnUrl write FReturnUrl;
-    // BUG-019 FIX: 密钥安全存储属�?
+    // BUG-019 FIX: 瀵嗛挜瀹夊叏瀛樺偍灞炴€?
     property SecretStore: ISecretStore read FSecretStore write FSecretStore;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
   end;

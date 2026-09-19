@@ -1,4 +1,4 @@
-unit DeepBase.Payment.Types;
+﻿unit DeepBase.Payment.Types;
 
 {*******************************************************************************
   DeepBase Payment Types

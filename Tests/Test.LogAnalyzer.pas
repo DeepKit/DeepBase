@@ -1,10 +1,10 @@
-{ ============================================================================
-  Test.LogAnalyzer - LogAnalyzer 工具单元测试
+﻿{ ============================================================================
+  Test.LogAnalyzer - LogAnalyzer 宸ュ叿鍗曞厓娴嬭瘯
 
-  测试覆盖:
-    - LogAnalyzer.Data: 日志数据�?
-    - LogAnalyzer.Stats: 日志统计模块
-    - LogAnalyzer.Export: 日志导出模块
+  娴嬭瘯瑕嗙洊:
+    - LogAnalyzer.Data: 鏃ュ織鏁版嵁锟?
+    - LogAnalyzer.Stats: 鏃ュ織缁熻妯″潡
+    - LogAnalyzer.Export: 鏃ュ織瀵煎嚭妯″潡
   ============================================================================ }
 
 unit Test.LogAnalyzer;
@@ -229,8 +229,8 @@ begin
   for I := 0 to 19 do
   begin
     FTestLogs[I].Id := I + 1;
-    FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 过去 20 小时分布
-    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 个不同来�?
+    FTestLogs[I].Timestamp := IncHour(Now, -20 + I);  // 杩囧幓 20 灏忔椂鍒嗗竷
+    FTestLogs[I].Source := 'Source' + IntToStr((I mod 4) + 1);  // 4 涓笉鍚屾潵锟?
 
     case I mod 6 of
       0: FTestLogs[I].Level := llTrace;
@@ -312,7 +312,7 @@ var
 begin
   Stats := TLogStats.Calculate(FTestLogs);
 
-  // 验证各级别计数总和等于总数
+  // 楠岃瘉鍚勭骇鍒鏁版€诲拰绛変簬鎬绘暟
   Total := 0;
   for L := Low(TLogLevel) to High(TLogLevel) do
     Inc(Total, Stats.CountByLevel[L]);
@@ -362,7 +362,7 @@ begin
     SourceStats := Analyzer.GetStatsBySource;
     Assert.AreEqual(Integer(4), Integer(Length(SourceStats)));
 
-    // 验证按数量降序排�?
+    // 楠岃瘉鎸夋暟閲忛檷搴忔帓锟?
     if Length(SourceStats) > 1 then
       Assert.IsTrue(SourceStats[0].Count >= SourceStats[1].Count);
   finally
@@ -380,7 +380,7 @@ begin
     HourlyStats := Analyzer.GetHourlyStats;
     Assert.IsTrue(Length(HourlyStats) > 0);
 
-    // 验证按时间升序排�?
+    // 楠岃瘉鎸夋椂闂村崌搴忔帓锟?
     if Length(HourlyStats) > 1 then
       Assert.IsTrue(HourlyStats[0].SlotTime <= HourlyStats[1].SlotTime);
   finally
@@ -410,7 +410,7 @@ begin
   Analyzer := TLogStatsAnalyzer.Create(FTestLogs);
   try
     TopErrors := Analyzer.GetTopErrorSources(5);
-    // 可能没有错误，所以只检查不会崩�?
+    // 鍙兘娌℃湁閿欒锛屾墍浠ュ彧妫€鏌ヤ笉浼氬穿锟?
     Assert.IsTrue(Length(TopErrors) <= 5);
   finally
     Analyzer.Free;
@@ -508,8 +508,8 @@ begin
     Lines.LoadFromFile(FileName, TEncoding.UTF8);
     Assert.IsTrue(Lines.Count > 0);
     Assert.IsTrue(Pos('ID', Lines[0]) > 0);
-    Assert.IsTrue(Pos('时间', Lines[0]) > 0);
-    Assert.IsTrue(Pos('级别', Lines[0]) > 0);
+    Assert.IsTrue(Pos('鏃堕棿', Lines[0]) > 0);
+    Assert.IsTrue(Pos('绾у埆', Lines[0]) > 0);
   finally
     Lines.Free;
   end;
@@ -541,7 +541,7 @@ begin
   TLogExporter.ExportToCSV(FTestLogs, FileName);
 
   Content := TFile.ReadAllText(FileName, TEncoding.UTF8);
-  // 包含逗号的字段应该被引号包围
+  // 鍖呭惈閫楀彿鐨勫瓧娈靛簲璇ヨ寮曞彿鍖呭洿
   Assert.IsTrue(Pos('"Message with, comma"', Content) > 0);
 end;
 
@@ -554,7 +554,7 @@ begin
   TLogExporter.ExportToCSV(FTestLogs, FileName);
 
   Content := TFile.ReadAllText(FileName, TEncoding.UTF8);
-  // 包含引号的字段应该转�?
+  // 鍖呭惈寮曞彿鐨勫瓧娈靛簲璇ヨ浆锟?
   Assert.IsTrue(Pos('""quotes""', Content) > 0);
 end;
 
@@ -681,7 +681,7 @@ begin
   TLogExporter.ExportToHTML(Logs, FileName);
 
   Content := TFile.ReadAllText(FileName, TEncoding.UTF8);
-  // 应该被转义，不应该包含原�?script 标签
+  // 搴旇琚浆涔夛紝涓嶅簲璇ュ寘鍚師锟?script 鏍囩
   Assert.IsTrue(Pos('&lt;script&gt;', Content) > 0);
   Assert.IsFalse(Pos('<script>', Content) > 0);
 end;

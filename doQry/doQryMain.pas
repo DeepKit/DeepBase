@@ -1,4 +1,4 @@
-unit doQryMain;
+﻿unit doQryMain;
 
 interface
 
@@ -109,7 +109,7 @@ begin
   procName :=   tblQueries.FieldByName('proc_name').Value ;
   //showMessage(procName);
   if cboxParams.checked then p :=  edtParams.Text;
-  // 明确指定使用三参数版本的doQry函数
+  // 鏄庣‘鎸囧畾浣跨敤涓夊弬鏁扮増鏈殑doQry鍑芥暟
   i := doQry( ProcName, aQry, p);
   if i> 0 then    dbgQry.Visible :=True;
 
@@ -119,14 +119,14 @@ procedure TfrmMain.btnGenSqlClick(Sender: TObject);
 var  proc_name,p:string;
 begin
     p :='';
-    // ���� tblQueries �Ѿ��򿪲��Ҵ�����ȷ�ļ�¼��
+    // 锟斤拷锟斤拷 tblQueries 锟窖撅拷锟津开诧拷锟揭达拷锟斤拷锟斤拷确锟侥硷拷录锟斤拷
     if not tblQueries.Eof then
     begin
       proc_name := tblQueries.FieldByName('proc_name').AsString;
       aQry.SQL.Text := 'select * from queries where proc_name = :p';
       aQry.Parameters.ParamByName('p').Value := proc_name; // DATA-R3-003 BUG-433: parameterize proc_name
       aQry.Open;
-      // ִ�� BuildSQL �����������������?MeoSQL �ı�����
+      // 执锟斤拷 BuildSQL 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?MeoSQL 锟侥憋拷锟斤拷锟斤拷
       if cboxParams.Checked  then               p :=  edtParams.Text;
       MeoSQL.Text := BuildSQL(aQry,p);
     end;
@@ -136,21 +136,21 @@ procedure TfrmMain.btnSearchClick(Sender: TObject);
 var
   s: string;
 begin
-  // ��ȡ�û�����������ı�?
+  // 锟斤拷取锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷谋锟?
   s := edtSearch.Text;
 
-  // ��������ı�Ϊ�գ������������������ʾ��������
+  // 锟斤拷锟斤拷锟斤拷锟斤拷谋锟轿拷眨锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷示锟斤拷锟斤拷锟斤拷锟斤拷
   if s = '' then
   begin
-    tblQueries.Filtered := False; // �رչ���
-    tblQueries.Filter := ''; // �����������?
+    tblQueries.Filtered := False; // 锟截闭癸拷锟斤拷
+    tblQueries.Filter := ''; // 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
     dbgQry.Visible := False;
     Exit;
   end;
 
-  // ����ģ����������
+  // 锟斤拷锟斤拷模锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
   tblQueries.Filter := 'proc_name LIKE ' + QuotedStr('%' + s + '%'); // DATA-R3-002 BUG-432: QuotedStr escapes inner quotes to prevent filter injection
-  tblQueries.Filtered := True; // ���ù���
+  tblQueries.Filtered := True; // 锟斤拷锟矫癸拷锟斤拷
 end;
 
 procedure TfrmMain.btnShowCurrRecClick(Sender: TObject);
@@ -165,7 +165,7 @@ var
   oldCount, newCount: Integer;
   qryCount: TADOQuery;
 begin
-  // 先获取插入前的记录数
+  // 鍏堣幏鍙栨彃鍏ュ墠鐨勮褰曟暟
   qryCount := TADOQuery.Create(nil);
   try
     qryCount.Connection := aQry.Connection;
@@ -173,29 +173,29 @@ begin
     qryCount.Open;
     oldCount := qryCount.Fields[0].AsInteger;
 
-    // 执行插入
+    // 鎵ц鎻掑叆
     try
       aQry.SQL.Clear;
       aQry.SQL.Add('INSERT INTO texts (user_id, share_link, no, title, video_url, status) VALUES (2, NULL, NULL,'
-       + '''' + '我是一头猪' + '''' + ', NULL, '+ '''' + '已经分享等待下载' + '''' + ')');
+       + '''' + '鎴戞槸涓€澶寸尓' + '''' + ', NULL, '+ '''' + '宸茬粡鍒嗕韩绛夊緟涓嬭浇' + '''' + ')');
       aQry.ExecSQL;
 
-      // 获取插入后的记录�?
+      // 鑾峰彇鎻掑叆鍚庣殑璁板綍鏁?
       qryCount.Close;
       qryCount.Open;
       newCount := qryCount.Fields[0].AsInteger;
 
       if newCount > oldCount then
-        ShowMessage('插入成功，新增记录数: ' + IntToStr(newCount - oldCount))
+        ShowMessage('鎻掑叆鎴愬姛锛屾柊澧炶褰曟暟: ' + IntToStr(newCount - oldCount))
       else
-        ShowMessage('警告：没有新增记录！' + #13#10 +
-                   '执行前记录数: ' + IntToStr(oldCount) + #13#10 +
-                   '执行后记录数: ' + IntToStr(newCount) + #13#10 +
+        ShowMessage('璀﹀憡锛氭病鏈夋柊澧炶褰曪紒' + #13#10 +
+                   '鎵ц鍓嶈褰曟暟: ' + IntToStr(oldCount) + #13#10 +
+                   '鎵ц鍚庤褰曟暟: ' + IntToStr(newCount) + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
     except
       on E: Exception do
       begin
-        ShowMessage('执行出错: ' + E.Message + #13#10 +
+        ShowMessage('鎵ц鍑洪敊: ' + E.Message + #13#10 +
                    'SQL: ' + aQry.SQL.Text);
       end;
     end;
@@ -207,15 +207,15 @@ end;
 
 procedure TfrmMain.UpdateTablesAndFields;
 begin
-  // ���� cboBoxTables
+  // 锟斤拷锟斤拷 cboBoxTables
   cboBoxTables.Items := GetTableList(cboBoxDatabase.Text);
   if cboBoxTables.Items.Count > 0 then
   begin
-    cboBoxTables.ItemIndex := 0; // Ĭ��ѡ���һ����?
-    ShowFields; // ���� ListBoxFields
+    cboBoxTables.ItemIndex := 0; // 默锟斤拷选锟斤拷锟揭伙拷锟斤拷锟?
+    ShowFields; // 锟斤拷锟斤拷 ListBoxFields
   end
   else
-    ListBoxFields.Items.Clear; // ���û�б�������ֶ��б�
+    ListBoxFields.Items.Clear; // 锟斤拷锟矫伙拷斜锟斤拷锟斤拷锟斤拷锟街讹拷锟叫憋拷
 end;
 
 
@@ -234,7 +234,7 @@ end;
 
 procedure TfrmMain.tblParamsBeforePost(DataSet: TDataSet);
 begin
-  // �ڲ���֮ǰ��Ϊ�ӱ��� proc_name �ֶθ�ֵ
+  // 锟节诧拷锟斤拷之前锟斤拷为锟接憋拷锟斤拷 proc_name 锟街段革拷值
   DataSet.FieldByName('proc_name').AsString := tblQueries.FieldByName('proc_name').Value;
 
 end;
@@ -244,12 +244,12 @@ begin
    tblQueries.Connection.Connected := true;
    tblQueries.open;
    tblParams.Open;
-  // ���?cboBoxDatabase
+  // 锟斤拷锟?cboBoxDatabase
   cboBoxDatabase.Items := GetDatabaseList;
   if cboBoxDatabase.Items.Count > 0 then
   begin
-    cboBoxDatabase.ItemIndex := 0; // Ĭ��ѡ���һ�����ݿ�?
-    UpdateTablesAndFields; // ���� cboBoxTables �� ListBoxFields
+    cboBoxDatabase.ItemIndex := 0; // 默锟斤拷选锟斤拷锟揭伙拷锟斤拷锟斤拷菘锟?
+    UpdateTablesAndFields; // 锟斤拷锟斤拷 cboBoxTables 锟斤拷 ListBoxFields
   end;
 end;
 
@@ -264,17 +264,17 @@ begin
   Result := TStringList.Create;
   try
     aQry.Close;
-    aQry.SQL.Text := 'SELECT datname FROM pg_database WHERE datistemplate = false;'; // ��ȡ��ģ�����ݿ�
+    aQry.SQL.Text := 'SELECT datname FROM pg_database WHERE datistemplate = false;'; // 锟斤拷取锟斤拷模锟斤拷锟斤拷锟捷匡拷
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('datname').AsString); // �����ݿ��������ӵ������?
+      Result.Add(aQry.FieldByName('datname').AsString); // 锟斤拷锟斤拷锟捷匡拷锟斤拷锟斤拷锟斤拷锟接碉拷锟斤拷锟斤拷锟?
       aQry.Next;
     end;
     aQry.Close;
   except
     on E: Exception do
-      ShowMessage('��ȡ���ݿ��б�ʱ����: ' + E.Message);
+      ShowMessage('锟斤拷取锟斤拷锟捷匡拷锟叫憋拷时锟斤拷锟斤拷: ' + E.Message);
   end;
 end;
 
@@ -288,13 +288,13 @@ begin
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('table_name').AsString); // �����������ӵ������?
+      Result.Add(aQry.FieldByName('table_name').AsString); // 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟接碉拷锟斤拷锟斤拷锟?
       aQry.Next;
     end;
     aQry.Close;
   except
     on E: Exception do
-      ShowMessage('��ȡ���б�ʱ����: ' + E.Message);
+      ShowMessage('锟斤拷取锟斤拷锟叫憋拷时锟斤拷锟斤拷: ' + E.Message);
   end;
 end;
 
@@ -308,13 +308,13 @@ begin
     aQry.Open;
     while not aQry.Eof do
     begin
-      Result.Add(aQry.FieldByName('column_name').AsString); // ���ֶ��������ӵ������?
+      Result.Add(aQry.FieldByName('column_name').AsString); // 锟斤拷锟街讹拷锟斤拷锟斤拷锟斤拷锟接碉拷锟斤拷锟斤拷锟?
       aQry.Next;
     end;
     aQry.Close;
   except
     on E: Exception do
-      ShowMessage('��ȡ�ֶ��б�ʱ����: ' + E.Message);
+      ShowMessage('锟斤拷取锟街讹拷锟叫憋拷时锟斤拷锟斤拷: ' + E.Message);
   end;
 end;
 

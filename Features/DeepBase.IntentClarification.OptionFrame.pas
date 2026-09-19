@@ -1,4 +1,4 @@
-unit DeepBase.IntentClarification.OptionFrame;
+﻿unit DeepBase.IntentClarification.OptionFrame;
 
 interface
 

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.EHAI.Conformance - Conformance Tests for EHAI Delphi Binding
   
   Language Common Layer Delphi Implementation 001 (WO-20260914-EHAI-001R1)

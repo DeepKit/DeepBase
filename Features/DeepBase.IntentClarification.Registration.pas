@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.IntentClarification.Registration - Component Registration Facade
 
   Provides a simple facade for wiring up all engine components.

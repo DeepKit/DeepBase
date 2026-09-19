@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.VCL.DeepShell
 
   Contract tests for the DeepShell desktop shell. The bulk of the cases here

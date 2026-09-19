@@ -1,4 +1,4 @@
-unit Test.DeepBase.Performance;
+﻿unit Test.DeepBase.Performance;
 
 {*******************************************************************************
   DeepBase Performance Benchmark Suite

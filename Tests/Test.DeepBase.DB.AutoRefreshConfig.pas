@@ -1,4 +1,4 @@
-unit Test.DeepBase.DB.AutoRefreshConfig;
+﻿unit Test.DeepBase.DB.AutoRefreshConfig;
 
 interface
 

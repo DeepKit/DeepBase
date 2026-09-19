@@ -1,17 +1,17 @@
-{ ============================================================================
-  Test.Regression.BUG014_WeChatPaySignature - 微信支付签名验证回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG014_WeChatPaySignature - 寰俊鏀粯绛惧悕楠岃瘉鍥炲綊娴嬭瘯
 
-  BUG-014: 微信支付签名验证缺失
+  BUG-014: 寰俊鏀粯绛惧悕楠岃瘉缂哄け
   
-  原问�? RSA签名使用简单SHA256而非PKCS#1 v1.5 RSA-SHA256�?
-          Webhook验证逻辑未完整实现�?
+  鍘熼棶棰? RSA绛惧悕浣跨敤绠€鍗昐HA256鑰岄潪PKCS#1 v1.5 RSA-SHA256锛?
+          Webhook楠岃瘉閫昏緫鏈畬鏁村疄鐜般€?
   
-  修复方案: 实现完整的RSA-SHA256签名和验签功能，添加WeChatPublicKey配置项�?
+  淇鏂规: 瀹炵幇瀹屾暣鐨凴SA-SHA256绛惧悕鍜岄獙绛惧姛鑳斤紝娣诲姞WeChatPublicKey閰嶇疆椤广€?
   
-  修复日期: 2025-12-16
-  文件: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
-  优先�? P0 (Critical)
-  分类: Security
+  淇鏃ユ湡: 2025-12-16
+  鏂囦欢: ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas
+  浼樺厛绾? P0 (Critical)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG014_WeChatPaySignature;
@@ -39,23 +39,23 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证 TWeChatPayConfig 包含 WeChatPublicKey 属�?)]
+    [Description('楠岃瘉 TWeChatPayConfig 鍖呭惈 WeChatPublicKey 灞炴€?)]
     procedure Test_Config_HasWeChatPublicKeyProperty;
     
     [Test]
-    [Description('验证签名验证在缺少公钥时返回 False')]
+    [Description('楠岃瘉绛惧悕楠岃瘉鍦ㄧ己灏戝叕閽ユ椂杩斿洖 False')]
     procedure Test_VerifySignature_WithoutPublicKey_ReturnsFalse;
     
     [Test]
-    [Description('验证 RSASign 方法存在且可调用')]
+    [Description('楠岃瘉 RSASign 鏂规硶瀛樺湪涓斿彲璋冪敤')]
     procedure Test_RSASign_MethodExists;
     
     [Test]
-    [Description('验证签名内容格式正确')]
+    [Description('楠岃瘉绛惧悕鍐呭鏍煎紡姝ｇ‘')]
     procedure Test_SignContent_HasCorrectFormat;
     
     [Test]
-    [Description('验证 Authorization 头部格式正确')]
+    [Description('楠岃瘉 Authorization 澶撮儴鏍煎紡姝ｇ‘')]
     procedure Test_AuthorizationHeader_HasCorrectFormat;
   end;
 
@@ -87,7 +87,7 @@ end;
 
 function TBug014_WeChatPaySignatureTest.GetBugDescription: string;
 begin
-  Result := '微信支付签名验证缺失';
+  Result := '寰俊鏀粯绛惧悕楠岃瘉缂哄け';
 end;
 
 function TBug014_WeChatPaySignatureTest.GetFixDate: string;
@@ -113,15 +113,15 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 验证 WeChatPublicKey 属性存在且可读�?
+    // 楠岃瘉 WeChatPublicKey 灞炴€у瓨鍦ㄤ笖鍙鍐?
     Config.WeChatPublicKey := 'test_public_key';
     Assert.AreEqual('test_public_key', Config.WeChatPublicKey,
-      'WeChatPublicKey 属性应该可以正确读�?);
+      'WeChatPublicKey 灞炴€у簲璇ュ彲浠ユ纭鍐?);
     
-    // 验证初始值为�?
+    // 楠岃瘉鍒濆鍊间负绌?
     Config.WeChatPublicKey := '';
     Assert.AreEqual('', Config.WeChatPublicKey,
-      'WeChatPublicKey 初始值应该为�?);
+      'WeChatPublicKey 鍒濆鍊煎簲璇ヤ负绌?);
   finally
     Config.Free;
   end;
@@ -140,7 +140,7 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 不设置公�?
+    // 涓嶈缃叕閽?
     Config.WeChatPublicKey := '';
     Config.AppId := 'test_app_id';
     Config.MchId := 'test_mch_id';
@@ -151,11 +151,11 @@ begin
       try
         Params.Add('test_key', 'test_value');
         
-        // 验证在没有公钥的情况下，签名验证应该返回 False
+        // 楠岃瘉鍦ㄦ病鏈夊叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False
         Result := Client.PublicVerifySignature(Params, 'fake_signature');
         
         Assert.IsFalse(Result, 
-          '在没有配置公钥的情况下，签名验证应该返回 False');
+          '鍦ㄦ病鏈夐厤缃叕閽ョ殑鎯呭喌涓嬶紝绛惧悕楠岃瘉搴旇杩斿洖 False');
       finally
         Params.Free;
       end;
@@ -181,7 +181,7 @@ begin
   
   Config := TWeChatPayConfig.Create;
   try
-    // 不设置私钥，验证方法存在但会抛出配置错误
+    // 涓嶈缃閽ワ紝楠岃瘉鏂规硶瀛樺湪浣嗕細鎶涘嚭閰嶇疆閿欒
     Config.PrivateKey := '';
     Config.AppId := 'test_app_id';
     Config.MchId := 'test_mch_id';
@@ -197,11 +197,11 @@ begin
       PaymentResult := Client.CreateOrder(Order);
       ErrorMessage := PaymentResult.ErrorMessage;
 
-      Assert.IsFalse(PaymentResult.Success, '缺少私钥时创建订单应该失�?);
+      Assert.IsFalse(PaymentResult.Success, '缂哄皯绉侀挜鏃跺垱寤鸿鍗曞簲璇ュけ璐?);
       Assert.IsTrue(ErrorMessage.Contains('private key') or
                     ErrorMessage.Contains('PrivateKey') or
                     ErrorMessage.Contains('not configured'),
-        '失败消息应该指示私钥未配�?);
+        '澶辫触娑堟伅搴旇鎸囩ず绉侀挜鏈厤缃?);
     finally
       Client.Free;
     end;
@@ -216,13 +216,13 @@ procedure TBug014_WeChatPaySignatureTest.Test_SignContent_HasCorrectFormat;
 begin
   LogTestStart('Test_SignContent_HasCorrectFormat');
   
-  // 验证签名内容格式：HTTP请求方法\nURL\n时间戳\n随机字符串\n请求报文主体\n
-  // 这是微信支付 V3 API 的签名格式要�?
+  // 楠岃瘉绛惧悕鍐呭鏍煎紡锛欻TTP璇锋眰鏂规硶\nURL\n鏃堕棿鎴砛n闅忔満瀛楃涓瞈n璇锋眰鎶ユ枃涓讳綋\n
+  // 杩欐槸寰俊鏀粯 V3 API 鐨勭鍚嶆牸寮忚姹?
   
-  // 由于 BuildAuthorizationHeader 是私有方法，我们通过检查文档和代码来验�?
-  // 这里主要验证格式要求被正确理�?
+  // 鐢变簬 BuildAuthorizationHeader 鏄鏈夋柟娉曪紝鎴戜滑閫氳繃妫€鏌ユ枃妗ｅ拰浠ｇ爜鏉ラ獙璇?
+  // 杩欓噷涓昏楠岃瘉鏍煎紡瑕佹眰琚纭悊瑙?
   
-  Assert.Pass('签名内容格式验证通过（通过代码审查确认�?);
+  Assert.Pass('绛惧悕鍐呭鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);
   
   LogTestEnd('Test_SignContent_HasCorrectFormat', True);
 end;
@@ -231,13 +231,13 @@ procedure TBug014_WeChatPaySignatureTest.Test_AuthorizationHeader_HasCorrectForm
 begin
   LogTestStart('Test_AuthorizationHeader_HasCorrectFormat');
   
-  // 验证 Authorization 头部格式�?
+  // 楠岃瘉 Authorization 澶撮儴鏍煎紡锛?
   // WECHATPAY2-SHA256-RSA2048 mchid="xxx",nonce_str="xxx",signature="xxx",timestamp="xxx",serial_no="xxx"
   
-  // 由于 BuildAuthorizationHeader 是私有方法，我们通过检查文档和代码来验�?
-  // 这里主要验证格式要求被正确理�?
+  // 鐢变簬 BuildAuthorizationHeader 鏄鏈夋柟娉曪紝鎴戜滑閫氳繃妫€鏌ユ枃妗ｅ拰浠ｇ爜鏉ラ獙璇?
+  // 杩欓噷涓昏楠岃瘉鏍煎紡瑕佹眰琚纭悊瑙?
   
-  Assert.Pass('Authorization 头部格式验证通过（通过代码审查确认�?);
+  Assert.Pass('Authorization 澶撮儴鏍煎紡楠岃瘉閫氳繃锛堥€氳繃浠ｇ爜瀹℃煡纭锛?);
   
   LogTestEnd('Test_AuthorizationHeader_HasCorrectFormat', True);
 end;

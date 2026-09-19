@@ -1,4 +1,4 @@
-unit DeepBase.Math;
+﻿unit DeepBase.Math;
 
 {*******************************************************************************
   DeepBase Math Utilities — Core Facade

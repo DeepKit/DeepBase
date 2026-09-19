@@ -1,8 +1,8 @@
-{ ============================================================================
-  Test.SeedTool - SeedTool 工具单元测试
+﻿{ ============================================================================
+  Test.SeedTool - SeedTool 宸ュ叿鍗曞厓娴嬭瘯
 
-  测试覆盖:
-    - TBasicProtection: 加密解密、HMAC、哈�?    - TAntiTamperPackage: 防篡改数据包
+  娴嬭瘯瑕嗙洊:
+    - TBasicProtection: 鍔犲瘑瑙ｅ瘑銆丠MAC銆佸搱甯?    - TAntiTamperPackage: 闃茬鏀规暟鎹寘
   ============================================================================ }
 
 unit Test.SeedTool;
@@ -139,7 +139,7 @@ procedure TBasicProtectionTests.Test_EncryptDecrypt_Unicode;
 var
   Original, Encrypted, Decrypted: string;
 begin
-  Original := '中文测试 日本�?한국�?🎉';
+  Original := '涓枃娴嬭瘯 鏃ユ湰瑾?頃滉淡鞏?馃帀';
   Encrypted := TBasicProtection.EncryptSensitiveData(Original);
   Decrypted := TBasicProtection.DecryptSensitiveData(Encrypted);
 
@@ -151,7 +151,7 @@ var
   Original, Encrypted, Decrypted: string;
   I: Integer;
 begin
-  // 生成 10KB 测试数据
+  // 鐢熸垚 10KB 娴嬭瘯鏁版嵁
   Original := '';
   for I := 1 to 1000 do
     Original := Original + 'TestData_' + IntToStr(I) + '_';
@@ -207,7 +207,7 @@ begin
   Data := 'Original data';
   HMAC := TBasicProtection.CalculateHMAC(Data);
 
-  // 修改数据后验证应该失�?  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));
+  // 淇敼鏁版嵁鍚庨獙璇佸簲璇ュけ璐?  Assert.IsFalse(TBasicProtection.VerifyDataIntegrity('Modified data', HMAC));
 end;
 
 procedure TBasicProtectionTests.Test_CalculateDataHash;
@@ -259,9 +259,9 @@ begin
   Encrypted1 := TBasicProtection.EncryptSensitiveData(Original);
   Encrypted2 := TBasicProtection.EncryptSensitiveData(Original);
 
-  // 由于随机 IV，每次加密结果应该不�?  Assert.AreNotEqual(Encrypted1, Encrypted2);
+  // 鐢变簬闅忔満 IV锛屾瘡娆″姞瀵嗙粨鏋滃簲璇ヤ笉鍚?  Assert.AreNotEqual(Encrypted1, Encrypted2);
 
-  // 但两个都应该能正确解�?  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1));
+  // 浣嗕袱涓兘搴旇鑳芥纭В瀵?  Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted1));
   Assert.AreEqual(Original, TBasicProtection.DecryptSensitiveData(Encrypted2));
 end;
 
@@ -337,7 +337,7 @@ begin
     Package.SaveToFile(FileName);
 
     Content := TFile.ReadAllBytes(FileName);
-    // 文件应该包含签名/校验数据
+    // 鏂囦欢搴旇鍖呭惈绛惧悕/鏍￠獙鏁版嵁
     Assert.IsTrue(Length(Content) > 10);
   finally
     Package.Free;
@@ -373,20 +373,20 @@ begin
     Package.Free;
   end;
 
-  // 篡改文件中间的一个字�?  Content := TFile.ReadAllBytes(FileName);
+  // 绡℃敼鏂囦欢涓棿鐨勪竴涓瓧鑺?  Content := TFile.ReadAllBytes(FileName);
   if Length(Content) > 50 then
     Content[50] := Content[50] xor $FF;
   TFile.WriteAllBytes(FileName, Content);
 
-  // 加载篡改后的文件应该检测到
+  // 鍔犺浇绡℃敼鍚庣殑鏂囦欢搴旇妫€娴嬪埌
   Package := TAntiTamperPackage.Create;
   try
     try
       Package.LoadFromFile(FileName);
-      // 如果没有抛出异常，检查完整性标�?      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
+      // 濡傛灉娌℃湁鎶涘嚭寮傚父锛屾鏌ュ畬鏁存€ф爣蹇?      Assert.IsFalse(Package.IsValid, 'Tampered package should be detected as invalid');
     except
       on E: Exception do
-        // 抛出异常也是合理的行�?        Assert.Pass('Tampering detected via exception: ' + E.Message);
+        // 鎶涘嚭寮傚父涔熸槸鍚堢悊鐨勮涓?        Assert.Pass('Tampering detected via exception: ' + E.Message);
     end;
   finally
     Package.Free;

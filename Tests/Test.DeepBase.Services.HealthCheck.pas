@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Services.HealthCheck - Unit Tests for Health Check Service
 
   Tests only the APIs that actually exist in Core/DeepBase.Services.HealthCheck.pas:

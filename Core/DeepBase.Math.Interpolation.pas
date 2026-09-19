@@ -1,4 +1,4 @@
-unit DeepBase.Math.Interpolation;
+﻿unit DeepBase.Math.Interpolation;
 
 {*******************************************************************************
   DeepBase Math — Easing Functions

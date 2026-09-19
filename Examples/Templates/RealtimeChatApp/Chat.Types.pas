@@ -1,4 +1,4 @@
-unit Chat.Types;
+﻿unit Chat.Types;
 
 {*******************************************************************************
   Realtime Chat Application Template - Type Definitions

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Persistence.HBTelemetry.FireDAC - SQLite WAL Persistence Adapter
   for HB Touchpoint Telemetry & Session Snapshots
 

@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Serialization module
 /// Tests: TJsonSerializer, TXmlSerializer, TBinarySerializer, TSerializer,
 ///        TSerializerBuilder, Serialization attributes

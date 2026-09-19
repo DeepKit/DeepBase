@@ -1,4 +1,4 @@
-unit DeepBase.Speech.Types;
+﻿unit DeepBase.Speech.Types;
 
 interface
 

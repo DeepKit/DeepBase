@@ -1,16 +1,16 @@
-{ ============================================================================
-  Test.Regression.BUG010_WorkerQueueRace - 工作队列状态竞争回归测�?
+﻿{ ============================================================================
+  Test.Regression.BUG010_WorkerQueueRace - 宸ヤ綔闃熷垪鐘舵€佺珵浜夊洖褰掓祴璇?
 
-  BUG-010: 工作队列状态竞�?
+  BUG-010: 宸ヤ綔闃熷垪鐘舵€佺珵浜?
   
-  原问�? 多个线程可能同时修改作业状态，缺乏适当同步
+  鍘熼棶棰? 澶氫釜绾跨▼鍙兘鍚屾椂淇敼浣滀笟鐘舵€侊紝缂轰箯閫傚綋鍚屾
   
-  修复方案: 在所有状态变更操作中添加锁保护，确保线程安全
+  淇鏂规: 鍦ㄦ墍鏈夌姸鎬佸彉鏇存搷浣滀腑娣诲姞閿佷繚鎶わ紝纭繚绾跨▼瀹夊叏
   
-  修复日期: 2025-12-16
-  文件: Core/DeepBase.WorkerQueue.pas
-  优先�? P1 (High)
-  分类: Concurrency
+  淇鏃ユ湡: 2025-12-16
+  鏂囦欢: Core/DeepBase.WorkerQueue.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Concurrency
   ============================================================================ }
 
 unit Test.Regression.BUG010_WorkerQueueRace;
@@ -38,11 +38,11 @@ type
     function GetAffectedFile: string; override;
   public
     [Test]
-    [Description('验证状态变更操作有锁保�?)]
+    [Description('楠岃瘉鐘舵€佸彉鏇存搷浣滄湁閿佷繚鎶?)]
     procedure Test_StateChange_HasLockProtection;
     
     [Test]
-    [Description('验证并发状态变更不会导致数据损�?)]
+    [Description('楠岃瘉骞跺彂鐘舵€佸彉鏇翠笉浼氬鑷存暟鎹崯鍧?)]
     [RepeatTest(10)]
     procedure Test_ConcurrentStateChange_NoCorruption;
   end;
@@ -61,7 +61,7 @@ end;
 
 function TBug010_WorkerQueueRaceTest.GetBugDescription: string;
 begin
-  Result := '工作队列状态竞�?;
+  Result := '宸ヤ綔闃熷垪鐘舵€佺珵浜?;
 end;
 
 function TBug010_WorkerQueueRaceTest.GetFixDate: string;
@@ -93,19 +93,19 @@ begin
     SourcePath := '..\Core\DeepBase.WorkerQueue.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在锁保护相关代�?
+  // 楠岃瘉瀛樺湪閿佷繚鎶ょ浉鍏充唬鐮?
   Assert.IsTrue(
     SourceCode.Contains('TMonitor.Enter') or 
     SourceCode.Contains('Lock') or
     SourceCode.Contains('TCriticalSection'),
-    '代码应该包含锁保护机�?);
+    '浠ｇ爜搴旇鍖呭惈閿佷繚鎶ゆ満鍒?);
   
   LogTestEnd('Test_StateChange_HasLockProtection', True);
 end;
@@ -123,7 +123,7 @@ begin
   Lock := TObject.Create;
   
   try
-    // 创建多个线程同时修改计数�?
+    // 鍒涘缓澶氫釜绾跨▼鍚屾椂淇敼璁℃暟鍣?
     for I := 0 to 9 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -144,19 +144,19 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
     
-    // 启动所有线�?
+    // 鍚姩鎵€鏈夌嚎绋?
     for I := 0 to 9 do
       Threads[I].Start;
     
-    // 等待所有线程完�?
+    // 绛夊緟鎵€鏈夌嚎绋嬪畬鎴?
     for I := 0 to 9 do
     begin
       Threads[I].WaitFor;
       Threads[I].Free;
     end;
     
-    // 验证计数器值正�?
-    Assert.AreEqual(10000, Counter, '并发操作后计数器值应该正�?);
+    // 楠岃瘉璁℃暟鍣ㄥ€兼纭?
+    Assert.AreEqual(10000, Counter, '骞跺彂鎿嶄綔鍚庤鏁板櫒鍊煎簲璇ユ纭?);
   finally
     Lock.Free;
   end;

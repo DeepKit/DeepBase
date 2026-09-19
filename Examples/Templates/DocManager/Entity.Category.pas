@@ -1,9 +1,9 @@
-unit Entity.Category;
+﻿unit Entity.Category;
 
 {*******************************************************************************
-  Category Entity - 分类实体
+  Category Entity - 鍒嗙被瀹炰綋
 
-  DeepBase 框架文档管理模板 - 树状分类结构
+  DeepBase 妗嗘灦鏂囨。绠＄悊妯℃澘 - 鏍戠姸鍒嗙被缁撴瀯
 *******************************************************************************}
 
 interface
@@ -16,7 +16,7 @@ type
   TCategory = class;
 
   /// <summary>
-  /// 分类实体 - 支持无限层级树状结构
+  /// 鍒嗙被瀹炰綋 - 鏀寔鏃犻檺灞傜骇鏍戠姸缁撴瀯
   /// </summary>
   [Table('Categories')]
   TCategory = class(TEntityBase)
@@ -43,7 +43,7 @@ type
     [Column('CreatedAt')]
     FCreatedAt: TDateTime;
 
-    // 非持久化字段
+    // 闈炴寔涔呭寲瀛楁
     FParent: TCategory;
     FChildren: TObjectList<TCategory>;
     FLevel: Integer;
@@ -58,28 +58,28 @@ type
 
     class function NewId: string;
 
-    /// <summary>验证分类</summary>
+    /// <summary>楠岃瘉鍒嗙被</summary>
     function Validate: Boolean; override;
 
-    /// <summary>获取验证错误</summary>
+    /// <summary>鑾峰彇楠岃瘉閿欒</summary>
     function GetValidationErrors: TArray<string>;
 
-    /// <summary>添加子分�?/summary>
+    /// <summary>娣诲姞瀛愬垎绫?/summary>
     procedure AddChild(Child: TCategory);
 
-    /// <summary>移除子分�?/summary>
+    /// <summary>绉婚櫎瀛愬垎绫?/summary>
     procedure ReDeepMoveChild(const ChildId: string);
 
-    /// <summary>查找子分�?/summary>
+    /// <summary>鏌ユ壘瀛愬垎绫?/summary>
     function FindChild(const ChildId: string): TCategory;
 
-    /// <summary>获取所有后代分�?ID</summary>
+    /// <summary>鑾峰彇鎵€鏈夊悗浠ｅ垎绫?ID</summary>
     function GetAllDescendantIds: TArray<string>;
 
-    /// <summary>检查是否是某个分类的后�?/summary>
+    /// <summary>妫€鏌ユ槸鍚︽槸鏌愪釜鍒嗙被鐨勫悗浠?/summary>
     function IsDescendantOf(const CategoryId: string): Boolean;
 
-    // 属�?
+    // 灞炴€?
     property Id: string read FId write FId;
     property Name: string read FName write FName;
     property ParentId: string read FParentId write FParentId;
@@ -88,11 +88,11 @@ type
     property IconIndex: Integer read FIconIndex write FIconIndex;
     property CreatedAt: TDateTime read FCreatedAt write FCreatedAt;
 
-    // 关系属�?
+    // 鍏崇郴灞炴€?
     property Parent: TCategory read FParent write FParent;
     property Children: TObjectList<TCategory> read FChildren;
 
-    // 计算属�?
+    // 璁＄畻灞炴€?
     property IsRoot: Boolean read GetIsRoot;
     property FullPath: string read GetFullPath;
     property HasChildren: Boolean read GetHasChildren;
@@ -101,7 +101,7 @@ type
   end;
 
   /// <summary>
-  /// 分类树管理器
+  /// 鍒嗙被鏍戠鐞嗗櫒
   /// </summary>
   TCategoryTree = class
   private
@@ -113,22 +113,22 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>从分类列表构建树</summary>
+    /// <summary>浠庡垎绫诲垪琛ㄦ瀯寤烘爲</summary>
     procedure LoadFromList(Categories: TObjectList<TCategory>);
 
-    /// <summary>清空�?/summary>
+    /// <summary>娓呯┖鏍?/summary>
     procedure Clear;
 
-    /// <summary>根据 ID 查找分类</summary>
+    /// <summary>鏍规嵁 ID 鏌ユ壘鍒嗙被</summary>
     function FindById(const Id: string): TCategory;
 
-    /// <summary>获取分类的完整路�?/summary>
+    /// <summary>鑾峰彇鍒嗙被鐨勫畬鏁磋矾寰?/summary>
     function GetCategoryPath(const Id: string): string;
 
-    /// <summary>获取指定分类下的所有后�?ID</summary>
+    /// <summary>鑾峰彇鎸囧畾鍒嗙被涓嬬殑鎵€鏈夊悗浠?ID</summary>
     function GetDescendantIds(const ParentId: string): TArray<string>;
 
-    /// <summary>将树扁平化为列表（按深度优先顺序�?/summary>
+    /// <summary>灏嗘爲鎵佸钩鍖栦负鍒楄〃锛堟寜娣卞害浼樺厛椤哄簭锛?/summary>
     function Flatten: TArray<TCategory>;
 
     property RootCategories: TObjectList<TCategory> read FRootCategories;
@@ -146,7 +146,7 @@ begin
   FSortOrder := 0;
   FIconIndex := 0;
   FCreatedAt := Now;
-  FChildren := TObjectList<TCategory>.Create(False);  // 不拥有子对象
+  FChildren := TObjectList<TCategory>.Create(False);  // 涓嶆嫢鏈夊瓙瀵硅薄
   FLevel := 0;
   FDocumentCount := 0;
 end;
@@ -195,14 +195,14 @@ begin
   Errors := TList<string>.Create;
   try
     if FName.Trim.IsEmpty then
-      Errors.Add('分类名称不能为空');
+      Errors.Add('鍒嗙被鍚嶇О涓嶈兘涓虹┖');
 
     if Length(FName) > 100 then
-      Errors.Add('分类名称不能超过 100 字符');
+      Errors.Add('鍒嗙被鍚嶇О涓嶈兘瓒呰繃 100 瀛楃');
 
-    // 检查循环引�?
+    // 妫€鏌ュ惊鐜紩鐢?
     if not FParentId.IsEmpty and (FParentId = FId) then
-      Errors.Add('分类不能作为自己的父分类');
+      Errors.Add('鍒嗙被涓嶈兘浣滀负鑷繁鐨勭埗鍒嗙被');
 
     Result := Errors.ToArray;
   finally
@@ -249,7 +249,7 @@ begin
     if Child.Id = ChildId then
       Exit(Child);
 
-    // 递归查找
+    // 閫掑綊鏌ユ壘
     Found := Child.FindChild(ChildId);
     if Found <> nil then
       Exit(Found);
@@ -317,11 +317,11 @@ var
 begin
   Clear;
 
-  // 首先添加所有分类到字典
+  // 棣栧厛娣诲姞鎵€鏈夊垎绫诲埌瀛楀吀
   for Cat in Categories do
     FAllCategories.Add(Cat.Id, Cat);
 
-  // 构建树结�?
+  // 鏋勫缓鏍戠粨鏋?
   BuildTree(Categories);
 end;
 
@@ -333,24 +333,24 @@ begin
   begin
     if Cat.ParentId.IsEmpty then
     begin
-      // 根分�?
+      // 鏍瑰垎绫?
       Cat.Level := 0;
       FRootCategories.Add(Cat);
     end
     else if FAllCategories.TryGetValue(Cat.ParentId, Parent) then
     begin
-      // 找到父分�?
+      // 鎵惧埌鐖跺垎绫?
       Parent.AddChild(Cat);
     end
     else
     begin
-      // 父分类不存在，作为根分类处理
+      // 鐖跺垎绫讳笉瀛樺湪锛屼綔涓烘牴鍒嗙被澶勭悊
       Cat.Level := 0;
       FRootCategories.Add(Cat);
     end;
   end;
 
-  // �?SortOrder 排序
+  // 鎸?SortOrder 鎺掑簭
   FRootCategories.Sort(TComparer<TCategory>.Construct(
     function(const A, B: TCategory): Integer
     begin

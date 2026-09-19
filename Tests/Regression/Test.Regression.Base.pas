@@ -1,15 +1,15 @@
 ﻿{ ============================================================================
   Test.Regression.Base - 回归测试基类
 
-  提供所有回归测试的通用基础设施�?
+  鎻愪緵鎵€鏈夊洖褰掓祴璇曠殑閫氱敤鍩虹璁炬柦锛?
   - 标准化的 Bug 信息获取接口
-  - 通用�?SetUp/TearDown 逻辑
+  - 閫氱敤鐨?SetUp/TearDown 閫昏緫
   - 测试辅助方法
 
-  使用方法�?
+  浣跨敤鏂规硶锛?
   1. 继承 TRegressionTestBase
   2. 实现 GetBugNumber, GetBugDescription, GetFixDate
-  3. 添加具体的测试方�?
+  3. 娣诲姞鍏蜂綋鐨勬祴璇曟柟娉?
   ============================================================================ }
 
 unit Test.Regression.Base;
@@ -33,19 +33,19 @@ type
     /// <summary>获取 Bug 编号，如 'BUG-058'</summary>
     function GetBugNumber: string; virtual; abstract;
 
-    /// <summary>获取 Bug 简短描�?/summary>
+    /// <summary>鑾峰彇 Bug 绠€鐭弿杩?/summary>
     function GetBugDescription: string; virtual; abstract;
 
-    /// <summary>获取修复日期，格�?'YYYY-MM-DD'</summary>
+    /// <summary>鑾峰彇淇鏃ユ湡锛屾牸寮?'YYYY-MM-DD'</summary>
     function GetFixDate: string; virtual; abstract;
 
-    /// <summary>获取 Bug 优先级，�?'P0', 'P1'</summary>
+    /// <summary>鑾峰彇 Bug 浼樺厛绾э紝濡?'P0', 'P1'</summary>
     function GetPriority: string; virtual;
 
-    /// <summary>获取受影响的源文件路�?/summary>
+    /// <summary>鑾峰彇鍙楀奖鍝嶇殑婧愭枃浠惰矾寰?/summary>
     function GetAffectedFile: string; virtual;
 
-    /// <summary>记录测试开始信�?/summary>
+    /// <summary>璁板綍娴嬭瘯寮€濮嬩俊鎭?/summary>
     procedure LogTestStart(const TestName: string);
 
     /// <summary>记录测试结束信息</summary>
@@ -63,29 +63,29 @@ type
     [TearDown]
     procedure TearDown; virtual;
 
-    /// <summary>获取完整�?Bug 信息字符�?/summary>
+    /// <summary>鑾峰彇瀹屾暣鐨?Bug 淇℃伅瀛楃涓?/summary>
     function GetBugInfo: string;
   end;
 
   /// <summary>
   /// 并发回归测试基类
-  /// 用于测试并发相关�?Bug 修复
+  /// 鐢ㄤ簬娴嬭瘯骞跺彂鐩稿叧鐨?Bug 淇
   /// </summary>
   TConcurrencyRegressionTestBase = class(TRegressionTestBase)
   private
     FThreadCount: Integer;
     FIterationCount: Integer;
   protected
-    /// <summary>默认线程�?/summary>
+    /// <summary>榛樿绾跨▼鏁?/summary>
     property ThreadCount: Integer read FThreadCount write FThreadCount;
 
-    /// <summary>每个线程的迭代次�?/summary>
+    /// <summary>姣忎釜绾跨▼鐨勮凯浠ｆ鏁?/summary>
     property IterationCount: Integer read FIterationCount write FIterationCount;
 
     /// <summary>运行并发测试</summary>
     procedure RunConcurrentTest(const TestProc: TProc);
 
-    /// <summary>等待所有线程完�?/summary>
+    /// <summary>绛夊緟鎵€鏈夌嚎绋嬪畬鎴?/summary>
     procedure WaitForThreads(const Threads: array of TThread; TimeoutMs: Integer = 30000);
   public
     [SetUp]
@@ -94,16 +94,16 @@ type
 
   /// <summary>
   /// 内存回归测试基类
-  /// 用于测试内存泄漏相关�?Bug 修复
+  /// 鐢ㄤ簬娴嬭瘯鍐呭瓨娉勬紡鐩稿叧鐨?Bug 淇
   /// </summary>
   TMemoryRegressionTestBase = class(TRegressionTestBase)
   private
     FInitialMemory: Int64;
   protected
-    /// <summary>获取当前内存使用�?/summary>
+    /// <summary>鑾峰彇褰撳墠鍐呭瓨浣跨敤閲?/summary>
     function GetCurrentMemoryUsage: Int64;
 
-    /// <summary>检查内存泄�?/summary>
+    /// <summary>妫€鏌ュ唴瀛樻硠婕?/summary>
     procedure CheckNoMemoryLeak(const OperationName: string; ToleranceBytes: Int64 = 1024);
   public
     [SetUp]
@@ -138,12 +138,12 @@ end;
 
 function TRegressionTestBase.GetPriority: string;
 begin
-  Result := 'P1'; // 默认优先�?
+  Result := 'P1'; // 榛樿浼樺厛绾?
 end;
 
 function TRegressionTestBase.GetAffectedFile: string;
 begin
-  Result := ''; // 子类可覆�?
+  Result := ''; // 瀛愮被鍙鐩?
 end;
 
 function TRegressionTestBase.GetBugInfo: string;
@@ -218,7 +218,7 @@ begin
   Errors := TStringList.Create;
   Lock := TObject.Create;
   try
-    // 创建并启动线�?
+    // 鍒涘缓骞跺惎鍔ㄧ嚎绋?
     for I := 0 to FThreadCount - 1 do
     begin
       Threads[I] := TThread.CreateAnonymousThread(
@@ -248,14 +248,14 @@ begin
       Threads[I].FreeOnTerminate := False;
     end;
 
-    // 启动所有线�?
+    // 鍚姩鎵€鏈夌嚎绋?
     for I := 0 to FThreadCount - 1 do
       Threads[I].Start;
 
-    // 等待所有线程完�?
+    // 绛夊緟鎵€鏈夌嚎绋嬪畬鎴?
     WaitForThreads(Threads);
 
-    // 检查错�?
+    // 妫€鏌ラ敊璇?
     Assert.AreEqual(0, ErrorCount,
       Format('并发测试失败，错误数: %d. 错误示例: %s', [ErrorCount, Errors.Text]));
   finally
@@ -310,7 +310,7 @@ begin
 end;
 {$ELSE}
 begin
-  Result := 0; // �?Windows 平台暂不支持
+  Result := 0; // 闈?Windows 骞冲彴鏆備笉鏀寔
 end;
 {$ENDIF}
 

@@ -1,4 +1,4 @@
-{*******************************************************************************
+﻿{*******************************************************************************
   DeepBase Payment AES-256-GCM Decryption
 
   Cross-platform AES-256-GCM decryption for payment notification handling.

@@ -1,4 +1,4 @@
-unit uDoQryErrors;
+﻿unit uDoQryErrors;
 
 interface
 

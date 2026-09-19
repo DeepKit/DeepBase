@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Demo.Commands
 
   Helper that registers demo business commands. Real apps register their own

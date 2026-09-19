@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.ConnectionPool - Connection Pool Long-term Stability Tests
 
   Tests database connection pool under extended load:

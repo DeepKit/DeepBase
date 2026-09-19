@@ -1,4 +1,4 @@
-unit Test.DeepBase.Desktop.Perception.ColorMatch;
+﻿unit Test.DeepBase.Desktop.Perception.ColorMatch;
 
 {$POINTERMATH ON}
 

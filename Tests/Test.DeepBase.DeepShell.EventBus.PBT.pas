@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DeepShell.EventBus.PBT - Property tests for the
   TShellEventBus lifecycle hooks added in DSHELL-003.
 

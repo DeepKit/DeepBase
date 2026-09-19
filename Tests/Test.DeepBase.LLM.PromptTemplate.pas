@@ -90,7 +90,7 @@ end;
 
 procedure TTestLLMPromptTemplate.Setup;
 begin
-  // 使用内存数据�?
+  // 浣跨敤鍐呭瓨鏁版嵁搴?
   FConnection := TFDConnection.Create(nil);
   FConnection.DriverName := 'SQLite';
   FConnection.Params.Database := ':memory:';
@@ -115,7 +115,7 @@ begin
   Q := TFDQuery.Create(nil);
   try
     Q.Connection := FConnection;
-    // 创建 LLMPromptTemplates �?
+    // 鍒涘缓 LLMPromptTemplates 琛?
     Q.SQL.Text := SQL_TIER2_LLM_PROMPTS;
     Q.ExecSQL;
     // 创建 LLMConfiguration 表（FLLM 构造函数需要）

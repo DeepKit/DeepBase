@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Collections module
 /// Tests: TSortedList, TCircularBuffer, TLRUCache, TBidiDictionary,
 ///        TMultiMap, TOrderedDictionary, TDeque, TCountingSet

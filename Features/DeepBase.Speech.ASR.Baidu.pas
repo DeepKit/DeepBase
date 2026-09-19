@@ -1,4 +1,4 @@
-unit DeepBase.Speech.ASR.Baidu;
+﻿unit DeepBase.Speech.ASR.Baidu;
 
 interface
 

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Resilience.Timeout.PBT - Property-based tests for
   TTimeoutPolicy result consistency and background-task cancellation.
 

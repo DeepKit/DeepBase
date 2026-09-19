@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.EventBus.PBT - Property-based tests for the global
   TEventBus singleton initialization.
 

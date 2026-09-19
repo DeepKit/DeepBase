@@ -1,4 +1,4 @@
-unit Test.Regression.BUG336_WorkerQueueStopWait;
+﻿unit Test.Regression.BUG336_WorkerQueueStopWait;
 
 interface
 

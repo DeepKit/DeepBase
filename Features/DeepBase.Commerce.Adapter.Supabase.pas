@@ -1,4 +1,4 @@
-unit DeepBase.Commerce.Adapter.Supabase;
+﻿unit DeepBase.Commerce.Adapter.Supabase;
 
 {==============================================================================
   DeepBase.Commerce.Adapter.Supabase - Supabase Storage Adapter

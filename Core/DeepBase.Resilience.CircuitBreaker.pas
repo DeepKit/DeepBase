@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Resilience.CircuitBreaker - Circuit breaker resilience policy
   Split from DeepBase.Resilience; use DeepBase.Resilience for compatibility.
   ============================================================================ }
@@ -131,7 +131,7 @@ var
 
 function CircuitBreakers: TCircuitBreakerRegistry;
 begin
-  // BUG-111 FIX: 确保锁已初始化后再使�?
+  // BUG-111 FIX: 纭繚閿佸凡鍒濆鍖栧悗鍐嶄娇鐢?
   if not Assigned(_RegistryLock) then
     raise ECircuitBreakerNotInitializedException.Create('CircuitBreakers registry lock not initialized');
     
@@ -177,7 +177,7 @@ begin
   FLock := TCriticalSection.Create;
   // BUG-119 FIX: 初始化HalfOpen状态跟踪变�?
   FHalfOpenActiveCount := 0;
-  FMaxHalfOpenRequests := 1;  // 默认只允�?个探测请�?
+  FMaxHalfOpenRequests := 1;  // 榛樿鍙厑璁?涓帰娴嬭姹?
 end;
 
 destructor TCircuitBreaker.Destroy;
@@ -299,7 +299,7 @@ begin
       csHalfOpen:
       begin
         // BUG-119 FIX: 限制HalfOpen状态下的并发请求数
-        // 只允许有限数量的探测请求通过，防止高并发场景下状态混�?
+        // 鍙厑璁告湁闄愭暟閲忕殑鎺㈡祴璇锋眰閫氳繃锛岄槻姝㈤珮骞跺彂鍦烘櫙涓嬬姸鎬佹贩涔?
         if FHalfOpenActiveCount < FMaxHalfOpenRequests then
         begin
           Inc(FHalfOpenActiveCount);
@@ -369,7 +369,7 @@ begin
       end;
       csHalfOpen:
       begin
-        // BUG-119 FIX: 减少活跃请求计数并立即打开断路�?
+        // BUG-119 FIX: 鍑忓皯娲昏穬璇锋眰璁℃暟骞剁珛鍗虫墦寮€鏂矾鍣?
         if FHalfOpenActiveCount > 0 then
           Dec(FHalfOpenActiveCount);
 

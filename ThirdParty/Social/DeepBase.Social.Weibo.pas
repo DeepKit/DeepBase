@@ -1,4 +1,4 @@
-unit DeepBase.Social.Weibo;
+﻿unit DeepBase.Social.Weibo;
 
 {*******************************************************************************
   DeepBase Weibo (微博) Social Integration
@@ -38,7 +38,7 @@ type
     /// <summary>Save keys to secure storage (Credential Manager)</summary>
     procedure SaveKeysToCredentialManager; virtual;
 
-    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    // BUG-019 FIX: 瀵嗛挜瀹夊叏瀛樺偍灞炴€?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
 
     /// <summary>Weibo AppKey (same as AppId for OAuth)</summary>
@@ -80,7 +80,7 @@ constructor TWeiboConfig.Create;
 begin
   inherited Create(spWeibo);
   FScope := 'all';
-  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.Weibo';
 end;
 
@@ -95,9 +95,9 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.ProtectString(APlainKey);
     ksmCredential:
-      // Credential Manager 模式下不需要额外加�?      Result := APlainKey;
+      // Credential Manager 妯″紡涓嬩笉闇€瑕侀澶栧姞瀵?      Result := APlainKey;
   else
-    // ksmPlainText - 不推荐，但保持兼容�?    Result := APlainKey;
+    // ksmPlainText - 涓嶆帹鑽愶紝浣嗕繚鎸佸吋瀹规€?    Result := APlainKey;
   end;
 end;
 
@@ -110,7 +110,7 @@ begin
     ksmDPAPI:
       Result := TDPAPIHelper.UnprotectString(AEncryptedKey);
     ksmCredential:
-      // Credential Manager 模式下数据已经安全存�?      Result := AEncryptedKey;
+      // Credential Manager 妯″紡涓嬫暟鎹凡缁忓畨鍏ㄥ瓨鍌?      Result := AEncryptedKey;
   else
     // ksmPlainText
     Result := AEncryptedKey;

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Stress.Concurrency - High Concurrency Race Condition Tests
 
   Tests for race conditions and thread safety:

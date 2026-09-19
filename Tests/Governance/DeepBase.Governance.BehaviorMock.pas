@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Governance.BehaviorMock — shared helpers for downstream
   governance behavior tests. Keeps the per-project .dpr harnesses terse.
   ---------------------------------------------------------------------------

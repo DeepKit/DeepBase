@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// Unit tests for DeepBase.Expression module
 /// Tests: TExpressionValue, TExpressionContext, TExpression, TCompiledExpression,
 ///        Math/String/Logic operations, Built-in functions, Error handling

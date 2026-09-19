@@ -1,4 +1,4 @@
-unit DeepBase.Speech.Occupancy;
+﻿unit DeepBase.Speech.Occupancy;
 
 { ============================================================================
   DeepBase.Speech.Occupancy — SAPI Voice Occupancy Detection

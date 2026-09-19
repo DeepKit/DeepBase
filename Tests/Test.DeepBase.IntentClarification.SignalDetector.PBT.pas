@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.IntentClarification.SignalDetector.PBT - PBT for the
   SignalDetector token-counting performance fix.
 

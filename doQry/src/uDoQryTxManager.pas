@@ -1,4 +1,4 @@
-unit uDoQryTxManager;
+﻿unit uDoQryTxManager;
 
 interface
 

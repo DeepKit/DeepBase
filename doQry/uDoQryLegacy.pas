@@ -1,4 +1,4 @@
-unit uDoQryLegacy;
+﻿unit uDoQryLegacy;
 
 interface
 
@@ -22,27 +22,27 @@ function BuildSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): st
 function ShowCurrRecord(aDataset: TDataset; field_num:Integer = 5): String;
 function ParseParamString(const paramStr: string; out paramName, paramValue: string): Boolean;
 
-// �?interface 部分添加以下函数声明
+// 鍦?interface 閮ㄥ垎娣诲姞浠ヤ笅鍑芥暟澹版槑
 function BuildWhereClauseFromDict(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function QuoteValue(const Value: string): string;
 function IsWhereField(const FieldName: string; qry: TAdoQuery; const ProcName: string = ''): Boolean;
 
-// 同时�?interface 部分添加这些函数的声�?
+// 鍚屾椂鍦?interface 閮ㄥ垎娣诲姞杩欎簺鍑芥暟鐨勫０鏄?
 function BuildSelectSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildUpdateSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildDeleteSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildInsertSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 function BuildCallSQL(qry: TAdoQuery; const Params: TDictionary<string, string>): string;
 
-// �?interface 部分添加新的函数声明
+// 鍦?interface 閮ㄥ垎娣诲姞鏂扮殑鍑芥暟澹版槑
 function doQry(const ProcName: String; aQry: TAdoQuery; const ParamString: string=''): Integer; overload;
 function doQry(const ProcName: String; aQry: TAdoQuery; var msg: string; const ParamString:string): Integer; overload;
-//Ms级参数用于返回执行的结果。经常用于出错�?
-//返回值说明：如果是选择状态返回选择到多少记录，如果是插入状态返回。最新插入记录的ID。如果是修改和更新状态返回影响到的行�?
+//Ms绾у弬鏁扮敤浜庤繑鍥炴墽琛岀殑缁撴灉銆傜粡甯哥敤浜庡嚭閿欍€?
+//杩斿洖鍊艰鏄庯細濡傛灉鏄€夋嫨鐘舵€佽繑鍥為€夋嫨鍒板灏戣褰曪紝濡傛灉鏄彃鍏ョ姸鎬佽繑鍥炪€傛渶鏂版彃鍏ヨ褰曠殑ID銆傚鏋滄槸淇敼鍜屾洿鏂扮姸鎬佽繑鍥炲奖鍝嶅埌鐨勮銆?
 
 implementation
 
-// 内部使用的函数声�?
+// 鍐呴儴浣跨敤鐨勫嚱鏁板０鏄?
 function StringToParams(const ParamStr: string): TDictionary<string, string>; forward;
 procedure ValidateSQL(const SQL: string); forward;
 function GetQueryDef(Connection: TADOConnection; const ProcName: string): TADOQuery; forward;
@@ -74,7 +74,7 @@ begin
     Close;
     SQL.Clear;
 
-    // �������ݿ����͹�����ͬ��Ԫ���ݲ�ѯ���?
+    // 锟斤拷锟斤拷锟斤拷锟捷匡拷锟斤拷锟酵癸拷锟斤拷锟斤拷同锟斤拷元锟斤拷锟捷诧拷询锟斤拷锟?
     case DatabaseType of
       dtMySQL:
         begin
@@ -128,7 +128,7 @@ begin
     // ִвѯ
     Open;
 
-    // ��ȡ�����ֶ���
+    // 锟斤拷取锟斤拷锟斤拷锟街讹拷锟斤拷
     if not IsEmpty then
       Result := FieldByName('column_name').AsString;
 
@@ -333,7 +333,7 @@ begin
   if orderBy <> '' then
     Result := Result + ' ORDER BY ' + orderBy;
 
-  // 添加限制 - 如果没有设置，默�?000
+  // 娣诲姞闄愬埗 - 濡傛灉娌℃湁璁剧疆锛岄粯璁?000
   limits := qry.FieldByName('limits').AsInteger;
   if limits <= 0 then
     limits := 1000;
@@ -397,7 +397,7 @@ begin
   procName := qry.FieldByName('proc_name').AsString;
   setClause := '';
   
-  // 创建用于存储字段顺序的字�?
+  // 鍒涘缓鐢ㄤ簬瀛樺偍瀛楁椤哄簭鐨勫瓧鍏?
   orderedFields := TDictionary<string, Integer>.Create;
   sortedFields := TList<TPair<string, string>>.Create;
   
@@ -410,7 +410,7 @@ begin
       qryParams.Parameters.ParamByName('ProcName').Value := procName;
       qryParams.Open;
       
-      // 将字段顺序信息存入字�?
+      // 灏嗗瓧娈甸『搴忎俊鎭瓨鍏ュ瓧鍏?
       while not qryParams.Eof do
       begin
         orderedFields.Add(qryParams.FieldByName('para_name').AsString, 
@@ -437,7 +437,7 @@ begin
       if orderedFields.ContainsKey(sortedFields[i].Key) then
         fieldOrder[i] := orderedFields[sortedFields[i].Key]
       else
-        fieldOrder[i] := High(Integer); // 对于没有定义顺序的字段，给一个很大的顺序�?
+        fieldOrder[i] := High(Integer); // 瀵逛簬娌℃湁瀹氫箟椤哄簭鐨勫瓧娈碉紝缁欎竴涓緢澶х殑椤哄簭鍊?
     end;
     
     // 简单的冒泡排序
@@ -450,7 +450,7 @@ begin
           fieldOrder[j] := fieldOrder[j + 1];
           fieldOrder[j + 1] := tempOrder;
           
-          // 交换相应的字�?
+          // 浜ゆ崲鐩稿簲鐨勫瓧娈?
           tempField := sortedFields[j].Key;
           sortedFields[j] := TPair<string, string>.Create(sortedFields[j + 1].Key, 
                                                          sortedFields[j + 1].Value);
@@ -498,7 +498,7 @@ begin
   tableName := qry.FieldByName('table_name').AsString;
   procName := qry.FieldByName('proc_name').AsString;
   
-  // 获取所有参数名和默认�?
+  // 鑾峰彇鎵€鏈夊弬鏁板悕鍜岄粯璁ゅ€?
   fieldList := TStringList.Create;
   defaultValues := TDictionary<string, string>.Create;
   paramQry := TADOQuery.Create(nil);
@@ -514,18 +514,18 @@ begin
       fieldName := paramQry.FieldByName('para_name').AsString;
       fieldList.Add(fieldName);
       
-      // 先存储默认�?
+      // 鍏堝瓨鍌ㄩ粯璁ゅ€?
       if not paramQry.FieldByName('para_value').IsNull then
         defaultValues.Add(fieldName, paramQry.FieldByName('para_value').AsString);
         
-      // 如果参数表中有值，则覆盖默认�?
+      // 濡傛灉鍙傛暟琛ㄤ腑鏈夊€硷紝鍒欒鐩栭粯璁ゅ€?
       if Params.ContainsKey(fieldName) then
         defaultValues.AddOrSetValue(fieldName, Params[fieldName]);
         
       paramQry.Next;
     end;
     
-    // 构建字段名列表和值列�?
+    // 鏋勫缓瀛楁鍚嶅垪琛ㄥ拰鍊煎垪琛?
     fieldNames := '';
     fieldValues := '';
     for i := 0 to fieldList.Count - 1 do
@@ -564,7 +564,7 @@ function BuildSQL(qry: TAdoQuery; const ParamStr: string): string; overload;
 var
   params: TDictionary<string, string>;
 begin
-  // 将参数字符串转换为字�?
+  // 灏嗗弬鏁板瓧绗︿覆杞崲涓哄瓧鍏?
   params := StringToParams(ParamStr);
   try
     // 调用接受字典参数的BuildSQL函数
@@ -585,7 +585,7 @@ begin
   else
     raise EDatabaseException.Create('字段 "run_type" 未找到，无法确定SQL类型');
   
-  // 根据SQL类型调用相应的构建函�?
+  // 鏍规嵁SQL绫诲瀷璋冪敤鐩稿簲鐨勬瀯寤哄嚱鏁?
   if sqlType = 'select' then
     Result := BuildSelectSQL(qry, Params)
   else if sqlType = 'insert' then
@@ -617,7 +617,7 @@ begin
   if ParamStr = '' then
     Exit(params);
   
-  // 使用 ||| 分割参数�?
+  // 浣跨敤 ||| 鍒嗗壊鍙傛暟瀵?
   pairs := ParamStr.Split(['|||']);
   
   for i := 0 to Length(pairs) - 1 do
@@ -631,15 +631,15 @@ begin
       
     if colonPos > 0 then
     begin
-      // 分割键值对，只对键去空�?
+      // 鍒嗗壊閿€煎锛屽彧瀵归敭鍘荤┖鏍?
       key := Trim(Copy(pair, 1, colonPos - 1));
       value := Copy(pair, colonPos + 1, Length(pair));
       
-      // 如果是中文冒号，需要多偏移一个字�?
+      // 濡傛灉鏄腑鏂囧啋鍙凤紝闇€瑕佸鍋忕Щ涓€涓瓧绗?
       if pair[colonPos] = '：' then
         value := Copy(pair, colonPos + 2, Length(pair));
         
-      // 只有key不为空时才添�?
+      // 鍙湁key涓嶄负绌烘椂鎵嶆坊鍔?
       if key <> '' then
         params.Add(key, value);
     end;
@@ -714,9 +714,9 @@ begin
           end;
         rtUpdate, rtDelete:
           begin
-            ExecSQL;  // 执行更新或删�?
+            ExecSQL;  // 鎵ц鏇存柊鎴栧垹闄?
             Result := RowsAffected;  // 获取受影响的行数
-            // 不再抛出异常，因为更�?行也可能是正常情�?
+            // 涓嶅啀鎶涘嚭寮傚父锛屽洜涓烘洿鏂?琛屼篃鍙兘鏄甯告儏鍐?
           end;
         rtInsert:
           begin
@@ -784,13 +784,13 @@ begin
   end;
 end;
 
-// 新增函数：分离参�?
+// 鏂板鍑芥暟锛氬垎绂诲弬鏁?
 procedure SplitParameters(qry: TAdoQuery; var whereParams, noWhereParams: TAdoQuery);
 begin
   whereParams := TAdoQuery.Create(nil);
   noWhereParams := TAdoQuery.Create(nil);
   try
-    // 复制连接和基本设�?
+    // 澶嶅埗杩炴帴鍜屽熀鏈缃?
     whereParams.Connection := qry.Connection;
     noWhereParams.Connection := qry.Connection;
 
@@ -802,7 +802,7 @@ begin
     whereParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     whereParams.Open;
 
-    // 设置�?WHERE 参数查询
+    // 璁剧疆闈?WHERE 鍙傛暟鏌ヨ
     noWhereParams.SQL.Text := sql + ' AND is_where = 0';
     noWhereParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     noWhereParams.Open;
@@ -864,7 +864,7 @@ var
 begin
   Result := -1;
   msg := '';
-  sSQL := '';  // 初始�?SQL，以便在出错时也能显�?
+  sSQL := '';  // 鍒濆鍖?SQL锛屼互渚垮湪鍑洪敊鏃朵篃鑳芥樉绀?
   
   try
     // 1. 获取查询配置
@@ -908,7 +908,7 @@ begin
 
     Result := ExecuteAndGetResult(sSQL, aQry, RunType, TableName);
     
-    // 根据不同的操作类型判断执行结�?
+    // 鏍规嵁涓嶅悓鐨勬搷浣滅被鍨嬪垽鏂墽琛岀粨鏋?
     case RunType of
       rtUpdate, rtDelete: 
         begin
@@ -980,7 +980,7 @@ begin
     on E: Exception do
     begin
       Result := -1;
-      if msg = '' then  // 如果还没有设置错误消�?
+      if msg = '' then  // 濡傛灉杩樻病鏈夎缃敊璇秷鎭?
       begin
         msg := Format('doQry Error: %s', [E.Message]);
       {$IFDEF DEBUG}Winapi.Windows.OutputDebugString(PChar('doQry DEBUG SQL: ' + sSQL));{$ENDIF}
@@ -1069,7 +1069,7 @@ begin
         Result.Add(trimmedPart);
     end;
     
-    // 检查是否成功分�?
+    // 妫€鏌ユ槸鍚︽垚鍔熷垎鍓?
     if Result.Count = 0 then
       raise EDatabaseException.CreateFmt('无法分割参数字符串: "%s"', [ParamString]);
 
@@ -1078,7 +1078,7 @@ begin
       if Result[i].Trim = '' then
         Result.Delete(i);
 
-    // 如果分割后仍为空，抛出异�?
+    // 濡傛灉鍒嗗壊鍚庝粛涓虹┖锛屾姏鍑哄紓甯?
     if Result.Count = 0 then
       raise EDatabaseException.CreateFmt('分割后没有有效参数: "%s"', [ParamString]);
   except
@@ -1106,15 +1106,15 @@ begin
     qryParams.Parameters.ParamByName('ProcName').Value := qry.FieldByName('proc_name').AsString;
     qryParams.Open;
 
-    // 遍历所有参数定�?
+    // 閬嶅巻鎵€鏈夊弬鏁板畾涔?
     while not qryParams.Eof do
     begin
-      // 如果�?WHERE 条件字段
+      // 濡傛灉鏄?WHERE 鏉′欢瀛楁
       if qryParams.FieldByName('is_where').AsInteger = 1 then
       begin
         var fieldName := qryParams.FieldByName('para_name').AsString;
         
-        // 如果在传入参数中有这个字段的�?
+        // 濡傛灉鍦ㄤ紶鍏ュ弬鏁颁腑鏈夎繖涓瓧娈电殑鍊?
         if Params.ContainsKey(fieldName) then
         begin
           if not firstWhere then
@@ -1140,14 +1140,14 @@ var
   needQuote: Boolean;
   tempValue: string;
 begin
-  // 检查是否为空�?
+  // 妫€鏌ユ槸鍚︿负绌哄€?
   if (Value = '') or (Value = 'NULL') then
   begin
     Result := 'NULL';
     Exit;
   end;
   
-  // 检查是否需要引�?
+  // 妫€鏌ユ槸鍚﹂渶瑕佸紩鍙?
   needQuote := False;
   for i := 1 to Length(Value) do
   begin
@@ -1207,7 +1207,7 @@ begin
   end;
 end;
 
-// 添加一个新函数来检查表的主键字�?
+// 娣诲姞涓€涓柊鍑芥暟鏉ユ鏌ヨ〃鐨勪富閿瓧娈?
 function GetPrimaryKeyField(Connection: TADOConnection; const TableName: string): string;
 var
   qry: TADOQuery;
@@ -1232,7 +1232,7 @@ begin
         Result := qry.Fields[0].AsString;
     except
       // 如果上面的查询失败，可能不是PostgreSQL或表名有问题
-      // 返回默认�?
+      // 杩斿洖榛樿鍊?
       if CompareText(TableName, 'texts') = 0 then
         Result := 'text_id'
       else

@@ -1,4 +1,4 @@
-unit Test.DeepBase.Manager;
+﻿unit Test.DeepBase.Manager;
 
 {*******************************************************************************
   DeepBase Manager 模块单元测试
@@ -6,8 +6,8 @@ unit Test.DeepBase.Manager;
   测试内容:
   - Initialize / InitializeEx / InitializeWithDB
   - Finalize
-  - 错误�?
-  - 健康检�?
+  - 閿欒鐮?
+  - 鍋ュ悍妫€鏌?
 *******************************************************************************}
 
 interface
@@ -96,7 +96,7 @@ begin
   // 获取全局单例引用
   FManager := DeepBase.Manager.DeepBase;
   
-  // 确保全局单例被重�?  if FManager.IsInitialized then
+  // 纭繚鍏ㄥ眬鍗曚緥琚噸缃?  if FManager.IsInitialized then
     FManager.Finalize;
 
   RegisterManagerConnectionAdapter;
@@ -155,22 +155,22 @@ end;
 
 procedure TTestDeepBaseManager.Test_Finalize_WithoutInit;
 begin
-  // 在未初始化的情况下调�?Finalize 不应该崩�?
+  // 鍦ㄦ湭鍒濆鍖栫殑鎯呭喌涓嬭皟鐢?Finalize 涓嶅簲璇ュ穿婧?
   FManager.Finalize;
   // 如果执行到这里，说明没有崩溃
-  Assert.Pass('未初始化时调�?Finalize 没有抛出异常');
+  Assert.Pass('鏈垵濮嬪寲鏃惰皟鐢?Finalize 娌℃湁鎶涘嚭寮傚父');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeEx_ReturnsErrorMsg;
 var
   InitResult: Boolean;
 begin
-  // 使用内存数据库测�?InitializeWithDB (InitializeEx 需�?root.txt)
+  // 浣跨敤鍐呭瓨鏁版嵁搴撴祴璇?InitializeWithDB (InitializeEx 闇€瑕?root.txt)
   FManager.Finalize;
   InitResult := FManager.InitializeWithDB(':memory:');
   
   Assert.IsTrue(InitResult, 'InitializeWithDB 应该成功');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');
 end;
 
 procedure TTestDeepBaseManager.Test_HealthCheck_AfterInit;
@@ -189,7 +189,7 @@ procedure TTestDeepBaseManager.Test_HealthCheck_BeforeInit_ShouldFail;
 var
   Health: THealthCheckResult;
 begin
-  // 不调�?Initialize
+  // 涓嶈皟鐢?Initialize
   Health := FManager.HealthCheck;
   
   Assert.IsFalse(Health.IsHealthy, 'HealthCheck should be unhealthy before initialization');
@@ -219,7 +219,7 @@ begin
   FManager.InitializeWithDB(':memory:');
   
   Assert.AreEqual(DeepBase_VERSION, DeepBase_VERSION, 'Version constant should exist');
-  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 应该�?True');
+  Assert.IsTrue(FManager.IsInitialized, 'IsInitialized 搴旇涓?True');
 end;
 
 procedure TTestDeepBaseManager.Test_InitializeWithDB_WithoutConnectionAdapter_ShouldFailClearly;

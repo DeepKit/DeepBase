@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   SamplePlugin - DeepBase Sample Plugin
   
   Demonstrates how to create a plugin for DeepBase framework.

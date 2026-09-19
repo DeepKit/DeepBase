@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.LLM.Providers - Provider-specific request/response formatting
 
   Contains HTTP request body builders and response parsers for each

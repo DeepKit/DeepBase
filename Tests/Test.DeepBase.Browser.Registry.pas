@@ -1,4 +1,4 @@
-unit Test.DeepBase.Browser.Registry;
+﻿unit Test.DeepBase.Browser.Registry;
 
 interface
 

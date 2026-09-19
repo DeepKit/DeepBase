@@ -1,16 +1,16 @@
-{ ============================================================================
-  Test.Regression.BUG066_PathTraversal - 路径遍历攻击漏洞回归测试
+﻿{ ============================================================================
+  Test.Regression.BUG066_PathTraversal - 璺緞閬嶅巻鏀诲嚮婕忔礊鍥炲綊娴嬭瘯
 
-  BUG-066: 路径遍历攻击漏洞
+  BUG-066: 璺緞閬嶅巻鏀诲嚮婕忔礊
   
-  原问�? 文件监控缺乏路径遍历验证，可通过../访问系统敏感文件
+  鍘熼棶棰? 鏂囦欢鐩戞帶缂轰箯璺緞閬嶅巻楠岃瘉锛屽彲閫氳繃../璁块棶绯荤粺鏁忔劅鏂囦欢
   
-  修复方案: 实现严格的路径规范化和验证函数，限制监控范围
+  淇鏂规: 瀹炵幇涓ユ牸鐨勮矾寰勮鑼冨寲鍜岄獙璇佸嚱鏁帮紝闄愬埗鐩戞帶鑼冨洿
   
-  修复日期: 2025-01-27
-  文件: Core/DeepBase.FileWatcher.pas
-  优先�? P1 (High)
-  分类: Security
+  淇鏃ユ湡: 2025-01-27
+  鏂囦欢: Core/DeepBase.FileWatcher.pas
+  浼樺厛绾? P1 (High)
+  鍒嗙被: Security
   ============================================================================ }
 
 unit Test.Regression.BUG066_PathTraversal;
@@ -44,15 +44,15 @@ type
     procedure TearDown; override;
     
     [Test]
-    [Description('验证 ../ 路径遍历被阻�?)]
+    [Description('楠岃瘉 ../ 璺緞閬嶅巻琚樆姝?)]
     procedure Test_DotDotSlash_IsBlocked;
     
     [Test]
-    [Description('验证绝对路径外部访问被阻�?)]
+    [Description('楠岃瘉缁濆璺緞澶栭儴璁块棶琚樆姝?)]
     procedure Test_AbsolutePathOutside_IsBlocked;
     
     [Test]
-    [Description('验证路径规范化函数存�?)]
+    [Description('楠岃瘉璺緞瑙勮寖鍖栧嚱鏁板瓨鍦?)]
     procedure Test_PathNormalization_Exists;
   end;
 
@@ -67,7 +67,7 @@ end;
 
 function TBug066_PathTraversalTest.GetBugDescription: string;
 begin
-  Result := '路径遍历攻击漏洞';
+  Result := '璺緞閬嶅巻鏀诲嚮婕忔礊';
 end;
 
 function TBug066_PathTraversalTest.GetFixDate: string;
@@ -104,15 +104,15 @@ var
 begin
   LogTestStart('Test_DotDotSlash_IsBlocked');
   
-  // 构造恶意路�?
+  // 鏋勯€犳伓鎰忚矾寰?
   MaliciousPath := TPath.Combine(FTempDir, '..\..\..\Windows\System32\config');
   
-  // 规范化后应该检测到路径遍历
+  // 瑙勮寖鍖栧悗搴旇妫€娴嬪埌璺緞閬嶅巻
   NormalizedPath := TPath.GetFullPath(MaliciousPath);
   
-  // 验证规范化后的路径不在原始目录内
+  // 楠岃瘉瑙勮寖鍖栧悗鐨勮矾寰勪笉鍦ㄥ師濮嬬洰褰曞唴
   Assert.IsFalse(NormalizedPath.StartsWith(FTempDir),
-    '路径遍历攻击应该被检测到');
+    '璺緞閬嶅巻鏀诲嚮搴旇琚娴嬪埌');
   
   LogTestEnd('Test_DotDotSlash_IsBlocked', True);
 end;
@@ -125,9 +125,9 @@ begin
   
   ExternalPath := 'C:\Windows\System32';
   
-  // 验证外部绝对路径不在监控目录�?
+  // 楠岃瘉澶栭儴缁濆璺緞涓嶅湪鐩戞帶鐩綍鍐?
   Assert.IsFalse(ExternalPath.StartsWith(FTempDir),
-    '外部绝对路径应该被识别为不在监控范围�?);
+    '澶栭儴缁濆璺緞搴旇琚瘑鍒负涓嶅湪鐩戞帶鑼冨洿鍐?);
   
   LogTestEnd('Test_AbsolutePathOutside_IsBlocked', True);
 end;
@@ -146,20 +146,20 @@ begin
     SourcePath := '..\Core\DeepBase.FileWatcher.pas';
     if not TFile.Exists(SourcePath) then
     begin
-      Assert.Pass('源文件不可访问，跳过静态分析测�?);
+      Assert.Pass('婧愭枃浠朵笉鍙闂紝璺宠繃闈欐€佸垎鏋愭祴璇?);
       Exit;
     end;
   end;
   
   SourceCode := TFile.ReadAllText(SourcePath);
   
-  // 验证存在路径验证相关代码
+  // 楠岃瘉瀛樺湪璺緞楠岃瘉鐩稿叧浠ｇ爜
   Assert.IsTrue(
     SourceCode.Contains('GetFullPath') or 
     SourceCode.Contains('NormalizePath') or
     SourceCode.Contains('ValidatePath') or
     SourceCode.Contains('IsValidPath'),
-    '代码应该包含路径规范化或验证函数');
+    '浠ｇ爜搴旇鍖呭惈璺緞瑙勮寖鍖栨垨楠岃瘉鍑芥暟');
   
   LogTestEnd('Test_PathNormalization_Exists', True);
 end;

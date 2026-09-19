@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DeepFlow.PBT - Property-based tests for the DeepFlow
   engine pause/resume round-trip and priority-queue sort invariant.
 

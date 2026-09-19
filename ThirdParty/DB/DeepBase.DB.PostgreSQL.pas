@@ -1,4 +1,4 @@
-unit DeepBase.DB.PostgreSQL;
+﻿unit DeepBase.DB.PostgreSQL;
 
 {*******************************************************************************
   DeepBase PostgreSQL Driver Adapter

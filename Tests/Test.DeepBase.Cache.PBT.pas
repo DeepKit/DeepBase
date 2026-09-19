@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Cache.PBT - Property-based tests for TCache FIFO eviction.
 
   Properties covered (deepbase-round2-fixes):

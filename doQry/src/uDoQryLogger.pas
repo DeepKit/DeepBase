@@ -1,4 +1,4 @@
-unit uDoQryLogger;
+﻿unit uDoQryLogger;
 
 interface
 

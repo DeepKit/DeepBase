@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.SQL.Security.PBT - Property-based tests for SQL safety.
 
   Properties covered (deepbase-round2-fixes):

@@ -1,4 +1,4 @@
-unit TypInfo;
+﻿unit TypInfo;
 interface
 uses
   System.TypInfo;

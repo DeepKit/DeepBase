@@ -1,4 +1,4 @@
-unit DeepBase.LLM.ConfigBridge;
+﻿unit DeepBase.LLM.ConfigBridge;
 
 interface
 

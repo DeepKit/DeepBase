@@ -1,4 +1,4 @@
-unit Test.Tools.UpdaterHelper;
+﻿unit Test.Tools.UpdaterHelper;
 
 interface
 

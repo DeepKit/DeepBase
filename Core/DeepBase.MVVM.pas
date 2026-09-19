@@ -5,7 +5,7 @@
   Description: Provides MVVM infrastructure building on DeepBase.DataBinding.
                Includes ViewModel base class, Command pattern, and validation.
   
-  Thread Safety: TAsyncCommand uses ITask for background execution.
+  Thread Safety: TAsyncCommand uses TManagedWorker for background execution.
                  Other classes should be used from the main thread only.
   
   Usage:
@@ -28,8 +28,10 @@ uses
   System.Classes,
   System.Rtti,
   System.Threading,
+  System.SyncObjs,
   System.Generics.Collections,
-  DeepBase.DataBinding;
+  DeepBase.DataBinding,
+  DeepBase.ManagedWorker;
 
 type
   // Forward declarations
@@ -152,12 +154,51 @@ type
   /// Async command state
   /// </summary>
   TAsyncCommandState = (acsIdle, acsRunning, acsCancelling, acsCancelled, acsCompleted, acsFailed);
+
+  /// <summary>B4（WO-20260919-AUDIT-乙）：异步执行上下文——引用计数，生命周期独立于宿主。
+  /// 工作体只触碰上下文（不再解引用宿主裸指针）；UI 回调经 Finish 在上下文守护锁内
+  /// 检查宿主注册态：宿主 Destroy 先 UnregisterOwner 再释放对象 → 迟到的 Finish 丢弃回调，
+  /// 消除旧 ITask 捕获 Self 在超时抛弃后访问已释放宿主的 UAF（审计 T3 同族）。</summary>
+  IAsyncCommandContext = interface
+    ['{9F4D2C71-5E0B-4A6C-8D3F-2C7B9E4A6D10}']
+    function GetCancelled: Boolean;
+    procedure SetCancelled(Value: Boolean);
+    procedure Run(const IsCancelled: TFunc<Boolean>);
+    procedure Finish(AState: TAsyncCommandState; const AError: string);
+    procedure UnregisterOwner;
+  end;
   
   /// <summary>
   /// Async command - runs in background thread
   /// </summary>
   TAsyncCommand = class(TInterfacedObject, ICommand)
   private
+    type
+      /// <summary>IAsyncCommandContext 实现。嵌套类与外围类互访 private：
+      /// Finish 在自身锁内触碰宿主字段/方法，与 Destroy 的 UnregisterOwner 串行化。</summary>
+      TContext = class(TInterfacedObject, IAsyncCommandContext)
+      private
+        FLock: TCriticalSection;
+        FOwner: TAsyncCommand;   // 仅 FRegistered=True 时有效
+        FRegistered: Boolean;
+        FCancelled: Boolean;
+        FExecuteProc: TAsyncExecuteProc;
+        FExecuteProcParam: TAsyncExecuteProcParam;
+        FHasParameter: Boolean;
+        FParameter: TValue;
+      public
+        constructor Create(AOwner: TAsyncCommand);
+        destructor Destroy; override;
+        function GetCancelled: Boolean;
+        procedure SetCancelled(Value: Boolean);
+        procedure Run(const IsCancelled: TFunc<Boolean>);
+        procedure Finish(AState: TAsyncCommandState; const AError: string);
+        procedure UnregisterOwner;
+      end;
+  private
+    FContext: IAsyncCommandContext;
+    // B4：后台执行改由 TManagedWorker 承载（取代 ITask 裸捕获 Self + FCancelled 裸读）
+    FWorker: TManagedWorker;
     FExecuteProc: TAsyncExecuteProc;
     FExecuteProcParam: TAsyncExecuteProcParam;
     FCanExecuteFunc: TCanExecuteFunc;
@@ -165,8 +206,6 @@ type
     FCanExecuteChangedHandlers: TList<TCanExecuteChangedEvent>;
     FHasParameter: Boolean;
     FState: TAsyncCommandState;
-    FTask: ITask;
-    FCancelled: Boolean;
     FViewModel: TViewModelBase;
     FOnCompleted: TProc;
     FOnError: TProc<Exception>;
@@ -483,7 +522,6 @@ begin
   FCanExecuteFunc := ACanExecute;
   FHasParameter := False;
   FState := acsIdle;
-  FCancelled := False;
   FCanExecuteChangedHandlers := TList<TCanExecuteChangedEvent>.Create;
 end;
 
@@ -496,32 +534,27 @@ begin
   FCanExecuteFuncParam := ACanExecute;
   FHasParameter := True;
   FState := acsIdle;
-  FCancelled := False;
   FCanExecuteChangedHandlers := TList<TCanExecuteChangedEvent>.Create;
 end;
 
 destructor TAsyncCommand.Destroy;
 begin
   Cancel;
-  if FTask <> nil then
+  if FWorker <> nil then
   begin
-    // BIZ-R3-015 FIX: Use finite timeout (5 seconds) instead of INFINITE to
-    // prevent hang during app shutdown if FExecuteProc blocks and doesn't check
-    // IsCancelledFunc. If the task doesn't complete in time, log a warning and
-    // proceed with cleanup rather than hanging indefinitely.
-    try
-      Wait(5000);
-    except
-      on E: Exception do
-      begin
-        // Swallow exceptions during destruction, but ensure FTask is cleared
-        FTask := nil;
-      end;
-    end;
-    // If Wait timed out, FTask may still be non-nil. Clear it to avoid
-    // accessing freed memory during finalization.
-    FTask := nil;
+    // BIZ-R3-015 的 5s 时限保留，但收敛方式升级为 B4 纪律：超时不再裸弃任务，
+    // 而是 Evacuate 移交隔离区（worker 跑完由 janitor 回收），随后 UnregisterOwner
+    // 关闸 UI 回调 → 宿主可安全释放，不再存在“任务在跑而 Self 悬垂解引用”窗口
+    FWorker.Cancel;
+    if FWorker.Wait(5000) then
+      FWorker.Free
+    else
+      FWorker.Evacuate;
+    FWorker := nil;
   end;
+  if FContext <> nil then
+    FContext.UnregisterOwner;
+  FContext := nil;
   FreeAndNil(FCanExecuteChangedHandlers);
   inherited;
 end;
@@ -537,7 +570,7 @@ end;
 
 function TAsyncCommand.GetIsCancelled: Boolean;
 begin
-  Result := FCancelled;
+  Result := (FContext <> nil) and FContext.GetCancelled;
 end;
 
 function TAsyncCommand.GetIsRunning: Boolean;
@@ -553,101 +586,179 @@ begin
   DoExecute(Parameter);
 end;
 
+{ TAsyncCommand.TContext }
+
+constructor TAsyncCommand.TContext.Create(AOwner: TAsyncCommand);
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+  FOwner := AOwner;
+  FRegistered := True;
+  FCancelled := False;
+end;
+
+destructor TAsyncCommand.TContext.Destroy;
+begin
+  FreeAndNil(FLock);
+  inherited;
+end;
+
+function TAsyncCommand.TContext.GetCancelled: Boolean;
+begin
+  FLock.Enter;
+  try
+    Result := FCancelled;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TAsyncCommand.TContext.SetCancelled(Value: Boolean);
+begin
+  FLock.Enter;
+  try
+    FCancelled := Value;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TAsyncCommand.TContext.Run(const IsCancelled: TFunc<Boolean>);
+begin
+  // 工作体唯一入口：只读上下文自身字段（DoExecute 时从宿主拷贝），不碰宿主裸指针
+  if FHasParameter then
+  begin
+    if Assigned(FExecuteProcParam) then
+      FExecuteProcParam(FParameter, IsCancelled);
+  end
+  else
+  begin
+    if Assigned(FExecuteProc) then
+      FExecuteProc(IsCancelled);
+  end;
+end;
+
+procedure TAsyncCommand.TContext.Finish(AState: TAsyncCommandState; const AError: string);
+var
+  CallbackError: Exception;
+  LDone: TProc;
+begin
+  // 守护锁内触碰宿主：与 Destroy 的 UnregisterOwner 互斥，保证 FRegistered=True
+  // 时宿主必存活（对象释放在 Unregister 返回之后）
+  FLock.Enter;
+  try
+    if not FRegistered then
+      Exit; // 宿主已销毁：丢弃迟到回调（抛弃场景的正确语义）
+    if AState = acsFailed then
+      FOwner.FLastError := AError;
+    FOwner.SetState(AState);
+    if FOwner.FViewModel <> nil then
+    begin
+      FOwner.FViewModel.EndBusy;
+      if AState = acsFailed then
+        FOwner.FViewModel.ErrorMessage := AError;
+    end;
+    if AState = acsFailed then
+    begin
+      if Assigned(FOwner.FOnError) then
+      begin
+        CallbackError := Exception.Create(AError);
+        try
+          FOwner.FOnError(CallbackError);
+        finally
+          CallbackError.Free;
+        end;
+      end;
+    end
+    else if (AState = acsCompleted) and Assigned(FOwner.FOnCompleted) then
+    begin
+      LDone := FOwner.FOnCompleted;
+      LDone();
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TAsyncCommand.TContext.UnregisterOwner;
+begin
+  FLock.Enter;
+  try
+    FRegistered := False;
+    FOwner := nil;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TAsyncCommand.DoExecute(const Parameter: TValue);
 var
-  SelfRef: TAsyncCommand;
-  IsCancelledFunc: TFunc<Boolean>;
+  CtxImpl: TContext;
+  Ctx: IAsyncCommandContext;
+  LWorker: TManagedWorker;
 begin
+  // 复用前收敛上一轮已结束的 worker（CanExecute 已拦 acsRunning，无并发窗口）；
+  // 旧上下文若仍有被抛弃任务在跑，其迟到的 Finish 经 Unregister 关闸
+  if FWorker <> nil then
+  begin
+    FWorker.Cancel;
+    FWorker.Free;
+    FWorker := nil;
+  end;
+  if FContext <> nil then
+    FContext.UnregisterOwner;
+
   SetState(acsRunning);
   FLastError := '';
-  FCancelled := False;
-  
+
   // Set ViewModel busy
   if FViewModel <> nil then
     FViewModel.BeginBusy;
-  
-  // Create cancellation check function
-  SelfRef := Self;
-  IsCancelledFunc := function: Boolean
-    begin
-      Result := SelfRef.FCancelled;
-    end;
-  
-  // Create and start task
-  FTask := TTask.Create(
-    procedure
-    begin
-      try
-        try
-          if FHasParameter then
-          begin
-            if Assigned(FExecuteProcParam) then
-              FExecuteProcParam(Parameter, IsCancelledFunc);
-          end
-          else
-          begin
-            if Assigned(FExecuteProc) then
-              FExecuteProc(IsCancelledFunc);
-          end;
 
-          // Check if cancelled
-          if FCancelled then
+  CtxImpl := TContext.Create(Self);
+  CtxImpl.FHasParameter := FHasParameter;
+  CtxImpl.FExecuteProc := FExecuteProc;
+  CtxImpl.FExecuteProcParam := FExecuteProcParam;
+  CtxImpl.FParameter := Parameter;
+  Ctx := CtxImpl; // 引用计数接管；下方 FContext 赋值后宿主与闭包共持
+  FContext := Ctx;
+
+  // B4：工作体捕获的是引用计数上下文（非宿主裸指针）；UI 回调用 Queue 投递主线程，
+  // 被抛弃的 worker 不会因主线程退出泵送而永久挂起（旧 Synchronize 阻塞会卡隔离区回收）
+  LWorker := TManagedWorker.Create(
+    procedure
+    var
+      LState: TAsyncCommandState;
+      LErr: string;
+    begin
+      LState := acsCompleted;
+      LErr := '';
+      try
+        // 取消检查闭包内联为实参：若存为 DoExecute 局部变量，会与捕获帧构成
+        // 帧<->闭包自引用环，钉死 Ctx 造成泄漏
+        Ctx.Run(
+          function: Boolean
           begin
-            TThread.Synchronize(nil,
-              procedure
-              begin
-                SelfRef.SetState(acsCancelled);
-                if SelfRef.FViewModel <> nil then
-                  SelfRef.FViewModel.EndBusy;
-              end);
-          end
-          else
-          begin
-            TThread.Synchronize(nil,
-              procedure
-              begin
-                SelfRef.SetState(acsCompleted);
-                if SelfRef.FViewModel <> nil then
-                  SelfRef.FViewModel.EndBusy;
-                if Assigned(SelfRef.FOnCompleted) then
-                  SelfRef.FOnCompleted();
-              end);
-          end;
-        except
-          on E: Exception do
-          begin
-            var ErrorMessage := E.Message;
-            SelfRef.FLastError := ErrorMessage;
-            TThread.Synchronize(nil,
-              procedure
-              var
-                CallbackError: Exception;
-              begin
-                SelfRef.SetState(acsFailed);
-                if SelfRef.FViewModel <> nil then
-                begin
-                  SelfRef.FViewModel.EndBusy;
-                  SelfRef.FViewModel.ErrorMessage := SelfRef.FLastError;
-                end;
-                if Assigned(SelfRef.FOnError) then
-                begin
-                  CallbackError := Exception.Create(ErrorMessage);
-                  try
-                    SelfRef.FOnError(CallbackError);
-                  finally
-                    CallbackError.Free;
-                  end;
-                end;
-              end);
-          end;
+            Result := Ctx.GetCancelled;
+          end);
+        if Ctx.GetCancelled then
+          LState := acsCancelled;
+      except
+        on E: Exception do
+        begin
+          LState := acsFailed;
+          // BUG-438 同族：except 结束后 E 由 RTL 自动释放，只携带消息字符串出块
+          LErr := E.Message;
         end;
-      finally
-        // Break the anonymous-method self-cycle in DoExecute's captured state.
-        IsCancelledFunc := nil;
       end;
-    end);
-  
-  FTask.Start;
+      TThread.Queue(nil,
+        procedure
+        begin
+          Ctx.Finish(LState, LErr);
+        end);
+    end, 'AsyncCommand');
+  FWorker := LWorker;
+  FWorker.Start;
 end;
 
 function TAsyncCommand.CanExecute(const Parameter: TValue): Boolean;
@@ -699,43 +810,36 @@ begin
   if FState = acsRunning then
   begin
     SetState(acsCancelling);
-    FCancelled := True;
+    if FContext <> nil then
+      FContext.SetCancelled(True);
   end;
 end;
 
 procedure TAsyncCommand.Wait(Timeout: Cardinal);
 var
   StartTick: Cardinal;
-  TimedOut: Boolean;
-  Completed: Boolean;
 begin
-  if FTask = nil then
+  if FWorker = nil then
     Exit;
 
   if TThread.CurrentThread.ThreadID <> MainThreadID then
   begin
-    if FTask.Wait(Timeout) then
-      FTask := nil;
+    FWorker.Wait(Timeout);
     Exit;
   end;
 
+  // 主线程：自旋泵消息队列，让排队中的 Finish 回调在等待期间得到执行
   StartTick := TThread.GetTickCount;
-  Completed := False;
-  repeat
-    if FTask.Wait(10) then
-    begin
-      CheckSynchronize(0);
-      Completed := True;
+  while not FWorker.Finished do
+  begin
+    if FWorker.Wait(10) then
       Break;
-    end;
-
     CheckSynchronize(10);
-    TimedOut := (Timeout <> INFINITE) and
-      ((TThread.GetTickCount - StartTick) >= Timeout);
-  until TimedOut;
-
-  if Completed then
-    FTask := nil;
+    if (Timeout <> INFINITE) and
+      ((TThread.GetTickCount - StartTick) >= Timeout) then
+      Break;
+  end;
+  CheckSynchronize(0);
 end;
 
 { TViewModelBase }

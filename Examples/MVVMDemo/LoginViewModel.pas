@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   LoginViewModel - MVVM Demo Login ViewModel
   
   Description: Demonstrates TViewModelBase, TRelayCommand, TAsyncCommand,

@@ -39,6 +39,8 @@ contains
   DeepBase.Manager in 'Core\DeepBase.Manager.pas',
   DeepBase.Manager.Schema in 'Core\DeepBase.Manager.Schema.pas',
   DeepBase.Manager.Operational in 'Core\DeepBase.Manager.Operational.pas',
+
+  DeepBase.ManagedWorker in 'Core\DeepBase.ManagedWorker.pas',
   DeepBase.Plugin in 'Core\DeepBase.Plugin.pas',
   DeepBase.PluginManager in 'Core\DeepBase.PluginManager.pas',
   DeepBase.Config in 'Core\DeepBase.Config.pas',

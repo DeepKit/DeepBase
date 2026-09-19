@@ -1,4 +1,4 @@
-unit Entity.Customer;
+﻿unit Entity.Customer;
 
 {*******************************************************************************
   CRUD Application Template - Customer Entity

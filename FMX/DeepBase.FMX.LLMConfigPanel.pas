@@ -1,14 +1,14 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.LLMConfigPanel - FMX LLM ����������
   
-  �汾: 1.0
-  ˵��: �ṩ LLM ���õĿ��ӻ��༭���� (FMX ��ƽ̨�汾)
-  ����:
-    - Provider ѡ�� (OpenAI/Anthropic/Azure/LiteLLM/Ollama/Custom)
-    - API Key / Base URL ����
-    - Model / MaxTokens / Temperature ����
-    - ��������
-    - ������ʷ��ʾ
+  版本: 1.0
+  说明: 提供 LLM 配置的可视化编辑界面 (FMX 跨平台版本)
+  功能:
+    - Provider 选择 (OpenAI/Anthropic/Azure/LiteLLM/Ollama/Custom)
+    - API Key / Base URL 配置
+    - Model / MaxTokens / Temperature 配置
+    - 测试连接
+    - 调用历史显示
   ============================================================================ }
 
 unit DeepBase.FMX.LLMConfigPanel;
@@ -41,53 +41,53 @@ uses
 
 type
   /// <summary>
-  /// FMX LLM ���������� - �����봴�������� .fmx
+  /// FMX LLM 配置面板组件 - 纯代码创建，无需 .fmx
   /// </summary>
   TFMXLLMConfigPanel = class(TLayout)
   private
-    // ����������
+    // 配置区容器
     FConfigLayout: TLayout;
     
-    // Provider ��
+    // Provider 行
     FProviderLabel: TLabel;
     FProviderCombo: TComboBox;
     
-    // Base URL ��
+    // Base URL 行
     FBaseUrlLabel: TLabel;
     FBaseUrlEdit: TEdit;
     
-    // API Key ��
+    // API Key 行
     FApiKeyLabel: TLabel;
     FApiKeyEdit: TEdit;
     
-    // Model ��
+    // Model 行
     FModelLabel: TLabel;
     FModelEdit: TEdit;
     
-    // Max Tokens ��
+    // Max Tokens 行
     FMaxTokensLabel: TLabel;
     FMaxTokensEdit: TSpinBox;
     
-    // Temperature ��
+    // Temperature 行
     FTemperatureLabel: TLabel;
     FTemperatureEdit: TSpinBox;
     
-    // ��ť��
+    // 按钮区
     FButtonLayout: TLayout;
     FTestButton: TButton;
     FSaveButton: TButton;
     FResetButton: TButton;
     
-    // ״̬��ǩ
+    // 状态标签
     FStatusLabel: TLabel;
     
-    // ��ʷ��
+    // 历史区
     FHistoryLayout: TLayout;
     FHistoryLabel: TLabel;
     FHistoryGrid: TStringGrid;
     FClearHistoryButton: TButton;
     
-    // �ڲ�״̬
+    // 内部状态
     FConfigName: string;
     FConnection: TComponent;
     FLLM: TDeepBaseLLM;
@@ -122,33 +122,33 @@ type
     destructor Destroy; override;
     
     /// <summary>
-    /// ˢ�����ã������ݿ����¼��أ�
+    /// 刷新配置（从数据库重新加载）
     /// </summary>
     procedure RefreshConfig;
     
     /// <summary>
-    /// ˢ�����ݣ�����+��ʷ��
+    /// 刷新数据（配置+历史）
     /// </summary>
     procedure RefreshData;
     
     /// <summary>
-    /// ���� LLM ����������ѡ�������ڲ�������
+    /// 设置 LLM 管理器（可选，否则内部创建）
     /// </summary>
     procedure SetLLM(ALLM: TDeepBaseLLM);
     
   published
     /// <summary>
-    /// ��������
+    /// 配置名称
     /// </summary>
     property ConfigName: string read FConfigName write SetConfigName;
     
     /// <summary>
-    /// ���ݿ�����
+    /// 数据库连接
     /// </summary>
     property Connection: TComponent read FConnection write SetConnection;
     
     /// <summary>
-    /// ���ñ���¼�
+    /// 配置变更事件
     /// </summary>
     property OnConfigChanged: TNotifyEvent read FOnConfigChanged write FOnConfigChanged;
   end;
@@ -193,7 +193,7 @@ var
   Y: Single;
   Item: TListBoxItem;
 begin
-  // ========== ������ ==========
+  // ========== 配置区 ==========
   FConfigLayout := TLayout.Create(Self);
   FConfigLayout.Parent := Self;
   FConfigLayout.Align := TAlignLayout.Top;
@@ -202,7 +202,7 @@ begin
   
   Y := 0;
   
-  // Provider ��
+  // Provider 行
   FProviderLabel := TLabel.Create(Self);
   FProviderLabel.Parent := FConfigLayout;
   FProviderLabel.Position.X := 0;
@@ -246,7 +246,7 @@ begin
   
   Y := Y + ROW_HEIGHT + 8;
   
-  // Base URL ��
+  // Base URL 行
   FBaseUrlLabel := TLabel.Create(Self);
   FBaseUrlLabel.Parent := FConfigLayout;
   FBaseUrlLabel.Position.X := 0;
@@ -263,7 +263,7 @@ begin
   
   Y := Y + ROW_HEIGHT + 8;
   
-  // API Key ��
+  // API Key 行
   FApiKeyLabel := TLabel.Create(Self);
   FApiKeyLabel.Parent := FConfigLayout;
   FApiKeyLabel.Position.X := 0;
@@ -281,7 +281,7 @@ begin
   
   Y := Y + ROW_HEIGHT + 8;
   
-  // Model ��
+  // Model 行
   FModelLabel := TLabel.Create(Self);
   FModelLabel.Parent := FConfigLayout;
   FModelLabel.Position.X := 0;
@@ -299,7 +299,7 @@ begin
   
   Y := Y + ROW_HEIGHT + 8;
   
-  // Max Tokens ��
+  // Max Tokens 行
   FMaxTokensLabel := TLabel.Create(Self);
   FMaxTokensLabel.Parent := FConfigLayout;
   FMaxTokensLabel.Position.X := 0;
@@ -318,7 +318,7 @@ begin
   FMaxTokensEdit.Value := 4096;
   FMaxTokensEdit.DecimalDigits := 0;
   
-  // Temperature (ͬһ��)
+  // Temperature (同一行)
   FTemperatureLabel := TLabel.Create(Self);
   FTemperatureLabel.Parent := FConfigLayout;
   FTemperatureLabel.Position.X := 220;
@@ -339,7 +339,7 @@ begin
   
   Y := Y + ROW_HEIGHT + 12;
   
-  // ========== ��ť�� ==========
+  // ========== 按钮区 ==========
   FButtonLayout := TLayout.Create(Self);
   FButtonLayout.Parent := FConfigLayout;
   FButtonLayout.Position.X := 0;
@@ -376,7 +376,7 @@ begin
   
   Y := Y + 40;
   
-  // ״̬��ǩ
+  // 状态标签
   FStatusLabel := TLabel.Create(Self);
   FStatusLabel.Parent := FConfigLayout;
   FStatusLabel.Position.X := 0;
@@ -386,7 +386,7 @@ begin
   FStatusLabel.Text := '';
   FStatusLabel.FontColor := TAlphaColorRec.Gray;
   
-  // ========== ��ʷ�� ==========
+  // ========== 历史区 ==========
   FHistoryLayout := TLayout.Create(Self);
   FHistoryLayout.Parent := Self;
   FHistoryLayout.Align := TAlignLayout.Client;
@@ -411,7 +411,7 @@ begin
   FHistoryGrid.Options := FHistoryGrid.Options + [TGridOption.RowSelect];
   FHistoryGrid.ReadOnly := True;
   
-  // �����
+  // 添加列
   with TStringColumn.Create(FHistoryGrid) do
   begin
     Parent := FHistoryGrid;
@@ -474,7 +474,7 @@ end;
 
 procedure TFMXLLMConfigPanel.LayoutControls;
 begin
-  // FMX ʹ�� Align �Զ����֣����������һЩ΢��
+  // FMX 使用 Align 自动布局，这里可以做一些微调
   if Assigned(FBaseUrlEdit) then
     FBaseUrlEdit.Width := Max(100, Width - 160);
     
@@ -498,7 +498,7 @@ begin
   begin
     FConnection := Value;
     
-    // ������ڲ� LLM���ͷ���
+    // 如果有内部 LLM，释放它
     if FOwnsLLM and Assigned(FLLM) then
     begin
       FreeAndNil(FLLM);
@@ -506,7 +506,7 @@ begin
       FOwnsLLM := False;
     end;
     
-    // �����µ� LLM ������
+    // 创建新的 LLM 管理器
     if Assigned(FConnection) then
     begin
       FLLM := TDeepBaseLLM.Create(FConnection);
@@ -537,17 +537,17 @@ var
 begin
   ProviderIdx := FProviderCombo.ItemIndex;
   
-  // ����Ĭ�� Base URL
+  // 设置默认 Base URL
   case ProviderIdx of
-    0: FBaseUrlEdit.Text := ''; // OpenAI - ʹ��Ĭ��
-    1: FBaseUrlEdit.Text := ''; // Anthropic - ʹ��Ĭ��
-    2: FBaseUrlEdit.Text := ''; // Azure - ��Ҫ�û���д
+    0: FBaseUrlEdit.Text := ''; // OpenAI - 使用默认
+    1: FBaseUrlEdit.Text := ''; // Anthropic - 使用默认
+    2: FBaseUrlEdit.Text := ''; // Azure - 需要用户填写
     3: FBaseUrlEdit.Text := 'http://localhost:4000'; // LiteLLM
     4: FBaseUrlEdit.Text := 'http://localhost:11434'; // Ollama
     5: FBaseUrlEdit.Text := ''; // Custom
   end;
   
-  // ����Ĭ�� Model
+  // 设置默认 Model
   case ProviderIdx of
     0: FModelEdit.Text := 'gpt-4o-mini';
     1: FModelEdit.Text := 'claude-3-haiku-20240307';
@@ -702,7 +702,7 @@ begin
   FTestButton.Enabled := False;
   
   try
-    // �ȱ��浱ǰ����
+    // 先保存当前配置
     SaveConfig;
     FLLM.RefreshConfigCache;
     

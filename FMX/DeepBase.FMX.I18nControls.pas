@@ -1,13 +1,13 @@
-{ ============================================================================
-  DeepBase.FMX.I18nControls - FMX 国际化控�?
+﻿{ ============================================================================
+  DeepBase.FMX.I18nControls - FMX 鍥介檯鍖栨帶浠?
 
-  版本: 1.1
-  说明: 自动翻译�?FMX 控件
-  控件:
-    - TFMXi18nLabel: 自动翻译�?Label
-    - TFMXi18nButton: 自动翻译�?Button
-    - TFMXi18nCheckBox: 自动翻译�?CheckBox
-    - TFMXi18nGroupBox: 自动翻译�?GroupBox
+  鐗堟湰: 1.1
+  璇存槑: 鑷姩缈昏瘧鐨?FMX 鎺т欢
+  鎺т欢:
+    - TFMXi18nLabel: 鑷姩缈昏瘧鐨?Label
+    - TFMXi18nButton: 鑷姩缈昏瘧鐨?Button
+    - TFMXi18nCheckBox: 鑷姩缈昏瘧鐨?CheckBox
+    - TFMXi18nGroupBox: 鑷姩缈昏瘧鐨?GroupBox
   ============================================================================ }
 
 unit DeepBase.FMX.I18nControls;
@@ -24,8 +24,8 @@ uses
 
 type
   /// <summary>
-  /// 自动翻译�?FMX Label 控件
-  /// 自动订阅语言变更通知，支持多个实例同时使�?
+  /// 鑷姩缈昏瘧鐨?FMX Label 鎺т欢
+  /// 鑷姩璁㈤槄璇█鍙樻洿閫氱煡锛屾敮鎸佸涓疄渚嬪悓鏃朵娇鐢?
   /// </summary>
   TFMXi18nLabel = class(TLabel)
   private
@@ -47,20 +47,20 @@ type
     destructor Destroy; override;
     
     /// <summary>
-    /// 刷新翻译
+    /// 鍒锋柊缈昏瘧
     /// </summary>
     procedure RefreshTranslation;
     
   published
     /// <summary>
-    /// 翻译键（如果为空，则使用 Text 作为键）
+    /// 缈昏瘧閿紙濡傛灉涓虹┖锛屽垯浣跨敤 Text 浣滀负閿級
     /// </summary>
     property TextKey: string read FTextKey write SetTextKey;
   end;
 
   /// <summary>
-  /// 自动翻译�?FMX Button 控件
-  /// 自动订阅语言变更通知，支持多个实例同时使�?
+  /// 鑷姩缈昏瘧鐨?FMX Button 鎺т欢
+  /// 鑷姩璁㈤槄璇█鍙樻洿閫氱煡锛屾敮鎸佸涓疄渚嬪悓鏃朵娇鐢?
   /// </summary>
   TFMXi18nButton = class(TButton)
   private
@@ -88,7 +88,7 @@ type
   end;
 
   /// <summary>
-  /// 自动翻译�?FMX CheckBox 控件
+  /// 鑷姩缈昏瘧鐨?FMX CheckBox 鎺т欢
   /// </summary>
   TFMXi18nCheckBox = class(TCheckBox)
   private
@@ -116,7 +116,7 @@ type
   end;
 
   /// <summary>
-  /// 自动翻译�?FMX GroupBox 控件
+  /// 鑷姩缈昏瘧鐨?FMX GroupBox 鎺т欢
   /// </summary>
   TFMXi18nGroupBox = class(TGroupBox)
   private
@@ -196,11 +196,11 @@ begin
   
   if not (csDesigning in ComponentState) then
   begin
-    // 保存原始文本
+    // 淇濆瓨鍘熷鏂囨湰
     if FOriginalText = '' then
       FOriginalText := Text;
       
-    // 订阅语言变更事件
+    // 璁㈤槄璇█鍙樻洿浜嬩欢
     SubscribeToLanguageChange;
     UpdateTranslation;
   end;

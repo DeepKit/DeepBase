@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   MainForm - MVVM Demo Main Form
   
   Description: Demonstrates MVVM pattern with data binding, commands,

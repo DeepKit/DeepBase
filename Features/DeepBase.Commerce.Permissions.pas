@@ -1,4 +1,4 @@
-unit DeepBase.Commerce.Permissions;
+﻿unit DeepBase.Commerce.Permissions;
 
 interface
 

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Exception - Unit Tests for Global Exception Handler Module
 
   Tests the actual API provided by DeepBase.Exception:

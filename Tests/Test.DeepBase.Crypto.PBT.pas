@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Crypto.PBT - Property-based tests for DeepBase.Crypto
 
   Properties covered (deepbase-round2-fixes):

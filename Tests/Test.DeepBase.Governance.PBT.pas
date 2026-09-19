@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Governance.PBT - Property tests for Round-2 governance fixes
   (deepbase-round2-fixes, sub-task 20.9).
 

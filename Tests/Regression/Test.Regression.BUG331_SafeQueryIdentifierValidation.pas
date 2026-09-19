@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.Regression.BUG331_SafeQueryIdentifierValidation - REVIEW5-DATA-002
 
   Verifies that SafeQuery validates and quotes schema identifiers:

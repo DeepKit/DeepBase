@@ -34,9 +34,34 @@ env:
   TEST_PLATFORM: Win64
 
 jobs:
+  encoding-gate:
+    name: Static Gates (source encoding + build ownership)
+    runs-on: [self-hosted, delphi-windows]
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check .pas encoding baseline (G1/G2/G3)
+        run: node .\09_工程脚本\encoding-gate\check_pas_encoding.js
+
+      - name: Negative sample test (gate must fail on injected violations)
+        run: node .\09_工程脚本\encoding-gate\test_negative_sample.js
+
+      - name: Build ownership gate (no unregistered orphan units, new-track blockade)
+        run: node .\09_工程脚本\build-ownership\check_build_ownership.js
+
+      - name: Build ownership negative sample test
+        run: node .\09_工程脚本\build-ownership\test_negative_sample.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]
+    needs: encoding-gate
     strategy:
       matrix:
         profile: [Minimal, Runtime, LLM, Speech, Commerce, Updater]

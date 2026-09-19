@@ -1,15 +1,15 @@
-unit DeepBase.CloudBackup;
+﻿unit DeepBase.CloudBackup;
 
 {*******************************************************************************
   DeepBase Framework - Cloud Backup & Restore
   
-  �ƶ˱��ݻָ�ģ�飬֧�֣�
-  - �������ݣ������ݱ����
-  - ѹ���洢��ZLib/LZMA��
-  - �汾��������汾������
-  - һ���ָ�
-  - ���ݼ��ܣ�AES-256��
-  - �Զ����ݵ���
+  云端备份恢复模块，支持：
+  - 增量备份（仅备份变更）
+  - 压缩存储（ZLib/LZMA）
+  - 版本管理（多版本保留）
+  - 一键恢复
+  - 备份加密（AES-256）
+  - 自动备份调度
   
   Author: DeepBase Team
   Created: 2025-11-30
@@ -24,58 +24,58 @@ uses
   System.Zip, System.ZLib, DeepBase.Exceptions;
 
 type
-  /// <summary>����״̬</summary>
+  /// <summary>备份状态</summary>
   TBackupStatus = (
-    bsIdle,           // ����
-    bsPreparing,      // ׼����
-    bsCompressing,    // ѹ����
-    bsEncrypting,     // ������
-    bsUploading,      // �ϴ���
-    bsDownloading,    // ������
-    bsDecrypting,     // ������
-    bsDecompressing,  // ��ѹ��
-    bsRestoring,      // �ָ���
-    bsCompleted,      // ���
-    bsError           // ����
+    bsIdle,           // 空闲
+    bsPreparing,      // 准备中
+    bsCompressing,    // 压缩中
+    bsEncrypting,     // 加密中
+    bsUploading,      // 上传中
+    bsDownloading,    // 下载中
+    bsDecrypting,     // 解密中
+    bsDecompressing,  // 解压中
+    bsRestoring,      // 恢复中
+    bsCompleted,      // 完成
+    bsError           // 错误
   );
 
-  /// <summary>��������</summary>
+  /// <summary>备份类型</summary>
   TBackupType = (
-    btFull,           // ȫ������
-    btIncremental,    // ��������
-    btDifferential    // ���챸�ݣ�����������ȫ����
+    btFull,           // 全量备份
+    btIncremental,    // 增量备份
+    btDifferential    // 差异备份（相对于最近的全量）
   );
 
-  /// <summary>ѹ������</summary>
+  /// <summary>压缩级别</summary>
   TCompressionLevel = (
-    clNone,           // ��ѹ��
-    clFast,           // ����ѹ��
-    clNormal,         // ��ͨѹ��
-    clMax             // ���ѹ��
+    clNone,           // 不压缩
+    clFast,           // 快速压缩
+    clNormal,         // 普通压缩
+    clMax             // 最大压缩
   );
 
-  /// <summary>���ݵ�������</summary>
+  /// <summary>备份调度类型</summary>
   TScheduleType = (
-    stNone,           // ������
+    stNone,           // 不调度
     stHourly,         // ÿСʱ
-    stDaily,          // ÿ��
-    stWeekly,         // ÿ��
-    stMonthly         // ÿ��
+    stDaily,          // 每天
+    stWeekly,         // 每周
+    stMonthly         // 每月
   );
 
-  /// <summary>�ļ��������</summary>
+  /// <summary>文件变更类型</summary>
   TFileChangeType = (
-    fctAdded,         // ����
-    fctModified,      // �޸�
-    fctDeleted        // ɾ��
+    fctAdded,         // 新增
+    fctModified,      // 修改
+    fctDeleted        // 删除
   );
 
-  /// <summary>�����ļ���Ϣ</summary>
+  /// <summary>备份文件信息</summary>
   TBackupFileInfo = record
-    RelativePath: string;       // ���·��
-    FileSize: Int64;            // �ļ���С
-    ModifiedTime: TDateTime;    // �޸�ʱ��
-    Checksum: string;           // SHA256У���
+    RelativePath: string;       // 相对路径
+    FileSize: Int64;            // 文件大小
+    ModifiedTime: TDateTime;    // 修改时间
+    Checksum: string;           // SHA256校验和
     ChangeType: TFileChangeType;
     class function Create(const APath: string; ASize: Int64;
       AModTime: TDateTime; const AChecksum: string): TBackupFileInfo; static;
@@ -83,7 +83,7 @@ type
     class function FromJSON(AJSON: TJSONObject): TBackupFileInfo; static;
   end;
 
-  /// <summary>�����嵥</summary>
+  /// <summary>备份清单</summary>
   TBackupManifest = class
   private
     FBackupId: string;
@@ -94,7 +94,7 @@ type
     FTotalSize: Int64;
     FCompressedSize: Int64;
     FFileCount: Integer;
-    FParentBackupId: string;    // ����/���챸�ݵĸ�����
+    FParentBackupId: string;    // 增量/差异备份的父备份
     FDescription: string;
     FTags: TStringList;
   public
@@ -124,7 +124,7 @@ type
     property Tags: TStringList read FTags;
   end;
 
-  /// <summary>���ݰ汾��Ϣ</summary>
+  /// <summary>备份版本信息</summary>
   TBackupVersion = class
   private
     FBackupId: string;
@@ -153,7 +153,7 @@ type
     property ParentBackupId: string read FParentBackupId write FParentBackupId;
   end;
 
-  /// <summary>���ݽ���</summary>
+  /// <summary>备份进度</summary>
   TBackupProgress = record
     Status: TBackupStatus;
     CurrentFile: string;
@@ -168,28 +168,28 @@ type
     function FormattedProgress: string;
   end;
 
-  /// <summary>��������</summary>
+  /// <summary>备份配置</summary>
   TBackupConfig = record
-    SourcePaths: TArray<string>;      // Ҫ���ݵ�·��
-    ExcludePatterns: TArray<string>;  // �ų�ģʽ
-    IncludePatterns: TArray<string>;  // ����ģʽ
-    LocalBackupPath: string;          // ���ر���·��
-    CloudServiceURL: string;          // �Ʒ���URL
-    CloudApiKey: string;              // ��API��Կ
-    CloudBucket: string;              // �ƴ洢Ͱ
-    EncryptionKey: string;            // ������Կ
-    EnableEncryption: Boolean;        // ���ü���
+    SourcePaths: TArray<string>;      // 要备份的路径
+    ExcludePatterns: TArray<string>;  // 排除模式
+    IncludePatterns: TArray<string>;  // 包含模式
+    LocalBackupPath: string;          // 本地备份路径
+    CloudServiceURL: string;          // 云服务URL
+    CloudApiKey: string;              // 云API密钥
+    CloudBucket: string;              // 云存储桶
+    EncryptionKey: string;            // 加密密钥
+    EnableEncryption: Boolean;        // 启用加密
     CompressionLevel: TCompressionLevel;
-    MaxVersionsToKeep: Integer;       // �����汾��
-    MaxBackupSizeGB: Integer;         // ��󱸷ݴ�С(GB)
+    MaxVersionsToKeep: Integer;       // 保留版本数
+    MaxBackupSizeGB: Integer;         // 最大备份大小(GB)
     ScheduleType: TScheduleType;
-    ScheduleTime: TTime;              // ����ʱ��
-    ScheduleDayOfWeek: Integer;       // �ܼ�������ÿ�ܵ��ȣ�
-    ScheduleDayOfMonth: Integer;      // ���ţ�����ÿ�µ��ȣ�
+    ScheduleTime: TTime;              // 调度时间
+    ScheduleDayOfWeek: Integer;       // 周几（用于每周调度）
+    ScheduleDayOfMonth: Integer;      // 几号（用于每月调度）
     class function Default: TBackupConfig; static;
   end;
 
-  /// <summary>����ͳ��</summary>
+  /// <summary>备份统计</summary>
   TBackupStatistics = record
     TotalBackups: Integer;
     SuccessfulBackups: Integer;
@@ -202,14 +202,14 @@ type
     procedure Reset;
   end;
 
-  // �¼�����
+  // 事件类型
   TBackupProgressEvent = procedure(Sender: TObject; const Progress: TBackupProgress) of object;
   TBackupCompleteEvent = procedure(Sender: TObject; Success: Boolean;
     const BackupId, ErrorMsg: string) of object;
   TRestoreCompleteEvent = procedure(Sender: TObject; Success: Boolean;
     const ErrorMsg: string) of object;
 
-  /// <summary>�ļ���������</summary>
+  /// <summary>文件变更检测器</summary>
   TFileChangeDetector = class
   private
     FBasePath: string;
@@ -231,7 +231,7 @@ type
     property BasePath: string read FBasePath;
   end;
 
-  /// <summary>����ѹ����</summary>
+  /// <summary>备份压缩器</summary>
   TBackupCompressor = class
   private
     FCompressionLevel: TCompressionLevel;
@@ -247,7 +247,7 @@ type
     function CompressBytes(const AData: TBytes): TBytes;
     function DecompressBytes(const AData: TBytes): TBytes;
     
-    // ZIP����
+    // ZIP操作
     procedure CreateArchive(const AArchivePath: string;
       const AFiles: TList<TBackupFileInfo>; const ABasePath: string;
       AProgressCallback: TProc<Integer, Integer> = nil);
@@ -257,7 +257,7 @@ type
     property CompressionLevel: TCompressionLevel read FCompressionLevel write FCompressionLevel;
   end;
 
-  /// <summary>���ݼ�����</summary>
+  /// <summary>备份加密器</summary>
   TBackupEncryptor = class
   private
     // FEAT-R3-003 (E-003): the raw password is forwarded to TSimpleCrypto,
@@ -277,7 +277,7 @@ type
     function DecryptBytes(const AData: TBytes): TBytes;
   end;
 
-  /// <summary>�ƶ˱��ݿͻ���</summary>
+  /// <summary>云端备份客户端</summary>
   TCloudBackupClient = class
   private
     FServiceURL: string;
@@ -305,7 +305,7 @@ type
     property Bucket: string read FBucket;
   end;
 
-  /// <summary>���ݵ�����</summary>
+  /// <summary>备份调度器</summary>
   TBackupScheduler = class
   private
     FConfig: TBackupConfig;
@@ -331,7 +331,7 @@ type
     property OnBackupTriggered: TNotifyEvent read FOnBackupTriggered write FOnBackupTriggered;
   end;
 
-  /// <summary>�ƶ˱��ݹ�����</summary>
+  /// <summary>云端备份管理器</summary>
   TCloudBackupManager = class
   private
     FConfig: TBackupConfig;
@@ -373,38 +373,38 @@ type
     constructor Create(const AConfig: TBackupConfig);
     destructor Destroy; override;
     
-    // ���ݲ���
+    // 备份操作
     procedure BackupFull(const ADescription: string = '');
     procedure BackupIncremental(const ADescription: string = '');
     procedure BackupDifferential(const ADescription: string = '');
     procedure BackupFullAsync(const ADescription: string = '');
     procedure BackupIncrementalAsync(const ADescription: string = '');
     
-    // �ָ�����
+    // 恢复操作
     procedure Restore(const ABackupId: string; const ATargetPath: string = '');
     procedure RestoreAsync(const ABackupId: string; const ATargetPath: string = '');
     procedure RestoreLatest(const ATargetPath: string = '');
     
-    // ȡ������
+    // 取消操作
     procedure Cancel;
     
-    // �汾����
+    // 版本管理
     function GetVersions: TObjectList<TBackupVersion>;
     function GetVersion(const ABackupId: string): TBackupVersion;
     procedure DeleteVersion(const ABackupId: string);
     procedure DeleteAllVersions;
     
-    // �ƶ�ͬ��
+    // 云端同步
     procedure SyncToCloud(const ABackupId: string);
     procedure SyncFromCloud(const ABackupId: string);
     procedure SyncAllToCloud;
     function GetCloudVersions: TObjectList<TBackupVersion>;
     
-    // ��֤
+    // 验证
     function VerifyBackup(const ABackupId: string): Boolean;
     function GetBackupManifest(const ABackupId: string): TBackupManifest;
     
-    // ����
+    // 调度
     procedure EnableScheduler;
     procedure DisableScheduler;
     function GetNextScheduledBackup: TDateTime;
@@ -415,17 +415,17 @@ type
     property Statistics: TBackupStatistics read FStatistics;
     property Config: TBackupConfig read FConfig write FConfig;
     
-    // �¼�
+    // 事件
     property OnProgress: TBackupProgressEvent read FOnProgress write FOnProgress;
     property OnBackupComplete: TBackupCompleteEvent read FOnBackupComplete write FOnBackupComplete;
     property OnRestoreComplete: TRestoreCompleteEvent read FOnRestoreComplete write FOnRestoreComplete;
   end;
 
-// ȫ�ֺ���
+// 全局函数
 function CloudBackup: TCloudBackupManager;
 procedure SetCloudBackup(AManager: TCloudBackupManager);
 
-// ��������
+// 辅助函数
 function FormatFileSize(ABytes: Int64): string;
 function FormatDuration(ASeconds: Integer): string;
 
@@ -791,9 +791,9 @@ begin
   Result.MaxVersionsToKeep := 10;
   Result.MaxBackupSizeGB := 100;
   Result.ScheduleType := stNone;
-  Result.ScheduleTime := EncodeTime(2, 0, 0, 0);  // Ĭ���賿2��
-  Result.ScheduleDayOfWeek := 1;  // ��һ
-  Result.ScheduleDayOfMonth := 1; // 1��
+  Result.ScheduleTime := EncodeTime(2, 0, 0, 0);  // 默认凌晨2点
+  Result.ScheduleDayOfWeek := 1;  // 周一
+  Result.ScheduleDayOfMonth := 1; // 1号
 end;
 
 { TBackupStatistics }
@@ -847,16 +847,16 @@ var
 begin
   LFileName := ExtractFileName(APath);
   
-  // ����ų�ģʽ
+  // 检查排除模式
   for LPattern in AExcludePatterns do
     if TPath.MatchesPattern(LFileName, LPattern, False) then
       Exit(False);
   
-  // ���û�а���ģʽ��Ĭ�ϰ�������
+  // 如果没有包含模式，默认包含所有
   if Length(AIncludePatterns) = 0 then
     Exit(True);
     
-  // ������ģʽ
+  // 检查包含模式
   for LPattern in AIncludePatterns do
     if TPath.MatchesPattern(LFileName, LPattern, False) then
       Exit(True);
@@ -918,7 +918,7 @@ begin
       if not TDirectory.Exists(FBasePath) then
         Exit;
         
-      // ɨ�赱ǰ�ļ�
+      // 扫描当前文件
       LFiles := TDirectory.GetFiles(FBasePath, '*', TSearchOption.soAllDirectories);
       for LFile in LFiles do
       begin
@@ -931,7 +931,7 @@ begin
         LInfo.ModifiedTime := TFile.GetLastWriteTime(LFile);
         LInfo.Checksum := CalculateFileChecksum(LFile);
         
-        // ����Ƿ����������޸�
+        // 检查是否是新增或修改
         if FLastSnapshot.TryGetValue(LRelPath, LOldInfo) then
         begin
           if LInfo.Checksum <> LOldInfo.Checksum then
@@ -949,7 +949,7 @@ begin
         LCurrentFiles.Add(LRelPath, LInfo);
       end;
       
-      // ���ɾ�����ļ�
+      // 检查删除的文件
       for LPair in FLastSnapshot do
       begin
         if not LCurrentFiles.ContainsKey(LPair.Key) then
@@ -960,7 +960,7 @@ begin
         end;
       end;
       
-      // ���¿���
+      // 更新快照
       FLastSnapshot.Clear;
       for LPair in LCurrentFiles do
         FLastSnapshot.Add(LPair.Key, LPair.Value);
@@ -1236,7 +1236,7 @@ end;
 
 destructor TBackupEncryptor.Destroy;
 begin
-  // �����Կ
+  // 清除密钥
   // FEAT-R3-003 (E-003): FPassword is a managed string released by reference
   // counting; managed strings cannot be securely zeroed (FillChar on the
   // payload risks AV), and TSimpleCrypto keeps no derived key material here.
@@ -1348,7 +1348,7 @@ begin
   FBucket := ABucket;
   FHttpClient := THTTPClient.Create;
   FHttpClient.ConnectionTimeout := 60000;
-  FHttpClient.ResponseTimeout := 300000;  // 5����
+  FHttpClient.ResponseTimeout := 300000;  // 5分钟
   FLock := TCriticalSection.Create;
 end;
 
@@ -1408,7 +1408,7 @@ begin
   try
     LTotalSize := LStream.Size;
     
-    // ��ʵ�֣�ʵ��Ӧ�ֿ��ϴ���֧�ֽ��Ȼص�
+    // 简化实现：实际应分块上传并支持进度回调
     LResponse := DoRequest('PUT', '/backup/' + TNetEncoding.URL.Encode(ARemoteKey), LStream);
     
     if Assigned(AProgressCallback) then
@@ -1546,7 +1546,7 @@ begin
   LNow := Now;
   LNextTime := GetNextScheduledTime;
   
-  // ����Ƿ񵽴����ʱ��
+  // 检查是否到达调度时间
   if (LNextTime <= LNow) and
      ((FLastTriggerTime = 0) or (MinutesBetween(LNow, FLastTriggerTime) > 1)) then
   begin
@@ -1662,7 +1662,7 @@ begin
   else
     FCloudClient := nil;
     
-  FChangeDetector := nil;  // ���贴��
+  FChangeDetector := nil;  // 按需创建
   FCompressor := TBackupCompressor.Create(FConfig.CompressionLevel);
   
   if FConfig.EnableEncryption and (FConfig.EncryptionKey <> '') then
@@ -1679,7 +1679,7 @@ begin
   FCancelled := False;
   FStatistics.Reset;
   
-  // ȷ������Ŀ¼����
+  // 确保备份目录存在
   if FConfig.LocalBackupPath <> '' then
     TDirectory.CreateDirectory(FConfig.LocalBackupPath);
     
@@ -1758,7 +1758,7 @@ begin
   DoProgress;
   
   try
-    // �����嵥
+    // 创建清单
     LManifest := TBackupManifest.Create;
     try
       LManifest.BackupId := LBackupId;
@@ -1766,15 +1766,15 @@ begin
       LManifest.CreatedAt := Now;
       LManifest.Description := ADescription;
       
-      // ��ȡҪ���ݵ��ļ�
+      // 获取要备份的文件
       if Length(FConfig.SourcePaths) > 0 then
         LManifest.BasePath := FConfig.SourcePaths[0];
         
-      // ��ʼ����������
+      // 初始化变更检测器
       if not Assigned(FChangeDetector) and (LManifest.BasePath <> '') then
         FChangeDetector := TFileChangeDetector.Create(LManifest.BasePath);
         
-      // ���ݱ������ͻ�ȡ�ļ��б�
+      // 根据备份类型获取文件列表
       case ABackupType of
         btFull:
           begin
@@ -1789,7 +1789,7 @@ begin
           begin
             if Assigned(FChangeDetector) then
             begin
-              // ������һ�εĿ���
+              // 加载上一次的快照
               if FVersions.Count > 0 then
               begin
                 var LLastManifest := TBackupManifest.LoadFromFile(
@@ -1802,7 +1802,7 @@ begin
                 end;
               end;
               
-              // �����
+              // 检测变更
               LFiles := FChangeDetector.DetectChanges(
                 FConfig.IncludePatterns, FConfig.ExcludePatterns);
               try
@@ -1821,7 +1821,7 @@ begin
       FProgress.TotalFiles := LManifest.FileCount;
       FProgress.TotalBytes := LManifest.TotalSize;
       
-      // ѹ��
+      // 压缩
       FStatus := bsCompressing;
       FProgress.Status := bsCompressing;
       DoProgress;
@@ -1842,7 +1842,7 @@ begin
       
       LArchivePath := GetBackupArchivePath(LBackupId);
       
-      // ���ܣ�������ã�
+      // 加密（如果启用）
       if Assigned(FEncryptor) then
       begin
         FStatus := bsEncrypting;
@@ -1858,13 +1858,13 @@ begin
         TFile.Move(LTempPath, LArchivePath);
       end;
       
-      // �����嵥�е�ѹ����С
+      // 更新清单中的压缩大小
       LManifest.CompressedSize := TFile.GetSize(LArchivePath);
       
-      // �����嵥
+      // 保存清单
       LManifest.SaveToFile(GetManifestPath(LBackupId));
       
-      // �����汾��¼
+      // 创建版本记录
       LVersion := TBackupVersion.Create;
       LVersion.BackupId := LBackupId;
       LVersion.BackupType := ABackupType;
@@ -1880,10 +1880,10 @@ begin
       FVersions.Add(LVersion);
       SaveVersions;
       
-      // �����ɰ汾
+      // 清理旧版本
       CleanupOldVersions;
       
-      // ����ͳ��
+      // 更新统计
       Inc(FStatistics.TotalBackups);
       Inc(FStatistics.SuccessfulBackups);
       FStatistics.TotalBytesBackedUp := FStatistics.TotalBytesBackedUp + LManifest.TotalSize;
@@ -1939,13 +1939,13 @@ begin
     if not TFile.Exists(LArchivePath) then
       raise EBackupFileNotFoundException.CreateFmt('Backup file not found: %s', [LArchivePath]);
       
-    // �����嵥
+    // 加载清单
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
     try
       FProgress.TotalFiles := LManifest.FileCount;
       FProgress.TotalBytes := LManifest.TotalSize;
       
-      // ȷ��Ŀ��·��
+      // 确定目标路径
       if ATargetPath <> '' then
         LDestPath := ATargetPath
       else
@@ -1953,7 +1953,7 @@ begin
         
       TDirectory.CreateDirectory(LDestPath);
       
-      // ���ܣ������Ҫ��
+      // 解密（如果需要）
       if Assigned(FEncryptor) and LArchivePath.EndsWith('.enc') then
       begin
         FStatus := bsDecrypting;
@@ -1973,7 +1973,7 @@ begin
         raise EBackupCancelledException.Create('Restore cancelled');
       end;
       
-      // ��ѹ
+      // 解压
       FStatus := bsDecompressing;
       FProgress.Status := bsDecompressing;
       DoProgress;
@@ -1989,11 +1989,11 @@ begin
           DoProgress;
         end);
         
-      // ������ʱ�ļ�
+      // 清理临时文件
       if LTempPath <> LArchivePath then
         TFile.Delete(LTempPath);
         
-      // ����ͳ��
+      // 更新统计
       FStatistics.TotalBytesRestored := FStatistics.TotalBytesRestored + LManifest.TotalSize;
       FStatistics.LastRestoreTime := Now;
       
@@ -2064,12 +2064,12 @@ procedure TCloudBackupManager.CleanupOldVersions;
 var
   LVersion: TBackupVersion;
 begin
-  // ����ָ�������İ汾
+  // 保留指定数量的版本
   while FVersions.Count > FConfig.MaxVersionsToKeep do
   begin
     LVersion := FVersions[0];
     
-    // ɾ�������ļ�
+    // 删除备份文件
     if TFile.Exists(GetBackupArchivePath(LVersion.BackupId)) then
       TFile.Delete(GetBackupArchivePath(LVersion.BackupId));
     if TFile.Exists(GetManifestPath(LVersion.BackupId)) then
@@ -2083,7 +2083,7 @@ end;
 
 procedure TCloudBackupManager.SchedulerBackupTriggered(Sender: TObject);
 begin
-  // �����������ı���ʹ����������
+  // 调度器触发的备份使用增量备份
   if FVersions.Count = 0 then
     BackupFullAsync('Scheduled full backup')
   else
@@ -2108,7 +2108,7 @@ begin
   if FStatus <> bsIdle then
     raise EBackupInProgressException.Create('Backup operation in progress');
     
-  // ���û��֮ǰ�ı��ݣ�ִ��ȫ������
+  // 如果没有之前的备份，执行全量备份
   if FVersions.Count = 0 then
   begin
     BackupFull(ADescription);
@@ -2277,7 +2277,7 @@ begin
   begin
     if FVersions[I].BackupId = ABackupId then
     begin
-      // ɾ���ļ�
+      // 删除文件
       if TFile.Exists(GetBackupArchivePath(ABackupId)) then
         TFile.Delete(GetBackupArchivePath(ABackupId));
       if TFile.Exists(GetManifestPath(ABackupId)) then
@@ -2368,7 +2368,7 @@ begin
         DoProgress;
       end) then
     begin
-      // ���»򴴽��汾��¼
+      // 更新或创建版本记录
       LVersion := GetVersion(ABackupId);
       if not Assigned(LVersion) then
       begin

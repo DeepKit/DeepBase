@@ -1,10 +1,10 @@
-{ ============================================================================
-  DeepBase.FMX.UpdateDialog - FMX 更新对话�?
+﻿{ ============================================================================
+  DeepBase.FMX.UpdateDialog - FMX 鏇存柊瀵硅瘽妗?
   版本: 1.0
-  说明: 跨平台更新提示对话框，支�?Windows/macOS/iOS/Android
+  璇存槑: 璺ㄥ钩鍙版洿鏂版彁绀哄璇濇锛屾敮鎸?Windows/macOS/iOS/Android
 
-  特�?
-    - 自适应布局（手�?平板/桌面�?    - 显示版本信息和更新日�?    - 下载进度显示
+  鐗规€?
+    - 鑷€傚簲甯冨眬锛堟墜鏈?骞虫澘/妗岄潰锛?    - 鏄剧ず鐗堟湰淇℃伅鍜屾洿鏂版棩蹇?    - 涓嬭浇杩涘害鏄剧ず
     - 支持强制更新
     - 支持跳转应用商店
   ============================================================================ }
@@ -128,7 +128,7 @@ begin
     Dialog.BtnSkip.Visible := False;
   end;
 
-  // 移动端显�?前往商店"而不�?下载"
+  // 绉诲姩绔樉绀?鍓嶅線鍟嗗簵"鑰屼笉鏄?涓嬭浇"
   if Dialog.IsMobilePlatform then
     Dialog.BtnUpdate.Text := '前往商店';
 
@@ -217,13 +217,13 @@ procedure TFMXUpdateDialog.BtnUpdateClick(Sender: TObject);
 begin
   if FIsMobile then
   begin
-    // 移动端跳转应用商�?    if Assigned(FCallback) then
+    // 绉诲姩绔烦杞簲鐢ㄥ晢搴?    if Assigned(FCallback) then
       FCallback(udaOpenStore);
     Close;
   end
   else
   begin
-    // 桌面端下载更�?    if not FIsDownloading then
+    // 妗岄潰绔笅杞芥洿鏂?    if not FIsDownloading then
       StartDownload;
   end;
 end;
@@ -297,12 +297,12 @@ begin
     usDownloading:
       begin
         if Progress.TotalBytes > 0 then
-          LblProgressStatus.Text := Format('下载�?.. %d%% (%s / %s)',
+          LblProgressStatus.Text := Format('涓嬭浇涓?.. %d%% (%s / %s)',
             [Progress.ProgressPercent,
              FormatFloat('#,##0', Progress.DownloadedBytes / 1024) + ' KB',
              FormatFloat('#,##0', Progress.TotalBytes / 1024) + ' KB'])
         else
-          LblProgressStatus.Text := Format('下载�?.. %s',
+          LblProgressStatus.Text := Format('涓嬭浇涓?.. %s',
             [FormatFloat('#,##0', Progress.DownloadedBytes / 1024) + ' KB']);
       end;
     usVerifying:

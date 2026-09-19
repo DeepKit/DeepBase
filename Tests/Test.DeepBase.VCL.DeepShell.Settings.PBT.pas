@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.VCL.DeepShell.Settings.PBT - Property test for the
   Settings notification routing contract.
 

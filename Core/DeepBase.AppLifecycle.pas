@@ -1,4 +1,4 @@
-unit DeepBase.AppLifecycle;
+﻿unit DeepBase.AppLifecycle;
 
 interface
 

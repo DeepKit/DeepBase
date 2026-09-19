@@ -1,4 +1,4 @@
-unit Test.Regression.BUG341_ObjectPoolCallbackOutsideLock;
+﻿unit Test.Regression.BUG341_ObjectPoolCallbackOutsideLock;
 
 interface
 

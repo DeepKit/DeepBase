@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.DataBinding - DataBinding Module Unit Tests
   
   Tests for DeepBase.DataBinding module including:

@@ -1,4 +1,4 @@
-unit DeepBase.IntentClarification.SignalDetector;
+﻿unit DeepBase.IntentClarification.SignalDetector;
 
 interface
 

@@ -1,0 +1,369 @@
+{
+ "generatedFrom": "check_build_ownership.js",
+ "orphans": {
+  "Core/DeepBase.Crypto.JCS.pas": {
+   "unit": "DeepBase.Crypto.JCS",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）；相邻线（Manifest 观察期 / Crypto 甲独占域）处置报主控",
+   "referrerCount": 1,
+   "referrers": [
+    "Core/DeepBase.Manifest.Verifier.pas"
+   ]
+  },
+  "Core/DeepBase.Manifest.Verifier.pas": {
+   "unit": "DeepBase.Manifest.Verifier",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；相邻线（Manifest 观察期 / Crypto 甲独占域）处置报主控",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Core/DeepBase.UITest.FmxProbe.pas": {
+   "unit": "DeepBase.UITest.FmxProbe",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.AntiTamper.PersistenceRegistration.pas": {
+   "unit": "DeepBase.AntiTamper.PersistenceRegistration",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Browser.CDP.Adapter.pas": {
+   "unit": "DeepBase.Browser.CDP.Adapter",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 2 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 2,
+   "referrers": [
+    "Features/DeepBase.Browser.Session.pas",
+    "Features/DeepBase.Browser.WebElement.pas"
+   ]
+  },
+  "Features/DeepBase.Browser.Recorder.pas": {
+   "unit": "DeepBase.Browser.Recorder",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Browser.WebElement.pas": {
+   "unit": "DeepBase.Browser.WebElement",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Features/DeepBase.Browser.Session.pas"
+   ]
+  },
+  "Features/DeepBase.Commerce.Adapter.Firebase.pas": {
+   "unit": "DeepBase.Commerce.Adapter.Firebase",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Commerce.Adapter.Supabase.pas": {
+   "unit": "DeepBase.Commerce.Adapter.Supabase",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Commerce.SDKGateway.pas": {
+   "unit": "DeepBase.Commerce.SDKGateway",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Config.Upload.pas": {
+   "unit": "DeepBase.Config.Upload",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Core/DeepBase.Crypto.JCS.pas"
+   ]
+  },
+  "Features/DeepBase.Desktop.Screen.Click.DPIMapper.pas": {
+   "unit": "DeepBase.Desktop.Screen.Click.DPIMapper",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas"
+   ]
+  },
+  "Features/DeepBase.Desktop.Screen.Click.RegionLocator.pas": {
+   "unit": "DeepBase.Desktop.Screen.Click.RegionLocator",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas"
+   ]
+  },
+  "Features/DeepBase.Desktop.Screen.Click.SmartExecutor.pas": {
+   "unit": "DeepBase.Desktop.Screen.Click.SmartExecutor",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.LLM.ConfigBridge.pas": {
+   "unit": "DeepBase.LLM.ConfigBridge",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Features/DeepBase.Speech.Intent.LLMBackend.pas": {
+   "unit": "DeepBase.Speech.Intent.LLMBackend",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.AI.pas": {
+   "unit": "DeepBase.FMX.HB.AI",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.CommandPalette.pas": {
+   "unit": "DeepBase.FMX.HB.CommandPalette",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Dock.pas": {
+   "unit": "DeepBase.FMX.HB.Dock",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Gate.pas": {
+   "unit": "DeepBase.FMX.HB.Gate",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Grid.pas": {
+   "unit": "DeepBase.FMX.HB.Grid",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.NavTree.pas": {
+   "unit": "DeepBase.FMX.HB.NavTree",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.PageControl.pas": {
+   "unit": "DeepBase.FMX.HB.PageControl",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.ShareCard.pas": {
+   "unit": "DeepBase.FMX.HB.ShareCard",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Terminal.pas": {
+   "unit": "DeepBase.FMX.HB.Terminal",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Tray.pas": {
+   "unit": "DeepBase.FMX.HB.Tray",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.VirtualList.pas": {
+   "unit": "DeepBase.FMX.HB.VirtualList",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Voice.pas": {
+   "unit": "DeepBase.FMX.HB.Voice",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "FMX/DeepBase.FMX.HB.Waterfall.pas": {
+   "unit": "DeepBase.FMX.HB.Waterfall",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Governance/DeepBase.Governance.JsonLogicEvaluator.pas": {
+   "unit": "DeepBase.Governance.JsonLogicEvaluator",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Governance/DeepBase.Governance.Schema.pas": {
+   "unit": "DeepBase.Governance.Schema",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Tools/CLI/DeepBase.CLI.Interactive.pas": {
+   "unit": "DeepBase.CLI.Interactive",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/CLI/CLI.Commands.pas"
+   ]
+  },
+  "Tools/CLI/DeepBase.CLI.Pipeline.pas": {
+   "unit": "DeepBase.CLI.Pipeline",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Tools/Studio/Forms/Studio.LicenseForm.pas": {
+   "unit": "Studio.LicenseForm",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Tools/Studio/Forms/Studio.LLMConfigForm.pas": {
+   "unit": "Studio.LLMConfigForm",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/Studio/Frames/Studio.LLMFrame.pas"
+   ]
+  },
+  "Tools/Studio/Forms/Studio.PromptDebugForm.pas": {
+   "unit": "Studio.PromptDebugForm",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/Studio/Frames/Studio.LLMFrame.pas"
+   ]
+  },
+  "Tools/Studio/Forms/Studio.TranslationForm.pas": {
+   "unit": "Studio.TranslationForm",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Tools/Studio/Forms/Studio.VersionDetailForm.pas": {
+   "unit": "Studio.VersionDetailForm",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "Tools/Studio/Frames/Studio.LLMFrame.pas": {
+   "unit": "Studio.LLMFrame",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/Studio/Forms/Studio.MainForm.pas"
+   ]
+  },
+  "Tools/Studio/Frames/Studio.PromptTemplateFrame.pas": {
+   "unit": "Studio.PromptTemplateFrame",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 2 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 2,
+   "referrers": [
+    "Core/DeepBase.LLM.pas",
+    "Tools/Studio/Forms/Studio.MainForm.pas"
+   ]
+  },
+  "Tools/Studio/Studio.i18nInit.pas": {
+   "unit": "Studio.i18nInit",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/Studio/Forms/Studio.MainForm.pas"
+   ]
+  },
+  "Tools/Studio/Studio.Resources.pas": {
+   "unit": "Studio.Resources",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 2 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 2,
+   "referrers": [
+    "Tools/Studio/Forms/Studio.MainForm.pas",
+    "Tools/Studio/Studio.i18nInit.pas"
+   ]
+  },
+  "Tools/Tray/Automation/Tray.KeyboardMouse.pas": {
+   "unit": "Tray.KeyboardMouse",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/Tray/Automation/Tray.Types.pas"
+   ]
+  },
+  "Tools/UniPublisher/Core/Publisher.Manifest.pas": {
+   "unit": "Publisher.Manifest",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/UniPublisher/Forms/DeepPublisher.MainForm.pas"
+   ]
+  },
+  "Tools/UniPublisher/Core/Publisher.Targets.pas": {
+   "unit": "Publisher.Targets",
+   "disposition": "建议入构建（待构建责任人执行）",
+   "reason": "被 1 个生产单元按名引用，可能经隐式搜索路径编译入包（构建清单失真源）",
+   "referrerCount": 1,
+   "referrers": [
+    "Tools/UniPublisher/Forms/DeepPublisher.MainForm.pas"
+   ]
+  },
+  "VCL/DeepBase.VCL.HB.AI.pas": {
+   "unit": "DeepBase.VCL.HB.AI",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  },
+  "VCL/DeepBase.VCL.HB.Choice.Demo.pas": {
+   "unit": "DeepBase.VCL.HB.Choice.Demo",
+   "disposition": "显式标记为非构建资产",
+   "reason": "全仓构建文件与生产单元源码均零引用；HB 视觉系统观察期单元，最终处置须报主控（H2）",
+   "referrerCount": 0,
+   "referrers": []
+  }
+ }
+}

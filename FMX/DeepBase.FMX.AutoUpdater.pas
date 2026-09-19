@@ -1,14 +1,14 @@
-{ ============================================================================
-  DeepBase.FMX.AutoUpdater - FMX 自动更新组件
+﻿{ ============================================================================
+  DeepBase.FMX.AutoUpdater - FMX 鑷姩鏇存柊缁勪欢
   
-  版本: 1.0
-  说明: 跨平台非可视组件，封装自动更新核心模块和 UI 交互
+  鐗堟湰: 1.0
+  璇存槑: 璺ㄥ钩鍙伴潪鍙缁勪欢锛屽皝瑁呰嚜鍔ㄦ洿鏂版牳蹇冩ā鍧楀拰 UI 浜や簰
   
-  支持平台:
-    - Windows: 直接下载安装�?
-    - macOS: 直接下载 DMG/PKG
-    - iOS: 跳转 App Store
-    - Android: 下载 APK 或跳�?Play Store
+  鏀寔骞冲彴:
+    - Windows: 鐩存帴涓嬭浇瀹夎鍖?
+    - macOS: 鐩存帴涓嬭浇 DMG/PKG
+    - iOS: 璺宠浆 App Store
+    - Android: 涓嬭浇 APK 鎴栬烦杞?Play Store
   ============================================================================ }
 
 unit DeepBase.FMX.AutoUpdater;
@@ -66,53 +66,53 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     
-    /// <summary>手动检查更�?/summary>
+    /// <summary>鎵嬪姩妫€鏌ユ洿鏂?/summary>
     procedure CheckForUpdates;
     
-    /// <summary>静默检查更新（不显示对话框�?/summary>
+    /// <summary>闈欓粯妫€鏌ユ洿鏂帮紙涓嶆樉绀哄璇濇锛?/summary>
     procedure CheckForUpdatesSilent(Callback: TCheckUpdateCallback);
     
-    /// <summary>下载并安装更�?/summary>
+    /// <summary>涓嬭浇骞跺畨瑁呮洿鏂?/summary>
     procedure DownloadAndInstall;
     
-    /// <summary>仅下载更�?/summary>
+    /// <summary>浠呬笅杞芥洿鏂?/summary>
     procedure DownloadOnly;
     
-    /// <summary>取消当前操作</summary>
+    /// <summary>鍙栨秷褰撳墠鎿嶄綔</summary>
     procedure Cancel;
     
-    /// <summary>打开应用商店页面（移动端�?/summary>
+    /// <summary>鎵撳紑搴旂敤鍟嗗簵椤甸潰锛堢Щ鍔ㄧ锛?/summary>
     procedure OpenAppStore;
     
-    /// <summary>获取当前更新信息</summary>
+    /// <summary>鑾峰彇褰撳墠鏇存柊淇℃伅</summary>
     property CurrentUpdateInfo: TUpdateInfo read FCurrentUpdateInfo;
     
-    /// <summary>是否正在检�?/summary>
+    /// <summary>鏄惁姝ｅ湪妫€鏌?/summary>
     property IsChecking: Boolean read FIsChecking;
     
-    /// <summary>是否正在下载</summary>
+    /// <summary>鏄惁姝ｅ湪涓嬭浇</summary>
     property IsDownloading: Boolean read FIsDownloading;
     
-    /// <summary>上次检查时�?/summary>
+    /// <summary>涓婃妫€鏌ユ椂闂?/summary>
     property LastCheckTime: TDateTime read FLastCheckTime;
     
   published
-    /// <summary>更新服务�?URL</summary>
+    /// <summary>鏇存柊鏈嶅姟鍣?URL</summary>
     property UpdateUrl: string read FUpdateUrl write FUpdateUrl;
     
-    /// <summary>当前版本�?/summary>
+    /// <summary>褰撳墠鐗堟湰鍙?/summary>
     property CurrentVersion: string read FCurrentVersion write FCurrentVersion;
     
-    /// <summary>更新频道</summary>
+    /// <summary>鏇存柊棰戦亾</summary>
     property Channel: TUpdateChannel read FChannel write FChannel default ucStable;
     
-    /// <summary>检查模�?/summary>
+    /// <summary>妫€鏌ユā寮?/summary>
     property CheckMode: TUpdateCheckMode read FCheckMode write FCheckMode default ucmOnStartup;
     
-    /// <summary>周期检查间隔（小时�?/summary>
+    /// <summary>鍛ㄦ湡妫€鏌ラ棿闅旓紙灏忔椂锛?/summary>
     property CheckIntervalHours: Integer read FCheckIntervalHours write FCheckIntervalHours default 24;
     
-    /// <summary>发现更新时自动显示对话框</summary>
+    /// <summary>鍙戠幇鏇存柊鏃惰嚜鍔ㄦ樉绀哄璇濇</summary>
     property ShowDialogOnUpdate: Boolean read FShowDialogOnUpdate write FShowDialogOnUpdate default True;
     
     /// <summary>iOS App Store URL</summary>
@@ -121,22 +121,22 @@ type
     /// <summary>Android Play Store URL</summary>
     property PlayStoreUrl: string read FPlayStoreUrl write FPlayStoreUrl;
     
-    /// <summary>RSA 公钥（用于签名验证）</summary>
+    /// <summary>RSA 鍏挜锛堢敤浜庣鍚嶉獙璇侊級</summary>
     property PublicKey: string read FPublicKey write FPublicKey;
     
-    /// <summary>发现更新时触�?/summary>
+    /// <summary>鍙戠幇鏇存柊鏃惰Е鍙?/summary>
     property OnUpdateAvailable: TUpdateAvailableEvent read FOnUpdateAvailable write FOnUpdateAvailable;
     
-    /// <summary>下载进度</summary>
+    /// <summary>涓嬭浇杩涘害</summary>
     property OnProgress: TUpdateProgressEvent read FOnProgress write FOnProgress;
     
-    /// <summary>更新完成</summary>
+    /// <summary>鏇存柊瀹屾垚</summary>
     property OnUpdateComplete: TUpdateCompleteEvent read FOnUpdateComplete write FOnUpdateComplete;
     
-    /// <summary>没有更新时触�?/summary>
+    /// <summary>娌℃湁鏇存柊鏃惰Е鍙?/summary>
     property OnNoUpdate: TNotifyEvent read FOnNoUpdate write FOnNoUpdate;
     
-    /// <summary>检查出错时触发</summary>
+    /// <summary>妫€鏌ュ嚭閿欐椂瑙﹀彂</summary>
     property OnCheckError: TGetStrProc read FOnCheckError write FOnCheckError;
   end;
 
@@ -189,7 +189,7 @@ begin
   inherited;
   if not (csDesigning in ComponentState) then
   begin
-    // 初始化更新管理器
+    // 鍒濆鍖栨洿鏂扮鐞嗗櫒
     if FUpdateUrl <> '' then
     begin
       Updater.Initialize(FUpdateUrl, FCurrentVersion);
@@ -198,7 +198,7 @@ begin
         Updater.SetPublicKey(FPublicKey);
     end;
     
-    // 启动时检�?
+    // 鍚姩鏃舵鏌?
     if ShouldCheckOnStartup then
     begin
       TThread.ForceQueue(nil,
@@ -232,7 +232,7 @@ begin
   {$IF DEFINED(IOS)}
   Result := 'appstore';
   {$ELSEIF DEFINED(ANDROID)}
-  Result := 'playstore'; // �?'apk'
+  Result := 'playstore'; // 鎴?'apk'
   {$ELSEIF DEFINED(MACOS)}
   Result := 'dmg';
   {$ELSE}
@@ -290,7 +290,7 @@ begin
         FCurrentUpdateInfo := Info;
         ShowDialog := FShowDialogOnUpdate;
         
-        // 触发事件，允许用户处�?
+        // 瑙﹀彂浜嬩欢锛屽厑璁哥敤鎴峰鐞?
         if Assigned(FOnUpdateAvailable) then
           FOnUpdateAvailable(Self, Info, ShowDialog);
         
@@ -307,7 +307,7 @@ end;
 
 procedure TFMXAutoUpdater.HandleUpdateAvailable(const Info: TUpdateInfo);
 begin
-  // 显示更新对话�?
+  // 鏄剧ず鏇存柊瀵硅瘽妗?
   TFMXUpdateDialog.ShowDialog(Self, Info,
     procedure(Action: TUpdateDialogAction)
     begin
@@ -317,9 +317,9 @@ begin
         udaOpenStore:
           OpenAppStore;
         udaLater:
-          ; // 用户选择稍后
+          ; // 鐢ㄦ埛閫夋嫨绋嶅悗
         udaSkip:
-          ; // 用户选择跳过此版�?
+          ; // 鐢ㄦ埛閫夋嫨璺宠繃姝ょ増鏈?
       end;
     end);
 end;
@@ -339,7 +339,7 @@ begin
   if FIsDownloading then
     Exit;
   
-  // 移动端跳转应用商�?
+  // 绉诲姩绔烦杞簲鐢ㄥ晢搴?
   {$IF DEFINED(IOS) OR DEFINED(ANDROID)}
   OpenAppStore;
   Exit;

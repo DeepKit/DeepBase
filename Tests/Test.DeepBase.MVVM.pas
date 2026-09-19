@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.MVVM - MVVM Framework Unit Tests
   
   Description: Tests for TViewModelBase, TRelayCommand, TAsyncCommand,

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Browser.Contract.PBT - Property-based tests for browser
   script template contracts and selector event-payload safety.
 

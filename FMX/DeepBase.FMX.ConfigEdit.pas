@@ -1,12 +1,12 @@
-{ ============================================================================
-  DeepBase.FMX.ConfigEdit - FMX 配置编辑控件
+﻿{ ============================================================================
+  DeepBase.FMX.ConfigEdit - FMX 閰嶇疆缂栬緫鎺т欢
   
-  版本: 1.0
-  说明: 自动绑定�?DeepBase 配置�?FMX 编辑控件
-  控件:
-    - TFMXConfigEdit: 字符串配置编�?
-    - TFMXConfigSpinBox: 数值配置编�?
-    - TFMXConfigSwitch: 布尔配置开�?
+  鐗堟湰: 1.0
+  璇存槑: 鑷姩缁戝畾鍒?DeepBase 閰嶇疆鐨?FMX 缂栬緫鎺т欢
+  鎺т欢:
+    - TFMXConfigEdit: 瀛楃涓查厤缃紪杈?
+    - TFMXConfigSpinBox: 鏁板€奸厤缃紪杈?
+    - TFMXConfigSwitch: 甯冨皵閰嶇疆寮€鍏?
   ============================================================================ }
 
 unit DeepBase.FMX.ConfigEdit;
@@ -27,16 +27,16 @@ uses
 
 type
   /// <summary>
-  /// 自动保存模式
+  /// 鑷姩淇濆瓨妯″紡
   /// </summary>
   TConfigAutoSaveMode = (
-    asmNone,        // 不自动保存，需手动调用 SaveValue
-    asmOnExit,      // 失去焦点时自动保�?
-    asmOnChange     // 值变化时立即保存
+    asmNone,        // 涓嶈嚜鍔ㄤ繚瀛橈紝闇€鎵嬪姩璋冪敤 SaveValue
+    asmOnExit,      // 澶卞幓鐒︾偣鏃惰嚜鍔ㄤ繚瀛?
+    asmOnChange     // 鍊煎彉鍖栨椂绔嬪嵆淇濆瓨
   );
 
   /// <summary>
-  /// FMX 配置编辑控件 - 字符串�?
+  /// FMX 閰嶇疆缂栬緫鎺т欢 - 瀛楃涓插€?
   /// </summary>
   TFMXConfigEdit = class(TEdit)
   private
@@ -58,44 +58,44 @@ type
     constructor Create(AOwner: TComponent); override;
     
     /// <summary>
-    /// 保存当前值到配置
+    /// 淇濆瓨褰撳墠鍊煎埌閰嶇疆
     /// </summary>
     procedure SaveValue;
     
     /// <summary>
-    /// 重新加载配置�?
+    /// 閲嶆柊鍔犺浇閰嶇疆鍊?
     /// </summary>
     procedure ReloadValue;
     
     /// <summary>
-    /// 检查值是否已修改
+    /// 妫€鏌ュ€兼槸鍚﹀凡淇敼
     /// </summary>
     function IsModified: Boolean;
     
     /// <summary>
-    /// 恢复原始�?
+    /// 鎭㈠鍘熷鍊?
     /// </summary>
     procedure RevertToOriginal;
     
   published
     /// <summary>
-    /// 配置键名
+    /// 閰嶇疆閿悕
     /// </summary>
     property ConfigKey: string read FConfigKey write SetConfigKey;
     
     /// <summary>
-    /// 配置分类（默�?'General'�?
+    /// 閰嶇疆鍒嗙被锛堥粯璁?'General'锛?
     /// </summary>
     property ConfigCategory: string read FConfigCategory write FConfigCategory;
     
     /// <summary>
-    /// 自动保存模式
+    /// 鑷姩淇濆瓨妯″紡
     /// </summary>
     property AutoSaveMode: TConfigAutoSaveMode read FAutoSaveMode write FAutoSaveMode default asmOnExit;
   end;
 
   /// <summary>
-  /// FMX 配置编辑控件 - 数�?
+  /// FMX 閰嶇疆缂栬緫鎺т欢 - 鏁板€?
   /// </summary>
   TFMXConfigSpinBox = class(TSpinBox)
   private
@@ -128,13 +128,13 @@ type
     property AutoSaveMode: TConfigAutoSaveMode read FAutoSaveMode write FAutoSaveMode default asmOnExit;
     
     /// <summary>
-    /// 是否作为整数保存（默�?True�?
+    /// 鏄惁浣滀负鏁存暟淇濆瓨锛堥粯璁?True锛?
     /// </summary>
     property IsInteger: Boolean read FIsInteger write FIsInteger default True;
   end;
 
   /// <summary>
-  /// FMX 配置开关控�?- 布尔�?
+  /// FMX 閰嶇疆寮€鍏虫帶浠?- 甯冨皵鍊?
   /// </summary>
   TFMXConfigSwitch = class(TSwitch)
   private
@@ -344,7 +344,7 @@ begin
   inherited Create(AOwner);
   FConfigKey := '';
   FConfigCategory := SConfigCategoryGeneral;
-  FAutoSaveMode := asmOnChange;  // 开关默认立即保�?
+  FAutoSaveMode := asmOnChange;  // 寮€鍏抽粯璁ょ珛鍗充繚瀛?
   FOriginalValue := False;
   FLoaded := False;
   

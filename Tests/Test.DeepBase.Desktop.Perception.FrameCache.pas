@@ -1,4 +1,4 @@
-unit Test.DeepBase.Desktop.Perception.FrameCache;
+﻿unit Test.DeepBase.Desktop.Perception.FrameCache;
 
 { ============================================================================
   Tests for the L0 frame cache (PERCEPT-P2-001): an identical screenshot

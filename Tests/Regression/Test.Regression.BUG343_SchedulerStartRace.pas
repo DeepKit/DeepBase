@@ -1,4 +1,4 @@
-unit Test.Regression.BUG343_SchedulerStartRace;
+﻿unit Test.Regression.BUG343_SchedulerStartRace;
 
 interface
 

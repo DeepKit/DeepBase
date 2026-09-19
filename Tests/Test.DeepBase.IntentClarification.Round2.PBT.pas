@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.IntentClarification.Round2.PBT - Property tests for the
   Round-2 IC fixes (deepbase-round2-fixes, sub-task 19.17).
 

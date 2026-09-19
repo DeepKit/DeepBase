@@ -1,4 +1,4 @@
-unit DeepBase.Social.QQ;
+﻿unit DeepBase.Social.QQ;
 
 {*******************************************************************************
   DeepBase QQ Social Integration
@@ -44,7 +44,7 @@ type
     /// <summary>Save keys to secure storage (Credential Manager)</summary>
     procedure SaveKeysToCredentialManager; virtual;
 
-    // BUG-019 FIX: 密钥安全存储属�?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
+    // BUG-019 FIX: 瀵嗛挜瀹夊叏瀛樺偍灞炴€?    property KeyStorageMode: TKeyStorageMode read FKeyStorageMode write FKeyStorageMode;
     property CredentialTarget: string read FCredentialTarget write FCredentialTarget;
 
     /// <summary>QQ AppId (oauth_consumer_key in API calls)</summary>
@@ -94,7 +94,7 @@ constructor TQQConfig.Create;
 begin
   inherited Create(spQQ);
   FScope := 'get_user_info';
-  // BUG-019 FIX: 初始化安全存储设�?  FKeyStorageMode := ksmDPAPI;
+  // BUG-019 FIX: 鍒濆鍖栧畨鍏ㄥ瓨鍌ㄨ缃?  FKeyStorageMode := ksmDPAPI;
   FCredentialTarget := 'DeepBase.Social.QQ';
 end;
 
