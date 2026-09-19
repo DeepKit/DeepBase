@@ -94,6 +94,12 @@ type
 var
   GlobalSenseVoiceASR: TDeepBaseSenseVoiceASR = nil;
 
+/// <summary>
+/// 解析逗号分隔字符串（tokens/CMVN CSV）。T4 回归覆盖点：TArray&lt;string&gt;
+/// 为托管数组，只能逐元素赋值，禁止 Move 批量拷贝；暴露供测试。
+/// </summary>
+function ParseCommaList(const AText: string): TArray<string>;
+
 implementation
 
 uses
@@ -112,7 +118,7 @@ const
   SENSEVOICE_VOCAB_SIZE  = 25055;
   BLANK_TOKEN = '<blank>';
 
-{ --- Helper: Comma-separated CSV parser ----------------------------------- }
+{ --- Helper: Comma-separated CSV parser (interface 声明含 T4 说明) --------- }
 
 function ParseCommaList(const AText: string): TArray<string>;
 var

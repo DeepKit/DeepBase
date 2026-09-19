@@ -301,6 +301,13 @@ type
     function GetBackupInfo(const ABackupId: string): TBackupVersion;
     function BackupExists(const ARemoteKey: string): Boolean;
     
+    /// <summary>
+    /// 组装默认认证头与请求级附加头（T4 回归覆盖点：TNetHeaders 含 string
+    /// 托管字段，只能逐元素赋值，禁止 Move 批量拷贝，暴露为静态方法供测试）。
+    /// </summary>
+    class function BuildRequestHeaders(const AApiKey, ABucket: string;
+      AExtraHeaders: TNetHeaders): TNetHeaders; static;
+    
     property ServiceURL: string read FServiceURL;
     property Bucket: string read FBucket;
   end;
@@ -1366,18 +1373,7 @@ var
   LDefaultHeaders: TNetHeaders;
 begin
   LURL := FServiceURL + AEndpoint;
-  
-  SetLength(LDefaultHeaders, 2);
-  LDefaultHeaders[0] := TNameValuePair.Create('X-API-Key', FApiKey);
-  LDefaultHeaders[1] := TNameValuePair.Create('X-Bucket', FBucket);
-  
-  if Length(AHeaders) > 0 then
-  begin
-    SetLength(LDefaultHeaders, Length(LDefaultHeaders) + Length(AHeaders));
-    // T4 FIX: 托管类型 (string 字段) 禁止使用非托管 Move 内存拷贝，防止 double-free
-    for var I := 0 to High(AHeaders) do
-      LDefaultHeaders[2 + I] := AHeaders[I];
-  end;
+  LDefaultHeaders := BuildRequestHeaders(FApiKey, FBucket, AHeaders);
   
   FLock.Enter;
   try
@@ -1392,6 +1388,17 @@ begin
   finally
     FLock.Leave;
   end;
+end;
+
+class function TCloudBackupClient.BuildRequestHeaders(const AApiKey, ABucket: string;
+  AExtraHeaders: TNetHeaders): TNetHeaders;
+begin
+  SetLength(Result, 2 + Length(AExtraHeaders));
+  Result[0] := TNameValuePair.Create('X-API-Key', AApiKey);
+  Result[1] := TNameValuePair.Create('X-Bucket', ABucket);
+  // T4 FIX: 托管类型 (string 字段) 禁止使用非托管 Move 内存拷贝，防止 double-free
+  for var I := 0 to High(AExtraHeaders) do
+    Result[2 + I] := AExtraHeaders[I];
 end;
 
 function TCloudBackupClient.UploadBackup(const ALocalPath, ARemoteKey: string;

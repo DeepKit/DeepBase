@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.LLMChatFrame - FMX LLM Chat Component
   
   Version: 1.0
@@ -25,16 +25,42 @@ interface
 
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  System.Threading, System.Generics.Collections,
+  System.Generics.Collections, System.SyncObjs,
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation, FMX.Edit, FMX.Memo, FMX.Memo.Types, FMX.ScrollBox,
   FMX.Layouts, FMX.Objects, FMX.Effects, FMX.Ani,
   {$IFDEF MSWINDOWS}
   FMX.Platform.Win,
   {$ENDIF}
-  DeepBase.LLM.BillingClient;
+  DeepBase.LLM.BillingClient,
+  DeepBase.ManagedWorker;
 
 type
+  TFMXLLMChatFrame = class; // E8 前向声明：供 ILLMFMXChatContext 回指宿主
+
+  /// <summary>E8/WO-20260919-AUDIT-乙-R2（B4 同构）：异步回信上下文的引用计数接口。
+  /// 工作体只捕获本接口（独立于宿主生命周期）；UI 回调经 TryBeginOwner 在守护锁内
+  /// 检查宿主注册态，宿主 Destroy 先 UnregisterOwner 再释放 → 迟到回调丢弃，
+  /// 消除超时 Evacuate 后 Synchronize 体解引用已释放宿主（Self）的 UAF（审计 T3 同族）。</summary>
+  ILLMFMXChatContext = interface
+    ['{2C7A9E54-1D08-4B63-A5F2-8E4C0D7B1A46}']
+    function TryBeginOwner(out AFrame: TFMXLLMChatFrame): Boolean;
+    procedure UnregisterOwner;
+  end;
+
+  /// <summary>ILLMFMXChatContext 实现：持宿主裸指针 + 注册位，二者由 FLock 串行化守护。</summary>
+  TLLMFMXChatContext = class(TInterfacedObject, ILLMFMXChatContext)
+  private
+    FLock: TCriticalSection;
+    FOwner: TFMXLLMChatFrame;   // 仅 FRegistered=True 时有效
+    FRegistered: Boolean;
+  public
+    constructor Create(AOwner: TFMXLLMChatFrame);
+    destructor Destroy; override;
+    function TryBeginOwner(out AFrame: TFMXLLMChatFrame): Boolean;
+    procedure UnregisterOwner;
+  end;
+
   /// <summary>Chat message display item</summary>
   TFMXChatDisplayItem = record
     Role: TMessageRole;
@@ -75,7 +101,8 @@ type
     FHistory: TChatHistory;
     FChatItems: TList<TFMXChatDisplayItem>;
     FIsGenerating: Boolean;
-    FCurrentTask: ITask;
+    FCurrentWorker: TManagedWorker;
+    FCurrentCtx: ILLMFMXChatContext;
     FStreamBuffer: string;
     
     // Settings
@@ -191,22 +218,78 @@ end;
 
 destructor TFMXLLMChatFrame.Destroy;
 begin
-  // REVIEW5-UI-002: Cancel and wait for background task to prevent
-  // use-after-free when frame is destroyed during generation
-  if FIsGenerating then
+  // REVIEW5-UI-002 / Top20 T3.5 改写（WO-20260919-AUDIT-乙-R2 E8）：
+  // 后台任务改走 TManagedWorker + 引用计数回信上下文（B4 同构）。Destroy 保留 2 秒预算：
+  // Cancel→Wait(2000)，超时则 Evacuate 移交托管隔离区。先 UnregisterOwner：被 Evacuate
+  // 的后台体之后晚到的 Synchronize 经 TryBeginOwner 见未注册即丢弃，不再触碰已释放宿主。
+  if FIsGenerating and Assigned(FClient) then
+    FClient.Cancel;
+  if Assigned(FCurrentWorker) then
   begin
-    if Assigned(FClient) then
-      FClient.Cancel;
-    // Wait for task to complete (with timeout to prevent deadlock)
-    if Assigned(FCurrentTask) then
-      FCurrentTask.Wait(2000);  // 2 second timeout
+    FCurrentWorker.Cancel;
+    if not FCurrentWorker.Wait(2000) then
+      FCurrentWorker.Evacuate
+    else
+      FCurrentWorker.Free;
+    FCurrentWorker := nil;
   end;
+  if Assigned(FCurrentCtx) then
+    FCurrentCtx.UnregisterOwner;
+  FCurrentCtx := nil;
 
   if FOwnsClient and Assigned(FClient) then
     FreeAndNil(FClient);
   FreeAndNil(FHistory);
   FreeAndNil(FChatItems);
   inherited;
+end;
+
+{ TLLMFMXChatContext }
+
+constructor TLLMFMXChatContext.Create(AOwner: TFMXLLMChatFrame);
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+  FOwner := AOwner;
+  FRegistered := True;
+end;
+
+destructor TLLMFMXChatContext.Destroy;
+begin
+  FreeAndNil(FLock);
+  inherited;
+end;
+
+function TLLMFMXChatContext.TryBeginOwner(out AFrame: TFMXLLMChatFrame): Boolean;
+begin
+  // UI 线程串行执行本方法所在的 Synchronize 体；与宿主 Destroy 的 UnregisterOwner
+  // 同锁串行，返回 True 即表示宿主仍存活且本次回调期间不会被同线程的 Destroy 插入。
+  FLock.Enter;
+  try
+    if FRegistered then
+    begin
+      AFrame := FOwner;
+      Result := True;
+    end
+    else
+    begin
+      AFrame := nil;
+      Result := False;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TLLMFMXChatContext.UnregisterOwner;
+begin
+  FLock.Enter;
+  try
+    FRegistered := False;
+    FOwner := nil;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TFMXLLMChatFrame.CreateComponents;
@@ -430,6 +513,7 @@ procedure TFMXLLMChatFrame.DoSendMessage;
 var
   UserMessage: string;
   Messages: TChatMessages;
+  LCtx: ILLMFMXChatContext;
 begin
   if FIsGenerating or not Assigned(FClient) then
     Exit;
@@ -478,7 +562,13 @@ begin
   var LClient := FClient;
   var LMessages := FHistory.GetMessages;
 
-  FCurrentTask := TTask.Run(
+  // 上一轮 worker 无论正常结束还是已被 Evacuate（字段仅残留失效引用，
+  // 此处只覆写不解引用）均在此回收/清位；上一轮回信随之作废。Destroy 是另一释放点。
+  FreeAndNil(FCurrentWorker);
+  FCurrentCtx := nil;
+  LCtx := TLLMFMXChatContext.Create(Self);
+  FCurrentCtx := LCtx;
+  FCurrentWorker := TManagedWorker.Create(
     procedure
     var
       Response: TChatResponse;
@@ -497,41 +587,43 @@ begin
         TThread.Synchronize(TThread(nil),
           procedure
           var
+            LFrame: TFMXLLMChatFrame;
             Item: TFMXChatDisplayItem;
           begin
-            if (csDestroying in ComponentState) or (FHistory = nil) or (FChatItems = nil) or (FMemoChat = nil) then
+            if not LCtx.TryBeginOwner(LFrame) then Exit; // 宿主已释放→丢弃晚到回调
+            if (LFrame.FMemoChat = nil) then
               Exit;
 
-            LocalContentLineIdx := FMemoChat.Lines.Count - 2;
+            LocalContentLineIdx := LFrame.FMemoChat.Lines.Count - 2;
             
             if Response.Success then
             begin
               if LocalContentLineIdx >= 0 then
-                FMemoChat.Lines[LocalContentLineIdx] := LocalContent;
+                LFrame.FMemoChat.Lines[LocalContentLineIdx] := LocalContent;
               
-              FHistory.AddAssistantMessage(LocalContent);
+              LFrame.FHistory.AddAssistantMessage(LocalContent);
               
               Item.Role := mrAssistant;
               Item.Content := LocalContent;
               Item.Timestamp := Now;
               Item.TokenCount := LocalTokenCount;
-              FChatItems.Add(Item);
+              LFrame.FChatItems.Add(Item);
               
-              SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
+              LFrame.SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
             end
             else
             begin
               if LocalContentLineIdx >= 0 then
-                FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
+                LFrame.FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
               
-              SetStatus('错误: ' + LocalErrorMsg);
+              LFrame.SetStatus('错误: ' + LocalErrorMsg);
             end;
             
-            FIsGenerating := False;
-            UpdateUI;
+            LFrame.FIsGenerating := False;
+            LFrame.UpdateUI;
             
-            if Assigned(FOnResponseReceived) then
-              FOnResponseReceived(Self, Response);
+            if Assigned(LFrame.FOnResponseReceived) then
+              LFrame.FOnResponseReceived(LFrame, Response);
           end);
       except
         on E: Exception do
@@ -539,21 +631,25 @@ begin
           LocalErrorMsg := E.Message;
           TThread.Synchronize(TThread(nil),
             procedure
+            var
+              LFrame: TFMXLLMChatFrame;
             begin
-              if (csDestroying in ComponentState) or (FMemoChat = nil) then
+              if not LCtx.TryBeginOwner(LFrame) then Exit;
+              if (LFrame.FMemoChat = nil) then
                 Exit;
 
-              LocalContentLineIdx := FMemoChat.Lines.Count - 2;
+              LocalContentLineIdx := LFrame.FMemoChat.Lines.Count - 2;
               if LocalContentLineIdx >= 0 then
-                FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
+                LFrame.FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;
               
-              FIsGenerating := False;
-              UpdateUI;
-              SetStatus('错误: ' + LocalErrorMsg);
+              LFrame.FIsGenerating := False;
+              LFrame.UpdateUI;
+              LFrame.SetStatus('错误: ' + LocalErrorMsg);
             end);
         end;
       end;
-    end);
+    end, 'FMX.LLMChatFrame.Send');
+  FCurrentWorker.Start;
 end;
 
 procedure TFMXLLMChatFrame.DoCancel;

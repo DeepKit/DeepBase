@@ -25,6 +25,7 @@ uses
   DeepBase.Governance.DueChecker,
   DeepBase.Governance.RouteStore.SQLite,
   DeepBase.Crypto, DeepBase.Crypto.Hash, DeepBase.Crypto.Encoding,
+  DeepBase.Gate.Verdict,
   DeepBase.KeyManager;
 
 const
@@ -84,10 +85,10 @@ type
     /// </summary>
     function ComputeModeHMAC(const AMode: string): string;
     /// <summary>
-    /// DATA2-023: Verify the stored mode against its HMAC signature.
-    /// Returns True if valid, False if tampered or unverifiable.
+    /// DATA2-023 + A6 fail-closed：验证存储 mode 的 HMAC 签名，返回强类型
+    /// 裁决：篡改=Rejected，签名密钥不可用=Indeterminate（两者均不放行）。
     /// </summary>
-    function ValidateModeHMAC(const AMode, AStoredSig: string): Boolean;
+    function ValidateModeHMAC(const AMode, AStoredSig: string): TGateVerdict;
   public
     constructor Create(AConnection: TFDConnection; AKeyResolver: TKeyResolver;
       APurposeSet: TPurposeSet; AActionGrid: TActionGrid = nil;
@@ -979,18 +980,24 @@ begin
   end;
 end;
 
-function TConfigRegistrar.ValidateModeHMAC(const AMode, AStoredSig: string): Boolean;
+function TConfigRegistrar.ValidateModeHMAC(const AMode, AStoredSig: string): TGateVerdict;
 var
   LExpected: string;
 begin
   if AStoredSig = '' then
     // No signature stored — treat as tampered / unverifiable.
-    Exit(False);
+    Exit(TGateVerdict.Rejected('mode has no stored HMAC signature (tampered or unverifiable)'));
   LExpected := ComputeModeHMAC(AMode);
+  if LExpected = '' then
+    // 签名密钥不可用（KeyManager 未解锁/无 signing key）：无法校验，
+    // 与"校验不过"归因不同，但同样不放行（调用侧按拒绝处理）。
+    Exit(TGateVerdict.Indeterminate('mode HMAC cannot be computed (signing key unavailable)'));
   // Constant-time compare is not available in base Delphi, but the
   // hex-string comparison here is acceptable because the attacker would
   // need write access to the DB *and* the signing key.
-  Result := (LExpected <> '') and SameText(LExpected, AStoredSig);
+  if not SameText(LExpected, AStoredSig) then
+    Exit(TGateVerdict.Rejected('mode HMAC mismatch (tampered at DB level)'));
+  Result := TGateVerdict.Approved;
 end;
 
 function TConfigRegistrar.GetMode: string;
@@ -1024,7 +1031,7 @@ begin
     // been tampered with (e.g. DB-level write). Default to enforce for safety.
     if LMode <> '' then
     begin
-      if ValidateModeHMAC(LMode, LSig) then
+      if ValidateModeHMAC(LMode, LSig).IsApproved then
         Result := LMode
       else
       begin

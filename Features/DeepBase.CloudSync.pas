@@ -118,6 +118,9 @@ type
     property RemoteVersion: TConfigVersion read FRemoteVersion write FRemoteVersion;
     property IsDeleted: Boolean read FIsDeleted write FIsDeleted;
     property IsDirty: Boolean read FIsDirty write FIsDirty;
+
+    /// <summary>深拷贝（ToJSON/FromJSON 往返）：同步引擎持有的是借用引用，入库必须克隆，防止双重释放</summary>
+    function Clone: TConfigItem;
   end;
 
   /// <summary>同步冲突</summary>
@@ -210,6 +213,8 @@ type
     function GetChangedConfigs(ASinceVersion: Integer): TObjectList<TConfigItem>;
     function UploadConfig(AItem: TConfigItem): Boolean;
     function UploadConfigs(AItems: TObjectList<TConfigItem>): Boolean;
+    /// <summary>Top20 #15: 批量上传响应聚合判定——任一子项失败/回传数量不符/缺失 success 均为整体失败（fail-closed，禁静默吞错）</summary>
+    class function EvaluateBatchUploadResponse(AResponse: TJSONObject; AItemCount: Integer): Boolean; static;
     function DeleteRemoteConfig(const AKey: string): Boolean;
     function GetServerVersion: Integer;
     
@@ -239,6 +244,8 @@ type
     function Exists(const AKey: string): Boolean;
     function GetAll: TObjectList<TConfigItem>;
     function GetDirtyItems: TObjectList<TConfigItem>;
+    /// <summary>Top20 #15: 含墓碑项全量标脏，供 ForceUpload 传播删除</summary>
+    procedure MarkAllDirty;
     procedure MarkAllClean;
     procedure Clear;
     
@@ -680,6 +687,18 @@ begin
     Result.FRemoteVersion := TConfigVersion.FromJSON(TJSONObject(LValue));
 end;
 
+function TConfigItem.Clone: TConfigItem;
+var
+  LJson: TJSONObject;
+begin
+  LJson := ToJSON;
+  try
+    Result := TConfigItem.FromJSON(LJson);
+  finally
+    LJson.Free;
+  end;
+end;
+
 function TConfigItem.GetStringValue: string;
 begin
   Result := FValue;
@@ -1046,14 +1065,14 @@ begin
   Result := TObjectList<TConfigItem>.Create(True);
   LResponse := DoRequest('GET', '/config', nil);
   try
-    if Assigned(LResponse) then
+    // Top20 #15: 请求失败不得伪装成“无配置”，fail-closed 拒绝静默空结果
+    if not Assigned(LResponse) then
+      raise Exception.Create('Cloud sync request failed: GET /config');
+    LItems := LResponse.GetValue<TJSONArray>('items');
+    if Assigned(LItems) then
     begin
-      LItems := LResponse.GetValue<TJSONArray>('items');
-      if Assigned(LItems) then
-      begin
-        for I := 0 to LItems.Count - 1 do
-          Result.Add(TConfigItem.FromJSON(LItems.Items[I] as TJSONObject));
-      end;
+      for I := 0 to LItems.Count - 1 do
+        Result.Add(TConfigItem.FromJSON(LItems.Items[I] as TJSONObject));
     end;
   finally
     LResponse.Free;
@@ -1069,14 +1088,14 @@ begin
   Result := TObjectList<TConfigItem>.Create(True);
   LResponse := DoRequest('GET', '/config/changes?since=' + IntToStr(ASinceVersion), nil);
   try
-    if Assigned(LResponse) then
+    // Top20 #15: 增量链拉取失败不得当作“无变更”继续提交版本，fail-closed 中断本轮同步
+    if not Assigned(LResponse) then
+      raise Exception.Create('Cloud sync request failed: GET /config/changes');
+    LItems := LResponse.GetValue<TJSONArray>('items');
+    if Assigned(LItems) then
     begin
-      LItems := LResponse.GetValue<TJSONArray>('items');
-      if Assigned(LItems) then
-      begin
-        for I := 0 to LItems.Count - 1 do
-          Result.Add(TConfigItem.FromJSON(LItems.Items[I] as TJSONObject));
-      end;
+      for I := 0 to LItems.Count - 1 do
+        Result.Add(TConfigItem.FromJSON(LItems.Items[I] as TJSONObject));
     end;
   finally
     LResponse.Free;
@@ -1120,14 +1139,47 @@ begin
     
     LResponse := DoRequest('POST', '/config/batch', LBody);
     try
-      if Assigned(LResponse) then
-        Result := LResponse.GetValue<Boolean>('success', False);
+      // Top20 #15: 逐条回传聚合成败，任一失败即整体失败
+      Result := EvaluateBatchUploadResponse(LResponse, AItems.Count);
     finally
       LResponse.Free;
     end;
   finally
     LBody.Free;
   end;
+end;
+
+class function TCloudSyncClient.EvaluateBatchUploadResponse(AResponse: TJSONObject;
+  AItemCount: Integer): Boolean;
+var
+  LResults: TJSONValue;
+  LItemObj: TJSONValue;
+  I: Integer;
+begin
+  // 无响应/非成功/缺失 success 字段一律失败（fail-closed）
+  if not Assigned(AResponse) then
+    Exit(False);
+  if not AResponse.GetValue<Boolean>('success', False) then
+    Exit(False);
+
+  // 服务器逐条回传时：数量必须与提交项一致且每条 success，部分失败/静默丢项均判整体失败
+  LResults := AResponse.GetValue('results');
+  if Assigned(LResults) then
+  begin
+    if not (LResults is TJSONArray) then
+      Exit(False);
+    if TJSONArray(LResults).Count <> AItemCount then
+      Exit(False);
+    for I := 0 to TJSONArray(LResults).Count - 1 do
+    begin
+      LItemObj := TJSONArray(LResults).Items[I];
+      if not (LItemObj is TJSONObject) then
+        Exit(False);
+      if not TJSONObject(LItemObj).GetValue<Boolean>('success', False) then
+        Exit(False);
+    end;
+  end;
+  Result := True;
 end;
 
 function TCloudSyncClient.DeleteRemoteConfig(const AKey: string): Boolean;
@@ -1151,8 +1203,10 @@ begin
   Result := 0;
   LResponse := DoRequest('GET', '/config/version', nil);
   try
-    if Assigned(LResponse) then
-      Result := LResponse.GetValue<Integer>('version', 0);
+    // Top20 #15: 版本读取失败不得返回 0 冒充“无版本”，fail-closed 让同步轮次中止
+    if not Assigned(LResponse) then
+      raise Exception.Create('Cloud sync request failed: GET /config/version');
+    Result := LResponse.GetValue<Integer>('version', 0);
   finally
     LResponse.Free;
   end;
@@ -1306,6 +1360,15 @@ begin
       LItem.IsDeleted := True;
       LItem.IsDirty := True;
       FIsDirty := True;
+    end
+    else
+    begin
+      // Top20 #15: 本地不存在的键也要留下墓碑，否则删除永远不会传播到远端（双向同步后远端旧值会回流）
+      LItem := TConfigItem.Create(AKey);
+      LItem.IsDeleted := True;
+      LItem.IsDirty := True;
+      FItems.Add(AKey, LItem);
+      FIsDirty := True;
     end;
   finally
     FLock.Leave;
@@ -1363,6 +1426,20 @@ begin
     for LPair in FItems do
       LPair.Value.IsDirty := False;
     SaveToFile;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TLocalConfigStore.MarkAllDirty;
+var
+  LPair: TPair<string, TConfigItem>;
+begin
+  FLock.Enter;
+  try
+    for LPair in FItems do
+      LPair.Value.IsDirty := True;
+    FIsDirty := True;
   finally
     FLock.Leave;
   end;
@@ -1504,10 +1581,18 @@ begin
     Exit;
     
   LResolvedItem := AConflict.GetResolvedItem;
-  if Assigned(LResolvedItem) then
+  if not Assigned(LResolvedItem) then
+    Exit;
+
+  if LResolvedItem = AConflict.RemoteItem then
   begin
-    // 更新本地存储
-    FLocalStore.Put(LResolvedItem);
+    // Top20 #15: 远程项归 LRemoteItems 所有，必须克隆入库，否则列表释放后存储持有野指针（双重释放）
+    FLocalStore.Put(LResolvedItem.Clone);
+    Inc(FStatistics.ConflictsResolved);
+  end
+  else if LResolvedItem = AConflict.LocalItem then
+  begin
+    // 本地项本就同引用在库；AddOrSetValue 会先释放旧值，重复 Put 会自毁，跳过入库即正确结果
     Inc(FStatistics.ConflictsResolved);
   end;
 end;
@@ -1521,6 +1606,7 @@ var
   LResolution: TConflictResolution;
   LStartTime: TDateTime;
   LDuration: Double;
+  LVersionBaseline: Integer;
 begin
   LStartTime := Now;
   FStatus := ssSyncing;
@@ -1533,6 +1619,10 @@ begin
     FProgress.Status := ssDownloading;
     DoProgress;
     
+    // Top20 #15: 先读版本基线再拉增量；成功后只提交到基线，
+    // 防止同步期间服务器新变更被事后 GetServerVersion 误标为已同步（增量链跳变丢失）
+    LVersionBaseline := FClient.GetServerVersion;
+
     LRemoteItems := FClient.GetChangedConfigs(FLocalStore.CurrentVersion);
     try
       FProgress.DownloadedItems := LRemoteItems.Count;
@@ -1578,7 +1668,9 @@ begin
             // 跳过有冲突的项（已处理）
             if not HasConflictForKey(LItem.Key) then
             begin
-              FLocalStore.Put(LItem);
+              // Top20 #15: 克隆入库；远程列表释放后存储不得继续持有其引用；
+              // 墓碑项（IsDeleted）照常入库，读取层已按 IsDeleted 过滤，远端删除得以落地
+              FLocalStore.Put(LItem.Clone);
               Inc(FProgress.ProcessedItems);
             end;
           end;
@@ -1589,6 +1681,10 @@ begin
         begin
           FProgress.Status := ssUploading;
           DoProgress;
+          
+          // Top20 #15: 冲突裁决的远端胜出项会替换并释放本地脏项，旧快照指针失效，上传前必须重建
+          LDirtyItems.Free;
+          LDirtyItems := FLocalStore.GetDirtyItems;
           
           if LDirtyItems.Count > 0 then
           begin
@@ -1601,7 +1697,8 @@ begin
         end;
         
         // 6. 更新版本
-        FLocalStore.CurrentVersion := FClient.GetServerVersion;
+        // Top20 #15: 提交到本轮开始前的基线版本，基线之后新到的变更留给下轮增量（宁重拉不丢）
+        FLocalStore.CurrentVersion := LVersionBaseline;
         
         // 更新统计
         Inc(FStatistics.TotalSyncs);
@@ -1711,12 +1808,10 @@ procedure TCloudConfigSync.ForceUpload;
 var
   LItems: TObjectList<TConfigItem>;
 begin
-  LItems := FLocalStore.GetAll;
+  // Top20 #15: 标脏覆盖含墓碑项；原 GetAll 过滤已删除项，导致删除永远不会被强制上传
+  FLocalStore.MarkAllDirty;
+  LItems := FLocalStore.GetDirtyItems;
   try
-    // 标记所有项为脏
-    for var LItem in LItems do
-      LItem.IsDirty := True;
-    
     // Top20 #15 FIX: 强制上传失败必须报错并阻断 clean 标记
     if not FClient.UploadConfigs(LItems) then
       raise Exception.Create('Force upload failed to send configurations to cloud server');
@@ -1729,15 +1824,18 @@ end;
 procedure TCloudConfigSync.ForceDownload;
 var
   LRemoteItems: TObjectList<TConfigItem>;
+  LVersionBaseline: Integer;
 begin
   FLocalStore.Clear;
   
+  // Top20 #15: 先读版本基线再拉全量，入库后提交到基线，防止期间新变更被误标已同步
+  LVersionBaseline := FClient.GetServerVersion;
   LRemoteItems := FClient.GetAllRemoteConfigs;
   try
     for var LItem in LRemoteItems do
-      FLocalStore.Put(LItem);
+      FLocalStore.Put(LItem.Clone);
     
-    FLocalStore.CurrentVersion := FClient.GetServerVersion;
+    FLocalStore.CurrentVersion := LVersionBaseline;
   finally
     LRemoteItems.Free;
   end;

@@ -22,6 +22,7 @@ uses
   System.IOUtils,
   System.DateUtils,
   System.Generics.Collections,
+  System.Net.HttpClient,
   DeepBase.CloudSync,
   DeepBase.Exceptions;
 
@@ -160,6 +161,47 @@ type
     
     [Test]
     procedure Test_CurrentVersion_Persisted;
+    
+    // Top20 #15 / E4: 墓碑语义
+    [Test]
+    procedure Test_Delete_UnknownKey_CreatesTombstone;
+    
+    [Test]
+    procedure Test_MarkAllDirty_IncludesTombstones;
+  end;
+
+  // ============================================================================
+  // Top20 #15 / E4: 批量上传响应逐条回传聚合（任一失败即整体失败）
+  // ============================================================================
+  [TestFixture]
+  TTestBatchUploadAggregation = class
+  public
+    [Test]
+    procedure Test_NilResponse_Fails;
+    [Test]
+    procedure Test_MissingSuccessFlag_Fails;
+    [Test]
+    procedure Test_TopLevelFailure_Fails;
+    [Test]
+    procedure Test_PartialItemFailure_FailsWholeBatch;
+    [Test]
+    procedure Test_SilentItemDrop_CountMismatch_Fails;
+    [Test]
+    procedure Test_AllItemsSuccessful_Passes;
+  end;
+
+  // ============================================================================
+  // Top20 #15 / E4: 请求失败必须 fail-closed，不得伪装成无变更/无版本
+  // ============================================================================
+  [TestFixture]
+  TTestCloudSyncClientFailClosed = class
+  private
+    function UnreachableClient: TCloudSyncClient;
+  public
+    [Test]
+    procedure Test_GetChangedConfigs_RequestFailure_Raises;
+    [Test]
+    procedure Test_GetServerVersion_RequestFailure_Raises;
   end;
 
   [TestFixture]
@@ -932,6 +974,181 @@ begin
   FStore := TLocalConfigStore.Create(FTempPath);
 end;
 
+// Top20 #15: 本地不存在的键被删除时也必须留下墓碑，否则删除永远不会传播到远端
+procedure TTestLocalConfigStore.Test_Delete_UnknownKey_CreatesTombstone;
+var
+  LDirty: TObjectList<TConfigItem>;
+  LTomb: TConfigItem;
+begin
+  FStore.Delete('never_seen_key');
+  LDirty := FStore.GetDirtyItems;
+  try
+    Assert.AreEqual(Integer(1), Integer(LDirty.Count), 'Delete of unknown key must produce a dirty tombstone');
+    LTomb := LDirty[0];
+    Assert.AreEqual('never_seen_key', LTomb.Key);
+    Assert.IsTrue(LTomb.IsDeleted);
+    Assert.IsTrue(LTomb.IsDirty);
+  finally
+    LDirty.Free;
+  end;
+  Assert.IsFalse(FStore.Exists('never_seen_key'), 'Tombstone must stay hidden from readers');
+end;
+
+// Top20 #15: ForceUpload 路径（MarkAllDirty+GetDirtyItems）必须覆盖墓碑项
+procedure TTestLocalConfigStore.Test_MarkAllDirty_IncludesTombstones;
+var
+  LItem: TConfigItem;
+  LDirty: TObjectList<TConfigItem>;
+begin
+  LItem := TConfigItem.Create('live_key', citString);
+  FStore.Put(LItem);
+  FStore.Delete('live_key');
+  FStore.MarkAllClean;
+  Assert.AreEqual(Integer(0), Integer(FStore.GetDirtyItems.Count), 'MarkAllClean should clear tombstone dirty flag');
+  
+  FStore.MarkAllDirty;
+  LDirty := FStore.GetDirtyItems;
+  try
+    Assert.AreEqual(Integer(1), Integer(LDirty.Count));
+    Assert.IsTrue(LDirty[0].IsDeleted, 'ForceUpload dirty snapshot must include tombstones');
+  finally
+    LDirty.Free;
+  end;
+end;
+
+{ TTestBatchUploadAggregation }
+
+procedure TTestBatchUploadAggregation.Test_NilResponse_Fails;
+begin
+  Assert.IsFalse(TCloudSyncClient.EvaluateBatchUploadResponse(nil, 3),
+    'nil response must fail closed');
+end;
+
+procedure TTestBatchUploadAggregation.Test_MissingSuccessFlag_Fails;
+var
+  LResp: TJSONObject;
+begin
+  LResp := TJSONObject.ParseJSONValue('{"processed":2}') as TJSONObject;
+  try
+    Assert.IsNotNull(LResp);
+    Assert.IsFalse(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 2),
+      'missing success flag must fail closed');
+  finally
+    LResp.Free;
+  end;
+end;
+
+procedure TTestBatchUploadAggregation.Test_TopLevelFailure_Fails;
+var
+  LResp: TJSONObject;
+begin
+  LResp := TJSONObject.ParseJSONValue('{"success":false}') as TJSONObject;
+  try
+    Assert.IsFalse(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 1),
+      'top-level success=false must fail');
+  finally
+    LResp.Free;
+  end;
+end;
+
+// 验收核心：注入“部分对象上传失败”⇒ 整体判定失败（禁静默吞错）
+procedure TTestBatchUploadAggregation.Test_PartialItemFailure_FailsWholeBatch;
+var
+  LResp: TJSONObject;
+begin
+  LResp := TJSONObject.ParseJSONValue(
+    '{"success":true,"results":[{"key":"a","success":true},{"key":"b","success":false}]}') as TJSONObject;
+  try
+    Assert.IsNotNull(LResp);
+    Assert.IsFalse(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 2),
+      'any per-item upload failure must aggregate to whole-batch failure');
+  finally
+    LResp.Free;
+  end;
+end;
+
+procedure TTestBatchUploadAggregation.Test_SilentItemDrop_CountMismatch_Fails;
+var
+  LResp: TJSONObject;
+begin
+  // 提交了 3 项，服务器只回传 2 项且都成功——静默丢项也是失败
+  LResp := TJSONObject.ParseJSONValue(
+    '{"success":true,"results":[{"key":"a","success":true},{"key":"b","success":true}]}') as TJSONObject;
+  try
+    Assert.IsFalse(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 3),
+      'results count mismatch (silently dropped items) must fail the batch');
+  finally
+    LResp.Free;
+  end;
+end;
+
+procedure TTestBatchUploadAggregation.Test_AllItemsSuccessful_Passes;
+var
+  LResp: TJSONObject;
+begin
+  LResp := TJSONObject.ParseJSONValue(
+    '{"success":true,"results":[{"key":"a","success":true},{"key":"b","success":true}]}') as TJSONObject;
+  try
+    Assert.IsTrue(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 2),
+      'full per-item success must pass');
+    
+    // 无 results 字段时以顶层 success 为准
+    LResp.Free;
+    LResp := TJSONObject.ParseJSONValue('{"success":true}') as TJSONObject;
+    Assert.IsTrue(TCloudSyncClient.EvaluateBatchUploadResponse(LResp, 5),
+      'legacy batch response without results relies on top-level success');
+  finally
+    LResp.Free;
+  end;
+end;
+
+{ TTestCloudSyncClientFailClosed }
+
+function TTestCloudSyncClientFailClosed.UnreachableClient: TCloudSyncClient;
+var
+  LCfg: TCloudServiceConfig;
+begin
+  LCfg := TCloudServiceConfig.Default;
+  LCfg.ServiceURL := 'http://127.0.0.1:9'; // 保留端口，正常环境无监听 ⇒ 请求必失败
+  LCfg.ApiKey := 'test-key';
+  LCfg.RetryCount := 0;
+  LCfg.TimeoutSeconds := 2;
+  LCfg.EnableEncryption := False;
+  Result := TCloudSyncClient.Create(LCfg);
+end;
+
+procedure TTestCloudSyncClientFailClosed.Test_GetChangedConfigs_RequestFailure_Raises;
+var
+  LClient: TCloudSyncClient;
+  LList: TObjectList<TConfigItem>;
+begin
+  LClient := UnreachableClient;
+  try
+    Assert.WillRaise(procedure
+    begin
+      LList := LClient.GetChangedConfigs(0);
+      LList.Free;
+    end, ENetHTTPClientException, 'Top20 #15: GetChangedConfigs must fail closed, not masquerade as "no changes"');
+  finally
+    LClient.Free;
+  end;
+end;
+
+procedure TTestCloudSyncClientFailClosed.Test_GetServerVersion_RequestFailure_Raises;
+var
+  LClient: TCloudSyncClient;
+begin
+  LClient := UnreachableClient;
+  try
+    Assert.WillRaise(procedure
+    begin
+      LClient.GetServerVersion;
+    end, ENetHTTPClientException, 'Top20 #15: GetServerVersion must fail closed, not return 0 as "no version"');
+  finally
+    LClient.Free;
+  end;
+end;
+
 { TTestConfigItem }
 
 procedure TTestConfigItem.Test_Create_SetsKeyAndType;
@@ -1374,5 +1591,7 @@ initialization
   TDUnitX.RegisterTestFixture(TTestSyncProgress);
   TDUnitX.RegisterTestFixture(TTestSyncStatistics);
   TDUnitX.RegisterTestFixture(TTestEncryptionFailClosed);
+  TDUnitX.RegisterTestFixture(TTestBatchUploadAggregation);
+  TDUnitX.RegisterTestFixture(TTestCloudSyncClientFailClosed);
 
 end.

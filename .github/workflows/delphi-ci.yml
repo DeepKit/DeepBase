@@ -58,6 +58,18 @@ jobs:
       - name: Build ownership negative sample test
         run: node .\09_工程脚本\build-ownership\test_negative_sample.js
 
+      - name: EOL consistency gate (WO-20260919-AUDIT-乙-R2 E9)
+        run: node .\09_工程脚本\eol-gate\check_eol.js
+
+      - name: EOL gate negative sample test
+        run: node .\09_工程脚本\eol-gate\test_negative_sample.js
+
+      - name: Managed-copy gate (no new Move/FillChar over managed types, WO-20260919-AUDIT-乙-R2 E7)
+        run: node .\09_工程脚本\managed-copy-gate\check_managed_copy.js
+
+      - name: Managed-copy gate negative sample test
+        run: node .\09_工程脚本\managed-copy-gate\test_negative_sample.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]

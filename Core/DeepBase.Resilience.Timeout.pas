@@ -10,8 +10,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.SyncObjs,
-  System.Threading;
+  System.Threading,
+  DeepBase.ManagedWorker;
 
 type
   // ============================================================================
@@ -30,6 +30,9 @@ type
   
   /// <summary>
   /// Timeout policy - limits execution time
+  /// Top20 #19 / E6: 工作体生命周期统一由 TManagedWorker 托管（取消→WaitFor→置 nil，
+  /// 超时抛弃走隔离区），宿主只在 Wait 成功后读结果信箱（DoneEvent 即发布/获取屏障），
+  /// 不再需要独立的引用计数锁同步线程与宿主栈帧的双生命周期。
   /// </summary>
   TTimeoutPolicy = class
   private
@@ -47,25 +50,6 @@ type
     function Execute<T>(Func: TFunc<T>): T; overload;
   end;
 
-  // ============================================================================
-  // Ref-counted Lock to eliminate UAF on timeout path (Top20 #19 / E6)
-  // ============================================================================
-  ITimeoutLock = interface
-    ['{D7A8B9C0-E1F2-4A3B-8C9D-0E1F2A3B4C5D}']
-    procedure Enter;
-    procedure Leave;
-  end;
-
-  TTimeoutLock = class(TInterfacedObject, ITimeoutLock)
-  private
-    FLock: TCriticalSection;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    procedure Enter;
-    procedure Leave;
-  end;
-
 
 implementation
 
@@ -77,29 +61,6 @@ constructor ETimeoutException.Create(ATimeoutMs: Int64);
 begin
   inherited CreateFmt('Operation timed out after %d ms', [ATimeoutMs]);
   FTimeoutMs := ATimeoutMs;
-end;
-
-
-constructor TTimeoutLock.Create;
-begin
-  inherited Create;
-  FLock := TCriticalSection.Create;
-end;
-
-destructor TTimeoutLock.Destroy;
-begin
-  FreeAndNil(FLock);
-  inherited;
-end;
-
-procedure TTimeoutLock.Enter;
-begin
-  FLock.Enter;
-end;
-
-procedure TTimeoutLock.Leave;
-begin
-  FLock.Leave;
 end;
 
 // ============================================================================
@@ -126,114 +87,84 @@ end;
 
 procedure TTimeoutPolicy.Execute(Proc: TProc);
 var
-  TaskProc: TProc;
-  Task: ITask;
-  Completed: Boolean;
+  Worker: TManagedWorker;
+  ExecProc: TProc;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
-  Lock: ITimeoutLock;
 begin
   ErrorClass := nil;
   ErrorMsg := '';
-  // Top20 #19 / E6: 使用引用计数托管锁，即使超时退出宿主栈帧，后台任务仍持有锁引用，彻底杜绝 UAF
-  Lock := TTimeoutLock.Create;
-  TaskProc := Proc;
-  Task := TTask.Run(
+  ExecProc := Proc;
+  Worker := TManagedWorker.Create(
     procedure
     begin
       try
-        TaskProc();
+        ExecProc();
       except
         on E: Exception do
         begin
-          Lock.Enter;
-          try
-            ErrorClass := ExceptClass(E.ClassType);
-            ErrorMsg := E.Message;
-          finally
-            Lock.Leave;
-          end;
+          // 信箱写入先于 DoneEvent 发布；宿主仅在 Wait 成功后读，无并发访问
+          ErrorClass := ExceptClass(E.ClassType);
+          ErrorMsg := E.Message;
         end;
       end;
-    end);
-
-  Completed := Task.Wait(FTimeoutMs);
-
-  if not Completed then
+    end, 'Resilience.Timeout');
+  Worker.Start;
+  if not Worker.Wait(FTimeoutMs) then
   begin
-    Task.Cancel;  // Cancel background task to prevent resource leaks
+    // 超时抛弃唯一合法出口：Evacuate 内部已 Cancel 并把所有权移交隔离区，
+    // 看护线程在其结束后 WaitFor+回收；此后不得再引用 Worker。
+    // 闭包持有信箱/捕获帧至线程体结束，无 UAF、无孤儿线程泄漏。
+    Worker.Evacuate;
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
-
-  Lock.Enter;
-  try
-    if Assigned(ErrorClass) then
-      raise ErrorClass.Create(ErrorMsg);
-  finally
-    Lock.Leave;
-  end;
+  Worker.Free; // 已结束：Destroy 即时回收（未结束时 Destroy 保证取消→WaitFor→置 nil）
+  if Assigned(ErrorClass) then
+    raise ErrorClass.Create(ErrorMsg);
 end;
 
 function TTimeoutPolicy.Execute<T>(Func: TFunc<T>): T;
 var
-  TaskFunc: TFunc<T>;
-  Task: ITask;
+  Worker: TManagedWorker;
+  ExecFunc: TFunc<T>;
   TaskResult: T;
-  Completed: Boolean;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
-  Lock: ITimeoutLock;
 begin
+  TaskResult := Default(T);
   ErrorClass := nil;
   ErrorMsg := '';
-  // Top20 #19 / E6: 引用计数锁跨线程生命周期托管
-  Lock := TTimeoutLock.Create;
-  TaskFunc := Func;
-  Task := TTask.Run(
+  ExecFunc := Func;
+  Worker := TManagedWorker.Create(
     procedure
+    var
+      LValue: T;
     begin
       try
-        var LResult := TaskFunc();
-        Lock.Enter;
-        try
-          TaskResult := LResult;
-        finally
-          Lock.Leave;
-        end;
+        LValue := ExecFunc();
+        TaskResult := LValue; // 同上：宿主只在 Wait 成功后读
       except
         on E: Exception do
         begin
-          Lock.Enter;
-          try
-            ErrorClass := ExceptClass(E.ClassType);
-            ErrorMsg := E.Message;
-          finally
-            Lock.Leave;
-          end;
+          ErrorClass := ExceptClass(E.ClassType);
+          ErrorMsg := E.Message;
         end;
       end;
-    end);
-
-  Completed := Task.Wait(FTimeoutMs);
-
-  if not Completed then
+    end, 'Resilience.Timeout');
+  Worker.Start;
+  if not Worker.Wait(FTimeoutMs) then
   begin
-    Task.Cancel;
+    Worker.Evacuate;
     if Assigned(FOnTimeout) then
       FOnTimeout(FTimeoutMs);
     raise ETimeoutException.Create(FTimeoutMs);
   end;
-
-  Lock.Enter;
-  try
-    if Assigned(ErrorClass) then
-      raise ErrorClass.Create(ErrorMsg);
-    Result := TaskResult;
-  finally
-    Lock.Leave;
-  end;
+  Worker.Free;
+  if Assigned(ErrorClass) then
+    raise ErrorClass.Create(ErrorMsg);
+  Result := TaskResult;
 end;
 
 end.

@@ -1,4 +1,4 @@
-unit DeepBase.BrowserAutomation;
+﻿unit DeepBase.BrowserAutomation;
 
 interface
 
@@ -701,25 +701,48 @@ begin
   Result :=
     '(function(){' +
     'try{' +
-    'var el=document.querySelector(' + JavaScriptString(ASelector) + ');' +
+    'var selRaw=' + JavaScriptString(ASelector) + ';' +
     'var text=' + JavaScriptString(AText) + ';' +
+    'function pickEl(selStr){' +
+    '  var parts=[],cur="",depth=0;' +
+    '  for(var i=0;i<selStr.length;i++){' +
+    '    var ch=selStr[i];' +
+    '    if(ch==="[") depth++;' +
+    '    else if(ch==="]") depth=Math.max(0,depth-1);' +
+    '    else if(ch===","&&depth===0){if(cur.trim())parts.push(cur.trim());cur="";continue;}' +
+    '    cur+=ch;' +
+    '  }' +
+    '  if(cur.trim())parts.push(cur.trim());' +
+    '  for(var j=0;j<parts.length;j++){' +
+    '    try{var el=document.querySelector(parts[j]);if(el)return el;}catch(e0){}' +
+    '  }' +
+    '  return null;' +
+    '}' +
+    'var el=pickEl(String(selRaw));' +
     'if(!el)return {success:false,error:"not_found"};' +
     'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
     'if(el.focus)el.focus();' +
+    'var isCE=!!(el.isContentEditable||el.getAttribute&&el.getAttribute("contenteditable")==="true");' +
+    'if(isCE){' +
+    '  try{document.execCommand("selectAll",false,null);document.execCommand("insertText",false,text);}' +
+    '  catch(e1){el.textContent=text;' +
+    '    try{el.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:text}));}' +
+    '    catch(e2){el.dispatchEvent(new Event("input",{bubbles:true}));}}' +
+    '}else{' +
     // CP-LOGIN-R1 fix (2026-08-22): React 受控组件必须走原生 setter 才会更新
     // 组件内部 state，直接 el.value=text 会被 React 的 value tracker 覆盖，
     // 发送按钮保持 disabled → 点击无效 → wait_response 永不命中。
-    // 走 HTMLTextAreaElement/HTMLInputElement 原型 setter，对受控/非受控通用。
-    'try{' +
-    '  var proto=null;' +
-    '  if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
-    '  else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
-    '  var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
-    '  if(setter){setter.call(el,text);}' +
-    '  else{if("value" in el){el.value=text;}else{el.textContent=text;}}' +
-    '}catch(e){if("value" in el){el.value=text;}else{el.textContent=text;}}' +
-    'el.dispatchEvent(new Event("input",{bubbles:true}));' +
-    'el.dispatchEvent(new Event("change",{bubbles:true}));' +
+    '  try{' +
+    '    var proto=null;' +
+    '    if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
+    '    else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
+    '    var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
+    '    if(setter){setter.call(el,text);}' +
+    '    else{if("value" in el){el.value=text;}else{el.textContent=text;}}' +
+    '  }catch(e){if("value" in el){el.value=text;}else{el.textContent=text;}}' +
+    '  el.dispatchEvent(new Event("input",{bubbles:true}));' +
+    '  el.dispatchEvent(new Event("change",{bubbles:true}));' +
+    '}' +
     'return {success:true};' +
     '}catch(e){return {success:false,error:String(e)}}' +
     '})();';

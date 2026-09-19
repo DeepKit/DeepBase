@@ -1,0 +1,401 @@
+{
+  "_comment": "DeepBase 裸内存拷贝存量基线 (WO-20260919-AUDIT-乙-R2 E7)，禁止新增文件或将计数上升；变更须评审后显式更新",
+  "files": {
+    "Core/DeepBase.Crypto.AES.pas": {
+      "move": 32,
+      "fillchar": 5
+    },
+    "Core/DeepBase.Crypto.Hash.pas": {
+      "move": 4,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Crypto.PBKDF2.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Crypto.RSA.pas": {
+      "move": 13,
+      "fillchar": 11
+    },
+    "Core/DeepBase.Crypto.Random.pas": {
+      "move": 1,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Diff.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Core/DeepBase.EHAI.Types.pas": {
+      "move": 0,
+      "fillchar": 6
+    },
+    "Core/DeepBase.FileWatcher.pas": {
+      "move": 1,
+      "fillchar": 1
+    },
+    "Core/DeepBase.HB.Core.pas": {
+      "move": 2,
+      "fillchar": 2
+    },
+    "Core/DeepBase.HB.Lifecycle.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Core/DeepBase.HB.Touchpoint.Engine.pas": {
+      "move": 0,
+      "fillchar": 3
+    },
+    "Core/DeepBase.KeyManager.pas": {
+      "move": 2,
+      "fillchar": 2
+    },
+    "Core/DeepBase.LogAggregator.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Core/DeepBase.LogQuery.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Core/DeepBase.Math.Statistics.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Memory.pas": {
+      "move": 1,
+      "fillchar": 1
+    },
+    "Core/DeepBase.PluginManager.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Core/DeepBase.Plugins.CAbiLoader.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Core/DeepBase.Protection.pas": {
+      "move": 18,
+      "fillchar": 7
+    },
+    "Core/DeepBase.Random.pas": {
+      "move": 1,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Security.DPAPI.pas": {
+      "move": 5,
+      "fillchar": 6
+    },
+    "Core/DeepBase.Security.pas": {
+      "move": 10,
+      "fillchar": 3
+    },
+    "Core/DeepBase.Serialization.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Core/DeepBase.Services.Protection.pas": {
+      "move": 8,
+      "fillchar": 0
+    },
+    "Core/DeepBase.Share.pas": {
+      "move": 1,
+      "fillchar": 1
+    },
+    "Core/DeepBase.SingleInstance.pas": {
+      "move": 1,
+      "fillchar": 1
+    },
+    "Core/DeepBase.TrayIcon.pas": {
+      "move": 0,
+      "fillchar": 3
+    },
+    "Core/DeepBase.VirtualScroll.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "DeepAxis/DeepBase.External.BCryptDecrypt.pas": {
+      "move": 4,
+      "fillchar": 3
+    },
+    "DeepAxis/DeepBase.External.SQLiteReader.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.HB.Choice.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.HB.Controls.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.HB.Dialogs.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.HB.Gate.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.HB.Grid.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "FMX/DeepBase.FMX.Platform.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Features/DeepBase.AntiTamper.pas": {
+      "move": 4,
+      "fillchar": 0
+    },
+    "Features/DeepBase.ClipboardGuard.pas": {
+      "move": 4,
+      "fillchar": 0
+    },
+    "Features/DeepBase.Inference.Session.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Features/DeepBase.Inference.Types.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Features/DeepBase.Speech.ASR.SAPI.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Features/DeepBase.Speech.ASR.SenseVoice.pas": {
+      "move": 2,
+      "fillchar": 2
+    },
+    "Features/DeepBase.Speech.Audio.WinMM.pas": {
+      "move": 0,
+      "fillchar": 3
+    },
+    "Features/DeepBase.Speech.Voiceprint.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Features/DeepBase.Speech.WakeWord.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Features/DeepBase.UIA.UnifiedActuator.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Features/UIAutomationClient_TLB.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Governance/DeepBase.Governance.ReviewQueue.pas": {
+      "move": 0,
+      "fillchar": 3
+    },
+    "Libs/JsonDataObjects.pas": {
+      "move": 20,
+      "fillchar": 2
+    },
+    "Persistence/DeepBase.DB.Pool.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Persistence/DeepBase.Persistence.HBTelemetry.FireDAC.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Persistence/DeepBase.Persistence.Speech.Voiceprint.FireDAC.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Tests/Plugins/Fixture/TestPlugin11NoHealth.CAbi.pas": {
+      "move": 3,
+      "fillchar": 0
+    },
+    "Tests/Plugins/Fixture/TestPlugin11NoInvoke.CAbi.pas": {
+      "move": 3,
+      "fillchar": 1
+    },
+    "Tests/Plugins/Fixture/TestPlugin77.CAbi.pas": {
+      "move": 7,
+      "fillchar": 1
+    },
+    "Tests/Plugins/Fixture/TestPluginABI10.CAbi.pas": {
+      "move": 3,
+      "fillchar": 1
+    },
+    "Tests/Regression/Test.Regression.BUG033_WeakEncryption.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Regression/Test.Regression.BUG035_InsecureRandom.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Regression/Test.Regression.CR20260824_P0Batch4.pas": {
+      "move": 2,
+      "fillchar": 0
+    },
+    "Tests/Stress/Stress.EventBus.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Stress/Stress.Memory48h.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Stress/Stress.Stability.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Test.DeepBase.AutoUpdate.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Test.DeepBase.CloudBackup.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.DB.Pool.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.EHAI.Conformance.pas": {
+      "move": 0,
+      "fillchar": 7
+    },
+    "Tests/Test.DeepBase.FMX.HB.Lifecycle.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Test.DeepBase.HB.Benchmark.pas": {
+      "move": 0,
+      "fillchar": 6
+    },
+    "Tests/Test.DeepBase.HB.Lifecycle.pas": {
+      "move": 0,
+      "fillchar": 2
+    },
+    "Tests/Test.DeepBase.HB.Persistence.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.HB.Suite.pas": {
+      "move": 0,
+      "fillchar": 14
+    },
+    "Tests/Test.DeepBase.HB.Touchpoint.pas": {
+      "move": 0,
+      "fillchar": 4
+    },
+    "Tests/Test.DeepBase.Hotkeys.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.Inference.PBT.pas": {
+      "move": 1,
+      "fillchar": 0
+    },
+    "Tests/Test.DeepBase.KeyManager.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.Payment.Integration.pas": {
+      "move": 2,
+      "fillchar": 8
+    },
+    "Tests/Test.DeepBase.Payment.pas": {
+      "move": 0,
+      "fillchar": 5
+    },
+    "Tests/Test.DeepBase.PerformanceSuite.pas": {
+      "move": 0,
+      "fillchar": 8
+    },
+    "Tests/Test.DeepBase.PluginManager.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.Security.pas": {
+      "move": 1,
+      "fillchar": 2
+    },
+    "Tests/Test.DeepBase.Types.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tests/Test.DeepBase.VirtualScroll.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "ThirdParty/Payment/DeepBase.Payment.AESGCM.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "ThirdParty/Payment/DeepBase.Payment.WeChatPay.pas": {
+      "move": 9,
+      "fillchar": 0
+    },
+    "ThirdParty/Payment/DeepBase.Payment.pas": {
+      "move": 1,
+      "fillchar": 0
+    },
+    "Tools/SeedTool/uBasicProtection.pas": {
+      "move": 8,
+      "fillchar": 0
+    },
+    "Tools/UniPublisher/Core/Publisher.Targets.pas": {
+      "move": 0,
+      "fillchar": 5
+    },
+    "Tools/UniPublisher/Forms/DeepPublisher.MainForm.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tools/UpdaterHelper/UpdaterHelper.Core.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tools/WebService/DeepBase.WebAPI.Auth.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "Tools/WebService/DeepBase.WebAPI.WebSocket.pas": {
+      "move": 2,
+      "fillchar": 6
+    },
+    "VCL/DeepBase.VCL.DeepShell.MainForm.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.HB.Choice.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.HB.Controls.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.HB.Dialogs.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.HB.Gate.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.HB.Grid.pas": {
+      "move": 0,
+      "fillchar": 3
+    },
+    "VCL/DeepBase.VCL.HB.VirtualList.pas": {
+      "move": 0,
+      "fillchar": 1
+    },
+    "VCL/DeepBase.VCL.UnlockDialog.pas": {
+      "move": 0,
+      "fillchar": 1
+    }
+  }
+}

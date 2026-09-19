@@ -20,7 +20,8 @@ uses
   DUnitX.TestFramework,
   DeepBase.Exceptions,
   DeepBase.Resilience,
-  DeepBase.Resilience.CircuitBreaker;
+  DeepBase.Resilience.CircuitBreaker,
+  DeepBase.ManagedWorker;
 
 type
   // Custom exception for testing
@@ -266,6 +267,31 @@ type
     procedure Test_OnTimeout_Fires;
   end;
 
+  // Top20 #19 / E6 压测辅助：引用计数共享接收器 —— 宿主与超时后仍存活的
+  // 被抛弃体各自持有引用，对象存活至最后释放，验证闭包捕获帧托管纪律（无 UAF）
+  TE6SharedSink = class(TInterfacedObject)
+  private
+    FCounter: Integer;
+  public
+    procedure Bump;
+    property Counter: Integer read FCounter;
+  end;
+
+  /// <summary>
+  /// Top20 #19 / E6：TManagedWorker 托管的 TTimeoutPolicy 压测
+  /// —— 并发超时无访问违规、无隔离区（锁/线程）泄漏
+  /// </summary>
+  [TestFixture]
+  TTimeoutManagedWorkerStressTests = class
+  public
+    [Test]
+    procedure Test_ConcurrentFiringTimeouts_NoAV_NoQuarantineLeak;
+    [Test]
+    procedure Test_AbandonedBody_CompletesSafelyAfterHostExit;
+    [Test]
+    procedure Test_Policy_ReusableAfterFiringTimeout;
+  end;
+
   /// <summary>
   /// Tests for TFallbackPolicy<T>
   /// </summary>
@@ -467,6 +493,9 @@ type
     procedure Test_Instance_ReturnsSingleton;
     [Test]
     procedure Test_CircuitBreakers_GlobalFunction;
+    // Top20 #19 / E6 SSOT：两入口必须返回同一注册表
+    [Test]
+    procedure Test_Instance_SameAsGlobalCircuitBreakers;
 
     // Thread safety tests
     [Test]
@@ -1609,6 +1638,145 @@ begin
 end;
 
 // ============================================================================
+// TTimeoutManagedWorkerStressTests (Top20 #19 / E6)
+// ============================================================================
+
+procedure TE6SharedSink.Bump;
+begin
+  TInterlocked.Increment(FCounter);
+end;
+
+procedure TTimeoutManagedWorkerStressTests.Test_ConcurrentFiringTimeouts_NoAV_NoQuarantineLeak;
+const
+  WorkerThreads = 6;
+  Iterations = 8;
+var
+  I: Integer;
+  Tasks: array of ITask;
+  Sink: TE6SharedSink;
+  Stopwatch: TStopwatch;
+begin
+  Sink := TE6SharedSink.Create;
+  try
+    SetLength(Tasks, WorkerThreads);
+    for I := 0 to High(Tasks) do
+    begin
+      Tasks[I] := TTask.Create(
+        procedure
+        var
+          K: Integer;
+          LPolicy: DeepBase.Resilience.Timeout.TTimeoutPolicy;
+          LSink: TE6SharedSink;
+        begin
+          LSink := Sink;
+          for K := 0 to Iterations - 1 do
+          begin
+            LPolicy := DeepBase.Resilience.Timeout.TTimeoutPolicy.Create(10);
+            try
+              // 10ms 超时 vs 80ms 工作体：必触发；走 Cancel→Evacuate 隔离路径
+              Assert.WillRaise(
+                procedure
+                begin
+                  LPolicy.Execute(
+                    procedure
+                    begin
+                      LSink.Bump;
+                      Sleep(80);
+                      // 宿主栈已因超时退出后再写：闭包持有捕获帧才合法（UAF 探针）
+                      LSink.Bump;
+                    end);
+                end, ETimeoutException);
+            finally
+              LPolicy.Free;
+            end;
+          end;
+        end);
+      Tasks[I].Start;
+    end;
+    TTask.WaitForAll(Tasks);
+
+    // 无泄漏：看护线程每 500ms 清扫已结束的被隔离 worker，必须在限时内清零
+    Stopwatch := TStopwatch.StartNew;
+    while TManagedWorker.QuarantinedWorkerCount > 0 do
+    begin
+      if Stopwatch.ElapsedMilliseconds > 15000 then
+        Assert.Fail('Top20 #19 / E6: 隔离区泄漏，压测后 15s 仍有 ' +
+          TManagedWorker.QuarantinedWorkerCount.ToString + ' 个被抛弃 worker 未回收');
+      Sleep(100);
+    end;
+
+    // 隔离区清零 = 所有工作体已执行完：计数必须等于超时次数×2
+    Assert.AreEqual(WorkerThreads * Iterations * 2, Sink.Counter,
+      'Top20 #19 / E6: 被抛弃工作体必须全部安全完成（闭包持有捕获帧，无 UAF）');
+  finally
+    Sink.Free;
+  end;
+end;
+
+procedure TTimeoutManagedWorkerStressTests.Test_AbandonedBody_CompletesSafelyAfterHostExit;
+var
+  Policy: DeepBase.Resilience.Timeout.TTimeoutPolicy;
+  Sink: TE6SharedSink;
+  Stopwatch: TStopwatch;
+begin
+  Sink := TE6SharedSink.Create;
+  Policy := DeepBase.Resilience.Timeout.TTimeoutPolicy.Create(10);
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        Policy.Execute(
+          procedure
+          begin
+            Sleep(120);
+            Sink.Bump; // 宿主已从超时返回之后才写入
+          end);
+      end, ETimeoutException);
+  finally
+    Policy.Free;
+  end;
+
+  Stopwatch := TStopwatch.StartNew;
+  while Sink.Counter = 0 do
+  begin
+    if Stopwatch.ElapsedMilliseconds > 5000 then
+      Assert.Fail('Top20 #19 / E6: 被抛弃工作体未能安全完成（捕获帧提前失效）');
+    Sleep(50);
+  end;
+  Assert.AreEqual(1, Sink.Counter);
+  Sink.Free;
+end;
+
+procedure TTimeoutManagedWorkerStressTests.Test_Policy_ReusableAfterFiringTimeout;
+var
+  Policy: DeepBase.Resilience.Timeout.TTimeoutPolicy;
+  Executed: Boolean;
+begin
+  Executed := False;
+  Policy := DeepBase.Resilience.Timeout.TTimeoutPolicy.Create(10);
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        Policy.Execute(
+          procedure
+          begin
+            Sleep(80);
+          end);
+      end, ETimeoutException);
+    Policy.Timeout(2000);
+    Policy.Execute(
+      procedure
+      begin
+        Executed := True;
+      end);
+    Assert.IsTrue(Executed, '超时抛弃后策略对象必须可复用（无残留锁/状态）');
+  finally
+    Policy.Free;
+  end;
+end;
+
+// ============================================================================
 // TFallbackPolicyTests
 // ============================================================================
 
@@ -2420,6 +2588,12 @@ begin
   Assert.IsNotNull(R);
 end;
 
+procedure TCircuitBreakerRegistryTests.Test_Instance_SameAsGlobalCircuitBreakers;
+begin
+  // Top20 #19 / E6 SSOT：facade 第二套注册表已删除，Instance 与全局函数必同一实例
+  Assert.AreSame(TCircuitBreakerRegistry.Instance, CircuitBreakers);
+end;
+
 procedure TCircuitBreakerRegistryTests.Test_ThreadSafety_ConcurrentGetOrCreate;
 var
   Tasks: array of ITask;
@@ -2466,6 +2640,7 @@ initialization
   TDUnitX.RegisterTestFixture(TRetryPolicyTests);
   TDUnitX.RegisterTestFixture(TTimeoutExceptionTests);
   TDUnitX.RegisterTestFixture(TTimeoutPolicyTests);
+  TDUnitX.RegisterTestFixture(TTimeoutManagedWorkerStressTests);
   TDUnitX.RegisterTestFixture(TFallbackPolicyTests);
   TDUnitX.RegisterTestFixture(TBulkheadRejectedExceptionTests);
   TDUnitX.RegisterTestFixture(TBulkheadPolicyTests);

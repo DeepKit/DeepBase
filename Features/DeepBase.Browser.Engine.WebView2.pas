@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Browser.Engine.WebView2
   ---------------------------------------------------------------------------
   Version     : 1.0
@@ -299,6 +299,7 @@ begin
     FWindowParent.Parent := AOwner;
 
   FBrowser := TWVBrowser.Create(AOwner);
+  FWindowParent.Browser := FBrowser;
   FBrowser.OnAfterCreated := BrowserAfterCreated;
   FBrowser.OnNavigationCompleted := BrowserNavigationCompleted;
   FBrowser.OnInitializationError := BrowserInitializationError;

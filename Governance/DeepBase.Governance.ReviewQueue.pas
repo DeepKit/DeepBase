@@ -1,4 +1,4 @@
-// AI-GENERATED
+﻿// AI-GENERATED
 // DeepBase.Governance.ReviewQueue.pas
 // 主权 review queue 契约层：裁决挑战 + 人工决策记录 + IReviewQueue 接口。
 // ASY-GOV-006 阶段2：D006 人主权——review case 的权威状态不由 UI 保存，
@@ -15,7 +15,8 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  DeepBase.Gate.Verdict;
 
 type
   /// ASY-GOV-006 阶段3：执行端 fail-closed 异常。ActionExecutor 在
@@ -79,7 +80,7 @@ type
   /// MarkExecuted 标记消费，防 asOnce 重放。
   /// </summary>
   IReviewDecisionVerifier = interface
-    ['{C8B4A3F2-0D5E-5B9F-C2A7-4E3F1B8D6000}']
+    ['{4D9E2A7C-6B1F-5E3A-8D7C-9A2E4F6B8D01}']
     /// 校验 confirmation 对应的裁决是否允许执行 action。
     /// - AActionKey：被校验的动作键（用于日志/证据，不参与哈希比对）
     /// - AArgumentsDigest：执行端实时计算的入参摘要，须与 challenge.ParametersDigest 一致
@@ -87,11 +88,12 @@ type
     /// - ARequiredScope：执行端要求的作用域（通常 asOnce）
     /// fail-fast：①challenge 存在 ②ParametersDigest 匹配 ③未过期(先 ExpireOverdue)
     /// ④status=approved ⑤AuthorizationScopes 含 ARequiredScope。
-    /// 全通过返回 True + AOutChallenge；任一失败返回 False + ARejectionReason。
+    /// A6 T1 fail-closed 立法：返回强类型裁决，全通过=gdApproved +
+    /// AOutChallenge；任一失败=gdRejected（拒绝理由在 Reason，不再用裸
+    /// Boolean + out 字符串双轨表意）。
     function Verify(const AActionKey, AArgumentsDigest, AConfirmation: string;
       ARequiredScope: TAuthorizationScope;
-      out AOutChallenge: TReviewChallenge;
-      out ARejectionReason: string): Boolean;
+      out AOutChallenge: TReviewChallenge): TGateVerdict;
     /// 消费 challenge（asOnce 防重放）。Verify 通过后、action 执行成功后由
     /// 执行端调用。已执行返回 False（重放被拒）。封装 IReviewQueue.MarkExecuted。
     function Consume(const AReviewId: string;
@@ -161,8 +163,7 @@ type
     constructor Create(const AQueue: IReviewQueue);
     function Verify(const AActionKey, AArgumentsDigest, AConfirmation: string;
       ARequiredScope: TAuthorizationScope;
-      out AOutChallenge: TReviewChallenge;
-      out ARejectionReason: string): Boolean;
+      out AOutChallenge: TReviewChallenge): TGateVerdict;
     function Consume(const AReviewId: string;
       out AOutChallenge: TReviewChallenge): Boolean;
   end;
@@ -179,7 +180,7 @@ end;
 
 function TReviewDecisionVerifier.Verify(const AActionKey, AArgumentsDigest,
   AConfirmation: string; ARequiredScope: TAuthorizationScope;
-  out AOutChallenge: TReviewChallenge; out ARejectionReason: string): Boolean;
+  out AOutChallenge: TReviewChallenge): TGateVerdict;
 const
   // 与 TReviewQueueSQLite.ScopeToStr 同表（verifier 不依赖 SQLite 单元，故内联）。
   SCOPE_NAMES: array [TAuthorizationScope] of string = ('once', 'session', 'persistent');
@@ -188,23 +189,31 @@ var
   LFound: Boolean;
   LScopeStr: string;
   I: Integer;
+
+  // 注：不用 `Exit(Reject(...))` 表达式形态——Exit() 的未类型化实参会把
+  // 非 ASCII 字符串字面量推断为 AnsiString（W1057 转码），语句式赋值保持 UnicodeString。
+  procedure Reject(const AReason: string);
+  begin
+    Finalize(AOutChallenge);
+    FillChar(AOutChallenge, SizeOf(AOutChallenge), 0);
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
-  Result := False;
-  ARejectionReason := '';
   // 缺省初始化 out 参数（managed record 编译器已置 nil，显式 Finalize 更稳）。
   Finalize(AOutChallenge);
   FillChar(AOutChallenge, SizeOf(AOutChallenge), 0);
 
   if FQueue = nil then
   begin
-    ARejectionReason := 'verifier 未绑定 review queue';
+    Reject('verifier 未绑定 review queue');
     Exit;
   end;
 
   // ① challenge 存在
   if not FQueue.GetChallenge(AConfirmation, AOutChallenge) then
   begin
-    ARejectionReason := '裁决凭证对应的 challenge 不存在: ' + AConfirmation;
+    Reject('裁决凭证对应的 challenge 不存在: ' + AConfirmation);
     Exit;
   end;
 
@@ -213,21 +222,21 @@ begin
   // 过期后重新读一次（ExpireOverdue 可能改了 status）
   if not FQueue.GetChallenge(AConfirmation, AOutChallenge) then
   begin
-    ARejectionReason := 'challenge 重新读取失败';
+    Reject('challenge 重新读取失败');
     Exit;
   end;
 
   // ② 入参摘要匹配（防篡改/重放到不同参数）
   if not SameText(AOutChallenge.ParametersDigest, AArgumentsDigest) then
   begin
-    ARejectionReason := '入参摘要不匹配（疑似篡改或重放到不同参数）';
+    Reject('入参摘要不匹配（疑似篡改或重放到不同参数）');
     Exit;
   end;
 
   // ④ status = approved
   if AOutChallenge.Status <> rsApproved then
   begin
-    ARejectionReason := '裁决未批准（当前状态: ' + IntToStr(Ord(AOutChallenge.Status)) + '）';
+    Reject('裁决未批准（当前状态: ' + IntToStr(Ord(AOutChallenge.Status)) + '）');
     Exit;
   end;
 
@@ -245,18 +254,18 @@ begin
   end;
   if not LFound then
   begin
-    ARejectionReason := '裁决作用域不含 ' + LScope;
+    Reject('裁决作用域不含 ' + LScope);
     Exit;
   end;
 
   // asOnce 已消费检查：ExecutedAt > 0 表示已被消费（防重放）
   if (ARequiredScope = asOnce) and (AOutChallenge.ExecutedAt > 0) then
   begin
-    ARejectionReason := 'asOnce 裁决已被消费（防重放）';
+    Reject('asOnce 裁决已被消费（防重放）');
     Exit;
   end;
 
-  Result := True;
+  Result := TGateVerdict.Approved;
 end;
 
 function TReviewDecisionVerifier.Consume(const AReviewId: string;

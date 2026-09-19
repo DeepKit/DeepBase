@@ -1,4 +1,4 @@
-// AI-GENERATED
+﻿// AI-GENERATED
 // DeepBase.Governance.ActionExecutor.pas
 // 第四层：行为执行器（调用 Bridge 链）
 // 依赖 Interfaces + ActionGrid + DueChecker
@@ -12,7 +12,8 @@ uses
   System.JSON,
   DeepBase.Governance.Types,
   DeepBase.Governance.Interfaces,
-  DeepBase.Governance.ReviewQueue;
+  DeepBase.Governance.ReviewQueue,
+  DeepBase.Gate.Verdict;
 
 type
   TActionExecutor = class(TInterfacedObject, IActionExecutor)
@@ -75,10 +76,10 @@ function TActionExecutor.Execute(const AActionKey: string;
 var
   LDue: TDueResult;
   LChallenge: TReviewChallenge;
-  LReason: string;
+  LVerdict: TGateVerdict;
   LDigest: string;
 begin
-  // 0. ASY-GOV-006 阶段3：裁决验证（fail-closed）
+  // 0. ASY-GOV-006 阶段3 + A6 fail-closed：裁决验证返回强类型门禁裁决
   //    confirmation 非空 = 调用方主张已获人工批准，必须经 verifier 校验。
   if AConfirmation <> '' then
   begin
@@ -87,10 +88,10 @@ begin
       raise EReviewDecisionRejected.CreateFmt(
         'action [%s] 带裁决凭证但 executor 未装配 verifier', [AActionKey]);
     LDigest := ExtractArgumentsDigest(AContext);
-    if not FVerifier.Verify(AActionKey, LDigest, AConfirmation, asOnce,
-      LChallenge, LReason) then
+    LVerdict := FVerifier.Verify(AActionKey, LDigest, AConfirmation, asOnce, LChallenge);
+    if not LVerdict.IsApproved then
       raise EReviewDecisionRejected.CreateFmt(
-        'action [%s] 裁决被拒: %s', [AActionKey, LReason]);
+        'action [%s] 裁决被拒: %s', [AActionKey, LVerdict.Reason]);
   end;
 
   // 1. 检查是否可执行

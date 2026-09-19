@@ -185,26 +185,52 @@ begin
     'Clicks the first matching element. Returns {success,error}.');
   Result[2] := CreateScriptDefinition(JSCRIPT_INPUT_TEXT,
     '(function(){try{' +
-    'var el=document.querySelector({{selector}});' +
+    'var selRaw={{selector}};' +
+    'var text={{text}};' +
+    // SSOT 多候选是优先级列表，不是「文档序任意命中」
+    'function pickEl(selStr){' +
+    '  var parts=[],cur="",depth=0;' +
+    '  for(var i=0;i<selStr.length;i++){' +
+    '    var ch=selStr[i];' +
+    '    if(ch==="[") depth++;' +
+    '    else if(ch==="]") depth=Math.max(0,depth-1);' +
+    '    else if(ch===","&&depth===0){if(cur.trim())parts.push(cur.trim());cur="";continue;}' +
+    '    cur+=ch;' +
+    '  }' +
+    '  if(cur.trim())parts.push(cur.trim());' +
+    '  for(var j=0;j<parts.length;j++){' +
+    '    try{var el=document.querySelector(parts[j]);if(el)return el;}catch(e0){}' +
+    '  }' +
+    '  return null;' +
+    '}' +
+    'var el=pickEl(String(selRaw));' +
     'if(!el)return {success:false,error:"not_found"};' +
     'if(el.scrollIntoView)el.scrollIntoView({block:"center",inline:"center"});' +
     'if(el.focus)el.focus();' +
+    'var isCE=!!(el.isContentEditable||el.getAttribute&&el.getAttribute("contenteditable")==="true");' +
+    'if(isCE){' +
+    '  try{document.execCommand("selectAll",false,null);document.execCommand("insertText",false,text);}' +
+    '  catch(e1){el.textContent=text;' +
+    '    try{el.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:text}));}' +
+    '    catch(e2){el.dispatchEvent(new Event("input",{bubbles:true}));}}' +
+    '}else{' +
     // CP-LOGIN-R1 (2026-08-22): React 受控组件必须走原生 setter 更新内部 state,
     // 直接 el.value={{text}} 会被 React value tracker 覆盖 → 发送按钮 disabled →
     // 点击无效 → wait_response 永不命中 (deepseek 新版 DOM 实测)。
-    'try{' +
-    '  var proto=null;' +
-    '  if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
-    '  else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
-    '  var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
-    '  if(setter){setter.call(el,{{text}});}' +
-    '  else{if("value" in el){el.value={{text}};}else{el.textContent={{text}};}}' +
-    '}catch(e){if("value" in el){el.value={{text}};}else{el.textContent={{text}};}}' +
-    'el.dispatchEvent(new Event("input",{bubbles:true}));' +
-    'el.dispatchEvent(new Event("change",{bubbles:true}));' +
+    '  try{' +
+    '    var proto=null;' +
+    '    if(el instanceof HTMLTextAreaElement){proto=HTMLTextAreaElement.prototype;}' +
+    '    else if(el instanceof HTMLInputElement){proto=HTMLInputElement.prototype;}' +
+    '    var setter=proto&&Object.getOwnPropertyDescriptor(proto,"value").set;' +
+    '    if(setter){setter.call(el,text);}' +
+    '    else{if("value" in el){el.value=text;}else{el.textContent=text;}}' +
+    '  }catch(e){if("value" in el){el.value=text;}else{el.textContent=text;}}' +
+    '  el.dispatchEvent(new Event("input",{bubbles:true}));' +
+    '  el.dispatchEvent(new Event("change",{bubbles:true}));' +
+    '}' +
     'return {success:true,error:""};' +
     '}catch(e){return {success:false,error:String(e)}}})();',
-    'Sets text on the first matching input (React-setter aware). Returns {success,error}.');
+    'Sets text on preferred matching input (selector priority + contenteditable insertText). Returns {success,error}.');
   Result[3] := CreateScriptDefinition(JSCRIPT_GET_TEXT,
     '(function(){try{' +
     'var list=document.querySelectorAll({{selector}});' +
@@ -259,10 +285,35 @@ begin
     '    },' +
     '    getLatestResponse: function() {' +
     '      if (!responseSel) return "";' +
-    '      var els = document.querySelectorAll(responseSel);' +
-    '      if (els.length === 0) return "";' +
-    '      var last = els[els.length - 1];' +
-    '      return last.innerText || last.textContent || "";' +
+    '      try {' +
+    '        var els = document.querySelectorAll(responseSel);' +
+    '        if (els.length > 0) {' +
+    '          var last = els[els.length - 1];' +
+    '          var t = (last.textContent || last.innerText || "").trim();' +
+    '          if (t) return t;' +
+    '        }' +
+    '      } catch (e) {}' +
+    '      try {' +
+    '        var best = "";' +
+    '        var nodes = document.querySelectorAll("div");' +
+    '        for (var i = 0; i < nodes.length; i++) {' +
+    '          var tx = (nodes[i].innerText || "").trim();' +
+    '          if (!tx || tx.indexOf("内容由 AI 生成") < 0) continue;' +
+    '          var cut = -1;' +
+    '          var m1 = tx.indexOf("快速模式");' +
+    '          var m2 = tx.indexOf("深度思考");' +
+    '          if (m1 > 0) cut = m1;' +
+    '          if (m2 > 0 && (cut < 0 || m2 < cut)) cut = m2;' +
+    '          if (cut <= 0) continue;' +
+    '          var ans = tx.substring(0, cut).replace(/\s+$/g,"");' +
+    '          if (ans && ans.length < 12000 && (best === "" || ans.length < best.length))' +
+    '            best = ans;' +
+    '        }' +
+    '        if (best) return best;' +
+    '        var tm = (document.title || "").replace(/\s*[-–—]\s*DeepSeek\s*$/i, "").trim();' +
+    '        if (tm && tm.length < 200) return tm;' +
+    '        return "";' +
+    '      } catch (e2) { return ""; }' +
     '    },' +
     '    finish: function(result, response) {' +
     '      if (this.cancelled) return;' +

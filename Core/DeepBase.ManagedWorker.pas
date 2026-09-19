@@ -71,6 +71,8 @@ type
     /// <summary>仅供本单元 initialization/finalization 使用：类外无法触达 strict private 类变量，经此收口。</summary>
     class procedure InitQuarantine; static;
     class procedure DoneQuarantine; static;
+    /// <summary>诊断口径：当前仍在隔离区的 worker 数（含已结待扫/仍挂起）。供门禁与压测断言“无泄漏”。</summary>
+    class function QuarantinedWorkerCount: Integer; static;
     /// <summary>创建但不启动。AName 仅用于调试诊断。</summary>
     constructor Create(const AProcedure: TThreadProcedure; const AName: string = '');
     /// <summary>线程未结束则先 Cancel 再 WaitFor（本组件不存在"销毁不等结束"路径）。</summary>
@@ -117,6 +119,18 @@ begin
   FreeAndNil(FQuarantine);
   FreeAndNil(FJanitorStop);
   FreeAndNil(FQuarantineLock);
+end;
+
+class function TManagedWorker.QuarantinedWorkerCount: Integer;
+begin
+  FQuarantineLock.Enter;
+  try
+    Result := 0;
+    if FQuarantine <> nil then
+      Result := FQuarantine.Count;
+  finally
+    FQuarantineLock.Leave;
+  end;
 end;
 
 class procedure TManagedWorker.EnsureJanitor;

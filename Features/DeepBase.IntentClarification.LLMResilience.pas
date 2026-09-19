@@ -22,23 +22,60 @@ uses
   System.SyncObjs,
   System.DateUtils,
   System.Diagnostics,
-  System.Threading,
   DeepBase.LLM.Client,
   DeepBase.LLM.Types,
   DeepBase.Logging,
+  DeepBase.ManagedWorker,
   DeepBase.IntentClarification.Logging;
 
 type
-  /// <summary>Heap-allocated context for async LLM task. Prevents use-after-return
-  /// when the task outlives the calling method (timeout scenario).</summary>
-  TLLMTaskContext = class
-    Result: TChatResult;
-    ErrorMsg: string;
+  /// <summary>异步 LLM 任务的引用计数信箱。超时后后台 worker 体与宿主各持
+  /// 一个引用、双双退出即自动释放——取代旧「LCtx := nil 故意泄漏」方案
+  /// （Top20 T3.8 / WO-20260919-AUDIT-乙-R2 E8）。</summary>
+  ILLMTaskContext = interface
+    ['{6E1B2A54-9C3D-4F0A-8D2E-5B7C9A1F3E60}']
+    function GetResult: TChatResult;
+    procedure SetResult(const AValue: TChatResult);
+    function GetErrorMsg: string;
+    procedure SetErrorMsg(const AValue: string);
+    property Result: TChatResult read GetResult write SetResult;
+    property ErrorMsg: string read GetErrorMsg write SetErrorMsg;
   end;
 
-  TLLMImageTaskContext = class
-    Result: TImageGenerationResult;
-    ErrorMsg: string;
+  TLLMTaskContext = class(TInterfacedObject, ILLMTaskContext)
+  strict private
+    FResult: TChatResult;
+    FErrorMsg: string;
+  public
+    function GetResult: TChatResult;
+    procedure SetResult(const AValue: TChatResult);
+    function GetErrorMsg: string;
+    procedure SetErrorMsg(const AValue: string);
+    property Result: TChatResult read GetResult write SetResult;
+    property ErrorMsg: string read GetErrorMsg write SetErrorMsg;
+  end;
+
+  ILLMImageTaskContext = interface
+    ['{B4F7C2E1-7A58-4D96-9E3C-2F6A8D105C74}']
+    function GetResult: TImageGenerationResult;
+    procedure SetResult(const AValue: TImageGenerationResult);
+    function GetErrorMsg: string;
+    procedure SetErrorMsg(const AValue: string);
+    property Result: TImageGenerationResult read GetResult write SetResult;
+    property ErrorMsg: string read GetErrorMsg write SetErrorMsg;
+  end;
+
+  TLLMImageTaskContext = class(TInterfacedObject, ILLMImageTaskContext)
+  strict private
+    FResult: TImageGenerationResult;
+    FErrorMsg: string;
+  public
+    function GetResult: TImageGenerationResult;
+    procedure SetResult(const AValue: TImageGenerationResult);
+    function GetErrorMsg: string;
+    procedure SetErrorMsg(const AValue: string);
+    property Result: TImageGenerationResult read GetResult write SetResult;
+    property ErrorMsg: string read GetErrorMsg write SetErrorMsg;
   end;
 
 type
@@ -269,14 +306,58 @@ begin
   Result.FinishReason := 'resilience_failure';
 end;
 
+{ TLLMTaskContext }
+
+function TLLMTaskContext.GetResult: TChatResult;
+begin
+  Result := FResult;
+end;
+
+procedure TLLMTaskContext.SetResult(const AValue: TChatResult);
+begin
+  FResult := AValue;
+end;
+
+function TLLMTaskContext.GetErrorMsg: string;
+begin
+  Result := FErrorMsg;
+end;
+
+procedure TLLMTaskContext.SetErrorMsg(const AValue: string);
+begin
+  FErrorMsg := AValue;
+end;
+
+{ TLLMImageTaskContext }
+
+function TLLMImageTaskContext.GetResult: TImageGenerationResult;
+begin
+  Result := FResult;
+end;
+
+procedure TLLMImageTaskContext.SetResult(const AValue: TImageGenerationResult);
+begin
+  FResult := AValue;
+end;
+
+function TLLMImageTaskContext.GetErrorMsg: string;
+begin
+  Result := FErrorMsg;
+end;
+
+procedure TLLMImageTaskContext.SetErrorMsg(const AValue: string);
+begin
+  FErrorMsg := AValue;
+end;
+
 function TResilientLLMWrapper.ExecuteWithResilience(
   ACall: TFunc<TChatResult>): TChatResult;
 var
   LAttempt: Integer;
   LLastError: string;
   LSW: TStopwatch;
-  LTask: ITask;
-  LCtx: TLLMTaskContext;
+  LWorker: TManagedWorker;
+  LCtx: ILLMTaskContext;
   LTimedOut: Boolean;
 begin
   // Circuit breaker check
@@ -297,13 +378,12 @@ begin
     try
       LSW := TStopwatch.StartNew;
 
-      // IC-010: Run inner call inside a TTask and wait with timeout so a
-      // hung LLM call cannot block the whole engine. The task context is
-      // heap-allocated (TLLMTaskContext) so that if the task outlives this
-      // method (timeout), it writes to its own memory, not to stack vars
-      // that may have been reused by the next loop iteration.
+      // IC-010 / Top20 T3.8 改写（WO-20260919-AUDIT-乙-R2 E8）：
+      // 悬垂上下文改由 ILLMTaskContext 引用计数信箱管理；后台任务本体
+      // 改走 TManagedWorker，超时路径经 Evacuate 移交托管隔离区，
+      // 取代旧「LCtx := nil 故意泄漏」方案。
       LCtx := TLLMTaskContext.Create;
-      LTask := TTask.Run(
+      LWorker := TManagedWorker.Create(
         procedure
         begin
           try
@@ -312,33 +392,35 @@ begin
             on E: Exception do
               LCtx.ErrorMsg := E.ClassName + ': ' + E.Message;
           end;
-        end);
+        end, 'IC.LLMResilience.Chat');
+      LWorker.Start;
 
-      LTimedOut := not LTask.Wait(FConfig.TimeoutMs);
+      LTimedOut := not LWorker.Wait(FConfig.TimeoutMs);
       LSW.Stop;
-
       if LTimedOut then
       begin
-        // The background task may still be running and captured LCtx.
-        // We must NOT free LCtx here — the anonymous method still holds
-        // a reference and will write to it when ACall() eventually returns.
-        // The LCtx + its captured ref will be cleaned up when LTask is
-        // released (end of iteration) and the task finishes. In the worst
-        // case (task hangs forever), LCtx is a small intentional leak.
-        LCtx := nil;  // transfer ownership to the captured anonymous method
-        Result := Default(TChatResult);
-        Result.Success := False;
-        LLastError := Format('LLM call timed out after %dms', [FConfig.TimeoutMs]);
-        Result.FinishReason := 'timeout';
-        Result.ErrorMessage := LLastError;
-        Result.ErrorCode := 'timeout';
-        Log(ltWarning, Format('IC.Resilience: LLM timeout (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+        // 超时唯一合法出口：Evacuate 移交隔离区，看护线程于工作体
+        // 结束后回收，本对象此后不得再被引用。
+        LWorker.Evacuate;
+      end;
+      try
+        if LTimedOut then
+        begin
+          Result := Default(TChatResult);
+          Result.Success := False;
+          LLastError := Format('LLM call timed out after %dms', [FConfig.TimeoutMs]);
+          Result.FinishReason := 'timeout';
+          Result.ErrorMessage := LLastError;
+          Result.ErrorCode := 'timeout';
+          Log(ltWarning, Format('IC.Resilience: LLM timeout (attempt %d/%d): %s',
+            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+          // 宿主引用移交闭包：后台体最终完成时随捕获帧自动释放，
+          // 取代旧 intentional leak 方案。
+          LCtx := nil;
       end
       else if LCtx.ErrorMsg <> '' then
       begin
         LLastError := LCtx.ErrorMsg;
-        LCtx.Free;
         Log(ltWarning, Format('IC.Resilience: LLM exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
         Result := Default(TChatResult);
@@ -348,7 +430,6 @@ begin
       else
       begin
         Result := LCtx.Result;
-        LCtx.Free;
         if Result.Success then
         begin
           RecordSuccess;
@@ -361,10 +442,14 @@ begin
             [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
         end;
       end;
+      finally
+        if not LTimedOut then
+          LWorker.Free;
+      end;
     except
       on E: Exception do
       begin
-        FreeAndNil(LCtx);  // Clean up if still owned
+        // LCtx 所有权已随闭包移交（引用计数），异常路径无需手工释放
         LLastError := E.Message;
         Log(ltWarning, Format('IC.Resilience: Resilience harness exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));
@@ -410,8 +495,8 @@ var
   LAttempt: Integer;
   LLastError: string;
   LSW: TStopwatch;
-  LTask: ITask;
-  LCtx: TLLMImageTaskContext;
+  LWorker: TManagedWorker;
+  LCtx: ILLMImageTaskContext;
   LTimedOut: Boolean;
 begin
   // Circuit breaker check
@@ -431,8 +516,9 @@ begin
     try
       LSW := TStopwatch.StartNew;
 
+      // T3.8 改写（E8）：同 Chat harness，引用计数信箱 + TManagedWorker 取代故意泄漏。
       LCtx := TLLMImageTaskContext.Create;
-      LTask := TTask.Run(
+      LWorker := TManagedWorker.Create(
         procedure
         begin
           try
@@ -441,55 +527,63 @@ begin
             on E: Exception do
               LCtx.ErrorMsg := E.ClassName + ': ' + E.Message;
           end;
-        end);
+        end, 'IC.LLMResilience.Image');
+      LWorker.Start;
 
-      LTimedOut := not LTask.Wait(FConfig.TimeoutMs);
+      LTimedOut := not LWorker.Wait(FConfig.TimeoutMs);
       LSW.Stop;
-
       if LTimedOut then
       begin
-        LCtx := nil;  // transfer ownership to task
-        Result := Default(TImageGenerationResult);
-        Result.Success := False;
-        LLastError := Format('Image call timed out after %dms', [FConfig.TimeoutMs]);
-        Result.ErrorCode := 'timeout';
-        Result.ErrorMessage := LLastError;
-        Log(ltWarning, Format('IC.Resilience: Image timeout (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
-      end
-      else if LCtx.ErrorMsg <> '' then
-      begin
-        LLastError := LCtx.ErrorMsg;
-        LCtx.Free;
-        Log(ltWarning, Format('IC.Resilience: Image exception (attempt %d/%d): %s',
-          [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
-        Result := Default(TImageGenerationResult);
-        Result.Success := False;
-        Result.ErrorCode := 'exception';
-        Result.ErrorMessage := LLastError;
-      end
-      else
-      begin
-        Result := LCtx.Result;
-        LCtx.Free;
-        if Result.Success then
+        LWorker.Evacuate;
+      end;
+      try
+        if LTimedOut then
         begin
-          RecordSuccess;
-          Exit;
+          Result := Default(TImageGenerationResult);
+          Result.Success := False;
+          LLastError := Format('Image call timed out after %dms', [FConfig.TimeoutMs]);
+          Result.ErrorCode := 'timeout';
+          Result.ErrorMessage := LLastError;
+          Log(ltWarning, Format('IC.Resilience: Image timeout (attempt %d/%d): %s',
+            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+          // 宿主引用移交闭包，后台体完成时自动释放。
+          LCtx := nil;
+        end
+        else if LCtx.ErrorMsg <> '' then
+        begin
+          LLastError := LCtx.ErrorMsg;
+          Log(ltWarning, Format('IC.Resilience: Image exception (attempt %d/%d): %s',
+            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+          Result := Default(TImageGenerationResult);
+          Result.Success := False;
+          Result.ErrorCode := 'exception';
+          Result.ErrorMessage := LLastError;
         end
         else
         begin
-          var LErr := if Result.ErrorMessage <> '' then Result.ErrorMessage
-                      else Result.ErrorCode;
-          LLastError := LErr;
-          Log(ltWarning, Format('IC.Resilience: Image returned error (attempt %d/%d): %s',
-            [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+          Result := LCtx.Result;
+          if Result.Success then
+          begin
+            RecordSuccess;
+            Exit;
+          end
+          else
+          begin
+            var LErr := if Result.ErrorMessage <> '' then Result.ErrorMessage
+                        else Result.ErrorCode;
+            LLastError := LErr;
+            Log(ltWarning, Format('IC.Resilience: Image returned error (attempt %d/%d): %s',
+              [LAttempt + 1, FConfig.MaxRetries + 1, LLastError]));
+          end;
         end;
+      finally
+        if not LTimedOut then
+          LWorker.Free;
       end;
     except
       on E: Exception do
       begin
-        FreeAndNil(LCtx);  // Clean up if still owned
+        // LCtx 所有权已随闭包移交（引用计数），异常路径无需手工释放
         LLastError := E.Message;
         Log(ltWarning, Format('IC.Resilience: Image harness exception (attempt %d/%d): %s',
           [LAttempt + 1, FConfig.MaxRetries + 1, E.Message]));

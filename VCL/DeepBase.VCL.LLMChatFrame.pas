@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.LLMChatFrame - VCL LLM Chat Component
   
   Version: 1.0
@@ -25,12 +25,38 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, 
-  System.Classes, System.Threading, System.Generics.Collections,
+  System.Classes, System.Generics.Collections, System.SyncObjs,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Clipbrd,
-  DeepBase.LLM.BillingClient;
+  DeepBase.LLM.BillingClient,
+  DeepBase.ManagedWorker;
 
 type
+  TLLMChatFrame = class; // E8 前向声明：供 ILLMChatContext 回指宿主
+
+  /// <summary>E8/WO-20260919-AUDIT-乙-R2（B4 同构）：异步回信上下文的引用计数接口。
+  /// 工作体只捕获本接口（独立于宿主生命周期）；UI 回调经 TryBeginOwner 在守护锁内
+  /// 检查宿主注册态，宿主 Destroy 先 UnregisterOwner 再释放 → 迟到回调丢弃，
+  /// 消除超时 Evacuate 后 Synchronize 体解引用已释放宿主（Self）的 UAF（审计 T3 同族）。</summary>
+  ILLMChatContext = interface
+    ['{6B2F4A18-3C07-4E5D-9A1B-7D0E2F5C8B34}']
+    function TryBeginOwner(out AFrame: TLLMChatFrame): Boolean;
+    procedure UnregisterOwner;
+  end;
+
+  /// <summary>ILLMChatContext 实现：持宿主裸指针 + 注册位，二者由 FLock 串行化守护。</summary>
+  TLLMChatContext = class(TInterfacedObject, ILLMChatContext)
+  private
+    FLock: TCriticalSection;
+    FOwner: TLLMChatFrame;   // 仅 FRegistered=True 时有效
+    FRegistered: Boolean;
+  public
+    constructor Create(AOwner: TLLMChatFrame);
+    destructor Destroy; override;
+    function TryBeginOwner(out AFrame: TLLMChatFrame): Boolean;
+    procedure UnregisterOwner;
+  end;
+
   /// <summary>Chat message display item</summary>
   TChatDisplayItem = record
     Role: TMessageRole;
@@ -71,7 +97,8 @@ type
     FHistory: TChatHistory;
     FChatItems: TList<TChatDisplayItem>;
     FIsGenerating: Boolean;
-    FCurrentTask: ITask;
+    FCurrentWorker: TManagedWorker;
+    FCurrentCtx: ILLMChatContext;
     FStreamBuffer: string;
     
     // Settings
@@ -195,22 +222,79 @@ end;
 
 destructor TLLMChatFrame.Destroy;
 begin
-  // REVIEW5-UI-004: Cancel and wait for background task to prevent
-  // use-after-free when frame is destroyed during generation
-  if FIsGenerating then
+  // REVIEW5-UI-004 / Top20 T3.5 改写（WO-20260919-AUDIT-乙-R2 E8）：
+  // 后台任务改走 TManagedWorker + 引用计数回信上下文（B4 同构）。Destroy 保留 2 秒预算语义：
+  // Cancel→Wait(2000)，超时则 Evacuate 移交托管隔离区（看护线程不等待挂起中的
+  // Synchronize 体，主线程自毁不会死锁）。先 UnregisterOwner：被 Evacuate 的后台体
+  // 之后晚到的 Synchronize 经 TryBeginOwner 见未注册即丢弃，不再触碰本已释放宿主。
+  if FIsGenerating and Assigned(FClient) then
+    FClient.Cancel;
+  if Assigned(FCurrentWorker) then
   begin
-    if Assigned(FClient) then
-      FClient.Cancel;
-    // Wait for task to complete (with timeout to prevent deadlock)
-    if Assigned(FCurrentTask) then
-      FCurrentTask.Wait(2000);  // 2 second timeout
+    FCurrentWorker.Cancel;
+    if not FCurrentWorker.Wait(2000) then
+      FCurrentWorker.Evacuate
+    else
+      FCurrentWorker.Free;
+    FCurrentWorker := nil;
   end;
+  if Assigned(FCurrentCtx) then
+    FCurrentCtx.UnregisterOwner;
+  FCurrentCtx := nil;
 
   if FOwnsClient and Assigned(FClient) then
     FreeAndNil(FClient);
   FreeAndNil(FHistory);
   FreeAndNil(FChatItems);
   inherited;
+end;
+
+{ TLLMChatContext }
+
+constructor TLLMChatContext.Create(AOwner: TLLMChatFrame);
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+  FOwner := AOwner;
+  FRegistered := True;
+end;
+
+destructor TLLMChatContext.Destroy;
+begin
+  FreeAndNil(FLock);
+  inherited;
+end;
+
+function TLLMChatContext.TryBeginOwner(out AFrame: TLLMChatFrame): Boolean;
+begin
+  // UI 线程串行执行本方法所在的 Synchronize 体；与宿主 Destroy 的 UnregisterOwner
+  // 同锁串行，返回 True 即表示宿主仍存活且本次回调期间不会被同线程的 Destroy 插入。
+  FLock.Enter;
+  try
+    if FRegistered then
+    begin
+      AFrame := FOwner;
+      Result := True;
+    end
+    else
+    begin
+      AFrame := nil;
+      Result := False;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TLLMChatContext.UnregisterOwner;
+begin
+  FLock.Enter;
+  try
+    FRegistered := False;
+    FOwner := nil;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TLLMChatFrame.CreateComponents;
@@ -449,6 +533,7 @@ end;
 procedure TLLMChatFrame.DoSendMessage;
 var
   UserMessage: string;
+  LCtx: ILLMChatContext;
 begin
   if FIsGenerating or not Assigned(FClient) then
     Exit;
@@ -488,15 +573,20 @@ begin
   FRichEditChat.SelAttributes.Color := clBlack;
   
   // Run async
-  // VCL-001/002: Capture state into locals before spawning the worker so the
-  // background thread does not dereference frame fields while the frame may be
-  // freed. FHistory access is restricted to the synchronized callbacks (which
-  // run on the UI thread).
+  // VCL-001/002 + E8/B4 同构：先把无关注状态捕获为局部，后台体不直接解引用宿主；
+  // UI 回写经引用计数上下文 LCtx 的注册守护（TryBeginOwner）在 UI 线程串行执行，
+  // 宿主 Destroy 先 UnregisterOwner → 超时 Evacuate 后晚到的回写被安全丢弃。
   var LClient := FClient;
   var LEnableStreaming := FEnableStreaming;
   var LMessages := FHistory.GetMessages;
   var LLastUserMessage := FHistory.GetLastUserMessage;
-  FCurrentTask := TTask.Run(
+  // 上一轮 worker 无论正常结束还是已被 Evacuate（字段仅残留失效引用，
+  // 此处只覆写不解引用）均在此回收/清位；上一轮回信随之作废。Destroy 是另一释放点。
+  FreeAndNil(FCurrentWorker);
+  FCurrentCtx := nil;
+  LCtx := TLLMChatContext.Create(Self);
+  FCurrentCtx := LCtx;
+  FCurrentWorker := TManagedWorker.Create(
     procedure
     var
       Response: TChatResponse;
@@ -519,30 +609,30 @@ begin
             TThread.Synchronize(TThread(nil),
               procedure
               var
+                LFrame: TLLMChatFrame;
                 Item: TChatDisplayItem;
               begin
-                // 检查控件与核心对象有效性，防止访问已释放的资源
-                if Assigned(Self) and not (csDestroying in ComponentState) and 
-                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated and
-                   Assigned(FHistory) and Assigned(FChatItems) then
+                if not LCtx.TryBeginOwner(LFrame) then Exit; // 宿主已释放→丢弃晚到回调
+                if Assigned(LFrame.FRichEditChat) and LFrame.FRichEditChat.HandleAllocated and
+                   Assigned(LFrame.FHistory) and Assigned(LFrame.FChatItems) then
                 begin
-                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                  FRichEditChat.SelText := LocalContent + #13#10#13#10;
-                  
-                  FHistory.AddAssistantMessage(LocalContent);
-                  
+                  LFrame.FRichEditChat.SelStart := Length(LFrame.FRichEditChat.Text);
+                  LFrame.FRichEditChat.SelText := LocalContent + #13#10#13#10;
+
+                  LFrame.FHistory.AddAssistantMessage(LocalContent);
+
                   Item.Role := mrAssistant;
                   Item.Content := LocalContent;
                   Item.Timestamp := Now;
                   Item.TokenCount := LocalTokenCount;
-                  FChatItems.Add(Item);
-                  
-                  FIsGenerating := False;
-                  UpdateUI;
-                  SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
-                  
-                  if Assigned(FOnResponseReceived) then
-                    FOnResponseReceived(Self, Response);
+                  LFrame.FChatItems.Add(Item);
+
+                  LFrame.FIsGenerating := False;
+                  LFrame.UpdateUI;
+                  LFrame.SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
+
+                  if Assigned(LFrame.FOnResponseReceived) then
+                    LFrame.FOnResponseReceived(LFrame, Response);
                 end;
               end);
           end
@@ -551,19 +641,20 @@ begin
             LocalErrorMsg := Response.ErrorMessage;
             TThread.Synchronize(TThread(nil),
               procedure
+              var
+                LFrame: TLLMChatFrame;
               begin
-                // 检查控件有效性
-                if Assigned(Self) and not (csDestroying in ComponentState) and 
-                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+                if not LCtx.TryBeginOwner(LFrame) then Exit;
+                if Assigned(LFrame.FRichEditChat) and LFrame.FRichEditChat.HandleAllocated then
                 begin
-                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                  FRichEditChat.SelAttributes.Color := clRed;
-                  FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-                  FRichEditChat.SelAttributes.Color := clBlack;
-                  
-                  FIsGenerating := False;
-                  UpdateUI;
-                  SetStatus('错误: ' + LocalErrorMsg);
+                  LFrame.FRichEditChat.SelStart := Length(LFrame.FRichEditChat.Text);
+                  LFrame.FRichEditChat.SelAttributes.Color := clRed;
+                  LFrame.FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                  LFrame.FRichEditChat.SelAttributes.Color := clBlack;
+
+                  LFrame.FIsGenerating := False;
+                  LFrame.UpdateUI;
+                  LFrame.SetStatus('错误: ' + LocalErrorMsg);
                 end;
               end);
           end;
@@ -579,43 +670,43 @@ begin
           TThread.Synchronize(TThread(nil),
             procedure
             var
+              LFrame: TLLMChatFrame;
               Item: TChatDisplayItem;
             begin
-              // 检查控件与核心对象有效性
-              if Assigned(Self) and not (csDestroying in ComponentState) and 
-                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated and
-                 Assigned(FHistory) and Assigned(FChatItems) then
+              if not LCtx.TryBeginOwner(LFrame) then Exit;
+              if Assigned(LFrame.FRichEditChat) and LFrame.FRichEditChat.HandleAllocated and
+                 Assigned(LFrame.FHistory) and Assigned(LFrame.FChatItems) then
               begin
                 if Response.Success then
                 begin
-                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                  FRichEditChat.SelText := LocalContent + #13#10#13#10;
-                  
-                  FHistory.AddAssistantMessage(LocalContent);
-                  
+                  LFrame.FRichEditChat.SelStart := Length(LFrame.FRichEditChat.Text);
+                  LFrame.FRichEditChat.SelText := LocalContent + #13#10#13#10;
+
+                  LFrame.FHistory.AddAssistantMessage(LocalContent);
+
                   Item.Role := mrAssistant;
                   Item.Content := LocalContent;
                   Item.Timestamp := Now;
                   Item.TokenCount := LocalTokenCount;
-                  FChatItems.Add(Item);
-                  
-                  SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
+                  LFrame.FChatItems.Add(Item);
+
+                  LFrame.SetStatus('完成 (' + IntToStr(LocalTokenCount) + ' tokens)');
                 end
                 else
                 begin
-                  FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                  FRichEditChat.SelAttributes.Color := clRed;
-                  FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-                  FRichEditChat.SelAttributes.Color := clBlack;
-                  
-                  SetStatus('错误: ' + LocalErrorMsg);
+                  LFrame.FRichEditChat.SelStart := Length(LFrame.FRichEditChat.Text);
+                  LFrame.FRichEditChat.SelAttributes.Color := clRed;
+                  LFrame.FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                  LFrame.FRichEditChat.SelAttributes.Color := clBlack;
+
+                  LFrame.SetStatus('错误: ' + LocalErrorMsg);
                 end;
-                
-                FIsGenerating := False;
-                UpdateUI;
-                
-                if Assigned(FOnResponseReceived) then
-                  FOnResponseReceived(Self, Response);
+
+                LFrame.FIsGenerating := False;
+                LFrame.UpdateUI;
+
+                if Assigned(LFrame.FOnResponseReceived) then
+                  LFrame.FOnResponseReceived(LFrame, Response);
               end;
             end);
         end;
@@ -625,24 +716,26 @@ begin
           LocalErrorMsg := E.Message;
           TThread.Synchronize(TThread(nil),
             procedure
+            var
+              LFrame: TLLMChatFrame;
             begin
-              // 检查控件有效性
-              if Assigned(Self) and not (csDestroying in ComponentState) and 
-                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+              if not LCtx.TryBeginOwner(LFrame) then Exit;
+              if Assigned(LFrame.FRichEditChat) and LFrame.FRichEditChat.HandleAllocated then
               begin
-                FRichEditChat.SelStart := Length(FRichEditChat.Text);
-                FRichEditChat.SelAttributes.Color := clRed;
-                FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
-                FRichEditChat.SelAttributes.Color := clBlack;
-                
-                FIsGenerating := False;
-                UpdateUI;
-                SetStatus('错误: ' + LocalErrorMsg);
+                LFrame.FRichEditChat.SelStart := Length(LFrame.FRichEditChat.Text);
+                LFrame.FRichEditChat.SelAttributes.Color := clRed;
+                LFrame.FRichEditChat.SelText := '错误: ' + LocalErrorMsg + #13#10#13#10;
+                LFrame.FRichEditChat.SelAttributes.Color := clBlack;
+
+                LFrame.FIsGenerating := False;
+                LFrame.UpdateUI;
+                LFrame.SetStatus('错误: ' + LocalErrorMsg);
               end;
             end);
         end;
       end;
-    end);
+    end, 'VCL.LLMChatFrame.Send');
+  FCurrentWorker.Start;
 end;
 
 procedure TLLMChatFrame.DoCancel;

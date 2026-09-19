@@ -19,7 +19,9 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
+  System.IOUtils,
   System.Generics.Collections,
+  System.Net.URLClient,
   DeepBase.CloudBackup;
 
 type
@@ -140,6 +142,52 @@ type
     procedure Test_ScheduleType_Values;
     [Test]
     procedure Test_FileChangeType_Values;
+  end;
+
+  // ============================================================================
+  // Top20 #15 / E4: 恢复链必须前置 VerifyBackup，校验失败即阻断恢复
+  // ============================================================================
+  [TestFixture]
+  TTestRestoreChainVerification = class
+  private
+    FSrcDir: string;
+    FBakDir: string;
+    FManager: TCloudBackupManager;
+    FBackupId: string;
+    FRestoreEventCount: Integer;
+    FRestoreSuccess: Boolean;
+    FRestoreError: string;
+    // TRestoreCompleteEvent 是 of object 事件，只能绑对象方法；
+    // InternalRestore 失败路径吞异常转事件，事件是唯一可观察出口
+    procedure HandleRestoreComplete(Sender: TObject; Success: Boolean;
+      const ErrorMsg: string);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_FreshBackup_VerifiesTrue;
+
+    [Test]
+    procedure Test_TamperedManifest_BlocksRestore;
+  end;
+
+  /// <summary>
+  /// T4 回归覆盖（WO-20260919-AUDIT-乙-R2 E7）：含 string 托管字段的
+  /// TNetHeaders 组装必须逐元素赋值；若回退为 Move 裸拷贝，重复构建用例
+  /// 会在释放阶段 double-free/AV。
+  /// </summary>
+  [TestFixture]
+  TTestBuildRequestHeaders = class
+  public
+    [Test]
+    procedure Test_DefaultsOnly;
+    [Test]
+    procedure Test_MergesExtraHeaders;
+    [Test]
+    procedure Test_RepeatedBuild_ManagedCopySafe;
   end;
 
 implementation
@@ -686,6 +734,151 @@ begin
   Assert.AreEqual(2, Ord(fctDeleted));
 end;
 
+{ TTestRestoreChainVerification }
+
+procedure TTestRestoreChainVerification.Setup;
+var
+  LCfg: TBackupConfig;
+begin
+  FSrcDir := TPath.Combine(TPath.GetTempPath, 'e4_src_' + TGUID.NewGuid.ToString);
+  FBakDir := TPath.Combine(TPath.GetTempPath, 'e4_bak_' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(FSrcDir);
+  TDirectory.CreateDirectory(FBakDir);
+  TFile.WriteAllText(TPath.Combine(FSrcDir, 'data.txt'), 'E4 restore-chain fixture payload');
+
+  LCfg := Default(TBackupConfig);
+  LCfg.SourcePaths := [FSrcDir];
+  LCfg.LocalBackupPath := FBakDir;
+  LCfg.EnableEncryption := False;
+  LCfg.MaxVersionsToKeep := 5;
+  FManager := TCloudBackupManager.Create(LCfg);
+  FManager.BackupFull('e4-fixture');
+  Assert.AreEqual(1, Integer(FManager.GetVersions.Count), 'setup must produce exactly one local backup');
+  FBackupId := FManager.GetVersions[0].BackupId;
+end;
+
+procedure TTestRestoreChainVerification.TearDown;
+begin
+  FreeAndNil(FManager);
+  try
+    TDirectory.Delete(FSrcDir, True);
+    TDirectory.Delete(FBakDir, True);
+  except
+    // 临时目录清理失败不影响断言结果
+  end;
+end;
+
+// VerifyBackup 不得恒返回失败（否则恢复链前置接入会把所有恢复都断掉）
+procedure TTestRestoreChainVerification.Test_FreshBackup_VerifiesTrue;
+begin
+  Assert.IsTrue(FManager.VerifyBackup(FBackupId),
+    'freshly created backup must pass verification');
+end;
+
+// 验收核心：篡改清单校验和 ⇒ VerifyBackup 失败 ⇒ Restore 被阻断且不写回任何文件
+procedure TTestRestoreChainVerification.Test_TamperedManifest_BlocksRestore;
+var
+  LManifestPath: string;
+  LManifest: TBackupManifest;
+  LInfo: TBackupFileInfo;
+  LTargetFile: string;
+begin
+  Assert.IsTrue(FManager.VerifyBackup(FBackupId));
+
+  LManifestPath := TPath.Combine(FBakDir, FBackupId + '.manifest.json');
+  Assert.IsTrue(TFile.Exists(LManifestPath), 'manifest must sit next to the archive');
+  LManifest := TBackupManifest.LoadFromFile(LManifestPath);
+  try
+    Assert.IsTrue(LManifest.Files.Count > 0);
+    LInfo := LManifest.Files[0];
+    LInfo.Checksum := StringOfChar('0', 64);
+    LManifest.Files[0] := LInfo;
+    LManifest.SaveToFile(LManifestPath);
+  finally
+    LManifest.Free;
+  end;
+
+  Assert.IsFalse(FManager.VerifyBackup(FBackupId),
+    'tampered manifest checksum must fail verification');
+
+  // 删除源文件后尝试恢复：InternalRestore 同步路径在 VerifyBackup 失败时
+  // 抛 EBackupException 阻断，被阻断则文件不得回来
+  LTargetFile := TPath.Combine(FSrcDir, 'data.txt');
+  TFile.Delete(LTargetFile);
+
+  FRestoreEventCount := 0;
+  FRestoreSuccess := True;
+  FRestoreError := '';
+  FManager.OnRestoreComplete := HandleRestoreComplete;
+  FManager.Restore(FBackupId);
+
+  Assert.AreEqual(1, FRestoreEventCount,
+    'blocked restore must still report completion exactly once');
+  Assert.IsFalse(FRestoreSuccess,
+    'restore must be blocked when VerifyBackup fails; got success with: ' + FRestoreError);
+  Assert.IsFalse(TFile.Exists(LTargetFile),
+    'blocked restore must not write any file back');
+end;
+
+procedure TTestRestoreChainVerification.HandleRestoreComplete(Sender: TObject;
+  Success: Boolean; const ErrorMsg: string);
+begin
+  Inc(FRestoreEventCount);
+  FRestoreSuccess := Success;
+  FRestoreError := ErrorMsg;
+end;
+
+procedure TTestBuildRequestHeaders.Test_DefaultsOnly;
+var
+  LH: TNetHeaders;
+begin
+  LH := TCloudBackupClient.BuildRequestHeaders('key1', 'bucket1', nil);
+  Assert.AreEqual(2, Integer(Length(LH)));
+  Assert.AreEqual('X-API-Key', LH[0].Name);
+  Assert.AreEqual('key1', LH[0].Value);
+  Assert.AreEqual('X-Bucket', LH[1].Name);
+  Assert.AreEqual('bucket1', LH[1].Value);
+end;
+
+procedure TTestBuildRequestHeaders.Test_MergesExtraHeaders;
+var
+  LExtra, LH: TNetHeaders;
+begin
+  SetLength(LExtra, 2);
+  LExtra[0] := TNameValuePair.Create('Content-Type', 'application/zip');
+  LExtra[1] := TNameValuePair.Create('X-Backup-Id', 'bk-20260919');
+  LH := TCloudBackupClient.BuildRequestHeaders('k', 'b', LExtra);
+  Assert.AreEqual(4, Integer(Length(LH)));
+  Assert.AreEqual('X-API-Key', LH[0].Name);
+  Assert.AreEqual('Content-Type', LH[2].Name);
+  Assert.AreEqual('X-Backup-Id', LH[3].Name);
+  Assert.AreEqual('bk-20260919', LH[3].Value);
+  // 源数组不受影响：若为 Move 裸拷贝，两侧共享字符串指针会重复释放
+  Assert.AreEqual('bk-20260919', LExtra[1].Value);
+end;
+
+procedure TTestBuildRequestHeaders.Test_RepeatedBuild_ManagedCopySafe;
+var
+  LExtra, LH: TNetHeaders;
+  I: Integer;
+  LLong: string;
+begin
+  LLong := StringOfChar('x', 300); // 超过字符串内联缓冲，堆分配引用计数路径
+  SetLength(LExtra, 3);
+  LExtra[0] := TNameValuePair.Create('A', LLong);
+  LExtra[1] := TNameValuePair.Create('B', 'yy');
+  LExtra[2] := TNameValuePair.Create('C', 'zz');
+  for I := 1 to 200 do
+  begin
+    LH := TCloudBackupClient.BuildRequestHeaders('key', 'bkt', LExtra);
+    Assert.AreEqual(5, Integer(Length(LH)));
+    Assert.AreEqual(LLong, LH[2].Value);
+  end;
+  // 循环内 LH 每轮重赋值会释放上一轮元素；若拷贝是 Move 裸内存，
+  // 源 LExtra 字符串已悬垂，此处必 AV 或 DUnitX 报 leak。
+  Assert.AreEqual(LLong, LExtra[0].Value);
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestBackupFileInfo);
   TDUnitX.RegisterTestFixture(TTestBackupManifest);
@@ -694,5 +887,7 @@ initialization
   TDUnitX.RegisterTestFixture(TTestBackupConfig);
   TDUnitX.RegisterTestFixture(TTestBackupStatistics);
   TDUnitX.RegisterTestFixture(TTestBackupEnums);
+  TDUnitX.RegisterTestFixture(TTestRestoreChainVerification);
+  TDUnitX.RegisterTestFixture(TTestBuildRequestHeaders);
 
 end.

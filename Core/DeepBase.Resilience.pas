@@ -141,32 +141,11 @@ const
   rmwWarn: TRetryMainThreadWaitMode = DeepBase.Resilience.Retry.rmwWarn;
   rmwRaise: TRetryMainThreadWaitMode = DeepBase.Resilience.Retry.rmwRaise;
 
-function CircuitBreakers: DeepBase.Resilience.CircuitBreaker.TCircuitBreakerRegistry;
+// Top20 #19 / E6: 此处曾并存第二套 CircuitBreakers 注册表单例（与本 facade 的
+// _RegistryLock 从未初始化，一经调用必抛 NotInitialized）；SSOT 收敛至
+// DeepBase.Resilience.CircuitBreaker 的 CircuitBreakers/Instance，按 H9 不保留兼容转发。
 
 implementation
-
-var
-  _CircuitBreakerRegistry: TCircuitBreakerRegistry;
-  _RegistryLock: TCriticalSection;
-
-function CircuitBreakers: DeepBase.Resilience.CircuitBreaker.TCircuitBreakerRegistry;
-begin
-  if not Assigned(_RegistryLock) then
-    raise ECircuitBreakerNotInitializedException.Create(
-      'CircuitBreakers registry lock not initialized');
-
-  if not Assigned(_CircuitBreakerRegistry) then
-  begin
-    _RegistryLock.Enter;
-    try
-      if not Assigned(_CircuitBreakerRegistry) then
-        _CircuitBreakerRegistry := TCircuitBreakerRegistry.Create;
-    finally
-      _RegistryLock.Leave;
-    end;
-  end;
-  Result := _CircuitBreakerRegistry;
-end;
 
 function TCircuitStateHelper.ToString: string;
 const
