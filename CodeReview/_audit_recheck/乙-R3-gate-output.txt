@@ -1,0 +1,18 @@
+=== 乙-R3 门禁实跑输出 ===
+时间: 2026-09-19 23:44:56
+
+--- managed-copy-gate 正例（仓库扫描） ---
+鎵樼鎷疯礉闂ㄧ閫氳繃锛氭鏌ヤ簡 960 涓?.pas 鏂囦欢锛圡1 纭鍒?+ M2 鍩虹嚎 99 椤硅眮鍏嶅瓨閲忥級
+EXIT=0
+
+--- managed-copy-gate 负例（注入违规） ---
+闂ㄧ杈撳嚭锛堥鏈熷寘鍚?M1, M2 杩濊锛? 鎵樼鎷疯礉闂ㄧ澶辫触锛岃繚瑙?3 椤?   M1 Move/鎵樼绫诲瀷瑁告嫹璐? src/Bad_M1.pas:7   M2 鏈瘎瀹＄殑瑁稿唴瀛?Move 璋冪敤 (褰撳墠 1 > 鍩虹嚎 0): src/Bad_M1.pas   M2 鏈瘎瀹＄殑 FillChar 鍐呭瓨鎿嶄綔 (褰撳墠 1 > 鍩虹嚎 0): src/Bad_M2.pas  姝ｅ悜鏍锋湰閫氳繃锛歄K NEGATIVE-TEST: PASS
+EXIT=0
+
+--- eol-gate 正例（仓库扫描） ---
+琛屽熬闂ㄧ閫氳繃锛氭鏌ヤ簡 1384 涓枃浠讹紙.pas CRLF / .md LF锛?
+EXIT=0
+
+--- eol-gate 负例（注入违规） ---
+闂ㄧ杈撳嚭锛堥鏈熷寘鍚?L1, L2, L3 杩濊锛? 琛屽熬闂ㄧ澶辫触锛岃繚瑙?3 椤?   L2 .md 鏂囨。闈為鏈熷寘鍚?CRLF (瑕佹眰 LF): docs/Bad_CRLF.md   L1 .pas 婧愮爜闈為鏈熺函 LF (瑕佹眰 CRLF): src/Bad_LF.pas   L3 .pas 婧愮爜娣风敤 CRLF 涓?LF (crlf=2, total_lf=4): src/Bad_Mixed.pas  NEGATIVE-TEST: PASS
+EXIT=0

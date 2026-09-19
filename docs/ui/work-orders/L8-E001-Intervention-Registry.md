@@ -21,8 +21,13 @@
 | **PI-CRYPTO-IV** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A4 CBC 随机 IV | EncryptPackage 输出格式变（IV 前缀） | AsWish/DeepAxis: 旧 CBC 密文不可用新代码解密（生产仅用 GCM，无实际落盘数据） | **ACTIVE** |
 | **PI-UIA-GATE** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A6 UIA fail-closed | 屏幕映射未注册签名→拒绝 | DeepBase 内部，影响 HB 视觉系统 | **ACTIVE** |
 | **PI-PLUGIN-DRAIN** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A8 在途计数 | 卸载等待在途调用完成（≤5s）超时拒绝 | AsWish/DeepAxis: 插件卸载可能延迟最多 5s | **ACTIVE** |
+| **PI-E4-LLMBACKOFF** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E4 LLMResilience 指数退避+抖动 | 重试间隔由固定→随机指数退避 | LLM 调用重试时序行为变，可观察 | **ACTIVE** |
+| **PI-E6-TIMEOUT-API** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E6 Resilience.Timeout 死代码清除 | TTimeoutLock 类删除，调用方编译报错（原无实现） | API 缩减，无运行时行为变（死代码） | **ACTIVE** |
+| **PI-E7-CLOUDSYNC-TIMEOUT** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E7 CloudSync 显式超时+重试 | 网络同步请求新增 30s 超时+2次重试 | 同步等待行为变：原来无限等→30s超时 | **ACTIVE** |
+| **PI-E8-LLMCHAT-GUARD** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | E8 FMX/VCL LLMChatFrame 回调守卫 | 防回调重入：快速连发请求时仅首次响应 | UI 响应行为变（丢弃后续回调） | **ACTIVE** |
+| **PI-B1-B5-GOVERNANCE** | `DeepBase` | `ed50cfd` | 2026-09-19 23:32 | B1-B5 Governance/Browser | 配置注册/动作审核/审查队列/缓存接线 | Governance 执行路径变更，可观察 | **ACTIVE** |
 
-> **登记来源**：`L8-E001-Observation-Active-Execution-Policy.md` §二（START Anchor `f47c573` 之后 commit 分类登记）。
+> **登记来源**：`L8-E001-Observation-Active-Execution-Policy.md` §二（START Anchor `f47c573` 之后 commit 分类登记）+ `WO-20260919-AUDIT-乙-R3` K4。
 > **时间界**：INT-20260917-01/02/03 均发生在 Case 001 START 宣告（2026-09-17 16:31）**之后** ⇒ 凡 `timestamp` 早于其 `Effective Time` 的 Episode 归入 `Before`，晚者归入 `After`，**严禁混池**。
 > **F4 相关性**：三项均未触及 `F2B`/`Engine`/`flight-receipt`，**与 F4 影响面无交集**。
 
