@@ -59,10 +59,36 @@ uses
   FMX.Forms,
   DeepBase.HttpServer;
 
+type
+  { Exposes protected TControl.Click without requiring FMX.StdCtrls. }
+  TProbeControlAccess = class(TControl);
+
 var
   GServer: THttpServer;
 
 { ---- Helpers ---- }
+
+/// Constant-time string comparison to prevent timing side-channel on token check.
+function SecureTokenEqual(const A, B: string): Boolean;
+var
+  I, LDiff, LLenA, LLenB: Integer;
+begin
+  LLenA := Length(A);
+  LLenB := Length(B);
+  LDiff := LLenA xor LLenB; // if lengths differ, non-zero
+  // Compare up to the shorter length without early exit:
+  if LLenA < LLenB then
+  begin
+    for I := 1 to LLenA do
+      LDiff := LDiff or (Ord(A[I]) xor Ord(B[I]));
+  end
+  else
+  begin
+    for I := 1 to LLenB do
+      LDiff := LDiff or (Ord(A[I]) xor Ord(B[I]));
+  end;
+  Result := LDiff = 0;
+end;
 
 function SafeGetText(const AObj: TFMXObject): string;
 var
@@ -119,7 +145,14 @@ class procedure TFmxProbe.Install;
 var
   I: Integer;
   LParam: string;
+  LAllowRemote: Boolean;
+  LToken: string;
+  LBindAddr: string;
 begin
+{$IFNDEF DEBUG}
+  // A15: probe excluded from production builds entirely.
+  Exit;
+{$ENDIF}
   if FActive then Exit;
 
   for I := 1 to ParamCount do
@@ -133,6 +166,25 @@ begin
   end;
 
   if FPort = 0 then Exit;
+
+  // A15/Top20#12: probe default-disabled, loopback-only, token-authenticated.
+  LAllowRemote := False;
+  LToken := '';
+  for I := 1 to ParamCount do
+  begin
+    LParam := ParamStr(I);
+    if LParam = '--uitest-probe-allow-remote' then
+      LAllowRemote := True;
+    if LParam.StartsWith('--uitest-probe-token=') then
+      LToken := LParam.Substring(Length('--uitest-probe-token='));
+  end;
+  // No token = refuse to start (fail-closed):
+  if LToken = '' then
+    Exit;
+  if not LAllowRemote then
+    LBindAddr := '127.0.0.1'
+  else
+    LBindAddr := '0.0.0.0';
   FActive := True;
 
   TThread.CreateAnonymousThread(
@@ -140,6 +192,21 @@ begin
     begin
       try
         GServer := THttpServer.Create;
+        // A15: token auth middleware — reject requests without valid token
+        GServer.Use(
+          procedure(const ACtx: THttpContext; Next: TProc)
+          var
+            LProvided: string;
+          begin
+            LProvided := ACtx.Request.Headers['X-Probe-Token'];
+            // constant-time compare (BUG-036)
+            if not SecureTokenEqual(LProvided, LToken) then
+            begin
+              ACtx.Response.Status(403).Text('{"error":"invalid or missing token"}');
+              Exit;
+            end;
+            Next;
+          end);
         GServer
           .Get('/tree',
             procedure(const ACtx: THttpContext)
@@ -152,7 +219,7 @@ begin
               LName: string;
               LResult: TFmxProbeResult;
             begin
-              LName := ACtx.Request.QueryParam['name'];
+              LName := ACtx.Request.Query['name'];
               if LName = '' then
               begin
                 ACtx.Response.Status(400).Text('{"error":"missing ?name="}');
@@ -198,7 +265,7 @@ begin
                 ACtx.Response.Status(404).Text('{"error":"' + LResult.Data + '"}');
             end);
 
-        GServer.Listen(FPort);
+        GServer.Listen(FPort, LBindAddr);
         FServerStarted := True;
       except
         FServerStarted := False;
@@ -238,7 +305,8 @@ class function TFmxProbe.EnumerateTree: string;
       LItem := TJSONObject.Create;
       LItem.AddPair('class', LChild.ClassName);
       LItem.AddPair('name', LChild.StyleName);
-      LItem.AddPair('visible', TJSONBool.Create(LChild.Visible));
+      LItem.AddPair('visible', TJSONBool.Create(
+        (LChild is TControl) and TControl(LChild).Visible));
 
       if LChild is TControl then
       begin
@@ -359,10 +427,7 @@ begin
   TThread.Queue(nil,
     procedure
     begin
-      if LControl is TCustomButton then
-        TCustomButton(LControl).OnClick(TCustomButton(LControl))
-      else if LControl is TButton then
-        TButton(LControl).OnClick(TButton(LControl));
+      TProbeControlAccess(LControl).Click;
     end);
 
   Result.Status := 'ok';
@@ -416,7 +481,8 @@ begin
   try
     LJson.AddPair('name', LFound.StyleName);
     LJson.AddPair('class', LFound.ClassName);
-    LJson.AddPair('visible', TJSONBool.Create(LFound.Visible));
+    LJson.AddPair('visible', TJSONBool.Create(
+      (LFound is TControl) and TControl(LFound).Visible));
 
     if LFound is TControl then
     begin

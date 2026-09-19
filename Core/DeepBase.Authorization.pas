@@ -287,7 +287,17 @@ type
   // ============================================================================
   // Authorization Manager
   // ============================================================================
-  
+
+  /// <summary>
+  /// A14/Top20#9: 线程身份上下文。存储 Epoch 以检测 ThreadID 复用。
+  /// 线程退出后 OS 可回收其 ThreadID；新线程读取时若 Epoch 不匹配则视为过期。
+  /// </summary>
+  TThreadUserContext = record
+    User: TUser;           // nil = 未登录
+    OwnerThread: TThread;  // nil 对非 TThread 原生线程
+    Epoch: Cardinal;       // 单调递增，标识哪次 SetCurrent 写入的
+  end;
+
   /// <summary>
   /// Main authorization manager
   /// </summary>
@@ -297,7 +307,8 @@ type
     FUsers: TObjectDictionary<string, TUser>;
     FRoles: TObjectDictionary<string, TRole>;
     FPermissions: TObjectDictionary<string, TPermission>;
-    FThreadCurrentUsers: TDictionary<TThreadID, TUser>;  // per-thread current user
+    FThreadCurrentUsers: TDictionary<TThreadID, TThreadUserContext>;  // A14: composite safety
+    FThreadEpoch: Cardinal; // monotonic counter detecting ID reuse
     FLock: TCriticalSection;
     FOnAuditLog: TAuditLogCallback;
     FTokenVerifier: TTokenVerifierFunc;
@@ -752,7 +763,8 @@ begin
   FUsers := TObjectDictionary<string, TUser>.Create([doOwnsValues]);
   FRoles := TObjectDictionary<string, TRole>.Create([doOwnsValues]);
   FPermissions := TObjectDictionary<string, TPermission>.Create([doOwnsValues]);
-  FThreadCurrentUsers := TDictionary<TThreadID, TUser>.Create;
+  FThreadCurrentUsers := TDictionary<TThreadID, TThreadUserContext>.Create;
+  FThreadEpoch := 0;
   FLock := TCriticalSection.Create;
   FAuditEnabled := True;
 
@@ -776,7 +788,7 @@ begin
     FreeAndNil(FPermissions);
     FreeAndNil(FRoles);
     FreeAndNil(FUsers);
-    FreeAndNil(FThreadCurrentUsers);
+    FreeAndNil(FThreadCurrentUsers); // TThreadUserContext contains unowned TUser ptrs, no Free needed
   finally
     FLock.Leave;
   end;
@@ -1131,7 +1143,7 @@ end;
 procedure TAuthorizationManager.DeleteUser(const Username: string);
 var
   ThreadID: TThreadID;
-  ContextUser: TUser;
+  Ctx: TThreadUserContext;
   AffectedThreads: TArray<TThreadID>;
 begin
   FLock.Enter;
@@ -1141,15 +1153,15 @@ begin
     
     DeleteUserFromDatabase(Username);
 
-    // CR-009: FThreadCurrentUsers 持有 FUsers(doOwnsValues) 的活体指针。
-    // 删除用户时必须同步清除其线程登录上下文，否则后续 CurrentUserCan/
-    // RequirePermission 解引用已释放对象；内存被复用时甚至会读到另一个
-    // 用户的身份做鉴权（提权面）。
+    // CR-009 + A14: FThreadCurrentUsers 持有 FUsers(doOwnsValues) 的活体指针。
+    // 删除用户时必须同步清除其线程登录上下文。
     AffectedThreads := nil;
     for ThreadID in FThreadCurrentUsers.Keys.ToArray do
-      if FThreadCurrentUsers.TryGetValue(ThreadID, ContextUser) and
-         (ContextUser <> nil) and SameText(ContextUser.Username, Username) then
+    begin
+      if FThreadCurrentUsers.TryGetValue(ThreadID, Ctx) and
+         (Ctx.User <> nil) and SameText(Ctx.User.Username, Username) then
         AffectedThreads := AffectedThreads + [ThreadID];
+    end;
     for ThreadID in AffectedThreads do
       FThreadCurrentUsers.Remove(ThreadID);
 
@@ -1600,10 +1612,24 @@ end;
 // ============================================================================
 
 function TAuthorizationManager.GetCurrentUserForThread: TUser;
+var
+  Ctx: TThreadUserContext;
+  LThreadID: TThreadID;
 begin
   FLock.Enter;
   try
-    if not FThreadCurrentUsers.TryGetValue(TThread.CurrentThread.ThreadID, Result) then
+    LThreadID := TThread.CurrentThread.ThreadID;
+    if FThreadCurrentUsers.TryGetValue(LThreadID, Ctx) then
+    begin
+      // A14: 检测线程复用——若存储的 OwnerThread 已终结，清除过期条目
+      if (Ctx.OwnerThread <> nil) and Ctx.OwnerThread.Finished then
+      begin
+        FThreadCurrentUsers.Remove(LThreadID);
+        Exit(nil);
+      end;
+      Result := Ctx.User;
+    end
+    else
       Result := nil;
   finally
     FLock.Leave;
@@ -1611,11 +1637,19 @@ begin
 end;
 
 procedure TAuthorizationManager.SetCurrentUserForThread(AUser: TUser);
+var
+  Ctx: TThreadUserContext;
 begin
   FLock.Enter;
   try
     if AUser <> nil then
-      FThreadCurrentUsers.AddOrSetValue(TThread.CurrentThread.ThreadID, AUser)
+    begin
+      Inc(FThreadEpoch);
+      Ctx.User := AUser;
+      Ctx.OwnerThread := TThread.CurrentThread;
+      Ctx.Epoch := FThreadEpoch;
+      FThreadCurrentUsers.AddOrSetValue(TThread.CurrentThread.ThreadID, Ctx);
+    end
     else
       FThreadCurrentUsers.Remove(TThread.CurrentThread.ThreadID);
   finally

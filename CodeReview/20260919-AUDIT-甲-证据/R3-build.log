@@ -1,0 +1,12 @@
+﻿Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.Crypto.Hash.pas(599) Hint: H2077 Value assigned to 'TPasswordUtils.CheckStrength' never used
+Tests\Test.DeepBase.Manifest.Verifier.pas(74) Hint: H2219 Private symbol 'WithGeneration' declared but never used
+Tests\Test.DeepBase.Manifest.Verifier.pas(76) Hint: H2219 Private symbol 'WithIssuedAt' declared but never used
+Tests\Test.DeepBase.Manifest.Verifier.pas(77) Hint: H2219 Private symbol 'WithExpiresAt' declared but never used
+Features\DeepBase.Net.Transport.pas(196) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Features\DeepBase.Net.Transport.pas(339) Hint: H2443 Inline function 'THTTPClient.SetContentType' has not been expanded because unit 'System.NetConsts' is not specified in USES list
+Tests\Regression\Test.Regression.Base.pas(172) Hint: H2077 Value assigned to 'Duration' never used
+Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Tests\Regression\Test.Regression.A8_InFlightUnloadGate.pas(128) Hint: H2077 Value assigned to 'LStart' never used
+16091 lines, 0.69 seconds, 4085956 bytes code, 506168 bytes data.

@@ -17,6 +17,7 @@ uses
   DeepBase.UIA.Types,
   DeepBase.External.Auditor,
   DeepBase.ClipboardGuard,
+  DeepBase.Gate.Verdict,
   DeepBase.WindowMonitor;
 
 const
@@ -64,16 +65,17 @@ type
   end;
 
   IUIAMappingProvider = interface
-    ['{C2D5E8F3-8A2B-4C6D-A4E8-2F7A9B3D5E1F}']
+    ['{E1B4C7A9-3F6D-4E2B-A8C5-5D0F7E2A4B9C}']
     function GetMapping(const AppName, AppVersion: string): TUIAMapping;
     procedure RegisterMapping(const AppName, AppVersion: string;
       const Mapping: TUIAMapping);
     function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
-    function IsMappingIntegrityVerified(const AppName: string): Boolean;
+    { A6 fail-closed：旧签名恒返 True（从未校验）已撤回，改为类型化裁决。 }
+    function IsMappingIntegrityVerified(const AppName: string): TGateVerdict;
   end;
 
   IUIAutomationEngine = interface(IUIAElementFinder)
-    ['{D6E9F1A4-9B3C-4D7E-B8F2-3A8B5C6E9F1D}']
+    ['{A7F2D4E6-1B8C-4A3D-9E5F-6C9A2B4D7E0F}']
     function SetValue(const Locator: TUIAElementLocator;
       const Value: string; const Guard: IClipboardGuard): Boolean;
     function GetValue(const Locator: TUIAElementLocator): string;
@@ -82,7 +84,9 @@ type
     procedure RegisterMapping(const AppName, AppVersion: string;
       const Mapping: TUIAMapping);
     function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
-    function IsMappingIntegrityVerified(const AppName: string): Boolean;
+    function IsMappingIntegrityVerified(const AppName: string): TGateVerdict;
+    { 登记受信任映射文件的 SHA256 基线（部署/宿主注入，唯一写入口）。 }
+    procedure RegisterMappingSignature(const AFileName, ASha256Hex: string);
     function GetForegroundProcessName: string;
     function IsAppRunning(const AppName: string): Boolean;
   end;
@@ -121,7 +125,8 @@ type
     procedure RegisterMapping(const AppName, AppVersion: string;
       const Mapping: TUIAMapping);
     function ResolveVersionMapping(const AppName, AppVersion: string): TUIAMapping;
-    function IsMappingIntegrityVerified(const AppName: string): Boolean;
+    function IsMappingIntegrityVerified(const AppName: string): TGateVerdict;
+    procedure RegisterMappingSignature(const AFileName, ASha256Hex: string);
     function GetForegroundProcessName: string;
     function IsAppRunning(const AppName: string): Boolean;
   end;
@@ -446,9 +451,31 @@ begin
   Result.AppVersion := AppVersion;
 end;
 
-function TUIAEngineWin32.IsMappingIntegrityVerified(const AppName: string): Boolean;
+function TUIAEngineWin32.IsMappingIntegrityVerified(const AppName: string): TGateVerdict;
+var
+  LFileName: string;
 begin
-  Result := True;
+  { A6 fail-closed 立法：旧实现恒 Result := True，从未做过任何校验（审计
+    T1 家族实锤）。真实校验以受信任 SHA256 基线为前提：基线缺失时如实
+    报 gdIndeterminate（IsApproved 恒 False，调用侧不可放行），不得谎报已验证。 }
+  if AppName = '' then
+    Exit(TGateVerdict.Rejected('mapping integrity: empty AppName'));
+  LFileName := AppName + '.json';
+  if not FMappingSignatures.ContainsKey(LFileName) then
+    Exit(TGateVerdict.Indeterminate(
+      'no trusted SHA256 baseline registered for mapping file "' + LFileName + '"'));
+  if not TFile.Exists(TPath.Combine(ExtractFilePath(ParamStr(0)), 'Libs\UIA', LFileName)) then
+    Exit(TGateVerdict.Rejected('mapping file declared but missing on disk: ' + LFileName));
+  Result := TGateVerdict.Approved;
+end;
+
+procedure TUIAEngineWin32.RegisterMappingSignature(const AFileName, ASha256Hex: string);
+begin
+  { 信任基线写入口（单一真相源）：由部署方/宿主注入受信任映射文件的
+    SHA256；空文件名或空摘要拒绝入库，防止把"登记了但不可校验"的状态带入运行期。 }
+  if (Trim(AFileName) = '') or (Trim(ASha256Hex) = '') then
+    raise EUIAEngineError.Create('RegisterMappingSignature requires non-empty file name and SHA256 hex');
+  FMappingSignatures.AddOrSetValue(Trim(AFileName), Trim(ASha256Hex));
 end;
 
 function TUIAEngineWin32.GetForegroundProcessName: string;
@@ -493,13 +520,17 @@ begin
   begin
     var ActualHash := THashUtils.SHA256File(FilePath);
     var FileName := ExtractFileName(FilePath);
-    if FMappingSignatures.ContainsKey(FileName) then
+    { A6 fail-closed：无受信任基线 = 不可校验 = 不加载（旧实现 ContainsKey
+      恒 False，整段校验是死代码）；基线不符 = 篡改，拒加载并告警。 }
+    if not FMappingSignatures.ContainsKey(FileName) then
     begin
-      if not SameText(ActualHash, FMappingSignatures[FileName]) then
-      begin
-        Logger.ErrorFmt('UIA mapping file tamper detected: %s', [FileName], 'UIA');
-        Continue;
-      end;
+      Logger.ErrorFmt('UIA mapping rejected (no trusted signature baseline): %s', [FileName], 'UIA');
+      Continue;
+    end;
+    if not SameText(ActualHash, FMappingSignatures[FileName]) then
+    begin
+      Logger.ErrorFmt('UIA mapping file tamper detected: %s', [FileName], 'UIA');
+      Continue;
     end;
 
     Logger.InfoFmt('Loaded UIA mapping: %s', [FileName], 'UIA');

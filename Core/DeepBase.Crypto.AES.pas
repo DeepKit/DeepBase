@@ -20,8 +20,8 @@ uses
   DeepBase.Crypto.Hash;
 
 type
-  /// <summary>AES encryption mode</summary>
-  TAESMode = (aesECB, aesCBC, aesCFB, aesOFB, aesCTR, aesGCM);
+  /// <summary>AES encryption mode (仅保留已实现的两种，A17/Top20#10 删除假模式)</summary>
+  TAESMode = (aesCBC, aesGCM);
 
   /// <summary>AES key size</summary>
   TAESKeySize = (aes128, aes192, aes256);
@@ -31,6 +31,10 @@ type
   private
     FKey: TBytes;
     FIV: TBytes;
+    // A4-1: guards against CBC IV reuse. FIV is consumed by one implicit
+    // Encrypt; the next implicit Encrypt regenerates it. An explicit SetIV
+    // resets the flag so a caller-supplied IV is always honored for that call.
+    FIVConsumed: Boolean;
     FMode: TAESMode;
     FKeySize: TAESKeySize;
 
@@ -130,13 +134,22 @@ const
   SIMPLE_CRYPTO_MAGIC_1 = $42; // B
   SIMPLE_CRYPTO_MAGIC_2 = $53; // S
   SIMPLE_CRYPTO_MAGIC_3 = $43; // C
-  SIMPLE_CRYPTO_VERSION = 2;
-  SIMPLE_CRYPTO_VERSION_V1 = 1;
+  // SIMPLE_CRYPTO_VERSION is the envelope version for all NEW writes.
+  // v3 derives the MAC key from the per-message salt via PBKDF2 (A4-3), closing
+  // the strength gap vs the encryption key. v2/v1 are retained READ-ONLY so
+  // envelopes already on disk stay decryptable; they are never written again.
+  SIMPLE_CRYPTO_VERSION = 3;
+  SIMPLE_CRYPTO_VERSION_V2 = 2;    // read-only: GCM + single-round HMAC MAC key
+  SIMPLE_CRYPTO_VERSION_V1 = 1;    // read-only: CBC + salt derived from password
   SIMPLE_CRYPTO_HEADER_SIZE = 5;
   SIMPLE_CRYPTO_AES_BLOCK_SIZE = 16;
   SIMPLE_CRYPTO_SALT_SIZE = 16;
   SIMPLE_CRYPTO_MAC_SIZE = 32; // SHA-256
+  // Legacy single-round HMAC context. READ path only (v1/v2 envelopes).
   SIMPLE_CRYPTO_MAC_CONTEXT = 'DeepBase.SimpleCrypto.MAC.v1';
+  // v3 MAC-key domain-separation label, mixed into the PBKDF2 salt so the MAC
+  // key and the encryption key stay independent even for the same password+salt.
+  SIMPLE_CRYPTO_MAC_KDF_INFO = 'DeepBase.SimpleCrypto.MACKey.v3';
 
 function BytesEqualConstantTime(const ALeft, ARight: TBytes): Boolean;
 var
@@ -163,12 +176,30 @@ begin
     (AData[3] = SIMPLE_CRYPTO_MAGIC_3);
 end;
 
+// Legacy MAC key (single-round HMAC, no salt). Retained ONLY so v1/v2
+// envelopes already on disk can still be authenticated; never used for new
+// writes. See SimpleCryptoMacKeyV3 for the v3 write path.
 function SimpleCryptoMacKey(const APassword: string): TBytes;
 begin
   Result := THashUtils.HMAC(
     TEncoding.UTF8.GetBytes(APassword),
     TEncoding.UTF8.GetBytes(SIMPLE_CRYPTO_MAC_CONTEXT),
     haSHA256);
+end;
+
+// A4-3: v3 MAC key. Same PBKDF2 strength as the encryption key (100k rounds,
+// SHA-256), bound to the per-message salt, with a distinct domain-separation
+// label so it never equals the encryption key derived from the same salt.
+function SimpleCryptoMacKeyV3(const APassword: string; const ASalt: TBytes): TBytes;
+var
+  LInfo, LSaltInfo: TBytes;
+begin
+  LInfo := TEncoding.UTF8.GetBytes(SIMPLE_CRYPTO_MAC_KDF_INFO);
+  SetLength(LSaltInfo, Length(ASalt) + Length(LInfo));
+  if Length(ASalt) > 0 then
+    Move(ASalt[0], LSaltInfo[0], Length(ASalt));
+  Move(LInfo[0], LSaltInfo[Length(ASalt)], Length(LInfo));
+  Result := TPasswordUtils.PBKDF2(APassword, LSaltInfo, 100000, SIMPLE_CRYPTO_MAC_SIZE, haSHA256);
 end;
 
 { TAESCrypto }
@@ -244,6 +275,8 @@ begin
   if Length(AIV) <> GetBlockSize then
     raise ECryptoException.CreateFmt('Invalid IV length. Expected %d bytes', [GetBlockSize]);
   FIV := Copy(AIV);
+  // An explicit IV is authoritative for the next Encrypt; do not auto-rotate it.
+  FIVConsumed := False;
 end;
 
 procedure TAESCrypto.GenerateKey;
@@ -254,6 +287,7 @@ end;
 procedure TAESCrypto.GenerateIV;
 begin
   FIV := TRandomGenerator.RandomBytes(GetBlockSize);
+  FIVConsumed := False;
 end;
 
 function TAESCrypto.GenerateNonce: TBytes;
@@ -374,7 +408,7 @@ begin
     end
     else
     begin
-      // --- Non-GCM modes (CBC, CFB, etc.) ---
+      // --- CBC mode ---
       LChainMode := BCRYPT_CHAIN_MODE_CBC;
       LStatus := BCryptSetProperty(LAlgHandle, BCRYPT_CHAINING_MODE,
         PByte(PWideChar(LChainMode)), (Length(LChainMode) + 1) * SizeOf(WideChar), 0);
@@ -392,6 +426,11 @@ begin
       if LStatus <> STATUS_SUCCESS then
         raise ECryptoException.CreateFmt('BCryptGenerateSymmetricKey failed: %d', [LStatus]);
 
+      // A4-1: never reuse an IV. If the current IV was already consumed by a
+      // prior implicit Encrypt, advance to a fresh random one. A caller that
+      // explicitly SetIV resets the consumed flag, so its IV is honored.
+      if FIVConsumed then
+        GenerateIV;
       LPadded := PadData(AData);
       LIVCopy := Copy(FIV);
 
@@ -409,6 +448,7 @@ begin
         raise ECryptoException.CreateFmt('BCryptEncrypt failed: %d', [LStatus]);
 
       SetLength(Result, LResultSize);
+      FIVConsumed := True;
     end;
   finally
     if LKeyHandle <> 0 then
@@ -437,8 +477,12 @@ begin
   end
   else
   begin
+    // A4-1: never reuse an IV (see Windows branch).
+    if FIVConsumed then
+      GenerateIV;
     LPadded := PadData(AData);
     Result := DeepBase.Crypto.OpenSSL.OpenSSL_AES256CBC_Encrypt(FKey, FIV, LPadded);
+    FIVConsumed := True;
   end;
 end;
 {$ENDIF}
@@ -530,7 +574,7 @@ begin
     end
     else
     begin
-      // --- Non-GCM modes (CBC, etc.) ---
+      // --- CBC mode ---
       if Length(AData) mod 16 <> 0 then
         raise ECryptoException.Create('Invalid ciphertext length');
 
@@ -735,7 +779,7 @@ begin
     IV := LAES.IV;
     BlockSize := Length(IV);
 
-    // v2 format: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
+    // v3 format: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
     PayloadLen := SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + BlockSize + Length(Cipher);
     SetLength(MacInput, PayloadLen);
     MacInput[0] := SIMPLE_CRYPTO_MAGIC_0;
@@ -749,7 +793,8 @@ begin
     if Length(Cipher) > 0 then
       Move(Cipher[0], MacInput[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + BlockSize], Length(Cipher));
 
-    MacKey := SimpleCryptoMacKey(APassword);
+    // A4-3: v3 binds the MAC key to the per-message salt via PBKDF2.
+    MacKey := SimpleCryptoMacKeyV3(APassword, LSalt);
     Mac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
 
     SetLength(Result, PayloadLen + Length(Mac));
@@ -771,22 +816,23 @@ begin
   if Length(AData) = 0 then
     Exit(nil);
 
-  // LUseGCM tracks which AES mode was used to encrypt this data.
-  // v2 (SIMPLE_CRYPTO_VERSION=2) uses AES-GCM (introduced with the GCM upgrade).
-  // v1 (SIMPLE_CRYPTO_VERSION_V1=1) and legacy (no header) used AES-CBC; they
-  // must be decrypted with CBC or the data is unrecoverable after the GCM upgrade.
+  // LUseGCM selects the AES mode the data was originally written with:
+  // v3/v2 use AES-GCM; v1 and legacy (no header) use AES-CBC and must be
+  // decrypted with CBC or the data is unrecoverable after the GCM upgrade.
   LUseGCM := False;
 
   if SimpleCryptoHasHeader(AData) then
   begin
     LVersion := AData[4];
-    if (LVersion <> SIMPLE_CRYPTO_VERSION) and (LVersion <> SIMPLE_CRYPTO_VERSION_V1) then
+    if (LVersion <> SIMPLE_CRYPTO_VERSION) and
+       (LVersion <> SIMPLE_CRYPTO_VERSION_V2) and
+       (LVersion <> SIMPLE_CRYPTO_VERSION_V1) then
       raise ECryptoException.Create('Unsupported encrypted data version');
 
-    if LVersion = SIMPLE_CRYPTO_VERSION then
+    if (LVersion = SIMPLE_CRYPTO_VERSION) or (LVersion = SIMPLE_CRYPTO_VERSION_V2) then
     begin
       LUseGCM := True;
-      // v2 format: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
+      // v3/v2 framing: Header(5) + Salt(16) + IV(16) + Cipher + MAC(32)
       if Length(AData) < SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE + SIMPLE_CRYPTO_AES_BLOCK_SIZE + SIMPLE_CRYPTO_MAC_SIZE then
         raise ECryptoException.Create('Invalid encrypted data (too short)');
 
@@ -797,13 +843,19 @@ begin
       SetLength(ExpectedMac, SIMPLE_CRYPTO_MAC_SIZE);
       Move(AData[MacInputLen], ExpectedMac[0], SIMPLE_CRYPTO_MAC_SIZE);
 
-      MacKey := SimpleCryptoMacKey(APassword);
+      SetLength(LSalt, SIMPLE_CRYPTO_SALT_SIZE);
+      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], LSalt[0], SIMPLE_CRYPTO_SALT_SIZE);
+
+      // A4-3: MAC-key derivation is version-bound — v3 uses PBKDF2(salt),
+      // v2 used the legacy single-round HMAC. Verify with the method the
+      // writer actually used, otherwise authenticated data would be rejected.
+      if LVersion = SIMPLE_CRYPTO_VERSION then
+        MacKey := SimpleCryptoMacKeyV3(APassword, LSalt)
+      else
+        MacKey := SimpleCryptoMacKey(APassword);
       ActualMac := THashUtils.HMAC(MacKey, MacInput, haSHA256);
       if not BytesEqualConstantTime(ExpectedMac, ActualMac) then
         raise ECryptoException.Create('Invalid encrypted data or password');
-
-      SetLength(LSalt, SIMPLE_CRYPTO_SALT_SIZE);
-      Move(AData[SIMPLE_CRYPTO_HEADER_SIZE], LSalt[0], SIMPLE_CRYPTO_SALT_SIZE);
 
       SetLength(IV, SIMPLE_CRYPTO_AES_BLOCK_SIZE);
       Move(AData[SIMPLE_CRYPTO_HEADER_SIZE + SIMPLE_CRYPTO_SALT_SIZE], IV[0], SIMPLE_CRYPTO_AES_BLOCK_SIZE);
@@ -859,8 +911,8 @@ begin
   end;
 
   // Use the AES mode that matches how this data was originally encrypted.
-  // GCM for v2 data; CBC for v1 and legacy data (CBC path also consumes the
-  // 16-byte IV extracted above — GCM would expect a 12-byte nonce + 16-byte tag).
+  // GCM for v3/v2 data; CBC for v1 and legacy data (the CBC path consumes the
+  // 16-byte IV set below — GCM instead reads a 12-byte nonce from Cipher).
   if LUseGCM then
     LAES := TAESCrypto.Create(aes256, aesGCM)
   else

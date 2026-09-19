@@ -1,4 +1,4 @@
-﻿unit DeepBase.Template;
+unit DeepBase.Template;
 
 (*******************************************************************************
   DeepBase Template Engine
@@ -2083,15 +2083,28 @@ end;
 
 function TTemplateEngine.DefaultIncludeResolver(const ATemplateName: string): string;
 var
-  LPath: string;
+  LPath, LResolved, LBase: string;
 begin
   Result := '';
-  
+
+  // A16/Top20#16: SSTI path traversal guard.
+  if (ATemplateName = '') or (Pos('\', ATemplateName) > 0) or
+     ((Pos('/', ATemplateName) > 0) and (Pos('..', ATemplateName) > 0)) or
+     TPath.IsPathRooted(ATemplateName) then
+    Exit;
+
   if FBasePath <> '' then
-    LPath := TPath.Combine(FBasePath, ATemplateName)
+  begin
+    LPath := TPath.Combine(FBasePath, ATemplateName);
+    // Ensure resolved path stays within FBasePath sandbox:
+    LResolved := TPath.GetFullPath(LPath);
+    LBase := TPath.GetFullPath(FBasePath);
+    if not LResolved.StartsWith(LBase, True) then
+      Exit; // path escape attempt
+  end
   else
     LPath := ATemplateName;
-    
+
   if TFile.Exists(LPath) then
     Result := TFile.ReadAllText(LPath, TEncoding.UTF8);
 end;

@@ -745,6 +745,10 @@ var
   KeysArray: TJSONArray;
   KeyObj, KdfObj: TJSONObject;
   Key: TDataKey;
+  LSerialized: string;
+  LTmpPath, LBakPath: string;
+  LStream: TFileStream;
+  LBytes: TBytes;
 begin
   JSON := TJSONObject.Create;
   try
@@ -776,11 +780,26 @@ begin
       KeysArray.AddElement(KeyObj);
     end;
     JSON.AddPair('keys', KeysArray);
-    
-    TFile.WriteAllText(FStorePath, JSON.ToJSON);
+    LSerialized := JSON.ToJSON;
   finally
     JSON.Free;
   end;
+
+  // A13/Top20#3: atomic write with backup. Write .tmp → flush → rename.
+  // If crash occurs between write and rename, original file remains intact.
+  LTmpPath := FStorePath + '.tmp';
+  LBakPath := FStorePath + '.bak';
+  LStream := TFileStream.Create(LTmpPath, fmCreate or fmShareDenyWrite);
+  try
+    LBytes := TEncoding.UTF8.GetBytes(LSerialized);
+    if Length(LBytes) > 0 then
+      LStream.WriteBuffer(LBytes[0], Length(LBytes));
+  finally
+    LStream.Free; // CloseHandle flushes OS buffers
+  end;
+  if TFile.Exists(FStorePath) then
+    TFile.Copy(FStorePath, LBakPath, True);
+  TFile.Move(LTmpPath, FStorePath);
 end;
 
 procedure TKeyStore.LoadFromFile;
