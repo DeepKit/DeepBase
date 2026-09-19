@@ -16,6 +16,11 @@
 | **INT-20260917-01** | `DeepAxis` | `c3215d3` (DataStore 搬迁收尾) | 2026-09-17 18:29:55 | DA-136 收尾：DataStore 搬迁 + 测试动态锚定恢复 159/159 | 数据存储位置变更，测试由硬编码 ID 改为动态锚定 | 消除硬编码 ID 失效，稳定数据存储基座 | **ACTIVE**（START 后）|
 | **INT-20260917-02** | `DeepAxis` | `3b9f135` (明文库消费通路) | 2026-09-17 18:52:33 | DA-137-T1：`DecryptedDataPath` 直接消费外部明文 SQLite | **数据通路变更**：由原路径改为直接消费外部明文库 | 打通明文库消费通路 | **ACTIVE**（START 后）|
 | **INT-20260917-03** | `DeepAxis` | `e389cd5` (hook 取钥移植) | 2026-09-17 18:52:51 | DA-137-T2：hook 取钥移植 + Profile 门禁 + 版本自检 | **执行行为/门禁变更**：取钥方式改为 hook，新增 Profile 门禁与版本自检 | 提升取钥合规性与版本一致性 | **ACTIVE**（START 后）|
+| **PI-UPD-FAILCLOSED** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A6 TGateVerdict 立法 | 验签失败/缺签名/未知算法→拒绝（原 fail-open） | AsWish/DeepAxis: 未配置公钥时更新将失败而非静默放行 | **ACTIVE** |
+| **PI-GOV-FAILCLOSED** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A6 TGateVerdict Governance | 权限裁决缺失→拒绝（原默认放行） | Governance 行为变更，L8可观察 | **ACTIVE** |
+| **PI-CRYPTO-IV** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A4 CBC 随机 IV | EncryptPackage 输出格式变（IV 前缀） | AsWish/DeepAxis: 旧 CBC 密文不可用新代码解密（生产仅用 GCM，无实际落盘数据） | **ACTIVE** |
+| **PI-UIA-GATE** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A6 UIA fail-closed | 屏幕映射未注册签名→拒绝 | DeepBase 内部，影响 HB 视觉系统 | **ACTIVE** |
+| **PI-PLUGIN-DRAIN** | `DeepBase` | `bff202b` | 2026-09-19 03:42 | A8 在途计数 | 卸载等待在途调用完成（≤5s）超时拒绝 | AsWish/DeepAxis: 插件卸载可能延迟最多 5s | **ACTIVE** |
 
 > **登记来源**：`L8-E001-Observation-Active-Execution-Policy.md` §二（START Anchor `f47c573` 之后 commit 分类登记）。
 > **时间界**：INT-20260917-01/02/03 均发生在 Case 001 START 宣告（2026-09-17 16:31）**之后** ⇒ 凡 `timestamp` 早于其 `Effective Time` 的 Episode 归入 `Before`，晚者归入 `After`，**严禁混池**。
