@@ -20,6 +20,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.SyncObjs,
   System.DateUtils,
   System.Generics.Collections,
@@ -127,13 +128,19 @@ type
     procedure Test_Execute_WithMockResponse;
     
     [Test]
-    procedure Test_Execute_WithoutMock_ReturnsDefault;
+    procedure Test_Execute_Unregistered_FailClosed_NoFakeSuccess;
     
     [Test]
     procedure Test_AddMockResponse_RegistersCommand;
     
     [Test]
     procedure Test_ClearMockResponses_RemovesAll;
+    
+    [Test]
+    procedure Test_Download_FailClosed_DoesNotWriteLocalFile;
+    
+    [Test]
+    procedure Test_Upload_FailClosed_RefusesFakeSuccess;
   end;
 
   [TestFixture]
@@ -163,6 +170,12 @@ type
     
     [Test]
     procedure Test_LastActivity_UpdatedOnConnect;
+
+    [Test]
+    procedure Test_Session_IsMock_MachineReadableModeFlag;
+
+    [Test]
+    procedure Test_Session_Download_FailClosed_DoesNotWriteLocalFile;
   end;
 
   [TestFixture]
@@ -548,21 +561,23 @@ begin
   Assert.AreEqual('mocked output', Result.Output);
 end;
 
-procedure TTestMockSSHBackend.Test_Execute_WithoutMock_ReturnsDefault;
+procedure TTestMockSSHBackend.Test_Execute_Unregistered_FailClosed_NoFakeSuccess;
 var
   Options: TSSHOptions;
   Creds: TSSHCredentials;
-  Result: TSSHResult;
+  LRes: TSSHResult;
 begin
   Options := TSSHOptions.Default;
   Options.Host := 'test.example.com';
   Creds := TSSHCredentials.CreatePassword('user', 'pass');
   
   FBackend.Connect(Options, Creds);
-  Result := FBackend.Execute('unknown_command', 5000);
+  LRes := FBackend.Execute('unknown_command', 5000);
   
-  // Should return a default/empty result
-  Assert.IsTrue(Result.Success or not Result.Success);  // Just check it returns something
+  // Top20 #07 / E3：未登记命令必须 fail-closed，禁止伪造 Success=True 的假输出
+  Assert.IsFalse(LRes.Success, 'Mock Execute must not fake success for unregistered commands');
+  Assert.IsEmpty(LRes.Output, 'Mock Execute must return no fake output');
+  Assert.IsNotEmpty(LRes.ErrorOutput, 'Mock Execute must explain the fail-closed reason');
 end;
 
 procedure TTestMockSSHBackend.Test_AddMockResponse_RegistersCommand;
@@ -589,6 +604,41 @@ begin
   
   // After clearing, commands should return default response
   Assert.Pass;
+end;
+
+procedure TTestMockSSHBackend.Test_Download_FailClosed_DoesNotWriteLocalFile;
+var
+  LTestFile: string;
+  LRes: Boolean;
+begin
+  LTestFile := System.IOUtils.TPath.Combine(System.IOUtils.TPath.GetTempPath, 'deepbase_ssh_mock_test_' + TGUID.NewGuid.ToString + '.txt');
+  try
+    // Top20 #07 负向用例：mock 模式调用 Download 必须 fail-closed，且严禁覆盖或创建本地文件
+    LRes := FBackend.Download('/remote/fake/file.txt', LTestFile);
+    Assert.IsFalse(LRes, 'Mock backend download must return False (fail-closed)');
+    Assert.IsFalse(System.IOUtils.TFile.Exists(LTestFile), 'Mock backend must NEVER create or overwrite local files');
+    Assert.IsNotEmpty(FBackend.GetLastError, 'Mock backend must provide clear fail-closed error');
+  finally
+    if System.IOUtils.TFile.Exists(LTestFile) then
+      System.IOUtils.TFile.Delete(LTestFile);
+  end;
+end;
+
+procedure TTestMockSSHBackend.Test_Upload_FailClosed_RefusesFakeSuccess;
+var
+  LTestFile: string;
+  LRes: Boolean;
+begin
+  LTestFile := System.IOUtils.TPath.Combine(System.IOUtils.TPath.GetTempPath, 'deepbase_ssh_mock_upload_' + TGUID.NewGuid.ToString + '.txt');
+  System.IOUtils.TFile.WriteAllText(LTestFile, 'hello');
+  try
+    LRes := FBackend.Upload(LTestFile, '/remote/target.txt');
+    Assert.IsFalse(LRes, 'Mock backend upload must return False (fail-closed)');
+    Assert.IsNotEmpty(FBackend.GetLastError, 'Mock backend must provide error explanation');
+  finally
+    if System.IOUtils.TFile.Exists(LTestFile) then
+      System.IOUtils.TFile.Delete(LTestFile);
+  end;
 end;
 
 { TTestSSHSession }
@@ -658,6 +708,46 @@ begin
   
   // LastActivity should be recent
   Assert.IsTrue(FSession.LastActivity >= BeforeConnect - (1/86400));  // Within 1 second
+end;
+
+procedure TTestSSHSession.Test_Session_IsMock_MachineReadableModeFlag;
+var
+  Options: TSSHOptions;
+  Creds: TSSHCredentials;
+begin
+  // E3/Top20 #07：mock 路径必须机器可读显式声明，调用方可据此拒绝把 mock 结果当真实结果
+  Options := TSSHOptions.Default;
+  Options.Host := 'localhost';
+  Creds := TSSHCredentials.CreatePassword('user', 'pass');
+  
+  Assert.IsFalse(FSession.IsMock, 'Unconnected session reports no backend');
+  FSession.Connect(Options, Creds);
+  Assert.IsTrue(FSession.IsMock, 'Default backend is mock and must be flagged via IsMock');
+end;
+
+procedure TTestSSHSession.Test_Session_Download_FailClosed_DoesNotWriteLocalFile;
+var
+  Options: TSSHOptions;
+  Creds: TSSHCredentials;
+  LTarget: string;
+begin
+  Options := TSSHOptions.Default;
+  Options.Host := 'localhost';
+  Creds := TSSHCredentials.CreatePassword('user', 'pass');
+  FSession.Connect(Options, Creds);
+  
+  LTarget := System.IOUtils.TPath.Combine(System.IOUtils.TPath.GetTempPath,
+    'deepbase_ssh_session_mock_' + TGUID.NewGuid.ToString + '.txt');
+  try
+    Assert.IsFalse(FSession.Download('/remote/nope.txt', LTarget),
+      'Session-level download on mock backend must fail closed');
+    Assert.IsFalse(System.IOUtils.TFile.Exists(LTarget),
+      'Session-level mock download must never create local files');
+    Assert.IsNotEmpty(FSession.LastError, 'Session must surface the fail-closed reason');
+  finally
+    if System.IOUtils.TFile.Exists(LTarget) then
+      System.IOUtils.TFile.Delete(LTarget);
+  end;
 end;
 
 { TTestSSHConnectionPool }

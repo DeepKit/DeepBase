@@ -161,10 +161,12 @@ type
   end;
 
   // JWT 验证结果
+  // Top20 #18: TokenType 由 ValidateToken 统一裁定（单一信息源），消费方按枚举判别，不再散落字符串比较
   TJWTValidationResult = record
     Valid: Boolean;
     Error: string;
     Token: TJWTToken;
+    TokenType: TTokenType;
   end;
 
   // JWT 管理器
@@ -197,6 +199,7 @@ type
       const ARoles: TArray<string> = nil;
       const AClaims: TDictionary<string, string> = nil;
       ATokenType: TTokenType = ttAccess): string;
+    function GenerateRefreshToken(const ASubject: string): string;
 
     // 验证令牌
     function ValidateToken(const AToken: string): TJWTValidationResult;
@@ -425,10 +428,25 @@ type
   function GetAuthenticatedUser(AContext: TApiContext): TAuthenticatedUser;
   function IsAuthenticated(AContext: TApiContext): Boolean;
   function HasRole(AContext: TApiContext; const ARole: string): Boolean;
+  function ConstantTimeCompare(const A, B: string): Boolean;
+  function CreateCSRFMiddleware(const ASecret: string; ATokenExpiry: Integer = 3600): TMiddlewareFunc;
+  function GenerateCSRFToken(const ASecret: string; const ASessionId: string): string;
 
 implementation
 
 { 辅助函数 }
+
+function ConstantTimeCompare(const A, B: string): Boolean;
+var
+  I, Diff: Integer;
+begin
+  if Length(A) <> Length(B) then
+    Exit(False);
+  Diff := 0;
+  for I := 1 to Length(A) do
+    Diff := Diff or (Ord(A[I]) xor Ord(B[I]));
+  Result := (Diff = 0);
+end;
 
 function GetAuthenticatedUser(AContext: TApiContext): TAuthenticatedUser;
 var
@@ -857,6 +875,11 @@ begin
   Result := LHeaderStr + '.' + LPayloadStr + '.' + Sign(LHeaderStr + '.' + LPayloadStr);
 end;
 
+function TJWTManager.GenerateRefreshToken(const ASubject: string): string;
+begin
+  Result := GenerateToken(ASubject, nil, nil, ttRefresh);
+end;
+
 function TJWTManager.ValidateToken(const AToken: string): TJWTValidationResult;
 var
   LParts: TArray<string>;
@@ -865,6 +888,7 @@ begin
   Result.Valid := False;
   Result.Token := nil;
   Result.Error := '';
+  Result.TokenType := ttAccess;
 
   LParts := AToken.Split(['.']);
   if Length(LParts) <> 3 then
@@ -917,6 +941,19 @@ begin
   begin
     LToken.Free;
     Result.Error := 'Invalid audience';
+    Exit;
+  end;
+
+  // Top20 #18: token 类型强类型裁定 — type claim 必须存在且为 access/refresh，缺失/未知一律拒绝（fail-closed）
+  var LTypeClaim := LToken.Payload.GetStringClaim('type');
+  if LTypeClaim = 'refresh' then
+    Result.TokenType := ttRefresh
+  else if LTypeClaim = 'access' then
+    Result.TokenType := ttAccess
+  else
+  begin
+    LToken.Free;
+    Result.Error := 'Invalid or missing token type claim';
     Exit;
   end;
 
@@ -985,8 +1022,8 @@ begin
     Exit;
 
   try
-    // 确保是刷新令牌
-    if LResult.Token.Payload.GetStringClaim('type') <> 'refresh' then
+    // Top20 #18: 仅 refresh 类型可用于刷新（类型由 ValidateToken 统一裁定）
+    if LResult.TokenType <> ttRefresh then
       Exit;
 
     // 获取角色
@@ -1012,6 +1049,10 @@ begin
     Exit;
 
   try
+    // Top20 #18 FIX: 资源接口认证只接受 access 类型（refresh/缺失/未知一律拒绝）
+    if LResult.TokenType <> ttAccess then
+      Exit;
+
     Result := TAuthenticatedUser.Create;
     Result.UserId := LResult.Token.Payload.Subject;
     Result.Username := LResult.Token.Payload.GetStringClaim('username', Result.UserId);
@@ -1786,10 +1827,13 @@ begin
   var
     LMethod: THttpMethod;
     LCSRFToken: string;
-    LCookieToken: string;
     LExpectedToken: string;
     LTimestamp: Int64;
     LNow: Int64;
+    LBinding: string;
+    LSignature: string;
+    LExpectedBinding: string;
+    LUser: TAuthenticatedUser;
   begin
     LMethod := AContext.Request.Method;
     
@@ -1801,10 +1845,6 @@ begin
       if LCSRFToken = '' then
         LCSRFToken := AContext.Request.GetFormField('_csrf');
       
-      // 从 Cookie 获取 Token
-      LCookieToken := AContext.Request.GetHeader('Cookie');
-      // 简化处理：实际应解析 Cookie
-      
       if LCSRFToken = '' then
       begin
         AContext.Response.Forbidden('CSRF token missing');
@@ -1812,15 +1852,17 @@ begin
         Exit;
       end;
       
-      // 验证 Token 格式和签名
-      // Token 格式: timestamp.signature
+      // 验证 Token 格式
+      // Top20 #18: 只接受 timestamp.binding.signature 三段强绑定格式，无绑定旧格式一律拒绝
       var Parts := LCSRFToken.Split(['.']);
-      if Length(Parts) <> 2 then
+      if Length(Parts) <> 3 then
       begin
         AContext.Response.Forbidden('Invalid CSRF token format');
         AContext.Abort;
         Exit;
       end;
+      LBinding := Parts[1];
+      LSignature := Parts[2];
       
       // 验证时间戳
       if not TryStrToInt64(Parts[0], LTimestamp) then
@@ -1831,6 +1873,13 @@ begin
       end;
       
       LNow := DateTimeToUnix(Now, False);
+      // 未来时间戳（超出时钟偏差容忍）视为伪造，拒绝
+      if LTimestamp > (LNow + 60) then
+      begin
+        AContext.Response.Forbidden('CSRF token timestamp in the future');
+        AContext.Abort;
+        Exit;
+      end;
       if (LNow - LTimestamp) > LExpiry then
       begin
         AContext.Response.Forbidden('CSRF token expired');
@@ -1838,9 +1887,44 @@ begin
         Exit;
       end;
       
-      // 验证签名
-      LExpectedToken := THashSHA2.GetHashString(Parts[0] + LSecret, SHA256);
-      if not SameText(Parts[1], LExpectedToken) then
+      // Top20 #18 FIX: 校验会话/用户强绑定，杜绝跨会话攻击
+      LExpectedBinding := '';
+      LUser := GetAuthenticatedUser(AContext);
+      if Assigned(LUser) then
+        LExpectedBinding := LUser.UserId;
+      if LExpectedBinding = '' then
+        LExpectedBinding := AContext.Request.GetHeader('X-Session-ID');
+      if (LExpectedBinding = '') and AContext.Request.HasHeader('Cookie') then
+      begin
+        var LCookies := AContext.Request.GetHeader('Cookie').Split([';']);
+        for var C in LCookies do
+        begin
+          var CPair := C.Trim.Split(['=']);
+          if (Length(CPair) = 2) and SameText(CPair[0].Trim, 'session_id') then
+          begin
+            LExpectedBinding := CPair[1].Trim;
+            Break;
+          end;
+        end;
+      end;
+      
+      // Top20 #18 FIX: 绑定校验 fail-closed：服务端必须能确定当前会话/用户身份，且与 token 绑定常量时间一致
+      if LExpectedBinding = '' then
+      begin
+        AContext.Response.Forbidden('CSRF token requires a session-bound identity');
+        AContext.Abort;
+        Exit;
+      end;
+      if not ConstantTimeCompare(LBinding, LExpectedBinding) then
+      begin
+        AContext.Response.Forbidden('CSRF token session mismatch');
+        AContext.Abort;
+        Exit;
+      end;
+
+      // 验证签名（常量时间比较）
+      LExpectedToken := THashSHA2.GetHashString(Parts[0] + ':' + LBinding + ':' + LSecret, SHA256);
+      if not ConstantTimeCompare(LSignature, LExpectedToken) then
       begin
         AContext.Response.Forbidden('Invalid CSRF token signature');
         AContext.Abort;
@@ -1852,14 +1936,17 @@ begin
   end;
 end;
 
-function GenerateCSRFToken(const ASecret: string): string;
+// Top20 #18: 禁止签发无绑定 token，ASessionId 必填（调用方必须提供会话/用户绑定来源）
+function GenerateCSRFToken(const ASecret: string; const ASessionId: string): string;
 var
   LTimestamp: string;
   LSignature: string;
 begin
+  if (ASecret = '') or (ASessionId = '') then
+    raise Exception.Create('GenerateCSRFToken requires a non-empty secret and session binding (fail-closed)');
   LTimestamp := IntToStr(DateTimeToUnix(Now, False));
-  LSignature := THashSHA2.GetHashString(LTimestamp + ASecret, SHA256);
-  Result := LTimestamp + '.' + LSignature;
+  LSignature := THashSHA2.GetHashString(LTimestamp + ':' + ASessionId + ':' + ASecret, SHA256);
+  Result := LTimestamp + '.' + ASessionId + '.' + LSignature;
 end;
 
 end.

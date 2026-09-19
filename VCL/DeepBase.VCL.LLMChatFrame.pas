@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.VCL.LLMChatFrame - VCL LLM Chat Component
   
   Version: 1.0
@@ -516,14 +516,15 @@ begin
             LocalContent := Response.Content;
             LocalTokenCount := Response.Usage.TotalTokens;
             
-            TThread.Synchronize(nil,
+            TThread.Synchronize(TThread(nil),
               procedure
               var
                 Item: TChatDisplayItem;
               begin
-                // 检查控件有效性，防止访问已释放的控件
+                // 检查控件与核心对象有效性，防止访问已释放的资源
                 if Assigned(Self) and not (csDestroying in ComponentState) and 
-                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+                   Assigned(FRichEditChat) and FRichEditChat.HandleAllocated and
+                   Assigned(FHistory) and Assigned(FChatItems) then
                 begin
                   FRichEditChat.SelStart := Length(FRichEditChat.Text);
                   FRichEditChat.SelText := LocalContent + #13#10#13#10;
@@ -548,7 +549,7 @@ begin
           else
           begin
             LocalErrorMsg := Response.ErrorMessage;
-            TThread.Synchronize(nil,
+            TThread.Synchronize(TThread(nil),
               procedure
               begin
                 // 检查控件有效性
@@ -575,14 +576,15 @@ begin
           LocalTokenCount := Response.Usage.TotalTokens;
           LocalErrorMsg := Response.ErrorMessage;
           
-          TThread.Synchronize(nil,
+          TThread.Synchronize(TThread(nil),
             procedure
             var
               Item: TChatDisplayItem;
             begin
-              // 检查控件有效性
+              // 检查控件与核心对象有效性
               if Assigned(Self) and not (csDestroying in ComponentState) and 
-                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated then
+                 Assigned(FRichEditChat) and FRichEditChat.HandleAllocated and
+                 Assigned(FHistory) and Assigned(FChatItems) then
               begin
                 if Response.Success then
                 begin
@@ -621,7 +623,7 @@ begin
         on E: Exception do
         begin
           LocalErrorMsg := E.Message;
-          TThread.Synchronize(nil,
+          TThread.Synchronize(TThread(nil),
             procedure
             begin
               // 检查控件有效性

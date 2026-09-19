@@ -163,6 +163,21 @@ type
 
     [Test]
     procedure Test_JWT_TamperedSignature_Denies;
+
+    [Test]
+    procedure Test_JWT_RefreshToken_DeniedForResourceAccess;
+
+    [Test]
+    procedure Test_CSRF_CrossSession_Token_Denied;
+
+    [Test]
+    procedure Test_CSRF_ValidToken_Allowed;
+
+    [Test]
+    procedure Test_CSRF_NoIdentityBinding_Denied;
+
+    [Test]
+    procedure Test_CSRF_LegacyUnboundFormat_Denied;
   end;
 
   // ============================================================================
@@ -211,6 +226,8 @@ type
 implementation
 
 uses
+  System.Hash,
+  System.DateUtils,
   DeepBase.WebAPI.Core,
   DeepBase.WebAPI.Auth,
   DeepBase.WebAPI.WebSocket,
@@ -765,6 +782,190 @@ begin
     JwtManager.Free;
   end;
 end;
+
+procedure TAuthMiddlewareExampleTests.Test_JWT_RefreshToken_DeniedForResourceAccess;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  JwtManager: TJWTManager;
+  AuthMiddleware: TAuthMiddleware;
+  Middleware: TMiddlewareFunc;
+  RefreshToken: string;
+  User: TAuthenticatedUser;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  JwtManager := TJWTManager.Create('unit-test-secret');
+  AuthMiddleware := TAuthMiddleware.Create;
+  try
+    RefreshToken := JwtManager.GenerateRefreshToken('user-refresh-123');
+    User := JwtManager.GetUserFromToken(RefreshToken);
+    Assert.IsNull(User, 'Refresh token should not be resolved to authenticated user');
+
+    AuthMiddleware.JWTManager := JwtManager;
+    AuthMiddleware.RequireAuth := True;
+    Middleware := AuthMiddleware.GetMiddleware();
+
+    Context.Request.Headers.AddOrSetValue('authorization', 'Bearer ' + RefreshToken);
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsFalse(NextCalled, 'Resource access with refresh token should be blocked');
+    Assert.IsTrue(Context.Aborted, 'Context should be aborted when refresh token is used as access token');
+    Assert.AreEqual(THttpStatus.Unauthorized, Context.Response.StatusCode);
+  finally
+    AuthMiddleware.Free;
+    JwtManager.Free;
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
+procedure TAuthMiddlewareExampleTests.Test_CSRF_CrossSession_Token_Denied;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  Middleware: TMiddlewareFunc;
+  TokenA: string;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  try
+    Middleware := CreateCSRFMiddleware('unit-test-csrf-secret');
+    TokenA := GenerateCSRFToken('unit-test-csrf-secret', 'sess_userA');
+
+    Context.Request.Method := hmPost;
+    Context.Request.Headers.AddOrSetValue('x-csrf-token', TokenA);
+    // Attacker sends token from sess_userA while current request belongs to sess_userB
+    Context.Request.Headers.AddOrSetValue('x-session-id', 'sess_userB');
+
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsFalse(NextCalled, 'Cross-session CSRF token should be rejected');
+    Assert.IsTrue(Context.Aborted, 'Context should be aborted on CSRF mismatch');
+    Assert.AreEqual(THttpStatus.Forbidden, Context.Response.StatusCode);
+  finally
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
+procedure TAuthMiddlewareExampleTests.Test_CSRF_ValidToken_Allowed;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  Middleware: TMiddlewareFunc;
+  TokenA: string;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  try
+    Middleware := CreateCSRFMiddleware('unit-test-csrf-secret');
+    TokenA := GenerateCSRFToken('unit-test-csrf-secret', 'sess_userA');
+
+    Context.Request.Method := hmPost;
+    Context.Request.Headers.AddOrSetValue('x-csrf-token', TokenA);
+    Context.Request.Headers.AddOrSetValue('x-session-id', 'sess_userA');
+
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsTrue(NextCalled, 'Valid matching CSRF token should be accepted');
+    Assert.IsFalse(Context.Aborted, 'Context should not be aborted on valid CSRF');
+    Assert.AreEqual(THttpStatus.OK, Context.Response.StatusCode);
+  finally
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
+// Top20 #18: 服务端无会话/用户身份可锚定时必须 fail-closed 拒绝，不得退化为仅验签名存在
+procedure TAuthMiddlewareExampleTests.Test_CSRF_NoIdentityBinding_Denied;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  Middleware: TMiddlewareFunc;
+  TokenA: string;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  try
+    Middleware := CreateCSRFMiddleware('unit-test-csrf-secret');
+    TokenA := GenerateCSRFToken('unit-test-csrf-secret', 'sess_userA');
+
+    Context.Request.Method := hmPost;
+    Context.Request.Headers.AddOrSetValue('x-csrf-token', TokenA);
+    // 不设 X-Session-ID、无 Cookie、无已认证用户 => 服务端无绑定来源
+
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsFalse(NextCalled, 'CSRF must fail-closed when server has no session-bound identity');
+    Assert.IsTrue(Context.Aborted, 'Context should be aborted when binding cannot be resolved');
+    Assert.AreEqual(THttpStatus.Forbidden, Context.Response.StatusCode);
+  finally
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
+// Top20 #18/H9: 旧二段无绑定格式（timestamp.signature）不再接受
+procedure TAuthMiddlewareExampleTests.Test_CSRF_LegacyUnboundFormat_Denied;
+var
+  Server: TApiServer;
+  Context: TApiContext;
+  Middleware: TMiddlewareFunc;
+  LegacyToken: string;
+  NextCalled: Boolean;
+begin
+  Server := TApiServer.Create;
+  Context := TApiContext.Create(Server);
+  try
+    Middleware := CreateCSRFMiddleware('unit-test-csrf-secret');
+    // 人工构造旧格式：无 binding 段，签名本身合法也无济于事
+    var LTs := IntToStr(DateTimeToUnix(Now, False));
+    LegacyToken := LTs + '.' + THashSHA2.GetHashString(LTs + ':unit-test-csrf-secret', THashSHA2.TSHA2Version.SHA256);
+
+    Context.Request.Method := hmPost;
+    Context.Request.Headers.AddOrSetValue('x-csrf-token', LegacyToken);
+    Context.Request.Headers.AddOrSetValue('x-session-id', 'sess_userA');
+
+    NextCalled := False;
+    Middleware(Context,
+      procedure
+      begin
+        NextCalled := True;
+      end);
+
+    Assert.IsFalse(NextCalled, 'Legacy two-part unbound CSRF token must be rejected');
+    Assert.AreEqual(THttpStatus.Forbidden, Context.Response.StatusCode);
+  finally
+    Context.Free;
+    Server.Free;
+  end;
+end;
+
 { TWebSocketTests }
 
 procedure TWebSocketTests.Test_WebSocketOpcode_Values;

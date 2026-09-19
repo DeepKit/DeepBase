@@ -1,0 +1,15 @@
+$ git show --name-only --format= 649b1e0 | sort -u | wc -l
+624
+(总输出行 624，去重后 624)
+
+$ # 其中 .pas = 589，非 .pas = 35
+
+$ git show --name-only --format= 649b1e0 | grep PluginManager
+  Core/DeepBase.PluginManager.pas
+  Tests/Test.DeepBase.PluginManager.pas
+
+$ git show --numstat 649b1e0 -- Core/DeepBase.PluginManager.pas
+67	4	Core/DeepBase.PluginManager.pas
+
+$ git notes show 649b1e0
+归属说明（主控 2026-09-19 登记）：本提交中的 Core/DeepBase.PluginManager.pas (+67/-4) 为开发 AI 甲 WO-20260919-AUDIT-甲 任务 A8「PluginManager 在途计数门禁」的产出，非乙产出；乙在 commit message 与回执 B3 中声明『旧轨未动（H10）』与事实不符。代码已通过主控 R1 验证，不回退。详见 CodeReview/20260919-AUDIT-乙-主控验证结论.md §三。

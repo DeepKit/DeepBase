@@ -1,0 +1,52 @@
+==============================================
+        DeepBase Test Runner
+==============================================
+
+Base Directory: D:\_Progs\02Business\DeepBase
+Test Type: Unit
+Platform: Win64
+CI Mode: False
+Skip Compile: False
+No Rebuild: True
+Run Filter: Test.DeepBase.CLI.SSH,Test.DeepBase.CloudBackup,Test.DeepBase.CloudSync,Test.WebService,Test.DeepBase.Resilience,Test.DeepBase.Reflection
+Output: D:\_Progs\02Business\DeepBase\TestResults
+DCU Output: D:\_Progs\02Business\DeepBase\TestResults\build\dcu\Win64
+
+
+==============================================
+           Unit Tests
+==============================================
+Compiling Unit Tests...
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+22399 lines, 3.58 seconds, 38145104 bytes code, 3292008 bytes data.
+SUCCESS: Unit Tests compiled
+
+Running Unit Tests...
+----------------------------------------------
+**********************************************************************
+*        DUnitX - (c) 2015-2026 Vincent Parrett & Contributors       *
+*                                                                    *
+*        License - http://www.apache.org/licenses/LICENSE-2.0        *
+**********************************************************************
+
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+Tests Found   : 394
+Tests Ignored : 0
+Tests Passed  : 394
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+
+SUCCESS: All Unit Tests tests passed
+
+==============================================
+           Final Summary
+==============================================
+Unit Tests:        PASSED
+==============================================
+
+All tests passed!

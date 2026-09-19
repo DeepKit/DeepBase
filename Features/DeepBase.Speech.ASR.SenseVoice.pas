@@ -116,7 +116,7 @@ const
 
 function ParseCommaList(const AText: string): TArray<string>;
 var
-  LStart, LPos: Integer;
+  LStart, LPos, I: Integer;
   LList: TArray<string>;
   LCount: Integer;
 begin
@@ -140,7 +140,8 @@ begin
   LList[LCount] := Copy(AText, LStart, Length(AText) - LStart + 1);
   Inc(LCount);
   SetLength(Result, LCount);
-  Move(LList[0], Result[0], LCount * SizeOf(string));
+  for I := 0 to LCount - 1 do
+    Result[I] := LList[I];
 end;
 
 { --- TDeepBaseSenseVoiceASR ----------------------------------------------- }

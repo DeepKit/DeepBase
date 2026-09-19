@@ -1,4 +1,4 @@
-﻿{ ============================================================================
+{ ============================================================================
   DeepBase.FMX.LLMChatFrame - FMX LLM Chat Component
   
   Version: 1.0
@@ -494,11 +494,14 @@ begin
         LocalTokenCount := Response.Usage.TotalTokens;
         LocalErrorMsg := Response.ErrorMessage;
         
-        TThread.Synchronize(nil,
+        TThread.Synchronize(TThread(nil),
           procedure
           var
             Item: TFMXChatDisplayItem;
           begin
+            if (csDestroying in ComponentState) or (FHistory = nil) or (FChatItems = nil) or (FMemoChat = nil) then
+              Exit;
+
             LocalContentLineIdx := FMemoChat.Lines.Count - 2;
             
             if Response.Success then
@@ -534,9 +537,12 @@ begin
         on E: Exception do
         begin
           LocalErrorMsg := E.Message;
-          TThread.Synchronize(nil,
+          TThread.Synchronize(TThread(nil),
             procedure
             begin
+              if (csDestroying in ComponentState) or (FMemoChat = nil) then
+                Exit;
+
               LocalContentLineIdx := FMemoChat.Lines.Count - 2;
               if LocalContentLineIdx >= 0 then
                 FMemoChat.Lines[LocalContentLineIdx] := '错误: ' + LocalErrorMsg;

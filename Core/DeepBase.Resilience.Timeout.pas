@@ -10,6 +10,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.SyncObjs,
   System.Threading;
 
 type
@@ -46,6 +47,26 @@ type
     function Execute<T>(Func: TFunc<T>): T; overload;
   end;
 
+  // ============================================================================
+  // Ref-counted Lock to eliminate UAF on timeout path (Top20 #19 / E6)
+  // ============================================================================
+  ITimeoutLock = interface
+    ['{D7A8B9C0-E1F2-4A3B-8C9D-0E1F2A3B4C5D}']
+    procedure Enter;
+    procedure Leave;
+  end;
+
+  TTimeoutLock = class(TInterfacedObject, ITimeoutLock)
+  private
+    FLock: TCriticalSection;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Enter;
+    procedure Leave;
+  end;
+
+
 implementation
 
 // ============================================================================
@@ -57,6 +78,30 @@ begin
   inherited CreateFmt('Operation timed out after %d ms', [ATimeoutMs]);
   FTimeoutMs := ATimeoutMs;
 end;
+
+
+constructor TTimeoutLock.Create;
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TTimeoutLock.Destroy;
+begin
+  FreeAndNil(FLock);
+  inherited;
+end;
+
+procedure TTimeoutLock.Enter;
+begin
+  FLock.Enter;
+end;
+
+procedure TTimeoutLock.Leave;
+begin
+  FLock.Leave;
+end;
+
 // ============================================================================
 // TTimeoutPolicy
 // ============================================================================
@@ -86,50 +131,48 @@ var
   Completed: Boolean;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
-  ResultLock: TObject;
+  Lock: ITimeoutLock;
 begin
   ErrorClass := nil;
   ErrorMsg := '';
-  ResultLock := TObject.Create;
-  try
-    TaskProc := Proc;
-    Task := TTask.Run(
-      procedure
-      begin
-        try
-          TaskProc();
-        except
-          on E: Exception do
-          begin
-            TMonitor.Enter(ResultLock);
-            try
-              ErrorClass := ExceptClass(E.ClassType);
-              ErrorMsg := E.Message;
-            finally
-              TMonitor.Exit(ResultLock);
-            end;
+  // Top20 #19 / E6: 使用引用计数托管锁，即使超时退出宿主栈帧，后台任务仍持有锁引用，彻底杜绝 UAF
+  Lock := TTimeoutLock.Create;
+  TaskProc := Proc;
+  Task := TTask.Run(
+    procedure
+    begin
+      try
+        TaskProc();
+      except
+        on E: Exception do
+        begin
+          Lock.Enter;
+          try
+            ErrorClass := ExceptClass(E.ClassType);
+            ErrorMsg := E.Message;
+          finally
+            Lock.Leave;
           end;
         end;
-      end);
-    Completed := Task.Wait(FTimeoutMs);
+      end;
+    end);
 
-    if not Completed then
-    begin
-      Task.Cancel;  // Cancel background task to prevent resource leaks
-      if Assigned(FOnTimeout) then
-        FOnTimeout(FTimeoutMs);
-      raise ETimeoutException.Create(FTimeoutMs);
-    end;
+  Completed := Task.Wait(FTimeoutMs);
 
-    TMonitor.Enter(ResultLock);
-    try
-      if Assigned(ErrorClass) then
-        raise ErrorClass.Create(ErrorMsg);
-    finally
-      TMonitor.Exit(ResultLock);
-    end;
+  if not Completed then
+  begin
+    Task.Cancel;  // Cancel background task to prevent resource leaks
+    if Assigned(FOnTimeout) then
+      FOnTimeout(FTimeoutMs);
+    raise ETimeoutException.Create(FTimeoutMs);
+  end;
+
+  Lock.Enter;
+  try
+    if Assigned(ErrorClass) then
+      raise ErrorClass.Create(ErrorMsg);
   finally
-    ResultLock.Free;
+    Lock.Leave;
   end;
 end;
 
@@ -141,57 +184,55 @@ var
   Completed: Boolean;
   ErrorClass: ExceptClass;
   ErrorMsg: string;
-  ResultLock: TObject;
+  Lock: ITimeoutLock;
 begin
   ErrorClass := nil;
   ErrorMsg := '';
-  ResultLock := TObject.Create;
-  try
-    TaskFunc := Func;
-    Task := TTask.Run(
-      procedure
-      begin
+  // Top20 #19 / E6: 引用计数锁跨线程生命周期托管
+  Lock := TTimeoutLock.Create;
+  TaskFunc := Func;
+  Task := TTask.Run(
+    procedure
+    begin
+      try
+        var LResult := TaskFunc();
+        Lock.Enter;
         try
-          var LResult := TaskFunc();
-          TMonitor.Enter(ResultLock);
+          TaskResult := LResult;
+        finally
+          Lock.Leave;
+        end;
+      except
+        on E: Exception do
+        begin
+          Lock.Enter;
           try
-            TaskResult := LResult;
+            ErrorClass := ExceptClass(E.ClassType);
+            ErrorMsg := E.Message;
           finally
-            TMonitor.Exit(ResultLock);
-          end;
-        except
-          on E: Exception do
-          begin
-            TMonitor.Enter(ResultLock);
-            try
-              ErrorClass := ExceptClass(E.ClassType);
-              ErrorMsg := E.Message;
-            finally
-              TMonitor.Exit(ResultLock);
-            end;
+            Lock.Leave;
           end;
         end;
-      end);
-    Completed := Task.Wait(FTimeoutMs);
+      end;
+    end);
 
-    if not Completed then
-    begin
-      Task.Cancel;  // Cancel background task to prevent resource leaks
-      if Assigned(FOnTimeout) then
-        FOnTimeout(FTimeoutMs);
-      raise ETimeoutException.Create(FTimeoutMs);
-    end;
+  Completed := Task.Wait(FTimeoutMs);
 
-    TMonitor.Enter(ResultLock);
-    try
-      if Assigned(ErrorClass) then
-        raise ErrorClass.Create(ErrorMsg);
-      Result := TaskResult;
-    finally
-      TMonitor.Exit(ResultLock);
-    end;
+  if not Completed then
+  begin
+    Task.Cancel;
+    if Assigned(FOnTimeout) then
+      FOnTimeout(FTimeoutMs);
+    raise ETimeoutException.Create(FTimeoutMs);
+  end;
+
+  Lock.Enter;
+  try
+    if Assigned(ErrorClass) then
+      raise ErrorClass.Create(ErrorMsg);
+    Result := TaskResult;
   finally
-    ResultLock.Free;
+    Lock.Leave;
   end;
 end;
 

@@ -1,0 +1,187 @@
+==== Core/DeepBase.Hotkeys.pas  (档: NOT-IN-116(档C或其他), 基线FFFD=128, 实测行=13) ====
+  L139 [COMMENT x5] /// <FFFD><FFFD>ȡ<FFFD><FFFD>ݼ<FFFD>
+  L144 [COMMENT x5] /// <FFFD><FFFD><FFFD>ÿ<FFFD>ݼ<FFFD>
+  L149 [COMMENT x16] /// ע<FFFD><FFFD>Ĭ<FFFD>Ͽ<FFFD>ݼ<FFFD><FFFD><FFFD>ֻ<FFFD>ڲ<FFFD><FFFD><FFFD><FFFD><FFFD>ʱ<FFFD><FFFD><FFFD>룩
+  L158 [COMMENT x11] /// <FFFD><FFFD><FFFD>õ<FFFD><FFFD><FFFD><FFFD><FFFD>ݼ<FFFD>ΪĬ<FFFD><FFFD>ֵ
+  L163 [COMMENT x11] /// <FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD>п<FFFD>ݼ<FFFD>ΪĬ<FFFD><FFFD>ֵ
+  L172 [COMMENT x7] /// <FFFD><FFFD><FFFD><FFFD>ݼ<FFFD><FFFD><FFFD>ͻ
+  L174 [COMMENT x16] /// <returns><FFFD><FFFD>ͻ<FFFD><FFFD> ActionName<FFFD><FFFD><FFFD>޳<FFFD>ͻ<FFFD><FFFD><FFFD>ؿ<FFFD><FFFD>ַ<FFFD><FFFD><FFFD></returns>
+  L195 [COMMENT x9] /// <FFFD><FFFD>ȡ<FFFD><FFFD><FFFD>п<FFFD>ݼ<FFFD><FFFD><FFFD>Ϣ
+  L200 [COMMENT x19] /// <FFFD><FFFD>ȡ<FFFD><FFFD>ݼ<FFFD><FFFD><FFFD>ϸ<FFFD><FFFD>Ϣ (<FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD>ý<FFFD><FFFD><FFFD>)
+  L205 [COMMENT x9] /// <FFFD><FFFD><FFFD><FFFD>ݼ<FFFD><FFFD>Ƿ<FFFD><FFFD>޸Ĺ<FFFD>
+  L210 [COMMENT x7] /// <FFFD><FFFD>ݼ<FFFD><FFFD><FFFD><FFFD><FFFD>
+  L215 [COMMENT x5] /// ɾ<FFFD><FFFD><FFFD><FFFD>ݼ<FFFD>
+  L220 [COMMENT x8] /// <FFFD><FFFD>ݼ<FFFD><FFFD><FFFD><FFFD><FFFD>¼<FFFD>
+
+==== Core/DeepBase.Resilience.CircuitBreaker.pas  (档: CLEAN_GBK, 基线FFFD=1, 实测行=1) ====
+  L178 [COMMENT x1] // BUG-119 FIX: 初始化HalfOpen状态跟踪变<FFFD>?
+
+==== doQry/uDoQryLegacy.pas  (档: CLEAN_GBK, 基线FFFD=7, 实测行=4) ====
+  L577 [COMMENT x1] // 原来的BuildSQL函数，接受字典参<FFFD>?
+  L744 [COMMENT x3] // DATA-R3-006: 不把含<FFFD><FFFD><FFFD>数值的完整 aSQL 写进异常消息 (PII 泄漏 —
+  L1019 [COMMENT x1] // 在implementation部分添加新函<FFFD>?
+  L1172 [COMMENT x2] // 处理单引<FFFD>?(在SQL中单引号需要用两个单引号表<FFFD>?
+
+==== Examples/FullDemo/FullDemo.MainForm.pas  (档: CLEAN_GBK, 基线FFFD=2, 实测行=2) ====
+  L164 [LITERAL x1] ShowMessage('DeepBase 鍒濆鍖栧け璐<FFFD>: ' + DeepBase.Manager.DeepBase.LastError);
+  L173 [LITERAL x1] DeepBase.Manager.DeepBase.Logger.Info('FullDemo 搴旂敤宸插惎鍔<FFFD>', 'App');
+
+==== Features/DeepBase.LLM.Client.pas  (档: CLEAN_UTF8, 基线FFFD=3, 实测行=2) ====
+  L22 [COMMENT x1] /// 消费程序接口 <FFFD>?极简调用
+  L78 [COMMENT x2] /// 管理接口 <FFFD>?配置 Providers <FFFD>?Tiers
+
+==== Features/DeepBase.LLM.HTTP.pas  (档: CLEAN_UTF8, 基线FFFD=2, 实测行=1) ====
+  L3 [COMMENT x2] { DeepBase LLM HTTP Transport <FFFD><FFFD> OpenAI/Anthropic format adapter }
+
+==== FMX/DeepBase.FMX.LLMConfigPanel.pas  (档: CLEAN_UTF8, 基线FFFD=10, 实测行=1) ====
+  L2 [CODE x10] DeepBase.FMX.LLMConfigPanel - FMX LLM <FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD><FFFD>
+
+==== Governance/DeepBase.Governance.ActionGrid.pas  (档: CLEAN_UTF8, 基线FFFD=3, 实测行=1) ====
+  L291 [COMMENT x3] // 执行 Bridge 链——用锁内快<FFFD><FFFD><FFFD>的引用数组，不再触碰 FBridges/LAction
+
+==== Persistence/DeepBase.DB.DoQry.pas  (档: CLEAN_GBK, 基线FFFD=1, 实测行=1) ====
+  L1479 [COMMENT x1] // 复制数据<FFFD>?TFDMemTable
+
+==== Tests/Acceptance/AcceptanceMain.pas  (档: CLEAN_UTF8, 基线FFFD=33, 实测行=30) ====
+  L2 [CODE x1] AcceptanceMain - 验收测试主窗<FFFD>?
+  L5 [CODE x1] 说明: 可视化验收测试界<FFFD>?
+  L77 [CODE x1] '文档与架构审<FFFD>?,
+  L78 [CODE x1] '静态代码分<FFFD>?,
+  L82 [CODE x1] '兼容性测<FFFD>?,
+  L84 [CODE x1] '最终验<FFFD>?
+  L108 [LITERAL x1] Caption := 'DeepBase 可视化验收测试工<FFFD>?v1.0';
+  L115 [COMMENT x1] // 设置 ListView <FFFD>?
+  L123 [CODE x1] with lvTests.Columns.Add do begin Caption := '优先<FFFD>?; Width := 60; end;
+  L124 [CODE x1] with lvTests.Columns.Add do begin Caption := '状<FFFD>?; Width := 80; end;
+  L142 [LITERAL x1] Node := tvPhases.Items.Add(nil, Format('<FFFD>?%d 阶段: %s', [I, PHASE_NAMES[I]]));
+  L175 [CODE x1] tsNotRun: StatusText := '未执<FFFD>?;
+  L176 [LITERAL x1] tsRunning: StatusText := '执行<FFFD>?..';
+  L177 [LITERAL x1] tsPassed: StatusText := '<FFFD>?通过';
+  L178 [LITERAL x1] tsFailed: StatusText := '<FFFD>?失败';
+  L179 [LITERAL x1] tsSkipped: StatusText := '<FFFD>?跳过';
+  L180 [CODE x2] tsManual: StatusText := '<FFFD>?待人<FFFD>?;
+  L187 [LITERAL x2] lblStatus.Caption := Format('<FFFD>?%d 阶段: %s - <FFFD>?%d 个测试项',
+  L204 [LITERAL x1] ShowMessage('测试正在运行<FFFD>?..');
+  L223 [LITERAL x1] ShowMessage('测试正在运行<FFFD>?..');
+  L249 [CODE x1] if MessageDlg('验收报告已生成，是否打开<FFFD>?, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  L280 [LITERAL x1] Notes := InputBox('标记失败', '请输入失败原<FFFD>?', '');
+  L316 [LITERAL x1] mmoLog.Lines.Add(Format('=== <FFFD>?%d 阶段完成 ===', [Result.PhaseNumber]));
+  L319 [LITERAL x1] mmoLog.Lines.Add(Format('  待人<FFFD>? %d', [Result.ManualTests]));
+  L349 [CODE x1] tsNotRun: StatusText := '未执<FFFD>?;
+  L350 [LITERAL x1] tsRunning: StatusText := '执行<FFFD>?..';
+  L351 [LITERAL x1] tsPassed: StatusText := '<FFFD>?通过';
+  L352 [LITERAL x1] tsFailed: StatusText := '<FFFD>?失败';
+  L353 [LITERAL x1] tsSkipped: StatusText := '<FFFD>?跳过';
+  L354 [CODE x2] tsManual: StatusText := '<FFFD>?待人<FFFD>?;
+
+==== Tests/GUI/DeepBase.GUITest.pas  (档: CLEAN_UTF8, 基线FFFD=35, 实测行=34) ====
+  L2 [CODE x1] DeepBase.GUITest - GUI 自动化测试框<FFFD>?
+  L5 [CODE x1] 说明: 提供完整<FFFD>?GUI 自动化测试基础设施
+  L47 [COMMENT x1] /// 时间戳辅<FFFD>?
+  L137 [COMMENT x1] /// GUI 测试上下<FFFD>?
+  L156 [COMMENT x1] /// <summary>记录步骤开<FFFD>?/summary>
+  L182 [COMMENT x1] /// 截图比较<FFFD>?
+  L198 [COMMENT x1] /// <summary>生成差异<FFFD>?/summary>
+  L204 [COMMENT x1] /// GUI 测试报告生成<FFFD>?
+  L217 [COMMENT x1] /// GUI 测试基类 - 可独立使用或<FFFD>?DUnitX 集成
+  L230 [COMMENT x1] /// <summary>销毁测试窗<FFFD>?/summary>
+  L236 [COMMENT x1] /// <summary>测试上下<FFFD>?/summary>
+  L260 [COMMENT x1] /// <summary>模拟勾<FFFD>?/summary>
+  L277 [COMMENT x1] /// <summary>断言控件不可<FFFD>?/summary>
+  L289 [COMMENT x1] /// <summary>断言控件<FFFD>?/summary>
+  L306 [COMMENT x1] /// <summary>保存为基准截<FFFD>?/summary>
+  L309 [COMMENT x1] /// <summary>与基准截图比<FFFD>?/summary>
+  L318 [COMMENT x1] /// <summary>开始步<FFFD>?/summary>
+  L325 [COMMENT x1] /// <summary>Setup - 在每个测试之前调<FFFD>?/summary>
+  L328 [COMMENT x1] /// <summary>TearDown - 在每个测试之后调<FFFD>?/summary>
+  L334 [COMMENT x1] /// <summary>获取所有测试结<FFFD>?/summary>
+  L339 [COMMENT x1] /// GUI 测试运行<FFFD>?
+  L350 [COMMENT x1] /// <summary>运行测试<FFFD>?/summary>
+  L594 [COMMENT x1] // 加载基准<FFFD>?
+  L608 [COMMENT x1] // 加载实际<FFFD>?
+  L638 [COMMENT x1] // 尺寸不匹<FFFD>?
+  L674 [COMMENT x1] Result.IsMatch := Result.DifferencePercent < 0.1; // 默认 0.1% 阈<FFFD>?
+  L798 [LITERAL x1] HTML.Add(Format('<p><strong>窗体<FFFD>?</strong> %s</p>', [R.FormClass]));
+  L799 [LITERAL x1] HTML.Add(Format('<p><strong>开始时<FFFD>?</strong> %s</p>', [FormatDateTime('hh:nn:ss.zzz', R.StartTime)]));
+  L804 [LITERAL x1] HTML.Add('<tr><th>#</th><th>描述</th><th>操作</th><th>预期</th><th>实际</th><th>状<FFFD>?/th><th>截图</th></tr>');
+  L819 [LITERAL x2] HTML.Add(Format('<td class="%s">%s</td>', [StatusClass, IfThen(S.Success, '<FFFD>?, '<FFFD>?)]));
+  L947 [COMMENT x1] // 创建上下<FFFD>?
+  L972 [COMMENT x1] // 销毁窗<FFFD>?
+  L1150 [COMMENT x1] Exit; // 不存在等同于不可<FFFD>?
+  L1355 [COMMENT x1] // 这里提供一个简化的运行器接<FFFD>?
+
+==== Tests/GUI/GUITest.FormFactory.pas  (档: CLEAN_UTF8, 基线FFFD=10, 实测行=9) ====
+  L36 [COMMENT x1] tftEmpty,           // 空窗<FFFD>?
+  L39 [COMMENT x1] tftI18nControls,    // 国际化控件窗<FFFD>?
+  L42 [COMMENT x1] tftDialog           // 对话框窗<FFFD>?
+  L87 [COMMENT x1] /// 创建空窗<FFFD>?
+  L93 [COMMENT x1] /// 创建带基础控件的窗<FFFD>?
+  L103 [COMMENT x1] /// 创建国际化测试窗<FFFD>?
+  L162 [COMMENT x2] /// 国际化控件测试窗<FFFD>?- 带辅助属性的包装<FFFD>?
+  L177 [COMMENT x1] /// 国际化控件测试窗<FFFD>?
+  L245 [COMMENT x1] // 确保 DeepBase 初始<FFFD>?
+
+==== Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas  (档: CLEAN_UTF8, 基线FFFD=20, 实测行=18) ====
+  L6 [CODE x2] 原问<FFFD>? WhenReady方法中存在潜在死锁，回调函数中再次调用DeepBase功能<FFFD>?
+  L7 [CODE x1] 可能因为嵌套锁定导致死锁<FFFD>?
+  L9 [CODE x1] 修复方案: 使用TTask.Run异步执行回调，避免嵌套锁定导致死锁<FFFD>?
+  L13 [CODE x1] 优先<FFFD>? P0 (Critical)
+  L43 [LITERAL x1] [Description('验证 WhenReady 回调中调<FFFD>?DeepBase 功能不会死锁')]
+  L55 [CODE x1] [Description('验证 WhenReady 回调异常不影响其他回<FFFD>?)]
+  L100 [COMMENT x1] // 检<FFFD>?DeepBase 是否已初始化
+  L120 [COMMENT x1] // 尝试读取配置（这会获取锁<FFFD>?
+  L134 [CODE x1] Assert.IsTrue(CallbackExecuted, '回调应该被执<FFFD>?);
+  L138 [CODE x2] Assert.Fail('检测到死锁：WhenReady 回调<FFFD>?5 秒内未完<FFFD>?);
+  L140 [CODE x1] Assert.Fail('等待回调时发生错<FFFD>?);
+  L176 [CODE x1] Assert.IsTrue(CallbackExecuted, '回调应该被执<FFFD>?);
+  L178 [CODE x1] Assert.Fail('回调应该在初始化后快速执<FFFD>?);
+  L225 [COMMENT x1] // 等待所有回调完<FFFD>?
+  L229 [CODE x1] '所有回调都应该被执<FFFD>?);
+  L260 [COMMENT x1] // 注册一个会抛出异常的回<FFFD>?
+  L274 [COMMENT x1] // 等待第二个回调完<FFFD>?
+  L282 [CODE x1] Assert.Fail('第一个回调的异常不应该阻止其他回调执<FFFD>?);
+
+==== Tests/Regression/Test.Regression.BUG013_RSASignature.pas  (档: CLEAN_GBK, 基线FFFD=5, 实测行=4) ====
+  L5 [CODE x2] 原问<FFFD>? RSA2Sign方法只使用SHA256+Base64，未实现真正的RSA2-SHA256签名<FFFD>?
+  L6 [CODE x1] 修复方案: 使用Windows CryptoAPI实现真正的RSA2-SHA256签名<FFFD>?
+  L103 [COMMENT x1] // 验证简单的 SHA256+Base64 长度（SHA256 产生 32 字节，Base64 编码后约 44 字符<FFFD>?  Assert.AreEqual(44, Integer(Length(SimpleSHA256Base64),
+  L108 [LITERAL x1] Assert.Pass('验证通过：RSA 签名长度应该远大于简<FFFD>?SHA256+Base64');
+
+==== Tests/Test.DeepBase.Browser.Selectors.pas  (档: CLEAN_UTF8, 基线FFFD=1, 实测行=1) ====
+  L1 [CODE x1] <FFFD>⺷ n i t   T e s t . D e e p B a s e . B r o w s e r . S e l e c t o r s ;  
+
+==== Tests/Test.DeepBase.EventBus.pas  (档: CLEAN_UTF8, 基线FFFD=3, 实测行=2) ====
+  L624 [COMMENT x1] Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特<FFFD>?
+  L635 [COMMENT x2] // BUG-027 FIX: 使用事件等待替代固定Sleep，超时设<FFFD>?000ms以适应高负载系<FFFD>?
+
+==== Tests/Test.DeepBase.Hotkeys.pas  (档: NOT-IN-116(档C或其他), 基线FFFD=5, 实测行=5) ====
+  L411 [COMMENT x1] // 修改快捷<FFFD>?
+  L461 [COMMENT x1] // Hotkeys 模块在初始化时可能已预置了一批默认快捷键<FFFD>?
+  L462 [COMMENT x1] // 因此这里不要假设 'Ctrl+F' 一定不会被占用<FFFD>?
+  L495 [LITERAL x1] Assert.AreEqual(Action, Conflict, '应该返回冲突<FFFD>?Action 名称');
+  L507 [LITERAL x1] Assert.IsTrue(Length(AllHotkeys) >= 2, '应该至少<FFFD>?2 个快捷键');
+
+==== Tools/SeedTool/uAntiTamperPackage.pas  (档: CLEAN_GBK, 基线FFFD=19, 实测行=19) ====
+  L127 [LITERAL x1] WriteLog('闃茬鏀瑰寘鍒濆鍖栧畬鎴<FFFD>');
+  L267 [LITERAL x1] raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨<FFFD>');
+  L271 [LITERAL x1] WriteLog(Format('浣跨敤AES-256鍔犲瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)]))
+  L273 [LITERAL x1] WriteLog(Format('浣跨敤XOR鍔犲瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)]));
+  L288 [LITERAL x1] raise EAntiTamperException.Create('鏈煡鐨勫姞瀵嗙被鍨<FFFD>');
+  L292 [LITERAL x1] WriteLog(Format('浣跨敤AES-256瑙ｅ瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)]))
+  L294 [LITERAL x1] WriteLog(Format('浣跨敤XOR瑙ｅ瘑锛屾暟鎹暱搴<FFFD>: %d bytes', [Length(Result)]));
+  L352 [LITERAL x1] WriteLog('鍗囩骇鏁版嵁琛ㄥけ璐<FFFD>');
+  L387 [LITERAL x1] WriteLog('sha256_hash瀛楁鍙兘宸插瓨鍦<FFFD>');
+  L395 [LITERAL x1] WriteLog('hmac_sha256瀛楁鍙兘宸插瓨鍦<FFFD>');
+  L403 [LITERAL x1] WriteLog('enabled瀛楁鍙兘宸插瓨鍦<FFFD>');
+  L411 [LITERAL x1] WriteLog('md5_hash瀛楁鍙兘宸插瓨鍦<FFFD>');
+  L565 [LITERAL x1] HandleSecurityViolation(AImageKey, '缂哄皯 sha256_hash 瀛楁鎴栦负绌<FFFD>');
+  L578 [LITERAL x1] HandleSecurityViolation(AImageKey, '缂哄皯 hmac_sha256 瀛楁鎴栦负绌<FFFD>');
+  L642 [LITERAL x1] '妫€娴嬪埌绋嬪簭鏂囦欢鍙兘琚鏀癸紝涓轰簡鎮ㄧ殑瀹夊叏锛岀▼搴忓皢閫€鍑恒€<FFFD>'#13#10 +
+  L643 [LITERAL x1] '璇蜂粠瀹樻柟缃戠珯涓嬭浇鏈€鏂扮増鏈€<FFFD>'#13#10#13#10 +
+  L644 [LITERAL x1] '鏄惁鐜板湪璁块棶瀹樻柟涓嬭浇椤甸潰锛<FFFD>', [ImageKey, Reason]);
+  L655 [LITERAL x1] WriteLog('绋嬪簭鍥犲畨鍏ㄨ繚瑙勯€€鍑<FFFD>');
+  L670 [LITERAL x1] WriteLog('宸叉竻绌洪槻绡℃敼鏁版嵁琛<FFFD>');
+
+==== Tools/SeedTool/uBasicProtection.pas  (档: CLEAN_GBK, 基线FFFD=1, 实测行=1) ====
+  L116 [COMMENT x1] // 数据填充（PKCS7<FFFD>?
+

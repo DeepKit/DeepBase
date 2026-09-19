@@ -1538,9 +1538,11 @@ end;
 
 class procedure TTypeRegistry.RegisterType(const AName: string; AClass: TClass);
 begin
+  if (FLock = nil) or (FRegistry = nil) then Exit;
   FLock.Enter;
   try
-    FRegistry.AddOrSetValue(AName, AClass);
+    if FRegistry <> nil then
+      FRegistry.AddOrSetValue(AName, AClass);
   finally
     FLock.Leave;
   end;
@@ -1558,9 +1560,11 @@ end;
 
 class procedure TTypeRegistry.UnregisterType(const AName: string);
 begin
+  if (FLock = nil) or (FRegistry = nil) then Exit;
   FLock.Enter;
   try
-    FRegistry.Remove(AName);
+    if FRegistry <> nil then
+      FRegistry.Remove(AName);
   finally
     FLock.Leave;
   end;
@@ -1594,9 +1598,14 @@ end;
 
 class function TTypeRegistry.TryGetClass(const AName: string; out AClass: TClass): Boolean;
 begin
+  AClass := nil;
+  if (FLock = nil) or (FRegistry = nil) then Exit(False);
   FLock.Enter;
   try
-    Result := FRegistry.TryGetValue(AName, AClass);
+    if FRegistry <> nil then
+      Result := FRegistry.TryGetValue(AName, AClass)
+    else
+      Result := False;
   finally
     FLock.Leave;
   end;
@@ -1604,9 +1613,13 @@ end;
 
 class function TTypeRegistry.IsRegistered(const AName: string): Boolean;
 begin
+  if (FLock = nil) or (FRegistry = nil) then Exit(False);
   FLock.Enter;
   try
-    Result := FRegistry.ContainsKey(AName);
+    if FRegistry <> nil then
+      Result := FRegistry.ContainsKey(AName)
+    else
+      Result := False;
   finally
     FLock.Leave;
   end;
@@ -1614,9 +1627,17 @@ end;
 
 class function TTypeRegistry.GetRegisteredNames: TArray<string>;
 begin
+  if (FLock = nil) or (FRegistry = nil) then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
   FLock.Enter;
   try
-    Result := FRegistry.Keys.ToArray;
+    if FRegistry <> nil then
+      Result := FRegistry.Keys.ToArray
+    else
+      SetLength(Result, 0);
   finally
     FLock.Leave;
   end;
@@ -1624,9 +1645,11 @@ end;
 
 class procedure TTypeRegistry.Clear;
 begin
+  if (FLock = nil) or (FRegistry = nil) then Exit;
   FLock.Enter;
   try
-    FRegistry.Clear;
+    if FRegistry <> nil then
+      FRegistry.Clear;
   finally
     FLock.Leave;
   end;

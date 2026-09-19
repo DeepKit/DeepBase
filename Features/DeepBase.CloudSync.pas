@@ -1592,11 +1592,11 @@ begin
           
           if LDirtyItems.Count > 0 then
           begin
-            if FClient.UploadConfigs(LDirtyItems) then
-            begin
-              FProgress.UploadedItems := LDirtyItems.Count;
-              FLocalStore.MarkAllClean;
-            end;
+            // Top20 #15 FIX: 上传失败不得静默吞错或虚假标成功
+            if not FClient.UploadConfigs(LDirtyItems) then
+              raise Exception.Create('Failed to upload dirty configuration items to cloud server');
+            FProgress.UploadedItems := LDirtyItems.Count;
+            FLocalStore.MarkAllClean;
           end;
         end;
         
@@ -1717,8 +1717,10 @@ begin
     for var LItem in LItems do
       LItem.IsDirty := True;
     
-    if FClient.UploadConfigs(LItems) then
-      FLocalStore.MarkAllClean;
+    // Top20 #15 FIX: 强制上传失败必须报错并阻断 clean 标记
+    if not FClient.UploadConfigs(LItems) then
+      raise Exception.Create('Force upload failed to send configurations to cloud server');
+    FLocalStore.MarkAllClean;
   finally
     LItems.Free;
   end;

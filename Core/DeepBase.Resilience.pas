@@ -38,38 +38,7 @@ type
   TOnCircuitStateChanged = DeepBase.Resilience.CircuitBreaker.TOnCircuitStateChanged;
   TOnCircuitRejected = DeepBase.Resilience.CircuitBreaker.TOnCircuitRejected;
 
-  TCircuitBreaker = class(DeepBase.Resilience.CircuitBreaker.TCircuitBreaker)
-  public
-    constructor Create(const AName: string = 'default');
-
-    function FailureThreshold(Value: Integer): TCircuitBreaker; reintroduce;
-    function SuccessThreshold(Value: Integer): TCircuitBreaker; reintroduce;
-    function OpenDuration(Ms: Int64): TCircuitBreaker; reintroduce;
-    function OnStateChanged(Handler: TOnCircuitStateChanged): TCircuitBreaker; reintroduce;
-    function OnRejected(Handler: TOnCircuitRejected): TCircuitBreaker; reintroduce;
-
-    procedure Execute(Proc: TProc); reintroduce; overload;
-    procedure Execute(Proc: TProc; TimeoutMs: Int64); reintroduce; overload;
-    function Execute<T>(Func: TFunc<T>): T; reintroduce; overload;
-    function Execute<T>(Func: TFunc<T>; TimeoutMs: Int64): T; reintroduce; overload;
-  end;
-
-  TCircuitBreakerRegistry = class
-  private
-    FBreakers: TDictionary<string, TCircuitBreaker>;
-    FLock: TCriticalSection;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    function GetOrCreate(const Name: string): TCircuitBreaker;
-    function TryGet(const Name: string; out Breaker: TCircuitBreaker): Boolean;
-    procedure Remove(const Name: string);
-    procedure Clear;
-
-    class function Instance: TCircuitBreakerRegistry;
-    class procedure ReleaseInstance;
-  end;
+// Top20 #19 / E6: 消解双轨，单一真相源收敛至 DeepBase.Resilience.CircuitBreaker
 
   TRetryStrategy = DeepBase.Resilience.Retry.TRetryStrategy;
   TRetryMainThreadWaitMode = DeepBase.Resilience.Retry.TRetryMainThreadWaitMode;
@@ -148,7 +117,7 @@ type
     function WithRetry(Policy: TRetryPolicy; OwnsPolicy: Boolean = True): TResiliencePolicy; reintroduce;
     function WithTimeout(Policy: TTimeoutPolicy; OwnsPolicy: Boolean = True): TResiliencePolicy; reintroduce; overload;
     function WithTimeout(Ms: Int64): TResiliencePolicy; reintroduce; overload;
-    function WithCircuitBreaker(Breaker: TCircuitBreaker;
+    function WithCircuitBreaker(Breaker: DeepBase.Resilience.CircuitBreaker.TCircuitBreaker;
       OwnsBreaker: Boolean = False): TResiliencePolicy; reintroduce;
     function WithBulkhead(Policy: TBulkheadPolicy;
       OwnsPolicy: Boolean = True): TResiliencePolicy; reintroduce; overload;
@@ -172,7 +141,7 @@ const
   rmwWarn: TRetryMainThreadWaitMode = DeepBase.Resilience.Retry.rmwWarn;
   rmwRaise: TRetryMainThreadWaitMode = DeepBase.Resilience.Retry.rmwRaise;
 
-function CircuitBreakers: TCircuitBreakerRegistry;
+function CircuitBreakers: DeepBase.Resilience.CircuitBreaker.TCircuitBreakerRegistry;
 
 implementation
 
@@ -180,7 +149,7 @@ var
   _CircuitBreakerRegistry: TCircuitBreakerRegistry;
   _RegistryLock: TCriticalSection;
 
-function CircuitBreakers: TCircuitBreakerRegistry;
+function CircuitBreakers: DeepBase.Resilience.CircuitBreaker.TCircuitBreakerRegistry;
 begin
   if not Assigned(_RegistryLock) then
     raise ECircuitBreakerNotInitializedException.Create(
@@ -204,152 +173,6 @@ const
   Names: array[TCircuitState] of string = ('Closed', 'Open', 'HalfOpen');
 begin
   Result := Names[Self];
-end;
-
-constructor TCircuitBreaker.Create(const AName: string);
-begin
-  inherited Create(AName);
-end;
-
-function TCircuitBreaker.FailureThreshold(Value: Integer): TCircuitBreaker;
-begin
-  inherited FailureThreshold(Value);
-  Result := Self;
-end;
-
-function TCircuitBreaker.SuccessThreshold(Value: Integer): TCircuitBreaker;
-begin
-  inherited SuccessThreshold(Value);
-  Result := Self;
-end;
-
-function TCircuitBreaker.OpenDuration(Ms: Int64): TCircuitBreaker;
-begin
-  inherited OpenDuration(Ms);
-  Result := Self;
-end;
-
-function TCircuitBreaker.OnStateChanged(
-  Handler: TOnCircuitStateChanged): TCircuitBreaker;
-begin
-  inherited OnStateChanged(Handler);
-  Result := Self;
-end;
-
-function TCircuitBreaker.OnRejected(
-  Handler: TOnCircuitRejected): TCircuitBreaker;
-begin
-  inherited OnRejected(Handler);
-  Result := Self;
-end;
-
-procedure TCircuitBreaker.Execute(Proc: TProc);
-begin
-  inherited Execute(Proc);
-end;
-
-procedure TCircuitBreaker.Execute(Proc: TProc; TimeoutMs: Int64);
-begin
-  inherited Execute(Proc, TimeoutMs);
-end;
-
-function TCircuitBreaker.Execute<T>(Func: TFunc<T>): T;
-begin
-  Result := inherited Execute<T>(Func);
-end;
-
-function TCircuitBreaker.Execute<T>(Func: TFunc<T>; TimeoutMs: Int64): T;
-begin
-  Result := inherited Execute<T>(Func, TimeoutMs);
-end;
-
-constructor TCircuitBreakerRegistry.Create;
-begin
-  inherited Create;
-  FBreakers := TDictionary<string, TCircuitBreaker>.Create;
-  FLock := TCriticalSection.Create;
-end;
-
-destructor TCircuitBreakerRegistry.Destroy;
-var
-  Pair: TPair<string, TCircuitBreaker>;
-begin
-  for Pair in FBreakers do
-    Pair.Value.Free;
-  FreeAndNil(FBreakers);
-  FreeAndNil(FLock);
-  inherited;
-end;
-
-function TCircuitBreakerRegistry.GetOrCreate(
-  const Name: string): TCircuitBreaker;
-begin
-  FLock.Enter;
-  try
-    if not FBreakers.TryGetValue(Name, Result) then
-    begin
-      Result := TCircuitBreaker.Create(Name);
-      FBreakers.Add(Name, Result);
-    end;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-function TCircuitBreakerRegistry.TryGet(const Name: string;
-  out Breaker: TCircuitBreaker): Boolean;
-begin
-  FLock.Enter;
-  try
-    Result := FBreakers.TryGetValue(Name, Breaker);
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TCircuitBreakerRegistry.Remove(const Name: string);
-var
-  Breaker: TCircuitBreaker;
-begin
-  FLock.Enter;
-  try
-    if FBreakers.TryGetValue(Name, Breaker) then
-    begin
-      FBreakers.Remove(Name);
-      Breaker.Free;
-    end;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TCircuitBreakerRegistry.Clear;
-var
-  Pair: TPair<string, TCircuitBreaker>;
-begin
-  FLock.Enter;
-  try
-    for Pair in FBreakers do
-      Pair.Value.Free;
-    FBreakers.Clear;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-class function TCircuitBreakerRegistry.Instance: TCircuitBreakerRegistry;
-begin
-  Result := CircuitBreakers;
-end;
-
-class procedure TCircuitBreakerRegistry.ReleaseInstance;
-begin
-  _RegistryLock.Enter;
-  try
-    FreeAndNil(_CircuitBreakerRegistry);
-  finally
-    _RegistryLock.Leave;
-  end;
 end;
 
 constructor TRetryPolicy.Create;
@@ -571,7 +394,7 @@ begin
   Result := Self;
 end;
 
-function TResiliencePolicy.WithCircuitBreaker(Breaker: TCircuitBreaker;
+function TResiliencePolicy.WithCircuitBreaker(Breaker: DeepBase.Resilience.CircuitBreaker.TCircuitBreaker;
   OwnsBreaker: Boolean): TResiliencePolicy;
 begin
   inherited WithCircuitBreaker(Breaker, OwnsBreaker);
@@ -603,10 +426,7 @@ begin
 end;
 
 initialization
-  _RegistryLock := TCriticalSection.Create;
 
 finalization
-  FreeAndNil(_CircuitBreakerRegistry);
-  FreeAndNil(_RegistryLock);
 
 end.

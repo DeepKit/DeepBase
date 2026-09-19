@@ -1,0 +1,53 @@
+# DeepBase Git Attributes Specification (WO-20260919-AUDIT-乙-R2 E9)
+# 行尾立法：Delphi 体系文件显式 CRLF，跨平台文档与脚本显式 LF，二进制文件标记 binary
+
+# Auto-detect text files and perform LF normalization by default
+* text=auto
+
+# Delphi source & projects: CRLF
+*.pas text eol=crlf
+*.dpr text eol=crlf
+*.dpk text eol=crlf
+*.dfm text eol=crlf
+*.fmx text eol=crlf
+*.inc text eol=crlf
+*.dproj text eol=crlf
+*.groupproj text eol=crlf
+*.sql text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Documentation & web/config files: LF
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.xml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Binaries
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.dcu binary
+*.res binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary

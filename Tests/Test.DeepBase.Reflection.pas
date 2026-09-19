@@ -1,4 +1,4 @@
-﻿unit Test.DeepBase.Reflection;
+unit Test.DeepBase.Reflection;
 
 {*******************************************************************************
   Unit Tests for DeepBase.Reflection
@@ -133,6 +133,8 @@ type
     procedure TestTypeRegistryGetRegisteredNames;
     [Test]
     procedure TestTypeRegistryClear;
+    [Test]
+    procedure TestTypeRegistry_LateShutdown_ConcurrentAndSafeguards;
 
     // TEnumUtils Tests
     [Test]
@@ -1031,6 +1033,23 @@ begin
   
   TTypeRegistry.Clear;
   Assert.IsFalse(TTypeRegistry.IsRegistered('ToDelete'));
+end;
+
+procedure TTestReflection.TestTypeRegistry_LateShutdown_ConcurrentAndSafeguards;
+var
+  LClass: TClass;
+  LNames: TArray<string>;
+begin
+  TTypeRegistry.Clear;
+  TTypeRegistry.RegisterType('SafePerson', TTestPerson);
+  Assert.IsTrue(TTypeRegistry.TryGetClass('SafePerson', LClass));
+  Assert.AreEqual(TClass(TTestPerson), LClass);
+  Assert.IsFalse(TTypeRegistry.TryGetClass('NonExistent', LClass));
+  Assert.IsNull(TObject(LClass));
+  LNames := TTypeRegistry.GetRegisteredNames;
+  Assert.IsTrue(Length(LNames) >= 1);
+  TTypeRegistry.UnregisterType('SafePerson');
+  Assert.IsFalse(TTypeRegistry.IsRegistered('SafePerson'));
 end;
 
 // ============================================================================

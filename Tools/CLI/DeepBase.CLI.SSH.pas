@@ -35,6 +35,7 @@ unit DeepBase.CLI.SSH;
 interface
 
 uses
+  Winapi.Windows,
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
@@ -147,6 +148,7 @@ type
     function Upload(const LocalFile, RemotePath: string): Boolean;
     function Download(const RemotePath, LocalFile: string): Boolean;
     function GetLastError: string;
+    function IsMock: Boolean;
     
     procedure SetOnOutput(Handler: TSSHOutputEvent);
     procedure SetOnProgress(Handler: TSSHProgressEvent);
@@ -177,6 +179,7 @@ type
     FLock: TCriticalSection;
     
     procedure SetState(AState: TSSHSessionState);
+    function GetIsMock: Boolean;
   public
     constructor Create(const AId: string);
     destructor Destroy; override;
@@ -203,6 +206,7 @@ type
     property Id: string read FId;
     property Options: TSSHOptions read FOptions;
     property State: TSSHSessionState read FState;
+    property IsMock: Boolean read GetIsMock;
     property LastActivity: TDateTime read FLastActivity;
     property LastError: string read FLastError;
     property OnOutput: TSSHOutputEvent read FOnOutput write FOnOutput;
@@ -331,6 +335,7 @@ type
     FOnOutput: TSSHOutputEvent;
     FOnHostKey: TSSHHostKeyEvent;
     
+    function GetIsMock: Boolean;
     function ParseHostString(const HostString: string; 
       out Options: TSSHOptions; out Credentials: TSSHCredentials): Boolean;
   public
@@ -376,6 +381,7 @@ type
     
     property Pool: TSSHConnectionPool read FPool;
     property CurrentSession: TSSHSession read FCurrentSession;
+    property IsMock: Boolean read GetIsMock;
     property DefaultOptions: TSSHOptions read FDefaultOptions write FDefaultOptions;
     property DefaultCredentials: TSSHCredentials read FDefaultCredentials write FDefaultCredentials;
     property OnOutput: TSSHOutputEvent read FOnOutput write FOnOutput;
@@ -412,6 +418,7 @@ type
     function Upload(const LocalFile, RemotePath: string): Boolean;
     function Download(const RemotePath, LocalFile: string): Boolean;
     function GetLastError: string;
+    function IsMock: Boolean;
     
     procedure SetOnOutput(Handler: TSSHOutputEvent);
     procedure SetOnProgress(Handler: TSSHProgressEvent);
@@ -680,11 +687,22 @@ begin
   Result := False;
   
   if not IsConnected then
+  begin
+    FLastError := 'Session not connected';
     Exit;
+  end;
+  
+  if IsMock then
+  begin
+    FLastError := 'Cannot upload using mock SSH backend';
+    Exit;
+  end;
   
   SetState(ssExecuting);
   try
     Result := FBackend.Upload(LocalFile, RemotePath);
+    if not Result then
+      FLastError := FBackend.GetLastError;
     FLastActivity := Now;
   finally
     SetState(ssConnected);
@@ -696,15 +714,31 @@ begin
   Result := False;
   
   if not IsConnected then
+  begin
+    FLastError := 'Session not connected';
     Exit;
+  end;
+  
+  if IsMock then
+  begin
+    FLastError := 'Cannot download using mock SSH backend (fail-closed to prevent overwriting local files)';
+    Exit;
+  end;
   
   SetState(ssExecuting);
   try
     Result := FBackend.Download(RemotePath, LocalFile);
+    if not Result then
+      FLastError := FBackend.GetLastError;
     FLastActivity := Now;
   finally
     SetState(ssConnected);
   end;
+end;
+
+function TSSHSession.GetIsMock: Boolean;
+begin
+  Result := Assigned(FBackend) and FBackend.IsMock;
 end;
 
 function TSSHSession.IsConnected: Boolean;
@@ -1020,7 +1054,7 @@ begin
       Session := GetSessionWithTimeout(LOptions, LCredentials, LTimeout);
       
       // Callback on main thread
-      TThread.Synchronize(nil,
+      TThread.Synchronize(TThread(nil),
         procedure
         begin
           if Assigned(Callback) then
@@ -1240,6 +1274,11 @@ begin
     Result := FCurrentSession.Download(RemotePath, LocalFile);
 end;
 
+function TSSHManager.GetIsMock: Boolean;
+begin
+  Result := Assigned(FCurrentSession) and FCurrentSession.IsMock;
+end;
+
 function TSSHManager.IsConnected: Boolean;
 begin
   Result := Assigned(FCurrentSession) and FCurrentSession.IsConnected;
@@ -1413,27 +1452,32 @@ begin
   if FMockResponses.TryGetValue(Command, Result) then
     Exit;
   
-  // Default response for unknown commands
-  Result := TSSHResult.OK('Mock output for: ' + Command);
+  // Top20 #07 / E3：未登记命令不得伪造成功输出；mock 结果必须由测试显式登记（机器可读 IsMock + fail-closed）
+  Result := TSSHResult.Error('Mock SSH backend has no registered response for: ' + Command +
+    ' (fail-closed: refusing to fake success; register it via AddMockResponse in tests)');
+end;
+
+function TMockSSHBackend.IsMock: Boolean;
+begin
+  Result := True;
 end;
 
 function TMockSSHBackend.Upload(const LocalFile, RemotePath: string): Boolean;
 begin
-  Result := FConnected and TFile.Exists(LocalFile);
-  if Result and Assigned(FOnOutput) then
-    FOnOutput('Uploaded: ' + LocalFile + ' -> ' + RemotePath);
+  // Top20 #07: Mock 后端禁止伪造上传成功
+  Result := False;
+  FLastError := 'Mock SSH backend refuses to fake upload for: ' + LocalFile;
+  if Assigned(FOnOutput) then
+    FOnOutput('[FAIL-CLOSED] ' + FLastError);
 end;
 
 function TMockSSHBackend.Download(const RemotePath, LocalFile: string): Boolean;
 begin
-  Result := FConnected;
-  if Result then
-  begin
-    // Create mock file
-    TFile.WriteAllText(LocalFile, 'Mock content from ' + RemotePath);
-    if Assigned(FOnOutput) then
-      FOnOutput('Downloaded: ' + RemotePath + ' -> ' + LocalFile);
-  end;
+  // Top20 #07: Mock 后端严禁向本地写入伪造数据，防止静默覆盖破坏真实本地文件
+  Result := False;
+  FLastError := 'Mock SSH backend refuses to write local file: ' + LocalFile;
+  if Assigned(FOnOutput) then
+    FOnOutput('[FAIL-CLOSED] ' + FLastError);
 end;
 
 function TMockSSHBackend.GetLastError: string;

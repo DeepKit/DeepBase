@@ -1374,7 +1374,9 @@ begin
   if Length(AHeaders) > 0 then
   begin
     SetLength(LDefaultHeaders, Length(LDefaultHeaders) + Length(AHeaders));
-    Move(AHeaders[0], LDefaultHeaders[2], Length(AHeaders) * SizeOf(TNameValuePair));
+    // T4 FIX: 托管类型 (string 字段) 禁止使用非托管 Move 内存拷贝，防止 double-free
+    for var I := 0 to High(AHeaders) do
+      LDefaultHeaders[2 + I] := AHeaders[I];
   end;
   
   FLock.Enter;
@@ -1938,6 +1940,10 @@ begin
     
     if not TFile.Exists(LArchivePath) then
       raise EBackupFileNotFoundException.CreateFmt('Backup file not found: %s', [LArchivePath]);
+      
+    // Top20 #15 FIX: 恢复链前置校验完整性与清单哈希，校验未过立即阻断恢复
+    if not VerifyBackup(ABackupId) then
+      raise EBackupException.CreateFmt('Backup archive integrity verification failed: %s', [ABackupId]);
       
     // 加载清单
     LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));

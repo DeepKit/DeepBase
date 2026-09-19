@@ -1,0 +1,25 @@
+=== 1. git check-attr -a verify ===
+Core/DeepBase.Resilience.pas: text: set
+Core/DeepBase.Resilience.pas: eol: crlf
+README.md: text: set
+README.md: eol: lf
+TestResults/WO-20260904-003/screenshots/sharecard_yahei.png: binary: set
+TestResults/WO-20260904-003/screenshots/sharecard_yahei.png: diff: unset
+TestResults/WO-20260904-003/screenshots/sharecard_yahei.png: merge: unset
+TestResults/WO-20260904-003/screenshots/sharecard_yahei.png: text: unset
+Tools/CLI/DeepBase.CLI.SSH.pas: text: set
+Tools/CLI/DeepBase.CLI.SSH.pas: eol: crlf
+"09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js": text: set
+"09_\345\267\245\347\250\213\350\204\232\346\234\254/eol-gate/check_eol.js": eol: lf
+
+=== 2. check_eol.js repository run ===
+行尾门禁通过：检查了 1371 个文件（.pas CRLF / .md LF）
+
+=== 3. test_negative_sample.js run ===
+门禁输出（预期包含 L1, L2, L3 违规）:
+行尾门禁失败，违规 3 项:
+  L2 .md 文档非预期包含 CRLF (要求 LF): docs/Bad_CRLF.md
+  L1 .pas 源码非预期纯 LF (要求 CRLF): src/Bad_LF.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=2, total_lf=4): src/Bad_Mixed.pas
+
+NEGATIVE-TEST: PASS

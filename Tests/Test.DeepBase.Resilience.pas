@@ -19,7 +19,8 @@ uses
   System.Diagnostics,
   DUnitX.TestFramework,
   DeepBase.Exceptions,
-  DeepBase.Resilience;
+  DeepBase.Resilience,
+  DeepBase.Resilience.CircuitBreaker;
 
 type
   // Custom exception for testing
