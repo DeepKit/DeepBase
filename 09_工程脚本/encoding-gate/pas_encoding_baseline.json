@@ -15,7 +15,6 @@
   "Tests/GUI/GUITest.FormFactory.pas": 10,
   "Tests/Regression/Test.Regression.BUG007_WhenReadyDeadlock.pas": 20,
   "Tests/Regression/Test.Regression.BUG013_RSASignature.pas": 5,
-  "Tests/Test.DeepBase.Browser.Selectors.pas": 1,
   "Tests/Test.DeepBase.EventBus.pas": 3,
   "Tests/Test.DeepBase.Hotkeys.pas": 5,
   "Tools/SeedTool/uAntiTamperPackage.pas": 19,
