@@ -14,6 +14,8 @@
 - **取证纪律**：路径取自 `git ls-files`/实测；file:line **锚定字面符号名**；受控状态须实测；免责声明 ≠ 消解误导机读字段。
 - **⚠️ diff 行尾污染铁律**：工作副本 CRLF 而 blob LF 时，`git diff --numstat` 造整文件重写级假阳性（实测 UIA.Engine 虚高 +545/−514，真实 +44/−13）。**凡 diff 呈整文件重写，先 `--ignore-cr-at-eol`/`--ignore-all-space` 复验再定性**。主控与开发方同标准。
 - **⚠️ 全库扫描口径铁律**：必排除 `.tmp`/`.claude`/`.git`/构建产物，报告须声明扫描根与排除集（`.tmp\b1-backup-preapply\` 含 1073 个修复前副本，实测 19 vs 251）。全库 `.pas` 现状 = **CRLF**（约 958 生产单元）。
+- **⚠️⚠️ 原子提交铁律 H15（2026-09-20，主控第二次同型失误后立）**：**裸 `git commit`（无 `--only`、无显式 pathspec）会提交 index 中他人已 stage 的全部内容**。主控 `ed50cfd` 名义 `chore(memory)`，实际带走乙的 28 个文件（29 文件 +3204/−1100）。前科 `c0592ff`（宽泛 `git add` 误带甲 Registry）。**纪律：`git commit` 必带 `--only` 或 pathspec；提交前后各跑 `git diff --cached --name-only`（前空后空）。**
+- **H16 · 共享 index 并发禁令**：多 AI 共操作同一工作树时，发现 `git diff --cached` 非空（他方暂存）即**停写**，报主控排序。
 - **自指锚点不可能性（F3）**：提交无法命名自身 ⇒ 报告自述 HEAD 永远写不准。自述 SHA 须 `git branch -a --contains` 非空。
 - **整改工单五件套**：文件:行／改法／验收标准／证据要求／是否阻塞他仓。硬约束：禁 `git checkout --`/`restore`/`clean`/`reset --hard` 处置非本工单改动；脏区分三类（纯噪声／未提交的历史已过审交付不可销毁／本工单改动）。
 - **冻结纪律**：开工单要求提交方声明停等；主控取证打时间戳；会写脏工作树的流水线不跑。
@@ -73,4 +75,7 @@
 - **★ 2026-09-19 21:56 主控发现：HEAD `c4b96a9` 后工作区仍有 180 项脏（91 修改 + 89 未跟踪），实质 85 文件 / +4041 −2466 ⇒ 未交付。** 已冻结快照 `CodeReview\_audit_recheck\20260919-工作区冻结快照\`，登记 `20260919-AUDIT-甲乙-工作区冻结与收口登记.md`（commit `eac257e`）。
   - 甲组 52 项 → `WO-20260919-AUDIT-甲-R4-工作区收口提交.md`；乙组 26 项 → `WO-20260919-AUDIT-乙-R3-工作区收口提交.md`（均为收口单：申报→精确提交→双证据复跑→干预登记）。
   - 归属待申报：`Examples/MicroserviceClientDemo/DeepBase.Microservice.Client.pas`、`Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas`。
-- 遗留：A18 端到端 BPL 卸载测试 DEFERRED；`docs/` 下 60+ 历史未跟踪文档归档卫生债。
+- **2026-09-20 收口态**：K2/E8 已入库（`ed50cfd` 误带 + `832ad65` 回执）；**K6 全库 renormalize 裁定由主控串行发**（甲 R4 落定后，440 脏件全属甲）；乙 R3 = ACCEPTED WITH CORRECTIONS（`bfac426`）。
+- **★ 2026-09-20 主控取证新发现（原审计 1445 项定级外）**：`Tests/Test.DeepBase.Browser.Selectors.pas` 的 HEAD blob = **UTF-16LE + U+FFFD 双重损坏**（blob 10470 = 工作树 5234×2），git 判 `i/-text`；`Core/DeepBase.Schema.pas` 报 `i/-text` 但无 NUL、size 一致、attr `text: set` ⇒ 成因待查。新开 `WO-20260920-AUDIT-乙-R4-UTF16编码损坏.md`。
+- **全库行尾现状（2026-09-20 实测）**：`i/lf` 1510 / `i/crlf` 362 / `i/mixed` 49 / `i/-text` 39（其中 .pas 仅 2 件，余为 png/ico/db/log）。凡 `i/crlf`/`i/mixed` 一 `git add` 即被 clean 成 LF 产生一次性整文件重写 ⇒ **H14 行尾前置核验**（提交前 `git ls-files --eol`，必须 `--renormalize`，双数字申报）。
+- 遗留：A18 端到端 BPL 卸载测试 DEFERRED；`docs/` 下 60+ 历史未跟踪文档归档卫生债；`UNRESOLVED-RUN-001`（全量裸跑卡 HB Gate #5，甲独占区）；pg-tag 未授权。
