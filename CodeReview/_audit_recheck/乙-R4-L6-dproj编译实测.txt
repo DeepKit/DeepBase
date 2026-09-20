@@ -1,0 +1,56 @@
+乙R4-L6 证据：Tests\DeepBaseTests.dproj 全量编译实测重验
+=========================================================
+日期：2026-09-20（本地）
+执行人：乙
+工单：WO-20260920-AUDIT-乙-R4-UTF16编码损坏.md · L6
+
+一、实测环境
+- 编译器：Embarcadero Delphi for Win32 compiler version 37.0（rsvars.bat @
+  "D:\Program Files (x86)\Embarcadero\Studio\37.0\bin"，msbuild 调用 dcc32）
+  （同窗 L7 另以 dcc64 Win64 37.0 实测 MicroserviceClientDemo，二者版本一致）
+- 构建入口：msbuild Tests\DeepBaseTests.dproj /t:Build /p:Config=Base /p:Platform=Win32
+  （dproj TargetedPlatforms=1=Win32；非独立 runner，符合 L6 要求 1）
+- 产物目录：dcu/exe 输出重定向至 .tmp 或 gitignore 覆盖的 Tests\Win32\，
+  实测后 `git status --porcelain Tests/` 无新增未登记产物。
+
+二、改前实测（真实错误原文）
+唯一实质错误（阻断全量编译）：
+  Test.DeepBase.FMX.HB.Dialogs.pas(22): error F2613: Unit 'DeepBase.FMX.HB.Theme' not found. [D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.dproj]
+  EXIT=1
+失败日志全文：.tmp/r4/l6_msbuild_prefix_out.txt
+（该文件系以 /p:DCC_UnitSearchPath 传旧值覆盖、/t:Rebuild 全量重跑复现，
+  未回滚工作树文件；原始首跑失败输出与本次逐字一致：同 F2613、同 EXIT=1。）
+
+SSH 无关性实证（对 R3 回执断言的实测重验）：
+- 改前全量编译中 `Test.DeepBase.CLI.SSH.pas` 编译通过，仅一条存量 Hint：
+  Test.DeepBase.CLI.SSH.pas(878): Hint warning H2077: Value assigned to 'Session' never used
+- 全部错误中 SSH 相关 = 0 条。
+- 结论：乙 R3 回执「DeepBaseTests.dpr 因 CLI.SSH 模块迁移至 better-loop 而无法编译」
+  的归因不成立（主控 H17 双证表已证伪「已迁移」）。真实唯一阻断 = dproj
+  `DCC_UnitSearchPath` 缺 `..\FMX`（`FMX/DeepBase.FMX.HB.Theme.pas` 在仓内受控，
+  git 历史 278e41e 引入）。
+
+三、生效 DCC_UnitSearchPath（Base 组，相对 Tests\）
+改前：..\Persistence;..\Core;..\Features;..\Governance;..\VCL;
+      ..\ThirdParty\Social;..\ThirdParty\Payment;..\Tools\CLI;
+      ..\DeepFlow\Source\Core;..\DeepFlow\Source\Roles;
+      ..\DeepFlow\Source\Workflow;..\DeepFlow\Source\AI
+改后：在 ..\VCL 后增 ..\FMX，在 ..\Tools\CLI 后增 ..\Tools\WebService
+依据：CI 权威口径 Scripts/run_tests.ps1:530-541 的 -U 集含 FMX 与
+      Tools\WebService；dproj 落后于脚本口径 → 按 L6 要求 3「搜索路径缺失 →
+      修 dproj」。未删任何 dpr 引用、未加条件编译（要求 2 满足）。
+
+四、改后实测
+  msbuild 同参数重跑：EXIT=0
+  361486 lines, 11.69 seconds, 26355772 bytes code, 299660 bytes data.
+  错误 0；仅存量 Hint/Warn（H2077/H2443/W1000 deprecated 等）。
+成功日志全文：.tmp/r4/l6_msbuild_out.txt
+
+五、H14 双数字（Tests/DeepBaseTests.dproj）
+- raw numstat:        230 / 230（i/crlf 遗留 blob 在 text eol=crlf 下 add 即
+  全文件归一重写，属 K6 同向 renormalize，非本次内容）
+- --ignore-cr-at-eol: 1 / 1（实质 = DCC_UnitSearchPath 单行增两路径）
+
+六、旁路登记（不处置）
+- `Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas` 未跟踪文件存在，
+  非本单产物，归属待主控裁定（H2/H16 携报）。
