@@ -1,0 +1,89 @@
+================================================================================
+乙 R2E8 裁定执行 — 实况核对与 K6 协调上报（本会话，非 EOL 借口）
+================================================================================
+承接：主控裁定 `CodeReview\20260919-AUDIT-乙-R2E8-主控裁定.md`（23:26）+
+      `WO-20260919-AUDIT-乙-R3`（追加 K6/K7/H14），要求乙按 K6→K2 执行、驳回停等。
+本文件记录乙**实际动手后**发现的实况，逐条附可复验命令与输出。
+扫描根 = 仓库根 d:\_Progs\02Business\DeepBase；排除 .tmp/.claude/.git/构建产物（H6）。
+
+--------------------------------------------------------------------------------
+0、主控的两条纠偏：乙独立实测，全部确认成立（乙认错）
+--------------------------------------------------------------------------------
+命令：git ls-files --eol | (取 i/ 列) group
+实测：i/lf 1506 / i/crlf 362 / i/mixed 49 / i/-text 39 / i/none 19 / i/"" 1
+→ ① 乙原述「HEAD 各 .pas blob 以 CRLF 存」= 错，多数是 LF，真实受影响面 ~411/1976，非「全部」。
+→ ② 乙原述「任意单个 .pas 一 add 就背整文件重写」= 过度扩大，仅 i/crlf/i/mixed 触发。
+→ ③ 真实现象乙复述主控定位：非「工作树行尾乱」，是 index blob 当年未走 clean 以 CRLF 存，
+      .gitattributes 现要求 clean ⇒ git 把工作树 clean 成 LF 去比 CRLF blob ⇒ 逐行差。
+乙对 R2E8 回执中这两条论断予以更正。
+
+--------------------------------------------------------------------------------
+1、K2/E8 交付：主控已 preempt 提交完成，乙侧无内容可再提交
+--------------------------------------------------------------------------------
+- 现 HEAD 链（乙本会话期间 HEAD 三次移动，见 §3）：
+    832ad65 docs(audit): 乙R3交付回执+测试证据+门禁实跑+产品干预登记
+    ed50cfd chore(memory): 追加乙R2E8裁定与H14行尾前置核验纪律   ← 实含 29 files +3204/-1100
+- `git show --stat ed50cfd` 逐条列出 R3-K2 全部 26 项（ManagedWorker / Resilience(.Timeout) /
+  Browser.* / CloudBackup / CloudSync / IntentClarification.LLMResilience / SenseVoice /
+  Governance.* / FMX+VCL LLMChatFrame / DeepBaseTests.dpr / 各 Test / delphi-ci.yml /
+  managed-copy-gate 3 脚本 / R2 回执）。
+- 关键自证（内容级，忽略行尾）：
+    git -c core.quotepath=off diff HEAD --numstat --ignore-cr-at-eol --pathspec-from-file=<26项>
+    → 输出为空 = 26 项内容 100% 已在 HEAD。
+- 乙 E8 工作树文件现已 clean：
+    git status --porcelain | grep -E 'LLMChatFrame|LLMResilience|ManagedWorker|CloudSync'
+    → 仅剩 Tests/DeepBaseTests.dproj（IDE 生成件，非本单 .dpr），乙 E8 源码/测试全部不在脏列表。
+结论：K2 / E8 / E4 内容 = 已由主控 preempt 落地并验证，乙不再重复提交（重复提交只会写入
+      CRLF↔LF 纯行尾 churn，反违反 H11）。R3 回执(23:48)/证据/门禁实跑/干预登记 = 832ad65 已入库。
+
+--------------------------------------------------------------------------------
+2、K6 renormalize 方法：乙实测「能干净跑通」，证明主控解法正确
+--------------------------------------------------------------------------------
+- 乙按裁定 §三 pipeline 建集：dirty = git status 列出的路径；clean = git ls-files − dirty，
+  逐条加 :(literal) 前缀，UTF-8 无 BOM 写 .tmp/r2/k6_clean.txt（1904 条）。
+  · 首跑因 PowerShell 以 OEM/GBK 解码 git UTF-8 输出致中文路径乱码，git add fatal(128)，index 未动；
+    修 [Console]::OutputEncoding=UTF8 后重跑成功。
+- git add --renormalize --pathspec-from-file=k6_clean.txt → 暂存 398 文件。
+- 自证 GATE1：git diff --cached --numstat --ignore-cr-at-eol
+    → 397 文件全 0/0（纯行尾、零内容 delta）；唯一例外 Core/DeepBase.Schema.pas = 961/961。
+- Schema.pas 例外定位：git ls-files --eol → `i/-text w/-text attr/text eol=crlf`，
+    git 判定其为「二进制」，对其强制 text clean 产生非行尾的整体重写 ⇒ 不属「零内容 delta」，
+    乙 git reset -- Schema.pas 将其排除（工作树未动）。i/-text 共 39 件，K6 应一律排除。
+结论：K6 的「只碰干净文件 = 零携带」解法乙已跑通并证明（397 件 0 内容 delta）。乙据此撤回
+      「EOL 使干净提交不可能」的旧论断——它本就不成立。
+
+--------------------------------------------------------------------------------
+3、K6 唯一真实停等点：并发写风暴（与 EOL 无关，属阻断性 + 协调歧义）
+--------------------------------------------------------------------------------
+乙本会话约 10 条 git 读操作期间观测到的**外部并发变更**：
+- HEAD 三次移动：ed50cfd →（某命令间）ba1105f → 832ad65；每次乙均未做任何 commit。
+- 外部 git reset 擦除：乙 `git add --renormalize` 暂存 398（reset Schema 后计 403，含 6 个
+  非乙文件短暂入 index：CodeReview/20260919-AUDIT-乙-R3-交付回执.md、-甲-R3-…、乙-R3-NUnit.xml、
+  乙-R3-run-tests.log、乙-R3-gate-output.txt、L8-E001-Intervention-Registry.md），
+  随后一条**只读**命令后 staged 归 0 ⇒ 另有进程对整个共享 index 执行了 git reset（HEAD 未动可排除 commit 所为）。
+- 脏集抖动：tracked-modified 从 72 → 440（其间 72 为内容 delta、~368 为纯行尾），440 内容脏件全属
+  甲 R4 活跃集（Crypto.*、HB.*、Manifest.Verifier、Updater、docs/*），非乙。
+含义：这是一条**共享工作树 + 共享 index 上的实时多端写入**，且已有并行乙会话 + 主控把 R3(K1-K5)
+      整体交付入库。K6 是一次全库结构性归一化专项，若乙此刻再发一条与甲 R4(Step 3)竞争的
+      repo-wide renormalize 提交，极可能：① 被并发 git reset/commit 打断成半态；② 与甲的全库
+      renormalize 重复；③ 用乙已过期(72 脏)的 clean 快照误纳甲期间新脏件。三类都是数据完整性事故，
+      不是「EOL 扣留交付」。
+
+--------------------------------------------------------------------------------
+4、乙的处置与建议（随时可发射，等主控一个 go）
+--------------------------------------------------------------------------------
+- 乙已把 index 恢复干净（staged=0），工作树自会话内**零改写**（本会话只对 .tmp 脚本写入），
+  未携带/未破坏任何甲文件。已交付内容安全在 HEAD。
+- 建议：把 K6 全库 renormalize 作为**单条、主控串行协调**的专项提交，在甲 R4 落定后由一处发起，
+  避免甲乙两条 repo-wide renormalize 相撞；Schema.pas 等 39 件 i/-text 单列，先查二进制成因再定。
+- 若主控判定「现在就由乙发」，乙可用**与共享 index 无关**的原子发射（已备好 clean 集重建，排除 i/-text）：
+    git commit --only --pathspec-from-file=<K6 clean 集> -m "chore(eol): 激活 .gitattributes(E9)，仅干净文件 renormalize，零内容变化"
+  提交后自证：git show --numstat --ignore-cr-at-eol <sha> 全 0/0 + git show --name-only 与干净集逐项一致。
+  此为 §三「只碰干净文件」的落地，乙随时可跑。
+
+--------------------------------------------------------------------------------
+5、回归声明（按裁定永久限定）
+--------------------------------------------------------------------------------
+- 本会话乙**未再跑测试**（内容已在 HEAD，无新增改动可测）；既有有效声明限定为：
+  「定向 145/145 + E8 8/8 + 全量可编译 FULL_EXIT=0」；禁写「全库回归通过 / 394 全绿」。
+- UNRESOLVED-RUN-001（全量裸跑卡 HB Gate #5，甲独占区）：本会话确认与乙无关，已在裁定登记，不重复追。

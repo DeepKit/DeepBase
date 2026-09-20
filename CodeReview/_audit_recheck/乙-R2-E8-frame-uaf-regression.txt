@@ -1,0 +1,120 @@
+================================================================================
+乙-R2-E8 frame UAF 回归修复证据（主控 R2 PASS 7366865 后乙复核发现的真实缺陷）
+================================================================================
+工单：WO-20260919-AUDIT-乙-R2 E8（T3 剩余家族）
+承接：4f9a747 已提交/已 PASS 的 R2 E8 采用「frame 迁移仅改走 TManagedWorker +
+      Synchronize 闭包用 csDestroying/Assigned 假守卫」——乙复核判定为真实 UAF。
+本证据记录该回归修复的实现、编译、用例与门禁结果。
+
+--------------------------------------------------------------------------------
+0、扫描口径声明（H10）
+--------------------------------------------------------------------------------
+- 全库 .pas 扫描根 = 仓库根 d:\_Progs\02Business\DeepBase
+- 排除集：.tmp（含 b1-backup-preapply 修复前副本）、.claude、.git、BuildOutput、
+  DCUOutput、DeepBaseRun、bin、__history
+- 行尾现状 CRLF（H11）：本次仅触及内容，未批量改写行尾；单文件内行尾变化在 diff 中可解释
+
+--------------------------------------------------------------------------------
+1、缺陷定位（为何原 R2 的守卫是假的）
+--------------------------------------------------------------------------------
+- 现象：TLLMChatFrame/TFMXLLMChatFrame 的 worker body 内 TThread.Synchronize 闭包
+  直接解引用捕获的 Self（frame 字段 FRichEditChat/FMemoChat/FHistory/FChatItems…），
+  守卫写成 `Assigned(Self) and not (csDestroying in ComponentState)` / `Fxx = nil`。
+- 根因：宿主 frame 在 Destroy 里对超时 worker 走 Evacuate（移交隔离区、不再 Free），
+  但 frame 对象本身随 Owner 释放；晚到的 Synchronize 执行时 Self 裸指针仍非 nil
+  （Delphi 释放对象不清空指针），Assigned/ComponentState 检查全部失效 → 读已释放内存 = UAF。
+- 与 B4 不一致：B4（MVVM TContext）用引用计数回信上下文规避同类问题；原 R2 frame 未采用。
+
+--------------------------------------------------------------------------------
+2、修复（B4 同构）
+--------------------------------------------------------------------------------
+- VCL/DeepBase.VCL.LLMChatFrame.pas：新增 ILLMChatContext/TLLMChatContext
+  （FLock + FOwner 裸指针 + FRegistered）；字段 FCurrentCtx；Destroy 先 UnregisterOwner
+  再释放；DoSendMessage 内 4 个 Synchronize 闭包改为 LCtx.TryBeginOwner(LFrame) 守卫后
+  统一以 LFrame.* 访问。
+- FMX/DeepBase.FMX.LLMChatFrame.pas：同构 ILLMFMXChatContext/TLLMFMXChatContext；
+  DoSendMessage 2 个闭包改 LCtx.TryBeginOwner(LFrame) 守卫。
+- Features/DeepBase.IntentClarification.LLMResilience.pas：ExecuteWithResilience 超时路径
+  旧「LCtx := nil 故意泄漏」→ 改引用计数信箱 ILLMTaskContext/TLLMTaskContext + TManagedWorker，
+  超时唯一出口 Evacuate。
+- Core/DeepBase.ManagedWorker.pas：新增诊断 class function QuarantinedWorkerCount（持
+  FQuarantineLock 读隔离区当前数），供退出期用例与门禁断言“无泄漏”。
+- Tests/Test.DeepBase.ManagedWorker.pas：新增 BoundedWaitEvacuateDropsLateCallbackAfterHostUnregister
+  （headless 机制层复刻 frame 上下文语义：Cancel→Wait(小预算)→超时 Evacuate→UnregisterOwner→
+  晚到回写被 TryBeginOwner 丢弃→隔离区回基线）。
+  注：frame widget 级用例不可行的两点原因——Synchronize 需 Application 消息泵；
+      TBillingClient.Chat 非 virtual 无法注入阻塞假件；故在机制层等价验证。
+- Tests/DeepBaseTests.dpr：注册 Test.DeepBase.IntentClarification.LLMResilience。
+
+--------------------------------------------------------------------------------
+3、编译证据（dcc64 Win64）
+--------------------------------------------------------------------------------
+命令：powershell -File .tmp\r2\e7-build.ps1 -TargetsCsv '.tmp\r2\TestE8Resilience.dpr'
+结果：EXIT=0 / ALL_EXIT=0（VCL+FMX frame+LLMResilience+ManagedWorker 单编零错误）
+      仅剩既有 W1057 AnsiString→string 提示（LLMResilience 测试内，非错误）
+
+--------------------------------------------------------------------------------
+4、用例证据（合并 runner TestE8Resilience.exe：ManagedWorker + LLMResilience）
+--------------------------------------------------------------------------------
+Tests Found   : 8
+Tests Ignored : 0
+Tests Passed  : 8
+Tests Leaked  : 0
+Tests Failed  : 0
+Tests Errored : 0
+RUN_EXIT=0
+（含 BoundedWaitEvacuateDropsLateCallbackAfterHostUnregister：断言
+ LCallbackApplied=0 且隔离区在 15s 内回基线 = 晚到回写被正确丢弃、无泄漏）
+
+--------------------------------------------------------------------------------
+5、编码门禁（G3 BOM）
+--------------------------------------------------------------------------------
+- 本工单乙自有 E8 文件全部通过 check_pas_encoding.js（含新补 BOM 的
+  Test.DeepBase.IntentClarification.LLMResilience.pas）。
+- 剩余 7 个 G3 缺 BOM 一律非乙自有、属跨主债务/H1 冻结/甲独占，乙不得擅改（见 blocker 登记）：
+    Core/DeepBase.EHAI.Types.pas                （H1 FROZEN，禁改）
+    Core/DeepBase.Gate.Verdict.pas              （甲独占）
+    Core/DeepBase.HB.Choice.Types.pas
+    Core/DeepBase.Template.pas
+    Features/DeepBase.UIA.UnifiedActuator.pas    （甲独占 UIA 系）
+    Features/UIAutomationClient_TLB.pas          （第三方 TLB 生成）
+    Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas （甲 A8）
+  → 作为 BOM 跨主债务 blocker 上报主控统一裁定归属后处理，乙不 sweep-commit、不加豁免。
+
+--------------------------------------------------------------------------------
+6、E4 CloudSync 测试编译债（本轮一并清偿：plan 标 "待编译验证"）
+--------------------------------------------------------------------------------
+全量 DeepBaseTests.dpr 首编在 Tests/Test.DeepBase.CloudSync.pas 报 5 处错误（属乙 E4 自有测试，
+4f9a747 未提交该测试文件；为 乙 自己的 "待编译验证" 遗留），修复：
+- Assert.AreEqual(1, LDirty.Count, …) 泛型推不出 T → 按仓库既有可用范式 Integer(…) 包裹两侧（3 处）。
+- Assert.WillRaise(procedure…, nil, 'msg') 无匹配重载 → 该 DUnitX 版 WillRaise 必须传具体异常类；
+  核实 fail-closed 实际抛 ENetHTTPClientException（源自 System.Net.HttpClient），
+  改为 Assert.WillRaise(proc, ENetHTTPClientException, 'msg')，并在 uses 补 System.Net.HttpClient（2 处）。
+语义不破：断言 "传输失败即抛异常 = fail-closed，绝不静默返回空/0"，符合 E4 验收。
+
+--------------------------------------------------------------------------------
+7、编译与回归结果
+--------------------------------------------------------------------------------
+- 全量 DeepBaseTests.dpr（cwd=Tests 解析 dpr 内 'Regression\…' 相对路径）：FULL_EXIT=0，357160 行。
+- 定向回归 runner TestWOYiR2（CloudSync + ManagedWorker + LLMResilience + Reflection）：
+  Tests Found 145 / Passed 145 / Failed 0 / Leaked 0，RUN_EXIT=0。
+- E8 专属 runner TestE8Resilience：8/8 PASS，Leaked 0（含 frame 退出期用例）。
+- 全量套件 headless 直跑会卡在 "HB Gate #5: Resize Interaction Budget"（UI 性能基准需真实窗口消息泵），
+  与乙 R2 逻辑无关；故回归证据取 定向 runner + 全量可编译(FULL_EXIT=0)，非整套件裸跑。
+
+--------------------------------------------------------------------------------
+8、H13 提交 blocker：E9 .gitattributes 触发全库行尾再归一化（结构性，待主控排期）
+--------------------------------------------------------------------------------
+- 实测：Core/DeepBase.ManagedWorker.pas 暂存后 diff --numstat HEAD = 306/292（默认），
+  --ignore-cr-at-eol = 14/0。即真实内容仅 +14 行，其余全是 CRLF↔LF 逐行 EOL 差异。
+- 根因：HEAD 各 .pas blob 以 CRLF 存；E9 引入的 .gitattributes 声明 `*.pas text eol=crlf`，
+  其 clean 过滤器会在下次 git add 时把 blob 归一化为 LF。由于该再归一化从未以一次专门的
+  `git add --renormalize .` 落地，任意单个 .pas 一旦提交即背上"整文件 EOL 重写"的巨差。
+- 后果：乙若现在提交 E8 文件，会把 306/292 级的行尾再归一化噪声一并写入，违反 H11（禁批量改行尾）；
+  若改为做全库 renormalize，则会一次性波及甲并行改动的文件，违反 H13（不得携带甲活跃改动）。
+  两种都是特例绕过/短期主义，乙不做。
+- 建议（交主控裁定排期）：待甲 R2/R3 工作树落定后，由主控统一发起一次全库
+  `git add --renormalize .` 专项提交激活 E9 立法；此后乙的 E8 代码（内容 delta 已验证干净：
+  ManagedWorker +14、frame/LLMResilience 上下文守护、测试）再以精确 pathspec 落一个纯内容提交。
+- 在此之前，乙已完成并通过验证的代码/测试/证据全部留在工作树，不动 index、不 sweep、不携带甲文件。
+
