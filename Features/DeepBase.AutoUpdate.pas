@@ -57,6 +57,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.Net.HttpClient,
   System.Net.URLClient,
   System.JSON,
@@ -65,37 +66,26 @@ uses
   System.Threading,
   System.Generics.Collections,
   DeepBase.Updater,
+  DeepBase.Update.Contracts,
   DeepBase.Gate.Verdict,
   DeepBase.Commerce.Permissions,
   DeepBase.Crypto.RSA;
 
 type
   /// <summary>
-  /// Update channel used by AutoUpdate. Alias of DeepBase.Updater.TUpdateChannel.
-  /// Only stable/beta/dev are used by version.json; alpha maps to dev.
+  /// Update channel used by AutoUpdate. Alias of DeepBase.Update.Contracts
+  /// TUpdateChannel. Only stable/beta/dev are used by version.json; alpha maps
+  /// to dev.
   /// </summary>
-  TUpdateChannel = DeepBase.Updater.TUpdateChannel;
-  TUpdateInstallMode = DeepBase.Updater.TUpdateInstallMode;
+  TUpdateChannel = DeepBase.Update.Contracts.TUpdateChannel;
+  TUpdateInstallMode = DeepBase.Update.Contracts.TUpdateInstallMode;
 
   /// <summary>
-  /// Simplified update information parsed from version.json.
+  /// AU-06 SSOT 消解：本通道不再维护第二套更新信息记录，TUpdateInfo 为契约
+  /// 单元（DeepBase.Update.Contracts）的别名——PackageHash 存纯 hex 小写
+  /// （NormalizePackageHash 归一），Signature 固定 RSA-SHA256。
   /// </summary>
-  TUpdateInfo = record
-    Version: string;            // e.g. "1.2.3"
-    Channel: TUpdateChannel;    // stable/beta/dev
-    DownloadUrl: string;        // direct URL to installer/package
-    DownloadSize: Int64;        // bytes (may be 0 if unknown)
-    Sha256: string;             // optional SHA256 hex string
-    Signature: string;          // REVIEW5-FEAT-003: optional digital signature (base64/PEM)
-    ReleaseDate: TDateTime;     // parsed from ISO8601, or Now if missing
-    Changelog: string;          // releaseNotes
-    ForceUpdate: Boolean;       // isMandatory
-    InstallMode: TUpdateInstallMode;
-    AllowSilentInstall: Boolean;
-    BackgroundDownload: Boolean;
-    IdleWindowMinutes: Integer;
-    ForceRestart: Boolean;
-  end;
+  TUpdateInfo = DeepBase.Update.Contracts.TUpdateInfo;
 
   /// <summary>Callback used after asynchronous update check.</summary>
   TUpdateCheckCallback = reference to procedure(Success: Boolean; const Info: TUpdateInfo);
@@ -130,7 +120,6 @@ type
     procedure SetCurrentVersion(const Value: string);
 
     function ChannelKey(Channel: TUpdateChannel): string;
-    function NormalizeVersion(const S: string): string;
     function IsNewFormatJson(ARoot: TJSONObject): Boolean;
     procedure ResetUpdateInfo(out Info: TUpdateInfo; Channel: TUpdateChannel);
     procedure ParseInstallPolicy(Source: TJSONObject; var Info: TUpdateInfo);
@@ -180,13 +169,12 @@ type
 
     /// <summary>
     /// Gate (A6 TGateVerdict): verify integrity of a downloaded package —
-    /// SHA256 (when declared) then RSA-SHA256 signature (when declared).
-    /// Declared signature without a configured public key, digest/签名不匹配
-    /// 或密钥加载异常 ⇒ gdRejected；未声明任何完整性字段由调用侧
-    /// DownloadUpdate 前置拒绝（缺字段 = 拒绝，不进入本门禁）。
+    /// SHA256 of the file, then RSA-SHA256 signature over the file's raw
+    /// bytes (AU-01 单层摘要). 包 hash / 签名 / 公钥任一缺失 ⇒ gdRejected
+    /// （缺字段 = 拒绝，fail-closed）；未通过前置门禁的 Info 不会进入下载。
     /// 任一拒绝路径都会删除已落盘包，不给调用方误装被篡改文件的机会。
     /// </summary>
-    function VerifyDownloadedPackageIntegrity(const DestFile, AExpectedSha256,
+    function VerifyDownloadedPackageIntegrity(const DestFile, AExpectedPackageHash,
       ASignature: string): TGateVerdict;
 
     /// <summary>
@@ -240,7 +228,7 @@ begin
   inherited Create;
   FUpdateUrl := AUpdateUrl;
   FCurrentVersion := ACurrentVersion;
-  FChannel := TUpdateChannel.ucStable;
+  FChannel := ucStable;
   // REVIEW5-FEAT-003: Default HTTP timeouts to prevent indefinite hangs
   FConnectionTimeout := 30000; // 30 seconds
   FResponseTimeout := 60000;   // 60 seconds
@@ -286,13 +274,6 @@ begin
   end;
 end;
 
-function TDeepBaseAutoUpdate.NormalizeVersion(const S: string): string;
-begin
-  Result := Trim(S);
-  if (Result <> '') and ((Result[Low(Result)] = 'v') or (Result[Low(Result)] = 'V')) then
-    Delete(Result, Low(Result), 1);
-end;
-
 function TDeepBaseAutoUpdate.IsNewFormatJson(ARoot: TJSONObject): Boolean;
 begin
   if ARoot = nil then
@@ -306,20 +287,10 @@ end;
 procedure TDeepBaseAutoUpdate.ResetUpdateInfo(out Info: TUpdateInfo;
   Channel: TUpdateChannel);
 begin
-  Info.Version := '';
+  Info := Default(TUpdateInfo);
   Info.Channel := Channel;
-  Info.DownloadUrl := '';
-  Info.DownloadSize := 0;
-  Info.Sha256 := '';
-  Info.Signature := '';
-  Info.ReleaseDate := 0;
-  Info.Changelog := '';
-  Info.ForceUpdate := False;
-  Info.InstallMode := uimUnspecified;
-  Info.AllowSilentInstall := False;
-  Info.BackgroundDownload := True;
-  Info.IdleWindowMinutes := 0;
-  Info.ForceRestart := False;
+  // 与旧实现语义保持：无后台下载开关时默认允许后台下载。
+  Info.InstallPolicy.BackgroundDownload := True;
 end;
 
 procedure TDeepBaseAutoUpdate.ParseInstallPolicy(Source: TJSONObject;
@@ -343,35 +314,35 @@ begin
     if ModeStr = '' then
       ModeStr := PolicyObj.GetValue<string>('install_mode', '');
     if ModeStr <> '' then
-      Info.InstallMode := ParseInstallMode(ModeStr);
+      Info.InstallPolicy.Mode := ParseInstallMode(ModeStr);
 
-    Info.AllowSilentInstall := PolicyObj.GetValue<Boolean>('allowSilent',
-      PolicyObj.GetValue<Boolean>('allow_silent', Info.AllowSilentInstall));
-    Info.BackgroundDownload := PolicyObj.GetValue<Boolean>('backgroundDownload',
-      PolicyObj.GetValue<Boolean>('background_download', Info.BackgroundDownload));
-    Info.IdleWindowMinutes := PolicyObj.GetValue<Integer>('idleWindowMinutes',
-      PolicyObj.GetValue<Integer>('idle_window_minutes', Info.IdleWindowMinutes));
-    Info.ForceRestart := PolicyObj.GetValue<Boolean>('forceRestart',
-      PolicyObj.GetValue<Boolean>('force_restart', Info.ForceRestart));
+    Info.InstallPolicy.AllowSilent := PolicyObj.GetValue<Boolean>('allowSilent',
+      PolicyObj.GetValue<Boolean>('allow_silent', Info.InstallPolicy.AllowSilent));
+    Info.InstallPolicy.BackgroundDownload := PolicyObj.GetValue<Boolean>('backgroundDownload',
+      PolicyObj.GetValue<Boolean>('background_download', Info.InstallPolicy.BackgroundDownload));
+    Info.InstallPolicy.IdleWindowMinutes := PolicyObj.GetValue<Integer>('idleWindowMinutes',
+      PolicyObj.GetValue<Integer>('idle_window_minutes', Info.InstallPolicy.IdleWindowMinutes));
+    Info.InstallPolicy.ForceRestart := PolicyObj.GetValue<Boolean>('forceRestart',
+      PolicyObj.GetValue<Boolean>('force_restart', Info.InstallPolicy.ForceRestart));
   end;
 
-  if Info.InstallMode = uimUnspecified then
+  if Info.InstallPolicy.Mode = uimUnspecified then
   begin
     ModeStr := Source.GetValue<string>('installMode', '');
     if ModeStr = '' then
       ModeStr := Source.GetValue<string>('install_mode', '');
     if ModeStr <> '' then
-      Info.InstallMode := ParseInstallMode(ModeStr);
+      Info.InstallPolicy.Mode := ParseInstallMode(ModeStr);
   end;
 
-  Info.AllowSilentInstall := Source.GetValue<Boolean>('allowSilent',
-    Source.GetValue<Boolean>('allow_silent', Info.AllowSilentInstall));
-  Info.BackgroundDownload := Source.GetValue<Boolean>('backgroundDownload',
-    Source.GetValue<Boolean>('background_download', Info.BackgroundDownload));
-  Info.IdleWindowMinutes := Source.GetValue<Integer>('idleWindowMinutes',
-    Source.GetValue<Integer>('idle_window_minutes', Info.IdleWindowMinutes));
-  Info.ForceRestart := Source.GetValue<Boolean>('forceRestart',
-    Source.GetValue<Boolean>('force_restart', Info.ForceRestart));
+  Info.InstallPolicy.AllowSilent := Source.GetValue<Boolean>('allowSilent',
+    Source.GetValue<Boolean>('allow_silent', Info.InstallPolicy.AllowSilent));
+  Info.InstallPolicy.BackgroundDownload := Source.GetValue<Boolean>('backgroundDownload',
+    Source.GetValue<Boolean>('background_download', Info.InstallPolicy.BackgroundDownload));
+  Info.InstallPolicy.IdleWindowMinutes := Source.GetValue<Integer>('idleWindowMinutes',
+    Source.GetValue<Integer>('idle_window_minutes', Info.InstallPolicy.IdleWindowMinutes));
+  Info.InstallPolicy.ForceRestart := Source.GetValue<Boolean>('forceRestart',
+    Source.GetValue<Boolean>('force_restart', Info.InstallPolicy.ForceRestart));
 end;
 
 function TDeepBaseAutoUpdate.CheckForUpdateFromNewFormat(
@@ -391,8 +362,8 @@ begin
   if VerStr = '' then
     Exit;
 
-  CurVer := TSemanticVersion.Parse(NormalizeVersion(GetCurrentVersion));
-  RemoteVer := TSemanticVersion.Parse(NormalizeVersion(VerStr));
+  CurVer := TSemanticVersion.Parse(GetCurrentVersion);
+  RemoteVer := TSemanticVersion.Parse(VerStr);
   if not RemoteVer.IsNewerThan(CurVer) then
     Exit;
 
@@ -406,14 +377,14 @@ begin
   else
     Info.Channel := FChannel;
 
-  Info.Version := VerStr;
+  Info.Version := RemoteVer;
   Info.DownloadUrl := '';
   Info.DownloadSize := 0;
-  Info.Sha256 := '';
+  Info.PackageHash := '';
   Info.Signature := '';
-  Info.Changelog := ARoot.GetValue<string>('releaseNotes', '');
-  Info.ForceUpdate := ARoot.GetValue<Boolean>('mandatory', False);
-  Info.ForceRestart := Info.ForceUpdate;
+  Info.ReleaseNotes := ARoot.GetValue<string>('releaseNotes', '');
+  Info.IsMandatory := ARoot.GetValue<Boolean>('mandatory', False);
+  Info.InstallPolicy.ForceRestart := Info.IsMandatory;
 
   DateStr := ARoot.GetValue<string>('publishedAt', '');
   if DateStr = '' then
@@ -439,7 +410,7 @@ begin
     if Info.DownloadUrl = '' then
       Info.DownloadUrl := FileObj.GetValue<string>('downloadUrl', '');
     Info.DownloadSize := FileObj.GetValue<Int64>('size', 0);
-    Info.Sha256 := FileObj.GetValue<string>('sha256', '');
+    Info.PackageHash := NormalizePackageHash(FileObj.GetValue<string>('sha256', ''));
     Info.Signature := FileObj.GetValue<string>('signature', '');
   end;
 
@@ -472,12 +443,12 @@ begin
   if VerStr = '' then
     Exit;
 
-  CurVer := TSemanticVersion.Parse(NormalizeVersion(GetCurrentVersion));
-  RemoteVer := TSemanticVersion.Parse(NormalizeVersion(VerStr));
+  CurVer := TSemanticVersion.Parse(GetCurrentVersion);
+  RemoteVer := TSemanticVersion.Parse(VerStr);
   if not RemoteVer.IsNewerThan(CurVer) then
     Exit;
 
-  Info.Version := VerStr;
+  Info.Version := RemoteVer;
   Info.Channel := FChannel;
   Info.DownloadUrl := Source.GetValue<string>('downloadUrl', '');
   if Info.DownloadUrl = '' then
@@ -498,22 +469,21 @@ begin
     HashStr := Source.GetValue<string>('packageHash', '');
   if HashStr = '' then
     HashStr := Source.GetValue<string>('package_hash', '');
-  if SameText(Copy(HashStr, 1, 7), 'sha256:') then
-    Delete(HashStr, 1, 7);
-  Info.Sha256 := HashStr;
+  // 契约层唯一归一化入口（剥 sha256: 前缀 + 小写），替代旧的手工剥前缀。
+  Info.PackageHash := NormalizePackageHash(HashStr);
 
   Info.Signature := Source.GetValue<string>('signature', '');
 
-  Info.Changelog := Source.GetValue<string>('releaseNotes', '');
-  if Info.Changelog = '' then
-    Info.Changelog := Source.GetValue<string>('release_notes', '');
-  if Info.Changelog = '' then
-    Info.Changelog := Source.GetValue<string>('changelog', '');
+  Info.ReleaseNotes := Source.GetValue<string>('releaseNotes', '');
+  if Info.ReleaseNotes = '' then
+    Info.ReleaseNotes := Source.GetValue<string>('release_notes', '');
+  if Info.ReleaseNotes = '' then
+    Info.ReleaseNotes := Source.GetValue<string>('changelog', '');
 
-  Info.ForceUpdate := Source.GetValue<Boolean>('isMandatory', False);
-  if not Info.ForceUpdate then
-    Info.ForceUpdate := Source.GetValue<Boolean>('mandatory', False);
-  Info.ForceRestart := Info.ForceUpdate;
+  Info.IsMandatory := Source.GetValue<Boolean>('isMandatory', False);
+  if not Info.IsMandatory then
+    Info.IsMandatory := Source.GetValue<Boolean>('mandatory', False);
+  Info.InstallPolicy.ForceRestart := Info.IsMandatory;
 
   DateStr := Source.GetValue<string>('releaseDate', '');
   if DateStr = '' then
@@ -531,7 +501,7 @@ begin
     Info.ReleaseDate := Now;
 
   ParseInstallPolicy(Source, Info);
-  if Info.InstallMode = uimUnspecified then
+  if Info.InstallPolicy.Mode = uimUnspecified then
     ParseInstallPolicy(ARoot, Info);
 
   Result := Info.DownloadUrl <> '';
@@ -627,16 +597,16 @@ begin
       if VerStr = '' then
         Exit;
 
-      CurVer := TSemanticVersion.Parse(NormalizeVersion(GetCurrentVersion));
-      RemoteVer := TSemanticVersion.Parse(NormalizeVersion(VerStr));
+      CurVer := TSemanticVersion.Parse(GetCurrentVersion);
+      RemoteVer := TSemanticVersion.Parse(VerStr);
       if not RemoteVer.IsNewerThan(CurVer) then
         Exit;
 
-      Info.Version := VerStr;
+      Info.Version := RemoteVer;
       Info.Channel := FChannel;
-      Info.Changelog := Root.GetValue<string>('body', '');
-      Info.ForceUpdate := False;
-      Info.ForceRestart := False;
+      Info.ReleaseNotes := Root.GetValue<string>('body', '');
+      Info.IsMandatory := False;
+      Info.InstallPolicy.ForceRestart := False;
 
       AssetsArr := Root.GetValue<TJSONArray>('assets');
       if (AssetsArr <> nil) and (AssetsArr.Count > 0) then
@@ -694,16 +664,16 @@ begin
       if VerStr = '' then
         Exit;
 
-      CurVer := TSemanticVersion.Parse(NormalizeVersion(GetCurrentVersion));
-      RemoteVer := TSemanticVersion.Parse(NormalizeVersion(VerStr));
+      CurVer := TSemanticVersion.Parse(GetCurrentVersion);
+      RemoteVer := TSemanticVersion.Parse(VerStr);
       if not RemoteVer.IsNewerThan(CurVer) then
         Exit;
 
-      Info.Version := VerStr;
+      Info.Version := RemoteVer;
       Info.Channel := FChannel;
-      Info.Changelog := Root.GetValue<string>('body', '');
-      Info.ForceUpdate := False;
-      Info.ForceRestart := False;
+      Info.ReleaseNotes := Root.GetValue<string>('body', '');
+      Info.IsMandatory := False;
+      Info.InstallPolicy.ForceRestart := False;
 
       // Gitee JSON structure is similar to GitHub/GitCode; try common asset fields.
       AssetsArr := Root.GetValue<TJSONArray>('assets');
@@ -786,7 +756,7 @@ var
   Client: THTTPClient;
   Response: IHTTPResponse;
   FS: TFileStream;
-  Hash: string;
+  Verdict: TGateVerdict;
   PermCheck: TDeepKitPermissionResult;
 begin
   Result := False;
@@ -805,12 +775,21 @@ begin
   if Info.DownloadUrl = '' then
     Exit;
 
-  // REVIEW5-FEAT-003 + A6 fail-closed: integrity requirement.
-  // Production downloads must provide at least one integrity mechanism
-  // (SHA256 hash or digital signature). 缺字段 = 拒绝，不再先下载后拒。
-  if (Info.Sha256 = '') and (Info.Signature = '') then
+  // 改法项 (4)：静态 CDN 通道无主机白名单可配置，最低门禁 = https（契约层
+  // ValidateUpdateEndpointScheme）；需要白名单的通道用 Updater 侧集中门禁。
+  Verdict := ValidateUpdateEndpointScheme(Info.DownloadUrl);
+  if not Verdict.IsApproved then
   begin
-    FLastError := 'Download rejected: update package must provide SHA256 hash or digital signature for integrity verification';
+    FLastError := 'Download rejected: ' + Verdict.Reason;
+    Exit;
+  end;
+
+  // 强制完整性策略（改法项 (2)，与 Updater 通道同一门禁语义）：SHA256、
+  // RSA-SHA256 签名与公钥三者齐备才允许下载；任一缺失 = fail-closed 拒绝，
+  // 不再先下载后拒，也不再接受"只有 hash 没有签名"的弱基线。
+  if (Trim(Info.PackageHash) = '') or (Trim(Info.Signature) = '') or (Trim(FPublicKeyRSA) = '') then
+  begin
+    FLastError := 'Download rejected: package SHA256, RSA-SHA256 signature and a configured public key are all required (fail-closed)';
     Exit;
   end;
 
@@ -849,7 +828,7 @@ begin
 
   // A6 T1 fail-closed 立法：下载后置完整性校验收敛为类型化门禁
   // VerifyDownloadedPackageIntegrity（拒绝即删包），调用侧只认 IsApproved。
-  if not VerifyDownloadedPackageIntegrity(DestFile, Info.Sha256, Info.Signature)
+  if not VerifyDownloadedPackageIntegrity(DestFile, Info.PackageHash, Info.Signature)
     .IsApproved then
     Exit;
 
@@ -860,11 +839,10 @@ begin
 end;
 
 function TDeepBaseAutoUpdate.VerifyDownloadedPackageIntegrity(const DestFile,
-  AExpectedSha256, ASignature: string): TGateVerdict;
+  AExpectedPackageHash, ASignature: string): TGateVerdict;
 var
-  FS: TFileStream;
-  Hash: string;
-  DigestBytes: TBytes;
+  LFileBytes: TBytes;
+  LActualHash: string;
   Verifier: TRSAVerifier;
 
   function Reject(const AReason: string): TGateVerdict;
@@ -876,63 +854,43 @@ var
   end;
 
 begin
-  if (AExpectedSha256 = '') and (ASignature = '') then
-    Exit(Reject('Integrity verification rejected: package declares no SHA256 hash and no signature'));
+  // fail-closed（改法项 (2)）：hash / 签名 / 公钥任一缺失 = 不可校验 = 拒绝。
+  // 正常路径下 DownloadUpdate 前置门禁已保证三者齐备，此处是门禁自身的
+  // 防御纵深，不以"未声明即跳过"放行。
+  if Trim(AExpectedPackageHash) = '' then
+    Exit(Reject('Integrity verification rejected: package hash is missing (fail-closed)'));
+  if Trim(ASignature) = '' then
+    Exit(Reject('Integrity verification rejected: package signature is missing (fail-closed)'));
+  if Trim(FPublicKeyRSA) = '' then
+    Exit(Reject('Integrity verification rejected: no RSA public key configured (fail-closed)'));
 
-  // Verify SHA256 if provided
-  if AExpectedSha256 <> '' then
-  begin
-    FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
+  // 1. SHA256 of the downloaded file（双侧归一化比对，防前缀/大小写分叉）
+  if not TFile.Exists(DestFile) then
+    Exit(Reject('Downloaded package not found: ' + DestFile));
+  LFileBytes := TFile.ReadAllBytes(DestFile);
+  LActualHash := LowerCase(THashSHA2.GetHashStringFromFile(DestFile));
+  if not SameText(LActualHash, NormalizePackageHash(AExpectedPackageHash)) then
+    Exit(Reject('SHA256 mismatch: expected ' + NormalizePackageHash(AExpectedPackageHash) +
+      ', got ' + LActualHash));
+
+  // 2. RSA-SHA256 over the package's RAW BYTES（AU-01 单层摘要）。
+  //    旧实现先增量流式自算文件摘要、再对"摘要的摘要"验签（双层），与签名端
+  //    （对文件原始字节单层 SHA256 签名）语义分叉；收敛为 VerifySignature(TBytes)
+  //    单层：内部只做一次 SHA256(data) 后 RSA 验签。
+  try
+    Verifier := TRSAVerifier.Create;
     try
-      Hash := THashSHA2.GetHashString(FS, SHA256);
+      if not Verifier.LoadPublicKeyPEM(FPublicKeyRSA) then
+        Exit(Reject('Failed to load RSA public key: ' + Verifier.LastError));
+
+      if not Verifier.VerifySignature(LFileBytes, ASignature) then
+        Exit(Reject('Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid'));
     finally
-      FreeAndNil(FS);
+      FreeAndNil(Verifier);
     end;
-
-    if not SameText(Hash, AExpectedSha256) then
-      Exit(Reject('SHA256 mismatch: expected ' + AExpectedSha256 + ', got ' + Hash));
-  end;
-
-  // Verify package signature.
-  // Production protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, Windows CNG).
-  // RSA path is authoritative; fail-closed when a signature is present but no
-  // production RSA public key is configured.
-  if ASignature <> '' then
-  begin
-    if Trim(FPublicKeyRSA) = '' then
-      Exit(Reject('Signature verification rejected: no RSA public key configured (RSA-SHA256 production)'));
-
-    try
-      FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
-      try
-        var H := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
-        var Buf: array[0..65535] of Byte;
-        var ReadCount: Integer;
-        while True do
-        begin
-          ReadCount := FS.Read(Buf[0], Length(Buf));
-          if ReadCount <= 0 then Break;
-          H.Update(Buf[0], ReadCount);
-        end;
-        DigestBytes := H.HashAsBytes;
-      finally
-        FreeAndNil(FS);
-      end;
-
-      Verifier := TRSAVerifier.Create;
-      try
-        if not Verifier.LoadPublicKeyPEM(FPublicKeyRSA) then
-          Exit(Reject('Failed to load RSA public key: ' + Verifier.LastError));
-
-        if not Verifier.VerifySignature(DigestBytes, ASignature) then
-          Exit(Reject('Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid'));
-      finally
-        FreeAndNil(Verifier);
-      end;
-    except
-      on E: Exception do
-        Exit(Reject('Integrity verification exception: ' + E.Message));
-    end;
+  except
+    on E: Exception do
+      Exit(Reject('Integrity verification exception: ' + E.Message));
   end;
 
   Result := TGateVerdict.Approved;

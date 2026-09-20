@@ -185,11 +185,17 @@ function VerifyPackageHash(const PackagePath, ExpectedSha256: string;
 var
   FS: TFileStream;
   ActualHash: string;
+  LExpected: string;
 begin
   Result := False;
   ErrorMessage := '';
+  // fail-closed：缺期望 hash = 不可校验 = 拒绝（与 DeepBase.Updater 门禁同型，
+  // 旧实现在此 Exit(True) 把"未提供校验基线"当作通过）。
   if Trim(ExpectedSha256) = '' then
-    Exit(True);
+  begin
+    ErrorMessage := 'Expected SHA-256 is empty; installation refused (fail-closed)';
+    Exit(False);
+  end;
 
   if not TFile.Exists(PackagePath) then
   begin
@@ -197,13 +203,19 @@ begin
     Exit(False);
   end;
 
+  // 与 §16.10 归一化语义对齐：剥 "sha256:" 前缀 + 小写。
+  LExpected := Trim(ExpectedSha256);
+  if SameText(Copy(LExpected, 1, 7), 'sha256:') then
+    Delete(LExpected, 1, 7);
+  LExpected := LowerCase(LExpected);
+
   FS := TFileStream.Create(PackagePath, fmOpenRead or fmShareDenyWrite);
   try
     ActualHash := LowerCase(THashSHA2.GetHashString(FS, SHA256));
-    if not SameText(ActualHash, Trim(ExpectedSha256)) then
+    if not SameText(ActualHash, LExpected) then
     begin
       ErrorMessage := Format('Package hash mismatch. expected=%s actual=%s',
-        [Trim(ExpectedSha256), ActualHash]);
+        [LExpected, ActualHash]);
       Exit(False);
     end;
   finally

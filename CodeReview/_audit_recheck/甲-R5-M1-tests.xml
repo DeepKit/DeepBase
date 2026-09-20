@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="D:\_Progs\02Business\DeepBase\Tests\TestUpdateChainM1.exe" total="153" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-09-20" time="16:59:29">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="TestUpdateChainM1.exe" executed="true" result="Success" success="True" time="16:59:29" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="Test" executed="true" result="Success" success="True" time="0.406" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DeepBase" executed="true" result="Success" success="True" time="0.406" asserts="0" >
+                <results>
+                    <test-suite type="Namespace" name="AutoUpdate" executed="true" result="Success" success="True" time="0.112" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestAutoUpdateClass" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Create_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_WithParams" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UpdateUrl_Get" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UpdateUrl_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CurrentVersion_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CurrentVersion_Set" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CurrentVersion_Empty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Channel_Default" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Channel_SetStable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Channel_SetBeta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Channel_SetDev" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CheckForUpdate_NoUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestIntegrityEnforcement" executed="True" result="Success" success="True" time="0.109" >
+                            <results>
+                              <test-case name="Test_DefaultConnectionTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DefaultResponseTimeout" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TimeoutsAreConfigurable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DownloadUpdate_FailClosed_NoIntegrityInfo" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                              <test-case name="Test_DownloadUpdate_FailClosed_OnlyPackageHash" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_DownloadUpdate_FailClosed_OnlySignature" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                              <test-case name="Test_DownloadUpdate_FailClosed_NoPublicKey" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                              <test-case name="Test_DownloadUpdate_NonHttpsEndpoint_RejectedWithoutRequest" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                              <test-case name="Test_Verify_IntegrityKAT_SignedRawBytes_Approved" executed="True" result="Success" success="True" time="0.013" asserts="0" />
+                              <test-case name="Test_Verify_TamperedPackageAfterSigning_RejectedAndDeleted" executed="True" result="Success" success="True" time="0.021" asserts="0" />
+                              <test-case name="Test_Verify_ForgedSignature_HashConsistent_Rejected" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                              <test-case name="Test_Verify_MissingHash_RejectedAndDeleted" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_Verify_MissingSignature_Rejected" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                              <test-case name="Test_Verify_MissingPublicKey_Rejected" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateChannel" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Stable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Beta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Alpha" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Dev" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EnumValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateInfo" executed="True" result="Success" success="True" time="0.003" >
+                            <results>
+                              <test-case name="Test_DefaultValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_VersionField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ChannelField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DownloadUrlField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_DownloadSizeField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PackageHashField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_SignatureField" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_ReleaseDateField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ReleaseNotesField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsMandatoryField" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsEmpty" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AllFieldsAssignment" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestVersionNormalization" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_VersionWithV" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_VersionWithoutV" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EmptyVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_TrimmedVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                    <test-suite type="Namespace" name="Updater" executed="true" result="Success" success="True" time="0.293" asserts="0" >
+                      <results>
+                          <test-suite type="Fixture" name="TTestSemanticVersion" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Parse_SimpleVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_VersionWithBuild" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_VersionWithPreRelease" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_VersionWithVPrefix" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_EmptyString_ReturnsZeros" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_MajorOnly" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_MajorMinor" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_ComplexPreRelease" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_BasicVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_WithBuild" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_WithPreRelease" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ToString_WithBuildAndPreRelease" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_Equal_ReturnsZero" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_CompareTo_MajorDifference" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_MinorDifference" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_PatchDifference" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_BuildDifference" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_PreRelease_LowerThanRelease" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CompareTo_PreReleaseComparison" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsNewerThan_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsNewerThan_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsNewerThan_Equal_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Equal_Operator_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Equal_Operator_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_NotEqual_Operator_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_NotEqual_Operator_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GreaterThan_Operator_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_GreaterThan_Operator_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LessThan_Operator_True" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_LessThan_Operator_False" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateChannel" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ParseChannel_Stable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseChannel_Beta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseChannel_Alpha" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseChannel_Dev" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseChannel_Unknown_ReturnsStable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseChannel_CaseInsensitive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ChannelToString_Stable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ChannelToString_Beta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ChannelToString_Alpha" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ChannelToString_Dev" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateContracts" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_NormalizePackageHash_StripsPrefixAndLowercases" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManifestPayload_SevenFieldsFixedOrder" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ManifestPayload_EmptyFields_KeepFieldCount" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EndpointUrl_HttpRejected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EndpointUrl_EmptyWhitelistRejected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EndpointUrl_HostNotWhitelistedRejected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EndpointUrl_HttpsWithWhitelistedHostApproved" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_EndpointScheme_AcceptsHttpsWithoutWhitelist" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateInfo" executed="True" result="Success" success="True" time="0.020" >
+                            <results>
+                              <test-case name="Test_IsEmpty_AllZeros_ReturnsTrue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsEmpty_WithVersion_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_IsEmpty_WithDownloadUrl_ReturnsFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_PackageHash_StripsSha256Prefix_AndLowercases" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_Parse_SignatureFields_MappedCorrectly" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_Parse_InvalidJson_ReturnsFalse" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Parse_EmptyPackageHash_StaysEmpty" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateManager" executed="True" result="Success" success="True" time="0.053" >
+                            <results>
+                              <test-case name="Test_Create_InitialState" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_StatusIsIdle" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Create_ChannelIsStable" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_SetsUpdateUrl" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_SetsCurrentVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Initialize_SetsApplicationDir" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_SetPublicKey_SetsKey" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AutoCheck_DefaultFalse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_AutoCheckInterval_Default24Hours" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Channel_CanBeSet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UpdateCheckRouteMode_DefaultAuto" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_UpdateRequestContext_CanBeSet" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ParseUpdateInfoFromJson_ManifestFields" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_CheckForUpdates_UsesInjectedTransport" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Cancel_SetsCancelledFlag" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateProgress" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_ProgressPercent_ZeroTotal_ReturnsZero" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_HalfDownloaded" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_FullyDownloaded" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ProgressPercent_Rounding" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestUpdateSecurity" executed="True" result="Success" success="True" time="0.219" >
+                            <results>
+                              <test-case name="Test_VerifySignature_ValidHashSignature_Approved" executed="True" result="Success" success="True" time="0.009" asserts="0" />
+                              <test-case name="Test_VerifySignature_WrongKey_Rejected" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                              <test-case name="Test_VerifySignature_EmptySignature_Rejected" executed="True" result="Success" success="True" time="0.005" asserts="0" />
+                              <test-case name="Test_VerifySignature_TamperedData_Rejected" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_VerifySignature_NoPublicKey_Rejected" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_StageAndVerify_MissingPackageHash_Rejected" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_StageAndVerify_MissingSignature_Rejected" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_StageAndVerify_DeclaredSignatureNoPublicKey_Rejected" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_StageAndVerify_HashMismatch_Rejected" executed="True" result="Success" success="True" time="0.014" asserts="0" />
+                              <test-case name="Test_StageAndVerify_ValidHashAndSignature_Approved" executed="True" result="Success" success="True" time="0.012" asserts="0" />
+                              <test-case name="Test_StageAndVerify_MissingManifestSignature_Rejected" executed="True" result="Success" success="True" time="0.006" asserts="0" />
+                              <test-case name="Test_ManifestVerify_PrecedesDownload_Approved" executed="True" result="Success" success="True" time="0.026" asserts="0" />
+                              <test-case name="Test_ManifestSignatureForged_RejectedWithoutDownload" executed="True" result="Success" success="True" time="0.017" asserts="0" />
+                              <test-case name="Test_PackageSignatureForged_RejectedAfterDownload" executed="True" result="Success" success="True" time="0.041" asserts="0" />
+                              <test-case name="Test_UpdateEndpoint_HttpScheme_RejectedWithoutRequest" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_UpdateEndpoint_HostNotWhitelisted_RejectedWithoutRequest" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_VerifyFileHash_ValidHash_Approved" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                              <test-case name="Test_VerifyFileHash_WrongHash_Rejected" executed="True" result="Success" success="True" time="0.015" asserts="0" />
+                              <test-case name="Test_VerifyFileHash_EmptyExpectedHash_Rejected" executed="True" result="Success" success="True" time="0.008" asserts="0" />
+                              <test-case name="Test_Downgrade_NewerThanCurrent_Allowed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Downgrade_OlderThanCurrent_Detected" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Downgrade_SameVersion_NotAllowed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_ZipSlip_PathTraversal_Detected" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                              <test-case name="Test_ZipSlip_NormalPath_Allowed" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_InsecureDevMode_Disabled_RejectsMissingIntegrity" executed="True" result="Success" success="True" time="0.003" asserts="0" />
+                              <test-case name="Test_InsecureDevMode_Enabled_SkipsVerification" executed="True" result="Success" success="True" time="0.007" asserts="0" />
+                            </results>
+                          </test-suite>
+                          <test-suite type="Fixture" name="TTestVersionEdgeCases" executed="True" result="Success" success="True" time="0.000" >
+                            <results>
+                              <test-case name="Test_Parse_LargeVersionNumbers" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_ZeroVersion" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Compare_ZeroVersions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PreRelease_AlphaBeforeBeta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_PreRelease_RCAfterBeta" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Parse_NonNumericParts_Handled" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                            </results>
+                          </test-suite>
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>

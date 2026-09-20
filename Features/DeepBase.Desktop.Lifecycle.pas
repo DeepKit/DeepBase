@@ -8,6 +8,7 @@ uses
   DeepBase.Commerce.SafeClient,
   DeepBase.Commerce.Types,
   DeepBase.Commerce.UpgradeFlow,
+  DeepBase.Update.Contracts,
   DeepBase.Updater;
 
 type

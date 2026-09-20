@@ -87,19 +87,6 @@ type
   end;
 
   /// <summary>
-  /// Update info record
-  /// </summary>
-  TUpdateInfo = record
-    Version: string;
-    ReleaseDate: TDateTime;
-    DownloadUrl: string;
-    FileSize: Int64;
-    SHA256: string;
-    Changelog: string;
-    ForceUpdate: Boolean;
-  end;
-
-  /// <summary>
   /// Hotkey default record
   /// </summary>
   THotkeyDefault = record
@@ -146,11 +133,6 @@ type
   /// Progress event
   /// </summary>
   TProgressEvent = procedure(Sender: TObject; Current, Total: Int64; const Status: string) of object;
-
-  /// <summary>
-  /// Update available event
-  /// </summary>
-  TUpdateAvailableEvent = procedure(Sender: TObject; const UpdateInfo: TUpdateInfo) of object;
 
   /// <summary>
   /// Save extra state event

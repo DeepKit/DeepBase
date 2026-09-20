@@ -1,0 +1,104 @@
+M1 consumer-unit compile gate: every unit that touches the update chain outside Features
+cmd: dcc64 <unit> -U'Core;Features;VCL;FMX;Tools/WebService;<studio lib>;<DUnitX>' -NU DCUOutput/Win64
+
+=== Features/DeepBase.Update.Contracts.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+383 lines, 0.12 seconds, 8241 bytes code, 1180 bytes data.
+
+=== Features/DeepBase.Updater.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+2014 lines, 0.23 seconds, 88807 bytes code, 12060 bytes data.
+
+=== Features/DeepBase.AutoUpdate.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+901 lines, 0.17 seconds, 49876 bytes code, 7452 bytes data.
+
+=== Features/DeepBase.Desktop.Lifecycle.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+498 lines, 0.17 seconds, 7814 bytes code, 1196 bytes data.
+
+=== VCL/DeepBase.VCL.AutoUpdater.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Core\DeepBase.PluginManager.pas(1095) Hint: H2077 Value assigned to 'TDeepBasePluginManager.IsValidPluginPath' never used
+Core\DeepBase.FormState.pas(409) Hint: H2443 Inline function 'TRttiType.GetHandle' has not been expanded because unit 'System.TypInfo' is not specified in USES list
+Core\DeepBase.Manager.Operational.pas(56) Hint: H2077 Value assigned to 'TDeepBaseManagerOperational.GetRetentionDays' never used
+Core\DeepBase.Manager.pas(566) Hint: H2077 Value assigned to 'TDeepBaseManager.DoLocateConfigDB' never used
+VCL\VCL/DeepBase.VCL.AutoUpdater.pas(89) Hint: H2164 Variable 'Info' is declared but never used in 'TAutoUpdater.CheckUpdate'
+12974 lines, 0.62 seconds, 3723 bytes code, 508 bytes data.
+
+=== VCL/DeepBase.VCL.UpdateDialog.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\DeepBase.VCL.UpdateDialog.pas(163) Hint: H2443 Inline function 'MessageDlg' has not been expanded because unit 'System.UITypes' is not specified in USES list
+330 lines, 0.23 seconds, 10004 bytes code, 988 bytes data.
+
+=== VCL/DeepBase.VCL.DesktopLifecycle.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+VCL\DeepBase.VCL.DesktopLifecycle.pas(147) Hint: H2443 Inline function 'MessageDlg' has not been expanded because unit 'System.UITypes' is not specified in USES list
+VCL\DeepBase.VCL.DesktopLifecycle.pas(150) Hint: H2443 Inline function 'MessageDlg' has not been expanded because unit 'System.UITypes' is not specified in USES list
+333 lines, 0.19 seconds, 3849 bytes code, 636 bytes data.
+
+=== FMX/DeepBase.FMX.AutoUpdater.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+FMX\FMX/DeepBase.FMX.AutoUpdater.pas(63) Hint: H2219 Private symbol 'GetPlatformUpdateMethod' declared but never used
+438 lines, 0.31 seconds, 14169 bytes code, 1420 bytes data.
+
+=== FMX/DeepBase.FMX.UpdateDialog.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+FMX\DeepBase.FMX.UpdateDialog.pas(256) Warning: W1000 Symbol 'MessageDlg' is deprecated: 'Use FMX.DialogService methods'
+FMX\DeepBase.FMX.UpdateDialog.pas(331) Warning: W1000 Symbol 'MessageDlg' is deprecated: 'Use FMX.DialogService methods'
+FMX\DeepBase.FMX.UpdateDialog.pas(347) Warning: W1000 Symbol 'MessageDlg' is deprecated: 'Use FMX.DialogService methods'
+390 lines, 0.36 seconds, 10353 bytes code, 892 bytes data.
+
+=== FMX/DeepBase.FMX.DesktopLifecycle.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+FMX\DeepBase.FMX.Platform.pas(133) Warning: W1010 Method 'FreeInstance' hides virtual method of base type 'TObject'
+FMX\DeepBase.FMX.Platform.pas(557) Hint: H2077 Value assigned to 'TUniPlatformAdapter.OpenURL' never used
+FMX\DeepBase.FMX.Platform.pas(111) Hint: H2219 Private symbol 'CheckAndroidPermission' declared but never used
+FMX\DeepBase.FMX.Platform.pas(117) Hint: H2219 Private symbol 'CheckiOSPermission' declared but never used
+FMX\DeepBase.FMX.Platform.pas(121) Hint: H2219 Private symbol 'RequestiOSPermission' declared but never used
+1478 lines, 0.31 seconds, 3682 bytes code, 588 bytes data.
+
+=== Tools/UpdaterHelper/UpdaterHelper.Core.pas ===
+Embarcadero Delphi for Win64 compiler version 37.0
+Copyright (c) 1983,2026 Embarcadero Technologies, Inc.
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(147) Hint: H2077 Value assigned to 'KillProcessById' never used
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(190) Hint: H2077 Value assigned to 'VerifyPackageHash' never used
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(236) Hint: H2077 Value assigned to 'RestoreBackup' never used
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(287) Hint: H2077 Value assigned to 'ApplyPackageWithRollback' never used
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(364) Hint: H2077 Value assigned to 'RestartApplication' never used
+Tools\UpdaterHelper\Tools/UpdaterHelper/UpdaterHelper.Core.pas(507) Hint: H2077 Value assigned to 'TUpdaterHelper.Execute' never used
+549 lines, 0.11 seconds, 55124 bytes code, 9068 bytes data.
+
+=== SUMMARY ===
+UNITS=12
+ERROR_FATAL=0
+NUL=0
+
+=== PRE-EXISTING DEFECT (NOT M1): Examples/Templates/Common/Template.AutoUpdateBootstrap.pas ===
+This template unit is not referenced by any .dpr/.dproj in the main tree and does not compile at HEAD either:
+it writes 6 properties (Channel/ShowDialogOnUpdate/EnablePolicyDrivenSilentUpdate/
+SilentInstallPollIntervalMs/AutoTriggerExitInstall/SilentInstallMainExePath) that
+git show HEAD:VCL/DeepBase.VCL.AutoUpdater.pas does not declare (only UpdateUrl/CurrentVersion/AutoCheck).
+Registering as a finding; not fixed inside M1 scope.
+
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(45) Error: E2003 Undeclared identifier: 'Channel'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(45) Error: E2003 Undeclared identifier: 'ucStable'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(46) Error: E2003 Undeclared identifier: 'ShowDialogOnUpdate'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(47) Error: E2003 Undeclared identifier: 'EnablePolicyDrivenSilentUpdate'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(48) Error: E2003 Undeclared identifier: 'SilentInstallPollIntervalMs'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(49) Error: E2003 Undeclared identifier: 'AutoTriggerExitInstall'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(50) Error: E2003 Undeclared identifier: 'SilentInstallMainExePath'
+Examples\Templates\Common\Template.AutoUpdateBootstrap.pas(63) Error: E2029 'END' expected but ')' found
+
+ERROR_FATAL_IN_11_UPDATE_CHAIN_UNITS=0
+ERROR_FATAL_IN_PRE_EXISTING_DEAD_TEMPLATE=8 (documented finding above; unit unreferenced by any .dpr/.dproj and already broken at HEAD)

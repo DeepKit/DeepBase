@@ -44,6 +44,7 @@ uses
   System.Threading,
   DeepBase.Exceptions,
   DeepBase.Gate.Verdict,
+  DeepBase.Update.Contracts,
   DeepBase.Net.Transport
   {$IFDEF MSWINDOWS}
   , DeepBase.Crypto, DeepBase.Crypto.RSA, Winapi.Windows
@@ -55,51 +56,20 @@ uses
 type
   // Forward declarations
   TUpdateManager = class;
-  
-  // ============================================================================
-  // Version Types
-  // ============================================================================
-  
-  /// <summary>
-  /// Semantic version representation
-  /// </summary>
-  TSemanticVersion = record
-    Major: Integer;
-    Minor: Integer;
-    Patch: Integer;
-    Build: Integer;
-    PreRelease: string;
-    
-    class function Parse(const VersionStr: string): TSemanticVersion; static;
-    function ToString: string;
-    function CompareTo(const Other: TSemanticVersion): Integer;
-    function IsNewerThan(const Other: TSemanticVersion): Boolean;
-    class operator Equal(const A, B: TSemanticVersion): Boolean;
-    class operator NotEqual(const A, B: TSemanticVersion): Boolean;
-    class operator GreaterThan(const A, B: TSemanticVersion): Boolean;
-    class operator LessThan(const A, B: TSemanticVersion): Boolean;
-  end;
-  
-  // ============================================================================
-  // Update Types
-  // ============================================================================
-  
-  /// <summary>
-  /// Update channel
-  /// </summary>
-  TUpdateChannel = (ucStable, ucBeta, ucAlpha, ucDev);
-  
-  /// <summary>
-  /// Update type
-  /// </summary>
-  TUpdateType = (utFull, utIncremental, utPatch);
 
-  /// <summary>
-  /// Update install mode.
-  /// interactive/immediate: install in current flow.
-  /// onExit/whenIdle: download and stage first, install later in safe window.
-  /// </summary>
-  TUpdateInstallMode = (uimUnspecified, uimInteractive, uimImmediate, uimOnExit, uimWhenIdle);
+  // ============================================================================
+  // Update contracts (SSOT: DeepBase.Update.Contracts)
+  // 版本/通道/安装策略/TUpdateInfo 的规范类型定义在 Contracts 单元；
+  // 本单元只做别名转接，禁止第二套记录定义（AU-06）。
+  // ============================================================================
+
+  TSemanticVersion = DeepBase.Update.Contracts.TSemanticVersion;
+  TUpdateChannel = DeepBase.Update.Contracts.TUpdateChannel;
+  TUpdateType = DeepBase.Update.Contracts.TUpdateType;
+  TUpdateInstallMode = DeepBase.Update.Contracts.TUpdateInstallMode;
+  TUpdateInstallPolicy = DeepBase.Update.Contracts.TUpdateInstallPolicy;
+  TUpdateFile = DeepBase.Update.Contracts.TUpdateFile;
+  TUpdateInfo = DeepBase.Update.Contracts.TUpdateInfo;
 
   /// <summary>
   /// API route strategy for update checking.
@@ -109,17 +79,6 @@ type
   /// </summary>
   TUpdateCheckRouteMode = (ucrmAuto, ucrmLegacyCheck, ucrmManifest);
 
-  /// <summary>
-  /// Install policy carried by update metadata.
-  /// </summary>
-  TUpdateInstallPolicy = record
-    Mode: TUpdateInstallMode;
-    AllowSilent: Boolean;
-    BackgroundDownload: Boolean;
-    IdleWindowMinutes: Integer;
-    ForceRestart: Boolean;
-  end;
-  
   /// <summary>
   /// Update status
   /// </summary>
@@ -135,46 +94,7 @@ type
     usComplete,
     usFailed
   );
-  
-  /// <summary>
-  /// Update file information
-  /// </summary>
-  TUpdateFile = record
-    FileName: string;
-    RelativePath: string;
-    Size: Int64;
-    Hash: string;        // SHA256 hash
-    Action: string;      // 'add', 'update', 'delete'
-  end;
-  
-  /// <summary>
-  /// Update information
-  /// </summary>
-  TUpdateInfo = record
-    AppId: string;
-    Version: TSemanticVersion;
-    ReleaseDate: TDateTime;
-    Channel: TUpdateChannel;
-    UpdateType: TUpdateType;
-    Title: string;
-    Description: string;
-    ReleaseNotes: string;
-    DownloadUrl: string;
-    DownloadSize: Int64;
-    PackageHash: string;    // SHA256 of package
-    Signature: string;      // RSA signature
-    SignatureAlgorithm: string;  // rsa-sha256/hmac-sha256/sha256
-    ManifestHash: string;
-    ManifestSignature: string;
-    SignatureRequired: Boolean;
-    MinVersion: TSemanticVersion;  // Minimum version for incremental
-    IsMandatory: Boolean;
-    InstallPolicy: TUpdateInstallPolicy;
-    Files: TArray<TUpdateFile>;
-    
-    function IsEmpty: Boolean;
-  end;
-  
+
   /// <summary>
   /// Update progress information
   /// </summary>
@@ -218,8 +138,10 @@ type
     FStatus: TUpdateStatus;
     FLastError: string;
     FPublicKey: string;  // RSA public key for signature verification
-    FSignatureSecret: string;  // Shared secret for HMAC signature verification
-    FInsecureDevMode: Boolean;  // EDGE-006: when True, allows bypass of missing hash/key checks
+    FAllowedHosts: TArray<string>;  // 更新端点主机白名单（改法项 (4)），空=拒绝
+{$IFNDEF RELEASE}
+    FInsecureDevMode: Boolean;  // EDGE-006: dev-only bypass; compiled out of RELEASE builds
+{$ENDIF}
     FAutoCheck: Boolean;
     FAutoCheckInterval: Integer;  // Hours
     FLastCheckTime: TDateTime;
@@ -244,11 +166,11 @@ type
     function ApplyUpdate(const PackagePath: string; 
       const Info: TUpdateInfo): Boolean;
     function ParseUpdateInfo(const JSON: TJSONObject): TUpdateInfo;
-    function BuildManifestSignaturePayload(const Info: TUpdateInfo): string;
     function BuildUpdateCheckUrl: string;
     function BuildUpdateHeaders: TNetHeaders;
     function SendHttpRequest(AMethod: TDeepBaseHttpMethod; const AUrl: string;
       const AHeaders: TNetHeaders = nil): TDeepBaseHttpTransportResponse;
+    function EffectiveAllowedHosts: TArray<string>;
     function ResolveInstallMode(const Info: TUpdateInfo): TUpdateInstallMode;
     function GetSystemIdleMilliseconds: UInt64;
     function StageUpdatePackage(const Info: TUpdateInfo; out PackagePath: string): Boolean;
@@ -270,25 +192,27 @@ type
     /// <summary>Set RSA public key for signature verification</summary>
     procedure SetPublicKey(const PublicKeyPEM: string);
 
-    /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
-    procedure SetSignatureSecret(const Secret: string);
-
-    /// <summary>Gate (A6 TGateVerdict): verify a signature over Data. Unknown
-    /// algorithm / empty fields / missing trust material ⇒ gdRejected.</summary>
-    function VerifySignature(const Data, Signature, Algorithm: string): TGateVerdict;
+    /// <summary>Gate (A6 TGateVerdict): verify an RSA-SHA256 signature over Data
+    /// (UTF-8 bytes, single-layer SHA-256 digest). 算法固定本地信任锚，
+    /// 不接受远端自述；空字段/缺公钥 ⇒ gdRejected。</summary>
+    function VerifySignature(const Data, Signature: string): TGateVerdict;
 
     /// <summary>Gate (A6 TGateVerdict): verify a downloaded file's SHA256 hash.</summary>
     function VerifyFileHash(const FilePath, ExpectedHash: string): TGateVerdict;
 
     /// <summary>Stage + full verification WITHOUT install (docs/66 §16.5 steps 1-5:
     /// package hash / package signature / manifest hash / manifest signature).
+    /// manifest 验签前置于下载（改法项 (4)：download_url 只信任已验签 manifest）。
     /// 配置同步等“下载+验证但不安装程序二进制”场景复用。</summary>
     function StageAndVerifyPackage(const Info: TUpdateInfo;
       out PackagePath: string; out ErrorMsg: string): TGateVerdict; overload;
 
+{$IFNDEF RELEASE}
     /// <summary>Enable insecure dev mode: allows updates without hash/signature.
-    /// NEVER enable in production builds. Use only for local development testing.</summary>
+    /// NEVER enable in production builds. Use only for local development testing.
+    /// RELEASE 编译期整体剔除（改法项 (2)）。</summary>
     property InsecureDevMode: Boolean read FInsecureDevMode write FInsecureDevMode;
+{$ENDIF}
 
     /// <summary>Inject HTTP transport for System.Net/ICS/test implementations.</summary>
     procedure SetHttpTransport(const Transport: IDeepBaseHttpTransport);
@@ -393,6 +317,9 @@ type
     property UpdateAccessToken: string read FUpdateAccessToken write FUpdateAccessToken;
     property UpdateApiKey: string read FUpdateApiKey write FUpdateApiKey;
     property HttpTransport: IDeepBaseHttpTransport read FTransport write SetHttpTransport;
+    /// <summary>更新端点主机白名单（小写主机名）。未显式配置时回退为
+    /// UpdateUrl 的 host；两者皆无 ⇒ 下载/检查请求一律拒绝（fail-closed）。</summary>
+    property UpdateHostWhitelist: TArray<string> read FAllowedHosts write FAllowedHosts;
     property Status: TUpdateStatus read FStatus;
     property LastError: string read FLastError;
     property AutoCheck: Boolean read FAutoCheck write FAutoCheck;
@@ -416,18 +343,6 @@ function Updater: TUpdateManager;
 
 /// <summary>Set global update manager</summary>
 procedure SetUpdater(Manager: TUpdateManager);
-
-/// <summary>Channel name to enum</summary>
-function ParseChannel(const Name: string): TUpdateChannel;
-
-/// <summary>Channel enum to name</summary>
-function ChannelToString(Channel: TUpdateChannel): string;
-
-/// <summary>Install mode name to enum</summary>
-function ParseInstallMode(const Name: string): TUpdateInstallMode;
-
-/// <summary>Install mode enum to name</summary>
-function InstallModeToString(Mode: TUpdateInstallMode): string;
 
 implementation
 
@@ -469,174 +384,12 @@ begin
   end;
 end;
 
-function ParseChannel(const Name: string): TUpdateChannel;
-begin
-  if SameText(Name, 'stable') then
-    Result := ucStable
-  else if SameText(Name, 'beta') then
-    Result := ucBeta
-  else if SameText(Name, 'alpha') then
-    Result := ucAlpha
-  else if SameText(Name, 'dev') then
-    Result := ucDev
-  else
-    Result := ucStable;
-end;
-
-function ChannelToString(Channel: TUpdateChannel): string;
-begin
-  case Channel of
-    ucStable: Result := 'stable';
-    ucBeta: Result := 'beta';
-    ucAlpha: Result := 'alpha';
-    ucDev: Result := 'dev';
-  else
-    Result := 'stable';
-  end;
-end;
-
-function ParseInstallMode(const Name: string): TUpdateInstallMode;
-begin
-  if SameText(Name, 'interactive') then
-    Result := uimInteractive
-  else if SameText(Name, 'immediate') then
-    Result := uimImmediate
-  else if SameText(Name, 'onExit') or SameText(Name, 'on_exit') then
-    Result := uimOnExit
-  else if SameText(Name, 'whenIdle') or SameText(Name, 'when_idle') then
-    Result := uimWhenIdle
-  else
-    Result := uimUnspecified;
-end;
-
-function InstallModeToString(Mode: TUpdateInstallMode): string;
-begin
-  case Mode of
-    uimInteractive: Result := 'interactive';
-    uimImmediate: Result := 'immediate';
-    uimOnExit: Result := 'onExit';
-    uimWhenIdle: Result := 'whenIdle';
-  else
-    Result := 'unspecified';
-  end;
-end;
-
 procedure AddHeader(var AHeaders: TNetHeaders; const AName, AValue: string);
 begin
   if AValue = '' then
     Exit;
   SetLength(AHeaders, Length(AHeaders) + 1);
   AHeaders[High(AHeaders)] := TNameValuePair.Create(AName, AValue);
-end;
-
-// ============================================================================
-// TSemanticVersion
-// ============================================================================
-
-class function TSemanticVersion.Parse(const VersionStr: string): TSemanticVersion;
-var
-  Parts: TArray<string>;
-  PreReleaseIdx: Integer;
-begin
-  Result.Major := 0;
-  Result.Minor := 0;
-  Result.Patch := 0;
-  Result.Build := 0;
-  Result.PreRelease := '';
-  
-  if VersionStr = '' then
-    Exit;
-  
-  // Remove 'v' prefix if present
-  var Ver := VersionStr;
-  if (Length(Ver) > 0) and (Ver[1] = 'v') then
-    Ver := Copy(Ver, 2, MaxInt);
-  
-  // Check for pre-release suffix
-  PreReleaseIdx := Pos('-', Ver);
-  if PreReleaseIdx > 0 then
-  begin
-    Result.PreRelease := Copy(Ver, PreReleaseIdx + 1, MaxInt);
-    Ver := Copy(Ver, 1, PreReleaseIdx - 1);
-  end;
-  
-  // Parse main version parts
-  Parts := Ver.Split(['.']);
-  if Length(Parts) >= 1 then
-    Result.Major := StrToIntDef(Parts[0], 0);
-  if Length(Parts) >= 2 then
-    Result.Minor := StrToIntDef(Parts[1], 0);
-  if Length(Parts) >= 3 then
-    Result.Patch := StrToIntDef(Parts[2], 0);
-  if Length(Parts) >= 4 then
-    Result.Build := StrToIntDef(Parts[3], 0);
-end;
-
-function TSemanticVersion.ToString: string;
-begin
-  Result := Format('%d.%d.%d', [Major, Minor, Patch]);
-  if Build > 0 then
-    Result := Result + '.' + IntToStr(Build);
-  if PreRelease <> '' then
-    Result := Result + '-' + PreRelease;
-end;
-
-function TSemanticVersion.CompareTo(const Other: TSemanticVersion): Integer;
-begin
-  Result := Major - Other.Major;
-  if Result <> 0 then Exit;
-  
-  Result := Minor - Other.Minor;
-  if Result <> 0 then Exit;
-  
-  Result := Patch - Other.Patch;
-  if Result <> 0 then Exit;
-  
-  Result := Build - Other.Build;
-  if Result <> 0 then Exit;
-  
-  // Pre-release versions are lower than release versions
-  if (PreRelease = '') and (Other.PreRelease <> '') then
-    Result := 1
-  else if (PreRelease <> '') and (Other.PreRelease = '') then
-    Result := -1
-  else
-    Result := CompareText(PreRelease, Other.PreRelease);
-end;
-
-function TSemanticVersion.IsNewerThan(const Other: TSemanticVersion): Boolean;
-begin
-  Result := CompareTo(Other) > 0;
-end;
-
-class operator TSemanticVersion.Equal(const A, B: TSemanticVersion): Boolean;
-begin
-  Result := A.CompareTo(B) = 0;
-end;
-
-class operator TSemanticVersion.NotEqual(const A, B: TSemanticVersion): Boolean;
-begin
-  Result := A.CompareTo(B) <> 0;
-end;
-
-class operator TSemanticVersion.GreaterThan(const A, B: TSemanticVersion): Boolean;
-begin
-  Result := A.CompareTo(B) > 0;
-end;
-
-class operator TSemanticVersion.LessThan(const A, B: TSemanticVersion): Boolean;
-begin
-  Result := A.CompareTo(B) < 0;
-end;
-
-// ============================================================================
-// TUpdateInfo
-// ============================================================================
-
-function TUpdateInfo.IsEmpty: Boolean;
-begin
-  Result := (Version.Major = 0) and (Version.Minor = 0) and 
-            (Version.Patch = 0) and (DownloadUrl = '');
 end;
 
 // ============================================================================
@@ -664,8 +417,9 @@ begin
   FHelperRunHidden := True;
   FSilentInstallTask := nil;
   FSilentInstallLoopActive := False;
-  FSignatureSecret := '';
+{$IFNDEF RELEASE}
   FInsecureDevMode := False;
+{$ENDIF}
   FLastCheckTime := 0;
   FCancelled := False;
   FTempDir := TPath.Combine(TPath.GetTempPath, 'DeepBase_Update');
@@ -708,11 +462,6 @@ end;
 procedure TUpdateManager.SetPublicKey(const PublicKeyPEM: string);
 begin
   FPublicKey := PublicKeyPEM;
-end;
-
-procedure TUpdateManager.SetSignatureSecret(const Secret: string);
-begin
-  FSignatureSecret := Secret;
 end;
 
 procedure TUpdateManager.SetHttpTransport(
@@ -854,20 +603,16 @@ begin
     LPackageHash := JSON.GetValue<string>('packageHash', '');
   if LPackageHash = '' then
     LPackageHash := JSON.GetValue<string>('sha256', '');
-  if SameText(Copy(LPackageHash, 1, 7), 'sha256:') then
-    Delete(LPackageHash, 1, 7);
-  Result.PackageHash := LowerCase(LPackageHash);
+  Result.PackageHash := NormalizePackageHash(LPackageHash);
   Result.Signature := JSON.GetValue<string>('signature', '');
-  Result.SignatureAlgorithm := JSON.GetValue<string>('signatureAlgorithm', '');
-  if Result.SignatureAlgorithm = '' then
-    Result.SignatureAlgorithm := JSON.GetValue<string>('signature_algorithm', '');
+  // 不再读取 signatureAlgorithm：验签算法固定本地信任锚 rsa-sha256（改法项 (1)），
+  // 远端自述一律不采信。
   Result.ManifestHash := JSON.GetValue<string>('manifestHash', '');
   if Result.ManifestHash = '' then
     Result.ManifestHash := JSON.GetValue<string>('manifest_hash', '');
   Result.ManifestSignature := JSON.GetValue<string>('manifestSignature', '');
   if Result.ManifestSignature = '' then
     Result.ManifestSignature := JSON.GetValue<string>('manifest_signature', '');
-  Result.SignatureRequired := ReadBool(JSON, 'signatureRequired', 'signature_required', False);
   Result.IsMandatory := ReadBool(JSON, 'mandatory', 'is_mandatory', False);
   if not Result.IsMandatory then
     Result.IsMandatory := ReadBool(JSON, 'force_update', 'forceUpdate', False);
@@ -968,21 +713,10 @@ begin
         if Result.DownloadSize = 0 then
           Result.DownloadSize := Result.Files[I].Size;
         if Result.PackageHash = '' then
-          Result.PackageHash := LowerCase(Result.Files[I].Hash);
+          Result.PackageHash := NormalizePackageHash(Result.Files[I].Hash);
       end;
     end;
   end;
-
-  // EDGE-006 fix: auto-require signature when trust anchors are configured
-  // or when metadata already contains a signature. This prevents an attacker
-  // from stripping the signature field from metadata to bypass verification.
-  if not Result.SignatureRequired then
-    Result.SignatureRequired := (Result.Signature <> '') or
-      (Result.ManifestSignature <> '') or
-      (FPublicKey <> '') or
-      (FSignatureSecret <> '');
-  if Result.SignatureAlgorithm = '' then
-    Result.SignatureAlgorithm := 'rsa-sha256';
 end;
 
 function TUpdateManager.BuildUpdateCheckUrl: string;
@@ -1058,7 +792,13 @@ function TUpdateManager.SendHttpRequest(AMethod: TDeepBaseHttpMethod;
   TDeepBaseHttpTransportResponse;
 var
   Request: TDeepBaseHttpTransportRequest;
+  Verdict: TGateVerdict;
 begin
+  // 改法项 (4)：所有更新链 HTTP 出口统一过 https+主机白名单门禁（咽喉点）。
+  Verdict := ValidateUpdateEndpointUrl(AUrl, EffectiveAllowedHosts);
+  if not Verdict.IsApproved then
+    raise Exception.Create('Update endpoint rejected: ' + Verdict.Reason);
+
   if FTransport = nil then
     FTransport := TDeepBaseSystemNetTransport.Create;
 
@@ -1151,12 +891,16 @@ begin
   end;
 end;
 
-function TUpdateManager.BuildManifestSignaturePayload(
-  const Info: TUpdateInfo): string;
+function TUpdateManager.EffectiveAllowedHosts: TArray<string>;
 begin
-  Result := Info.AppId + '|' + Info.Version.ToString + '|' +
-    ChannelToString(Info.Channel) + '|' + Info.DownloadUrl + '|' +
-    IntToStr(Info.DownloadSize) + '|' + Info.PackageHash + '|' + Info.Signature;
+  if Length(FAllowedHosts) > 0 then
+    Exit(FAllowedHosts);
+  // 未显式配置白名单时回退到 UpdateUrl 的 host（信任锚 = 初始化时人工配置的服务器）；
+  // 两者皆无 → 空数组 → ValidateUpdateEndpointUrl fail-closed 拒绝。
+  if UrlHost(FUpdateUrl) <> '' then
+    Result := [UrlHost(FUpdateUrl)]
+  else
+    Result := [];
 end;
 
 function TUpdateManager.ParseUpdateInfoFromJson(const JsonText: string;
@@ -1229,7 +973,7 @@ end;
 function TUpdateManager.StageAndVerifyPackage(const Info: TUpdateInfo;
   out PackagePath: string; out ErrorMsg: string): TGateVerdict;
 var
-  SignatureAlg, ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
+  ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
   LVerdict: TGateVerdict;
 
   function Reject(const AReason: string): TGateVerdict;
@@ -1243,52 +987,52 @@ begin
   ErrorMsg := '';
   Result := TGateVerdict.Rejected('');
   try
+{$IFNDEF RELEASE}
+    if FInsecureDevMode then
+    begin
+      // 开发豁免仅存在于非 RELEASE 编译；RELEASE 构建中此分支连代码都不存在。
+      SetStatus(usDownloading, 'Downloading package...');
+      if not StageUpdatePackage(Info, PackagePath) then
+        Exit(Reject(FLastError));
+      Exit(TGateVerdict.Approved('WARNING: verification skipped (insecure dev mode)'));
+    end;
+{$ENDIF}
+
+    // 强制策略（改法项 (2)）：hash/签名/验签信任锚任一缺失即拒，无开关、无自述。
+    if Info.PackageHash = '' then
+      Exit(Reject('Package hash is missing; update refused (fail-closed)'));
+    if Info.Signature = '' then
+      Exit(Reject('Package signature is missing; update refused (fail-closed)'));
+    if Info.ManifestSignature = '' then
+      Exit(Reject('Manifest signature is missing; update refused (fail-closed)'));
+    if FPublicKey = '' then
+      Exit(Reject('RSA public key is not configured; update refused (fail-closed)'));
+
+    // 改法项 (4)：manifest 验签前置于下载——download_url 只有在 payload
+    // （含 URL 字段）通过 RSA 验签后才可信。payload 唯一构造见 Contracts。
+    SetStatus(usVerifying, 'Verifying manifest signature...');
+    ManifestPayload := BuildManifestSignaturePayload(Info);
+    ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
+    ExpectedManifestHash := Info.ManifestHash;
+    if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
+      Delete(ExpectedManifestHash, 1, 7);
+    if Trim(ExpectedManifestHash) = '' then
+      Exit(Reject('Manifest hash is missing; update refused (fail-closed)'));
+    if not SameText(ExpectedManifestHash, ComputedManifestHash) then
+      Exit(Reject('Manifest hash verification failed'));
+    // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
+    LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature);
+    if not LVerdict.IsApproved then
+      Exit(Reject('Manifest signature verification failed: ' + LVerdict.Reason));
+
     SetStatus(usDownloading, 'Downloading package...');
     if not StageUpdatePackage(Info, PackagePath) then
       Exit(Reject(FLastError));
 
-    // Insecure dev mode bypass (strictly for local dev testing)
-    if FInsecureDevMode then
-      Exit(TGateVerdict.Approved('WARNING: verification skipped (insecure dev mode)'));
-
-    SignatureAlg := Trim(Info.SignatureAlgorithm).ToLower;
-    if SignatureAlg = '' then
-      SignatureAlg := 'rsa-sha256';
-
-    if Info.SignatureRequired then
-    begin
-      if (Pos('hmac', SignatureAlg) = 1) and (FSignatureSecret = '') then
-        Exit(Reject('Package signature verification is required but HMAC secret is not configured'));
-      if (Pos('rsa', SignatureAlg) = 1) and (FPublicKey = '') then
-        Exit(Reject('Package signature verification is required but RSA public key is not configured'));
-    end;
-
-    if Info.Signature <> '' then
-    begin
-      LVerdict := VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg);
-      if not LVerdict.IsApproved then
-        Exit(Reject('Package signature verification failed: ' + LVerdict.Reason));
-    end
-    else if Info.SignatureRequired then
-      Exit(Reject('Package signature is missing'));
-
-    if Info.ManifestSignature <> '' then
-    begin
-      ManifestPayload := BuildManifestSignaturePayload(Info);
-      ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
-      // docs/66 §16.10: manifest_hash 允许 'sha256:' 前缀，比对前剥离
-      ExpectedManifestHash := Info.ManifestHash;
-      if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
-        Delete(ExpectedManifestHash, 1, 7);
-      if (ExpectedManifestHash <> '') and (not SameText(ExpectedManifestHash, ComputedManifestHash)) then
-        Exit(Reject('Manifest hash verification failed'));
-      // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
-      LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature, SignatureAlg);
-      if not LVerdict.IsApproved then
-        Exit(Reject('Manifest signature verification failed: ' + LVerdict.Reason));
-    end
-    else if Info.SignatureRequired then
-      Exit(Reject('Manifest signature is missing'));
+    // 包签名：data = 归一化 PackageHash 的 UTF-8 字节（§16.10 关键点 1）
+    LVerdict := VerifySignature(Info.PackageHash, Info.Signature);
+    if not LVerdict.IsApproved then
+      Exit(Reject('Package signature verification failed: ' + LVerdict.Reason));
 
     Result := TGateVerdict.Approved;
   except
@@ -1424,8 +1168,7 @@ begin
   end;
 end;
 
-function TUpdateManager.VerifySignature(const Data, Signature,
-  Algorithm: string): TGateVerdict;
+function TUpdateManager.VerifySignature(const Data, Signature: string): TGateVerdict;
 {$IFDEF MSWINDOWS}
 var
   LVerifier: TRSAVerifier;
@@ -1435,9 +1178,6 @@ var
   LDataBytes: TBytes;
   LError: string;
 {$ENDIF}
-var
-  LAlgorithm: string;
-  LExpected: string;
 
   function Reject(const AReason: string): TGateVerdict;
   begin
@@ -1446,48 +1186,21 @@ var
   end;
 
 begin
-  { A6 T1 fail-closed 立法：门禁返回值类型化。算法白名单显式匹配，
-    未知算法一律拒绝（旧实现把未识别算法静默回落到 RSA 路径）。 }
-  LAlgorithm := Trim(Algorithm).ToLower;
-  if LAlgorithm = '' then
-    LAlgorithm := 'rsa-sha256'; // 更新协议缺省算法（docs/66 §16.5，显式定义，非隐式回落）
-
+  { 改法项 (1)：验签算法不接受远端自述——本函数只实现 rsa-sha256（本地固定
+    信任锚）。旧 sha256"伪签名"与 hmac 共享密钥分支不是签名，全部删除。 }
   if Signature = '' then
     Exit(Reject('Signature is empty'));
 
-  if (LAlgorithm = 'sha256') or (LAlgorithm = 'sha-256') then
-  begin
-    LExpected := LowerCase(THashSHA2.GetHashString(Data));
-    if not SameText(LExpected, Signature) then
-      Exit(Reject('SHA256 signature mismatch'));
-    FLastError := '';
-    Exit(TGateVerdict.Approved);
-  end;
-
-  if (LAlgorithm = 'hmac-sha256') or (LAlgorithm = 'hmac_sha256') then
-  begin
-    if FSignatureSecret = '' then
-      Exit(Reject('HMAC signature secret is not configured'));
-    LExpected := LowerCase(THashSHA2.GetHMAC(Data, FSignatureSecret));
-    if not SameText(LExpected, Signature) then
-      Exit(Reject('HMAC-SHA256 signature mismatch'));
-    FLastError := '';
-    Exit(TGateVerdict.Approved);
-  end;
-
-  if not ((LAlgorithm = 'rsa-sha256') or (LAlgorithm = 'rsa_sha256')) then
-    Exit(Reject('Unknown signature algorithm "' + Algorithm +
-      '"; approved set: rsa-sha256/hmac-sha256/sha256'));
-
-  // EDGE-006 fix: missing public key must fail-closed in production.
-  // Only allow bypass in explicit dev/insecure mode.
+  // 缺公钥必须 fail-closed；dev 旁路仅存在于非 RELEASE 编译（改法项 (2)）。
   if FPublicKey = '' then
   begin
+{$IFNDEF RELEASE}
     if FInsecureDevMode then
     begin
       FLastError := 'WARNING: Signature verification skipped (insecure dev mode, no public key)';
       Exit(TGateVerdict.Approved(FLastError));
     end;
+{$ENDIF}
     Exit(Reject('RSA public key is not configured. Cannot verify update signature.'));
   end;
 
@@ -1530,12 +1243,13 @@ begin
   if not FileExists(FilePath) then
     Exit(Reject('File not found for hash verification: ' + FilePath));
 
-  // EDGE-006 fix: empty hash must fail-closed in production.
-  // Only allow bypass in explicit dev/insecure mode.
+  // 缺 hash 必须 fail-closed；dev 旁路仅存在于非 RELEASE 编译（改法项 (2)）。
   if ExpectedHash = '' then
   begin
+{$IFNDEF RELEASE}
     if FInsecureDevMode then
       Exit(TGateVerdict.Approved('WARNING: hash check skipped (insecure dev mode)'));
+{$ENDIF}
     Exit(Reject('Package hash is missing. Cannot verify update integrity.'));
   end;
 
@@ -1546,7 +1260,7 @@ begin
     FreeAndNil(FileStream);
   end;
 
-  if not SameText(ActualHash, ExpectedHash) then
+  if not SameText(ActualHash, NormalizePackageHash(ExpectedHash)) then
     Exit(Reject('File hash mismatch: expected ' + ExpectedHash + ', got ' + ActualHash));
   FLastError := '';
   Result := TGateVerdict.Approved;
@@ -1764,90 +1478,26 @@ begin
       InstallMode: TUpdateInstallMode;
       Success: Boolean;
       ErrorMsg: string;
-      SignatureAlg: string;
-      ManifestPayload: string;
-      ComputedManifestHash: string;
       LV: TGateVerdict;
     begin
       Success := False;
       ErrorMsg := '';
       FCancelled := False;
-      
-      try
-        SetStatus(usDownloading, 'Downloading update...');
 
-        if not StageUpdatePackage(Info, PackagePath) then
+      try
+        // 路径 A 收敛到与路径 B 同一实现（改法项 (3)：U-02 双实现消缺点）：
+        // StageAndVerifyPackage 内部完成 manifest 验签（前置于下载）、
+        // 强制字段检查、下载+hash 校验与包签名校验，全部 fail-closed。
+        LV := StageAndVerifyPackage(Info, PackagePath, ErrorMsg);
+        if not LV.IsApproved then
         begin
-          ErrorMsg := FLastError;
           SetStatus(usFailed, ErrorMsg);
           Exit;
         end;
-        
+
         if FCancelled then
         begin
           ErrorMsg := 'Cancelled by user';
-          SetStatus(usFailed, ErrorMsg);
-          Exit;
-        end;
-
-        SignatureAlg := Trim(Info.SignatureAlgorithm).ToLower;
-        if SignatureAlg = '' then
-          SignatureAlg := 'rsa-sha256';
-
-        if Info.SignatureRequired then
-        begin
-          if ((Pos('hmac', SignatureAlg) = 1) and (FSignatureSecret = '')) then
-          begin
-            ErrorMsg := 'Package signature verification is required but HMAC secret is not configured';
-            SetStatus(usFailed, ErrorMsg);
-            Exit;
-          end;
-          if ((Pos('rsa', SignatureAlg) = 1) and (FPublicKey = '')) then
-          begin
-            ErrorMsg := 'Package signature verification is required but RSA public key is not configured';
-            SetStatus(usFailed, ErrorMsg);
-            Exit;
-          end;
-        end;
-
-        if Info.Signature <> '' then
-        begin
-          LV := VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg);
-          if not LV.IsApproved then
-          begin
-            ErrorMsg := 'Package signature verification failed: ' + LV.Reason;
-            SetStatus(usFailed, ErrorMsg);
-            Exit;
-          end;
-        end
-        else if Info.SignatureRequired then
-        begin
-          ErrorMsg := 'Package signature is missing';
-          SetStatus(usFailed, ErrorMsg);
-          Exit;
-        end;
-
-        if Info.ManifestSignature <> '' then
-        begin
-          ManifestPayload := BuildManifestSignaturePayload(Info);
-          ComputedManifestHash := LowerCase(THashSHA2.GetHashString(ManifestPayload));
-          if (Info.ManifestHash <> '') and (not SameText(Info.ManifestHash, ComputedManifestHash)) then
-          begin
-            ErrorMsg := 'Manifest hash verification failed';
-            SetStatus(usFailed, ErrorMsg);
-            Exit;
-          end;
-          LV := VerifySignature(ComputedManifestHash, Info.ManifestSignature, SignatureAlg);
-          if not LV.IsApproved then
-          begin
-            ErrorMsg := 'Manifest signature verification failed: ' + LV.Reason;
-            SetStatus(usFailed, ErrorMsg);
-            Exit;
-          end;
-        end
-        else if Info.SignatureRequired then
-        begin
-          ErrorMsg := 'Manifest signature is missing';
           SetStatus(usFailed, ErrorMsg);
           Exit;
         end;
@@ -2284,9 +1934,7 @@ class function TUpdateManager.StageAndVerifyPackage(const AInfo: TUpdateInfo;
   const APackagePath: string; const APublicKeyPEM: string;
   out AErrMsg: string): TGateVerdict;
 var
-  LDataBytes: TBytes;
   LComputedHash: string;
-  LSigBytes: TBytes;
   LVerifier: TRSAVerifier;
 
   function Reject(const AReason: string): TGateVerdict;
@@ -2299,42 +1947,40 @@ begin
   AErrMsg := '';
   Result := TGateVerdict.Rejected('');
 
+  // fail-closed：hash / 签名 / 公钥任一缺失 = 不可校验 = 拒绝（改法项 (2)）。
+  // 旧实现是 "if provided" 可选检查，缺字段静默放行，正是 T1 家族立法对象。
   if not TFile.Exists(APackagePath) then
     Exit(Reject('Package file does not exist: ' + APackagePath));
+  if Trim(AInfo.PackageHash) = '' then
+    Exit(Reject('Package hash is missing; update refused (fail-closed)'));
+  if Trim(AInfo.Signature) = '' then
+    Exit(Reject('Package signature is missing; update refused (fail-closed)'));
+  if Trim(APublicKeyPEM) = '' then
+    Exit(Reject('No RSA public key configured; cannot verify package signature (fail-closed)'));
 
-  // 1. Verify SHA-256 hash if provided
-  if AInfo.PackageHash <> '' then
-  begin
-    LComputedHash := LowerCase(THashSHA2.GetHashStringFromFile(APackagePath));
-    if not SameText(LComputedHash, AInfo.PackageHash) then
-      Exit(Reject(Format('Package hash mismatch: expected %s, got %s',
-        [AInfo.PackageHash, LComputedHash])));
-  end;
+  // 1. SHA-256 of package file（比对前双侧归一化，防 "sha256:" 前缀/大小写分叉）
+  LComputedHash := LowerCase(THashSHA2.GetHashStringFromFile(APackagePath));
+  if not SameText(LComputedHash, NormalizePackageHash(AInfo.PackageHash)) then
+    Exit(Reject(Format('Package hash mismatch: expected %s, got %s',
+      [NormalizePackageHash(AInfo.PackageHash), LComputedHash])));
 
-  // 2. Verify RSA-SHA256 signature if provided.
-  //    A6 fail-closed：声明了签名却无公钥 = 不可校验，拒绝（旧实现把该
-  //    组合静默跳过，签名声明形同虚设）。
-  if AInfo.Signature <> '' then
-  begin
-    if APublicKeyPEM = '' then
-      Exit(Reject('Package signature declared but no public key provided; cannot verify RSA-SHA256 signature'));
+  // 2. RSA-SHA256 over utf8(package_hash_hex)（docs/66 §16.10 关键点 1）。
+  //    旧实现对"文件原始字节"签名，与 §16.10 协议不符且与 AutoUpdate 通道
+  //    构成第二套验签语义（U-02）；统一为对归一化 hash 串单层摘要验签。
+  try
+    LVerifier := TRSAVerifier.Create;
     try
-      LSigBytes := TNetEncoding.Base64.DecodeStringToBytes(AInfo.Signature);
-      LVerifier := TRSAVerifier.Create;
-      try
-        if not LVerifier.LoadPublicKeyPEM(APublicKeyPEM) then
-          Exit(Reject('Failed to load RSA public key: ' + LVerifier.LastError));
+      if not LVerifier.LoadPublicKeyPEM(APublicKeyPEM) then
+        Exit(Reject('Failed to load RSA public key: ' + LVerifier.LastError));
 
-        LDataBytes := TFile.ReadAllBytes(APackagePath);
-        if not LVerifier.VerifySignature(LDataBytes, LSigBytes) then
-          Exit(Reject('Package RSA-SHA256 signature verification failed: ' + LVerifier.LastError));
-      finally
-        LVerifier.Free;
-      end;
-    except
-      on E: Exception do
-        Exit(Reject('RSA verification exception: ' + E.Message));
+      if not LVerifier.VerifySignature(NormalizePackageHash(AInfo.PackageHash), AInfo.Signature) then
+        Exit(Reject('Package RSA-SHA256 signature verification failed: ' + LVerifier.LastError));
+    finally
+      LVerifier.Free;
     end;
+  except
+    on E: Exception do
+      Exit(Reject('RSA verification exception: ' + E.Message));
   end;
 
   Result := TGateVerdict.Approved;
@@ -2348,7 +1994,7 @@ var
 begin
   LInfo := Default(TUpdateInfo);
   LInfo.Version := TSemanticVersion.Parse(AVersion);
-  LInfo.PackageHash := APackageHash;
+  LInfo.PackageHash := NormalizePackageHash(APackageHash);
   LInfo.Signature := ASignature;
   Result := StageAndVerifyPackage(LInfo, APackagePath, APublicKeyPEM, AErrMsg);
 end;

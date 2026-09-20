@@ -63,10 +63,10 @@ begin
       Dlg.FUpdateInfo := Info;
     end);
     
-    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version, '1.0.0']); // STUB(UPD-P0-001): Pass current ver
-    Dlg.mmoChangelog.Lines.Text := Info.Changelog;
+    Dlg.lblVersion.Caption := Format('Version %s available (Current: %s)', [Info.Version.ToString, '1.0.0']); // STUB(UPD-P0-001): Pass current ver
+    Dlg.mmoChangelog.Lines.Text := Info.ReleaseNotes;
     
-    if Info.ForceUpdate then
+    if Info.IsMandatory then
     begin
       Dlg.btnCancel.Enabled := False;
       Dlg.BorderIcons := [];
@@ -118,7 +118,7 @@ begin
   FIsDownloading := True;
   FCancelRequested := False;
   btnUpdate.Enabled := False;
-  btnCancel.Enabled := not FUpdateInfo.ForceUpdate;
+  btnCancel.Enabled := not FUpdateInfo.IsMandatory;
   pbDownload.Visible := True;
   pbDownload.Position := 0;
 
@@ -207,7 +207,7 @@ end;
 
 procedure TUpdateDialog.btnCancelClick(Sender: TObject);
 begin
-  if FIsDownloading and FUpdateInfo.ForceUpdate then
+  if FIsDownloading and FUpdateInfo.IsMandatory then
     Exit; // Cannot cancel forced update
 
   // REVIEW5-UI-003: Signal download thread to stop
@@ -223,7 +223,7 @@ end;
 
 procedure TUpdateDialog.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  if FIsDownloading and FUpdateInfo.ForceUpdate then
+  if FIsDownloading and FUpdateInfo.IsMandatory then
     Action := caNone;
 end;
 

@@ -147,20 +147,6 @@ type
   end;
 
   /// <summary>
-  /// Tests for TUpdateInfo record
-  /// </summary>
-  [TestFixture]
-  TUpdateInfoTests = class
-  public
-    [Test]
-    procedure Test_Record_Fields;
-    [Test]
-    procedure Test_Record_Assignment;
-    [Test]
-    procedure Test_ForceUpdate_Default;
-  end;
-
-  /// <summary>
   /// Tests for THotkeyDefault record
   /// </summary>
   [TestFixture]
@@ -593,52 +579,6 @@ begin
 end;
 
 // ============================================================================
-// TUpdateInfoTests
-// ============================================================================
-
-procedure TUpdateInfoTests.Test_Record_Fields;
-var
-  Info: TUpdateInfo;
-begin
-  Info.Version := '2.0.0';
-  Info.ReleaseDate := EncodeDate(2024, 1, 15);
-  Info.DownloadUrl := 'https://example.com/update.zip';
-  Info.FileSize := 1024 * 1024 * 50;  // 50 MB
-  Info.SHA256 := 'abc123def456';
-  Info.Changelog := 'Bug fixes and improvements';
-  Info.ForceUpdate := False;
-  
-  Assert.AreEqual('2.0.0', Info.Version);
-  Assert.AreEqual('https://example.com/update.zip', Info.DownloadUrl);
-  Assert.AreEqual(Int64(50 * 1024 * 1024), Info.FileSize);
-  Assert.AreEqual('abc123def456', Info.SHA256);
-  Assert.AreEqual('Bug fixes and improvements', Info.Changelog);
-  Assert.IsFalse(Info.ForceUpdate);
-end;
-
-procedure TUpdateInfoTests.Test_Record_Assignment;
-var
-  Info1, Info2: TUpdateInfo;
-begin
-  Info1.Version := '1.5.0';
-  Info1.ForceUpdate := True;
-  
-  Info2 := Info1;
-  
-  Assert.AreEqual(Info1.Version, Info2.Version);
-  Assert.AreEqual(Info1.ForceUpdate, Info2.ForceUpdate);
-end;
-
-procedure TUpdateInfoTests.Test_ForceUpdate_Default;
-var
-  Info: TUpdateInfo;
-begin
-  // Default value should be False
-  FillChar(Info, SizeOf(Info), 0);
-  Assert.IsFalse(Info.ForceUpdate);
-end;
-
-// ============================================================================
 // THotkeyDefaultTests
 // ============================================================================
 
@@ -680,7 +620,6 @@ initialization
   TDUnitX.RegisterTestFixture(TMRUItemTests);
   TDUnitX.RegisterTestFixture(TThemeInfoTests);
   TDUnitX.RegisterTestFixture(TAnimationAssetDataTests);
-  TDUnitX.RegisterTestFixture(TUpdateInfoTests);
   TDUnitX.RegisterTestFixture(THotkeyDefaultTests);
 
 end.

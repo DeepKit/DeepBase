@@ -18,10 +18,12 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
+  System.Hash,
   System.IOUtils,
   System.JSON,
   DeepBase.Gate.Verdict,
   DeepBase.Updater,
+  DeepBase.Update.Contracts,
   DeepBase.Net.Transport;
 
 type
@@ -276,29 +278,60 @@ type
   end;
 
   /// <summary>
-  /// Security tests: signature verification, hash validation, downgrade protection, zip-slip prevention.
+  /// 更新验签链门禁测试（WO-20260920-AUDIT-甲-R5 M1 / Top20#01，RCE 级）：
+  /// 本地固定信任锚、hash/签名/公钥三件套 fail-closed、manifest 验签前置于下载、
+  /// 端点 https + 主机白名单咽喉点。
   /// </summary>
   [TestFixture]
   TTestUpdateSecurity = class
+  private
+    class function NewManager(const AUpdateUrl: string =
+      'https://cdn.example.com/updates'): TUpdateManager; static;
+    /// <summary>
+    /// 构造一份"自洽且已正确签名"的 manifest：包签名签归一化 PackageHash，
+    /// manifest 签名与 manifest hash 均由 Contracts 的唯一 payload 派生。
+    /// 篡改场景在下层测试中定向替换单个字段，验证门禁层级。
+    /// </summary>
+    class function BuildSignedManifestInfo(const APackageHash: string): TUpdateInfo; static;
   public
     [Test]
-    procedure Test_VerifySignature_ValidSignature_ReturnsTrue;
+    procedure Test_VerifySignature_ValidHashSignature_Approved;
     [Test]
-    procedure Test_VerifySignature_WrongKey_ReturnsFalse;
+    procedure Test_VerifySignature_WrongKey_Rejected;
     [Test]
-    procedure Test_VerifySignature_EmptySignature_ReturnsFalse;
+    procedure Test_VerifySignature_EmptySignature_Rejected;
     [Test]
-    procedure Test_VerifySignature_TamperedData_ReturnsFalse;
+    procedure Test_VerifySignature_TamperedData_Rejected;
     [Test]
-    procedure Test_VerifySignature_UnknownAlgorithm_Rejected;
+    procedure Test_VerifySignature_NoPublicKey_Rejected;
     [Test]
-    procedure Test_StageAndVerifyPackage_FailClosed;
+    procedure Test_StageAndVerify_MissingPackageHash_Rejected;
     [Test]
-    procedure Test_VerifyFileHash_ValidHash_ReturnsTrue;
+    procedure Test_StageAndVerify_MissingSignature_Rejected;
     [Test]
-    procedure Test_VerifyFileHash_WrongHash_ReturnsFalse;
+    procedure Test_StageAndVerify_DeclaredSignatureNoPublicKey_Rejected;
     [Test]
-    procedure Test_VerifyFileHash_EmptyExpectedHash_ReturnsFalse;
+    procedure Test_StageAndVerify_HashMismatch_Rejected;
+    [Test]
+    procedure Test_StageAndVerify_ValidHashAndSignature_Approved;
+    [Test]
+    procedure Test_StageAndVerify_MissingManifestSignature_Rejected;
+    [Test]
+    procedure Test_ManifestVerify_PrecedesDownload_Approved;
+    [Test]
+    procedure Test_ManifestSignatureForged_RejectedWithoutDownload;
+    [Test]
+    procedure Test_PackageSignatureForged_RejectedAfterDownload;
+    [Test]
+    procedure Test_UpdateEndpoint_HttpScheme_RejectedWithoutRequest;
+    [Test]
+    procedure Test_UpdateEndpoint_HostNotWhitelisted_RejectedWithoutRequest;
+    [Test]
+    procedure Test_VerifyFileHash_ValidHash_Approved;
+    [Test]
+    procedure Test_VerifyFileHash_WrongHash_Rejected;
+    [Test]
+    procedure Test_VerifyFileHash_EmptyExpectedHash_Rejected;
     [Test]
     procedure Test_Downgrade_NewerThanCurrent_Allowed;
     [Test]
@@ -309,105 +342,44 @@ type
     procedure Test_ZipSlip_PathTraversal_Detected;
     [Test]
     procedure Test_ZipSlip_NormalPath_Allowed;
+{$IFNDEF RELEASE}
     [Test]
-    procedure Test_InsecureDevMode_Disabled_RejectsMissingHash;
+    procedure Test_InsecureDevMode_Disabled_RejectsMissingIntegrity;
     [Test]
-    procedure Test_InsecureDevMode_Enabled_AllowsMissingHash;
+    procedure Test_InsecureDevMode_Enabled_SkipsVerification;
+{$ENDIF}
+  end;
+
+  /// <summary>
+  /// 契约层测试（DeepBase.Update.Contracts SSOT）：hash 归一化、manifest payload
+  /// 7 字段唯一构造、更新端点门禁（含"空白名单 = 拒绝"）。
+  /// </summary>
+  [TestFixture]
+  TTestUpdateContracts = class
+  public
+    [Test]
+    procedure Test_NormalizePackageHash_StripsPrefixAndLowercases;
+    [Test]
+    procedure Test_ManifestPayload_SevenFieldsFixedOrder;
+    [Test]
+    procedure Test_ManifestPayload_EmptyFields_KeepFieldCount;
+    [Test]
+    procedure Test_EndpointUrl_HttpRejected;
+    [Test]
+    procedure Test_EndpointUrl_EmptyWhitelistRejected;
+    [Test]
+    procedure Test_EndpointUrl_HostNotWhitelistedRejected;
+    [Test]
+    procedure Test_EndpointUrl_HttpsWithWhitelistedHostApproved;
+    [Test]
+    procedure Test_EndpointScheme_AcceptsHttpsWithoutWhitelist;
   end;
 
 implementation
 
 uses
-  DeepBase.Crypto.RSA,
+  Test.DeepBase.UpdateFixtures,
   DeepBase.Crypto.Hash;
-
-type
-  TFakeUpdaterTransport = class(TInterfacedObject, IDeepBaseHttpTransport)
-  public
-    LastRequest: TDeepBaseHttpTransportRequest;
-    Response: TDeepBaseHttpTransportResponse;
-    CallCount: Integer;
-    function Send(const ARequest: TDeepBaseHttpTransportRequest):
-      TDeepBaseHttpTransportResponse;
-  end;
-
-function TFakeUpdaterTransport.Send(
-  const ARequest: TDeepBaseHttpTransportRequest):
-  TDeepBaseHttpTransportResponse;
-begin
-  Inc(CallCount);
-  LastRequest := ARequest;
-  Result := Response;
-end;
-
-const
-  // 测试用 RSA-2048 密钥对（仅测试用，已公开无关安全）。
-  // 用于验证 Updater.VerifySignature 的 RSA-SHA256 链路（§16.10 关键点 2）。
-  // 私钥签 → 公钥验，两端均走 DeepBase.Crypto.RSA 同实现，签名必然互通。
-  // 私钥须为 PKCS#1 (BEGIN RSA PRIVATE KEY) 格式——DeepBase.Crypto.RSA 的
-  // LoadPrivateKeyPEM 只解析 PKCS#1 RSAPrivateKey ASN.1 结构（见 Crypto.RSA L583+），
-  // 不支持 PKCS#8 (BEGIN PRIVATE KEY) 外层 PrivateKeyInfo 包装。
-  TEST_PRIVATE_KEY_PEM =
-    '-----BEGIN RSA PRIVATE KEY-----' + sLineBreak +
-    'MIIEogIBAAKCAQEAuhMNc5e6NGCuObch/OOZnGdcM9Kt1a1DuZrQryKPxl1lbE+0' + sLineBreak +
-    '8cG+o7GcVBWJF5hXY4ApcxkDO6xdEo2RBNp8QJ9cUMQEPxFuavGBGpgrj27l4pd8' + sLineBreak +
-    '9DPrQ44xs+esY8Bp/GQHp+21NXQIQtXnyLpvz8IBcbl4sgvm4PKytQaGOByC1Vnu' + sLineBreak +
-    'ay4aOrOejxypKOW7frXqb+voWAr/h7G0tZE3E2EjlQVRRVm7Khjp3JAo7NiwrlZC' + sLineBreak +
-    '+LCuivrEzxveHUHKXwXf6scOt+w4snCNNT23nEuWIKYKnXxXMb83yq9G6bb1ZVpM' + sLineBreak +
-    'hhJvJPfA4xRkOQyzRukC9jq2PUPpoSBE6QA3PwIDAQABAoIBACL44L7Yhg1BHI3J' + sLineBreak +
-    'bzBmIKFmRcyRrM1rzr5MLCu2fbpFJIJaasJDbU6724tsLsOKBOa1GFVDHrnw9988' + sLineBreak +
-    'T0TPwamtqf6eEMQ/xPaBpIe4kPtY1wki+r+1IGMmjw3mnZ5z9BeVP2EfCr9cqw7Q' + sLineBreak +
-    'wEsYS1qLdpUGzHn+RasCwnbGnqRd2SA3PzVh5h6lwYJYfYAqQOM4CGvRPjsPaWIm' + sLineBreak +
-    'ryEekfJ8Tuh4q/WndFvq/38NIpttP/SZAOeWHdmqeVDOxFJpP+FA6YWduaAeuEQX' + sLineBreak +
-    'XrO3aRqvPJIxmQGZ9uXwu85BWx69XFK2/fXZ1Gk0vtJ6QQUnp5rhXqq8io2L9MuS' + sLineBreak +
-    '3KuO/qUCgYEA7SDFaHDb1ItGgmYYRh/vLF9SDmVb8Ps8G/jQaU4QwEvxauQMf1a+' + sLineBreak +
-    'uuzkW9Gxo1ZtnUYjRPAo83663J1H11sxZ6gfcsX+SJzQyRY9CCZSMJ2MOjSoS+Qv' + sLineBreak +
-    'Ocs36/eMsF01fXll3BO0u0CT+OxTtserzlggD64jl5q6/QYuOdOKzWsCgYEAyOIe' + sLineBreak +
-    'jDh2LPENcMnMPlwCKmAfKthDVjOSI9xb+9bIV5T6s9fLM6t3Y2Odtd911RU7PBqq' + sLineBreak +
-    '3FoVfu0Gs3NonWnbjE1TFjoNDYVgSJKIvHRp4kt2ZLxHgFPrlAN4zhXOFdBye3a1' + sLineBreak +
-    'e4m4eAulfMPHmTOjPXA0NnDqQKp7/WXMiNXuPn0CgYBGBR9Fr825/UZcyvjv/A4L' + sLineBreak +
-    '9Dmuto9noUgmmlowPjUEE2i+P4jRMTQwzjLASjNCIAtOHZ/cg24UOJ/E9Ux5cxwr' + sLineBreak +
-    'l6FxqrVji6q7Ni3fcjFi2aLGrTXk8wRe9HsW2opYqa1Z17cUPV1ozbDkGCTAHEXH' + sLineBreak +
-    'MI6HEsy/v5jnjiOoP6cE8QKBgHAqGaZvrESBv+B3PMyg8TCaBS0WHdsW5oWRd+bR' + sLineBreak +
-    'UYHdlHIwjqxmFD5xk9DGWfPFbBKuTTLGNfRuAmzWhtZGEilvz3G8ricbjtxWvXSE' + sLineBreak +
-    'h86sFgo/OqlDsmkt2xkvAagagKHBcanuBws4bYmRg3ReacpXSUAQoivDRYICgkbx' + sLineBreak +
-    'NJq9AoGAXzVP3gMPyNfhPZp4lWXZagjmfDUWzFPtmpk8h+MIvmOfQRghM1H8Jg7I' + sLineBreak +
-    'ByqYe2qrG3kUTkemquhEh4XgYqglrHSuI7OMgn8CMKLkI0LHrObvwtk8eWSfFgZq' + sLineBreak +
-    'SazofgDvL7U/VNLnCCMpFn6wZMVbpKp/6fDGAb3M9or629btvmI=' + sLineBreak +
-    '-----END RSA PRIVATE KEY-----';
-
-  TEST_PUBLIC_KEY_PEM =
-    '-----BEGIN PUBLIC KEY-----' + sLineBreak +
-    'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuhMNc5e6NGCuObch/OOZ' + sLineBreak +
-    'nGdcM9Kt1a1DuZrQryKPxl1lbE+08cG+o7GcVBWJF5hXY4ApcxkDO6xdEo2RBNp8' + sLineBreak +
-    'QJ9cUMQEPxFuavGBGpgrj27l4pd89DPrQ44xs+esY8Bp/GQHp+21NXQIQtXnyLpv' + sLineBreak +
-    'z8IBcbl4sgvm4PKytQaGOByC1Vnuay4aOrOejxypKOW7frXqb+voWAr/h7G0tZE3' + sLineBreak +
-    'E2EjlQVRRVm7Khjp3JAo7NiwrlZC+LCuivrEzxveHUHKXwXf6scOt+w4snCNNT23' + sLineBreak +
-    'nEuWIKYKnXxXMb83yq9G6bb1ZVpMhhJvJPfA4xRkOQyzRukC9jq2PUPpoSBE6QA3' + sLineBreak +
-    'PwIDAQAB' + sLineBreak +
-    '-----END PUBLIC KEY-----';
-
-// 用测试私钥对 Data 做 RSA-SHA256 签名，返回 base64。
-// 镜像客户端 TRSAVerifier.VerifySignature(data, sigBase64) 的对端。
-// TRSASigner 仅 MSWINDOWS 可用（同 Updater.VerifySignature 的 CNG 路径）。
-function TestRSASign(const AData: string): string;
-{$IFDEF MSWINDOWS}
-var
-  LSigner: TRSASigner;
-{$ENDIF}
-begin
-  Result := '';
-  {$IFDEF MSWINDOWS}
-  LSigner := TRSASigner.Create;
-  try
-    if not LSigner.LoadPrivateKeyPEM(TEST_PRIVATE_KEY_PEM) then
-      Exit('');
-    Result := LSigner.Sign(AData);
-  finally
-    LSigner.Free;
-  end;
-  {$ENDIF}
-end;
 
 { TTestSemanticVersion }
 
@@ -865,7 +837,6 @@ begin
     Manager.Free;
   end;
   Assert.AreEqual('SIG_BASE64', Info.Signature, 'signature field must map to Info.Signature');
-  Assert.AreEqual('rsa-sha256', Info.SignatureAlgorithm, 'signature_algorithm must map');
   Assert.AreEqual('MANIFEST_SIG_BASE64', Info.ManifestSignature, 'manifest_signature must map');
 end;
 
@@ -1195,128 +1166,421 @@ end;
 
 { TTestUpdateSecurity }
 
-procedure TTestUpdateSecurity.Test_VerifySignature_ValidSignature_ReturnsTrue;
+{ TTestUpdateSecurity }
+
+class function TTestUpdateSecurity.NewManager(const AUpdateUrl: string): TUpdateManager;
+begin
+  Result := TUpdateManager.Create;
+  Result.Initialize(AUpdateUrl, '1.0.0');
+  Result.SetPublicKey(TEST_PUBLIC_KEY_PEM);
+end;
+
+class function TTestUpdateSecurity.BuildSignedManifestInfo(
+  const APackageHash: string): TUpdateInfo;
+var
+  Payload: string;
+begin
+  Result := Default(TUpdateInfo);
+  Result.AppId := 'deepbase_desktop';
+  Result.Version := TSemanticVersion.Parse('2.0.0');
+  Result.Channel := ucStable;
+  Result.DownloadUrl := 'https://cdn.example.com/updates/deepbase-2.0.0.zip';
+  Result.DownloadSize := 1024;
+  Result.PackageHash := APackageHash;
+  // 签名顺序即 §16.10 依赖顺序：包签名先入 payload 第 7 位，
+  // 再由 payload 派生 manifest_hash 与 manifest_signature。
+  Result.Signature := TestRSASign(APackageHash);
+  Payload := BuildManifestSignaturePayload(Result);
+  Result.ManifestHash := LowerCase(THashSHA2.GetHashString(Payload));
+  Result.ManifestSignature := TestRSASign(Payload);
+end;
+
+procedure TTestUpdateSecurity.Test_VerifySignature_ValidHashSignature_Approved;
 const
   // §16.10 关键点 2：data 是去前缀纯 hex 小写串（镜像客户端 Info.PackageHash）。
   TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+var
+  Manager: TUpdateManager;
+  Verdict: TGateVerdict;
 begin
-  var Manager := TUpdateManager.Create;
+  Manager := NewManager;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
-    var Sig := TestRSASign(TestData);
-    var Ok := Manager.VerifySignature(TestData, Sig, 'rsa-sha256');
+    Verdict := Manager.VerifySignature(TestData, TestRSASign(TestData));
     // 用配对私钥签名 → 同公钥验签必然通过
-    Assert.IsTrue(Ok,
-      'Valid signature must verify against matching public key');
+    Assert.IsTrue(Verdict.IsApproved,
+      'Valid signature must verify against matching public key: ' + Verdict.Reason);
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifySignature_WrongKey_ReturnsFalse;
+procedure TTestUpdateSecurity.Test_VerifySignature_WrongKey_Rejected;
 const
   TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+var
+  Manager: TUpdateManager;
 begin
-  var Manager := TUpdateManager.Create;
+  Manager := TUpdateManager.Create;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.Initialize('https://cdn.example.com/updates', '1.0.0');
     // 故意设置一个无效公钥 PEM → LoadPublicKeyPEM 失败 → fail-closed
     Manager.SetPublicKey('-----BEGIN PUBLIC KEY-----' + sLineBreak +
       'NOT_A_REAL_KEY' + sLineBreak + '-----END PUBLIC KEY-----');
-    Assert.IsFalse(Manager.VerifySignature(TestData, TestRSASign(TestData), 'rsa-sha256'),
+    Assert.IsFalse(Manager.VerifySignature(TestData, TestRSASign(TestData)).IsApproved,
       'Signature must NOT verify against an invalid/unmatched public key');
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifySignature_EmptySignature_ReturnsFalse;
+procedure TTestUpdateSecurity.Test_VerifySignature_EmptySignature_Rejected;
 const
   TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+var
+  Manager: TUpdateManager;
 begin
-  var Manager := TUpdateManager.Create;
+  Manager := NewManager;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
-    // 空签名 → fail-closed（EDGE-006）
-    Assert.IsFalse(Manager.VerifySignature(TestData, '', 'rsa-sha256'),
+    Assert.IsFalse(Manager.VerifySignature(TestData, '').IsApproved,
       'Empty signature must be rejected');
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifySignature_TamperedData_ReturnsFalse;
+procedure TTestUpdateSecurity.Test_VerifySignature_TamperedData_Rejected;
 const
-  TestData    = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+  TestData     = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
   TamperedData = 'b1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+var
+  Manager: TUpdateManager;
 begin
-  var Manager := TUpdateManager.Create;
+  Manager := NewManager;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
     // 用 TestData 的签名，却拿篡改后的 data 验签 → 必然失败
-    Assert.IsFalse(Manager.VerifySignature(TamperedData, TestRSASign(TestData), 'rsa-sha256'),
+    Assert.IsFalse(Manager.VerifySignature(TamperedData, TestRSASign(TestData)).IsApproved,
       'Tampered data must fail signature verification');
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifySignature_UnknownAlgorithm_Rejected;
+procedure TTestUpdateSecurity.Test_VerifySignature_NoPublicKey_Rejected;
 const
   TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+var
+  Manager: TUpdateManager;
+  Verdict: TGateVerdict;
 begin
-  { A6 fail-closed 立法：未在白名单中的算法一律拒绝，不得静默回落到 RSA 路径 }
-  var Manager := TUpdateManager.Create;
+  { 改法项 (2)：验签信任锚缺失 = 不可校验 = 拒绝，无开关、无远端自述兜底 }
+  Manager := TUpdateManager.Create;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
-    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
-    var V := Manager.VerifySignature(TestData, 'deadbeef', 'ed25519');
-    Assert.IsFalse(V.IsApproved, 'Unknown algorithm must be rejected');
-    Assert.AreEqual(gdRejected, V.Decision,
-      'Unknown algorithm must produce gdRejected');
+    Manager.Initialize('https://cdn.example.com/updates', '1.0.0');
+    Verdict := Manager.VerifySignature(TestData, TestRSASign(TestData));
+    Assert.IsFalse(Verdict.IsApproved, 'Missing public key must be rejected');
+    Assert.AreEqual(gdRejected, Verdict.Decision,
+      'Missing public key must produce gdRejected');
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_StageAndVerifyPackage_FailClosed;
+procedure TTestUpdateSecurity.Test_StageAndVerify_MissingPackageHash_Rejected;
 var
-  LInfo: TUpdateInfo;
-  LVerdict: TGateVerdict;
-  LErr: string;
-  LTempFile: string;
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+  Verdict: TGateVerdict;
 begin
-  { A6 fail-open 修复：声明了签名但无公钥 → 拒绝（旧代码静默跳过验签） }
-  LTempFile := TPath.GetTempFileName;
+  PackagePath := TPath.GetTempFileName;
   try
-    TFile.WriteAllText(LTempFile, 'dummy package content');
-    LInfo := Default(TUpdateInfo);
-    LInfo.Version := TSemanticVersion.Parse('2.0.0');
-    LInfo.Signature := 'some-signature-value';
-    LVerdict := TUpdateManager.StageAndVerifyPackage(LInfo, LTempFile, '', LErr);
-    Assert.IsFalse(LVerdict.IsApproved,
-      'Declared signature with no public key must be rejected (fail-open fix)');
-    Assert.AreEqual(gdRejected, LVerdict.Decision,
-      'Must be gdRejected, not Indeterminate');
+    TFile.WriteAllText(PackagePath, 'package content');
+    Info := Default(TUpdateInfo);
+    Info.Signature := 'ANY_SIGNATURE';
+    Verdict := TUpdateManager.StageAndVerifyPackage(Info, PackagePath,
+      TEST_PUBLIC_KEY_PEM, ErrMsg);
+    Assert.IsFalse(Verdict.IsApproved, 'Missing package hash must be rejected');
+    Assert.IsTrue(Pos('Package hash is missing', ErrMsg) > 0,
+      'Reject reason must name the missing field: ' + ErrMsg);
   finally
-    TFile.Delete(LTempFile);
+    TFile.Delete(PackagePath);
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifyFileHash_ValidHash_ReturnsTrue;
+procedure TTestUpdateSecurity.Test_StageAndVerify_MissingSignature_Rejected;
+var
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+begin
+  PackagePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(PackagePath, 'package content');
+    Info := Default(TUpdateInfo);
+    Info.PackageHash := StringOfChar('a', 64);
+    Info.Signature := '';
+    Assert.IsFalse(
+      TUpdateManager.StageAndVerifyPackage(Info, PackagePath,
+        TEST_PUBLIC_KEY_PEM, ErrMsg).IsApproved,
+      'Missing package signature must be rejected');
+  finally
+    TFile.Delete(PackagePath);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_StageAndVerify_DeclaredSignatureNoPublicKey_Rejected;
+var
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+  Verdict: TGateVerdict;
+begin
+  { A6 fail-open 修复：声明了签名但无公钥 → 拒绝（旧代码静默跳过验签） }
+  PackagePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(PackagePath, 'dummy package content');
+    Info := Default(TUpdateInfo);
+    Info.PackageHash := StringOfChar('a', 64);
+    Info.Signature := 'some-signature-value';
+    Verdict := TUpdateManager.StageAndVerifyPackage(Info, PackagePath, '', ErrMsg);
+    Assert.IsFalse(Verdict.IsApproved,
+      'Declared signature with no public key must be rejected (fail-open fix)');
+    Assert.AreEqual(gdRejected, Verdict.Decision,
+      'Must be gdRejected, not Indeterminate');
+  finally
+    TFile.Delete(PackagePath);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_StageAndVerify_HashMismatch_Rejected;
+var
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg, WrongHash: string;
+begin
+  PackagePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(PackagePath, 'package content');
+    WrongHash := StringOfChar('0', 64);
+    Info := Default(TUpdateInfo);
+    Info.PackageHash := WrongHash;
+    // 签名对"错误 hash"是正确的：只有 hash 比对层会失败，证明不是签名层误伤
+    Info.Signature := TestRSASign(WrongHash);
+    Assert.IsFalse(
+      TUpdateManager.StageAndVerifyPackage(Info, PackagePath,
+        TEST_PUBLIC_KEY_PEM, ErrMsg).IsApproved,
+      'Package whose bytes do not match declared hash must be rejected');
+  finally
+    TFile.Delete(PackagePath);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_StageAndVerify_ValidHashAndSignature_Approved;
+var
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg, Hash: string;
+  Verdict: TGateVerdict;
+begin
+  PackagePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(PackagePath, 'package content');
+    Hash := LowerCase(THashSHA2.GetHashStringFromFile(PackagePath));
+    Info := Default(TUpdateInfo);
+    Info.PackageHash := Hash;
+    Info.Signature := TestRSASign(Hash);
+    Verdict := TUpdateManager.StageAndVerifyPackage(Info, PackagePath,
+      TEST_PUBLIC_KEY_PEM, ErrMsg);
+    Assert.IsTrue(Verdict.IsApproved,
+      'Hash + signature computed from the real package must approve: ' + ErrMsg);
+  finally
+    TFile.Delete(PackagePath);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_StageAndVerify_MissingManifestSignature_Rejected;
+var
+  Manager: TUpdateManager;
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+begin
+  { 改法项 (2)：manifest 签名与包签名同为强制项，缺一即拒（三件套 fail-closed） }
+  Manager := NewManager;
+  try
+    Info := Default(TUpdateInfo);
+    Info.PackageHash := StringOfChar('a', 64);
+    Info.Signature := TestRSASign(StringOfChar('a', 64));
+    Info.ManifestSignature := '';
+    Assert.IsFalse(
+      Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg).IsApproved,
+      'Missing manifest signature must be rejected');
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_ManifestVerify_PrecedesDownload_Approved;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+  TempFile, PackagePath, ErrMsg, Hash: string;
+  Verdict: TGateVerdict;
+begin
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'deepbase update package bytes');
+    Hash := LowerCase(THashSHA2.GetHashStringFromFile(TempFile));
+    Info := BuildSignedManifestInfo(Hash);
+
+    Manager := NewManager;
+    Fake := TFakeUpdaterTransport.Create;
+    Fake.Response := TDeepBaseHttpTransportResponse.Create(200, '');
+    Fake.Response.BodyBytes := TFile.ReadAllBytes(TempFile);
+    Transport := Fake as IDeepBaseHttpTransport;
+    Manager.HttpTransport := Transport;
+    try
+      Verdict := Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg);
+      Assert.IsTrue(Verdict.IsApproved,
+        'Fully signed manifest + package must approve: ' + ErrMsg);
+      Assert.AreEqual(1, Fake.CallCount,
+        'Manifest verification must precede exactly one package download');
+    finally
+      Manager.Free;
+      if PackagePath <> '' then
+        TFile.Delete(PackagePath);
+    end;
+  finally
+    TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_ManifestSignatureForged_RejectedWithoutDownload;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+  Verdict: TGateVerdict;
+begin
+  { 改法项 (4) 的攻击语义：伪造 manifest 签名但保持 manifest_hash 与 payload 自洽
+    → hash 层放行、RSA 层必拒；关键在于此时一次下载都不该发生。 }
+  Manager := NewManager;
+  Fake := TFakeUpdaterTransport.Create;
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200, '');
+  Transport := Fake as IDeepBaseHttpTransport;
+  Manager.HttpTransport := Transport;
+  try
+    Info := BuildSignedManifestInfo(StringOfChar('a', 64));
+    Info.ManifestSignature := TestRSASign('forged-payload-by-attacker');
+    Verdict := Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg);
+    Assert.IsFalse(Verdict.IsApproved, 'Forged manifest signature must be rejected');
+    Assert.AreEqual(0, Fake.CallCount,
+      'Unverified manifest must never trigger a download from download_url');
+  finally
+    Manager.Free;
+    if PackagePath <> '' then
+      TFile.Delete(PackagePath);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_PackageSignatureForged_RejectedAfterDownload;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+  TempFile, PackagePath, ErrMsg, Hash, Payload: string;
+  Verdict: TGateVerdict;
+begin
+  { manifest 层完好、包签名被伪造：门禁必须在下载后于包验签层拒绝。 }
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'deepbase update package bytes');
+    Hash := LowerCase(THashSHA2.GetHashStringFromFile(TempFile));
+
+    Manager := NewManager;
+    Fake := TFakeUpdaterTransport.Create;
+    Fake.Response := TDeepBaseHttpTransportResponse.Create(200, '');
+    Fake.Response.BodyBytes := TFile.ReadAllBytes(TempFile);
+    Transport := Fake as IDeepBaseHttpTransport;
+    Manager.HttpTransport := Transport;
+    try
+      Info := BuildSignedManifestInfo(Hash);
+      Info.Signature := TestRSASign(StringOfChar('f', 64));
+      // 重新自洽 manifest 层，使攻击只落在包签名这一层
+      Payload := BuildManifestSignaturePayload(Info);
+      Info.ManifestHash := LowerCase(THashSHA2.GetHashString(Payload));
+      Info.ManifestSignature := TestRSASign(Payload);
+
+      Verdict := Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg);
+      Assert.IsFalse(Verdict.IsApproved, 'Forged package signature must be rejected');
+      Assert.AreEqual(1, Fake.CallCount,
+        'Package layer is reached only after manifest verification');
+    finally
+      Manager.Free;
+      if PackagePath <> '' then
+        TFile.Delete(PackagePath);
+    end;
+  finally
+    TFile.Delete(TempFile);
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_UpdateEndpoint_HttpScheme_RejectedWithoutRequest;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+begin
+  { 改法项 (4)：https 是端点最低要求，明文更新端点在发出任何请求前被拒。 }
+  Manager := NewManager('http://cdn.example.com/updates');
+  Fake := TFakeUpdaterTransport.Create;
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200, '{}');
+  Transport := Fake as IDeepBaseHttpTransport;
+  Manager.HttpTransport := Transport;
+  try
+    Assert.IsFalse(Manager.CheckForUpdatesSync(Info),
+      'Plain http update endpoint must be refused');
+    Assert.AreEqual(0, Fake.CallCount,
+      'Endpoint gate must run before the transport is touched');
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_UpdateEndpoint_HostNotWhitelisted_RejectedWithoutRequest;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+begin
+  { 主机白名单是显式信任锚：UpdateUrl 的 host 不在名单内同样拒（fail-closed）。 }
+  Manager := NewManager('https://cdn.example.com/updates');
+  Manager.UpdateHostWhitelist := ['updates.deepbase.invalid'];
+  Fake := TFakeUpdaterTransport.Create;
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200, '{}');
+  Transport := Fake as IDeepBaseHttpTransport;
+  Manager.HttpTransport := Transport;
+  try
+    Assert.IsFalse(Manager.CheckForUpdatesSync(Info),
+      'Non-whitelisted https host must be refused');
+    Assert.AreEqual(0, Fake.CallCount,
+      'Host whitelist gate must run before the transport is touched');
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifyFileHash_ValidHash_Approved;
 begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test content for hash verification');
     // §16.10 关键点 1：纯 hex 小写（VerifyFileHash 内部 THashSHA2.GetHashString 对齐）
     var Expected := THashUtils.SHA256File(TempFile);
-    var Manager := TUpdateManager.Create;
+    var Manager := NewManager;
     try
-      Manager.Initialize('https://example.com/updates', '1.0.0');
-      Assert.IsTrue(Manager.VerifyFileHash(TempFile, Expected),
+      Assert.IsTrue(Manager.VerifyFileHash(TempFile, Expected).IsApproved,
         'Correct hash must verify');
     finally
       Manager.Free;
@@ -1326,17 +1590,16 @@ begin
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifyFileHash_WrongHash_ReturnsFalse;
+procedure TTestUpdateSecurity.Test_VerifyFileHash_WrongHash_Rejected;
 begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test content');
     // 故意给一个不可能匹配的 hash
     var WrongHash := StringOfChar('0', 64);
-    var Manager := TUpdateManager.Create;
+    var Manager := NewManager;
     try
-      Manager.Initialize('https://example.com/updates', '1.0.0');
-      Assert.IsFalse(Manager.VerifyFileHash(TempFile, WrongHash),
+      Assert.IsFalse(Manager.VerifyFileHash(TempFile, WrongHash).IsApproved,
         'Wrong hash must be rejected');
     finally
       Manager.Free;
@@ -1346,17 +1609,19 @@ begin
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_VerifyFileHash_EmptyExpectedHash_ReturnsFalse;
+procedure TTestUpdateSecurity.Test_VerifyFileHash_EmptyExpectedHash_Rejected;
 begin
   var TempFile := TPath.GetTempFileName;
   try
     TFile.WriteAllText(TempFile, 'test');
-    // 空期望 hash → fail-closed（EDGE-006，生产模式无 InsecureDevMode 时必拒）
-    var Manager := TUpdateManager.Create;
+    var Manager := NewManager;
     try
-      Manager.Initialize('https://example.com/updates', '1.0.0');
-      Assert.IsFalse(Manager.VerifyFileHash(TempFile, ''),
-        'Empty expected hash must be rejected in production mode');
+      // 空期望 hash → fail-closed（改法项 (2)，RELEASE 构建无 dev 豁免分支）
+      var Verdict := Manager.VerifyFileHash(TempFile, '');
+      Assert.IsFalse(Verdict.IsApproved,
+        'Empty expected hash must be rejected when dev mode is off');
+      Assert.AreEqual(gdRejected, Verdict.Decision,
+        'Empty expected hash must produce gdRejected');
     finally
       Manager.Free;
     end;
@@ -1405,32 +1670,154 @@ begin
     'Normal path should be within temp root');
 end;
 
-procedure TTestUpdateSecurity.Test_InsecureDevMode_Disabled_RejectsMissingHash;
+{$IFNDEF RELEASE}
+procedure TTestUpdateSecurity.Test_InsecureDevMode_Disabled_RejectsMissingIntegrity;
+var
+  Manager: TUpdateManager;
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
 begin
-  var Manager := TUpdateManager.Create;
+  { 开发豁免的反面：开关显式关闭时，三件套门禁照旧拒绝缺失的完整性字段 }
+  Manager := NewManager;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := False;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    Info := Default(TUpdateInfo);
+    Assert.IsFalse(
+      Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg).IsApproved,
+      'Missing integrity fields must still be rejected with dev mode off');
   finally
     Manager.Free;
   end;
 end;
 
-procedure TTestUpdateSecurity.Test_InsecureDevMode_Enabled_AllowsMissingHash;
+procedure TTestUpdateSecurity.Test_InsecureDevMode_Enabled_SkipsVerification;
+var
+  Manager: TUpdateManager;
+  Fake: TFakeUpdaterTransport;
+  Transport: IDeepBaseHttpTransport;
+  Info: TUpdateInfo;
+  PackagePath, ErrMsg: string;
+  Verdict: TGateVerdict;
 begin
-  var Manager := TUpdateManager.Create;
+  { 豁免只作用于非 RELEASE 编译，且必须在 verdict 理由中显式自曝（不可静默放行） }
+  Manager := NewManager;
+  Fake := TFakeUpdaterTransport.Create;
+  Fake.Response := TDeepBaseHttpTransportResponse.Create(200, 'package');
+  Transport := Fake as IDeepBaseHttpTransport;
+  Manager.HttpTransport := Transport;
   try
-    Manager.Initialize('https://example.com/updates', '1.0.0');
     Manager.InsecureDevMode := True;
-    var Info: TUpdateInfo;
-    Manager.CheckForUpdatesSync(Info);
-    Assert.IsTrue(True);
+    Info := Default(TUpdateInfo);
+    Info.Version := TSemanticVersion.Parse('2.0.0');
+    Info.DownloadUrl := 'https://cdn.example.com/updates/deepbase-2.0.0.zip';
+    Verdict := Manager.StageAndVerifyPackage(Info, PackagePath, ErrMsg);
+    Assert.IsTrue(Verdict.IsApproved,
+      'Dev mode must allow an unsigned package in non-RELEASE builds');
+    Assert.IsTrue(Pos('insecure dev mode', Verdict.Reason) > 0,
+      'Skipped verification must be declared in the verdict reason: ' + Verdict.Reason);
+    Assert.AreEqual(1, Fake.CallCount);
   finally
     Manager.Free;
+    if PackagePath <> '' then
+      TFile.Delete(PackagePath);
   end;
+end;
+{$ENDIF}
+
+{ TTestUpdateContracts }
+
+procedure TTestUpdateContracts.Test_NormalizePackageHash_StripsPrefixAndLowercases;
+begin
+  Assert.AreEqual('abcdef0123456789',
+    NormalizePackageHash('sha256:ABCDEF0123456789'));
+  Assert.AreEqual('abcdef0123456789',
+    NormalizePackageHash(' SHA256:ABCDEF0123456789 '),
+      'prefix match is case-insensitive and surrounding blanks are trimmed');
+  Assert.AreEqual('abcdef0123456789',
+    NormalizePackageHash('ABCDEF0123456789'),
+      'a bare hex hash must pass through lowercased');
+  Assert.AreEqual('', NormalizePackageHash(''), 'Empty stays empty (fail-closed upstream)');
+end;
+
+procedure TTestUpdateContracts.Test_ManifestPayload_SevenFieldsFixedOrder;
+var
+  Info: TUpdateInfo;
+  Fields: TArray<string>;
+begin
+  Info := Default(TUpdateInfo);
+  Info.AppId := 'deepbase_desktop';
+  Info.Version := TSemanticVersion.Parse('1.3.0');
+  Info.Channel := ucBeta;
+  Info.DownloadUrl := 'https://cdn.example.com/p/deepbase-1.3.0.zip';
+  Info.DownloadSize := 4096;
+  Info.PackageHash := 'abc123';
+  Info.Signature := 'SIG_B64';
+
+  Fields := BuildManifestSignaturePayload(Info).Split(['|']);
+  Assert.AreEqual<Integer>(7, Length(Fields), '§16.10 payload must have exactly 7 fields');
+  Assert.AreEqual('deepbase_desktop', Fields[0]);
+  Assert.AreEqual('1.3.0', Fields[1]);
+  Assert.AreEqual('beta', Fields[2]);
+  Assert.AreEqual('https://cdn.example.com/p/deepbase-1.3.0.zip', Fields[3]);
+  Assert.AreEqual('4096', Fields[4]);
+  Assert.AreEqual('abc123', Fields[5]);
+  Assert.AreEqual('SIG_B64', Fields[6]);
+end;
+
+procedure TTestUpdateContracts.Test_ManifestPayload_EmptyFields_KeepFieldCount;
+var
+  Info: TUpdateInfo;
+begin
+  { 空字段以空串占位：字段数恒为 7，否则签名字段会错位到别的序号上 }
+  Info := Default(TUpdateInfo);
+  Assert.AreEqual('|0.0.0|stable||0||', BuildManifestSignaturePayload(Info));
+end;
+
+procedure TTestUpdateContracts.Test_EndpointUrl_HttpRejected;
+var
+  Verdict: TGateVerdict;
+begin
+  Verdict := ValidateUpdateEndpointUrl('http://cdn.example.com/p.zip', ['cdn.example.com']);
+  Assert.IsFalse(Verdict.IsApproved, 'http must be refused even for a whitelisted host');
+  Assert.AreEqual(gdRejected, Verdict.Decision);
+end;
+
+procedure TTestUpdateContracts.Test_EndpointUrl_EmptyWhitelistRejected;
+var
+  Verdict: TGateVerdict;
+begin
+  { 无信任锚 ≠ 全放行：这是 fail-closed 与 fail-open 的分界 }
+  Verdict := ValidateUpdateEndpointUrl('https://cdn.example.com/p.zip', []);
+  Assert.IsFalse(Verdict.IsApproved, 'Empty host whitelist must reject');
+  Assert.IsTrue(Pos('fail-closed', Verdict.Reason) > 0,
+    'Reject reason must state fail-closed: ' + Verdict.Reason);
+end;
+
+procedure TTestUpdateContracts.Test_EndpointUrl_HostNotWhitelistedRejected;
+var
+  Verdict: TGateVerdict;
+begin
+  Verdict := ValidateUpdateEndpointUrl('https://evil.example.com/p.zip', ['cdn.example.com']);
+  Assert.IsFalse(Verdict.IsApproved, 'Non-listed host must be rejected');
+  Assert.IsTrue(Pos('not in the allowed host list', Verdict.Reason) > 0,
+    'Reject reason must name the whitelist: ' + Verdict.Reason);
+end;
+
+procedure TTestUpdateContracts.Test_EndpointUrl_HttpsWithWhitelistedHostApproved;
+var
+  Verdict: TGateVerdict;
+begin
+  Verdict := ValidateUpdateEndpointUrl('https://cdn.example.com/p.zip', ['CDN.Example.com']);
+  Assert.IsTrue(Verdict.IsApproved,
+    'Host comparison must be case-insensitive: ' + Verdict.Reason);
+end;
+
+procedure TTestUpdateContracts.Test_EndpointScheme_AcceptsHttpsWithoutWhitelist;
+begin
+  { 静态 CDN 通道（AutoUpdate）只需 https；需要白名单的通道另有门禁函数 }
+  Assert.IsTrue(ValidateUpdateEndpointScheme('https://any.cdn.example/p.zip').IsApproved);
+  Assert.IsFalse(ValidateUpdateEndpointScheme('ftp://any.cdn.example/p.zip').IsApproved);
+  Assert.IsFalse(ValidateUpdateEndpointScheme('').IsApproved);
 end;
 
 initialization
@@ -1441,5 +1828,6 @@ initialization
   TDUnitX.RegisterTestFixture(TTestUpdateProgress);
   TDUnitX.RegisterTestFixture(TTestVersionEdgeCases);
   TDUnitX.RegisterTestFixture(TTestUpdateSecurity);
+  TDUnitX.RegisterTestFixture(TTestUpdateContracts);
 
 end.

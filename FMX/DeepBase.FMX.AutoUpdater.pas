@@ -21,6 +21,7 @@ uses
   System.Messaging,
   FMX.Types,
   FMX.Dialogs,
+  DeepBase.Update.Contracts,
   DeepBase.Updater;
 
 type

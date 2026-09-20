@@ -1,12 +1,15 @@
 ﻿{ ============================================================================
   Test.DeepBase.AutoUpdate - Unit Tests for Auto-Update Module
 
-  Test Coverage:
-    - TUpdateInfo record operations
-    - TDeepBaseAutoUpdate class
-    - Update channel handling
-    - Version comparison
-    - REVIEW5-FEAT-003: HTTP timeouts and integrity enforcement
+  覆盖：
+    - TUpdateInfo（DeepBase.Update.Contracts SSOT 别名）字段语义
+    - TDeepBaseAutoUpdate 属性 / 通道 / 版本归一化
+    - 完整性三方（SHA256 + RSA-SHA256 签名 + 公钥）fail-closed 门禁（改法项 (2)）
+    - 端点 https 门禁（改法项 (4)，静态 CDN 通道无白名单可配）
+    - AU-01 正向 KAT：对包文件原始字节单层签名 → 验签收敛（RSA-2048/CNG 真实往返）
+
+  密钥材料来自 Test.DeepBase.UpdateFixtures（两通道测试共用，禁各持一份）。
+  法源：WO-20260920-AUDIT-甲-R5 M1（Top20#01 更新验签链，docs/66 §16.10）。
   ============================================================================ }
 
 unit Test.DeepBase.AutoUpdate;
@@ -18,7 +21,9 @@ uses
   System.SysUtils,
   System.Classes,
   System.IOUtils,
-  DeepBase.Updater,
+  System.Hash,
+  DeepBase.Gate.Verdict,
+  DeepBase.Update.Contracts,
   DeepBase.AutoUpdate;
 
 type
@@ -36,13 +41,17 @@ type
     [Test]
     procedure Test_DownloadSizeField;
     [Test]
-    procedure Test_Sha256Field;
+    procedure Test_PackageHashField;
+    [Test]
+    procedure Test_SignatureField;
     [Test]
     procedure Test_ReleaseDateField;
     [Test]
-    procedure Test_ChangelogField;
+    procedure Test_ReleaseNotesField;
     [Test]
-    procedure Test_ForceUpdateField;
+    procedure Test_IsMandatoryField;
+    [Test]
+    procedure Test_IsEmpty;
     [Test]
     procedure Test_AllFieldsAssignment;
   end;
@@ -56,7 +65,7 @@ type
     procedure Setup;
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure Test_Create_Default;
     [Test]
@@ -119,12 +128,11 @@ type
   end;
 
   /// <summary>
-  /// REVIEW5-FEAT-003: HTTP timeouts and integrity enforcement tests.
-  /// Verifies that:
-  /// - Default timeouts are configured (30s connection, 60s response)
-  /// - Timeouts are configurable via public properties
-  /// - DownloadUpdate fails closed when neither SHA256 nor Signature is provided
-  /// - TUpdateInfo has a Signature field
+  /// 完整性门禁测试（改法项 (2)(4) + AU-01）：
+  /// - hash/签名/公钥三元组任一缺失 = 下载前 fail-closed 拒绝，不发网络请求；
+  /// - 非 https 端点拒绝；
+  /// - 正向 KAT：私钥对包原始字节签名 → VerifyDownloadedPackageIntegrity 通过；
+  /// - 篡改包 / 伪造签名 → 拒绝且删包。
   /// </summary>
   [TestFixture]
   TTestIntegrityEnforcement = class
@@ -143,18 +151,33 @@ type
     [Test]
     procedure Test_TimeoutsAreConfigurable;
     [Test]
-    procedure Test_UpdateInfoSignatureField;
-    [Test]
     procedure Test_DownloadUpdate_FailClosed_NoIntegrityInfo;
     [Test]
-    procedure Test_DownloadUpdate_FailClosed_EmptySha256AndSignature;
+    procedure Test_DownloadUpdate_FailClosed_OnlyPackageHash;
     [Test]
-    procedure Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck;
+    procedure Test_DownloadUpdate_FailClosed_OnlySignature;
     [Test]
-    procedure Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck;
+    procedure Test_DownloadUpdate_FailClosed_NoPublicKey;
+    [Test]
+    procedure Test_DownloadUpdate_NonHttpsEndpoint_RejectedWithoutRequest;
+    [Test]
+    procedure Test_Verify_IntegrityKAT_SignedRawBytes_Approved;
+    [Test]
+    procedure Test_Verify_TamperedPackageAfterSigning_RejectedAndDeleted;
+    [Test]
+    procedure Test_Verify_ForgedSignature_HashConsistent_Rejected;
+    [Test]
+    procedure Test_Verify_MissingHash_RejectedAndDeleted;
+    [Test]
+    procedure Test_Verify_MissingSignature_Rejected;
+    [Test]
+    procedure Test_Verify_MissingPublicKey_Rejected;
   end;
 
 implementation
+
+uses
+  Test.DeepBase.UpdateFixtures;
 
 { TTestUpdateInfo }
 
@@ -162,23 +185,27 @@ procedure TTestUpdateInfo.Test_DefaultValues;
 var
   Info: TUpdateInfo;
 begin
-  FillChar(Info, SizeOf(Info), 0);
-  
-  Assert.AreEqual('', Info.Version);
+  Info := Default(TUpdateInfo);
+
+  Assert.AreEqual('0.0.0', Info.Version.ToString);
   Assert.AreEqual('', Info.DownloadUrl);
+  Assert.AreEqual('', Info.PackageHash);
+  Assert.AreEqual('', Info.Signature);
   Assert.AreEqual(Int64(0), Info.DownloadSize);
-  Assert.IsFalse(Info.ForceUpdate);
+  Assert.IsFalse(Info.IsMandatory);
 end;
 
 procedure TTestUpdateInfo.Test_VersionField;
 var
   Info: TUpdateInfo;
 begin
-  Info.Version := '1.2.3';
-  Assert.AreEqual('1.2.3', Info.Version);
-  
-  Info.Version := '2.0.0-beta.1';
-  Assert.AreEqual('2.0.0-beta.1', Info.Version);
+  Info.Version := TSemanticVersion.Parse('1.2.3');
+  Assert.AreEqual('1.2.3', Info.Version.ToString);
+
+  Info.Version := TSemanticVersion.Parse('2.0.0-beta.1');
+  Assert.AreEqual('2.0.0-beta.1', Info.Version.ToString);
+  Assert.AreEqual(2, Info.Version.Major);
+  Assert.AreEqual('beta.1', Info.Version.PreRelease);
 end;
 
 procedure TTestUpdateInfo.Test_ChannelField;
@@ -187,10 +214,10 @@ var
 begin
   Info.Channel := ucStable;
   Assert.AreEqual(ucStable, Info.Channel);
-  
+
   Info.Channel := ucBeta;
   Assert.AreEqual(ucBeta, Info.Channel);
-  
+
   Info.Channel := ucDev;
   Assert.AreEqual(ucDev, Info.Channel);
 end;
@@ -209,17 +236,29 @@ var
 begin
   Info.DownloadSize := 0;
   Assert.AreEqual(Int64(0), Info.DownloadSize);
-  
+
   Info.DownloadSize := 52428800;  // 50MB
   Assert.AreEqual(Int64(52428800), Info.DownloadSize);
 end;
 
-procedure TTestUpdateInfo.Test_Sha256Field;
+procedure TTestUpdateInfo.Test_PackageHashField;
 var
   Info: TUpdateInfo;
 begin
-  Info.Sha256 := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-  Assert.AreEqual(64, Integer(Length(Info.Sha256)));
+  Info.PackageHash := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  Assert.AreEqual(64, Integer(Length(Info.PackageHash)));
+end;
+
+procedure TTestUpdateInfo.Test_SignatureField;
+var
+  Info: TUpdateInfo;
+begin
+  // §16.10：Signature = base64(RSA-SHA256(utf8(PackageHash)))，契约侧纯字符串字段。
+  Info := Default(TUpdateInfo);
+  Assert.AreEqual('', Info.Signature);
+
+  Info.Signature := TestRSASign('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+  Assert.IsTrue(Info.Signature <> '');
 end;
 
 procedure TTestUpdateInfo.Test_ReleaseDateField;
@@ -232,44 +271,59 @@ begin
   Assert.AreEqual(TestDate, Info.ReleaseDate);
 end;
 
-procedure TTestUpdateInfo.Test_ChangelogField;
+procedure TTestUpdateInfo.Test_ReleaseNotesField;
 var
   Info: TUpdateInfo;
 begin
-  Info.Changelog := '- Bug fixes\n- New features\n- Performance improvements';
-  Assert.IsTrue(Info.Changelog.Contains('Bug fixes'));
-  Assert.IsTrue(Info.Changelog.Contains('Performance'));
+  Info.ReleaseNotes := '- Bug fixes' + sLineBreak + '- New features' + sLineBreak + '- Performance improvements';
+  Assert.IsTrue(Info.ReleaseNotes.Contains('Bug fixes'));
+  Assert.IsTrue(Info.ReleaseNotes.Contains('Performance'));
 end;
 
-procedure TTestUpdateInfo.Test_ForceUpdateField;
+procedure TTestUpdateInfo.Test_IsMandatoryField;
 var
   Info: TUpdateInfo;
 begin
-  Info.ForceUpdate := False;
-  Assert.IsFalse(Info.ForceUpdate);
-  
-  Info.ForceUpdate := True;
-  Assert.IsTrue(Info.ForceUpdate);
+  Info.IsMandatory := False;
+  Assert.IsFalse(Info.IsMandatory);
+
+  Info.IsMandatory := True;
+  Assert.IsTrue(Info.IsMandatory);
+end;
+
+procedure TTestUpdateInfo.Test_IsEmpty;
+var
+  Info: TUpdateInfo;
+begin
+  Info := Default(TUpdateInfo);
+  Assert.IsTrue(Info.IsEmpty, 'Default record must be empty');
+
+  Info.DownloadUrl := 'https://example.com/pkg.zip';
+  Assert.IsFalse(Info.IsEmpty);
 end;
 
 procedure TTestUpdateInfo.Test_AllFieldsAssignment;
 var
   Info: TUpdateInfo;
 begin
-  Info.Version := '3.0.0';
+  Info := Default(TUpdateInfo);
+  Info.AppId := 'deepbase_desktop';
+  Info.Version := TSemanticVersion.Parse('3.0.0');
   Info.Channel := ucStable;
   Info.DownloadUrl := 'https://cdn.example.com/v3/setup.exe';
   Info.DownloadSize := 104857600;
-  Info.Sha256 := 'abc123def456';
+  Info.PackageHash := 'abc123def456';
+  Info.Signature := 'SIG_B64';
   Info.ReleaseDate := Now;
-  Info.Changelog := 'Major release with breaking changes';
-  Info.ForceUpdate := True;
-  
-  Assert.AreEqual('3.0.0', Info.Version);
+  Info.ReleaseNotes := 'Major release with breaking changes';
+  Info.IsMandatory := True;
+
+  Assert.AreEqual('deepbase_desktop', Info.AppId);
+  Assert.AreEqual('3.0.0', Info.Version.ToString);
   Assert.AreEqual(ucStable, Info.Channel);
   Assert.AreEqual('https://cdn.example.com/v3/setup.exe', Info.DownloadUrl);
   Assert.AreEqual(Int64(104857600), Info.DownloadSize);
-  Assert.IsTrue(Info.ForceUpdate);
+  Assert.IsTrue(Info.IsMandatory);
 end;
 
 { TTestAutoUpdateClass }
@@ -415,7 +469,7 @@ procedure TTestVersionNormalization.Test_VersionWithV;
 begin
   FAutoUpdate.CurrentVersion := 'v1.2.3';
   // Should normalize by removing 'v' prefix internally when comparing
-  Assert.IsTrue(FAutoUpdate.CurrentVersion.StartsWith('v') or 
+  Assert.IsTrue(FAutoUpdate.CurrentVersion.StartsWith('v') or
                 (FAutoUpdate.CurrentVersion = '1.2.3'));
 end;
 
@@ -444,6 +498,9 @@ end;
 procedure TTestIntegrityEnforcement.Setup;
 begin
   FAutoUpdate := TDeepBaseAutoUpdate.Create;
+  // 显式覆盖公钥：构造函数会读 DEEPKIT_UPDATE_PUBLIC_KEY_RSA_PEM 环境变量，
+  // 测试必须自己决定有/无公钥，不受本机环境左右。
+  FAutoUpdate.PublicKeyRSA := '';
 end;
 
 procedure TTestIntegrityEnforcement.TearDown;
@@ -453,14 +510,12 @@ end;
 
 procedure TTestIntegrityEnforcement.Test_DefaultConnectionTimeout;
 begin
-  // REVIEW5-FEAT-003: default connection timeout must be 30000ms
   Assert.AreEqual(30000, FAutoUpdate.ConnectionTimeout,
     'Default ConnectionTimeout should be 30000ms (30 seconds)');
 end;
 
 procedure TTestIntegrityEnforcement.Test_DefaultResponseTimeout;
 begin
-  // REVIEW5-FEAT-003: default response timeout must be 60000ms
   Assert.AreEqual(60000, FAutoUpdate.ResponseTimeout,
     'Default ResponseTimeout should be 60000ms (60 seconds)');
 end;
@@ -473,96 +528,53 @@ begin
   Assert.AreEqual(45000, FAutoUpdate.ResponseTimeout);
 end;
 
-procedure TTestIntegrityEnforcement.Test_UpdateInfoSignatureField;
-var
-  Info: TUpdateInfo;
-begin
-  // REVIEW5-FEAT-003: TUpdateInfo must have a Signature field
-  FillChar(Info, SizeOf(Info), 0);
-  Assert.AreEqual('', Info.Signature);
-
-  Info.Signature := 'MEUCIQDx...base64encoded...sig==';
-  Assert.IsTrue(Info.Signature <> '');
-  Assert.IsTrue(Info.Signature.StartsWith('MEUCIQDx'));
-end;
-
 procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_NoIntegrityInfo;
 var
   Info: TUpdateInfo;
   TempFile: string;
-  DownloadResult: Boolean;
+  Ok: Boolean;
 begin
-  // REVIEW5-FEAT-003: When neither SHA256 nor Signature is provided,
-  // DownloadUpdate must fail closed (return False with descriptive error)
-  // BEFORE making any HTTP request.
+  // 三元组（SHA256/签名/公钥）任一缺失 = 下载前 fail-closed 拒绝，不发 HTTP 请求。
   Info := Default(TUpdateInfo);
   Info.DownloadUrl := 'https://example.com/update.exe';
-  Info.Sha256 := '';
+  Info.PackageHash := '';
   Info.Signature := '';
 
   TempFile := TPath.GetTempFileName;
   try
-    DownloadResult := FAutoUpdate.DownloadUpdate(Info, TempFile);
-    Assert.IsFalse(DownloadResult,
-      'DownloadUpdate must fail closed when neither SHA256 nor Signature is provided');
-    Assert.IsTrue(FAutoUpdate.LastError <> '',
-      'LastError should contain a descriptive message');
-    Assert.IsTrue(
-      FAutoUpdate.LastError.Contains('SHA256') or FAutoUpdate.LastError.Contains('signature'),
-      'LastError should mention SHA256 or signature requirement');
+    Ok := False;
+    try
+      Ok := FAutoUpdate.DownloadUpdate(Info, TempFile);
+    except
+      on E: Exception do
+        Assert.Fail('Download must be rejected before any request, but raised: ' + E.Message);
+    end;
+    Assert.IsFalse(Ok,
+      'DownloadUpdate must fail closed when integrity triad is incomplete');
+    Assert.IsTrue(FAutoUpdate.LastError.Contains('all required (fail-closed)'),
+      'LastError should state the triad requirement. Got: ' + FAutoUpdate.LastError);
   finally
     if FileExists(TempFile) then
       DeleteFile(TempFile);
   end;
 end;
 
-procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_EmptySha256AndSignature;
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_OnlyPackageHash;
 var
   Info: TUpdateInfo;
   TempFile: string;
 begin
-  // REVIEW5-FEAT-003: Both empty Sha256 and Signature => fail closed
+  // 旧弱基线"只有 hash 没有签名"必须翻转拒绝（改法项 (2)，不得变通）。
   Info := Default(TUpdateInfo);
   Info.DownloadUrl := 'https://example.com/update.exe';
-  Info.Sha256 := '';
+  Info.PackageHash := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
   Info.Signature := '';
 
   TempFile := TPath.GetTempFileName;
   try
     Assert.IsFalse(FAutoUpdate.DownloadUpdate(Info, TempFile),
-      'Download must be rejected without any integrity information');
-    Assert.IsTrue(FAutoUpdate.LastError <> '',
-      'LastError must be set');
-  finally
-    if FileExists(TempFile) then
-      DeleteFile(TempFile);
-  end;
-end;
-
-procedure TTestIntegrityEnforcement.Test_DownloadUpdate_WithSha256_DoesNotFailIntegrityCheck;
-var
-  Info: TUpdateInfo;
-  TempFile: string;
-begin
-  // REVIEW5-FEAT-003: When SHA256 is provided, the integrity gate must pass
-  // (download may still fail due to network, but not due to integrity check).
-  // We use a non-routable URL to ensure the HTTP call fails for reasons OTHER
-  // than the integrity check.
-  Info := Default(TUpdateInfo);
-  Info.DownloadUrl := 'https://192.0.2.1/unreachable'; // RFC 5737 TEST-NET
-  Info.Sha256 := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-  Info.Signature := '';
-
-  TempFile := TPath.GetTempFileName;
-  try
-    // This should NOT fail with the integrity error. It will fail due to network,
-    // but that's a different error path.
-    FAutoUpdate.DownloadUpdate(Info, TempFile);
-    // The LastError should NOT contain the integrity rejection message
-    Assert.IsFalse(
-      FAutoUpdate.LastError.Contains('must provide SHA256') or
-      FAutoUpdate.LastError.Contains('must provide digital signature'),
-      'LastError should not contain integrity gate rejection when SHA256 is provided. ' +
+      'SHA256 alone must not pass the integrity gate');
+    Assert.IsTrue(FAutoUpdate.LastError.Contains('all required (fail-closed)'),
       'Got: ' + FAutoUpdate.LastError);
   finally
     if FileExists(TempFile) then
@@ -570,27 +582,208 @@ begin
   end;
 end;
 
-procedure TTestIntegrityEnforcement.Test_DownloadUpdate_WithSignature_DoesNotFailIntegrityCheck;
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_OnlySignature;
 var
   Info: TUpdateInfo;
   TempFile: string;
 begin
-  // REVIEW5-FEAT-003: When Signature is provided (but no SHA256), the integrity
-  // gate must pass.
+  // 只有签名没有 hash：同样拒绝。
   Info := Default(TUpdateInfo);
-  Info.DownloadUrl := 'https://192.0.2.1/unreachable'; // RFC 5737 TEST-NET
-  Info.Sha256 := '';
-  Info.Signature := 'MEUCIQDx...base64encoded...sig==';
+  Info.DownloadUrl := 'https://example.com/update.exe';
+  Info.PackageHash := '';
+  Info.Signature := TestRSASign('anything');
 
   TempFile := TPath.GetTempFileName;
   try
-    FAutoUpdate.DownloadUpdate(Info, TempFile);
-    // The LastError should NOT contain the integrity rejection message
-    Assert.IsFalse(
-      FAutoUpdate.LastError.Contains('must provide SHA256') or
-      FAutoUpdate.LastError.Contains('must provide digital signature'),
-      'LastError should not contain integrity gate rejection when Signature is provided. ' +
+    Assert.IsFalse(FAutoUpdate.DownloadUpdate(Info, TempFile),
+      'Signature alone must not pass the integrity gate');
+    Assert.IsTrue(FAutoUpdate.LastError.Contains('all required (fail-closed)'),
       'Got: ' + FAutoUpdate.LastError);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_FailClosed_NoPublicKey;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+begin
+  // hash+签名齐备但未配置公钥：三方缺一仍是 fail-closed。
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'https://example.com/update.exe';
+  Info.PackageHash := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  Info.Signature := TestRSASign(Info.PackageHash);
+  FAutoUpdate.PublicKeyRSA := '';
+
+  TempFile := TPath.GetTempFileName;
+  try
+    Assert.IsFalse(FAutoUpdate.DownloadUpdate(Info, TempFile),
+      'Missing configured public key must fail the gate');
+    Assert.IsTrue(FAutoUpdate.LastError.Contains('all required (fail-closed)'),
+      'Got: ' + FAutoUpdate.LastError);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_DownloadUpdate_NonHttpsEndpoint_RejectedWithoutRequest;
+var
+  Info: TUpdateInfo;
+  TempFile: string;
+begin
+  // 改法项 (4)：静态 CDN 通道最低门禁 = https，三元组齐备也不放行 http。
+  Info := Default(TUpdateInfo);
+  Info.DownloadUrl := 'http://example.com/update.exe';
+  Info.PackageHash := 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  Info.Signature := TestRSASign(Info.PackageHash);
+  FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+  TempFile := TPath.GetTempFileName;
+  try
+    Assert.IsFalse(FAutoUpdate.DownloadUpdate(Info, TempFile),
+      'http endpoint must be rejected by scheme gate');
+    Assert.IsTrue(FAutoUpdate.LastError.Contains('Download rejected'),
+      'Got: ' + FAutoUpdate.LastError);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_IntegrityKAT_SignedRawBytes_Approved;
+var
+  TempFile: string;
+  ExpectedHash: string;
+  Sig: string;
+begin
+  // AU-01 正向 KAT：私钥对包"原始字节"单层 SHA256 签名 → 门禁通过。
+  // 这是旧双层实现（摘要的摘要）与新单层语义的分叉点，必须有真实往返证据。
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'deepbase-package-payload-v1');
+    ExpectedHash := LowerCase(THashSHA2.GetHashStringFromFile(TempFile));
+    Sig := TestRSASignFile(TempFile);
+    FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+    Assert.IsTrue(FAutoUpdate.VerifyDownloadedPackageIntegrity(TempFile, ExpectedHash, Sig).IsApproved,
+      'Valid raw-bytes signature must be approved. Got: ' + FAutoUpdate.LastError);
+    Assert.IsTrue(FileExists(TempFile), 'Approved package must be kept on disk');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_TamperedPackageAfterSigning_RejectedAndDeleted;
+var
+  TempFile: string;
+  ExpectedHash: string;
+  Sig: string;
+  Verdict: TGateVerdict;
+begin
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'signed-content');
+    // 声明侧期望值 = 签名时原始内容的 hash（远端 metadata 给出的原始事实）；
+    // 篡改后文件实际 hash 与声明分叉 → SHA256 层先行拒绝并删包。
+    ExpectedHash := LowerCase(THashSHA2.GetHashStringFromFile(TempFile));
+    Sig := TestRSASignFile(TempFile);
+    TFile.WriteAllText(TempFile, 'tampered!!');
+    FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+    Verdict := FAutoUpdate.VerifyDownloadedPackageIntegrity(TempFile, ExpectedHash, Sig);
+    Assert.AreEqual(gdRejected, Verdict.Decision, 'Tampered hash must be rejected');
+    Assert.IsTrue(Verdict.Reason.Contains('SHA256 mismatch'),
+      'Got: ' + Verdict.Reason);
+    Assert.IsFalse(FileExists(TempFile), 'Rejected package must be deleted (fail-closed)');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_ForgedSignature_HashConsistent_Rejected;
+var
+  TempFile: string;
+  Sig: string;
+  Verdict: TGateVerdict;
+begin
+  // hash 与文件一致但签名是攻击者私钥对别的内容签的 → 必须走到 RSA 验签层拒绝。
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'victim-package');
+    Sig := TestRSASign('attacker-controlled-hash');
+    FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+    Verdict := FAutoUpdate.VerifyDownloadedPackageIntegrity(
+      TempFile, LowerCase(THashSHA2.GetHashStringFromFile(TempFile)), Sig);
+    Assert.AreEqual(gdRejected, Verdict.Decision, 'Invalid signature must be rejected');
+    Assert.IsTrue(Verdict.Reason.Contains('Signature verification failed'),
+      'Got: ' + Verdict.Reason);
+    Assert.IsFalse(FileExists(TempFile), 'Rejected package must be deleted');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_MissingHash_RejectedAndDeleted;
+var
+  TempFile: string;
+  Verdict: TGateVerdict;
+begin
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'content');
+    FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+    Verdict := FAutoUpdate.VerifyDownloadedPackageIntegrity(TempFile, '', 'some-sig');
+    Assert.AreEqual(gdRejected, Verdict.Decision);
+    Assert.IsTrue(Verdict.Reason.Contains('package hash is missing'), 'Got: ' + Verdict.Reason);
+    Assert.IsFalse(FileExists(TempFile), 'Rejected package must be deleted');
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_MissingSignature_Rejected;
+var
+  TempFile: string;
+  Verdict: TGateVerdict;
+begin
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'content');
+    FAutoUpdate.PublicKeyRSA := TEST_PUBLIC_KEY_PEM;
+
+    Verdict := FAutoUpdate.VerifyDownloadedPackageIntegrity(
+      TempFile, LowerCase(THashSHA2.GetHashStringFromFile(TempFile)), '');
+    Assert.AreEqual(gdRejected, Verdict.Decision);
+    Assert.IsTrue(Verdict.Reason.Contains('package signature is missing'), 'Got: ' + Verdict.Reason);
+  finally
+    if FileExists(TempFile) then
+      DeleteFile(TempFile);
+  end;
+end;
+
+procedure TTestIntegrityEnforcement.Test_Verify_MissingPublicKey_Rejected;
+var
+  TempFile: string;
+  Verdict: TGateVerdict;
+begin
+  TempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(TempFile, 'content');
+    FAutoUpdate.PublicKeyRSA := '';
+
+    Verdict := FAutoUpdate.VerifyDownloadedPackageIntegrity(
+      TempFile, LowerCase(THashSHA2.GetHashStringFromFile(TempFile)), 'some-sig');
+    Assert.AreEqual(gdRejected, Verdict.Decision);
+    Assert.IsTrue(Verdict.Reason.Contains('no RSA public key configured'), 'Got: ' + Verdict.Reason);
   finally
     if FileExists(TempFile) then
       DeleteFile(TempFile);
