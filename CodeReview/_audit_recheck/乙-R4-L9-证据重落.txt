@@ -1,0 +1,46 @@
+WO-20260920-AUDIT-乙-R4 L9 — `_audit_recheck/` 证据文件 UTF-16 重落 UTF-8
+执行：开发 AI 乙　日期：2026-09-20　工具：.tmp/r4/l9_scan.js（普查）+ .tmp/r4/l9_fix.js（转换，幂等）
+
+[扫描口径 H10]
+扫描根：CodeReview/_audit_recheck/（含子目录，全部 71 个文件，无排除）
+判据：NUL 字节计数 > 0
+
+[重落前普查（乙独立实测，H7）]
+NUL>0 命中 15 件，与主控工单清单一致（15 件、逐文件名吻合）：
+  乙-B1-scan-fffd-before.txt (NUL=4981) / 乙-B1-scan-fffd-after.txt (1365)
+  乙-R2-E2-scan-fffd-after-fix.txt (1294) / 乙-R2-E2-gate-run.txt (808) / 乙-R2-E2-残留逐行登记.txt (38)
+  乙-B4-regression-output.txt (917) / 乙-B4-regression-output-run2.txt (917) / 乙-B4-test-output.txt (543)
+  乙-B5-取证/out1.txt (41112) out2.txt (15132) out3.txt (10172) out4.txt (1730) out6.txt (2353) out7.txt (1907) out8.txt (3639)
+（out5.txt 不在命中集：其本身已是 UTF-8，与主控清单一致）
+
+[特征分型]
+14 件 = 完整 UTF-16LE（FF FE BOM + 逐字符高位 00），TextDecoder(utf-16le,fatal) 全量解码成功，无代理项错误。
+1 件特例 `乙-R2-E2-残留逐行登记.txt` = UTF-8 主体 + 嵌入式 UTF-16LE 片段：
+  偏移 10789..10867（首/末 NUL 定界 10792/10866，(ln-s)%2==1 对齐），
+  片段 78 字节 = 39 字符，解码为 "뫢·nit Test.DeepBase.Browser.Selectors;\r"
+  —— 正是当年登记 Selectors.pas 损坏前缀时，UTF-16 文本流以原始字节插入 UTF-8 文件所致（同一根因的第二表现）。
+  处理：head(合法UTF-8) + seg(按UTF-16LE解码) + tail(合法UTF-8) 拼接；三段均 fatal 解码零异常。
+
+[转换与自证]
+- 仅做编码转换；行尾/行内容零干预（blob 的 CRLF→LF 归一由 `*.txt text eol=lf` 立法在 commit 时承担）。
+- 逐行等价：以 /\r\n|\r|\n/ 切分行序列逐行比对通过（14 件在转换时即校验；特例文件片段内仅 1 个 \r 且保留原字节语义）。
+- 重落后普查：NUL>0 命中 = 0（本文件同目录复扫输出，见工单回执）。
+- 每件 sha256(原件)/sha256(新件) 与行数登记于清单。
+
+[原件生命周期（要求1）]
+原件逐字节备份：.tmp/r4/l9-originals/（含 乙-B5-取证/ 子目录）+ _manifest.json
+登记：观察期 14 天，到期日 2026-10-04；到期经主控确认后处置（本单 H4 禁删除，未授权即不删）。
+git 历史中 UTF-16 原 blob 仍可按 commit+path 恢复，构成第二重保底。
+
+[生成源头说明（要求3）]
+14 件源头 = PowerShell `>` / `Out-File` 默认 UTF-16LE 重定向（主控 L3 顺带查实：NUL 占比恒定≈50% 特征吻合）。
+后续整改（本单已落地一半）：
+  a) H18 纪律入工单文本；
+  b) CI 机器门禁 = WO-20260920-AUDIT-乙-R5 N3 `evidence-encoding-gate/`（检测 CodeReview/** NUL>0）。
+证据内容零改写（要求4）：仅编码层转换，无任何一行文本被润色或删除。
+
+[残留披露：特例文件提交后仍为 -text]
+`乙-R2-E2-残留逐行登记.txt` 重落后 NUL=0，但拼接缝处原件即含 1 个孤立 CR（片段尾部 `Selectors;\r` 直接接 tail 的 `\r\n`，形成 `\r\r\n`）。
+乙独立实测：以 splice 定界解码原件所得文本与当前工作树文件**逐字节相同**（189 行 = 189 行），孤立 CR 系忠实保留的原始内容，非本次转换引入。
+按 R4 L3 已证结论（孤立 CR ⇒ git 判 `-text`），该文件提交后 i/ 状态仍为 -text。处置：不改写（证据不得洗白）、原件与 _manifest.json 留 .tmp 备查；
+git clean（text eol=lf）提交时会把缝处 `\r\r\n` 折叠为 `\r\n`，属仓库行尾立法的既定作用域，行序列语义以 .tmp 原件为准。

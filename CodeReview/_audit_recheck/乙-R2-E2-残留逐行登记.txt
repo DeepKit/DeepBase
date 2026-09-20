@@ -148,7 +148,7 @@
   L108 [LITERAL x1] Assert.Pass('验证通过：RSA 签名长度应该远大于简<FFFD>?SHA256+Base64');
 
 ==== Tests/Test.DeepBase.Browser.Selectors.pas  (档: CLEAN_UTF8, 基线FFFD=1, 实测行=1) ====
-  L1 [CODE x1] <FFFD>⺷ n i t   T e s t . D e e p B a s e . B r o w s e r . S e l e c t o r s ;  
+  L1 [CODE x1] <FFFD>뫢·nit Test.DeepBase.Browser.Selectors;
 
 ==== Tests/Test.DeepBase.EventBus.pas  (档: CLEAN_UTF8, 基线FFFD=3, 实测行=2) ====
   L624 [COMMENT x1] Sleep(50);  // BUG-027 FIX: 减少Sleep时间，主要用于验证异步特<FFFD>?
