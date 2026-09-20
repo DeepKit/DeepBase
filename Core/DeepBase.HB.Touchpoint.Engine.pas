@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Touchpoint.Engine - HB Touchpoint Registry & Sampling Engine
 
   Version: 2.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

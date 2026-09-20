@@ -1,4 +1,4 @@
-{*****************************************************************************
+﻿{*****************************************************************************
   Test.DeepBase.HB.Benchmark - HB Performance Gates #1–#7 (31.hb-test v1.1)
 
   Thresholds are fixed by the spec — never relaxed for machine noise.

@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Theme - VCL Adapter for HB Visual Infrastructure Theme Engine
 
   Version: 1.0 (Delphi 13.1 on Win64)

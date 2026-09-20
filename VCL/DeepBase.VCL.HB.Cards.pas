@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Cards - HB Visual Infrastructure Business Cards & Containers
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -35,11 +35,13 @@ uses
   DeepBase.VCL.HB.Controls;
 
 type
-  THbCardKind = (ckSurface, ckSunken, ckHero, ckOutline);
+  THbCardKind = (ckSurface, ckSunken, ckHero, ckOutline, ckGhost, ckQuiet);
   THbCardRadius = (rsS, rsM, rsL);
 
   THbStatEmphasis = (peNormal, peHero);
   THbStatTrend = (trNone, trUp, trDown);
+
+  THbEmptyStateMode = (esmNoData, esmAllClear, esmFilteredEmpty, esmOffline);
 
   { --------------------------------------------------------------------------
     THbCard - Modern container card with gradient/elevation/sunken support
@@ -171,6 +173,7 @@ type
     -------------------------------------------------------------------------- }
   THbEmptyState = class(THbCustomControl)
   private
+    FMode: THbEmptyStateMode;
     FGlyph: string;
     FTitle: string;
     FHint: string;
@@ -178,6 +181,7 @@ type
     FOnActionClick: TNotifyEvent;
     FActionHovered: Boolean;
     FActionPressed: Boolean;
+    procedure SetMode(Value: THbEmptyStateMode);
     procedure SetGlyph(const Value: string);
     procedure SetTitle(const Value: string);
     procedure SetHint(const Value: string);
@@ -192,6 +196,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
   published
+    property Mode: THbEmptyStateMode read FMode write SetMode default esmNoData;
     property Glyph: string read FGlyph write SetGlyph;
     property Title: string read FTitle write SetTitle;
     property Hint: string read FHint write SetHint;
@@ -243,6 +248,8 @@ begin
     ckSunken:  Result := Tokens.Sunken;
     ckHero:    Result := Tokens.HeroGradFrom;
     ckOutline: Result := Tokens.Surface;
+    ckGhost:   Result := TAlphaColors.Null;
+    ckQuiet:   Result := Tokens.SurfaceQuiet;
   else
     Result := Tokens.SurfaceAlt;
   end;
@@ -417,6 +424,16 @@ begin
       ckOutline:
       begin
         BgColor := Tokens.Surface;
+        BorderColor := Tokens.Border;
+      end;
+      ckGhost:
+      begin
+        BgColor := TAlphaColors.Null;
+        BorderColor := Tokens.Border;
+      end;
+      ckQuiet:
+      begin
+        BgColor := Tokens.SurfaceQuiet;
         BorderColor := Tokens.Border;
       end;
       else // ckSurface
@@ -976,6 +993,15 @@ begin
   SetBounds(0, 0, ScalePixels(300), ScalePixels(160));
 end;
 
+procedure THbEmptyState.SetMode(Value: THbEmptyStateMode);
+begin
+  if FMode <> Value then
+  begin
+    FMode := Value;
+    Invalidate;
+  end;
+end;
+
 procedure THbEmptyState.SetGlyph(const Value: string);
 begin
   if FGlyph <> Value then
@@ -1084,6 +1110,8 @@ var
   BtnRect: TGPRectF;
   BtnPath: TGPGraphicsPath;
   BtnBrush: TGPSolidBrush;
+  GlyphStr: string;
+  GlyphCol: TAlphaColor;
 begin
   Tokens := GetTokens;
   Graphics := TGPGraphics.Create(Canvas.Handle);
@@ -1104,10 +1132,18 @@ begin
           StrFmt.SetAlignment(StringAlignmentCenter);
           StrFmt.SetLineAlignment(StringAlignmentCenter);
 
-          // 1. Draw Emoji Glyph
-          TextBrush := TGPSolidBrush.Create(ColorToARGB(Tokens.Primary));
+          // 1. Draw Emoji / Symbol Glyph
+          GlyphStr := FGlyph;
+          if (GlyphStr = '') and (FMode = esmAllClear) then
+            GlyphStr := #$2713; // Checkmark
+          if FMode = esmAllClear then
+            GlyphCol := Tokens.Success
+          else
+            GlyphCol := Tokens.Primary;
+
+          TextBrush := TGPSolidBrush.Create(ColorToARGB(GlyphCol));
           try
-            Graphics.DrawString(FGlyph, -1, GlyphFont, MakeRect(0.0, ScaleDIP(8), Width, ScaleDIP(36)), StrFmt, TextBrush);
+            Graphics.DrawString(GlyphStr, -1, GlyphFont, MakeRect(0.0, ScaleDIP(8), Width, ScaleDIP(36)), StrFmt, TextBrush);
           finally
             TextBrush.Free;
           end;

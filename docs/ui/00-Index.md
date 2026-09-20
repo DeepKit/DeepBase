@@ -1,4 +1,4 @@
-﻿# DeepBase UI 文档索引
+# DeepBase UI 文档索引
 
 本目录包�?DeepBase 框架的所�?UI 相关设计文档。这些文档使�?Mermaid 图表生成，可在支�?Mermaid �?Markdown 查看器中查看�?
 
@@ -165,15 +165,37 @@ for file in *.md; do mmdc -i "$file" -o "${file%.md}.png"; done
 
 ### 更新维护
 - 每次架构变更时应同步更新图表
-- 保持版本号与主规范文档一�?
-- 检查链接引用的完整�?
+- 保持版本号与主规范文档一?
+- 检查链接引用的完整?
 
 ---
 
-## 🔗 相关文档
+## 🔗 相关文档与 Efficient Human-AI Interaction 核心规范
 
+> **【体系与规范定位声明】**  
+> **Efficient Human-AI Interaction（高效 AI 人机交互体系）**定义 AI 与 Human 高效共同工作所需要的核心原则、交互规则、机器语义和产品实现边界。**Efficient Human-AI Interaction Specification（高效 AI 人机交互规范）**是其正式规范表达。**DeepBase** 是用于工程化实现和承载高效 AI 人机交互规范的 Delphi 软件框架。**HB** 是 DeepBase 中面向 Human 的统一人机交互承载与呈现基础设施，负责把高效 AI 人机交互体系中的语义、逻辑、状态、功能与交互行为，转化为 Human 可感知、可理解、可判断、可操作的交互。行为适配是 HB 的重要能力之一，但不是 HB 的全部。
+
+### 高效 AI 人机交互规范分层结构（L1～L7）
+- **L1：AI 人机认知哲学**：[`../DeepBase-AI-Human-Cognition-Philosophy-v1.md`](../DeepBase-AI-Human-Cognition-Philosophy-v1.md)（Frozen v1.0 · P1~P12 认知哲学母源，源于 ASTO 理论）
+- **L2：AI 交付原则**：[`../DeepBase-AI-Delivery-Principles-v1.md`](../DeepBase-AI-Delivery-Principles-v1.md)（Frozen v1.0 · D1~D7 认知交付结构、四自质量检查框架）
+- **L3：AI 人类介入原则**：[`../DeepBase-AI-Human-Intervention-Principles-v1.md`](../DeepBase-AI-Human-Intervention-Principles-v1.md)（Freeze Candidate v1.0 · H/A/E 三轴模型、最小必要介入、承诺边界）
+- **L4：通用 AI 交互协议**：[`../DeepBase-General-AI-Interaction-Protocol-v1.md`](../DeepBase-General-AI-Interaction-Protocol-v1.md)（Freeze Candidate v1.0 · 判断协议、认知语素与选择语义）
+- **L5：HB 人机行为适配基础设施**：[`../DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md`](../DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md)（Freeze Candidate v1.0 · 认知投射与行为适配母稿）
+- **L6：机器语义与介入基础设施**：[`../DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md`](../DeepBase-Machine-Semantics-and-Intervention-Infrastructure-v1.md)（Frozen v1.0 · DeepBase 工程实现：DB-MSI）
+- **L7：产品实现边界**：[`../DeepBase-Product-Realization-Boundary-v1.md`](../DeepBase-Product-Realization-Boundary-v1.md) / [`-r2`](../DeepBase-Product-Realization-Boundary-v1-r2.md)（Freeze Candidate v1.0 · 规范性产品绑定与符合性边界）
+
+### HB 交互实现标准与下游接入资料
+- **HB AI 选择式交互标准**：[`DeepBase-HB-AI-Choice-Interaction-Standard.md`](DeepBase-HB-AI-Choice-Interaction-Standard.md)（0–9 协议、1–7 多选扩展、Truthful State Machine）
+- **AI 交付质量“四自”检查规范**：[`DeepBase-HB-AI-Delivery-Four-Self-Inspection-Standard.md`](DeepBase-HB-AI-Delivery-Four-Self-Inspection-Standard.md)（自营销/自承接/自成长/低客服验收标准、打分表与一票说明规则）
+- **AI 偏好学习交互标准 [让我学习]**：[`DeepBase-HB-AI-Preference-Learning-Interaction-Standard.md`](DeepBase-HB-AI-Preference-Learning-Interaction-Standard.md)（4-A 交互母稿：偏好沉淀闭环、AI猜人确认、防过度泛化）
+- **Core AI 人类判断记忆模型**：[`../DeepBase-AI-Human-Judgment-Memory.md`](../DeepBase-AI-Human-Judgment-Memory.md)（4-B 存储母稿：通用判断沉淀 Schema、场景指纹检索与注入）
+- **通用大模型成本阶梯架构规范**：[`../DeepBase-AI-Cost-Optimization-and-Template-Tiering-Standard.md`](../DeepBase-AI-Cost-Optimization-and-Template-Tiering-Standard.md)（三级调用阶梯、本地模型暂缓；话术资产单一母稿在唤金 24）
+- **HB 触点引擎与四自度量权威源**：[`../30.touchpoint.md`](../30.touchpoint.md)（触点契约、分级采样与四自验收 SSOT）
+- **AsWish × 唤金共性现状资料包**：[`../AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md`](../AsWish-HuanJin-DeepBase-HB-AI-Interaction-Commonality-Pack.md)
+
+### 基础设计与集成指南
 - 文档索引：`../00.00.DeepBase-文档索引-v1.0.md`
-- 技术规范：`../03.03.DeepBase-4H-技术规�?v1.0.md`
+- 技术规范：`../03.03.DeepBase-4H-技术规范-v1.0.md`
 - AI集成指南：`../02.quickstart.下游接入流程-downstream-integration.md`
 
 ---

@@ -1,4 +1,4 @@
-unit Test.DeepBase.Updater;
+﻿unit Test.DeepBase.Updater;
 
 {*******************************************************************************
   DeepBase Updater Module Unit Tests
@@ -20,6 +20,7 @@ uses
   System.Classes,
   System.IOUtils,
   System.JSON,
+  DeepBase.Gate.Verdict,
   DeepBase.Updater,
   DeepBase.Net.Transport;
 
@@ -288,6 +289,10 @@ type
     procedure Test_VerifySignature_EmptySignature_ReturnsFalse;
     [Test]
     procedure Test_VerifySignature_TamperedData_ReturnsFalse;
+    [Test]
+    procedure Test_VerifySignature_UnknownAlgorithm_Rejected;
+    [Test]
+    procedure Test_StageAndVerifyPackage_FailClosed;
     [Test]
     procedure Test_VerifyFileHash_ValidHash_ReturnsTrue;
     [Test]
@@ -1256,6 +1261,48 @@ begin
       'Tampered data must fail signature verification');
   finally
     Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_VerifySignature_UnknownAlgorithm_Rejected;
+const
+  TestData = 'a1b2c3d4e5f678901234567890abcdef0123456789abcdef0123456789abcdef';
+begin
+  { A6 fail-closed 立法：未在白名单中的算法一律拒绝，不得静默回落到 RSA 路径 }
+  var Manager := TUpdateManager.Create;
+  try
+    Manager.Initialize('https://example.com/updates', '1.0.0');
+    Manager.SetPublicKey(TEST_PUBLIC_KEY_PEM);
+    var V := Manager.VerifySignature(TestData, 'deadbeef', 'ed25519');
+    Assert.IsFalse(V.IsApproved, 'Unknown algorithm must be rejected');
+    Assert.AreEqual(gdRejected, V.Decision,
+      'Unknown algorithm must produce gdRejected');
+  finally
+    Manager.Free;
+  end;
+end;
+
+procedure TTestUpdateSecurity.Test_StageAndVerifyPackage_FailClosed;
+var
+  LInfo: TUpdateInfo;
+  LVerdict: TGateVerdict;
+  LErr: string;
+  LTempFile: string;
+begin
+  { A6 fail-open 修复：声明了签名但无公钥 → 拒绝（旧代码静默跳过验签） }
+  LTempFile := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(LTempFile, 'dummy package content');
+    LInfo := Default(TUpdateInfo);
+    LInfo.Version := TSemanticVersion.Parse('2.0.0');
+    LInfo.Signature := 'some-signature-value';
+    LVerdict := TUpdateManager.StageAndVerifyPackage(LInfo, LTempFile, '', LErr);
+    Assert.IsFalse(LVerdict.IsApproved,
+      'Declared signature with no public key must be rejected (fail-open fix)');
+    Assert.AreEqual(gdRejected, LVerdict.Decision,
+      'Must be gdRejected, not Indeterminate');
+  finally
+    TFile.Delete(LTempFile);
   end;
 end;
 

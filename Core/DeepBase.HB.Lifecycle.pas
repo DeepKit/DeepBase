@@ -1,4 +1,4 @@
-{*****************************************************************************
+﻿{*****************************************************************************
   DeepBase.HB.Lifecycle - Shared lifecycle phase guard (VCL/FMX SSOT)
 
   Phase transitions + Paint precondition live here so VCL and FMX do not fork.

@@ -1,4 +1,4 @@
-unit DeepBase.Crypto.Encoding;
+﻿unit DeepBase.Crypto.Encoding;
 
 {*******************************************************************************
   DeepBase Crypto - Encoding Utilities

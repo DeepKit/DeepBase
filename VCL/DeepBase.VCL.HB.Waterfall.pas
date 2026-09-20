@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Waterfall - Modern Token-Driven Faceted Waterfall Component
 
   Version: 1.3 (Delphi 13.1 on Win64)

@@ -1,4 +1,4 @@
-unit DeepBase.Crypto.Platform;
+﻿unit DeepBase.Crypto.Platform;
 
 {*******************************************************************************
   DeepBase Crypto - Platform Layer

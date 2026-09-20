@@ -1,4 +1,4 @@
-unit DeepBase.Crypto.Hash;
+﻿unit DeepBase.Crypto.Hash;
 
 {*******************************************************************************
   DeepBase Crypto - Hash Utilities

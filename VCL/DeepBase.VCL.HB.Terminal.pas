@@ -48,10 +48,12 @@ type
     FBadgeText: string;
     FBadgeTone: THbBadgeTone;
     FHoverCopy: Boolean;
+    FFontScale: Single;
     FOnCopied: TNotifyEvent;
     procedure SetKeyText(const Value: string);
     procedure SetValueText(const Value: string);
     procedure SetLabelWidth(const Value: Integer);
+    procedure SetFontScale(const Value: Single);
     procedure SetIsMasked(const Value: Boolean);
     procedure SetIsMonospace(const Value: Boolean);
     procedure SetCanCopy(const Value: Boolean);
@@ -73,6 +75,7 @@ type
     property BadgeTone: THbBadgeTone read FBadgeTone write SetBadgeTone default btNeutral;
     property CanCopy: Boolean read FCanCopy write SetCanCopy default True;
     property Enabled;
+    property FontScale: Single read FFontScale write SetFontScale;
     property IsMasked: Boolean read FIsMasked write SetIsMasked default False;
     property IsMonospace: Boolean read FIsMonospace write SetIsMonospace default False;
     property KeyText: string read FKeyText write SetKeyText;
@@ -155,6 +158,7 @@ begin
   FBadgeText := '';
   FBadgeTone := btNeutral;
   FHoverCopy := False;
+  FFontScale := 1.0;
   Width := 360;
   Height := 28;
 end;
@@ -182,6 +186,15 @@ begin
   if FLabelWidth <> Value then
   begin
     FLabelWidth := Value;
+    Invalidate;
+  end;
+end;
+
+procedure THbKeyValRow.SetFontScale(const Value: Single);
+begin
+  if (Abs(FFontScale - Value) > 0.001) and (Value > 0) then
+  begin
+    FFontScale := Value;
     Invalidate;
   end;
 end;
@@ -309,7 +322,7 @@ begin
       // Key
       FontFamily := TGPFontFamily.Create(Tokens.FontFamily);
       try
-        FontKey := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS), FontStyleBold, UnitPixel);
+        FontKey := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeS) * FFontScale, FontStyleBold, UnitPixel);
         try
           Graphics.DrawString(FKeyText, Length(FKeyText), FontKey, KeyRect, StrFmt, BrushMuted);
         finally
@@ -324,7 +337,7 @@ begin
 
         var ValFamily := TGPFontFamily.Create(ValFontName);
         try
-          FontVal := TGPFont.Create(ValFamily, ScaleDIP(Tokens.SizeS), FontStyleRegular, UnitPixel);
+          FontVal := TGPFont.Create(ValFamily, ScaleDIP(Tokens.SizeS) * FFontScale, FontStyleRegular, UnitPixel);
           try
             DisplayVal := GetDisplayValue;
             Graphics.DrawString(DisplayVal, Length(DisplayVal), FontVal, ValRect, StrFmt, BrushVal);
@@ -347,12 +360,23 @@ begin
               HoverBg.Free;
             end;
           end;
-          var FontCopy := TGPFont.Create(FontFamily, ScaleDIP(Tokens.SizeXS), FontStyleRegular, UnitPixel);
+          // Draw crisp vector copy icon: two overlapping rectangles
+          var PenCopy := TGPPen.Create(ColorToARGB(Tokens.InkMuted), 1.2);
           try
-            StrFmt.SetAlignment(StringAlignmentCenter);
-            Graphics.DrawString(#$D83D#$DCCB, 2, FontCopy, CopyRect, StrFmt, BrushMuted);
+            var IconW := 8.0;
+            var IconH := 10.0;
+            var IconX := CopyRect.X + (CopyRect.Width - IconW - 3.0) / 2.0;
+            var IconY := CopyRect.Y + (CopyRect.Height - IconH - 3.0) / 2.0;
+            Graphics.DrawRectangle(PenCopy, IconX + 3.0, IconY, IconW, IconH);
+            var BrushBg := TGPSolidBrush.Create(ColorToARGB(Tokens.Surface));
+            try
+              Graphics.FillRectangle(BrushBg, IconX, IconY + 3.0, IconW, IconH);
+            finally
+              BrushBg.Free;
+            end;
+            Graphics.DrawRectangle(PenCopy, IconX, IconY + 3.0, IconW, IconH);
           finally
-            FontCopy.Free;
+            PenCopy.Free;
           end;
         end;
       finally

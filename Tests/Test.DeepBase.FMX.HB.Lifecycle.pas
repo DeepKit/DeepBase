@@ -1,4 +1,4 @@
-{*****************************************************************************
+﻿{*****************************************************************************
   Test.DeepBase.FMX.HB.Lifecycle - FMX HB Lifecycle Pipeline & Pilot Tests
 
   Version: 1.0 (Delphi 13.1 on Win64 / DUnitX)

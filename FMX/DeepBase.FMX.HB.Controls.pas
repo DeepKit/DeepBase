@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.HB.Controls - Core Vector-Rendered HB Controls for FireMonkey
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform FMX)
@@ -33,10 +33,10 @@ uses
 
 type
   THbControlState = (stNormal, stHover, stPressed, stDisabled, stFocused);
-  THbButtonKind = (bkPrimary, bkGhost, bkSoft, bkDanger);
+  THbButtonKind = (bkPrimary, bkGhost, bkSoft, bkDanger, bkRecommended);
   THbButtonSize = (bsSmall, bsMedium, bsLarge);
   THbDualTrack = (htNone, htFree, htPoints);
-  THbChipTone = (ttNeutral, ttBrand, ttSuccess, ttWarning, ttDanger);
+  THbChipTone = (ttNeutral, ttBrand, ttSuccess, ttWarning, ttDanger, ttChange, ttNotice, ttUnresolved);
   THbBadgeTone = DeepBase.HB.Core.THbBadgeTone;
   THbBadgeShape = (hpPill, hpSquare);
   THbAvatarSize = (avsS, avsM, avsL, avsXL);
@@ -738,6 +738,15 @@ begin
         BorderColor := TAlphaColors.Null;
         TextColor := $FFFFFFFF;
       end;
+    bkRecommended:
+      begin
+        case EffState of
+          stHover:   begin BgColor := Tokens.PrimaryHover; BorderColor := Tokens.PrimaryHover; TextColor := Tokens.OnPrimary; end;
+          stPressed: begin BgColor := Tokens.PrimaryPressed; BorderColor := Tokens.PrimaryPressed; TextColor := Tokens.OnPrimary; end;
+          stDisabled: begin BgColor := Tokens.Soft; BorderColor := Tokens.Border; TextColor := Tokens.InkMuted; end;
+          else       begin BgColor := Tokens.Soft; BorderColor := Tokens.Primary; TextColor := Tokens.Primary; end;
+        end;
+      end;
     else
       BgColor := Tokens.Primary;
       BorderColor := TAlphaColors.Null;
@@ -1015,11 +1024,14 @@ begin
   else
   begin
     case FTone of
-      ttBrand:   begin BgColor := Tokens.Soft; BorderColor := Tokens.Primary; TextColor := Tokens.Primary; end;
-      ttSuccess: begin BgColor := Tokens.SuccessSoft; BorderColor := Tokens.Success; TextColor := Tokens.Success; end;
-      ttWarning: begin BgColor := Tokens.WarningSoft; BorderColor := Tokens.Warning; TextColor := Tokens.Warning; end;
-      ttDanger:  begin BgColor := Tokens.DangerSoft; BorderColor := Tokens.Danger; TextColor := Tokens.Danger; end;
-      else       begin BgColor := Tokens.SurfaceAlt; BorderColor := Tokens.Border; TextColor := Tokens.Ink; end;
+      ttBrand:      begin BgColor := Tokens.Soft; BorderColor := Tokens.Primary; TextColor := Tokens.Primary; end;
+      ttSuccess:    begin BgColor := Tokens.SuccessSoft; BorderColor := Tokens.Success; TextColor := Tokens.Success; end;
+      ttWarning:    begin BgColor := Tokens.WarningSoft; BorderColor := Tokens.Warning; TextColor := Tokens.Warning; end;
+      ttDanger:     begin BgColor := Tokens.DangerSoft; BorderColor := Tokens.Danger; TextColor := Tokens.Danger; end;
+      ttChange:     begin BgColor := Tokens.ChangeSoft; BorderColor := Tokens.Change; TextColor := Tokens.Change; end;
+      ttNotice:     begin BgColor := Tokens.NoticeSoft; BorderColor := Tokens.Notice; TextColor := Tokens.Notice; end;
+      ttUnresolved: begin BgColor := Tokens.UnresolvedSoft; BorderColor := Tokens.Unresolved; TextColor := Tokens.Unresolved; end;
+      else          begin BgColor := Tokens.SurfaceAlt; BorderColor := Tokens.Border; TextColor := Tokens.Ink; end;
     end;
   end;
 
@@ -1109,11 +1121,14 @@ begin
     Radius := Tokens.RadiusS;
 
   case FTone of
-    btBrand:   begin BgColor := Tokens.Soft; BorderColor := Tokens.Primary; TextColor := Tokens.Primary; end;
-    btSuccess: begin BgColor := Tokens.SuccessSoft; BorderColor := Tokens.Success; TextColor := Tokens.Success; end;
-    btWarning: begin BgColor := Tokens.WarningSoft; BorderColor := Tokens.Warning; TextColor := Tokens.Warning; end;
-    btDanger:  begin BgColor := Tokens.DangerSoft; BorderColor := Tokens.Danger; TextColor := Tokens.Danger; end;
-    else       begin BgColor := Tokens.SurfaceAlt; BorderColor := Tokens.Border; TextColor := Tokens.InkMuted; end;
+    btBrand:      begin BgColor := Tokens.Soft; BorderColor := Tokens.Primary; TextColor := Tokens.Primary; end;
+    btSuccess:    begin BgColor := Tokens.SuccessSoft; BorderColor := Tokens.Success; TextColor := Tokens.Success; end;
+    btWarning:    begin BgColor := Tokens.WarningSoft; BorderColor := Tokens.Warning; TextColor := Tokens.Warning; end;
+    btDanger:     begin BgColor := Tokens.DangerSoft; BorderColor := Tokens.Danger; TextColor := Tokens.Danger; end;
+    btChange:     begin BgColor := Tokens.ChangeSoft; BorderColor := Tokens.Change; TextColor := Tokens.Change; end;
+    btNotice:     begin BgColor := Tokens.NoticeSoft; BorderColor := Tokens.Notice; TextColor := Tokens.Notice; end;
+    btUnresolved: begin BgColor := Tokens.UnresolvedSoft; BorderColor := Tokens.Unresolved; TextColor := Tokens.Unresolved; end;
+    else          begin BgColor := Tokens.SurfaceAlt; BorderColor := Tokens.Border; TextColor := Tokens.InkMuted; end;
   end;
 
   Canvas.Fill.Color := BgColor;

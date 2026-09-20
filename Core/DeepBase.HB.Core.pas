@@ -34,7 +34,7 @@ type
   /// <summary>
   /// Semantic badge tones.
   /// </summary>
-  THbBadgeTone = (btNeutral, btBrand, btSuccess, btWarning, btDanger);
+  THbBadgeTone = (btNeutral, btBrand, btSuccess, btWarning, btDanger, btChange, btNotice, btUnresolved);
 
   /// <summary>
   /// Surface provider interface for container controls (cards, panels, dialogs)
@@ -59,6 +59,7 @@ type
     Elevation1: TAlphaColor;
     Elevation2: TAlphaColor;
     Elevation3: TAlphaColor;
+    SurfaceQuiet: TAlphaColor;
 
     // Choice Group
     ChoiceOption: TAlphaColor;
@@ -90,6 +91,12 @@ type
     DangerSoft: TAlphaColor;
     Info: TAlphaColor;
     InfoSoft: TAlphaColor;
+    Change: TAlphaColor;
+    ChangeSoft: TAlphaColor;
+    Notice: TAlphaColor;
+    NoticeSoft: TAlphaColor;
+    Unresolved: TAlphaColor;
+    UnresolvedSoft: TAlphaColor;
 
     // Shape Group
     RadiusS: Single;
@@ -325,14 +332,15 @@ begin
   FillChar(Result, SizeOf(Result), 0);
 
   // Surface Group (Warm Gold Light)
-  Result.Surface    := $FFFFFDF8;
-  Result.SurfaceAlt := $FFFFF6E6;
-  Result.Border     := $FFEBDFC8;
-  Result.Soft       := $FFFDF0DA;
-  Result.Sunken     := $FFF5EFE6;
-  Result.Elevation1 := $1A000000;
-  Result.Elevation2 := $26000000;
-  Result.Elevation3 := $33000000;
+  Result.Surface      := $FFFFFDF8;
+  Result.SurfaceAlt   := $FFFFF6E6;
+  Result.Border       := $FFEBDFC8;
+  Result.Soft         := $FFFDF0DA;
+  Result.Sunken       := $FFF5EFE6;
+  Result.Elevation1   := $1A000000;
+  Result.Elevation2   := $26000000;
+  Result.Elevation3   := $33000000;
+  Result.SurfaceQuiet := $FFF8FAF9;
 
   // Choice Group
   Result.ChoiceOption      := $FFFFF6E6; // SurfaceAlt
@@ -356,14 +364,20 @@ begin
   Result.FocusRing      := $FFD97706;
 
   // Status Group
-  Result.Success     := $FF059669;
-  Result.SuccessSoft := $FFECFDF5;
-  Result.Warning     := $FFD97706;
-  Result.WarningSoft := $FFFEF9C3;
-  Result.Danger      := $FFDC2626;
-  Result.DangerSoft  := $FFFEF2F2;
-  Result.Info        := $FF0284C7;
-  Result.InfoSoft    := $FFF0F9FF;
+  Result.Success        := $FF059669;
+  Result.SuccessSoft    := $FFECFDF5;
+  Result.Warning        := $FFD97706;
+  Result.WarningSoft    := $FFFEF9C3;
+  Result.Danger         := $FFDC2626;
+  Result.DangerSoft     := $FFFEF2F2;
+  Result.Info           := $FF0284C7;
+  Result.InfoSoft       := $FFF0F9FF;
+  Result.Change         := $FF0F766E; // Teal 700 (Neutral Diff)
+  Result.ChangeSoft     := $FFF0FDFA; // Teal 50
+  Result.Notice         := $FF4F46E5; // Indigo 600 (Suggested Review)
+  Result.NoticeSoft     := $FFEEF2FF; // Indigo 50
+  Result.Unresolved     := $FFD97706; // Amber 600 (Pending / On Hold)
+  Result.UnresolvedSoft := $FFFEF9C3; // Amber 100
 
   // Shape Group
   Result.RadiusS     := 6.0;
@@ -681,6 +695,8 @@ begin
       ATokens.Elevation2 := ParseColor(SubObj.Values['elevation2'].Value, ATokens.Elevation2);
     if SubObj.Values['elevation3'] <> nil then
       ATokens.Elevation3 := ParseColor(SubObj.Values['elevation3'].Value, ATokens.Elevation3);
+    if SubObj.Values['surfaceQuiet'] <> nil then
+      ATokens.SurfaceQuiet := ParseColor(SubObj.Values['surfaceQuiet'].Value, ATokens.SurfaceQuiet);
   end;
 
   // Ink
@@ -738,6 +754,18 @@ begin
       ATokens.Info := ParseColor(SubObj.Values['info'].Value, ATokens.Info);
     if SubObj.Values['infoSoft'] <> nil then
       ATokens.InfoSoft := ParseColor(SubObj.Values['infoSoft'].Value, ATokens.InfoSoft);
+    if SubObj.Values['change'] <> nil then
+      ATokens.Change := ParseColor(SubObj.Values['change'].Value, ATokens.Change);
+    if SubObj.Values['changeSoft'] <> nil then
+      ATokens.ChangeSoft := ParseColor(SubObj.Values['changeSoft'].Value, ATokens.ChangeSoft);
+    if SubObj.Values['notice'] <> nil then
+      ATokens.Notice := ParseColor(SubObj.Values['notice'].Value, ATokens.Notice);
+    if SubObj.Values['noticeSoft'] <> nil then
+      ATokens.NoticeSoft := ParseColor(SubObj.Values['noticeSoft'].Value, ATokens.NoticeSoft);
+    if SubObj.Values['unresolved'] <> nil then
+      ATokens.Unresolved := ParseColor(SubObj.Values['unresolved'].Value, ATokens.Unresolved);
+    if SubObj.Values['unresolvedSoft'] <> nil then
+      ATokens.UnresolvedSoft := ParseColor(SubObj.Values['unresolvedSoft'].Value, ATokens.UnresolvedSoft);
   end;
 
   // Choice

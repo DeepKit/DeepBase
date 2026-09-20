@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.HB.Lifecycle - HB Control Lifecycle Pipeline & Exception Tests
 
   Version: 2.0 (Delphi 13.1 on Win64 / DUnitX)

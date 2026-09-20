@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Controls - HB Visual Infrastructure Core Atomic Controls
 
   Version: 1.0 (Delphi 13.1 on Win64)
@@ -54,10 +54,10 @@ type
   EHbLifecycleViolation = DeepBase.HB.Runtime.EHbLifecycleViolation;
   THbLifecycleErrorEvent = procedure(Sender: TObject; const AStep: string; AException: Exception) of object;
 
-  THbBtnKind = (bkPrimary, bkGhost, bkSoft, bkDanger);
+  THbBtnKind = (bkPrimary, bkGhost, bkSoft, bkDanger, bkRecommended);
   THbBtnSize = (bsS, bsM, bsL);
 
-  THbChipTone = (ttNeutral, ttBrand, ttSuccess, ttWarning, ttDanger);
+  THbChipTone = (ttNeutral, ttBrand, ttSuccess, ttWarning, ttDanger, ttChange, ttNotice, ttUnresolved);
   THbBadgeTone = DeepBase.HB.Core.THbBadgeTone;
   THbBadgeShape = (hpPill, hpSquare);
   THbAvatarSize = (avsS, avsM, avsL, avsXL);
@@ -973,6 +973,35 @@ begin
       end;
       TextColor := Tokens.OnPrimary;
     end;
+    bkRecommended:
+    begin
+      case CurrentState of
+        csNormal:
+        begin
+          BgColor := Tokens.Soft;
+          BorderColor := Tokens.Primary;
+          TextColor := Tokens.Primary;
+        end;
+        csHover:
+        begin
+          BgColor := Tokens.PrimaryHover;
+          BorderColor := Tokens.PrimaryHover;
+          TextColor := Tokens.OnPrimary;
+        end;
+        csPressed:
+        begin
+          BgColor := Tokens.PrimaryPressed;
+          BorderColor := Tokens.PrimaryPressed;
+          TextColor := Tokens.OnPrimary;
+        end;
+        csDisabled:
+        begin
+          BgColor := Tokens.Soft;
+          BorderColor := Tokens.Border;
+          TextColor := Tokens.InkMuted;
+        end;
+      end;
+    end;
   end;
 
   DC := Canvas.Handle;
@@ -1410,11 +1439,14 @@ begin
     else
     begin
       case FTone of
-        ttBrand:   begin BgColor := Tokens.Soft; TextColor := Tokens.Primary; end;
-        ttSuccess: begin BgColor := Tokens.SuccessSoft; TextColor := Tokens.Success; end;
-        ttWarning: begin BgColor := Tokens.WarningSoft; TextColor := Tokens.Warning; end;
-        ttDanger:  begin BgColor := Tokens.DangerSoft; TextColor := Tokens.Danger; end;
-        else       begin BgColor := Tokens.Soft; TextColor := Tokens.Ink; end;
+        ttBrand:      begin BgColor := Tokens.Soft; TextColor := Tokens.Primary; end;
+        ttSuccess:    begin BgColor := Tokens.SuccessSoft; TextColor := Tokens.Success; end;
+        ttWarning:    begin BgColor := Tokens.WarningSoft; TextColor := Tokens.Warning; end;
+        ttDanger:     begin BgColor := Tokens.DangerSoft; TextColor := Tokens.Danger; end;
+        ttChange:     begin BgColor := Tokens.ChangeSoft; TextColor := Tokens.Change; end;
+        ttNotice:     begin BgColor := Tokens.NoticeSoft; TextColor := Tokens.Notice; end;
+        ttUnresolved: begin BgColor := Tokens.UnresolvedSoft; TextColor := Tokens.Unresolved; end;
+        else          begin BgColor := Tokens.Soft; TextColor := Tokens.Ink; end;
       end;
     end;
 
@@ -1547,11 +1579,14 @@ begin
       Radius := ScaleDIP(Tokens.RadiusS);
 
     case FTone of
-      btBrand:   begin BgColor := Tokens.Soft; TextColor := Tokens.Primary; end;
-      btSuccess: begin BgColor := Tokens.SuccessSoft; TextColor := Tokens.Success; end;
-      btWarning: begin BgColor := Tokens.WarningSoft; TextColor := Tokens.Warning; end;
-      btDanger:  begin BgColor := Tokens.DangerSoft; TextColor := Tokens.Danger; end;
-      else       begin BgColor := Tokens.SurfaceAlt; TextColor := Tokens.InkMuted; end;
+      btBrand:      begin BgColor := Tokens.Soft; TextColor := Tokens.Primary; end;
+      btSuccess:    begin BgColor := Tokens.SuccessSoft; TextColor := Tokens.Success; end;
+      btWarning:    begin BgColor := Tokens.WarningSoft; TextColor := Tokens.Warning; end;
+      btDanger:     begin BgColor := Tokens.DangerSoft; TextColor := Tokens.Danger; end;
+      btChange:     begin BgColor := Tokens.ChangeSoft; TextColor := Tokens.Change; end;
+      btNotice:     begin BgColor := Tokens.NoticeSoft; TextColor := Tokens.Notice; end;
+      btUnresolved: begin BgColor := Tokens.UnresolvedSoft; TextColor := Tokens.Unresolved; end;
+      else          begin BgColor := Tokens.SurfaceAlt; TextColor := Tokens.InkMuted; end;
     end;
 
     Path := CreateRoundRectPath(RectF, Radius);

@@ -65,6 +65,7 @@ uses
   System.Threading,
   System.Generics.Collections,
   DeepBase.Updater,
+  DeepBase.Gate.Verdict,
   DeepBase.Commerce.Permissions,
   DeepBase.Crypto.RSA;
 
@@ -176,6 +177,17 @@ type
     /// </summary>
     function DownloadUpdate(const Info: TUpdateInfo; const DestFile: string;
       const OnProgress: TUpdateProgressCallback = nil): Boolean;
+
+    /// <summary>
+    /// Gate (A6 TGateVerdict): verify integrity of a downloaded package —
+    /// SHA256 (when declared) then RSA-SHA256 signature (when declared).
+    /// Declared signature without a configured public key, digest/签名不匹配
+    /// 或密钥加载异常 ⇒ gdRejected；未声明任何完整性字段由调用侧
+    /// DownloadUpdate 前置拒绝（缺字段 = 拒绝，不进入本门禁）。
+    /// 任一拒绝路径都会删除已落盘包，不给调用方误装被篡改文件的机会。
+    /// </summary>
+    function VerifyDownloadedPackageIntegrity(const DestFile, AExpectedSha256,
+      ASignature: string): TGateVerdict;
 
     /// <summary>
     /// Optional permission client for gating update downloads.
@@ -793,10 +805,9 @@ begin
   if Info.DownloadUrl = '' then
     Exit;
 
-  // REVIEW5-FEAT-003: Fail-closed integrity requirement.
+  // REVIEW5-FEAT-003 + A6 fail-closed: integrity requirement.
   // Production downloads must provide at least one integrity mechanism
-  // (SHA256 hash or digital signature). Without any, tampered packages
-  // cannot be detected.
+  // (SHA256 hash or digital signature). 缺字段 = 拒绝，不再先下载后拒。
   if (Info.Sha256 = '') and (Info.Signature = '') then
   begin
     FLastError := 'Download rejected: update package must provide SHA256 hash or digital signature for integrity verification';
@@ -836,8 +847,40 @@ begin
     Client.Free;
   end;
 
+  // A6 T1 fail-closed 立法：下载后置完整性校验收敛为类型化门禁
+  // VerifyDownloadedPackageIntegrity（拒绝即删包），调用侧只认 IsApproved。
+  if not VerifyDownloadedPackageIntegrity(DestFile, Info.Sha256, Info.Signature)
+    .IsApproved then
+    Exit;
+
+  if Assigned(OnProgress) then
+    OnProgress(Info.DownloadSize, Info.DownloadSize);
+
+  Result := True;
+end;
+
+function TDeepBaseAutoUpdate.VerifyDownloadedPackageIntegrity(const DestFile,
+  AExpectedSha256, ASignature: string): TGateVerdict;
+var
+  FS: TFileStream;
+  Hash: string;
+  DigestBytes: TBytes;
+  Verifier: TRSAVerifier;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    FLastError := AReason;
+    if FileExists(DestFile) then
+      DeleteFile(DestFile);
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
+begin
+  if (AExpectedSha256 = '') and (ASignature = '') then
+    Exit(Reject('Integrity verification rejected: package declares no SHA256 hash and no signature'));
+
   // Verify SHA256 if provided
-  if Info.Sha256 <> '' then
+  if AExpectedSha256 <> '' then
   begin
     FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
     try
@@ -846,68 +889,53 @@ begin
       FreeAndNil(FS);
     end;
 
-    if not SameText(Hash, Info.Sha256) then
-      Exit;
+    if not SameText(Hash, AExpectedSha256) then
+      Exit(Reject('SHA256 mismatch: expected ' + AExpectedSha256 + ', got ' + Hash));
   end;
 
   // Verify package signature.
   // Production protocol per 78a ADR r1 §2.7: RSA-SHA256 (PKCS#1 v1.5, Windows CNG).
   // RSA path is authoritative; fail-closed when a signature is present but no
   // production RSA public key is configured.
-  if Info.Signature <> '' then
+  if ASignature <> '' then
   begin
     if Trim(FPublicKeyRSA) = '' then
-    begin
-      FLastError := 'Signature verification rejected: no RSA public key configured (RSA-SHA256 production)';
-      if FileExists(DestFile) then
-        DeleteFile(DestFile);
-      Exit;
-    end;
+      Exit(Reject('Signature verification rejected: no RSA public key configured (RSA-SHA256 production)'));
 
-    var DigestBytes: TBytes;
-    FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
     try
-      var H := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
-      var Buf: array[0..65535] of Byte;
-      var ReadCount: Integer;
-      while True do
-      begin
-        ReadCount := FS.Read(Buf[0], Length(Buf));
-        if ReadCount <= 0 then Break;
-        H.Update(Buf[0], ReadCount);
-      end;
-      DigestBytes := H.HashAsBytes;
-    finally
-      FreeAndNil(FS);
-    end;
-
-    var Verifier: TRSAVerifier;
-    Verifier := TRSAVerifier.Create;
-    try
-      if not Verifier.LoadPublicKeyPEM(FPublicKeyRSA) then
-      begin
-        FLastError := 'Failed to load RSA public key: ' + Verifier.LastError;
-        if FileExists(DestFile) then
-          DeleteFile(DestFile);
-        Exit;
+      FS := TFileStream.Create(DestFile, fmOpenRead or fmShareDenyWrite);
+      try
+        var H := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+        var Buf: array[0..65535] of Byte;
+        var ReadCount: Integer;
+        while True do
+        begin
+          ReadCount := FS.Read(Buf[0], Length(Buf));
+          if ReadCount <= 0 then Break;
+          H.Update(Buf[0], ReadCount);
+        end;
+        DigestBytes := H.HashAsBytes;
+      finally
+        FreeAndNil(FS);
       end;
 
-      if not Verifier.VerifySignature(DigestBytes, Info.Signature) then
-      begin
-        FLastError := 'Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid';
-        if FileExists(DestFile) then
-          DeleteFile(DestFile);
-        Exit;
+      Verifier := TRSAVerifier.Create;
+      try
+        if not Verifier.LoadPublicKeyPEM(FPublicKeyRSA) then
+          Exit(Reject('Failed to load RSA public key: ' + Verifier.LastError));
+
+        if not Verifier.VerifySignature(DigestBytes, ASignature) then
+          Exit(Reject('Signature verification failed (RSA-SHA256): package has been tampered with or signature is invalid'));
+      finally
+        FreeAndNil(Verifier);
       end;
-    finally
-      FreeAndNil(Verifier);
+    except
+      on E: Exception do
+        Exit(Reject('Integrity verification exception: ' + E.Message));
     end;
   end;
 
-  if Assigned(OnProgress) then
-    OnProgress(Info.DownloadSize, Info.DownloadSize);
-
-  Result := True;
+  Result := TGateVerdict.Approved;
 end;
 
 end.

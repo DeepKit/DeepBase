@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.VCL.HB.Choice.Demo - Comprehensive Showcase for HB AI Choice Standard
 
   Version: 2.0 (Delphi 13.1 on Win64)

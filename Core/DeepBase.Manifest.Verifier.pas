@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.Manifest.Verifier - 统一 Artifact Manifest v1 签名验证器
 
   法源：docs/79.protocol §13（统一 Artifact Manifest 字段与信任根原则）
@@ -27,7 +27,8 @@ uses
   System.JSON,
   System.Generics.Collections,
   DeepBase.Crypto.JCS,
-  DeepBase.Crypto.RSA;
+  DeepBase.Crypto.RSA,
+  DeepBase.Gate.Verdict;
 
 const
   { Manifest v1 schema 版本与受支持签名算法 }
@@ -86,12 +87,15 @@ type
     procedure AddTrustedKey(const AKeyId, APem: string);
     procedure ClearTrustedKeys;
 
-    { 验证 Manifest JSON。AMinGeneration 为宿主已知最低可接受 generation
-      （防回滚）；ANow 为当前 UTC 时间。成功返回 True 并填充 AMetadata。 }
+    { 验证 Manifest JSON（A6 T1 fail-closed 立法：门禁返回强类型裁决）。
+      AMinGeneration 为宿主已知最低可接受 generation（防回滚）；ANow 为当前
+      UTC 时间。成功返回 gdApproved 并填充 AMetadata；缺字段/未知算法/
+      验签失败一律 gdRejected。信任根缺失仍抛 EManifestVerificationError
+      （装配级缺陷，非逐单裁决）。 }
     function VerifyManifest(const AJson: string; AMinGeneration: Int64;
-      ANow: TDateTime; out AMetadata: TManifestMetadata): Boolean; overload;
+      ANow: TDateTime; out AMetadata: TManifestMetadata): TGateVerdict; overload;
     { 便捷重载：仅做完整性+防回滚+过期（用当前 UTC 时间），不返回元数据 }
-    function VerifyManifest(const AJson: string; AMinGeneration: Int64): Boolean; overload;
+    function VerifyManifest(const AJson: string; AMinGeneration: Int64): TGateVerdict; overload;
 
     property HasTrustedKeys: Boolean read FHasTrustedKeys;
     property LastError: string read FLastError;
@@ -244,19 +248,24 @@ end;
 
 function TManifestVerifier.VerifyManifest(const AJson: string;
   AMinGeneration: Int64; ANow: TDateTime;
-  out AMetadata: TManifestMetadata): Boolean;
+  out AMetadata: TManifestMetadata): TGateVerdict;
 var
   LRoot: TJSONObject;
   LSigningData: string;
   LKeyId: string;
   LPem: string;
   LVerifier: TRSAVerifier;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    FLastError := AReason;
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
-  Result := False;
-  FLastError := '';
   { out 语义自动清空托管字段；无需 ZeroMemory }
 
-  { 信任根缺失 = 安全失败（验收硬条件 #3） }
+  { 信任根缺失 = 安全失败（验收硬条件 #3）；装配级缺陷，抛异常而非逐单裁决 }
   if not FHasTrustedKeys then
     raise EManifestVerificationError.Create(
       'No trusted keys injected; refusing to verify manifest (safe-fail)');
@@ -265,41 +274,33 @@ begin
   try
     LRoot := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
     if LRoot = nil then
-    begin
-      FLastError := 'Malformed manifest: not a JSON object';
-      Exit;
-    end;
+      Exit(Reject('Malformed manifest: not a JSON object'));
 
     AMetadata := ParseMetadata(LRoot);
 
-    { 算法门禁 }
+    { 算法门禁：白名单显式匹配，未知/缺失算法 = 拒绝 }
     if not SameText(AMetadata.Algorithm, CManifestAlgorithmRsaSha256) then
-    begin
-      FLastError := Format('Unsupported signature algorithm "%s"; expected %s',
-        [AMetadata.Algorithm, CManifestAlgorithmRsaSha256]);
-      Exit;
-    end;
+      Exit(Reject(Format('Unsupported signature algorithm "%s"; expected %s',
+        [AMetadata.Algorithm, CManifestAlgorithmRsaSha256])));
 
     { signing_key_id 必须声明且命中信任根 }
     LKeyId := AMetadata.SigningKeyId;
     if LKeyId = '' then
-    begin
-      FLastError := 'Manifest missing signing_key_id';
-      Exit;
-    end;
+      Exit(Reject('Manifest missing signing_key_id'));
     if not FTrustedKeys.TryGetValue(LKeyId, LPem) then
-    begin
-      FLastError := Format('signing_key_id "%s" not in trusted keyset', [LKeyId]);
-      Exit;
-    end;
+      Exit(Reject(Format('signing_key_id "%s" not in trusted keyset', [LKeyId])));
+
+    { A6 fail-closed：signature 字段缺失 = 拒绝，不把空签名送进验签器碰运气 }
+    if AMetadata.SignatureBase64 = '' then
+      Exit(Reject('Manifest missing signature field'));
 
     { 防回滚 }
     if not CheckGeneration(AMetadata, AMinGeneration) then
-      Exit;
+      Exit(TGateVerdict.Rejected(FLastError));
 
     { 过期校验 }
     if not CheckTimestamps(AMetadata, ANow, False) then
-      Exit;
+      Exit(TGateVerdict.Rejected(FLastError));
 
     { 签名验证：签名数据 = 剥离 signature 的 JCS 规范化 }
     LSigningData := CanonicalSigningData(LRoot);
@@ -307,27 +308,22 @@ begin
     LVerifier := TRSAVerifier.Create;
     try
       if not LVerifier.LoadPublicKeyPEM(LPem) then
-      begin
-        FLastError := 'Failed to load trusted public key: ' + LVerifier.LastError;
-        Exit;
-      end;
+        Exit(Reject('Failed to load trusted public key: ' + LVerifier.LastError));
       if not LVerifier.VerifySignature(LSigningData, AMetadata.SignatureBase64) then
-      begin
-        FLastError := 'Signature verification failed: ' + LVerifier.LastError;
-        Exit;
-      end;
+        Exit(Reject('Signature verification failed: ' + LVerifier.LastError));
     finally
       LVerifier.Free;
     end;
 
-    Result := True;
+    FLastError := '';
+    Result := TGateVerdict.Approved;
   finally
     LRoot.Free;
   end;
 end;
 
 function TManifestVerifier.VerifyManifest(const AJson: string;
-  AMinGeneration: Int64): Boolean;
+  AMinGeneration: Int64): TGateVerdict;
 var
   LMeta: TManifestMetadata;
 begin

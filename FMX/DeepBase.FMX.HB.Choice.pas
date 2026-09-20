@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.FMX.HB.Choice - Modern Token-Driven 0-9 Choice Deck for FireMonkey
 
   Version: 2.1 (Delphi 13.1 on Win64 / Cross-Platform FMX)

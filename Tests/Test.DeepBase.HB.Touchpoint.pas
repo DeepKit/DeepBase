@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.HB.Touchpoint - HB Touchpoint Contract, Registry & Anti-Pollution Tests
 
   Version: 2.0 (Delphi 13.1 on Win64 / DUnitX)

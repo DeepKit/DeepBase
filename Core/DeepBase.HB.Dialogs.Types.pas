@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Dialogs.Types - Cross-Framework Types for HB Dialogs & Wizards
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

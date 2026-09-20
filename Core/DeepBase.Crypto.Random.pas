@@ -1,4 +1,4 @@
-unit DeepBase.Crypto.Random;
+﻿unit DeepBase.Crypto.Random;
 
 {*******************************************************************************
   DeepBase Crypto - Random Data Generation

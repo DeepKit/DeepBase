@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Runtime - HB Runtime Central Coordinator & State Slot Registry
 
   Version: 2.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

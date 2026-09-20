@@ -1,4 +1,4 @@
-unit DeepBase.Crypto.JCS;
+﻿unit DeepBase.Crypto.JCS;
 
 { ============================================================================
   DeepBase.Crypto.JCS - RFC 8785 JSON Canonicalization Scheme (JCS)

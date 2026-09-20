@@ -161,6 +161,8 @@ type
     [Test]
     procedure Test_PBKDF2_DifferentIterations;
     [Test]
+    procedure Test_PBKDF2_HMAC_SHA256_KAT;
+    [Test]
     procedure Test_CheckStrength_Weak;
     [Test]
     procedure Test_CheckStrength_Medium;
@@ -211,6 +213,8 @@ type
     procedure Test_KeySizes;
     [Test]
     procedure Test_DifferentKeys_DifferentResults;
+    [Test]
+    procedure Test_CBC_Encrypt_DoesNotReuseIV;
   end;
 
   /// <summary>
@@ -229,6 +233,8 @@ type
     procedure Test_DifferentPasswords_DifferentResults;
     [Test]
     procedure Test_WrongPassword_Fails;
+    [Test]
+    procedure Test_Envelope_IsV3_And_SaltIsRandom;
   end;
 
   /// <summary>
@@ -883,6 +889,26 @@ begin
   Assert.IsFalse(CompareMem(@Key1[0], @Key2[0], 32));
 end;
 
+// A4-3: PBKDF2-HMAC-SHA256 known-answer test. The v3 SimpleCrypto MAC key is
+// derived with this same primitive, so its correctness is a precondition for
+// the strengthened authentication path. Vectors are the published
+// PBKDF2-HMAC-SHA256 test set.
+procedure TPasswordUtilsTests.Test_PBKDF2_HMAC_SHA256_KAT;
+var
+  Salt: TBytes;
+begin
+  Salt := TEncoding.ASCII.GetBytes('salt');
+  Assert.AreEqual('120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b',
+    TEncodingUtils.HexEncode(TPasswordUtils.PBKDF2('password', Salt, 1, 32, haSHA256)).ToUpper,
+    'PBKDF2-HMAC-SHA256 c=1');
+  Assert.AreEqual('AE4D0C95AF6B46D32D0ADFF928F06DD02A303F8EF3C251DFD6E2D85A95474C43',
+    TEncodingUtils.HexEncode(TPasswordUtils.PBKDF2('password', Salt, 2, 32, haSHA256)).ToUpper,
+    'PBKDF2-HMAC-SHA256 c=2');
+  Assert.AreEqual('C5E478D59288C841AA530DB6845C4C8D962893A001CE4E11A4963873AA98134A',
+    TEncodingUtils.HexEncode(TPasswordUtils.PBKDF2('password', Salt, 4096, 32, haSHA256)).ToUpper,
+    'PBKDF2-HMAC-SHA256 c=4096');
+end;
+
 procedure TPasswordUtilsTests.Test_CheckStrength_Weak;
 var
   Score: Integer;
@@ -1098,6 +1124,33 @@ begin
   end;
 end;
 
+// A4-1: a single CBC instance must never reuse an IV across encryptions.
+// Two consecutive implicit Encrypts of the same plaintext must differ, and each
+// result must still decrypt correctly with the IV it was produced under.
+procedure TAESCryptoTests.Test_CBC_Encrypt_DoesNotReuseIV;
+var
+  CBC: TAESCrypto;
+  Plain, C1, C2, D1, D2: TBytes;
+begin
+  CBC := TAESCrypto.Create(aes256, aesCBC);
+  try
+    CBC.GenerateKey;
+    Plain := TEncoding.UTF8.GetBytes('identical plaintext for IV-reuse regression');
+
+    C1 := CBC.Encrypt(Plain);
+    D1 := CBC.Decrypt(C1); // instance IV still the one C1 used
+    Assert.AreEqual(TEncoding.UTF8.GetString(Plain), TEncoding.UTF8.GetString(D1));
+
+    C2 := CBC.Encrypt(Plain); // must rotate the IV internally
+    Assert.AreNotEqual(TEncodingUtils.HexEncode(C1), TEncodingUtils.HexEncode(C2),
+      'A4-1: consecutive Encrypt calls must not reuse the IV');
+    D2 := CBC.Decrypt(C2);
+    Assert.AreEqual(TEncoding.UTF8.GetString(Plain), TEncoding.UTF8.GetString(D2));
+  finally
+    CBC.Free;
+  end;
+end;
+
 // ============================================================================
 // TSimpleCryptoTests
 // ============================================================================
@@ -1154,6 +1207,31 @@ begin
       Raised := True;
   end;
   Assert.IsTrue(Raised, 'Expected ECryptoException');
+end;
+
+// A4-2 / A4-3: new envelope writes are v3 and use a fresh random salt per call,
+// so encrypting the same payload with the same password twice yields different
+// salts and different ciphertexts; both must still round-trip.
+procedure TSimpleCryptoTests.Test_Envelope_IsV3_And_SaltIsRandom;
+var
+  Plain, E1, E2, Salt1, Salt2: TBytes;
+begin
+  Plain := TEncoding.UTF8.GetBytes('envelope payload');
+  E1 := TSimpleCrypto.EncryptBytes(Plain, 'same-password');
+  E2 := TSimpleCrypto.EncryptBytes(Plain, 'same-password');
+
+  // Header is 5 bytes; salt occupies bytes [5..20].
+  Assert.AreEqual(Byte(3), E1[4], 'new writes must be envelope v3');
+  Salt1 := Copy(E1, 5, 16);
+  Salt2 := Copy(E2, 5, 16);
+  Assert.AreNotEqual(TEncodingUtils.HexEncode(Salt1), TEncodingUtils.HexEncode(Salt2),
+    'A4-2: salt must be random per encryption, not derived from the password');
+  Assert.AreNotEqual(TEncodingUtils.HexEncode(E1), TEncodingUtils.HexEncode(E2));
+
+  Assert.AreEqual('envelope payload',
+    TEncoding.UTF8.GetString(TSimpleCrypto.DecryptBytes(E1, 'same-password')));
+  Assert.AreEqual('envelope payload',
+    TEncoding.UTF8.GetString(TSimpleCrypto.DecryptBytes(E2, 'same-password')));
 end;
 
 // ============================================================================

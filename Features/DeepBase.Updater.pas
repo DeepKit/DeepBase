@@ -43,6 +43,7 @@ uses
   System.SyncObjs,
   System.Threading,
   DeepBase.Exceptions,
+  DeepBase.Gate.Verdict,
   DeepBase.Net.Transport
   {$IFDEF MSWINDOWS}
   , DeepBase.Crypto, DeepBase.Crypto.RSA, Winapi.Windows
@@ -272,17 +273,18 @@ type
     /// <summary>Set shared secret for hmac-sha256 signature verification</summary>
     procedure SetSignatureSecret(const Secret: string);
 
-    /// <summary>Verify an RSA/HMAC signature over Data (for tests/integration).</summary>
-    function VerifySignature(const Data, Signature, Algorithm: string): Boolean;
+    /// <summary>Gate (A6 TGateVerdict): verify a signature over Data. Unknown
+    /// algorithm / empty fields / missing trust material ⇒ gdRejected.</summary>
+    function VerifySignature(const Data, Signature, Algorithm: string): TGateVerdict;
 
-    /// <summary>Verify a downloaded file's SHA256 hash (for tests/integration).</summary>
-    function VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
+    /// <summary>Gate (A6 TGateVerdict): verify a downloaded file's SHA256 hash.</summary>
+    function VerifyFileHash(const FilePath, ExpectedHash: string): TGateVerdict;
 
     /// <summary>Stage + full verification WITHOUT install (docs/66 §16.5 steps 1-5:
     /// package hash / package signature / manifest hash / manifest signature).
     /// 配置同步等“下载+验证但不安装程序二进制”场景复用。</summary>
     function StageAndVerifyPackage(const Info: TUpdateInfo;
-      out PackagePath: string; out ErrorMsg: string): Boolean; overload;
+      out PackagePath: string; out ErrorMsg: string): TGateVerdict; overload;
 
     /// <summary>Enable insecure dev mode: allows updates without hash/signature.
     /// NEVER enable in production builds. Use only for local development testing.</summary>
@@ -371,14 +373,15 @@ type
     /// <summary>Clear update cache</summary>
     procedure ClearCache;
 
-    /// <summary>Stage and verify downloaded update package against RSA-SHA256 signature and hash.</summary>
+    /// <summary>Gate (A6): stage-verify a downloaded package against SHA256 and
+    /// RSA-SHA256 signature. Declared signature without a public key is rejected.</summary>
     class function StageAndVerifyPackage(const AInfo: TUpdateInfo;
       const APackagePath: string; const APublicKeyPEM: string;
-      out AErrMsg: string): Boolean; overload;
+      out AErrMsg: string): TGateVerdict; overload;
 
     class function StageAndVerifyPackage(const AVersion, APackageHash, ASignature: string;
       const APackagePath: string; const APublicKeyPEM: string;
-      out AErrMsg: string): Boolean; overload;
+      out AErrMsg: string): TGateVerdict; overload;
 
     // Properties
     property UpdateUrl: string read FUpdateUrl write FUpdateUrl;
@@ -1206,39 +1209,47 @@ begin
 end;
 
 function TUpdateManager.StageUpdatePackage(const Info: TUpdateInfo; out PackagePath: string): Boolean;
+var
+  LHashVerdict: TGateVerdict;
 begin
   PackagePath := TPath.Combine(FTempDir, Format('update_%s.zip', [Info.Version.ToString]));
   Result := DownloadFile(Info.DownloadUrl, PackagePath, FOnProgress);
   if not Result then
     Exit;
   SetStatus(usVerifying, 'Verifying download...');
-  Result := VerifyFileHash(PackagePath, Info.PackageHash);
-  if not Result then
-    FLastError := 'Package hash verification failed';
+  LHashVerdict := VerifyFileHash(PackagePath, Info.PackageHash);
+  if not LHashVerdict.IsApproved then
+  begin
+    FLastError := 'Package hash verification failed: ' + LHashVerdict.Reason;
+    Exit;
+  end;
+  Result := True;
 end;
 
 function TUpdateManager.StageAndVerifyPackage(const Info: TUpdateInfo;
-  out PackagePath: string; out ErrorMsg: string): Boolean;
+  out PackagePath: string; out ErrorMsg: string): TGateVerdict;
 var
   SignatureAlg, ManifestPayload, ComputedManifestHash, ExpectedManifestHash: string;
+  LVerdict: TGateVerdict;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    ErrorMsg := AReason;
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
-  Result := False;
   PackagePath := '';
   ErrorMsg := '';
+  Result := TGateVerdict.Rejected('');
   try
     SetStatus(usDownloading, 'Downloading package...');
     if not StageUpdatePackage(Info, PackagePath) then
-    begin
-      ErrorMsg := FLastError;
-      Exit;
-    end;
+      Exit(Reject(FLastError));
 
     // Insecure dev mode bypass (strictly for local dev testing)
     if FInsecureDevMode then
-    begin
-      Result := True;
-      Exit;
-    end;
+      Exit(TGateVerdict.Approved('WARNING: verification skipped (insecure dev mode)'));
 
     SignatureAlg := Trim(Info.SignatureAlgorithm).ToLower;
     if SignatureAlg = '' then
@@ -1247,30 +1258,19 @@ begin
     if Info.SignatureRequired then
     begin
       if (Pos('hmac', SignatureAlg) = 1) and (FSignatureSecret = '') then
-      begin
-        ErrorMsg := 'Package signature verification is required but HMAC secret is not configured';
-        Exit;
-      end;
+        Exit(Reject('Package signature verification is required but HMAC secret is not configured'));
       if (Pos('rsa', SignatureAlg) = 1) and (FPublicKey = '') then
-      begin
-        ErrorMsg := 'Package signature verification is required but RSA public key is not configured';
-        Exit;
-      end;
+        Exit(Reject('Package signature verification is required but RSA public key is not configured'));
     end;
 
     if Info.Signature <> '' then
     begin
-      if not VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg) then
-      begin
-        ErrorMsg := 'Package signature verification failed';
-        Exit;
-      end;
+      LVerdict := VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg);
+      if not LVerdict.IsApproved then
+        Exit(Reject('Package signature verification failed: ' + LVerdict.Reason));
     end
     else if Info.SignatureRequired then
-    begin
-      ErrorMsg := 'Package signature is missing';
-      Exit;
-    end;
+      Exit(Reject('Package signature is missing'));
 
     if Info.ManifestSignature <> '' then
     begin
@@ -1281,32 +1281,21 @@ begin
       if SameText(Copy(ExpectedManifestHash, 1, 7), 'sha256:') then
         Delete(ExpectedManifestHash, 1, 7);
       if (ExpectedManifestHash <> '') and (not SameText(ExpectedManifestHash, ComputedManifestHash)) then
-      begin
-        ErrorMsg := 'Manifest hash verification failed';
-        Exit;
-      end;
+        Exit(Reject('Manifest hash verification failed'));
       // §16.10 Step 6: manifest_signature 签的是 payload 的 UTF-8 字节（非 hash）
-      if not VerifySignature(ManifestPayload, Info.ManifestSignature, SignatureAlg) then
-      begin
-        ErrorMsg := 'Manifest signature verification failed';
-        Exit;
-      end;
+      LVerdict := VerifySignature(ManifestPayload, Info.ManifestSignature, SignatureAlg);
+      if not LVerdict.IsApproved then
+        Exit(Reject('Manifest signature verification failed: ' + LVerdict.Reason));
     end
     else if Info.SignatureRequired then
-    begin
-      ErrorMsg := 'Manifest signature is missing';
-      Exit;
-    end;
+      Exit(Reject('Manifest signature is missing'));
 
-    Result := True;
+    Result := TGateVerdict.Approved;
   except
     on E: Exception do
-    begin
-      ErrorMsg := E.Message;
-      Result := False;
-    end;
+      Result := Reject(E.Message);
   end;
-  if not Result then
+  if not Result.IsApproved then
     SetStatus(usFailed, ErrorMsg);
 end;
 
@@ -1436,7 +1425,7 @@ begin
 end;
 
 function TUpdateManager.VerifySignature(const Data, Signature,
-  Algorithm: string): Boolean;
+  Algorithm: string): TGateVerdict;
 {$IFDEF MSWINDOWS}
 var
   LVerifier: TRSAVerifier;
@@ -1449,42 +1438,47 @@ var
 var
   LAlgorithm: string;
   LExpected: string;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    FLastError := AReason;
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
+  { A6 T1 fail-closed 立法：门禁返回值类型化。算法白名单显式匹配，
+    未知算法一律拒绝（旧实现把未识别算法静默回落到 RSA 路径）。 }
   LAlgorithm := Trim(Algorithm).ToLower;
   if LAlgorithm = '' then
-    LAlgorithm := 'rsa-sha256';
+    LAlgorithm := 'rsa-sha256'; // 更新协议缺省算法（docs/66 §16.5，显式定义，非隐式回落）
 
   if Signature = '' then
-  begin
-    Result := False;
-    FLastError := 'Signature is empty';
-    Exit;
-  end;
+    Exit(Reject('Signature is empty'));
 
   if (LAlgorithm = 'sha256') or (LAlgorithm = 'sha-256') then
   begin
     LExpected := LowerCase(THashSHA2.GetHashString(Data));
-    Result := SameText(LExpected, Signature);
-    if not Result then
-      FLastError := 'SHA256 signature mismatch';
-    Exit;
+    if not SameText(LExpected, Signature) then
+      Exit(Reject('SHA256 signature mismatch'));
+    FLastError := '';
+    Exit(TGateVerdict.Approved);
   end;
 
   if (LAlgorithm = 'hmac-sha256') or (LAlgorithm = 'hmac_sha256') then
   begin
     if FSignatureSecret = '' then
-    begin
-      FLastError := 'HMAC signature secret is not configured';
-      Exit(False);
-    end;
+      Exit(Reject('HMAC signature secret is not configured'));
     LExpected := LowerCase(THashSHA2.GetHMAC(Data, FSignatureSecret));
-    Result := SameText(LExpected, Signature);
-    if not Result then
-      FLastError := 'HMAC-SHA256 signature mismatch';
-    Exit;
+    if not SameText(LExpected, Signature) then
+      Exit(Reject('HMAC-SHA256 signature mismatch'));
+    FLastError := '';
+    Exit(TGateVerdict.Approved);
   end;
 
-  // Default: RSA-SHA256
+  if not ((LAlgorithm = 'rsa-sha256') or (LAlgorithm = 'rsa_sha256')) then
+    Exit(Reject('Unknown signature algorithm "' + Algorithm +
+      '"; approved set: rsa-sha256/hmac-sha256/sha256'));
+
   // EDGE-006 fix: missing public key must fail-closed in production.
   // Only allow bypass in explicit dev/insecure mode.
   if FPublicKey = '' then
@@ -1492,67 +1486,70 @@ begin
     if FInsecureDevMode then
     begin
       FLastError := 'WARNING: Signature verification skipped (insecure dev mode, no public key)';
-      Exit(True);
+      Exit(TGateVerdict.Approved(FLastError));
     end;
-    FLastError := 'RSA public key is not configured. Cannot verify update signature.';
-    Exit(False);
+    Exit(Reject('RSA public key is not configured. Cannot verify update signature.'));
   end;
 
   {$IFDEF MSWINDOWS}
   LVerifier := TRSAVerifier.Create;
   try
     if not LVerifier.LoadPublicKeyPEM(FPublicKey) then
-    begin
-      FLastError := 'Failed to load public key: ' + LVerifier.LastError;
-      Exit(False);
-    end;
+      Exit(Reject('Failed to load public key: ' + LVerifier.LastError));
 
-    Result := LVerifier.VerifySignature(Data, Signature);
-    if not Result then
-      FLastError := 'Signature verification failed: ' + LVerifier.LastError;
+    if not LVerifier.VerifySignature(Data, Signature) then
+      Exit(Reject('Signature verification failed: ' + LVerifier.LastError));
   finally
     LVerifier.Free;
   end;
   {$ELSE}
     {$IF DEFINED(MACOS) OR DEFINED(LINUX)}
     LDataBytes := TEncoding.UTF8.GetBytes(Data);
-    Result := OpenSSL_RSAVerifySHA256(FPublicKey, LDataBytes, Signature, LError);
-    if not Result then
-      FLastError := LError;
+    if not OpenSSL_RSAVerifySHA256(FPublicKey, LDataBytes, Signature, LError) then
+      Exit(Reject(LError));
     {$ELSE}
-    Result := False;
-    FLastError := 'Signature verification not implemented on this platform';
+    Exit(Reject('Signature verification not implemented on this platform'));
     {$ENDIF}
   {$ENDIF}
+  FLastError := '';
+  Result := TGateVerdict.Approved;
 end;
 
-function TUpdateManager.VerifyFileHash(const FilePath, ExpectedHash: string): Boolean;
+function TUpdateManager.VerifyFileHash(const FilePath, ExpectedHash: string): TGateVerdict;
 var
   FileStream: TFileStream;
   ActualHash: string;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    FLastError := AReason;
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
-  Result := False;
-  
   if not FileExists(FilePath) then
-    Exit;
-  
+    Exit(Reject('File not found for hash verification: ' + FilePath));
+
   // EDGE-006 fix: empty hash must fail-closed in production.
   // Only allow bypass in explicit dev/insecure mode.
   if ExpectedHash = '' then
   begin
     if FInsecureDevMode then
-      Exit(True);
-    FLastError := 'Package hash is missing. Cannot verify update integrity.';
-    Exit(False);
+      Exit(TGateVerdict.Approved('WARNING: hash check skipped (insecure dev mode)'));
+    Exit(Reject('Package hash is missing. Cannot verify update integrity.'));
   end;
-  
+
   FileStream := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyWrite);
   try
     ActualHash := THashSHA2.GetHashString(FileStream, SHA256);
-    Result := SameText(ActualHash, ExpectedHash);
   finally
     FreeAndNil(FileStream);
   end;
+
+  if not SameText(ActualHash, ExpectedHash) then
+    Exit(Reject('File hash mismatch: expected ' + ExpectedHash + ', got ' + ActualHash));
+  FLastError := '';
+  Result := TGateVerdict.Approved;
 end;
 
 function TUpdateManager.CreateBackup(const Files: TArray<string>): Boolean;
@@ -1770,6 +1767,7 @@ begin
       SignatureAlg: string;
       ManifestPayload: string;
       ComputedManifestHash: string;
+      LV: TGateVerdict;
     begin
       Success := False;
       ErrorMsg := '';
@@ -1814,9 +1812,10 @@ begin
 
         if Info.Signature <> '' then
         begin
-          if not VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg) then
+          LV := VerifySignature(Info.PackageHash, Info.Signature, SignatureAlg);
+          if not LV.IsApproved then
           begin
-            ErrorMsg := 'Package signature verification failed';
+            ErrorMsg := 'Package signature verification failed: ' + LV.Reason;
             SetStatus(usFailed, ErrorMsg);
             Exit;
           end;
@@ -1838,9 +1837,10 @@ begin
             SetStatus(usFailed, ErrorMsg);
             Exit;
           end;
-          if not VerifySignature(ComputedManifestHash, Info.ManifestSignature, SignatureAlg) then
+          LV := VerifySignature(ComputedManifestHash, Info.ManifestSignature, SignatureAlg);
+          if not LV.IsApproved then
           begin
-            ErrorMsg := 'Manifest signature verification failed';
+            ErrorMsg := 'Manifest signature verification failed: ' + LV.Reason;
             SetStatus(usFailed, ErrorMsg);
             Exit;
           end;
@@ -1900,6 +1900,7 @@ begin
       PackagePath: string;
       Success: Boolean;
       ErrorMsg: string;
+      LV: TGateVerdict;
     begin
       Success := False;
       ErrorMsg := '';
@@ -1914,14 +1915,15 @@ begin
         if DownloadFile(Info.DownloadUrl, PackagePath, FOnProgress) then
         begin
           SetStatus(usVerifying, 'Verifying download...');
-          if VerifyFileHash(PackagePath, Info.PackageHash) then
+          LV := VerifyFileHash(PackagePath, Info.PackageHash);
+          if LV.IsApproved then
           begin
             Success := True;
             SetStatus(usIdle, 'Download complete');
           end
           else
           begin
-            ErrorMsg := 'Package hash verification failed';
+            ErrorMsg := 'Package hash verification failed: ' + LV.Reason;
             SetStatus(usFailed, ErrorMsg);
           end;
         end
@@ -2280,80 +2282,75 @@ end;
 
 class function TUpdateManager.StageAndVerifyPackage(const AInfo: TUpdateInfo;
   const APackagePath: string; const APublicKeyPEM: string;
-  out AErrMsg: string): Boolean;
+  out AErrMsg: string): TGateVerdict;
 var
   LDataBytes: TBytes;
   LComputedHash: string;
   LSigBytes: TBytes;
   LVerifier: TRSAVerifier;
+
+  function Reject(const AReason: string): TGateVerdict;
+  begin
+    AErrMsg := AReason;
+    Result := TGateVerdict.Rejected(AReason);
+  end;
+
 begin
   AErrMsg := '';
-  Result := False;
+  Result := TGateVerdict.Rejected('');
 
   if not TFile.Exists(APackagePath) then
-  begin
-    AErrMsg := 'Package file does not exist: ' + APackagePath;
-    Exit;
-  end;
+    Exit(Reject('Package file does not exist: ' + APackagePath));
 
   // 1. Verify SHA-256 hash if provided
   if AInfo.PackageHash <> '' then
   begin
     LComputedHash := LowerCase(THashSHA2.GetHashStringFromFile(APackagePath));
     if not SameText(LComputedHash, AInfo.PackageHash) then
-    begin
-      AErrMsg := Format('Package hash mismatch: expected %s, got %s', [AInfo.PackageHash, LComputedHash]);
-      Exit;
-    end;
+      Exit(Reject(Format('Package hash mismatch: expected %s, got %s',
+        [AInfo.PackageHash, LComputedHash])));
   end;
 
-  // 2. Verify RSA-SHA256 signature if signature and public key provided
-  if (AInfo.Signature <> '') and (APublicKeyPEM <> '') then
+  // 2. Verify RSA-SHA256 signature if provided.
+  //    A6 fail-closed：声明了签名却无公钥 = 不可校验，拒绝（旧实现把该
+  //    组合静默跳过，签名声明形同虚设）。
+  if AInfo.Signature <> '' then
   begin
+    if APublicKeyPEM = '' then
+      Exit(Reject('Package signature declared but no public key provided; cannot verify RSA-SHA256 signature'));
     try
       LSigBytes := TNetEncoding.Base64.DecodeStringToBytes(AInfo.Signature);
       LVerifier := TRSAVerifier.Create;
       try
         if not LVerifier.LoadPublicKeyPEM(APublicKeyPEM) then
-        begin
-          AErrMsg := 'Failed to load RSA public key: ' + LVerifier.LastError;
-          Exit;
-        end;
+          Exit(Reject('Failed to load RSA public key: ' + LVerifier.LastError));
 
         LDataBytes := TFile.ReadAllBytes(APackagePath);
         if not LVerifier.VerifySignature(LDataBytes, LSigBytes) then
-        begin
-          AErrMsg := 'Package RSA-SHA256 signature verification failed: ' + LVerifier.LastError;
-          Exit;
-        end;
+          Exit(Reject('Package RSA-SHA256 signature verification failed: ' + LVerifier.LastError));
       finally
         LVerifier.Free;
       end;
     except
       on E: Exception do
-      begin
-        AErrMsg := 'RSA verification exception: ' + E.Message;
-        Exit;
-      end;
+        Exit(Reject('RSA verification exception: ' + E.Message));
     end;
   end;
 
-  Result := True;
+  Result := TGateVerdict.Approved;
 end;
 
 class function TUpdateManager.StageAndVerifyPackage(const AVersion, APackageHash, ASignature: string;
   const APackagePath: string; const APublicKeyPEM: string;
-  out AErrMsg: string): Boolean;
+  out AErrMsg: string): TGateVerdict;
 var
   LInfo: TUpdateInfo;
-  LErr: string;
 begin
   LInfo := Default(TUpdateInfo);
   LInfo.Version := TSemanticVersion.Parse(AVersion);
   LInfo.PackageHash := APackageHash;
   LInfo.Signature := ASignature;
-  Result := StageAndVerifyPackage(LInfo, APackagePath, APublicKeyPEM, LErr);
-  AErrMsg := LErr;
+  Result := StageAndVerifyPackage(LInfo, APackagePath, APublicKeyPEM, AErrMsg);
 end;
 
 initialization

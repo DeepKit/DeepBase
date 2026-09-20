@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.HB.Persistence - HB Telemetry Persistence & Snapshot Recovery Tests
 
   Version: 1.0 (Delphi 13.1 on Win64 / DUnitX)

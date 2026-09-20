@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   Test.DeepBase.Manifest.Verifier - Manifest v1 签名验证器测试
 
   覆盖（对齐 P0-004 验收硬条件 + 79 §13）：
@@ -24,6 +24,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
+  DeepBase.Gate.Verdict,
   DeepBase.Manifest.Verifier;
 
 type
@@ -74,6 +75,7 @@ type
     function WithKeyId(const AJson, AKeyId: string): string;
     function WithIssuedAt(const AJson, ADate: string): string;
     function WithExpiresAt(const AJson, ADate: string): string;
+    function WithoutSignatureField(const AJson: string): string;
   public
     [Setup]
     procedure Setup;
@@ -98,6 +100,10 @@ type
     procedure Test_UnknownKeyId_Rejected;
     [Test]
     procedure Test_UnsupportedAlgorithm_Rejected;
+    [Test]
+    procedure Test_MissingSignatureField_Rejected;
+    [Test]
+    procedure Test_DefaultVerdict_IsFailClosed;
     [Test]
     procedure Test_MetadataPopulated;
   end;
@@ -154,6 +160,13 @@ begin
   Result := StringReplace(AJson,
     '"expires_at":"2026-12-31T23:59:59Z"',
     '"expires_at":"' + ADate + '"', [rfReplaceAll]);
+end;
+
+function TManifestVerifierTests.WithoutSignatureField(const AJson: string): string;
+begin
+  { 删除 "signature":... 段，模拟缺签名字段的注入攻击 }
+  Result := StringReplace(AJson,
+    ',"signature":"' + TEST_SIGNATURE_BASE64 + '"', '', [rfReplaceAll]);
 end;
 
 procedure TManifestVerifierTests.Setup;
@@ -323,13 +336,44 @@ procedure TManifestVerifierTests.Test_UnsupportedAlgorithm_Rejected;
 var
   V: TManifestVerifier;
   M: TManifestMetadata;
-  B: Boolean;
+  LVerdict: TGateVerdict;
 begin
   V := MakeVerifier;
   try
-    B := V.VerifyManifest(WithAlgorithm(TEST_MANIFEST_JSON, 'ed25519'),
+    LVerdict := V.VerifyManifest(WithAlgorithm(TEST_MANIFEST_JSON, 'ed25519'),
       0, ISO8601ToDate('2026-09-15T00:00:00Z', False), M);
-    Assert.IsFalse(B, 'Unsupported algorithm must be rejected');
+    Assert.IsFalse(LVerdict.IsApproved, 'Unsupported algorithm must be rejected');
+    Assert.AreEqual(gdRejected, LVerdict.Decision,
+      'Unknown algorithm must produce gdRejected (not Indeterminate)');
+  finally
+    V.Free;
+  end;
+end;
+
+procedure TManifestVerifierTests.Test_DefaultVerdict_IsFailClosed;
+var
+  LV: TGateVerdict;
+begin
+  { A6 语言级 fail-closed：default(TGateVerdict) 必须等于 gdRejected }
+  LV := default(TGateVerdict);
+  Assert.IsFalse(LV.IsApproved, 'default(TGateVerdict) must not be approved');
+  Assert.AreEqual(gdRejected, LV.Decision, 'default must be gdRejected (enum ord 0)');
+end;
+
+procedure TManifestVerifierTests.Test_MissingSignatureField_Rejected;
+var
+  V: TManifestVerifier;
+  M: TManifestMetadata;
+  LVerdict: TGateVerdict;
+begin
+  { A6 fail-closed：缺 signature 字段 = Rejected，不把空签名送验签器 }
+  V := MakeVerifier;
+  try
+    LVerdict := V.VerifyManifest(WithoutSignatureField(TEST_MANIFEST_JSON),
+      0, ISO8601ToDate('2026-09-15T00:00:00Z', False), M);
+    Assert.IsFalse(LVerdict.IsApproved, 'Missing signature field must be rejected');
+    Assert.AreEqual(gdRejected, LVerdict.Decision,
+      'Missing signature must be gdRejected, not Indeterminate');
   finally
     V.Free;
   end;

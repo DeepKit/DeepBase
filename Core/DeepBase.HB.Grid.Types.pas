@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Grid.Types - High-Performance Data Grid Contract Types
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)

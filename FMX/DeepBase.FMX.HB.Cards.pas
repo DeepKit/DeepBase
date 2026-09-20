@@ -25,11 +25,12 @@ uses
   DeepBase.FMX.HB.Controls;
 
 type
-  THbCardKind = (ckSurface, ckSunken, ckHero, ckOutline);
+  THbCardKind = (ckSurface, ckSunken, ckHero, ckOutline, ckGhost, ckQuiet);
   THbCardRadius = (rdS, rdM, rdL);
   THbCardElevation = (elNone, elLow, elMedium, elHigh);
   THbStatEmphasis = (peNormal, peHero);
   THbListRowHoverBtn = (hbNone, hbFree, hbPoints);
+  THbEmptyStateMode = (esmNoData, esmAllClear, esmFilteredEmpty, esmOffline);
 
   /// <summary>
   /// THbCard: Container supporting Surface, Sunken, Hero gradient, and Outline modes.
@@ -149,12 +150,14 @@ type
   /// </summary>
   THbEmptyState = class(THbFmxControl)
   private
+    FMode: THbEmptyStateMode;
     FGlyph: string;
     FTitle: string;
     FHintText: string;
     FActionCaption: string;
     FHoverAction: Boolean;
     FOnActionClick: TNotifyEvent;
+    procedure SetMode(const Value: THbEmptyStateMode);
     procedure SetGlyph(const Value: string);
     procedure SetTitle(const Value: string);
     procedure SetHintText(const Value: string);
@@ -173,6 +176,7 @@ type
     property Enabled;
     property Glyph: string read FGlyph write SetGlyph;
     property HintText: string read FHintText write SetHintText;
+    property Mode: THbEmptyStateMode read FMode write SetMode default esmNoData;
     property Title: string read FTitle write SetTitle;
     property Visible;
     property OnActionClick: TNotifyEvent read FOnActionClick write FOnActionClick;
@@ -279,6 +283,18 @@ begin
     ckOutline:
       begin
         BorderColor := Tokens.Border;
+      end;
+    ckGhost:
+      begin
+        BorderColor := Tokens.Border;
+      end;
+    ckQuiet:
+      begin
+        BgColor := Tokens.SurfaceQuiet;
+        BorderColor := Tokens.Border;
+        Canvas.Fill.Color := BgColor;
+        Canvas.Fill.Kind := TBrushKind.Solid;
+        Canvas.FillRect(R, Radius, Radius, AllCorners, 1.0);
       end;
     else // ckSurface
       begin
@@ -707,6 +723,15 @@ begin
   Height := 180;
 end;
 
+procedure THbEmptyState.SetMode(const Value: THbEmptyStateMode);
+begin
+  if FMode <> Value then
+  begin
+    FMode := Value;
+    Repaint;
+  end;
+end;
+
 procedure THbEmptyState.SetGlyph(const Value: string);
 begin
   if FGlyph <> Value then
@@ -776,12 +801,16 @@ end;
 procedure THbEmptyState.DrawHbControl(const Canvas: TCanvas; const ARect: TRectF; const Tokens: THbTokens);
 var
   R, GlyphR, TitleR, HintR, BtnR: TRectF;
+  GlyphStr: string;
 begin
   R := ARect;
   R.Inflate(-1, -1);
 
-  // Surface Sunken Container
-  Canvas.Fill.Color := Tokens.Sunken;
+  // Surface Sunken / Quiet Container
+  if FMode = esmAllClear then
+    Canvas.Fill.Color := Tokens.SurfaceQuiet
+  else
+    Canvas.Fill.Color := Tokens.Sunken;
   Canvas.Fill.Kind := TBrushKind.Solid;
   Canvas.FillRect(R, Tokens.RadiusL, Tokens.RadiusL, AllCorners, 1.0);
 
@@ -792,11 +821,18 @@ begin
 
   // Glyph
   GlyphR := TRectF.Create(R.Left, R.Top + 16, R.Right, R.Top + 54);
-  Canvas.Fill.Color := Tokens.Ink;
+  GlyphStr := FGlyph;
+  if (GlyphStr = '') and (FMode = esmAllClear) then
+    GlyphStr := #$2713;
+
+  if FMode = esmAllClear then
+    Canvas.Fill.Color := Tokens.Success
+  else
+    Canvas.Fill.Color := Tokens.Ink;
   Canvas.Font.Family := Tokens.FontFamily;
   Canvas.Font.Size := 28.0;
   Canvas.Font.Style := [];
-  Canvas.FillText(GlyphR, FGlyph, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
+  Canvas.FillText(GlyphR, GlyphStr, False, 1.0, [], TTextAlign.Center, TTextAlign.Center);
 
   // Title
   TitleR := TRectF.Create(R.Left + 16, R.Top + 58, R.Right - 16, R.Top + 82);

@@ -1,4 +1,4 @@
-unit DeepBase.Crypto;
+﻿unit DeepBase.Crypto;
 
 {*******************************************************************************
   DeepBase Cryptography Utilities — Facade
