@@ -36,8 +36,11 @@ uses
   System.NetEncoding,
   System.SyncObjs,
   System.DateUtils,
+  System.Math,
   System.Rtti,
-  DeepBase.Exceptions;
+  DeepBase.Exceptions,
+  // Top20 #19 / E6: 熔断器单一真相源在 Core；demo 不再自建同名 TCircuitBreaker
+  DeepBase.Resilience.CircuitBreaker;
 
 type
   // ============================================================================
@@ -75,37 +78,8 @@ type
   end;
   
   // ============================================================================
-  // Circuit Breaker
+  // Circuit Breaker: 使用 DeepBase.Resilience.CircuitBreaker.TCircuitBreaker（SSOT，Top20 #19 / E6）
   // ============================================================================
-  
-  TCircuitState = (csClose, csOpen, csHalfOpen);
-  
-  /// <summary>
-  /// Circuit breaker for fault tolerance
-  /// </summary>
-  TCircuitBreaker = class
-  private
-    FState: TCircuitState;
-    FFailureCount: Integer;
-    FSuccessCount: Integer;
-    FFailureThreshold: Integer;
-    FSuccessThreshold: Integer;
-    FOpenTimeout: TDateTime;
-    FLastFailureTime: TDateTime;
-    FLock: TCriticalSection;
-  public
-    constructor Create(FailureThreshold: Integer = 5; 
-      SuccessThreshold: Integer = 2; OpenTimeoutSeconds: Integer = 30);
-    destructor Destroy; override;
-    
-    function CanExecute: Boolean;
-    procedure RecordSuccess;
-    procedure RecordFailure;
-    procedure Reset;
-    
-    property State: TCircuitState read FState;
-    property FailureCount: Integer read FFailureCount;
-  end;
   
   // ============================================================================
   // Retry Policy
@@ -342,117 +316,6 @@ begin
 end;
 
 // ============================================================================
-// TCircuitBreaker
-// ============================================================================
-
-constructor TCircuitBreaker.Create(FailureThreshold, SuccessThreshold: Integer;
-  OpenTimeoutSeconds: Integer);
-begin
-  inherited Create;
-  FLock := TCriticalSection.Create;
-  FState := csClose;
-  FFailureCount := 0;
-  FSuccessCount := 0;
-  FFailureThreshold := FailureThreshold;
-  FSuccessThreshold := SuccessThreshold;
-  FOpenTimeout := OpenTimeoutSeconds / SecsPerDay;
-end;
-
-destructor TCircuitBreaker.Destroy;
-begin
-  FLock.Free;
-  inherited;
-end;
-
-function TCircuitBreaker.CanExecute: Boolean;
-begin
-  FLock.Enter;
-  try
-    case FState of
-      csClose:
-        Result := True;
-      csOpen:
-        begin
-          // Check if timeout has passed
-          if Now - FLastFailureTime >= FOpenTimeout then
-          begin
-            FState := csHalfOpen;
-            Result := True;
-          end
-          else
-            Result := False;
-        end;
-      csHalfOpen:
-        Result := True;
-    else
-      Result := False;
-    end;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TCircuitBreaker.RecordSuccess;
-begin
-  FLock.Enter;
-  try
-    case FState of
-      csClose:
-        FFailureCount := 0;
-      csHalfOpen:
-        begin
-          Inc(FSuccessCount);
-          if FSuccessCount >= FSuccessThreshold then
-          begin
-            FState := csClose;
-            FFailureCount := 0;
-            FSuccessCount := 0;
-          end;
-        end;
-    end;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TCircuitBreaker.RecordFailure;
-begin
-  FLock.Enter;
-  try
-    FLastFailureTime := Now;
-    case FState of
-      csClose:
-        begin
-          Inc(FFailureCount);
-          if FFailureCount >= FFailureThreshold then
-          begin
-            FState := csOpen;
-          end;
-        end;
-      csHalfOpen:
-        begin
-          FState := csOpen;
-          FSuccessCount := 0;
-        end;
-    end;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TCircuitBreaker.Reset;
-begin
-  FLock.Enter;
-  try
-    FState := csClose;
-    FFailureCount := 0;
-    FSuccessCount := 0;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-// ============================================================================
 // TRetryPolicy
 // ============================================================================
 
@@ -521,7 +384,10 @@ begin
   FHttpClient.UserAgent := 'DeepBase-MicroserviceClient/1.0';
   FHttpClient.ContentType := 'application/json';
   FDefaultHeaders := TDictionary<string, string>.Create;
-  FCircuitBreaker := TCircuitBreaker.Create;
+  FCircuitBreaker := TCircuitBreaker.Create('microservice-client')
+    .FailureThreshold(5)
+    .SuccessThreshold(2)
+    .OpenDuration(30000);
   FLock := TCriticalSection.Create;
   FDefaultTimeout := 30000;
   FDefaultRetryPolicy := TRetryPolicy.Default;
@@ -701,13 +567,17 @@ var
   Request: IHTTPRequest;
   BodyStream: TStringStream;
   StartTime: TDateTime;
+  LResponse: IURLResponse;
 begin
   Result := nil;
   Attempt := 0;
   
   // Check circuit breaker
-  if Options.UseCircuitBreaker and not FCircuitBreaker.CanExecute then
+  // demo 故意展示 gate+record 手动模式；Core 推荐 Execute(...) 原子模式（见 AllowRequest 的 deprecated 提示）
+  {$WARN SYMBOL_DEPRECATED OFF}
+  if Options.UseCircuitBreaker and not FCircuitBreaker.AllowRequest then
     raise ECircuitBreakerException.Create('Circuit breaker is open');
+  {$WARN SYMBOL_DEPRECATED ON}
   
   while True do
   begin
@@ -718,10 +588,13 @@ begin
       if Body <> '' then
       begin
         BodyStream := TStringStream.Create(Body, TEncoding.UTF8);
-        Result := FHttpClient.Execute(Method, Url, BodyStream);
+        LResponse := FHttpClient.Execute(Method, Url, BodyStream);
       end
       else
-        Result := FHttpClient.Execute(Method, Url);
+        LResponse := FHttpClient.Execute(Method, Url);
+      // Delphi 12+ THTTPClient.Execute 静态返回类型改为 IURLResponse，运行实例仍为 IHTTPResponse
+      if not Supports(LResponse, IHTTPResponse, Result) then
+        raise Exception.Create('HTTP client returned a non-IHTTPResponse implementation');
       
       // Log response
       LogResponse(Result.StatusCode, Result.ContentAsString,
@@ -803,8 +676,10 @@ procedure TMicroserviceClient.ConfigureCircuitBreaker(FailureThreshold,
   SuccessThreshold, OpenTimeoutSeconds: Integer);
 begin
   FCircuitBreaker.Free;
-  FCircuitBreaker := TCircuitBreaker.Create(FailureThreshold, SuccessThreshold,
-    OpenTimeoutSeconds);
+  FCircuitBreaker := TCircuitBreaker.Create('microservice-client')
+    .FailureThreshold(FailureThreshold)
+    .SuccessThreshold(SuccessThreshold)
+    .OpenDuration(Int64(OpenTimeoutSeconds) * 1000);
 end;
 
 // ========================================================================
@@ -1066,13 +941,16 @@ begin
       procedure
       var
         Response: TApiResponse<T>;
+        LCallbackProc: TThreadProcedure;
       begin
         Response := Get<T>(Endpoint);
-        TThread.Queue(nil,
+        // 显式 TThreadProcedure 变量：解除高版本 RTL 下 Queue(nil, 匿名方法) 的重载歧义
+        LCallbackProc :=
           procedure
           begin
             Callback(Endpoint, Response);
-          end);
+          end;
+        TThread.Queue(nil, LCallbackProc);
       end);
   end;
   

@@ -1,0 +1,67 @@
+WO-20260920-AUDIT-乙-R4 L7 — Examples/MicroserviceClientDemo 归属落定后的实质提交
+执行：开发 AI 乙　日期：2026-09-20（本地结束时间见回执）　工具：git diff / dcc64（node 捕获，H18 UTF-8 落盘）
+
+[范围与归属]
+主控已裁定本 demo 归属=乙，须提交。其余 20 件 Examples 纯行尾差异归 K6 主控统一消化，本单不触碰。
+本目录实际涉及 4 件（不是 2 件）：
+  Examples/MicroserviceClientDemo/DeepBase.Microservice.Client.pas（实质改造主体）
+  Examples/MicroserviceClientDemo/MainForm.pas → Main.Form.pas（git mv 改名，见下）
+  Examples/MicroserviceClientDemo/MainForm.dfm → Main.Form.dfm（git mv 改名，内容零变化）
+  Examples/MicroserviceClientDemo/MicroserviceClientDemo.dpr（引用同步）
+
+[H14 双数字申报]（git diff HEAD，raw vs --ignore-cr-at-eol）
+  Client.pas:  raw 1142/1264  vs ignore-cr 28/150（净减 122）
+  Main.Form.pas: raw 442/441   vs ignore-cr 4/3（旧口径 1/1 为 BOM 噪声，改名+修复合入后为 4/3）
+  Main.Form.dfm: 0/0（纯改名）
+  dpr:         1/3（两口径一致）
+raw 全文件重写系 i/crlf 属性文件 clean 归一自然发生（授权口径），实质差异以 ignore-cr 为准。
+
+[净减 122 删除了什么（与 K1-5 同标准的书面说明）]
+Client.pas 的 28/150 实质 = S4/Top20 #19 / E6 熔断器单一真相源收敛：
+  删除（−150 主体）：
+    - 本地枚举 TCircuitState = (csClose, csOpen, csHalfOpen)（demo 私有副本）
+    - 本地类 TCircuitBreaker 完整实现：Create / Destroy / CanExecute / RecordSuccess /
+      RecordFailure / Reset 与内部字段（FState/FFailureCount/FOpenUntil 等）≈112 行
+  对等物（Core SSOT，已在仓）：Core/DeepBase.Resilience.CircuitBreaker.pas
+    - :23  TCircuitState = (csClosed, csOpen, csHalfOpen)
+    - builder API：Create(name).FailureThreshold(n).SuccessThreshold(n).OpenDuration(ms)
+    - AllowRequest（deprecated gate 模式）/ RecordSuccess / RecordFailure / State
+  替换（+28）：
+    - uses 增 System.Math 与 DeepBase.Resilience.CircuitBreaker（注释注明 SSOT 归属）
+    - 构造点改 builder 链：FailureThreshold(5).SuccessThreshold(2).OpenDuration(30000)
+      —— 与旧 demo 默认语义一致（旧：5次失败/2次成功/30秒；OpenTimeout 秒→OpenDuration 毫秒为参数单位对齐）
+    - ConfigureCircuitBreaker 改 .OpenDuration(Int64(OpenTimeoutSeconds) * 1000)
+    - CanExecute→AllowRequest 以 {$WARN SYMBOL_DEPRECATED OFF/ON} 局部包裹（demo 故意展示 gate+record 手动模式）
+    - Delphi 12 适配：THTTPClient.Execute 返回 IURLResponse，经 Supports(LResponse, IHTTPResponse, Result)
+      转换失败即 raise；TThread.Queue 用显式 TThreadProcedure 变量解除匿名方法重载歧义
+  行为差异：无对外行为变化；熔断状态机唯一实现收敛到 Core。
+
+[编译实测（提交前）]
+编译器：Embarcadero Delphi for Win64 compiler version 37.0（dcc64, Studio 37.0）
+命令口径：与 Scripts/build_examples_win64.ps1 的 DCC 类示例一致（-B -Q -U/-I 源码根 + -N0/-E TestResults/Examples + -NS 同命名空间集），
+经 node execFileSync 捕获输出（H18：不经 PowerShell 重定向），原始输出=.tmp/r4/l7_dcc_out.txt
+结果：3196 lines, 0.67 seconds, 4225372 bytes code — EXIT=0，仅存量 Hint（H2443/H2164/H2219），0 Error。
+
+[过程中发现并一并修复的两个既有缺陷（登记，非掩耳盗铃：均为 demo 从未编译过的一部分）]
+1) E2004「单元名与自身全局 var 同名」：unit MainForm + var MainForm 在 dcc64 下不可编译
+   （最小复现 .tmp/r4/e2004/：同构两文件同样报 E2004；HEAD 版即存在）。
+   修复=仓内 Templates/FMXDemo 既有惯例：git mv MainForm.pas→Main.Form.pas，unit 改 Main.Form，
+   dpr 引用同步；MainForm.pas 另补直接 uses DeepBase.Resilience.CircuitBreaker
+   （csClosed/csOpen/csHalfOpen 经 Client 传递可见在 dcc64 下不足，E2003 实证）。
+2) E1026 File not found 'MicroserviceClientDemo.res'：dpr 带 {$R *.res} 但 .res 从未入库
+   （git ls-files Examples 无任何 .res；必选 demo 均无此指令）。修复=删除 {$R *.res} 指令。
+注意：这两个缺陷说明该 Optional demo 从未通过编译；此前 L7 口径「MainForm.pas 1/1 BOM 噪声」
+只是 diff 统计事实，不掩盖「不可编译」的实测结论。dfm 内容零变化（对象名 MainForm 是窗体名，非单元名，保留）。
+
+[旁路发现（不处置，仅登记）]
+build-ownership 门禁实跑报既有违规：Core/DeepBase.Gate.Verdict.pas 孤儿单元（O1）。
+溯源：git log 归属 WO-20260919-AUDIT-甲 R2（commit 32b0642），属甲线，非本单引入，本单不处置。
+
+[门禁实跑（本单文件相关）]
+eol-gate: 行尾门禁通过（检查 1395 个文件，含改名后 4 件）exit 0
+encoding-gate: 违规列表不含本 demo 任何文件（G3 缺 BOM 列表为 UIA/TLB/Regression 他线存量）
+neg-sample 测试未涉及本单改动面。
+
+[git 状态自证]
+提交前 git diff --cached --name-only 仅含本 demo 4 件（R 改名已暂存）；
+其余工作区脏文件（约 26 件 _audit_recheck CRLF 存量等）一律不携入，留 K6。

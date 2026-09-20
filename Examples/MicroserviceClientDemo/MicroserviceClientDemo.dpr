@@ -2,10 +2,8 @@ program MicroserviceClientDemo;
 
 uses
   Vcl.Forms,
-  MainForm in 'MainForm.pas' {MainForm},
+  Main.Form in 'Main.Form.pas' {MainForm},
   DeepBase.Microservice.Client in 'DeepBase.Microservice.Client.pas';
-
-{$R *.res}
 
 begin
   ReportMemoryLeaksOnShutdown := True;
