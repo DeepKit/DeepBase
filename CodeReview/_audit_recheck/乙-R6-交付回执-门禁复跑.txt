@@ -1,10 +1,12 @@
 == 1. 门禁主判据复跑 ==
 [eol-gate] 09_工程脚本/eol-gate/check_eol.js
-  行尾门禁通过：检查了 1409 个文件（.pas CRLF / .md LF）
-  EXIT=0
+  行尾门禁失败，违规 2 项:
+    L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.SecureMemory.pas
+    L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.UBS2.pas
+  EXIT=1
 
 [evidence-encoding-gate --all-worktree] 09_工程脚本/evidence-encoding-gate/check_evidence_encoding.js --all-worktree
-  证据编码门禁通过：扫描 98 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+  证据编码门禁通过：扫描 100 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
   EXIT=0
 
 [encoding-gate] 09_工程脚本/encoding-gate/check_pas_encoding.js
@@ -16,8 +18,10 @@
   EXIT=1
 
 [managed-copy-gate] 09_工程脚本/managed-copy-gate/check_managed_copy.js
-  托管拷贝门禁通过：检查了 962 个 .pas 文件（M1 硬规则 + M2 基线 99 项豁免存量）
-  EXIT=0
+  托管拷贝门禁失败，违规 2 项:
+    M2 未评审的 FillChar 内存操作 (当前 2 > 基线 0): Core/DeepBase.SecureMemory.pas
+    M2 未评审的裸内存 Move 调用 (当前 9 > 基线 0): Core/DeepBase.Security.UBS2.pas
+  EXIT=1
 
 == 2. 负向样本复跑（门禁自身仍会拦） ==
 [eol-gate/test_negative_sample] 09_工程脚本/eol-gate/test_negative_sample.js
@@ -101,9 +105,7 @@
   备份目录在位=true
 
 == 5. 工作树未跟踪 EHAI/归档件残留（应为 0，除他方在写件） ==
-  docs/ 下 porcelain 条目 = 27（含甲在写 docs/66.backend.*）
-    M docs/66.backend.DB4后端交接说明-db4-backend-handoff.md
-     M docs/ui/work-orders/L8-E001-Intervention-Registry.md
+  docs/ 下 porcelain 条目 = 25（含甲在写 docs/66.backend.*）
     ?? docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md
     ?? docs/WO-20260829-0230-开发甲-VCL-HB-视觉层全面修复交付报告.md
     ?? docs/WO-20260830-003-审核-交付验收报告.md
@@ -129,4 +131,19 @@
     ?? docs/brief-WO-20260905-005-开发甲.md
     ?? docs/evidence-dcc64-hb-005-34units.txt
     ?? docs/evidence-dcc64-hb-32units.txt
+
+== 6. N7 全量套件证据件登记（逐件实测字节属性 + XML 根计数原样摘录） ==
+  乙-R6-N7-full-suite-console.txt bytes=62106 sha256=faebfa5518c2eca2652efa2eb29d4d409a10fdd5e9b0ba02892eee655b66494a BOM=false CR=0 NUL=0 UTF8合法=true
+  乙-R6-N7-full-suite-nunit.xml bytes=977295 sha256=00289a07f3291ef0cbef310aaf9841eac05dffa32ccc347b8e9eaead83f3f86e BOM=true CR=9008 NUL=0 UTF8合法=true
+  XML 根计数原样: <test-results name="D:\_Progs\02Business\DeepBase\Tests\DeepBaseTests.exe" total="4610" errors="15" failures="4" ignored="4" inconclusive="0" not-run="4" skipped="0" invalid="0" date="2026-09-20" time="17:12:00">
+  TTestBackupProgress fixture result=Success / 其下用例 5 例，非 Success 0 例
+  本次运行非 Success 用例（Failure/Error/Ignored）按 Namespace 计数：
+    DeepBase Ignored = 1
+    HB Failure = 2
+    KeyManager Error = 11
+    Perception Failure = 2
+    Regression Error = 3
+    Resilience Error = 1
+    Serialization Ignored = 3
+    合计非 Success = 23
 
