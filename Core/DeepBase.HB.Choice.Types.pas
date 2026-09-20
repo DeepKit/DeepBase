@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.HB.Choice.Types - Unified 0-9 Choice Deck Contract Types
 
   Version: 2.1 (Delphi 13.1 on Win64 / Cross-Platform RTL)

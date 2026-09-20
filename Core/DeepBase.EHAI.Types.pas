@@ -1,4 +1,4 @@
-{ ============================================================================
+﻿{ ============================================================================
   DeepBase.EHAI.Types - Delphi Semantic Implementation for EHAI Language Common Layer
 
   Version: 1.0 (Delphi 13.1 on Win64 / Cross-Platform RTL)
