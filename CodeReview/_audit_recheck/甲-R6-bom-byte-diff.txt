@@ -1,0 +1,37 @@
+tested_commit=d10332fded9e434c2be24b86b2d9ef90ee37e254
+m1_commit=17363c60f02a8bd4ca4c9be9e1888f006afece4b
+m1_parent=82d5f5872fd120a7f0c93577f0de059301361f49
+method=BOM-only: after == EF BB BF + before, body byte-identical
+Core/DeepBase.Gate.Verdict.pas
+  before len=3437 sha256=4dde009b9db6f33e09a054d40a40838a58bcd62938c7de25ac6de7b08025d655
+  after len=3440 sha256=727eeb1ba1ba1829f27815029088d88ff6341261ae921f2db3f27d431668739d bodyIdentical=true
+Core/DeepBase.HB.Choice.Types.pas
+  before len=10669 sha256=963fedd0ea91402085391af2b9ed69fa137c23ffd46b340bfe8996dd059ee79e
+  after len=10672 sha256=307a97e17f78ecd2015d4781a7c436a830256189f296b2eb94e725e8bac6a650 bodyIdentical=true
+Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+  before len=5885 sha256=f87770c792bd3cac8ffcba761ede3c38bdcc44e54b2c6b238564c754856714b1
+  after len=5888 sha256=cc3f78ee501573cf53e7a700bdb624a276985932f96197c600582557eff6d222 bodyIdentical=true
+Core/DeepBase.EHAI.Types.pas
+  before len=25531 sha256=de9a32082dbf86ff1943c33677a89746eae187f646c116fd465dda9cbb2d0799
+  after len=25534 sha256=53cd5eec1629027feabaa9bcc368a5128464473d5cba964b686b6c8ed6f38160 bodyIdentical=true
+Core/DeepBase.Security.UBS2.Migration.pas
+  before len=4007 sha256=44a1cb8e4fb9570595adc28cbe93f52c65078efa939261168cac7409c2cdee17
+  after len=4010 sha256=efe0391fc8357c17029be6882808fc770105ee776faf7a8c5210624ec70da3aa bodyIdentical=true
+Tests/Test.DeepBase.Security.MachineIdentity.pas
+  before len=5651 sha256=b634a682673046a74d5488c42884b31d876f27b18944e747f73e64b303f8cbd0
+  after len=5654 sha256=93c6b424d909c9b86cde7232434f538d3bb089072b511480eec08a95e197f88d bodyIdentical=true
+numstat raw:
+1	1	Core/DeepBase.EHAI.Types.pas
+1	1	Core/DeepBase.Gate.Verdict.pas
+1	1	Core/DeepBase.HB.Choice.Types.pas
+1	1	Core/DeepBase.Security.UBS2.Migration.pas
+1	1	Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+1	1	Tests/Test.DeepBase.Security.MachineIdentity.pas
+numstat --ignore-cr-at-eol:
+1	1	Core/DeepBase.EHAI.Types.pas
+1	1	Core/DeepBase.Gate.Verdict.pas
+1	1	Core/DeepBase.HB.Choice.Types.pas
+1	1	Core/DeepBase.Security.UBS2.Migration.pas
+1	1	Tests/Regression/Test.Regression.A8_InFlightUnloadGate.pas
+1	1	Tests/Test.DeepBase.Security.MachineIdentity.pas
+H14 raw==icr: true

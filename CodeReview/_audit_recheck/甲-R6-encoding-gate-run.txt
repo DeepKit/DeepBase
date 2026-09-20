@@ -1,0 +1,4 @@
+tested_commit=d10332fded9e434c2be24b86b2d9ef90ee37e254 (d10332f)
+kind=encoding-gate
+exit=0
+编码门禁通过：970 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）

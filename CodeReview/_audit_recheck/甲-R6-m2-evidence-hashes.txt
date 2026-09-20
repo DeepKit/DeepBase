@@ -1,0 +1,5 @@
+tested_commit=d10332fded9e434c2be24b86b2d9ef90ee37e254
+M2 worktree state: NUL=0, valid UTF-8, no BOM, 3 files byte-identical
+R2-run-tests.log len=987 NUL=0 sha256=c73373c21054e7e1ec4e535f75ac262d9fc3bb50b43c591826fb5526d842300b
+R3-run-tests.log len=987 NUL=0 sha256=c73373c21054e7e1ec4e535f75ac262d9fc3bb50b43c591826fb5526d842300b
+run-tests-a6a8.log len=987 NUL=0 sha256=c73373c21054e7e1ec4e535f75ac262d9fc3bb50b43c591826fb5526d842300b

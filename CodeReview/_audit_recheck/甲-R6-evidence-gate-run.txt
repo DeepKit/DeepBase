@@ -1,0 +1,10 @@
+tested_commit=d10332fded9e434c2be24b86b2d9ef90ee37e254 (d10332f)
+kind=evidence-encoding-gate tracked
+exit=0
+证据编码门禁通过：扫描 81 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+
+---
+tested_commit=d10332fded9e434c2be24b86b2d9ef90ee37e254 (d10332f)
+kind=evidence-encoding-gate --all-worktree
+exit=0
+证据编码门禁通过：扫描 106 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
