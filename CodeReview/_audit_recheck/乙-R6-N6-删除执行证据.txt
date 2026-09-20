@@ -1,0 +1,41 @@
+DeepBase 乙 R6 / N6 —— D4/D5/D7 授权删除执行证据（7 件，回收站流程）
+工单：docs/ui/work-orders/WO-20260920-AUDIT-乙-R6-归档卫生与门禁口径收口.md §N6
+主控裁定：老板 2026-09-20 15:12 第④项「授权删除纯重复副本」
+执行时间（本地）：2026-09-20 20:36
+前置：清单已于 664f0e5（16:40）报主控；保留件已于 D1/D2/D6 入库（33d80b8/a3f4a72）
+复核（本窗）：7 件 sha256 与 664f0e5 清单逐件一致；仓库外备份 D:\_ProgData\DeepBase-R6-N6-backup-20260920-162216\ 7 件 sha256 与工作树逐件一致（全 MATCH）
+
+一、删除执行明细（Windows 回收站，禁 rm/del）
+[D4-1] docs/DeepBase-General-AI-Interaction-Protocol-v1(2).md  36330 B  sha256 f0c056f433c08595…
+  保留件：docs/规范历史版本与对比库/DeepBase-General-AI-Interaction-Protocol-v1.md（同 sha256）
+[D5-1] docs/backup_20260909_l1_l7/DeepBase-AI-Human-Intervention-Principles-v1.md
+  保留件：docs/规范历史版本与对比库/DeepBase-AI-Human-Intervention-Principles-v1.md
+[D5-2] docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1.md
+  保留件：docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1.md
+[D5-3] docs/backup_20260909_l1_l7/DeepBase-Product-Realization-Boundary-v1-r2.md
+  保留件：docs/规范历史版本与对比库/DeepBase-Product-Realization-Boundary-v1-r2.md
+[D5-4] docs/backup_20260909_l1_l7/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure-v1.md
+  保留件：docs/规范历史版本与对比库/DeepBase-HB-Human-Behavior-Adaptation-Infrastructure.原稿-20260908.md
+[D7-1] docs/WO-20260830-HB-交付报告纠偏-开发甲-交付报告.md  10148 B
+  保留件：docs/WO-20260830-003-开发甲-HB视觉系统缺失组件补齐交付报告.md（同 sha256）
+[D7-2] docs/WO-20260830-补修-开发甲-交付报告.md  5897 B
+  保留件：docs/WO-20260830-最终验证-开发甲-交付报告.md（同 sha256）
+
+二、删除后核验
+  - 7 件候选 Test-Path 全部 = False（已移入回收站）
+  - 7 件保留件 sha256 逐一复验 = 清单值（内容未损）
+  - D5 目录 docs/backup_20260909_l1_l7/ 剩余 4 件独有过期版（按工单转归档，不删）
+  - git status：7 件均未跟踪件 ⇒ 零 tracked 文件改动、零 staged、零 index 竞争
+
+三、eol 基线死键退役（降向，216 → 210）
+  6 条死键（删除件）已从 09_工程脚本/eol-gate/eol_baseline.json 的 md_crlf_exceptions 移除；
+  另 1 条（HB-交付报告纠偏）本不在基线内。未新增任何豁免，只降不升。
+
+四、门禁复跑（删除后）
+  encoding-gate            EXIT=0（970 .pas，BOM例外 45，孤立CR 0）
+  encoding negative sample EXIT=0
+  evidence-encoding-gate   EXIT=0（114 证据，NUL 违规 0，基线豁免 0）
+  eol-gate                 EXIT=1（14 项，全部为甲域在途 .pas，非本单范围）
+  eol negative sample      EXIT=0
+  managed-copy-gate        EXIT=1（5 项 M2，全部为甲域在途 .pas，非本单范围）
+  managed-copy neg sample  EXIT=0

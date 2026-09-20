@@ -1,0 +1,15 @@
+行尾门禁失败，违规 14 项:
+  L3 .pas 源码混用 CRLF 与 LF (crlf=592, lf=11): Core/DeepBase.License.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.SecureMemory.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.DPAPI.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.MachineIdentity.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.MasterKey.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=1, lf=616): Core/DeepBase.Security.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.UBS2.Migration.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Core/DeepBase.Security.UBS2.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=320, lf=12): Core/DeepBase.Storage.Interfaces.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=193, lf=29): Persistence/DeepBase.Persistence.Security.FireDAC.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.SecureMemory.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.Security.MachineIdentity.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): Tests/Test.DeepBase.Security.UBS2.pas
+  L1 .pas 源码非预期纯 LF (要求 CRLF): ThirdParty/Social/DeepBase.Social.OAuth.pas

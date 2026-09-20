@@ -1,0 +1,19 @@
+门禁输出（预期包含 E1 两类 + E2 一类违规）:
+证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 3 项:
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=20, 首偏移=3, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+
+存量基线（ps-redirect.log=20）命中输出:
+证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 2 项:
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+
+存量件 NUL 上升后输出:
+证据编码门禁失败：扫描 4 个 CodeReview 证据文件，违规 3 项:
+  E2 证据非合法 UTF-8(GBK/ANSI 原始字节): CodeReview/gbk.csv
+  E1 证据含 NUL 字节(NUL=1, 首偏移=26, 存量基线=0)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/nul-in-body.xml
+  E1 证据含 NUL 字节(NUL=21, 首偏移=3, 存量基线=20)，疑为 UTF-16LE/二进制落盘，须按 H18 以 UTF-8 重落: CodeReview/ps-redirect.log
+
+清理后复跑: 证据编码门禁通过：扫描 1 个 CodeReview 证据文件，NUL 违规 0（存量基线豁免 0 项 / 本次命中 0 项），全部为合法 UTF-8
+NEGATIVE-TEST: PASS

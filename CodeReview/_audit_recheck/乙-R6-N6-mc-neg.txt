@@ -1,0 +1,8 @@
+门禁输出（预期包含 M1, M2 违规）:
+托管拷贝门禁失败，违规 3 项:
+  M1 Move/托管类型裸拷贝: src/Bad_M1.pas:7
+  M2 未评审的裸内存 Move 调用 (当前 1 > 基线 0): src/Bad_M1.pas
+  M2 未评审的 FillChar 内存操作 (当前 1 > 基线 0): src/Bad_M2.pas
+
+正向样本通过：OK
+NEGATIVE-TEST: PASS

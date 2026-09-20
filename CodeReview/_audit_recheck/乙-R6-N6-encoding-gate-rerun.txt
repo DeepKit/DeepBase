@@ -1,0 +1,6 @@
+#kind=encoding-gate-rerun
+#exit=0
+#rerun_at=2026-09-20 20:26
+#note=after N6 D4/D5/D7 deletion of 7 duplicates + 6 dead eol keys retired
+#编码门禁通过：970 个 .pas（基线残留U+FFFD文件 18，BOM例外 45，孤立CR基线文件 0）
+EXIT=0

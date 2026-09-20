@@ -1,0 +1,9 @@
+门禁输出（预期包含 L1, L2, L3, L4 违规）:
+行尾门禁失败，违规 5 项:
+  L2 .md 文档非预期包含 CR (要求 LF): docs/Bad_CRLF.md
+  L1 .pas 源码非预期纯 LF (要求 CRLF): src/Bad_LF.pas
+  L3 .pas 源码混用 CRLF 与 LF (crlf=2, lf=2): src/Bad_Mixed.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=4, crlf=0, lf=0): src/Bad_MultiCR.pas
+  L4 .pas 源码多重CR行尾 \r{2,}\n (multicr=1, crlf=2, lf=1): src/Bad_MultiCR_Mixed.pas
+
+NEGATIVE-TEST: PASS
