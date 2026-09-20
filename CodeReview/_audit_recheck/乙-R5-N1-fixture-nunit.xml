@@ -1,0 +1,11 @@
+<test-suite type="Fixture" name="TTestBackupIdPathTraversal" executed="True" result="Success" success="True" time="0.419" >
+                            <results>
+                              <test-case name="Test_Negative_MalformedIds_AllRejected" executed="True" result="Success" success="True" time="0.010" asserts="0" />
+                              <test-case name="Test_Negative_DotSegmentsAndEscapingExtension" executed="True" result="Success" success="True" time="0.004" asserts="0" />
+                              <test-case name="Test_Negative_EmptyId_Rejected" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Negative_PoisonedVersionsJson_FailClosed" executed="True" result="Success" success="True" time="0.018" asserts="0" />
+                              <test-case name="Test_Negative_SyncFromCloudPoisonedId_RejectedAtEntry" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                              <test-case name="Test_Positive_LegitimateIds_PassAndStayUnderRoot" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                              <test-case name="Test_Positive_FullFlow_NoRegression" executed="True" result="Success" success="True" time="0.171" asserts="0" />
+                            </results>
+                          </test-suite>

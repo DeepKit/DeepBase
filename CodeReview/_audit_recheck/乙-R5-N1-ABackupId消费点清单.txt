@@ -1,0 +1,109 @@
+# 乙-R5-N1 证据：ABackupId 全部消费点是否经单一校验入口（SSOT）
+# 取证时间: 2026-09-20 12:31:59 +0800
+# 取证命令: grep -n 'ABackupId|SafeBackupId|BackupFileUnderRoot|GetBackupArchivePath|GetManifestPath|IsValidBackupId' Features/DeepBase.CloudBackup.pas
+# 目标文件: Features/DeepBase.CloudBackup.pas (HEAD=工作区，含本单改动)
+# 原始输出如下
+--------------------------------------------------------------------------------
+301:    function GetBackupInfo(const ABackupId: string): TBackupVersion;
+364:    procedure DoBackupComplete(Success: Boolean; const ABackupId, AErrorMsg: string);
+368:    function GetBackupArchivePath(const ABackupId: string): string;
+369:    function GetManifestPath(const ABackupId: string): string;
+372:    procedure InternalRestore(const ABackupId: string; const ATargetPath: string);
+391:    procedure Restore(const ABackupId: string; const ATargetPath: string = '');
+392:    procedure RestoreAsync(const ABackupId: string; const ATargetPath: string = '');
+400:    function GetVersion(const ABackupId: string): TBackupVersion;
+401:    procedure DeleteVersion(const ABackupId: string);
+405:    procedure SyncToCloud(const ABackupId: string);
+406:    procedure SyncFromCloud(const ABackupId: string);
+411:    function VerifyBackup(const ABackupId: string): Boolean;
+412:    function GetBackupManifest(const ABackupId: string): TBackupManifest;
+440:// Top20 #06: ABackupId 路径遍历防御（SSOT 单一校验入口）
+441:// 所有 ABackupId 消费点（含未来新增）必须先经 SafeBackupId 规范化再拼路径；
+442:// 拼路径一律经 BackupFileUnderRoot（白名单 + 拼接后根前缀二次防御）。
+451:/// SafeBackupId 的纯谓词形式（白名单正则），供批量校验与测试复用；
+452:/// 需要"拒绝即异常"的路径消费点必须调 SafeBackupId 而非本函数。
+454:function IsValidBackupId(const ABackupId: string): Boolean;
+460:function SafeBackupId(const ABackupId: string): string;
+466:/// 在备份根内安全拼接文件：id 经 SafeBackupId 白名单校验 →
+470:function BackupFileUnderRoot(const ABackupRoot, ABackupId, AExtension: string): string;
+594:{ Top20 #06: ABackupId 路径遍历防御（SSOT） }
+596:function IsValidBackupId(const ABackupId: string): Boolean;
+598:  Result := TRegEx.IsMatch(ABackupId, BACKUP_ID_PATTERN);
+601:function SafeBackupId(const ABackupId: string): string;
+605:  if IsValidBackupId(ABackupId) then
+606:    Exit(ABackupId);
+608:  LDisplay := ABackupId;
+620:function BackupFileUnderRoot(const ABackupRoot, ABackupId, AExtension: string): string;
+625:  Result := TPath.GetFullPath(TPath.Combine(LRoot, SafeBackupId(ABackupId) + '.' + AExtension));
+628:    raise EBackupException.CreateFmt('Backup path escapes backup root: %s', [ABackupId]);
+1566:function TCloudBackupClient.GetBackupInfo(const ABackupId: string): TBackupVersion;
+1573:  LResponse := DoRequest('GET', '/backup/' + TNetEncoding.URL.Encode(ABackupId) + '/info', nil);
+1788:  const ABackupId, AErrorMsg: string);
+1791:    FOnBackupComplete(Self, Success, ABackupId, AErrorMsg);
+1807:function TCloudBackupManager.GetBackupArchivePath(const ABackupId: string): string;
+1810:    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip.enc')
+1812:    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip');
+1815:function TCloudBackupManager.GetManifestPath(const ABackupId: string): string;
+1817:  Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'manifest.json');
+1876:                  GetManifestPath(FVersions[FVersions.Count - 1].BackupId));
+1923:      LArchivePath := GetBackupArchivePath(LBackupId);
+1945:      LManifest.SaveToFile(GetManifestPath(LBackupId));
+2003:procedure TCloudBackupManager.InternalRestore(const ABackupId: string;
+2017:    LArchivePath := GetBackupArchivePath(ABackupId);
+2023:    if not VerifyBackup(ABackupId) then
+2024:      raise EBackupException.CreateFmt('Backup archive integrity verification failed: %s', [ABackupId]);
+2027:    LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
+2047:        LTempPath := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'tmp.zip');
+2126:        SafeBackupId(LVersion.BackupId);
+2163:    if TFile.Exists(GetBackupArchivePath(LVersion.BackupId)) then
+2164:      TFile.Delete(GetBackupArchivePath(LVersion.BackupId));
+2165:    if TFile.Exists(GetManifestPath(LVersion.BackupId)) then
+2166:      TFile.Delete(GetManifestPath(LVersion.BackupId));
+2279:procedure TCloudBackupManager.Restore(const ABackupId: string;
+2287:    InternalRestore(ABackupId, ATargetPath);
+2293:procedure TCloudBackupManager.RestoreAsync(const ABackupId: string;
+2304:        InternalRestore(ABackupId, ATargetPath);
+2352:function TCloudBackupManager.GetVersion(const ABackupId: string): TBackupVersion;
+2358:    if FVersions[I].BackupId = ABackupId then
+2362:procedure TCloudBackupManager.DeleteVersion(const ABackupId: string);
+2368:    if FVersions[I].BackupId = ABackupId then
+2371:      if TFile.Exists(GetBackupArchivePath(ABackupId)) then
+2372:        TFile.Delete(GetBackupArchivePath(ABackupId));
+2373:      if TFile.Exists(GetManifestPath(ABackupId)) then
+2374:        TFile.Delete(GetManifestPath(ABackupId));
+2389:    if TFile.Exists(GetBackupArchivePath(FVersions[I].BackupId)) then
+2390:      TFile.Delete(GetBackupArchivePath(FVersions[I].BackupId));
+2391:    if TFile.Exists(GetManifestPath(FVersions[I].BackupId)) then
+2392:      TFile.Delete(GetManifestPath(FVersions[I].BackupId));
+2399:procedure TCloudBackupManager.SyncToCloud(const ABackupId: string);
+2407:  LVersion := GetVersion(ABackupId);
+2409:    raise EBackupFileNotFoundException.CreateFmt('Backup version not found: %s', [ABackupId]);
+2411:  LArchivePath := GetBackupArchivePath(ABackupId);
+2420:    if FCloudClient.UploadBackup(LArchivePath, ABackupId,
+2438:procedure TCloudBackupManager.SyncFromCloud(const ABackupId: string);
+2445:  LArchivePath := GetBackupArchivePath(ABackupId);
+2455:    if FCloudClient.DownloadBackup(ABackupId, LArchivePath,
+2464:      LVersion := GetVersion(ABackupId);
+2467:        LVersion := FCloudClient.GetBackupInfo(ABackupId);
+2504:function TCloudBackupManager.VerifyBackup(const ABackupId: string): Boolean;
+2520:  LArchivePath := GetBackupArchivePath(ABackupId);
+2524:  if not TFile.Exists(GetManifestPath(ABackupId)) then
+2528:    LManifest := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
+2592:function TCloudBackupManager.GetBackupManifest(const ABackupId: string): TBackupManifest;
+2594:  Result := TBackupManifest.LoadFromFile(GetManifestPath(ABackupId));
+--------------------------------------------------------------------------------
+# 参照实现（本仓既有正确范例，本次复用它的前缀比较口径，未另造轮子）
+# 取证命令: grep -n 'BuildSafeDestination' Features/DeepBase.CloudBackup.pas
+468:/// 二次防御口径与本仓 BuildSafeDestination（归档解压侧）一致，不另造轮子。
+626:  // 二次防御：白名单后仍验拼接规范化结果在根内（大小写不敏感），口径同 BuildSafeDestination
+1248:  function BuildSafeDestination(const AEntryName: string): string;
+1277:        LDestPath := BuildSafeDestination(LEntryName);
+--------------------------------------------------------------------------------
+# 归类判读（人工，逐点对应上方行号）
+[SSOT 定义] 440-472 声明 / 594-629 实现：IsValidBackupId(纯谓词) -> SafeBackupId(白名单不合规 raise) -> BackupFileUnderRoot(白名单+拼接后 BackupRoot 前缀二次防御)
+[路径构建唯一入口] 1807-1812 GetBackupArchivePath -> BackupFileUnderRoot；1815-1817 GetManifestPath -> BackupFileUnderRoot
+[派生消费点(经上述两函数)] 1876 1923 1945 2017 2027 2163 2164 2165 2166 2371 2372 2373 2374 2389 2390 2391 2392 2411 2445 2520 2524 2528 2594
+[直接拼临时解密文件] 2047 InternalRestore -> BackupFileUnderRoot('tmp.zip')
+[持久化清单载入侧校验] 2126 LoadVersions -> SafeBackupId(LVersion.BackupId)（versions.json 被篡改/历史投毒即 fail-closed）
+[非路径消费点(不需校验)] 364 1788-1791 事件参数；1566/1573 云端 HTTP 路径段（走 TNetEncoding.URL.Encode）；2352-2358/2362-2368/2407/2464 内存列表等值比较；2024/2409 错误消息文本
+[未纳入本单的死路径] 无：全文件不存在绕过 SafeBackupId 的 ABackupId -> 文件系统路径拼接

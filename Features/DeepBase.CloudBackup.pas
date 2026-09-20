@@ -21,7 +21,7 @@ uses
   System.SysUtils, System.Classes, System.Types, System.Generics.Collections,
   System.JSON, System.SyncObjs, System.DateUtils, System.Hash, System.NetEncoding,
   System.Net.HttpClient, System.Net.URLClient, System.Threading, System.IOUtils,
-  System.Zip, System.ZLib, DeepBase.Exceptions;
+  System.Zip, System.ZLib, System.RegularExpressions, DeepBase.Exceptions;
 
 type
   /// <summary>备份状态</summary>
@@ -436,6 +436,39 @@ procedure SetCloudBackup(AManager: TCloudBackupManager);
 function FormatFileSize(ABytes: Int64): string;
 function FormatDuration(ASeconds: Integer): string;
 
+// ============================================================================
+// Top20 #06: ABackupId 路径遍历防御（SSOT 单一校验入口）
+// 所有 ABackupId 消费点（含未来新增）必须先经 SafeBackupId 规范化再拼路径；
+// 拼路径一律经 BackupFileUnderRoot（白名单 + 拼接后根前缀二次防御）。
+// 云端来源 id 与本地生成 id 走同一校验，不因来源豁免。
+// ============================================================================
+
+/// <summary>备份 id 白名单：1-64 位字母/数字/'_'/'-'（时间戳与 GUID 派生 id 均在此格式内）</summary>
+const
+  BACKUP_ID_PATTERN = '^[0-9A-Za-z_-]{1,64}$';
+
+/// <summary>
+/// SafeBackupId 的纯谓词形式（白名单正则），供批量校验与测试复用；
+/// 需要"拒绝即异常"的路径消费点必须调 SafeBackupId 而非本函数。
+/// </summary>
+function IsValidBackupId(const ABackupId: string): Boolean;
+
+/// <summary>
+/// 备份 id 单一校验入口：不合规直接 raise EBackupInvalidIdException
+/// （fail-closed，不返回空串让调用方自行判断）。
+/// </summary>
+function SafeBackupId(const ABackupId: string): string;
+
+/// <summary>备份根前缀：GetFullPath + 尾分隔符，供根内包含性比较（调用方按 OrdinalIgnoreCase 比较）</summary>
+function BackupRootPrefix(const ABackupRoot: string): string;
+
+/// <summary>
+/// 在备份根内安全拼接文件：id 经 SafeBackupId 白名单校验 →
+/// GetFullPath 规范化 → 结果必须以根前缀为前缀（OrdinalIgnoreCase），否则拒绝。
+/// 二次防御口径与本仓 BuildSafeDestination（归档解压侧）一致，不另造轮子。
+/// </summary>
+function BackupFileUnderRoot(const ABackupRoot, ABackupId, AExtension: string): string;
+
 implementation
 
 uses
@@ -556,6 +589,43 @@ begin
     Result := Format('%dm %ds', [M, S])
   else
     Result := Format('%ds', [S]);
+end;
+
+{ Top20 #06: ABackupId 路径遍历防御（SSOT） }
+
+function IsValidBackupId(const ABackupId: string): Boolean;
+begin
+  Result := TRegEx.IsMatch(ABackupId, BACKUP_ID_PATTERN);
+end;
+
+function SafeBackupId(const ABackupId: string): string;
+var
+  LDisplay: string;
+begin
+  if IsValidBackupId(ABackupId) then
+    Exit(ABackupId);
+  // fail-closed：不返回空串、不做清洗，非法即拒绝
+  LDisplay := ABackupId;
+  if Length(LDisplay) > 80 then
+    LDisplay := Copy(LDisplay, 1, 80) + '...';
+  raise EBackupInvalidIdException.CreateFmt('Invalid backup id (rejected by whitelist %s): %s',
+    [BACKUP_ID_PATTERN, QuotedStr(LDisplay)]);
+end;
+
+function BackupRootPrefix(const ABackupRoot: string): string;
+begin
+  Result := IncludeTrailingPathDelimiter(TPath.GetFullPath(ABackupRoot));
+end;
+
+function BackupFileUnderRoot(const ABackupRoot, ABackupId, AExtension: string): string;
+var
+  LRoot: string;
+begin
+  LRoot := BackupRootPrefix(ABackupRoot);
+  Result := TPath.GetFullPath(TPath.Combine(LRoot, SafeBackupId(ABackupId) + '.' + AExtension));
+  // 二次防御：白名单后仍验拼接规范化结果在根内（大小写不敏感），口径同 BuildSafeDestination
+  if not SameText(Copy(Result, 1, Length(LRoot)), LRoot) then
+    raise EBackupException.CreateFmt('Backup path escapes backup root: %s', [ABackupId]);
 end;
 
 { TBackupFileInfo }
@@ -1736,14 +1806,15 @@ end;
 
 function TCloudBackupManager.GetBackupArchivePath(const ABackupId: string): string;
 begin
-  Result := TPath.Combine(FConfig.LocalBackupPath, ABackupId + '.zip');
   if FConfig.EnableEncryption then
-    Result := Result + '.enc';
+    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip.enc')
+  else
+    Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'zip');
 end;
 
 function TCloudBackupManager.GetManifestPath(const ABackupId: string): string;
 begin
-  Result := TPath.Combine(FConfig.LocalBackupPath, ABackupId + '.manifest.json');
+  Result := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'manifest.json');
 end;
 
 procedure TCloudBackupManager.InternalBackup(ABackupType: TBackupType;
@@ -1973,7 +2044,7 @@ begin
         FProgress.Status := bsDecrypting;
         DoProgress;
         
-        LTempPath := TPath.Combine(FConfig.LocalBackupPath, ABackupId + '.tmp.zip');
+        LTempPath := BackupFileUnderRoot(FConfig.LocalBackupPath, ABackupId, 'tmp.zip');
         FEncryptor.DecryptFile(LArchivePath, LTempPath);
       end
       else
@@ -2036,6 +2107,7 @@ var
   LVersionsPath: string;
   LContent: string;
   LJSON: TJSONArray;
+  LVersion: TBackupVersion;
   I: Integer;
 begin
   LVersionsPath := TPath.Combine(FConfig.LocalBackupPath, 'versions.json');
@@ -2048,7 +2120,12 @@ begin
   try
     if Assigned(LJSON) then
       for I := 0 to LJSON.Count - 1 do
-        FVersions.Add(TBackupVersion.FromJSON(LJSON.Items[I] as TJSONObject));
+      begin
+        LVersion := TBackupVersion.FromJSON(LJSON.Items[I] as TJSONObject);
+        // Top20 #06: versions.json 可被本地篡改或历史投毒写入，载入即白名单校验（fail-closed）
+        SafeBackupId(LVersion.BackupId);
+        FVersions.Add(LVersion);
+      end;
   finally
     LJSON.Free;
   end;
@@ -2363,10 +2440,12 @@ var
   LArchivePath: string;
   LVersion: TBackupVersion;
 begin
+  // Top20 #06: 云端 id 与本地 id 同源同校验——入口先于任何网络/落盘动作拒绝非法 id
+  // （服务器被攻陷或 MITM 投毒清单时，恶意 id 在此即 fail-closed）
+  LArchivePath := GetBackupArchivePath(ABackupId);
+
   if not Assigned(FCloudClient) then
     raise ECloudServiceNotConfiguredException.Create('Cloud service not configured');
-    
-  LArchivePath := GetBackupArchivePath(ABackupId);
   
   FStatus := bsDownloading;
   FProgress.Status := bsDownloading;

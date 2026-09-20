@@ -22,6 +22,7 @@ uses
   System.IOUtils,
   System.Generics.Collections,
   System.Net.URLClient,
+  DeepBase.Exceptions,
   DeepBase.CloudBackup;
 
 type
@@ -172,6 +173,39 @@ type
 
     [Test]
     procedure Test_TamperedManifest_BlocksRestore;
+  end;
+
+  // ============================================================================
+  // Top20 #06 / R5-N1: ABackupId 路径遍历——一切消费点经 SafeBackupId 单一校验入口，
+  // 非法 id fail-closed 拒绝；`.`/`..` 等点段本身不在白名单字符集内，因此在第一道闸即被拒，
+  // 拼接后的根前缀二次防御则由未受信的扩展名参数实证可达（id 与 extension 拼接面整体受根约束）。
+  // ============================================================================
+  [TestFixture]
+  TTestBackupIdPathTraversal = class
+  private
+    FBakDir: string;
+    procedure AssertRejectedId(const ABadId: string);
+    function NewBakDir: string;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Negative_MalformedIds_AllRejected;
+    [Test]
+    procedure Test_Negative_DotSegmentsAndEscapingExtension;
+    [Test]
+    procedure Test_Negative_EmptyId_Rejected;
+    [Test]
+    procedure Test_Negative_PoisonedVersionsJson_FailClosed;
+    [Test]
+    procedure Test_Negative_SyncFromCloudPoisonedId_RejectedAtEntry;
+    [Test]
+    procedure Test_Positive_LegitimateIds_PassAndStayUnderRoot;
+    [Test]
+    procedure Test_Positive_FullFlow_NoRegression;
   end;
 
   /// <summary>
@@ -828,6 +862,216 @@ begin
   FRestoreError := ErrorMsg;
 end;
 
+{ TTestBackupIdPathTraversal }
+
+procedure TTestBackupIdPathTraversal.Setup;
+begin
+  FBakDir := NewBakDir;
+end;
+
+procedure TTestBackupIdPathTraversal.TearDown;
+begin
+  try
+    TDirectory.Delete(FBakDir, True);
+  except
+    // 临时目录清理失败不影响断言结果
+  end;
+end;
+
+function TTestBackupIdPathTraversal.NewBakDir: string;
+begin
+  Result := TPath.Combine(TPath.GetTempPath, 'n1_bak_' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(Result);
+end;
+
+// 统一断言：非法 id 在消费入口即被 EBackupInvalidIdException 拒绝，错误消息可区分（含拒绝原因）。
+// 异常实例在 except 块结束时即由 RTL 释放，断言所需的类型与消息必须在块内取出。
+procedure TTestBackupIdPathTraversal.AssertRejectedId(const ABadId: string);
+var
+  LRejected: Boolean;
+  LMsg: string;
+begin
+  LRejected := False;
+  LMsg := '';
+  try
+    SafeBackupId(ABadId);
+  except
+    on X: EBackupInvalidIdException do
+    begin
+      LRejected := True;
+      LMsg := X.Message;
+    end;
+  end;
+  Assert.IsTrue(LRejected, 'id must be rejected by whitelist: [' + ABadId + ']');
+  Assert.IsTrue(LMsg.Contains('Invalid backup id'),
+    'rejection message must be distinguishable, id=[' + ABadId + '] msg=[' + LMsg + ']');
+end;
+
+procedure TTestBackupIdPathTraversal.Test_Negative_MalformedIds_AllRejected;
+begin
+  Assert.IsFalse(IsValidBackupId('../..'));
+  AssertRejectedId('../..');
+  AssertRejectedId('../../..');
+  AssertRejectedId('../../etc/passwd');
+  AssertRejectedId('....//....//etc/passwd');
+  AssertRejectedId('..%2f..%2fetc');
+  AssertRejectedId('C:\Windows\temp\x');
+  AssertRejectedId('\\server\share\x');
+  AssertRejectedId('/etc/passwd');
+  AssertRejectedId(#0);
+  AssertRejectedId('abc' + #0 + 'def');
+  AssertRejectedId(StringOfChar('a', 65));
+  AssertRejectedId('backup id with spaces');
+  AssertRejectedId('backup@id');
+  AssertRejectedId('backup+id');
+end;
+
+// 点段 id 不在白名单字符集内 → 第一道闸即拒。二次防御经未受信的 AExtension 参数验证：
+// 白名单只覆盖 id，拼接面（root/id/extension）整体仍受根前缀约束，口径同 BuildSafeDestination。
+procedure TTestBackupIdPathTraversal.Test_Negative_DotSegmentsAndEscapingExtension;
+begin
+  Assert.IsFalse(IsValidBackupId('.'));
+  Assert.IsFalse(IsValidBackupId('..'));
+  Assert.WillRaise(
+    procedure
+    begin
+      BackupFileUnderRoot(FBakDir, '..', 'zip');
+    end, EBackupInvalidIdException);
+  Assert.WillRaise(
+    procedure
+    begin
+      BackupFileUnderRoot(FBakDir, '.', 'zip');
+    end, EBackupInvalidIdException);
+  // id 合法但扩展名带逃逸段 → 由拼接后的根前缀检查拒绝（错误类别与白名单拒绝可区分）。
+  // 三级 ..：拼接式为 root/id + '.' + extension，id 后的那个点与首个 .. 合并成普通段名
+  // （legit_id...），会被下一级 .. 抵消，故需三级才能跳出根目录。
+  Assert.WillRaise(
+    procedure
+    begin
+      BackupFileUnderRoot(FBakDir, 'legit_id', '..\..\..\outside\zip');
+    end, EBackupException);
+end;
+
+procedure TTestBackupIdPathTraversal.Test_Negative_EmptyId_Rejected;
+begin
+  AssertRejectedId('');
+  AssertRejectedId('   ');
+  // '.' 被白名单拒绝，不进入拼接
+  Assert.WillRaise(
+    procedure
+    begin
+      BackupFileUnderRoot(FBakDir, '.', 'zip');
+    end, EBackupInvalidIdException);
+end;
+
+// versions.json 被本地篡改/历史投毒写入恶意 id → 载入即 fail-closed（管理器构造抛异常）
+procedure TTestBackupIdPathTraversal.Test_Negative_PoisonedVersionsJson_FailClosed;
+var
+  LCfg: TBackupConfig;
+  LMgr: TCloudBackupManager;
+begin
+  TFile.WriteAllText(
+    TPath.Combine(FBakDir, 'versions.json'),
+    '[{"backupId":"../../../outside","fileCount":1}]');
+  LCfg := Default(TBackupConfig);
+  LCfg.LocalBackupPath := FBakDir;
+  Assert.WillRaise(
+    procedure
+    begin
+      LMgr := TCloudBackupManager.Create(LCfg);
+      FreeAndNil(LMgr);
+    end, EBackupInvalidIdException);
+end;
+
+// 云端投毒模拟：恶意 id 在 SyncFromCloud 入口即被拒，先于"云服务未配置"检查（顺序即证明）
+procedure TTestBackupIdPathTraversal.Test_Negative_SyncFromCloudPoisonedId_RejectedAtEntry;
+var
+  LCfg: TBackupConfig;
+  LMgr: TCloudBackupManager;
+begin
+  LCfg := Default(TBackupConfig);
+  LCfg.LocalBackupPath := FBakDir;
+  LMgr := TCloudBackupManager.Create(LCfg);
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        LMgr.SyncFromCloud('../../../evil');
+      end, EBackupInvalidIdException);
+    // 对照组：合法 id 才走到云服务配置检查
+    Assert.WillRaise(
+      procedure
+      begin
+        LMgr.SyncFromCloud('backup_20260920_101500_deadbeef');
+      end, ECloudServiceNotConfiguredException);
+  finally
+    LMgr.Free;
+  end;
+end;
+
+procedure TTestBackupIdPathTraversal.Test_Positive_LegitimateIds_PassAndStayUnderRoot;
+var
+  LRoot: string;
+  LPath: string;
+  LGuidId: string;
+begin
+  LRoot := BackupRootPrefix(FBakDir);
+  LPath := BackupFileUnderRoot(FBakDir, '20260920_101500_deadbeef', 'zip');
+  Assert.IsTrue(SameText(Copy(LPath, 1, Length(LRoot)), LRoot));
+  Assert.IsTrue(LPath.EndsWith('.zip'));
+
+  LGuidId := 'b7d9f3a1-4c2e-4f6a-9d8b-1e2c3a4b5d6f';
+  Assert.IsTrue(IsValidBackupId(LGuidId), 'GUID-format id must pass whitelist');
+  LPath := BackupFileUnderRoot(FBakDir, LGuidId, 'manifest.json');
+  Assert.IsTrue(SameText(Copy(LPath, 1, Length(LRoot)), LRoot));
+
+  Assert.AreEqual(64, Length(SafeBackupId(StringOfChar('a', 64))), '64-char id is the whitelist boundary');
+end;
+
+// 正向全流程：创建/校验/恢复/删除不回归
+procedure TTestBackupIdPathTraversal.Test_Positive_FullFlow_NoRegression;
+var
+  LCfg: TBackupConfig;
+  LMgr: TCloudBackupManager;
+  LSrcDir, LRestDir, LBackupId: string;
+begin
+  LSrcDir := TPath.Combine(TPath.GetTempPath, 'n1_src_' + TGUID.NewGuid.ToString);
+  LRestDir := TPath.Combine(TPath.GetTempPath, 'n1_rest_' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(LSrcDir);
+  TFile.WriteAllText(TPath.Combine(LSrcDir, 'payload.txt'), 'N1 full-flow payload');
+  try
+    LCfg := Default(TBackupConfig);
+    LCfg.SourcePaths := [LSrcDir];
+    LCfg.LocalBackupPath := FBakDir;
+    LCfg.EnableEncryption := False;
+    LCfg.MaxVersionsToKeep := 5;
+    LMgr := TCloudBackupManager.Create(LCfg);
+    try
+      LMgr.BackupFull('n1-positive');
+      Assert.AreEqual(1, Integer(LMgr.GetVersions.Count));
+      LBackupId := LMgr.GetVersions[0].BackupId;
+      Assert.IsTrue(IsValidBackupId(LBackupId), 'generated id must satisfy whitelist');
+      Assert.IsTrue(LMgr.VerifyBackup(LBackupId));
+
+      LMgr.Restore(LBackupId, LRestDir);
+      Assert.IsTrue(TFile.Exists(TPath.Combine(LRestDir, 'payload.txt')),
+        'positive restore must not regress');
+
+      LMgr.DeleteVersion(LBackupId);
+      Assert.AreEqual(0, Integer(LMgr.GetVersions.Count));
+      Assert.IsFalse(TFile.Exists(TPath.Combine(FBakDir, LBackupId + '.zip')));
+    finally
+      LMgr.Free;
+    end;
+  finally
+    try
+      TDirectory.Delete(LSrcDir, True);
+      TDirectory.Delete(LRestDir, True);
+    except
+    end;
+  end;
+end;
+
 procedure TTestBuildRequestHeaders.Test_DefaultsOnly;
 var
   LH: TNetHeaders;
@@ -888,6 +1132,7 @@ initialization
   TDUnitX.RegisterTestFixture(TTestBackupStatistics);
   TDUnitX.RegisterTestFixture(TTestBackupEnums);
   TDUnitX.RegisterTestFixture(TTestRestoreChainVerification);
+  TDUnitX.RegisterTestFixture(TTestBackupIdPathTraversal);
   TDUnitX.RegisterTestFixture(TTestBuildRequestHeaders);
 
 end.

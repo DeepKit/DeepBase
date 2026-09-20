@@ -1,0 +1,550 @@
+DeepBase R5-N1 全量测试套件控制台输出（SafeBackupId 修复后复跑）
+命令: Tests\DeepBaseTests.exe --hidebanner --exitbehavior:Continue --consolemode:Quiet "--xmlfile:TestResults\r5-final.xml" > ..\.tmp\r5\full-console.txt 2>&1
+cwd: Tests
+原始字节: GBK(代码页936) 40880B；正文为逐字节转码后的 UTF-8（H18），无内容增删
+同源 NUnit XML: Tests\TestResults\r5-final.xml (1045003B)，二进制构建 2026-09-20 12:58:02 / 运行 12:58:36 起（本地，晚于甲R4 c1052a2 12:33:43 与 6f39015 12:52:18）
+---
+DUnitX - [DeepBaseTests.exe] - Starting Tests.
+
+.............................F...........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................F.............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................E.E.E.............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................F......................................................................EEEEEEEEEEEEEEE.............................................................................................................................F.............................................................................................................................................................................................................................................................................................................................................................................................................................................F.F.E.E.E.E.F.F...F.........................................F...................................................................E...........E.............................................................................................................................................................................................................................................................................................F...........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................E.E.E.E.E.E.E.E.E.E.E.E.EEEEEEEEE....................................................................................................................................................................................EEEEEEE.........................................................F.........................F.......................................................F.........................................................................E.E.E.E.E.E.E.E.E.E.....E.E.E.E......................................................................................................................................................................................................................................................................................................................................EEEEEEEE.......E.E.E.....................................................................................................................................................................................................................................................E.E.E...............................................................................................E.E.E.E.E.E.E.E.E.E.E.E.E.............................................................................................F.F.F...F.F...F...F.....E...F.F....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................EEEE.....F...E.E.E...............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................E...........................................................................................................................................................................................E.E.E...............................................................................................................................F.F.F.F.F.F.F.F..................................................................................................I........................II...................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................E.E.E.E.....E.E.E.E..............................................................................................................................I.........F....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................EEEEEEEEEEEEE...................................................................E............................................................................E.................E.E....................................................................................................................................
+
+Tests Found   : 4591
+Tests Ignored : 4
+Tests Passed  : 4424
+Tests Leaked  : 0
+Tests Failed  : 33
+Tests Errored : 130
+
+Failing Tests
+
+  Test.Arch.PackageBoundaries.TPackageBoundaryTests.SourceDirectories_DoNotContainDcuArtifacts
+  Message: Condition is False when True expected. [Source directories must not contain .dcu artifacts:
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Encoding.dcu
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Hash.dcu
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.JCS.dcu
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Platform.dcu
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.Random.dcu
+D:\_Progs\02Business\DeepBase\Core\DeepBase.Crypto.RSA.dcu
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.DeepShell.Commands.dcu
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.DeepShell.Events.dcu
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.DeepShell.Intf.dcu
+D:\_Progs\02Business\DeepBase\VCL\DeepBase.VCL.DeepShell.Types.dcu
+]
+
+  Test.DeepBase.CloudBackup.TTestBackupProgress.Test_ProgressPercent_Zero
+  Message: Expected [0] but got [-103]
+
+  Test.DeepBase.DB.DoQry.TTestDeepBaseDoQry.Test_InsertReturningId_ConcurrentWrites_ReturnUniqueIds
+  Message: Expected [0] but got [7] Concurrent insert should not produce errors
+
+  Test.DeepBase.DB.Upsert.PBT.TUpsertPropertyTests.Property20_ConcurrentUpsertProducesExactlyOneRow
+  Message: Expected [0] but got [7] Iter 1: 7 worker(s) failed; first: ESQLiteNativeException: [FireDAC][Phys][SQLite] ERROR: database is locked
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.VCL_RegisterUnit_Exists
+  Message: Condition is False when True expected. [VCL design-time registration unit should exist: VCL\DeepBase.VCL.Controls.pas]
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.FMX_RegisterUnit_Exists
+  Message: Condition is False when True expected. [FMX design-time registration unit should exist: FMX\DeepBase.FMX.Controls.pas]
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.DesignTimePackages_Exist
+  Message: Condition is False when True expected. [Design-time package dclDeepBaseCore.dpk should exist]
+
+  Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.StaticPair_InjectedReplay_Unchanged
+  Message: Condition is False when True expected. [second identical injected frame must short-circuit (Unchanged=True)]
+
+  Test.DeepBase.Desktop.Perception.BitmapSource.TBitmapSourceTests.InjectedBitmap_FlowsThroughFrameDifferGate
+  Message: Condition is False when True expected. [second static after seed]
+
+  Test.DeepBase.Desktop.Perception.FrameCache.TFrameCacheTests.Test_SetProvider_InvalidatesFrameCache
+  Message: Expected [1] but got [6619216] provider A not invoked after swap
+
+  Test.DeepBase.Exception.TTestExceptionHandlerClass.Test_StorageInjection_LogsExceptionViaInjectedStorage
+  Message: Expected [1] but got [0] Injected storage should receive one exception report
+
+  Test.DeepBase.HB.Persistence.TTestHbPersistence.Test_Sink_WALMode_Assert
+  Message: Expected [WAL] but got [DELETE] SQLite engine must operate in WAL journal mode
+
+  Test.DeepBase.HB.Persistence.TTestHbPersistence.Test_Performance_BatchInsert_P95_Latency
+  Message: Condition is False when True expected. [Batch persist P95 latency must be <= 2.0ms (Observed P95=32.843ms)]
+
+  Test.DeepBase.HB.Suite.TTestHbSuite.Test_HbChoiceDeck_Full_0_To_9_Matrix
+  Message: Expected [自己输入] but got [鑷繁杈撳叆] 
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_Initialize_WithMemoryDB
+  Message: Condition is False when True expected. [使用内存数据库初始化应该成功]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_Initialize_WithFilePath
+  Message: Condition is False when True expected. [file path initialization should succeed]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_Initialize_DoubleInit_ShouldSucceed
+  Message: Condition is False when True expected. [第一次初始化应该成功]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_InitializeEx_ReturnsErrorMsg
+  Message: Condition is False when True expected. [InitializeWithDB 应该成功]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_HealthCheck_AfterInit
+  Message: Condition is False when True expected. [HealthCheck should report healthy status]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_ErrorCode_Success_AfterSuccessfulInit
+  Message: Expected [(empty)] but got [(empty)] 成功初始化后错误码应该为 ecSuccess
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_Properties_AfterInit
+  Message: Condition is False when True expected. [IsInitialized 搴旇涓?True]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_MRUItemPath_IsMigratedToItemKey_OnLegacyDatabase
+  Message: Condition is False when True expected. [初始化旧 MRU 数据库应成功]
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_OperationalRetention_ArchivesOldRowsAcrossCoreTables
+  Message: Condition is False when True expected. []
+
+  Test.DeepBase.Performance.TTestDoQryPerformance.Benchmark_Insert
+  Message: Condition is False when True expected. [Insert should exceed 2K ops/sec, got 1433]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_SaveAndLoadSecret
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_SecretExists_True
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_SecretExists_False
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_DeleteSecret
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_LoadSecret_NotFound
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_GetSecretNames
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_SaveSecret_UpdateExisting
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Security.TTestDeepBaseSecurity.Test_GlobalLoadSaveSecret
+  Message: Condition is False when True expected. [DeepBase should be initialized]
+
+  Test.DeepBase.Unlock.TTestDeepBaseUnlock.Test_ApplyCode_PersistsLevelAndCode
+  Message: Expected [1] but got [0] StoredLevel should be ulFollow
+
+
+
+Tests With Errors
+
+  Test.DeepBase.Config.TTestDeepBaseConfig.Test_GetSetConfig_String
+  Message: Access violation at address 0099F31E in module 'DeepBaseTests.exe' (offset 3CF31E). Read of address 00000014
+
+  Test.DeepBase.Config.TTestDeepBaseConfig.Test_GetSetConfig_Integer
+  Message: Access violation at address 0099F4A4 in module 'DeepBaseTests.exe' (offset 3CF4A4). Read of address 00000014
+
+  Test.DeepBase.Config.TTestDeepBaseConfig.Test_GetSetConfig_Boolean
+  Message: Access violation at address 0099F732 in module 'DeepBaseTests.exe' (offset 3CF732). Read of address 00000014
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Enqueue_IsIdempotentByQueueAndLogicalKey
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Dequeue_ClaimsPendingTaskAndReturnsPayload
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Dequeue_DoesNotCrossQueues
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Heartbeat_UpdatesRunningTask
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_RecycleDeadTasks_RequeuesStaleRunningTask
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Complete_MarksRunningTaskDone
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Fail_WithRequeue_MakesTaskPendingAgain
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Dequeue_RespectsNextRunAt
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Fail_SetsNextRunAt_ExponentialBackoff
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Fail_ExceedsMaxRetries_TransfersToDLQ
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_DeadLetterCount_FiltersByQueue
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_PeekDeadLetters_RespectsLimitAndQueue
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_ReplayDeadLetter_MovesBackToMainPending
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_PurgeDeadLetter_RemovesRow
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DB.JobQueue.TTestDBJobQueue.Test_Dequeue_EmptyQueueReturnsFalse
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.VCL_RegisterProcedure_CallsRegisterComponents
+  Message: The specified path was not found
+[D:\_Progs\02Business\DeepBase\Tests\VCL\DeepBase.VCL.Controls.pas]
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.FMX_RegisterProcedure_CallsRegisterComponents
+  Message: The specified file was not found
+[D:\_Progs\02Business\DeepBase\Tests\FMX\DeepBase.FMX.Controls.pas]
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.VCL_RegistersMinimumComponents
+  Message: The specified path was not found
+[D:\_Progs\02Business\DeepBase\Tests\VCL\DeepBase.VCL.Controls.pas]
+
+  Test.DeepBase.DesignTime.Registration.TDesignTimeRegistrationTests.FMX_RegistersMinimumComponents
+  Message: The specified file was not found
+[D:\_Progs\02Business\DeepBase\Tests\FMX\DeepBase.FMX.Controls.pas]
+
+  Test.DeepBase.Diagnose.TTestDiagnoseAll.Test_DiagnoseAll_CompleteSchema
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Diagnose.TTestDiagnoseHelpers.Test_ColumnExists_NonExistentTable
+  Message: [FireDAC][Phys][SQLite]-308. Cannot open / define command, which does not return result sets. Hint: use Execute / ExecSQL method for non-SELECT commands
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveFormState_Basic
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_RestoreFormState_Basic
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveRestore_Position
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveRestore_Size
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveRestore_WindowState_Normal
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveRestore_WindowState_Maximized
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_RestoreFormState_BoundaryCheck
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_RestoreFormState_ClampsStaleMultiMonitorBounds
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_SaveRestore_Extra_JSON
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_DeleteFormState
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_FormStateExists
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_MultipleFormsIsolated
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.FormState.TTestDeepBaseFormState.Test_StorageInjection_SaveRestoreState
+  Message: Access violation at address 009DB9E6 in module 'DeepBaseTests.exe' (offset 40B9E6). Read of address 0000000C
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.RegisterAction_SyncsToAllThreeRegistries
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.LoadFromDB_SyncsActionsToAllThreeRegistries
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.LoadGates_ValidatesActionKeysExistInActionGrid
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.LoadGates_ThrowsWhenActionKeyMissing
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.RegisterDueRule_PersistsAndSyncsToChecker
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.RegisterDueRule_L3ObserveSafeAvoidsFreeze
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.LoadDueRules_RestoresExplicitRuleOnReload
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Governance.ConfigRegistrar.TConfigRegistrarTests.RegisterDueRule_ThrowsOnEmptyActionKey
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate1_ColdStart_FirstPaint_P95Under800ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate2_DataGrid_100kScroll_AllFramesUnder16_6ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate3_ThemeSwitch_TenPalettes_EachUnder100ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate4_DpiSwitch_NoFlicker_NoJaggies_RelayoutUnder30ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate5_ResizeDrag_Composite_EachStepUnder16_6ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.Gate6_TenThousandInstances_ZeroGdiAndHeapLeak
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.HB.Benchmark.TTestHbBenchmark.BenchmarkTouchpointAggregation_100kRows_LatencyP95Under2ms
+  Message: Condition is False when True expected. [Probe build.ps1 missing: D:\_Progs\02Business\DeepBase\Tests\Examples\HbColdStartProbe\build.ps1]
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_SetGetHotkey_Basic
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_GetHotkey_NotExists_ReturnsZero
+  Message: Access violation at address 009E7AB8 in module 'DeepBaseTests.exe' (offset 417AB8). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_SetHotkey_OverwritesExisting
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_RegisterDefaultHotkeys
+  Message: Access violation at address 009E77DE in module 'DeepBaseTests.exe' (offset 4177DE). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_ResetHotkey_ToDefault
+  Message: Access violation at address 009E77DE in module 'DeepBaseTests.exe' (offset 4177DE). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_ResetAllHotkeys
+  Message: Access violation at address 009E77DE in module 'DeepBaseTests.exe' (offset 4177DE). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_CheckHotkeyConflict_NoConflict
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_CheckHotkeyConflict_HasConflict
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_GetAllHotkeys
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_DeleteHotkey
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_OnHotkeyChanged_Event
+  Message: Access violation at address 005E4371 in module 'DeepBaseTests.exe' (offset 14371). Read of address 00000024
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_Scope_Default_IsApplication
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_CheckHotkeyConflictInScope_DifferentScopes_NoConflict
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.Hotkeys.TTestDeepBaseHotkeys.Test_CheckHotkeyConflictInScope_SameScope_HasConflict
+  Message: Access violation at address 009E79DB in module 'DeepBaseTests.exe' (offset 4179DB). Read of address 0000000C
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_Initialize_And_IsUnlocked
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_CreateDataKey_And_GetDataKey
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_EncryptDecrypt_String
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_EncryptDecrypt_Config
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_GetAllKeyInfo_NotEmpty
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_GetExpiringKeys
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_ValidateHardwareBinding
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyManager.Test_GetMachineFingerprint_NotEmpty
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keymanager_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyStore.Test_RotateKey_ChangesVersion
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keystore_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyStore.Test_RevokeKey_ChangesStatus
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keystore_test.json]
+
+  Test.DeepBase.KeyManager.TTestKeyStore.Test_SaveAndLoad_PersistsKeys
+  Message: The specified file already exists
+[E:\Scratch\temp\DeepBase_keystore_test.json]
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_ActivateLicense_ValidKey
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_DeactivateLicense
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.License.TTestDeepBaseLicense.Test_CurrentLicenseInfo
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_AddMRU_SingleItem
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_AddMRU_MultipleItems
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_AddMRU_DuplicateKey_UpdatesTimestamp
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_GetMRUList_ReturnsKeys
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_GetMRUItems_ReturnsFullInfo
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_GetMRUList_MaxItems
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_GetMRUList_SortedByLastAccess
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_ClearMRU
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_ClearMRU_ByCategory
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_RemoveMRU_SingleItem
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_RemoveInvalidMRU_RemovesNonexistentFiles
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_AccessCount_Increments
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.MRU.TTestDeepBaseMRU.Test_DifferentCategories_Isolated
+  Message: Access violation at address 009DD769 in module 'DeepBaseTests.exe' (offset 40D769). Read of address 0000000C
+
+  Test.DeepBase.Manager.TTestDeepBaseManager.Test_InitializeWithDBOrRaise_WithMemoryDB_ShouldSucceed
+  Message: InitializeWithDB failed [2] ConfigDB Corrupted: Failed to create schema: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+Statement: INSERT INTO Settings (Key, Value, ValueType, Category, Description, DefaultValue) VALUES   ('App.Language', 'en-US', 'String', 'General', 'Application language', 'en-US') ON CONFLICT (Key) DO NOTHING
+
+  Test.DeepBase.Performance.TTestConfigPerformance.Benchmark_ConfigRead_Cached
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_config_{B47903C3-2D4E-47A7-9FB1-A68BF400652B}.db]
+
+  Test.DeepBase.Performance.TTestConfigPerformance.Benchmark_ConfigRead_Uncached
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_config_{722FCA0C-87B6-45F8-97BC-799E040F66F1}.db]
+
+  Test.DeepBase.Performance.TTestConfigPerformance.Benchmark_ConfigWrite
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_config_{0F654725-48E9-4F46-9534-155D50EAA73A}.db]
+
+  Test.DeepBase.Performance.TTestConfigPerformance.Benchmark_ConfigWrite_Batch
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_config_{C26F752C-2F3A-47F8-97CA-9A4E9F94128A}.db]
+
+  Test.DeepBase.Performance.TTestLoggingPerformance.Benchmark_LogWrite_Info
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_log_{09539517-6871-4345-B403-B9EA629E68A9}.db]
+
+  Test.DeepBase.Performance.TTestLoggingPerformance.Benchmark_LogWrite_WithFormat
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_log_{7F5FEE23-AC8F-4140-813D-63A7C7E10573}.db]
+
+  Test.DeepBase.Performance.TTestLoggingPerformance.Benchmark_LogWrite_Concurrent
+  Message: 另一个程序正在使用此文件，进程无法访问。
+[E:\Scratch\temp\DeepBase_perf_log_{6B641822-2CC3-40D1-925F-DEB261CF3281}.db]
+
+  Test.DeepBase.Resilience.Timeout.PBT.TTimeoutPolicyPropertyTests.Property6_TimeoutCancelsBackgroundTask
+  Message: Access violation at address 01D3D28C in module 'DeepBaseTests.exe' (offset 176D28C). Read of address 00000000
+
+  Test.DeepBase.Schema.TTestSchemaLogLevelMigration.Test_DualKeys_MigrationIdempotency_Twice
+  Message: [FireDAC][Phys][SQLite] ERROR: near ",": syntax error
+
+  Test.DeepBase.Schema.TTestSchemaLogLevelMigration.Test_OnlyOldKey_MigrationIdempotency_Twice
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Schema.TTestSchemaLogLevelMigration.Test_OnlyNewKey_MigrationIdempotency_Twice
+  Message: [FireDAC][Phys][SQLite] ERROR: near "ON": syntax error
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_GetAvailableThemes_NotEmpty
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_GetAvailableThemes_HasWindowsTheme
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_CurrentTheme_NotEmpty
+  Message: Access violation at address 00C3F048 in module 'DeepBaseTests.exe' (offset 66F048). Read of address 00000014
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_ApplyTheme_ValidTheme
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_GetThemeInfo_ValidTheme
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_OnThemeChanged_Event
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_SavedTheme_Persists
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.Theme.TTestDeepBaseTheme.Test_ThemeInfo_HasRequiredFields
+  Message: Access violation at address 009CAFF6 in module 'DeepBaseTests.exe' (offset 3FAFF6). Read of address 0000000C
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_T_ReturnsOriginal_WhenNoTranslation
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_T_ReturnsTranslation_WhenExists
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_TFmt_FormatsCorrectly
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_TN_Singular
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_TN_Plural
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_CurrentLanguage_DefaultValue
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_SetCurrentLanguage
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_GetAvailableLanguages
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_AddTranslation
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_OnLanguageChanged_Event
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_Cache_Performance
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_LanguageSwitch_ClearCache
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.DeepBase.i18n.TTestDeepBaseI18n.Test_StorageInjection_BasicFlow
+  Message: Access violation at address 005DF2B2 in module 'DeepBaseTests.exe' (offset F2B2). Read of address 00000028
+
+  Test.Regression.BUG327_KeyManagerAEAD.TBUG327_KeyManagerAEADTest.Test_EmptyPlaintext_GCMRoundtrip
+  Message: The specified file already exists
+[E:\Scratch\temp\bug327_km_1289393163.json]
+
+  Test.Regression.BUG346_JobQueueConcurrentDequeue.TBUG346_JobQueueConcurrentDequeueTest.Test_ConcurrentDequeue_NoBusyAndNoDoubleClaim
+  Message: [FireDAC][Phys][SQLite] ERROR: near "(": syntax error
+
+  Test.Regression.CR20260824_P0Batch2.TCR20260824P0Batch2Test.Test_CR001_KEK_Reproducible_AcrossSessions
+  Message: The specified file already exists
+[E:\Scratch\temp\km_cr001_{D5E51841-A21D-4C8E-894A-B06B276A8152}.json]
+
+  Test.Regression.CR20260824_P0Batch2.TCR20260824P0Batch2Test.Test_CR001_WrongPassword_FailsFastAtInitialize
+  Message: The specified file already exists
+[E:\Scratch\temp\km_cr001w_{65D6878D-E7B8-4C0F-9534-8A04B76F199D}.json]
+
+
