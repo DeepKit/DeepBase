@@ -70,6 +70,12 @@ jobs:
       - name: Managed-copy gate negative sample test
         run: node .\09_工程脚本\managed-copy-gate\test_negative_sample.js
 
+      - name: Evidence encoding gate (no NUL / non-UTF-8 audit evidence, WO-20260920-AUDIT-乙-R5 N3)
+        run: node .\09_工程脚本\evidence-encoding-gate\check_evidence_encoding.js
+
+      - name: Evidence encoding gate negative sample test
+        run: node .\09_工程脚本\evidence-encoding-gate\test_negative_sample.js
+
   package-gate:
     name: Package Build Gate (Win64) - ${{ matrix.profile }}
     runs-on: [self-hosted, delphi-windows]
