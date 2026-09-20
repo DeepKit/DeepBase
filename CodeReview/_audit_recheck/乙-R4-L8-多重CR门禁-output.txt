@@ -1,0 +1,33 @@
+WO-20260920-AUDIT-乙-R4 L8 — 多重 CR 行尾门禁（eol-gate 同族扩展，四态分类）
+执行：开发 AI 乙　日期：2026-09-20
+
+[实现]
+落点：09_工程脚本/eol-gate/check_eol.js 新增规则 L4（多重CR），与 L1(CRLF)/L2(md LF)/L3(mixed) 并列；
+分类器重写为四态计数：按每个 LF 前置连续 CR 个数 k 分类——k=0 纯LF、k=1 CRLF、k>=2 多重CR。
+四态纪律：含多重CR的 .pas 只进 L4 评估，不再进入 L1/L3 分类（多重CR不得混入 mixed）。
+基线：eol_baseline.json 新增 pas_multicr_exceptions 数组；Core/DeepBase.Schema.pas 从 pas_mixed_exceptions
+（旧版误归类，恰为工单禁止的「混入 mixed」存量）迁移至 pas_multicr_exceptions，mixed 26→25。
+CI：无需改 delphi-ci.yml——eol-gate 及其负向样本两个 step 已在 CI（delphi-ci.yml:61-65），扩展同族脚本自动接入。
+
+[全库基线实测（乙独立扫描，H7）]
+脚本：.tmp/r4/l8_scan.js（扫描根=仓库根，排除 .git/.tmp/构建产物等，同门禁 SKIP 集）
+结果：.pas 共 960 个，多重CR命中 1 件：
+  Core/DeepBase.Schema.pas  multicr=961, crlf=9, lfOnly=12, loneCR=2883
+与主控 L3 基线（961 行 \r\r\r\r\n）数字一致。
+
+[负向样本测试（test_negative_sample.js 扩展）]
+注入 5 类样本，门禁输出（退出码 1，逐项拦截）：
+  L2 docs/Bad_CRLF.md
+  L1 src/Bad_LF.pas
+  L3 src/Bad_Mixed.pas (crlf=2, lf=2)
+  L4 src/Bad_MultiCR.pas (multicr=4)
+  L4 src/Bad_MultiCR_Mixed.pas (multicr=1, crlf=2, lf=1)  ← 多重CR+混用并存：只归 L4，未混入 L3
+断言：L1–L4 逐项命中 + 四态不混淆正则校验（L1/L3 行不得出现 Bad_MultiCR*）→ NEGATIVE-TEST: PASS
+
+[全库门禁实跑]
+$ node 09_工程脚本/eol-gate/check_eol.js
+行尾门禁通过：检查了 1394 个文件（.pas CRLF / .md LF）   退出码 0
+（Schema.pas 由 pas_multicr_exceptions 基线豁免；K6 主控修复该文件后，须同步删除基线条目，门禁收敛为零豁免。）
+
+[后续联动]
+K6 前置修复（主控执行，961 行 \r\r\r\r\n → \r\n）完成后重跑本门禁：pas_multicr_exceptions 应清空。

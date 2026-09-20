@@ -674,7 +674,6 @@
     "Core/DeepBase.HB.StateSlot.Types.pas",
     "Core/DeepBase.HB.Touchpoint.Engine.pas",
     "Core/DeepBase.HB.Touchpoint.Types.pas",
-    "Core/DeepBase.Schema.pas",
     "Core/DeepBase.TrayIcon.pas",
     "DeepBaseRun/FrameConfigEditor.pas",
     "DeepBaseRun/ViewMain.pas",
@@ -915,5 +914,8 @@
     "history_wyjx_p0_p1_complete.md",
     "sql/README.md",
     "tasks.md"
+  ],
+  "pas_multicr_exceptions": [
+    "Core/DeepBase.Schema.pas"
   ]
 }
